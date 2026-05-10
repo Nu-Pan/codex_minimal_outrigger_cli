@@ -14,7 +14,7 @@ from commons.process import run_command
 def cmot_merge_impl() -> None:
     """cmot feature branch を default branch へ merge して削除する。"""
     try:
-        repo_root = prepare_repo()
+        repo_root, _ = prepare_repo()
         feature_branch = require_cmot_branch(repo_root)
 
         # default branch を最新化してから feature branch を merge する。

@@ -16,10 +16,11 @@ from commons.process import run_command
 def cmot_fork_impl() -> None:
     """remote default branch から cmot feature branch を作る。"""
     try:
-        repo_root = prepare_repo()
+        repo_root, cmot_ignore_added = prepare_repo()
 
         # fork は人間がクリーンにした状態からだけ開始する。
-        require_clean_worktree(repo_root)
+        allowed_paths = [".gitignore"] if cmot_ignore_added else []
+        require_clean_worktree(repo_root, allowed_paths=allowed_paths)
         require_not_cmot_branch(repo_root)
 
         # remote 最新 commit を分岐元にする。
@@ -31,5 +32,14 @@ def cmot_fork_impl() -> None:
             repo_root,
             capture_output=False,
         )
+
+        # 初回導入時の cmot ignore だけを feature branch 上で確定する。
+        if cmot_ignore_added:
+            run_command(["git", "add", ".gitignore"], repo_root)
+            run_command(
+                ["git", "commit", "-m", "Add cmot ignore"],
+                repo_root,
+                capture_output=False,
+            )
     except CmotError as error:
         exit_with_error(error)

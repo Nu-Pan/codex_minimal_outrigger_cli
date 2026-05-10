@@ -12,7 +12,7 @@ from commons.oracles import list_oracle_files
 def cmot_eval_oracles_impl() -> None:
     """oracles の個別評価と関係性評価を行い、レポートを保存する。"""
     try:
-        repo_root = prepare_repo()
+        repo_root, _ = prepare_repo()
         require_cmot_branch(repo_root)
 
         # oracles ファイルごとに Codex CLI で評価する。

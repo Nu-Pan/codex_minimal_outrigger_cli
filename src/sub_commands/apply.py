@@ -21,7 +21,7 @@ from commons.process import run_command
 def cmot_apply_impl() -> None:
     """oracles に実装を追従させ、branch 全体の変更レポートを保存する。"""
     try:
-        repo_root = prepare_repo()
+        repo_root, _ = prepare_repo()
         current_branch = require_cmot_branch(repo_root)
 
         # 作業前の未コミット差分を仕様通り処理する。

@@ -10,16 +10,16 @@ from commons.process import run_command
 CMOT_BRANCH_PREFIX = "cmot_"
 
 
-def prepare_repo() -> Path:
+def prepare_repo() -> tuple[Path, bool]:
     """呼び出し元から repo root を探索し、cmot 用 ignore を整える。
 
     Returns:
-        探索した git repository root。
+        探索した git repository root と、今回 .gitignore を更新したかどうか。
     """
     repo_root = find_repo_root(Path.cwd())
     os.chdir(repo_root)
-    ensure_cmot_ignored(repo_root)
-    return repo_root
+    cmot_ignore_added = ensure_cmot_ignored(repo_root)
+    return repo_root, cmot_ignore_added
 
 
 def find_repo_root(start: Path) -> Path:
@@ -42,11 +42,14 @@ def find_repo_root(start: Path) -> Path:
         current = current.parent
 
 
-def ensure_cmot_ignored(repo_root: Path) -> None:
+def ensure_cmot_ignored(repo_root: Path) -> bool:
     """repo root の .gitignore に .cmot/ を含める。
 
     Args:
         repo_root: 操作対象 repository root。
+
+    Returns:
+        今回の呼び出しで .gitignore を更新したかどうか。
     """
     gitignore_path = repo_root / ".gitignore"
     existing = gitignore_path.read_text(encoding="utf-8") if gitignore_path.exists() else ""
@@ -58,20 +61,32 @@ def ensure_cmot_ignored(repo_root: Path) -> None:
         check=False,
     )
     if ignored.returncode == 0:
-        return
+        return False
+
+    # 人間の .gitignore 編集と cmot の追記を混ぜない。
+    if ".gitignore" in dirty_paths(repo_root):
+        raise CmotError(".gitignore has uncommitted changes")
 
     # ログファイルが差分として現れないよう .gitignore に追記する。
     suffix = "" if existing.endswith("\n") or existing == "" else "\n"
     gitignore_path.write_text(f"{existing}{suffix}/.cmot/\n", encoding="utf-8")
+    return True
 
 
-def require_clean_worktree(repo_root: Path) -> None:
+def require_clean_worktree(
+    repo_root: Path,
+    *,
+    allowed_paths: list[str] | None = None,
+) -> None:
     """未コミット差分が無いことを要求する。
 
     Args:
         repo_root: 操作対象 repository root。
+        allowed_paths: 差分があっても許容する path。
     """
-    if status_entries(repo_root):
+    paths = dirty_paths(repo_root)
+    allowed = allowed_paths or []
+    if any(path not in allowed for path in paths):
         raise CmotError("working tree has uncommitted changes")
 
 
