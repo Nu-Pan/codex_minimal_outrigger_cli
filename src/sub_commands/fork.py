@@ -4,6 +4,7 @@ from datetime import datetime
 
 from commons.errors import CmotError, exit_with_error
 from commons.git import (
+    commit_cmot_ignore,
     default_branch,
     fetch_origin,
     prepare_repo,
@@ -35,11 +36,6 @@ def cmot_fork_impl() -> None:
 
         # 初回導入時の cmot ignore だけを feature branch 上で確定する。
         if cmot_ignore_added:
-            run_command(["git", "add", ".gitignore"], repo_root)
-            run_command(
-                ["git", "commit", "-m", "Add cmot ignore"],
-                repo_root,
-                capture_output=False,
-            )
+            commit_cmot_ignore(repo_root)
     except CmotError as error:
         exit_with_error(error)

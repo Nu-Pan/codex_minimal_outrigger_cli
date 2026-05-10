@@ -211,6 +211,20 @@ def commit_all(repo_root: Path, message: str) -> None:
     run_command(["git", "commit", "-m", message], repo_root, capture_output=False)
 
 
+def commit_cmot_ignore(repo_root: Path) -> None:
+    """cmot 用 ignore 追加だけを commit する。
+
+    Args:
+        repo_root: 操作対象 repository root。
+    """
+    run_command(["git", "add", ".gitignore"], repo_root)
+    run_command(
+        ["git", "commit", "-m", "Add cmot ignore"],
+        repo_root,
+        capture_output=False,
+    )
+
+
 def merge_base_ref(repo_root: Path) -> str:
     """現在の default branch remote ref を返す。
 

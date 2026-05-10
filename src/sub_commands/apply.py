@@ -6,6 +6,7 @@ from commons.codex import run_codex_exec
 from commons.errors import CmotError, exit_with_error
 from commons.git import (
     commit_all,
+    commit_cmot_ignore,
     dirty_paths,
     fetch_origin,
     merge_base_ref,
@@ -21,8 +22,12 @@ from commons.process import run_command
 def cmot_apply_impl() -> None:
     """oracles に実装を追従させ、branch 全体の変更レポートを保存する。"""
     try:
-        repo_root, _ = prepare_repo()
+        repo_root, cmot_ignore_added = prepare_repo()
         current_branch = require_cmot_branch(repo_root)
+
+        # cmot 自身の準備差分は、人間の oracles 差分とは別 commit にする。
+        if cmot_ignore_added:
+            commit_cmot_ignore(repo_root)
 
         # 作業前の未コミット差分を仕様通り処理する。
         paths = dirty_paths(repo_root)
@@ -43,7 +48,7 @@ def cmot_apply_impl() -> None:
                 diff_report_path,
                 diff_report,
             )
-            run_codex_exec(repo_root, prompt)
+            run_codex_exec(repo_root, prompt, read_only=False)
 
             if status_entries(repo_root):
                 commit_message = _generate_commit_message(repo_root)
@@ -59,7 +64,7 @@ def cmot_apply_impl() -> None:
             current_branch,
             base_ref,
         )
-        report_body = run_codex_exec(repo_root, report_prompt)
+        report_body = run_codex_exec(repo_root, report_prompt, read_only=True)
         log_path = new_log_path(repo_root, "apply")
         diff_stat = run_command(["git", "diff", "--stat", base_ref, "HEAD"], repo_root)
         log_path.write_text(
@@ -94,7 +99,7 @@ def _write_oracle_implementation_diff(repo_root: Path) -> Path:
     for oracle_file in oracle_files:
         relative_path = oracle_file.relative_to(repo_root).as_posix()
         prompt = _build_oracle_implementation_diff_prompt(repo_root, oracle_file)
-        report = run_codex_exec(repo_root, prompt)
+        report = run_codex_exec(repo_root, prompt, read_only=True)
         report_parts.append(f"\n## `{relative_path}`\n\n{report.strip()}\n")
 
     path = new_log_path(repo_root, "oracle-implementation-diff")
@@ -144,7 +149,8 @@ def _build_apply_oracles_prompt(
         f"- 仕様断片ディレクトリ: `{oracles_dir}`\n"
         f"- 差異調査結果ファイル: `{diff_report_path}`\n"
         "- 仕様断片の内容を正として、実装側を合わせてください。\n"
-        "- `.agents` ディレクトリ配下は編集しないでください。\n"
+        "- `.agents` 配下に対する書き込み操作は禁止。そういった操作が必要になったことは"
+        "作業結果として必ず報告してください。\n"
         "- 既存の設計、命名、責務分担に合わせ、必要最小限の変更に留めてください。\n"
         "- 変更後に実行すべき確認コマンドがある場合は実行し、実行できなかった場合は"
         "理由を報告してください。\n\n"
@@ -225,7 +231,7 @@ def _generate_commit_message(repo_root: Path) -> str:
     """
     diff_stat = run_command(["git", "diff", "--stat"], repo_root).stdout
     prompt = _build_commit_message_prompt(repo_root, diff_stat)
-    raw_message = run_codex_exec(repo_root, prompt).strip()
+    raw_message = run_codex_exec(repo_root, prompt, read_only=True).strip()
     message = raw_message.splitlines()[0].strip() if raw_message else ""
     return message or "Apply oracle changes"
 

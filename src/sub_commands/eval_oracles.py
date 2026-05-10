@@ -4,7 +4,7 @@ from pathlib import Path
 
 from commons.codex import run_codex_exec
 from commons.errors import CmotError, exit_with_error
-from commons.git import prepare_repo, require_cmot_branch
+from commons.git import commit_cmot_ignore, prepare_repo, require_cmot_branch
 from commons.logs import new_log_path
 from commons.oracles import list_oracle_files
 
@@ -12,19 +12,26 @@ from commons.oracles import list_oracle_files
 def cmot_eval_oracles_impl() -> None:
     """oracles の個別評価と関係性評価を行い、レポートを保存する。"""
     try:
-        repo_root, _ = prepare_repo()
+        repo_root, cmot_ignore_added = prepare_repo()
         require_cmot_branch(repo_root)
+
+        # cmot 自身の準備差分は、評価対象の差分とは別 commit にする。
+        if cmot_ignore_added:
+            commit_cmot_ignore(repo_root)
 
         # oracles ファイルごとに Codex CLI で評価する。
         oracle_files = list_oracle_files(repo_root)
         per_file_reports: list[tuple[Path, str]] = []
         for oracle_file in oracle_files:
             prompt = _build_per_file_evaluation_prompt(repo_root, oracle_file)
-            per_file_reports.append((oracle_file, run_codex_exec(repo_root, prompt)))
+            per_file_reports.append((
+                oracle_file,
+                run_codex_exec(repo_root, prompt, read_only=True),
+            ))
 
         # 全 oracles 間の関係性を Codex CLI で評価する。
         relation_prompt = _build_cross_file_evaluation_prompt(repo_root, oracle_files)
-        relation_report = run_codex_exec(repo_root, relation_prompt)
+        relation_report = run_codex_exec(repo_root, relation_prompt, read_only=True)
 
         # これまでの評価を 1 つのレポートにまとめる。
         report_parts = ["# cmot eval-oracles report\n"]

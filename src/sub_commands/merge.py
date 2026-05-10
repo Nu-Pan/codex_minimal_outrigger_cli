@@ -2,6 +2,7 @@
 
 from commons.errors import CmotError, exit_with_error
 from commons.git import (
+    commit_cmot_ignore,
     current_branch,
     default_branch,
     fetch_origin,
@@ -14,8 +15,12 @@ from commons.process import run_command
 def cmot_merge_impl() -> None:
     """cmot feature branch を default branch へ merge して削除する。"""
     try:
-        repo_root, _ = prepare_repo()
+        repo_root, cmot_ignore_added = prepare_repo()
         feature_branch = require_cmot_branch(repo_root)
+
+        # cmot 自身の準備差分を持ったまま checkout しない。
+        if cmot_ignore_added:
+            commit_cmot_ignore(repo_root)
 
         # default branch を最新化してから feature branch を merge する。
         base_branch = default_branch(repo_root)
