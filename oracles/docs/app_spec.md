@@ -13,11 +13,14 @@ cmot による操作対象リポジトリである `<repo-root>` は以下の要
         - 「`<repo-root>/oracles` 配下のファイル別に `codex exec` セッションを起動する責任」は cmot が負う
         - 「`oracles` を評価する際の観点をエージェントに説明する責任」は cmot ではなく `<repo-root>/.agents/skills` が担う
 
-## `codex` 実行方法とサンドボックスの扱い
+## Codex CLI の実行方法
 
 - cmot からの Codex CLI はすべて `codex exec` で行う
-- この時、全ての呼び出しで必ず `--dangerously-bypass-approvals-and-sandbox` を付ける
-- これは危険ではあるが「`.agents` 配下を `codex exec` からは絶対に編集出来ない問題」をお手軽に解決するにはこれしか方法がない
+- `.agents` 配下を編集出来ない問題の扱い
+    - `.agents` 配下は Codex CLI で特別扱いされているため、人間が approve しないと編集出来ない
+    - `codex exec` は個別に approve が出来ないので `<repo-root>/.agents` 配下は絶対に編集できない（やろうとして失敗する）
+    - この問題は `<repo-root>` 側で対策を行う事とする
+    - e.g. AI 行動原則「明確な指示があった場合のみリポジトリローカルスキルを編集する」＋ユーザー運用規則「スキル編集をしたい場合は Codex CLI を直接起動したうえで明確に指示をする」
 
 ## cmot のエンドユーザー呼び出し方法
 
@@ -25,7 +28,7 @@ cmot による操作対象リポジトリである `<repo-root>` は以下の要
 
 ## 実行時のカレントディレクトリ
 
-- cmot が呼び出された時のカレントを起点に、ルートに向けて「直下に `.git` を持つディレクトリ」を探索する
+- cmot が呼び出された時のカレントを起点に、ルートに向けて「直下に `.git` ファイル・ディレクトリを持つディレクトリ」を探索する
 - 最初に見つかったディレクトリを `<repo-root>` とする
 - cmot 実行時のカレントは必ず `<repo-root>` に変更する
 
@@ -50,7 +53,7 @@ cmot による操作対象リポジトリである `<repo-root>` は以下の要
 - コマンド呼び出し時点で git 未コミット差分が有る場合はエラー終了とする
 - 既に cmot feature branch をチェックアウトしている場合はエラー終了とする
 - git default branch の最新コミットを分岐元として、新規に cmot feature branch を作成・チェックアウトする
-- cmot feature branch の命名規則は `cmot_<year>-<month>-<day>_<hour>-<minute>` とする
+- cmot feature branch の命名規則は `cmot_<year>-<month>-<day>_<hour>-<minute>-<sec>` とする
 
 ### `cmot eval-oracles`
 
@@ -58,8 +61,12 @@ cmot による操作対象リポジトリである `<repo-root>` は以下の要
 - 現在の `<repo-root>/oracles` の内容に致命的な問題が無いか評価し、評価結果を人間にレポートする
 - 具体的には以下の手順で評価レポートを作成する
     1. `oracles` ファイルを列挙
-    2. ファイルごとに個別に評価を行う（個別に `codex exec` を実行する）
-    3. ファイル別評価を１つのレポートにまとめる
+    2. ファイルごとに個別に評価を行う
+        - １回の `codex` 呼び出しで、ファイル１つを評価する
+        - 評価にあたっては、関係するファイルも読みに行くこととする
+    3. 全てのファイルを読んで、ファイル間の関係性を評価する
+        - １回の `codex` 呼び出しで、全てのファイルを読ませる
+    3. これまでに出した評価を１つのレポートにまとめる
 - 評価レポートは `<repo-root>/.cmot/logs/eval-oracles/*.md` にファイルに保存し、そのフルパスを標準出力に流す
 
 ### `cmot apply`
@@ -82,9 +89,11 @@ cmot による操作対象リポジトリである `<repo-root>` は以下の要
 
 - cmot feature branch 上に居なければエラー終了とする
 - 以下の手順を実行
-    1. 現状の cmot feature branch を default branch の最新コミットにマージする
-    2. default branch の最新コミットをチェックアウトする
-    3. マージ済み cmot feature branch を削除
+    1. default branch を checkout する
+    2. default branch を最新化する
+    3. cmot feature branch を default branch に merge する
+    4. merge 後の default branch に居る事を確認
+    5. マージ済みの cmot feature branch を削除
 
 ## 各処理の補足
 
