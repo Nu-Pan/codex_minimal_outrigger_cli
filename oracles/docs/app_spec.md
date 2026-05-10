@@ -41,7 +41,7 @@ cmot による操作対象リポジトリである `<repo-root>` は以下の要
     4. ループ先頭に戻る
 5. 人間が `cmot apply` を呼び出して、作業レポートを読む
 6. 現状の実装に人間が満足しなければ「4. `<repo-root>/oracles` 修正ループ」に戻る
-8. 人間が `cmot merge` を呼び出す
+7. 人間が `cmot merge` を呼び出す
 
 ## サブコマンド別仕様
 
@@ -74,7 +74,7 @@ cmot による操作対象リポジトリである `<repo-root>` は以下の要
     5. 1. に戻る
 - 作業完了後、結果をレポートする
     - レポートは「現状の cmot feature branch を default branch の最新コミットにマージした時の変更内容の要約」を書く（この `cmot apply` で行った作業内容の要約ではない）
-    - レポート本体は `<repo-root>/.cmot/logs/eval-oracles/*.md` にファイルに保存する
+    - レポート本体は `<repo-root>/.cmot/logs/apply/*.md` にファイルに保存する
     - レポート執筆は codex にやらせる
     - レポートのフルパスを標準出力に流す
 

@@ -7,8 +7,8 @@
 - エントリーポイント・引数解釈までは `<cmot-root>/src/main.py` で実装する
 - 各サブコマンドの本命処理は `<cmot-root>/src/sub_commands/<sub command name>.py` で実装する
 - e.g.
-    - `cmot start` は `<cmot-root>/src/sub_commands/start.py` に関数 `cmot_start_impl` として実装する
-    - 「`<cmot-root>/src/main.py` 上の　typer 的に `cmot start` と対応する関数」は「関数 `cmot_start_impl`」の呼び出しだけを行う
+    - `cmot fork` は `<cmot-root>/src/sub_commands/fork.py` に関数 `cmot_fork_impl` として実装する
+    - 「`<cmot-root>/src/main.py` 上の　typer 的に `cmot fork` と対応する関数」は「関数 `cmot_fork_impl`」の呼び出しだけを行う
 
 ## 共通系
 
