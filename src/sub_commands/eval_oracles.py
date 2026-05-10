@@ -19,23 +19,11 @@ def cmot_eval_oracles_impl() -> None:
         oracle_files = list_oracle_files(repo_root)
         per_file_reports: list[tuple[Path, str]] = []
         for oracle_file in oracle_files:
-            relative_path = oracle_file.relative_to(repo_root).as_posix()
-            prompt = (
-                f"{relative_path} を評価してください。"
-                "この oracles ファイルに致命的な問題が無いかを確認し、"
-                "必要なら関係するファイルも読みに行って、評価結果を日本語で報告してください。"
-            )
+            prompt = _build_per_file_evaluation_prompt(repo_root, oracle_file)
             per_file_reports.append((oracle_file, run_codex_exec(repo_root, prompt)))
 
         # 全 oracles 間の関係性を Codex CLI で評価する。
-        oracle_list = "\n".join(
-            f"- {path.relative_to(repo_root).as_posix()}" for path in oracle_files
-        )
-        relation_prompt = (
-            "以下の oracles ファイルを全て読んで、ファイル間の関係性に"
-            "致命的な問題が無いかを評価し、日本語で報告してください。\n\n"
-            f"{oracle_list}"
-        )
+        relation_prompt = _build_cross_file_evaluation_prompt(repo_root, oracle_files)
         relation_report = run_codex_exec(repo_root, relation_prompt)
 
         # これまでの評価を 1 つのレポートにまとめる。
@@ -63,3 +51,50 @@ def cmot_eval_oracles_impl() -> None:
         print(log_path)
     except CmotError as error:
         exit_with_error(error)
+
+
+def _build_per_file_evaluation_prompt(repo_root: Path, oracle_file: Path) -> str:
+    """oracles ファイル単体を評価させる prompt を作る。"""
+    return (
+        "## エージェントのロール\n"
+        f"あなたは `{repo_root}` の開発チームの一員で、仕様断片のレビューを担当します。\n\n"
+        "## かいつまんだ作業内容\n"
+        f"`{oracle_file}` を評価してください。\n\n"
+        "## 作業完了条件\n"
+        "対象ファイルに致命的な問題があるかどうかと、問題がある場合の理由を"
+        "日本語で報告したら完了です。\n\n"
+        "## 詳細な作業内容\n"
+        f"- 対象ファイル: `{oracle_file}`\n"
+        f"- 対象ファイルが属する repository root: `{repo_root}`\n"
+        "- 対象ファイルの内容だけで判断できない場合は、同じ repository 内の関係する"
+        "ファイルも読んでください。\n"
+        "- 仕様として曖昧すぎる点、実装不能な点、他の仕様断片と衝突しそうな点を"
+        "優先して確認してください。\n"
+        "- 致命的な問題が見つからない場合も、その旨を明確に書いてください。\n"
+    )
+
+
+def _build_cross_file_evaluation_prompt(
+    repo_root: Path,
+    oracle_files: list[Path],
+) -> str:
+    """oracles ファイル間の関係性を評価させる prompt を作る。"""
+    oracle_list = "\n".join(f"- `{path}`" for path in oracle_files)
+    if not oracle_list:
+        oracle_list = "- 対象ファイルなし"
+
+    return (
+        "## エージェントのロール\n"
+        f"あなたは `{repo_root}` の開発チームの一員で、仕様断片全体のレビューを担当します。\n\n"
+        "## かいつまんだ作業内容\n"
+        "以下に列挙する仕様断片ファイルを全て読み、ファイル間の関係性を評価してください。\n\n"
+        "## 作業完了条件\n"
+        "仕様断片同士に致命的な矛盾、重複による解釈不能、または実装上の重大な"
+        "リスクがあるかどうかを日本語で報告したら完了です。\n\n"
+        "## 詳細な作業内容\n"
+        f"- repository root: `{repo_root}`\n"
+        "- 評価対象ファイル:\n"
+        f"{oracle_list}\n"
+        "- 必要に応じて、同じ repository 内の実装ファイルも読んでください。\n"
+        "- 致命的な問題が見つからない場合も、その旨を明確に書いてください。\n"
+    )

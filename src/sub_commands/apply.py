@@ -22,7 +22,7 @@ def cmot_apply_impl() -> None:
     """oracles に実装を追従させ、branch 全体の変更レポートを保存する。"""
     try:
         repo_root = prepare_repo()
-        require_cmot_branch(repo_root)
+        current_branch = require_cmot_branch(repo_root)
 
         # 作業前の未コミット差分を仕様通り処理する。
         paths = dirty_paths(repo_root)
@@ -38,10 +38,10 @@ def cmot_apply_impl() -> None:
             if _report_has_no_clear_difference(diff_report):
                 break
 
-            prompt = (
-                "<repo-root> の実装を <repo-root>/oracles に追従させてください。"
-                "以下は oracles と実装の差異調査結果です。\n\n"
-                f"{diff_report}"
+            prompt = _build_apply_oracles_prompt(
+                repo_root,
+                diff_report_path,
+                diff_report,
             )
             run_codex_exec(repo_root, prompt)
 
@@ -53,14 +53,14 @@ def cmot_apply_impl() -> None:
 
         # default branch remote 最新 commit へ merge した時の変更内容を report にする。
         fetch_origin(repo_root)
-        report_prompt = (
-            "現状の cmot feature branch を default branch のリモート最新コミットに"
-            "マージした時の変更内容の要約を日本語で書いてください。"
-            "この cmot apply で行った作業内容ではなく、branch 全体の差分を要約してください。"
+        base_ref = merge_base_ref(repo_root)
+        report_prompt = _build_apply_report_prompt(
+            repo_root,
+            current_branch,
+            base_ref,
         )
         report_body = run_codex_exec(repo_root, report_prompt)
         log_path = new_log_path(repo_root, "apply")
-        base_ref = merge_base_ref(repo_root)
         diff_stat = run_command(["git", "diff", "--stat", base_ref, "HEAD"], repo_root)
         log_path.write_text(
             "# cmot apply report\n\n"
@@ -93,16 +93,88 @@ def _write_oracle_implementation_diff(repo_root: Path) -> Path:
     # 各 oracles ファイルと実装との差異を Codex CLI に調査させる。
     for oracle_file in oracle_files:
         relative_path = oracle_file.relative_to(repo_root).as_posix()
-        prompt = (
-            f"{relative_path} と実装との明確な差異が無いかを確認して、"
-            "差異とその説明を日本語で報告してください。"
-        )
+        prompt = _build_oracle_implementation_diff_prompt(repo_root, oracle_file)
         report = run_codex_exec(repo_root, prompt)
         report_parts.append(f"\n## `{relative_path}`\n\n{report.strip()}\n")
 
     path = new_log_path(repo_root, "oracle-implementation-diff")
     path.write_text("".join(report_parts), encoding="utf-8")
     return path
+
+
+def _build_oracle_implementation_diff_prompt(
+    repo_root: Path,
+    oracle_file: Path,
+) -> str:
+    """oracles ファイルと実装との差異調査 prompt を作る。"""
+    return (
+        "## エージェントのロール\n"
+        f"あなたは `{repo_root}` の開発チームの一員で、仕様と実装の差異調査を担当します。\n\n"
+        "## かいつまんだ作業内容\n"
+        f"`{oracle_file}` と `{repo_root}` の実装との明確な差異がないか確認してください。\n\n"
+        "## 作業完了条件\n"
+        "明確な差異の有無、差異がある場合はその内容と理由を日本語で報告したら完了です。\n\n"
+        "## 詳細な作業内容\n"
+        f"- repository root: `{repo_root}`\n"
+        f"- 仕様断片ファイル: `{oracle_file}`\n"
+        "- 仕様断片ファイルの内容を正として、実装が追従しているかを確認してください。\n"
+        "- 対象ファイルと直接関係する実装ファイルを必要に応じて読んでください。\n"
+        "- 明確な差異がない場合は、差異がないことを明示してください。\n"
+        "- 推測に基づく改善提案ではなく、仕様断片と実装の明確なズレだけを報告してください。\n"
+    )
+
+
+def _build_apply_oracles_prompt(
+    repo_root: Path,
+    diff_report_path: Path,
+    diff_report: str,
+) -> str:
+    """oracles への実装追従を依頼する prompt を作る。"""
+    oracles_dir = repo_root / "oracles"
+    return (
+        "## エージェントのロール\n"
+        f"あなたは `{repo_root}` の開発チームの一員で、仕様追従の実装を担当します。\n\n"
+        "## かいつまんだ作業内容\n"
+        f"`{repo_root}` の実装を `{oracles_dir}` に記載された仕様断片へ追従させてください。\n\n"
+        "## 作業完了条件\n"
+        f"`{diff_report_path}` に記載された明確な差異を解消するための実装変更が完了し、"
+        "変更内容を簡潔に報告したら完了です。\n\n"
+        "## 詳細な作業内容\n"
+        f"- repository root: `{repo_root}`\n"
+        f"- 仕様断片ディレクトリ: `{oracles_dir}`\n"
+        f"- 差異調査結果ファイル: `{diff_report_path}`\n"
+        "- 仕様断片の内容を正として、実装側を合わせてください。\n"
+        "- `.agents` ディレクトリ配下は編集しないでください。\n"
+        "- 既存の設計、命名、責務分担に合わせ、必要最小限の変更に留めてください。\n"
+        "- 変更後に実行すべき確認コマンドがある場合は実行し、実行できなかった場合は"
+        "理由を報告してください。\n\n"
+        "### 差異調査結果\n"
+        f"{diff_report}"
+    )
+
+
+def _build_apply_report_prompt(
+    repo_root: Path,
+    current_branch: str,
+    base_ref: str,
+) -> str:
+    """branch 全体の変更要約 report を依頼する prompt を作る。"""
+    return (
+        "## エージェントのロール\n"
+        f"あなたは `{repo_root}` の開発チームの一員で、変更内容の要約を担当します。\n\n"
+        "## かいつまんだ作業内容\n"
+        f"git ブランチ `{current_branch}` を `{base_ref}` にマージした時の変更内容を"
+        "日本語で要約してください。\n\n"
+        "## 作業完了条件\n"
+        "ブランチ全体の差分に基づく日本語の要約を出力したら完了です。\n\n"
+        "## 詳細な作業内容\n"
+        f"- repository root: `{repo_root}`\n"
+        f"- 要約対象ブランチ: `{current_branch}`\n"
+        f"- 比較元 ref: `{base_ref}`\n"
+        "- このコマンド実行中に行われた個別作業の履歴ではなく、比較元 ref から"
+        "現在の HEAD までの差分内容を要約してください。\n"
+        "- 必要に応じて `git diff` や `git log` を読んでください。\n"
+    )
 
 
 def _report_has_no_clear_difference(report: str) -> bool:
@@ -152,11 +224,25 @@ def _generate_commit_message(repo_root: Path) -> str:
         1 行の commit message。
     """
     diff_stat = run_command(["git", "diff", "--stat"], repo_root).stdout
-    prompt = (
-        "以下の差分統計に対する簡潔な git commit message を英語で 1 行だけ生成してください。"
-        "引用符や箇条書きは不要です。\n\n"
-        f"{diff_stat}"
-    )
+    prompt = _build_commit_message_prompt(repo_root, diff_stat)
     raw_message = run_codex_exec(repo_root, prompt).strip()
     message = raw_message.splitlines()[0].strip() if raw_message else ""
     return message or "Apply oracle changes"
+
+
+def _build_commit_message_prompt(repo_root: Path, diff_stat: str) -> str:
+    """現在の差分に対する commit message 生成 prompt を作る。"""
+    return (
+        "## エージェントのロール\n"
+        f"あなたは `{repo_root}` の開発チームの一員で、git commit message の作成を担当します。\n\n"
+        "## かいつまんだ作業内容\n"
+        "以下の差分統計に対する簡潔な git commit message を英語で作成してください。\n\n"
+        "## 作業完了条件\n"
+        "英語の commit message を 1 行だけ出力したら完了です。\n\n"
+        "## 詳細な作業内容\n"
+        f"- repository root: `{repo_root}`\n"
+        "- 引用符、箇条書き、Markdown 装飾、説明文は出力しないでください。\n"
+        "- 50 文字前後を目安に、命令形の短い文にしてください。\n\n"
+        "### 差分統計\n"
+        f"{diff_stat}"
+    )
