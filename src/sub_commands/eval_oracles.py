@@ -7,22 +7,33 @@ from commons.errors import CmotError, exit_with_error
 from commons.git import commit_cmot_ignore, prepare_repo, require_cmot_branch
 from commons.logs import new_log_path
 from commons.oracles import list_oracle_files
+from commons.progress import format_elapsed, progress, start_timer
 
 
 def cmot_eval_oracles_impl() -> None:
     """oracles の個別評価と関係性評価を行い、レポートを保存する。"""
+    started_at = start_timer()
+    progress("eval-oracles started")
     try:
+        # repository root と cmot feature branch を確認する。
+        progress("preparing repository")
         repo_root, cmot_ignore_added = prepare_repo()
         require_cmot_branch(repo_root)
 
         # cmot 自身の準備差分は、評価対象の差分とは別 commit にする。
         if cmot_ignore_added:
+            progress("committing cmot ignore")
             commit_cmot_ignore(repo_root)
 
         # oracles ファイルごとに Codex CLI で評価する。
+        progress("listing oracle files")
         oracle_files = list_oracle_files(repo_root)
         per_file_reports: list[tuple[Path, str]] = []
-        for oracle_file in oracle_files:
+        for index, oracle_file in enumerate(oracle_files, start=1):
+            relative_path = oracle_file.relative_to(repo_root).as_posix()
+            progress(
+                f"evaluating oracle {index}/{len(oracle_files)}: {relative_path}",
+            )
             prompt = _build_per_file_evaluation_prompt(repo_root, oracle_file)
             per_file_reports.append((
                 oracle_file,
@@ -30,10 +41,12 @@ def cmot_eval_oracles_impl() -> None:
             ))
 
         # 全 oracles 間の関係性を Codex CLI で評価する。
+        progress("evaluating oracle relations")
         relation_prompt = _build_cross_file_evaluation_prompt(repo_root, oracle_files)
         relation_report = run_codex_exec(repo_root, relation_prompt, read_only=True)
 
         # これまでの評価を 1 つのレポートにまとめる。
+        progress("writing evaluation report")
         report_parts = ["# cmot eval-oracles report\n"]
         report_parts.append("## Oracle files\n")
         if oracle_files:
@@ -55,8 +68,11 @@ def cmot_eval_oracles_impl() -> None:
 
         log_path = new_log_path(repo_root, "eval-oracles")
         log_path.write_text("".join(report_parts), encoding="utf-8")
+        progress(f"report written: {log_path}")
         print(log_path)
+        progress(f"eval-oracles completed in {format_elapsed(started_at)}")
     except CmotError as error:
+        progress(f"eval-oracles failed in {format_elapsed(started_at)}")
         exit_with_error(error)
 
 

@@ -17,32 +17,43 @@ from commons.git import (
 from commons.logs import new_log_path
 from commons.oracles import list_oracle_files
 from commons.process import run_command
+from commons.progress import format_elapsed, progress, start_timer
 
 
 def cmot_apply_impl() -> None:
     """oracles に実装を追従させ、branch 全体の変更レポートを保存する。"""
+    started_at = start_timer()
+    progress("apply started")
     try:
+        # repository root と cmot feature branch を確認する。
+        progress("preparing repository")
         repo_root, cmot_ignore_added = prepare_repo()
         current_branch = require_cmot_branch(repo_root)
 
         # cmot 自身の準備差分は、人間の oracles 差分とは別 commit にする。
         if cmot_ignore_added:
+            progress("committing cmot ignore")
             commit_cmot_ignore(repo_root)
 
         # 作業前の未コミット差分を仕様通り処理する。
+        progress("checking working tree")
         paths = dirty_paths(repo_root)
         if paths and all(path.startswith("oracles/") for path in paths):
+            progress("committing oracle changes")
             commit_all(repo_root, "Update oracles")
         elif paths:
             raise CmotError("working tree has changes outside oracles")
 
         # 最大 3 回、差異調査と実装追従を繰り返す。
-        for _ in range(3):
+        for index in range(1, 4):
+            progress(f"checking oracle implementation differences ({index}/3)")
             diff_report_path = _write_oracle_implementation_diff(repo_root)
             diff_report = diff_report_path.read_text(encoding="utf-8")
             if _report_has_no_clear_difference(diff_report):
+                progress("no clear differences found")
                 break
 
+            progress(f"applying oracle changes ({index}/3)")
             prompt = _build_apply_oracles_prompt(
                 repo_root,
                 diff_report_path,
@@ -51,14 +62,19 @@ def cmot_apply_impl() -> None:
             run_codex_exec(repo_root, prompt, read_only=False)
 
             if status_entries(repo_root):
+                progress("generating commit message")
                 commit_message = _generate_commit_message(repo_root)
+                progress("committing implementation changes")
                 commit_all(repo_root, commit_message)
             else:
+                progress("no implementation changes produced")
                 break
 
         # default branch remote 最新 commit へ merge した時の変更内容を report にする。
+        progress("fetching origin")
         fetch_origin(repo_root)
         base_ref = merge_base_ref(repo_root)
+        progress("generating apply report")
         report_prompt = _build_apply_report_prompt(
             repo_root,
             current_branch,
@@ -78,8 +94,11 @@ def cmot_apply_impl() -> None:
             "```\n",
             encoding="utf-8",
         )
+        progress(f"report written: {log_path}")
         print(log_path)
+        progress(f"apply completed in {format_elapsed(started_at)}")
     except CmotError as error:
+        progress(f"apply failed in {format_elapsed(started_at)}")
         exit_with_error(error)
 
 
@@ -96,14 +115,18 @@ def _write_oracle_implementation_diff(repo_root: Path) -> Path:
     report_parts = ["# oracles と実装の差異\n"]
 
     # 各 oracles ファイルと実装との差異を Codex CLI に調査させる。
-    for oracle_file in oracle_files:
+    for index, oracle_file in enumerate(oracle_files, start=1):
         relative_path = oracle_file.relative_to(repo_root).as_posix()
+        progress(
+            f"checking oracle {index}/{len(oracle_files)}: {relative_path}",
+        )
         prompt = _build_oracle_implementation_diff_prompt(repo_root, oracle_file)
         report = run_codex_exec(repo_root, prompt, read_only=True)
         report_parts.append(f"\n## `{relative_path}`\n\n{report.strip()}\n")
 
     path = new_log_path(repo_root, "oracle-implementation-diff")
     path.write_text("".join(report_parts), encoding="utf-8")
+    progress(f"difference report written: {path}")
     return path
 
 
