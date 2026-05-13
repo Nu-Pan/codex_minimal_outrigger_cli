@@ -38,7 +38,7 @@
     - `<cmoc-branch>` 作成元 commit から `HEAD` までに変更された `<repo-root>/oracles` 配下のファイル
     - working tree 上で未コミット変更がある `<repo-root>/oracles` 配下のファイル
     - staging area 上で未コミット変更がある `<repo-root>/oracles` 配下のファイル
-- `<cmoc-branch>` 作成元 commit は `cmoc branch` 実行時に `.cmoc` 配下へ記録する
+- `<cmoc-branch>` 作成元 commit は `<repo-root>/.cmoc/branch/<cmoc-branch>.txt` から読み取る
 - 削除済みファイルは評価対象から除外する
 - rename は rename 後のパスを評価対象とする
 

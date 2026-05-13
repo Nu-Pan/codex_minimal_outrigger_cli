@@ -17,8 +17,9 @@
 
 以下のような手順で処理を行う。
 
-1. git checkout -b <cmoc-branch>
+1. `git checkout -b <cmoc-branch>`
 2. `<repo-root>/.cmoc` が git の追跡対象外であることを保証する
+3. `<repo-root>/.cmoc/branch/<cmoc-branch>.txt` に作成元コミットのハッシュ値を記録する
 
 ## `<cmoc-branch>` の命名規則
 

@@ -17,4 +17,4 @@
 
 1. `<repo-root>/.cmoc` を `<repo-root>/.gitignore` に追加する
     - 既に追加済みなら何もしない
-
+2. ここまでの作業で発生した差分を git commit する
