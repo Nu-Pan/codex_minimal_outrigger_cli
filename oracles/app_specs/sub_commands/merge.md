@@ -17,7 +17,7 @@
 
 1. `<repo-root>/.cmoc` が git の追跡対象外であることを保証する
 2. `git merge <cmoc-branch>`
-3. `git branch -d <cmoc-branch>`
+3. 後述の条件を満たす場合のみ `git branch -d <cmoc-branch>`
 
 ## マージ元の `<cmoc-branch>` の自動解決
 

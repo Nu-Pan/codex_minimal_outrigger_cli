@@ -4,11 +4,9 @@
 - 修正・再チェックの反復をするのに、全チェックは重たすぎる
 - cmoc fork で未コミットの差分はそのまま引き継ぐ感じにしたいかも（コミットを移動するわけじゃないのだし）
 - `cmoc eval-oracles --full`, `cmoc eval-oracles` の二本立てか
-
-# 名前変える
-
-- Codex Minimal Outrigger CLI にする
-- 略称は cmoc
+- `--full` オプションを付けなかった時のデフォルト挙動は
+    - `<cmoc-branch>` 上なら部分チェック
+    - それ以外の場合は全チェック
 
 # Codex CLI 更新チェック
 
