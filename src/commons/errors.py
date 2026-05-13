@@ -1,0 +1,60 @@
+"""cmoc 全体で使うエラー処理。"""
+
+import traceback
+from collections.abc import Sequence
+
+
+class CmocError(RuntimeError):
+    """ユーザーに次の操作を提示すべき cmoc の実行時エラー。"""
+
+    def __init__(
+        self,
+        message: str,
+        actions: Sequence[str],
+        detail: str | None = None,
+        exit_code: int = 1,
+    ) -> None:
+        """エラーレポートに必要な情報を保持する。"""
+        super().__init__(message)
+        self.message = message
+        self.actions = list(actions)
+        self.detail = detail or message
+        self.exit_code = exit_code
+
+
+def format_error_report(error: BaseException) -> str:
+    """仕様で要求される stdout 向けエラーレポートを作る。"""
+    if isinstance(error, CmocError):
+        actions = error.actions
+        detail = error.detail
+        message = error.message
+    else:
+        actions = [
+            "Read the error detail below.",
+            "Fix the repository state or command input, then run cmoc again.",
+        ]
+        detail = str(error)
+        message = error.__class__.__name__
+
+    # エラー内容と復旧操作を機械的に並べる。
+    lines = [
+        "ERROR",
+        "",
+        "Summary:",
+        message,
+        "",
+        "Next actions:",
+    ]
+    for action in actions:
+        lines.append(f"- {action}")
+    lines.extend(
+        [
+            "",
+            "Detail:",
+            detail,
+            "",
+            "Call stack:",
+            traceback.format_exc(),
+        ]
+    )
+    return "\n".join(lines)

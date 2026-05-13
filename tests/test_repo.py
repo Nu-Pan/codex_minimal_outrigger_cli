@@ -1,0 +1,128 @@
+"""git リポジトリ共通処理のテスト。"""
+
+import subprocess
+from pathlib import Path
+
+import pytest
+
+from commons.errors import CmocError
+from commons.repo import (
+    assert_only_oracles_uncommitted,
+    branch_base_commit_path,
+    changed_oracle_files,
+    ensure_cmoc_ignored,
+    find_repo_root,
+    is_cmoc_branch,
+    list_oracle_files,
+)
+
+
+def test_find_repo_root_walks_up_from_nested_directory(tmp_path: Path) -> None:
+    """`.git` を持つ親ディレクトリを repo root として見つける。"""
+    repo = _init_repo(tmp_path)
+    nested = repo / "a" / "b"
+    nested.mkdir(parents=True)
+
+    assert find_repo_root(nested) == repo
+
+
+def test_ensure_cmoc_ignored_is_idempotent(tmp_path: Path) -> None:
+    """`.cmoc` ignore ルールは重複追記しない。"""
+    repo = _init_repo(tmp_path)
+
+    assert ensure_cmoc_ignored(repo) is True
+    assert ensure_cmoc_ignored(repo) is False
+    assert (repo / ".gitignore").read_text(encoding="utf-8").count(".cmoc") == 1
+
+
+def test_list_oracle_files_excludes_index_and_gitignored_files(tmp_path: Path) -> None:
+    """oracle 列挙は INDEX.md と gitignore 対象を除外する。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text("oracles/ignored.md\n", encoding="utf-8")
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "INDEX.md").write_text("index", encoding="utf-8")
+    (oracle_root / "kept.md").write_text("kept", encoding="utf-8")
+    (oracle_root / "ignored.md").write_text("ignored", encoding="utf-8")
+
+    assert [path.name for path in list_oracle_files(repo)] == ["kept.md"]
+
+
+def test_changed_oracle_files_uses_cmoc_branch_base_and_uncommitted_changes(
+    tmp_path: Path,
+) -> None:
+    """部分評価対象は base..HEAD と未コミット oracle 変更の和集合になる。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "base.md").write_text("base", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "base")
+    base_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    (oracle_root / "committed.md").write_text("committed", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "oracle change")
+    (oracle_root / "working.md").write_text("working", encoding="utf-8")
+
+    names = [path.name for path in changed_oracle_files(repo, base_commit)]
+
+    assert names == ["committed.md", "working.md"]
+
+
+def test_assert_only_oracles_uncommitted_rejects_non_oracle_changes(
+    tmp_path: Path,
+) -> None:
+    """`cmoc apply` の事前条件として oracles 外差分を拒否する。"""
+    repo = _init_repo(tmp_path)
+    (repo / "app.py").write_text("print('changed')\n", encoding="utf-8")
+
+    with pytest.raises(CmocError):
+        assert_only_oracles_uncommitted(repo)
+
+
+@pytest.mark.parametrize(
+    ("branch_name", "expected"),
+    [
+        ("cmoc_2026-05-10_22-21_10_123", True),
+        ("feature/cmoc_2026-05-10_22-21_10_123", False),
+        ("cmoc_2026-05-10_22-21-10", False),
+    ],
+)
+def test_is_cmoc_branch(branch_name: str, expected: bool) -> None:
+    """cmoc ブランチ命名規則を判定する。"""
+    assert is_cmoc_branch(branch_name) is expected
+
+
+def test_branch_base_commit_path_points_under_cmoc_branch_dir(tmp_path: Path) -> None:
+    """branch base commit 記録先は `.cmoc/branch` 配下になる。"""
+    repo = _init_repo(tmp_path)
+
+    assert branch_base_commit_path(repo, "cmoc_2026-05-10_22-21_10_123") == (
+        repo / ".cmoc" / "branch" / "cmoc_2026-05-10_22-21_10_123.txt"
+    )
+
+
+def _init_repo(tmp_path: Path) -> Path:
+    """テスト用 git repo を作り、初期 commit を置く。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init")
+    _git(repo, "config", "user.email", "test@example.com")
+    _git(repo, "config", "user.name", "Test User")
+    (repo / "README.md").write_text("test\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "initial")
+    return repo
+
+
+def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    """git をテスト repo で実行する。"""
+    return subprocess.run(
+        ["git", *args],
+        cwd=repo,
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
