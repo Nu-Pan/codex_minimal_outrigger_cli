@@ -26,11 +26,21 @@
 
 1. `<repo-root>/.cmoc` が git の追跡対象外であることを保証する
 2. `oracles` ファイルを列挙
-3. 部分評価モードの場合、列挙した `oracles` ファイルリストを「`<cmoc-branch>` 上で変更があったファイル」のみに絞り込む
+3. 部分評価モードの場合、列挙した `oracles` ファイルリストを「変更があった `oracles` ファイル」のみに絞り込む
 4. 列挙した `oracles` ファイルリストに対して、ファイルごとの評価を行う
     - １回の `codex exec` 呼び出しで、ファイル１つを評価する
     - 評価にあたっては、関係するファイルも読みに行くこととする
 6. これまでに出した評価を１つのレポートにまとめる
+
+## 変更があった `oracles` ファイルの定義
+
+- 部分評価モードでは、以下の和集合を「変更があった oracles ファイル」とする
+    - `<cmoc-branch>` 作成元 commit から `HEAD` までに変更された `<repo-root>/oracles` 配下のファイル
+    - working tree 上で未コミット変更がある `<repo-root>/oracles` 配下のファイル
+    - staging area 上で未コミット変更がある `<repo-root>/oracles` 配下のファイル
+- `<cmoc-branch>` 作成元 commit は `cmoc branch` 実行時に `.cmoc` 配下へ記録する
+- 削除済みファイルは評価対象から除外する
+- rename は rename 後のパスを評価対象とする
 
 ## 「致命的な問題」の定義
 
