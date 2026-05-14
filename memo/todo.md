@@ -54,9 +54,3 @@
 - サンドボックスモード指定を仕様化してなかったかも？
 - Strctured Output を使えって書いただけだと --structued-output を使ってくれてないかも
     - https://zenn.dev/explaza/articles/251023-vibecoding-with-specification
-
-# 言語がバラバラすぎる
-
-- INDEX.md の中身が英語と日本語とで揺れている
-- 英語か、日本語か、指定が必要かも
-- 性能的には英語の方が良さそうではある

@@ -9,7 +9,7 @@
 ## 具体的な出力情報例
 
 - サブコマンド内のステップ名・ステップ数
-    - e.g. `cmoc apply` なら `implementatino loop (1/3) investigate oracle-implements difference`
+    - e.g. `cmoc apply` なら `implementation loop (1/3) investigate oracle-implements difference`
 - `codex exec` に渡したプロンプト・実行結果から回収した出力
 - サブコマンド実行時間レポート
     - ステップ別の経過時間
