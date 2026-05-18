@@ -3,6 +3,7 @@
 from pathlib import Path
 from time import sleep
 
+from commons.command_runner import run_command
 from commons.repo import (
     branch_base_commit_path,
     ensure_cmoc_ignored,
@@ -13,8 +14,12 @@ from commons.timing import StepTimer
 from commons.timestamps import make_timestamp
 
 
-def cmoc_branch_impl(repo_root: Path) -> None:
+def cmoc_branch_impl(repo_root: Path | None = None) -> None:
     """cmoc 作業用ブランチを作成し、作成元 commit を記録する。"""
+    if repo_root is None:
+        run_command(cmoc_branch_impl)
+        return
+
     # branch 作成前の HEAD を、cmoc branch の base commit として記録する。
     timer = StepTimer("branch")
     timer.start("create cmoc branch")

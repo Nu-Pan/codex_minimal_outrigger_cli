@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 from commons.codex import run_codex_exec
+from commons.command_runner import run_command
 from commons.errors import CmocError
 from commons.repo import (
     assert_no_uncommitted_changes,
@@ -18,10 +19,23 @@ _MANUAL_RESOLUTION_MESSAGE = (
 )
 
 
-def cmoc_merge_impl(repo_root: Path, cmoc_branch: str | None) -> None:
+def cmoc_merge_impl(
+    repo_root: Path | None = None,
+    cmoc_branch: str | None = None,
+) -> None:
     """cmoc ブランチを現在の HEAD へ merge する。"""
+    if repo_root is None:
+        run_command(
+            lambda resolved_repo_root: cmoc_merge_impl(
+                resolved_repo_root,
+                cmoc_branch,
+            )
+        )
+        return
+
     # merge 全体のステップ時間を計測しながら前提条件を検証する。
     timer = StepTimer("merge")
+    merge_started = False
     try:
         timer.start("validate repository state")
         print("merge (1/4) validate repository state")
@@ -36,6 +50,7 @@ def cmoc_merge_impl(repo_root: Path, cmoc_branch: str | None) -> None:
         # 通常 merge を試し、conflict 時だけ Codex CLI に marker 解消を依頼する。
         timer.start("run git merge")
         print("merge (3/4) run git merge")
+        merge_started = True
         result = run_git(
             repo_root,
             ["merge", "--no-ff", source_branch],
@@ -51,8 +66,9 @@ def cmoc_merge_impl(repo_root: Path, cmoc_branch: str | None) -> None:
         print(f"merged branch: {source_branch}")
         timer.report()
     except Exception:
-        # 想定外失敗でも merge state は巻き戻さず、手動解決が必要なことを通知する。
-        print(_MANUAL_RESOLUTION_MESSAGE, file=sys.stderr)
+        # git merge 開始後だけ、残った merge state の手動解決を案内する。
+        if merge_started:
+            print(_MANUAL_RESOLUTION_MESSAGE, file=sys.stderr)
         raise
 
 

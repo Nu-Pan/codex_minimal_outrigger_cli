@@ -86,6 +86,26 @@ def test_list_oracle_files_excludes_tracked_gitignored_files(
     assert list_oracle_files(repo) == []
 
 
+def test_list_oracle_files_respects_slash_pattern_depth(
+    tmp_path: Path,
+) -> None:
+    """`oracles/*.md` は oracles 直下だけに一致し、ネスト先には一致しない。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text("oracles/*.md\n", encoding="utf-8")
+    oracle_root = repo / "oracles"
+    nested = oracle_root / "nested"
+    nested.mkdir(parents=True)
+    (oracle_root / "ignored.md").write_text("ignored", encoding="utf-8")
+    (nested / "kept.md").write_text("kept", encoding="utf-8")
+
+    relative_paths = [
+        path.relative_to(repo).as_posix()
+        for path in list_oracle_files(repo)
+    ]
+
+    assert relative_paths == ["oracles/nested/kept.md"]
+
+
 def test_list_oracle_files_ignores_only_root_gitignore(
     tmp_path: Path,
 ) -> None:
@@ -164,6 +184,31 @@ def test_changed_oracle_files_excludes_gitignored_files(
     (oracle_root / "ignored.md").write_text("ignored", encoding="utf-8")
 
     assert changed_oracle_files(repo, base_commit) == []
+
+
+def test_changed_oracle_files_respects_slash_pattern_depth(
+    tmp_path: Path,
+) -> None:
+    """変更 oracle 抽出でも slash 付き pattern の階層 semantics を守る。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text("oracles/*.md\n", encoding="utf-8")
+    oracle_root = repo / "oracles"
+    nested = oracle_root / "nested"
+    nested.mkdir(parents=True)
+    (nested / "base.md").write_text("base", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "base")
+    base_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    (oracle_root / "ignored.md").write_text("ignored", encoding="utf-8")
+    (nested / "kept.md").write_text("kept", encoding="utf-8")
+
+    relative_paths = [
+        path.relative_to(repo).as_posix()
+        for path in changed_oracle_files(repo, base_commit)
+    ]
+
+    assert relative_paths == ["oracles/nested/kept.md"]
 
 
 def test_has_deleted_oracle_files_detects_base_to_head_deletion(

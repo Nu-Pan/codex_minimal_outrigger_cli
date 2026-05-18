@@ -3,7 +3,7 @@
 import fnmatch
 import os
 import subprocess
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from .errors import CmocError
 
@@ -388,7 +388,7 @@ def _matches_root_gitignore(pattern: str, relative_path: str) -> bool:
         )
 
     if "/" in normalized:
-        return fnmatch.fnmatch(relative_path, normalized)
+        return PurePosixPath(relative_path).match(normalized)
 
     return any(
         fnmatch.fnmatch(part, normalized)

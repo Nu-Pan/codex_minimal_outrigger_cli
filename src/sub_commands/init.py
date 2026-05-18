@@ -2,12 +2,17 @@
 
 from pathlib import Path
 
+from commons.command_runner import run_command
 from commons.timing import StepTimer
 from commons.repo import commit_if_changed, ensure_cmoc_ignored
 
 
-def cmoc_init_impl(repo_root: Path) -> None:
+def cmoc_init_impl(repo_root: Path | None = None) -> None:
     """cmoc 作業用ディレクトリを git 追跡対象外にする。"""
+    if repo_root is None:
+        run_command(cmoc_init_impl)
+        return
+
     # `.cmoc` ignore ルールと tracked file 解除を保証する。
     timer = StepTimer("init")
     timer.start("ensure .cmoc is ignored")

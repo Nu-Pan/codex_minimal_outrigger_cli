@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from commons.codex import parse_json_object, run_codex_exec
+from commons.command_runner import run_command
 from commons.errors import CmocError
 from commons.indexing import maintain_indexes
 from commons.repo import (
@@ -100,8 +101,12 @@ _DISCREPANCY_OUTPUT_SCHEMA: dict[str, object] = {
 }
 
 
-def cmoc_apply_impl(repo_root: Path) -> int:
+def cmoc_apply_impl(repo_root: Path | None = None) -> int | None:
     """oracle と実装のズレを Codex CLI へ追従させる。"""
+    if repo_root is None:
+        run_command(cmoc_apply_impl)
+        return None
+
     # apply は cmoc 作業ブランチ上でだけ実行できる。
     timer = StepTimer("apply")
     branch_name = current_branch(repo_root)
@@ -115,8 +120,8 @@ def cmoc_apply_impl(repo_root: Path) -> int:
     # oracle 更新以外の未コミット差分を拒否し、oracle 変更は先に commit する。
     timer.start("validate repository state")
     print("apply (1/4) validate repository state")
-    assert_only_oracles_uncommitted(repo_root)
     ensure_cmoc_ignored(repo_root)
+    assert_only_oracles_uncommitted(repo_root)
     commit_if_changed(repo_root, ["oracles"], "Update oracle files")
 
     # ユーザー向けステップとして INDEX.md を明示メンテナンスする。
@@ -227,6 +232,7 @@ def _commit_all_changes(repo_root: Path) -> None:
 
     # 実装差分によって INDEX.md が古くなった場合は commit 前に更新する。
     maintain_indexes(repo_root)
+    _assert_forbidden_paths_clean(repo_root)
     if not changed_paths(repo_root):
         return
 

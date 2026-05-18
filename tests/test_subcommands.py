@@ -1,6 +1,7 @@
 """サブコマンド本体の決定論的な制御ロジックのテスト。"""
 
 import subprocess
+import inspect
 from pathlib import Path
 
 import pytest
@@ -9,6 +10,7 @@ from pytest import MonkeyPatch
 from commons.errors import CmocError
 from sub_commands.apply import cmoc_apply_impl
 from sub_commands.apply import _DISCREPANCY_OUTPUT_SCHEMA
+from sub_commands.apply import _commit_all_changes
 from sub_commands.apply import _validate_discrepancy_payload
 from sub_commands.branch import cmoc_branch_impl
 from sub_commands.eval_oracles import cmoc_eval_oracles_impl
@@ -101,12 +103,15 @@ def test_eval_oracles_writes_report_with_fake_codex(
     assert "no fatal problems" in reports[0].read_text(encoding="utf-8")
 
 
-def test_eval_oracles_body_file_uses_pep8_module_name() -> None:
-    """`eval-oracles` の本体ファイルは PEP 8 準拠の module 名にする。"""
+def test_eval_oracles_body_file_uses_subcommand_name() -> None:
+    """`eval-oracles` の本体ファイルはサブコマンド名と一致させる。"""
     repo_root = Path(__file__).resolve().parents[1]
 
-    assert (repo_root / "src" / "sub_commands" / "eval_oracles.py").exists()
-    assert not (repo_root / "src" / "sub_commands" / "eval-oracles.py").exists()
+    body = repo_root / "src" / "sub_commands" / "eval-oracles.py"
+    wrapper = repo_root / "src" / "sub_commands" / "eval_oracles.py"
+    assert body.exists()
+    assert "def cmoc_eval_oracles_impl" in body.read_text(encoding="utf-8")
+    assert wrapper.exists()
 
 
 def test_apply_returns_complete_when_no_discrepancies(
@@ -155,6 +160,42 @@ def test_apply_rejects_non_cmoc_branch(tmp_path: Path) -> None:
         cmoc_apply_impl(repo)
 
     assert "cmoc apply must be run on a cmoc branch." in error.value.message
+
+
+def test_apply_guarantees_cmoc_ignored_before_uncommitted_check(
+    tmp_path: Path,
+) -> None:
+    """`cmoc apply` は未コミット差分検査より先に `.cmoc` 保証を行う。"""
+    repo = _init_repo(tmp_path)
+    _git(repo, "checkout", "-b", "cmoc_2026-05-10_22-21_10_123")
+    (repo / "app.py").write_text("changed\n", encoding="utf-8")
+
+    with pytest.raises(CmocError):
+        cmoc_apply_impl(repo)
+
+    assert "/.cmoc/" in (repo / ".gitignore").read_text(encoding="utf-8")
+
+
+def test_commit_all_changes_rechecks_forbidden_paths_after_index_update(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """INDEX メンテナンス後に禁止領域差分が出た場合は commit 前に止める。"""
+    repo = _init_repo(tmp_path)
+    (repo / "app.py").write_text("changed\n", encoding="utf-8")
+
+    def fake_maintain_indexes(repo_root: Path) -> bool:
+        oracle_index = repo_root / "oracles" / "INDEX.md"
+        oracle_index.parent.mkdir()
+        oracle_index.write_text("forbidden\n", encoding="utf-8")
+        return True
+
+    monkeypatch.setattr("sub_commands.apply.maintain_indexes", fake_maintain_indexes)
+
+    with pytest.raises(CmocError):
+        _commit_all_changes(repo)
+
+    assert _git(repo, "status", "--porcelain").stdout
 
 
 def test_apply_discrepancy_schema_rejects_incomplete_items() -> None:
@@ -217,6 +258,38 @@ def test_merge_merges_explicit_cmoc_branch_and_deletes_it(
     ).stdout.splitlines()
     assert (repo / "feature.txt").read_text(encoding="utf-8") == "feature\n"
     assert "cmoc_2026-05-10_22-21_10_123" not in branches
+
+
+def test_merge_auto_resolve_failure_does_not_print_manual_resolution(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """merge 開始前の自動解決失敗では merge state 手動解決を案内しない。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-m", "ignore cmoc")
+
+    with pytest.raises(CmocError):
+        cmoc_merge_impl(repo, None)
+
+    captured = capsys.readouterr()
+    assert "Manual resolution is required" not in captured.err
+
+
+def test_main_typer_functions_delegate_only_to_impls() -> None:
+    """Typer 対応関数は共通 runner ではなく対応する impl 呼び出しだけを持つ。"""
+    import main
+
+    source = inspect.getsource(main)
+
+    assert "def _run_command" not in source
+    assert "_run_command(" not in source
+    assert "cmoc_init_impl()" in source
+    assert "cmoc_branch_impl()" in source
+    assert "cmoc_eval_oracles_impl(full=full)" in source
+    assert "cmoc_apply_impl()" in source
+    assert "cmoc_merge_impl(cmoc_branch=cmoc_branch)" in source
 
 
 def test_merge_conflict_prompt_always_forbids_oracles_edit() -> None:
