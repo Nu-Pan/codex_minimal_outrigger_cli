@@ -5,40 +5,56 @@ from pathlib import Path
 from commons.codex import run_codex_exec
 from commons.indexing import maintain_indexes
 from commons.repo import (
+    changed_oracle_files,
     current_branch,
     ensure_cmoc_ignored,
+    has_deleted_oracle_files,
     head_commit,
     is_cmoc_branch,
     list_oracle_files,
     read_branch_base_commit,
-    changed_oracle_files,
 )
+from commons.timing import StepTimer
 from commons.timestamps import make_timestamp
 
 
 def cmoc_eval_oracles_impl(repo_root: Path, *, full: bool) -> None:
     """oracle 断片を Codex CLI で評価し、レポートを作る。"""
+    timer = StepTimer("eval-oracles")
+    timer.start("ensure .cmoc is ignored")
     print("eval-oracles (1/5) ensure .cmoc is ignored")
     ensure_cmoc_ignored(repo_root)
 
+    timer.start("maintain INDEX.md files")
     print("eval-oracles (2/5) maintain INDEX.md files")
     maintain_indexes(repo_root)
 
+    timer.start("select oracle files")
     print("eval-oracles (3/5) select oracle files")
     branch_name = current_branch(repo_root)
-    partial = is_cmoc_branch(branch_name) and not full
+    base_commit = None
+    deleted_oracles = False
+    if is_cmoc_branch(branch_name) and not full:
+        base_commit = read_branch_base_commit(repo_root, branch_name)
+        deleted_oracles = has_deleted_oracle_files(repo_root, base_commit)
+    partial = is_cmoc_branch(branch_name) and not full and not deleted_oracles
     all_oracle_files = list_oracle_files(repo_root)
     if partial:
-        changed_files = set(changed_oracle_files(repo_root, read_branch_base_commit(repo_root, branch_name)))
-        oracle_files = [path for path in all_oracle_files if path in changed_files]
+        assert base_commit is not None
+        changed_files = set(changed_oracle_files(repo_root, base_commit))
+        oracle_files = [
+            path for path in all_oracle_files if path in changed_files
+        ]
         mode = "partial"
     else:
         oracle_files = all_oracle_files
         mode = "full"
 
+    timer.start("evaluate oracle files")
     print("eval-oracles (4/5) evaluate oracle files")
     evaluations = []
-    for oracle_file in oracle_files:
+    for index, oracle_file in enumerate(oracle_files, start=1):
+        print(f"evaluate oracle ({index}/{len(oracle_files)}) {oracle_file}")
         output = run_codex_exec(
             repo_root,
             _evaluation_prompt(repo_root, oracle_file),
@@ -47,9 +63,17 @@ def cmoc_eval_oracles_impl(repo_root: Path, *, full: bool) -> None:
         )
         evaluations.append((oracle_file, output))
 
+    timer.start("write report")
     print("eval-oracles (5/5) write report")
-    report_path = _write_report(repo_root, mode, branch_name, head_commit(repo_root), evaluations)
+    report_path = _write_report(
+        repo_root,
+        mode,
+        branch_name,
+        head_commit(repo_root),
+        evaluations,
+    )
     print(str(report_path))
+    timer.report()
 
 
 def _evaluation_prompt(repo_root: Path, oracle_file: Path) -> str:
@@ -58,6 +82,9 @@ def _evaluation_prompt(repo_root: Path, oracle_file: Path) -> str:
         [
             "あなたはソフトウェア仕様のレビュー担当です。",
             f"`{repo_root}` 内の oracle ファイル `{oracle_file}` を評価してください。",
+            "対象 oracle だけで判断せず、同じ oracles ツリー内の関連仕様、",
+            "INDEX.md のルーティング情報、必要な実装・テスト・設定",
+            "ファイルも読んで評価してください。",
             "完了条件は、致命的な仕様問題の有無と根拠を報告することです。",
             "致命的な問題とは、主要ワークフローを壊す、完了判定を妨げる、または中核目的を満たしたと判断できなくする問題です。",
             f"`{repo_root / 'memo'}` は読み書き禁止です。",

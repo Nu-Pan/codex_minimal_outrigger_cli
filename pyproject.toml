@@ -9,7 +9,7 @@ dependencies = [
 ]
 
 [project.scripts]
-cmoc = "main:app"
+cmoc = "main:main"
 
 [build-system]
 requires = ["setuptools>=68"]

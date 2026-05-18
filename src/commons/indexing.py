@@ -35,10 +35,17 @@ def maintain_indexes(repo_root: Path, *, commit_changes: bool = True) -> bool:
     changed_paths: list[str] = []
     if ensure_cmoc_ignored(repo_root):
         changed_paths.append(".gitignore")
+        changed_paths.append(".cmoc")
     directories = _index_directories(repo_root)
-    for directory in sorted(directories, key=lambda path: len(path.parts), reverse=True):
+    for directory in sorted(
+        directories,
+        key=lambda path: len(path.parts),
+        reverse=True,
+    ):
         if _write_index_if_needed(repo_root, directory):
-            changed_paths.append((directory / "INDEX.md").relative_to(repo_root).as_posix())
+            changed_paths.append(
+                (directory / "INDEX.md").relative_to(repo_root).as_posix()
+            )
 
     if changed_paths and commit_changes:
         from .repo import commit_if_changed
@@ -50,9 +57,16 @@ def maintain_indexes(repo_root: Path, *, commit_changes: bool = True) -> bool:
 def _index_directories(repo_root: Path) -> list[Path]:
     """仕様の除外条件に従って INDEX.md 配置対象を列挙する。"""
     result: list[Path] = []
-    for directory in [repo_root, *[path for path in repo_root.rglob("*") if path.is_dir()]]:
+    directories = [
+        repo_root,
+        *[path for path in repo_root.rglob("*") if path.is_dir()],
+    ]
+    for directory in directories:
         relative_parts = directory.relative_to(repo_root).parts
-        if any(part.startswith(".") or part in _EXCLUDED_NAMES for part in relative_parts):
+        if any(
+            part.startswith(".") or part in _EXCLUDED_NAMES
+            for part in relative_parts
+        ):
             continue
         if _is_gitignored(repo_root, directory):
             continue
@@ -63,12 +77,18 @@ def _index_directories(repo_root: Path) -> list[Path]:
 def _write_index_if_needed(repo_root: Path, directory: Path) -> bool:
     """現在の直下項目から INDEX.md を更新し、差分があれば書く。"""
     index_path = directory / "INDEX.md"
-    old_content = index_path.read_text(encoding="utf-8") if index_path.exists() else ""
+    old_content = (
+        index_path.read_text(encoding="utf-8") if index_path.exists() else ""
+    )
     existing_entries = _parse_index_entries(old_content)
     entries: list[str] = []
 
     for child in sorted(directory.iterdir(), key=lambda path: path.name):
-        if child.name == "INDEX.md" or child.name.startswith(".") or child.name in _EXCLUDED_NAMES:
+        if (
+            child.name == "INDEX.md"
+            or child.name.startswith(".")
+            or child.name in _EXCLUDED_NAMES
+        ):
             continue
         if _is_gitignored(repo_root, child):
             continue
@@ -138,7 +158,8 @@ def _index_prompt(repo_root: Path, path: Path, digest: str) -> str:
             "あなたはリポジトリのルーティング文書を作るアシスタントです。",
             f"`{path}` の `INDEX.md` 目次情報を作成してください。",
             "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。",
-            "summary、read_this_when、do_not_read_this_when はそれぞれ日本語の文字列配列にしてください。",
+            "summary、read_this_when、do_not_read_this_when はそれぞれ",
+            "日本語の文字列配列にしてください。",
             "content_hash などの余計なプロパティは返さないでください。",
             f"`{repo_root / 'memo'}` は読み書き禁止です。",
             "ファイル編集は禁止です。",
@@ -186,13 +207,6 @@ def _is_gitignored(repo_root: Path, path: Path) -> bool:
     return result.returncode == 0
 
 
-def _string_list(value: object) -> list[str]:
-    """JSON 値を文字列配列として検査する。"""
-    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
-        raise ValueError("Expected list[str].")
-    return value
-
-
 def _validate_index_payload(value: object) -> None:
     """INDEX 生成用 Structured Output の schema を検査する。"""
     if not isinstance(value, dict):
@@ -211,6 +225,15 @@ def _validate_index_payload(value: object) -> None:
         _string_list(value.get(key))
 
 
+def _string_list(value: object) -> list[str]:
+    """JSON 値を文字列配列として検査する。"""
+    if not isinstance(value, list) or not all(
+        isinstance(item, str) for item in value
+    ):
+        raise ValueError("Expected list[str].")
+    return value
+
+
 def _bullet_lines(values: list[str]) -> list[str]:
     """Markdown 箇条書きへ変換する。"""
     return [f"- {value}" for value in values]
@@ -222,7 +245,11 @@ def _parse_index_entries(content: str) -> dict[str, str]:
     matches = list(re.finditer(r"(?m)^# `([^`]+)`\n", content))
     for index, match in enumerate(matches):
         start = match.start()
-        end = matches[index + 1].start() if index + 1 < len(matches) else len(content)
+        end = (
+            matches[index + 1].start()
+            if index + 1 < len(matches)
+            else len(content)
+        )
         entries[match.group(1)] = content[start:end].strip()
     return entries
 

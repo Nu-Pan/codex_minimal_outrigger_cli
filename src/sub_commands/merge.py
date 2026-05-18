@@ -11,32 +11,44 @@ from commons.repo import (
     is_cmoc_branch,
     run_git,
 )
+from commons.timing import StepTimer
+
+_MANUAL_RESOLUTION_MESSAGE = (
+    "Manual resolution is required. cmoc did not roll back the merge state."
+)
 
 
 def cmoc_merge_impl(repo_root: Path, cmoc_branch: str | None) -> None:
     """cmoc ブランチを現在の HEAD へ merge する。"""
-    print("merge (1/4) validate repository state")
-    assert_no_uncommitted_changes(repo_root)
-    ensure_cmoc_ignored(repo_root)
+    timer = StepTimer("merge")
+    try:
+        timer.start("validate repository state")
+        print("merge (1/4) validate repository state")
+        assert_no_uncommitted_changes(repo_root)
+        ensure_cmoc_ignored(repo_root)
 
-    print("merge (2/4) resolve source branch")
-    source_branch = cmoc_branch or _resolve_source_branch(repo_root)
+        timer.start("resolve source branch")
+        print("merge (2/4) resolve source branch")
+        source_branch = cmoc_branch or _resolve_source_branch(repo_root)
 
-    print("merge (3/4) run git merge")
-    result = run_git(repo_root, ["merge", "--no-ff", source_branch], check=False)
-    if result.returncode != 0:
-        try:
+        timer.start("run git merge")
+        print("merge (3/4) run git merge")
+        result = run_git(
+            repo_root,
+            ["merge", "--no-ff", source_branch],
+            check=False,
+        )
+        if result.returncode != 0:
             _resolve_conflicts(repo_root)
-        except Exception:
-            print(
-                "Manual conflict resolution is required. cmoc did not roll back the merge state.",
-                file=sys.stderr,
-            )
-            raise
 
-    print("merge (4/4) delete source branch if safe")
-    _delete_branch_if_safe(repo_root, source_branch)
-    print(f"merged branch: {source_branch}")
+        timer.start("delete source branch if safe")
+        print("merge (4/4) delete source branch if safe")
+        _delete_branch_if_safe(repo_root, source_branch)
+        print(f"merged branch: {source_branch}")
+        timer.report()
+    except Exception:
+        print(_MANUAL_RESOLUTION_MESSAGE, file=sys.stderr)
+        raise
 
 
 def _resolve_source_branch(repo_root: Path) -> str:
@@ -52,7 +64,8 @@ def _resolve_source_branch(repo_root: Path) -> str:
             "Failed to resolve cmoc branch automatically.",
             [
                 "Pass the cmoc branch name explicitly.",
-                "Delete or merge extra cmoc branches, then run the command again.",
+                "Delete or merge extra cmoc branches, then run the command "
+                "again.",
             ],
             "\n".join(candidates) or "No cmoc branch candidates.",
         )
@@ -65,7 +78,10 @@ def _resolve_conflicts(repo_root: Path) -> None:
     if not unmerged:
         raise CmocError(
             "git merge failed without unmerged paths.",
-            ["Inspect git status manually.", "Resolve the merge state, then run cmoc again."],
+            [
+                "Inspect git status manually.",
+                "Resolve the merge state, then run cmoc again.",
+            ],
         )
 
     run_codex_exec(
@@ -77,7 +93,10 @@ def _resolve_conflicts(repo_root: Path) -> None:
     if _files_with_conflict_markers(repo_root):
         raise CmocError(
             "Conflict markers remain after Codex CLI resolution.",
-            ["Resolve remaining conflict markers manually.", "Commit the merge manually."],
+            [
+                "Resolve remaining conflict markers manually.",
+                "Commit the merge manually.",
+            ],
             "\n".join(_files_with_conflict_markers(repo_root)),
         )
     for path in unmerged:
@@ -85,7 +104,10 @@ def _resolve_conflicts(repo_root: Path) -> None:
     if _unmerged_paths(repo_root):
         raise CmocError(
             "Unmerged paths remain after conflict resolution.",
-            ["Inspect git status manually.", "Resolve and commit the merge manually."],
+            [
+                "Inspect git status manually.",
+                "Resolve and commit the merge manually.",
+            ],
             "\n".join(_unmerged_paths(repo_root)),
         )
     run_git(repo_root, ["commit", "--no-edit"])
@@ -98,12 +120,6 @@ def _delete_branch_if_safe(repo_root: Path, branch_name: str) -> None:
         print(f"warning: source branch was not deleted: {branch_name}")
 
 
-def _unmerged_paths(repo_root: Path) -> list[str]:
-    """unmerged path を git から取得する。"""
-    result = run_git(repo_root, ["diff", "--name-only", "--diff-filter=U"])
-    return [line for line in result.stdout.splitlines() if line]
-
-
 def _files_with_conflict_markers(repo_root: Path) -> list[str]:
     """conflict marker が残るファイルを列挙する。"""
     matches: list[str] = []
@@ -112,9 +128,19 @@ def _files_with_conflict_markers(repo_root: Path) -> list[str]:
         if not path.exists() or not path.is_file():
             continue
         content = path.read_text(encoding="utf-8", errors="ignore")
-        if "<<<<<<<" in content or "=======" in content or ">>>>>>>" in content:
+        if (
+            "<<<<<<<" in content
+            or "=======" in content
+            or ">>>>>>>" in content
+        ):
             matches.append(relative)
     return matches
+
+
+def _unmerged_paths(repo_root: Path) -> list[str]:
+    """unmerged path を git から取得する。"""
+    result = run_git(repo_root, ["diff", "--name-only", "--diff-filter=U"])
+    return [line for line in result.stdout.splitlines() if line]
 
 
 def _conflict_prompt(repo_root: Path, unmerged: list[str]) -> str:
@@ -122,7 +148,8 @@ def _conflict_prompt(repo_root: Path, unmerged: list[str]) -> str:
     return "\n".join(
         [
             "あなたは merge conflict の解消担当です。",
-            f"`{repo_root}` の以下のファイルについて conflict marker を解消してください: {unmerged}",
+            f"`{repo_root}` の以下のファイルについて conflict marker を",
+            f"解消してください: {unmerged}",
             "完了条件は、conflict marker を削除し、未解決ファイルの有無を報告することです。",
             "`git add` と `git commit` は実行禁止です。",
             f"`{repo_root / 'oracles'}` は、既に conflict がある場合を除いて編集禁止です。",

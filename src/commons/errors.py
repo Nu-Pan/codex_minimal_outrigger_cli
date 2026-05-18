@@ -30,8 +30,8 @@ def format_error_report(error: BaseException) -> str:
         message = error.message
     else:
         actions = [
-            "Read the error detail below.",
-            "Fix the repository state or command input, then run cmoc again.",
+            "下の詳細を確認してください。",
+            "リポジトリ状態またはコマンド入力を修正してから、cmoc を再実行してください。",
         ]
         detail = str(error)
         message = error.__class__.__name__

@@ -16,6 +16,7 @@ from commons.repo import (
     list_oracle_files,
     run_git,
 )
+from commons.timing import StepTimer
 from commons.timestamps import make_timestamp
 
 APPLY_INCOMPLETE_EXIT_CODE = 2
@@ -48,15 +49,25 @@ _DISCREPANCY_OUTPUT_SCHEMA: dict[str, object] = {
                     },
                     "oracle_line_start": {
                         "type": ["integer", "null"],
-                        "description": "ズレの根拠となる oracle 記述の開始行。行番号を特定できない場合は null。",
+                        "description": (
+                            "ズレの根拠となる oracle 記述の開始行。"
+                            "行番号を特定できない場合は null。"
+                        ),
                     },
                     "oracle_line_end": {
                         "type": ["integer", "null"],
-                        "description": "ズレの根拠となる oracle 記述の終了行。行番号を特定できない場合は null。",
+                        "description": (
+                            "ズレの根拠となる oracle 記述の終了行。"
+                            "行番号を特定できない場合は null。"
+                        ),
                     },
                     "implementation_paths": {
                         "type": "array",
-                        "description": "ズレに関係する実装・テスト・設定ファイルの絶対パス。未実装などで該当ファイルを特定できない場合は空配列。",
+                        "description": (
+                            "ズレに関係する実装・テスト・設定ファイルの"
+                            "絶対パス。未実装などで該当ファイルを"
+                            "特定できない場合は空配列。"
+                        ),
                         "items": {"type": "string"},
                     },
                     "title": {
@@ -73,7 +84,10 @@ _DISCREPANCY_OUTPUT_SCHEMA: dict[str, object] = {
                     },
                     "reason": {
                         "type": "string",
-                        "description": "なぜ oracle と実装が明確にズレていると言えるのか。推測や未確認事項は含めない。",
+                        "description": (
+                            "なぜ oracle と実装が明確にズレていると"
+                            "言えるのか。推測や未確認事項は含めない。"
+                        ),
                     },
                     "suggested_fix": {
                         "type": "string",
@@ -88,6 +102,7 @@ _DISCREPANCY_OUTPUT_SCHEMA: dict[str, object] = {
 
 def cmoc_apply_impl(repo_root: Path) -> int:
     """oracle と実装のズレを Codex CLI へ追従させる。"""
+    timer = StepTimer("apply")
     branch_name = current_branch(repo_root)
     if not is_cmoc_branch(branch_name):
         raise CmocError(
@@ -96,21 +111,27 @@ def cmoc_apply_impl(repo_root: Path) -> int:
             f"Current branch: {branch_name}",
         )
 
+    timer.start("validate repository state")
     print("apply (1/4) validate repository state")
     assert_only_oracles_uncommitted(repo_root)
     ensure_cmoc_ignored(repo_root)
     commit_if_changed(repo_root, ["oracles"], "Update oracle files")
 
+    timer.start("maintain INDEX.md files")
     print("apply (2/4) maintain INDEX.md files")
     maintain_indexes(repo_root)
 
+    timer.start("investigate and apply discrepancies")
     print("apply (3/4) investigate and apply discrepancies")
     discrepancy_counts: list[int] = []
     completed = False
     for loop_index in range(1, 6):
         discrepancies = _investigate_discrepancies(repo_root)
         discrepancy_counts.append(len(discrepancies))
-        print(f"implementation loop ({loop_index}/5) discrepancies: {len(discrepancies)}")
+        print(
+            f"implementation loop ({loop_index}/5) discrepancies: "
+            f"{len(discrepancies)}"
+        )
         if not discrepancies:
             completed = True
             break
@@ -118,16 +139,28 @@ def cmoc_apply_impl(repo_root: Path) -> int:
         _assert_forbidden_paths_clean(repo_root)
         _commit_all_changes(repo_root)
 
+    timer.start("write report")
     print("apply (4/4) write report")
-    report_path = _write_apply_report(repo_root, branch_name, completed, discrepancy_counts)
+    report_path = _write_apply_report(
+        repo_root,
+        branch_name,
+        completed,
+        discrepancy_counts,
+    )
     print(str(report_path))
+    timer.report()
     return 0 if completed else APPLY_INCOMPLETE_EXIT_CODE
 
 
 def _investigate_discrepancies(repo_root: Path) -> list[dict[str, object]]:
     """oracle ファイルごとにズレ調査を実行する。"""
     discrepancies: list[dict[str, object]] = []
-    for oracle_file in list_oracle_files(repo_root):
+    oracle_files = list_oracle_files(repo_root)
+    for index, oracle_file in enumerate(oracle_files, start=1):
+        print(
+            f"investigate oracle ({index}/{len(oracle_files)}) "
+            f"{oracle_file}"
+        )
         payload = parse_json_object(
             run_codex_exec(
                 repo_root,
@@ -144,7 +177,10 @@ def _investigate_discrepancies(repo_root: Path) -> list[dict[str, object]]:
     return discrepancies
 
 
-def _apply_discrepancies(repo_root: Path, discrepancies: list[dict[str, object]]) -> None:
+def _apply_discrepancies(
+    repo_root: Path,
+    discrepancies: list[dict[str, object]],
+) -> None:
     """Codex CLI にズレ追従作業を依頼する。"""
     run_codex_exec(
         repo_root,
@@ -174,6 +210,9 @@ def _assert_forbidden_paths_clean(repo_root: Path) -> None:
 
 def _commit_all_changes(repo_root: Path) -> None:
     """未コミット差分を Codex 生成メッセージで commit する。"""
+    if not changed_paths(repo_root):
+        return
+    maintain_indexes(repo_root)
     if not changed_paths(repo_root):
         return
     message = run_codex_exec(
@@ -210,7 +249,13 @@ def _write_apply_report(
             "ファイル編集は禁止です。",
         ]
     )
-    report = run_codex_exec(repo_root, prompt, read_only=True, expect_json=False)
+    maintain_indexes(repo_root)
+    report = run_codex_exec(
+        repo_root,
+        prompt,
+        read_only=True,
+        expect_json=False,
+    )
     report_path.write_text(report, encoding="utf-8")
     return report_path
 
@@ -222,7 +267,10 @@ def _investigation_prompt(repo_root: Path, oracle_file: Path) -> str:
             "あなたはソフトウェア実装の監査担当です。",
             f"`{oracle_file}` と `{repo_root}` の実装との明確なズレを調査してください。",
             "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。",
-            "各ズレには oracle_path、oracle_line_start、oracle_line_end、implementation_paths、title、oracle_requirement、observed_implementation、reason、suggested_fix を含めてください。",
+            "各ズレには oracle_path、oracle_line_start、oracle_line_end、",
+            "implementation_paths、title、oracle_requirement、",
+            "observed_implementation、reason、suggested_fix を",
+            "含めてください。",
             "明確なズレがない場合だけ空配列を返してください。",
             f"`{repo_root / 'memo'}` は読み書き禁止です。",
             "ファイル編集は禁止です。",
@@ -230,7 +278,10 @@ def _investigation_prompt(repo_root: Path, oracle_file: Path) -> str:
     )
 
 
-def _apply_prompt(repo_root: Path, discrepancies: list[dict[str, object]]) -> str:
+def _apply_prompt(
+    repo_root: Path,
+    discrepancies: list[dict[str, object]],
+) -> str:
     """ズレ追従作業用 prompt を組み立てる。"""
     return "\n".join(
         [
@@ -283,13 +334,20 @@ def _validate_discrepancy_payload(value: object) -> None:
         if not isinstance(item, dict):
             raise ValueError(f"discrepancies[{index}] must be an object.")
         if set(item) != required_keys:
-            raise ValueError(f"discrepancies[{index}] keys do not match schema.")
+            raise ValueError(
+                f"discrepancies[{index}] keys do not match schema."
+            )
         _require_string(item, "oracle_path", index)
         _require_nullable_int(item, "oracle_line_start", index)
         _require_nullable_int(item, "oracle_line_end", index)
         paths = item["implementation_paths"]
-        if not isinstance(paths, list) or not all(isinstance(path, str) for path in paths):
-            raise ValueError(f"discrepancies[{index}].implementation_paths must be list[str].")
+        if not isinstance(paths, list) or not all(
+            isinstance(path, str) for path in paths
+        ):
+            raise ValueError(
+                f"discrepancies[{index}].implementation_paths must be "
+                "list[str]."
+            )
         for key in [
             "title",
             "oracle_requirement",
@@ -306,7 +364,13 @@ def _require_string(item: dict[str, object], key: str, index: int) -> None:
         raise ValueError(f"discrepancies[{index}].{key} must be a string.")
 
 
-def _require_nullable_int(item: dict[str, object], key: str, index: int) -> None:
+def _require_nullable_int(
+    item: dict[str, object],
+    key: str,
+    index: int,
+) -> None:
     """schema 上 integer|null の項目を検査する。"""
     if item[key] is not None and not isinstance(item[key], int):
-        raise ValueError(f"discrepancies[{index}].{key} must be integer or null.")
+        raise ValueError(
+            f"discrepancies[{index}].{key} must be integer or null."
+        )

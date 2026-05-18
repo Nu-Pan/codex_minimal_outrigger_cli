@@ -12,6 +12,7 @@ from commons.repo import (
     changed_oracle_files,
     ensure_cmoc_ignored,
     find_repo_root,
+    has_deleted_oracle_files,
     is_cmoc_branch,
     list_oracle_files,
 )
@@ -32,10 +33,32 @@ def test_ensure_cmoc_ignored_is_idempotent(tmp_path: Path) -> None:
 
     assert ensure_cmoc_ignored(repo) is True
     assert ensure_cmoc_ignored(repo) is False
-    assert (repo / ".gitignore").read_text(encoding="utf-8").count(".cmoc") == 1
+    assert (
+        repo / ".gitignore"
+    ).read_text(encoding="utf-8").count(".cmoc") == 1
 
 
-def test_list_oracle_files_excludes_index_and_gitignored_files(tmp_path: Path) -> None:
+def test_ensure_cmoc_ignored_untracks_existing_cmoc_files(
+    tmp_path: Path,
+) -> None:
+    """既に tracked な `.cmoc` 配下ファイルは git index から外す。"""
+    repo = _init_repo(tmp_path)
+    cmoc_file = repo / ".cmoc" / "logs" / "tracked.log"
+    cmoc_file.parent.mkdir(parents=True)
+    cmoc_file.write_text("tracked\n", encoding="utf-8")
+    _git(repo, "add", "-f", ".cmoc/logs/tracked.log")
+    _git(repo, "commit", "-m", "track cmoc")
+
+    assert ensure_cmoc_ignored(repo) is True
+
+    assert _git(repo, "ls-files", "--", ".cmoc").stdout == ""
+    assert cmoc_file.exists()
+    assert "/.cmoc/" in (repo / ".gitignore").read_text(encoding="utf-8")
+
+
+def test_list_oracle_files_excludes_index_and_gitignored_files(
+    tmp_path: Path,
+) -> None:
     """oracle 列挙は INDEX.md と gitignore 対象を除外する。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("oracles/ignored.md\n", encoding="utf-8")
@@ -70,7 +93,9 @@ def test_changed_oracle_files_uses_cmoc_branch_base_and_uncommitted_changes(
     assert names == ["committed.md", "working.md"]
 
 
-def test_changed_oracle_files_excludes_gitignored_files(tmp_path: Path) -> None:
+def test_changed_oracle_files_excludes_gitignored_files(
+    tmp_path: Path,
+) -> None:
     """部分評価対象でも gitignore 対象の oracle ファイルは除外する。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("oracles/ignored.md\n", encoding="utf-8")
@@ -84,6 +109,25 @@ def test_changed_oracle_files_excludes_gitignored_files(tmp_path: Path) -> None:
     (oracle_root / "ignored.md").write_text("ignored", encoding="utf-8")
 
     assert changed_oracle_files(repo, base_commit) == []
+
+
+def test_has_deleted_oracle_files_detects_base_to_head_deletion(
+    tmp_path: Path,
+) -> None:
+    """cmoc ブランチ上の oracle 削除を全体評価切替用に検出する。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "deleted.md").write_text("delete me\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "oracle")
+    base_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    (oracle_root / "deleted.md").unlink()
+    _git(repo, "add", "-u", "oracles")
+    _git(repo, "commit", "-m", "delete oracle")
+
+    assert has_deleted_oracle_files(repo, base_commit) is True
 
 
 def test_assert_only_oracles_uncommitted_rejects_non_oracle_changes(
@@ -110,7 +154,9 @@ def test_is_cmoc_branch(branch_name: str, expected: bool) -> None:
     assert is_cmoc_branch(branch_name) is expected
 
 
-def test_branch_base_commit_path_points_under_cmoc_branch_dir(tmp_path: Path) -> None:
+def test_branch_base_commit_path_points_under_cmoc_branch_dir(
+    tmp_path: Path,
+) -> None:
     """branch base commit 記録先は `.cmoc/branch` 配下になる。"""
     repo = _init_repo(tmp_path)
 

@@ -46,7 +46,10 @@ def test_maintain_indexes_generates_routing_entries_and_respects_gitignore(
     assert "kept summary" in content
     assert "# `ignored.txt`" not in content
     assert codex_kwargs
-    assert all(kwargs["output_schema"] == _INDEX_OUTPUT_SCHEMA for kwargs in codex_kwargs)
+    assert all(
+        kwargs["output_schema"] == _INDEX_OUTPUT_SCHEMA
+        for kwargs in codex_kwargs
+    )
 
 
 def test_maintain_indexes_retries_invalid_structured_output(
@@ -72,9 +75,20 @@ def test_maintain_indexes_retries_invalid_structured_output(
                 "COUNT=$((COUNT + 1))",
                 "echo \"$COUNT\" > \"$STATE\"",
                 "if [ \"$COUNT\" -eq 1 ]; then",
-                "  echo '{\"content_hash\":\"abc\",\"summary\":\"not a list\",\"read_this_when\":[\"read\"],\"do_not_read_this_when\":[\"skip\"]}'",
+                (
+                    "  printf '%s\\n' "
+                    "'{\"content_hash\":\"abc\","
+                    "\"summary\":\"not a list\","
+                    "\"read_this_when\":[\"read\"],"
+                    "\"do_not_read_this_when\":[\"skip\"]}'"
+                ),
                 "else",
-                "  echo '{\"summary\":[\"valid summary\"],\"read_this_when\":[\"read\"],\"do_not_read_this_when\":[\"skip\"]}'",
+                (
+                    "  printf '%s\\n' "
+                    "'{\"summary\":[\"valid summary\"],"
+                    "\"read_this_when\":[\"read\"],"
+                    "\"do_not_read_this_when\":[\"skip\"]}'"
+                ),
                 "fi",
             ]
         ),
@@ -100,7 +114,9 @@ def test_maintain_indexes_does_not_call_codex_when_index_is_current(
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     target = repo / "target.txt"
     target.write_text("target\n", encoding="utf-8")
-    readme_digest = hashlib.sha256((repo / "README.md").read_bytes()).hexdigest()
+    readme_digest = hashlib.sha256(
+        (repo / "README.md").read_bytes()
+    ).hexdigest()
     digest = hashlib.sha256(target.read_bytes()).hexdigest()
     (repo / "INDEX.md").write_text(
         "\n".join(
@@ -149,7 +165,10 @@ def test_maintain_indexes_does_not_call_codex_when_index_is_current(
     _git(repo, "commit", "-m", "content")
 
     def fail_codex(*args: object, **kwargs: object) -> str:
-        raise AssertionError("codex exec should not be called for a fresh INDEX.md")
+        """最新 INDEX では呼ばれてはいけない fake Codex CLI。"""
+        raise AssertionError(
+            "codex exec should not be called for a fresh INDEX.md"
+        )
 
     monkeypatch.setattr("commons.indexing.run_codex_exec", fail_codex)
 
@@ -170,6 +189,7 @@ def test_maintain_indexes_commits_only_maintenance_paths(
     _git(repo, "commit", "-m", "target")
 
     def fake_codex(*args: object, **kwargs: object) -> str:
+        """INDEX 生成用の最小 Structured Output を返す。"""
         return json.dumps(
             {
                 "summary": ["summary"],
@@ -182,7 +202,13 @@ def test_maintain_indexes_commits_only_maintenance_paths(
 
     changed = maintain_indexes(repo, commit_changes=True)
     status = _git(repo, "status", "--porcelain").stdout
-    last_commit_paths = _git(repo, "show", "--name-only", "--pretty=format:", "HEAD").stdout
+    last_commit_paths = _git(
+        repo,
+        "show",
+        "--name-only",
+        "--pretty=format:",
+        "HEAD",
+    ).stdout
 
     assert changed is True
     assert "?? user_work.txt" in status

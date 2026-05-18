@@ -4,6 +4,7 @@ import sys
 from collections.abc import Callable
 from pathlib import Path
 
+import click
 import typer
 
 from commons.errors import format_error_report
@@ -30,9 +31,13 @@ def branch_command() -> None:
 
 
 @app.command("eval-oracles")
-def eval_oracles_command(full: bool = typer.Option(False, "--full", "-f")) -> None:
+def eval_oracles_command(
+    full: bool = typer.Option(False, "--full", "-f"),
+) -> None:
     """Evaluate oracle files."""
-    _run_command(lambda repo_root: cmoc_eval_oracles_impl(repo_root, full=full))
+    _run_command(
+        lambda repo_root: cmoc_eval_oracles_impl(repo_root, full=full)
+    )
 
 
 @app.command("apply")
@@ -62,7 +67,22 @@ def _run_command(handler: Callable[[Path], int | None]) -> None:
         raise typer.Exit(code) from error
 
 
+def main() -> None:
+    """Typer の parse error も共通エラーレポートへ変換して起動する。"""
+    try:
+        app(standalone_mode=False)
+    except typer.Exit as exit_error:
+        raise SystemExit(exit_error.exit_code) from exit_error
+    except click.ClickException as error:
+        print(format_error_report(error))
+        raise SystemExit(error.exit_code) from error
+    except Exception as error:
+        print(format_error_report(error))
+        code = getattr(error, "exit_code", 1)
+        raise SystemExit(code) from error
+
+
 if __name__ == "__main__":
     # `bin/cmoc` から直接実行される経路でも typer を起動する。
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    app()
+    main()

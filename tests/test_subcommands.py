@@ -24,10 +24,42 @@ def test_init_adds_cmoc_ignore_and_commits_it(tmp_path: Path) -> None:
 
     assert ".cmoc" in (repo / ".gitignore").read_text(encoding="utf-8")
     assert _git(repo, "status", "--porcelain").stdout == ""
-    assert _git(repo, "log", "-1", "--pretty=%s").stdout.strip() == "Initialize cmoc"
+    assert (
+        _git(repo, "log", "-1", "--pretty=%s").stdout.strip()
+        == "Initialize cmoc"
+    )
 
 
-def test_branch_creates_cmoc_branch_and_records_base_commit(tmp_path: Path) -> None:
+def test_init_untracks_existing_cmoc_file_and_commits_it(
+    tmp_path: Path,
+) -> None:
+    """`cmoc init` は tracked `.cmoc` ファイルの追跡解除も commit する。"""
+    repo = _init_repo(tmp_path)
+    cmoc_file = repo / ".cmoc" / "logs" / "tracked.log"
+    cmoc_file.parent.mkdir(parents=True)
+    cmoc_file.write_text("tracked\n", encoding="utf-8")
+    _git(repo, "add", "-f", ".cmoc/logs/tracked.log")
+    _git(repo, "commit", "-m", "track cmoc")
+
+    cmoc_init_impl(repo)
+
+    assert _git(repo, "ls-files", "--", ".cmoc").stdout == ""
+    assert cmoc_file.exists()
+    assert _git(repo, "status", "--porcelain").stdout == ""
+    last_commit_paths = _git(
+        repo,
+        "show",
+        "--name-only",
+        "--pretty=format:",
+        "HEAD",
+    ).stdout
+    assert ".gitignore" in last_commit_paths
+    assert ".cmoc/logs/tracked.log" in last_commit_paths
+
+
+def test_branch_creates_cmoc_branch_and_records_base_commit(
+    tmp_path: Path,
+) -> None:
     """`cmoc branch` は branch 作成と base commit 記録を行う。"""
     repo = _init_repo(tmp_path)
     base_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
@@ -50,7 +82,10 @@ def test_eval_oracles_writes_report_with_fake_codex(
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
 
-    monkeypatch.setattr("sub_commands.eval_oracles.maintain_indexes", lambda repo_root: False)
+    monkeypatch.setattr(
+        "sub_commands.eval_oracles.maintain_indexes",
+        lambda repo_root: False,
+    )
     monkeypatch.setattr(
         "sub_commands.eval_oracles.run_codex_exec",
         lambda *args, **kwargs: "no fatal problems",
@@ -78,7 +113,10 @@ def test_apply_returns_complete_when_no_discrepancies(
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "oracle")
 
-    monkeypatch.setattr("sub_commands.apply.maintain_indexes", lambda repo_root: False)
+    monkeypatch.setattr(
+        "sub_commands.apply.maintain_indexes",
+        lambda repo_root: False,
+    )
     codex_kwargs: list[dict[str, object]] = []
 
     def fake_codex(*args: object, **kwargs: object) -> str:
@@ -145,7 +183,9 @@ def test_apply_discrepancy_schema_rejects_near_miss_keys() -> None:
         )
 
 
-def test_merge_merges_explicit_cmoc_branch_and_deletes_it(tmp_path: Path) -> None:
+def test_merge_merges_explicit_cmoc_branch_and_deletes_it(
+    tmp_path: Path,
+) -> None:
     """`cmoc merge <branch>` は clean tree で merge し、安全なら branch を消す。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
@@ -160,7 +200,11 @@ def test_merge_merges_explicit_cmoc_branch_and_deletes_it(tmp_path: Path) -> Non
 
     cmoc_merge_impl(repo, "cmoc_2026-05-10_22-21_10_123")
 
-    branches = _git(repo, "branch", "--format=%(refname:short)").stdout.splitlines()
+    branches = _git(
+        repo,
+        "branch",
+        "--format=%(refname:short)",
+    ).stdout.splitlines()
     assert (repo / "feature.txt").read_text(encoding="utf-8") == "feature\n"
     assert "cmoc_2026-05-10_22-21_10_123" not in branches
 
