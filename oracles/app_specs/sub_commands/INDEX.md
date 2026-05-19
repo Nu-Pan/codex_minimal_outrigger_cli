@@ -2,29 +2,34 @@
 
 ## Summary
 
-- `cmoc apply` サブコマンドの仕様を定義している。
-- `<repo-root>` の実装を `<repo-root>/oracles` の正本仕様断片へ追従させるための前提条件、作業手順、ループ処理、レポート出力、終了コードを扱う。
-- 不整合調査を Codex CLI に oracle ファイル単位で依頼し、Structured Output の `discrepancies` 配列として受け取る schema を定義している。
-- 不整合追従作業、最大5回の反復、編集禁止領域の差分検出、コミット、作業レポート保存先の仕様を定義している。
+- `cmoc apply` サブコマンドの正本仕様断片。
+- `<repo-root>` の実装を `<repo-root>/oracles` の正本仕様断片へ追従させるための事前条件、実行手順、不整合修正ループ、Codex CLI への依頼内容、作業レポート、終了コードを定義する。
+- `--repeat`/`-r` による不整合修正ループ回数、デフォルト値 5、回数上限到達時の扱いを定義する。
+- 不整合調査では oracle ファイルごとに Codex CLI を呼び出し、Structured Output の `discrepancies` 配列として明確な不整合を受け取る仕様を定義する。
+- apply 実行時の oracle 差分自動コミット、実装追従後の編集禁止領域チェック、変更コミット、`.cmoc/reports/apply/<time-stamp>.md` へのレポート保存を扱う。
 
 ## Read this when
 
-- `cmoc apply` の実装、修正、テストを行うとき。
-- `<repo-root>/oracles` と実装の不整合を検出する処理や Structured Output schema を確認するとき。
-- `cmoc apply` が Codex CLI をどのように呼び出して調査・追従・レポート作成を行うべきか確認するとき。
-- `cmoc apply` の事前条件、未コミット差分の扱い、自動コミット、ループ回数上限、終了コードの仕様を確認するとき。
-- `<repo-root>/.cmoc/reports/apply/<time-stamp>.md` に保存する作業レポートの内容や標準出力の仕様を確認するとき。
+- `cmoc apply` の引数、事前条件、処理順序、終了コードを実装・確認したいとき。
+- `cmoc apply` が `<cmoc-branch>` 上でのみ動作することや、`<repo-root>/oracles` 外の未コミット差分をエラーにする条件を確認したいとき。
+- apply 実行時に `<repo-root>/.cmoc` を git 追跡対象外に保証する処理や、`oracles` 配下の未コミット差分を自動コミットする処理を調べたいとき。
+- oracles と実装の不整合調査を Codex CLI にどう依頼し、Structured Output の `discrepancies` をどう解釈するか実装したいとき。
+- 不整合追従作業で Codex CLI に渡す補足情報、編集禁止ディレクトリの差分検査、実装変更のコミット方針を確認したいとき。
+- `--repeat`/`-r` の意味、デフォルト反復回数、不整合修正ループが上限に達した場合の正常系扱いを確認したいとき。
+- `cmoc apply` の作業レポートに含める項目、保存先、標準出力へ流すレポートパスを実装・テストしたいとき。
 
 ## Do not read this when
 
-- `cmoc apply` 以外のサブコマンド仕様だけを調べているとき。
-- cmoc 自体の開発ルール、設計ルール、環境構築手順を調べているとき。
-- `oracles` のルーティング規則や INDEX.md の書き方だけを調べているとき。
-- Codex CLI に依頼する一般的な実装作業の仕様で、`cmoc apply` の不整合調査・追従ループ・レポート出力に関係しないとき。
+- `cmoc init`、`cmoc branch`、`cmoc eval-oracles`、`cmoc merge` など apply 以外のサブコマンド仕様だけを調べたいとき。
+- Codex CLI 呼び出し表示、stdout 進捗表示、共通エラー処理、タイムスタンプ形式など、サブコマンド横断の共通仕様だけを確認したいとき。
+- `INDEX.md` 自動メンテナンスや oracle ファイル列挙など、apply 固有ではない共通処理の詳細を調べたいとき。
+- cmoc 自体の Python 実装規約、テスト規約、開発環境、ディレクトリ構成など開発者向けルールだけを確認したいとき。
+- `<repo-root>/oracles` に書く仕様断片の内容そのものや、個別機能の正本仕様を探しているとき。
+- README、AGENTS、memo、oracles などの閲覧・編集可否に関するリポジトリ運用ルールだけを確認したいとき。
 
 ## hash
 
-- 4653b4ae85942f593f585a36c469f6e1aa65955e886d492509844a2f6a108cc4
+- 6a256318c99311fac3088517b931206017a786bccbde97db8dda3ce9c5ca3a53
 
 # `branch.md`
 

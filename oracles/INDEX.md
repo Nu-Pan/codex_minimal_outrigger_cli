@@ -2,16 +2,16 @@
 
 ## Summary
 
-- cmoc のアプリケーション仕様断片を集約するディレクトリです。
-- Codex CLI 呼び出し、コンソール出力、共通エラーハンドリング、`INDEX.md` 自動メンテナンス、対象リポジトリ探索、`.cmoc`、タイムスタンプなど、サブコマンド横断の実行時仕様へのルーティングを提供します。
-- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` の個別仕様を集約する `sub_commands` への導線を含みます。
-- cmoc 利用者向けの初期セットアップや、branch、oracle 評価、apply、merge までの全体ワークフローを確認するための仕様断片も含みます。
+- `oracles/app_specs/INDEX.md` は、cmoc のアプリケーション仕様断片を読むためのルーティング文書です。
+- Codex CLI 呼び出し、コンソール出力、共通エラーハンドリング、`INDEX.md` 自動メンテナンス、対象リポジトリ探索、`.cmoc` 管理、タイムスタンプなど、サブコマンド横断の実行時仕様への導線をまとめています。
+- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` の個別仕様を集約する `sub_commands` への入口を提供します。
+- cmoc 利用者向けの PATH 設定、初期化、作業用ブランチ作成、oracle 評価、実装反映、マージまでの全体ワークフロー仕様への導線も含みます。
 
 ## Read this when
 
-- cmoc のアプリケーション実行時仕様のうち、どの個別仕様ファイルやサブディレクトリを読むべきか判断したいとき。
+- cmoc のアプリケーション実行時仕様について、どの個別仕様ファイルやサブディレクトリを読むべきか判断したいとき。
 - Codex CLI 連携、プロンプト構成、サンドボックス指定、Structured Output、ログ保存、リトライ、自然言語の使用方針を調べたいとき。
-- サブコマンド実行中の stdout 進捗表示、`codex exec` 呼び出し表示、完了時の時間レポート、共通エラー報告、終了ステータスを実装・確認するとき。
+- サブコマンド実行中の stdout 進捗表示、`codex exec` 呼び出し表示、完了時の時間レポート、共通エラー報告、終了ステータスを実装または確認するとき。
 - `<repo-root>` の発見、oracle ファイル列挙、`.cmoc` の git 追跡対象外保証、タイムスタンプ生成など、サブコマンド横断の共通挙動を確認したいとき。
 - `<repo-root>` 配下へ自動配置される `INDEX.md` の対象、除外規則、フォーマット、Structured Output による目次生成、メンテナンス順序や実行タイミングを調べたいとき。
 - `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` の個別仕様への入口を探しているとき。
@@ -28,7 +28,7 @@
 
 ## hash
 
-- 3d9cd924e49aa59a80f0bd5937bb4a011681cbf4341e1f5ddd346c550485085f
+- c40b084f9f404a11406f36ed91e06d3a7c5f33221129837258eef53c94c3590a
 
 # `dev_rules`
 
