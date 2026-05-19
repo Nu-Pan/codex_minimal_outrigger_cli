@@ -1,6 +1,16 @@
 """サブコマンドのステップ時間計測。"""
 
+from math import floor
 from time import perf_counter
+
+
+def format_duration(duration_seconds: float) -> str:
+    """oracle 指定の経過時間表示へ変換する。"""
+    total_tenths = max(0, floor(duration_seconds * 10))
+    total_seconds, msec = divmod(total_tenths, 10)
+    total_minutes, sec = divmod(total_seconds, 60)
+    hour, minute = divmod(total_minutes, 60)
+    return f"{hour:2d}h {minute:2d}m {sec:2d}.{msec}s"
 
 
 class StepTimer:
@@ -41,8 +51,8 @@ class StepTimer:
         self.finish_current()
         print(f"{self.command_name} step timings:")
         for name, duration in self._durations:
-            print(f"- {name}: {duration:.3f}s")
+            print(f"- {name}: {format_duration(duration)}")
         print(
             f"{self.command_name} total elapsed: "
-            f"{perf_counter() - self._started:.3f}s"
+            f"{format_duration(perf_counter() - self._started)}"
         )

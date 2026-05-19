@@ -101,10 +101,19 @@ _DISCREPANCY_OUTPUT_SCHEMA: dict[str, object] = {
 }
 
 
-def cmoc_apply_impl(repo_root: Path | None = None) -> int | None:
+def cmoc_apply_impl(
+    repo_root: Path | None = None,
+    *,
+    repeat: int = 5,
+) -> int | None:
     """oracle と実装の不整合を Codex CLI へ追従させる。"""
     if repo_root is None:
-        run_command(cmoc_apply_impl)
+        run_command(
+            lambda resolved_repo_root: cmoc_apply_impl(
+                resolved_repo_root,
+                repeat=repeat,
+            )
+        )
         return None
 
     # apply は cmoc 作業ブランチ上でだけ実行できる。
@@ -135,16 +144,23 @@ def cmoc_apply_impl(repo_root: Path | None = None) -> int | None:
     print("apply (2/4) maintain INDEX.md files")
     maintain_indexes(repo_root)
 
-    # 不整合調査と追従作業を最大 5 回まで反復する。
+    if repeat < 0:
+        raise CmocError(
+            "Repeat count must not be negative.",
+            ["Pass a zero or positive integer to --repeat."],
+            f"repeat: {repeat}",
+        )
+
+    # 不整合調査と追従作業を指定回数まで反復する。
     timer.start("investigate and apply discrepancies")
     print("apply (3/4) investigate and apply discrepancies")
     discrepancy_counts: list[int] = []
     completed = False
-    for loop_index in range(1, 6):
+    for loop_index in range(1, repeat + 1):
         discrepancies = _investigate_discrepancies(repo_root)
         discrepancy_counts.append(len(discrepancies))
         print(
-            f"implementation loop ({loop_index}/5) discrepancies: "
+            f"implementation loop ({loop_index}/{repeat}) discrepancies: "
             f"{len(discrepancies)}"
         )
         if not discrepancies:

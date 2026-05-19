@@ -4,7 +4,6 @@ from pathlib import Path
 
 from commons.command_runner import run_command
 from commons.repo import (
-    assert_paths_clean,
     commit_if_changed,
     ensure_cmoc_ignored,
 )
@@ -21,7 +20,6 @@ def cmoc_init_impl(repo_root: Path | None = None) -> None:
     timer = StepTimer("init")
     timer.start("ensure .cmoc is ignored")
     print("init (1/2) ensure .cmoc is ignored")
-    assert_paths_clean(repo_root, [".gitignore", ".cmoc"])
     ensure_cmoc_ignored(repo_root)
 
     # 初期化によって発生した `.gitignore` や index 変更だけを commit する。

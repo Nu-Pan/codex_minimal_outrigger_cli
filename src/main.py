@@ -13,7 +13,7 @@ from sub_commands.eval_oracles import cmoc_eval_oracles_impl
 from sub_commands.init import cmoc_init_impl
 from sub_commands.merge import cmoc_merge_impl
 
-app = typer.Typer(no_args_is_help=True)
+app = typer.Typer(name="cmoc", no_args_is_help=True)
 
 
 @app.command("init")
@@ -37,9 +37,11 @@ def eval_oracles_command(
 
 
 @app.command("apply")
-def apply_command() -> None:
+def apply_command(
+    repeat: int = typer.Option(5, "--repeat", "-r"),
+) -> None:
     """Apply oracle requirements to implementation."""
-    cmoc_apply_impl()
+    cmoc_apply_impl(repeat=repeat)
 
 
 @app.command("merge")
@@ -52,7 +54,7 @@ def main() -> None:
     """Typer の parse error も共通エラーレポートへ変換して起動する。"""
     # standalone_mode=False で Click/Typer の例外を cmoc 側で整形する。
     try:
-        app(standalone_mode=False)
+        app(prog_name="cmoc", standalone_mode=False)
     except typer.Exit as exit_error:
         raise SystemExit(exit_error.exit_code) from exit_error
     except click.ClickException as error:

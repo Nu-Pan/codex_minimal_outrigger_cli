@@ -2,8 +2,10 @@
 
 import fnmatch
 import os
+import shutil
 import subprocess
-from pathlib import Path, PurePosixPath
+import tempfile
+from pathlib import Path
 
 from .errors import CmocError
 
@@ -172,16 +174,20 @@ def list_oracle_files(repo_root: Path) -> list[Path]:
     if not oracle_root.exists():
         return []
 
-    # INDEX.md と .gitignore 対象を除いた全ファイルを列挙する。
-    files: list[Path] = []
+    # INDEX.md と root .gitignore 対象を除いた全ファイルを列挙する。
+    candidates: list[Path] = []
     for path in oracle_root.rglob("*"):
         if not path.is_file() or path.name == "INDEX.md":
             continue
-        relative = path.relative_to(repo_root).as_posix()
-        if _is_root_gitignored(repo_root, relative):
-            continue
-        files.append(path)
-    return sorted(files)
+        candidates.append(path)
+
+    relatives = [path.relative_to(repo_root).as_posix() for path in candidates]
+    ignored = _root_gitignored_paths(repo_root, relatives)
+    return sorted(
+        path
+        for path, relative in zip(candidates, relatives, strict=True)
+        if relative not in ignored
+    )
 
 
 def changed_oracle_files(repo_root: Path, base_commit: str) -> list[Path]:
@@ -239,34 +245,35 @@ def changed_oracle_files(repo_root: Path, base_commit: str) -> list[Path]:
             collected.add(repo_root / line[3:])
 
     # 削除済み、INDEX.md、root .gitignore 対象は評価対象から除外する。
-    return sorted(
+    existing = [
         path
         for path in collected
         if path.exists()
         and path.is_file()
         and path.name != "INDEX.md"
-        and not _is_root_gitignored(
-            repo_root,
-            path.relative_to(repo_root).as_posix(),
-        )
+    ]
+    relatives = [path.relative_to(repo_root).as_posix() for path in existing]
+    ignored = _root_gitignored_paths(repo_root, relatives)
+    return sorted(
+        path
+        for path, relative in zip(existing, relatives, strict=True)
+        if relative not in ignored
     )
 
 
 def has_deleted_oracle_files(repo_root: Path, base_commit: str) -> bool:
-    """base commit から HEAD までの oracle 削除有無を判定する。"""
-    # 全体評価への切替条件は committed な base..HEAD の削除だけに限定する。
-    committed = run_git(
-        repo_root,
-        [
-            "diff",
-            "--name-only",
-            "--diff-filter=D",
-            f"{base_commit}..HEAD",
-            "--",
-            "oracles",
-        ],
-    )
-    return bool(committed.stdout.strip())
+    """評価モード切替用に oracle 削除有無を判定する。"""
+    # committed、working tree、staging area の削除をすべて切替条件にする。
+    commands = [
+        ["diff", "--name-only", "--diff-filter=D", f"{base_commit}..HEAD"],
+        ["diff", "--name-only", "--diff-filter=D", "HEAD"],
+        ["diff", "--cached", "--name-only", "--diff-filter=D"],
+    ]
+    for command in commands:
+        result = run_git(repo_root, [*command, "--", "oracles"])
+        if result.stdout.strip():
+            return True
+    return False
 
 
 def read_branch_base_commit(repo_root: Path, branch_name: str) -> str:
@@ -354,71 +361,42 @@ def _tracked_cmoc_paths(repo_root: Path) -> list[str]:
 
 def _is_root_gitignored(repo_root: Path, relative_path: str) -> bool:
     """root `.gitignore` の pattern だけで ignore 対象か判定する。"""
-    # oracles 列挙仕様では下位 .gitignore や Git の exclude source は使わない。
+    return relative_path in _root_gitignored_paths(repo_root, [relative_path])
+
+
+def _root_gitignored_paths(repo_root: Path, relative_paths: list[str]) -> set[str]:
+    """root `.gitignore` だけを Git の wildmatch semantics で評価する。"""
     gitignore = repo_root / ".gitignore"
-    if not gitignore.exists():
-        return False
+    if not relative_paths or not gitignore.exists():
+        return set()
 
-    ignored = False
-    for raw_line in gitignore.read_text(encoding="utf-8").splitlines():
-        pattern = _normalize_gitignore_pattern(raw_line)
-        if pattern is None:
-            continue
-        if pattern.startswith("!"):
-            if _matches_root_gitignore(pattern[1:], relative_path):
-                ignored = False
-            continue
-        if _matches_root_gitignore(pattern, relative_path):
-            ignored = True
-    return ignored
-
-
-def _normalize_gitignore_pattern(raw_line: str) -> str | None:
-    """root `.gitignore` の 1 行を評価用 pattern に整形する。"""
-    # 空行と comment 行は ignore pattern ではない。
-    line = raw_line.rstrip()
-    if not line or line.lstrip().startswith("#"):
-        return None
-    return line.strip()
-
-
-def _matches_root_gitignore(pattern: str, relative_path: str) -> bool:
-    """root `.gitignore` の単純な file/dir/glob pattern を照合する。"""
-    # root 起点指定、パス指定、basename 指定の主要 gitignore 形式を扱う。
-    rooted = pattern.startswith("/")
-    directory_only = pattern.endswith("/")
-    normalized = pattern.strip("/")
-    if not normalized:
-        return False
-
-    if directory_only:
-        if rooted:
-            return (
-                relative_path == normalized
-                or relative_path.startswith(normalized + "/")
-            )
-        return (
-            relative_path == normalized
-            or relative_path.startswith(normalized + "/")
-            or any(
-                part == normalized
-                for part in Path(relative_path).parts[:-1]
-            )
+    with tempfile.TemporaryDirectory(prefix="cmoc-gitignore-") as temp_name:
+        temp_root = Path(temp_name)
+        shutil.copyfile(gitignore, temp_root / ".gitignore")
+        subprocess.run(
+            ["git", "init", "-q"],
+            cwd=temp_root,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
-
-    if "/" in normalized:
-        return PurePosixPath(relative_path).match(normalized)
-
-    if rooted:
-        return "/" not in relative_path and fnmatch.fnmatch(
-            relative_path,
-            normalized,
+        result = subprocess.run(
+            ["git", "check-ignore", "--no-index", "--stdin"],
+            cwd=temp_root,
+            check=False,
+            input="\n".join(relative_paths) + "\n",
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env={**os.environ, "GIT_CONFIG_GLOBAL": os.devnull},
         )
-
-    return any(
-        fnmatch.fnmatch(part, normalized)
-        for part in Path(relative_path).parts
-    )
+    if result.returncode not in {0, 1}:
+        raise CmocError(
+            "Failed to evaluate root .gitignore.",
+            ["Inspect .gitignore syntax and retry the command."],
+            result.stderr.strip(),
+        )
+    return set(result.stdout.splitlines())
 
 
 def _is_gitignored(repo_root: Path, relative_path: str) -> bool:

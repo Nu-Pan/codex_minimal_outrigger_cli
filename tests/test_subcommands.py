@@ -1,7 +1,8 @@
 """サブコマンド本体の決定論的な制御ロジックのテスト。"""
 
-import subprocess
 import inspect
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,7 @@ from sub_commands.apply import _commit_all_changes
 from sub_commands.apply import _validate_discrepancy_payload
 from sub_commands.branch import cmoc_branch_impl
 from sub_commands.eval_oracles import cmoc_eval_oracles_impl
+from sub_commands.eval_oracles import _evaluation_prompt
 from sub_commands.init import cmoc_init_impl
 from sub_commands.merge import cmoc_merge_impl
 from sub_commands.merge import _conflict_prompt
@@ -61,15 +63,17 @@ def test_init_untracks_existing_cmoc_file_and_commits_it(
     assert ".cmoc/logs/tracked.log" in last_commit_paths
 
 
-def test_init_rejects_existing_gitignore_changes(tmp_path: Path) -> None:
-    """`cmoc init` は既存の `.gitignore` 差分を初期化 commit に混ぜない。"""
+def test_init_allows_existing_gitignore_changes(tmp_path: Path) -> None:
+    """`cmoc init` は `.gitignore` 差分を追加の事前条件にしない。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("user-rule\n", encoding="utf-8")
 
-    with pytest.raises(CmocError):
-        cmoc_init_impl(repo)
+    cmoc_init_impl(repo)
 
-    assert _git(repo, "log", "-1", "--pretty=%s").stdout.strip() == "initial"
+    assert "/.cmoc/" in (repo / ".gitignore").read_text(encoding="utf-8")
+    assert _git(repo, "log", "-1", "--pretty=%s").stdout.strip() == (
+        "Initialize cmoc"
+    )
 
 
 def test_branch_creates_cmoc_branch_and_records_base_commit(
@@ -114,15 +118,22 @@ def test_eval_oracles_writes_report_with_fake_codex(
     assert "no fatal problems" in reports[0].read_text(encoding="utf-8")
 
 
-def test_eval_oracles_body_file_uses_subcommand_name() -> None:
-    """`eval-oracles` の本体ファイルはサブコマンド名と一致させる。"""
+def test_eval_oracles_body_uses_pep8_module_name() -> None:
+    """`eval-oracles` の本体は import 可能な underscore module に置く。"""
     repo_root = Path(__file__).resolve().parents[1]
 
     body = repo_root / "src" / "sub_commands" / "eval-oracles.py"
-    wrapper = repo_root / "src" / "sub_commands" / "eval_oracles.py"
-    assert body.exists()
-    assert "def cmoc_eval_oracles_impl" in body.read_text(encoding="utf-8")
-    assert wrapper.exists()
+    module = repo_root / "src" / "sub_commands" / "eval_oracles.py"
+    assert not body.exists()
+    assert "def cmoc_eval_oracles_impl" in module.read_text(encoding="utf-8")
+
+
+def test_eval_oracles_prompt_forbids_implementation_references() -> None:
+    """評価 prompt は仕様だけから致命的問題を判断させる。"""
+    prompt = _evaluation_prompt(Path("/repo"), Path("/repo/oracles/spec.md"))
+
+    assert "実装・テスト・設定ファイルは参照禁止です。" in prompt
+    assert "仕様だけから判断・実装したとき" in prompt
 
 
 def test_apply_returns_complete_when_no_discrepancies(
@@ -161,6 +172,49 @@ def test_apply_returns_complete_when_no_discrepancies(
     assert len(reports) == 1
     assert reports[0].read_text(encoding="utf-8") == "complete report"
     assert codex_kwargs[0]["output_schema"] == _DISCREPANCY_OUTPUT_SCHEMA
+
+
+def test_apply_uses_repeat_option_for_loop_limit(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """`cmoc apply` は指定 repeat 回数をループ上限と表示に使う。"""
+    repo = _init_repo(tmp_path)
+    _git(repo, "checkout", "-b", "cmoc_2026-05-10_22-21_10_123")
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "oracle")
+
+    monkeypatch.setattr(
+        "sub_commands.apply.maintain_indexes",
+        lambda repo_root: False,
+    )
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """常に不整合を返し、指定回数で incomplete になることを見やすくする。"""
+        if kwargs.get("expect_json") is True:
+            return (
+                '{"discrepancies": [{"oracle_path": "/repo/oracles/spec.md", '
+                '"oracle_line_start": 1, "oracle_line_end": 1, '
+                '"implementation_paths": [], "title": "t", '
+                '"oracle_requirement": "r", "observed_implementation": "o", '
+                '"reason": "x", "suggested_fix": "f"}]}'
+            )
+        return "incomplete report"
+
+    monkeypatch.setattr("sub_commands.apply.run_codex_exec", fake_codex)
+
+    exit_code = cmoc_apply_impl(repo, repeat=2)
+
+    assert exit_code == 2
+    assert (
+        "implementation loop (2/2) discrepancies: 1"
+        in capsys.readouterr().out
+    )
 
 
 def test_apply_rejects_non_cmoc_branch(tmp_path: Path) -> None:
@@ -342,8 +396,24 @@ def test_main_typer_functions_delegate_only_to_impls() -> None:
     assert "cmoc_init_impl()" in source
     assert "cmoc_branch_impl()" in source
     assert "cmoc_eval_oracles_impl(full=full)" in source
-    assert "cmoc_apply_impl()" in source
+    assert "cmoc_apply_impl(repeat=repeat)" in source
     assert "cmoc_merge_impl(cmoc_branch=cmoc_branch)" in source
+
+
+def test_cmoc_help_uses_cmoc_command_name() -> None:
+    """PATH 経由の `cmoc --help` は Usage に cmoc を表示する。"""
+    repo_root = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        [sys.executable, "-m", "main", "--help"],
+        cwd=repo_root,
+        env={"PYTHONPATH": str(repo_root / "src")},
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    assert "Usage: cmoc [OPTIONS] COMMAND [ARGS]..." in result.stdout
 
 
 def test_merge_conflict_prompt_always_forbids_oracles_edit() -> None:

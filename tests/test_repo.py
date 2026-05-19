@@ -106,6 +106,30 @@ def test_list_oracle_files_respects_slash_pattern_depth(
     assert relative_paths == ["oracles/nested/kept.md"]
 
 
+def test_list_oracle_files_uses_git_double_star_semantics(
+    tmp_path: Path,
+) -> None:
+    """root .gitignore の `**` は Git と同じ semantics で評価する。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text(
+        "oracles/**/ignored.md\n",
+        encoding="utf-8",
+    )
+    oracle_root = repo / "oracles"
+    nested = oracle_root / "a" / "b"
+    nested.mkdir(parents=True)
+    (oracle_root / "ignored.md").write_text("ignored", encoding="utf-8")
+    (nested / "ignored.md").write_text("ignored", encoding="utf-8")
+    (nested / "kept.md").write_text("kept", encoding="utf-8")
+
+    relative_paths = [
+        path.relative_to(repo).as_posix()
+        for path in list_oracle_files(repo)
+    ]
+
+    assert relative_paths == ["oracles/a/b/kept.md"]
+
+
 def test_list_oracle_files_ignores_only_root_gitignore(
     tmp_path: Path,
 ) -> None:
@@ -248,10 +272,10 @@ def test_has_deleted_oracle_files_detects_base_to_head_deletion(
     assert has_deleted_oracle_files(repo, base_commit) is True
 
 
-def test_has_deleted_oracle_files_ignores_uncommitted_deletion(
+def test_has_deleted_oracle_files_detects_uncommitted_worktree_deletion(
     tmp_path: Path,
 ) -> None:
-    """未コミット oracle 削除だけでは全体評価切替条件にしない。"""
+    """working tree の oracle 削除も全体評価切替条件にする。"""
     repo = _init_repo(tmp_path)
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -262,7 +286,25 @@ def test_has_deleted_oracle_files_ignores_uncommitted_deletion(
 
     (oracle_root / "deleted.md").unlink()
 
-    assert has_deleted_oracle_files(repo, base_commit) is False
+    assert has_deleted_oracle_files(repo, base_commit) is True
+
+
+def test_has_deleted_oracle_files_detects_staged_deletion(
+    tmp_path: Path,
+) -> None:
+    """staging area の oracle 削除も全体評価切替条件にする。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "deleted.md").write_text("delete me\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "oracle")
+    base_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    (oracle_root / "deleted.md").unlink()
+    _git(repo, "add", "-u", "oracles")
+
+    assert has_deleted_oracle_files(repo, base_commit) is True
 
 
 def test_assert_only_oracles_uncommitted_rejects_non_oracle_changes(
