@@ -25,32 +25,31 @@
 
 ## Summary
 
-- `commons.codex.run_codex_exec` の振る舞いを検証する pytest テストファイル。
-- Structured Output 利用時の JSON parse 失敗、JSON Schema 検証失敗、意味的バリデーション失敗に対する 3 回リトライとエラー詳細出力を検証する。
-- `--output-schema` に渡す schema ファイル生成、codex exec 引数、ログへの試行情報・schema パス記録を検証する。
-- Structured Output 指定時に `output_schema` が必須であることを検証する。
-- 通常の Codex CLI 呼び出し直前に `commons.indexing.maintain_indexes` が実行されることと、`skip_index_maintenance=True` で明示的にスキップできることを検証する。
-- テスト用の fake `codex` 実行ファイルを一時ディレクトリに作成し、`PATH` 差し替え、`tmp_path`、`monkeypatch`、`pytest.raises` を使って外部 Codex CLI 呼び出しを隔離している。
+- `commons.codex.run_codex_exec` の Codex CLI 呼び出しラッパーに関する pytest テストをまとめたファイルです。
+- Structured Output の JSON parse 失敗、JSON Schema 不一致、意味的バリデーション失敗に対する 3 回リトライとエラー詳細を検証します。
+- `--output-schema` に渡すスキーマファイル生成、ログへの試行情報・スキーマパス・標準出力情報の記録、stdout 進捗表示の 80 文字切り詰めと改行可視化を検証します。
+- 通常の Codex CLI 呼び出し直前に `commons.indexing.maintain_indexes` が実行されることと、`skip_index_maintenance=True` で INDEX メンテナンスをスキップできることを検証します。
+- テスト内では一時ディレクトリに fake `codex` 実行ファイルを作成し、`PATH` を差し替えて `run_codex_exec` の外部コマンド連携を制御します。
 
 ## Read this when
 
-- `run_codex_exec` のリトライ、Structured Output、schema ファイル渡し、ログ出力に関する期待挙動を確認したいとき。
-- Codex CLI 呼び出しラッパーのエラー詳細に `Last JSON error`、`Last stdout`、`Log` などが含まれるかを調べたいとき。
-- `expect_json=True` と `output_schema`、`json_validator` の組み合わせに関するテストを追加・修正するとき。
-- Codex CLI 呼び出し前の `INDEX.md` メンテナンス実行や `skip_index_maintenance` の仕様をテスト側から確認したいとき。
-- fake `codex` コマンドを使った CLI ラッパーの単体テストパターンを参照したいとき。
+- `run_codex_exec` の Structured Output 対応、JSON 再試行、スキーマ検証、意味的バリデーション、エラー詳細のテストを確認したいとき。
+- Codex CLI 呼び出し時に `--output-schema` がどのように渡され、`.cmoc/logs/codex_exec` のログへ何が残るべきかを確認したいとき。
+- stdout 進捗表示で prompt と stdout の先頭 80 文字を扱う仕様のテスト例を探しているとき。
+- Codex 呼び出し前の `INDEX.md` 自動メンテナンス実行や、INDEX 生成・merge conflict 解消向けのスキップ指定を確認したいとき。
+- fake `codex` コマンド、`monkeypatch`、一時 git repo を使った `commons.codex` 周辺のテストパターンを参考にしたいとき。
 
 ## Do not read this when
 
-- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc merge` など個別サブコマンドの CLI 仕様や統合テストを調べたいとき。
-- `INDEX.md` 生成ロジックそのものの実装詳細や、目次メンテナンス対象ファイルの走査規則を調べたいとき。
-- Codex CLI ラッパーではなく、git 操作、oracle 評価、ブランチ作成、マージ処理の実装を確認したいとき。
-- 実際の Codex CLI の一般的な使い方や外部サービスとしての挙動を知りたいとき。
-- cmoc のユーザー向け README やリポジトリ運用ルールだけを確認したいとき。
+- `run_codex_exec` の実装そのものを読みたいとき。
+- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc merge` など個別サブコマンドの CLI 挙動テストを探しているとき。
+- INDEX 生成ロジック自体の詳細実装や、`commons.indexing` の単体テストを確認したいとき。
+- Codex CLI ではなく git 操作、oracle 評価、ファイルマージ処理などのテストを探しているとき。
+- README、AGENTS、oracles、memo などのリポジトリ運用ルールや編集可否だけを確認したいとき。
 
 ## hash
 
-- 8e795a51180bf7dbecb39c8f35e9ac8facbd3fdae5515ad4c52b175f32f8a071
+- ff401a6a7b166b183f603554871dc502f0b7a0c4ccfa196b2404298ee0d8e030
 
 # `test_indexing.py`
 
@@ -119,39 +118,33 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は、cmoc の主要サブコマンド本体と周辺ヘルパーの決定論的な制御ロジックを検証する pytest テストファイルです。
-- `cmoc init` について、`.cmoc` を `.gitignore` に追加して commit すること、既に追跡されている `.cmoc` ファイルを追跡解除して commit すること、既存の `.gitignore` 差分を許容することを検証します。
-- `cmoc branch` について、`cmoc_` で始まる作業ブランチを作成し、`.cmoc/branch/<branch>.txt` に base commit を記録することを検証します。
-- `cmoc eval-oracles --full` について、INDEX メンテナンスと Codex CLI 呼び出しを fake に差し替えた上で評価レポートを `.cmoc/reports/eval-oracles` に保存すること、実装本体が import 可能な `eval_oracles.py` に置かれること、評価 prompt が実装・テスト・設定ファイル参照を禁止することを検証します。
-- `cmoc apply` について、cmoc ブランチ上での不整合調査 JSON、Structured Output schema の利用、repeat 回数による実装ループ上限、レポート保存、終了コード、非 cmoc ブランチ拒否、oracle 外のユーザー差分拒否、`.cmoc` ignore 保証 commit と oracle commit の順序を検証します。
-- `cmoc apply` 関連ヘルパーについて、INDEX メンテナンス後に禁止領域差分が発生した場合 `_commit_all_changes` が commit 前に停止すること、不整合 JSON payload が必須項目不足や近似キーを拒否することを検証します。
-- `cmoc merge` について、明示された cmoc ブランチを clean tree で merge して安全なら削除すること、自動解決開始前の失敗では merge state 手動解決案内を表示しないこと、conflict 解消 prompt が常に oracles 編集を禁止すること、conflict marker 検査が渡された対象ファイル一覧を見ることを検証します。
-- `main` の Typer 対応関数について、共通 runner ではなく各サブコマンド impl へ直接委譲すること、`python -m main --help` の Usage が `cmoc` コマンド名を表示することを検証します。
-- テスト用 helper として、一時 git repository を初期化して初期 commit を作る `_init_repo` と、指定 repository で git コマンドを実行する `_git` を定義しています。
+- サブコマンド本体の決定論的な制御ロジックを検証する pytest ファイル。
+- `cmoc init`、`cmoc branch`、`cmoc eval-oracles`、`cmoc apply`、`cmoc merge` の主要な副作用、エラー条件、標準出力、commit 内容を一時 git リポジトリ上で確認する。
+- Fake Codex CLI や monkeypatch を使い、oracle 評価、apply の不整合 JSON schema、レポート保存、repeat 上限、INDEX メンテナンス後の禁止パス再検査をテストする。
+- Typer の公開コマンドが各 impl 関数へ直接委譲すること、`cmoc --help` の Usage 表示、merge conflict 解消 prompt と conflict marker 検出 helper の挙動も扱う。
+- テスト補助として `_init_repo` と `_git` を定義し、各ケースで独立した git リポジトリを作成して検証する。
 
 ## Read this when
 
-- cmoc のサブコマンド実装を変更し、既存テストがどの制御ロジックや git 操作を保護しているか把握したいとき。
-- `cmoc init` の `.cmoc` ignore 保証、tracked `.cmoc` の追跡解除、`.gitignore` commit 挙動を確認したいとき。
-- `cmoc branch` のブランチ命名や base commit 記録ファイルの期待値を確認したいとき。
-- `cmoc eval-oracles` のレポート保存、prompt 制約、実装モジュール名に関するテストを探しているとき。
-- `cmoc apply` の事前条件、repeat ループ、不整合 JSON schema、レポート保存、終了コード、commit 順序、禁止領域差分チェックを確認したいとき。
-- `cmoc merge` の成功時ブランチ削除、自動解決失敗時の表示、conflict prompt、conflict marker 検出のテストを確認したいとき。
-- Typer の CLI 関数が各 impl に直接委譲しているか、`cmoc --help` のコマンド名表示が守られているかを調べたいとき。
-- 一時 git repository を使うテスト helper の書き方や、既存テストでの monkeypatch、capsys、subprocess の使い方を参考にしたいとき。
+- サブコマンド実装の制御フローや git 副作用に対する既存テスト範囲を把握したいとき。
+- `cmoc init` の `.cmoc` ignore 追加、tracked `.cmoc` 追跡解除、既存 `.gitignore` 差分の扱いを確認したいとき。
+- `cmoc branch` のブランチ名生成、base commit 記録、進捗表示のテストを探しているとき。
+- `cmoc eval-oracles` のレポート保存、underscore module 配置、評価 prompt の禁止事項を検証するテストを確認したいとき。
+- `cmoc apply` の cmoc ブランチ制約、oracle 外差分拒否、`.cmoc` 保証 commit、oracle commit、Codex JSON schema、repeat 上限、完了・未完了レポートのテストを調べたいとき。
+- `cmoc merge` の明示ブランチ merge と削除、自動解決失敗時の案内抑制、conflict prompt、conflict marker 検出のテストを確認したいとき。
+- CLI エントリーポイントが共通 runner ではなく個別 impl に委譲していることや、`python -m main --help` のコマンド名表示を検証するテストを見たいとき。
 
 ## Do not read this when
 
-- サブコマンドの正本仕様そのものを確認したいとき。このファイルは仕様書ではなく、実装に対する自動テストです。
-- cmoc の実装コードを直接修正したいだけで、既存テストの保護範囲や期待値を確認する必要がないとき。
-- Codex CLI 呼び出し、prompt 構成、Structured Output、ログ保存などの横断仕様を体系的に調べたいとき。まず oracles 配下の該当仕様を読んでください。
-- Python コーディング規約、設計規約、テスト規約、開発環境ルールを確認したいとき。このファイルではなく開発ルールのルーティング情報を参照してください。
-- `cmoc` を用いて別の `<repo-root>` を開発する利用手順だけを知りたいとき。
-- README、AGENTS、oracles、memo などの編集可否やリポジトリ運用ルールだけを確認したいとき。
+- 個別サブコマンドの仕様そのものを確認したいだけで、テストコードの期待値や検証方法が不要なとき。
+- サブコマンド実装の内部コードを修正したいだけで、既存テストの構造や対象ケースをまだ調べる必要がないとき。
+- INDEX 生成、Codex CLI 呼び出し、ログ保存などの共通仕様を調べたいが、このテストファイルの具体的な検証ケースには関心がないとき。
+- pytest、monkeypatch、一時 git リポジトリを使ったテスト補助実装ではなく、ユーザー向け CLI の使い方だけを知りたいとき。
+- README、AGENTS、oracles、memo などのリポジトリ運用ルールや編集可否だけを確認したいとき。
 
 ## hash
 
-- 4b6aaed4c68f03775e9036f8808b4152b85c780886eda6901c63306586a57b21
+- cd300b3b292ef79e690fc45cb32edc10979a4bc8b9eb5a5fd178952a3e8eb74d
 
 # `test_timestamps.py`
 
