@@ -272,6 +272,6 @@ def _matches_type(value: object, expected_type: object) -> bool:
 
 
 def _head80(value: str) -> str:
-    """stdout 表示用に改行を潰した先頭 80 文字を返す。"""
-    # 複数行 prompt/stdout は 1 行に潰して進捗表示を短く保つ。
-    return value.replace("\n", "\\n")[:80]
+    """元文字列の先頭 80 文字を stdout 表示向けに返す。"""
+    # oracle の切り詰め対象は、表示用変換前の prompt/stdout そのものである。
+    return value[:80].replace("\n", "\\n")

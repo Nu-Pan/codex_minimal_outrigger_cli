@@ -15,6 +15,10 @@ class CmocError(RuntimeError):
         exit_code: int = 1,
     ) -> None:
         """エラーレポートに必要な情報を保持する。"""
+        # 共通エラーレポートは、場合分けした複数の次アクションを必須にする。
+        if len(actions) < 2:
+            raise ValueError("CmocError requires at least two actions.")
+
         # RuntimeError としての message と、cmoc report 用の詳細情報を両方保持する。
         super().__init__(message)
         self.message = message

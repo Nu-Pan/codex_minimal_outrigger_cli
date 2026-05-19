@@ -147,6 +147,49 @@ def assert_paths_clean(repo_root: Path, paths: list[str]) -> None:
         )
 
 
+def gitignore_has_cmoc_rule(repo_root: Path) -> bool:
+    """作業ツリーの `.gitignore` が `/.cmoc/` 行を既に持つか返す。"""
+    # init 開始前からある ignore ルールを、init で発生した差分と区別する。
+    gitignore = repo_root / ".gitignore"
+    if not gitignore.exists():
+        return False
+    content = gitignore.read_text(encoding="utf-8")
+    lines = [line.strip() for line in content.splitlines()]
+    return "/.cmoc/" in lines
+
+
+def commit_cmoc_initialization_changes(
+    repo_root: Path,
+    had_cmoc_rule: bool,
+) -> bool:
+    """`cmoc init` が発生させた差分だけを commit する。"""
+    # init が追加した `/.cmoc/` だけを、既存 `.gitignore` 差分と分けて stage する。
+    if not had_cmoc_rule:
+        _stage_gitignore_with_cmoc_rule_from_head(repo_root)
+
+    # tracked `.cmoc` の追跡解除は `ensure_cmoc_ignored()` 済みの index 状態を使う。
+    diff = run_git(
+        repo_root,
+        ["diff", "--cached", "--quiet", "--", ".gitignore", ".cmoc"],
+        check=False,
+    )
+    if diff.returncode == 0:
+        return False
+    if diff.returncode != 1:
+        raise CmocError(
+            "Failed to inspect initialization changes.",
+            [
+                "Inspect git index state and retry cmoc init.",
+                "Commit or stash unrelated changes, then run cmoc init again.",
+            ],
+            diff.stderr.strip(),
+        )
+
+    # stage 済みの初期化差分だけを init commit にする。
+    run_git(repo_root, ["commit", "-m", "Initialize cmoc"])
+    return True
+
+
 def commit_if_changed(repo_root: Path, paths: list[str], message: str) -> bool:
     """指定パスに差分があれば add して commit する。"""
     # 指定 pathspec に差分が無ければ commit を作らない。
@@ -311,6 +354,54 @@ def changed_paths(repo_root: Path) -> list[str]:
     return paths
 
 
+def _stage_gitignore_with_cmoc_rule_from_head(repo_root: Path) -> None:
+    """HEAD の `.gitignore` に `/.cmoc/` だけを足した blob を stage する。"""
+    # HEAD 側の内容を基準にすることで、作業ツリーの既存差分を commit から外す。
+    head_text = _head_file_text(repo_root, ".gitignore") or ""
+    lines = [line.strip() for line in head_text.splitlines()]
+    if "/.cmoc/" in lines:
+        return
+
+    # commit 対象にする `.gitignore` 内容を一時ファイル経由で git object 化する。
+    prefix = head_text
+    if prefix and not prefix.endswith("\n"):
+        prefix += "\n"
+    staged_text = f"{prefix}/.cmoc/\n"
+    with tempfile.NamedTemporaryFile(
+        "w",
+        encoding="utf-8",
+        delete=False,
+    ) as staged_file:
+        staged_file.write(staged_text)
+        staged_path = Path(staged_file.name)
+    try:
+        blob = run_git(
+            repo_root,
+            ["hash-object", "-w", str(staged_path)],
+        ).stdout.strip()
+    finally:
+        staged_path.unlink(missing_ok=True)
+
+    # 作った blob を index に直接置き、作業ツリーの `.gitignore` は触らない。
+    run_git(
+        repo_root,
+        ["update-index", "--add", "--cacheinfo", f"100644,{blob},.gitignore"],
+    )
+
+
+def _head_file_text(repo_root: Path, relative_path: str) -> str | None:
+    """HEAD 上のファイル内容を返し、存在しなければ None を返す。"""
+    # 初回 init のように HEAD に `.gitignore` が無い場合を通常系として扱う。
+    result = run_git(
+        repo_root,
+        ["show", f"HEAD:{relative_path}"],
+        check=False,
+    )
+    if result.returncode == 0:
+        return result.stdout
+    return None
+
+
 def _ensure_cmoc_ignore_rule(repo_root: Path) -> bool:
     """`.gitignore` に oracle 指定の `/.cmoc/` 行を追加する。"""
     # 既存 `.gitignore` を読み、必要な ignore 行の重複を避ける。
@@ -364,12 +455,17 @@ def _is_root_gitignored(repo_root: Path, relative_path: str) -> bool:
     return relative_path in _root_gitignored_paths(repo_root, [relative_path])
 
 
-def _root_gitignored_paths(repo_root: Path, relative_paths: list[str]) -> set[str]:
+def _root_gitignored_paths(
+    repo_root: Path,
+    relative_paths: list[str],
+) -> set[str]:
     """root `.gitignore` だけを Git の wildmatch semantics で評価する。"""
+    # 評価対象または root `.gitignore` が無ければ ignore 対象なしとして返す。
     gitignore = repo_root / ".gitignore"
     if not relative_paths or not gitignore.exists():
         return set()
 
+    # 一時 git repository に root `.gitignore` だけを複製して評価環境を作る。
     with tempfile.TemporaryDirectory(prefix="cmoc-gitignore-") as temp_name:
         temp_root = Path(temp_name)
         shutil.copyfile(gitignore, temp_root / ".gitignore")
@@ -380,6 +476,7 @@ def _root_gitignored_paths(repo_root: Path, relative_paths: list[str]) -> set[st
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
+        # `--stdin` で渡した root 相対 path を Git の ignore 実装に判定させる。
         result = subprocess.run(
             ["git", "check-ignore", "--no-index", "--stdin"],
             cwd=temp_root,
@@ -390,12 +487,19 @@ def _root_gitignored_paths(repo_root: Path, relative_paths: list[str]) -> set[st
             stderr=subprocess.PIPE,
             env={**os.environ, "GIT_CONFIG_GLOBAL": os.devnull},
         )
+
+    # gitignore 評価自体の異常は利用者が復旧できる共通エラーに変換する。
     if result.returncode not in {0, 1}:
         raise CmocError(
             "Failed to evaluate root .gitignore.",
-            ["Inspect .gitignore syntax and retry the command."],
+            [
+                "Inspect .gitignore syntax and retry the command.",
+                "Temporarily simplify root .gitignore, then run cmoc again.",
+            ],
             result.stderr.strip(),
         )
+
+    # `git check-ignore` が出力した path だけを ignore 対象集合として返す。
     return set(result.stdout.splitlines())
 
 

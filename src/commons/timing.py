@@ -32,6 +32,18 @@ class StepTimer:
         self._current_name = step_name
         self._current_started = perf_counter()
 
+    def report(self) -> None:
+        """ステップ別とサブコマンド全体の経過時間を stdout へ出力する。"""
+        # 未確定の最後のステップを含めてから stdout に集計を出す。
+        self.finish_current()
+        print(f"{self.command_name} step timings:")
+        for name, duration in self._durations:
+            print(f"- {name}: {format_duration(duration)}")
+        print(
+            f"{self.command_name} total elapsed: "
+            f"{format_duration(perf_counter() - self._started)}"
+        )
+
     def finish_current(self) -> None:
         """実行中のステップがあれば経過時間を確定する。"""
         # 計測中ステップが無ければ idempotent に何もしない。
@@ -44,15 +56,3 @@ class StepTimer:
         )
         self._current_name = None
         self._current_started = None
-
-    def report(self) -> None:
-        """ステップ別とサブコマンド全体の経過時間を stdout へ出力する。"""
-        # 未確定の最後のステップを含めてから stdout に集計を出す。
-        self.finish_current()
-        print(f"{self.command_name} step timings:")
-        for name, duration in self._durations:
-            print(f"- {name}: {format_duration(duration)}")
-        print(
-            f"{self.command_name} total elapsed: "
-            f"{format_duration(perf_counter() - self._started)}"
-        )

@@ -147,7 +147,10 @@ def cmoc_apply_impl(
     if repeat < 0:
         raise CmocError(
             "Repeat count must not be negative.",
-            ["Pass a zero or positive integer to --repeat."],
+            [
+                "Pass a zero or positive integer to --repeat.",
+                "Omit --repeat to use the default retry limit.",
+            ],
             f"repeat: {repeat}",
         )
 
@@ -286,12 +289,14 @@ def _write_apply_report(
     report_path = report_dir / f"{make_timestamp()}.md"
 
     # Codex にはレポート本文だけを生成させ、ファイル保存は cmoc が行う。
+    result_label = "収束" if completed else "未収束"
     prompt = "\n".join(
         [
             "あなたはソフトウェア作業レポートの作成担当です。",
             f"`{repo_root}` のブランチ `{branch_name}` について簡潔な作業レポートを書いてください。",
             "完了条件は、作業結果、不整合件数の推移、ブランチ上の全変更内容を説明することです。",
-            f"Result: {'complete' if completed else 'incomplete'}",
+            f"作業結果の区分は一言で `{result_label}` と書いてください。",
+            f"Result category: {result_label}",
             f"Discrepancy counts: {discrepancy_counts}",
             f"`{repo_root / 'oracles'}` と `{repo_root / '.agents'}` は編集禁止です。",
             f"`{repo_root / 'memo'}` は読み書き禁止です。",

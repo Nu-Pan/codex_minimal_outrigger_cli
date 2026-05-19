@@ -63,21 +63,28 @@ def test_init_untracks_existing_cmoc_file_and_commits_it(
     assert ".cmoc/logs/tracked.log" in last_commit_paths
 
 
-def test_init_allows_existing_gitignore_changes(tmp_path: Path) -> None:
-    """`cmoc init` は `.gitignore` 差分を追加の事前条件にしない。"""
+def test_init_does_not_commit_existing_gitignore_changes(
+    tmp_path: Path,
+) -> None:
+    """`cmoc init` は既存 `.gitignore` 差分を初期化 commit に混ぜない。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("user-rule\n", encoding="utf-8")
 
     cmoc_init_impl(repo)
 
-    assert "/.cmoc/" in (repo / ".gitignore").read_text(encoding="utf-8")
+    gitignore = (repo / ".gitignore").read_text(encoding="utf-8")
+    committed_gitignore = _git(repo, "show", "HEAD:.gitignore").stdout
+    assert gitignore == "user-rule\n/.cmoc/\n"
+    assert committed_gitignore == "/.cmoc/\n"
     assert _git(repo, "log", "-1", "--pretty=%s").stdout.strip() == (
         "Initialize cmoc"
     )
+    assert _git(repo, "status", "--porcelain").stdout == " M .gitignore\n"
 
 
 def test_branch_creates_cmoc_branch_and_records_base_commit(
     tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """`cmoc branch` は branch 作成と base commit 記録を行う。"""
     repo = _init_repo(tmp_path)
@@ -89,6 +96,7 @@ def test_branch_creates_cmoc_branch_and_records_base_commit(
     record_path = repo / ".cmoc" / "branch" / f"{branch_name}.txt"
     assert branch_name.startswith("cmoc_")
     assert record_path.read_text(encoding="utf-8").strip() == base_commit
+    assert "create cmoc branch attempt (1/10)" in capsys.readouterr().out
 
 
 def test_eval_oracles_writes_report_with_fake_codex(
@@ -155,13 +163,15 @@ def test_apply_returns_complete_when_no_discrepancies(
         lambda repo_root: False,
     )
     codex_kwargs: list[dict[str, object]] = []
+    codex_prompts: list[str] = []
 
     def fake_codex(*args: object, **kwargs: object) -> str:
         """調査なら不整合なし JSON、レポートなら Markdown を返す。"""
         codex_kwargs.append(kwargs)
+        codex_prompts.append(str(args[1]))
         if kwargs.get("expect_json") is True:
             return '{"discrepancies": []}'
-        return "complete report"
+        return "収束\ncomplete report"
 
     monkeypatch.setattr("sub_commands.apply.run_codex_exec", fake_codex)
 
@@ -170,8 +180,9 @@ def test_apply_returns_complete_when_no_discrepancies(
     reports = list((repo / ".cmoc" / "reports" / "apply").glob("*.md"))
     assert exit_code == 0
     assert len(reports) == 1
-    assert reports[0].read_text(encoding="utf-8") == "complete report"
+    assert reports[0].read_text(encoding="utf-8") == "収束\ncomplete report"
     assert codex_kwargs[0]["output_schema"] == _DISCREPANCY_OUTPUT_SCHEMA
+    assert "Result category: 収束" in codex_prompts[-1]
 
 
 def test_apply_uses_repeat_option_for_loop_limit(
@@ -193,9 +204,11 @@ def test_apply_uses_repeat_option_for_loop_limit(
         "sub_commands.apply.maintain_indexes",
         lambda repo_root: False,
     )
+    codex_prompts: list[str] = []
 
     def fake_codex(*args: object, **kwargs: object) -> str:
         """常に不整合を返し、指定回数で incomplete になることを見やすくする。"""
+        codex_prompts.append(str(args[1]))
         if kwargs.get("expect_json") is True:
             return (
                 '{"discrepancies": [{"oracle_path": "/repo/oracles/spec.md", '
@@ -204,7 +217,7 @@ def test_apply_uses_repeat_option_for_loop_limit(
                 '"oracle_requirement": "r", "observed_implementation": "o", '
                 '"reason": "x", "suggested_fix": "f"}]}'
             )
-        return "incomplete report"
+        return "未収束\nincomplete report"
 
     monkeypatch.setattr("sub_commands.apply.run_codex_exec", fake_codex)
 
@@ -215,6 +228,7 @@ def test_apply_uses_repeat_option_for_loop_limit(
         "implementation loop (2/2) discrepancies: 1"
         in capsys.readouterr().out
     )
+    assert "Result category: 未収束" in codex_prompts[-1]
 
 
 def test_apply_rejects_non_cmoc_branch(tmp_path: Path) -> None:

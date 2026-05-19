@@ -113,6 +113,39 @@ def test_run_codex_exec_passes_output_schema_file(
     assert f"output_schema: {schema_path}" in log_content
 
 
+def test_run_codex_exec_prints_head80_before_escaping_newlines(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """stdout 進捗は元文字列を 80 文字で切ってから改行を可視化する。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "printf '%079d\\nbbbbbbbbbb' 0 | tr '0' 'a'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+    prompt = "p" * 79 + "\n" + "q" * 10
+
+    run_codex_exec(repo, prompt, read_only=True)
+
+    captured = capsys.readouterr().out
+    assert f"prompt: {'p' * 79}\\n" in captured
+    assert f"stdout: {'a' * 79}\\n" in captured
+    assert "q" not in captured
+    assert "b" not in captured
+
+
 def test_run_codex_exec_retries_json_semantic_validation_failure(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,

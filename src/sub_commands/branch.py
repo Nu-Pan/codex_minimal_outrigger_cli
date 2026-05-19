@@ -45,8 +45,9 @@ def cmoc_branch_impl(repo_root: Path | None = None) -> None:
 def _create_unique_branch(repo_root: Path) -> str:
     """衝突時に timestamp を作り直して branch 作成をリトライする。"""
     # timestamp 衝突に備えて短い sleep を挟みながら最大 10 回リトライする。
-    for _ in range(10):
+    for attempt in range(1, 11):
         branch_name = f"cmoc_{make_timestamp()}"
+        print(f"create cmoc branch attempt ({attempt}/10) {branch_name}")
         result = run_git(
             repo_root,
             ["checkout", "-b", branch_name],
