@@ -200,7 +200,7 @@ def test_apply_returns_complete_when_no_discrepancies(
     assert "## 不整合件数の推移" in report_text
     assert "全変更内容" in report_text
     assert codex_kwargs[0]["output_schema"] == _DISCREPANCY_OUTPUT_SCHEMA
-    assert "Result category: 収束" in codex_prompts[-1]
+    assert "作業結果区分: 収束" in codex_prompts[-1]
     assert "変更内容の意味論に基づき" in codex_prompts[-1]
     assert "「カテゴリ」という語" in codex_prompts[-1]
     assert "<cmoc-branch>" not in codex_prompts[-1]
@@ -262,7 +262,7 @@ def test_apply_uses_repeat_option_for_loop_limit(
     )
     reports = list((repo / ".cmoc" / "reports" / "apply").glob("*.md"))
     report_text = reports[0].read_text(encoding="utf-8")
-    assert "Result category: 未収束" in codex_prompts[-1]
+    assert "作業結果区分: 未収束" in codex_prompts[-1]
     assert "まだ不整合が残っている可能性" in codex_prompts[-1]
     assert "まだ不整合が残っている可能性" in report_text
 
@@ -522,6 +522,36 @@ def test_bin_cmoc_requires_venv_python() -> None:
     assert launcher.startswith("#!/bin/sh")
     assert "#!/usr/bin/env python3" not in launcher
     assert 'exec "$venv_python"' in launcher
+    assert "} >&2" not in launcher
+
+
+def test_bin_cmoc_reports_missing_venv_to_stdout(tmp_path: Path) -> None:
+    """仮想環境が無い場合も共通エラーレポートを stdout へ出す。"""
+    repo_root = Path(__file__).resolve().parents[1]
+    launcher = tmp_path / "repo" / "bin" / "cmoc"
+    launcher.parent.mkdir(parents=True)
+    launcher.write_text(
+        (repo_root / "bin" / "cmoc").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    launcher.chmod(0o755)
+
+    result = subprocess.run(
+        [str(launcher), "--help"],
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    assert result.returncode == 1
+    assert result.stderr == ""
+    assert "ERROR" in result.stdout
+    assert "Summary:" in result.stdout
+    assert "Next actions:" in result.stdout
+    assert "Detail:" in result.stdout
+    assert "Call stack:" in result.stdout
+    assert "仮想環境 Python" in result.stdout
 
 
 def test_merge_conflict_prompt_always_forbids_oracles_edit() -> None:
@@ -535,20 +565,23 @@ def test_merge_conflict_prompt_always_forbids_oracles_edit() -> None:
     assert "解決内容と未解決ファイルの有無を報告" in prompt
 
 
-def test_files_with_conflict_markers_uses_fixed_conflict_targets(
+def test_files_with_conflict_markers_checks_all_tracked_files(
     tmp_path: Path,
 ) -> None:
-    """marker 検査は現在の unmerged path ではなく渡された対象一覧を見る。"""
-    repo = tmp_path / "repo"
-    repo.mkdir()
+    """marker 検査は渡された対象一覧に限定せず git 管理対象全体を見る。"""
+    repo = _init_repo(tmp_path)
     conflicted = repo / "conflicted.txt"
-    conflicted.write_text(
+    unrelated = repo / "unrelated.txt"
+    conflicted.write_text("resolved\n", encoding="utf-8")
+    unrelated.write_text(
         "<<<<<<< HEAD\nleft\n=======\nright\n>>>>>>> branch\n",
         encoding="utf-8",
     )
+    _git(repo, "add", "conflicted.txt", "unrelated.txt")
+    _git(repo, "commit", "-m", "add tracked files")
 
     assert _files_with_conflict_markers(repo, ["conflicted.txt"]) == [
-        "conflicted.txt"
+        "unrelated.txt"
     ]
 
 
