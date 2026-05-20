@@ -3,47 +3,24 @@
 import inspect
 import subprocess
 import sys
-from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
-from types import ModuleType
-from typing import Callable
 
 import pytest
 from pytest import MonkeyPatch
 
 from commons.errors import CmocError
+from sub_commands import eval_oracles as eval_oracles_module
 from sub_commands.apply import cmoc_apply_impl
 from sub_commands.apply import _DISCREPANCY_OUTPUT_SCHEMA
 from sub_commands.apply import _commit_all_changes
 from sub_commands.apply import _validate_discrepancy_payload
 from sub_commands.branch import cmoc_branch_impl
+from sub_commands.eval_oracles import cmoc_eval_oracles_impl
+from sub_commands.eval_oracles import _evaluation_prompt
 from sub_commands.init import cmoc_init_impl
 from sub_commands.merge import cmoc_merge_impl
 from sub_commands.merge import _conflict_prompt
 from sub_commands.merge import _files_with_conflict_markers
-
-
-def _load_eval_oracles_module() -> ModuleType:
-    """`eval-oracles` の本体ファイルをテスト用に読み込む。"""
-    repo_root = Path(__file__).resolve().parents[1]
-    module_path = repo_root / "src" / "sub_commands" / "eval-oracles.py"
-    spec = spec_from_file_location("tests.eval_oracles_body", module_path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Failed to load module spec: {module_path}")
-
-    module = module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-eval_oracles_module: ModuleType = _load_eval_oracles_module()
-cmoc_eval_oracles_impl: Callable[..., None] = (
-    eval_oracles_module.cmoc_eval_oracles_impl
-)
-_evaluation_prompt: Callable[[Path, Path], str] = (
-    eval_oracles_module._evaluation_prompt
-)
 
 
 def test_init_adds_cmoc_ignore_and_commits_it(tmp_path: Path) -> None:
@@ -133,6 +110,35 @@ def test_init_does_not_commit_preexisting_staged_changes(
     )
 
 
+def test_init_does_not_restore_preexisting_staged_cmoc_changes(
+    tmp_path: Path,
+) -> None:
+    """実行前に stage 済みの `.cmoc` 差分も最終的に追跡対象外にする。"""
+    repo = _init_repo(tmp_path)
+    cmoc_file = repo / ".cmoc" / "logs" / "staged.log"
+    cmoc_file.parent.mkdir(parents=True)
+    cmoc_file.write_text("user staged\n", encoding="utf-8")
+    _git(repo, "add", "-f", ".cmoc/logs/staged.log")
+
+    cmoc_init_impl(repo)
+
+    assert _git(repo, "ls-files", "--", ".cmoc").stdout == ""
+    assert _git(
+        repo,
+        "check-ignore",
+        "-q",
+        "--",
+        ".cmoc/.__cmoc_ignore_probe__",
+    ).returncode == 0
+    assert ".cmoc" not in _git(
+        repo,
+        "diff",
+        "--cached",
+        "--name-only",
+    ).stdout
+    assert cmoc_file.exists()
+
+
 def test_init_can_create_first_commit(tmp_path: Path) -> None:
     """`cmoc init` は unborn HEAD のリポジトリでも初期化 commit を作る。"""
     repo = tmp_path / "repo"
@@ -195,16 +201,16 @@ def test_eval_oracles_writes_report_with_fake_codex(
     assert "no fatal problems" in reports[0].read_text(encoding="utf-8")
 
 
-def test_eval_oracles_body_uses_subcommand_file_name() -> None:
-    """`eval-oracles` の本体はサブコマンド名と同じファイルに置く。"""
+def test_eval_oracles_body_uses_pep8_module_file_name() -> None:
+    """`eval-oracles` の本体は import 可能な PEP 8 module 名に置く。"""
     repo_root = Path(__file__).resolve().parents[1]
 
-    module = repo_root / "src" / "sub_commands" / "eval-oracles.py"
+    module = repo_root / "src" / "sub_commands" / "eval_oracles.py"
     assert "def cmoc_eval_oracles_impl" in module.read_text(
         encoding="utf-8"
     )
     assert not (
-        repo_root / "src" / "sub_commands" / "eval_oracles.py"
+        repo_root / "src" / "sub_commands" / "eval-oracles.py"
     ).exists()
     module_text = module.read_text(encoding="utf-8")
     assert "compile(" not in module_text
@@ -560,6 +566,8 @@ def test_main_typer_functions_delegate_only_to_impls() -> None:
 
     assert "def _run_command" not in source
     assert "_run_command(" not in source
+    assert "spec_from_file_location" not in source
+    assert "from sub_commands.eval_oracles import" in source
     assert "cmoc_init_impl()" in source
     assert "cmoc_branch_impl()" in source
     assert "cmoc_eval_oracles_impl(full=full)" in source

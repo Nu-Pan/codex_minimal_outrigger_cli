@@ -51,7 +51,8 @@ def run_codex_exec(
     last_json_error = ""
     for attempt in range(1, attempts + 1):
         # 利用者向けには prompt/stdout の先頭だけを進捗表示する。
-        print(f"codex exec attempt {attempt} prompt: {_head80(prompt)}")
+        step = f"codex exec attempt ({attempt}/{attempts})"
+        print(f"{step} prompt: {_head80(prompt)}")
         result = subprocess.run(
             command,
             cwd=repo_root,
@@ -61,7 +62,7 @@ def run_codex_exec(
         )
         last_stdout = result.stdout
         last_stderr = result.stderr
-        print(f"codex exec attempt {attempt} stdout: {_head80(result.stdout)}")
+        print(f"{step} stdout: {_head80(result.stdout)}")
         _append_codex_log(
             log_path,
             command,

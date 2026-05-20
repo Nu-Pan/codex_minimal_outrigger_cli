@@ -22,6 +22,7 @@ _BOOLEAN_SCHEMA: dict[str, object] = {
 def test_run_codex_exec_retries_json_and_writes_full_log(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Structured Output の parse 失敗は 3 回までリトライし、試行ログを残す。"""
     repo = tmp_path / "repo"
@@ -66,6 +67,9 @@ def test_run_codex_exec_retries_json_and_writes_full_log(
     assert "attempt: 1" in log_content
     assert "attempt: 2" in log_content
     assert "attempt: 3" in log_content
+    captured = capsys.readouterr().out
+    assert "codex exec attempt (1/3) prompt:" in captured
+    assert "codex exec attempt (3/3) stdout:" in captured
 
 
 def test_run_codex_exec_passes_output_schema_file(

@@ -1,41 +1,17 @@
 """cmoc CLI エントリーポイント。"""
 
-import sys
-from importlib.util import module_from_spec, spec_from_file_location
-from pathlib import Path
-from typing import Callable, cast
-
 import click
 import typer
 
 from commons.errors import format_error_report
 from sub_commands.apply import cmoc_apply_impl
 from sub_commands.branch import cmoc_branch_impl
+from sub_commands.eval_oracles import cmoc_eval_oracles_impl
 from sub_commands.init import cmoc_init_impl
 from sub_commands.merge import cmoc_merge_impl
 
 
-def _load_eval_oracles_impl() -> Callable[..., None]:
-    """ハイフン付きサブコマンド本体ファイルから実装関数を読み込む。"""
-    module_path = Path(__file__).parent / "sub_commands" / "eval-oracles.py"
-    module_name = "sub_commands.eval_oracles_command_body"
-    spec = spec_from_file_location(module_name, module_path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Failed to load module spec: {module_path}")
-
-    module = module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    impl = getattr(module, "cmoc_eval_oracles_impl")
-    if not callable(impl):
-        raise RuntimeError(
-            "cmoc_eval_oracles_impl was not found in eval-oracles.py."
-        )
-    return cast(Callable[..., None], impl)
-
-
 app: typer.Typer = typer.Typer(name="cmoc", no_args_is_help=True)
-cmoc_eval_oracles_impl: Callable[..., None] = _load_eval_oracles_impl()
 
 
 @app.command("init")

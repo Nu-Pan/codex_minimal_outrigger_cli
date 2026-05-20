@@ -248,6 +248,8 @@ def _restore_index_after_init_commit(
     finally:
         patch_path.unlink(missing_ok=True)
     if result.returncode == 0:
+        _remove_cmoc_from_index(repo_root, {})
+        _assert_cmoc_ignore_guarantee(repo_root)
         return
 
     raise CmocError(
@@ -347,7 +349,8 @@ def changed_oracle_files(repo_root: Path, base_commit: str) -> list[Path]:
         repo_root,
         [
             "diff",
-            "--name-only",
+            "--name-status",
+            "-M",
             "--diff-filter=ACMRT",
             "HEAD",
             "--",
@@ -359,15 +362,15 @@ def changed_oracle_files(repo_root: Path, base_commit: str) -> list[Path]:
         [
             "diff",
             "--cached",
-            "--name-only",
+            "--name-status",
+            "-M",
             "--diff-filter=ACMRT",
             "--",
             "oracles",
         ],
     )
     for output in [uncommitted.stdout, staged.stdout]:
-        for line in output.splitlines():
-            collected.add(repo_root / line)
+        collected.update(_changed_paths_from_name_status(repo_root, output))
 
     # untracked oracle ファイルはディレクトリ単位に畳まない形式で収集する。
     status = run_git(
@@ -396,6 +399,21 @@ def changed_oracle_files(repo_root: Path, base_commit: str) -> list[Path]:
     )
 
 
+def _changed_paths_from_name_status(repo_root: Path, output: str) -> set[Path]:
+    """`git diff --name-status` から変更後 path を取り出す。"""
+    paths: set[Path] = set()
+    for line in output.splitlines():
+        parts = line.split("\t")
+        if not parts:
+            continue
+        status = parts[0]
+        if status.startswith(("R", "C")) and len(parts) >= 3:
+            paths.add(repo_root / parts[2])
+        elif len(parts) >= 2:
+            paths.add(repo_root / parts[1])
+    return paths
+
+
 def has_deleted_oracle_files(repo_root: Path, base_commit: str) -> bool:
     """評価モード切替用に oracle 削除有無を判定する。"""
     # committed 履歴、working tree、staging area の削除をすべて切替条件にする。
@@ -403,12 +421,13 @@ def has_deleted_oracle_files(repo_root: Path, base_commit: str) -> bool:
         [
             "log",
             "--name-only",
+            "-M",
             "--diff-filter=D",
             "--format=",
             f"{base_commit}..HEAD",
         ],
-        ["diff", "--name-only", "--diff-filter=D", "HEAD"],
-        ["diff", "--cached", "--name-only", "--diff-filter=D"],
+        ["diff", "--name-only", "-M", "--diff-filter=D", "HEAD"],
+        ["diff", "--cached", "--name-only", "-M", "--diff-filter=D"],
     ]
     for command in commands:
         result = run_git(repo_root, [*command, "--", "oracles"])

@@ -238,6 +238,67 @@ def test_changed_oracle_files_includes_untracked_files_under_new_directory(
     assert relative_paths == ["oracles/new_dir/new.md"]
 
 
+def test_changed_oracle_files_uses_renamed_oracle_new_path(
+    tmp_path: Path,
+) -> None:
+    """staged oracle rename は rename 後 path を部分評価対象にする。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    old_path = oracle_root / "old.md"
+    old_path.write_text("same content\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "base")
+    base_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    new_path = oracle_root / "new.md"
+    _git(
+        repo,
+        "mv",
+        old_path.relative_to(repo).as_posix(),
+        new_path.relative_to(repo).as_posix(),
+    )
+
+    relative_paths = [
+        path.relative_to(repo).as_posix()
+        for path in changed_oracle_files(repo, base_commit)
+    ]
+
+    assert relative_paths == ["oracles/new.md"]
+    assert has_deleted_oracle_files(repo, base_commit) is False
+
+
+def test_committed_oracle_rename_does_not_count_as_deletion(
+    tmp_path: Path,
+) -> None:
+    """committed oracle rename も削除扱いせず rename 後 path で評価する。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    old_path = oracle_root / "old.md"
+    old_path.write_text("same content\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "base")
+    base_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    new_path = oracle_root / "new.md"
+    _git(
+        repo,
+        "mv",
+        old_path.relative_to(repo).as_posix(),
+        new_path.relative_to(repo).as_posix(),
+    )
+    _git(repo, "commit", "-m", "rename oracle")
+
+    relative_paths = [
+        path.relative_to(repo).as_posix()
+        for path in changed_oracle_files(repo, base_commit)
+    ]
+
+    assert relative_paths == ["oracles/new.md"]
+    assert has_deleted_oracle_files(repo, base_commit) is False
+
+
 def test_changed_oracle_files_excludes_gitignored_files(
     tmp_path: Path,
 ) -> None:
