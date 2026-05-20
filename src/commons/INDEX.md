@@ -113,67 +113,75 @@
 
 ## Summary
 
-- `INDEX.md` の自動メンテナンス処理を実装する共通モジュールです。
-- 配置対象ディレクトリの列挙、除外条件の適用、既存目次ブロックの再利用、内容ハッシュ比較、必要時の `INDEX.md` 書き込みを扱います。
-- Codex CLI に Structured Output schema 付きで目次生成を依頼し、返却 JSON を検証して Markdown の目次ブロックへ変換します。
-- `.cmoc` の gitignore 保証、INDEX 更新差分だけを対象にした自動コミット、gitignore 判定、バイナリ判定、`memo` 除外などの補助処理を含みます。
-- ハッシュ欄、見出し、Summary、Read this when、Do not read this when の固定フォーマット検証と既存 `INDEX.md` の項目単位パースを行います。
+- `INDEX.md` の自動メンテナンス処理を実装するモジュールです。
+- リポジトリ配下の配置対象ディレクトリを列挙し、直下項目ごとの目次ブロックを生成・再利用・更新します。
+- `INDEX.md` 生成用の Structured Output schema、Codex CLI へのプロンプト生成、JSON payload 検証を定義します。
+- 目次対象から除外するディレクトリ名、ドット始まり項目、`memo`、gitignore 対象、バイナリらしいファイルの判定を扱います。
+- ファイル内容またはディレクトリ直下項目の hash から更新要否を判定し、必要に応じて `INDEX.md` を書き換え、自動コミット対象パスをまとめます。
+- 既存 `INDEX.md` ブロックのパース、hash 抽出、固定フォーマット検証、Markdown bullet への変換を行う補助関数群を含みます。
 
 ## Read this when
 
-- `INDEX.md` の生成・更新・自動コミットの流れを確認したいとき。
-- どのディレクトリに `INDEX.md` を配置し、どの名前やパスを除外するかを調べたいとき。
-- 既存の目次情報をハッシュ一致時に再利用する条件や、再生成される条件を確認したいとき。
-- Codex CLI に目次情報生成を依頼するプロンプト、Structured Output schema、JSON 検証処理を変更したいとき。
-- `memo`、ドットパス、`build`、`tmp`、`__pycache__`、gitignore 対象、バイナリファイルの扱いを確認したいとき。
-- `INDEX.md` の Markdown ブロック形式、hash セクション、既存エントリのパースやフォーマット検証に関わる不具合を調査するとき。
+- `maintain_indexes` による `INDEX.md` の作成・更新・自動コミット条件を確認したいとき。
+- `INDEX.md` 配置対象ディレクトリや目次作成対象項目の除外規則を実装・修正したいとき。
+- `memo`、ドット始まり項目、`build`、`tmp`、`__pycache__`、gitignore 対象、バイナリ判定の扱いを調べたいとき。
+- 目次情報生成時に Codex CLI へ渡すプロンプト、read-only 実行、Structured Output schema、JSON 検証の流れを確認したいとき。
+- 既存 `INDEX.md` の目次ブロックを hash とフォーマットに基づいて再利用する条件を調べたいとき。
+- `INDEX.md` の Markdown ブロック形式、`Summary`、`Read this when`、`Do not read this when`、`hash` セクションの生成規則を確認したいとき。
+- INDEX メンテナンス処理が `.gitignore` の `.cmoc` ignore 保証や `commit_if_changed` とどう連携するか確認したいとき。
 
 ## Do not read this when
 
 - 個別サブコマンドの CLI 仕様やユーザー向け挙動だけを調べたいとき。
-- Codex CLI 実行ラッパーそのもの、JSON パースの低レベル実装、リトライやログ保存の詳細だけを確認したいとき。
-- リポジトリ探索、`.cmoc` の ignore 保証、コミット処理などの共通 git/repo 操作の本体実装だけを読みたいとき。
-- 生成された `INDEX.md` の内容そのものを確認したいだけで、生成ロジックが不要なとき。
-- cmoc のテスト規約、開発環境、Python コーディング規約など、開発者向けルールだけを調べたいとき。
+- Codex CLI 実行ラッパーそのもの、JSON パースの詳細、リポジトリ共通処理の実装を調べたいとき。
+- `INDEX.md` のルーティング文書としての内容を読みたいだけで、自動生成・更新ロジックに関心がないとき。
+- cmoc の全体ワークフロー、oracle 評価、branch、apply、merge などの仕様を調べたいとき。
+- Python パッケージ構成、CLI エントリーポイント、テスト規約など、INDEX メンテナンス以外の開発ルールを探しているとき。
+- 特定ファイルの内容 hash を確認・再計算したいだけのとき。
 
 ## hash
 
-- 911fa78749629cf1ca97f70502bca882cdf6c53952df7a7ebfa62f175f4d60cb
+- 65d87fde3b9ccbf060cd681882097d7555d2bbdc3fdfd66b85494fb73143b30f
 
 # `repo.py`
 
 ## Summary
 
-- git リポジトリ検出、カレントディレクトリ移動、現在ブランチ名・HEAD commit 取得、cmoc ブランチ名判定など、リポジトリ操作の共通処理を実装するモジュール。
-- `.cmoc` を git 追跡対象外に保つため、root `.gitignore` への `/.cmoc/` 追加、既存 tracked `.cmoc` の index 解除、保証状態の検証を行う。
-- 未コミット差分の検出、差分パス一覧取得、差分なし検証、oracles 配下だけの差分検証、指定 pathspec の clean 検証など、サブコマンド実行前の git 状態チェックを提供する。
-- `cmoc init` 用に、初期化差分だけを一時 index で commit し、既存 staged 差分を復元する処理を持つ。
-- oracle ファイル列挙、変更済み oracle ファイル列挙、削除済み oracle ファイル判定を実装し、`INDEX.md` と root `.gitignore` 対象を除外する。
-- cmoc ブランチの base commit 記録ファイルパス生成と読み取り、指定パス差分の commit、git コマンド実行ラッパー、root `.gitignore` 判定ヘルパーを含む。
+- `src/commons/repo.py` は、cmoc が対象 git リポジトリを扱うための共通処理を集約するモジュールです。
+- リポジトリルートの探索と cwd 移動、現在ブランチ名や HEAD commit の取得、cmoc 作業ブランチ名の形式判定を提供します。
+- `.cmoc` を git 追跡対象外に保つため、root `.gitignore` への `/.cmoc/` 追加、既存 tracked `.cmoc` の index からの除去、ignore 保証の検証を行います。
+- 未コミット差分の有無確認、差分 path の列挙、指定 pathspec の clean 検証、oracle 以外の未コミット差分禁止など、サブコマンド実行前の作業ツリー検査を扱います。
+- `cmoc init` 用に、初期化差分だけを一時 index で commit し、利用者が事前に stage していた差分を復元する処理を持ちます。
+- 指定 path に差分がある場合だけ add/commit する共通 commit 処理を提供し、`.cmoc` を新規 add 対象から除外します。
+- `oracles` 配下の評価対象ファイル列挙、base commit 以降に変更された oracle ファイルの抽出、oracle ファイル削除有無の判定を行います。
+- oracle 列挙では `INDEX.md` と root `.gitignore` 対象を除外し、root `.gitignore` の判定には一時 git repository と `git check-ignore --no-index --stdin` を使います。
+- cmoc branch の作成元 commit を `.cmoc/branch/<branch>.txt` から読み書きするためのパス解決と読み取り処理を提供します。
+- すべての git 呼び出しは `run_git` に集約され、repo root を cwd に固定して stdout/stderr を取得します。
 
 ## Read this when
 
-- cmoc の各サブコマンドで `<repo-root>` を発見し、以降の git 操作をリポジトリルート基準で実行したいとき。
-- 現在ブランチ、HEAD commit、cmoc ブランチ名形式、cmoc ブランチ作成元 commit の扱いを確認したいとき。
-- `.cmoc` を `.gitignore` と git index の両面から追跡対象外にする処理を調べたいとき。
-- 未コミット差分の有無、差分パス一覧、oracles 配下だけに限定した差分検証、初期化対象パスの clean 検証を利用または修正したいとき。
-- `cmoc init` が生成した差分だけを commit し、実行前から stage 済みだった利用者差分を保持する仕組みを理解したいとき。
-- `cmoc eval-oracles` などで oracle ファイル全体、変更済み oracle ファイル、削除済み oracle ファイルを列挙する条件を確認したいとき。
-- root `.gitignore` だけを使った oracle ファイル除外判定や、Git の ignore semantics に近い判定方法を確認したいとき。
-- 共通の `git` 実行方法、`CmocError` への変換箇所、標準出力・標準エラーの扱いを確認したいとき。
+- cmoc の各サブコマンドから共通で使う git 操作、repo root 探索、cwd 固定の実装を確認したいとき。
+- `.cmoc` を git 追跡対象外にする保証、root `.gitignore` への `/.cmoc/` 追加、tracked `.cmoc` の index 除去を実装または調査するとき。
+- `cmoc init` が利用者の既存 staged 差分を混ぜずに初期化差分だけ commit する仕組みを確認したいとき。
+- 未コミット差分がある場合のエラー、oracle 配下だけの差分許可、指定 pathspec の clean 検査など、実行前ガードを調べるとき。
+- oracle ファイル列挙、変更済み oracle の部分評価対象抽出、oracle 削除時の全評価切り替え条件を確認したいとき。
+- root `.gitignore` のみを使って oracle ファイルや削除 path の除外判定を行う処理を調べたいとき。
+- cmoc 作業ブランチ名の形式判定、ブランチ作成元 commit ファイルの場所、base commit 読み取りを確認したいとき。
+- git コマンド実行時の共通ラッパー、stdout/stderr の扱い、追加 env や stdin の渡し方を確認したいとき。
 
 ## Do not read this when
 
-- Codex CLI 呼び出し、プロンプト構成、Structured Output、ログ保存、リトライ方針など、LLM 連携仕様だけを調べたいとき。
-- 個別サブコマンドのユーザー向け入出力、進捗表示、終了メッセージ、CLI 引数仕様だけを確認したいとき。
-- oracle の正本仕様本文や、どの oracle ファイルを読むべきかの仕様ルーティングだけを調べたいとき。
-- cmoc の Python コーディング規約、テスト規約、開発環境ルールだけを確認したいとき。
-- git 以外のファイルシステム操作、Codex 実行ログ、自然言語メッセージ生成、評価結果レポートの実装を探しているとき。
-- README、AGENTS、oracles、memo などの編集可否やリポジトリ運用ルールだけを確認したいとき。
+- CLI 引数定義、サブコマンドの argparse 構成、ユーザー向けコマンドルーティングだけを調べたいとき。
+- Codex CLI 呼び出し、プロンプト生成、Structured Output、ログ保存、リトライ方針など LLM 連携部分を調べたいとき。
+- oracle ファイルの本文評価ロジックや Codex への評価依頼内容そのものを確認したいとき。
+- `INDEX.md` の目次情報フォーマットや自動生成プロンプトの詳細だけを調べたいとき。
+- cmoc のエラー表示全体の整形、例外クラス定義、CLI 最上位の例外捕捉だけを調べたいとき。
+- テスト実装、Fake Codex CLI、pytest fixture などテスト側の構成だけを確認したいとき。
+- 一般的な git の使い方や gitignore の仕様を調べており、cmoc 固有の共通処理を読む必要がないとき。
 
 ## hash
 
-- abe347f0e97b031203741aec3568493f1bd67f79cff0af9e346b393170f22de9
+- 9d01c66b37aad588fed9bf08efdba80d9cf9c692c8610cae8941e1071afa24af
 
 # `timestamps.py`
 

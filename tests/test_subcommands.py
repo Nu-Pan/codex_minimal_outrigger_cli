@@ -183,12 +183,12 @@ def test_eval_oracles_writes_report_with_fake_codex(
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
 
     monkeypatch.setattr(
-        eval_oracles_module,
+        eval_oracles_module._module,
         "maintain_indexes",
         lambda repo_root: False,
     )
     monkeypatch.setattr(
-        eval_oracles_module,
+        eval_oracles_module._module,
         "run_codex_exec",
         lambda *args, **kwargs: "no fatal problems",
     )
@@ -201,20 +201,18 @@ def test_eval_oracles_writes_report_with_fake_codex(
     assert "no fatal problems" in reports[0].read_text(encoding="utf-8")
 
 
-def test_eval_oracles_body_uses_pep8_module_file_name() -> None:
-    """`eval-oracles` の本体は import 可能な PEP 8 module 名に置く。"""
+def test_eval_oracles_body_uses_subcommand_file_name() -> None:
+    """`eval-oracles` の本体はサブコマンド名と同じファイルに置く。"""
     repo_root = Path(__file__).resolve().parents[1]
 
-    module = repo_root / "src" / "sub_commands" / "eval_oracles.py"
-    assert "def cmoc_eval_oracles_impl" in module.read_text(
+    body = repo_root / "src" / "sub_commands" / "eval-oracles.py"
+    wrapper = repo_root / "src" / "sub_commands" / "eval_oracles.py"
+    assert "def cmoc_eval_oracles_impl" in body.read_text(
         encoding="utf-8"
     )
-    assert not (
-        repo_root / "src" / "sub_commands" / "eval-oracles.py"
-    ).exists()
-    module_text = module.read_text(encoding="utf-8")
-    assert "compile(" not in module_text
-    assert "globals()" not in module_text
+    wrapper_text = wrapper.read_text(encoding="utf-8")
+    assert "spec_from_file_location" in wrapper_text
+    assert "def cmoc_eval_oracles_impl" not in wrapper_text
 
 
 def test_eval_oracles_prompt_forbids_implementation_references() -> None:
@@ -223,6 +221,17 @@ def test_eval_oracles_prompt_forbids_implementation_references() -> None:
 
     assert "実装・テスト・設定ファイルは参照禁止です。" in prompt
     assert "仕様だけから判断・実装したとき" in prompt
+
+
+def test_eval_oracles_prompt_orders_completion_before_details() -> None:
+    """評価 prompt はロール、作業、完了条件、詳細指示の順にする。"""
+    prompt = _evaluation_prompt(Path("/repo"), Path("/repo/oracles/spec.md"))
+    lines = prompt.splitlines()
+
+    assert lines[0] == "あなたはソフトウェア仕様のレビュー担当です。"
+    assert lines[1] == "`/repo` 内の oracle ファイル `/repo/oracles/spec.md` を評価してください。"
+    assert lines[2] == "完了条件は、致命的な仕様問題の有無と根拠を報告することです。"
+    assert lines.index("対象 oracle だけで判断せず、同じ oracles ツリー内の関連仕様と") > 2
 
 
 def test_apply_returns_complete_when_no_discrepancies(
@@ -566,8 +575,8 @@ def test_main_typer_functions_delegate_only_to_impls() -> None:
 
     assert "def _run_command" not in source
     assert "_run_command(" not in source
-    assert "spec_from_file_location" not in source
-    assert "from sub_commands.eval_oracles import" in source
+    assert "from sub_commands.eval_oracles import load_eval_oracles_module" in source
+    assert "load_eval_oracles_module().cmoc_eval_oracles_impl" in source
     assert "cmoc_init_impl()" in source
     assert "cmoc_branch_impl()" in source
     assert "cmoc_eval_oracles_impl(full=full)" in source
@@ -589,6 +598,25 @@ def test_cmoc_help_uses_cmoc_command_name() -> None:
     )
 
     assert "Usage: cmoc [OPTIONS] COMMAND [ARGS]..." in result.stdout
+
+
+def test_main_returns_nonzero_for_subcommand_error() -> None:
+    """サブコマンド内エラーはプロセス終了コードへ反映される。"""
+    repo_root = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        [sys.executable, "-m", "main", "apply", "--repeat", "-1"],
+        cwd=repo_root,
+        env={"PYTHONPATH": str(repo_root / "src")},
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    assert result.returncode == 1
+    assert result.stderr == ""
+    assert "ERROR" in result.stdout
+    assert "Summary:" in result.stdout
 
 
 def test_bin_cmoc_requires_venv_python() -> None:

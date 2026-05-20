@@ -85,37 +85,62 @@
 
 - 3f0f49fc6b3453d7c26dea4e5cb47b8bd0b23b7378f6d77da6eeb182a334eee7
 
+# `eval-oracles.py`
+
+## Summary
+
+- `cmoc eval-oracles` サブコマンドの本体処理を定義する実装ファイル。
+- `.cmoc` の ignore 保証、`INDEX.md` メンテナンス、評価対象 oracle ファイルの選択、Codex CLI による評価実行、Markdown レポート保存までの 5 ステップを担う。
+- `--full` 指定、cmoc ブランチ判定、削除済み oracle の有無、ブランチ基点コミットに基づいて、部分評価と全体評価を切り替える。
+- oracle 評価用プロンプトでは、関連仕様と `INDEX.md` ルーティングを根拠にすること、実装・テスト・設定ファイル参照禁止、`memo` 読み書き禁止、編集禁止を Codex CLI に指示する。
+- 評価結果は `.cmoc/reports/eval-oracles/<timestamp>.md` に frontmatter 付き Markdown として保存される。
+
+## Read this when
+
+- `cmoc eval-oracles` の実行フロー、進捗表示、評価対象選択、レポート生成処理を確認したいとき。
+- 部分評価と全体評価の切り替え条件を調べたいとき。
+- Codex CLI に oracle 評価を依頼するプロンプト内容や `read_only` 実行設定を確認したいとき。
+- 評価レポートの保存先、ファイル名、frontmatter、oracle ごとの出力結合形式を確認したいとき。
+- `ensure_cmoc_ignored`、`maintain_indexes`、oracle ファイル列挙、ブランチ情報取得、タイマー表示の呼び出し順を追いたいとき。
+
+## Do not read this when
+
+- `cmoc eval-oracles` の CLI 引数定義や argparse 側の登録処理だけを確認したいとき。
+- oracle ファイル列挙、cmoc ブランチ判定、`.cmoc` ignore 保証などの共通 repo 操作の詳細実装を調べたいとき。
+- `INDEX.md` メンテナンス処理そのものの詳細を調べたいとき。
+- Codex CLI 実行ラッパー、ログ保存、リトライ、サンドボックス指定などの共通処理を調べたいとき。
+- タイムスタンプ生成や StepTimer の実装詳細を調べたいとき。
+
+## hash
+
+- 29e6ed0b739fd8b701484bda5222be421949287d5cb8662504d58fb846216340
+
 # `eval_oracles.py`
 
 ## Summary
 
-- `cmoc eval-oracles` サブコマンドの本体処理を実装する Python モジュールです。
-- `.cmoc` の ignore 保証、`INDEX.md` メンテナンス、評価対象 oracle ファイルの選択、Codex CLI による評価実行、Markdown レポート保存までの一連の処理を扱います。
-- cmoc 作業ブランチかつ `--full` 未指定で削除 oracle がない場合は変更 oracle のみを部分評価し、それ以外は全 oracle を全体評価します。
-- oracle 評価用プロンプトでは、実装・テスト・設定ファイル参照禁止、関連仕様と `INDEX.md` に基づく致命的仕様問題の報告、`memo` 読み書き禁止、ファイル編集禁止を Codex CLI に指示します。
-- 評価レポートは `.cmoc/reports/eval-oracles/<timestamp>.md` に frontmatter と oracle ごとの評価本文を含む Markdown として書き出します。
+- `src/sub_commands/eval_oracles.py` は、ハイフン付きの本命実装ファイル `eval-oracles.py` を通常の Python import から扱いやすくする互換モジュールです。
+- `importlib.util.spec_from_file_location` を使って同じディレクトリの `eval-oracles.py` を `sub_commands.eval-oracles` として動的に読み込みます。
+- 読み込んだ本命実装モジュールから `cmoc_eval_oracles_impl` と `_evaluation_prompt` を再公開し、テストや他モジュールがアンダースコア区切りの `eval_oracles.py` 経由で参照できるようにします。
+- 動的ロードに失敗した場合は `ImportError` を送出します。
 
 ## Read this when
 
-- `cmoc eval-oracles` の実行フロー、進捗表示、ステップ順序を確認したいとき。
-- oracle 評価が部分評価になる条件と、全体評価になる条件を調べたいとき。
-- `changed_oracle_files`、`has_deleted_oracle_files`、`list_oracle_files`、ブランチ基点コミットなどを使った評価対象選択ロジックを確認したいとき。
-- Codex CLI に渡す oracle 評価プロンプトの内容、read-only 実行、JSON を期待しない呼び出し設定を調べたいとき。
-- eval-oracles の評価結果レポートの保存先、ファイル名、frontmatter 項目、oracle ごとの本文構成を確認したいとき。
-- `maintain_indexes` が eval-oracles の既存ユーザー向けステップとして評価前に実行されることを確認したいとき。
+- `eval-oracles.py` の実装を Python の通常 import で参照するための互換レイヤーを確認したいとき。
+- `cmoc_eval_oracles_impl` や `_evaluation_prompt` が `src/sub_commands/eval_oracles.py` からどのように公開されているか調べたいとき。
+- ハイフンを含むファイル名の本命実装を `importlib` で読み込む仕組みを確認したいとき。
+- `eval-oracles` サブコマンド関連のテストが `eval_oracles.py` を import している理由を理解したいとき。
 
 ## Do not read this when
 
-- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc merge` など、eval-oracles 以外のサブコマンド本体を調べたいとき。
-- Codex CLI 実行ラッパーそのもの、サンドボックス指定、ログ保存、リトライなどの共通実装だけを確認したいとき。
-- oracle ファイル列挙、ブランチ判定、基点コミット読み取り、`.cmoc` ignore 保証などの repo 共通ヘルパー実装だけを詳しく調べたいとき。
-- `INDEX.md` メンテナンス処理の対象ディレクトリ、Structured Output、ハッシュ比較、生成ロジックの詳細を調べたいとき。
-- タイムスタンプ生成、ステップ時間計測、共通エラー整形などの横断ユーティリティだけを確認したいとき。
-- eval-oracles の仕様文書や正本仕様断片を読みたいだけで、Python 実装の制御フローが不要なとき。
+- `cmoc eval-oracles` の本体処理、CLI 挙動、oracle 評価ロジック、プロンプト生成の詳細を調べたいとき。その場合は本命実装の `src/sub_commands/eval-oracles.py` を読むべきです。
+- `cmoc eval-oracles` の正本仕様を確認したいとき。その場合は `oracles/INDEX.md` から該当する仕様断片へルーティングしてください。
+- 他のサブコマンドや共通 CLI 処理の実装を調べたいとき。
+- ファイル名互換や再公開の仕組みではなく、実際の評価結果生成、ログ保存、Codex CLI 呼び出しなどの処理内容を確認したいとき。
 
 ## hash
 
-- bfaa17519e59fa0a092983b1556fc578decfcb4312492879ecb884035d25fff1
+- f7b3b8fed670ac7d3b700362e0de934019a514fb8f5c3b2f06b762b6eabf01c7
 
 # `init.py`
 

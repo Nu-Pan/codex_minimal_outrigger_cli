@@ -264,6 +264,7 @@ def _restore_index_after_init_commit(
 
 def _head_commit_or_none(repo_root: Path) -> str | None:
     """HEAD が存在すれば commit hash を返し、未作成なら None を返す。"""
+    # rev-parse で HEAD の存在確認と commit hash 取得を同時に行う。
     result = run_git(
         repo_root,
         ["rev-parse", "--verify", "HEAD"],
@@ -401,6 +402,7 @@ def changed_oracle_files(repo_root: Path, base_commit: str) -> list[Path]:
 
 def _changed_paths_from_name_status(repo_root: Path, output: str) -> set[Path]:
     """`git diff --name-status` から変更後 path を取り出す。"""
+    # rename/copy を考慮しながら git 出力を path 集合へ変換する。
     paths: set[Path] = set()
     for line in output.splitlines():
         parts = line.split("\t")
@@ -525,6 +527,7 @@ def _stage_gitignore_with_cmoc_rule_from_head(
 
 def _remove_cmoc_from_index(repo_root: Path, env: dict[str, str]) -> None:
     """指定 index から `.cmoc` 配下の tracked entries を取り除く。"""
+    # 対象 index に残っている `.cmoc` entries を NUL 区切りで取得する。
     tracked = run_git(
         repo_root,
         ["ls-files", "-z", "--", ".cmoc"],

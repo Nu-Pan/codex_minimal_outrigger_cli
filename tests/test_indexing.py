@@ -116,6 +116,37 @@ def test_maintain_indexes_includes_build_and_tmp_as_entries(
     assert not (tmp / "INDEX.md").exists()
 
 
+def test_maintain_indexes_excludes_non_utf8_binary_without_nul(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """NUL を含まない非 UTF-8 バイナリも INDEX 目次対象から除外する。"""
+    repo = _init_repo(tmp_path)
+    binary = repo / "image.bin"
+    binary.write_bytes(bytes([0xFF, 0xD8, 0xFF, 0xE0, 0x7F, 0x01]))
+    (repo / "kept.txt").write_text("kept\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "binary")
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """INDEX 生成用の最小 Structured Output を返す。"""
+        return json.dumps(
+            {
+                "summary": ["summary"],
+                "read_this_when": ["read"],
+                "do_not_read_this_when": ["skip"],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    maintain_indexes(repo, commit_changes=False)
+
+    content = (repo / "INDEX.md").read_text(encoding="utf-8")
+    assert "# `kept.txt`" in content
+    assert "# `image.bin`" not in content
+
+
 def test_maintain_indexes_places_index_in_nested_memo_directory(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,

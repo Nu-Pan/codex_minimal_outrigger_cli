@@ -6,12 +6,13 @@ import typer
 from commons.errors import format_error_report
 from sub_commands.apply import cmoc_apply_impl
 from sub_commands.branch import cmoc_branch_impl
-from sub_commands.eval_oracles import cmoc_eval_oracles_impl
+from sub_commands.eval_oracles import load_eval_oracles_module
 from sub_commands.init import cmoc_init_impl
 from sub_commands.merge import cmoc_merge_impl
 
 
 app: typer.Typer = typer.Typer(name="cmoc", no_args_is_help=True)
+cmoc_eval_oracles_impl = load_eval_oracles_module().cmoc_eval_oracles_impl
 
 
 @app.command("init")
@@ -57,7 +58,9 @@ def main() -> None:
     """Typer の parse error も共通エラーレポートへ変換して起動する。"""
     # standalone_mode=False で Click/Typer の例外を cmoc 側で整形する。
     try:
-        app(prog_name="cmoc", standalone_mode=False)
+        result = app(prog_name="cmoc", standalone_mode=False)
+        if isinstance(result, int):
+            raise SystemExit(result)
     except typer.Exit as exit_error:
         raise SystemExit(exit_error.exit_code) from exit_error
     except click.ClickException as error:
