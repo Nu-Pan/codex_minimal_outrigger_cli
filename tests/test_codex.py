@@ -241,8 +241,96 @@ def test_run_codex_exec_reports_json_semantic_validation_failure(
             json_validator=validate,
         )
 
-    assert "Last JSON error: ok must be true." in error.value.detail
+    assert "Last validation error: ok must be true." in error.value.detail
     assert "Log:" in error.value.detail
+    assert "Last stdout:" in error.value.detail
+
+
+def test_run_codex_exec_retries_text_semantic_validation_failure(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """非 JSON 出力の意味的失敗も 3 回までリトライする。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    state = tmp_path / "attempts.txt"
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                f"STATE={state}",
+                "COUNT=0",
+                "if [ -f \"$STATE\" ]; then COUNT=$(cat \"$STATE\"); fi",
+                "COUNT=$((COUNT + 1))",
+                "echo \"$COUNT\" > \"$STATE\"",
+                "if [ \"$COUNT\" -lt 3 ]; then",
+                "  echo 'incomplete report'",
+                "else",
+                "  echo 'complete report'",
+                "fi",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    def validate(value: str) -> None:
+        """complete を含む出力だけを成功にする。"""
+        if value.strip() != "complete report":
+            raise ValueError("report is incomplete.")
+
+    output = run_codex_exec(
+        repo,
+        "prompt",
+        read_only=True,
+        text_validator=validate,
+    )
+
+    log_content = next(
+        (repo / ".cmoc" / "logs" / "codex_exec").glob("*.log")
+    ).read_text(encoding="utf-8")
+    assert output.strip() == "complete report"
+    assert state.read_text(encoding="utf-8").strip() == "3"
+    assert "attempt: 1" in log_content
+    assert "attempt: 2" in log_content
+    assert "attempt: 3" in log_content
+
+
+def test_run_codex_exec_reports_text_semantic_validation_failure(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """非 JSON 出力の意味的失敗が続いたら CmocError で詳細を出す。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(["#!/usr/bin/env bash", "echo 'incomplete report'"]),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    def validate(value: str) -> None:
+        """常に semantic validation failure を発生させる。"""
+        raise ValueError("report is incomplete.")
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(
+            repo,
+            "prompt",
+            read_only=True,
+            text_validator=validate,
+        )
+
+    assert "Last validation error: report is incomplete." in error.value.detail
+    assert "Output schema: none" in error.value.detail
     assert "Last stdout:" in error.value.detail
 
 

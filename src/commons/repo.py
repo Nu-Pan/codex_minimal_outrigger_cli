@@ -282,16 +282,55 @@ def commit_if_changed(repo_root: Path, paths: list[str], message: str) -> bool:
     if not diff_result.stdout.strip():
         return False
 
-    # 既存ファイルの削除・更新は `git add -u` で拾う。
-    update_paths = [path for path in paths if (repo_root / path).exists()]
-    if update_paths:
-        run_git(repo_root, ["add", "-u", "--", *update_paths])
+    # 呼び出し前から stage 済みの無関係差分を、対象 commit へ混ぜない。
+    staged_outside_paths = _staged_diff_excluding_paths(repo_root, paths)
+    parent_hash = _head_commit_or_none(repo_root)
+    with tempfile.TemporaryDirectory(prefix="cmoc-pathspec-index-") as temp_name:
+        env = {"GIT_INDEX_FILE": str(Path(temp_name) / "index")}
+        if parent_hash is None:
+            run_git(repo_root, ["read-tree", "--empty"], env=env)
+        else:
+            run_git(repo_root, ["read-tree", "HEAD"], env=env)
 
-    # `.cmoc` は追跡対象外なので、新規 add 対象からは外す。
-    add_paths = [path for path in paths if not path.startswith(".cmoc")]
-    if add_paths:
-        run_git(repo_root, ["add", "--", *add_paths])
-    run_git(repo_root, ["commit", "-m", message])
+        update_paths = [path for path in paths if (repo_root / path).exists()]
+        if update_paths:
+            run_git(repo_root, ["add", "-u", "--", *update_paths], env=env)
+
+        add_paths = [path for path in paths if not path.startswith(".cmoc")]
+        if add_paths:
+            run_git(repo_root, ["add", "--", *add_paths], env=env)
+        if any(path == ".cmoc" or path.startswith(".cmoc/") for path in paths):
+            _remove_cmoc_from_index(repo_root, env)
+
+        changed = run_git(
+            repo_root,
+            ["diff", "--cached", "--quiet", "--", *paths],
+            check=False,
+            env=env,
+        )
+        if changed.returncode == 0:
+            return False
+        if changed.returncode != 1:
+            raise CmocError(
+                "Failed to inspect pathspec commit changes.",
+                [
+                    "Inspect git index state and retry cmoc.",
+                    "Commit or stash unrelated changes, then run cmoc again.",
+                ],
+                changed.stderr.strip(),
+            )
+
+        tree_hash = run_git(repo_root, ["write-tree"], env=env).stdout.strip()
+
+    commit_args = ["commit-tree", tree_hash, "-m", message]
+    if parent_hash is not None:
+        commit_args[2:2] = ["-p", parent_hash]
+    commit_hash = run_git(repo_root, commit_args).stdout.strip()
+    update_ref_args = ["update-ref", "HEAD", commit_hash]
+    if parent_hash is not None:
+        update_ref_args.append(parent_hash)
+    run_git(repo_root, update_ref_args)
+    _restore_index_after_pathspec_commit(repo_root, staged_outside_paths)
     return True
 
 
@@ -483,6 +522,56 @@ def changed_paths(repo_root: Path) -> list[str]:
             value = value.split(" -> ", 1)[1]
         paths.append(value)
     return paths
+
+
+def _staged_diff_excluding_paths(repo_root: Path, paths: list[str]) -> str:
+    """指定 pathspec 以外の既存 staged 差分を patch として返す。"""
+    # pathspec magic の exclude で、今回 commit する対象だけを復元対象から外す。
+    exclusions = [f":(exclude){path}" for path in paths]
+    result = run_git(
+        repo_root,
+        ["diff", "--cached", "--binary", "--full-index", "--", ".", *exclusions],
+    )
+    return result.stdout
+
+
+def _restore_index_after_pathspec_commit(
+    repo_root: Path,
+    staged_diff: str,
+) -> None:
+    """pathspec commit 後、対象外の既存 staged 差分だけを index に戻す。"""
+    # 作業ツリーは触らず index だけを新しい HEAD に合わせる。
+    run_git(repo_root, ["read-tree", "--reset", "HEAD"])
+    if not staged_diff:
+        return
+
+    with tempfile.NamedTemporaryFile(
+        "w",
+        encoding="utf-8",
+        delete=False,
+    ) as patch_file:
+        patch_file.write(staged_diff)
+        patch_path = Path(patch_file.name)
+    try:
+        result = run_git(
+            repo_root,
+            ["apply", "--cached", "--3way", str(patch_path)],
+            check=False,
+        )
+    finally:
+        patch_path.unlink(missing_ok=True)
+    if result.returncode == 0:
+        _remove_cmoc_from_index(repo_root, {})
+        return
+
+    raise CmocError(
+        "Failed to restore preexisting staged changes.",
+        [
+            "Inspect git index state before continuing.",
+            "Re-stage your previous changes if needed.",
+        ],
+        result.stderr.strip(),
+    )
 
 
 def _stage_gitignore_with_cmoc_rule_from_head(

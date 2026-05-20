@@ -2,27 +2,28 @@
 
 ## Summary
 
-- `bin/cmoc` は cmoc CLI を起動するための POSIX shell 製ラッパースクリプトです。
-- スクリプト自身の場所から `<cmoc-root>` を解決し、`<cmoc-root>/.venv/bin/python` を cmoc 実行用 Python として使用します。
-- 仮想環境 Python が存在しない、または実行可能でない場合は、日本語のエラーレポート、次の対応、必要な実行ファイル、セットアップ手順、呼び出し箇所を stdout に出力して終了ステータス 1 で終了します。
-- 仮想環境 Python が実行可能な場合は、`exec` により `<cmoc-root>/src/main.py` をその Python で起動し、受け取った引数をそのまま引き渡します。
+- `bin/cmoc` は cmoc コマンドのシェル製エントリーポイントです。
+- スクリプト自身の場所から `<cmoc-root>` を解決し、`<cmoc-root>/.venv/bin/python` を実行 Python として使用します。
+- 仮想環境 Python が存在し実行可能な場合は、`<cmoc-root>/src/main.py` に全引数を渡して `exec` します。
+- 仮想環境 Python が見つからない、または実行不可の場合は、日本語の構造化エラーを標準出力へ表示し、セットアップ手順、必要な実行ファイル、簡易 Call stack を示して終了ステータス 1 で終了します。
+- `line_number_of` はエラー表示内の Call stack 用に、このスクリプト内で指定パターンに一致する最初の行番号を求める補助関数です。
 
 ## Read this when
 
-- cmoc コマンドの実行入口がどこで、どの Python とどの main ファイルを起動するか確認したいとき。
-- `.venv/bin/python` が見つからない場合のエラーメッセージ、セットアップ案内、終了ステータスを調べたいとき。
-- `bin/cmoc` から `<cmoc-root>` をどのように算出しているか確認したいとき。
-- cmoc の CLI 起動時にユーザー指定の引数が `src/main.py` へどう渡されるか確認したいとき。
-- 仮想環境未セットアップ時の初期導線やトラブルシュート表示を修正・テストしたいとき。
+- cmoc コマンド起動時に、どの Python とどの Python ファイルが実行されるか確認したいとき。
+- `.venv/bin/python` が無い場合や実行権限が無い場合のエラー文面、終了ステータス、復旧手順を確認したいとき。
+- cmoc の配布用または開発用 CLI ラッパーの挙動を調べたいとき。
+- `bin/cmoc` から `<cmoc-root>/src/main.py` への引数受け渡し方法を確認したいとき。
+- 仮想環境未セットアップ時のユーザー向け案内や Call stack 表示の実装を変更・検証したいとき。
 
 ## Do not read this when
 
-- cmoc のサブコマンド本体、引数解析、業務ロジック、Codex CLI 連携など `src/main.py` 以降の実装を調べたいとき。
-- cmoc の正本仕様断片、開発規約、テスト規約、アプリケーション仕様を調べたいとき。
-- Python パッケージ設定、依存関係、仮想環境の作成方法そのものを詳しく調べたいとき。
-- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` など個別サブコマンドの挙動を確認したいとき。
-- cmoc を用いて開発する `<repo-root>` 側のファイル探索、oracle 処理、INDEX.md 生成、git 操作の詳細を調べたいとき。
+- cmoc の各サブコマンドの具体的な処理内容やアプリケーション仕様を調べたいとき。
+- `src/main.py` 以降の Python 実装、コマンドディスパッチ、共通処理の詳細を調べたいとき。
+- pytest や Fake Codex CLI など、テスト実装の規約やテストケース本体を調べたいとき。
+- `<repo-root>` 側で cmoc が生成・管理するファイルや `INDEX.md` の仕様を調べたいとき。
+- 仮想環境の作成手順ではなく、Python パッケージ構成や依存関係定義の詳細を確認したいとき。
 
 ## hash
 
-- 62fe294f1a015c92004e32b18bb98eb7cb91487375005bec22aaaae6e7a7e092
+- ad61286380c31b08548fc54089fc4097d1fb116a324e6fc55e7ff94da53e530a

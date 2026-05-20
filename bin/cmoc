@@ -5,7 +5,12 @@ set -eu
 cmoc_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 venv_python="$cmoc_root/.venv/bin/python"
 
-if [ ! -x "$venv_python" ]; then
+line_number_of() {
+    pattern=$1
+    awk -v pattern="$pattern" '$0 ~ pattern { print NR; exit }' "$0"
+}
+
+print_missing_venv_error() {
     printf '%s\n' "ERROR"
     printf '\n'
     printf '%s\n' "Summary:"
@@ -23,8 +28,19 @@ if [ ! -x "$venv_python" ]; then
     printf '%s\n' "  ./.venv/bin/python -m pip install -e ."
     printf '\n'
     printf '%s\n' "Call stack:"
-    printf '%s\n' "bin/cmoc: 仮想環境 Python の実行可能性チェック"
+    printf '%s\n' "  at print_missing_venv_error ($0:$(line_number_of "^print_missing_venv_error[(][)] [{]$"))"
+    printf '%s\n' "  at require_venv_python ($0:$(line_number_of "^    print_missing_venv_error$"))"
+    printf '%s\n' "  at main ($0:$(line_number_of "^require_venv_python$"))"
+}
+
+require_venv_python() {
+    if [ -x "$venv_python" ]; then
+        return 0
+    fi
+    print_missing_venv_error
     exit 1
-fi
+}
+
+require_venv_python
 
 exec "$venv_python" "$cmoc_root/src/main.py" "$@"

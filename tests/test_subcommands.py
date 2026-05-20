@@ -457,6 +457,61 @@ def test_apply_commits_cmoc_guarantee_before_oracle_changes(
     assert _git(repo, "status", "--porcelain", "--", "oracles").stdout == ""
 
 
+def test_apply_does_not_mix_preexisting_staged_oracles_into_cmoc_commit(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """事前 stage 済み oracle 差分も `.cmoc` 保証 commit へ混ぜない。"""
+    repo = _init_repo(tmp_path)
+    _git(repo, "checkout", "-b", "cmoc_2026-05-10_22-21_10_123")
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md")
+
+    monkeypatch.setattr(
+        "sub_commands.apply.maintain_indexes",
+        lambda repo_root: False,
+    )
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """調査なら不整合なし JSON、レポートなら Markdown を返す。"""
+        if kwargs.get("expect_json") is True:
+            return '{"discrepancies": []}'
+        return "\n".join(
+            [
+                "## 作業結果",
+                "収束",
+                "## 不整合件数の推移",
+                "1 回目: 0 件",
+                "## ブランチ cmoc_2026-05-10_22-21_10_123 上の全変更内容",
+                "カテゴリ: oracle 整備",
+            ]
+        )
+
+    monkeypatch.setattr("sub_commands.apply.run_codex_exec", fake_codex)
+
+    assert cmoc_apply_impl(repo) == 0
+
+    cmoc_commit_paths = _git(
+        repo,
+        "show",
+        "--name-only",
+        "--pretty=format:",
+        "HEAD~1",
+    ).stdout.splitlines()
+    oracle_commit_paths = _git(
+        repo,
+        "show",
+        "--name-only",
+        "--pretty=format:",
+        "HEAD",
+    ).stdout.splitlines()
+    assert cmoc_commit_paths == [".gitignore"]
+    assert oracle_commit_paths == ["oracles/spec.md"]
+    assert _git(repo, "status", "--porcelain").stdout == ""
+
+
 def test_commit_all_changes_rechecks_forbidden_paths_after_index_update(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -657,6 +712,10 @@ def test_bin_cmoc_reports_missing_venv_to_stdout(tmp_path: Path) -> None:
     assert "Detail:" in result.stdout
     assert "Call stack:" in result.stdout
     assert "仮想環境 Python" in result.stdout
+    assert "at print_missing_venv_error" in result.stdout
+    assert "at require_venv_python" in result.stdout
+    assert "at main" in result.stdout
+    assert "仮想環境 Python の実行可能性チェック" not in result.stdout
 
 
 def test_merge_conflict_prompt_always_forbids_oracles_edit() -> None:

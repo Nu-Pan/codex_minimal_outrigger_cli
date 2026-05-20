@@ -318,14 +318,32 @@ def _write_apply_report(
         prompt,
         read_only=True,
         expect_json=False,
+        text_validator=lambda value: _validate_apply_report(
+            value,
+            branch_name,
+            result_label,
+            completed,
+            discrepancy_counts,
+        ),
     )
-    _validate_apply_report(
-        report,
-        branch_name,
-        result_label,
-        completed,
-        discrepancy_counts,
-    )
+    try:
+        _validate_apply_report(
+            report,
+            branch_name,
+            result_label,
+            completed,
+            discrepancy_counts,
+        )
+    except ValueError as error:
+        raise CmocError(
+            "Apply report from Codex CLI missed required content.",
+            [
+                "Inspect the Codex report generation prompt and retry.",
+                "If the problem repeats, run cmoc apply again after checking "
+                "Codex CLI output.",
+            ],
+            str(error),
+        ) from error
     report_path.write_text(report, encoding="utf-8")
     return report_path
 
@@ -361,14 +379,9 @@ def _validate_apply_report(
 
     # 不完全な Codex 出力をそのまま保存せず、共通エラーとして中断する。
     if missing:
-        raise CmocError(
-            "Apply report from Codex CLI missed required content.",
-            [
-                "Inspect the Codex report generation prompt and retry.",
-                "If the problem repeats, run cmoc apply again after checking "
-                "Codex CLI output.",
-            ],
-            "\n".join(missing),
+        raise ValueError(
+            "Apply report from Codex CLI missed required content:\n"
+            + "\n".join(missing)
         )
 
 
