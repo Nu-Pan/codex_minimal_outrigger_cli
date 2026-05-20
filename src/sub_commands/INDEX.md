@@ -87,32 +87,32 @@
 ## Summary
 
 - `cmoc eval-oracles` サブコマンドの本体処理を実装するファイル。
-- `.cmoc` の git ignore 保証、`INDEX.md` メンテナンス、評価対象 oracle ファイルの選択、Codex CLI による oracle 評価、Markdown レポート保存までの一連の処理を担当する。
-- `--full` 指定、cmoc ブランチ判定、base commit、削除 oracle の有無に基づいて、部分評価と全体評価を切り替える。
-- oracle 評価用プロンプトを組み立て、参照範囲、必須見出し、ファイル編集禁止、`memo` 読み書き禁止などを Codex CLI に渡す。
-- 評価出力に必須見出しが含まれることを検証し、`.cmoc/reports/eval-oracles/<timestamp>.md` に frontmatter 付きで評価結果を保存する。
+- `.cmoc` の ignore 保証、`INDEX.md` メンテナンス、評価対象 oracle の選定、Codex CLI による oracle 評価、Markdown レポート保存までの一連の処理を扱う。
+- `--full` 指定、cmoc ブランチ判定、ベースコミット、削除 oracle の有無に基づいて、全体評価または部分評価を選択する。
+- oracle 評価用プロンプトの組み立て、評価出力に必須見出しが含まれるかの検証、`.cmoc/reports/eval-oracles` 配下への timestamp 付きレポート生成を定義する。
 
 ## Read this when
 
-- `cmoc eval-oracles` の実行フロー、進捗表示、ステップ構成を確認したいとき。
-- oracle 評価が部分評価になる条件、全体評価になる条件、`--full` の影響を調べたいとき。
-- Codex CLI に渡す oracle 評価プロンプトの内容や、評価時の参照禁止範囲を確認したいとき。
-- 評価レポートに要求される必須見出しや、出力検証の条件を確認したいとき。
-- `.cmoc/reports/eval-oracles` に保存される評価レポートのパス、frontmatter、oracle ごとの本文構成を調べたいとき。
-- `commons.codex`、`commons.indexing`、`commons.repo`、`commons.timing`、`commons.timestamps` との連携箇所を確認したいとき。
+- `cmoc eval-oracles` の実行フロー、進捗表示、ステップ順序を確認したいとき。
+- oracle 評価前に `.cmoc` の git ignore 保証や `INDEX.md` メンテナンスがどの順番で行われるか調べたいとき。
+- `cmoc eval-oracles --full` と通常実行で、評価対象 oracle ファイルの選定条件がどう変わるか確認したいとき。
+- cmoc ブランチ上での部分評価、ベースコミット、変更 oracle、削除 oracle の扱いを調べたいとき。
+- Codex CLI に渡す oracle 評価プロンプトの内容、読み取り制限、ファイル編集禁止指示、必須レポート見出しを確認したいとき。
+- oracle 評価結果の検証条件や、必須見出し不足時のエラー処理を確認したいとき。
+- `.cmoc/reports/eval-oracles` に保存される評価レポートの frontmatter、ファイル名、本文構成を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc eval-oracles` ではなく、`init`、`branch`、`apply`、`merge` など他サブコマンドの本体処理を調べたいとき。
-- Codex CLI 実行の低レベル実装、リトライ、ログ保存、Structured Output 処理などの共通処理だけを調べたいとき。
-- oracle ファイル列挙、変更 oracle 検出、cmoc ブランチ判定、base commit 読み取りなどの git・repo 共通ヘルパー自体を修正したいとき。
-- `INDEX.md` メンテナンス処理の詳細な対象ディレクトリ、除外規則、ハッシュ判定、目次生成処理を調べたいとき。
-- 評価レポートのタイムスタンプ生成やステップ時間計測の共通実装だけを確認したいとき。
-- cmoc の正本仕様断片そのものや、`cmoc eval-oracles` の仕様上の期待挙動を確認したいだけのとき。
+- `cmoc eval-oracles` 以外のサブコマンド本体処理を調べたいとき。
+- Codex CLI 呼び出しの低レベル実装、共通 runner、repo 操作、timestamp 生成などの共通処理そのものを詳しく調べたいとき。
+- `INDEX.md` 自動メンテナンスの具体的な生成・更新ロジックを調べたいとき。
+- oracle ファイル列挙、変更検出、cmoc ブランチ判定、`.cmoc` ignore 保証の個別実装だけを確認したいとき。
+- 評価レポートの正本仕様や、oracle 評価で何を致命的問題とみなすかの仕様断片だけを確認したいとき。
+- CLI 引数の定義、サブコマンド登録、エントリーポイント側の実装を調べたいとき。
 
 ## hash
 
-- 831c8e5abba60851849dc02b00f8b1a6a1fdf9e33dd09e876e8952ae342efc3b
+- fdcf804262512c4eceb72e1539ca583118cfd0b7414ac1b2234ee11f3aa99b56
 
 # `init.py`
 

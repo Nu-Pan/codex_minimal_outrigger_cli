@@ -2,24 +2,26 @@
 
 ## Summary
 
-- pytest execution helper that prepends the repository's src directory to sys.path so tests can import cmoc source modules without installation.
-- Defines SRC as the repository root's src path relative to tests/conftest.py and inserts it at the front of Python's import search path.
+- pytest 実行時に `<cmoc-root>/src` を Python の import path 先頭へ追加するテスト共通設定ファイルです。
+- `tests` 配下のテストから cmoc 本体の `src` 配下モジュールを直接 import できるようにします。
+- `Path(__file__).resolve().parents[1] / "src"` で `<cmoc-root>/src` を解決し、`sys.path.insert(0, ...)` で優先的に参照されるよう設定します。
 
 ## Read this when
 
-- Investigating how tests import modules from <cmoc-root>/src.
-- Debugging pytest import errors, module resolution order, or test environment setup.
-- Changing the test suite's Python path/bootstrap behavior.
+- pytest で `src` 配下の cmoc 実装モジュールを import できる理由を確認したいとき。
+- テスト実行時の Python import path 設定や `sys.path` の変更箇所を探しているとき。
+- `tests` 配下の共通 pytest 設定が何をしているか把握したいとき。
 
 ## Do not read this when
 
-- Looking for individual test cases or assertions for cmoc behavior.
-- Investigating application runtime import behavior outside pytest.
-- Changing cmoc implementation code under <cmoc-root>/src.
+- 個別テストケースの内容や期待値を調べたいとき。
+- cmoc の CLI 挙動、サブコマンド仕様、ユーザー向け出力仕様を確認したいとき。
+- pytest fixture、mock、Fake Codex CLI などの具体的なテスト補助機能を探しているとき。
+- 本番コードの実装ロジックやアプリケーション設定の詳細を調べたいとき。
 
 ## hash
 
-- 32bfe11389fb732e9ac0cc6ecb2e14bf9722d848696fc618e360ef72c19633e7
+- 70811f2ee49ed59eeb60c3c17354146e78b9c21d8ab9bfbcb46007f9d6c8eb57
 
 # `test_codex.py`
 
@@ -128,29 +130,30 @@
 ## Summary
 
 - `tests/test_subcommands.py` は、cmoc のサブコマンド実装と CLI エントリーポイント周辺の決定論的な制御ロジックを検証する pytest ファイルです。
-- `cmoc init`、`branch`、`eval-oracles`、`apply`、`merge` の実装関数を直接呼び、git リポジトリ上の副作用、コミット内容、レポート保存、エラー条件、プロンプト文面を確認します。
-- `main` モジュールと `bin/cmoc` ランチャーについて、Typer 関数の委譲構造、`cmoc --help` の Usage、サブコマンドエラー時の終了コード、仮想環境 Python 必須化と stdout エラーレポートも検証します。
-- テスト用ヘルパーとして、一時 git リポジトリを作る `_init_repo`、固定名の cmoc ブランチへ切り替える `_checkout_cmoc_branch`、git コマンドを実行する `_git` を定義しています。
+- 主な対象は `init`、`branch`、`eval-oracles`、`apply`、`merge` の実装関数で、git リポジトリ上のコミット、ブランチ、`.cmoc` 追跡除外、oracle 評価レポート、apply レポート、エラー条件を確認しています。
+- `main` の Typer コマンド委譲、`cmoc --help` の Usage 表示、サブコマンドエラー時の終了コードと stdout エラーレポート、`bin/cmoc` ランチャーの仮想環境 Python 必須化も検証しています。
+- テスト補助として、一時 git リポジトリを作る `_init_repo`、固定名の cmoc ブランチへ移動する `_checkout_cmoc_branch`、git コマンドを実行する `_git` を定義しています。
 
 ## Read this when
 
-- cmoc の主要サブコマンド実装を変更し、既存テストがどの振る舞いを固定しているか確認したいとき。
-- `.cmoc` の git 追跡対象外保証、初期化コミット、cmoc ブランチ作成、base commit 記録、oracle 評価レポート、apply 反復処理、merge 後のブランチ削除などをテスト上で追いたいとき。
-- `sub_commands.apply` の不整合 JSON schema、レポート必須項目、repeat オプション、cmoc ブランチ外拒否、oracle 外差分拒否、INDEX メンテナンス後の禁止パス再検査に関する期待値を調べたいとき。
-- `sub_commands.eval_oracles` や `sub_commands.merge` が生成する Codex 向けプロンプトで、参照禁止範囲、報告順序、oracles 編集禁止などの文言がどう守られているか確認したいとき。
-- `main.py` や `bin/cmoc` を変更し、CLI 表示名、エラー出力先、終了コード、仮想環境 Python の扱いに関する回帰テストを確認したいとき。
+- cmoc の `init`、`branch`、`eval-oracles`、`apply`、`merge` の実装変更に伴い、既存テストの期待挙動を確認したいとき。
+- `.cmoc` ディレクトリの ignore 保証、既存 staged 差分を混ぜない commit、cmoc ブランチ作成、base commit 記録など、git 操作を伴うサブコマンド挙動を調べたいとき。
+- `eval-oracles` や `apply` が Codex 呼び出しを fake 化して、プロンプト、Structured Output schema、レポート保存、未収束終了コードをどう検証しているか確認したいとき。
+- `merge` のブランチ削除、自動解決失敗時の表示、conflict 解消 prompt、conflict marker 検査のテストを確認したいとき。
+- Typer の `main`、`python -m main --help`、サブコマンド例外時のプロセス終了コード、`bin/cmoc` ランチャーの stdout エラーレポートに関する回帰テストを探しているとき。
+- サブコマンド関連の新しい pytest を追加するため、一時リポジトリ作成や monkeypatch、capsys、subprocess の既存パターンを参考にしたいとき。
 
 ## Do not read this when
 
-- cmoc の正本仕様断片を調べたいとき。まず `<cmoc-root>/oracles/INDEX.md` から必要な仕様ファイルへ辿ってください。
-- サブコマンドの実装詳細そのものを読みたいだけのとき。対象は `src/sub_commands` 配下や `src/main.py` です。
-- ユーザー向けの使い方、インストール手順、全体ワークフローを確認したいとき。テストではなく README や該当する oracle を参照してください。
-- pytest の共通設定、依存関係、テスト実行環境全般を調べたいとき。このファイルは個別のサブコマンド回帰テストが中心です。
-- `memo` 配下の情報が必要な作業をしているとき。このリポジトリでは `<cmoc-root>/memo` は AI の閲覧・編集禁止対象です。
+- cmoc の正本仕様断片を確認したいとき。その場合はまず `oracles/INDEX.md` から必要な仕様ファイルへ進むこと。
+- cmoc の実装本体を直接調査したいとき。その場合は `src/sub_commands`、`src/main.py`、`bin/cmoc` などの該当ファイルを読むこと。
+- サブコマンドではなく、INDEX 生成、設定ファイル、Codex CLI 呼び出し共通処理などの横断仕様だけを確認したいとき。
+- pytest 全体の方針や開発ルールだけを確認したいとき。その場合は `oracles/dev_rules` 配下のテスト規約や開発規約を参照すること。
+- README、AGENTS、oracles、memo などの編集可否やリポジトリ運用ルールだけを確認したいとき。
 
 ## hash
 
-- 7356e10e1c4a4e3db155ddbc6715fad0ed7bb1e194eca10990cbb6b38818fe8d
+- 081d92b88f3cd09d5ee2e643c1f75cfe9f2440114c626869aa03a4996046a85c
 
 # `test_timestamps.py`
 

@@ -227,7 +227,10 @@ def test_eval_oracles_prompt_forbids_implementation_references() -> None:
     """評価 prompt は仕様だけから致命的問題を判断させる。"""
     prompt = _evaluation_prompt(Path("/repo"), Path("/repo/oracles/spec.md"))
 
-    assert "`oracles` 外のファイルは一切参照禁止です。" in prompt
+    assert "`/repo/oracles` 外のファイルは一切参照禁止です。" in prompt
+    assert "`/repo/oracles/INDEX.md` から始まる INDEX.md" in prompt
+    assert "`oracles` 外のファイルは一切参照禁止です。" not in prompt
+    assert "`oracles/INDEX.md`" not in prompt
     assert "実装ファイル、テストファイル、設定ファイル、ビルド成果物も参照禁止です。" in prompt
     assert "参照した oracle / INDEX ファイル" in prompt
     assert "仕様だけから判断・実装したとき" in prompt
@@ -639,6 +642,7 @@ def test_main_typer_functions_delegate_only_to_impls() -> None:
     import main
 
     source = inspect.getsource(main)
+    eval_oracles_source = inspect.getsource(main.eval_oracles_command)
 
     assert "def _run_command" not in source
     assert "_run_command(" not in source
@@ -648,6 +652,7 @@ def test_main_typer_functions_delegate_only_to_impls() -> None:
         "from sub_commands.eval_oracles import cmoc_eval_oracles_impl"
         in source
     )
+    assert "from sub_commands.eval_oracles" not in eval_oracles_source
     assert "cmoc_eval_oracles_impl(full=full)" in source
     assert "cmoc_apply_impl(repeat=repeat, full=full)" in source
     assert "cmoc_merge_impl(cmoc_branch=cmoc_branch)" in source
@@ -739,6 +744,8 @@ def test_merge_conflict_prompt_always_forbids_oracles_edit() -> None:
     prompt = _conflict_prompt(repo, ["app.py"])
 
     assert "`/repo/oracles` は編集禁止です。" in prompt
+    assert "解消してください: ['/repo/app.py']" in prompt
+    assert "解消してください: ['app.py']" not in prompt
     assert "既に conflict がある場合を除いて" not in prompt
     assert "解決内容と未解決ファイルの有無を報告" in prompt
 

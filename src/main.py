@@ -6,6 +6,7 @@ import typer
 from commons.errors import format_error_report
 from sub_commands.apply import cmoc_apply_impl
 from sub_commands.branch import cmoc_branch_impl
+from sub_commands.eval_oracles import cmoc_eval_oracles_impl
 from sub_commands.init import cmoc_init_impl
 from sub_commands.merge import cmoc_merge_impl
 
@@ -33,8 +34,6 @@ def eval_oracles_command(
 ) -> None:
     """Evaluate oracle files."""
     # CLI callback は eval-oracles の本体実装へ処理を委譲する。
-    from sub_commands.eval_oracles import cmoc_eval_oracles_impl
-
     cmoc_eval_oracles_impl(full=full)
 
 

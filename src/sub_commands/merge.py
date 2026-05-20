@@ -196,16 +196,23 @@ def _unmerged_paths(repo_root: Path) -> list[str]:
 
 def _conflict_prompt(repo_root: Path, unmerged: list[str]) -> str:
     """merge conflict 解消用 prompt を組み立てる。"""
+    # Codex CLI には conflict 対象を git 相対パスではなく絶対パスで渡す。
+    concrete_repo_root = repo_root.resolve()
+    concrete_unmerged = [
+        str((concrete_repo_root / relative_path).resolve())
+        for relative_path in unmerged
+    ]
+
     # workspace-write 実行なので oracles と .agents は常に編集禁止として明示する。
     return "\n".join(
         [
             "あなたは merge conflict の解消担当です。",
-            f"`{repo_root}` の以下のファイルについて conflict marker を",
-            f"解消してください: {unmerged}",
+            f"`{concrete_repo_root}` の以下のファイルについて conflict marker を",
+            f"解消してください: {concrete_unmerged}",
             "完了条件は、conflict marker を削除し、解決内容と未解決ファイルの有無を報告することです。",
             "`git add` と `git commit` は実行禁止です。",
-            f"`{repo_root / 'oracles'}` は編集禁止です。",
-            f"`{repo_root / '.agents'}` は編集禁止です。",
-            f"`{repo_root / 'memo'}` は読み書き禁止です。",
+            f"`{concrete_repo_root / 'oracles'}` は編集禁止です。",
+            f"`{concrete_repo_root / '.agents'}` は編集禁止です。",
+            f"`{concrete_repo_root / 'memo'}` は読み書き禁止です。",
         ]
     )

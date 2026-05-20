@@ -108,26 +108,33 @@ def cmoc_eval_oracles_impl(
 
 def _evaluation_prompt(repo_root: Path, oracle_file: Path) -> str:
     """oracle 評価用 prompt を組み立てる。"""
+    # Codex CLI には prompt だけで解釈できる具体的な絶対パスを渡す。
+    concrete_repo_root = repo_root.resolve()
+    concrete_oracle_file = oracle_file.resolve()
+    concrete_oracle_root = (concrete_repo_root / "oracles").resolve()
+    concrete_oracle_index = (concrete_oracle_root / "INDEX.md").resolve()
+
     # 仕様の構成順序に従い、完了条件を詳細指示より前に置く。
     return "\n".join(
         [
             "あなたはソフトウェア仕様のレビュー担当です。",
-            f"`{repo_root}` 内の oracle ファイル `{oracle_file}` を評価してください。",
+            f"`{concrete_repo_root}` 内の oracle ファイル "
+            f"`{concrete_oracle_file}` を評価してください。",
             "完了条件は、致命的な仕様問題の有無と根拠を報告することです。",
             "評価レポートには「仕様だけに基づく根拠」、",
             "「参照した oracle / INDEX ファイル」、",
             "「致命的問題の有無と根拠」を見出しとして必ず含めてください。",
             "対象 oracle、関連する oracle ファイル、関連判断に必要な",
-            "`oracles` 配下の INDEX.md だけを読んでください。",
-            "`oracles/INDEX.md` から始まる INDEX.md の Summary /",
+            f"`{concrete_oracle_root}` 配下の INDEX.md だけを読んでください。",
+            f"`{concrete_oracle_index}` から始まる INDEX.md の Summary /",
             "Read this when / Do not read this when を根拠に、",
             "関連 oracle を選定してください。",
-            "`oracles` 外のファイルは一切参照禁止です。",
+            f"`{concrete_oracle_root}` 外のファイルは一切参照禁止です。",
             "実装ファイル、テストファイル、設定ファイル、ビルド成果物も参照禁止です。",
             "致命的な問題とは、実装を参照せずに仕様だけから判断・実装したとき、",
             "主要ワークフローを壊す、完了判定を妨げる、または中核目的を",
             "満たしたと判断できなくする問題です。",
-            f"`{repo_root / 'memo'}` は読み書き禁止です。",
+            f"`{concrete_repo_root / 'memo'}` は読み書き禁止です。",
             "ファイル編集は禁止です。",
         ]
     )
