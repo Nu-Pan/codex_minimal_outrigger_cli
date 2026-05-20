@@ -146,23 +146,31 @@
 
 ## Summary
 
-- `/home/happy/codex_minimal_outrigger_cli_stage1/oracles/INDEX.md` を読み、配下の正本仕様を調べる入口としての目次情報だけを整理します。ファイル編集と `memo` へのアクセスは行いません。
+- `oracles` は、cmoc の正本仕様断片を格納するディレクトリです。
+- トップレベルには、アプリケーション実行時仕様へ進む `app_specs` と、cmoc 自体の開発ルールへ進む `dev_rules` があります。
+- `app_specs` は Codex CLI 連携、プロンプト構成、サンドボックス、Model・Reasoning Effort、Structured Output、ログ、リトライ、設定ファイル、共通エラーハンドリング、サブコマンド横断仕様、`INDEX.md` 自動メンテナンス、エンドユーザー向けワークフローを扱います。
+- `app_specs/sub_commands` には `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` の個別仕様へのルーティングがあります。
+- `dev_rules` は cmoc 自体の Python 実装、CLI 構成、共通処理配置、開発環境、テスト実装規約など、実装者向けの開発ルールを扱います。
 
 ## Read this when
 
-- `oracles` 配下の仕様断片を調べ始める前。
-- どの仕様ファイルや下位ディレクトリを読むべきか判断したいとき。
-- cmoc の正本仕様に基づいて実装やテスト方針を確認したいとき。
+- `oracles` 配下のどの仕様ディレクトリを読むべきか判断したいとき。
+- cmoc のユーザー向け実行時仕様、サブコマンド仕様、Codex CLI 呼び出し仕様、設定ファイル仕様、ログ・リトライ・エラー処理などを調べる入口を探しているとき。
+- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` の仕様へ進みたいが、読むべき個別仕様ファイルがまだ明確でないとき。
+- `<repo-root>` 探索、oracle ファイル列挙、実装ファイル列挙、`.cmoc`、タイムスタンプ、`INDEX.md` 自動生成など、サブコマンド横断の補助仕様を調べたいとき。
+- cmoc 自体の実装・修正・テスト追加にあたり、Python コーディング規約、設計規約、開発環境、pytest や Fake Codex CLI の扱いを確認したいとき。
 
 ## Do not read this when
 
-- cmoc の実装コードそのものを確認したいとき。
-- `README.md` や `AGENTS.md` の編集が目的のとき。
-- `memo` 配下の情報を探したいとき。
+- 読むべき具体的な仕様ファイルやサブディレクトリがすでに明確で、トップレベルのルーティング判断が不要なとき。
+- `src` や `tests` の実装コードを直接調査するだけで、正本仕様断片へのルーティングが不要なとき。
+- `README.md`、`AGENTS.md`、`oracles`、`memo` などの編集可否やリポジトリ運用ルールだけを確認したいとき。
+- Codex CLI や git の一般的な使い方だけを調べており、cmoc 固有の仕様が不要なとき。
+- cmoc を用いた別リポジトリ開発の `<repo-root>` 側ルールだけを調べており、cmoc 自体の仕様断片を参照する必要がないとき。
 
 ## hash
 
-- ca462c3f2193b29fabe34123925821c5e686ced193984d6e4bd0c59678dcd4ea
+- 17fa259142339c833e252530999c9e16c5303a2253f14414c23ba49c647ed7cc
 
 # `pyproject.toml`
 
@@ -196,32 +204,33 @@
 ## Summary
 
 - `src` は cmoc 本体の Python 実装を置くディレクトリです。
-- CLI エントリーポイントである `main.py`、横断的な共通処理をまとめる `commons`、各サブコマンド本体を配置する `sub_commands` で構成されています。
-- `main.py` は Typer アプリケーション `cmoc` を定義し、`init`、`branch`、`eval-oracles`、`apply`、`merge` の各コマンドを登録して、実処理を `sub_commands` 配下へ委譲します。
-- `commons` は Codex CLI 呼び出し、Structured Output 検証、ログ保存、共通エラー整形、repo root 解決、git 操作、`.cmoc` ignore 保証、oracle ファイル列挙、`INDEX.md` 自動メンテナンス、タイムスタンプ、時間計測などの共通部品を提供します。
-- `sub_commands` は `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` の具体的な実行フロー、進捗表示、Codex CLI 連携、レポート生成、git 操作の組み立てを実装します。
+- `main.py` は Typer ベースの CLI エントリーポイントで、`init`、`branch`、`eval-oracles`、`apply`、`merge` の各サブコマンドを登録し、実処理を `sub_commands` 配下へ委譲します。
+- `commons` は Codex CLI 呼び出し、Structured Output 検証、ログ保存、リトライ、共通エラーレポート、repo root 解決、git 操作、INDEX.md 自動メンテナンス、タイムスタンプ、時間計測など、サブコマンド横断の共通処理をまとめるパッケージです。
+- `sub_commands` は `cmoc init`、`cmoc branch`、`cmoc eval-oracles`、`cmoc apply`、`cmoc merge` の本体実装を置くパッケージで、各サブコマンド固有の進捗表示、エラー条件、Codex CLI prompt、git 操作、レポート保存などを扱います。
+- `codex_minimal_outrigger_cli.egg-info` は Python パッケージビルドやインストール時に生成されるメタデータで、通常の機能実装を調べる入口ではありません。
+- `__pycache__` 配下は Python の生成済みバイトコードであり、通常の実装確認や仕様調査では読む必要がありません。
 
 ## Read this when
 
-- cmoc 本体の実装コード全体の入口を把握したいとき。
-- CLI エントリーポイント、共通処理、個別サブコマンド実装が `src` 配下でどのように分かれているか確認したいとき。
-- `cmoc init`、`cmoc branch`、`cmoc eval-oracles`、`cmoc apply`、`cmoc merge` の実装ファイルへ進むためのルーティング情報が必要なとき。
-- Typer のコマンド登録や Click/Typer 例外の共通エラーレポート変換を確認したいとき。
-- Codex CLI 呼び出し、Structured Output、ログ保存、リトライ、INDEX メンテナンス、repo root 解決、git 操作など、複数サブコマンドで共有される実装の所在を調べたいとき。
-- サブコマンド単位の進捗表示、commit、oracle 評価、apply 反復、merge conflict 解消などの本体処理へ進む入口を探しているとき。
+- cmoc 本体の実装コードが `src` 配下でどのように分かれているか把握したいとき。
+- CLI のトップレベルコマンド登録、Typer の引数・オプション定義、サブコマンド実装への委譲関係を調べたいとき。
+- 複数サブコマンドで共有される Codex CLI 呼び出し、Structured Output、共通エラー処理、repo root 解決、git 操作、INDEX.md 自動メンテナンス、タイムスタンプ、時間計測の入口を探したいとき。
+- `cmoc init`、`cmoc branch`、`cmoc eval-oracles`、`cmoc apply`、`cmoc merge` の個別処理がどの実装ファイルにあるか判断したいとき。
+- テストや不具合調査で、CLI エントリーポイント、共通処理、個別サブコマンドのどこから読むべきか切り分けたいとき。
+- cmoc の正本仕様ではなく、実際の Python 実装上の責務分担や制御フローを確認したいとき。
 
 ## Do not read this when
 
-- cmoc の正本仕様断片を確認したいとき。その場合は `oracles/INDEX.md` から必要な仕様ファイルへ進むべきです。
-- cmoc 自体の開発規約、テスト規約、設計規約、開発環境ルールだけを調べたいとき。その場合は `oracles/dev_rules` 配下を確認するべきです。
-- 自動テストの具体的なケース、pytest 設定、Fake Codex CLI など、テスト実装だけを調べたいとき。
-- README、AGENTS、oracles、memo などの編集可否やリポジトリ運用ルールだけを確認したいとき。
-- cmoc を用いて開発する対象リポジトリである `<repo-root>` 側の oracle や `INDEX.md` の内容だけを調べたいとき。
-- 特定の実装ファイルを読むべきことが既に明確で、`src` 全体の構成やルーティング情報が不要なとき。
+- cmoc のユーザー向け仕様、サブコマンド仕様、Codex 連携仕様、INDEX.md 生成仕様などの正本仕様断片を確認したいとき。その場合は `oracles/INDEX.md` から必要な仕様へ進んでください。
+- cmoc 自体の開発ルール、Python コーディング規約、テスト規約、開発環境ルールだけを確認したいとき。その場合は `oracles/dev_rules` 側のルーティングを参照してください。
+- 自動テストの具体的なケース、pytest fixture、Fake Codex CLI、テストデータ構成だけを調べたいとき。その場合は `tests` 配下を確認してください。
+- README、AGENTS、oracles、memo の編集可否やリポジトリ運用ルールだけを確認したいとき。
+- cmoc を用いて開発する別リポジトリ側の `<repo-root>` の oracle や実装ファイルを調査したいとき。
+- 生成済みバイトコードやパッケージメタデータだけを確認したいとき。通常の実装調査では `__pycache__` や `codex_minimal_outrigger_cli.egg-info` を読む必要はありません。
 
 ## hash
 
-- 8ccebecaceab590ec5b213604cce71482dd5ef3377efd7939a6ad81b8da5b155
+- 9125d3933977c349e09e4d29aeb8488a64e9654309b246b85b96f4870d89c880
 
 # `test.sh`
 

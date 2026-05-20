@@ -65,35 +65,33 @@
 
 ## Summary
 
-- `src/sub_commands` は cmoc の各サブコマンド本体処理を配置する実装ディレクトリです。
-- `init.py` は `cmoc init` の実装で、`.cmoc` を git 追跡対象外にする保証、初期化差分の commit、2 段階の進捗表示と時間レポートを扱います。
-- `branch.py` は `cmoc branch` の実装で、`cmoc_<timestamp>` 形式の作業ブランチ作成、base commit の `.cmoc/branch` 記録、`.cmoc` ignore 保証、ブランチ名衝突時のリトライを扱います。
-- `apply.py` は `cmoc apply` の実装で、cmoc ブランチ上での状態検証、oracle 差分 commit、`INDEX.md` メンテナンス、oracle と実装の不整合調査、Codex CLI による実装修正、禁止パス検査、apply レポート生成、未収束時の終了コードを扱います。
-- `eval-oracles.py` は `cmoc eval-oracles` の本命実装で、`.cmoc` ignore 保証、`INDEX.md` メンテナンス、部分評価と全体評価の選択、Codex CLI による oracle 評価、`.cmoc/reports/eval-oracles` への Markdown レポート保存を扱います。
-- `eval_oracles.py` は、ハイフンを含む `eval-oracles.py` を通常の Python import から扱うための互換モジュールで、`cmoc_eval_oracles_impl` と `_evaluation_prompt` を再公開します。
-- `merge.py` は `cmoc merge` の実装で、未コミット差分検査、merge 元 cmoc ブランチ解決、`git merge --no-ff`、conflict 発生時の Codex CLI 解消依頼、marker 残存検査、merge commit、source branch の安全削除を扱います。
-- `__init__.py` は `src/sub_commands` を cmoc サブコマンド実装パッケージとして示すだけの初期化ファイルです。
-- `__pycache__` 配下は Python の生成キャッシュであり、サブコマンド実装の読解対象ではありません。
+- `src/sub_commands` は、cmoc の各サブコマンド本体を実装する Python パッケージです。
+- `init.py` は `cmoc init` の本体で、repo root 解決を共通 runner に委譲し、`.cmoc` の git ignore 保証、初期化差分の commit、2 段階の進捗表示と時間レポートを扱います。
+- `branch.py` は `cmoc branch` の本体で、`cmoc_<timestamp>` 形式の作業ブランチ作成、衝突時の最大 10 回リトライ、`.cmoc` ignore 保証、作成元 commit の `.cmoc/branch` 記録を扱います。
+- `apply.py` は `cmoc apply` の本体で、cmoc ブランチ制約、未コミット差分検査、INDEX.md メンテナンス、不整合調査、Codex CLI による実装修正、禁止パス検査、commit、apply レポート生成、収束時と未収束時の終了コードを扱います。
+- `eval-oracles.py` は `cmoc eval-oracles` の本体で、`.cmoc` ignore 保証、INDEX.md メンテナンス、部分評価または全体評価の対象 oracle 選択、Codex CLI による oracle 評価、`.cmoc/reports/eval-oracles` への Markdown レポート保存を扱います。
+- `eval_oracles.py` は、ハイフン付きファイル名の本命実装 `eval-oracles.py` を通常の Python import から扱うための互換モジュールです。
+- `merge.py` は `cmoc merge` の本体で、作業ツリー検査、merge 元 cmoc ブランチ解決、`git merge --no-ff`、conflict 時の Codex CLI 解消依頼、marker 検査、merge commit、source branch の安全削除を扱います。
+- `__init__.py` はサブコマンド実装パッケージであることを示すだけの初期化ファイルで、実行ロジックは含みません。
 
 ## Read this when
 
 - cmoc の個別サブコマンド実装がどのファイルにあるか判断したいとき。
-- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` の本体処理、進捗表示、実行フローを調べたいとき。
-- サブコマンド実装から、共通処理である repo root 解決、git 操作、Codex CLI 呼び出し、INDEX メンテナンス、StepTimer がどの順序で呼ばれるか追いたいとき。
-- `.cmoc` の ignore 保証、cmoc ブランチ作成、oracle 評価、oracle と実装の不整合追従、merge conflict 解消など、サブコマンド単位の責務分担を確認したいとき。
-- `eval-oracles.py` と `eval_oracles.py` の関係、つまりハイフン付き実装ファイルと import 用互換モジュールの使い分けを確認したいとき。
-- サブコマンドのテスト対象となる関数、プロンプト生成関数、例外条件、レポート保存先、終了コードなどの実装詳細へ進む入口を探しているとき。
+- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` の本体処理、進捗表示、時間計測、エラー条件、レポート保存、git 操作の呼び出し順序を調べたいとき。
+- サブコマンドから `commons.command_runner`、`commons.repo`、`commons.codex`、`commons.indexing`、`commons.timing` などの共通処理がどう使われているか確認したいとき。
+- Codex CLI に渡す prompt、read-only と workspace-write の使い分け、Structured Output schema、レポート生成 prompt、conflict 解消 prompt を確認したいとき。
+- cmoc ブランチ上での oracle 差分処理、INDEX.md メンテナンス、不整合追従、禁止パス検査、commit 作成、merge conflict 解消など、複数のサブコマンドにまたがる実行フローを実装コードから追いたいとき。
+- テストから直接呼ばれる `cmoc_*_impl` 関数や、`eval_oracles.py` 経由の互換 import の理由を確認したいとき。
 
 ## Do not read this when
 
-- CLI エントリーポイントでサブコマンドがどのように登録されるかだけを調べたいとき。
-- Codex CLI 呼び出し、JSON パース、ログ保存、リトライ、サンドボックス指定などの共通処理そのものを調べたいとき。
-- git 実行ラッパー、repo root 探索、cmoc ブランチ判定、oracle ファイル列挙、`.cmoc` パス生成などの共通 repo ユーティリティ内部を調べたいとき。
-- `INDEX.md` 自動生成、ハッシュ管理、除外規則、Structured Output schema など、インデックス管理の共通実装だけを調べたいとき。
-- cmoc の正本仕様断片を確認したいとき。その場合は `oracles/INDEX.md` から必要な仕様ファイルへルーティングしてください。
-- cmoc 自体の開発規約、Python コーディング規約、テスト規約、開発環境ルールだけを確認したいとき。
-- `__pycache__` の生成物や Python バイトコードキャッシュを調べたいとき。
+- CLI エントリーポイントで Typer コマンドがどう登録されるかだけを調べたいとき。
+- repo root 探索、git コマンド実行、`.cmoc` パス生成、oracle ファイル列挙、タイムスタンプ生成、時間計測、Codex CLI 実行、JSON パース、INDEX.md 生成の共通実装そのものを調べたいとき。
+- cmoc の正本仕様断片やユーザー向け仕様だけを確認したいとき。その場合は `oracles/INDEX.md` から必要な仕様へルーティングしてください。
+- cmoc 自体の開発ルール、Python コーディング規約、テスト規約、開発環境ルールだけを確認したいとき。
+- 自動テストの具体的なケース、Fake Codex CLI、pytest fixture、テストデータ構成だけを調べたいとき。
+- `__pycache__` 配下の生成済みバイトコードを調べたいとき。通常の実装確認では読む必要がありません。
 
 ## hash
 
-- 755e32717d116054d6bc4313e5bd110eef3a360b8164f074855ca53f3a99e9f5
+- 8a69133f03609f59877673d231aec0340c16dab75b501a18b78c9398c5c97bba

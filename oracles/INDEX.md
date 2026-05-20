@@ -3,20 +3,21 @@
 ## Summary
 
 - `oracles/app_specs` は、cmoc のアプリケーション実行時仕様を扱う正本仕様断片ディレクトリです。
-- Codex CLI 呼び出し、プロンプト構成、サンドボックス指定、Structured Output、ログ保存、リトライ、自然言語の使用方針など、Codex 連携に関する横断仕様を含みます。
-- サブコマンド実行中の stdout 進捗表示、`codex exec` 呼び出し表示、完了時の時間レポート、共通エラーハンドリング、終了ステータスなど、実行時の共通挙動への導線をまとめています。
-- `<repo-root>` の発見、oracle ファイル列挙、`.cmoc` の git 追跡対象外保証、タイムスタンプ形式など、サブコマンド横断の補助仕様を扱います。
-- `<repo-root>` 配下に自動配置・自動メンテナンスされる `INDEX.md` の対象、除外規則、フォーマット、Structured Output による目次生成、処理順序、実行タイミングを扱います。
-- `sub_commands` 配下に、`cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` の個別仕様へのルーティングがあります。
+- Codex CLI 呼び出し、プロンプト構成、サンドボックス指定、Model・Reasoning Effort、Structured Output、ログ保存、リトライ、自然言語の使用方針など、Codex 連携の横断仕様を含みます。
+- 設定ファイル `comconfig.json` と `CMOConfig` の扱い、サブコマンド実行中の stdout 進捗表示、`codex exec` 呼び出し表示、完了時の時間レポート、共通エラーハンドリング、終了ステータスなどの実行時共通挙動を扱います。
+- `<repo-root>` の発見、oracle ファイル列挙、実装ファイル列挙、`.cmoc` の git 追跡対象外保証、タイムスタンプ形式、`<cmoc-branch>` 上での変更範囲など、サブコマンド横断の補助仕様を含みます。
+- `<repo-root>` 配下に自動配置・自動メンテナンスされる `INDEX.md` の対象、除外規則、フォーマット、Structured Output による目次生成、処理順序、実行タイミングを定義します。
+- `sub_commands` 配下には、`cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` の個別サブコマンド仕様へのルーティングがあります。
 - cmoc 利用者向けに、PATH 設定、初期化、作業用ブランチ作成、oracle 評価、実装反映、マージまでの全体ワークフロー仕様も含みます。
 
 ## Read this when
 
 - cmoc のアプリケーション実行時仕様について、どの個別仕様ファイルやサブディレクトリを読むべきか判断したいとき。
-- Codex CLI 連携、`codex exec` の呼び出し方法、プロンプト構成、サンドボックス指定、Structured Output、ログ保存、リトライ方針、使用言語を調べたいとき。
+- Codex CLI 連携、`codex exec` の呼び出し方法、プロンプト構成、サンドボックス指定、Model・Reasoning Effort、Structured Output、ログ保存、リトライ方針、使用言語を調べたいとき。
+- `comconfig.json` や `CMOConfig` による設定ファイルの生成、補完、過剰パラメータ削除、プロパティ公開の仕様を確認したいとき。
 - サブコマンド実行中の stdout 進捗表示、`codex exec` 呼び出し情報の表示、完了時の経過時間レポートを実装または確認したいとき。
 - 個別仕様に明記がない場合の共通エラーハンドリング、エラーレポート項目、終了ステータスの扱いを確認したいとき。
-- cmoc 実行時の `<repo-root>` 探索、カレントディレクトリ変更、oracle ファイル列挙、`.cmoc` の git 追跡対象外保証、タイムスタンプ生成を調べたいとき。
+- cmoc 実行時の `<repo-root>` 探索、カレントディレクトリ変更、oracle ファイル列挙、実装ファイル列挙、`.cmoc` の git 追跡対象外保証、タイムスタンプ生成、`<cmoc-branch>` 上での変更範囲を調べたいとき。
 - `<repo-root>` 配下へ自動配置される `INDEX.md` の対象ディレクトリ、除外規則、目次情報フォーマット、ハッシュ不一致時の再生成、Codex CLI への目次生成依頼を実装または確認したいとき。
 - `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` の個別仕様への入口を探しているとき。
 - cmoc のエンドユーザーが PATH 設定、初期化、作業用ブランチ作成、oracle 評価、実装反映、マージをどの順番で行うか把握したいとき。
@@ -28,11 +29,12 @@
 - cmoc の実装コードやテストコードの具体的な配置、ファイル構造、実装パターンだけを調べたいとき。
 - 対象がアプリケーション実行時仕様ではなく、内部の開発方針やローカル開発環境設定に限られるとき。
 - Codex CLI や git の一般的な使い方だけを調べており、cmoc 固有の実行時仕様が不要なとき。
-- 読むべき個別仕様ファイルが既に明確で、このディレクトリ全体のルーティング情報が不要なとき。
+- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` のうち、読むべき個別サブコマンド仕様ファイルが既に明確で、このディレクトリ全体のルーティング情報が不要なとき。
+- 特定の実装不具合やテスト失敗の原因をコード上で直接調査したいだけで、正本仕様断片へのルーティング判断が不要なとき。
 
 ## hash
 
-- 73e2505e482bffc4a34680e0d143b61265b2888ff624b99105eaf28e12326bf1
+- 6555d9dfc363fbf6c7ec09c218cfcdfb850e9a9e61433fba015967d8816bec5a
 
 # `dev_rules`
 

@@ -85,36 +85,6 @@
 
 - 3f0f49fc6b3453d7c26dea4e5cb47b8bd0b23b7378f6d77da6eeb182a334eee7
 
-# `eval-oracles.py`
-
-## Summary
-
-- `cmoc eval-oracles` サブコマンドの本体処理を定義する実装ファイル。
-- `.cmoc` の ignore 保証、`INDEX.md` メンテナンス、評価対象 oracle ファイルの選択、Codex CLI による評価実行、Markdown レポート保存までの 5 ステップを担う。
-- `--full` 指定、cmoc ブランチ判定、削除済み oracle の有無、ブランチ基点コミットに基づいて、部分評価と全体評価を切り替える。
-- oracle 評価用プロンプトでは、関連仕様と `INDEX.md` ルーティングを根拠にすること、実装・テスト・設定ファイル参照禁止、`memo` 読み書き禁止、編集禁止を Codex CLI に指示する。
-- 評価結果は `.cmoc/reports/eval-oracles/<timestamp>.md` に frontmatter 付き Markdown として保存される。
-
-## Read this when
-
-- `cmoc eval-oracles` の実行フロー、進捗表示、評価対象選択、レポート生成処理を確認したいとき。
-- 部分評価と全体評価の切り替え条件を調べたいとき。
-- Codex CLI に oracle 評価を依頼するプロンプト内容や `read_only` 実行設定を確認したいとき。
-- 評価レポートの保存先、ファイル名、frontmatter、oracle ごとの出力結合形式を確認したいとき。
-- `ensure_cmoc_ignored`、`maintain_indexes`、oracle ファイル列挙、ブランチ情報取得、タイマー表示の呼び出し順を追いたいとき。
-
-## Do not read this when
-
-- `cmoc eval-oracles` の CLI 引数定義や argparse 側の登録処理だけを確認したいとき。
-- oracle ファイル列挙、cmoc ブランチ判定、`.cmoc` ignore 保証などの共通 repo 操作の詳細実装を調べたいとき。
-- `INDEX.md` メンテナンス処理そのものの詳細を調べたいとき。
-- Codex CLI 実行ラッパー、ログ保存、リトライ、サンドボックス指定などの共通処理を調べたいとき。
-- タイムスタンプ生成や StepTimer の実装詳細を調べたいとき。
-
-## hash
-
-- 29e6ed0b739fd8b701484bda5222be421949287d5cb8662504d58fb846216340
-
 # `eval_oracles.py`
 
 ## Summary
@@ -171,35 +141,3 @@
 ## hash
 
 - 253e20a5cd3777cd63492c0bac7fb6ed2c0dc7fdefeb5135264b7912c81b9a7a
-
-# `merge.py`
-
-## Summary
-
-- `cmoc merge` の本体処理を実装するモジュール。
-- 作業ツリーの未コミット変更確認、`.cmoc` の ignore 保証、merge 元 cmoc ブランチの解決、`git merge --no-ff`、安全なブランチ削除、ステップ時間レポートまでを担当する。
-- merge conflict が発生した場合は、unmerged path を取得して Codex CLI に conflict marker 解消を依頼し、marker 残存確認、`git add`、`git commit --no-edit` までを行う。
-- 自動解決できる cmoc ブランチ候補が 1 件でない場合、または conflict 解消後も marker や unmerged path が残る場合は `CmocError` で手動対応を促す。
-- conflict marker 検出は git 管理対象ファイル全体を走査し、`<<<<<<<`、`=======`、`>>>>>>>` の残存を確認する。
-
-## Read this when
-
-- `cmoc merge` サブコマンドの実行フロー、進捗表示、前提条件チェック、merge 元ブランチ解決の実装を確認したいとき。
-- 未マージの cmoc ブランチを `git branch --no-merged` から自動解決する条件や、明示指定が必要になるケースを調べたいとき。
-- `git merge --no-ff` 失敗時に Codex CLI を使って conflict marker を解消する処理を確認したいとき。
-- conflict 解消後の marker 残存検出、unmerged path 確認、`git add`、`git commit --no-edit` の責務分担を調べたいとき。
-- merge 後に source branch を `git branch -d` で削除し、削除できない場合は warning に留める挙動を確認したいとき。
-- merge state が残る可能性がある例外時の stderr メッセージや、手動解決案内の扱いを確認したいとき。
-
-## Do not read this when
-
-- `cmoc merge` の CLI 引数定義や argparse へのサブコマンド登録だけを調べたいとき。
-- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles` など、merge 以外のサブコマンド仕様や実装を調べたいとき。
-- Codex CLI 呼び出し共通処理、ログ保存、Structured Output、リトライ方針など `run_codex_exec` の内部実装を調べたいとき。
-- git コマンド実行ラッパー、repo root 解決、共通エラー整形、StepTimer の内部仕様だけを調べたいとき。
-- merge conflict 解消プロンプトの文言ではなく、oracles 側の正本仕様やユーザー向けワークフロー説明だけを確認したいとき。
-- INDEX.md 自動生成全体の対象ディレクトリ、除外規則、ハッシュ管理、処理順序を調べたいとき。
-
-## hash
-
-- 512711fc123c5f5655dc4f656b008c8daae9a85ab4f5a0f85b38ed15891cbd21
