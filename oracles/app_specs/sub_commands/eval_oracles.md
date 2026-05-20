@@ -19,8 +19,7 @@
 - `<cmoc-branch>` 上に居る場合
     - `--full` がついている場合は全体評価モードへ
     - `--full` が付いていない場合
-        - `<cmoc-branch>` 作成元 commit から `HEAD` までの間に `oracles` ファイルの削除が有る場合は全体評価モードへ
-        - working tree または staging area に `oracles` ファイルの削除がある場合は全体評価モードへ
+        - `<cmoc-branch>` 上で `oracles` ファイルの削除が有る場合は全体評価モードへ
         - そうでなければ部分評価へ
 - `<cmoc-branch>` に居ない場合 (e.g. `master` ブランチ上)
     - 全体評価モードへ
@@ -29,26 +28,11 @@
 
 1. `<repo-root>/.cmoc` が git の追跡対象外であることを保証する
 2. `oracles` ファイルを列挙
-3. 部分評価モードの場合、列挙した `oracles` ファイルリストを「変更があった `oracles` ファイル」のみに絞り込む
+3. 部分評価モードの場合、列挙した `oracles` ファイルリストを「`<cmoc-branch>` 上で変更があった `oracles` ファイル」のみに絞り込む
 4. 列挙した `oracles` ファイルリストに対して、ファイルごとの評価を行う
     - １回の `codex exec` 呼び出しで、ファイル１つを評価する
     - 評価にあたっては、関係するファイルも読みに行くこととする
 6. これまでに出した評価を１つのレポートにまとめる
-
-## 変更があった `oracles` ファイルの定義
-
-- 部分評価モードでは、以下の和集合を「変更があった oracles ファイル」とする
-    - `<cmoc-branch>` 上で変更のあった `<repo-root>/oracles` 配下のファイル
-    - working tree 上で未コミット変更がある `<repo-root>/oracles` 配下のファイル
-    - staging area 上で未コミット変更がある `<repo-root>/oracles` 配下のファイル
-- 削除済みファイルは評価対象から除外する
-- rename は rename 後のパスを評価対象とする
-
-
-## 「`<cmoc-branch>` 上で～」の定義
-
-- `<cmoc-branch>` 作成元 commit から `HEAD` までの間の cmmit 上で起きた～、という意味
-- `<cmoc-branch>` 作成元 commit は `<repo-root>/.cmoc/branch/<cmoc-branch>.txt` から読み取る
 
 ## 「致命的な問題」の定義
 
