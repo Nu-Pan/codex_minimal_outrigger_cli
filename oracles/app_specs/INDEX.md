@@ -1,41 +1,3 @@
-# `codex_call.md`
-
-## Summary
-
-- cmoc から Codex CLI を呼び出す際の正本仕様断片です。
-- すべての Codex CLI 呼び出しは `codex exec` で行い、プロンプト構成、cmoc 固有概念の注入禁止、アクセス制限指示の含め方を規定しています。
-- Model と Reasoning Effort の指定必須、xhigh/high の禁止、品質や反復性に応じたモデル選択方針、サンドボックスモード選択方針を扱います。
-- `--json`、`--output-last-message`、Structured Output 用の `--output-schema` の使用、レスポンス検証、フルログ保存先を規定しています。
-- Codex CLI 実行失敗時の扱いとして、意味的失敗のリトライ、quota 枯渇時の待機・ポーリング・`--resume` 再開、想定外エラー時の即時失敗を扱います。
-- Codex CLI に渡す自然言語やレポート、INDEX.md 目次情報などは原則日本語とする方針を定めています。
-- Codex CLI では `.agents` 配下を編集できない問題と、その制約をプロンプト設計で緩和する方針を説明しています。
-
-## Read this when
-
-- cmoc から Codex CLI をどのコマンド形式で呼び出すべきか確認したいとき。
-- Codex CLI に渡すプロンプトの構成、完了条件の書き方、詳細作業指示の含め方を実装または確認したいとき。
-- `<cmoc-root>` や `<repo-root>` などの cmoc 固有概念を Codex CLI プロンプトに含めてよいか判断したいとき。
-- Codex CLI 実行時に読み取り専用または書き込み可能なサンドボックスをどう指定し、どのアクセス制限指示をプロンプトに含めるべきか確認したいとき。
-- Codex CLI 呼び出し時の Model、Reasoning Effort、サンドボックスモードの選択規則を調べたいとき。
-- `--json`、`--output-last-message`、`--output-schema`、Structured Output 検証、ログ保存の実装要件を確認したいとき。
-- Codex CLI のレスポンス不備、quota 枯渇、想定外エラーが起きた場合のリトライ、待機、再開、失敗扱いを実装したいとき。
-- Codex CLI 関連のプロンプト、レポート、エラー説明、INDEX.md 目次情報で使用する自然言語の方針を確認したいとき。
-- `.agents` 配下を Codex CLI から編集できない制約と、その扱いを確認したいとき。
-
-## Do not read this when
-
-- cmoc の個別サブコマンドの機能仕様やユーザー向けワークフローだけを調べたいとき。
-- cmoc 自体の Python コーディング規約、設計規約、テスト規約、開発環境だけを確認したいとき。
-- Codex CLI を呼び出さない処理の仕様や、通常のファイル操作・git 操作だけを実装しているとき。
-- `INDEX.md` の対象ディレクトリ、除外規則、フォーマット、生成タイミングなど、目次生成そのものの詳細仕様だけを調べたいとき。
-- サブコマンド共通の stdout 進捗表示、完了時の経過時間レポート、一般的なエラー表示だけを確認したいとき。
-- Codex CLI や LLM の一般的な使い方を知りたいだけで、cmoc 固有の呼び出し規約が不要なとき。
-- README、AGENTS、oracles、memo など、このリポジトリ自体の編集可否やファイルアクセス規則だけを確認したいとき。
-
-## hash
-
-- fff5658cc34eb0820b3f24b686d35d4d5f34d5e0a55413da49f64349f8d74208
-
 # `console_output.md`
 
 ## Summary
@@ -159,38 +121,38 @@
 
 ## Summary
 
-- `oracles/app_specs/sub_commands` は、cmoc の個別サブコマンド仕様へのルーティングを扱う正本仕様断片ディレクトリです。
-- `cmoc init`、`cmoc branch`、`cmoc eval-oracles`、`cmoc apply`、`cmoc merge` の引数、事前条件、実行手順、終了条件、レポート出力などの個別仕様を含みます。
-- `init.md` は、`<repo-root>` を cmoc で作業可能な状態に初期化し、`<repo-root>/.cmoc` を git 追跡対象外にする操作と完了判定を定義します。
-- `branch.md` は、作業用ブランチ `<cmoc-branch>` の作成、命名規則、`.cmoc` の追跡対象外保証、作成元コミットハッシュの記録を定義します。
-- `eval_oracles.md` は、`<repo-root>/oracles` の仕様スナップショットに致命的な問題がないかを Codex CLI で評価し、評価レポートを保存・提示する仕様を定義します。
-- `apply.md` は、`<repo-root>/oracles` と実装の明確な不整合を Codex CLI で調査・整理・修正し、コミットと作業レポート生成を行う反復ループ仕様を定義します。
-- `merge.md` は、`<cmoc-branch>` を現在の `HEAD` にマージし、必要に応じて Codex CLI にコンフリクト解決を依頼し、安全な場合のみ作業ブランチを削除する仕様を定義します。
+- `oracles/app_specs/sub_commands` は、cmoc の個別サブコマンド仕様へ案内するルーティング用の正本仕様断片ディレクトリです。
+- `cmoc init`、`cmoc branch`、`cmoc eval-oracles`、`cmoc apply`、`cmoc merge` の各サブコマンドの引数、事前条件、実行手順、終了条件、レポート出力を扱います。
+- `init.md` は `<repo-root>` の初期化と `<repo-root>/.cmoc` の git 追跡対象外保証を定義します。
+- `branch.md` は作業用ブランチ `<cmoc-branch>` の作成、命名規則、`<repo-root>/.cmoc/branch/<cmoc-branch>.txt` への記録を定義します。
+- `eval_oracles.md` は `<repo-root>/oracles` の致命的問題評価、部分評価・全体評価の切り替え、レポート保存を定義します。
+- `apply.md` は `<repo-root>/oracles` と実装の不整合を調査・改善する反復ループ、コミット、作業レポート生成を定義します。
+- `merge.md` は `<cmoc-branch>` のマージ、自動解決、コンフリクト処理、ブランチ削除条件を定義します。
 
 ## Read this when
 
-- cmoc の個別サブコマンド仕様のうち、どのファイルを読むべきか判断したいとき。
-- `cmoc init`、`cmoc branch`、`cmoc eval-oracles`、`cmoc apply`、`cmoc merge` の引数、事前条件、実行手順、出力、終了条件を調べたいとき。
-- `<repo-root>/.cmoc` を git 追跡対象外にする処理が、各サブコマンドでどのように扱われるか確認したいとき。
-- 作業用ブランチ `<cmoc-branch>` の作成、命名、自動解決、マージ、削除条件に関するサブコマンド仕様を探しているとき。
-- oracle 評価、仕様と実装の不整合調査、Codex CLI による修正依頼、レポート保存など、Codex CLI を使うサブコマンド固有の処理を確認したいとき。
-- 部分評価・全体評価、部分適用・全体適用、変更ファイルや削除ファイルに応じたモード切り替えを調べたいとき。
-- `cmoc apply` や `cmoc eval-oracles` が生成するレポートの内容、保存先、stdout に表示するパスを確認したいとき。
-- `cmoc merge` のマージ元ブランチ自動解決、コンフリクト発生時の Codex CLI 依頼範囲、cmoc 側の `git add` や merge commit 作成手順を確認したいとき。
+- どの個別サブコマンド仕様ファイルを読むべきか判断したいとき。
+- `cmoc init`、`cmoc branch`、`cmoc eval-oracles`、`cmoc apply`、`cmoc merge` の仕様を確認したいとき。
+- 各サブコマンドの引数、事前条件、実行順序、終了条件を調べたいとき。
+- `<repo-root>/.cmoc` の追跡対象外保証が各サブコマンドでどう扱われるか確認したいとき。
+- 作業用ブランチ `<cmoc-branch>` の作成や削除の仕様を確認したいとき。
+- oracle 評価のレポート保存先や、実装反映の作業レポート仕様を確認したいとき。
+- `cmoc apply` の反復調査・修正ループや、`cmoc eval-oracles` の評価モード切り替えを確認したいとき。
+- `cmoc merge` のマージ元自動解決やコンフリクト解消の責務分担を確認したいとき。
 
 ## Do not read this when
 
-- Codex CLI 呼び出し方法、プロンプト構成、ログ保存、リトライ、Structured Output、自然言語方針など、サブコマンド横断の共通実行時仕様だけを調べたいとき。
-- `<repo-root>` の発見、oracle ファイル列挙、実装ファイル列挙、タイムスタンプ形式、`.cmoc` の git 追跡対象外保証など、共通補助仕様の詳細だけを調べたいとき。
-- `<repo-root>` 配下に自動配置される `INDEX.md` の対象、除外規則、フォーマット、生成タイミングなど、目次自動生成仕様だけを確認したいとき。
-- cmoc 自体の Python コーディング規約、設計規約、テスト規約、開発環境など、開発者向けルールだけを調べたいとき。
-- README、AGENTS、oracles、memo などの編集可否やリポジトリ運用ルールだけを確認したいとき。
-- 特定のサブコマンド仕様ファイルを読むべきことが既に明確で、このディレクトリ全体のルーティング情報が不要なとき。
-- git や Codex CLI の一般的な使い方だけを調べており、cmoc 固有のサブコマンド仕様が不要なとき。
+- Codex CLI 呼び出し方法、Structured Output、ログ保存などの共通実行時仕様だけを調べたいとき。
+- `<repo-root>` の発見、oracle ファイル列挙、実装ファイル列挙、タイムスタンプなどの共通補助仕様だけを調べたいとき。
+- `cmoc` 自体の開発ルール、コーディング規約、テスト規約、開発環境だけを調べたいとき。
+- `README.md`、`AGENTS.md`、`oracles`、`memo` などのリポジトリ運用ルールだけを確認したいとき。
+- 個別サブコマンドの仕様がすでに分かっていて、このディレクトリ全体のルーティングが不要なとき。
+- 特定の実装不具合やテスト失敗をコード上で直接調査したいだけで、サブコマンド仕様への案内が不要なとき。
+- サブコマンド以外のユーザー向け利用手順や開発者向けルールだけを確認したいとき。
 
 ## hash
 
-- f66d337b8c6da6311ea53c277dba7355f61af1d4c6edfffccdea94b5feb4c6a7
+- fdc07d9d3362012901f791a6511d1485b4f00ef60017d0422998b60f8ef73b0e
 
 # `usage.md`
 

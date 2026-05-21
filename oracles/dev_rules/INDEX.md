@@ -58,19 +58,16 @@
 
 ## Summary
 
-- cmoc 開発に使う標準環境として、WSL2 Ubuntu 24.04 on Windows 11、VS Code Remote Development、指定 workspace、Codex CLI 利用可能環境を定義している。
-- ファイルエンコードは原則 UTF-8 BOM なしで統一し、ツール都合がある場合のみ例外を認める。
-- Python は 3.12.3 以上を前提とし、システムワイドの python3 直接使用は venv 作成時以外禁止する。
-- Python 仮想環境は <cmoc-root>/.venv を使い、インタプリタは <cmoc-root>/.venv/bin/python、pip は <cmoc-root>/.venv/bin/python -m pip を使う。
-- <cmoc-root>/.venv の作成、editable install、依存追加時の pyproject.toml 更新と再インストール手順を定めている。
+- cmoc 開発で使う標準環境、ファイルエンコード、Python 実行環境、仮想環境管理の方針を扱う正本仕様断片です。
+- WSL2 Ubuntu 24.04 on Windows 11、VS Code Remote Development、指定 workspace、Codex CLI 利用可能環境を前提にします。
+- UTF-8 BOM なしの統一、python3>=3.12.3、<cmoc-root>/.venv の使用、pip 実行方法、依存追加時の手順を定めます。
 
 ## Read this when
 
 - cmoc 自体の開発環境、前提 OS、エディタ、workspace、Codex CLI 利用前提を確認したいとき。
-- Python コマンド、pip コマンド、仮想環境パス、システム Python 使用可否を判断するとき。
-- .venv を新規作成するとき、または .venv に cmoc をインストールするとき。
-- 新しい Python 依存パッケージを追加する手順を確認するとき。
-- ファイル作成・編集時の文字コード方針を確認するとき。
+- Python コマンド、pip コマンド、仮想環境パス、システム Python 使用可否を判断したいとき。
+- `.venv` を新規作成するとき、`.venv` に cmoc をインストールするとき、新しい Python 依存パッケージを追加するとき。
+- ファイル作成・編集時の文字コード方針を確認したいとき。
 
 ## Do not read this when
 
@@ -81,7 +78,7 @@
 
 ## hash
 
-- 18bc19e57ac055a39bbf07444976bae25fee0421e8f94826e57686d03f076a74
+- 86996302b0a27d51c9d2b5ba3de5621739f672b8bd20280da6afb3587a4d70f2
 
 # `test_rules.md`
 
