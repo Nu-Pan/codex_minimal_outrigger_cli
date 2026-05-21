@@ -151,6 +151,35 @@ def test_maintain_indexes_excludes_non_utf8_binary_without_nul(
     assert "# `image.bin`" not in content
 
 
+def test_maintain_indexes_keeps_utf8_when_sample_ends_mid_character(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """sample 末尾で UTF-8 文字が途中切れしてもテキストとして扱う。"""
+    repo = _init_repo(tmp_path)
+    target = repo / "partial_boundary.md"
+    target.write_bytes(b"a" * 4094 + "あ".encode("utf-8") + b"\n")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "utf8 boundary")
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """INDEX 生成用の最小 Structured Output を返す。"""
+        return json.dumps(
+            {
+                "summary": ["summary"],
+                "read_this_when": ["read"],
+                "do_not_read_this_when": ["skip"],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    maintain_indexes(repo)
+
+    content = (repo / "INDEX.md").read_text(encoding="utf-8")
+    assert "# `partial_boundary.md`" in content
+
+
 def test_maintain_indexes_places_index_in_nested_memo_directory(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,

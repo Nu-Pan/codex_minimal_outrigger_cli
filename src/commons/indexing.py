@@ -1,5 +1,6 @@
 """`INDEX.md` メンテナンス処理。"""
 
+import codecs
 import hashlib
 import re
 import subprocess
@@ -233,7 +234,8 @@ def _looks_binary(path: Path) -> bool:
     if b"\0" in sample:
         return True
     try:
-        sample.decode("utf-8")
+        decoder = codecs.getincrementaldecoder("utf-8")()
+        decoder.decode(sample, final=False)
     except UnicodeDecodeError:
         return True
     return False
