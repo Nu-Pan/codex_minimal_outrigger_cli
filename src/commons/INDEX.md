@@ -24,8 +24,8 @@
 ## Summary
 
 - `src/commons/codex.py` は、cmoc から Codex CLI の `codex exec` を呼び出すための共通ラッパーです。
-- `run_codex_exec` を中心に、`model` と `reasoning effort` の組み立て、`read-only` / `workspace-write` の sandbox 指定、Structured Output の schema 連携、`--output-last-message` の回収を扱います。
-- Codex 実行前の INDEX.md 保守、`.cmoc/logs/codex_exec` へのフルログ保存、schema ファイルの保存もこのモジュールの責務です。
+- `run_codex_exec` を中心に、`read-only` / `workspace-write` の sandbox 指定、`model` と `reasoning effort` の組み立て、`--output-last-message` の回収を扱います。
+- Codex 実行前の `INDEX.md` 保守、`.cmoc/logs/codex_exec` へのフルログ保存、Structured Output 用 schema ファイルの保存もこのモジュールの責務です。
 - JSON 解析、JSON Schema subset の再検証、text / json の意味検証、最大 3 回のリトライ処理をまとめています。
 - quota 枯渇時の session id 抽出、`--resume` 付き再実行、復旧確認用の低コスト疎通チェックもここで扱います。
 
@@ -49,7 +49,7 @@
 
 ## hash
 
-- a6f0c1d47f0475678223aa3fa4457e6102ffd67d5163cf860defc5ac5da309ac
+- 2a4cc851f91cbc04212bebd3c5d89051fa1bda75c1fb5ae9ffef0f215b29afdb
 
 # `command_runner.py`
 

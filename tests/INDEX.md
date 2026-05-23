@@ -27,13 +27,12 @@
 
 ## Summary
 
-- `commons.codex.run_codex_exec` の Codex CLI 呼び出しラッパーを検証する pytest テストファイルです。
-- Structured Output の JSON schema 渡し、`--json`、`--output-last-message`、`--output-schema`、model、reasoning effort、schema ファイル生成、ログ記録の挙動を確認します。
-- JSON parse 失敗、JSON schema 不一致、JSON semantic validator 失敗、非 JSON text validator 失敗について、3 回リトライする挙動と失敗時の `CmocError` 詳細出力を検証します。
-- stdout の進捗表示では、prompt と output を元文字列の先頭 80 文字で切ってから改行を可視化する仕様を確認します。
-- Structured Output 利用時の `output_schema` 必須条件と、oracle で禁止される high/xhigh reasoning effort の起動前拒否を検証します。
-- quota 枯渇時のセッション再開、`--resume` 付き再実行、resume 後の想定外エラー報告、`commons.indexing.maintain_indexes` の事前実行とスキップ指定を確認します。
-- テストでは一時ディレクトリに fake `codex` 実行ファイルを作成し、`PATH` 差し替え、`monkeypatch`、`capsys`、一時 git repo を使って外部 Codex CLI の挙動を模擬します。
+- `tests/test_codex.py` は、`commons.codex.run_codex_exec` の Codex CLI 呼び出しラッパーを検証する pytest テストです。
+- Structured Output 利用時の `--json`、`--output-last-message`、`--output-schema`、schema ファイル生成、model、reasoning effort の引き渡しを確認します。
+- JSON parse 失敗、schema 不一致、semantic validator 失敗、非 JSON の text validator 失敗に対して、3 回までリトライして詳細な `CmocError` を返す挙動を確認します。
+- stdout の進捗表示では、prompt と output を先頭 80 文字で切り出した後に改行を可視化する仕様を確認します。
+- quota 枯渇時の疎通確認と `--resume` 再実行、resume 後の想定外エラー、`INDEX.md` 事前メンテナンスの実行とスキップ指定も扱います。
+- テストでは一時ディレクトリに fake `codex` を置き、`PATH` 差し替え、`monkeypatch`、`capsys`、一時 git repo を使って外部 CLI の挙動を模擬します。
 
 ## Read this when
 
@@ -54,7 +53,7 @@
 
 ## hash
 
-- 9500b79b0454eaad4460bde1cb95644ffebd726197018fb30b11442881ef93fa
+- 2fc73a0cec5aec8249e1870336f1aa1b2754bd009febf1dac319c03a11e3e48b
 
 # `test_indexing.py`
 
