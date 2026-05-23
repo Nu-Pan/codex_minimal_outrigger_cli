@@ -18,33 +18,31 @@
 
 ## Do not read this when
 
-- `cmoc init`、`cmoc apply`、`cmoc merge` など個別サブコマンドの業務ロジックだけを調べたいとき。
+- `cmoc` の個別サブコマンドの業務ロジックだけを調べたいとき。
 - `oracles` 配下の正本仕様や、`src` / `tests` の別ディレクトリの細かな内容だけを確認したいとき。
 - `README.md`、`AGENTS.md`、`memo` の運用ルールだけを確認したいとき。
 - 共通処理の再利用関係ではなく、特定の CLI 引数や画面表示だけを追いたいとき。
 
 ## hash
 
-- 904fe4a613758879e809d342066ee9aba38baf85f041bf5c6d1f272d42ff041b
+- 616501ed94add89800835497d89e3d07552e4f841b5fbfcdd7fd2e1f63539b2f
 
 # `main.py`
 
 ## Summary
 
-- cmoc CLI の Typer エントリーポイントを定義するファイル。
-- `cmoc` アプリケーション本体を作成し、`init`、`branch`、`eval-oracles`、`apply`、`merge` の各サブコマンド名を CLI に登録する。
-- 各 CLI コールバックは引数やオプションを受け取り、実処理を `sub_commands` 配下の対応する `cmoc_*_impl` 関数へ委譲する。
-- `eval-oracles` は `--full` / `-f`、`apply` は `--repeat` / `-r` と `--full` / `-f`、`merge` は任意の `cmoc_branch` 引数を定義する。
-- `main()` は Typer/Click の起動経路をラップし、parse error や想定外例外を `commons.errors.format_error_report` による共通エラーレポート形式で表示して終了コードを決定する。
-- `python src/main.py` による直接実行時も `main()` を呼び出して cmoc CLI を起動する。
+- `cmoc` CLI の Typer エントリーポイントを定義するファイルです。
+- `init`、`branch`、`eval-oracles`、`apply`、`merge` の各サブコマンドを `app` に登録し、引数やオプションを受けて対応する `sub_commands` 実装へ処理を委譲します。
+- `main()` は Typer/Click の起動をラップし、parse error や想定外例外を共通エラーレポート形式に整えて終了コードを決定します。
+- `python src/main.py` で直接実行された場合も `main()` を起動する入口になっています。
 
 ## Read this when
 
-- cmoc のトップレベル CLI コマンド一覧やサブコマンド登録箇所を確認したいとき。
-- `cmoc init`、`cmoc branch`、`cmoc eval-oracles`、`cmoc apply`、`cmoc merge` がどの実装関数へ委譲されるか調べたいとき。
+- `cmoc` のトップレベル CLI コマンド一覧やサブコマンド登録箇所を確認したいとき。
+- `init`、`branch`、`eval-oracles`、`apply`、`merge` がどの実装関数へ委譲されるか調べたいとき。
 - サブコマンドの Typer 引数・オプション定義、デフォルト値、短縮オプションを確認したいとき。
-- Typer や Click の例外、CLI parse error、想定外例外が cmoc の共通エラーレポートと終了コードへどう変換されるか確認したいとき。
-- cmoc の起動入口、`app` オブジェクト、`main()`、直接実行時の挙動を修正または調査したいとき。
+- Typer や Click の例外、CLI の parse error、想定外例外がどのように共通エラーレポートと終了コードへ変換されるか確認したいとき。
+- `app` オブジェクト、`main()`、直接実行時の挙動を修正または調査したいとき。
 
 ## Do not read this when
 
@@ -56,7 +54,7 @@
 
 ## hash
 
-- d752eef82e7384747c693c0afe234254d441d6ba098d33d86bec3b0c9e31da62
+- 36e5e2fb8b0363de44466a80240381ed5c51c543fb23b58d66d935e199d46b02
 
 # `sub_commands`
 
