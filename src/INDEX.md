@@ -58,23 +58,23 @@
 
 ## Summary
 
-- `cmoc` のサブコマンド実装をまとめたパッケージです。
-- `apply.py`、`branch.py`、`eval_oracles.py`、`init.py`、`merge.py` にそれぞれ `cmoc apply`、`cmoc branch`、`cmoc eval-oracles`、`cmoc init`、`cmoc merge` の本体処理が入っています。
+- `src/sub_commands` 配下の cmoc サブコマンド本体実装へのルーティング用目次です。
+- `apply.py`、`branch.py`、`eval_oracles.py`、`init.py`、`merge.py` に、それぞれ `cmoc apply` などの実処理が分かれています。
 - `__init__.py` はサブコマンド実装パッケージであることを示す最小限の初期化ファイルです。
 
 ## Read this when
 
-- `cmoc` の各サブコマンドの本体実装がどのファイルにあるか確認したいとき。
+- 各サブコマンドの本体実装がどのファイルにあるか確認したいとき。
 - `apply`、`branch`、`eval-oracles`、`init`、`merge` のどれを読むべきか切り分けたいとき。
 - サブコマンド実装パッケージ全体の構成を把握したいとき。
 
 ## Do not read this when
 
-- 共通ユーティリティ、CLI エントリーポイント、引数解析の実装だけを調べたいとき。
+- 共通ユーティリティや CLI エントリーポイントの実装だけを調べたいとき。
 - `oracles` の正本仕様や `INDEX.md` 自動生成ルールだけを調べたいとき。
 - `cmoc` 自体の開発規約、設計規約、テスト規約だけを確認したいとき。
-- 個別サブコマンドの詳細な挙動が既に分かっていて、実装ファイルの所在確認が不要なとき。
+- すでに個別サブコマンドの実装ファイルが分かっていて、所在確認が不要なとき。
 
 ## hash
 
-- 344e7cf24724de509515cdb5b1e76ba9046c87159ecae9533a7dbd64cbf20316
+- 6ff3c5218a6001243286eb527dd9f0a5ed981eff536ef9c08b3bf4b9ad78541f
