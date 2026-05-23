@@ -24,13 +24,14 @@
 
 ## Summary
 
-- `src/sub_commands/apply.py` は `cmoc apply` の本体実装で、oracle と実装の不整合調査から修正適用、コミット、レポート出力までを一括して扱うファイルです。
-- `cmoc` 作業ブランチの確認、`.cmoc` の追跡除外保証、`INDEX.md` の維持、未コミット差分の検査、反復回数の検証など、実行前後の制御も含みます。
-- 不整合調査用の Structured Output schema 検証、要修正点リストの整理、個別修正の実行、apply レポートの保存と終了コード決定の流れを含みます。
+- `src/sub_commands/apply.py` は `cmoc apply` の本体実装で、oracle と実装の不整合調査から修正適用、コミット、レポート保存までを一括して扱うファイルです。
+- 実行前に `cmoc` 作業ブランチの確認、`.cmoc` の追跡除外保証、`INDEX.md` の維持、未コミット差分の検査、反復回数の妥当性確認を行います。
+- 各 oracle ファイルと実装ファイルを起点に Structured Output で要修正点を集め、改善ループを回したうえで、個別修正とコミットを反復します。
+- 作業結果はレポートとして `.cmoc/reports/apply/<time-stamp>.md` に保存され、収束・未収束を区別した終了コードで返します。
 
 ## Read this when
 
-- `cmoc apply` の実行フロー、前提条件、部分適用と全体適用の切り替え、反復回数、終了コードを確認したいとき。
+- `cmoc apply` の処理順序、前提条件、部分適用と全体適用の切り替え、反復回数、終了コードを確認したいとき。
 - oracle と実装の不整合調査に使う Codex CLI の prompt、Structured Output schema、要修正点リストの改善ロジックを追いたいとき。
 - 変更の自動コミット、編集禁止領域の検査、`INDEX.md` の維持、apply レポートの生成と検証を確認したいとき。
 - このファイル内の補助関数の役割や、各処理がどの順番で呼ばれるかを把握したいとき。
@@ -44,7 +45,7 @@
 
 ## hash
 
-- 2f6fb840f86c18c0434ea320346592f9282ec1e959032a0acb82c91416afbf1d
+- ea01fe7c000914defdfbdeba04981cd67b2f1cc1cda963a18622d445805e27f2
 
 # `branch.py`
 
