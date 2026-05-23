@@ -24,10 +24,9 @@
 
 ## Summary
 
-- `src/sub_commands/apply.py` は `cmoc apply` の本体実装で、oracle と実装の不整合調査から修正適用、コミット、レポート保存までを一括して扱うファイルです。
+- `src/sub_commands/apply.py` は `cmoc apply` の本体実装で、oracle と実装の不整合調査、要修正点の整理、修正適用、コミット、レポート保存までを一連で扱います。
 - 実行前に `cmoc` 作業ブランチの確認、`.cmoc` の追跡除外保証、`INDEX.md` の維持、未コミット差分の検査、反復回数の妥当性確認を行います。
-- 各 oracle ファイルと実装ファイルを起点に Structured Output で要修正点を集め、改善ループを回したうえで、個別修正とコミットを反復します。
-- 作業結果はレポートとして `.cmoc/reports/apply/<time-stamp>.md` に保存され、収束・未収束を区別した終了コードで返します。
+- oracle ファイルと実装ファイルを起点に Structured Output で要修正点を集め、改善ループを回したうえで個別修正を反復し、結果を `.cmoc/reports/apply/<time-stamp>.md` に保存します。
 
 ## Read this when
 
@@ -45,7 +44,7 @@
 
 ## hash
 
-- ea01fe7c000914defdfbdeba04981cd67b2f1cc1cda963a18622d445805e27f2
+- 6792af4ab2c398ccbd92fe8318359e2543cf2fa9a44839fe5c83a5026a9a271e
 
 # `branch.py`
 
