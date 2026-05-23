@@ -3,18 +3,18 @@
 ## Summary
 
 - `src/commons` は、cmoc 全体で共有する横断的な共通処理を集約した基盤モジュール群です。
-- `repo.py` は、git リポジトリ探索、作業ルート移動、ブランチや HEAD の取得、`.cmoc` の追跡回避、差分収集、oracle / implementation ファイル列挙などを扱います。
-- `codex.py` は、`codex exec` の呼び出し、Structured Output の schema 受け渡し、ログ保存、JSON / text の検証とリトライ、quota 復旧を扱います。
-- `indexing.py` は、`INDEX.md` の自動生成・更新と自動コミットをまとめ、目次本文の生成に Codex CLI を使う処理を含みます。
-- `errors.py` は共通エラーレポートの整形、`timestamps.py` は `<time-stamp>` 生成、`timing.py` はステップ別経過時間の計測、`command_runner.py` はサブコマンド実行の共通制御を担います。
+- `codex.py` は `codex exec` の共通ラッパーで、Structured Output、実行ログ、JSON/text 検証、リトライ、quota 復旧を扱います。
+- `repo.py` は git リポジトリ探索、`.cmoc` の追跡回避、差分収集、oracle / implementation ファイル列挙を扱います。
+- `indexing.py` は `INDEX.md` の自動生成・更新・再利用・自動コミットをまとめます。
+- `errors.py`、`subcommand_log.py`、`timestamps.py`、`timing.py`、`command_runner.py` は、共通エラーレポート、サブコマンドログ、タイムスタンプ、経過時間計測、実行制御を担います。
 
 ## Read this when
 
 - `cmoc` の共通ユーティリティの役割分担や、どの処理がこのディレクトリにあるかを確認したいとき。
-- git リポジトリ探索、`.cmoc` の ignore 保証、差分収集、oracle / implementation ファイル列挙の実装方針を知りたいとき。
+- git リポジトリ探索、ブランチや HEAD の取得、`.cmoc` の ignore 保証、差分収集、ファイル列挙の実装方針を知りたいとき。
 - `codex exec` の起動方法、Structured Output、ログ保存、検証リトライ、quota 復旧の流れを確認したいとき。
 - `INDEX.md` の自動生成・更新・再利用・自動コミットの仕組みを確認したいとき。
-- 共通エラーレポート、タイムスタンプ生成、経過時間表示、サブコマンド実行の共通ラッパーを確認したいとき。
+- 共通エラーレポート、サブコマンドログ、タイムスタンプ生成、経過時間表示、サブコマンド実行の共通ラッパーを確認したいとき。
 
 ## Do not read this when
 
@@ -26,7 +26,7 @@
 
 ## hash
 
-- b1db76082c53cdcf7006f383fc1824d6caa12ed6b90d1793eb807786cec73025
+- 1e25d531f87072557d3049821b4cff2aee96007f47c9f0111b24f3919163b4c6
 
 # `main.py`
 

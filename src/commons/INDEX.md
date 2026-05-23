@@ -23,19 +23,19 @@
 
 ## Summary
 
-- `src/commons/codex.py` は、cmoc から `codex exec` を呼び出すための共通ラッパーです。
-- `read-only` / `workspace-write` の sandbox 指定、`model` と `reasoning effort` の組み立て、`--output-last-message` の回収を扱います。
-- Structured Output の schema ファイル保存、`logs/codex_exec` へのフルログ保存、JSON 解析と JSON Schema subset の再検証をまとめています。
-- JSON 応答と text 応答の意味検証を最大 3 回までリトライし、quota 枯渇時は `--resume` 再実行と復旧確認を行います。
+- `src/commons/codex.py` は、cmoc から `codex exec` を起動するための共通ラッパーです。
+- `read-only` / `workspace-write` の sandbox、`model` と `reasoning_effort`、`--output-last-message`、`--output-schema` の付与をまとめて扱います。
+- Structured Output の schema を `logs/codex_exec/output_schemae` 配下に hash 名で保存し、`logs/codex_exec/call` と `logs/codex_exec/output_last_message` に実行ログを残します。
+- JSON 応答の解析と cmoc 側の JSON Schema subset 再検証、text 応答の意味検証、最大 3 回のリトライ、quota 枯渇時の待機と `--resume` 再実行までを扱います。
 
 ## Read this when
 
-- cmoc から Codex CLI をどのように起動しているか確認したいとき。
+- cmoc から Codex CLI をどのようなオプションで呼び出しているか確認したいとき。
 - `run_codex_exec` の引数、`expect_json`、`output_schema`、`json_validator`、`text_validator` の扱いを確認したいとき。
-- Structured Output の schema ファイルがどこに保存され、どのように `codex exec` に渡されるか確認したいとき。
-- Codex 実行ログ、last message ファイル、stdout / stderr の診断情報、リトライ条件を確認したいとき。
-- quota 枯渇時の待機・疎通確認・`--resume` 再実行の流れを確認したいとき。
-- JSON 応答を `dict` として扱う前提や、cmoc 側の JSON Schema subset 検証を確認したいとき。
+- Structured Output の schema ファイルの保存先と、`codex exec` への渡し方を確認したいとき。
+- 実行ログ、last message ファイル、stdout / stderr の診断情報、リトライ条件を確認したいとき。
+- quota 枯渇時に session id を抽出して `--resume` する流れを確認したいとき。
+- JSON 応答を `dict` 前提で扱う処理や、cmoc 側の JSON Schema subset 検証を確認したいとき。
 
 ## Do not read this when
 
@@ -48,34 +48,34 @@
 
 ## hash
 
-- 00568a3cbd924ed7773891feadad85420f0606782679f0bf7680b4675bffabd3
+- f29bf5c273bf29239008a76079482e77f6a846469fce894d4bc35f285d3b9709
 
 # `command_runner.py`
 
 ## Summary
 
-- CLI サブコマンドの Typer 関数から呼び出される共通実行ラッパーを定義するファイルです。
-- `run_command(handler)` が `<repo-root>` の解決とカレントディレクトリ移動を `enter_repo_root()` に委ね、解決後の `Path` をサブコマンド本体の `handler` に渡します。
-- `handler` が整数を返した場合はその値を終了コードとして `typer.Exit` を送出します。
-- `typer.Exit` はそのまま再送出し、それ以外の例外は `format_error_report()` で表示してから、例外の `exit_code` 属性または既定値 `1` を使って `typer.Exit` に変換します。
+- `src/commons/command_runner.py` は、CLI サブコマンドの Typer エントリーポイントから呼ばれる共通実行ラッパーです。
+- `run_command(handler)` が `<repo-root>` の解決を `enter_repo_root()` に委ね、解決済みの `Path` を `handler` に渡して実行します。
+- `handler` が整数を返した場合は終了コードとして扱い、`typer.Exit` と通常例外を共通方針で終了コード化します。
+- 例外発生時は `format_error_report()` で利用者向けレポートを出し、`subcommand_log` と `timing` の集計結果も最後に出力します。
 
 ## Read this when
 
-- サブコマンドの Typer エントリーポイントを薄く保ち、共通の実行制御をどこに委譲しているか確認したいとき。
-- 各サブコマンド本体が `<repo-root>` の `Path` をどのように受け取るか調べたいとき。
-- 例外発生時の共通エラー表示、終了コード決定、`typer.Exit` への変換処理を確認したいとき。
-- `enter_repo_root()` や `format_error_report()` とサブコマンド実行フローの接続箇所を探しているとき。
+- サブコマンド本体を薄く保ち、共通の実行制御をどこに集約しているか確認したいとき。
+- 各サブコマンドが `<repo-root>` の `Path` をどのように受け取るか確認したいとき。
+- 例外時の共通エラー表示、終了コードの決定、`typer.Exit` への変換規則を確認したいとき。
+- サブコマンド実行時のログ、経過時間、待機時間、戻り値出力の流れを追いたいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの具体的な処理内容やオプション定義を調べたいとき。
-- `<repo-root>` の探索ロジック自体や `.cmoc` の扱いを詳しく確認したいとき。
-- エラーメッセージの整形内容や例外クラスの定義を詳しく確認したいとき。
-- Codex CLI 呼び出し、プロンプト生成、oracle 評価、INDEX.md 生成などの実処理を調べたいとき。
+- 個別サブコマンドの業務ロジックや CLI 引数定義だけを調べたいとき。
+- `<repo-root>` の探索ロジックや `.cmoc` の扱いを詳しく確認したいとき。
+- エラーメッセージの整形内容や例外クラス定義そのものを詳しく確認したいとき。
+- Codex CLI 呼び出し、Structured Output、INDEX.md 生成などの別機能を調べたいとき。
 
 ## hash
 
-- ef44b0b6b838c51a601783bd80e15d97049be1e17cd4771609ed747e30a45b6d
+- c7cbbadbd76f6d19446132324442beeb3558377b48e8e28e8a998368a94518a7
 
 # `errors.py`
 
@@ -170,6 +170,34 @@
 
 - fb74e9bfaa0c5c5d27d06f4ca23767d023eb93c7380f80dd7200392ccb31dc2b
 
+# `subcommand_log.py`
+
+## Summary
+
+- `src/commons/subcommand_log.py` は、サブコマンド単位の標準出力・標準エラー出力を `tee` して `<repo-root>/logs/sub_commands` 配下へ保存する共通ログ管理モジュールです。
+- `SubcommandLogContext` と `current_subcommand_log()` で現在のログ状態を共有し、`add_quota_wait()` で quota 回復待ち時間を加算できます。
+- `subcommand_log()` はログファイルを作成し、コンソール出力とログファイルへの複製を行い、開始時にログの相対パスを表示します。
+- `_ensure_logs_excluded()` は `logs/` がサブコマンド自身の未コミット差分にならないよう、`.git/info/exclude` へ除外設定を追加します。
+
+## Read this when
+
+- サブコマンド実行時の標準出力・標準エラー出力をログファイルへ同時保存する仕組みを確認したいとき。
+- 現在実行中のサブコマンドのログ状態や、quota 回復待ち時間の累積方法を確認したいとき。
+- ログファイルの保存先、ファイル名の付け方、開始メッセージの表示内容を確認したいとき。
+- `logs/` をサブコマンド自身の差分として扱わないための除外設定の挙動を確認したいとき。
+
+## Do not read this when
+
+- 個別サブコマンドの業務ロジック、引数解析、実装手順だけを調べたいとき。
+- `INDEX.md` の自動生成や更新の仕組みを調べたいとき。
+- git リポジトリ探索、ブランチ操作、差分収集などの共通 repo 処理を調べたいとき。
+- タイムスタンプ生成や経過時間表示など、別の共通ユーティリティを調べたいとき。
+- エラー整形や例外処理の共通仕様だけを調べたいとき。
+
+## hash
+
+- 56034b81bd2d66809847c5c1a5d493068d686c1cbd4a943e4e12eaa4f3e3d330
+
 # `timestamps.py`
 
 ## Summary
@@ -200,28 +228,28 @@
 
 ## Summary
 
-- サブコマンドのステップ時間計測を提供する共通モジュール。
-- `StepTimer` はサブコマンド全体の開始時刻、実行中ステップ、確定済みステップ別 duration を保持し、`start()` で直前ステップを確定して新ステップを開始する。
-- `StepTimer.report()` は未確定ステップを確定したうえで、ステップ別経過時間とサブコマンド全体の経過時間を stdout に出力する。
-- `StepTimer.finish_current()` は実行中ステップがある場合だけ duration を保存して状態をクリアし、実行中ステップが無い場合は何もしない。
-- `format_duration()` は秒数を 0.1 秒単位に切り捨て、負値を 0 として扱い、` 0h  0m  0.0s` 形式の経過時間文字列へ変換する。
+- サブコマンドのステップ単位の時間計測を担う共通モジュールです。
+- `StepTimer` は開始時刻、現在ステップ、確定済みステップの経過時間を保持し、`start()` で直前ステップを確定して次のステップを開始します。
+- `report()` は未確定の最後のステップも確定したうえで、各ステップの経過時間とサブコマンド全体の経過時間を stdout に出力します。
+- `current_timer()`、`report_current_timer()`、`clear_current_timer()` は `ContextVar` を使って現在の計測器を参照・出力・解除します。
+- `format_duration()` は秒数を 0.1 秒単位で切り捨て、負値を 0 として扱い、` 0h  0m  0.0s` 形式の文字列に変換します。
 
 ## Read this when
 
-- サブコマンド処理のステップ別タイミング表示や総経過時間表示を実装・修正するとき。
-- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` などから共通の時間計測器を使う方法を確認したいとき。
-- ステップ開始時に直前ステップを自動的に確定する挙動、または最後のステップを report 時に確定する挙動を確認したいとき。
+- 各サブコマンドのステップ別タイミング表示や総経過時間表示を実装・修正したいとき。
+- `StepTimer` の `start()`、`report()`、`finish_current()` の状態遷移を確認したいとき。
+- サブコマンド実行中の現在の計測器を取得したり、最後にまとめて出力したり、参照を消したりする方法を確認したいとき。
 - 経過時間の表示フォーマット、0.1 秒単位への切り捨て、負値の扱いを確認したいとき。
 - タイミングレポートの stdout 出力行や `command_name` の使われ方を確認したいとき。
 
 ## Do not read this when
 
-- タイマーを使う側の各サブコマンド固有の処理順序や業務ロジックを調べたいとき。
-- Codex CLI 呼び出し、Structured Output、ログ保存、リトライなどの実行時仕様全体を調べたいとき。
-- oracle ファイル列挙、repo-root 探索、INDEX.md 生成など、時間計測以外の共通処理を調べたいとき。
-- pytest や Fake Codex CLI など、テスト基盤の規約だけを確認したいとき。
-- Python の一般的な時間計測 API や `perf_counter` の詳細仕様を調べたいだけのとき。
+- 各サブコマンド固有の業務ロジックだけを追いたいとき。
+- Codex CLI 呼び出し、Structured Output、ログ保存、リトライなど別の共通処理を調べたいとき。
+- `INDEX.md` の自動生成や内容ハッシュの規則を調べたいとき。
+- repo 探索、oracle 列挙、ブランチ操作など、timing 以外の共通機能を探したいとき。
+- Python の一般的な時間計測 API や `perf_counter` の詳細仕様だけを知りたいとき。
 
 ## hash
 
-- 37186b8a149f9438526632ae6e3619364cfc49e91b6157a8b55db52ff3af8126
+- 75558c0d9b8b16b8296f16fd1b5cf927260d60da1a97a672539bda11584bf2a4
