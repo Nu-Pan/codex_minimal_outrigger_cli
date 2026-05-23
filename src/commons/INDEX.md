@@ -24,31 +24,32 @@
 ## Summary
 
 - `src/commons/codex.py` は、cmoc から `codex exec` を起動するための共通ラッパーです。
-- `read-only` / `workspace-write` の sandbox、`model` と `reasoning_effort`、`--output-last-message`、`--output-schema` の付与をまとめて扱います。
-- Structured Output の schema を `logs/codex_exec/output_schemae` 配下に hash 名で保存し、`logs/codex_exec/call` と `logs/codex_exec/output_last_message` に実行ログを残します。
-- JSON 応答の解析と cmoc 側の JSON Schema subset 再検証、text 応答の意味検証、最大 3 回のリトライ、quota 枯渇時の待機と `--resume` 再実行までを扱います。
+- `read-only` / `workspace-write` のサンドボックス、`model`、`reasoning_effort`、`--json`、`--output-last-message`、`--output-schema` の付与をまとめて扱います。
+- Structured Output の schema を `logs/codex_exec/output_schemae` に hash 名で保存し、`logs/codex_exec/call` と `logs/codex_exec/output_last_message` に実行ログを残します。
+- JSON 応答の解析、cmoc 側の JSON Schema subset 再検証、text validator、最大 3 回のリトライ、quota 枯渇時の待機と `--resume` 再実行までを扱います。
+- `parse_json_object` で JSON object 以外を拒否し、呼び出し側が `dict` 前提で扱えることを保証します。
 
 ## Read this when
 
 - cmoc から Codex CLI をどのようなオプションで呼び出しているか確認したいとき。
 - `run_codex_exec` の引数、`expect_json`、`output_schema`、`json_validator`、`text_validator` の扱いを確認したいとき。
 - Structured Output の schema ファイルの保存先と、`codex exec` への渡し方を確認したいとき。
-- 実行ログ、last message ファイル、stdout / stderr の診断情報、リトライ条件を確認したいとき。
+- `codex exec` 前の `INDEX.md` 保守の有無や、`skip_index_maintenance` の意味を確認したいとき。
 - quota 枯渇時に session id を抽出して `--resume` する流れを確認したいとき。
 - JSON 応答を `dict` 前提で扱う処理や、cmoc 側の JSON Schema subset 検証を確認したいとき。
 
 ## Do not read this when
 
 - 個別サブコマンドの業務ロジックや CLI 引数定義だけを調べたいとき。
-- `INDEX.md` の自動生成・更新・再利用ルールそのものを調べたいとき。
-- git リポジトリ探索、ブランチ操作、差分収集、`.cmoc` の ignore 保証を調べたいとき。
+- `INDEX.md` の配置対象や自動メンテナンス全体を調べたいとき。
+- git リポジトリ探索、ブランチ操作、差分収集、`.cmoc` の追跡外保証を調べたいとき。
 - `CmocError` の表示形式や共通エラーハンドリング全体を調べたいとき。
-- タイムスタンプ生成や時間計測など、別の共通ユーティリティを確認したいとき。
-- テストコードや Fake Codex CLI の実装パターンだけを確認したいとき。
+- タイムスタンプ生成、経過時間表示、サブコマンドログなど別の共通ユーティリティだけを確認したいとき。
+- テストコードや Fake Codex CLI の実装例だけを確認したいとき。
 
 ## hash
 
-- f29bf5c273bf29239008a76079482e77f6a846469fce894d4bc35f285d3b9709
+- e37d6171c059764e6fa7e8509f409af6218eddb74cfca7b0638ff3f7930f4f47
 
 # `command_runner.py`
 
@@ -111,9 +112,9 @@
 ## Summary
 
 - `src/commons/indexing.py` は、`INDEX.md` の自動メンテナンス処理をまとめた共通モジュールです。
-- `maintain_indexes` が `<repo-root>` 配下の配置対象ディレクトリを列挙し、必要な `INDEX.md` を生成・更新して、差分があれば自動コミットします。
-- 配置対象ディレクトリの除外条件、`memo`・隠し項目・gitignore 対象・バイナリらしいファイル・`build` / `tmp` / `__pycache__` の扱いを実装しています。
-- 既存の `INDEX.md` ブロックを解析して再利用し、子項目のハッシュと固定フォーマットの一致を見て再生成要否を判定します。
+- `<repo-root>` 配下の配置対象ディレクトリを列挙し、必要な `INDEX.md` を生成・更新して、差分があれば自動コミットします。
+- `memo`、隠し項目、`gitignore` 対象、`build` / `tmp` / `__pycache__`、バイナリらしいファイルを除外する判定を実装しています。
+- 既存の `INDEX.md` ブロックを解析して再利用し、子項目のハッシュと固定フォーマットの一致で再生成要否を判定します。
 - 目次本文の新規生成では Codex CLI を Structured Output schema 付きで呼び出し、JSON 検証後に Markdown へ変換します。
 
 ## Read this when
@@ -121,8 +122,8 @@
 - `INDEX.md` がどのディレクトリへ配置され、どの項目が目次生成対象になるかを確認したいとき。
 - `maintain_indexes` の処理順、`INDEX.md` 更新、変更パス限定の自動コミットの流れを調べたいとき。
 - 既存の `INDEX.md` がハッシュ一致時に再利用される条件や、固定フォーマット検証の仕様を確認したいとき。
-- `memo`、隠しディレクトリ、`build`、`tmp`、`__pycache__`、gitignore 対象、バイナリファイルの除外規則を確認したいとき。
-- INDEX 生成用の Codex CLI プロンプト、Structured Output schema、JSON 検証、Markdown 変換処理を変更したいとき.
+- `memo`、隠しディレクトリ、`build`、`tmp`、`__pycache__`、`gitignore` 対象、バイナリファイルの除外規則を確認したいとき。
+- INDEX 生成用の Codex CLI プロンプト、Structured Output schema、JSON 検証、Markdown 変換処理を変更したいとき。
 
 ## Do not read this when
 
@@ -130,11 +131,11 @@
 - Codex CLI 呼び出しの汎用ラッパー、JSON パース、モデル定数の詳細だけを調べたいとき。
 - git コミット処理や `.gitignore` 更新、repo root 検出など、INDEX 以外の repo 共通処理だけを確認したいとき。
 - 特定の `INDEX.md` 目次本文だけを読みたい場合で、生成・更新ロジックを追う必要がないとき。
-- cmoc 自体の開発規約、テスト規約、環境ルールなど、実装方針の正本仕様を探しているとき.
+- cmoc 自体の開発規約、テスト規約、環境ルールなど、実装方針の正本仕様を探しているとき。
 
 ## hash
 
-- 7f77914cb9e5294ae06f7b4471912058ed5646aa142dea86879f2bc9a5979b32
+- 6d05df0e2ee40acbac84fbb0549101830c1a9a8fe7f3cdef13cba8aef7aaf83b
 
 # `repo.py`
 

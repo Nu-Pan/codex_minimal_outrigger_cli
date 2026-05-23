@@ -27,32 +27,30 @@
 
 ## Summary
 
-- `tests/test_codex.py` は、`commons.codex.run_codex_exec` の Codex CLI 呼び出しラッパーを検証する pytest テストです。
-- Structured Output 利用時の `--json`、`--output-last-message`、`--output-schema`、schema ファイル生成、`model`、`reasoning_effort` の引き渡しを確認します。
-- JSON parse 失敗、schema 不一致、semantic validator 失敗、非 JSON の text validator 失敗に対して、3 回までリトライして詳細な `CmocError` を返す挙動を確認します。
-- stdout の進捗表示では、prompt と output を先頭 80 文字で切り出した後に改行を可視化する仕様を確認します。
-- quota 枯渇時の疎通確認と `--resume` 再実行、resume 後の想定外エラー、`INDEX.md` 事前メンテナンスの実行とスキップ指定も扱います。
+- `tests/test_codex.py` は、`commons.codex.run_codex_exec` の Codex CLI 呼び出しラッパーを検証するテストの目次です。
+- Structured Output の `--json`、`--output-last-message`、`--output-schema`、schema ファイル生成、`model`、`reasoning_effort` の受け渡しを扱います。
+- JSON 解析失敗、schema 不一致、semantic validator 失敗、非 JSON テキストの validator 失敗に対する最大 3 回のリトライと、失敗時の `CmocError` 詳細を扱います。
+- stdout の進捗表示の切り詰めと改行可視化、quota 枯渇時の疎通確認と `--resume` 再実行、`INDEX.md` 事前メンテナンスの実行・スキップも検証対象です。
 
 ## Read this when
 
-- `run_codex_exec` のリトライ回数、ログ保存、進捗表示、エラー詳細の期待仕様をテストから確認したいとき。
-- Structured Output の `output_schema` ファイル化、Codex CLI 引数、JSON schema 検証、semantic validator の扱いを調べたいとき。
-- 非 JSON テキスト出力に対する validator、リトライ、失敗時 `CmocError` の詳細内容を確認したいとき。
-- quota 枯渇検出、疎通確認 prompt、`--resume` 再実行、resume 後エラー処理のテストケースを探しているとき。
-- Codex CLI 呼び出し前の `INDEX.md` メンテナンス実行と、生成処理や conflict 解消時のメンテナンススキップ指定を確認したいとき。
-- fake `codex` バイナリ、`tmp_path`、`monkeypatch`、`capsys` を使った Codex CLI ラッパーの単体テスト実装例を参照したいとき。
+- `run_codex_exec` の引数構成、Structured Output の渡し方、リトライ挙動を確認したいとき。
+- Codex CLI 呼び出し前後のログ保存、stdout 進捗表示、戻り値の扱いを調べたいとき。
+- JSON schema 検証、semantic validator、非 JSON テキスト validator の失敗時挙動を確認したいとき。
+- quota 枯渇時の疎通確認プロンプトと `--resume` 再実行の流れを確認したいとき。
+- `INDEX.md` の事前メンテナンスが通常呼び出しで走る条件と、明示スキップできる条件を確認したいとき。
 
 ## Do not read this when
 
-- `run_codex_exec` の実装本体や内部 helper の具体的な処理を直接確認したいとき。
-- cmoc のサブコマンド全体、CLI エントリーポイント、設定ファイル、oracle 評価、`branch` / `apply` / `merge` などの仕様を調べたいとき。
-- `INDEX.md` 自動生成ロジックそのもの、対象ディレクトリの列挙、ハッシュ管理、ルーティング文書生成の詳細実装を調べたいとき。
-- Codex CLI や OpenAI API の一般的な使い方、外部仕様、最新のモデル情報を調べたいとき。
-- pytest 全体の設定、テスト共通 fixture、テスト環境構築、依存関係管理だけを確認したいとき。
+- `commons.codex.run_codex_exec` の実装本体や内部 helper の処理だけを確認したいとき。
+- `cmoc` のサブコマンド全体、CLI エントリーポイント、`branch` / `apply` / `merge` など他機能の仕様を調べたいとき。
+- `INDEX.md` 自動生成ロジックそのものや、対象ディレクトリ列挙の詳細を知りたいとき。
+- Codex CLI や OpenAI API の一般的な使い方、外部仕様を調べたいとき。
+- pytest 全体の共通設定や、テスト用 git リポジトリ作成の一般論だけを確認したいとき。
 
 ## hash
 
-- 13a4e467d5215afd88aa36466b40c9ee769bc48b6b0e75aab6c0027889cb260b
+- c38030f1b7be20b969877e663701fb89f92a1116805c3ccab03f13d6d41f625f
 
 # `test_indexing.py`
 
