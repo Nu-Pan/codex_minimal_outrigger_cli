@@ -22,19 +22,20 @@
 - `oracles` 配下の正本仕様や、`src` / `tests` の別ディレクトリの細かな内容だけを確認したいとき。
 - `README.md`、`AGENTS.md`、`memo` の運用ルールだけを確認したいとき。
 - 共通処理の再利用関係ではなく、特定の CLI 引数や画面表示だけを追いたいとき。
+- 個々の補助モジュールの詳細実装だけを確認したいとき。
 
 ## hash
 
-- 2d66dcd95dfb928fa3603af23a39cc0c8d1e499f4ae2c8cda3ce3c9b4f586899
+- 923512335d977526ffdc78319c356951f3189e40e643f6edfc186443f86a1bdf
 
 # `main.py`
 
 ## Summary
 
 - `cmoc` CLI の Typer エントリーポイントを定義するファイルです。
-- `init`、`branch`、`eval-oracles`、`apply`、`merge` の各サブコマンドを `app` に登録し、引数やオプションを受けて対応する `sub_commands` 実装へ処理を委譲します。
-- `main()` は Typer/Click の起動をラップし、parse error や想定外例外を共通エラーレポート形式に整えて終了コードを決定します。
-- `python src/main.py` で直接実行された場合も `main()` を起動する入口になっています。
+- `init`、`branch`、`eval-oracles`、`apply`、`merge` を `app` に登録し、それぞれ対応する `sub_commands` 実装へ処理を委譲します。
+- `main()` は Typer / Click の起動をラップし、parse error や想定外例外を共通エラーレポート形式に整えて終了コードを決定します。
+- `python src/main.py` で直接実行された場合も `main()` を起動する入口です。
 
 ## Read this when
 
@@ -54,31 +55,28 @@
 
 ## hash
 
-- 36e5e2fb8b0363de44466a80240381ed5c51c543fb23b58d66d935e199d46b02
+- 46a839a204d98681f3b4b8ae950eedaa799d921d99d7ab1989d89478396fd25d
 
 # `sub_commands`
 
 ## Summary
 
-- `cmoc` のサブコマンド本体実装をまとめるディレクトリです。
-- `init.py`、`branch.py`、`apply.py`、`eval_oracles.py`、`merge.py` など、各サブコマンドの実処理への入口を案内します。
-- サブコマンドごとの引数処理、前提条件、実行フロー、終了処理を確認するときのルーティング用目です。
-- `cmoc` のコマンド単位の挙動を実装・修正・テストする際に、読むべき本体ファイルを素早く特定するための目次です。
+- `cmoc` の各サブコマンド本体実装をまとめる `src/sub_commands` ディレクトリの目次です。
+- `__init__.py` はパッケージ初期化、`init.py`、`branch.py`、`apply.py`、`eval_oracles.py`、`merge.py` は各サブコマンドの実装入口です。
+- このディレクトリは、サブコマンドごとの処理の流れ、入出力、実行条件、進捗表示や終了判定を確認するための案内役です。
 
 ## Read this when
 
-- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` の実装や修正をするとき。
-- 特定のサブコマンドの本体処理がどの Python ファイルにあるか確認したいとき。
-- サブコマンドごとの前提条件、実行手順、分岐、例外処理、完了判定を追いたいとき。
-- `src/sub_commands` 配下の構成を把握して、個別実装へ移動したいとき。
+- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` のどの実装ファイルを読むべきか判断したいとき。
+- 各サブコマンドの処理の流れ、引数、前提条件、終了条件、保存先などの実装詳細を確認したいとき。
+- サブコマンド実装のパッケージ境界や、個別モジュールの役割を把握したいとき。
 
 ## Do not read this when
 
-- cmoc 全体の設計方針や開発ルールだけを確認したいとき。
-- `oracles` 配下の正本仕様断片だけを調べたいとき。
-- テストコードや共通ユーティリティの場所を探しているとき。
-- サブコマンド横断の共通仕様だけを見たいが、個別実装の入口は不要なとき。
+- `cmoc` の開発ルール、コーディング規約、テスト方針、開発環境だけを調べたいとき。
+- CLI のユーザー向け利用方法や、サブコマンド一覧だけを確認したいとき。
+- `README.md`、`AGENTS.md`、`oracles` の運用ルールや編集可否だけを確認したいとき。
 
 ## hash
 
-- 75c517936677a6be2379b6cabc1e9edcfb4cc328d04ac0dd866b3b4ee6c3cf3d
+- cb429b2d3c2360fd3d21bf461f7ca360685222b91aa33b70a81043eec5acd933
