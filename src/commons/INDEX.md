@@ -82,27 +82,27 @@
 
 ## Summary
 
-- cmoc 全体で使う共通エラー型 `CmocError` と、stdout 向けエラーレポート整形処理 `format_error_report` をまとめるモジュールです。
+- `src/commons/errors.py` は、cmoc 全体で使う共通例外 `CmocError` と、stdout 向けエラーレポート整形関数 `format_error_report` をまとめるモジュールです。
 - `CmocError` は利用者向けメッセージ、複数の次アクション、詳細、終了コードを保持し、次アクションは最低 2 件を必須にします。
 - `format_error_report` は例外を `ERROR` / `Summary` / `Next actions` / `Detail` / `Call stack` の形式に整形し、`CmocError` と通常例外で扱いを分けます。
 
 ## Read this when
 
 - cmoc の共通エラーハンドリングや、例外から stdout レポートへ変換する処理を実装・修正したいとき。
-- サブコマンドや共通処理から、復旧アクション付きの `CmocError` を投げたいとき。
+- 復旧手順を複数提示する `CmocError` をサブコマンドや共通処理から投げたいとき。
 - `message`、`actions`、`detail`、`exit_code` の意味や制約を確認したいとき。
 - 通常の Python 例外が cmoc の共通エラーレポートでどう表示されるか確認したいとき。
 
 ## Do not read this when
 
 - 個別サブコマンドの業務ロジック、引数解析、git 操作、Codex CLI 呼び出しを調べたいとき。
-- ログ保存、リトライ、Structured Output、サンドボックス指定などの Codex 連携仕様だけを調べたいとき。
-- タイムスタンプ生成、経過時間表示、サブコマンドログなど別の共通ユーティリティを調べたいとき。
+- ログ保存、リトライ、Structured Output、サンドボックス指定など、別の共通機能だけを調べたいとき。
+- タイムスタンプ生成、経過時間表示、サブコマンドログなど、他の共通ユーティリティを調べたいとき。
 - テスト実装の詳細や Fake Codex CLI の使い方だけを確認したいとき。
 
 ## hash
 
-- 779b7ce4f8cb9958b8108ac1932ecf47458c0ab72a380772f86cdadbad221615
+- 23ce2d1433949a8fe5d974510579f35dcc329db757ec531165e167a8d708eb2c
 
 # `indexing.py`
 

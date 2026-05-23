@@ -123,32 +123,28 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は、`cmoc` の主要サブコマンドと CLI エントリポイント周辺の決定論的な制御ロジックを検証する pytest ファイルです。
-- `cmoc init`、`cmoc branch`、`cmoc eval-oracles`、`cmoc apply`、`cmoc merge` の各処理について、git 操作、レポート保存、終了コード、進捗表示、例外時挙動を横断的に固定します。
-- `main` と `bin/cmoc` の起動経路、共通エラーレポート、`cmoc --help` 表示、仮想環境 Python 必須条件もこのテストで確認します。
-- 補助として、一時 git リポジトリ初期化、cmoc ブランチ切り替え、git コマンド実行のための共通 helper を含みます。
+- `tests/test_subcommands.py` は、cmoc の主要サブコマンドと CLI エントリポイント周辺の決定論的な制御ロジックを検証する pytest ファイルです。
+- `run_command` の標準出力とログへの tee、例外時のエラーレポート、`cmoc init` / `cmoc branch` / `cmoc eval-oracles` / `cmoc apply` / `cmoc merge` の振る舞いを横断的に固定します。
+- `main` と `bin/cmoc` の委譲構造、`cmoc --help` 表示、終了コード、仮想環境 Python 必須条件もこのテストで確認します。
 
 ## Read this when
 
-- `cmoc init` の `.cmoc` ignore 追加、tracked `.cmoc` の追跡解除、初期 commit の対象範囲を確認したいとき。
-- `cmoc branch` の作業ブランチ命名、base commit 記録、進捗表示の期待値を確認したいとき。
-- `cmoc eval-oracles` の Fake Codex CLI によるレポート保存、評価 prompt の参照制約、`eval_oracles.py` の配置方針を確認したいとき。
-- `cmoc apply` の不整合 JSON schema、repeat 上限、レポート必須項目、cmoc ブランチ前提、禁止領域差分の再検査を確認したいとき。
-- `cmoc merge` の明示ブランチ指定、削除挙動、自動解決失敗時の案内抑制、conflict marker 検査範囲を確認したいとき。
-- `main` と `bin/cmoc` の委譲構造、ヘルプ表示、サブコマンド失敗時の終了コード、仮想環境欠落時のエラー表示を確認したいとき。
+- cmoc の各サブコマンドがどのように git 操作、レポート保存、終了コード処理を行うかをテスト観点で確認したいとき。
+- サブコマンド実行時の stdout とログファイルの出力規則、進捗表示、例外時のまとめ出力を確認したいとき。
+- `cmoc init`、`cmoc branch`、`cmoc eval-oracles`、`cmoc apply`、`cmoc merge` の主要な制御フローを、pytest の期待値から追いたいとき。
+- `main` / `bin/cmoc` の起動経路、ヘルプ表示、エラー終了、仮想環境 Python 必須条件を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc` の正本仕様そのものを知りたいとき。仕様断片は `oracles` 配下を読むべきです。
-- 個別サブコマンドの実装コードだけを追いたいとき。実装本体は `src/sub_commands` 配下にあります。
+- cmoc の正本仕様そのものを知りたいとき。仕様断片は `oracles` 配下を読むべきです。
+- 各サブコマンドの実装コードだけを追いたいとき。実装本体は `src/sub_commands` 配下にあります。
 - `INDEX.md` 自動生成や更新の共通ロジックだけを調べたいとき。
-- `commons.repo`、`commons.codex`、`commons.timestamps` など、サブコマンド以外の共通処理の単体テストを探しているとき。
+- `commons.repo` や `commons.codex` など、サブコマンド以外の共通処理の単体テストを探しているとき。
 - `README.md`、`AGENTS.md`、`oracles`、`memo` の運用ルールや編集可否だけを確認したいとき。
-- pytest や git の一般論だけを知りたいとき。
 
 ## hash
 
-- b02299f5df1f74d5343778836480effa6d59e7d07f0c30acd802980b784424fd
+- 7a057f39cce2349c5b8f354f2107f2dfd68694913db69888e994f3f3b7517b90
 
 # `test_timestamps.py`
 

@@ -2,30 +2,30 @@
 
 ## Summary
 
-- `src/commons` は、cmoc 全体で共有する横断的な共通処理を集約した基盤モジュール群です。
-- `codex.py` は `codex exec` の共通ラッパーで、Structured Output、実行ログ、JSON/text 検証、リトライ、quota 復旧を扱います。
-- `repo.py` は git リポジトリ探索、`.cmoc` の追跡回避、差分収集、oracle / implementation ファイル列挙を扱います。
-- `indexing.py` は `INDEX.md` の自動生成・更新・再利用・自動コミットをまとめます。
-- `errors.py`、`subcommand_log.py`、`timestamps.py`、`timing.py`、`command_runner.py` は、共通エラーレポート、サブコマンドログ、タイムスタンプ、経過時間計測、実行制御を担います。
+- `src/commons` は、cmoc 全体で共通利用する横断処理を集約した基盤モジュール群です。
+- `codex.py` は `codex exec` の共通ラッパーで、サンドボックス指定、Model / Reasoning Effort、Structured Output、JSON/text 検証、リトライ、quota 復旧をまとめて扱います。
+- `repo.py` は git リポジトリ探索、ブランチ・HEAD 情報、`.cmoc` の追跡回避、差分収集、oracle / 実装ファイル列挙、commit 補助処理を担当します。
+- `indexing.py` は `INDEX.md` の自動生成・更新・再利用・自動コミットを担当します。
+- `errors.py`、`subcommand_log.py`、`timestamps.py`、`timing.py`、`command_runner.py` は、共通エラー表示、サブコマンドログ、タイムスタンプ生成、経過時間計測、実行制御の入口を提供します。
 
 ## Read this when
 
-- `cmoc` の共通ユーティリティの役割分担や、このディレクトリに何があるかを確認したいとき。
-- git リポジトリ探索、ブランチや HEAD の取得、`.cmoc` の ignore 保証、差分収集、ファイル列挙の実装方針を知りたいとき。
-- `codex exec` の起動方法、Structured Output、ログ保存、検証リトライ、quota 復旧の流れを確認したいとき。
+- cmoc の共通ユーティリティの役割分担や、このディレクトリに何があるかを確認したいとき。
+- `codex exec` の起動方法、Structured Output、検証、リトライ、quota 復旧の流れを確認したいとき。
+- git リポジトリ探索、ブランチ・HEAD 取得、`.cmoc` の ignore 保証、差分収集、ファイル列挙、commit 補助の実装方針を知りたいとき。
 - `INDEX.md` の自動生成・更新・再利用・自動コミットの仕組みを確認したいとき。
-- 共通エラーレポート、サブコマンドログ、タイムスタンプ生成、経過時間表示、サブコマンド実行の共通ラッパーを確認したいとき。
+- 共通エラーハンドリング、サブコマンドログ、タイムスタンプ、経過時間表示、サブコマンド実行の共通ラッパーを確認したいとき。
 
 ## Do not read this when
 
-- `cmoc` の個別サブコマンドの業務ロジックだけを調べたいとき。
+- 個別サブコマンドの業務ロジックや CLI 引数定義だけを調べたいとき。
 - `oracles` 配下の正本仕様や、`src` / `tests` の別ディレクトリの細かな内容だけを確認したいとき。
 - `README.md`、`AGENTS.md`、`memo` の運用ルールだけを確認したいとき。
 - 共通処理の再利用関係ではなく、特定の CLI 引数や画面表示だけを追いたいとき。
 
 ## hash
 
-- 616501ed94add89800835497d89e3d07552e4f841b5fbfcdd7fd2e1f63539b2f
+- 2d66dcd95dfb928fa3603af23a39cc0c8d1e499f4ae2c8cda3ce3c9b4f586899
 
 # `main.py`
 
