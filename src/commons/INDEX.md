@@ -23,8 +23,8 @@
 
 ## Summary
 
-- `src/commons/codex.py` は、cmoc から `codex exec` を起動するための共通ラッパーをまとめたモジュールです。
-- `read-only` / `workspace-write` のサンドボックス指定、`model`、`reasoning_effort`、`--json`、`--output-last-message`、`--output-schema` の付与を統一的に扱います。
+- `src/commons/codex.py` は、cmoc から `codex exec` を起動するための共通ラッパーをまとめるモジュールです。
+- `read-only` / `workspace-write` のサンドボックス、`model`、`reasoning_effort`、`--json`、`--output-last-message`、`--output-schema` の付与を統一して扱います。
 - Structured Output の schema をハッシュ名のファイルとして保存し、`logs/codex_exec/call` と `logs/codex_exec/output_last_message` に実行ログを残します。
 - JSON 応答の解析、cmoc 側の JSON Schema subset 再検証、text validator、最大 3 回までのリトライを扱います。
 - quota 枯渇時は session id を抽出して `--resume` し、回復待ち中は最小構成の疎通確認を繰り返します。
@@ -43,11 +43,11 @@
 - `INDEX.md` の配置対象や自動メンテナンス全体を調べたいとき。
 - git リポジトリ探索、ブランチ操作、差分収集、`.cmoc` の追跡外保証を調べたいとき。
 - `CmocError` の表示形式や共通エラーハンドリング全体を調べたいとき。
-- タイムスタンプ生成、経過時間表示、サブコマンドログなど別の共通ユーティリティだけを確認したいとき。
+- タイムスタンプ生成、経過時間表示、サブcommandログなど別の共通ユーティリティだけを確認したいとき。
 
 ## hash
 
-- b7c6ad2bd685eca46bc0b63e817d39d0387c77d1ade8194b3c19b9ec08bc3328
+- f2022c7e9e944253ad49b517fa7ea74cf2d4adbe9d3e3c5ad87e8fc7e4d871c8
 
 # `command_runner.py`
 

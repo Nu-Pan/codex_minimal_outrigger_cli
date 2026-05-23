@@ -121,8 +121,8 @@
 ## Summary
 
 - `tests/test_subcommands.py` は、`cmoc` の主要サブコマンドと CLI 入口の決定論的な制御ロジックを検証するテスト群の目次です。
-- `run_command` の stdout への tee、ログ保存、例外時の共通エラーレポート、終了コード処理を横断して確認します。
-- `cmoc init`、`cmoc branch`、`cmoc eval-oracles`、`cmoc apply`、`cmoc merge` の実行フローと補助関数、prompt、Structured Output schema を扱います。
+- `run_command` の stdout への tee、ログ保存、共通エラーレポート、終了コード処理を横断して確認します。
+- `cmoc init`、`cmoc branch`、`cmoc eval-oracle(s)`、`cmoc apply`、`cmoc merge` の実行フロー、補助関数、prompt、Structured Output schema を扱います。
 - `main` と `bin/cmoc` の委譲、`--help` 表示、互換 alias、仮想環境 Python の必須条件も検証します。
 
 ## Read this when
@@ -142,11 +142,11 @@
 - `oracles` 配下の正本仕様だけを確認したいとき。
 - `tests/test_repo.py`、`tests/test_indexing.py`、`tests/test_timestamps.py` など別のテスト群を探しているとき。
 - `README.md`、`AGENTS.md`、`memo` の運用ルールだけを確認したいとき。
-- テスト補助関数の定義順や、ファイル末尾の ` _init_repo` / `_git` などの実装詳細だけを探しているとき。
+- テスト補助関数の定義順や、ファイル末尾の `_init_repo`、`_git` などの実装詳細だけを探しているとき。
 
 ## hash
 
-- 3da957603dc55bbc0bf3016450a5527e70559e9030f49f51fb83bac736b3b8a7
+- 89d3b1609ce3351891cec6c9896cca1a9bef1b10a1e84fb691d12c9d7442ab21
 
 # `test_timestamps.py`
 
