@@ -2,36 +2,31 @@
 
 ## Summary
 
-- `cmoc` のアプリケーション実行時仕様を集約するルーティング用ディレクトリの目次です。
-- `codex exec` の呼び出し規約、プロンプト構成、サンドボックス、Model / Reasoning Effort、Structured Output、ログ保存、リトライ、言語方針を扱います。
-- 標準出力とファイルのログ規則、共通エラーハンドリング、`<repo-root>` 上の `INDEX.md` 自動生成・更新仕様、補助的な実行時共通仕様を案内します。
+- `cmoc` の実行時仕様をまとめるルーティング用ディレクトリの目次です。
+- `codex exec` の呼び出し規約、プロンプト構成、サンドボックス、Model / Reasoning Effort、Structured Output を扱います。
+- 標準出力とファイルのログ規則、共通エラーハンドリング、`<repo-root>` 上の `INDEX.md` 自動生成・更新仕様、横断的な補助仕様を案内します。
 - `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` の各個別仕様への入口をまとめます。
-- `cmoc` の利用者向けワークフローとして、PATH 設定から初期化、作業用ブランチ作成、oracle 評価、実装反映、マージまでの流れを案内します。
+- `cmoc` の利用者向けワークフローとして、初期化から作業用ブランチ作成、oracle 評価、実装反映、マージまでを案内します。
 
 ## Read this when
 
 - `cmoc` の実行時仕様について、どの個別仕様ファイルやサブディレクトリを読むべきか判断したいとき。
-- Codex CLI 連携、`codex exec` の呼び出し方法、プロンプト構成、サンドボックス指定、Model / Reasoning Effort、Structured Output、ログ保存、リトライ方針、使用言語を確認したいとき。
-- `comconfig.json` や `CMOConfig` による設定ファイル生成、補完、過剰パラメータ削除、公開プロパティの扱いを確認したいとき。
-- サブコマンド実行中の stdout 進捗表示、`codex exec` 呼び出し情報の表示、完了時の経過時間レポートを実装または確認したいとき。
-- 個別仕様に明記がない場合の共通エラーハンドリング、エラーレポート項目、終了ステータスの扱いを確認したいとき。
+- `codex exec` の呼び出し方法、プロンプト構成、サンドボックス指定、Model / Reasoning Effort、Structured Output、ログ保存、リトライ方針を確認したいとき。
+- 標準出力、ファイルログ、進捗表示、経過時間表示の規則を確認したいとき。
+- 共通エラーハンドリングや終了ステータスの扱いを確認したいとき。
 - `<repo-root>` 探索、oracle ファイル列挙、実装ファイル列挙、`.cmoc` の git 追跡対象外保証、タイムスタンプ生成、`<cmoc-branch>` 上の変更範囲を調べたいとき。
-- `<repo-root>` 配下へ自動配置される `INDEX.md` の対象、除外規則、フォーマット、Structured Output による目次生成、処理順序、実行タイミングを確認したいとき。
 - `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` の個別仕様への入口が必要なとき。
-- `cmoc` の利用手順として、PATH 設定から初期化、作業用ブランチ作成、oracle 評価、実装反映、マージまでの流れを把握したいとき。
 
 ## Do not read this when
 
 - `cmoc` 自体の Python コーディング規約、設計規約、テスト規約、開発環境など、開発者向けルールだけを調べたいとき。
 - `cmoc` の具体的な実装コードやテストコードの場所、ファイル構造、実装パターンだけを調べたいとき。
 - 特定のサブコマンド仕様が既に明確で、このディレクトリ全体のルーティング情報が不要なとき。
-- `README.md`、`AGENTS.md`、`oracles`、`memo` などの編集可否やリポジトリ運用ルールだけを確認したいとき。
-- Codex CLI や git の一般的な使い方だけを知りたくて、`cmoc` 固有の実行時仕様が不要なとき。
-- `cmoc apply`、`cmoc eval-oracles` など個別サブコマンドの詳細だけを確認したい段階で、横断仕様が不要なとき。
+- `README.md`、`AGENTS.md`、`oracles`、`memo` などの編集可否や運用ルールだけを確認したいとき。
 
 ## hash
 
-- fa80e044de7b2b0f8f7bd24105b727c22845c2a7529d1a4e8db00043bd83aa05
+- 56a160083b9457253ccbf8162fcb2dd029702948bb669ca7c1ff0c7429cd5220
 
 # `considered_alternatives`
 

@@ -2,18 +2,17 @@
 
 ## Summary
 
-- cmoc から Codex CLI を `codex exec` で呼び出す際の共通規約を定めた仕様断片です。
-- プロンプトの構成、`<cmoc-root>` などの cmoc 固有語の禁止、アクセス制限指示の入れ方を扱います。
-- Model / Reasoning Effort の選び方、サンドボックスモード、`--json`・`--output-last-message`・`--output-schema` の指定方法を定義します。
-- `codex exec` のフルログ保存先、失敗時のリトライ方針、quota 枯渇時の待機・再開方法を扱います。
-- cmoc で扱う自然言語は原則日本語とし、`.agents` 配下の編集不可問題への対処方針を含みます。
+- cmoc から `codex exec` で Codex CLI を呼び出す際の共通規約をまとめた仕様です。
+- プロンプトの構成、`<cmoc-root>` や `<repo-root>` のような cmoc 固有語の扱い、アクセス制限指示の入れ方を扱います。
+- Model / Reasoning Effort の選び方、サンドボックス、`--json`・`--output-last-message`・`--output-schema` の使い方を定めます。
+- `codex exec` のログ保存、リトライ、quota 待機・再開、自然言語の日本語統一方針、`.agents` 配下を編集できない問題への対処を含みます。
 
 ## Read this when
 
 - cmoc から Codex CLI を呼び出す実装や仕様を確認したいとき。
-- Codex CLI に渡すプロンプトの構成、ロール説明、作業内容、完了条件の書き方を確認したいとき。
-- `<cmoc-root>` や `<repo-root>` といった抽象語をプロンプトに入れてよいか判断したいとき。
-- 読み取り専用実行・書き込み可実行のどちらでサンドボックスを設定すべきか確認したいとき。
+- Codex CLI に渡すプロンプトの構成、役割説明、作業内容、完了条件の書き方を確認したいとき。
+- `<cmoc-root>` や `<repo-root>` のような抽象語をプロンプトに入れてよいか判断したいとき。
+- 読み取り専用実行か書き込み可実行か、どちらのサンドボックスにするべきか確認したいとき。
 - Model / Reasoning Effort の選択基準、Structured Output の使い方、出力 JSON の検証方針を実装したいとき。
 - `codex exec` のログ保存、リトライ、quota 待機、再開の挙動を確認したいとき。
 - cmoc が出力する説明文やエラーメッセージを日本語に統一すべきか確認したいとき。
@@ -21,32 +20,30 @@
 
 ## Do not read this when
 
-- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc merge` など個別サブコマンドの入出力や手順だけを確認したいとき。
+- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc merge` など個別サブコマンドの手順だけを確認したいとき。
 - `INDEX.md` の配置対象、除外対象、目次フォーマットなどのメンテナンス仕様だけを確認したいとき。
 - `<repo-root>` の探索、oracle ファイル列挙、実装ファイル列挙、タイムスタンプ形式などの共通補助仕様だけを確認したいとき。
 - cmoc 自体の Python 実装規約、設計規約、テスト規約、開発環境ルールを確認したいとき。
-- README や AGENTS、`oracles`、`memo` の編集可否や運用ルールだけを確認したいとき。
+- `README.md`、`AGENTS.md`、`oracles`、`memo` の編集可否や運用ルールだけを確認したいとき。
 - Codex CLI の一般的な使い方だけを知りたくて、cmoc 固有の呼び出し規約が不要なとき。
 
 ## hash
 
-- 1c410c43fc7b725ee598060d362de335bd6704e7dc69e7d74edb5464f223b75a
+- 74e99e6b9c41c8b159bbd7ba0db59d376472f7e467874f716fffe7bb8fb740be
 
 # `console_and_file_log.md`
 
 ## Summary
 
-- cmoc のサブコマンド呼び出し時に、標準出力とファイルの両方へ出力するログ規則をまとめた仕様断片です。
+- `cmoc` のサブコマンド呼び出し時における、標準出力とログファイルへの出力規則をまとめた仕様です。
 - サブコマンド呼び出しログと `codex exec` 呼び出しログの役割、記録すべき項目、表示フォーマットを定めています。
-- ステップ開始通知、`codex exec` 呼び出し通知、ステップ別経過時間、全体経過時間、待機時間、戻り値の扱いを含みます。
-- 標準出力に表示する時間表記の桁幅、スペースパディング、小数 1 桁の切り捨て規則を定義しています。
+- ステップ開始通知、`codex exec` 呼び出し通知、経過時間、待機時間、戻り値、時間表示フォーマットの規則を扱います。
 
 ## Read this when
 
-- サブコマンド実行時に、コンソール表示とログファイル出力をどう分けるか確認したいとき。
-- サブコマンド呼び出しログに、どのような進捗通知や経過時間を記録すべきか確認したいとき。
-- `codex exec` ごとの詳細ログを markdown と YAML Front Matter で残す仕様を確認したいとき。
-- 標準出力に出す時間表示の書式や丸め規則を実装・検証したいとき。
+- サブコマンド実行時のコンソール表示とログファイル出力をどう分けるか確認したいとき。
+- サブコマンド呼び出しログに、進捗通知や経過時間をどう記録するか確認したいとき。
+- `codex exec` ごとの詳細ログを残す形式や、標準出力の時間表記・丸め規則を実装または検証したいとき。
 - 過去の `cmoc` 実行をログファイル起点で追跡できるようにしたいとき。
 
 ## Do not read this when
@@ -54,12 +51,11 @@
 - `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` など個別サブコマンドの手順だけを確認したいとき。
 - Codex CLI の呼び出し引数、サンドボックス、Structured Output など実行制御の仕様だけを調べたいとき。
 - 共通エラーハンドリングや終了ステータスなど、ログ出力以外のエラー仕様を調べたいとき。
-- cmoc 自体の Python 実装規約、テスト規約、開発環境ルールを確認したいとき。
 - `INDEX.md` の配置対象や自動生成ルールだけを確認したいとき。
 
 ## hash
 
-- 0c35d4f364b82c432f78e5f02eadf7d3c64ec7d444905ef6c70af7865cc065b5
+- 7eb84e1d97b41b7321cd2db126adaa399cd400cfb7cba464c2e161acaed1f7ae
 
 # `error_handling.md`
 
@@ -156,52 +152,45 @@
 
 ## Summary
 
-- `cmoc` のサブコマンド仕様断片を集約するディレクトリの目次である。
-- `cmoc apply` / `branch` / `eval-oracles` / `init` / `merge` の個別仕様への入口をまとめる。
-- 各サブコマンドの引数、事前条件、実行手順、終了条件、エラー挙動を参照するための案内を担う。
+- `cmoc` の各サブコマンド仕様ファイルへのルーティング用目次です。
+- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` の個別仕様をまとめています。
+- 初期化、作業用ブランチ作成、調査・修正ループ、oracle 評価、マージ解決までの流れを案内します。
 
 ## Read this when
 
-- 特定の `cmoc` サブコマンド仕様を読み始める前に、どの個別仕様ファイルへ進むべきか判断したいとき。
-- `cmoc apply` / `branch` / `eval-oracles` / `init` / `merge` のどれかの実装や確認を始めるとき。
-- サブコマンド横断ではなく、個別サブコマンドの詳細仕様へすばやく辿りたいとき。
+- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` のどれを読むべきか判断したいとき。
+- 作業用ブランチ作成、`oracles` 評価、修正反映、マージ解決の仕様を確認したいとき。
+- 各サブコマンドの引数、事前条件、実行手順、終了条件を見分けたいとき。
 
 ## Do not read this when
 
-- `cmoc` 全体の実行時共通仕様や `INDEX.md` 自動生成規則だけを調べたいとき。
-- `cmoc` の開発ルール、コーディング規約、テスト規約などの開発者向けルールだけを確認したいとき。
-- `README.md`、`AGENTS.md`、`oracles`、`memo` などの運用ルールや編集可否だけを確認したいとき。
+- `cmoc` 自体の開発規約、コーディング規約、テスト規約だけを調べたいとき。
+- すでに読みたい個別仕様ファイルが決まっていて、この目次が不要なとき。
+- `README.md`、`AGENTS.md`、`oracles` の運用ルールだけを確認したいとき。
 
 ## hash
 
-- 8c3d0afb68d52d26b6cc921e1c19a6aef06d36042197129821cecb6cf6d32dce
+- 4cd75f2e028152469a6d2253db38c34e8129efb18932d7d01e49facb636ab0f2
 
 # `usage.md`
 
 ## Summary
 
-- cmoc のエンドユーザー向け利用手順を説明する仕様断片。
-- `cmoc` コマンドの呼び出し前提として、`<cmoc-root>/bin` を `PATH` に追加することを示す。
-- 初回セットアップとして人間が `cmoc init` を一度実行する流れを定義する。
-- 通常利用の想定ワークフローとして、分岐元ブランチでの `cmoc branch`、`<repo-root>/oracles` の記述・評価、`cmoc apply` による実装反映、マージ先ブランチでの `cmoc merge` までの全体手順をまとめる。
-- `<repo-root>/oracles` の修正ループでは、`cmoc eval-oracles` による評価レポート確認と、人間による仕様修正を繰り返すことを示す。
+- `cmoc` の使い方と、人間が `cmoc` を呼び出すための基本ワークフローをまとめた仕様です。
+- `cmoc init` の初回手順と、`cmoc branch`、`cmoc eval-oracles`、`cmoc apply`、`cmoc merge` を使う想定フローを案内します。
 
 ## Read this when
 
-- cmoc をエンドユーザーがどの順番で実行するか確認したいとき。
-- `cmoc init`、`cmoc branch`、`cmoc eval-oracles`、`cmoc apply`、`cmoc merge` を使った全体ワークフローを把握したいとき。
-- cmoc コマンドを呼び出すために `<cmoc-root>/bin` を `PATH` に追加する前提を確認したいとき。
-- `<repo-root>/oracles` を人間が更新し、評価レポートを読みながら仕様を改善する利用フローを確認したいとき。
-- cmoc による実装作業を開始してから、最終的にマージ先ブランチへ反映するまでの利用者視点の手順を調べたいとき。
+- `cmoc` の起動方法や、利用者がどの順番でコマンドを実行すべきか確認したいとき。
+- 初回セットアップとして `cmoc init` をいつ呼ぶか知りたいとき。
+- `cmoc branch` から `cmoc merge` までの利用手順全体を把握したいとき。
 
 ## Do not read this when
 
-- 各サブコマンドの詳細な引数、入出力、エラー処理、内部処理を調べたいとき。
-- cmoc 自体の実装方針、Python コーディング規約、テスト規約、開発環境ルールを確認したいとき。
-- Codex CLI 呼び出し、Structured Output、サンドボックス、ログ保存などの詳細仕様を調べたいとき。
-- `INDEX.md` 自動生成・更新や oracle ファイル列挙など、cmoc の内部的な共通処理仕様を調べたいとき。
-- 既に特定のサブコマンド仕様ファイルを読むべきことが分かっており、利用者向けの全体手順が不要なとき。
+- `cmoc` の実装コードやテストコードの配置を探したいとき。
+- 個別サブコマンドの詳細な入出力仕様や内部動作だけを知りたいとき。
+- `oracles` 配下の正本仕様そのものを編集・確認したいとき。
 
 ## hash
 
-- 8b06fc15b6b50983c7695a9aa351c4bbf8df7b262059233fe5f2bc941612e17f
+- fbdd3943a6658a919f34edab7cfcbdb4de897c47c55479b66e864c2948f8a1b5

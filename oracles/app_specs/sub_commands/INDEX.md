@@ -22,7 +22,7 @@
 
 ## hash
 
-- c472f5828ee97cf13515b6b71ead18636f5cfba7e801fc9bc09d5979141f03d9
+- b9120ad73c35a6d25f608556e6390ea5585422126d2b9b3aba19a66fbc3efc15
 
 # `branch.md`
 
@@ -55,13 +55,13 @@
 
 ## Summary
 
-- `cmoc eval-oracles` の正本仕様断片であり、`<repo-root>/oracles` のスナップショットを仕様だけから評価してレポートする手順を定義する。
-- 部分評価と全体評価の切り替え条件、`codex exec` によるファイル単位評価、評価時に参照してよい `oracles` / `INDEX.md` の範囲を扱う。
-- 致命的問題の定義、評価結果レポートの YAML frontmatter と本文構成、保存先と stdout 出力の方針を含む。
+- `cmoc eval-oracles` の正本仕様断片で、`<repo-root>/oracles` のスナップショットを仕様だけから評価してレポートする手順を定義します。
+- 部分評価・全体評価の切り替え条件、`codex exec` によるファイル単位評価、参照してよい `oracles` / `INDEX.md` の範囲を扱います。
+- 致命的問題の定義、評価レポートの YAML frontmatter と本文構成、保存先と stdout 出力の方針をまとめます。
 
 ## Read this when
 
-- `cmoc eval-oracles` の実装・修正・テストを行うとき。
+- `cmoc eval-oracles` の実装、修正、テストを行うとき。
 - 部分評価モードと全体評価モードの切り替え条件を確認したいとき。
 - oracle ファイル評価時に `codex exec` へ渡す制約や、読んでよい `oracles` / `INDEX.md` の範囲を確認したいとき。
 - 評価レポートの構成、保存先、標準出力への表示内容を確認したいとき。
@@ -69,13 +69,13 @@
 ## Do not read this when
 
 - `cmoc eval-oracles` 以外のサブコマンド仕様だけを調べたいとき。
-- 実装コードやテストコードを直接検証する処理を調べているとき。
-- cmoc ではなく `<repo-root>` 側の個別アプリケーション仕様を調べているとき。
+- 実装コードやテストコードを直接検証する処理を調べたいとき。
 - `INDEX.md` の自動生成規則や目次フォーマットそのものだけを確認したいとき。
+- cmoc ではなく `<repo-root>` 側の個別アプリケーション仕様を調べているとき。
 
 ## hash
 
-- bba77331f8cf3c09b126137aca557f61a7a355f7d4743b9a94ad680ca888b6e1
+- c827cfcfdb1fcec425b80807d461dc8a06b3fe0dd772465135d4d2757d3bbe4d
 
 # `init.md`
 
