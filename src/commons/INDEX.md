@@ -224,19 +224,19 @@
 
 ## Summary
 
-- `src/commons/timing.py` はサブコマンドのステップ単位の経過時間を扱う共通モジュールです。
+- `src/commons/timing.py` は、サブコマンドのステップ単位の経過時間を記録・表示する共通モジュールです。
 - `StepTimer` はサブコマンド全体の開始時刻、現在のステップ名、確定済みステップの経過時間を保持し、`start()` で直前ステップを確定して次のステップを開始します。
-- `report()` は未確定の最後のステップも含めて、各ステップの経過時間とサブコマンド全体の経過時間を stdout に出力します。
-- `current_timer()`、`report_current_timer()`、`clear_current_timer()` は `ContextVar` を使って現在の計測器を参照、出力、解除します。
-- `format_duration()` は秒数を 0.1 秒単位で切り捨て、負値を 0 として ` 0h  0m  0.0s` 形式の文字列に整形します。
+- `report()` は未確定の最後のステップも含めて、各ステップの経過時間と全体の経過時間を stdout に出力します。
+- `current_timer()`、`report_current_timer()`、`clear_current_timer()` は `ContextVar` を使って現在の計測器を参照・出力・解除します。
+- `format_duration()` は秒数を 0.1 秒単位で切り捨て、負値を 0 として ` 0h  0m  0.0s` 形式に整形します。
 
 ## Read this when
 
 - 各サブコマンドのステップ別タイミング表示や総経過時間表示を実装・修正したいとき。
-- `StepTimer` の `start()`、`report()`、`finish_current()` の状態遷移を確認したいとき。
-- サブコマンド実行中の現在の計測器を取得したり、最後にまとめて出力したり、参照を消したりする方法を確認したいとき。
+- `StepTimer` の状態遷移や、`start()`・`report()`・`finish_current()` の関係を確認したいとき。
+- 実行中の現在の計測器を取得したい、最後にまとめて出力したい、参照を消したいとき。
 - 経過時間の表示フォーマット、0.1 秒単位への切り捨て、負値の扱いを確認したいとき。
-- タイミングレポートの stdout 出力行や `command_name` の使われ方を確認したいとき。
+- タイミングレポートの stdout 出力形式や `command_name` の使われ方を確認したいとき。
 
 ## Do not read this when
 
@@ -248,4 +248,4 @@
 
 ## hash
 
-- 10e161032e4c03d1517c0c89f553acc0c2bd56358372ee48189480672ceb7fe1
+- 9c0e3bd7f64b020379aadcc0e747d1b0c90c0678b2bd2a27efd4db0f4ff58175

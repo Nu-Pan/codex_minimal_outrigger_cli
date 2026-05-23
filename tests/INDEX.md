@@ -148,22 +148,24 @@
 
 ## Summary
 
-- `commons.timestamps.make_timestamp` と `commons.timing.format_duration` の出力形式を検証するテストファイルです。
-- cmoc timestamp が `YYYY-MM-DD_HH-MM_SS_mmm` 形式で、日時要素とミリ秒がゼロ埋めされることを確認します。
-- 経過時間表示が stdout 用の固定幅 ` h  m  s` 形式になり、秒の小数第 1 位が切り捨てで表示されることを確認します。
+- `tests/test_timestamps.py` は、`commons.timestamps.make_timestamp` と `commons.timing.format_duration` の出力仕様を確認するテストの目次です。
+- cmoc の `<time-stamp>` が `YYYY-MM-DD_HH-MM_SS_mmm` 形式でゼロ埋めされることと、経過時間表示が固定幅の ` h  m  s` 形式で出ることを検証します。
+- 同一ファイル内の補助関数の並び順が、呼び出し側を先・呼び出し先を後ろに置く方針になっていることも確認します。
 
 ## Read this when
 
-- タイムスタンプ文字列の仕様や `make_timestamp` の期待フォーマットを確認したいとき。
-- サブコマンド完了時などに表示する経過時間文字列のフォーマットを確認したいとき。
-- `commons.timestamps` または `commons.timing` の出力仕様を変更し、その既存テスト影響を把握したいとき。
+- タイムスタンプ文字列の生成形式や、`make_timestamp` のゼロ埋め・ミリ秒表現を確認したいとき。
+- サブコマンドの経過時間表示に使う `format_duration` の表示形式や、小数 1 桁の切り捨て規則を確認したいとき。
+- `commons.timestamps` や `commons.timing` の仕様変更が、このテスト群にどう影響するか把握したいとき。
+- テスト内の補助関数の配置順や、`inspect.getsourcelines()` を使った順序検証の意図を確認したいとき。
 
 ## Do not read this when
 
-- タイムスタンプや経過時間表示と関係のない CLI サブコマンド仕様を調べているとき。
-- 日時生成処理そのものの実装詳細だけを読みたいとき。
-- Codex CLI 呼び出し、ログ保存、oracle 評価などの高レベルな実行仕様を確認したいとき。
+- タイムスタンプや経過時間表示と関係のない CLI サブコマンド仕様だけを調べたいとき。
+- 日時のパース、タイムゾーン変換、UTC 固定など、タイムスタンプ生成以外の日時処理を探しているとき。
+- Codex CLI 呼び出し、ログ保存、oracle 評価、INDEX.md 自動生成など、別の共通仕様を調べたいとき。
+- `tests/test_repo.py` や `tests/test_indexing.py` のような別テスト群を探しているとき。
 
 ## hash
 
-- 05d4e42195653c5b491aa1c7a212a92f0c106b6988f231389a2ab14348ca30dc
+- e94f2022b96d86d1d943862a01d1866f5bd2872b6fd31f7e4dd3df4f64c6ca30
