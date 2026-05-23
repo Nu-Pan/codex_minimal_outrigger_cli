@@ -23,20 +23,19 @@
 
 ## Summary
 
-- `src/commons/codex.py` は、cmoc から Codex CLI の `codex exec` を呼び出すための共通ラッパーです。
-- `run_codex_exec` を中心に、`read-only` / `workspace-write` の sandbox 指定、`model` と `reasoning effort` の組み立て、`--output-last-message` の回収を扱います。
-- Codex 実行前の `INDEX.md` 保守、`.cmoc/logs/codex_exec` へのフルログ保存、Structured Output 用 schema ファイルの保存もこのモジュールの責務です。
-- JSON 解析、JSON Schema subset の再検証、text / json の意味検証、最大 3 回のリトライ処理をまとめています。
-- quota 枯渇時の session id 抽出、`--resume` 付き再実行、復旧確認用の低コスト疎通チェックもここで扱います。
+- `src/commons/codex.py` は、cmoc から `codex exec` を呼び出すための共通ラッパーです。
+- `read-only` / `workspace-write` の sandbox 指定、`model` と `reasoning effort` の組み立て、`--output-last-message` の回収を扱います。
+- Structured Output の schema ファイル保存、`logs/codex_exec` へのフルログ保存、JSON 解析と JSON Schema subset の再検証をまとめています。
+- JSON 応答と text 応答の意味検証を最大 3 回までリトライし、quota 枯渇時は `--resume` 再実行と復旧確認を行います。
 
 ## Read this when
 
 - cmoc から Codex CLI をどのように起動しているか確認したいとき。
-- `run_codex_exec` の引数、`read_only`、`expect_json`、`output_schema`、`json_validator`、`text_validator` の使い方を調べたいとき。
+- `run_codex_exec` の引数、`expect_json`、`output_schema`、`json_validator`、`text_validator` の扱いを確認したいとき。
 - Structured Output の schema ファイルがどこに保存され、どのように `codex exec` に渡されるか確認したいとき。
 - Codex 実行ログ、last message ファイル、stdout / stderr の診断情報、リトライ条件を確認したいとき。
 - quota 枯渇時の待機・疎通確認・`--resume` 再実行の流れを確認したいとき。
-- JSON 応答の `dict` 変換や、cmoc 側の JSON Schema subset 検証を確認したいとき。
+- JSON 応答を `dict` として扱う前提や、cmoc 側の JSON Schema subset 検証を確認したいとき。
 
 ## Do not read this when
 
@@ -49,7 +48,7 @@
 
 ## hash
 
-- 2a4cc851f91cbc04212bebd3c5d89051fa1bda75c1fb5ae9ffef0f215b29afdb
+- 00568a3cbd924ed7773891feadad85420f0606782679f0bf7680b4675bffabd3
 
 # `command_runner.py`
 

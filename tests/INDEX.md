@@ -28,11 +28,10 @@
 ## Summary
 
 - `tests/test_codex.py` は、`commons.codex.run_codex_exec` の Codex CLI 呼び出しラッパーを検証する pytest テストです。
-- Structured Output 利用時の `--json`、`--output-last-message`、`--output-schema`、schema ファイル生成、model、reasoning effort の引き渡しを確認します。
+- Structured Output 利用時の `--json`、`--output-last-message`、`--output-schema`、schema ファイル生成、`model`、`reasoning_effort` の引き渡しを確認します。
 - JSON parse 失敗、schema 不一致、semantic validator 失敗、非 JSON の text validator 失敗に対して、3 回までリトライして詳細な `CmocError` を返す挙動を確認します。
 - stdout の進捗表示では、prompt と output を先頭 80 文字で切り出した後に改行を可視化する仕様を確認します。
 - quota 枯渇時の疎通確認と `--resume` 再実行、resume 後の想定外エラー、`INDEX.md` 事前メンテナンスの実行とスキップ指定も扱います。
-- テストでは一時ディレクトリに fake `codex` を置き、`PATH` 差し替え、`monkeypatch`、`capsys`、一時 git repo を使って外部 CLI の挙動を模擬します。
 
 ## Read this when
 
@@ -46,14 +45,14 @@
 ## Do not read this when
 
 - `run_codex_exec` の実装本体や内部 helper の具体的な処理を直接確認したいとき。
-- cmoc のサブコマンド全体、CLI エントリーポイント、設定ファイル、oracle 評価、branch/apply/merge などの仕様を調べたいとき。
+- cmoc のサブコマンド全体、CLI エントリーポイント、設定ファイル、oracle 評価、`branch` / `apply` / `merge` などの仕様を調べたいとき。
 - `INDEX.md` 自動生成ロジックそのもの、対象ディレクトリの列挙、ハッシュ管理、ルーティング文書生成の詳細実装を調べたいとき。
 - Codex CLI や OpenAI API の一般的な使い方、外部仕様、最新のモデル情報を調べたいとき。
 - pytest 全体の設定、テスト共通 fixture、テスト環境構築、依存関係管理だけを確認したいとき。
 
 ## hash
 
-- 2fc73a0cec5aec8249e1870336f1aa1b2754bd009febf1dac319c03a11e3e48b
+- 13a4e467d5215afd88aa36466b40c9ee769bc48b6b0e75aab6c0027889cb260b
 
 # `test_indexing.py`
 

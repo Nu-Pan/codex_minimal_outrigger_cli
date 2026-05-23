@@ -2,28 +2,31 @@
 
 ## Summary
 
-- `src/commons` は、cmoc 全体で共有する共通処理をまとめた基盤モジュール群です。
-- git リポジトリ探索、作業ルート移動、ブランチや HEAD の取得、差分収集、`.cmoc` の追跡回避など、repo 操作の入口を提供します。
-- Codex CLI 呼び出しラッパー、`INDEX.md` 自動メンテナンス、共通エラー整形、タイムスタンプ生成、経過時間計測を集約しています。
-- 個別サブコマンドの業務ロジックではなく、複数のサブコマンドから再利用される横断的な処理を扱います。
+- `src/commons` は、cmoc 全体で共有する横断的な共通処理を集約した基盤モジュール群です。
+- `repo.py` は、git リポジトリ探索、作業ルート移動、ブランチや HEAD の取得、`.cmoc` の追跡回避、差分収集、oracle / implementation ファイル列挙などを扱います。
+- `codex.py` は、`codex exec` の呼び出し、Structured Output の schema 受け渡し、ログ保存、JSON / text の検証とリトライ、quota 復旧を扱います。
+- `indexing.py` は、`INDEX.md` の自動生成・更新と自動コミットをまとめ、目次本文の生成に Codex CLI を使う処理を含みます。
+- `errors.py` は共通エラーレポートの整形、`timestamps.py` は `<time-stamp>` 生成、`timing.py` はステップ別経過時間の計測、`command_runner.py` はサブコマンド実行の共通制御を担います。
 
 ## Read this when
 
-- `cmoc` の共通機能の実装や呼び出し順を確認したいとき。
-- `codex exec` の起動方法、Structured Output、ログ保存、リトライ、quota 復旧の流れを調べたいとき。
-- git の repo root 探索、`.cmoc` の ignore 保証、変更ファイル列挙、部分評価・部分適用用の差分収集を確認したいとき。
-- `INDEX.md` の自動生成・更新、エラーレポート形式、タイムスタンプ生成、ステップ時間計測を確認したいとき。
+- `cmoc` の共通ユーティリティの役割分担や、どの処理がこのディレクトリにあるかを確認したいとき。
+- git リポジトリ探索、`.cmoc` の ignore 保証、差分収集、oracle / implementation ファイル列挙の実装方針を知りたいとき。
+- `codex exec` の起動方法、Structured Output、ログ保存、検証リトライ、quota 復旧の流れを確認したいとき。
+- `INDEX.md` の自動生成・更新・再利用・自動コミットの仕組みを確認したいとき。
+- 共通エラーレポート、タイムスタンプ生成、経過時間表示、サブコマンド実行の共通ラッパーを確認したいとき。
 
 ## Do not read this when
 
-- `cmoc init` や `cmoc apply` など、個別サブコマンドの業務ロジックだけを調べたいとき。
-- `oracles` 配下の正本仕様そのものや、開発ルール・テストルールだけを確認したいとき。
-- CLI 引数定義やユーザー向けフローよりも、共通ユーティリティの再利用関係に関心がないとき。
-- `README.md`、`AGENTS.md`、`memo` などの運用ルールだけを確認したいとき。
+- `cmoc init`、`cmoc apply`、`cmoc merge` など個別サブコマンドの業務ロジックだけを調べたいとき。
+- `oracles` 配下の正本仕様や、`src` / `tests` の別ディレクトリの細かな内容だけを確認したいとき。
+- `README.md`、`AGENTS.md`、`memo` の運用ルールだけを確認したいとき。
+- 共通処理の再利用関係ではなく、特定の CLI 引数や画面表示だけを追いたいとき。
+- このディレクトリのメンテナンス規則や `INDEX.md` 自動生成の仕様そのものだけを確認したいとき。
 
 ## hash
 
-- 1cc50a89492e65e2e24935fff683b97a1426e469f8384e43b3528ec71f4eea7d
+- b1db76082c53cdcf7006f383fc1824d6caa12ed6b90d1793eb807786cec73025
 
 # `main.py`
 
