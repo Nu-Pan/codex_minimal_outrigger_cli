@@ -10,7 +10,7 @@ from commons.repo import (
     head_commit,
     run_git,
 )
-from commons.timing import StepTimer
+from commons.timing import StepTimer, start_step
 from commons.timestamps import make_timestamp
 
 
@@ -23,19 +23,16 @@ def cmoc_branch_impl(repo_root: Path | None = None) -> None:
 
     # branch 作成前の HEAD を、cmoc branch の base commit として記録する。
     timer = StepTimer("branch")
-    timer.start("create cmoc branch")
-    print("branch (1/3) create cmoc branch")
+    start_step(timer, 1, 3, "create cmoc branch")
     base_commit = head_commit(repo_root)
     branch_name = _create_unique_branch(repo_root)
 
     # 作成した branch 上で `.cmoc` が git 追跡対象外であることを保証する。
-    timer.start("ensure .cmoc is ignored")
-    print("branch (2/3) ensure .cmoc is ignored")
+    start_step(timer, 2, 3, "ensure .cmoc is ignored")
     ensure_cmoc_ignored(repo_root)
 
     # branch 名に対応する `.cmoc/branch` ファイルへ base commit を保存する。
-    timer.start("record branch base commit")
-    print("branch (3/3) record branch base commit")
+    start_step(timer, 3, 3, "record branch base commit")
     base_path = branch_base_commit_path(repo_root, branch_name)
     base_path.parent.mkdir(parents=True, exist_ok=True)
     base_path.write_text(f"{base_commit}\n", encoding="utf-8")
@@ -57,4 +54,4 @@ def _create_unique_branch(repo_root: Path) -> str:
         if result.returncode == 0:
             return branch_name
         sleep(0.001)
-    raise RuntimeError("Failed to create unique cmoc branch after retries.")
+    raise RuntimeError("リトライ後も一意な cmoc branch を作成できませんでした。")

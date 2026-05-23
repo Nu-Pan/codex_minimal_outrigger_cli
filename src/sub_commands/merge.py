@@ -12,10 +12,10 @@ from commons.repo import (
     is_cmoc_branch,
     run_git,
 )
-from commons.timing import StepTimer
+from commons.timing import StepTimer, start_step
 
 _MANUAL_RESOLUTION_MESSAGE: str = (
-    "Manual resolution is required. cmoc did not roll back the merge state."
+    "手動解消が必要です。cmoc は merge 状態をロールバックしていません。"
 )
 
 
@@ -38,19 +38,16 @@ def cmoc_merge_impl(
     timer = StepTimer("merge")
     merge_started = False
     try:
-        timer.start("validate repository state")
-        print("merge (1/4) validate repository state")
+        start_step(timer, 1, 4, "validate repository state")
         assert_no_uncommitted_changes(repo_root)
         ensure_cmoc_ignored(repo_root)
 
         # 明示引数が無い場合は未マージ cmoc ブランチを best effort で 1 件に絞る。
-        timer.start("resolve source branch")
-        print("merge (2/4) resolve source branch")
+        start_step(timer, 2, 4, "resolve source branch")
         source_branch = cmoc_branch or _resolve_source_branch(repo_root)
 
         # 通常 merge を試し、conflict 時だけ Codex CLI に marker 解消を依頼する。
-        timer.start("run git merge")
-        print("merge (3/4) run git merge")
+        start_step(timer, 3, 4, "run git merge")
         merge_started = True
         result = run_git(
             repo_root,
@@ -61,8 +58,7 @@ def cmoc_merge_impl(
             _resolve_conflicts(repo_root)
 
         # merge 完了後、git が安全と判断できる場合だけ作業ブランチを削除する。
-        timer.start("delete source branch if safe")
-        print("merge (4/4) delete source branch if safe")
+        start_step(timer, 4, 4, "delete source branch if safe")
         _delete_branch_if_safe(repo_root, source_branch)
         print(f"merged branch: {source_branch}")
         timer.report()
@@ -85,13 +81,12 @@ def _resolve_source_branch(repo_root: Path) -> str:
     if len(candidates) != 1:
         # 0 件または複数件の場合は利用者に明示指定を求める。
         raise CmocError(
-            "Failed to resolve cmoc branch automatically.",
+            "cmoc branch の自動特定に失敗しました。",
             [
-                "Pass the cmoc branch name explicitly.",
-                "Delete or merge extra cmoc branches, then run the command "
-                "again.",
+                "cmoc branch 名を明示的に指定してください。",
+                "余分な cmoc branch を削除または merge してからコマンドを再実行してください。",
             ],
-            "\n".join(candidates) or "No cmoc branch candidates.",
+            "\n".join(candidates) or "cmoc branch 候補がありません。",
         )
     return candidates[0]
 
@@ -102,10 +97,10 @@ def _resolve_conflicts(repo_root: Path) -> None:
     unmerged = _unmerged_paths(repo_root)
     if not unmerged:
         raise CmocError(
-            "git merge failed without unmerged paths.",
+            "git merge が失敗しましたが、unmerged path がありません。",
             [
-                "Inspect git status manually.",
-                "Resolve the merge state, then run cmoc again.",
+                "git status を手動で確認してください。",
+                "merge 状態を解消してから cmoc を再実行してください。",
             ],
         )
 
@@ -113,6 +108,7 @@ def _resolve_conflicts(repo_root: Path) -> None:
     run_codex_exec(
         repo_root,
         _conflict_prompt(repo_root, unmerged),
+        purpose="resolve merge conflicts",
         read_only=False,
         expect_json=False,
         skip_index_maintenance=True,
@@ -122,10 +118,10 @@ def _resolve_conflicts(repo_root: Path) -> None:
     marker_files = _files_with_conflict_markers(repo_root)
     if marker_files:
         raise CmocError(
-            "Conflict markers remain after Codex CLI resolution.",
+            "Codex CLI による解消後も conflict marker が残っています。",
             [
-                "Resolve remaining conflict markers manually.",
-                "Commit the merge manually.",
+                "残っている conflict marker を手動で解消してください。",
+                "merge commit を手動で作成してください。",
             ],
             "\n".join(marker_files),
         )
@@ -135,10 +131,10 @@ def _resolve_conflicts(repo_root: Path) -> None:
         run_git(repo_root, ["add", "--", path])
     if _unmerged_paths(repo_root):
         raise CmocError(
-            "Unmerged paths remain after conflict resolution.",
+            "conflict 解消後も unmerged path が残っています。",
             [
-                "Inspect git status manually.",
-                "Resolve and commit the merge manually.",
+                "git status を手動で確認してください。",
+                "merge を手動で解消して commit してください。",
             ],
             "\n".join(_unmerged_paths(repo_root)),
         )

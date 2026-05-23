@@ -17,8 +17,6 @@ from commons.repo import (
     current_branch,
     ensure_cmoc_ignored,
     gitignore_has_cmoc_rule,
-    has_deleted_implementation_files,
-    has_deleted_oracle_files,
     is_cmoc_branch,
     list_implementation_files,
     list_oracle_files,
@@ -26,67 +24,92 @@ from commons.repo import (
     run_git,
     staged_diff_from_head,
 )
-from commons.timing import StepTimer
+from commons.timing import StepTimer, start_step
 from commons.timestamps import make_timestamp
 
 _APPLY_INCOMPLETE_EXIT_CODE: int = 2
 _DISCREPANCY_OUTPUT_SCHEMA: dict[str, object] = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["discrepancies"],
+    "required": ["fixing_points"],
     "properties": {
-        "discrepancies": {
+        "git_head_commit_hash": {
+            "type": ["string", "null"],
+            "description": (
+                "要修正点を発見した時点での git HEAD commit hash。"
+                "後で機械的にフィルされるので AI による出力は null で良い。"
+            ),
+        },
+        "fixing_points": {
             "type": "array",
-            "description": "oracles と実装との明確な不整合のリスト。空配列の場合のみ不整合なしとみなす。",
+            "description": "実装に対する要修正点のリスト。空配列の場合のみ要修正点なしとみなす。",
             "items": {
                 "type": "object",
                 "additionalProperties": False,
                 "required": [
-                    "oracle_path",
-                    "oracle_line_start",
-                    "oracle_line_end",
-                    "implementation_paths",
                     "title",
+                    "evidences",
                     "oracle_requirement",
                     "observed_implementation",
                     "reason",
                     "suggested_fix",
                 ],
                 "properties": {
-                    "oracle_path": {
-                        "type": "string",
-                        "description": "不整合の根拠となる oracle ファイルの絶対パス。",
-                    },
-                    "oracle_line_start": {
-                        "type": ["integer", "null"],
-                        "description": (
-                            "不整合の根拠となる oracle 記述の開始行。"
-                            "行番号を特定できない場合は null。"
-                        ),
-                    },
-                    "oracle_line_end": {
-                        "type": ["integer", "null"],
-                        "description": (
-                            "不整合の根拠となる oracle 記述の終了行。"
-                            "行番号を特定できない場合は null。"
-                        ),
-                    },
-                    "implementation_paths": {
-                        "type": "array",
-                        "description": (
-                            "不整合に関係する実装・テスト・設定ファイルの"
-                            "絶対パス。未実装などで該当ファイルを"
-                            "特定できない場合は空配列。"
-                        ),
-                        "items": {"type": "string"},
-                    },
                     "title": {
                         "type": "string",
-                        "description": "不整合の短い見出し。",
+                        "description": "要修正点の短い見出し。",
+                    },
+                    "evidences": {
+                        "type": "array",
+                        "description": (
+                            "要修正点の根拠となる文言の位置情報。"
+                            "`oracles`・実装どちらかのファイルが必ず 1 つは"
+                            "根拠として存在するはずであるから空配列は想定しない。"
+                        ),
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "required": [
+                                "path",
+                                "line_start",
+                                "line_end",
+                                "summary",
+                            ],
+                            "properties": {
+                                "path": {
+                                    "type": "string",
+                                    "description": "要修正点の根拠となるファイルの絶対パス。",
+                                },
+                                "line_start": {
+                                    "type": ["integer", "null"],
+                                    "description": (
+                                        "要修正点の根拠となる記述の開始行。"
+                                        "行番号を特定できない場合は null。"
+                                    ),
+                                },
+                                "line_end": {
+                                    "type": ["integer", "null"],
+                                    "description": (
+                                        "要修正点の根拠となる記述の終了行。"
+                                        "行番号を特定できない場合は null。"
+                                    ),
+                                },
+                                "summary": {
+                                    "type": "string",
+                                    "description": (
+                                        "該当箇所の短い要約。位置情報がズレた場合に"
+                                        "それを検知するための冗長情報。"
+                                    ),
+                                },
+                            },
+                        },
                     },
                     "oracle_requirement": {
                         "type": "string",
-                        "description": "oracle が要求している仕様。",
+                        "description": (
+                            "oracle が要求している仕様。実装のみから発見した"
+                            "要修正点であったとしても必ず関係する仕様を記載する。"
+                        ),
                     },
                     "observed_implementation": {
                         "type": "string",
@@ -95,13 +118,13 @@ _DISCREPANCY_OUTPUT_SCHEMA: dict[str, object] = {
                     "reason": {
                         "type": "string",
                         "description": (
-                            "なぜ oracle と実装が明確に不整合していると"
-                            "言えるのか。推測や未確認事項は含めない。"
+                            "なぜ、明確に問題があり修正が必要であると言えるのか。"
+                            "推測や未確認事項は含めない。"
                         ),
                     },
                     "suggested_fix": {
                         "type": "string",
-                        "description": "実装を oracle に追従させるための修正方針。",
+                        "description": "問題を解決するために必要な実装修正の方針。",
                     },
                 },
             },
@@ -113,7 +136,8 @@ _DISCREPANCY_OUTPUT_SCHEMA: dict[str, object] = {
 def cmoc_apply_impl(
     repo_root: Path | None = None,
     *,
-    repeat: int = 5,
+    repeat_investigate_and_fix: int = 5,
+    repeat_improove_fixing_list: int = 3,
     full: bool = False,
 ) -> int | None:
     """oracle と実装の不整合を Codex CLI へ追従させる。"""
@@ -122,7 +146,10 @@ def cmoc_apply_impl(
         run_command(
             lambda resolved_repo_root: cmoc_apply_impl(
                 resolved_repo_root,
-                repeat=repeat,
+                repeat_investigate_and_fix=repeat_investigate_and_fix,
+                repeat_improove_fixing_list=(
+                    repeat_improove_fixing_list
+                ),
                 full=full,
             )
         )
@@ -133,15 +160,17 @@ def cmoc_apply_impl(
     branch_name = current_branch(repo_root)
     if not is_cmoc_branch(branch_name):
         raise CmocError(
-            "cmoc apply must be run on a cmoc branch.",
-            ["Run `cmoc branch` first.", "Checkout an existing cmoc branch."],
-            f"Current branch: {branch_name}",
+            "`cmoc apply` は cmoc branch 上で実行してください。",
+            [
+                "先に `cmoc branch` を実行してください。",
+                "既存の cmoc branch を checkout してください。",
+            ],
+            f"現在の branch: {branch_name}",
         )
     base_commit = read_branch_base_commit(repo_root, branch_name)
 
     # `.cmoc` 保証差分を先に分離 commit してから、ユーザー由来の oracle 外差分を拒否する。
-    timer.start("validate repository state")
-    print("apply (1/4) validate repository state")
+    start_step(timer, 1, 4, "validate repository state")
     had_cmoc_rule = gitignore_has_cmoc_rule(repo_root)
     preexisting_staged_diff = staged_diff_from_head(repo_root)
     ensure_cmoc_ignored(repo_root)
@@ -155,34 +184,43 @@ def cmoc_apply_impl(
     commit_if_changed(repo_root, ["oracles"], "Update oracle files")
 
     # ユーザー向けステップとして INDEX.md を明示メンテナンスする。
-    timer.start("maintain INDEX.md files")
-    print("apply (2/4) maintain INDEX.md files")
+    start_step(timer, 2, 4, "maintain INDEX.md files")
     maintain_indexes(repo_root)
 
-    if repeat < 0:
+    if repeat_investigate_and_fix < 0:
         raise CmocError(
-            "Repeat count must not be negative.",
+            "調査・修正ループ回数に負の値は指定できません。",
             [
-                "Pass a zero or positive integer to --repeat.",
-                "Omit --repeat to use the default retry limit.",
+                "`--repeat-investigate-and-fix` には 0 以上の整数を指定してください。",
+                "既定の上限を使う場合は `--repeat-investigate-and-fix` を省略してください。",
             ],
-            f"repeat: {repeat}",
+            f"repeat_investigate_and_fix: {repeat_investigate_and_fix}",
+        )
+    if repeat_improove_fixing_list < 0:
+        raise CmocError(
+            "要修正点リスト改善ループ回数に負の値は指定できません。",
+            [
+                "`--repeat-improove-fixing-list` には 0 以上の整数を指定してください。",
+                "既定の上限を使う場合は `--repeat-improove-fixing-list` を省略してください。",
+            ],
+            f"repeat_improove_fixing_list: {repeat_improove_fixing_list}",
         )
 
     # 不整合調査と追従作業を指定回数まで反復する。
-    timer.start("investigate and apply discrepancies")
-    print("apply (3/4) investigate and apply discrepancies")
+    start_step(timer, 3, 4, "investigate and apply discrepancies")
     discrepancy_counts: list[int] = []
     completed = False
-    for loop_index in range(1, repeat + 1):
+    for loop_index in range(1, repeat_investigate_and_fix + 1):
         discrepancies = _investigate_discrepancies(
             repo_root,
             base_commit,
+            repeat_improove_fixing_list=repeat_improove_fixing_list,
             full=full,
         )
         discrepancy_counts.append(len(discrepancies))
         print(
-            f"implementation loop ({loop_index}/{repeat}) discrepancies: "
+            "implementation loop "
+            f"({loop_index}/{repeat_investigate_and_fix}) discrepancies: "
             f"{len(discrepancies)}"
         )
         if not discrepancies:
@@ -195,8 +233,7 @@ def cmoc_apply_impl(
         _commit_all_changes(repo_root)
 
     # 実行結果を人間向け report と exit code に変換する。
-    timer.start("write report")
-    print("apply (4/4) write report")
+    start_step(timer, 4, 4, "write report")
     report_path = _write_apply_report(
         repo_root,
         branch_name,
@@ -212,12 +249,13 @@ def _investigate_discrepancies(
     repo_root: Path,
     base_commit: str,
     *,
+    repeat_improove_fixing_list: int,
     full: bool,
 ) -> list[dict[str, object]]:
     """oracle ファイル・実装ファイルごとに不整合調査を実行する。"""
     # ループごとに部分・全体適用モードと調査対象を再評価する。
     discrepancies: list[dict[str, object]] = []
-    partial = _use_partial_mode(repo_root, base_commit, full)
+    partial = _use_partial_mode(full)
     oracle_files = _target_oracle_files(repo_root, base_commit, partial)
     implementation_files = _target_implementation_files(
         repo_root,
@@ -231,18 +269,21 @@ def _investigate_discrepancies(
             f"investigate oracle ({index}/{len(oracle_files)}) "
             f"{oracle_file}"
         )
-        # Structured Output の discrepancies を 1 つの一覧へ結合する。
+        # Structured Output の fixing_points を 1 つの一覧へ結合する。
         payload = parse_json_object(
             run_codex_exec(
                 repo_root,
                 _investigation_prompt(repo_root, oracle_file),
+                purpose=(
+                    f"investigate oracle {oracle_file.relative_to(repo_root)}"
+                ),
                 read_only=True,
                 expect_json=True,
                 output_schema=_DISCREPANCY_OUTPUT_SCHEMA,
                 json_validator=_validate_discrepancy_payload,
             )
         )
-        values = payload.get("discrepancies")
+        values = payload.get("fixing_points")
         for value in values:
             discrepancies.append(value)
 
@@ -262,27 +303,31 @@ def _investigate_discrepancies(
                     repo_root,
                     implementation_file,
                 ),
+                purpose=(
+                    "investigate implementation "
+                    f"{implementation_file.relative_to(repo_root)}"
+                ),
                 read_only=True,
                 expect_json=True,
                 output_schema=_DISCREPANCY_OUTPUT_SCHEMA,
                 json_validator=_validate_discrepancy_payload,
             )
         )
-        values = payload.get("discrepancies")
+        values = payload.get("fixing_points")
         for value in values:
             discrepancies.append(value)
 
-    return _organize_discrepancies(repo_root, discrepancies)
+    return _improove_fixing_list(
+        repo_root,
+        discrepancies,
+        repeat_improove_fixing_list,
+    )
 
 
-def _use_partial_mode(repo_root: Path, base_commit: str, full: bool) -> bool:
+def _use_partial_mode(full: bool) -> bool:
     """現在ループの部分・全体適用モードを判定する。"""
-    # --full または削除検出時は全体適用、それ以外は部分適用にする。
-    if full:
-        return False
-    if has_deleted_oracle_files(repo_root, base_commit):
-        return False
-    return not has_deleted_implementation_files(repo_root, base_commit)
+    # --full の有無だけで全体適用・部分適用を切り替える。
+    return not full
 
 
 def _target_oracle_files(
@@ -313,6 +358,27 @@ def _target_implementation_files(
     return [path for path in all_files if path in changed]
 
 
+def _improove_fixing_list(
+    repo_root: Path,
+    discrepancies: list[dict[str, object]],
+    repeat_improove_fixing_list: int,
+) -> list[dict[str, object]]:
+    """要修正点リストを最大指定回数まで Codex CLI に改善させる。"""
+    # 改善結果が前回と同一なら、改善点なしとして早期終了する。
+    improved = discrepancies
+    for loop_index in range(1, repeat_improove_fixing_list + 1):
+        next_improved = _organize_discrepancies(repo_root, improved)
+        print(
+            "fixing list improvement loop "
+            f"({loop_index}/{repeat_improove_fixing_list}) discrepancies: "
+            f"{len(next_improved)}"
+        )
+        if next_improved == improved:
+            break
+        improved = next_improved
+    return improved
+
+
 def _organize_discrepancies(
     repo_root: Path,
     discrepancies: list[dict[str, object]],
@@ -323,13 +389,14 @@ def _organize_discrepancies(
         run_codex_exec(
             repo_root,
             _organize_prompt(repo_root, discrepancies),
+            purpose="organize discrepancies",
             read_only=True,
             expect_json=True,
             output_schema=_DISCREPANCY_OUTPUT_SCHEMA,
             json_validator=_validate_discrepancy_payload,
         )
     )
-    values = payload.get("discrepancies")
+    values = payload.get("fixing_points")
     return [value for value in values if isinstance(value, dict)]
 
 
@@ -344,6 +411,7 @@ def _apply_discrepancies(
         run_codex_exec(
             repo_root,
             _apply_prompt(repo_root, discrepancy),
+            purpose=f"apply discrepancy {index}/{len(discrepancies)}",
             read_only=False,
             expect_json=False,
         )
@@ -365,6 +433,7 @@ def _commit_all_changes(repo_root: Path) -> None:
     message = run_codex_exec(
         repo_root,
         _commit_message_prompt(repo_root),
+        purpose="generate commit message",
         read_only=True,
         expect_json=False,
     ).strip()
@@ -386,10 +455,10 @@ def _assert_forbidden_paths_clean(repo_root: Path) -> None:
     ]
     if forbidden:
         raise CmocError(
-            "Forbidden paths were changed by implementation work.",
+            "実装作業により編集禁止パスが変更されました。",
             [
-                "Inspect and manually resolve the forbidden changes.",
-                "Run `cmoc apply` again after the working tree is acceptable.",
+                "編集禁止パスの変更を確認し、手動で解消してください。",
+                "作業ツリーが許容できる状態になってから `cmoc apply` を再実行してください。",
             ],
             "\n".join(forbidden),
         )
@@ -434,6 +503,7 @@ def _write_apply_report(
     report = run_codex_exec(
         repo_root,
         prompt,
+        purpose="write apply report",
         read_only=True,
         expect_json=False,
         text_validator=lambda value: _validate_apply_report(
@@ -454,11 +524,10 @@ def _write_apply_report(
         )
     except ValueError as error:
         raise CmocError(
-            "Apply report from Codex CLI missed required content.",
+            "Codex CLI が生成した apply report に必須内容がありません。",
             [
-                "Inspect the Codex report generation prompt and retry.",
-                "If the problem repeats, run cmoc apply again after checking "
-                "Codex CLI output.",
+                "Codex report 生成 prompt を確認してから再実行してください。",
+                "問題が続く場合は、Codex CLI の出力を確認してから `cmoc apply` を再実行してください。",
             ],
             str(error),
         ) from error
@@ -498,7 +567,7 @@ def _validate_apply_report(
     # 不完全な Codex 出力をそのまま保存せず、共通エラーとして中断する。
     if missing:
         raise ValueError(
-            "Apply report from Codex CLI missed required content:\n"
+            "Codex CLI が生成した apply report に必須内容がありません:\n"
             + "\n".join(missing)
         )
 
@@ -509,13 +578,16 @@ def _investigation_prompt(repo_root: Path, oracle_file: Path) -> str:
     return "\n".join(
         [
             "あなたはソフトウェア実装の監査担当です。",
-            f"`{oracle_file}` と `{repo_root}` の実装との明確な不整合を調査してください。",
+            f"`{oracle_file}` を起点に `{repo_root}` の要修正点を調査してください。",
             "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。",
-            "各不整合には oracle_path、oracle_line_start、oracle_line_end、",
-            "implementation_paths、title、oracle_requirement、",
-            "observed_implementation、reason、suggested_fix を",
-            "含めてください。",
-            "明確な不整合がない場合だけ空配列を返してください。",
+            "要修正点には、oracles ファイルと実装との明確な不整合だけでなく、",
+            "実装だけから見た成果物品質上の致命的な問題も含めてください。",
+            "実装のみから発見した要修正点でも、関係する oracle 仕様を oracle_requirement に記載してください。",
+            "指定ファイルは調査の起点であり、必要なら他の oracle・実装ファイルも読んでください。",
+            "各要修正点には title、evidences、oracle_requirement、",
+            "observed_implementation、reason、suggested_fix を含めてください。",
+            "evidences には path、line_start、line_end、summary を含めてください。",
+            "明確な要修正点がない場合だけ fixing_points に空配列を返してください。",
             f"`{repo_root / 'memo'}` は読み書き禁止です。",
             "ファイル編集は禁止です。",
         ]
@@ -532,15 +604,16 @@ def _implementation_investigation_prompt(
         [
             "あなたはソフトウェア実装の監査担当です。",
             f"`{implementation_file}` を起点に、",
-            f"`{repo_root / 'oracles'}` と `{repo_root}` の実装との",
-            "明確な不整合を調査してください。",
+            f"`{repo_root}` の要修正点を調査してください。",
             "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。",
+            "要修正点には、oracles ファイルと実装との明確な不整合だけでなく、",
+            "実装だけから見た成果物品質上の致命的な問題も含めてください。",
+            "実装のみから発見した要修正点でも、関係する oracle 仕様を oracle_requirement に記載してください。",
             "指定ファイルは調査の起点であり、必要なら他の oracle・実装ファイルも読んでください。",
-            "各不整合には oracle_path、oracle_line_start、oracle_line_end、",
-            "implementation_paths、title、oracle_requirement、",
-            "observed_implementation、reason、suggested_fix を",
-            "含めてください。",
-            "明確な不整合がない場合だけ空配列を返してください。",
+            "各要修正点には title、evidences、oracle_requirement、",
+            "observed_implementation、reason、suggested_fix を含めてください。",
+            "evidences には path、line_start、line_end、summary を含めてください。",
+            "明確な要修正点がない場合だけ fixing_points に空配列を返してください。",
             f"`{repo_root / 'memo'}` は読み書き禁止です。",
             "ファイル編集は禁止です。",
         ]
@@ -556,11 +629,18 @@ def _organize_prompt(
     return "\n".join(
         [
             "あなたはソフトウェア監査結果の整理担当です。",
-            f"`{repo_root}` の oracle と実装の不整合リストを整理してください。",
+            f"`{repo_root}` の要修正点リストを整理してください。",
             "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。",
-            "重複する不整合は 1 件にマージし、矛盾する修正方針は矛盾しない内容に調整してください。",
-            "明確な不整合がない場合だけ空配列を返してください。",
-            f"連結済み不整合リスト: {json.dumps(discrepancies, ensure_ascii=False)}",
+            "要修正点の内容の品質に明確な問題がない状態を目指してください。",
+            "重複する要修正点は 1 件にマージし、矛盾する修正方針は矛盾しない内容に調整してください。",
+            "`<cmoc-branch>` 上の過去の修正内容を確認し、その内容を考慮してください。",
+            "False-Positive と判断できる要修正点は除外してください。",
+            "要修正点を先頭から順番に対応した時に、作業順序として適切になるよう並べ替えてください。",
+            "改善過程で発見した漏れがあれば、要修正点リストに追加してください。",
+            "実装のみから発見した要修正点でも、関係する oracle 仕様を oracle_requirement に記載してください。",
+            "改善点がない場合は入力と同じ要修正点リストを返してください。",
+            "明確な要修正点がない場合だけ fixing_points に空配列を返してください。",
+            f"連結済み要修正点リスト: {json.dumps(discrepancies, ensure_ascii=False)}",
             f"`{repo_root / 'memo'}` は読み書き禁止です。",
             "ファイル編集は禁止です。",
         ]
@@ -576,9 +656,9 @@ def _apply_prompt(
     return "\n".join(
         [
             "あなたはソフトウェア実装担当です。",
-            f"`{repo_root}` の実装を、以下の不整合 1 件が解消されるように更新してください。",
+            f"`{repo_root}` の実装を、以下の要修正点 1 件が解消されるように更新してください。",
             "完了条件は、実装が oracle 要求に追従し、必要なテスト更新も終わっていることです。",
-            f"不整合: {json.dumps(discrepancy, ensure_ascii=False)}",
+            f"要修正点: {json.dumps(discrepancy, ensure_ascii=False)}",
             f"`{repo_root / 'oracles'}` は編集禁止です。",
             f"`{repo_root / '.agents'}` は編集禁止です。",
             f"`{repo_root / 'memo'}` は読み書き禁止です。",
@@ -602,48 +682,41 @@ def _commit_message_prompt(repo_root: Path) -> str:
 
 def _validate_discrepancy_payload(value: object) -> None:
     """不整合調査 Structured Output の schema を検査する。"""
-    # top-level は discrepancies だけを持つ object に限定する。
+    # top-level は fixing_points と任意の git_head_commit_hash に限定する。
     if not isinstance(value, dict):
         raise ValueError("Expected JSON object.")
-    if set(value) != {"discrepancies"}:
-        raise ValueError("Expected only discrepancies key.")
-    discrepancies = value.get("discrepancies")
-    if not isinstance(discrepancies, list):
-        raise ValueError("discrepancies must be a list.")
+    allowed_keys = {"fixing_points", "git_head_commit_hash"}
+    if "fixing_points" not in value or not set(value).issubset(allowed_keys):
+        raise ValueError(
+            "Expected fixing_points and optional git_head_commit_hash keys."
+        )
+    commit_hash = value.get("git_head_commit_hash")
+    if commit_hash is not None and not isinstance(commit_hash, str):
+        raise ValueError("git_head_commit_hash must be a string or null.")
+    fixing_points = value.get("fixing_points")
+    if not isinstance(fixing_points, list):
+        raise ValueError("fixing_points must be a list.")
 
-    # 各 discrepancy item の required keys を完全一致で検査する。
+    # 各 fixing point item の required keys を完全一致で検査する。
     required_keys = {
-        "oracle_path",
-        "oracle_line_start",
-        "oracle_line_end",
-        "implementation_paths",
         "title",
+        "evidences",
         "oracle_requirement",
         "observed_implementation",
         "reason",
         "suggested_fix",
     }
-    for index, item in enumerate(discrepancies):
+    for index, item in enumerate(fixing_points):
         # item ごとに型と各プロパティの型を検査する。
         if not isinstance(item, dict):
-            raise ValueError(f"discrepancies[{index}] must be an object.")
+            raise ValueError(f"fixing_points[{index}] must be an object.")
         if set(item) != required_keys:
             raise ValueError(
-                f"discrepancies[{index}] keys do not match schema."
+                f"fixing_points[{index}] keys do not match schema."
             )
-        _require_string(item, "oracle_path", index)
-        _require_nullable_int(item, "oracle_line_start", index)
-        _require_nullable_int(item, "oracle_line_end", index)
-        paths = item["implementation_paths"]
-        if not isinstance(paths, list) or not all(
-            isinstance(path, str) for path in paths
-        ):
-            raise ValueError(
-                f"discrepancies[{index}].implementation_paths must be "
-                "list[str]."
-            )
+        _require_string(item, "title", index)
+        _validate_evidences(item["evidences"], index)
         for key in [
-            "title",
             "oracle_requirement",
             "observed_implementation",
             "reason",
@@ -656,17 +729,79 @@ def _require_string(item: dict[str, object], key: str, index: int) -> None:
     """schema 上 string の項目を検査する。"""
     # 対象 key が Python str であることを保証する。
     if not isinstance(item[key], str):
-        raise ValueError(f"discrepancies[{index}].{key} must be a string.")
+        raise ValueError(f"fixing_points[{index}].{key} must be a string.")
 
 
-def _require_nullable_int(
-    item: dict[str, object],
-    key: str,
-    index: int,
-) -> None:
-    """schema 上 integer|null の項目を検査する。"""
-    # 行番号は integer または null だけを許容する。
-    if item[key] is not None and not isinstance(item[key], int):
+def _validate_evidences(value: object, item_index: int) -> None:
+    """schema 上 evidences の項目を検査する。"""
+    # evidence は根拠位置の構造化情報として完全一致で検査する。
+    if not isinstance(value, list) or not value:
         raise ValueError(
-            f"discrepancies[{index}].{key} must be integer or null."
+            f"fixing_points[{item_index}].evidences must be a non-empty list."
+        )
+    required_keys = {"path", "line_start", "line_end", "summary"}
+    for evidence_index, evidence in enumerate(value):
+        if not isinstance(evidence, dict):
+            raise ValueError(
+                "fixing_points"
+                f"[{item_index}].evidences[{evidence_index}] "
+                "must be an object."
+            )
+        if set(evidence) != required_keys:
+            raise ValueError(
+                "fixing_points"
+                f"[{item_index}].evidences[{evidence_index}] "
+                "keys do not match schema."
+            )
+        _require_evidence_string(evidence, "path", item_index, evidence_index)
+        _require_evidence_nullable_int(
+            evidence,
+            "line_start",
+            item_index,
+            evidence_index,
+        )
+        _require_evidence_nullable_int(
+            evidence,
+            "line_end",
+            item_index,
+            evidence_index,
+        )
+        _require_evidence_string(
+            evidence,
+            "summary",
+            item_index,
+            evidence_index,
+        )
+
+
+def _require_evidence_string(
+    item: dict[object, object],
+    key: str,
+    item_index: int,
+    evidence_index: int,
+) -> None:
+    """schema 上 evidence 内 string の項目を検査する。"""
+    if not isinstance(item[key], str):
+        raise ValueError(
+            "fixing_points"
+            f"[{item_index}].evidences[{evidence_index}].{key} "
+            "must be a string."
+        )
+
+
+def _require_evidence_nullable_int(
+    item: dict[object, object],
+    key: str,
+    item_index: int,
+    evidence_index: int,
+) -> None:
+    """schema 上 evidence 内 integer|null の項目を検査する。"""
+    if (
+        item[key] is not None
+        and (not isinstance(item[key], int) or isinstance(item[key], bool))
+    ):
+        raise ValueError(
+            "fixing_points"
+            f"[{item_index}].evidences[{evidence_index}].{key} "
+            "must be integer or null."
         )

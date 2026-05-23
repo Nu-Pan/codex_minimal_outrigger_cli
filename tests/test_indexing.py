@@ -415,6 +415,77 @@ def test_maintain_indexes_does_not_call_codex_when_index_is_current(
     assert changed is False
 
 
+def test_maintain_indexes_reuses_current_index_with_empty_sections(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """schema 上有効な空配列由来の既存 INDEX は再生成しない。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    target = repo / "target.txt"
+    target.write_text("target\n", encoding="utf-8")
+    readme_digest = hashlib.sha256(
+        (repo / "README.md").read_bytes()
+    ).hexdigest()
+    digest = hashlib.sha256(target.read_bytes()).hexdigest()
+    (repo / "INDEX.md").write_text(
+        "\n".join(
+            [
+                "# `README.md`",
+                "",
+                "## Summary",
+                "",
+                "- readme summary",
+                "",
+                "## Read this when",
+                "",
+                "- read readme",
+                "",
+                "## Do not read this when",
+                "",
+                "- skip readme",
+                "",
+                "## hash",
+                "",
+                f"- {readme_digest}",
+                "",
+                "# `target.txt`",
+                "",
+                "## Summary",
+                "",
+                "",
+                "## Read this when",
+                "",
+                "",
+                "## Do not read this when",
+                "",
+                "",
+                "## hash",
+                "",
+                f"- {digest}",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    original_content = (repo / "INDEX.md").read_text(encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "current empty index sections")
+
+    def fail_codex(*args: object, **kwargs: object) -> str:
+        """空セクションの最新 INDEX では呼ばれてはいけない fake Codex CLI。"""
+        raise AssertionError(
+            "codex exec should not be called for empty INDEX sections"
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fail_codex)
+
+    changed = maintain_indexes(repo)
+
+    assert changed is False
+    assert (repo / "INDEX.md").read_text(encoding="utf-8") == original_content
+
+
 def test_maintain_indexes_commits_only_maintenance_paths(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,

@@ -36,10 +36,15 @@ def format_error_report(error: BaseException) -> str:
         message = error.message
     else:
         actions = [
-            "下の詳細を確認してください。",
-            "リポジトリ状態またはコマンド入力を修正してから、cmoc を再実行してください。",
+            "入力値が誤っている場合は、コマンド引数を修正してから cmoc を再実行してください。",
+            "リポジトリ状態が原因の場合は、Detail と Call stack を確認して作業ツリーや設定を修正してください。",
         ]
         detail = str(error)
+        if not detail.strip():
+            detail = (
+                f"{error.__class__.__module__}."
+                f"{error.__class__.__name__} がメッセージなしで発生しました。"
+            )
         message = error.__class__.__name__
 
     # エラー内容と復旧操作を機械的に並べる。

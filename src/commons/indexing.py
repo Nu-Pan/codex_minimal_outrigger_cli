@@ -146,6 +146,7 @@ def _entry_for(repo_root: Path, path: Path, digest: str) -> str:
         run_codex_exec(
             repo_root,
             _index_prompt(repo_root, path, digest),
+            purpose=f"generate INDEX entry for {path.relative_to(repo_root)}",
             read_only=True,
             expect_json=True,
             output_schema=_INDEX_OUTPUT_SCHEMA,
@@ -335,7 +336,8 @@ def _entry_hash(entry: str) -> str | None:
 
 def _entry_format_is_valid(entry: str, name: str, digest: str) -> bool:
     """既存目次ブロックが仕様の固定フォーマットに一致するか判定する。"""
-    # 見出しと 4 セクションの順序、各説明欄の bullet 形式まで検査する。
+    # 見出しと 4 セクションの順序、説明欄の bullet 形式まで検査する。
+    # Structured Output schema は空配列を許容するため、bullet 0 件も有効。
     expected_heading = f"# `{name}`"
     if not entry.startswith(expected_heading + "\n"):
         return False
@@ -344,13 +346,13 @@ def _entry_format_is_valid(entry: str, name: str, digest: str) -> bool:
         r"\A"
         rf"\# `{re.escape(name)}`\n\n"
         r"## Summary\n\n"
-        r"(?P<summary>(?:- .*\n)+)"
+        r"(?P<summary>(?:- .*\n)*)"
         r"\n"
         r"## Read this when\n\n"
-        r"(?P<read>(?:- .*\n)+)"
+        r"(?P<read>(?:- .*\n)*)"
         r"\n"
         r"## Do not read this when\n\n"
-        r"(?P<skip>(?:- .*\n)+)"
+        r"(?P<skip>(?:- .*\n)*)"
         r"\n"
         r"## hash\n\n"
         rf"- {digest}"

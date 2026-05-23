@@ -1,7 +1,13 @@
 """サブコマンドのステップ時間計測。"""
 
+from contextvars import ContextVar
 from math import floor
 from time import perf_counter
+
+_CURRENT_TIMER: ContextVar["StepTimer | None"] = ContextVar(
+    "cmoc_step_timer",
+    default=None,
+)
 
 
 class StepTimer:
@@ -15,6 +21,8 @@ class StepTimer:
         self._current_name: str | None = None
         self._current_started: float | None = None
         self._durations: list[tuple[str, float]] = []
+        self._reported = False
+        _CURRENT_TIMER.set(self)
 
     def start(self, step_name: str) -> None:
         """新しいステップを開始し、直前のステップを終了する。"""
@@ -25,6 +33,8 @@ class StepTimer:
 
     def report(self) -> None:
         """ステップ別とサブコマンド全体の経過時間を stdout へ出力する。"""
+        if self._reported:
+            return
         # 未確定の最後のステップを含めてから stdout に集計を出す。
         self.finish_current()
         print(f"{self.command_name} step timings:")
@@ -34,6 +44,7 @@ class StepTimer:
             f"{self.command_name} total elapsed: "
             f"{format_duration(perf_counter() - self._started)}"
         )
+        self._reported = True
 
     def finish_current(self) -> None:
         """実行中のステップがあれば経過時間を確定する。"""
@@ -47,6 +58,35 @@ class StepTimer:
         )
         self._current_name = None
         self._current_started = None
+
+
+def start_step(
+    timer: StepTimer,
+    step_number: int,
+    total_steps: int,
+    description: str,
+) -> None:
+    """ステップ開始を計測し、oracle 指定フォーマットで通知する。"""
+    timer.start(description)
+    print(f"({step_number}/{total_steps}) {description}")
+
+
+def current_timer() -> StepTimer | None:
+    """現在のサブコマンド用 StepTimer を返す。"""
+    return _CURRENT_TIMER.get()
+
+
+def report_current_timer() -> None:
+    """現在の StepTimer があれば未出力の経過時間を出力する。"""
+    timer = current_timer()
+    if timer is None:
+        return
+    timer.report()
+
+
+def clear_current_timer() -> None:
+    """現在の StepTimer 参照を消す。"""
+    _CURRENT_TIMER.set(None)
 
 
 def format_duration(duration_seconds: float) -> str:

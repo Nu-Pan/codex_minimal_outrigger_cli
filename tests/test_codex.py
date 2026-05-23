@@ -3,6 +3,7 @@
 import json
 import os
 import subprocess
+from hashlib import sha256
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,7 @@ from pytest import MonkeyPatch
 
 from commons.codex import run_codex_exec
 from commons.errors import CmocError
+from commons.subcommand_log import subcommand_log
 
 _BOOLEAN_SCHEMA: dict[str, object] = {
     "type": "object",
@@ -69,16 +71,75 @@ def test_run_codex_exec_retries_json_and_writes_full_log(
         output_schema=_BOOLEAN_SCHEMA,
     )
 
-    log_files = list((repo / ".cmoc" / "logs" / "codex_exec").glob("*.log"))
+    log_files = list((repo / "logs" / "codex_exec" / "call").glob("*.log"))
     log_content = log_files[0].read_text(encoding="utf-8")
     assert output.strip() == '{"ok": true}'
     assert state.read_text(encoding="utf-8").strip() == "3"
-    assert "attempt: 1" in log_content
-    assert "attempt: 2" in log_content
-    assert "attempt: 3" in log_content
+    assert log_content.startswith("---\n")
+    assert "latest_attempt: 3" in log_content
+    assert "latest_returncode: 0" in log_content
+    assert "## Attempt 1" in log_content
+    assert "## Attempt 2" in log_content
+    assert "## Attempt 3" in log_content
     captured = capsys.readouterr().out
     assert "codex exec attempt (1/3) prompt:" in captured
     assert "codex exec attempt (3/3) output:" in captured
+
+
+def test_run_codex_exec_notifies_console_and_subcommand_log(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Codex CLI 呼び出し通知は目的・相対ログ・時間・戻り値を tee する。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                "echo 'ok' > \"$LAST\"",
+                "echo '{\"event\":\"done\"}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    with subcommand_log(repo):
+        output = run_codex_exec(
+            repo,
+            "prompt",
+            purpose="unit test codex call",
+            read_only=True,
+        )
+
+    captured = capsys.readouterr().out
+    subcommand_logs = list((repo / "logs" / "sub_commands").glob("*.log"))
+    log_content = subcommand_logs[0].read_text(encoding="utf-8")
+    notification_head = (
+        "codex exec: unit test codex call "
+        "log=logs/codex_exec/call/"
+    )
+    assert output == "ok\n"
+    assert notification_head in captured
+    assert " elapsed=" in captured
+    assert " returncode=0" in captured
+    assert notification_head in log_content
+    assert " elapsed=" in log_content
+    assert " returncode=0" in log_content
 
 
 def test_run_codex_exec_passes_output_schema_file(
@@ -91,12 +152,14 @@ def test_run_codex_exec_passes_output_schema_file(
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
     args_file = tmp_path / "args.txt"
+    stdin_file = tmp_path / "stdin.txt"
     codex = fake_bin / "codex"
     codex.write_text(
         "\n".join(
             [
                 "#!/usr/bin/env bash",
                 f"printf '%s\\n' \"$@\" > {args_file}",
+                f"cat > {stdin_file}",
                 "LAST=''",
                 "PREV=''",
                 "for ARG in \"$@\"; do",
@@ -120,24 +183,63 @@ def test_run_codex_exec_passes_output_schema_file(
         expect_json=True,
         output_schema=_BOOLEAN_SCHEMA,
     )
+    schema_files = list(
+        (repo / "logs" / "codex_exec" / "output_schemae").glob("*.log")
+    )
+    second_output = run_codex_exec(
+        repo,
+        "prompt",
+        read_only=True,
+        expect_json=True,
+        output_schema=_BOOLEAN_SCHEMA,
+    )
 
     args = args_file.read_text(encoding="utf-8").splitlines()
+    stdin_prompt = stdin_file.read_text(encoding="utf-8")
     schema_path = Path(args[args.index("--output-schema") + 1])
-    log_content = next(
-        (repo / ".cmoc" / "logs" / "codex_exec").glob("*.log")
-    ).read_text(encoding="utf-8")
+    last_message_path = Path(args[args.index("--output-last-message") + 1])
+    log_contents = [
+        path.read_text(encoding="utf-8")
+        for path in (repo / "logs" / "codex_exec" / "call").glob("*.log")
+    ]
+    schema_body = json.dumps(
+        _BOOLEAN_SCHEMA,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    schema_hash = sha256(schema_body.encode("utf-8")).hexdigest()
     assert output.strip() == '{"ok": true}'
+    assert second_output.strip() == '{"ok": true}'
     assert "--json" in args
     assert "--output-last-message" in args
+    assert last_message_path.parent == (
+        repo / "logs" / "codex_exec" / "output_last_message"
+    )
+    assert last_message_path.suffix == ".log"
     assert "--model" in args
     assert "-c" in args
+    assert args[-1] == "-"
+    assert "prompt" not in args
+    assert stdin_prompt == "prompt"
     assert 'model_reasoning_effort="medium"' in args
     assert "--output-schema" in args
-    assert (
-        json.loads(schema_path.read_text(encoding="utf-8"))
-        == _BOOLEAN_SCHEMA
+    assert schema_path == (
+        repo / "logs" / "codex_exec" / "output_schemae" / f"{schema_hash}.log"
     )
-    assert f"output_schema: {schema_path}" in log_content
+    assert schema_path.read_text(encoding="utf-8") == schema_body
+    assert schema_files == [schema_path]
+    assert list(
+        (repo / "logs" / "codex_exec" / "output_schemae").glob("*.log")
+    ) == [schema_path]
+    assert any(
+        f"output_schema: \"{schema_path}\"" in content
+        for content in log_contents
+    )
+    assert any(
+        f"output_last_message: \"{last_message_path}\"" in content
+        for content in log_contents
+    )
 
 
 def test_run_codex_exec_prints_output_head80_before_escaping_newlines(
@@ -237,13 +339,13 @@ def test_run_codex_exec_retries_json_semantic_validation_failure(
         json_validator=validate,
     )
 
-    log_files = list((repo / ".cmoc" / "logs" / "codex_exec").glob("*.log"))
+    log_files = list((repo / "logs" / "codex_exec" / "call").glob("*.log"))
     log_content = log_files[0].read_text(encoding="utf-8")
     assert output.strip() == '{"ok": true}'
     assert state.read_text(encoding="utf-8").strip() == "3"
-    assert "attempt: 1" in log_content
-    assert "attempt: 2" in log_content
-    assert "attempt: 3" in log_content
+    assert "## Attempt 1" in log_content
+    assert "## Attempt 2" in log_content
+    assert "## Attempt 3" in log_content
 
 
 def test_run_codex_exec_reports_json_semantic_validation_failure(
@@ -350,13 +452,13 @@ def test_run_codex_exec_retries_text_semantic_validation_failure(
     )
 
     log_content = next(
-        (repo / ".cmoc" / "logs" / "codex_exec").glob("*.log")
+        (repo / "logs" / "codex_exec" / "call").glob("*.log")
     ).read_text(encoding="utf-8")
     assert output.strip() == "complete report"
     assert state.read_text(encoding="utf-8").strip() == "3"
-    assert "attempt: 1" in log_content
-    assert "attempt: 2" in log_content
-    assert "attempt: 3" in log_content
+    assert "## Attempt 1" in log_content
+    assert "## Attempt 2" in log_content
+    assert "## Attempt 3" in log_content
 
 
 def test_run_codex_exec_reports_text_semantic_validation_failure(
@@ -421,12 +523,57 @@ def test_run_codex_exec_requires_schema_for_structured_output(
 def test_run_codex_exec_rejects_forbidden_reasoning_effort(
     tmp_path: Path,
 ) -> None:
-    """oracle が禁止する high/xhigh reasoning effort は起動前に拒否する。"""
+    """oracle が禁止する xhigh reasoning effort は起動前に拒否する。"""
     repo = tmp_path / "repo"
     repo.mkdir()
 
     with pytest.raises(ValueError):
-        run_codex_exec(repo, "prompt", read_only=True, reasoning_effort="high")
+        run_codex_exec(repo, "prompt", read_only=True, reasoning_effort="xhigh")
+
+
+def test_run_codex_exec_allows_high_reasoning_effort(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """品質重視用途向けの high reasoning effort を Codex CLI に渡せる。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    args_file = tmp_path / "args.txt"
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                f"printf '%s\\n' \"$@\" > {args_file}",
+                "LAST=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                "echo done > \"$LAST\"",
+                "echo '{\"event\":\"done\"}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    output = run_codex_exec(
+        repo,
+        "prompt",
+        read_only=True,
+        reasoning_effort="high",
+    )
+
+    args = args_file.read_text(encoding="utf-8").splitlines()
+    assert output.strip() == "done"
+    assert 'model_reasoning_effort="high"' in args
 
 
 def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
@@ -440,12 +587,15 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
     args_file = tmp_path / "args.txt"
+    prompts_file = tmp_path / "prompts.txt"
     codex = fake_bin / "codex"
     codex.write_text(
         "\n".join(
             [
                 "#!/usr/bin/env bash",
                 f"printf '%s\\n' \"$@\" >> {args_file}",
+                "PROMPT=\"$(cat)\"",
+                f"printf '%s\\n---END---\\n' \"$PROMPT\" >> {prompts_file}",
                 "LAST=''",
                 "PREV=''",
                 "HAS_RESUME=0",
@@ -456,7 +606,6 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
                 "  fi",
                 "  PREV=\"$ARG\"",
                 "done",
-                "PROMPT=\"${@: -1}\"",
                 "if [ \"$PROMPT\" = \"original prompt\" ]; then",
                 "  if [ \"$HAS_RESUME\" = 0 ]; then",
                 "  echo '{\"session_id\":\"session-1\"}'",
@@ -485,11 +634,16 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
     output = run_codex_exec(repo, "original prompt", read_only=True)
 
     args = args_file.read_text(encoding="utf-8")
+    prompts = prompts_file.read_text(encoding="utf-8")
     captured = capsys.readouterr().out
     assert output.strip() == "resumed"
+    assert "original prompt" not in args
+    assert "Codex CLI の疎通確認担当" not in args
     assert "--resume\nsession-1" in args
-    assert "Codex CLI の疎通確認担当" in args
-    assert "/memo` は読み書き禁止です。" in args
+    assert args.count("\n-\n") == 3
+    assert "original prompt" in prompts
+    assert "Codex CLI の疎通確認担当" in prompts
+    assert "/memo` は読み書き禁止です。" in prompts
     assert "quota exhausted; waiting before resume" in captured
     assert "quota poll prompt: あなたは Codex CLI の疎通確認担当です。" in captured
     assert "quota poll output: ok" in captured
@@ -520,7 +674,7 @@ def test_run_codex_exec_fails_when_resume_returns_unexpected_error(
                 "  fi",
                 "  PREV=\"$ARG\"",
                 "done",
-                "PROMPT=\"${@: -1}\"",
+                "PROMPT=\"$(cat)\"",
                 "if [[ \"$PROMPT\" == *'Codex CLI の疎通確認担当'* ]]; then",
                 "  if [[ \"$PROMPT\" != *'/memo` は読み書き禁止です。'* ]]; then exit 2; fi",
                 "  if [[ \"$PROMPT\" != *'ファイル編集は禁止です。'* ]]; then exit 2; fi",
