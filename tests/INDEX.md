@@ -27,15 +27,13 @@
 
 ## Summary
 
-- `commons.codex.run_codex_exec` の Codex CLI 呼び出しラッパーを検証する pytest テストファイル。
-- Structured Output 用の JSON schema 渡し、`--json`、`--output-last-message`、`--output-schema`、model、reasoning effort 引数、schema ファイル生成、ログ記録を確認する。
-- JSON parse 失敗、JSON schema 不一致、JSON semantic validator 失敗、非 JSON text validator 失敗について、3 回リトライする挙動と失敗時の `CmocError` 詳細出力を検証する。
-- stdout 進捗表示では prompt と output を元文字列の先頭 80 文字で切ってから改行を可視化する仕様を確認する。
-- Structured Output 利用時の `output_schema` 必須条件と、oracle で禁止される high/xhigh reasoning effort の起動前拒否を検証する。
-- quota 枯渇時にセッション ID を取得し、疎通確認 prompt を実行した後、`--resume` 付きで元 prompt を再実行する挙動を検証する。
-- quota 復旧後の resume が想定外エラーを返した場合に即時 `CmocError` として報告する挙動を確認する。
-- 通常の Codex CLI 呼び出し直前に `commons.indexing.maintain_indexes` を実行することと、`skip_index_maintenance=True` で明示的にスキップできることを検証する。
-- テスト内では一時ディレクトリに fake `codex` 実行ファイルを作成し、`PATH` 差し替え、`monkeypatch`、`capsys`、一時 git repo を使って外部 Codex CLI の挙動を模擬する。
+- `commons.codex.run_codex_exec` の Codex CLI 呼び出しラッパーを検証する pytest テストファイルです。
+- Structured Output の JSON schema 渡し、`--json`、`--output-last-message`、`--output-schema`、model、reasoning effort、schema ファイル生成、ログ記録の挙動を確認します。
+- JSON parse 失敗、JSON schema 不一致、JSON semantic validator 失敗、非 JSON text validator 失敗について、3 回リトライする挙動と失敗時の `CmocError` 詳細出力を検証します。
+- stdout の進捗表示では、prompt と output を元文字列の先頭 80 文字で切ってから改行を可視化する仕様を確認します。
+- Structured Output 利用時の `output_schema` 必須条件と、oracle で禁止される high/xhigh reasoning effort の起動前拒否を検証します。
+- quota 枯渇時のセッション再開、`--resume` 付き再実行、resume 後の想定外エラー報告、`commons.indexing.maintain_indexes` の事前実行とスキップ指定を確認します。
+- テストでは一時ディレクトリに fake `codex` 実行ファイルを作成し、`PATH` 差し替え、`monkeypatch`、`capsys`、一時 git repo を使って外部 Codex CLI の挙動を模擬します。
 
 ## Read this when
 
@@ -53,11 +51,10 @@
 - `INDEX.md` 自動生成ロジックそのもの、対象ディレクトリの列挙、ハッシュ管理、ルーティング文書生成の詳細実装を調べたいとき。
 - Codex CLI や OpenAI API の一般的な使い方、外部仕様、最新のモデル情報を調べたいとき。
 - pytest 全体の設定、テスト共通 fixture、テスト環境構築、依存関係管理だけを確認したいとき。
-- cmoc を用いて開発する `<repo-root>` 側のファイル構造やプロジェクト固有ルールを調べたいとき。
 
 ## hash
 
-- 994bd3091388ff064dcc1efcfce278af8f5b41f2552b3bd76e82bd43910b47b8
+- 9500b79b0454eaad4460bde1cb95644ffebd726197018fb30b11442881ef93fa
 
 # `test_indexing.py`
 

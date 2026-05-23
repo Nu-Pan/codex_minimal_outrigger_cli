@@ -23,37 +23,33 @@
 
 ## Summary
 
-- `src/commons/codex.py` は、cmoc から Codex CLI の `codex exec` を呼び出すための共通処理をまとめたモジュールです。
-- `run_codex_exec` が中心で、INDEX 保守、ログ保存、Structured Output schema の保存と指定、last message 読み取り、JSON・テキスト検証、最大 3 回のリトライ、quota 枯渇時の待機・resume を扱います。
-- Codex CLI の model・reasoning effort・sandbox・`--json`・`--output-last-message`・`--output-schema` などのコマンドライン構築と、high/xhigh reasoning effort の拒否を実装します。
-- `.cmoc/logs/codex_exec` 配下へのフルログ追記、schema ファイル保存、stdout 向けの prompt/output 先頭表示など、利用者向け進捗と診断用ログを分離して扱います。
-- Codex CLI の JSON 応答を dict として読む `parse_json_object` と、cmoc で使う JSON Schema subset を再検証する補助関数群を含みます。
-- quota 枯渇らしさの判定、session id 抽出、resume コマンド生成、低コストな quota 疎通確認 prompt の構築もこのファイルに含まれます。
+- `src/commons/codex.py` は、cmoc から Codex CLI の `codex exec` を呼び出すための共通ラッパーです。
+- `run_codex_exec` を中心に、`model` と `reasoning effort` の組み立て、`read-only` / `workspace-write` の sandbox 指定、Structured Output の schema 連携、`--output-last-message` の回収を扱います。
+- Codex 実行前の INDEX.md 保守、`.cmoc/logs/codex_exec` へのフルログ保存、schema ファイルの保存もこのモジュールの責務です。
+- JSON 解析、JSON Schema subset の再検証、text / json の意味検証、最大 3 回のリトライ処理をまとめています。
+- quota 枯渇時の session id 抽出、`--resume` 付き再実行、復旧確認用の低コスト疎通チェックもここで扱います。
 
 ## Read this when
 
-- cmoc から Codex CLI をどのように起動しているか、`codex exec` の共通呼び出し仕様を確認したいとき。
-- Codex 実行前に INDEX 保守がいつ行われ、どの条件で `skip_index_maintenance` が使われるか調べたいとき。
-- `read_only` による sandbox 指定、model、reasoning effort、`--json`、`--output-last-message`、Structured Output schema 指定の組み立てを確認したいとき。
-- Codex CLI 呼び出しログや schema ファイルが `.cmoc/logs/codex_exec` 配下にどの形式で保存されるか調べたいとき。
-- Codex の last message をどのように読み取り、JSON parse、JSON Schema subset 検査、呼び出し側 validator、テキスト validator をどの順番で適用するか確認したいとき。
-- Codex CLI が不正な JSON や検証失敗の応答を返した場合のリトライ回数、失敗時の `CmocError` 診断情報を調べたいとき。
-- quota 枯渇時に session id を抽出して `--resume` する処理や、復旧確認用の低コスト Codex 呼び出しを確認したいとき。
-- Codex CLI の非 0 終了、quota 枯渇、last message 未生成などをどのようにエラー化するか調べたいとき。
+- cmoc から Codex CLI をどのように起動しているか確認したいとき。
+- `run_codex_exec` の引数、`read_only`、`expect_json`、`output_schema`、`json_validator`、`text_validator` の使い方を調べたいとき。
+- Structured Output の schema ファイルがどこに保存され、どのように `codex exec` に渡されるか確認したいとき。
+- Codex 実行ログ、last message ファイル、stdout / stderr の診断情報、リトライ条件を確認したいとき。
+- quota 枯渇時の待機・疎通確認・`--resume` 再実行の流れを確認したいとき。
+- JSON 応答の `dict` 変換や、cmoc 側の JSON Schema subset 検証を確認したいとき。
 
 ## Do not read this when
 
 - 個別サブコマンドの業務ロジックや CLI 引数定義だけを調べたいとき。
-- INDEX ファイルの列挙、目次生成対象の選別、ハッシュ比較など、インデックス保守処理そのものの詳細を調べたいとき。
-- `CmocError` の表示形式や例外クラス定義そのものを確認したいとき。
-- タイムスタンプ生成ルールだけを確認したいとき。
-- Codex CLI を使わない通常のファイル操作、git 操作、パス探索、oracle 列挙の実装だけを調べたいとき。
-- cmoc のテスト規約や Fake Codex CLI のテスト実装パターンだけを調べたいとき。
-- Codex CLI や OpenAI モデルの一般仕様を調べたいだけで、cmoc 内部の呼び出しラッパー実装が不要なとき。
+- `INDEX.md` の自動生成・更新・再利用ルールそのものを調べたいとき。
+- git リポジトリ探索、ブランチ操作、差分収集、`.cmoc` の ignore 保証を調べたいとき。
+- `CmocError` の表示形式や共通エラーハンドリング全体を調べたいとき。
+- タイムスタンプ生成や時間計測など、別の共通ユーティリティを確認したいとき。
+- テストコードや Fake Codex CLI の実装パターンだけを確認したいとき。
 
 ## hash
 
-- 373f0da584ef00984949c3c0f53123e45546b5a3fbde76cfaaafbe6b10725d5d
+- a6f0c1d47f0475678223aa3fa4457e6102ffd67d5163cf860defc5ac5da309ac
 
 # `command_runner.py`
 
