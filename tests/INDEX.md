@@ -56,30 +56,31 @@
 
 ## Summary
 
-- `commons.indexing.maintain_indexes` による `INDEX.md` メンテナンス処理の pytest テストです。
-- gitignore 対象の除外、空ディレクトリへの空 `INDEX.md` 作成、`build`/`tmp` の親目次掲載と配置除外、非 UTF-8 バイナリ除外、UTF-8 文字境界の取り扱い、`memo` ディレクトリの扱いを検証します。
-- 既存 `INDEX.md` の必須セクション欠落時の再生成、Structured Output 不正時のリトライ、最新 `INDEX.md` では Codex CLI を呼ばないこと、自動コミット対象がメンテナンス差分に限られることを検証します。
-- テスト用 git リポジトリ作成と git コマンド実行の補助関数 `_init_repo` と `_git` を含みます。
+- `commons.indexing.maintain_indexes` による `INDEX.md` メンテナンス処理を検証する pytest テストの目次です。
+- gitignore 除外、空ディレクトリへの空 `INDEX.md` 作成、`build` / `tmp` の扱い、非 UTF-8 バイナリ除外、UTF-8 文字境界、`memo` ディレクトリの扱いを確認します。
+- 既存 `INDEX.md` の必須セクション欠落による再生成、Structured Output 不正時のリトライ、最新 `INDEX.md` では Codex CLI を呼ばない挙動、自動コミットの対象範囲を確認します。
+- テスト用 git リポジトリを作成する `_init_repo` と、git コマンドを実行する `_git` の補助関数を含みます。
 
 ## Read this when
 
-- `maintain_indexes` の対象ファイル・対象ディレクトリ判定、除外規則、ハッシュによる再生成判定を確認したいとき。
-- `INDEX.md` 生成で Codex CLI に渡す Structured Output schema、model、reasoning effort の期待値を確認したいとき。
-- `build`、`tmp`、`memo`、`.gitignore`、非 UTF-8 バイナリ、空ディレクトリ、UTF-8 文字境界が `INDEX.md` メンテナンスでどう扱われるかを調べたいとき。
-- 既存 `INDEX.md` が最新か壊れているかで Codex CLI 呼び出し、再生成、リトライがどう変わるかを確認したいとき。
-- `INDEX.md` メンテナンス後の自動コミットがユーザー作業ファイルを巻き込まないことを確認したいとき。
+- `maintain_indexes` がどのファイル・ディレクトリを `INDEX.md` の目次対象にするか確認したいとき。
+- `INDEX.md` 生成時の gitignore 除外、空ディレクトリ処理、`build` / `tmp` の掲載と配置除外の関係を確認したいとき。
+- 非 UTF-8 バイナリ、UTF-8 文字境界、`memo` ディレクトリの扱いがどうなるかをテスト観点から確認したいとき。
+- 既存 `INDEX.md` が壊れている場合の再生成、Structured Output のリトライ、最新判定による Codex CLI 呼び出し有無を確認したいとき。
+- `INDEX.md` メンテナンス後に自動コミットがどの差分だけを含むかを確認したいとき。
+- テスト用 git リポジトリの作り方や、`_init_repo` / `_git` の使い方を確認したいとき。
 
 ## Do not read this when
 
-- cmoc の `INDEX.md` 目次仕様そのものを正本仕様として確認したいとき。
-- `maintain_indexes` の実装詳細を直接修正したいだけで、テスト期待値を確認する必要がないとき。
-- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` など個別サブコマンドの挙動を調べたいとき。
-- Codex CLI 実行共通処理や Structured Output リトライ処理の実装本体だけを読みたいとき。
-- git リポジトリ操作一般、pytest 一般、またはテスト用 fixture の書き方だけを調べたいとき。
+- `commons.indexing` の実装本体だけを追いたいとき。
+- `INDEX.md` の正本仕様そのものを知りたいとき。仕様断片は `oracles/app_specs/indexing.md` を読むべきです。
+- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` など個別サブコマンドの仕様を調べたいとき。
+- Codex CLI 呼び出し共通仕様、ログ保存、エラーハンドリングなど `INDEX.md` メンテナンス以外の実行仕様を調べたいとき。
+- `README.md`、`AGENTS.md`、`oracles`、`memo` の運用ルールや編集可否だけを確認したいとき。
 
 ## hash
 
-- 80901c433ef95e2268b5afeafbaf564a0371c640b34fdb568aebd38a5ec655f6
+- c0f44d7d640d0d3849d8e75450417b77b1e3808170911631ee5292682eba42a8
 
 # `test_repo.py`
 

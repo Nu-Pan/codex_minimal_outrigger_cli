@@ -108,16 +108,15 @@
 
 ## Summary
 
-- `src/commons/indexing.py` は、`INDEX.md` の自動メンテナンス処理をまとめた共通モジュールです。
-- `<repo-root>` 配下の配置対象ディレクトリを列挙し、必要な `INDEX.md` を生成・更新して、差分があれば自動コミットします。
-- `memo`、隠し項目、`gitignore` 対象、`build` / `tmp` / `__pycache__`、バイナリらしいファイルを除外する判定を実装しています。
-- 既存の `INDEX.md` ブロックを解析して再利用し、子項目のハッシュと固定フォーマットの一致で再生成要否を判定します。
+- `src/commons/indexing.py` は `<repo-root>` 配下の `INDEX.md` を列挙・生成・更新し、必要なら変更分を自動コミットする共通モジュールです。
+- `memo`、隠し項目、`build` / `tmp` / `__pycache__`、`gitignore` 対象、バイナリらしいファイルを除外しながら、目次配置対象ディレクトリと直下項目を判定します。
+- 既存の `INDEX.md` ブロックを解析して再利用し、子項目ハッシュと固定フォーマットが一致する場合は再生成を避けます。
 - 目次本文の新規生成では Codex CLI を Structured Output schema 付きで呼び出し、JSON 検証後に Markdown へ変換します。
 
 ## Read this when
 
-- `INDEX.md` がどのディレクトリへ配置され、どの項目が目次生成対象になるかを確認したいとき。
-- `maintain_indexes` の処理順、`INDEX.md` 更新、変更パス限定の自動コミットの流れを調べたいとき。
+- `INDEX.md` をどのディレクトリに配置し、どの項目を目次生成対象にするか確認したいとき。
+- `maintain_indexes` の処理順、`INDEX.md` 更新、変更パスだけを対象にした自動コミットの流れを調べたいとき。
 - 既存の `INDEX.md` がハッシュ一致時に再利用される条件や、固定フォーマット検証の仕様を確認したいとき。
 - `memo`、隠しディレクトリ、`build`、`tmp`、`__pycache__`、`gitignore` 対象、バイナリファイルの除外規則を確認したいとき。
 - INDEX 生成用の Codex CLI プロンプト、Structured Output schema、JSON 検証、Markdown 変換処理を変更したいとき。
@@ -132,7 +131,7 @@
 
 ## hash
 
-- 6d05df0e2ee40acbac84fbb0549101830c1a9a8fe7f3cdef13cba8aef7aaf83b
+- 8de94107ce9dd49c11f8672c66dcc2d2ddef0d7afb4c7f036d5e118cec4519ac
 
 # `repo.py`
 
