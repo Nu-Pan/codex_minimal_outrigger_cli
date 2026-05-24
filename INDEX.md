@@ -173,32 +173,6 @@
 
 - c20014553a4e48f3a2f9f5221852179231c76594ccc1bc4c82b8dddc651b203e
 
-# `routing.md`
-
-## Summary
-
-- リポジトリ直下の主要パスへのルーティング情報を箇条書きでまとめている。
-- `<cmoc-root>/bin`、`<cmoc-root>/src`、現行の oracle 入口である `oracles/INDEX.md` と各主要 `INDEX.md` について、用途や配置先を短く説明している。
-- cmoc の公開バイナリ、ソース配置、実行時仕様、サブコマンド仕様、開発者向けルール、採用しなかった設計案の入口を素早く把握するための入口となる。
-
-## Read this when
-
-- リポジトリ直下で、どのディレクトリや現行 oracle 入口を見ればよいか大まかに判断したいとき。
-- `bin` や `src` の役割を短く確認したいとき。
-- `oracles/app_specs`、`oracles/app_specs/sub_commands`、`oracles/dev_rules`、`oracles/considered_alternatives` のどれを起点にするか確認したいとき。
-- cmoc の実装ファイルや公開用バイナリの配置先を確認したいとき。
-
-## Do not read this when
-
-- cmoc の正本仕様を調べるために、現在の `oracles/INDEX.md` からルーティングすべきとき。
-- サブコマンド仕様、Codex CLI 連携、出力、エラー処理などの詳細なアプリケーション仕様を確認したいとき。
-- Python 実装規約、テスト規約、開発環境などの詳細な開発ルールを確認したいとき。
-- README、AGENTS、oracles、memo などの編集可否やファイルアクセス制約だけを確認したいとき。
-
-## hash
-
-- 38c522d31666cd227d95ba00e29f3d71de0e6182cf82585b581004f84aebc53d
-
 # `src`
 
 ## Summary
@@ -259,7 +233,7 @@
 - `tests/test_indexing.py` は `INDEX.md` の自動生成・更新、gitignore 除外、空ディレクトリ、バイナリ判定を検証します。
 - `tests/test_repo.py` は git リポジトリ共通処理、`.cmoc` の ignore、oracle / 実装ファイル列挙、差分検出を検証します。
 - `tests/test_subcommands.py` は `cmoc init`、`cmoc branch`、`cmoc eval-oracles`、`cmoc apply`、`cmoc merge` の制御ロジックを検証します。
-- `tests/test_file_naming.py` は `routing.md` の命名と現行 oracle 入口への参照を検証します。
+- `tests/test_file_naming.py` は旧ルーティングファイルの不存在を検証します。
 - `tests/test_timestamps.py` は timestamp 生成と経過時間表示の書式を検証します。
 
 ## Read this when
@@ -278,4 +252,4 @@
 
 ## hash
 
-- fbc2c42e989683a18bad98588d1cbe84507d7c5c17832bba39ae9cebc1102751
+- b9d0d744ccad86c46676e20f62e6bc2023472bb272a4ff5348d1cca9e8b29d51

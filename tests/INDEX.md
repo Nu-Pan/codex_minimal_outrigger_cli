@@ -57,15 +57,14 @@
 ## Summary
 
 - `tests/test_file_naming.py` はリポジトリ構成のファイル名が命名規則に従うことを検証するテストです。
-- ルート直下のルーティングファイルが指定のないファイル名としてスネークケースの `routing.md` になっていることを確認します。
-- 旧名の `ROUTING.md` が残存していないことを確認します。
-- `routing.md` が現行の oracle `INDEX.md` 入口を案内し、存在しない旧 `oracles/docs` 配下を直接参照していないことを確認します。
+- 旧ルーティングファイルである `routing.md` と `ROUTING.md` が残存していないことを確認します。
+- ルート直下の案内ファイルを増やさず、現行のルーティング入口を `INDEX.md` 群へ統合していることを検証します。
 
 ## Read this when
 
-- リポジトリ直下のルーティングファイル名に関する回帰テストを確認したいとき。
-- `routing.md` と `ROUTING.md` の期待状態をテスト観点から確認したいとき。
-- `routing.md` の oracle 参照先が現行構成に追従していることを検証したいとき。
+- リポジトリ直下に旧ルーティングファイルが残っていないことを確認したいとき。
+- `routing.md` と `ROUTING.md` の不存在をテスト観点から確認したいとき。
+- ルーティング入口を `INDEX.md` 群へ一本化する方針の回帰テストを探すとき。
 
 ## Do not read this when
 
@@ -75,7 +74,7 @@
 
 ## hash
 
-- 2de90d094eb10a99efef725b983166cbb500ae3fa6e3ee48e8c915ad4ea809b1
+- da6fb4e9bc601ae30956b75bfcaf9e3aff37eb1cad5ed6bf58094e64ec5cf412
 
 # `test_indexing.py`
 
