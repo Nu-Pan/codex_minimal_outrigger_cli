@@ -61,22 +61,23 @@
 
 ## Summary
 
-- `src/sub_commands` は、cmoc の各サブコマンド実装をまとめるルーティング用ディレクトリです。
-- この配下には `__init__.py`、`apply.py`、`branch.py`、`eval-oracles.py`、`init.py`、`merge.py` があり、それぞれ `cmoc apply`、`cmoc branch`、`cmoc eval-oracles`、`cmoc init`、`cmoc merge` の本体実装への入口になります。
-- サブコマンドごとの業務ロジック、処理順、引数、終了条件を追うときの最初の案内所として機能します。
+- `cmoc` のサブコマンド実装を集約する `src/sub_commands` ディレクトリの目次です。
+- `__init__.py` と、`apply.py`、`branch.py`、`init.py`、`merge.py`、`eval-oracles.py` への入口をまとめています。
+- 各サブコマンド本体の処理概要、実行順序、補助関数の役割を素早く引けるように整理します。
 
 ## Read this when
 
-- `src/sub_commands` 配下で、どのファイルがどのサブコマンドを担当しているかを確認したいとき。
-- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` の実装本体へ移動したいとき。
-- サブコマンド実装パッケージの境界や、各モジュールの役割をざっと把握したいとき。
+- `cmoc` の各サブコマンド実装がどのファイルにあるか確認したいとき。
+- `apply`、`branch`、`init`、`merge`、`eval-oracles` の処理フローを個別に追いたいとき。
+- サブコマンド実装パッケージ全体の構成や、各モジュールの役割分担を把握したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの具体的な処理手順、引数、エラーハンドリングだけを確認したいとき。
-- `cmoc` 自体の開発ルール、コーディング規約、テスト規約、開発環境を調べたいとき。
-- `README.md`、`AGENTS.md`、`oracles`、`memo` の運用ルールや編集可否だけを確認したいとき。
+- `commons` 側の共通基盤やユーティリティだけを調べたいとき。
+- `oracles` 配下の正本仕様や、`README.md`、`AGENTS.md` などの運用ルールだけを確認したいとき。
+- CLI エントリポイントやコマンド登録の仕組みだけを調べたいとき。
+- 開発ルール、テスト方針、環境設定など、`src/sub_commands` 以外の実装規約を確認したいとき。
 
 ## hash
 
-- 05d25427815a6fea0d0959f24c25d773aa20c97904f5a59d4054409695f755cb
+- d8dfc8ed8863a6bbc09ea1425cbf6d5fb671240173680f8b6b61d5fac8702efb

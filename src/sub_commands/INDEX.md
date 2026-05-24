@@ -24,28 +24,27 @@
 
 ## Summary
 
-- `cmoc apply` の本体実装をまとめるモジュールで、不整合調査、要修正点の整理、個別適用、レポート保存までの一連の処理を扱います。
-- 部分適用・全体適用の切り替え、対象ファイルの選別、反復回数制御、Structured Output の検証、編集禁止領域の確認、commit 処理などの補助関数も含みます。
-- `run_codex_exec` に渡す各種 prompt 生成や、apply レポートの内容検証・保存に関する実装を追いたいときの入口です。
+- `cmoc apply` の本体実装をまとめるモジュールです。
+- 不整合調査、要修正点の整理、個別適用、修正後の commit、作業レポート保存までの流れを扱います。
+- 部分適用・全体適用の切り替え、対象ファイルの選別、反復回数制御、Structured Output 検証、編集禁止領域チェック、各種 prompt 生成とレポート検証の補助関数も含みます。
 
 ## Read this when
 
-- `cmoc apply` の実装や挙動を確認したいとき。
-- 不整合調査の Structured Output schema や、要修正点の改善ループの実装を追いたいとき。
-- 部分適用と全体適用の切り替え条件、調査対象ファイルの絞り込み、修正後 commit の流れを確認したいとき。
-- `.cmoc/reports/apply` へのレポート出力や、レポート本文の必須項目チェックを確認したいとき。
-- このモジュール内の prompt 生成関数や検証関数の役割を把握したいとき。
+- `cmoc apply` の処理順序や全体フローを確認したいとき。
+- 不整合調査用の Structured Output schema、要修正点の整理ロジック、実装への追従ループを確認したいとき。
+- 部分適用と全体適用の切り替え条件、調査対象の絞り込み、修正後の commit やレポート保存の流れを確認したいとき。
+- このモジュール内の prompt 生成関数、JSON 検証関数、レポート検証関数の役割を把握したいとき。
 
 ## Do not read this when
 
-- `cmoc init`、`cmoc branch`、`cmoc eval-oracles`、`cmoc merge` など他のサブコマンドの実装だけを調べたいとき。
+- `cmoc init`、`cmoc branch`、`cmoc eval-oracles`、`cmoc merge` など他サブコマンドの実装だけを調べたいとき。
 - `commons` 側の共通基盤、たとえば `run_codex_exec` や git ユーティリティの詳細だけを確認したいとき。
 - `oracles/app_specs/sub_commands/apply.md` にある正本仕様そのものを読みたいとき。
-- cmoc 全体の開発ルール、テスト規約、ディレクトリ構成の案内だけが必要なとき。
+- `cmoc` 全体の開発ルール、コーディング規約、テスト方針だけを確認したいとき。
 
 ## hash
 
-- 3c9a37aa2198014e5209c0cbdae2567c435ee85fdd63cd93d41957138d4ccc4a
+- cf40519616b1d190d6e1c4a9e139e31fa2bc70528ca36709d6e658df406ecfde
 
 # `branch.py`
 
@@ -74,11 +73,11 @@
 
 - d5849b98d41d0a4141bfd20cc13fb2f98ac5a781a9f4f21f2fe5f30c445eebd0
 
-# `eval_oracles.py`
+# `eval-oracles.py`
 
 ## Summary
 
-- `src/sub_commands/eval_oracles.py` は `cmoc eval-oracles` の本体実装で、oracle 断片の評価、Structured Output の検証、Markdown レポート生成をまとめて担当します。
+- `src/sub_commands/eval-oracles.py` は `cmoc eval-oracles` の本体実装で、oracle 断片の評価、Structured Output の検証、Markdown レポート生成をまとめて担当します。
 - 実行前に `.cmoc` の ignore 保証と `INDEX.md` メンテナンスを行い、`--full` とブランチ状態に応じて部分評価モードと全体評価モードを切り替えます。
 - 各 oracle ファイルごとに `codex exec` を読み取り専用で呼び出し、`oracles` 配下の仕様断片と `INDEX.md` だけを参照させたうえで評価結果を収集します。
 - 評価結果は severity 別に集約され、成功時は通常レポート、失敗時は代替の error レポートとして `.cmoc/reports/eval-oracles/<timestamp>.md` に保存されます。
