@@ -1,15 +1,15 @@
-# `cmoc apply fork`
+# `cmoc apply`
 
 ## 概要
 
-- `cmoc apply fork` は、Codex CLI による調査・修正ループを開始する
+- `cmoc apply` は、Codex CLI による調査・修正ループを開始する
 - この調査・修正ループは以下の状態を目標とする
     - `<repo-root>` の実装を `<repo-root>/oracles` の正本仕様断片と一致している
     - `<repo-root>` の実装が最低限度の品質を満たしている
-- `cmoc apply fork` が正常に実行完了したからといって、目標達成が保証されるわけではない
-    - あくまで、調査・修正ループの実行し、目標達成のために努力する所までが `cmoc apply fork` の責任範囲である
+- `cmoc apply` が正常に実行完了したからといって、目標達成が保証されるわけではない
+    - あくまで、調査・修正ループの実行し、目標達成のために努力する所までが `cmoc apply` の責任範囲である
     - i.e. ベストエフォート的な振る舞いで良い
-- `cmoc apply fork` は `<cmoc-session-branch>` と作業用コピーを直接汚すことはしない
+- `cmoc apply` は `<cmoc-session-branch>` と作業用コピーを直接汚すことはしない
     - `<cmoc-apply-branch>` を作成し、そこにコミットを積み上げる
     - また、実作業は `<apply-worktree>` 上で行われる
 
@@ -55,15 +55,13 @@
 9. apply 終了時点の `<cmoc-session-branch>` HEAD を取得し、apply run metadata に保存する
 10. `<cmoc-session-branch>` が apply 実行中に進んだかどうかを metadata とレポートに記録する
 
+## `cmoc apply` の責務境界
 
-
-## `cmoc apply fork` の責務境界
-
-- `cmoc apply fork` の責務は、指定された最大回数の範囲で調査・修正ループを実行し、その結果を人間が判断できる形でレポートすることである
-- `cmoc apply fork` は、要修正点が残っていないことを保証しない
-- `cmoc apply fork` は、全ての要修正点を漏れなく発見することは保証しない（あくまでベストエフォート的に振る舞う）
+- `cmoc apply` の責務は、指定された最大回数の範囲で調査・修正ループを実行し、その結果を人間が判断できる形でレポートすることである
+- `cmoc apply` は、要修正点が残っていないことを保証しない
+- `cmoc apply` は、全ての要修正点を漏れなく発見することは保証しない（あくまでベストエフォート的に振る舞う）
 - ループが回数上限に達した場合も、コマンド実行としては正常系として扱う
-- 回数上限到達後にさらに `cmoc apply fork` を再実行するか、`cmoc eval-oracles` や人手レビューを行うか、作業を打ち切るかは人間が判断する
+- 回数上限到達後にさらに `cmoc apply` を再実行するか、`cmoc eval-oracles` や人手レビューを行うか、作業を打ち切るかは人間が判断する
 
 ## git worktree と編集操作
 
@@ -84,12 +82,12 @@
 
 ### 対象となる git スナップショット
 
-`cmoc apply fork` の評価対象は開始時点の `<oracle-snapshot-commit>` に固定される。
-つまり、例えば、 `cmoc apply fork` の実行開始後にユーザーによって `oracles` ファイルの編集が `<cmoc-session-branch>` へ commit された場合、その編集内容は既に実行開始した `cmoc apply fork` の調査対象には含まれない。
+`cmoc apply` の評価対象は開始時点の `<oracle-snapshot-commit>` に固定される。
+つまり、例えば、 `cmoc apply` の実行開始後にユーザーによって `oracles` ファイルの編集が `<cmoc-session-branch>` へ commit された場合、その編集内容は既に実行開始した `cmoc apply` の調査対象には含まれない。
 
 ### 部分適用モード・全体適用モード
 
-`cmoc apply fork` は以下の２つのモードを持つ
+`cmoc apply` は以下の２つのモードを持つ
 
 - `--full` が付いている場合は全体適用モード
 - `--full` が付いていない場合は部分適用モード
@@ -135,7 +133,7 @@
     - 要修正点を先頭から順番に対応した時に、それが作業順序として適切であること
     - 要修正点リスト改善の過程で発見した「漏れ」が要修正点リストに追加されていること
 - 改善後の要修正点リストが空の場合のみ「検出された要修正点なし」と扱う
-    - これは「この調査結果においては」という但し書きが付くが、要修正点の完全解消は `cmoc apply fork` の目的ではないので、これでよい
+    - これは「この調査結果においては」という但し書きが付くが、要修正点の完全解消は `cmoc apply` の目的ではないので、これでよい
 - 改善語の要修正点リストは Structured Output で受け取る
 
 ## 要修正点リストの Structured Output schema
@@ -261,7 +259,7 @@
         - ループごとに何件の要修正点を見つけたかを書く
         - 「未収束」の場合は、まだ要修正点が残っている可能性を追記する
     - `<cmoc-apply-branch>` 上の全ての変更内容に対する要約
-        - この `cmoc apply fork` で行った作業内容だけの要約に限定する
+        - この `cmoc apply` で行った作業内容だけの要約に限定する
         - 変更内容の意味論に基づいたカテゴリ分けを行うこと
 - レポート本体は `<repo-root>/.cmoc/reports/apply/<time-stamp>.md` にファイルに保存する
 - 作成したレポートのフルパスを標準出力に流す
@@ -272,8 +270,8 @@
 
 ## apply 結果の扱い
 
-`cmoc apply fork` は `<cmoc-apply-branch>` に実装修正 commit を積む。
-`cmoc apply fork` は、完了時に `<cmoc-apply-branch>` を `<cmoc-session-branch>` へ自動 merge しない。
+`cmoc apply` は `<cmoc-apply-branch>` に実装修正 commit を積む。
+`cmoc apply` は、完了時に `<cmoc-apply-branch>` を `<cmoc-session-branch>` へ自動 merge しない。
 
 理由は、apply 実行中にユーザーが `<cmoc-session-branch>` 上で oracles を編集・commit している可能性があるためである。
 
