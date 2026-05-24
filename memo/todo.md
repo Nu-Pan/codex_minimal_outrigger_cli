@@ -1,3 +1,26 @@
+## branch, apply, merge 大工事の余波
+
+- 大工事の過程で、未コミット差分なしだと通らないようになったけど、これは戻したい
+- ブランチのメタ名は `<cmoc-...>` みたいにプリフィックス cmoc を付ける方向性で統一したい
+- 意図がよくわからん
+    > apply 開始後に `<cmoc-session-branch>` へ追加された commit は、実行中の apply の部分適用対象には含めない。
+- `<cmoc-apply-branch>` の `<cmoc-session-branch>` へのマージ作業はサブコマンドとして導入したい
+    - `cmoc apply fork`, `cmoc apply join` とかだろうか
+    - であれば `<cmoc-session-branch>` の方は `cmoc session fork`, `cmoc session join` の方が良いだろう
+    - git の branch, merge とは別概念なので、別ワードを割り当てたいという意図もある
+- `cmoc session report` が必要
+    - 今この瞬間に `cmoc session join` したら、どういう内容になるか？　をレポートさせる
+    - このまま `cmoc session join` に進んでよいかの判断材料
+- スキーマをどこにも書いてない
+    - `<repo-root>/.cmoc/sessions/<session-id>/session.json`
+    - `<repo-root>/.cmoc/sessions/<session-id>/apply-runs/<apply-run-id>.json`
+- oracles として用語集が必要
+    - 用語関係は将来的には cmoc の機能にしたいが、直近は oracles に手作業で書く
+- どこに書くのん
+    > `<cmoc-apply-branch>` を `<cmoc-session-branch>` に取り込む操作は、`cmoc merge` の責務ではない。
+- `<cmoc-apply-branch>` の削除ルール
+    - 書いてない
+
 ## cmoc が作業している間も oracles を編集したい
 
 - 今の仕様だと cmoc の作業中に oracles を触るとエラーで止まる
@@ -7,6 +30,10 @@
 
 - master へのマージではなく、分岐元ブランチへのマージとしたい
 - どのみち、 apply で専用ブランチを作成することを考えるとまとめて再検討が必要という話ではある
+
+# cmoc branch が未コミット差分ありでも通る仕様に戻したい
+
+- 普通に不便なので、未コミット差分は許容したい
 
 ## Codex CLI の呼び出しを可能な限り並列にしたい
 

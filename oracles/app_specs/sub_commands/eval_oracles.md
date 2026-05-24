@@ -16,17 +16,17 @@
 ## 部分・全体評価モード
 
 - `cmoc eval-oracles` は部分評価・全体評価の２つのモードを持つ
-- `<cmoc-branch>` 上に居る場合
+- `<cmoc-session-branch>` 上に居る場合
     - `--full` がついている場合は全体評価モードへ
     - `--full` が付いていない場合は部分評価モードへ
-- `<cmoc-branch>` に居ない場合 (e.g. `master` ブランチ上)
+- `<cmoc-session-branch>` に居ない場合 (e.g. `master` ブランチ上)
     - 全体評価モードへ
 
 ## 実行手順
 
 1. `<repo-root>/.cmoc` が git の追跡対象外であることを保証する
 2. `oracles` ファイルを列挙
-3. 部分評価モードの場合、列挙した `oracles` ファイルリストを「`<cmoc-branch>` 上で変更があった `oracles` ファイル」のみに絞り込む
+3. 部分評価モードの場合、列挙した `oracles` ファイルリストを「`<cmoc-session-branch>` 上で変更があった `oracles` ファイル」のみに絞り込む
 4. 列挙した `oracles` ファイルリストに対して、ファイルごとの評価を行う
 6. これまでに出した評価を１つのレポートにまとめる
 

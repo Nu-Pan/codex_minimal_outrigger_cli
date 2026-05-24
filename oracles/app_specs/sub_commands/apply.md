@@ -9,6 +9,9 @@
 - `cmoc apply` が正常に実行完了したからといって、目標達成が保証されるわけではない
     - あくまで、調査・修正ループの実行し、目標達成のために努力する所までが `cmoc apply` の責任範囲である
     - i.e. ベストエフォート的な振る舞いで良い
+- `cmoc apply` は `<cmoc-session-branch>` と作業用コピーを直接汚すことはしない
+    - `<cmoc-apply-branch>` を作成し、そこにコミットを積み上げる
+    - また、実作業は `<apply-worktree>` 上で行われる
 
 ## 引数
 
@@ -19,24 +22,41 @@
 
 ## 事前条件
 
-- `<cmoc-branch>` 上に居なければエラー終了とする
-- git 未コミット差分があればエラー終了する
-    - 人間が事前に必要な差分を手動でコミットする事（クリーンな状態すること）を前提とする
+以下の場合はエラー終了する。
+
+- 現在 branch が `<cmoc-session-branch>` ではない
+- session metadata が存在しない
+- session metadata の `state` が `active` ではない
+- git 未コミット差分が存在する
+- 同じ session に `running` 状態の apply run が既に存在する
 
 ## 部分・全体適用モード
 
-- `cmoc apply` は部分適用・全体適用の２つのモードを持つ
+`cmoc apply` は部分適用・全体適用の２つのモードを持つ
+
 - `--full` がついている場合は全体適用モードへ
 - `--full` が付いていない場合は部分適用モードへ
+
+部分適用モードでは、初回の調査対象を以下に絞る。
+
+- `<session-start-commit>..<oracle-snapshot-commit>` で変更された `oracles` ファイル
+- `<session-start-commit>..<oracle-snapshot-commit>` で変更された実装ファイル
+
+apply 開始後に `<cmoc-session-branch>` へ追加された commit は、実行中の apply の部分適用対象には含めない。
+
+調査・修正ループの 2 回目以降では、`<cmoc-apply-branch>` 上でそれまでに積まれた実装修正 commit も考慮してよい。
 
 ## 実行作業
 
 1. `<repo-root>/.cmoc` が git の追跡対象外であることを保証する
-2. `<repo-root>/oracles` 配下の未コミット差分を自動コミット
-3. 調査・修正ループ（最大 N 回）
+2. 現在の `<cmoc-session-branch>` HEAD を `<oracle-snapshot-commit>` として取得する
+3. 一意な `<apply-run-id>` を生成する
+4. `<oracle-snapshot-commit>` から `<cmoc-apply-branch>` を作成する
+5. `<cmoc-apply-branch>` を checkout した専用 `<apply-worktree>` を作成する
+6. apply run metadata を `.cmoc/sessions/<session-id>/apply-runs/<apply-run-id>.json` に保存する
+7. `<apply-worktree>` 上で調査・修正ループを実行する
     1. 部分・全体適用モードを再評価
-    2. `oracles` ファイル・実装ファイルを列挙する
-    3. 部分適用モードの場合、 1. で列挙したファイルリストを「`<cmoc-branch>` 上で変更のあった `oracles` ファイル・実装ファイル」に絞り込む
+    2. 調査対象となる `oracles` ファイル・実装ファイルを列挙する
     4. Codex CLI に、列挙したファイルリストを元に要修正点をリストアップさせる
     5. 要修正点リスト改善ループ (最大 M 回)
         1. Codex CLI に、要修正点リストを改善させる
@@ -48,7 +68,9 @@
         2. `<repo-root>/oracles` などの編集禁止ディレクトリに未コミット差分が有る場合はエラー終了
         3. 全ての未コミット差分を git にコミット（コミットメッセージは Codex CLI で適切なものを生成）
     8. 調査・修正ループ先頭に戻る
-4. 作業結果と判断材料をレポートする
+8. 作業結果と判断材料をレポートする
+9. apply 終了時点の `<cmoc-session-branch>` HEAD を取得し、apply run metadata に保存する
+10. `<cmoc-session-branch>` が apply 実行中に進んだかどうかを metadata とレポートに記録する
 
 ## `cmoc apply` の責務境界
 
@@ -57,6 +79,13 @@
 - `cmoc apply` は、全ての要修正点を漏れなく発見することは保証しない（あくまでベストエフォート的に振る舞う）
 - ループが回数上限に達した場合も、コマンド実行としては正常系として扱う
 - 回数上限到達後にさらに `cmoc apply` を再実行するか、`cmoc eval-oracles` や人手レビューを行うか、作業を打ち切るかは人間が判断する
+
+## git worktree と編集操作
+
+- `<apply-worktree>` 上の `oracles/` は編集禁止である。
+- Codex CLI による実装修正が `<apply-worktree>/oracles` を変更した場合はエラー終了する。
+- 一方、apply 実行中にユーザーが `<cmoc-session-branch>` 側で `oracles/` を編集・commit しても、実行中の apply には取り込まれない。
+
 
 ## ループの反復回数の決め方
 
@@ -98,7 +127,7 @@
     - 要修正点の内容の品質に明確な問題が存在しないこと
     - 要修正点同士に内容的な重複がないこと
     - 要修正点同士が相互に矛盾していないこと
-    - 要修正点の内容が、 `<cmoc-branch>` 上の過去の修正内容を考慮したものになっていること
+    - 要修正点の内容が、 `<cmoc-apply-branch>` 上の過去の修正内容を考慮したものになっていること
     - 要修正点が False-Positive ではないこと
     - 要修正点を先頭から順番に対応した時に、それが作業順序として適切であること
     - 要修正点リスト改善の過程で発見した「漏れ」が要修正点リストに追加されていること
@@ -212,16 +241,24 @@
 ## 作業レポートの仕様
 
 - レポート執筆は Codex CLI に依頼する
-- レポートの内容
+- レポートの形式は markdown + YAML Front Matter とする
+- YAML Front Matter に必ず含める項目
+    - session branch
+    - apply branch
+    - apply worktree path
+    - oracle snapshot commit
+    - session head at apply start
+    - session head at apply finish
+    - session branch が apply 実行中に進んだかどうか
+- レポート本文に必ず含める項目
     - 作業結果
-        - 作業結果の区分を一言で書く
-            - 収束 : 「検出された要修正点リストが空」によりループを終了した場合
-            - 未収束 : 「回数上限に達した」によりループを終了した場合
+        - 収束 : 「検出された要修正点リストが空」によりループを終了した場合
+        - 未収束 : 「回数上限に達した」によりループを終了した場合
     - 要修正点件数の推移
         - ループごとに何件の要修正点を見つけたかを書く
         - 「未収束」の場合は、まだ要修正点が残っている可能性を追記する
-    - `<cmoc-branch>` 上の全ての変更内容に対する要約
-        - この `cmoc apply` で行った作業内容だけの要約ではない（それ以前の作業内容も含めるということ）
+    - `<cmoc-apply-branch>` 上の全ての変更内容に対する要約
+        - この `cmoc apply` で行った作業内容だけの要約に限定する
         - 変更内容の意味論に基づいたカテゴリ分けを行うこと
 - レポート本体は `<repo-root>/.cmoc/reports/apply/<time-stamp>.md` にファイルに保存する
 - 作成したレポートのフルパスを標準出力に流す
@@ -229,3 +266,13 @@
 ## サブコマンドの終了コード
 
 - 収束・未収束・エラーの３種類を区別可能であること
+
+## apply 結果の扱い
+
+`cmoc apply` は `<cmoc-apply-branch>` に実装修正 commit を積む。
+`cmoc apply` は、完了時に `<cmoc-apply-branch>` を `<cmoc-session-branch>` へ自動 merge しない。
+
+理由は、apply 実行中にユーザーが `<cmoc-session-branch>` 上で oracles を編集・commit している可能性があるためである。
+
+apply 結果は、`<oracle-snapshot-commit>` に対する実装追従結果である。
+apply 実行中に `<cmoc-session-branch>` が進んだ場合、最新 oracles に対する追従は保証しない。
