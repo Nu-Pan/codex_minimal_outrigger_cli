@@ -53,14 +53,15 @@
 
 ## Summary
 
-- `src/commons/command_runner.py` は、CLI サブコマンドの Typer エントリーポイントから呼ばれる共通実行ラッパーです。
-- `run_command(handler)` が `<repo-root>` の解決を `enter_repo_root()` に委ね、解決済みの `Path` を `handler` に渡して実行します。
-- `handler` が整数を返した場合は終了コードとして扱い、`typer.Exit` と通常例外を共通方針で終了コード化します。
-- 例外発生時は `format_error_report()` で利用者向けレポートを出し、`subcommand_log` と `timing` の集計結果も最後に出力します。
+- `src/commons/command_runner.py` は、Typer から呼ばれるサブコマンド共通の実行ラッパーをまとめるモジュールです。
+- `enter_repo_root()` で `<repo-root>` を解決し、その `Path` を各サブコマンド本体に渡して実行します。
+- `typer.Exit` と通常例外を共通方針で終了コード化し、必要に応じて `format_error_report()` で利用者向けレポートを出します。
+- `subcommand_log` と `timing` と連携して、サブコマンド全体の経過時間、待機時間、戻り値を最後に出力します。
+- サブコマンド本体を薄く保ち、実行制御・エラー処理・集計出力を `commons` 側へ集約する役割を持ちます。
 
 ## Read this when
 
-- サブコマンド本体を薄く保ち、共通の実行制御をどこに集約しているか確認したいとき。
+- サブコマンドの入口をどこに集約しているか、共通の実行制御を確認したいとき。
 - 各サブコマンドが `<repo-root>` の `Path` をどのように受け取るか確認したいとき。
 - 例外時の共通エラー表示、終了コードの決定、`typer.Exit` への変換規則を確認したいとき。
 - サブコマンド実行時のログ、経過時間、待機時間、戻り値出力の流れを追いたいとき。
@@ -74,7 +75,7 @@
 
 ## hash
 
-- c7cbbadbd76f6d19446132324442beeb3558377b48e8e28e8a998368a94518a7
+- 1a30a308606e2791c48b17833e7e0427c5b04e7e3ca6ecfe8a6880de7f9ab4b0
 
 # `errors.py`
 
