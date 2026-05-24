@@ -109,11 +109,11 @@
 
 ## Summary
 
-- `tests/test_repo.py` は `commons.repo` にある git リポジトリ共通処理の自動テストをまとめた目次です。
-- `.cmoc` の ignore 保証、既存 tracked ファイルの index 除外、cmoc ブランチ判定、branch base commit 記録先を扱います。
-- oracle ファイル列挙では `INDEX.md` の除外、root `.gitignore` のみを使う判定、`/` 付き pattern、`**` pattern、tracked な ignored file の扱いを検証します。
-- 実装ファイル列挙では `oracles`、`.git`、`INDEX.md`、gitignore 対象を除外して、実装対象だけを返すことを検証します。
-- 変更・削除検出では、base commit からの oracle / 実装の差分抽出、rename、未追跡ディレクトリ、履歴上の戻し、削除判定と `assert_no_uncommitted_changes` を確認します。
+- `tests/test_repo.py` は `commons.repo` の git リポジトリ共通処理を検証するテスト群の目次です。
+- `.cmoc` の ignore 保証、既存 tracked ファイルの index 解除、cmoc ブランチ判定、branch base commit の保存先を扱います。
+- oracle ファイル列挙では `INDEX.md` の除外、root `.gitignore` のみを使う判定、`/` 付き pattern、`**` pattern、tracked な ignored file の扱いを確認します。
+- 実装ファイル列挙では `oracles`、`.git`、`INDEX.md`、gitignore 対象を除外して、実装対象だけを返すことを確認します。
+- 変更・削除検出では、base commit からの oracle / 実装の差分抽出、rename、未追跡ディレクトリ、履歴上の戻し、削除判定、`assert_no_uncommitted_changes` を確認します。
 
 ## Read this when
 
@@ -134,13 +134,13 @@
 - `commons.repo` 以外の本体実装や別モジュールのテストを探しているとき。
 - oracle 正本仕様そのものを知りたいとき。仕様断片は `oracles/app_specs` 側を読むべきです。
 - `INDEX.md` の自動生成やメンテナンス仕様だけを知りたいとき。
-- `README.md`、`AGENTS.md`、`memo` の運用ルールだけを確認したいとき。
+- `README.md`、`AGENTS.md`、`memo` の運用ルールや編集可否だけを確認したいとき。
 - `tests/test_codex.py` や `tests/test_indexing.py` のような別テスト群の仕様を調べたいとき。
 - gitignore pattern の一般論だけを調べており、cmoc における oracle / 実装ファイル列挙の期待挙動が不要なとき。
 
 ## hash
 
-- d2819022054e7ef9e7ed6cf5c2c2ddb1f4f42c3091dd8f2d6284d508083915f3
+- aae0b10a2203cdecbfddf542ef3e22803bdddea3140069e1266605891ae6cb06
 
 # `test_subcommands.py`
 
