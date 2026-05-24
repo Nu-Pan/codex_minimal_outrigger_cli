@@ -23,31 +23,30 @@
 
 ## Summary
 
-- `src/commons/codex.py` は、cmoc から `codex exec` を起動するための共通ラッパーと、その前後処理をまとめるモジュールです。
-- `--model`、`--sandbox`、`-c model_reasoning_effort=...`、`--json`、`--output-schema`、`--output-last-message` の付与を統一して扱います。
-- Structured Output 用の schema ファイル生成、呼び出しログ、last message の保存、JSON 解析と schema 再検証を担います。
-- 最大 3 回のリトライ、quota 枯渇時の `--resume`、session id の抽出、待機ループを扱います。
-- `parse_json_object` と model / reasoning_effort の妥当性検査など、Codex CLI 連携の共通処理を集約しています。
+- `codex exec` の共通呼び出し処理をまとめたモジュールです。
+- モデル指定、reasoning effort、read-only / workspace-write サンドボックス、Structured Output の設定を共通化しています。
+- `output-last-message` の回収、JSON / JSON Schema 検証、quota 枯渇時の待機と `--resume` 再開を扱います。
+- `logs/codex_exec` 配下への呼び出しログ保存、前後のメタデータ記録、進捗通知の出力を担います。
+- Codex CLI の応答を cmoc 側で再検証するための JSON object 解析と schema subset 検査の補助関数を含みます。
 
 ## Read this when
 
-- cmoc から Codex CLI をどの引数・出力形式で呼び出すべきか確認したいとき。
-- Structured Output の schema ファイルの生成、検証、`--output-schema` への渡し方を調べたいとき。
-- JSON 応答の `dict` 化、schema 検証、text validator、リトライ条件を変更したいとき。
-- quota 枯渇時に session id を抽出して `--resume` し、回復待ちを行う流れを確認したいとき。
-- Codex CLI 呼び出しの共通定数や、利用可能な `model` / `reasoning_effort` の制約を確認したいとき。
+- `codex exec` の実行フローや共通引数の組み立て方法を確認したいとき。
+- Structured Output 用の JSON schema ファイル生成や、JSON 応答の再検証方法を調べたいとき。
+- quota 枯渇時の待機、疎通確認、`--resume` 再開の挙動を確認したいとき。
+- Codex CLI の call log、last message、front matter 付きログの保存規則を確認したいとき。
+- `cmoc` から Codex CLI を呼ぶ共通処理を修正・拡張したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの業務ロジック、CLI 引数、ユーザー向け出力だけを調べたいとき。
-- `INDEX.md` の生成・更新ロジックや `<repo-root>` の探索・差分収集を調べたいとき。
-- 共通エラーハンドリングや `CmocError` の表示形式だけを確認したいとき。
-- タイムスタンプ、サブcommand ログ、repo 探索など他の共通ユーティリティだけを調べたいとき。
-- cmoc 自体の開発ルール、テスト規約、環境ルールだけを調べたいとき。
+- サブコマンド固有の入出力仕様やユーザー向け操作手順だけを調べたいとき。
+- `src/commons` 以外の実装配置やファイル構造を探したいとき。
+- Python の一般的な開発規約、設計規約、テスト規約だけを確認したいとき。
+- `codex exec` 以外のコマンド実装や、各サブコマンド本体の振る舞いだけを知りたいとき。
 
 ## hash
 
-- 22036afd73b40ad2cea051e8f075b2b9abcd13b452730563c5dfc58dd881ea32
+- 7d4e523b9762089e09b73478ce6e5e9c8011300cf7ca6690fca1a60a0d41e462
 
 # `command_runner.py`
 

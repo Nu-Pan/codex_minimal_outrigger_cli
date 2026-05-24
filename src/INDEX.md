@@ -4,7 +4,7 @@
 
 - `src/commons` は、cmoc 全体で共有する基盤処理の目次です。Codex CLI 呼び出し、共通エラー処理、repo / git 操作、`INDEX.md` 自動生成、サブコマンドログ、タイムスタンプ、経過時間計測への入口をまとめます。
 - このディレクトリは `__init__.py`、`codex.py`、`command_runner.py`、`errors.py`、`indexing.py`、`repo.py`、`subcommand_log.py`、`timestamps.py`、`timing.py` に分かれています。
-- `codex.py` は `codex exec` の共通ラッパー、`command_runner.py` は CLI サブコマンドの共通実行制御、`errors.py` は `CmocError` とエラーレポート整形を扱います。
+- `codex.py` は `codex exec` の共通ラッパー、`command_runner.py` は CLI サブコマンドの共通実行制御、`errors.py` は共通例外とエラーレポート整形を扱います。
 - `indexing.py` は `<repo-root>` 配下の `INDEX.md` を列挙・生成・更新し、`repo.py` は repo root 探索や git 操作、`subcommand_log.py` は tee ログ、`timestamps.py` は `<time-stamp>`、`timing.py` はステップ別経過時間を担当します。
 
 ## Read this when
@@ -17,7 +17,7 @@
 
 ## Do not read this when
 
-- 個別サブコマンドの業務ロジックや引数定義だけを調べたいとき。
+- 個別サブコマンドの業務ロジックや CLI 引数定義だけを調べたいとき。
 - `src` 全体や `tests` 全体の設計方針、コーディング規約、開発環境ルールだけを調べたいとき。
 - `README.md`、`AGENTS.md`、`oracles`、`memo` などのリポジトリ運用ルールだけを確認したいとき。
 - 特定の共通モジュールの実装詳細だけを追いたいときで、このディレクトリ全体の案内が不要なとき。
@@ -25,7 +25,7 @@
 
 ## hash
 
-- d24c012464a398d499a51d99d3e3af8fea64470029e7d9f197afef15478e5593
+- bb3896a736ba2f0fbda175bcc5e29e43c4bc179b665713758d81dedd74a1e863
 
 # `main.py`
 
@@ -60,26 +60,26 @@
 
 ## Summary
 
-- `src/sub_commands` 配下のサブコマンド実装をまとめるルーティング用ディレクトリの目次です。
-- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` の各本体実装への入口を案内します。
-- `__init__.py` はパッケージ初期化のみを担い、他の各 `.py` ファイルが個別サブコマンドの実装を持ちます。
-- この目次は、サブコマンドごとの処理順、前提条件、git 操作、レポート生成、エラー処理の所在を切り分けて把握するためのものです。
+- `src/sub_commands` は cmoc のサブコマンド実装をまとめるパッケージの目次です。
+- `__init__.py` はパッケージの入口、`apply.py` は `cmoc apply`、`branch.py` は `cmoc branch`、`eval_oracles.py` は `cmoc eval-oracles`、`init.py` は `cmoc init`、`merge.py` は `cmoc merge` を担当します。
+- `apply.py` は oracle と実装の差分検出から修正適用、レポート保存までを扱い、`eval_oracles.py` は oracle 断片の評価と Markdown レポート生成を扱います。
+- `branch.py` は作業ブランチ作成と base commit 記録を扱い、`init.py` は `.cmoc` の ignore 保証と初期化変更の commit を扱います。
+- `merge.py` は cmoc ブランチの merge、conflict 解消依頼、必要時のブランチ削除を扱います。
 
 ## Read this when
 
-- `src/sub_commands` 配下にある各サブコマンド実装の役割を最小限で確認したいとき。
-- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` のどれを読むべきか判断したいとき。
-- サブコマンドごとの前提条件、処理順、git 操作、出力レポート、失敗時の挙動を比較したいとき。
-- このディレクトリがパッケージとしてどこまでを含み、どこからを共通処理や別ディレクトリに委ねるか確認したいとき。
+- `src/sub_commands` 配下のどのファイルがどのサブコマンドに対応するかを確認したいとき。
+- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` の個別実装の入口を探したいとき。
+- 新しいサブコマンド実装をこのパッケージに追加するとき。
+- 各サブコマンドの責務分担をざっと把握して、読むべき実装ファイルを切り分けたいとき。
 
 ## Do not read this when
 
-- `commons` 配下の共通ユーティリティや CLI 共通呼び出し規約だけを調べたいとき。
-- CLI エントリポイントでのコマンド登録や引数解析だけを確認したいとき。
-- `oracles` の正本仕様そのものを読みたいとき。
-- 開発規約、テスト規約、環境ルールなどの開発者向けルールだけを確認したいとき。
-- `src/sub_commands` 以外の実装配置やリポジトリ全体のルーティングだけを探したいとき。
+- CLI 引数の定義やエントリーポイントの登録方法だけを知りたいとき。
+- `commons` の共通処理や `oracles` の正本仕様そのものを調べたいとき。
+- 開発規約、テスト規約、環境規約だけを確認したいとき。
+- 対象サブコマンドの個別ファイルがすでに決まっていて、この目次だけでは判断が不要なとき。
 
 ## hash
 
-- 3aee8161991d5d88e8ff5c201447225572769d57567002e92d96be362a0d3050
+- 16f3dc24027bbeb888b7cb1a00ee2a93824e6a70b0449c371eef613fe549254b

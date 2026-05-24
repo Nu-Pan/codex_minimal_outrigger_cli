@@ -24,13 +24,13 @@
 
 ## Summary
 
-- `src/sub_commands/apply.py` は `cmoc apply` の本体実装で、oracle と実装の不整合調査、要修正点の整理、修正適用、コミット、作業レポート保存までを一連で扱います。
-- 実行前に `cmoc` 作業ブランチかどうかを確認し、`.cmoc` の ignore 保証、oracle 差分の先行 commit、`INDEX.md` の維持、未コミット差分の検査を行います。
-- oracle ファイルと実装ファイルを起点に Structured Output で不整合を集め、要修正点リストの改善ループを回したうえで、各不整合を個別に適用し、結果を `.cmoc/reports/apply/<timestamp>.md` に保存します。
+- `src/sub_commands/apply.py` は `cmoc apply` の本体実装で、oracle と実装の不整合調査、要修正点リストの整理、個別適用、レポート保存までを一連で担います。
+- `cmoc` 作業ブランチ判定、`.cmoc` と `oracles` の先行 commit、`INDEX.md` メンテナンス、未コミット差分の拒否など、適用前の状態整備も含みます。
+- 不整合調査用・要修正点整理用・適用用・コミットメッセージ用の prompt 生成関数と、Structured Output schema / レポート検証関数も内包します。
 
 ## Read this when
 
-- `cmoc apply` の処理順序、前提条件、部分適用と全体適用の切り替え、反復回数、終了コードを確認したいとき。
+- `cmoc apply` の処理順、前提条件、部分適用と全体適用の切り替え、反復回数、終了コードを確認したいとき。
 - oracle と実装の不整合調査に使う prompt、Structured Output schema、要修正点リストの改善ロジックを追いたいとき。
 - 変更の自動 commit、編集禁止領域の検査、`INDEX.md` の維持、apply レポートの生成と検証を確認したいとき。
 - このファイル内の補助関数の役割や、各処理がどの順番で呼ばれるかを把握したいとき。
@@ -38,13 +38,13 @@
 ## Do not read this when
 
 - `cmoc init`、`cmoc branch`、`cmoc eval-oracles`、`cmoc merge` など他サブコマンドの実装だけを調べたいとき。
-- Codex CLI の共通呼び出し規約、ログ、エラーハンドリング、`INDEX.md` 自動生成の共通仕様だけを確認したいとき。
+- `codex exec` の共通呼び出し規約、ログ、共通エラーハンドリング、`INDEX.md` 自動生成の共通仕様だけを確認したいとき。
 - `oracles` 側の正本仕様そのものを読みたいとき。
 - 共通ユーティリティや git 操作ヘルパーだけを追いたいとき。
 
 ## hash
 
-- 045bed96fb9863fe0a3fade23703fba1d625bce9ff114bcc8e11774f1759008f
+- 5dddb39401739050b4eb3970417a019f086ceaeb501a57a4fcc5e46d94ab117d
 
 # `branch.py`
 
@@ -77,15 +77,15 @@
 
 ## Summary
 
-- `src/sub_commands/eval_oracles.py` は `cmoc eval-oracles` の本体実装で、oracle 断片の評価、Structured Output の検証、Markdown レポート生成をまとめて扱います。
-- 実行前に `.cmoc` の ignore 保証と `INDEX.md` メンテナンスを行い、`--full` とブランチ状態に応じて部分評価と全体評価を切り替えます。
-- 各 oracle ファイルごとに `codex exec` を読み取り専用で呼び出し、JSON schema と意味制約を検査したうえで評価結果を `.cmoc/reports/eval-oracles/<timestamp>.md` に保存します。
-- 評価失敗時は代替の error レポートを作成し、評価済みファイル数、対象ファイル数、issue 集計、失敗した処理段階も記録します。
+- `src/sub_commands/eval_oracles.py` は `cmoc eval-oracles` の実装本体で、oracle 断片の評価実行、Structured Output の検証、Markdown レポート生成をまとめて担当します。
+- 実行前に `.cmoc` の ignore 保証と `INDEX.md` のメンテナンスを行い、`--full` とブランチ状態に応じて部分評価モードと全体評価モードを切り替えます。
+- 各 oracle ファイルごとに `codex exec` を読み取り専用で呼び出し、仕様断片と `INDEX.md` だけを参照させたうえで評価結果を収集します。
+- 評価結果は severity 別に集約され、成功時は通常レポート、失敗時は代替の error レポートとして `.cmoc/reports/eval-oracles/<timestamp>.md` に保存されます。
 
 ## Read this when
 
 - `cmoc eval-oracles` の処理順序、前処理、評価実行、レポート保存までの流れを確認したいとき。
-- `--full` の有無や `cmoc` ブランチ上かどうかで、どの oracle ファイルを評価するか知りたいとき。
+- `--full` の有無や `<cmoc-branch>` 上かどうかで、どの oracle ファイルを評価するか知りたいとき。
 - 評価用 prompt、Structured Output schema、JSON 検証ロジック、issue の severity 順序や番号付けを確認したいとき。
 - 評価レポートの YAML frontmatter、本文構成、参照ファイル一覧、エラー時の代替出力を確認したいとき。
 - このファイル内の補助関数の役割や、各処理がどの順番で呼ばれるかを把握したいとき。
@@ -99,7 +99,7 @@
 
 ## hash
 
-- e8e4f321cfab988758e4356054bb30f4ee2bc2db7514c601c3ce959fb8107d30
+- 1a1a8e6aa1bb553a6263d18f487cd4e352b82c32170c51aeac9e3eaf3101a5cc
 
 # `init.py`
 
