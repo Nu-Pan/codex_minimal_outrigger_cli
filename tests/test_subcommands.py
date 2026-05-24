@@ -2,11 +2,13 @@
 
 import ast
 import inspect
+import importlib.util
 import json
 import re
 import subprocess
 import sys
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 import typer
@@ -21,7 +23,6 @@ from commons.errors import CmocError
 from commons.errors import format_error_report
 from commons.repo import branch_base_commit_path
 from commons.timing import StepTimer, start_step
-from sub_commands import eval_oracles as eval_oracles_module
 from sub_commands.apply import cmoc_apply_impl
 from sub_commands.apply import _apply_prompt
 from sub_commands.apply import _DISCREPANCY_OUTPUT_SCHEMA
@@ -29,12 +30,30 @@ from sub_commands.apply import _commit_all_changes
 from sub_commands.apply import _organize_prompt
 from sub_commands.apply import _validate_discrepancy_payload
 from sub_commands.branch import cmoc_branch_impl
-from sub_commands.eval_oracles import cmoc_eval_oracles_impl
-from sub_commands.eval_oracles import _evaluation_prompt
 from sub_commands.init import cmoc_init_impl
 from sub_commands.merge import cmoc_merge_impl
 from sub_commands.merge import _conflict_prompt
 from sub_commands.merge import _files_with_conflict_markers
+
+
+def _load_eval_oracles_module() -> ModuleType:
+    """ハイフン付きファイル名の eval-oracles 本体モジュールを読む。"""
+    repo_root = Path(__file__).resolve().parents[1]
+    module_path = repo_root / "src" / "sub_commands" / "eval-oracles.py"
+    spec = importlib.util.spec_from_file_location(
+        "sub_commands.eval-oracles",
+        module_path,
+    )
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load subcommand module: {module_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+eval_oracles_module = _load_eval_oracles_module()
+cmoc_eval_oracles_impl = eval_oracles_module.cmoc_eval_oracles_impl
+_evaluation_prompt = eval_oracles_module._evaluation_prompt
 
 
 def test_python_sources_do_not_use_future_annotations() -> None:
@@ -448,7 +467,11 @@ def test_eval_oracles_writes_error_report_when_report_generation_fails(
         raise OSError("fake report failure")
 
     monkeypatch.setattr(eval_oracles_module, "run_codex_exec", fake_codex)
-    monkeypatch.setattr(eval_oracles_module, "_write_report", fake_write_report)
+    monkeypatch.setattr(
+        eval_oracles_module,
+        "_write_report",
+        fake_write_report,
+    )
 
     with pytest.raises(OSError, match="fake report failure"):
         cmoc_eval_oracles_impl(repo, full=True)
@@ -595,8 +618,8 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
         "## Fatal issues",
         "## Inconclusive issues",
         "## Warnings",
-        "## Specification-only basis",
         "## Referenced files",
+        "## Specification-only basis",
     ]
     assert [report.index(section) for section in expected_sections] == sorted(
         report.index(section) for section in expected_sections
@@ -723,11 +746,11 @@ def test_eval_oracles_stays_partial_when_oracle_was_deleted(
 
 
 def test_eval_oracles_body_uses_subcommand_file_name() -> None:
-    """`eval-oracles` の本体は PEP 8 の module 名に置く。"""
+    """`eval-oracles` の本体はサブコマンド名と同じファイル名に置く。"""
     repo_root = Path(__file__).resolve().parents[1]
 
-    body = repo_root / "src" / "sub_commands" / "eval_oracles.py"
-    legacy = repo_root / "src" / "sub_commands" / "eval-oracles.py"
+    body = repo_root / "src" / "sub_commands" / "eval-oracles.py"
+    legacy = repo_root / "src" / "sub_commands" / "eval_oracles.py"
     body_text = body.read_text(encoding="utf-8")
     assert "def cmoc_eval_oracles_impl" in body_text
     assert "spec_from_file_location" not in body_text
@@ -738,7 +761,7 @@ def test_eval_oracles_validation_helpers_are_ordered_caller_first() -> None:
     """同一ファイル内の validation helper は caller first に並べる。"""
     repo_root = Path(__file__).resolve().parents[1]
     source = (
-        repo_root / "src" / "sub_commands" / "eval_oracles.py"
+        repo_root / "src" / "sub_commands" / "eval-oracles.py"
     ).read_text(encoding="utf-8")
 
     callee = source.index("def _require_absolute_oracle_path(")
@@ -1053,7 +1076,10 @@ def test_apply_fills_discrepancy_head_commit_hash(
         f'"git_head_commit_hash": "{expected_head}"' in prompt
         for prompt in apply_prompts
     )
-    assert all('"git_head_commit_hash": null' not in prompt for prompt in apply_prompts)
+    assert all(
+        '"git_head_commit_hash": null' not in prompt
+        for prompt in apply_prompts
+    )
 
 
 def test_apply_commits_each_discrepancy_before_next_codex_call(
@@ -1307,10 +1333,11 @@ def test_apply_does_not_commit_preexisting_gitignore_changes(
     )
 
 
-def test_apply_rejects_oracle_changes_after_cmoc_guarantee(
+def test_apply_commits_untracked_oracle_changes_after_cmoc_guarantee(
     tmp_path: Path,
+    monkeypatch: MonkeyPatch,
 ) -> None:
-    """`cmoc apply` は `.cmoc` 保証後も oracle 差分を自動 commit しない。"""
+    """`cmoc apply` は `.cmoc` 保証後に未追跡 oracle 差分を自動 commit する。"""
     repo = _init_repo(tmp_path)
     _checkout_cmoc_branch(repo)
     cmoc_log = repo / ".cmoc" / "logs" / "poll.log"
@@ -1320,28 +1347,49 @@ def test_apply_rejects_oracle_changes_after_cmoc_guarantee(
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
 
-    with pytest.raises(CmocError) as error:
-        cmoc_apply_impl(repo)
+    monkeypatch.setattr(
+        "sub_commands.apply.maintain_indexes",
+        lambda repo_root: False,
+    )
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """調査なら不整合なし JSON、レポートなら Markdown を返す。"""
+        if kwargs.get("expect_json") is True:
+            return '{"fixing_points": []}'
+        return "\n".join(
+            [
+                "## 作業結果",
+                "収束",
+                "## 不整合件数の推移",
+                "1 回目: 0 件",
+                "## ブランチ cmoc_2026-05-10_22-21_10_123 上の全変更内容",
+                "カテゴリ: oracle 整備",
+            ]
+        )
+
+    monkeypatch.setattr("sub_commands.apply.run_codex_exec", fake_codex)
+
+    assert cmoc_apply_impl(repo) == 0
 
     commit_subjects = _git(
         repo,
         "log",
         "--pretty=%s",
-        "-2",
+        "-3",
     ).stdout.splitlines()
-    assert "未コミットの変更があります。" in error.value.message
-    assert commit_subjects[0] == "Ensure cmoc directory is ignored"
-    assert commit_subjects[1] == "initial"
-    assert _git(repo, "status", "--porcelain", "--", "oracles").stdout == (
-        "?? oracles/\n"
-    )
+    assert commit_subjects[0] == "Commit oracle changes before apply"
+    assert commit_subjects[1] == "Ensure cmoc directory is ignored"
+    assert commit_subjects[2] == "initial"
+    assert _git(repo, "show", "HEAD:oracles/spec.md").stdout == "spec\n"
+    assert _git(repo, "status", "--porcelain", "--", "oracles").stdout == ""
     assert _git(repo, "status", "--porcelain", "--", ".cmoc").stdout == ""
 
 
-def test_apply_rejects_preexisting_staged_oracles_after_cmoc_guarantee(
+def test_apply_commits_preexisting_staged_oracles_after_cmoc_guarantee(
     tmp_path: Path,
+    monkeypatch: MonkeyPatch,
 ) -> None:
-    """事前 stage 済み oracle 差分も `cmoc apply` は自動 commit しない。"""
+    """事前 stage 済み oracle 差分も `cmoc apply` は自動 commit する。"""
     repo = _init_repo(tmp_path)
     _checkout_cmoc_branch(repo)
     oracle_root = repo / "oracles"
@@ -1349,21 +1397,41 @@ def test_apply_rejects_preexisting_staged_oracles_after_cmoc_guarantee(
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
     _git(repo, "add", "oracles/spec.md")
 
-    with pytest.raises(CmocError) as error:
-        cmoc_apply_impl(repo)
+    monkeypatch.setattr(
+        "sub_commands.apply.maintain_indexes",
+        lambda repo_root: False,
+    )
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """調査なら不整合なし JSON、レポートなら Markdown を返す。"""
+        if kwargs.get("expect_json") is True:
+            return '{"fixing_points": []}'
+        return "\n".join(
+            [
+                "## 作業結果",
+                "収束",
+                "## 不整合件数の推移",
+                "1 回目: 0 件",
+                "## ブランチ cmoc_2026-05-10_22-21_10_123 上の全変更内容",
+                "カテゴリ: oracle 整備",
+            ]
+        )
+
+    monkeypatch.setattr("sub_commands.apply.run_codex_exec", fake_codex)
+
+    assert cmoc_apply_impl(repo) == 0
 
     commit_subjects = _git(
         repo,
         "log",
         "--pretty=%s",
-        "-2",
+        "-3",
     ).stdout.splitlines()
-    assert "未コミットの変更があります。" in error.value.message
-    assert commit_subjects[0] == "Ensure cmoc directory is ignored"
-    assert commit_subjects[1] == "initial"
-    assert _git(repo, "status", "--porcelain", "--", "oracles").stdout == (
-        "A  oracles/spec.md\n"
-    )
+    assert commit_subjects[0] == "Commit oracle changes before apply"
+    assert commit_subjects[1] == "Ensure cmoc directory is ignored"
+    assert commit_subjects[2] == "initial"
+    assert _git(repo, "show", "HEAD:oracles/spec.md").stdout == "spec\n"
+    assert _git(repo, "status", "--porcelain", "--", "oracles").stdout == ""
 
 
 def test_commit_all_changes_rechecks_forbidden_paths_after_index_update(
@@ -1409,6 +1477,15 @@ def test_apply_discrepancy_schema_rejects_incomplete_items() -> None:
 def test_apply_discrepancy_schema_accepts_fixing_points() -> None:
     """要修正点 JSON は fixing_points と evidences 形式を受け付ける。"""
     _validate_discrepancy_payload(json.loads(_discrepancy_json("fix")))
+
+
+def test_apply_discrepancy_schema_rejects_relative_evidence_path() -> None:
+    """要修正点 JSON の evidence path は絶対パスでなければ拒否する。"""
+    payload = json.loads(_discrepancy_json("fix"))
+    payload["fixing_points"][0]["evidences"][0]["path"] = "oracles/spec.md"
+
+    with pytest.raises(ValueError, match="must be an absolute path"):
+        _validate_discrepancy_payload(payload)
 
 
 def test_apply_discrepancy_schema_rejects_near_miss_keys() -> None:
@@ -1463,6 +1540,39 @@ def test_merge_merges_explicit_cmoc_branch_and_deletes_it(
     assert "cmoc_2026-05-10_22-21_10_123" not in branches
 
 
+def test_merge_rejects_explicit_non_cmoc_branch_before_git_merge(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """`cmoc merge <branch>` は cmoc branch 名以外を merge 対象にしない。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-m", "ignore cmoc")
+    target_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    _git(repo, "checkout", "-b", "feature")
+    (repo / "feature.txt").write_text("feature\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "feature")
+    _git(repo, "checkout", target_branch)
+
+    with pytest.raises(CmocError) as error:
+        cmoc_merge_impl(repo, "feature")
+
+    captured = capsys.readouterr()
+    branches = _git(
+        repo,
+        "branch",
+        "--format=%(refname:short)",
+    ).stdout.splitlines()
+    assert "cmoc branch 名" in error.value.message
+    assert "指定された branch: feature" in error.value.detail
+    assert (repo / "feature.txt").exists() is False
+    assert "feature" in branches
+    assert _git(repo, "status", "--porcelain").stdout == ""
+    assert "手動解消が必要です" not in captured.err
+
+
 def test_merge_auto_resolve_failure_does_not_print_manual_resolution(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -1492,10 +1602,11 @@ def test_main_typer_functions_delegate_only_to_impls() -> None:
     assert "cmoc_init_impl()" in source
     assert "cmoc_branch_impl()" in source
     assert (
-        "from sub_commands.eval_oracles import cmoc_eval_oracles_impl"
+        '"sub_commands.eval-oracles"'
         in source
     )
     assert "from sub_commands.eval_oracles" not in eval_oracles_source
+    assert '"eval-oracles.py"' in source
     assert "cmoc_eval_oracles_impl(full=full)" in source
     assert "repeat_investigate_and_fix=repeat_investigate_and_fix" in source
     assert "repeat_improove_fixing_list=repeat_improove_fixing_list" in source

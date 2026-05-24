@@ -1,5 +1,9 @@
 """cmoc CLI エントリーポイント。"""
 
+import importlib.util
+from pathlib import Path
+from types import ModuleType
+
 import click
 import typer
 
@@ -7,12 +11,22 @@ from commons.errors import CmocError
 from commons.errors import format_error_report
 from sub_commands.apply import cmoc_apply_impl
 from sub_commands.branch import cmoc_branch_impl
-from sub_commands.eval_oracles import cmoc_eval_oracles_impl
 from sub_commands.init import cmoc_init_impl
 from sub_commands.merge import cmoc_merge_impl
 
 
 app: typer.Typer = typer.Typer(name="cmoc", no_args_is_help=True)
+_EVAL_ORACLES_PATH = Path(__file__).parent / "sub_commands" / "eval-oracles.py"
+_EVAL_ORACLES_SPEC = importlib.util.spec_from_file_location(
+    "sub_commands.eval-oracles",
+    _EVAL_ORACLES_PATH,
+)
+if _EVAL_ORACLES_SPEC is None or _EVAL_ORACLES_SPEC.loader is None:
+    raise ImportError(f"cannot load subcommand module: {_EVAL_ORACLES_PATH}")
+_eval_oracles_module = importlib.util.module_from_spec(_EVAL_ORACLES_SPEC)
+assert isinstance(_eval_oracles_module, ModuleType)
+_EVAL_ORACLES_SPEC.loader.exec_module(_eval_oracles_module)
+cmoc_eval_oracles_impl = _eval_oracles_module.cmoc_eval_oracles_impl
 
 
 @app.command("init")

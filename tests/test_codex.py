@@ -391,7 +391,9 @@ def test_run_codex_exec_retries_json_semantic_validation_failure(
 
     log_contents = [
         path.read_text(encoding="utf-8")
-        for path in sorted((repo / "logs" / "codex_exec" / "call").glob("*.log"))
+        for path in sorted(
+            (repo / "logs" / "codex_exec" / "call").glob("*.log")
+        )
     ]
     assert output.strip() == '{"ok": true}'
     assert state.read_text(encoding="utf-8").strip() == "3"
@@ -512,7 +514,9 @@ def test_run_codex_exec_retries_text_semantic_validation_failure(
 
     log_contents = [
         path.read_text(encoding="utf-8")
-        for path in sorted((repo / "logs" / "codex_exec" / "call").glob("*.log"))
+        for path in sorted(
+            (repo / "logs" / "codex_exec" / "call").glob("*.log")
+        )
     ]
     assert output.strip() == "complete report"
     assert state.read_text(encoding="utf-8").strip() == "3"
@@ -646,7 +650,12 @@ def test_run_codex_exec_rejects_forbidden_reasoning_effort(
     repo.mkdir()
 
     with pytest.raises(ValueError):
-        run_codex_exec(repo, "prompt", read_only=True, reasoning_effort="xhigh")
+        run_codex_exec(
+            repo,
+            "prompt",
+            read_only=True,
+            reasoning_effort="xhigh",
+        )
 
 
 def test_run_codex_exec_allows_high_reasoning_effort(
@@ -732,11 +741,14 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
                 "  echo 'quota limit exhausted' >&2",
                 "  exit 1",
                 "  fi",
-                f"  if [ \"$(wc -l < {maintain_file})\" -lt 3 ]; then exit 3; fi",
+                f"  if [ \"$(wc -l < {maintain_file})\" -lt 3 ]; "
+                "then exit 3; fi",
                 "fi",
                 "if [[ \"$PROMPT\" == *'Codex CLI の疎通確認担当'* ]]; then",
-                f"  if [ \"$(wc -l < {maintain_file})\" -lt 2 ]; then exit 3; fi",
-                "  if [[ \"$PROMPT\" != *'/memo` は読み書き禁止です。'* ]]; then exit 2; fi",
+                f"  if [ \"$(wc -l < {maintain_file})\" -lt 2 ]; "
+                "then exit 3; fi",
+                "  if [[ \"$PROMPT\" != "
+                "*'/memo` は読み書き禁止です。'* ]]; then exit 2; fi",
                 "  if [[ \"$PROMPT\" != *'ファイル編集は禁止です。'* ]]; then exit 2; fi",
                 "  echo ok > \"$LAST\"",
                 "  echo '{\"event\":\"poll-ok\"}'",
@@ -771,7 +783,9 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
     captured = capsys.readouterr().out
     log_contents = [
         path.read_text(encoding="utf-8")
-        for path in sorted((repo / "logs" / "codex_exec" / "call").glob("*.log"))
+        for path in sorted(
+            (repo / "logs" / "codex_exec" / "call").glob("*.log")
+        )
     ]
     assert output.strip() == "resumed"
     assert calls == [repo, repo, repo]
@@ -822,7 +836,8 @@ def test_run_codex_exec_fails_when_resume_returns_unexpected_error(
                 "done",
                 "PROMPT=\"$(cat)\"",
                 "if [[ \"$PROMPT\" == *'Codex CLI の疎通確認担当'* ]]; then",
-                "  if [[ \"$PROMPT\" != *'/memo` は読み書き禁止です。'* ]]; then exit 2; fi",
+                "  if [[ \"$PROMPT\" != "
+                "*'/memo` は読み書き禁止です。'* ]]; then exit 2; fi",
                 "  if [[ \"$PROMPT\" != *'ファイル編集は禁止です。'* ]]; then exit 2; fi",
                 "  echo ok > \"$LAST\"",
                 "  exit 0",
@@ -897,6 +912,56 @@ def test_run_codex_exec_retries_schema_validation_failure(
         )
 
     assert state.read_text(encoding="utf-8").strip() == "3"
+    assert "'not boolean' is not of type 'boolean'" in error.value.detail
+
+
+def test_run_codex_exec_validates_output_schema_without_expect_json(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """output_schema 指定時は expect_json=False でも cmoc 側で schema 検証する。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    state = tmp_path / "attempts.txt"
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                f"STATE={state}",
+                "COUNT=0",
+                "if [ -f \"$STATE\" ]; then COUNT=$(cat \"$STATE\"); fi",
+                "COUNT=$((COUNT + 1))",
+                "echo \"$COUNT\" > \"$STATE\"",
+                "echo '{\"ok\":\"not boolean\"}' > \"$LAST\"",
+                "echo '{\"event\":\"done\"}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(
+            repo,
+            "prompt",
+            read_only=True,
+            output_schema=_BOOLEAN_SCHEMA,
+        )
+
+    assert state.read_text(encoding="utf-8").strip() == "3"
+    assert "有効な JSON" in error.value.message
     assert "'not boolean' is not of type 'boolean'" in error.value.detail
 
 

@@ -416,6 +416,19 @@ def _write_report(
             continue
         for issue_id, issue in _numbered_issues(severity, issues):
             lines.extend(_issue_lines(issue_id, issue))
+    lines.extend(["## Referenced files", ""])
+    referenced_path_rows = _referenced_path_rows(repo_root, evaluations)
+    if referenced_path_rows:
+        lines.extend(
+            [
+                "| No. | Referenced file |",
+                "|---:|---|",
+            ]
+        )
+        lines.extend(referenced_path_rows)
+    else:
+        lines.append("No referenced files.")
+    lines.extend([""])
     lines.extend(["## Specification-only basis", ""])
     specification_basis_rows = _specification_only_basis_rows(
         repo_root,
@@ -431,19 +444,6 @@ def _write_report(
         lines.extend(specification_basis_rows)
     else:
         lines.append("No completed evaluations.")
-    lines.extend([""])
-    lines.extend(["## Referenced files", ""])
-    referenced_path_rows = _referenced_path_rows(repo_root, evaluations)
-    if referenced_path_rows:
-        lines.extend(
-            [
-                "| No. | Referenced file |",
-                "|---:|---|",
-            ]
-        )
-        lines.extend(referenced_path_rows)
-    else:
-        lines.append("No referenced files.")
     report_path.write_text("\n".join(lines), encoding="utf-8")
     return report_path
 
@@ -542,6 +542,19 @@ def _write_error_report(
             continue
         for issue_id, issue in _numbered_issues(severity, issues):
             lines.extend(_issue_lines(issue_id, issue))
+    lines.extend(["## Referenced files", ""])
+    referenced_path_rows = _referenced_path_rows(repo_root, evaluations)
+    if referenced_path_rows:
+        lines.extend(
+            [
+                "| No. | Referenced file |",
+                "|---:|---|",
+            ]
+        )
+        lines.extend(referenced_path_rows)
+    else:
+        lines.append("No referenced files.")
+    lines.extend([""])
     lines.extend(["## Specification-only basis", ""])
     specification_basis_rows = _specification_only_basis_rows(
         repo_root,
@@ -557,19 +570,6 @@ def _write_error_report(
         lines.extend(specification_basis_rows)
     else:
         lines.append("No completed evaluations.")
-    lines.extend([""])
-    lines.extend(["## Referenced files", ""])
-    referenced_path_rows = _referenced_path_rows(repo_root, evaluations)
-    if referenced_path_rows:
-        lines.extend(
-            [
-                "| No. | Referenced file |",
-                "|---:|---|",
-            ]
-        )
-        lines.extend(referenced_path_rows)
-    else:
-        lines.append("No referenced files.")
     report_path.write_text("\n".join(lines), encoding="utf-8")
     return report_path
 
@@ -884,7 +884,11 @@ def _unique_strings(values: list[str]) -> list[str]:
 
 def _markdown_table_text(value: str) -> str:
     """Markdown table のセル内で崩れない本文へ整形する。"""
-    return value.replace("\\", "\\\\").replace("|", "\\|").replace("\n", "<br>")
+    return (
+        value.replace("\\", "\\\\")
+        .replace("|", "\\|")
+        .replace("\n", "<br>")
+    )
 
 
 def _display_path(repo_root: Path, path_text: str) -> str:

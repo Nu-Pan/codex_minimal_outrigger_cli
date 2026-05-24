@@ -351,7 +351,7 @@ def list_implementation_files(repo_root: Path) -> list[Path]:
         candidates.append(path)
 
     relatives = [path.relative_to(repo_root).as_posix() for path in candidates]
-    ignored = _gitignored_paths(repo_root, relatives)
+    ignored = _root_gitignored_paths(repo_root, relatives)
     return sorted(
         path
         for path, relative in zip(candidates, relatives, strict=True)
@@ -501,7 +501,7 @@ def changed_implementation_files(
         if _is_implementation_file(repo_root, path)
     ]
     relatives = [path.relative_to(repo_root).as_posix() for path in existing]
-    ignored = _gitignored_paths(repo_root, relatives)
+    ignored = _root_gitignored_paths(repo_root, relatives)
     return sorted(
         path
         for path, relative in zip(existing, relatives, strict=True)
@@ -595,7 +595,7 @@ def _deleted_implementation_file_paths(
         for line in output.splitlines()
         if not _is_excluded_implementation_path(line)
     ]
-    ignored = _gitignored_paths(repo_root, relatives)
+    ignored = _root_gitignored_paths(repo_root, relatives)
     return [relative for relative in relatives if relative not in ignored]
 
 
@@ -890,6 +890,12 @@ def _root_gitignored_paths(
     return set(result.stdout.splitlines())
 
 
+def _is_gitignored(repo_root: Path, relative_path: str) -> bool:
+    """実リポジトリ全体の `.gitignore` ルールで ignore 対象か判定する。"""
+    # 単一 path の判定も集合判定の実装に揃える。
+    return relative_path in _gitignored_paths(repo_root, [relative_path])
+
+
 def _gitignored_paths(repo_root: Path, relative_paths: list[str]) -> set[str]:
     """実リポジトリ全体の `.gitignore` ルールで ignore 対象を返す。"""
     # nested .gitignore も含め、Git 自身の判定に path 集合をまとめて渡す。
@@ -911,12 +917,6 @@ def _gitignored_paths(repo_root: Path, relative_paths: list[str]) -> set[str]:
             result.stderr.strip(),
         )
     return set(result.stdout.splitlines())
-
-
-def _is_gitignored(repo_root: Path, relative_path: str) -> bool:
-    """実リポジトリ全体の `.gitignore` ルールで ignore 対象か判定する。"""
-    # 単一 path の判定も集合判定の実装に揃える。
-    return relative_path in _gitignored_paths(repo_root, [relative_path])
 
 
 def run_git(

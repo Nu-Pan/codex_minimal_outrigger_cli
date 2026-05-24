@@ -31,8 +31,11 @@ def run_command(handler: Callable[[Path], int | None]) -> None:
                     report_error = CmocError(
                         "サブコマンドがエラー終了しました。",
                         actions=[
-                            "直前の出力に個別の失敗理由がある場合は、その内容に従って入力値やリポジトリ状態を修正してください。",
-                            "原因が特定できない場合は、Detail と Call stack を確認してから cmoc を再実行してください。",
+                            "直前の出力に個別の失敗理由がある場合は、"
+                            "その内容に従って入力値やリポジトリ状態を"
+                            "修正してください。",
+                            "原因が特定できない場合は、Detail と Call stack を"
+                            "確認してから cmoc を再実行してください。",
                         ],
                         detail=(
                             "サブコマンド本体が "

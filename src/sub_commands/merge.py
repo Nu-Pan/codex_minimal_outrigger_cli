@@ -45,6 +45,15 @@ def cmoc_merge_impl(
         # 明示引数が無い場合は未マージ cmoc ブランチを best effort で 1 件に絞る。
         start_step(timer, 2, 4, "resolve source branch")
         source_branch = cmoc_branch or _resolve_source_branch(repo_root)
+        if not is_cmoc_branch(source_branch):
+            raise CmocError(
+                "merge 対象は cmoc branch 名である必要があります。",
+                [
+                    "`cmoc branch` が作成した branch 名を指定してください。",
+                    "通常の branch を merge する場合は `git merge` を直接実行してください。",
+                ],
+                f"指定された branch: {source_branch}",
+            )
 
         # 通常 merge を試し、conflict 時だけ Codex CLI に marker 解消を依頼する。
         start_step(timer, 3, 4, "run git merge")

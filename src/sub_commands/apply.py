@@ -20,6 +20,7 @@ from commons.repo import (
     changed_paths,
     changed_implementation_files,
     commit_cmoc_initialization_changes,
+    commit_if_changed,
     current_branch,
     ensure_cmoc_ignored,
     gitignore_has_cmoc_rule,
@@ -176,7 +177,7 @@ def cmoc_apply_impl(
         )
     base_commit = read_branch_base_commit(repo_root, branch_name)
 
-    # `.cmoc` 保証差分だけを分離 commit してから、ユーザー由来の差分を拒否する。
+    # `.cmoc` 保証差分と oracle 差分を分離 commit してから、その他の差分を拒否する。
     start_step(timer, 1, 4, "validate repository state")
     had_cmoc_rule = gitignore_has_cmoc_rule(repo_root)
     preexisting_staged_diff = staged_diff_from_head(repo_root)
@@ -186,6 +187,11 @@ def cmoc_apply_impl(
         had_cmoc_rule,
         preexisting_staged_diff,
         "Ensure cmoc directory is ignored",
+    )
+    commit_if_changed(
+        repo_root,
+        ["oracles"],
+        "Commit oracle changes before apply",
     )
     assert_no_uncommitted_changes(repo_root)
 
@@ -825,6 +831,7 @@ def _validate_evidences(value: object, item_index: int) -> None:
                 "keys do not match schema."
             )
         _require_evidence_string(evidence, "path", item_index, evidence_index)
+        _require_evidence_absolute_path(evidence, item_index, evidence_index)
         _require_evidence_nullable_int(
             evidence,
             "line_start",
@@ -857,6 +864,21 @@ def _require_evidence_string(
             "fixing_points"
             f"[{item_index}].evidences[{evidence_index}].{key} "
             "must be a string."
+        )
+
+
+def _require_evidence_absolute_path(
+    item: dict[object, object],
+    item_index: int,
+    evidence_index: int,
+) -> None:
+    """schema 上 evidence path が絶対パスであることを検査する。"""
+    path = item["path"]
+    if not isinstance(path, str) or not Path(path).is_absolute():
+        raise ValueError(
+            "fixing_points"
+            f"[{item_index}].evidences[{evidence_index}].path "
+            "must be an absolute path."
         )
 
 

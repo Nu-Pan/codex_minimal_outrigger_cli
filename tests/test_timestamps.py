@@ -29,7 +29,8 @@ def test_make_timestamp_converts_aware_datetime_to_local_timezone() -> None:
     tzset()
 
     try:
-        assert make_timestamp(datetime(2026, 5, 3, 18, 2, 1, 987654, timezone.utc)) == (
+        timestamp = datetime(2026, 5, 3, 18, 2, 1, 987654, timezone.utc)
+        assert make_timestamp(timestamp) == (
             "2026-05-04_03-02_01_987"
         )
     finally:

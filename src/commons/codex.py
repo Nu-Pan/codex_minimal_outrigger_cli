@@ -60,6 +60,7 @@ def run_codex_exec(
     # Structured Output を要求する呼び出しは schema ファイルを必須にする。
     if expect_json and output_schema is None:
         raise ValueError("expect_json=True requires output_schema.")
+    validates_structured_output = output_schema is not None
     _validate_model_options(model, reasoning_effort)
 
     # 必要なら output schema ファイルを準備する。call log と last message は実行単位で払い出す。
@@ -142,7 +143,7 @@ def run_codex_exec(
         print(f"{step} output: {_head80(output)}")
         last_output = output
 
-        if not expect_json:
+        if not validates_structured_output:
             if text_validator is None:
                 return output
             try:
@@ -154,9 +155,9 @@ def run_codex_exec(
 
         # JSON parse、schema 検査、意味検査のいずれかが失敗した場合だけ次の試行へ進む。
         try:
+            assert output_schema is not None
             value = json.loads(output)
-            if output_schema is not None:
-                _validate_json_schema(value, output_schema)
+            _validate_json_schema(value, output_schema)
             if json_validator is not None:
                 json_validator(value)
             if text_validator is not None:
@@ -167,7 +168,7 @@ def run_codex_exec(
             continue
 
     # 全試行失敗時は最後の output/stdout/stderr と検証エラーを診断情報として残す。
-    validation_label = "JSON" if expect_json else "text"
+    validation_label = "JSON" if validates_structured_output else "text"
     raise CmocError(
         f"codex exec がリトライ後も有効な {validation_label} を返しませんでした。",
         [

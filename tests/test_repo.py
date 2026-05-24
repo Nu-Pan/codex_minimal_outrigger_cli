@@ -188,10 +188,10 @@ def test_list_implementation_files_excludes_specified_paths(
     assert relative_paths == [".gitignore", "README.md", "app.py"]
 
 
-def test_list_implementation_files_excludes_nested_gitignored_files(
+def test_list_implementation_files_ignores_only_root_gitignore(
     tmp_path: Path,
 ) -> None:
-    """実装ファイル列挙は nested .gitignore 対象も除外する。"""
+    """実装ファイル列挙では nested .gitignore を除外判定に使わない。"""
     repo = _init_repo(tmp_path)
     cache_root = repo / ".pytest_cache"
     cache_root.mkdir()
@@ -204,9 +204,32 @@ def test_list_implementation_files_excludes_nested_gitignored_files(
         for path in list_implementation_files(repo)
     ]
 
-    assert ".pytest_cache/.gitignore" not in relative_paths
-    assert ".pytest_cache/CACHEDIR.TAG" not in relative_paths
-    assert relative_paths == ["README.md", "app.py"]
+    assert relative_paths == [
+        ".pytest_cache/.gitignore",
+        ".pytest_cache/CACHEDIR.TAG",
+        "README.md",
+        "app.py",
+    ]
+
+
+def test_list_implementation_files_ignores_git_info_exclude(
+    tmp_path: Path,
+) -> None:
+    """実装ファイル列挙では `.git/info/exclude` を除外判定に使わない。"""
+    repo = _init_repo(tmp_path)
+    exclude = repo / ".git" / "info" / "exclude"
+    exclude.write_text("/logs/\n", encoding="utf-8")
+    log_root = repo / "logs"
+    log_root.mkdir()
+    (log_root / "subcommand.log").write_text("log\n", encoding="utf-8")
+    (repo / "app.py").write_text("app\n", encoding="utf-8")
+
+    relative_paths = [
+        path.relative_to(repo).as_posix()
+        for path in list_implementation_files(repo)
+    ]
+
+    assert relative_paths == ["README.md", "app.py", "logs/subcommand.log"]
 
 
 def test_changed_oracle_files_uses_cmoc_branch_base_and_uncommitted_changes(
@@ -387,10 +410,10 @@ def test_changed_implementation_files_filters_to_implementation_targets(
     assert relative_paths == ["base.py", "new.py"]
 
 
-def test_changed_implementation_files_excludes_nested_gitignored_files(
+def test_changed_implementation_files_ignores_only_root_gitignore(
     tmp_path: Path,
 ) -> None:
-    """変更済み実装ファイルは nested .gitignore 対象を除外する。"""
+    """変更済み実装ファイルでは nested .gitignore を除外判定に使わない。"""
     repo = _init_repo(tmp_path)
     cache_root = repo / ".pytest_cache"
     cache_root.mkdir()
@@ -415,7 +438,7 @@ def test_changed_implementation_files_excludes_nested_gitignored_files(
         for path in changed_implementation_files(repo, base_commit)
     ]
 
-    assert relative_paths == ["app.py"]
+    assert relative_paths == [".pytest_cache/CACHEDIR.TAG", "app.py"]
 
 
 def test_has_deleted_implementation_files_detects_target_deletion(
@@ -434,10 +457,10 @@ def test_has_deleted_implementation_files_detects_target_deletion(
     assert has_deleted_implementation_files(repo, base_commit) is True
 
 
-def test_has_deleted_implementation_files_ignores_nested_gitignored_deletion(
+def test_has_deleted_implementation_files_ignores_only_root_gitignore(
     tmp_path: Path,
 ) -> None:
-    """nested .gitignore 対象の削除は実装ファイル削除扱いにしない。"""
+    """削除済み実装ファイルでは nested .gitignore を除外判定に使わない。"""
     repo = _init_repo(tmp_path)
     cache_root = repo / ".pytest_cache"
     cache_root.mkdir()
@@ -457,7 +480,7 @@ def test_has_deleted_implementation_files_ignores_nested_gitignored_deletion(
     ignored.unlink()
     _git(repo, "add", "-u", ".pytest_cache")
 
-    assert has_deleted_implementation_files(repo, base_commit) is False
+    assert has_deleted_implementation_files(repo, base_commit) is True
 
 
 def test_changed_oracle_files_respects_slash_pattern_depth(
