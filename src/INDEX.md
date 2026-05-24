@@ -60,26 +60,29 @@
 
 ## Summary
 
-- `src/sub_commands` は cmoc のサブコマンド実装をまとめるパッケージの目次です。
-- `__init__.py` はパッケージの入口、`apply.py` は `cmoc apply`、`branch.py` は `cmoc branch`、`eval_oracles.py` は `cmoc eval-oracles`、`init.py` は `cmoc init`、`merge.py` は `cmoc merge` を担当します。
-- `apply.py` は oracle と実装の差分検出から修正適用、レポート保存までを扱い、`eval_oracles.py` は oracle 断片の評価と Markdown レポート生成を扱います。
-- `branch.py` は作業ブランチ作成と base commit 記録を扱い、`init.py` は `.cmoc` の ignore 保証と初期化変更の commit を扱います。
-- `merge.py` は cmoc ブランチの merge、conflict 解消依頼、必要時のブランチ削除を扱います。
+- このディレクトリは cmoc のサブコマンド実装をまとめたルーティング用目次です。
+- `__init__.py` はパッケージ境界の説明だけを持つ最小ファイルです。
+- `init.py` は `cmoc init` の初期化処理と `.cmoc` の追跡対象外保証を扱います。
+- `branch.py` は `cmoc branch` の作業ブランチ作成、命名、記録を扱います。
+- `apply.py` は `cmoc apply` の調査・修正ループ、改善、適用、レポートを扱います。
+- `eval_oracles.py` は `cmoc eval-oracles` の oracle 評価、集約、Markdown レポート生成を扱います。
+- `merge.py` は `cmoc merge` のマージ、自動解決、コンフリクト処理、ブランチ削除判定を扱います。
 
 ## Read this when
 
-- `src/sub_commands` 配下のどのファイルがどのサブコマンドに対応するかを確認したいとき。
-- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` の個別実装の入口を探したいとき。
-- 新しいサブコマンド実装をこのパッケージに追加するとき。
-- 各サブコマンドの責務分担をざっと把握して、読むべき実装ファイルを切り分けたいとき。
+- src/sub_commands 配下のどのファイルに各サブコマンド実装があるかを素早く把握したいとき。
+- 各サブコマンドの本体実装の入口を探したいとき。
+- サブコマンドごとの責務境界や、どの処理をどのモジュールが持つかを確認したいとき。
+- サブコマンド実装の追加・修正・テストで、まず読むべきファイルを選びたいとき。
 
 ## Do not read this when
 
-- CLI 引数の定義やエントリーポイントの登録方法だけを知りたいとき。
-- `commons` の共通処理や `oracles` の正本仕様そのものを調べたいとき。
-- 開発規約、テスト規約、環境規約だけを確認したいとき。
-- 対象サブコマンドの個別ファイルがすでに決まっていて、この目次だけでは判断が不要なとき。
+- cmoc の実行時仕様そのものや、`oracles` の正本仕様を調べたいとき。
+- 開発ルール、テスト規約、設計規約などの開発者向けルールだけを確認したいとき。
+- CLI の引数定義やエントリーポイント登録だけを確認したいとき。
+- `README.md`、`AGENTS.md`、`oracles`、`memo` の運用ルールだけを確認したいとき。
+- 個別サブコマンドの詳細仕様が既に明確で、この目次全体が不要なとき。
 
 ## hash
 
-- 16f3dc24027bbeb888b7cb1a00ee2a93824e6a70b0449c371eef613fe549254b
+- c977cb8ba00dceb3735d4b047ce5c7e23ea5456275d632c77924c3ec6250dc93
