@@ -113,7 +113,7 @@
 ## Summary
 
 - `tests/test_repo.py` は `commons.repo` の git リポジトリ共通処理を検証するテスト群の目次です。
-- `.cmoc` の ignore 保証、既存 tracked ファイルの index 解除、cmoc ブランチ判定、branch base commit の保存先を扱います。
+- .cmoc の ignore 保証、既に tracked な `.cmoc` 配下ファイルの index 解除、cmoc ブランチ判定、branch base commit の保存先を扱います。
 - oracle ファイル列挙では `INDEX.md` の除外、root `.gitignore` のみを使う判定、`/` 付き pattern、`**` pattern、tracked な ignored file の扱いを確認します。
 - 実装ファイル列挙では `oracles`、`.git`、`INDEX.md`、gitignore 対象を除外して、実装対象だけを返すことを確認します。
 - 変更・削除検出では、base commit からの oracle / 実装の差分抽出、rename、未追跡ディレクトリ、履歴上の戻し、削除判定、`assert_no_uncommitted_changes` を確認します。
@@ -138,12 +138,10 @@
 - oracle 正本仕様そのものを知りたいとき。仕様断片は `oracles/app_specs` 側を読むべきです。
 - `INDEX.md` の自動生成やメンテナンス仕様だけを知りたいとき。
 - `README.md`、`AGENTS.md`、`memo` の運用ルールや編集可否だけを確認したいとき。
-- `tests/test_codex.py` や `tests/test_indexing.py` のような別テスト群の仕様を調べたいとき。
-- gitignore pattern の一般論だけを調べており、cmoc における oracle / 実装ファイル列挙の期待挙動が不要なとき。
 
 ## hash
 
-- aae0b10a2203cdecbfddf542ef3e22803bdddea3140069e1266605891ae6cb06
+- 5a7be4c42e04c978dec15c037abb1f5efc9d5cef15bf7b5acbfad4caa9801200
 
 # `test_subcommands.py`
 

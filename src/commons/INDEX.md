@@ -133,34 +133,30 @@
 
 ## Summary
 
-- `src/commons/repo.py` は、`<repo-root>` の探索と cwd の切り替え、現在ブランチ名・`HEAD` commit の取得、`cmoc_<time-stamp>` 形式のブランチ判定をまとめる共通モジュールです。
-- `.cmoc` を `.gitignore` と git index の両面から追跡対象外に保つ保証処理と、その検証、既に tracked されている `.cmoc` の除去を扱います。
-- 未コミット差分の検査、指定パスだけを対象にした commit 作成、stage 済み差分の退避と復元など、git 操作を安全に包む処理を提供します。
-- `oracles` と実装ファイルの列挙、変更済み・削除済みファイルの収集、rename や untracked を含む差分判定を実装しています。
-- `cmoc branch` の作成元 commit を記録・読み出しする `.cmoc/branch/<branch>.txt` の規則と、git 呼び出しの共通ラッパーを持つ基盤です。
+- `src/commons/repo.py` は、`<repo-root>` の探索と cwd 切り替え、`git` 実行の共通ラッパーをまとめるモジュールです。
+- 現在ブランチ名、`HEAD` commit、`cmoc_<time-stamp>` 形式のブランチ判定、`cmoc branch` の作成元 commit 記録先を扱います。
+- `.cmoc` を `.gitignore` と git index の両面から追跡対象外に保つ保証処理と、その検証、既存 tracked 項目の除去を提供します。
+- `oracles` と実装ファイルの列挙、変更・削除検出、rename や untracked を含む差分収集、指定パスだけを commit する処理を提供します。
 
 ## Read this when
 
-- `cmoc` の各サブコマンドから git リポジトリの root、現在ブランチ、`HEAD` commit、変更パスを取得したいとき。
-- .cmoc を git 追跡対象外にする保証、`.gitignore` への `/.cmoc/` 追加、tracked な `.cmoc` の index 除去を確認したいとき。
-- `cmoc init` などで、利用者が事前に stage していた差分を壊さずに初期化差分だけを commit する仕組みを確認したいとき。
-- `oracles` と実装ファイルの列挙規則、`INDEX.md` と `.git` の除外規則、root `.gitignore` の扱いを調べたいとき。
-- 部分評価や部分適用のために、base commit 以降の commit 差分、working tree 差分、staging area 差分、untracked ファイルをどう集めるか確認したいとき。
-- oracle または実装ファイルの削除有無で full 評価・full 適用へ切り替える判定ロジックを確認したいとき。
-- `cmoc branch` の作成元 commit を記録・読み出しする `.cmoc/branch/<branch>.txt` の規則を確認したいとき。
+- `cmoc` が使う git リポジトリ root の探索、cwd 固定、`git` 呼び出しの共通化を修正・確認したいとき。
+- `cmoc branch`、`cmoc init`、`cmoc apply`、`cmoc eval-oracles`、`cmoc merge` で使うブランチ名、`HEAD`、base commit、差分パスの扱いを確認したいとき。
+- `.cmoc` を追跡対象外にする保証、`/.cmoc/` の `.gitignore` 追加、tracked な `.cmoc` の index 解除を確認したいとき。
+- `oracles` / 実装ファイルの列挙規則、root `.gitignore` の評価、削除検出、rename や untracked を含む差分判定を確認したいとき。
+- 既存の stage 差分を壊さずに対象パスだけを commit する共通ロジックや、その復元処理を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc` の CLI 引数定義、サブコマンド本体、ユーザー向け出力だけを調べたいとき。
-- `CmocError` の表示形式や共通エラーハンドリング全体だけを調べたいとき。
-- Codex CLI 呼び出し、Structured Output、ログ保存、リトライなど別の共通機能だけを調べたいとき。
-- oracle の正本仕様そのものや `oracles` 配下のルーティングを調べたいとき。
-- 自動テストの構成や Fake Codex CLI の使い方だけを確認したいとき。
-- README、AGENTS、memo などのファイルアクセス規則やリポジトリ運用ルールだけを確認したいとき。
+- CLI 引数解析、サブコマンドの画面出力、ログ保存など、`repo.py` 以外の実行制御だけを調べたいとき。
+- `commons.codex`、`commons.indexing`、`commons.errors`、`commons.timing` など別の共通モジュールだけを追いたいとき。
+- `INDEX.md` の生成規則そのものや、`oracles` 側の正本仕様だけを調べたいとき。
+- `tests/test_repo.py` の期待値だけを確認したいとき。
+- `README.md`、`AGENTS.md`、`memo` の運用ルールや編集可否だけを確認したいとき。
 
 ## hash
 
-- 48dae14a2437e2fb30082e6cbd9774239ea1cb56f77d6a86bd80e3014f54423d
+- 82d137941e9f8706358cdfb6868c71e5b3e34a17c1b7c30393e5e443551aa400
 
 # `subcommand_log.py`
 
