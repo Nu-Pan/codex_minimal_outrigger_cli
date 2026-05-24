@@ -2,16 +2,28 @@
 
 ## 概要
 
-cmoc は、通常の local branch から session branch を作り、必要に応じて session branch から apply branch を作る。
+cmoc は、通常の `<local-branch>` から `<cmoc-session-branch>` を作り、必要に応じて `<cmoc-session-branch>` から `<cmoc-apply-branch>` を作る。
 
-`main` / `master` / repository default branch は特別扱いしない。
-ユーザーが `cmoc branch` を実行した時点で checkout している通常の local branch をその session の `<session-home-branch>` とする。
+`<repository-default-branch>` は特別扱いしない。
+ユーザーが `cmoc branch` を実行した時点で checkout している `<local-branch>` をその session の `<cmoc-session-home-branch>` とする。
 
 ## branch の種類
 
-### `<session-home-branch>`
+### `<repository-default-branch>`
 
-`cmoc branch` を実行した時点で checkout されていた通常の local branch。
+典型的には `main` / `master` などのこと。
+
+### `<local-branch>`
+
+cmoc 管理ではない通常の git local branch。
+
+### `<remote-tracking-branch>`
+
+cmoc 管理ではない通常の remote-tracking branch。
+
+### `<cmoc-session-home-branch>`
+
+`cmoc branch` を実行した時点で checkout されていた `<local-branch>`。
 session の分岐元であり、最終的な merge 先でもある。
 
 ### `<cmoc-session-branch>`
@@ -33,12 +45,16 @@ session の分岐元であり、最終的な merge 先でもある。
 Codex CLI による実装修正 commit はこの branch に積む。
 ユーザーが oracle 改訂作業を行う場所ではない。
 
+### `<cmoc-managed-branch>`
+
+cmoc が管理する branch の総称。
+`<cmoc-session-branch>`, `<cmoc-apply-branch>` の上位概念。
+
 ## session の原則
 
-1 つの `<session-home-branch>` に対して active な `<cmoc-session-branch>` は高々 1 つとする。
+1 つの `<cmoc-session-home-branch>` に対して active な `<cmoc-session-branch>` は高々 1 つとする。
 
-`<session-home-branch>` は通常の local branch でなければならない。
-detached HEAD、remote-tracking branch、commit hash、cmoc-managed branch は `<session-home-branch>` として扱わない。
+detached HEAD、`<remote-tracking-branch>`、commit hash、`<cmoc-managed-branch>` は `<cmoc-session-home-branch>` として扱わない。
 
 ## apply の snapshot 原則
 

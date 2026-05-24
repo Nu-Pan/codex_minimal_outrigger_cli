@@ -2,13 +2,13 @@
 
 ## 概要
 
-`cmoc merge` は、現在 checkout している `<cmoc-session-branch>` を、その session metadata に記録された `<session-home-branch>` へ merge する。
+`cmoc merge` は、現在 checkout している `<cmoc-session-branch>` を、その session metadata に記録された `<cmoc-session-home-branch>` へ merge する。
 
-`cmoc merge` は、session を完了して home branch へ戻すためのコマンドである。
+`cmoc merge` は、session を完了して `<cmoc-session-home-branch>` へ戻すためのコマンドである。
 通常の git branch 同士の汎用 merge wrapper ではない。
 
-`main` / `master` / repository default branch は特別扱いしない。
-merge 先は常に session metadata の `<session-home-branch>` である。
+`<repository-default-branch>` は特別扱いしない。
+merge 先は常に session metadata の `<cmoc-session-home-branch>` である。
 
 ## 引数
 
@@ -25,15 +25,15 @@ merge 先は常に session metadata の `<session-home-branch>` である。
 - git 未コミット差分が存在する
 - session metadata が存在しない
 - session metadata の `state` が `active` ではない
-- metadata に記録された `<session-home-branch>` が存在しない
-- `<session-home-branch>` が cmoc-managed branch である
+- metadata に記録された `<cmoc-session-home-branch>` が存在しない
+- `<cmoc-session-home-branch>` が `<cmoc-managed-branch>` である
 - 同じ session に、現在の `<cmoc-session-branch>` へ未統合の `<cmoc-apply-branch>` が存在する
 
 ## 実行手順
 
 1. 現在 branch から `<session-id>` を取得する
 2. `.cmoc/sessions/<session-id>/session.json` を読む
-3. metadata から `<session-home-branch>` を取得する
+3. metadata から `<cmoc-session-home-branch>` を取得する
 4. `<repo-root>/.cmoc` が git の追跡対象外であることを保証する
 5. `git switch <session-home-branch>` を実行する
 6. `git merge --no-ff <cmoc-session-branch>` を実行する
@@ -41,10 +41,10 @@ merge 先は常に session metadata の `<session-home-branch>` である。
 8. merge が完了したら session metadata の `state` を `merged` にする
 9. 安全に削除できる場合のみ `<cmoc-session-branch>` を削除する
 
-## home branch が進んでいた場合
+## `<cmoc-session-home-branch>` が進んでいた場合
 
-`<session-home-branch>` が session 作成後に進んでいてもエラーにはしない。
-`cmoc merge` は、実行時点の `<session-home-branch>` HEAD に `<cmoc-session-branch>` を merge する。
+`<cmoc-session-home-branch>` が session 作成後に進んでいてもエラーにはしない。
+`cmoc merge` は、実行時点の `<cmoc-session-home-branch>` HEAD に `<cmoc-session-branch>` を merge する。
 
 merge conflict が発生した場合は通常の conflict として扱う。
 

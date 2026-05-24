@@ -2,8 +2,6 @@
 
 - 大工事の過程で、未コミット差分なしだと通らないようになったけど、これは戻したい
 - ブランチのメタ名は `<cmoc-...>` みたいにプリフィックス cmoc を付ける方向性で統一したい
-- 意図がよくわからん
-    > apply 開始後に `<cmoc-session-branch>` へ追加された commit は、実行中の apply の部分適用対象には含めない。
 - `<cmoc-apply-branch>` の `<cmoc-session-branch>` へのマージ作業はサブコマンドとして導入したい
     - `cmoc apply fork`, `cmoc apply join` とかだろうか
     - であれば `<cmoc-session-branch>` の方は `cmoc session fork`, `cmoc session join` の方が良いだろう
