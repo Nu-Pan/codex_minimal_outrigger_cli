@@ -204,9 +204,8 @@
 ## Summary
 
 - `src` は cmoc の Python 実装をまとめるルートディレクトリです。
-- `main.py` は `cmoc` CLI のエントリーポイントで、サブコマンド登録と共通エラー変換を担います。
-- `commons` は `codex exec` 呼び出し、共通エラー処理、リポジトリ操作、ログ、時刻・計測、`INDEX.md` 生成支援などの共通基盤をまとめます。
-- `sub_commands` は `init`、`branch`、`apply`、`eval-oracles`、`merge` の各本体実装をまとめます。
+- `main.py` は CLI エントリーポイント、`commons` は共通基盤、`sub_commands` は各サブコマンド本体をまとめます。
+- cmoc の Python 実装全体で、どこから読むべきかを判断するときの入口です。
 
 ## Read this when
 
@@ -219,12 +218,12 @@
 
 - `oracles` の正本仕様や個別サブコマンドの仕様断片だけを読みたいとき。
 - `tests` の期待値や pytest の補助だけを確認したいとき。
-- `README.md`、`AGENTS.md`、`memo` の運用ルールだけを確認したいとき。
-- すでに読むべきモジュールが決まっていて、ディレクトリ全体の案内が不要なとき。
+- `README.md`、`AGENTS.md`、`memo` などの運用ルールだけを確認したいとき。
+- すでに対象モジュールが決まっていて、ディレクトリ全体の案内が不要なとき。
 
 ## hash
 
-- 4d1b4f29d084aa1d30a118d3c5915b2c12c370f5cf0024d59aeb53abefeb401d
+- 7cf4437eaf2b6697f02e45b28a24c139f96d26592d627c1df05e45d06ce6be77
 
 # `test.sh`
 
@@ -254,27 +253,29 @@
 
 ## Summary
 
-- `tests` は cmoc 本体の自動テスト群のルーティング目次です。
-- `conftest.py` は `src` を import path の先頭に追加する pytest 共通設定です。
-- `test_codex.py` は `run_codex_exec()` の Structured Output、リトライ、ログ、`--resume` を扱います。
-- `test_file_naming.py` は `routing.md` の命名と oracle 入口の参照先を確認します。
-- `test_indexing.py` は `INDEX.md` メンテナンス、除外規則、再生成条件を検証します。
-- `test_repo.py` は git リポジトリ共通処理、`.cmoc` ignore、差分抽出と削除検出を検証します。
-- `test_subcommands.py` は CLI 入口、各サブコマンド、`run_command` の制御とエラー表示を検証します。
-- `test_timestamps.py` はタイムスタンプ形式と経過時間表示の仕様を確認します。
+- `tests` は cmoc 本体の pytest テスト群のルーティング用ディレクトリの目次です。
+- `tests/conftest.py` は `<cmoc-root>/src` を import path の先頭に追加する共通設定です。
+- `tests/test_codex.py` は Codex CLI 呼び出しラッパーと Structured Output、再試行、ログ記録を検証します。
+- `tests/test_indexing.py` は `INDEX.md` の自動生成・更新、gitignore 除外、空ディレクトリ、バイナリ判定を検証します。
+- `tests/test_repo.py` は git リポジトリ共通処理、`.cmoc` の ignore、oracle / 実装ファイル列挙、差分検出を検証します。
+- `tests/test_subcommands.py` は `cmoc init`、`cmoc branch`、`cmoc eval-oracles`、`cmoc apply`、`cmoc merge` の制御ロジックを検証します。
+- `tests/test_file_naming.py` は `routing.md` の命名と現行 oracle 入口への参照を検証します。
+- `tests/test_timestamps.py` は timestamp 生成と経過時間表示の書式を検証します。
 
 ## Read this when
 
-- cmoc の変更がどのテストファイルに影響するかを切り分けたいとき。
-- `src` の実装変更に対して、対応する pytest 群を素早く探したいとき。
-- Codex 呼び出し、INDEX.md 更新、git 共通処理、CLI サブコマンド、タイムスタンプのどれを読むべきか判断したいとき。
+- `tests` 配下で、どのテストファイルを読むべきか判断したいとき。
+- pytest 共通設定、Codex 呼び出し、INDEX メンテナンス、git 共通処理、サブコマンド制御のどこに仕様があるか確認したいとき。
+- 新しい実装や修正に対して、既存の回帰テストがどの観点をカバーしているか把握したいとき。
+- `src` 側の変更がどのテストに影響するか、またはどのテストを追加すべきか見極めたいとき。
 
 ## Do not read this when
 
-- cmoc の正本仕様断片を探しているときは `oracles` 側を読むべきです。
-- 実装コード本体だけを追いたいときは `src` 側を読むべきです。
-- README.md、AGENTS.md、oracles、memo の運用ルールだけを確認したいとき。
+- `oracles` 側の正本仕様だけを調べたいとき。
+- `src` の実装コードだけを追いたいとき。
+- `README.md`、`AGENTS.md`、`memo` の運用ルールや編集可否だけを確認したいとき。
+- `tests` 全体の入口ではなく、特定の個別テストの細部だけをすぐ確認したいとき。
 
 ## hash
 
-- bd0789ac2c9334c7e1e967266505c07ec921076dbeba842c7fb34f80bfb70cda
+- fbc2c42e989683a18bad98588d1cbe84507d7c5c17832bba39ae9cebc1102751

@@ -77,10 +77,10 @@
 
 ## Summary
 
-- `src/sub_commands/eval-oracles.py` は `cmoc eval-oracles` の本体実装で、oracle 断片の評価、Structured Output の検証、Markdown レポート生成をまとめて担当します。
-- 実行前に `.cmoc` の ignore 保証と `INDEX.md` メンテナンスを行い、`--full` とブランチ状態に応じて部分評価モードと全体評価モードを切り替えます。
-- 各 oracle ファイルごとに `codex exec` を読み取り専用で呼び出し、`oracles` 配下の仕様断片と `INDEX.md` だけを参照させたうえで評価結果を収集します。
-- 評価結果は severity 別に集約され、成功時は通常レポート、失敗時は代替の error レポートとして `.cmoc/reports/eval-oracles/<timestamp>.md` に保存されます。
+- `src/sub_commands/eval-oracles.py` は `cmoc eval-oracles` の本体実装で、oracle 断片の評価実行、Structured Output の検証、Markdown レポート生成をまとめて担当するモジュールです。
+- 実行前に `.cmoc` の ignore 保証と `INDEX.md` のメンテナンスを行い、`--full` と現在のブランチ状態に応じて部分評価モードと全体評価モードを切り替えます。
+- 各 oracle ファイルに対して `codex exec` を読み取り専用で呼び出し、参照可能な `oracles` / `INDEX.md` の範囲だけを見せて評価結果を収集します。
+- 評価結果は severity ごとに集約され、通常レポートまたは error レポートとして `.cmoc/reports/eval-oracles/<timestamp>.md` に保存されます。
 
 ## Read this when
 
@@ -95,11 +95,11 @@
 - `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc merge` など他のサブコマンドの実装だけを調べたいとき。
 - `codex exec` の共通呼び出し規約、ログ、共通エラーハンドリングだけを確認したいとき。
 - `oracles` 側の正本仕様そのものを読みたいとき。
-- 開発規約、コーディング規約、テスト規約など、開発者向けルールだけを確認したいとき。
+- 開発規約、コーディング規約、テスト規約など、`cmoc` 自体の開発者向けルールだけを確認したいとき。
 
 ## hash
 
-- cab44a65bcd08d5338390e310da51fac2ad14bc597369679b5f2f78e07818497
+- 8dbd4e4386d66f709cb2524ea2100c941f9589fc671a717f70adb1be1447879c
 
 # `init.py`
 
