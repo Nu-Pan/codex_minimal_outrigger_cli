@@ -91,14 +91,12 @@ def test_run_codex_exec_passes_output_schema_file(
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
     args_file = tmp_path / "args.txt"
-    stdin_file = tmp_path / "stdin.txt"
     codex = fake_bin / "codex"
     codex.write_text(
         "\n".join(
             [
                 "#!/usr/bin/env bash",
                 f"printf '%s\\n' \"$@\" > {args_file}",
-                f"cat > {stdin_file}",
                 "LAST=''",
                 "PREV=''",
                 "for ARG in \"$@\"; do",
@@ -125,14 +123,10 @@ def test_run_codex_exec_passes_output_schema_file(
 
     args = args_file.read_text(encoding="utf-8").splitlines()
     schema_path = Path(args[args.index("--output-schema") + 1])
-    stdin_prompt = stdin_file.read_text(encoding="utf-8")
     log_content = next(
         (repo / ".cmoc" / "logs" / "codex_exec").glob("*.log")
     ).read_text(encoding="utf-8")
     assert output.strip() == '{"ok": true}'
-    assert args[-1] == "-"
-    assert "prompt" not in args
-    assert stdin_prompt == "prompt"
     assert "--json" in args
     assert "--output-last-message" in args
     assert "--model" in args
@@ -144,8 +138,6 @@ def test_run_codex_exec_passes_output_schema_file(
         == _BOOLEAN_SCHEMA
     )
     assert f"output_schema: {schema_path}" in log_content
-    assert "command: codex exec" in log_content
-    assert "<prompt-stdin>" in log_content
 
 
 def test_run_codex_exec_prints_output_head80_before_escaping_newlines(
@@ -464,7 +456,7 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
                 "  fi",
                 "  PREV=\"$ARG\"",
                 "done",
-                "PROMPT=\"$(cat)\"",
+                "PROMPT=\"${@: -1}\"",
                 "if [ \"$PROMPT\" = \"original prompt\" ]; then",
                 "  if [ \"$HAS_RESUME\" = 0 ]; then",
                 "  echo '{\"session_id\":\"session-1\"}'",
@@ -496,6 +488,8 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
     captured = capsys.readouterr().out
     assert output.strip() == "resumed"
     assert "--resume\nsession-1" in args
+    assert "Codex CLI の疎通確認担当" in args
+    assert "/memo` は読み書き禁止です。" in args
     assert "quota exhausted; waiting before resume" in captured
     assert "quota poll prompt: あなたは Codex CLI の疎通確認担当です。" in captured
     assert "quota poll output: ok" in captured
@@ -526,7 +520,7 @@ def test_run_codex_exec_fails_when_resume_returns_unexpected_error(
                 "  fi",
                 "  PREV=\"$ARG\"",
                 "done",
-                "PROMPT=\"$(cat)\"",
+                "PROMPT=\"${@: -1}\"",
                 "if [[ \"$PROMPT\" == *'Codex CLI の疎通確認担当'* ]]; then",
                 "  if [[ \"$PROMPT\" != *'/memo` は読み書き禁止です。'* ]]; then exit 2; fi",
                 "  if [[ \"$PROMPT\" != *'ファイル編集は禁止です。'* ]]; then exit 2; fi",
