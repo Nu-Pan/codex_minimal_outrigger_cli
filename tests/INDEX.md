@@ -146,7 +146,7 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は、cmoc のサブコマンド実行と CLI प्रवेश口の決定論的な制御ロジックを検証するテスト群の目次です。
+- `tests/test_subcommands.py` は、cmoc のサブコマンド実行制御と CLI 入口の決定論的な挙動を検証するテスト群の目次です。
 - `run_command` の stdout への tee、ファイルログ保存、終了コード反映、共通エラーレポート生成を横断して扱います。
 - `cmoc init`、`cmoc branch`、`cmoc eval-oracles`、`cmoc apply`、`cmoc merge` の各フローに加えて、prompt、Structured Output、検証ヘルパー、補助関数の挙動をまとめています。
 - `main.py` のコマンド登録と互換 alias、`bin/cmoc` の起動条件、`src` の Python ソースに future annotations を使わない制約も回帰対象です。
@@ -174,7 +174,7 @@
 
 ## hash
 
-- d67ea49da659dab87a75f6f955724e3bc7c18d67a77563ae93004e03ade41d52
+- 1123a91945a7d73a90874ecafeaddec1cc0ed0980dc42cf2307c771be9066b64
 
 # `test_timestamps.py`
 

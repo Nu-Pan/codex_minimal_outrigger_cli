@@ -134,25 +134,26 @@
 
 ## Summary
 
-- `cmoc merge` の本体実装が書かれている Python モジュールです。
-- `cmoc_merge_impl` を中心に、未コミット差分の検証、`<cmoc-branch>` の自動解決、`git merge` 実行、コンフリクト時の解消依頼、マージ後のブランチ削除判定を扱います。
-- Codex CLI へ渡すコンフリクト解消用プロンプト、conflict marker 検査、`git add` と `git commit` の実行順も含みます。
+- `src/sub_commands/merge.py` は `cmoc merge` の本体実装をまとめたモジュールです。
+- 未コミット差分の確認、`<cmoc-branch>` の自動解決、`git merge` の実行、コンフリクト解消の依頼、マージ後のブランチ削除判定までを扱います。
+- 共通 runner 経由で `repo_root` を解決する直接呼び出しパスと、`StepTimer` による進捗表示・経過時間報告を含みます。
+- コンフリクト時の Codex CLI への依頼文、conflict marker 検査、`git add`、`git commit` の順序もこのモジュールの担当範囲です。
 
 ## Read this when
 
 - `cmoc merge` の実装や挙動を修正・確認したいとき。
-- マージ元ブランチの自動解決条件や、候補が複数・未確定だった場合のエラー処理を確認したいとき。
-- `git merge` 失敗後にどこまでを cmoc が処理し、どこからを手動解決に切り替えるか確認したいとき。
-- マージ完了後に source branch を削除してよい条件や、削除失敗時の warning 挙動を確認したいとき。
-- Codex CLI に conflict 解消を依頼する際の入力内容や制約を確認したいとき。
+- マージ元 `<cmoc-branch>` の引数仕様や、自動解決条件を確認したいとき。
+- マージ前の前提条件、未コミット差分チェック、`.cmoc` の ignore 保証を確認したいとき。
+- git merge のコンフリクト発生後に、cmoc がどこまで解決し、どこから手動対応へ切り替えるかを確認したいとき。
+- マージ完了後の source branch 削除条件や、削除失敗時の warning 挙動を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc init`、`cmoc branch`、`cmoc apply`、`cmoc eval-oracles` など他のサブコマンドの実装だけを調べたいとき。
-- cmoc 全体の開発規約、コーディング規約、テスト規約だけを確認したいとき。
-- `git` の一般的な merge 操作や conflict 解消の一般論だけを知りたいとき。
+- `cmoc merge` 以外のサブコマンド仕様だけを調べたいとき。
+- cmoc 全体の開発ルール、コーディング規約、テスト規約だけを確認したいとき。
+- git の一般的な merge 操作や conflict 解消の一般論だけを知りたいとき。
 - `README.md`、`AGENTS.md`、`oracles` の運用ルールや編集可否だけを確認したいとき。
 
 ## hash
 
-- c92c70c3d856e00f115f6f8df81d01956fd3beaa8fdb869008074fbaa268f3c9
+- 7d9017bc3ccbf62d9c08be6ef19cbb8b3e44d2031c2479a2464dc3601a5b99a3
