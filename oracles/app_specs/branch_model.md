@@ -33,11 +33,11 @@ session の分岐元であり、最終的な merge 先でもある。
 
 `cmoc/session/<session-id>`
 
-ユーザーはこの branch 上で oracles を編集・commit し、`cmoc eval-oracles` や `cmoc apply` を呼び出す。
+ユーザーはこの branch 上で oracles を編集・commit し、`cmoc eval-oracles` や `cmoc apply fork` を呼び出す。
 
 ### `<cmoc-apply-branch>`
 
-`cmoc apply` が 1 回の apply 実行ごとに作成する cmoc 管理 branch。
+`cmoc apply fork` が 1 回の apply 実行ごとに作成する cmoc 管理 branch。
 命名規則は以下。
 
 `cmoc/apply/<session-id>/<apply-run-id>`
@@ -58,7 +58,7 @@ detached HEAD、`<remote-tracking-branch>`、commit hash、`<cmoc-managed-branch
 
 ## apply の snapshot 原則
 
-`cmoc apply` は、開始時点の `<cmoc-session-branch>` HEAD を `<oracle-snapshot-commit>` として固定し、その snapshot から `<cmoc-apply-branch>` を作成する。
+`cmoc apply fork` は、開始時点の `<cmoc-session-branch>` HEAD を `<oracle-snapshot-commit>` として固定し、その snapshot から `<cmoc-apply-branch>` を作成する。
 
 apply 開始後に `<cmoc-session-branch>` が進んでも、実行中の apply はその変更を取り込まない。
 
