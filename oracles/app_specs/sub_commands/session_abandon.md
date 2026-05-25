@@ -1,0 +1,2 @@
+# `cmoc session abandon`
+

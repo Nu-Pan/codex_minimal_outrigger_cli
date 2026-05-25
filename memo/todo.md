@@ -4,6 +4,7 @@
 - やっぱり `cmoc apply` でマージまでやらせたい
     - 結構な大工事になってしまった
     - `oracles` ファイルについての記述は１つのファイルにまとめた方が良い
+    - `apply_run` っていう言い方やめたい
 - `cmoc session report` が必要
     - 今この瞬間に `cmoc session join` したら、どういう内容になるか？　をレポートさせる
     - このまま `cmoc session join` に進んでよいかの判断材料

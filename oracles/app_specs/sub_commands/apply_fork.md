@@ -1,4 +1,4 @@
-# `cmoc apply`
+# `cmoc apply fork`
 
 ## 概要
 
@@ -11,7 +11,6 @@
     - i.e. ベストエフォート的な振る舞いで良い
 - `cmoc apply` は `<cmoc-session-branch>` と作業用コピーを直接汚すことはしない
     - `<cmoc-apply-branch>` を作成し、そこにコミットを積み上げる
-    - また、実作業は `<apply-worktree>` 上で行われる
 
 ## 引数
 
@@ -25,10 +24,10 @@
 以下の場合はエラー終了する。
 
 - 現在のブランチが `<cmoc-session-branch>` ではない
-- session metadata が存在しない
-- session metadata の `state` が `active` ではない
+- 対応する `<cmoc-session-state-file>` が存在しない
+- 対応する `<cmoc-session-state-file>` の `session.state` が `active` ではない
+- 対応する `<cmoc-session-state-file>` の `apply.state` が `joined` ではない
 - git 未コミット差分が存在する
-- 同じ session に `running` 状態の apply run が既に存在する
 
 ## 実行作業
 
@@ -37,8 +36,7 @@
 3. 一意な `<apply-run-id>` を生成する
 4. `<oracle-snapshot-commit>` から `<cmoc-apply-branch>` を作成する
 5. `<cmoc-apply-branch>` を checkout した専用 `<apply-worktree>` を作成する
-6. apply run metadata を `.cmoc/sessions/<session-id>/apply-runs/<apply-run-id>.json` に保存する
-7. `<apply-worktree>` 上で調査・修正ループを実行する
+6. `<apply-worktree>` 上で調査・修正ループを実行する
     1. 調査対象となる oracles ファイル・実装ファイルを列挙する
     2. Codex CLI に、列挙したファイルリストを元に要修正点をリストアップさせる
     3. 要修正点リスト改善ループ (最大 M 回)
@@ -51,9 +49,9 @@
         2. `<repo-root>/oracles` などの編集禁止ディレクトリに未コミット差分が有る場合はエラー終了
         3. 全ての未コミット差分を git にコミット（コミットメッセージは Codex CLI で適切なものを生成）
     6. 調査・修正ループ先頭に戻る
-8. `<cmoc-apply-branch>` を `<cmoc-session-branch>` にマージする
-9. 使用済みの `<cmoc-apply-branch` を削除する
-10. 作業結果をレポートする
+7. `<cmoc-apply-branch>` を `<cmoc-session-branch>` にマージする
+8. 使用済みの `<cmoc-apply-branch>` を削除する
+9. 作業結果をレポートする
 
 ## `cmoc apply` の責務境界
 
@@ -239,35 +237,6 @@
 ## 回数上限でループを抜けた場合
 
 - エラーとみはみなさず、作業結果の区分「未収束」として処理を続行する
-
-## apply 結果の統合
-
-`cmoc apply` は、調査・修正ループ終了後、通常系では `<cmoc-apply-branch>` を `<cmoc-session-branch>` へ merge する。
-
-merge 前に cmoc は以下を検査する。
-
-- `<cmoc-apply-branch>` 上で `<repo-root>/oracles` 配下が変更されていないこと
-- `<oracle-snapshot-commit>..<cmoc-session-branch>` の差分が `<repo-root>/oracles` 配下だけであること
-- session metadata の `state` が `active` であること
-- 同一 session に他の `running` apply run が存在しないこと
-- merge を実行する worktree が clean であること
-
-これらを満たす場合、cmoc は `<cmoc-session-branch>` 上で `git merge --no-ff <cmoc-apply-branch>` を実行する。
-
-merge が成功した場合、apply run metadata の状態を `merged` に更新する。
-
-merge conflict が発生した場合、cmoc は Codex CLI に conflict 解消を依頼しない。特に `<repo-root>/oracles` 配下の conflict は人間が解決すべき仕様衝突として扱う。cmoc は merge を abort し、apply run metadata の状態を `merge_conflict` または `merge_pending` に更新し、手動対応が必要なことをレポートする。
-
-## `<cmoc-apply-branch>` の削除
-
-- apply run state が `merged` である
-- `<cmoc-apply-branch>` の HEAD が `<cmoc-session-branch>` から到達可能である
-- apply report が保存済みである
-- metadata に merge 結果が保存済みである
-
-上記を満たす場合、cmoc は `<cmoc-apply-branch>` と `<apply-worktree>` を削除してよい。
-
-確認に失敗した場合は削除せず、warning として報告する。
 
 ## 作業レポートの仕様
 
