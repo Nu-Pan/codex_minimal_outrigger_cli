@@ -10,6 +10,7 @@ import typer
 from commons.errors import CmocError
 from commons.errors import format_error_report
 from sub_commands.apply import cmoc_apply_impl
+from sub_commands.apply_abandon import cmoc_apply_abandon_impl
 from sub_commands.apply_join import cmoc_apply_join_impl
 from sub_commands.init import cmoc_init_impl
 from sub_commands.session_abandon import cmoc_session_abandon_impl
@@ -115,14 +116,8 @@ def apply_join_command(
 @apply_app.command("abandon")
 def apply_abandon_command() -> None:
     """Abandon the active apply run."""
-    raise CmocError(
-        "`cmoc apply abandon` は未実装です。",
-        [
-            "現時点では手動で apply branch と worktree を整理してください。",
-            "`cmoc apply join` 前の成果物を破棄する場合は、関連 branch を確認してください。",
-        ],
-        "CLI 入口のみ登録されていますが、apply run state 管理の実装がまだありません。",
-    )
+    # CLI callback は apply abandon の本体実装へ処理を委譲する。
+    cmoc_apply_abandon_impl()
 
 
 def main() -> None:

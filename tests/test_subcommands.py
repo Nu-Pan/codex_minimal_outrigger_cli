@@ -29,6 +29,7 @@ from sub_commands.apply import _DISCREPANCY_OUTPUT_SCHEMA
 from sub_commands.apply import _commit_all_changes
 from sub_commands.apply import _organize_prompt
 from sub_commands.apply import _validate_discrepancy_payload
+from sub_commands.apply_abandon import cmoc_apply_abandon_impl
 from sub_commands.apply_join import cmoc_apply_join_impl
 from sub_commands.init import cmoc_init_impl
 from sub_commands.session_abandon import cmoc_session_abandon_impl
@@ -1120,6 +1121,95 @@ def test_apply_join_stops_on_unexpected_diff_in_normal_mode(
     assert apply_worktree.exists()
 
 
+def test_apply_abandon_deletes_apply_artifacts_and_resets_state(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """`cmoc apply abandon` は apply 成果物を merge せず破棄する。"""
+    repo = _init_repo(tmp_path)
+    _checkout_cmoc_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    (apply_worktree / "feature.txt").write_text("implemented\n", encoding="utf-8")
+    _git(apply_worktree, "add", "feature.txt")
+    _git(apply_worktree, "commit", "-m", "implement feature")
+
+    cmoc_apply_abandon_impl(repo)
+
+    output = capsys.readouterr().out
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert state["apply"] == {
+        "apply_branch": None,
+        "apply_worktree": None,
+        "completed": None,
+        "discrepancy_counts": None,
+        "oracle_snapshot_commit": None,
+        "report_path": None,
+        "state": "ready",
+    }
+    assert _git(repo, "branch", "--show-current").stdout.strip() == (
+        "cmoc/session/2026-05-10_22-21_10_123"
+    )
+    assert _git(repo, "branch", "--list", apply_branch).stdout == ""
+    assert not apply_worktree.exists()
+    assert report_path.exists()
+    assert not (repo / "feature.txt").exists()
+    assert f"abandoned apply branch: {apply_branch}" in output
+    assert f"abandoned apply worktree: {apply_worktree}" in output
+    assert "previous apply.state: completed" in output
+    assert "current apply.state: ready" in output
+
+
+def test_apply_abandon_accepts_apply_branch_worktree(
+    tmp_path: Path,
+) -> None:
+    """apply worktree 上から実行しても main worktree の state を更新する。"""
+    repo = _init_repo(tmp_path)
+    _checkout_cmoc_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+
+    cmoc_apply_abandon_impl(apply_worktree)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert state["apply"]["state"] == "ready"
+    assert _git(repo, "branch", "--list", apply_branch).stdout == ""
+    assert not apply_worktree.exists()
+
+
+def test_apply_abandon_rejects_ready_state_without_cleanup(
+    tmp_path: Path,
+) -> None:
+    """apply.state が ready の場合は破棄対象なしとして停止する。"""
+    repo = _init_repo(tmp_path)
+    _checkout_cmoc_branch(repo)
+
+    with pytest.raises(CmocError) as error_info:
+        cmoc_apply_abandon_impl(repo)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert "破棄対象の apply run" in error_info.value.message
+    assert state["apply"]["state"] == "ready"
+
+
 def test_apply_uses_investigate_repeat_option_for_loop_limit(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -1926,6 +2016,7 @@ def test_main_typer_functions_delegate_only_to_impls() -> None:
     assert "repeat_improove_fixing_list=repeat_improove_fixing_list" in source
     assert "cmoc_session_join_impl()" in source
     assert "cmoc_session_abandon_impl()" in source
+    assert "cmoc_apply_abandon_impl()" in source
 
 
 def test_cmoc_help_uses_cmoc_command_name() -> None:
