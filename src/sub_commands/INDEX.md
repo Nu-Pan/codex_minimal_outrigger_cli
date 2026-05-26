@@ -47,6 +47,30 @@
 
 - 9da37e860569d5a2c30b9b497945598e83854bbaf2517ac5036d5076a52d7447
 
+# `apply_abandon.py`
+
+## Summary
+
+- `src/sub_commands/apply_abandon.py` は `cmoc apply abandon` の本体処理を定義するモジュールです。
+- 現在の branch と session state を検証し、未 join の apply run に対応する apply branch と apply worktree を強制削除します。
+- 破棄後は `session.state` の `apply.state` を `ready` に戻し、必要な warning と timing を標準出力へ出します。
+
+## Read this when
+
+- `cmoc apply abandon` の本体実装、事前条件、cleanup 手順を確認したいとき。
+- 現在の session に紐づく未 join の apply run を破棄する処理や、`apply.state` を `ready` に戻す流れを追いたいとき。
+- apply branch と apply worktree の削除条件、warning の出し方、状態復元の挙動を実装・修正・レビューしたいとき。
+
+## Do not read this when
+
+- `cmoc apply fork` の要修正点リスト作成や調査・修正ループの流れだけを確認したいとき。
+- `cmoc apply join` のマージ処理、強制解決、後始末だけを確認したいとき。
+- `cmoc session fork`、`cmoc session join`、`cmoc session abandon` など、apply 以外のサブコマンドを確認したいとき。
+
+## hash
+
+- 54a743632d56ff0320b7ab9e4fea3892cafdbaf9057dbe949b55ba92f167e3d9
+
 # `apply_join.py`
 
 ## Summary

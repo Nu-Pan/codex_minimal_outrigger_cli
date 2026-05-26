@@ -140,17 +140,18 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は、`cmoc` のサブコマンド群と共通実行基盤の決定論的な挙動を検証するテスト集の目次です。
-- `run_command` の出力・ログ・例外処理、`init` / `session` / `apply` / `eval-oracles` の主要分岐、`main` の CLI 登録や互換 alias をまとめて扱います。
-- 要修正点リストや評価レポートの schema 検証、prompt 文字列、`bin/cmoc` ランチャー、conflict 解消補助などの周辺仕様もこのファイルで確認できます。
+- `tests/test_subcommands.py` は、`cmoc` のサブコマンド本体と共通実行基盤の決定論的な挙動を検証するテスト集の目次です。
+- `run_command` の tee 出力、ログ保存、例外処理、終了コード、`main` の登録や `bin/cmoc` ランチャーまで横断して確認できます。
+- `init`、`session`、`apply`、`eval-oracles` の主要分岐に加えて、prompt・schema・conflict 解消補助・補助関数の順序規約も扱います。
 
 ## Read this when
 
-- `run_command`、`init`、`session`、`apply`、`eval-oracles` の決定論的な挙動を横断して確認したいとき。
+- `run_command`、`init`、`session`、`apply`、`eval-oracles` の挙動を横断して確認したいとき。
 - `main` の CLI 登録、`eval-oracles` と `eval-oracle` の互換 alias、`bin/cmoc` の起動経路を確認したいとき。
-- 要修正点リストや評価レポートの schema 検証、prompt 生成、コミット順序、レポート保存の仕様を確認したいとき。
+- 要修正点リストや評価レポートの schema 検証、prompt 文字列、コミット順序、レポート保存の仕様を確認したいとき。
 - `session fork` / `join` / `abandon` の state 更新、branch 操作、conflict 解消補助、前提条件エラーの扱いを確認したいとき。
 - 共通エラーレポート、ログ tee、終了コード、補助関数の並び順など、サブコマンド周辺の制御ロジックを追いたいとき。
+- Python ソースで `future annotations` を使わない規約の確認対象を把握したいとき。
 
 ## Do not read this when
 
@@ -161,7 +162,7 @@
 
 ## hash
 
-- 9ee37b32832d9eb6c6ac5566e0b063b2454d7745d2d58bc6651f8cd2e3caa999
+- eb170127002be7574e475a5a92cc88588de7bd8dc700162fe34b223af04652a3
 
 # `test_timestamps.py`
 
