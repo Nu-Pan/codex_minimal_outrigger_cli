@@ -16,11 +16,13 @@ from .timing import clear_current_timer, format_duration, report_current_timer
 def run_command(handler: Callable[[Path], int | None]) -> None:
     """repo root 解決と共通エラー報告を行って本体処理を実行する。"""
     # Typer 関数を薄く保つため、横断的な実行制御は commons 側に集約する。
-    repo_root = enter_repo_root()
     exit_code = 0
+    started = perf_counter()
     try:
+        repo_root = enter_repo_root()
         with subcommand_log(repo_root) as log_context:
             try:
+                started = log_context.started
                 clear_current_timer()
                 result = handler(repo_root)
                 if isinstance(result, int):
@@ -50,22 +52,45 @@ def run_command(handler: Callable[[Path], int | None]) -> None:
                 exit_code = getattr(error, "exit_code", 1)
                 raise typer.Exit(exit_code) from error
             finally:
-                # 途中経過ログと終了時の集計ブロックを視覚的に分ける。
-                print("")
-                print("== Command completion report ==")
-                report_current_timer()
-                print(
-                    "subcommand total elapsed: "
-                    f"{format_duration(perf_counter() - log_context.started)}"
+                _print_completion_report(
+                    started=log_context.started,
+                    quota_wait_seconds=log_context.quota_wait_seconds,
+                    exit_code=exit_code,
                 )
-                print(
-                    "subcommand quota wait elapsed: "
-                    f"{format_duration(log_context.quota_wait_seconds)}"
-                )
-                print(f"subcommand return code: {exit_code}")
-                clear_current_timer()
     except typer.Exit:
         raise
+    except Exception as error:
+        print(format_error_report(error))
+        exit_code = getattr(error, "exit_code", 1)
+        _print_completion_report(
+            started=started,
+            quota_wait_seconds=0.0,
+            exit_code=exit_code,
+        )
+        raise typer.Exit(exit_code) from error
 
     if exit_code != 0:
         raise typer.Exit(exit_code)
+
+
+def _print_completion_report(
+    *,
+    started: float,
+    quota_wait_seconds: float,
+    exit_code: int,
+) -> None:
+    """サブコマンド終了時に可能な範囲の集計を stdout へ出す。"""
+    # 途中経過ログと終了時の集計ブロックを視覚的に分ける。
+    print("")
+    print("== Command completion report ==")
+    report_current_timer()
+    print(
+        "subcommand total elapsed: "
+        f"{format_duration(perf_counter() - started)}"
+    )
+    print(
+        "subcommand quota wait elapsed: "
+        f"{format_duration(quota_wait_seconds)}"
+    )
+    print(f"subcommand return code: {exit_code}")
+    clear_current_timer()

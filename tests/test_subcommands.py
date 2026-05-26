@@ -198,6 +198,52 @@ def test_run_command_reports_nonzero_typer_exit(
     assert "subcommand return code: 7" in log_content
 
 
+def test_run_command_reports_repo_root_resolution_error(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """repo root 解決失敗も共通エラーレポートと終了集計を stdout に出す。"""
+    def fail_enter_repo_root() -> Path:
+        """repo root 解決に失敗する setup 処理。"""
+        raise CmocError(
+            "Git リポジトリのルートが見つかりませんでした。",
+            [
+                "git 管理下のリポジトリへ移動してください。",
+                "このディレクトリをリポジトリにする場合は `git init` を実行してください。",
+            ],
+            f"開始パス: {tmp_path.resolve()}",
+        )
+
+    monkeypatch.setattr(
+        "commons.command_runner.enter_repo_root",
+        fail_enter_repo_root,
+    )
+
+    def handler(_repo: Path) -> None:
+        """repo root 解決に失敗するため呼ばれない。"""
+        raise AssertionError("handler must not be called")
+
+    with pytest.raises(typer.Exit) as exit_info:
+        run_command(handler)
+
+    captured = capsys.readouterr()
+    assert exit_info.value.exit_code == 1
+    assert captured.err == ""
+    assert "ERROR" in captured.out
+    assert "Summary:" in captured.out
+    assert "Git リポジトリのルートが見つかりませんでした。" in captured.out
+    assert "Next actions:" in captured.out
+    assert "Detail:" in captured.out
+    assert f"開始パス: {tmp_path.resolve()}" in captured.out
+    assert "Call stack:" in captured.out
+    assert "== Command completion report ==" in captured.out
+    assert "subcommand total elapsed:" in captured.out
+    assert "subcommand quota wait elapsed:" in captured.out
+    assert "subcommand return code: 1" in captured.out
+    assert not (tmp_path / ".cmoc" / "logs" / "sub_commands").exists()
+
+
 def test_init_adds_cmoc_ignore_and_commits_it(tmp_path: Path) -> None:
     """`cmoc init` は `.cmoc` ignore ルールを commit する。"""
     repo = _init_repo(tmp_path)
