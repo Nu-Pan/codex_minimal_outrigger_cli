@@ -29,8 +29,8 @@
 
 - `tests/test_codex.py` は `commons.codex.run_codex_exec()` の振る舞いを Fake Codex CLI で検証するテスト群の入口です。
 - Structured Output の schema ファイル生成、JSON とテキストの再試行、意味的検証失敗時の詳細エラー、`enum` や文字列長制約の検査を扱います。
-- 呼び出しログ、`subcommand_log` への通知、`--resume` 再実行、quota 枯渇時の待機と疎通確認、`INDEX.md` 事前メンテナンスと `skip_index_maintenance` の扱いも確認します。
-- ファイル末尾には、テスト用 git リポジトリを初期化して `git` を実行する補助関数 `_init_git_repo` と `_git` があります。
+- 呼び出しログ、`subcommand_log` への通知、`INDEX.md` 事前メンテナンスと `skip_index_maintenance`、quota 枯渇時の待機・疎通確認・`--resume` 再実行も確認します。
+- ファイル末尾には、テスト用 git リポジトリを初期化して `git` を実行する補助関数 `_init_git_repo` と `_git`、および `_FailingTextIO` / `_RecordingTextIO` があります。
 
 ## Read this when
 
@@ -38,7 +38,7 @@
 - Structured Output の parse 失敗、意味的検証失敗、JSON Schema の `enum` や文字列長制約に対するリトライとエラー表示を確認したいとき。
 - Codex CLI 呼び出しログ、`subcommand_log` への通知、出力プレビュー、quota 枯渇時の待機と疎通確認、再実行の流れを確認したいとき。
 - Codex 呼び出し前後の `INDEX.md` メンテナンスの有無や、`skip_index_maintenance` による明示スキップを確認したいとき。
-- テスト用 git リポジトリを初期化して `git` を実行する補助関数 `_init_git_repo` と `_git` の使い方を確認したいとき。
+- テスト用 git リポジトリを初期化して `git` を実行する補助関数 `_init_git_repo` と `_git`、ならびに `_TeeTextIO` の補助テストを確認したいとき。
 
 ## Do not read this when
 
@@ -49,7 +49,7 @@
 
 ## hash
 
-- 9cc2d4d55a0ed08f2d10e0f4205709acffeaf2eb10f8d4717b2fae40bf9e4888
+- e4860b4c71a56d69dab03afe3d94b071487da810591b3e401c816decd518ae98
 
 # `test_file_naming.py`
 
