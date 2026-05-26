@@ -130,31 +130,30 @@
 
 ## Summary
 
-- git リポジトリのルート探索、`cwd` の固定、`git` 実行をまとめる共通モジュールです。
-- cmoc 管理ブランチの判定、session id 抽出、`session state` の読み書きと固定スキーマ検証を扱います。
-- `.cmoc` を追跡対象外に保つ保証、`.gitignore` の判定、未コミット差分や pathspec 単位の clean 判定を提供します。
-- `oracles` と実装ファイルの列挙、変更・削除検出、working tree / staging area からの差分抽出を行います。
+- git リポジトリのルート探索、cwd 固定、`git` 実行をまとめる共通モジュールです。
+- `cmoc/session/<session-id>` と `cmoc/apply/<session-id>/<apply-run-id>` のブランチ判定や、branch から session id を取り出す処理を提供します。
+- `.cmoc/sessions/<session-id>.json` の読み書き、固定スキーマ検証、active session の列挙、session start commit の参照を扱います。
+- `.cmoc` の追跡対象外保証、root `.gitignore` の判定、未コミット差分や pathspec 単位の clean 判定、変更済み oracle / 実装ファイルの列挙を行います。
 - `commit_if_changed` と `commit_cmoc_initialization_changes` で、一時 index を使った部分 commit と staged 差分の復元を実現します。
 
 ## Read this when
 
-- git リポジトリのルート探索や、プロセスの `cwd` を repo root に固定する処理を確認・修正したいとき。
-- 現在ブランチ名、`HEAD` commit、`cmoc/session/<session-id>` と `cmoc/apply/<session-id>/<apply-run-id>` の判定、session id の抽出を扱いたいとき。
-- `.cmoc/sessions` の session state の読み書き、固定スキーマ検証、active session の列挙、session start commit の参照を確認したいとき。
-- `.cmoc` を git 追跡対象外に保つ保証、root `.gitignore` の判定、未コミット差分や pathspec 単位の clean 判定を実装したいとき。
-- `oracles` ファイルや実装ファイルの列挙、変更・削除検出、working tree と staging area の差分収集を追いたいとき。
-- `commit_if_changed` や `commit_cmoc_initialization_changes` のように、一時 index を使って特定パスだけを commit し、既存の staged 差分を復元する挙動を確認したいとき。
+- repo root の探索や cwd 固定の処理を確認・修正したいとき。
+- branch 名の判定、session id 抽出、session state の読み書き・検証を扱いたいとき。
+- `.cmoc` の ignore 保証、`.gitignore` 判定、未コミット差分や pathspec 単位の clean 判定を実装したいとき。
+- oracle / 実装ファイルの列挙、削除検出、working tree と staging area の差分収集を追いたいとき。
+- 一時 index を使った部分 commit や staged 差分復元の挙動を確認したいとき。
 
 ## Do not read this when
 
-- CLI の引数定義やサブコマンドの実行手順だけを確認したいときは、`src/sub_commands` 側を読むべきです。
-- エラーレポート整形やログ保存、タイムスタンプ生成など、別の共通機能だけを確認したいときは、このファイルではなく対応する `src/commons/*.py` を読むべきです。
+- CLI 引数定義やサブコマンドの実行手順だけを確認したいときは、`src/sub_commands` 側を読むべきです。
+- エラーレポート整形、ログ保存、タイムスタンプ生成など、別の共通機能だけを確認したいときは、このファイルではなく対応する `src/commons/*.py` を読むべきです。
 - `INDEX.md` の自動生成や更新ルールそのものを確認したいときは、`src/commons/indexing.py` を読むべきです。
 - `oracles` の正本仕様や個別の仕様断片だけを追いたいときは、この共通ユーティリティではなく `oracles` 配下の文書を読むべきです。
 
 ## hash
 
-- 2e9cdb32c1472f40026409bdf83ba6578ca85ecf231b440c539ab226e7278c84
+- e8152ea12b79ed32a2e26e02465b301cd57ddd2345159a14734a2484771ec4c0
 
 # `subcommand_log.py`
 
