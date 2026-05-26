@@ -938,7 +938,7 @@ def test_apply_returns_complete_when_no_discrepancies(
         codex_kwargs.append(kwargs)
         codex_prompts.append(str(args[1]))
         if kwargs.get("expect_json") is True:
-            return '{"fixing_points": []}'
+            return '{"git_head_commit_hash": null, "fixing_points": []}'
         return _apply_report(str(args[1]), "収束", [0])
 
     monkeypatch.setattr("sub_commands.apply.run_codex_exec", fake_codex)
@@ -1392,7 +1392,7 @@ def test_apply_rejects_incomplete_report_from_codex(
     def fake_codex(*args: object, **kwargs: object) -> str:
         """調査は収束、レポートは必須項目不足にする。"""
         if kwargs.get("expect_json") is True:
-            return '{"fixing_points": []}'
+            return '{"git_head_commit_hash": null, "fixing_points": []}'
         return "収束\ncomplete report"
 
     monkeypatch.setattr("sub_commands.apply.run_codex_exec", fake_codex)
@@ -1479,7 +1479,7 @@ def test_apply_commits_untracked_oracle_changes_after_cmoc_guarantee(
     def fake_codex(*args: object, **kwargs: object) -> str:
         """調査なら不整合なし JSON、レポートなら Markdown を返す。"""
         if kwargs.get("expect_json") is True:
-            return '{"fixing_points": []}'
+            return '{"git_head_commit_hash": null, "fixing_points": []}'
         return "\n".join(
             [
                 "## 作業結果",
@@ -1525,7 +1525,7 @@ def test_apply_commits_preexisting_staged_oracles_after_cmoc_guarantee(
     def fake_codex(*args: object, **kwargs: object) -> str:
         """調査なら不整合なし JSON、レポートなら Markdown を返す。"""
         if kwargs.get("expect_json") is True:
-            return '{"fixing_points": []}'
+            return '{"git_head_commit_hash": null, "fixing_points": []}'
         return "\n".join(
             [
                 "## 作業結果",
@@ -1581,6 +1581,7 @@ def test_apply_discrepancy_schema_rejects_incomplete_items() -> None:
     with pytest.raises(ValueError):
         _validate_discrepancy_payload(
             {
+                "git_head_commit_hash": None,
                 "fixing_points": [
                     {
                         "title": "missing fields",
@@ -1588,6 +1589,17 @@ def test_apply_discrepancy_schema_rejects_incomplete_items() -> None:
                 ]
             }
         )
+
+
+def test_apply_discrepancy_schema_requires_git_head_commit_hash() -> None:
+    """不整合調査 JSON は top-level の HEAD hash key 欠落を拒否する。"""
+    assert set(_DISCREPANCY_OUTPUT_SCHEMA["required"]) == {
+        "git_head_commit_hash",
+        "fixing_points",
+    }
+
+    with pytest.raises(ValueError, match="git_head_commit_hash"):
+        _validate_discrepancy_payload({"fixing_points": []})
 
 
 def test_apply_discrepancy_schema_accepts_fixing_points() -> None:
@@ -1609,6 +1621,7 @@ def test_apply_discrepancy_schema_rejects_near_miss_keys() -> None:
     with pytest.raises(ValueError):
         _validate_discrepancy_payload(
             {
+                "git_head_commit_hash": None,
                 "fixing_points": [
                     {
                         "title": "near miss",

@@ -35,7 +35,7 @@ _APPLY_INCOMPLETE_EXIT_CODE: int = 2
 _DISCREPANCY_OUTPUT_SCHEMA: dict[str, object] = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["fixing_points"],
+    "required": ["git_head_commit_hash", "fixing_points"],
     "properties": {
         "git_head_commit_hash": {
             "type": ["string", "null"],
@@ -1062,6 +1062,7 @@ def _investigation_prompt(repo_root: Path, oracle_file: Path) -> str:
             "各要修正点には title、evidences、oracle_requirement、",
             "observed_implementation、reason、suggested_fix を含めてください。",
             "evidences には path、line_start、line_end、summary を含めてください。",
+            "top-level の git_head_commit_hash は必ず含め、値は null で構いません。",
             "明確な要修正点がない場合だけ fixing_points に空配列を返してください。",
             f"`{repo_root / 'memo'}` は読み書き禁止です。",
             "ファイル編集は禁止です。",
@@ -1088,6 +1089,7 @@ def _implementation_investigation_prompt(
             "各要修正点には title、evidences、oracle_requirement、",
             "observed_implementation、reason、suggested_fix を含めてください。",
             "evidences には path、line_start、line_end、summary を含めてください。",
+            "top-level の git_head_commit_hash は必ず含め、値は null で構いません。",
             "明確な要修正点がない場合だけ fixing_points に空配列を返してください。",
             f"`{repo_root / 'memo'}` は読み書き禁止です。",
             "ファイル編集は禁止です。",
@@ -1127,6 +1129,7 @@ def _organize_prompt(
             "改善過程で発見した漏れがあれば、要修正点リストに追加してください。",
             "実装のみから発見した要修正点でも、関係する oracle 仕様を oracle_requirement に記載してください。",
             "改善点がない場合は入力と同じ要修正点リストを返してください。",
+            "top-level の git_head_commit_hash は必ず含め、値は null で構いません。",
             "明確な要修正点がない場合だけ fixing_points に空配列を返してください。",
             "連結済み要修正点リスト: "
             f"{json.dumps(structured_discrepancies, ensure_ascii=False)}",
@@ -1192,14 +1195,12 @@ def _commit_message_prompt(repo_root: Path) -> str:
 
 def _validate_discrepancy_payload(value: object) -> None:
     """不整合調査 Structured Output の schema を検査する。"""
-    # top-level は fixing_points と任意の git_head_commit_hash に限定する。
+    # top-level は git_head_commit_hash と fixing_points に限定する。
     if not isinstance(value, dict):
         raise ValueError("Expected JSON object.")
-    allowed_keys = {"fixing_points", "git_head_commit_hash"}
-    if "fixing_points" not in value or not set(value).issubset(allowed_keys):
-        raise ValueError(
-            "Expected fixing_points and optional git_head_commit_hash keys."
-        )
+    required_keys = {"git_head_commit_hash", "fixing_points"}
+    if set(value) != required_keys:
+        raise ValueError("Expected git_head_commit_hash and fixing_points keys.")
     commit_hash = value.get("git_head_commit_hash")
     if commit_hash is not None and not isinstance(commit_hash, str):
         raise ValueError("git_head_commit_hash must be a string or null.")
