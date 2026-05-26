@@ -181,49 +181,34 @@ def cmoc_apply_impl(
         session_branch,
     )
     assert_no_uncommitted_changes(repo_root)
+    _validate_repeat_options(
+        repeat_investigate_and_fix,
+        repeat_improove_fixing_list,
+    )
 
     start_step(timer, 2, 6, "ensure .cmoc is ignored")
     assert_cmoc_ignored(repo_root)
     assert_no_uncommitted_changes(repo_root)
     oracle_snapshot_commit = head_commit(repo_root)
 
-    start_step(timer, 3, 6, "create apply worktree")
-    apply_run_id, apply_branch, apply_worktree = _create_apply_worktree(
-        repo_root,
-        session_id,
-        oracle_snapshot_commit,
-    )
-    _mark_apply_running(
-        repo_root,
-        session_id,
-        state,
-        apply_branch,
-        oracle_snapshot_commit,
-    )
-
-    # ユーザー向けステップとして INDEX.md を明示メンテナンスする。
     try:
+        start_step(timer, 3, 6, "create apply worktree")
+        apply_run_id, apply_branch, apply_worktree = _create_apply_worktree(
+            repo_root,
+            session_id,
+            oracle_snapshot_commit,
+        )
+        _mark_apply_running(
+            repo_root,
+            session_id,
+            state,
+            apply_branch,
+            oracle_snapshot_commit,
+        )
+
+        # ユーザー向けステップとして INDEX.md を明示メンテナンスする。
         start_step(timer, 4, 6, "maintain INDEX.md files")
         maintain_indexes(apply_worktree)
-
-        if repeat_investigate_and_fix < 0:
-            raise CmocError(
-                "調査・修正ループ回数に負の値は指定できません。",
-                [
-                    "`--repeat-investigate-and-fix` には 0 以上の整数を指定してください。",
-                    "既定の上限を使う場合は `--repeat-investigate-and-fix` を省略してください。",
-                ],
-                f"repeat_investigate_and_fix: {repeat_investigate_and_fix}",
-            )
-        if repeat_improove_fixing_list < 0:
-            raise CmocError(
-                "要修正点リスト改善ループ回数に負の値は指定できません。",
-                [
-                    "`--repeat-improove-fixing-list` には 0 以上の整数を指定してください。",
-                    "既定の上限を使う場合は `--repeat-improove-fixing-list` を省略してください。",
-                ],
-                f"repeat_improove_fixing_list: {repeat_improove_fixing_list}",
-            )
 
         # 不整合調査と追従作業を指定回数まで反復する。
         start_step(timer, 5, 6, "investigate and apply discrepancies")
@@ -320,6 +305,31 @@ def _validate_apply_fork_state(
     return start_commit
 
 
+def _validate_repeat_options(
+    repeat_investigate_and_fix: int,
+    repeat_improove_fixing_list: int,
+) -> None:
+    """apply fork の repeat 系オプションを副作用前に検証する。"""
+    if repeat_investigate_and_fix < 0:
+        raise CmocError(
+            "調査・修正ループ回数に負の値は指定できません。",
+            [
+                "`--repeat-investigate-and-fix` には 0 以上の整数を指定してください。",
+                "既定の上限を使う場合は `--repeat-investigate-and-fix` を省略してください。",
+            ],
+            f"repeat_investigate_and_fix: {repeat_investigate_and_fix}",
+        )
+    if repeat_improove_fixing_list < 0:
+        raise CmocError(
+            "要修正点リスト改善ループ回数に負の値は指定できません。",
+            [
+                "`--repeat-improove-fixing-list` には 0 以上の整数を指定してください。",
+                "既定の上限を使う場合は `--repeat-improove-fixing-list` を省略してください。",
+            ],
+            f"repeat_improove_fixing_list: {repeat_improove_fixing_list}",
+        )
+
+
 def _create_apply_worktree(
     repo_root: Path,
     session_id: str,
@@ -394,7 +404,7 @@ def _mark_apply_error(
 ) -> None:
     """開始済み apply run を error として永続化する。"""
     apply = _mutable_apply_section(state)
-    if apply.get("state") == "running":
+    if apply.get("state") != "error":
         apply["state"] = "error"
         write_session_state(repo_root, session_id, state)
 

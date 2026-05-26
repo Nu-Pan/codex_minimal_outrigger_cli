@@ -14,6 +14,7 @@ import pytest
 import typer
 from pytest import MonkeyPatch
 
+import sub_commands.apply as apply_module
 import sub_commands.session_abandon as session_abandon_module
 import sub_commands.session_fork as session_fork_module
 from commons.codex import COST_PERFORMANCE_MODEL
@@ -1930,6 +1931,118 @@ def test_apply_rejects_tracked_cmoc_before_worktree_creation(
     assert not (repo / ".cmoc" / "worktrees").exists()
     assert _git(repo, "ls-files", "--", ".cmoc").stdout == f"{state_path}\n"
     branches = _git(repo, "branch", "--format=%(refname:short)").stdout
+    assert "cmoc/apply/" not in branches
+
+
+def test_apply_rejects_negative_repeat_before_worktree_creation(
+    tmp_path: Path,
+) -> None:
+    """repeat 系オプションの負値は apply 開始副作用の前に拒否する。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+
+    with pytest.raises(CmocError) as error:
+        cmoc_apply_impl(repo, repeat_investigate_and_fix=-1)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+        ).read_text(encoding="utf-8")
+    )
+    branches = _git(repo, "branch", "--format=%(refname:short)").stdout
+    assert "調査・修正ループ回数に負の値" in error.value.message
+    assert state["apply"] == {
+        "apply_branch": None,
+        "oracle_snapshot_commit": None,
+        "state": "ready",
+    }
+    assert not (repo / ".cmoc" / "worktrees").exists()
+    assert "cmoc/apply/" not in branches
+
+
+def test_apply_marks_error_when_running_state_write_fails(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """apply 開始中の state 書き込み失敗も error state として残す。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    real_write_session_state = apply_module.write_session_state
+    calls = 0
+
+    def flaky_write_session_state(
+        repo_root: Path,
+        session_id: str,
+        state: dict[str, object],
+    ) -> Path:
+        """running 遷移の保存だけ失敗させる。"""
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise OSError("fake running write failure")
+        return real_write_session_state(repo_root, session_id, state)
+
+    monkeypatch.setattr(
+        apply_module,
+        "write_session_state",
+        flaky_write_session_state,
+    )
+
+    with pytest.raises(OSError) as error:
+        cmoc_apply_impl(repo)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+        ).read_text(encoding="utf-8")
+    )
+    apply_branch = state["apply"]["apply_branch"]
+    assert "fake running write failure" in str(error.value)
+    assert state["apply"]["state"] == "error"
+    assert isinstance(apply_branch, str)
+    assert apply_branch.startswith("cmoc/apply/2026-05-10_22-21_10_123/")
+    assert _git(repo, "branch", "--list", apply_branch).stdout.strip()
+    assert calls == 2
+
+
+def test_apply_marks_error_when_worktree_creation_fails(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """apply 開始後の worktree 作成失敗は error state として残す。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+
+    def fail_create_apply_worktree(
+        _repo_root: Path,
+        _session_id: str,
+        _oracle_snapshot_commit: str,
+    ) -> tuple[str, str, Path]:
+        """worktree 作成失敗を模擬する。"""
+        raise RuntimeError("fake worktree creation failure")
+
+    monkeypatch.setattr(
+        apply_module,
+        "_create_apply_worktree",
+        fail_create_apply_worktree,
+    )
+
+    with pytest.raises(RuntimeError) as error:
+        cmoc_apply_impl(repo)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+        ).read_text(encoding="utf-8")
+    )
+    branches = _git(repo, "branch", "--format=%(refname:short)").stdout
+    assert "fake worktree creation failure" in str(error.value)
+    assert state["apply"] == {
+        "apply_branch": None,
+        "oracle_snapshot_commit": None,
+        "state": "error",
+    }
+    assert not (repo / ".cmoc" / "worktrees").exists()
     assert "cmoc/apply/" not in branches
 
 
