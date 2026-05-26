@@ -14,6 +14,7 @@ from commons.repo import (
     initial_session_state,
     is_cmoc_branch,
     run_git,
+    session_state_path,
     write_session_state,
 )
 from commons.timing import StepTimer, start_step
@@ -62,11 +63,20 @@ def cmoc_session_fork_impl(repo_root: Path | None = None) -> None:
     session_id, branch_name = _create_unique_session_branch(repo_root)
 
     start_step(timer, 4, 4, "record session state")
-    write_session_state(
-        repo_root,
-        session_id,
-        initial_session_state(home_branch, start_commit),
-    )
+    try:
+        write_session_state(
+            repo_root,
+            session_id,
+            initial_session_state(home_branch, start_commit),
+        )
+    except Exception as error:
+        _rollback_created_session_branch(
+            repo_root,
+            home_branch,
+            branch_name,
+            session_id,
+            error,
+        )
     print(f"created session branch: {branch_name}")
     print(f"session home branch: {home_branch}")
     timer.report()
@@ -121,3 +131,42 @@ def _create_unique_session_branch(repo_root: Path) -> tuple[str, str]:
             return session_id, branch_name
         sleep(0.001)
     raise RuntimeError("リトライ後も一意な session branch を作成できませんでした。")
+
+
+def _rollback_created_session_branch(
+    repo_root: Path,
+    home_branch: str,
+    branch_name: str,
+    session_id: str,
+    error: Exception,
+) -> None:
+    """session state 保存失敗時に作成済み branch を破棄する。"""
+    # state と branch を揃って作るため、保存失敗時は開始前の branch へ戻す。
+    rollback_errors: list[str] = []
+    session_state_path(repo_root, session_id).unlink(missing_ok=True)
+    switch_result = run_git(
+        repo_root,
+        ["switch", home_branch],
+        check=False,
+    )
+    if switch_result.returncode != 0:
+        rollback_errors.append(switch_result.stderr.strip())
+    else:
+        delete_result = run_git(
+            repo_root,
+            ["branch", "-D", branch_name],
+            check=False,
+        )
+        if delete_result.returncode != 0:
+            rollback_errors.append(delete_result.stderr.strip())
+
+    detail_lines = [str(error)]
+    detail_lines.extend(line for line in rollback_errors if line)
+    raise CmocError(
+        "session state の保存に失敗したため session branch 作成を取り消しました。",
+        [
+            ".cmoc/sessions 配下の権限とディスク状態を確認してください。",
+            "rollback に失敗した場合は Detail の branch と state を手動で確認してください。",
+        ],
+        "\n".join(detail_lines),
+    ) from error

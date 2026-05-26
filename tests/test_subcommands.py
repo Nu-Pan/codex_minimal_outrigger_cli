@@ -14,6 +14,7 @@ import pytest
 import typer
 from pytest import MonkeyPatch
 
+import sub_commands.session_fork as session_fork_module
 from commons.codex import COST_PERFORMANCE_MODEL
 from commons.codex import COST_PERFORMANCE_REASONING_EFFORT
 from commons.codex import COMMIT_MESSAGE_MODEL
@@ -497,6 +498,41 @@ def test_session_fork_rejects_malformed_session_state_before_branch_creation(
     assert _git(repo, "branch", "--show-current").stdout.strip() == home_branch
     assert "cmoc/session/" not in branches
     assert _session_state_paths(repo) == [broken_path]
+
+
+def test_session_fork_rolls_back_branch_when_state_write_fails(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """state 保存に失敗した session branch は残さない。"""
+    repo = _init_repo(tmp_path)
+    cmoc_init_impl(repo)
+    home_branch = _git(repo, "branch", "--show-current").stdout.strip()
+
+    def fail_write_session_state(
+        _repo_root: Path,
+        _session_id: str,
+        _state: dict[str, object],
+    ) -> Path:
+        """session state 保存失敗を模擬する。"""
+        raise OSError("fake state write failure")
+
+    monkeypatch.setattr(
+        session_fork_module,
+        "write_session_state",
+        fail_write_session_state,
+    )
+
+    with pytest.raises(CmocError) as error:
+        cmoc_session_fork_impl(repo)
+
+    branches = _git(repo, "branch", "--format=%(refname:short)").stdout
+    assert "session state の保存に失敗" in error.value.message
+    assert "fake state write failure" in error.value.detail
+    assert _git(repo, "branch", "--show-current").stdout.strip() == home_branch
+    assert "cmoc/session/" not in branches
+    assert _session_state_paths(repo) == []
+    assert _git(repo, "status", "--porcelain").stdout == ""
 
 
 def test_eval_oracles_writes_report_with_fake_codex(
