@@ -130,25 +130,25 @@
 
 ## Summary
 
-- `cmoc` の正本仕様断片群である `oracles` への入口です。
-- `app_specs`、`considered_alternatives`、`dev_rules` へのルーティングをまとめています。
-- `oracles` 配下の各ディレクトリの詳しい案内は、それぞれの `INDEX.md` からたどります。
+- `cmoc` の正本仕様断片をまとめる `oracles` のルート目次です。
+- `app_specs`、`considered_alternatives`、`dev_rules` への入口を提供します。
+- どの仕様群を読むべきか迷ったときの最初の案内として使います。
 
 ## Read this when
 
-- `oracles` 全体の入口と各系統の役割分担を確認したいとき。
-- どの配下の `INDEX.md` に進むべきかを判断したいとき。
-- `cmoc` の仕様断片群を横断して参照したいとき。
+- `oracles` 全体の入口と、どの仕様群へ進むべきかを確認したいとき。
+- アプリ仕様、採用しなかった代替案、開発ルールのどれを読むべきか整理したいとき。
+- 下位の `INDEX.md` や個別仕様へ進む前に、`oracles` の構成を俯瞰したいとき。
 
 ## Do not read this when
 
-- 個別の仕様本文だけを読みたいときは、該当ディレクトリの `INDEX.md` から直接進むべきです。
-- `oracles` 以外の実装コードやテストコードを確認したいときです。
-- `oracles` の編集方針や各ファイル本文を深掘りしたいときです。
+- 目的の仕様がすでに分かっていて、`app_specs`、`considered_alternatives`、`dev_rules` の下位文書を直接開けば足りるとき。
+- 個別サブコマンドや単独の設計判断だけを確認したいとき。
+- 実装コードやテストコードだけで十分で、`oracles` の案内が不要なとき。
 
 ## hash
 
-- bf0452c1fd6dfc8d1a9c2061396c77fd8c80a3f3fc2dc450808a13d0c3d84b15
+- b3d0489bd52c7e3a4b34d1694b46a0401f65851b343712c5490cd59d4be0ee99
 
 # `pyproject.toml`
 

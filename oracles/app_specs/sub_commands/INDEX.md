@@ -1,3 +1,26 @@
+# `apply_abandon.md`
+
+## Summary
+
+- `cmoc apply abandon` の仕様断片への入口です。
+- 未 join の apply run を安全に破棄する手順と前提条件、破棄対象、状態遷移、出力内容をまとめています。
+
+## Read this when
+
+- 現在の session に紐づく未 join の apply run を破棄したいとき。
+- `<cmoc-apply-branch>` と `<cmoc-apply-worktree>` の削除条件、`apply.state` の更新、cleanup 時の warning を確認したいとき。
+- `cmoc apply abandon` の実装・修正・テスト・レビューを行いたいとき。
+
+## Do not read this when
+
+- `cmoc apply fork` の調査・修正ループ開始や要修正点リストアップの仕様だけを確認したいとき。
+- `cmoc apply join` のマージ手順、想定外の差分の処理、`--force-resolve` の挙動だけを確認したいとき。
+- `cmoc session abandon` や `cmoc session join` など、session 側の終了・破棄手順だけを確認したいとき。
+
+## hash
+
+- 65a56fe5bb8b38e641adf42fd80069b16cca0e2d78c698aecf00f015f9a2789a
+
 # `apply_fork.md`
 
 ## Summary
@@ -14,7 +37,7 @@
 
 ## Do not read this when
 
-- `cmoc session fork` の作成条件、ブランチ命名、session metadata 保存だけを確認したいとき。
+- `cmoc session fork` の作成条件や session metadata の保存だけを確認したいとき。
 - `cmoc session join` の merge 手順、コンフリクト解決、session 終了処理だけを確認したいとき。
 - `cmoc apply join` のマージ手順、差分検査、`--force-resolve` の挙動だけを確認したいとき。
 - `cmoc apply abandon` の破棄手順や cleanup 挙動だけを確認したいとき。
@@ -22,7 +45,7 @@
 
 ## hash
 
-- d49b12e0859a04231fca7af88fecb9c2a5bdbdef373cd021aa422893b14dd62c
+- d2609b45513796846beb5a8bfc82fba45b907112c55399cfdfcfb8823419b130
 
 # `apply_join.md`
 
@@ -50,6 +73,30 @@
 
 - 9920b25b80bed7bc2e7afa1e4f7745bc7784ff9712f46e4b14c638614dcf926e
 
+# `eval_oracles.md`
+
+## Summary
+
+- `cmoc eval-oracles` の仕様断片への入口です。
+- 現在の `<repo-root>/oracles` スナップショットに致命的な問題がないかを評価し、その結果を人間向けレポートとしてまとめる手順を扱います。
+- 部分評価・全体評価モードの分岐、`codex exec` による 1 ファイル単位の評価、評価レポートの構成を確認するための文書です。
+
+## Read this when
+
+- `cmoc eval-oracles` の実装・修正・テスト・レビューを行うとき。
+- `--full` による部分評価 / 全体評価の切り替え条件を確認したいとき。
+- `codex exec` を使って `<repo-root>/oracles` の各ファイルを評価し、Structured Output のレポートをまとめる流れを確認したいとき。
+
+## Do not read this when
+
+- `cmoc eval-oracles` ではなく、`cmoc session` や `cmoc apply` など他サブコマンドの手順だけを確認したいとき。
+- 実装コードやテストコードの作業だけで足りるとき。
+- `INDEX.md` の生成・更新ルールや、`oracles` 全体の扱いだけを確認したいとき。
+
+## hash
+
+- 04dddafebf3feba523bb4be89a990dead4c7e4c5f698221e352ad45e8fd8f16e
+
 # `init.md`
 
 ## Summary
@@ -76,25 +123,25 @@
 
 ## Summary
 
-- `cmoc session abandon` は、現在の `<cmoc-session-branch>` を `<cmoc-session-home-branch>` に merge せず破棄するコマンドの仕様をまとめている。
-- `cmoc session join` と異なり、session の成果物を本流へ取り込まず、既に join 済みの結果を取り消す rollback でもない。
-- 実行には session が active であること、apply が ready であること、未コミット差分がないことなどの前提条件がある。
+- `cmoc session abandon` は、現在の `<cmoc-session-branch>` を `<cmoc-session-home-branch>` に merge せず破棄するサブコマンドです。
+- session の成果物を本流へ取り込まず、`cmoc session join` 済み結果の rollback でもありません。
+- 実行には session が active であること、apply が ready であること、未コミット差分がないことなどの前提があります。
 
 ## Read this when
 
-- 現在の `cmoc-session-branch` を merge せずに破棄したいとき。
+- 現在の `cmoc-session-branch` を `merge` せずに破棄したいとき。
 - `session.state` や `apply.state` の前提条件、破棄対象、状態遷移を確認したいとき。
 - `cmoc session abandon` を実装・修正・テストするとき。
 
 ## Do not read this when
 
-- `cmoc session fork` の仕様だけを調べたいとき。
+- `cmoc session fork` の仕様だけを確認したいとき。
 - `cmoc session join` の仕様や、session を merge して完了させる流れだけを確認したいとき。
 - `cmoc apply abandon` など、apply run の破棄仕様だけを確認したいとき。
 
 ## hash
 
-- 507316f4bbe764dc9e6ccf3e64c3a01db78cc820403112caad2a4e2a9ef2c6fe
+- bcb79ab68e9293890ddbe24d146e34e8b5bbff528ac21f015290f00e16a2d954
 
 # `session_fork.md`
 
@@ -120,28 +167,30 @@
 
 ## hash
 
-- 98607f6a5c43661d870eaef63e7418d440e540401d47f9e00057675db4c72630
+- 471fc0184da6ece904959ed74a6ae0bbae6c71ebd92ed2ff52c44a8c8576d946
 
 # `session_join.md`
 
 ## Summary
 
-- `cmoc session join` の仕様断片への入口です。
-- 現在の `<cmoc-session-branch>` を session metadata に記録された `<cmoc-session-home-branch>` へ `git merge --no-ff` する処理を扱います。
-- 実行条件、`apply.state` の前提、home branch が進んでいた場合の扱い、conflict 解決、merge 後の状態更新とブランチ削除条件を確認するための文書です。
+- `cmoc session join` の仕様断片への入口で、現在の `<cmoc-session-branch>` を session metadata に記録された `<cmoc-session-home-branch>` へ `git merge --no-ff` して session を完了する手順を定めます。
+- 引数はなく、現在ブランチ・state file の存在・`session.state=active`・`apply.state=ready`・home branch の特定可否・未コミット差分なしを事前条件とします。
+- 実行は事前検証、`.cmoc` の非追跡保証、`git switch` と `git merge --no-ff`、conflict 時の Codex CLI 依頼、`session.state` の更新とブランチ削除の後始末で構成されます。
+- home branch が session 作成後に進んでいてもエラーにはせず、その時点の HEAD に merge します。merge conflict は通常の conflict として扱い、`cmoc merge` は旧名として後方互換を保ちません。
 
 ## Read this when
 
-- `cmoc session join` が何をするコマンドか知りたいとき。
-- session ブランチを home ブランチへ戻す手順や前提条件を確認したいとき。
-- git merge の conflict 解決フローや、session 破棄後のブランチ削除条件を確認したいとき。
+- `cmoc session join` が何をするコマンドか、入力なしでどう session を完了させるか確認したいとき。
+- session branch を home branch へ戻す前提条件や、`apply.state` の確認基準を実装・レビューしたいとき。
+- home branch が先に進んでいた場合の扱い、conflict 解消時の Codex CLI 依頼、後始末の条件を確認したいとき。
+- `cmoc merge` という旧名の扱いを整理したいとき。
 
 ## Do not read this when
 
-- `cmoc session fork` の仕様だけを確認したいとき。
-- `cmoc session abandon` の仕様だけを確認したいとき。
-- `cmoc apply` 系の実行条件や apply run の破棄手順だけを確認したいとき。
+- `session fork` / `session abandon` の手順だけを確認したいときは、それぞれの仕様文書を読むべきです。
+- `apply` 系コマンドの実行条件や破棄手順だけを確認したいときは、この文書は適しません。
+- 一般的な git merge の解説だけで足りるときは、この文書を読む必要はありません。
 
 ## hash
 
-- 1f26455671cfe4ac6362e78d941be5e6045763af74b30a64bc6f849278760135
+- 428466eab6eb5bbb48cf36c26eb649f9159375e2f63a555739d5146a999407a7

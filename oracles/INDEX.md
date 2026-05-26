@@ -21,7 +21,32 @@
 
 ## hash
 
-- 3a42159d1c3bccbdc2941d0687a562aee823b8187ec53a69ceda04accd3cfe3a
+- 494abd3852061b8dfa1357e731f3ea8c227e7cc5103083cd9d96c92d6487763b
+
+# `considered_alternatives`
+
+## Summary
+
+- `cmoc` で採用しなかった設計案や、その不採用理由をまとめたディレクトリの入口です。
+- 修正点リスト後の作業計画立案、AI-generated kaizen の自動注入、作業計画レビューの不採用理由を扱います。
+- `oracles` と実装の役割分担を考えるときに、代替案の判断材料をたどるための目次です。
+
+## Read this when
+
+- `cmoc apply` 系で、修正点リスト完成後に作業計画を立てる案を採用しなかった理由を確認したいとき。
+- AI-generated kaizen を次回実行へ自動反映しない方針や、その理由を整理したいとき。
+- `tgbt plan` や `/plan` のような作業計画レビューを採用しなかった背景を確認したいとき。
+- 人間が `oracles` を編集し、AI が実装を追従する方針になった経緯を横断的に把握したいとき。
+
+## Do not read this when
+
+- `cmoc` の実装手順や各サブコマンドの正本仕様そのものを確認したいときは、このディレクトリではなく該当する仕様断片を直接読むべきです。
+- `oracles` 全体のルーティング方針や `INDEX.md` の生成ルールだけを確認したいときは、このディレクトリの本文を読む必要はありません。
+- この配下のうち特定の代替案だけを見たいときは、`apply_behavior.md`、`memory_alternative.md`、`working_plan_review.md` を直接参照すべきです。
+
+## hash
+
+- ebf4b17563b7e25fc70c16b29ad207ac649692c57278bf404ef8859d1054a113
 
 # `dev_rules`
 

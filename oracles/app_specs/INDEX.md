@@ -1,3 +1,26 @@
+# `branch_model.md`
+
+## Summary
+
+- `cmoc` における session branch と apply branch の役割分担、および通常 branch との関係をまとめた文書です。
+- session 開始時に checkout 中の local branch を session home branch として扱い、session branch は `cmoc/session/<session-id>`、apply branch は `cmoc/apply/<session-id>/<apply-run-id>` という命名規則を定めます。
+- default branch を特別扱いしないこと、1 つの session home branch に対して active な session branch は高々 1 つであること、apply は開始時点の oracle snapshot commit を基準に進めることを示します。
+
+## Read this when
+
+- `cmoc session fork` の分岐元や最終的な merge 先をどう扱うか確認したいとき。
+- session branch と apply branch の命名規則、用途、ユーザーが編集してよい branch を確認したいとき。
+- apply 実行中にどの HEAD を snapshot として固定し、どの変更を取り込まないかを確認したいとき。
+
+## Do not read this when
+
+- branch 以外の共通規約や実装ルールを確認したいときは、`dev_rules` や他の仕様文書を読むべきです。
+- 個別サブコマンドの引数や手順だけを確認したいときは、該当するサブコマンド仕様を直接参照すべきです。
+- `INDEX.md` の生成や更新ルールだけを確認したいときは、この文書ではなく `indexing.md` を読むべきです。
+
+## hash
+
+- 224e2b96c282ac68bcfea8b9b51c7884cf7eb2a7cc8fa1f857340bc98ebf69a1
 
 # `codex_call.md`
 
@@ -8,19 +31,19 @@
 
 ## Read this when
 
-- `codex exec` の起動方法や、stdin 経由でのプロンプト送信ルールを実装・修正・レビューしたいとき。
-- プロンプトの構成、argv に載せてよい情報の制約、`--output-schema` / `--output-last-message` を含む出力規約を確認したいとき。
+- cmoc から `codex exec` を呼び出す方法や、stdin 経由でのプロンプト送信ルールを実装・修正・レビューしたいとき。
+- プロンプトの構成、argv に載せてよい情報の制約、`--output-schema` や `--output-last-message` を含む出力規約を確認したいとき。
 - sandbox の read-only / workspace-write の選択基準、Model / Reasoning Effort の指定方針、quota 不足時の待機・再開手順を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc` の他のサブコマンド固有の手順や状態遷移だけを確認したいとき。
 - `codex exec` 以外の実行手段や、一般的なシェル呼び出し方針だけを確認したいとき。
 - `INDEX.md` の生成・更新ルールや、他の仕様ファイルのルーティングだけを確認したいとき。
+- この文書の対象外である、他のサブコマンド固有の手順や状態遷移だけを確認したいとき。
 
 ## hash
 
-- c2e777ee093c87d4c3caa020a32b00c2f6fd0f8b3e0ad511149f5a3677981b37
+- eb9c7b8b3ba16bcebf07830fc8241eef7fc51f23bd3f73fb24b38f0a4388bebc
 
 # `console_and_file_log.md`
 
@@ -145,6 +168,59 @@
 ## hash
 
 - 846f75a87ba5831d36df56aa4f44028b2b6c01f4fd11932d0dac73376382191b
+
+# `session_state.md`
+
+## Summary
+
+- `cmoc` の session/apply 状態を記録する JSON ファイルの仕様です。
+- 保存先は `<repo-root>/.cmoc/sessions/<session-id>.json` で、`session` と `apply` の各スキーマ、状態遷移の補助情報、初期値を定義します。
+- session と apply の状態管理に関わる実装やレビューの入口になります。
+
+## Read this when
+
+- 現在の session と apply の状態を保持する JSON ファイルの保存先、スキーマ、初期値を確認したいとき。
+- `session.state` と `apply.state` の遷移を実装・修正・レビューするときに、補助情報として何を保存すべきか整理したいとき。
+- `cmoc session fork` で作成される状態ファイルの内容や、`join` / `abandon` / `apply join` の前提条件を確認したいとき。
+
+## Do not read this when
+
+- `cmoc session fork` / `join` / `abandon` / `apply join` などの手順だけを確認したいときは、各サブコマンドの仕様を直接読むべきです。
+- セッション状態ファイルそのものの構造ではなく、実装コードやテストコードだけで足りるときは、この文書を参照する必要はありません。
+- branch model、ログ出力、エラーハンドリングなど、状態ファイル以外の共通仕様を調べたいときは、別の仕様文書を読むべきです。
+
+## hash
+
+- 7a7969b8448e51e91e02c6a790bf109070f46ebc252f1b9a1cf14c9974fb666c
+
+# `sub_commands`
+
+## Summary
+
+- `cmoc` の個別サブコマンド仕様への入口であり、`apply`、`session`、`eval-oracles`、`init` の各手順を下位文書へ案内する。
+- このディレクトリは `apply_*`、`session_*`、`eval_oracles.md`、`init.md` をまとめて参照できるようにし、実装・修正・レビュー時に必要な前提条件や状態遷移へ素早く辿れるようにする。
+- ここから各文書へ進むことで、`cmoc` のサブコマンドごとの目的、入出力、実行手順、終了条件を整理して確認できる。
+
+## Read this when
+
+- `cmoc apply abandon` の未 join な apply run の破棄手順、前提条件、削除対象、状態遷移を確認したいとき。
+- `cmoc apply fork` の調査・修正ループ、作業用ブランチと worktree、評価対象スナップショット、要修正点リストの Structured Output 仕様を確認したいとき。
+- `cmoc apply join` のマージ手順、想定外の差分の扱い、`--force-resolve` の挙動、削除条件を確認したいとき。
+- `cmoc eval-oracles` の評価モード、ファイルごとの評価手順、レポートの構成を確認したいとき。
+- `cmoc init` の初期化手順、`.cmoc` を git 追跡対象外にする条件を確認したいとき。
+- `cmoc session abandon` の session 破棄手順、前提条件、破棄対象、状態遷移を確認したいとき。
+- `cmoc session fork` の session 作成条件、ブランチ命名規則、metadata 保存、レガシー要素の扱いを確認したいとき。
+- `cmoc session join` の session 完了手順、merge 条件、conflict 時の扱い、後始末を確認したいとき。
+
+## Do not read this when
+
+- 個別サブコマンドの手順だけを確認したいときは、この INDEX ではなく該当する `apply_*` / `session_*` / `eval_oracles.md` / `init.md` を直接読むべきです。
+- 実装コードやテストコードだけで足りる場合は、このディレクトリの案内を読む必要はありません。
+- `branch_model`、`codex_call`、ログ、エラー処理、`oracles`、利用方法など、他の `app_specs` 配下の共通仕様を確認したいときは、この INDEX ではなく対応する入口文書を読むべきです。
+
+## hash
+
+- dde244e6dbebfda95e54cea192e81e91ac58f79750fe191eea3772e9bcaa4af7
 
 # `usage.md`
 
