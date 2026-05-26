@@ -31,21 +31,22 @@
 
 ## Read this when
 
-- `cmoc apply` の起動条件、処理順、終了条件、report 出力を確認したいとき。
+- `cmoc apply` の起動条件、前提検証、処理順、終了コード、report 出力を確認したいとき。
 - oracle / 実装ファイルの調査対象選定、部分適用と全体適用の切り替え、要修正点リストの整理ロジックを追いたいとき。
 - Structured Output schema、調査用 prompt、要修正点の検証、apply report の必須内容を変更したいとき。
 - apply run における `.cmoc` の追跡対象外保証、INDEX.md の維持、編集禁止領域チェックを実装・修正したいとき。
+- session state の `apply.state` 更新や、apply worktree / apply branch の作成・削除条件を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc session fork`、`cmoc session join`、`cmoc session abandon` など、`cmoc apply` 以外のサブコマンド仕様だけを確認したいとき。
+- `cmoc session fork`、`cmoc session join`、`cmoc session abandon` など、apply 以外のサブコマンド仕様だけを確認したいとき。
+- `cmoc apply` の実装ではなく、`INDEX.md` の一般的な生成ルールや `oracles` 全体の扱いだけを確認したいとき。
+- ユーザー向けの使い方全体や、具体的な操作手順の概要だけをざっくり把握したいとき。
 - `cmoc apply` の中でも、調査・修正ループや report 生成ではなく、branch や session の運用仕様だけを見たいとき。
-- `INDEX.md` の一般的な生成ルールや、`oracles` 配下の仕様断片そのものだけを読みたいとき。
-- `cmoc apply` の実装ではなく、ユーザー向けの使い方全体をざっくり把握したいだけのとき。
 
 ## hash
 
-- 758d734d8315c56b2ac110a802b0fa8967e8e3ce872253f937b84e16d8accbf5
+- 9a4021718e6b6b211d234857c7080531c6c626eb114c061d5808f81047bf11dd
 
 # `eval-oracles.py`
 
