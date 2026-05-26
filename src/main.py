@@ -10,9 +10,9 @@ import typer
 from commons.errors import CmocError
 from commons.errors import format_error_report
 from sub_commands.apply import cmoc_apply_impl
-from sub_commands.branch import cmoc_branch_impl
 from sub_commands.init import cmoc_init_impl
 from sub_commands.merge import cmoc_merge_impl
+from sub_commands.session_fork import cmoc_session_fork_impl
 
 
 app: typer.Typer = typer.Typer(name="cmoc", no_args_is_help=True)
@@ -51,7 +51,7 @@ def init_command() -> None:
 def session_fork_command() -> None:
     """Start a cmoc session."""
     # CLI callback は session fork の本体実装へ処理を委譲する。
-    cmoc_branch_impl()
+    cmoc_session_fork_impl()
 
 
 @session_app.command("join")

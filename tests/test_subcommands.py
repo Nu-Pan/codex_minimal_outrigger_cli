@@ -21,7 +21,7 @@ from commons.codex import COMMIT_MESSAGE_REASONING_EFFORT
 from commons.command_runner import run_command
 from commons.errors import CmocError
 from commons.errors import format_error_report
-from commons.repo import branch_base_commit_path
+from commons.repo import write_session_state
 from commons.timing import StepTimer, start_step
 from sub_commands.apply import cmoc_apply_impl
 from sub_commands.apply import _apply_prompt
@@ -29,9 +29,9 @@ from sub_commands.apply import _DISCREPANCY_OUTPUT_SCHEMA
 from sub_commands.apply import _commit_all_changes
 from sub_commands.apply import _organize_prompt
 from sub_commands.apply import _validate_discrepancy_payload
-from sub_commands.branch import cmoc_branch_impl
 from sub_commands.init import cmoc_init_impl
 from sub_commands.merge import cmoc_merge_impl
+from sub_commands.session_fork import cmoc_session_fork_impl
 from sub_commands.merge import _conflict_prompt
 from sub_commands.merge import _files_with_conflict_markers
 
@@ -312,24 +312,33 @@ def test_init_can_create_first_commit(tmp_path: Path) -> None:
     assert _git(repo, "status", "--porcelain").stdout == ""
 
 
-def test_branch_creates_cmoc_branch_and_records_base_commit(
+def test_branch_creates_session_branch_and_records_state(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """`cmoc session fork` は branch 作成と base commit 記録を行う。"""
+    """`cmoc session fork` は session branch 作成と state 記録を行う。"""
     repo = _init_repo(tmp_path)
     base_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
 
-    cmoc_branch_impl(repo)
+    cmoc_session_fork_impl(repo)
 
     branch_name = _git(repo, "branch", "--show-current").stdout.strip()
-    record_path = repo / ".cmoc" / "branch" / f"{branch_name}.txt"
-    assert branch_name.startswith("cmoc_")
-    assert record_path.read_text(encoding="utf-8").strip() == base_commit
+    session_id = branch_name.removeprefix("cmoc/session/")
+    record_path = repo / ".cmoc" / "sessions" / f"{session_id}.json"
+    state = json.loads(record_path.read_text(encoding="utf-8"))
+    assert branch_name.startswith("cmoc/session/")
+    assert state["session"]["state"] == "active"
+    assert state["session"]["session_home_branch"] in {"main", "master"}
+    assert state["session"]["session_start_commit"] == base_commit
+    assert state["apply"] == {
+        "state": "ready",
+        "apply_branch": None,
+        "oracle_snapshot_commit": None,
+    }
     output = capsys.readouterr().out
-    assert "(1/3) create cmoc branch" in output
-    assert "branch (1/3) create cmoc branch" not in output
-    assert "create cmoc branch attempt (1/10)" in output
+    assert "(1/4) validate repository state" in output
+    assert "session fork (1/4) validate repository state" not in output
+    assert "create session branch attempt (1/10)" in output
 
 
 def test_eval_oracles_writes_report_with_fake_codex(
@@ -695,7 +704,7 @@ def test_eval_oracles_stays_partial_when_oracle_was_deleted(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """削除済み oracle があっても `--full` なしの cmoc branch は部分評価する。"""
+    """削除済み oracle があっても `--full` なしの session branch は部分評価する。"""
     repo = _init_repo(tmp_path)
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -834,7 +843,7 @@ def test_apply_returns_complete_when_no_discrepancies(
                 "収束",
                 "## 不整合件数の推移",
                 "1 回目: 0 件",
-                "## ブランチ cmoc_2026-05-10_22-21_10_123 上の全変更内容",
+                "## ブランチ cmoc/session/2026-05-10_22-21_10_123 上の全変更内容",
                 "カテゴリ: oracle 整備",
             ]
         )
@@ -930,7 +939,7 @@ def test_apply_uses_investigate_repeat_option_for_loop_limit(
                 "1 回目: 1 件",
                 "2 回目: 1 件",
                 "まだ不整合が残っている可能性があります。",
-                "## ブランチ cmoc_2026-05-10_22-21_10_123 上の全変更内容",
+                "## ブランチ cmoc/session/2026-05-10_22-21_10_123 上の全変更内容",
                 "カテゴリ: 実装修正",
             ]
         )
@@ -997,7 +1006,7 @@ def test_apply_improoves_fixing_list_until_same_result_or_limit(
                     "## 不整合件数の推移",
                     "1 回目: 1 件",
                     "まだ不整合が残っている可能性があります。",
-                    "## ブランチ cmoc_2026-05-10_22-21_10_123 上の全変更内容",
+                    "## ブランチ cmoc/session/2026-05-10_22-21_10_123 上の全変更内容",
                     "カテゴリ: 実装修正",
                 ]
             )
@@ -1057,7 +1066,7 @@ def test_apply_fills_discrepancy_head_commit_hash(
                     "## 不整合件数の推移",
                     "1 回目: 2 件",
                     "まだ不整合が残っている可能性があります。",
-                    "## ブランチ cmoc_2026-05-10_22-21_10_123 上の全変更内容",
+                    "## ブランチ cmoc/session/2026-05-10_22-21_10_123 上の全変更内容",
                     "カテゴリ: 実装修正",
                 ]
             )
@@ -1152,7 +1161,7 @@ def test_apply_commits_each_discrepancy_before_next_codex_call(
                     "## 不整合件数の推移",
                     "1 回目: 2 件",
                     "まだ不整合が残っている可能性があります。",
-                    "## ブランチ cmoc_2026-05-10_22-21_10_123 上の全変更内容",
+                    "## ブランチ cmoc/session/2026-05-10_22-21_10_123 上の全変更内容",
                     "カテゴリ: 実装修正",
                 ]
             )
@@ -1187,7 +1196,7 @@ def test_organize_prompt_includes_fixing_list_quality_requirements(
     prompt = _organize_prompt(
         tmp_path,
         json.loads(_discrepancy_json("fix"))["fixing_points"],
-        "cmoc_2026-05-10_22-21_10_123",
+        "cmoc/session/2026-05-10_22-21_10_123",
         "1111111111111111111111111111111111111111",
         "2222222222222222222222222222222222222222",
     )
@@ -1196,7 +1205,7 @@ def test_organize_prompt_includes_fixing_list_quality_requirements(
     assert "重複する要修正点は 1 件にマージ" in prompt
     assert "矛盾する修正方針は矛盾しない内容に調整" in prompt
     assert "<cmoc-branch>" not in prompt
-    assert "git ブランチ `cmoc_2026-05-10_22-21_10_123`" in prompt
+    assert "git ブランチ `cmoc/session/2026-05-10_22-21_10_123`" in prompt
     assert (
         "`1111111111111111111111111111111111111111"
         "..2222222222222222222222222222222222222222`"
@@ -1296,7 +1305,7 @@ def test_apply_rejects_non_cmoc_branch(tmp_path: Path) -> None:
     with pytest.raises(CmocError) as error:
         cmoc_apply_impl(repo)
 
-    assert "`cmoc apply` は cmoc branch 上で実行してください。" in error.value.message
+    assert "`cmoc apply` は cmoc 管理 branch 上で実行してください。" in error.value.message
 
 
 def test_apply_rejects_non_oracle_changes_after_cmoc_guarantee(
@@ -1362,7 +1371,7 @@ def test_apply_commits_untracked_oracle_changes_after_cmoc_guarantee(
                 "収束",
                 "## 不整合件数の推移",
                 "1 回目: 0 件",
-                "## ブランチ cmoc_2026-05-10_22-21_10_123 上の全変更内容",
+                "## ブランチ cmoc/session/2026-05-10_22-21_10_123 上の全変更内容",
                 "カテゴリ: oracle 整備",
             ]
         )
@@ -1412,7 +1421,7 @@ def test_apply_commits_preexisting_staged_oracles_after_cmoc_guarantee(
                 "収束",
                 "## 不整合件数の推移",
                 "1 回目: 0 件",
-                "## ブランチ cmoc_2026-05-10_22-21_10_123 上の全変更内容",
+                "## ブランチ cmoc/session/2026-05-10_22-21_10_123 上の全変更内容",
                 "カテゴリ: oracle 整備",
             ]
         )
@@ -1529,7 +1538,7 @@ def test_merge_merges_explicit_cmoc_branch_and_deletes_it(
     _git(repo, "commit", "-m", "feature")
     _git(repo, "checkout", target_branch)
 
-    cmoc_merge_impl(repo, "cmoc_2026-05-10_22-21_10_123")
+    cmoc_merge_impl(repo, "cmoc/session/2026-05-10_22-21_10_123")
 
     branches = _git(
         repo,
@@ -1537,14 +1546,14 @@ def test_merge_merges_explicit_cmoc_branch_and_deletes_it(
         "--format=%(refname:short)",
     ).stdout.splitlines()
     assert (repo / "feature.txt").read_text(encoding="utf-8") == "feature\n"
-    assert "cmoc_2026-05-10_22-21_10_123" not in branches
+    assert "cmoc/session/2026-05-10_22-21_10_123" not in branches
 
 
 def test_merge_rejects_explicit_non_cmoc_branch_before_git_merge(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """`cmoc merge <branch>` は cmoc branch 名以外を merge 対象にしない。"""
+    """`cmoc merge <branch>` は cmoc 管理 branch 名以外を merge 対象にしない。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
@@ -1565,7 +1574,7 @@ def test_merge_rejects_explicit_non_cmoc_branch_before_git_merge(
         "branch",
         "--format=%(refname:short)",
     ).stdout.splitlines()
-    assert "cmoc branch 名" in error.value.message
+    assert "cmoc 管理 branch 名" in error.value.message
     assert "指定された branch: feature" in error.value.detail
     assert (repo / "feature.txt").exists() is False
     assert "feature" in branches
@@ -1600,7 +1609,7 @@ def test_main_typer_functions_delegate_only_to_impls() -> None:
     assert "def _run_command" not in source
     assert "_run_command(" not in source
     assert "cmoc_init_impl()" in source
-    assert "cmoc_branch_impl()" in source
+    assert "cmoc_session_fork_impl()" in source
     assert (
         '"sub_commands.eval-oracles"'
         in source
@@ -1824,10 +1833,10 @@ def test_user_facing_error_text_does_not_keep_known_english_phrases() -> None:
         "Move into a git-managed repository.",
         "Uncommitted changes exist.",
         "Commit or stash",
-        "cmoc apply must be run on a cmoc branch.",
+        "cmoc apply must be run on a cmoc managed branch.",
         "Run `cmoc session fork` first.",
-        "Failed to resolve cmoc branch automatically.",
-        "Pass the cmoc branch name explicitly.",
+        "Failed to resolve cmoc managed branch automatically.",
+        "Pass the cmoc managed branch name explicitly.",
         "Inspect git status manually.",
         "Resolve remaining conflict markers manually.",
         "Manual resolution is required.",
@@ -1979,13 +1988,28 @@ def _init_repo(tmp_path: Path) -> Path:
 
 
 def _checkout_cmoc_branch(repo: Path) -> None:
-    """テスト用 cmoc branch に移動し、base commit 記録を作る。"""
-    branch_name = "cmoc_2026-05-10_22-21_10_123"
+    """テスト用 cmoc session branch に移動し、state を作る。"""
+    session_id = "2026-05-10_22-21_10_123"
+    branch_name = f"cmoc/session/{session_id}"
+    home_branch = _git(repo, "branch", "--show-current").stdout.strip()
     base_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
     _git(repo, "checkout", "-b", branch_name)
-    path = branch_base_commit_path(repo, branch_name)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(base_commit, encoding="utf-8")
+    write_session_state(
+        repo,
+        session_id,
+        {
+            "session": {
+                "state": "active",
+                "session_home_branch": home_branch,
+                "session_start_commit": base_commit,
+            },
+            "apply": {
+                "state": "ready",
+                "apply_branch": None,
+                "oracle_snapshot_commit": None,
+            },
+        },
+    )
     exclude = repo / ".git" / "info" / "exclude"
     exclude.write_text(f"{exclude.read_text(encoding='utf-8')}\n.cmoc/\n")
 

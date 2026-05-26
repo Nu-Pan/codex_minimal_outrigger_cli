@@ -1,5 +1,6 @@
 """git リポジトリと cmoc 作業ディレクトリの共通処理。"""
 
+import json
 import os
 import shutil
 import subprocess
@@ -7,6 +8,9 @@ import tempfile
 from pathlib import Path
 
 from .errors import CmocError
+
+SESSION_BRANCH_PREFIX = "cmoc/session/"
+APPLY_BRANCH_PREFIX = "cmoc/apply/"
 
 
 def enter_repo_root(start: Path | None = None) -> Path:
@@ -49,27 +53,133 @@ def head_commit(repo_root: Path) -> str:
 
 
 def is_cmoc_branch(branch_name: str) -> bool:
-    """`cmoc_<time-stamp>` 形式のブランチ名か判定する。"""
-    # timestamp 区切り数と prefix を先に検査する。
-    parts = branch_name.split("_")
-    if len(parts) != 5 or parts[0] != "cmoc":
-        return False
+    """cmoc 管理ブランチ名か判定する。"""
+    return is_session_branch(branch_name) or is_apply_branch(branch_name)
 
-    # 各 timestamp 要素の桁数、区切り文字、数字性を検査する。
-    date_part, hour_minute_part, second_part, msec_part = parts[1:]
+
+def is_session_branch(branch_name: str) -> bool:
+    """`cmoc/session/<session-id>` 形式のブランチ名か判定する。"""
+    session_id = branch_name.removeprefix(SESSION_BRANCH_PREFIX)
     return (
-        len(date_part) == 10
-        and date_part[4] == "-"
-        and date_part[7] == "-"
-        and len(hour_minute_part) == 5
-        and hour_minute_part[2] == "-"
-        and len(second_part) == 2
-        and len(msec_part) == 3
-        and date_part.replace("-", "").isdigit()
-        and hour_minute_part.replace("-", "").isdigit()
-        and second_part.isdigit()
-        and msec_part.isdigit()
+        branch_name.startswith(SESSION_BRANCH_PREFIX)
+        and bool(session_id)
+        and "/" not in session_id
     )
+
+
+def is_apply_branch(branch_name: str) -> bool:
+    """`cmoc/apply/<session-id>/<apply-run-id>` 形式のブランチ名か判定する。"""
+    suffix = branch_name.removeprefix(APPLY_BRANCH_PREFIX)
+    parts = suffix.split("/")
+    return (
+        branch_name.startswith(APPLY_BRANCH_PREFIX)
+        and len(parts) == 2
+        and all(parts)
+    )
+
+
+def session_id_from_branch(branch_name: str) -> str:
+    """cmoc 管理ブランチ名から session id を取り出す。"""
+    if is_session_branch(branch_name):
+        return branch_name.removeprefix(SESSION_BRANCH_PREFIX)
+    if is_apply_branch(branch_name):
+        return branch_name.removeprefix(APPLY_BRANCH_PREFIX).split("/", 1)[0]
+    raise CmocError(
+        "cmoc 管理 branch ではありません。",
+        [
+            "`cmoc session fork` で作成した session branch 上で実行してください。",
+            "通常の branch から実行する場合は、先に session を開始してください。",
+        ],
+        f"現在の branch: {branch_name}",
+    )
+
+
+def session_state_path(repo_root: Path, session_id: str) -> Path:
+    """session state JSON の保存先 path を返す。"""
+    return repo_root / ".cmoc" / "sessions" / f"{session_id}.json"
+
+
+def initial_session_state(
+    session_home_branch: str,
+    session_start_commit: str,
+) -> dict[str, object]:
+    """`cmoc session fork` 直後の session state を返す。"""
+    return {
+        "session": {
+            "state": "active",
+            "session_home_branch": session_home_branch,
+            "session_start_commit": session_start_commit,
+        },
+        "apply": {
+            "state": "ready",
+            "apply_branch": None,
+            "oracle_snapshot_commit": None,
+        },
+    }
+
+
+def write_session_state(
+    repo_root: Path,
+    session_id: str,
+    state: dict[str, object],
+) -> Path:
+    """session state JSON を保存する。"""
+    path = session_state_path(repo_root, session_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True)
+        + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def read_session_state(repo_root: Path, session_id: str) -> dict[str, object]:
+    """session state JSON を読む。"""
+    path = session_state_path(repo_root, session_id)
+    if not path.exists():
+        raise CmocError(
+            "session state ファイルが見つかりませんでした。",
+            [
+                "`cmoc session fork` で作成した branch 上で実行してください。",
+                "session state が失われた場合は、手動で branch と .cmoc/sessions を確認してください。",
+            ],
+            str(path),
+        )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise CmocError(
+            "session state ファイルの形式が不正です。",
+            ["state JSON の内容を確認してください。"],
+            str(path),
+        )
+    return payload
+
+
+def active_session_ids_for_home_branch(
+    repo_root: Path,
+    session_home_branch: str,
+) -> list[str]:
+    """指定 home branch に紐づく active session id を列挙する。"""
+    session_root = repo_root / ".cmoc" / "sessions"
+    if not session_root.exists():
+        return []
+
+    session_ids: list[str] = []
+    for path in sorted(session_root.glob("*.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        session = payload.get("session")
+        if not isinstance(session, dict):
+            continue
+        if (
+            session.get("state") == "active"
+            and session.get("session_home_branch") == session_home_branch
+        ):
+            session_ids.append(path.stem)
+    return session_ids
 
 
 def ensure_cmoc_ignored(repo_root: Path) -> bool:
@@ -627,25 +737,26 @@ def _is_excluded_implementation_path(relative_path: str) -> bool:
 
 
 def read_branch_base_commit(repo_root: Path, branch_name: str) -> str:
-    """cmoc branch の作成元 commit hash を読む。"""
-    # cmoc branch 作成時に記録した base commit ファイルを読む。
-    path = branch_base_commit_path(repo_root, branch_name)
-    if not path.exists():
+    """cmoc session state から session start commit を読む。"""
+    payload = read_session_state(repo_root, session_id_from_branch(branch_name))
+    session = payload.get("session")
+    if not isinstance(session, dict):
         raise CmocError(
-            "cmoc branch の作成元 commit ファイルが見つかりませんでした。",
+            "session state ファイルに session セクションがありません。",
+            ["state JSON の内容を確認してください。"],
+            f"branch: {branch_name}",
+        )
+    start_commit = session.get("session_start_commit")
+    if not isinstance(start_commit, str) or not start_commit:
+        raise CmocError(
+            "session start commit が session state に記録されていません。",
             [
                 "差分評価の前に `cmoc session fork` を実行してください。",
                 "全 oracle ファイルを評価する場合は `cmoc eval-oracles --full` を実行してください。",
             ],
-            str(path),
+            f"branch: {branch_name}",
         )
-    return path.read_text(encoding="utf-8").strip()
-
-
-def branch_base_commit_path(repo_root: Path, branch_name: str) -> Path:
-    """cmoc branch の作成元 commit 記録ファイルのパスを返す。"""
-    # branch 名をファイル名にして `.cmoc/branch` 配下へ配置する。
-    return repo_root / ".cmoc" / "branch" / f"{branch_name}.txt"
+    return start_commit
 
 
 def changed_paths(repo_root: Path) -> list[str]:

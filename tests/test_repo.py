@@ -8,7 +8,6 @@ import pytest
 from commons.errors import CmocError
 from commons.repo import (
     assert_no_uncommitted_changes,
-    branch_base_commit_path,
     changed_oracle_files,
     changed_implementation_files,
     ensure_cmoc_ignored,
@@ -18,6 +17,9 @@ from commons.repo import (
     is_cmoc_branch,
     list_implementation_files,
     list_oracle_files,
+    read_branch_base_commit,
+    session_state_path,
+    write_session_state,
 )
 
 
@@ -644,9 +646,10 @@ def test_assert_no_uncommitted_changes_rejects_oracle_changes(
 @pytest.mark.parametrize(
     ("branch_name", "expected"),
     [
-        ("cmoc_2026-05-10_22-21_10_123", True),
-        ("feature/cmoc_2026-05-10_22-21_10_123", False),
-        ("cmoc_2026-05-10_22-21-10", False),
+        ("cmoc/session/2026-05-10_22-21_10_123", True),
+        ("cmoc/apply/2026-05-10_22-21_10_123/run-1", True),
+        ("cmoc/session/2026-05-10_22-21_10_123/extra", False),
+        ("cmoc/apply/2026-05-10_22-21_10_123", False),
     ],
 )
 def test_is_cmoc_branch(branch_name: str, expected: bool) -> None:
@@ -654,14 +657,34 @@ def test_is_cmoc_branch(branch_name: str, expected: bool) -> None:
     assert is_cmoc_branch(branch_name) is expected
 
 
-def test_branch_base_commit_path_points_under_cmoc_branch_dir(
+def test_read_branch_base_commit_uses_session_state(
     tmp_path: Path,
 ) -> None:
-    """branch base commit 記録先は `.cmoc/branch` 配下になる。"""
+    """部分評価用 base commit は session state から読む。"""
     repo = _init_repo(tmp_path)
+    session_id = "2026-05-10_22-21_10_123"
+    write_session_state(
+        repo,
+        session_id,
+        {
+            "session": {
+                "state": "active",
+                "session_home_branch": "main",
+                "session_start_commit": "abc123",
+            },
+            "apply": {
+                "state": "ready",
+                "apply_branch": None,
+                "oracle_snapshot_commit": None,
+            },
+        },
+    )
 
-    assert branch_base_commit_path(repo, "cmoc_2026-05-10_22-21_10_123") == (
-        repo / ".cmoc" / "branch" / "cmoc_2026-05-10_22-21_10_123.txt"
+    assert session_state_path(repo, session_id) == (
+        repo / ".cmoc" / "sessions" / f"{session_id}.json"
+    )
+    assert read_branch_base_commit(repo, f"cmoc/session/{session_id}") == (
+        "abc123"
     )
 
 

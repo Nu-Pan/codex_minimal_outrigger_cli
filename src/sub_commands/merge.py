@@ -21,15 +21,15 @@ _MANUAL_RESOLUTION_MESSAGE: str = (
 
 def cmoc_merge_impl(
     repo_root: Path | None = None,
-    cmoc_branch: str | None = None,
+    managed_branch: str | None = None,
 ) -> None:
-    """cmoc ブランチを現在の HEAD へ merge する。"""
+    """cmoc 管理ブランチを現在の HEAD へ merge する。"""
     # 直接呼び出し時は共通 runner で repo root 解決とエラー整形を行う。
     if repo_root is None:
         run_command(
             lambda resolved_repo_root: cmoc_merge_impl(
                 resolved_repo_root,
-                cmoc_branch,
+                managed_branch,
             )
         )
         return
@@ -44,10 +44,10 @@ def cmoc_merge_impl(
 
         # 明示引数が無い場合は未マージ cmoc ブランチを best effort で 1 件に絞る。
         start_step(timer, 2, 4, "resolve source branch")
-        source_branch = cmoc_branch or _resolve_source_branch(repo_root)
+        source_branch = managed_branch or _resolve_source_branch(repo_root)
         if not is_cmoc_branch(source_branch):
             raise CmocError(
-                "merge 対象は cmoc branch 名である必要があります。",
+                "merge 対象は cmoc 管理 branch 名である必要があります。",
                 [
                     "`cmoc session fork` が作成した branch 名を指定してください。",
                     "通常の branch を merge する場合は `git merge` を直接実行してください。",
@@ -79,7 +79,7 @@ def cmoc_merge_impl(
 
 
 def _resolve_source_branch(repo_root: Path) -> str:
-    """未マージの cmoc ブランチを best effort で 1 件に絞る。"""
+    """未マージの cmoc 管理ブランチを best effort で 1 件に絞る。"""
     # 未マージ branch のうち cmoc 命名規則に一致するものだけを候補にする。
     result = run_git(repo_root, ["branch", "--no-merged"])
     candidates = [
@@ -90,12 +90,12 @@ def _resolve_source_branch(repo_root: Path) -> str:
     if len(candidates) != 1:
         # 0 件または複数件の場合は利用者に明示指定を求める。
         raise CmocError(
-            "cmoc branch の自動特定に失敗しました。",
+            "cmoc 管理 branch の自動特定に失敗しました。",
             [
-                "cmoc branch 名を明示的に指定してください。",
-                "余分な cmoc branch を削除または merge してからコマンドを再実行してください。",
+                "cmoc 管理 branch 名を明示的に指定してください。",
+                "余分な cmoc 管理 branch を削除または merge してからコマンドを再実行してください。",
             ],
-            "\n".join(candidates) or "cmoc branch 候補がありません。",
+            "\n".join(candidates) or "cmoc 管理 branch 候補がありません。",
         )
     return candidates[0]
 

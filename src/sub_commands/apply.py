@@ -168,10 +168,10 @@ def cmoc_apply_impl(
     branch_name = current_branch(repo_root)
     if not is_cmoc_branch(branch_name):
         raise CmocError(
-            "`cmoc apply` は cmoc branch 上で実行してください。",
+            "`cmoc apply` は cmoc 管理 branch 上で実行してください。",
             [
                 "先に `cmoc session fork` を実行してください。",
-                "既存の cmoc branch を checkout してください。",
+                "既存の session branch を checkout してください。",
             ],
             f"現在の branch: {branch_name}",
         )
