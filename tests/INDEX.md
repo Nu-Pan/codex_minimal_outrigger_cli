@@ -27,29 +27,28 @@
 
 ## Summary
 
-- `tests/test_codex.py` は `commons.codex.run_codex_exec()` の挙動を Fake Codex CLI で検証するテスト群の目次です。
-- Structured Output の schema ファイル生成、JSON / テキスト出力の再試行、意味的検証失敗時のエラー表示、`enum` や文字列長制約を含む schema 検証を扱います。
-- 呼び出しログ、`subcommand_log` への通知、出力プレビュー、`--resume` 再実行、quota 枯渇時の待機と疎通確認、`INDEX.md` 事前メンテナンスと `skip_index_maintenance` の扱いも確認します。
-- ファイル末尾には、テスト用 git リポジトリを初期化して `git` を実行する補助関数 `_git` があります。
+- `tests/test_codex.py` は `commons.codex.run_codex_exec()` の振る舞いを Fake Codex CLI で検証するテスト群の入口です。
+- Structured Output の schema ファイル生成、JSON とテキストの再試行、意味的検証失敗時の詳細エラー、`enum` や文字列長制約の検査を扱います。
+- 呼び出しログ、`subcommand_log` への通知、`--resume` 再実行、quota 枯渇時の待機と疎通確認、`INDEX.md` 事前メンテナンスと `skip_index_maintenance` の扱いも確認します。
+- ファイル末尾には、テスト用 git リポジトリを初期化して `git` を実行する補助関数 `_init_git_repo` と `_git` があります。
 
 ## Read this when
 
-- `run_codex_exec()` の引数、`--output-schema`、`--output-last-message`、`--resume`、`skip_index_maintenance`、`reasoning_effort` の扱いを確認したいとき。
-- Structured Output の構文検証・意味的検証のリトライ条件や、JSON Schema の `enum` や文字列長制約の検査を確認したいとき。
-- `logs/codex_exec` の呼び出しログ、`logs/sub_commands` への通知、標準出力の進捗表示、80 文字の出力プレビュー規則を確認したいとき。
-- quota 枯渇時の待機・疎通確認・`--resume` 再開の流れや、Codex 呼び出し前後で `INDEX.md` を保守するかどうかを確認したいとき。
-- テストファイル末尾の `_git` 補助関数を使って、テスト用 git リポジトリを初期化する方法を確認したいとき。
+- `commons.codex.run_codex_exec()` の引数、`--output-schema`、`--output-last-message`、`--resume`、`skip_index_maintenance`、`reasoning_effort` の扱いを確認したいとき。
+- Structured Output の parse 失敗、意味的検証失敗、JSON Schema の `enum` や文字列長制約に対するリトライとエラー表示を確認したいとき。
+- Codex CLI 呼び出しログ、`subcommand_log` への通知、出力プレビュー、quota 枯渇時の待機と疎通確認、再実行の流れを確認したいとき。
+- Codex 呼び出し前後の `INDEX.md` メンテナンスの有無や、`skip_index_maintenance` による明示スキップを確認したいとき。
+- ファイル末尾の `_init_git_repo` や `_git` を使って、テスト用 git リポジトリを準備する方法を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc` のユーザー向けサブコマンド仕様や `oracles` 側の正本仕様だけを確認したいときは、このテスト目次ではなく該当する仕様文書を読むべきです。
-- `tests` 全体の共通 fixture や他のテストファイルの観点だけを追いたいときは、このファイルを読む必要はありません。
-- `commons.codex` 以外の共通モジュールや `src/sub_commands` の実装ロジックだけを調べたいときは、このテスト群は目的外です。
-- `INDEX.md` の生成・更新ルールそのものや、`README.md` / `AGENTS.md` / `memo` の運用ルールだけを確認したいときは、このファイルではなく別の案内を読むべきです。
+- `cmoc` のサブコマンド正本仕様だけを確認したいときは、`oracles/app_specs/sub_commands/INDEX.md` 側を読むべきです。
+- `INDEX.md` の生成・更新ルールそのものだけを確認したいときは、このテスト目次ではなく `oracles/app_specs/indexing.md` を読むべきです。
+- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいときは、このファイルの目次ではなく別の案内を参照すべきです。
 
 ## hash
 
-- b218fda9e9398154cebcae82c5763379b1e34e6c4c7c94ed9c9c0ddc2075d774
+- be9bfbc2ddb3d8118af7e9280575340f82321231629d6d62c5e544563162661b
 
 # `test_file_naming.py`
 
