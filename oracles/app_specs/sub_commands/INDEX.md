@@ -45,33 +45,32 @@
 
 ## hash
 
-- d2609b45513796846beb5a8bfc82fba45b907112c55399cfdfcfb8823419b130
+- 8aa459173043df38e38937f7c8f48c31a360282d0441017d043edefe8c804e02
 
 # `apply_join.md`
 
 ## Summary
 
-- `cmoc apply join` は、`apply fork` で作成された成果物をセッション本流へ取り込むコマンドの仕様を定義します。
-- 処理は、ブランチの checkout、想定外の差分の記録または revert、`git merge --no-ff` による統合、セッション状態ファイルの更新、結果レポートで構成されます。
-- マージコンフリクトは原則想定せず、発生した場合は解決せずにユーザーへ報告します。
-- 一定条件を満たした場合にのみ、`<cmoc-apply-branch>` と `<cmoc-apply-worktree>` を削除できます。
+- `cmoc apply join` の仕様断片への入口です。
+- `apply fork` で作成された成果物を `<cmoc-session-branch>` に取り込み、`session.state` と `apply.state` を更新する流れを案内します。
+- 想定外の差分の扱い、`--force-resolve`、マージ後の後始末や削除条件を確認できます。
 
 ## Read this when
 
-- `cmoc apply join` の引数、事前条件、実行手順を確認したいとき
-- `<cmoc-apply-branch>` を `<cmoc-session-branch>` にマージする処理を実装・修正したいとき
-- 想定外の差分の検出、通常モード/強制モードの分岐、マージ後の state 更新を扱いたいとき
-- 使用済みブランチと apply worktree の削除条件を確認したいとき
+- `cmoc apply join` の引数、事前条件、実行手順を確認したいとき。
+- `<cmoc-apply-branch>` を `<cmoc-session-branch>` にマージする処理を実装・修正・レビューしたいとき。
+- 想定外の差分の検出、通常モードと強制モードの分岐、マージ後の state 更新を扱いたいとき。
+- 使用済みブランチと apply worktree の削除条件を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply join` ではなく、`cmoc apply fork` の生成処理や調査・修正ループを確認したいとき
-- セッション開始・終了、または `abandon` 系のフローだけを確認したいとき
-- ブランチモデルや状態ファイルの基本仕様だけを確認したいとき
+- `cmoc apply fork` の生成処理や調査・修正ループだけを確認したいときは、この文書ではなく `apply_fork.md` を読むべきです。
+- session の開始・終了や `abandon` 系の流れだけを確認したいときは、この文書ではなく該当する session/apply 断片を直接読むべきです。
+- branch model や状態ファイルの基本仕様だけを確認したいときは、この文書ではなく対応する共通仕様を読むべきです。
 
 ## hash
 
-- 9920b25b80bed7bc2e7afa1e4f7745bc7784ff9712f46e4b14c638614dcf926e
+- 7a7cc60cc1f86108bd3612c6dd3528f69b7aaee99810db4d51ab65f8e6fb9c69
 
 # `eval_oracles.md`
 
@@ -147,10 +146,9 @@
 
 ## Summary
 
-- `cmoc session fork` の概要と、現在の local branch を起点に session branch を作る仕様をまとめた文書です。
-- 引数なしで実行する前提と、detached HEAD・未コミット差分・既存 active session などのエラー条件を扱います。
-- session start commit の取得、`.cmoc` の追跡対象外保証、session metadata 保存、標準出力への表示までの実行手順を扱います。
-- `cmoc/session/<session-id>` の命名規則、任意 start point を受け取らない方針、`cmoc branch` のレガシー扱いを含みます。
+- `cmoc session fork` は、現在 checkout している local branch を session home branch とし、その HEAD から session branch を作成する手順を定める文書です。
+- 引数なし実行を前提に、detached HEAD、未コミット差分、既存 active session、managed branch 上での実行などのエラー条件を扱います。
+- session start commit の取得、`.cmoc` の追跡対象外保証、session metadata の保存、標準出力への表示、`cmoc/session/<session-id>` の命名規則を扱います。
 
 ## Read this when
 
@@ -161,13 +159,13 @@
 
 ## Do not read this when
 
-- `cmoc session fork` 以外のサブコマンド仕様を確認したいとき
-- セッションの join・abandon・apply 系の挙動だけを調べたいとき
-- branch モデル全体や一般的な使用法だけを確認したいとき
+- `cmoc session join`、`cmoc session abandon`、`cmoc apply` 系の挙動だけを確認したいとき
+- branch モデル全体や一般的な使い方だけを確認したいとき
+- セッション開始ではなく、終了・破棄・統合の手順だけを確認したいとき
 
 ## hash
 
-- 471fc0184da6ece904959ed74a6ae0bbae6c71ebd92ed2ff52c44a8c8576d946
+- 758a51bc67aeb9f3b5951c7e5fe4c2426113fad8b592cfe6b4f9092c89cbf566
 
 # `session_join.md`
 

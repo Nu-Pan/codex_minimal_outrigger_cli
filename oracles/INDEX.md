@@ -2,26 +2,27 @@
 
 ## Summary
 
-- `cmoc` のアプリ仕様断片をまとめた入口です。
-- branch model、Codex CLI 呼び出し、ログ出力、エラーハンドリング、`INDEX.md` 生成、雑多な基礎規約、`oracles` の扱い、利用方法を扱います。
-- 個別サブコマンドの入口は `sub_commands/INDEX.md` からたどります。
+- `cmoc` のアプリ仕様断片をまとめた入口です。`branch_model`、`codex_call`、`console_and_file_log`、`error_handling`、`indexing`、`misc_specs`、`oracles`、`session_state`、`usage`、および `sub_commands` への案内をまとめます。
+- `sub_commands/INDEX.md` から `apply`、`session`、`eval-oracles`、`init` など個別サブコマンドの正本仕様へたどれます。
+- `INDEX.md` 自体の生成・更新ルールは `indexing.md` が担当し、`oracles` の扱いは `oracles.md` が担当します。
 
 ## Read this when
 
 - `cmoc` の共通仕様や、その参照先となる正本断片を確認したいとき。
-- `apply`、`session`、`eval-oracles` などの前提になるルールを横断的に見直したいとき。
+- `apply`、`session`、`eval-oracles`、`init` などの前提になるルールを横断的に見直したいとき。
 - どの仕様ファイルを読むべきか、`app_specs` 配下の案内から判断したいとき。
 - 個別サブコマンドの入口を含めて、`branch_model`、`codex_call`、ログ、エラー処理、利用方法のどこへ進むべきか整理したいとき。
 
 ## Do not read this when
 
 - 個別サブコマンドの手順だけを確認したいときは、`sub_commands/INDEX.md` から該当文書へ直接進むべきです。
+- 特定の仕様本文だけを読みたいときは、該当する `*.md` を直接参照すべきです。
 - 実装コードやテストコードだけで足りる場合は、このディレクトリの案内を読む必要はありません。
-- この配下の単独仕様の本文だけを読みたいときは、該当する `*.md` を直接参照すべきです。
+- `INDEX.md` の生成・更新ルールだけを確認したいときは、`indexing.md` を読むべきです。
 
 ## hash
 
-- 494abd3852061b8dfa1357e731f3ea8c227e7cc5103083cd9d96c92d6487763b
+- f0c8d69cd54308630ee8c9a86e7172db086a4bbaf5dce90a57bb0b0534bc3332
 
 # `considered_alternatives`
 

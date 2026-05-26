@@ -20,7 +20,7 @@
 
 ## hash
 
-- 224e2b96c282ac68bcfea8b9b51c7884cf7eb2a7cc8fa1f857340bc98ebf69a1
+- dd1f141e83ae328b95305aa6ab8e08f5431af4188a4d0d5d4ba130b1fb51148d
 
 # `codex_call.md`
 
@@ -155,72 +155,67 @@
 
 ## Read this when
 
-- `oracles ファイル` の定義を確認したいとき
-- `oracles ファイル` を人間が所有し、AI が編集しない前提を確認したいとき
-- `oracles` 配下のファイルに対する読み書き可否や自動処理規則を確認したいとき
+- `oracles ファイル` の定義を確認したいとき。
+- `oracles ファイル` を人間が所有し、AI が編集しない前提を確認したいとき。
+- `oracles` 配下のファイルに対する読み書き可否や自動処理規則を確認したいとき。
 
 ## Do not read this when
 
-- `INDEX.md` の作成手順やメンテナンス規則だけを確認したいとき
-- `cmoc` のサブコマンド仕様や実装方針を確認したいとき
-- `oracles` 配下の個別仕様ファイルそのものを編集したいとき
+- `INDEX.md` の作成手順やメンテナンス規則だけを確認したいとき。
+- `cmoc` のサブコマンド仕様や実装方針を確認したいとき。
+- `oracles` 配下の個別仕様ファイルそのものを編集したいとき。
 
 ## hash
 
-- 846f75a87ba5831d36df56aa4f44028b2b6c01f4fd11932d0dac73376382191b
+- 6ca91e5371d86a6fa925f5b9af6d2d3a2407cb43bd76910f1cb9bdc6cf0d4545
 
 # `session_state.md`
 
 ## Summary
 
-- `cmoc` の session/apply 状態を記録する JSON ファイルの仕様です。
-- 保存先は `<repo-root>/.cmoc/sessions/<session-id>.json` で、`session` と `apply` の各スキーマ、状態遷移の補助情報、初期値を定義します。
-- session と apply の状態管理に関わる実装やレビューの入口になります。
+- `cmoc` ワークフローで発生する fork/join の状態を、セッションごとの JSON ファイルとして永続化するための仕様です。
+- `session` と `apply` の 2 つの領域に分けて状態を保持し、初期値と `ready` 遷移時の初期化方針を定めています。
+- 保存先は `<repo-root>/.cmoc/sessions/<session-id>.json` です。
 
 ## Read this when
 
-- 現在の session と apply の状態を保持する JSON ファイルの保存先、スキーマ、初期値を確認したいとき。
-- `session.state` と `apply.state` の遷移を実装・修正・レビューするときに、補助情報として何を保存すべきか整理したいとき。
-- `cmoc session fork` で作成される状態ファイルの内容や、`join` / `abandon` / `apply join` の前提条件を確認したいとき。
+- `cmoc` の fork/join に伴うセッション状態をどこにどう永続化するか確認したいとき。
+- `<repo-root>/.cmoc/sessions/<session-id>.json` に保存する状態項目や初期値、遷移条件を確認したいとき。
+- `session` と `apply` の状態管理を実装・レビューするときに、保持すべき情報を整理したいとき。
 
 ## Do not read this when
 
-- `cmoc session fork` / `join` / `abandon` / `apply join` などの手順だけを確認したいときは、各サブコマンドの仕様を直接読むべきです。
-- セッション状態ファイルそのものの構造ではなく、実装コードやテストコードだけで足りるときは、この文書を参照する必要はありません。
-- branch model、ログ出力、エラーハンドリングなど、状態ファイル以外の共通仕様を調べたいときは、別の仕様文書を読むべきです。
+- `cmoc session` や `cmoc apply` の操作手順そのものだけを確認したいとき。
+- `oracles` 全体のルーティング方針や `INDEX.md` 生成ルールだけを確認したいとき。
+- このファイルの保存先や永続化スキーマではなく、実装コードやテストコードだけで足りるとき。
 
 ## hash
 
-- 7a7969b8448e51e91e02c6a790bf109070f46ebc252f1b9a1cf14c9974fb666c
+- 555300a24f708c758456656f0bd1fabe6efa1598b83e12a9d5c0453493cd21b6
 
 # `sub_commands`
 
 ## Summary
 
-- `cmoc` の個別サブコマンド仕様への入口であり、`apply`、`session`、`eval-oracles`、`init` の各手順を下位文書へ案内する。
-- このディレクトリは `apply_*`、`session_*`、`eval_oracles.md`、`init.md` をまとめて参照できるようにし、実装・修正・レビュー時に必要な前提条件や状態遷移へ素早く辿れるようにする。
-- ここから各文書へ進むことで、`cmoc` のサブコマンドごとの目的、入出力、実行手順、終了条件を整理して確認できる。
+- `cmoc` の個別サブコマンド仕様への入口です。
+- `apply`、`session`、`eval-oracles`、`init` の各手順を下位文書へ案内します。
+- このディレクトリを起点に、サブコマンドごとの前提条件や状態遷移を素早く辿れるようにします。
 
 ## Read this when
 
-- `cmoc apply abandon` の未 join な apply run の破棄手順、前提条件、削除対象、状態遷移を確認したいとき。
-- `cmoc apply fork` の調査・修正ループ、作業用ブランチと worktree、評価対象スナップショット、要修正点リストの Structured Output 仕様を確認したいとき。
-- `cmoc apply join` のマージ手順、想定外の差分の扱い、`--force-resolve` の挙動、削除条件を確認したいとき。
-- `cmoc eval-oracles` の評価モード、ファイルごとの評価手順、レポートの構成を確認したいとき。
-- `cmoc init` の初期化手順、`.cmoc` を git 追跡対象外にする条件を確認したいとき。
-- `cmoc session abandon` の session 破棄手順、前提条件、破棄対象、状態遷移を確認したいとき。
-- `cmoc session fork` の session 作成条件、ブランチ命名規則、metadata 保存、レガシー要素の扱いを確認したいとき。
-- `cmoc session join` の session 完了手順、merge 条件、conflict 時の扱い、後始末を確認したいとき。
+- `cmoc` の個別サブコマンドの入口をまとめて確認したいとき。
+- `apply`、`session`、`eval-oracles`、`init` のどの仕様断片へ進むべきか整理したいとき。
+- `cmoc` のサブコマンドごとの目的、入力条件、実行手順、終了条件を俯瞰したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの手順だけを確認したいときは、この INDEX ではなく該当する `apply_*` / `session_*` / `eval_oracles.md` / `init.md` を直接読むべきです。
-- 実装コードやテストコードだけで足りる場合は、このディレクトリの案内を読む必要はありません。
-- `branch_model`、`codex_call`、ログ、エラー処理、`oracles`、利用方法など、他の `app_specs` 配下の共通仕様を確認したいときは、この INDEX ではなく対応する入口文書を読むべきです。
+- 個別のサブコマンド仕様だけを確認したいときは、この INDEX ではなく該当する `apply_*`、`session_*`、`eval_oracles.md`、`init.md` を直接読むべきです。
+- 実装コードやテストコードだけで足りる作業では、このディレクトリの案内を読む必要はありません。
+- `branch_model`、`codex_call`、ログ、エラーハンドリング、`oracles` 全体の扱いなど、他の共通仕様を確認したいときは、この INDEX ではなく対応する入口文書を読むべきです。
 
 ## hash
 
-- dde244e6dbebfda95e54cea192e81e91ac58f79750fe191eea3772e9bcaa4af7
+- d1fde1f8138ab99223c037a0dfcb143bebfa1d8ff26e418766bd43ac28613d92
 
 # `usage.md`
 

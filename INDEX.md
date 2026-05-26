@@ -130,25 +130,26 @@
 
 ## Summary
 
-- `cmoc` の正本仕様断片をまとめる `oracles` のルート目次です。
-- `app_specs`、`considered_alternatives`、`dev_rules` への入口を提供します。
-- どの仕様群を読むべきか迷ったときの最初の案内として使います。
+- `cmoc` の正本仕様断片をまとめる `oracles` 配下の入口です。`app_specs`、`dev_rules`、`considered_alternatives` への案内を担当します。
+- `oracles` に書かれた内容は仕様の根拠であり、実装と食い違う場合は実装を合わせる前提です。
+- どの仕様断片へ進むべきかを整理するときの目次です。
 
 ## Read this when
 
-- `oracles` 全体の入口と、どの仕様群へ進むべきかを確認したいとき。
-- アプリ仕様、採用しなかった代替案、開発ルールのどれを読むべきか整理したいとき。
-- 下位の `INDEX.md` や個別仕様へ進む前に、`oracles` の構成を俯瞰したいとき。
+- `cmoc` の正本仕様断片がどこにあるかを確認したいとき。
+- 実装やテストを進める前に、`app_specs`、`dev_rules`、`considered_alternatives` のどこを読むべきか切り分けたいとき。
+- `oracles` と実装に差があるときの基準を確認したいとき。
+- 仕様断片の配置やルーティング方針を把握したいとき。
 
 ## Do not read this when
 
-- 目的の仕様がすでに分かっていて、`app_specs`、`considered_alternatives`、`dev_rules` の下位文書を直接開けば足りるとき。
-- 個別サブコマンドや単独の設計判断だけを確認したいとき。
-- 実装コードやテストコードだけで十分で、`oracles` の案内が不要なとき。
+- 個別の仕様本文だけが必要なときは、該当する `.md` を直接読むべきです。
+- 実装コードやテストコードだけで判断できるときは、この目次を読む必要はありません。
+- `INDEX.md` の生成・更新ルールだけを確認したいときは、`indexing.md` を読むべきです。
 
 ## hash
 
-- b3d0489bd52c7e3a4b34d1694b46a0401f65851b343712c5490cd59d4be0ee99
+- 69d98037c54c6ff1bffffbe523180c53f6eb5d090cdf652bb9ff43fe530bd65d
 
 # `pyproject.toml`
 
