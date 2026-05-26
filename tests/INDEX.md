@@ -108,13 +108,13 @@
 ## Summary
 
 - `tests/test_repo.py` は `commons.repo` の git リポジトリ共通処理を検証するテスト群の目次です。
-- .cmoc の ignore 保証、tracked な `.cmoc` ファイルの index 解除、cmoc ブランチ判定、session state の読み書きを扱います。
-- `oracles` / 実装ファイルの列挙、変更検出、削除検出、`INDEX.md`・`.gitignore`・`.git/info/exclude`・`memo` の扱いを確認します。
+- .cmoc の ignore 保証、tracked な `.cmoc` ファイルの index 解除、cmoc ブランチ判定を扱います。
+- `oracles` / 実装ファイルの列挙、変更検出、削除検出、`INDEX.md`・`.gitignore`・`.git/info/exclude`・`memo` の扱い、session state の読み書きを確認します。
 
 ## Read this when
 
 - `commons.repo` の git リポジトリ共通処理がどのようにテストされているか確認したいとき。
-- `.cmoc` の ignore 保証、tracked な `.cmoc` ファイルの index 解除、cmoc ブランチ判定を見直したいとき。
+- .cmoc の ignore 保証、tracked な `.cmoc` ファイルの index 解除、cmoc ブランチ判定を見直したいとき。
 - `oracles` / 実装ファイルの列挙、変更検出、削除検出、session state の読み書きと検証条件を確認したいとき。
 - テスト用 git リポジトリの初期化や、`_init_repo` / `_git` の補助関数の役割を把握したいとき。
 
@@ -127,7 +127,7 @@
 
 ## hash
 
-- 99eb9decfe3d5b90da77855c234cd4e39b20ebe8922bc1cd9f03025888250518
+- a045a63b99d93b85dce9ece2b1409f2a406d041b4a32cf293580a68c51f6275d
 
 # `test_subcommands.py`
 
@@ -143,19 +143,19 @@
 - `cmoc init`、`cmoc session`、`cmoc apply`、`cmoc eval-oracles`、`main` の決定論的な CLI 挙動を確認したいとき。
 - `session fork/join/abandon` や `apply fork/join/abandon` の state、branch、worktree、前提条件、後始末の流れを確認したいとき。
 - `eval-oracles` のレポート生成、partial/full 評価、削除済み oracle の扱い、評価失敗時のエラー報告を確認したいとき。
-- `bin/cmoc` の起動挙動、Typer 登録、`cmoc --help`、`eval-oracles` 互換 alias、共通エラーレポートの扱いを確認したいとき。
+- `bin/cmoc` の起動挙動、Typer 登録、`cmoc --help`、`eval-oracle` 互換 alias、共通エラーレポートの扱いを確認したいとき。
 - 同ファイル内の補助関数や prompt / schema / helper の順序、conflict marker 判定、検証条件を追いたいとき。
 
 ## Do not read this when
 
-- `cmoc` のサブコマンド正本仕様だけを確認したいときは、`oracles/app_specs/sub_commands/INDEX.md` から該当文書へ直接進むべきです。
-- 共通のログ形式、エラー文言、`INDEX.md` 生成ルールだけを確認したいときは、このテスト目次ではなく対応する仕様文書を読むべきです。
+- `cmoc` の個別サブコマンドの正本仕様だけを確認したいときは、`oracles/app_specs/sub_commands/INDEX.md` から該当文書へ直接進むべきです。
+- 共通のログ形式、エラーレポート、`INDEX.md` 生成ルールだけを確認したいときは、このテスト目次ではなく対応する仕様文書を読むべきです。
 - `commons.codex`、`commons.repo`、`commons.errors` などの単体実装だけを調べたいときは、このテスト群では範囲が広すぎます。
 - `memo`、`README.md`、`AGENTS.md`、`oracles` の編集可否や運用ルールだけを確認したいときは、このファイルではなく別の案内を読むべきです。
 
 ## hash
 
-- 18b236414521d3ebacfd2c641a909f216f6164beb327eb4e6b0908faa7560ab5
+- e27d36ca3e4b7bed859a108359c55c0cb8b2ac069135c4b5f7398828341de309
 
 # `test_timestamps.py`
 

@@ -103,29 +103,27 @@
 
 - `src/sub_commands/eval-oracles.py` は `cmoc eval-oracles` コマンド本体の実装をまとめたモジュールです。
 - `oracles` 配下の評価対象を列挙し、現在ブランチと `--full` に応じて部分評価または全体評価を選びます。
-- 評価前に `.cmoc` の ignore 保証と `INDEX.md` のメンテナンスを行い、`codex exec` で各 oracle を個別に評価します。
-- 各評価結果の Structured Output を検証し、最終的に Markdown レポートまたはエラーレポートを `.cmoc/reports/eval-oracles` に保存します。
-- レポート生成、issue 集約、番号付け、参照ファイル一覧化、失敗時の代替レポート作成までを含む、`cmoc eval-oracles` の中核処理です。
+- 評価前に `.cmoc` の非追跡保証と `INDEX.md` のメンテナンスを行い、`codex exec` で各 oracle を個別に評価します。
+- 各評価結果を検証して集約し、Markdown レポートまたはエラーレポートとして `.cmoc/reports/eval-oracles` に保存します。
 
 ## Read this when
 
 - `cmoc eval-oracles` の実装・修正・テスト・レビューを行いたいとき。
-- 部分評価・全体評価の切り替え条件、`--full` の扱い、現在ブランチ判定、`session start commit` 参照の流れを確認したいとき。
-- 評価前に `.cmoc` の非追跡保証を行う処理や、`INDEX.md` を先にメンテナンスする順序を確認したいとき。
-- oracle ファイルの列挙、変更差分による部分評価の絞り込み、`codex exec` に渡す評価プロンプトと Structured Output 検証の実装を見たいとき。
-- 評価結果の Markdown レポート生成、エラーレポート生成、集約結果の出力や保存先を確認したいとき。
-- 評価に使う補助関数や、JSON パース・バリデーション・レポート書式の内部仕様を確認したいとき。
+- 部分評価・全体評価の切り替え条件や `--full` の扱いを確認したいとき。
+- 評価前の `.cmoc` の ignore 保証と `INDEX.md` メンテナンスの順序を確認したいとき。
+- `codex exec` による oracle の個別評価、Structured Output の検証、レポート生成の流れを見たいとき。
+- 評価結果の Markdown レポート、エラーレポート、issue 集約や参照ファイル一覧の実装を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply`、`cmoc session`、`cmoc init` など、`cmoc eval-oracles` 以外のサブコマンドの実装や挙動だけを確認したいとき。
-- `cmoc eval-oracles` の仕様本文だけを確認したいときは、実装ファイルではなく `oracles/app_specs/sub_commands/eval_oracles.md` を読むべきです。
-- `INDEX.md` の生成・更新ルールだけを確認したいときは、この実装ファイルではなく `oracles/app_specs/indexing.md` を読むべきです。
-- `oracles` 全体の入口や他の仕様断片の案内だけを確認したいときは、このモジュールではなく対応する `INDEX.md` を読むべきです。
+- `cmoc eval-oracles` 以外のサブコマンドの挙動だけを確認したいとき。
+- `cmoc eval-oracles` の仕様本文だけを確認したいときは、この実装ファイルではなく正本仕様を読むべきです。
+- `INDEX.md` の生成・更新ルールだけを確認したいとき。
+- `oracles` 全体の入口や他の仕様断片の案内だけを確認したいとき。
 
 ## hash
 
-- e7f2cf6af7109e846e82bf6e5619a3d561de2baa715985a3ac40604cefc83198
+- 148ae2a414da66167dd7a8ba14a4005643d7a80bc80543f5a50522af5ffc2589
 
 # `init.py`
 
