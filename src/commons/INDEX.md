@@ -130,30 +130,29 @@
 
 ## Summary
 
-- git リポジトリのルート探索、cwd 固定、`git` 実行をまとめる共通モジュールです。
-- `cmoc/session/<session-id>` と `cmoc/apply/<session-id>/<apply-run-id>` のブランチ判定や、branch から session id を取り出す処理を提供します。
+- git リポジトリのルート探索と `cwd` 固定、`git` 実行の共通処理をまとめたモジュールです。
+- `cmoc/session/<session-id>` と `cmoc/apply/<session-id>/<apply-run-id>` のブランチ判定と、branch から session id を取り出す処理を提供します。
 - `.cmoc/sessions/<session-id>.json` の読み書き、固定スキーマ検証、active session の列挙、session start commit の参照を扱います。
-- `.cmoc` の追跡対象外保証、root `.gitignore` の判定、未コミット差分や pathspec 単位の clean 判定、変更済み oracle / 実装ファイルの列挙を行います。
-- `commit_if_changed` と `commit_cmoc_initialization_changes` で、一時 index を使った部分 commit と staged 差分の復元を実現します。
+- `.cmoc` の ignore 保証、未コミット差分や pathspec 単位の clean 判定、oracle / 実装ファイルの列挙と削除検出、部分 commit と staged 差分の復元を実装します。
 
 ## Read this when
 
-- repo root の探索や cwd 固定の処理を確認・修正したいとき。
-- branch 名の判定、session id 抽出、session state の読み書き・検証を扱いたいとき。
-- `.cmoc` の ignore 保証、`.gitignore` 判定、未コミット差分や pathspec 単位の clean 判定を実装したいとき。
-- oracle / 実装ファイルの列挙、削除検出、working tree と staging area の差分収集を追いたいとき。
-- 一時 index を使った部分 commit や staged 差分復元の挙動を確認したいとき。
+- リポジトリルートの探索や、`cwd` をルートに固定する処理を確認・修正したいとき。
+- `cmoc/session/<session-id>` や `cmoc/apply/<session-id>/<apply-run-id>` のブランチ判定、session id 抽出を扱いたいとき。
+- `.cmoc/sessions/<session-id>.json` の読み書きや、固定スキーマ検証、active session の列挙を確認したいとき。
+- `.cmoc` の追跡対象外保証、`.gitignore` 判定、未コミット差分や pathspec 単位の clean 判定を実装したいとき。
+- oracle ファイルや実装ファイルの列挙、削除検出、working tree と staging area の差分収集、部分 commit と staged 差分復元を追いたいとき。
 
 ## Do not read this when
 
-- CLI 引数定義やサブコマンドの実行手順だけを確認したいときは、`src/sub_commands` 側を読むべきです。
-- エラーレポート整形、ログ保存、タイムスタンプ生成など、別の共通機能だけを確認したいときは、このファイルではなく対応する `src/commons/*.py` を読むべきです。
-- `INDEX.md` の自動生成や更新ルールそのものを確認したいときは、`src/commons/indexing.py` を読むべきです。
-- `oracles` の正本仕様や個別の仕様断片だけを追いたいときは、この共通ユーティリティではなく `oracles` 配下の文書を読むべきです。
+- CLI 引数定義やサブコマンドの実行手順だけを確認したいとき。
+- エラーレポート整形、標準出力ログ、タイムスタンプ生成など、別の共通機能だけを調べたいとき。
+- `INDEX.md` の生成・更新ルールそのものや、`oracles` の正本仕様だけを追いたいとき。
+- 個別のサブコマンド実装やテストだけを見れば足りるとき。
 
 ## hash
 
-- e8152ea12b79ed32a2e26e02465b301cd57ddd2345159a14734a2484771ec4c0
+- 692b758834b7d94ac0ff896c1f5edf9d6d4f4e013b3667bd4f027b33ba427f18
 
 # `subcommand_log.py`
 
