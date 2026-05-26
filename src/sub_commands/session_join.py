@@ -1,5 +1,6 @@
 """`cmoc session join` の本体処理。"""
 
+import subprocess
 import sys
 from pathlib import Path
 
@@ -55,7 +56,10 @@ def cmoc_session_join_impl(repo_root: Path | None = None) -> None:
             check=False,
         )
         if result.returncode != 0:
-            _resolve_conflicts(repo_root)
+            if _unmerged_paths(repo_root):
+                _resolve_conflicts(repo_root)
+            else:
+                _raise_unexpected_merge_failure(result)
 
         start_step(timer, 5, 5, "record joined session")
         _mark_session_joined(repo_root, session_id, state)
@@ -213,6 +217,31 @@ def _resolve_conflicts(repo_root: Path) -> None:
 
     # marker 確認と git add が完了してから merge commit を作成する。
     run_git(repo_root, ["commit", "--no-edit"])
+
+
+def _raise_unexpected_merge_failure(
+    result: subprocess.CompletedProcess[str],
+) -> None:
+    """conflict ではない merge 失敗をユーザー向けエラーにする。"""
+    stdout = getattr(result, "stdout", "")
+    stderr = getattr(result, "stderr", "")
+    detail = "\n".join(
+        [
+            f"git merge return code: {result.returncode}",
+            "STDOUT:",
+            stdout.strip(),
+            "STDERR:",
+            stderr.strip(),
+        ]
+    ).strip()
+    raise CmocError(
+        "git merge が失敗しましたが、merge conflict は検出されませんでした。",
+        [
+            "git status と git merge の出力を確認し、手動で原因を解消してください。",
+            "リポジトリ状態を整理してから `cmoc session join` を再実行してください。",
+        ],
+        detail,
+    )
 
 
 def _delete_branch_if_safe(repo_root: Path, branch_name: str) -> None:

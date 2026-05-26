@@ -17,6 +17,7 @@ from pytest import MonkeyPatch
 import sub_commands.apply as apply_module
 import sub_commands.session_abandon as session_abandon_module
 import sub_commands.session_fork as session_fork_module
+import sub_commands.session_join as session_join_module
 from commons.codex import COST_PERFORMANCE_MODEL
 from commons.codex import COST_PERFORMANCE_REASONING_EFFORT
 from commons.codex import COMMIT_MESSAGE_MODEL
@@ -2730,6 +2731,80 @@ def test_session_join_precondition_failure_does_not_print_manual_resolution(
     captured = capsys.readouterr()
     assert "apply run" in error.value.message
     assert "手動解消が必要です" not in captured.err
+
+
+def test_session_join_stops_non_conflict_merge_failure_without_codex(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """conflict ではない merge 失敗では Codex を呼ばず手動解決にする。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-m", "ignore cmoc")
+    _checkout_session_branch(repo)
+    (repo / "feature.txt").write_text("feature\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "feature")
+    session_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    original_run_git = session_join_module.run_git
+    codex_calls: list[str] = []
+
+    def fail_merge_without_unmerged_paths(
+        repo_root: Path,
+        args: list[str],
+        *,
+        check: bool = True,
+        text: bool = True,
+        input_text: str | None = None,
+        env: dict[str, str] | None = None,
+    ) -> subprocess.CompletedProcess[str]:
+        """merge の非 conflict 失敗を模擬する。"""
+        if args == ["merge", "--no-ff", session_branch]:
+            return subprocess.CompletedProcess(
+                ["git", *args],
+                128,
+                stdout="",
+                stderr="fatal: refusing to merge unrelated histories",
+            )
+        return original_run_git(
+            repo_root,
+            args,
+            check=check,
+            text=text,
+            input_text=input_text,
+            env=env,
+        )
+
+    def fake_codex(*args: object, **kwargs: object) -> None:
+        """Codex 呼び出しが誤って発生したことを記録する。"""
+        del args, kwargs
+        codex_calls.append("called")
+
+    monkeypatch.setattr(
+        session_join_module,
+        "run_git",
+        fail_merge_without_unmerged_paths,
+    )
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_codex)
+
+    with pytest.raises(CmocError) as error:
+        cmoc_session_join_impl(repo)
+
+    captured = capsys.readouterr()
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+        ).read_text(encoding="utf-8")
+    )
+    branches = _git(repo, "branch", "--format=%(refname:short)").stdout
+    assert "merge conflict は検出されませんでした" in error.value.message
+    assert "fatal: refusing to merge unrelated histories" in error.value.detail
+    assert "手動解消が必要です" in captured.err
+    assert codex_calls == []
+    assert state["session"]["state"] == "active"
+    assert session_branch in branches
 
 
 def test_session_abandon_marks_state_and_force_deletes_branch(
