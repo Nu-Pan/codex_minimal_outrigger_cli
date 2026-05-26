@@ -141,18 +141,19 @@
 - `init`、`session`、`apply`、`eval-oracles` の状態遷移、branch / worktree 管理、レポート生成、Structured Output schema を確認したいとき。
 - `run_command` の tee ログ、`format_error_report`、`bin/cmoc` の起動挙動、`main` のエラーハンドリングを確認したいとき。
 - `session join` の conflict prompt、`eval-oracles` の評価 prompt、テスト補助関数の並び順やサブコマンド登録の回帰を確認したいとき。
+- `apply` の要修正点 JSON スキーマ、修正ループ、`cmoc apply join` / `cmoc apply abandon` の振る舞いをまとめて確認したいとき。
 
 ## Do not read this when
 
 - `src/commons/*` の実装詳細だけを追いたいときは、このテスト目次ではなく共通モジュール本体を読むべきです。
-- `oracles/app_specs/*` の正本仕様だけを確認したいときは、このテストファイルではなく該当仕様文書を読むべきです。
+- `oracles/app_specs/*` の正本仕様だけを確認したいときは、このテストファイルではなく該当する仕様文書を読むべきです。
 - `INDEX.md` の生成・更新ルールそのものだけを確認したいときは、このテストファイルではなく `indexing.md` を読むべきです。
 - `README.md`、`AGENTS.md`、`memo` の運用規則だけを確認したいときは、このテストファイルを読む必要はありません。
 - 別のテストファイルの観点だけを追いたいときは、この回帰テスト目次は目的外です。
 
 ## hash
 
-- 58f87fed2320336b632012c9aefbce977038c273ab6eb7713b79cd27b6f29ee6
+- dac420b002a3c63d04733356558caae525bd1324fd87174be69f71673a65f512
 
 # `test_timestamps.py`
 

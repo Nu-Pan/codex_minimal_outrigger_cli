@@ -55,24 +55,24 @@
 
 ## Summary
 
-- `src/sub_commands` にある `cmoc` の各サブコマンド実装の入口です。`init.py`、`apply.py`、`apply_abandon.py`、`apply_join.py`、`session_fork.py`、`session_join.py`、`session_abandon.py`、`eval-oracles.py`、`__init__.py` をまとめます。
-- `apply` 系は要修正点の調査・修正ループ、取り込み、破棄を分担し、`session` 系は開始・統合・破棄を分担します。
-- `eval-oracles.py` は `oracles` 断片の評価を担当し、`__init__.py` はパッケージ宣言のみを担います。
+- `src/sub_commands` は `cmoc` の各サブコマンド実装をまとめたディレクトリの入口です。
+- `__init__.py` はパッケージ宣言のみを担い、`init.py`、`apply.py`、`apply_abandon.py`、`apply_join.py`、`session_fork.py`、`session_join.py`、`session_abandon.py`、`eval-oracles.py` が個別コマンド本体です。
+- この目次は、実装コードを読む前に該当モジュールへ素早くたどり着くための案内です。
 
 ## Read this when
 
-- `cmoc` のサブコマンド本体がどのファイルにあるかを確認したいとき。
-- `apply`、`session`、`eval-oracles`、`init` の実装や修正箇所を探したいとき。
-- 新しいサブコマンドを追加するときの配置方針を確認したいとき。
-- `src.sub_commands` パッケージの役割をまとめて把握したいとき。
+- `src/sub_commands` 配下にどのサブコマンド実装があるか、入口を一覧で把握したいとき。
+- `cmoc init`、`cmoc apply`、`cmoc apply abandon`、`cmoc apply join`、`cmoc session fork`、`cmoc session join`、`cmoc session abandon`、`cmoc eval-oracles` の実装へ進む前に、該当モジュールを特定したいとき。
+- `src/sub_commands` ディレクトリ全体のルーティング文書を作成・更新したいとき。
+- サブコマンド実装と、パッケージ宣言だけの補助モジュールを切り分けて確認したいとき。
 
 ## Do not read this when
 
-- 利用手順や作業順だけを確認したいときは、`oracles/app_specs/usage.md` を読むべきです。
-- 個別サブコマンドの正本仕様だけを確認したいときは、`oracles/app_specs/sub_commands/*.md` を直接読むべきです。
-- `branch_model`、ログ、エラー処理、`INDEX.md` 生成ルールなどの共通仕様だけを確認したいときは、このディレクトリより上位の文書を読むべきです。
-- `src/commons` の共通処理やテスト仕様だけを確認したいときは、このディレクトリは優先対象ではありません。
+- `cmoc` のユーザー向け仕様や手順だけを確認したいときは、`oracles/app_specs/sub_commands/` 配下の正本仕様を読むべきです。
+- 特定の実装モジュールだけを確認したいときは、この目次ではなく `init.py`、`apply.py`、`apply_abandon.py`、`apply_join.py`、`session_fork.py`、`session_join.py`、`session_abandon.py`、`eval-oracles.py` を直接読むべきです。
+- `INDEX.md` の生成・更新ルールだけを確認したいときは、`oracles/app_specs/indexing.md` を読むべきです。
+- `src/sub_commands` のパッケージ宣言だけを確認したいときは、`__init__.py` を直接読むべきです。
 
 ## hash
 
-- 6593b6015a19368883af96f3db2a1057afe3b331c0b647baa0dd7c7c7ead55b4
+- 0ab29bd92000e72aedc361b6470001e67b797119444f6411695ea877cd6cf843

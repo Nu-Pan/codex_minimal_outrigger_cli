@@ -26,26 +26,27 @@
 ## Summary
 
 - `cmoc apply` の本体処理をまとめた実装ファイルです。
-- session state の検証、apply worktree の作成、oracle スナップショットの固定、調査・修正ループ、report 保存までを扱います。
-- 要修正点リストの Structured Output schema、調査対象ファイルの選定、Codex CLI への調査・修正依頼、commit 作成、レポート整形の処理が含まれます。
+- session state の検証、apply worktree と apply branch の作成、oracle snapshot の固定、要修正点の調査・改善・修正ループ、レポート保存までを扱います。
+- 要修正点リストの Structured Output schema、対象ファイルの列挙、Codex CLI への問い合わせ、commit 生成、レポート整形、補助プロンプト生成の関数群も含みます。
 
 ## Read this when
 
-- `cmoc apply` の本体処理、状態遷移、worktree 作成、レポート生成を実装・修正・レビューしたいとき。
-- `apply.state` の `ready` / `running` / `completed` / `error` の扱いと、session state の更新条件を確認したいとき。
-- oracle ファイルと実装ファイルを対象にした不整合調査、要修正点リストの Structured Output、改善ループの仕様を確認したいとき。
-- `--full` と部分適用モードの対象ファイル選定、禁止パス検査、commit 単位の追従処理を確認したいとき。
+- `cmoc apply` の本体処理、状態遷移、worktree 作成、調査・修正ループ、レポート生成を実装・修正・レビューしたいとき。
+- session state の検証、`apply.state` の `ready` / `running` / `completed` / `error` の扱い、開始失敗時のエラー処理を確認したいとき。
+- 要修正点リストの Structured Output schema、oracle ファイルと実装ファイルの調査対象選定、Codex CLI への調査・修正依頼の流れを確認したいとき。
+- 不整合の改善ループ、要修正点ごとの修正適用、commit 作成、`INDEX.md` メンテナンス、apply report の front matter と本文の生成・検証を追いたいとき。
+- `--full` と部分適用モードの対象ファイル選定、禁止パス検査、レポート保存先や終了コードの扱いを確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply abandon` の破棄手順だけを確認したいときは、このファイルではなく `src/sub_commands/apply_abandon.py` を読むべきです。
-- `cmoc apply join` のマージ手順や後始末だけを確認したいときは、このファイルではなく `src/sub_commands/apply_join.py` を読むべきです。
-- `cmoc session fork` / `cmoc session join` / `cmoc session abandon` の挙動だけを確認したいときは、このファイルは対象外です。
-- 不整合調査ではなく、共通の `INDEX.md` 生成ルールや `oracles` 全体の扱いだけを確認したいときは、このファイルを読む必要はありません。
+- `cmoc apply join` のマージ処理や `cmoc apply abandon` の破棄処理だけを確認したいときは、このファイルではなく各サブコマンド実装を読むべきです。
+- `cmoc session fork/join/abandon` の挙動だけを確認したいときは、このファイルは対象外です。
+- `INDEX.md` の生成・更新ルールだけを確認したいときは、このファイルではなく `src/commons/indexing.py` や `oracles/app_specs/indexing.md` を読むべきです。
+- ユーザー向けの `cmoc apply` 正本仕様だけを確認したいときは、この実装ファイルではなく `oracles/app_specs/sub_commands/apply_fork.md` を読むべきです。
 
 ## hash
 
-- 593121872b2169893602b5847823d6f971f764b082a577f7e5302ddf607eb0eb
+- 731a81c788c5d5d9e758c0a66d1c48272f2c3ea63981f24651b729b14e13ddc1
 
 # `apply_abandon.py`
 
