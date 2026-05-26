@@ -14,6 +14,7 @@ import pytest
 import typer
 from pytest import MonkeyPatch
 
+import sub_commands.session_abandon as session_abandon_module
 import sub_commands.session_fork as session_fork_module
 from commons.codex import COST_PERFORMANCE_MODEL
 from commons.codex import COST_PERFORMANCE_REASONING_EFFORT
@@ -2292,6 +2293,78 @@ def test_session_abandon_rejects_uncommitted_changes_before_switch(
         "cmoc/session/2026-05-10_22-21_10_123"
     )
     assert state["session"]["state"] == "active"
+
+
+def test_session_abandon_reports_rollback_switch_failure(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """cleanup 後の branch 復旧失敗は再実行可能状態として隠さない。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-m", "ignore cmoc")
+    home_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    session_branch = "cmoc/session/2026-05-10_22-21_10_123"
+    _checkout_session_branch(repo)
+    original_run_git = session_abandon_module.run_git
+
+    def fail_cleanup_and_restore_switch(
+        repo_root: Path,
+        args: list[str],
+        *,
+        check: bool = True,
+        text: bool = True,
+        input_text: str | None = None,
+        env: dict[str, str] | None = None,
+    ) -> subprocess.CompletedProcess[str]:
+        """branch 削除失敗と session branch への復旧失敗を模擬する。"""
+        if args == ["branch", "-D", session_branch]:
+            raise subprocess.CalledProcessError(
+                1,
+                ["git", *args],
+                stderr="fake branch delete failure",
+            )
+        if args == ["switch", session_branch]:
+            return subprocess.CompletedProcess(
+                ["git", *args],
+                1,
+                stdout="",
+                stderr="fake switch failure",
+            )
+        return original_run_git(
+            repo_root,
+            args,
+            check=check,
+            text=text,
+            input_text=input_text,
+            env=env,
+        )
+
+    monkeypatch.setattr(
+        session_abandon_module,
+        "run_git",
+        fail_cleanup_and_restore_switch,
+    )
+
+    with pytest.raises(CmocError) as error:
+        cmoc_session_abandon_impl(repo)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+        ).read_text(encoding="utf-8")
+    )
+    branches = _git(repo, "branch", "--format=%(refname:short)").stdout
+    assert "rollback にも失敗" in error.value.message
+    assert "cleanup failure" in error.value.detail
+    assert "fake branch delete failure" in error.value.detail
+    assert "rollback failure" in error.value.detail
+    assert "fake switch failure" in error.value.detail
+    assert "再実行は避けてください" in error.value.actions[1]
+    assert _git(repo, "branch", "--show-current").stdout.strip() == home_branch
+    assert state["session"]["state"] == "active"
+    assert session_branch in branches
 
 
 def test_main_typer_functions_delegate_only_to_impls() -> None:

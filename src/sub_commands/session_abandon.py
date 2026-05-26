@@ -44,15 +44,32 @@ def cmoc_session_abandon_impl(repo_root: Path | None = None) -> None:
         _mark_session_abandoned(repo_root, session_id, state)
         run_git(repo_root, ["branch", "-D", session_branch])
     except Exception as error:
-        _restore_abandon_state(repo_root, session_id, state, session_branch)
+        restore_errors = _restore_abandon_state(
+            repo_root,
+            session_id,
+            state,
+            session_branch,
+        )
+        detail = _cleanup_failure_detail(error, restore_errors)
+        if restore_errors:
+            message = (
+                "session abandon のクリーンアップに失敗し、"
+                "rollback にも失敗しました。"
+            )
+            actions = [
+                "Detail の rollback failure を確認し、session branch と session state を手動で整合させてください。",
+                "整合を確認できるまで `cmoc session abandon` の再実行は避けてください。",
+            ]
+        else:
+            message = "session abandon のクリーンアップに失敗しました。"
+            actions = [
+                "Detail を確認して問題を手動で解消してから `cmoc session abandon` を再実行してください。",
+                "session branch と session state が active に戻っていることを確認してください。",
+            ]
         raise CmocError(
-            "session abandon のクリーンアップに失敗しました。",
-            [
-                "Detail を確認して問題を手動で解消してから "
-                "`cmoc session abandon` を再実行してください。",
-                "session branch と session state の状態を確認してください。",
-            ],
-            str(error),
+            message,
+            actions,
+            detail,
         ) from error
 
     print(f"abandoned session branch: {session_branch}")
@@ -160,17 +177,55 @@ def _restore_abandon_state(
     session_id: str,
     state: dict[str, object],
     session_branch: str,
-) -> None:
+) -> list[str]:
     """cleanup 失敗時に再実行しやすい状態へ戻す。"""
+    restore_errors: list[str] = []
     session = state.get("session")
     if isinstance(session, dict):
         session["state"] = "active"
-        write_session_state(repo_root, session_id, state)
+        try:
+            write_session_state(repo_root, session_id, state)
+        except Exception as error:
+            restore_errors.append(f"state restore failed: {error}")
+    else:
+        restore_errors.append("state restore failed: session section is invalid")
 
     branch_exists = run_git(
         repo_root,
         ["show-ref", "--verify", f"refs/heads/{session_branch}"],
         check=False,
     )
-    if branch_exists.returncode == 0:
-        run_git(repo_root, ["switch", session_branch], check=False)
+    if branch_exists.returncode != 0:
+        restore_errors.append(
+            "branch restore failed: "
+            f"session branch does not exist: {session_branch}"
+        )
+        return restore_errors
+
+    switch_result = run_git(repo_root, ["switch", session_branch], check=False)
+    if switch_result.returncode != 0:
+        detail = switch_result.stderr.strip() or switch_result.stdout.strip()
+        if not detail:
+            detail = f"git switch {session_branch} exited with code {switch_result.returncode}"
+        restore_errors.append(f"branch restore failed: {detail}")
+    return restore_errors
+
+
+def _cleanup_failure_detail(
+    error: Exception,
+    restore_errors: list[str],
+) -> str:
+    """cleanup 失敗と rollback 失敗の detail をまとめる。"""
+    detail_lines = [
+        f"cleanup failure: {_error_detail(error)}",
+    ]
+    detail_lines.extend(f"rollback failure: {line}" for line in restore_errors)
+    return "\n".join(detail_lines)
+
+
+def _error_detail(error: Exception) -> str:
+    """例外から利用者向け detail に含める本文を取り出す。"""
+    stderr = getattr(error, "stderr", None)
+    if isinstance(stderr, str) and stderr.strip():
+        return stderr.strip()
+    return str(error)
