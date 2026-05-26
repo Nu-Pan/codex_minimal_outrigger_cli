@@ -55,23 +55,23 @@
 
 ## Summary
 
-- `cmoc` のサブコマンド実装の入口をまとめたディレクトリです。
-- `apply` 系、`session` 系、`init`、`eval-oracles` の各コマンド本体と、その周辺の専用処理が入っています。
-- 各コマンドの細かな仕様本文は `oracles/app_specs/sub_commands` 側にあり、このディレクトリはそれを実装する側の入口として使います。
+- `cmoc` のサブコマンド実装をまとめた入口で、`apply` 系、`session` 系、`init`、`eval-oracles` の本体モジュールと、その周辺の専用処理を案内します。
+- 各コマンドの実装は `apply.py`、`apply_abandon.py`、`apply_join.py`、`session_fork.py`、`session_join.py`、`session_abandon.py`、`init.py`、`eval-oracles.py` に分かれています。
+- `__init__.py` はパッケージ宣言用の最小モジュールです。
 
 ## Read this when
 
 - `cmoc apply`、`cmoc apply abandon`、`cmoc apply join` の実装・修正・テスト・レビューを行うとき。
 - `cmoc session fork`、`cmoc session join`、`cmoc session abandon` の実装・修正・テスト・レビューを行うとき。
-- `cmoc init` や `cmoc eval-oracles` のサブコマンド本体の振る舞いを確認したいとき。
-- サブコマンド間の責務分担や、各コマンドがどの処理を担当するかを整理したいとき。
+- `cmoc init` や `cmoc eval-oracles` の本体処理、またはサブコマンド間の責務分担を確認したいとき。
+- `src/sub_commands` 配下のどのモジュールを読むべきか、このディレクトリの目次から判断したいとき。
 
 ## Do not read this when
 
-- 共通の Git/Repository ヘルパーや `commons` 側の実装だけを確認したいときは、このディレクトリではなく対応する共通モジュールを読むべきです。
-- `oracles` の仕様本文や `INDEX.md` の生成ルールだけを確認したいときは、このディレクトリではなく `oracles` 配下の正本仕様を読むべきです。
-- サブコマンドの外側にある CLI 起動・引数解釈・設定値だけを追いたいときは、このディレクトリを読む必要はありません。
+- 共有の Git・リポジトリ操作や補助ユーティリティだけを見たいときは、`src/commons` 側を読むべきです。
+- `cmoc` 全体の起動・引数解釈・トップレベルルーティングだけを追いたいときは、`src/main.py` を読むべきです。
+- `oracles` 側の正本仕様や `INDEX.md` の生成・更新ルールだけを確認したいときは、このディレクトリではなく `oracles` 配下を読むべきです。
 
 ## hash
 
-- 419c2f8b95e25475525f2ab52a148360e56aef8b9e2f56fbbeb0577f548c4653
+- 3a0255fd4676be0a92adccbe848880b8cf8e32971db0c625bf5faff1242a6530
