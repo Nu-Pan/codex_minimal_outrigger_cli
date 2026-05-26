@@ -145,26 +145,24 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` の索引で、cmoc のサブコマンド制御ロジック全体を検証するテスト群をまとめている。
-- `init`、`branch`、`eval-oracles`、`apply`、`merge` の主要経路に加えて、`main` の登録、エラー処理、`bin/cmoc` の起動条件、conflict 関連の補助ロジックまで含む。
-- 実装の個別詳細ではなく、CLI の入口・出力・検証・例外処理の回帰確認を読むための案内である。
+- `cmoc` のサブコマンド群と CLI 入口の決定論的な制御ロジックを検証するテスト集です。
+- `init`、`branch`、`apply`、`eval-oracles`、`merge`、`session` 系、`main` のコマンド登録、`bin/cmoc` ランチャー、共通エラー報告や prompt 生成の振る舞いをまとめています。
 
 ## Read this when
 
-- `cmoc init` / `cmoc branch` / `cmoc eval-oracles` / `cmoc apply` / `cmoc merge` の回帰テストを追加・修正するとき
-- `run_command`、`main`、エラーレポート、CLI ラッパーの振る舞いを確認したいとき
-- 各サブコマンドのプロンプト生成、検証ヘルパー、conflict 判定ロジックの期待値を確認したいとき
-- サブコマンド全体の決定論的な制御ロジックをテスト観点から把握したいとき
+- `tests/test_subcommands.py` を修正・追加して、回帰を防ぎたいとき。
+- `cmoc` のサブコマンド登録、help 表示、エラー報告、prompt 生成、report 生成などの CLI 制御ロジックを確認したいとき。
+- `init`、`branch`、`apply`、`eval-oracles`、`merge`、`session` 系と `main`、`bin/cmoc` をまたぐ横断的な挙動を検証したいとき。
 
 ## Do not read this when
 
-- `cmoc` の個別サブコマンドのユーザー向け仕様だけを確認したいとき
-- 実装本体の処理手順やデータ構造を、テストではなく仕様断片から確認したいとき
-- `oracles` 配下の正本仕様や開発ルールだけを確認したいとき
+- 個別サブコマンドの正本仕様だけを確認したいときは、このテストではなく `oracles/app_specs/sub_commands/*.md` を直接読むべきです。
+- `src/sub_commands/*.py` の実装アルゴリズムや内部ロジックだけを確認したいときは、このテスト集を先に読む必要はありません。
+- `main` や `bin/cmoc` を含まない局所的な修正で、CLI 全体の配線確認が不要なときはこのファイルは後回しで構いません。
 
 ## hash
 
-- 61c0d5b86e1316d36926c94b3a9ed3a7477ecb2154d9ca2a2ff71fe7b27b22a4
+- 543b110729aff31a9f3f7bd4f7ba7ccb277efd5312007d085a4bbadafaf26553
 
 # `test_timestamps.py`
 

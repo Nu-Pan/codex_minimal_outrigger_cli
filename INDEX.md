@@ -197,7 +197,7 @@
 
 ## hash
 
-- dcf5800597bdb17a27d2850a5bdfa9755dea10d66edb39493f68ae5c5c5c1d99
+- 459d54d0a0938bea12dfbb84c0ddd2095f02315e563d60565f13ef52ad1776a9
 
 # `test.sh`
 
@@ -227,22 +227,26 @@
 
 ## Summary
 
-- `tests` ディレクトリのルーティング索引で、配下の各テストファイルが何を検証するかを案内する。
-- `conftest.py` による import path 設定から、Codex 呼び出し、INDEX.md メンテナンス、git 共通処理、サブコマンド制御、タイムスタンプ、命名規則までを対象にする。
-- 個別テストの詳細に入る前の入口として、必要なテストファイルへ最短で辿るための目次である。
+- `tests` ディレクトリの自動テスト群の入口です。`conftest.py` と `test_codex.py`、`test_file_naming.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py`、`test_timestamps.py` への案内をまとめます。
+- `commons.codex` の呼び出しラッパー、Structured Output、再試行、quota 待機、出力ログ、`INDEX.md` 保守の共通挙動を検証するテストを含みます。
+- `commons.repo`、`commons.indexing`、`commons.timestamps`、`commons.timing`、`src/sub_commands`、CLI 入口の横断的な回帰テストをまとめます。
+- `tests/INDEX.md` は個別テストファイルへ進むための目次であり、各テストの目的と確認範囲を整理する案内です。
 
 ## Read this when
 
-- `tests` 配下にどのテスト群があり、何を検証しているかを一覧したいとき。
-- `conftest.py` の共通設定、`test_codex.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py`、`test_timestamps.py`、`test_file_naming.py` の役割を辿りたいとき。
-- pytest の共通 fixture、CLI 呼び出し、INDEX メンテナンス、git リポジトリ処理、タイムスタンプ処理のどこにテストがあるか確認したいとき。
+- `tests` 配下のどのテストファイルを読むべきか整理したいとき。
+- `commons.codex`、`commons.indexing`、`commons.repo`、`commons.timestamps`、`commons.timing` のどれに関する回帰か切り分けたいとき。
+- `cmoc init`、`apply`、`eval-oracles`、`merge`、`session`、CLI 入口のテスト位置を確認したいとき。
+- `INDEX.md` の生成・更新、gitignore、`build` / `tmp`、バイナリ除外、`memo` 扱いなどのテスト観点を確認したいとき。
+- pytest の共通設定である `conftest.py` が何をしているか確認したいとき。
 
 ## Do not read this when
 
-- `tests` 配下の個別テストの期待値や実装詳細を確認したいときは、対応する各 `test_*.py` を直接読む。
-- `cmoc` の正本仕様や `oracles` 側の断片だけを確認したいときは、この索引ではなく `oracles` を読む。
-- `README.md`、`AGENTS.md`、`memo` の運用ルールや編集可否だけを知りたいときは、この索引は目的が違う。
+- 個別のアサーションやヘルパー実装だけを追いたいときは、該当する `test_*.py` を直接読むべきです。
+- `README.md`、`AGENTS.md`、`oracles`、`memo` の運用ルールや編集可否だけを確認したいとき。
+- 本番実装側のアルゴリズムや仕様本文だけを確認したいときは、`src` や `oracles` を直接読むべきです。
+- `tests` 全体の入口ではなく、特定の 1 ファイルだけを探しているときはこの目次は後回しで構いません。
 
 ## hash
 
-- a67a0a3bae4cb9a7091e6566a91afed9742c4ef33a0286a917062b772df62f3c
+- 852612b8ac2590203fec3547aa20f1b2119a2d530b71ad71b08a8b68c4d48ce4

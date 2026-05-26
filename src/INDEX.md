@@ -35,28 +35,28 @@
 
 ## Summary
 
-- `src/main.py` は `cmoc` CLI の Typer エントリーポイントで、`init`、`branch`、`eval-oracles`、`apply`、`merge` を登録するルーティング用ファイルです。
-- `eval-oracles` は `src/sub_commands/eval-oracles.py` を動的に読み込み、`eval-oracle` という hidden な互換 alias も併せて提供します。
+- `src/main.py` は `cmoc` CLI の Typer エントリーポイントで、`init`、`session`、`apply`、`eval-oracles` を登録するルーティング用ファイルです。
+- `eval-oracles` は `src/sub_commands/eval-oracles.py` を動的に読み込み、`eval-oracle` という hidden な互換 alias も提供します。
 - `main()` は `standalone_mode=False` で Typer / Click の例外を受け取り、共通エラーレポートへ変換して終了コードを決めます。
-- `NoArgsIsHelpError` も含め、CLI 起動全体の入口と例外整形の責務をまとめて確認するためのファイルです。
+- `NoArgsIsHelpError` を含め、CLI 起動全体の入口と例外整形の責務をまとめて確認するためのファイルです。
 
 ## Read this when
 
-- `cmoc` のトップレベルコマンド登録と、その実装への委譲関係を確認したいとき。
+- `cmoc` のトップレベルコマンド登録と、各実装への委譲関係を確認したいとき。
 - `eval-oracles` の動的読み込みや `apply` の引数定義など、CLI 入口の挙動を見たいとき。
-- Typer / Click の parse error、`NoArgsIsHelpError`、想定外例外がどう処理されるかを確認したいとき。
+- Typer / Click の parse error、`NoArgsIsHelpError`、想定外例外の扱いを確認したいとき。
 - `python src/main.py` で直接起動した場合の入口処理を確認したいとき。
 
 ## Do not read this when
 
-- `src/sub_commands` 配下の各サブコマンド本体の実装や業務ロジックを確認したいとき。
-- `commons.errors` のエラーレポート整形や共通例外処理の内部を詳しく追いたいとき。
-- CLI の利用手順や `oracles` 側の正本仕様そのものを調べたいとき。
-- `src/commons` の共通基盤や補助モジュールを横断的に確認したいとき。
+- `src/sub_commands` 配下の各サブコマンド本体の業務ロジックを確認したいとき。
+- `commons.errors` の共通エラー整形や終了コード処理の内部だけを追いたいとき。
+- `cmoc` の利用手順や `oracles` 側の正本仕様そのものを確認したいとき。
+- `src/commons` の共通基盤モジュールを横断的に確認したいとき。
 
 ## hash
 
-- 236e0dadb87744e110d141ba5b8ba24c119bb46aadd3cb85949991ba02696bfb
+- 6c1afdc88839f2f29f9ba0fb784da27d6d11ae85ad171c10e1efbb4e02fa24f6
 
 # `sub_commands`
 
