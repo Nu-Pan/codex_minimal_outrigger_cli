@@ -76,7 +76,7 @@
 
 ## Summary
 
-- `cmoc apply join` の本体処理を定義する Python モジュールです。
+- `src/sub_commands/apply_join.py` は `cmoc apply join` の本体処理を定義する Python モジュールです。
 - 完了済みの apply branch を session branch へ `git merge --no-ff` し、その後の state 更新と後始末までを扱います。
 - 直接呼び出し時の共通 runner 委譲、想定外の差分検出、`--force-resolve` による強制解決、merge conflict 時の報告を実装しています。
 
@@ -95,7 +95,7 @@
 
 ## hash
 
-- 6e576bc1edc5711bdabd8ff47d57b1cd6c7f6915daf86de5fbb74f2f8616f7da
+- ea00e36832cd44e392e6364df88692c773554ab767755c4ca9d21be880d7f100
 
 # `eval-oracles.py`
 
