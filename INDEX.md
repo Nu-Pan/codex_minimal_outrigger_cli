@@ -199,7 +199,7 @@
 
 ## hash
 
-- 5e492ad94523e46ba382810fddc8e51d621f37e2ba73212eefd6fdc3c5e5fae3
+- 6c8bcb782670f4bbbf93ae15ea61203e4e0b953f010c08bbeb09bcd2074311ba
 
 # `test.sh`
 
@@ -229,22 +229,24 @@
 
 ## Summary
 
-- `tests` 配下の pytest テスト群の入口です。`conftest.py` による共通設定と、`test_codex.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py`、`test_file_naming.py`、`test_timestamps.py` をまとめて案内します。
-- 各テストは `commons.indexing`、`commons.repo`、`commons.codex`、`commons.timestamps`、`commons.timing`、および CLI サブコマンドの決定論的な振る舞いを検証します。
-- `INDEX.md` の生成・再生成・再利用、git 連携、Fake Codex CLI、ファイル命名規則、時刻表現など、cmoc の制御ロジックを確認するためのテスト目次です。
+- `tests` 配下全体の入口です。pytest テスト群の案内をまとめます。
+- `conftest.py` は `src` を import 可能にする pytest 共通設定です。
+- `test_codex.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py`、`test_timestamps.py`、`test_file_naming.py` への入口をまとめます。
 
 ## Read this when
 
-- `tests` 配下の pytest テスト全体の構成を把握したいとき。
-- `commons.indexing`、`commons.repo`、`commons.codex`、`commons.timestamps`、`commons.timing`、および CLI サブコマンドの決定論的な振る舞いをどのテストで確認しているか整理したいとき。
-- `conftest.py` の共通設定、`INDEX.md` メンテナンス、Fake Codex CLI、ファイル命名規則、時刻表現のテスト観点を一覧したいとき。
+- `tests` 配下で、どのテストファイルがどの機能を検証しているか先に把握したいとき。
+- pytest の共通設定や、`src` を import できる理由を確認したいとき。
+- `INDEX.md` メンテナンス、`cmoc` 連携、サブコマンド、タイムスタンプ、命名規則などのテストの入口を探したいとき。
+- 個別テストへ進む前に、`tests` 全体の役割分担を整理したいとき。
 
 ## Do not read this when
 
-- 個別の実装ロジックだけを追いたいときは、対応する `src` 配下や `oracles` 配下の正本仕様を直接読むべきです。
-- 特定のテスト関数だけを確認したいときは、この目次ではなく該当する `tests/test_*.py` を直接参照すべきです。
-- `README.md`、`AGENTS.md`、`memo` などの運用や編集可否だけを確認したいときは、このディレクトリのテスト目次は目的外です。
+- 特定の 1 ファイルだけを確認したいときは、該当する `test_*.py` を直接読むべきです。
+- `cmoc` の実装やサブコマンド仕様だけを確認したいときは、この目次ではなく `src` や `oracles/app_specs` を参照すべきです。
+- pytest の一般論ではなく、具体的なテストケースや期待値だけを知りたいときは、この目次では範囲が広すぎます。
+- `README.md`、`AGENTS.md`、`memo` の運用ルールだけを確認したいときは、別の案内を参照すべきです。
 
 ## hash
 
-- 2475623e73b9dffeb85fe43dc8daeddd7ea84f38f3c0f8b922ee21f68344f47c
+- a0eb238c1d837a65e5ea634beab61a7e55c117dec524171322381b739e72baae

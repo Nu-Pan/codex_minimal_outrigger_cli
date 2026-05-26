@@ -64,14 +64,14 @@
 
 ## Do not read this when
 
-- 個別サブコマンドの業務ロジックや CLI 引数定義だけを調べたいとき。
-- `<repo-root>` の探索ロジックや `.cmoc` の扱いを詳しく確認したいとき。
-- エラーメッセージの整形内容や例外クラス定義そのものを詳しく確認したいとき。
-- Codex CLI 呼び出し、Structured Output、INDEX.md 生成などの別機能を調べたいとき。
+- 個別サブコマンドの業務ロジックや CLI 引数定義だけを確認したいとき。
+- `<repo-root>` の探索ロジックや `.cmoc` の扱いを詳しく追いたいとき。
+- エラーメッセージの整形内容や例外クラスの定義そのものを確認したいとき。
+- Codex CLI 呼び出し、Structured Output、`INDEX.md` 生成など別機能を調べたいとき。
 
 ## hash
 
-- d6133db4b6e0d0dfd6673433b4c89b471d97c333023549da4d5087119edd4801
+- 9bc56c823a03d5097debd4de687539b76ca05027c210bef0aa5c4fa9658d339e
 
 # `errors.py`
 

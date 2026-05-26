@@ -133,29 +133,28 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は `init`、`session`、`apply`、`eval-oracles`、`main` まわりの決定論的な CLI テストを束ねる入口です。
-- 共通エラー報告、`bin/cmoc` ランチャー、Typer 登録、Fake Codex CLI による制御ロジック検証を含みます。
-- `session` / `apply` の state 更新、branch/worktree 操作、report 生成、`INDEX.md` メンテナンス連携まで確認します。
-- テスト末尾には、検証用 git リポジトリ初期化や conflict marker 判定などの補助関数もまとまっています。
+- `cmoc` のサブコマンド本体に対する決定論的な制御ロジックのテスト集です。
+- `run_command` の標準出力・ログ tee、終了コード、エラーレポートの出力方針を検証します。
+- `init`、`session fork`、`eval-oracles` の主要な成功系・失敗系・検証補助ロジックをまとめて確認できます。
+- `cmoc apply`、`session join`、`session abandon` 系のインポートや共通ヘルパーも含め、サブコマンド周辺の振る舞いを横断的にたどれます。
 
 ## Read this when
 
-- `cmoc init`、`cmoc session`、`cmoc apply`、`cmoc eval-oracles`、`main` の決定論的な CLI 挙動を確認したいとき。
-- `session fork/join/abandon` や `apply fork/join/abandon` の state、branch、worktree、前提条件、後始末の流れを確認したいとき。
-- `eval-oracles` のレポート生成、partial/full 評価、削除済み oracle の扱い、評価失敗時のエラー報告を確認したいとき。
-- `bin/cmoc` の起動挙動、Typer 登録、`cmoc --help`、`eval-oracle` 互換 alias、共通エラーレポートの扱いを確認したいとき。
-- 同ファイル内の補助関数や prompt / schema / helper の順序、conflict marker 判定、検証条件を追いたいとき。
+- `tests/test_subcommands.py` の目的や、どのサブコマンドの挙動を検証しているか確認したいとき。
+- `cmoc init`、`cmoc session fork`、`cmoc eval-oracles`、`run_command` の制御ロジックをテスト観点から見直したいとき。
+- `session_join`、`apply`、`apply_abandon`、`apply_join` などのヘルパーや関連実装が、どの検証に使われているか追いたいとき。
+- pytest による cmoc の決定論的テスト方針を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc` の個別サブコマンドの正本仕様だけを確認したいときは、`oracles/app_specs/sub_commands/INDEX.md` から該当文書へ直接進むべきです。
-- 共通のログ形式、エラーレポート、`INDEX.md` 生成ルールだけを確認したいときは、このテスト目次ではなく対応する仕様文書を読むべきです。
-- `commons.codex`、`commons.repo`、`commons.errors` などの単体実装だけを調べたいときは、このテスト群では範囲が広すぎます。
-- `memo`、`README.md`、`AGENTS.md`、`oracles` の編集可否や運用ルールだけを確認したいときは、このファイルではなく別の案内を読むべきです。
+- 個別のサブコマンドの正本仕様だけが必要なときは、`oracles/app_specs/sub_commands/*.md` を直接読むべきです。
+- テストの書き方や置き場所などの一般規約だけを確認したいときは、`oracles/dev_rules/test_rules.md` を読むべきです。
+- 実装コードや実行ログだけで十分なときは、このテストファイルのルーティングを見る必要はありません。
+- `cmoc init`、`cmoc session fork`、`cmoc eval-oracles` 以外のサブコマンド仕様を深掘りしたいときは、対応する個別文書へ進むべきです。
 
 ## hash
 
-- e27d36ca3e4b7bed859a108359c55c0cb8b2ac069135c4b5f7398828341de309
+- 3841a66ddd16638d114862d9b694316c1cd78784a8965b82119d941218b56e86
 
 # `test_timestamps.py`
 
