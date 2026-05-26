@@ -190,7 +190,7 @@
 - 新しい session branch の作成条件や checkout 手順を確認したいとき。
 - session home branch の決め方、session metadata の保存先、ブランチ命名規則を確認したいとき。
 - detached HEAD、remote-tracking branch、未コミット差分、既存 active session、`cmoc` 管理 branch の扱いを確認したいとき。
-- `.cmoc` の追跡対象外保証や、session branch 作成失敗時の最大 10 回リトライ処理を確認したいとき。
+- .cmoc の追跡対象外保証や、session branch 作成失敗時の最大 10 回リトライ処理を確認したいとき。
 
 ## Do not read this when
 
@@ -201,7 +201,7 @@
 
 ## hash
 
-- e806efb8efb70f57e196651f4593280879ca64038d1178f463f3ab84f9b35f2f
+- 4f3b2291933f066fdb59a552059dbea15716aa00a0e66e4a7bef8bea08a52a2b
 
 # `session_join.py`
 

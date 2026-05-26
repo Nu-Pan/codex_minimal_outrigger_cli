@@ -56,31 +56,25 @@
 
 ## Summary
 
-- このディレクトリには `cmoc` の各サブコマンド実装と `__init__.py` のパッケージ宣言がまとまっています。
-- `apply.py` は要修正点リストの抽出、調査・修正ループ、`apply.state` 更新、レポート生成を担います。
-- `apply_join.py` は完了済み apply branch を session branch へ取り込み、想定外差分や conflict を処理します。
-- `apply_abandon.py` は未 join の apply run を破棄し、branch / worktree を片付けて `apply.state` を `ready` に戻します。
-- `session_fork.py` は現在の local branch から session branch を作成し、session state を記録します。
-- `session_join.py` は session branch を home branch へ merge し、conflict 解消と終了処理まで行います。
-- `session_abandon.py` は session branch を merge せずに破棄し、状態を `abandoned` に更新します。
-- `init.py` は `.cmoc` を git 追跡対象外にして初期化結果を commit します。
-- `eval-oracles.py` は oracle スナップショットを評価し、部分評価または全体評価のレポートを作ります。
+- `cmoc` の個別サブコマンド実装をまとめたディレクトリの入口です。
+- `apply.py`、`apply_abandon.py`、`apply_join.py`、`session_fork.py`、`session_join.py`、`session_abandon.py`、`init.py`、`eval-oracles.py` の各実装へ案内します。
+- `__init__.py` は `src.sub_commands` パッケージを宣言する最小モジュールです。
+- このディレクトリを起点に、各サブコマンドの本体処理、前提条件、状態遷移、後始末を素早くたどれるようにします。
 
 ## Read this when
 
-- `cmoc` の個別サブコマンド実装を修正・レビューしたいとき。
-- apply 系と session 系の状態遷移や branch / worktree の違いを横断して確認したいとき。
-- `init` や `eval-oracles` を含む CLI の振る舞いを実装側から追いたいとき。
-- `src/sub_commands` でどのモジュールに処理があるか素早く見分けたいとき。
-- `src/sub_commands` が Python パッケージとしてどう構成されているか確認したいとき。
+- `cmoc` の個別サブコマンド実装の入口をまとめて確認したいとき。
+- `apply`、`session`、`eval-oracles`、`init` のどの実装ファイルへ進むべきか整理したいとき。
+- サブコマンドごとの実装本体、状態遷移、前提条件、終了処理の対応関係を俯瞰したいとき。
+- `src/sub_commands` 配下のモジュール構成や、`main.py` から参照される実装の所在を把握したいとき。
 
 ## Do not read this when
 
-- `cmoc` の仕様本文だけを確認したいときは、`oracles/app_specs/sub_commands` 側を読むべきです。
-- 共通ユーティリティ、git 操作ヘルパー、状態ファイルの共通基盤だけを追いたいときは、`src/commons` を読むべきです。
-- トップレベルの CLI ルーティングだけを知りたいときは、`src/main.py` を読むべきです。
-- このディレクトリのうち特定の 1 モジュールだけを確認したいときは、`INDEX.md` ではなく該当ファイルを直接読むべきです。
+- 個別サブコマンドの実装だけを確認したいときは、この目次ではなく該当する `apply.py`、`apply_abandon.py`、`apply_join.py`、`session_fork.py`、`session_join.py`、`session_abandon.py`、`init.py`、`eval-oracles.py` を直接読むべきです。
+- `cmoc` の共通仕様や `oracles` 全体のルーティングだけを確認したいときは、このディレクトリではなく上位の `INDEX.md` や関連仕様を読むべきです。
+- 実装コードやテストコードだけで足りる作業では、このディレクトリの案内を読む必要はありません。
+- `__init__.py` のようなパッケージ宣言そのものだけを確認したいときは、他のサブコマンド実装を読む必要はありません。
 
 ## hash
 
-- 70751717a8a9ca9642df349cc53c30117ea3bda6ad277fcc56dcc5f6d4f6149a
+- 10880ca8852f86330f8c78be6c7e3a62c1dc3f294a79d86cfc17bffb38436919
