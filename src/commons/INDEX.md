@@ -130,30 +130,33 @@
 ## Summary
 
 - git リポジトリのルート探索、`cwd` 固定、`git` 実行の共通ラッパーをまとめたモジュールです。
-- 現在ブランチ名、`HEAD` commit、cmoc 管理ブランチ判定、session state の読み書きと検証を扱います。
-- `.cmoc` の追跡除外保証、root `.gitignore` の判定、未コミット差分や pathspec 単位の clean 判定を提供します。
-- oracle / 実装ファイルの列挙、変更・削除検出、一時 index を使った commit と index 復元までを担います。
+- 現在ブランチ名、`HEAD` commit、cmoc 管理ブランチ判定、session id 抽出、session start commit 参照を扱います。
+- .cmoc/sessions` の session state の読み書き、固定スキーマ検証、active session の列挙を担います。
+- .cmoc` の追跡対象外保証、root `.gitignore` の判定、未コミット差分や pathspec 単位の clean 判定を提供します。
+- `oracles` ファイルや実装ファイルの列挙、変更・削除検出、working tree と staging area からの差分収集を行います。
+- `commit_if_changed` や `commit_cmoc_initialization_changes` により、一時 index を使った pathspec commit と staged 差分の復元を行います。
 
 ## Read this when
 
 - git リポジトリのルート探索や、`cwd` をルートへ固定する処理を確認・修正したいとき。
 - 現在ブランチ名、`HEAD` commit、`cmoc/session/<session-id>` や `cmoc/apply/<session-id>/<apply-run-id>` の判定、session id 抽出を扱いたいとき。
-- `.cmoc/sessions` の session state の読み書き、active session の列挙、`cmoc session fork` 後の初期状態や session start commit の参照を確認したいとき。
+- `.cmoc/sessions` の session state の読み書き、固定スキーマ検証、active session の列挙、session start commit の参照を確認したいとき。
 - `.cmoc` を追跡対象外に保つ保証、root `.gitignore` の判定、未コミット差分や pathspec ごとの clean 判定を実装したいとき。
-- oracle ファイルや実装ファイルの列挙、変更・削除検出、untracked も含めた差分収集、`INDEX.md` 自動更新前後の差分管理を追いたいとき。
-- `commit_if_changed` や `commit_cmoc_initialization_changes` のように、対象パスだけを一時 index で commit し、その後に既存の staged 差分を復元する挙動を確認したいとき。
+- `oracles` ファイルや実装ファイルの列挙、変更・削除検出、working tree と staging area の差分抽出を追いたいとき。
+- `commit_if_changed` や `commit_cmoc_initialization_changes` のように、一時 index を使って特定パスだけを commit し、既存の staged 差分を復元する挙動を確認したいとき。
 - root `.gitignore` の wildmatch 判定や、`git check-ignore` を使った除外判定の実装を確認したいとき。
 
 ## Do not read this when
 
-- サブコマンドの引数定義やユーザー向けフローだけを確認したいときは、`src/sub_commands` 側を読むべきです。
-- エラーレポート整形やログ保存など、別の共通モジュールだけを追いたいときは、このファイルではなく該当モジュールを読むべきです。
-- `oracles` 側の正本仕様や `INDEX.md` 生成ルールそのものだけを確認したいときは、この実装ファイルではなく `oracles` 配下の該当文書を読むべきです。
-- git の一般的な操作手順だけが目的で、cmoc 固有の repo root 探索、ブランチ判定、session state、差分列挙、pathspec commit に関心がないときは、このファイルは不要です。
+- CLI の引数定義やサブコマンドの実行手順だけを確認したいときは、`src/sub_commands` 側を読むべきです。
+- エラーレポート整形やタイミング表示など、別の共通機能だけを確認したいときは、このファイルではなく `errors.py`、`timing.py`、`subcommand_log.py`、`codex.py` を読むべきです。
+- `INDEX.md` の生成・更新ルールそのものを確認したいときは、この実装ファイルではなく `src/commons/indexing.py` や `oracles` 配下の仕様文書を読むべきです。
+- 一般的な Git の使い方だけが目的で、cmoc 固有の repo root 探索、ブランチ判定、session state、差分抽出、pathspec commit に関心がないときは、このファイルは不要です。
+- oracles の仕様本文や個別の実装詳細だけを追いたいときは、この共通ユーティリティではなく該当する仕様断片や実装ファイルを直接読むべきです。
 
 ## hash
 
-- 877a75f47355cdc3d74706e10c407d1dc2b1533d62104f5b1f09a2801fd9a05f
+- 23812a25fabef6b345d852c36e48adde881f08dd5ecde8494e960a480e25aa73
 
 # `subcommand_log.py`
 

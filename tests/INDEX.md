@@ -131,16 +131,16 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は `cmoc` の各サブコマンドと CLI 入口の回帰テスト目次です。
-- `init`、`session`、`apply`、`eval-oracles` の制御フロー、状態遷移、レポート生成、Structured Output、branch / worktree 管理をまとめて検証します。
+- `tests/test_subcommands.py` は `cmoc` の各サブコマンドと CLI 入口の回帰テストをまとめたファイルです。
+- `init`、`session`、`apply`、`eval-oracles` の制御フロー、状態遷移、branch / worktree 操作、レポート生成、Structured Output を検証します。
 - `run_command`、`format_error_report`、`main` の Typer ルーティング、`bin/cmoc`、補助関数の順序や conflict 文字列検査も含みます。
 
 ## Read this when
 
 - `src/main.py` と `src/sub_commands/*` のルーティングや引数委譲を変更・レビューしたいとき。
-- `init`、`session`、`apply`、`eval-oracles` の state 遷移、branch / worktree 操作、report 生成、Structured Output schema を確認したいとき。
+- `init`、`session`、`apply`、`eval-oracles` の状態遷移、branch / worktree 管理、レポート生成、Structured Output schema を確認したいとき。
 - `run_command` の tee ログ、`format_error_report`、`bin/cmoc` の起動挙動、`main` のエラーハンドリングを確認したいとき。
-- `session join` の conflict prompt、`eval-oracles` の評価 prompt、helper 関数の並び順やサブコマンド登録の回帰を確認したいとき。
+- `session join` の conflict prompt、`eval-oracles` の評価 prompt、テスト補助関数の並び順やサブコマンド登録の回帰を確認したいとき。
 
 ## Do not read this when
 
@@ -152,7 +152,7 @@
 
 ## hash
 
-- 5f7f6565ba607fae0f6cb9652ad492ba29797b4677213821d04c784733f1004a
+- 58f87fed2320336b632012c9aefbce977038c273ab6eb7713b79cd27b6f29ee6
 
 # `test_timestamps.py`
 

@@ -51,27 +51,25 @@
 
 ## Summary
 
-- `src/sub_commands/apply_abandon.py` は `cmoc apply abandon` の本体処理を定義するモジュールです。
-- 現在の branch と session state を検証し、未 join の apply run に対応する apply branch と apply worktree を強制削除します。
-- 破棄後は `session.state` の `apply.state` を `ready` に戻し、必要な warning と timing を標準出力へ出します。
+- `cmoc apply abandon` の実装本体が入っています。
+- 現在のブランチ、session state、apply state を検証し、破棄可能な状態かを判定します。
+- apply worktree と apply branch を削除し、`apply.state` を `ready` に戻して結果を表示します。
 
 ## Read this when
 
-- `cmoc apply abandon` の本体実装、事前条件、cleanup 手順を確認したいとき。
-- 現在の session に紐づく未 join の apply run を破棄する処理や、`apply.state` を `ready` に戻す流れを追いたいとき。
-- apply branch と apply worktree の削除条件、warning の出し方、状態復元の挙動を実装・修正・レビューしたいとき。
-- `_cmoc_root` や session state の読み書き、apply abandon の出力内容と timing report を確認したいとき。
+- `cmoc apply abandon` の本体実装、前提条件チェック、cleanup 手順、`apply.state` の更新を確認したいとき。
+- apply worktree と apply branch の強制削除、および削除失敗や欠損時の warning の扱いを確認したいとき。
+- `cmoc apply abandon` の修正、レビュー、テストを行い、状態遷移や出力内容を追いたいとき。
 
 ## Do not read this when
 
-- `cmoc apply fork` の要修正点整理や調査フローだけを確認したいとき。
-- `cmoc apply join` の merge 処理や後始末だけを確認したいとき。
-- `cmoc session fork`、`cmoc session join`、`cmoc session abandon` など、apply 以外のサブコマンドを確認したいとき。
-- `cmoc apply abandon` の仕様本文だけを見たいときは、実装ではなく `oracles/app_specs/sub_commands/apply_abandon.md` を読むべきです。
+- `cmoc apply join` や `cmoc apply fork` の実装・修正・テストを確認したいときは、このファイルではなく各コマンドの実装を読むべきです。
+- `cmoc session abandon` や `cmoc session join` など、session 側の終了・統合処理だけを追いたいときは、このファイルを読む必要はありません。
+- 仕様断片だけを確認したいときは、`oracles/app_specs/sub_commands/apply_abandon.md` を直接読むべきで、この実装ファイルは不要です。
 
 ## hash
 
-- f281e41a0379d679b803e6f9de24858ea2e0481bd210a02b9ea043cc3b1d1d5f
+- f956a48313c28e0cd1e5d4d154f65ac31999b3c271f8e4a78e8d610228d8b7bd
 
 # `apply_join.py`
 
@@ -96,7 +94,7 @@
 
 ## hash
 
-- 7c04012e7755967e6fa8bfcbf9abfd130391b5e7dad6f7b0fb10bd06314df94d
+- 6e576bc1edc5711bdabd8ff47d57b1cd6c7f6915daf86de5fbb74f2f8616f7da
 
 # `eval-oracles.py`
 

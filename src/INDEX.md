@@ -2,28 +2,27 @@
 
 ## Summary
 
-- `src/commons` にある cmoc 共通基盤モジュール群の入口です。CLI 実行制御、git リポジトリ操作、共通エラー整形、ログ、タイムスタンプ、経過時間計測、`INDEX.md` 生成・維持をまとめています。
-- `command_runner.py` と `errors.py` はサブコマンド全体の実行制御と利用者向けエラーレポートを担います。
-- `repo.py` は repo root 探索、ブランチ判定、session state、差分確認、`.cmoc` の無視保証、pathspec 単位の commit を扱います。
-- `codex.py`、`indexing.py`、`subcommand_log.py`、`timestamps.py`、`timing.py` は Codex 呼び出し、INDEX 生成、tee ログ、時刻文字列、ステップ計測をそれぞれ担当します。
+- `cmoc` の共通処理をまとめたディレクトリの入口です。Codex CLI 呼び出し、サブコマンド実行制御、リポジトリ操作、共通エラー、ログ、タイムスタンプ、経過時間計測、`INDEX.md` メンテナンスを扱うモジュールへ案内します。
+- `src/commons/INDEX.md` から、`codex.py`、`command_runner.py`、`errors.py`、`indexing.py`、`repo.py`、`subcommand_log.py`、`timestamps.py`、`timing.py`、`__init__.py` へたどれます。
+- サブコマンド本体ではなく、複数箇所から再利用される基盤機能を集約する場所として使います。
 
 ## Read this when
 
-- `src/main.py` やサブコマンドから呼ぶ共通処理の置き場所と責務を確認したいとき。
-- `codex exec` の共通ラッパー、Structured Output 検証、quota 待機、再試行の流れを追いたいとき。
-- git リポジトリのルート探索、session / apply ブランチ判定、`.cmoc` の無視保証、未コミット差分や commit の扱いを確認したいとき。
-- エラーレポート、ログ保存、タイムスタンプ、経過時間表示、`INDEX.md` の生成・維持ルールを実装・修正したいとき。
+- `cmoc` で共通利用するユーティリティ群の入口をまとめて確認したいとき。
+- Codex CLI 呼び出し、サブコマンド実行制御、repo ルート探索、エラー整形、ログ保存、時間計測、タイムスタンプ生成、`INDEX.md` メンテナンスのどれへ進むべきか整理したいとき。
+- 共通処理を追加・修正するときに、どのモジュールへ置くべきか判断したいとき。
+- 共有機能の実装やレビューで、`src/commons` 配下の役割分担を素早く把握したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの引数解析や業務ロジックだけを確認したいときは、`src/sub_commands` 側を直接読むべきです。
-- `cmoc` の利用手順やユーザー向けコマンド説明だけが目的なら、この共有モジュール群は優先して読む必要はありません。
-- `oracles` 配下の正本仕様そのものを確認したいときは、この実装ディレクトリではなく該当する仕様文書を読むべきです。
-- テストコードだけで足りる、または `src/commons/__init__.py` のパッケージ宣言だけを確認したいときは、この目次は不要です。
+- 個別サブコマンドの業務ロジックや CLI 引数定義だけを確認したいときは、このディレクトリではなく `src/sub_commands` 側を読むべきです。
+- ユーザー向けのコマンド仕様やワークフロー仕様だけを確認したいときは、`oracles` 配下の該当仕様断片を直接読むべきです。
+- この配下のうち特定モジュールだけを見たいときは、`codex.py`、`command_runner.py`、`errors.py`、`indexing.py`、`repo.py`、`subcommand_log.py`、`timestamps.py`、`timing.py` を直接参照すべきです。
+- `INDEX.md` の生成・更新ルールそのものだけを確認したいときは、このディレクトリの個別モジュールではなく `src/commons/indexing.py` を読むべきです。
 
 ## hash
 
-- 9d86b490f4830b214240c020d024532b0d5408d8a1bb52e09f0d16acdf5529dc
+- db52f008bf7130473d13c22d7fb03e10ee22591500ae81a99096f88c855400b8
 
 # `main.py`
 
@@ -56,25 +55,24 @@
 
 ## Summary
 
-- このディレクトリは、`cmoc` の各サブコマンド実装をまとめた配置先で、CLI から呼ばれる本体処理が集まっています。
-- `apply.py` は `cmoc apply` の本体で、`apply_abandon.py` と `apply_join.py` が破棄と取り込みの処理を担当します。
-- `session_fork.py`、`session_join.py`、`session_abandon.py` は session の開始・統合・破棄を担当します。
-- `eval-oracles.py` は `oracles` 断片の評価処理、`init.py` は初期化処理、`__init__.py` はパッケージ入口です。
+- `src/sub_commands` にある `cmoc` の各サブコマンド実装の入口です。`init.py`、`apply.py`、`apply_abandon.py`、`apply_join.py`、`session_fork.py`、`session_join.py`、`session_abandon.py`、`eval-oracles.py`、`__init__.py` をまとめます。
+- `apply` 系は要修正点の調査・修正ループ、取り込み、破棄を分担し、`session` 系は開始・統合・破棄を分担します。
+- `eval-oracles.py` は `oracles` 断片の評価を担当し、`__init__.py` はパッケージ宣言のみを担います。
 
 ## Read this when
 
-- `cmoc` のサブコマンド実装がどのファイルにあるかを確認したいとき。
-- `apply`、`session`、`eval-oracles`、`init` の本体処理を実装・修正・レビューしたいとき。
-- サブコマンド間の責務分割や、新しいコマンド追加時の配置方針を整理したいとき。
-- `__init__.py` を含むこのディレクトリ配下の役割をまとめて把握したいとき。
+- `cmoc` のサブコマンド本体がどのファイルにあるかを確認したいとき。
+- `apply`、`session`、`eval-oracles`、`init` の実装や修正箇所を探したいとき。
+- 新しいサブコマンドを追加するときの配置方針を確認したいとき。
+- `src.sub_commands` パッケージの役割をまとめて把握したいとき。
 
 ## Do not read this when
 
-- 利用方法や操作順だけを確認したいときは、このディレクトリではなく `oracles/app_specs/usage.md` を読むべきです。
-- 個別サブコマンドの詳細仕様だけを確認したいときは、対応する `oracles/app_specs/sub_commands/*.md` を直接読むべきです。
-- branch 管理、ログ出力、エラーハンドリング、INDEX 生成ルールなどの共通仕様だけを確認したいときは、このディレクトリではなく上位の仕様文書を読むべきです。
-- `INDEX.md` の生成・更新ルールだけを確認したいときは、`oracles/app_specs/indexing.md` を読むべきです。
+- 利用手順や作業順だけを確認したいときは、`oracles/app_specs/usage.md` を読むべきです。
+- 個別サブコマンドの正本仕様だけを確認したいときは、`oracles/app_specs/sub_commands/*.md` を直接読むべきです。
+- `branch_model`、ログ、エラー処理、`INDEX.md` 生成ルールなどの共通仕様だけを確認したいときは、このディレクトリより上位の文書を読むべきです。
+- `src/commons` の共通処理やテスト仕様だけを確認したいときは、このディレクトリは優先対象ではありません。
 
 ## hash
 
-- 2b1e12b9cc6aa77376d7e541771ebf9870a753e2175624b008151faf36d14f19
+- 6593b6015a19368883af96f3db2a1057afe3b331c0b647baa0dd7c7c7ead55b4

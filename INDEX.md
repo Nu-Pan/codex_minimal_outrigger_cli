@@ -199,7 +199,7 @@
 
 ## hash
 
-- ec29590a6fe5eebd86e6767b7865883bb6b90db8f130bdf2b1a8b6a57023bcbc
+- c522ebb541441b8dce3069366c32721ec5bb8a561bfdc059115dd1b4e2da8c36
 
 # `test.sh`
 
@@ -229,24 +229,24 @@
 
 ## Summary
 
-- `tests` 配下の pytest 回帰テスト群の入口です。`conftest.py`、`test_codex.py`、`test_file_naming.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py`、`test_timestamps.py` をまとめます。
-- `commons.codex`、`commons.repo`、`commons.indexing`、`commons.timestamps`、`commons.timing`、`src/sub_commands` の挙動を検証するテストを含みます。
-- `conftest.py` の import path 設定と、`test_file_naming.py` の命名規則チェックもここに含まれます。
+- pytest による cmoc の回帰テスト群の入口です。`conftest.py`、`test_codex.py`、`test_file_naming.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py`、`test_timestamps.py` への案内をまとめます。
+- `commons` の共通処理、`src/sub_commands` の制御ロジック、`INDEX.md` メンテナンス、git リポジトリ操作、タイムスタンプ表示をそれぞれ分担して検証します。
+- `tests/INDEX.md` から、どの観点のテストへ進むべきかを素早く切り分けられるようにします。
 
 ## Read this when
 
-- `tests` 配下にどの回帰テストが置かれているか、入口を整理したいとき。
-- `commons.codex`、`commons.indexing`、`commons.repo`、`commons.timestamps`、`commons.timing`、`src/sub_commands` の挙動に対するテスト観点を探したいとき。
-- pytest の共通設定、Structured Output の検証、`INDEX.md` 生成、git リポジトリ補助処理、サブコマンド制御、タイムスタンプ処理の回帰テストを見たいとき。
-- `test_file_naming.py` のようなファイル命名規則チェックや、`conftest.py` の import path 設定の役割を確認したいとき。
+- pytest で cmoc のどの機能がどのテストファイルで守られているか把握したいとき。
+- `commons.codex`、`commons.indexing`、`commons.repo`、`src/sub_commands`、`commons.timestamps` の回帰観点をまとめて確認したいとき。
+- 共通 fixture やテスト補助関数を含めて、`tests` 配下の役割分担を整理したいとき。
+- `INDEX.md` 生成や CLI ルーティングの変更が、どのテストに影響するか判断したいとき。
 
 ## Do not read this when
 
-- `tests` 配下の個別テストファイルの本文や期待値をその場で確認したいときは、この目次ではなく該当ファイルを直接読むべきです。
-- `src` 側の本番実装ロジックだけを追いたいときは、このテスト目次ではなく `src` 配下を読むべきです。
-- `oracles` 側の正本仕様や `INDEX.md` 生成ルールだけを確認したいときは、このテスト目次ではなく `oracles/app_specs/*` を読むべきです。
-- ファイル名やディレクトリ構成だけを機械的に確認したいときは、個別テストの本文まで読む必要はありません。
+- 個別の実装ロジックや本番コードを確認したいときは、この目次ではなく `src` 配下の該当モジュールを読むべきです。
+- `oracles` の正本仕様やユーザー向け手順だけを確認したいときは、このテスト目次ではなく該当仕様文書を読むべきです。
+- 特定 1 本のテストケースだけを追いたいときは、この一覧ではなく対応する `test_*.py` を直接読むべきです。
+- `README.md`、`AGENTS.md`、`memo` の運用規則だけを確認したいときは、このディレクトリのテスト目次は目的外です。
 
 ## hash
 
-- 4921ecf8e6cf2c2abdedf23c5cca010ef6b7c622bcd88c8e4f15dcf3f155ae86
+- 7a945d9b89c04dd5f1e9e42d5a98eda2e6555bfd56074fbe828b7d7ebdd2a50e
