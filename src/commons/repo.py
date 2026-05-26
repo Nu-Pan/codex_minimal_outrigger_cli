@@ -736,7 +736,7 @@ def _is_excluded_implementation_path(relative_path: str) -> bool:
     )
 
 
-def read_branch_base_commit(repo_root: Path, branch_name: str) -> str:
+def read_session_start_commit(repo_root: Path, branch_name: str) -> str:
     """cmoc session state から session start commit を読む。"""
     payload = read_session_state(repo_root, session_id_from_branch(branch_name))
     session = payload.get("session")

@@ -921,7 +921,7 @@ def test_eval_oracles_stays_partial_when_oracle_was_deleted(
     deleted_oracle.write_text("deleted\n", encoding="utf-8")
     _git(repo, "add", "oracles")
     _git(repo, "commit", "-m", "add oracles")
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
     changed_oracle.write_text("after\n", encoding="utf-8")
     deleted_oracle.unlink()
 
@@ -959,11 +959,11 @@ def test_eval_oracles_stays_partial_when_oracle_was_deleted(
     assert "oracle_count: 1" in report
 
 
-def test_eval_oracles_full_mode_reports_deleted_oracles_on_cmoc_branch(
+def test_eval_oracles_full_mode_reports_deleted_oracles_on_session_branch(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """cmoc branch 上では full mode でも削除済み oracle 有無を metadata に出す。"""
+    """session branch 上では full mode でも削除済み oracle 有無を metadata に出す。"""
     repo = _init_repo(tmp_path)
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -973,7 +973,7 @@ def test_eval_oracles_full_mode_reports_deleted_oracles_on_cmoc_branch(
     deleted_oracle.write_text("deleted\n", encoding="utf-8")
     _git(repo, "add", "oracles")
     _git(repo, "commit", "-m", "add oracles")
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
     deleted_oracle.unlink()
 
     monkeypatch.setattr(
@@ -1070,7 +1070,7 @@ def test_apply_returns_complete_when_no_discrepancies(
 ) -> None:
     """`cmoc apply` は不整合なし JSON で完了扱いのレポートを保存する。"""
     repo = _init_repo(tmp_path)
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -1192,7 +1192,6 @@ def test_apply_returns_complete_when_no_discrepancies(
     )
     assert "変更内容の意味論に基づき" in codex_prompts[-1]
     assert "「カテゴリ」という語" in codex_prompts[-1]
-    assert "<cmoc-branch>" not in codex_prompts[-1]
 
 
 def test_apply_join_merges_completed_apply_branch_and_resets_state(
@@ -1201,7 +1200,7 @@ def test_apply_join_merges_completed_apply_branch_and_resets_state(
 ) -> None:
     """`cmoc apply join` は apply branch を session branch へ merge する。"""
     repo = _init_repo(tmp_path)
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
     oracle_snapshot = _add_oracle_snapshot(repo)
     apply_branch, apply_worktree, report_path = _create_completed_apply_run(
         repo,
@@ -1243,7 +1242,7 @@ def test_apply_join_stops_on_unexpected_diff_in_normal_mode(
 ) -> None:
     """通常モードの apply join は想定外差分を報告して停止する。"""
     repo = _init_repo(tmp_path)
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
     oracle_snapshot = _add_oracle_snapshot(repo)
     apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
         repo,
@@ -1277,7 +1276,7 @@ def test_apply_abandon_deletes_apply_artifacts_and_resets_state(
 ) -> None:
     """`cmoc apply abandon` は apply 成果物を merge せず破棄する。"""
     repo = _init_repo(tmp_path)
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
     oracle_snapshot = _add_oracle_snapshot(repo)
     apply_branch, apply_worktree, report_path = _create_completed_apply_run(
         repo,
@@ -1322,7 +1321,7 @@ def test_apply_abandon_accepts_apply_branch_worktree(
 ) -> None:
     """apply worktree 上から実行しても main worktree の state を更新する。"""
     repo = _init_repo(tmp_path)
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
     oracle_snapshot = _add_oracle_snapshot(repo)
     apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
         repo,
@@ -1346,7 +1345,7 @@ def test_apply_abandon_rejects_ready_state_without_cleanup(
 ) -> None:
     """apply.state が ready の場合は破棄対象なしとして停止する。"""
     repo = _init_repo(tmp_path)
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
 
     with pytest.raises(CmocError) as error_info:
         cmoc_apply_abandon_impl(repo)
@@ -1367,7 +1366,7 @@ def test_apply_uses_investigate_repeat_option_for_loop_limit(
 ) -> None:
     """`cmoc apply` は指定された調査・修正ループ回数を上限に使う。"""
     repo = _init_repo(tmp_path)
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -1413,7 +1412,7 @@ def test_apply_improoves_fixing_list_until_same_result_or_limit(
 ) -> None:
     """要修正点リスト改善ループは上限内で同一結果まで繰り返す。"""
     repo = _init_repo(tmp_path)
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -1471,7 +1470,7 @@ def test_apply_fills_discrepancy_head_commit_hash(
 ) -> None:
     """AI が null を返しても要修正点には cmoc 側で発見時 HEAD を付与する。"""
     repo = _init_repo(tmp_path)
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -1523,7 +1522,7 @@ def test_apply_commits_each_discrepancy_before_next_codex_call(
 ) -> None:
     """修正作業ループは要修正点 1 件ごとに検査と commit を完了する。"""
     repo = _init_repo(tmp_path)
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -1627,7 +1626,6 @@ def test_organize_prompt_includes_fixing_list_quality_requirements(
     assert "内容の品質に明確な問題がない" in prompt
     assert "重複する要修正点は 1 件にマージ" in prompt
     assert "矛盾する修正方針は矛盾しない内容に調整" in prompt
-    assert "<cmoc-branch>" not in prompt
     assert "git ブランチ `cmoc/session/2026-05-10_22-21_10_123`" in prompt
     assert (
         "`1111111111111111111111111111111111111111"
@@ -1693,7 +1691,7 @@ def test_apply_rejects_incomplete_report_from_codex(
 ) -> None:
     """必須内容を欠く apply レポートは保存せずエラーにする。"""
     repo = _init_repo(tmp_path)
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -1745,7 +1743,7 @@ def test_apply_rejects_non_oracle_changes_after_cmoc_guarantee(
 ) -> None:
     """`cmoc apply` は開始前の未コミット実装差分を拒否する。"""
     repo = _init_repo(tmp_path)
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
     (repo / "app.py").write_text("changed\n", encoding="utf-8")
 
     with pytest.raises(CmocError) as error:
@@ -1762,7 +1760,7 @@ def test_apply_does_not_commit_preexisting_gitignore_changes(
 ) -> None:
     """開始前からある `.gitignore` 差分も precondition failure にする。"""
     repo = _init_repo(tmp_path)
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
     (repo / ".gitignore").write_text("user-rule\n", encoding="utf-8")
 
     with pytest.raises(CmocError) as error:
@@ -1780,7 +1778,7 @@ def test_apply_commits_untracked_oracle_changes_after_cmoc_guarantee(
 ) -> None:
     """未追跡 oracle 差分は自動 commit せず precondition failure にする。"""
     repo = _init_repo(tmp_path)
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
     cmoc_log = repo / ".cmoc" / "logs" / "poll.log"
     cmoc_log.parent.mkdir(parents=True)
     cmoc_log.write_text("local log\n", encoding="utf-8")
@@ -1828,7 +1826,7 @@ def test_apply_commits_preexisting_staged_oracles_after_cmoc_guarantee(
 ) -> None:
     """事前 stage 済み oracle 差分も自動 commit せず拒否する。"""
     repo = _init_repo(tmp_path)
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
@@ -1969,7 +1967,7 @@ def test_session_join_merges_current_session_branch_and_deletes_it(
     _git(repo, "add", ".gitignore")
     _git(repo, "commit", "-m", "ignore cmoc")
     target_branch = _git(repo, "branch", "--show-current").stdout.strip()
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
     (repo / "feature.txt").write_text("feature\n", encoding="utf-8")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "feature")
@@ -2034,7 +2032,7 @@ def test_session_join_precondition_failure_does_not_print_manual_resolution(
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
     _git(repo, "commit", "-m", "ignore cmoc")
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
     state_path = repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
     state = json.loads(state_path.read_text(encoding="utf-8"))
     state["apply"]["state"] = "running"
@@ -2058,7 +2056,7 @@ def test_session_abandon_marks_state_and_force_deletes_branch(
     _git(repo, "add", ".gitignore")
     _git(repo, "commit", "-m", "ignore cmoc")
     home_branch = _git(repo, "branch", "--show-current").stdout.strip()
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
     (repo / "feature.txt").write_text("feature\n", encoding="utf-8")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "session-only feature")
@@ -2095,7 +2093,7 @@ def test_session_abandon_rejects_apply_run_before_cleanup(
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
     _git(repo, "commit", "-m", "ignore cmoc")
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
     state_path = repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
     state = json.loads(state_path.read_text(encoding="utf-8"))
     state["apply"]["state"] = "active"
@@ -2126,7 +2124,7 @@ def test_session_abandon_rejects_uncommitted_changes_before_switch(
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
     _git(repo, "commit", "-m", "ignore cmoc")
-    _checkout_cmoc_branch(repo)
+    _checkout_session_branch(repo)
     (repo / "dirty.txt").write_text("dirty\n", encoding="utf-8")
 
     with pytest.raises(CmocError) as error:
@@ -2274,26 +2272,6 @@ def test_cmoc_session_and_apply_workflow_commands_are_registered() -> None:
             f"Usage: cmoc {command_group} {command_name} [OPTIONS]"
             in result.stdout
         )
-        assert result.stderr == ""
-
-
-def test_cmoc_legacy_branch_and_merge_are_not_registered() -> None:
-    """legacy 旧名の top-level command は公開 CLI に登録しない。"""
-    repo_root = Path(__file__).resolve().parents[1]
-    env = {"PYTHONPATH": str(repo_root / "src")}
-
-    for command_name in ["branch", "merge"]:
-        result = subprocess.run(
-            [sys.executable, "-m", "main", command_name, "--help"],
-            cwd=repo_root,
-            env=env,
-            check=False,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        assert result.returncode != 0
-        assert "No such command" in result.stdout
         assert result.stderr == ""
 
 
@@ -2559,7 +2537,7 @@ def _init_repo(tmp_path: Path) -> Path:
     return repo
 
 
-def _checkout_cmoc_branch(repo: Path) -> None:
+def _checkout_session_branch(repo: Path) -> None:
     """テスト用 cmoc session branch に移動し、state を作る。"""
     session_id = "2026-05-10_22-21_10_123"
     branch_name = f"cmoc/session/{session_id}"

@@ -13,7 +13,7 @@ from commons.repo import (
     head_commit,
     is_cmoc_branch,
     list_oracle_files,
-    read_branch_base_commit,
+    read_session_start_commit,
 )
 from commons.timing import StepTimer, start_step
 from commons.timestamps import make_timestamp
@@ -182,7 +182,7 @@ def cmoc_eval_oracles_impl(
         partial = cmoc_branch and not full
         mode = "partial" if partial else "full"
         if cmoc_branch:
-            base_commit = read_branch_base_commit(repo_root, branch_name)
+            base_commit = read_session_start_commit(repo_root, branch_name)
             deleted_oracles = has_deleted_oracle_files(repo_root, base_commit)
         else:
             deleted_oracles = False

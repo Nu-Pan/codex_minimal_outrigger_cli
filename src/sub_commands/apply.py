@@ -22,8 +22,8 @@ from commons.repo import (
     current_branch,
     head_commit,
     is_session_branch,
-    read_branch_base_commit,
     read_session_state,
+    read_session_start_commit,
     run_git,
     session_id_from_branch,
     write_session_state,
@@ -702,7 +702,7 @@ def _organize_discrepancies(
     # 整理結果も同じ Structured Output schema で受け取って検証する。
     branch_name = current_branch(repo_root)
     if base_commit is None:
-        base_commit = read_branch_base_commit(repo_root, branch_name)
+        base_commit = read_session_start_commit(repo_root, branch_name)
     head_commit_hash = head_commit(repo_root)
     payload = parse_json_object(
         run_codex_exec(

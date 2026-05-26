@@ -17,7 +17,7 @@ from commons.repo import (
     is_cmoc_branch,
     list_implementation_files,
     list_oracle_files,
-    read_branch_base_commit,
+    read_session_start_commit,
     session_state_path,
     write_session_state,
 )
@@ -234,7 +234,7 @@ def test_list_implementation_files_ignores_git_info_exclude(
     assert relative_paths == ["README.md", "app.py", "logs/subcommand.log"]
 
 
-def test_changed_oracle_files_uses_cmoc_branch_base_and_uncommitted_changes(
+def test_changed_oracle_files_uses_session_start_and_uncommitted_changes(
     tmp_path: Path,
 ) -> None:
     """部分評価対象は base..HEAD と未コミット oracle 変更の和集合になる。"""
@@ -657,7 +657,7 @@ def test_is_cmoc_branch(branch_name: str, expected: bool) -> None:
     assert is_cmoc_branch(branch_name) is expected
 
 
-def test_read_branch_base_commit_uses_session_state(
+def test_read_session_start_commit_uses_session_state(
     tmp_path: Path,
 ) -> None:
     """部分評価用 base commit は session state から読む。"""
@@ -683,7 +683,7 @@ def test_read_branch_base_commit_uses_session_state(
     assert session_state_path(repo, session_id) == (
         repo / ".cmoc" / "sessions" / f"{session_id}.json"
     )
-    assert read_branch_base_commit(repo, f"cmoc/session/{session_id}") == (
+    assert read_session_start_commit(repo, f"cmoc/session/{session_id}") == (
         "abc123"
     )
 
