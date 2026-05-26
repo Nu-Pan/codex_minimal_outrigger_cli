@@ -892,6 +892,8 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
                 "if [ \"$PROMPT\" = \"original prompt\" ]; then",
                 "  if [ \"$HAS_RESUME\" = 0 ]; then",
                 "  echo '{\"session_id\":\"session-1\"}'",
+                "  echo '{\"type\":\"error\","
+                "\"error\":{\"code\":\"insufficient_quota\"}}'",
                 "  echo 'quota limit exhausted' >&2",
                 "  exit 1",
                 "  fi",
@@ -992,6 +994,8 @@ def test_run_codex_exec_fails_when_resume_returns_unexpected_error(
                 "fi",
                 "if [ \"$HAS_RESUME\" = 0 ]; then",
                 "  echo '{\"session_id\":\"session-1\"}'",
+                "  echo '{\"type\":\"error\","
+                "\"error\":{\"code\":\"insufficient_quota\"}}'",
                 "  echo 'quota limit exhausted' >&2",
                 "  exit 1",
                 "fi",
@@ -1011,6 +1015,140 @@ def test_run_codex_exec_fails_when_resume_returns_unexpected_error(
 
     assert "codex exec が失敗しました。" in error.value.message
     assert "repository failure" in error.value.detail
+
+
+def test_run_codex_exec_does_not_treat_plain_limit_error_as_quota(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """quota 明示でない limit 系エラーは待機せず即時失敗する。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "echo 'validation limit exceeded while processing input' >&2",
+                "exit 2",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(repo, "original prompt", read_only=True)
+
+    log_files = sorted(
+        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+    )
+    assert "codex exec が失敗しました。" in error.value.message
+    assert "validation limit exceeded" in error.value.detail
+    assert len(log_files) == 1
+
+
+def test_run_codex_exec_fails_when_quota_poll_returns_unexpected_error(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """quota poll 自体の非 quota エラーは待機継続せず失敗する。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "PROMPT=\"$(cat)\"",
+                "if [[ \"$PROMPT\" == *'Codex CLI の疎通確認担当'* ]]; then",
+                "  echo 'network failure during poll' >&2",
+                "  exit 2",
+                "fi",
+                "echo '{\"session_id\":\"session-1\"}'",
+                "echo '{\"type\":\"error\","
+                "\"error\":{\"code\":\"insufficient_quota\"}}'",
+                "echo 'quota exhausted' >&2",
+                "exit 1",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setattr("commons.codex.time.sleep", lambda seconds: None)
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(repo, "original prompt", read_only=True)
+
+    log_files = sorted(
+        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+    )
+    assert "codex exec が失敗しました。" in error.value.message
+    assert "network failure during poll" in error.value.detail
+    assert len(log_files) == 2
+
+
+def test_run_codex_exec_requires_ok_last_message_for_quota_poll(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """quota poll が 0 終了でも last message が ok 以外なら resume しない。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                "PROMPT=\"$(cat)\"",
+                "if [[ \"$PROMPT\" == *'Codex CLI の疎通確認担当'* ]]; then",
+                "  echo 'not-ok' > \"$LAST\"",
+                "  exit 0",
+                "fi",
+                "echo '{\"session_id\":\"session-1\"}'",
+                "echo '{\"type\":\"error\","
+                "\"error\":{\"code\":\"insufficient_quota\"}}'",
+                "echo 'quota exhausted' >&2",
+                "exit 1",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setattr("commons.codex.time.sleep", lambda seconds: None)
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(repo, "original prompt", read_only=True)
+
+    log_contents = [
+        path.read_text(encoding="utf-8")
+        for path in sorted(
+            (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+        )
+    ]
+    assert "quota 復旧確認に失敗しました。" in error.value.message
+    assert "quota poll output-last-message was not ok." in error.value.detail
+    assert not any("--resume" in content for content in log_contents)
 
 
 def test_run_codex_exec_retries_schema_validation_failure(

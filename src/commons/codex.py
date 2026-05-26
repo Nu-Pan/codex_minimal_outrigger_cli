@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
 from time import perf_counter
+from typing import NoReturn
 
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError, ValidationError
@@ -277,8 +278,16 @@ def _wait_for_quota_and_resume(
         )
         poll_result = poll_run.result
         if poll_result.returncode == 0:
-            poll_output = _read_last_message(poll_run.last_message_path)
+            try:
+                poll_output = _read_last_message(poll_run.last_message_path)
+            except ValueError as error:
+                _raise_quota_poll_failure(poll_run, str(error))
             print(f"quota poll output: {_head80(poll_output)}")
+            if poll_output.strip() != "ok":
+                _raise_quota_poll_failure(
+                    poll_run,
+                    "quota poll output-last-message was not ok.",
+                )
             print("quota restored; resuming codex exec")
             return _run_codex_command(
                 repo_root,
@@ -288,6 +297,11 @@ def _wait_for_quota_and_resume(
                 attempt,
                 schema_path,
             )
+        if not _looks_like_quota_exhaustion(
+            poll_result.stdout,
+            poll_result.stderr,
+        ):
+            _raise_codex_failure(poll_run.log_path, poll_result)
         wait_started = perf_counter()
         time.sleep(_QUOTA_POLL_INTERVAL_SECONDS)
         add_quota_wait(perf_counter() - wait_started)
@@ -562,16 +576,91 @@ def _read_last_message(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _raise_quota_poll_failure(
+    run: _CodexCommandRun,
+    reason: str,
+) -> NoReturn:
+    """quota 疎通確認が実行可能状態を証明しない場合は中断する。"""
+    raise CmocError(
+        "quota 復旧確認に失敗しました。",
+        [
+            "codex exec のログを確認してください。",
+            "Codex CLI または実行環境の状態を確認してから、cmoc を再実行してください。",
+        ],
+        "\n".join(
+            [
+                f"Log: {run.log_path}",
+                f"Reason: {reason}",
+                "STDOUT:",
+                run.result.stdout,
+                "STDERR:",
+                run.result.stderr,
+            ]
+        ),
+    )
+
+
 def _looks_like_quota_exhaustion(stdout: str, stderr: str) -> bool:
     """Codex CLI 出力から quota 枯渇らしさを判定する。"""
-    # Codex の表現ゆれに備えて、limit/credits/quota 系の語を広めに拾う。
+    # 任意の "limit exceeded" ではなく、Codex CLI の構造化エラーや quota を
+    # 明示する文言だけを quota 枯渇として扱う。
     text = f"{stdout}\n{stderr}".lower()
-    quota_words = ["quota", "limit", "credit", "credits", "rate limit"]
-    exhaustion_words = ["exhaust", "insufficient", "reached", "exceeded"]
-    return (
-        any(word in text for word in quota_words)
-        and any(word in text for word in exhaustion_words)
+    return _has_quota_error_code(stdout, stderr) or any(
+        re.search(pattern, text) is not None
+        for pattern in (
+            r"\binsufficient[_ -]quota\b",
+            r"\brate[_ -]limit[_ -]exceeded\b",
+            r"\bquota[_ -]exhausted\b",
+            r"\busage[_ -]limit[_ -]reached\b",
+            r"\bcredits?[_ -]exhausted\b",
+            r"\bquota\s+(?:has\s+)?(?:been\s+)?(?:exhausted|exceeded)\b",
+            r"\b(?:5h|weekly)\s+limit\s+(?:has\s+)?(?:been\s+)?"
+            r"(?:reached|exhausted)\b.*\bcredits?\b",
+        )
     )
+
+
+def _has_quota_error_code(stdout: str, stderr: str) -> bool:
+    """Codex JSONL 内の明示的な quota 系 error code を検出する。"""
+    quota_codes = {
+        "insufficient_quota",
+        "quota_exhausted",
+        "rate_limit_exceeded",
+        "usage_limit_reached",
+        "credits_exhausted",
+    }
+    for line in f"{stdout}\n{stderr}".splitlines():
+        try:
+            value = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if _contains_quota_error_code(value, quota_codes):
+            return True
+    return False
+
+
+def _contains_quota_error_code(
+    value: object,
+    quota_codes: set[str],
+) -> bool:
+    """ネストした JSON object/list から quota error code を探す。"""
+    if isinstance(value, dict):
+        for key, child in value.items():
+            key_text = str(key).lower().replace("-", "_")
+            if key_text in {"code", "error_code", "type"} and isinstance(
+                child,
+                str,
+            ):
+                code = child.lower().replace("-", "_")
+                if code in quota_codes:
+                    return True
+            if _contains_quota_error_code(child, quota_codes):
+                return True
+    if isinstance(value, list):
+        for child in value:
+            if _contains_quota_error_code(child, quota_codes):
+                return True
+    return False
 
 
 def _extract_session_id(stdout: str, stderr: str) -> str | None:
