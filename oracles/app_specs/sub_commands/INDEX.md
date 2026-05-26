@@ -37,15 +37,14 @@
 
 ## Do not read this when
 
-- `cmoc session fork` の作成条件や session metadata の保存だけを確認したいとき。
-- `cmoc session join` の merge 手順、コンフリクト解決、session 終了処理だけを確認したいとき。
-- `cmoc apply join` のマージ手順、差分検査、`--force-resolve` の挙動だけを確認したいとき。
-- `cmoc apply abandon` の破棄手順や cleanup 挙動だけを確認したいとき。
+- `cmoc apply join` のマージ手順、想定外の差分の処理、`--force-resolve` の挙動だけを確認したいとき。
+- `cmoc apply abandon` の破棄手順や cleanup の挙動だけを確認したいとき。
+- `cmoc session fork` や `cmoc session join` など、session 側の開始・終了・統合だけを確認したいとき。
 - `cmoc eval-oracles` の評価モードや評価レポート仕様だけを確認したいとき。
 
 ## hash
 
-- 8aa459173043df38e38937f7c8f48c31a360282d0441017d043edefe8c804e02
+- be616ae9e2a54925a77477a884654c9c0b76dee88ec24ce36aef81450e808766
 
 # `apply_join.md`
 

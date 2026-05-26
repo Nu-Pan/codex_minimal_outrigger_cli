@@ -43,7 +43,7 @@
 
 ## hash
 
-- eb9c7b8b3ba16bcebf07830fc8241eef7fc51f23bd3f73fb24b38f0a4388bebc
+- 87b6e64fd0d0d82f9c0b062206da7ada02803b320ccd8a5468e935dbaabbb9cf
 
 # `console_and_file_log.md`
 
@@ -96,29 +96,28 @@
 
 ## Summary
 
-- `cmoc` が `<repo-root>` 配下に `INDEX.md` を自動配置・自動更新するための仕様をまとめた文書。
-- 配置対象ディレクトリと、目次作成対象から除外するファイル・ディレクトリの判定ルールを定義している。
-- `INDEX.md` の各目次項目に必要な見出し構成、説明の書き方、参照ハッシュの扱いを定めている。
-- 目次情報の生成方法として、Structured Output の JSON スキーマと `codex exec` の使い方を指定している。
-- `INDEX.md` メンテナンスの実行タイミング、処理順序、既存差分の扱い、自動コミット条件を定義している。
+- `cmoc` が `<repo-root>` 配下に `INDEX.md` を自動配置・自動更新するための仕様をまとめた文書です。
+- 配置対象ディレクトリと、目次作成対象から除外するファイル・ディレクトリの判定ルールを定義しています。
+- `INDEX.md` の各目次項目に必要な見出し構成、説明の書き方、参照ハッシュの扱いを定めています。
+- 目次情報の生成方法として、Structured Output の JSON スキーマと `codex exec` の使い方を指定しています。
+- `INDEX.md` メンテナンスの実行タイミング、処理順序、既存差分の扱い、自動コミット条件を定義しています。
 
 ## Read this when
 
-- `<repo-root>` 配下の `INDEX.md` をどこに置くか決めるとき。
-- `INDEX.md` に載せるべきファイル・ディレクトリの選別ルールを確認するとき。
-- `INDEX.md` の各項目に書く Summary / Read this when / Do not read this when / hash の形式を実装・更新するとき。
-- `INDEX.md` の生成や再生成、差分更新、自動コミットの流れを実装するとき。
-- Codex CLI を呼ぶ前に実行するべき `INDEX.md` メンテナンスの条件を確認するとき。
+- `<repo-root>` 配下に `INDEX.md` をどこへ配置するか、どのディレクトリを対象にするかを決めたいとき。
+- `INDEX.md` に載せるファイル・ディレクトリの選別ルールや除外条件を確認したいとき。
+- `INDEX.md` の Summary / Read this when / Do not read this when / hash の記法や生成方法を実装・更新したいとき。
+- `INDEX.md` の再生成、差分更新、自動コミット、メンテナンス実行タイミングを実装・レビューしたいとき。
 
 ## Do not read this when
 
-- `INDEX.md` の配置・更新・検証に関係しない機能を実装するとき。
-- `INDEX.md` の目次生成ルールではなく、他の `oracles` の仕様だけを確認すれば足りるとき。
-- リポジトリの一般的なアプリ機能や業務ロジックを扱っていて、`INDEX.md` のメンテナンス処理を触らないとき。
+- `INDEX.md` の生成・更新ルールそのものではなく、個別のサブコマンド仕様や実装コードを確認したいとき。
+- `oracles` 配下の他の仕様断片だけで用が足り、`INDEX.md` のメンテナンス規則を扱わないとき。
+- リポジトリの一般的なアプリ機能や業務ロジックを確認していて、`INDEX.md` の配置・検証・再生成に関与しないとき。
 
 ## hash
 
-- 5690765b2f0740b860e81c8096b3adb5ab80983eafbffce20b09338a1b33f920
+- a6e6af330d3ce5e851bfd29cd85909bf3af4d01cbbb502863e7eedf5a165a175
 
 # `misc_specs.md`
 
@@ -215,7 +214,7 @@
 
 ## hash
 
-- d1fde1f8138ab99223c037a0dfcb143bebfa1d8ff26e418766bd43ac28613d92
+- 373b169f7013d4e4f5f0a1efe0478f539a29253959ff4851955209161500a566
 
 # `usage.md`
 

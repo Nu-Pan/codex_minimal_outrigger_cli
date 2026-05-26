@@ -15,14 +15,14 @@
 
 ## Do not read this when
 
-- 個別サブコマンドの手順だけを確認したいときは、`sub_commands/INDEX.md` から該当文書へ直接進むべきです。
+- `cmoc` の個別サブコマンドの手順だけを確認したいときは、`sub_commands/INDEX.md` から該当文書へ直接進むべきです。
 - 特定の仕様本文だけを読みたいときは、該当する `*.md` を直接参照すべきです。
 - 実装コードやテストコードだけで足りる場合は、このディレクトリの案内を読む必要はありません。
 - `INDEX.md` の生成・更新ルールだけを確認したいときは、`indexing.md` を読むべきです。
 
 ## hash
 
-- f0c8d69cd54308630ee8c9a86e7172db086a4bbaf5dce90a57bb0b0534bc3332
+- 2003ccf3d1dfdc2e4b6a26b633fd90f5b2b5785b29b58ea3ed6b9df005549803
 
 # `considered_alternatives`
 
