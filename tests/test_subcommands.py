@@ -945,7 +945,9 @@ def test_apply_returns_complete_when_no_discrepancies(
 
     exit_code = cmoc_apply_impl(repo)
 
-    reports = list((repo / ".cmoc" / "reports" / "apply").glob("*.md"))
+    reports = list(
+        (repo / ".cmoc" / "reports" / "apply" / "fork").glob("*.md")
+    )
     state = json.loads(
         (
             repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
@@ -968,8 +970,23 @@ def test_apply_returns_complete_when_no_discrepancies(
         "cmoc/session/2026-05-10_22-21_10_123"
     )
     report_text = reports[0].read_text(encoding="utf-8")
+    assert report_text.startswith("---\n")
+    assert "cmoc_session_id: \"2026-05-10_22-21_10_123\"" in report_text
+    assert "cmoc_apply_run_id: " in report_text
+    assert (
+        "cmoc_session_branch: \"cmoc/session/2026-05-10_22-21_10_123\""
+        in report_text
+    )
+    assert (
+        "cmoc_apply_branch: \"cmoc/apply/2026-05-10_22-21_10_123/"
+        in report_text
+    )
+    assert "apply_worktree_path: " in report_text
+    assert "oracle_snapshot_commit: " in report_text
+    assert "session_head_at_apply_start: " in report_text
+    assert "session_head_at_apply_finish: " in report_text
     assert "## 作業結果" in report_text
-    assert "## 不整合件数の推移" in report_text
+    assert "## 要修正点件数の推移" in report_text
     assert "全変更内容" in report_text
     assert codex_kwargs[0]["output_schema"] == _DISCREPANCY_OUTPUT_SCHEMA
     assert "fixing_points" in codex_prompts[0]
@@ -1012,6 +1029,15 @@ def test_apply_returns_complete_when_no_discrepancies(
         == COST_PERFORMANCE_REASONING_EFFORT
     )
     assert "作業結果区分: 収束" in codex_prompts[-1]
+    assert "今回の apply run で行った変更内容" in codex_prompts[-1]
+    assert (
+        "この `cmoc apply fork` が実際に行った作業内容だけ"
+        in codex_prompts[-1]
+    )
+    assert (
+        "今回の自動適用処理以前の作業も含めてください"
+        not in codex_prompts[-1]
+    )
     assert "変更内容の意味論に基づき" in codex_prompts[-1]
     assert "「カテゴリ」という語" in codex_prompts[-1]
     assert "<cmoc-branch>" not in codex_prompts[-1]
@@ -1054,11 +1080,13 @@ def test_apply_uses_investigate_repeat_option_for_loop_limit(
         "implementation loop (2/2) discrepancies: 1"
         in capsys.readouterr().out
     )
-    reports = list((repo / ".cmoc" / "reports" / "apply").glob("*.md"))
+    reports = list(
+        (repo / ".cmoc" / "reports" / "apply" / "fork").glob("*.md")
+    )
     report_text = reports[0].read_text(encoding="utf-8")
     assert "作業結果区分: 未収束" in codex_prompts[-1]
-    assert "まだ不整合が残っている可能性" in codex_prompts[-1]
-    assert "まだ不整合が残っている可能性" in report_text
+    assert "まだ要修正点が残っている可能性" in codex_prompts[-1]
+    assert "まだ要修正点が残っている可能性" in report_text
 
 
 def test_apply_improoves_fixing_list_until_same_result_or_limit(
@@ -1377,7 +1405,7 @@ def test_apply_rejects_incomplete_report_from_codex(
             repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
         ).read_text(encoding="utf-8")
     )
-    report_dir = repo / ".cmoc" / "reports" / "apply"
+    report_dir = repo / ".cmoc" / "reports" / "apply" / "fork"
     assert state["apply"]["state"] == "error"
     assert state["apply"]["apply_branch"].startswith(
         "cmoc/apply/2026-05-10_22-21_10_123/"
@@ -2152,12 +2180,12 @@ def _apply_report(prompt: str, result_label: str, counts: list[int]) -> str:
         for index, count in enumerate(counts, start=1)
     ]
     if result_label == "未収束":
-        count_lines.append("まだ不整合が残っている可能性があります。")
+        count_lines.append("まだ要修正点が残っている可能性があります。")
     return "\n".join(
         [
             "## 作業結果",
             result_label,
-            "## 不整合件数の推移",
+            "## 要修正点件数の推移",
             *count_lines,
             f"## ブランチ {branch_name} 上の全変更内容",
             "カテゴリ: 実装修正",

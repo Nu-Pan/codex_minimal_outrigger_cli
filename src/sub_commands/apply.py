@@ -250,7 +250,14 @@ def cmoc_apply_impl(
         report_path = _write_apply_report(
             apply_worktree,
             repo_root,
+            session_id,
+            apply_run_id,
+            session_branch,
             apply_branch,
+            apply_worktree,
+            oracle_snapshot_commit,
+            oracle_snapshot_commit,
+            head_commit(repo_root),
             completed,
             discrepancy_counts,
         )
@@ -808,34 +815,45 @@ def _assert_forbidden_paths_clean(repo_root: Path) -> None:
 def _write_apply_report(
     repo_root: Path,
     report_repo_root: Path,
+    session_id: str,
+    apply_run_id: str,
+    session_branch: str,
     branch_name: str,
+    apply_worktree: Path,
+    oracle_snapshot_commit: str,
+    session_head_at_apply_start: str,
+    session_head_at_apply_finish: str,
     completed: bool,
     discrepancy_counts: list[int],
 ) -> Path:
     """作業レポートを Codex CLI に依頼し、ファイル保存する。"""
     # report 保存先と timestamp 付きファイル名を用意する。
-    report_dir = report_repo_root / ".cmoc" / "reports" / "apply"
+    report_dir = report_repo_root / ".cmoc" / "reports" / "apply" / "fork"
     report_dir.mkdir(parents=True, exist_ok=True)
-    report_path = report_dir / f"{make_timestamp()}.md"
+    generated_at = make_timestamp()
+    report_path = report_dir / f"{generated_at}.md"
 
     # Codex にはレポート本文だけを生成させ、ファイル保存は cmoc が行う。
     result_label = "収束" if completed else "未収束"
     incomplete_instruction = (
-        "「未収束」の場合は、不整合件数の推移に「まだ不整合が残っている可能性」を必ず追記してください。"
+        "「未収束」の場合は、要修正点件数の推移に"
+        "「まだ要修正点が残っている可能性」を必ず追記してください。"
     )
     prompt = "\n".join(
         [
             "あなたはソフトウェア作業レポートの作成担当です。",
             f"`{repo_root}` のブランチ `{branch_name}` について簡潔な作業レポートを書いてください。",
-            "完了条件は、作業結果、不整合件数の推移、ブランチ上の全変更内容を説明することです。",
-            "Markdown 見出しとして「作業結果」「不整合件数の推移」「全変更内容」を必ず含めてください。",
-            "不整合件数の推移には、ループごとに何件の不整合を見つけたかを書いてください。",
+            "完了条件は、作業結果、要修正点件数の推移、今回の apply run で行った変更内容を説明することです。",
+            "YAML Front Matter は cmoc 側で付与するため、本文 Markdown だけを書いてください。",
+            "Markdown 見出しとして「作業結果」「要修正点件数の推移」「全変更内容」を必ず含めてください。",
+            "要修正点件数の推移には、ループごとに何件の要修正点を見つけたかを書いてください。",
             incomplete_instruction,
-            f"ブランチ `{branch_name}` 上の全変更内容は、今回の自動適用処理以前の作業も含めてください。",
-            "ブランチ上の変更内容は、変更内容の意味論に基づき「カテゴリ」という語を使って要約してください。",
+            "全変更内容は、この `cmoc apply fork` が実際に行った作業内容だけに限定してください。",
+            f"具体的には `{oracle_snapshot_commit}` から `{branch_name}` の HEAD までの差分だけを対象にしてください。",
+            "変更内容は、変更内容の意味論に基づき「カテゴリ」という語を使って要約してください。",
             f"作業結果の区分は一言で `{result_label}` と書いてください。",
             f"作業結果区分: {result_label}",
-            f"不整合件数: {discrepancy_counts}",
+            f"要修正点件数: {discrepancy_counts}",
             f"`{repo_root / 'oracles'}` と `{repo_root / '.agents'}` は編集禁止です。",
             f"`{repo_root / 'memo'}` は読み書き禁止です。",
             "ファイル編集は禁止です。",
@@ -875,6 +893,28 @@ def _write_apply_report(
             ],
             str(error),
         ) from error
+    report = _apply_report_with_front_matter(
+        report_body=report,
+        generated_at=generated_at,
+        session_id=session_id,
+        apply_run_id=apply_run_id,
+        session_branch=session_branch,
+        apply_branch=branch_name,
+        apply_worktree=apply_worktree,
+        oracle_snapshot_commit=oracle_snapshot_commit,
+        session_head_at_apply_start=session_head_at_apply_start,
+        session_head_at_apply_finish=session_head_at_apply_finish,
+        result_label=result_label,
+        discrepancy_counts=discrepancy_counts,
+    )
+    _validate_apply_report(
+        report,
+        branch_name,
+        result_label,
+        completed,
+        discrepancy_counts,
+        require_front_matter=True,
+    )
     report_path.write_text(report, encoding="utf-8")
     return report_path
 
@@ -885,26 +925,51 @@ def _validate_apply_report(
     result_label: str,
     completed: bool,
     discrepancy_counts: list[int],
+    *,
+    require_front_matter: bool = False,
 ) -> None:
     """保存前の apply レポートが必須内容を持つことを機械的に確認する。"""
     # Markdown の意味解釈ではなく、必須セクションと既知値の存在を検査する。
     missing: list[str] = []
-    if "作業結果" not in report or result_label not in report:
+    body = report
+    if require_front_matter:
+        front_matter, body = _split_yaml_front_matter(report)
+        required_metadata = [
+            "cmoc_session_id",
+            "cmoc_apply_run_id",
+            "cmoc_session_branch",
+            "cmoc_apply_branch",
+            "apply_worktree_path",
+            "oracle_snapshot_commit",
+            "session_head_at_apply_start",
+            "session_head_at_apply_finish",
+            "result",
+            "generated_at",
+        ]
+        for key in required_metadata:
+            if key not in front_matter:
+                missing.append(f"YAML Front Matter {key}")
+        if front_matter.get("cmoc_apply_branch") != branch_name:
+            missing.append("YAML Front Matter cmoc_apply_branch")
+        if front_matter.get("result") != result_label:
+            missing.append("YAML Front Matter result")
+
+    if "作業結果" not in body or result_label not in body:
         missing.append("作業結果の区分")
-    if "不整合件数の推移" not in report:
-        missing.append("不整合件数の推移")
+    if "要修正点件数の推移" not in body:
+        missing.append("要修正点件数の推移")
     for index, count in enumerate(discrepancy_counts, start=1):
-        if f"{index}" not in report or f"{count}" not in report:
-            missing.append(f"不整合件数の推移 loop {index}")
+        if f"{index}" not in body or f"{count}" not in body:
+            missing.append(f"要修正点件数の推移 loop {index}")
     if (
         not completed
-        and "まだ不整合が残っている可能性" not in report
+        and "まだ要修正点が残っている可能性" not in body
     ):
         missing.append("未収束時の残存可能性")
     if (
-        branch_name not in report
-        or "全変更内容" not in report
-        or "カテゴリ" not in report
+        branch_name not in body
+        or "全変更内容" not in body
+        or "カテゴリ" not in body
     ):
         missing.append("ブランチ上の全変更内容の意味論的カテゴリ別要約")
 
@@ -914,6 +979,72 @@ def _validate_apply_report(
             "Codex CLI が生成した apply report に必須内容がありません:\n"
             + "\n".join(missing)
         )
+
+
+def _apply_report_with_front_matter(
+    *,
+    report_body: str,
+    generated_at: str,
+    session_id: str,
+    apply_run_id: str,
+    session_branch: str,
+    apply_branch: str,
+    apply_worktree: Path,
+    oracle_snapshot_commit: str,
+    session_head_at_apply_start: str,
+    session_head_at_apply_finish: str,
+    result_label: str,
+    discrepancy_counts: list[int],
+) -> str:
+    """cmoc が確定できる apply report metadata を YAML Front Matter にする。"""
+    front_matter = [
+        "---",
+        f"generated_at: {_yaml_string(generated_at)}",
+        f"cmoc_session_id: {_yaml_string(session_id)}",
+        f"cmoc_apply_run_id: {_yaml_string(apply_run_id)}",
+        f"cmoc_session_branch: {_yaml_string(session_branch)}",
+        f"cmoc_apply_branch: {_yaml_string(apply_branch)}",
+        f"apply_worktree_path: {_yaml_string(str(apply_worktree))}",
+        f"oracle_snapshot_commit: {_yaml_string(oracle_snapshot_commit)}",
+        f"session_head_at_apply_start: {_yaml_string(session_head_at_apply_start)}",
+        f"session_head_at_apply_finish: {_yaml_string(session_head_at_apply_finish)}",
+        f"result: {_yaml_string(result_label)}",
+        f"discrepancy_counts: {json.dumps(discrepancy_counts)}",
+        "---",
+    ]
+    return "\n".join([*front_matter, "", report_body.strip(), ""])
+
+
+def _yaml_string(value: str) -> str:
+    """単純な文字列 metadata を YAML double quoted scalar として出力する。"""
+    return json.dumps(value, ensure_ascii=False)
+
+
+def _split_yaml_front_matter(report: str) -> tuple[dict[str, str], str]:
+    """apply report の YAML Front Matter を軽量に取り出す。"""
+    if not report.startswith("---\n"):
+        return {}, report
+    front_matter_end = report.find("\n---\n", 4)
+    if front_matter_end == -1:
+        return {}, report
+
+    front_matter: dict[str, str] = {}
+    for line in report[4:front_matter_end].splitlines():
+        if ":" not in line:
+            continue
+        key, raw_value = line.split(":", 1)
+        value = raw_value.strip()
+        if value.startswith('"') and value.endswith('"'):
+            try:
+                loaded = json.loads(value)
+            except json.JSONDecodeError:
+                loaded = value[1:-1]
+            if isinstance(loaded, str):
+                front_matter[key.strip()] = loaded
+                continue
+        front_matter[key.strip()] = value
+
+    return front_matter, report[front_matter_end + len("\n---\n") :]
 
 
 def _investigation_prompt(repo_root: Path, oracle_file: Path) -> str:
