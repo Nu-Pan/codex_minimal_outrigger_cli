@@ -1,5 +1,6 @@
 """Codex CLI 呼び出しラッパーのテスト。"""
 
+import io
 import json
 import os
 import subprocess
@@ -11,6 +12,7 @@ from pytest import MonkeyPatch
 
 from commons.codex import run_codex_exec
 from commons.errors import CmocError
+from commons.subcommand_log import _TeeTextIO
 from commons.subcommand_log import subcommand_log
 
 _BOOLEAN_SCHEMA: dict[str, object] = {
@@ -336,6 +338,53 @@ def test_subcommand_log_avoids_existing_timestamp_file(
     assert existing_log.read_text(encoding="utf-8") == "existing log\n"
     assert new_log.exists()
     assert "new invocation" in new_log.read_text(encoding="utf-8")
+
+
+def test_subcommand_log_excludes_logs_in_linked_worktree(
+    tmp_path: Path,
+) -> None:
+    """`.git` が file の worktree でも実 gitdir の exclude にログ除外を入れる。"""
+    repo = _init_git_repo(tmp_path)
+    linked = tmp_path / "linked"
+    _git(repo, "worktree", "add", "-b", "linked", str(linked))
+
+    with subcommand_log(linked):
+        print("linked worktree invocation")
+
+    exclude_path = Path(
+        _git(
+            linked,
+            "rev-parse",
+            "--path-format=absolute",
+            "--git-path",
+            "info/exclude",
+        ).stdout.strip()
+    )
+    assert (linked / ".git").is_file()
+    assert "/.cmoc/logs/" in exclude_path.read_text(encoding="utf-8")
+    assert _git(linked, "status", "--porcelain").stdout == ""
+
+
+def test_tee_text_io_writes_log_when_console_write_fails() -> None:
+    """console write 失敗時も log file sink への write は試行済みにする。"""
+    log_file = io.StringIO()
+    tee = _TeeTextIO(_FailingTextIO(fail_write=True), log_file)
+
+    with pytest.raises(BrokenPipeError):
+        tee.write("durable log\n")
+
+    assert log_file.getvalue() == "durable log\n"
+
+
+def test_tee_text_io_flushes_log_when_console_flush_fails() -> None:
+    """console flush 失敗時も log file sink への flush は試行済みにする。"""
+    log_file = _RecordingTextIO()
+    tee = _TeeTextIO(_FailingTextIO(fail_flush=True), log_file)
+
+    with pytest.raises(BrokenPipeError):
+        tee.flush()
+
+    assert log_file.flushed
 
 
 def test_run_codex_exec_passes_output_schema_file(
@@ -1541,3 +1590,44 @@ def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
+
+
+class _FailingTextIO:
+    """テスト用の失敗する text sink。"""
+
+    def __init__(
+        self,
+        *,
+        fail_write: bool = False,
+        fail_flush: bool = False,
+    ) -> None:
+        self._fail_write = fail_write
+        self._fail_flush = fail_flush
+
+    def write(self, text: str) -> int:
+        if self._fail_write:
+            raise BrokenPipeError("console closed")
+        return len(text)
+
+    def flush(self) -> None:
+        if self._fail_flush:
+            raise BrokenPipeError("console closed")
+
+    def isatty(self) -> bool:
+        return False
+
+
+class _RecordingTextIO:
+    """テスト用の flush 記録 text sink。"""
+
+    def __init__(self) -> None:
+        self.flushed = False
+
+    def write(self, text: str) -> int:
+        return len(text)
+
+    def flush(self) -> None:
+        self.flushed = True
+
+    def isatty(self) -> bool:
+        return False
