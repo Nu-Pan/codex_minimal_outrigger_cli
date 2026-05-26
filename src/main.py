@@ -11,8 +11,8 @@ from commons.errors import CmocError
 from commons.errors import format_error_report
 from sub_commands.apply import cmoc_apply_impl
 from sub_commands.init import cmoc_init_impl
-from sub_commands.merge import cmoc_merge_impl
 from sub_commands.session_fork import cmoc_session_fork_impl
+from sub_commands.session_join import cmoc_session_join_impl
 
 
 app: typer.Typer = typer.Typer(name="cmoc", no_args_is_help=True)
@@ -58,7 +58,7 @@ def session_fork_command() -> None:
 def session_join_command() -> None:
     """Join the active cmoc session."""
     # CLI callback は session join の本体実装へ処理を委譲する。
-    cmoc_merge_impl()
+    cmoc_session_join_impl()
 
 
 @session_app.command("abandon")
@@ -112,9 +112,15 @@ def apply_join_command(
     force_resolve: bool = typer.Option(False, "--force-resolve"),
 ) -> None:
     """Join the last completed apply run."""
-    # 既存の merge 実装は force resolve の分岐をまだ持たない。
     del force_resolve
-    cmoc_merge_impl()
+    raise CmocError(
+        "`cmoc apply join` は未実装です。",
+        [
+            "現時点では手動で apply branch の成果物を確認してください。",
+            "session 全体を完了する場合は、apply run がない状態で `cmoc session join` を実行してください。",
+        ],
+        "CLI 入口のみ登録されていますが、apply run state 管理の実装がまだありません。",
+    )
 
 
 @apply_app.command("abandon")

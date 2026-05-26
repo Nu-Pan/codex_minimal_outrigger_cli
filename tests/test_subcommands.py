@@ -30,10 +30,10 @@ from sub_commands.apply import _commit_all_changes
 from sub_commands.apply import _organize_prompt
 from sub_commands.apply import _validate_discrepancy_payload
 from sub_commands.init import cmoc_init_impl
-from sub_commands.merge import cmoc_merge_impl
 from sub_commands.session_fork import cmoc_session_fork_impl
-from sub_commands.merge import _conflict_prompt
-from sub_commands.merge import _files_with_conflict_markers
+from sub_commands.session_join import cmoc_session_join_impl
+from sub_commands.session_join import _conflict_prompt
+from sub_commands.session_join import _files_with_conflict_markers
 
 
 def _load_eval_oracles_module() -> ModuleType:
@@ -1624,10 +1624,10 @@ def test_apply_discrepancy_schema_rejects_near_miss_keys() -> None:
         )
 
 
-def test_merge_merges_explicit_cmoc_branch_and_deletes_it(
+def test_session_join_merges_current_session_branch_and_deletes_it(
     tmp_path: Path,
 ) -> None:
-    """`cmoc merge <branch>` は clean tree で merge し、安全なら branch を消す。"""
+    """`cmoc session join` は記録済み home branch へ session を merge する。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
@@ -1637,24 +1637,30 @@ def test_merge_merges_explicit_cmoc_branch_and_deletes_it(
     (repo / "feature.txt").write_text("feature\n", encoding="utf-8")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "feature")
-    _git(repo, "checkout", target_branch)
 
-    cmoc_merge_impl(repo, "cmoc/session/2026-05-10_22-21_10_123")
+    cmoc_session_join_impl(repo)
 
     branches = _git(
         repo,
         "branch",
         "--format=%(refname:short)",
     ).stdout.splitlines()
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert _git(repo, "branch", "--show-current").stdout.strip() == target_branch
     assert (repo / "feature.txt").read_text(encoding="utf-8") == "feature\n"
+    assert state["session"]["state"] == "joined"
     assert "cmoc/session/2026-05-10_22-21_10_123" not in branches
 
 
-def test_merge_rejects_explicit_non_cmoc_branch_before_git_merge(
+def test_session_join_rejects_non_session_branch_before_git_merge(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """`cmoc merge <branch>` は cmoc 管理 branch 名以外を merge 対象にしない。"""
+    """通常 branch 上では session join を開始しない。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
@@ -1667,7 +1673,7 @@ def test_merge_rejects_explicit_non_cmoc_branch_before_git_merge(
     _git(repo, "checkout", target_branch)
 
     with pytest.raises(CmocError) as error:
-        cmoc_merge_impl(repo, "feature")
+        cmoc_session_join_impl(repo)
 
     captured = capsys.readouterr()
     branches = _git(
@@ -1675,29 +1681,35 @@ def test_merge_rejects_explicit_non_cmoc_branch_before_git_merge(
         "branch",
         "--format=%(refname:short)",
     ).stdout.splitlines()
-    assert "cmoc 管理 branch 名" in error.value.message
-    assert "指定された branch: feature" in error.value.detail
+    assert "session branch 上" in error.value.message
+    assert f"現在の branch: {target_branch}" in error.value.detail
     assert (repo / "feature.txt").exists() is False
     assert "feature" in branches
     assert _git(repo, "status", "--porcelain").stdout == ""
     assert "手動解消が必要です" not in captured.err
 
 
-def test_merge_auto_resolve_failure_does_not_print_manual_resolution(
+def test_session_join_precondition_failure_does_not_print_manual_resolution(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """merge 開始前の自動解決失敗では merge state 手動解決を案内しない。"""
+    """merge 開始前の事前条件失敗では merge state 手動解決を案内しない。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
     _git(repo, "commit", "-m", "ignore cmoc")
+    _checkout_cmoc_branch(repo)
+    state_path = repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["apply"]["state"] = "running"
+    state_path.write_text(json.dumps(state), encoding="utf-8")
 
-    with pytest.raises(CmocError):
-        cmoc_merge_impl(repo, None)
+    with pytest.raises(CmocError) as error:
+        cmoc_session_join_impl(repo)
 
     captured = capsys.readouterr()
-    assert "Manual resolution is required" not in captured.err
+    assert "apply run" in error.value.message
+    assert "手動解消が必要です" not in captured.err
 
 
 def test_main_typer_functions_delegate_only_to_impls() -> None:
@@ -1720,7 +1732,7 @@ def test_main_typer_functions_delegate_only_to_impls() -> None:
     assert "cmoc_eval_oracles_impl(full=full)" in source
     assert "repeat_investigate_and_fix=repeat_investigate_and_fix" in source
     assert "repeat_improove_fixing_list=repeat_improove_fixing_list" in source
-    assert "cmoc_merge_impl()" in source
+    assert "cmoc_session_join_impl()" in source
 
 
 def test_cmoc_help_uses_cmoc_command_name() -> None:
@@ -1927,7 +1939,7 @@ def test_user_facing_error_text_does_not_keep_known_english_phrases() -> None:
         repo_root / "src" / "commons" / "errors.py",
         repo_root / "src" / "commons" / "repo.py",
         repo_root / "src" / "sub_commands" / "apply.py",
-        repo_root / "src" / "sub_commands" / "merge.py",
+        repo_root / "src" / "sub_commands" / "session_join.py",
     ]
     forbidden_fragments = [
         "Git repository root was not found.",
@@ -1994,16 +2006,18 @@ def test_bin_cmoc_reports_missing_venv_to_stdout(tmp_path: Path) -> None:
     assert "仮想環境 Python の実行可能性チェック" not in result.stdout
 
 
-def test_merge_conflict_prompt_always_forbids_oracles_edit() -> None:
-    """workspace-write の conflict 解消 prompt でも oracles は常に編集禁止にする。"""
+def test_session_join_conflict_prompt_allows_marker_only_oracle_fix() -> None:
+    """conflict 対象 oracle file は marker 解消に限って編集できる。"""
     repo = Path("/repo")
 
-    prompt = _conflict_prompt(repo, ["app.py"])
+    prompt = _conflict_prompt(repo, ["app.py", "oracles/spec.md"])
 
-    assert "`/repo/oracles` は編集禁止です。" in prompt
-    assert "解消してください: ['/repo/app.py']" in prompt
-    assert "解消してください: ['app.py']" not in prompt
-    assert "既に conflict がある場合を除いて" not in prompt
+    assert "`/repo/oracles` は編集禁止です。" not in prompt
+    assert "['/repo/app.py', '/repo/oracles/spec.md']" in prompt
+    assert "['app.py" not in prompt
+    assert "conflict marker 解消に限って編集できます" in prompt
+    assert "意味的な仕様改訂" in prompt
+    assert "conflict 対象外 oracle file の編集は禁止" in prompt
     assert "解決内容と未解決ファイルの有無を報告" in prompt
 
 
