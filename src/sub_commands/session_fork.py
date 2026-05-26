@@ -9,7 +9,6 @@ from commons.repo import (
     SESSION_BRANCH_PREFIX,
     active_session_ids_for_home_branch,
     assert_no_uncommitted_changes,
-    current_branch,
     ensure_cmoc_ignored,
     head_commit,
     initial_session_state,
@@ -75,8 +74,12 @@ def cmoc_session_fork_impl(repo_root: Path | None = None) -> None:
 
 def _current_local_branch(repo_root: Path) -> str:
     """現在 checkout している local branch 名を返す。"""
-    branch_name = current_branch(repo_root)
-    if not branch_name:
+    result = run_git(
+        repo_root,
+        ["symbolic-ref", "--quiet", "--short", "HEAD"],
+        check=False,
+    )
+    if result.returncode != 0:
         raise CmocError(
             "`cmoc session fork` は detached HEAD 上では実行できません。",
             [
@@ -84,6 +87,7 @@ def _current_local_branch(repo_root: Path) -> str:
                 "任意の commit から開始したい場合は、先に branch を作成してください。",
             ],
         )
+    branch_name = result.stdout.strip()
     result = run_git(
         repo_root,
         ["show-ref", "--verify", f"refs/heads/{branch_name}"],

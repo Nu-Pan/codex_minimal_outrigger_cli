@@ -312,7 +312,7 @@ def test_init_can_create_first_commit(tmp_path: Path) -> None:
     assert _git(repo, "status", "--porcelain").stdout == ""
 
 
-def test_branch_creates_session_branch_and_records_state(
+def test_session_fork_creates_session_branch_and_records_state(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -339,6 +339,107 @@ def test_branch_creates_session_branch_and_records_state(
     assert "(1/4) validate repository state" in output
     assert "session fork (1/4) validate repository state" not in output
     assert "create session branch attempt (1/10)" in output
+
+
+@pytest.mark.parametrize(
+    ("target_kind", "expected_message"),
+    [
+        ("commit_hash", "detached HEAD"),
+        ("remote_tracking_branch", "detached HEAD"),
+    ],
+)
+def test_session_fork_rejects_non_local_branch_start_points(
+    tmp_path: Path,
+    target_kind: str,
+    expected_message: str,
+) -> None:
+    """`cmoc session fork` は local branch 以外から開始しない。"""
+    repo = _init_repo(tmp_path)
+    start_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    start_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    _git(repo, "update-ref", "refs/remotes/origin/main", start_commit)
+    checkout_target = start_commit
+    if target_kind == "remote_tracking_branch":
+        checkout_target = "origin/main"
+    _git(repo, "checkout", checkout_target)
+
+    with pytest.raises(CmocError) as error:
+        cmoc_session_fork_impl(repo)
+
+    assert expected_message in error.value.message
+    assert _git(repo, "rev-parse", "HEAD").stdout.strip() == start_commit
+    assert start_branch in _git(repo, "branch", "--format=%(refname:short)").stdout
+    assert _session_state_paths(repo) == []
+
+
+def test_session_fork_rejects_cmoc_managed_branch_before_creating_state(
+    tmp_path: Path,
+) -> None:
+    """cmoc 管理 branch 上では session branch を二重作成しない。"""
+    repo = _init_repo(tmp_path)
+    _git(repo, "checkout", "-b", "cmoc/session/existing")
+
+    with pytest.raises(CmocError) as error:
+        cmoc_session_fork_impl(repo)
+
+    assert "cmoc 管理 branch" in error.value.message
+    branches = _git(repo, "branch", "--format=%(refname:short)").stdout
+    assert branches.count("cmoc/session/") == 1
+    assert _session_state_paths(repo) == []
+
+
+def test_session_fork_rejects_uncommitted_changes_before_branch_creation(
+    tmp_path: Path,
+) -> None:
+    """未コミット差分がある場合は branch 作成前に止める。"""
+    repo = _init_repo(tmp_path)
+    start_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    (repo / "README.md").write_text("changed\n", encoding="utf-8")
+
+    with pytest.raises(CmocError) as error:
+        cmoc_session_fork_impl(repo)
+
+    assert "未コミットの変更" in error.value.message
+    assert _git(repo, "branch", "--show-current").stdout.strip() == start_branch
+    assert _session_state_paths(repo) == []
+
+
+def test_session_fork_rejects_existing_active_session_for_home_branch(
+    tmp_path: Path,
+) -> None:
+    """同じ home branch の active session がある場合は新規作成しない。"""
+    repo = _init_repo(tmp_path)
+    home_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    start_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-m", "ignore cmoc")
+    write_session_state(
+        repo,
+        "existing",
+        {
+            "session": {
+                "state": "active",
+                "session_home_branch": home_branch,
+                "session_start_commit": start_commit,
+            },
+            "apply": {
+                "state": "ready",
+                "apply_branch": None,
+                "oracle_snapshot_commit": None,
+            },
+        },
+    )
+
+    with pytest.raises(CmocError) as error:
+        cmoc_session_fork_impl(repo)
+
+    assert "active session" in error.value.message
+    assert error.value.detail == "existing"
+    assert _git(repo, "branch", "--show-current").stdout.strip() == home_branch
+    assert _session_state_paths(repo) == [
+        repo / ".cmoc" / "sessions" / "existing.json",
+    ]
 
 
 def test_eval_oracles_writes_report_with_fake_codex(
@@ -2012,6 +2113,14 @@ def _checkout_cmoc_branch(repo: Path) -> None:
     )
     exclude = repo / ".git" / "info" / "exclude"
     exclude.write_text(f"{exclude.read_text(encoding='utf-8')}\n.cmoc/\n")
+
+
+def _session_state_paths(repo: Path) -> list[Path]:
+    """テスト repo の session state file 一覧を返す。"""
+    session_root = repo / ".cmoc" / "sessions"
+    if not session_root.exists():
+        return []
+    return sorted(session_root.glob("*.json"))
 
 
 def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
