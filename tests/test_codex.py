@@ -729,7 +729,6 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
     fake_bin.mkdir()
     args_file = tmp_path / "args.txt"
     prompts_file = tmp_path / "prompts.txt"
-    maintain_file = tmp_path / "maintain.txt"
     codex = fake_bin / "codex"
     codex.write_text(
         "\n".join(
@@ -754,12 +753,8 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
                 "  echo 'quota limit exhausted' >&2",
                 "  exit 1",
                 "  fi",
-                f"  if [ \"$(wc -l < {maintain_file})\" -lt 3 ]; "
-                "then exit 3; fi",
                 "fi",
                 "if [[ \"$PROMPT\" == *'Codex CLI の疎通確認担当'* ]]; then",
-                f"  if [ \"$(wc -l < {maintain_file})\" -lt 2 ]; "
-                "then exit 3; fi",
                 "  if [[ \"$PROMPT\" != "
                 "*'/memo` は読み書き禁止です。'* ]]; then exit 2; fi",
                 "  if [[ \"$PROMPT\" != *'ファイル編集は禁止です。'* ]]; then exit 2; fi",
@@ -781,10 +776,8 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
     calls: list[Path] = []
 
     def fake_maintain(repo_root: Path) -> bool:
-        """Codex CLI 呼び出し前の INDEX.md メンテナンスを記録する。"""
+        """quota 枯渇前の通常 Codex CLI 呼び出しだけを記録する。"""
         calls.append(repo_root)
-        with maintain_file.open("a", encoding="utf-8") as handle:
-            handle.write("maintain\n")
         return False
 
     monkeypatch.setattr("commons.indexing.maintain_indexes", fake_maintain)
@@ -801,7 +794,7 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
         )
     ]
     assert output.strip() == "resumed"
-    assert calls == [repo, repo, repo]
+    assert calls == [repo]
     assert len(log_contents) == 3
     assert all(
         content.count("## Codex Exec Call") == 1

@@ -116,7 +116,6 @@ def run_codex_exec(
                         purpose,
                         attempt,
                         schema_path,
-                        skip_index_maintenance,
                     )
                     result = run.result
                     last_log_path = run.log_path
@@ -245,10 +244,10 @@ def _wait_for_quota_and_resume(
     purpose: str,
     attempt: int,
     schema_path: Path | None,
-    skip_index_maintenance: bool,
 ) -> _CodexCommandRun:
     """quota 復活まで疎通確認を繰り返してから元セッションを再開する。"""
-    # 復活確認は低コスト model/effort の最小 prompt で行う。
+    # quota 待機中は余計な repo 作業を挟まず、低コスト model/effort の最小 prompt
+    # だけで利用可能性を確認する。
     while True:
         poll_prompt = _quota_poll_prompt(repo_root)
         print("quota poll: running minimal codex exec check")
@@ -259,7 +258,6 @@ def _wait_for_quota_and_resume(
             reasoning_effort=_POLL_REASONING_EFFORT,
         )
         poll_command.append("-")
-        _maintain_indexes_before_codex(repo_root, skip_index_maintenance)
         poll_run = _run_codex_command(
             repo_root,
             poll_command,
@@ -273,7 +271,6 @@ def _wait_for_quota_and_resume(
             poll_output = _read_last_message(poll_run.last_message_path)
             print(f"quota poll output: {_head80(poll_output)}")
             print("quota restored; resuming codex exec")
-            _maintain_indexes_before_codex(repo_root, skip_index_maintenance)
             return _run_codex_command(
                 repo_root,
                 command,
