@@ -14,6 +14,7 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError, ValidationError
 
 from .errors import CmocError
+from .repo import filter_oracle_file_paths, run_git
 from .subcommand_log import add_quota_wait
 from .timing import format_duration
 from .timestamps import make_timestamp
@@ -40,6 +41,14 @@ class _CodexCommandRun:
     log_path: Path
     last_message_path: Path
     command: list[str]
+
+
+@dataclass(frozen=True)
+class _OracleGuardSnapshot:
+    """workspace-write Codex 実行前の oracle 保護検査用 snapshot。"""
+
+    enabled: bool
+    head_commit: str | None
 
 
 def run_codex_exec(
@@ -352,6 +361,7 @@ def _run_codex_command(
     )
     # 前回 attempt の最終メッセージを誤読しないよう、起動前に消しておく。
     last_message_path.unlink(missing_ok=True)
+    oracle_guard = _start_oracle_guard(repo_root, command)
     started = perf_counter()
     result = subprocess.run(
         run_command,
@@ -377,12 +387,130 @@ def _run_codex_command(
         elapsed_seconds=perf_counter() - started,
         returncode=result.returncode,
     )
+    _assert_workspace_write_oracles_unchanged(repo_root, oracle_guard)
     return _CodexCommandRun(
         result=result,
         log_path=log_path,
         last_message_path=last_message_path,
         command=run_command,
     )
+
+
+def _start_oracle_guard(
+    repo_root: Path,
+    command: list[str],
+) -> _OracleGuardSnapshot:
+    """workspace-write 実行前 HEAD を記録する。"""
+    # Git repo 外や read-only 実行では oracle 変更検査の対象外にする。
+    if "--sandbox" not in command or not (repo_root / ".git").exists():
+        return _OracleGuardSnapshot(enabled=False, head_commit=None)
+    sandbox_index = command.index("--sandbox") + 1
+    if (
+        sandbox_index >= len(command)
+        or command[sandbox_index] != "workspace-write"
+    ):
+        return _OracleGuardSnapshot(enabled=False, head_commit=None)
+    result = run_git(
+        repo_root,
+        ["rev-parse", "--verify", "HEAD"],
+        check=False,
+    )
+    head = result.stdout.strip() if result.returncode == 0 else None
+    return _OracleGuardSnapshot(enabled=True, head_commit=head)
+
+
+def _assert_workspace_write_oracles_unchanged(
+    repo_root: Path,
+    snapshot: _OracleGuardSnapshot,
+) -> None:
+    """workspace-write 実行後の oracle ファイル変更を拒否する。"""
+    if not snapshot.enabled:
+        return
+    uncommitted = _uncommitted_oracle_file_paths(repo_root)
+    committed = _committed_oracle_file_paths(repo_root, snapshot.head_commit)
+    if not uncommitted and not committed:
+        return
+
+    detail_lines: list[str] = []
+    if uncommitted:
+        detail_lines.append("未コミット差分:")
+        detail_lines.extend(uncommitted)
+    if committed:
+        detail_lines.append("Codex CLI 実行中の commit range 変更:")
+        detail_lines.extend(committed)
+    raise CmocError(
+        "codex exec が oracles ファイルを変更しました。",
+        [
+            "oracles ファイルの変更を確認し、手動で解消してください。",
+            "作業ツリーと commit 履歴が許容できる状態になってから、cmoc を再実行してください。",
+        ],
+        "\n".join(detail_lines),
+    )
+
+
+def _uncommitted_oracle_file_paths(repo_root: Path) -> list[str]:
+    """未コミット差分に含まれる oracle ファイルを返す。"""
+    relative_paths: list[str] = []
+    diff = run_git(
+        repo_root,
+        ["diff", "--name-status", "-M", "HEAD", "--", "oracles"],
+    )
+    relative_paths.extend(_paths_from_name_status(diff.stdout))
+    status = run_git(
+        repo_root,
+        ["status", "--porcelain", "--untracked-files=all", "--", "oracles"],
+    )
+    for line in status.stdout.splitlines():
+        if line.startswith("?? "):
+            relative_paths.append(line[3:])
+    return filter_oracle_file_paths(repo_root, relative_paths)
+
+
+def _committed_oracle_file_paths(
+    repo_root: Path,
+    before_head: str | None,
+) -> list[str]:
+    """Codex 実行前後の HEAD range に含まれる oracle ファイルを返す。"""
+    if before_head is None:
+        return []
+    after = run_git(
+        repo_root,
+        ["rev-parse", "--verify", "HEAD"],
+        check=False,
+    )
+    if after.returncode != 0 or after.stdout.strip() == before_head:
+        return []
+    diff = run_git(
+        repo_root,
+        [
+            "diff",
+            "--name-status",
+            "-M",
+            f"{before_head}..HEAD",
+            "--",
+            "oracles",
+        ],
+    )
+    return filter_oracle_file_paths(
+        repo_root,
+        _paths_from_name_status(diff.stdout),
+    )
+
+
+def _paths_from_name_status(output: str) -> list[str]:
+    """`git diff --name-status` の変更前後 path を取り出す。"""
+    # rename/copy では旧 path と新 path の両方を検査し、oracle から外への移動も
+    # oracle ファイル変更として検出できるようにする。
+    paths: list[str] = []
+    for line in output.splitlines():
+        parts = line.split("\t")
+        if not parts:
+            continue
+        if parts[0].startswith(("R", "C")) and len(parts) >= 3:
+            paths.extend([parts[1], parts[2]])
+        elif len(parts) >= 2:
+            paths.append(parts[1])
+    return paths
 
 
 def _command_with_last_message(

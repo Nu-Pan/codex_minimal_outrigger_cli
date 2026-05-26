@@ -616,6 +616,25 @@ def list_oracle_files(repo_root: Path) -> list[Path]:
     )
 
 
+def filter_oracle_file_paths(
+    repo_root: Path,
+    relative_paths: list[str],
+) -> list[str]:
+    """root 相対 path から仕様上の oracles ファイルだけを返す。"""
+    # 削除済み path も判定できるよう、存在確認ではなく path と root .gitignore
+    # だけで oracles ファイル定義に合わせる。
+    candidates = sorted(
+        {
+            path
+            for path in relative_paths
+            if path.startswith("oracles/")
+            and Path(path).name != "INDEX.md"
+        }
+    )
+    ignored = _root_gitignored_paths(repo_root, candidates)
+    return [path for path in candidates if path not in ignored]
+
+
 def list_implementation_files(repo_root: Path) -> list[Path]:
     """仕様に従って実装ファイルを列挙する。"""
     # repo root 配下の全ファイルから、仕様上の除外対象だけを落とす。
