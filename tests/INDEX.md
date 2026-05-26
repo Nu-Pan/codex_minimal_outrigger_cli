@@ -80,30 +80,28 @@
 ## Summary
 
 - `commons.indexing.maintain_indexes` による `INDEX.md` メンテナンス処理を検証する pytest テスト群です。
-- gitignore 除外、空ディレクトリへの空 `INDEX.md` 作成、`build` / `tmp` の目次掲載、非 UTF-8 バイナリ除外、UTF-8 文字境界、`memo` ディレクトリの扱いを確認します。
+- gitignore 除外、空ディレクトリへの空 `INDEX.md` 作成、`build` / `tmp` の目次掲載、バイナリ除外、UTF-8 文字境界、`memo` ディレクトリの扱いを確認します。
 - 既存 `INDEX.md` の不備による再生成、Structured Output のリトライ、最新 `INDEX.md` の再利用、自動コミット範囲、`.cmoc` ignore の責務境界を確認します。
-- テスト用 git リポジトリを作成する `_init_repo` と、git コマンドを実行する `_git` の補助関数を含みます。
+- テスト用 git リポジトリを作る `_init_repo` と、git コマンドを実行する `_git` の補助関数を含みます。
 
 ## Read this when
 
 - `maintain_indexes` がどのファイル・ディレクトリを `INDEX.md` の目次対象にするか確認したいとき。
 - `INDEX.md` 生成時の gitignore 除外、空ディレクトリ処理、`build` / `tmp` の掲載と配置除外の関係を確認したいとき。
-- 非 UTF-8 バイナリ、UTF-8 文字境界、`memo` ディレクトリの扱いがどうなるかをテスト観点から確認したいとき。
-- 既存 `INDEX.md` が壊れている場合の再生成、Structured Output のリトライ、最新判定による Codex CLI 呼び出し有無を確認したいとき。
-- `INDEX.md` メンテナンス後に自動コミットがどの差分だけを含むかを確認したいとき。
-- テスト用 git リポジトリの作り方や、`_init_repo` / `_git` の使い方を確認したいとき。
+- 非 UTF-8 バイナリ、UTF-8 文字境界、`memo` ディレクトリ、既存エントリの再生成や再利用、Structured Output のリトライ挙動を確認したいとき。
+- `INDEX.md` メンテナンス後の自動コミット範囲や、`.cmoc` の ignore 保証をこのテスト観点から確認したいとき。
+- テスト用 git リポジトリの作り方や、補助関数 `_init_repo` / `_git` の使い方を確認したいとき。
 
 ## Do not read this when
 
-- `commons.indexing` の実装本体だけを追いたいとき。
-- `INDEX.md` の正本仕様そのものを知りたいとき。仕様断片は `oracles/app_specs/indexing.md` を読むべきです。
-- `cmoc init`、`cmoc session fork`、`cmoc session join`、`cmoc apply`、`cmoc eval-oracles` など個別サブコマンドの仕様を調べたいとき。
-- Codex CLI 呼び出し共通仕様、ログ保存、エラーハンドリングなど `INDEX.md` メンテナンス以外の実行仕様を調べたいとき。
-- `README.md`、`AGENTS.md`、`oracles`、`memo` の運用ルールや編集可否だけを確認したいとき。
+- `commons.indexing.maintain_indexes` の実装ロジックだけを追いたいときは、このテスト目次ではなく実装本体を読むべきです。
+- `INDEX.md` の正本仕様や生成・更新ルールを確認したいときは、`oracles/app_specs/indexing.md` を読むべきです。
+- `cmoc init`、`cmoc session`、`cmoc apply`、`cmoc eval-oracles` など、他のサブコマンドの仕様だけを調べたいときは目的外です。
+- Codex CLI の呼び出し仕様、ログ保存、エラーハンドリングなど、`INDEX.md` メンテナンス以外の共通仕様を知りたいときはこのファイルではありません。
 
 ## hash
 
-- 1c90b7ee2b0b5c82bca7456807efba2c157a977aac9ad26d7dac41a96b812cdf
+- 094d29ba140eed5ad41fa5246ae11a99c8dcaff0c547362954b9431135c684a0
 
 # `test_repo.py`
 
