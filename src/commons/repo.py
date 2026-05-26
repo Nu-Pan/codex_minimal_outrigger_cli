@@ -114,6 +114,20 @@ def session_state_path(repo_root: Path, session_id: str) -> Path:
     return repo_root / ".cmoc" / "sessions" / f"{session_id}.json"
 
 
+def session_state_repo_root(repo_root: Path, session_id: str) -> Path:
+    """session state を保持する main worktree root を返す。"""
+    common_dir = run_git(
+        repo_root,
+        ["rev-parse", "--path-format=absolute", "--git-common-dir"],
+    ).stdout.strip()
+    common_root = Path(common_dir).parent
+    if session_state_path(common_root, session_id).exists():
+        return common_root
+    if common_root != repo_root:
+        return common_root
+    return repo_root
+
+
 def initial_session_state(
     session_home_branch: str,
     session_start_commit: str,

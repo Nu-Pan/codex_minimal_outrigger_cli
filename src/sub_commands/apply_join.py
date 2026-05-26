@@ -14,6 +14,7 @@ from commons.repo import (
     read_session_state,
     run_git,
     session_id_from_branch,
+    session_state_repo_root,
     write_session_state,
 )
 from commons.timing import StepTimer, start_step
@@ -37,10 +38,10 @@ def cmoc_apply_join_impl(
 
     timer = StepTimer("apply join")
     start_step(timer, 1, 5, "validate apply state")
-    cmoc_root = _cmoc_root(repo_root)
-    os.chdir(cmoc_root)
     branch_name = current_branch(repo_root)
     session_id = session_id_from_branch(branch_name)
+    cmoc_root = session_state_repo_root(repo_root, session_id)
+    os.chdir(cmoc_root)
     state = read_session_state(cmoc_root, session_id)
     join_state = _validate_joinable_state(
         cmoc_root,
@@ -121,20 +122,6 @@ class _JoinState:
         self.apply_branch = apply_branch
         self.apply_worktree = apply_worktree
         self.oracle_snapshot_commit = oracle_snapshot_commit
-
-
-def _cmoc_root(repo_root: Path) -> Path:
-    """state を保持する main worktree root を返す。"""
-    if (repo_root / ".cmoc").exists():
-        return repo_root
-    common_dir = run_git(
-        repo_root,
-        ["rev-parse", "--path-format=absolute", "--git-common-dir"],
-    ).stdout.strip()
-    candidate = Path(common_dir).parent
-    if (candidate / ".cmoc").exists():
-        return candidate
-    return repo_root
 
 
 def _validate_joinable_state(

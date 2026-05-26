@@ -1326,6 +1326,35 @@ def test_apply_join_merges_completed_apply_branch_and_resets_state(
     assert "joined apply branch:" in output
 
 
+def test_apply_join_ignores_worktree_local_log_cmoc(
+    tmp_path: Path,
+) -> None:
+    """apply worktree 内のログ用 `.cmoc` ではなく main worktree の state を読む。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    (apply_worktree / ".cmoc" / "logs" / "sub_commands").mkdir(parents=True)
+    (apply_worktree / "feature.txt").write_text("implemented\n", encoding="utf-8")
+    _git(apply_worktree, "add", "feature.txt")
+    _git(apply_worktree, "commit", "-m", "implement feature")
+
+    cmoc_apply_join_impl(apply_worktree)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
+    assert state["apply"]["state"] == "ready"
+    assert _git(repo, "branch", "--list", apply_branch).stdout == ""
+    assert not apply_worktree.exists()
+
+
 def test_apply_join_stops_on_unexpected_diff_in_normal_mode(
     tmp_path: Path,
 ) -> None:
@@ -1412,6 +1441,31 @@ def test_apply_abandon_accepts_apply_branch_worktree(
         repo,
         oracle_snapshot,
     )
+
+    cmoc_apply_abandon_impl(apply_worktree)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert state["apply"]["state"] == "ready"
+    assert _git(repo, "branch", "--list", apply_branch).stdout == ""
+    assert not apply_worktree.exists()
+
+
+def test_apply_abandon_ignores_worktree_local_log_cmoc(
+    tmp_path: Path,
+) -> None:
+    """ログ用 `.cmoc` がある apply worktree からでも main worktree の state を更新する。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    (apply_worktree / ".cmoc" / "logs" / "sub_commands").mkdir(parents=True)
 
     cmoc_apply_abandon_impl(apply_worktree)
 
