@@ -123,7 +123,7 @@
 
 ## Do not read this when
 
-- `cmoc` のユーザー向け CLI 仕様やサブコマンドの入出力だけを確認したいとき。
+- `cmoc` のユーザー向け CLI 仕様や各サブコマンドの入出力だけを確認したいとき。
 - `commons.repo` 以外の本体実装や、別モジュールのテストだけを追いたいとき。
 - `oracles` の正本仕様そのものを確認したいときは、`oracles/app_specs` 側を読むべきです。
 - `INDEX.md` の自動生成やメンテナンス仕様だけを確認したいとき。
@@ -131,34 +131,35 @@
 
 ## hash
 
-- d28fe7ab47b84acce592861eec8be37f2b43db328f466cd6f340cc663f4a82b7
+- 69b45babcf3d26512bcb3a2185a5d2e85600aaa839790decee97b635476a5514
 
 # `test_subcommands.py`
 
 ## Summary
 
-- `tests/test_subcommands.py` は `cmoc` のサブコマンド本体と共通実行基盤の決定論的な挙動をまとめたテスト目次です。
-- `run_command`、`init`、`session`、`apply`、`eval-oracles`、`main`、`bin/cmoc` を横断して、ログ、終了コード、状態更新、エラー表示を確認します。
-- 後半では prompt、Structured Output schema、衝突解消補助、補助関数の並び順、`future annotations` 禁止などの周辺規約も扱います。
+- cmoc のサブコマンド本体と共通基盤の決定論的な制御ロジックをまとめて検証するテスト群です。
+- `src/main.py` の CLI ルーティング、`bin/cmoc` の起動前提、`commons` の実行ラッパー・ログ・タイミング・エラー整形を扱います。
+- `init`、`session fork/join/abandon`、`apply`、`eval-oracles` の state 遷移、ブランチ操作、レポート生成、conflict 解消を回帰テストします。
+- `oracles` の取り扱い、`INDEX.md` メンテナンス、Structured Output、prompt 制約、評価結果の集約も確認します。
+- テスト規約として、`from __future__ import annotations` の禁止や CLI 出力文言の安定性も検証します。
 
 ## Read this when
 
-- `run_command` の tee 出力、ログ保存、例外処理、終了コードの扱いを確認したいとき。
-- `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`eval-oracles` の主要分岐や state 更新を確認したいとき。
-- `main` の CLI 登録、`eval-oracles` と `eval-oracle` の互換 alias、`bin/cmoc` の起動経路を確認したいとき。
-- 要修正点リストや評価レポートの schema 検証、prompt 文字列、レポート保存の仕様を確認したいとき。
-- 共通エラーレポート、`commons.errors` の整形、`commons.repo` の状態補助、`commons.timing` の helper 順序、`future annotations` 禁止を確認したいとき。
+- このテストがどの実装や仕様に対応しているかを横断的に整理したいとき。
+- `src/main.py`、`src/commons/*`、`src/sub_commands/*` の変更が既存の回帰観点にどう影響するか確認したいとき。
+- `cmoc init`、`session`、`apply`、`eval-oracles` の制御ロジックやエラー処理をまとめて見直したいとき。
+- `bin/cmoc`、`oracles` の評価前メンテナンス、`INDEX.md` 生成、CLI ヘルプやコマンド登録を確認したいとき。
 
 ## Do not read this when
 
-- `src/sub_commands/*.py` の個別実装だけを追いたいときは、このテスト目次ではなく対応する本体モジュールを読むべきです。
-- `tests` 全体の配置規則や、他のテストファイルだけを確認したいときは、このファイルでは目的外です。
-- `oracles` 側の正本仕様そのものや `INDEX.md` 生成・更新ルールだけを確認したいときは、別の仕様文書を読むべきです。
-- `README.md`、`AGENTS.md`、`memo` の運用ルールや編集可否だけを確認したいときは、このテストファイルではありません。
+- 個別サブコマンドの仕様本文だけを確認したいときは、`oracles/app_specs/sub_commands/*` の該当文書を直接読むべきです。
+- 共通処理の実装だけを追いたいときは、`src/commons/*` の該当モジュールを直接読むべきです。
+- CLI の実装だけを追いたいときは、`src/main.py` と `src/sub_commands/*` を直接読むべきで、このテストファイル自体は不要です。
+- 利用方法や開発ルールだけを確認したいときは、`usage.md`、`branch_model.md`、`test_rules.md` などの別文書を読むべきです。
 
 ## hash
 
-- 0d3202da20b68d40adef7dc9274e5bc4d993f4d3e378d2d75340cdcfa0b547aa
+- c6ef8a1805ab47fb3cd0dac03831c19f75f631ebe2b3fdb7194ab70a6dd4be32
 
 # `test_timestamps.py`
 

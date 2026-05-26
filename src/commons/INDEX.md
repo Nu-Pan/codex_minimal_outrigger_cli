@@ -131,7 +131,7 @@
 
 - git リポジトリのルート探索、`cwd` 固定、`git` 実行の共通ラッパーをまとめたモジュールです。
 - 現在ブランチ名、`HEAD` commit、cmoc 管理ブランチ判定、`session state` の読み書きと参照を扱います。
-- `.cmoc` の追跡除外保証、root `.gitignore` の判定、未コミット差分や pathspec 単位の clean 判定を提供します。
+- .cmoc` の追跡除外保証、root `.gitignore` の判定、未コミット差分や pathspec 単位の clean 判定を提供します。
 - oracle / 実装ファイルの列挙、変更・削除検出、一時 index を使った commit と index 復元までを担います。
 
 ## Read this when
@@ -152,7 +152,7 @@
 
 ## hash
 
-- 06a392b356a2419d9034d3875f03e183de6ef8d29853fc0eb1146a1e44b04c4a
+- a65e99cc41639d0cf7c96e001e7d2008169e27c79c8523624a356e4f13788c14
 
 # `subcommand_log.py`
 

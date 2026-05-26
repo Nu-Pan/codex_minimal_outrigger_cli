@@ -25,25 +25,26 @@
 
 ## Summary
 
-- `cmoc apply` の本体実装で、session state の検証、apply worktree の作成、oracle/実装の不整合調査、apply report 生成と state 更新をまとめています。
-- Codex CLI に渡す調査・追従・レポート生成用の prompt、Structured Output schema、検証関数も含みます。
-- 実装対象のファイルは `oracles` そのものではなく、`cmoc apply` の orchestration と周辺の機械的な補助ロジックです。
+- `src/sub_commands/apply.py` は `cmoc apply` の本体実装で、session state の検証、apply worktree の作成、不整合調査と追従、レポート生成、state 更新をまとめています。
+- `codex exec` に渡す調査・整理・修正・レポート生成用の prompt、Structured Output schema、`INDEX.md` の維持、禁止パス検査も含みます。
+- 実装対象は `oracles` そのものではなく、`cmoc apply` の orchestration と周辺の機械的な補助ロジックです。
 
 ## Read this when
 
 - `cmoc apply` の実行フロー、session state の検証、apply worktree の作成、終了コードや state 更新までの実装・修正・レビューを行うとき。
-- oracle と実装の差分調査、`codex exec` への Structured Output 依頼、要修正点の整理・再整理ロジックを確認したいとき。
+- oracle と実装の不整合調査、`codex exec` への Structured Output 依頼、要修正点リストの整理・改善ロジックを確認したいとき。
 - `INDEX.md` の自動メンテナンス、apply report の YAML Front Matter と必須セクションの検証、レポート保存前の整形処理を扱いたいとき。
+- `cmoc apply` が内部で扱う調査対象選定、`--full` による部分・全体切り替え、レポート出力の流れを追いたいとき。
 
 ## Do not read this when
 
-- `cmoc apply fork`、`cmoc apply join`、`cmoc apply abandon` の各サブコマンド仕様だけを確認したいとき。
-- `cmoc session fork`、`cmoc session join`、`cmoc session abandon` など、apply 以外の session 運用だけを確認したいとき。
-- `oracles` 配下の正本仕様本文や、`INDEX.md` の生成ルールだけを確認したいとき。
+- `cmoc apply fork`、`cmoc apply join`、`cmoc apply abandon` の各サブコマンド仕様だけを確認したいときは、それぞれの仕様断片を直接読むべきです。
+- `cmoc session fork`、`cmoc session join`、`cmoc session abandon` など、apply 以外の session 運用だけを確認したいときは、このファイルではなく session 側を読むべきです。
+- `oracles` 配下の正本仕様本文や `INDEX.md` の生成ルールだけを確認したいときは、対応する仕様断片や `indexing.md` を読むべきです。
 
 ## hash
 
-- c554f36a841cb043d41da8ceef710d88337df3f1479efa43948231924803812a
+- e5c25e5dcd3292c8e750f22b23a81d06b06fedf29458ae836ac8a329b497f4b4
 
 # `apply_abandon.py`
 
@@ -58,40 +59,43 @@
 - `cmoc apply abandon` の本体実装、事前条件、cleanup 手順を確認したいとき。
 - 現在の session に紐づく未 join の apply run を破棄する処理や、`apply.state` を `ready` に戻す流れを追いたいとき。
 - apply branch と apply worktree の削除条件、warning の出し方、状態復元の挙動を実装・修正・レビューしたいとき。
+- `_cmoc_root` や session state の読み書き、apply abandon の出力内容と timing report を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply fork` の要修正点リスト作成や調査・修正ループの流れだけを確認したいとき。
-- `cmoc apply join` のマージ処理、強制解決、後始末だけを確認したいとき。
+- `cmoc apply fork` の要修正点整理や調査フローだけを確認したいとき。
+- `cmoc apply join` の merge 処理や後始末だけを確認したいとき。
 - `cmoc session fork`、`cmoc session join`、`cmoc session abandon` など、apply 以外のサブコマンドを確認したいとき。
+- `cmoc apply abandon` の仕様本文だけを見たいときは、実装ではなく `oracles/app_specs/sub_commands/apply_abandon.md` を読むべきです。
 
 ## hash
 
-- 54a743632d56ff0320b7ab9e4fea3892cafdbaf9057dbe949b55ba92f167e3d9
+- f281e41a0379d679b803e6f9de24858ea2e0481bd210a02b9ea043cc3b1d1d5f
 
 # `apply_join.py`
 
 ## Summary
 
-- `cmoc apply join` の本体処理を定義しており、完了済みの apply branch を session branch へ merge する流れを扱います。
-- state の検証、想定外の差分の検出、通常モードと強制モードの分岐、merge conflict 時の扱いを実装しています。
-- merge 後には `apply.state` を ready に戻し、条件を満たす場合に apply worktree と apply branch の削除まで行います。
+- `cmoc apply join` の本体処理を定義する Python モジュールです。
+- 完了済みの apply branch を session branch へ `git merge --no-ff` し、その後の state 更新と後始末までを扱います。
+- 直接呼び出し時の共通 runner 委譲、想定外の差分検出、`--force-resolve` による強制解決、merge conflict 時の報告を実装しています。
 
 ## Read this when
 
-- `cmoc apply join` の実装・修正・レビューをするとき。
-- 想定外の差分の検出、`--force-resolve` による強制解決、マージ後の state 更新や削除条件を確認したいとき。
-- `<cmoc-apply-branch>` を `<cmoc-session-branch>` に取り込む処理の前提条件と実行順序を把握したいとき。
+- `cmoc apply join` の実装・修正・レビューを行いたいとき。
+- `<cmoc-apply-branch>` を `<cmoc-session-branch>` に取り込む前提条件、実行順序、状態更新の流れを確認したいとき。
+- 想定外の差分の検出、通常モードと `--force-resolve` の分岐、merge conflict 時のエラー処理を追いたいとき。
+- merge 後の `apply.state` の更新や、apply branch / apply worktree の削除条件を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply fork` の生成処理や調査・修正ループだけを確認したいとき。
-- `cmoc session join` や `cmoc session abandon` など、session 側の完了・破棄手順だけを確認したいとき。
-- `cmoc apply join` の実装ではなく、一般的な `git merge` の説明だけで足りるとき。
+- `cmoc apply fork` の要修正点抽出や調査・修正ループだけを確認したいときは、このモジュールではなく `src/sub_commands/apply.py` や対応する正本仕様を読むべきです。
+- `cmoc session join` / `cmoc session abandon` など、session 側の開始・終了・破棄だけを確認したいときは、このモジュールは適しません。
+- 一般的な `git merge` の解説だけで足りるときや、`INDEX.md` の生成ルールそのものだけを確認したいときは、この実装ファイルを読む必要はありません。
 
 ## hash
 
-- 28801482feca085814f6a23528dbe812d89e3f70918a2dbe928a5f8759462da4
+- 7c04012e7755967e6fa8bfcbf9abfd130391b5e7dad6f7b0fb10bd06314df94d
 
 # `eval-oracles.py`
 
