@@ -73,7 +73,7 @@
 
 ## hash
 
-- da6fb4e9bc601ae30956b75bfcaf9e3aff37eb1cad5ed6bf58094e64ec5cf412
+- 8cffbbd037cfef7eddae93b596fc8e14a5e496a69ec1a9cc344e42ba99a22f43
 
 # `test_indexing.py`
 
@@ -133,28 +133,28 @@
 
 ## Summary
 
-- `cmoc` のサブコマンド本体に対する決定論的な制御ロジックのテスト集です。
-- `run_command` の標準出力・ログ tee、終了コード、エラーレポートの出力方針を検証します。
-- `init`、`session fork`、`eval-oracles` の主要な成功系・失敗系・検証補助ロジックをまとめて確認できます。
-- `cmoc apply`、`session join`、`session abandon` 系のインポートや共通ヘルパーも含め、サブコマンド周辺の振る舞いを横断的にたどれます。
+- cmoc のサブコマンド一式と共通エラー処理の決定論的な制御ロジックを検証するテスト群の入口です。
+- `init`、`session`、`apply`、`eval-oracles`、`main`、共通 runner、エラーレポート、prompt 仕様を横断します。
+- 実装や LLM の品質ではなく、事前条件、状態遷移、ブランチや worktree の後始末、CLI 露出を固定する役割があります。
 
 ## Read this when
 
-- `tests/test_subcommands.py` の目的や、どのサブコマンドの挙動を検証しているか確認したいとき。
-- `cmoc init`、`cmoc session fork`、`cmoc eval-oracles`、`run_command` の制御ロジックをテスト観点から見直したいとき。
-- `session_join`、`apply`、`apply_abandon`、`apply_join` などのヘルパーや関連実装が、どの検証に使われているか追いたいとき。
-- pytest による cmoc の決定論的テスト方針を確認したいとき。
+- `tests/test_subcommands.py` を修正・追加するとき。
+- `cmoc init`、`cmoc session`、`cmoc apply`、`cmoc eval-oracles` の決定論的な制御ロジックを確認したいとき。
+- `main` のコマンド登録、ヘルプ表示、終了コード、共通エラーレポートを検証したいとき。
+- prompt 文言、Structured Output schema、対象ファイル選択ルール、状態遷移や後始末の観点を見直したいとき。
+- Fake Codex CLI を使う pytest テストの書き方や、サブコマンド横断のテスト観点を整理したいとき。
 
 ## Do not read this when
 
-- 個別のサブコマンドの正本仕様だけが必要なときは、`oracles/app_specs/sub_commands/*.md` を直接読むべきです。
-- テストの書き方や置き場所などの一般規約だけを確認したいときは、`oracles/dev_rules/test_rules.md` を読むべきです。
-- 実装コードや実行ログだけで十分なときは、このテストファイルのルーティングを見る必要はありません。
-- `cmoc init`、`cmoc session fork`、`cmoc eval-oracles` 以外のサブコマンド仕様を深掘りしたいときは、対応する個別文書へ進むべきです。
+- サブコマンドのユーザー向け仕様だけを確認したいとき。
+- 実装コードの配置や設計方針だけを確認したいとき。
+- 個別サブコマンドの詳細仕様だけを確認したいときは、対応する仕様文書を直接読むべきです。
+- README やリポジトリ運用ルールだけを確認したいとき。
 
 ## hash
 
-- 3841a66ddd16638d114862d9b694316c1cd78784a8965b82119d941218b56e86
+- fb5eb5077d45a182deb927c55b0004edfca94588ba471fa2c456de757d79a45b
 
 # `test_timestamps.py`
 

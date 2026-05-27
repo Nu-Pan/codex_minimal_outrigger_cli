@@ -28,53 +28,51 @@
 
 ## Summary
 
-- `cmoc` CLI の Typer エントリーポイントで、`init`、`session`、`apply`、`eval-oracles` のトップレベルルーティングを定義します。
-- `session fork/join/abandon` と `apply fork/join/abandon` の CLI 入口を登録し、各サブコマンド実装への委譲をまとめています。
-- `eval-oracles` は `src/sub_commands/eval-oracles.py` を動的読み込みし、互換の `eval-oracle` hidden alias も含めています。
-- `main()` は Typer / Click の例外を `cmoc` 形式のエラーレポートへ変換し、`python src/main.py` の直接起動経路も担います。
+- `cmoc` CLI のエントリーポイントで、Typer アプリ本体と `session` / `apply` のサブアプリを組み立てています。
+- `init`、`session`、`apply`、`eval-oracles` の各コマンドを定義し、実処理は `src/sub_commands/` 側の実装へ委譲しています。
+- Typer / Click の例外処理をまとめて受け、`NoArgsIsHelpError` を含むエラーを `format_error_report()` で整形して終了コード付きで終了します。
 
 ## Read this when
 
-- `cmoc` のトップレベルコマンド登録と、`init`、`session`、`apply`、`eval-oracles` のルーティング構成を確認したいとき。
-- `session fork/join/abandon` や `apply fork/join/abandon` の CLI 入口がどこで登録されているかを確認したいとき。
-- `eval-oracles` の動的読み込みや、互換用の hidden alias `eval-oracle` の扱いを確認したいとき。
-- `NoArgsIsHelpError` を含む Typer / Click の例外を、`cmoc` 形式のエラーレポートへ変換する流れや、`python src/main.py` での直接起動経路を確認したいとき。
+- `cmoc` のエントリーポイント、Typer アプリの構成、サブコマンド登録を修正・レビューしたいとき。
+- `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`eval-oracles` とその引数定義を確認したいとき。
+- サブコマンドなし起動時の `NoArgsIsHelpError` の扱い、`--help` 相当の挙動、終了コードの伝播を確認したいとき。
+- Typer / Click の例外を `CmocError` と共通エラーレポートへ変換する起動経路を確認したいとき。
+- `python src/main.py` で直接起動する経路の振る舞いを確認したいとき。
 
 ## Do not read this when
 
-- 各サブコマンド本体の業務ロジックや状態遷移だけを確認したいときは、`src/sub_commands` 配下の該当モジュールを読むべきです。
-- 共通エラー整形の内部実装や、`commons.errors` の詳細だけを追いたいときは、このファイルではなく共通モジュールを読むべきです。
-- `cmoc` の利用手順や `oracles` 側の正本仕様だけを確認したいときは、この CLI  प्रवेश点ではなく該当文書を読むべきです。
-- `apply` や `session` の個別処理そのものを見たいだけで、トップレベルのルーティングや起動処理が不要なときは読む必要がありません。
+- 各サブコマンド本体の処理内容だけを確認したいときは、このファイルではなく `src/sub_commands/` 配下の実装を見るべきです。
+- 共通エラー型やエラーレポートの整形だけを確認したいときは、このファイルではなく `src/commons/errors.py` を見るべきです。
+- CLI の設計ルールや配置方針だけを確認したいときは、このファイルではなく `oracles/dev_rules/design_rules.md` を見るべきです。
+- サブコマンドごとの仕様断片だけを確認したいときは、このファイルではなく `oracles/app_specs/sub_commands/` 配下の文書を見るべきです。
 
 ## hash
 
-- 1d39a93edfb5c7866f8de10ccc4cb645f39cf6684d9ede63ee90507bed1e7431
+- fd4b3fe58ddc1bb32e637e83cc5ddca509458ade3b15a69c1c5d5bc677ba138b
 
 # `sub_commands`
 
 ## Summary
 
-- `src/sub_commands` は `cmoc` のサブコマンド本体をまとめる入口です。
-- `apply.py`、`apply_abandon.py`、`apply_join.py` が apply 系、`session_fork.py`、`session_join.py`、`session_abandon.py` が session 系を担当します。
-- `init.py` は初期化、`eval-oracles.py` は oracle 評価、`__init__.py` はパッケージ宣言のみを担当します。
-- このディレクトリは、各コマンド本体へ進むための目次として使います。
+- `src/sub_commands` は cmoc のサブコマンド本体をまとめる入口です。`__init__.py`、`init.py`、`eval_oracles.py`、`apply/`、`session/` への案内をまとめます。
+- `apply/INDEX.md` は `apply` 系の個別実装へ、`session/INDEX.md` は `session` 系の個別実装へ、それぞれ直接たどるための入口です。
+- この INDEX は、サブコマンド本体の配置先と各ファイルへの導線を整理するための目次です。
 
 ## Read this when
 
-- `cmoc apply` とその補助コマンドの実装・修正・レビューを確認したいとき。
-- `cmoc session fork`、`cmoc session join`、`cmoc session abandon` の実装・修正・レビューを確認したいとき。
-- `cmoc init` や `cmoc eval-oracles` の本体処理を追いたいとき。
-- `src/sub_commands` 配下のどのモジュールを読むべきかを、入口から判断したいとき。
-- パッケージ宣言だけの `__init__.py` を含め、各サブコマンド本体の配置を確認したいとき。
+- `cmoc apply` 系の本体処理と、その `fork/join/abandon` 実装の配置を確認したいとき。
+- `cmoc session` 系の本体処理と、その `fork/join/abandon` 実装の配置を確認したいとき。
+- `cmoc init` や `cmoc eval-oracles` の本体処理の置き場所を確認したいとき。
+- このディレクトリ配下のどのモジュールを読むべきか、入口から判断したいとき。
 
 ## Do not read this when
 
-- 共有ユーティリティや git 操作、`INDEX.md` 生成の共通処理だけを確認したいときは、`src/commons` を読むべきです。
-- CLI のトップレベル引数解釈やコマンド登録だけを確認したいときは、`src/main.py` を読むべきです。
-- `oracles` 側の正本仕様や、そのルーティング文書だけを確認したいときは、このディレクトリではなく `oracles` 配下を読むべきです。
-- `src/sub_commands` の個別実装ではなく、仕様断片だけを読みたいときは、対応する oracle 文書へ進むべきです。
+- 共有ユーティリティや git 操作の共通処理だけを確認したいときは、`src/commons` を読むべきです。
+- CLI のトップレベル登録やコマンドルーティング全体だけを確認したいときは、`src/main.py` を読むべきです。
+- 個別のサブコマンド仕様断片だけを確認したいときは、`oracles/app_specs/sub_commands/` 側を読むべきです。
+- `src/sub_commands` の個別実装ではなく、仕様文書だけを読みたいときは、対応する oracle 文書へ進むべきです。
 
 ## hash
 
-- a9b5d3d47f0ded2a9fa1914f0933efa75034d5386c6adc42cee523075c581efa
+- bc8f565ec785460cf8fd844be217b7e2e316270ab55a272bde6d2a07036153e5
