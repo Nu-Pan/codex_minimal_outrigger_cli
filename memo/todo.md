@@ -1,16 +1,7 @@
 ## branch, apply, merge 大工事の余波
 
-- apply_worktree の命名規則を決めて session state schema から apply_worktree を消す
-- `cmoc session report` が必要
-    - 今この瞬間に `cmoc session join` したら、どういう内容になるか？　をレポートさせる
-    - このまま `cmoc session join` に進んでよいかの判断材料
 - oracles として用語集が必要
     - 用語関係は将来的には cmoc の機能にしたいが、直近は oracles に手作業で書く
-
-## `eval-oracles` を `eval oracles` にしたい
-
-- 読み取り専用で評価を行う eval サブコマンド群の中の oracles という立ち位置にしたい
-- そこに eval skills みたいなのを入れたい
 
 # `eval-oracles` に用語統一機能を組み込みたい
 
@@ -19,20 +10,10 @@
 - oracles の規模が大きくなってきて、用語統一が大変だと感じるようになってきたので、早めに欲しい
 - あと、 AI に提供するインデクシング情報としても有用なはず
 
-## Codex CLI が oracles を触っちゃったら話
+# Codex CLI が oracles を触っちゃったら話
 
 - `ownership_and_safety.md` で書いてる内容、他の箇所でも言及していた気がする
 - サンドボックスで強固にガードしたい
-
-## cmoc が作業している間も oracles を編集したい
-
-- 今の仕様だと cmoc の作業中に oracles を触るとエラーで止まる
-- 流石にしんどいのでなんとかしたい
-
-## git 分岐・マージ周りの仕様を再整理したい
-
-- master へのマージではなく、分岐元ブランチへのマージとしたい
-- どのみち、 apply で専用ブランチを作成することを考えるとまとめて再検討が必要という話ではある
 
 # cmoc branch が未コミット差分ありでも通る仕様に戻したい
 
@@ -111,21 +92,36 @@
 
 - ２つのファイルの矛盾系の話で、全く同じ話が２回登場したりするのは流石にどうなの
 
+## Structured Output の schema で OpenAI の API 制限を組み込む
+
+- required は全部に付けないとダメらしい
+- ていうか fork の schema にハッシュ含めるのが違うって話かも？
+
 # 補助的なサブコマンド
 
-## `cmoc index` コマンドが欲しい
+## `cmoc eval oracles` を `cmoc eval oracles` にしたい
+
+- 読み取り専用で評価を行う eval サブコマンド群の中の oracles という立ち位置にしたい
+- そこに eval skills みたいなのを入れたい
+
+## `cmoc eval session`
+
+- `<cmoc-session-branch>` 上で行った変更を全て総合したら、結局どういうことなのか？　をレポートさせる
+- おかしなことが起きていないかに気づくための判断材料
+
+## `cmoc index` サブコマンド
 
 - `INDEX.md` の構築だけを行うコマンド
 - `INDEX.md` を最新に追従させてから Codex CLI を直接呼び出してなんかする…みたいな用途を想定
 
-## `cmoc commit` コマンドが欲しい
+## `cmoc commit` サブコマンド
 
 - 未コミット差分をコミットするだけ
 - Codex CLI を使ってコミットメッセージを自動生成してくれる
 - ただのヘルパー関数
 - ついでなので cmoc が生成するコミットメッセージも規約化したほうが良いか
 
-## `cmoc status` コマンドが欲しい
+## `cmoc status` サブコマンド
 
 - 現在のブランチが cmoc branch か
 - base commit は何か
@@ -134,7 +130,7 @@
 - apply が完了扱いか未完了扱いか
 - merge 可能そうか
 
-## `cmoc dector` コマンドが欲しい
+## `cmoc dector` サブコマンド
 
 - codex が呼べるか
 - Structured Output が使えるか
@@ -151,6 +147,7 @@
 ## `cmoc version` サブコマンド
 
 - ただのバージョン表示
+
 
 # AI が吐いてくる仕様文章の品質が終わっている
 
