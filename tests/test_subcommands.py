@@ -2018,6 +2018,31 @@ def test_apply_join_stops_on_apply_branch_non_implementation_diff(
     assert apply_worktree.exists()
 
 
+def test_apply_join_stops_on_apply_branch_rename_from_oracles(
+    tmp_path: Path,
+) -> None:
+    """apply branch 側の oracle から実装側への rename は停止対象にする。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    _git(apply_worktree, "mv", "oracles/spec.md", "feature.txt")
+    _git(apply_worktree, "commit", "-m", "rename oracle to implementation")
+
+    with pytest.raises(CmocError) as error_info:
+        cmoc_apply_join_impl(repo)
+
+    assert "想定外の差分" in error_info.value.message
+    assert f"{apply_branch}: oracles/spec.md" in error_info.value.detail
+    assert not (repo / "feature.txt").exists()
+    assert (repo / "oracles" / "spec.md").read_text(encoding="utf-8") == "spec\n"
+    assert _git(repo, "branch", "--list", apply_branch).stdout.strip()
+    assert apply_worktree.exists()
+
+
 def test_apply_join_force_resolves_apply_branch_non_implementation_diff(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -2082,6 +2107,36 @@ def test_apply_join_force_resolves_with_missing_apply_worktree(
     assert not apply_worktree.exists()
     assert list((repo / ".cmoc" / "worktrees" / "tmp").glob("*")) == []
     assert f"- {apply_branch}: INDEX.md" in output
+
+
+def test_apply_join_force_resolves_apply_branch_copy_from_oracles(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """強制モードは oracle 由来 copy entry 全体を snapshot へ戻す。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    (apply_worktree / "feature.txt").write_text("spec\n", encoding="utf-8")
+    _git(apply_worktree, "add", "feature.txt")
+    _git(apply_worktree, "commit", "-m", "copy oracle to implementation")
+
+    cmoc_apply_join_impl(repo, force_resolve=True)
+
+    output = capsys.readouterr().out
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert not (repo / "feature.txt").exists()
+    assert (repo / "oracles" / "spec.md").read_text(encoding="utf-8") == "spec\n"
+    assert state["apply"]["state"] == "ready"
+    assert f"- {apply_branch}: oracles/spec.md" in output
 
 
 def test_apply_abandon_deletes_apply_artifacts_and_resets_state(

@@ -3,6 +3,7 @@
 import json
 import os
 import tempfile
+from collections.abc import Callable
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
@@ -150,6 +151,13 @@ class _CleanupEvidence:
         self.warnings = warnings
 
 
+class _ChangedPathEntry:
+    """1 つの git diff entry が触る path 群。"""
+
+    def __init__(self, paths: list[str]) -> None:
+        self.paths = paths
+
+
 def _validate_joinable_state(
     repo_root: Path,
     state: dict[str, object],
@@ -251,47 +259,61 @@ def _assert_local_branch_exists(repo_root: Path, branch_name: str) -> None:
 def _unexpected_diffs(repo_root: Path, join_state: _JoinState) -> list[str]:
     """通常モードで停止対象にする想定外差分を列挙する。"""
     unexpected: list[str] = []
-    apply_paths = _changed_paths_between(
+    apply_entries = _changed_path_entries_between(
         repo_root,
         join_state.oracle_snapshot_commit,
         join_state.apply_branch,
     )
-    for path in apply_paths:
-        if not is_implementation_path(repo_root, path):
+    for entry in apply_entries:
+        invalid_paths = [
+            path
+            for path in entry.paths
+            if not is_implementation_path(repo_root, path)
+        ]
+        for path in invalid_paths:
             unexpected.append(f"{join_state.apply_branch}: {path}")
 
-    session_paths = _changed_paths_between(
+    session_entries = _changed_path_entries_between(
         repo_root,
         join_state.oracle_snapshot_commit,
         join_state.session_branch,
     )
-    for path in session_paths:
-        if not _is_oracle_path(path):
+    for entry in session_entries:
+        invalid_paths = [path for path in entry.paths if not _is_oracle_path(path)]
+        for path in invalid_paths:
             unexpected.append(f"{join_state.session_branch}: {path}")
     return unexpected
 
 
-def _changed_paths_between(
+def _changed_path_entries_between(
     repo_root: Path,
     base_commit: str,
     branch_name: str,
-) -> list[str]:
-    """base..branch の変更後 path を返す。"""
+) -> list[_ChangedPathEntry]:
+    """base..branch の変更 entry が触る path 群を返す。"""
     result = run_git(
         repo_root,
-        ["diff", "--name-status", "-M", f"{base_commit}..{branch_name}", "--"],
+        [
+            "diff",
+            "--name-status",
+            "-M",
+            "-C",
+            "--find-copies-harder",
+            f"{base_commit}..{branch_name}",
+            "--",
+        ],
     )
-    paths: list[str] = []
+    entries: list[_ChangedPathEntry] = []
     for line in result.stdout.splitlines():
         parts = line.split("\t")
         if not parts:
             continue
         status = parts[0]
         if status.startswith(("R", "C")) and len(parts) >= 3:
-            paths.append(parts[2])
+            entries.append(_ChangedPathEntry([parts[1], parts[2]]))
         elif len(parts) >= 2:
-            paths.append(parts[1])
-    return paths
+            entries.append(_ChangedPathEntry([parts[1]]))
+    return entries
 
 
 def _is_oracle_path(path: str) -> bool:
@@ -308,32 +330,42 @@ def _force_resolve_unexpected_diffs(
         repo_root,
         join_state.apply_branch,
         join_state.oracle_snapshot_commit,
-        [
-            path
-            for path in _changed_paths_between(
+        _unexpected_entry_paths(
+            _changed_path_entries_between(
                 repo_root,
                 join_state.oracle_snapshot_commit,
                 join_state.apply_branch,
-            )
-            if not is_implementation_path(repo_root, path)
-        ],
+            ),
+            lambda path: is_implementation_path(repo_root, path),
+        ),
         join_state.apply_worktree,
     )
     _revert_branch_paths(
         repo_root,
         join_state.session_branch,
         join_state.oracle_snapshot_commit,
-        [
-            path
-            for path in _changed_paths_between(
+        _unexpected_entry_paths(
+            _changed_path_entries_between(
                 repo_root,
                 join_state.oracle_snapshot_commit,
                 join_state.session_branch,
-            )
-            if not _is_oracle_path(path)
-        ],
+            ),
+            _is_oracle_path,
+        ),
         repo_root,
     )
+
+
+def _unexpected_entry_paths(
+    entries: list[_ChangedPathEntry],
+    is_expected_path: Callable[[str], bool],
+) -> list[str]:
+    """想定外 path を含む entry の全 path を revert 対象として返す。"""
+    paths: set[str] = set()
+    for entry in entries:
+        if any(not is_expected_path(path) for path in entry.paths):
+            paths.update(entry.paths)
+    return sorted(paths)
 
 
 def _revert_branch_paths(
