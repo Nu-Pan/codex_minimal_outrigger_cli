@@ -155,10 +155,11 @@
 - `src/main.py` や `src/sub_commands` の実装本体を追いたいときは、このテスト目次ではなく `src/` 側を読むべきです。
 - `INDEX.md` の生成・更新ルールだけを確認したいときは、`oracles/app_specs/indexing.md` を参照すべきです。
 - `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいときは、このテスト目次ではなく別の案内を参照すべきです。
+- `tests/test_codex.py` や `tests/test_indexing.py` など、別のテスト群の観点だけを追いたいときは、このファイルでは範囲が広すぎます。
 
 ## hash
 
-- 85a23a93a60ee6238e1028a89971a672d5aa205da3b2b5a8f1a241bcae0d9612
+- 96c69d8671d6311640b0857e80c85dd09864032165b4740b0da5f3fe4684eff5
 
 # `test_timestamps.py`
 

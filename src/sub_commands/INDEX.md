@@ -50,28 +50,27 @@
 
 ## Summary
 
-- `cmoc eval-oracles` の本体処理で、oracle ファイル群を選定して Codex CLI で評価し、人間向けレポートを作成します。
-- セッションブランチ上では `--full` の有無で部分評価・全体評価を切り替え、それ以外では全体評価として動作します。
-- 評価前に `.cmoc` の ignore を保証し、`INDEX.md` を保守したうえで、対象 oracle ごとに Structured Output を検証しながら評価します。
-- 評価結果は fatal / inconclusive / warning ごとに集約され、通常レポートと失敗時レポートの両方を生成できるようになっています。
+- `cmoc eval-oracles` の本体処理を案内する目次で、oracle ファイルを評価して人間向けレポートを生成する流れをまとめます。
+- ブランチが session branch かどうかと `--full` の有無に応じて、部分評価と全体評価を切り替える仕様へたどれます。
+- 評価前の `.cmoc` ignore 保証、`INDEX.md` の保守、Structured Output 検証、issue 集約、通常時と失敗時のレポート生成を確認できます。
 
 ## Read this when
 
 - `cmoc eval-oracles` の実装・修正・テスト・レビューを行うとき。
-- 部分評価と全体評価の切り替え条件、`--full` の扱い、対象 oracle ファイルの選び方を確認したいとき。
-- `.cmoc` の ignore 保証、`INDEX.md` の保守、`codex exec` による 1 ファイル単位の評価実行を確認したいとき。
-- Structured Output の検証、評価結果の集約、レポート生成、エラー時のレポート出力を確認したいとき。
+- `--full` の有無とブランチ種別による部分評価・全体評価の切り替え条件を確認したいとき。
+- `.cmoc` の ignore 保証、`INDEX.md` の保守、oracle ファイルの列挙と選定の流れを確認したいとき。
+- Structured Output の検証、fatal / inconclusive / warning の集約、レポート生成とエラー時の出力を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc eval-oracles` 以外のサブコマンドの実装や挙動だけを確認したいとき。
-- oracle 断片そのものの仕様だけを確認したいときで、この処理本体の流れは不要なとき。
-- `INDEX.md` の生成・更新ルールだけを確認したいときで、評価処理の実装は不要なとき。
-- レポート本文の細かな文言だけを確認したいときで、ファイル選択・評価実行・検証ロジックは不要なとき。
+- `cmoc eval-oracles` 以外のサブコマンドの実装や手順だけを確認したいとき。
+- oracle 断片そのものの仕様だけを読みたいときで、評価・集約・レポート生成の流れが不要なとき。
+- `INDEX.md` の生成・更新ルールだけを確認したいときで、評価ロジック自体は不要なとき。
+- レポート本文の細かな文言だけを確認したいときで、ファイル選定や Structured Output の検証は不要なとき。
 
 ## hash
 
-- 148ae2a414da66167dd7a8ba14a4005643d7a80bc80543f5a50522af5ffc2589
+- b2cf301036a8bc6a91ee72ebc1e88f8a7c710394a7f0d4c312a3562cc56cb7c9
 
 # `init.py`
 
