@@ -2,22 +2,21 @@
 
 import ast
 import inspect
-import importlib.util
 import json
 import re
 import subprocess
 import sys
 from pathlib import Path
-from types import ModuleType
 
 import pytest
 import typer
 from pytest import MonkeyPatch
 
-import sub_commands.apply as apply_module
-import sub_commands.session_abandon as session_abandon_module
-import sub_commands.session_fork as session_fork_module
-import sub_commands.session_join as session_join_module
+import sub_commands.apply.fork as apply_module
+import sub_commands.eval_oracles as eval_oracles_module
+import sub_commands.session.abandon as session_abandon_module
+import sub_commands.session.fork as session_fork_module
+import sub_commands.session.join as session_join_module
 from commons.codex import COST_PERFORMANCE_MODEL
 from commons.codex import COST_PERFORMANCE_REASONING_EFFORT
 from commons.codex import COMMIT_MESSAGE_MODEL
@@ -27,40 +26,22 @@ from commons.errors import CmocError
 from commons.errors import format_error_report
 from commons.repo import write_session_state
 from commons.timing import StepTimer, start_step
-from sub_commands.apply import cmoc_apply_impl
-from sub_commands.apply import _apply_prompt
-from sub_commands.apply import _DISCREPANCY_OUTPUT_SCHEMA
-from sub_commands.apply import _commit_all_changes
-from sub_commands.apply import _organize_prompt
-from sub_commands.apply import _validate_discrepancy_payload
-from sub_commands.apply_abandon import cmoc_apply_abandon_impl
-from sub_commands.apply_join import cmoc_apply_join_impl
+from sub_commands.apply.fork import cmoc_apply_impl
+from sub_commands.apply.fork import _apply_prompt
+from sub_commands.apply.fork import _DISCREPANCY_OUTPUT_SCHEMA
+from sub_commands.apply.fork import _commit_all_changes
+from sub_commands.apply.fork import _organize_prompt
+from sub_commands.apply.fork import _validate_discrepancy_payload
+from sub_commands.apply.abandon import cmoc_apply_abandon_impl
+from sub_commands.apply.join import cmoc_apply_join_impl
+from sub_commands.eval_oracles import cmoc_eval_oracles_impl
+from sub_commands.eval_oracles import _evaluation_prompt
 from sub_commands.init import cmoc_init_impl
-from sub_commands.session_abandon import cmoc_session_abandon_impl
-from sub_commands.session_fork import cmoc_session_fork_impl
-from sub_commands.session_join import cmoc_session_join_impl
-from sub_commands.session_join import _conflict_prompt
-from sub_commands.session_join import _files_with_conflict_markers
-
-
-def _load_eval_oracles_module() -> ModuleType:
-    """ハイフン付きファイル名の eval-oracles 本体モジュールを読む。"""
-    repo_root = Path(__file__).resolve().parents[1]
-    module_path = repo_root / "src" / "sub_commands" / "eval-oracles.py"
-    spec = importlib.util.spec_from_file_location(
-        "sub_commands.eval-oracles",
-        module_path,
-    )
-    if spec is None or spec.loader is None:
-        raise ImportError(f"cannot load subcommand module: {module_path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-eval_oracles_module = _load_eval_oracles_module()
-cmoc_eval_oracles_impl = eval_oracles_module.cmoc_eval_oracles_impl
-_evaluation_prompt = eval_oracles_module._evaluation_prompt
+from sub_commands.session.abandon import cmoc_session_abandon_impl
+from sub_commands.session.fork import cmoc_session_fork_impl
+from sub_commands.session.join import cmoc_session_join_impl
+from sub_commands.session.join import _conflict_prompt
+from sub_commands.session.join import _files_with_conflict_markers
 
 
 def test_python_sources_do_not_use_future_annotations() -> None:
@@ -1339,12 +1320,12 @@ def test_eval_oracles_uses_full_mode_on_apply_branch(
     assert "oracle_count: 2" in report
 
 
-def test_eval_oracles_body_uses_subcommand_file_name() -> None:
-    """`eval-oracles` の本体はサブコマンド名と同じファイル名に置く。"""
+def test_eval_oracles_body_uses_importable_module_name() -> None:
+    """`eval-oracles` の本体は通常 import 可能なモジュールに置く。"""
     repo_root = Path(__file__).resolve().parents[1]
 
-    body = repo_root / "src" / "sub_commands" / "eval-oracles.py"
-    legacy = repo_root / "src" / "sub_commands" / "eval_oracles.py"
+    body = repo_root / "src" / "sub_commands" / "eval_oracles.py"
+    legacy = repo_root / "src" / "sub_commands" / "eval-oracles.py"
     body_text = body.read_text(encoding="utf-8")
     assert "def cmoc_eval_oracles_impl" in body_text
     assert "spec_from_file_location" not in body_text
@@ -1355,7 +1336,7 @@ def test_eval_oracles_validation_helpers_are_ordered_caller_first() -> None:
     """同一ファイル内の validation helper は caller first に並べる。"""
     repo_root = Path(__file__).resolve().parents[1]
     source = (
-        repo_root / "src" / "sub_commands" / "eval-oracles.py"
+        repo_root / "src" / "sub_commands" / "eval_oracles.py"
     ).read_text(encoding="utf-8")
 
     callee = source.index("def _require_absolute_oracle_path(")
@@ -1410,7 +1391,7 @@ def test_apply_returns_complete_when_no_discrepancies(
     _git(repo, "commit", "-m", "oracle")
 
     monkeypatch.setattr(
-        "sub_commands.apply.maintain_indexes",
+        "sub_commands.apply.fork.maintain_indexes",
         lambda repo_root: False,
     )
     codex_kwargs: list[dict[str, object]] = []
@@ -1424,7 +1405,7 @@ def test_apply_returns_complete_when_no_discrepancies(
             return '{"git_head_commit_hash": null, "fixing_points": []}'
         return _apply_report(str(args[1]), "収束", [0])
 
-    monkeypatch.setattr("sub_commands.apply.run_codex_exec", fake_codex)
+    monkeypatch.setattr("sub_commands.apply.fork.run_codex_exec", fake_codex)
 
     exit_code = cmoc_apply_impl(repo)
 
@@ -1567,7 +1548,7 @@ def test_apply_commits_index_changes_when_no_discrepancies(
         return True
 
     monkeypatch.setattr(
-        "sub_commands.apply.maintain_indexes",
+        "sub_commands.apply.fork.maintain_indexes",
         fake_maintain_indexes,
     )
     codex_kwargs: list[dict[str, object]] = []
@@ -1581,7 +1562,7 @@ def test_apply_commits_index_changes_when_no_discrepancies(
             return '{"git_head_commit_hash": null, "fixing_points": []}'
         return _apply_report(str(args[1]), "収束", [0])
 
-    monkeypatch.setattr("sub_commands.apply.run_codex_exec", fake_codex)
+    monkeypatch.setattr("sub_commands.apply.fork.run_codex_exec", fake_codex)
 
     exit_code = cmoc_apply_impl(repo)
 
@@ -2024,7 +2005,7 @@ def test_apply_uses_investigate_repeat_option_for_loop_limit(
     _git(repo, "commit", "-m", "oracle")
 
     monkeypatch.setattr(
-        "sub_commands.apply.maintain_indexes",
+        "sub_commands.apply.fork.maintain_indexes",
         lambda repo_root: False,
     )
     codex_prompts: list[str] = []
@@ -2036,7 +2017,7 @@ def test_apply_uses_investigate_repeat_option_for_loop_limit(
             return _discrepancy_json("f")
         return _apply_report(str(args[1]), "未収束", [1, 1])
 
-    monkeypatch.setattr("sub_commands.apply.run_codex_exec", fake_codex)
+    monkeypatch.setattr("sub_commands.apply.fork.run_codex_exec", fake_codex)
 
     exit_code = cmoc_apply_impl(repo, repeat_investigate_and_fix=2)
 
@@ -2070,7 +2051,7 @@ def test_apply_improoves_fixing_list_until_same_result_or_limit(
     _git(repo, "commit", "-m", "oracle")
 
     monkeypatch.setattr(
-        "sub_commands.apply.maintain_indexes",
+        "sub_commands.apply.fork.maintain_indexes",
         lambda repo_root: False,
     )
     organize_prompts: list[str] = []
@@ -2096,7 +2077,7 @@ def test_apply_improoves_fixing_list_until_same_result_or_limit(
             return _apply_report(str(args[1]), "未収束", [1])
         return ""
 
-    monkeypatch.setattr("sub_commands.apply.run_codex_exec", fake_codex)
+    monkeypatch.setattr("sub_commands.apply.fork.run_codex_exec", fake_codex)
 
     exit_code = cmoc_apply_impl(
         repo,
@@ -2129,7 +2110,7 @@ def test_apply_fills_discrepancy_head_commit_hash(
     expected_head = _git(repo, "rev-parse", "HEAD").stdout.strip()
 
     monkeypatch.setattr(
-        "sub_commands.apply.maintain_indexes",
+        "sub_commands.apply.fork.maintain_indexes",
         lambda repo_root: False,
     )
     apply_prompts: list[str] = []
@@ -2146,7 +2127,7 @@ def test_apply_fills_discrepancy_head_commit_hash(
             return _apply_report(str(args[1]), "未収束", [2])
         return ""
 
-    monkeypatch.setattr("sub_commands.apply.run_codex_exec", fake_codex)
+    monkeypatch.setattr("sub_commands.apply.fork.run_codex_exec", fake_codex)
 
     assert cmoc_apply_impl(
         repo,
@@ -2180,7 +2161,7 @@ def test_apply_commits_each_discrepancy_before_next_codex_call(
     _git(repo, "commit", "-m", "oracle")
 
     monkeypatch.setattr(
-        "sub_commands.apply.maintain_indexes",
+        "sub_commands.apply.fork.maintain_indexes",
         lambda repo_root: False,
     )
     first_payload = json.loads(_discrepancy_json("first fix"))
@@ -2234,7 +2215,7 @@ def test_apply_commits_each_discrepancy_before_next_codex_call(
             return _apply_report(str(args[1]), "未収束", [2])
         return ""
 
-    monkeypatch.setattr("sub_commands.apply.run_codex_exec", fake_codex)
+    monkeypatch.setattr("sub_commands.apply.fork.run_codex_exec", fake_codex)
 
     assert cmoc_apply_impl(repo, repeat_investigate_and_fix=1) == 2
 
@@ -2349,7 +2330,7 @@ def test_apply_rejects_incomplete_report_from_codex(
     _git(repo, "commit", "-m", "oracle")
 
     monkeypatch.setattr(
-        "sub_commands.apply.maintain_indexes",
+        "sub_commands.apply.fork.maintain_indexes",
         lambda repo_root: False,
     )
 
@@ -2359,7 +2340,7 @@ def test_apply_rejects_incomplete_report_from_codex(
             return '{"git_head_commit_hash": null, "fixing_points": []}'
         return "収束\ncomplete report"
 
-    monkeypatch.setattr("sub_commands.apply.run_codex_exec", fake_codex)
+    monkeypatch.setattr("sub_commands.apply.fork.run_codex_exec", fake_codex)
 
     with pytest.raises(CmocError):
         cmoc_apply_impl(repo)
@@ -2570,7 +2551,7 @@ def test_apply_commits_untracked_oracle_changes_after_cmoc_guarantee(
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
 
     monkeypatch.setattr(
-        "sub_commands.apply.maintain_indexes",
+        "sub_commands.apply.fork.maintain_indexes",
         lambda repo_root: False,
     )
 
@@ -2589,7 +2570,7 @@ def test_apply_commits_untracked_oracle_changes_after_cmoc_guarantee(
             ]
         )
 
-    monkeypatch.setattr("sub_commands.apply.run_codex_exec", fake_codex)
+    monkeypatch.setattr("sub_commands.apply.fork.run_codex_exec", fake_codex)
 
     with pytest.raises(CmocError) as error:
         cmoc_apply_impl(repo)
@@ -2616,7 +2597,7 @@ def test_apply_commits_preexisting_staged_oracles_after_cmoc_guarantee(
     _git(repo, "add", "oracles/spec.md")
 
     monkeypatch.setattr(
-        "sub_commands.apply.maintain_indexes",
+        "sub_commands.apply.fork.maintain_indexes",
         lambda repo_root: False,
     )
 
@@ -2635,7 +2616,7 @@ def test_apply_commits_preexisting_staged_oracles_after_cmoc_guarantee(
             ]
         )
 
-    monkeypatch.setattr("sub_commands.apply.run_codex_exec", fake_codex)
+    monkeypatch.setattr("sub_commands.apply.fork.run_codex_exec", fake_codex)
 
     with pytest.raises(CmocError) as error:
         cmoc_apply_impl(repo)
@@ -2664,7 +2645,7 @@ def test_commit_all_changes_rechecks_forbidden_paths_after_index_update(
         return True
 
     monkeypatch.setattr(
-        "sub_commands.apply.maintain_indexes",
+        "sub_commands.apply.fork.maintain_indexes",
         fake_maintain_indexes,
     )
 
@@ -2791,7 +2772,7 @@ def test_commit_all_changes_rejects_memo_changes(
     (memo_root / "note.md").write_text("memo\n", encoding="utf-8")
     (repo / "app.py").write_text("changed\n", encoding="utf-8")
     monkeypatch.setattr(
-        "sub_commands.apply.maintain_indexes",
+        "sub_commands.apply.fork.maintain_indexes",
         lambda repo_root: False,
     )
 
@@ -3351,12 +3332,11 @@ def test_main_typer_functions_delegate_only_to_impls() -> None:
     assert "_run_command(" not in source
     assert "cmoc_init_impl()" in source
     assert "cmoc_session_fork_impl()" in source
-    assert (
-        '"sub_commands.eval-oracles"'
-        in source
-    )
-    assert "from sub_commands.eval_oracles" not in eval_oracles_source
-    assert '"eval-oracles.py"' in source
+    assert "importlib.util" not in source
+    assert "spec_from_file_location" not in source
+    assert "from sub_commands.eval_oracles import cmoc_eval_oracles_impl" in source
+    assert "eval-oracles.py" not in source
+    assert "eval_oracles_source" not in eval_oracles_source
     assert "cmoc_eval_oracles_impl(full=full)" in source
     assert "repeat_investigate_and_fix=repeat_investigate_and_fix" in source
     assert "repeat_improove_fixing_list=repeat_improove_fixing_list" in source
@@ -3548,9 +3528,9 @@ def test_user_facing_error_text_does_not_keep_known_english_phrases() -> None:
     target_paths = [
         repo_root / "src" / "commons" / "errors.py",
         repo_root / "src" / "commons" / "repo.py",
-        repo_root / "src" / "sub_commands" / "apply.py",
-        repo_root / "src" / "sub_commands" / "session_abandon.py",
-        repo_root / "src" / "sub_commands" / "session_join.py",
+        repo_root / "src" / "sub_commands" / "apply" / "fork.py",
+        repo_root / "src" / "sub_commands" / "session" / "abandon.py",
+        repo_root / "src" / "sub_commands" / "session" / "join.py",
     ]
     forbidden_fragments = [
         "Git repository root was not found.",

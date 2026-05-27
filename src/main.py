@@ -1,21 +1,18 @@
 """cmoc CLI エントリーポイント。"""
 
-import importlib.util
-from pathlib import Path
-from types import ModuleType
-
 import click
 import typer
 
 from commons.errors import CmocError
 from commons.errors import format_error_report
-from sub_commands.apply import cmoc_apply_impl
-from sub_commands.apply_abandon import cmoc_apply_abandon_impl
-from sub_commands.apply_join import cmoc_apply_join_impl
+from sub_commands.apply.abandon import cmoc_apply_abandon_impl
+from sub_commands.apply.fork import cmoc_apply_impl
+from sub_commands.apply.join import cmoc_apply_join_impl
+from sub_commands.eval_oracles import cmoc_eval_oracles_impl
 from sub_commands.init import cmoc_init_impl
-from sub_commands.session_abandon import cmoc_session_abandon_impl
-from sub_commands.session_fork import cmoc_session_fork_impl
-from sub_commands.session_join import cmoc_session_join_impl
+from sub_commands.session.abandon import cmoc_session_abandon_impl
+from sub_commands.session.fork import cmoc_session_fork_impl
+from sub_commands.session.join import cmoc_session_join_impl
 
 
 app: typer.Typer = typer.Typer(name="cmoc", no_args_is_help=True)
@@ -27,17 +24,6 @@ apply_app: typer.Typer = typer.Typer(
     name="apply",
     no_args_is_help=True,
 )
-_EVAL_ORACLES_PATH = Path(__file__).parent / "sub_commands" / "eval-oracles.py"
-_EVAL_ORACLES_SPEC = importlib.util.spec_from_file_location(
-    "sub_commands.eval-oracles",
-    _EVAL_ORACLES_PATH,
-)
-if _EVAL_ORACLES_SPEC is None or _EVAL_ORACLES_SPEC.loader is None:
-    raise ImportError(f"cannot load subcommand module: {_EVAL_ORACLES_PATH}")
-_eval_oracles_module = importlib.util.module_from_spec(_EVAL_ORACLES_SPEC)
-assert isinstance(_eval_oracles_module, ModuleType)
-_EVAL_ORACLES_SPEC.loader.exec_module(_eval_oracles_module)
-cmoc_eval_oracles_impl = _eval_oracles_module.cmoc_eval_oracles_impl
 
 app.add_typer(session_app, name="session")
 app.add_typer(apply_app, name="apply")
