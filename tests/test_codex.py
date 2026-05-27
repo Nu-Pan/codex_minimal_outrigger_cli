@@ -263,6 +263,62 @@ def test_run_codex_exec_rejects_committed_oracle_change_after_workspace_write(
     assert _git(repo, "status", "--porcelain", "--", "oracles").stdout == ""
 
 
+def test_run_codex_exec_rejects_reverted_oracle_commit_after_workspace_write(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """最終差分が消えても commit range 内の oracle 変更は拒否する。"""
+    repo = _init_git_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("initial spec\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md")
+    _git(repo, "commit", "-m", "add oracle")
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                "echo 'temporarily committed by codex' > oracles/spec.md",
+                "git add oracles/spec.md",
+                "git commit -m 'codex oracle change' >/dev/null",
+                "git revert --no-edit HEAD >/dev/null",
+                "echo 'ok' > \"$LAST\"",
+                "echo '{\"event\":\"done\"}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(
+            repo,
+            "prompt",
+            read_only=False,
+            skip_index_maintenance=True,
+        )
+
+    assert "Codex CLI 実行中の commit range 変更:" in error.value.detail
+    assert "oracles/spec.md" in error.value.detail
+    assert (
+        _git(repo, "diff", "--name-only", "HEAD~2..HEAD", "--", "oracles").stdout
+        == ""
+    )
+    assert _git(repo, "status", "--porcelain", "--", "oracles").stdout == ""
+
+
 def test_run_codex_exec_allows_oracles_index_and_ignored_paths(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,

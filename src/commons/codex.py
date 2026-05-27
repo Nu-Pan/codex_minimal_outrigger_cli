@@ -497,12 +497,14 @@ def _committed_oracle_file_paths(
     )
     if after.returncode != 0 or after.stdout.strip() == before_head:
         return []
-    diff = run_git(
+    log = run_git(
         repo_root,
         [
-            "diff",
+            "log",
+            "--format=",
             "--name-status",
             "-M",
+            "--diff-filter=ACDMRT",
             f"{before_head}..HEAD",
             "--",
             "oracles",
@@ -510,7 +512,7 @@ def _committed_oracle_file_paths(
     )
     return filter_oracle_file_paths(
         repo_root,
-        _paths_from_name_status(diff.stdout),
+        _paths_from_name_status(log.stdout),
     )
 
 
