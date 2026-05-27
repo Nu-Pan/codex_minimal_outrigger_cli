@@ -21,6 +21,7 @@ from commons.repo import (
     is_cmoc_branch,
     list_implementation_files,
     list_oracle_files,
+    read_session_state,
     read_session_start_commit,
     session_state_path,
     write_session_state,
@@ -888,6 +889,133 @@ def test_write_session_state_persists_only_oracle_schema(
             ),
             "oracle_snapshot_commit": "def456",
         },
+    }
+
+
+def test_read_session_state_rejects_unknown_state_values(
+    tmp_path: Path,
+) -> None:
+    """session/apply state は oracle 定義の列挙値だけ受け入れる。"""
+    repo = _init_repo(tmp_path)
+    session_id = "2026-05-10_22-21_10_123"
+    state_path = session_state_path(repo, session_id)
+    state_path.parent.mkdir(parents=True)
+    state_path.write_text(
+        json.dumps(
+            {
+                "session": {
+                    "state": "paused",
+                    "session_home_branch": "main",
+                    "session_start_commit": "abc123",
+                },
+                "apply": {
+                    "state": "ready",
+                    "apply_branch": None,
+                    "oracle_snapshot_commit": None,
+                },
+            },
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(CmocError) as error:
+        read_session_state(repo, session_id)
+
+    assert "session.state は" in error.value.actions[0]
+    assert "session.state: paused" in error.value.detail
+
+
+def test_read_session_state_rejects_ready_apply_with_run_fields(
+    tmp_path: Path,
+) -> None:
+    """apply.state が ready の永続 state は補助 field を null に保つ。"""
+    repo = _init_repo(tmp_path)
+    session_id = "2026-05-10_22-21_10_123"
+    state_path = session_state_path(repo, session_id)
+    state_path.parent.mkdir(parents=True)
+    state_path.write_text(
+        json.dumps(
+            {
+                "session": {
+                    "state": "active",
+                    "session_home_branch": "main",
+                    "session_start_commit": "abc123",
+                },
+                "apply": {
+                    "state": "ready",
+                    "apply_branch": (
+                        "cmoc/apply/2026-05-10_22-21_10_123/"
+                        "2026-05-10_22-22_10_123"
+                    ),
+                    "oracle_snapshot_commit": None,
+                },
+            },
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(CmocError) as error:
+        read_session_state(repo, session_id)
+
+    assert "apply.state が ready" in error.value.actions[0]
+    assert "apply.apply_branch:" in error.value.detail
+
+
+def test_write_session_state_rejects_completed_apply_without_run_fields(
+    tmp_path: Path,
+) -> None:
+    """completed/running apply は cleanup/join 用の補助 field を必須にする。"""
+    repo = _init_repo(tmp_path)
+
+    with pytest.raises(CmocError) as error:
+        write_session_state(
+            repo,
+            "2026-05-10_22-21_10_123",
+            {
+                "session": {
+                    "state": "active",
+                    "session_home_branch": "main",
+                    "session_start_commit": "abc123",
+                },
+                "apply": {
+                    "state": "completed",
+                    "apply_branch": None,
+                    "oracle_snapshot_commit": "def456",
+                },
+            },
+        )
+
+    assert "apply.apply_branch" in error.value.detail
+
+
+def test_write_session_state_allows_error_before_apply_run_fields_exist(
+    tmp_path: Path,
+) -> None:
+    """apply branch 作成前の失敗は error state として保存できる。"""
+    repo = _init_repo(tmp_path)
+    session_id = "2026-05-10_22-21_10_123"
+
+    state_path = write_session_state(
+        repo,
+        session_id,
+        {
+            "session": {
+                "state": "active",
+                "session_home_branch": "main",
+                "session_start_commit": "abc123",
+            },
+            "apply": {
+                "state": "error",
+                "apply_branch": None,
+                "oracle_snapshot_commit": None,
+            },
+        },
+    )
+
+    assert json.loads(state_path.read_text(encoding="utf-8"))["apply"] == {
+        "state": "error",
+        "apply_branch": None,
+        "oracle_snapshot_commit": None,
     }
 
 

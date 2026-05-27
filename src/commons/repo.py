@@ -11,6 +11,8 @@ from .errors import CmocError
 
 SESSION_BRANCH_PREFIX = "cmoc/session/"
 APPLY_BRANCH_PREFIX = "cmoc/apply/"
+SESSION_STATES = {"active", "joined", "abandoned", "error"}
+APPLY_STATES = {"ready", "running", "completed", "error"}
 
 
 def enter_repo_root(start: Path | None = None) -> Path:
@@ -156,6 +158,7 @@ def write_session_state(
     path = session_state_path(repo_root, session_id)
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = _session_state_payload(state)
+    _validate_session_state_schema(payload, path)
     path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True)
         + "\n",
@@ -245,7 +248,7 @@ def _validate_session_state_schema(
     payload: dict[str, object],
     path: Path,
 ) -> None:
-    """session state の固定スキーマに必要な構造だけを検証する。"""
+    """session state の固定スキーマと state 不変条件を検証する。"""
     session = payload.get("session")
     apply = payload.get("apply")
     if not isinstance(session, dict) or not isinstance(apply, dict):
@@ -258,12 +261,13 @@ def _validate_session_state_schema(
             str(path),
         )
 
-    _validate_required_string(
+    session_state = _validate_required_string(
         session,
         "state",
         "session.state",
         path,
     )
+    _validate_state_value(session_state, SESSION_STATES, "session.state", path)
     _validate_required_string(
         session,
         "session_home_branch",
@@ -276,7 +280,8 @@ def _validate_session_state_schema(
         "session.session_start_commit",
         path,
     )
-    _validate_required_string(apply, "state", "apply.state", path)
+    apply_state = _validate_required_string(apply, "state", "apply.state", path)
+    _validate_state_value(apply_state, APPLY_STATES, "apply.state", path)
     _validate_optional_string(apply, "apply_branch", "apply.apply_branch", path)
     _validate_optional_string(
         apply,
@@ -284,6 +289,7 @@ def _validate_session_state_schema(
         "apply.oracle_snapshot_commit",
         path,
     )
+    _validate_apply_state_invariants(apply, apply_state, path)
 
 
 def _validate_required_string(
@@ -291,7 +297,7 @@ def _validate_required_string(
     key: str,
     label: str,
     path: Path,
-) -> None:
+) -> str:
     """必須 string field が session state に存在することを検証する。"""
     value = section.get(key)
     if not isinstance(value, str) or not value:
@@ -299,6 +305,26 @@ def _validate_required_string(
             "session state ファイルの形式が不正です。",
             [
                 f"{label} を確認してください。",
+                "破損した session state を復旧してください。",
+            ],
+            f"{path}\n{label}: {value}",
+        )
+    return value
+
+
+def _validate_state_value(
+    value: str,
+    allowed_values: set[str],
+    label: str,
+    path: Path,
+) -> None:
+    """state field が oracle 定義の列挙値であることを検証する。"""
+    if value not in allowed_values:
+        choices = "/".join(sorted(allowed_values))
+        raise CmocError(
+            "session state ファイルの形式が不正です。",
+            [
+                f"{label} は {choices} のいずれかである必要があります。",
                 "破損した session state を復旧してください。",
             ],
             f"{path}\n{label}: {value}",
@@ -321,6 +347,72 @@ def _validate_optional_string(
                 "破損した session state を復旧してください。",
             ],
             f"{path}\n{label}: {value}",
+        )
+
+
+def _validate_apply_state_invariants(
+    apply: dict[object, object],
+    apply_state: str,
+    path: Path,
+) -> None:
+    """apply.state ごとの補助 field 不変条件を検証する。"""
+    apply_branch = apply.get("apply_branch")
+    oracle_snapshot_commit = apply.get("oracle_snapshot_commit")
+    if apply_state == "ready":
+        _validate_null_field(apply_branch, "apply.apply_branch", path)
+        _validate_null_field(
+            oracle_snapshot_commit,
+            "apply.oracle_snapshot_commit",
+            path,
+        )
+        return
+
+    if apply_state in {"running", "completed"}:
+        _validate_apply_run_fields(apply_branch, oracle_snapshot_commit, path)
+        return
+
+    if apply_state == "error" and (
+        apply_branch is not None or oracle_snapshot_commit is not None
+    ):
+        _validate_apply_run_fields(apply_branch, oracle_snapshot_commit, path)
+
+
+def _validate_null_field(value: object, label: str, path: Path) -> None:
+    """ready state で null 初期化される field を検証する。"""
+    if value is not None:
+        raise CmocError(
+            "session state ファイルの形式が不正です。",
+            [
+                f"apply.state が ready の場合は {label} を null にしてください。",
+                "破損した session state を復旧してください。",
+            ],
+            f"{path}\n{label}: {value}",
+        )
+
+
+def _validate_apply_run_fields(
+    apply_branch: object,
+    oracle_snapshot_commit: object,
+    path: Path,
+) -> None:
+    """active apply run の特定に必要な field を検証する。"""
+    if not isinstance(apply_branch, str) or not is_apply_branch(apply_branch):
+        raise CmocError(
+            "session state ファイルの形式が不正です。",
+            [
+                "apply.apply_branch は cmoc apply branch 名である必要があります。",
+                "破損した session state を復旧してください。",
+            ],
+            f"{path}\napply.apply_branch: {apply_branch}",
+        )
+    if not isinstance(oracle_snapshot_commit, str) or not oracle_snapshot_commit:
+        raise CmocError(
+            "session state ファイルの形式が不正です。",
+            [
+                "apply.oracle_snapshot_commit を確認してください。",
+                "破損した session state を復旧してください。",
+            ],
+            f"{path}\napply.oracle_snapshot_commit: {oracle_snapshot_commit}",
         )
 
 

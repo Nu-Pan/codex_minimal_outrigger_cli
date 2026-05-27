@@ -1983,7 +1983,8 @@ def test_apply_abandon_rejects_unknown_state_without_cleanup(
         cmoc_apply_abandon_impl(repo)
 
     state = json.loads(state_path.read_text(encoding="utf-8"))
-    assert "apply.state が不正" in error_info.value.message
+    assert "形式が不正" in error_info.value.message
+    assert "apply.state: paused" in error_info.value.detail
     assert state["apply"]["state"] == "paused"
     assert _git(repo, "branch", "--list", apply_branch).stdout.strip()
     assert apply_worktree.exists()
@@ -2953,6 +2954,14 @@ def test_session_join_precondition_failure_does_not_print_manual_resolution(
     state_path = repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
     state = json.loads(state_path.read_text(encoding="utf-8"))
     state["apply"]["state"] = "running"
+    state["apply"]["apply_branch"] = (
+        "cmoc/apply/2026-05-10_22-21_10_123/2026-05-10_22-22_10_123"
+    )
+    state["apply"]["oracle_snapshot_commit"] = _git(
+        repo,
+        "rev-parse",
+        "HEAD",
+    ).stdout.strip()
     state_path.write_text(json.dumps(state), encoding="utf-8")
 
     with pytest.raises(CmocError) as error:
@@ -3203,7 +3212,15 @@ def test_session_abandon_rejects_apply_run_before_cleanup(
     _checkout_session_branch(repo)
     state_path = repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
     state = json.loads(state_path.read_text(encoding="utf-8"))
-    state["apply"]["state"] = "active"
+    state["apply"]["state"] = "running"
+    state["apply"]["apply_branch"] = (
+        "cmoc/apply/2026-05-10_22-21_10_123/2026-05-10_22-22_10_123"
+    )
+    state["apply"]["oracle_snapshot_commit"] = _git(
+        repo,
+        "rev-parse",
+        "HEAD",
+    ).stdout.strip()
     state_path.write_text(json.dumps(state), encoding="utf-8")
 
     with pytest.raises(CmocError) as error:
