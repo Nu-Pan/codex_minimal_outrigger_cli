@@ -56,6 +56,59 @@ def test_maintain_indexes_generates_routing_entries_and_respects_gitignore(
     )
 
 
+def test_maintain_indexes_ignores_external_and_local_excludes_files(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """INDEX 生成対象は global/system と `.git/info/exclude` に依存しない。"""
+    global_ignore = tmp_path / "global-excludes"
+    global_ignore.write_text("/global-only.txt\n", encoding="utf-8")
+    global_config = tmp_path / "global-gitconfig"
+    global_config.write_text(
+        f"[core]\n\texcludesFile = {global_ignore.as_posix()}\n",
+        encoding="utf-8",
+    )
+    external_ignore = tmp_path / "system-excludes"
+    external_ignore.write_text("/system-only.txt\n", encoding="utf-8")
+    system_config = tmp_path / "system-gitconfig"
+    system_config.write_text(
+        f"[core]\n\texcludesFile = {external_ignore.as_posix()}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", global_config.as_posix())
+    monkeypatch.setenv("GIT_CONFIG_SYSTEM", system_config.as_posix())
+
+    repo = _init_repo(tmp_path)
+    (repo / ".git" / "info" / "exclude").write_text(
+        "/local-only.txt\n",
+        encoding="utf-8",
+    )
+    (repo / ".gitignore").write_text("# repo rules only\n", encoding="utf-8")
+    (repo / "global-only.txt").write_text("kept\n", encoding="utf-8")
+    (repo / "local-only.txt").write_text("kept\n", encoding="utf-8")
+    (repo / "system-only.txt").write_text("kept\n", encoding="utf-8")
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """INDEX 生成用の最小 Structured Output を返す。"""
+        return json.dumps(
+            {
+                "summary": ["summary"],
+                "read_this_when": ["read"],
+                "do_not_read_this_when": ["skip"],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    changed = maintain_indexes(repo)
+
+    content = (repo / "INDEX.md").read_text(encoding="utf-8")
+    assert changed is True
+    assert "# `global-only.txt`" in content
+    assert "# `local-only.txt`" in content
+    assert "# `system-only.txt`" in content
+
+
 def test_maintain_indexes_creates_empty_index_for_empty_directory(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,

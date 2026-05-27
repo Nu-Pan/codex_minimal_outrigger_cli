@@ -2,8 +2,10 @@
 
 import codecs
 import hashlib
+import os
 import re
 import subprocess
+import tempfile
 from pathlib import Path
 
 from .codex import (
@@ -282,14 +284,57 @@ def _is_gitignored(repo_root: Path, path: Path) -> bool:
     """gitignore 対象のファイル・ディレクトリか判定する。"""
     # tracked 状態に依存せず .gitignore pattern への一致だけを見る。
     relative = path.relative_to(repo_root).as_posix()
-    result = subprocess.run(
-        ["git", "check-ignore", "--no-index", "-q", "--", relative],
-        cwd=repo_root,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
+    env = _gitignore_git_env()
+    with tempfile.TemporaryDirectory(prefix="cmoc-index-gitignore-") as name:
+        temp_git_dir = Path(name) / ".git"
+        subprocess.run(
+            [
+                "git",
+                "--git-dir",
+                str(temp_git_dir),
+                "--work-tree",
+                str(repo_root),
+                "init",
+                "-q",
+            ],
+            cwd=repo_root,
+            check=True,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+        )
+        result = subprocess.run(
+            [
+                "git",
+                "--git-dir",
+                str(temp_git_dir),
+                "--work-tree",
+                str(repo_root),
+                "-c",
+                f"core.excludesFile={os.devnull}",
+                "check-ignore",
+                "--no-index",
+                "-q",
+                "--",
+                relative,
+            ],
+            cwd=repo_root,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+        )
     return result.returncode == 0
+
+
+def _gitignore_git_env() -> dict[str, str]:
+    """gitignore 評価用に外部 Git ignore 設定を遮断した env を返す。"""
+    env = dict(os.environ)
+    env["GIT_CONFIG_GLOBAL"] = os.devnull
+    env["GIT_CONFIG_SYSTEM"] = os.devnull
+    env["GIT_CONFIG_NOSYSTEM"] = "1"
+    return env
 
 
 def _validate_index_payload(value: object) -> None:
