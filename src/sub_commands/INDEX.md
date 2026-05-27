@@ -112,11 +112,11 @@
 
 ## Do not read this when
 
-- `cmoc session fork`、`cmoc session join`、`cmoc session abandon` のうち 1 つだけの実装や挙動を確認したいときは、このディレクトリ全体ではなく該当する `fork.py`、`join.py`、`abandon.py` を直接読むべきです。
+- `session fork`、`session join`、`session abandon` のうち 1 つだけの実装や挙動を確認したいときは、このディレクトリ全体ではなく該当する `fork.py`、`join.py`、`abandon.py` を直接読むべきです。
 - `cmoc session` 系の仕様断片だけを確認したいときは、`oracles/app_specs/sub_commands/` 側の該当文書を読むべきです。
 - パッケージ宣言の有無だけを確認したいときは、`__init__.py` だけを読むだけで足ります。
 - `cmoc apply` 系サブコマンドや、`init`、`eval-oracles` など session 以外の実装を確認したいときは、このディレクトリではなく対応する別ディレクトリを読むべきです。
 
 ## hash
 
-- 373611ca9e8d57f86c9d89d00bca7d57bdbc84a33398131b53102fe59b5dae18
+- 1d2275727371db17e67840652dafc3bd5d257922e8484d2d1211517708131088

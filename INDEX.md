@@ -180,13 +180,13 @@
 ## Summary
 
 - `cmoc` の実装本体を置く `src` ディレクトリの入口です。
-- `main.py`、`commons`、`sub_commands` をたどって、CLI 入口・共通処理・サブコマンド実装へ進めます。
-- この階層では、アプリ本体と再利用共通処理の位置関係を把握できます。
+- `main.py` から CLI 入口を追い、`commons` と `sub_commands` へ進めます。
+- この階層では、アプリ本体・共通処理・サブコマンド実装の配置関係を整理できます。
 
 ## Read this when
 
 - `cmoc` のソースコード全体の配置を確認したいとき。
-- `main.py` から CLI 入口を追いたいとき。
+- `main.py` から CLI の起動経路を追いたいとき。
 - `commons` の共通処理や `sub_commands` の個別実装へ進む前に、どこに何があるか整理したいとき。
 
 ## Do not read this when
@@ -197,7 +197,7 @@
 
 ## hash
 
-- 82a6e2b29daec947c4bb1bc55ed2dfd7460dd3f94bea624f70fb55f6b82f38d7
+- ba30a51daf998109214ed0cbc6a7d7e813a20ca0427b295268e68ae099114791
 
 # `test.sh`
 
@@ -227,24 +227,21 @@
 
 ## Summary
 
-- `tests` 配下の pytest 群の入口です。`conftest.py` の共通設定と、Codex 連携、INDEX.md メンテナンス、git リポジトリ共通処理、サブコマンド制御、ファイル命名、タイムスタンプの各テスト目次をまとめます。
-- `test_codex.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py`、`test_file_naming.py`、`test_timestamps.py` から、個別機能の検証範囲へ直接たどれます。
-- テスト固有の補助関数や fixture の位置を確認するための案内でもあります。
+- pytest の共通設定と、Codex CLI 呼び出し、INDEX.md メンテナンス、git リポジトリ共通処理、サブコマンド制御、ファイル命名、タイムスタンプ仕様を検証するテスト群の入口です。
+- `conftest.py`、`test_codex.py`、`test_file_naming.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py`、`test_timestamps.py` に分かれています。
 
 ## Read this when
 
-- `tests` 配下の pytest 群の役割分担を把握したいとき。
-- `conftest.py` の共通設定と、どのテストがどの機能を検証しているかを整理したいとき。
-- `test_codex.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py`、`test_file_naming.py`、`test_timestamps.py` のどれへ進むべきか判断したいとき。
-- テスト補助関数、fixture、Fake Codex CLI、git リポジトリ初期化の位置を確認したいとき。
+- `tests` 配下の pytest テスト全体が、どの機能群を検証しているか把握したいとき。
+- Codex CLI 呼び出し、`INDEX.md` メンテナンス、git 共通処理、サブコマンド制御、タイムスタンプ仕様のどこへ進むべきか整理したいとき。
+- `tests` ディレクトリの入口として、各テストファイルの役割をざっと確認したいとき。
 
 ## Do not read this when
 
-- 個別の実装ロジックや本番コードの振る舞いだけを確認したいとき。
-- `oracles` 配下の正本仕様そのものを読みたいとき。
-- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいとき。
-- 特定のテストファイル 1 本だけを深掘りしたいときは、この目次ではなく該当する `tests/*.py` を直接読むべきです。
+- `tests/test_codex.py` など、個別のテストファイルだけを確認したいときは該当ファイルを直接読むべきです。
+- `oracles/app_specs` 配下の正本仕様だけを確認したいときは、このテスト目次ではなく仕様断片を読むべきです。
+- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいときは、このディレクトリではなく別の案内を参照すべきです。
 
 ## hash
 
-- 86e531fddeab78c564f07bcd2134c1efb6adad02ae8d08c0f9ec6607e291fb51
+- 5d4035aaabad3f14fed913e83de83ef16cf51b1fafae236be97e02ec5d4126e3

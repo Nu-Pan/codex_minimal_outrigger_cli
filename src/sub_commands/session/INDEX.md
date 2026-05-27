@@ -49,14 +49,14 @@
 
 - `cmoc session fork` の本体処理を実装するモジュールです。
 - 現在 checkout している local branch を session home branch とみなし、その HEAD から session branch を作成します。
-- detached HEAD、cmoc 管理 branch、未コミット差分、既存 active session などの前提条件を検証します。
-- `.cmoc` の ignore 確認、session branch の作成、session state の記録、失敗時の rollback までを扱います。
+- detached HEAD、cmoc 管理 branch、未コミット差分、既存 active session などの事前条件チェックを扱います。
+- `.cmoc` の非追跡保証、session branch の一意作成、session state の記録、失敗時の rollback までを含みます。
 
 ## Read this when
 
-- `cmoc session fork` の実装・修正・テスト・レビューを行いたいとき。
+- `cmoc session fork` の実装・修正・テスト・レビューを行うとき。
 - 新しい session branch の作成条件や、現在 checkout 中の local branch の扱いを確認したいとき。
-- active session の重複防止や、`.cmoc` の追跡対象外保証を確認したいとき。
+- active session の重複防止や、`.cmoc` の追跡対象外保証、state 保存と rollback の流れを確認したいとき。
 - session branch 名の生成や、timestamp 衝突時のリトライ挙動を確認したいとき。
 
 ## Do not read this when
@@ -67,7 +67,7 @@
 
 ## hash
 
-- 41bb7dda3536f18f24acad384157770f07aeba89485f414e0723288514ed07e8
+- b16a9771b9753164ced9d20d2b579b322f01b01e9b080faf4a297fc73bcd03e3
 
 # `join.py`
 

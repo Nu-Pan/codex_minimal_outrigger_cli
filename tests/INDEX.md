@@ -146,18 +146,19 @@
 - `cmoc init`、`cmoc session fork/join/abandon`、`cmoc apply fork/join/abandon`、`cmoc eval-oracles` の決定論的な制御フロー、state 更新、branch/worktree の後始末を確認したいとき。
 - `main` のコマンド登録、help 表示、終了コード、共通エラーレポート、`bin/cmoc` の起動条件を確認したいとき。
 - prompt 文言、Structured Output schema、対象ファイル選択ルール、validation helper の順序、CLI から impl への delegate 方針を見直したいとき。
+- `commons.command_runner.run_command` の入出力 tee、エラー報告、`session` / `apply` / `eval-oracles` の制御ロジックを横断的に把握したいとき。
 
 ## Do not read this when
 
 - 個別のサブコマンド仕様だけを確認したいときは、`oracles/app_specs/sub_commands/*.md` を直接読むべきです。
 - 実装コードの配置や設計方針だけを確認したいときは、`oracles/app_specs` や `oracles/dev_rules` を参照すべきです。
-- `INDEX.md` の生成・更新ルールそのものだけを確認したいときは、`oracles/app_specs/indexing.md` を読むべきです。
+- `INDEX.md` の生成・更新ルールだけを確認したいときは、`oracles/app_specs/indexing.md` を読むべきです。
 - `tests/test_codex.py` や `tests/test_indexing.py` など、別のテスト群の観点だけを追いたいときはこのファイルでは範囲が広すぎます。
 - `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいときは、このテスト目次ではなく別の案内を参照すべきです。
 
 ## hash
 
-- 1129c4d48034451f84904979d4e286e004d402d0fc6243f6cd7cf59262d218fe
+- ca6751a490efea069169a286eef3b54c82fb4566915a524776c19e27a574900e
 
 # `test_timestamps.py`
 
