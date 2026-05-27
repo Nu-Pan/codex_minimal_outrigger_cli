@@ -443,22 +443,6 @@ def _write_report(
         lines.extend(referenced_path_rows)
     else:
         lines.append("No referenced files.")
-    lines.extend([""])
-    lines.extend(["## Specification-only basis", ""])
-    specification_basis_rows = _specification_only_basis_rows(
-        repo_root,
-        evaluations,
-    )
-    if specification_basis_rows:
-        lines.extend(
-            [
-                "| No. | Oracle file | Specification-only basis |",
-                "|---:|---|---|",
-            ]
-        )
-        lines.extend(specification_basis_rows)
-    else:
-        lines.append("No completed evaluations.")
     report_path.write_text("\n".join(lines), encoding="utf-8")
     return report_path
 
@@ -585,22 +569,6 @@ def _write_error_report(
         lines.extend(referenced_path_rows)
     else:
         lines.append("No referenced files.")
-    lines.extend([""])
-    lines.extend(["## Specification-only basis", ""])
-    specification_basis_rows = _specification_only_basis_rows(
-        repo_root,
-        evaluations,
-    )
-    if specification_basis_rows:
-        lines.extend(
-            [
-                "| No. | Oracle file | Specification-only basis |",
-                "|---:|---|---|",
-            ]
-        )
-        lines.extend(specification_basis_rows)
-    else:
-        lines.append("No completed evaluations.")
     report_path.write_text("\n".join(lines), encoding="utf-8")
     return report_path
 
@@ -855,29 +823,6 @@ def _line_range(issue: dict[str, object]) -> str:
     return f"{start}-{end}"
 
 
-def _specification_only_basis_rows(
-    repo_root: Path,
-    evaluations: list[dict[str, object]],
-) -> list[str]:
-    """評価ごとの specification_only_basis を表示行へ変換する。"""
-    result = []
-    for index, evaluation in enumerate(evaluations, start=1):
-        target_path = _display_path(
-            repo_root,
-            str(evaluation["target_oracle_path"]),
-        )
-        basis = _markdown_table_text(
-            str(evaluation["specification_only_basis"]),
-        )
-        result.append(
-            "| "
-            f"{index} | "
-            f"`{target_path}` | "
-            f"{basis} |"
-        )
-    return result
-
-
 def _referenced_path_rows(
     repo_root: Path,
     evaluations: list[dict[str, object]],
@@ -958,15 +903,6 @@ def _unique_strings(values: list[str]) -> list[str]:
         seen.add(value)
         result.append(value)
     return result
-
-
-def _markdown_table_text(value: str) -> str:
-    """Markdown table のセル内で崩れない本文へ整形する。"""
-    return (
-        value.replace("\\", "\\\\")
-        .replace("|", "\\|")
-        .replace("\n", "<br>")
-    )
 
 
 def _display_path(repo_root: Path, path_text: str) -> str:

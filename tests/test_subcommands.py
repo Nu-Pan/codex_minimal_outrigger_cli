@@ -821,11 +821,7 @@ def test_eval_oracles_writes_report_with_fake_codex(
     assert "result: ok" in report
     assert "## Fatal issues" in report
     assert "No issues." in report
-    assert "## Specification-only basis" in report
-    assert (
-        "| 1 | `oracles/spec.md` | oracles 配下の仕様だけを参照しました。 |"
-        in report
-    )
+    assert "## Specification-only basis" not in report
 
 
 def test_eval_oracles_writes_error_report_when_evaluation_fails(
@@ -1017,11 +1013,7 @@ def test_eval_oracles_writes_error_report_when_report_generation_fails(
     assert "- Exception message: `fake report failure`" in report
     assert "成功評価ではありません" in report
     assert "今回評価した範囲では問題点が検出されませんでした" not in report
-    assert "## Specification-only basis" in report
-    assert (
-        "| 1 | `oracles/spec.md` | oracles 配下の仕様だけを参照しました。 |"
-        in report
-    )
+    assert "## Specification-only basis" not in report
 
 
 def test_eval_oracles_report_aggregates_issues_by_severity(
@@ -1150,11 +1142,11 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
         "## Inconclusive issues",
         "## Warnings",
         "## Referenced files",
-        "## Specification-only basis",
     ]
     assert [report.index(section) for section in expected_sections] == sorted(
         report.index(section) for section in expected_sections
     )
+    assert "## Specification-only basis" not in report
     assert report.index("### FATAL-001: A fatal") < report.index(
         "### FATAL-002: B fatal"
     )
@@ -1170,15 +1162,6 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
     assert "| 1 | `oracles/a.md` | 2 |" in report
     assert "| 2 | `oracles/b.md` | 3 |" in report
     assert "| No. | Referenced file |" in report
-    assert "| No. | Oracle file | Specification-only basis |" in report
-    assert (
-        "| 1 | `oracles/a.md` | oracles 配下の仕様だけを参照しました。 |"
-        in report
-    )
-    assert (
-        "| 2 | `oracles/b.md` | oracles 配下の仕様だけを参照しました。 |"
-        in report
-    )
     assert "| 1 | `oracles/a.md` |" in report
     assert "| 2 | `oracles/INDEX.md` |" in report
     assert "| 3 | `oracles/b.md` |" in report
