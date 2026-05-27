@@ -31,6 +31,9 @@ INDEX_GENERATION_REASONING_EFFORT = COST_PERFORMANCE_REASONING_EFFORT
 _POLL_MODEL = COST_PERFORMANCE_MODEL
 _POLL_REASONING_EFFORT = "low"
 _QUOTA_POLL_INTERVAL_SECONDS = 30 * 60
+_CAPACITY_MESSAGE = "Selected model is at capacity"
+_CAPACITY_RETRY_LIMIT = 8
+_CAPACITY_INITIAL_RETRY_DELAY_SECONDS = 5
 _FORBIDDEN_REASONING_EFFORTS = {"xhigh"}
 
 
@@ -104,6 +107,16 @@ def run_codex_exec(
             purpose,
             attempt,
             schema_path,
+        )
+        run = _retry_after_capacity_if_needed(
+            repo_root,
+            run,
+            command,
+            prompt,
+            purpose,
+            attempt,
+            schema_path,
+            skip_index_maintenance,
         )
         result = run.result
         last_log_path = run.log_path
@@ -279,6 +292,16 @@ def _wait_for_quota_and_resume(
             attempt,
             None,
         )
+        poll_run = _retry_after_capacity_if_needed(
+            repo_root,
+            poll_run,
+            poll_command,
+            poll_prompt,
+            "quota recovery check",
+            attempt,
+            None,
+            skip_index_maintenance,
+        )
         poll_result = poll_run.result
         if poll_result.returncode == 0:
             try:
@@ -293,13 +316,23 @@ def _wait_for_quota_and_resume(
                 )
             print("quota restored; resuming codex exec")
             _maintain_indexes_before_codex(repo_root, skip_index_maintenance)
-            return _run_codex_command(
+            resume_run = _run_codex_command(
                 repo_root,
                 command,
                 prompt,
                 purpose,
                 attempt,
                 schema_path,
+            )
+            return _retry_after_capacity_if_needed(
+                repo_root,
+                resume_run,
+                command,
+                prompt,
+                purpose,
+                attempt,
+                schema_path,
+                skip_index_maintenance,
             )
         if not _last_message_indicates_quota_exhaustion(
             poll_run.last_message_path,
@@ -308,6 +341,43 @@ def _wait_for_quota_and_resume(
         wait_started = perf_counter()
         time.sleep(_QUOTA_POLL_INTERVAL_SECONDS)
         add_quota_wait(perf_counter() - wait_started)
+
+
+def _retry_after_capacity_if_needed(
+    repo_root: Path,
+    run: _CodexCommandRun,
+    command: list[str],
+    prompt: str,
+    purpose: str,
+    attempt: int,
+    schema_path: Path | None,
+    skip_index_maintenance: bool,
+) -> _CodexCommandRun:
+    """capacity 一時失敗なら同じ Codex CLI 呼び出しを指数 backoff で再実行する。"""
+    delay_seconds = _CAPACITY_INITIAL_RETRY_DELAY_SECONDS
+    current_run = run
+    for retry_index in range(1, _CAPACITY_RETRY_LIMIT + 1):
+        if not _last_message_indicates_capacity(current_run.last_message_path):
+            return current_run
+        print(
+            "selected model is at capacity; "
+            f"retrying codex exec ({retry_index}/{_CAPACITY_RETRY_LIMIT}) "
+            f"after {delay_seconds} sec"
+        )
+        time.sleep(delay_seconds)
+        delay_seconds *= 2
+        _maintain_indexes_before_codex(repo_root, skip_index_maintenance)
+        current_run = _run_codex_command(
+            repo_root,
+            command,
+            prompt,
+            purpose,
+            attempt,
+            schema_path,
+        )
+    if _last_message_indicates_capacity(current_run.last_message_path):
+        _raise_capacity_failure(current_run)
+    return current_run
 
 
 def _maintain_indexes_before_codex(
@@ -605,6 +675,27 @@ def _raise_quota_poll_failure(
     )
 
 
+def _raise_capacity_failure(run: _CodexCommandRun) -> NoReturn:
+    """capacity 一時失敗を規定回数リトライしても解消しない場合は中断する。"""
+    raise CmocError(
+        "codex exec が capacity リトライ後も失敗しました。",
+        [
+            "codex exec のログを確認してください。",
+            "Codex CLI または実行環境の状態を確認してから、cmoc を再実行してください。",
+        ],
+        "\n".join(
+            [
+                f"Log: {run.log_path}",
+                f"Last message: {run.last_message_path}",
+                "STDOUT:",
+                run.result.stdout,
+                "STDERR:",
+                run.result.stderr,
+            ]
+        ),
+    )
+
+
 def _last_message_indicates_quota_exhaustion(path: Path) -> bool:
     """最終出力メッセージだけを quota 枯渇判定の根拠にする。"""
     # oracle は stdout/stderr ではなく output-last-message の文言を判定基準にする。
@@ -613,6 +704,15 @@ def _last_message_indicates_quota_exhaustion(path: Path) -> bool:
     except ValueError:
         return False
     return "quota exhausted" in last_message.lower()
+
+
+def _last_message_indicates_capacity(path: Path) -> bool:
+    """最終出力メッセージだけを capacity 一時失敗判定の根拠にする。"""
+    try:
+        last_message = _read_last_message(path)
+    except ValueError:
+        return False
+    return _CAPACITY_MESSAGE in last_message
 
 
 def _extract_session_id(stdout: str, stderr: str) -> str | None:

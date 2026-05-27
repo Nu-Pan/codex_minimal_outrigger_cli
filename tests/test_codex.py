@@ -1063,6 +1063,121 @@ def test_resume_command_falls_back_to_last_when_resume_id_is_missing() -> None:
     ]
 
 
+def test_run_codex_exec_retries_zero_exit_capacity_last_message(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """0 終了でも last message が capacity なら同じ条件で再実行する。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    state = tmp_path / "attempts.txt"
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                f"STATE={state}",
+                "COUNT=0",
+                "if [ -f \"$STATE\" ]; then COUNT=$(cat \"$STATE\"); fi",
+                "COUNT=$((COUNT + 1))",
+                "echo \"$COUNT\" > \"$STATE\"",
+                "if [ \"$COUNT\" -eq 1 ]; then",
+                "  echo 'Selected model is at capacity' > \"$LAST\"",
+                "  exit 0",
+                "fi",
+                "echo 'done' > \"$LAST\"",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    sleeps: list[int] = []
+
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setattr(
+        "commons.codex.time.sleep",
+        lambda seconds: sleeps.append(seconds),
+    )
+
+    output = run_codex_exec(repo, "prompt", read_only=True)
+
+    log_files = sorted(
+        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+    )
+    assert output.strip() == "done"
+    assert state.read_text(encoding="utf-8").strip() == "2"
+    assert sleeps == [5]
+    assert len(log_files) == 2
+
+
+def test_run_codex_exec_fails_after_capacity_retry_limit(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """capacity が解消しない場合は 8 回だけ指数 backoff で再実行して失敗する。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    state = tmp_path / "attempts.txt"
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                f"STATE={state}",
+                "COUNT=0",
+                "if [ -f \"$STATE\" ]; then COUNT=$(cat \"$STATE\"); fi",
+                "COUNT=$((COUNT + 1))",
+                "echo \"$COUNT\" > \"$STATE\"",
+                "echo 'Selected model is at capacity' > \"$LAST\"",
+                "echo 'temporary capacity failure' >&2",
+                "exit 1",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    sleeps: list[int] = []
+
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setattr(
+        "commons.codex.time.sleep",
+        lambda seconds: sleeps.append(seconds),
+    )
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(repo, "prompt", read_only=True)
+
+    log_files = sorted(
+        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+    )
+    assert "codex exec が capacity リトライ後も失敗しました。" in (
+        error.value.message
+    )
+    assert state.read_text(encoding="utf-8").strip() == "9"
+    assert sleeps == [5, 10, 20, 40, 80, 160, 320, 640]
+    assert len(log_files) == 9
+
+
 def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
