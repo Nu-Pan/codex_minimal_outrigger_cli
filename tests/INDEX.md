@@ -28,30 +28,28 @@
 ## Summary
 
 - `tests/test_codex.py` は `commons.codex.run_codex_exec()` とその周辺の共通補助処理を検証するテスト群の入口です。
-- Structured Output の schema ファイル生成、JSON/テキストの再試行、意味的検証失敗、出力プレビューを扱います。
+- Structured Output の schema ファイル生成、JSON / テキストの再試行、意味的検証失敗、出力プレビューを扱います。
 - Codex CLI 呼び出しログ、`subcommand_log` への通知、`INDEX.md` 事前メンテナンスと `skip_index_maintenance`、workspace-write 時の oracle 保護を確認します。
 - quota 枯渇時の待機・疎通確認・`--resume` 再実行、`session_id` 抽出、`_resume_command`、`_prepare_codex_exec_paths` も扱います。
 - 末尾にはテスト用 git リポジトリ初期化用の `_init_git_repo` / `_git` と、`_FailingTextIO` / `_RecordingTextIO` があります。
 
 ## Read this when
 
-- `run_codex_exec()` の引数や `read_only` / `workspace-write`、`--json`、`--output-last-message`、`--output-schema`、`reasoning_effort` の扱いを確認したいとき。
-- Structured Output の parse 失敗、schema 不一致、意味的検証失敗に対するリトライとエラー表示を確認したいとき。
-- Codex CLI 呼び出しログ、`subcommand_log` への tee、出力の先頭 80 文字プレビュー、quota 枯渇時の再実行フローを確認したいとき。
-- `INDEX.md` の事前メンテナンスや `skip_index_maintenance`、workspace-write 時の oracle 変更ガードを確認したいとき。
-- `session_id` 抽出、`_resume_command`、`_prepare_codex_exec_paths`、`_TeeTextIO`、`_init_git_repo` / `_git` の補助テストを追いたいとき。
+- `commons.codex.run_codex_exec()` の引数、`read_only` / `workspace-write`、`--json`、`--output-last-message`、`--output-schema`、`reasoning_effort` の扱いを確認したいとき。
+- Structured Output の parse 失敗、schema 不一致、意味的検証失敗に対するリトライやエラー表示を確認したいとき。
+- Codex CLI 呼び出しログ、`subcommand_log` への通知、出力プレビュー、quota 枯渇時の再実行フローを確認したいとき。
+- `INDEX.md` 事前メンテナンス、`skip_index_maintenance`、workspace-write 時の oracle 保護、`session_id` 抽出や `_resume_command` を追いたいとき。
 
 ## Do not read this when
 
-- `tests/test_indexing.py` の `INDEX.md` メンテナンス処理そのものを確認したいとき。
+- `tests/test_indexing.py` の `INDEX.md` 保守処理そのものを確認したいとき。
 - `tests/test_subcommands.py` や `src/sub_commands` の個別サブコマンド仕様だけを確認したいとき。
-- `tests/test_repo.py` や `tests/test_timestamps.py` の git 共通処理・時刻書式だけを確認したいとき。
+- `tests/test_repo.py` や `tests/test_timestamps.py` の git 共通処理や時刻書式だけを確認したいとき。
 - `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいとき。
-- このファイル内のテスト補助関数だけを読みたいとき。
 
 ## hash
 
-- 9d343ecfb6a35af3c6f2691c13f1f227824ae6429a3625aaa81f34fedc0de834
+- c6d37ce69f20abc3676195fedc5242d60af2e99161514311ea4c104a28957956
 
 # `test_file_naming.py`
 

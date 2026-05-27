@@ -2,28 +2,27 @@
 
 ## Summary
 
-- `src/commons` は、`cmoc` 全体で共有する基盤モジュールをまとめたディレクトリで、エラー処理、サブコマンド実行制御、`codex exec` 連携、リポジトリ操作、ログ、タイムスタンプ、経過時間計測、`INDEX.md` 生成を含みます。
-- `command_runner.py` や `errors.py` は CLI の横断的な実行制御とエラーレポート整形を担い、`repo.py` は git リポジトリ探索や `.cmoc` 関連 state を扱います。
-- `codex.py` は `codex exec` の共通ラッパーと Structured Output 検証をまとめ、`indexing.py` は `INDEX.md` メンテナンス処理の本体です。
-- `subcommand_log.py`、`timestamps.py`、`timing.py` は、それぞれ tee ログ、タイムスタンプ生成、ステップ別経過時間の表示を担当します。
+- `src/commons` 配下の共有モジュールをまとめた入口で、`codex`、`command_runner`、`errors`、`indexing`、`repo`、`subcommand_log`、`timestamps`、`timing` への案内を提供します。
+- 各サブコマンドで共通利用される実行制御、エラー整形、リポジトリ探索、ログ保存、タイムスタンプ生成、時間計測の担当範囲を整理するための目次です。
+- 個別実装へ進む前に、どの共通機能がどのファイルにあるかを素早く判断するためのルーティング文書です。
 
 ## Read this when
 
-- `cmoc` の共通エラー処理、ログ、タイムスタンプ、経過時間表示、リポジトリ探索などの横断機能を確認したいとき。
-- `codex exec` の呼び出し、Structured Output の検証、`INDEX.md` 生成、再試行や quota 待機の流れを確認したいとき。
-- サブコマンド共通の実行制御や、`<repo-root>` 解決、`typer.Exit` の扱い、終了時レポートの出力を見直したいとき。
-- git リポジトリのルート探索、session / apply ブランチ判定、`.cmoc` 配下の state やログ保存先を確認したいとき。
+- `src/commons` に置かれた共通ユーティリティの全体像を確認したいとき。
+- 共有エラー処理、リポジトリ探索、ログ出力、タイムスタンプ生成、経過時間計測のどこへ進むべきか整理したいとき。
+- 各サブコマンドで共通利用される機能の入口をまとめて把握したいとき。
+- `src/commons` 配下の個別モジュールへたどる前に、役割分担を先に確認したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの業務ロジックや CLI 引数定義だけを確認したいときは、`src/sub_commands` 側を読むべきです。
-- `cmoc` のユーザー向け仕様や正本断片だけを確認したいときは、`oracles` 側を読むべきです。
-- `INDEX.md` の生成・更新ルールそのものだけを確認したいときは、`src/commons/indexing.py` ではなく対応する正本仕様を読むべきです。
-- 共通処理ではなく、特定の 1 機能だけを深掘りしたいときは、このディレクトリ全体を読む必要はありません。
+- 個別サブコマンドの業務ロジックだけを確認したいときは、`src/sub_commands` 側を直接読むべきです。
+- `codex exec` や `apply` など、`src/commons` 以外の機能の仕様だけを確認したいときは、この目次を読む必要はありません。
+- 特定の共有モジュールの実装詳細を知りたいときは、`codex.py`、`command_runner.py`、`errors.py`、`indexing.py`、`repo.py`、`subcommand_log.py`、`timestamps.py`、`timing.py` を直接参照すべきです。
+- `INDEX.md` の生成・更新ルールそのものだけを確認したいときは、`src/commons/indexing.py` を読むべきです。
 
 ## hash
 
-- cbebfbeb5f2fe97f7e82b31ed5d25eea014f26d2c3b3d34e43e18455f68a451e
+- 2adb2bce9291af358a5cdecb51f152bf8de10f8c3aa468f1cb03120bedc6bfd1
 
 # `main.py`
 
