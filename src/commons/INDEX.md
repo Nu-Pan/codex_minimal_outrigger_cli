@@ -105,26 +105,27 @@
 
 - `<repo-root>` 配下を走査して `INDEX.md` の配置対象を列挙し、深い階層から順に更新するメンテナンス処理をまとめるモジュールです。
 - .gitignore、`.git/info/exclude`、`memo`、`build` / `tmp`、dotfiles、symlink、バイナリ、`INDEX.md` 自身を除外して、目次に載せる直下項目を決めます。
-- 既存 `INDEX.md` のブロックを解析し、ハッシュが一致して固定フォーマットも保たれているものは再利用し、崩れたものは再生成します。
+- 既存の `INDEX.md` ブロックを解析し、ハッシュが一致して固定フォーマットも保たれているものは再利用し、崩れたものは再生成します。
 - Codex CLI の Structured Output で `summary`、`read_this_when`、`do_not_read_this_when` を生成し、差分が出た場合は `INDEX.md` の変更だけを自動コミットします。
 
 ## Read this when
 
 - `INDEX.md` の自動配置・更新ルールや、対象ディレクトリの列挙方法を実装・修正したいとき。
 - `.gitignore`、`.git/info/exclude`、`memo`、`build` / `tmp`、dotfiles、symlink、バイナリなどの除外条件を確認したいとき。
-- 既存の目次ブロックの再利用、再生成、ハッシュ一致判定、空ディレクトリの扱いを見直したいとき。
-- Structured Output の検証、目次生成用プロンプトの組み立て、Codex 呼び出し、自動コミットの流れを追いたいとき。
+- 既存の `INDEX.md` の再利用、再生成、ハッシュ一致判定、空ディレクトリの扱いを見直したいとき。
+- Structured Output の schema 検証、目次生成用プロンプトの組み立て、Codex 呼び出し、自動コミットの流れを追いたいとき。
+- 親子の `INDEX.md` がどの順序で更新されるかや、最新判定の条件を確認したいとき。
 
 ## Do not read this when
 
-- `INDEX.md` の正本仕様だけを確認したいときは、`oracles/app_specs/indexing.md` を読むべきです。
-- `codex exec` の一般的な呼び出し方や Structured Output 以外の実行制御だけを知りたいときは、`commons/codex.py` を読むべきです。
-- git リポジトリ探索、`.cmoc` の扱い、session state の読み書きを確認したいときは、`commons/repo.py` を読むべきです。
-- `INDEX.md` メンテナンス以外の共通エラー処理やログ制御だけを調べたいときは、このモジュールではありません。
+- 正本仕様だけを確認したいときは、`oracles/app_specs/indexing.md` を読むべきです。
+- `codex exec` の一般的な呼び出し方だけを知りたいときは、`commons/codex.py` を読むべきです。
+- `git` リポジトリ探索や `.cmoc`、session state の処理を確認したいときは、別のモジュールを読むべきです。
+- `INDEX.md` メンテナンス以外の共通エラー処理やログ制御を調べたいときは、このモジュールの範囲外です。
 
 ## hash
 
-- 151a04565ff80ba75bacea4552b6d01d098a25de872a329c69b5a05abe0a2ce9
+- f877795e28b7fb6c6bc4fee92a674b581591825e7577a18ad9c6d29634eabdb1
 
 # `repo.py`
 
