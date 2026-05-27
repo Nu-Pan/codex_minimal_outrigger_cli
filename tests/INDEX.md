@@ -108,29 +108,29 @@
 ## Summary
 
 - `tests/test_repo.py` は `commons.repo` の git リポジトリ共通処理を検証するテスト群の入口です。
-- .cmoc の ignore 保証、tracked な `.cmoc` の index 解除、cmoc ブランチ判定、`session_id` 抽出、apply worktree path 復元を扱います。
+- .cmoc の ignore 保証、tracked な `.cmoc` の untrack、cmoc ブランチ判定、`session_id` 抽出、apply worktree path 復元を扱います。
 - `oracles` / 実装ファイルの列挙、変更・削除検出、`INDEX.md` / `.gitignore` / `.git/info/exclude` / `memo` の除外条件、`commit_if_changed` の index 復元と `assert_no_uncommitted_changes` の前提を確認します。
-- `.cmoc/sessions/<session-id>.json` の読み書き、固定スキーマ検証、active session 探索と session start commit 参照を扱います。
+- .cmoc/sessions/<session-id>.json` の読み書き、固定スキーマ検証、active session 探索と session start commit 参照を扱います。
 - ファイル末尾には、テスト用 git リポジトリを初期化する `_init_repo` と、git コマンド実行用の `_git` 補助関数があります。
 
 ## Read this when
 
 - `tests/test_repo.py` が `commons.repo` のどの機能を検証しているか確認したいとき。
-- .cmoc の ignore 保証、tracked な `.cmoc` の untrack、cmoc ブランチ判定、`session_id` 抽出を見直したいとき。
+- .cmoc の ignore 保証、tracked な `.cmoc` の index 解除、cmoc ブランチ判定、`session_id` 抽出を見直したいとき。
 - `oracles` / 実装ファイルの列挙、変更検出、削除検出、`INDEX.md`、`.gitignore`、`.git/info/exclude`、`memo` の扱いを確認したいとき。
 - session state の読み書き、active session の探索、`commit_if_changed` や `assert_no_uncommitted_changes` の前提条件を把握したいとき。
 - テスト用 git リポジトリの初期化や、`_init_repo` / `_git` 補助関数の役割を確認したいとき。
 
 ## Do not read this when
 
-- `commons.repo` の実装ロジックそのものを追いたいときは、このテスト目次ではなく実装本体を読むべきです。
+- `src/commons/repo.py` の実装ロジックそのものを追いたいときは、このテスト目次ではなく実装本体を読むべきです。
 - `INDEX.md` の生成・更新ルールだけを確認したいときは、`oracles/app_specs/indexing.md` を読むべきです。
 - `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいときは、このテスト目次ではなく別の案内を参照すべきです。
-- `tests/test_codex.py` や `tests/test_indexing.py` など、別のテスト群の観点だけを追いたいときはこのファイルでは範囲が広すぎます。
+- `tests/test_codex.py` や `tests/test_indexing.py` など、別のテスト群の観点だけを追いたいときは、このファイルでは範囲が広すぎます。
 
 ## hash
 
-- f2cc015d1911fd3f0db43abcde3b848f8495c09513ffa45f1be69c0d78dec84e
+- beed7146d8f022c1f8900f9a0371fc5a9bf9c61f1c73ded396d29333f01fc771
 
 # `test_subcommands.py`
 
@@ -143,22 +143,20 @@
 ## Read this when
 
 - `tests/test_subcommands.py` を修正・追加するとき。
-- `cmoc init`、`cmoc session fork/join/abandon`、`cmoc apply fork/join/abandon`、`cmoc eval-oracles` の決定論的な制御フロー、state 更新、branch/worktree の後始末を確認したいとき。
-- `main` のコマンド登録、help 表示、終了コード、共通エラーレポート、`bin/cmoc` の起動条件を確認したいとき。
-- prompt 文言、Structured Output schema、対象ファイル選択ルール、validation helper の順序、CLI から impl への delegate 方針を見直したいとき。
-- `commons.command_runner.run_command` の入出力 tee、エラー報告、`session` / `apply` / `eval-oracles` の制御ロジックを横断的に把握したいとき。
+- `cmoc init`、`cmoc session fork/join/abandon`、`cmoc apply fork/join/abandon`、`cmoc eval-oracles` の決定論的な制御フローや状態遷移を確認したいとき。
+- `main` のコマンド登録、help 表示、終了コード、`bin/cmoc` の起動条件、共通エラーレポートの扱いを確認したいとき。
+- prompt 文言、Structured Output schema、対象選択ルール、validation helper の順序、CLI から impl への委譲方針を見直したいとき。
 
 ## Do not read this when
 
-- 個別のサブコマンド仕様だけを確認したいときは、`oracles/app_specs/sub_commands/*.md` を直接読むべきです。
-- 実装コードの配置や設計方針だけを確認したいときは、`oracles/app_specs` や `oracles/dev_rules` を参照すべきです。
+- 個別サブコマンドの手順だけを確認したいときは、`oracles/app_specs/sub_commands/*.md` を直接読むべきです。
 - `INDEX.md` の生成・更新ルールだけを確認したいときは、`oracles/app_specs/indexing.md` を読むべきです。
-- `tests/test_codex.py` や `tests/test_indexing.py` など、別のテスト群の観点だけを追いたいときはこのファイルでは範囲が広すぎます。
-- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいときは、このテスト目次ではなく別の案内を参照すべきです。
+- `cmoc` の実装配置や設計方針だけを確認したいときは、`oracles/dev_rules` や `src` 配下の実装目次を参照すべきです。
+- `tests/test_codex.py`、`tests/test_indexing.py`、`tests/test_repo.py` など、別のテスト群の観点だけを追いたいときはこのファイルでは範囲が広すぎます。
 
 ## hash
 
-- ca6751a490efea069169a286eef3b54c82fb4566915a524776c19e27a574900e
+- 9cbdd6eb51743bedfcc4615e11c04c53f2f48281047d29469705e22cbe96f33d
 
 # `test_timestamps.py`
 

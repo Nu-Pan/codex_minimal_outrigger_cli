@@ -197,7 +197,7 @@
 
 ## hash
 
-- ba30a51daf998109214ed0cbc6a7d7e813a20ca0427b295268e68ae099114791
+- faa2a17b0fe68afa282c014c7ad923a27e2a8e77730f351c234541aa2a05abe4
 
 # `test.sh`
 
@@ -227,21 +227,30 @@
 
 ## Summary
 
-- pytest の共通設定と、Codex CLI 呼び出し、INDEX.md メンテナンス、git リポジトリ共通処理、サブコマンド制御、ファイル命名、タイムスタンプ仕様を検証するテスト群の入口です。
-- `conftest.py`、`test_codex.py`、`test_file_naming.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py`、`test_timestamps.py` に分かれています。
+- `tests` 配下の pytest テスト群の入口です。
+- `conftest.py` による import path 設定と、各テストファイルの役割分担をまとめています。
+- `test_codex.py` は Codex CLI 呼び出しラッパーの再試行、ログ、Structured Output、quota 関連を検証します。
+- `test_indexing.py` は `INDEX.md` 生成・更新、gitignore 除外、空ディレクトリ、binary 除外、`memo` の扱いを検証します。
+- `test_repo.py` は git リポジトリ共通処理、`.cmoc` の ignore、oracle / implementation 列挙、session state を検証します。
+- `test_subcommands.py` は `init`、`session`、`apply`、`eval-oracles`、共通 runner、エラー処理の決定論的な制御ロジックを検証します。
+- `test_file_naming.py` は旧ルーティングファイルが残っていないことと、サブコマンド配置の命名規則を検証します。
+- `test_timestamps.py` はタイムスタンプ生成と経過時間表示の書式を検証します。
 
 ## Read this when
 
-- `tests` 配下の pytest テスト全体が、どの機能群を検証しているか把握したいとき。
-- Codex CLI 呼び出し、`INDEX.md` メンテナンス、git 共通処理、サブコマンド制御、タイムスタンプ仕様のどこへ進むべきか整理したいとき。
-- `tests` ディレクトリの入口として、各テストファイルの役割をざっと確認したいとき。
+- pytest の共通設定やテスト補助の役割を把握したいとき。
+- `commons.codex` の呼び出しラッパー、`commons.indexing` の `INDEX.md` メンテナンス、`commons.repo` の git 共通処理を確認したいとき。
+- サブコマンドの制御フロー、エラー処理、CLI 登録、終了コード、help 表示を確認したいとき。
+- `INDEX.md` の生成・更新、リポジトリ列挙、gitignore 除外、binary 除外、`memo` 扱いなどの回帰テストを見たいとき。
+- ファイル命名規則、旧ルーティングファイルの不存在、タイムスタンプや経過時間の書式を確認したいとき。
 
 ## Do not read this when
 
-- `tests/test_codex.py` など、個別のテストファイルだけを確認したいときは該当ファイルを直接読むべきです。
-- `oracles/app_specs` 配下の正本仕様だけを確認したいときは、このテスト目次ではなく仕様断片を読むべきです。
-- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいときは、このディレクトリではなく別の案内を参照すべきです。
+- `cmoc` の実装コードや本体ロジックだけを確認したいとき。
+- `oracles` 配下の正本仕様だけを確認したいとき。
+- 特定 1 ファイルのテスト内容だけを追いたいときは、このディレクトリ全体ではなく該当する `tests/*.py` を直接読むべきです。
+- ユーザー向けの操作手順や機能説明だけを確認したいとき。
 
 ## hash
 
-- 5d4035aaabad3f14fed913e83de83ef16cf51b1fafae236be97e02ec5d4126e3
+- 852a7ebed0996d503d3e2a80e16dbadfb8e0f5ccfe1a44d3a05124d3560121c9
