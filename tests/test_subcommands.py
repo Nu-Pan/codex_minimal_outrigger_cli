@@ -143,6 +143,35 @@ def test_run_command_logs_summary_on_exception(
     assert "subcommand return code: 1" in log_content
 
 
+def test_run_command_reports_total_elapsed_from_command_entry(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """終了集計の全体経過時間はログ開始ではなく共通入口から測る。"""
+    repo = _init_repo(tmp_path)
+    monkeypatch.chdir(repo)
+
+    command_times = iter([10.0, 35.0])
+    monkeypatch.setattr(
+        "commons.command_runner.perf_counter",
+        lambda: next(command_times),
+    )
+    monkeypatch.setattr(
+        "commons.subcommand_log.perf_counter",
+        lambda: 20.0,
+    )
+
+    def handler(_repo: Path) -> None:
+        """正常終了する空のサブコマンド本体。"""
+
+    run_command(handler)
+
+    log_content = next(
+        (repo / ".cmoc" / "logs" / "sub_commands").glob("*.log")
+    ).read_text(encoding="utf-8")
+    assert "subcommand total elapsed:  0h  0m 25.0s" in log_content
+
+
 def test_run_command_reports_nonzero_typer_exit(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,

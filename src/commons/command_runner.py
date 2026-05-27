@@ -22,7 +22,6 @@ def run_command(handler: Callable[[Path], int | None]) -> None:
         repo_root = enter_repo_root()
         with subcommand_log(repo_root) as log_context:
             try:
-                started = log_context.started
                 clear_current_timer()
                 result = handler(repo_root)
                 if isinstance(result, int):
@@ -53,7 +52,7 @@ def run_command(handler: Callable[[Path], int | None]) -> None:
                 raise typer.Exit(exit_code) from error
             finally:
                 _print_completion_report(
-                    started=log_context.started,
+                    started=started,
                     quota_wait_seconds=log_context.quota_wait_seconds,
                     exit_code=exit_code,
                 )
