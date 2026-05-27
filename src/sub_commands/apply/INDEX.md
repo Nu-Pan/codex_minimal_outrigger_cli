@@ -47,27 +47,27 @@
 
 ## Summary
 
-- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体処理を実装するモジュールで、session branch の前提確認から apply branch / worktree の作成、調査・修正ループ、レポート出力までをまとめて扱います。
-- 要修正点の Structured Output 検証、部分適用・全体適用の切り替え、対象 oracle / 実装ファイルの列挙、改善ループ、禁止領域チェック、コミット生成と state 更新を担います。
-- このディレクトリの入口として、`cmoc apply fork` の処理順や責務境界を追うための案内です。
+- - `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体処理を実装するモジュールで、session branch の前提確認から apply branch / worktree の作成、調査・修正ループ、レポート出力までをまとめて扱います。
+- - 要修正点の Structured Output 検証、部分適用・全体適用の切り替え、対象 oracle / 実装ファイルの列挙、改善ループ、禁止領域チェック、コミット生成と state 更新を担います。
+- - このディレクトリの入口として、`cmoc apply fork` の処理順や責務境界を追うための案内です。
 
 ## Read this when
 
-- `cmoc apply fork` の実装・修正・レビュー・テストで、全体の処理順を確認したいとき。
-- session state の検証、apply branch / worktree の生成、調査・修正ループ、要修正点の整理、レポート保存までの流れを追いたいとき。
-- 部分適用モードと全体適用モードの違い、調査対象ファイルの選定規則、要修正点リストの改善ループを確認したいとき。
-- Structured Output の schema 検証、禁止領域の変更検査、コミット生成、`apply.state` の `running` / `completed` / `error` 遷移を確認したいとき。
+- - `cmoc apply fork` の実装・修正・レビュー・テストで、全体の処理順を確認したいとき。
+- - session state の検証、apply branch / worktree の生成、調査・修正ループ、要修正点の整理、レポート保存までの流れを追いたいとき。
+- - 部分適用モードと全体適用モードの違い、調査対象ファイルの選定規則、要修正点リストの改善ループを確認したいとき。
+- - Structured Output の schema 検証、禁止領域の変更検査、コミット生成、`apply.state` の `running` / `completed` / `error` 遷移を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply join` や `cmoc apply abandon` の挙動だけを確認したいとき。
-- `cmoc session fork/join/abandon` など、session 側の処理だけを確認したいとき。
-- `cmoc apply fork` の仕様断片そのものを確認したいときは、`oracles/app_specs/sub_commands/apply_fork.md` を読むべきで、この実装ファイルを読む必要はありません。
-- Codex CLI 呼び出しの共通基盤や `INDEX.md` メンテナンスの一般ルールだけを確認したいとき。
+- - `cmoc apply join` や `cmoc apply abandon` の挙動だけを確認したいとき。
+- - `cmoc session fork/join/abandon` など、session 側の処理だけを確認したいとき。
+- - `cmoc apply fork` の仕様断片そのものを確認したいときは、`oracles/app_specs/sub_commands/apply_fork.md` を読むべきで、この実装ファイルを読む必要はありません。
+- - Codex CLI 呼び出しの共通基盤や `INDEX.md` メンテナンスの一般ルールだけを確認したいとき。
 
 ## hash
 
-- 4c0f0c16e93bb176e8bd80a7d9468694526d880b91119cfcb081aa30dde6dbbc
+- 21ae21ba4091771296fe758ee59067045958cd1ab7e3e37e6a84de8afb460382
 
 # `join.py`
 

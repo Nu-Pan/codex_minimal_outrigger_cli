@@ -137,27 +137,26 @@
 ## Summary
 
 - `tests/test_subcommands.py` は、`cmoc` のサブコマンド群に対する決定論的な制御ロジック、CLI 登録、エラー報告、ログ出力をまとめて検証するテスト群です。
-- `init`、`session`、`apply`、`eval-oracles` の各サブコマンド本体に加えて、`run_command`、`main`、`bin/cmoc` の振る舞いも扱います。
-- 関連する正本仕様は `dev_rules`、`app_specs/sub_commands`、`console_and_file_log`、`error_handling`、`session_state`、`branch_model`、`codex_call` です。
+- `run_command` の stdout / ログ tee、`cmoc init` の `.cmoc` ignore と commit、`session` と `apply` の state 遷移、`eval-oracles` の評価レポート生成と検証を扱います。
+- `main` の Typer ルーティング、`bin/cmoc` ランチャー、help 表示、共通エラーレポート、各種 validation helper や prompt / report 生成の振る舞いも含みます。
 
 ## Read this when
 
-- サブコマンドの共通実行ラッパー `run_command` の標準出力・ログ保存・例外時の終了処理を確認したいとき。
-- `cmoc init`、`session fork/join/abandon`、`apply fork/join/abandon`、`eval-oracles` の制御ロジックと状態遷移を確認したいとき。
-- CLI 登録、`main` の委譲、`bin/cmoc` の起動条件、ヘルプ表示、エラー整形を確認したいとき。
-- pytest による cmoc の決定論的テスト方針や、`tests/` への配置規則を確認したいとき。
-- Python ソースの `from __future__ import annotations` 禁止や、型・命名の基本規則を見直したいとき。
+- `tests/test_subcommands.py` が `run_command`、エラー報告、ログ保存、終了コードをどう検証しているか確認したいとき。
+- `cmoc init`、`session fork/join/abandon`、`apply fork/join/abandon`、`eval-oracles` の決定論的な制御ロジックと状態遷移を確認したいとき。
+- CLI 登録、`main` の委譲、`bin/cmoc` の起動条件、help 表示、`eval-oracle` 互換 alias の有無を確認したいとき。
+- pytest ベースの回帰テスト方針、`tests/` 配置規則、補助関数 `_init_repo`、`_git`、`_checkout_session_branch` の役割を把握したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドのユーザー向け仕様だけを確認したいときは、`oracles/app_specs/sub_commands/INDEX.md` から該当文書へ直接進むべきです。
-- 実装コードそのものを修正したいときは、対応する `src/sub_commands/...` や `src/commons/...` を読むべきです。
-- テストではなく設計ルールや利用方法だけを確認したいときは、`oracles/dev_rules/INDEX.md`、`oracles/app_specs/INDEX.md`、`oracles/app_specs/usage.md` を参照すべきです。
-- `oracles` 全体の編集可否や `INDEX.md` 自動生成ルールだけを確認したいときは、`oracles/oracles.md` と `oracles/app_specs/indexing.md` を読むべきです。
+- 個別サブコマンドの正本仕様だけを確認したいときは、`oracles/app_specs/sub_commands/INDEX.md` 側を読むべきです。
+- `run_command` や `cmoc init`、`session`、`apply`、`eval-oracles` の実装本体を修正したいときは、このテスト目次ではなく対応する `src/` 配下を読むべきです。
+- `INDEX.md` の生成・更新ルールや `oracles` 全体の取り扱いだけを確認したいときは、`oracles/app_specs/indexing.md` や `oracles/app_specs/oracles.md` を参照すべきです。
+- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいときは、このテスト目次ではなく別の案内を参照すべきです。
 
 ## hash
 
-- 50bf36ea48a264e932b7e9f7d95975ce7b90544f35a9024cf2066142b35d4d1c
+- 2b279be8906c824c9d09f36848930f9b455c9d5399a4496349c5e3144dbc62b9
 
 # `test_timestamps.py`
 
