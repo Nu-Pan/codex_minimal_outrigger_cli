@@ -518,11 +518,13 @@ def _cleanup_apply_artifacts(
                 warnings.append(
                     f"apply worktree was not deleted: {join_state.apply_worktree}"
                 )
+                return warnings
         else:
             warnings.append(
                 "apply worktree path is outside .cmoc/worktrees: "
                 f"{join_state.apply_worktree}"
             )
+            return warnings
 
     result = run_git(
         repo_root,

@@ -13,6 +13,7 @@ import typer
 from pytest import MonkeyPatch
 
 import sub_commands.apply.fork as apply_module
+import sub_commands.apply.join as apply_join_module
 import sub_commands.eval_oracles as eval_oracles_module
 import sub_commands.session.abandon as session_abandon_module
 import sub_commands.session.fork as session_fork_module
@@ -1863,6 +1864,71 @@ def test_apply_join_keeps_artifacts_when_report_result_is_missing(
     assert apply_worktree.exists()
     assert report_path.exists()
     assert "warning: apply cleanup skipped:" in output
+
+
+def test_apply_join_keeps_branch_when_worktree_remove_fails(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """apply worktree 削除に失敗した場合は branch 削除へ進まない。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    (apply_worktree / "feature.txt").write_text("implemented\n", encoding="utf-8")
+    _git(apply_worktree, "add", "feature.txt")
+    _git(apply_worktree, "commit", "-m", "implement feature")
+    original_run_git = apply_join_module.run_git
+    branch_delete_attempted = False
+
+    def fail_worktree_remove(
+        repo_root: Path,
+        args: list[str],
+        *,
+        check: bool = True,
+        text: bool = True,
+        input_text: str | None = None,
+        env: dict[str, str] | None = None,
+    ) -> subprocess.CompletedProcess[str]:
+        nonlocal branch_delete_attempted
+        if args == ["worktree", "remove", str(apply_worktree)]:
+            return subprocess.CompletedProcess(
+                ["git", *args],
+                1,
+                "",
+                "simulated worktree remove failure",
+            )
+        if args == ["branch", "-d", apply_branch]:
+            branch_delete_attempted = True
+        return original_run_git(
+            repo_root,
+            args,
+            check=check,
+            text=text,
+            input_text=input_text,
+            env=env,
+        )
+
+    monkeypatch.setattr(apply_join_module, "run_git", fail_worktree_remove)
+
+    cmoc_apply_join_impl(repo)
+
+    output = capsys.readouterr().out
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
+    assert state["apply"]["state"] == "ready"
+    assert apply_branch in _git(repo, "branch", "--list", apply_branch).stdout
+    assert apply_worktree.exists()
+    assert not branch_delete_attempted
+    assert "warning: apply worktree was not deleted:" in output
 
 
 def test_apply_join_ignores_worktree_local_log_cmoc(
