@@ -107,54 +107,56 @@
 
 ## Summary
 
-- `tests/test_repo.py` は `commons.repo` の git リポジトリ共通処理を検証するテスト群の目次です。
-- .cmoc の ignore 保証、tracked な `.cmoc` ファイルの index 解除、cmoc ブランチ判定を扱います。
-- `oracles` / 実装ファイルの列挙、変更検出、削除検出、`INDEX.md`・`.gitignore`・`.git/info/exclude`・`memo` の扱い、session state の読み書きを確認します。
+- `tests/test_repo.py` は `commons.repo` の git リポジトリ共通処理を検証するテスト群の入口です。
+- .cmoc の ignore 保証、tracked な `.cmoc` の index 解除、cmoc ブランチ判定、ファイル列挙と変更・削除検出を扱います。
+- `oracles` / 実装ファイルの抽出、`INDEX.md`・`.gitignore`・`.git/info/exclude`・`memo` の除外条件、session state の読み書きと active session 探索を確認します。
+- ファイル末尾には、テスト用 git リポジトリを初期化する `_init_repo` と、git コマンド実行用の `_git` 補助関数があります。
 
 ## Read this when
 
-- `commons.repo` の git リポジトリ共通処理がどのようにテストされているか確認したいとき。
-- .cmoc の ignore 保証、tracked な `.cmoc` ファイルの index 解除、cmoc ブランチ判定を見直したいとき。
-- `oracles` / 実装ファイルの列挙、変更検出、削除検出、session state の読み書きと検証条件を確認したいとき。
-- テスト用 git リポジトリの初期化や、`_init_repo` / `_git` の補助関数の役割を把握したいとき。
+- `tests/test_repo.py` が `commons.repo` のどの機能を検証しているか確認したいとき。
+- .cmoc の ignore 保証、tracked な `.cmoc` の untrack、cmoc ブランチ判定を見直したいとき。
+- `oracles` / 実装ファイルの列挙、変更検出、削除検出、`INDEX.md` や `.gitignore`、`.git/info/exclude`、`memo` の扱いを確認したいとき。
+- session state の読み書き、active session の探索、`commit_if_changed` や `assert_no_uncommitted_changes` の前提条件を把握したいとき。
+- テスト用 git リポジトリの初期化や、`_init_repo` / `_git` 補助関数の役割を確認したいとき。
 
 ## Do not read this when
 
-- cmoc の CLI 仕様や各サブコマンドの入出力だけを確認したいとき。
-- `commons.repo` 以外の実装や、別モジュールのテストだけを追いたいとき。
-- `INDEX.md` の自動生成ルールそのものや、`README.md`・`AGENTS.md`・`memo` の運用を確認したいとき。
-- Python 標準ライブラリの `git` 呼び出し方法やテスト補助関数の一般論だけを知りたいとき。
+- cmoc の CLI 操作手順や各サブコマンドのユーザー向け仕様だけを確認したいとき。
+- `commons.repo` 以外の実装や、別モジュールのテスト群だけを追いたいとき。
+- `INDEX.md` の生成・更新ルールそのものや、`README.md`・`AGENTS.md`・`memo` の運用規則だけを確認したいとき。
+- git の一般論ではなく、このテスト群が何を検証しているかを知りたいとき。
 
 ## hash
 
-- a045a63b99d93b85dce9ece2b1409f2a406d041b4a32cf293580a68c51f6275d
+- 615aa798360925b26210c46a85657ff1e25ccca48f14f0163d9c429e60379216
 
 # `test_subcommands.py`
 
 ## Summary
 
-- cmoc のサブコマンド一式と共通エラー処理の決定論的な制御ロジックを検証するテスト群の入口です。
-- `init`、`session`、`apply`、`eval-oracles`、`main`、共通 runner、エラーレポート、prompt 仕様を横断します。
-- 実装や LLM の品質ではなく、事前条件、状態遷移、ブランチや worktree の後始末、CLI 露出を固定する役割があります。
+- `tests/test_subcommands.py` は、cmoc の各サブコマンドと共通エラー処理の決定論的な制御ロジックを検証するテスト群の入口です。
+- `init`、`session`、`apply`、`eval-oracles`、`main`、共通 runner、エラーレポート、CLI 登録、help 表示を横断して確認します。
+- prompt 文言、Structured Output schema、対象選択、状態遷移、後始末、`bin/cmoc` の起動条件、補助関数の並び順まで固定します。
 
 ## Read this when
 
 - `tests/test_subcommands.py` を修正・追加するとき。
-- `cmoc init`、`cmoc session`、`cmoc apply`、`cmoc eval-oracles` の決定論的な制御ロジックを確認したいとき。
-- `main` のコマンド登録、ヘルプ表示、終了コード、共通エラーレポートを検証したいとき。
-- prompt 文言、Structured Output schema、対象ファイル選択ルール、状態遷移や後始末の観点を見直したいとき。
-- Fake Codex CLI を使う pytest テストの書き方や、サブコマンド横断のテスト観点を整理したいとき。
+- `cmoc init`、`cmoc session fork/join/abandon`、`cmoc apply fork/join/abandon`、`cmoc eval-oracles` の決定論的な制御フロー、state 更新、branch/worktree の後始末を確認したいとき。
+- `main` のコマンド登録、help 表示、終了コード、共通エラーレポート、`bin/cmoc` の起動条件を確認したいとき。
+- prompt 文言、Structured Output schema、対象ファイル選択ルール、validation helper の順序、CLI から impl への delegate 方針を見直したいとき。
 
 ## Do not read this when
 
-- サブコマンドのユーザー向け仕様だけを確認したいとき。
-- 実装コードの配置や設計方針だけを確認したいとき。
-- 個別サブコマンドの詳細仕様だけを確認したいときは、対応する仕様文書を直接読むべきです。
-- README やリポジトリ運用ルールだけを確認したいとき。
+- 個別サブコマンドのユーザー向け仕様だけを確認したいときは、対応する `oracles/app_specs/sub_commands/*.md` を直接読むべきです。
+- 実装コードの配置や設計方針だけを確認したいときは、このテスト目次ではなく `oracles/app_specs` や `oracles/dev_rules` を読むべきです。
+- `INDEX.md` の生成・更新ルールそのものだけを確認したいときは、`oracles/app_specs/indexing.md` を読むべきです。
+- `tests/test_codex.py` や `tests/test_indexing.py` など、別のテスト群の観点だけを追いたいときはこのファイルでは範囲が広すぎます。
+- README、AGENTS、memo の運用や編集可否だけを確認したいときは、このテスト目次ではなく別の案内を参照すべきです。
 
 ## hash
 
-- fb5eb5077d45a182deb927c55b0004edfca94588ba471fa2c456de757d79a45b
+- 1a26bab981be0d0ab3fd2e6442982af4b27c8b1215d7f27afc18353d712713d8
 
 # `test_timestamps.py`
 
