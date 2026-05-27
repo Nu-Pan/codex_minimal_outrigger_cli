@@ -969,7 +969,7 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
     calls: list[Path] = []
 
     def fake_maintain(repo_root: Path) -> bool:
-        """quota 枯渇前の通常 Codex CLI 呼び出しだけを記録する。"""
+        """quota 復旧経路を含む Codex CLI 直前メンテナンスを記録する。"""
         calls.append(repo_root)
         return False
 
@@ -987,7 +987,7 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
         )
     ]
     assert output.strip() == "resumed"
-    assert calls == [repo]
+    assert calls == [repo, repo, repo]
     assert len(log_contents) == 3
     assert all(
         content.count("## Codex Exec Call") == 1
