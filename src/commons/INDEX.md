@@ -103,28 +103,30 @@
 
 ## Summary
 
-- `src/commons/indexing.py` は `<repo-root>` 配下の `INDEX.md` を列挙・再生成・更新し、必要なら自動コミットするための共通モジュールです。
-- 配置対象ディレクトリと直下項目を、`memo`、隠し項目、`build` / `tmp` / `__pycache__`、`gitignore` 対象、バイナリらしいファイルを除外しながら判定します。
-- 既存の `INDEX.md` から再利用可能な目次ブロックを解析し、ハッシュ一致かつ形式が妥当なら再生成を避けます。
-- 新規生成時は Codex CLI を Structured Output 付きで呼び出し、JSON を検証して Markdown の目次ブロックへ変換します。
+- `<repo-root>` 配下のディレクトリを深い順で巡回し、`INDEX.md` の配置対象を列挙して更新する処理をまとめたモジュールです。
+- 直下のファイル・ディレクトリを走査し、非表示項目、`memo`、`gitignore` 対象、バイナリ、`INDEX.md` 自身を除外して目次項目を作ります。
+- 既存の `INDEX.md` を項目ごとに解析し、ハッシュ一致かつ書式が妥当なブロックは再利用し、崩れたものは再生成します。
+- Codex CLI の Structured Output で `summary`、`read_this_when`、`do_not_read_this_when` を生成し、Markdown の見出しと箇条書きに整形します。
+- 変更が発生した場合は、`INDEX.md` の差分だけを対象にして自動コミットするようにしています。
 
 ## Read this when
 
-- `INDEX.md` をどのディレクトリに配置し、どの項目を目次生成対象にするか確認したいとき。
-- `maintain_indexes` の処理順、既存 `INDEX.md` の再利用条件、自動コミットの流れを確認したいとき。
-- `memo`、隠しディレクトリ、`build`、`tmp`、`__pycache__`、`gitignore` 対象、バイナリファイルの除外規則を確認したいとき。
-- INDEX 生成用の Codex CLI プロンプト、Structured Output schema、JSON 検証、Markdown 変換処理を変更したいとき。
+- `INDEX.md` の自動配置・自動更新ルールを実装または修正したいとき。
+- ディレクトリ列挙条件、`memo` や `.gitignore`、バイナリ、`INDEX.md` 自身の除外条件を確認したいとき。
+- 既存の目次ブロックの再利用、再生成、空ディレクトリの扱いを見直したいとき。
+- Structured Output の JSON スキーマ検証、prompt 生成、Codex 呼び出しの流れを確認したいとき。
+- `INDEX.md` メンテナンス後の自動コミット対象や、更新順序の仕様を確認したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの CLI 引数、ユーザー向け出力、終了ステータスだけを調べたいとき。
-- Codex CLI 呼び出しの汎用ラッパー、JSON パース、モデル定数の詳細だけを調べたいとき。
-- git コミット処理や `.gitignore` 更新、repo root 検出など、INDEX 以外の共通処理だけを確認したいとき。
-- 特定の `INDEX.md` 目次本文だけを読みたい場合で、生成・更新ロジックを追う必要がないとき。
+- `INDEX.md` の本文の書き方や正本仕様そのものを確認したいときは、`oracles/app_specs/indexing.md` を読むべきです。
+- 個別サブコマンドの手順や業務ロジックだけを確認したいときは、このファイルは対象外です。
+- `INDEX.md` 以外の `codex exec` の一般処理や git 操作の詳細だけを見たいときは、`commons/codex.py` や `commons/repo.py` を優先すべきです。
+- `oracles` 全体のルーティング方針だけを確認したいときは、このファイルではありません。
 
 ## hash
 
-- 9f2cd7fa5e47f1b14ba861bc76ef7a9a3743ab8dfd6338bc9b0aec3a1fbe75a9
+- 82b749149c407727e039210fc10852893f4201d1c0437b6459d55f2693daaa09
 
 # `repo.py`
 
