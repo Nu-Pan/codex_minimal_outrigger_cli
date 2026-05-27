@@ -151,13 +151,13 @@
 ## Do not read this when
 
 - 個別サブコマンドの正本仕様だけを確認したいときは、`oracles/app_specs/sub_commands/INDEX.md` 側を読むべきです。
-- `src/sub_commands` や `src/main.py` の実装本体を修正・追跡したいときは、このテスト目次ではなく `src/` 側を読むべきです。
+- `src/sub_commands` や `src/main.py` の実装本体を追いたいときは、このテスト目次ではなく `src/` 側を読むべきです。
 - `INDEX.md` の生成・更新ルールだけを確認したいときは、`oracles/app_specs/indexing.md` を参照すべきです。
 - `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいときは、このテスト目次ではなく別の案内を参照すべきです。
 
 ## hash
 
-- 9c1d9d5b65f1d581e2aa34c8dff60dd3a783a796ea4c1543bb6ae60253248229
+- f3a916385801e932f18def77f2c1ec15f1c91191f01b7a51d2fafa658901cb60
 
 # `test_timestamps.py`
 

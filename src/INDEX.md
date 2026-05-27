@@ -69,11 +69,11 @@
 
 ## Do not read this when
 
-- 個別の `cmoc apply` 実装だけを確認したいときは、この目次ではなく `apply/INDEX.md` へ直接進むべきです。
-- 個別の `cmoc session` 実装だけを確認したいときは、この目次ではなく `session/INDEX.md` へ直接進むべきです。
+- 個別の `cmoc apply` 実装だけを確認したいときは、この目次ではなく `apply/INDEX.md` を直接読むべきです。
+- 個別の `cmoc session` 実装だけを確認したいときは、この目次ではなく `session/INDEX.md` を直接読むべきです。
 - `cmoc eval-oracles` や `cmoc init` の処理内容だけを確認したいときは、この目次ではなく `eval_oracles.py` や `init.py` を直接読むべきです。
 - `src/sub_commands` が Python パッケージとして宣言されているかだけを確認したいときは、`__init__.py` だけで足ります。
 
 ## hash
 
-- 94750e0e91d994e84745b4128b7e9a045eb2751a60279e6e66f4f59164aebd84
+- 9a0d7d5af087c5fc768acb3eb8b4da92f8ed61023ed700b0b122876c877e170c

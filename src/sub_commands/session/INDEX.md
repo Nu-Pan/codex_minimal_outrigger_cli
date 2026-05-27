@@ -80,15 +80,15 @@
 
 - `cmoc session join` の実装・修正・レビューで、事前条件と実行順を確認したいとき。
 - session branch を home branch に merge し、`session.state` を `joined` に更新する処理を追いたいとき。
-- merge conflict の解消依頼、禁止領域の扱い、後始末としての branch 削除条件を確認したいとき。
+- merge conflict の解消依頼、禁止領域の扱い、` .cmoc` の非追跡保証、後始末としての branch 削除条件を確認したいとき。
 
 ## Do not read this when
 
 - `cmoc session fork` の開始条件や session branch 作成だけを確認したいとき。
 - `cmoc session abandon` の破棄手順だけを確認したいとき。
-- `cmoc apply` 系の実行条件や apply branch の扱いだけを確認したいとき。
-- 一般的な `git merge` の解説だけで足りるとき。
+- `cmoc apply` 系の実行条件や merge 手順だけを確認したいとき。
+- 一般的な `git merge` の説明だけで足りるとき。
 
 ## hash
 
-- 12f2627f684bf392d24d438bcb88aeb57c76553f4ba583a468ba9e1be1b1965b
+- b94387b9f743ebb75a779ce24a9d719a8d19c28122c6909d7c281de94407f3d3

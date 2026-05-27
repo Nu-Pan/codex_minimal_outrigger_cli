@@ -100,9 +100,9 @@
 
 ## Summary
 
-- `src/sub_commands/session` 配下の `cmoc session` 系実装モジュールの入口です。`__init__.py`、`fork.py`、`join.py`、`abandon.py` の役割分担をまとめます。
-- `fork.py` は session 開始、`join.py` は session 完了の merge、`abandon.py` は session 破棄を担います。
-- この INDEX から個別モジュールへたどれば、session 系処理の順序、前提条件、状態遷移、cleanup の責務を素早く確認できます。
+- `src/sub_commands/session` 配下の `cmoc session` 系実装モジュールの入口です。
+- `__init__.py` はパッケージ宣言のみ、`fork.py` は session 開始、`join.py` は session 完了、`abandon.py` は session 破棄を担います。
+- この目次から、各モジュールへ進んで session 系処理の順序、前提条件、状態遷移、cleanup の責務を確認できます。
 
 ## Read this when
 
@@ -120,4 +120,4 @@
 
 ## hash
 
-- ba80cadfaf3605e0fd5d9e5d9377e6798318465ce7ae1ec8613e3e4afc28dab6
+- e8c222e289be56f51494770067a5ad86ef85004503e095e4596660a650e6aa7f
