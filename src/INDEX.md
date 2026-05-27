@@ -11,7 +11,7 @@
 - `src/commons` に置かれた共通ユーティリティの全体像を確認したいとき。
 - 共有エラー処理、リポジトリ探索、ログ出力、タイムスタンプ生成、経過時間計測のどこへ進むべきか整理したいとき。
 - 各サブコマンドで共通利用される機能の入口をまとめて把握したいとき。
-- `src/commons` 配下の個別モジュールへたどる前に、役割分担を先に確認したいとき。
+- 個別モジュールへ入る前に、役割分担を先に確認したいとき。
 
 ## Do not read this when
 
@@ -22,7 +22,7 @@
 
 ## hash
 
-- 2adb2bce9291af358a5cdecb51f152bf8de10f8c3aa468f1cb03120bedc6bfd1
+- f7a863e1187f10533477dde8e8d6a062eb83d7d5168dc5a2e184cbf7ef06dc26
 
 # `main.py`
 
@@ -55,24 +55,22 @@
 
 ## Summary
 
-- `src/sub_commands` は cmoc のサブコマンド実装群の入口です。`__init__.py` はパッケージ宣言のみで、`apply` と `session` は専用サブディレクトリに分かれています。
-- `eval_oracles.py` は `cmoc eval-oracles` の本体、`init.py` は `cmoc init` の本体です。
-- この目次から `apply/INDEX.md` と `session/INDEX.md` へ進み、各サブコマンドの詳細実装へたどれます。
+- `src.sub_commands` パッケージの入口で、`__init__.py`、`apply/`、`session/`、`eval_oracles.py`、`init.py` への案内をまとめます。
+- `apply/` と `session/` はそれぞれサブコマンド群の実装ディレクトリで、個別処理の入口をさらに分けています。
+- `eval_oracles.py` と `init.py` はディレクトリ直下の個別サブコマンド本体です。
 
 ## Read this when
 
-- `src/sub_commands` 配下の実装入口をまとめて確認したいとき。
-- `apply`、`session`、`eval-oracles`、`init` の実装ファイルがどこにあるか整理したいとき。
-- 個別モジュールへ入る前に、サブコマンド群の役割分担と配置方針を把握したいとき。
-- `apply/INDEX.md` や `session/INDEX.md` へ進むべきか判断したいとき。
+- `src.sub_commands` の全体像を把握したいとき。
+- `apply`、`session`、`eval-oracles`、`init` のどの実装へ進むべきかを切り分けたいとき。
+- `src.sub_commands` が Python パッケージとして宣言されていることや、配下の実装ファイル一覧を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply` や `cmoc session` の個別処理だけを確認したいときは、この目次ではなく各下位 `INDEX.md` を直接読むべきです。
-- `cmoc eval-oracles` や `cmoc init` の本体処理だけを確認したいときは、この目次ではなく `eval_oracles.py` や `init.py` を直接読むべきです。
-- `src/sub_commands` が Python パッケージとして存在するかだけを確認したいときは、`__init__.py` だけで足ります。
-- サブコマンドの仕様断片や利用手順だけを確認したいときは、`oracles/app_specs/sub_commands/` 側を読むべきです。
+- 個別サブコマンドの実行手順や状態遷移だけを確認したいときは、該当する `apply/`、`session/`、`eval_oracles.py`、`init.py` を直接読むべきです。
+- サブコマンド仕様の正本断片だけを確認したいときは、`oracles/app_specs/sub_commands/` 側を読むべきです。
+- CLI 全体の共通規約や開発ルールだけを確認したいときは、このディレクトリの目次は不要です。
 
 ## hash
 
-- c38b9eefb1ca26896d06bc808b4c27f0dec659f5d4fff50c7c5d7e7b591cab81
+- 896d77e4f4443097c89d36e185ab69125c0f3bddf81b60c8561b2c4b0bed1b47

@@ -130,25 +130,25 @@
 
 ## Summary
 
-- `oracles` 配下全体の入口となる目次で、`app_specs`、`dev_rules`、`considered_alternatives` への案内をまとめる。
-- `cmoc` の仕様断片を読む前に、どの系統の文書へ進むべきかを切り分けるためのルーティング文書である。
-- 個別仕様の本文ではなく、`INDEX.md` から下位の正本仕様へたどるための起点である。
+- `cmoc` の `oracles` 配下にある正本仕様断片への入口で、`app_specs`、`considered_alternatives`、`dev_rules` の 3 つの案内をまとめます。
+- `app_specs` はアプリ仕様、`considered_alternatives` は採用しなかった設計案、`dev_rules` は開発ルールへのルーティングを担います。
+- `oracles` 配下の具体的な正本を探すときの最初の分岐点になります。
 
 ## Read this when
 
-- `oracles` 配下のどこへ進むべきかを最初に整理したいとき。
-- `cmoc` の仕様断片、開発ルール、採用しなかった代替案のどれを読むべきか判断したいとき。
-- `INDEX.md` から各ディレクトリの正本仕様へたどる入口が欲しいとき。
+- `oracles` 配下でどの仕様カテゴリを読むべきか整理したいとき。
+- `cmoc` のアプリ仕様、代替案、開発ルールのどれに属するかを切り分けたいとき。
+- `oracles` 全体の入口として、下位ディレクトリへ進む前に案内だけ確認したいとき。
 
 ## Do not read this when
 
-- 個別仕様や実装方針を直接確認したいときは、対応する下位の `INDEX.md` や本文を直接読むべきである。
-- 読む先がすでに分かっているときは、この入口を経由する必要はない。
-- 実装コードやテストコードだけで足りる作業では、このルーティング文書は不要である。
+- 個別の仕様本文を読みたいときは、`app_specs`、`considered_alternatives`、`dev_rules` の各 `INDEX.md` から直接進むべきです。
+- `oracles` 配下の特定ファイルの内容だけを確認したいときは、この入口ではなく該当ファイルを直接読むべきです。
+- 実装コードやテストコードだけで足りるときは、この案内を読む必要はありません。
 
 ## hash
 
-- fa126c1999bf61c2f77a2477b8185947b284dda1d8d6af421a7f3b869652ffd9
+- d9dd75b4c6a0b0236260c10a6c949daa4d767c760cb778d3b94d136313b38f08
 
 # `pyproject.toml`
 
@@ -179,27 +179,25 @@
 
 ## Summary
 
-- `src` 配下の入口となる目次で、`commons`、`main.py`、`sub_commands` への案内をまとめます。
-- `cmoc` の起動点、共有モジュール群、サブコマンド実装群の役割分担を素早く把握するためのルーティング文書です。
-- 個別実装へ進む前に、`src` のどのファイルや下位目次を読むべきか判断するための案内を提供します。
+- `src` 配下の入口となる目次で、`main.py`、`commons`、`sub_commands` への案内をまとめます。
+- CLI エントリーポイントと共有モジュール、サブコマンド実装の担当範囲を整理するためのルーティング文書です。
+- 個別実装へ進む前に、どのファイルへ向かうべきかを素早く判断するための案内です。
 
 ## Read this when
 
-- `src` 配下の構成をまとめて把握したいとき。
-- `commons`、`main.py`、`sub_commands` のどこに役割があるか整理したいとき。
-- 個別モジュールへ進む前に、`src` 全体のルーティングを確認したいとき。
-- `src/INDEX.md` から下位の `INDEX.md` へたどるための入口が必要なとき。
+- `src` 配下の全体構成と、どの入口から進むべきかを把握したいとき。
+- `src/main.py`、`src/commons`、`src/sub_commands` の役割分担を整理したいとき。
+- 個別モジュールへ入る前に、ソースツリーのルーティングを先に確認したいとき。
 
 ## Do not read this when
 
-- `src/commons` の共通モジュールだけを確認したいときは、この目次ではなく `src/commons/INDEX.md` を直接読むべきです。
-- `cmoc` の起動点やコマンド登録だけを確認したいときは、この目次ではなく `src/main.py` を直接読むべきです。
-- `cmoc session` や `cmoc apply` の個別処理だけを確認したいときは、この目次ではなく `src/sub_commands/INDEX.md` から該当する下位目次へ進むべきです。
-- `src` の配下にある個別モジュールの実装詳細だけを確認したいときは、この目次を読む必要はありません。
+- `src/main.py` や `src/commons`、`src/sub_commands` の個別実装だけを確認したいときは、この目次を読む必要はありません。
+- `cmoc` 全体の仕様断片や利用手順だけを確認したいときは、`oracles/app_specs/` 側を直接参照すべきです。
+- `src/INDEX.md` の生成・更新ルールだけを確認したいときは、`src/commons/indexing.py` を読むべきです。
 
 ## hash
 
-- e3d509542e0776d6667f8b7dc0b963145cfe8e1a9533f807dbe2cf52250cbd8b
+- 42e69fa8e9f4c35f8ab45772eb1b0a974df784c4771f9c01be66754476c95f62
 
 # `test.sh`
 
@@ -229,23 +227,24 @@
 
 ## Summary
 
-- `tests` 配下の pytest テスト群の入口で、共通設定 `conftest.py` と各 `test_*.py` の役割分担を案内する。
-- `commons.codex`、`commons.indexing`、`commons.repo`、`sub_commands`、`commons.timestamps`、ファイル命名規則など、cmoc の主要機能ごとの回帰テストをまとめている。
-- どのテストファイルを読むべきかを切り分けるための目次として使う。
+- `tests` 配下の回帰テスト群への入口で、`conftest.py` と各 `test_*.py` の役割を案内します。
+- `commons.codex`、`commons.indexing`、`commons.repo`、`subcommands`、`timestamps`、およびファイル命名規則の検証を扱うテストをまとめます。
+- pytest の共通設定やテスト補助関数の位置づけを確認し、個別テストへ進むための目次として使います。
 
 ## Read this when
 
-- pytest 共通設定や `src` への import path 追加の前提を確認したいとき。
-- `commons.codex`、`commons.indexing`、`commons.repo`、サブコマンド群、タイムスタンプ処理、ファイル命名規則のどのテストに進むべきか判断したいとき。
-- 既存テストの責務を見直して、新しいテストの置き場を決めたいとき。
+- `tests` 配下の全体像を把握し、どのテストがどの機能を担っているか整理したいとき。
+- `commons.codex`、`commons.indexing`、`commons.repo`、サブコマンド群、時刻ユーティリティのどこに回帰テストがあるか確認したいとき。
+- pytest 共通設定の `conftest.py` が何をしているか、また各 `test_*.py` がどの責務を持つかを見分けたいとき。
+- 新しいテストを追加するときに、既存のテスト群の役割分担や配置方針を確認したいとき。
 
 ## Do not read this when
 
-- 個別のテストケースの詳細や期待値だけを確認したいときは、対応する `test_*.py` を直接読むべきです。
-- `src` 側の実装ロジックを確認したいときは、`tests` ではなく `src` を読むべきです。
-- `oracles` の正本仕様や `README.md`、`AGENTS.md`、`memo` の運用ルールだけを確認したいときは、この目次ではなく該当文書を参照すべきです。
-- テスト以外のルーティング文書だけを確認したいときは、このディレクトリは範囲外です。
+- 個別テストケースの期待値や失敗条件だけを確認したいときは、該当する `tests/test_*.py` を直接読むべきです。
+- `commons.indexing` の実装や `INDEX.md` の生成ルールそのものを確認したいときは、テスト目次ではなく正本仕様や実装本体を参照すべきです。
+- `src/` 側の CLI 実装、サブコマンド実装、共通処理の詳細だけを追いたいときは、このディレクトリの案内だけでは範囲が広すぎます。
+- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいときは、このテスト目次ではなく別の案内を参照すべきです。
 
 ## hash
 
-- 2f43ac50b4d77e1869f206a425f3f48467cbb219cd5c29c338bff4bc7edd4997
+- 69d19d2b821e5215f0b1d2cfd2f7e601e800007e181fa1c58c392876eab53550

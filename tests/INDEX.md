@@ -27,7 +27,7 @@
 
 ## Summary
 
-- `tests/test_codex.py` は `commons.codex.run_codex_exec()` とその周辺の共通補助処理を検証するテスト群の入口です。
+- `tests/test_codex.py` は `commons.codex.run_codex_exec()` とその周辺補助処理を検証するテスト群の入口です。
 - Structured Output の schema ファイル生成、JSON / テキストの再試行、意味的検証失敗、出力プレビューを扱います。
 - Codex CLI 呼び出しログ、`subcommand_log` への通知、`INDEX.md` 事前メンテナンスと `skip_index_maintenance`、workspace-write 時の oracle 保護を確認します。
 - quota 枯渇時の待機・疎通確認・`--resume` 再実行、`session_id` 抽出、`_resume_command`、`_prepare_codex_exec_paths` も扱います。
@@ -35,21 +35,21 @@
 
 ## Read this when
 
-- `commons.codex.run_codex_exec()` の引数、`read_only` / `workspace-write`、`--json`、`--output-last-message`、`--output-schema`、`reasoning_effort` の扱いを確認したいとき。
-- Structured Output の parse 失敗、schema 不一致、意味的検証失敗に対するリトライやエラー表示を確認したいとき。
-- Codex CLI 呼び出しログ、`subcommand_log` への通知、出力プレビュー、quota 枯渇時の再実行フローを確認したいとき。
+- `commons.codex.run_codex_exec()` の呼び出し、`read_only` / `workspace-write`、`--json`、`--output-schema`、`reasoning_effort` の扱いを確認したいとき。
+- Structured Output の parse 失敗、schema 不一致、意味的検証失敗に対するリトライやエラー表示を追いたいとき。
+- Codex CLI 呼び出しログ、`subcommand_log` 通知、出力プレビュー、quota 枯渇時の疎通確認と `resume` 再実行の流れを確認したいとき。
 - `INDEX.md` 事前メンテナンス、`skip_index_maintenance`、workspace-write 時の oracle 保護、`session_id` 抽出や `_resume_command` を追いたいとき。
 
 ## Do not read this when
 
-- `tests/test_indexing.py` の `INDEX.md` 保守処理そのものを確認したいとき。
-- `tests/test_subcommands.py` や `src/sub_commands` の個別サブコマンド仕様だけを確認したいとき。
-- `tests/test_repo.py` や `tests/test_timestamps.py` の git 共通処理や時刻書式だけを確認したいとき。
+- `commons.indexing.maintain_indexes` の実装や `INDEX.md` 生成ルールそのものを確認したいとき。
+- `tests/test_subcommands.py` など、各サブコマンドの振る舞いだけを確認したいとき。
+- `tests/test_repo.py` の git 共通処理や `tests/test_timestamps.py` の時刻関連だけを確認したいとき。
 - `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいとき。
 
 ## hash
 
-- c6d37ce69f20abc3676195fedc5242d60af2e99161514311ea4c104a28957956
+- 203660b9711223702c7306bc407881695f12cc4e283b205f842c291f948af10a
 
 # `test_file_naming.py`
 
@@ -136,30 +136,30 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は `cmoc` のサブコマンド群と CLI ルーティングの回帰テストの入口です。
-- `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`eval-oracles` の状態遷移、エラー報告、ログ、レポートを検証します。
-- prompt / report の検証補助、Structured Output の妥当性、`main` と `bin/cmoc` の公開形も確認します。
+- `tests/test_subcommands.py` は cmoc のサブコマンド群と CLI ルーティングの回帰テストの入口で、`init`、`session`、`apply`、`eval-oracles` の制御ロジックをまとめて検証します。
+- 共通エラーレポート、`run_command` の tee と終了コード、ログ保存、`.cmoc` ignore、tracked `.cmoc` の追跡解除、セッション状態の作成・復旧・ロールバックを扱います。
+- apply/worktree の差分処理、`eval-oracles` の report 生成、Structured Output の検証、`main` と `bin/cmoc` の公開形や互換 alias も確認します。
+- ファイル末尾のテスト補助関数は、session/apply の検証用リポジトリや作業履歴を組み立てるために使います。
 
 ## Read this when
 
-- `run_command` の tee、共通エラーレポート、終了コード、ログ保存の流れを確認したいとき。
-- `cmoc init` の `.cmoc` ignore 追加や commit、tracked `.cmoc` の扱いを確認したいとき。
-- `session` / `apply` の fork・join・abandon の状態遷移、rollback、cleanup、副作用の有無を追いたいとき。
-- `eval-oracles` の評価レポート、削除済み oracle、Structured Output、prompt の内容を確認したいとき。
+- サブコマンドの状態遷移や副作用をまとめて確認したいとき。
+- `run_command` の出力 tee、終了コード、共通エラーレポート、ログ保存の挙動を確認したいとき。
+- `cmoc init` の `.cmoc` ignore 追加や tracked `.cmoc` の追跡解除、`session` / `apply` の fork・join・abandon の挙動を追いたいとき。
+- `eval-oracles` の評価レポート、削除済み oracle、Structured Output、prompt / report 補助関数の意図を見たいとき。
 - `main` の Typer ルーティング、`eval-oracle` 互換 alias、`bin/cmoc` の launcher と help 表示を確認したいとき。
-- このファイル内のテスト補助関数や prompt/report 検証 helper の意図を把握したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの正本仕様だけを確認したいときは、`oracles/app_specs/sub_commands/INDEX.md` 側を読むべきです。
-- `src/main.py` や `src/sub_commands` の実装本体を追いたいときは、このテスト目次ではなく `src/` 側を読むべきです。
+- 個別サブコマンドの正本仕様だけを確認したいときは、`oracles/app_specs/sub_commands/INDEX.md` を直接読むべきです。
+- `src/main.py` や `src/sub_commands` の実装本体だけを追いたいときは、このテスト目次ではなく `src/` 側を読むべきです。
 - `INDEX.md` の生成・更新ルールだけを確認したいときは、`oracles/app_specs/indexing.md` を参照すべきです。
 - `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいときは、このテスト目次ではなく別の案内を参照すべきです。
 - `tests/test_codex.py` や `tests/test_indexing.py` など、別のテスト群の観点だけを追いたいときは、このファイルでは範囲が広すぎます。
 
 ## hash
 
-- 96c69d8671d6311640b0857e80c85dd09864032165b4740b0da5f3fe4684eff5
+- 37db1f4bfa770795af62d965115849bf75397387b332a5964a46c9e9717183e4
 
 # `test_timestamps.py`
 
