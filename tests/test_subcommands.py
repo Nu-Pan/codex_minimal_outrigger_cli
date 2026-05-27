@@ -666,6 +666,82 @@ def test_session_fork_rolls_back_branch_when_state_write_fails(
     assert _git(repo, "status", "--porcelain").stdout == ""
 
 
+def test_session_fork_keeps_state_when_rollback_branch_delete_fails(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """rollback が branch を消せない場合は対応する state を残す。"""
+    repo = _init_repo(tmp_path)
+    cmoc_init_impl(repo)
+    home_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    session_id = "2026-05-10_22-21_10_123"
+    session_branch = f"cmoc/session/{session_id}"
+    original_run_git = session_fork_module.run_git
+
+    monkeypatch.setattr(
+        session_fork_module,
+        "make_timestamp",
+        lambda: session_id,
+    )
+
+    def fail_after_writing_session_state(
+        repo_root: Path,
+        state_session_id: str,
+        state: dict[str, object],
+    ) -> Path:
+        """state 作成後の保存失敗を模擬する。"""
+        path = write_session_state(repo_root, state_session_id, state)
+        raise OSError(f"fake state write failure after {path.name}")
+
+    def fail_branch_delete(
+        repo_root: Path,
+        args: list[str],
+        *,
+        check: bool = True,
+        text: bool = True,
+        input_text: str | None = None,
+        env: dict[str, str] | None = None,
+    ) -> subprocess.CompletedProcess[str]:
+        """rollback 中の session branch 削除失敗を模擬する。"""
+        if args == ["branch", "-D", session_branch]:
+            return subprocess.CompletedProcess(
+                ["git", *args],
+                1,
+                stdout="",
+                stderr="fake branch delete failure",
+            )
+        return original_run_git(
+            repo_root,
+            args,
+            check=check,
+            text=text,
+            input_text=input_text,
+            env=env,
+        )
+
+    monkeypatch.setattr(
+        session_fork_module,
+        "write_session_state",
+        fail_after_writing_session_state,
+    )
+    monkeypatch.setattr(session_fork_module, "run_git", fail_branch_delete)
+
+    with pytest.raises(CmocError) as error:
+        cmoc_session_fork_impl(repo)
+
+    branches = _git(repo, "branch", "--format=%(refname:short)").stdout
+    state_path = repo / ".cmoc" / "sessions" / f"{session_id}.json"
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    assert "session state の保存に失敗" in error.value.message
+    assert "完全には取り消せません" in error.value.message
+    assert "fake branch delete failure" in error.value.detail
+    assert _git(repo, "branch", "--show-current").stdout.strip() == home_branch
+    assert session_branch in branches
+    assert state["session"]["state"] == "active"
+    assert state["session"]["session_home_branch"] == home_branch
+    assert state["apply"]["state"] == "ready"
+
+
 def test_eval_oracles_writes_report_with_fake_codex(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
