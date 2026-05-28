@@ -48,27 +48,27 @@
 
 ## Summary
 
-- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体処理を実装し、session state の検証から apply branch / worktree の作成、調査・修正ループ、レポート出力までをまとめています。
-- 要修正点の Structured Output 検証、oracle / 実装ファイルの対象選定、部分適用と全体適用の切り替え、要修正点リスト改善ループ、禁止領域チェック、コミットと state 更新を扱います。
+- `src/sub_commands/apply/fork.py` は `cmoc apply` の本体処理を実装し、session state の検証から apply branch / worktree の作成、不整合調査・修正ループ、レポート生成までをまとめるモジュールです。
+- 要修正点の Structured Output 検証、oracle / 実装ファイルの対象選定、部分適用と全体適用の切り替え、要修正点リスト改善ループ、禁止領域の変更検査、コミットと state 更新を扱います。
 - `cmoc apply` の処理順と、実行時の責務境界を追うための入口です。
 
 ## Read this when
 
 - `cmoc apply fork` の実装・修正・レビュー・テストで、全体の処理順を確認したいとき。
-- session state の前提条件、apply branch / worktree の作成、調査・修正ループ、レポート生成までの流れを追いたいとき。
+- session state の前提条件、apply branch / worktree の作成、不整合調査・修正ループ、レポート生成までの流れを追いたいとき。
 - 部分適用モードと全体適用モードの違い、調査対象ファイルの選定規則、要修正点リストの改善ループを確認したいとき。
 - Structured Output の schema 検証、禁止領域の変更検査、コミット生成、`apply.state` の `running` / `completed` / `error` 遷移を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply join` や `cmoc apply abandon` の挙動だけを確認したいときは、このモジュールではなく該当モジュールを読むべきです。
+- `cmoc apply join` や `cmoc apply abandon` の処理だけを確認したいときは、このモジュールではなく該当モジュールを読むべきです。
 - `cmoc session` 系や他のサブコマンドの実装だけを確認したいときは、このモジュールではなく session 側や別の実装を読むべきです。
 - `cmoc apply fork` の仕様断片そのものを確認したいときは、`oracles/app_specs/sub_commands/apply_fork.md` を直接読むべきです。
 - Codex CLI 呼び出しの共通基盤や `INDEX.md` メンテナンスの一般ルールだけを確認したいときは、このファイルではなく共通仕様を読むべきです。
 
 ## hash
 
-- b2bcd096b9deaed42b659b5d8a7b8c4d20adae653526b53ff07bd2bdd5a85a3a
+- 094c991649b818cc898e1ff69b8b95366dda08ce64d664d6b9248ce043a90751
 
 # `join.py`
 

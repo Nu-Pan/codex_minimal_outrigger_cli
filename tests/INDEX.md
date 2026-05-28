@@ -136,27 +136,28 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は、`cmoc` の各サブコマンドに関する決定論的な制御ロジックをまとめて検証するテスト群の入口です。
-- `run_command` の共通処理に加えて、`init`、`session`、`apply`、`eval-oracles` の実装経路、エラー分岐、CLI 登録、ヘルプ表示までを広く扱います。
-- 詳細なテスト観点は `dev_rules/test_rules.md` と各サブコマンド仕様へ案内します。
+- `tests/test_subcommands.py` は、`cmoc` のサブコマンド群に対する決定論的な制御ロジック、CLI 登録、エラーレポートを検証するテスト群の入口です。
+- `run_command` の共通処理に加えて、`init`、`session`、`apply`、`eval-oracles` の各実装経路、`main` の公開コマンド登録、`bin/cmoc` の起動経路まで扱います。
+- さらに、`Fake Codex CLI`、Structured Output の検証、`INDEX.md` 更新、`oracles` / `memo` の扱い、`session join` の conflict prompt、ヘルパーの並び順も確認できます。
 
 ## Read this when
 
 - サブコマンドの振る舞いを実装・修正・レビューするとき。
-- 共通ランナー `run_command`、`init`、`session`、`apply`、`eval-oracles` の制御フローやエラー分岐を確認したいとき。
-- CLI の公開コマンド登録、`--help` 表示、エラー報告、ログ出力、state 更新の期待値を知りたいとき。
-- pytest ベースのテスト方針や Fake Codex CLI を使う前提を確認したいとき。
+- 共通ランナー `run_command` の出力、終了コード、ログ、エラー報告を確認したいとき。
+- `cmoc init`、`session fork/join/abandon`、`apply fork/join/abandon`、`eval-oracles` の制御フローや前提条件を確認したいとき。
+- `main` の `--help`、`eval-oracle` 互換 alias、`bin/cmoc` のランチャー挙動を確認したいとき。
+- `Fake Codex CLI` を使うテスト前提や、Structured Output・prompt 検証の観点を確認したいとき。
 
 ## Do not read this when
 
 - 個別サブコマンドの正本仕様だけを確認したいときは、`oracles/app_specs/sub_commands/INDEX.md` から該当文書へ進むべきです。
-- テスト全般の書き方や配置ルールだけを確認したいときは、`oracles/dev_rules/test_rules.md` を読むべきです。
-- `cmoc` の他領域の実装や、サブコマンド以外のテストを確認したいときは、このファイルは適しません。
-- 特定のヘルパー関数や個別テストケースだけを追いたいときは、対応する実装ファイルや該当テスト関数へ直接進むべきです。
+- テスト全般の書き方や `Fake Codex CLI` の使い方だけを確認したいときは、`oracles/dev_rules/test_rules.md` を読むべきです。
+- `tests/test_codex.py`、`tests/test_indexing.py`、`tests/test_repo.py` など、他のテスト群を見たいときはこのファイルは適しません。
+- `run_command` や各サブコマンドの個別ヘルパー、prompt 文面だけを追いたいときは、対応する実装ファイルや仕様文書へ直接進むべきです。
 
 ## hash
 
-- 9d91dff02f1bc016a4e28cbe054feb66e286f557c8abf84c316e301161c54c1d
+- 1ffa2a7b9fc4b027c39cfdc43838ccfff34c0db9b5723c539f5636dcf2999f55
 
 # `test_timestamps.py`
 
