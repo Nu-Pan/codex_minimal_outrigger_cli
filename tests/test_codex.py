@@ -106,8 +106,8 @@ def test_run_codex_exec_retries_json_and_writes_full_log(
     )
     assert not any("## Attempt 1" in content for content in log_contents)
     captured = capsys.readouterr().out
-    assert "codex exec attempt (1/3) prompt:" in captured
-    assert "codex exec attempt (3/3) output:" in captured
+    assert "codex exec 試行 (1/3) prompt:" in captured
+    assert "codex exec 試行 (3/3) output:" in captured
 
 
 def test_prepare_codex_exec_paths_reserves_call_log_atomically(
@@ -176,7 +176,7 @@ def test_run_codex_exec_notifies_console_and_subcommand_log(
         output = run_codex_exec(
             repo,
             "prompt",
-            purpose="unit test codex call",
+            purpose="unit test codex 呼び出し",
             read_only=True,
         )
 
@@ -189,7 +189,7 @@ def test_run_codex_exec_notifies_console_and_subcommand_log(
         for line in subcommand_logs[0].read_text(encoding="utf-8").splitlines()
     ]
     notification_head = (
-        "codex exec: unit test codex call "
+        "codex exec 完了: unit test codex 呼び出し "
         f"log={repo}/.cmoc/logs/codex_exec/call/"
     )
     assert output == "ok\n"
@@ -198,7 +198,7 @@ def test_run_codex_exec_notifies_console_and_subcommand_log(
     assert " returncode=0" in captured
     assert any(
         event["event"] == "codex_exec_call"
-        and event["purpose"] == "unit test codex call"
+        and event["purpose"] == "unit test codex 呼び出し"
         and event["returncode"] == 0
         for event in log_events
     )
@@ -249,6 +249,115 @@ def test_run_codex_exec_rejects_uncommitted_oracle_change_after_workspace_write(
     assert "oracles/spec.md" in error.value.detail
 
 
+def test_run_codex_exec_allows_active_oracle_conflict_resolution(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """明示された conflict 中 oracle path の未コミット解消差分は許可する。"""
+    repo = _init_git_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("base\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md")
+    _git(repo, "commit", "-m", "add oracle")
+    _git(repo, "checkout", "-b", "session")
+    (oracle_root / "spec.md").write_text("session\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md")
+    _git(repo, "commit", "-m", "session oracle")
+    _git(repo, "checkout", "master")
+    (oracle_root / "spec.md").write_text("home\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md")
+    _git(repo, "commit", "-m", "home oracle")
+    with pytest.raises(subprocess.CalledProcessError):
+        _git(repo, "merge", "session")
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                "echo 'resolved oracle conflict' > oracles/spec.md",
+                "echo 'ok' > \"$LAST\"",
+                "echo '{\"event\":\"done\"}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    output = run_codex_exec(
+        repo,
+        "prompt",
+        read_only=False,
+        skip_index_maintenance=True,
+        allowed_uncommitted_oracle_paths=["oracles/spec.md"],
+    )
+
+    assert output == "ok\n"
+    assert (oracle_root / "spec.md").read_text(encoding="utf-8") == (
+        "resolved oracle conflict\n"
+    )
+
+
+def test_run_codex_exec_rejects_allowed_oracle_path_without_active_conflict(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """例外指定されても conflict 中でない oracle path の変更は拒否する。"""
+    repo = _init_git_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("initial\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md")
+    _git(repo, "commit", "-m", "add oracle")
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                "echo 'not a conflict resolution' > oracles/spec.md",
+                "echo 'ok' > \"$LAST\"",
+                "echo '{\"event\":\"done\"}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(
+            repo,
+            "prompt",
+            read_only=False,
+            skip_index_maintenance=True,
+            allowed_uncommitted_oracle_paths=["oracles/spec.md"],
+        )
+
+    assert "oracles ファイルを変更しました" in error.value.message
+    assert "oracles/spec.md" in error.value.detail
+
+
 def test_run_codex_exec_rejects_committed_oracle_change_after_workspace_write(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -278,6 +387,56 @@ def test_run_codex_exec_rejects_committed_oracle_change_after_workspace_write(
                 "echo 'committed by codex' > oracles/spec.md",
                 "git add oracles/spec.md",
                 "git commit -m 'codex oracle change' >/dev/null",
+                "echo 'ok' > \"$LAST\"",
+                "echo '{\"event\":\"done\"}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(
+            repo,
+            "prompt",
+            read_only=False,
+            skip_index_maintenance=True,
+        )
+
+    assert "Codex CLI 実行中の commit range 変更:" in error.value.detail
+    assert "oracles/spec.md" in error.value.detail
+    assert _git(repo, "status", "--porcelain", "--", "oracles").stdout == ""
+
+
+def test_run_codex_exec_rejects_committed_oracle_deletion_after_workspace_write(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """workspace-write 実行中の commit range に含まれる oracle 削除を拒否する。"""
+    repo = _init_git_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("initial spec\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md")
+    _git(repo, "commit", "-m", "add oracle")
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                "git rm oracles/spec.md >/dev/null",
+                "git commit -m 'codex oracle deletion' >/dev/null",
                 "echo 'ok' > \"$LAST\"",
                 "echo '{\"event\":\"done\"}'",
             ]
@@ -458,6 +617,89 @@ def test_subcommand_log_excludes_logs_in_linked_worktree(
     assert _git(linked, "status", "--porcelain").stdout == ""
 
 
+def test_subcommand_log_from_apply_worktree_writes_to_main_repo(
+    tmp_path: Path,
+) -> None:
+    """cmoc 管理 apply worktree からのログは main repo 側へ集約する。"""
+    repo = _init_git_repo(tmp_path)
+    apply_worktree = (
+        repo
+        / ".cmoc"
+        / "worktrees"
+        / "apply"
+        / "2026-05-28_05-10_00_000"
+        / "2026-05-28_05-11_00_000"
+    )
+    apply_worktree.parent.mkdir(parents=True)
+    _git(
+        repo,
+        "worktree",
+        "add",
+        "-b",
+        "cmoc/apply/2026-05-28_05-10_00_000/2026-05-28_05-11_00_000",
+        str(apply_worktree),
+        "HEAD",
+    )
+
+    with subcommand_log(apply_worktree):
+        print("apply worktree invocation")
+
+    main_logs = list((repo / ".cmoc" / "logs" / "sub_commands").glob("*.jsonl"))
+    apply_logs = list(
+        (apply_worktree / ".cmoc" / "logs" / "sub_commands").glob("*.jsonl")
+    )
+    assert len(main_logs) == 1
+    assert apply_logs == []
+
+
+def test_subcommand_log_from_submodule_keeps_submodule_repo_root(
+    tmp_path: Path,
+) -> None:
+    """submodule の `.git` file を git-common-dir の親へ置き換えない。"""
+    super_repo = _init_git_repo(tmp_path)
+    module_source = tmp_path / "module_source"
+    module_source.mkdir()
+    _git(module_source, "init")
+    _git(module_source, "config", "user.email", "test@example.com")
+    _git(module_source, "config", "user.name", "Test User")
+    (module_source / "README.md").write_text("module\n", encoding="utf-8")
+    _git(module_source, "add", "README.md")
+    _git(module_source, "commit", "-m", "initial")
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            str(module_source),
+            "module",
+        ],
+        cwd=super_repo,
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    _git(super_repo, "commit", "-am", "add submodule")
+    submodule = super_repo / "module"
+
+    with subcommand_log(submodule):
+        print("submodule invocation")
+
+    submodule_logs = list(
+        (submodule / ".cmoc" / "logs" / "sub_commands").glob("*.jsonl")
+    )
+    misplaced_logs = list(
+        (super_repo / ".git" / "modules" / ".cmoc" / "logs" / "sub_commands").glob(
+            "*.jsonl"
+        )
+    )
+    assert (submodule / ".git").is_file()
+    assert len(submodule_logs) == 1
+    assert misplaced_logs == []
+
+
 def test_run_codex_exec_passes_output_schema_file(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -563,6 +805,46 @@ def test_run_codex_exec_passes_output_schema_file(
         f"output_last_message: \"{last_message_path}\"" in content
         for content in log_contents
     )
+
+
+def test_run_codex_exec_rejects_invalid_output_schema_before_codex_call(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """cmoc 側の不正な output_schema は Codex CLI 呼び出し前に失敗する。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    called = tmp_path / "called.txt"
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                f"echo called > {called}",
+                "exit 1",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+    invalid_schema: dict[str, object] = {"type": "not-a-json-schema-type"}
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(
+            repo,
+            "prompt",
+            read_only=True,
+            expect_json=True,
+            output_schema=invalid_schema,
+        )
+
+    assert "出力 schema 定義が不正です" in error.value.message
+    assert "not-a-json-schema-type" in error.value.detail
+    assert not called.exists()
+    assert not (repo / ".cmoc" / "logs" / "codex_exec").exists()
 
 
 def test_run_codex_exec_prints_output_head80_before_escaping_newlines(
@@ -1004,8 +1286,8 @@ def test_extract_session_id_keeps_session_id_compatibility() -> None:
     assert _extract_session_id(stdout, "") == "session-1"
 
 
-def test_resume_command_uses_current_codex_exec_resume_form() -> None:
-    """quota 復旧時の再実行は現行の resume subcommand 形式にする。"""
+def test_resume_command_uses_resume_option_form() -> None:
+    """quota 復旧時の再実行は停止 session を --resume で復元する。"""
     command = [
         "codex",
         "exec",
@@ -1025,24 +1307,20 @@ def test_resume_command_uses_current_codex_exec_resume_form() -> None:
         "--sandbox",
         "read-only",
         "--json",
-        "resume",
+        "--resume",
         "thread-1",
         "-",
     ]
 
 
-def test_resume_command_falls_back_to_last_when_resume_id_is_missing() -> None:
-    """resume id が取れない場合は Codex CLI の --last に委ねる。"""
+def test_resume_command_fails_when_resume_id_is_missing() -> None:
+    """resume id が取れない場合は別 session へ fallback しない。"""
     command = ["codex", "exec", "--json", "-"]
 
-    assert _resume_command(command, None) == [
-        "codex",
-        "exec",
-        "--json",
-        "resume",
-        "--last",
-        "-",
-    ]
+    with pytest.raises(CmocError) as error:
+        _resume_command(command, None)
+
+    assert "resume session id を取得できませんでした" in error.value.message
 
 
 def test_run_codex_exec_retries_zero_exit_capacity_last_message(
@@ -1165,7 +1443,7 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
     monkeypatch: MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """quota 枯渇時は疎通確認後に resume subcommand で同じ prompt を再実行する。"""
+    """quota 枯渇時は疎通確認後に --resume で同じ prompt を再実行する。"""
     repo = tmp_path / "repo"
     repo.mkdir()
     _git(repo, "init")
@@ -1185,7 +1463,7 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
                 "PREV=''",
                 "HAS_RESUME=0",
                 "for ARG in \"$@\"; do",
-                "  if [ \"$ARG\" = \"resume\" ]; then HAS_RESUME=1; fi",
+                "  if [ \"$ARG\" = \"--resume\" ]; then HAS_RESUME=1; fi",
                 "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
                 "    LAST=\"$ARG\"",
                 "  fi",
@@ -1250,19 +1528,92 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
     )
     assert any("quota limit exhausted" in content for content in log_contents)
     assert any("Codex CLI の疎通確認担当" in content for content in log_contents)
-    assert not any("--resume" in content for content in log_contents)
-    assert any("resume" in content for content in log_contents)
+    assert any("--resume" in content for content in log_contents)
     assert "original prompt" not in args
     assert "Codex CLI の疎通確認担当" not in args
-    assert "resume\nthread-1\n-" in args
+    assert "--resume\nthread-1\n-" in args
     assert args.count("\n-\n") == 3
     assert "original prompt" in prompts
     assert "Codex CLI の疎通確認担当" in prompts
     assert "/memo` は読み書き禁止です。" in prompts
-    assert "quota exhausted; waiting before resume" in captured
+    assert "quota が枯渇したため、resume 前に復旧を待機します" in captured
     assert "quota poll prompt: あなたは Codex CLI の疎通確認担当です。" in captured
     assert "quota poll output: ok" in captured
-    assert "quota restored; resuming codex exec" in captured
+    assert "quota が復旧したため、codex exec を resume します" in captured
+
+
+def test_run_codex_exec_waits_again_when_resume_is_still_quota_exhausted(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """resume 後も quota 枯渇なら次の poll 前に 30 分待機する。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    resume_attempts = tmp_path / "resume-attempts.txt"
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "HAS_RESUME=0",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$ARG\" = \"--resume\" ]; then HAS_RESUME=1; fi",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                "PROMPT=\"$(cat)\"",
+                "if [[ \"$PROMPT\" == *'Codex CLI の疎通確認担当'* ]]; then",
+                "  echo ok > \"$LAST\"",
+                "  exit 0",
+                "fi",
+                "if [ \"$HAS_RESUME\" = 0 ]; then",
+                "  echo '{\"type\":\"thread.started\","
+                "\"thread_id\":\"thread-1\"}'",
+                "  echo 'quota exhausted' > \"$LAST\"",
+                "  exit 1",
+                "fi",
+                f"STATE={resume_attempts}",
+                "COUNT=0",
+                "if [ -f \"$STATE\" ]; then COUNT=$(cat \"$STATE\"); fi",
+                "COUNT=$((COUNT + 1))",
+                "echo \"$COUNT\" > \"$STATE\"",
+                "if [ \"$COUNT\" -eq 1 ]; then",
+                "  echo 'quota exhausted' > \"$LAST\"",
+                "  exit 1",
+                "fi",
+                "echo resumed > \"$LAST\"",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    sleeps: list[int] = []
+
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setattr(
+        "commons.codex.time.sleep",
+        lambda seconds: sleeps.append(seconds),
+    )
+
+    output = run_codex_exec(repo, "original prompt", read_only=True)
+
+    log_files = sorted(
+        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+    )
+    assert output.strip() == "resumed"
+    assert resume_attempts.read_text(encoding="utf-8").strip() == "2"
+    assert sleeps == [1800]
+    assert len(log_files) == 5
+    assert "resume 後に quota が再度枯渇したため、待機します" in (
+        capsys.readouterr().out
+    )
 
 
 def test_run_codex_exec_fails_when_resume_returns_unexpected_error(
@@ -1283,7 +1634,7 @@ def test_run_codex_exec_fails_when_resume_returns_unexpected_error(
                 "PREV=''",
                 "HAS_RESUME=0",
                 "for ARG in \"$@\"; do",
-                "  if [ \"$ARG\" = \"resume\" ]; then HAS_RESUME=1; fi",
+                "  if [ \"$ARG\" = \"--resume\" ]; then HAS_RESUME=1; fi",
                 "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
                 "    LAST=\"$ARG\"",
                 "  fi",
@@ -1511,7 +1862,10 @@ def test_run_codex_exec_requires_ok_last_message_for_quota_poll(
         )
     ]
     assert "quota 復旧確認に失敗しました。" in error.value.message
-    assert "quota poll output-last-message was not ok." in error.value.detail
+    assert (
+        "quota poll の output-last-message が ok ではありませんでした。"
+        in error.value.detail
+    )
     assert not any("--resume" in content for content in log_contents)
 
 

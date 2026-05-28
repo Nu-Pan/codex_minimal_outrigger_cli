@@ -56,11 +56,11 @@ def test_maintain_indexes_generates_routing_entries_and_respects_gitignore(
     )
 
 
-def test_maintain_indexes_ignores_external_and_local_excludes_files(
+def test_maintain_indexes_uses_local_exclude_but_ignores_external_excludes(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """INDEX 生成対象は global/system と `.git/info/exclude` に依存しない。"""
+    """INDEX 生成対象は `.git/info/exclude` を反映し、global/system は無視する。"""
     global_ignore = tmp_path / "global-excludes"
     global_ignore.write_text("/global-only.txt\n", encoding="utf-8")
     global_config = tmp_path / "global-gitconfig"
@@ -105,7 +105,7 @@ def test_maintain_indexes_ignores_external_and_local_excludes_files(
     content = (repo / "INDEX.md").read_text(encoding="utf-8")
     assert changed is True
     assert "# `global-only.txt`" in content
-    assert "# `local-only.txt`" in content
+    assert "# `local-only.txt`" not in content
     assert "# `system-only.txt`" in content
 
 
@@ -135,6 +135,40 @@ def test_maintain_indexes_creates_empty_index_for_empty_directory(
     assert changed is True
     assert (empty / "INDEX.md").exists()
     assert (empty / "INDEX.md").read_text(encoding="utf-8") == ""
+
+
+def test_maintain_indexes_skips_excluded_index_roots(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """除外 root 配下には INDEX.md を作成・更新しない。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    nested_oracle = oracle_root / "nested"
+    nested_oracle.mkdir(parents=True)
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    (nested_oracle / "more.md").write_text("more\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "oracles")
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """INDEX 生成用の最小 Structured Output を返す。"""
+        return json.dumps(
+            {
+                "summary": ["summary"],
+                "read_this_when": ["read"],
+                "do_not_read_this_when": ["skip"],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    changed = maintain_indexes(repo, excluded_index_roots=["oracles"])
+
+    assert changed is True
+    assert (repo / "INDEX.md").exists()
+    assert not (oracle_root / "INDEX.md").exists()
+    assert not (nested_oracle / "INDEX.md").exists()
 
 
 def test_maintain_indexes_includes_build_and_tmp_as_entries(
@@ -518,8 +552,8 @@ def test_maintain_indexes_regenerates_non_utf8_index(
     assert changed is True
     assert "# `README.md`" in content
     assert "# `target.txt`" in content
-    assert "generate INDEX entry for README.md" in purposes
-    assert "generate INDEX entry for target.txt" in purposes
+    assert "INDEX entry 生成 README.md" in purposes
+    assert "INDEX entry 生成 target.txt" in purposes
 
 
 def test_maintain_indexes_retries_invalid_structured_output(
@@ -735,9 +769,9 @@ def test_maintain_indexes_regenerates_parent_entry_after_child_rename(
     root_index = (repo / "INDEX.md").read_text(encoding="utf-8")
 
     assert changed is True
-    assert "generate INDEX entry for folder" in purposes
+    assert "INDEX entry 生成 folder" in purposes
     assert "# `folder`" in root_index
-    assert "- generate INDEX entry for folder" in root_index
+    assert "- INDEX entry 生成 folder" in root_index
 
 
 def test_maintain_indexes_reuses_current_index_with_empty_sections(

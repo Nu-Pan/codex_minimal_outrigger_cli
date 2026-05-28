@@ -13,7 +13,9 @@ from commons.errors import CmocError
 from commons.repo import (
     apply_worktree_path_from_branch,
     assert_no_uncommitted_changes,
+    clear_apply_process_id,
     current_branch,
+    filter_oracle_file_paths,
     is_apply_branch,
     is_implementation_path,
     is_session_branch,
@@ -170,7 +172,10 @@ def _validate_joinable_state(
     if not isinstance(session, dict) or not isinstance(apply, dict):
         raise CmocError(
             "session state ファイルの形式が不正です。",
-            ["state JSON の session/apply セクションを確認してください。"],
+            [
+                "state JSON の session/apply セクションを確認して復旧してください。",
+                "復旧できない場合は、対象 apply run を破棄して新しい session でやり直してください。",
+            ],
             f"現在の branch: {current_branch_name}",
     )
     session_branch = f"cmoc/session/{session_id}"
@@ -268,7 +273,7 @@ def _unexpected_diffs(repo_root: Path, join_state: _JoinState) -> list[str]:
         invalid_paths = [
             path
             for path in entry.paths
-            if not is_implementation_path(repo_root, path)
+            if not _is_apply_branch_expected_path(repo_root, path)
         ]
         for path in invalid_paths:
             unexpected.append(f"{join_state.apply_branch}: {path}")
@@ -279,7 +284,11 @@ def _unexpected_diffs(repo_root: Path, join_state: _JoinState) -> list[str]:
         join_state.session_branch,
     )
     for entry in session_entries:
-        invalid_paths = [path for path in entry.paths if not _is_oracle_path(path)]
+        invalid_paths = [
+            path
+            for path in entry.paths
+            if not _is_session_branch_expected_path(repo_root, path)
+        ]
         for path in invalid_paths:
             unexpected.append(f"{join_state.session_branch}: {path}")
     return unexpected
@@ -321,6 +330,21 @@ def _is_oracle_path(path: str) -> bool:
     return path == "oracles" or path.startswith("oracles/")
 
 
+def _is_apply_branch_expected_path(repo_root: Path, path: str) -> bool:
+    """apply branch 側で cmoc が積み得る想定内 path か判定する。"""
+    if _is_oracle_path(path):
+        return False
+    return (
+        is_implementation_path(repo_root, path)
+        or Path(path).name == "INDEX.md"
+    )
+
+
+def _is_session_branch_expected_path(repo_root: Path, path: str) -> bool:
+    """session branch 側で利用者が編集し得る想定内 path か判定する。"""
+    return filter_oracle_file_paths(repo_root, [path]) == [path]
+
+
 def _force_resolve_unexpected_diffs(
     repo_root: Path,
     join_state: _JoinState,
@@ -350,7 +374,7 @@ def _force_resolve_unexpected_diffs(
                 join_state.oracle_snapshot_commit,
                 join_state.session_branch,
             ),
-            _is_oracle_path,
+            lambda path: _is_session_branch_expected_path(repo_root, path),
         ),
         repo_root,
     )
@@ -497,15 +521,18 @@ def _mark_apply_ready(
     if not isinstance(apply, dict):
         raise CmocError(
             "session state ファイルの形式が不正です。",
-            ["state JSON の apply セクションを確認してください。"],
+            [
+                "state JSON の apply セクションを確認して復旧してください。",
+                "復旧できない場合は、対象 apply run を破棄して新しい session でやり直してください。",
+            ],
         )
     state["apply"] = {
         "state": "ready",
         "apply_branch": None,
         "oracle_snapshot_commit": None,
-        "process_id": None,
     }
     write_session_state(repo_root, session_id, state)
+    clear_apply_process_id(repo_root, session_id)
 
 
 def _snapshot_cleanup_evidence(

@@ -1,5 +1,6 @@
 """サブコマンドのステップ時間計測。"""
 
+from collections.abc import Sequence
 from contextvars import ContextVar
 from math import floor
 from time import perf_counter
@@ -11,6 +12,8 @@ _CURRENT_TIMER: ContextVar["StepTimer | None"] = ContextVar(
     "cmoc_step_timer",
     default=None,
 )
+
+StepIndexPath = Sequence[tuple[int, int]]
 
 
 class StepTimer:
@@ -65,12 +68,12 @@ class StepTimer:
 
 def start_step(
     timer: StepTimer,
-    step_number: int,
-    total_steps: int,
+    step_number: int | StepIndexPath,
+    total_steps: int | None,
     description: str,
 ) -> None:
     """ステップ開始を計測し、oracle 指定フォーマットで通知する。"""
-    step_index = f"{step_number}/{total_steps}"
+    step_index = _format_step_index(step_number, total_steps)
     timer.start(description)
     timestamp = _console_timestamp()
     log_event(
@@ -82,6 +85,28 @@ def start_step(
         },
     )
     print(f"# {timestamp} ({step_index}) {description}")
+
+
+def _format_step_index(
+    step_number: int | StepIndexPath,
+    total_steps: int | None,
+) -> str:
+    """単一階層または階層化ステップ番号を表示用文字列へ変換する。"""
+    # 既存の単一階層 API 呼び出しはそのまま `i/N` として扱う。
+    if isinstance(step_number, int):
+        if total_steps is None:
+            raise ValueError("total_steps is required for flat step index.")
+        return f"{step_number}/{total_steps}"
+
+    # 階層化 API では全階層を `i/N, j/M, ...` として並べる。
+    if total_steps is not None:
+        raise ValueError("total_steps must be None for hierarchical step index.")
+    if not step_number:
+        raise ValueError("hierarchical step index must not be empty.")
+    parts: list[str] = []
+    for current_step, current_total in step_number:
+        parts.append(f"{current_step}/{current_total}")
+    return ", ".join(parts)
 
 
 def report_current_timer() -> None:

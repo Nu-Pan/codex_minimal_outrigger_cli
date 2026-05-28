@@ -2,7 +2,6 @@
 
 from collections.abc import Callable
 from pathlib import Path
-import sys
 from time import perf_counter
 
 import typer
@@ -46,10 +45,10 @@ def run_command(handler: Callable[[Path], int | None]) -> None:
                         ),
                         exit_code=exit_code,
                     )
-                    print(format_error_report(report_error), file=sys.stderr)
+                    print(format_error_report(report_error))
                 raise
             except Exception as error:
-                print(format_error_report(error), file=sys.stderr)
+                print(format_error_report(error))
                 exit_code = getattr(error, "exit_code", 1)
                 raise typer.Exit(exit_code) from error
             finally:
@@ -61,7 +60,7 @@ def run_command(handler: Callable[[Path], int | None]) -> None:
     except typer.Exit:
         raise
     except Exception as error:
-        print(format_error_report(error), file=sys.stderr)
+        print(format_error_report(error))
         exit_code = getattr(error, "exit_code", 1)
         _print_completion_report(
             started=started,

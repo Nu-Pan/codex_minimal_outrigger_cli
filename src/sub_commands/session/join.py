@@ -101,7 +101,10 @@ def _validate_joinable_state(
     if not isinstance(session, dict) or not isinstance(apply, dict):
         raise CmocError(
             "session state ファイルの形式が不正です。",
-            ["state JSON の session/apply セクションを確認してください。"],
+            [
+                "state JSON の session/apply セクションを確認して復旧してください。",
+                "復旧できない場合は、現在の session を abandon して新しい session を開始してください。",
+            ],
             f"現在の branch: {session_branch}",
         )
     if session.get("state") != "active":
@@ -163,7 +166,10 @@ def _mark_session_joined(
     if not isinstance(session, dict):
         raise CmocError(
             "session state ファイルの形式が不正です。",
-            ["state JSON の session セクションを確認してください。"],
+            [
+                "state JSON の session セクションを確認して復旧してください。",
+                "復旧できない場合は、現在の session を使わず新しい session を開始してください。",
+            ],
         )
     session["state"] = "joined"
     write_session_state(repo_root, session_id, state)
@@ -189,10 +195,11 @@ def _resolve_conflicts(repo_root: Path) -> None:
     run_codex_exec(
         repo_root,
         _conflict_prompt(repo_root, unmerged),
-        purpose="resolve session join conflicts",
+        purpose="session join conflict 解消",
         read_only=False,
         expect_json=False,
         skip_index_maintenance=True,
+        allowed_uncommitted_oracle_paths=_oracle_conflict_paths(unmerged),
     )
 
     _assert_no_forbidden_pending_paths(repo_root)
@@ -321,6 +328,15 @@ def _is_forbidden_conflict_path(path: str) -> bool:
     return path == ".agents" or path.startswith(".agents/") or (
         path == "memo" or path.startswith("memo/")
     )
+
+
+def _oracle_conflict_paths(unmerged: list[str]) -> list[str]:
+    """conflict marker 解消だけを許可する oracle path を抽出する。"""
+    return [
+        path
+        for path in unmerged
+        if path == "oracles" or path.startswith("oracles/")
+    ]
 
 
 def _assert_no_forbidden_pending_paths(repo_root: Path) -> None:

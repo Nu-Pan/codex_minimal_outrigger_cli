@@ -150,7 +150,7 @@ def _git_exclude_path(repo_root: Path) -> Path | None:
 
 
 def _subcommand_log_repo_root(repo_root: Path) -> Path:
-    """linked worktree ではなく session state を共有する root を返す。"""
+    """サブコマンドログを書き込む repo root を返す。"""
     if not (repo_root / ".git").exists():
         return repo_root
     result = subprocess.run(
@@ -171,7 +171,21 @@ def _subcommand_log_repo_root(repo_root: Path) -> Path:
     common_dir = result.stdout.strip()
     if not common_dir:
         return repo_root
-    return Path(common_dir).parent
+    common_root = Path(common_dir).parent
+    if _is_cmoc_managed_worktree_root(repo_root, common_root):
+        return common_root
+    return repo_root
+
+
+def _is_cmoc_managed_worktree_root(repo_root: Path, common_root: Path) -> bool:
+    """repo_root が common_root 配下の cmoc 管理 worktree なら真を返す。"""
+    try:
+        repo_root.resolve().relative_to(
+            (common_root / ".cmoc" / "worktrees").resolve()
+        )
+    except ValueError:
+        return False
+    return True
 
 
 def _console_timestamp() -> str:

@@ -10,9 +10,11 @@ from commons.errors import CmocError
 from commons.repo import (
     apply_worktree_path_from_branch,
     assert_no_uncommitted_changes,
+    clear_apply_process_id,
     current_branch,
     is_apply_branch,
     is_session_branch,
+    read_apply_process_id,
     read_session_state,
     run_git,
     session_id_from_branch,
@@ -48,6 +50,7 @@ def cmoc_apply_abandon_impl(repo_root: Path | None = None) -> None:
     warnings = _stop_running_apply(abandon_state)
 
     start_step(timer, 3, 4, "cleanup apply artifacts")
+    _relocate_from_apply_branch(cmoc_root, branch_name, abandon_state)
     warnings.extend(_cleanup_apply_artifacts(cmoc_root, abandon_state))
 
     start_step(timer, 4, 4, "record ready apply state")
@@ -69,11 +72,13 @@ class _AbandonState:
         self,
         *,
         apply_branch: str,
+        session_branch: str,
         apply_worktree: Path,
         previous_apply_state: str,
         process_id: int | None,
     ) -> None:
         self.apply_branch = apply_branch
+        self.session_branch = session_branch
         self.apply_worktree = apply_worktree
         self.previous_apply_state = previous_apply_state
         self.process_id = process_id
@@ -91,7 +96,10 @@ def _validate_abandonable_state(
     if not isinstance(session, dict) or not isinstance(apply, dict):
         raise CmocError(
             "session state ファイルの形式が不正です。",
-            ["state JSON の session/apply セクションを確認してください。"],
+            [
+                "state JSON の session/apply セクションを確認して復旧してください。",
+                "復旧できない場合は、対象 session を使わず新しい session を開始してください。",
+            ],
             f"現在の branch: {current_branch_name}",
         )
     session_branch = f"cmoc/session/{session_id}"
@@ -117,7 +125,10 @@ def _validate_abandonable_state(
     if not isinstance(apply_state, str) or not apply_state:
         raise CmocError(
             "apply state を session state から特定できませんでした。",
-            ["session state の apply.state を確認してください。"],
+            [
+                "session state の apply.state を確認して復旧してください。",
+                "復旧できない場合は、対象 session を使わず新しい session を開始してください。",
+            ],
             f"apply.state: {apply_state}",
         )
     if apply_state not in {"running", "completed", "error"}:
@@ -158,22 +169,12 @@ def _validate_abandonable_state(
             ],
             f"session branch: {session_branch}",
         )
-    process_id = apply.get("process_id")
-    if process_id is not None and (
-        not isinstance(process_id, int)
-        or isinstance(process_id, bool)
-        or process_id <= 0
-    ):
-        raise CmocError(
-            "apply process id を session state から特定できませんでした。",
-            [
-                "session state の apply.process_id を確認してください。",
-                "state が壊れている場合は、手動で apply process の状態を確認してください。",
-            ],
-            f"apply.process_id: {process_id}",
-        )
+    process_id = None
+    if apply_state == "running":
+        process_id = read_apply_process_id(repo_root, session_id)
     return _AbandonState(
         apply_branch=apply_branch,
+        session_branch=session_branch,
         apply_worktree=apply_worktree,
         previous_apply_state=apply_state,
         process_id=process_id,
@@ -194,10 +195,10 @@ def _stop_running_apply(abandon_state: _AbandonState) -> list[str]:
         raise CmocError(
             "停止対象の apply process が現在の abandon process と一致します。",
             [
-                "session state の apply.process_id を確認してください。",
+                "runtime の apply process id ファイルを確認してください。",
                 "誤った process id が記録されている場合は、state を復旧してから再実行してください。",
             ],
-            f"apply.process_id: {process_id}",
+            f"apply process id: {process_id}",
         )
     if not _process_exists(process_id):
         return [f"running apply process was already gone: pid {process_id}"]
@@ -217,7 +218,7 @@ def _stop_running_apply(abandon_state: _AbandonState) -> list[str]:
             "対象 process の状態を確認してください。",
             "`cmoc apply abandon` を再実行する前に、手動で process を停止してください。",
         ],
-        f"apply.process_id: {process_id}",
+        f"apply process id: {process_id}",
     )
 
 
@@ -257,6 +258,32 @@ def _child_process_ids(process_id: int) -> list[int]:
     except OSError:
         return []
     return [int(value) for value in content.split() if value.isdigit()]
+
+
+def _relocate_from_apply_branch(
+    repo_root: Path,
+    current_branch_name: str,
+    abandon_state: _AbandonState,
+) -> None:
+    """apply branch 上からの実行時に cleanup 基点を session branch へ移す。"""
+    if current_branch_name != abandon_state.apply_branch:
+        return
+    switch_result = run_git(
+        repo_root,
+        ["switch", abandon_state.session_branch],
+        check=False,
+    )
+    if switch_result.returncode == 0:
+        return
+    detail = switch_result.stderr.strip()
+    raise CmocError(
+        "apply cleanup のため session branch へ移動できませんでした。",
+        [
+            "session branch の worktree 状態を確認してください。",
+            "問題を解消してから `cmoc apply abandon` を再実行してください。",
+        ],
+        detail or f"session branch: {abandon_state.session_branch}",
+    )
 
 
 def _cleanup_apply_artifacts(
@@ -319,12 +346,15 @@ def _mark_apply_ready(
     if not isinstance(apply, dict):
         raise CmocError(
             "session state ファイルの形式が不正です。",
-            ["state JSON の apply セクションを確認してください。"],
+            [
+                "state JSON の apply セクションを確認して復旧してください。",
+                "復旧できない場合は、対象 session を使わず新しい session を開始してください。",
+            ],
         )
     state["apply"] = {
         "state": "ready",
         "apply_branch": None,
         "oracle_snapshot_commit": None,
-        "process_id": None,
     }
     write_session_state(repo_root, session_id, state)
+    clear_apply_process_id(repo_root, session_id)

@@ -49,26 +49,26 @@
 
 ## Summary
 
-- サブコマンド呼び出しごとのコンソール・ファイル両方への tee 出力、ログ保存先、追跡可能性の要件を定めている。
-- ステップ開始通知、Codex CLI 呼び出し通知、経過時間、戻り値、途中経過と作業完了レポートの見分け方を扱う。
-- 標準出力に流す時間表示フォーマットを定義している。
+- サブコマンド呼び出しごとのコンソール出力とファイルログ出力の規則をまとめた文書です。
+- ログ保存先、追跡可能性、ステップ開始通知、Codex CLI 呼び出し通知、完了報告の見分け方を扱います。
+- 標準出力に流す時間表示フォーマットと、コンソール表示の最低限の項目を定めています。
 
 ## Read this when
 
-- サブコマンド実行時の標準出力とログファイルの出し分け、または tee の実装を確認したいとき。
-- `.cmoc/logs/sub_commands/<time-stamp>.log` への保存や、過去の実行を辿れるログ構造を設計・修正したいとき。
+- サブコマンド実行時の標準出力とログファイルの出し分け、または tee 出力の実装を確認したいとき。
+- .cmoc/logs/sub_commands/<time-stamp>.jsonl への保存や、過去の実行を追跡できるログ構造を設計・修正したいとき。
 - ステップ開始通知や Codex CLI 呼び出し通知、経過時間表示、完了報告の表示形式を実装・調整したいとき。
-- 時間表示を `<hour>h <minute>m <sec>.<msec>s` 形式に揃える必要があるとき。
+- 標準出力に流す時間表示を <hour>h <minute>m <sec>.<msec>s 形式に揃える必要があるとき。
 
 ## Do not read this when
 
-- 特定のサブコマンドの引数、状態遷移、業務ロジックだけを確認したいとき。
-- branch model、session/apply の手順、エラー処理など、出力規則以外の仕様を調べたいとき。
+- 個別サブコマンドの引数、状態遷移、業務ロジックだけを確認したいとき。
+- branch model や session/apply の手順など、出力規則以外の仕様を確認したいとき。
 - README や AGENTS などのリポジトリ運用ルールだけを確認したいとき。
 
 ## hash
 
-- 87802561acbe4b063a58543c94ec190bcbebf3ff78dd8ee015a51e071ab05a1b
+- 1a25a649cbb5e89e2a60b28aba4c29b6b69a2371984a459ebcfefcc95d3b2e9d
 
 # `error_handling.md`
 
@@ -196,9 +196,9 @@
 
 ## Summary
 
-- cmoc の個別サブコマンド仕様への入口で、`apply`、`session`、`eval-oracles`、`init` の各正本仕様へ案内します。
+- `cmoc` の個別サブコマンド仕様への入口で、`apply`、`session`、`eval-oracles`、`init` の各正本仕様へ案内するディレクトリです。
 - `apply_abandon.md`、`apply_fork.md`、`apply_join.md`、`session_abandon.md`、`session_fork.md`、`session_join.md`、`eval_oracles.md`、`init.md` に分かれた手順・前提条件・状態遷移・終了条件をまとめます。
-- このディレクトリを起点に、サブコマンドごとの目的や読むべき詳細仕様を素早く選べるようにします。
+- このディレクトリを起点に、各サブコマンドの目的や読むべき詳細仕様を素早く選べるようにします。
 
 ## Read this when
 
@@ -208,13 +208,13 @@
 
 ## Do not read this when
 
-- 個別のサブコマンド仕様だけを確認したいときは、この INDEX ではなく該当する `apply_*`、`session_*`、`eval_oracles.md`、`init.md` を直接読むべきです。
+- 個別のサブコマンド仕様だけを確認したいときは、この `INDEX.md` ではなく該当する `apply_*`、`session_*`、`eval_oracles.md`、`init.md` を直接読むべきです。
 - 実装コードやテストコードだけで足りる作業では、このディレクトリの案内を読む必要はありません。
-- `branch_model`、`codex_call`、ログ、エラーハンドリング、`oracles` 全体の扱いなど、他の共通仕様を確認したいときは、別の入口文書を読むべきです。
+- `branch_model`、`codex_call`、ログ、エラーハンドリング、`oracles` 全体の扱いなど、他の共通仕様を確認したいときは別の入口文書を読むべきです。
 
 ## hash
 
-- 216e9b87597dde1829c7f82bb742f7ba34c01ccf2d5da2f26830d5cc3b3dfd89
+- ed8511bd8d99dc20a13dc999a8b78c32d5c744a049412d98d73963bd0242292d
 
 # `usage.md`
 

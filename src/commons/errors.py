@@ -65,7 +65,17 @@ def format_error_report(error: BaseException) -> str:
             detail,
             "",
             "Call stack:",
-            traceback.format_exc(),
+            _format_call_stack(error),
         ]
     )
     return "\n".join(lines)
+
+
+def _format_call_stack(error: BaseException) -> str:
+    """受け取った例外そのもののコールスタックを整形する。"""
+    if error.__traceback__ is None:
+        return (
+            "Traceback is not available for this exception. "
+            "The exception may not have been raised yet."
+        )
+    return "".join(traceback.format_exception(type(error), error, error.__traceback__))

@@ -105,7 +105,10 @@ def _validate_abandonable_state(
     if not isinstance(session, dict) or not isinstance(apply, dict):
         raise CmocError(
             "session state ファイルの形式が不正です。",
-            ["state JSON の session/apply セクションを確認してください。"],
+            [
+                "state JSON の session/apply セクションを確認して復旧してください。",
+                "復旧できない場合は、現在の session を使わず新しい session を開始してください。",
+            ],
             f"現在の branch: {session_branch}",
         )
     if session.get("state") != "active":
@@ -168,7 +171,10 @@ def _mark_session_abandoned(
     if not isinstance(session, dict):
         raise CmocError(
             "session state ファイルの形式が不正です。",
-            ["state JSON の session セクションを確認してください。"],
+            [
+                "state JSON の session セクションを確認して復旧してください。",
+                "復旧できない場合は、現在の session を使わず新しい session を開始してください。",
+            ],
         )
     session["state"] = "abandoned"
     write_session_state(repo_root, session_id, state)
@@ -191,21 +197,18 @@ def _restore_abandon_state(
             restored = read_session_state(state_root, session_id)
         except Exception as error:
             restore_errors.append(f"state restore failed: {error}")
-            return restore_errors
-        restored_session = restored.get("session")
-        if not isinstance(restored_session, dict):
-            restore_errors.append(
-                "state restore failed: restored session section is invalid"
-            )
-            return restore_errors
-        if restored_session.get("state") != "active":
-            restore_errors.append(
-                "state restore failed: restored session.state is not active"
-            )
-            return restore_errors
+        else:
+            restored_session = restored.get("session")
+            if not isinstance(restored_session, dict):
+                restore_errors.append(
+                    "state restore failed: restored session section is invalid"
+                )
+            elif restored_session.get("state") != "active":
+                restore_errors.append(
+                    "state restore failed: restored session.state is not active"
+                )
     else:
         restore_errors.append("state restore failed: session section is invalid")
-        return restore_errors
 
     branch_exists = run_git(
         repo_root,
