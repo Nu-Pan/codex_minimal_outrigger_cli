@@ -33,6 +33,12 @@ _POLL_MODEL = COST_PERFORMANCE_MODEL
 _POLL_REASONING_EFFORT = "low"
 _QUOTA_POLL_INTERVAL_SECONDS = 30 * 60
 _CAPACITY_MESSAGE = "Selected model is at capacity"
+_QUOTA_MESSAGES = (
+    "Quota exceeded",
+    "You've hit your usage limit",
+    "out of credits",
+    "You hit your spend cap",
+)
 _CAPACITY_RETRY_LIMIT = 8
 _CAPACITY_INITIAL_RETRY_DELAY_SECONDS = 5
 _FORBIDDEN_REASONING_EFFORTS = {"xhigh"}
@@ -140,9 +146,7 @@ def run_codex_exec(
 
         # quota 枯渇だけは待機・resume に入り、それ以外の CLI 失敗は中断する。
         if result.returncode != 0:
-            if _last_message_indicates_quota_exhaustion(
-                run.last_message_path,
-            ):
+            if _stdout_jsonl_indicates_quota_exhaustion(result.stdout):
                 session_id = _extract_session_id(result.stdout, result.stderr)
                 command = _resume_command(command, session_id)
                 print("quota が枯渇したため、resume 前に復旧を待機します")
@@ -359,15 +363,15 @@ def _wait_for_quota_and_resume(
             )
             if resume_run.result.returncode == 0:
                 return resume_run
-            if not _last_message_indicates_quota_exhaustion(
-                resume_run.last_message_path,
+            if not _stdout_jsonl_indicates_quota_exhaustion(
+                resume_run.result.stdout,
             ):
                 _raise_codex_failure(resume_run.log_path, resume_run.result)
             print("resume 後に quota が再度枯渇したため、待機します")
             _sleep_for_quota_poll_interval()
             continue
-        if not _last_message_indicates_quota_exhaustion(
-            poll_run.last_message_path,
+        if not _stdout_jsonl_indicates_quota_exhaustion(
+            poll_run.result.stdout,
         ):
             _raise_codex_failure(poll_run.log_path, poll_result)
         _sleep_for_quota_poll_interval()
@@ -396,7 +400,7 @@ def _retry_after_capacity_if_needed(
     delay_seconds = _CAPACITY_INITIAL_RETRY_DELAY_SECONDS
     current_run = run
     for retry_index in range(1, _CAPACITY_RETRY_LIMIT + 1):
-        if not _last_message_indicates_capacity(current_run.last_message_path):
+        if not _stdout_jsonl_indicates_capacity(current_run.result.stdout):
             return current_run
         print(
             "選択された model が capacity 上限に達しています。"
@@ -419,7 +423,7 @@ def _retry_after_capacity_if_needed(
             schema_path,
             allowed_uncommitted_oracle_paths,
         )
-    if _last_message_indicates_capacity(current_run.last_message_path):
+    if _stdout_jsonl_indicates_capacity(current_run.result.stdout):
         _raise_capacity_failure(current_run)
     return current_run
 
@@ -818,23 +822,48 @@ def _raise_capacity_failure(run: _CodexCommandRun) -> NoReturn:
     )
 
 
-def _last_message_indicates_quota_exhaustion(path: Path) -> bool:
-    """最終出力メッセージだけを quota 枯渇判定の根拠にする。"""
-    # oracle は stdout/stderr ではなく output-last-message の文言を判定基準にする。
-    try:
-        last_message = _read_last_message(path)
-    except ValueError:
-        return False
-    return "quota exhausted" in last_message.lower()
+def _stdout_jsonl_indicates_quota_exhaustion(stdout: str) -> bool:
+    """Codex CLI の stdout JSONL から quota 枯渇を判定する。"""
+    return _stdout_jsonl_has_error_message(stdout, _QUOTA_MESSAGES)
 
 
-def _last_message_indicates_capacity(path: Path) -> bool:
-    """最終出力メッセージだけを capacity 一時失敗判定の根拠にする。"""
-    try:
-        last_message = _read_last_message(path)
-    except ValueError:
-        return False
-    return _CAPACITY_MESSAGE in last_message
+def _stdout_jsonl_indicates_capacity(stdout: str) -> bool:
+    """Codex CLI の stdout JSONL から capacity 一時失敗を判定する。"""
+    return _stdout_jsonl_has_error_message(stdout, (_CAPACITY_MESSAGE,))
+
+
+def _stdout_jsonl_has_error_message(
+    stdout: str,
+    message_fragments: tuple[str, ...],
+) -> bool:
+    """stdout JSONL の既知 error event に指定文言が含まれるか調べる。"""
+    for line in stdout.splitlines():
+        try:
+            value = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        message = _codex_error_message(value)
+        if message is None:
+            continue
+        if any(fragment in message for fragment in message_fragments):
+            return True
+    return False
+
+
+def _codex_error_message(value: object) -> str | None:
+    """Codex JSONL の error / turn.failed event から message を取り出す。"""
+    if not isinstance(value, dict):
+        return None
+    event_type = value.get("type")
+    if event_type == "error":
+        message = value.get("message")
+        return message if isinstance(message, str) else None
+    if event_type == "turn.failed":
+        error = value.get("error")
+        if isinstance(error, dict):
+            message = error.get("message")
+            return message if isinstance(message, str) else None
+    return None
 
 
 def _extract_session_id(stdout: str, stderr: str) -> str | None:

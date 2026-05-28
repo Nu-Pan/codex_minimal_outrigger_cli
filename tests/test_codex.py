@@ -1323,11 +1323,11 @@ def test_resume_command_fails_when_resume_id_is_missing() -> None:
     assert "resume session id を取得できませんでした" in error.value.message
 
 
-def test_run_codex_exec_retries_zero_exit_capacity_last_message(
+def test_run_codex_exec_retries_zero_exit_capacity_stdout_jsonl(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """0 終了でも last message が capacity なら同じ条件で再実行する。"""
+    """0 終了でも stdout JSONL が capacity なら同じ条件で再実行する。"""
     repo = tmp_path / "repo"
     repo.mkdir()
     fake_bin = tmp_path / "bin"
@@ -1352,7 +1352,9 @@ def test_run_codex_exec_retries_zero_exit_capacity_last_message(
                 "COUNT=$((COUNT + 1))",
                 "echo \"$COUNT\" > \"$STATE\"",
                 "if [ \"$COUNT\" -eq 1 ]; then",
-                "  echo 'Selected model is at capacity' > \"$LAST\"",
+                "  echo '{\"type\":\"error\","
+                "\"message\":\"Selected model is at capacity\"}'",
+                "  echo 'not final output' > \"$LAST\"",
                 "  exit 0",
                 "fi",
                 "echo 'done' > \"$LAST\"",
@@ -1408,7 +1410,9 @@ def test_run_codex_exec_fails_after_capacity_retry_limit(
                 "if [ -f \"$STATE\" ]; then COUNT=$(cat \"$STATE\"); fi",
                 "COUNT=$((COUNT + 1))",
                 "echo \"$COUNT\" > \"$STATE\"",
-                "echo 'Selected model is at capacity' > \"$LAST\"",
+                "echo '{\"type\":\"turn.failed\","
+                "\"error\":{\"message\":\"Selected model is at capacity\"}}'",
+                "echo 'not final output' > \"$LAST\"",
                 "echo 'temporary capacity failure' >&2",
                 "exit 1",
             ]
@@ -1474,8 +1478,8 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
                 "  echo '{\"type\":\"thread.started\","
                 "\"thread_id\":\"thread-1\"}'",
                 "  echo '{\"type\":\"error\","
-                "\"error\":{\"code\":\"insufficient_quota\"}}'",
-                "  echo 'quota exhausted' > \"$LAST\"",
+                "\"message\":\"Quota exceeded while running\"}'",
+                "  echo 'not a quota final message' > \"$LAST\"",
                 "  echo 'quota limit exhausted' >&2",
                 "  exit 1",
                 "  fi",
@@ -1576,7 +1580,9 @@ def test_run_codex_exec_waits_again_when_resume_is_still_quota_exhausted(
                 "if [ \"$HAS_RESUME\" = 0 ]; then",
                 "  echo '{\"type\":\"thread.started\","
                 "\"thread_id\":\"thread-1\"}'",
-                "  echo 'quota exhausted' > \"$LAST\"",
+                "  echo '{\"type\":\"error\","
+                "\"message\":\"Quota exceeded\"}'",
+                "  echo 'not a quota final message' > \"$LAST\"",
                 "  exit 1",
                 "fi",
                 f"STATE={resume_attempts}",
@@ -1585,7 +1591,9 @@ def test_run_codex_exec_waits_again_when_resume_is_still_quota_exhausted(
                 "COUNT=$((COUNT + 1))",
                 "echo \"$COUNT\" > \"$STATE\"",
                 "if [ \"$COUNT\" -eq 1 ]; then",
-                "  echo 'quota exhausted' > \"$LAST\"",
+                "  echo '{\"type\":\"turn.failed\","
+                "\"error\":{\"message\":\"out of credits\"}}'",
+                "  echo 'not a quota final message' > \"$LAST\"",
                 "  exit 1",
                 "fi",
                 "echo resumed > \"$LAST\"",
@@ -1652,8 +1660,8 @@ def test_run_codex_exec_fails_when_resume_returns_unexpected_error(
                 "  echo '{\"type\":\"thread.started\","
                 "\"thread_id\":\"thread-1\"}'",
                 "  echo '{\"type\":\"error\","
-                "\"error\":{\"code\":\"insufficient_quota\"}}'",
-                "  echo 'quota exhausted' > \"$LAST\"",
+                "\"message\":\"You hit your spend cap\"}'",
+                "  echo 'not a quota final message' > \"$LAST\"",
                 "  echo 'quota limit exhausted' >&2",
                 "  exit 1",
                 "fi",
@@ -1710,11 +1718,11 @@ def test_run_codex_exec_does_not_treat_plain_limit_error_as_quota(
     assert len(log_files) == 1
 
 
-def test_run_codex_exec_ignores_stdout_quota_code_without_last_message(
+def test_run_codex_exec_ignores_stdout_quota_code_without_message(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """stdout/stderr の quota 系文字列だけでは待機せず即時失敗する。"""
+    """stdout JSONL に既知 message がなければ quota 待機しない。"""
     repo = tmp_path / "repo"
     repo.mkdir()
     fake_bin = tmp_path / "bin"
@@ -1786,8 +1794,8 @@ def test_run_codex_exec_fails_when_quota_poll_returns_unexpected_error(
                 "fi",
                 "echo '{\"session_id\":\"session-1\"}'",
                 "echo '{\"type\":\"error\","
-                "\"error\":{\"code\":\"insufficient_quota\"}}'",
-                "echo 'quota exhausted' > \"$LAST\"",
+                "\"message\":\"Quota exceeded\"}'",
+                "echo 'not a quota final message' > \"$LAST\"",
                 "echo 'quota exhausted' >&2",
                 "exit 1",
             ]
@@ -1839,8 +1847,8 @@ def test_run_codex_exec_requires_ok_last_message_for_quota_poll(
                 "fi",
                 "echo '{\"session_id\":\"session-1\"}'",
                 "echo '{\"type\":\"error\","
-                "\"error\":{\"code\":\"insufficient_quota\"}}'",
-                "echo 'quota exhausted' > \"$LAST\"",
+                "\"message\":\"out of credits\"}'",
+                "echo 'not a quota final message' > \"$LAST\"",
                 "echo 'quota exhausted' >&2",
                 "exit 1",
             ]
