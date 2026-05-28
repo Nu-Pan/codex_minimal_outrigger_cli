@@ -255,7 +255,8 @@ def cmoc_apply_impl(
         session_branch,
     )
     assert_no_uncommitted_changes(repo_root)
-    oracle_snapshot_commit = head_commit(repo_root)
+    session_head_at_apply_start = head_commit(repo_root)
+    oracle_snapshot_commit = session_head_at_apply_start
 
     failed_stage = "create apply worktree"
     apply_run_id = "unknown"
@@ -341,8 +342,8 @@ def cmoc_apply_impl(
             apply_branch,
             apply_worktree,
             oracle_snapshot_commit,
-            oracle_snapshot_commit,
-            head_commit(repo_root),
+            session_head_at_apply_start,
+            session_head_at_apply_start,
             completed,
             discrepancy_counts,
         )
@@ -366,8 +367,8 @@ def cmoc_apply_impl(
                 apply_branch,
                 apply_worktree,
                 oracle_snapshot_commit,
-                oracle_snapshot_commit,
-                _safe_head_commit(repo_root),
+                session_head_at_apply_start,
+                session_head_at_apply_start,
                 failed_stage,
                 error,
                 discrepancy_counts,
@@ -1353,14 +1354,6 @@ def _write_apply_error_report(
     )
     report_path.write_text(report, encoding="utf-8")
     return report_path
-
-
-def _safe_head_commit(repo_root: Path) -> str:
-    """エラー report 用に HEAD を取得し、失敗時は unknown を返す。"""
-    try:
-        return head_commit(repo_root)
-    except Exception:
-        return "unknown"
 
 
 def _validate_apply_report(

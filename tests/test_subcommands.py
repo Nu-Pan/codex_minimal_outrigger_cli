@@ -1729,6 +1729,7 @@ def test_apply_returns_complete_when_no_discrepancies(
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "oracle")
+    session_head = _git(repo, "rev-parse", "HEAD").stdout.strip()
 
     monkeypatch.setattr(
         "sub_commands.apply.fork.maintain_indexes",
@@ -1804,6 +1805,8 @@ def test_apply_returns_complete_when_no_discrepancies(
     assert "oracle_snapshot_commit: " in report_text
     assert "session_head_at_apply_start: " in report_text
     assert "session_head_at_apply_finish: " in report_text
+    assert f"session_head_at_apply_start: \"{session_head}\"" in report_text
+    assert f"session_head_at_apply_finish: \"{session_head}\"" in report_text
     assert "## 作業結果" in report_text
     assert "## 要修正点件数の推移" in report_text
     assert "全変更内容" in report_text
@@ -1862,6 +1865,7 @@ def test_apply_commits_index_changes_when_no_discrepancies(
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "oracle")
+    session_head = _git(repo, "rev-parse", "HEAD").stdout.strip()
 
     maintained_roots: list[Path] = []
 
@@ -1917,6 +1921,16 @@ def test_apply_commits_index_changes_when_no_discrepancies(
         for kwargs in codex_kwargs
         if kwargs.get("purpose") == "summarize apply changes"
     ]
+    reports = list(
+        (repo / ".cmoc" / "reports" / "apply" / "fork").glob("*.md")
+    )
+    assert len(reports) == 1
+    report_text = reports[0].read_text(encoding="utf-8")
+    apply_head = _git(
+        repo,
+        "rev-parse",
+        state["apply"]["apply_branch"],
+    ).stdout.strip()
 
     assert exit_code == 0
     assert state["apply"]["state"] == "completed"
@@ -1930,6 +1944,10 @@ def test_apply_commits_index_changes_when_no_discrepancies(
     assert len(report_kwargs) == 1
     assert report_kwargs[0]["skip_index_maintenance"] is True
     assert maintained_roots.count(apply_worktree) == 2
+    assert f"session_head_at_apply_start: \"{session_head}\"" in report_text
+    assert f"session_head_at_apply_finish: \"{session_head}\"" in report_text
+    assert session_head != apply_head
+    assert f"session_head_at_apply_finish: \"{apply_head}\"" not in report_text
 
 
 def test_apply_join_merges_completed_apply_branch_and_resets_state(
@@ -3134,6 +3152,7 @@ def test_apply_rejects_incomplete_change_summary_from_codex(
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "oracle")
+    session_head = _git(repo, "rev-parse", "HEAD").stdout.strip()
 
     def fake_maintain_indexes(repo_root: Path) -> bool:
         """apply worktree 側だけ report 対象差分を作る。"""
@@ -3177,9 +3196,18 @@ def test_apply_rejects_incomplete_change_summary_from_codex(
     reports = list(report_dir.glob("*.md"))
     assert len(reports) == 1
     report_text = reports[0].read_text(encoding="utf-8")
+    apply_head = _git(
+        repo,
+        "rev-parse",
+        state["apply"]["apply_branch"],
+    ).stdout.strip()
     captured = capsys.readouterr()
     assert str(reports[0]) in captured.out
     assert "result: \"エラー\"" in report_text
+    assert f"session_head_at_apply_start: \"{session_head}\"" in report_text
+    assert f"session_head_at_apply_finish: \"{session_head}\"" in report_text
+    assert session_head != apply_head
+    assert f"session_head_at_apply_finish: \"{apply_head}\"" not in report_text
     assert "## 作業結果" in report_text
     assert "エラー" in report_text
     assert "## エラー詳細" in report_text
