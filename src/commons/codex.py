@@ -79,6 +79,8 @@ def run_codex_exec(
         raise ValueError("expect_json=True requires output_schema.")
     validates_structured_output = output_schema is not None
     _validate_model_options(model, reasoning_effort)
+    if output_schema is not None:
+        _validate_output_schema(output_schema)
 
     # 必要なら output schema ファイルを準備する。call log と last message は実行単位で払い出す。
     command = _build_codex_command(
@@ -1075,10 +1077,24 @@ def _validate_json_schema(value: object, schema: dict[str, object]) -> None:
     """Codex CLI の Structured Output を JSON Schema として検査する。"""
     # Codex CLI の応答を cmoc 側でも機械的に再検証する。
     try:
-        Draft202012Validator.check_schema(schema)
         Draft202012Validator(schema).validate(value)
-    except (SchemaError, ValidationError) as error:
+    except ValidationError as error:
         raise ValueError(error.message) from error
+
+
+def _validate_output_schema(schema: dict[str, object]) -> None:
+    """cmoc 側の Structured Output schema 定義を事前検査する。"""
+    try:
+        Draft202012Validator.check_schema(schema)
+    except SchemaError as error:
+        raise CmocError(
+            "Codex CLI の出力 schema 定義が不正です。",
+            [
+                "cmoc の Structured Output schema 定義を修正してください。",
+                "schema 定義修正後に cmoc を再実行してください。",
+            ],
+            error.message,
+        ) from error
 
 
 def _head80(value: str) -> str:

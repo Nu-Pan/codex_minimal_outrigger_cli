@@ -807,6 +807,46 @@ def test_run_codex_exec_passes_output_schema_file(
     )
 
 
+def test_run_codex_exec_rejects_invalid_output_schema_before_codex_call(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """cmoc 側の不正な output_schema は Codex CLI 呼び出し前に失敗する。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    called = tmp_path / "called.txt"
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                f"echo called > {called}",
+                "exit 1",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+    invalid_schema: dict[str, object] = {"type": "not-a-json-schema-type"}
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(
+            repo,
+            "prompt",
+            read_only=True,
+            expect_json=True,
+            output_schema=invalid_schema,
+        )
+
+    assert "出力 schema 定義が不正です" in error.value.message
+    assert "not-a-json-schema-type" in error.value.detail
+    assert not called.exists()
+    assert not (repo / ".cmoc" / "logs" / "codex_exec").exists()
+
+
 def test_run_codex_exec_prints_output_head80_before_escaping_newlines(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
