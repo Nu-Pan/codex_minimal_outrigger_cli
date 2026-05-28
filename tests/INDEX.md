@@ -110,56 +110,55 @@
 - `tests/test_repo.py` は `commons.repo` の git リポジトリ共通処理を検証するテスト群の入口です。
 - .cmoc の ignore 保証、tracked な `.cmoc` の untrack、cmoc ブランチ判定、`session_id` 抽出、apply worktree path 復元を扱います。
 - `oracles` / 実装ファイルの列挙、変更・削除検出、`INDEX.md` / `.gitignore` / `.git/info/exclude` / `memo` の除外条件、`commit_if_changed` の index 復元と `assert_no_uncommitted_changes` の前提を確認します。
-- .cmoc/sessions/<session-id>.json` の読み書き、固定スキーマ検証、active session 探索と session start commit 参照を扱います。
+- `.cmoc/sessions/<session-id>.json` の読み書き、固定スキーマ検証、active session 探索と session start commit 参照を扱います。
 - ファイル末尾には、テスト用 git リポジトリを初期化する `_init_repo` と、git コマンド実行用の `_git` 補助関数があります。
 
 ## Read this when
 
 - `tests/test_repo.py` が `commons.repo` のどの機能を検証しているか確認したいとき。
-- .cmoc の ignore 保証、tracked な `.cmoc` の index 解除、cmoc ブランチ判定、`session_id` 抽出を見直したいとき。
+- `.cmoc` の ignore 保証、tracked な `.cmoc` の追跡解除、cmoc ブランチ判定、`session_id` 抽出を見直したいとき。
 - `oracles` / 実装ファイルの列挙、変更検出、削除検出、`INDEX.md`、`.gitignore`、`.git/info/exclude`、`memo` の扱いを確認したいとき。
 - session state の読み書き、active session の探索、`commit_if_changed` や `assert_no_uncommitted_changes` の前提条件を把握したいとき。
 - テスト用 git リポジトリの初期化や、`_init_repo` / `_git` 補助関数の役割を確認したいとき。
 
 ## Do not read this when
 
-- `src/commons/repo.py` の実装ロジックそのものを追いたいときは、このテスト目次ではなく実装本体を読むべきです。
-- `INDEX.md` の生成・更新ルールだけを確認したいときは、`oracles/app_specs/indexing.md` を読むべきです。
-- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいときは、このテスト目次ではなく別の案内を参照すべきです。
-- `tests/test_codex.py` や `tests/test_indexing.py` など、別のテスト群の観点だけを追いたいときは、このファイルでは範囲が広すぎます。
+- `src/commons/repo.py` の実装ロジックそのものを追いたいとき。
+- `INDEX.md` の生成・更新ルールだけを確認したいとき。
+- `tests/test_codex.py` や `tests/test_indexing.py` など、別のテスト群の観点だけを追いたいとき。
+- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいとき。
 
 ## hash
 
-- beed7146d8f022c1f8900f9a0371fc5a9bf9c61f1c73ded396d29333f01fc771
+- 7b0496e9dd91cb9180a4b5633298859ba050bfa172ae9227a412869c5ddea155
 
 # `test_subcommands.py`
 
 ## Summary
 
-- `tests/test_subcommands.py` は cmoc のサブコマンド群と CLI ルーティングの回帰テストの入口で、`init`、`session`、`apply`、`eval-oracles` の制御ロジックをまとめて検証します。
-- 共通エラーレポート、`run_command` の tee と終了コード、ログ保存、`.cmoc` ignore、tracked `.cmoc` の追跡解除、セッション状態の作成・復旧・ロールバックを扱います。
-- apply/worktree の差分処理、`eval-oracles` の report 生成、Structured Output の検証、`main` と `bin/cmoc` の公開形や互換 alias も確認します。
-- ファイル末尾のテスト補助関数は、session/apply の検証用リポジトリや作業履歴を組み立てるために使います。
+- `tests/test_subcommands.py` は、cmoc のサブコマンド本体に関する決定論的な制御ロジックをまとめて検証するテスト入口です。
+- 先頭では `run_command` の共通動作、標準出力・エラー出力・終了コード・ログ記録を確認します。
+- 続いて `init`、`session fork/join/abandon`、`eval-oracles`、`apply` の各サブコマンドの状態遷移、前提条件、失敗時の扱いを広く検証します。
+- 後半では CLI の `typer` 登録や `main` のエラー処理、`bin/cmoc` の起動前提、補助関数の挙動も含めて確認します。
 
 ## Read this when
 
-- サブコマンドの状態遷移や副作用をまとめて確認したいとき。
-- `run_command` の出力 tee、終了コード、共通エラーレポート、ログ保存の挙動を確認したいとき。
-- `cmoc init` の `.cmoc` ignore 追加や tracked `.cmoc` の追跡解除、`session` / `apply` の fork・join・abandon の挙動を追いたいとき。
-- `eval-oracles` の評価レポート、削除済み oracle、Structured Output、prompt / report 補助関数の意図を見たいとき。
-- `main` の Typer ルーティング、`eval-oracle` 互換 alias、`bin/cmoc` の launcher と help 表示を確認したいとき。
+- `cmoc` のサブコマンド群全体の回帰テスト入口を確認したいとき。
+- `run_command`、`cmoc init`、`session fork/join/abandon`、`apply`、`eval-oracles` の振る舞いを横断して把握したいとき。
+- CLI のエラーレポート、終了コード、ログ出力、`typer` の委譲やコマンド登録を確認したいとき。
+- `apply` と `session` の状態遷移、ワークツリー操作、`oracles` と `INDEX.md` の扱いをテスト観点から見直したいとき。
+- `test_subcommands.py` がどの機能群をカバーしているか、目次として素早く把握したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの正本仕様だけを確認したいときは、`oracles/app_specs/sub_commands/INDEX.md` を直接読むべきです。
-- `src/main.py` や `src/sub_commands` の実装本体だけを追いたいときは、このテスト目次ではなく `src/` 側を読むべきです。
-- `INDEX.md` の生成・更新ルールだけを確認したいときは、`oracles/app_specs/indexing.md` を参照すべきです。
-- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいときは、このテスト目次ではなく別の案内を参照すべきです。
-- `tests/test_codex.py` や `tests/test_indexing.py` など、別のテスト群の観点だけを追いたいときは、このファイルでは範囲が広すぎます。
+- 個別サブコマンドの実装ロジックそのものを追いたいときは、このテスト入口ではなく `src/sub_commands` 側を読むべきです。
+- `INDEX.md` の生成・更新ルールだけを確認したいときは、このファイルではなく `oracles/indexing.md` 系の正本仕様を参照すべきです。
+- `tests/test_repo.py` や `tests/test_indexing.py` など、git 共通処理や INDEX 生成の専用テストだけを確認したいときは、このファイルは範囲外です。
+- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを調べたいときは、このテストファイルを読む必要はありません。
 
 ## hash
 
-- 37db1f4bfa770795af62d965115849bf75397387b332a5964a46c9e9717183e4
+- 7a6e3acdb973a56cf1a14689e1182174714e16cdf3f13697246f0e8b302aad09
 
 # `test_timestamps.py`
 

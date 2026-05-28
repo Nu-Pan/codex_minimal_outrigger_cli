@@ -24,24 +24,25 @@
 ## Summary
 
 - `src/sub_commands/apply/abandon.py` は `cmoc apply abandon` の本体処理を実装するモジュールです。
-- 現在の session に紐づく未 join の apply run を破棄し、running 中なら停止したうえで apply worktree と apply branch を強制削除し、`apply.state` を `ready` に戻します。
+- 現在の session に紐づく未 join の apply run を破棄し、running 中なら子プロセスごと停止したうえで、apply worktree と apply branch を強制削除して `apply.state` を `ready` に戻します。
 - 破棄前後の状態表示と warning 出力を行い、次回の apply 実行に支障がないよう session state の補助情報を初期化します。
 
 ## Read this when
 
 - `cmoc apply abandon` の実装・修正・レビュー・テストを行いたいとき。
-- 未 join の apply run を破棄する前提条件、`apply.state` の検証、running apply の停止、worktree / branch の cleanup を確認したいとき。
+- 未 join の apply run を破棄する前提条件や、`apply.state` の検証条件を確認したいとき。
+- running 中の apply を停止する挙動や、apply worktree / apply branch の cleanup 方針を確認したいとき。
 - 破棄結果として標準出力に何を出し、warning をどう扱うかを確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply fork` の調査・修正ループや要修正点一覧の生成だけを確認したいときは、このファイルではなく `fork.py` を読むべきです。
-- `cmoc apply join` や `cmoc session abandon` など、別サブコマンドの終了・統合・破棄手順だけを確認したいときは、このファイルではなく該当モジュールを読むべきです。
+- `cmoc apply fork` の調査・修正ループや要修正点一覧だけを確認したいときは、このモジュールではなく `fork.py` を読むべきです。
+- `cmoc apply join` や `cmoc session abandon` など、別サブコマンドの終了・統合・破棄手順だけを確認したいときは、このモジュールではなく該当モジュールを読むべきです。
 - `cmoc apply abandon` の仕様断片や利用手順だけを確認したいときは、`oracles/app_specs/sub_commands/apply_abandon.md` を直接読むべきです。
 
 ## hash
 
-- 496c8839373d9dc0dac817039b3a6e2874d4f414c2046ed8b9afe7ea887955b7
+- 6b22bc9462748c5b103ab2ce84908157438f20caf06ef2d09b2b6ec195632fac
 
 # `fork.py`
 
@@ -54,20 +55,20 @@
 ## Read this when
 
 - `cmoc apply fork` の実装・修正・レビュー・テストで、全体の処理順を確認したいとき。
-- session state の検証、apply branch / worktree の生成、調査・修正ループ、要修正点の整理、レポート保存までの流れを追いたいとき。
+- session state の検証、apply branch / worktree の生成、調査・修正ループ、要修正点の整理、レポート出力までの流れを追いたいとき。
 - 部分適用モードと全体適用モードの違い、調査対象ファイルの選定規則、要修正点リストの改善ループを確認したいとき。
 - Structured Output の schema 検証、禁止領域の変更検査、コミット生成、`apply.state` の `running` / `completed` / `error` 遷移を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply join` や `cmoc apply abandon` の挙動だけを確認したいとき。
-- `cmoc session fork/join/abandon` など、session 側の処理だけを確認したいとき。
+- `cmoc apply join` や `cmoc apply abandon` の挙動だけを確認したいときは、このファイルではなく該当モジュールを読むべきです。
+- `cmoc session fork/join/abandon` など、session 側の処理だけを確認したいときは、このファイルではなく session 系の実装を読むべきです。
 - `cmoc apply fork` の仕様断片そのものを確認したいときは、`oracles/app_specs/sub_commands/apply_fork.md` を読むべきで、この実装ファイルを読む必要はありません。
-- Codex CLI 呼び出しの共通基盤や `INDEX.md` メンテナンスの一般ルールだけを確認したいとき。
+- Codex CLI 呼び出しの共通基盤や `INDEX.md` メンテナンスの一般ルールだけを確認したいときは、このファイルではなく関連する共通仕様を読むべきです。
 
 ## hash
 
-- 869eeac4b502dffea0d00200c6afd25f0eba70faa4972eef8cd542778704611d
+- 4229a53e8b37d0ca1a16a47b4b26d1583a0697a126e94ec2123c96568c983b46
 
 # `join.py`
 
@@ -93,4 +94,4 @@
 
 ## hash
 
-- 4376b574bd041df6f81cfb2c5789f6c383ff82e009be59e05645d3872f7ea37f
+- 4963b76ba9d91902d0cef9ff873e93da010569ac29fcc0aa378498582cbc795c
