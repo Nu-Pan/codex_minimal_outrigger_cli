@@ -259,9 +259,10 @@ def cmoc_apply_impl(
     oracle_snapshot_commit = session_head_at_apply_start
 
     failed_stage = "create apply worktree"
-    apply_run_id = "unknown"
-    apply_branch = "unknown"
-    apply_worktree = repo_root
+    apply_run_id, apply_branch, apply_worktree = _plan_apply_worktree(
+        repo_root,
+        session_id,
+    )
     discrepancy_counts: list[int] = []
     try:
         failed_stage = "create apply worktree"
@@ -464,17 +465,9 @@ def _create_apply_worktree(
     """snapshot から apply branch と専用 worktree を作成する。"""
     # timestamp 衝突に備えて短い sleep を挟みながら最大 10 回リトライする。
     for attempt in range(1, 11):
-        apply_run_id = make_timestamp()
-        apply_branch = (
-            f"{APPLY_BRANCH_PREFIX}{session_id}/{apply_run_id}"
-        )
-        apply_worktree = (
-            repo_root
-            / ".cmoc"
-            / "worktrees"
-            / "apply"
-            / session_id
-            / apply_run_id
+        apply_run_id, apply_branch, apply_worktree = _plan_apply_worktree(
+            repo_root,
+            session_id,
         )
         print(f"create apply worktree attempt ({attempt}/10) {apply_branch}")
         branch_result = run_git(
@@ -495,6 +488,24 @@ def _create_apply_worktree(
         run_git(repo_root, ["branch", "-D", apply_branch], check=False)
         sleep(0.001)
     raise RuntimeError("リトライ後も一意な apply worktree を作成できませんでした。")
+
+
+def _plan_apply_worktree(
+    repo_root: Path,
+    session_id: str,
+) -> tuple[str, str, Path]:
+    """次に作成を試みる apply run id、branch、worktree path を組み立てる。"""
+    apply_run_id = make_timestamp()
+    apply_branch = f"{APPLY_BRANCH_PREFIX}{session_id}/{apply_run_id}"
+    apply_worktree = (
+        repo_root
+        / ".cmoc"
+        / "worktrees"
+        / "apply"
+        / session_id
+        / apply_run_id
+    )
+    return apply_run_id, apply_branch, apply_worktree
 
 
 def _mark_apply_running(

@@ -3441,6 +3441,7 @@ def test_apply_marks_error_when_running_state_write_fails(
 def test_apply_marks_error_when_worktree_creation_fails(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """apply 開始後の worktree 作成失敗は error state として残す。"""
     repo = _init_repo(tmp_path)
@@ -3472,6 +3473,10 @@ def test_apply_marks_error_when_worktree_creation_fails(
         ).read_text(encoding="utf-8")
     )
     branches = _git(repo, "branch", "--format=%(refname:short)").stdout
+    reports = list(
+        (repo / ".cmoc" / "reports" / "apply" / "fork").glob("*.md")
+    )
+    captured = capsys.readouterr()
     assert "fake worktree creation failure" in str(error.value)
     assert state["apply"] == {
         "apply_branch": None,
@@ -3480,6 +3485,26 @@ def test_apply_marks_error_when_worktree_creation_fails(
     }
     assert not (repo / ".cmoc" / "worktrees").exists()
     assert "cmoc/apply/" not in branches
+    assert len(reports) == 1
+    assert str(reports[0]) in captured.out
+    report_text = reports[0].read_text(encoding="utf-8")
+    apply_run_id_match = re.search(
+        r'^cmoc_apply_run_id: "([^"]+)"$',
+        report_text,
+        re.MULTILINE,
+    )
+    assert apply_run_id_match is not None
+    apply_run_id = apply_run_id_match.group(1)
+    planned_apply_worktree = (
+        repo
+        / ".cmoc"
+        / "worktrees"
+        / "apply"
+        / "2026-05-10_22-21_10_123"
+        / apply_run_id
+    )
+    assert f"apply_worktree_path: \"{planned_apply_worktree}\"" in report_text
+    assert f"apply_worktree_path: \"{repo}\"" not in report_text
 
 
 def test_apply_commits_untracked_oracle_changes_after_cmoc_guarantee(
