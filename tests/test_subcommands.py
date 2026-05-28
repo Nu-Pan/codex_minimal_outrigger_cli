@@ -4574,11 +4574,11 @@ def test_session_abandon_reports_rollback_switch_failure(
     assert session_branch in branches
 
 
-def test_session_abandon_stops_rollback_when_state_restore_fails(
+def test_session_abandon_restores_branch_when_state_restore_fails(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """state 復旧失敗時は session branch への復旧 switch を行わない。"""
+    """state 復旧失敗時も session branch への復旧 switch は試行する。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
@@ -4650,8 +4650,8 @@ def test_session_abandon_stops_rollback_when_state_restore_fails(
     assert "rollback failure: state restore failed" in error.value.detail
     assert "fake state restore failure" in error.value.detail
     assert "再実行は避けてください" in error.value.actions[1]
-    assert restore_switches == []
-    assert _git(repo, "branch", "--show-current").stdout.strip() == home_branch
+    assert restore_switches == [["switch", session_branch]]
+    assert _git(repo, "branch", "--show-current").stdout.strip() == session_branch
     assert state["session"]["state"] == "abandoned"
     assert session_branch in branches
 
