@@ -23,28 +23,27 @@
 
 ## Summary
 
-- `codex exec` の共通ラッパーで、コマンド組み立て、実行、`--output-last-message` を含むログ保存、`--resume` 再開、quota 待機をまとめるモジュールです。
-- Structured Output の `--output-schema` ファイル生成とキャッシュ、JSON パース、JSON Schema 検証、意味検査を扱います。
-- workspace-write 実行時の `oracles` 改変検査と、`INDEX.md` メンテナンス前処理を担います。
-- model と reasoning effort の制約、quota ポーリング、ログの Front Matter 書き出し補助も含みます。
+- Codex CLI 呼び出しの共通ラッパーで、`codex exec` の起動、`--output-last-message` を含む実行ログ保存、`--resume` 再開、quota 待機と再開をまとめるモジュールです。
+- Structured Output 用の `--output-schema` ファイル生成とキャッシュ、JSON 解析、JSON Schema 検証、意味検査までを扱います。
+- workspace-write 実行時の `oracles` 変更検査と、`INDEX.md` メンテナンス前処理、model と reasoning_effort の制約も含みます。
 
 ## Read this when
 
-- `codex exec` の実行方法、sandbox 切り替え、`--output-last-message`、`--output-schema`、`--resume` の扱いを確認したいときに読むべきです。
-- Structured Output の JSON Schema 保存・検証、JSON パース、意味検査、リトライの流れを見直したいときに読むべきです。
-- quota 枯渇時の待機と再開、workspace-write 実行時の `oracles` 保護、`INDEX.md` メンテナンス前処理を追いたいときに読むべきです。
-- `codex exec` の呼び出しログ、最終メッセージ保存、schema ファイル名の決め方、model と reasoning effort の制約を確認したいときに読むべきです。
+- Codex CLI 呼び出し方法や sandbox の切り替え、`codex exec` のコマンド組み立てを確認したいとき。
+- Structured Output の schema 保存・検証、JSON パース、リトライの流れを見直したいとき。
+- quota 枯渇時の待機と `--resume` 再開、capacity リトライ、`oracles` 保護や `INDEX.md` 事前更新の挙動を追いたいとき。
+- 呼び出しログ、`--output-last-message`、model と reasoning_effort の制約を確認したいとき。
 
 ## Do not read this when
 
-- `codex exec` 以外のサブコマンド本体や業務ロジックを確認したいときは、このモジュールではなく該当する実装を読むべきです。
-- 共通エラー整形、タイムスタンプ生成、サブコマンドログ、経過時間表示、リポジトリ探索など、他の `src/commons` モジュールで足りる内容を調べたいときは、このモジュールを読む必要はありません。
-- `oracles` の正本仕様そのものや `INDEX.md` の生成・更新ルールだけを確認したいときは、このモジュールではなく `oracles` 配下の文書を読むべきです。
+- Codex CLI 以外のサブコマンド本体や業務ロジックを見たいときは、このモジュールではなく `src/sub_commands/` を読むべきです。
+- 共通エラー整形だけを確認したいときは `src/commons/errors.py`、タイムスタンプだけなら `src/commons/timestamps.py` を読むべきです。
+- `INDEX.md` の自動生成ルールそのものだけを確認したいときは、このモジュールではなく `src/commons/indexing.py` と `oracles/app_specs/indexing.md` を読むべきです。
 - ファイル操作やテスト実装だけを確認したいときは、このモジュールの範囲外です。
 
 ## hash
 
-- f744c426daed53267864c148057d0f10405efe79479823fc4017543e772e496a
+- 8a796cbd5fd5efe16da697afa674fe2a93e6adee14c6c86b2430fce8d11d89e2
 
 # `command_runner.py`
 

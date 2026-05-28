@@ -2,24 +2,26 @@
 
 ## Summary
 
-- cmoc の共通処理をまとめる `src/commons` 配下の入口で、`codex` 呼び出し、サブコマンド実行制御、共通エラー、git リポジトリ操作、サブコマンドログ、タイムスタンプ、経過時間計測、`INDEX.md` 生成補助を案内します。
-- このディレクトリからは `codex.py`、`command_runner.py`、`errors.py`、`indexing.py`、`repo.py`、`subcommand_log.py`、`timestamps.py`、`timing.py`、`__init__.py` へたどれます。
+- `src/commons` は、cmoc 全体で再利用する共通処理をまとめたディレクトリです。Codex CLI 呼び出し、サブコマンド実行制御、エラー整形、リポジトリ操作、ログ、時間計測、タイムスタンプ、`INDEX.md` 生成をここに集約します。
+- 各モジュールは個別の責務を持ちつつ、サブコマンド実装から呼び出される共通基盤として機能します。`__init__.py` はパッケージ定義のみを担います。
 
 ## Read this when
 
-- cmoc の共通実行基盤や、複数のサブコマンドにまたがる処理の置き場所を確認したいとき。
-- codex exec の呼び出し、repo root 解決、共通エラー整形、ログ記録、タイムスタンプ、時間計測のどこへ進むべきか整理したいとき。
-- このディレクトリ配下の個別モジュールを横断して、共通ユーティリティの役割分担を把握したいとき。
+- 複数のサブコマンドから共通で使う処理を探したいときに読むべきです。
+- Codex CLI 呼び出し、Structured Output、`INDEX.md` 生成・維持、gitignore 判定の流れを確認したいときに読むべきです。
+- `<repo-root>` の探索、branch 判定、session state、apply worktree、process id などの git 連携と状態管理を見直したいときに読むべきです。
+- 共通エラー整形、サブコマンドログ、経過時間計測、タイムスタンプ生成の実装を横断的に把握したいときに読むべきです。
 
 ## Do not read this when
 
-- 個別サブコマンドの業務ロジックや CLI 引数だけを確認したいときは、`src/sub_commands` 側を読むべきです。
-- `INDEX.md` の生成・更新ルールだけを確認したいときは、`src/commons/indexing.py` ではなく `oracles/app_specs/indexing.md` を読むべきです。
-- このディレクトリのうち特定の 1 ファイルだけを確認したいときは、ここではなく該当するモジュールを直接参照すべきです。
+- 個別サブコマンドの業務ロジックや引数定義だけを確認したいときは、`src/sub_commands` を先に読むべきです。
+- CLI のエントリーポイントや全体の起動順だけを見たいときは、`src/main.py` 側を確認すべきです。
+- 共有処理のうち特定機能だけを追いたいときは、このディレクトリ全体ではなく該当する `codex.py`、`repo.py`、`errors.py`、`subcommand_log.py`、`timing.py`、`timestamps.py`、`indexing.py` を直接読むべきです。
+- 自動テストや検証手順だけが目的なら、この共通モジュール群ではなく `tests` を読むべきです。
 
 ## hash
 
-- 15688b3b0b4503d7b246bb989eb7ec6967ff863ba9ac28ec4e4f2a43bb69cb25
+- c9e70229953c4187622c53d3cf44b75e60a22082557ed220bd586724eb92852b
 
 # `main.py`
 
