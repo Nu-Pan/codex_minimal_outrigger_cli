@@ -43,13 +43,12 @@
 ## Do not read this when
 
 - `commons.indexing.maintain_indexes` の実装や `INDEX.md` 生成ルールそのものを確認したいとき。
-- `tests/test_subcommands.py` など、各サブコマンドの振る舞いだけを確認したいとき。
-- `tests/test_repo.py` の git 共通処理や `tests/test_timestamps.py` の時刻関連だけを確認したいとき。
+- `tests/test_subcommands.py` や `tests/test_repo.py` など、別のテスト群の観点だけを追いたいとき。
 - `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいとき。
 
 ## hash
 
-- 203660b9711223702c7306bc407881695f12cc4e283b205f842c291f948af10a
+- 003b5da29d284f8685fada729fd262e86f2909a3b98ce9edec049fb0f7f32a9d
 
 # `test_file_naming.py`
 

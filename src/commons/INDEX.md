@@ -158,27 +158,27 @@
 
 ## Summary
 
-- `src/commons/subcommand_log.py` は、各サブコマンド実行の標準出力と標準エラー出力をコンソールと `<repo-root>/.cmoc/logs/sub_commands/<time-stamp>.jsonl` の両方へ tee する共通ログ管理モジュールです。
-- `SubcommandLogContext` と `current_subcommand_log()` で現在のサブコマンドログ状態を共有し、`add_quota_wait()` で quota 回復待ち時間を累積できます。
-- `subcommand_log()` は一意なログファイル作成と開始メッセージ表示を担い、`_ensure_logs_excluded()` は `.git/info/exclude` を更新して `.cmoc/logs/` が未コミット差分にならないようにします。
+- サブコマンド呼び出し単位の JSON Lines ログを管理する共通処理への入口です。
+- ログ状態の保持、イベント追記、quota 待ち時間の加算、現在のログコンテキスト取得をまとめます。
+- ログファイルの作成先を `repo root` 側に寄せつつ、worktree 配下に出力しないための判定と `git info/exclude` 更新も扱います。
 
 ## Read this when
 
-- サブコマンドの標準出力・標準エラー出力をコンソールとログファイルへ同時に保存する仕組みを確認したいとき。
-- 現在実行中のサブコマンドのログ状態や、quota 回復待ち時間の加算方法を確認したいとき。
-- ログファイルの保存先、ファイル名の払い出し方法、開始時に表示される相対パスのメッセージを確認したいとき。
-- `.cmoc/logs/` をサブコマンド自身の未コミット差分として扱わないための除外設定の挙動を確認したいとき。
+- サブコマンド呼び出し単位の JSON Lines ログをどこにどう作るか確認したいとき。
+- 現在実行中のサブコマンドログ状態を `ContextVar` で保持し、イベントを追記する実装を確認したいとき。
+- `.cmoc/logs/sub_commands/<time-stamp>.jsonl` の作成、排他生成、即時 flush、ログ追記の流れを実装・修正・レビューしたいとき。
+- `.cmoc/logs/` を git の未コミット差分にしないための `info/exclude` 更新や、worktree での保存先切り替えを確認したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの業務ロジックや引数解析だけを確認したいとき。
-- `INDEX.md` の自動生成や更新ルールだけを確認したいとき。
-- タイムスタンプ生成や経過時間表示など、`subcommand_log.py` 以外の共通ユーティリティを調べたいとき。
-- エラー整形や共通エラーハンドリング全体だけを調べたいとき。
+- 個別サブコマンドの引数や状態遷移だけを確認したいときは、この共通ログ処理ではなく該当サブコマンドの仕様を読むべきです。
+- `cmoc` のコンソール表示フォーマットだけを確認したいときは、`console_and_file_log.md` を先に読むべきです。
+- `codex exec` の呼び出し方や quota 待ちの共通規約だけを確認したいときは、`codex_call.md` を読むべきです。
+- `.cmoc` の配置や `INDEX.md` の生成ルールそのものを確認したいときは、このファイルではなく `misc_specs.md` や `indexing.md` を読むべきです。
 
 ## hash
 
-- 326e5cbad6a455d6bbfb3396ae01c308254923b4f00097637f12a7fd35b110f1
+- c5363a43ba379d9f913aed453f9a6588296f5b5a2f6d9aa207ef4687eb837977
 
 # `timestamps.py`
 
