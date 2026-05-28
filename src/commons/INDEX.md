@@ -210,26 +210,27 @@
 
 ## Summary
 
-- `src/commons/timing.py` は、サブコマンド実行中のステップ単位の経過時間を記録し、最後にまとめて stdout へ表示する共通モジュールです。
-- `StepTimer` は全体開始時刻と現在のステップ状態を保持し、`start()` で直前ステップを確定して次のステップを開始します。
-- `current_timer()`、`report_current_timer()`、`clear_current_timer()` は `ContextVar` 上の現在の計測器を参照・出力・解除します。
-- `format_duration()` は経過秒数を 0.1 秒単位で切り捨て、負値を 0 として ` 0h 0m 0.0s` 形式に整形します。
+- サブコマンド実行中のステップ単位の経過時間を管理し、最後に stdout へ集計表示する共通モジュールです。
+- `StepTimer` は開始時刻、現在ステップ、確定済みの各ステップ時間を保持し、`start()` と `finish_current()` で計測区間を区切ります。
+- `start_step()` は flat / hierarchical なステップ番号を整形して `step_start` ログと stdout の開始通知を出します。
+- `current_timer()`、`report_current_timer()`、`clear_current_timer()` は `ContextVar` 上の現在の計測器を取得・出力・解除します。
+- `format_duration()` は秒数を 0.1 秒単位で切り捨て、負値を 0 として固定幅の経過時間文字列に整形します。
 
 ## Read this when
 
-- サブコマンドのステップ別の経過時間表示や、全体の総経過時間表示を実装・修正したいとき。
-- `StepTimer` の状態遷移や、`start()`・`finish_current()`・`report()` の関係を確認したいとき。
-- 現在の計測器を `ContextVar` 経由で取得・出力・解除したいとき。
-- 経過時間の表示フォーマット、0.1 秒単位への切り捨て、負値の扱いを確認したいとき。
-- `start_step()` がどのようにステップ開始を通知し、標準出力へ表示するか確認したいとき。
+- サブコマンドのステップ別の経過時間表示や、完了時の総経過時間表示を実装・修正したいとき。
+- `StepTimer` の状態遷移や、`start()`、`finish_current()`、`report()` の関係を確認したいとき。
+- 階層化されたステップ番号を含む開始通知の表示形式を確認したいとき。
+- 現在の計測器を `ContextVar` 経由で参照・出力・解除したいとき。
+- 経過時間の表示フォーマットや、0.1 秒単位への切り捨て、負値の扱いを確認したいとき。
 
 ## Do not read this when
 
 - 各サブコマンドの業務ロジックや引数解析だけを確認したいとき。
-- ログ保存や `subcommand_log` の実装、`<repo-root>` 探索など、経過時間計測以外の共通処理を調べたいとき。
+- ログ保存、`subcommand_log`、`repo` 探索など、経過時間計測以外の共通処理を調べたいとき。
 - `INDEX.md` の自動生成や内容ハッシュの規則だけを確認したいとき。
 - Python の一般的な時間計測 API や `perf_counter` の詳細だけを知りたいとき。
 
 ## hash
 
-- 91419d7208e17b68b1e2271753be45e87e4dba1bb2106e56e18dac3d74e60e95
+- 2dc577ed39e2040ba837ec032afb14e81fd0313520c6969249125b3f858884ea

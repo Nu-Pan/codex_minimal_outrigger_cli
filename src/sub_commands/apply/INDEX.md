@@ -48,14 +48,14 @@
 
 ## Summary
 
-- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体処理を実装するモジュールで、session branch の前提確認から apply branch / worktree の作成、調査・修正ループ、レポート生成までをまとめて扱います。
-- 要修正点の Structured Output 検証、部分適用・全体適用の切り替え、対象 oracle / 実装ファイルの列挙、改善ループ、禁止領域チェック、コミット生成と state 更新を担います。
-- このディレクトリの入口として、`cmoc apply fork` の処理順や責務境界を追うための案内です。
+- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体処理を実装し、session state の検証から apply branch / worktree の作成、調査・修正ループ、レポート出力までをまとめています。
+- 要修正点の Structured Output 検証、oracle / 実装ファイルの対象選定、部分適用と全体適用の切り替え、要修正点リスト改善ループ、禁止領域チェック、コミットと state 更新を扱います。
+- `cmoc apply` の処理順と、実行時の責務境界を追うための入口です。
 
 ## Read this when
 
 - `cmoc apply fork` の実装・修正・レビュー・テストで、全体の処理順を確認したいとき。
-- session state の検証、apply branch / worktree の生成、調査・修正ループ、要修正点の整理、レポート出力までの流れを追いたいとき。
+- session state の前提条件、apply branch / worktree の作成、調査・修正ループ、レポート生成までの流れを追いたいとき。
 - 部分適用モードと全体適用モードの違い、調査対象ファイルの選定規則、要修正点リストの改善ループを確認したいとき。
 - Structured Output の schema 検証、禁止領域の変更検査、コミット生成、`apply.state` の `running` / `completed` / `error` 遷移を確認したいとき。
 
@@ -68,7 +68,7 @@
 
 ## hash
 
-- f77151e931e8b69fcd471ff22d488dd06b700aa8047bd7b0591c1bb2bc8d05cf
+- 302e964ab5d1defe2f8ee61c6ca3e1b8e9dc82489169afdf229e5532435a1d1d
 
 # `join.py`
 
