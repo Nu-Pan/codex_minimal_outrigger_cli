@@ -2248,29 +2248,66 @@ def test_apply_join_stops_on_apply_branch_oracles_index_diff(
     assert f"{apply_branch}: oracles/INDEX.md" in error_info.value.detail
 
 
-def test_apply_join_stops_on_session_branch_oracles_index_diff(
+def test_apply_join_accepts_session_branch_oracles_index_diff(
     tmp_path: Path,
 ) -> None:
-    """session branch 側の oracles/INDEX.md 差分は想定外差分として停止する。"""
+    """session branch 側の oracles/INDEX.md 差分は想定内として扱う。"""
     repo = _init_repo(tmp_path)
     _checkout_session_branch(repo)
     oracle_snapshot = _add_oracle_snapshot(repo)
-    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+    _apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
         repo,
         oracle_snapshot,
     )
-    session_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    (apply_worktree / "feature.txt").write_text("implemented\n", encoding="utf-8")
+    _git(apply_worktree, "add", "feature.txt")
+    _git(apply_worktree, "commit", "-m", "implement feature")
     (repo / "oracles" / "INDEX.md").write_text("index\n", encoding="utf-8")
     _git(repo, "add", "oracles/INDEX.md")
     _git(repo, "commit", "-m", "maintain oracle index on session")
 
-    with pytest.raises(CmocError) as error_info:
-        cmoc_apply_join_impl(repo)
+    cmoc_apply_join_impl(repo)
 
-    assert "想定外の差分" in error_info.value.message
-    assert f"{session_branch}: oracles/INDEX.md" in error_info.value.detail
-    assert _git(repo, "branch", "--list", apply_branch).stdout.strip()
-    assert apply_worktree.exists()
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
+    assert (repo / "oracles" / "INDEX.md").read_text(encoding="utf-8") == "index\n"
+    assert state["apply"]["state"] == "ready"
+
+
+def test_apply_join_accepts_session_branch_memo_diff(
+    tmp_path: Path,
+) -> None:
+    """session branch 側の root memo 差分は想定内として扱う。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    _apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    memo_root = repo / "memo"
+    memo_root.mkdir()
+    (memo_root / "note.md").write_text("note\n", encoding="utf-8")
+    _git(repo, "add", "memo/note.md")
+    _git(repo, "commit", "-m", "edit memo on session")
+    (apply_worktree / "feature.txt").write_text("implemented\n", encoding="utf-8")
+    _git(apply_worktree, "add", "feature.txt")
+    _git(apply_worktree, "commit", "-m", "implement feature")
+
+    cmoc_apply_join_impl(repo)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert (repo / "memo" / "note.md").read_text(encoding="utf-8") == "note\n"
+    assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
+    assert state["apply"]["state"] == "ready"
 
 
 def test_apply_join_stops_on_session_branch_ignored_oracle_diff(
@@ -2299,25 +2336,25 @@ def test_apply_join_stops_on_session_branch_ignored_oracle_diff(
     assert f"{session_branch}: oracles/ignored.md" in error_info.value.detail
 
 
-def test_apply_join_force_resolves_session_branch_oracles_index_diff(
+def test_apply_join_force_resolve_keeps_expected_apply_index_diff(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """強制モードは session branch 側の oracles/INDEX.md 差分を revert する。"""
+    """強制モードは apply branch 側の想定内 INDEX.md 差分を維持する。"""
     repo = _init_repo(tmp_path)
     _checkout_session_branch(repo)
     oracle_snapshot = _add_oracle_snapshot(repo)
-    _apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
         repo,
         oracle_snapshot,
     )
-    session_branch = _git(repo, "branch", "--show-current").stdout.strip()
     (apply_worktree / "feature.txt").write_text("implemented\n", encoding="utf-8")
-    _git(apply_worktree, "add", "feature.txt")
-    _git(apply_worktree, "commit", "-m", "implement feature")
-    (repo / "oracles" / "INDEX.md").write_text("index\n", encoding="utf-8")
-    _git(repo, "add", "oracles/INDEX.md")
-    _git(repo, "commit", "-m", "maintain oracle index on session")
+    (apply_worktree / "INDEX.md").write_text("index\n", encoding="utf-8")
+    memo_root = apply_worktree / "memo"
+    memo_root.mkdir()
+    (memo_root / "note.md").write_text("note\n", encoding="utf-8")
+    _git(apply_worktree, "add", "feature.txt", "INDEX.md", "memo/note.md")
+    _git(apply_worktree, "commit", "-m", "implement with index and memo")
 
     cmoc_apply_join_impl(repo, force_resolve=True)
 
@@ -2328,9 +2365,108 @@ def test_apply_join_force_resolves_session_branch_oracles_index_diff(
         ).read_text(encoding="utf-8")
     )
     assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
-    assert not (repo / "oracles" / "INDEX.md").exists()
+    assert (repo / "INDEX.md").read_text(encoding="utf-8") == "index\n"
+    assert not (repo / "memo" / "note.md").exists()
     assert state["apply"]["state"] == "ready"
-    assert f"- {session_branch}: oracles/INDEX.md" in output
+    assert f"- {apply_branch}: memo/note.md" in output
+
+
+def test_apply_join_auto_resolves_index_conflict(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """INDEX.md だけの merge conflict は削除で自動解決する。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    (repo / "INDEX.md").write_text("session index\n", encoding="utf-8")
+    _git(repo, "add", "INDEX.md")
+    _git(repo, "commit", "-m", "maintain session index")
+    (apply_worktree / "INDEX.md").write_text("apply index\n", encoding="utf-8")
+    _git(apply_worktree, "add", "INDEX.md")
+    _git(apply_worktree, "commit", "-m", "maintain apply index")
+
+    cmoc_apply_join_impl(repo)
+
+    output = capsys.readouterr().out
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert not (repo / "INDEX.md").exists()
+    assert state["apply"]["state"] == "ready"
+    assert _git(repo, "branch", "--list", apply_branch).stdout == ""
+    assert "auto-resolved INDEX.md conflicts:" in output
+    assert "- INDEX.md" in output
+
+
+def test_apply_join_stops_on_non_index_conflict(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """INDEX.md 以外の conflict は自動解決せず state を維持する。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    (apply_worktree / "feature.txt").write_text("implemented\n", encoding="utf-8")
+    _git(apply_worktree, "add", "feature.txt")
+    _git(apply_worktree, "commit", "-m", "implement feature")
+    original_run_git = apply_join_module.run_git
+
+    def fail_merge_with_feature_conflict(
+        repo_root: Path,
+        args: list[str],
+        *,
+        check: bool = True,
+        text: bool = True,
+        input_text: str | None = None,
+        env: dict[str, str] | None = None,
+    ) -> subprocess.CompletedProcess[str]:
+        if args == ["merge", "--no-ff", apply_branch]:
+            return subprocess.CompletedProcess(
+                ["git", *args],
+                1,
+                "",
+                "CONFLICT (content): Merge conflict in feature.txt",
+            )
+        return original_run_git(
+            repo_root,
+            args,
+            check=check,
+            text=text,
+            input_text=input_text,
+            env=env,
+        )
+
+    monkeypatch.setattr(apply_join_module, "run_git", fail_merge_with_feature_conflict)
+    monkeypatch.setattr(
+        apply_join_module,
+        "_unmerged_paths",
+        lambda _repo: ["feature.txt"],
+    )
+
+    with pytest.raises(CmocError) as error_info:
+        cmoc_apply_join_impl(repo)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert "conflict" in error_info.value.message
+    assert "feature.txt" in error_info.value.detail
+    assert state["apply"]["state"] == "completed"
+    assert _git(repo, "branch", "--list", apply_branch).stdout.strip()
+    assert apply_worktree.exists()
 
 
 def test_apply_join_stops_on_apply_branch_rename_from_oracles(

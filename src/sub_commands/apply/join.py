@@ -91,19 +91,27 @@ def cmoc_apply_join_impl(
         ["merge", "--no-ff", join_state.apply_branch],
         check=False,
     )
+    auto_resolved_index_conflicts: list[str] = []
     if merge_result.returncode != 0:
         unmerged = _unmerged_paths(cmoc_root)
-        detail = merge_result.stderr.strip()
-        if unmerged:
-            detail = "\n".join(["unmerged paths:", *unmerged, detail]).strip()
-        raise CmocError(
-            "apply branch の merge で conflict が発生しました。",
-            [
-                "cmoc は apply join の conflict を自動解消しません。",
-                "git status を確認し、手動で merge 状態を解消してください。",
-            ],
-            detail,
-        )
+        if unmerged and all(_is_index_path(path) for path in unmerged):
+            auto_resolved_index_conflicts = _resolve_index_conflicts(
+                cmoc_root,
+                unmerged,
+                merge_result.stderr.strip(),
+            )
+        else:
+            detail = merge_result.stderr.strip()
+            if unmerged:
+                detail = "\n".join(["unmerged paths:", *unmerged, detail]).strip()
+            raise CmocError(
+                "apply branch の merge で conflict が発生しました。",
+                [
+                    "cmoc は INDEX.md 以外の apply join conflict を自動解消しません。",
+                    "git status を確認し、手動で merge 状態を解消してください。",
+                ],
+                detail,
+            )
 
     start_step(timer, 5, 5, "record ready apply state")
     cleanup_evidence = _snapshot_cleanup_evidence(cmoc_root, join_state)
@@ -116,6 +124,10 @@ def cmoc_apply_join_impl(
     )
     print(f"joined apply branch: {join_state.apply_branch}")
     print(f"session branch: {join_state.session_branch}")
+    if auto_resolved_index_conflicts:
+        print("auto-resolved INDEX.md conflicts:")
+        for path in auto_resolved_index_conflicts:
+            print(f"- {path}")
     for warning in warnings:
         print(f"warning: {warning}")
     timer.report()
@@ -342,7 +354,21 @@ def _is_apply_branch_expected_path(repo_root: Path, path: str) -> bool:
 
 def _is_session_branch_expected_path(repo_root: Path, path: str) -> bool:
     """session branch 側で利用者が編集し得る想定内 path か判定する。"""
-    return filter_oracle_file_paths(repo_root, [path]) == [path]
+    return (
+        filter_oracle_file_paths(repo_root, [path]) == [path]
+        or _is_memo_path(path)
+        or _is_index_path(path)
+    )
+
+
+def _is_memo_path(path: str) -> bool:
+    """root memo 側の変更とみなす path か判定する。"""
+    return path == "memo" or path.startswith("memo/")
+
+
+def _is_index_path(path: str) -> bool:
+    """cmoc が再生成可能な INDEX.md path か判定する。"""
+    return Path(path).name == "INDEX.md"
 
 
 def _force_resolve_unexpected_diffs(
@@ -360,7 +386,7 @@ def _force_resolve_unexpected_diffs(
                 join_state.oracle_snapshot_commit,
                 join_state.apply_branch,
             ),
-            lambda path: is_implementation_path(repo_root, path),
+            lambda path: _is_apply_branch_expected_path(repo_root, path),
         ),
         join_state.apply_worktree,
     )
@@ -509,6 +535,51 @@ def _unmerged_paths(repo_root: Path) -> list[str]:
     """unmerged path を git から取得する。"""
     result = run_git(repo_root, ["diff", "--name-only", "--diff-filter=U"])
     return [line for line in result.stdout.splitlines() if line]
+
+
+def _resolve_index_conflicts(
+    repo_root: Path,
+    paths: list[str],
+    merge_stderr: str,
+) -> list[str]:
+    """INDEX.md conflict を削除で解消し、merge commit を完了する。"""
+    resolved_paths = sorted(paths)
+    run_git(repo_root, ["rm", "--ignore-unmatch", "--", *resolved_paths])
+    remaining = _unmerged_paths(repo_root)
+    if remaining:
+        detail = "\n".join(
+            [
+                "unmerged paths:",
+                *remaining,
+                merge_stderr,
+            ]
+        ).strip()
+        raise CmocError(
+            "INDEX.md conflict の自動解消に失敗しました。",
+            [
+                "git status を確認し、残っている conflict を手動で解消してください。",
+                "不要な merge 状態であれば `git merge --abort` で戻してください。",
+            ],
+            detail,
+        )
+
+    commit_result = run_git(repo_root, ["commit", "--no-edit"], check=False)
+    if commit_result.returncode != 0:
+        detail = "\n".join(
+            [
+                merge_stderr,
+                commit_result.stderr.strip(),
+            ]
+        ).strip()
+        raise CmocError(
+            "INDEX.md conflict 解消後の merge commit に失敗しました。",
+            [
+                "git status を確認し、merge 状態を手動で完了してください。",
+                "不要な merge 状態であれば `git merge --abort` で戻してください。",
+            ],
+            detail,
+        )
+    return resolved_paths
 
 
 def _mark_apply_ready(
