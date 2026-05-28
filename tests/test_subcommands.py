@@ -2027,6 +2027,79 @@ def test_apply_commits_index_changes_when_no_discrepancies(
     assert f"session_head_at_apply_finish: \"{apply_head}\"" not in report_text
 
 
+def test_apply_report_records_session_head_at_finish_when_session_advances(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """apply fork は終了時点の session branch HEAD を report に記録する。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "oracle")
+    session_head_at_start = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    monkeypatch.setattr(
+        "sub_commands.apply.fork.maintain_indexes",
+        lambda repo_root: False,
+    )
+    advanced_session = False
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """調査中に session branch を進め、調査自体は収束させる。"""
+        nonlocal advanced_session
+        if kwargs.get("expect_json") is True:
+            if not advanced_session:
+                (repo / "session-progress.txt").write_text(
+                    "session advanced\n",
+                    encoding="utf-8",
+                )
+                _git(repo, "add", "session-progress.txt")
+                _git(repo, "commit", "-m", "advance session during apply")
+                advanced_session = True
+            return '{"git_head_commit_hash": null, "fixing_points": []}'
+        if kwargs.get("purpose") == "apply 変更要約":
+            return _change_summary_json()
+        return "No changes"
+
+    monkeypatch.setattr("sub_commands.apply.fork.run_codex_exec", fake_codex)
+
+    exit_code = cmoc_apply_impl(repo)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+        ).read_text(encoding="utf-8")
+    )
+    reports = list(
+        (repo / ".cmoc" / "reports" / "apply" / "fork").glob("*.md")
+    )
+    report_text = reports[0].read_text(encoding="utf-8")
+    session_head_at_finish = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    apply_head = _git(
+        repo,
+        "rev-parse",
+        state["apply"]["apply_branch"],
+    ).stdout.strip()
+
+    assert exit_code == 0
+    assert len(reports) == 1
+    assert session_head_at_start != session_head_at_finish
+    assert session_head_at_finish != apply_head
+    assert (
+        f"session_head_at_apply_start: \"{session_head_at_start}\""
+        in report_text
+    )
+    assert (
+        f"session_head_at_apply_finish: \"{session_head_at_finish}\""
+        in report_text
+    )
+    assert f"session_head_at_apply_finish: \"{apply_head}\"" not in report_text
+
+
 def test_apply_join_merges_completed_apply_branch_and_resets_state(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -3404,10 +3477,20 @@ def test_apply_rejects_incomplete_change_summary_from_codex(
         "sub_commands.apply.fork.maintain_indexes",
         fake_maintain_indexes,
     )
+    advanced_session = False
 
     def fake_codex(*args: object, **kwargs: object) -> str:
         """調査は収束、変更要約は必須項目不足にする。"""
+        nonlocal advanced_session
         if kwargs.get("purpose") == "apply 変更要約":
+            if not advanced_session:
+                (repo / "session-progress.txt").write_text(
+                    "session advanced\n",
+                    encoding="utf-8",
+                )
+                _git(repo, "add", "session-progress.txt")
+                _git(repo, "commit", "-m", "advance session during apply")
+                advanced_session = True
             return '{"changes": []}'
         if kwargs.get("expect_json") is True:
             return '{"git_head_commit_hash": null, "fixing_points": []}'
@@ -3436,11 +3519,16 @@ def test_apply_rejects_incomplete_change_summary_from_codex(
         "rev-parse",
         state["apply"]["apply_branch"],
     ).stdout.strip()
+    session_head_at_finish = _git(repo, "rev-parse", "HEAD").stdout.strip()
     captured = capsys.readouterr()
     assert str(reports[0]) in captured.out
     assert "result: \"エラー\"" in report_text
     assert f"session_head_at_apply_start: \"{session_head}\"" in report_text
-    assert f"session_head_at_apply_finish: \"{session_head}\"" in report_text
+    assert (
+        f"session_head_at_apply_finish: \"{session_head_at_finish}\""
+        in report_text
+    )
+    assert session_head != session_head_at_finish
     assert session_head != apply_head
     assert f"session_head_at_apply_finish: \"{apply_head}\"" not in report_text
     assert "## 作業結果" in report_text

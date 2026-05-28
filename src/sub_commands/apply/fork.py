@@ -334,6 +334,10 @@ def cmoc_apply_impl(
         # 実行結果を人間向け report と exit code に変換する。
         failed_stage = "write report"
         start_step(timer, 6, 6, "write report")
+        session_head_at_apply_finish = _session_branch_head_for_report(
+            repo_root,
+            session_branch,
+        )
         report_path = _write_apply_report(
             apply_worktree,
             repo_root,
@@ -344,7 +348,7 @@ def cmoc_apply_impl(
             apply_worktree,
             oracle_snapshot_commit,
             session_head_at_apply_start,
-            session_head_at_apply_start,
+            session_head_at_apply_finish,
             completed,
             discrepancy_counts,
         )
@@ -360,6 +364,10 @@ def cmoc_apply_impl(
     except Exception as error:
         _mark_apply_error(state_root, session_id, state)
         try:
+            session_head_at_apply_finish = _session_branch_head_for_report(
+                repo_root,
+                session_branch,
+            )
             report_path = _write_apply_error_report(
                 repo_root,
                 session_id,
@@ -369,7 +377,7 @@ def cmoc_apply_impl(
                 apply_worktree,
                 oracle_snapshot_commit,
                 session_head_at_apply_start,
-                session_head_at_apply_start,
+                session_head_at_apply_finish,
                 failed_stage,
                 error,
                 discrepancy_counts,
@@ -383,6 +391,20 @@ def cmoc_apply_impl(
             print(f"apply run id: {apply_run_id}")
             print(str(report_path))
         raise
+
+
+def _session_branch_head_for_report(repo_root: Path, session_branch: str) -> str:
+    """apply report 用に session branch の現在 HEAD を取得する。"""
+    result = run_git(
+        repo_root,
+        ["rev-parse", "--verify", f"refs/heads/{session_branch}^{{commit}}"],
+        check=False,
+    )
+    value = result.stdout.strip()
+    if result.returncode == 0 and value:
+        return value
+    detail = result.stderr.strip() or "git rev-parse returned no commit"
+    return f"unknown: failed to resolve {session_branch}: {detail}"
 
 
 def _validate_apply_fork_state(
