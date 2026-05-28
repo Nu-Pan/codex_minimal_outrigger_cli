@@ -191,13 +191,13 @@
 
 ## Do not read this when
 
-- 特定の実装だけを確認したいときは、このディレクトリ全体ではなく `src/main.py`、`src/commons/`、`src/sub_commands/` の該当ファイルを直接読むべきです。
+- 個別の実装だけを確認したいときは、このディレクトリ全体ではなく `src/main.py`、`src/commons/`、`src/sub_commands/` の該当ファイルを直接読むべきです。
 - cmoc の利用手順や正本仕様だけを確認したいときは、`oracles/` 配下の該当文書を読むべきです。
 - テストの追加や修正だけが目的なら、まず `tests/` を確認すべきです。
 
 ## hash
 
-- dc29af5eff4e868222b2b27ffc46084259387884edc8f15ccc836b44946af54a
+- 91629a0c3d3b219f90f6e12b1b8923fb6f5fbd5c695ee100ecb2ed1d5aa1a9fe
 
 # `test.sh`
 
@@ -227,23 +227,24 @@
 
 ## Summary
 
-- `cmoc` の pytest ベース自動テストをまとめた入口です。
-- `conftest.py` による import path 設定、`test_codex.py` の Codex 呼び出し検証、`test_indexing.py` の `INDEX.md` メンテナンス検証、`test_repo.py` の git 共通処理検証、`test_subcommands.py` のサブコマンド制御検証、`test_timestamps.py` の日時・経過時間検証、`test_file_naming.py` の命名規則検証を扱います。
-- テスト用の補助関数や固定フィクスチャもこのディレクトリ配下にあり、cmoc 本体の振る舞いを回帰テストで守るための目次になります。
+- `cmoc` の pytest テスト群の入口で、共通設定の `conftest.py` と各機能別テストへの案内をまとめます。
+- `commons.codex`、`commons.indexing`、`commons.repo`、`commons.timestamps`、`command_runner`、サブコマンド本体などの回帰テストを含みます。
+- `test_file_naming.py` では旧ルーティングファイルの残存有無を確認し、`tests` 全体の案内を `INDEX.md` に集約します。
 
 ## Read this when
 
-- pytest による `cmoc` の回帰テスト全体の入口を把握したいとき。
-- `commons.codex`、`commons.indexing`、`commons.repo`、`commons.timestamps`、`commons.timing` のどの機能がどのテストで検証されるか整理したいとき。
-- `INDEX.md` メンテナンス、サブコマンド制御、リポジトリ共通処理、タイムスタンプ処理のテスト観点を横断して確認したいとき。
-- テスト共通設定や補助関数を含めて、`tests` ディレクトリ全体の役割を見直したいとき。
+- `tests` 配下で、どのテストファイルを読むべきか判断したいとき。
+- ある実装変更が、どの回帰テストに影響するかを整理したいとき。
+- pytest 共通設定や、各テスト群の責務分担を把握したいとき。
+- `tests` ディレクトリの入口として、テスト群全体の範囲を素早く見渡したいとき。
 
 ## Do not read this when
 
-- `src` 側の実装ロジックや、`cmoc` のユーザー向け仕様だけを確認したいとき。
-- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいとき。
-- `tests` 配下のうち特定の 1 ファイルだけを深掘りしたいときは、対応する `test_*.py` を直接読むべきです。
+- 個別の期待値やアサーションを確認したいときは、該当する `test_*.py` を直接読むべきです。
+- 実装ロジックや CLI 仕様そのものを確認したいときは、`src` や `oracles` 側を読むべきです。
+- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいときは、この目次を読む必要はありません。
+- `INDEX.md` の生成・更新ルールだけを確認したいときは、`oracles/app_specs/indexing.md` を読むべきです。
 
 ## hash
 
-- 88c2dd13ca383398d5ea28c12e830b08a9ec9e6e494964ab7dfae9a8a6f3f999
+- 24a236e14b317c78254ec9fe5cc3e2c39a00d007724c8b82066def471a2b9833

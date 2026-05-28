@@ -78,7 +78,7 @@
 
 ## Summary
 
-- `commons.indexing.maintain_indexes()` による `INDEX.md` メンテナンス処理の回帰テスト群です。
+- `tests/test_indexing.py` は `commons.indexing.maintain_indexes()` による `INDEX.md` メンテナンスの回帰テスト群です。
 - `gitignore` 除外、空ディレクトリ、`build` / `tmp`、symlink、バイナリ、UTF-8 境界、`memo` の扱いを検証します。
 - `INDEX.md` の不備検出・再生成、Structured Output のリトライ、既存 `INDEX.md` の再利用、親子 `INDEX.md` の連鎖更新を確認します。
 - メンテナンス後の自動コミット範囲と、`.cmoc` の ignore 責務境界も扱います。
@@ -86,7 +86,7 @@
 
 ## Read this when
 
-- `maintain_indexes()` がどのファイル・ディレクトリを `INDEX.md` の目次対象にするか確認したいとき。
+- `tests/test_indexing.py` が `commons.indexing.maintain_indexes()` のどの挙動を検証しているか確認したいとき。
 - `gitignore` 除外、空ディレクトリ、`build` / `tmp`、symlink、バイナリ、UTF-8 境界、`memo` の扱いを見直したいとき。
 - 既存 `INDEX.md` の不備検出、再生成、再利用、Structured Output のリトライを確認したいとき。
 - `INDEX.md` メンテナンス後の自動コミット範囲や、`.cmoc` の ignore 責務境界を確認したいとき。
@@ -94,14 +94,14 @@
 
 ## Do not read this when
 
-- `commons.indexing` の実装そのものを確認したいとき。
-- `INDEX.md` の生成ルールだけを確認したいとき。
-- `tests/test_codex.py`、`tests/test_repo.py`、`tests/test_subcommands.py` など別のテスト群を探したいとき。
+- `commons.indexing.maintain_indexes()` の実装そのものを確認したいとき。
+- `INDEX.md` の生成・更新ルール全体だけを確認したいとき。
+- `tests/test_codex.py`、`tests/test_repo.py`、`tests/test_subcommands.py` など、別のテスト群を見たいとき。
 - `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいとき。
 
 ## hash
 
-- 4d23088c4eba8022498525a8f4e6853dcb7f31583ea9cc44017fc8191a1528ab
+- 7d1d5e3ee475ea2400b2805fb00e37dc75bbaa85b011fb77d4ea8ea50155494f
 
 # `test_repo.py`
 
@@ -151,14 +151,14 @@
 
 ## Do not read this when
 
-- `src/sub_commands` や `src/main.py` の実装ロジックそのものを追いたいとき。
-- `commons.indexing` や `INDEX.md` の生成・更新ルールだけを確認したいとき。
-- `tests/test_repo.py`、`tests/test_codex.py`、`tests/test_timestamps.py` など、別のテスト群の観点だけを知りたいとき。
-- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいとき。
+- `src/sub_commands` や `src/main.py` の実装ロジックそのものを追いたいときは、このテスト入口ではなく該当実装を直接読むべきです。
+- `commons.indexing` や `INDEX.md` の生成・更新ルールだけを確認したいときは、このファイルではなく別の目次文書を参照すべきです。
+- `tests/test_repo.py`、`tests/test_codex.py`、`tests/test_timestamps.py` など、別のテスト群の観点だけを知りたいときはこのファイルを読む必要はありません。
+- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいときは、このテスト目次ではなく該当ルール文書を確認すべきです。
 
 ## hash
 
-- c428fd0a6d9e2e64ee0de2997c619a8c75c1c28b389ececb94b922834c75176e
+- 72aaadfb685204927d24984faf67e7573d5bbc404aaa4d38730a54cd4fce459c
 
 # `test_timestamps.py`
 
