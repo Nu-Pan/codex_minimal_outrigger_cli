@@ -458,6 +458,89 @@ def test_subcommand_log_excludes_logs_in_linked_worktree(
     assert _git(linked, "status", "--porcelain").stdout == ""
 
 
+def test_subcommand_log_from_apply_worktree_writes_to_main_repo(
+    tmp_path: Path,
+) -> None:
+    """cmoc 管理 apply worktree からのログは main repo 側へ集約する。"""
+    repo = _init_git_repo(tmp_path)
+    apply_worktree = (
+        repo
+        / ".cmoc"
+        / "worktrees"
+        / "apply"
+        / "2026-05-28_05-10_00_000"
+        / "2026-05-28_05-11_00_000"
+    )
+    apply_worktree.parent.mkdir(parents=True)
+    _git(
+        repo,
+        "worktree",
+        "add",
+        "-b",
+        "cmoc/apply/2026-05-28_05-10_00_000/2026-05-28_05-11_00_000",
+        str(apply_worktree),
+        "HEAD",
+    )
+
+    with subcommand_log(apply_worktree):
+        print("apply worktree invocation")
+
+    main_logs = list((repo / ".cmoc" / "logs" / "sub_commands").glob("*.jsonl"))
+    apply_logs = list(
+        (apply_worktree / ".cmoc" / "logs" / "sub_commands").glob("*.jsonl")
+    )
+    assert len(main_logs) == 1
+    assert apply_logs == []
+
+
+def test_subcommand_log_from_submodule_keeps_submodule_repo_root(
+    tmp_path: Path,
+) -> None:
+    """submodule の `.git` file を git-common-dir の親へ置き換えない。"""
+    super_repo = _init_git_repo(tmp_path)
+    module_source = tmp_path / "module_source"
+    module_source.mkdir()
+    _git(module_source, "init")
+    _git(module_source, "config", "user.email", "test@example.com")
+    _git(module_source, "config", "user.name", "Test User")
+    (module_source / "README.md").write_text("module\n", encoding="utf-8")
+    _git(module_source, "add", "README.md")
+    _git(module_source, "commit", "-m", "initial")
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            str(module_source),
+            "module",
+        ],
+        cwd=super_repo,
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    _git(super_repo, "commit", "-am", "add submodule")
+    submodule = super_repo / "module"
+
+    with subcommand_log(submodule):
+        print("submodule invocation")
+
+    submodule_logs = list(
+        (submodule / ".cmoc" / "logs" / "sub_commands").glob("*.jsonl")
+    )
+    misplaced_logs = list(
+        (super_repo / ".git" / "modules" / ".cmoc" / "logs" / "sub_commands").glob(
+            "*.jsonl"
+        )
+    )
+    assert (submodule / ".git").is_file()
+    assert len(submodule_logs) == 1
+    assert misplaced_logs == []
+
+
 def test_run_codex_exec_passes_output_schema_file(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
