@@ -248,6 +248,44 @@ def test_maintain_indexes_excludes_symlink_entries(
     assert not any("linked-dir" in purpose for purpose in purposes)
 
 
+def test_maintain_indexes_replaces_index_symlink_without_touching_target(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """既存 INDEX.md が symlink でもリンク先を書き換えない。"""
+    repo = _init_repo(tmp_path)
+    outside = tmp_path / "outside-index.md"
+    outside.write_text("outside sentinel\n", encoding="utf-8")
+    index_path = repo / "INDEX.md"
+    index_path.symlink_to(outside)
+    _git(repo, "add", "INDEX.md")
+    _git(repo, "commit", "-m", "index symlink")
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """INDEX 生成用の最小 Structured Output を返す。"""
+        return json.dumps(
+            {
+                "summary": ["summary"],
+                "read_this_when": ["read"],
+                "do_not_read_this_when": ["skip"],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    changed = maintain_indexes(repo)
+    content = index_path.read_text(encoding="utf-8")
+
+    assert changed is True
+    assert outside.read_text(encoding="utf-8") == "outside sentinel\n"
+    assert not index_path.is_symlink()
+    assert index_path.is_file()
+    assert "# `README.md`" in content
+    assert _git(repo, "ls-files", "-s", "INDEX.md").stdout.split()[0] == (
+        "100644"
+    )
+
+
 def test_maintain_indexes_ignores_symlink_contents_in_directory_hash(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,

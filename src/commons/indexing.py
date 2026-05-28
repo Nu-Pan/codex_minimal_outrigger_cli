@@ -5,6 +5,7 @@ import hashlib
 import os
 import re
 import subprocess
+import tempfile
 from collections.abc import Iterable
 from pathlib import Path
 from urllib.parse import unquote
@@ -162,14 +163,8 @@ def _write_index_if_needed(
     """現在の直下項目から INDEX.md を更新し、差分があれば書く。"""
     # 既存 INDEX.md の内容と、再利用可能な目次ブロックを読み込む。
     index_path = directory / "INDEX.md"
-    index_exists = index_path.exists()
-    try:
-        old_content = (
-            index_path.read_text(encoding="utf-8") if index_exists else ""
-        )
-    except (OSError, UnicodeDecodeError):
-        old_content = ""
-    existing_entries = _parse_index_entries(old_content)
+    old_content = _read_existing_index_content(index_path)
+    existing_entries = _parse_index_entries(old_content or "")
     entries: list[str] = []
 
     # 目次作成対象の除外条件だけを使い、配置対象除外名とは切り分ける。
@@ -191,10 +186,56 @@ def _write_index_if_needed(
     if new_content:
         new_content += "\n"
 
-    if index_exists and old_content == new_content:
+    if (
+        old_content is not None
+        and index_path.exists()
+        and old_content == new_content
+    ):
         return False
-    index_path.write_text(new_content, encoding="utf-8")
+    _replace_index_file(index_path, new_content)
     return True
+
+
+def _read_existing_index_content(index_path: Path) -> str | None:
+    """既存 INDEX.md の通常ファイル内容を読み、symlink は再利用しない。"""
+    # INDEX.md symlink はリンク先を読まず、後段で通常ファイルへ置き換える。
+    if index_path.is_symlink():
+        return None
+    if not index_path.exists():
+        return ""
+    if not index_path.is_file():
+        raise CmocError(
+            "INDEX.md が通常ファイルではありません。",
+            [
+                "該当 path のファイル種別を確認してください。",
+                "通常ファイルとして再作成してから cmoc を再実行してください。",
+            ],
+            str(index_path),
+        )
+    try:
+        return index_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ""
+
+
+def _replace_index_file(index_path: Path, content: str) -> None:
+    """INDEX.md を同一ディレクトリ内の一時ファイルから通常ファイルへ置換する。"""
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=index_path.parent,
+            prefix=".INDEX.md.",
+            suffix=".tmp",
+            delete=False,
+        ) as temporary_file:
+            temporary_file.write(content)
+            temporary_path = Path(temporary_file.name)
+        os.replace(temporary_path, index_path)
+    finally:
+        if temporary_path is not None and temporary_path.exists():
+            temporary_path.unlink()
 
 
 def _entry_for(repo_root: Path, path: Path, digest: str) -> str:
