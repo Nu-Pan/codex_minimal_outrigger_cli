@@ -260,7 +260,7 @@ def cmoc_apply_impl(
 
     failed_stage = "create apply worktree"
     apply_run_id, apply_branch, apply_worktree = _plan_apply_worktree(
-        repo_root,
+        state_root,
         session_id,
     )
     discrepancy_counts: list[int] = []
@@ -268,7 +268,7 @@ def cmoc_apply_impl(
         failed_stage = "create apply worktree"
         start_step(timer, 3, 6, "create apply worktree")
         apply_run_id, apply_branch, apply_worktree = _create_apply_worktree(
-            repo_root,
+            state_root,
             session_id,
             oracle_snapshot_commit,
         )
@@ -340,7 +340,7 @@ def cmoc_apply_impl(
         )
         report_path = _write_apply_report(
             apply_worktree,
-            repo_root,
+            state_root,
             session_id,
             apply_run_id,
             session_branch,
@@ -369,7 +369,7 @@ def cmoc_apply_impl(
                 session_branch,
             )
             report_path = _write_apply_error_report(
-                repo_root,
+                state_root,
                 session_id,
                 apply_run_id,
                 session_branch,

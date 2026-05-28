@@ -2224,6 +2224,74 @@ def test_apply_join_merges_completed_apply_branch_and_resets_state(
     assert "joined apply branch:" in output
 
 
+def test_apply_join_cleans_worktree_created_from_linked_worktree(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """linked worktree で fork した apply run も common root 側で cleanup する。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-m", "ignore cmoc")
+    linked = tmp_path / "linked"
+    _git(repo, "worktree", "add", "-b", "feature", str(linked), "HEAD")
+    cmoc_session_fork_impl(linked)
+    session_branch = _git(linked, "branch", "--show-current").stdout.strip()
+    session_id = session_branch.removeprefix("cmoc/session/")
+    oracle_root = linked / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _git(linked, "add", "oracles/spec.md")
+    _git(linked, "commit", "-m", "add oracle")
+
+    monkeypatch.setattr(
+        "sub_commands.apply.fork.maintain_indexes",
+        lambda repo_root: False,
+    )
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """調査を要修正点なしとして完了させる。"""
+        if kwargs.get("expect_json") is True:
+            return '{"git_head_commit_hash": null, "fixing_points": []}'
+        return "No changes"
+
+    monkeypatch.setattr("sub_commands.apply.fork.run_codex_exec", fake_codex)
+
+    exit_code = cmoc_apply_impl(linked)
+
+    state_path = repo / ".cmoc" / "sessions" / f"{session_id}.json"
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    apply_branch = state["apply"]["apply_branch"]
+    apply_run_id = apply_branch.rsplit("/", 1)[1]
+    apply_worktree = (
+        repo / ".cmoc" / "worktrees" / "apply" / session_id / apply_run_id
+    )
+    linked_apply_worktree = (
+        linked / ".cmoc" / "worktrees" / "apply" / session_id / apply_run_id
+    )
+    reports = list((repo / ".cmoc" / "reports" / "apply" / "fork").glob("*.md"))
+    assert exit_code == 0
+    assert apply_worktree.is_dir()
+    assert not linked_apply_worktree.exists()
+    assert len(reports) == 1
+    assert f'apply_worktree_path: "{apply_worktree}"' in reports[0].read_text(
+        encoding="utf-8"
+    )
+
+    _git(linked, "switch", "feature")
+    _git(repo, "switch", session_branch)
+    cmoc_apply_join_impl(repo)
+
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    assert state["apply"] == {
+        "apply_branch": None,
+        "oracle_snapshot_commit": None,
+        "state": "ready",
+    }
+    assert _git(repo, "branch", "--list", apply_branch).stdout == ""
+    assert not apply_worktree.exists()
+
+
 def test_apply_join_keeps_artifacts_when_report_result_is_missing(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
