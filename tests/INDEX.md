@@ -27,30 +27,30 @@
 
 ## Summary
 
-- `tests/test_codex.py` は `commons.codex.run_codex_exec()` とその周辺補助処理を検証するテスト群の入口です。
-- Structured Output の schema ファイル生成、JSON / テキストの再試行、意味的検証失敗を扱います。
-- Codex CLI 呼び出しログ、`subcommand_log` への通知、`INDEX.md` 事前メンテナンスと `skip_index_maintenance`、workspace-write 時の oracle 保護を確認します。
-- quota 枯渇時の待機・疎通確認・`--resume` 再実行、`session_id` 抽出、`_resume_command`、`_prepare_codex_exec_paths` も扱います。
-- 末尾にはテスト用 git リポジトリ初期化用の `_init_git_repo` / `_git` と、`_FailingTextIO` / `_RecordingTextIO` があります。
+- tests/test_codex.py は `commons.codex.run_codex_exec()` とその周辺補助処理を検証するテスト群の入口です。
+- Structured Output の schema ファイル生成、JSON / text の再試行、schema 検証失敗や意味的検証失敗を扱います。
+- Codex CLI 呼び出しログ、subcommand_log 通知、`INDEX.md` 事前メンテナンス、`skip_index_maintenance`、workspace-write 時の oracle 保護を確認します。
+- quota 枯渇時の待機と `resume` 再実行、`session_id` 抽出、`_resume_command`、`_prepare_codex_exec_paths` も扱います。
+- 末尾にはテスト用 git repo 初期化の補助関数と、ログ用の補助 IO クラスがあります。
 
 ## Read this when
 
-- `commons.codex.run_codex_exec()` の呼び出し、`read_only` / `workspace-write`、`--json`、`--output-schema`、`reasoning_effort` の扱いを確認したいとき。
+- commons.codex.run_codex_exec() の呼び出し、read_only / workspace-write、`--json`、`--output-schema`、reasoning_effort の扱いを確認したいとき。
 - Structured Output の parse 失敗、schema 不一致、意味的検証失敗に対するリトライやエラー表示を追いたいとき。
-- Codex CLI 呼び出しログ、`subcommand_log` 通知、出力プレビュー、quota 枯渇時の疎通確認と `resume` 再実行の流れを確認したいとき。
-- `INDEX.md` 事前メンテナンス、`skip_index_maintenance`、workspace-write 時の oracle 保護、`session_id` 抽出や `_resume_command` を追いたいとき。
-- `_prepare_codex_exec_paths` のログ予約や、JSON Schema 文字列長・enum などの検証挙動を確認したいとき。
+- Codex CLI 呼び出しログ、subcommand_log 通知、出力プレビュー、quota 枯渇時の疎通確認と resume 再実行の流れを確認したいとき。
+- INDEX.md 事前メンテナンス、`skip_index_maintenance`、workspace-write 時の oracle 保護、session_id 抽出や `_resume_command` を追いたいとき。
+- `_prepare_codex_exec_paths` のログ予約や JSON Schema の文字列長・enum 検証挙動を確認したいとき。
 
 ## Do not read this when
 
-- `commons.indexing.maintain_indexes()` の実装や `INDEX.md` 生成ルールそのものを確認したいとき。
-- `tests/test_subcommands.py`、`tests/test_repo.py`、`tests/test_indexing.py` など、別のテスト群だけを追いたいとき。
-- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいとき。
+- commons.indexing.maintain_indexes() の実装や INDEX.md 生成ルールそのものを確認したいとき。
+- tests/test_subcommands.py、tests/test_repo.py、tests/test_indexing.py など、別のテスト群だけを追いたいとき。
+- README.md、AGENTS.md、memo の運用や編集可否だけを確認したいとき。
 - 個別サブコマンドの仕様そのものを見たいとき。
 
 ## hash
 
-- cfac06fe61fc4a450565cb4070d6d81cbbb3d251cd8114d0626631d6744e6c24
+- 4127e6ef8355da12e2711f3e66bc14a7e8e74105b0f9db82ba8a1931f63f3977
 
 # `test_file_naming.py`
 
@@ -138,29 +138,29 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は、サブコマンド群の決定論的な制御ロジック、CLI 登録、共通エラーレポートをまとめて検証する入口です。
-- `init`、`session`、`apply`、`eval-oracles` の主要経路に加えて、`main` と `bin/cmoc` の起動経路も扱います。
-- `run_command` の出力とログ、`Fake Codex CLI`、Structured Output、`INDEX.md` 更新、`oracles` / `memo` の扱い、`session join` の conflict prompt までをカバーします。
-- エラー報告の文面や補助関数の配置順、prompt 文面の制約など、実装の横断的な規約もここから追えます。
+- `tests/test_subcommands.py` は、`run_command`、共通エラーレポート、終了コード伝播を含むサブコマンド制御の回帰テスト群の入口です。
+- `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`eval-oracles` の制御フローに加え、`main` と `bin/cmoc` の CLI 登録と起動経路も扱います。
+- `Fake Codex CLI`、Structured Output、`INDEX.md` 更新、`oracles` / `memo` の扱い、`session join` の conflict 対応や `format_error_report()` の文面も検証します。
 
 ## Read this when
 
-- `tests/test_subcommands.py` が `run_command` やエラー整形、終了コード伝播をどう検証しているか確認したいとき。
-- `cmoc init`、`session fork/join/abandon`、`apply fork/join/abandon`、`eval-oracles` の制御フローや前提条件をテスト観点で追いたいとき。
-- `main` のコマンド登録や `bin/cmoc` の起動経路、`--help` の表示内容を確認したいとき。
-- `Fake Codex CLI`、Structured Output、`INDEX.md` 更新、`session join` の conflict prompt、補助関数の並び順検証の意図を把握したいとき。
-- 共通エラーレポートの文面、`format_error_report()` の振る舞い、ユーザー向け日本語エラー方針を確認したいとき。
+- このテスト群がどのサブコマンドや共通処理を検証しているか確認したいとき。
+- `run_command` のログ出力、終了コード、例外時レポートの振る舞いを追いたいとき。
+- `cmoc init`、`session`、`apply`、`eval-oracles` の制御ロジックをテスト観点で確認したいとき。
+- `main` の Typer 登録、`cmoc --help`、`eval-oracle` alias、`apply fork --help` の表示を確認したいとき。
+- `Fake Codex CLI` や Structured Output に対するテストの前提を確認したいとき。
+- `oracles`、`memo`、`INDEX.md`、`format_error_report()` の扱いを確認したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの正本仕様だけを確認したいときは、`oracles/app_specs/sub_commands/` 配下の該当文書を直接読むべきです。
-- `run_command` の実装やサブコマンド本体のコードだけを追いたいときは、このテスト目次ではなく `src/` 側を読むべきです。
-- `tests/test_codex.py`、`tests/test_indexing.py`、`tests/test_repo.py` など、別のテスト群の観点だけを追いたいときは、このファイルは適しません。
-- テスト規約や Fake Codex CLI の使い方だけを確認したいときは、`oracles/dev_rules/test_rules.md` を読むべきです。
+- 個別サブコマンドの正本仕様だけを確認したいときは、`oracles/app_specs/sub_commands/` を直接読むべきです。
+- 実装コードそのものや関数本体の詳細を追いたいときは、`src/` 側を読むべきです。
+- `tests/test_indexing.py` や `tests/test_repo.py` など、別のテスト群の観点だけを追いたいときは適しません。
+- テスト規約や Fake Codex CLI の共通方針だけを確認したいときは、`oracles/dev_rules/test_rules.md` を読むべきです。
 
 ## hash
 
-- f3cb968cd43e0a494476b62d3ed3d2128f9918be11e1cf9ba76866085630ebdb
+- 0657e90583d7219633466b1ff0f18db3ee11eb5119a6a384abdff3a02a94a58e
 
 # `test_timestamps.py`
 

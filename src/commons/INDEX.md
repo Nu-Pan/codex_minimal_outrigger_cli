@@ -30,21 +30,21 @@
 
 ## Read this when
 
-- `codex exec` の実行、sandbox 切り替え、`--output-last-message` / `--output-schema` / `--resume` の扱いを確認したいとき。
-- Structured Output の JSON Schema 保存・検証、JSON パース、意味検査、リトライの流れを見直したいとき。
-- quota 枯渇時の待機と再開、`oracles` 保護、`INDEX.md` メンテナンス前処理を追いたいとき。
-- `codex exec` の呼び出しログ、実行メッセージ、schema ファイル名の決め方を確認したいとき。
+- `codex exec` の実行方法、sandbox 切り替え、`--output-last-message`、`--output-schema`、`--resume` の扱いを確認したいときに読むべきです。
+- Structured Output の JSON Schema 保存・検証、JSON パース、意味検査、リトライの流れを見直したいときに読むべきです。
+- quota 枯渇時の待機と再開、workspace-write 実行時の `oracles` 保護、`INDEX.md` メンテナンス前処理を追いたいときに読むべきです。
+- `codex exec` の呼び出しログ、最終メッセージ保存、schema ファイル名の決め方、model と reasoning effort の制約を確認したいときに読むべきです。
 
 ## Do not read this when
 
-- `codex exec` と無関係な CLI ルーティングや、サブコマンド本体の業務ロジックだけを確認したいとき。
-- 共通エラーレポート、`<repo-root>` 探索、タイムスタンプ生成、経過時間表示など、別の `src/commons` モジュールで足りるとき。
-- ファイル操作やテスト実装だけを確認したいとき。
-- `oracles` の正本仕様そのものを確認したいときは、このモジュールではなく `oracles` 配下を直接読むべきです。
+- `codex exec` と無関係な CLI のサブルーチン本体や業務ロジックを確認したいときは、このモジュールではなく該当する実装を読むべきです。
+- 共通エラーレポート、`<repo-root>` 探索、タイムスタンプ生成、経過時間表示など、他の `src/commons` モジュールで足りる内容を調べたいときは、このモジュールを読む必要はありません。
+- ファイル操作やテスト実装だけを確認したいときは、このモジュールではなく該当箇所を直接見るべきです。
+- `oracles` の正本仕様そのものや `INDEX.md` の生成・更新ルールだけを確認したいときは、このモジュールではなく `oracles` 配下の文書を読むべきです。
 
 ## hash
 
-- 1cb39213796a7d95f81708167cb4f90d841e7aeb834a27cc4385bdae03c89bd7
+- a113450797da43fc50efe71ad25186acfbd527e5be14d8aa546bd195b42f607e
 
 # `command_runner.py`
 

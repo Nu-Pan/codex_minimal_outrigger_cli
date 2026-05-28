@@ -199,7 +199,7 @@
 
 ## hash
 
-- c5cfc98cc6922767c14401effcf1daf3b5ee1cbcfca00c421acfd099b73acd72
+- 3206e8235f1d644c8bf6e8d497d6198222ae5c29fd0fecd6565e502f2564ccd1
 
 # `test.sh`
 
@@ -229,20 +229,21 @@
 
 ## Summary
 
-- `tests` ディレクトリの入口で、pytest 共通設定と各機能の回帰テストをまとめる。
-- `conftest.py` は `<cmoc-root>/src` を Python の import path 先頭へ追加する。
-- `test_codex.py` は Codex CLI 呼び出し、Structured Output の再試行、ログ通知、workspace-write 後の oracle 保護を検証する。
-- `test_file_naming.py` は旧 routing ファイルの不存在と、サブコマンド配置の命名規則を確認する。
-- `test_indexing.py` は `INDEX.md` の生成・更新、gitignore/exclude、空ディレクトリ、symlink、binary、既存不整合の再生成を検証する。
-- `test_repo.py` は repo 判定、`.cmoc` ignore、oracle/implementation 列挙、session state、変更検出を検証する。
-- `test_subcommands.py` は `init`、`session`、`apply`、`eval-oracles` の制御フロー、`run_command`、エラーレポート、ログ出力を検証する。
-- `test_timestamps.py` は timestamp と duration 表示の書式を検証する。
+- `tests` ディレクトリの入口で、pytest 共通設定と各機能の回帰テストをまとめます。
+- `conftest.py` は `<cmoc-root>/src` を Python の import path 先頭へ追加します。
+- `test_codex.py` は Codex CLI 連携、Structured Output の再試行、ログ通知、workspace-write 後の oracle 保護を検証します。
+- `test_file_naming.py` は旧 routing ファイルの不存在とサブコマンド配置の命名規則を検証します。
+- `test_indexing.py` は `INDEX.md` 生成・更新、gitignore/exclude、空ディレクトリ、symlink、binary、既存不整合の再生成を検証します。
+- `test_repo.py` は repo 判定、`.cmoc` ignore、oracle / implementation 列挙、session state、変更検出を検証します。
+- `test_subcommands.py` は `init`、`session`、`apply`、`eval-oracles` の制御フロー、`run_command`、エラーレポート、ログ出力を検証します。
+- `test_timestamps.py` は timestamp と duration 表示の書式を検証します。
 
 ## Read this when
 
 - pytest の共通設定や import path を確認したいとき。
 - Codex CLI 連携、`INDEX.md` 生成、repo 共通処理、サブコマンド制御、日時・経過時間表示の挙動を確認したいとき。
 - どのテストファイルがどの機能を守っているか整理したいとき。
+- テスト実装の入口から、個別テストへ素早くたどりたいとき。
 
 ## Do not read this when
 
@@ -253,4 +254,4 @@
 
 ## hash
 
-- ee3a3ea09507c7d483f4b7d6dd09d8c3ffa95d9736ea31b5f56ba4b7a980d255
+- de94a2f2e6e009ac16f672608eefe3d2310b1808bb747544194db1dbf208627d

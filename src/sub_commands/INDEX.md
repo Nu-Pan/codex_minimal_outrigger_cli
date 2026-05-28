@@ -98,22 +98,22 @@
 
 ## Summary
 
-- `src/sub_commands/session` は `cmoc session` 系サブコマンドの入口で、`__init__.py` と `fork.py`、`join.py`、`abandon.py` をまとめるディレクトリです。
-- `cmoc session fork`、`cmoc session join`、`cmoc session abandon` の実装本体へのルーティング情報を提供します。
-- session の開始・統合・破棄の役割分担を整理し、目的の実装へ直接進めるための目次です。
+- `src/sub_commands/session` は `cmoc session` 系サブコマンドの実装入口で、`__init__.py`、`fork.py`、`join.py`、`abandon.py` をまとめます。
+- `fork.py` は session 開始、`join.py` は session を home branch へ取り込んで完了、`abandon.py` は merge せず破棄する処理を担当します。
+- この目次は、session の開始・統合・破棄の役割分担を把握して目的の実装へ直接進むための案内です。
 
 ## Read this when
 
-- `cmoc session` 系サブコマンドの実装・修正・レビュー・テストを進めたいとき。
+- `cmoc session` 系の実装・修正・レビュー・テストを進めたいとき。
 - `__init__.py`、`fork.py`、`join.py`、`abandon.py` の担当範囲を確認したいとき。
-- session の開始、統合、破棄の処理フローを実装順にたどりたいとき。
+- session の開始、統合、破棄の処理フローを実装順に追いたいとき。
 
 ## Do not read this when
 
-- `cmoc session` の利用手順や仕様断片だけを確認したいときは、`oracles/app_specs/sub_commands/` 側を直接読むべきです。
+- `cmoc session` の利用手順や正本仕様だけを確認したいときは、`oracles/app_specs/sub_commands/` 側を直接読むべきです。
 - `cmoc apply` 系や `eval-oracles` など、session 以外のサブコマンドだけを確認したいときは、このディレクトリを読む必要はありません。
 - CLI の入口や共通処理だけを追いたいときは、このディレクトリではなく該当する上位の案内や共通仕様を読むべきです。
 
 ## hash
 
-- 781120d64240d94e841479095a7dc88aa771e9709ac66fa4a203ffcb040a9d31
+- e9432fa65c8cd253b5cc1e608cb1644264444296db68907314351f400c51e1d5
