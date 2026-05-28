@@ -520,6 +520,84 @@ def test_maintain_indexes_regenerates_malformed_current_entry(
     assert "## Do not read this when" in content
 
 
+def test_maintain_indexes_regenerates_known_cmoc_command_typo(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """hash が最新でも既知の cmoc コマンド名 typo は再生成する。"""
+    repo = _init_repo(tmp_path)
+    target = repo / "apply_join.md"
+    target.write_text("join spec\n", encoding="utf-8")
+    readme_digest = hashlib.sha256(
+        (repo / "README.md").read_bytes()
+    ).hexdigest()
+    digest = hashlib.sha256(target.read_bytes()).hexdigest()
+    (repo / "INDEX.md").write_text(
+        "\n".join(
+            [
+                "# `README.md`",
+                "",
+                "## Summary",
+                "",
+                "- readme summary",
+                "",
+                "## Read this when",
+                "",
+                "- read readme",
+                "",
+                "## Do not read this when",
+                "",
+                "- skip readme",
+                "",
+                "## hash",
+                "",
+                f"- {readme_digest}",
+                "",
+                "# `apply_join.md`",
+                "",
+                "## Summary",
+                "",
+                "- cmo apply fork からの合流仕様を扱います。",
+                "",
+                "## Read this when",
+                "",
+                "- apply join を確認するとき。",
+                "",
+                "## Do not read this when",
+                "",
+                "- unrelated.",
+                "",
+                "## hash",
+                "",
+                f"- {digest}",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "stale command typo index")
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """再生成された routing 文を返す。"""
+        return json.dumps(
+            {
+                "summary": ["cmoc apply fork からの合流仕様を扱います。"],
+                "read_this_when": ["apply join を確認するとき。"],
+                "do_not_read_this_when": ["unrelated."],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    changed = maintain_indexes(repo)
+    content = (repo / "INDEX.md").read_text(encoding="utf-8")
+
+    assert changed is True
+    assert "cmo apply fork" not in content
+    assert "cmoc apply fork" in content
+
+
 def test_maintain_indexes_regenerates_non_utf8_index(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,

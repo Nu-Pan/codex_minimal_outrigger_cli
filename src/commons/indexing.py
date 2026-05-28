@@ -551,6 +551,9 @@ def _entry_format_is_valid(entry: str, name: str, digest: str) -> bool:
     """既存目次ブロックが仕様の固定フォーマットに一致するか判定する。"""
     # 見出しと 4 セクションの順序、説明欄の bullet 形式まで検査する。
     # Structured Output schema は空配列を許容するため、bullet 0 件も有効。
+    if _entry_has_known_command_typo(entry):
+        return False
+
     encoded_name = _encode_index_token(name)
     expected_heading = f"# `{encoded_name}`"
     if not entry.startswith(expected_heading + "\n"):
@@ -573,3 +576,15 @@ def _entry_format_is_valid(entry: str, name: str, digest: str) -> bool:
         r"\Z"
     )
     return pattern.match(entry) is not None
+
+
+def _entry_has_known_command_typo(entry: str) -> bool:
+    """既知の cmoc コマンド名 typo を含む古い routing entry を弾く。"""
+    # `cmo apply fork` のような誤誘導は hash が最新でも再生成対象にする。
+    return (
+        re.search(
+            r"(?<![A-Za-z0-9_-])cmo\s+(?:init|session|review|apply)\b",
+            entry,
+        )
+        is not None
+    )
