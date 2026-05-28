@@ -956,9 +956,9 @@ def test_eval_oracles_writes_report_with_fake_codex(
 
     monkeypatch.setattr(eval_oracles_module, "run_codex_exec", fake_codex)
 
-    cmoc_eval_oracles_impl(repo, full=True)
+    cmoc_eval_oracles_impl(repo, full=True, repeat_improve_issues_list=0)
 
-    reports = list((repo / ".cmoc" / "reports" / "eval-oracles").glob("*.md"))
+    reports = list((repo / ".cmoc" / "reports" / "review_oracles").glob("*.md"))
     assert len(reports) == 1
     report = reports[0].read_text(encoding="utf-8")
     assert codex_kwargs[0]["expect_json"] is True
@@ -999,7 +999,7 @@ def test_eval_oracles_writes_error_report_when_evaluation_fails(
     with pytest.raises(RuntimeError, match="fake evaluation failure"):
         cmoc_eval_oracles_impl(repo, full=True)
 
-    reports = list((repo / ".cmoc" / "reports" / "eval-oracles").glob("*.md"))
+    reports = list((repo / ".cmoc" / "reports" / "review_oracles").glob("*.md"))
     assert len(reports) == 1
     report = reports[0].read_text(encoding="utf-8")
     assert "result: error" in report
@@ -1008,7 +1008,7 @@ def test_eval_oracles_writes_error_report_when_evaluation_fails(
     assert "- Failed stage: `oracle ファイル評価`" in report
     assert "- Exception type: `RuntimeError`" in report
     assert "- Exception message: `fake evaluation failure`" in report
-    assert "# cmoc eval-oracles report" in report
+    assert "# cmoc review oracles report" in report
     assert "## Summary" in report
     assert "## Verdict" in report
     assert "## Specification-only basis" in report
@@ -1045,7 +1045,7 @@ def test_eval_oracles_writes_error_report_when_preparation_fails(
     with pytest.raises(RuntimeError, match="fake preparation failure"):
         cmoc_eval_oracles_impl(repo, full=True)
 
-    reports = list((repo / ".cmoc" / "reports" / "eval-oracles").glob("*.md"))
+    reports = list((repo / ".cmoc" / "reports" / "review_oracles").glob("*.md"))
     assert len(reports) == 1
     report = reports[0].read_text(encoding="utf-8")
     assert "result: error" in report
@@ -1102,7 +1102,7 @@ def test_eval_oracles_error_report_separates_unevaluated_files(
         cmoc_eval_oracles_impl(repo, full=True)
 
     report = next(
-        (repo / ".cmoc" / "reports" / "eval-oracles").glob("*.md")
+        (repo / ".cmoc" / "reports" / "review_oracles").glob("*.md")
     ).read_text(encoding="utf-8")
     assert "oracle_count_total: 2" in report
     assert "oracle_count_evaluated: 1" in report
@@ -1157,7 +1157,7 @@ def test_eval_oracles_writes_error_report_when_report_generation_fails(
     with pytest.raises(OSError, match="fake report failure"):
         cmoc_eval_oracles_impl(repo, full=True)
 
-    reports = list((repo / ".cmoc" / "reports" / "eval-oracles").glob("*.md"))
+    reports = list((repo / ".cmoc" / "reports" / "review_oracles").glob("*.md"))
     assert len(reports) == 1
     report = reports[0].read_text(encoding="utf-8")
     assert "result: error" in report
@@ -1261,14 +1261,14 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
 
     monkeypatch.setattr(eval_oracles_module, "run_codex_exec", fake_codex)
 
-    cmoc_eval_oracles_impl(repo, full=True)
+    cmoc_eval_oracles_impl(repo, full=True, repeat_improve_issues_list=0)
 
     report = next(
-        (repo / ".cmoc" / "reports" / "eval-oracles").glob("*.md")
+        (repo / ".cmoc" / "reports" / "review_oracles").glob("*.md")
     ).read_text(encoding="utf-8")
     for field in [
         "schema_version: 1",
-        "command: cmoc eval-oracles",
+        "command: cmoc review oracles",
         "generated_at:",
         f"repo_root: {repo.resolve()}",
         f"oracle_root: {oracle_root.resolve()}",
@@ -1289,7 +1289,7 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
         assert field in report
 
     expected_sections = [
-        "# cmoc eval-oracles report",
+        "# cmoc review oracles report",
         "## Summary",
         "## Verdict",
         "## Specification-only basis",
@@ -1328,6 +1328,57 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
     assert "| 2 | `oracles/INDEX.md` |" in report
     assert "| 3 | `oracles/b.md` |" in report
     assert report.count("| 2 | `oracles/INDEX.md` |") == 1
+
+
+def test_review_oracles_improves_combined_issue_list(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """評価後の結合 issue list は指定回数まで改善され、改善後をレポートする。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    oracle_file = oracle_root / "spec.md"
+    oracle_file.write_text("spec\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        eval_oracles_module,
+        "maintain_indexes",
+        lambda repo_root: False,
+    )
+    calls: list[str] = []
+
+    def issue(title: str) -> dict[str, object]:
+        result = _eval_oracle_issue("warning", title, oracle_file, 1, 1)
+        result["referenced_paths"] = [str(oracle_file.resolve())]
+        result["specification_only_basis"] = "oracles 配下の仕様だけを参照しました。"
+        return result
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """評価結果を改善呼び出しで置き換える Codex 実行を模擬する。"""
+        purpose = str(kwargs["purpose"])
+        calls.append(purpose)
+        if "問題点リスト改善" in purpose:
+            return json.dumps(
+                {"issues": [issue("Improved warning")]},
+                ensure_ascii=False,
+            )
+        return json.dumps({"issues": [issue("Raw warning")]}, ensure_ascii=False)
+
+    monkeypatch.setattr(eval_oracles_module, "run_codex_exec", fake_codex)
+
+    cmoc_eval_oracles_impl(repo, full=True, repeat_improve_issues_list=2)
+
+    report = next(
+        (repo / ".cmoc" / "reports" / "review_oracles").glob("*.md")
+    ).read_text(encoding="utf-8")
+    assert calls == [
+        "oracle 評価 oracles/spec.md",
+        "oracle 問題点リスト改善 1",
+        "oracle 問題点リスト改善 2",
+    ]
+    assert "Improved warning" in report
+    assert "Raw warning" not in report
 
 
 def test_eval_oracles_result_precedence() -> None:
@@ -1550,7 +1601,7 @@ def test_eval_oracles_stays_partial_when_oracle_was_deleted(
 
     cmoc_eval_oracles_impl(repo, full=False)
 
-    reports = list((repo / ".cmoc" / "reports" / "eval-oracles").glob("*.md"))
+    reports = list((repo / ".cmoc" / "reports" / "review_oracles").glob("*.md"))
     report = reports[0].read_text(encoding="utf-8")
     assert len(evaluated_prompts) == 1
     assert str(changed_oracle) in evaluated_prompts[0]
@@ -1600,7 +1651,7 @@ def test_eval_oracles_full_mode_reports_deleted_oracles_on_session_branch(
     cmoc_eval_oracles_impl(repo, full=True)
 
     report = next(
-        (repo / ".cmoc" / "reports" / "eval-oracles").glob("*.md")
+        (repo / ".cmoc" / "reports" / "review_oracles").glob("*.md")
     ).read_text(encoding="utf-8")
     assert "mode: full" in report
     assert "full_requested: true" in report
@@ -1662,7 +1713,7 @@ def test_eval_oracles_uses_full_mode_on_apply_branch(
     cmoc_eval_oracles_impl(repo, full=False)
 
     report = next(
-        (repo / ".cmoc" / "reports" / "eval-oracles").glob("*.md")
+        (repo / ".cmoc" / "reports" / "review_oracles").glob("*.md")
     ).read_text(encoding="utf-8")
     assert evaluated_targets == [changed_oracle, unchanged_oracle]
     assert "mode: full" in report
@@ -1707,7 +1758,7 @@ def test_eval_oracles_prompt_forbids_implementation_references() -> None:
     assert "`oracles` 外のファイルは一切参照禁止です。" not in prompt
     assert "`oracles/INDEX.md`" not in prompt
     assert "実装ファイル、テストファイル、設定ファイル、ビルド成果物も参照禁止です。" in prompt
-    assert "referenced_paths には参照した oracle / INDEX ファイルの絶対パス" in prompt
+    assert "各 issue の referenced_paths には参照した oracle / INDEX" in prompt
     assert "Structured Output schema に一致する JSON" in prompt
     assert "仕様だけから判断・実装したとき" in prompt
 
@@ -1725,7 +1776,7 @@ def test_eval_oracles_prompt_orders_completion_before_details() -> None:
         "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。"
     )
     assert lines.index(
-        "target_oracle_path には評価対象 oracle ファイルの絶対パスを返してください。"
+        "issues には検出した問題点を入れ、問題がない場合は空配列を返してください。"
     ) > 2
 
 
@@ -4861,7 +4912,8 @@ def test_main_typer_functions_delegate_only_to_impls() -> None:
     assert "from sub_commands.eval_oracles import cmoc_eval_oracles_impl" in source
     assert "eval-oracles.py" not in source
     assert "eval_oracles_source" not in eval_oracles_source
-    assert "cmoc_eval_oracles_impl(full=full)" in source
+    assert "cmoc_eval_oracles_impl(" in source
+    assert "repeat_improve_issues_list=repeat_improve_issues_list" in source
     assert "repeat_investigate_and_fix=repeat_investigate_and_fix" in source
     assert "repeat_improove_fixing_list=repeat_improove_fixing_list" in source
     assert "cmoc_session_join_impl()" in source
@@ -4885,17 +4937,26 @@ def test_cmoc_help_uses_cmoc_command_name() -> None:
     assert "Usage: cmoc [OPTIONS] COMMAND [ARGS]..." in result.stdout
     assert "session" in result.stdout
     assert "apply" in result.stdout
-    assert "eval-oracles" in result.stdout
+    assert "review" in result.stdout
     assert re.search(r"\bbranch\b", result.stdout) is None
     assert re.search(r"\bmerge\b", result.stdout) is None
     assert re.search(r"\beval-oracle(?!s)\b", result.stdout) is None
 
 
-def test_cmoc_eval_oracles_command_and_compat_alias_are_registered() -> None:
-    """`eval-oracles` を正名にし、既存の `eval-oracle` も alias として残す。"""
+def test_cmoc_review_oracles_command_and_compat_alias_are_registered() -> None:
+    """`review oracles` を正名にし、既存 alias も残す。"""
     repo_root = Path(__file__).resolve().parents[1]
     env = {"PYTHONPATH": str(repo_root / "src")}
-    plural = subprocess.run(
+    review = subprocess.run(
+        [sys.executable, "-m", "main", "review", "oracles", "--help"],
+        cwd=repo_root,
+        env=env,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    plural_alias = subprocess.run(
         [sys.executable, "-m", "main", "eval-oracles", "--help"],
         cwd=repo_root,
         env=env,
@@ -4913,11 +4974,15 @@ def test_cmoc_eval_oracles_command_and_compat_alias_are_registered() -> None:
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    assert plural.returncode == 0
+    assert review.returncode == 0
+    assert plural_alias.returncode == 0
     assert singular.returncode == 0
-    assert "Usage: cmoc eval-oracles [OPTIONS]" in plural.stdout
+    assert "Usage: cmoc review oracles [OPTIONS]" in review.stdout
+    assert "--repeat-improve-issu" in review.stdout
+    assert "Usage: cmoc eval-oracles [OPTIONS]" in plural_alias.stdout
     assert "Usage: cmoc eval-oracle [OPTIONS]" in singular.stdout
-    assert plural.stderr == ""
+    assert review.stderr == ""
+    assert plural_alias.stderr == ""
     assert singular.stderr == ""
 
 
@@ -5267,7 +5332,7 @@ def _eval_oracle_issue(
         "oracle_path": str(oracle_path.resolve()),
         "oracle_line_start": line_start,
         "oracle_line_end": line_end,
-        "affected_workflow": "cmoc eval-oracles",
+        "affected_workflow": "cmoc review oracles",
         "requirement": f"{title} requirement",
         "problem": f"{title} problem",
         "reason": f"{title} reason",

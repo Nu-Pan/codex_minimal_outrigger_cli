@@ -1206,7 +1206,7 @@ def read_session_start_commit(repo_root: Path, branch_name: str) -> str:
             "session start commit が session state に記録されていません。",
             [
                 "差分評価の前に `cmoc session fork` を実行してください。",
-                "全 oracle ファイルを評価する場合は `cmoc eval-oracles --full` を実行してください。",
+                "全 oracle ファイルを評価する場合は `cmoc review oracles --full` を実行してください。",
             ],
             f"branch: {branch_name}",
         )
