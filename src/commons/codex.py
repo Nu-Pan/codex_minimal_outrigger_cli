@@ -144,31 +144,23 @@ def run_codex_exec(
                 session_id = _extract_session_id(result.stdout, result.stderr)
                 command = _resume_command(command, session_id)
                 print("quota exhausted; waiting before resume")
-                while True:
-                    run = _wait_for_quota_and_resume(
-                        repo_root,
-                        command,
-                        prompt,
-                        purpose,
-                        attempt,
-                        schema_path,
-                        skip_index_maintenance,
-                        index_excluded_roots,
-                        allowed_uncommitted_oracle_paths,
-                    )
-                    result = run.result
-                    last_log_path = run.log_path
-                    last_message_path = run.last_message_path
-                    command = run.command
-                    last_stdout_log = result.stdout
-                    last_stderr = result.stderr
-                    if result.returncode == 0:
-                        break
-                    if not _last_message_indicates_quota_exhaustion(
-                        run.last_message_path,
-                    ):
-                        _raise_codex_failure(run.log_path, result)
-                    print("quota exhausted again after resume; waiting")
+                run = _wait_for_quota_and_resume(
+                    repo_root,
+                    command,
+                    prompt,
+                    purpose,
+                    attempt,
+                    schema_path,
+                    skip_index_maintenance,
+                    index_excluded_roots,
+                    allowed_uncommitted_oracle_paths,
+                )
+                result = run.result
+                last_log_path = run.log_path
+                last_message_path = run.last_message_path
+                command = run.command
+                last_stdout_log = result.stdout
+                last_stderr = result.stderr
             else:
                 _raise_codex_failure(run.log_path, result)
 
@@ -351,7 +343,7 @@ def _wait_for_quota_and_resume(
                 schema_path,
                 allowed_uncommitted_oracle_paths,
             )
-            return _retry_after_capacity_if_needed(
+            resume_run = _retry_after_capacity_if_needed(
                 repo_root,
                 resume_run,
                 command,
@@ -363,13 +355,27 @@ def _wait_for_quota_and_resume(
                 index_excluded_roots,
                 allowed_uncommitted_oracle_paths,
             )
+            if resume_run.result.returncode == 0:
+                return resume_run
+            if not _last_message_indicates_quota_exhaustion(
+                resume_run.last_message_path,
+            ):
+                _raise_codex_failure(resume_run.log_path, resume_run.result)
+            print("quota exhausted again after resume; waiting")
+            _sleep_for_quota_poll_interval()
+            continue
         if not _last_message_indicates_quota_exhaustion(
             poll_run.last_message_path,
         ):
             _raise_codex_failure(poll_run.log_path, poll_result)
-        wait_started = perf_counter()
-        time.sleep(_QUOTA_POLL_INTERVAL_SECONDS)
-        add_quota_wait(perf_counter() - wait_started)
+        _sleep_for_quota_poll_interval()
+
+
+def _sleep_for_quota_poll_interval() -> None:
+    """次の quota 疎通確認まで oracle 規定の間隔を空ける。"""
+    wait_started = perf_counter()
+    time.sleep(_QUOTA_POLL_INTERVAL_SECONDS)
+    add_quota_wait(perf_counter() - wait_started)
 
 
 def _retry_after_capacity_if_needed(
@@ -868,20 +874,24 @@ def _session_id_from_json(value: object) -> str | None:
 
 
 def _resume_command(command: list[str], session_id: str | None) -> list[str]:
-    """元コマンドを `codex exec resume ...` に変換する。"""
+    """元コマンドを `codex exec --resume <session-id> ...` に変換する。"""
+    if session_id is None:
+        raise CmocError(
+            "quota 枯渇後の resume session id を取得できませんでした。",
+            [
+                "codex exec のログを確認してください。",
+                "停止した session id が出力される状態で、cmoc を再実行してください。",
+            ],
+            "Codex CLI の JSONL 出力から session_id/thread_id を取得できませんでした。",
+        )
     # 既に resume 化済みならそのまま使う。
-    if "resume" in command[2:]:
+    if "--resume" in command:
         return command
-    prompt_args: list[str] = []
-    base = [*command]
-    if base and base[-1] == "-":
-        prompt_args.append(base.pop())
-    resumed = [*base, "resume"]
-    if session_id is not None:
-        resumed.append(session_id)
-    else:
-        resumed.append("--last")
-    resumed.extend(prompt_args)
+    resumed = [*command]
+    insert_index = len(resumed)
+    if resumed and resumed[-1] == "-":
+        insert_index -= 1
+    resumed[insert_index:insert_index] = ["--resume", session_id]
     return resumed
 
 

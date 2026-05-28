@@ -1246,8 +1246,8 @@ def test_extract_session_id_keeps_session_id_compatibility() -> None:
     assert _extract_session_id(stdout, "") == "session-1"
 
 
-def test_resume_command_uses_current_codex_exec_resume_form() -> None:
-    """quota 復旧時の再実行は現行の resume subcommand 形式にする。"""
+def test_resume_command_uses_resume_option_form() -> None:
+    """quota 復旧時の再実行は停止 session を --resume で復元する。"""
     command = [
         "codex",
         "exec",
@@ -1267,24 +1267,20 @@ def test_resume_command_uses_current_codex_exec_resume_form() -> None:
         "--sandbox",
         "read-only",
         "--json",
-        "resume",
+        "--resume",
         "thread-1",
         "-",
     ]
 
 
-def test_resume_command_falls_back_to_last_when_resume_id_is_missing() -> None:
-    """resume id が取れない場合は Codex CLI の --last に委ねる。"""
+def test_resume_command_fails_when_resume_id_is_missing() -> None:
+    """resume id が取れない場合は別 session へ fallback しない。"""
     command = ["codex", "exec", "--json", "-"]
 
-    assert _resume_command(command, None) == [
-        "codex",
-        "exec",
-        "--json",
-        "resume",
-        "--last",
-        "-",
-    ]
+    with pytest.raises(CmocError) as error:
+        _resume_command(command, None)
+
+    assert "resume session id を取得できませんでした" in error.value.message
 
 
 def test_run_codex_exec_retries_zero_exit_capacity_last_message(
@@ -1407,7 +1403,7 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
     monkeypatch: MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """quota 枯渇時は疎通確認後に resume subcommand で同じ prompt を再実行する。"""
+    """quota 枯渇時は疎通確認後に --resume で同じ prompt を再実行する。"""
     repo = tmp_path / "repo"
     repo.mkdir()
     _git(repo, "init")
@@ -1427,7 +1423,7 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
                 "PREV=''",
                 "HAS_RESUME=0",
                 "for ARG in \"$@\"; do",
-                "  if [ \"$ARG\" = \"resume\" ]; then HAS_RESUME=1; fi",
+                "  if [ \"$ARG\" = \"--resume\" ]; then HAS_RESUME=1; fi",
                 "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
                 "    LAST=\"$ARG\"",
                 "  fi",
@@ -1492,11 +1488,10 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
     )
     assert any("quota limit exhausted" in content for content in log_contents)
     assert any("Codex CLI の疎通確認担当" in content for content in log_contents)
-    assert not any("--resume" in content for content in log_contents)
-    assert any("resume" in content for content in log_contents)
+    assert any("--resume" in content for content in log_contents)
     assert "original prompt" not in args
     assert "Codex CLI の疎通確認担当" not in args
-    assert "resume\nthread-1\n-" in args
+    assert "--resume\nthread-1\n-" in args
     assert args.count("\n-\n") == 3
     assert "original prompt" in prompts
     assert "Codex CLI の疎通確認担当" in prompts
@@ -1505,6 +1500,80 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
     assert "quota poll prompt: あなたは Codex CLI の疎通確認担当です。" in captured
     assert "quota poll output: ok" in captured
     assert "quota restored; resuming codex exec" in captured
+
+
+def test_run_codex_exec_waits_again_when_resume_is_still_quota_exhausted(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """resume 後も quota 枯渇なら次の poll 前に 30 分待機する。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    resume_attempts = tmp_path / "resume-attempts.txt"
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "HAS_RESUME=0",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$ARG\" = \"--resume\" ]; then HAS_RESUME=1; fi",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                "PROMPT=\"$(cat)\"",
+                "if [[ \"$PROMPT\" == *'Codex CLI の疎通確認担当'* ]]; then",
+                "  echo ok > \"$LAST\"",
+                "  exit 0",
+                "fi",
+                "if [ \"$HAS_RESUME\" = 0 ]; then",
+                "  echo '{\"type\":\"thread.started\","
+                "\"thread_id\":\"thread-1\"}'",
+                "  echo 'quota exhausted' > \"$LAST\"",
+                "  exit 1",
+                "fi",
+                f"STATE={resume_attempts}",
+                "COUNT=0",
+                "if [ -f \"$STATE\" ]; then COUNT=$(cat \"$STATE\"); fi",
+                "COUNT=$((COUNT + 1))",
+                "echo \"$COUNT\" > \"$STATE\"",
+                "if [ \"$COUNT\" -eq 1 ]; then",
+                "  echo 'quota exhausted' > \"$LAST\"",
+                "  exit 1",
+                "fi",
+                "echo resumed > \"$LAST\"",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    sleeps: list[int] = []
+
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setattr(
+        "commons.codex.time.sleep",
+        lambda seconds: sleeps.append(seconds),
+    )
+
+    output = run_codex_exec(repo, "original prompt", read_only=True)
+
+    log_files = sorted(
+        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+    )
+    assert output.strip() == "resumed"
+    assert resume_attempts.read_text(encoding="utf-8").strip() == "2"
+    assert sleeps == [1800]
+    assert len(log_files) == 5
+    assert "quota exhausted again after resume; waiting" in (
+        capsys.readouterr().out
+    )
 
 
 def test_run_codex_exec_fails_when_resume_returns_unexpected_error(
@@ -1525,7 +1594,7 @@ def test_run_codex_exec_fails_when_resume_returns_unexpected_error(
                 "PREV=''",
                 "HAS_RESUME=0",
                 "for ARG in \"$@\"; do",
-                "  if [ \"$ARG\" = \"resume\" ]; then HAS_RESUME=1; fi",
+                "  if [ \"$ARG\" = \"--resume\" ]; then HAS_RESUME=1; fi",
                 "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
                 "    LAST=\"$ARG\"",
                 "  fi",
