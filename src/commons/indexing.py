@@ -5,7 +5,7 @@ import hashlib
 import os
 import re
 import subprocess
-import tempfile
+from collections.abc import Iterable
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -15,6 +15,7 @@ from .codex import (
     parse_json_object,
     run_codex_exec,
 )
+from .errors import CmocError
 
 _INDEX_DIRECTORY_EXCLUDED_NAMES: set[str] = {"build", "tmp", "__pycache__"}
 _BINARY_DETECTION_CHUNK_SIZE = 8192
@@ -39,18 +40,31 @@ _INDEX_OUTPUT_SCHEMA: dict[str, object] = {
 }
 
 
-def maintain_indexes(repo_root: Path) -> bool:
+def maintain_indexes(
+    repo_root: Path,
+    *,
+    excluded_index_roots: Iterable[Path | str] | None = None,
+) -> bool:
     """配置対象ディレクトリへ `INDEX.md` を用意し、必要なら自動コミットする。"""
     changed_paths: list[str] = []
+    gitignore_matcher = _GitignoreMatcher(repo_root)
+    excluded_roots = _normalize_excluded_index_roots(
+        repo_root,
+        excluded_index_roots,
+    )
 
     # 深い階層から順に INDEX.md を更新し、親の hash が最新子目次を反映するようにする。
-    directories = _index_directories(repo_root)
+    directories = _index_directories(
+        repo_root,
+        gitignore_matcher,
+        excluded_roots,
+    )
     for directory in sorted(
         directories,
         key=lambda path: len(path.parts),
         reverse=True,
     ):
-        if _write_index_if_needed(repo_root, directory):
+        if _write_index_if_needed(repo_root, directory, gitignore_matcher):
             changed_paths.append(
                 (directory / "INDEX.md").relative_to(repo_root).as_posix()
             )
@@ -63,21 +77,36 @@ def maintain_indexes(repo_root: Path) -> bool:
     return bool(changed_paths)
 
 
-def _index_directories(repo_root: Path) -> list[Path]:
+def _index_directories(
+    repo_root: Path,
+    gitignore_matcher: "_GitignoreMatcher",
+    excluded_index_roots: set[Path],
+) -> list[Path]:
     """仕様の除外条件に従って INDEX.md 配置対象を列挙する。"""
     # repo root とその配下ディレクトリを配置候補として集める。
     result: list[Path] = []
     directories = [repo_root]
     for current, dir_names, _file_names in repo_root.walk():
-        dir_names[:] = [
-            name
+        child_directories = [
+            current / name
             for name in dir_names
             if not _should_prune_index_directory(repo_root, current / name)
+        ]
+        gitignored_directories = gitignore_matcher.ignored_paths(
+            child_directories
+        )
+        dir_names[:] = [
+            path.name
+            for path in child_directories
+            if path not in gitignored_directories
         ]
         directories.extend(current / name for name in dir_names)
 
     # 配置対象ディレクトリ専用の除外条件を適用する。
+    gitignored_directories = gitignore_matcher.ignored_paths(directories)
     for directory in directories:
+        if _is_under_any_path(directory, excluded_index_roots):
+            continue
         relative_parts = directory.relative_to(repo_root).parts
         if any(
             part.startswith(".") or part in _INDEX_DIRECTORY_EXCLUDED_NAMES
@@ -86,13 +115,50 @@ def _index_directories(repo_root: Path) -> list[Path]:
             continue
         if _is_repo_memo(repo_root, directory):
             continue
-        if _is_gitignored(repo_root, directory):
+        if directory in gitignored_directories:
             continue
         result.append(directory)
     return result
 
 
-def _write_index_if_needed(repo_root: Path, directory: Path) -> bool:
+def _normalize_excluded_index_roots(
+    repo_root: Path,
+    excluded_index_roots: Iterable[Path | str] | None,
+) -> set[Path]:
+    """INDEX.md を書かない root 群を repo 内の絶対 path に正規化する。"""
+    if excluded_index_roots is None:
+        return set()
+    normalized_roots: set[Path] = set()
+    for root in excluded_index_roots:
+        path = Path(root)
+        if not path.is_absolute():
+            path = repo_root / path
+        try:
+            relative = path.resolve().relative_to(repo_root.resolve())
+        except ValueError:
+            continue
+        normalized_roots.add(repo_root / relative)
+    return normalized_roots
+
+
+def _is_under_any_path(path: Path, roots: set[Path]) -> bool:
+    """path が指定 root のいずれか自身または配下か判定する。"""
+    for root in roots:
+        if path == root:
+            return True
+        try:
+            path.relative_to(root)
+        except ValueError:
+            continue
+        return True
+    return False
+
+
+def _write_index_if_needed(
+    repo_root: Path,
+    directory: Path,
+    gitignore_matcher: "_GitignoreMatcher",
+) -> bool:
     """現在の直下項目から INDEX.md を更新し、差分があれば書く。"""
     # 既存 INDEX.md の内容と、再利用可能な目次ブロックを読み込む。
     index_path = directory / "INDEX.md"
@@ -107,11 +173,9 @@ def _write_index_if_needed(repo_root: Path, directory: Path) -> bool:
     entries: list[str] = []
 
     # 目次作成対象の除外条件だけを使い、配置対象除外名とは切り分ける。
-    for child in sorted(directory.iterdir(), key=lambda path: path.name):
-        if not _is_index_entry_target(repo_root, child):
-            continue
-
-        digest = _hash_path(repo_root, child)
+    children = sorted(directory.iterdir(), key=lambda path: path.name)
+    for child in _index_entry_targets(repo_root, children, gitignore_matcher):
+        digest = _hash_path(repo_root, child, gitignore_matcher)
         existing = existing_entries.get(child.name)
         if (
             existing is not None
@@ -140,7 +204,7 @@ def _entry_for(repo_root: Path, path: Path, digest: str) -> str:
         run_codex_exec(
             repo_root,
             _index_prompt(repo_root, path, digest),
-            purpose=f"generate INDEX entry for {path.relative_to(repo_root)}",
+            purpose=f"INDEX entry 生成 {path.relative_to(repo_root)}",
             read_only=True,
             expect_json=True,
             output_schema=_INDEX_OUTPUT_SCHEMA,
@@ -197,7 +261,11 @@ def _index_prompt(repo_root: Path, path: Path, digest: str) -> str:
     )
 
 
-def _hash_path(repo_root: Path, path: Path) -> str:
+def _hash_path(
+    repo_root: Path,
+    path: Path,
+    gitignore_matcher: "_GitignoreMatcher",
+) -> str:
     """ファイル内容または直下項目 serialization から sha256 を計算する。"""
     # ファイルは内容 bytes をそのまま hash 化する。
     if path.is_file():
@@ -205,15 +273,14 @@ def _hash_path(repo_root: Path, path: Path) -> str:
 
     # ディレクトリは直下目次対象の type/path/hash を安定形式で連結する。
     serialized_entries: list[str] = []
-    for child in sorted(
+    children = sorted(
         path.iterdir(),
         key=lambda item: item.relative_to(repo_root).as_posix(),
-    ):
-        if not _is_index_entry_target(repo_root, child):
-            continue
+    )
+    for child in _index_entry_targets(repo_root, children, gitignore_matcher):
         entry_type = "directory" if child.is_dir() else "file"
         relative_path = child.relative_to(repo_root).as_posix()
-        content_hash = _hash_path(repo_root, child)
+        content_hash = _hash_path(repo_root, child, gitignore_matcher)
         serialized_entries.append(
             f"{entry_type}\0{relative_path}\0{content_hash}\n"
         )
@@ -222,7 +289,25 @@ def _hash_path(repo_root: Path, path: Path) -> str:
     ).hexdigest()
 
 
-def _is_index_entry_target(repo_root: Path, path: Path) -> bool:
+def _index_entry_targets(
+    repo_root: Path,
+    paths: list[Path],
+    gitignore_matcher: "_GitignoreMatcher",
+) -> list[Path]:
+    """INDEX 目次情報と directory hash に含める直下項目を返す。"""
+    gitignored_paths = gitignore_matcher.ignored_paths(paths)
+    return [
+        path
+        for path in paths
+        if _is_index_entry_target(repo_root, path, gitignored_paths)
+    ]
+
+
+def _is_index_entry_target(
+    repo_root: Path,
+    path: Path,
+    gitignored_paths: set[Path],
+) -> bool:
     """INDEX 目次情報と directory hash に含める直下項目か判定する。"""
     # symlink は repo 外混入や循環の入口になるため、実体種別を見ずに除外する。
     if path.is_symlink():
@@ -233,7 +318,7 @@ def _is_index_entry_target(repo_root: Path, path: Path) -> bool:
         or _is_repo_memo(repo_root, path)
     ):
         return False
-    if _is_gitignored(repo_root, path):
+    if path in gitignored_paths:
         return False
     if _looks_binary(path):
         return False
@@ -281,52 +366,66 @@ def _is_repo_memo(repo_root: Path, path: Path) -> bool:
     return path == repo_root / "memo"
 
 
-def _is_gitignored(repo_root: Path, path: Path) -> bool:
-    """gitignore 対象のファイル・ディレクトリか判定する。"""
-    # tracked 状態に依存せず .gitignore pattern への一致だけを見る。
-    relative = path.relative_to(repo_root).as_posix()
-    env = _gitignore_git_env()
-    with tempfile.TemporaryDirectory(prefix="cmoc-index-gitignore-") as name:
-        temp_git_dir = Path(name) / ".git"
-        subprocess.run(
-            [
-                "git",
-                "--git-dir",
-                str(temp_git_dir),
-                "--work-tree",
-                str(repo_root),
-                "init",
-                "-q",
-            ],
-            cwd=repo_root,
-            check=True,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            env=env,
+class _GitignoreMatcher:
+    """実 repository の ignore 判定を batched/cached で提供する。"""
+
+    def __init__(self, repo_root: Path) -> None:
+        """repo root と判定 cache を初期化する。"""
+        self._repo_root = repo_root
+        self._cache: dict[str, bool] = {}
+
+    def ignored_paths(self, paths: list[Path]) -> set[Path]:
+        """gitignore 対象の path 集合を返す。"""
+        relatives_by_path = {
+            path: path.relative_to(self._repo_root).as_posix()
+            for path in paths
+        }
+        unknown_relatives = sorted(
+            {
+                relative
+                for relative in relatives_by_path.values()
+                if relative not in self._cache
+            }
         )
+        if unknown_relatives:
+            self._cache.update(self._check_ignored(unknown_relatives))
+        return {
+            path
+            for path, relative in relatives_by_path.items()
+            if self._cache[relative]
+        }
+
+    def _check_ignored(self, relatives: list[str]) -> dict[str, bool]:
+        """実 repository の Git ignore 判定をまとめて実行する。"""
         result = subprocess.run(
             [
                 "git",
-                "--git-dir",
-                str(temp_git_dir),
-                "--work-tree",
-                str(repo_root),
                 "-c",
                 f"core.excludesFile={os.devnull}",
                 "check-ignore",
                 "--no-index",
-                "-q",
-                "--",
-                relative,
+                "--stdin",
             ],
-            cwd=repo_root,
+            cwd=self._repo_root,
+            check=False,
+            input="\n".join(relatives) + "\n",
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            env=env,
+            env=_gitignore_git_env(),
         )
-    return result.returncode == 0
+        if result.returncode not in {0, 1}:
+            raise CmocError(
+                ".gitignore の評価に失敗しました。",
+                [
+                    ".gitignore や .git/info/exclude の構文を確認してから "
+                    "cmoc を再実行してください。",
+                    "一時的に ignore rule を単純化してから cmoc を再実行してください。",
+                ],
+                result.stderr.strip(),
+            )
+        ignored = set(result.stdout.splitlines())
+        return {relative: relative in ignored for relative in relatives}
 
 
 def _gitignore_git_env() -> dict[str, str]:

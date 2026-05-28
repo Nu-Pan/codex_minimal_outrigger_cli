@@ -4,7 +4,7 @@
 
 - `cmoc` のアプリ仕様断片をまとめた入口で、`branch_model`、`codex_call`、`console_and_file_log`、`error_handling`、`indexing`、`misc_specs`、`oracles`、`session_state`、`usage`、`sub_commands` への案内をまとめます。
 - `sub_commands/INDEX.md` から `apply`、`session`、`eval-oracles`、`init` など個別サブコマンドの正本仕様へたどれます。
-- `INDEX.md` 自体の生成・更新ルールは `indexing.md` が担当し、`oracles` の扱いは `oracles.md` が担当します。
+- `indexing.md` は `INDEX.md` の生成・更新ルールを定め、`oracles.md` は oracles ファイルの扱いを定めます。
 
 ## Read this when
 
@@ -22,7 +22,7 @@
 
 ## hash
 
-- 9c08d88ac886576a5975994c6c87adcfb9b4d2a26931f3e4809610f71871f1c3
+- c9f87cbde042bcc4d69ed56a068f214a0dc1fda96510a6403b13bd366a5dd111
 
 # `considered_alternatives`
 

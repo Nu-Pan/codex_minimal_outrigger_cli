@@ -2,27 +2,27 @@
 
 ## Summary
 
-- `src/commons` 配下の共有モジュールをまとめた入口で、`codex`、`command_runner`、`errors`、`indexing`、`repo`、`subcommand_log`、`timestamps`、`timing` への案内を提供します。
-- 各サブコマンドで共通利用される実行制御、エラー整形、リポジトリ探索、ログ保存、タイムスタンプ生成、時間計測の担当範囲を整理するための目次です。
-- 個別実装へ進む前に、どの共通機能がどのファイルにあるかを素早く判断するためのルーティング文書です。
+- `src/commons` は cmoc の共有基盤をまとめるディレクトリの入口で、Codex CLI 呼び出し、サブコマンド実行制御、エラー整形、リポジトリ操作、ログ、タイムスタンプ、経過時間計測を案内します。
+- `codex.py`、`indexing.py`、`repo.py` は実行フローとメンテナンス処理の中核で、`INDEX.md` の生成・維持や git ルート、branch、session state の管理も扱います。
+- `command_runner.py`、`errors.py`、`subcommand_log.py`、`timing.py`、`timestamps.py` はサブコマンドの共通実行基盤を支える補助群です。
 
 ## Read this when
 
-- `src/commons` に置かれた共通ユーティリティの全体像を確認したいとき。
-- 共有エラー処理、リポジトリ探索、ログ出力、タイムスタンプ生成、経過時間計測のどこへ進むべきか整理したいとき。
-- 各サブコマンドで共通利用される機能の入口をまとめて把握したいとき。
-- `src/commons` 配下の個別モジュールへたどる前に、役割分担を先に確認したいとき。
+- `src/commons` 配下の共有処理の役割分担を把握したいときに読むべきです。
+- `codex exec`、Structured Output、`INDEX.md` メンテナンス、`.cmoc` 管理の関連を横断して確認したいときに読むべきです。
+- サブコマンド本体から再利用すべき共通関数の置き場所を探したいときに読むべきです。
+- 共有ユーティリティの一覧から目的のモジュールへ進みたいときに読むべきです。
 
 ## Do not read this when
 
-- 個別サブコマンドの業務ロジックだけを確認したいときは、`src/sub_commands` 側を直接読むべきです。
-- `codex exec` や `apply` など、`src/commons` 以外の機能の仕様だけを確認したいときは、この目次を読む必要はありません。
-- 特定の共有モジュールの実装詳細を知りたいときは、`codex.py`、`command_runner.py`、`errors.py`、`indexing.py`、`repo.py`、`subcommand_log.py`、`timestamps.py`、`timing.py` を直接参照すべきです。
-- `INDEX.md` の生成・更新ルールそのものだけを確認したいときは、`src/commons/indexing.py` を読むべきです。
+- 個別サブコマンドの仕様や CLI 引数を確認したいときは、このディレクトリではなく `src/sub_commands` を読むべきです。
+- `INDEX.md` の自動生成ルールだけを確認したいときは、このディレクトリではなく `src/commons/indexing.py` を直接読むべきです。
+- 共通エラーの整形だけを確認したいときは、このディレクトリではなく `src/commons/errors.py` を直接読むべきです。
+- タイムスタンプ生成、ログ、経過時間計測のうち特定 1 つだけを確認したいときは、対応する個別ファイルを直接読むべきです。
 
 ## hash
 
-- 2adb2bce9291af358a5cdecb51f152bf8de10f8c3aa468f1cb03120bedc6bfd1
+- 1728f9a6a6b99b9bae07b413f81c2272fc03c9a7eaee6b0e982b6800ee18b83d
 
 # `main.py`
 
@@ -55,24 +55,25 @@
 
 ## Summary
 
-- `src/sub_commands` は cmoc のサブコマンド実装群の入口です。`__init__.py` はパッケージ宣言のみで、`apply` と `session` は専用サブディレクトリに分かれています。
-- `eval_oracles.py` は `cmoc eval-oracles` の本体、`init.py` は `cmoc init` の本体です。
-- この目次から `apply/INDEX.md` と `session/INDEX.md` へ進み、各サブコマンドの詳細実装へたどれます。
+- `src/sub_commands` は cmoc のサブコマンド実装の入口で、`apply` と `session` の各パッケージ、`init.py`、`eval_oracles.py`、`__init__.py` への案内をまとめます。
+- `apply` と `session` はそれぞれ独立したサブコマンド群として、配下の `INDEX.md` から個別実装へたどれます。
+- `init.py` と `eval_oracles.py` は単体モジュールとして、初期化処理と oracle 評価処理の入口を担います。
+- `__init__.py` は `src.sub_commands` パッケージを宣言するだけの最小モジュールです。
 
 ## Read this when
 
-- `src/sub_commands` 配下の実装入口をまとめて確認したいとき。
-- `apply`、`session`、`eval-oracles`、`init` の実装ファイルがどこにあるか整理したいとき。
-- 個別モジュールへ入る前に、サブコマンド群の役割分担と配置方針を把握したいとき。
-- `apply/INDEX.md` や `session/INDEX.md` へ進むべきか判断したいとき。
+- `cmoc` のサブコマンド実装全体の入口を確認したいときに読むべきです。
+- `apply` や `session` のような複数ファイルの実装群と、`init.py` / `eval_oracles.py` の単体モジュールを見分けたいときに読むべきです。
+- どのサブコマンド実装へ進むべきか、このディレクトリの目次から判断したいときに読むべきです。
+- `src/sub_commands` 配下の個別 `INDEX.md` や実装ファイルの入口を探したいときに読むべきです。
 
 ## Do not read this when
 
-- `cmoc apply` や `cmoc session` の個別処理だけを確認したいときは、この目次ではなく各下位 `INDEX.md` を直接読むべきです。
-- `cmoc eval-oracles` や `cmoc init` の本体処理だけを確認したいときは、この目次ではなく `eval_oracles.py` や `init.py` を直接読むべきです。
-- `src/sub_commands` が Python パッケージとして存在するかだけを確認したいときは、`__init__.py` だけで足ります。
-- サブコマンドの仕様断片や利用手順だけを確認したいときは、`oracles/app_specs/sub_commands/` 側を読むべきです。
+- `src/sub_commands` 配下のどの実装へ進むべきかではなく、CLI の起動口やコマンド登録全体を確認したいときは `src/main.py` を読むべきです。
+- 個別サブコマンドの利用手順や正本仕様だけを確認したいときは、`oracles/app_specs/sub_commands/` 側の文書を直接読むべきです。
+- 共通処理やリポジトリ操作、エラー整形などの横断的な仕組みを確認したいときは、`src/commons/` 側を読むべきです。
+- `apply`、`session`、`init.py`、`eval_oracles.py` のうち特定の 1 つだけを深く追いたいときは、この目次ではなく該当する配下の `INDEX.md` やモジュールを直接読むべきです。
 
 ## hash
 
-- c38b9eefb1ca26896d06bc808b4c27f0dec659f5d4fff50c7c5d7e7b591cab81
+- 0553470bbdbf893543c16374e33fe53b6281294c9f04662f43680ff05a751d57

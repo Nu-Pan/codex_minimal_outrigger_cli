@@ -203,11 +203,11 @@ def cmoc_eval_oracles_impl(
         commit_hash = head_commit(repo_root)
 
         # oracle ファイルごとに Codex CLI 評価を実行する。
-        failed_stage = "evaluate oracle files"
-        start_step(timer, 4, 5, "evaluate oracle files")
+        failed_stage = "oracle ファイル評価"
+        start_step(timer, 4, 5, "oracle ファイル評価")
         for index, oracle_file in enumerate(oracle_files, start=1):
             print(
-                f"evaluate oracle ({index}/{len(oracle_files)}) "
+                f"oracle 評価 ({index}/{len(oracle_files)}) "
                 f"{oracle_file}"
             )
             payload = parse_json_object(
@@ -215,7 +215,7 @@ def cmoc_eval_oracles_impl(
                     repo_root,
                     _evaluation_prompt(repo_root, oracle_file),
                     purpose=(
-                        f"evaluate oracle {oracle_file.relative_to(repo_root)}"
+                        f"oracle 評価 {oracle_file.relative_to(repo_root)}"
                     ),
                     read_only=True,
                     expect_json=True,
@@ -406,6 +406,10 @@ def _write_report(
         "",
         _verdict_text(result),
         "",
+        "## Specification-only basis",
+        "",
+        *_specification_only_basis_lines(repo_root, evaluations),
+        "",
         "## Evaluated oracle files",
         "",
         "| No. | Oracle file | Issues |",
@@ -430,7 +434,7 @@ def _write_report(
             lines.extend(["No issues.", ""])
             continue
         for issue_id, issue in _numbered_issues(severity, issues):
-            lines.extend(_issue_lines(issue_id, issue))
+            lines.extend(_issue_lines(repo_root, issue_id, issue))
     lines.extend(["## Referenced files", ""])
     referenced_path_rows = _referenced_path_rows(repo_root, evaluations)
     if referenced_path_rows:
@@ -516,6 +520,10 @@ def _write_error_report(
         "",
         f"Exception: `{type(error).__name__}: {str(error)}`",
         "",
+        "## Specification-only basis",
+        "",
+        *_specification_only_basis_lines(repo_root, evaluations),
+        "",
         "## Evaluated oracle files",
         "",
         "| No. | Oracle file | Issues |",
@@ -556,7 +564,7 @@ def _write_error_report(
             lines.extend(["No issues.", ""])
             continue
         for issue_id, issue in _numbered_issues(severity, issues):
-            lines.extend(_issue_lines(issue_id, issue))
+            lines.extend(_issue_lines(repo_root, issue_id, issue))
     lines.extend(["## Referenced files", ""])
     referenced_path_rows = _referenced_path_rows(repo_root, evaluations)
     if referenced_path_rows:
@@ -792,12 +800,43 @@ def _numbered_issues(
     ]
 
 
-def _issue_lines(issue_id: str, issue: dict[str, object]) -> list[str]:
+def _specification_only_basis_lines(
+    repo_root: Path,
+    evaluations: list[dict[str, object]],
+) -> list[str]:
+    """評価ごとの specification_only_basis を Markdown 行へ変換する。"""
+    if not evaluations:
+        return ["No completed evaluations."]
+    lines = [
+        "| No. | Oracle file | Basis |",
+        "|---:|---|---|",
+    ]
+    for index, evaluation in enumerate(evaluations, start=1):
+        target = str(evaluation["target_oracle_path"])
+        basis = _markdown_table_cell(
+            str(evaluation["specification_only_basis"])
+        )
+        lines.append(
+            f"| {index} | `{_display_path(repo_root, target)}` | {basis} |"
+        )
+    return lines
+
+
+def _markdown_table_cell(value: str) -> str:
+    """Markdown table cell に入れる自由文を 1 行へ整形する。"""
+    return " ".join(value.splitlines()).replace("|", "\\|")
+
+
+def _issue_lines(
+    repo_root: Path,
+    issue_id: str,
+    issue: dict[str, object],
+) -> list[str]:
     """issue 1 件を Markdown 行へ変換する。"""
     return [
         f"### {issue_id}: {issue['title']}",
         "",
-        f"- Oracle file: `{issue['oracle_path']}`",
+        f"- Oracle file: `{_display_path(repo_root, str(issue['oracle_path']))}`",
         f"- Lines: `{_line_range(issue)}`",
         f"- Affected workflow: `{issue['affected_workflow']}`",
         "- Requirement:",

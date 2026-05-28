@@ -900,7 +900,6 @@ def test_write_session_state_persists_only_oracle_schema(
                 "2026-05-10_22-22_10_123"
             ),
             "oracle_snapshot_commit": "def456",
-            "process_id": None,
         },
     }
 
@@ -974,6 +973,40 @@ def test_read_session_state_rejects_ready_apply_with_run_fields(
     assert "apply.apply_branch:" in error.value.detail
 
 
+def test_read_session_state_rejects_apply_schema_mismatch(
+    tmp_path: Path,
+) -> None:
+    """永続 session state の apply field 集合は oracle schema と一致させる。"""
+    repo = _init_repo(tmp_path)
+    session_id = "2026-05-10_22-21_10_123"
+    state_path = session_state_path(repo, session_id)
+    state_path.parent.mkdir(parents=True)
+    state_path.write_text(
+        json.dumps(
+            {
+                "session": {
+                    "state": "active",
+                    "session_home_branch": "main",
+                    "session_start_commit": "abc123",
+                },
+                "apply": {
+                    "state": "ready",
+                    "oracle_snapshot_commit": None,
+                    "process_id": 12345,
+                },
+            },
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(CmocError) as error:
+        read_session_state(repo, session_id)
+
+    assert "apply セクションの field 集合" in error.value.actions[0]
+    assert "missing apply fields: apply_branch" in error.value.detail
+    assert "unknown apply fields: process_id" in error.value.detail
+
+
 def test_write_session_state_rejects_completed_apply_without_run_fields(
     tmp_path: Path,
 ) -> None:
@@ -1029,7 +1062,6 @@ def test_write_session_state_allows_error_before_apply_run_fields_exist(
         "state": "error",
         "apply_branch": None,
         "oracle_snapshot_commit": None,
-        "process_id": None,
     }
 
 

@@ -23,36 +23,36 @@
 
 ## Summary
 
-- `codex exec` の共通ラッパーで、コマンド組み立て、実行、`--output-last-message` を含むログ保存、`--resume` 再開、quota 待機をまとめるモジュールです。
-- Structured Output の `--output-schema` ファイル生成・キャッシュ、JSON パース、JSON Schema 検証、意味検査を扱います。
-- workspace-write 実行時の `oracles` 改変検査と、`INDEX.md` メンテナンス前処理を担います。
-- model と reasoning effort の制約、quota ポーリング、ログの Front Matter 書き出し補助も含みます。
+- Codex CLI 呼び出しの共通ラッパーで、`codex exec` の起動、`--output-last-message` を含む実行ログ保存、`resume` サブコマンドによる再開、quota 待機と再開をまとめるモジュールです。
+- Structured Output 用の `--output-schema` ファイル生成とキャッシュ、JSON 解析、JSON Schema 検証、意味検査までを扱います。
+- workspace-write 実行時の `oracles` 変更検査と、`INDEX.md` メンテナンス前処理、model と reasoning_effort の制約も含みます。
 
 ## Read this when
 
-- `codex exec` の実行、sandbox 切り替え、`--output-last-message` / `--output-schema` / `--resume` の扱いを確認したいとき。
-- Structured Output の JSON Schema 保存・検証、JSON パース、意味検査、リトライの流れを見直したいとき。
-- quota 枯渇時のポーリング待機・再開、`oracles` 保護、`INDEX.md` メンテナンス前処理を追いたいとき。
-- `codex exec` の呼び出しログ、実行メッセージ、schema ファイル名の決め方を確認したいとき。
+- Codex CLI の呼び出し方法や sandbox の切り替え、`codex exec` のコマンド組み立てを確認したいとき。
+- Structured Output の schema 保存・検証、JSON パース、リトライの流れを見直したいとき。
+- quota 枯渇時の待機と `resume` サブコマンドによる再開、capacity リトライ、`oracles` 保護や `INDEX.md` 事前更新の挙動を追いたいとき。
+- 呼び出しログ、`--output-last-message`、model と reasoning_effort の制約を確認したいとき。
 
 ## Do not read this when
 
-- `codex exec` と無関係な CLI ルーティングや、サブコマンド本体の業務ロジックだけを確認したいとき。
-- 共通エラーレポート、`<repo-root>` 探索、タイムスタンプ生成、経過時間表示など、別の `src/commons` モジュールで足りるとき。
-- ファイル操作やテスト実装だけを確認したいとき。
-- `oracles` の正本仕様そのものを確認したいときは、このモジュールではなく `oracles` 配下を直接読むべきです。
+- `codex exec` 以外のサブコマンド本体や業務ロジックを確認したいときは、このモジュールではなく `src/sub_commands` を読むべきです。
+- 共通エラー整形だけを確認したいときは `src/commons/errors.py`、タイムスタンプだけなら `src/commons/timestamps.py` を読むべきです。
+- `INDEX.md` の自動生成ルールそのものだけを確認したいときは、このモジュールではなく `src/commons/indexing.py` と `oracles/app_specs/indexing.md` を読むべきです。
+- ファイル操作やテスト実装だけを確認したいときは、このモジュールの範囲外です。
 
 ## hash
 
-- ae009dc7a50796fbe8d663b0e5f6bfd845fa036175bc13976d45908742285ce6
+- 252a9e3953b8ee9485403e6d6d4bb0191606d155d6799dd09120e2da2b130f10
 
 # `command_runner.py`
 
 ## Summary
 
-- Typer から呼ばれるサブコマンド共通の実行ラッパーをまとめ、`<repo-root>` 解決、例外変換、終了コード決定、終了時レポート出力を担う。
-- 通常のサブコマンド本体は `Path` を受け取って実行され、`subcommand_log` と `timing` と連携して実行結果を集約する。
-- `typer.Exit` と通常例外を分けて扱い、必要に応じて `format_error_report()` で利用者向けエラー表示を行う。
+- Typer から呼ばれるサブコマンド共通の実行ラッパーで、`<repo-root>` の解決、`subcommand_log` の開始、例外の変換、終了コード決定をまとめています。
+- 通常のサブコマンド本体は `Path` を受け取り、`subcommand_log` と `timing` と連携して実行結果を集約します。
+- `typer.Exit` と通常例外を分けて扱い、必要に応じて `CmocError` と `format_error_report()` で利用者向けのエラー表示を行います。
+- 終了時には `log_event()`、`report_current_timer()`、`format_duration()`、`clear_current_timer()` を使って完了レポートを出します。
 
 ## Read this when
 
@@ -64,14 +64,14 @@
 ## Do not read this when
 
 - 個別サブコマンドの業務ロジックや CLI 引数定義だけを確認したいとき。
-- `<repo-root>` 探索の詳細や `.cmoc` の扱いを詳しく追いたいときは、`repo.py` を読むべきです。
-- エラーメッセージ本文の整形や例外クラスの定義そのものを確認したいときは、`errors.py` を読むべきです。
+- `<repo-root>` 探索や `.cmoc` の扱いの詳細を追いたいときは、`repo.py` を読むべきです。
+- エラーメッセージ本文の整形や共通例外の定義そのものを確認したいときは、`errors.py` を読むべきです。
 - サブコマンドログやタイミング計測の実装だけを調べたいときは、`subcommand_log.py` と `timing.py` を直接読むべきです。
 - Codex CLI 呼び出し、Structured Output、`INDEX.md` 生成など別機能を調べたいとき。
 
 ## hash
 
-- e296c49aaa9993d182bfe68f1c51f79af75fa6fd4c466b713809cb0c73354b8f
+- 5464d0e62e6d10ccdc888415490d0ead1a958e3da4dddf0c0cb337fb61b09a09
 
 # `errors.py`
 
@@ -90,95 +90,95 @@
 
 ## Do not read this when
 
-- 個別サブコマンドの業務ロジック、引数解析、git 操作、`codex exec` 呼び出しを調べたいとき。
-- ログ保存、リトライ、Structured Output、サンドボックス指定など、別の共通機能だけを調べたいとき。
-- タイムスタンプ生成、経過時間表示、サブコマンドログなど、他の共通ユーティリティを調べたいとき。
-- テスト実装の詳細や Fake Codex CLI の使い方だけを確認したいとき。
+- 個別サブコマンドの業務ロジック、引数解析、git 操作、`codex exec` 呼び出しを確認したいときは、このモジュールではなく該当するサブコマンドや共通処理を読むべきです。
+- ログ保存、リトライ、Structured Output、サンドボックス指定など、`format_error_report` とは別の共通機能だけを確認したいときは、このファイルの範囲外です。
+- タイムスタンプ生成、経過時間表示、サブコマンドログなど、他の共通ユーティリティを調べたいときは `src/commons/errors.py` ではありません。
+- テスト実装の詳細や Fake Codex CLI の使い方だけを確認したいときは、このモジュールを読む必要はありません。
 
 ## hash
 
-- d4b9943ebba58c28cfcb04b0c1a4971b63391ac36f12740d38c1381392381b97
+- a72dbd1205ce53b398ceacaaf86e966b9aba8f03be9634806f0d94a73e4717ea
 
 # `indexing.py`
 
 ## Summary
 
-- `<repo-root>` 配下を走査して `INDEX.md` の配置対象を列挙し、深い階層から順に更新するメンテナンス処理をまとめるモジュールです。
-- .gitignore、`.git/info/exclude`、`memo`、`build` / `tmp`、dotfiles、symlink、バイナリ、`INDEX.md` 自身を除外して、目次に載せる直下項目を決めます。
-- 既存の `INDEX.md` ブロックを解析し、ハッシュが一致して固定フォーマットも保たれているものは再利用し、崩れたものは再生成します。
-- Codex CLI の Structured Output で `summary`、`read_this_when`、`do_not_read_this_when` を生成し、差分が出た場合は `INDEX.md` の変更だけを自動コミットします。
+- `INDEX.md` の生成・維持処理をまとめたモジュールです。
+- リポジトリを走査して、`.gitignore`、`.git/info/exclude`、`memo`、`build` / `tmp`、dotfiles、symlink、バイナリ、`INDEX.md` 自身を除外しながら、目次対象の直下項目を決めます。
+- 既存の `INDEX.md` ブロックを解析し、ハッシュと固定フォーマットが一致するものは再利用し、崩れたものは再生成します。
+- Structured Output の schema 検証、目次生成プロンプトの組み立て、Markdown 変換、gitignore 判定の補助処理も含みます。
 
 ## Read this when
 
-- `INDEX.md` の自動配置・更新ルールや、対象ディレクトリの列挙方法を実装・修正したいとき。
-- `.gitignore`、`.git/info/exclude`、`memo`、`build` / `tmp`、dotfiles、symlink、バイナリなどの除外条件を確認したいとき。
-- 既存の `INDEX.md` の再利用、再生成、ハッシュ一致判定、空ディレクトリの扱いを見直したいとき。
-- Structured Output の schema 検証、目次生成用プロンプトの組み立て、Codex 呼び出し、自動コミットの流れを追いたいとき。
-- 親子の `INDEX.md` がどの順序で更新されるかや、最新判定の条件を確認したいとき。
+- `INDEX.md` の自動生成・更新ルールを実装または修正したいとき。
+- 直下項目の列挙条件、除外条件、ハッシュ再利用の判定を確認したいとき。
+- Structured Output の schema 検証、目次生成用プロンプト、Markdown 変換の流れを追いたいとき。
+- gitignore 判定やバイナリ判定を含む、INDEX メンテナンスの補助処理を見直したいとき。
 
 ## Do not read this when
 
-- 正本仕様だけを確認したいときは、`oracles/app_specs/indexing.md` を読むべきです。
-- `codex exec` の一般的な呼び出し方だけを知りたいときは、`commons/codex.py` を読むべきです。
-- `git` リポジトリ探索や `.cmoc`、session state の処理を確認したいときは、別のモジュールを読むべきです。
-- `INDEX.md` メンテナンス以外の共通エラー処理やログ制御を調べたいときは、このモジュールの範囲外です。
+- `codex exec` の汎用的な呼び出し方だけを知りたいときは、`src/commons/codex.py` を読むべきです。
+- 共通エラー処理、タイムスタンプ、サブコマンドログ、リポジトリ探索など、`INDEX.md` メンテナンス以外の共通機能を調べたいときは別モジュールを読むべきです。
+- `INDEX.md` の正本仕様だけを確認したいときは、`oracles/app_specs/indexing.md` を読むべきです。
 
 ## hash
 
-- f877795e28b7fb6c6bc4fee92a674b581591825e7577a18ad9c6d29634eabdb1
+- cb8403ff8ed29965811c4617e5972ba734e69a3ce7db1431f0573ccfb65bed6d
 
 # `repo.py`
 
 ## Summary
 
-- git リポジトリのルート探索、`cwd` 固定、`git` 実行ラッパーをまとめる共通モジュールです。
-- `cmoc/session/<session-id>` と `cmoc/apply/<session-id>/<apply-run-id>` のブランチ判定、session id 抽出、apply worktree path 復元を扱います。
-- .cmoc/sessions/<session-id>.json` の読み書き、固定スキーマ検証、active session 一覧、session start commit 参照を扱います。
-- `.cmoc` の追跡対象外保証、未コミット差分の検出、oracle / 実装ファイルの列挙、削除検出、差分 commit 後の index 復元を行います。
+- git リポジトリのルート探索、現在ブランチや HEAD の取得、`cmoc/session/...` と `cmoc/apply/...` の branch 判定、session id 抽出、apply worktree path 復元を扱う共通モジュールです。
+- session state JSON の初期値生成、保存、読込、固定スキーマ検証、state 値の妥当性確認、active session の列挙を扱います。
+- `.cmoc` を追跡対象外に保つ保証、未コミット差分の検査、`pathspec` 単位の commit、`cmoc init` 用差分の分離と復元、root `.gitignore` の評価補助も含みます。
+- `oracles` と実装ファイルの列挙、変更検出、削除検出を通じて、部分評価と部分適用の切り替え判断を支える機能もまとめています。
 
 ## Read this when
 
-- リポジトリルート探索や `cwd` の固定、`git` コマンド共通実行の挙動を確認・修正したいとき。
-- `cmoc/session/...` と `cmoc/apply/...` のブランチ判定や、branch 名から session id を取り出す処理を確認したいとき。
-- .cmoc/sessions/<session-id>.json` の state JSON を読み書きする処理や、検証ルールを確認したいとき。
-- `oracles` と実装ファイルの列挙、削除検出、差分 commit 後の staged 差分復元を追いたいとき。
+- リポジトリルート探索や、現在の作業ディレクトリを git リポジトリの root に合わせたいときに読むべきです。
+- `cmoc session` / `cmoc apply` の branch 判定、session id 抽出、apply worktree パス復元を実装・修正したいときに読むべきです。
+- session state JSON の保存、読込、スキーマ検証、state 値の妥当性確認、active session の列挙を確認したいときに読むべきです。
+- `.cmoc` を git 追跡対象外に保つ保証、未コミット差分の検査、`cmoc init` 時の差分分離や commit ロジックを見直したいときに読むべきです。
+- 部分評価や部分適用のための変更ファイル列挙、削除検出、root `.gitignore` の評価方法を追いたいときに読むべきです。
 
 ## Do not read this when
 
-- CLI の引数定義やサブコマンド本体の業務ロジックだけを確認したいときは、別モジュールを読むべきです。
-- `commons.errors` や `commons.indexing` など、別の共通モジュールだけで足りるときはこのファイルを読む必要はありません。
-- cmoc の仕様断片やユーザー向け手順だけを追いたいときは、`oracles` 側を読むべきです。
-- `INDEX.md` の生成・更新ルールそのものだけを確認したいときは、このモジュールではなく `src/commons/indexing.py` を読むべきです。
+- ユーザー向けの `cmoc` サブコマンドの使い方だけを確認したいときは、このモジュールではなく `src/sub_commands` 側を読むべきです。
+- 共通エラー整形だけを確認したいときは `src/commons/errors.py` を、タイムスタンプだけなら `src/commons/timestamps.py` を読むべきです。
+- サブコマンドログや経過時間表示を調べたいときは `src/commons/subcommand_log.py` や `src/commons/timing.py` を読むべきです。
+- `codex exec` 呼び出し、Structured Output、`INDEX.md` 自動生成の仕組みだけを確認したいときは、このモジュールではなく `src/commons/codex.py` や `src/commons/indexing.py`、対応する正本仕様を読むべきです。
+- `.cmoc` のルーティングや保持ルールそのものではなく、ファイル配置や目次生成だけを見たいときは、このモジュールを読む必要はありません。
 
 ## hash
 
-- 62005af6bd7913754183b34aaffde72148702dd2fc7342dcbcde710698bf8ce6
+- 3c22c1c88b9cceceabaddc2e7e457554f4b05a83d149219d35ec62cebe1fa2e7
 
 # `subcommand_log.py`
 
 ## Summary
 
-- `src/commons/subcommand_log.py` は、各サブコマンド実行の標準出力と標準エラー出力をコンソールと `<repo-root>/.cmoc/logs/sub_commands/<time-stamp>.log` の両方へ tee する共通ログ管理モジュールです。
-- `SubcommandLogContext` と `current_subcommand_log()` で現在のサブコマンドログ状態を共有し、`add_quota_wait()` で quota 回復待ち時間を累積できます。
-- `subcommand_log()` は一意なログファイル作成と開始メッセージ表示を担い、`_ensure_logs_excluded()` は `.git/info/exclude` を更新して `.cmoc/logs/` が未コミット差分にならないようにします。
+- サブコマンド呼び出し単位の JSON Lines ログを管理する共通処理への入口です。
+- ログ状態の保持、イベント追記、quota 待ち時間の加算、現在のログコンテキスト取得をまとめます。
+- ログファイルの作成先を `repo root` 側に寄せつつ、worktree 配下に出力しないための判定と `git info/exclude` 更新も扱います。
 
 ## Read this when
 
-- サブコマンドの標準出力と標準エラー出力をコンソールとログファイルへ同時保存する仕組みを確認したいとき。
-- 現在実行中のサブコマンドのログ状態や、quota 回復待ち時間の加算方法を確認したいとき。
-- ログファイルの保存先、ファイル名の払い出し方法、開始時に表示される相対パスのメッセージを確認したいとき。
-- `.cmoc/logs/` をサブコマンド自身の差分として扱わないための除外設定の挙動を確認したいとき。
+- サブコマンド呼び出し単位の JSON Lines ログをどこにどう作るか確認したいとき。
+- 現在実行中のサブコマンドログ状態を `ContextVar` で保持し、イベントを追記する実装を確認したいとき。
+- `.cmoc/logs/sub_commands/<time-stamp>.jsonl` の作成、排他生成、即時 flush、ログ追記の流れを実装・修正・レビューしたいとき。
+- `.cmoc/logs/` を git の未コミット差分にしないための `info/exclude` 更新や、worktree での保存先切り替えを確認したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの業務ロジックや引数解析だけを確認したいとき。
-- `INDEX.md` の自動生成や更新ルールだけを確認したいとき。
-- タイムスタンプ生成や経過時間表示など、別の共通ユーティリティを調べたいとき。
-- エラー整形や共通エラーハンドリング全体だけを調べたいとき。
+- 個別サブコマンドの引数や状態遷移だけを確認したいときは、この共通ログ処理ではなく該当サブコマンドの仕様を読むべきです。
+- `cmoc` のコンソール表示フォーマットだけを確認したいときは、`console_and_file_log.md` を先に読むべきです。
+- `codex exec` の呼び出し方や quota 待ちの共通規約だけを確認したいときは、`codex_call.md` を読むべきです。
+- `.cmoc` の配置や `INDEX.md` の生成ルールそのものを確認したいときは、このファイルではなく `misc_specs.md` や `indexing.md` を読むべきです。
 
 ## hash
 
-- 7f18681c89832887103f064328d088ebf01496a44ded901bc19821c642c01eb3
+- c5363a43ba379d9f913aed453f9a6588296f5b5a2f6d9aa207ef4687eb837977
 
 # `timestamps.py`
 
@@ -210,28 +210,27 @@
 
 ## Summary
 
-- `src/commons/timing.py` は、サブコマンドのステップ単位の経過時間を記録・表示する共通モジュールです。
-- `StepTimer` はサブコマンド全体の開始時刻、現在のステップ名、確定済みステップの経過時間を保持し、`start()` で直前ステップを確定して次のステップを開始します。
-- `report()` は未確定の最後のステップも含めて、各ステップの経過時間と全体の経過時間を stdout に出力します。
-- `current_timer()`、`report_current_timer()`、`clear_current_timer()` は `ContextVar` を使って現在の計測器を参照・出力・解除します。
-- `format_duration()` は秒数を 0.1 秒単位で切り捨て、負値を 0 として ` 0h  0m  0.0s` 形式に整形します。
+- サブコマンド実行中のステップ単位の経過時間を管理し、最後に stdout へ集計表示する共通モジュールです。
+- `StepTimer` は開始時刻、現在ステップ、確定済みの各ステップ時間を保持し、`start()` と `finish_current()` で計測区間を区切ります。
+- `start_step()` は flat / hierarchical なステップ番号を整形して `step_start` ログと stdout の開始通知を出します。
+- `current_timer()`、`report_current_timer()`、`clear_current_timer()` は `ContextVar` 上の現在の計測器を取得・出力・解除します。
+- `format_duration()` は秒数を 0.1 秒単位で切り捨て、負値を 0 として固定幅の経過時間文字列に整形します。
 
 ## Read this when
 
-- 各サブコマンドのステップ別タイミング表示や総経過時間表示を実装・修正したいとき。
-- `StepTimer` の状態遷移や、`start()`・`report()`・`finish_current()` の関係を確認したいとき。
-- 実行中の現在の計測器を取得したい、最後にまとめて出力したい、参照を消したいとき。
-- 経過時間の表示フォーマット、0.1 秒単位への切り捨て、負値の扱いを確認したいとき。
-- タイミングレポートの stdout 出力形式や `command_name` の使われ方を確認したいとき。
+- サブコマンドのステップ別の経過時間表示や、完了時の総経過時間表示を実装・修正したいとき。
+- `StepTimer` の状態遷移や、`start()`、`finish_current()`、`report()` の関係を確認したいとき。
+- 階層化されたステップ番号を含む開始通知の表示形式を確認したいとき。
+- 現在の計測器を `ContextVar` 経由で参照・出力・解除したいとき。
+- 経過時間の表示フォーマットや、0.1 秒単位への切り捨て、負値の扱いを確認したいとき。
 
 ## Do not read this when
 
-- 各サブコマンド固有の業務ロジックだけを追いたいとき。
-- Codex CLI 呼び出し、ログ保存、Structured Output、リトライなど `timing.py` 以外の共通処理を調べたいとき。
-- `INDEX.md` の自動生成や内容ハッシュの規則を調べたいとき。
-- `repo` 探索、oracle 列挙、ブランチ操作など、タイミング以外の共通機能を探したいとき。
-- Python の一般的な時間計測 API や `perf_counter` の詳細仕様だけを知りたいとき。
+- 各サブコマンドの業務ロジックや引数解析だけを確認したいとき。
+- ログ保存、`subcommand_log`、`repo` 探索など、経過時間計測以外の共通処理を調べたいとき。
+- `INDEX.md` の自動生成や内容ハッシュの規則だけを確認したいとき。
+- Python の一般的な時間計測 API や `perf_counter` の詳細だけを知りたいとき。
 
 ## hash
 
-- 9c0e3bd7f64b020379aadcc0e747d1b0c90c0678b2bd2a27efd4db0f4ff58175
+- 2dc577ed39e2040ba837ec032afb14e81fd0313520c6969249125b3f858884ea

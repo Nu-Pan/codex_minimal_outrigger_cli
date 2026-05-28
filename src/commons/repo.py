@@ -116,6 +116,71 @@ def session_state_path(repo_root: Path, session_id: str) -> Path:
     return repo_root / ".cmoc" / "sessions" / f"{session_id}.json"
 
 
+def apply_process_id_path(repo_root: Path, session_id: str) -> Path:
+    """running apply process id の runtime-only 保存先 path を返す。"""
+    return repo_root / ".cmoc" / "runtime" / "apply" / f"{session_id}.pid"
+
+
+def write_apply_process_id(
+    repo_root: Path,
+    session_id: str,
+    process_id: int,
+) -> Path:
+    """running apply process id を session state 外の runtime file に保存する。"""
+    path = apply_process_id_path(repo_root, session_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(f"{process_id}\n", encoding="utf-8")
+    return path
+
+
+def read_apply_process_id(repo_root: Path, session_id: str) -> int | None:
+    """runtime file から running apply process id を読む。"""
+    path = apply_process_id_path(repo_root, session_id)
+    try:
+        raw_value = path.read_text(encoding="utf-8").strip()
+    except FileNotFoundError:
+        return None
+    except OSError as error:
+        raise CmocError(
+            "apply process id ファイルを読めませんでした。",
+            [
+                ".cmoc/runtime/apply 配下のファイル権限と状態を確認してください。",
+                "手動で apply process の状態を確認してから再実行してください。",
+            ],
+            f"{path}\n{error}",
+        ) from error
+    try:
+        process_id = int(raw_value)
+    except ValueError as error:
+        raise CmocError(
+            "apply process id ファイルの形式が不正です。",
+            [
+                ".cmoc/runtime/apply 配下の pid ファイルを確認してください。",
+                "手動で apply process の状態を確認してから再実行してください。",
+            ],
+            f"{path}\nprocess_id: {raw_value}",
+        ) from error
+    if process_id <= 0:
+        raise CmocError(
+            "apply process id ファイルの形式が不正です。",
+            [
+                "process id は正の整数である必要があります。",
+                "手動で apply process の状態を確認してから再実行してください。",
+            ],
+            f"{path}\nprocess_id: {process_id}",
+        )
+    return process_id
+
+
+def clear_apply_process_id(repo_root: Path, session_id: str) -> None:
+    """runtime-only apply process id file を削除する。"""
+    path = apply_process_id_path(repo_root, session_id)
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        return
+
+
 def session_state_root(repo_root: Path) -> Path:
     """session state を共有する canonical repo root を返す。"""
     common_dir = run_git(
@@ -146,7 +211,6 @@ def initial_session_state(
             "state": "ready",
             "apply_branch": None,
             "oracle_snapshot_commit": None,
-            "process_id": None,
         },
     }
 
@@ -159,7 +223,7 @@ def write_session_state(
     """session state JSON を保存する。"""
     path = session_state_path(repo_root, session_id)
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = _session_state_payload(state)
+    payload = _session_state_payload(state, path)
     _validate_session_state_schema(payload, path)
     path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True)
@@ -169,7 +233,10 @@ def write_session_state(
     return path
 
 
-def _session_state_payload(state: dict[str, object]) -> dict[str, object]:
+def _session_state_payload(
+    state: dict[str, object],
+    path: Path,
+) -> dict[str, object]:
     """永続化対象の session state 固定スキーマだけを返す。"""
     session = state.get("session")
     apply = state.get("apply")
@@ -181,6 +248,18 @@ def _session_state_payload(state: dict[str, object]) -> dict[str, object]:
                 "破損した session state を復旧してください。",
             ],
         )
+    _validate_required_keys(
+        session,
+        {"state", "session_home_branch", "session_start_commit"},
+        "session",
+        path,
+    )
+    _validate_required_keys(
+        apply,
+        {"state", "apply_branch", "oracle_snapshot_commit"},
+        "apply",
+        path,
+    )
     return {
         "session": {
             "state": session.get("state"),
@@ -191,7 +270,6 @@ def _session_state_payload(state: dict[str, object]) -> dict[str, object]:
             "state": apply.get("state"),
             "apply_branch": apply.get("apply_branch"),
             "oracle_snapshot_commit": apply.get("oracle_snapshot_commit"),
-            "process_id": apply.get("process_id"),
         },
     }
 
@@ -243,6 +321,7 @@ def _read_existing_session_state(path: Path) -> dict[str, object]:
             ],
             str(path),
         )
+    _validate_exact_keys(payload, {"session", "apply"}, "root", path)
     _validate_session_state_schema(payload, path)
     return payload
 
@@ -263,6 +342,18 @@ def _validate_session_state_schema(
             ],
             str(path),
         )
+    _validate_exact_keys(
+        session,
+        {"state", "session_home_branch", "session_start_commit"},
+        "session",
+        path,
+    )
+    _validate_exact_keys(
+        apply,
+        {"state", "apply_branch", "oracle_snapshot_commit"},
+        "apply",
+        path,
+    )
 
     session_state = _validate_required_string(
         session,
@@ -292,13 +383,54 @@ def _validate_session_state_schema(
         "apply.oracle_snapshot_commit",
         path,
     )
-    _validate_optional_positive_int(
-        apply,
-        "process_id",
-        "apply.process_id",
-        path,
-    )
     _validate_apply_state_invariants(apply, apply_state, path)
+
+
+def _validate_required_keys(
+    section: dict[object, object],
+    required_keys: set[str],
+    label: str,
+    path: Path,
+) -> None:
+    """永続化元 state が固定スキーマの定義済み key を持つことを検証する。"""
+    missing = required_keys - set(section)
+    if missing:
+        missing_text = ", ".join(sorted(missing))
+        raise CmocError(
+            "session state ファイルの形式が不正です。",
+            [
+                f"{label} セクションの不足 field を確認してください。",
+                "破損した session state を復旧してください。",
+            ],
+            f"{path}\nmissing {label} fields: {missing_text}",
+        )
+
+
+def _validate_exact_keys(
+    section: dict[object, object],
+    expected_keys: set[str],
+    label: str,
+    path: Path,
+) -> None:
+    """読み込んだ永続 state の key 集合が固定スキーマと一致することを検証する。"""
+    actual_keys = set(section)
+    if actual_keys == expected_keys:
+        return
+    missing = expected_keys - actual_keys
+    extra = actual_keys - expected_keys
+    detail_parts: list[str] = [str(path)]
+    if missing:
+        detail_parts.append(f"missing {label} fields: {', '.join(sorted(missing))}")
+    if extra:
+        detail_parts.append(f"unknown {label} fields: {', '.join(sorted(extra))}")
+    raise CmocError(
+        "session state ファイルの形式が不正です。",
+        [
+            f"{label} セクションの field 集合を確認してください。",
+            "破損した session state を復旧してください。",
+        ],
+        "\n".join(detail_parts),
+    )
 
 
 def _validate_required_string(
@@ -359,29 +491,6 @@ def _validate_optional_string(
         )
 
 
-def _validate_optional_positive_int(
-    section: dict[object, object],
-    key: str,
-    label: str,
-    path: Path,
-) -> None:
-    """任意 positive integer field が null または正の整数であることを検証する。"""
-    value = section.get(key)
-    if value is not None and (
-        not isinstance(value, int)
-        or isinstance(value, bool)
-        or value <= 0
-    ):
-        raise CmocError(
-            "session state ファイルの形式が不正です。",
-            [
-                f"{label} を確認してください。",
-                "破損した session state を復旧してください。",
-            ],
-            f"{path}\n{label}: {value}",
-        )
-
-
 def _validate_apply_state_invariants(
     apply: dict[object, object],
     apply_state: str,
@@ -390,7 +499,6 @@ def _validate_apply_state_invariants(
     """apply.state ごとの補助 field 不変条件を検証する。"""
     apply_branch = apply.get("apply_branch")
     oracle_snapshot_commit = apply.get("oracle_snapshot_commit")
-    process_id = apply.get("process_id")
     if apply_state == "ready":
         _validate_null_field(apply_branch, "apply.apply_branch", path)
         _validate_null_field(
@@ -398,25 +506,20 @@ def _validate_apply_state_invariants(
             "apply.oracle_snapshot_commit",
             path,
         )
-        _validate_null_field(process_id, "apply.process_id", path)
         return
 
     if apply_state == "running":
         _validate_apply_run_fields(apply_branch, oracle_snapshot_commit, path)
-        _validate_running_process_field(process_id, path)
         return
 
     if apply_state == "completed":
         _validate_apply_run_fields(apply_branch, oracle_snapshot_commit, path)
-        _validate_null_field(process_id, "apply.process_id", path)
         return
 
     if apply_state == "error" and (
         apply_branch is not None or oracle_snapshot_commit is not None
     ):
         _validate_apply_run_fields(apply_branch, oracle_snapshot_commit, path)
-    if apply_state == "error":
-        _validate_null_field(process_id, "apply.process_id", path)
 
 
 def _validate_null_field(value: object, label: str, path: Path) -> None:
@@ -455,25 +558,6 @@ def _validate_apply_run_fields(
                 "破損した session state を復旧してください。",
             ],
             f"{path}\napply.oracle_snapshot_commit: {oracle_snapshot_commit}",
-        )
-
-
-def _validate_running_process_field(process_id: object, path: Path) -> None:
-    """running apply の停止対象 process id を検証する。"""
-    if process_id is None:
-        return
-    if (
-        not isinstance(process_id, int)
-        or isinstance(process_id, bool)
-        or process_id <= 0
-    ):
-        raise CmocError(
-            "session state ファイルの形式が不正です。",
-            [
-                "apply.process_id は正の整数または null である必要があります。",
-                "破損した session state を復旧してください。",
-            ],
-            f"{path}\napply.process_id: {process_id}",
         )
 
 
@@ -624,11 +708,24 @@ def commit_cmoc_initialization_changes(
         repo_root,
         commit_args,
     ).stdout.strip()
-    update_ref_args = ["update-ref", "HEAD", commit_hash]
-    if parent_hash is not None:
-        update_ref_args.append(parent_hash)
-    run_git(repo_root, update_ref_args)
-    _restore_index_after_init_commit(repo_root, preexisting_staged_diff)
+    with tempfile.TemporaryDirectory(prefix="cmoc-restore-index-") as temp_name:
+        restored_index = Path(temp_name) / "index"
+        _write_restored_index_after_internal_commit(
+            repo_root,
+            restored_index,
+            commit_hash,
+            preexisting_staged_diff,
+            remove_cmoc=True,
+        )
+        _assert_cmoc_ignore_guarantee(
+            repo_root,
+            env={"GIT_INDEX_FILE": str(restored_index)},
+        )
+        update_ref_args = ["update-ref", "HEAD", commit_hash]
+        if parent_hash is not None:
+            update_ref_args.append(parent_hash)
+        run_git(repo_root, update_ref_args)
+        _replace_git_index(repo_root, restored_index)
     return True
 
 
@@ -799,6 +896,14 @@ def is_implementation_path(repo_root: Path, relative_path: str) -> bool:
         not _is_excluded_implementation_path(relative_path)
         and not _is_root_gitignored(repo_root, relative_path)
     )
+
+
+def root_gitignored_paths(
+    repo_root: Path,
+    relative_paths: list[str],
+) -> set[str]:
+    """root `.gitignore` の pattern に一致する path 集合を返す。"""
+    return _root_gitignored_paths(repo_root, relative_paths)
 
 
 def changed_oracle_files(repo_root: Path, base_commit: str) -> list[Path]:
@@ -1089,7 +1194,10 @@ def read_session_start_commit(repo_root: Path, branch_name: str) -> str:
     if not isinstance(session, dict):
         raise CmocError(
             "session state ファイルに session セクションがありません。",
-            ["state JSON の内容を確認してください。"],
+            [
+                "state JSON の内容を確認し、session セクションを復旧してください。",
+                "復旧できない場合は、現在の session を使わず新しい session を開始してください。",
+            ],
             f"branch: {branch_name}",
         )
     start_commit = session.get("session_start_commit")
@@ -1184,24 +1292,42 @@ def _restore_index_after_internal_commit(
     """内部 commit 後の index を一時 index で復元し、成功後だけ本体へ反映する。"""
     with tempfile.TemporaryDirectory(prefix="cmoc-restore-index-") as temp_name:
         temp_index = Path(temp_name) / "index"
-        env = {"GIT_INDEX_FILE": str(temp_index)}
-        run_git(repo_root, ["read-tree", "--reset", "HEAD"], env=env)
-
-        if staged_diff:
-            result = _apply_staged_diff_to_index(repo_root, staged_diff, env)
-            if result.returncode != 0:
-                raise CmocError(
-                    "事前に stage されていた変更の復元に失敗しました。",
-                    [
-                        "作業を続ける前に git index の状態を確認してください。",
-                        "必要に応じて、以前 stage していた変更をもう一度 stage してください。",
-                    ],
-                    result.stderr.strip(),
-                )
-
-        if remove_cmoc:
-            _remove_cmoc_from_index(repo_root, env)
+        _write_restored_index_after_internal_commit(
+            repo_root,
+            temp_index,
+            "HEAD",
+            staged_diff,
+            remove_cmoc=remove_cmoc,
+        )
         _replace_git_index(repo_root, temp_index)
+
+
+def _write_restored_index_after_internal_commit(
+    repo_root: Path,
+    index_path: Path,
+    base_ref: str,
+    staged_diff: str,
+    *,
+    remove_cmoc: bool,
+) -> None:
+    """内部 commit 後に使う index 内容を指定 path へ組み立てる。"""
+    env = {"GIT_INDEX_FILE": str(index_path)}
+    run_git(repo_root, ["read-tree", "--reset", base_ref], env=env)
+
+    if staged_diff:
+        result = _apply_staged_diff_to_index(repo_root, staged_diff, env)
+        if result.returncode != 0:
+            raise CmocError(
+                "事前に stage されていた変更の復元に失敗しました。",
+                [
+                    "作業を続ける前に git index の状態を確認してください。",
+                    "必要に応じて、以前 stage していた変更をもう一度 stage してください。",
+                ],
+                result.stderr.strip(),
+            )
+
+    if remove_cmoc:
+        _remove_cmoc_from_index(repo_root, env)
 
 
 def _apply_staged_diff_to_index(
@@ -1330,10 +1456,13 @@ def _ensure_cmoc_ignore_rule(repo_root: Path) -> bool:
     return True
 
 
-def _assert_cmoc_ignore_guarantee(repo_root: Path) -> None:
+def _assert_cmoc_ignore_guarantee(
+    repo_root: Path,
+    env: dict[str, str] | None = None,
+) -> None:
     """`.cmoc` 追跡対象外保証の完了条件を検証する。"""
     # tracked path と ignore probe の両方で保証状態を確認する。
-    tracked = _tracked_cmoc_paths(repo_root)
+    tracked = _tracked_cmoc_paths(repo_root, env=env)
     probe = ".cmoc/.__cmoc_ignore_probe__"
     ignored = run_git(
         repo_root,
@@ -1352,10 +1481,13 @@ def _assert_cmoc_ignore_guarantee(repo_root: Path) -> None:
         )
 
 
-def _tracked_cmoc_paths(repo_root: Path) -> list[str]:
+def _tracked_cmoc_paths(
+    repo_root: Path,
+    env: dict[str, str] | None = None,
+) -> list[str]:
     """git index に残っている `.cmoc` 配下パスを返す。"""
     # `git ls-files` の空でない行だけを tracked path として返す。
-    result = run_git(repo_root, ["ls-files", "--", ".cmoc"])
+    result = run_git(repo_root, ["ls-files", "--", ".cmoc"], env=env)
     return [line for line in result.stdout.splitlines() if line]
 
 
