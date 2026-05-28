@@ -432,16 +432,14 @@ def _evaluation_payload_to_record(
     """Structured Output を report 用の評価レコードへ正規化する。"""
     if not isinstance(value, dict):
         raise ValueError("Expected JSON object.")
-    if set(value) == {"issues"}:
-        return _refresh_evaluation_metadata(
-            {
-                "target_oracle_path": str(oracle_file.resolve()),
-                "referenced_paths": [],
-                "specification_only_basis": "",
-                "issues": value["issues"],
-            }
-        )
-    return _refresh_evaluation_metadata(value)
+    if set(value) != {"issues"}:
+        raise ValueError("Evaluation payload keys do not match schema.")
+    return _refresh_evaluation_metadata(
+        {
+            "target_oracle_path": str(oracle_file.resolve()),
+            "issues": value["issues"],
+        }
+    )
 
 
 def _refresh_evaluation_metadata(
@@ -481,48 +479,15 @@ def _refresh_evaluation_metadata(
 def _validate_evaluation_payload(
     value: object,
     repo_root: Path,
-    oracle_file: Path,
+    _oracle_file: Path,
 ) -> None:
     """oracle 評価 Structured Output の schema と意味制約を検査する。"""
     # run_codex_exec の schema 検査に加え、Python 側でも後段で扱う型を保証する。
     if not isinstance(value, dict):
         raise ValueError("Expected JSON object.")
-    if set(value) == {"issues"}:
-        _validate_evaluation_issues(value["issues"], repo_root)
-        return
-
-    legacy_keys = {
-        "target_oracle_path",
-        "referenced_paths",
-        "specification_only_basis",
-        "issues",
-    }
-    if set(value) != legacy_keys:
+    if set(value) != {"issues"}:
         raise ValueError("Evaluation payload keys do not match schema.")
-
-    target_path = _require_absolute_oracle_path(
-        value["target_oracle_path"],
-        repo_root,
-        "target_oracle_path",
-    )
-    if target_path != oracle_file.resolve():
-        raise ValueError("target_oracle_path does not match evaluated file.")
-
-    referenced_paths = _validate_referenced_paths(
-        value["referenced_paths"],
-        repo_root,
-    )
-    if target_path not in referenced_paths:
-        raise ValueError("referenced_paths must include target_oracle_path.")
-
-    if not isinstance(value["specification_only_basis"], str):
-        raise ValueError("specification_only_basis must be a string.")
-    _validate_evaluation_issues(
-        value["issues"],
-        repo_root,
-        referenced_paths=value["referenced_paths"],
-        specification_only_basis=value["specification_only_basis"],
-    )
+    _validate_evaluation_issues(value["issues"], repo_root)
 
 
 def _validate_issues_payload(value: object, repo_root: Path) -> None:
@@ -595,10 +560,6 @@ def _write_report(
         "## Verdict",
         "",
         _verdict_text(result),
-        "",
-        "## Specification-only basis",
-        "",
-        *_specification_only_basis_lines(repo_root, evaluations),
         "",
         "## Evaluated oracle files",
         "",
@@ -710,10 +671,6 @@ def _write_error_report(
         "",
         f"Exception: `{type(error).__name__}: {str(error)}`",
         "",
-        "## Specification-only basis",
-        "",
-        *_specification_only_basis_lines(repo_root, evaluations),
-        "",
         "## Evaluated oracle files",
         "",
         "| No. | Oracle file | Issues |",
@@ -790,11 +747,8 @@ def _validate_referenced_paths(value: object, repo_root: Path) -> set[Path]:
 def _validate_evaluation_issues(
     value: object,
     repo_root: Path,
-    *,
-    referenced_paths: object | None = None,
-    specification_only_basis: object | None = None,
 ) -> None:
-    """issues 配列の item schema を検査し、legacy 応答は補完する。"""
+    """issues 配列の item schema を検査する。"""
     if not isinstance(value, list):
         raise ValueError("issues must be a list.")
     required_keys = {
@@ -811,18 +765,9 @@ def _validate_evaluation_issues(
         "suggested_oracle_change",
         "specification_only_basis",
     }
-    legacy_required_keys = required_keys - {
-        "referenced_paths",
-        "specification_only_basis",
-    }
     for index, item in enumerate(value):
         if not isinstance(item, dict):
             raise ValueError(f"issues[{index}] must be an object.")
-        if set(item) == legacy_required_keys:
-            if referenced_paths is None or specification_only_basis is None:
-                raise ValueError(f"issues[{index}] keys do not match schema.")
-            item["referenced_paths"] = referenced_paths
-            item["specification_only_basis"] = specification_only_basis
         if set(item) != required_keys:
             raise ValueError(f"issues[{index}] keys do not match schema.")
         if item["severity"] not in _SEVERITY_ORDER:
@@ -1013,33 +958,6 @@ def _numbered_issues(
     ]
 
 
-def _specification_only_basis_lines(
-    repo_root: Path,
-    evaluations: list[dict[str, object]],
-) -> list[str]:
-    """評価ごとの specification_only_basis を Markdown 行へ変換する。"""
-    if not evaluations:
-        return ["No completed evaluations."]
-    lines = [
-        "| No. | Oracle file | Basis |",
-        "|---:|---|---|",
-    ]
-    for index, evaluation in enumerate(evaluations, start=1):
-        target = str(evaluation["target_oracle_path"])
-        basis = _markdown_table_cell(
-            str(evaluation["specification_only_basis"])
-        )
-        lines.append(
-            f"| {index} | `{_display_path(repo_root, target)}` | {basis} |"
-        )
-    return lines
-
-
-def _markdown_table_cell(value: str) -> str:
-    """Markdown table cell に入れる自由文を 1 行へ整形する。"""
-    return " ".join(value.splitlines()).replace("|", "\\|")
-
-
 def _issue_lines(
     repo_root: Path,
     issue_id: str,
@@ -1060,6 +978,8 @@ def _issue_lines(
         f"  - {issue['reason']}",
         "- Suggested oracle change:",
         f"  - {issue['suggested_oracle_change']}",
+        "- Specification-only basis:",
+        f"  - {issue['specification_only_basis']}",
         "",
     ]
 

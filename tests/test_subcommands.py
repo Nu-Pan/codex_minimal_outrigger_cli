@@ -943,14 +943,7 @@ def test_eval_oracles_writes_report_with_fake_codex(
         """不整合なしの oracle 評価結果を返す Codex 実行を模擬する。"""
         codex_kwargs.append(kwargs)
         return json.dumps(
-            {
-                "target_oracle_path": str((oracle_root / "spec.md").resolve()),
-                "referenced_paths": [
-                    str((oracle_root / "spec.md").resolve()),
-                ],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
-                "issues": [],
-            },
+            {"issues": []},
             ensure_ascii=False,
         )
 
@@ -970,8 +963,7 @@ def test_eval_oracles_writes_report_with_fake_codex(
     assert "result: ok" in report
     assert "## Fatal issues" in report
     assert "No issues." in report
-    assert "## Specification-only basis" in report
-    assert "| 1 | `oracles/spec.md` | oracles 配下の仕様だけを参照しました。 |" in report
+    assert "## Specification-only basis" not in report
 
 
 def test_eval_oracles_writes_error_report_when_evaluation_fails(
@@ -1011,8 +1003,7 @@ def test_eval_oracles_writes_error_report_when_evaluation_fails(
     assert "# cmoc review oracles report" in report
     assert "## Summary" in report
     assert "## Verdict" in report
-    assert "## Specification-only basis" in report
-    assert "No completed evaluations." in report
+    assert "## Specification-only basis" not in report
     assert "成功評価ではありません" in report
     assert "今回評価した範囲では問題点が検出されませんでした" not in report
     assert "## Evaluated oracle files" in report
@@ -1087,12 +1078,7 @@ def test_eval_oracles_error_report_separates_unevaluated_files(
         if calls == 2:
             raise RuntimeError("fake second evaluation failure")
         return json.dumps(
-            {
-                "target_oracle_path": str(oracle_a.resolve()),
-                "referenced_paths": [str(oracle_a.resolve())],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
-                "issues": [],
-            },
+            {"issues": []},
             ensure_ascii=False,
         )
 
@@ -1106,8 +1092,7 @@ def test_eval_oracles_error_report_separates_unevaluated_files(
     ).read_text(encoding="utf-8")
     assert "oracle_count_total: 2" in report
     assert "oracle_count_evaluated: 1" in report
-    assert "## Specification-only basis" in report
-    assert "| 1 | `oracles/a.md` | oracles 配下の仕様だけを参照しました。 |" in report
+    assert "## Specification-only basis" not in report
     assert "| 1 | `oracles/a.md` | 0 |" in report
     assert "| 2 | `oracles/b.md` | 0 |" not in report
     assert "Not evaluated oracle files:" in report
@@ -1134,12 +1119,7 @@ def test_eval_oracles_writes_error_report_when_report_generation_fails(
     def fake_codex(*args: object, **kwargs: object) -> str:
         """レポート生成前までは成功する Codex 実行を模擬する。"""
         return json.dumps(
-            {
-                "target_oracle_path": str(oracle_file.resolve()),
-                "referenced_paths": [str(oracle_file.resolve())],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
-                "issues": [],
-            },
+            {"issues": []},
             ensure_ascii=False,
         )
 
@@ -1167,8 +1147,7 @@ def test_eval_oracles_writes_error_report_when_report_generation_fails(
     assert "- Exception message: `fake report failure`" in report
     assert "成功評価ではありません" in report
     assert "今回評価した範囲では問題点が検出されませんでした" not in report
-    assert "## Specification-only basis" in report
-    assert "| 1 | `oracles/spec.md` | oracles 配下の仕様だけを参照しました。 |" in report
+    assert "## Specification-only basis" not in report
 
 
 def test_eval_oracles_report_aggregates_issues_by_severity(
@@ -1198,13 +1177,6 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
         if "oracles/a.md" in purpose:
             return json.dumps(
                 {
-                    "target_oracle_path": str(oracle_a.resolve()),
-                    "referenced_paths": [
-                        str(oracle_a.resolve()),
-                        str(oracle_index.resolve()),
-                        str(oracle_a.resolve()),
-                    ],
-                    "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
                     "issues": [
                         _eval_oracle_issue(
                             "warning",
@@ -1212,6 +1184,7 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
                             oracle_a,
                             3,
                             4,
+                            [oracle_a, oracle_index],
                         ),
                         _eval_oracle_issue(
                             "fatal",
@@ -1219,6 +1192,7 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
                             oracle_a,
                             5,
                             5,
+                            [oracle_a, oracle_index],
                         ),
                     ],
                 },
@@ -1226,12 +1200,6 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
             )
         return json.dumps(
             {
-                "target_oracle_path": str(oracle_b.resolve()),
-                "referenced_paths": [
-                    str(oracle_b.resolve()),
-                    str(oracle_index.resolve()),
-                ],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
                 "issues": [
                     _eval_oracle_issue(
                         "inconclusive",
@@ -1239,6 +1207,7 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
                         oracle_b,
                         None,
                         None,
+                        [oracle_b, oracle_index],
                     ),
                     _eval_oracle_issue(
                         "fatal",
@@ -1246,6 +1215,7 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
                         oracle_b,
                         8,
                         9,
+                        [oracle_b, oracle_index],
                     ),
                     _eval_oracle_issue(
                         "warning",
@@ -1253,6 +1223,7 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
                         oracle_b,
                         10,
                         10,
+                        [oracle_b, oracle_index],
                     ),
                 ],
             },
@@ -1292,7 +1263,6 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
         "# cmoc review oracles report",
         "## Summary",
         "## Verdict",
-        "## Specification-only basis",
         "## Evaluated oracle files",
         "## Fatal issues",
         "## Inconclusive issues",
@@ -1302,9 +1272,7 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
     assert [report.index(section) for section in expected_sections] == sorted(
         report.index(section) for section in expected_sections
     )
-    assert "## Specification-only basis" in report
-    assert "| 1 | `oracles/a.md` | oracles 配下の仕様だけを参照しました。 |" in report
-    assert "| 2 | `oracles/b.md` | oracles 配下の仕様だけを参照しました。 |" in report
+    assert "## Specification-only basis" not in report
     assert report.index("### FATAL-001: A fatal") < report.index(
         "### FATAL-002: B fatal"
     )
@@ -1321,6 +1289,8 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
     assert "| 2 | `oracles/b.md` | 3 |" in report
     assert "- Oracle file: `oracles/a.md`" in report
     assert "- Oracle file: `oracles/b.md`" in report
+    assert "- Specification-only basis:" in report
+    assert "oracles 配下の仕様だけを参照しました。" in report
     assert f"- Oracle file: `{oracle_a.resolve()}`" not in report
     assert f"- Oracle file: `{oracle_b.resolve()}`" not in report
     assert "| No. | Referenced file |" in report
@@ -1408,7 +1378,7 @@ def test_eval_oracles_result_precedence() -> None:
 def test_eval_oracles_payload_accepts_existing_oracle_and_index_paths(
     tmp_path: Path,
 ) -> None:
-    """評価 payload は実在する oracle / INDEX file の参照を受理する。"""
+    """評価 payload は issue 単位の実在 oracle / INDEX file 参照を受理する。"""
     repo = _init_repo(tmp_path)
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -1419,14 +1389,15 @@ def test_eval_oracles_payload_accepts_existing_oracle_and_index_paths(
 
     eval_oracles_module._validate_evaluation_payload(
         {
-            "target_oracle_path": str(oracle.resolve()),
-            "referenced_paths": [
-                str(oracle.resolve()),
-                str(oracle_index.resolve()),
-            ],
-            "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
             "issues": [
-                _eval_oracle_issue("warning", "warning", oracle, 1, 1),
+                _eval_oracle_issue(
+                    "warning",
+                    "warning",
+                    oracle,
+                    1,
+                    1,
+                    [oracle, oracle_index],
+                ),
             ],
         },
         repo,
@@ -1434,10 +1405,60 @@ def test_eval_oracles_payload_accepts_existing_oracle_and_index_paths(
     )
 
 
+def test_eval_oracles_payload_rejects_legacy_top_level_metadata(
+    tmp_path: Path,
+) -> None:
+    """評価 payload は top-level の評価対象メタ情報を受理しない。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    oracle = oracle_root / "spec.md"
+    oracle.write_text("spec\n", encoding="utf-8")
+
+    with pytest.raises(
+        ValueError,
+        match="Evaluation payload keys do not match schema",
+    ):
+        eval_oracles_module._validate_evaluation_payload(
+            {
+                "target_oracle_path": str(oracle.resolve()),
+                "referenced_paths": [str(oracle.resolve())],
+                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
+                "issues": [],
+            },
+            repo,
+            oracle,
+        )
+
+
+def test_eval_oracles_payload_rejects_legacy_issue_metadata(
+    tmp_path: Path,
+) -> None:
+    """issue item は referenced_paths と specification_only_basis を必須にする。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    oracle = oracle_root / "spec.md"
+    oracle.write_text("spec\n", encoding="utf-8")
+    issue = _eval_oracle_issue("warning", "warning", oracle, 1, 1)
+    del issue["referenced_paths"]
+    del issue["specification_only_basis"]
+
+    with pytest.raises(
+        ValueError,
+        match="issues\\[0\\] keys do not match schema",
+    ):
+        eval_oracles_module._validate_evaluation_payload(
+            {"issues": [issue]},
+            repo,
+            oracle,
+        )
+
+
 def test_eval_oracles_payload_rejects_missing_referenced_path(
     tmp_path: Path,
 ) -> None:
-    """referenced_paths は存在しない oracles 配下 path を受理しない。"""
+    """issues[].referenced_paths は存在しない oracles 配下 path を受理しない。"""
     repo = _init_repo(tmp_path)
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -1447,13 +1468,16 @@ def test_eval_oracles_payload_rejects_missing_referenced_path(
     with pytest.raises(ValueError, match="referenced_paths\\[1\\] must exist"):
         eval_oracles_module._validate_evaluation_payload(
             {
-                "target_oracle_path": str(oracle.resolve()),
-                "referenced_paths": [
-                    str(oracle.resolve()),
-                    str((oracle_root / "missing.md").resolve()),
+                "issues": [
+                    _eval_oracle_issue(
+                        "warning",
+                        "warning",
+                        oracle,
+                        1,
+                        1,
+                        [oracle, oracle_root / "missing.md"],
+                    ),
                 ],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
-                "issues": [],
             },
             repo,
             oracle,
@@ -1463,7 +1487,7 @@ def test_eval_oracles_payload_rejects_missing_referenced_path(
 def test_eval_oracles_payload_rejects_directory_referenced_path(
     tmp_path: Path,
 ) -> None:
-    """referenced_paths は directory を参照済みファイルとして受理しない。"""
+    """issues[].referenced_paths は directory を参照済みファイルにしない。"""
     repo = _init_repo(tmp_path)
     oracle_root = repo / "oracles"
     oracle_dir = oracle_root / "nested"
@@ -1474,13 +1498,16 @@ def test_eval_oracles_payload_rejects_directory_referenced_path(
     with pytest.raises(ValueError, match="referenced_paths\\[1\\] must be a file"):
         eval_oracles_module._validate_evaluation_payload(
             {
-                "target_oracle_path": str(oracle.resolve()),
-                "referenced_paths": [
-                    str(oracle.resolve()),
-                    str(oracle_dir.resolve()),
+                "issues": [
+                    _eval_oracle_issue(
+                        "warning",
+                        "warning",
+                        oracle,
+                        1,
+                        1,
+                        [oracle, oracle_dir],
+                    ),
                 ],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
-                "issues": [],
             },
             repo,
             oracle,
@@ -1490,7 +1517,7 @@ def test_eval_oracles_payload_rejects_directory_referenced_path(
 def test_eval_oracles_payload_rejects_ignored_oracle_path(
     tmp_path: Path,
 ) -> None:
-    """referenced_paths は root .gitignore 対象の oracle file を受理しない。"""
+    """issues[].referenced_paths は .gitignore 対象 oracle file を受理しない。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("oracles/ignored.md\n", encoding="utf-8")
     oracle_root = repo / "oracles"
@@ -1506,13 +1533,16 @@ def test_eval_oracles_payload_rejects_ignored_oracle_path(
     ):
         eval_oracles_module._validate_evaluation_payload(
             {
-                "target_oracle_path": str(oracle.resolve()),
-                "referenced_paths": [
-                    str(oracle.resolve()),
-                    str(ignored_oracle.resolve()),
+                "issues": [
+                    _eval_oracle_issue(
+                        "warning",
+                        "warning",
+                        oracle,
+                        1,
+                        1,
+                        [oracle, ignored_oracle],
+                    ),
                 ],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
-                "issues": [],
             },
             repo,
             oracle,
@@ -1534,9 +1564,6 @@ def test_eval_oracles_payload_rejects_missing_issue_oracle_path(
     with pytest.raises(ValueError, match="issues\\[0\\]\\.oracle_path must exist"):
         eval_oracles_module._validate_evaluation_payload(
             {
-                "target_oracle_path": str(oracle.resolve()),
-                "referenced_paths": [str(oracle.resolve())],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
                 "issues": [issue],
             },
             repo,
@@ -1588,12 +1615,7 @@ def test_eval_oracles_stays_partial_when_oracle_was_deleted(
         """部分評価対象の prompt を記録し、不整合なしの結果を返す。"""
         evaluated_prompts.append(str(args[1]))
         return json.dumps(
-            {
-                "target_oracle_path": str(changed_oracle.resolve()),
-                "referenced_paths": [str(changed_oracle.resolve())],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
-                "issues": [],
-            },
+            {"issues": []},
             ensure_ascii=False,
         )
 
@@ -1637,12 +1659,7 @@ def test_eval_oracles_full_mode_reports_deleted_oracles_on_session_branch(
     def fake_codex(*args: object, **kwargs: object) -> str:
         """full mode の既存 oracle 評価結果を返す。"""
         return json.dumps(
-            {
-                "target_oracle_path": str(existing_oracle.resolve()),
-                "referenced_paths": [str(existing_oracle.resolve())],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
-                "issues": [],
-            },
+            {"issues": []},
             ensure_ascii=False,
         )
 
@@ -1699,12 +1716,7 @@ def test_eval_oracles_uses_full_mode_on_apply_branch(
         )
         evaluated_targets.append(target)
         return json.dumps(
-            {
-                "target_oracle_path": str(target.resolve()),
-                "referenced_paths": [str(target.resolve())],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
-                "issues": [],
-            },
+            {"issues": []},
             ensure_ascii=False,
         )
 
@@ -5324,19 +5336,23 @@ def _eval_oracle_issue(
     oracle_path: Path,
     line_start: int | None,
     line_end: int | None,
+    referenced_paths: list[Path] | None = None,
 ) -> dict[str, object]:
     """テスト用の valid な eval-oracles issue item を返す。"""
+    references = referenced_paths or [oracle_path]
     return {
         "severity": severity,
         "title": title,
         "oracle_path": str(oracle_path.resolve()),
         "oracle_line_start": line_start,
         "oracle_line_end": line_end,
+        "referenced_paths": [str(path.resolve()) for path in references],
         "affected_workflow": "cmoc review oracles",
         "requirement": f"{title} requirement",
         "problem": f"{title} problem",
         "reason": f"{title} reason",
         "suggested_oracle_change": f"{title} change",
+        "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
     }
 
 
