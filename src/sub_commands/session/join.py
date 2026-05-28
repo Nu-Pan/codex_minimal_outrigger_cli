@@ -199,6 +199,7 @@ def _resolve_conflicts(repo_root: Path) -> None:
         read_only=False,
         expect_json=False,
         skip_index_maintenance=True,
+        allowed_uncommitted_oracle_paths=_oracle_conflict_paths(unmerged),
     )
 
     _assert_no_forbidden_pending_paths(repo_root)
@@ -327,6 +328,15 @@ def _is_forbidden_conflict_path(path: str) -> bool:
     return path == ".agents" or path.startswith(".agents/") or (
         path == "memo" or path.startswith("memo/")
     )
+
+
+def _oracle_conflict_paths(unmerged: list[str]) -> list[str]:
+    """conflict marker 解消だけを許可する oracle path を抽出する。"""
+    return [
+        path
+        for path in unmerged
+        if path == "oracles" or path.startswith("oracles/")
+    ]
 
 
 def _assert_no_forbidden_pending_paths(repo_root: Path) -> None:

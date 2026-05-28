@@ -54,6 +54,7 @@ class _OracleGuardSnapshot:
 
     enabled: bool
     head_commit: str | None
+    allowed_uncommitted_paths: tuple[str, ...] = ()
 
 
 def run_codex_exec(
@@ -68,6 +69,7 @@ def run_codex_exec(
     text_validator: Callable[[str], None] | None = None,
     skip_index_maintenance: bool = False,
     index_excluded_roots: Iterable[Path | str] | None = None,
+    allowed_uncommitted_oracle_paths: Iterable[Path | str] | None = None,
     model: str = _DEFAULT_MODEL,
     reasoning_effort: str = _DEFAULT_REASONING_EFFORT,
 ) -> str:
@@ -113,6 +115,7 @@ def run_codex_exec(
             purpose,
             attempt,
             schema_path,
+            allowed_uncommitted_oracle_paths,
         )
         run = _retry_after_capacity_if_needed(
             repo_root,
@@ -124,6 +127,7 @@ def run_codex_exec(
             schema_path,
             skip_index_maintenance,
             index_excluded_roots,
+            allowed_uncommitted_oracle_paths,
         )
         result = run.result
         last_log_path = run.log_path
@@ -150,6 +154,7 @@ def run_codex_exec(
                         schema_path,
                         skip_index_maintenance,
                         index_excluded_roots,
+                        allowed_uncommitted_oracle_paths,
                     )
                     result = run.result
                     last_log_path = run.log_path
@@ -279,6 +284,7 @@ def _wait_for_quota_and_resume(
     schema_path: Path | None,
     skip_index_maintenance: bool,
     index_excluded_roots: Iterable[Path | str] | None,
+    allowed_uncommitted_oracle_paths: Iterable[Path | str] | None,
 ) -> _CodexCommandRun:
     """quota 復活まで疎通確認を繰り返してから元セッションを再開する。"""
     # quota 待機中の疎通確認も Codex CLI 呼び出しなので、通常経路と同じ直前処理を通す。
@@ -304,6 +310,7 @@ def _wait_for_quota_and_resume(
             "quota recovery check",
             attempt,
             None,
+            None,
         )
         poll_run = _retry_after_capacity_if_needed(
             repo_root,
@@ -315,6 +322,7 @@ def _wait_for_quota_and_resume(
             None,
             skip_index_maintenance,
             index_excluded_roots,
+            None,
         )
         poll_result = poll_run.result
         if poll_result.returncode == 0:
@@ -341,6 +349,7 @@ def _wait_for_quota_and_resume(
                 purpose,
                 attempt,
                 schema_path,
+                allowed_uncommitted_oracle_paths,
             )
             return _retry_after_capacity_if_needed(
                 repo_root,
@@ -352,6 +361,7 @@ def _wait_for_quota_and_resume(
                 schema_path,
                 skip_index_maintenance,
                 index_excluded_roots,
+                allowed_uncommitted_oracle_paths,
             )
         if not _last_message_indicates_quota_exhaustion(
             poll_run.last_message_path,
@@ -372,6 +382,7 @@ def _retry_after_capacity_if_needed(
     schema_path: Path | None,
     skip_index_maintenance: bool,
     index_excluded_roots: Iterable[Path | str] | None,
+    allowed_uncommitted_oracle_paths: Iterable[Path | str] | None,
 ) -> _CodexCommandRun:
     """capacity 一時失敗なら同じ Codex CLI 呼び出しを指数 backoff で再実行する。"""
     delay_seconds = _CAPACITY_INITIAL_RETRY_DELAY_SECONDS
@@ -398,6 +409,7 @@ def _retry_after_capacity_if_needed(
             purpose,
             attempt,
             schema_path,
+            allowed_uncommitted_oracle_paths,
         )
     if _last_message_indicates_capacity(current_run.last_message_path):
         _raise_capacity_failure(current_run)
@@ -464,6 +476,7 @@ def _run_codex_command(
     purpose: str,
     attempt: int,
     schema_path: Path | None,
+    allowed_uncommitted_oracle_paths: Iterable[Path | str] | None,
 ) -> _CodexCommandRun:
     """Codex CLI を 1 回起動し、その呼び出し専用ログを出力する。"""
     paths = _prepare_codex_exec_paths(repo_root)
@@ -474,7 +487,11 @@ def _run_codex_command(
         "codex exec call: "
         f"{_head80(prompt)} -> {log_path}"
     )
-    oracle_guard = _start_oracle_guard(repo_root, command)
+    oracle_guard = _start_oracle_guard(
+        repo_root,
+        command,
+        allowed_uncommitted_oracle_paths,
+    )
     started = perf_counter()
     result = subprocess.run(
         run_command,
@@ -512,6 +529,7 @@ def _run_codex_command(
 def _start_oracle_guard(
     repo_root: Path,
     command: list[str],
+    allowed_uncommitted_oracle_paths: Iterable[Path | str] | None,
 ) -> _OracleGuardSnapshot:
     """workspace-write 実行前 HEAD を記録する。"""
     # Git repo 外や read-only 実行では oracle 変更検査の対象外にする。
@@ -529,7 +547,14 @@ def _start_oracle_guard(
         check=False,
     )
     head = result.stdout.strip() if result.returncode == 0 else None
-    return _OracleGuardSnapshot(enabled=True, head_commit=head)
+    return _OracleGuardSnapshot(
+        enabled=True,
+        head_commit=head,
+        allowed_uncommitted_paths=_active_allowed_oracle_conflict_paths(
+            repo_root,
+            allowed_uncommitted_oracle_paths,
+        ),
+    )
 
 
 def _assert_workspace_write_oracles_unchanged(
@@ -539,7 +564,12 @@ def _assert_workspace_write_oracles_unchanged(
     """workspace-write 実行後の oracle ファイル変更を拒否する。"""
     if not snapshot.enabled:
         return
-    uncommitted = _uncommitted_oracle_file_paths(repo_root)
+    allowed = set(snapshot.allowed_uncommitted_paths)
+    uncommitted = [
+        path
+        for path in _uncommitted_oracle_file_paths(repo_root)
+        if path not in allowed
+    ]
     committed = _committed_oracle_file_paths(repo_root, snapshot.head_commit)
     if not uncommitted and not committed:
         return
@@ -559,6 +589,53 @@ def _assert_workspace_write_oracles_unchanged(
         ],
         "\n".join(detail_lines),
     )
+
+
+def _active_allowed_oracle_conflict_paths(
+    repo_root: Path,
+    allowed_paths: Iterable[Path | str] | None,
+) -> tuple[str, ...]:
+    """現に conflict 中の oracle path だけを guard 例外対象へ正規化する。"""
+    if allowed_paths is None:
+        return ()
+    requested = set(_normalize_repo_relative_paths(repo_root, allowed_paths))
+    if not requested:
+        return ()
+    unmerged = run_git(
+        repo_root,
+        ["diff", "--name-only", "--diff-filter=U"],
+    )
+    active = {
+        line
+        for line in unmerged.stdout.splitlines()
+        if line
+    }
+    return tuple(
+        sorted(
+            filter_oracle_file_paths(
+                repo_root,
+                [path for path in requested if path in active],
+            )
+        )
+    )
+
+
+def _normalize_repo_relative_paths(
+    repo_root: Path,
+    paths: Iterable[Path | str],
+) -> list[str]:
+    """Path/str の混在を repo root 相対の POSIX path にそろえる。"""
+    normalized: list[str] = []
+    concrete_root = repo_root.resolve()
+    for raw_path in paths:
+        path = Path(raw_path)
+        if path.is_absolute():
+            try:
+                path = path.resolve().relative_to(concrete_root)
+            except ValueError:
+                continue
+        normalized.append(path.as_posix())
+    return normalized
 
 
 def _uncommitted_oracle_file_paths(repo_root: Path) -> list[str]:

@@ -4284,6 +4284,45 @@ def test_session_join_rejects_codex_rewrite_of_auto_merged_file(
     assert _git(repo, "log", "-1", "--pretty=%s").stdout.strip() == "home change"
 
 
+def test_session_join_allows_oracle_conflict_path_in_codex_guard(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """session join は conflict 対象 oracle path を Codex guard 例外へ渡す。"""
+    repo = _repo_with_session_join_oracle_conflict(tmp_path)
+    captured_allowed_paths: list[str] = []
+
+    def fake_codex(
+        repo_root: Path,
+        prompt: str,
+        **kwargs: object,
+    ) -> None:
+        """oracle conflict を解消し、guard 例外対象を記録する。"""
+        del prompt
+        allowed = kwargs.get("allowed_uncommitted_oracle_paths")
+        assert isinstance(allowed, list)
+        captured_allowed_paths.extend(allowed)
+        (repo_root / "oracles" / "spec.md").write_text(
+            "resolved oracle\n",
+            encoding="utf-8",
+        )
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_codex)
+
+    cmoc_session_join_impl(repo)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert captured_allowed_paths == ["oracles/spec.md"]
+    assert state["session"]["state"] == "joined"
+    assert (repo / "oracles" / "spec.md").read_text(encoding="utf-8") == (
+        "resolved oracle\n"
+    )
+
+
 def test_session_join_rejects_codex_change_in_forbidden_path(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -5144,6 +5183,29 @@ def _repo_with_session_join_conflict(tmp_path: Path) -> Path:
     (repo / "conflict.txt").write_text("home\n", encoding="utf-8")
     _git(repo, "add", "conflict.txt")
     _git(repo, "commit", "-m", "home change")
+    _git(repo, "switch", session_branch)
+    return repo
+
+
+def _repo_with_session_join_oracle_conflict(tmp_path: Path) -> Path:
+    """session join で oracle file conflict が発生する repo を作る。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("base oracle\n", encoding="utf-8")
+    _git(repo, "add", ".gitignore", "oracles/spec.md")
+    _git(repo, "commit", "-m", "prepare oracle session")
+    home_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    _checkout_session_branch(repo)
+    session_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    (oracle_root / "spec.md").write_text("session oracle\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md")
+    _git(repo, "commit", "-m", "session oracle change")
+    _git(repo, "switch", home_branch)
+    (oracle_root / "spec.md").write_text("home oracle\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md")
+    _git(repo, "commit", "-m", "home oracle change")
     _git(repo, "switch", session_branch)
     return repo
 

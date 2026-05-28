@@ -249,6 +249,115 @@ def test_run_codex_exec_rejects_uncommitted_oracle_change_after_workspace_write(
     assert "oracles/spec.md" in error.value.detail
 
 
+def test_run_codex_exec_allows_active_oracle_conflict_resolution(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """明示された conflict 中 oracle path の未コミット解消差分は許可する。"""
+    repo = _init_git_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("base\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md")
+    _git(repo, "commit", "-m", "add oracle")
+    _git(repo, "checkout", "-b", "session")
+    (oracle_root / "spec.md").write_text("session\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md")
+    _git(repo, "commit", "-m", "session oracle")
+    _git(repo, "checkout", "master")
+    (oracle_root / "spec.md").write_text("home\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md")
+    _git(repo, "commit", "-m", "home oracle")
+    with pytest.raises(subprocess.CalledProcessError):
+        _git(repo, "merge", "session")
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                "echo 'resolved oracle conflict' > oracles/spec.md",
+                "echo 'ok' > \"$LAST\"",
+                "echo '{\"event\":\"done\"}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    output = run_codex_exec(
+        repo,
+        "prompt",
+        read_only=False,
+        skip_index_maintenance=True,
+        allowed_uncommitted_oracle_paths=["oracles/spec.md"],
+    )
+
+    assert output == "ok\n"
+    assert (oracle_root / "spec.md").read_text(encoding="utf-8") == (
+        "resolved oracle conflict\n"
+    )
+
+
+def test_run_codex_exec_rejects_allowed_oracle_path_without_active_conflict(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """例外指定されても conflict 中でない oracle path の変更は拒否する。"""
+    repo = _init_git_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("initial\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md")
+    _git(repo, "commit", "-m", "add oracle")
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                "echo 'not a conflict resolution' > oracles/spec.md",
+                "echo 'ok' > \"$LAST\"",
+                "echo '{\"event\":\"done\"}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(
+            repo,
+            "prompt",
+            read_only=False,
+            skip_index_maintenance=True,
+            allowed_uncommitted_oracle_paths=["oracles/spec.md"],
+        )
+
+    assert "oracles ファイルを変更しました" in error.value.message
+    assert "oracles/spec.md" in error.value.detail
+
+
 def test_run_codex_exec_rejects_committed_oracle_change_after_workspace_write(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
