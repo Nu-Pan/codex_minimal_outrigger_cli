@@ -136,29 +136,29 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は、`cmoc` のサブコマンド本体に関する決定論的な制御ロジックをまとめて検証するテスト入口です。
+- `tests/test_subcommands.py` は、`cmoc` のサブコマンド本体に関する決定論的な制御ロジックをまとめて検証するテスト群の入口です。
 - 先頭では `run_command` の共通動作、標準出力・エラー出力・終了コード・ログ記録・例外時の集計を確認します。
 - 続いて `init`、`session fork/join/abandon`、`eval-oracles`、`apply fork/join/abandon` の状態遷移、前提条件、失敗時の扱いを広く検証します。
-- 後半では CLI の Typer 登録、ヘルプ表示、互換 alias、`bin/cmoc` の起動前提、補助関数、プロンプト、JSON schema 検証を確認します.
+- 後半では CLI の Typer 登録、ヘルプ表示、互換 alias、`bin/cmoc` の起動前提、補助関数、プロンプト、JSON schema 検証を確認します。
 
 ## Read this when
 
-- `cmoc` のサブコマンド群全体に対する回帰テストの入口を把握したいときに読む文書です。
-- `run_command` の標準出力・標準エラー出力・終了コード・ログ記録・例外時の集計挙動を確認したいときに読む文書です。
-- `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`eval-oracles` の状態遷移や失敗時の扱いを横断して追いたいときに読む文書です。
-- CLI の Typer 登録、互換 alias、`bin/cmoc` の起動条件、共通エラーレポートの文面を確認したいときに読む文書です。
-- `apply` と `session` の前提条件、`oracles` と `INDEX.md` の扱い、補助関数やプロンプト検証の観点を素早く整理したいときに読む文書です.
+- `cmoc` のサブコマンド群全体に対する回帰テストの入口を把握したいとき。
+- `run_command` の標準出力・標準エラー出力・終了コード・ログ記録・例外時の集計挙動を確認したいとき。
+- `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`eval-oracles` の状態遷移や失敗時の扱いを横断して追いたいとき。
+- CLI の Typer 登録、互換 alias、`bin/cmoc` の起動条件、共通エラーレポートの文面を確認したいとき。
+- `apply` と `session` の前提条件、`oracles` と `INDEX.md` の扱い、補助関数やプロンプト検証の観点を素早く整理したいとき。
 
 ## Do not read this when
 
-- `src/sub_commands` や `src/main.py` の実装ロジックそのものを追いたいときは、このテスト入口ではなく対応する実装ファイルを読むべきです。
-- `commons.indexing` や `INDEX.md` の生成・更新ルールだけを確認したいときは、このファイルではなく `tests/test_indexing.py` や正本仕様側を参照すべきです。
-- `tests/test_repo.py`、`tests/test_codex.py`、`tests/test_timestamps.py` など、別のテスト群の観点だけを知りたいときはこのファイルを読む必要はありません。
-- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいときは、このテスト入口ではなく該当ルール文書を参照すべきです.
+- `src/sub_commands` や `src/main.py` の実装ロジックそのものを追いたいとき。
+- `commons.indexing` や `INDEX.md` の生成・更新ルールだけを確認したいとき。
+- `tests/test_repo.py`、`tests/test_codex.py`、`tests/test_timestamps.py` など、別のテスト群の観点だけを知りたいとき。
+- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいとき。
 
 ## hash
 
-- 5fd07fb65232b68f4846059c86fc781149bbe082921a35572e00dd22fb52ccbd
+- b80f7f74ccd690ac0271f74686d98c190954a2a2ecd085b230cc00978874fdc9
 
 # `test_timestamps.py`
 
