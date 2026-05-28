@@ -130,27 +130,30 @@
 
 ## Summary
 
-- git リポジトリのルート探索、現在ブランチ・HEAD の取得、cmoc 管理ブランチ判定、session/apply のブランチ名から worktree や保存先パスを復元する共通モジュール。
-- session state JSON の初期値生成、保存、読込、スキーマ検証、状態値の妥当性確認、active session の列挙を扱う。
-- .cmoc を追跡対象外に保つ保証、未コミット差分の検査、初期化時や pathspec 単位の commit、root `.gitignore` の評価補助も含む。
+- git リポジトリのルート探索、現在ブランチや HEAD の取得、`cmoc/session/...` と `cmoc/apply/...` の branch 判定、session id 抽出、apply worktree path 復元を扱う共通モジュールです。
+- session state JSON の初期値生成、保存、読込、固定スキーマ検証、state 値の妥当性確認、active session の列挙を扱います。
+- `.cmoc` を追跡対象外に保つ保証、未コミット差分の検査、`pathspec` 単位の commit、`cmoc init` 用差分の分離と復元、root `.gitignore` の評価補助も含みます。
+- `oracles` と実装ファイルの列挙、変更検出、削除検出を通じて、部分評価と部分適用の切り替え判断を支える機能もまとめています。
 
 ## Read this when
 
-- リポジトリルート探索や `cwd` の切り替え方法を確認したいとき。
-- `cmoc session` / `cmoc apply` のブランチ名判定、session ID 抽出、apply worktree パス復元を実装・修正したいとき。
-- session state の保存形式、読み込みエラー、状態遷移の検証、active session の列挙を追いたいとき。
-- `.cmoc` の ignore 保証、`git status` による差分検査、`cmoc init` 相当の差分分離や commit ロジックを見直したいとき。
+- リポジトリルート探索や、現在の作業ディレクトリを git リポジトリの root に合わせたいときに読むべきです。
+- `cmoc session` / `cmoc apply` の branch 判定、session id 抽出、apply worktree パス復元を実装・修正したいときに読むべきです。
+- session state JSON の保存、読込、スキーマ検証、state 値の妥当性確認、active session の列挙を確認したいときに読むべきです。
+- `.cmoc` を git 追跡対象外に保つ保証、未コミット差分の検査、`cmoc init` 時の差分分離や commit ロジックを見直したいときに読むべきです。
+- 部分評価や部分適用のための変更ファイル列挙、削除検出、root `.gitignore` の評価方法を追いたいときに読むべきです。
 
 ## Do not read this when
 
-- `cmoc` のユーザー向けサブコマンドの手順だけを確認したいときは、`src/sub_commands` 側を読むべきです。
-- 共通エラー整形や終了コードの扱いだけを確認したいときは、`src/commons/errors.py` を読むべきです。
-- `INDEX.md` の生成・更新ルールだけを確認したいときは、`oracles/app_specs/indexing.md` を読むべきです。
-- タイムスタンプ、経過時間、ログ tee など別の共通ユーティリティを調べたいときは、このモジュールではありません。
+- ユーザー向けの `cmoc` サブコマンドの使い方だけを確認したいときは、このモジュールではなく `src/sub_commands` 側を読むべきです。
+- 共通エラー整形だけを確認したいときは `src/commons/errors.py` を、タイムスタンプだけなら `src/commons/timestamps.py` を読むべきです。
+- サブコマンドログや経過時間表示を調べたいときは `src/commons/subcommand_log.py` や `src/commons/timing.py` を読むべきです。
+- `codex exec` 呼び出し、Structured Output、`INDEX.md` 自動生成の仕組みだけを確認したいときは、このモジュールではなく `src/commons/codex.py` や `src/commons/indexing.py`、対応する正本仕様を読むべきです。
+- `.cmoc` のルーティングや保持ルールそのものではなく、ファイル配置や目次生成だけを見たいときは、このモジュールを読む必要はありません。
 
 ## hash
 
-- 548fcb84a8feba816800b71016dbe1904b5faf172e495ea7365d2ba1665a6a74
+- 3c22c1c88b9cceceabaddc2e7e457554f4b05a83d149219d35ec62cebe1fa2e7
 
 # `subcommand_log.py`
 

@@ -136,29 +136,27 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は、`cmoc` のサブコマンド本体に関する決定論的な制御ロジックをまとめて検証するテスト群の入口です。
-- 先頭では `run_command` の共通動作、標準出力・エラー出力・終了コード・ログ記録・例外時の集計を確認します。
-- 続いて `init`、`session fork/join/abandon`、`eval-oracles`、`apply fork/join/abandon` の状態遷移、前提条件、失敗時の扱いを広く検証します。
-- 後半では CLI の Typer 登録、ヘルプ表示、互換 alias、`bin/cmoc` の起動前提、補助関数、プロンプト、JSON schema 検証を確認します。
+- このテストファイルは、`cmoc` の各サブコマンドの決定論的な制御ロジックをまとめて検証する目次です。
+- `run_command` の共通処理、`init`、`session`、`apply`、`eval-oracles` の実装経路とエラー分岐、CLI 登録やヘルプ表示までを扱います。
+- 詳細なテスト観点は `dev_rules/test_rules.md` と各サブコマンド仕様へ案内します。
 
 ## Read this when
 
-- `cmoc` のサブコマンド群全体に対する回帰テストの入口を把握したいとき。
-- `run_command` の標準出力・標準エラー出力・終了コード・ログ記録・例外時の集計挙動を確認したいとき。
-- `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`eval-oracles` の状態遷移や失敗時の扱いを横断して追いたいとき。
-- CLI の Typer 登録、互換 alias、`bin/cmoc` の起動条件、共通エラーレポートの文面を確認したいとき。
-- `apply` と `session` の前提条件、`oracles` と `INDEX.md` の扱い、補助関数やプロンプト検証の観点を素早く整理したいとき。
+- サブコマンドの振る舞いを実装・修正・レビューするとき。
+- 共通ランナー `run_command`、セッション開始・統合・破棄、apply の fork/join/abandon、`eval-oracles` の評価処理を確認したいとき。
+- CLI の公開コマンド登録、`--help` 表示、エラー報告、ログ出力、state 更新の期待値を知りたいとき。
+- pytest ベースのテスト方針や Fake Codex CLI を使う前提を確認したいとき。
 
 ## Do not read this when
 
-- `src/sub_commands` や `src/main.py` の実装ロジックそのものを追いたいときは、このテスト入口ではなく該当実装を直接読むべきです。
-- `commons.indexing` や `INDEX.md` の生成・更新ルールだけを確認したいときは、このファイルではなく別の目次文書を参照すべきです。
-- `tests/test_repo.py`、`tests/test_codex.py`、`tests/test_timestamps.py` など、別のテスト群の観点だけを知りたいときはこのファイルを読む必要はありません。
-- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいときは、このテスト目次ではなく該当ルール文書を確認すべきです。
+- 個別サブコマンドの正本仕様だけを確認したいときは、`oracles/app_specs/sub_commands/INDEX.md` から該当文書へ進むべきです。
+- テスト全般の書き方や配置ルールだけを確認したいときは、`oracles/dev_rules/test_rules.md` を読むべきです。
+- `cmoc` の他領域の実装や、サブコマンド以外のテストを確認したいときは、このファイルは適しません。
+- 特定のヘルパー関数や個別テストケースだけを追いたいときは、対応する実装ファイルや該当テスト関数へ直接進むべきです。
 
 ## hash
 
-- 72aaadfb685204927d24984faf67e7573d5bbc404aaa4d38730a54cd4fce459c
+- cbbeead8ee1d012810aec40f3113f4e8da3ed7ea7110227274bab7ccd6346d9a
 
 # `test_timestamps.py`
 

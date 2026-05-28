@@ -61,14 +61,14 @@
 
 ## Do not read this when
 
-- `cmoc apply join` や `cmoc apply abandon` の挙動だけを確認したいときは、このファイルではなく該当モジュールを読むべきです。
-- `cmoc session` 系や他のサブコマンドの実装だけを確認したいときは、このファイルではなく session 側や別の実装を読むべきです。
+- `cmoc apply join` や `cmoc apply abandon` の挙動だけを確認したいときは、このモジュールではなく該当モジュールを読むべきです。
+- `cmoc session` 系や他のサブコマンドの実装だけを確認したいときは、このモジュールではなく session 側や別の実装を読むべきです。
 - `cmoc apply fork` の仕様断片そのものを確認したいときは、`oracles/app_specs/sub_commands/apply_fork.md` を直接読むべきです。
 - Codex CLI 呼び出しの共通基盤や `INDEX.md` メンテナンスの一般ルールだけを確認したいときは、このファイルではなく共通仕様を読むべきです。
 
 ## hash
 
-- b8df05c4cfa606db18f31ac7e37daa5fa0b1326cfaeec164eef5f86f8498e06d
+- b2bcd096b9deaed42b659b5d8a7b8c4d20adae653526b53ff07bd2bdd5a85a3a
 
 # `join.py`
 
