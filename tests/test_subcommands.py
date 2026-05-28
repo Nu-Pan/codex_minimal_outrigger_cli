@@ -3407,6 +3407,90 @@ def test_apply_implementation_files_at_commit_excludes_root_memo(
     assert relative_paths == ["README.md", "app.py", "docs/memo/note.md"]
 
 
+def test_apply_files_at_commit_exclude_tracked_root_gitignored_files(
+    tmp_path: Path,
+) -> None:
+    """apply の snapshot 調査対象は tracked でも root .gitignore 対象を含めない。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text(
+        "oracles/ignored.md\nignored.py\n",
+        encoding="utf-8",
+    )
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "kept.md").write_text("kept\n", encoding="utf-8")
+    (oracle_root / "ignored.md").write_text("ignored\n", encoding="utf-8")
+    (repo / "kept.py").write_text("kept\n", encoding="utf-8")
+    (repo / "ignored.py").write_text("ignored\n", encoding="utf-8")
+    _git(repo, "add", ".gitignore", "oracles/kept.md", "kept.py")
+    _git(repo, "add", "-f", "oracles/ignored.md", "ignored.py")
+    _git(repo, "commit", "-m", "snapshot targets")
+    commit_hash = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    oracle_paths = [
+        path.relative_to(repo).as_posix()
+        for path in apply_module._oracle_files_at_commit(repo, commit_hash)
+    ]
+    implementation_paths = [
+        path.relative_to(repo).as_posix()
+        for path in apply_module._implementation_files_at_commit(
+            repo,
+            commit_hash,
+        )
+    ]
+
+    assert oracle_paths == ["oracles/kept.md"]
+    assert implementation_paths == [".gitignore", "README.md", "kept.py"]
+
+
+def test_apply_partial_targets_exclude_tracked_root_gitignored_files(
+    tmp_path: Path,
+) -> None:
+    """部分 apply の変更調査対象は tracked でも root .gitignore 対象を含めない。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text(
+        "oracles/ignored.md\nignored.py\n",
+        encoding="utf-8",
+    )
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-m", "base ignore rules")
+    _checkout_session_branch(repo)
+    base_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "kept.md").write_text("kept\n", encoding="utf-8")
+    (oracle_root / "ignored.md").write_text("ignored\n", encoding="utf-8")
+    (repo / "kept.py").write_text("kept\n", encoding="utf-8")
+    (repo / "ignored.py").write_text("ignored\n", encoding="utf-8")
+    _git(repo, "add", "oracles/kept.md", "kept.py")
+    _git(repo, "add", "-f", "oracles/ignored.md", "ignored.py")
+    _git(repo, "commit", "-m", "change targets")
+    snapshot_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    oracle_targets = [
+        target.path.relative_to(repo).as_posix()
+        for target in apply_module._target_oracle_files(
+            repo,
+            base_commit,
+            snapshot_commit,
+            partial=True,
+        )
+    ]
+    implementation_targets = [
+        target.path.relative_to(repo).as_posix()
+        for target in apply_module._target_implementation_files(
+            repo,
+            base_commit,
+            snapshot_commit,
+            partial=True,
+        )
+    ]
+
+    assert oracle_targets == ["oracles/kept.md"]
+    assert implementation_targets == ["kept.py"]
+
+
 def test_apply_partial_targets_exclude_deleted_and_include_reverted_paths(
     tmp_path: Path,
 ) -> None:

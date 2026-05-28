@@ -898,6 +898,14 @@ def is_implementation_path(repo_root: Path, relative_path: str) -> bool:
     )
 
 
+def root_gitignored_paths(
+    repo_root: Path,
+    relative_paths: list[str],
+) -> set[str]:
+    """root `.gitignore` の pattern に一致する path 集合を返す。"""
+    return _root_gitignored_paths(repo_root, relative_paths)
+
+
 def changed_oracle_files(repo_root: Path, base_commit: str) -> list[Path]:
     """部分評価対象となる変更済み oracle ファイルを列挙する。"""
     # base..HEAD の履歴上で起きた追加・変更・rename などを収集する。
