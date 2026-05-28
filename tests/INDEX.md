@@ -140,7 +140,7 @@
 
 - `tests/test_subcommands.py` は、`cmoc` の主要サブコマンドと CLI 入口の決定論的な制御ロジックを検証するテスト群の入口です。
 - `run_command` のログ出力、終了集計、例外時レポート、`repo_root` 解決失敗時の振る舞いを扱います。
-- `init`、`session` 系、`apply` 系、`eval_oracles` 系の各コマンドについて、状態遷移、事前条件、ロールバック、出力、永続化、CLI 登録の回帰を確認します。
+- `init`、`session` 系、`apply` 系、`eval_oracles` 系、CLI 登録、エラーレポート、conflict marker 判定までを広く回帰確認します。
 
 ## Read this when
 
@@ -152,15 +152,15 @@
 
 ## Do not read this when
 
-- `src/` 配下の実装そのものを追いたいとき。
-- `tests/test_codex.py`、`tests/test_indexing.py`、`tests/test_repo.py` など、別のテスト群だけを確認したいとき。
-- `cmoc` の個別サブコマンド仕様を、実装や CLI 登録ではなく正本仕様から直接確認したいとき。
+- `src/` 配下の実装ロジックそのものを確認したいとき。
+- `tests/test_codex.py`、`tests/test_indexing.py`、`tests/test_repo.py` など、別のテスト群だけを追いたいとき。
+- 個別サブコマンドの正本仕様を、`oracles` から直接確認したいとき。
 - `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいとき。
 - `INDEX.md` の生成ルールやルーティング方針だけを確認したいとき。
 
 ## hash
 
-- 4206d3f24b3a107339bb82c8b7d225d8ffac05a95e728f2fe481800bb4a8031f
+- 32e0094612600a4db26a6333621baaf40a834d8792666f805ca7277b5519407c
 
 # `test_timestamps.py`
 

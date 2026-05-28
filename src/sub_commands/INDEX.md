@@ -98,7 +98,7 @@
 
 ## Summary
 
-- `src/sub_commands/session` は `cmoc session` 系サブコマンドのパッケージで、`fork.py`、`join.py`、`abandon.py` に各コマンド本体を持ち、`__init__.py` はパッケージ宣言のみを担います。
+- `src/sub_commands/session` は `cmoc session` 系サブコマンドのパッケージ入口で、`fork.py`、`join.py`、`abandon.py` に各コマンド本体を持ち、`__init__.py` はパッケージ宣言のみを担います。
 - このディレクトリは session の開始・統合・破棄を扱う実装の入口であり、個別の処理詳細は各モジュールへ分かれています。
 
 ## Read this when
@@ -109,10 +109,10 @@
 
 ## Do not read this when
 
-- `cmoc apply` 系の開始・終了や、apply branch / worktree の仕様だけを確認したいとき。
-- `cmoc session fork`、`cmoc session join`、`cmoc session abandon` のうち 1 つだけの詳細を確認したいときは、該当するモジュールを直接読むべきです。
-- `src/sub_commands/session` 配下の Python パッケージ構造ではなく、`oracles/app_specs/sub_commands/` 側の利用手順だけを見たいとき。
+- `cmoc session fork`、`cmoc session join`、`cmoc session abandon` のうち 1 つだけの詳細仕様を確認したいときは、この目次ではなく該当モジュールを直接読むべきです。
+- `cmoc apply` 系の開始・終了や破棄の仕様だけを確認したいときは、このディレクトリではなく apply 側の仕様を読むべきです。
+- `src/sub_commands/session` のパッケージ宣言だけを確認したいときは `__init__.py` を直接見れば足ります。
 
 ## hash
 
-- c613accffa48c967beddcd2fca1e0c073cb56376461bc4e6c68355596831c161
+- 8b7bcc836b12b151fa9dce31aeb1da89425157c028bb734b90ee5e9814ce73a6
