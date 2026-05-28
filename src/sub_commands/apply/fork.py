@@ -1304,6 +1304,15 @@ def _render_apply_report_body(
         "",
         f"## ブランチ {apply_branch} 上の全変更内容",
     ]
+    _append_change_summary_lines(lines, change_summary)
+    return "\n".join(lines).strip()
+
+
+def _append_change_summary_lines(
+    lines: list[str],
+    change_summary: list[dict[str, object]],
+) -> None:
+    """変更要約 Structured Output を Markdown 行へ追加する。"""
     for change in change_summary:
         category = str(change.get("category", "")).strip()
         summary = str(change.get("summary", "")).strip()
@@ -1321,7 +1330,104 @@ def _render_apply_report_body(
             lines.append("主な変更ファイル:")
             lines.extend(f"- `{path}`" for path in paths if isinstance(path, str))
         lines.append("")
-    return "\n".join(lines).strip()
+
+
+def _best_effort_change_summary(
+    repo_root: Path,
+    branch_name: str,
+    oracle_snapshot_commit: str,
+) -> list[dict[str, object]]:
+    """エラーレポート用に、可能な限り apply branch の変更要約を返す。"""
+    try:
+        change_summary = _generate_change_summary(
+            repo_root,
+            branch_name,
+            oracle_snapshot_commit,
+        )
+        _validate_change_summary_payload({"changes": change_summary})
+        return change_summary
+    except Exception as error:
+        return _fallback_change_summary_from_git(
+            repo_root,
+            branch_name,
+            oracle_snapshot_commit,
+            error,
+        )
+
+
+def _fallback_change_summary_from_git(
+    repo_root: Path,
+    branch_name: str,
+    oracle_snapshot_commit: str,
+    error: BaseException,
+) -> list[dict[str, object]]:
+    """Codex CLI 要約が使えない場合、git から取得できる範囲を report に残す。"""
+    try:
+        diff_result = run_git(
+            repo_root,
+            [
+                "diff",
+                "--name-only",
+                f"{oracle_snapshot_commit}..{branch_name}",
+                "--",
+            ],
+            check=False,
+        )
+    except Exception as diff_error:
+        return [
+            {
+                "category": "変更要約生成失敗",
+                "summary": (
+                    "Codex CLI による変更内容要約に失敗し、git diff による"
+                    "変更ファイル一覧の取得にも失敗しました。"
+                    f"要約生成エラー: {type(error).__name__}: {error} / "
+                    f"diff 取得エラー: {type(diff_error).__name__}: {diff_error}"
+                ),
+                "changed_paths": [],
+            }
+        ]
+    changed_paths = [
+        line.strip()
+        for line in diff_result.stdout.splitlines()
+        if line.strip()
+    ]
+    if diff_result.returncode not in (0, 1):
+        return [
+            {
+                "category": "変更要約生成失敗",
+                "summary": (
+                    "Codex CLI による変更内容要約に失敗し、git diff による"
+                    "変更ファイル一覧の取得にも失敗しました。"
+                    f"要約生成エラー: {type(error).__name__}: {error}"
+                ),
+                "changed_paths": [],
+            }
+        ]
+    if not changed_paths:
+        return [
+            {
+                "category": "変更なし",
+                "summary": (
+                    "Codex CLI による変更内容要約には失敗しましたが、"
+                    "git diff で確認できる apply branch 上の変更ファイルは"
+                    "ありませんでした。"
+                    f"要約生成エラー: {type(error).__name__}: {error}"
+                ),
+                "changed_paths": [],
+            }
+        ]
+    return [
+        {
+            "category": "変更ファイル一覧",
+            "summary": (
+                "Codex CLI による意味論的カテゴリ別要約には失敗しました。"
+                "代替情報として、oracle snapshot commit から apply branch の"
+                "HEAD までに変更されたファイル一覧を記録します。"
+                f"要約生成エラー: {type(error).__name__}: {error}"
+            ),
+            "changed_paths": changed_paths,
+        }
+    ]
 
 
 def _write_apply_error_report(
@@ -1351,30 +1457,35 @@ def _write_apply_error_report(
     if not count_lines:
         count_lines = ["- エラー発生前に記録済みの要修正点件数はありません。"]
 
-    body = "\n".join(
-        [
-            "## 作業結果",
-            "エラー",
-            "",
-            "`cmoc apply fork` は途中でエラーが起きたため、"
-            "調査・修正ループを正常に終了できませんでした。",
-            "",
-            "## エラー詳細",
-            f"- Failed stage: `{failed_stage}`",
-            f"- Exception type: `{type(error).__name__}`",
-            f"- Exception message: `{error}`",
-            "",
-            "## 要修正点件数の推移",
-            *count_lines,
-            "",
-            f"## ブランチ {apply_branch} 上の全変更内容",
-            "カテゴリ: エラー終了",
-            "",
-            "エラー終了したため、変更内容の意味論的カテゴリ別要約は"
-            "確定できません。必要に応じて apply worktree と apply branch の"
-            "差分を確認してください。",
-        ]
+    summary_repo_root = (
+        apply_worktree
+        if apply_worktree.exists()
+        else report_repo_root
     )
+    change_summary = _best_effort_change_summary(
+        summary_repo_root,
+        apply_branch,
+        oracle_snapshot_commit,
+    )
+    body_lines = [
+        "## 作業結果",
+        "エラー",
+        "",
+        "`cmoc apply fork` は途中でエラーが起きたため、"
+        "調査・修正ループを正常に終了できませんでした。",
+        "",
+        "## エラー詳細",
+        f"- Failed stage: `{failed_stage}`",
+        f"- Exception type: `{type(error).__name__}`",
+        f"- Exception message: `{error}`",
+        "",
+        "## 要修正点件数の推移",
+        *count_lines,
+        "",
+        f"## ブランチ {apply_branch} 上の全変更内容",
+    ]
+    _append_change_summary_lines(body_lines, change_summary)
+    body = "\n".join(body_lines).strip()
     report = _apply_report_with_front_matter(
         report_body=body,
         generated_at=generated_at,

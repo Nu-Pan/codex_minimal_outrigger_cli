@@ -3694,7 +3694,9 @@ def test_apply_rejects_incomplete_change_summary_from_codex(
     assert "apply report の生成に必要な変更要約が不足しています。" in report_text
     assert "## 要修正点件数の推移" in report_text
     assert "- 1 回目: 0 件" in report_text
-    assert "カテゴリ: エラー終了" in report_text
+    assert "カテゴリ: 変更ファイル一覧" in report_text
+    assert "docs/INDEX.md" in report_text
+    assert "Codex CLI による意味論的カテゴリ別要約には失敗しました。" in report_text
 
 
 def test_apply_writes_error_report_when_midway_stage_fails(
@@ -3751,7 +3753,58 @@ def test_apply_writes_error_report_when_midway_stage_fails(
     assert "- Exception type: `RuntimeError`" in report_text
     assert "- Exception message: `fake maintain failure at " in report_text
     assert "エラー発生前に記録済みの要修正点件数はありません。" in report_text
-    assert "カテゴリ: エラー終了" in report_text
+    assert "カテゴリ: 変更なし" in report_text
+
+
+def test_apply_error_report_includes_codex_change_summary(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """error report でも apply branch の変更要約を Codex Structured Output から描画する。"""
+    repo = _init_repo(tmp_path)
+    (repo / "oracles").mkdir()
+    (repo / "oracles" / "spec.md").write_text("spec\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "base")
+    oracle_snapshot_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    apply_branch = "cmoc/apply/session/run"
+    _git(repo, "checkout", "-b", apply_branch)
+    (repo / "app.py").write_text("print('changed')\n", encoding="utf-8")
+    _git(repo, "add", "app.py")
+    _git(repo, "commit", "-m", "change app")
+
+    codex_purposes: list[str] = []
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        codex_purposes.append(str(kwargs.get("purpose")))
+        return _change_summary_json()
+
+    monkeypatch.setattr("sub_commands.apply.fork.run_codex_exec", fake_codex)
+
+    report_path = apply_module._write_apply_error_report(
+        repo,
+        "session",
+        "run",
+        "cmoc/session/session",
+        apply_branch,
+        repo,
+        oracle_snapshot_commit,
+        oracle_snapshot_commit,
+        oracle_snapshot_commit,
+        "要修正点適用",
+        RuntimeError("fake apply failure"),
+        [1],
+    )
+
+    report_text = report_path.read_text(encoding="utf-8")
+    assert codex_purposes == ["apply 変更要約"]
+    assert "result: \"エラー\"" in report_text
+    assert "## エラー詳細" in report_text
+    assert "- Failed stage: `要修正点適用`" in report_text
+    assert "カテゴリ: 実装修正" in report_text
+    assert "テスト用の変更内容を整理しました。" in report_text
+    assert "- `app.py`" in report_text
+    assert "カテゴリ: エラー終了" not in report_text
 
 
 def test_apply_rejects_non_cmoc_branch(tmp_path: Path) -> None:
