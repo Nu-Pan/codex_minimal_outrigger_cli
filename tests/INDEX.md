@@ -27,30 +27,30 @@
 
 ## Summary
 
-- tests/test_codex.py は `commons.codex.run_codex_exec()` とその周辺補助処理を検証するテスト群の入口です。
+- `tests/test_codex.py` は `commons.codex.run_codex_exec()` とその周辺補助処理を検証するテスト群の入口です。
 - Structured Output の schema ファイル生成、JSON / text の再試行、schema 検証失敗や意味的検証失敗を扱います。
-- Codex CLI 呼び出しログ、subcommand_log 通知、`INDEX.md` 事前メンテナンス、`skip_index_maintenance`、workspace-write 時の oracle 保護を確認します。
+- Codex CLI 呼び出しログ、`subcommand_log` 通知、`INDEX.md` 事前メンテナンス、`skip_index_maintenance`、workspace-write 時の oracle 保護を確認します。
 - quota 枯渇時の待機と `resume` 再実行、`session_id` 抽出、`_resume_command`、`_prepare_codex_exec_paths` も扱います。
-- 末尾にはテスト用 git repo 初期化の補助関数と、ログ用の補助 IO クラスがあります。
+- 末尾には、テスト用 git repo 初期化の補助関数と、ログ用の補助 IO クラスがあります。
 
 ## Read this when
 
-- commons.codex.run_codex_exec() の呼び出し、read_only / workspace-write、`--json`、`--output-schema`、reasoning_effort の扱いを確認したいとき。
+- `commons.codex.run_codex_exec()` の呼び出し、`read_only` / `workspace-write`、`--json`、`--output-schema`、`reasoning_effort` の扱いを確認したいとき。
 - Structured Output の parse 失敗、schema 不一致、意味的検証失敗に対するリトライやエラー表示を追いたいとき。
-- Codex CLI 呼び出しログ、subcommand_log 通知、出力プレビュー、quota 枯渇時の疎通確認と resume 再実行の流れを確認したいとき。
-- INDEX.md 事前メンテナンス、`skip_index_maintenance`、workspace-write 時の oracle 保護、session_id 抽出や `_resume_command` を追いたいとき。
+- Codex CLI 呼び出しログ、`subcommand_log` 通知、出力プレビュー、quota 枯渇時の疎通確認と `resume` 再実行の流れを確認したいとき。
+- `INDEX.md` 事前メンテナンス、`skip_index_maintenance`、workspace-write 時の oracle 保護、`session_id` 抽出や `_resume_command` を追いたいとき。
 - `_prepare_codex_exec_paths` のログ予約や JSON Schema の文字列長・enum 検証挙動を確認したいとき。
 
 ## Do not read this when
 
-- commons.indexing.maintain_indexes() の実装や INDEX.md 生成ルールそのものを確認したいとき。
-- tests/test_subcommands.py、tests/test_repo.py、tests/test_indexing.py など、別のテスト群だけを追いたいとき。
-- README.md、AGENTS.md、memo の運用や編集可否だけを確認したいとき。
+- `commons.indexing.maintain_indexes()` の実装や `INDEX.md` 生成ルールそのものを確認したいとき。
+- `tests/test_subcommands.py`、`tests/test_repo.py`、`tests/test_indexing.py` など、別のテスト群だけを追いたいとき。
+- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいとき。
 - 個別サブコマンドの仕様そのものを見たいとき。
 
 ## hash
 
-- 4127e6ef8355da12e2711f3e66bc14a7e8e74105b0f9db82ba8a1931f63f3977
+- b2380197b4f9ea2906dc371a2aa151fbf1f57b1cfe352267315e8736e87bf950
 
 # `test_file_naming.py`
 
