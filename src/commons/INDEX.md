@@ -23,27 +23,27 @@
 
 ## Summary
 
-- Codex CLI の共通実行処理をまとめたモジュールで、`codex exec` のコマンド組み立て、`--output-last-message` の付与、実行ログ保存、`resume` 再開を扱います。
-- Structured Output 用の `--output-schema` ファイル生成と再利用、JSON の解析、JSON Schema 検証、呼び出し結果の意味検査を含みます。
-- quota 枯渇時のポーリング待機、capacity 一時失敗の指数バックオフ再試行、workspace-write 時の `oracles` 変更検査、`INDEX.md` 事前メンテナンスも実装されています。
+- Codex CLI の共通実行処理をまとめたモジュールで、`codex exec` のコマンド組み立て、`--output-last-message` の付与、実行ログ保存、`resume` 再開を扱う。
+- Structured Output 用の `--output-schema` ファイル生成と再利用、JSON の解析、JSON Schema 検証、呼び出し結果の意味検査を含む。
+- quota 枯渇時のポーリング待機、capacity 一時失敗の指数バックオフ再試行、workspace-write 時の `oracles` 変更検査、`INDEX.md` 事前メンテナンスも実装されている。
 
 ## Read this when
 
-- Codex CLI 呼び出しの共通ラッパーや、`read_only` / `workspace-write` の切り替えを確認したいとき。
-- Structured Output の schema 保存・キャッシュ、JSON 解析、JSON Schema 検証、意味検査の流れを見直したいとき。
-- quota 枯渇時の待機と `resume` 再開、capacity 一時失敗の指数バックオフ再試行、失敗時の診断情報を確認したいとき。
-- workspace-write 実行時の `oracles` 保護、実行前の `INDEX.md` メンテナンス、呼び出しログの保存方法を追いたいとき。
+- Codex CLI 呼び出しの共通処理や、`read_only` / `workspace-write` の切り替えを確認したいとき。
+- Structured Output の schema ファイル生成、JSON 解析、JSON Schema 検証、出力の意味検査を見直したいとき。
+- quota 待機と `resume` 再開、capacity 一時失敗の指数バックオフ再試行、失敗時の診断情報を追いたいとき。
+- workspace-write 実行時の `oracles` 保護、実行前の `INDEX.md` メンテナンス、呼び出しログの保存方法を確認したいとき。
 
 ## Do not read this when
 
-- `codex exec` の起動方法や `--output-last-message` / `--output-schema` の基本的な使い方だけを確認したいとき。
+- `codex exec` の基本的な使い方や個別オプションの詳細だけを確認したいとき。
 - `INDEX.md` の生成・維持ルールそのものを確認したいとき。
 - `repo.py`、`errors.py`、`indexing.py` など別の共通モジュールだけを追いたいとき。
 - 個別サブコマンドの業務ロジックや CLI 引数定義だけを確認したいとき。
 
 ## hash
 
-- 7bc4388098b7a226e0d3d4d3ca063068f59f3f01e89727e575a57a3f046e151c
+- 1cfa78a615b23e96da3d8f81828013a41d2347c31f2dbc6053602ba123e0a219
 
 # `command_runner.py`
 

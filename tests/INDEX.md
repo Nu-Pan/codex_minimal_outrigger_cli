@@ -43,14 +43,14 @@
 
 ## Do not read this when
 
-- `src/commons/codex.py` の実装そのものを確認したいときは、このテスト目次ではなく実装コードを読むべきです。
-- `commons.indexing.maintain_indexes()` や `INDEX.md` 生成ルールそのものを確認したいときは、`src/commons/indexing.py` や `oracles/app_specs/indexing.md` を読むべきです。
-- `tests/test_indexing.py`、`tests/test_repo.py`、`tests/test_subcommands.py` など、別のテスト群だけを追いたいときには適しません。
-- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいときは、このテスト群を読む必要はありません。
+- `src/commons/codex.py` の実装そのものを確認したいとき。
+- `commons.indexing.maintain_indexes()` や `INDEX.md` の生成ルールそのものを確認したいとき。
+- `tests/test_indexing.py`、`tests/test_repo.py`、`tests/test_subcommands.py` など、別のテスト群だけを追いたいとき。
+- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいとき。
 
 ## hash
 
-- f27e1a1d007f362be7d84a20c4629623c08ee57068f07d4fb8923b2795363b87
+- c9359bf4586fc6ba492f5222dbd6b15201542f6de2f70cd759383430888c37a7
 
 # `test_file_naming.py`
 

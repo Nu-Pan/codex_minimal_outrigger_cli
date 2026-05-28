@@ -182,25 +182,25 @@
 
 ## Summary
 
-- `src` 配下のコード全体を案内する目次です。
-- `main.py`、`commons/`、`sub_commands/` への入口をまとめます。
-- 個別機能の詳細ではなく、`src` 全体の配置と導線を把握するための入口です。
+- `cmoc` の Python 実装本体をまとめた `src` 配下で、CLI エントリーポイント、共通基盤、各サブコマンド実装の入口を収めています。
+- `main.py` が Typer ベースの `cmoc` 起動処理を持ち、`commons/` は共通処理、`sub_commands/` は `init` / `review` / `apply` / `session` 系の実装を束ねます。
+- この `INDEX.md` は `src` 直下の構成を案内するルーティング文書で、個別の実装詳細は各下位モジュールの `INDEX.md` や実装ファイルへ誘導します。
 
 ## Read this when
 
-- `src` 配下にどの主要モジュールとパッケージがあるかを一覧で把握したいとき。
-- `main.py`、`commons`、`sub_commands` のどこに何があるかを整理したいとき。
-- 実装やテストの前に、`src` 全体のルーティング先を確認したいとき。
+- `cmoc` の CLI 起動口やサブコマンド登録の全体像を確認したいとき。
+- 共通ユーティリティ層の `commons/` と、サブコマンド実装層の `sub_commands/` の責務分担を整理したいとき。
+- 新しい実装やテストを始める前に、`src` からどのモジュールへ進むべきか判断したいとき。
 
 ## Do not read this when
 
-- `src` 配下の個別モジュールの実装詳細だけを確認したいとき。
-- `commons` や `sub_commands` の下位ディレクトリにある各 `INDEX.md` を直接読むべきとき。
-- CLI 仕様や `oracles` の正本仕様だけを確認したいとき。
+- 個別コマンドの引数、状態遷移、エラー処理だけを確認したいときは、`main.py` や各実装モジュールを直接読むべきです。
+- `commons/` の共通処理だけ、または `sub_commands/` の特定コマンドだけを深掘りしたいときは、この目次では粒度が粗すぎます。
+- `tests/` や `oracles/` の仕様、運用ルールだけを確認したいときは、`src` の目次を読む必要はありません。
 
 ## hash
 
-- 97315b70941b874976e77425e221bdb222eba1be107f00d380f14df4002d7acf
+- 9bb16c4be2d260493279cc77587a3dcac88df91acbbfa3792d762701f54b356b
 
 # `test.sh`
 
@@ -230,22 +230,22 @@
 
 ## Summary
 
-- `tests` 配下の pytest テスト群をまとめる入口です。
-- `conftest.py` による `src` の import path 設定と、各機能領域の回帰テストへの案内を含みます。
-- Codex CLI 呼び出し、リポジトリ共通処理、`INDEX.md` メンテナンス、サブコマンド制御、タイムスタンプ、ファイル命名規則を扱うテスト群を案内します。
+- `tests` 配下の回帰テスト群をまとめた入口で、`src` への import 設定から CLI、共通処理、INDEX 生成までを横断的に案内する。
+- `conftest.py`、`test_codex.py`、`test_file_naming.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py`、`test_timestamps.py` の各テストへ導線を張る。
+- `commons.codex.run_codex_exec()`、`commons.indexing.maintain_indexes()`、`commons.repo`、`commons.timestamps` / `commons.timing`、および主要サブコマンドの回帰確認を担う。
 
 ## Read this when
 
-- pytest の全体構成や、`tests` 配下でどの機能をどのテストが担当しているかを俯瞰したいとき。
-- `commons.codex`、`commons.repo`、`commons.indexing`、`sub_commands`、`commons.timestamps` の回帰テストの入口を探したいとき。
-- 個別テストファイルの役割分担や、共通の `conftest.py` による import path 設定を確認したいとき。
+- pytest の共通設定や、`tests` から `src` を import できる仕組みを確認したいとき。
+- `commons.codex`、`commons.indexing`、`commons.repo`、`commons.timestamps`、`commons.timing` の回帰テストを探したいとき。
+- CLI 入口、サブコマンド登録、`INDEX.md` 生成、ファイル命名規則の検証観点をまとめて把握したいとき。
 
 ## Do not read this when
 
-- `src/commons/codex.py` や `src/commons/repo.py` など、実装そのものの詳細を確認したいとき。
-- `oracles` 配下の正本仕様や、`INDEX.md` の生成ルールだけを確認したいとき。
-- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいとき。
+- `src` 配下の本番実装だけを追いたいとき。
+- `oracles` 配下の正本仕様や、README / AGENTS / memo の運用ルールだけを確認したいとき。
+- 個別テストファイルの詳細ではなく、別ディレクトリの `INDEX.md` だけを辿りたいとき。
 
 ## hash
 
-- 57b7f771b50f4e8ac522db7557d925042cb3807b1156a62e5c998fb79de05fec
+- 1bfde81f01c43a2b2e23ddcd9eb86febc87ebc2af3687a22980dce828f882849
