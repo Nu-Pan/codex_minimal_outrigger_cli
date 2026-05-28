@@ -88,20 +88,20 @@
 ## Read this when
 
 - `commons.indexing.maintain_indexes()` の除外条件と更新条件を確認したいとき。
-- 既存 `INDEX.md` の不備検出・再生成・再利用・リトライの挙動を追いたいとき。
+- 既存 `INDEX.md` の不備検出、再生成、再利用、Structured Output のリトライ挙動を追いたいとき。
 - 自動コミットの対象が `INDEX.md` などのメンテナンス差分に限定されるか確認したいとき。
-- テスト用 git リポジトリ初期化の `_init_repo` / `_git` の役割を見たいとき。
+- テスト用 git リポジトリ初期化の `_init_repo` と git 実行補助の `_git` の役割を見たいとき。
 
 ## Do not read this when
 
 - `src/commons/indexing.py` の実装そのものを確認したいとき。
-- `INDEX.md` の生成・更新ルール全体だけを確認したいとき。
-- `tests/test_codex.py`、`tests/test_repo.py`、`tests/test_subcommands.py` など別のテスト群を見たいとき。
+- `INDEX.md` の生成・更新ルール全体ではなく、他の仕様ファイルや別のテスト群を見たいとき。
 - `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいとき。
+- `tests/test_codex.py`、`tests/test_repo.py`、`tests/test_subcommands.py` など別機能のテスト観点だけを追いたいとき。
 
 ## hash
 
-- 8ab869456d96325f18163db9ab6628130bb0d28087d1167e66b0aa2cd8e74151
+- c1099c2b54f79953b20a13c6aac70163c47f102391f2c5fb62478c05bdbf24d8
 
 # `test_repo.py`
 
