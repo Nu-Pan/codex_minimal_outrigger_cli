@@ -1110,6 +1110,8 @@ def _is_forbidden_changed_path(relative_path: str) -> bool:
     return (
         relative_path == "oracles"
         or relative_path.startswith("oracles/")
+        or relative_path == "README.md"
+        or relative_path == "AGENTS.md"
         or relative_path == ".agents"
         or relative_path.startswith(".agents/")
         or relative_path == "memo"
@@ -1768,6 +1770,8 @@ def _apply_prompt(
             "要修正点本文への逐語的追従や、要修正点で述べている目的を達成した保証は不要です。",
             f"要修正点: {json.dumps(discrepancy, ensure_ascii=False)}",
             f"`{repo_root / 'oracles'}` は編集禁止です。",
+            f"`{repo_root / 'README.md'}` は編集禁止です。",
+            f"`{repo_root / 'AGENTS.md'}` は編集禁止です。",
             f"`{repo_root / '.agents'}` は編集禁止です。",
             f"`{repo_root / 'memo'}` は読み書き禁止です。",
         ]

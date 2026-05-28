@@ -3336,6 +3336,8 @@ def test_apply_prompt_treats_discrepancy_as_optional_hint(
     assert "無視してかまいません" in prompt
     assert "ベストエフォート" in prompt
     assert "目的を達成した保証は不要" in prompt
+    assert f"`{tmp_path / 'README.md'}` は編集禁止です。" in prompt
+    assert f"`{tmp_path / 'AGENTS.md'}` は編集禁止です。" in prompt
 
 
 def test_apply_prompt_orders_completion_before_details() -> None:
@@ -4201,6 +4203,29 @@ def test_commit_all_changes_rejects_memo_changes(
 
     assert "編集禁止パス" in error.value.message
     assert "memo/" in error.value.detail
+    assert _git(repo, "log", "-1", "--pretty=%s").stdout.strip() == "initial"
+
+
+@pytest.mark.parametrize("forbidden_file", ["README.md", "AGENTS.md"])
+def test_commit_all_changes_rejects_root_readme_and_agents_changes(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    forbidden_file: str,
+) -> None:
+    """root README/AGENTS は workspace-write の編集禁止 path として検出する。"""
+    repo = _init_repo(tmp_path)
+    (repo / forbidden_file).write_text("tampered\n", encoding="utf-8")
+    (repo / "app.py").write_text("changed\n", encoding="utf-8")
+    monkeypatch.setattr(
+        "sub_commands.apply.fork.maintain_indexes",
+        lambda repo_root: False,
+    )
+
+    with pytest.raises(CmocError) as error:
+        _commit_all_changes(repo)
+
+    assert "編集禁止パス" in error.value.message
+    assert forbidden_file in error.value.detail
     assert _git(repo, "log", "-1", "--pretty=%s").stdout.strip() == "initial"
 
 
