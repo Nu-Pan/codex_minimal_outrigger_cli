@@ -2,9 +2,9 @@
 
 ## Summary
 
-- `cmoc` の共通ユーティリティをまとめた入口で、エラー処理、Codex CLI 呼び出し、リポジトリ探索、サブコマンド実行制御、ログ、計測、タイムスタンプ生成への案内を集約します。
-- `indexing.py` は `INDEX.md` メンテナンスの中核で、各ディレクトリの目次生成と更新ルールを扱います。
-- `codex.py` と `repo.py` と `command_runner.py` は、外部コマンド実行、作業リポジトリの特定、共通実行制御を支える中心モジュールです。
+- `src/commons` の共通ユーティリティ群の入口で、エラー処理、Codex CLI 呼び出し、リポジトリ探索、サブコマンド実行制御、ログ、計測、タイムスタンプ生成への案内をまとめます。
+- `indexing.py` は `INDEX.md` の生成・更新ルールを扱い、各ディレクトリの目次メンテナンスを担います。
+- `codex.py`、`repo.py`、`command_runner.py` は、外部コマンド実行、作業リポジトリの特定、共通実行制御の中心です。
 - `errors.py`、`subcommand_log.py`、`timing.py`、`timestamps.py` は、エラーレポート、ログ保存、経過時間表示、時刻文字列生成をそれぞれ担当します。
 
 ## Read this when
@@ -23,7 +23,7 @@
 
 ## hash
 
-- c521b7966cc4004d43e592eade15e5e0f6c93e8bd913843100d1586debcde735
+- 57a94553d2614230b455fb6052c88bfc9b7675805579a640b1b87c1fbeff73b9
 
 # `main.py`
 
