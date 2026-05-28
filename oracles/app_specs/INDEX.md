@@ -4,13 +4,13 @@
 
 - `cmoc` における session branch と apply branch の役割分担、および通常 branch との関係をまとめた文書です。
 - session 開始時に checkout 中の local branch を session home branch として扱い、session branch は `cmoc/session/<session-id>`、apply branch は `cmoc/apply/<session-id>/<apply-run-id>` という命名規則を定めます。
-- default branch を特別扱いしないこと、1 つの session home branch に対して active な session branch は高々 1 つであること、apply は開始時点の oracle snapshot commit を基準に進めることを示します。
+- default branch を特別扱いしないこと、1 つの session home branch に対して active な session branch は高々 1 つであること、apply は開始時点の oracle snapshot commit を基準に進めること、そして apply worktree の配置規則を示します。
 
 ## Read this when
 
 - `cmoc session fork` の分岐元や最終的な merge 先をどう扱うか確認したいとき。
 - session branch と apply branch の命名規則、用途、ユーザーが編集してよい branch を確認したいとき。
-- apply 実行中にどの HEAD を snapshot として固定し、どの変更を取り込まないかを確認したいとき。
+- apply 実行中にどの HEAD を snapshot として固定し、どの変更を取り込まないか、また apply worktree の扱いを確認したいとき。
 
 ## Do not read this when
 
@@ -20,14 +20,15 @@
 
 ## hash
 
-- dd1f141e83ae328b95305aa6ab8e08f5431af4188a4d0d5d4ba130b1fb51148d
+- c7f96b4e052ffd604c91086c43283b41bd348783f03d5f7b8ef2a1f32da5101b
 
 # `codex_call.md`
 
 ## Summary
 
 - `cmoc` から `codex exec` を呼び出すための共通規約をまとめた文書です。
-- stdin でプロンプト本文を渡す方法、プロンプトの構成要件、アクセス制限の書き方、モデル指定と出力方法、失敗時の扱いまでを扱います。
+- stdin でプロンプト本文を渡す方法、プロンプトの構成要件、アクセス制限の書き方、モデル指定と出力方法を扱います。
+- 失敗時の扱いとして、quota 不足時の待機・再開、サーバー一時不調時のリトライ方針まで定義しています。
 
 ## Read this when
 
@@ -43,7 +44,7 @@
 
 ## hash
 
-- 2acda3eea367c47ac75fb0a2f8e5248d426e21494c1ec3ae63e0257f96393ee5
+- af194643aa501ff63b04e38f89557cb4e953a097d3fb318161d3943b731bd4e7
 
 # `console_and_file_log.md`
 
@@ -113,11 +114,11 @@
 
 - `INDEX.md` の生成・更新ルールそのものではなく、個別のサブコマンド仕様や実装コードを確認したいとき。
 - `oracles` 配下の他の仕様断片だけで用が足り、`INDEX.md` のメンテナンス規則を扱わないとき。
-- リポジトリの一般的なアプリ機能や業務ロジックを確認していて、`INDEX.md` の配置・検証・再生成に関与しないとき。
+- リポジトリ一般のアプリ機能や業務ロジックを確認していて、`INDEX.md` の配置・検証・再生成に関与しないとき。
 
 ## hash
 
-- a6e6af330d3ce5e851bfd29cd85909bf3af4d01cbbb502863e7eedf5a165a175
+- 6f4efcb481d66f85a2c78d839d021ea40d7a1d04678bb282f2ba6361157e349f
 
 # `misc_specs.md`
 
@@ -209,33 +210,33 @@
 ## Do not read this when
 
 - 個別のサブコマンド仕様だけを確認したいときは、この `INDEX.md` ではなく該当する `apply_*`、`session_*`、`review_oracles.md`、`init.md` を直接読むべきです。
-- 実装コードやテストコードだけで足りる作業では、このディレクトリの案内を読む必要はありません。
+- 実装コードやテストコードの作業だけで足りるときは、この目次を読む必要はありません。
 - `branch_model`、`codex_call`、ログ、エラーハンドリング、`oracles` 全体の扱いなど、他の共通仕様を確認したいときは別の入口文書を読むべきです。
 
 ## hash
 
-- ed8511bd8d99dc20a13dc999a8b78c32d5c744a049412d98d73963bd0242292d
+- 28fc735bf6d02195f4b07b04cd60f9fb4da1ec5913a22c5afa360b017f4b0831
 
 # `usage.md`
 
 ## Summary
 
-- `cmoc` の利用方法をまとめた文書です。
-- `cmoc` コマンドの呼び出し前提、初回の `cmoc init`、想定ワークフローを扱います。
-- セッション作成から `apply`、`join` までの基本的な操作順を確認するための入口です。
+- `cmoc` の利用方法と、ユーザーが日常的にたどる基本ワークフローをまとめた入口です。
+- `cmoc init` を最初に一度だけ実行する前提、`session fork` でのセッション開始、`review oracles` と `apply` 系コマンドを交えた反復作業の流れを示します。
+- `apply fork` 実行中の `oracles` 変更はその実行には反映されず、別周回になる点など、運用上の重要な前提を説明します。
 
 ## Read this when
 
-- `cmoc` の基本的な使い方や、最初に何を実行するかを確認したいとき。
-- `cmoc init` から `session fork`、`apply fork`、`apply join`、`session join` までの全体の流れを確認したいとき。
-- エンドユーザーが `cmoc` を呼び出す前提や、標準的な作業順序を把握したいとき。
+- エンドユーザーが `cmoc` をどう呼び出すか、`PATH` 設定を含めて確認したいとき。
+- `cmoc init` を最初に一度だけ実行する前提や、その後の基本的なワークフローを確認したいとき。
+- `session fork` から `review oracles`、`apply fork`、`apply join`、`session join` までの全体の流れと、`oracles` の変更がどの時点で反映されるかを把握したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの引数、出力形式、内部手順だけを確認したいときは、`sub_commands/INDEX.md` から該当文書へ直接進むべきです。
-- 実装コードやテストコードの作業だけで足りるときは、この利用方法の案内を読む必要はありません。
-- `cmoc` の共通規約や設計方針だけを確認したいときは、`app_specs/INDEX.md` 配下の別文書を参照すべきです。
+- 各サブコマンドの引数や内部手順など、個別仕様そのものを確認したいときは、この文書ではなく該当する正本仕様を読むべきです。
+- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいときは、この文書を読む必要はありません。
+- `cmoc` の実装コードやテストコードだけで足りる作業では、この文書を参照しなくて構いません。
 
 ## hash
 
-- 8b19f52b9c8b57989c5eb50f80342410ee3e6b38732410730612640b55b7d5bd
+- 66d3f08c8efdcd5478e588555add6a5aa7ab3b333cf9322a8582e5babff47f32

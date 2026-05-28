@@ -39,18 +39,18 @@
 - Structured Output の parse 失敗、JSON Schema 不一致、意味的検証失敗に対するリトライやエラー表示を追いたいとき。
 - Codex CLI 呼び出しログ、`subcommand_log` 通知、出力プレビュー、quota 枯渇時の待機と `resume` サブコマンド再実行の流れを確認したいとき。
 - `INDEX.md` 事前メンテナンス、`skip_index_maintenance`、workspace-write 時の `oracles` 保護、`session_id` 抽出や `_resume_command` を追いたいとき。
-- `_prepare_codex_exec_paths` のログ予約、JSON Schema の文字列長・enum 検証、テスト用 git リポジトリ初期化の補助関数を確認したいとき。
+- `_prepare_codex_exec_paths` のログ予約、JSON Schema の文字列長・`enum` 検証、テスト用 git リポジトリ初期化の補助関数を確認したいとき。
 
 ## Do not read this when
 
-- `commons.codex.run_codex_exec()` や周辺補助処理の実装そのものを確認したいときは、`src/commons/codex.py` を読むべきです。
-- `commons.indexing.maintain_indexes()` の実装や `INDEX.md` 生成ルールそのものを確認したいときは、`src/commons/indexing.py` や `oracles/app_specs/indexing.md` を読むべきです。
-- `tests/test_repo.py`、`tests/test_indexing.py`、`tests/test_subcommands.py` など、別のテスト群だけを追いたいときには適しません。
+- `src/commons/codex.py` の実装そのものを確認したいときは、このテスト目次ではなく実装コードを読むべきです。
+- `commons.indexing.maintain_indexes()` や `INDEX.md` 生成ルールそのものを確認したいときは、`src/commons/indexing.py` や `oracles/app_specs/indexing.md` を読むべきです。
+- `tests/test_indexing.py`、`tests/test_repo.py`、`tests/test_subcommands.py` など、別のテスト群だけを追いたいときには適しません。
 - `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいときは、このテスト群を読む必要はありません。
 
 ## hash
 
-- f7f4af5a498ccab7b771969c0ed545c3f4825c2c069fb9fc64aeb9b5c64f6701
+- 54e5466f97bae889db2a63fc245a9fcbb78b629a3066bfe21ffda777b4951c3c
 
 # `test_file_naming.py`
 
@@ -139,17 +139,17 @@
 ## Summary
 
 - `tests/test_subcommands.py` は `run_command` と共通エラーレポート、終了コード伝播、サブコマンドログ出力の回帰テスト群の入口です。
-- `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`eval-oracles` の制御フロー、state 更新、cleanup、競合処理をまとめて検証します。
-- `apply fork` の差分検出や Structured Output 検証、`apply join` のマージと強制解決、`apply abandon` の破棄処理、`eval-oracles` の評価レポート生成を扱います。
-- `Fake Codex CLI`、`INDEX.md` 更新、`oracles` / `memo` の制約、`main` と `bin/cmoc` の登録経路、補助関数の順序チェックも確認します。
+- `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`eval-oracles` の制御フロー、状態更新、cleanup、競合処理をまとめて検証します。
+- `apply fork` の差分検出・Structured Output 検証、`apply join` のマージと強制解決、`apply abandon` の破棄、`eval-oracles` の評価レポート生成を扱います。
+- `main` の Typer 登録、`cmoc --help`、`eval-oracle` 互換エイリアス、`bin/cmoc` 起動経路、`Fake Codex CLI`、`INDEX.md` 更新、`oracles`/`memo` 制約も確認します。
 
 ## Read this when
 
-- サブコマンド群がどの回帰テストでカバーされているか確認したいとき。
+- サブコマンド群の回帰テストの全体像を把握したいとき。
 - `run_command` のログ出力、例外時レポート、終了コードの扱いを追いたいとき。
 - `cmoc init`、`session`、`apply`、`eval-oracles` の制御ロジックをテスト観点で見直したいとき。
-- `main` の Typer 登録や `cmoc --help`、`eval-oracle` の互換エイリアス、`bin/cmoc` の起動経路を確認したいとき。
-- `Fake Codex CLI` や Structured Output、`INDEX.md` 更新、`oracles` / `memo` の扱いを確認したいとき。
+- `main` の Typer 登録や `cmoc --help`、`eval-oracle` 互換エイリアス、`bin/cmoc` の起動経路を確認したいとき。
+- `Fake Codex CLI`、Structured Output、`INDEX.md` 更新、`oracles`/`memo` の扱いを確認したいとき。
 
 ## Do not read this when
 
@@ -160,7 +160,7 @@
 
 ## hash
 
-- c1a2b3ce2a96c3d37381199e9560c211f9832028b7b1c16cbfcfbdc812cde890
+- a610fc51f3ebcbc3a04954f76874885c4ec0706313acfb24f40503bac069ce98
 
 # `test_timestamps.py`
 

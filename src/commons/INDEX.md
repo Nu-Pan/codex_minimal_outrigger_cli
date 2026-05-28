@@ -23,27 +23,26 @@
 
 ## Summary
 
-- Codex CLI 呼び出しの共通ラッパーで、`codex exec` の起動、`--output-last-message` を含む実行ログ保存、`resume` サブコマンドによる再開、quota 待機と再開をまとめるモジュールです。
+- Codex CLI 呼び出しの共通ラッパーで、`codex exec` の起動、`--output-last-message` を含む実行ログ保存、`resume` による再開、quota 待機と再開をまとめるモジュールです。
 - Structured Output 用の `--output-schema` ファイル生成とキャッシュ、JSON 解析、JSON Schema 検証、意味検査までを扱います。
-- workspace-write 実行時の `oracles` 変更検査と、`INDEX.md` メンテナンス前処理、model と reasoning_effort の制約も含みます。
+- workspace-write 実行時の `oracles` 変更検査、`INDEX.md` の事前メンテナンス、model と reasoning_effort の制約も含みます。
 
 ## Read this when
 
-- Codex CLI の呼び出し方法や sandbox の切り替え、`codex exec` のコマンド組み立てを確認したいとき。
-- Structured Output の schema 保存・検証、JSON パース、リトライの流れを見直したいとき。
-- quota 枯渇時の待機と `resume` サブコマンドによる再開、capacity リトライ、`oracles` 保護や `INDEX.md` 事前更新の挙動を追いたいとき。
-- 呼び出しログ、`--output-last-message`、model と reasoning_effort の制約を確認したいとき。
+- Codex CLI の呼び出し方法、`read-only` と `workspace-write` の切り替え、`codex exec` のコマンド組み立てを確認したいとき。
+- Structured Output の schema 保存・キャッシュ、JSON 解析、JSON Schema 検証、意味検査の流れを見直したいとき。
+- quota 枯渇時の待機と `resume` 再開、capacity の再試行、`oracles` 保護や `INDEX.md` 事前メンテナンスの挙動を追いたいとき。
+- 呼び出しログ、`--output-last-message`、model と reasoning_effort の制約、実行結果の診断情報を確認したいとき。
 
 ## Do not read this when
 
-- `codex exec` 以外のサブコマンド本体や業務ロジックを確認したいときは、このモジュールではなく `src/sub_commands` を読むべきです。
-- 共通エラー整形だけを確認したいときは `src/commons/errors.py`、タイムスタンプだけなら `src/commons/timestamps.py` を読むべきです。
-- `INDEX.md` の自動生成ルールそのものだけを確認したいときは、このモジュールではなく `src/commons/indexing.py` と `oracles/app_specs/indexing.md` を読むべきです。
-- ファイル操作やテスト実装だけを確認したいときは、このモジュールの範囲外です。
+- `codex exec` 以外のサブコマンド本体や、個別の業務ロジックを確認したいとき。
+- `INDEX.md` の自動生成ルールや、`oracles` 側の目次仕様だけを確認したいとき。
+- ファイル操作、テスト実装、`repo.py` や `errors.py` など別の共通モジュールの挙動だけを追いたいとき。
 
 ## hash
 
-- 252a9e3953b8ee9485403e6d6d4bb0191606d155d6799dd09120e2da2b130f10
+- ac361903a3b7967c15f89bf1dd37f333fdc21885d80fc828b0a425912397d6b2
 
 # `command_runner.py`
 
