@@ -55,19 +55,19 @@
 
 ## Read this when
 
-- `cmoc review oracles` の実行順や評価モードの切り替えを確認したいとき。
-- 対象 oracle の選定、`referenced_paths` と `specification_only_basis` の検証、問題点リストの改善ロジックを追いたいとき。
+- `cmoc review oracles` の実行順、部分評価/全体評価の切り替え、評価対象ファイルの選定を確認したいとき。
+- `referenced_paths` や `specification_only_basis` を含む Structured Output の検証条件、問題点リストの改善ロジックを追いたいとき。
 - レポート生成先、error report の出力、stderr フォールバックまで含めて実装・修正・レビューしたいとき。
 
 ## Do not read this when
 
-- `cmoc review oracles` の CLI 引数やコマンド登録だけを確認したいとき。
+- `cmoc review oracles` の CLI 引数やサブコマンド登録だけを確認したいとき。
 - `cmoc` の他サブコマンドや共通処理だけを確認したいとき。
 - `oracles` 配下の個別仕様断片そのものを読みたいとき。
 
 ## hash
 
-- d8ece0a3ba1ce783e4eac8044cf4c862eabe88af66be5255c33a1439eac4dae0
+- 9a56ef506b3beb99cab967fb0e64f654cf5dce6f8929331c634033cc2a49f9e1
 
 # `init.py`
 
