@@ -2825,6 +2825,85 @@ def test_apply_join_auto_resolves_index_conflict(
     assert "- INDEX.md" in output
 
 
+def test_apply_join_resolves_index_conflict_before_reporting_other_conflict(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """混在 conflict では INDEX.md だけ自動解決し、他 path は報告する。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    (apply_worktree / "feature.txt").write_text("implemented\n", encoding="utf-8")
+    (apply_worktree / "INDEX.md").write_text("apply index\n", encoding="utf-8")
+    _git(apply_worktree, "add", "feature.txt", "INDEX.md")
+    _git(apply_worktree, "commit", "-m", "implement feature with index")
+    original_run_git = apply_join_module.run_git
+    removed_index = False
+
+    def fail_merge_with_mixed_conflicts(
+        repo_root: Path,
+        args: list[str],
+        *,
+        check: bool = True,
+        text: bool = True,
+        input_text: str | None = None,
+        env: dict[str, str] | None = None,
+    ) -> subprocess.CompletedProcess[str]:
+        nonlocal removed_index
+        if args == ["merge", "--no-ff", apply_branch]:
+            return subprocess.CompletedProcess(
+                ["git", *args],
+                1,
+                "",
+                "\n".join(
+                    [
+                        "CONFLICT (content): Merge conflict in INDEX.md",
+                        "CONFLICT (content): Merge conflict in feature.txt",
+                    ]
+                ),
+            )
+        if args == ["rm", "--ignore-unmatch", "--", "INDEX.md"]:
+            removed_index = True
+            return subprocess.CompletedProcess(["git", *args], 0, "", "")
+        if args == ["commit", "--no-edit"]:
+            pytest.fail("non INDEX.md conflict が残る場合は merge commit しない")
+        return original_run_git(
+            repo_root,
+            args,
+            check=check,
+            text=text,
+            input_text=input_text,
+            env=env,
+        )
+
+    def mixed_unmerged_paths(_repo: Path) -> list[str]:
+        if removed_index:
+            return ["feature.txt"]
+        return ["INDEX.md", "feature.txt"]
+
+    monkeypatch.setattr(apply_join_module, "run_git", fail_merge_with_mixed_conflicts)
+    monkeypatch.setattr(apply_join_module, "_unmerged_paths", mixed_unmerged_paths)
+
+    with pytest.raises(CmocError) as error_info:
+        cmoc_apply_join_impl(repo)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert removed_index
+    assert "feature.txt" in error_info.value.detail
+    assert "INDEX.md" not in error_info.value.detail
+    assert state["apply"]["state"] == "completed"
+    assert _git(repo, "branch", "--list", apply_branch).stdout.strip()
+    assert apply_worktree.exists()
+
+
 def test_apply_join_stops_on_non_index_conflict(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,

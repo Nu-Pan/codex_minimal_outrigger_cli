@@ -94,15 +94,27 @@ def cmoc_apply_join_impl(
     auto_resolved_index_conflicts: list[str] = []
     if merge_result.returncode != 0:
         unmerged = _unmerged_paths(cmoc_root)
-        if unmerged and all(_is_index_path(path) for path in unmerged):
+        index_conflicts = [path for path in unmerged if _is_index_path(path)]
+        non_index_conflicts = [
+            path for path in unmerged if not _is_index_path(path)
+        ]
+        if index_conflicts:
             auto_resolved_index_conflicts = _resolve_index_conflicts(
                 cmoc_root,
-                unmerged,
+                index_conflicts,
                 merge_result.stderr.strip(),
+                commit_merge=not non_index_conflicts,
             )
-        else:
-            detail = merge_result.stderr.strip()
-            if unmerged:
+            unmerged = _unmerged_paths(cmoc_root)
+            non_index_conflicts = [
+                path for path in unmerged if not _is_index_path(path)
+            ]
+        if non_index_conflicts or not index_conflicts:
+            if auto_resolved_index_conflicts and unmerged:
+                detail = "\n".join(["unmerged paths:", *unmerged]).strip()
+            else:
+                detail = merge_result.stderr.strip()
+            if unmerged and not detail.startswith("unmerged paths:"):
                 detail = "\n".join(["unmerged paths:", *unmerged, detail]).strip()
             raise CmocError(
                 "apply branch の merge で conflict が発生しました。",
@@ -541,12 +553,17 @@ def _resolve_index_conflicts(
     repo_root: Path,
     paths: list[str],
     merge_stderr: str,
+    *,
+    commit_merge: bool,
 ) -> list[str]:
-    """INDEX.md conflict を削除で解消し、merge commit を完了する。"""
+    """INDEX.md conflict を削除で解消し、必要なら merge commit を完了する。"""
     resolved_paths = sorted(paths)
     run_git(repo_root, ["rm", "--ignore-unmatch", "--", *resolved_paths])
     remaining = _unmerged_paths(repo_root)
-    if remaining:
+    remaining_index_conflicts = [
+        path for path in remaining if _is_index_path(path)
+    ]
+    if remaining_index_conflicts or (commit_merge and remaining):
         detail = "\n".join(
             [
                 "unmerged paths:",
@@ -562,6 +579,8 @@ def _resolve_index_conflicts(
             ],
             detail,
         )
+    if not commit_merge:
+        return resolved_paths
 
     commit_result = run_git(repo_root, ["commit", "--no-edit"], check=False)
     if commit_result.returncode != 0:
