@@ -1501,12 +1501,8 @@ def _assert_cmoc_ignore_guarantee(
     # tracked path と ignore probe の両方で保証状態を確認する。
     tracked = _tracked_cmoc_paths(repo_root, env=env)
     probe = ".cmoc/.__cmoc_ignore_probe__"
-    ignored = run_git(
-        repo_root,
-        ["check-ignore", "-q", "--", probe],
-        check=False,
-    )
-    if tracked or ignored.returncode != 0:
+    ignored = _is_root_gitignored(repo_root, probe)
+    if tracked or not ignored:
         raise CmocError(
             ".cmoc が git 追跡対象外として初期化されていません。",
             [

@@ -82,6 +82,39 @@ def test_assert_cmoc_ignored_does_not_modify_repository(
     assert _git(repo, "status", "--porcelain").stdout == ""
 
 
+def test_assert_cmoc_ignored_rejects_global_exclude_only(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """外部 exclude だけで `.cmoc` が ignore されても保証済みにしない。"""
+    repo = _init_repo(tmp_path)
+    global_ignore = tmp_path / "global-ignore"
+    global_ignore.write_text(".cmoc/\n", encoding="utf-8")
+    global_config = tmp_path / "global-gitconfig"
+    global_config.write_text(
+        f"[core]\n\texcludesFile = {global_ignore}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(global_config))
+
+    assert (
+        _git(
+            repo,
+            "check-ignore",
+            "-q",
+            "--",
+            ".cmoc/.__cmoc_ignore_probe__",
+        ).returncode
+        == 0
+    )
+    with pytest.raises(CmocError) as error:
+        assert_cmoc_ignored(repo)
+
+    assert "probe が ignore されませんでした" in error.value.detail
+    assert not (repo / ".gitignore").exists()
+    assert _git(repo, "status", "--porcelain").stdout == ""
+
+
 def test_assert_cmoc_ignored_rejects_tracked_cmoc_without_untracking(
     tmp_path: Path,
 ) -> None:
