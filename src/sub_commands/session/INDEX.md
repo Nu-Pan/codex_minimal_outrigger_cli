@@ -73,13 +73,13 @@
 
 - `src/sub_commands/session/join.py` は `cmoc session join` の本体処理を実装するモジュールです。
 - 現在の session branch が active で `apply.state = ready` であることを確認し、session home branch へ `git merge --no-ff` します。
-- merge conflict が発生した場合は禁止領域や対象外差分を検査し、Codex CLI に conflict marker 解消を依頼したうえで、merge 後の `session.state` 更新と session branch の削除可否判定まで行います。
+- merge conflict が発生した場合は禁止対象や未解決差分を確認して Codex CLI に conflict marker 解消を依頼し、`session.state` 更新と session branch の削除可否判定まで行います。
 
 ## Read this when
 
-- `cmoc session join` の処理順、事前条件、後始末を確認したいとき。
+- `cmoc session join` の処理順、事前条件、後始末を実装・修正・レビュー・テストしたいとき。
 - merge conflict 時の自動解消や手動復旧、`oracles` と禁止領域の扱いを追いたいとき。
-- 実装・修正・テスト・レビューで `src/sub_commands/session/join.py` の副作用境界を確認したいとき。
+- `src/sub_commands/session/join.py` の副作用境界や、merge 後に何が更新・削除されるかを確認したいとき。
 
 ## Do not read this when
 
@@ -89,4 +89,4 @@
 
 ## hash
 
-- e814ef544507baf3add5cb47101ee30b7e2cb206f676517fd5e20276717bb0f7
+- 227b758d743053171f82bfe3fb3e01c73579f4e8a70ec067ff0a9f7ea748c949

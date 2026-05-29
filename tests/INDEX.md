@@ -130,7 +130,7 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は、サブコマンド群の決定論的な制御ロジックを広く検証する統合テスト集です。
+- サブコマンド本体の決定論的な制御ロジックを広く検証する統合テスト群です。
 - `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`eval_oracles` の状態遷移と、Git ブランチ・worktree・state ファイル・レポート生成を扱います。
 - プロンプト本文、Structured Output schema、エラーハンドリング、禁止領域チェック、関連する補助関数の回帰も確認します。
 
@@ -139,16 +139,17 @@
 - `init`、`session`、`apply`、`eval_oracles` の実装を変更して、状態遷移や終了条件を確認したいとき。
 - Git ブランチ、worktree、state ファイル、レポート出力、エラーレポートの期待値を確認したいとき。
 - プロンプト生成、Structured Output schema、禁止パス検出、補助関数の回帰を確認したいとき。
+- CLI 入口の登録、`main` の委譲先、help 文言やエラー表示を確認したいとき。
 
 ## Do not read this when
 
 - 個別コマンドの正本仕様だけを確認したいとき。
 - `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
-- `test_codex.py`、`test_indexing.py`、`test_repo.py` など、別のテスト群の挙動だけを追いたいとき。
+- `test_codex.py`、`test_indexing.py`、`test_repo.py` など、別のテスト群だけを追いたいとき。
 
 ## hash
 
-- a3bd3a5303ef063a6c941575a5ad5dd5d492f7d4ed62d47df24a82f26943da67
+- cc75781735efabc89ed366bc027df0d3f47f5bdd5148b52847a31aee5058addf
 
 # `test_timestamps.py`
 
