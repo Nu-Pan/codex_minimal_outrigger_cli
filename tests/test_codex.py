@@ -2302,6 +2302,95 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
     assert "quota が復旧したため、codex exec を resume します" in captured
 
 
+def test_run_codex_exec_does_not_carry_resume_into_semantic_retry(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """quota resume 後の検証失敗からの retry は元コマンドで実行する。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    args_file = tmp_path / "args.txt"
+    state = tmp_path / "fresh_attempts.txt"
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                f"printf '%s\\n' '---CALL---' >> {args_file}",
+                f"printf '%s\\n' \"$@\" >> {args_file}",
+                "PROMPT=\"$(cat)\"",
+                "LAST=''",
+                "PREV=''",
+                "HAS_RESUME=0",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$ARG\" = \"resume\" ]; then HAS_RESUME=1; fi",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                "if [[ \"$PROMPT\" == *'Codex CLI の疎通確認担当'* ]]; then",
+                "  echo ok > \"$LAST\"",
+                "  echo '{\"event\":\"poll-ok\"}'",
+                "  exit 0",
+                "fi",
+                "if [ \"$HAS_RESUME\" = 1 ]; then",
+                "  echo '{\"ok\": false}' > \"$LAST\"",
+                "  echo '{\"event\":\"resumed-invalid\"}'",
+                "  exit 0",
+                "fi",
+                f"STATE={state}",
+                "COUNT=0",
+                "if [ -f \"$STATE\" ]; then COUNT=$(cat \"$STATE\"); fi",
+                "COUNT=$((COUNT + 1))",
+                "echo \"$COUNT\" > \"$STATE\"",
+                "if [ \"$COUNT\" = 1 ]; then",
+                "  echo '{\"type\":\"thread.started\","
+                "\"thread_id\":\"thread-1\"}'",
+                "  echo '{\"type\":\"error\","
+                "\"message\":\"Quota exceeded while running\"}'",
+                "  echo 'not a quota final message' > \"$LAST\"",
+                "  exit 1",
+                "fi",
+                "echo '{\"ok\": true}' > \"$LAST\"",
+                "echo '{\"event\":\"fresh-retry-ok\"}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setattr("commons.codex.time.sleep", lambda seconds: None)
+
+    def validate(value: object) -> None:
+        """`ok` が true になった試行だけを成功にする。"""
+        if not isinstance(value, dict) or value.get("ok") is not True:
+            raise ValueError("ok must be true.")
+
+    output = run_codex_exec(
+        repo,
+        "prompt",
+        read_only=True,
+        expect_json=True,
+        output_schema=_BOOLEAN_SCHEMA,
+        json_validator=validate,
+    )
+
+    command_blocks = [
+        block.strip().splitlines()
+        for block in args_file.read_text(encoding="utf-8").split("---CALL---")
+        if block.strip()
+    ]
+    assert output.strip() == '{"ok": true}'
+    assert state.read_text(encoding="utf-8").strip() == "2"
+    assert len(command_blocks) == 4
+    assert sum("resume" in block for block in command_blocks) == 1
+    assert "resume" not in command_blocks[-1]
+
+
 def test_run_codex_exec_waits_and_resumes_after_zero_exit_quota_jsonl(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,

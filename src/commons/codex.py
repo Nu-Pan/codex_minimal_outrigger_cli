@@ -107,16 +107,16 @@ def run_codex_exec(
     )
 
     # 必要なら output schema ファイルを準備する。call log と last message は実行単位で払い出す。
-    command = _build_codex_command(
+    base_command = _build_codex_command(
         read_only=read_only,
         model=model,
         reasoning_effort=reasoning_effort,
     )
-    _preflight_workspace_write_oracle_guard(repo_root, command)
+    _preflight_workspace_write_oracle_guard(repo_root, base_command)
     schema_path = _write_output_schema(repo_root, output_schema)
     if schema_path is not None:
-        command.extend(["--output-schema", str(schema_path)])
-    command.append("-")
+        base_command.extend(["--output-schema", str(schema_path)])
+    base_command.append("-")
 
     # last message 欠落も Codex CLI レスポンス要件の失敗として最大 3 回試行する。
     attempts = 3
@@ -127,6 +127,7 @@ def run_codex_exec(
     last_log_path: Path | None = None
     last_message_path: Path | None = None
     for attempt in range(1, attempts + 1):
+        command = [*base_command]
         # 利用者向けには prompt と回収出力の先頭だけを進捗表示する。
         _preflight_workspace_write_oracle_guard(repo_root, command)
         _maintain_indexes_before_codex(
@@ -161,18 +162,17 @@ def run_codex_exec(
         result = run.result
         last_log_path = run.log_path
         last_message_path = run.last_message_path
-        command = run.command
         last_stdout_log = result.stdout
         last_stderr = result.stderr
 
         # stdout JSONL の既知意味エラーは終了コードに依存せず扱う。
         if _stdout_jsonl_indicates_quota_exhaustion(result.stdout):
             session_id = _extract_session_id(result.stdout, result.stderr)
-            command = _resume_command(command, session_id)
+            resume_command = _resume_command(run.command, session_id)
             print("quota が枯渇したため、resume 前に復旧を待機します")
             run = _wait_for_quota_and_resume(
                 repo_root,
-                command,
+                resume_command,
                 prompt,
                 purpose,
                 attempt,
@@ -184,7 +184,6 @@ def run_codex_exec(
             result = run.result
             last_log_path = run.log_path
             last_message_path = run.last_message_path
-            command = run.command
             last_stdout_log = result.stdout
             last_stderr = result.stderr
 
