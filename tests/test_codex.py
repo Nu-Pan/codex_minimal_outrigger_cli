@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 from pytest import MonkeyPatch
 
+from commons.codex import _active_allowed_oracle_conflict_paths
 from commons.codex import _extract_session_id
 from commons.codex import _prepare_codex_exec_paths
 from commons.codex import _resume_command
@@ -299,6 +300,51 @@ def test_run_codex_exec_rejects_uncommitted_oracle_change_after_workspace_write(
     assert "oracles/spec.md" in error.value.detail
 
 
+def test_run_codex_exec_rejects_special_name_uncommitted_oracle_change(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """newline や tab を含む未コミット oracle path も guard で検出する。"""
+    repo = _init_git_repo(tmp_path)
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                "mkdir -p oracles",
+                "printf 'changed by codex\\n' > $'oracles/tab\\tline\\nspec.md'",
+                "echo 'ok' > \"$LAST\"",
+                "echo '{\"event\":\"done\"}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(
+            repo,
+            "prompt",
+            read_only=False,
+            skip_index_maintenance=True,
+        )
+
+    assert "oracles ファイルを変更しました" in error.value.message
+    assert "未コミット差分:" in error.value.detail
+    assert "oracles/tab\tline\nspec.md" in error.value.detail
+
+
 def test_run_codex_exec_rejects_workspace_write_without_head(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -396,6 +442,36 @@ def test_run_codex_exec_allows_active_oracle_conflict_resolution(
     assert (oracle_root / "spec.md").read_text(encoding="utf-8") == (
         "resolved oracle conflict\n"
     )
+
+
+def test_active_allowed_oracle_conflict_paths_preserves_special_path_tokens(
+    tmp_path: Path,
+) -> None:
+    """conflict 中 oracle path の例外判定でも newline や tab を保持する。"""
+    repo = _init_git_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    special = oracle_root / "conflict\tline\nspec.md"
+    special.write_text("base\n", encoding="utf-8")
+    _git(repo, "add", special.relative_to(repo).as_posix())
+    _git(repo, "commit", "-m", "add oracle")
+    _git(repo, "checkout", "-b", "session")
+    special.write_text("session\n", encoding="utf-8")
+    _git(repo, "add", special.relative_to(repo).as_posix())
+    _git(repo, "commit", "-m", "session oracle")
+    _git(repo, "checkout", "master")
+    special.write_text("home\n", encoding="utf-8")
+    _git(repo, "add", special.relative_to(repo).as_posix())
+    _git(repo, "commit", "-m", "home oracle")
+    with pytest.raises(subprocess.CalledProcessError):
+        _git(repo, "merge", "session")
+
+    relative_path = special.relative_to(repo).as_posix()
+
+    assert _active_allowed_oracle_conflict_paths(
+        repo,
+        [relative_path],
+    ) == (relative_path,)
 
 
 def test_run_codex_exec_rejects_allowed_oracle_path_without_active_conflict(
@@ -496,6 +572,58 @@ def test_run_codex_exec_rejects_committed_oracle_change_after_workspace_write(
     assert "Codex CLI 実行中の commit range 変更:" in error.value.detail
     assert "oracles/spec.md" in error.value.detail
     assert _git(repo, "status", "--porcelain", "--", "oracles").stdout == ""
+
+
+def test_run_codex_exec_rejects_special_name_committed_oracle_move_out(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """commit range 内の oracle 外 rename は特殊 path でも旧 path で検出する。"""
+    repo = _init_git_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    old_path = oracle_root / "old\tline\nspec.md"
+    old_path.write_text("base oracle\n", encoding="utf-8")
+    _git(repo, "add", old_path.relative_to(repo).as_posix())
+    _git(repo, "commit", "-m", "add oracle")
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                "mkdir -p docs",
+                "git mv $'oracles/old\\tline\\nspec.md' docs/moved.md",
+                "git commit -m 'move oracle out' >/dev/null",
+                "echo 'ok' > \"$LAST\"",
+                "echo '{\"event\":\"done\"}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(
+            repo,
+            "prompt",
+            read_only=False,
+            skip_index_maintenance=True,
+        )
+
+    assert "oracles ファイルを変更しました" in error.value.message
+    assert "commit range 変更:" in error.value.detail
+    assert "oracles/old\tline\nspec.md" in error.value.detail
 
 
 def test_run_codex_exec_rejects_hidden_oracle_commit_after_workspace_write(

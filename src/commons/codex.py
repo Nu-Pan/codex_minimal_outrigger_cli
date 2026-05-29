@@ -15,7 +15,13 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError, ValidationError
 
 from .errors import CmocError
-from .repo import filter_oracle_file_paths, run_git
+from .repo import (
+    filter_oracle_file_paths,
+    git_name_only_paths,
+    git_name_status_entries,
+    git_status_paths,
+    run_git,
+)
 from .subcommand_log import add_quota_wait
 from .subcommand_log import log_event
 from .timing import format_duration
@@ -663,13 +669,9 @@ def _active_allowed_oracle_conflict_paths(
         return ()
     unmerged = run_git(
         repo_root,
-        ["diff", "--name-only", "--diff-filter=U"],
+        ["diff", "--name-only", "-z", "--diff-filter=U"],
     )
-    active = {
-        line
-        for line in unmerged.stdout.splitlines()
-        if line
-    }
+    active = set(git_name_only_paths(unmerged.stdout))
     return tuple(
         sorted(
             filter_oracle_file_paths(
@@ -703,16 +705,24 @@ def _uncommitted_oracle_file_paths(repo_root: Path) -> list[str]:
     relative_paths: list[str] = []
     diff = run_git(
         repo_root,
-        ["diff", "--name-status", "-M", "HEAD", "--", "oracles"],
+        ["diff", "--name-status", "-z", "-M", "HEAD", "--", "oracles"],
     )
-    relative_paths.extend(_paths_from_name_status(diff.stdout))
+    relative_paths.extend(_paths_from_name_status_z(diff.stdout))
     status = run_git(
         repo_root,
-        ["status", "--porcelain", "--untracked-files=all", "--", "oracles"],
+        [
+            "status",
+            "--porcelain=v1",
+            "-z",
+            "--untracked-files=all",
+            "--",
+            "oracles",
+        ],
     )
-    for line in status.stdout.splitlines():
-        if line.startswith("?? "):
-            relative_paths.append(line[3:])
+    relative_paths.extend(
+        path for status_code, path in git_status_paths(status.stdout)
+        if status_code == "??"
+    )
     return filter_oracle_file_paths(repo_root, relative_paths)
 
 
@@ -751,6 +761,7 @@ def _committed_oracle_file_paths(
             "log",
             "--format=",
             "--name-status",
+            "-z",
             "-M",
             "--diff-filter=ACDMRT",
             f"{before_head}..HEAD",
@@ -762,7 +773,7 @@ def _committed_oracle_file_paths(
         None,
         filter_oracle_file_paths(
             repo_root,
-            _paths_from_name_status(log.stdout),
+            _paths_from_name_status_z(log.stdout),
         ),
     )
 
@@ -817,6 +828,7 @@ def _head_reflog_oracle_file_paths(
                 "log",
                 "--format=",
                 "--name-status",
+                "-z",
                 "-M",
                 "--diff-filter=ACDMRT",
                 f"{commit}^!",
@@ -826,23 +838,17 @@ def _head_reflog_oracle_file_paths(
             check=False,
         )
         if log.returncode == 0:
-            paths.extend(_paths_from_name_status(log.stdout))
+            paths.extend(_paths_from_name_status_z(log.stdout))
     return (None, filter_oracle_file_paths(repo_root, paths))
 
 
-def _paths_from_name_status(output: str) -> list[str]:
-    """`git diff --name-status` の変更前後 path を取り出す。"""
+def _paths_from_name_status_z(output: str) -> list[str]:
+    """`git diff --name-status -z` の変更前後 path を取り出す。"""
     # rename/copy では旧 path と新 path の両方を検査し、oracle から外への移動も
     # oracle ファイル変更として検出できるようにする。
     paths: list[str] = []
-    for line in output.splitlines():
-        parts = line.split("\t")
-        if not parts:
-            continue
-        if parts[0].startswith(("R", "C")) and len(parts) >= 3:
-            paths.extend([parts[1], parts[2]])
-        elif len(parts) >= 2:
-            paths.append(parts[1])
+    for _status, entry_paths in git_name_status_entries(output):
+        paths.extend(entry_paths)
     return paths
 
 
