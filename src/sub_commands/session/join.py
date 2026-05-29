@@ -8,9 +8,9 @@ from commons.codex import run_codex_exec
 from commons.command_runner import run_command
 from commons.errors import CmocError
 from commons.repo import (
-    assert_cmoc_ignored,
     assert_no_uncommitted_changes,
     current_branch,
+    ensure_cmoc_ignored,
     is_session_branch,
     read_session_state,
     run_git,
@@ -44,7 +44,8 @@ def cmoc_session_join_impl(repo_root: Path | None = None) -> None:
         assert_no_uncommitted_changes(repo_root)
 
         start_step(timer, 2, 5, "ensure .cmoc is ignored")
-        assert_cmoc_ignored(repo_root)
+        ensure_cmoc_ignored(repo_root)
+        assert_no_uncommitted_changes(repo_root)
 
         start_step(timer, 3, 5, "switch to session home branch")
         _assert_local_branch_exists(repo_root, home_branch)
@@ -211,8 +212,8 @@ def _resolve_conflicts(repo_root: Path) -> None:
         protected_snapshot,
     )
 
-    # Codex が conflict 対象外へ marker を残した場合も、add 前に検出する。
-    marker_files = _files_with_conflict_markers(repo_root)
+    # conflict 対象に marker が残っていないことを add 前に検出する。
+    marker_files = _files_with_conflict_markers(repo_root, unmerged)
     if marker_files:
         raise CmocError(
             "Codex CLI による解消後も conflict marker が残っています。",
@@ -278,16 +279,18 @@ def _files_with_conflict_markers(
     paths: list[str] | None = None,
 ) -> list[str]:
     """conflict marker が残るファイルを列挙する。"""
-    # paths は後方互換のため受け取るが、仕様上は git 管理対象全体を検査する。
-    del paths
     matches: list[str] = []
-    result = run_git(repo_root, ["ls-files", "-z"])
-    tracked_paths = {
-        relative
-        for relative in result.stdout.split("\0")
-        if relative
-    }
-    for relative in sorted(tracked_paths):
+    if paths is None:
+        result = run_git(repo_root, ["ls-files", "-z"])
+        target_paths = {
+            relative
+            for relative in result.stdout.split("\0")
+            if relative
+        }
+    else:
+        target_paths = {relative for relative in paths if relative}
+
+    for relative in sorted(target_paths):
         path = repo_root / relative
         if not path.exists() or not path.is_file():
             continue

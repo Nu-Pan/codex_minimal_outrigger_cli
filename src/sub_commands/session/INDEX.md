@@ -41,7 +41,7 @@
 
 ## hash
 
-- 7d65a039f9fe0c4bc6376396290a92051ab9e7041b039bacc83c58e13f6b1fa6
+- 83f293c0fe6cbc1e72e8e7d05679d4c3d7252fa35a1f030518023b5584ee309f
 
 # `fork.py`
 
@@ -71,22 +71,22 @@
 
 ## Summary
 
-- `cmoc session join` の本体処理を実装するモジュールで、直接呼び出し時は共通 runner に委譲する。
-- session state の妥当性確認、session branch から home branch への `git merge --no-ff`、完了後の `joined` 記録と branch 後始末を扱う。
-- merge conflict 時は Codex CLI に marker 解消を依頼し、禁止領域や対象外差分の混入を検査する。
+- `src/sub_commands/session/join.py` は `cmoc session join` の本体処理を実装するモジュールです。
+- 現在の session branch が active で `apply.state = ready` であることを確認し、session home branch へ `git merge --no-ff` します。
+- merge conflict 発生時は禁止領域や対象外差分を検査し、Codex CLI に marker 解消を依頼したうえで、merge 後の `session.state` 更新と session branch の削除可否判定まで行います。
 
 ## Read this when
 
-- `cmoc session join` の実装・修正・レビュー・テストで、処理順や副作用の境界を確認したいとき。
-- session state の前提条件、home branch の特定、merge 後の `session.state` 更新や branch 削除条件を追いたいとき。
-- merge conflict 解消の依頼方法、`oracles` を含む保護対象の扱い、手動復旧が必要になる条件を確認したいとき。
+- `cmoc session join` の処理順、事前条件、後始末を確認したいとき。
+- merge conflict 時の自動解消や手動復旧、`oracles` と禁止領域の扱いを追いたいとき。
+- 実装・修正・テスト・レビューで `src/sub_commands/session/join.py` の副作用境界を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc session fork` や `cmoc session abandon` の処理だけを確認したいとき。
-- `cmoc apply` 系の開始・終了や、一般的な `git merge` の解説だけで足りるとき。
-- `cmoc session join` の利用手順だけを知りたくて、実装や conflict 処理の詳細は不要なとき。
+- `cmoc session fork` や `cmoc session abandon` の作成・破棄手順だけを確認したいとき。
+- `cmoc apply` 側の開始・終了や、一般的な `git merge` の説明だけで足りるとき。
+- 利用手順だけを知りたくて、conflict 解消や state 更新の実装詳細が不要なとき。
 
 ## hash
 
-- 8b9dc751932cdf47880edeced408f0464c637796645f93f46f0b1e420d7bcdd6
+- d7e0d1bad413766fee2da28e2ff682193a30d13294dd954c7590349e25dfb2d2

@@ -5,9 +5,9 @@ from pathlib import Path
 from commons.command_runner import run_command
 from commons.errors import CmocError
 from commons.repo import (
-    assert_cmoc_ignored,
     assert_no_uncommitted_changes,
     current_branch,
+    ensure_cmoc_ignored,
     is_session_branch,
     read_session_state,
     run_git,
@@ -36,7 +36,8 @@ def cmoc_session_abandon_impl(repo_root: Path | None = None) -> None:
     assert_no_uncommitted_changes(repo_root)
 
     start_step(timer, 2, 4, "ensure .cmoc is ignored")
-    assert_cmoc_ignored(repo_root)
+    ensure_cmoc_ignored(repo_root)
+    assert_no_uncommitted_changes(repo_root)
 
     start_step(timer, 3, 4, "switch to session home branch")
     try:

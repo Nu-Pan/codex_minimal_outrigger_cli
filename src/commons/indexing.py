@@ -5,6 +5,7 @@ import hashlib
 import os
 import re
 import subprocess
+import tempfile
 from collections.abc import Iterable
 from pathlib import Path
 from urllib.parse import unquote
@@ -162,14 +163,8 @@ def _write_index_if_needed(
     """現在の直下項目から INDEX.md を更新し、差分があれば書く。"""
     # 既存 INDEX.md の内容と、再利用可能な目次ブロックを読み込む。
     index_path = directory / "INDEX.md"
-    index_exists = index_path.exists()
-    try:
-        old_content = (
-            index_path.read_text(encoding="utf-8") if index_exists else ""
-        )
-    except (OSError, UnicodeDecodeError):
-        old_content = ""
-    existing_entries = _parse_index_entries(old_content)
+    old_content = _read_existing_index_content(index_path)
+    existing_entries = _parse_index_entries(old_content or "")
     entries: list[str] = []
 
     # 目次作成対象の除外条件だけを使い、配置対象除外名とは切り分ける。
@@ -191,10 +186,56 @@ def _write_index_if_needed(
     if new_content:
         new_content += "\n"
 
-    if index_exists and old_content == new_content:
+    if (
+        old_content is not None
+        and index_path.exists()
+        and old_content == new_content
+    ):
         return False
-    index_path.write_text(new_content, encoding="utf-8")
+    _replace_index_file(index_path, new_content)
     return True
+
+
+def _read_existing_index_content(index_path: Path) -> str | None:
+    """既存 INDEX.md の通常ファイル内容を読み、symlink は再利用しない。"""
+    # INDEX.md symlink はリンク先を読まず、後段で通常ファイルへ置き換える。
+    if index_path.is_symlink():
+        return None
+    if not index_path.exists():
+        return ""
+    if not index_path.is_file():
+        raise CmocError(
+            "INDEX.md が通常ファイルではありません。",
+            [
+                "該当 path のファイル種別を確認してください。",
+                "通常ファイルとして再作成してから cmoc を再実行してください。",
+            ],
+            str(index_path),
+        )
+    try:
+        return index_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return ""
+
+
+def _replace_index_file(index_path: Path, content: str) -> None:
+    """INDEX.md を同一ディレクトリ内の一時ファイルから通常ファイルへ置換する。"""
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=index_path.parent,
+            prefix=".INDEX.md.",
+            suffix=".tmp",
+            delete=False,
+        ) as temporary_file:
+            temporary_file.write(content)
+            temporary_path = Path(temporary_file.name)
+        os.replace(temporary_path, index_path)
+    finally:
+        if temporary_path is not None and temporary_path.exists():
+            temporary_path.unlink()
 
 
 def _entry_for(repo_root: Path, path: Path, digest: str) -> str:
@@ -403,13 +444,14 @@ class _GitignoreMatcher:
                 "-c",
                 f"core.excludesFile={os.devnull}",
                 "check-ignore",
+                "-z",
                 "--no-index",
                 "--stdin",
             ],
             cwd=self._repo_root,
             check=False,
-            input="\n".join(relatives) + "\n",
-            text=True,
+            input=b"\0".join(os.fsencode(relative) for relative in relatives)
+            + b"\0",
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=_gitignore_git_env(),
@@ -422,9 +464,13 @@ class _GitignoreMatcher:
                     "cmoc を再実行してください。",
                     "一時的に ignore rule を単純化してから cmoc を再実行してください。",
                 ],
-                result.stderr.strip(),
+                result.stderr.decode(errors="replace").strip(),
             )
-        ignored = set(result.stdout.splitlines())
+        ignored = {
+            os.fsdecode(relative)
+            for relative in result.stdout.split(b"\0")
+            if relative
+        }
         return {relative: relative in ignored for relative in relatives}
 
 
@@ -486,7 +532,10 @@ def _safe_index_text(value: str) -> str:
         character if _is_index_text_character(character) else " "
         for character in value
     )
-    return re.sub(r"\s+", " ", text).strip()
+    text = re.sub(r"\s+", " ", text).strip()
+    # Structured Output の項目文字列は「本文」として扱い、Markdown bullet は
+    # cmoc 側で 1 つだけ付与する。
+    return re.sub(r"^(?:[-*+]\s+)+", "", text).strip()
 
 
 def _is_index_text_character(character: str) -> bool:
@@ -551,6 +600,9 @@ def _entry_format_is_valid(entry: str, name: str, digest: str) -> bool:
     """既存目次ブロックが仕様の固定フォーマットに一致するか判定する。"""
     # 見出しと 4 セクションの順序、説明欄の bullet 形式まで検査する。
     # Structured Output schema は空配列を許容するため、bullet 0 件も有効。
+    if _entry_has_known_command_typo(entry):
+        return False
+
     encoded_name = _encode_index_token(name)
     expected_heading = f"# `{encoded_name}`"
     if not entry.startswith(expected_heading + "\n"):
@@ -573,3 +625,15 @@ def _entry_format_is_valid(entry: str, name: str, digest: str) -> bool:
         r"\Z"
     )
     return pattern.match(entry) is not None
+
+
+def _entry_has_known_command_typo(entry: str) -> bool:
+    """既知の cmoc コマンド名 typo を含む古い routing entry を弾く。"""
+    # `cmo apply fork` のような誤誘導は hash が最新でも再生成対象にする。
+    return (
+        re.search(
+            r"(?<![A-Za-z0-9_-])cmo\s+(?:init|session|review|apply)\b",
+            entry,
+        )
+        is not None
+    )

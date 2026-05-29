@@ -23,26 +23,27 @@
 
 ## Summary
 
-- Codex CLI 呼び出しの共通ラッパーで、`codex exec` の起動、`--output-last-message` を含む実行ログ保存、`resume` による再開、quota 待機と再開をまとめるモジュールです。
-- Structured Output 用の `--output-schema` ファイル生成とキャッシュ、JSON 解析、JSON Schema 検証、意味検査までを扱います。
-- workspace-write 実行時の `oracles` 変更検査、`INDEX.md` の事前メンテナンス、model と reasoning_effort の制約も含みます。
+- Codex CLI の共通実行処理をまとめたモジュールで、`codex exec` のコマンド組み立て、`--output-last-message` の付与、実行ログ保存、`resume` 再開を扱います。
+- Structured Output 用の `--output-schema` ファイル生成と再利用、JSON の解析、JSON Schema 検証、呼び出し結果の意味検査を含みます。
+- quota 枯渇時のポーリング待機、capacity 一時失敗の指数バックオフ再試行、`workspace-write` 時の `oracles` 変更検査、`INDEX.md` 事前メンテナンスも実装されています。
 
 ## Read this when
 
-- Codex CLI の呼び出し方法、`read-only` と `workspace-write` の切り替え、`codex exec` のコマンド組み立てを確認したいとき。
-- Structured Output の schema 保存・キャッシュ、JSON 解析、JSON Schema 検証、意味検査の流れを見直したいとき。
-- quota 枯渇時の待機と `resume` 再開、capacity の再試行、`oracles` 保護や `INDEX.md` 事前メンテナンスの挙動を追いたいとき。
-- 呼び出しログ、`--output-last-message`、model と reasoning_effort の制約、実行結果の診断情報を確認したいとき。
+- Codex CLI 呼び出しの共通処理や、`read_only` / `workspace-write` の切り替えを確認したいとき。
+- Structured Output の schema ファイル生成、JSON 解析、JSON Schema 検証、出力の意味検査を見直したいとき。
+- quota 待機と `resume` 再開、capacity 一時失敗の指数バックオフ再試行、失敗時の診断情報を追いたいとき。
+- workspace-write 実行時の `oracles` 保護、実行前の `INDEX.md` メンテナンス、呼び出しログの保存方法を確認したいとき。
 
 ## Do not read this when
 
-- `codex exec` 以外のサブコマンド本体や、個別の業務ロジックを確認したいとき。
-- `INDEX.md` の自動生成ルールや、`oracles` 側の目次仕様だけを確認したいとき。
-- ファイル操作、テスト実装、`repo.py` や `errors.py` など別の共通モジュールの挙動だけを追いたいとき。
+- `codex exec` の基本的な使い方や個別オプションの詳細だけを確認したいとき。
+- `INDEX.md` の生成・維持ルールそのものを確認したいとき。
+- `repo.py`、`errors.py`、`indexing.py` など別の共通モジュールだけを追いたいとき。
+- 個別サブコマンドの業務ロジックや CLI 引数定義だけを確認したいとき。
 
 ## hash
 
-- ac361903a3b7967c15f89bf1dd37f333fdc21885d80fc828b0a425912397d6b2
+- e8132a2e299d5409e709cce33790967569f63e95806117c8cb1c937ce4187038
 
 # `command_runner.py`
 
@@ -102,56 +103,53 @@
 
 ## Summary
 
-- `INDEX.md` の生成・維持処理をまとめたモジュールです。
-- リポジトリを走査して、`.gitignore`、`.git/info/exclude`、`memo`、`build` / `tmp`、dotfiles、symlink、バイナリ、`INDEX.md` 自身を除外しながら、目次対象の直下項目を決めます。
-- 既存の `INDEX.md` ブロックを解析し、ハッシュと固定フォーマットが一致するものは再利用し、崩れたものは再生成します。
-- Structured Output の schema 検証、目次生成プロンプトの組み立て、Markdown 変換、gitignore 判定の補助処理も含みます。
+- `INDEX.md` の生成・維持処理を担うモジュールです。
+- リポジトリ配下を走査して、`.gitignore`、`.git/info/exclude`、`memo`、`build` / `tmp`、dotfile、symlink、バイナリ、既存 `INDEX.md` などを除外しながら目次対象を決めます。
+- 既存の `INDEX.md` ブロックを解析し、ハッシュと形式が一致する場合は再利用し、崩れている場合は再生成します。
+- Structured Output の schema 検証、生成プロンプトの組み立て、Markdown 変換、gitignore 判定補助、自動コミットの流れを含みます。
 
 ## Read this when
 
-- `INDEX.md` の自動生成・更新ルールを実装または修正したいとき。
-- 直下項目の列挙条件、除外条件、ハッシュ再利用の判定を確認したいとき。
-- Structured Output の schema 検証、目次生成用プロンプト、Markdown 変換の流れを追いたいとき。
-- gitignore 判定やバイナリ判定を含む、INDEX メンテナンスの補助処理を見直したいとき。
+- `INDEX.md` の自動生成・更新ロジックを実装または修正したいとき。
+- 直下項目の列挙条件、除外条件、再利用条件、ハッシュ更新判定を確認したいとき。
+- Structured Output の schema 検証、Codex 生成プロンプト、Markdown 変換、gitignore やバイナリ判定の補助処理を追いたいとき。
+- `INDEX.md` 差分だけを自動コミットする流れや、更新対象範囲の決め方を見直したいとき。
 
 ## Do not read this when
 
-- `codex exec` の汎用的な呼び出し方だけを知りたいときは、`src/commons/codex.py` を読むべきです。
-- 共通エラー処理、タイムスタンプ、サブコマンドログ、リポジトリ探索など、`INDEX.md` メンテナンス以外の共通機能を調べたいときは別モジュールを読むべきです。
-- `INDEX.md` の正本仕様だけを確認したいときは、`oracles/app_specs/indexing.md` を読むべきです。
+- `codex exec` の起動方法や `--output-schema` の一般的な使い方だけを確認したいとき。
+- 共通エラーハンドリングやサブコマンド実行制御だけを確認したいとき。
+- `INDEX.md` の正本仕様そのものを確認したいときは、このモジュールではなく対応する `oracles` 側を読むべきです。
+- `repo.py` や `errors.py` など別の共通モジュールだけを追いたいとき。
 
 ## hash
 
-- cb8403ff8ed29965811c4617e5972ba734e69a3ce7db1431f0573ccfb65bed6d
+- 7b01aac47ce43ef06d2df987fedea589cf3fdb65eceb033c028d892fdb56f87f
 
 # `repo.py`
 
 ## Summary
 
-- git リポジトリのルート探索、現在ブランチや HEAD の取得、`cmoc/session/...` と `cmoc/apply/...` の branch 判定、session id 抽出、apply worktree path 復元を扱う共通モジュールです。
-- session state JSON の初期値生成、保存、読込、固定スキーマ検証、state 値の妥当性確認、active session の列挙を扱います。
-- `.cmoc` を追跡対象外に保つ保証、未コミット差分の検査、`pathspec` 単位の commit、`cmoc init` 用差分の分離と復元、root `.gitignore` の評価補助も含みます。
-- `oracles` と実装ファイルの列挙、変更検出、削除検出を通じて、部分評価と部分適用の切り替え判断を支える機能もまとめています。
+- `git` リポジトリと cmoc 作業ディレクトリの共通処理をまとめたモジュールです。
+- repo root 探索、branch 判定、session id 抽出、apply worktree パス復元、session state の保存・読込・検証を扱います。
+- `.cmoc` の ignore 保証、未コミット差分の検査、pathspec commit、`oracles` / 実装ファイルの列挙と変更・削除検出、root `.gitignore` の評価補助も含みます。
 
 ## Read this when
 
-- リポジトリルート探索や、現在の作業ディレクトリを git リポジトリの root に合わせたいときに読むべきです。
-- `cmoc session` / `cmoc apply` の branch 判定、session id 抽出、apply worktree パス復元を実装・修正したいときに読むべきです。
-- session state JSON の保存、読込、スキーマ検証、state 値の妥当性確認、active session の列挙を確認したいときに読むべきです。
-- `.cmoc` を git 追跡対象外に保つ保証、未コミット差分の検査、`cmoc init` 時の差分分離や commit ロジックを見直したいときに読むべきです。
-- 部分評価や部分適用のための変更ファイル列挙、削除検出、root `.gitignore` の評価方法を追いたいときに読むべきです。
+- git リポジトリルート探索、現在ブランチ、HEAD、`cmoc/session/...` と `cmoc/apply/...` の branch 判定を確認したいとき。
+- session state JSON の保存・読込・固定スキーマ検証、active session の列挙を確認したいとき。
+- `.cmoc` を追跡対象外に保つ保証、未コミット差分の検査、`cmoc init` 向けの差分分離と commit ロジックを追いたいとき。
+- `oracles` と実装ファイルの列挙、変更検出、削除検出、root `.gitignore` の評価方法を確認したいとき。
 
 ## Do not read this when
 
-- ユーザー向けの `cmoc` サブコマンドの使い方だけを確認したいときは、このモジュールではなく `src/sub_commands` 側を読むべきです。
-- 共通エラー整形だけを確認したいときは `src/commons/errors.py` を、タイムスタンプだけなら `src/commons/timestamps.py` を読むべきです。
-- サブコマンドログや経過時間表示を調べたいときは `src/commons/subcommand_log.py` や `src/commons/timing.py` を読むべきです。
-- `codex exec` 呼び出し、Structured Output、`INDEX.md` 自動生成の仕組みだけを確認したいときは、このモジュールではなく `src/commons/codex.py` や `src/commons/indexing.py`、対応する正本仕様を読むべきです。
-- `.cmoc` のルーティングや保持ルールそのものではなく、ファイル配置や目次生成だけを見たいときは、このモジュールを読む必要はありません。
+- 個別サブコマンドの引数や実行手順だけを確認したいとき。
+- `src/commons/errors.py` や `src/commons/indexing.py` など、別の共通モジュールだけを追いたいとき。
+- `.cmoc` の追跡対象外保証や git 操作の細部ではなく、CLI 仕様やワークフロー仕様だけを確認したいとき。
 
 ## hash
 
-- 3c22c1c88b9cceceabaddc2e7e457554f4b05a83d149219d35ec62cebe1fa2e7
+- a0bbb8c8e23d7f160a0c39ab19940007b95c4e6eaf779b97bca6f8ce24bddda3
 
 # `subcommand_log.py`
 

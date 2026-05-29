@@ -39,6 +39,7 @@ from sub_commands.apply.abandon import cmoc_apply_abandon_impl
 from sub_commands.apply.join import cmoc_apply_join_impl
 from sub_commands.eval_oracles import cmoc_eval_oracles_impl
 from sub_commands.eval_oracles import _evaluation_prompt
+from sub_commands.eval_oracles import _improvement_prompt
 from sub_commands.init import cmoc_init_impl
 from sub_commands.session.abandon import cmoc_session_abandon_impl
 from sub_commands.session.fork import cmoc_session_fork_impl
@@ -932,10 +933,17 @@ def test_eval_oracles_writes_report_with_fake_codex(
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
 
+    maintain_calls: list[Path] = []
+
+    def fake_maintain_indexes(repo_root: Path) -> bool:
+        """review oracles 冒頭の INDEX.md メンテナンスを記録する。"""
+        maintain_calls.append(repo_root)
+        return False
+
     monkeypatch.setattr(
         eval_oracles_module,
         "maintain_indexes",
-        lambda repo_root: False,
+        fake_maintain_indexes,
     )
     codex_kwargs: list[dict[str, object]] = []
 
@@ -943,35 +951,88 @@ def test_eval_oracles_writes_report_with_fake_codex(
         """不整合なしの oracle 評価結果を返す Codex 実行を模擬する。"""
         codex_kwargs.append(kwargs)
         return json.dumps(
-            {
-                "target_oracle_path": str((oracle_root / "spec.md").resolve()),
-                "referenced_paths": [
-                    str((oracle_root / "spec.md").resolve()),
-                ],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
-                "issues": [],
-            },
+            {"issues": []},
             ensure_ascii=False,
         )
 
     monkeypatch.setattr(eval_oracles_module, "run_codex_exec", fake_codex)
 
-    cmoc_eval_oracles_impl(repo, full=True)
+    cmoc_eval_oracles_impl(repo, full=True, repeat_improve_issues_list=0)
 
-    reports = list((repo / ".cmoc" / "reports" / "eval-oracles").glob("*.md"))
+    reports = list((repo / ".cmoc" / "reports" / "review_oracles").glob("*.md"))
     assert len(reports) == 1
     report = reports[0].read_text(encoding="utf-8")
+    assert maintain_calls == [repo]
     assert codex_kwargs[0]["expect_json"] is True
     assert codex_kwargs[0]["output_schema"] == (
         eval_oracles_module._EVALUATION_OUTPUT_SCHEMA
     )
+    assert codex_kwargs[0]["skip_index_maintenance"] is True
     assert "json_validator" in codex_kwargs[0]
     assert "mode: full" in report
     assert "result: ok" in report
     assert "## Fatal issues" in report
     assert "No issues." in report
-    assert "## Specification-only basis" in report
-    assert "| 1 | `oracles/spec.md` | oracles 配下の仕様だけを参照しました。 |" in report
+    assert "## Specification-only basis" not in report
+
+
+def test_eval_oracles_freezes_snapshot_before_index_maintenance(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """review 対象と report head は INDEX.md メンテナンス前に固定する。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    original_oracle = oracle_root / "original.md"
+    original_oracle.write_text("original\n", encoding="utf-8")
+    _git(repo, "add", "oracles")
+    _git(repo, "commit", "-m", "add original oracle")
+    review_start_head = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    maintain_exclusions: list[list[str]] = []
+
+    def fake_maintain_indexes(
+        repo_root: Path,
+        *,
+        excluded_index_roots: list[str],
+    ) -> bool:
+        """メンテナンス中に HEAD と oracle file set が動く状況を模擬する。"""
+        maintain_exclusions.append(excluded_index_roots)
+        (repo_root / "oracles" / "generated.md").write_text(
+            "generated\n",
+            encoding="utf-8",
+        )
+        (repo_root / "INDEX.md").write_text("index\n", encoding="utf-8")
+        _git(repo_root, "add", "INDEX.md", "oracles/generated.md")
+        _git(repo_root, "commit", "-m", "fake index maintenance")
+        return True
+
+    monkeypatch.setattr(
+        eval_oracles_module,
+        "maintain_indexes",
+        fake_maintain_indexes,
+    )
+    evaluated_purposes: list[str] = []
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """固定済み oracle だけが評価されることを記録する。"""
+        evaluated_purposes.append(str(kwargs["purpose"]))
+        return json.dumps({"issues": []}, ensure_ascii=False)
+
+    monkeypatch.setattr(eval_oracles_module, "run_codex_exec", fake_codex)
+
+    cmoc_eval_oracles_impl(repo, full=True, repeat_improve_issues_list=0)
+
+    report = next(
+        (repo / ".cmoc" / "reports" / "review_oracles").glob("*.md")
+    ).read_text(encoding="utf-8")
+    assert maintain_exclusions == [["oracles"]]
+    assert evaluated_purposes == ["oracle 評価 oracles/original.md"]
+    assert f"head_commit: {review_start_head}" in report
+    assert "oracle_count_total: 1" in report
+    assert "oracle_count_evaluated: 1" in report
+    assert "oracles/generated.md" not in report
 
 
 def test_eval_oracles_writes_error_report_when_evaluation_fails(
@@ -999,7 +1060,7 @@ def test_eval_oracles_writes_error_report_when_evaluation_fails(
     with pytest.raises(RuntimeError, match="fake evaluation failure"):
         cmoc_eval_oracles_impl(repo, full=True)
 
-    reports = list((repo / ".cmoc" / "reports" / "eval-oracles").glob("*.md"))
+    reports = list((repo / ".cmoc" / "reports" / "review_oracles").glob("*.md"))
     assert len(reports) == 1
     report = reports[0].read_text(encoding="utf-8")
     assert "result: error" in report
@@ -1008,11 +1069,10 @@ def test_eval_oracles_writes_error_report_when_evaluation_fails(
     assert "- Failed stage: `oracle ファイル評価`" in report
     assert "- Exception type: `RuntimeError`" in report
     assert "- Exception message: `fake evaluation failure`" in report
-    assert "# cmoc eval-oracles report" in report
+    assert "# cmoc review oracles report" in report
     assert "## Summary" in report
     assert "## Verdict" in report
-    assert "## Specification-only basis" in report
-    assert "No completed evaluations." in report
+    assert "## Specification-only basis" not in report
     assert "成功評価ではありません" in report
     assert "今回評価した範囲では問題点が検出されませんでした" not in report
     assert "## Evaluated oracle files" in report
@@ -1045,19 +1105,19 @@ def test_eval_oracles_writes_error_report_when_preparation_fails(
     with pytest.raises(RuntimeError, match="fake preparation failure"):
         cmoc_eval_oracles_impl(repo, full=True)
 
-    reports = list((repo / ".cmoc" / "reports" / "eval-oracles").glob("*.md"))
+    reports = list((repo / ".cmoc" / "reports" / "review_oracles").glob("*.md"))
     assert len(reports) == 1
     report = reports[0].read_text(encoding="utf-8")
     assert "result: error" in report
-    assert "mode: unknown" in report
-    assert "branch: null" in report
-    assert "head_commit: null" in report
-    assert "deleted_oracles_detected: null" in report
-    assert "oracle_count_total: null" in report
+    assert "mode: full" in report
+    assert "branch:" in report
+    assert "head_commit: null" not in report
+    assert "deleted_oracles_detected: false" in report
+    assert "oracle_count_total: 1" in report
     assert "oracle_count_evaluated: 0" in report
     assert "- Failed stage: `maintain INDEX.md files`" in report
     assert "| - | No completed evaluations. | - |" in report
-    assert "No requested oracle files remained unevaluated." in report
+    assert "1. `oracles/spec.md`" in report
 
 
 def test_eval_oracles_error_report_separates_unevaluated_files(
@@ -1087,12 +1147,7 @@ def test_eval_oracles_error_report_separates_unevaluated_files(
         if calls == 2:
             raise RuntimeError("fake second evaluation failure")
         return json.dumps(
-            {
-                "target_oracle_path": str(oracle_a.resolve()),
-                "referenced_paths": [str(oracle_a.resolve())],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
-                "issues": [],
-            },
+            {"issues": []},
             ensure_ascii=False,
         )
 
@@ -1102,12 +1157,11 @@ def test_eval_oracles_error_report_separates_unevaluated_files(
         cmoc_eval_oracles_impl(repo, full=True)
 
     report = next(
-        (repo / ".cmoc" / "reports" / "eval-oracles").glob("*.md")
+        (repo / ".cmoc" / "reports" / "review_oracles").glob("*.md")
     ).read_text(encoding="utf-8")
     assert "oracle_count_total: 2" in report
     assert "oracle_count_evaluated: 1" in report
-    assert "## Specification-only basis" in report
-    assert "| 1 | `oracles/a.md` | oracles 配下の仕様だけを参照しました。 |" in report
+    assert "## Specification-only basis" not in report
     assert "| 1 | `oracles/a.md` | 0 |" in report
     assert "| 2 | `oracles/b.md` | 0 |" not in report
     assert "Not evaluated oracle files:" in report
@@ -1134,12 +1188,7 @@ def test_eval_oracles_writes_error_report_when_report_generation_fails(
     def fake_codex(*args: object, **kwargs: object) -> str:
         """レポート生成前までは成功する Codex 実行を模擬する。"""
         return json.dumps(
-            {
-                "target_oracle_path": str(oracle_file.resolve()),
-                "referenced_paths": [str(oracle_file.resolve())],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
-                "issues": [],
-            },
+            {"issues": []},
             ensure_ascii=False,
         )
 
@@ -1157,7 +1206,7 @@ def test_eval_oracles_writes_error_report_when_report_generation_fails(
     with pytest.raises(OSError, match="fake report failure"):
         cmoc_eval_oracles_impl(repo, full=True)
 
-    reports = list((repo / ".cmoc" / "reports" / "eval-oracles").glob("*.md"))
+    reports = list((repo / ".cmoc" / "reports" / "review_oracles").glob("*.md"))
     assert len(reports) == 1
     report = reports[0].read_text(encoding="utf-8")
     assert "result: error" in report
@@ -1167,8 +1216,7 @@ def test_eval_oracles_writes_error_report_when_report_generation_fails(
     assert "- Exception message: `fake report failure`" in report
     assert "成功評価ではありません" in report
     assert "今回評価した範囲では問題点が検出されませんでした" not in report
-    assert "## Specification-only basis" in report
-    assert "| 1 | `oracles/spec.md` | oracles 配下の仕様だけを参照しました。 |" in report
+    assert "## Specification-only basis" not in report
 
 
 def test_eval_oracles_report_aggregates_issues_by_severity(
@@ -1198,13 +1246,6 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
         if "oracles/a.md" in purpose:
             return json.dumps(
                 {
-                    "target_oracle_path": str(oracle_a.resolve()),
-                    "referenced_paths": [
-                        str(oracle_a.resolve()),
-                        str(oracle_index.resolve()),
-                        str(oracle_a.resolve()),
-                    ],
-                    "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
                     "issues": [
                         _eval_oracle_issue(
                             "warning",
@@ -1212,6 +1253,7 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
                             oracle_a,
                             3,
                             4,
+                            [oracle_a, oracle_index],
                         ),
                         _eval_oracle_issue(
                             "fatal",
@@ -1219,6 +1261,7 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
                             oracle_a,
                             5,
                             5,
+                            [oracle_a, oracle_index],
                         ),
                     ],
                 },
@@ -1226,12 +1269,6 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
             )
         return json.dumps(
             {
-                "target_oracle_path": str(oracle_b.resolve()),
-                "referenced_paths": [
-                    str(oracle_b.resolve()),
-                    str(oracle_index.resolve()),
-                ],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
                 "issues": [
                     _eval_oracle_issue(
                         "inconclusive",
@@ -1239,6 +1276,7 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
                         oracle_b,
                         None,
                         None,
+                        [oracle_b, oracle_index],
                     ),
                     _eval_oracle_issue(
                         "fatal",
@@ -1246,6 +1284,7 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
                         oracle_b,
                         8,
                         9,
+                        [oracle_b, oracle_index],
                     ),
                     _eval_oracle_issue(
                         "warning",
@@ -1253,6 +1292,7 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
                         oracle_b,
                         10,
                         10,
+                        [oracle_b, oracle_index],
                     ),
                 ],
             },
@@ -1261,14 +1301,14 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
 
     monkeypatch.setattr(eval_oracles_module, "run_codex_exec", fake_codex)
 
-    cmoc_eval_oracles_impl(repo, full=True)
+    cmoc_eval_oracles_impl(repo, full=True, repeat_improve_issues_list=0)
 
     report = next(
-        (repo / ".cmoc" / "reports" / "eval-oracles").glob("*.md")
+        (repo / ".cmoc" / "reports" / "review_oracles").glob("*.md")
     ).read_text(encoding="utf-8")
     for field in [
         "schema_version: 1",
-        "command: cmoc eval-oracles",
+        "command: cmoc review oracles",
         "generated_at:",
         f"repo_root: {repo.resolve()}",
         f"oracle_root: {oracle_root.resolve()}",
@@ -1289,10 +1329,9 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
         assert field in report
 
     expected_sections = [
-        "# cmoc eval-oracles report",
+        "# cmoc review oracles report",
         "## Summary",
         "## Verdict",
-        "## Specification-only basis",
         "## Evaluated oracle files",
         "## Fatal issues",
         "## Inconclusive issues",
@@ -1302,9 +1341,7 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
     assert [report.index(section) for section in expected_sections] == sorted(
         report.index(section) for section in expected_sections
     )
-    assert "## Specification-only basis" in report
-    assert "| 1 | `oracles/a.md` | oracles 配下の仕様だけを参照しました。 |" in report
-    assert "| 2 | `oracles/b.md` | oracles 配下の仕様だけを参照しました。 |" in report
+    assert "## Specification-only basis" not in report
     assert report.index("### FATAL-001: A fatal") < report.index(
         "### FATAL-002: B fatal"
     )
@@ -1321,6 +1358,8 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
     assert "| 2 | `oracles/b.md` | 3 |" in report
     assert "- Oracle file: `oracles/a.md`" in report
     assert "- Oracle file: `oracles/b.md`" in report
+    assert "- Specification-only basis:" in report
+    assert "oracles 配下の仕様だけを参照しました。" in report
     assert f"- Oracle file: `{oracle_a.resolve()}`" not in report
     assert f"- Oracle file: `{oracle_b.resolve()}`" not in report
     assert "| No. | Referenced file |" in report
@@ -1328,6 +1367,110 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
     assert "| 2 | `oracles/INDEX.md` |" in report
     assert "| 3 | `oracles/b.md` |" in report
     assert report.count("| 2 | `oracles/INDEX.md` |") == 1
+
+
+def test_review_oracles_improves_combined_issue_list(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """評価後の結合 issue list は指定回数まで改善され、改善後をレポートする。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    oracle_file = oracle_root / "spec.md"
+    oracle_file.write_text("spec\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        eval_oracles_module,
+        "maintain_indexes",
+        lambda repo_root: False,
+    )
+    calls: list[str] = []
+    codex_kwargs: list[dict[str, object]] = []
+
+    def issue(title: str) -> dict[str, object]:
+        result = _eval_oracle_issue("warning", title, oracle_file, 1, 1)
+        result["referenced_paths"] = [str(oracle_file.resolve())]
+        result["specification_only_basis"] = "oracles 配下の仕様だけを参照しました。"
+        return result
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """評価結果を改善呼び出しで置き換える Codex 実行を模擬する。"""
+        purpose = str(kwargs["purpose"])
+        calls.append(purpose)
+        codex_kwargs.append(kwargs)
+        if "問題点リスト改善" in purpose:
+            return json.dumps(
+                {"issues": [issue("Improved warning")]},
+                ensure_ascii=False,
+            )
+        return json.dumps({"issues": [issue("Raw warning")]}, ensure_ascii=False)
+
+    monkeypatch.setattr(eval_oracles_module, "run_codex_exec", fake_codex)
+
+    cmoc_eval_oracles_impl(repo, full=True, repeat_improve_issues_list=2)
+
+    report = next(
+        (repo / ".cmoc" / "reports" / "review_oracles").glob("*.md")
+    ).read_text(encoding="utf-8")
+    assert calls == [
+        "oracle 評価 oracles/spec.md",
+        "oracle 問題点リスト改善 1",
+        "oracle 問題点リスト改善 2",
+    ]
+    assert [
+        kwargs["skip_index_maintenance"] for kwargs in codex_kwargs
+    ] == [True, True, True]
+    assert "Improved warning" in report
+    assert "Raw warning" not in report
+
+
+def test_review_oracles_rejects_improved_issue_for_unevaluated_oracle(
+    tmp_path: Path,
+) -> None:
+    """改善後 issue は評価対象外 oracle へ黙って再配布しない。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    evaluated_oracle = oracle_root / "evaluated.md"
+    unevaluated_oracle = oracle_root / "unevaluated.md"
+    evaluated_oracle.write_text("evaluated\n", encoding="utf-8")
+    unevaluated_oracle.write_text("unevaluated\n", encoding="utf-8")
+
+    evaluations = [
+        {
+            "target_oracle_path": str(evaluated_oracle.resolve()),
+            "referenced_paths": [],
+            "specification_only_basis": "",
+            "issues": [],
+        }
+    ]
+    improved_issue = _eval_oracle_issue(
+        "warning",
+        "outside target",
+        unevaluated_oracle,
+        1,
+        1,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="oracle_path must match an evaluated oracle file",
+    ):
+        eval_oracles_module._validate_issues_payload(
+            {"issues": [improved_issue]},
+            repo,
+            {evaluated_oracle.resolve()},
+        )
+
+    with pytest.raises(
+        ValueError,
+        match="oracle_path must match an evaluated oracle file",
+    ):
+        eval_oracles_module._redistribute_improved_issues(
+            evaluations,
+            [improved_issue],
+        )
 
 
 def test_eval_oracles_result_precedence() -> None:
@@ -1357,7 +1500,7 @@ def test_eval_oracles_result_precedence() -> None:
 def test_eval_oracles_payload_accepts_existing_oracle_and_index_paths(
     tmp_path: Path,
 ) -> None:
-    """評価 payload は実在する oracle / INDEX file の参照を受理する。"""
+    """評価 payload は issue 単位の実在 oracle / INDEX file 参照を受理する。"""
     repo = _init_repo(tmp_path)
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -1368,14 +1511,15 @@ def test_eval_oracles_payload_accepts_existing_oracle_and_index_paths(
 
     eval_oracles_module._validate_evaluation_payload(
         {
-            "target_oracle_path": str(oracle.resolve()),
-            "referenced_paths": [
-                str(oracle.resolve()),
-                str(oracle_index.resolve()),
-            ],
-            "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
             "issues": [
-                _eval_oracle_issue("warning", "warning", oracle, 1, 1),
+                _eval_oracle_issue(
+                    "warning",
+                    "warning",
+                    oracle,
+                    1,
+                    1,
+                    [oracle, oracle_index],
+                ),
             ],
         },
         repo,
@@ -1383,10 +1527,60 @@ def test_eval_oracles_payload_accepts_existing_oracle_and_index_paths(
     )
 
 
+def test_eval_oracles_payload_rejects_legacy_top_level_metadata(
+    tmp_path: Path,
+) -> None:
+    """評価 payload は top-level の評価対象メタ情報を受理しない。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    oracle = oracle_root / "spec.md"
+    oracle.write_text("spec\n", encoding="utf-8")
+
+    with pytest.raises(
+        ValueError,
+        match="Evaluation payload keys do not match schema",
+    ):
+        eval_oracles_module._validate_evaluation_payload(
+            {
+                "target_oracle_path": str(oracle.resolve()),
+                "referenced_paths": [str(oracle.resolve())],
+                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
+                "issues": [],
+            },
+            repo,
+            oracle,
+        )
+
+
+def test_eval_oracles_payload_rejects_legacy_issue_metadata(
+    tmp_path: Path,
+) -> None:
+    """issue item は referenced_paths と specification_only_basis を必須にする。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    oracle = oracle_root / "spec.md"
+    oracle.write_text("spec\n", encoding="utf-8")
+    issue = _eval_oracle_issue("warning", "warning", oracle, 1, 1)
+    del issue["referenced_paths"]
+    del issue["specification_only_basis"]
+
+    with pytest.raises(
+        ValueError,
+        match="issues\\[0\\] keys do not match schema",
+    ):
+        eval_oracles_module._validate_evaluation_payload(
+            {"issues": [issue]},
+            repo,
+            oracle,
+        )
+
+
 def test_eval_oracles_payload_rejects_missing_referenced_path(
     tmp_path: Path,
 ) -> None:
-    """referenced_paths は存在しない oracles 配下 path を受理しない。"""
+    """issues[].referenced_paths は存在しない oracles 配下 path を受理しない。"""
     repo = _init_repo(tmp_path)
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -1396,13 +1590,16 @@ def test_eval_oracles_payload_rejects_missing_referenced_path(
     with pytest.raises(ValueError, match="referenced_paths\\[1\\] must exist"):
         eval_oracles_module._validate_evaluation_payload(
             {
-                "target_oracle_path": str(oracle.resolve()),
-                "referenced_paths": [
-                    str(oracle.resolve()),
-                    str((oracle_root / "missing.md").resolve()),
+                "issues": [
+                    _eval_oracle_issue(
+                        "warning",
+                        "warning",
+                        oracle,
+                        1,
+                        1,
+                        [oracle, oracle_root / "missing.md"],
+                    ),
                 ],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
-                "issues": [],
             },
             repo,
             oracle,
@@ -1412,7 +1609,7 @@ def test_eval_oracles_payload_rejects_missing_referenced_path(
 def test_eval_oracles_payload_rejects_directory_referenced_path(
     tmp_path: Path,
 ) -> None:
-    """referenced_paths は directory を参照済みファイルとして受理しない。"""
+    """issues[].referenced_paths は directory を参照済みファイルにしない。"""
     repo = _init_repo(tmp_path)
     oracle_root = repo / "oracles"
     oracle_dir = oracle_root / "nested"
@@ -1423,13 +1620,16 @@ def test_eval_oracles_payload_rejects_directory_referenced_path(
     with pytest.raises(ValueError, match="referenced_paths\\[1\\] must be a file"):
         eval_oracles_module._validate_evaluation_payload(
             {
-                "target_oracle_path": str(oracle.resolve()),
-                "referenced_paths": [
-                    str(oracle.resolve()),
-                    str(oracle_dir.resolve()),
+                "issues": [
+                    _eval_oracle_issue(
+                        "warning",
+                        "warning",
+                        oracle,
+                        1,
+                        1,
+                        [oracle, oracle_dir],
+                    ),
                 ],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
-                "issues": [],
             },
             repo,
             oracle,
@@ -1439,7 +1639,7 @@ def test_eval_oracles_payload_rejects_directory_referenced_path(
 def test_eval_oracles_payload_rejects_ignored_oracle_path(
     tmp_path: Path,
 ) -> None:
-    """referenced_paths は root .gitignore 対象の oracle file を受理しない。"""
+    """issues[].referenced_paths は .gitignore 対象 oracle file を受理しない。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("oracles/ignored.md\n", encoding="utf-8")
     oracle_root = repo / "oracles"
@@ -1455,13 +1655,16 @@ def test_eval_oracles_payload_rejects_ignored_oracle_path(
     ):
         eval_oracles_module._validate_evaluation_payload(
             {
-                "target_oracle_path": str(oracle.resolve()),
-                "referenced_paths": [
-                    str(oracle.resolve()),
-                    str(ignored_oracle.resolve()),
+                "issues": [
+                    _eval_oracle_issue(
+                        "warning",
+                        "warning",
+                        oracle,
+                        1,
+                        1,
+                        [oracle, ignored_oracle],
+                    ),
                 ],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
-                "issues": [],
             },
             repo,
             oracle,
@@ -1483,9 +1686,6 @@ def test_eval_oracles_payload_rejects_missing_issue_oracle_path(
     with pytest.raises(ValueError, match="issues\\[0\\]\\.oracle_path must exist"):
         eval_oracles_module._validate_evaluation_payload(
             {
-                "target_oracle_path": str(oracle.resolve()),
-                "referenced_paths": [str(oracle.resolve())],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
                 "issues": [issue],
             },
             repo,
@@ -1537,12 +1737,7 @@ def test_eval_oracles_stays_partial_when_oracle_was_deleted(
         """部分評価対象の prompt を記録し、不整合なしの結果を返す。"""
         evaluated_prompts.append(str(args[1]))
         return json.dumps(
-            {
-                "target_oracle_path": str(changed_oracle.resolve()),
-                "referenced_paths": [str(changed_oracle.resolve())],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
-                "issues": [],
-            },
+            {"issues": []},
             ensure_ascii=False,
         )
 
@@ -1550,7 +1745,7 @@ def test_eval_oracles_stays_partial_when_oracle_was_deleted(
 
     cmoc_eval_oracles_impl(repo, full=False)
 
-    reports = list((repo / ".cmoc" / "reports" / "eval-oracles").glob("*.md"))
+    reports = list((repo / ".cmoc" / "reports" / "review_oracles").glob("*.md"))
     report = reports[0].read_text(encoding="utf-8")
     assert len(evaluated_prompts) == 1
     assert str(changed_oracle) in evaluated_prompts[0]
@@ -1586,12 +1781,7 @@ def test_eval_oracles_full_mode_reports_deleted_oracles_on_session_branch(
     def fake_codex(*args: object, **kwargs: object) -> str:
         """full mode の既存 oracle 評価結果を返す。"""
         return json.dumps(
-            {
-                "target_oracle_path": str(existing_oracle.resolve()),
-                "referenced_paths": [str(existing_oracle.resolve())],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
-                "issues": [],
-            },
+            {"issues": []},
             ensure_ascii=False,
         )
 
@@ -1600,7 +1790,7 @@ def test_eval_oracles_full_mode_reports_deleted_oracles_on_session_branch(
     cmoc_eval_oracles_impl(repo, full=True)
 
     report = next(
-        (repo / ".cmoc" / "reports" / "eval-oracles").glob("*.md")
+        (repo / ".cmoc" / "reports" / "review_oracles").glob("*.md")
     ).read_text(encoding="utf-8")
     assert "mode: full" in report
     assert "full_requested: true" in report
@@ -1648,12 +1838,7 @@ def test_eval_oracles_uses_full_mode_on_apply_branch(
         )
         evaluated_targets.append(target)
         return json.dumps(
-            {
-                "target_oracle_path": str(target.resolve()),
-                "referenced_paths": [str(target.resolve())],
-                "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
-                "issues": [],
-            },
+            {"issues": []},
             ensure_ascii=False,
         )
 
@@ -1662,7 +1847,7 @@ def test_eval_oracles_uses_full_mode_on_apply_branch(
     cmoc_eval_oracles_impl(repo, full=False)
 
     report = next(
-        (repo / ".cmoc" / "reports" / "eval-oracles").glob("*.md")
+        (repo / ".cmoc" / "reports" / "review_oracles").glob("*.md")
     ).read_text(encoding="utf-8")
     assert evaluated_targets == [changed_oracle, unchanged_oracle]
     assert "mode: full" in report
@@ -1707,9 +1892,31 @@ def test_eval_oracles_prompt_forbids_implementation_references() -> None:
     assert "`oracles` 外のファイルは一切参照禁止です。" not in prompt
     assert "`oracles/INDEX.md`" not in prompt
     assert "実装ファイル、テストファイル、設定ファイル、ビルド成果物も参照禁止です。" in prompt
-    assert "referenced_paths には参照した oracle / INDEX ファイルの絶対パス" in prompt
+    assert "各 issue の referenced_paths には参照した oracle / INDEX" in prompt
     assert "Structured Output schema に一致する JSON" in prompt
     assert "仕様だけから判断・実装したとき" in prompt
+
+
+def test_eval_oracles_improvement_prompt_uses_index_routing() -> None:
+    """改善 prompt も INDEX のルーティング情報で関連 oracle を選定させる。"""
+    prompt = _improvement_prompt(
+        Path("/repo"),
+        {
+            "issues": [
+                {
+                    "oracle_path": "/repo/oracles/spec.md",
+                    "referenced_paths": ["/repo/oracles/INDEX.md"],
+                }
+            ]
+        },
+    )
+
+    assert "`/repo/oracles/INDEX.md` から始まる INDEX.md" in prompt
+    assert "Read this when / Do not read this when を根拠に、" in prompt
+    assert "関連 oracle を選定してください。" in prompt
+    assert "`/repo/oracles` 外のファイルは一切参照禁止です。" in prompt
+    assert "`oracles/INDEX.md`" not in prompt
+    assert "実装ファイル、テストファイル、設定ファイル、ビルド成果物も参照禁止です。" in prompt
 
 
 def test_eval_oracles_prompt_orders_completion_before_details() -> None:
@@ -1725,7 +1932,7 @@ def test_eval_oracles_prompt_orders_completion_before_details() -> None:
         "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。"
     )
     assert lines.index(
-        "target_oracle_path には評価対象 oracle ファイルの絶対パスを返してください。"
+        "issues には検出した問題点を入れ、問題がない場合は空配列を返してください。"
     ) > 2
 
 
@@ -1964,6 +2171,79 @@ def test_apply_commits_index_changes_when_no_discrepancies(
     assert f"session_head_at_apply_finish: \"{apply_head}\"" not in report_text
 
 
+def test_apply_report_records_session_head_at_finish_when_session_advances(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """apply fork は終了時点の session branch HEAD を report に記録する。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "oracle")
+    session_head_at_start = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    monkeypatch.setattr(
+        "sub_commands.apply.fork.maintain_indexes",
+        lambda repo_root: False,
+    )
+    advanced_session = False
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """調査中に session branch を進め、調査自体は収束させる。"""
+        nonlocal advanced_session
+        if kwargs.get("expect_json") is True:
+            if not advanced_session:
+                (repo / "session-progress.txt").write_text(
+                    "session advanced\n",
+                    encoding="utf-8",
+                )
+                _git(repo, "add", "session-progress.txt")
+                _git(repo, "commit", "-m", "advance session during apply")
+                advanced_session = True
+            return '{"git_head_commit_hash": null, "fixing_points": []}'
+        if kwargs.get("purpose") == "apply 変更要約":
+            return _change_summary_json()
+        return "No changes"
+
+    monkeypatch.setattr("sub_commands.apply.fork.run_codex_exec", fake_codex)
+
+    exit_code = cmoc_apply_impl(repo)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+        ).read_text(encoding="utf-8")
+    )
+    reports = list(
+        (repo / ".cmoc" / "reports" / "apply" / "fork").glob("*.md")
+    )
+    report_text = reports[0].read_text(encoding="utf-8")
+    session_head_at_finish = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    apply_head = _git(
+        repo,
+        "rev-parse",
+        state["apply"]["apply_branch"],
+    ).stdout.strip()
+
+    assert exit_code == 0
+    assert len(reports) == 1
+    assert session_head_at_start != session_head_at_finish
+    assert session_head_at_finish != apply_head
+    assert (
+        f"session_head_at_apply_start: \"{session_head_at_start}\""
+        in report_text
+    )
+    assert (
+        f"session_head_at_apply_finish: \"{session_head_at_finish}\""
+        in report_text
+    )
+    assert f"session_head_at_apply_finish: \"{apply_head}\"" not in report_text
+
+
 def test_apply_join_merges_completed_apply_branch_and_resets_state(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -2001,6 +2281,74 @@ def test_apply_join_merges_completed_apply_branch_and_resets_state(
     assert not apply_worktree.exists()
     assert report_path.exists()
     assert "joined apply branch:" in output
+
+
+def test_apply_join_cleans_worktree_created_from_linked_worktree(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """linked worktree で fork した apply run も common root 側で cleanup する。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-m", "ignore cmoc")
+    linked = tmp_path / "linked"
+    _git(repo, "worktree", "add", "-b", "feature", str(linked), "HEAD")
+    cmoc_session_fork_impl(linked)
+    session_branch = _git(linked, "branch", "--show-current").stdout.strip()
+    session_id = session_branch.removeprefix("cmoc/session/")
+    oracle_root = linked / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _git(linked, "add", "oracles/spec.md")
+    _git(linked, "commit", "-m", "add oracle")
+
+    monkeypatch.setattr(
+        "sub_commands.apply.fork.maintain_indexes",
+        lambda repo_root: False,
+    )
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """調査を要修正点なしとして完了させる。"""
+        if kwargs.get("expect_json") is True:
+            return '{"git_head_commit_hash": null, "fixing_points": []}'
+        return "No changes"
+
+    monkeypatch.setattr("sub_commands.apply.fork.run_codex_exec", fake_codex)
+
+    exit_code = cmoc_apply_impl(linked)
+
+    state_path = repo / ".cmoc" / "sessions" / f"{session_id}.json"
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    apply_branch = state["apply"]["apply_branch"]
+    apply_run_id = apply_branch.rsplit("/", 1)[1]
+    apply_worktree = (
+        repo / ".cmoc" / "worktrees" / "apply" / session_id / apply_run_id
+    )
+    linked_apply_worktree = (
+        linked / ".cmoc" / "worktrees" / "apply" / session_id / apply_run_id
+    )
+    reports = list((repo / ".cmoc" / "reports" / "apply" / "fork").glob("*.md"))
+    assert exit_code == 0
+    assert apply_worktree.is_dir()
+    assert not linked_apply_worktree.exists()
+    assert len(reports) == 1
+    assert f'apply_worktree_path: "{apply_worktree}"' in reports[0].read_text(
+        encoding="utf-8"
+    )
+
+    _git(linked, "switch", "feature")
+    _git(repo, "switch", session_branch)
+    cmoc_apply_join_impl(repo)
+
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    assert state["apply"] == {
+        "apply_branch": None,
+        "oracle_snapshot_commit": None,
+        "state": "ready",
+    }
+    assert _git(repo, "branch", "--list", apply_branch).stdout == ""
+    assert not apply_worktree.exists()
 
 
 def test_apply_join_keeps_artifacts_when_report_result_is_missing(
@@ -3200,6 +3548,8 @@ def test_apply_prompt_treats_discrepancy_as_optional_hint(
     assert "無視してかまいません" in prompt
     assert "ベストエフォート" in prompt
     assert "目的を達成した保証は不要" in prompt
+    assert f"`{tmp_path / 'README.md'}` は編集禁止です。" in prompt
+    assert f"`{tmp_path / 'AGENTS.md'}` は編集禁止です。" in prompt
 
 
 def test_apply_prompt_orders_completion_before_details() -> None:
@@ -3315,7 +3665,7 @@ def test_apply_rejects_incomplete_change_summary_from_codex(
     monkeypatch: MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """必須内容を欠く Codex 変更要約はエラーレポートを保存する。"""
+    """report 失敗時も完了済み apply run を error へ戻さない。"""
     repo = _init_repo(tmp_path)
     _checkout_session_branch(repo)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
@@ -3341,10 +3691,20 @@ def test_apply_rejects_incomplete_change_summary_from_codex(
         "sub_commands.apply.fork.maintain_indexes",
         fake_maintain_indexes,
     )
+    advanced_session = False
 
     def fake_codex(*args: object, **kwargs: object) -> str:
         """調査は収束、変更要約は必須項目不足にする。"""
+        nonlocal advanced_session
         if kwargs.get("purpose") == "apply 変更要約":
+            if not advanced_session:
+                (repo / "session-progress.txt").write_text(
+                    "session advanced\n",
+                    encoding="utf-8",
+                )
+                _git(repo, "add", "session-progress.txt")
+                _git(repo, "commit", "-m", "advance session during apply")
+                advanced_session = True
             return '{"changes": []}'
         if kwargs.get("expect_json") is True:
             return '{"git_head_commit_hash": null, "fixing_points": []}'
@@ -3361,7 +3721,7 @@ def test_apply_rejects_incomplete_change_summary_from_codex(
         ).read_text(encoding="utf-8")
     )
     report_dir = repo / ".cmoc" / "reports" / "apply" / "fork"
-    assert state["apply"]["state"] == "error"
+    assert state["apply"]["state"] == "completed"
     assert state["apply"]["apply_branch"].startswith(
         "cmoc/apply/2026-05-10_22-21_10_123/"
     )
@@ -3373,11 +3733,16 @@ def test_apply_rejects_incomplete_change_summary_from_codex(
         "rev-parse",
         state["apply"]["apply_branch"],
     ).stdout.strip()
+    session_head_at_finish = _git(repo, "rev-parse", "HEAD").stdout.strip()
     captured = capsys.readouterr()
     assert str(reports[0]) in captured.out
     assert "result: \"エラー\"" in report_text
     assert f"session_head_at_apply_start: \"{session_head}\"" in report_text
-    assert f"session_head_at_apply_finish: \"{session_head}\"" in report_text
+    assert (
+        f"session_head_at_apply_finish: \"{session_head_at_finish}\""
+        in report_text
+    )
+    assert session_head != session_head_at_finish
     assert session_head != apply_head
     assert f"session_head_at_apply_finish: \"{apply_head}\"" not in report_text
     assert "## 作業結果" in report_text
@@ -3388,7 +3753,31 @@ def test_apply_rejects_incomplete_change_summary_from_codex(
     assert "apply report の生成に必要な変更要約が不足しています。" in report_text
     assert "## 要修正点件数の推移" in report_text
     assert "- 1 回目: 0 件" in report_text
-    assert "カテゴリ: エラー終了" in report_text
+    assert "カテゴリ: 変更ファイル一覧" in report_text
+    assert "docs/INDEX.md" in report_text
+    assert "Codex CLI による意味論的カテゴリ別要約には失敗しました。" in report_text
+
+
+def test_apply_fallback_change_summary_preserves_special_path_tokens(
+    tmp_path: Path,
+) -> None:
+    """fallback report の changed_paths は newline や前後空白を削らない。"""
+    repo = _init_repo(tmp_path)
+    snapshot_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    special_path = repo / " changed\nfile.py "
+    special_path.write_text("changed\n", encoding="utf-8")
+    _git(repo, "add", special_path.relative_to(repo).as_posix())
+    _git(repo, "commit", "-m", "special path")
+    branch_name = _git(repo, "branch", "--show-current").stdout.strip()
+
+    summary = apply_module._fallback_change_summary_from_git(
+        repo,
+        branch_name,
+        snapshot_commit,
+        RuntimeError("summary failed"),
+    )
+
+    assert summary[0]["changed_paths"] == [" changed\nfile.py "]
 
 
 def test_apply_writes_error_report_when_midway_stage_fails(
@@ -3445,7 +3834,58 @@ def test_apply_writes_error_report_when_midway_stage_fails(
     assert "- Exception type: `RuntimeError`" in report_text
     assert "- Exception message: `fake maintain failure at " in report_text
     assert "エラー発生前に記録済みの要修正点件数はありません。" in report_text
-    assert "カテゴリ: エラー終了" in report_text
+    assert "カテゴリ: 変更なし" in report_text
+
+
+def test_apply_error_report_includes_codex_change_summary(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """error report でも apply branch の変更要約を Codex Structured Output から描画する。"""
+    repo = _init_repo(tmp_path)
+    (repo / "oracles").mkdir()
+    (repo / "oracles" / "spec.md").write_text("spec\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "base")
+    oracle_snapshot_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    apply_branch = "cmoc/apply/session/run"
+    _git(repo, "checkout", "-b", apply_branch)
+    (repo / "app.py").write_text("print('changed')\n", encoding="utf-8")
+    _git(repo, "add", "app.py")
+    _git(repo, "commit", "-m", "change app")
+
+    codex_purposes: list[str] = []
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        codex_purposes.append(str(kwargs.get("purpose")))
+        return _change_summary_json()
+
+    monkeypatch.setattr("sub_commands.apply.fork.run_codex_exec", fake_codex)
+
+    report_path = apply_module._write_apply_error_report(
+        repo,
+        "session",
+        "run",
+        "cmoc/session/session",
+        apply_branch,
+        repo,
+        oracle_snapshot_commit,
+        oracle_snapshot_commit,
+        oracle_snapshot_commit,
+        "要修正点適用",
+        RuntimeError("fake apply failure"),
+        [1],
+    )
+
+    report_text = report_path.read_text(encoding="utf-8")
+    assert codex_purposes == ["apply 変更要約"]
+    assert "result: \"エラー\"" in report_text
+    assert "## エラー詳細" in report_text
+    assert "- Failed stage: `要修正点適用`" in report_text
+    assert "カテゴリ: 実装修正" in report_text
+    assert "テスト用の変更内容を整理しました。" in report_text
+    assert "- `app.py`" in report_text
+    assert "カテゴリ: エラー終了" not in report_text
 
 
 def test_apply_rejects_non_cmoc_branch(tmp_path: Path) -> None:
@@ -3608,6 +4048,69 @@ def test_apply_marks_error_when_running_state_write_fails(
     assert apply_branch.startswith("cmoc/apply/2026-05-10_22-21_10_123/")
     assert _git(repo, "branch", "--list", apply_branch).stdout.strip()
     assert calls == 2
+
+
+def test_apply_revalidates_ready_state_under_start_lock(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """apply fork は lock 獲得後に state を読み直して二重開始を拒否する。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-m", "ignore cmoc")
+    session_id = "2026-05-10_22-21_10_123"
+    state_path = repo / ".cmoc" / "sessions" / f"{session_id}.json"
+    running_branch = f"cmoc/apply/{session_id}/already-running"
+    snapshot_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    real_read_session_state = apply_module.read_session_state
+    read_calls = 0
+
+    def read_state_with_concurrent_start(
+        repo_root: Path,
+        requested_session_id: str,
+    ) -> dict[str, object]:
+        """初回検証後に別 apply が running を保存した状態を模擬する。"""
+        nonlocal read_calls
+        read_calls += 1
+        state = real_read_session_state(repo_root, requested_session_id)
+        if read_calls == 1:
+            concurrent_state = json.loads(
+                json.dumps(state, ensure_ascii=False),
+            )
+            concurrent_state["apply"] = {
+                "state": "running",
+                "apply_branch": running_branch,
+                "oracle_snapshot_commit": snapshot_commit,
+            }
+            write_session_state(repo_root, requested_session_id, concurrent_state)
+        return state
+
+    monkeypatch.setattr(
+        apply_module,
+        "read_session_state",
+        read_state_with_concurrent_start,
+    )
+
+    with pytest.raises(CmocError) as error:
+        cmoc_apply_impl(repo)
+
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    branches = _git(repo, "branch", "--format=%(refname:short)").stdout
+    reports = list(
+        (repo / ".cmoc" / "reports" / "apply" / "fork").glob("*.md")
+    )
+    assert "apply run を開始できる状態ではありません" in error.value.message
+    assert state["apply"] == {
+        "state": "running",
+        "apply_branch": running_branch,
+        "oracle_snapshot_commit": snapshot_commit,
+    }
+    assert read_calls == 2
+    assert "cmoc/apply/" not in branches
+    assert not (repo / ".cmoc" / "worktrees" / "apply").exists()
+    assert reports == []
 
 
 def test_apply_marks_error_when_worktree_creation_fails(
@@ -3910,10 +4413,10 @@ def test_apply_partial_targets_exclude_tracked_root_gitignored_files(
     assert implementation_targets == ["kept.py"]
 
 
-def test_apply_partial_targets_exclude_deleted_and_include_reverted_paths(
+def test_apply_partial_targets_include_deleted_and_reverted_paths(
     tmp_path: Path,
 ) -> None:
-    """部分 apply は削除済みを除外し、存在する履歴変更 path を対象にする。"""
+    """部分 apply は削除済みと存在する履歴変更 path を対象にする。"""
     repo = _init_repo(tmp_path)
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -3962,10 +4465,12 @@ def test_apply_partial_targets_exclude_deleted_and_include_reverted_paths(
     }
 
     assert oracle_targets == {
+        "oracles/obsolete.md": True,
         "oracles/spec.md": False,
     }
     assert implementation_targets == {
         "app.py": False,
+        "obsolete.py": True,
     }
 
 
@@ -4011,6 +4516,50 @@ def test_apply_partial_targets_use_renamed_new_paths(
     assert implementation_targets == ["new.py"]
 
 
+def test_apply_partial_targets_preserve_special_path_tokens(
+    tmp_path: Path,
+) -> None:
+    """部分 apply の調査対象 path は newline や前後空白を保持する。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    old_oracle = oracle_root / "old\nspec.md"
+    old_impl = repo / "old\nimpl.py"
+    old_oracle.write_text("oracle\n", encoding="utf-8")
+    old_impl.write_text("app\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "base targets")
+    _checkout_session_branch(repo)
+    base_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    _git(repo, "mv", "oracles/old\nspec.md", "oracles/ new\nspec.md ")
+    _git(repo, "mv", "old\nimpl.py", " new\nimpl.py ")
+    _git(repo, "commit", "-m", "rename special targets")
+    snapshot_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    oracle_targets = [
+        target.path.relative_to(repo).as_posix()
+        for target in apply_module._target_oracle_files(
+            repo,
+            base_commit,
+            snapshot_commit,
+            partial=True,
+        )
+    ]
+    implementation_targets = [
+        target.path.relative_to(repo).as_posix()
+        for target in apply_module._target_implementation_files(
+            repo,
+            base_commit,
+            snapshot_commit,
+            partial=True,
+        )
+    ]
+
+    assert oracle_targets == ["oracles/ new\nspec.md "]
+    assert implementation_targets == [" new\nimpl.py "]
+
+
 def test_apply_deleted_investigation_target_prompt_mentions_history(
     tmp_path: Path,
 ) -> None:
@@ -4048,6 +4597,29 @@ def test_commit_all_changes_rejects_memo_changes(
 
     assert "編集禁止パス" in error.value.message
     assert "memo/" in error.value.detail
+    assert _git(repo, "log", "-1", "--pretty=%s").stdout.strip() == "initial"
+
+
+@pytest.mark.parametrize("forbidden_file", ["README.md", "AGENTS.md"])
+def test_commit_all_changes_rejects_root_readme_and_agents_changes(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    forbidden_file: str,
+) -> None:
+    """root README/AGENTS は workspace-write の編集禁止 path として検出する。"""
+    repo = _init_repo(tmp_path)
+    (repo / forbidden_file).write_text("tampered\n", encoding="utf-8")
+    (repo / "app.py").write_text("changed\n", encoding="utf-8")
+    monkeypatch.setattr(
+        "sub_commands.apply.fork.maintain_indexes",
+        lambda repo_root: False,
+    )
+
+    with pytest.raises(CmocError) as error:
+        _commit_all_changes(repo)
+
+    assert "編集禁止パス" in error.value.message
+    assert forbidden_file in error.value.detail
     assert _git(repo, "log", "-1", "--pretty=%s").stdout.strip() == "initial"
 
 
@@ -4150,10 +4722,10 @@ def test_session_join_merges_current_session_branch_and_deletes_it(
     assert "cmoc/session/2026-05-10_22-21_10_123" not in branches
 
 
-def test_session_join_rejects_tracked_cmoc_without_side_effects(
+def test_session_join_ensures_cmoc_ignored_before_switch(
     tmp_path: Path,
 ) -> None:
-    """未初期化の tracked `.cmoc` state は補修せず merge 前に止める。"""
+    """tracked `.cmoc` state を補修し、発生差分を検出して switch 前に止める。"""
     repo = _init_repo(tmp_path)
     home_branch = _git(repo, "branch", "--show-current").stdout.strip()
     _checkout_session_branch(repo)
@@ -4164,13 +4736,17 @@ def test_session_join_rejects_tracked_cmoc_without_side_effects(
     with pytest.raises(CmocError) as error:
         cmoc_session_join_impl(repo)
 
-    assert ".cmoc" in error.value.message
+    status = _git(repo, "status", "--porcelain").stdout
+    assert "未コミットの変更" in error.value.message
+    assert ".gitignore" in error.value.detail
     assert state_path in error.value.detail
     assert _git(repo, "branch", "--show-current").stdout.strip() == (
         "cmoc/session/2026-05-10_22-21_10_123"
     )
-    assert not (repo / ".gitignore").exists()
-    assert _git(repo, "ls-files", "--", ".cmoc").stdout == f"{state_path}\n"
+    assert "/.cmoc/" in (repo / ".gitignore").read_text(encoding="utf-8")
+    assert _git(repo, "ls-files", "--", ".cmoc").stdout == ""
+    assert ".gitignore" in status
+    assert state_path in status
     assert home_branch in _git(repo, "branch", "--format=%(refname:short)").stdout
 
 
@@ -4473,6 +5049,47 @@ def test_session_join_allows_oracle_conflict_path_in_codex_guard(
     )
 
 
+def test_session_join_ignores_markers_outside_conflict_paths(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """conflict 対象外の通常内容にある marker 風文字列では止めない。"""
+    repo = _repo_with_session_join_conflict(tmp_path)
+    (repo / "literal_markers.txt").write_text(
+        "<<<<<<< sample\n"
+        "left\n"
+        "=======\n"
+        "right\n"
+        ">>>>>>> sample\n",
+        encoding="utf-8",
+    )
+    _git(repo, "add", "literal_markers.txt")
+    _git(repo, "commit", "-m", "add literal marker sample")
+
+    def fake_codex(
+        repo_root: Path,
+        prompt: str,
+        **kwargs: object,
+    ) -> None:
+        """本物の Codex CLI なしで conflict 対象だけを解消する。"""
+        del prompt, kwargs
+        (repo_root / "conflict.txt").write_text("resolved\n", encoding="utf-8")
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_codex)
+
+    cmoc_session_join_impl(repo)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert state["session"]["state"] == "joined"
+    assert (repo / "literal_markers.txt").read_text(encoding="utf-8").startswith(
+        "<<<<<<< sample\n"
+    )
+
+
 def test_session_join_rejects_codex_change_in_forbidden_path(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -4544,10 +5161,10 @@ def test_session_abandon_marks_state_and_force_deletes_branch(
     )
 
 
-def test_session_abandon_rejects_tracked_cmoc_without_side_effects(
+def test_session_abandon_ensures_cmoc_ignored_before_cleanup(
     tmp_path: Path,
 ) -> None:
-    """tracked `.cmoc` state は補修せず cleanup 前に止める。"""
+    """tracked `.cmoc` state を補修し、発生差分を検出して cleanup 前に止める。"""
     repo = _init_repo(tmp_path)
     _checkout_session_branch(repo)
     state_path = ".cmoc/sessions/2026-05-10_22-21_10_123.json"
@@ -4557,13 +5174,17 @@ def test_session_abandon_rejects_tracked_cmoc_without_side_effects(
     with pytest.raises(CmocError) as error:
         cmoc_session_abandon_impl(repo)
 
-    assert ".cmoc" in error.value.message
+    status = _git(repo, "status", "--porcelain").stdout
+    assert "未コミットの変更" in error.value.message
+    assert ".gitignore" in error.value.detail
     assert state_path in error.value.detail
     assert _git(repo, "branch", "--show-current").stdout.strip() == (
         "cmoc/session/2026-05-10_22-21_10_123"
     )
-    assert not (repo / ".gitignore").exists()
-    assert _git(repo, "ls-files", "--", ".cmoc").stdout == f"{state_path}\n"
+    assert "/.cmoc/" in (repo / ".gitignore").read_text(encoding="utf-8")
+    assert _git(repo, "ls-files", "--", ".cmoc").stdout == ""
+    assert ".gitignore" in status
+    assert state_path in status
 
 
 def test_session_abandon_rejects_apply_run_before_cleanup(
@@ -4861,7 +5482,8 @@ def test_main_typer_functions_delegate_only_to_impls() -> None:
     assert "from sub_commands.eval_oracles import cmoc_eval_oracles_impl" in source
     assert "eval-oracles.py" not in source
     assert "eval_oracles_source" not in eval_oracles_source
-    assert "cmoc_eval_oracles_impl(full=full)" in source
+    assert "cmoc_eval_oracles_impl(" in source
+    assert "repeat_improve_issues_list=repeat_improve_issues_list" in source
     assert "repeat_investigate_and_fix=repeat_investigate_and_fix" in source
     assert "repeat_improove_fixing_list=repeat_improove_fixing_list" in source
     assert "cmoc_session_join_impl()" in source
@@ -4885,17 +5507,26 @@ def test_cmoc_help_uses_cmoc_command_name() -> None:
     assert "Usage: cmoc [OPTIONS] COMMAND [ARGS]..." in result.stdout
     assert "session" in result.stdout
     assert "apply" in result.stdout
-    assert "eval-oracles" in result.stdout
+    assert "review" in result.stdout
     assert re.search(r"\bbranch\b", result.stdout) is None
     assert re.search(r"\bmerge\b", result.stdout) is None
     assert re.search(r"\beval-oracle(?!s)\b", result.stdout) is None
 
 
-def test_cmoc_eval_oracles_command_and_compat_alias_are_registered() -> None:
-    """`eval-oracles` を正名にし、既存の `eval-oracle` も alias として残す。"""
+def test_cmoc_review_oracles_command_and_compat_alias_are_registered() -> None:
+    """`review oracles` を正名にし、既存 alias も残す。"""
     repo_root = Path(__file__).resolve().parents[1]
     env = {"PYTHONPATH": str(repo_root / "src")}
-    plural = subprocess.run(
+    review = subprocess.run(
+        [sys.executable, "-m", "main", "review", "oracles", "--help"],
+        cwd=repo_root,
+        env=env,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    plural_alias = subprocess.run(
         [sys.executable, "-m", "main", "eval-oracles", "--help"],
         cwd=repo_root,
         env=env,
@@ -4913,11 +5544,15 @@ def test_cmoc_eval_oracles_command_and_compat_alias_are_registered() -> None:
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    assert plural.returncode == 0
+    assert review.returncode == 0
+    assert plural_alias.returncode == 0
     assert singular.returncode == 0
-    assert "Usage: cmoc eval-oracles [OPTIONS]" in plural.stdout
+    assert "Usage: cmoc review oracles [OPTIONS]" in review.stdout
+    assert "--repeat-improve-issu" in review.stdout
+    assert "Usage: cmoc eval-oracles [OPTIONS]" in plural_alias.stdout
     assert "Usage: cmoc eval-oracle [OPTIONS]" in singular.stdout
-    assert plural.stderr == ""
+    assert review.stderr == ""
+    assert plural_alias.stderr == ""
     assert singular.stderr == ""
 
 
@@ -5169,14 +5804,17 @@ def test_session_join_conflict_prompt_allows_marker_only_oracle_fix() -> None:
     assert "解決内容と未解決ファイルの有無を報告" in prompt
 
 
-def test_files_with_conflict_markers_checks_all_tracked_files(
+def test_files_with_conflict_markers_checks_requested_paths_only(
     tmp_path: Path,
 ) -> None:
-    """marker 検査は渡された対象一覧に限定せず git 管理対象全体を見る。"""
+    """marker 検査は渡された対象一覧だけを見る。"""
     repo = _init_repo(tmp_path)
     conflicted = repo / "conflicted.txt"
     unrelated = repo / "unrelated.txt"
-    conflicted.write_text("resolved\n", encoding="utf-8")
+    conflicted.write_text(
+        "<<<<<<< HEAD\nleft\n=======\nright\n>>>>>>> branch\n",
+        encoding="utf-8",
+    )
     unrelated.write_text(
         "<<<<<<< HEAD\nleft\n=======\nright\n>>>>>>> branch\n",
         encoding="utf-8",
@@ -5185,7 +5823,7 @@ def test_files_with_conflict_markers_checks_all_tracked_files(
     _git(repo, "commit", "-m", "add tracked files")
 
     assert _files_with_conflict_markers(repo, ["conflicted.txt"]) == [
-        "unrelated.txt"
+        "conflicted.txt"
     ]
 
 
@@ -5259,19 +5897,23 @@ def _eval_oracle_issue(
     oracle_path: Path,
     line_start: int | None,
     line_end: int | None,
+    referenced_paths: list[Path] | None = None,
 ) -> dict[str, object]:
     """テスト用の valid な eval-oracles issue item を返す。"""
+    references = referenced_paths or [oracle_path]
     return {
         "severity": severity,
         "title": title,
         "oracle_path": str(oracle_path.resolve()),
         "oracle_line_start": line_start,
         "oracle_line_end": line_end,
-        "affected_workflow": "cmoc eval-oracles",
+        "referenced_paths": [str(path.resolve()) for path in references],
+        "affected_workflow": "cmoc review oracles",
         "requirement": f"{title} requirement",
         "problem": f"{title} problem",
         "reason": f"{title} reason",
         "suggested_oracle_change": f"{title} change",
+        "specification_only_basis": "oracles 配下の仕様だけを参照しました。",
     }
 
 

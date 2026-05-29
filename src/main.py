@@ -24,9 +24,14 @@ apply_app: typer.Typer = typer.Typer(
     name="apply",
     no_args_is_help=True,
 )
+review_app: typer.Typer = typer.Typer(
+    name="review",
+    no_args_is_help=True,
+)
 
 app.add_typer(session_app, name="session")
 app.add_typer(apply_app, name="apply")
+app.add_typer(review_app, name="review")
 
 
 @app.command("init")
@@ -57,14 +62,23 @@ def session_abandon_command() -> None:
     cmoc_session_abandon_impl()
 
 
-@app.command("eval-oracles")
 @app.command("eval-oracle", hidden=True)
+@app.command("eval-oracles", hidden=True)
+@review_app.command("oracles")
 def eval_oracles_command(
     full: bool = typer.Option(False, "--full", "-f"),
+    repeat_improve_issues_list: int = typer.Option(
+        3,
+        "--repeat-improve-issues-list",
+        min=0,
+    ),
 ) -> None:
-    """Evaluate oracle files."""
-    # CLI callback は eval-oracles の本体実装へ処理を委譲する。
-    cmoc_eval_oracles_impl(full=full)
+    """Review oracle files."""
+    # CLI callback は review oracles の本体実装へ処理を委譲する。
+    cmoc_eval_oracles_impl(
+        full=full,
+        repeat_improve_issues_list=repeat_improve_issues_list,
+    )
 
 
 @apply_app.command("fork")
@@ -124,7 +138,7 @@ def main() -> None:
                 "コマンドが指定されていません。",
                 [
                     "利用可能なコマンドを確認するには `cmoc --help` を実行してください。",
-                    "`cmoc init`, `cmoc session fork`, `cmoc eval-oracles`, "
+                    "`cmoc init`, `cmoc session fork`, `cmoc review oracles`, "
                     "`cmoc apply fork`, `cmoc apply join`, "
                     "`cmoc session join` のいずれかを実行してください。",
                 ],

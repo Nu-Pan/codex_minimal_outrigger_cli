@@ -87,6 +87,11 @@ def run_codex_exec(
     _validate_model_options(model, reasoning_effort)
     if output_schema is not None:
         _validate_output_schema(output_schema)
+    normalized_index_excluded_roots = (
+        tuple(index_excluded_roots)
+        if index_excluded_roots is not None
+        else None
+    )
 
     # 必要なら output schema ファイルを準備する。call log と last message は実行単位で払い出す。
     command = _build_codex_command(
@@ -114,7 +119,7 @@ def run_codex_exec(
         _maintain_indexes_before_codex(
             repo_root,
             skip_index_maintenance,
-            index_excluded_roots,
+            normalized_index_excluded_roots,
         )
         run = _run_codex_command(
             repo_root,
@@ -133,9 +138,9 @@ def run_codex_exec(
             purpose,
             attempt,
             schema_path,
-            skip_index_maintenance,
-            index_excluded_roots,
             allowed_uncommitted_oracle_paths,
+            skip_index_maintenance,
+            normalized_index_excluded_roots,
         )
         result = run.result
         last_log_path = run.log_path
@@ -144,31 +149,32 @@ def run_codex_exec(
         last_stdout_log = result.stdout
         last_stderr = result.stderr
 
-        # quota 枯渇だけは待機・resume に入り、それ以外の CLI 失敗は中断する。
+        # stdout JSONL の既知意味エラーは終了コードに依存せず扱う。
+        if _stdout_jsonl_indicates_quota_exhaustion(result.stdout):
+            session_id = _extract_session_id(result.stdout, result.stderr)
+            command = _resume_command(command, session_id)
+            print("quota が枯渇したため、resume 前に復旧を待機します")
+            run = _wait_for_quota_and_resume(
+                repo_root,
+                command,
+                prompt,
+                purpose,
+                attempt,
+                schema_path,
+                allowed_uncommitted_oracle_paths,
+                skip_index_maintenance,
+                normalized_index_excluded_roots,
+            )
+            result = run.result
+            last_log_path = run.log_path
+            last_message_path = run.last_message_path
+            command = run.command
+            last_stdout_log = result.stdout
+            last_stderr = result.stderr
+
+        # quota 枯渇以外の CLI 失敗は中断する。
         if result.returncode != 0:
-            if _stdout_jsonl_indicates_quota_exhaustion(result.stdout):
-                session_id = _extract_session_id(result.stdout, result.stderr)
-                command = _resume_command(command, session_id)
-                print("quota が枯渇したため、resume 前に復旧を待機します")
-                run = _wait_for_quota_and_resume(
-                    repo_root,
-                    command,
-                    prompt,
-                    purpose,
-                    attempt,
-                    schema_path,
-                    skip_index_maintenance,
-                    index_excluded_roots,
-                    allowed_uncommitted_oracle_paths,
-                )
-                result = run.result
-                last_log_path = run.log_path
-                last_message_path = run.last_message_path
-                command = run.command
-                last_stdout_log = result.stdout
-                last_stderr = result.stderr
-            else:
-                _raise_codex_failure(run.log_path, result)
+            _raise_codex_failure(run.log_path, result)
 
         try:
             output = _read_last_message(last_message_path)
@@ -280,12 +286,11 @@ def _wait_for_quota_and_resume(
     purpose: str,
     attempt: int,
     schema_path: Path | None,
+    allowed_uncommitted_oracle_paths: Iterable[Path | str] | None,
     skip_index_maintenance: bool,
     index_excluded_roots: Iterable[Path | str] | None,
-    allowed_uncommitted_oracle_paths: Iterable[Path | str] | None,
 ) -> _CodexCommandRun:
     """quota 復活まで疎通確認を繰り返してから元セッションを再開する。"""
-    # quota 待機中の疎通確認も Codex CLI 呼び出しなので、通常経路と同じ直前処理を通す。
     while True:
         poll_prompt = _quota_poll_prompt(repo_root)
         print("quota poll: 最小限の codex exec 疎通確認を実行します")
@@ -318,11 +323,14 @@ def _wait_for_quota_and_resume(
             "quota 復旧確認",
             attempt,
             None,
+            None,
             skip_index_maintenance,
             index_excluded_roots,
-            None,
         )
         poll_result = poll_run.result
+        if _stdout_jsonl_indicates_quota_exhaustion(poll_result.stdout):
+            _sleep_for_quota_poll_interval()
+            continue
         if poll_result.returncode == 0:
             try:
                 poll_output = _read_last_message(poll_run.last_message_path)
@@ -357,19 +365,19 @@ def _wait_for_quota_and_resume(
                 purpose,
                 attempt,
                 schema_path,
+                allowed_uncommitted_oracle_paths,
                 skip_index_maintenance,
                 index_excluded_roots,
-                allowed_uncommitted_oracle_paths,
             )
-            if resume_run.result.returncode == 0:
-                return resume_run
-            if not _stdout_jsonl_indicates_quota_exhaustion(
+            if _stdout_jsonl_indicates_quota_exhaustion(
                 resume_run.result.stdout,
             ):
-                _raise_codex_failure(resume_run.log_path, resume_run.result)
-            print("resume 後に quota が再度枯渇したため、待機します")
-            _sleep_for_quota_poll_interval()
-            continue
+                print("resume 後に quota が再度枯渇したため、待機します")
+                _sleep_for_quota_poll_interval()
+                continue
+            if resume_run.result.returncode == 0:
+                return resume_run
+            _raise_codex_failure(resume_run.log_path, resume_run.result)
         if not _stdout_jsonl_indicates_quota_exhaustion(
             poll_run.result.stdout,
         ):
@@ -392,9 +400,9 @@ def _retry_after_capacity_if_needed(
     purpose: str,
     attempt: int,
     schema_path: Path | None,
+    allowed_uncommitted_oracle_paths: Iterable[Path | str] | None,
     skip_index_maintenance: bool,
     index_excluded_roots: Iterable[Path | str] | None,
-    allowed_uncommitted_oracle_paths: Iterable[Path | str] | None,
 ) -> _CodexCommandRun:
     """capacity 一時失敗なら同じ Codex CLI 呼び出しを指数 backoff で再実行する。"""
     delay_seconds = _CAPACITY_INITIAL_RETRY_DELAY_SECONDS
@@ -935,15 +943,14 @@ def _append_codex_log(
     last_message_path: Path,
 ) -> None:
     """1 回分の Codex CLI 入出力を Markdown フルログへ書き出す。"""
+    output_last_message = _read_optional_text(last_message_path)
     body = "\n".join(
         [
             "## Codex Exec Call",
             "",
             "### Prompt",
             "",
-            "```text",
-            prompt,
-            "```",
+            _markdown_text_block(prompt),
             "",
             "### Return Code",
             "",
@@ -951,23 +958,17 @@ def _append_codex_log(
             "",
             "### Stdout",
             "",
-            "```text",
-            result.stdout,
-            "```",
+            _markdown_text_block(result.stdout),
             "",
             "### Stderr",
             "",
-            "```text",
-            result.stderr,
-            "```",
+            _markdown_text_block(result.stderr),
             "",
             "### Output Last Message",
             "",
             f"`{last_message_path}`",
             "",
-            "```text",
-            _read_optional_text(last_message_path),
-            "```",
+            _markdown_text_block(output_last_message),
             "",
         ]
     )
@@ -982,6 +983,16 @@ def _append_codex_log(
         front_matter + body,
         encoding="utf-8",
     )
+
+
+def _markdown_text_block(text: str) -> str:
+    """Markdown code fence と衝突しない text code block を組み立てる。"""
+    max_backtick_run = max(
+        (len(match.group(0)) for match in re.finditer(r"`+", text)),
+        default=0,
+    )
+    fence = "`" * max(3, max_backtick_run + 1)
+    return "\n".join([f"{fence}text", text, fence])
 
 
 def _write_output_schema(

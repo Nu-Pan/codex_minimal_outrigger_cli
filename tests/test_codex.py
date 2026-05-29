@@ -110,6 +110,56 @@ def test_run_codex_exec_retries_json_and_writes_full_log(
     assert "codex exec 試行 (3/3) output:" in captured
 
 
+def test_run_codex_exec_full_log_uses_fence_longer_than_payload(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """入出力内の Markdown fence で codex exec フルログの区切りを壊さない。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                "printf 'stdout before\\n```\\nstdout after\\n'",
+                "printf 'stderr before\\n```\\nstderr after\\n' >&2",
+                "printf 'last before\\n```\\nlast after\\n' > \"$LAST\"",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+    prompt = "prompt before\n```\nprompt after"
+
+    output = run_codex_exec(repo, prompt, read_only=True)
+
+    log_path = next((repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log"))
+    log_content = log_path.read_text(encoding="utf-8")
+    assert output == "last before\n```\nlast after\n"
+    assert "### Prompt\n\n````text\nprompt before\n```\nprompt after\n````" in log_content
+    assert "### Stdout\n\n````text\nstdout before\n```\nstdout after\n\n````" in log_content
+    assert "### Stderr\n\n````text\nstderr before\n```\nstderr after\n\n````" in log_content
+    assert (
+        "### Output Last Message" in log_content
+        and "````text\nlast before\n```\nlast after\n\n````" in log_content
+    )
+    assert log_content.count("## Codex Exec Call") == 1
+    assert log_content.count("### Stdout") == 1
+    assert log_content.count("### Stderr") == 1
+
+
 def test_prepare_codex_exec_paths_reserves_call_log_atomically(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -1330,6 +1380,7 @@ def test_run_codex_exec_retries_zero_exit_capacity_stdout_jsonl(
     """0 終了でも stdout JSONL が capacity なら同じ条件で再実行する。"""
     repo = tmp_path / "repo"
     repo.mkdir()
+    _git(repo, "init")
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
     state = tmp_path / "attempts.txt"
@@ -1364,12 +1415,19 @@ def test_run_codex_exec_retries_zero_exit_capacity_stdout_jsonl(
     )
     codex.chmod(0o755)
     sleeps: list[int] = []
+    calls: list[Path] = []
+
+    def fake_maintain(repo_root: Path) -> bool:
+        """capacity retry 直前にも再メンテナンスすることを記録する。"""
+        calls.append(repo_root)
+        return False
 
     monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
     monkeypatch.setattr(
         "commons.codex.time.sleep",
         lambda seconds: sleeps.append(seconds),
     )
+    monkeypatch.setattr("commons.indexing.maintain_indexes", fake_maintain)
 
     output = run_codex_exec(repo, "prompt", read_only=True)
 
@@ -1379,6 +1437,7 @@ def test_run_codex_exec_retries_zero_exit_capacity_stdout_jsonl(
     assert output.strip() == "done"
     assert state.read_text(encoding="utf-8").strip() == "2"
     assert sleeps == [5]
+    assert calls == [repo, repo]
     assert len(log_files) == 2
 
 
@@ -1506,7 +1565,7 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
     calls: list[Path] = []
 
     def fake_maintain(repo_root: Path) -> bool:
-        """quota 復旧経路を含む Codex CLI 直前メンテナンスを記録する。"""
+        """quota poll と resume 直前のメンテナンスも記録する。"""
         calls.append(repo_root)
         return False
 
@@ -1547,6 +1606,67 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
     assert "quota poll prompt: あなたは Codex CLI の疎通確認担当です。" in captured
     assert "quota poll output: ok" in captured
     assert "quota が復旧したため、codex exec を resume します" in captured
+
+
+def test_run_codex_exec_waits_and_resumes_after_zero_exit_quota_jsonl(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """0 終了でも stdout JSONL が quota 枯渇なら停止 session を resume する。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    args_file = tmp_path / "args.txt"
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                f"printf '%s\\n' \"$@\" >> {args_file}",
+                "LAST=''",
+                "PREV=''",
+                "HAS_RESUME=0",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$ARG\" = \"resume\" ]; then HAS_RESUME=1; fi",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                "PROMPT=\"$(cat)\"",
+                "if [ \"$PROMPT\" = \"original prompt\" ]; then",
+                "  if [ \"$HAS_RESUME\" = 0 ]; then",
+                "    echo '{\"type\":\"thread.started\","
+                "\"thread_id\":\"thread-zero\"}'",
+                "    echo '{\"type\":\"turn.failed\","
+                "\"error\":{\"message\":\"out of credits\"}}'",
+                "    echo 'not a quota final message' > \"$LAST\"",
+                "    exit 0",
+                "  fi",
+                "fi",
+                "if [[ \"$PROMPT\" == *'Codex CLI の疎通確認担当'* ]]; then",
+                "  echo ok > \"$LAST\"",
+                "  echo '{\"event\":\"poll-ok\"}'",
+                "  exit 0",
+                "fi",
+                "echo resumed > \"$LAST\"",
+                "echo '{\"event\":\"resumed\"}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setattr("commons.codex.time.sleep", lambda seconds: None)
+
+    output = run_codex_exec(repo, "original prompt", read_only=True)
+
+    args = args_file.read_text(encoding="utf-8")
+    assert output.strip() == "resumed"
+    assert "resume\nthread-zero\n-" in args
+    assert args.count("\n-\n") == 3
 
 
 def test_run_codex_exec_waits_again_when_resume_is_still_quota_exhausted(

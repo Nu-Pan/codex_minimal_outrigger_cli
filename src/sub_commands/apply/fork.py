@@ -1,8 +1,11 @@
 """`cmoc apply` の本体処理。"""
 
+import fcntl
 import json
 import os
 import re
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from inspect import Parameter, signature
 from pathlib import Path
@@ -27,6 +30,8 @@ from commons.repo import (
     current_branch,
     ensure_cmoc_ignored,
     filter_oracle_file_paths,
+    git_name_only_paths,
+    git_name_status_entries,
     head_commit,
     is_session_branch,
     read_session_state,
@@ -255,30 +260,51 @@ def cmoc_apply_impl(
         session_branch,
     )
     assert_no_uncommitted_changes(repo_root)
-    session_head_at_apply_start = head_commit(repo_root)
-    oracle_snapshot_commit = session_head_at_apply_start
+    session_head_at_apply_start = ""
+    oracle_snapshot_commit = ""
 
     failed_stage = "create apply worktree"
     apply_run_id, apply_branch, apply_worktree = _plan_apply_worktree(
-        repo_root,
+        state_root,
         session_id,
     )
     discrepancy_counts: list[int] = []
+    apply_completed_recorded = False
+    apply_start_needs_error_record = False
+    apply_error_recorded = False
     try:
-        failed_stage = "create apply worktree"
-        start_step(timer, 3, 6, "create apply worktree")
-        apply_run_id, apply_branch, apply_worktree = _create_apply_worktree(
-            repo_root,
-            session_id,
-            oracle_snapshot_commit,
-        )
-        _mark_apply_running(
-            state_root,
-            session_id,
-            state,
-            apply_branch,
-            oracle_snapshot_commit,
-        )
+        with _locked_apply_start(state_root, session_id):
+            state = read_session_state(state_root, session_id)
+            session_start_commit = _validate_apply_fork_state(
+                state,
+                session_branch,
+            )
+            assert_no_uncommitted_changes(repo_root)
+            session_head_at_apply_start = head_commit(repo_root)
+            oracle_snapshot_commit = session_head_at_apply_start
+
+            failed_stage = "create apply worktree"
+            start_step(timer, 3, 6, "create apply worktree")
+            apply_start_needs_error_record = True
+            try:
+                apply_run_id, apply_branch, apply_worktree = (
+                    _create_apply_worktree(
+                        state_root,
+                        session_id,
+                        oracle_snapshot_commit,
+                    )
+                )
+                _mark_apply_running(
+                    state_root,
+                    session_id,
+                    state,
+                    apply_branch,
+                    oracle_snapshot_commit,
+                )
+            except Exception:
+                _mark_apply_error(state_root, session_id, state)
+                apply_error_recorded = True
+                raise
 
         # ユーザー向けステップとして INDEX.md を明示メンテナンスする。
         failed_stage = "maintain INDEX.md files"
@@ -327,16 +353,26 @@ def cmoc_apply_impl(
             )
 
         # 要修正点 0 件の経路も含め、apply run 中に生じた差分を確定してから
-        # report を生成する。
+        # apply run の完了状態を記録し、その後 report を生成する。
         _assert_forbidden_paths_clean(apply_worktree)
         _commit_all_changes(apply_worktree)
+        _mark_apply_completed(
+            state_root,
+            session_id,
+            state,
+        )
+        apply_completed_recorded = True
 
         # 実行結果を人間向け report と exit code に変換する。
         failed_stage = "write report"
         start_step(timer, 6, 6, "write report")
+        session_head_at_apply_finish = _session_branch_head_for_report(
+            repo_root,
+            session_branch,
+        )
         report_path = _write_apply_report(
             apply_worktree,
-            repo_root,
+            state_root,
             session_id,
             apply_run_id,
             session_branch,
@@ -344,24 +380,26 @@ def cmoc_apply_impl(
             apply_worktree,
             oracle_snapshot_commit,
             session_head_at_apply_start,
-            session_head_at_apply_start,
+            session_head_at_apply_finish,
             completed,
             discrepancy_counts,
-        )
-        _mark_apply_completed(
-            state_root,
-            session_id,
-            state,
         )
         print(f"apply run id: {apply_run_id}")
         print(str(report_path))
         timer.report()
         return 0 if completed else _APPLY_INCOMPLETE_EXIT_CODE
     except Exception as error:
-        _mark_apply_error(state_root, session_id, state)
+        if not apply_start_needs_error_record:
+            raise
+        if not apply_completed_recorded and not apply_error_recorded:
+            _mark_apply_error(state_root, session_id, state)
         try:
-            report_path = _write_apply_error_report(
+            session_head_at_apply_finish = _session_branch_head_for_report(
                 repo_root,
+                session_branch,
+            )
+            report_path = _write_apply_error_report(
+                state_root,
                 session_id,
                 apply_run_id,
                 session_branch,
@@ -369,7 +407,7 @@ def cmoc_apply_impl(
                 apply_worktree,
                 oracle_snapshot_commit,
                 session_head_at_apply_start,
-                session_head_at_apply_start,
+                session_head_at_apply_finish,
                 failed_stage,
                 error,
                 discrepancy_counts,
@@ -383,6 +421,20 @@ def cmoc_apply_impl(
             print(f"apply run id: {apply_run_id}")
             print(str(report_path))
         raise
+
+
+def _session_branch_head_for_report(repo_root: Path, session_branch: str) -> str:
+    """apply report 用に session branch の現在 HEAD を取得する。"""
+    result = run_git(
+        repo_root,
+        ["rev-parse", "--verify", f"refs/heads/{session_branch}^{{commit}}"],
+        check=False,
+    )
+    value = result.stdout.strip()
+    if result.returncode == 0 and value:
+        return value
+    detail = result.stderr.strip() or "git rev-parse returned no commit"
+    return f"unknown: failed to resolve {session_branch}: {detail}"
 
 
 def _validate_apply_fork_state(
@@ -488,6 +540,23 @@ def _create_apply_worktree(
         run_git(repo_root, ["branch", "-D", apply_branch], check=False)
         sleep(0.001)
     raise RuntimeError("リトライ後も一意な apply worktree を作成できませんでした。")
+
+
+@contextmanager
+def _locked_apply_start(
+    state_root: Path,
+    session_id: str,
+) -> Iterator[None]:
+    """apply 開始時の ready 判定、artifact 作成、state 永続化を直列化する。"""
+    lock_dir = state_root / ".cmoc" / "locks"
+    lock_dir.mkdir(parents=True, exist_ok=True)
+    lock_path = lock_dir / f"apply-fork-{session_id}.lock"
+    with lock_path.open("a+", encoding="utf-8") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
 def _plan_apply_worktree(
@@ -703,9 +772,11 @@ def _target_oracle_files(
         )
     )
     return [
-        _InvestigationTarget(path)
+        _InvestigationTarget(
+            path,
+            deleted_at_snapshot=path not in snapshot_paths,
+        )
         for path in sorted(changed)
-        if path in snapshot_paths
     ]
 
 
@@ -732,9 +803,11 @@ def _target_implementation_files(
         )
     )
     return [
-        _InvestigationTarget(path)
+        _InvestigationTarget(
+            path,
+            deleted_at_snapshot=path not in snapshot_paths,
+        )
         for path in sorted(changed)
-        if path in snapshot_paths
     ]
 
 
@@ -820,9 +893,9 @@ def _tracked_files_at_commit(
     """指定 commit の tracked file 一覧を repo 相対 path で返す。"""
     result = run_git(
         repo_root,
-        ["ls-tree", "-r", "--name-only", commit_hash, "--", pathspec],
+        ["ls-tree", "-r", "-z", "--name-only", commit_hash, "--", pathspec],
     )
-    return sorted(line for line in result.stdout.splitlines() if line)
+    return sorted(git_name_only_paths(result.stdout))
 
 
 def _changed_files_between_commits(
@@ -831,12 +904,16 @@ def _changed_files_between_commits(
     commit_hash: str,
     pathspec: str,
 ) -> list[str]:
-    """指定 commit 範囲で変更された変更後 path を返す。"""
+    """指定 commit 範囲で変更された path を返す。
+
+    削除差分は変更後 path が存在しないため、削除前 path を返す。
+    """
     result = run_git(
         repo_root,
         [
             "log",
             "--name-status",
+            "-z",
             "-M",
             "--format=",
             f"{base_commit}..{commit_hash}",
@@ -845,20 +922,16 @@ def _changed_files_between_commits(
         ],
     )
     paths: set[str] = set()
-    for line in result.stdout.splitlines():
-        parts = line.split("\t")
-        if len(parts) < 2:
-            continue
-        status = parts[0]
+    for status, status_paths in git_name_status_entries(result.stdout):
         status_kind = status[:1]
-        if status_kind not in {"A", "C", "M", "R", "T"}:
+        if status_kind not in {"A", "C", "D", "M", "R", "T"}:
             continue
         if status_kind in {"C", "R"}:
-            if len(parts) >= 3 and parts[2]:
-                paths.add(parts[2])
+            if len(status_paths) >= 2:
+                paths.add(status_paths[1])
             continue
-        if parts[1]:
-            paths.add(parts[1])
+        if status_paths:
+            paths.add(status_paths[0])
     return sorted(paths)
 
 
@@ -1081,6 +1154,8 @@ def _is_forbidden_changed_path(relative_path: str) -> bool:
     return (
         relative_path == "oracles"
         or relative_path.startswith("oracles/")
+        or relative_path == "README.md"
+        or relative_path == "AGENTS.md"
         or relative_path == ".agents"
         or relative_path.startswith(".agents/")
         or relative_path == "memo"
@@ -1270,6 +1345,15 @@ def _render_apply_report_body(
         "",
         f"## ブランチ {apply_branch} 上の全変更内容",
     ]
+    _append_change_summary_lines(lines, change_summary)
+    return "\n".join(lines).strip()
+
+
+def _append_change_summary_lines(
+    lines: list[str],
+    change_summary: list[dict[str, object]],
+) -> None:
+    """変更要約 Structured Output を Markdown 行へ追加する。"""
     for change in change_summary:
         category = str(change.get("category", "")).strip()
         summary = str(change.get("summary", "")).strip()
@@ -1287,7 +1371,101 @@ def _render_apply_report_body(
             lines.append("主な変更ファイル:")
             lines.extend(f"- `{path}`" for path in paths if isinstance(path, str))
         lines.append("")
-    return "\n".join(lines).strip()
+
+
+def _best_effort_change_summary(
+    repo_root: Path,
+    branch_name: str,
+    oracle_snapshot_commit: str,
+) -> list[dict[str, object]]:
+    """エラーレポート用に、可能な限り apply branch の変更要約を返す。"""
+    try:
+        change_summary = _generate_change_summary(
+            repo_root,
+            branch_name,
+            oracle_snapshot_commit,
+        )
+        _validate_change_summary_payload({"changes": change_summary})
+        return change_summary
+    except Exception as error:
+        return _fallback_change_summary_from_git(
+            repo_root,
+            branch_name,
+            oracle_snapshot_commit,
+            error,
+        )
+
+
+def _fallback_change_summary_from_git(
+    repo_root: Path,
+    branch_name: str,
+    oracle_snapshot_commit: str,
+    error: BaseException,
+) -> list[dict[str, object]]:
+    """Codex CLI 要約が使えない場合、git から取得できる範囲を report に残す。"""
+    try:
+        diff_result = run_git(
+            repo_root,
+            [
+                "diff",
+                "--name-only",
+                "-z",
+                f"{oracle_snapshot_commit}..{branch_name}",
+                "--",
+            ],
+            check=False,
+        )
+    except Exception as diff_error:
+        return [
+            {
+                "category": "変更要約生成失敗",
+                "summary": (
+                    "Codex CLI による変更内容要約に失敗し、git diff による"
+                    "変更ファイル一覧の取得にも失敗しました。"
+                    f"要約生成エラー: {type(error).__name__}: {error} / "
+                    f"diff 取得エラー: {type(diff_error).__name__}: {diff_error}"
+                ),
+                "changed_paths": [],
+            }
+        ]
+    changed_paths = git_name_only_paths(diff_result.stdout)
+    if diff_result.returncode not in (0, 1):
+        return [
+            {
+                "category": "変更要約生成失敗",
+                "summary": (
+                    "Codex CLI による変更内容要約に失敗し、git diff による"
+                    "変更ファイル一覧の取得にも失敗しました。"
+                    f"要約生成エラー: {type(error).__name__}: {error}"
+                ),
+                "changed_paths": [],
+            }
+        ]
+    if not changed_paths:
+        return [
+            {
+                "category": "変更なし",
+                "summary": (
+                    "Codex CLI による変更内容要約には失敗しましたが、"
+                    "git diff で確認できる apply branch 上の変更ファイルは"
+                    "ありませんでした。"
+                    f"要約生成エラー: {type(error).__name__}: {error}"
+                ),
+                "changed_paths": [],
+            }
+        ]
+    return [
+        {
+            "category": "変更ファイル一覧",
+            "summary": (
+                "Codex CLI による意味論的カテゴリ別要約には失敗しました。"
+                "代替情報として、oracle snapshot commit から apply branch の"
+                "HEAD までに変更されたファイル一覧を記録します。"
+                f"要約生成エラー: {type(error).__name__}: {error}"
+            ),
+            "changed_paths": changed_paths,
+        }
+    ]
 
 
 def _write_apply_error_report(
@@ -1317,30 +1495,35 @@ def _write_apply_error_report(
     if not count_lines:
         count_lines = ["- エラー発生前に記録済みの要修正点件数はありません。"]
 
-    body = "\n".join(
-        [
-            "## 作業結果",
-            "エラー",
-            "",
-            "`cmoc apply fork` は途中でエラーが起きたため、"
-            "調査・修正ループを正常に終了できませんでした。",
-            "",
-            "## エラー詳細",
-            f"- Failed stage: `{failed_stage}`",
-            f"- Exception type: `{type(error).__name__}`",
-            f"- Exception message: `{error}`",
-            "",
-            "## 要修正点件数の推移",
-            *count_lines,
-            "",
-            f"## ブランチ {apply_branch} 上の全変更内容",
-            "カテゴリ: エラー終了",
-            "",
-            "エラー終了したため、変更内容の意味論的カテゴリ別要約は"
-            "確定できません。必要に応じて apply worktree と apply branch の"
-            "差分を確認してください。",
-        ]
+    summary_repo_root = (
+        apply_worktree
+        if apply_worktree.exists()
+        else report_repo_root
     )
+    change_summary = _best_effort_change_summary(
+        summary_repo_root,
+        apply_branch,
+        oracle_snapshot_commit,
+    )
+    body_lines = [
+        "## 作業結果",
+        "エラー",
+        "",
+        "`cmoc apply fork` は途中でエラーが起きたため、"
+        "調査・修正ループを正常に終了できませんでした。",
+        "",
+        "## エラー詳細",
+        f"- Failed stage: `{failed_stage}`",
+        f"- Exception type: `{type(error).__name__}`",
+        f"- Exception message: `{error}`",
+        "",
+        "## 要修正点件数の推移",
+        *count_lines,
+        "",
+        f"## ブランチ {apply_branch} 上の全変更内容",
+    ]
+    _append_change_summary_lines(body_lines, change_summary)
+    body = "\n".join(body_lines).strip()
     report = _apply_report_with_front_matter(
         report_body=body,
         generated_at=generated_at,
@@ -1739,6 +1922,8 @@ def _apply_prompt(
             "要修正点本文への逐語的追従や、要修正点で述べている目的を達成した保証は不要です。",
             f"要修正点: {json.dumps(discrepancy, ensure_ascii=False)}",
             f"`{repo_root / 'oracles'}` は編集禁止です。",
+            f"`{repo_root / 'README.md'}` は編集禁止です。",
+            f"`{repo_root / 'AGENTS.md'}` は編集禁止です。",
             f"`{repo_root / '.agents'}` は編集禁止です。",
             f"`{repo_root / 'memo'}` は読み書き禁止です。",
         ]
