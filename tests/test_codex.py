@@ -169,9 +169,9 @@ def test_prepare_codex_exec_paths_reserves_call_log_atomically(
     repo.mkdir()
     timestamps = iter(
         [
-            "2026-05-04_03-02_01_001",
-            "2026-05-04_03-02_01_001",
-            "2026-05-04_03-02_01_002",
+            "2026-05-04_03-02_01_000000001",
+            "2026-05-04_03-02_01_000000001",
+            "2026-05-04_03-02_01_000000002",
         ]
     )
     monkeypatch.setattr(
@@ -182,10 +182,10 @@ def test_prepare_codex_exec_paths_reserves_call_log_atomically(
     first = _prepare_codex_exec_paths(repo)
     second = _prepare_codex_exec_paths(repo)
 
-    assert first["call"].name == "2026-05-04_03-02_01_001.log"
-    assert second["call"].name == "2026-05-04_03-02_01_002.log"
-    assert first["last_message"].name == "2026-05-04_03-02_01_001.log"
-    assert second["last_message"].name == "2026-05-04_03-02_01_002.log"
+    assert first["call"].name == "2026-05-04_03-02_01_000000001.log"
+    assert second["call"].name == "2026-05-04_03-02_01_000000002.log"
+    assert first["last_message"].name == "2026-05-04_03-02_01_000000001.log"
+    assert second["last_message"].name == "2026-05-04_03-02_01_000000002.log"
     assert first["call"].exists()
     assert second["call"].exists()
 
@@ -620,12 +620,12 @@ def test_subcommand_log_avoids_existing_timestamp_file(
     repo.mkdir()
     log_dir = repo / ".cmoc" / "logs" / "sub_commands"
     log_dir.mkdir(parents=True)
-    existing_log = log_dir / "2026-05-04_03-02_01_001.jsonl"
+    existing_log = log_dir / "2026-05-04_03-02_01_000000001.jsonl"
     existing_log.write_text("existing log\n", encoding="utf-8")
     timestamps = iter(
         [
-            "2026-05-04_03-02_01_001",
-            "2026-05-04_03-02_01_002",
+            "2026-05-04_03-02_01_000000001",
+            "2026-05-04_03-02_01_000000002",
         ]
     )
     monkeypatch.setattr(
@@ -636,7 +636,7 @@ def test_subcommand_log_avoids_existing_timestamp_file(
     with subcommand_log(repo):
         print("new invocation")
 
-    new_log = log_dir / "2026-05-04_03-02_01_002.jsonl"
+    new_log = log_dir / "2026-05-04_03-02_01_000000002.jsonl"
     assert existing_log.read_text(encoding="utf-8") == "existing log\n"
     assert new_log.exists()
     assert '"event": "subcommand_start"' in new_log.read_text(encoding="utf-8")
@@ -677,8 +677,8 @@ def test_subcommand_log_from_apply_worktree_writes_to_main_repo(
         / ".cmoc"
         / "worktrees"
         / "apply"
-        / "2026-05-28_05-10_00_000"
-        / "2026-05-28_05-11_00_000"
+        / "2026-05-28_05-10_00_000000000"
+        / "2026-05-28_05-11_00_000000000"
     )
     apply_worktree.parent.mkdir(parents=True)
     _git(
@@ -686,7 +686,7 @@ def test_subcommand_log_from_apply_worktree_writes_to_main_repo(
         "worktree",
         "add",
         "-b",
-        "cmoc/apply/2026-05-28_05-10_00_000/2026-05-28_05-11_00_000",
+        "cmoc/apply/2026-05-28_05-10_00_000000000/2026-05-28_05-11_00_000000000",
         str(apply_worktree),
         "HEAD",
     )

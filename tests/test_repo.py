@@ -930,10 +930,10 @@ def test_changed_paths_preserves_special_path_tokens(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("branch_name", "expected"),
     [
-        ("cmoc/session/2026-05-10_22-21_10_123", True),
-        ("cmoc/apply/2026-05-10_22-21_10_123/run-1", True),
-        ("cmoc/session/2026-05-10_22-21_10_123/extra", False),
-        ("cmoc/apply/2026-05-10_22-21_10_123", False),
+        ("cmoc/session/2026-05-10_22-21_10_000000123", True),
+        ("cmoc/apply/2026-05-10_22-21_10_000000123/run-1", True),
+        ("cmoc/session/2026-05-10_22-21_10_000000123/extra", False),
+        ("cmoc/apply/2026-05-10_22-21_10_000000123", False),
     ],
 )
 def test_is_cmoc_branch(branch_name: str, expected: bool) -> None:
@@ -946,7 +946,7 @@ def test_read_session_start_commit_uses_session_state(
 ) -> None:
     """部分評価用 base commit は session state から読む。"""
     repo = _init_repo(tmp_path)
-    session_id = "2026-05-10_22-21_10_123"
+    session_id = "2026-05-10_22-21_10_000000123"
     write_session_state(
         repo,
         session_id,
@@ -988,7 +988,7 @@ def test_write_session_state_persists_only_oracle_schema(
 ) -> None:
     """session state は oracle 定義の固定 field だけ永続化する。"""
     repo = _init_repo(tmp_path)
-    session_id = "2026-05-10_22-21_10_123"
+    session_id = "2026-05-10_22-21_10_000000123"
 
     state_path = write_session_state(
         repo,
@@ -1003,8 +1003,8 @@ def test_write_session_state_persists_only_oracle_schema(
             "apply": {
                 "state": "completed",
                 "apply_branch": (
-                    "cmoc/apply/2026-05-10_22-21_10_123/"
-                    "2026-05-10_22-22_10_123"
+                    "cmoc/apply/2026-05-10_22-21_10_000000123/"
+                    "2026-05-10_22-22_10_000000123"
                 ),
                 "oracle_snapshot_commit": "def456",
                 "apply_worktree": "/repo/.cmoc/worktrees/apply/session/run",
@@ -1024,8 +1024,8 @@ def test_write_session_state_persists_only_oracle_schema(
         "apply": {
             "state": "completed",
             "apply_branch": (
-                "cmoc/apply/2026-05-10_22-21_10_123/"
-                "2026-05-10_22-22_10_123"
+                "cmoc/apply/2026-05-10_22-21_10_000000123/"
+                "2026-05-10_22-22_10_000000123"
             ),
             "oracle_snapshot_commit": "def456",
         },
@@ -1037,7 +1037,7 @@ def test_read_session_state_rejects_unknown_state_values(
 ) -> None:
     """session/apply state は oracle 定義の列挙値だけ受け入れる。"""
     repo = _init_repo(tmp_path)
-    session_id = "2026-05-10_22-21_10_123"
+    session_id = "2026-05-10_22-21_10_000000123"
     state_path = session_state_path(repo, session_id)
     state_path.parent.mkdir(parents=True)
     state_path.write_text(
@@ -1070,7 +1070,7 @@ def test_read_session_state_rejects_ready_apply_with_run_fields(
 ) -> None:
     """apply.state が ready の永続 state は補助 field を null に保つ。"""
     repo = _init_repo(tmp_path)
-    session_id = "2026-05-10_22-21_10_123"
+    session_id = "2026-05-10_22-21_10_000000123"
     state_path = session_state_path(repo, session_id)
     state_path.parent.mkdir(parents=True)
     state_path.write_text(
@@ -1084,8 +1084,8 @@ def test_read_session_state_rejects_ready_apply_with_run_fields(
                 "apply": {
                     "state": "ready",
                     "apply_branch": (
-                        "cmoc/apply/2026-05-10_22-21_10_123/"
-                        "2026-05-10_22-22_10_123"
+                        "cmoc/apply/2026-05-10_22-21_10_000000123/"
+                        "2026-05-10_22-22_10_000000123"
                     ),
                     "oracle_snapshot_commit": None,
                 },
@@ -1106,7 +1106,7 @@ def test_read_session_state_rejects_apply_schema_mismatch(
 ) -> None:
     """永続 session state の apply field 集合は oracle schema と一致させる。"""
     repo = _init_repo(tmp_path)
-    session_id = "2026-05-10_22-21_10_123"
+    session_id = "2026-05-10_22-21_10_000000123"
     state_path = session_state_path(repo, session_id)
     state_path.parent.mkdir(parents=True)
     state_path.write_text(
@@ -1144,7 +1144,7 @@ def test_write_session_state_rejects_completed_apply_without_run_fields(
     with pytest.raises(CmocError) as error:
         write_session_state(
             repo,
-            "2026-05-10_22-21_10_123",
+            "2026-05-10_22-21_10_000000123",
             {
                 "session": {
                     "state": "active",
@@ -1167,7 +1167,7 @@ def test_write_session_state_allows_error_before_apply_run_fields_exist(
 ) -> None:
     """apply branch 作成前の失敗は error state として保存できる。"""
     repo = _init_repo(tmp_path)
-    session_id = "2026-05-10_22-21_10_123"
+    session_id = "2026-05-10_22-21_10_000000123"
 
     state_path = write_session_state(
         repo,

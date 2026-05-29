@@ -14,7 +14,7 @@ from commons.timestamps import make_timestamp
 def test_make_timestamp_uses_required_format() -> None:
     """ゼロ埋めされた cmoc timestamp を生成する。"""
     assert make_timestamp(datetime(2026, 5, 4, 3, 2, 1, 987654)) == (
-        "2026-05-04_03-02_01_987"
+        "2026-05-04_03-02_01_000000987"
     )
 
 
@@ -31,7 +31,7 @@ def test_make_timestamp_converts_aware_datetime_to_local_timezone() -> None:
     try:
         timestamp = datetime(2026, 5, 3, 18, 2, 1, 987654, timezone.utc)
         assert make_timestamp(timestamp) == (
-            "2026-05-04_03-02_01_987"
+            "2026-05-04_03-02_01_000000987"
         )
     finally:
         if original_tz is None:

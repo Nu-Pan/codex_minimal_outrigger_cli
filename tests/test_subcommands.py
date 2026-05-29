@@ -855,7 +855,7 @@ def test_session_fork_keeps_state_when_rollback_branch_delete_fails(
     repo = _init_repo(tmp_path)
     cmoc_init_impl(repo)
     home_branch = _git(repo, "branch", "--show-current").stdout.strip()
-    session_id = "2026-05-10_22-21_10_123"
+    session_id = "2026-05-10_22-21_10_000000123"
     session_branch = f"cmoc/session/{session_id}"
     original_run_git = session_fork_module.run_git
 
@@ -1817,7 +1817,7 @@ def test_eval_oracles_uses_full_mode_on_apply_branch(
         repo,
         "checkout",
         "-b",
-        "cmoc/apply/2026-05-10_22-21_10_123/2026-05-10_22-22_10_123",
+        "cmoc/apply/2026-05-10_22-21_10_000000123/2026-05-10_22-22_10_000000123",
     )
     changed_oracle.write_text("after\n", encoding="utf-8")
 
@@ -1977,14 +1977,14 @@ def test_apply_returns_complete_when_no_discrepancies(
     )
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert exit_code == 0
     assert len(reports) == 1
     assert state["apply"]["state"] == "completed"
     assert state["apply"]["apply_branch"].startswith(
-        "cmoc/apply/2026-05-10_22-21_10_123/"
+        "cmoc/apply/2026-05-10_22-21_10_000000123/"
     )
     assert state["apply"]["oracle_snapshot_commit"] == _git(
         repo,
@@ -1997,7 +1997,7 @@ def test_apply_returns_complete_when_no_discrepancies(
         / ".cmoc"
         / "worktrees"
         / "apply"
-        / "2026-05-10_22-21_10_123"
+        / "2026-05-10_22-21_10_000000123"
         / apply_run_id
     )
     assert apply_worktree.is_dir()
@@ -2007,18 +2007,18 @@ def test_apply_returns_complete_when_no_discrepancies(
         "oracle_snapshot_commit",
     }
     assert _git(repo, "branch", "--show-current").stdout.strip() == (
-        "cmoc/session/2026-05-10_22-21_10_123"
+        "cmoc/session/2026-05-10_22-21_10_000000123"
     )
     report_text = reports[0].read_text(encoding="utf-8")
     assert report_text.startswith("---\n")
-    assert "cmoc_session_id: \"2026-05-10_22-21_10_123\"" in report_text
+    assert "cmoc_session_id: \"2026-05-10_22-21_10_000000123\"" in report_text
     assert "cmoc_apply_run_id: " in report_text
     assert (
-        "cmoc_session_branch: \"cmoc/session/2026-05-10_22-21_10_123\""
+        "cmoc_session_branch: \"cmoc/session/2026-05-10_22-21_10_000000123\""
         in report_text
     )
     assert (
-        "cmoc_apply_branch: \"cmoc/apply/2026-05-10_22-21_10_123/"
+        "cmoc_apply_branch: \"cmoc/apply/2026-05-10_22-21_10_000000123/"
         in report_text
     )
     assert "apply_worktree_path: " in report_text
@@ -2125,7 +2125,7 @@ def test_apply_commits_index_changes_when_no_discrepancies(
 
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     apply_run_id = state["apply"]["apply_branch"].rsplit("/", 1)[1]
@@ -2134,7 +2134,7 @@ def test_apply_commits_index_changes_when_no_discrepancies(
         / ".cmoc"
         / "worktrees"
         / "apply"
-        / "2026-05-10_22-21_10_123"
+        / "2026-05-10_22-21_10_000000123"
         / apply_run_id
     )
     report_kwargs = [
@@ -2215,7 +2215,7 @@ def test_apply_report_records_session_head_at_finish_when_session_advances(
 
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     reports = list(
@@ -2265,7 +2265,7 @@ def test_apply_join_merges_completed_apply_branch_and_resets_state(
     output = capsys.readouterr().out
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
@@ -2275,7 +2275,7 @@ def test_apply_join_merges_completed_apply_branch_and_resets_state(
         "state": "ready",
     }
     assert _git(repo, "branch", "--show-current").stdout.strip() == (
-        "cmoc/session/2026-05-10_22-21_10_123"
+        "cmoc/session/2026-05-10_22-21_10_000000123"
     )
     assert _git(repo, "branch", "--list", apply_branch).stdout == ""
     assert not apply_worktree.exists()
@@ -2360,7 +2360,7 @@ def test_apply_join_keeps_artifacts_when_report_result_is_missing(
     _checkout_session_branch(repo)
     oracle_snapshot = _add_oracle_snapshot(repo)
     expected_apply_branch = (
-        "cmoc/apply/2026-05-10_22-21_10_123/2026-05-10_22-22_10_123"
+        "cmoc/apply/2026-05-10_22-21_10_000000123/2026-05-10_22-22_10_000000123"
     )
     apply_branch, apply_worktree, report_path = _create_completed_apply_run(
         repo,
@@ -2386,7 +2386,7 @@ def test_apply_join_keeps_artifacts_when_report_result_is_missing(
     output = capsys.readouterr().out
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
@@ -2451,7 +2451,7 @@ def test_apply_join_keeps_branch_when_worktree_remove_fails(
     output = capsys.readouterr().out
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
@@ -2482,7 +2482,7 @@ def test_apply_join_ignores_worktree_local_log_cmoc(
 
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
@@ -2516,7 +2516,7 @@ def test_apply_join_stops_on_unexpected_diff_in_normal_mode(
     assert f"{apply_branch}: oracles/spec.md" in error_info.value.detail
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert state["apply"]["state"] == "completed"
@@ -2618,7 +2618,7 @@ def test_apply_join_accepts_session_branch_oracles_index_diff(
 
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
@@ -2650,7 +2650,7 @@ def test_apply_join_accepts_session_branch_memo_diff(
 
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert (repo / "memo" / "note.md").read_text(encoding="utf-8") == "note\n"
@@ -2709,7 +2709,7 @@ def test_apply_join_force_resolve_keeps_expected_apply_index_diff(
     output = capsys.readouterr().out
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
@@ -2743,7 +2743,7 @@ def test_apply_join_auto_resolves_index_conflict(
     output = capsys.readouterr().out
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert not (repo / "INDEX.md").exists()
@@ -2807,7 +2807,7 @@ def test_apply_join_stops_on_non_index_conflict(
 
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert "conflict" in error_info.value.message
@@ -2866,7 +2866,7 @@ def test_apply_join_force_resolves_apply_branch_non_implementation_diff(
     output = capsys.readouterr().out
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
@@ -2900,7 +2900,7 @@ def test_apply_join_force_resolves_with_missing_apply_worktree(
     output = capsys.readouterr().out
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
@@ -2933,7 +2933,7 @@ def test_apply_join_force_resolves_apply_branch_copy_from_oracles(
     output = capsys.readouterr().out
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert not (repo / "feature.txt").exists()
@@ -2963,7 +2963,7 @@ def test_apply_abandon_deletes_apply_artifacts_and_resets_state(
     output = capsys.readouterr().out
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert state["apply"] == {
@@ -2972,7 +2972,7 @@ def test_apply_abandon_deletes_apply_artifacts_and_resets_state(
         "state": "ready",
     }
     assert _git(repo, "branch", "--show-current").stdout.strip() == (
-        "cmoc/session/2026-05-10_22-21_10_123"
+        "cmoc/session/2026-05-10_22-21_10_000000123"
     )
     assert _git(repo, "branch", "--list", apply_branch).stdout == ""
     assert not apply_worktree.exists()
@@ -3000,7 +3000,7 @@ def test_apply_abandon_accepts_apply_branch_worktree(
 
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert state["apply"]["state"] == "ready"
@@ -3047,7 +3047,7 @@ def test_apply_abandon_ignores_worktree_local_log_cmoc(
 
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert state["apply"]["state"] == "ready"
@@ -3067,7 +3067,7 @@ def test_apply_abandon_rejects_ready_state_without_cleanup(
 
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert "破棄対象の apply run" in error_info.value.message
@@ -3085,7 +3085,7 @@ def test_apply_abandon_accepts_error_state(
         repo,
         oracle_snapshot,
     )
-    state_path = repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+    state_path = repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
     state = json.loads(state_path.read_text(encoding="utf-8"))
     state["apply"]["state"] = "error"
     state_path.write_text(json.dumps(state), encoding="utf-8")
@@ -3112,11 +3112,11 @@ def test_apply_abandon_stops_running_process_and_resets_state(
     process = subprocess.Popen(
         [sys.executable, "-c", "import time; time.sleep(60)"],
     )
-    state_path = repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+    state_path = repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
     state = json.loads(state_path.read_text(encoding="utf-8"))
     state["apply"]["state"] = "running"
-    write_session_state(repo, "2026-05-10_22-21_10_123", state)
-    write_apply_process_id(repo, "2026-05-10_22-21_10_123", process.pid)
+    write_session_state(repo, "2026-05-10_22-21_10_000000123", state)
+    write_apply_process_id(repo, "2026-05-10_22-21_10_000000123", process.pid)
 
     try:
         cmoc_apply_abandon_impl(repo)
@@ -3128,7 +3128,7 @@ def test_apply_abandon_stops_running_process_and_resets_state(
     assert state["apply"]["state"] == "ready"
     assert "process_id" not in state["apply"]
     assert not (
-        repo / ".cmoc" / "runtime" / "apply" / "2026-05-10_22-21_10_123.pid"
+        repo / ".cmoc" / "runtime" / "apply" / "2026-05-10_22-21_10_000000123.pid"
     ).exists()
     assert _git(repo, "branch", "--list", apply_branch).stdout == ""
     assert not apply_worktree.exists()
@@ -3146,10 +3146,10 @@ def test_apply_abandon_accepts_stale_running_state_without_process_id(
         repo,
         oracle_snapshot,
     )
-    state_path = repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+    state_path = repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
     state = json.loads(state_path.read_text(encoding="utf-8"))
     state["apply"]["state"] = "running"
-    write_session_state(repo, "2026-05-10_22-21_10_123", state)
+    write_session_state(repo, "2026-05-10_22-21_10_000000123", state)
 
     cmoc_apply_abandon_impl(repo)
 
@@ -3172,7 +3172,7 @@ def test_apply_abandon_rejects_unknown_state_without_cleanup(
         repo,
         oracle_snapshot,
     )
-    state_path = repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+    state_path = repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
     state = json.loads(state_path.read_text(encoding="utf-8"))
     state["apply"]["state"] = "paused"
     state_path.write_text(json.dumps(state), encoding="utf-8")
@@ -3497,7 +3497,7 @@ def test_apply_commits_each_discrepancy_before_next_codex_call(
     assert commit_subjects[:2] == ["Apply fix 2", "Apply fix 1"]
     assert _git(repo, "status", "--porcelain").stdout == ""
     assert _git(repo, "branch", "--show-current").stdout.strip() == (
-        "cmoc/session/2026-05-10_22-21_10_123"
+        "cmoc/session/2026-05-10_22-21_10_000000123"
     )
 
 
@@ -3508,7 +3508,7 @@ def test_organize_prompt_includes_fixing_list_quality_requirements(
     prompt = _organize_prompt(
         tmp_path,
         json.loads(_discrepancy_json("fix"))["fixing_points"],
-        "cmoc/session/2026-05-10_22-21_10_123",
+        "cmoc/session/2026-05-10_22-21_10_000000123",
         "1111111111111111111111111111111111111111",
         "2222222222222222222222222222222222222222",
     )
@@ -3516,7 +3516,7 @@ def test_organize_prompt_includes_fixing_list_quality_requirements(
     assert "内容の品質に明確な問題がない" in prompt
     assert "重複する要修正点は 1 件にマージ" in prompt
     assert "矛盾する修正方針は矛盾しない内容に調整" in prompt
-    assert "git ブランチ `cmoc/session/2026-05-10_22-21_10_123`" in prompt
+    assert "git ブランチ `cmoc/session/2026-05-10_22-21_10_000000123`" in prompt
     assert (
         "`1111111111111111111111111111111111111111"
         "..2222222222222222222222222222222222222222`"
@@ -3717,13 +3717,13 @@ def test_apply_rejects_incomplete_change_summary_from_codex(
 
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     report_dir = repo / ".cmoc" / "reports" / "apply" / "fork"
     assert state["apply"]["state"] == "completed"
     assert state["apply"]["apply_branch"].startswith(
-        "cmoc/apply/2026-05-10_22-21_10_123/"
+        "cmoc/apply/2026-05-10_22-21_10_000000123/"
     )
     reports = list(report_dir.glob("*.md"))
     assert len(reports) == 1
@@ -3808,7 +3808,7 @@ def test_apply_writes_error_report_when_midway_stage_fails(
 
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     reports = list(
@@ -3818,7 +3818,7 @@ def test_apply_writes_error_report_when_midway_stage_fails(
 
     assert state["apply"]["state"] == "error"
     assert state["apply"]["apply_branch"].startswith(
-        "cmoc/apply/2026-05-10_22-21_10_123/"
+        "cmoc/apply/2026-05-10_22-21_10_000000123/"
     )
     assert len(reports) == 1
     assert str(reports[0]) in captured.out
@@ -3826,7 +3826,7 @@ def test_apply_writes_error_report_when_midway_stage_fails(
     assert "result: \"エラー\"" in report_text
     assert "cmoc_apply_run_id: " in report_text
     assert (
-        "cmoc_apply_branch: \"cmoc/apply/2026-05-10_22-21_10_123/"
+        "cmoc_apply_branch: \"cmoc/apply/2026-05-10_22-21_10_000000123/"
         in report_text
     )
     assert "apply_worktree_path: " in report_text
@@ -3938,7 +3938,7 @@ def test_apply_rejects_tracked_cmoc_before_worktree_creation(
     """apply fork は state 読み取り前に `.cmoc` 非追跡を保証する。"""
     repo = _init_repo(tmp_path)
     _checkout_session_branch(repo)
-    state_path = ".cmoc/sessions/2026-05-10_22-21_10_123.json"
+    state_path = ".cmoc/sessions/2026-05-10_22-21_10_000000123.json"
     _git(repo, "add", "-f", state_path)
     _git(repo, "commit", "-m", "track session state")
 
@@ -3960,8 +3960,8 @@ def test_apply_ensures_cmoc_ignore_before_session_state_read(
 ) -> None:
     """ignore 保証が済む前に `.cmoc/sessions` の壊れた state を読まない。"""
     repo = _init_repo(tmp_path)
-    _git(repo, "checkout", "-b", "cmoc/session/2026-05-10_22-21_10_123")
-    broken_path = repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+    _git(repo, "checkout", "-b", "cmoc/session/2026-05-10_22-21_10_000000123")
+    broken_path = repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
     broken_path.parent.mkdir(parents=True)
     broken_path.write_text("{not json", encoding="utf-8")
 
@@ -3988,7 +3988,7 @@ def test_apply_rejects_negative_repeat_before_worktree_creation(
 
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     branches = _git(repo, "branch", "--format=%(refname:short)").stdout
@@ -4038,14 +4038,14 @@ def test_apply_marks_error_when_running_state_write_fails(
 
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     apply_branch = state["apply"]["apply_branch"]
     assert "fake running write failure" in str(error.value)
     assert state["apply"]["state"] == "error"
     assert isinstance(apply_branch, str)
-    assert apply_branch.startswith("cmoc/apply/2026-05-10_22-21_10_123/")
+    assert apply_branch.startswith("cmoc/apply/2026-05-10_22-21_10_000000123/")
     assert _git(repo, "branch", "--list", apply_branch).stdout.strip()
     assert calls == 2
 
@@ -4060,7 +4060,7 @@ def test_apply_revalidates_ready_state_under_start_lock(
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
     _git(repo, "commit", "-m", "ignore cmoc")
-    session_id = "2026-05-10_22-21_10_123"
+    session_id = "2026-05-10_22-21_10_000000123"
     state_path = repo / ".cmoc" / "sessions" / f"{session_id}.json"
     running_branch = f"cmoc/apply/{session_id}/already-running"
     snapshot_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
@@ -4144,7 +4144,7 @@ def test_apply_marks_error_when_worktree_creation_fails(
 
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     branches = _git(repo, "branch", "--format=%(refname:short)").stdout
@@ -4175,7 +4175,7 @@ def test_apply_marks_error_when_worktree_creation_fails(
         / ".cmoc"
         / "worktrees"
         / "apply"
-        / "2026-05-10_22-21_10_123"
+        / "2026-05-10_22-21_10_000000123"
         / apply_run_id
     )
     assert f"apply_worktree_path: \"{planned_apply_worktree}\"" in report_text
@@ -4211,7 +4211,7 @@ def test_apply_commits_untracked_oracle_changes_after_cmoc_guarantee(
                 "収束",
                 "## 不整合件数の推移",
                 "1 回目: 0 件",
-                "## ブランチ cmoc/session/2026-05-10_22-21_10_123 上の全変更内容",
+                "## ブランチ cmoc/session/2026-05-10_22-21_10_000000123 上の全変更内容",
                 "カテゴリ: oracle 整備",
             ]
         )
@@ -4257,7 +4257,7 @@ def test_apply_commits_preexisting_staged_oracles_after_cmoc_guarantee(
                 "収束",
                 "## 不整合件数の推移",
                 "1 回目: 0 件",
-                "## ブランチ cmoc/session/2026-05-10_22-21_10_123 上の全変更内容",
+                "## ブランチ cmoc/session/2026-05-10_22-21_10_000000123 上の全変更内容",
                 "カテゴリ: oracle 整備",
             ]
         )
@@ -4713,13 +4713,13 @@ def test_session_join_merges_current_session_branch_and_deletes_it(
     ).stdout.splitlines()
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert _git(repo, "branch", "--show-current").stdout.strip() == target_branch
     assert (repo / "feature.txt").read_text(encoding="utf-8") == "feature\n"
     assert state["session"]["state"] == "joined"
-    assert "cmoc/session/2026-05-10_22-21_10_123" not in branches
+    assert "cmoc/session/2026-05-10_22-21_10_000000123" not in branches
 
 
 def test_session_join_ensures_cmoc_ignored_before_switch(
@@ -4729,7 +4729,7 @@ def test_session_join_ensures_cmoc_ignored_before_switch(
     repo = _init_repo(tmp_path)
     home_branch = _git(repo, "branch", "--show-current").stdout.strip()
     _checkout_session_branch(repo)
-    state_path = ".cmoc/sessions/2026-05-10_22-21_10_123.json"
+    state_path = ".cmoc/sessions/2026-05-10_22-21_10_000000123.json"
     _git(repo, "add", "-f", state_path)
     _git(repo, "commit", "-m", "track session state")
 
@@ -4741,7 +4741,7 @@ def test_session_join_ensures_cmoc_ignored_before_switch(
     assert ".gitignore" in error.value.detail
     assert state_path in error.value.detail
     assert _git(repo, "branch", "--show-current").stdout.strip() == (
-        "cmoc/session/2026-05-10_22-21_10_123"
+        "cmoc/session/2026-05-10_22-21_10_000000123"
     )
     assert "/.cmoc/" in (repo / ".gitignore").read_text(encoding="utf-8")
     assert _git(repo, "ls-files", "--", ".cmoc").stdout == ""
@@ -4793,11 +4793,11 @@ def test_session_join_precondition_failure_does_not_print_manual_resolution(
     _git(repo, "add", ".gitignore")
     _git(repo, "commit", "-m", "ignore cmoc")
     _checkout_session_branch(repo)
-    state_path = repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+    state_path = repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
     state = json.loads(state_path.read_text(encoding="utf-8"))
     state["apply"]["state"] = "running"
     state["apply"]["apply_branch"] = (
-        "cmoc/apply/2026-05-10_22-21_10_123/2026-05-10_22-22_10_123"
+        "cmoc/apply/2026-05-10_22-21_10_000000123/2026-05-10_22-22_10_000000123"
     )
     state["apply"]["oracle_snapshot_commit"] = _git(
         repo,
@@ -4828,7 +4828,7 @@ def test_session_join_switch_failure_prints_manual_resolution(
     session_branch = _git(repo, "branch", "--show-current").stdout.strip()
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     home_branch = state["session"]["session_home_branch"]
@@ -4936,7 +4936,7 @@ def test_session_join_stops_non_conflict_merge_failure_without_codex(
     captured = capsys.readouterr()
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     branches = _git(repo, "branch", "--format=%(refname:short)").stdout
@@ -4972,7 +4972,7 @@ def test_session_join_rejects_codex_change_outside_conflict_paths(
 
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert "conflict 対象外" in error.value.message
@@ -5039,7 +5039,7 @@ def test_session_join_allows_oracle_conflict_path_in_codex_guard(
 
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert captured_allowed_paths == ["oracles/spec.md"]
@@ -5081,7 +5081,7 @@ def test_session_join_ignores_markers_outside_conflict_paths(
 
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert state["session"]["state"] == "joined"
@@ -5147,16 +5147,16 @@ def test_session_abandon_marks_state_and_force_deletes_branch(
     ).stdout.splitlines()
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert _git(repo, "branch", "--show-current").stdout.strip() == home_branch
     assert state["session"]["state"] == "abandoned"
     assert state["session"].get("joined_at") is None
-    assert "cmoc/session/2026-05-10_22-21_10_123" not in branches
+    assert "cmoc/session/2026-05-10_22-21_10_000000123" not in branches
     assert (repo / "feature.txt").exists() is False
     assert (
-        "abandoned session branch: cmoc/session/2026-05-10_22-21_10_123"
+        "abandoned session branch: cmoc/session/2026-05-10_22-21_10_000000123"
         in captured.out
     )
 
@@ -5167,7 +5167,7 @@ def test_session_abandon_ensures_cmoc_ignored_before_cleanup(
     """tracked `.cmoc` state を補修し、発生差分を検出して cleanup 前に止める。"""
     repo = _init_repo(tmp_path)
     _checkout_session_branch(repo)
-    state_path = ".cmoc/sessions/2026-05-10_22-21_10_123.json"
+    state_path = ".cmoc/sessions/2026-05-10_22-21_10_000000123.json"
     _git(repo, "add", "-f", state_path)
     _git(repo, "commit", "-m", "track session state")
 
@@ -5179,7 +5179,7 @@ def test_session_abandon_ensures_cmoc_ignored_before_cleanup(
     assert ".gitignore" in error.value.detail
     assert state_path in error.value.detail
     assert _git(repo, "branch", "--show-current").stdout.strip() == (
-        "cmoc/session/2026-05-10_22-21_10_123"
+        "cmoc/session/2026-05-10_22-21_10_000000123"
     )
     assert "/.cmoc/" in (repo / ".gitignore").read_text(encoding="utf-8")
     assert _git(repo, "ls-files", "--", ".cmoc").stdout == ""
@@ -5196,11 +5196,11 @@ def test_session_abandon_rejects_apply_run_before_cleanup(
     _git(repo, "add", ".gitignore")
     _git(repo, "commit", "-m", "ignore cmoc")
     _checkout_session_branch(repo)
-    state_path = repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+    state_path = repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
     state = json.loads(state_path.read_text(encoding="utf-8"))
     state["apply"]["state"] = "running"
     state["apply"]["apply_branch"] = (
-        "cmoc/apply/2026-05-10_22-21_10_123/2026-05-10_22-22_10_123"
+        "cmoc/apply/2026-05-10_22-21_10_000000123/2026-05-10_22-22_10_000000123"
     )
     state["apply"]["oracle_snapshot_commit"] = _git(
         repo,
@@ -5220,10 +5220,10 @@ def test_session_abandon_rejects_apply_run_before_cleanup(
     ).stdout.splitlines()
     assert "apply run" in error.value.message
     assert _git(repo, "branch", "--show-current").stdout.strip() == (
-        "cmoc/session/2026-05-10_22-21_10_123"
+        "cmoc/session/2026-05-10_22-21_10_000000123"
     )
     assert state_after["session"]["state"] == "active"
-    assert "cmoc/session/2026-05-10_22-21_10_123" in branches
+    assert "cmoc/session/2026-05-10_22-21_10_000000123" in branches
 
 
 def test_session_abandon_rejects_uncommitted_changes_before_switch(
@@ -5242,12 +5242,12 @@ def test_session_abandon_rejects_uncommitted_changes_before_switch(
 
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     assert "未コミットの変更" in error.value.message
     assert _git(repo, "branch", "--show-current").stdout.strip() == (
-        "cmoc/session/2026-05-10_22-21_10_123"
+        "cmoc/session/2026-05-10_22-21_10_000000123"
     )
     assert state["session"]["state"] == "active"
 
@@ -5262,7 +5262,7 @@ def test_session_abandon_reports_home_switch_cleanup_failure(
     _git(repo, "add", ".gitignore")
     _git(repo, "commit", "-m", "ignore cmoc")
     home_branch = _git(repo, "branch", "--show-current").stdout.strip()
-    session_branch = "cmoc/session/2026-05-10_22-21_10_123"
+    session_branch = "cmoc/session/2026-05-10_22-21_10_000000123"
     _checkout_session_branch(repo)
     original_run_git = session_abandon_module.run_git
 
@@ -5298,7 +5298,7 @@ def test_session_abandon_reports_home_switch_cleanup_failure(
 
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     branches = _git(repo, "branch", "--format=%(refname:short)").stdout
@@ -5322,7 +5322,7 @@ def test_session_abandon_reports_rollback_switch_failure(
     _git(repo, "add", ".gitignore")
     _git(repo, "commit", "-m", "ignore cmoc")
     home_branch = _git(repo, "branch", "--show-current").stdout.strip()
-    session_branch = "cmoc/session/2026-05-10_22-21_10_123"
+    session_branch = "cmoc/session/2026-05-10_22-21_10_000000123"
     _checkout_session_branch(repo)
     original_run_git = session_abandon_module.run_git
 
@@ -5369,7 +5369,7 @@ def test_session_abandon_reports_rollback_switch_failure(
 
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     branches = _git(repo, "branch", "--format=%(refname:short)").stdout
@@ -5394,7 +5394,7 @@ def test_session_abandon_restores_branch_when_state_restore_fails(
     _git(repo, "add", ".gitignore")
     _git(repo, "commit", "-m", "ignore cmoc")
     home_branch = _git(repo, "branch", "--show-current").stdout.strip()
-    session_branch = "cmoc/session/2026-05-10_22-21_10_123"
+    session_branch = "cmoc/session/2026-05-10_22-21_10_000000123"
     _checkout_session_branch(repo)
     original_run_git = session_abandon_module.run_git
     original_write_session_state = session_abandon_module.write_session_state
@@ -5450,7 +5450,7 @@ def test_session_abandon_restores_branch_when_state_restore_fails(
 
     state = json.loads(
         (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_123.json"
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
     branches = _git(repo, "branch", "--format=%(refname:short)").stdout
@@ -5932,7 +5932,7 @@ def _init_repo(tmp_path: Path) -> Path:
 
 def _checkout_session_branch(repo: Path) -> None:
     """テスト用 cmoc session branch に移動し、state を作る。"""
-    session_id = "2026-05-10_22-21_10_123"
+    session_id = "2026-05-10_22-21_10_000000123"
     branch_name = f"cmoc/session/{session_id}"
     home_branch = _git(repo, "branch", "--show-current").stdout.strip()
     base_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
@@ -6019,15 +6019,15 @@ def _create_completed_apply_run(
     report_text: str | None = None,
 ) -> tuple[str, Path, Path]:
     """completed apply run の branch/worktree/state を作る。"""
-    session_id = "2026-05-10_22-21_10_123"
-    apply_branch = f"cmoc/apply/{session_id}/2026-05-10_22-22_10_123"
+    session_id = "2026-05-10_22-21_10_000000123"
+    apply_branch = f"cmoc/apply/{session_id}/2026-05-10_22-22_10_000000123"
     apply_worktree = (
         repo
         / ".cmoc"
         / "worktrees"
         / "apply"
         / session_id
-        / "2026-05-10_22-22_10_123"
+        / "2026-05-10_22-22_10_000000123"
     )
     report_path = repo / ".cmoc" / "reports" / "apply" / "fork" / "report.md"
     report_path.parent.mkdir(parents=True)
