@@ -104,25 +104,25 @@
 ## Summary
 
 - `src/commons/repo.py` の git まわり共通処理を検証するテスト群です。
-- repo root 検出、ignore ルール、oracle/implementation ファイル列挙、変更・削除判定、commit 処理を広く扱います。
+- repo root 検出、`.cmoc` ignore 保証、oracle / implementation ファイル列挙、変更・削除・rename 判定、`commit_if_changed` を広く扱います。
 - session state と apply process id の読み書き、スキーマ検証、active session 判定の異常系も含みます。
 
 ## Read this when
 
 - git リポジトリ共通処理のテスト範囲を把握したいとき。
-- `.gitignore`、`oracles`、`memo`、`INDEX.md` の列挙・除外ルールを確認したいとき。
-- session state、apply process id、cmoc ブランチ判定の期待動作を見たいとき。
+- .gitignore、`oracles`、`memo`、`INDEX.md` の列挙・除外ルールを確認したいとき。
+- session state、apply process id、`cmoc` ブランチ判定の期待動作を見たいとき。
 - 削除検出、変更抽出、`commit_if_changed` の境界条件を確認したいとき。
 
 ## Do not read this when
 
-- git 共通処理の実装ロジックそのものを追いたいとき。
-- `src/commons/repo.py` の個別関数仕様を確認したいとき。
-- `oracles` や `session state` の正本仕様だけを確認したいとき。
+- `src/commons/repo.py` の実装ロジックそのものを追いたいとき。
+- `src/commons/repo.py` の個別関数仕様だけを確認したいとき。
+- `oracles` や session state の正本仕様だけを確認したいとき。
 
 ## hash
 
-- da789f11906686e297ed01c7c7bd6d400ecbd4d1743aa4dfc5c3f7452dcca3b8
+- f5dd809fb4df0103cd0f2acaaba86bf728657e9b89e8819fc244b10ab9dd6773
 
 # `test_report_files.py`
 
@@ -158,21 +158,21 @@
 
 ## Read this when
 
-- `cmoc init`、`session fork/join/abandon`、`apply fork/join/abandon` の状態遷移や副作用を変更したいとき。
-- `review oracles` / `eval-oracles` の評価対象選定、レポート生成、改善ループ、payload 検証を確認したいとき。
-- `run_command`、`main`、`format_error_report`、CLI 登録や help 文言など共通入口の挙動を確認したいとき。
+- `cmoc init`、`cmoc session fork/join/abandon`、`cmoc apply fork/join/abandon` の状態遷移や副作用の回帰を確認したいとき。
+- `review oracles` / `eval-oracles` の評価対象選定、問題点リストの改善、レポート生成や payload 検証を確認したいとき。
+- `run_command`、`main`、`format_error_report`、CLI 登録、help 文言など共通入口の挙動を確認したいとき。
 - prompt 文面、Structured Output schema、`_validate_*` 系ヘルパー、修正点整理や不整合調査の制約を確認したいとき。
 
 ## Do not read this when
 
-- `src/commons/repo.py` の一般的な git 共通処理だけを確認したいとき。
-- `src/commons/codex.py` の実行詳細や Codex CLI 連携だけを確認したいとき。
-- `tests/test_codex.py` や `tests/test_repo.py` など、別のテスト群で足りるとき。
+- `src/sub_commands/apply/` や `src/sub_commands/session/` の実装ロジックそのものを確認したいとき。
+- `src/commons/codex.py` や `src/commons/repo.py` の共通処理だけを確認したいとき。
+- `tests/test_codex.py`、`tests/test_repo.py`、`tests/test_indexing.py` など、個別機能のテストだけを追えば足りるとき。
 - `INDEX.md` の生成ルールや `oracles` の正本仕様だけを確認したいとき。
 
 ## hash
 
-- f00ef03be2320e70ce66062b12844512db6098fbd74e6216b3574435050daa12
+- c6810596f5cd12fde71367fad2eaa651800649173ea9d7e3d6a1c356ddd05c6e
 
 # `test_timestamps.py`
 
