@@ -136,19 +136,19 @@ def write_apply_process_id(
 def read_apply_process_id(repo_root: Path, session_id: str) -> int | None:
     """runtime file から running apply process id を読む。"""
     path = apply_process_id_path(repo_root, session_id)
-    try:
-        raw_value = path.read_text(encoding="utf-8").strip()
-    except FileNotFoundError:
+    if not path.exists():
         return None
-    except OSError as error:
-        raise CmocError(
+    try:
+        raw_value = _read_utf8_text(
+            path,
             "apply process id ファイルを読めませんでした。",
             [
                 ".cmoc/runtime/apply 配下のファイル権限と状態を確認してください。",
                 "手動で apply process の状態を確認してから再実行してください。",
             ],
-            f"{path}\n{error}",
-        ) from error
+        ).strip()
+    except FileNotFoundError:
+        return None
     try:
         process_id = int(raw_value)
     except ValueError as error:
@@ -292,7 +292,16 @@ def read_session_state(repo_root: Path, session_id: str) -> dict[str, object]:
 def _read_existing_session_state(path: Path) -> dict[str, object]:
     """存在する session state JSON を読み、固定スキーマを検証する。"""
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = json.loads(
+            _read_utf8_text(
+                path,
+                "session state ファイルを読めませんでした。",
+                [
+                    ".cmoc/sessions 配下のファイル権限と状態を確認してください。",
+                    "破損した session state を復旧または退避してから再実行してください。",
+                ],
+            )
+        )
     except OSError as error:
         raise CmocError(
             "session state ファイルを読めませんでした。",
@@ -647,7 +656,7 @@ def gitignore_has_cmoc_rule(repo_root: Path) -> bool:
     gitignore = repo_root / ".gitignore"
     if not gitignore.exists():
         return False
-    content = gitignore.read_text(encoding="utf-8")
+    content = _read_gitignore_text(gitignore)
     lines = [line.strip() for line in content.splitlines()]
     return "/.cmoc/" in lines
 
@@ -1501,9 +1510,7 @@ def _ensure_cmoc_ignore_rule(repo_root: Path) -> bool:
     """`.gitignore` に oracle 指定の `/.cmoc/` 行を追加する。"""
     # 既存 `.gitignore` を読み、必要な ignore 行の重複を避ける。
     gitignore = repo_root / ".gitignore"
-    existing = (
-        gitignore.read_text(encoding="utf-8") if gitignore.exists() else ""
-    )
+    existing = _read_gitignore_text(gitignore) if gitignore.exists() else ""
     lines = [line.strip() for line in existing.splitlines()]
     if "/.cmoc/" in lines:
         return False
@@ -1514,6 +1521,32 @@ def _ensure_cmoc_ignore_rule(repo_root: Path) -> bool:
         prefix += "\n"
     gitignore.write_text(f"{prefix}/.cmoc/\n", encoding="utf-8")
     return True
+
+
+def _read_gitignore_text(path: Path) -> str:
+    """root `.gitignore` を UTF-8 text として読む。"""
+    return _read_utf8_text(
+        path,
+        ".gitignore ファイルを読めませんでした。",
+        [
+            ".gitignore のファイル権限と文字コードを確認してください。",
+            ".gitignore を UTF-8 で読める内容に復旧してから再実行してください。",
+        ],
+    )
+
+
+def _read_utf8_text(path: Path, message: str, actions: list[str]) -> str:
+    """repo-local text file を UTF-8 として読み、失敗を CmocError に変換する。"""
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError as error:
+        raise CmocError(message, actions, f"{path}\n{error}") from error
+    except UnicodeDecodeError as error:
+        raise CmocError(
+            message,
+            actions,
+            f"{path}\nUTF-8 decode error: {error}",
+        ) from error
 
 
 def _assert_cmoc_ignore_guarantee(

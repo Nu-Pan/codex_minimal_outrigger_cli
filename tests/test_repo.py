@@ -9,6 +9,7 @@ import pytest
 from commons.errors import CmocError
 from commons.repo import (
     active_session_ids_for_home_branch,
+    apply_process_id_path,
     assert_cmoc_ignored,
     assert_no_uncommitted_changes,
     changed_paths,
@@ -17,11 +18,13 @@ from commons.repo import (
     commit_if_changed,
     ensure_cmoc_ignored,
     find_repo_root,
+    gitignore_has_cmoc_rule,
     has_deleted_implementation_files,
     has_deleted_oracle_files,
     is_cmoc_branch,
     list_implementation_files,
     list_oracle_files,
+    read_apply_process_id,
     read_session_state,
     read_session_start_commit,
     session_state_path,
@@ -66,6 +69,38 @@ def test_ensure_cmoc_ignored_untracks_existing_cmoc_files(
     assert _git(repo, "ls-files", "--", ".cmoc").stdout == ""
     assert cmoc_file.exists()
     assert "/.cmoc/" in (repo / ".gitignore").read_text(encoding="utf-8")
+
+
+def test_gitignore_has_cmoc_rule_rejects_non_utf8_gitignore(
+    tmp_path: Path,
+) -> None:
+    """`.gitignore` が UTF-8 で読めない場合は CmocError に変換する。"""
+    repo = _init_repo(tmp_path)
+    gitignore = repo / ".gitignore"
+    gitignore.write_bytes(b"\xff\n")
+
+    with pytest.raises(CmocError) as error:
+        gitignore_has_cmoc_rule(repo)
+
+    assert ".gitignore ファイルを読めませんでした。" in error.value.message
+    assert "UTF-8 decode error" in error.value.detail
+    assert str(gitignore) in error.value.detail
+
+
+def test_ensure_cmoc_ignored_rejects_non_utf8_gitignore(
+    tmp_path: Path,
+) -> None:
+    """init 用の `.gitignore` 補修でも decode failure を CmocError にする。"""
+    repo = _init_repo(tmp_path)
+    gitignore = repo / ".gitignore"
+    gitignore.write_bytes(b"\xff\n")
+
+    with pytest.raises(CmocError) as error:
+        ensure_cmoc_ignored(repo)
+
+    assert ".gitignore ファイルを読めませんでした。" in error.value.message
+    assert "UTF-8 decode error" in error.value.detail
+    assert str(gitignore) in error.value.detail
 
 
 def test_assert_cmoc_ignored_does_not_modify_repository(
@@ -1114,6 +1149,24 @@ def test_session_state_root_uses_main_worktree_for_linked_worktree(
     assert session_state_root(linked) == repo
 
 
+def test_read_apply_process_id_rejects_non_utf8_pid_file(
+    tmp_path: Path,
+) -> None:
+    """apply pid file が UTF-8 で読めない場合は CmocError に変換する。"""
+    repo = _init_repo(tmp_path)
+    session_id = "2026-05-10_22-21_10_000000123"
+    path = apply_process_id_path(repo, session_id)
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b"\xff\n")
+
+    with pytest.raises(CmocError) as error:
+        read_apply_process_id(repo, session_id)
+
+    assert "apply process id ファイルを読めませんでした。" in error.value.message
+    assert "UTF-8 decode error" in error.value.detail
+    assert str(path) in error.value.detail
+
+
 def test_write_session_state_persists_only_oracle_schema(
     tmp_path: Path,
 ) -> None:
@@ -1194,6 +1247,24 @@ def test_read_session_state_rejects_unknown_state_values(
 
     assert "session.state は" in error.value.actions[0]
     assert "session.state: paused" in error.value.detail
+
+
+def test_read_session_state_rejects_non_utf8_state_file(
+    tmp_path: Path,
+) -> None:
+    """session state が UTF-8 で読めない場合は CmocError に変換する。"""
+    repo = _init_repo(tmp_path)
+    session_id = "2026-05-10_22-21_10_000000123"
+    state_path = session_state_path(repo, session_id)
+    state_path.parent.mkdir(parents=True)
+    state_path.write_bytes(b"\xff\n")
+
+    with pytest.raises(CmocError) as error:
+        read_session_state(repo, session_id)
+
+    assert "session state ファイルを読めませんでした。" in error.value.message
+    assert "UTF-8 decode error" in error.value.detail
+    assert str(state_path) in error.value.detail
 
 
 def test_read_session_state_rejects_ready_apply_with_run_fields(
