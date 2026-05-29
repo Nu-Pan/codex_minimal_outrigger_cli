@@ -528,6 +528,7 @@ def test_session_fork_creates_session_branch_and_records_state(
     """`cmoc session fork` は session branch 作成と state 記録を行う。"""
     repo = _init_repo(tmp_path)
     cmoc_init_impl(repo)
+    home_branch = _git(repo, "branch", "--show-current").stdout.strip()
     base_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
 
     cmoc_session_fork_impl(repo)
@@ -538,7 +539,7 @@ def test_session_fork_creates_session_branch_and_records_state(
     state = json.loads(record_path.read_text(encoding="utf-8"))
     assert branch_name.startswith("cmoc/session/")
     assert state["session"]["state"] == "active"
-    assert state["session"]["session_home_branch"] in {"main", "master"}
+    assert state["session"]["session_home_branch"] == home_branch
     assert state["session"]["session_start_commit"] == base_commit
     assert state["apply"] == {
         "state": "ready",
