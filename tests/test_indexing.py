@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import socket
 import subprocess
 from multiprocessing import Process
 from pathlib import Path
@@ -368,6 +369,43 @@ def test_maintain_indexes_excludes_symlink_entries(
     assert "# `linked-dir`" not in content
     assert not any("linked-file.txt" in purpose for purpose in purposes)
     assert not any("linked-dir" in purpose for purpose in purposes)
+
+
+def test_maintain_indexes_excludes_special_files(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """通常ファイルでもディレクトリでもない entry は安全に除外する。"""
+    repo = _init_repo(tmp_path)
+    socket_path = repo / "control.sock"
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as server_socket:
+        server_socket.bind(str(socket_path))
+        (repo / "real.txt").write_text("real\n", encoding="utf-8")
+        _git(repo, "add", "real.txt")
+        _git(repo, "commit", "-m", "real file")
+        purposes: list[str] = []
+
+        def fake_codex(*args: object, **kwargs: object) -> str:
+            """INDEX 生成対象を記録する fake Codex CLI。"""
+            purpose = str(kwargs["purpose"])
+            purposes.append(purpose)
+            return json.dumps(
+                {
+                    "summary": [purpose],
+                    "read_this_when": ["read"],
+                    "do_not_read_this_when": ["skip"],
+                }
+            )
+
+        monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+        changed = maintain_indexes(repo)
+        content = (repo / "INDEX.md").read_text(encoding="utf-8")
+
+    assert changed is True
+    assert "# `real.txt`" in content
+    assert "# `control.sock`" not in content
+    assert not any("control.sock" in purpose for purpose in purposes)
 
 
 def test_maintain_indexes_replaces_index_symlink_without_touching_target(

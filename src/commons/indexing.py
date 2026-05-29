@@ -218,9 +218,14 @@ def _write_index_if_needed(
     entries: list[str] = []
 
     # 目次作成対象の除外条件だけを使い、配置対象除外名とは切り分ける。
-    children = sorted(directory.iterdir(), key=lambda path: path.name)
+    try:
+        children = sorted(directory.iterdir(), key=lambda path: path.name)
+    except OSError:
+        return False
     for child in _index_entry_targets(repo_root, children, gitignore_matcher):
         digest = _hash_path(repo_root, child, gitignore_matcher)
+        if digest is None:
+            continue
         existing = existing_entries.get(child.name)
         if (
             existing is not None
@@ -242,7 +247,10 @@ def _write_index_if_needed(
         and old_content == new_content
     ):
         return False
-    _replace_index_file(index_path, new_content)
+    try:
+        _replace_index_file(index_path, new_content)
+    except OSError:
+        return False
     return True
 
 
@@ -357,22 +365,33 @@ def _hash_path(
     repo_root: Path,
     path: Path,
     gitignore_matcher: "_GitignoreMatcher",
-) -> str:
+) -> str | None:
     """ファイル内容または直下項目 serialization から sha256 を計算する。"""
     # ファイルは内容 bytes をそのまま hash 化する。
     if path.is_file():
-        return hashlib.sha256(path.read_bytes()).hexdigest()
+        try:
+            return hashlib.sha256(path.read_bytes()).hexdigest()
+        except OSError:
+            return None
+
+    if not path.is_dir():
+        return None
 
     # ディレクトリは直下目次対象の type/path/hash を安定形式で連結する。
     serialized_entries: list[str] = []
-    children = sorted(
-        path.iterdir(),
-        key=lambda item: item.relative_to(repo_root).as_posix(),
-    )
+    try:
+        children = sorted(
+            path.iterdir(),
+            key=lambda item: item.relative_to(repo_root).as_posix(),
+        )
+    except OSError:
+        return None
     for child in _index_entry_targets(repo_root, children, gitignore_matcher):
         entry_type = "directory" if child.is_dir() else "file"
         relative_path = child.relative_to(repo_root).as_posix()
         content_hash = _hash_path(repo_root, child, gitignore_matcher)
+        if content_hash is None:
+            continue
         serialized_entries.append(
             f"{entry_type}\0{relative_path}\0{content_hash}\n"
         )
@@ -412,6 +431,8 @@ def _is_index_entry_target(
         return False
     if path in gitignored_paths:
         return False
+    if not path.is_file() and not path.is_dir():
+        return False
     if _looks_binary(path):
         return False
     return True
@@ -436,6 +457,8 @@ def _looks_binary(path: Path) -> bool:
                 decoder.decode(chunk, final=False)
         decoder.decode(b"", final=True)
     except UnicodeDecodeError:
+        return True
+    except OSError:
         return True
     return False
 
