@@ -27,30 +27,25 @@
 
 ## Summary
 
-- `tests/test_codex.py` は `commons.codex.run_codex_exec()` とその周辺補助処理を検証するテスト群の入口です。
-- Structured Output の schema ファイル生成、JSON / text の再試行、schema 検証失敗や意味的検証失敗、`reasoning_effort` 制約を扱います。
-- Codex CLI 呼び出しログ、`subcommand_log` 通知、出力プレビュー、quota 枯渇時の待機と `resume` 再実行の流れを確認します。
-- `INDEX.md` 事前メンテナンス、`skip_index_maintenance`、workspace-write 時の `oracles` 保護、`session_id` 抽出や `_resume_command` も含みます。
-- 末尾には、テスト用 git リポジトリ初期化の補助関数と、git 実行補助の関数があります。
+- `commons.codex` の `run_codex_exec` が、Codex CLI 呼び出し時のログ、通知、JSON / テキスト出力検証、再試行、容量超過復帰、`INDEX.md` 保守、ワークスペース書き込み制御をどう扱うかを検証するテスト群です。
+- `subcommand_log` やセッション ID 抽出、`resume` コマンド生成など、Codex 実行に付随する補助関数の挙動も確認します。
+- Fake Codex CLI と git の一時リポジトリを使って、oracle 変更検知や特殊 path、worktree / submodule / linked worktree まで含めた境界条件を押さえます。
 
 ## Read this when
 
-- `commons.codex.run_codex_exec()` の引数組み立て、`read_only` / `workspace-write`、`--json`、`--output-schema`、`reasoning_effort` の扱いを確認したいとき。
-- Structured Output の parse 失敗、JSON Schema 不一致、意味的検証失敗に対するリトライやエラー表示を追いたいとき。
-- Codex CLI 呼び出しログ、`subcommand_log` 通知、出力プレビュー、quota 枯渇時の待機と `resume` 再実行の流れを確認したいとき。
-- `INDEX.md` の事前メンテナンス、`skip_index_maintenance`、workspace-write 時の `oracles` 保護、`session_id` 抽出や `_resume_command` を追いたいとき。
-- `_prepare_codex_exec_paths` のログ予約、Structured Output 用 schema ファイル生成、テスト用 git リポジトリ初期化の `_init_git_repo` / `_git` の役割を確認したいとき。
+- `commons.codex` の挙動、ログ形式、再試行条件、Structured Output の検証条件を変更するとき。
+- `workspace-write` 時の oracle 変更検知や `INDEX.md` 保守の前後関係を確認したいとき。
+- `resume`、quota、session ID、subcommand log まわりの回帰を追いたいとき。
 
 ## Do not read this when
 
-- `src/commons/codex.py` の実装ロジックそのものを追いたいとき。
-- `tests/test_indexing.py` や `tests/test_repo.py` など、別のテスト群だけを確認したいとき。
-- `INDEX.md` 全体の生成ルールや `oracles` 正本仕様だけを確認したいとき。
-- `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいとき。
+- git 共通処理やリポジトリ初期化だけを確認したいときは `tests/test_repo.py` を読むべきです。
+- CLI サブコマンド全体の入出力やルーティングだけを確認したいときは `tests/test_subcommands.py` を読むべきです。
+- ルーティング文書の生成規約や `INDEX.md` 自動メンテナンスの仕様だけを確認したいときは、`oracles/app_specs/indexing.md` や `tests/test_indexing.py` を読むべきです。
 
 ## hash
 
-- 0e0e2fa32e546e20870c9cdd686ecebcc35877fd96a4c9861e5d59fd4dd6d826
+- ed4a1be0e9bdf8d05529d757f998456611627bc44badee81a439e599ceb019da
 
 # `test_file_naming.py`
 
