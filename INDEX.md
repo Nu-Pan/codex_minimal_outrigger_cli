@@ -179,25 +179,25 @@
 
 ## Summary
 
-- `cmoc` の実装ソース全体の入口で、CLI エントリーポイント、共通モジュール、サブコマンド実装の配置をまとめる目次です。
-- `main.py`、`commons/`、`sub_commands/` への導線を示し、どの責務がどこに置かれているかを素早く把握するためのルーティング文書です。
-- 詳細仕様は各下位ディレクトリや個別モジュールの `INDEX.md` を参照する前提です。
+- `src` 配下の入口で、`cmoc` CLI 本体 `main.py`、共通処理 `commons`、サブコマンド実装 `sub_commands` をまとめる目次です。
+- `main.py` は Typer アプリの起動点、`commons` は再利用基盤、`sub_commands` は `init`、`review oracles`、`apply`、`session` 系の実装群です。
+- `src` 直下の実装ファイルは少なく、実務上はこの3系統をたどれば足ります。
 
 ## Read this when
 
-- `src` 配下の全体構成を把握したいとき。
-- `cmoc` の CLI 入口と共通処理、サブコマンド実装の担当範囲を整理したいとき。
-- 実装やテストの前に、どのファイルへ進むべきかを判断したいとき。
+- `cmoc` の起動点や Typer アプリ構成を確認したいとき。
+- 共有処理の入口と個別サブコマンド実装の分担を一覧で見たいとき。
+- `src/main.py`、`src/commons`、`src/sub_commands` のどこを読むべきか迷うとき。
 
 ## Do not read this when
 
-- `cmoc` の個別サブコマンドの仕様や引数だけを確認したいときは、`src/sub_commands/` 配下の該当モジュールを直接読むべきです。
-- 共有ユーティリティの実装詳細だけを確認したいときは、`src/commons/` 配下の個別モジュールを直接読むべきです。
-- CLI の起動処理だけを確認したいときは、`src/main.py` を直接読むべきです。
+- 具体的なコマンド引数や状態遷移だけを確認したいとき。
+- 共通処理や個別コマンドの詳細実装を追いたいときは、この目次ではなく各モジュールの `INDEX.md` や該当ファイルを直接読むべきです。
+- `INDEX.md` の生成ロジックや更新ルールだけを確認したいとき。
 
 ## hash
 
-- 3308b6e209cc5139d00f75154b4223e994426eaf420f8c4ae5741542cb24d6af
+- bc7b6e00cc2f6eebc2fe6b4abaf6e08f397a12d061e945c3a2b8382a531cf2c8
 
 # `test.sh`
 
@@ -227,24 +227,22 @@
 
 ## Summary
 
-- `tests` 配下にある pytest 回帰テスト群の入口です。
-- `conftest.py` による共通設定と、各 `test_*.py` が担当する機能別テストを案内します。
-- `commons.codex`、`commons.indexing`、`commons.repo`、サブコマンド制御、タイムスタンプ生成などの検証対象を整理するための目次です。
+- `cmoc` の自動テスト全体をまとめた入口です。
+- コア機能、`INDEX.md` 生成、サブコマンド、タイムスタンプ、命名規則のテストを案内します。
+- 新しい振る舞いを追加・修正したあとに、どのテストを読むべきかを素早く見つけるための目次です。
 
 ## Read this when
 
-- pytest で何をどこまで検証しているか、`tests` 配下の入口を把握したいとき。
-- `conftest.py` による import path 設定や、共通テスト前提を確認したいとき。
-- `test_codex.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py`、`test_timestamps.py` の役割を素早く見分けたいとき。
-- ファイル命名や `INDEX.md` メンテナンス、リポジトリ判定、サブコマンド制御、タイムスタンプ仕様の回帰テストを追いたいとき。
+- `src` の変更に合わせて対応するテストを確認したいとき。
+- `commons` のリポジトリ処理、`INDEX.md` 生成、`cmoc init` / `session` / `apply` / `eval-oracles` の挙動を追いたいとき。
+- テストの共通フィクスチャや補助関数、名前付けや時刻フォーマットの規約を確認したいとき。
 
 ## Do not read this when
 
-- `src/` の実装ロジックや CLI 本体を確認したいとき。
-- `oracles/` の正本仕様や `INDEX.md` の生成ルールだけを確認したいとき。
-- 特定のテストファイルではなく、全体の開発ルールや運用ルールだけを確認したいとき。
-- `README.md`、`AGENTS.md`、`memo` の扱いだけを確認したいとき。
+- 個別コマンドの実装仕様そのものを確認したいときは、`src` 側を読むべきです。
+- `oracles` の正本仕様やルーティング判断を確認したいときは、このディレクトリではなく `oracles` 側を読むべきです。
+- ファイル編集の方針や開発ルール全般を確認したいときは、`dev_rules` の目次を参照すべきです。
 
 ## hash
 
-- 38d675ba0e40459347192bb58df4f718d0a4f97beba286e9ce4cdb5c7f19ee6b
+- efa0d3d321f9e88dc88b5d8ef6fef1c012bdd91fdb95f211df93e16c6a39cad5

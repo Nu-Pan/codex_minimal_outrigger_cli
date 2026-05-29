@@ -80,26 +80,26 @@
 
 ## Summary
 
-- `INDEX.md` メンテナンス処理の挙動を検証する回帰テスト群です。
-- 対象ファイル・ディレクトリの列挙、除外規則、再生成条件、自動コミット、ロック直列化までをカバーしています。
-- `INDEX.md` 生成ロジックを変更する前に、このテストで期待される境界条件を確認します。
+- `commons.indexing.maintain_indexes` の回帰テスト群です。
+- `INDEX.md` の対象判定、再生成、既存目次の再利用、自動コミットまでを検証します。
+- ロック直列化や、gitignore・symlink・非 UTF-8・バイナリ・空ディレクトリの扱いも含みます。
 
 ## Read this when
 
-- `commons.indexing` の `maintain_indexes` やロック制御の回帰テストを確認したいとき。
-- gitignore、symlink、バイナリ、非 UTF-8、空ディレクトリなどの `INDEX.md` 対象判定を見直したいとき。
-- 既存 `INDEX.md` の再生成条件、ハッシュ更新、差分の自動コミット条件を確認したいとき。
-- Structured Output のリトライや、親子ディレクトリへ hash 変更が伝播する挙動を確認したいとき。
+- `INDEX.md` の生成対象や除外条件を見直したいとき。
+- `maintain_indexes` の再生成条件、hash 更新、既存 entry の再利用条件を確認したいとき。
+- 自動コミットや `_locked_index_maintenance` の並列実行制御を追いたいとき。
+- 特殊ファイル名や非 UTF-8 path、Markdown 境界を含む入力の扱いを確認したいとき。
 
 ## Do not read this when
 
-- `INDEX.md` の正本仕様や生成ルールそのものを確認したいとき。
-- `cmoc` の個別サブコマンド仕様や実装コードだけを追いたいとき。
-- `INDEX.md` 以外のメンテナンス対象や一般的な pytest の書き方だけを確認したいとき。
+- `src/commons/indexing.py` の実装ロジックだけを追いたいとき。
+- `tests/test_codex.py` や `tests/test_repo.py` など別のテスト群だけを見たいとき。
+- `INDEX.md` の正本仕様そのものや、`oracles` 配下のルーティングを確認したいとき。
 
 ## hash
 
-- 51c93df1011fcd05ea46ba1a42cd8a67559d7d2f5e5a9f18681594b77d23e65a
+- 7ae0a4d7ff147f6589f8c8c7b157a5081a065ae08d8fa4a219d87284fc1b375c
 
 # `test_repo.py`
 
