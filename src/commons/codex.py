@@ -128,14 +128,15 @@ def run_codex_exec(
     last_message_path: Path | None = None
     for attempt in range(1, attempts + 1):
         # 利用者向けには prompt と回収出力の先頭だけを進捗表示する。
-        step = f"codex exec 試行 ({attempt}/{attempts})"
-        print(f"{step} prompt: {_console_log_safe_head80(prompt)}")
         _preflight_workspace_write_oracle_guard(repo_root, command)
         _maintain_indexes_before_codex(
             repo_root,
             skip_index_maintenance,
             normalized_index_excluded_roots,
         )
+        print("## Codex CLI 実行準備")
+        print(f"- attempt: {attempt}/{attempts}")
+        print(f"- prompt preview: {_console_log_safe_head80(prompt)}")
         run = _run_codex_command(
             repo_root,
             command,
@@ -196,7 +197,9 @@ def run_codex_exec(
         except ValueError as error:
             last_validation_error = str(error)
             continue
-        print(f"{step} output: {_console_log_safe_head80(output)}")
+        print("## Codex CLI 応答プレビュー")
+        print(f"- attempt: {attempt}/{attempts}")
+        print(f"- output preview: {_console_log_safe_head80(output)}")
         last_output = output
 
         if not validates_structured_output:
@@ -529,10 +532,6 @@ def _run_codex_command(
     log_path = paths["call"]
     last_message_path = paths["last_message"]
     run_command = _command_with_last_message(command, last_message_path)
-    print(
-        "codex exec 呼び出し: "
-        f"{_console_log_safe_head80(prompt)} -> {log_path}"
-    )
     oracle_guard = _start_oracle_guard(
         repo_root,
         command,

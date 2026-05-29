@@ -108,8 +108,12 @@ def test_run_codex_exec_retries_json_and_writes_full_log(
     )
     assert not any("## Attempt 1" in content for content in log_contents)
     captured = capsys.readouterr().out
-    assert "codex exec 試行 (1/3) prompt:" in captured
-    assert "codex exec 試行 (3/3) output:" in captured
+    assert "## Codex CLI 実行準備" in captured
+    assert "- attempt: 1/3" in captured
+    assert "## Codex CLI 応答プレビュー" in captured
+    assert "- attempt: 3/3" in captured
+    assert "codex exec 試行" not in captured
+    assert "codex exec 呼び出し:" not in captured
 
 
 def test_run_codex_exec_full_log_uses_fence_longer_than_payload(
@@ -555,6 +559,7 @@ def test_run_codex_exec_rejects_workspace_write_without_head(
 def test_run_codex_exec_rejects_workspace_write_without_head_before_preflight_side_effects(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """HEAD が存在しない workspace-write は INDEX 保守や schema 準備前に失敗する。"""
     repo = tmp_path / "repo"
@@ -602,6 +607,10 @@ def test_run_codex_exec_rejects_workspace_write_without_head_before_preflight_si
     assert not (repo / "INDEX.md").exists()
     assert not (repo / ".cmoc").exists()
     assert not marker.exists()
+    captured = capsys.readouterr().out
+    assert "## Codex CLI 実行準備" not in captured
+    assert "## Codex CLI 呼び出し完了" not in captured
+    assert "codex exec 呼び出し:" not in captured
 
 
 def test_run_codex_exec_rejects_workspace_write_without_reflog_before_preflight_side_effects(
@@ -1472,8 +1481,8 @@ def test_run_codex_exec_prints_progress_head80_before_console_escaping(
     run_codex_exec(repo, prompt, read_only=True)
 
     captured = capsys.readouterr().out
-    assert f"prompt: {'p' * 79}%0A" in captured
-    assert f"output: {'a' * 79}%0A" in captured
+    assert f"- prompt preview: {'p' * 79}%0A" in captured
+    assert f"- output preview: {'a' * 79}%0A" in captured
     assert "q" not in captured
     assert "b" not in captured
 
@@ -1512,8 +1521,8 @@ def test_run_codex_exec_escapes_prompt_preview_control_chars(
     run_codex_exec(repo, "a\rb\tc\x1b[31m%d", read_only=True)
 
     captured = capsys.readouterr().out
-    assert "codex exec 試行 (1/3) prompt: a%0Db%09c%1B[31m%25d" in captured
-    assert "codex exec 呼び出し: a%0Db%09c%1B[31m%25d -> " in captured
+    assert "- prompt preview: a%0Db%09c%1B[31m%25d" in captured
+    assert "codex exec 呼び出し:" not in captured
     assert "a\rb\tc\x1b[31m%d" not in captured
 
 
