@@ -53,7 +53,7 @@
 
 ## Summary
 
-- `src/sub_commands` は `cmoc` の各サブコマンド実装を集めた入口です。
+- このディレクトリは `cmoc` の各サブコマンド実装を集めた入口です。
 - `__init__.py`、`init.py`、`eval_oracles.py`、`apply/`、`session/` の役割分担をまとめています。
 - 個別コマンドの実装本文へ進む前のルーティング目次です。
 
@@ -71,4 +71,4 @@
 
 ## hash
 
-- e925411266a3e1c77df2bf4099781c90802067ccb260d92c40c089662c3c87c8
+- 4be7079c1f7ac3c627cb68bdf0b618b63f954d3c0035506d7eb8b79eda4d863d

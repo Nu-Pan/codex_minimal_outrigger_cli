@@ -179,26 +179,25 @@
 
 ## Summary
 
-- `cmoc` CLI の起点となる `src` ディレクトリです。
-- `main.py` が Typer のエントリーポイント、`commons/` が共通基盤、`sub_commands/` が各サブコマンド実装を担います。
-- 個別コマンドの入口へ進む前の上位ルーティング目次です。
+- `cmoc` の Python 実装の本体をまとめたディレクトリです。
+- CLI エントリーポイントの `main.py`、共通基盤の `commons/`、個別サブコマンド実装の `sub_commands/` を束ねます。
+- この階層は実装コードの入口であり、各機能の詳細は配下の `INDEX.md` を参照します。
 
 ## Read this when
 
-- `cmoc` CLI の起動点やサブコマンド登録全体を俯瞰したいとき。
-- 共通基盤 `commons` とサブコマンド実装 `sub_commands` の役割分担を確認したいとき。
-- `init`、`session`、`apply`、`review oracles` のどこへ進むべきか整理したいとき。
+- `cmoc` の起動入口や全体構成を俯瞰したいとき。
+- 共通基盤とサブコマンド実装のどちらを読むべきか整理したいとき。
+- `main.py` から各コマンド実装へどう委譲されるか追いたいとき。
 
 ## Do not read this when
 
-- `src/commons` の個別ユーティリティの実装詳細だけを確認したいとき。
-- `src/sub_commands` 配下の個別コマンドの処理順や引数だけを確認したいとき。
-- テストや `oracles` 仕様だけを確認したいとき。
-- `main.py` の Typer / Click の具体的な例外処理やエントリーポイント実装だけを確認したいとき。
+- `cmoc` の個別サブコマンドの処理内容だけを確認したいとき。
+- `src/commons` や `src/sub_commands` の特定モジュールだけを直接確認したいとき。
+- 実装コードではなく `oracles` 配下の仕様断片だけを確認したいとき。
 
 ## hash
 
-- 9cfcbd26643f4e7068c78d5d782288ed487e574c98b64534461f6720f8712825
+- 8929c2dd2dccf317a0bf825542f49e235d4709f62478b5777bb87a86ed4b79bd
 
 # `test.sh`
 
@@ -228,22 +227,21 @@
 
 ## Summary
 
-- `tests` 配下の pytest 群の入口で、cmoc の実装に対する回帰テストを機能別に案内する目次です。
-- `conftest.py` の import path 設定を起点に、`test_codex.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py`、`test_file_naming.py`、`test_timestamps.py` を整理します。
-- Codex 呼び出し、`INDEX.md` 自動生成、git 共通処理、CLI 制御、命名規則、タイムスタンプ表示のどこを読むべきかを切り分けるための入口です。
+- `tests` ディレクトリの入口です。pytest 共通設定と、cmoc の主要機能ごとのテスト群への案内をまとめます。
+- `conftest.py`、`test_codex.py`、`test_file_naming.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py`、`test_timestamps.py` へのルーティング情報を提供します。
 
 ## Read this when
 
-- pytest の共通設定や、各テストファイルの担当範囲を確認したいとき。
-- Codex ラッパー、INDEX.md メンテナンス、リポジトリ操作、サブコマンド制御、ファイル命名、時間表示のどれを調べるべきか判断したいとき。
-- `tests` 配下のどのファイルから読み始めるかを素早く決めたいとき。
+- `tests` 配下にどんなテストがあるかを一覧で把握したいとき。
+- `commons.codex`、`commons.indexing`、`commons.repo`、`sub_commands` など、どの機能がどのテストで検証されているかを探したいとき。
+- pytest の共通設定や、命名規則、INDEX.md 生成、CLI 挙動、タイムスタンプ仕様のどれを見ればよいかを切り分けたいとき。
 
 ## Do not read this when
 
-- `src` の実装そのものや、個別テストのアサーション詳細を直接追いたいとき。
-- `oracles` の正本仕様や、`README.md`・`AGENTS.md` の運用ルールだけを確認したいとき。
-- `tests` の案内ではなく、対象機能の本体コードや仕様断片を読みたいとき。
+- `tests` 全体の入口ではなく、個別のテストファイルだけを確認したいとき。
+- `src` 側の実装仕様や `oracles` の正本仕様だけを確認したいとき。
+- `README.md`、`AGENTS.md`、`memo` の運用ルールだけを確認したいとき。
 
 ## hash
 
-- efda594601edaba41d9619da0a3c32b8a8275d711876006467dad2cfcd71122e
+- afdcc0fcffbac14eafb456452772adcd2f46fc1c8edea741f0eecfec7947f394
