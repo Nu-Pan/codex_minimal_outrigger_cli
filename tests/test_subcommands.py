@@ -6531,6 +6531,8 @@ def test_session_join_conflict_prompt_allows_marker_only_oracle_fix() -> None:
 
     prompt = _conflict_prompt(repo, ["app.py", "oracles/spec.md"])
 
+    assert "あなたは merge conflict 解消担当です。" in prompt
+    assert "cmoc session join" not in prompt
     assert "`/repo/oracles` は編集禁止です。" not in prompt
     assert "`/repo/README.md` は編集禁止です。" in prompt
     assert "`/repo/AGENTS.md` は編集禁止です。" in prompt

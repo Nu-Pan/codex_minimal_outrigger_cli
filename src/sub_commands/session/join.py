@@ -456,7 +456,7 @@ def _conflict_prompt(repo_root: Path, unmerged: list[str]) -> str:
     ]
 
     lines = [
-        "あなたは `cmoc session join` の merge conflict 解消担当です。",
+        "あなたは merge conflict 解消担当です。",
         f"`{concrete_repo_root}` の以下の conflict 対象ファイルだけを編集してください:",
         str(concrete_unmerged),
         "完了条件は、conflict marker を削除し、解決内容と未解決ファイルの有無を報告することです。",
