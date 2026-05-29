@@ -144,14 +144,14 @@
 
 ## Do not read this when
 
-- `src/sub_commands/*` の個別実装だけを確認したいとき。
+- `src/sub_commands/apply/*`、`src/sub_commands/session/*`、`src/sub_commands/init.py` など、個別サブコマンド実装の詳細だけを確認したいとき。
 - `commons.repo` や `commons.indexing` など、サブコマンド共通処理の別領域を確認したいとき。
-- `tests/test_codex.py`、`tests/test_indexing.py`、`tests/test_repo.py` など、別のテスト群だけを見たいとき。
+- `tests/test_codex.py`、`tests/test_indexing.py`、`tests/test_repo.py` など、別のテスト群だけを追いたいとき。
 - `oracles` 配下の正本仕様や `INDEX.md` の生成ルールそのものを確認したいとき。
 
 ## hash
 
-- 4b7de429e4c09408f5ee023ecc24807c6a82bdf2559151c52cd26d2c6d264562
+- 467aaba954a0e7c1c5a5a22ba7bb08b61df23f89fd540f142d504ad6e9802c13
 
 # `test_timestamps.py`
 

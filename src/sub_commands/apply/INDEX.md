@@ -48,7 +48,7 @@
 
 ## Summary
 
-- `cmoc apply fork` の本体実装で、session state の前提確認から apply branch と worktree の作成、調査・修正ループ、レポート生成までを担当するモジュールです。
+- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体実装で、session state の検証から apply branch と worktree の作成、調査・修正ループ、レポート生成までを担当するモジュールです。
 - oracle と実装の差分を調べるための Structured Output スキーマ、Codex CLI への prompt 生成、要修正点の整理、`INDEX.md` 保守をまとめています。
 - 失敗時の `apply.state` 更新、編集禁止パスの検査、apply report と error report の検証・出力もこのファイルに含まれます。
 
@@ -60,13 +60,13 @@
 
 ## Do not read this when
 
-- `cmoc apply fork` の利用手順、引数、終了条件だけを確認したいときは、`oracles/app_specs/sub_commands/apply_fork.md` を読むべきであり、この実装ファイルを読む必要はありません。
-- `cmoc apply join` や `cmoc apply abandon`、`cmoc session` 系の処理だけを確認したいときは、別のサブコマンド実装を読むべきです。
-- `INDEX.md` の生成・更新ルールや、`branch_model`・`error_handling`・`codex_call` などの共通仕様だけを確認したいときは、このファイルではなく該当する共通仕様を読むべきです。
+- `cmoc apply fork` の利用手順、引数、終了条件だけを確認したいときは、仕様断片側を読むべきであり、この実装ファイルを読む必要はありません。
+- `cmoc apply join`、`cmoc apply abandon`、`cmoc session` 系の開始・統合・破棄だけを確認したいときは、別のサブコマンド実装を読むべきです。
+- `INDEX.md` の生成・更新ルールや、branch model・error handling・codex 呼び出しなどの共通仕様だけを確認したいときは、このファイルではなく該当する共通仕様を読むべきです。
 
 ## hash
 
-- ff3d2418ec2b66d128ac1f36c7d6c8f70ad650abe60672e45a6045cb3d80acd2
+- 48c997a13c7165a89a2950500acb83dff13362b9055a274fac3ab4c86c86de2e
 
 # `join.py`
 

@@ -54,9 +54,9 @@
 
 ## Summary
 
-- `src/sub_commands` は `cmoc` のサブコマンド実装を束ねる入口ディレクトリです。
-- 直下には `__init__.py`、`init.py`、`eval_oracles.py`、`apply`、`session` があり、各サブコマンド実装の入口を分けています。
-- `apply` と `session` はそれぞれ下位パッケージとして `fork` / `join` / `abandon` の実装を保持します。
+- `src/sub_commands` は cmoc のサブコマンド実装を束ねる入口ディレクトリです。
+- 直下には `__init__.py`、`init.py`、`eval_oracles.py`、`apply/`、`session/` があり、各サブコマンドの実装入口を分けています。
+- `apply/` と `session/` は下位パッケージとして `fork` / `join` / `abandon` の実装を保持します。
 
 ## Read this when
 
@@ -68,8 +68,8 @@
 
 - 個別の `cmoc` サブコマンドの引数や状態遷移だけを確認したいとき。
 - `apply` や `session` の下位モジュールの詳細仕様を直接追いたいとき。
-- パッケージ宣言だけを確認したいときは、`__init__.py` を直接見れば足りるとき。
+- パッケージ宣言だけを確認したいときは `__init__.py` を直接見れば足りるとき。
 
 ## hash
 
-- a261ee5877e3658e833a1e048e0c427f048eab10d040d543d9efaf6eefc03f78
+- 4b302f7cd5c441c6084689360d60037a682fe8ebc772a579374249f6578259b0
