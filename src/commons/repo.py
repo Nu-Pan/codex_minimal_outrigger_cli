@@ -1057,21 +1057,9 @@ def changed_oracle_files(repo_root: Path, base_commit: str) -> list[Path]:
     for output in [uncommitted.stdout, staged.stdout]:
         collected.update(_changed_paths_from_name_status(repo_root, output))
 
-    # untracked oracle ファイルはディレクトリ単位に畳まない形式で収集する。
-    status = run_git(
-        repo_root,
-        [
-            "status",
-            "--porcelain=v1",
-            "-z",
-            "--untracked-files=all",
-            "--",
-            "oracles",
-        ],
-    )
-    for status_code, path in git_status_paths(status.stdout):
-        if status_code == "??":
-            collected.add(repo_root / path)
+    # 未追跡 oracle ファイルは Git の ignore 判定を通さず、oracle
+    # ファイル列挙候補と tracked path の差分として収集する。
+    collected.update(_untracked_oracle_files(repo_root))
 
     # 削除済み、INDEX.md、root .gitignore 対象は評価対象から除外する。
     existing = [
@@ -1139,21 +1127,9 @@ def changed_implementation_files(
             )
         )
 
-    # 未追跡ファイルもディレクトリ単位に畳まず収集する。
-    status = run_git(
-        repo_root,
-        [
-            "status",
-            "--porcelain=v1",
-            "-z",
-            "--untracked-files=all",
-            "--",
-            ".",
-        ],
-    )
-    for status_code, path in git_status_paths(status.stdout):
-        if status_code == "??":
-            collected.add(repo_root / path)
+    # 未追跡実装ファイルは Git の ignore 判定を通さず、仕様上の実装
+    # ファイル列挙候補と tracked path の差分として収集する。
+    collected.update(_untracked_implementation_files(repo_root))
 
     existing = [
         path
@@ -1176,6 +1152,45 @@ def _changed_paths_from_name_status(repo_root: Path, output: str) -> set[Path]:
         repo_root / paths[-1]
         for status, paths in git_name_status_entries(output)
         if status[:1] in {"A", "C", "M", "R", "T"} and paths
+    }
+
+
+def _untracked_oracle_files(repo_root: Path) -> set[Path]:
+    """Git ignore に隠れたものも含め、未追跡 oracle ファイルを返す。"""
+    return _untracked_files_from_candidates(
+        repo_root,
+        list_oracle_files(repo_root),
+        ["oracles"],
+    )
+
+
+def _untracked_implementation_files(repo_root: Path) -> set[Path]:
+    """Git ignore に隠れたものも含め、未追跡実装ファイルを返す。"""
+    return _untracked_files_from_candidates(
+        repo_root,
+        list_implementation_files(repo_root),
+        ["."],
+    )
+
+
+def _untracked_files_from_candidates(
+    repo_root: Path,
+    candidates: list[Path],
+    pathspecs: list[str],
+) -> set[Path]:
+    """仕様上の候補集合から Git 追跡済み path を除いた集合を返す。"""
+    tracked = set(
+        git_name_only_paths(
+            run_git(
+                repo_root,
+                ["ls-files", "-z", "--", *pathspecs],
+            ).stdout
+        )
+    )
+    return {
+        path
+        for path in candidates
+        if path.relative_to(repo_root).as_posix() not in tracked
     }
 
 

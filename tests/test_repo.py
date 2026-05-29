@@ -679,6 +679,31 @@ def test_changed_oracle_files_excludes_gitignored_files(
     assert changed_oracle_files(repo, base_commit) == []
 
 
+def test_changed_oracle_files_ignores_nested_gitignore_for_untracked_files(
+    tmp_path: Path,
+) -> None:
+    """未追跡 oracle 収集でも nested .gitignore の除外判定を使わない。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    nested = oracle_root / "nested"
+    nested.mkdir(parents=True)
+    (oracle_root / "base.md").write_text("base\n", encoding="utf-8")
+    (nested / ".gitignore").write_text("*\n", encoding="utf-8")
+    _git(repo, "add", "oracles/base.md")
+    _git(repo, "add", "-f", "oracles/nested/.gitignore")
+    _git(repo, "commit", "-m", "base")
+    base_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    (nested / "hidden.md").write_text("hidden\n", encoding="utf-8")
+
+    relative_paths = [
+        path.relative_to(repo).as_posix()
+        for path in changed_oracle_files(repo, base_commit)
+    ]
+
+    assert relative_paths == ["oracles/nested/hidden.md"]
+
+
 def test_changed_implementation_files_filters_to_implementation_targets(
     tmp_path: Path,
 ) -> None:
@@ -768,6 +793,30 @@ def test_changed_implementation_files_ignores_only_root_gitignore(
     ]
 
     assert relative_paths == [".pytest_cache/CACHEDIR.TAG", "app.py"]
+
+
+def test_changed_implementation_files_ignores_git_info_exclude_for_untracked(
+    tmp_path: Path,
+) -> None:
+    """未追跡実装収集でも .git/info/exclude の除外判定を使わない。"""
+    repo = _init_repo(tmp_path)
+    (repo / "base.py").write_text("base\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "base")
+    base_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    (repo / ".git" / "info" / "exclude").write_text(
+        "hidden-by-info.py\n",
+        encoding="utf-8",
+    )
+    (repo / "hidden-by-info.py").write_text("hidden\n", encoding="utf-8")
+
+    relative_paths = [
+        path.relative_to(repo).as_posix()
+        for path in changed_implementation_files(repo, base_commit)
+    ]
+
+    assert relative_paths == ["hidden-by-info.py"]
 
 
 def test_commit_if_changed_keeps_index_when_staged_restore_fails(
