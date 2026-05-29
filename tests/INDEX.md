@@ -80,26 +80,26 @@
 
 ## Summary
 
-- `commons.indexing.maintain_indexes` の回帰テスト群です。
-- `INDEX.md` の対象判定、再生成、既存目次の再利用、自動コミットまでを検証します。
-- ロック直列化や、gitignore・symlink・非 UTF-8・バイナリ・空ディレクトリの扱いも含みます。
+- `commons.indexing` の `INDEX.md` 生成・更新処理を検証する pytest 集です。
+- gitignore、除外ディレクトリ、symlink、バイナリ、非 UTF-8 path、特殊文字、空ディレクトリ、既存 INDEX の再利用と再生成を網羅します。
+- 目次生成の Structured Output 検証、並列化、ロック、自動コミット、既存差分の扱いも確認します。
 
 ## Read this when
 
-- `INDEX.md` の生成対象や除外条件を見直したいとき。
-- `maintain_indexes` の再生成条件、hash 更新、既存 entry の再利用条件を確認したいとき。
-- 自動コミットや `_locked_index_maintenance` の並列実行制御を追いたいとき。
-- 特殊ファイル名や非 UTF-8 path、Markdown 境界を含む入力の扱いを確認したいとき。
+- `commons.indexing` の対象選別ルールや `INDEX.md` 更新ロジックを変更するとき。
+- `INDEX.md` の自動コミット、差分ステージング、ロック制御、並列実行を修正するとき。
+- gitignore、symlink、非 UTF-8 path、バイナリ判定、特殊ファイルの扱いを確認したいとき。
+- Structured Output の schema 検証や再生成条件を変えるとき。
 
 ## Do not read this when
 
-- `src/commons/indexing.py` の実装ロジックだけを追いたいとき。
-- `tests/test_codex.py` や `tests/test_repo.py` など別のテスト群だけを見たいとき。
-- `INDEX.md` の正本仕様そのものや、`oracles` 配下のルーティングを確認したいとき。
+- `cmoc` のサブコマンド仕様や利用手順だけを確認したいとき。
+- `INDEX.md` の記述内容そのものを人手で書き換えるだけで、メンテナンス処理を触らないとき。
+- `commons.indexing` 以外の CLI 実装や別機能のテストを探しているとき。
 
 ## hash
 
-- 7ae0a4d7ff147f6589f8c8c7b157a5081a065ae08d8fa4a219d87284fc1b375c
+- 2e6133612c9b2a46f50c7951b4ae4827f8e405443a6f26df63b95dfce03bbd22
 
 # `test_repo.py`
 
