@@ -103,27 +103,27 @@
 
 ## Summary
 
-- `INDEX.md` のメンテナンス本体を担う共通処理で、対象ディレクトリの列挙、既存目次の再利用判定、再生成、差し替え、自動コミットまでをまとめています。
-- `gitignore`、`memo`、隠しディレクトリ、`build` / `tmp` / `__pycache__`、symlink、バイナリ、通常ファイルでない項目を除外しながら、目次作成対象を決めます。
-- Codex CLI の Structured Output で `summary` / `read_this_when` / `do_not_read_this_when` を生成し、`INDEX.md` の Markdown ブロックへ整形します。
-- 既存 `INDEX.md` の構文検査、内容ハッシュによる更新判定、置換時の安全性確保、メンテナンス用 lock の取得も担当します。
+- INDEX.md のメンテナンス本体を担う共通モジュールで、対象ディレクトリの列挙、既存目次の再利用判定、再生成、置換、自動コミットまでをまとめています。
+- gitignore、memo、隠しディレクトリ、build・tmp・__pycache__、symlink、バイナリ、通常ファイルでない項目を除外して、目次作成対象を決めます。
+- Codex CLI の Structured Output で summary / read_this_when / do_not_read_this_when を生成し、Markdown の INDEX.md ブロックへ整形します。
+- 既存 INDEX.md の構文検査、内容ハッシュによる更新判定、メンテナンス用 lock、失敗時の CmocError 変換も担当します。
 
 ## Read this when
 
-- `INDEX.md` の自動生成・再生成・更新・自動コミットの実装を確認したいとき。
-- ディレクトリ列挙、gitignore 判定、`memo` 除外、バイナリ判定、symlink 除外の対象選別を追いたいとき。
-- 既存 `INDEX.md` の再利用条件、内容ハッシュによる更新判定、Structured Output から Markdown への変換を確認したいとき。
-- INDEX メンテナンス用の lock による直列化や、安全な一時ファイル置換の実装を確認したいとき。
+- INDEX.md の自動生成・再生成・更新・自動コミットの実装を確認したいとき。
+- ディレクトリ列挙、gitignore 判定、memo 除外、バイナリ判定、symlink 除外の対象選別を追いたいとき。
+- 既存 INDEX.md の再利用条件、内容ハッシュによる更新判定、Structured Output から Markdown への変換を確認したいとき。
+- INDEX メンテナンス用の lock による直列化や、I/O 失敗をユーザー向けエラーへ変換する処理を確認したいとき。
 
 ## Do not read this when
 
-- `INDEX.md` の配置ルールや目次フォーマットの概要だけを確認したいとき。
-- `codex.py`、`repo.py`、`errors.py` など、他の共通モジュールの仕様だけを確認したいとき。
+- INDEX.md の配置ルールや目次フォーマットの概要だけを確認したいとき。
+- codex.py、repo.py、errors.py など、他の共通モジュールの仕様だけを追いたいとき。
 - cmoc の個別サブコマンドの引数、実行フロー、テストの詳細だけを追いたいとき。
 
 ## hash
 
-- 49e76370930b6ff1ac4406fc0df4a219bff8673ed78e58179e81fe6ee5c430cd
+- db3495e24bbc1a552d451e51b1921d63f1c6dc0aa6f5129a593ed1bc9f3c5faf
 
 # `repo.py`
 
