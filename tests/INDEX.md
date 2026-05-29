@@ -130,28 +130,27 @@
 
 ## Summary
 
-- サブコマンド本体の統合テスト群で、`init`、`session`、`apply`、`eval_oracles` の状態遷移や終了条件を確認する。
-- Git ブランチ、worktree、state ファイル、report、`INDEX.md` メンテナンスの前後関係など、実運用に近い流れを検証する。
-- Prompt 生成、Structured Output schema、`CmocError` や error report の整形、禁止パス検出などの回帰を含む。
-- CLI 入口の登録、`main` の委譲、help 文言、`bin/cmoc` の起動条件までまとめて押さえる。
+- `tests/test_subcommands.py` は、cmoc のサブコマンド本体に対する統合テスト群の入口です。
+- `init`、`session`、`apply`、`eval_oracles` の状態遷移、終了条件、branch や worktree の扱いを横断的に検証します。
+- 共通の実行制御、Prompt と Structured Output、エラーハンドリング、CLI 入口の登録と起動までをまとめて扱います。
 
 ## Read this when
 
-- サブコマンドの実装を変えて、実際の branch / worktree / state / report の挙動を確認したいとき。
-- `init` / `session` / `apply` / `eval_oracles` の統合的な回帰を見たいとき。
-- Prompt 文面や Structured Output schema、エラーレポートの出力仕様を確認したいとき。
-- CLI の入口登録や help、`bin/cmoc` を含む起動まわりを確認したいとき。
+- `init`、`session`、`apply`、`eval_oracles` の統合的な回帰を確認したいとき。
+- branch、worktree、state、report、`INDEX.md` メンテナンスの前後関係を追いたいとき。
+- Prompt 生成、Structured Output schema、エラーレポート、禁止パス検出の挙動を確認したいとき。
+- CLI の登録、`main` の委譲、help 文言、`bin/cmoc` の起動条件を確認したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの正本仕様そのものだけを確認したいとき。
-- `commons.indexing` や `commons.repo` など、別の共通処理のテストを探しているとき。
-- `INDEX.md` の生成ルールや `oracles` 配下の正本仕様だけを確認したいとき。
-- サブコマンド以外の単体ユーティリティや別モジュールの実装意図を調べたいとき。
+- 個別サブコマンドの仕様断片そのものだけを確認したいとき。
+- `commons.repo` や `commons.indexing` など、別の共通処理の単体テストを探しているとき。
+- `INDEX.md` の生成ルールや `oracles` の正本仕様だけを確認したいとき。
+- サブコマンド以外のユーティリティ実装や、CLI 入口以外の起動周りを調べたいとき。
 
 ## hash
 
-- 61be4989d5878e521edc3930f4fabf3b8842e9fac7e33076c44548d9f75ac306
+- 0dd2a426498dcd377ee49dbd892501405223c8aeddb4a76b12706042a106c0e1
 
 # `test_timestamps.py`
 
