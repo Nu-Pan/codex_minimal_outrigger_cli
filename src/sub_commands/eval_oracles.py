@@ -5,7 +5,12 @@ import json
 from inspect import signature
 from pathlib import Path
 
-from commons.codex import parse_json_object, run_codex_exec
+from commons.codex import (
+    FRONTIER_HIGH_REASONING_EFFORT,
+    FRONTIER_MODEL,
+    parse_json_object,
+    run_codex_exec,
+)
 from commons.command_runner import run_command
 from commons.indexing import maintain_indexes
 from commons.repo import (
@@ -385,6 +390,8 @@ def _improve_evaluations(
                 expect_json=True,
                 output_schema=_EVALUATION_OUTPUT_SCHEMA,
                 skip_index_maintenance=True,
+                model=FRONTIER_MODEL,
+                reasoning_effort=FRONTIER_HIGH_REASONING_EFFORT,
                 json_validator=lambda value: _validate_issues_payload(
                     value,
                     repo_root,

@@ -1481,6 +1481,14 @@ def test_review_oracles_improves_combined_issue_list(
     assert [
         kwargs["skip_index_maintenance"] for kwargs in codex_kwargs
     ] == [True, True, True]
+    improve_kwargs = [
+        kwargs for kwargs in codex_kwargs if "問題点リスト改善" in kwargs["purpose"]
+    ]
+    assert all(kwargs["model"] == FRONTIER_MODEL for kwargs in improve_kwargs)
+    assert all(
+        kwargs["reasoning_effort"] == FRONTIER_HIGH_REASONING_EFFORT
+        for kwargs in improve_kwargs
+    )
     assert "Improved warning" in report
     assert "Raw warning" not in report
 
