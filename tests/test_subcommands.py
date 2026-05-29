@@ -3032,17 +3032,17 @@ def test_apply_join_stops_on_apply_branch_non_implementation_diff(
 @pytest.mark.parametrize(
     ("relative_path", "content"),
     [
-        ("README.md", "tampered\n"),
-        ("AGENTS.md", "tampered\n"),
-        (".agents/note.txt", "tampered\n"),
+        ("README.md", "joined readme\n"),
+        ("AGENTS.md", "joined agents\n"),
+        (".agents/note.txt", "joined agents note\n"),
     ],
 )
-def test_apply_join_stops_on_apply_branch_forbidden_edit_diff(
+def test_apply_join_accepts_apply_branch_implementation_diff_on_guarded_paths(
     tmp_path: Path,
     relative_path: str,
     content: str,
 ) -> None:
-    """apply branch 側の workspace-write 禁止 path 変更は想定外差分にする。"""
+    """apply join の差分分類は編集禁止ガードと実装ファイル性を分離する。"""
     repo = _init_repo(tmp_path)
     _checkout_session_branch(repo)
     oracle_snapshot = _add_oracle_snapshot(repo)
@@ -3056,13 +3056,11 @@ def test_apply_join_stops_on_apply_branch_forbidden_edit_diff(
     _git(apply_worktree, "add", relative_path)
     _git(apply_worktree, "commit", "-m", "edit forbidden path")
 
-    with pytest.raises(CmocError) as error_info:
-        cmoc_apply_join_impl(repo)
+    cmoc_apply_join_impl(repo)
 
-    assert "想定外の差分" in error_info.value.message
-    assert f"{apply_branch}: {relative_path}" in error_info.value.detail
-    assert _git(repo, "branch", "--list", apply_branch).stdout.strip()
-    assert apply_worktree.exists()
+    assert (repo / relative_path).read_text(encoding="utf-8") == content
+    assert _git(repo, "branch", "--list", apply_branch).stdout == ""
+    assert not apply_worktree.exists()
 
 
 def test_apply_join_reports_unexpected_diff_with_control_chars(
@@ -5194,11 +5192,12 @@ def test_commit_all_changes_rechecks_forbidden_paths_after_index_update(
     assert _git(repo, "status", "--porcelain").stdout
 
 
-def test_apply_implementation_files_at_commit_excludes_forbidden_paths(
+def test_apply_implementation_files_at_commit_matches_implementation_files(
     tmp_path: Path,
 ) -> None:
-    """apply の実装調査対象は workspace-write 禁止 path を含めない。"""
+    """apply の実装調査対象は通常の実装ファイル列挙に合わせる。"""
     repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     memo_root = repo / "memo"
     memo_root.mkdir()
     (memo_root / "note.md").write_text("memo\n", encoding="utf-8")
@@ -5223,10 +5222,14 @@ def test_apply_implementation_files_at_commit_excludes_forbidden_paths(
     ]
 
     assert "memo/note.md" not in relative_paths
-    assert "README.md" not in relative_paths
-    assert "AGENTS.md" not in relative_paths
-    assert ".agents/skill.md" not in relative_paths
-    assert relative_paths == ["app.py", "docs/memo/note.md"]
+    assert relative_paths == [
+        ".agents/skill.md",
+        ".gitignore",
+        "AGENTS.md",
+        "README.md",
+        "app.py",
+        "docs/memo/note.md",
+    ]
 
 
 def test_apply_files_at_commit_exclude_tracked_root_gitignored_files(
@@ -5262,7 +5265,7 @@ def test_apply_files_at_commit_exclude_tracked_root_gitignored_files(
     ]
 
     assert oracle_paths == ["oracles/kept.md"]
-    assert implementation_paths == [".gitignore", "kept.py"]
+    assert implementation_paths == [".gitignore", "README.md", "kept.py"]
 
 
 def test_apply_partial_targets_exclude_tracked_root_gitignored_files(

@@ -982,12 +982,12 @@ def filter_apply_implementation_file_paths(
     repo_root: Path,
     relative_paths: list[str],
 ) -> list[str]:
-    """root 相対 path から apply が編集対象にできる実装ファイルだけを返す。"""
+    """root 相対 path から apply の調査対象になる実装ファイルだけを返す。"""
     candidates = sorted(
         {
             path
             for path in relative_paths
-            if not _is_excluded_apply_implementation_path(path)
+            if not _is_excluded_implementation_path(path)
         }
     )
     ignored = _root_gitignored_paths(repo_root, candidates)
@@ -995,11 +995,8 @@ def filter_apply_implementation_file_paths(
 
 
 def is_apply_implementation_path(repo_root: Path, relative_path: str) -> bool:
-    """root 相対 path が apply の編集対象にできる実装ファイルか判定する。"""
-    return (
-        not _is_excluded_apply_implementation_path(relative_path)
-        and not _is_root_gitignored(repo_root, relative_path)
-    )
+    """root 相対 path が apply の調査対象になる実装ファイルか判定する。"""
+    return is_implementation_path(repo_root, relative_path)
 
 
 def root_gitignored_paths(
@@ -1309,19 +1306,6 @@ def _is_excluded_implementation_path(relative_path: str) -> bool:
         or relative_path == ".git"
         or relative_path.startswith(".git/")
         or path.name == "INDEX.md"
-    )
-
-
-def _is_excluded_apply_implementation_path(relative_path: str) -> bool:
-    """apply の AI 編集対象から除外する path か判定する。"""
-    return (
-        _is_excluded_implementation_path(relative_path)
-        or relative_path == ".cmoc"
-        or relative_path.startswith(".cmoc/")
-        or relative_path == "README.md"
-        or relative_path == "AGENTS.md"
-        or relative_path == ".agents"
-        or relative_path.startswith(".agents/")
     )
 
 

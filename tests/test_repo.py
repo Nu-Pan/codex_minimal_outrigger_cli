@@ -414,12 +414,15 @@ def test_list_implementation_files_ignores_system_excludes_file(
     assert relative_paths == [".gitignore", "README.md", "system-only.txt"]
 
 
-def test_filter_apply_implementation_file_paths_excludes_forbidden_paths(
+def test_filter_apply_implementation_file_paths_matches_implementation_files(
     tmp_path: Path,
 ) -> None:
-    """apply の実装対象は workspace-write で禁止する path を含めない。"""
+    """apply の実装調査対象は通常の実装ファイル列挙に合わせる。"""
     repo = _init_repo(tmp_path)
-    (repo / ".gitignore").write_text("ignored.py\n", encoding="utf-8")
+    (repo / ".gitignore").write_text(
+        "/.cmoc/\nignored.py\n",
+        encoding="utf-8",
+    )
     relative_paths = [
         "README.md",
         "AGENTS.md",
@@ -434,12 +437,17 @@ def test_filter_apply_implementation_file_paths_excludes_forbidden_paths(
     ]
 
     assert filter_apply_implementation_file_paths(repo, relative_paths) == [
+        ".agents/skill.md",
+        "AGENTS.md",
+        "README.md",
         "app.py",
         "docs/memo/note.md",
     ]
-    assert not is_apply_implementation_path(repo, "README.md")
-    assert not is_apply_implementation_path(repo, "AGENTS.md")
-    assert not is_apply_implementation_path(repo, ".agents/skill.md")
+    assert is_apply_implementation_path(repo, "README.md")
+    assert is_apply_implementation_path(repo, "AGENTS.md")
+    assert is_apply_implementation_path(repo, ".agents/skill.md")
+    assert not is_apply_implementation_path(repo, ".cmoc/state.json")
+    assert not is_apply_implementation_path(repo, "memo/note.md")
     assert is_apply_implementation_path(repo, "app.py")
 
 
