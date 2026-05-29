@@ -55,21 +55,21 @@
 ## Summary
 
 - `src/sub_commands` は `cmoc` のサブコマンド実装を束ねる入口ディレクトリです。
-- `__init__.py` の最小パッケージ宣言に加えて、`init.py`、`eval_oracles.py`、`apply`、`session` を含みます。
-- 個別コマンドの本体実装や下位パッケージへ進む前の目次として使います。
+- 直下には `__init__.py`、`init.py`、`eval_oracles.py`、`apply`、`session` があり、各サブコマンド実装の入口を分けています。
+- `apply` と `session` はそれぞれ下位パッケージとして `fork` / `join` / `abandon` の実装を保持します。
 
 ## Read this when
 
-- `src/sub_commands` にどのサブコマンド実装が置かれているかを確認したいとき。
+- `src/sub_commands` にどのコマンド実装が置かれているかを確認したいとき。
 - `init`、`review oracles`、`apply`、`session` の実装入口を素早くたどりたいとき。
-- この配下の実装・修正・レビュー・テストを始める前に、入口ファイルの役割分担を整理したいとき。
+- この配下の実装・修正・レビュー・テストを始める前に、入口の役割分担を整理したいとき。
 
 ## Do not read this when
 
-- 個別の `cmoc` サブコマンドの実装や引数だけを確認したいとき。
-- `apply` や `session` の配下にある詳細仕様ではなく、サブコマンド全体の入口だけを把握したいとき。
-- `src/sub_commands` のパッケージ宣言だけを確認したいときは、`__init__.py` を直接見れば足りるとき。
+- 個別の `cmoc` サブコマンドの引数や状態遷移だけを確認したいとき。
+- `apply` や `session` の下位モジュールの詳細仕様を直接追いたいとき。
+- パッケージ宣言だけを確認したいときは、`__init__.py` を直接見れば足りるとき。
 
 ## hash
 
-- bc3e316358fd1c7603c9e6c1a95370c492c4b2dcd779a2297c2ad74e98d2f433
+- a261ee5877e3658e833a1e048e0c427f048eab10d040d543d9efaf6eefc03f78

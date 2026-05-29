@@ -138,20 +138,20 @@
 
 - cmoc の主要サブコマンド入口と `main.py` から各実装への委譲関係を確認したいとき。
 - `run_command`、`StepTimer`、`start_step`、`format_error_report` のログ出力や終了集計を追いたいとき。
-- `init`、`session`、`apply`、`review oracles`、`eval_oracles` 系の状態遷移、例外処理、CLI 登録、ヘルプ表示を広く回帰確認したいとき。
-- conflict marker 判定や `bin/cmoc` ランチャーの振る舞いを確認したいとき。
+- `init`、`session`、`apply`、`review oracles`、`eval_oracles` の登録・ヘルプ表示・例外処理を広く回帰確認したいとき。
+- conflict marker 判定や `bin/cmoc` ランチャーの挙動を確認したいとき。
 - テスト内の補助関数の並び順や、共通のテスト前提を確認したいとき。
 
 ## Do not read this when
 
-- `src/sub_commands/*` の個別実装だけを追いたいとき。
-- `commons.repo`、`commons.indexing`、`commons.codex` など共通処理の仕様だけを確認したいとき。
-- `tests/test_codex.py`、`tests/test_indexing.py`、`tests/test_repo.py` など別のテスト群だけを見たいとき。
+- `src/sub_commands/*` の個別実装だけを確認したいとき。
+- `commons.repo` や `commons.indexing` など、サブコマンド共通処理の別領域を確認したいとき。
+- `tests/test_codex.py`、`tests/test_indexing.py`、`tests/test_repo.py` など、別のテスト群だけを見たいとき。
 - `oracles` 配下の正本仕様や `INDEX.md` の生成ルールそのものを確認したいとき。
 
 ## hash
 
-- 60d6b0882cfb3f3c6cd7a8c97515b8c66591bbc75c06f79a63c42f4420fea6b0
+- 4b7de429e4c09408f5ee023ecc24807c6a82bdf2559151c52cd26d2c6d264562
 
 # `test_timestamps.py`
 
