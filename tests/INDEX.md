@@ -27,25 +27,25 @@
 
 ## Summary
 
-- `commons.codex` の `run_codex_exec` が、Codex CLI 呼び出し時のログ、通知、JSON / テキスト出力検証、再試行、容量超過復帰、`INDEX.md` 保守、ワークスペース書き込み制御をどう扱うかを検証するテスト群です。
-- `subcommand_log` やセッション ID 抽出、`resume` コマンド生成など、Codex 実行に付随する補助関数の挙動も確認します。
-- Fake Codex CLI と git の一時リポジトリを使って、oracle 変更検知や特殊 path、worktree / submodule / linked worktree まで含めた境界条件を押さえます。
+- `tests/test_codex.py` は `commons.codex` の `run_codex_exec` を中心に、Codex CLI 呼び出し時のログ、通知、Structured Output 検証、再試行、quota 復旧、workspace-write 保護を検証するテスト群です。
+- `subcommand_log`、セッション ID 抽出、`resume` コマンド生成、出力 schema の保存・再利用、`INDEX.md` メンテナンスなど、Codex 実行に付随する補助機能もまとめて確認します。
+- Fake Codex CLI と git の一時リポジトリを使い、未コミット差分、commit range、reflog、特殊な path 文字、worktree / submodule / linked worktree まで含めた境界条件を押さえます。
 
 ## Read this when
 
-- `commons.codex` の挙動、ログ形式、再試行条件、Structured Output の検証条件を変更するとき。
-- `workspace-write` 時の oracle 変更検知や `INDEX.md` 保守の前後関係を確認したいとき。
-- `resume`、quota、session ID、subcommand log まわりの回帰を追いたいとき。
+- `commons.codex.run_codex_exec` のログ出力、Structured Output 検証、JSON / テキストの再試行条件を変更するとき。
+- workspace-write 時の oracle 変更検知、`INDEX.md` メンテナンス、特殊な path 名や linked worktree / submodule まわりの境界条件を確認したいとき。
+- quota 枯渇時の待機と resume、`resume_command`、`extract_session_id`、`subcommand_log` の回帰を追いたいとき。
 
 ## Do not read this when
 
-- git 共通処理やリポジトリ初期化だけを確認したいときは `tests/test_repo.py` を読むべきです。
-- CLI サブコマンド全体の入出力やルーティングだけを確認したいときは `tests/test_subcommands.py` を読むべきです。
-- ルーティング文書の生成規約や `INDEX.md` 自動メンテナンスの仕様だけを確認したいときは、`oracles/app_specs/indexing.md` や `tests/test_indexing.py` を読むべきです。
+- `commons.repo` の git 共通処理やリポジトリ初期化だけを確認したいときは、このファイルではなく `tests/test_repo.py` を読むべきです。
+- CLI サブコマンド全体の入出力やルーティングだけを確認したいときは、このファイルではなく `tests/test_subcommands.py` を読むべきです。
+- `INDEX.md` の生成ルールや配置規約だけを確認したいときは、このファイルではなく `oracles/app_specs/indexing.md` や `tests/test_indexing.py` を読むべきです。
 
 ## hash
 
-- ed4a1be0e9bdf8d05529d757f998456611627bc44badee81a439e599ceb019da
+- 2cd57202d0ef4cf6fe26b92e1082c5fb67facf791e43b84e7949cbf443798e14
 
 # `test_file_naming.py`
 
