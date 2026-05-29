@@ -1354,7 +1354,12 @@ def _generate_change_summary(
     oracle_snapshot_commit: str,
 ) -> list[dict[str, object]]:
     """apply branch の変更内容を Structured Output でカテゴリ別要約にする。"""
-    if not _branch_has_changes(repo_root, oracle_snapshot_commit, branch_name):
+    changed_paths = _changed_paths_on_apply_branch(
+        repo_root,
+        oracle_snapshot_commit,
+        branch_name,
+    )
+    if not changed_paths:
         return [
             {
                 "category": "変更なし",
@@ -1372,6 +1377,8 @@ def _generate_change_summary(
             "完了条件は Structured Output schema に従い、changes 配列だけを返すことです。",
             f"具体的には `{oracle_snapshot_commit}` から `{branch_name}` の HEAD までの差分と、"
             "working tree / staging area に残っている未コミット差分を対象にしてください。",
+            "対象変更 path の機械的な収集結果は次の JSON 配列です。",
+            json.dumps(changed_paths, ensure_ascii=False),
             "変更内容の意味論に基づいてカテゴリ分けしてください。",
             "changed_paths は repo 相対パスで、要約の根拠になる主要ファイルだけを列挙してください。",
             f"`{repo_root / 'oracles'}` と `{repo_root / '.agents'}` は編集禁止です。",
@@ -1399,15 +1406,6 @@ def _generate_change_summary(
     return [change for change in changes if isinstance(change, dict)]
 
 
-def _branch_has_changes(
-    repo_root: Path,
-    base_commit: str,
-    branch_name: str,
-) -> bool:
-    """base..branch と未コミット差分に変更があるかを判定する。"""
-    return bool(_changed_paths_on_apply_branch(repo_root, base_commit, branch_name))
-
-
 def _changed_paths_on_apply_branch(
     repo_root: Path,
     base_commit: str,
@@ -1421,7 +1419,7 @@ def _changed_paths_on_apply_branch(
             "--name-status",
             "-z",
             "-M",
-            "--diff-filter=ACMRT",
+            "--diff-filter=ACDMRT",
             f"{base_commit}..{branch_name}",
             "--",
         ],
@@ -1430,7 +1428,7 @@ def _changed_paths_on_apply_branch(
             "--name-status",
             "-z",
             "-M",
-            "--diff-filter=ACMRT",
+            "--diff-filter=ACDMRT",
             "HEAD",
             "--",
         ],
@@ -1440,7 +1438,7 @@ def _changed_paths_on_apply_branch(
             "--name-status",
             "-z",
             "-M",
-            "--diff-filter=ACMRT",
+            "--diff-filter=ACDMRT",
             "--",
         ],
     ]
@@ -1449,7 +1447,7 @@ def _changed_paths_on_apply_branch(
         if result.returncode not in (0, 1):
             continue
         for status, paths in git_name_status_entries(result.stdout):
-            if status[:1] in {"A", "C", "M", "R", "T"} and paths:
+            if status[:1] in {"A", "C", "D", "M", "R", "T"} and paths:
                 collected.add(paths[-1])
 
     status_result = run_git(
@@ -1459,7 +1457,7 @@ def _changed_paths_on_apply_branch(
     )
     if status_result.returncode in (0, 1):
         for status, path in git_status_paths(status_result.stdout):
-            if status == "??":
+            if status == "??" or "D" in status:
                 collected.add(path)
     return sorted(collected)
 

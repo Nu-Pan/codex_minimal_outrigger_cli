@@ -4338,6 +4338,41 @@ def test_apply_fallback_change_summary_includes_uncommitted_paths(
     ]
 
 
+def test_apply_fallback_change_summary_includes_deleted_paths(
+    tmp_path: Path,
+) -> None:
+    """fallback report は commit 済み/staged/working tree の削除も列挙する。"""
+    repo = _init_repo(tmp_path)
+    (repo / "committed_delete.py").write_text("committed\n", encoding="utf-8")
+    (repo / "staged_delete.py").write_text("staged\n", encoding="utf-8")
+    (repo / "working_delete.py").write_text("working\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "add delete targets")
+    snapshot_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    branch_name = _git(repo, "branch", "--show-current").stdout.strip()
+
+    (repo / "committed_delete.py").unlink()
+    _git(repo, "add", "committed_delete.py")
+    _git(repo, "commit", "-m", "delete committed")
+    (repo / "staged_delete.py").unlink()
+    _git(repo, "add", "staged_delete.py")
+    (repo / "working_delete.py").unlink()
+
+    summary = apply_module._fallback_change_summary_from_git(
+        repo,
+        branch_name,
+        snapshot_commit,
+        RuntimeError("summary failed"),
+    )
+
+    assert summary[0]["category"] == "変更ファイル一覧"
+    assert summary[0]["changed_paths"] == [
+        "committed_delete.py",
+        "staged_delete.py",
+        "working_delete.py",
+    ]
+
+
 def test_apply_change_summary_treats_uncommitted_paths_as_changes(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -4365,6 +4400,49 @@ def test_apply_change_summary_treats_uncommitted_paths_as_changes(
     assert prompts
     assert "working tree / staging area" in prompts[0]
     assert summary[0]["category"] == "実装修正"
+
+
+def test_apply_change_summary_treats_deleted_paths_as_changes(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """変更要約は削除のみの差分でも Codex に依頼する。"""
+    repo = _init_repo(tmp_path)
+    (repo / "deleted.py").write_text("deleted\n", encoding="utf-8")
+    _git(repo, "add", "deleted.py")
+    _git(repo, "commit", "-m", "add deleted target")
+    snapshot_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    branch_name = _git(repo, "branch", "--show-current").stdout.strip()
+    (repo / "deleted.py").unlink()
+    _git(repo, "add", "deleted.py")
+
+    prompts: list[str] = []
+
+    def fake_codex(repo_root: Path, prompt: str, **kwargs: object) -> str:
+        prompts.append(prompt)
+        return json.dumps(
+            {
+                "changes": [
+                    {
+                        "category": "削除",
+                        "summary": "不要なファイルを削除しました。",
+                        "changed_paths": ["deleted.py"],
+                    }
+                ]
+            }
+        )
+
+    monkeypatch.setattr("sub_commands.apply.fork.run_codex_exec", fake_codex)
+
+    summary = apply_module._generate_change_summary(
+        repo,
+        branch_name,
+        snapshot_commit,
+    )
+
+    assert prompts
+    assert '["deleted.py"]' in prompts[0]
+    assert summary[0]["changed_paths"] == ["deleted.py"]
 
 
 def test_apply_writes_error_report_when_midway_stage_fails(
