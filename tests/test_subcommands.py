@@ -1040,6 +1040,63 @@ def test_eval_oracles_freezes_snapshot_before_index_maintenance(
     assert "oracles/generated.md" not in report
 
 
+def test_eval_oracles_runs_file_evaluations_in_parallel(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """ファイルごとの oracle 評価は並列実行し、report 順は対象順を保つ。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    for name in ["a.md", "b.md", "c.md"]:
+        (oracle_root / name).write_text(f"{name}\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        eval_oracles_module,
+        "maintain_indexes",
+        lambda repo_root: False,
+    )
+
+    barrier = threading.Barrier(3, timeout=2.0)
+    lock = threading.Lock()
+    active_calls = 0
+    max_active_calls = 0
+    purposes: list[str] = []
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """全評価呼び出しが同時に開始されることを観測する。"""
+        nonlocal active_calls, max_active_calls
+        with lock:
+            active_calls += 1
+            max_active_calls = max(max_active_calls, active_calls)
+            purposes.append(str(kwargs["purpose"]))
+        barrier.wait()
+        time.sleep(0.05)
+        with lock:
+            active_calls -= 1
+        return json.dumps({"issues": []}, ensure_ascii=False)
+
+    monkeypatch.setattr(eval_oracles_module, "run_codex_exec", fake_codex)
+
+    cmoc_eval_oracles_impl(repo, full=True, repeat_improve_issues_list=0)
+
+    report = next(
+        (repo / ".cmoc" / "reports" / "review_oracles").glob("*.md")
+    ).read_text(encoding="utf-8")
+    assert max_active_calls > 1
+    assert sorted(purposes) == [
+        "oracle 評価 oracles/a.md",
+        "oracle 評価 oracles/b.md",
+        "oracle 評価 oracles/c.md",
+    ]
+    assert report.index("| 1 | `oracles/a.md` | 0 |") < report.index(
+        "| 2 | `oracles/b.md` | 0 |"
+    )
+    assert report.index("| 2 | `oracles/b.md` | 0 |") < report.index(
+        "| 3 | `oracles/c.md` | 0 |"
+    )
+
+
 def test_eval_oracles_writes_error_report_when_evaluation_fails(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -1143,13 +1200,11 @@ def test_eval_oracles_error_report_separates_unevaluated_files(
         "maintain_indexes",
         lambda repo_root: False,
     )
-    calls = 0
 
     def fake_codex(*args: object, **kwargs: object) -> str:
-        """1 件目だけ成功し、2 件目の評価で失敗する。"""
-        nonlocal calls
-        calls += 1
-        if calls == 2:
+        """a.md だけ成功し、b.md の評価で失敗する。"""
+        purpose = str(kwargs["purpose"])
+        if "oracles/b.md" in purpose:
             raise RuntimeError("fake second evaluation failure")
         return json.dumps(
             {"issues": []},
@@ -1857,13 +1912,16 @@ def test_eval_oracles_uses_full_mode_on_apply_branch(
     report = next(
         (repo / ".cmoc" / "reports" / "review_oracles").glob("*.md")
     ).read_text(encoding="utf-8")
-    assert evaluated_targets == [changed_oracle, unchanged_oracle]
+    assert sorted(evaluated_targets) == [changed_oracle, unchanged_oracle]
     assert "mode: full" in report
     assert "full_requested: false" in report
     assert "is_cmoc_branch: true" in report
     assert "base_commit: null" in report
     assert "deleted_oracles_detected: false" in report
     assert "oracle_count: 2" in report
+    assert report.index("| 1 | `oracles/changed.md` | 0 |") < report.index(
+        "| 2 | `oracles/unchanged.md` | 0 |"
+    )
 
 
 def test_eval_oracles_body_uses_importable_module_name() -> None:

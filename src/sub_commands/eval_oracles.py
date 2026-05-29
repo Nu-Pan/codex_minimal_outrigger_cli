@@ -1,5 +1,6 @@
 """`cmoc review oracles` の本体処理。"""
 
+from concurrent.futures import Future, ThreadPoolExecutor
 import json
 from inspect import signature
 from pathlib import Path
@@ -216,33 +217,17 @@ def cmoc_eval_oracles_impl(
                 f"oracle 評価 ({index}/{len(oracle_files)}) "
                 f"{oracle_file}"
             )
-            payload = parse_json_object(
-                run_codex_exec(
-                    repo_root,
-                    _evaluation_prompt(repo_root, oracle_file),
-                    purpose=(
-                        f"oracle 評価 {oracle_file.relative_to(repo_root)}"
-                    ),
-                    read_only=True,
-                    expect_json=True,
-                    output_schema=_EVALUATION_OUTPUT_SCHEMA,
-                    skip_index_maintenance=True,
-                    json_validator=lambda value, current_oracle=oracle_file: (
-                        _validate_evaluation_payload(
-                            value,
-                            repo_root,
-                            current_oracle,
-                        )
-                    ),
-                )
-            )
-            evaluations.append(
-                _evaluation_payload_to_record(
-                    payload,
-                    repo_root,
-                    oracle_file,
-                )
-            )
+        if oracle_files:
+            with ThreadPoolExecutor(max_workers=len(oracle_files)) as executor:
+                futures = [
+                    executor.submit(
+                        _evaluate_oracle_file,
+                        repo_root,
+                        oracle_file,
+                    )
+                    for oracle_file in oracle_files
+                ]
+                _append_evaluation_records_in_order(futures, evaluations)
 
         failed_stage = "improve issues list"
         start_step(timer, 5, 6, "improve issues list")
@@ -295,6 +280,39 @@ def _maintain_indexes_preserving_oracle_snapshot(repo_root: Path) -> bool:
     if _maintain_indexes_accepts_excluded_roots():
         return maintain_indexes(repo_root, excluded_index_roots=["oracles"])
     return maintain_indexes(repo_root)
+
+
+def _evaluate_oracle_file(
+    repo_root: Path,
+    oracle_file: Path,
+) -> dict[str, object]:
+    """1 oracle ファイルの評価を実行し、report 用レコードを返す。"""
+    payload = parse_json_object(
+        run_codex_exec(
+            repo_root,
+            _evaluation_prompt(repo_root, oracle_file),
+            purpose=f"oracle 評価 {oracle_file.relative_to(repo_root)}",
+            read_only=True,
+            expect_json=True,
+            output_schema=_EVALUATION_OUTPUT_SCHEMA,
+            skip_index_maintenance=True,
+            json_validator=lambda value: _validate_evaluation_payload(
+                value,
+                repo_root,
+                oracle_file,
+            ),
+        )
+    )
+    return _evaluation_payload_to_record(payload, repo_root, oracle_file)
+
+
+def _append_evaluation_records_in_order(
+    futures: list[Future[dict[str, object]]],
+    evaluations: list[dict[str, object]],
+) -> None:
+    """並列評価結果を dispatch 時の順序で回収する。"""
+    for future in futures:
+        evaluations.append(future.result())
 
 
 def _maintain_indexes_accepts_excluded_roots() -> bool:
