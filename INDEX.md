@@ -191,13 +191,13 @@
 
 ## Do not read this when
 
-- 個別の `cmoc apply` / `cmoc session` / `cmoc review oracles` の詳細仕様だけを確認したいときは、この目次ではなく `sub_commands` 配下の該当モジュールを直接読むべきです。
-- 共通ユーティリティやエラー処理の実装だけを確認したいときは、この目次ではなく `commons` 配下の該当モジュールを直接読むべきです。
-- `src/main.py` の起動処理だけを確認したいときは、この目次ではなく `main.py` を直接読むべきです。
+- 個別の `cmoc apply` / `cmoc session` / `cmoc review oracles` の詳細仕様だけを確認したいとき。
+- 共通ユーティリティやエラー処理の実装だけを確認したいとき。
+- `src/main.py` の起動処理だけを確認したいとき。
 
 ## hash
 
-- 1c321c0c6fb8f7afc8ea2875cdf39da70390bda2ca58029193a5e88a932c2d1b
+- 7681fa3fab7080f99fa6acaa6350a73babe77bb5e0ef4e2bcb97974eef4d0e5c
 
 # `test.sh`
 
@@ -227,22 +227,24 @@
 
 ## Summary
 
-- `tests` 配下の pytest 群の目次で、cmoc の共通設定、Codex 呼び出し、INDEX.md メンテナンス、repo 共通処理、サブコマンド統合、タイムスタンプ、命名規則の回帰をまとめる。
-- `conftest.py` は import path 設定、`test_codex.py` は Codex CLI 呼び出しラッパー、`test_indexing.py` は `INDEX.md` 維持、`test_repo.py` は repo 共通処理、`test_subcommands.py` は統合テスト、`test_timestamps.py` は時刻仕様、`test_file_naming.py` は構成規則を扱う。
-- このディレクトリは、`src` 実装と `oracles` 正本仕様の変更がどのテストに波及するかを見通すための入口である。
+- `tests` 配下の pytest テスト群の目次です。
+- 共通 import 設定から Codex 実行ラッパー、命名規則、`INDEX.md` 生成、git 共通処理、サブコマンド統合、タイムスタンプ仕様までを案内します。
+- この配下のテストは、`src` の実装と `oracles` の仕様の両方にまたがる回帰確認の入口になります。
 
 ## Read this when
 
-- pytest で `<cmoc-root>/src` を import できる共通設定や、各テスト群の入口を把握したいとき。
-- `test_codex.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py`、`test_timestamps.py`、`test_file_naming.py` の担当範囲を素早く確認したいとき。
-- `src` 実装や `oracles` 仕様の変更が、どの回帰テストに影響するかを見極めたいとき。
+- `tests` 配下のどのテストが何を検証しているかを一覧で把握したいとき。
+- pytest の共通設定、Codex CLI 呼び出し、ファイル命名規則、`INDEX.md` メンテナンス、git 共通処理、サブコマンド統合、タイムスタンプ仕様の入口を探したいとき。
+- 新しいテストを追加・変更する前に、既存のテスト群の担当範囲を切り分けたいとき。
+- `tests/conftest.py`、`tests/test_codex.py`、`tests/test_file_naming.py`、`tests/test_indexing.py`、`tests/test_repo.py`、`tests/test_subcommands.py`、`tests/test_timestamps.py` の役割を確認したいとき。
 
 ## Do not read this when
 
-- 個別テストケースの実装や期待値を細かく追いたいときは、この目次ではなく各 `test_*.py` / `conftest.py` を直接読む。
-- `cmoc` のコマンド仕様や `oracles` の正本仕様だけを確認したいときは、このディレクトリではなく対応する仕様側を読む。
-- `INDEX.md` の生成ルールや本体実装の詳細だけを確認したいときは、`tests` ではなく `src` や `oracles` 側の入口へ進む。
+- `src` 側の実装ロジックそのものを確認したいとき。
+- `oracles` の正本仕様だけを追いたいとき。
+- `README.md`、`AGENTS.md`、`memo` の運用規則だけを確認したいとき。
+- 個別のテストケースを行単位で読む必要があるとき。
 
 ## hash
 
-- 99bb284fff0e225e2f680868c8bf9d2f13bb3d92470692f1d0bcea716210290c
+- c5bbea6fb5347052d310f188edfb21db49c72cdff476c39f6c949ea15d329a07

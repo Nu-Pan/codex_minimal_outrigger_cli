@@ -143,14 +143,14 @@
 
 ## Do not read this when
 
-- 個別サブコマンドの仕様断片そのものだけを確認したいとき。
-- `commons.repo` や `commons.indexing` など、別の共通処理の単体テストを探しているとき。
-- `INDEX.md` の生成ルールや `oracles` の正本仕様だけを確認したいとき。
-- サブコマンド以外のユーティリティ実装や、CLI 入口以外の起動周りを調べたいとき。
+- `commons.repo`、`commons.indexing`、`commons.codex` など、個別の共通処理の単体テストだけを確認したいとき。
+- `tests/test_codex.py` や `tests/test_repo.py` など、別のテスト群だけを追いたいとき。
+- `oracles` の正本仕様や `INDEX.md` の生成ルールそのものを確認したいとき。
+- サブコマンド以外のユーティリティ実装や、CLI 入口以外の起動処理だけを調べたいとき。
 
 ## hash
 
-- 0dd2a426498dcd377ee49dbd892501405223c8aeddb4a76b12706042a106c0e1
+- 5d5c00906b41b1e59f580f3c557d65b21ee68a27cd6f3d36622b674f3899f69b
 
 # `test_timestamps.py`
 
