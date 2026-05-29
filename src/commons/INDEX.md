@@ -38,13 +38,13 @@
 ## Do not read this when
 
 - `INDEX.md` の生成・更新ロジックそのものを確認したいときは、このファイルではなく `src/commons/indexing.py` を読むべきです。
-- git 操作や session/apply の状態管理だけを確認したいときは、このモジュールではなく `src/commons/repo.py` を読むべきです。
+- `<repo-root>` 探索、ブランチ判定、session/apply 状態管理だけを確認したいときは、このモジュールではなく `src/commons/repo.py` を読むべきです。
 - 共通例外やエラーレポートの整形だけを確認したいときは、`src/commons/errors.py` を読むべきです。
 - タイムスタンプ生成や経過時間表示だけを確認したいときは、`src/commons/timestamps.py` と `src/commons/timing.py` を読むべきです。
 
 ## hash
 
-- 84326d666a81cfd46b49573698420b020514740f7480535c954a376a40cff209
+- dc077974c7c0f7c9354be07aae107b1a4a9de3d3e746ca4b8ac5ebbd01ba2424
 
 # `command_runner.py`
 

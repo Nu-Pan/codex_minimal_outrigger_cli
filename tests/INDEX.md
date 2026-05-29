@@ -36,16 +36,18 @@
 - `commons.codex.run_codex_exec` のログ出力、Structured Output 検証、JSON / テキストの再試行条件を変更するとき。
 - workspace-write 時の oracle 変更検知、`INDEX.md` メンテナンス、特殊な path 名や linked worktree / submodule まわりの境界条件を確認したいとき。
 - quota 枯渇時の待機と resume、`resume_command`、`extract_session_id`、`subcommand_log` の回帰を追いたいとき。
+- Codex CLI 呼び出しの前処理・後処理・再実行・エラー報告のテスト観点をまとめて確認したいとき。
 
 ## Do not read this when
 
 - `commons.repo` の git 共通処理やリポジトリ初期化だけを確認したいとき。
 - CLI サブコマンド全体の入出力やルーティングだけを確認したいとき。
 - `INDEX.md` の生成ルールや配置規約だけを確認したいとき。
+- `commons.codex` ではなく `src/sub_commands` 側の個別実装を追いたいとき。
 
 ## hash
 
-- 603fe4d4f5b79ffd91f148ffe691e24002cd47dc56c66b1ff315b601d4e73d1e
+- ff534bdafec7c439401eb783de7e7eb434beff88aa3bf90207ad7a3a4f4e3bd6
 
 # `test_file_naming.py`
 
