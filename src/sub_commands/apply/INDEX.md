@@ -48,25 +48,25 @@
 
 ## Summary
 
-- `cmoc apply fork` の本体実装で、session state の前提確認から apply branch と worktree の作成、調査・修正ループ、レポート生成までを担当します。
+- `cmoc apply fork` の本体実装で、session state の前提確認から apply branch と worktree の作成、調査・修正ループ、レポート生成までを担当するモジュールです。
 - oracle と実装の差分を調べるための Structured Output スキーマ、Codex CLI への prompt 生成、要修正点の整理、`INDEX.md` の保守をまとめています。
-- 失敗時の `apply.state` 更新、編集禁止パスの検査、apply report と error report の検証・出力もここに含まれます。
+- 失敗時の `apply.state` 更新、編集禁止パスの検査、apply report と error report の検証・出力もこのファイルに含まれます。
 
 ## Read this when
 
-- cmoc apply fork の実装・修正・レビュー・テストで、処理全体の流れを追いたいとき。
-- session state の前提条件、apply branch / worktree の作成、ロック制御、調査・修正ループを確認したいとき。
-- 不整合調査の Structured Output 検証、要修正点の整理、`INDEX.md` 保守、レポート出力の経路を確認したいとき。
+- `cmoc apply fork` の実装・修正・レビュー・テストで、処理全体の流れを追いたいときに読みます。
+- session state の前提条件、apply branch / worktree の作成、ロック制御、調査・修正ループの実装を確認したいときに読みます。
+- 不整合調査の Structured Output 検証、要修正点の整理、`INDEX.md` 保守、レポート出力の経路を確認したいときに読みます。
 
 ## Do not read this when
 
-- cmoc apply fork の利用手順、引数、終了条件だけを確認したいときは、`oracles/app_specs/sub_commands/apply_fork.md` を読むべきです。
-- cmoc apply join や cmoc apply abandon、cmoc session 系の処理だけを確認したいときは、このファイルではなく該当モジュールを読むべきです。
-- `INDEX.md` の生成・更新ルールや、`branch_model`・`error_handling`・`codex_call` などの共通仕様だけを確認したいときは、別の仕様文書を読むべきです。
+- `cmoc apply fork` の利用手順、引数、終了条件だけを確認したいときは、`oracles/app_specs/sub_commands/apply_fork.md` を読むべきで、この実装ファイルを読む必要はありません。
+- `cmoc apply join` や `cmoc apply abandon`、`cmoc session` 系の処理だけを確認したいときは、別のサブコマンド実装を読むべきです。
+- `INDEX.md` の生成・更新ルールや、`branch_model`・`error_handling`・`codex_call` などの共通仕様だけを確認したいときは、このファイルではなく該当する共通仕様を読むべきです。
 
 ## hash
 
-- dc1d0484ffeb812009fffe5497b6051a55e2fd5ef7fe59b9b8410e670937501f
+- b108f1ca4a95b84828f57fa970ac46676de7f91df1a2cfe1931b935365fe610d
 
 # `join.py`
 
@@ -80,14 +80,14 @@
 
 - `cmoc apply join` の実装・修正・レビュー・テストで、処理順や責務境界を確認したいとき。
 - 完了済みの apply branch を session branch に取り込む前提条件や、`apply.state` の検証条件を確認したいとき。
-- 想定外の差分の検出方法、`--force-resolve` による revert 分岐、`INDEX.md` conflict の自動解消、cleanup 条件を追いたいとき。
+- 想定外の差分の検出方法、`--force-resolve` による強制解決、`INDEX.md` conflict の自動解消、cleanup 条件を追いたいとき。
 
 ## Do not read this when
 
-- `cmoc apply fork` や `cmoc apply abandon` の処理を確認したいとき。
-- `cmoc session join` や `cmoc session abandon` など、session 側の開始・終了・統合だけを確認したいとき。
-- `cmoc apply join` の仕様断片や利用手順だけを確認したいときは、`oracles/app_specs/sub_commands/apply_join.md` を読むべきです。
+- `cmoc apply fork` の調査・修正ループや要修正点の抽出だけを確認したいとき。
+- `cmoc session join` や `cmoc session abandon` など、session 側の開始・統合・破棄だけを確認したいとき。
+- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
 
 ## hash
 
-- 761f1c7b525d555f6b0e479f607df591933aa67476a140046b4d43f1ffc7f007
+- 1391e546ed2d2fcaf413fddc759751e247e8709aba4371d7b29ca4e7491829bc

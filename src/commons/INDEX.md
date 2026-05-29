@@ -132,7 +132,7 @@
 
 - `git` リポジトリと `cmoc` の共通基盤処理をまとめたモジュールです。
 - repo root の探索、branch 判定、session/apply 状態管理、session state の保存・読込・検証を扱います。
-- .cmoc の ignore 保証、未コミット差分の検査、`cmoc init` 向けの差分分離と commit ロジックも含みます。
+- `.cmoc` の ignore 保証、未コミット差分の検査、`cmoc init` 向けの差分分離と commit ロジックも含みます。
 
 ## Read this when
 
@@ -148,7 +148,7 @@
 
 ## hash
 
-- 9dc9245d619aea6f7fb0fc039e37005ac6c931a11d10a6ef1eea7a41e2ca7366
+- 13c129f68903f77ac0fe26e329a0d24725cc2e14efb9d4820236b6fc3a7d8b8a
 
 # `subcommand_log.py`
 
