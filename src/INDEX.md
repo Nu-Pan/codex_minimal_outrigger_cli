@@ -2,28 +2,26 @@
 
 ## Summary
 
-- `src/commons` は `cmoc` 全体で共有する Python パッケージで、共通基盤をまとめる入口です。
-- `codex.py` は `codex exec` 呼び出しの共通制御、Structured Output の扱い、再試行、oracle 保護を担います。
-- `command_runner.py`、`errors.py`、`indexing.py`、`repo.py`、`report_files.py`、`subcommand_log.py`、`timestamps.py`、`timing.py` は、それぞれサブコマンド実行、共通例外、`INDEX.md` 保守、git リポジトリ処理、レポート保存、ログ、タイムスタンプ、経過時間計測を提供します。
-- `__init__.py` は `src.commons` パッケージを宣言するだけの最小構成です。
+- cmoc 全体で再利用する共通ユーティリティ群をまとめたディレクトリです。
+- `codex.py` は Codex CLI 呼び出しの共通処理、`command_runner.py` はサブコマンド実行ラッパーを扱います。
+- `errors.py`、`indexing.py`、`repo.py`、`report_files.py`、`subcommand_log.py`、`timestamps.py`、`timing.py` は、それぞれ共通例外、INDEX.md 生成、git/セッション状態、レポート保存、ログ記録、タイムスタンプ生成、時間計測を担当します。
+- `__init__.py` は `src.commons` パッケージを定義するだけの最小モジュールです。
 
 ## Read this when
 
-- `cmoc` 全体で共有する共通処理を探していて、CLI 実行・例外整形・git 操作・ログ・時刻処理のどこに何があるか整理したいとき。
-- `codex exec` の共通制御、Structured Output、JSON スキーマ検証、再試行、oracle 保護の実装を確認したいとき。
-- `INDEX.md` の自動生成・再生成・更新、サブコマンド実行ラッパー、レポート保存、サブコマンドログ、時間計測の実装を確認したいとき。
-- `repo.py` で session/apply 状態や git リポジトリ判定を追いたいとき、または `timestamps.py` や `report_files.py` のような共通ユーティリティだけを読みたいとき。
+- cmoc の共通処理をどのモジュールに置くか判断したいとき。
+- Codex CLI 呼び出し、リポジトリ探索、共通例外、ログ、タイムスタンプ、経過時間計測、レポート保存の実装を確認したいとき。
+- 新しいサブコマンドや共通ユーティリティを追加するときに、既存の共通部品の役割分担を把握したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの業務ロジックや CLI 引数の詳細だけを確認したいときは、この配下ではなく `src/sub_commands` を読むべきです。
-- `oracles` の正本仕様や利用手順を確認したいときは、この配下ではなく `<cmoc-root>/oracles` を辿るべきです。
-- pytest の期待値や回帰テストを確認したいときは、この配下ではなく `tests` を読むべきです。
-- パッケージ宣言だけを確認したいときは `__init__.py` で足りるので、他の共通モジュールまで広げて読む必要はありません。
+- 個別サブコマンドの業務ロジックや引数定義だけを確認したいとき。
+- `src/commons` 全体ではなく、`errors.py` や `repo.py` など特定の共通モジュールだけを追いたいとき。
+- `src/commons` の実装変更ではなく、テストや他ディレクトリの仕様だけを確認したいとき。
 
 ## hash
 
-- 6148e3612f8fa419d8f9c6522e9523c02902bd54532fa61639e117d5d3768ad0
+- 38e6f8f3c72c63d08f8603249c7df21733024f939672ddce3643a485c0cc2974
 
 # `main.py`
 
