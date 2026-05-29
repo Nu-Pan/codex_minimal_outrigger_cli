@@ -11,6 +11,7 @@ from commons.repo import (
     active_session_ids_for_home_branch,
     assert_cmoc_ignored,
     assert_no_uncommitted_changes,
+    changed_paths,
     changed_oracle_files,
     changed_implementation_files,
     commit_if_changed,
@@ -447,6 +448,40 @@ def test_changed_oracle_files_uses_renamed_oracle_new_path(
     assert has_deleted_oracle_files(repo, base_commit) is False
 
 
+def test_changed_oracle_files_preserves_special_path_tokens(
+    tmp_path: Path,
+) -> None:
+    """変更 oracle path は newline や前後空白を含んでも実 path のまま扱う。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    old_path = oracle_root / "old\nname.md"
+    old_path.write_text("same content\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "base")
+    base_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    renamed = oracle_root / " new\nname.md "
+    _git(
+        repo,
+        "mv",
+        old_path.relative_to(repo).as_posix(),
+        renamed.relative_to(repo).as_posix(),
+    )
+    untracked = oracle_root / " untracked\nspec.md "
+    untracked.write_text("new\n", encoding="utf-8")
+
+    relative_paths = {
+        path.relative_to(repo).as_posix()
+        for path in changed_oracle_files(repo, base_commit)
+    }
+
+    assert relative_paths == {
+        "oracles/ new\nname.md ",
+        "oracles/ untracked\nspec.md ",
+    }
+
+
 def test_committed_oracle_rename_does_not_count_as_deletion(
     tmp_path: Path,
 ) -> None:
@@ -565,6 +600,38 @@ def test_changed_implementation_files_filters_to_implementation_targets(
     assert relative_paths == ["base.py", "new.py"]
 
 
+def test_changed_implementation_files_preserves_special_path_tokens(
+    tmp_path: Path,
+) -> None:
+    """変更済み実装 path は newline や前後空白を含んでも実 path のまま扱う。"""
+    repo = _init_repo(tmp_path)
+    old_path = repo / "old\nname.py"
+    old_path.write_text("same content\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "base")
+    base_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    renamed = repo / " new\nname.py "
+    _git(
+        repo,
+        "mv",
+        old_path.relative_to(repo).as_posix(),
+        renamed.relative_to(repo).as_posix(),
+    )
+    untracked = repo / " untracked\nimpl.py "
+    untracked.write_text("new\n", encoding="utf-8")
+
+    relative_paths = {
+        path.relative_to(repo).as_posix()
+        for path in changed_implementation_files(repo, base_commit)
+    }
+
+    assert relative_paths == {
+        " new\nname.py ",
+        " untracked\nimpl.py ",
+    }
+
+
 def test_changed_implementation_files_ignores_only_root_gitignore(
     tmp_path: Path,
 ) -> None:
@@ -626,6 +693,22 @@ def test_has_deleted_implementation_files_detects_target_deletion(
     """cmoc ブランチ上の実装ファイル削除を全体適用切替用に検出する。"""
     repo = _init_repo(tmp_path)
     deleted = repo / "deleted.py"
+    deleted.write_text("delete me\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "base")
+    base_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    deleted.unlink()
+
+    assert has_deleted_implementation_files(repo, base_commit) is True
+
+
+def test_has_deleted_implementation_files_preserves_special_path_tokens(
+    tmp_path: Path,
+) -> None:
+    """削除済み実装 path の判定でも newline や前後空白を path として扱う。"""
+    repo = _init_repo(tmp_path)
+    deleted = repo / " delete\nme.py "
     deleted.write_text("delete me\n", encoding="utf-8")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "base")
@@ -818,6 +901,30 @@ def test_assert_no_uncommitted_changes_rejects_oracle_changes(
 
     assert "未コミットの変更があります。" in error.value.message
     assert "oracles/" in error.value.detail
+
+
+def test_changed_paths_preserves_special_path_tokens(tmp_path: Path) -> None:
+    """porcelain 由来の変更 path でも newline や前後空白を保持する。"""
+    repo = _init_repo(tmp_path)
+    tracked = repo / "old\nname.py"
+    tracked.write_text("same content\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "base")
+
+    renamed = repo / " new\nname.py "
+    _git(
+        repo,
+        "mv",
+        tracked.relative_to(repo).as_posix(),
+        renamed.relative_to(repo).as_posix(),
+    )
+    untracked = repo / " untracked\nimpl.py "
+    untracked.write_text("new\n", encoding="utf-8")
+
+    assert set(changed_paths(repo)) == {
+        " new\nname.py ",
+        " untracked\nimpl.py ",
+    }
 
 
 @pytest.mark.parametrize(

@@ -3758,6 +3758,28 @@ def test_apply_rejects_incomplete_change_summary_from_codex(
     assert "Codex CLI による意味論的カテゴリ別要約には失敗しました。" in report_text
 
 
+def test_apply_fallback_change_summary_preserves_special_path_tokens(
+    tmp_path: Path,
+) -> None:
+    """fallback report の changed_paths は newline や前後空白を削らない。"""
+    repo = _init_repo(tmp_path)
+    snapshot_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    special_path = repo / " changed\nfile.py "
+    special_path.write_text("changed\n", encoding="utf-8")
+    _git(repo, "add", special_path.relative_to(repo).as_posix())
+    _git(repo, "commit", "-m", "special path")
+    branch_name = _git(repo, "branch", "--show-current").stdout.strip()
+
+    summary = apply_module._fallback_change_summary_from_git(
+        repo,
+        branch_name,
+        snapshot_commit,
+        RuntimeError("summary failed"),
+    )
+
+    assert summary[0]["changed_paths"] == [" changed\nfile.py "]
+
+
 def test_apply_writes_error_report_when_midway_stage_fails(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -4492,6 +4514,50 @@ def test_apply_partial_targets_use_renamed_new_paths(
 
     assert oracle_targets == ["oracles/new.md"]
     assert implementation_targets == ["new.py"]
+
+
+def test_apply_partial_targets_preserve_special_path_tokens(
+    tmp_path: Path,
+) -> None:
+    """部分 apply の調査対象 path は newline や前後空白を保持する。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    old_oracle = oracle_root / "old\nspec.md"
+    old_impl = repo / "old\nimpl.py"
+    old_oracle.write_text("oracle\n", encoding="utf-8")
+    old_impl.write_text("app\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "base targets")
+    _checkout_session_branch(repo)
+    base_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    _git(repo, "mv", "oracles/old\nspec.md", "oracles/ new\nspec.md ")
+    _git(repo, "mv", "old\nimpl.py", " new\nimpl.py ")
+    _git(repo, "commit", "-m", "rename special targets")
+    snapshot_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    oracle_targets = [
+        target.path.relative_to(repo).as_posix()
+        for target in apply_module._target_oracle_files(
+            repo,
+            base_commit,
+            snapshot_commit,
+            partial=True,
+        )
+    ]
+    implementation_targets = [
+        target.path.relative_to(repo).as_posix()
+        for target in apply_module._target_implementation_files(
+            repo,
+            base_commit,
+            snapshot_commit,
+            partial=True,
+        )
+    ]
+
+    assert oracle_targets == ["oracles/ new\nspec.md "]
+    assert implementation_targets == [" new\nimpl.py "]
 
 
 def test_apply_deleted_investigation_target_prompt_mentions_history(

@@ -915,6 +915,7 @@ def changed_oracle_files(repo_root: Path, base_commit: str) -> list[Path]:
         [
             "log",
             "--name-status",
+            "-z",
             "-M",
             "--diff-filter=ACMRT",
             "--format=",
@@ -923,15 +924,7 @@ def changed_oracle_files(repo_root: Path, base_commit: str) -> list[Path]:
             "oracles",
         ],
     )
-    for line in committed.stdout.splitlines():
-        parts = line.split("\t")
-        if not parts:
-            continue
-        status = parts[0]
-        if status.startswith(("R", "C")) and len(parts) >= 3:
-            collected.add(repo_root / parts[2])
-        elif len(parts) >= 2:
-            collected.add(repo_root / parts[1])
+    collected.update(_changed_paths_from_name_status(repo_root, committed.stdout))
 
     # 未コミットの working tree/staging 変更も部分評価対象に加える。
     uncommitted = run_git(
@@ -939,6 +932,7 @@ def changed_oracle_files(repo_root: Path, base_commit: str) -> list[Path]:
         [
             "diff",
             "--name-status",
+            "-z",
             "-M",
             "--diff-filter=ACMRT",
             "HEAD",
@@ -952,6 +946,7 @@ def changed_oracle_files(repo_root: Path, base_commit: str) -> list[Path]:
             "diff",
             "--cached",
             "--name-status",
+            "-z",
             "-M",
             "--diff-filter=ACMRT",
             "--",
@@ -964,11 +959,18 @@ def changed_oracle_files(repo_root: Path, base_commit: str) -> list[Path]:
     # untracked oracle ファイルはディレクトリ単位に畳まない形式で収集する。
     status = run_git(
         repo_root,
-        ["status", "--porcelain", "--untracked-files=all", "--", "oracles"],
+        [
+            "status",
+            "--porcelain=v1",
+            "-z",
+            "--untracked-files=all",
+            "--",
+            "oracles",
+        ],
     )
-    for line in status.stdout.splitlines():
-        if line.startswith("?? "):
-            collected.add(repo_root / line[3:])
+    for status_code, path in git_status_paths(status.stdout):
+        if status_code == "??":
+            collected.add(repo_root / path)
 
     # 削除済み、INDEX.md、root .gitignore 対象は評価対象から除外する。
     existing = [
@@ -999,6 +1001,7 @@ def changed_implementation_files(
         [
             "log",
             "--name-status",
+            "-z",
             "-M",
             "--diff-filter=ACMRT",
             "--format=",
@@ -1009,6 +1012,7 @@ def changed_implementation_files(
         [
             "diff",
             "--name-status",
+            "-z",
             "-M",
             "--diff-filter=ACMRT",
             "HEAD",
@@ -1019,6 +1023,7 @@ def changed_implementation_files(
             "diff",
             "--cached",
             "--name-status",
+            "-z",
             "-M",
             "--diff-filter=ACMRT",
             "--",
@@ -1036,11 +1041,18 @@ def changed_implementation_files(
     # 未追跡ファイルもディレクトリ単位に畳まず収集する。
     status = run_git(
         repo_root,
-        ["status", "--porcelain", "--untracked-files=all", "--", "."],
+        [
+            "status",
+            "--porcelain=v1",
+            "-z",
+            "--untracked-files=all",
+            "--",
+            ".",
+        ],
     )
-    for line in status.stdout.splitlines():
-        if line.startswith("?? "):
-            collected.add(repo_root / line[3:])
+    for status_code, path in git_status_paths(status.stdout):
+        if status_code == "??":
+            collected.add(repo_root / path)
 
     existing = [
         path
@@ -1059,17 +1071,11 @@ def changed_implementation_files(
 def _changed_paths_from_name_status(repo_root: Path, output: str) -> set[Path]:
     """`git diff --name-status` から変更後 path を取り出す。"""
     # rename/copy を考慮しながら git 出力を path 集合へ変換する。
-    paths: set[Path] = set()
-    for line in output.splitlines():
-        parts = line.split("\t")
-        if not parts:
-            continue
-        status = parts[0]
-        if status.startswith(("R", "C")) and len(parts) >= 3:
-            paths.add(repo_root / parts[2])
-        elif len(parts) >= 2:
-            paths.add(repo_root / parts[1])
-    return paths
+    return {
+        repo_root / paths[-1]
+        for status, paths in git_name_status_entries(output)
+        if status[:1] in {"A", "C", "M", "R", "T"} and paths
+    }
 
 
 def has_deleted_oracle_files(repo_root: Path, base_commit: str) -> bool:
@@ -1079,13 +1085,14 @@ def has_deleted_oracle_files(repo_root: Path, base_commit: str) -> bool:
         [
             "log",
             "--name-status",
+            "-z",
             "-M",
             "--diff-filter=DR",
             "--format=",
             f"{base_commit}..HEAD",
         ],
-        ["diff", "--name-status", "-M", "--diff-filter=DR", "HEAD"],
-        ["diff", "--cached", "--name-status", "-M", "--diff-filter=DR"],
+        ["diff", "--name-status", "-z", "-M", "--diff-filter=DR", "HEAD"],
+        ["diff", "--cached", "--name-status", "-z", "-M", "--diff-filter=DR"],
     ]
     for command in commands:
         result = run_git(repo_root, [*command, "--", "."])
@@ -1104,13 +1111,14 @@ def has_deleted_implementation_files(
         [
             "log",
             "--name-only",
+            "-z",
             "-M",
             "--diff-filter=D",
             "--format=",
             f"{base_commit}..HEAD",
         ],
-        ["diff", "--name-only", "-M", "--diff-filter=D", "HEAD"],
-        ["diff", "--cached", "--name-only", "-M", "--diff-filter=D"],
+        ["diff", "--name-only", "-z", "-M", "--diff-filter=D", "HEAD"],
+        ["diff", "--cached", "--name-only", "-z", "-M", "--diff-filter=D"],
     ]
     for command in commands:
         result = run_git(repo_root, [*command, "--", "."])
@@ -1126,18 +1134,14 @@ def _deleted_oracle_changes_from_name_status(
     """`git name-status` から oracle 削除相当の変更を取り出す。"""
     # oracle から非 oracle への rename は、oracle 集合から見れば削除である。
     deleted: list[str] = []
-    for line in output.splitlines():
-        parts = line.split("\t")
-        if len(parts) < 2:
-            continue
-        status = parts[0]
+    for status, paths in git_name_status_entries(output):
         if status == "D":
-            deleted.extend(filter_oracle_file_paths(repo_root, [parts[1]]))
+            deleted.extend(filter_oracle_file_paths(repo_root, paths[:1]))
             continue
-        if not status.startswith("R") or len(parts) < 3:
+        if not status.startswith("R") or len(paths) < 2:
             continue
-        source_oracles = filter_oracle_file_paths(repo_root, [parts[1]])
-        destination_oracles = filter_oracle_file_paths(repo_root, [parts[2]])
+        source_oracles = filter_oracle_file_paths(repo_root, [paths[0]])
+        destination_oracles = filter_oracle_file_paths(repo_root, [paths[1]])
         if source_oracles and not destination_oracles:
             deleted.extend(source_oracles)
     return deleted
@@ -1150,9 +1154,9 @@ def _deleted_implementation_file_paths(
     """削除 path から実装ファイル列挙対象外のものを除外する。"""
     # 削除済み path は存在確認できないため、path 規則と gitignore だけで判定する。
     relatives = [
-        line
-        for line in output.splitlines()
-        if is_implementation_path(repo_root, line)
+        path
+        for path in git_name_only_paths(output)
+        if is_implementation_path(repo_root, path)
     ]
     return relatives
 
@@ -1216,14 +1220,47 @@ def read_session_start_commit(repo_root: Path, branch_name: str) -> str:
 def changed_paths(repo_root: Path) -> list[str]:
     """未コミット差分のパスを porcelain から取り出す。"""
     # rename 行は新しい path だけを返す。
-    result = run_git(repo_root, ["status", "--porcelain"])
-    paths: list[str] = []
-    for line in result.stdout.splitlines():
-        value = line[3:]
-        if " -> " in value:
-            value = value.split(" -> ", 1)[1]
-        paths.append(value)
-    return paths
+    result = run_git(repo_root, ["status", "--porcelain=v1", "-z"])
+    return [path for _status, path in git_status_paths(result.stdout)]
+
+
+def git_name_only_paths(output: str) -> list[str]:
+    """`git ... --name-only -z` の path token を返す。"""
+    return [token for token in output.split("\0") if token]
+
+
+def git_name_status_entries(output: str) -> list[tuple[str, list[str]]]:
+    """`git ... --name-status -z` の status と path token を返す。"""
+    tokens = git_name_only_paths(output)
+    entries: list[tuple[str, list[str]]] = []
+    index = 0
+    while index < len(tokens):
+        status = tokens[index]
+        index += 1
+        path_count = 2 if status[:1] in {"R", "C"} else 1
+        paths = tokens[index:index + path_count]
+        index += path_count
+        if len(paths) == path_count:
+            entries.append((status, paths))
+    return entries
+
+
+def git_status_paths(output: str) -> list[tuple[str, str]]:
+    """`git status --porcelain=v1 -z` の status と変更後 path を返す。"""
+    tokens = git_name_only_paths(output)
+    entries: list[tuple[str, str]] = []
+    index = 0
+    while index < len(tokens):
+        entry = tokens[index]
+        index += 1
+        if len(entry) < 4:
+            continue
+        status = entry[:2]
+        path = entry[3:]
+        entries.append((status, path))
+        if status[:1] in {"R", "C"} or status[1:2] in {"R", "C"}:
+            index += 1
+    return entries
 
 
 def _staged_diff_excluding_paths(repo_root: Path, paths: list[str]) -> str:

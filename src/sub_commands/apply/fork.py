@@ -30,6 +30,8 @@ from commons.repo import (
     current_branch,
     ensure_cmoc_ignored,
     filter_oracle_file_paths,
+    git_name_only_paths,
+    git_name_status_entries,
     head_commit,
     is_session_branch,
     read_session_state,
@@ -891,9 +893,9 @@ def _tracked_files_at_commit(
     """指定 commit の tracked file 一覧を repo 相対 path で返す。"""
     result = run_git(
         repo_root,
-        ["ls-tree", "-r", "--name-only", commit_hash, "--", pathspec],
+        ["ls-tree", "-r", "-z", "--name-only", commit_hash, "--", pathspec],
     )
-    return sorted(line for line in result.stdout.splitlines() if line)
+    return sorted(git_name_only_paths(result.stdout))
 
 
 def _changed_files_between_commits(
@@ -911,6 +913,7 @@ def _changed_files_between_commits(
         [
             "log",
             "--name-status",
+            "-z",
             "-M",
             "--format=",
             f"{base_commit}..{commit_hash}",
@@ -919,20 +922,16 @@ def _changed_files_between_commits(
         ],
     )
     paths: set[str] = set()
-    for line in result.stdout.splitlines():
-        parts = line.split("\t")
-        if len(parts) < 2:
-            continue
-        status = parts[0]
+    for status, status_paths in git_name_status_entries(result.stdout):
         status_kind = status[:1]
         if status_kind not in {"A", "C", "D", "M", "R", "T"}:
             continue
         if status_kind in {"C", "R"}:
-            if len(parts) >= 3 and parts[2]:
-                paths.add(parts[2])
+            if len(status_paths) >= 2:
+                paths.add(status_paths[1])
             continue
-        if parts[1]:
-            paths.add(parts[1])
+        if status_paths:
+            paths.add(status_paths[0])
     return sorted(paths)
 
 
@@ -1410,6 +1409,7 @@ def _fallback_change_summary_from_git(
             [
                 "diff",
                 "--name-only",
+                "-z",
                 f"{oracle_snapshot_commit}..{branch_name}",
                 "--",
             ],
@@ -1428,11 +1428,7 @@ def _fallback_change_summary_from_git(
                 "changed_paths": [],
             }
         ]
-    changed_paths = [
-        line.strip()
-        for line in diff_result.stdout.splitlines()
-        if line.strip()
-    ]
+    changed_paths = git_name_only_paths(diff_result.stdout)
     if diff_result.returncode not in (0, 1):
         return [
             {
