@@ -108,7 +108,7 @@
 ## Summary
 
 - `tests/test_repo.py` は `commons.repo` の git リポジトリ共通処理を検証するテスト群の入口です。
-- `.cmoc` の ignore 保証、tracked な `.cmoc` の untrack、`changed_paths`、`is_cmoc_branch`、`find_repo_root` を扱います。
+- .cmoc の ignore 保証、tracked な `.cmoc` の untrack、`find_repo_root`、`is_cmoc_branch` を扱います。
 - `list_oracle_files` / `list_implementation_files`、`changed_oracle_files` / `changed_implementation_files`、`has_deleted_oracle_files` / `has_deleted_implementation_files` を通じて、`INDEX.md`、`.gitignore`、`.git/info/exclude`、`memo` の除外条件を確認します。
 - `commit_if_changed` と `assert_no_uncommitted_changes` の前提条件、ならびに session state の読み書き、`active_session_ids_for_home_branch`、`read_session_start_commit`、`session_state_root` を確認します。
 - 末尾に、テスト用 git リポジトリを初期化する `_init_repo` と、git コマンド実行補助の `_git` があります。
@@ -123,14 +123,14 @@
 
 ## Do not read this when
 
-- `src/commons/repo.py` の実装ロジックや内部アルゴリズムそのものを追いたいとき。
-- `tests/test_codex.py`、`tests/test_indexing.py`、`tests/test_subcommands.py` など、別のテスト群だけを確認したいとき。
-- `INDEX.md` の生成・更新ルール全体や、`oracles` 配下の正本仕様だけを確認したいとき。
+- `src/commons/repo.py` の実装ロジックそのものを追いたいとき。
+- `tests/test_codex.py`、`tests/test_indexing.py`、`tests/test_subcommands.py` など別のテスト群だけを確認したいとき。
+- `INDEX.md` 全体の生成ルールや `oracles` 正本仕様だけを確認したいとき。
 - `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいとき。
 
 ## hash
 
-- 59b8c183b2a2e16107cec8757261cd5dbcb7b0991258723929756c0b7970f313
+- b166d092ce7dcb74ed88926493b29675708b3e9ecfbef72c73dba253d364816d
 
 # `test_subcommands.py`
 
