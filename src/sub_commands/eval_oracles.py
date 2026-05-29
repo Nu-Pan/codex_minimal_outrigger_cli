@@ -908,7 +908,7 @@ def _validate_referenced_paths(value: object, repo_root: Path) -> set[Path]:
     paths = set()
     for index, item in enumerate(value):
         paths.add(
-            _require_absolute_oracle_path(
+            _require_absolute_oracle_reference_path(
                 item,
                 repo_root,
                 f"referenced_paths[{index}]",
@@ -969,7 +969,44 @@ def _require_absolute_oracle_path(
     repo_root: Path,
     label: str,
 ) -> Path:
-    """JSON 値を参照可能な oracle / INDEX ファイル path として検査する。"""
+    """JSON 値を issue の根拠となる oracle file path として検査する。"""
+    resolved_path = _require_absolute_existing_oracles_file(
+        value,
+        repo_root,
+        label,
+    )
+    oracle_files = {path.resolve() for path in list_oracle_files(repo_root)}
+    if resolved_path not in oracle_files:
+        raise ValueError(f"{label} must be an oracle file.")
+    return resolved_path
+
+
+def _require_absolute_oracle_reference_path(
+    value: object,
+    repo_root: Path,
+    label: str,
+) -> Path:
+    """JSON 値を参照可能な oracle / INDEX file path として検査する。"""
+    resolved_path = _require_absolute_existing_oracles_file(
+        value,
+        repo_root,
+        label,
+    )
+    if resolved_path.name == "INDEX.md":
+        return resolved_path
+
+    oracle_files = {path.resolve() for path in list_oracle_files(repo_root)}
+    if resolved_path not in oracle_files:
+        raise ValueError(f"{label} must be an oracle file or INDEX.md.")
+    return resolved_path
+
+
+def _require_absolute_existing_oracles_file(
+    value: object,
+    repo_root: Path,
+    label: str,
+) -> Path:
+    """JSON 値を oracles 配下の実在する絶対 file path として検査する。"""
     if not isinstance(value, str):
         raise ValueError(f"{label} must be a string.")
     path = Path(value)
@@ -985,12 +1022,6 @@ def _require_absolute_oracle_path(
         raise ValueError(f"{label} must exist.")
     if not resolved_path.is_file():
         raise ValueError(f"{label} must be a file.")
-    if resolved_path.name == "INDEX.md":
-        return resolved_path
-
-    oracle_files = {path.resolve() for path in list_oracle_files(repo_root)}
-    if resolved_path not in oracle_files:
-        raise ValueError(f"{label} must be an oracle file or INDEX.md.")
     return resolved_path
 
 

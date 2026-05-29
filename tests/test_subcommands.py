@@ -1660,7 +1660,7 @@ def test_eval_oracles_result_precedence() -> None:
 def test_eval_oracles_payload_accepts_existing_oracle_and_index_paths(
     tmp_path: Path,
 ) -> None:
-    """評価 payload は issue 単位の実在 oracle / INDEX file 参照を受理する。"""
+    """評価 payload は referenced_paths の実在 oracle / INDEX file 参照を受理する。"""
     repo = _init_repo(tmp_path)
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -1685,6 +1685,39 @@ def test_eval_oracles_payload_accepts_existing_oracle_and_index_paths(
         repo,
         oracle,
     )
+
+
+def test_eval_oracles_payload_rejects_index_as_issue_oracle_path(
+    tmp_path: Path,
+) -> None:
+    """issues[].oracle_path は INDEX.md ではなく oracle file に帰属させる。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    oracle = oracle_root / "spec.md"
+    oracle_index = oracle_root / "INDEX.md"
+    oracle.write_text("spec\n", encoding="utf-8")
+    oracle_index.write_text("index\n", encoding="utf-8")
+    issue = _eval_oracle_issue(
+        "fatal",
+        "fatal",
+        oracle_index,
+        1,
+        1,
+        [oracle, oracle_index],
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="issues\\[0\\]\\.oracle_path must be an oracle file",
+    ):
+        eval_oracles_module._validate_evaluation_payload(
+            {
+                "issues": [issue],
+            },
+            repo,
+            oracle,
+        )
 
 
 def test_eval_oracles_payload_rejects_legacy_top_level_metadata(
@@ -1877,7 +1910,7 @@ def test_eval_oracles_payload_rejects_ignored_oracle_path(
 def test_eval_oracles_payload_rejects_missing_issue_oracle_path(
     tmp_path: Path,
 ) -> None:
-    """issues[].oracle_path も実在する oracle / INDEX file として検査する。"""
+    """issues[].oracle_path も実在する oracle file として検査する。"""
     repo = _init_repo(tmp_path)
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
