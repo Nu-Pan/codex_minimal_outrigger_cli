@@ -574,21 +574,87 @@ def active_session_ids_for_home_branch(
     repo_root: Path,
     session_home_branch: str,
 ) -> list[str]:
-    """指定 home branch に紐づく active session id を列挙する。"""
+    """指定 home branch に紐づく active session id を列挙する。
+
+    active session の一意性は state file と session branch の両方で守る。
+    片方だけが残る状態は新規 session 作成を進めず、手動復旧を促す。
+    """
+    session_branch_names = _session_branch_names(repo_root)
+    session_branch_ids = {
+        branch_name.removeprefix(SESSION_BRANCH_PREFIX)
+        for branch_name in session_branch_names
+    }
     session_root = session_state_root(repo_root) / ".cmoc" / "sessions"
     if not session_root.exists():
+        if session_branch_ids:
+            _raise_session_state_branch_mismatch(
+                "session state がない session branch が存在します。",
+                session_branch_names,
+            )
         return []
 
     session_ids: list[str] = []
+    state_session_ids: set[str] = set()
     for path in sorted(session_root.glob("*.json")):
         payload = _read_existing_session_state(path)
         session = payload["session"]
+        session_id = path.stem
+        state_session_ids.add(session_id)
+        if (
+            session.get("state") == "active"
+            and session_id not in session_branch_ids
+        ):
+            _raise_session_state_branch_mismatch(
+                "active session state に対応する session branch が存在しません。",
+                [f"{SESSION_BRANCH_PREFIX}{session_id}"],
+            )
         if (
             session.get("state") == "active"
             and session.get("session_home_branch") == session_home_branch
         ):
-            session_ids.append(path.stem)
+            session_ids.append(session_id)
+    orphan_branch_ids = sorted(session_branch_ids - state_session_ids)
+    if orphan_branch_ids:
+        _raise_session_state_branch_mismatch(
+            "session state がない session branch が存在します。",
+            [
+                f"{SESSION_BRANCH_PREFIX}{session_id}"
+                for session_id in orphan_branch_ids
+            ],
+        )
     return session_ids
+
+
+def _session_branch_names(repo_root: Path) -> list[str]:
+    """local session branch 名を列挙する。"""
+    result = run_git(
+        repo_root,
+        [
+            "for-each-ref",
+            "--format=%(refname:short)",
+            f"refs/heads/{SESSION_BRANCH_PREFIX}",
+        ],
+    )
+    return sorted(
+        branch_name
+        for branch_name in result.stdout.splitlines()
+        if is_session_branch(branch_name)
+    )
+
+
+def _raise_session_state_branch_mismatch(
+    message: str,
+    detail_items: list[str],
+) -> None:
+    """session state と branch の不整合を fail closed にする。"""
+    raise CmocError(
+        message,
+        [
+            ".cmoc/sessions と refs/heads/cmoc/session を確認してください。",
+            "不整合を復旧または不要な session branch を削除してから再実行してください。",
+        ],
+        "\n".join(detail_items),
+    )
 
 
 def ensure_cmoc_ignored(repo_root: Path) -> bool:

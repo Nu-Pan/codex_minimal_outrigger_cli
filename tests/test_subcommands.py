@@ -665,9 +665,11 @@ def test_session_fork_rejects_existing_active_session_for_home_branch(
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
     _git(repo, "commit", "-m", "ignore cmoc")
+    session_id = "2026-05-10_22-21_10_000000123"
+    _git(repo, "branch", f"cmoc/session/{session_id}")
     write_session_state(
         repo,
-        "existing",
+        session_id,
         {
             "session": {
                 "state": "active",
@@ -686,10 +688,10 @@ def test_session_fork_rejects_existing_active_session_for_home_branch(
         cmoc_session_fork_impl(repo)
 
     assert "active session" in error.value.message
-    assert error.value.detail == "existing"
+    assert error.value.detail == session_id
     assert _git(repo, "branch", "--show-current").stdout.strip() == home_branch
     assert _session_state_paths(repo) == [
-        repo / ".cmoc" / "sessions" / "existing.json",
+        repo / ".cmoc" / "sessions" / f"{session_id}.json",
     ]
 
 
@@ -766,9 +768,11 @@ def test_session_fork_from_linked_worktree_rejects_common_active_session(
     linked = tmp_path / "linked"
     _git(repo, "worktree", "add", "-b", "feature", str(linked), "HEAD")
     start_commit = _git(linked, "rev-parse", "HEAD").stdout.strip()
+    session_id = "2026-05-10_22-21_10_000000123"
+    _git(linked, "branch", f"cmoc/session/{session_id}")
     write_session_state(
         repo,
-        "existing",
+        session_id,
         {
             "session": {
                 "state": "active",
@@ -787,10 +791,10 @@ def test_session_fork_from_linked_worktree_rejects_common_active_session(
         cmoc_session_fork_impl(linked)
 
     assert "active session" in error.value.message
-    assert error.value.detail == "existing"
+    assert error.value.detail == session_id
     assert _git(linked, "branch", "--show-current").stdout.strip() == "feature"
     assert _session_state_paths(repo) == [
-        repo / ".cmoc" / "sessions" / "existing.json",
+        repo / ".cmoc" / "sessions" / f"{session_id}.json",
     ]
 
 
@@ -816,6 +820,27 @@ def test_session_fork_rejects_malformed_session_state_before_branch_creation(
     assert _git(repo, "branch", "--show-current").stdout.strip() == home_branch
     assert "cmoc/session/" not in branches
     assert _session_state_paths(repo) == [broken_path]
+
+
+def test_session_fork_rejects_orphan_session_branch_before_creation(
+    tmp_path: Path,
+) -> None:
+    """対応 state がない session branch が残る場合は新規 session を作らない。"""
+    repo = _init_repo(tmp_path)
+    cmoc_init_impl(repo)
+    home_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    orphan_branch = "cmoc/session/2026-05-10_22-21_10_000000123"
+    _git(repo, "branch", orphan_branch)
+
+    with pytest.raises(CmocError) as error:
+        cmoc_session_fork_impl(repo)
+
+    branches = _git(repo, "branch", "--format=%(refname:short)").stdout
+    assert "session state がない session branch" in error.value.message
+    assert orphan_branch in error.value.detail
+    assert _git(repo, "branch", "--show-current").stdout.strip() == home_branch
+    assert branches.count("cmoc/session/") == 1
+    assert _session_state_paths(repo) == []
 
 
 def test_session_fork_rolls_back_branch_when_state_write_fails(

@@ -1463,6 +1463,51 @@ def test_active_session_scan_fails_on_schema_invalid_state(
     assert str(invalid_path) in error.value.detail
 
 
+def test_active_session_scan_fails_on_orphan_session_branch(
+    tmp_path: Path,
+) -> None:
+    """state がない session branch は active 判定を fail closed にする。"""
+    repo = _init_repo(tmp_path)
+    session_branch = "cmoc/session/2026-05-10_22-21_10_000000123"
+    _git(repo, "branch", session_branch)
+
+    with pytest.raises(CmocError) as error:
+        active_session_ids_for_home_branch(repo, "main")
+
+    assert "session state がない session branch" in error.value.message
+    assert session_branch in error.value.detail
+
+
+def test_active_session_scan_fails_on_active_state_without_branch(
+    tmp_path: Path,
+) -> None:
+    """active state に対応 branch がない場合は不整合として止める。"""
+    repo = _init_repo(tmp_path)
+    session_id = "2026-05-10_22-21_10_000000123"
+    write_session_state(
+        repo,
+        session_id,
+        {
+            "session": {
+                "state": "active",
+                "session_home_branch": "main",
+                "session_start_commit": "abc123",
+            },
+            "apply": {
+                "state": "ready",
+                "apply_branch": None,
+                "oracle_snapshot_commit": None,
+            },
+        },
+    )
+
+    with pytest.raises(CmocError) as error:
+        active_session_ids_for_home_branch(repo, "main")
+
+    assert "対応する session branch が存在しません" in error.value.message
+    assert session_id in error.value.detail
+
+
 def _init_repo(tmp_path: Path) -> Path:
     """テスト用 git repo を作り、初期 commit を置く。"""
     repo = tmp_path / "repo"
