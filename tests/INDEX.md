@@ -29,9 +29,9 @@
 
 - `tests/test_codex.py` は `commons.codex.run_codex_exec()` とその周辺補助処理を検証するテスト群の入口です。
 - Structured Output の schema ファイル生成、JSON / text の再試行、schema 検証失敗や意味的検証失敗、`reasoning_effort` 制約を扱います。
-- Codex CLI 呼び出しログ、`subcommand_log` 通知、`INDEX.md` 事前メンテナンス、`skip_index_maintenance`、workspace-write 時の `oracles` 保護を確認します。
-- quota 枯渇時の待機と `resume` 再実行、`session_id` 抽出、`_resume_command`、`_prepare_codex_exec_paths` も扱います。
-- 末尾には、テスト用 git repo 初期化の補助関数と、git 実行補助の関数があります。
+- Codex CLI 呼び出しログ、`subcommand_log` 通知、出力プレビュー、quota 枯渇時の待機と `resume` 再実行の流れを確認します。
+- `INDEX.md` 事前メンテナンス、`skip_index_maintenance`、workspace-write 時の `oracles` 保護、`session_id` 抽出や `_resume_command` も含みます。
+- 末尾には、テスト用 git リポジトリ初期化の補助関数と、git 実行補助の関数があります。
 
 ## Read this when
 
@@ -50,7 +50,7 @@
 
 ## hash
 
-- 49b038d72dd1d494971024dd1afd589ab8fccb69e445f72c41bbf68200d59477
+- 0e0e2fa32e546e20870c9cdd686ecebcc35877fd96a4c9861e5d59fd4dd6d826
 
 # `test_file_naming.py`
 
@@ -130,24 +130,28 @@
 
 ## Summary
 
-- `sub_commands` 系サブコマンドの決定論的な制御ロジックを検証するテストファイルです。
-- 初期化、session/apply のライフサイクル、oracle 評価、レポート生成、prompt と schema 検証を横断的にカバーします。
+- `tests/test_subcommands.py` は `cmoc` のサブコマンド群に対する決定論的な振る舞いを検証するテスト入口です。
+- `init`、`session`、`apply`、`eval-oracles` の開始・終了・破棄・統合・調査ループ・レポート生成・状態遷移を横断して確認します。
+- 共通の実行ラッパー、CLI 登録、エラー報告、prompt / Structured Output schema / validation helper まで含めて、サブコマンド周辺の回帰をまとめて守ります。
 
 ## Read this when
 
-- `tests/test_subcommands.py` が何を保証しているかを把握したいとき。
-- `cmoc init`、`session fork/join/abandon`、`apply fork/join/abandon`、`eval-oracles` の挙動確認をしたいとき。
-- report 形式、prompt 文面、payload validation、エラー時の復帰条件などのテスト観点を確認したいとき。
+- `cmoc init` の `.cmoc` 追跡対象外化や初期化コミットの挙動を確認したいとき。
+- `session fork/join/abandon` と `apply fork/join/abandon` の状態遷移、worktree、branch、cleanup 条件を確認したいとき。
+- `review oracles` / `eval-oracles` の評価対象選定、レポート生成、改善ループ、payload 検証を確認したいとき。
+- `run_command`、`main`、`format_error_report`、CLI 登録や help 文言など共通入口の挙動を確認したいとき。
+- prompt 文面、Structured Output schema、`_validate_*` 系ヘルパーの制約やエラー条件を確認したいとき。
 
 ## Do not read this when
 
-- サブコマンド本体の実装や制御ロジックそのものを確認したいとき。
-- `apply` / `session` / `eval_oracles` の個別仕様を、テストではなく正本コードから追いたいとき。
-- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
+- 個別サブコマンドの実装ロジックそのものを追いたいときは、このテストではなく `src/sub_commands` 側を読むべきです。
+- `commons.repo`、`commons.codex`、`commons.command_runner` などの共通実装を単独で確認したいときは、専用の本体やテストを参照すべきです。
+- `INDEX.md` の生成ルールや `oracles` 正本仕様だけを確認したいときは、このファイルではなく該当する仕様文書を読むべきです。
+- ルーティング文書の更新や配置ルールだけを確認したいときは、`tests/INDEX.md` や `oracles/app_specs/indexing.md` を優先すべきです。
 
 ## hash
 
-- 1088fba07757f48fe4c1340efb9ae6d4870bc1e58db1bc386ef0fa66a14b6101
+- fc00cc04bbc0d7215b51db6c59d94127ab6adf8faa71c777d4342226cad44e12
 
 # `test_timestamps.py`
 
