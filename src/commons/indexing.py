@@ -59,6 +59,46 @@ def maintain_indexes(
         )
 
 
+def is_maintained_index_path(
+    repo_root: Path,
+    relative_path: str,
+    *,
+    excluded_index_roots: Iterable[Path | str] | None = None,
+) -> bool:
+    """`maintain_indexes` が配置し得る `INDEX.md` path か判定する。"""
+    path = Path(relative_path)
+    if path.is_absolute() or path.name != "INDEX.md":
+        return False
+    if any(part in {"", ".", ".."} for part in path.parts):
+        return False
+
+    index_path = repo_root / path
+    directory = index_path.parent
+    try:
+        relative_parts = directory.relative_to(repo_root).parts
+    except ValueError:
+        return False
+
+    excluded_roots = _normalize_excluded_index_roots(
+        repo_root,
+        excluded_index_roots,
+    )
+    if _is_under_any_path(directory, excluded_roots):
+        return False
+    if any(
+        part.startswith(".") or part in _INDEX_DIRECTORY_EXCLUDED_NAMES
+        for part in relative_parts
+    ):
+        return False
+    if _is_repo_memo(repo_root, directory):
+        return False
+
+    gitignored_paths = _GitignoreMatcher(repo_root).ignored_paths(
+        [directory, index_path]
+    )
+    return directory not in gitignored_paths and index_path not in gitignored_paths
+
+
 def _maintain_indexes_unlocked(
     repo_root: Path,
     *,

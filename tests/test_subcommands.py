@@ -2910,6 +2910,30 @@ def test_apply_join_accepts_apply_branch_index_diff(
     assert (repo / "INDEX.md").read_text(encoding="utf-8") == "index\n"
 
 
+def test_apply_join_stops_on_apply_branch_memo_index_diff(
+    tmp_path: Path,
+) -> None:
+    """apply branch 側の root memo/INDEX.md は想定外差分として停止する。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    memo_root = apply_worktree / "memo"
+    memo_root.mkdir()
+    (memo_root / "INDEX.md").write_text("index\n", encoding="utf-8")
+    _git(apply_worktree, "add", "memo/INDEX.md")
+    _git(apply_worktree, "commit", "-m", "maintain memo index")
+
+    with pytest.raises(CmocError) as error_info:
+        cmoc_apply_join_impl(repo)
+
+    assert "想定外の差分" in error_info.value.message
+    assert f"{apply_branch}: memo/INDEX.md" in error_info.value.detail
+
+
 def test_apply_join_stops_on_apply_branch_oracles_index_diff(
     tmp_path: Path,
 ) -> None:

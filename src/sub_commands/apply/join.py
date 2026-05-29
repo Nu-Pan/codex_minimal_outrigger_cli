@@ -10,6 +10,7 @@ from typing import Iterator
 
 from commons.command_runner import run_command
 from commons.errors import CmocError
+from commons.indexing import is_maintained_index_path
 from commons.repo import (
     apply_worktree_path_from_branch,
     assert_no_uncommitted_changes,
@@ -358,7 +359,11 @@ def _is_apply_branch_expected_path(repo_root: Path, path: str) -> bool:
         return False
     return (
         is_apply_implementation_path(repo_root, path)
-        or Path(path).name == "INDEX.md"
+        or is_maintained_index_path(
+            repo_root,
+            path,
+            excluded_index_roots=[repo_root / "oracles"],
+        )
     )
 
 

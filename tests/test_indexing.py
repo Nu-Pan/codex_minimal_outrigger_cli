@@ -17,6 +17,7 @@ from pytest import MonkeyPatch
 from commons.errors import CmocError
 from commons.indexing import _INDEX_OUTPUT_SCHEMA
 from commons.indexing import _locked_index_maintenance
+from commons.indexing import is_maintained_index_path
 from commons.indexing import maintain_indexes
 
 
@@ -61,6 +62,41 @@ def test_maintain_indexes_generates_routing_entries_and_respects_gitignore(
     assert all(kwargs["model"] == "gpt-5.4-mini" for kwargs in codex_kwargs)
     assert all(
         kwargs["reasoning_effort"] == "medium" for kwargs in codex_kwargs
+    )
+
+
+@pytest.mark.parametrize(
+    ("relative_path", "expected"),
+    [
+        ("INDEX.md", True),
+        ("docs/INDEX.md", True),
+        ("docs/memo/INDEX.md", True),
+        ("memo/INDEX.md", False),
+        ("oracles/INDEX.md", False),
+        ("oracles/nested/INDEX.md", False),
+        (".cmoc/INDEX.md", False),
+        (".agents/INDEX.md", False),
+        (".git/INDEX.md", False),
+        ("build/INDEX.md", False),
+        ("tmp/INDEX.md", False),
+        ("docs/readme.md", False),
+    ],
+)
+def test_is_maintained_index_path_matches_index_placement_rules(
+    tmp_path: Path,
+    relative_path: str,
+    expected: bool,
+) -> None:
+    """INDEX.md path 判定は配置対象外 root や禁止領域を許可しない。"""
+    repo = _init_repo(tmp_path)
+
+    assert (
+        is_maintained_index_path(
+            repo,
+            relative_path,
+            excluded_index_roots=["oracles"],
+        )
+        is expected
     )
 
 
