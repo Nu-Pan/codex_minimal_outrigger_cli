@@ -26,6 +26,7 @@ from commons.codex import (
 from commons.command_runner import run_command
 from commons.errors import CmocError
 from commons.indexing import maintain_indexes
+from commons.report_files import write_timestamped_report
 from commons.repo import (
     APPLY_BRANCH_PREFIX,
     assert_no_uncommitted_changes,
@@ -1294,11 +1295,7 @@ def _write_apply_report(
     discrepancy_counts: list[int],
 ) -> Path:
     """作業レポートを cmoc 側で組み立て、変更要約だけ Codex CLI に依頼する。"""
-    # report 保存先と timestamp 付きファイル名を用意する。
     report_dir = report_repo_root / ".cmoc" / "reports" / "apply" / "fork"
-    report_dir.mkdir(parents=True, exist_ok=True)
-    generated_at = make_timestamp()
-    report_path = report_dir / f"{generated_at}.md"
 
     result_label = "収束" if completed else "未収束"
     change_summary = _generate_change_summary(
@@ -1306,27 +1303,28 @@ def _write_apply_report(
         branch_name,
         oracle_snapshot_commit,
     )
-    report = _apply_report_with_front_matter(
-        report_body=_render_apply_report_body(
+
+    def build_report(generated_at: str) -> str:
+        report = _apply_report_with_front_matter(
+            report_body=_render_apply_report_body(
+                apply_branch=branch_name,
+                result_label=result_label,
+                completed=completed,
+                discrepancy_counts=discrepancy_counts,
+                change_summary=change_summary,
+            ),
+            generated_at=generated_at,
+            session_id=session_id,
+            apply_run_id=apply_run_id,
+            session_branch=session_branch,
             apply_branch=branch_name,
+            apply_worktree=apply_worktree,
+            oracle_snapshot_commit=oracle_snapshot_commit,
+            session_head_at_apply_start=session_head_at_apply_start,
+            session_head_at_apply_finish=session_head_at_apply_finish,
             result_label=result_label,
-            completed=completed,
             discrepancy_counts=discrepancy_counts,
-            change_summary=change_summary,
-        ),
-        generated_at=generated_at,
-        session_id=session_id,
-        apply_run_id=apply_run_id,
-        session_branch=session_branch,
-        apply_branch=branch_name,
-        apply_worktree=apply_worktree,
-        oracle_snapshot_commit=oracle_snapshot_commit,
-        session_head_at_apply_start=session_head_at_apply_start,
-        session_head_at_apply_finish=session_head_at_apply_finish,
-        result_label=result_label,
-        discrepancy_counts=discrepancy_counts,
-    )
-    try:
+        )
         _validate_apply_report(
             report,
             branch_name,
@@ -1335,6 +1333,10 @@ def _write_apply_report(
             discrepancy_counts,
             require_front_matter=True,
         )
+        return report
+
+    try:
+        return write_timestamped_report(report_dir, build_report)
     except ValueError as error:
         raise CmocError(
             "apply report の生成に必要な変更要約が不足しています。",
@@ -1344,8 +1346,6 @@ def _write_apply_report(
             ],
             str(error),
         ) from error
-    report_path.write_text(report, encoding="utf-8")
-    return report_path
 
 
 def _generate_change_summary(
@@ -1632,9 +1632,6 @@ def _write_apply_error_report(
 ) -> Path:
     """例外終了時の apply レポートを cmoc 側で保存する。"""
     report_dir = report_repo_root / ".cmoc" / "reports" / "apply" / "fork"
-    report_dir.mkdir(parents=True, exist_ok=True)
-    generated_at = make_timestamp()
-    report_path = report_dir / f"{generated_at}.md"
 
     count_lines = [
         f"- {index} 回目: {count} 件"
@@ -1672,30 +1669,33 @@ def _write_apply_error_report(
     ]
     _append_change_summary_lines(body_lines, change_summary)
     body = "\n".join(body_lines).strip()
-    report = _apply_report_with_front_matter(
-        report_body=body,
-        generated_at=generated_at,
-        session_id=session_id,
-        apply_run_id=apply_run_id,
-        session_branch=session_branch,
-        apply_branch=apply_branch,
-        apply_worktree=apply_worktree,
-        oracle_snapshot_commit=oracle_snapshot_commit,
-        session_head_at_apply_start=session_head_at_apply_start,
-        session_head_at_apply_finish=session_head_at_apply_finish,
-        result_label="エラー",
-        discrepancy_counts=discrepancy_counts,
-    )
-    _validate_apply_report(
-        report,
-        apply_branch,
-        "エラー",
-        completed=False,
-        discrepancy_counts=discrepancy_counts,
-        require_front_matter=True,
-    )
-    report_path.write_text(report, encoding="utf-8")
-    return report_path
+
+    def build_report(generated_at: str) -> str:
+        report = _apply_report_with_front_matter(
+            report_body=body,
+            generated_at=generated_at,
+            session_id=session_id,
+            apply_run_id=apply_run_id,
+            session_branch=session_branch,
+            apply_branch=apply_branch,
+            apply_worktree=apply_worktree,
+            oracle_snapshot_commit=oracle_snapshot_commit,
+            session_head_at_apply_start=session_head_at_apply_start,
+            session_head_at_apply_finish=session_head_at_apply_finish,
+            result_label="エラー",
+            discrepancy_counts=discrepancy_counts,
+        )
+        _validate_apply_report(
+            report,
+            apply_branch,
+            "エラー",
+            completed=False,
+            discrepancy_counts=discrepancy_counts,
+            require_front_matter=True,
+        )
+        return report
+
+    return write_timestamped_report(report_dir, build_report)
 
 
 def _validate_apply_report(

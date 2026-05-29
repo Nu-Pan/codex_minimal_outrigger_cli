@@ -14,6 +14,7 @@ from commons.codex import (
 )
 from commons.command_runner import run_command
 from commons.indexing import maintain_indexes
+from commons.report_files import write_timestamped_report
 from commons.repo import (
     changed_oracle_files,
     current_branch,
@@ -26,7 +27,6 @@ from commons.repo import (
     read_session_start_commit,
 )
 from commons.timing import StepTimer, start_step
-from commons.timestamps import make_timestamp
 
 _SEVERITY_ORDER = ["fatal", "inconclusive", "warning"]
 _ISSUE_ID_PREFIXES = {
@@ -657,11 +657,8 @@ def _write_report(
     evaluations: list[dict[str, object]],
 ) -> Path:
     """評価結果を `.cmoc/reports/review_oracles` に保存する。"""
-    # 保存先ディレクトリと timestamp 付きレポートパスを用意する。
     report_dir = repo_root / ".cmoc" / "reports" / _REPORT_DIR_NAME
-    report_dir.mkdir(parents=True, exist_ok=True)
-    generated_at = make_timestamp()
-    report_path = report_dir / f"{generated_at}.md"
+    generated_at = "__CMOC_REPORT_GENERATED_AT__"
     issue_counts = _issue_counts(evaluations)
     result = _evaluation_result(len(oracle_files), issue_counts)
 
@@ -742,8 +739,11 @@ def _write_report(
         lines.extend(referenced_path_rows)
     else:
         lines.append("No referenced files.")
-    report_path.write_text("\n".join(lines), encoding="utf-8")
-    return report_path
+    report = "\n".join(lines)
+    return write_timestamped_report(
+        report_dir,
+        lambda timestamp: report.replace(generated_at, timestamp),
+    )
 
 
 def _write_error_report(
@@ -763,9 +763,7 @@ def _write_error_report(
 ) -> Path:
     """評価処理失敗時の `result: error` レポートを best effort で保存する。"""
     report_dir = repo_root / ".cmoc" / "reports" / _REPORT_DIR_NAME
-    report_dir.mkdir(parents=True, exist_ok=True)
-    generated_at = make_timestamp()
-    report_path = report_dir / f"{generated_at}.md"
+    generated_at = "__CMOC_REPORT_GENERATED_AT__"
     issue_counts = _issue_counts(evaluations)
     result = "error"
     lines = [
@@ -868,8 +866,11 @@ def _write_error_report(
         lines.extend(referenced_path_rows)
     else:
         lines.append("No referenced files.")
-    report_path.write_text("\n".join(lines), encoding="utf-8")
-    return report_path
+    report = "\n".join(lines)
+    return write_timestamped_report(
+        report_dir,
+        lambda timestamp: report.replace(generated_at, timestamp),
+    )
 
 
 def _print_error_report_fallback(
