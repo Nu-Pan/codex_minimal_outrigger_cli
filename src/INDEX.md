@@ -67,8 +67,8 @@
 
 - `cmoc apply` や `cmoc session` の個別処理だけを確認したいとき。
 - `cmoc init` や `cmoc review oracles` の仕様断片だけを確認したいとき。
-- `src/sub_commands` のパッケージ宣言だけで足りるときは、`__init__.py` を直接見れば十分です。
+- `src/sub_commands` のパッケージ宣言だけで足りるときは、`__init__.py` を直接見れば十分なとき。
 
 ## hash
 
-- d8e821fa0478c57354a37cac09fa8b98813666cbdf3a1e7809b8f999cffa49fe
+- b4ffe3521a35e962ab980065f23a8db158de7b63b81ca58c4e5411977247763f

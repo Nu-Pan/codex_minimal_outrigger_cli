@@ -133,13 +133,13 @@
 
 - `tests/test_subcommands.py` は cmoc のサブコマンド全体にまたがる決定論的な制御ロジックを検証するテスト群の入口です。
 - 共通 runner のログ出力、終了コード、エラーレポート、`StepTimer` と `start_step` の集計表示を扱います。
-- `init`、`session`、`apply`、`review oracles` の実行経路、保護条件、CLI 登録、ヘルプ表示、`bin/cmoc` の起動条件までを回帰確認するための目次です。
+- `init`、`session`、`apply`、`review oracles` の実行経路や保護条件、CLI 登録、ヘルプ表示、`bin/cmoc` の起動条件までを回帰確認するための目次です。
 
 ## Read this when
 
-- cmoc のサブコマンド全体にまたがる共通ランナーのログ、終了コード、エラーレポートの流れを確認したいとき。
+- cmoc のサブコマンド全体にまたがる共通 runner のログ、終了コード、エラーレポートの流れを確認したいとき。
 - `init`、`session`、`apply`、`review oracles` の状態遷移、保護条件、例外処理、実行前提を横断して確認したいとき。
-- `bin/cmoc` の起動条件、CLI 登録、`--help` の見え方、互換エイリアスの有無を確認したいとき。
+- CLI 登録、`--help` の見え方、互換エイリアス、`bin/cmoc` の起動条件を確認したいとき。
 - 各サブコマンドの prompt、Structured Output 検証、payload 検証、worktree や session state の扱いをまとめて追いたいとき。
 
 ## Do not read this when
@@ -150,7 +150,7 @@
 
 ## hash
 
-- 86294575f0e8a1014991e8076a97e3bbed789e34ff226c97c70905b03c20ad49
+- 2757ecb94553699eeb9cd6ef88dd4615eec7965cc95de22feaa1977a064df2ca
 
 # `test_timestamps.py`
 
