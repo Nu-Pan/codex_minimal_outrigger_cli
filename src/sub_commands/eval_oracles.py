@@ -90,7 +90,6 @@ _ISSUE_OUTPUT_SCHEMA: dict[str, object] = {
         },
         "referenced_paths": {
             "type": "array",
-            "minItems": 1,
             "description": (
                 "この問題点の評価時に参照した oracle / INDEX ファイルの絶対パス。"
             ),
@@ -907,8 +906,6 @@ def _validate_referenced_paths(value: object, repo_root: Path) -> set[Path]:
     """referenced_paths を絶対 oracle / INDEX ファイル配列として検査する。"""
     if not isinstance(value, list):
         raise ValueError("referenced_paths must be a list.")
-    if not value:
-        raise ValueError("referenced_paths must not be empty.")
     paths = set()
     for index, item in enumerate(value):
         paths.add(

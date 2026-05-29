@@ -1803,10 +1803,10 @@ def test_eval_oracles_payload_rejects_legacy_issue_metadata(
         )
 
 
-def test_eval_oracles_payload_rejects_empty_referenced_paths(
+def test_eval_oracles_payload_accepts_empty_referenced_paths(
     tmp_path: Path,
 ) -> None:
-    """issues[].referenced_paths は空配列を受理しない。"""
+    """issues[].referenced_paths は oracle schema に合わせて空配列を受理する。"""
     repo = _init_repo(tmp_path)
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -1815,12 +1815,11 @@ def test_eval_oracles_payload_rejects_empty_referenced_paths(
     issue = _eval_oracle_issue("warning", "warning", oracle, 1, 1)
     issue["referenced_paths"] = []
 
-    with pytest.raises(ValueError, match="referenced_paths must not be empty"):
-        eval_oracles_module._validate_evaluation_payload(
-            {"issues": [issue]},
-            repo,
-            oracle,
-        )
+    eval_oracles_module._validate_evaluation_payload(
+        {"issues": [issue]},
+        repo,
+        oracle,
+    )
 
 
 def test_eval_oracles_payload_rejects_empty_specification_only_basis(
