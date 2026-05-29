@@ -8,6 +8,7 @@ import tempfile
 from pathlib import Path
 
 from .errors import CmocError
+from .timestamps import is_timestamp
 
 SESSION_BRANCH_PREFIX = "cmoc/session/"
 APPLY_BRANCH_PREFIX = "cmoc/apply/"
@@ -64,8 +65,7 @@ def is_session_branch(branch_name: str) -> bool:
     session_id = branch_name.removeprefix(SESSION_BRANCH_PREFIX)
     return (
         branch_name.startswith(SESSION_BRANCH_PREFIX)
-        and bool(session_id)
-        and "/" not in session_id
+        and is_timestamp(session_id)
     )
 
 
@@ -76,7 +76,7 @@ def is_apply_branch(branch_name: str) -> bool:
     return (
         branch_name.startswith(APPLY_BRANCH_PREFIX)
         and len(parts) == 2
-        and all(parts)
+        and all(is_timestamp(part) for part in parts)
     )
 
 

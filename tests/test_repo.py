@@ -1017,7 +1017,15 @@ def test_changed_paths_preserves_special_path_tokens(tmp_path: Path) -> None:
     ("branch_name", "expected"),
     [
         ("cmoc/session/2026-05-10_22-21_10_000000123", True),
-        ("cmoc/apply/2026-05-10_22-21_10_000000123/run-1", True),
+        (
+            "cmoc/apply/"
+            "2026-05-10_22-21_10_000000123/"
+            "2026-05-10_22-22_10_000000123",
+            True,
+        ),
+        ("cmoc/session/test", False),
+        ("cmoc/apply/2026-05-10_22-21_10_000000123/run-1", False),
+        ("cmoc/apply/a/b", False),
         ("cmoc/session/2026-05-10_22-21_10_000000123/extra", False),
         ("cmoc/apply/2026-05-10_22-21_10_000000123", False),
     ],

@@ -8,7 +8,7 @@ from inspect import getsourcelines
 import pytest
 
 from commons.timing import current_timer, format_duration, report_current_timer
-from commons.timestamps import make_timestamp
+from commons.timestamps import is_timestamp, make_timestamp
 
 
 def test_make_timestamp_uses_required_format() -> None:
@@ -39,6 +39,20 @@ def test_make_timestamp_converts_aware_datetime_to_local_timezone() -> None:
         else:
             os.environ["TZ"] = original_tz
         tzset()
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("2026-05-04_03-02_01_000000987", True),
+        ("2026-05-04_03-02_01_987", False),
+        ("2026-05-04_03-02-01_000000987", False),
+        ("run-1", False),
+    ],
+)
+def test_is_timestamp(value: str, expected: bool) -> None:
+    """cmoc timestamp 形式だけを受け入れる。"""
+    assert is_timestamp(value) is expected
 
 
 def test_format_duration_uses_required_stdout_format() -> None:

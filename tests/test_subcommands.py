@@ -627,7 +627,7 @@ def test_session_fork_rejects_cmoc_managed_branch_before_creating_state(
 ) -> None:
     """cmoc 管理 branch 上では session branch を二重作成しない。"""
     repo = _init_repo(tmp_path)
-    _git(repo, "checkout", "-b", "cmoc/session/existing")
+    _git(repo, "checkout", "-b", "cmoc/session/2026-05-10_22-21_10_000000123")
 
     with pytest.raises(CmocError) as error:
         cmoc_session_fork_impl(repo)
@@ -4612,7 +4612,9 @@ def test_apply_revalidates_ready_state_under_start_lock(
     _git(repo, "commit", "-m", "ignore cmoc")
     session_id = "2026-05-10_22-21_10_000000123"
     state_path = repo / ".cmoc" / "sessions" / f"{session_id}.json"
-    running_branch = f"cmoc/apply/{session_id}/already-running"
+    running_branch = (
+        f"cmoc/apply/{session_id}/2026-05-10_22-22_10_000000123"
+    )
     snapshot_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
     real_read_session_state = apply_module.read_session_state
     read_calls = 0
