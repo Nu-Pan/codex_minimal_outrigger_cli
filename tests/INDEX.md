@@ -43,14 +43,14 @@
 
 ## Do not read this when
 
-- `src/commons/codex.py` の実装そのものを追いたいとき。
-- `tests/test_indexing.py`、`tests/test_repo.py`、`tests/test_subcommands.py` など、別のテスト群だけを確認したいとき。
+- `src/commons/codex.py` の実装ロジックそのものを追いたいとき。
+- `tests/test_indexing.py` や `tests/test_repo.py` など、別のテスト群だけを確認したいとき。
 - `INDEX.md` 全体の生成ルールや `oracles` 正本仕様だけを確認したいとき。
 - `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいとき。
 
 ## hash
 
-- f3e89ac406e3c979687e6c320979fbc19bbc7b6dae7cf30623cb0fc9172ef7c0
+- 49b038d72dd1d494971024dd1afd589ab8fccb69e445f72c41bbf68200d59477
 
 # `test_file_naming.py`
 
