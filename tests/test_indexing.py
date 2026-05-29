@@ -4,11 +4,15 @@ import hashlib
 import json
 import os
 import subprocess
+from multiprocessing import Process
 from pathlib import Path
+from time import monotonic
+from time import sleep
 
 from pytest import MonkeyPatch
 
 from commons.indexing import _INDEX_OUTPUT_SCHEMA
+from commons.indexing import _locked_index_maintenance
 from commons.indexing import maintain_indexes
 
 
@@ -54,6 +58,45 @@ def test_maintain_indexes_generates_routing_entries_and_respects_gitignore(
     assert all(
         kwargs["reasoning_effort"] == "medium" for kwargs in codex_kwargs
     )
+
+
+def test_index_maintenance_lock_serializes_processes(
+    tmp_path: Path,
+) -> None:
+    """INDEX メンテナンス用 lock は別プロセスの同時実行を直列化する。"""
+    repo = _init_repo(tmp_path)
+    ready_path = tmp_path / "holder-ready"
+    release_path = tmp_path / "holder-release"
+    acquired_path = tmp_path / "contender-acquired"
+    holder = Process(
+        target=_hold_index_maintenance_lock,
+        args=(repo, ready_path, release_path),
+    )
+    contender = Process(
+        target=_record_index_maintenance_lock_acquisition,
+        args=(repo, acquired_path),
+    )
+
+    try:
+        holder.start()
+        _wait_until_path_exists(ready_path)
+        contender.start()
+        sleep(0.2)
+
+        assert not acquired_path.exists()
+
+        release_path.write_text("release\n", encoding="utf-8")
+        holder.join(5)
+        contender.join(5)
+
+        assert holder.exitcode == 0
+        assert contender.exitcode == 0
+        assert acquired_path.read_text(encoding="utf-8") == "acquired\n"
+    finally:
+        for process in (holder, contender):
+            if process.is_alive():
+                process.terminate()
+                process.join(5)
 
 
 def test_maintain_indexes_uses_local_exclude_but_ignores_external_excludes(
@@ -1286,6 +1329,37 @@ def _init_repo(tmp_path: Path) -> Path:
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "initial")
     return repo
+
+
+def _hold_index_maintenance_lock(
+    repo: Path,
+    ready_path: Path,
+    release_path: Path,
+) -> None:
+    """テスト用に INDEX メンテナンス lock を保持する。"""
+    with _locked_index_maintenance(repo):
+        ready_path.write_text("ready\n", encoding="utf-8")
+        while not release_path.exists():
+            sleep(0.01)
+
+
+def _record_index_maintenance_lock_acquisition(
+    repo: Path,
+    acquired_path: Path,
+) -> None:
+    """テスト用に INDEX メンテナンス lock の取得完了を記録する。"""
+    with _locked_index_maintenance(repo):
+        acquired_path.write_text("acquired\n", encoding="utf-8")
+
+
+def _wait_until_path_exists(path: Path) -> None:
+    """指定 path が作られるまで短時間待つ。"""
+    deadline = monotonic() + 5
+    while monotonic() < deadline:
+        if path.exists():
+            return
+        sleep(0.01)
+    raise AssertionError(f"{path} was not created")
 
 
 def _directory_digest(repo: Path, directory: Path) -> str:

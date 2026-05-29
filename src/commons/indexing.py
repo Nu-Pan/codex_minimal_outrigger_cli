@@ -1,12 +1,15 @@
 """`INDEX.md` メンテナンス処理。"""
 
 import codecs
+import fcntl
 import hashlib
 import os
 import re
 import subprocess
 import tempfile
 from collections.abc import Iterable
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -47,6 +50,19 @@ def maintain_indexes(
     excluded_index_roots: Iterable[Path | str] | None = None,
 ) -> bool:
     """配置対象ディレクトリへ `INDEX.md` を用意し、必要なら自動コミットする。"""
+    with _locked_index_maintenance(repo_root):
+        return _maintain_indexes_unlocked(
+            repo_root,
+            excluded_index_roots=excluded_index_roots,
+        )
+
+
+def _maintain_indexes_unlocked(
+    repo_root: Path,
+    *,
+    excluded_index_roots: Iterable[Path | str] | None = None,
+) -> bool:
+    """排他取得後に `INDEX.md` メンテナンス本体を実行する。"""
     changed_paths: list[str] = []
     gitignore_matcher = _GitignoreMatcher(repo_root)
     excluded_roots = _normalize_excluded_index_roots(
@@ -76,6 +92,40 @@ def maintain_indexes(
 
         commit_if_changed(repo_root, changed_paths, "Maintain INDEX.md files")
     return bool(changed_paths)
+
+
+@contextmanager
+def _locked_index_maintenance(repo_root: Path) -> Iterator[None]:
+    """同一 git repository 内の INDEX メンテナンスを直列化する。"""
+    lock_path = _index_maintenance_lock_path(repo_root)
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a+", encoding="utf-8") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
+
+def _index_maintenance_lock_path(repo_root: Path) -> Path:
+    """INDEX メンテナンス用 lock file の repo-local path を返す。"""
+    result = subprocess.run(
+        [
+            "git",
+            "rev-parse",
+            "--path-format=absolute",
+            "--git-path",
+            "cmoc-index-maintenance.lock",
+        ],
+        cwd=repo_root,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if result.returncode == 0:
+        return Path(result.stdout.strip())
+    return repo_root / ".git" / "cmoc-index-maintenance.lock"
 
 
 def _index_directories(
