@@ -27,23 +27,23 @@
 
 - `src/sub_commands/apply` は `cmoc apply` 系サブコマンドのパッケージ入口です。
 - この配下には `abandon.py`、`fork.py`、`join.py` と、パッケージ宣言だけを担う `__init__.py` があります。
-- 個別の実行フローや状態遷移は各モジュール側で扱います。
+- 個別の開始・完了・破棄の流れは各モジュール側で扱います。
 
 ## Read this when
 
-- `src/sub_commands/apply` が `cmoc apply` 系サブコマンドのパッケージであることを確認したいとき。
-- `cmoc apply abandon` / `cmoc apply fork` / `cmoc apply join` の実装モジュールの入口をまとめて把握したいとき。
-- このディレクトリ配下の構成と、どのモジュールにどの処理が置かれているかを素早く確認したいとき。
+- `src/sub_commands/apply` が `cmoc apply` 系サブコマンドの実装入口であることを確認したいとき。
+- この配下で `abandon.py`、`fork.py`、`join.py`、`__init__.py` がどの役割を持つか素早く把握したいとき。
+- `cmoc apply` 系の実装・修正・レビュー・テストを始める前に、参照先のモジュールを整理したいとき。
 
 ## Do not read this when
 
-- `cmoc apply` 以外のサブコマンドの仕様や実装を確認したいとき。
-- `oracles` 配下の仕様断片だけを読みたいとき。
-- `apply` の個別モジュールではなく、共通の branch / state / ログ / エラーハンドリング仕様を確認したいとき。
+- 個別の `cmoc apply fork` / `cmoc apply join` / `cmoc apply abandon` の詳細仕様だけを確認したいとき。
+- `apply` 配下ではなく、`session` 側や `oracles` 側の仕様断片を探したいとき。
+- `src/sub_commands/apply` のパッケージ宣言だけを確認したいとき。
 
 ## hash
 
-- a9051b948efe416051329955f92ffe315b21dcd169558c77c90f885f7de7c08b
+- 60351daf172e75621691c43f42cacd37394adb1fb479920693927fd1598ad787
 
 # `eval_oracles.py`
 

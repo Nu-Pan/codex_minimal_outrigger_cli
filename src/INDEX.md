@@ -2,25 +2,25 @@
 
 ## Summary
 
-- `cmoc` 全体で共有する基盤処理をまとめたディレクトリです。
-- Codex CLI の共通実行、git リポジトリと session/apply の共通処理、エラー整形、`INDEX.md` メンテナンス、ログ、時間計測、タイムスタンプ生成を扱います。
-- 個別サブコマンドの実装ではなく、複数機能から再利用される共通部品の入口として読む場所です。
+- cmoc 全体で共有する実行基盤をまとめたディレクトリです。
+- Codex CLI 呼び出し、git と repo root の共通処理、共通エラー整形、サブコマンドログ、経過時間計測、タイムスタンプ生成、INDEX.md メンテナンスを扱います。
+- 個別サブコマンドではなく、複数機能から再利用される共通部品の入口です。
 
 ## Read this when
 
-- `cmoc` 全体で共通利用される基盤モジュール群の役割を把握したいとき。
-- git リポジトリ探索、session/apply の共通状態管理、共通エラー整形、サブコマンド実行ラッパーを確認したいとき。
-- Codex CLI 呼び出し、`INDEX.md` メンテナンス、サブコマンドログ、経過時間計測、タイムスタンプ生成の共通処理を追いたいとき。
+- Codex CLI の呼び出し方、Structured Output の検証、quota 待機や再試行の共通処理を確認したいとき。
+- repo root 探索、session/apply の共通 state、branch 判定、git 操作の補助を確認したいとき。
+- 共通エラー表示、サブコマンドログ、経過時間計測、タイムスタンプ、INDEX.md 自動生成の仕組みを追いたいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの業務ロジック、CLI 引数定義、状態遷移だけを確認したいとき。
-- `src/commons` のどのモジュールを読むべきか迷っているだけで、まずは `INDEX.md` 全体の入口を見たいだけのとき。
-- `src/commons` ではなく、`src` 配下の別機能や `tests` の実装を確認したいとき。
+- 個別サブコマンドの業務ロジックや CLI 引数だけを確認したいとき。
+- src/commons の特定モジュールだけを直接見たいときは、この目次ではなく該当ファイルを読むべきです。
+- src 配下の別機能や tests の実装だけを追いたいとき。
 
 ## hash
 
-- 799c19f2d3c010cb015fbf536ae3aec142d859e2d71b7dcd30b4bf4c5ccd2fb4
+- 9e7c7bd2ed228c84e68832cd468604a3510aa13f98d09d56aac5cf6f340a58c9
 
 # `main.py`
 
@@ -55,20 +55,20 @@
 
 - `src/sub_commands` 配下のサブコマンド実装全体を案内する入口です。
 - `__init__.py`、`init.py`、`eval_oracles.py`、`apply/`、`session/` への導線をまとめる目次として使います。
-- 個別コマンドの詳細は各モジュールまたは下位ディレクトリの `INDEX.md` を参照します。
+- 個別コマンドの詳細は、各モジュールまたは下位ディレクトリの `INDEX.md` を参照します。
 
 ## Read this when
 
 - `src/sub_commands` 配下にどのサブコマンド実装があるかを一覧で把握したいとき。
-- `cmoc` の各サブコマンド入口がどのモジュールやディレクトリに分かれているかを整理したいとき。
+- `cmoc` の各サブコマンド入口が、どのモジュールやディレクトリに分かれているかを整理したいとき。
 - 実装やテストを始める前に、`src/sub_commands` のルーティング先を確認したいとき。
 
 ## Do not read this when
 
 - `cmoc init`、`cmoc review oracles`、`cmoc apply`、`cmoc session` の個別仕様や引数だけを確認したいとき。
-- `src/sub_commands/apply` や `src/sub_commands/session` の下位実装だけを深く追いたいとき。
-- `src/sub_commands/__init__.py` や `init.py` など、単一モジュールの実装詳細を直接見たいとき。
+- `src/sub_commands/apply` や `src/sub_commands/session` など、下位ディレクトリの詳細仕様だけを追いたいとき。
+- `src/sub_commands/__init__.py` や `init.py` のような単一モジュールの実装詳細を直接見たいとき。
 
 ## hash
 
-- 2951c538a564c07d8a5652a32655d2d30b7752961cae421a9bb0424eaeaa3f09
+- fb7ca8757521c6107c82cd19d328d3fc1f374169a66fde4921f308128035a13d

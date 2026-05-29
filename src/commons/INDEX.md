@@ -24,15 +24,14 @@
 ## Summary
 
 - Codex CLI の共通実行ラッパーをまとめたモジュールです。
-- `codex exec` のコマンド組み立て、Structured Output の schema 付与・検証、JSON 解析と `output-last-message` の回収を扱います。
+- `codex exec` のコマンド組み立て、Structured Output の schema 付与と検証、JSON 解析、`output-last-message` の回収を扱います。
 - 呼び出しログの保存、quota 待機と resume 再開、capacity 一時失敗の再試行、workspace-write 時の `oracles` 保護も担当します。
 
 ## Read this when
 
-- `codex exec` の呼び出し手順や `--output-schema`、`output-last-message` の扱いを確認したいとき。
-- Structured Output の JSON 解析、JSON Schema 検証、返却値の意味検査を見直したいとき。
-- quota 枯渇時の待機・再開や、capacity 一時失敗の指数バックオフ再試行を追いたいとき。
-- workspace-write 実行前の `oracles` 保護や、実行ログ・last message の保存方法を確認したいとき。
+- `codex exec` の呼び出し手順や `--output-schema`、`--output-last-message` の扱いを確認したいとき。
+- Structured Output の JSON 解析、JSON Schema 検証、意味的な値検査を見直したいとき。
+- quota 枯渇時の待機と resume、capacity 一時失敗の指数バックオフ再試行、workspace-write 実行時の `oracles` 保護を追いたいとき。
 
 ## Do not read this when
 
@@ -43,7 +42,7 @@
 
 ## hash
 
-- ef760dae5acb474a9abc5a0b8e7317392485b3338915e56d28c0a50148b23e98
+- 3e3c87fd162ecd44b2675d498987226986339fcb208bc8a587732d9e3226117f
 
 # `command_runner.py`
 

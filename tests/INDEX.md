@@ -132,24 +132,25 @@
 ## Summary
 
 - `tests/test_subcommands.py` は cmoc のサブコマンド全体にまたがる決定論的な制御ロジックを検証するテスト群の入口です。
-- 共通 runner のログ・終了コード・エラー報告、`init` / `session` / `apply` / `review oracles` の実行と保護条件、CLI 登録とヘルプ表示を扱います。
-- 各サブコマンドの prompt、payload 検証、worktree・session state・branch 取り扱い、`bin/cmoc` の起動条件まで含めて回帰確認するための目次です。
+- 共通 runner のログ出力、終了コード、エラーレポート、`StepTimer` と `start_step` の集計表示を扱います。
+- `init`、`session`、`apply`、`review oracles` の実行経路、保護条件、CLI 登録、ヘルプ表示、`bin/cmoc` の起動条件までを回帰確認するための目次です。
 
 ## Read this when
 
-- cmoc の主要サブコマンド入口、`run_command`、`StepTimer`、`start_step`、`format_error_report` の制御と出力を確認したいとき。
-- `init`、`session`、`apply`、`review oracles` の状態遷移、例外処理、CLI 登録、ヘルプ表示を広く回帰確認したいとき。
-- `bin/cmoc` ランチャー、共通エラーレポート、prompt 文、Structured Output の検証、`eval-oracles` / `apply` の主要な検証ロジックをまとめてたどりたいとき。
+- cmoc のサブコマンド全体にまたがる共通ランナーのログ、終了コード、エラーレポートの流れを確認したいとき。
+- `init`、`session`、`apply`、`review oracles` の状態遷移、保護条件、例外処理、実行前提を横断的に回帰確認したいとき。
+- `bin/cmoc` の起動条件、CLI 登録、`--help` の見え方、互換エイリアスの有無を確認したいとき。
+- 各サブコマンドの prompt、Structured Output 検証、payload 検証、worktree や session state の扱いをまとめてたどりたいとき。
 
 ## Do not read this when
 
 - `src/sub_commands/*` の個別実装だけを追いたいとき。
-- `commons.repo` や `commons.indexing` など、サブコマンド以外の共通処理だけを確認したいとき。
-- `tests/test_codex.py`、`tests/test_indexing.py`、`tests/test_repo.py` など別のテスト群だけを見たいとき。
+- `commons.repo`、`commons.indexing`、`commons.codex` など、サブコマンド以外の共通処理だけを確認したいとき。
+- `tests/test_codex.py`、`tests/test_indexing.py`、`tests/test_repo.py`、`tests/test_timestamps.py` など、別のテスト群だけを確認したいとき。
 
 ## hash
 
-- 1b9cca145a4bafef381a2218d55fd75ad52f6f72510f89d90b66d44a68e0f080
+- 0c327866d482f1450ab04fc3e8d7d03a0afd2288d2b088fafc9b6094b2462d9d
 
 # `test_timestamps.py`
 
