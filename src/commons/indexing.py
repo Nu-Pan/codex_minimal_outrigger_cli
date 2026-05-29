@@ -1,12 +1,14 @@
 """`INDEX.md` メンテナンス処理。"""
 
 import codecs
+import concurrent.futures
 import fcntl
 import hashlib
 import os
 import re
 import subprocess
 import tempfile
+import threading
 from collections.abc import Iterable
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -70,27 +72,52 @@ def _maintain_indexes_unlocked(
         excluded_index_roots,
     )
 
-    # 深い階層から順に INDEX.md を更新し、親の hash が最新子目次を反映するようにする。
+    # 深い階層から depth ごとの barrier を置いて INDEX.md を更新し、親が子の
+    # 最新目次を参照できる順序を保つ。
     directories = _index_directories(
         repo_root,
         gitignore_matcher,
         excluded_roots,
     )
-    for directory in sorted(
-        directories,
-        key=lambda path: len(path.parts),
-        reverse=True,
-    ):
-        if _write_index_if_needed(repo_root, directory, gitignore_matcher):
-            changed_paths.append(
-                (directory / "INDEX.md").relative_to(repo_root).as_posix()
-            )
+    directories_by_depth: dict[int, list[Path]] = {}
+    for directory in directories:
+        directories_by_depth.setdefault(len(directory.parts), []).append(
+            directory
+        )
+    for depth in sorted(directories_by_depth, reverse=True):
+        depth_directories = sorted(directories_by_depth[depth])
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=_index_worker_count(len(depth_directories))
+        ) as executor:
+            future_by_directory = {
+                executor.submit(
+                    _write_index_if_needed,
+                    repo_root,
+                    directory,
+                    gitignore_matcher,
+                ): directory
+                for directory in depth_directories
+            }
+            for future in concurrent.futures.as_completed(
+                future_by_directory
+            ):
+                directory = future_by_directory[future]
+                if future.result():
+                    changed_paths.append(
+                        (directory / "INDEX.md")
+                        .relative_to(repo_root)
+                        .as_posix()
+                    )
 
     # 自動コミット対象は INDEX メンテナンスで触ったパスだけに限定する。
     if changed_paths:
         from .repo import commit_if_changed
 
-        commit_if_changed(repo_root, changed_paths, "Maintain INDEX.md files")
+        commit_if_changed(
+            repo_root,
+            sorted(changed_paths),
+            "Maintain INDEX.md files",
+        )
     return bool(changed_paths)
 
 
@@ -215,7 +242,7 @@ def _write_index_if_needed(
     index_path = directory / "INDEX.md"
     old_content = _read_existing_index_content(index_path)
     existing_entries = _parse_index_entries(old_content or "")
-    entries: list[str] = []
+    entry_items: list[str | tuple[Path, str]] = []
 
     # 目次作成対象の除外条件だけを使い、配置対象除外名とは切り分ける。
     try:
@@ -232,9 +259,11 @@ def _write_index_if_needed(
             and _entry_hash(existing) == digest
             and _entry_format_is_valid(existing, child.name, digest)
         ):
-            entries.append(existing)
+            entry_items.append(existing)
         else:
-            entries.append(_entry_for(repo_root, child, digest))
+            entry_items.append((child, digest))
+
+    entries = _resolve_index_entries(repo_root, entry_items)
 
     # 生成内容が空でも、INDEX.md が無ければ新規作成する。
     new_content = "\n\n".join(entries)
@@ -252,6 +281,44 @@ def _write_index_if_needed(
     except OSError:
         return False
     return True
+
+
+def _resolve_index_entries(
+    repo_root: Path,
+    entry_items: list[str | tuple[Path, str]],
+) -> list[str]:
+    """既存 entry は再利用し、生成が必要な entry は同一 INDEX 内で並列生成する。"""
+    pending_count = sum(
+        1 for item in entry_items if not isinstance(item, str)
+    )
+    if pending_count == 0:
+        return [item for item in entry_items if isinstance(item, str)]
+    results: dict[int, str] = {}
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=_index_worker_count(pending_count)
+    ) as executor:
+        future_by_position = {
+            executor.submit(_entry_for, repo_root, item[0], item[1]): position
+            for position, item in enumerate(entry_items)
+            if not isinstance(item, str)
+        }
+        for future in concurrent.futures.as_completed(future_by_position):
+            results[future_by_position[future]] = future.result()
+
+    entries: list[str] = []
+    for position, item in enumerate(entry_items):
+        if isinstance(item, str):
+            entries.append(item)
+        else:
+            entries.append(results[position])
+    return entries
+
+
+def _index_worker_count(item_count: int) -> int:
+    """INDEX 生成用の bounded worker 数を返す。"""
+    if item_count <= 0:
+        return 1
+    return min(item_count, 32)
 
 
 def _read_existing_index_content(index_path: Path) -> str | None:
@@ -496,6 +563,7 @@ class _GitignoreMatcher:
         """repo root と判定 cache を初期化する。"""
         self._repo_root = repo_root
         self._cache: dict[str, bool] = {}
+        self._lock = threading.Lock()
 
     def ignored_paths(self, paths: list[Path]) -> set[Path]:
         """gitignore 対象の path 集合を返す。"""
@@ -503,19 +571,28 @@ class _GitignoreMatcher:
             path: path.relative_to(self._repo_root).as_posix()
             for path in paths
         }
-        unknown_relatives = sorted(
-            {
+        with self._lock:
+            unknown_relatives = sorted(
+                {
+                    relative
+                    for relative in relatives_by_path.values()
+                    if relative not in self._cache
+                }
+            )
+        if unknown_relatives:
+            checked = self._check_ignored(unknown_relatives)
+            with self._lock:
+                self._cache.update(checked)
+        with self._lock:
+            ignored_relatives = {
                 relative
                 for relative in relatives_by_path.values()
-                if relative not in self._cache
+                if self._cache[relative]
             }
-        )
-        if unknown_relatives:
-            self._cache.update(self._check_ignored(unknown_relatives))
         return {
             path
             for path, relative in relatives_by_path.items()
-            if self._cache[relative]
+            if relative in ignored_relatives
         }
 
     def _check_ignored(self, relatives: list[str]) -> dict[str, bool]:

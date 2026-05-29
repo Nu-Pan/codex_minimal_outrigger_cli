@@ -5,6 +5,7 @@ import json
 import os
 import socket
 import subprocess
+import threading
 from multiprocessing import Process
 from pathlib import Path
 from time import monotonic
@@ -59,6 +60,102 @@ def test_maintain_indexes_generates_routing_entries_and_respects_gitignore(
     assert all(
         kwargs["reasoning_effort"] == "medium" for kwargs in codex_kwargs
     )
+
+
+def test_maintain_indexes_generates_entries_in_parallel_with_stable_order(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """同じ INDEX.md 内の entry 生成は並列化しつつ辞書順を保つ。"""
+    repo = _init_repo(tmp_path)
+    for name in ["a.txt", "b.txt", "c.txt"]:
+        (repo / name).write_text(f"{name}\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "parallel entries")
+    active = 0
+    max_active = 0
+    lock = threading.Lock()
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """同時実行数を記録する fake Codex CLI。"""
+        nonlocal active, max_active
+        purpose = str(kwargs["purpose"])
+        with lock:
+            active += 1
+            max_active = max(max_active, active)
+        sleep(0.05)
+        with lock:
+            active -= 1
+        return json.dumps(
+            {
+                "summary": [purpose],
+                "read_this_when": ["read"],
+                "do_not_read_this_when": ["skip"],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    changed = maintain_indexes(repo)
+    content = (repo / "INDEX.md").read_text(encoding="utf-8")
+
+    assert changed is True
+    assert max_active > 1
+    assert content.index("# `README.md`") < content.index("# `a.txt`")
+    assert content.index("# `a.txt`") < content.index("# `b.txt`")
+    assert content.index("# `b.txt`") < content.index("# `c.txt`")
+
+
+def test_maintain_indexes_parallelizes_unrelated_indexes_at_same_depth(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """祖先・子孫関係にない同 depth の INDEX.md は並列処理する。"""
+    repo = _init_repo(tmp_path)
+    left = repo / "left"
+    right = repo / "right"
+    left.mkdir()
+    right.mkdir()
+    (left / "note.txt").write_text("left\n", encoding="utf-8")
+    (right / "note.txt").write_text("right\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "sibling indexes")
+    active_sibling_entries = 0
+    max_active_sibling_entries = 0
+    lock = threading.Lock()
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """同 depth sibling の entry 生成の重なりを記録する。"""
+        nonlocal active_sibling_entries, max_active_sibling_entries
+        purpose = str(kwargs["purpose"])
+        is_sibling_entry = purpose in {
+            "INDEX entry 生成 left/note.txt",
+            "INDEX entry 生成 right/note.txt",
+        }
+        if is_sibling_entry:
+            with lock:
+                active_sibling_entries += 1
+                max_active_sibling_entries = max(
+                    max_active_sibling_entries,
+                    active_sibling_entries,
+                )
+            sleep(0.05)
+            with lock:
+                active_sibling_entries -= 1
+        return json.dumps(
+            {
+                "summary": [purpose],
+                "read_this_when": ["read"],
+                "do_not_read_this_when": ["skip"],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    changed = maintain_indexes(repo)
+
+    assert changed is True
+    assert max_active_sibling_entries > 1
 
 
 def test_index_maintenance_lock_serializes_processes(
