@@ -131,28 +131,28 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は、cmoc の主要サブコマンドと CLI 入口の決定論的な制御ロジックを検証するテスト群の目次です。
-- `init`、`session`、`apply`、`review oracles` の状態遷移、ログ出力、終了コード、エラー報告、cleanup をまとめて扱います。
-- `eval-oracles` と `apply` の prompt、Structured Output schema、payload 検証、レポート生成、差分整理、conflict 解決、`INDEX.md` 連携も確認します。
-- `main.py` のコマンド登録や `bin/cmoc` ランチャー、`cmoc --help`、互換 alias の挙動もこのテスト群で確認します。
+- サブコマンド本体の決定論的な制御ロジックを検証する pytest 群です。
+- 共通実行入口のログ出力、終了コード、エラーレポート、`INDEX.md` 更新を確認します。
+- `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`review oracles` の状態遷移と副作用を確認します。
+- Fake Codex CLI や git worktree を使った分岐・復旧・cleanup の挙動を広くカバーします。
 
 ## Read this when
 
-- `main.py` と各サブコマンドの委譲関係、CLI 登録、`--help` の表示を確認したいとき。
-- `run_command` のコンソール/JSONL ログ、終了コード、例外レポート、`repo_root` 解決失敗時の挙動を追いたいとき。
-- `init`、`session`、`apply`、`review oracles` の状態遷移、cleanup、`force_resolve`、破棄処理を回帰確認したいとき。
-- prompt 生成、Structured Output schema、payload validation、conflict marker 判定、レポート生成の変更影響を確認したいとき。
+- サブコマンドの状態遷移、終了コード、cleanup、状態ファイル更新を確認したいとき。
+- CLI 入口と実装関数のつながり、または `run_command` のログ挙動を確認したいとき。
+- `cmoc init` や `session` / `apply` / `review oracles` の期待される副作用を検証したいとき。
+- Fake Codex CLI を使った決定論的なテスト設計を確認したいとき。
 
 ## Do not read this when
 
-- 個別の `src/sub_commands/*` 実装だけを追いたいとき。
-- `commons.repo`、`commons.indexing`、`commons.codex` など共通処理の詳細だけを確認したいとき。
-- `tests/test_codex.py`、`tests/test_indexing.py`、`tests/test_repo.py`、`tests/test_timestamps.py` など別のテスト群だけを見たいとき。
-- `oracles` 配下の正本仕様や `INDEX.md` の生成ルールそのものを確認したいとき。
+- pytest の共通設定や import 設定だけを確認したいときは `tests/conftest.py` を読むべきです。
+- ファイル命名や旧ルーティングの有無だけを確認したいときは `tests/test_file_naming.py` を読むべきです。
+- `INDEX.md` 生成や除外判定など別の共通機能を確認したいときは `tests/test_indexing.py` を読むべきです。
+- 時間表示や duration 表示の仕様だけを確認したいときは `tests/test_timestamps.py` を読むべきです。
 
 ## hash
 
-- 2a7c52fa5608661770abdeced234d4e602c5c7b57002fb7f05056b8fafd2f506
+- d7dd039168fbd8e7b74fdcda15ff44f430915d62e265c37f75f1c6956ea2b4c7
 
 # `test_timestamps.py`
 
