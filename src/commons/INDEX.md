@@ -129,27 +129,27 @@
 
 ## Summary
 
-- `git` リポジトリと `cmoc` の共通基盤処理をまとめたモジュールです。
-- repo root の探索、ブランチ判定、session/apply 状態管理、session state の保存・読込・検証を扱います。
-- `.cmoc` の ignore 保証、未コミット差分の検査、`cmoc init` 向けの差分分離と commit ロジックも含みます。
-- oracle ファイルと実装ファイルの列挙・変更検出・削除検出、および `git` 呼び出し用の共通ラッパーも提供します。
+- git リポジトリの探索、現在ブランチ/HEAD 取得、cmoc 管理ブランチの判定を行う共通モジュールです。
+- session/apply の state JSON の保存・読込・固定スキーマ検証と、active session の整合性確認を扱います。
+- `.cmoc` を追跡対象外に保つ保証、未コミット差分の検査、`cmoc init` 向けの差分分離と commit を実装しています。
+- oracle ファイルと実装ファイルの列挙・変更検出・削除検出、`git` 呼び出しラッパーもまとめています。
 
 ## Read this when
 
-- git リポジトリルートの探索、現在ブランチの取得、`cmoc/session/...` と `cmoc/apply/...` の識別を確認したいとき。
-- session state JSON の保存・読込・固定スキーマ検証や、active session の整合性確認を追いたいとき。
-- `.cmoc` を git 追跡対象外に保つ保証、未コミット差分の検査、`cmoc init` 向けの差分分離と commit ロジックを確認したいとき。
-- oracle ファイルと実装ファイルの列挙、変更検出、削除検出、gitignore 判定の共通処理を追いたいとき。
+- リポジトリルート探索、現在ブランチの判定、`cmoc/session/...` と `cmoc/apply/...` の扱いを確認したいとき。
+- session state JSON の保存・読込・検証や、active session の整合性判定を追いたいとき。
+- `.cmoc` の ignore 保証、未コミット差分の検査、`cmoc init` の初期化差分の commit を確認したいとき。
+- oracle ファイルや実装ファイルの列挙、変更検出、削除検出、`git` ラッパーの共通処理を追いたいとき。
 
 ## Do not read this when
 
 - 個別サブコマンドの引数や実行手順だけを確認したいとき。
-- `src/commons/errors.py` や `src/commons/indexing.py` など、別の共通モジュールの仕様だけを追いたいとき。
+- `src/commons/errors.py` や `src/commons/indexing.py` など、別の共通モジュールだけを追いたいとき。
 - `.cmoc` の追跡対象外保証や git 操作の細部ではなく、CLI 全体のワークフロー仕様だけを確認したいとき。
 
 ## hash
 
-- 46ea8c07c7be39d7c4ac8ed973123666e1daa9c1e4ae2146aca91fd461fe4326
+- 51984995ee1913c79306af1630d09a2e03416be103cfa1ecc924afc17474b86f
 
 # `report_files.py`
 
