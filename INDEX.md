@@ -188,7 +188,6 @@
 - `src` 配下の実装構成全体を俯瞰したいとき。
 - CLI の起動点とサブコマンド登録の流れを確認したいとき。
 - 共通処理と個別コマンドの役割分担を見分けたいとき。
-- `src` 配下のどのディレクトリやモジュールを先に読むべきか整理したいとき。
 
 ## Do not read this when
 
@@ -198,7 +197,7 @@
 
 ## hash
 
-- c94fb4e1f282e3a0bfb5955d1bf2847325fa5d442e67926d73ceea73aa02153e
+- 67461f9e3324a2a9a84b0b00c014afd59a64eadb4c9840abcb564462970a9cc6
 
 # `test.sh`
 
@@ -228,22 +227,22 @@
 
 ## Summary
 
-- `cmoc` の pytest ベースのテスト群をまとめるディレクトリの入口です。
-- `conftest.py` による import path 設定と、`test_codex.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py`、`test_timestamps.py` などの個別テストへ案内します。
-- ファイル命名の回帰確認も含め、共通処理・リポジトリ処理・サブコマンド処理・日時処理のテスト範囲を俯瞰するための目次です。
+- `tests` 配下の pytest テスト群の入口であり、共通設定と個別テストファイルへのルーティングをまとめる目次です。
+- `conftest.py`、`test_codex.py`、`test_file_naming.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py`、`test_timestamps.py` へ進むための案内を担います。
+- cmoc の実装本体ではなく、テストの責務と参照先を整理するための文書です。
 
 ## Read this when
 
-- `tests` 配下にどのテスト群があるかを一覧で把握したいとき。
-- pytest の共通設定、各テストファイルの担当範囲、回帰確認の入口を探したいとき。
-- 新しいテストを追加・修正する前に、既存のテスト構成と役割分担を確認したいとき。
+- `tests` 配下にどのテストがあるか、全体の役割分担を素早く把握したいとき。
+- `conftest.py` を含む pytest の共通設定と、各テスト群の入口を確認したいとき。
+- `test_codex.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py` などの責務の切り分けを知りたいとき。
 
 ## Do not read this when
 
-- 本番コードの実装や CLI の業務ロジックそのものを確認したいとき。
-- `oracles` の正本仕様や `README.md` / `AGENTS.md` の運用だけを確認したいとき。
-- 個別の機能仕様ではなく、テストの共通設定や配置方針だけを知りたいとき。
+- `src` 配下の実装ロジックそのものを追いたいとき。
+- `oracles` 配下の正本仕様を直接確認したいとき。
+- 個別の 1 テストファイルだけを見たい場合に、この目次だけで済ませたいとき。
 
 ## hash
 
-- 5175e6628eef0adfce4a4bc4898de89e367f05a9ded4b9c93c12e664a0f21e4a
+- cffc07c2b618749301e14bb2629f8bfdc6794b4c061910e7b9190d418b4742d0

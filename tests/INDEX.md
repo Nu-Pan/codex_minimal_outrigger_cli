@@ -28,29 +28,29 @@
 ## Summary
 
 - `tests/test_codex.py` は `commons.codex.run_codex_exec()` とその周辺補助処理を検証するテスト群の入口です。
-- Structured Output の schema ファイル生成、JSON / text の再試行、schema 検証失敗や意味的検証失敗を扱います。
+- Structured Output の schema ファイル生成、JSON / text の再試行、schema 検証失敗や意味的検証失敗、`reasoning_effort` 制約を扱います。
 - Codex CLI 呼び出しログ、`subcommand_log` 通知、`INDEX.md` 事前メンテナンス、`skip_index_maintenance`、workspace-write 時の `oracles` 保護を確認します。
 - quota 枯渇時の待機と `resume` 再実行、`session_id` 抽出、`_resume_command`、`_prepare_codex_exec_paths` も扱います。
-- 末尾には、テスト用 git repo 初期化の補助関数と、ログ用の補助関数があります。
+- 末尾には、テスト用 git repo 初期化の補助関数と、git 実行補助の関数があります。
 
 ## Read this when
 
-- `commons.codex.run_codex_exec()` の引数組み立て、`read_only` / `workspace-write`、`--json`、`--output-schema` の扱いを確認したいとき。
+- `commons.codex.run_codex_exec()` の引数組み立て、`read_only` / `workspace-write`、`--json`、`--output-schema`、`reasoning_effort` の扱いを確認したいとき。
 - Structured Output の parse 失敗、JSON Schema 不一致、意味的検証失敗に対するリトライやエラー表示を追いたいとき。
 - Codex CLI 呼び出しログ、`subcommand_log` 通知、出力プレビュー、quota 枯渇時の待機と `resume` 再実行の流れを確認したいとき。
 - `INDEX.md` の事前メンテナンス、`skip_index_maintenance`、workspace-write 時の `oracles` 保護、`session_id` 抽出や `_resume_command` を追いたいとき。
-- `_prepare_codex_exec_paths` のログ予約、JSON Schema の文字列長・`enum` 検証、テスト用 git リポジトリ初期化の補助関数を確認したいとき。
+- `_prepare_codex_exec_paths` のログ予約、Structured Output 用 schema ファイル生成、テスト用 git リポジトリ初期化の `_init_git_repo` / `_git` の役割を確認したいとき。
 
 ## Do not read this when
 
 - `src/commons/codex.py` の実装そのものを追いたいとき。
-- `tests/test_indexing.py` や `tests/test_repo.py` など、別の共通処理のテストだけを確認したいとき。
-- `tests/INDEX.md` 全体の配置や他のテスト群の入口だけを確認したいとき。
+- `tests/test_indexing.py`、`tests/test_repo.py`、`tests/test_subcommands.py` など、別のテスト群だけを確認したいとき。
+- `INDEX.md` 全体の生成ルールや `oracles` 正本仕様だけを確認したいとき。
 - `README.md`、`AGENTS.md`、`memo` の運用や編集可否だけを確認したいとき。
 
 ## hash
 
-- 8a6092e0007e5cb655f779d2a62d9f60ddd96ead3d8de3e72381d37327a8c672
+- d2f41bd5cf1ab4fad15b81fc052bb662413c70d5fabce1247331e2ebf8c1958d
 
 # `test_file_naming.py`
 
