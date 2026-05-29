@@ -179,25 +179,25 @@
 
 ## Summary
 
-- `src` は cmoc の実装本体を置くディレクトリで、CLI エントリーポイント、共通処理、サブコマンド実装の入口をまとめています。
-- `main.py` は CLI 起動とサブコマンド登録を担う入口です。
-- `commons` は横断的な共通処理、`sub_commands` は個別コマンド実装の入口です。
+- `src` は cmoc の実装ルートで、CLI の入口、共通基盤、サブコマンド実装をまとめます。
+- `main.py` は Typer アプリのエントリーポイントで、各サブコマンドを登録し、起動時の例外を共通処理へ渡します。
+- `commons` は横断的な共通処理群、`sub_commands` は `init` / `review oracles` / `apply` / `session` 系の実装入口です。
 
 ## Read this when
 
-- `src` 配下の役割分担をまとめて把握し、どの入口から詳細を追うか整理したいとき。
-- CLI の起動経路、共通処理、個別サブコマンド実装の入口を俯瞰したいとき。
-- `commons`、`main.py`、`sub_commands` のどこへ進むべきかを素早く選びたいとき。
+- `src` 配下全体の役割分担を把握したいとき。
+- CLI の入口と共通処理と個別サブコマンドのどこへ進むべきか判断したいとき。
+- 実装・修正・レビューの前に、ソースツリーの入口だけを俯瞰したいとき。
 
 ## Do not read this when
 
-- 個別の `cmoc apply` / `cmoc session` / `cmoc review oracles` の詳細仕様だけを確認したいとき。
-- 共通ユーティリティやエラー処理の実装だけを確認したいとき。
-- `src/main.py` の起動処理だけを確認したいとき。
+- 個別モジュールの引数、状態遷移、エラー処理などの詳細だけを確認したいとき。
+- `src/commons` だけ、または `src/sub_commands` だけを深掘りしたいとき。
+- `INDEX.md` の生成ルールや `oracles` 側の仕様だけを確認したいとき。
 
 ## hash
 
-- 7681fa3fab7080f99fa6acaa6350a73babe77bb5e0ef4e2bcb97974eef4d0e5c
+- 755b34fc191a39a96a3b0f898050f0ad3396d2e352de5e629ffcbb106c4ce09d
 
 # `test.sh`
 
@@ -247,4 +247,4 @@
 
 ## hash
 
-- c5bbea6fb5347052d310f188edfb21db49c72cdff476c39f6c949ea15d329a07
+- 851d4fb2db1e011154d013ed31306994f6c6592ac388bd3eda029b47f22e7197

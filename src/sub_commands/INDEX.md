@@ -49,7 +49,7 @@
 
 ## Summary
 
-- `src/sub_commands/eval_oracles.py` は `cmoc review oracles` の本体で、oracles ファイルの選別、評価実行、結果集約を担当します。
+- `src/sub_commands/eval_oracles.py` は `cmoc review oracles` の本体で、oracles ファイルの選別、評価実行、結果集約を担当する実装です。
 - 部分評価 / 全体評価の判定、Codex CLI への Structured Output 評価、問題点リストの反復改善をまとめています。
 - `INDEX.md` の事前メンテナンス、評価レポート保存、エラー時の error report と stderr フォールバックも扱います。
 
@@ -69,7 +69,7 @@
 
 ## hash
 
-- 7495896cd30316312f91ca1a3dcabb0716139b59aa03b4617eef2acf153f3510
+- d92353f13127001177e828b6fa33f26a940956cb5a675687eb258718b546fe19
 
 # `init.py`
 

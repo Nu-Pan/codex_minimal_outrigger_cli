@@ -130,27 +130,28 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は、cmoc のサブコマンド本体に対する統合テスト群の入口です。
-- `init`、`session`、`apply`、`eval_oracles` の状態遷移、終了条件、branch や worktree の扱いを横断的に検証します。
-- 共通の実行制御、Prompt と Structured Output、エラーハンドリング、CLI 入口の登録と起動までをまとめて扱います。
+- cmoc の主要サブコマンドと CLI 入口の決定論的な制御ロジックを検証するテスト群の目次です。
+- `run_command` のログ出力、終了コード、例外時レポート、`repo_root` 解決失敗時の扱いを確認します。
+- `init`、`session`、`apply`、`review oracles` の各コマンド登録とヘルプ表示を回帰確認します。
+- conflict marker の判定、補助関数の並び順、`bin/cmoc` ランチャーの挙動も含みます。
 
 ## Read this when
 
-- `init`、`session`、`apply`、`eval_oracles` の統合的な回帰を確認したいとき。
-- branch、worktree、state、report、`INDEX.md` メンテナンスの前後関係を追いたいとき。
-- Prompt 生成、Structured Output schema、エラーレポート、禁止パス検出の挙動を確認したいとき。
-- CLI の登録、`main` の委譲、help 文言、`bin/cmoc` の起動条件を確認したいとき。
+- cmoc の主要サブコマンド入口や `main.py` から各実装への委譲関係を確認したいとき。
+- `run_command`、`StepTimer`、`start_step`、`format_error_report` の出力や終了集計を追いたいとき。
+- `init`、`session`、`apply`、`review oracles` 系の状態遷移、例外処理、CLI 登録、ヘルプ表示を広く回帰確認したいとき。
+- conflict marker 判定や `bin/cmoc` ランチャーの振る舞いを確認したいとき。
 
 ## Do not read this when
 
-- `commons.repo`、`commons.indexing`、`commons.codex` など、個別の共通処理の単体テストだけを確認したいとき。
-- `tests/test_codex.py` や `tests/test_repo.py` など、別のテスト群だけを追いたいとき。
-- `oracles` の正本仕様や `INDEX.md` の生成ルールそのものを確認したいとき。
-- サブコマンド以外のユーティリティ実装や、CLI 入口以外の起動処理だけを調べたいとき。
+- `src/sub_commands/*` の個別実装だけを追いたいとき。
+- `commons.repo` や `commons.indexing` などの共通処理だけを確認したいとき。
+- `tests/test_codex.py`、`tests/test_indexing.py`、`tests/test_repo.py` など別のテスト群だけを見たいとき。
+- `oracles` 配下の正本仕様や `INDEX.md` の生成ルールそのものを確認したいとき。
 
 ## hash
 
-- 5d5c00906b41b1e59f580f3c557d65b21ee68a27cd6f3d36622b674f3899f69b
+- 07e88bf9e6f822e7dd3e06c11dd7123fa4981a53f042ebf689d7c5d17afce74a
 
 # `test_timestamps.py`
 
