@@ -1720,6 +1720,39 @@ def test_eval_oracles_payload_rejects_index_as_issue_oracle_path(
         )
 
 
+def test_eval_oracles_payload_rejects_other_oracle_as_issue_oracle_path(
+    tmp_path: Path,
+) -> None:
+    """1 file 評価の issue は現在評価中の oracle file だけに帰属させる。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    oracle = oracle_root / "spec.md"
+    other_oracle = oracle_root / "other.md"
+    oracle.write_text("spec\n", encoding="utf-8")
+    other_oracle.write_text("other\n", encoding="utf-8")
+    issue = _eval_oracle_issue(
+        "fatal",
+        "fatal",
+        other_oracle,
+        1,
+        1,
+        [oracle, other_oracle],
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="issues\\[0\\]\\.oracle_path must match an evaluated oracle file",
+    ):
+        eval_oracles_module._validate_evaluation_payload(
+            {
+                "issues": [issue],
+            },
+            repo,
+            oracle,
+        )
+
+
 def test_eval_oracles_payload_rejects_legacy_top_level_metadata(
     tmp_path: Path,
 ) -> None:

@@ -577,7 +577,7 @@ def _refresh_evaluation_metadata(
 def _validate_evaluation_payload(
     value: object,
     repo_root: Path,
-    _oracle_file: Path,
+    oracle_file: Path,
 ) -> None:
     """oracle 評価 Structured Output の schema と意味制約を検査する。"""
     # run_codex_exec の schema 検査に加え、Python 側でも後段で扱う型を保証する。
@@ -586,6 +586,10 @@ def _validate_evaluation_payload(
     if set(value) != {"issues"}:
         raise ValueError("Evaluation payload keys do not match schema.")
     _validate_evaluation_issues(value["issues"], repo_root)
+    _validate_issue_oracle_paths_match_targets(
+        value["issues"],
+        {oracle_file.resolve()},
+    )
 
 
 def _validate_issues_payload(
