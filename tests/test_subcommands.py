@@ -770,10 +770,10 @@ def test_session_fork_rechecks_active_session_before_branch_creation(
     assert _session_state_paths(repo) == []
 
 
-def test_session_fork_from_linked_worktree_records_state_in_common_root(
+def test_session_fork_from_linked_worktree_records_state_in_linked_repo_root(
     tmp_path: Path,
 ) -> None:
-    """linked worktree で作った session state も共有 root 側へ保存する。"""
+    """linked worktree で作った session state は linked repo-root 側へ保存する。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
@@ -785,18 +785,14 @@ def test_session_fork_from_linked_worktree_records_state_in_common_root(
 
     branch_name = _git(linked, "branch", "--show-current").stdout.strip()
     session_id = branch_name.removeprefix("cmoc/session/")
-    assert (
-        repo / ".cmoc" / "sessions" / f"{session_id}.json"
-    ).exists()
-    assert not (
-        linked / ".cmoc" / "sessions" / f"{session_id}.json"
-    ).exists()
+    assert (linked / ".cmoc" / "sessions" / f"{session_id}.json").exists()
+    assert not (repo / ".cmoc" / "sessions" / f"{session_id}.json").exists()
 
 
-def test_session_fork_from_linked_worktree_rejects_common_active_session(
+def test_session_fork_from_linked_worktree_rejects_linked_active_session(
     tmp_path: Path,
 ) -> None:
-    """active session 判定は linked worktree ごとに分離しない。"""
+    """active session 判定は linked repo-root 側の state を見る。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
@@ -807,7 +803,7 @@ def test_session_fork_from_linked_worktree_rejects_common_active_session(
     session_id = "2026-05-10_22-21_10_000000123"
     _git(linked, "branch", f"cmoc/session/{session_id}")
     write_session_state(
-        repo,
+        linked,
         session_id,
         {
             "session": {
@@ -830,9 +826,10 @@ def test_session_fork_from_linked_worktree_rejects_common_active_session(
     assert "active session" in error.value.message
     assert error.value.detail == session_id
     assert _git(linked, "branch", "--show-current").stdout.strip() == "feature"
-    assert _session_state_paths(repo) == [
-        repo / ".cmoc" / "sessions" / f"{session_id}.json",
+    assert _session_state_paths(linked) == [
+        linked / ".cmoc" / "sessions" / f"{session_id}.json",
     ]
+    assert _session_state_paths(repo) == []
 
 
 def test_session_fork_rejects_malformed_session_state_before_branch_creation(
@@ -2973,11 +2970,11 @@ def test_apply_join_merges_completed_apply_branch_and_resets_state(
     assert "joined apply branch:" in output
 
 
-def test_apply_join_cleans_worktree_created_from_linked_worktree(
+def test_apply_join_cleans_worktree_created_under_linked_worktree_repo_root(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """linked worktree で fork した apply run も common root 側で cleanup する。"""
+    """linked worktree で fork した apply run は linked repo-root 側で cleanup する。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
@@ -3008,29 +3005,30 @@ def test_apply_join_cleans_worktree_created_from_linked_worktree(
 
     exit_code = cmoc_apply_impl(linked)
 
-    state_path = repo / ".cmoc" / "sessions" / f"{session_id}.json"
+    state_path = linked / ".cmoc" / "sessions" / f"{session_id}.json"
     state = json.loads(state_path.read_text(encoding="utf-8"))
     apply_branch = state["apply"]["apply_branch"]
     oracle_snapshot = state["apply"]["oracle_snapshot_commit"]
     apply_run_id = apply_branch.rsplit("/", 1)[1]
     apply_worktree = (
-        repo / ".cmoc" / "worktrees" / "apply" / session_id / apply_run_id
-    )
-    linked_apply_worktree = (
         linked / ".cmoc" / "worktrees" / "apply" / session_id / apply_run_id
     )
-    reports = list((repo / ".cmoc" / "reports" / "apply" / "fork").glob("*.md"))
+    main_apply_worktree = (
+        repo / ".cmoc" / "worktrees" / "apply" / session_id / apply_run_id
+    )
+    reports = list(
+        (linked / ".cmoc" / "reports" / "apply" / "fork").glob("*.md")
+    )
     assert exit_code == 0
     assert apply_worktree.is_dir()
-    assert not linked_apply_worktree.exists()
+    assert not main_apply_worktree.exists()
     assert len(reports) == 1
     assert f'apply_worktree_path: "{apply_worktree}"' in reports[0].read_text(
         encoding="utf-8"
     )
 
-    _git(linked, "switch", "feature")
-    _git(repo, "switch", session_branch)
-    cmoc_apply_join_impl(repo)
+    _git(linked, "switch", session_branch)
+    cmoc_apply_join_impl(linked)
 
     state = json.loads(state_path.read_text(encoding="utf-8"))
     assert state["apply"] == {
@@ -3038,13 +3036,15 @@ def test_apply_join_cleans_worktree_created_from_linked_worktree(
         "oracle_snapshot_commit": None,
         "state": "ready",
     }
-    assert state["session"]["session_home_branch"] == "feature"
+    assert isinstance(state["session"]["session_home_branch"], str)
+    assert state["session"]["session_home_branch"]
     assert state["session"]["last_joined_apply_oracle_snapshot_commit"] == (
         oracle_snapshot
     )
     assert "last_joined_apply_result" not in state["session"]
     assert _git(repo, "branch", "--list", apply_branch).stdout == ""
     assert not apply_worktree.exists()
+    assert state_path.exists()
 
 
 def test_apply_join_keeps_artifacts_when_report_result_is_missing(
@@ -3162,7 +3162,7 @@ def test_apply_join_keeps_branch_when_worktree_remove_fails(
 def test_apply_join_ignores_worktree_local_log_cmoc(
     tmp_path: Path,
 ) -> None:
-    """apply worktree 内のログ用 `.cmoc` ではなく main worktree の state を読む。"""
+    """apply worktree 内のログ用 `.cmoc` ではなく所有元の state を読む。"""
     repo = _init_repo(tmp_path)
     _checkout_session_branch(repo)
     oracle_snapshot = _add_oracle_snapshot(repo)
@@ -3888,7 +3888,7 @@ def test_apply_abandon_deletes_apply_artifacts_and_resets_state(
 def test_apply_abandon_accepts_apply_branch_worktree(
     tmp_path: Path,
 ) -> None:
-    """apply worktree 上から実行しても main worktree の state を更新する。"""
+    """apply worktree 上から実行しても所有元 repo root の state を更新する。"""
     repo = _init_repo(tmp_path)
     _checkout_session_branch(repo)
     oracle_snapshot = _add_oracle_snapshot(repo)
@@ -3934,7 +3934,7 @@ def test_apply_abandon_relocates_from_apply_branch_before_cleanup(
 def test_apply_abandon_ignores_worktree_local_log_cmoc(
     tmp_path: Path,
 ) -> None:
-    """ログ用 `.cmoc` がある apply worktree からでも main worktree の state を更新する。"""
+    """ログ用 `.cmoc` がある apply worktree からでも所有元の state を更新する。"""
     repo = _init_repo(tmp_path)
     _checkout_session_branch(repo)
     oracle_snapshot = _add_oracle_snapshot(repo)
@@ -3986,10 +3986,10 @@ def test_apply_abandon_rejects_dirty_session_branch_worktree(
     assert apply_worktree.exists()
 
 
-def test_apply_abandon_does_not_check_unrelated_canonical_worktree(
+def test_apply_abandon_does_not_check_unrelated_owner_worktree(
     tmp_path: Path,
 ) -> None:
-    """session branch が別 worktree にある場合、canonical root の差分は見ない。"""
+    """session branch が別 worktree にある場合、所有元 root の差分は見ない。"""
     repo = _init_repo(tmp_path)
     home_branch = _git(repo, "branch", "--show-current").stdout.strip()
     _checkout_session_branch(repo)

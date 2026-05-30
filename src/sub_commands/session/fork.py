@@ -106,7 +106,7 @@ def _assert_no_active_session(active_session_ids: list[str]) -> None:
 @contextmanager
 def _locked_session_creation(state_root: Path) -> Iterator[None]:
     """session 作成中の active 判定と state 永続化を直列化する。"""
-    # canonical state root 単位で作成処理を直列化し、home branch ごとの一意性を守る。
+    # repo root 単位で作成処理を直列化し、home branch ごとの一意性を守る。
     lock_dir = state_root / ".cmoc" / "locks"
     lock_dir.mkdir(parents=True, exist_ok=True)
     lock_path = lock_dir / "session-fork.lock"

@@ -207,18 +207,35 @@ def clear_apply_process_id(repo_root: Path, session_id: str) -> None:
 
 
 def session_state_root(repo_root: Path) -> Path:
-    """session state を共有する canonical repo root を返す。"""
-    common_dir = run_git(
-        repo_root,
-        ["rev-parse", "--path-format=absolute", "--git-common-dir"],
-    ).stdout.strip()
-    return Path(common_dir).parent
+    """session state を置く repo root を返す。"""
+    return repo_root
 
 
 def session_state_repo_root(repo_root: Path, session_id: str) -> Path:
-    """session state を保持する main worktree root を返す。"""
-    _ = session_id
+    """session state を保持する repo root を返す。
+
+    通常の repo root ではそのまま返す。cmoc 管理 apply worktree から
+    join/abandon する場合だけ、worktree 配置規則から所有元 repo root を復元する。
+    """
+    owner_root = _owning_repo_root_from_apply_worktree_path(repo_root, session_id)
+    if owner_root is not None:
+        return owner_root
     return session_state_root(repo_root)
+
+
+def _owning_repo_root_from_apply_worktree_path(
+    repo_root: Path,
+    session_id: str,
+) -> Path | None:
+    """cmoc apply worktree path から所有元 repo root を復元する。"""
+    parts = repo_root.resolve().parts
+    marker = (".cmoc", "worktrees", "apply", session_id)
+    for index in range(0, len(parts) - len(marker)):
+        if parts[index : index + len(marker)] != marker:
+            continue
+        if len(parts) == index + len(marker) + 1:
+            return Path(*parts[:index])
+    return None
 
 
 def initial_session_state(
