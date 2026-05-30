@@ -1,5 +1,6 @@
 """cmoc CLI エントリーポイント。"""
 
+import os
 import sys
 from typing import Literal
 
@@ -131,6 +132,10 @@ def apply_abandon_command() -> None:
 
 def main() -> None:
     """Typer の parse error も共通エラーレポートへ変換して起動する。"""
+    if _is_completion_probe():
+        app(prog_name="cmoc")
+        return
+
     # standalone_mode=False で Click/Typer の例外を cmoc 側で整形する。
     try:
         _raise_missing_command_error_if_needed(sys.argv[1:])
@@ -149,6 +154,11 @@ def main() -> None:
         print(format_error_report(error))
         code = getattr(error, "exit_code", 1)
         raise SystemExit(code) from error
+
+
+def _is_completion_probe() -> bool:
+    """Click/Typer の自動補完プローブとして起動されたか判定する。"""
+    return "_CMOC_COMPLETE" in os.environ
 
 
 def _raise_missing_command_error_if_needed(arguments: list[str]) -> None:

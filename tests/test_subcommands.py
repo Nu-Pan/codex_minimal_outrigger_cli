@@ -7335,6 +7335,20 @@ def test_main_reports_no_args_error_with_non_empty_detail() -> None:
     assert "Usage: cmoc [OPTIONS] COMMAND [ARGS]..." not in result.stdout
 
 
+def test_main_delegates_root_completion_probe_to_typer() -> None:
+    """root 補完プローブでは cmoc 独自エラーレポートを出さない。"""
+    result = _run_completion_probe([], "cmoc ", 1)
+
+    assert result.returncode == 0
+    assert result.stderr == ""
+    assert "ERROR" not in result.stdout
+    assert "Summary:" not in result.stdout
+    assert "init" in result.stdout
+    assert "session" in result.stdout
+    assert "apply" in result.stdout
+    assert "review" in result.stdout
+
+
 @pytest.mark.parametrize("command_group", ["session", "apply", "review"])
 def test_main_reports_command_group_without_subcommand_as_single_error_report(
     command_group: str,
@@ -7367,6 +7381,44 @@ def test_main_reports_command_group_without_subcommand_as_single_error_report(
     assert "Traceback (most recent call last):" in result.stdout
     assert "Traceback is not available for this exception." not in result.stdout
     assert f"Usage: cmoc {command_group}" not in result.stdout
+
+
+@pytest.mark.parametrize(
+    ("command_group", "expected_commands"),
+    [
+        ("session", ["fork", "join", "abandon"]),
+        ("apply", ["fork", "join", "abandon"]),
+        ("review", ["oracles"]),
+    ],
+)
+def test_main_delegates_group_completion_probe_to_typer(
+    command_group: str,
+    expected_commands: list[str],
+) -> None:
+    """command group 直下の補完プローブでも独自エラーを出さない。"""
+    result = _run_completion_probe(
+        [command_group],
+        f"cmoc {command_group} ",
+        2,
+    )
+
+    assert result.returncode == 0
+    assert result.stderr == ""
+    assert "ERROR" not in result.stdout
+    assert "Summary:" not in result.stdout
+    for expected_command in expected_commands:
+        assert expected_command in result.stdout
+
+
+def test_main_treats_empty_completion_env_as_completion_probe() -> None:
+    """_CMOC_COMPLETE が空文字でも独自の事前検査を実行しない。"""
+    result = _run_completion_probe([], "cmoc ", 1, complete_value="")
+
+    assert result.returncode == 2
+    assert "ERROR" not in result.stdout
+    assert "Summary:" not in result.stdout
+    assert "コマンドが指定されていません。" not in result.stdout
+    assert "Missing command." in result.stderr
 
 
 def test_format_error_report_fills_empty_generic_detail() -> None:
@@ -7813,6 +7865,31 @@ def _session_state_paths(repo: Path) -> list[Path]:
     if not session_root.exists():
         return []
     return sorted(session_root.glob("*.json"))
+
+
+def _run_completion_probe(
+    arguments: list[str],
+    comp_words: str,
+    comp_cword: int,
+    *,
+    complete_value: str = "complete_bash",
+) -> subprocess.CompletedProcess[str]:
+    """main module を Click/Typer 補完プローブとして実行する。"""
+    repo_root = Path(__file__).resolve().parents[1]
+    return subprocess.run(
+        [sys.executable, "-m", "main", *arguments],
+        cwd=repo_root,
+        env={
+            "PYTHONPATH": str(repo_root / "src"),
+            "_CMOC_COMPLETE": complete_value,
+            "COMP_WORDS": comp_words,
+            "COMP_CWORD": str(comp_cword),
+        },
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
 
 
 def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
