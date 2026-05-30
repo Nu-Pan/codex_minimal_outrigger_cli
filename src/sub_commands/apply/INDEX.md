@@ -67,7 +67,8 @@
 
 ## hash
 
-- a13b1bea2252369e6e32ee2981c2c088e993d08c41ca072c666034b18775eb43
+- 810d97fb97634dab3011fd5efd6ac5f78757c6ac025e6ed6ca5693d2460bf9da
+<!-- cmoc-index-kind: file -->
 
 # `join.py`
 

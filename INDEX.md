@@ -192,13 +192,13 @@
 
 ## Do not read this when
 
-- 個別のサブコマンド仕様や業務ロジックだけを確認したいときは、該当モジュールや `oracles` を直接読むべきです。
+- 個別サブコマンドの詳細仕様だけを確認したいときは、`src/sub_commands/` 配下の各 INDEX や実装ファイルを直接読むべきです。
 - 共通エラー、`INDEX.md` 生成、Git 操作など `commons/` の詳細だけを追いたいときは、`src/commons/INDEX.md` を読むべきです。
-- `cmoc apply` や `cmoc session` の個別フローだけを確認したいときは、`src/sub_commands/` 配下の各 INDEX や実装ファイルを読むべきです。
+- `cmoc apply` や `cmoc session` の個別フローだけを確認したいときは、`src/sub_commands/` 配下の各 INDEX か各モジュールを読むべきです。
 
 ## hash
 
-- 65098a72dd7ad9dc65c18676f63f025098ffba4f422a821693915aaa5a83269d
+- 51e20471ced7a7c0425ebf29dc0864aba2c789901c1dccb9d9295103f4550e69
 <!-- cmoc-index-kind: directory -->
 
 # `test.sh`
@@ -229,24 +229,24 @@
 
 ## Summary
 
-- `tests` 配下の pytest 回帰テスト群の入口で、共通設定 `conftest.py` と各テストファイルの役割を案内する。
-- Codex CLI ラッパー、INDEX.md メンテナンス、git 共通処理、レポート保存、サブコマンド制御、タイムスタンプ仕様、命名規則をまとめてたどれる。
+- `<cmoc-root>/tests` 配下の pytest 回帰テスト群の目次です。
+- テスト共通設定、Codex 実行まわり、ファイル命名、`INDEX.md` メンテナンス、git 共通処理、レポート保存、CLI サブコマンド、タイムスタンプ関連のテストを案内します。
+- 正規の Codex CLI の結果品質ではなく、cmoc の決定論的な制御ロジックと周辺ヘルパーの仕様を検証するための入口です。
 
 ## Read this when
 
-- pytest の import path 設定や共通 fixture を確認したいとき。
-- `commons.codex` や `commons.repo` など共通処理の回帰テストを探したいとき。
-- INDEX.md メンテナンス、サブコマンド制御、レポート保存、タイムスタンプ仕様のどれに属するテストか判断したいとき。
-- tests 配下のどのファイルを読むべきか迷ったとき。
+- `<cmoc-root>/tests` に pytest のテストを追加・修正したいとき。
+- `conftest.py` を含むテスト共通設定や、各テストファイルの役割を確認したいとき。
+- Codex CLI を直接当てない前提で、cmoc の決定論的な制御ロジックをどう検証しているか把握したいとき。
+- `INDEX.md` メンテナンス、git 共通処理、タイムスタンプ、レポート保存、サブコマンド制御などの回帰テストの入口を探したいとき。
 
 ## Do not read this when
 
-- 個別テストの具体的なアサーションや失敗条件だけを確認したいときは、該当する `test_*.py` を直接読む。
-- cmoc の実装本体や `oracles` の正本仕様を確認したいときは、この目次ではなく該当モジュールや `oracles` を読む。
-- テスト対象外の CLI 実行手順や開発環境のルールだけを確認したいときは、`oracles/dev_rules` を読む。
-- `tests` 全体の構成ではなく、特定の helper や fixture の実装だけを追いたいときは `conftest.py` を直接読む。
+- cmoc の本体実装や CLI 仕様そのものを確認したいとき。
+- `oracles` 配下の正本仕様や、README・AGENTS などのリポジトリ運用ルールだけを確認したいとき。
+- テストではなく、実装ロジックや設計判断の詳細を追いたいとき。
 
 ## hash
 
-- 677e1f95a9a4d78a72dcb9ba7f1a7f39cefe9e14710b0ca8ff95ac52d68b6204
+- d0e58bae13717476b27d47aa27e2069df45e4d136c723cbbc33887d4392c2df3
 <!-- cmoc-index-kind: directory -->

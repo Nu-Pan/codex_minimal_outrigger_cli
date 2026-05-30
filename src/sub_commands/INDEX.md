@@ -27,7 +27,7 @@
 
 - `src/sub_commands/apply` は `cmoc apply` 系サブコマンドの実装パッケージです。
 - `__init__.py` はパッケージ宣言のみを担い、`fork.py`、`join.py`、`abandon.py` に各コマンド本体があります。
-- `apply` の開始、調査・修正、マージ、破棄、state 更新に関する入口をまとめてたどるためのディレクトリです。
+- `apply` の開始、調査・修正、マージ、破棄、`apply.state` 更新に関する入口をまとめてたどるためのディレクトリです。
 
 ## Read this when
 
@@ -39,11 +39,11 @@
 
 - 個別の `cmoc apply fork` / `join` / `abandon` の詳細仕様や状態遷移だけを確認したいときは、このディレクトリではなく各モジュールを読むべきです。
 - `oracles/app_specs/sub_commands/` 側の正本仕様だけを確認したいときは、このディレクトリを読む必要はありません。
-- `src/sub_commands/apply/__init__.py` のパッケージ宣言だけを確認したいときは、このディレクトリではなく当該ファイルを直接見れば足ります。
+- `src/sub_commands/apply/__init__.py` のパッケージ宣言だけを確認したいときは、当該ファイルを直接見れば足ります。
 
 ## hash
 
-- 576bbdd3b67cbeb4bc15b03e77036aad46721c7a0b4ff5dd829fbd122481bb06
+- 7a7d64a2a300c3bcdc19756ea745857aac3279ca50f7f153037391ec20554330
 <!-- cmoc-index-kind: directory -->
 
 # `eval_oracles.py`

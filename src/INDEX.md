@@ -33,42 +33,43 @@
 
 ## Read this when
 
-- cmoc の起動点やサブコマンド登録を修正・レビューしたいとき。
-- `init` / `session` / `apply` / `review` のコマンド名、エイリアス、オプション既定値を確認したいとき。
-- サブコマンドなし起動時の利用者向けエラー、終了コード、`--help` への誘導を確認したいとき。
+- cmoc の起動点やサブコマンド登録の全体像を確認したいとき。
+- `init`、`session`、`apply`、`review` のコマンド名、エイリアス、既定値を確認したいとき。
+- サブコマンド未指定時の利用者向けエラーや終了コードの扱いを確認したいとき。
 - `python src/main.py` で直接起動する経路と、その例外ハンドリングを確認したいとき。
 
 ## Do not read this when
 
-- 各サブコマンドの本体ロジックや `src/sub_commands/` 配下の処理だけを確認したいとき。
-- 共通エラー型や `format_error_report` の整形仕様だけを確認したいとき。
+- `src/sub_commands/` 配下の各サブコマンド本体の処理だけを確認したいとき。
+- 共通エラー型やエラーレポート整形の詳細だけを確認したいとき。
 - `INDEX.md` の生成ルールや共通ユーティリティの設計だけを追いたいとき。
 
 ## hash
 
-- 725244cd04649c14efdc472340862818b2eabfb76416af919258408edf3121cc
+- 17a01bf5b24f9947a86117e0ba85c891287ad99e26a1f7e625772b3eaa746447
+<!-- cmoc-index-kind: file -->
 
 # `sub_commands`
 
 ## Summary
 
-- `cmoc` の個別サブコマンド実装への入口です。
-- `apply/` と `session/` の各パッケージ、`init.py`、`eval_oracles.py`、`__init__.py` をまとめて案内します。
-- 各コマンド本体の配置先を素早く選べるようにする目次です。
+- `cmoc` のサブコマンド実装をまとめるパッケージで、`__init__.py`、`init.py`、`eval_oracles.py` と `apply/`、`session/` の入口を持ちます。
+- `cmoc init`、`cmoc review oracles`、`cmoc apply`、`cmoc session` の各実装を辿るときのルーティング起点です。
+- 個別サブコマンドの実処理は各モジュール配下に分かれており、このディレクトリ自体は全体の入口として機能します。
 
 ## Read this when
 
-- `src/sub_commands` 配下で、どのモジュールがどのサブコマンドを担当しているか整理したいとき。
-- `apply`、`session`、`init`、`review oracles` の実装入口を一覧したいとき。
-- `src/sub_commands` のパッケージ構造と、各入口ファイルへの導線を確認したいとき。
+- `cmoc` のサブコマンド実装全体の配置と役割分担を把握したいとき。
+- `init`、`review oracles`、`apply`、`session` のどの実装ファイルへ進むべきか整理したいとき。
+- 新しいサブコマンドを追加したり、既存サブコマンドの入口を確認したいとき。
 
 ## Do not read this when
 
-- 個別の `cmoc apply fork/join/abandon` や `cmoc session fork/join/abandon` の詳細仕様だけを確認したいとき。
-- `cmoc review oracles` の評価条件や出力仕様だけを追いたいとき。
-- 共通仕様や `oracles` 配下の正本断片だけを確認したいとき。
+- `commons` 配下の共通処理や Git・報告・計測の詳細だけを確認したいとき。
+- `oracles` 配下の仕様断片そのものや、`INDEX.md` の生成ルールだけを確認したいとき。
+- 対象モジュールが既に分かっていて、`init.py`、`eval_oracles.py`、`apply/`、`session/` の個別実装を直接読みたいとき。
 
 ## hash
 
-- fa9b262bd8f142e6cebc753e70e76bdf79f5730de5f240ed4ff2937348c00ba4
+- a04b55252d05e3b5d2dc808f226a956b1433be6da50c41a313ffd85c618382fb
 <!-- cmoc-index-kind: directory -->
