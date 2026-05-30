@@ -6118,6 +6118,35 @@ def test_session_join_merges_current_session_branch_and_deletes_it(
     assert "cmoc/session/2026-05-10_22-21_10_000000123" not in branches
 
 
+def test_session_join_recovers_null_session_home_branch(
+    tmp_path: Path,
+) -> None:
+    """fresh fork 後の null home branch でも session join できる。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-m", "ignore cmoc")
+    home_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    _checkout_session_branch(repo)
+    state_path = repo / ".cmoc" / "sessions" / (
+        "2026-05-10_22-21_10_000000123.json"
+    )
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["session"]["session_home_branch"] = None
+    write_session_state(repo, "2026-05-10_22-21_10_000000123", state)
+    (repo / "feature.txt").write_text("feature\n", encoding="utf-8")
+    _git(repo, "add", "feature.txt")
+    _git(repo, "commit", "-m", "feature")
+
+    cmoc_session_join_impl(repo)
+
+    state_after = json.loads(state_path.read_text(encoding="utf-8"))
+    assert _git(repo, "branch", "--show-current").stdout.strip() == home_branch
+    assert (repo / "feature.txt").read_text(encoding="utf-8") == "feature\n"
+    assert state_after["session"]["state"] == "joined"
+    assert state_after["session"]["session_home_branch"] == home_branch
+
+
 def test_session_join_ensures_cmoc_ignored_before_switch(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -6727,6 +6756,37 @@ def test_session_abandon_marks_state_and_force_deletes_branch(
         "abandoned session branch: cmoc/session/2026-05-10_22-21_10_000000123"
         in captured.out
     )
+
+
+def test_session_abandon_recovers_null_session_home_branch(
+    tmp_path: Path,
+) -> None:
+    """fresh fork 後の null home branch でも session abandon できる。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-m", "ignore cmoc")
+    home_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    _checkout_session_branch(repo)
+    state_path = repo / ".cmoc" / "sessions" / (
+        "2026-05-10_22-21_10_000000123.json"
+    )
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["session"]["session_home_branch"] = None
+    write_session_state(repo, "2026-05-10_22-21_10_000000123", state)
+    (repo / "feature.txt").write_text("session only\n", encoding="utf-8")
+    _git(repo, "add", "feature.txt")
+    _git(repo, "commit", "-m", "session only")
+
+    cmoc_session_abandon_impl(repo)
+
+    branches = _git(repo, "branch", "--format=%(refname:short)").stdout
+    state_after = json.loads(state_path.read_text(encoding="utf-8"))
+    assert _git(repo, "branch", "--show-current").stdout.strip() == home_branch
+    assert (repo / "feature.txt").exists() is False
+    assert state_after["session"]["state"] == "abandoned"
+    assert state_after["session"]["session_home_branch"] == home_branch
+    assert "cmoc/session/2026-05-10_22-21_10_000000123" not in branches
 
 
 def test_session_abandon_ensures_cmoc_ignored_before_cleanup(

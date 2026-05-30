@@ -259,6 +259,135 @@ def initial_session_state(
     }
 
 
+def resolve_session_home_branch(
+    repo_root: Path,
+    state: dict[str, object],
+    session_branch: str,
+) -> str:
+    """null 初期値の session home branch を session branch から復元する。"""
+    session = state.get("session")
+    if not isinstance(session, dict):
+        raise CmocError(
+            "session state ファイルの形式が不正です。",
+            [
+                "state JSON の session セクションを確認して復旧してください。",
+                "復旧できない場合は、対象 session を破棄して新しい session でやり直してください。",
+            ],
+        )
+    existing = session.get("session_home_branch")
+    if isinstance(existing, str) and existing:
+        return existing
+    start_commit = session.get("session_start_commit")
+    if not isinstance(start_commit, str) or not start_commit:
+        raise CmocError(
+            "session home branch を特定できませんでした。",
+            [
+                "session state の session.session_start_commit を確認してください。",
+                "state が壊れている場合は、手動で session state を復旧してください。",
+            ],
+            f"session.session_start_commit: {start_commit}",
+        )
+
+    candidates = _session_home_branch_candidates(
+        repo_root,
+        session_branch,
+        start_commit,
+    )
+    if not candidates:
+        raise CmocError(
+            "session home branch を特定できませんでした。",
+            [
+                "session fork 元の local branch が削除されていないか確認してください。",
+                "必要な branch を復元してから再実行してください。",
+            ],
+            f"session_start_commit: {start_commit}",
+        )
+    if len(candidates) == 1:
+        return candidates[0]
+
+    checked_out = set(_checked_out_local_branches(repo_root))
+    checked_out_candidates = [
+        branch for branch in candidates if branch in checked_out
+    ]
+    if len(checked_out_candidates) == 1:
+        return checked_out_candidates[0]
+
+    exact_tip_candidates = [
+        branch
+        for branch in candidates
+        if _branch_head(repo_root, branch) == start_commit
+    ]
+    if len(exact_tip_candidates) == 1:
+        return exact_tip_candidates[0]
+
+    raise CmocError(
+        "session home branch を一意に特定できませんでした。",
+        [
+            "session fork 元の local branch だけを残してから再実行してください。",
+            "判断できる場合は session state の session.session_home_branch を復旧してください。",
+        ],
+        "\n".join(candidates),
+    )
+
+
+def _session_home_branch_candidates(
+    repo_root: Path,
+    session_branch: str,
+    start_commit: str,
+) -> list[str]:
+    """session_start_commit から分岐した通常 local branch 候補を返す。"""
+    candidates: list[str] = []
+    for branch in _local_non_cmoc_branches(repo_root):
+        merge_base = run_git(
+            repo_root,
+            ["merge-base", branch, session_branch],
+            check=False,
+        )
+        if merge_base.returncode != 0:
+            continue
+        if merge_base.stdout.strip() == start_commit:
+            candidates.append(branch)
+    return candidates
+
+
+def _local_non_cmoc_branches(repo_root: Path) -> list[str]:
+    """cmoc 管理ではない local branch 名を列挙する。"""
+    result = run_git(
+        repo_root,
+        ["for-each-ref", "--format=%(refname:short)", "refs/heads"],
+    )
+    return sorted(
+        branch
+        for branch in result.stdout.splitlines()
+        if branch and not is_cmoc_branch(branch)
+    )
+
+
+def _checked_out_local_branches(repo_root: Path) -> list[str]:
+    """worktree で checkout されている local branch 名を列挙する。"""
+    result = run_git(repo_root, ["worktree", "list", "--porcelain"])
+    branches: list[str] = []
+    for line in result.stdout.splitlines():
+        if not line.startswith("branch refs/heads/"):
+            continue
+        branch = line.removeprefix("branch refs/heads/")
+        if branch and not is_cmoc_branch(branch):
+            branches.append(branch)
+    return branches
+
+
+def _branch_head(repo_root: Path, branch: str) -> str | None:
+    """branch の HEAD commit を返す。"""
+    result = run_git(
+        repo_root,
+        ["rev-parse", "--verify", branch],
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip()
+
+
 def write_session_state(
     repo_root: Path,
     session_id: str,

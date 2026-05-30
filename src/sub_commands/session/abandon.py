@@ -12,6 +12,7 @@ from commons.repo import (
     ensure_cmoc_ignored_and_committed,
     is_session_branch,
     read_session_state,
+    resolve_session_home_branch,
     run_git,
     session_id_from_branch,
     session_state_root,
@@ -43,7 +44,13 @@ def cmoc_session_abandon_impl(repo_root: Path | None = None) -> None:
     session_id = session_id_from_branch(session_branch)
     state_root = session_state_root(repo_root)
     state = read_session_state(state_root, session_id)
-    home_branch = _validate_abandonable_state(state, session_branch)
+    _validate_abandonable_state(state, session_branch)
+    home_branch = resolve_session_home_branch(
+        repo_root,
+        state,
+        session_branch,
+    )
+    _record_session_home_branch(state_root, session_id, state, home_branch)
     _assert_local_branch_exists(repo_root, home_branch)
     assert_no_uncommitted_changes_outside_cmoc(repo_root)
     rollback_snapshot = _capture_rollback_snapshot(
@@ -118,8 +125,8 @@ def _current_session_branch(repo_root: Path) -> str:
 def _validate_abandonable_state(
     state: dict[str, object],
     session_branch: str,
-) -> str:
-    """session abandon の state 前提条件を検証し、home branch 名を返す。"""
+) -> None:
+    """session abandon の state 前提条件を検証する。"""
     session = state.get("session")
     apply = state.get("apply")
     if not isinstance(session, dict) or not isinstance(apply, dict):
@@ -150,17 +157,28 @@ def _validate_abandonable_state(
             ],
             f"apply.state: {apply.get('state')}",
         )
-    home_branch = session.get("session_home_branch")
-    if not isinstance(home_branch, str) or not home_branch:
+
+
+def _record_session_home_branch(
+    repo_root: Path,
+    session_id: str,
+    state: dict[str, object],
+    home_branch: str,
+) -> None:
+    """復元済み session home branch を state に保存する。"""
+    session = state.get("session")
+    if not isinstance(session, dict):
         raise CmocError(
-            "session home branch を特定できませんでした。",
+            "session state ファイルの形式が不正です。",
             [
-                "session state の session.session_home_branch を確認してください。",
-                "state が壊れている場合は、手動で戻り先 branch を確認してください。",
+                "state JSON の session セクションを確認して復旧してください。",
+                "復旧できない場合は、現在の session を使わず新しい session を開始してください。",
             ],
-            f"現在の branch: {session_branch}",
         )
-    return home_branch
+    if session.get("session_home_branch") == home_branch:
+        return
+    session["session_home_branch"] = home_branch
+    write_session_state(repo_root, session_id, state)
 
 
 def _capture_rollback_snapshot(
