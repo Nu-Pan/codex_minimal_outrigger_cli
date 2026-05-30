@@ -79,15 +79,15 @@
 ## Summary
 
 - `bin/cmoc` は cmoc コマンドのシェル製エントリーポイントです。
-- スクリプト自身の場所から `<cmoc-root>` を解決し、`<cmoc-root>/.venv/bin/python` を実行 Python として使います。
-- 仮想環境 Python が利用可能なら、全引数をそのまま `<cmoc-root>/src/main.py` に渡して `exec` します。
-- 仮想環境 Python が見つからない、または実行不可の場合は、日本語の構造化エラーを標準出力へ出し、セットアップ手順・必要な実行ファイル・簡易 Call stack を示して終了ステータス 1 で終了します。
+- スクリプト自身の位置から `<cmoc-root>` を解決し、`<cmoc-root>/.venv/bin/python` を実行 Python として使います。
+- 仮想環境 Python が利用可能なときは、全引数を `<cmoc-root>/src/main.py` にそのまま渡して `exec` します。
+- 仮想環境 Python が見つからない、または実行不可のときは、日本語の構造化エラーを標準出力へ表示し、セットアップ手順・必要な実行ファイル・簡易 Call stack を示して終了ステータス 1 で終了します。
 - `line_number_of` は、エラー表示内の Call stack 用に、このスクリプト内で指定パターンに一致する最初の行番号を求める補助関数です。
 
 ## Read this when
 
 - `bin/cmoc` がどの Python を使って `src/main.py` を起動するか確認したいとき。
-- `.venv/bin/python` が存在しない、または実行できない場合のエラー文面、終了ステータス、復旧手順を確認したいとき。
+- .venv/bin/python` が存在しない、または実行できない場合のエラー文面、終了ステータス、復旧手順を確認したいとき。
 - シェル製の CLI エントリーポイントとして `bin/cmoc` の挙動を把握したいとき。
 - `bin/cmoc` から `src/main.py` へ引数をそのまま渡す流れを確認したいとき。
 - エラー表示内の Call stack を組み立てる `line_number_of` の役割を確認したいとき。
@@ -102,7 +102,7 @@
 
 ## hash
 
-- 160e19df3f9b3de96dc5dc79fea7fa0837b099f6220d61742a9b8c141cd23d51
+- 6b2ad008646b163ca4bd7bd4ced6f60b6cd655c9c1d0e19d068820da0bbab7b2
 <!-- cmoc-index-kind: directory -->
 
 # `codex_minimal_outrigger_cli.code-workspace`
@@ -233,22 +233,22 @@
 ## Summary
 
 - `tests` 配下の回帰テスト群への入口です。
-- pytest 共通設定から、INDEX 保守、Codex 呼び出し、git 共通処理、サブコマンド、レポート保存、タイムスタンプまでのテストの担当範囲を案内します。
+- pytest 共通設定、`INDEX.md` 保守、Codex 呼び出し、git 共通処理、サブコマンド、レポート保存、タイムスタンプの各テスト担当範囲を案内します。
 - 個別テストへ進む前に、目的別の読み先を絞り込むための目次です。
 
 ## Read this when
 
 - `tests` ディレクトリの各テストファイルが何を守っているかを把握したいとき。
-- pytest 共通設定、`INDEX.md` メンテナンス、Codex 呼び出し、git 共通処理、サブコマンド、タイムスタンプ、レポート保存の回帰観点を一覧したいとき。
+- pytest 共通設定、`INDEX.md` メンテナンス、Codex 呼び出し、git 共通処理、サブコマンド、レポート保存、タイムスタンプの回帰観点を一覧したいとき。
 - 特定のテストファイルへ進む前に、どのファイルを読むべきかを素早く判断したいとき。
 
 ## Do not read this when
 
-- 実装コードや正本仕様ではなく、`tests` 配下の回帰テストの案内だけが必要なとき。
+- 実装コードや正本仕様ではなく、tests 配下の回帰テストの案内だけが必要なとき。
 - `src` や `oracles` の個別仕様を確認したいとき。
 - `INDEX.md` の生成ルールやハッシュ管理の詳細だけを確認したいとき。
 
 ## hash
 
-- 8dbabee768184809f85d586c4ac2e6a956e05e3a77e21b8881284e024469c7f5
+- f41360827e60bed775493bb673fdd401239f4ca1775ab8ebee536c89b9edde96
 <!-- cmoc-index-kind: directory -->
