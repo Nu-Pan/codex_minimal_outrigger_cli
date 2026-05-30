@@ -5826,7 +5826,7 @@ def test_session_join_ensures_cmoc_ignored_before_switch(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """tracked `.cmoc` state を補修し、発生差分を検出して switch 前に止める。"""
+    """tracked `.cmoc` state を補修 commit してから home branch へ merge する。"""
     repo = _init_repo(tmp_path)
     home_branch = _git(repo, "branch", "--show-current").stdout.strip()
     _checkout_session_branch(repo)
@@ -5834,22 +5834,16 @@ def test_session_join_ensures_cmoc_ignored_before_switch(
     _git(repo, "add", "-f", state_path)
     _git(repo, "commit", "-m", "track session state")
 
-    with pytest.raises(CmocError) as error:
-        cmoc_session_join_impl(repo)
+    cmoc_session_join_impl(repo)
 
     captured = capsys.readouterr()
-    status = _git(repo, "status", "--porcelain").stdout
-    assert "未コミットの変更" in error.value.message
-    assert ".gitignore" in error.value.detail
-    assert state_path in error.value.detail
-    assert "手動解消が必要です" in captured.err
-    assert _git(repo, "branch", "--show-current").stdout.strip() == (
-        "cmoc/session/2026-05-10_22-21_10_000000123"
-    )
+    state = json.loads((repo / state_path).read_text(encoding="utf-8"))
+    assert captured.err == ""
+    assert _git(repo, "branch", "--show-current").stdout.strip() == home_branch
+    assert state["session"]["state"] == "joined"
     assert "/.cmoc/" in (repo / ".gitignore").read_text(encoding="utf-8")
     assert _git(repo, "ls-files", "--", ".cmoc").stdout == ""
-    assert ".gitignore" in status
-    assert state_path in status
+    assert _git(repo, "status", "--porcelain").stdout == ""
     assert home_branch in _git(repo, "branch", "--format=%(refname:short)").stdout
 
 
@@ -6323,27 +6317,25 @@ def test_session_abandon_marks_state_and_force_deletes_branch(
 def test_session_abandon_ensures_cmoc_ignored_before_cleanup(
     tmp_path: Path,
 ) -> None:
-    """tracked `.cmoc` state を補修し、発生差分を検出して cleanup 前に止める。"""
+    """tracked `.cmoc` state を補修し、home branch 側も ignore 保証する。"""
     repo = _init_repo(tmp_path)
+    home_branch = _git(repo, "branch", "--show-current").stdout.strip()
     _checkout_session_branch(repo)
+    session_branch = _git(repo, "branch", "--show-current").stdout.strip()
     state_path = ".cmoc/sessions/2026-05-10_22-21_10_000000123.json"
     _git(repo, "add", "-f", state_path)
     _git(repo, "commit", "-m", "track session state")
 
-    with pytest.raises(CmocError) as error:
-        cmoc_session_abandon_impl(repo)
+    cmoc_session_abandon_impl(repo)
 
-    status = _git(repo, "status", "--porcelain").stdout
-    assert "未コミットの変更" in error.value.message
-    assert ".gitignore" in error.value.detail
-    assert state_path in error.value.detail
-    assert _git(repo, "branch", "--show-current").stdout.strip() == (
-        "cmoc/session/2026-05-10_22-21_10_000000123"
-    )
+    state = json.loads((repo / state_path).read_text(encoding="utf-8"))
+    branches = _git(repo, "branch", "--format=%(refname:short)").stdout
+    assert _git(repo, "branch", "--show-current").stdout.strip() == home_branch
+    assert state["session"]["state"] == "abandoned"
+    assert session_branch not in branches
     assert "/.cmoc/" in (repo / ".gitignore").read_text(encoding="utf-8")
     assert _git(repo, "ls-files", "--", ".cmoc").stdout == ""
-    assert ".gitignore" in status
-    assert state_path in status
+    assert _git(repo, "status", "--porcelain").stdout == ""
 
 
 def test_session_abandon_rejects_apply_run_before_cleanup(

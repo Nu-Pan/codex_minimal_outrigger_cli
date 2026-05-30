@@ -9,8 +9,9 @@ from commons.command_runner import run_command
 from commons.errors import CmocError
 from commons.repo import (
     assert_no_uncommitted_changes,
+    assert_no_uncommitted_changes_outside_cmoc,
     current_branch,
-    ensure_cmoc_ignored,
+    ensure_cmoc_ignored_and_committed,
     git_name_only_paths,
     git_status_paths,
     is_session_branch,
@@ -43,11 +44,11 @@ def cmoc_session_join_impl(repo_root: Path | None = None) -> None:
         state_root = session_state_root(repo_root)
         state = read_session_state(state_root, session_id)
         home_branch = _validate_joinable_state(state, session_branch)
-        assert_no_uncommitted_changes(repo_root)
+        assert_no_uncommitted_changes_outside_cmoc(repo_root)
 
         start_step(timer, 2, 5, "ensure .cmoc is ignored")
         manual_resolution_required = True
-        ensure_cmoc_ignored(repo_root)
+        ensure_cmoc_ignored_and_committed(repo_root)
         assert_no_uncommitted_changes(repo_root)
 
         start_step(timer, 3, 5, "switch to session home branch")

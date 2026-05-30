@@ -689,6 +689,24 @@ def ensure_cmoc_ignored(repo_root: Path) -> bool:
     return changed
 
 
+def ensure_cmoc_ignored_and_committed(
+    repo_root: Path,
+    message: str = "Initialize cmoc",
+) -> bool:
+    """`.cmoc` ignore 保証で発生した内部差分を commit まで完了する。"""
+    had_cmoc_rule = gitignore_has_cmoc_rule(repo_root)
+    preexisting_staged_diff = staged_diff_from_head(repo_root)
+    changed = ensure_cmoc_ignored(repo_root)
+    if not changed:
+        return False
+    return commit_cmoc_initialization_changes(
+        repo_root,
+        had_cmoc_rule,
+        preexisting_staged_diff,
+        message,
+    )
+
+
 def assert_cmoc_ignored(repo_root: Path) -> None:
     """`.cmoc` が git 追跡対象外であることを副作用なしで検証する。"""
     _assert_cmoc_ignore_guarantee(repo_root)
@@ -705,6 +723,21 @@ def assert_no_uncommitted_changes(repo_root: Path) -> None:
     """未コミット差分がある場合は仕様通りエラーにする。"""
     # 未コミット path を利用者に見せるため、bool ではなく一覧を取得する。
     paths = changed_paths(repo_root)
+    _raise_uncommitted_changes(paths)
+
+
+def assert_no_uncommitted_changes_outside_cmoc(repo_root: Path) -> None:
+    """`.cmoc` 管理領域以外に未コミット差分がないことを確認する。"""
+    paths = [
+        path
+        for path in changed_paths(repo_root)
+        if not _is_cmoc_managed_path(path)
+    ]
+    _raise_uncommitted_changes(paths)
+
+
+def _raise_uncommitted_changes(paths: list[str]) -> None:
+    """未コミット path 一覧が空でなければ共通エラーを送出する。"""
     if paths:
         raise CmocError(
             "未コミットの変更があります。",

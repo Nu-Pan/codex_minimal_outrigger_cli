@@ -6,8 +6,9 @@ from commons.command_runner import run_command
 from commons.errors import CmocError
 from commons.repo import (
     assert_no_uncommitted_changes,
+    assert_no_uncommitted_changes_outside_cmoc,
     current_branch,
-    ensure_cmoc_ignored,
+    ensure_cmoc_ignored_and_committed,
     is_session_branch,
     read_session_state,
     run_git,
@@ -33,15 +34,17 @@ def cmoc_session_abandon_impl(repo_root: Path | None = None) -> None:
     state = read_session_state(state_root, session_id)
     home_branch = _validate_abandonable_state(state, session_branch)
     _assert_local_branch_exists(repo_root, home_branch)
-    assert_no_uncommitted_changes(repo_root)
+    assert_no_uncommitted_changes_outside_cmoc(repo_root)
 
     start_step(timer, 2, 4, "ensure .cmoc is ignored")
-    ensure_cmoc_ignored(repo_root)
+    ensure_cmoc_ignored_and_committed(repo_root)
     assert_no_uncommitted_changes(repo_root)
 
     start_step(timer, 3, 4, "switch to session home branch")
     try:
         run_git(repo_root, ["switch", home_branch])
+        ensure_cmoc_ignored_and_committed(repo_root)
+        assert_no_uncommitted_changes(repo_root)
         start_step(timer, 4, 4, "record abandoned session")
         _mark_session_abandoned(state_root, session_id, state)
         run_git(repo_root, ["branch", "-D", session_branch])
