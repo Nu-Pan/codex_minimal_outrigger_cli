@@ -23,9 +23,9 @@
 
 ## Summary
 
-- `src/sub_commands/session/abandon.py` は `cmoc session abandon` の本体実装で、現在の session branch を merge せずに破棄して home branch に戻す。
-- `session.state` / `apply.state` の事前検証、`.cmoc` の ignore 保証、home branch への switch、`session.state=abandoned` への更新、session branch の強制削除を扱う。
-- cleanup 失敗時は branch/state を再実行しやすい状態へ戻す rollback と、手動復旧を促すエラー整形まで含む。
+- `src/sub_commands/session/abandon.py` は `cmoc session abandon` の本体実装で、現在の session branch を merge せずに破棄して home branch に戻します。
+- `session.state` / `apply.state` の事前検証、`.cmoc` の ignore 保証、home branch への switch、`session.state=abandoned` への更新、session branch の強制削除を扱います。
+- cleanup 失敗時は branch/state を再実行しやすい状態へ戻す rollback と、手動復旧を促すエラー整形まで含みます。
 
 ## Read this when
 
@@ -41,7 +41,8 @@
 
 ## hash
 
-- 725004adba5efd9262a7568da44b4044f0badc0c76a4324d405cd0b00c332b55
+- 48b22231b5a8c15575b449fc037ffbeb0f7a841b8a05e55df5506063996ad615
+<!-- cmoc-index-kind: file -->
 
 # `fork.py`
 
@@ -84,10 +85,11 @@
 
 ## Do not read this when
 
-- `cmoc session fork` や `cmoc session abandon` の実装・修正・レビューだけを確認したいとき。
-- `cmoc apply` 系の開始・終了・破棄の流れだけを確認したいとき。
+- `cmoc session fork` や `cmoc session abandon` の仕様だけを確認したいとき。
+- `cmoc apply` 側の開始・終了・破棄の手順だけを確認したいとき。
 - 一般的な `git merge` の説明だけで足り、`session.state` 更新や conflict 解消の実装詳細が不要なとき。
 
 ## hash
 
-- 61f4b42440c3fda5ead506427f77739e3c6008309da010ff51e4ade2c87317a9
+- a9a7bed03d38ab27825d79fff4759b5a7af4d03d8885a9fe9bd279dd2ce207bf
+<!-- cmoc-index-kind: file -->
