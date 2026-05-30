@@ -1241,6 +1241,7 @@ def filter_apply_implementation_file_paths(
             path
             for path in relative_paths
             if not _is_excluded_implementation_path(path)
+            and not _is_forbidden_apply_implementation_path(path)
         }
     )
     ignored = _root_gitignored_paths(repo_root, candidates)
@@ -1249,7 +1250,10 @@ def filter_apply_implementation_file_paths(
 
 def is_apply_implementation_path(repo_root: Path, relative_path: str) -> bool:
     """root 相対 path が apply の調査対象になる実装ファイルか判定する。"""
-    return is_implementation_path(repo_root, relative_path)
+    return (
+        is_implementation_path(repo_root, relative_path)
+        and not _is_forbidden_apply_implementation_path(relative_path)
+    )
 
 
 def root_gitignored_paths(
@@ -1573,6 +1577,12 @@ def _is_excluded_implementation_path(relative_path: str) -> bool:
         or relative_path.startswith(".git/")
         or path.name == "INDEX.md"
     )
+
+
+def _is_forbidden_apply_implementation_path(relative_path: str) -> bool:
+    """apply の Codex 調査起点にしてはいけない path か判定する。"""
+    # root 直下 memo は prompt 上で読み書き禁止にしているため調査対象からも外す。
+    return relative_path == "memo" or relative_path.startswith("memo/")
 
 
 def read_session_start_commit(repo_root: Path, branch_name: str) -> str:
