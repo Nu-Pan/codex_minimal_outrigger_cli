@@ -116,12 +116,12 @@
 ## Do not read this when
 
 - `src/commons/repo.py` の実装ロジックそのものを追いたいとき。
-- `src/commons/repo.py` の個別関数仕様だけを確認したいとき。
-- `oracles` や session state の正本仕様だけを確認したいとき。
+- `src/commons/repo.py` の個別関数だけを確認したいとき。
+- `oracles` や session state の正本仕様だけを見たいとき。
 
 ## hash
 
-- d6f6bf6314e06a00b0f1db2eccc9101a97c1bd18211522ecf8e28eeb6c04b0b9
+- a16b990836bc03562a9ef964e368a7d12ec244faba88f2e7331d8ac7e924d8fa
 <!-- cmoc-index-kind: file -->
 
 # `test_report_files.py`
@@ -153,25 +153,24 @@
 ## Summary
 
 - cmoc の公開 CLI とサブコマンド群の決定論的な制御ロジックを横断的に検証する回帰テストです。
-- init、session、apply、review oracles、eval-oracles、main、bin/cmoc の起動、状態遷移、エラー処理、出力整合性をまとめて確認します。
+- `init`、`session`、`apply`、`review oracles`、`eval-oracles`、`main`、`bin/cmoc` の起動、状態遷移、エラー処理、出力整合性をまとめて確認します。
 - branch、worktree、session-state、apply-state、Structured Output schema、プロンプト、差分、衝突処理、レポート生成まで広く扱います。
 
 ## Read this when
 
-- cmoc の公開コマンド群の登録状況や実行フローを横断して確認したいとき。
-- branch / worktree / session-state / apply-state の遷移や、不正状態・競合・ロールバックの扱いを確認したいとき。
-- Structured Output schema、プロンプト文言、差分検出、衝突解決、レポート生成の回帰をまとめて追いたいとき。
+- cmoc の公開 CLI と各サブコマンドの登録・委譲・起動経路を横断して確認したいとき。
+- `init`、`session`、`apply`、`review oracles`、`eval-oracles`、`main`、`bin/cmoc` にまたがる状態遷移やエラー処理を確認したいとき。
+- Structured Output schema、プロンプト文言、差分検出、衝突解消、レポート生成、ヘルプや互換エイリアスの回帰をまとめて追いたいとき。
 
 ## Do not read this when
 
-- src/sub_commands/apply/ や src/sub_commands/session/ の個別実装だけを追いたいとき。
-- src/commons/codex.py、src/commons/repo.py、src/commons/report_files.py など共通処理だけを確認したいとき。
-- tests/test_repo.py、tests/test_indexing.py、tests/test_codex.py など別のテスト群だけで足りるとき。
-- INDEX.md の生成ルールや oracles 全体のルーティング方針だけを確認したいとき。
+- `src/sub_commands/apply/` や `src/sub_commands/session/` の個別実装だけを確認したいとき。
+- `src/commons/codex.py`、`src/commons/repo.py`、`src/commons/report_files.py` など共通処理だけを追いたいとき。
+- `tests/test_repo.py`、`tests/test_indexing.py`、`tests/test_codex.py` など別のテスト群だけで足りるとき。
 
 ## hash
 
-- 78bb9bd861b46b501c384932a90d48f81e653a26974a03d1e2f6d9c66622e87b
+- ffd90cf72d9b0f338309d7607b915258bbf46b27ab28a02a29fe1e58bbdd34e2
 <!-- cmoc-index-kind: file -->
 
 # `test_timestamps.py`

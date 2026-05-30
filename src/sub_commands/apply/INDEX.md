@@ -82,17 +82,17 @@
 
 ## Read this when
 
-- `cmoc apply join` の実装・修正・レビュー・テストで、処理順や責務境界を確認したいとき
-- 完了済みの apply branch を session branch に取り込む前提条件や、`apply.state = completed` / `error` の扱いを確認したいとき
-- 想定外の差分の検出、`--force-resolve` による差分の戻し方、`INDEX.md` conflict の自動解消、cleanup 条件を追いたいとき
+- `src/sub_commands/apply/join.py` の実装・修正・レビュー・テストで、処理順や責務境界を確認したいとき。
+- 完了済みの apply branch を session branch に取り込む前提条件や、`apply.state = completed` / `error` の扱いを確認したいとき。
+- 想定外の差分の検出、`--force-resolve` による差分の戻し方、`INDEX.md` conflict の自動解消、cleanup 条件を追いたいとき。
 
 ## Do not read this when
 
-- `cmoc apply fork` の調査・修正ループや要修正点の整理だけを確認したいとき
-- `cmoc apply abandon` や `cmoc session join` / `cmoc session abandon` など、別サブコマンドの終了・破棄・統合だけを確認したいとき
-- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき
+- `cmoc apply fork` の調査・修正ループや要修正点の整理だけを確認したいとき。
+- `cmoc apply abandon` や `cmoc session join` / `cmoc session abandon` など、別サブコマンドの終了・破棄・統合だけを確認したいとき。
+- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
 
 ## hash
 
-- 52a37baede21d099ad4ef7b0086dd667e38296c3ce92be79c9e299589729f746
+- 410e52eed97fbd4d1a03cc7118c6cb1a252d86469fb4b5619c630cdd64b95c73
 <!-- cmoc-index-kind: file -->

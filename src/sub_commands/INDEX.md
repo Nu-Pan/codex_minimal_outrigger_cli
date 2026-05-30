@@ -25,25 +25,25 @@
 
 ## Summary
 
-- `cmoc apply` 系サブコマンドの実装パッケージで、`__init__.py`、`abandon.py`、`fork.py`、`join.py` をまとめています。
+- `src/sub_commands/apply` は `cmoc apply` 系サブコマンドの実装パッケージで、`__init__.py`、`abandon.py`、`fork.py`、`join.py` をまとめています。
 - apply の開始、調査・修正ループ、成果物の取り込み、破棄に関する処理へ進むための入口です。
 - apply branch、worktree、state file をどう扱うかを、実装ファイル単位でたどるための目次です。
 
 ## Read this when
 
-- `cmoc apply` 系のどの実装ファイルを読むべきか整理したいとき。
-- apply の開始、調査・修正、マージ、破棄の流れを実装・修正・レビューしたいとき。
+- `src/sub_commands/apply` 配下にどの実装ファイルやパッケージがあるかを整理したいとき。
+- `cmoc apply` 系の開始、調査・修正、マージ、破棄の流れを実装・修正・レビューしたいとき。
 - apply branch、apply worktree、session state file の役割分担を実装側から確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply` の利用手順や引数の意味だけを確認したいときは、この目次ではなく `oracles/app_specs/sub_commands/` 側の仕様を読むべきです。
-- `session` 系サブコマンドや `review oracles` など、別機能の実装を探しているときは対象外です。
+- `cmoc apply` の利用手順や引数の意味だけを確認したいときは、`oracles/app_specs/sub_commands/` 側の仕様を読むべきです。
+- `cmoc session` 系サブコマンドや `review oracles` など、別機能の実装を探しているときは対象外です。
 - 個別の `fork.py`、`join.py`、`abandon.py` の実装内容が既に分かっていて、そのファイルを直接読みたいときは、この目次を経由する必要はありません。
 
 ## hash
 
-- e03bf602ceca276630e9f6b857ae0aec69ce17d4521e2fe4d7a7566ab452507b
+- 89b955de54c027578d5e654c8b0c848becd473d3ce4605f84603973e845061cb
 <!-- cmoc-index-kind: directory -->
 
 # `eval_oracles.py`
