@@ -63,11 +63,11 @@
 
 ## Do not read this when
 
-- 個別サブコマンドの処理順、前提条件、状態遷移だけを確認したいときは、該当する実装モジュールや正本仕様を直接読むべきです。
+- `src/sub_commands` 配下の個別サブコマンドの処理順、前提条件、状態遷移だけを確認したいときは、該当モジュールや正本仕様を直接読むべきです。
 - パッケージ宣言だけを確認したいときは、`__init__.py` を直接見れば足ります。
-- `branch_model`、`codex_call`、`indexing`、`error_handling` など別の共通仕様を確認したいときは、他の入口文書を読むべきです。
+- `branch_model`、`codex_call`、`indexing`、`error_handling` など、別の共通仕様だけを確認したいときは、他の入口文書を読むべきです。
 
 ## hash
 
-- ac2bf5b99da5ccfabd7d7a459b5d82f82003e1c93d00da8d46cd36460aad9b2e
+- 03ddb0a912f05fca82efe7b37afcf333228f298c95db02e80dcd2dab18a720a9
 <!-- cmoc-index-kind: directory -->
