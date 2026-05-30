@@ -59,8 +59,10 @@ def test_maintain_indexes_generates_routing_entries_and_respects_gitignore(
     assert "kept summary" in content
     assert "cmoc-index-kind" not in content
     assert "# `ignored.txt`" not in content
-    assert any(f"`{repo / 'README.md'}`" in prompt for prompt in codex_prompts)
-    assert any(f"`{repo / 'kept.txt'}`" in prompt for prompt in codex_prompts)
+    readme_path = json.dumps((repo / "README.md").resolve().as_posix())
+    kept_path = json.dumps((repo / "kept.txt").resolve().as_posix())
+    assert any(readme_path in prompt for prompt in codex_prompts)
+    assert any(kept_path in prompt for prompt in codex_prompts)
     assert not any("`README.md` の `INDEX.md`" in prompt for prompt in codex_prompts)
     assert not any("`kept.txt` の `INDEX.md`" in prompt for prompt in codex_prompts)
     assert codex_kwargs
@@ -72,6 +74,42 @@ def test_maintain_indexes_generates_routing_entries_and_respects_gitignore(
     assert all(
         kwargs["reasoning_effort"] == "medium" for kwargs in codex_kwargs
     )
+
+
+def test_maintain_indexes_prompts_with_recoverable_json_path_for_symbols(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """prompt の対象 path は記号を INDEX token 化せず JSON string で渡す。"""
+    repo = _init_repo(tmp_path)
+    target = repo / "a%b`c.txt"
+    target.write_text("symbols\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "symbol path")
+    codex_prompts: list[str] = []
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """INDEX 生成 prompt を記録する fake Codex CLI。"""
+        del kwargs
+        codex_prompts.append(str(args[1]))
+        return json.dumps(
+            {
+                "summary": ["summary"],
+                "read_this_when": ["read"],
+                "do_not_read_this_when": ["skip"],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    changed = maintain_indexes(repo)
+    content = (repo / "INDEX.md").read_text(encoding="utf-8")
+    expected_json_path = json.dumps(target.resolve().as_posix())
+
+    assert changed is True
+    assert "# `a%25b%60c.txt`" in content
+    assert any(expected_json_path in prompt for prompt in codex_prompts)
+    assert not any("a%25b%60c.txt" in prompt for prompt in codex_prompts)
 
 
 @pytest.mark.parametrize(
@@ -606,7 +644,10 @@ def test_maintain_indexes_round_trips_non_utf8_paths(
     assert "# `bad_%FF_dir`" in root_index
     assert "# `note_%FE.txt`" in child_index
     assert any("bad_%FF_dir" in purpose for purpose in purposes)
-    assert any("bad_%FF_dir" in prompt for prompt in prompts)
+    assert any(
+        json.dumps(bad_dir.resolve().as_posix()) in prompt
+        for prompt in prompts
+    )
     assert not any(_has_surrogate(text) for text in [*prompts, *purposes])
 
     def fail_codex(*args: object, **kwargs: object) -> str:

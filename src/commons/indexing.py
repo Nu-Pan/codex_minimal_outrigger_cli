@@ -4,6 +4,7 @@ import codecs
 import concurrent.futures
 import fcntl
 import hashlib
+import json
 import os
 import re
 import subprocess
@@ -476,11 +477,13 @@ def _entry_for(repo_root: Path, path: Path, digest: str) -> str:
 def _index_prompt(repo_root: Path, path: Path, digest: str) -> str:
     """INDEX 目次情報生成用の Codex prompt を作る。"""
     # Codex 側には hash を返させず、cmoc が計算した値だけを後段で埋め込む。
-    concrete_path = _display_concrete_index_path(path)
+    concrete_path = _json_concrete_index_path(path)
     return "\n".join(
         [
             "あなたはリポジトリのルーティング文書を作るアシスタントです。",
-            f"`{concrete_path}` の `INDEX.md` 目次情報を作成してください。",
+            "対象 path は次の JSON string をデコードした絶対 path です: "
+            f"{concrete_path}",
+            "その対象 path の `INDEX.md` 目次情報を作成してください。",
             "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。",
             "summary、read_this_when、do_not_read_this_when はそれぞれ",
             "日本語の文字列配列にしてください。",
@@ -812,8 +815,13 @@ def _display_index_path(repo_root: Path, path: Path) -> str:
 
 
 def _display_concrete_index_path(path: Path) -> str:
-    """Codex prompt 用の絶対 path を安全な 1 行表現にする。"""
+    """絶対 path を INDEX token と同じ安全な 1 行表現にする。"""
     return _encode_index_token(path.resolve().as_posix())
+
+
+def _json_concrete_index_path(path: Path) -> str:
+    """Codex prompt 用の絶対 path を可逆な JSON string にする。"""
+    return json.dumps(path.resolve().as_posix())
 
 
 def _encode_index_token(value: str) -> str:
