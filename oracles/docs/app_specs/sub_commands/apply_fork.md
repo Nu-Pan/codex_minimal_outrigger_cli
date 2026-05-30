@@ -4,7 +4,7 @@
 
 - `cmoc apply fork` は、Codex CLI による調査・修正ループを実行する
 - この調査・修正ループは以下の状態を目標とする
-    - `<repo-root>` の実装を `<repo-root>/oracles` の正本仕様断片と一致している
+    - `<repo-root>` の実装が `<repo-root>/oracles` の正本仕様断片と一致している
     - `<repo-root>` の実装が最低限度の品質を満たしている
 - `cmoc apply fork` が正常に実行完了したからといって、目標達成が保証されるわけではない
     - あくまで、調査・修正ループの実行し、目標達成のために努力する所までが `cmoc apply fork` の責任範囲である

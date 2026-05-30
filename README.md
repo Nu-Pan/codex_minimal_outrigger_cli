@@ -33,3 +33,20 @@
 ## 基本ワークフロー
 
 - `<cmoc-root>/oracles/app_specs/usage.md` を参照
+
+## Tips
+
+### Ctrl+S によるターミナルロック
+
+ターミナルに Ctrl+S を入力するとプロセスの実行が止まってしまう。
+Ctrl+S はエディタ上で連打するようなショートカットなので、かなり誤爆しやすい。
+そのくせ、誤爆すると数時間停止に気づかないこともザラ。
+
+`~/.bashrc` に以下を追記すれば Ctrl+S によるターミナルロックを無効化出来る。
+```bash
+# Disable terminal locking by Ctrl+S 
+if [[ -t 0 ]]; then
+    stty stop undef
+    stty start undef
+fi
+```
