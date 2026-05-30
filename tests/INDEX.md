@@ -97,7 +97,7 @@
 
 ## hash
 
-- d23632ba86e6e1020c3e585534ebb37ce5d9dc0b19c3e0aa7bb9e576836388dc
+- 4d936a8e2e426e8baa0f54da57d3acbbfb03995e9165a79fb124bd8086fb2c5d
 <!-- cmoc-index-kind: file -->
 
 # `test_repo.py`

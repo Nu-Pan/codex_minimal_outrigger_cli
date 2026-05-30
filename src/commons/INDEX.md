@@ -118,11 +118,12 @@
 
 - `INDEX.md` の配置ルールや見出し構成の概要だけを知りたいとき。
 - `codex.py`、`repo.py`、`errors.py` など他の共通モジュールの仕様だけを追いたいとき。
-- cmoc の個別サブコマンドの引数や実行フロー、テストの詳細だけを確認したいとき。
+- cmoc の個別サブコマンドの引数や実行フローだけを確認したいとき。
 
 ## hash
 
-- 3ab05d06c4e06d2f0f36e88a68c2c9b67fe522e2f8f314ade836d69b6d0ca084
+- b789244f2b8c7ce8728c0d2dc536904e51896bf686df133e76c4a41c22d1f98e
+<!-- cmoc-index-kind: file -->
 
 # `repo.py`
 
