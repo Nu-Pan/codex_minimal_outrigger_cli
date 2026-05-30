@@ -18,6 +18,7 @@ from jsonschema.exceptions import SchemaError, ValidationError
 from .errors import CmocError
 from .repo import (
     filter_oracle_file_paths,
+    filter_oracle_file_paths_at_commit,
     git_name_only_paths,
     git_name_status_entries,
     git_status_paths,
@@ -760,7 +761,10 @@ def _assert_workspace_write_oracles_unchanged(
     allowed = set(snapshot.allowed_uncommitted_paths)
     uncommitted = [
         path
-        for path in _uncommitted_oracle_file_paths(repo_root)
+        for path in _uncommitted_oracle_file_paths(
+            repo_root,
+            snapshot.head_commit,
+        )
         if path not in allowed
     ]
     range_error, committed = _committed_oracle_file_paths(
@@ -847,7 +851,10 @@ def _normalize_repo_relative_paths(
     return normalized
 
 
-def _uncommitted_oracle_file_paths(repo_root: Path) -> list[str]:
+def _uncommitted_oracle_file_paths(
+    repo_root: Path,
+    before_head: str | None,
+) -> list[str]:
     """未コミット差分に含まれる oracle ファイルを返す。"""
     relative_paths: list[str] = []
     diff = run_git(
@@ -870,7 +877,7 @@ def _uncommitted_oracle_file_paths(repo_root: Path) -> list[str]:
         path for status_code, path in git_status_paths(status.stdout)
         if status_code == "??"
     )
-    return filter_oracle_file_paths(repo_root, relative_paths)
+    return _oracle_guard_file_paths(repo_root, before_head, relative_paths)
 
 
 def _committed_oracle_file_paths(
@@ -918,8 +925,9 @@ def _committed_oracle_file_paths(
     )
     return (
         None,
-        filter_oracle_file_paths(
+        _oracle_guard_file_paths(
             repo_root,
+            before_head,
             _paths_from_name_status_z(log.stdout),
         ),
     )
@@ -986,7 +994,28 @@ def _head_reflog_oracle_file_paths(
         )
         if log.returncode == 0:
             paths.extend(_paths_from_name_status_z(log.stdout))
-    return (None, filter_oracle_file_paths(repo_root, paths))
+    return (None, _oracle_guard_file_paths(repo_root, before_head, paths))
+
+
+def _oracle_guard_file_paths(
+    repo_root: Path,
+    before_head: str | None,
+    relative_paths: list[str],
+) -> list[str]:
+    """実行前後の oracle 判定基準を和集合にして guard 対象 path を返す。"""
+    current_paths = set(filter_oracle_file_paths(repo_root, relative_paths))
+    if before_head is None:
+        return sorted(current_paths)
+    return sorted(
+        {
+            *current_paths,
+            *filter_oracle_file_paths_at_commit(
+                repo_root,
+                before_head,
+                relative_paths,
+            ),
+        }
+    )
 
 
 def _paths_from_name_status_z(output: str) -> list[str]:
