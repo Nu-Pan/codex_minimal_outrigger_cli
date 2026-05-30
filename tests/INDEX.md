@@ -153,25 +153,25 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は `cmoc` のサブコマンド周りの決定論的な制御ロジックを検証するテスト群への入口です。
+- `tests/test_subcommands.py` は、`cmoc` のサブコマンド周りの決定論的な制御ロジックを検証するテスト群への入口です。
 - 起動経路、引数解釈、状態遷移、エラー表示、ヘルプ登録、各種補助関数の仕様回帰をまとめて扱います。
 - `init` / `session` / `apply` / `eval_oracles` / `main` と、関連するプロンプト・検証ヘルパーの期待値を見直すときの目次です。
 
 ## Read this when
 
-- サブコマンドの追加・削除・名称変更に伴ってテスト期待値を見直したいとき。
-- CLI のルーティング、引数処理、状態遷移、エラー表示、ヘルプやコマンド登録、レポート形式の回帰確認を更新したいとき。
-- `tests/test_subcommands.py` に書かれている各サブコマンドの検証対象を素早く把握したいとき。
+- サブコマンドの追加・削除・名称変更に伴って、テスト期待値を見直したいとき。
+- CLI のルーティング、引数解釈、状態遷移、エラー表示、ヘルプ登録の回帰を確認したいとき。
+- `init` / `session` / `apply` / `eval_oracles` / `main` と、それらに付随する検証ヘルパーの期待値を把握したいとき。
 
 ## Do not read this when
 
-- `cmoc` の個別サブコマンド実装そのものを確認したいとき。
-- `src/sub_commands` や `commons` の設計・共通処理だけを追いたいとき。
-- サブコマンド以外の CLI 仕様や別カテゴリのテストを見たいとき。
+- `src/sub_commands` の実装本体や `commons` の共通処理だけを確認したいとき。
+- `cmoc` の個別サブコマンド仕様そのものや、`oracles` 側の正本仕様だけを追いたいとき。
+- サブコマンド以外の CLI 仕様や、別カテゴリのテストを見たいとき。
 
 ## hash
 
-- 1551fc690ead77b77edcf591fe405342c7f8707cb9a0765e63d0a343c1113831
+- 8d5f32cddc370ba6a94a812f3c9b5461ac60649a6ce4b8c4fffd3bddc3e76ff7
 <!-- cmoc-index-kind: file -->
 
 # `test_timestamps.py`

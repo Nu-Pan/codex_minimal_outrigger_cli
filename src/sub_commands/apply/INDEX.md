@@ -75,7 +75,7 @@
 ## Summary
 
 - `src/sub_commands/apply/join.py` は `cmoc apply join` の本体処理を実装するモジュールです。
-- session/apply state の検証を行い、apply branch を session branch へ merge します。
+- session/apply state の検証を行い、apply branch を session branch へ `git merge --no-ff` します。
 - 想定外の差分を検出して通常は停止し、`--force-resolve` 指定時は差分を revert してから merge を試みます。
 - merge 時の `INDEX.md` conflict は自動解消対象として扱い、merge 後は `apply.state` を ready に戻して、条件を満たす場合のみ apply branch と worktree を cleanup します。
 
@@ -95,5 +95,5 @@
 
 ## hash
 
-- f0467aa037cc581f4e619997aae152d40374f7fc01ef3570d864f1a354991b9b
+- 6f7e6546326dd20b0c011edfd1ddea301bcd6ad04d9088185c3ca50ba41a7882
 <!-- cmoc-index-kind: file -->
