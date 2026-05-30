@@ -18,11 +18,11 @@
 - 個別サブコマンドの引数や業務ロジックだけを確認したいとき。
 - `src/sub_commands` 側の実装や CLI のサブコマンド構成だけを追いたいとき。
 - `INDEX.md` の生成ルールそのものや、`oracles` 側の仕様断片だけを確認したいとき。
-- `src/commons` 以外の日時ユーティリティ、ログ UI、テスト観点だけを探したいとき。
+- `src/commons` 以外の日時ユーティリティ、ログ表示、テスト観点だけを探したいとき。
 
 ## hash
 
-- 3c754f5ffd2734b8a09a4fb8056953cb5fb75f9a81e1bbaf38e9e2f90cb3a9a1
+- dc67ea824d511ed6f3286192649f913a0b5ce50cb92d54b50eb4c8dcd7635026
 <!-- cmoc-index-kind: directory -->
 
 # `main.py`
@@ -49,7 +49,6 @@
 ## hash
 
 - d03b4e0b3d0c12971884d8bc1e159f95c3f0efe50e8fca99dc96066066992456
-<!-- cmoc-index-kind: file -->
 
 # `sub_commands`
 
@@ -74,4 +73,3 @@
 ## hash
 
 - 33f5bee825729d3ca2913d39b0490463fc0b3391eeb11f58c0c02261d687ef84
-<!-- cmoc-index-kind: directory -->

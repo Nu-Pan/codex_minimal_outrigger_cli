@@ -49,7 +49,6 @@
 ## hash
 
 - 50b52d84a2a8135e58f9c7ac0a99a94a4d57d55de52a36ec2030e017d9d2fd10
-<!-- cmoc-index-kind: file -->
 
 # `test_file_naming.py`
 
@@ -91,13 +90,13 @@
 
 ## Do not read this when
 
-- `commons.indexing` の実装本体だけを確認したいとき。
+- `commons.indexing` の実装詳細だけを追いたいとき。
 - `INDEX.md` の生成ルール全体や `oracles` 側の正本仕様だけを確認したいとき。
-- `session` や `apply` など、INDEX 以外のサブコマンド仕様を探しているとき。
+- `session` や `apply` など、INDEX 以外のサブコマンド仕様を調べたいとき。
 
 ## hash
 
-- 4d936a8e2e426e8baa0f54da57d3acbbfb03995e9165a79fb124bd8086fb2c5d
+- a176e3753f7acc9efd2a347685b0e0353f4ff0f11892a316d156d4a50fa9eb0d
 <!-- cmoc-index-kind: file -->
 
 # `test_repo.py`
@@ -126,7 +125,6 @@
 ## hash
 
 - ee93caa9fc7de7dcf4d27b077ca5e70b29e9dc4bfb7ae2233dd83bb417be535d
-<!-- cmoc-index-kind: file -->
 
 # `test_report_files.py`
 
@@ -177,7 +175,6 @@
 ## hash
 
 - 3f434c2d31f2c3dd53f76014a6a2921e4d8ed677a399c6c8bb4b613b909a0c08
-<!-- cmoc-index-kind: file -->
 
 # `test_timestamps.py`
 

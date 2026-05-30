@@ -42,7 +42,6 @@
 ## hash
 
 - dcb6d54f9e3426fb1a80deb7f2b0561e0293018d7c652f2709c51c4c210a9800
-<!-- cmoc-index-kind: file -->
 
 # `command_runner.py`
 
@@ -71,7 +70,6 @@
 ## hash
 
 - fb8b525a34d873d1070035cae87b17be49cd73d9f27228024f1dd4718ae888f7
-<!-- cmoc-index-kind: file -->
 
 # `errors.py`
 
@@ -97,7 +95,6 @@
 ## hash
 
 - 4e9b2d98720b30ea3d87e385d451e3fa2a63918c22757b629c57c87093b50048
-<!-- cmoc-index-kind: file -->
 
 # `indexing.py`
 
@@ -123,7 +120,7 @@
 
 ## hash
 
-- b789244f2b8c7ce8728c0d2dc536904e51896bf686df133e76c4a41c22d1f98e
+- 2481c25fe71ea0a9ba101ddd0fa8b62759e8bf5d8d32ed40cf51853ad48c8fb3
 <!-- cmoc-index-kind: file -->
 
 # `repo.py`
@@ -152,7 +149,6 @@
 ## hash
 
 - da9be729c726a22c4914e3e47c57631c32e576a755ec203cad1dd9edabc5a0c3
-<!-- cmoc-index-kind: file -->
 
 # `report_files.py`
 
