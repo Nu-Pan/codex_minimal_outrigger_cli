@@ -7863,6 +7863,26 @@ def test_format_error_report_fills_empty_generic_detail() -> None:
     assert "Call stack:" in report
 
 
+def test_format_error_report_includes_called_process_output() -> None:
+    """git 失敗時は capture 済みの stderr/stdout を Detail に含める。"""
+    error = subprocess.CalledProcessError(
+        returncode=128,
+        cmd=["git", "switch", "missing branch"],
+        output="stdout diagnostic\n",
+        stderr="fatal: invalid reference: missing branch\n",
+    )
+
+    report = format_error_report(error)
+
+    assert "Summary:\nCalledProcessError" in report
+    assert "Detail:" in report
+    assert "returncode:\n128" in report
+    assert "cmd:\ngit switch 'missing branch'" in report
+    assert "stderr:\nfatal: invalid reference: missing branch" in report
+    assert "stdout:\nstdout diagnostic" in report
+    assert "Call stack:" in report
+
+
 def test_format_error_report_uses_passed_exception_traceback() -> None:
     """except 外でも、渡された例外自身の traceback を表示する。"""
 
