@@ -136,7 +136,6 @@ def cmoc_apply_join_impl(
         session_id,
         state,
         join_state.oracle_snapshot_commit,
-        cleanup_evidence.apply_result,
         _resolve_session_home_branch(
             cmoc_root,
             state,
@@ -185,12 +184,10 @@ class _CleanupEvidence:
         *,
         report_saved: bool,
         result_saved: bool,
-        apply_result: str | None,
         warnings: list[str],
     ) -> None:
         self.report_saved = report_saved
         self.result_saved = result_saved
-        self.apply_result = apply_result
         self.warnings = warnings
 
 
@@ -623,7 +620,6 @@ def _mark_apply_ready(
     session_id: str,
     state: dict[str, object],
     oracle_snapshot_commit: str,
-    apply_result: str | None,
     session_home_branch: str,
 ) -> None:
     """最後に join した snapshot を記録し、apply セクションを ready に戻す。"""
@@ -639,7 +635,6 @@ def _mark_apply_ready(
         )
     session["session_home_branch"] = session_home_branch
     session["last_joined_apply_oracle_snapshot_commit"] = oracle_snapshot_commit
-    session["last_joined_apply_result"] = apply_result
     state["apply"] = {
         "state": "ready",
         "apply_branch": None,
@@ -793,13 +788,11 @@ def _snapshot_cleanup_evidence(
         return _CleanupEvidence(
             report_saved=False,
             result_saved=False,
-            apply_result=None,
             warnings=warnings,
         )
 
     result = metadata.get("result")
     result_saved = isinstance(result, str) and result.strip() != ""
-    apply_result = result.strip() if result_saved else None
     if not result_saved:
         warnings.append(
             "apply cleanup skipped: saved apply report does not contain result "
@@ -808,7 +801,6 @@ def _snapshot_cleanup_evidence(
     return _CleanupEvidence(
         report_saved=True,
         result_saved=result_saved,
-        apply_result=apply_result,
         warnings=warnings,
     )
 
@@ -923,7 +915,7 @@ def _cleanup_preconditions_hold(
     except CmocError as error:
         warnings.append(
             "apply cleanup skipped: session state could not be reloaded after "
-            f"recording result: {error.message}"
+            f"recording ready state: {error.message}"
         )
         return False
 
@@ -932,13 +924,6 @@ def _cleanup_preconditions_hold(
         return False
     session = saved_state.get("session")
     if not isinstance(session, dict):
-        return False
-    saved_result = session.get("last_joined_apply_result")
-    if not isinstance(saved_result, str) or not saved_result.strip():
-        warnings.append(
-            "apply cleanup skipped: session state does not contain saved apply "
-            "result"
-        )
         return False
     if not cleanup_evidence.report_saved or not cleanup_evidence.result_saved:
         return False

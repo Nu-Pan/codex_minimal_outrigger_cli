@@ -2963,7 +2963,7 @@ def test_apply_join_merges_completed_apply_branch_and_resets_state(
     assert state["session"]["last_joined_apply_oracle_snapshot_commit"] == (
         oracle_snapshot
     )
-    assert state["session"]["last_joined_apply_result"] == "収束"
+    assert "last_joined_apply_result" not in state["session"]
     assert _git(repo, "branch", "--show-current").stdout.strip() == (
         "cmoc/session/2026-05-10_22-21_10_000000123"
     )
@@ -3042,7 +3042,7 @@ def test_apply_join_cleans_worktree_created_from_linked_worktree(
     assert state["session"]["last_joined_apply_oracle_snapshot_commit"] == (
         oracle_snapshot
     )
-    assert state["session"]["last_joined_apply_result"] == "収束"
+    assert "last_joined_apply_result" not in state["session"]
     assert _git(repo, "branch", "--list", apply_branch).stdout == ""
     assert not apply_worktree.exists()
 
@@ -3087,67 +3087,11 @@ def test_apply_join_keeps_artifacts_when_report_result_is_missing(
     )
     assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
     assert state["apply"]["state"] == "ready"
-    assert state["session"]["last_joined_apply_result"] is None
-    assert apply_branch in _git(repo, "branch", "--list", apply_branch).stdout
-    assert apply_worktree.exists()
-    assert report_path.exists()
-    assert "warning: apply cleanup skipped:" in output
-
-
-def test_apply_join_keeps_artifacts_when_session_state_result_is_missing(
-    tmp_path: Path,
-    monkeypatch: MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """session state file に result 保存を確認できない場合は cleanup しない。"""
-    repo = _init_repo(tmp_path)
-    _checkout_session_branch(repo)
-    oracle_snapshot = _add_oracle_snapshot(repo)
-    apply_branch, apply_worktree, report_path = _create_completed_apply_run(
-        repo,
-        oracle_snapshot,
-    )
-    (apply_worktree / "feature.txt").write_text("implemented\n", encoding="utf-8")
-    _git(apply_worktree, "add", "feature.txt")
-    _git(apply_worktree, "commit", "-m", "implement feature")
-    real_write_session_state = apply_join_module.write_session_state
-
-    def drop_saved_result(
-        repo_root: Path,
-        session_id: str,
-        state: dict[str, object],
-    ) -> Path:
-        """join 結果だけが永続化されない異常を模擬する。"""
-        path = real_write_session_state(repo_root, session_id, state)
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        payload["session"].pop("last_joined_apply_result", None)
-        path.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True)
-            + "\n",
-            encoding="utf-8",
-        )
-        return path
-
-    monkeypatch.setattr(apply_join_module, "write_session_state", drop_saved_result)
-
-    cmoc_apply_join_impl(repo)
-
-    output = capsys.readouterr().out
-    state = json.loads(
-        (
-            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
-        ).read_text(encoding="utf-8")
-    )
-    assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
-    assert state["apply"]["state"] == "ready"
     assert "last_joined_apply_result" not in state["session"]
     assert apply_branch in _git(repo, "branch", "--list", apply_branch).stdout
     assert apply_worktree.exists()
     assert report_path.exists()
-    assert (
-        "warning: apply cleanup skipped: session state does not contain saved "
-        "apply result"
-    ) in output
+    assert "warning: apply cleanup skipped:" in output
 
 
 def test_apply_join_keeps_branch_when_worktree_remove_fails(

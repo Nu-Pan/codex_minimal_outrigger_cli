@@ -19,10 +19,6 @@ SESSION_STATE_KEYS = {
     "session_home_branch",
     "session_start_commit",
     "last_joined_apply_oracle_snapshot_commit",
-    "last_joined_apply_result",
-}
-SESSION_STATE_REQUIRED_INPUT_KEYS = SESSION_STATE_KEYS - {
-    "last_joined_apply_result",
 }
 APPLY_STATE_KEYS = {"state", "apply_branch", "oracle_snapshot_commit"}
 
@@ -237,7 +233,6 @@ def initial_session_state(
             "session_home_branch": None,
             "session_start_commit": session_start_commit,
             "last_joined_apply_oracle_snapshot_commit": None,
-            "last_joined_apply_result": None,
         },
         "apply": {
             "state": "ready",
@@ -282,7 +277,7 @@ def _session_state_payload(
         )
     _validate_required_keys(
         session,
-        SESSION_STATE_REQUIRED_INPUT_KEYS,
+        SESSION_STATE_KEYS,
         "session",
         path,
     )
@@ -300,7 +295,6 @@ def _session_state_payload(
             "last_joined_apply_oracle_snapshot_commit": session.get(
                 "last_joined_apply_oracle_snapshot_commit"
             ),
-            "last_joined_apply_result": session.get("last_joined_apply_result"),
         },
         "apply": {
             "state": apply.get("state"),
@@ -367,9 +361,6 @@ def _read_existing_session_state(path: Path) -> dict[str, object]:
             str(path),
         )
     _validate_exact_keys(payload, {"session", "apply"}, "root", path)
-    session = payload.get("session")
-    if isinstance(session, dict) and "last_joined_apply_result" not in session:
-        session["last_joined_apply_result"] = None
     _validate_session_state_schema(payload, path)
     return payload
 
@@ -426,12 +417,6 @@ def _validate_session_state_schema(
         session,
         "last_joined_apply_oracle_snapshot_commit",
         "session.last_joined_apply_oracle_snapshot_commit",
-        path,
-    )
-    _validate_optional_string(
-        session,
-        "last_joined_apply_result",
-        "session.last_joined_apply_result",
         path,
     )
     apply_state = _validate_required_string(apply, "state", "apply.state", path)
