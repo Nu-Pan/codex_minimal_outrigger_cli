@@ -201,7 +201,7 @@
 
 ## hash
 
-- 6b3906b60743f3ab1cbdfacec95e3687a1ccd4b951c6045fb6f100e8910c5c7b
+- 567646430cbca6995bf519dd75336f82596fc85fc9b471f584ce29814a56d818
 <!-- cmoc-index-kind: directory -->
 
 # `test.sh`
@@ -232,25 +232,25 @@
 
 ## Summary
 
-- tests は cmoc の回帰テスト群の入口です。src の共通処理、サブコマンド、INDEX.md 生成、レポート保存、タイムスタンプ、命名規則をまとめて検証します。
-- pytest の import path 設定は conftest.py、Codex 呼び出しは test_codex.py、INDEX.md 保守は test_indexing.py、git 共通処理は test_repo.py、レポート保存は test_report_files.py、サブコマンド制御は test_subcommands.py、時刻関連は test_timestamps.py が担当します。
-- 旧ルーティングファイルの残存や、テスト配置・命名の整合性もこの配下のテストで守ります。
+- `tests` 配下の回帰テスト群を機能別に案内する目次です。
+- `conftest.py` は pytest の import path 設定、`test_codex.py` は Codex 実行ラッパー周辺、`test_file_naming.py` は命名規則、`test_indexing.py` は INDEX メンテナンス、`test_repo.py` は git 共通処理、`test_report_files.py` はレポート保存、`test_subcommands.py` は CLI サブコマンド、`test_timestamps.py` は日時・経過時間処理を担当します。
+- 各テストファイルの役割を起点に、必要な回帰観点へ移動するための入口です。
 
 ## Read this when
 
-- tests 配下でどの回帰テストが何を守っているかを素早く把握したいとき。
-- src の共通処理やサブコマンド実装を修正する前に、対応するテスト入口を確認したいとき。
-- INDEX.md 生成、git 処理、Codex 呼び出し、レポート保存、タイムスタンプの各仕様のテスト範囲を整理したいとき。
-- pytest の import path 設定や、テスト用の共通 fixture・補助設定を確認したいとき。
+- `tests` 配下のどのファイルがどの機能を守っているかを素早く把握したいとき。
+- pytest の共通設定、CLI 入口、INDEX メンテナンス、repo 共通処理、レポート保存、タイムスタンプ処理の担当箇所を探したいとき。
+- `tests/INDEX.md` から個別テストファイルへ案内をたどりたいとき。
+- 回帰テストを追加・修正する前に、既存テストの責務分担を確認したいとき。
 
 ## Do not read this when
 
-- 個別関数の実装仕様だけを確認したいときは、tests ではなく src 側のモジュールを読むべきです。
-- oracles の正本仕様だけを追いたいときは、この配下ではなく oracles を読むべきです。
-- テストの網羅範囲ではなく、ユーザー向け操作手順や CLI の使用方法だけを確認したいとき。
-- README.md、AGENTS.md、memo などのファイルアクセス規則だけを確認したいとき。
+- 個別テストケースの実装やアサーション内容をその場で追いたいとき。
+- `src` 側の実装ロジックやサブコマンド本体の仕様を確認したいとき。
+- `oracles` 配下の正本仕様だけを調べたいとき。
+- `README.md` や `AGENTS.md`、`memo` の取り扱い規則だけを確認したいとき。
 
 ## hash
 
-- 9a04a14b76349617c4f4294aaae4ccf8568d610d538e93bb4db939b895f88b2d
+- 4d463e01904bc8f369fb9b17addf6d445b89ccc7627939619994648c838020ab
 <!-- cmoc-index-kind: directory -->

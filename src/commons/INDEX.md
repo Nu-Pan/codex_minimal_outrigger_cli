@@ -139,7 +139,7 @@
 
 - repo root を見つけて `cmoc` の実行基準ディレクトリを揃えたいとき。
 - `session` / `apply` の branch ルール、session id の復元、worktree の場所特定を確認したいとき。
-- `.cmoc` の ignore 保証、session state / apply pid の永続化、スキーマ検証、active session の整合性を実装・修正したいとき。
+- `.cmoc` の ignore 保証、session state / apply process id の永続化と検証を実装・修正したいとき。
 - `oracles` / 実装ファイルの列挙、変更抽出、削除検出、未コミット差分や pathspec commit の扱いを確認したいとき。
 
 ## Do not read this when
@@ -151,7 +151,7 @@
 
 ## hash
 
-- f67c1f45dc99f520462a37c4948b65cc08bb79d538be65936f4454822741860c
+- da9be729c726a22c4914e3e47c57631c32e576a755ec203cad1dd9edabc5a0c3
 <!-- cmoc-index-kind: file -->
 
 # `report_files.py`
