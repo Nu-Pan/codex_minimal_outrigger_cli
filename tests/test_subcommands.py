@@ -7125,6 +7125,36 @@ def test_session_join_allows_oracle_conflict_path_in_codex_guard(
     )
 
 
+def test_session_join_allows_clean_auto_merged_root_forbidden_file(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """conflict 対象外で自動 merge 済みの README 変更は merge 成果物に含める。"""
+    repo = _repo_with_session_join_conflict(tmp_path, auto_path="README.md")
+
+    def fake_codex(
+        repo_root: Path,
+        prompt: str,
+        **kwargs: object,
+    ) -> None:
+        """本物の Codex CLI なしで conflict 対象だけを解消する。"""
+        del prompt, kwargs
+        (repo_root / "conflict.txt").write_text("resolved\n", encoding="utf-8")
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_codex)
+
+    cmoc_session_join_impl(repo)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert state["session"]["state"] == "joined"
+    assert (repo / "README.md").read_text(encoding="utf-8") == "session auto\n"
+    assert _git(repo, "status", "--porcelain").stdout == ""
+
+
 @pytest.mark.parametrize("forbidden_path", ["README.md", "AGENTS.md"])
 def test_session_join_rejects_forbidden_root_file_conflict(
     tmp_path: Path,
@@ -7219,7 +7249,7 @@ def test_session_join_rejects_codex_change_in_forbidden_path(
     with pytest.raises(CmocError) as error:
         cmoc_session_join_impl(repo)
 
-    assert "禁止領域" in error.value.message
+    assert "conflict 対象外" in error.value.message
     assert ".agents/note.txt" in error.value.detail
     assert (repo / ".git" / "MERGE_HEAD").exists()
     assert _git(repo, "log", "-1", "--pretty=%s").stdout.strip() == "home change"
