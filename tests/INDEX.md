@@ -39,13 +39,13 @@
 
 ## Do not read this when
 
-- `commons.codex` の実装そのものや、`run_codex_exec` 以外の共通処理だけを確認したいとき。
-- `tests/test_indexing.py` や `tests/test_repo.py` など、別の共通機能の回帰テストだけを確認したいとき。
-- `INDEX.md` の生成ルールや `oracles` の正本仕様そのものを確認したいとき。
+- `commons.codex` の実装本体や、`run_codex_exec` 以外の共通処理だけを確認したいとき。
+- `tests/test_repo.py`、`tests/test_indexing.py`、`tests/test_report_files.py` など、別機能の回帰テストだけを確認したいとき。
+- `INDEX.md` の生成ルールや、`oracles` の正本仕様そのものを確認したいとき。
 
 ## hash
 
-- 70017df866bcfb1996874d6bd210d600c1d6b0ec349f7db7b491a71de2d4cbe2
+- 850f6da8d2615e6900dd1bddec2ef00e3cad5059e3ab0df4d963fab6dbe6b6ba
 
 # `test_file_naming.py`
 
