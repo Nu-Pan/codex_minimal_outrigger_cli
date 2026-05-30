@@ -351,11 +351,23 @@ def cmoc_apply_impl(
                 apply_run_id = error.last_plan.apply_run_id
                 apply_branch = error.last_plan.apply_branch
                 apply_worktree = error.last_plan.apply_worktree
-                _mark_apply_error(state_root, session_id, state)
+                _mark_apply_error(
+                    state_root,
+                    session_id,
+                    state,
+                    apply_branch=apply_branch,
+                    oracle_snapshot_commit=oracle_snapshot_commit,
+                )
                 apply_error_recorded = True
                 raise
             except Exception:
-                _mark_apply_error(state_root, session_id, state)
+                _mark_apply_error(
+                    state_root,
+                    session_id,
+                    state,
+                    apply_branch=apply_branch,
+                    oracle_snapshot_commit=oracle_snapshot_commit,
+                )
                 apply_error_recorded = True
                 raise
 
@@ -471,7 +483,13 @@ def cmoc_apply_impl(
         if not apply_start_needs_error_record:
             raise
         if not apply_error_recorded:
-            _mark_apply_error(state_root, session_id, state)
+            _mark_apply_error(
+                state_root,
+                session_id,
+                state,
+                apply_branch=apply_branch,
+                oracle_snapshot_commit=oracle_snapshot_commit,
+            )
         try:
             session_head_at_apply_finish = _session_branch_head_for_report(
                 repo_root,
@@ -774,11 +792,24 @@ def _mark_apply_error(
     repo_root: Path,
     session_id: str,
     state: dict[str, object],
+    *,
+    apply_branch: str | None = None,
+    oracle_snapshot_commit: str | None = None,
 ) -> None:
     """開始済み apply run を error として永続化する。"""
     apply = _mutable_apply_section(state)
-    if apply.get("state") != "error":
-        apply["state"] = "error"
+    changed = apply.get("state") != "error"
+    apply["state"] = "error"
+    if apply_branch:
+        changed = changed or apply.get("apply_branch") != apply_branch
+        apply["apply_branch"] = apply_branch
+    if oracle_snapshot_commit:
+        changed = (
+            changed
+            or apply.get("oracle_snapshot_commit") != oracle_snapshot_commit
+        )
+        apply["oracle_snapshot_commit"] = oracle_snapshot_commit
+    if changed:
         write_session_state(repo_root, session_id, state)
     clear_apply_process_id(repo_root, session_id)
 

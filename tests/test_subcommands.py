@@ -5419,11 +5419,15 @@ def test_apply_marks_error_when_worktree_creation_fails(
     )
     captured = capsys.readouterr()
     assert "fake worktree creation failure" in str(error.value)
-    assert state["apply"] == {
-        "apply_branch": None,
-        "oracle_snapshot_commit": None,
-        "state": "error",
-    }
+    assert state["apply"]["state"] == "error"
+    assert state["apply"]["apply_branch"].startswith(
+        "cmoc/apply/2026-05-10_22-21_10_000000123/"
+    )
+    assert state["apply"]["oracle_snapshot_commit"] == _git(
+        repo,
+        "rev-parse",
+        "HEAD",
+    ).stdout.strip()
     assert not (repo / ".cmoc" / "worktrees").exists()
     assert "cmoc/apply/" not in branches
     assert len(reports) == 1
@@ -5446,6 +5450,19 @@ def test_apply_marks_error_when_worktree_creation_fails(
     )
     assert f"apply_worktree_path: \"{planned_apply_worktree}\"" in report_text
     assert f"apply_worktree_path: \"{repo}\"" not in report_text
+
+    cmoc_apply_abandon_impl(repo)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert state["apply"] == {
+        "apply_branch": None,
+        "oracle_snapshot_commit": None,
+        "state": "ready",
+    }
 
 
 def test_create_apply_worktree_failure_reports_last_attempted_plan(
