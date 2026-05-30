@@ -178,25 +178,25 @@
 
 ## Summary
 
-- `src` 配下の cmoc 実装全体への入口です。
-- `main.py`、`commons`、`sub_commands` への導線を整理し、CLI 起動点・共通基盤・サブコマンド実装の責務分担を把握するための目次です。
-- 個別ファイルの詳細に入る前に、どこを読むべきかを判断するための上位ルーティングを担います。
+- `src` は cmoc の実装コード全体の入口です。
+- `commons` は共通基盤処理、`main.py` は CLI エントリーポイント、`sub_commands` は各サブコマンド本体をまとめます。
+- 実装の全体像を把握してから個別モジュールへ進むための目次です。
 
 ## Read this when
 
-- `src` 配下のどの入口から読むべきかを確認したいとき。
-- `src/main.py`、`src/commons`、`src/sub_commands` の役割分担を把握したいとき。
-- cmoc 本体実装の全体構成を俯瞰して、必要なモジュールへ素早く辿りたいとき。
+- `src` 配下でどの責務がどのファイルにあるかを一覧したいとき。
+- CLI の起点、共通処理、サブコマンド実装のどこを読むべきかを切り分けたいとき。
+- 実装やテストを書き始める前に、コード配置の全体像を確認したいとき。
 
 ## Do not read this when
 
 - 個別モジュールの実装詳細だけを確認したいとき。
-- `cmoc` の CLI 仕様や開発ルールだけを確認したいとき。
-- `INDEX.md` の生成・維持ルールだけを確認したいとき。
+- `oracles` 側の仕様断片や使用手順だけを確認したいとき。
+- `src/commons` や `src/sub_commands` の中の特定ファイルを直接読む目的がすでに決まっているとき。
 
 ## hash
 
-- 2b5614f87b135d870f066b34ffef84b3d7417f421bb093eb28f60c72960f9890
+- f91f4266ab46626b2cfff5c97158877a2d52fb0538624befc86186d5df9801cf
 <!-- cmoc-index-kind: directory -->
 
 # `test.sh`
@@ -227,23 +227,23 @@
 
 ## Summary
 
-- `tests` 配下の pytest 回帰テスト群への入口です。
-- `commons` の共通処理、`sub_commands` の CLI 挙動、`INDEX.md` メンテナンス、タイムスタンプや命名規則の検証をまとめています。
-- `conftest.py` を含む、テスト実行に必要な共通設定もここからたどれます。
+- pytest を使った cmoc の回帰テスト群をまとめた入口です。
+- `conftest.py` の import path 設定と、`test_codex.py` / `test_indexing.py` / `test_repo.py` / `test_subcommands.py` / `test_report_files.py` / `test_timestamps.py` / `test_file_naming.py` の役割を案内します。
+- 共通処理、`INDEX.md` 維持、CLI 制御、レポート保存、タイムスタンプ、命名規則の期待動作を確認するための目次です。
 
 ## Read this when
 
-- `tests` 配下にどんな回帰テストがあり、どの機能をカバーしているか全体像をつかみたいとき。
-- `commons.indexing`、`commons.repo`、`commons.codex`、`sub_commands` まわりのテストを探したいとき。
-- 新しいテストを追加・整理する前に、既存の分類や責務の分け方を確認したいとき。
+- `tests` 配下のどのファイルが何を検証しているか整理したいとき。
+- 新しいテストを追加するときに、既存の配置先や役割分担を確認したいとき。
+- pytest の共通設定、回帰テスト範囲、`INDEX.md` 維持、CLI 制御、共通ヘルパー検証を横断して把握したいとき。
 
 ## Do not read this when
 
-- 個別の `test_*.py` に書かれた期待値や失敗条件を、その場で直接確認したいとき。
-- `src` の実装ロジックや `oracles` の正本仕様だけを追いたいとき。
-- pytest の import 設定や fixture の詳細だけを知りたいときは、`conftest.py` だけを読むべきです。
+- 実装コードや `oracles` の正本仕様だけを追いたいとき。
+- 個別機能の内部ロジックや CLI の実行詳細だけを確認したいとき。
+- `src` 側の設計方針や共通処理の実装を読むだけで足りるとき。
 
 ## hash
 
-- 796e450a4190626323dfdb21a5a0a3afeca0843bfc18704c7c5029ce0621064b
+- 4da11234fbb05fb69aac0b075375a2e29ddd3f6572958c4d66d4fb552c5be35e
 <!-- cmoc-index-kind: directory -->

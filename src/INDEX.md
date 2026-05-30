@@ -55,7 +55,7 @@
 
 ## Summary
 
-- `src/sub_commands/INDEX.md` は `src/sub_commands` 配下のサブコマンド実装全体への入口です。
+- `src/sub_commands/INDEX.md` は `cmoc` のサブコマンド実装全体への入口です。
 - `__init__.py`、`apply`、`session`、`init.py`、`eval_oracles.py` へ案内し、各サブコマンドの役割分担を整理します。
 - `cmoc` のサブコマンド実装を読む起点として、個別仕様に進む前の全体像を示します。
 
@@ -73,5 +73,5 @@
 
 ## hash
 
-- cbfa2fa7333c1ce3ffcc318d93f0554a240053c87b18be9de1f3c11ad6b13e9f
+- 4913b5c24cb830ed83db2e5dc037bf803a09c9086d42efcdd691569074edcda3
 <!-- cmoc-index-kind: directory -->
