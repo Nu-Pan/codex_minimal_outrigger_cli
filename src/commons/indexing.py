@@ -209,10 +209,18 @@ def _index_directories(
     excluded_index_roots: set[Path],
 ) -> list[Path]:
     """仕様の除外条件に従って INDEX.md 配置対象を列挙する。"""
+
+    def raise_walk_error(error: OSError) -> None:
+        """Path.walk の探索 failure を cmoc error として中断する。"""
+        error_path = Path(error.filename) if error.filename else repo_root
+        _raise_index_io_error("directory tree の探索", error_path, error)
+
     # repo root とその配下ディレクトリを配置候補として集める。
     result: list[Path] = []
     directories = [repo_root]
-    for current, dir_names, _file_names in repo_root.walk():
+    for current, dir_names, _file_names in repo_root.walk(
+        on_error=raise_walk_error
+    ):
         child_directories = [
             current / name
             for name in dir_names

@@ -1,5 +1,6 @@
 """INDEX.md メンテナンス処理のテスト。"""
 
+import errno
 import hashlib
 import json
 import os
@@ -136,6 +137,34 @@ def test_maintain_indexes_reports_directory_iteration_failure(
     assert "ファイルシステム操作へ失敗" in error.value.message
     assert "直下項目列挙" in error.value.detail
     assert str(repo) in error.value.detail
+
+
+def test_maintain_indexes_reports_directory_walk_failure(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """配置対象 directory 探索の I/O failure は silent skip にしない。"""
+    repo = _init_repo(tmp_path)
+    blocked = repo / "blocked"
+
+    def failing_walk(path: Path, *args: object, **kwargs: object) -> object:
+        """Path.walk の on_error 経由で探索失敗を通知する。"""
+        assert path == repo
+        on_error = kwargs.get("on_error")
+        assert on_error is not None
+        on_error(
+            OSError(errno.EACCES, "Permission denied", blocked.as_posix())
+        )
+        return iter(())
+
+    monkeypatch.setattr(Path, "walk", failing_walk)
+
+    with pytest.raises(CmocError) as error:
+        maintain_indexes(repo)
+
+    assert "ファイルシステム操作へ失敗" in error.value.message
+    assert "directory tree の探索" in error.value.detail
+    assert str(blocked) in error.value.detail
 
 
 def test_maintain_indexes_reports_index_replace_failure(
