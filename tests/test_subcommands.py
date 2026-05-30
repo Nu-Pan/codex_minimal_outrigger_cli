@@ -2586,7 +2586,7 @@ def test_apply_investigates_file_origin_targets_in_parallel(
         timer=StepTimer("test"),
         step_path=((1, 1),),
         repeat_improove_fixing_list=0,
-        full=False,
+        scope="session",
     )
 
     purposes = [str(kwargs.get("purpose", "")) for kwargs in codex_kwargs]
@@ -2600,6 +2600,134 @@ def test_apply_investigates_file_origin_targets_in_parallel(
         kwargs["reasoning_effort"] == FRONTIER_REASONING_EFFORT
         for kwargs in codex_kwargs
     )
+
+
+def test_apply_scope_rolling_uses_last_joined_oracle_snapshot(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """rolling scope は最後に join された oracle snapshot 以降だけを調査する。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "old.md").write_text("old spec\n", encoding="utf-8")
+    (repo / "old.py").write_text("print('old')\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "old targets")
+    last_joined_snapshot = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    state_path = (
+        repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
+    )
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["session"]["last_joined_apply_oracle_snapshot_commit"] = (
+        last_joined_snapshot
+    )
+    write_session_state(repo, "2026-05-10_22-21_10_000000123", state)
+
+    (oracle_root / "new.md").write_text("new spec\n", encoding="utf-8")
+    (repo / "new.py").write_text("print('new')\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "new targets")
+
+    monkeypatch.setattr(
+        "sub_commands.apply.fork.maintain_indexes",
+        lambda repo_root: False,
+    )
+    purposes: list[str] = []
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        purpose = str(kwargs.get("purpose"))
+        purposes.append(purpose)
+        if purpose == "apply 変更要約":
+            return _change_summary_json()
+        return '{"git_head_commit_hash": null, "fixing_points": []}'
+
+    monkeypatch.setattr("sub_commands.apply.fork.run_codex_exec", fake_codex)
+
+    assert cmoc_apply_impl(
+        repo,
+        repeat_investigate_and_fix=1,
+        repeat_improove_fixing_list=0,
+    ) == 0
+
+    assert any(purpose.endswith("oracles/new.md") for purpose in purposes)
+    assert any(purpose.endswith("new.py") for purpose in purposes)
+    assert not any(purpose.endswith("oracles/old.md") for purpose in purposes)
+    assert not any(purpose.endswith("old.py") for purpose in purposes)
+
+
+def test_apply_scope_target_selection_supports_session_and_full(
+    tmp_path: Path,
+) -> None:
+    """session scope と full scope は仕様通り差分対象・全件対象を選べる。"""
+    repo = _init_repo(tmp_path)
+    base_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "old.md").write_text("old spec\n", encoding="utf-8")
+    (repo / "old.py").write_text("print('old')\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "old targets")
+    last_joined_snapshot = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    (oracle_root / "new.md").write_text("new spec\n", encoding="utf-8")
+    (repo / "new.py").write_text("print('new')\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "new targets")
+    oracle_snapshot_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    session_oracles = apply_module._target_oracle_files(
+        repo,
+        base_commit,
+        oracle_snapshot_commit,
+        partial=True,
+    )
+    session_impls = apply_module._target_implementation_files(
+        repo,
+        base_commit,
+        oracle_snapshot_commit,
+        partial=True,
+    )
+    rolling_oracles = apply_module._target_oracle_files(
+        repo,
+        last_joined_snapshot,
+        oracle_snapshot_commit,
+        partial=True,
+    )
+    rolling_impls = apply_module._target_implementation_files(
+        repo,
+        last_joined_snapshot,
+        oracle_snapshot_commit,
+        partial=True,
+    )
+    full_oracles = apply_module._target_oracle_files(
+        repo,
+        oracle_snapshot_commit,
+        oracle_snapshot_commit,
+        partial=False,
+    )
+    full_impls = apply_module._target_implementation_files(
+        repo,
+        oracle_snapshot_commit,
+        oracle_snapshot_commit,
+        partial=False,
+    )
+
+    assert {target.path.name for target in session_oracles} == {
+        "old.md",
+        "new.md",
+    }
+    assert {"old.py", "new.py"} <= {
+        target.path.name for target in session_impls
+    }
+    assert {target.path.name for target in rolling_oracles} == {"new.md"}
+    assert {"new.py"} <= {target.path.name for target in rolling_impls}
+    assert {"old.md", "new.md"} <= {target.path.name for target in full_oracles}
+    assert {"old.py", "new.py"} <= {target.path.name for target in full_impls}
 
 
 def test_apply_commits_index_changes_when_no_discrepancies(
@@ -7081,9 +7209,11 @@ def test_cmoc_apply_fork_help_exposes_oracle_repeat_options() -> None:
         stderr=subprocess.PIPE,
     )
 
-    assert "--repeat-investigate-and-fix" in result.stdout
-    assert "--repeat-improove-fixing-list" in result.stdout
-    assert "--full" in result.stdout
+    assert "--repeat-investigate-" in result.stdout
+    assert "--repeat-improove-fix" in result.stdout
+    assert "--scope" in result.stdout
+    assert "-s" in result.stdout
+    assert "--full" not in result.stdout
 
 
 def test_cmoc_review_oracles_rejects_too_many_issue_list_improvements() -> None:

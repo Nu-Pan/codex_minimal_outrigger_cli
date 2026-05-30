@@ -1,6 +1,7 @@
 """cmoc CLI エントリーポイント。"""
 
 import sys
+from typing import Literal
 
 import click
 import typer
@@ -97,14 +98,18 @@ def apply_fork_command(
         3,
         "--repeat-improove-fixing-list",
     ),
-    full: bool = typer.Option(False, "--full", "-f"),
+    scope: Literal["rolling", "session", "full"] = typer.Option(
+        "rolling",
+        "--scope",
+        "-s",
+    ),
 ) -> None:
     """Apply oracle requirements to implementation."""
     # CLI callback は apply fork の本体実装へ処理を委譲する。
     cmoc_apply_impl(
         repeat_investigate_and_fix=repeat_investigate_and_fix,
         repeat_improove_fixing_list=repeat_improove_fixing_list,
-        full=full,
+        scope=scope,
     )
 
 

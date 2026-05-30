@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from inspect import Parameter, signature
 from pathlib import Path
 from time import sleep
+from typing import Literal
 
 from commons.codex import (
     COMMIT_MESSAGE_MODEL,
@@ -54,6 +55,8 @@ from commons.timing import StepIndexPath
 from commons.timestamps import make_timestamp
 
 _APPLY_INCOMPLETE_EXIT_CODE: int = 2
+ApplyScope = Literal["rolling", "session", "full"]
+_APPLY_SCOPES = {"rolling", "session", "full"}
 
 
 @dataclass(frozen=True)
@@ -246,7 +249,7 @@ def cmoc_apply_impl(
     *,
     repeat_investigate_and_fix: int = 5,
     repeat_improove_fixing_list: int = 3,
-    full: bool = False,
+    scope: ApplyScope = "rolling",
 ) -> int | None:
     """oracle と実装の不整合を Codex CLI へ追従させる。"""
     # 直接呼び出し時は共通 runner で repo root 解決とエラー整形を行う。
@@ -258,7 +261,7 @@ def cmoc_apply_impl(
                 repeat_improove_fixing_list=(
                     repeat_improove_fixing_list
                 ),
-                full=full,
+                scope=scope,
             )
         )
         return None
@@ -283,6 +286,7 @@ def cmoc_apply_impl(
         repeat_investigate_and_fix,
         repeat_improove_fixing_list,
     )
+    _validate_apply_scope(scope)
     ensure_cmoc_ignored(repo_root)
     assert_no_uncommitted_changes(repo_root)
 
@@ -309,6 +313,11 @@ def cmoc_apply_impl(
             session_start_commit = _validate_apply_fork_state(
                 state,
                 session_branch,
+            )
+            investigation_base_commit = _scope_base_commit(
+                state,
+                session_start_commit,
+                scope,
             )
             assert_no_uncommitted_changes(repo_root)
             session_head_at_apply_start = head_commit(repo_root)
@@ -374,12 +383,12 @@ def cmoc_apply_impl(
             )
             discrepancies = _investigate_discrepancies(
                 apply_worktree,
-                session_start_commit,
+                investigation_base_commit,
                 oracle_snapshot_commit,
                 timer=timer,
                 step_path=loop_step_path,
                 repeat_improove_fixing_list=repeat_improove_fixing_list,
-                full=full,
+                scope=scope,
                 dirty_oracle_paths=dirty_oracle_paths,
                 dirty_implementation_paths=dirty_implementation_paths,
             )
@@ -579,6 +588,52 @@ def _validate_repeat_options(
         )
 
 
+def _validate_apply_scope(scope: str) -> None:
+    """apply fork の scope オプション値を検証する。"""
+    if scope in _APPLY_SCOPES:
+        return
+    raise CmocError(
+        "`cmoc apply fork --scope` の値が不正です。",
+        [
+            "`rolling`, `session`, `full` のいずれかを指定してください。",
+            "既定の rolling scope を使う場合は `--scope` を省略してください。",
+        ],
+        f"--scope: {scope}",
+    )
+
+
+def _scope_base_commit(
+    state: dict[str, object],
+    session_start_commit: str,
+    scope: ApplyScope,
+) -> str:
+    """scope に応じて差分調査の base commit を返す。"""
+    if scope == "session" or scope == "full":
+        return session_start_commit
+    session = state.get("session")
+    if not isinstance(session, dict):
+        raise CmocError(
+            "session state ファイルの形式が不正です。",
+            [
+                "state JSON の session セクションを確認して復旧してください。",
+                "復旧できない場合は、現在の session を使わず新しい session を開始してください。",
+            ],
+        )
+    last_joined = session.get("last_joined_apply_oracle_snapshot_commit")
+    if last_joined is None:
+        return session_start_commit
+    if not isinstance(last_joined, str) or not last_joined:
+        raise CmocError(
+            "session state ファイルの形式が不正です。",
+            [
+                "session.last_joined_apply_oracle_snapshot_commit を確認して復旧してください。",
+                "復旧できない場合は、現在の session を使わず新しい session を開始してください。",
+            ],
+            f"last_joined_apply_oracle_snapshot_commit: {last_joined}",
+        )
+    return last_joined
+
+
 def _create_apply_worktree(
     repo_root: Path,
     session_id: str,
@@ -752,15 +807,14 @@ def _investigate_discrepancies(
     timer: StepTimer,
     step_path: StepIndexPath,
     repeat_improove_fixing_list: int,
-    full: bool,
+    scope: ApplyScope,
     dirty_oracle_paths: set[Path] | None = None,
     dirty_implementation_paths: set[Path] | None = None,
 ) -> list[dict[str, object]]:
     """oracle ファイル・実装ファイルごとに不整合調査を実行する。"""
-    # ループごとに部分・全体適用モードと調査対象を再評価する。
+    # ループごとに scope と調査対象を再評価する。
     discrepancies: list[dict[str, object]] = []
-    # --full の有無だけで全体適用・部分適用を切り替える。
-    partial = not full
+    partial = scope != "full"
     start_step(
         timer,
         (*step_path, (1, 5)),
