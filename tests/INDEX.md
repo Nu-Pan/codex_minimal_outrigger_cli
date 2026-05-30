@@ -155,27 +155,26 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は、`init`、`session`、`apply`、`review oracles`、`main`、`bin/cmoc` の公開入口と周辺ヘルパーを横断して検証する回帰テスト群です。
-- `run_command` の出力・ログ・終了コード、エラー整形、補完プローブ、Fake Codex CLI、git worktree、conflict marker の扱いを含む決定論的な制御を守ります。
-- 各サブコマンドの業務ロジックそのものより、CLI と共通制御の境界条件と安定した統合動作を確認することを目的にしています。
+- このファイルは、`cmoc` のサブコマンド全体に対する決定論的な制御ロジックを検証する pytest テストの集約です。
+- `run_command` のログ出力、エラー報告、終了コード、経過時間計測、`cmoc init` / `session` / `apply` / `eval oracles` の状態遷移と副作用を広く扱います。
+- CLI エントリポイントの登録、補完、`main` のエラー変換、エラーメッセージ整形、バイナリ起動ラッパー、プロンプトや検証ヘルパーの回帰もここで確認します。
 
 ## Read this when
 
-- 公開 CLI の登録、ヘルプ、補完プローブ、`main` / `bin/cmoc` の入口仕様を確認したいとき。
-- `init`、`session`、`apply`、`review oracles` の状態遷移や失敗時の挙動、`run_command` のログ出力を確認したいとき。
-- report 生成、エラー整形、prompt / validation helper、Fake Codex CLI、git worktree、conflict marker の境界条件を確認したいとき。
-- `format_error_report` や各種 prompt / validation helper の回帰意図を把握したいとき。
+- `cmoc` のサブコマンド群に対する決定論的な制御ロジックのテスト観点を確認したいとき。
+- `run_command` の標準出力 tee、終了集計、例外時レポート、repo ルート解決失敗時の扱いを修正したいとき。
+- `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`eval oracles`、`main` のルーティングや登録、completion、エラー変換の挙動を変更したとき。
+- サブコマンドの状態遷移、`INDEX.md` メンテナンス、session/apply state の保存、レポート生成、プロンプト検証に関する回帰テストを探したいとき。
 
 ## Do not read this when
 
-- `src/sub_commands` や `src/commons` の実装ロジックそのものを追いたいとき。
-- 個別サブコマンドの詳細仕様や `oracles` の正本仕様だけを確認したいとき。
-- `INDEX.md` の生成ルールや内容ハッシュの管理だけを調べたいとき。
-- `tests/test_repo.py` や `tests/test_indexing.py` など、別の共通処理の回帰だけを見たいとき。
+- `cmoc` の個別サブコマンドの手順や引数仕様だけを確認したいときは、このテスト集約ファイルではなく `oracles/app_specs/sub_commands/` 配下の該当仕様を読むべきです。
+- `src/sub_commands/` 側の実装ロジックだけを追いたいときは、このテストではなく実装ファイルを直接読むべきです。
+- コマンド実行の制御やエラー処理ではなく、CLI の文言調整や一般的なテスト規約だけを確認したいときは、このファイルではなく `oracles/dev_rules/test_rules.md` を読むべきです。
 
 ## hash
 
-- 488ffe0274bbbc3ea082004403bbd1bc3276d72932a6a99ac609a01221c18fb6
+- 9f22e55cf90e59bb7df381a501d8fe7a5fe8d3464b401071fadc9bdaa519c678
 <!-- cmoc-index-kind: file -->
 
 # `test_timestamps.py`

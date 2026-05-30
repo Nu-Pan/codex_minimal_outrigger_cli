@@ -115,9 +115,9 @@
 
 - 個別の `cmoc session fork`、`cmoc session join`、`cmoc session abandon` の詳細仕様、状態遷移、例外条件だけを確認したいとき。
 - `cmoc apply` 系の開始・統合・破棄の流れだけを確認したいとき。
-- `src/sub_commands/session` のパッケージ宣言だけを確認したいときは、`__init__.py` を直接見れば足ります。
+- `src/sub_commands/session` のパッケージ宣言だけを確認したいときは、`__init__.py` を直接読むべきです。
 
 ## hash
 
-- c1b95ca54d632c67426b0117cbdb32b12c8861b7c6ef135d7fd4314f6ba1fd9f
+- 81fb0f4d687be7393e1c8257c8036f5d9c57f4ac1de1348d4dee6ecae64e3048
 <!-- cmoc-index-kind: directory -->

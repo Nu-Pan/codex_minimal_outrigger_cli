@@ -58,17 +58,17 @@
 
 ## Read this when
 
-- src/sub_commands 配下でどのファイルがどのサブコマンドを担当するか確認したいとき。
+- `src/sub_commands` 配下で、どのファイルがどのサブコマンドを担当するか確認したいとき。
 - サブコマンド実装・修正・レビュー・テストの前に、該当モジュールや配下ディレクトリへ進む入口を整理したいとき。
 - `__init__.py`、`init.py`、`eval_oracles.py`、`apply/`、`session/` の役割分担を素早く把握したいとき。
 
 ## Do not read this when
 
 - 個別サブコマンドの引数、状態遷移、例外条件だけを確認したいとき。
-- `apply/` や `session/` のさらに細かい仕様を見たいときは、この目次ではなく配下の `INDEX.md` を読むべきとき。
+- `apply/` や `session/` のさらに細かい仕様を見たいとき。
 - `src/commons` や `oracles` 全体の共通仕様だけを確認したいとき。
 
 ## hash
 
-- 7eeb26a6794245d5c0b0f32698b1239975f34f260b4b9459202fbe0ba6e292d6
+- 56243a2ee914280480e7f03ec8a44b0e01760626bd30d2bfcd2472e05889882d
 <!-- cmoc-index-kind: directory -->
