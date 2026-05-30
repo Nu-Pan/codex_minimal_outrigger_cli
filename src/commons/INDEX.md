@@ -127,10 +127,10 @@
 
 ## Summary
 
-- Git リポジトリ root の探索と cwd 固定、現在ブランチと HEAD commit の取得をまとめた共通モジュールです。
-- `cmoc/session/*` と `cmoc/apply/*` の branch 判定、session id の復元、apply worktree path と所有元 repo root の復元を扱います。
-- `.cmoc` の ignore 保証、session/apply state JSON と apply process id の保存・読込・検証、active session の整合性確認を含みます。
-- `git status` / `git diff` / `git check-ignore` / pathspec を使った未コミット差分、削除検出、oracle / implementation ファイル列挙、内部 commit 後の index 復元をまとめます。
+- Git リポジトリ root の探索と cwd 固定、現在 branch / HEAD commit の取得を行う共通モジュールです。
+- `cmoc/session/*` と `cmoc/apply/*` の branch 判定、session id の復元、apply worktree と所有元 repo root の復元を扱います。
+- `.cmoc` の ignore 保証、session/apply state JSON と apply process id の保存・読込・検証、active session の整合性確認を担当します。
+- `git status` / `git diff` / `git check-ignore` / pathspec を使った未コミット差分、削除検出、oracle / implementation ファイル列挙、内部 commit 後の index 復元まで含みます。
 
 ## Read this when
 
@@ -145,11 +145,11 @@
 - `cmoc init` や `session` / `apply` の操作手順、CLI 引数だけを確認したいとき。
 - `INDEX.md` の生成ルールや Structured Output の仕様だけを確認したいとき。
 - エラーレポート整形や共通例外だけを確認したいとき。
-- タイムスタンプ、ログ保存、計時など他の共通モジュールだけを確認したいとき。
+- `timestamps.py`、`subcommand_log.py`、`report_files.py` など他の共通モジュールだけを確認したいとき。
 
 ## hash
 
-- 9ab4336628102fe603da5c5bb295ee06e39fd8af9f5819353b6c13d638ca5b3b
+- eab3a2ba6b470e7208334666846c125ee63516b92d2760dafd23c7efeef68087
 <!-- cmoc-index-kind: file -->
 
 # `report_files.py`

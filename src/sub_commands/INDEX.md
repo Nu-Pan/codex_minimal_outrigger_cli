@@ -37,13 +37,13 @@
 
 ## Do not read this when
 
-- 個別の `cmoc apply fork` / `cmoc apply join` / `cmoc apply abandon` の詳細な処理手順や状態遷移だけを確認したいときは、この目次ではなく各実装モジュールを直接読むべきです。
+- `cmoc apply fork` / `cmoc apply join` / `cmoc apply abandon` のうち 1 つだけの詳細仕様、状態遷移、例外条件を確認したいときは、各実装モジュールを直接読むべきです。
 - `src/sub_commands/apply` のパッケージ宣言だけを確認したいときは、この目次ではなく `__init__.py` を直接読むべきです。
 - `branch_model`、`codex_call`、`indexing`、`error_handling` などの共通仕様だけを確認したいときは、別の入口文書を読むべきです。
 
 ## hash
 
-- 24745ce21256497332e8d53b8a1ac378a81e5c1cb48ff0793dec0b73d7c9dd83
+- 2fbe8bb64166350d4edd964e0d2071e81c24b938878c16a6f62c0b61353dce40
 <!-- cmoc-index-kind: directory -->
 
 # `eval_oracles.py`

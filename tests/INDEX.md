@@ -104,7 +104,7 @@
 ## Summary
 
 - `src/commons/repo.py` の git 共通処理を検証する回帰テスト群です。
-- .cmoc の ignore 保証、実装/正本ファイルの列挙、変更・削除判定、`commit_if_changed` を扱います。
+- repo root 検出、`.cmoc` の ignore 保証、実装/正本ファイルの列挙と変更検出を扱います。
 - session state、apply process id、`cmoc` ブランチ判定、active session 判定の境界条件も押さえます。
 
 ## Read this when
@@ -124,7 +124,8 @@
 
 ## hash
 
-- ee93caa9fc7de7dcf4d27b077ca5e70b29e9dc4bfb7ae2233dd83bb417be535d
+- b192e39b66753b510f1487472b881e0674f4a1e290f604132a1ecfe47d7d684e
+<!-- cmoc-index-kind: file -->
 
 # `test_report_files.py`
 
@@ -154,27 +155,25 @@
 
 ## Summary
 
-- サブコマンド本体と CLI 入口の決定論的な回帰テストを集めたファイルです。
-- `init`、`session`、`apply`、`review oracles`、`main`、`bin/cmoc`、エラー整形と共通 runner の挙動を横断して検証します。
-- 状態遷移、レポート生成、prompt/validation ヘルパー、Fake Codex CLI を使う評価系テストまで含みます。
+- サブコマンド本体と CLI 入口の決定論的な回帰テストをまとめたファイルです。
+- `init`、`session`、`apply`、`review oracles`、`main`、`bin/cmoc` の登録やヘルプ、エラー整形を横断して検証します。
+- 状態遷移、report 生成、prompt / validation、Fake Codex CLI、git worktree まわりの境界条件まで広く押さえます。
 
 ## Read this when
 
-- 公開 CLI の登録内容やヘルプ、サブコマンドの接続関係を確認したいとき。
-- `init`、`session`、`apply`、`review oracles`、`main`、`bin/cmoc` の回帰観点を追いたいとき。
-- エラー整形、レポート出力、状態遷移、prompt/validation ヘルパー、Fake Codex CLI を使う評価系テストの意図を把握したいとき。
-- サブコマンド本体と CLI 入口の決定論的な挙動を横断して確認したいとき。
+- 公開 CLI の登録内容、ヘルプ表示、補完プローブの振る舞いを確認したいとき。
+- `init`、`session`、`apply`、`review oracles`、`main`、`bin/cmoc` の回帰観点やエラー整形を追いたいとき。
+- 状態遷移、report 生成、prompt / validation ヘルパー、Fake Codex CLI、git worktree 境界のテスト意図を把握したいとき。
 
 ## Do not read this when
 
 - `src/sub_commands` や `src/commons` の実装ロジックそのものを追いたいとき。
-- `oracles` 配下の正本仕様だけを確認したいとき。
-- 個別サブコマンドの利用手順や引数仕様だけが必要で、テスト観点が不要なとき。
-- `INDEX.md` の生成ルールや内容ハッシュの扱いだけを確認したいとき。
+- 個別サブコマンドの利用手順や `oracles` の正本仕様だけを確認したいとき。
+- `INDEX.md` の生成ルールや内容ハッシュの扱いだけを調べたいとき。
 
 ## hash
 
-- 2cad66b931d7d6b68a8da761693caf55ea09b0d36e14e93f3c38efae528cab57
+- 44940e8600334fe4d6615dc858020689a17c4a89399acb692d41cc985ad97420
 <!-- cmoc-index-kind: file -->
 
 # `test_timestamps.py`

@@ -2,24 +2,25 @@
 
 ## Summary
 
-- cmoc で共通利用する基盤モジュール群の集約先です。`codex.py`、`command_runner.py`、`repo.py`、`errors.py`、`subcommand_log.py`、`timing.py`、`timestamps.py`、`report_files.py`、`indexing.py` など、CLI 実行・リポジトリ操作・ログ・時間計測・レポート保存・`INDEX.md` メンテナンスを支える処理が入っています。
-- `__init__.py` はパッケージ宣言のみで、公開 API の本体は個別モジュールに分かれています。
+- cmoc 全体で使う共通基盤モジュール群の集約先です。`codex.py`、`command_runner.py`、`repo.py`、`errors.py`、`subcommand_log.py`、`timing.py`、`timestamps.py`、`report_files.py`、`indexing.py` などが入っています。
+- `codex exec` の起動、サブコマンド実行制御、リポジトリ探索、共通エラー整形、ログ記録、時間計測、レポート保存、`INDEX.md` メンテナンスを支えます。
+- `__init__.py` はパッケージ宣言のみで、公開 API の本体は各モジュールに分かれています。
 
 ## Read this when
 
-- cmoc 全体で使う共通処理の役割分担や、どのモジュールに何があるかを把握したいとき。
-- Codex CLI 呼び出し、サブコマンド実行制御、Git リポジトリ探索、共通エラー整形、サブコマンドログ、タイムスタンプ、経過時間計測、レポート保存、`INDEX.md` メンテナンスの実装や修正に入る前に入口を確認したいとき。
-- `src.commons` が Python パッケージであることを確認したいとき。
+- cmoc 全体で使う共通処理の役割分担を確認したいとき。
+- `codex exec` 呼び出し、サブコマンドの共通実行制御、Git リポジトリ操作、エラー整形、ログ、計時、レポート保存、`INDEX.md` メンテナンスの実装に入る前に入口を確認したいとき。
+- `src.commons` が Python パッケージであることや、どのモジュールに何があるかを素早く把握したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの業務ロジックや `src/commands` 側の振る舞いを確認したいときは、この共通モジュール群ではなく該当コマンド側を読むべきです。
-- `oracles` の正本仕様や `INDEX.md` 生成ルールの詳細だけを確認したいときは、このディレクトリではなく `oracles/app_specs/indexing.md` を読むべきです。
-- 特定の共通処理だけを追いたいときは、`codex.py`、`repo.py`、`errors.py` など該当モジュールへ直接進めば足ります。
+- 個別サブコマンドの業務ロジックや `src/sub_commands` 側の振る舞いだけを確認したいとき。
+- `oracles` の正本仕様や `INDEX.md` 生成ルールの詳細だけを確認したいとき。
+- 共通処理のうち特定モジュールだけを追いたいときは、`codex.py`、`repo.py`、`errors.py` など該当ファイルへ直接進めば足ります。
 
 ## hash
 
-- d6674278d3c0b39f52c2f3bfa2c07c42ccd8e122a333fe3bc1fafd40582f69af
+- 826c3c469e7aeb8c5ebce53bc70a4464923068ec14f92014e6b964a2b15fbe9c
 <!-- cmoc-index-kind: directory -->
 
 # `main.py`
@@ -57,17 +58,17 @@
 
 ## Read this when
 
-- 個別サブコマンドの実装入口をまとめて確認したいとき。
+- `src/sub_commands` 配下の個別サブコマンド実装の入口をまとめて確認したいとき。
 - `apply`、`session`、`review oracles`、`init` のどれを見ればよいか整理したいとき。
 - `src/sub_commands` 配下のファイル配置と責務分担を俯瞰したいとき。
 
 ## Do not read this when
 
-- 特定の 1 つのサブコマンドだけを確認したいときは、この目次ではなく該当モジュールや配下の `INDEX.md` を直接見るべきです。
-- 共通規約、`oracles` 全体、ログ、エラーハンドリングなどの別系統の仕様を確認したいとき。
-- 実装コードやテストコードの詳細をそのまま追いたいときは、この入口ではなく該当ファイルを読むべきです。
+- 個別の `cmoc apply fork/join/abandon` や `cmoc session fork/join/abandon` の詳細仕様だけを確認したいときは、この入口ではなく該当モジュールや配下の `INDEX.md` を直接読むべきです。
+- `cmoc init` 以外のサブコマンドに用がなく、`src/sub_commands` 全体の構成を俯瞰する必要がないときは、この目次を経由する必要はありません。
+- 共通規約、`oracles` 全体、ログ、エラーハンドリングなどの別系統の仕様を確認したいときは、このディレクトリではなく該当する共通文書を読むべきです。
 
 ## hash
 
-- a163b68e6cb62b4978c2c214cd24533eaeac4f6c54125d0e1aced1c14c2ecbb0
+- f5eacdafade7e432d86068071d2637318aaff5b2d7d2517790ae2cf11d343497
 <!-- cmoc-index-kind: directory -->

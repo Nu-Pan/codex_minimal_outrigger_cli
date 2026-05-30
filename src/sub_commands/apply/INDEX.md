@@ -75,26 +75,25 @@
 
 ## Summary
 
-- `src/sub_commands/apply/join.py` は `cmoc apply join` の本体処理を実装するモジュールです。
-- session/apply state の検証を行い、apply branch を session branch へ `git merge --no-ff` します。
-- 想定外の差分を検出して通常は停止し、`--force-resolve` 指定時は差分を revert してから merge を試みます。
-- merge 時の `INDEX.md` conflict は自動解消対象として扱い、merge 後は `apply.state` を ready に戻して、条件を満たす場合のみ apply branch と worktree を cleanup します。
+- `src/sub_commands/apply/join.py` は `cmoc apply join` の本体実装で、完了済み apply branch を session branch へ取り込む処理を担います。
+- session/apply state の検証、現在 branch の確認、未コミット差分の確認、想定外差分の検出と必要に応じた強制修復をまとめています。
+- merge 後の `apply.state` の `ready` への更新、`INDEX.md` conflict の自動解消、report/result の保存状況を踏まえた apply branch / worktree の cleanup まで扱います。
 
 ## Read this when
 
-- `src/sub_commands/apply/join.py` の実装・修正・レビュー・テストで、処理順や責務境界を確認したいとき。
-- 完了済みの apply branch を session branch に取り込む前提条件や、`apply.state = completed` / `error` の扱いを確認したいとき。
-- 想定外の差分の検出、`--force-resolve` による差分の戻し方、`INDEX.md` conflict の自動解消、cleanup 条件を追いたいとき。
-- merge 後に `apply.state` を ready に戻し、条件を満たす場合だけ apply branch と worktree を削除する流れを確認したいとき。
+- `cmoc apply join` の実装・修正・レビュー・テストで、処理順や責務境界を確認したいとき。
+- apply branch を session branch に merge する前提条件や、`--force-resolve` による想定外差分の扱いを追いたいとき。
+- `INDEX.md` conflict の自動解消条件、merge 後の state 更新、使用済み apply branch / worktree の削除条件を確認したいとき。
+- apply cleanup の warning 条件や、report/result が保存されていない場合の挙動を把握したいとき。
 
 ## Do not read this when
 
-- `cmoc apply fork` の調査・修正ループや、要修正点の整理だけを確認したいとき。
-- `cmoc apply abandon` や `cmoc session join` / `cmoc session abandon` など、別サブコマンドの終了・破棄・統合手順だけを確認したいとき。
-- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
-- `cmoc apply join` の実装内容を既に把握していて、ソースコードだけを直接追えば足りるとき。
+- `cmoc apply fork` や `cmoc apply abandon` の処理だけを確認したいときは、このファイルではなく各実装モジュールを読むべきです。
+- サブコマンド仕様の断片だけを確認したいときは、`oracles/app_specs/sub_commands/apply_join.md` を直接読むべきです。
+- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいときは、このファイルを読む必要はありません。
+- 既に join の実装内容を把握していて、ソースを直接追えば足りるときは、この目次を経由する必要はありません。
 
 ## hash
 
-- 4a93faf13175da51766cf6e56b532b8f3cb5e2e3bcc2a34ec4e801dc2210bc4e
+- cdb61d8ff1435f1fca7a3b5b7a75ea551aa6840874a695a19fd54d54e65ff374
 <!-- cmoc-index-kind: file -->
