@@ -865,7 +865,9 @@ def commit_cmoc_initialization_changes(
             run_git(repo_root, ["read-tree", "--empty"], env=env)
         else:
             run_git(repo_root, ["read-tree", "HEAD"], env=env)
-        if not had_cmoc_rule:
+        if parent_hash is None and had_cmoc_rule:
+            _stage_worktree_gitignore(repo_root, env)
+        elif not had_cmoc_rule:
             _stage_gitignore_with_cmoc_rule_from_head(repo_root, env)
         _remove_cmoc_from_index(repo_root, env)
 
@@ -1687,6 +1689,12 @@ def _stage_gitignore_with_cmoc_rule_from_head(
         ["update-index", "--add", "--cacheinfo", f"100644,{blob},.gitignore"],
         env=env,
     )
+
+
+def _stage_worktree_gitignore(repo_root: Path, env: dict[str, str]) -> None:
+    """作業ツリーの `.gitignore` を指定 index に stage する。"""
+    # unborn HEAD では親 tree が無いため、既存 ignore rule を初期 commit に載せる。
+    run_git(repo_root, ["add", "-f", "--", ".gitignore"], env=env)
 
 
 def _remove_cmoc_from_index(repo_root: Path, env: dict[str, str]) -> None:

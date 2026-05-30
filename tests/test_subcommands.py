@@ -530,6 +530,31 @@ def test_init_can_create_first_commit(tmp_path: Path) -> None:
     assert _git(repo, "status", "--porcelain").stdout == ""
 
 
+def test_init_can_create_first_commit_with_existing_cmoc_ignore_rule(
+    tmp_path: Path,
+) -> None:
+    """既存 ignore rule 付き unborn HEAD でも初期 commit を作る。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init")
+    _git(repo, "config", "user.email", "test@example.com")
+    _git(repo, "config", "user.name", "Test User")
+    (repo / ".gitignore").write_text("user-rule\n/.cmoc/\n", encoding="utf-8")
+
+    cmoc_init_impl(repo)
+    init_head = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    cmoc_session_fork_impl(repo)
+
+    state_paths = _session_state_paths(repo)
+    session_state = json.loads(state_paths[0].read_text(encoding="utf-8"))
+    assert _git(repo, "show", "HEAD:.gitignore").stdout == (
+        "user-rule\n/.cmoc/\n"
+    )
+    assert _git(repo, "status", "--porcelain").stdout == ""
+    assert session_state["session"]["session_start_commit"] == init_head
+
+
 def test_session_fork_creates_session_branch_and_records_state(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
