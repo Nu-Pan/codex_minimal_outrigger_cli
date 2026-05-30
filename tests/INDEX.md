@@ -105,13 +105,13 @@
 ## Summary
 
 - `src/commons/repo.py` の git 共通処理を検証する回帰テスト群です。
-- repo root 検出、`.cmoc` の ignore 保証、oracle / 実装ファイルの列挙と変更・削除判定、`commit_if_changed` を扱います。
-- session state、apply process id、`cmoc` ブランチ判定、active session 判定の異常系も含みます。
+- repo root 検出、`.cmoc` の ignore 保証、oracle/実装ファイルの列挙・変更・削除判定、`commit_if_changed` を扱います。
+- session state、apply process id、`cmoc` ブランチ判定、active session 判定の境界条件も押さえます。
 
 ## Read this when
 
 - repo root 検出や `.cmoc` の ignore 保証、変更ファイル列挙の仕様を確認したいとき。
-- .gitignore、`oracles`、`memo`、`INDEX.md` の除外・対象判定を確認したいとき。
+- `.gitignore`、`oracles`、`memo`、`INDEX.md` の除外・対象判定を確認したいとき。
 - `changed_oracle_files`、`changed_implementation_files`、削除検出、`commit_if_changed` の境界条件を見たいとき。
 - session state、apply process id、`cmoc` ブランチ判定、active session 判定の期待動作を確認したいとき。
 
@@ -123,7 +123,7 @@
 
 ## hash
 
-- 0dd96be9670acacbde59323547b440fe8a12fd4c53c11fcdd848599760a7d6b3
+- 2980ec95cd73033f16d553d806e5f66e531b37088e31119832b9ec26af8d2d65
 <!-- cmoc-index-kind: file -->
 
 # `test_report_files.py`
@@ -154,27 +154,27 @@
 
 ## Summary
 
-- tests/test_subcommands.py は、cmoc のサブコマンド群に関する決定論的な制御ロジックの回帰テスト入口です。
-- init、session、apply、review oracles、main、CLI エントリポイント、ヘルプ登録、エラー整形をまとめて検証します。
-- 共通 runner、状態遷移、レポート保存、補助ヘルパー、bin 入口の挙動まで含むため、サブコマンド全体の制御面を俯瞰するときの目次です。
+- `tests/test_subcommands.py` は、cmoc のサブコマンド群に関する決定論的な制御ロジックの回帰テストをまとめた入口です。
+- init、session、apply、review oracles、main、CLI エントリポイント、ヘルプ登録、エラー整形、共通 runner を広く検証します。
+- 状態遷移、レポート保存、prompt / validation ヘルパー、`bin/cmoc` を含む周辺制御まで押さえるため、サブコマンド全体の挙動を俯瞰するときの目次です。
 
 ## Read this when
 
-- tests/test_subcommands.py がどのサブコマンドの制御ロジックを守っているか確認したいとき。
-- run_command、cmoc_init_impl、cmoc_session_*、cmoc_apply_*、cmoc_eval_oracles_impl、main、bin/cmoc の回帰観点を整理したいとき。
-- CLI のヘルプ登録、エラー表示、起動経路、共通 runner、report 生成、prompt や validation ヘルパーの期待動作を追いたいとき。
-- apply と session の状態遷移や、Fake Codex CLI を使う評価・レポート系のテスト意図を確認したいとき。
+- `tests/test_subcommands.py` がどのサブコマンド群と CLI 入口を守っているか確認したいとき。
+- `run_command`、`cmoc_init_impl`、`cmoc_session_*`、`cmoc_apply_*`、`cmoc_eval_oracles_impl` の回帰観点を整理したいとき。
+- CLI のヘルプ登録、エラー整形、レポート生成、状態遷移、`bin/cmoc` の挙動をテスト観点から追いたいとき。
+- prompt 生成や validation ヘルパー、Fake Codex CLI を使う評価系テストの意図を確認したいとき。
 
 ## Do not read this when
 
-- src/sub_commands 配下の実装本体や、oracles 側の正本仕様を直接追いたいとき。
-- 個別サブコマンドの仕様断片だけを確認したく、テスト観点が不要なとき。
-- INDEX.md の生成ルールや内容ハッシュの扱いだけを確認したいとき。
-- tests/test_repo.py や tests/test_indexing.py など、別カテゴリの回帰テストを探しているとき。
+- `src/sub_commands` 配下の実装ロジックそのものを追いたいとき。
+- `oracles` 配下の正本仕様だけを確認したいとき。
+- 個別サブコマンドの引数や利用手順だけを確認したくて、テスト観点が不要なとき。
+- `INDEX.md` の生成ルールや内容ハッシュの扱いだけを確認したいとき。
 
 ## hash
 
-- 31222f9f7cc77a85197d87f25fae9ddaba994f50cc1742eea39c1ec25dc8faf4
+- 613e129440735aaaa4e700fb212d7184e24d9bc48632100779a338d803f3b8a8
 <!-- cmoc-index-kind: file -->
 
 # `test_timestamps.py`

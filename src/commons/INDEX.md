@@ -144,14 +144,14 @@
 
 ## Do not read this when
 
-- `cmoc init` / `session` / `apply` の操作手順や CLI 引数だけを確認したいとき。
+- `cmoc init` や `session` / `apply` の操作手順、CLI 引数だけを確認したいとき。
 - `INDEX.md` の生成ルールや Structured Output の仕様だけを確認したいとき。
-- エラーレポート整形や共通例外の仕様だけを確認したいとき。
+- エラーレポート整形や共通例外だけを確認したいとき。
 - タイムスタンプ、ログ保存、計時など他の共通モジュールだけを確認したいとき。
 
 ## hash
 
-- 86730c21c41a8fbded798935298ff558ae6885ec3e3609ed7777b5ac5697ecda
+- 785b4ac27443d38580fc82f36893c6f2baad3ead062d0260419f21e7bdcec597
 <!-- cmoc-index-kind: file -->
 
 # `report_files.py`

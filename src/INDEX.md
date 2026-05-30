@@ -2,16 +2,16 @@
 
 ## Summary
 
-- src/commons は cmoc 全体で共有する基盤処理をまとめた入口です。
+- `src/commons` は cmoc 全体で共有する基盤処理の入口です。
 - `command_runner.py`、`codex.py`、`repo.py`、`errors.py`、`indexing.py`、`report_files.py`、`subcommand_log.py`、`timestamps.py`、`timing.py`、`__init__.py` への導線を整理します。
-- 共通実行制御、Codex CLI 呼び出し、エラー整形、Git リポジトリ判定、`INDEX.md` 維持、レポート保存、サブコマンドログ、計時、タイムスタンプ生成の責務分担を把握するための目次です。
+- 共通実行制御、Codex CLI 呼び出し、エラー整形、Git リポジトリ検出、`INDEX.md` 維持、レポート保存、サブコマンドログ、計時、タイムスタンプ生成の責務分担を把握するための目次です。
 
 ## Read this when
 
-- src/commons 配下の共有ユーティリティ全体を俯瞰したいとき。
-- 共通実行制御、Codex CLI 呼び出し、エラー整形、Git リポジトリ判定、`INDEX.md` 維持、レポート保存、サブコマンドログ、タイムスタンプ、計時の入口をまとめて確認したいとき。
+- `src/commons` 配下の共有ユーティリティ全体を俯瞰したいとき。
+- 共通実行制御、Codex CLI 呼び出し、エラー整形、Git リポジトリ判定、`INDEX.md` 維持、レポート保存、サブコマンドログ、計時、タイムスタンプの入口をまとめて確認したいとき。
 - どの共通モジュールを読むべきかを素早く振り分けたいとき。
-- 共有処理の責務分担を先に整理してから個別モジュールへ進みたいとき。
+- `src/commons` が Python パッケージとしてどう構成されているかを確認したいとき。
 
 ## Do not read this when
 
@@ -22,7 +22,7 @@
 
 ## hash
 
-- 3966b01882772166726f4d5175d3892424225a3acbce04ad8b2142967b7794ac
+- c79995c3bd6c578cbeec0d0fcf1a425021ec2f75b2f5d96d88d0ec513fae926f
 <!-- cmoc-index-kind: directory -->
 
 # `main.py`
