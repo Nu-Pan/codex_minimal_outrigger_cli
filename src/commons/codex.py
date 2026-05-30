@@ -119,7 +119,7 @@ def run_codex_exec(
         base_command.extend(["--output-schema", str(schema_path)])
     base_command.append("-")
 
-    # last message 欠落も Codex CLI レスポンス要件の失敗として最大 3 回試行する。
+    # 0 終了後の last message 欠落も Codex CLI レスポンス要件の失敗として最大 3 回試行する。
     attempts = 3
     last_output = ""
     last_stdout_log = ""
@@ -188,16 +188,14 @@ def run_codex_exec(
             last_stdout_log = result.stdout
             last_stderr = result.stderr
 
+        if result.returncode != 0:
+            _raise_codex_failure(run.log_path, result)
+
         try:
             output = _read_last_message(last_message_path)
         except ValueError as error:
             last_validation_error = str(error)
             continue
-
-        # last-message 欠落は終了コードに依存しないレスポンス要件違反として retry する。
-        # last-message が正常に読めた非 0 終了は quota/capacity 以外の CLI 失敗として扱う。
-        if result.returncode != 0:
-            _raise_codex_failure(run.log_path, result)
 
         print("## Codex CLI 応答プレビュー")
         print(f"- attempt: {attempt}/{attempts}")

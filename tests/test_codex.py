@@ -1981,11 +1981,11 @@ def test_run_codex_exec_retries_missing_last_message_without_validator(
     ] == [True, True]
 
 
-def test_run_codex_exec_retries_missing_last_message_after_nonzero_exit(
+def test_run_codex_exec_fails_immediately_on_nonzero_exit_without_last_message(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """非 0 終了でも last message 欠落はレスポンス要件失敗としてリトライする。"""
+    """非 0 終了かつ last message 欠落の想定外エラーは即時失敗する。"""
     repo = tmp_path / "repo"
     repo.mkdir()
     fake_bin = tmp_path / "bin"
@@ -2009,12 +2009,8 @@ def test_run_codex_exec_retries_missing_last_message_after_nonzero_exit(
                 "if [ -f \"$STATE\" ]; then COUNT=$(cat \"$STATE\"); fi",
                 "COUNT=$((COUNT + 1))",
                 "echo \"$COUNT\" > \"$STATE\"",
-                "if [ \"$COUNT\" -eq 1 ]; then",
-                "  echo 'transient CLI failure without last message' >&2",
-                "  exit 2",
-                "fi",
-                "echo 'plain text result' > \"$LAST\"",
-                "echo '{\"event\":\"done\"}'",
+                "echo 'unexpected CLI failure without last message' >&2",
+                "exit 2",
             ]
         ),
         encoding="utf-8",
@@ -2022,17 +2018,17 @@ def test_run_codex_exec_retries_missing_last_message_after_nonzero_exit(
     codex.chmod(0o755)
     monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
 
-    output = run_codex_exec(repo, "prompt", read_only=True)
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(repo, "prompt", read_only=True)
 
     log_files = sorted(
         (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.md")
     )
-    assert output.strip() == "plain text result"
-    assert state.read_text(encoding="utf-8").strip() == "2"
-    assert len(log_files) == 2
-    log_contents = [path.read_text(encoding="utf-8") for path in log_files]
-    assert "returncode: 2" in log_contents[0]
-    assert "returncode: 0" in log_contents[1]
+    assert "codex exec が失敗しました。" in error.value.message
+    assert "unexpected CLI failure without last message" in error.value.detail
+    assert state.read_text(encoding="utf-8").strip() == "1"
+    assert len(log_files) == 1
+    assert "returncode: 2" in log_files[0].read_text(encoding="utf-8")
 
 
 def test_run_codex_exec_reports_unreadable_last_message(
