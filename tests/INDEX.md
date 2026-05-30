@@ -154,24 +154,24 @@
 
 - `tests/test_subcommands.py` は cmoc の公開 CLI とサブコマンド群の決定論的な制御ロジックを横断的に検証する回帰テスト集です。
 - `init`、`session`、`apply`、`review oracles`、`eval-oracles`、`main`、`bin/cmoc` の起動とエラー処理、状態遷移、出力整合性を確認します。
-- branch / worktree / session-state / apply-state、Structured Output schema、プロンプト文言、差分・衝突処理、レポート生成などを広く扱います。
+- branch / worktree / session-state / apply-state、Structured Output schema、プロンプト、差分・衝突処理、レポート生成などを広く扱います。
 
 ## Read this when
 
-- `cmoc init`、`session`、`apply`、`review oracles`、`eval-oracles` の制御フローや登録状況をまとめて確認したいとき。
-- `run_command`、`main`、`format_error_report`、`bin/cmoc` の変更が CLI 挙動に与える影響を確認したいとき。
-- branch / worktree / session-state / apply-state、Structured Output schema、プロンプト、conflict 処理の回帰を追いたいとき。
+- `cmoc init`、`session`、`apply`、`review oracles`、`eval-oracles`、`main`、`bin/cmoc` の登録状況や実行フローを横断して確認したいとき。
+- branch / worktree / session-state / apply-state の遷移や、不正状態・競合・ロールバックの扱いを確認したいとき。
+- Structured Output schema、プロンプト文言、差分検出、衝突解決、レポート生成の回帰をまとめて追いたいとき。
 
 ## Do not read this when
 
 - `src/sub_commands/apply/` や `src/sub_commands/session/` の個別実装だけを追いたいとき。
 - `src/commons/codex.py`、`src/commons/repo.py`、`src/commons/report_files.py` など共通処理だけを確認したいとき。
-- `tests/test_codex.py`、`tests/test_repo.py`、`tests/test_indexing.py` など、別のテスト群だけで足りるとき。
+- `tests/test_repo.py`、`tests/test_indexing.py`、`tests/test_codex.py` など、別のテスト群だけで足りるとき。
 - `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
 
 ## hash
 
-- f60e44e644be1bbdeb5c749828fc8b094a56657ca839153b50d854399dc18bc2
+- 5ca9d13c81926fe2528d9e7d4b7293880e77f9b27122c45d76c722dd763a8471
 <!-- cmoc-index-kind: file -->
 
 # `test_timestamps.py`

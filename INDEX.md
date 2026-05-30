@@ -79,28 +79,26 @@
 ## Summary
 
 - `bin` ディレクトリの入口で、`cmoc` コマンドのシェル製エントリーポイントを案内します。
-- `bin/cmoc` は `<cmoc-root>` を解決し、`<cmoc-root>/.venv/bin/python` を実行 Python として使って `src/main.py` を起動します。
+- `bin/cmoc` は `<cmoc-root>` を解決し、`<cmoc-root>/.venv/bin/python` を使って `src/main.py` を起動します。
 - 仮想環境 Python が見つからない、または実行不可の場合の日本語エラー表示と終了処理を扱います。
 - `line_number_of` はエラー表示内の Call stack 用に、指定パターンの最初の行番号を求める補助関数です。
 
 ## Read this when
 
-- cmoc コマンド起動時に、どの Python とどの Python ファイルが実行されるか確認したいとき。
-- `.venv/bin/python` が無い場合や実行不可の場合のエラー文面、終了ステータス、復旧手順を確認したいとき。
-- cmoc の配布用または開発用 CLI ラッパーの挙動を調べたいとき。
-- `bin/cmoc` から `<cmoc-root>/src/main.py` への引数受け渡し方法を確認したいとき。
-- 仮想環境未セットアップ時のユーザー向け案内や Call stack 表示の実装を変更・検証したいとき。
+- `cmoc` 起動時に、どの Python が実行されるかを確認したいとき。
+- .venv が無い、または実行できない場合のエラー文面と復旧手順を確認したいとき。
+- `bin/cmoc` から `<cmoc-root>/src/main.py` への引数受け渡しや Call stack 表示を確認したいとき。
 
 ## Do not read this when
 
-- cmoc の各サブコマンドの具体的な処理内容やアプリケーション仕様を確認したいとき。
-- `src/main.py` 以降の Python 実装やコマンドディスパッチの詳細を追いたいとき。
-- pytest や Fake Codex CLI など、テスト実装やテストケース本体を確認したいとき。
-- `<repo-root>` 側で cmoc が生成・管理するファイルや別の `INDEX.md` の仕様を確認したいとき。
+- `cmoc` の各サブコマンドの処理内容やアプリ仕様だけを確認したいとき。
+- Python 実装や `src/main.py` 以降のディスパッチ処理を追いたいとき。
+- pytest などのテストケース本体や、`bin/cmoc` 以外の実装を確認したいとき。
 
 ## hash
 
-- 160e19df3f9b3de96dc5dc79fea7fa0837b099f6220d61742a9b8c141cd23d51
+- 5a7c1ad7ae81d60c96cbfc13ff5430f2fe21d49e82a13eb5fe0ca68ce90b9feb
+<!-- cmoc-index-kind: directory -->
 
 # `codex_minimal_outrigger_cli.code-workspace`
 
@@ -229,23 +227,23 @@
 
 ## Summary
 
-- `tests` 配下の pytest 回帰テストをまとめたディレクトリです。
-- `commons` と `sub_commands` の制御ロジック、`INDEX.md` メンテナンス、git・レポート・タイムスタンプ周辺の仕様を検証します。
-- `conftest.py` による import path 設定と、各テストファイルの対象範囲を案内します。
+- `tests` 配下の pytest 回帰テスト全体への入口で、`src`・`bin`・共通処理・CLI 制御を分野別に確認するための目次である。
+- `conftest.py` の import path 設定から、`test_codex.py`、`test_file_naming.py`、`test_indexing.py`、`test_repo.py`、`test_report_files.py`、`test_subcommands.py`、`test_timestamps.py` までの役割を案内する。
+- テストは `oracles/dev_rules/test_rules.md` の方針に従い、決定論的な制御ロジックの回帰を対象にする前提を持つ。
 
 ## Read this when
 
-- pytest で使う共通設定や、`tests` 配下の import path の前提を確認したいとき。
-- `commons` や `sub_commands` の決定論的な制御ロジックの回帰テスト範囲を把握したいとき。
-- `INDEX.md` メンテナンス、git まわり、レポート保存、タイムスタンプ仕様のテスト入口を探したいとき。
+- どのテストファイルがどの機能を守っているかを素早く探したいとき。
+- `src` や `bin` の変更に対して、対応する回帰テストを見つけたいとき。
+- pytest 共通設定やテスト群の担当範囲を把握したいとき。
 
 ## Do not read this when
 
-- `src` 配下の実装本体や `oracles` の正本仕様を直接追いたいとき。
-- `tests` 直下の個別テストファイルだけを見れば足りるとき。
-- `INDEX.md` の生成ルールやファイルアクセス規則だけを確認したいとき。
+- テストの書き方や禁止事項だけを確認したいときは、`oracles/dev_rules/test_rules.md` を読むべきである。
+- 仕様の正本だけを追いたいときは、`oracles` 配下の該当仕様断片を直接読むべきである。
+- `tests` ではなく `src` の実装ロジックそのものを確認したいとき。
 
 ## hash
 
-- c1871670a2bfa41f67704295dfe174a1199115444757ec13897fd78e87492706
+- 9fb0c4674943341f5701d3a983a5319a1210c8f578621a6c038467972a5fe054
 <!-- cmoc-index-kind: directory -->
