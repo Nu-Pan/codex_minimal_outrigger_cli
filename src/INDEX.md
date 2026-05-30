@@ -2,25 +2,26 @@
 
 ## Summary
 
-- cmoc 全体で使う共通基盤モジュール群の集約先です。`codex.py`、`command_runner.py`、`repo.py`、`errors.py`、`subcommand_log.py`、`timing.py`、`timestamps.py`、`report_files.py`、`indexing.py` などが入っています。
-- `codex exec` の起動、サブコマンド実行制御、リポジトリ探索、共通エラー整形、ログ記録、時間計測、レポート保存、`INDEX.md` メンテナンスを支えます。
+- `src/commons` は cmoc 全体で使う共通基盤モジュール群の集約先です。`codex.py`、`command_runner.py`、`repo.py`、`errors.py`、`subcommand_log.py`、`timing.py`、`timestamps.py`、`report_files.py`、`indexing.py` が入ります。
+- `codex.py` は Codex CLI の共通実行基盤、`command_runner.py` はサブコマンド実行制御、`repo.py` は git と cmoc 状態管理、`errors.py` は共通エラー整形を担います。
+- `subcommand_log.py`、`timing.py`、`timestamps.py`、`report_files.py`、`indexing.py` はそれぞれログ記録、時間計測、タイムスタンプ生成、レポート保存、`INDEX.md` 自動整備を担当します。
 - `__init__.py` はパッケージ宣言のみで、公開 API の本体は各モジュールに分かれています。
 
 ## Read this when
 
 - cmoc 全体で使う共通処理の役割分担を確認したいとき。
-- `codex exec` 呼び出し、サブコマンドの共通実行制御、Git リポジトリ操作、エラー整形、ログ、計時、レポート保存、`INDEX.md` メンテナンスの実装に入る前に入口を確認したいとき。
-- `src.commons` が Python パッケージであることや、どのモジュールに何があるかを素早く把握したいとき。
+- `codex exec` 呼び出し、サブコマンド共通実行、git と cmoc 状態管理、エラー整形、ログ、計時、レポート保存、`INDEX.md` メンテナンスの入口を把握したいとき。
+- `src/commons` の各モジュールに何があるかを俯瞰したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの業務ロジックや `src/sub_commands` 側の振る舞いだけを確認したいとき。
-- `oracles` の正本仕様や `INDEX.md` 生成ルールの詳細だけを確認したいとき。
-- 共通処理のうち特定モジュールだけを追いたいときは、`codex.py`、`repo.py`、`errors.py` など該当ファイルへ直接進めば足ります。
+- 個別サブコマンドの業務ロジックや `src/sub_commands` 側の挙動だけを確認したいとき。
+- `oracles` の正本仕様や `INDEX.md` の生成ルールだけを確認したいとき。
+- `codex.py`、`repo.py`、`errors.py` など特定モジュールの詳細実装だけを追いたいとき。
 
 ## hash
 
-- 826c3c469e7aeb8c5ebce53bc70a4464923068ec14f92014e6b964a2b15fbe9c
+- a556701f2149259badb7055515ed862180071a6cbc5659198e01af0db53d3b3c
 <!-- cmoc-index-kind: directory -->
 
 # `main.py`

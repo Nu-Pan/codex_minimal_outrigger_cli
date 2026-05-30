@@ -42,13 +42,14 @@
 ## Do not read this when
 
 - `commons.codex` の実装本体を直接追いたいとき。
-- `tests/test_repo.py` や `tests/test_indexing.py` など、`test_codex.py` 以外の回帰テストだけを見たいとき。
+- `tests/test_repo.py` や `tests/test_indexing.py` など、別の回帰テストだけを見たいとき。
 - `INDEX.md` の生成ルールや `oracles` 全体の正本仕様だけを確認したいとき。
 - `session` や `apply` など、Codex 呼び出し以外のサブコマンド仕様を探しているとき。
 
 ## hash
 
-- 50b52d84a2a8135e58f9c7ac0a99a94a4d57d55de52a36ec2030e017d9d2fd10
+- bb13c41685a86d7c30c00d9da0db1a975c3444135ad959649967df26692c71a1
+<!-- cmoc-index-kind: file -->
 
 # `test_file_naming.py`
 
