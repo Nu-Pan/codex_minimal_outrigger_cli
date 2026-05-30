@@ -34,10 +34,12 @@ def test_maintain_indexes_generates_routing_entries_and_respects_gitignore(
     (repo / "ignored.txt").write_text("ignored\n", encoding="utf-8")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "content")
+    codex_prompts: list[str] = []
     codex_kwargs: list[dict[str, object]] = []
 
     def fake_codex(*args: object, **kwargs: object) -> str:
         """INDEX 生成用の Structured Output を返す fake Codex CLI。"""
+        codex_prompts.append(str(args[1]))
         codex_kwargs.append(kwargs)
         return json.dumps(
             {
@@ -55,7 +57,14 @@ def test_maintain_indexes_generates_routing_entries_and_respects_gitignore(
     assert changed is True
     assert "# `kept.txt`" in content
     assert "kept summary" in content
+    assert "cmoc-index-kind" not in content
     assert "# `ignored.txt`" not in content
+    readme_path = json.dumps((repo / "README.md").resolve().as_posix())
+    kept_path = json.dumps((repo / "kept.txt").resolve().as_posix())
+    assert any(readme_path in prompt for prompt in codex_prompts)
+    assert any(kept_path in prompt for prompt in codex_prompts)
+    assert not any("`README.md` の `INDEX.md`" in prompt for prompt in codex_prompts)
+    assert not any("`kept.txt` の `INDEX.md`" in prompt for prompt in codex_prompts)
     assert codex_kwargs
     assert all(
         kwargs["output_schema"] == _INDEX_OUTPUT_SCHEMA
@@ -67,6 +76,42 @@ def test_maintain_indexes_generates_routing_entries_and_respects_gitignore(
     )
 
 
+def test_maintain_indexes_prompts_with_recoverable_json_path_for_symbols(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """prompt の対象 path は記号を INDEX token 化せず JSON string で渡す。"""
+    repo = _init_repo(tmp_path)
+    target = repo / "a%b`c.txt"
+    target.write_text("symbols\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "symbol path")
+    codex_prompts: list[str] = []
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """INDEX 生成 prompt を記録する fake Codex CLI。"""
+        del kwargs
+        codex_prompts.append(str(args[1]))
+        return json.dumps(
+            {
+                "summary": ["summary"],
+                "read_this_when": ["read"],
+                "do_not_read_this_when": ["skip"],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    changed = maintain_indexes(repo)
+    content = (repo / "INDEX.md").read_text(encoding="utf-8")
+    expected_json_path = json.dumps(target.resolve().as_posix())
+
+    assert changed is True
+    assert "# `a%25b%60c.txt`" in content
+    assert any(expected_json_path in prompt for prompt in codex_prompts)
+    assert not any("a%25b%60c.txt" in prompt for prompt in codex_prompts)
+
+
 @pytest.mark.parametrize(
     ("relative_path", "expected"),
     [
@@ -75,8 +120,8 @@ def test_maintain_indexes_generates_routing_entries_and_respects_gitignore(
         ("docs/memo/INDEX.md", True),
         ("memo/INDEX.md", False),
         ("memo/sub/INDEX.md", False),
-        ("oracles/INDEX.md", False),
-        ("oracles/nested/INDEX.md", False),
+        ("oracles/INDEX.md", True),
+        ("oracles/nested/INDEX.md", True),
         (".cmoc/INDEX.md", False),
         (".agents/INDEX.md", False),
         (".git/INDEX.md", False),
@@ -90,17 +135,10 @@ def test_is_maintained_index_path_matches_index_placement_rules(
     relative_path: str,
     expected: bool,
 ) -> None:
-    """INDEX.md path 判定は配置対象外 root や禁止領域を許可しない。"""
+    """INDEX.md path 判定は配置対象外 root を許可しない。"""
     repo = _init_repo(tmp_path)
 
-    assert (
-        is_maintained_index_path(
-            repo,
-            relative_path,
-            excluded_index_roots=["oracles"],
-        )
-        is expected
-    )
+    assert is_maintained_index_path(repo, relative_path) is expected
 
 
 def test_is_maintained_index_path_allows_ignored_index_file(
@@ -606,7 +644,10 @@ def test_maintain_indexes_round_trips_non_utf8_paths(
     assert "# `bad_%FF_dir`" in root_index
     assert "# `note_%FE.txt`" in child_index
     assert any("bad_%FF_dir" in purpose for purpose in purposes)
-    assert any("bad_%FF_dir" in prompt for prompt in prompts)
+    assert any(
+        json.dumps(bad_dir.resolve().as_posix()) in prompt
+        for prompt in prompts
+    )
     assert not any(_has_surrogate(text) for text in [*prompts, *purposes])
 
     def fail_codex(*args: object, **kwargs: object) -> str:
@@ -1470,7 +1511,88 @@ def test_maintain_indexes_regenerates_entry_when_empty_file_becomes_directory(
     assert purposes == ["INDEX entry 生成 target"]
     assert "- old file summary" not in content
     assert "- INDEX entry 生成 target" in content
-    assert "<!-- cmoc-index-kind: directory -->" in content
+    assert "cmoc-index-kind" not in content
+
+
+def test_maintain_indexes_regenerates_entry_with_internal_kind_comment(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """仕様外の内部種別コメントを含む既存 entry は再生成する。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    target = repo / "target.txt"
+    target.write_text("target\n", encoding="utf-8")
+    readme_digest = hashlib.sha256(
+        (repo / "README.md").read_bytes()
+    ).hexdigest()
+    digest = hashlib.sha256(target.read_bytes()).hexdigest()
+    (repo / "INDEX.md").write_text(
+        "\n".join(
+            [
+                "# `README.md`",
+                "",
+                "## Summary",
+                "",
+                "- readme summary",
+                "",
+                "## Read this when",
+                "",
+                "- read readme",
+                "",
+                "## Do not read this when",
+                "",
+                "- skip readme",
+                "",
+                "## hash",
+                "",
+                f"- {readme_digest}",
+                "",
+                "# `target.txt`",
+                "",
+                "## Summary",
+                "",
+                "- old summary",
+                "",
+                "## Read this when",
+                "",
+                "- read old",
+                "",
+                "## Do not read this when",
+                "",
+                "- skip old",
+                "",
+                "## hash",
+                "",
+                f"- {digest}",
+                "<!-- cmoc-index-kind: file -->",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "index with internal comment")
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """再生成されたことを識別できる Structured Output を返す。"""
+        return json.dumps(
+            {
+                "summary": ["regenerated summary"],
+                "read_this_when": ["read regenerated"],
+                "do_not_read_this_when": ["skip regenerated"],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    changed = maintain_indexes(repo)
+    content = (repo / "INDEX.md").read_text(encoding="utf-8")
+
+    assert changed is True
+    assert "- old summary" not in content
+    assert "- regenerated summary" in content
+    assert "cmoc-index-kind" not in content
 
 
 def test_maintain_indexes_round_trips_special_names_and_multiline_text(

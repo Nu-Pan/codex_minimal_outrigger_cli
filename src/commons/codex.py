@@ -18,6 +18,7 @@ from jsonschema.exceptions import SchemaError, ValidationError
 from .errors import CmocError
 from .repo import (
     filter_oracle_file_paths,
+    filter_oracle_file_paths_at_commit,
     git_name_only_paths,
     git_name_status_entries,
     git_status_paths,
@@ -119,7 +120,7 @@ def run_codex_exec(
         base_command.extend(["--output-schema", str(schema_path)])
     base_command.append("-")
 
-    # last message 欠落も Codex CLI レスポンス要件の失敗として最大 3 回試行する。
+    # 0 終了後の last message 欠落も Codex CLI レスポンス要件の失敗として最大 3 回試行する。
     attempts = 3
     last_output = ""
     last_stdout_log = ""
@@ -188,16 +189,14 @@ def run_codex_exec(
             last_stdout_log = result.stdout
             last_stderr = result.stderr
 
+        if result.returncode != 0:
+            _raise_codex_failure(run.log_path, result)
+
         try:
             output = _read_last_message(last_message_path)
         except ValueError as error:
             last_validation_error = str(error)
             continue
-
-        # last-message 欠落は終了コードに依存しないレスポンス要件違反として retry する。
-        # last-message が正常に読めた非 0 終了は quota/capacity 以外の CLI 失敗として扱う。
-        if result.returncode != 0:
-            _raise_codex_failure(run.log_path, result)
 
         print("## Codex CLI 応答プレビュー")
         print(f"- attempt: {attempt}/{attempts}")
@@ -643,30 +642,32 @@ def _run_codex_command(
                 returncode=result.returncode,
             )
             raise _codex_launch_failure_error(log_path, result, error) from error
-        _append_codex_log(
-            log_path,
-            run_command,
-            prompt,
-            attempt,
-            result,
-            schema_path,
-            last_message_path,
-        )
-        log_written = True
-        _print_codex_notification(
-            purpose=purpose,
-            repo_root=repo_root,
-            log_path=log_path,
-            elapsed_seconds=perf_counter() - started,
-            returncode=result.returncode,
-        )
-        _assert_workspace_write_oracles_unchanged(repo_root, oracle_guard)
-        return _CodexCommandRun(
-            result=result,
-            log_path=log_path,
-            last_message_path=last_message_path,
-            command=run_command,
-        )
+        try:
+            _append_codex_log(
+                log_path,
+                run_command,
+                prompt,
+                attempt,
+                result,
+                schema_path,
+                last_message_path,
+            )
+            log_written = True
+            _print_codex_notification(
+                purpose=purpose,
+                repo_root=repo_root,
+                log_path=log_path,
+                elapsed_seconds=perf_counter() - started,
+                returncode=result.returncode,
+            )
+            return _CodexCommandRun(
+                result=result,
+                log_path=log_path,
+                last_message_path=last_message_path,
+                command=run_command,
+            )
+        finally:
+            _assert_workspace_write_oracles_unchanged(repo_root, oracle_guard)
     finally:
         if not log_written:
             log_path.unlink(missing_ok=True)
@@ -760,7 +761,10 @@ def _assert_workspace_write_oracles_unchanged(
     allowed = set(snapshot.allowed_uncommitted_paths)
     uncommitted = [
         path
-        for path in _uncommitted_oracle_file_paths(repo_root)
+        for path in _uncommitted_oracle_file_paths(
+            repo_root,
+            snapshot.head_commit,
+        )
         if path not in allowed
     ]
     range_error, committed = _committed_oracle_file_paths(
@@ -847,7 +851,10 @@ def _normalize_repo_relative_paths(
     return normalized
 
 
-def _uncommitted_oracle_file_paths(repo_root: Path) -> list[str]:
+def _uncommitted_oracle_file_paths(
+    repo_root: Path,
+    before_head: str | None,
+) -> list[str]:
     """未コミット差分に含まれる oracle ファイルを返す。"""
     relative_paths: list[str] = []
     diff = run_git(
@@ -870,7 +877,7 @@ def _uncommitted_oracle_file_paths(repo_root: Path) -> list[str]:
         path for status_code, path in git_status_paths(status.stdout)
         if status_code == "??"
     )
-    return filter_oracle_file_paths(repo_root, relative_paths)
+    return _oracle_guard_file_paths(repo_root, before_head, relative_paths)
 
 
 def _committed_oracle_file_paths(
@@ -918,8 +925,9 @@ def _committed_oracle_file_paths(
     )
     return (
         None,
-        filter_oracle_file_paths(
+        _oracle_guard_file_paths(
             repo_root,
+            before_head,
             _paths_from_name_status_z(log.stdout),
         ),
     )
@@ -986,7 +994,28 @@ def _head_reflog_oracle_file_paths(
         )
         if log.returncode == 0:
             paths.extend(_paths_from_name_status_z(log.stdout))
-    return (None, filter_oracle_file_paths(repo_root, paths))
+    return (None, _oracle_guard_file_paths(repo_root, before_head, paths))
+
+
+def _oracle_guard_file_paths(
+    repo_root: Path,
+    before_head: str | None,
+    relative_paths: list[str],
+) -> list[str]:
+    """実行前後の oracle 判定基準を和集合にして guard 対象 path を返す。"""
+    current_paths = set(filter_oracle_file_paths(repo_root, relative_paths))
+    if before_head is None:
+        return sorted(current_paths)
+    return sorted(
+        {
+            *current_paths,
+            *filter_oracle_file_paths_at_commit(
+                repo_root,
+                before_head,
+                relative_paths,
+            ),
+        }
+    )
 
 
 def _paths_from_name_status_z(output: str) -> list[str]:
@@ -1408,8 +1437,8 @@ def _prepare_codex_exec_paths(repo_root: Path) -> dict[str, Path]:
     last_message_dir.mkdir(parents=True, exist_ok=True)
     while True:
         timestamp = make_timestamp()
-        call_path = call_dir / f"{timestamp}.log"
-        last_message_path = last_message_dir / f"{timestamp}.log"
+        call_path = call_dir / f"{timestamp}.md"
+        last_message_path = last_message_dir / f"{timestamp}.json"
         try:
             with call_path.open("x", encoding="utf-8"):
                 pass

@@ -1,5 +1,6 @@
 """Codex CLI 呼び出しラッパーのテスト。"""
 
+import ast
 import json
 import os
 import subprocess
@@ -89,7 +90,7 @@ def test_run_codex_exec_retries_json_and_writes_full_log(
     )
 
     log_files = sorted(
-        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.md")
     )
     log_contents = [path.read_text(encoding="utf-8") for path in log_files]
     assert output.strip() == '{"ok": true}'
@@ -151,7 +152,7 @@ def test_run_codex_exec_full_log_uses_fence_longer_than_payload(
 
     output = run_codex_exec(repo, prompt, read_only=True)
 
-    log_path = next((repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log"))
+    log_path = next((repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.md"))
     log_content = log_path.read_text(encoding="utf-8")
     assert output == "last before\n```\nlast after\n"
     assert "### Prompt\n\n````text\nprompt before\n```\nprompt after\n````" in log_content
@@ -197,7 +198,7 @@ def test_run_codex_exec_uses_utf8_for_process_text_and_logs_japanese(
     output = run_codex_exec(repo, prompt, read_only=True)
 
     log_path = next(
-        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.md")
     )
     log_content = log_path.read_text(encoding="utf-8")
     assert output == "最後の応答"
@@ -225,7 +226,7 @@ def test_run_codex_exec_logs_launch_failure_as_cmoc_error(
         run_codex_exec(repo, "prompt", read_only=True)
 
     log_files = sorted(
-        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.md")
     )
     assert "codex exec を起動できませんでした" in error.value.message
     assert len(log_files) == 1
@@ -265,7 +266,7 @@ def test_run_codex_exec_removes_reserved_log_when_guard_fails_after_prepare(
         run_codex_exec(repo, "prompt", read_only=True)
 
     call_dir = repo / ".cmoc" / "logs" / "codex_exec" / "call"
-    assert list(call_dir.glob("*.log")) == []
+    assert list(call_dir.glob("*.md")) == []
 
 
 def test_prepare_codex_exec_paths_reserves_call_log_atomically(
@@ -290,10 +291,10 @@ def test_prepare_codex_exec_paths_reserves_call_log_atomically(
     first = _prepare_codex_exec_paths(repo)
     second = _prepare_codex_exec_paths(repo)
 
-    assert first["call"].name == "2026-05-04_03-02_01_000000001.log"
-    assert second["call"].name == "2026-05-04_03-02_01_000000002.log"
-    assert first["last_message"].name == "2026-05-04_03-02_01_000000001.log"
-    assert second["last_message"].name == "2026-05-04_03-02_01_000000002.log"
+    assert first["call"].name == "2026-05-04_03-02_01_000000001.md"
+    assert second["call"].name == "2026-05-04_03-02_01_000000002.md"
+    assert first["last_message"].name == "2026-05-04_03-02_01_000000001.json"
+    assert second["last_message"].name == "2026-05-04_03-02_01_000000002.json"
     assert first["call"].exists()
     assert second["call"].exists()
 
@@ -484,6 +485,121 @@ def test_run_codex_exec_escapes_control_chars_in_console_notification(
     assert notification_lines[3] == "- returncode: 0"
 
 
+def test_workspace_write_oracle_guard_runs_when_call_log_write_fails(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """workspace-write 後の call log 書き込み失敗でも oracle guard を実行する。"""
+    repo = _init_git_repo(tmp_path)
+    guard_calls: list[Path] = []
+    original_run = subprocess.run
+
+    def fake_run(
+        command: list[str],
+        **kwargs: object,
+    ) -> subprocess.CompletedProcess[str]:
+        if command[0] != "codex":
+            return original_run(command, **kwargs)
+        return subprocess.CompletedProcess(
+            command,
+            0,
+            stdout="stdout",
+            stderr="stderr",
+        )
+
+    def fail_log(*_: object, **__: object) -> None:
+        raise OSError("call log write failed")
+
+    def fail_guard(repo_root: Path, _: object) -> None:
+        guard_calls.append(repo_root)
+        raise CmocError(
+            "oracle guard failed",
+            [
+                "oracles ファイルの変更を確認してください。",
+                "修正後に cmoc を再実行してください。",
+            ],
+        )
+
+    monkeypatch.setattr("commons.codex.subprocess.run", fake_run)
+    monkeypatch.setattr("commons.codex._append_codex_log", fail_log)
+    monkeypatch.setattr(
+        "commons.codex._assert_workspace_write_oracles_unchanged",
+        fail_guard,
+    )
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(
+            repo,
+            "prompt",
+            read_only=False,
+            skip_index_maintenance=True,
+        )
+
+    assert error.value.message == "oracle guard failed"
+    assert guard_calls == [repo]
+
+
+def test_workspace_write_oracle_guard_runs_when_notification_fails(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """workspace-write 後の通知失敗でも oracle guard を実行する。"""
+    repo = _init_git_repo(tmp_path)
+    guard_calls: list[Path] = []
+    original_run = subprocess.run
+
+    def fake_run(
+        command: list[str],
+        **kwargs: object,
+    ) -> subprocess.CompletedProcess[str]:
+        if command[0] != "codex":
+            return original_run(command, **kwargs)
+        last_message_path = Path(
+            command[command.index("--output-last-message") + 1]
+        )
+        last_message_path.write_text("ok\n", encoding="utf-8")
+        return subprocess.CompletedProcess(
+            command,
+            0,
+            stdout="stdout",
+            stderr="stderr",
+        )
+
+    def fail_notification(**_: object) -> None:
+        raise OSError("notification failed")
+
+    def fail_guard(repo_root: Path, _: object) -> None:
+        guard_calls.append(repo_root)
+        raise CmocError(
+            "oracle guard failed",
+            [
+                "oracles ファイルの変更を確認してください。",
+                "修正後に cmoc を再実行してください。",
+            ],
+        )
+
+    monkeypatch.setattr("commons.codex.subprocess.run", fake_run)
+    monkeypatch.setattr(
+        "commons.codex._print_codex_notification",
+        fail_notification,
+    )
+    monkeypatch.setattr(
+        "commons.codex._assert_workspace_write_oracles_unchanged",
+        fail_guard,
+    )
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(
+            repo,
+            "prompt",
+            read_only=False,
+            skip_index_maintenance=True,
+        )
+
+    assert error.value.message == "oracle guard failed"
+    assert guard_calls == [repo]
+
+
 def test_run_codex_exec_rejects_uncommitted_oracle_change_after_workspace_write(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -506,6 +622,56 @@ def test_run_codex_exec_rejects_uncommitted_oracle_change_after_workspace_write(
                 "  PREV=\"$ARG\"",
                 "done",
                 "mkdir -p oracles",
+                "echo 'changed by codex' > oracles/spec.md",
+                "echo 'ok' > \"$LAST\"",
+                "echo '{\"event\":\"done\"}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(
+            repo,
+            "prompt",
+            read_only=False,
+            skip_index_maintenance=True,
+        )
+
+    assert "oracles ファイルを変更しました" in error.value.message
+    assert "未コミット差分:" in error.value.detail
+    assert "oracles/spec.md" in error.value.detail
+
+
+def test_run_codex_exec_rejects_uncommitted_oracle_hidden_by_changed_gitignore(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """実行中の .gitignore 変更で隠された未コミット oracle 差分も拒否する。"""
+    repo = _init_git_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("initial spec\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md")
+    _git(repo, "commit", "-m", "add oracle")
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                "echo 'oracles/spec.md' > .gitignore",
                 "echo 'changed by codex' > oracles/spec.md",
                 "echo 'ok' > \"$LAST\"",
                 "echo '{\"event\":\"done\"}'",
@@ -921,6 +1087,58 @@ def test_run_codex_exec_rejects_committed_oracle_change_after_workspace_write(
                 "echo 'committed by codex' > oracles/spec.md",
                 "git add oracles/spec.md",
                 "git commit -m 'codex oracle change' >/dev/null",
+                "echo 'ok' > \"$LAST\"",
+                "echo '{\"event\":\"done\"}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(
+            repo,
+            "prompt",
+            read_only=False,
+            skip_index_maintenance=True,
+        )
+
+    assert "Codex CLI 実行中の commit range 変更:" in error.value.detail
+    assert "oracles/spec.md" in error.value.detail
+    assert _git(repo, "status", "--porcelain", "--", "oracles").stdout == ""
+
+
+def test_run_codex_exec_rejects_committed_oracle_hidden_by_changed_gitignore(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """実行中の .gitignore 変更で隠された commit range の oracle 変更も拒否する。"""
+    repo = _init_git_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("initial spec\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md")
+    _git(repo, "commit", "-m", "add oracle")
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                "echo 'oracles/spec.md' > .gitignore",
+                "echo 'committed by codex' > oracles/spec.md",
+                "git add .gitignore oracles/spec.md",
+                "git commit -m 'codex hidden oracle change' >/dev/null",
                 "echo 'ok' > \"$LAST\"",
                 "echo '{\"event\":\"done\"}'",
             ]
@@ -1447,7 +1665,7 @@ def test_run_codex_exec_passes_output_schema_file(
         path.read_text(encoding="utf-8")
         for path in (
             repo / ".cmoc" / "logs" / "codex_exec" / "call"
-        ).glob("*.log")
+        ).glob("*.md")
     ]
     schema_body = json.dumps(
         _BOOLEAN_SCHEMA,
@@ -1463,7 +1681,7 @@ def test_run_codex_exec_passes_output_schema_file(
     assert last_message_path.parent == (
         repo / ".cmoc" / "logs" / "codex_exec" / "output_last_message"
     )
-    assert last_message_path.suffix == ".log"
+    assert last_message_path.suffix == ".json"
     assert "--model" in args
     assert "-c" in args
     assert args[-1] == "-"
@@ -1673,7 +1891,7 @@ def test_run_codex_exec_retries_json_semantic_validation_failure(
     log_contents = [
         path.read_text(encoding="utf-8")
         for path in sorted(
-            (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+            (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.md")
         )
     ]
     assert output.strip() == '{"ok": true}'
@@ -1855,7 +2073,7 @@ def test_run_codex_exec_retries_text_semantic_validation_failure(
     log_contents = [
         path.read_text(encoding="utf-8")
         for path in sorted(
-            (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+            (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.md")
         )
     ]
     assert output.strip() == "complete report"
@@ -1970,7 +2188,7 @@ def test_run_codex_exec_retries_missing_last_message_without_validator(
     output = run_codex_exec(repo, "prompt", read_only=True)
 
     log_files = sorted(
-        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.md")
     )
     assert output.strip() == "plain text result"
     assert state.read_text(encoding="utf-8").strip() == "2"
@@ -1981,11 +2199,11 @@ def test_run_codex_exec_retries_missing_last_message_without_validator(
     ] == [True, True]
 
 
-def test_run_codex_exec_retries_missing_last_message_after_nonzero_exit(
+def test_run_codex_exec_fails_immediately_on_nonzero_exit_without_last_message(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """非 0 終了でも last message 欠落はレスポンス要件失敗としてリトライする。"""
+    """非 0 終了かつ last message 欠落の想定外エラーは即時失敗する。"""
     repo = tmp_path / "repo"
     repo.mkdir()
     fake_bin = tmp_path / "bin"
@@ -2009,12 +2227,8 @@ def test_run_codex_exec_retries_missing_last_message_after_nonzero_exit(
                 "if [ -f \"$STATE\" ]; then COUNT=$(cat \"$STATE\"); fi",
                 "COUNT=$((COUNT + 1))",
                 "echo \"$COUNT\" > \"$STATE\"",
-                "if [ \"$COUNT\" -eq 1 ]; then",
-                "  echo 'transient CLI failure without last message' >&2",
-                "  exit 2",
-                "fi",
-                "echo 'plain text result' > \"$LAST\"",
-                "echo '{\"event\":\"done\"}'",
+                "echo 'unexpected CLI failure without last message' >&2",
+                "exit 2",
             ]
         ),
         encoding="utf-8",
@@ -2022,17 +2236,17 @@ def test_run_codex_exec_retries_missing_last_message_after_nonzero_exit(
     codex.chmod(0o755)
     monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
 
-    output = run_codex_exec(repo, "prompt", read_only=True)
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(repo, "prompt", read_only=True)
 
     log_files = sorted(
-        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.md")
     )
-    assert output.strip() == "plain text result"
-    assert state.read_text(encoding="utf-8").strip() == "2"
-    assert len(log_files) == 2
-    log_contents = [path.read_text(encoding="utf-8") for path in log_files]
-    assert "returncode: 2" in log_contents[0]
-    assert "returncode: 0" in log_contents[1]
+    assert "codex exec が失敗しました。" in error.value.message
+    assert "unexpected CLI failure without last message" in error.value.detail
+    assert state.read_text(encoding="utf-8").strip() == "1"
+    assert len(log_files) == 1
+    assert "returncode: 2" in log_files[0].read_text(encoding="utf-8")
 
 
 def test_run_codex_exec_reports_unreadable_last_message(
@@ -2384,7 +2598,7 @@ def test_run_codex_exec_retries_zero_exit_capacity_stdout_jsonl(
     output = run_codex_exec(repo, "prompt", read_only=True)
 
     log_files = sorted(
-        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.md")
     )
     assert output.strip() == "done"
     assert state.read_text(encoding="utf-8").strip() == "2"
@@ -2443,7 +2657,7 @@ def test_run_codex_exec_fails_after_capacity_retry_limit(
         run_codex_exec(repo, "prompt", read_only=True)
 
     log_files = sorted(
-        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.md")
     )
     assert "codex exec が capacity リトライ後も失敗しました。" in (
         error.value.message
@@ -2531,7 +2745,7 @@ def test_run_codex_exec_waits_and_resumes_after_quota_exhaustion(
     log_contents = [
         path.read_text(encoding="utf-8")
         for path in sorted(
-            (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+            (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.md")
         )
     ]
     assert output.strip() == "resumed"
@@ -2777,7 +2991,7 @@ def test_run_codex_exec_waits_again_when_resume_is_still_quota_exhausted(
     output = run_codex_exec(repo, "original prompt", read_only=True)
 
     log_files = sorted(
-        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.md")
     )
     assert output.strip() == "resumed"
     assert resume_attempts.read_text(encoding="utf-8").strip() == "2"
@@ -2884,7 +3098,7 @@ def test_run_codex_exec_does_not_treat_plain_limit_error_as_quota(
         run_codex_exec(repo, "original prompt", read_only=True)
 
     log_files = sorted(
-        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.md")
     )
     assert "codex exec が失敗しました。" in error.value.message
     assert "validation limit exceeded" in error.value.detail
@@ -2977,7 +3191,7 @@ def test_run_codex_exec_ignores_stdout_quota_code_without_message(
         run_codex_exec(repo, "original prompt", read_only=True)
 
     log_files = sorted(
-        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.md")
     )
     assert "codex exec が失敗しました。" in error.value.message
     assert "quota exhausted" in error.value.detail
@@ -3030,7 +3244,7 @@ def test_run_codex_exec_fails_when_quota_poll_returns_unexpected_error(
         run_codex_exec(repo, "original prompt", read_only=True)
 
     log_files = sorted(
-        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.md")
     )
     assert "codex exec が失敗しました。" in error.value.message
     assert "network failure during poll" in error.value.detail
@@ -3085,7 +3299,7 @@ def test_run_codex_exec_requires_ok_last_message_for_quota_poll(
     log_contents = [
         path.read_text(encoding="utf-8")
         for path in sorted(
-            (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+            (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.md")
         )
     ]
     assert "quota 復旧確認に失敗しました。" in error.value.message
@@ -3522,6 +3736,32 @@ def test_run_codex_exec_can_skip_index_maintenance(
     )
 
     assert output.strip() == "done"
+
+
+def test_production_skip_index_maintenance_calls_are_limited_to_exceptions() -> None:
+    """skip_index_maintenance=True は INDEX 生成と conflict 解消だけで使う。"""
+    repo_root = Path(__file__).resolve().parents[1]
+    allowed_paths = {
+        Path("src/commons/indexing.py"),
+        Path("src/sub_commands/session/join.py"),
+    }
+    actual_paths: set[Path] = set()
+
+    for source_path in (repo_root / "src").rglob("*.py"):
+        tree = ast.parse(source_path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            for keyword in node.keywords:
+                if keyword.arg != "skip_index_maintenance":
+                    continue
+                if (
+                    isinstance(keyword.value, ast.Constant)
+                    and keyword.value.value is True
+                ):
+                    actual_paths.add(source_path.relative_to(repo_root))
+
+    assert actual_paths == allowed_paths
 
 
 def _init_git_repo(tmp_path: Path) -> Path:

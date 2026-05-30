@@ -2,7 +2,6 @@
 
 import json
 import os
-import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -14,6 +13,16 @@ SESSION_BRANCH_PREFIX = "cmoc/session/"
 APPLY_BRANCH_PREFIX = "cmoc/apply/"
 SESSION_STATES = {"active", "joined", "abandoned", "error"}
 APPLY_STATES = {"ready", "running", "completed", "error"}
+SESSION_STATE_KEYS = {
+    "state",
+    "session_home_branch",
+    "session_start_commit",
+    "last_joined_apply_oracle_snapshot_commit",
+}
+OPTIONAL_SESSION_STATE_KEYS = {
+    "last_joined_apply_result",
+}
+APPLY_STATE_KEYS = {"state", "apply_branch", "oracle_snapshot_commit"}
 
 
 def enter_repo_root(start: Path | None = None) -> Path:
@@ -143,16 +152,46 @@ def write_apply_process_id(
     repo_root: Path,
     session_id: str,
     process_id: int,
+    apply_branch: str | None = None,
 ) -> Path:
-    """running apply process id を session state 外の runtime file に保存する。"""
+    """running apply process 情報を session state 外の runtime file に保存する。"""
     path = apply_process_id_path(repo_root, session_id)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(f"{process_id}\n", encoding="utf-8")
+    record = {
+        "format": "cmoc-apply-process-v1",
+        "process_id": process_id,
+        "proc_start_time": process_start_time(process_id),
+        "cmdline": process_cmdline(process_id),
+        "repo_root": str(repo_root.resolve()),
+        "session_id": session_id,
+        "apply_branch": apply_branch,
+    }
+    path.write_text(
+        json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     return path
 
 
 def read_apply_process_id(repo_root: Path, session_id: str) -> int | None:
     """runtime file から running apply process id を読む。"""
+    record = read_apply_process_record(repo_root, session_id)
+    if record is None:
+        return None
+    process_id = record.get("process_id")
+    if not isinstance(process_id, int):
+        raise _invalid_apply_process_id_error(
+            apply_process_id_path(repo_root, session_id),
+            process_id,
+        )
+    return process_id
+
+
+def read_apply_process_record(
+    repo_root: Path,
+    session_id: str,
+) -> dict[str, object] | None:
+    """runtime file から running apply process record を読む。"""
     path = apply_process_id_path(repo_root, session_id)
     if not path.exists():
         return None
@@ -168,26 +207,71 @@ def read_apply_process_id(repo_root: Path, session_id: str) -> int | None:
     except FileNotFoundError:
         return None
     try:
+        parsed = json.loads(raw_value)
+    except json.JSONDecodeError:
+        parsed = None
+    if isinstance(parsed, dict):
+        process_id = parsed.get("process_id")
+        if not isinstance(process_id, int) or process_id <= 0:
+            raise _invalid_apply_process_id_error(path, process_id)
+        return parsed
+    try:
         process_id = int(raw_value)
     except ValueError as error:
-        raise CmocError(
-            "apply process id ファイルの形式が不正です。",
-            [
-                ".cmoc/runtime/apply 配下の pid ファイルを確認してください。",
-                "手動で apply process の状態を確認してから再実行してください。",
-            ],
-            f"{path}\nprocess_id: {raw_value}",
-        ) from error
+        raise _invalid_apply_process_id_error(path, raw_value) from error
     if process_id <= 0:
-        raise CmocError(
-            "apply process id ファイルの形式が不正です。",
-            [
-                "process id は正の整数である必要があります。",
-                "手動で apply process の状態を確認してから再実行してください。",
-            ],
-            f"{path}\nprocess_id: {process_id}",
-        )
-    return process_id
+        raise _invalid_apply_process_id_error(path, process_id)
+    return {
+        "format": "legacy-pid-only",
+        "process_id": process_id,
+    }
+
+
+def process_start_time(process_id: int) -> int | None:
+    """Linux procfs から process starttime(clock ticks) を返す。"""
+    try:
+        content = Path(f"/proc/{process_id}/stat").read_text(encoding="utf-8")
+    except OSError:
+        return None
+    try:
+        fields_after_comm = content.rsplit(") ", 1)[1].split()
+    except IndexError:
+        return None
+    if len(fields_after_comm) < 20:
+        return None
+    try:
+        return int(fields_after_comm[19])
+    except ValueError:
+        return None
+
+
+def process_cmdline(process_id: int) -> list[str] | None:
+    """Linux procfs から process cmdline を argv list として返す。"""
+    try:
+        content = Path(f"/proc/{process_id}/cmdline").read_bytes()
+    except OSError:
+        return None
+    if not content:
+        return []
+    return [
+        value.decode("utf-8", errors="replace")
+        for value in content.rstrip(b"\0").split(b"\0")
+    ]
+
+
+def _invalid_apply_process_id_error(
+    path: Path,
+    process_id: object,
+) -> CmocError:
+    """apply process runtime file の形式不正を CmocError 化する。"""
+    return CmocError(
+        "apply process id ファイルの形式が不正です。",
+        [
+            ".cmoc/runtime/apply 配下の pid ファイルを確認してください。",
+            "手動で apply process の状態を確認してから再実行してください。",
+        ],
+        f"{path}\nprocess_id: {process_id}",
+    )
 
 
 def clear_apply_process_id(repo_root: Path, session_id: str) -> None:
@@ -200,18 +284,35 @@ def clear_apply_process_id(repo_root: Path, session_id: str) -> None:
 
 
 def session_state_root(repo_root: Path) -> Path:
-    """session state を共有する canonical repo root を返す。"""
-    common_dir = run_git(
-        repo_root,
-        ["rev-parse", "--path-format=absolute", "--git-common-dir"],
-    ).stdout.strip()
-    return Path(common_dir).parent
+    """session state を置く repo root を返す。"""
+    return repo_root
 
 
 def session_state_repo_root(repo_root: Path, session_id: str) -> Path:
-    """session state を保持する main worktree root を返す。"""
-    _ = session_id
+    """session state を保持する repo root を返す。
+
+    通常の repo root ではそのまま返す。cmoc 管理 apply worktree から
+    join/abandon する場合だけ、worktree 配置規則から所有元 repo root を復元する。
+    """
+    owner_root = _owning_repo_root_from_apply_worktree_path(repo_root, session_id)
+    if owner_root is not None:
+        return owner_root
     return session_state_root(repo_root)
+
+
+def _owning_repo_root_from_apply_worktree_path(
+    repo_root: Path,
+    session_id: str,
+) -> Path | None:
+    """cmoc apply worktree path から所有元 repo root を復元する。"""
+    parts = repo_root.resolve().parts
+    marker = (".cmoc", "worktrees", "apply", session_id)
+    for index in range(0, len(parts) - len(marker)):
+        if parts[index : index + len(marker)] != marker:
+            continue
+        if len(parts) == index + len(marker) + 1:
+            return Path(*parts[:index])
+    return None
 
 
 def initial_session_state(
@@ -224,6 +325,7 @@ def initial_session_state(
             "state": "active",
             "session_home_branch": session_home_branch,
             "session_start_commit": session_start_commit,
+            "last_joined_apply_oracle_snapshot_commit": None,
         },
         "apply": {
             "state": "ready",
@@ -231,6 +333,135 @@ def initial_session_state(
             "oracle_snapshot_commit": None,
         },
     }
+
+
+def resolve_session_home_branch(
+    repo_root: Path,
+    state: dict[str, object],
+    session_branch: str,
+) -> str:
+    """null 初期値の session home branch を session branch から復元する。"""
+    session = state.get("session")
+    if not isinstance(session, dict):
+        raise CmocError(
+            "session state ファイルの形式が不正です。",
+            [
+                "state JSON の session セクションを確認して復旧してください。",
+                "復旧できない場合は、対象 session を破棄して新しい session でやり直してください。",
+            ],
+        )
+    existing = session.get("session_home_branch")
+    if isinstance(existing, str) and existing:
+        return existing
+    start_commit = session.get("session_start_commit")
+    if not isinstance(start_commit, str) or not start_commit:
+        raise CmocError(
+            "session home branch を特定できませんでした。",
+            [
+                "session state の session.session_start_commit を確認してください。",
+                "state が壊れている場合は、手動で session state を復旧してください。",
+            ],
+            f"session.session_start_commit: {start_commit}",
+        )
+
+    candidates = _session_home_branch_candidates(
+        repo_root,
+        session_branch,
+        start_commit,
+    )
+    if not candidates:
+        raise CmocError(
+            "session home branch を特定できませんでした。",
+            [
+                "session fork 元の local branch が削除されていないか確認してください。",
+                "必要な branch を復元してから再実行してください。",
+            ],
+            f"session_start_commit: {start_commit}",
+        )
+    if len(candidates) == 1:
+        return candidates[0]
+
+    checked_out = set(_checked_out_local_branches(repo_root))
+    checked_out_candidates = [
+        branch for branch in candidates if branch in checked_out
+    ]
+    if len(checked_out_candidates) == 1:
+        return checked_out_candidates[0]
+
+    exact_tip_candidates = [
+        branch
+        for branch in candidates
+        if _branch_head(repo_root, branch) == start_commit
+    ]
+    if len(exact_tip_candidates) == 1:
+        return exact_tip_candidates[0]
+
+    raise CmocError(
+        "session home branch を一意に特定できませんでした。",
+        [
+            "session fork 元の local branch だけを残してから再実行してください。",
+            "判断できる場合は session state の session.session_home_branch を復旧してください。",
+        ],
+        "\n".join(candidates),
+    )
+
+
+def _session_home_branch_candidates(
+    repo_root: Path,
+    session_branch: str,
+    start_commit: str,
+) -> list[str]:
+    """session_start_commit から分岐した通常 local branch 候補を返す。"""
+    candidates: list[str] = []
+    for branch in _local_non_cmoc_branches(repo_root):
+        merge_base = run_git(
+            repo_root,
+            ["merge-base", branch, session_branch],
+            check=False,
+        )
+        if merge_base.returncode != 0:
+            continue
+        if merge_base.stdout.strip() == start_commit:
+            candidates.append(branch)
+    return candidates
+
+
+def _local_non_cmoc_branches(repo_root: Path) -> list[str]:
+    """cmoc 管理ではない local branch 名を列挙する。"""
+    result = run_git(
+        repo_root,
+        ["for-each-ref", "--format=%(refname:short)", "refs/heads"],
+    )
+    return sorted(
+        branch
+        for branch in result.stdout.splitlines()
+        if branch and not is_cmoc_branch(branch)
+    )
+
+
+def _checked_out_local_branches(repo_root: Path) -> list[str]:
+    """worktree で checkout されている local branch 名を列挙する。"""
+    result = run_git(repo_root, ["worktree", "list", "--porcelain"])
+    branches: list[str] = []
+    for line in result.stdout.splitlines():
+        if not line.startswith("branch refs/heads/"):
+            continue
+        branch = line.removeprefix("branch refs/heads/")
+        if branch and not is_cmoc_branch(branch):
+            branches.append(branch)
+    return branches
+
+
+def _branch_head(repo_root: Path, branch: str) -> str | None:
+    """branch の HEAD commit を返す。"""
+    result = run_git(
+        repo_root,
+        ["rev-parse", "--verify", branch],
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip()
 
 
 def write_session_state(
@@ -268,22 +499,31 @@ def _session_state_payload(
         )
     _validate_required_keys(
         session,
-        {"state", "session_home_branch", "session_start_commit"},
+        SESSION_STATE_KEYS,
         "session",
         path,
     )
     _validate_required_keys(
         apply,
-        {"state", "apply_branch", "oracle_snapshot_commit"},
+        APPLY_STATE_KEYS,
         "apply",
         path,
     )
+    session_payload = {
+        "state": session.get("state"),
+        "session_home_branch": session.get("session_home_branch"),
+        "session_start_commit": session.get("session_start_commit"),
+        "last_joined_apply_oracle_snapshot_commit": session.get(
+            "last_joined_apply_oracle_snapshot_commit"
+        ),
+    }
+    if "last_joined_apply_result" in session:
+        session_payload["last_joined_apply_result"] = session.get(
+            "last_joined_apply_result"
+        )
+
     return {
-        "session": {
-            "state": session.get("state"),
-            "session_home_branch": session.get("session_home_branch"),
-            "session_start_commit": session.get("session_start_commit"),
-        },
+        "session": session_payload,
         "apply": {
             "state": apply.get("state"),
             "apply_branch": apply.get("apply_branch"),
@@ -371,13 +611,14 @@ def _validate_session_state_schema(
         )
     _validate_exact_keys(
         session,
-        {"state", "session_home_branch", "session_start_commit"},
+        SESSION_STATE_KEYS,
         "session",
         path,
+        optional_keys=OPTIONAL_SESSION_STATE_KEYS,
     )
     _validate_exact_keys(
         apply,
-        {"state", "apply_branch", "oracle_snapshot_commit"},
+        APPLY_STATE_KEYS,
         "apply",
         path,
     )
@@ -389,7 +630,7 @@ def _validate_session_state_schema(
         path,
     )
     _validate_state_value(session_state, SESSION_STATES, "session.state", path)
-    _validate_required_string(
+    _validate_optional_string(
         session,
         "session_home_branch",
         "session.session_home_branch",
@@ -401,6 +642,19 @@ def _validate_session_state_schema(
         "session.session_start_commit",
         path,
     )
+    _validate_optional_string(
+        session,
+        "last_joined_apply_oracle_snapshot_commit",
+        "session.last_joined_apply_oracle_snapshot_commit",
+        path,
+    )
+    if "last_joined_apply_result" in session:
+        _validate_optional_string(
+            session,
+            "last_joined_apply_result",
+            "session.last_joined_apply_result",
+            path,
+        )
     apply_state = _validate_required_string(apply, "state", "apply.state", path)
     _validate_state_value(apply_state, APPLY_STATES, "apply.state", path)
     _validate_optional_string(apply, "apply_branch", "apply.apply_branch", path)
@@ -410,7 +664,7 @@ def _validate_session_state_schema(
         "apply.oracle_snapshot_commit",
         path,
     )
-    _validate_apply_state_invariants(apply, apply_state, path)
+    _validate_apply_state_invariants(apply, apply_state, path, path.stem)
 
 
 def _validate_required_keys(
@@ -438,13 +692,16 @@ def _validate_exact_keys(
     expected_keys: set[str],
     label: str,
     path: Path,
+    *,
+    optional_keys: set[str] | None = None,
 ) -> None:
     """読み込んだ永続 state の key 集合が固定スキーマと一致することを検証する。"""
     actual_keys = set(section)
-    if actual_keys == expected_keys:
+    allowed_keys = expected_keys | (optional_keys or set())
+    if expected_keys <= actual_keys <= allowed_keys:
         return
     missing = expected_keys - actual_keys
-    extra = actual_keys - expected_keys
+    extra = actual_keys - allowed_keys
     detail_parts: list[str] = [str(path)]
     if missing:
         detail_parts.append(f"missing {label} fields: {', '.join(sorted(missing))}")
@@ -522,6 +779,7 @@ def _validate_apply_state_invariants(
     apply: dict[object, object],
     apply_state: str,
     path: Path,
+    session_id: str,
 ) -> None:
     """apply.state ごとの補助 field 不変条件を検証する。"""
     apply_branch = apply.get("apply_branch")
@@ -537,16 +795,19 @@ def _validate_apply_state_invariants(
 
     if apply_state == "running":
         _validate_apply_run_fields(apply_branch, oracle_snapshot_commit, path)
+        _validate_apply_branch_session_id(apply_branch, session_id, path)
         return
 
     if apply_state == "completed":
         _validate_apply_run_fields(apply_branch, oracle_snapshot_commit, path)
+        _validate_apply_branch_session_id(apply_branch, session_id, path)
         return
 
     if apply_state == "error" and (
         apply_branch is not None or oracle_snapshot_commit is not None
     ):
         _validate_apply_run_fields(apply_branch, oracle_snapshot_commit, path)
+        _validate_apply_branch_session_id(apply_branch, session_id, path)
 
 
 def _validate_null_field(value: object, label: str, path: Path) -> None:
@@ -586,6 +847,34 @@ def _validate_apply_run_fields(
             ],
             f"{path}\napply.oracle_snapshot_commit: {oracle_snapshot_commit}",
         )
+
+
+def _validate_apply_branch_session_id(
+    apply_branch: object,
+    session_id: str,
+    path: Path,
+) -> None:
+    """apply branch がこの session state に属することを検証する。"""
+    if not isinstance(apply_branch, str):
+        return
+    branch_session_id = session_id_from_branch(apply_branch)
+    if branch_session_id == session_id:
+        return
+    raise CmocError(
+        "session state ファイルの形式が不正です。",
+        [
+            "apply.apply_branch は同じ session の apply branch である必要があります。",
+            "破損した session state を復旧してください。",
+        ],
+        "\n".join(
+            [
+                str(path),
+                f"session id: {session_id}",
+                f"apply branch session id: {branch_session_id}",
+                f"apply.apply_branch: {apply_branch}",
+            ]
+        ),
+    )
 
 
 def active_session_ids_for_home_branch(
@@ -628,7 +917,15 @@ def active_session_ids_for_home_branch(
             )
         if (
             session.get("state") == "active"
-            and session.get("session_home_branch") == session_home_branch
+            and (
+                session.get("session_home_branch") == session_home_branch
+                or _legacy_active_session_home_branch_matches(
+                    repo_root,
+                    session_id,
+                    session,
+                    session_home_branch,
+                )
+            )
         ):
             session_ids.append(session_id)
     orphan_branch_ids = sorted(session_branch_ids - state_session_ids)
@@ -641,6 +938,27 @@ def active_session_ids_for_home_branch(
             ],
         )
     return session_ids
+
+
+def _legacy_active_session_home_branch_matches(
+    repo_root: Path,
+    session_id: str,
+    session: dict[str, object],
+    session_home_branch: str,
+) -> bool:
+    """home branch が null の古い active session を一意復元できる場合だけ照合する。"""
+    if session.get("session_home_branch") is not None:
+        return False
+    start_commit = session.get("session_start_commit")
+    if not isinstance(start_commit, str) or not start_commit:
+        return False
+    session_branch = f"{SESSION_BRANCH_PREFIX}{session_id}"
+    candidates = _session_home_branch_candidates(
+        repo_root,
+        session_branch,
+        start_commit,
+    )
+    return candidates == [session_home_branch]
 
 
 def _session_branch_names(repo_root: Path) -> list[str]:
@@ -681,7 +999,7 @@ def ensure_cmoc_ignored(repo_root: Path) -> bool:
     changed = _ensure_cmoc_ignore_rule(repo_root)
     tracked = _tracked_cmoc_paths(repo_root)
     if tracked:
-        run_git(repo_root, ["rm", "--cached", "-r", "--", ".cmoc"])
+        _remove_cmoc_from_index(repo_root, env={})
         changed = True
 
     # gitignore と git index の両面から完了条件を検証する。
@@ -781,9 +1099,18 @@ def gitignore_has_cmoc_rule(repo_root: Path) -> bool:
 def staged_diff_from_head(repo_root: Path) -> str:
     """現在 stage 済みの差分を HEAD 基準の patch として返す。"""
     # init commit 後に利用者の stage 済み差分だけを復元するため事前保存する。
+    # `.cmoc` は init の完了条件として必ず index から外すため復元対象にしない。
     result = run_git(
         repo_root,
-        ["diff", "--cached", "--binary", "--full-index"],
+        [
+            "diff",
+            "--cached",
+            "--binary",
+            "--full-index",
+            "--",
+            ".",
+            ":(exclude,literal).cmoc",
+        ],
     )
     return result.stdout
 
@@ -803,7 +1130,9 @@ def commit_cmoc_initialization_changes(
             run_git(repo_root, ["read-tree", "--empty"], env=env)
         else:
             run_git(repo_root, ["read-tree", "HEAD"], env=env)
-        if not had_cmoc_rule:
+        if parent_hash is None and had_cmoc_rule:
+            _stage_worktree_gitignore(repo_root, env)
+        elif not had_cmoc_rule:
             _stage_gitignore_with_cmoc_rule_from_head(repo_root, env)
         _remove_cmoc_from_index(repo_root, env)
 
@@ -916,14 +1245,21 @@ def commit_if_changed(repo_root: Path, paths: list[str], message: str) -> bool:
     if parent_hash is not None:
         commit_args[2:2] = ["-p", parent_hash]
     commit_hash = run_git(repo_root, commit_args).stdout.strip()
-    update_ref_args = ["update-ref", "HEAD", commit_hash]
-    if parent_hash is not None:
-        update_ref_args.append(parent_hash)
-    run_git(repo_root, update_ref_args)
-    _restore_index_after_pathspec_commit(
-        repo_root,
-        staged_outside_paths + staged_inside_paths,
-    )
+    with tempfile.TemporaryDirectory(prefix="cmoc-restore-index-") as temp_name:
+        restored_index = Path(temp_name) / "index"
+        staged_diff = staged_outside_paths + staged_inside_paths
+        _write_restored_index_after_internal_commit(
+            repo_root,
+            restored_index,
+            commit_hash,
+            staged_diff,
+            remove_cmoc=bool(staged_diff),
+        )
+        update_ref_args = ["update-ref", "HEAD", commit_hash]
+        if parent_hash is not None:
+            update_ref_args.append(parent_hash)
+        run_git(repo_root, update_ref_args)
+        _replace_git_index(repo_root, restored_index)
     return True
 
 
@@ -1000,6 +1336,24 @@ def filter_oracle_file_paths(
     return [path for path in candidates if path not in ignored]
 
 
+def filter_oracle_file_paths_at_commit(
+    repo_root: Path,
+    commit_hash: str,
+    relative_paths: list[str],
+) -> list[str]:
+    """指定 commit の root `.gitignore` で oracles ファイルだけを返す。"""
+    candidates = sorted(
+        {
+            path
+            for path in relative_paths
+            if path.startswith("oracles/")
+            and Path(path).name != "INDEX.md"
+        }
+    )
+    ignored = root_gitignored_paths_at_commit(repo_root, commit_hash, candidates)
+    return [path for path in candidates if path not in ignored]
+
+
 def list_implementation_files(repo_root: Path) -> list[Path]:
     """仕様に従って実装ファイルを列挙する。"""
     # repo root 配下の全ファイルから、仕様上の除外対象だけを落とす。
@@ -1039,15 +1393,37 @@ def filter_apply_implementation_file_paths(
             path
             for path in relative_paths
             if not _is_excluded_implementation_path(path)
+            and not _is_forbidden_apply_implementation_path(path)
         }
     )
     ignored = _root_gitignored_paths(repo_root, candidates)
     return [path for path in candidates if path not in ignored]
 
 
+def filter_apply_implementation_file_paths_at_commit(
+    repo_root: Path,
+    commit_hash: str,
+    relative_paths: list[str],
+) -> list[str]:
+    """指定 commit の root `.gitignore` で apply 実装調査対象だけを返す。"""
+    candidates = sorted(
+        {
+            path
+            for path in relative_paths
+            if not _is_excluded_implementation_path(path)
+            and not _is_forbidden_apply_implementation_path(path)
+        }
+    )
+    ignored = root_gitignored_paths_at_commit(repo_root, commit_hash, candidates)
+    return [path for path in candidates if path not in ignored]
+
+
 def is_apply_implementation_path(repo_root: Path, relative_path: str) -> bool:
     """root 相対 path が apply の調査対象になる実装ファイルか判定する。"""
-    return is_implementation_path(repo_root, relative_path)
+    return (
+        is_implementation_path(repo_root, relative_path)
+        and not _is_forbidden_apply_implementation_path(relative_path)
+    )
 
 
 def root_gitignored_paths(
@@ -1056,6 +1432,24 @@ def root_gitignored_paths(
 ) -> set[str]:
     """root `.gitignore` の pattern に一致する path 集合を返す。"""
     return _root_gitignored_paths(repo_root, relative_paths)
+
+
+def root_gitignored_paths_at_commit(
+    repo_root: Path,
+    commit_hash: str,
+    relative_paths: list[str],
+) -> set[str]:
+    """指定 commit の root `.gitignore` pattern に一致する path 集合を返す。"""
+    if not relative_paths:
+        return set()
+    result = run_git(
+        repo_root,
+        ["show", f"{commit_hash}:.gitignore"],
+        check=False,
+    )
+    if result.returncode != 0:
+        return set()
+    return _root_gitignored_paths_from_content(relative_paths, result.stdout)
 
 
 def changed_oracle_files(repo_root: Path, base_commit: str) -> list[Path]:
@@ -1373,6 +1767,12 @@ def _is_excluded_implementation_path(relative_path: str) -> bool:
     )
 
 
+def _is_forbidden_apply_implementation_path(relative_path: str) -> bool:
+    """apply の Codex 調査起点にしてはいけない path か判定する。"""
+    # root 直下 memo は prompt 上で読み書き禁止にしているため調査対象からも外す。
+    return relative_path == "memo" or relative_path.startswith("memo/")
+
+
 def read_session_start_commit(repo_root: Path, branch_name: str) -> str:
     """cmoc session state から session start commit を読む。"""
     session_id = session_id_from_branch(branch_name)
@@ -1489,18 +1889,6 @@ def _literal_pathspecs(paths: list[str]) -> list[str]:
 def _literal_exclude_pathspecs(paths: list[str]) -> list[str]:
     """repo 相対 path を git literal exclude pathspec へ変換する。"""
     return [f":(exclude,literal){path}" for path in paths]
-
-
-def _restore_index_after_pathspec_commit(
-    repo_root: Path,
-    staged_diff: str,
-) -> None:
-    """pathspec commit 後、既存 staged 差分を index に戻す。"""
-    _restore_index_after_internal_commit(
-        repo_root,
-        staged_diff,
-        remove_cmoc=bool(staged_diff),
-    )
 
 
 def _restore_index_after_internal_commit(
@@ -1627,6 +2015,12 @@ def _stage_gitignore_with_cmoc_rule_from_head(
     )
 
 
+def _stage_worktree_gitignore(repo_root: Path, env: dict[str, str]) -> None:
+    """作業ツリーの `.gitignore` を指定 index に stage する。"""
+    # unborn HEAD では親 tree が無いため、既存 ignore rule を初期 commit に載せる。
+    run_git(repo_root, ["add", "-f", "--", ".gitignore"], env=env)
+
+
 def _remove_cmoc_from_index(repo_root: Path, env: dict[str, str]) -> None:
     """指定 index から `.cmoc` 配下の tracked entries を取り除く。"""
     # 対象 index に残っている `.cmoc` entries を NUL 区切りで取得する。
@@ -1746,12 +2140,28 @@ def _root_gitignored_paths(
     gitignore = repo_root / ".gitignore"
     if not relative_paths or not gitignore.exists():
         return set()
+    return _root_gitignored_paths_from_content(
+        relative_paths,
+        gitignore.read_text(encoding="utf-8"),
+    )
+
+
+def _root_gitignored_paths_from_content(
+    relative_paths: list[str],
+    gitignore_content: str,
+) -> set[str]:
+    """root `.gitignore` 内容で path 集合を Git wildmatch 評価する。"""
+    if not relative_paths or not gitignore_content:
+        return set()
 
     # 一時 git repository に root `.gitignore` だけを複製して評価環境を作る。
     env = _root_gitignore_git_env()
     with tempfile.TemporaryDirectory(prefix="cmoc-gitignore-") as temp_name:
         temp_root = Path(temp_name)
-        shutil.copyfile(gitignore, temp_root / ".gitignore")
+        (temp_root / ".gitignore").write_text(
+            gitignore_content,
+            encoding="utf-8",
+        )
         subprocess.run(
             ["git", "init", "-q"],
             cwd=temp_root,

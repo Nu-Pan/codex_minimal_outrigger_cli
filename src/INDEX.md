@@ -2,71 +2,73 @@
 
 ## Summary
 
-- `cmoc` の各サブコマンドから共通利用される基盤処理をまとめたディレクトリです。
-- 実行ラッパー、Codex 呼び出し、Git リポジトリ操作、共通エラー、サブコマンドログ、時間計測、タイムスタンプ生成、レポート保存、`INDEX.md` 目次維持が入っています。
-- サブコマンド実装の土台と、目次文書の自動維持を支える共通モジュール群の入口です。
+- `src/commons` は cmoc 全体で共有する基盤処理の集約先で、`__init__.py` と各種共通モジュールをまとめています。
+- `codex.py` は `codex exec` の共通起動基盤、`command_runner.py` はサブコマンド共通実行、`repo.py` は git と cmoc 状態管理、`errors.py` は共通エラー整形を担当します。
+- `subcommand_log.py`、`timing.py`、`timestamps.py`、`report_files.py`、`indexing.py` はそれぞれログ記録、経過時間計測、タイムスタンプ生成、レポート保存、`INDEX.md` 目次維持を扱います。
+- このディレクトリの目次は、共通処理の役割を素早く切り分けて、必要な実装へ最短でたどるための入口です。
 
 ## Read this when
 
-- `cmoc` 全体で共有する実行制御、エラー整形、Git 操作、ログ記録の役割分担を把握したいとき。
-- `codex exec` 呼び出し、`INDEX.md` 生成・維持、レポート保存、タイムスタンプ生成の共通処理を確認したいとき。
-- サブコマンド本体の土台になるユーティリティ群の入口をまとめて見たいとき。
+- cmoc 全体で使う共通基盤モジュールの役割分担を把握したいとき。
+- `codex.py`、`command_runner.py`、`repo.py`、`errors.py`、`subcommand_log.py`、`timing.py`、`timestamps.py`、`report_files.py`、`indexing.py` のどれに何があるかを俯瞰したいとき。
+- 共通処理の入口を確認してから、実装やテストの対象モジュールへ進みたいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの引数解析や業務ロジックだけを確認したいとき。
-- `src/sub_commands` 側の実装や各コマンドの実行フローだけを追いたいとき。
-- `oracles` 配下の正本仕様や運用手順だけを確認したいとき。
+- `src/sub_commands` 側の個別サブコマンドの業務ロジックや CLI 引数だけを確認したいとき。
+- `oracles` の正本仕様や `INDEX.md` の生成ルールだけを確認したいとき。
+- 特定の共通モジュール 1 つだけの詳細実装を追いたいとき。
 
 ## hash
 
-- 70ff3c924c8ffd5f7a868ca72c53bac80361aa4256253209aa91510602584892
+- e96c77a0a4f9c1684cb598a016371c6e97a12f05165463aed067a752844a737e
 
 # `main.py`
 
 ## Summary
 
-- cmoc CLI のエントリーポイントで、Typer のルート app と `session` / `apply` / `review` のサブアプリを組み立てます。
-- `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`review oracles` の登録と、それぞれのオプション既定値やエイリアスをまとめます。
-- サブコマンド未指定時の利用者向けエラー、Click/Typer 例外の共通整形、`python src/main.py` 直実行の起動経路を扱います。
+- cmoc CLI のエントリーポイントで、Typer のルート `app` と `session` / `apply` / `review` の各サブアプリを組み立てるファイルです。
+- `init`、`session`、`apply`、`review` の各コマンド登録に加えて、`eval-oracle` / `eval-oracles` の隠し別名や、`apply fork` の繰り返し回数・`scope`、`apply join` の `--force-resolve` などの既定値をまとめています。
+- サブコマンド未指定時の `CmocError` 生成、補完プローブ時の分岐、Click/Typer 例外の共通整形、`python src/main.py` 直実行の起動経路を扱います。
 
 ## Read this when
 
-- cmoc の起動点やサブコマンド登録を修正・レビューしたいとき。
-- `init` / `session` / `apply` / `review` のコマンド名、エイリアス、オプション既定値を確認したいとき。
-- サブコマンドなし起動時の利用者向けエラー、終了コード、`--help` への誘導を確認したいとき。
-- `python src/main.py` で直接起動する経路と、その例外ハンドリングを確認したいとき。
+- cmoc CLI の起動点と、`session` / `apply` / `review` のサブアプリ構成を確認したいとき。
+- `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`review oracles` の登録名、隠し別名、既定オプションを確認したいとき。
+- サブコマンド未指定時の利用者向けエラー、補完プローブ時の分岐、Click/Typer 例外の共通整形を追いたいとき。
+- `python src/main.py` で直接起動する経路と、そのときの例外処理を確認したいとき。
 
 ## Do not read this when
 
-- 各サブコマンドの本体ロジックや `src/sub_commands/` 配下の処理だけを確認したいとき。
-- 共通エラー型や `format_error_report` の整形仕様だけを確認したいとき。
-- `INDEX.md` の生成ルールや共通ユーティリティの設計だけを追いたいとき。
+- `src/sub_commands/` 配下の各サブコマンド本体の実装だけを追いたいとき。
+- `commons.errors` のエラー型や `format_error_report()` の整形ロジックだけを確認したいとき。
+- `INDEX.md` の生成ルールや `oracles` 側のルーティング方針だけを確認したいとき。
 
 ## hash
 
-- 725244cd04649c14efdc472340862818b2eabfb76416af919258408edf3121cc
+- d03b4e0b3d0c12971884d8bc1e159f95c3f0efe50e8fca99dc96066066992456
 
 # `sub_commands`
 
 ## Summary
 
-- `cmoc` の個別サブコマンド実装への入口です。
-- `apply/` と `session/` の各パッケージ、`init.py`、`eval_oracles.py`、`__init__.py` をまとめて案内します。
-- 各コマンド本体の配置先を素早く選べるようにする目次です。
+- `src/sub_commands` は cmoc のサブコマンド実装の入口で、`__init__.py`、`init.py`、`eval_oracles.py`、`apply/`、`session/` へ振り分ける目次です。
+- `__init__.py` はパッケージ宣言のみ、`init.py` は `cmoc init`、`eval_oracles.py` は `cmoc review oracles` の本体です。
+- `apply/` と `session/` はそれぞれ個別の `INDEX.md` を持ち、開始・統合・破棄系の実装入口へ進むための案内になります。
 
 ## Read this when
 
-- `src/sub_commands` 配下で、どのモジュールがどのサブコマンドを担当しているか整理したいとき。
-- `apply`、`session`、`init`、`review oracles` の実装入口を一覧したいとき。
-- `src/sub_commands` のパッケージ構造と、各入口ファイルへの導線を確認したいとき。
+- `src/sub_commands` 配下で、どのファイルがどのサブコマンドを担当するか確認したいとき。
+- サブコマンド実装・修正・レビュー・テストの前に、該当モジュールや配下ディレクトリへ進む入口を整理したいとき。
+- `__init__.py`、`init.py`、`eval_oracles.py`、`apply/`、`session/` の役割分担を素早く把握したいとき。
 
 ## Do not read this when
 
-- 個別の `cmoc apply fork/join/abandon` や `cmoc session fork/join/abandon` の詳細仕様だけを確認したいとき。
-- `cmoc review oracles` の評価条件や出力仕様だけを追いたいとき。
-- 共通仕様や `oracles` 配下の正本断片だけを確認したいとき。
+- 個別サブコマンドの引数、状態遷移、例外条件だけを確認したいとき。
+- `apply/` や `session/` のさらに細かい仕様を見たいとき。
+- `src/commons` や `oracles` 全体の共通仕様だけを確認したいとき。
 
 ## hash
 
-- 47c5b8acb94db4eda4a37758a044fcca71e0ed0a5202ebfee9fd1554a327da5a
+- 56243a2ee914280480e7f03ec8a44b0e01760626bd30d2bfcd2472e05889882d
+<!-- cmoc-index-kind: directory -->

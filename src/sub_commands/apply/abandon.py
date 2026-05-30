@@ -14,7 +14,9 @@ from commons.repo import (
     current_branch,
     is_apply_branch,
     is_session_branch,
-    read_apply_process_id,
+    process_cmdline,
+    process_start_time,
+    read_apply_process_record,
     read_session_state,
     run_git,
     session_id_from_branch,
@@ -86,13 +88,17 @@ class _AbandonState:
         session_branch: str,
         apply_worktree: Path,
         previous_apply_state: str,
-        process_id: int | None,
+        repo_root: Path,
+        session_id: str,
+        process_record: dict[str, object] | None,
     ) -> None:
         self.apply_branch = apply_branch
         self.session_branch = session_branch
         self.apply_worktree = apply_worktree
         self.previous_apply_state = previous_apply_state
-        self.process_id = process_id
+        self.repo_root = repo_root
+        self.session_id = session_id
+        self.process_record = process_record
 
 
 def _validate_abandonable_state(
@@ -161,6 +167,22 @@ def _validate_abandonable_state(
             ],
             f"apply.apply_branch: {apply_branch}",
         )
+    apply_branch_session_id = session_id_from_branch(apply_branch)
+    if apply_branch_session_id != session_id:
+        raise CmocError(
+            "session state ファイルの apply branch が現在の session と一致しません。",
+            [
+                "session state の apply.apply_branch を確認して復旧してください。",
+                "別 session の apply branch を破棄対象にしないでください。",
+            ],
+            "\n".join(
+                [
+                    f"session id: {session_id}",
+                    f"apply branch session id: {apply_branch_session_id}",
+                    f"apply.apply_branch: {apply_branch}",
+                ]
+            ),
+        )
     apply_worktree = apply_worktree_path_from_branch(repo_root, apply_branch)
     if current_branch_name not in {session_branch, apply_branch}:
         raise CmocError(
@@ -180,15 +202,17 @@ def _validate_abandonable_state(
             ],
             f"session branch: {session_branch}",
         )
-    process_id = None
+    process_record = None
     if apply_state == "running":
-        process_id = read_apply_process_id(repo_root, session_id)
+        process_record = read_apply_process_record(repo_root, session_id)
     return _AbandonState(
         apply_branch=apply_branch,
         session_branch=session_branch,
         apply_worktree=apply_worktree,
         previous_apply_state=apply_state,
-        process_id=process_id,
+        repo_root=repo_root,
+        session_id=session_id,
+        process_record=process_record,
     )
 
 
@@ -196,8 +220,8 @@ def _stop_running_apply(abandon_state: _AbandonState) -> list[str]:
     """running apply のプロセスを停止し、終了済みであることを確認する。"""
     if abandon_state.previous_apply_state != "running":
         return []
-    process_id = abandon_state.process_id
-    if process_id is None:
+    process_record = abandon_state.process_record
+    if process_record is None:
         raise CmocError(
             "running apply process id が記録されていません。",
             [
@@ -206,6 +230,7 @@ def _stop_running_apply(abandon_state: _AbandonState) -> list[str]:
             ],
             "apply.state: running",
         )
+    process_id = _process_id_from_record(process_record)
     if process_id == os.getpid():
         raise CmocError(
             "停止対象の apply process が現在の abandon process と一致します。",
@@ -217,6 +242,7 @@ def _stop_running_apply(abandon_state: _AbandonState) -> list[str]:
         )
     if not _process_exists(process_id):
         return [f"running apply process was already gone: pid {process_id}"]
+    _assert_apply_process_identity(abandon_state, process_record, process_id)
 
     target_process_ids = [*reversed(_descendant_process_ids(process_id)), process_id]
     for target_process_id in target_process_ids:
@@ -234,6 +260,77 @@ def _stop_running_apply(abandon_state: _AbandonState) -> list[str]:
             "`cmoc apply abandon` を再実行する前に、手動で process を停止してください。",
         ],
         f"apply process id: {process_id}",
+    )
+
+
+def _process_id_from_record(process_record: dict[str, object]) -> int:
+    """runtime record から正の process id を取り出す。"""
+    process_id = process_record.get("process_id")
+    if isinstance(process_id, int) and process_id > 0:
+        return process_id
+    raise CmocError(
+        "running apply process id が不正です。",
+        [
+            ".cmoc/runtime/apply 配下の pid ファイルを確認してください。",
+            "実行中の apply process を特定できないため、手動で状態を確認してから再実行してください。",
+        ],
+        f"apply process id: {process_id}",
+    )
+
+
+def _assert_apply_process_identity(
+    abandon_state: _AbandonState,
+    process_record: dict[str, object],
+    process_id: int,
+) -> None:
+    """PID 再利用を検出し、現在の apply process と確認できる場合だけ許可する。"""
+    expected_repo_root = str(abandon_state.repo_root.resolve())
+    recorded_start_time = process_record.get("proc_start_time")
+    current_start_time = process_start_time(process_id)
+    recorded_cmdline = process_record.get("cmdline")
+    current_cmdline = process_cmdline(process_id)
+    checks = [
+        ("format", process_record.get("format"), "cmoc-apply-process-v1"),
+        ("repo_root", process_record.get("repo_root"), expected_repo_root),
+        ("session_id", process_record.get("session_id"), abandon_state.session_id),
+        (
+            "apply_branch",
+            process_record.get("apply_branch"),
+            abandon_state.apply_branch,
+        ),
+        (
+            "proc_start_time",
+            recorded_start_time,
+            current_start_time,
+        ),
+        ("cmdline", recorded_cmdline, current_cmdline),
+    ]
+    mismatches = [
+        f"{name}: recorded={recorded!r}, current={current!r}"
+        for name, recorded, current in checks
+        if recorded != current
+    ]
+    if not isinstance(recorded_start_time, int):
+        mismatches.append(
+            f"recorded proc_start_time is invalid: {recorded_start_time!r}"
+        )
+    if not isinstance(current_start_time, int):
+        mismatches.append(
+            f"current proc_start_time is unavailable: {current_start_time!r}"
+        )
+    if not isinstance(recorded_cmdline, list) or not recorded_cmdline:
+        mismatches.append(f"recorded cmdline is invalid: {recorded_cmdline!r}")
+    if not isinstance(current_cmdline, list) or not current_cmdline:
+        mismatches.append(f"current cmdline is unavailable: {current_cmdline!r}")
+    if not mismatches:
+        return
+    raise CmocError(
+        "running apply process を安全に特定できませんでした。",
+        [
+            ".cmoc/runtime/apply 配下の pid ファイルと実行中 process を確認してください。",
+            "対象が現在の apply process であると確認できるまで、手動で process を停止しないでください。",
+        ],
+        "\n".join([f"apply process id: {process_id}", *mismatches]),
     )
 
 
@@ -287,12 +384,14 @@ def _relocate_from_apply_branch(
     if session_worktree is not None:
         os.chdir(session_worktree)
         return
+    assert_no_uncommitted_changes(repo_root)
     switch_result = run_git(
         repo_root,
         ["switch", abandon_state.session_branch],
         check=False,
     )
     if switch_result.returncode == 0:
+        assert_no_uncommitted_changes(repo_root)
         return
     detail = switch_result.stderr.strip()
     raise CmocError(

@@ -16,6 +16,7 @@ from commons.repo import (
     git_status_paths,
     is_session_branch,
     read_session_state,
+    resolve_session_home_branch,
     run_git,
     session_id_from_branch,
     session_state_root,
@@ -43,16 +44,22 @@ def cmoc_session_join_impl(repo_root: Path | None = None) -> None:
         session_id = session_id_from_branch(session_branch)
         state_root = session_state_root(repo_root)
         state = read_session_state(state_root, session_id)
-        home_branch = _validate_joinable_state(state, session_branch)
+        _validate_joinable_state(state, session_branch)
+        home_branch = resolve_session_home_branch(
+            repo_root,
+            state,
+            session_branch,
+        )
+        _assert_local_branch_exists(repo_root, home_branch)
         assert_no_uncommitted_changes_outside_cmoc(repo_root)
 
         start_step(timer, 2, 5, "ensure .cmoc is ignored")
         manual_resolution_required = True
         ensure_cmoc_ignored_and_committed(repo_root)
         assert_no_uncommitted_changes(repo_root)
+        _record_session_home_branch(state_root, session_id, state, home_branch)
 
         start_step(timer, 3, 5, "switch to session home branch")
-        _assert_local_branch_exists(repo_root, home_branch)
         run_git(repo_root, ["switch", home_branch])
 
         start_step(timer, 4, 5, "merge session branch")
@@ -98,8 +105,8 @@ def _current_session_branch(repo_root: Path) -> str:
 def _validate_joinable_state(
     state: dict[str, object],
     session_branch: str,
-) -> str:
-    """session join の state 前提条件を検証し、home branch 名を返す。"""
+) -> None:
+    """session join の state 前提条件を検証する。"""
     session = state.get("session")
     apply = state.get("apply")
     if not isinstance(session, dict) or not isinstance(apply, dict):
@@ -129,17 +136,28 @@ def _validate_joinable_state(
             ],
             f"apply.state: {apply.get('state')}",
         )
-    home_branch = session.get("session_home_branch")
-    if not isinstance(home_branch, str) or not home_branch:
+
+
+def _record_session_home_branch(
+    repo_root: Path,
+    session_id: str,
+    state: dict[str, object],
+    home_branch: str,
+) -> None:
+    """復元済み session home branch を state に保存する。"""
+    session = state.get("session")
+    if not isinstance(session, dict):
         raise CmocError(
-            "session home branch を特定できませんでした。",
+            "session state ファイルの形式が不正です。",
             [
-                "session state の session.session_home_branch を確認してください。",
-                "state が壊れている場合は、手動で merge 先 branch を確認してください。",
+                "state JSON の session セクションを確認して復旧してください。",
+                "復旧できない場合は、現在の session を使わず新しい session を開始してください。",
             ],
-            f"現在の branch: {session_branch}",
         )
-    return home_branch
+    if session.get("session_home_branch") == home_branch:
+        return
+    session["session_home_branch"] = home_branch
+    write_session_state(repo_root, session_id, state)
 
 
 def _assert_local_branch_exists(repo_root: Path, branch_name: str) -> None:
@@ -192,7 +210,6 @@ def _resolve_conflicts(repo_root: Path) -> None:
             ],
         )
     _assert_no_forbidden_conflict_paths(unmerged)
-    _assert_no_forbidden_pending_paths(repo_root)
     merge_state = _merge_state_snapshot(repo_root)
     protected_snapshot = _protected_conflict_snapshot(repo_root, unmerged)
 
@@ -208,7 +225,6 @@ def _resolve_conflicts(repo_root: Path) -> None:
     )
 
     _assert_merge_state_unchanged(repo_root, merge_state)
-    _assert_no_forbidden_pending_paths(repo_root)
 
     # conflict 対象外の差分は Codex 呼び出し前と同一でなければならない。
     _assert_protected_conflict_snapshot_unchanged(
@@ -368,6 +384,7 @@ def _files_with_conflict_markers(
         ).splitlines():
             if (
                 line.startswith("<<<<<<<")
+                or line.startswith("|||||||")
                 or line == "======="
                 or line.startswith(">>>>>>>")
             ):
@@ -397,9 +414,7 @@ def _assert_no_forbidden_conflict_paths(unmerged: list[str]) -> None:
 def _is_forbidden_conflict_path(path: str) -> bool:
     """session join の自動 conflict 解消で編集禁止の path か判定する。"""
     return (
-        path == "README.md"
-        or path == "AGENTS.md"
-        or path == ".agents"
+        path == ".agents"
         or path.startswith(".agents/")
         or path == "memo"
         or path.startswith("memo/")
@@ -413,24 +428,6 @@ def _oracle_conflict_paths(unmerged: list[str]) -> list[str]:
         for path in unmerged
         if path == "oracles" or path.startswith("oracles/")
     ]
-
-
-def _assert_no_forbidden_pending_paths(repo_root: Path) -> None:
-    """禁止領域の未コミット差分が merge 中に残っていないことを確認する。"""
-    forbidden = [
-        path
-        for _status, path in _porcelain_status_entries(repo_root)
-        if _is_forbidden_conflict_path(path)
-    ]
-    if forbidden:
-        raise CmocError(
-            "session join の禁止領域に未コミット差分があります。",
-            [
-                "merge commit は作成していません。",
-                "表示された path の扱いを判断し、merge を手動で解消してください。",
-            ],
-            "\n".join(sorted(forbidden)),
-        )
 
 
 def _protected_conflict_snapshot(
@@ -485,7 +482,7 @@ def _porcelain_status_entries(repo_root: Path) -> list[tuple[str, str]]:
 
 def _read_snapshot_bytes(repo_root: Path, relative_path: str) -> bytes | None:
     """存在する通常ファイルの内容を snapshot 用に読む。"""
-    if _is_forbidden_conflict_path(relative_path):
+    if relative_path == "memo" or relative_path.startswith("memo/"):
         return None
     path = repo_root / relative_path
     if not path.exists() or not path.is_file():
@@ -513,6 +510,12 @@ def _conflict_prompt(repo_root: Path, unmerged: list[str]) -> str:
         for path in unmerged
         if path == "oracles" or path.startswith("oracles/")
     ]
+    root_doc_conflicts = [
+        path
+        for path in unmerged
+        if path in {"README.md", "AGENTS.md"}
+    ]
+    root_doc_conflict_set = set(root_doc_conflicts)
 
     lines = [
         "あなたは merge conflict 解消担当です。",
@@ -521,11 +524,17 @@ def _conflict_prompt(repo_root: Path, unmerged: list[str]) -> str:
         "完了条件は、conflict marker を削除し、解決内容と未解決ファイルの有無を報告することです。",
         "`git add` と `git commit` は実行禁止です。",
         "conflict 対象外のファイルは編集禁止です。",
-        f"`{concrete_repo_root / 'README.md'}` は編集禁止です。",
-        f"`{concrete_repo_root / 'AGENTS.md'}` は編集禁止です。",
         f"`{concrete_repo_root / '.agents'}` は編集禁止です。",
         f"`{concrete_repo_root / 'memo'}` は読み書き禁止です。",
     ]
+    for root_doc in ("README.md", "AGENTS.md"):
+        concrete_root_doc = concrete_repo_root / root_doc
+        if root_doc in root_doc_conflict_set:
+            lines.append(
+                f"`{concrete_root_doc}` は conflict marker 解消に限って編集できます。"
+            )
+        else:
+            lines.append(f"`{concrete_root_doc}` は編集禁止です。")
     if oracle_conflicts:
         concrete_oracle_conflicts = [
             str((concrete_repo_root / relative_path).resolve())

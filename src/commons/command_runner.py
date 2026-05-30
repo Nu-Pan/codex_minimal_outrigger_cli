@@ -45,6 +45,9 @@ def run_command(handler: Callable[[Path], int | None]) -> None:
                         ),
                         exit_code=exit_code,
                     )
+                    report_error = report_error.with_traceback(
+                        exit_error.__traceback__
+                    )
                     print(format_error_report(report_error))
                 raise
             except Exception as error:

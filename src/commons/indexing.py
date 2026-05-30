@@ -4,6 +4,7 @@ import codecs
 import concurrent.futures
 import fcntl
 import hashlib
+import json
 import os
 import re
 import subprocess
@@ -310,12 +311,14 @@ def _write_index_if_needed(
         digest = _hash_path(repo_root, child, gitignore_matcher)
         if digest is None:
             continue
-        kind = _index_entry_kind(child)
         existing = existing_entries.get(child.name)
         if (
             existing is not None
             and _entry_hash(existing) == digest
-            and _entry_kind_matches(existing, kind, digest)
+            # Empty file and empty directory hashes collide by specification.
+            # Without storing non-spec metadata in INDEX.md, regenerate these
+            # entries so file/directory replacement cannot silently reuse text.
+            and digest != _EMPTY_SHA256_DIGEST
             and _entry_format_is_valid(existing, child.name, digest)
         ):
             entry_items.append(existing)
@@ -467,7 +470,6 @@ def _entry_for(repo_root: Path, path: Path, digest: str) -> str:
             "## hash",
             "",
             f"- {digest}",
-            f"<!-- cmoc-index-kind: {_index_entry_kind(path)} -->",
         ]
     )
 
@@ -475,11 +477,13 @@ def _entry_for(repo_root: Path, path: Path, digest: str) -> str:
 def _index_prompt(repo_root: Path, path: Path, digest: str) -> str:
     """INDEX 目次情報生成用の Codex prompt を作る。"""
     # Codex 側には hash を返させず、cmoc が計算した値だけを後段で埋め込む。
-    display_path = _display_index_path(repo_root, path)
+    concrete_path = _json_concrete_index_path(path)
     return "\n".join(
         [
             "あなたはリポジトリのルーティング文書を作るアシスタントです。",
-            f"`{display_path}` の `INDEX.md` 目次情報を作成してください。",
+            "対象 path は次の JSON string をデコードした絶対 path です: "
+            f"{concrete_path}",
+            "その対象 path の `INDEX.md` 目次情報を作成してください。",
             "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。",
             "summary、read_this_when、do_not_read_this_when はそれぞれ",
             "日本語の文字列配列にしてください。",
@@ -810,6 +814,16 @@ def _display_index_path(repo_root: Path, path: Path) -> str:
     return _encode_index_token(path.relative_to(repo_root).as_posix())
 
 
+def _display_concrete_index_path(path: Path) -> str:
+    """絶対 path を INDEX token と同じ安全な 1 行表現にする。"""
+    return _encode_index_token(path.resolve().as_posix())
+
+
+def _json_concrete_index_path(path: Path) -> str:
+    """Codex prompt 用の絶対 path を可逆な JSON string にする。"""
+    return json.dumps(path.resolve().as_posix())
+
+
 def _encode_index_token(value: str) -> str:
     """heading 内の code span に置く名前を可逆な 1 行 token にする。"""
     # `%` は escape 導入子なので必ず符号化し、backtick と制御文字も避ける。
@@ -867,29 +881,6 @@ def _entry_hash(entry: str) -> str | None:
     return match.group(1)
 
 
-def _entry_kind_matches(entry: str, kind: str, digest: str) -> bool:
-    """既存目次ブロックの記録種別が現在種別と矛盾しないか判定する。"""
-    entry_kind = _entry_kind(entry)
-    if entry_kind is not None:
-        return entry_kind == kind
-
-    # 旧形式 INDEX には種別メタデータが無い。空ファイルと空ディレクトリは
-    # 同じ SHA-256(empty bytes) になるため、この digest だけは再生成して
-    # 種別メタデータを付与する。
-    return digest != _EMPTY_SHA256_DIGEST
-
-
-def _entry_kind(entry: str) -> str | None:
-    """目次情報ブロックから内部種別メタデータを読む。"""
-    match = re.search(
-        r"(?m)^<!-- cmoc-index-kind: (file|directory) -->$",
-        entry,
-    )
-    if match is None:
-        return None
-    return match.group(1)
-
-
 def _entry_format_is_valid(entry: str, name: str, digest: str) -> bool:
     """既存目次ブロックが仕様の固定フォーマットに一致するか判定する。"""
     # 見出しと 4 セクションの順序、説明欄の bullet 形式まで検査する。
@@ -916,7 +907,6 @@ def _entry_format_is_valid(entry: str, name: str, digest: str) -> bool:
         r"\n"
         r"## hash\n\n"
         rf"- {digest}"
-        r"(?:\n<!-- cmoc-index-kind: (?:file|directory) -->)?"
         r"\Z"
     )
     return pattern.match(entry) is not None

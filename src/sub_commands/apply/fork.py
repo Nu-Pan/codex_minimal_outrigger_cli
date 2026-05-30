@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from inspect import Parameter, signature
 from pathlib import Path
 from time import sleep
+from typing import Literal
 
 from commons.codex import (
     COMMIT_MESSAGE_MODEL,
@@ -35,7 +36,9 @@ from commons.repo import (
     current_branch,
     ensure_cmoc_ignored,
     filter_apply_implementation_file_paths,
+    filter_apply_implementation_file_paths_at_commit,
     filter_oracle_file_paths,
+    filter_oracle_file_paths_at_commit,
     git_name_only_paths,
     git_name_status_entries,
     git_status_paths,
@@ -53,7 +56,10 @@ from commons.timing import StepTimer, start_step
 from commons.timing import StepIndexPath
 from commons.timestamps import make_timestamp
 
-_APPLY_INCOMPLETE_EXIT_CODE: int = 2
+ApplyScope = Literal["rolling", "session", "full"]
+_APPLY_SCOPES = {"rolling", "session", "full"}
+APPLY_FORK_EXIT_CODE_CONVERGED = 0
+APPLY_FORK_EXIT_CODE_UNCONVERGED = 3
 
 
 @dataclass(frozen=True)
@@ -126,7 +132,7 @@ _DISCREPANCY_OUTPUT_SCHEMA: dict[str, object] = {
                         "type": "array",
                         "description": (
                             "要修正点の根拠となる文言の位置情報。"
-                            "`oracles`・実装どちらかのファイルが必ず 1 つは"
+                            "仕様ファイル・実装ファイルのどちらかが必ず 1 つは"
                             "根拠として存在するはずであるから空配列は想定しない。"
                         ),
                         "items": {
@@ -170,7 +176,7 @@ _DISCREPANCY_OUTPUT_SCHEMA: dict[str, object] = {
                     "oracle_requirement": {
                         "type": "string",
                         "description": (
-                            "oracle が要求している仕様。実装のみから発見した"
+                            "仕様ファイルが要求している仕様。実装のみから発見した"
                             "要修正点であったとしても必ず関係する仕様を記載する。"
                         ),
                     },
@@ -246,7 +252,7 @@ def cmoc_apply_impl(
     *,
     repeat_investigate_and_fix: int = 5,
     repeat_improove_fixing_list: int = 3,
-    full: bool = False,
+    scope: ApplyScope = "rolling",
 ) -> int | None:
     """oracle と実装の不整合を Codex CLI へ追従させる。"""
     # 直接呼び出し時は共通 runner で repo root 解決とエラー整形を行う。
@@ -258,7 +264,7 @@ def cmoc_apply_impl(
                 repeat_improove_fixing_list=(
                     repeat_improove_fixing_list
                 ),
-                full=full,
+                scope=scope,
             )
         )
         return None
@@ -283,6 +289,7 @@ def cmoc_apply_impl(
         repeat_investigate_and_fix,
         repeat_improove_fixing_list,
     )
+    _validate_apply_scope(scope)
     ensure_cmoc_ignored(repo_root)
     assert_no_uncommitted_changes(repo_root)
 
@@ -309,6 +316,11 @@ def cmoc_apply_impl(
             session_start_commit = _validate_apply_fork_state(
                 state,
                 session_branch,
+            )
+            investigation_base_commit = _scope_base_commit(
+                state,
+                session_start_commit,
+                scope,
             )
             assert_no_uncommitted_changes(repo_root)
             session_head_at_apply_start = head_commit(repo_root)
@@ -342,11 +354,23 @@ def cmoc_apply_impl(
                 apply_run_id = error.last_plan.apply_run_id
                 apply_branch = error.last_plan.apply_branch
                 apply_worktree = error.last_plan.apply_worktree
-                _mark_apply_error(state_root, session_id, state)
+                _mark_apply_error(
+                    state_root,
+                    session_id,
+                    state,
+                    apply_branch=apply_branch,
+                    oracle_snapshot_commit=oracle_snapshot_commit,
+                )
                 apply_error_recorded = True
                 raise
             except Exception:
-                _mark_apply_error(state_root, session_id, state)
+                _mark_apply_error(
+                    state_root,
+                    session_id,
+                    state,
+                    apply_branch=apply_branch,
+                    oracle_snapshot_commit=oracle_snapshot_commit,
+                )
                 apply_error_recorded = True
                 raise
 
@@ -374,12 +398,13 @@ def cmoc_apply_impl(
             )
             discrepancies = _investigate_discrepancies(
                 apply_worktree,
-                session_start_commit,
+                investigation_base_commit,
                 oracle_snapshot_commit,
+                improvement_base_commit=oracle_snapshot_commit,
                 timer=timer,
                 step_path=loop_step_path,
                 repeat_improove_fixing_list=repeat_improove_fixing_list,
-                full=full,
+                scope=scope,
                 dirty_oracle_paths=dirty_oracle_paths,
                 dirty_implementation_paths=dirty_implementation_paths,
             )
@@ -426,7 +451,7 @@ def cmoc_apply_impl(
         _assert_forbidden_paths_clean(apply_worktree)
         _commit_all_changes(apply_worktree)
 
-        # 実行結果を人間向け report と exit code に変換する。
+        # 実行結果を人間向け report に変換する。
         failed_stage = "write report"
         start_step(timer, 6, 6, "write report")
         session_head_at_apply_finish = _session_branch_head_for_report(
@@ -457,12 +482,20 @@ def cmoc_apply_impl(
             session_id,
             state,
         )
-        return 0 if completed else _APPLY_INCOMPLETE_EXIT_CODE
+        if completed:
+            return APPLY_FORK_EXIT_CODE_CONVERGED
+        return APPLY_FORK_EXIT_CODE_UNCONVERGED
     except Exception as error:
         if not apply_start_needs_error_record:
             raise
         if not apply_error_recorded:
-            _mark_apply_error(state_root, session_id, state)
+            _mark_apply_error(
+                state_root,
+                session_id,
+                state,
+                apply_branch=apply_branch,
+                oracle_snapshot_commit=oracle_snapshot_commit,
+            )
         try:
             session_head_at_apply_finish = _session_branch_head_for_report(
                 repo_root,
@@ -577,6 +610,52 @@ def _validate_repeat_options(
             ],
             f"repeat_improove_fixing_list: {repeat_improove_fixing_list}",
         )
+
+
+def _validate_apply_scope(scope: str) -> None:
+    """apply fork の scope オプション値を検証する。"""
+    if scope in _APPLY_SCOPES:
+        return
+    raise CmocError(
+        "`cmoc apply fork --scope` の値が不正です。",
+        [
+            "`rolling`, `session`, `full` のいずれかを指定してください。",
+            "既定の rolling scope を使う場合は `--scope` を省略してください。",
+        ],
+        f"--scope: {scope}",
+    )
+
+
+def _scope_base_commit(
+    state: dict[str, object],
+    session_start_commit: str,
+    scope: ApplyScope,
+) -> str:
+    """scope に応じて差分調査の base commit を返す。"""
+    if scope == "session" or scope == "full":
+        return session_start_commit
+    session = state.get("session")
+    if not isinstance(session, dict):
+        raise CmocError(
+            "session state ファイルの形式が不正です。",
+            [
+                "state JSON の session セクションを確認して復旧してください。",
+                "復旧できない場合は、現在の session を使わず新しい session を開始してください。",
+            ],
+        )
+    last_joined = session.get("last_joined_apply_oracle_snapshot_commit")
+    if last_joined is None:
+        return session_start_commit
+    if not isinstance(last_joined, str) or not last_joined:
+        raise CmocError(
+            "session state ファイルの形式が不正です。",
+            [
+                "session.last_joined_apply_oracle_snapshot_commit を確認して復旧してください。",
+                "復旧できない場合は、現在の session を使わず新しい session を開始してください。",
+            ],
+            f"last_joined_apply_oracle_snapshot_commit: {last_joined}",
+        )
+    return last_joined
 
 
 def _create_apply_worktree(
@@ -700,7 +779,7 @@ def _mark_apply_running(
     apply["apply_branch"] = apply_branch
     apply["oracle_snapshot_commit"] = oracle_snapshot_commit
     write_session_state(repo_root, session_id, state)
-    write_apply_process_id(repo_root, session_id, os.getpid())
+    write_apply_process_id(repo_root, session_id, os.getpid(), apply_branch)
 
 
 def _mark_apply_completed(
@@ -719,11 +798,24 @@ def _mark_apply_error(
     repo_root: Path,
     session_id: str,
     state: dict[str, object],
+    *,
+    apply_branch: str | None = None,
+    oracle_snapshot_commit: str | None = None,
 ) -> None:
     """開始済み apply run を error として永続化する。"""
     apply = _mutable_apply_section(state)
-    if apply.get("state") != "error":
-        apply["state"] = "error"
+    changed = apply.get("state") != "error"
+    apply["state"] = "error"
+    if apply_branch:
+        changed = changed or apply.get("apply_branch") != apply_branch
+        apply["apply_branch"] = apply_branch
+    if oracle_snapshot_commit:
+        changed = (
+            changed
+            or apply.get("oracle_snapshot_commit") != oracle_snapshot_commit
+        )
+        apply["oracle_snapshot_commit"] = oracle_snapshot_commit
+    if changed:
         write_session_state(repo_root, session_id, state)
     clear_apply_process_id(repo_root, session_id)
 
@@ -746,21 +838,21 @@ def _mutable_apply_section(
 
 def _investigate_discrepancies(
     repo_root: Path,
-    base_commit: str,
+    investigation_base_commit: str,
     oracle_snapshot_commit: str,
     *,
+    improvement_base_commit: str | None = None,
     timer: StepTimer,
     step_path: StepIndexPath,
     repeat_improove_fixing_list: int,
-    full: bool,
+    scope: ApplyScope,
     dirty_oracle_paths: set[Path] | None = None,
     dirty_implementation_paths: set[Path] | None = None,
 ) -> list[dict[str, object]]:
     """oracle ファイル・実装ファイルごとに不整合調査を実行する。"""
-    # ループごとに部分・全体適用モードと調査対象を再評価する。
+    # ループごとに scope と調査対象を再評価する。
     discrepancies: list[dict[str, object]] = []
-    # --full の有無だけで全体適用・部分適用を切り替える。
-    partial = not full
+    partial = scope != "full"
     start_step(
         timer,
         (*step_path, (1, 5)),
@@ -769,14 +861,14 @@ def _investigate_discrepancies(
     )
     oracle_targets = _target_oracle_files(
         repo_root,
-        base_commit,
+        investigation_base_commit,
         oracle_snapshot_commit,
         partial,
         dirty_paths=dirty_oracle_paths,
     )
     implementation_targets = _target_implementation_files(
         repo_root,
-        base_commit,
+        investigation_base_commit,
         oracle_snapshot_commit,
         partial,
         dirty_paths=dirty_implementation_paths,
@@ -816,7 +908,7 @@ def _investigate_discrepancies(
     return _improove_fixing_list(
         repo_root,
         discrepancies,
-        base_commit,
+        improvement_base_commit or oracle_snapshot_commit,
         repeat_improove_fixing_list,
         timer=timer,
         step_path=(*step_path, (4, 5)),
@@ -845,7 +937,6 @@ def _run_investigation_job(
             json_validator=_validate_discrepancy_payload,
             model=FRONTIER_MODEL,
             reasoning_effort=FRONTIER_REASONING_EFFORT,
-            skip_index_maintenance=True,
             index_excluded_roots=_apply_index_excluded_roots(repo_root),
         )
     )
@@ -871,6 +962,7 @@ def _target_oracle_files(
                 deleted_at_snapshot=path not in snapshot_paths,
             )
             for path in sorted(dirty_paths)
+            if path in snapshot_paths or path.exists()
         ]
     if not partial:
         return [_InvestigationTarget(path) for path in all_files]
@@ -882,11 +974,9 @@ def _target_oracle_files(
         )
     )
     return [
-        _InvestigationTarget(
-            path,
-            deleted_at_snapshot=path not in snapshot_paths,
-        )
+        _InvestigationTarget(path)
         for path in sorted(changed)
+        if path in snapshot_paths
     ]
 
 
@@ -912,6 +1002,7 @@ def _target_implementation_files(
                 deleted_at_snapshot=path not in snapshot_paths,
             )
             for path in sorted(dirty_paths)
+            if path in snapshot_paths or path.exists()
         ]
     if not partial:
         return [_InvestigationTarget(path) for path in all_files]
@@ -923,18 +1014,23 @@ def _target_implementation_files(
         )
     )
     return [
-        _InvestigationTarget(
-            path,
-            deleted_at_snapshot=path not in snapshot_paths,
-        )
+        _InvestigationTarget(path)
         for path in sorted(changed)
+        if path in snapshot_paths
     ]
 
 
 def _oracle_files_at_commit(repo_root: Path, commit_hash: str) -> list[Path]:
     """指定 commit に存在する oracle ファイルを列挙する。"""
     paths = _tracked_files_at_commit(repo_root, commit_hash, "oracles")
-    return [repo_root / path for path in filter_oracle_file_paths(repo_root, paths)]
+    return [
+        repo_root / path
+        for path in filter_oracle_file_paths_at_commit(
+            repo_root,
+            commit_hash,
+            paths,
+        )
+    ]
 
 
 def _implementation_files_at_commit(
@@ -945,7 +1041,11 @@ def _implementation_files_at_commit(
     paths = _tracked_files_at_commit(repo_root, commit_hash, ".")
     return [
         repo_root / path
-        for path in _filter_implementation_file_paths(repo_root, paths)
+        for path in _filter_implementation_file_paths_at_commit(
+            repo_root,
+            commit_hash,
+            paths,
+        )
     ]
 
 
@@ -957,8 +1057,9 @@ def _changed_oracle_files_at_commit(
     """指定 commit 範囲で変更された oracle ファイルを列挙する。"""
     return [
         repo_root / path
-        for path in filter_oracle_file_paths(
+        for path in filter_oracle_file_paths_at_commit(
             repo_root,
+            commit_hash,
             _changed_files_between_commits(
                 repo_root,
                 base_commit,
@@ -977,8 +1078,9 @@ def _changed_implementation_files_at_commit(
     """指定 commit 範囲で変更された実装ファイルを列挙する。"""
     return [
         repo_root / path
-        for path in _filter_implementation_file_paths(
+        for path in _filter_implementation_file_paths_at_commit(
             repo_root,
+            commit_hash,
             _changed_files_between_commits(
                 repo_root,
                 base_commit,
@@ -995,6 +1097,19 @@ def _filter_implementation_file_paths(
 ) -> list[str]:
     """root 相対 path から apply fork の実装調査対象だけを返す。"""
     return filter_apply_implementation_file_paths(repo_root, relative_paths)
+
+
+def _filter_implementation_file_paths_at_commit(
+    repo_root: Path,
+    commit_hash: str,
+    relative_paths: list[str],
+) -> list[str]:
+    """指定 commit の root `.gitignore` で apply 実装調査対象だけを返す。"""
+    return filter_apply_implementation_file_paths_at_commit(
+        repo_root,
+        commit_hash,
+        relative_paths,
+    )
 
 
 def _tracked_files_at_commit(
@@ -1018,7 +1133,7 @@ def _changed_files_between_commits(
 ) -> list[str]:
     """指定 commit 範囲で変更された path を返す。
 
-    削除差分は変更後 path が存在しないため、削除前 path を返す。
+    削除差分は対象外にし、rename/copy は変更後 path だけを返す。
     """
     result = run_git(
         repo_root,
@@ -1036,7 +1151,7 @@ def _changed_files_between_commits(
     paths: set[str] = set()
     for status, status_paths in git_name_status_entries(result.stdout):
         status_kind = status[:1]
-        if status_kind not in {"A", "C", "D", "M", "R", "T"}:
+        if status_kind not in {"A", "C", "M", "R", "T"}:
             continue
         if status_kind in {"C", "R"}:
             if len(status_paths) >= 2:
@@ -1289,7 +1404,7 @@ def _commit_all_changes(repo_root: Path) -> None:
 
 
 def _maintain_apply_indexes(repo_root: Path) -> bool:
-    """apply worktree 上で編集禁止の `oracles/` を避けて INDEX を保守する。"""
+    """apply worktree 上で cmoc 管理 INDEX.md を保守する。"""
     excluded_roots = _apply_index_excluded_roots(repo_root)
     if _maintain_indexes_accepts_excluded_roots():
         return maintain_indexes(
@@ -1320,7 +1435,7 @@ def _assert_forbidden_paths_clean(repo_root: Path) -> None:
     # prompt 上の禁止領域に差分があれば、commit 前に中断する。
     forbidden = [
         path
-        for path in changed_paths(repo_root)
+        for path in _changed_paths_for_forbidden_check(repo_root)
         if _is_forbidden_changed_path(path)
     ]
     if forbidden:
@@ -1332,6 +1447,15 @@ def _assert_forbidden_paths_clean(repo_root: Path) -> None:
             ],
             "\n".join(forbidden),
         )
+
+
+def _changed_paths_for_forbidden_check(repo_root: Path) -> list[str]:
+    """禁止 path 検査用に未追跡ディレクトリ内の file path まで展開する。"""
+    result = run_git(
+        repo_root,
+        ["status", "--porcelain=v1", "-z", "--untracked-files=all"],
+    )
+    return [path for _status, path in git_status_paths(result.stdout)]
 
 
 def _is_forbidden_changed_path(relative_path: str) -> bool:
@@ -1467,7 +1591,7 @@ def _generate_change_summary(
             json_validator=_validate_change_summary_payload,
             model=COST_PERFORMANCE_MODEL,
             reasoning_effort=COST_PERFORMANCE_REASONING_EFFORT,
-            skip_index_maintenance=True,
+            index_excluded_roots=_apply_index_excluded_roots(repo_root),
         )
     )
     changes = payload.get("changes")
@@ -2008,12 +2132,14 @@ def _investigation_prompt(
         [
             "あなたはソフトウェア実装の監査担当です。",
             f"`{oracle_target.path}` を起点に `{repo_root}` の要修正点を調査してください。",
-            target_note,
             "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。",
-            "要修正点には、oracles ファイルと実装との明確な不整合だけでなく、",
+            target_note,
+            f"要修正点には、`{repo_root / 'oracles'}` 配下の仕様ファイルと"
+            "実装との明確な不整合だけでなく、",
             "実装だけから見た成果物品質上の致命的な問題も含めてください。",
-            "実装のみから発見した要修正点でも、関係する oracle 仕様を oracle_requirement に記載してください。",
-            "指定ファイルは調査の起点であり、必要なら他の oracle・実装ファイルも読んでください。",
+            "実装のみから発見した要修正点でも、関係する仕様要求を "
+            "oracle_requirement に記載してください。",
+            "指定ファイルは調査の起点であり、必要なら他の仕様ファイル・実装ファイルも読んでください。",
             "各要修正点には title、evidences、oracle_requirement、",
             "observed_implementation、reason、suggested_fix を含めてください。",
             "evidences には path、line_start、line_end、summary を含めてください。",
@@ -2037,12 +2163,14 @@ def _implementation_investigation_prompt(
             "あなたはソフトウェア実装の監査担当です。",
             f"`{implementation_target.path}` を起点に、",
             f"`{repo_root}` の要修正点を調査してください。",
-            target_note,
             "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。",
-            "要修正点には、oracles ファイルと実装との明確な不整合だけでなく、",
+            target_note,
+            f"要修正点には、`{repo_root / 'oracles'}` 配下の仕様ファイルと"
+            "実装との明確な不整合だけでなく、",
             "実装だけから見た成果物品質上の致命的な問題も含めてください。",
-            "実装のみから発見した要修正点でも、関係する oracle 仕様を oracle_requirement に記載してください。",
-            "指定ファイルは調査の起点であり、必要なら他の oracle・実装ファイルも読んでください。",
+            "実装のみから発見した要修正点でも、関係する仕様要求を "
+            "oracle_requirement に記載してください。",
+            "指定ファイルは調査の起点であり、必要なら他の仕様ファイル・実装ファイルも読んでください。",
             "各要修正点には title、evidences、oracle_requirement、",
             "observed_implementation、reason、suggested_fix を含めてください。",
             "evidences には path、line_start、line_end、summary を含めてください。",
@@ -2058,10 +2186,10 @@ def _investigation_target_note(target: _InvestigationTarget) -> str:
     """削除済み target の履歴調査が必要なことを prompt に明示する。"""
     if target.deleted_at_snapshot:
         return (
-            "この起点 path は oracle snapshot 時点では存在しません。"
+            "この起点 path は調査対象として固定された commit 時点では存在しません。"
             "削除差分や履歴上の変更内容を確認して調査してください。"
         )
-    return "この起点 path は oracle snapshot 時点に存在するファイルです。"
+    return "この起点 path は調査対象として固定された commit 時点に存在するファイルです。"
 
 
 def _organize_prompt(
@@ -2094,7 +2222,8 @@ def _organize_prompt(
             "False-Positive と判断できる要修正点は除外してください。",
             "要修正点を先頭から順番に対応した時に、作業順序として適切になるよう並べ替えてください。",
             "改善過程で発見した漏れがあれば、要修正点リストに追加してください。",
-            "実装のみから発見した要修正点でも、関係する oracle 仕様を oracle_requirement に記載してください。",
+            "実装のみから発見した要修正点でも、関係する仕様要求を "
+            "oracle_requirement に記載してください。",
             "改善点がない場合は入力と同じ要修正点リストを返してください。",
             "top-level の git_head_commit_hash は必ず含め、値は null で構いません。",
             "明確な要修正点がない場合だけ fixing_points に空配列を返してください。",
@@ -2130,12 +2259,14 @@ def _apply_prompt(
     return "\n".join(
         [
             "あなたはソフトウェア実装担当です。",
-            f"`{repo_root}` の実装を、oracle 要求に追従するようベストエフォートで更新してください。",
+            f"`{repo_root}` の実装を、要修正点情報に記載された仕様要求に"
+            "追従するようベストエフォートで更新してください。",
             "完了条件は、必要と判断した実装修正とテスト更新を終え、変更内容と残課題を報告することです。",
             "作業が必要と判断できる場合は、実装修正と必要なテスト更新を行ってください。",
             "以下の要修正点情報は作業のためのヒントです。",
             "絶対に従わなければならない指示書としては扱わないでください。",
-            "実装状況や oracle を確認した結果として不適切なら、この要修正点情報は無視してかまいません。",
+            "実装状況や仕様ファイルを確認した結果として不適切なら、"
+            "この要修正点情報は無視してかまいません。",
             "作業目的は、要修正点が指摘している問題の修正を試みることです。",
             "要修正点本文への逐語的追従や、要修正点で述べている目的を達成した保証は不要です。",
             f"要修正点: {json.dumps(discrepancy, ensure_ascii=False)}",

@@ -55,11 +55,11 @@
 ## Codex CLI 呼び出しの規則
 
 - 以下の作業を Codex CLI に依頼する時、この規則を適用する
-  - ファイル毎の評価
-  - 問題点リストを改善
+    - ファイル毎の評価
+    - 問題点リストを改善
 - `codex exec` は読み取り専用で実行する。
 - 評価にあたってエージェントは以下のファイルを読んで良い
-    - 対象 `oracle` ファイル
+    - 対象 oracle ファイル
     - `<repo-root>/oracles` 配下の関連 oracles ファイル
     - 関連判断に必要な `<repo-root>/oracles` 配下の `INDEX.md`
 - 逆に、評価にあたってエージェントは以下のファイルを読んではいけない
@@ -70,9 +70,13 @@
 
 ## 「ファイル毎の評価」の詳細
 
-- 1 回の `codex exec` 呼び出しで、ファイル 1 つを評価し、問題点リストを生成する
+- 1 回の `codex exec` 呼び出しで oracles ファイル 1 つを評価し、問題点リストを生成する
 - このファイルごとの評価は並列に実行する
 - 問題点リストは Structured Output で受け取る
+- 評価作業のヒントとして以下の情報をプロンプトで渡すこと
+    - oracles ファイルの内容に対する指摘が必要であること
+    - この指摘を人間が読んで oracles ファイルの修正を行うこと
+    - `INDEX.md` は自動生成されるため、評価対象ではないこと
 
 ## 「問題点リストを改善」の詳細
 
@@ -135,7 +139,7 @@
           },
           "oracle_path": {
             "type": "string",
-            "description": "問題点の根拠となる oracle ファイルの絶対パス。"
+            "description": "この issue の帰属先となる評価対象 oracle ファイルの絶対パス。"
           },
           "oracle_line_start": {
             "anyOf": [
@@ -147,7 +151,7 @@
                 "type": "null"
               }
             ],
-            "description": "問題点の根拠となる oracle 記述の開始行。特定できない場合は null。"
+            "description": "この issue の帰属先となる oracle 記述の開始行。特定できない場合は null。"
           },
           "oracle_line_end": {
             "anyOf": [
@@ -159,7 +163,7 @@
                 "type": "null"
               }
             ],
-            "description": "問題点の根拠となる oracle 記述の終了行。特定できない場合は null。"
+            "description": "この issue の帰属先となる oracle 記述の終了行。特定できない場合は null。"
           },
           "referenced_paths": {
             "type": "array",
@@ -198,6 +202,11 @@
   }
 }
 ```
+
+## 問題点リストの Structured Output の後処理・事後検証
+
+- `issues[*].oracle_path` が oracles ファイルではない場合、それはエラーとしては扱わない
+- その他は AI の裁量で決めて良い
 
 ## レポート
 

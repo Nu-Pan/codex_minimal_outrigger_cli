@@ -27,26 +27,30 @@
 
 ## Summary
 
-- `commons.codex` の `run_codex_exec` と周辺ヘルパーの回帰テストをまとめたファイルです。
-- Structured Output 用 schema の準備、JSON / text 検証、semantic validation による retry、quota 復旧後の `resume` を検証します。
-- `output_schema` のキャッシュ、call log / last message の扱い、console 出力、workspace-write 時の `INDEX.md` 保守、oracle 変更検知、HEAD / reflog / commit range の境界条件を押さえます。
+- `tests/test_codex.py` は、Codex CLI 呼び出しラッパー `run_codex_exec` の挙動を、正常系から異常系まで広く検証するテスト群です。
+- Structured Output のスキーマ検証、JSON / テキストの意味的 validation、quota や capacity の再試行、`resume` を含む復旧フロー、ログ出力を重点的に確認します。
+- あわせて、workspace-write 時の oracle 変更ガード、`subcommand_log` 連携、session id 抽出、`skip_index_maintenance` の使用範囲も検証します。
 
 ## Read this when
 
-- `run_codex_exec` の呼び出し条件、戻り値、例外、再試行、`resume` の挙動を変更・確認したいとき。
-- Structured Output の schema 検証、JSON / text 検証、`output_schema` のキャッシュや再利用を確認したいとき。
-- Codex CLI の呼び出しログ、コンソール通知、workspace-write 時の `INDEX.md` 保守や oracle 変更検知を確認したいとき。
-- quota 復旧、capacity の指数バックオフ、`_extract_session_id`、`_resume_command` などの周辺ヘルパーを確認したいとき。
+- `run_codex_exec` の起動前チェック、失敗時診断、再試行、再開処理を変更するとき。
+- Structured Output の `output_schema`、JSON/テキストの意味的検証、validator の扱いを変えるとき。
+- quota や capacity の検知、待機、`resume` への切り替え条件を調整するとき。
+- workspace-write 時の oracle 保護、未コミット差分の検出、`skip_index_maintenance` の前提を変えるとき。
+- call log、subcommand log、コンソール通知の出力形式や内容を変えるとき。
+- `_extract_session_id` や `_resume_command` の resume まわりのロジックを変えるとき。
 
 ## Do not read this when
 
-- `commons.codex` の実装本体ではなく、別の共通モジュールや別サブコマンドの仕様だけを確認したいとき。
-- `tests/test_repo.py`、`tests/test_indexing.py`、`tests/test_report_files.py` など、codex 以外の回帰テストだけを追いたいとき。
-- `INDEX.md` の生成ルールや `oracles` 全体の正本仕様そのものを確認したいとき。
+- `commons.codex` の実装仕様そのものだけを確認したいとき。
+- `subcommand_log` や `commons.indexing` の単体仕様だけを確認したいとき。
+- `oracles` 配下の個別仕様やファイル生成ルールだけを確認したいとき。
+- このテスト群ではなく、特定の実装ファイルや別のテストだけを見れば足りるとき。
 
 ## hash
 
-- a37d24f86e298b18514cd92ce3cbf47b17d19fe475e88f00b754138d980fea17
+- 5c177f32272e25df3ac2f00e175cf157ed70d19402d5416527dcc012f399168e
+<!-- cmoc-index-kind: file -->
 
 # `test_file_naming.py`
 
@@ -70,56 +74,58 @@
 
 ## hash
 
-- 8cffbbd037cfef7eddae93b596fc8e14a5e496a69ec1a9cc344e42ba99a22f43
+- 7abe9ede601af68a8a246e895f9952a426868048a3a0c12aacf939b4ab8e8c50
 
 # `test_indexing.py`
 
 ## Summary
 
 - `tests/test_indexing.py` は `INDEX.md` メンテナンス処理の回帰テスト集です。
-- 目次エントリの生成・再利用・再生成条件・ハッシュ更新を検証します。
-- gitignore、symlink、binary、非 UTF-8 path、並列処理、排他 lock、自動 commit までを広く押さえます。
+- 目次エントリの生成・再利用・再生成条件、hash 更新、Structured Output の検証を扱います。
+- gitignore、symlink、binary、非 UTF-8 path、並列処理、排他 lock、自動 commit まで広く押さえます。
 
 ## Read this when
 
-- `commons.indexing` の `maintain_indexes` や `is_maintained_index_path` の期待動作を確認したいとき。
-- `INDEX.md` の生成・再利用・再生成条件や、特殊な path の扱いを調べたいとき。
-- INDEX メンテナンスの並列実行、排他制御、自動 commit の回帰を追加・修正したいとき。
+- `maintain_indexes` と `is_maintained_index_path` の期待動作を確認したいとき。
+- gitignore、symlink、binary、非 UTF-8 path、空ディレクトリ、特殊文字を含む path の扱いを修正・追加したいとき。
+- 並列生成、排他 lock、Codex 呼び出しの再試行、既存 INDEX の再利用・再生成、自動 commit の境界条件を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc` の他サブコマンドの引数や実行フローだけを確認したいとき。
-- `session` や `apply` など、INDEX 以外の機能の仕様を探しているとき。
-- 開発ルールや `oracles` 全体のルーティング方針だけを見たいとき。
+- `commons.indexing` の実装ロジックをそのまま追いたいだけのとき。
+- `oracles` 側の正本仕様や、`INDEX.md` 全体の生成ルールだけを確認したいとき。
+- `session` や `apply` など、INDEX 保守以外のサブコマンド仕様を調べたいとき。
 
 ## hash
 
-- 88242db22c36acf60467b819439d38cac87250c0ee8922ed07128cd188bacc6d
+- ca92d4f8ae0ab1ad5af06b24e2cd6de771974db09db746d149e01205831dcabe
 
 # `test_repo.py`
 
 ## Summary
 
-- `src/commons/repo.py` の git まわり共通処理を検証するテスト群です。
-- repo root 検出、`.cmoc` ignore 保証、oracle / implementation ファイル列挙、変更・削除・rename 判定、`commit_if_changed` を広く扱います。
-- session state と apply process id の読み書き、スキーマ検証、active session 判定の異常系も含みます。
+- `src/commons/repo.py` の git 共通処理を検証する回帰テスト群です。
+- repo root 検出、`.cmoc` の ignore 保証、実装/正本ファイルの列挙と変更検出を扱います。
+- session state、apply process id、`cmoc` ブランチ判定、active session 判定の境界条件も押さえます。
 
 ## Read this when
 
-- git リポジトリ共通処理のテスト範囲を把握したいとき。
-- .gitignore、`oracles`、`memo`、`INDEX.md` の列挙・除外ルールを確認したいとき。
-- session state、apply process id、`cmoc` ブランチ判定、active session 判定の期待動作を見たいとき。
-- 削除検出、変更抽出、`commit_if_changed` の境界条件を確認したいとき。
+- repo root 検出、`.cmoc` の ignore 保証、`list_implementation_files` / `list_oracle_files` の対象判定を確認したいとき。
+- `changed_paths`、`changed_oracle_files`、`changed_implementation_files`、削除検出の境界条件を調べたいとき。
+- `commit_if_changed` のコミット可否や、失敗時に index と HEAD を壊さない挙動を確認したいとき。
+- session state の読み書き、`active_session_ids_for_home_branch`、`is_cmoc_branch` の判定条件を確認したいとき。
+- .gitignore、`.git/info/exclude`、`INDEX.md`、`memo` の除外・対象判定の回帰を修正するとき。
 
 ## Do not read this when
 
-- `src/commons/repo.py` の実装ロジックそのものを追いたいとき。
-- `src/commons/repo.py` の個別関数仕様だけを確認したいとき。
-- `oracles` や session state の正本仕様だけを確認したいとき。
+- `src/commons/repo.py` の実装そのものを追いたいとき。
+- 個別の git ユーティリティや関数単体の使い方だけを確認したいとき。
+- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを知りたいとき。
+- `session` や `apply` など、repo 共通処理以外のサブコマンド仕様を調べたいとき。
 
 ## hash
 
-- 4953da24d14c812f87138af987efa58fd2975eb47448427ac32419a2bb92a5cd
+- 80385bba58bf311ef6c963184cfd1b01b1d81f1b9871704381ed6c9040b63a19
 
 # `test_report_files.py`
 
@@ -149,27 +155,27 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は `cmoc` のサブコマンド群と共通 CLI 入口の決定論的な制御ロジックを横断的に検証するテスト集です。
-- `init`、`session`、`apply`、`review oracles`、`eval-oracles`、`main`、`bin/cmoc` まで含めて、起動・状態遷移・レポート・エラー処理の整合性を押さえます。
-- branch、worktree、session/apply state、Structured Output schema、prompt 文言、ファイル差分や衝突処理など、実行制御まわりの回帰を広く扱います。
+- このファイルは、`cmoc` のサブコマンド全体に対する決定論的な制御ロジックを検証する pytest テストの集約です。
+- `run_command` のログ出力、エラー報告、終了コード、経過時間計測、`cmoc init` / `session` / `apply` / `eval oracles` の状態遷移と副作用を広く扱います。
+- CLI エントリポイントの登録、補完、`main` のエラー変換、エラーメッセージ整形、バイナリ起動ラッパー、プロンプトや検証ヘルパーの回帰もここで確認します。
 
 ## Read this when
 
-- `cmoc init`、`session`、`apply`、`review oracles`、`eval-oracles` の制御フローを横断して確認したいとき。
-- `run_command`、`main`、`format_error_report`、CLI 登録、`bin/cmoc` の変更がこのテスト群に影響するか判断したいとき。
-- branch、worktree、session/apply state、レポート出力、Structured Output schema、validation helper、prompt 文言、差分・衝突処理の回帰を確認したいとき。
-- `cmoc` の起動、状態遷移、エラー整形、出力整合性をまとめて把握したいとき。
+- `cmoc` のサブコマンド群に対する決定論的な制御ロジックのテスト観点を確認したいとき。
+- `run_command` の標準出力 tee、終了集計、例外時レポート、repo ルート解決失敗時の扱いを修正したいとき。
+- `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`eval oracles`、`main` のルーティングや登録、completion、エラー変換の挙動を変更したとき。
+- サブコマンドの状態遷移、`INDEX.md` メンテナンス、session/apply state の保存、レポート生成、プロンプト検証に関する回帰テストを探したいとき。
 
 ## Do not read this when
 
-- `src/sub_commands/apply/` や `src/sub_commands/session/` の個別実装だけを追いたいとき。
-- `src/commons/codex.py`、`src/commons/repo.py`、`src/commons/report_files.py` など共通処理だけを確認したいとき。
-- `tests/test_codex.py`、`tests/test_repo.py`、`tests/test_indexing.py` など別のテスト群だけで足りるとき。
-- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
+- `cmoc` の個別サブコマンドの手順や引数仕様だけを確認したいときは、このテスト集約ファイルではなく `oracles/app_specs/sub_commands/` 配下の該当仕様を読むべきです。
+- `src/sub_commands/` 側の実装ロジックだけを追いたいときは、このテストではなく実装ファイルを直接読むべきです。
+- コマンド実行の制御やエラー処理ではなく、CLI の文言調整や一般的なテスト規約だけを確認したいときは、このファイルではなく `oracles/dev_rules/test_rules.md` を読むべきです。
 
 ## hash
 
-- effdb0198c9e5bb768c2d7a8c1426770f11987ce4ab61ab408f1de0e1dfaaaef
+- 9f22e55cf90e59bb7df381a501d8fe7a5fe8d3464b401071fadc9bdaa519c678
+<!-- cmoc-index-kind: file -->
 
 # `test_timestamps.py`
 

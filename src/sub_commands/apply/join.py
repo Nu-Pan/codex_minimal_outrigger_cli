@@ -23,6 +23,7 @@ from commons.repo import (
     is_apply_implementation_path,
     is_session_branch,
     read_session_state,
+    resolve_session_home_branch,
     run_git,
     session_id_from_branch,
     session_state_repo_root,
@@ -130,11 +131,22 @@ def cmoc_apply_join_impl(
 
     start_step(timer, 5, 5, "record ready apply state")
     cleanup_evidence = _snapshot_cleanup_evidence(cmoc_root, join_state)
-    _mark_apply_ready(cmoc_root, session_id, state)
+    _mark_apply_ready(
+        cmoc_root,
+        session_id,
+        state,
+        join_state.oracle_snapshot_commit,
+        resolve_session_home_branch(
+            cmoc_root,
+            state,
+            join_state.session_branch,
+        ),
+        cleanup_evidence.apply_result,
+    )
     warnings = _cleanup_apply_artifacts(
         cmoc_root,
+        session_id,
         join_state,
-        state,
         cleanup_evidence,
     )
     print(f"joined apply branch: {join_state.apply_branch}")
@@ -172,11 +184,11 @@ class _CleanupEvidence:
         self,
         *,
         report_saved: bool,
-        result_saved: bool,
+        apply_result: str | None,
         warnings: list[str],
     ) -> None:
         self.report_saved = report_saved
-        self.result_saved = result_saved
+        self.apply_result = apply_result
         self.warnings = warnings
 
 
@@ -234,6 +246,22 @@ def _validate_joinable_state(
                 "state が壊れている場合は、手動で apply branch を確認してください。",
             ],
             f"apply.apply_branch: {apply_branch}",
+        )
+    apply_branch_session_id = session_id_from_branch(apply_branch)
+    if apply_branch_session_id != session_id:
+        raise CmocError(
+            "session state ファイルの apply branch が現在の session と一致しません。",
+            [
+                "session state の apply.apply_branch を確認して復旧してください。",
+                "別 session の apply branch を join 対象にしないでください。",
+            ],
+            "\n".join(
+                [
+                    f"session id: {session_id}",
+                    f"apply branch session id: {apply_branch_session_id}",
+                    f"apply.apply_branch: {apply_branch}",
+                ]
+            ),
         )
     if current_branch_name not in {session_branch, apply_branch}:
         raise CmocError(
@@ -341,10 +369,13 @@ def _changed_path_entries_between(
         ],
     )
     entries: list[_ChangedPathEntry] = []
-    for _status, paths in git_name_status_entries(result.stdout):
+    for status, paths in git_name_status_entries(result.stdout):
         if paths:
-            # rename/copy は oracle の共通規則に合わせて変更後 path を対象にする。
-            entries.append(_ChangedPathEntry([paths[-1]]))
+            if status.startswith("R"):
+                entries.append(_ChangedPathEntry(paths))
+            else:
+                # copy は source を変更しないため、変更後 path を対象にする。
+                entries.append(_ChangedPathEntry([paths[-1]]))
     return entries
 
 
@@ -355,15 +386,24 @@ def _is_oracle_path(path: str) -> bool:
 
 def _is_apply_branch_expected_path(repo_root: Path, path: str) -> bool:
     """apply branch 側で cmoc が積み得る想定内 path か判定する。"""
-    if _is_oracle_path(path):
+    if _is_apply_branch_forbidden_path(path):
         return False
+    if is_maintained_index_path(repo_root, path):
+        return True
+    return is_apply_implementation_path(repo_root, path)
+
+
+def _is_apply_branch_forbidden_path(path: str) -> bool:
+    """apply branch 側の正規成果物として扱わない path か判定する。"""
     return (
-        is_apply_implementation_path(repo_root, path)
-        or is_maintained_index_path(
-            repo_root,
-            path,
-            excluded_index_roots=[repo_root / "oracles"],
-        )
+        _is_oracle_path(path)
+        or path == "README.md"
+        or path == "AGENTS.md"
+        or path == ".cmoc"
+        or path.startswith(".cmoc/")
+        or path == ".agents"
+        or path.startswith(".agents/")
+        or _is_memo_path(path)
     )
 
 
@@ -488,6 +528,10 @@ def _revert_worktree(
         yield branch_worktree
         return
 
+    if current_branch(repo_root) == branch_name:
+        yield repo_root
+        return
+
     temporary_root = repo_root / ".cmoc" / "worktrees" / "tmp"
     temporary_root.mkdir(parents=True, exist_ok=True)
     run_git(repo_root, ["worktree", "prune"])
@@ -608,17 +652,27 @@ def _mark_apply_ready(
     repo_root: Path,
     session_id: str,
     state: dict[str, object],
+    oracle_snapshot_commit: str,
+    session_home_branch: str,
+    apply_result: str | None,
 ) -> None:
-    """apply セクションを ready に戻し、固定 field を null 初期化する。"""
+    """最後に join した snapshot を記録し、apply セクションを ready に戻す。"""
+    session = state.get("session")
     apply = state.get("apply")
-    if not isinstance(apply, dict):
+    if not isinstance(session, dict) or not isinstance(apply, dict):
         raise CmocError(
             "session state ファイルの形式が不正です。",
             [
-                "state JSON の apply セクションを確認して復旧してください。",
+                "state JSON の session/apply セクションを確認して復旧してください。",
                 "復旧できない場合は、対象 apply run を破棄して新しい session でやり直してください。",
             ],
         )
+    session["session_home_branch"] = session_home_branch
+    session["last_joined_apply_oracle_snapshot_commit"] = oracle_snapshot_commit
+    if apply_result is not None and apply_result.strip() != "":
+        session["last_joined_apply_result"] = apply_result
+    else:
+        session.pop("last_joined_apply_result", None)
     state["apply"] = {
         "state": "ready",
         "apply_branch": None,
@@ -642,7 +696,7 @@ def _snapshot_cleanup_evidence(
         )
         return _CleanupEvidence(
             report_saved=False,
-            result_saved=False,
+            apply_result=None,
             warnings=warnings,
         )
 
@@ -655,7 +709,7 @@ def _snapshot_cleanup_evidence(
         )
     return _CleanupEvidence(
         report_saved=True,
-        result_saved=result_saved,
+        apply_result=result if result_saved else None,
         warnings=warnings,
     )
 
@@ -709,13 +763,19 @@ def _split_yaml_front_matter(report: str) -> dict[str, str]:
 
 def _cleanup_apply_artifacts(
     repo_root: Path,
+    session_id: str,
     join_state: _JoinState,
-    state: dict[str, object],
     cleanup_evidence: _CleanupEvidence,
 ) -> list[str]:
     """安全条件を満たす場合だけ apply worktree と branch を削除する。"""
     warnings: list[str] = [*cleanup_evidence.warnings]
-    if not _cleanup_preconditions_hold(repo_root, join_state, state, cleanup_evidence):
+    if not _cleanup_preconditions_hold(
+        repo_root,
+        session_id,
+        join_state,
+        cleanup_evidence,
+        warnings,
+    ):
         if not warnings:
             warnings.append(
                 "apply artifacts were kept because cleanup preconditions failed"
@@ -753,15 +813,34 @@ def _cleanup_apply_artifacts(
 
 def _cleanup_preconditions_hold(
     repo_root: Path,
+    session_id: str,
     join_state: _JoinState,
-    state: dict[str, object],
     cleanup_evidence: _CleanupEvidence,
+    warnings: list[str],
 ) -> bool:
     """apply artifact 削除の安全条件を検証する。"""
-    apply = state.get("apply")
+    try:
+        saved_state = read_session_state(repo_root, session_id)
+    except CmocError as error:
+        warnings.append(
+            "apply cleanup skipped: session state could not be reloaded after "
+            f"recording ready state: {error.message}"
+        )
+        return False
+
+    apply = saved_state.get("apply")
     if not isinstance(apply, dict) or apply.get("state") != "ready":
         return False
-    if not cleanup_evidence.report_saved or not cleanup_evidence.result_saved:
+    session = saved_state.get("session")
+    if not isinstance(session, dict):
+        return False
+    if not cleanup_evidence.report_saved:
+        return False
+    result = session.get("last_joined_apply_result")
+    if not isinstance(result, str) or result.strip() == "":
+        warnings.append(
+            "apply cleanup skipped: apply result was not saved in session state"
+        )
         return False
     ancestor = run_git(
         repo_root,

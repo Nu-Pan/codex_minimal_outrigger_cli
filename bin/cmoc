@@ -41,6 +41,17 @@ require_venv_python() {
     exit 1
 }
 
+is_completion_probe() {
+    [ "${_CMOC_COMPLETE+x}" = x ]
+}
+
+if is_completion_probe; then
+    if [ -x "$venv_python" ]; then
+        exec "$venv_python" "$cmoc_root/src/main.py" "$@"
+    fi
+    exit 1
+fi
+
 require_venv_python
 
 exec "$venv_python" "$cmoc_root/src/main.py" "$@"

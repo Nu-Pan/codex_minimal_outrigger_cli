@@ -50,3 +50,11 @@ complete -o default -F _cmoc_stage0_completion cmoc-stage0
 ## stage0 cmoc が動かなくなった場合
 
 - stage0 上で Codex CLI を直接使って修正を行う
+
+## 単一リポジトリ上での自己開発は却下した
+
+- 自己開発で一番怖いのは「cmoc の作業中に cmoc が自身を編集・破壊してしまう」こと
+- 次に怖いのは「使用する cmoc のバージョンが途中で変わってしまい、挙動・契約が一致しない」こと
+- よって cmoc セッションを join するまでは、使用する cmoc のバージョンは固定し無ければならない
+- もしも単一リポジトリで自己開発を行うと、 cmoc 開発ワークフローに従って `<cmoc-managed-branch>` 上での fork, merge が起こるごとに cmoc の挙動が変わってしまう
+- よって、安全に開発するには stage0, stage1 に分けるしか無い

@@ -1,5 +1,7 @@
 """cmoc 全体で使うエラー処理。"""
 
+import shlex
+import subprocess
 import traceback
 from collections.abc import Sequence
 
@@ -39,12 +41,7 @@ def format_error_report(error: BaseException) -> str:
             "入力値が誤っている場合は、コマンド引数を修正してから cmoc を再実行してください。",
             "リポジトリ状態が原因の場合は、Detail と Call stack を確認して作業ツリーや設定を修正してください。",
         ]
-        detail = str(error)
-        if not detail.strip():
-            detail = (
-                f"{error.__class__.__module__}."
-                f"{error.__class__.__name__} がメッセージなしで発生しました。"
-            )
+        detail = _format_exception_detail(error)
         message = error.__class__.__name__
 
     # エラー内容と復旧操作を機械的に並べる。
@@ -69,6 +66,64 @@ def format_error_report(error: BaseException) -> str:
         ]
     )
     return "\n".join(lines)
+
+
+def _format_exception_detail(error: BaseException) -> str:
+    """通常例外の Detail に診断情報を落とす。"""
+    if isinstance(error, subprocess.CalledProcessError):
+        return _format_called_process_error_detail(error)
+
+    detail = str(error)
+    if detail.strip():
+        return detail
+
+    return (
+        f"{error.__class__.__module__}."
+        f"{error.__class__.__name__} がメッセージなしで発生しました。"
+    )
+
+
+def _format_called_process_error_detail(error: subprocess.CalledProcessError) -> str:
+    """subprocess が capture した stdout/stderr を Detail に含める。"""
+    lines = [
+        str(error),
+        "",
+        "returncode:",
+        str(error.returncode),
+        "",
+        "cmd:",
+        _format_command(error.cmd),
+    ]
+
+    stderr = _format_process_stream(error.stderr)
+    if stderr is not None:
+        lines.extend(["", "stderr:", stderr])
+
+    stdout = _format_process_stream(error.stdout)
+    if stdout is not None:
+        lines.extend(["", "stdout:", stdout])
+
+    return "\n".join(lines)
+
+
+def _format_command(command: object) -> str:
+    """argv 配列なら shell 表記に近い形へ整形する。"""
+    if isinstance(command, (list, tuple)):
+        return shlex.join(str(part) for part in command)
+    return str(command)
+
+
+def _format_process_stream(value: object) -> str | None:
+    """capture された stream を Detail に出せる文字列へ変換する。"""
+    if value is None:
+        return None
+    if isinstance(value, bytes):
+        value = value.decode(errors="backslashreplace")
+
+    text = str(value)
+    if not text.strip():
+        return None
+    return text.rstrip("\n")
 
 
 def _format_call_stack(error: BaseException) -> str:
