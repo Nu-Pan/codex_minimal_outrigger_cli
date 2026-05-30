@@ -127,27 +127,24 @@
 
 ## Summary
 
-- git リポジトリの探索、現在ブランチ/HEAD 取得、cmoc 管理ブランチの判定を行う共通モジュールです。
-- session/apply の state JSON の保存・読込・固定スキーマ検証と、active session の整合性確認を扱います。
-- `.cmoc` を追跡対象外に保つ保証、未コミット差分の検査、`cmoc init` 向けの差分分離と commit を実装しています。
-- oracle ファイルと実装ファイルの列挙・変更検出・削除検出、`git` 呼び出しラッパーもまとめています。
+- Git リポジトリと `cmoc` 作業ディレクトリを扱う共通処理をまとめたファイルです。
+- repo ルート探索、ブランチ・worktree 判定、session / apply の状態ファイル管理、`.cmoc` の追跡回避保証、差分検査を担当します。
 
 ## Read this when
 
-- リポジトリルート探索、現在ブランチの判定、`cmoc/session/...` と `cmoc/apply/...` の扱いを確認したいとき。
-- session state JSON の保存・読込・検証や、active session の整合性判定を追いたいとき。
-- `.cmoc` の ignore 保証、未コミット差分の検査、`cmoc init` の初期化差分の commit を確認したいとき。
-- oracle ファイルや実装ファイルの列挙、変更検出、削除検出、`git` ラッパーの共通処理を追いたいとき。
+- Git リポジトリのルート探索、現在ブランチ判定、HEAD 取得などの共通処理を確認したいとき。
+- `cmoc/session/*` と `cmoc/apply/*` のブランチ名判定や、session id の抽出方法を確認したいとき。
+- session state JSON の読み書き、スキーマ検証、`.cmoc` の ignore 保証、未コミット差分の検査を確認したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの引数や実行手順だけを確認したいとき。
-- `src/commons/errors.py` や `src/commons/indexing.py` など、別の共通モジュールだけを追いたいとき。
-- `.cmoc` の追跡対象外保証や git 操作の細部ではなく、CLI 全体のワークフロー仕様だけを確認したいとき。
+- `cmoc` の起動手順や `init` / `session` / `apply` の操作フローだけを確認したいとき。
+- `repo.py` 以外の開発ルールや命名規則、テスト方針だけを確認したいとき。
+- `.cmoc` の保存形式ではなく、別の共通処理や個別サブコマンドの仕様を確認したいとき。
 
 ## hash
 
-- 34dbd516e0065cfba3b2edaf9a914e80a8a6f1d6a384fc756a26d2b1dc5c552d
+- 7ce5be5945d5ccfe1708d20fc8040c2a83423d0c13e219b3dc36bc317ccd950d
 
 # `report_files.py`
 

@@ -162,13 +162,13 @@
 ## Do not read this when
 
 - `src/sub_commands/apply/` や `src/sub_commands/session/` の個別実装だけを追いたいとき。
-- `src/commons/codex.py`、`src/commons/repo.py`、`src/commons/report_files.py` などの共通処理だけを確認したいとき。
-- `tests/test_codex.py`、`tests/test_repo.py`、`tests/test_indexing.py` など他の個別テストだけで足りるとき。
+- `src/commons/codex.py`、`src/commons/repo.py`、`src/commons/report_files.py` など共通処理だけを確認したいとき。
+- `tests/test_codex.py`、`tests/test_repo.py`、`tests/test_indexing.py` など、他の個別テストだけで足りるとき。
 - `INDEX.md` の生成ルールや `oracles` の正本仕様だけを確認したいとき。
 
 ## hash
 
-- df0e14cf21f8f6623dab3b8a818c5596f6d868e541893b4345d54386602a40ef
+- bf0f1648cc2ba75e34a84a774d53662cdcdb6344b54003bb530d3c47cd75d0bb
 
 # `test_timestamps.py`
 
