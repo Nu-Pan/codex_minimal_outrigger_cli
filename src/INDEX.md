@@ -36,19 +36,19 @@
 ## Read this when
 
 - cmoc CLI の起動点と、`session` / `apply` / `review` のサブアプリ構成を確認したいとき。
-- `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`review oracles` の登録名、エイリアス、既定オプションを確認したいとき。
-- サブコマンド未指定時の利用者向けエラー、補完プローブの扱い、Click/Typer 例外の共通整形を追いたいとき。
+- `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`review oracles` の登録名、隠し別名、既定オプションを確認したいとき。
+- サブコマンド未指定時の利用者向けエラー、補完プローブ時の分岐、Click/Typer 例外の共通整形を追いたいとき。
 - `python src/main.py` で直接起動する経路と、そのときの例外処理を確認したいとき。
 
 ## Do not read this when
 
-- `src/sub_commands/` 配下の各サブコマンド本体の処理だけを確認したいとき。
-- 共通エラー型や `format_error_report()` の整形仕様だけを確認したいとき。
+- `src/sub_commands/` 配下の各サブコマンド本体の実装だけを追いたいとき。
+- `commons.errors` のエラー型や `format_error_report()` の整形ロジックだけを確認したいとき。
 - `INDEX.md` の生成ルールや `oracles` 側のルーティング方針だけを確認したいとき。
 
 ## hash
 
-- 7eb6c6be9a4576cdc697c9a82f65de46450efcff9825b8fc064595ec07baf889
+- d03b4e0b3d0c12971884d8bc1e159f95c3f0efe50e8fca99dc96066066992456
 <!-- cmoc-index-kind: file -->
 
 # `sub_commands`

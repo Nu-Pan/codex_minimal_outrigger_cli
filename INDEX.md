@@ -78,26 +78,31 @@
 
 ## Summary
 
-- `bin` ディレクトリの入口で、`cmoc` コマンドのシェル製エントリーポイントを案内します。
-- `bin/cmoc` は `<cmoc-root>` を解決し、`<cmoc-root>/.venv/bin/python` を使って `src/main.py` を起動します。
-- 仮想環境 Python が見つからない、または実行不可の場合の日本語エラー表示と終了処理を扱います。
-- `line_number_of` はエラー表示内の Call stack 用に、指定パターンの最初の行番号を求める補助関数です。
+- `bin/cmoc` は cmoc コマンドのシェル製エントリーポイントです。
+- スクリプト自身の場所から `<cmoc-root>` を解決し、`<cmoc-root>/.venv/bin/python` を実行 Python として使います。
+- 仮想環境 Python が利用可能なら、全引数をそのまま `<cmoc-root>/src/main.py` に渡して `exec` します。
+- 仮想環境 Python が見つからない、または実行不可の場合は、日本語の構造化エラーを標準出力へ出し、セットアップ手順・必要な実行ファイル・簡易 Call stack を示して終了ステータス 1 で終了します。
+- `line_number_of` は、エラー表示内の Call stack 用に、このスクリプト内で指定パターンに一致する最初の行番号を求める補助関数です。
 
 ## Read this when
 
-- `cmoc` 起動時に、どの Python が実行されるかを確認したいとき。
-- .venv が無い、または実行できない場合のエラー文面と復旧手順を確認したいとき。
-- `bin/cmoc` から `<cmoc-root>/src/main.py` への引数受け渡しや Call stack 表示を確認したいとき。
+- `bin/cmoc` がどの Python を使って `src/main.py` を起動するか確認したいとき。
+- `.venv/bin/python` が存在しない、または実行できない場合のエラー文面、終了ステータス、復旧手順を確認したいとき。
+- シェル製の CLI エントリーポイントとして `bin/cmoc` の挙動を把握したいとき。
+- `bin/cmoc` から `src/main.py` へ引数をそのまま渡す流れを確認したいとき。
+- エラー表示内の Call stack を組み立てる `line_number_of` の役割を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc` の各サブコマンドの処理内容やアプリ仕様だけを確認したいとき。
-- Python 実装や `src/main.py` 以降のディスパッチ処理を追いたいとき。
-- pytest などのテストケース本体や、`bin/cmoc` 以外の実装を確認したいとき。
+- `src/main.py` 以降の Python 実装や共通処理の仕様だけを確認したいとき。
+- `cmoc` の各サブコマンド本体や引数解析の仕様だけを確認したいとき。
+- pytest などのテスト観点やテストケースの整理だけを確認したいとき。
+- `oracles` 側の仕様断片や `INDEX.md` の生成ルールだけを確認したいとき。
+- 仮想環境の作成手順そのものではなく、依存関係や Python パッケージ構成を確認したいとき。
 
 ## hash
 
-- 5a7c1ad7ae81d60c96cbfc13ff5430f2fe21d49e82a13eb5fe0ca68ce90b9feb
+- 160e19df3f9b3de96dc5dc79fea7fa0837b099f6220d61742a9b8c141cd23d51
 <!-- cmoc-index-kind: directory -->
 
 # `codex_minimal_outrigger_cli.code-workspace`
@@ -178,25 +183,25 @@
 
 ## Summary
 
-- `src` は cmoc の実装本体を置くルートで、`main.py`、`commons`、`sub_commands` をまとめた入口です。
-- `main.py` は CLI の起動点、`commons` は共有基盤、`sub_commands` は各サブコマンド実装を担います。
-- この目次は、`src` 配下のどの領域を読むべきかを素早く判断するための案内です。
+- `src` は cmoc の実装本体を置くトップレベルで、`main.py` と `commons`、`sub_commands` への入口をまとめるディレクトリです。
+- `main.py` は CLI の起動点、`commons` は共通基盤処理、`sub_commands` は各サブコマンド実装を担います。
+- この目次は、どの実装入口を読むべきかを素早く切り分けるための案内です。
 
 ## Read this when
 
-- `src` 配下の全体構成を把握して、どこに何があるかを振り分けたいとき。
-- `main.py` の CLI प्रवेश点と、`commons` / `sub_commands` の役割分担を確認したいとき。
-- 共通処理、サブコマンド実装、パッケージ構成の入口をまとめて見たいとき。
+- `cmoc` の CLI 起動点やサブコマンド登録の全体像を把握したいとき。
+- 共通処理を探したいときは `commons`、サブコマンド本体を探したいときは `sub_commands` へ進むべきか判断したいとき。
+- `src` 配下の実装ファイルの配置をざっくり確認したいとき。
 
 ## Do not read this when
 
-- cmoc の個別サブコマンドの実装詳細だけを確認したいとき。
-- 共通基盤だけ、または `oracles` 側の仕様断片だけを確認したいとき。
-- `INDEX.md` の生成ルールや更新処理だけを確認したいとき。
+- `src/commons` や `src/sub_commands` の個別モジュールの実装詳細だけを見たいときは、この目次ではなく各配下の `INDEX.md` を読むべきです。
+- CLI の引数や状態遷移の詳細だけを確認したいときは、ここではなく対象サブコマンド本体を直接読むべきです。
+- `oracles` 側の仕様断片や `INDEX.md` 生成ルールだけを確認したいときは、このディレクトリではなく該当仕様文書を読むべきです。
 
 ## hash
 
-- d8a1d00dcbc20b92be0f7bbfbc16a0f3866540fdf45943a4ae8fc6517ca2ff07
+- e81f02670ef6eeaf0e4c9bfde9d157b87b218c165c2c13c47f56e75602f1f86b
 <!-- cmoc-index-kind: directory -->
 
 # `test.sh`
@@ -227,15 +232,15 @@
 
 ## Summary
 
-- `tests` 配下の回帰テスト群をまとめて案内する入口です。
-- pytest の共通設定と、Codex 呼び出し、`INDEX.md` 維持、git 共通処理、レポート保存、サブコマンド制御、タイムスタンプ関連のテストへ導きます。
-- テスト作業時に、どのファイルを読むべきかを振り分けるための目次です。
+- pytest の回帰テスト群をまとめたディレクトリの入口です。
+- `conftest.py` による共通設定と、`test_codex.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py`、`test_report_files.py`、`test_timestamps.py`、`test_file_naming.py` を案内します。
+- cmoc 本体の実装ではなく、各機能の期待動作と境界条件を検証するテストの目次です。
 
 ## Read this when
 
-- `tests` 配下にどの回帰テストがあり、何を守っているかを素早く把握したいとき。
-- `conftest.py` による共通設定や、`test_codex.py` / `test_indexing.py` / `test_repo.py` などの対象範囲を確認したいとき。
-- テスト追加・修正の前に、既存テストの役割分担を整理したいとき。
+- どの回帰テストが何を守っているかを素早く把握したいとき。
+- `conftest.py` の共通設定や、個別テストファイルの担当範囲を確認したいとき。
+- テスト追加や修正の前に、既存テストの役割分担を整理したいとき。
 
 ## Do not read this when
 
@@ -245,5 +250,5 @@
 
 ## hash
 
-- 9163ba8c0d2e1c499cebdaa0d1d867ad56d367ff5a032997af591ed7e4f8ddfb
+- a229ac727589a642ef2bebbaa0944af125ec7c1cdb04fa44ac11ed1e170c308f
 <!-- cmoc-index-kind: directory -->
