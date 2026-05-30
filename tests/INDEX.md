@@ -154,27 +154,27 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は、`cmoc` のサブコマンド群に関する決定論的な制御ロジックの回帰テストの入口です。
-- `init`、`session`、`apply`、`eval_oracles`、`main` の起動経路、引数解釈、状態遷移、エラー表示、ヘルプ登録をまとめて確認します。
-- 共通 runner、`INDEX.md` 保守、session/apply の状態記録、oracle 評価と report 保存、関連する補助ヘルパーの期待動作を押さえます。
+- `tests/test_subcommands.py` は cmoc のサブコマンド群に関する決定論的な制御ロジックの回帰テストの入口です。
+- `init`、`session`、`apply`、`eval_oracles`、`main` の起動経路、状態遷移、エラー表示、ヘルプ登録をまとめて検証します。
+- 共通 runner、`INDEX.md` 保守、session/apply の状態記録、oracle 評価と report 保存、および関連補助ヘルパーの期待動作を押さえます。
 
 ## Read this when
 
-- サブコマンドの追加・削除・名称変更に伴って、テスト期待値を見直したいとき。
-- CLI のルーティング、引数解釈、状態遷移、エラー表示、ヘルプ登録の回帰を確認したいとき。
-- `init` / `session` / `apply` / `eval_oracles` / `main` と、それらに付随する検証ヘルパーの挙動を把握したいとき。
-- `run_command`、`cmoc_init_impl`、`cmoc_session_*`、`cmoc_apply_*`、`cmoc_eval_oracles_impl` の回帰を追いたいとき。
+- `init`、`session`、`apply`、`eval_oracles`、`main` の起動経路や引数解釈を確認したいとき。
+- CLI の状態遷移、エラー表示、ヘルプ登録、共通 runner の挙動を追いたいとき。
+- `run_command`、`cmoc_init_impl`、`cmoc_session_*`、`cmoc_apply_*`、`cmoc_eval_oracles_impl` の回帰を確認したいとき。
+- サブコマンド群の決定論的な制御ロジック全体を把握したいとき。
 
 ## Do not read this when
 
-- `src/sub_commands` の実装本体や `commons` の共通処理だけを確認したいとき。
-- `cmoc` の個別サブコマンド仕様そのものや、`oracles` 側の正本仕様だけを追いたいとき。
-- サブコマンド以外の CLI 挙動や、別カテゴリのテストを見たいとき。
-- `INDEX.md` の生成ルールや、内容ハッシュの管理方法だけを調べたいとき。
+- `src/sub_commands` や `src/commons` の実装そのものを確認したいとき。
+- `oracles` 側の正本仕様だけを読みたいとき。
+- サブコマンド以外の CLI 挙動や、別カテゴリのテストを探しているとき。
+- `INDEX.md` の生成ルールや内容ハッシュの扱いだけを確認したいとき。
 
 ## hash
 
-- ea07907ef31734b55ab0fbcbe3fdde8a0141f18ee0266c339ef3954a23032fac
+- b83636e38b134366d1d0f28257ab99c297c12f0d2842b1aadba35acbea9611d9
 <!-- cmoc-index-kind: file -->
 
 # `test_timestamps.py`

@@ -49,25 +49,25 @@
 
 ## Summary
 
-- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体実装で、session branch から専用 apply branch / worktree を作成し、調査・修正ループを完遂するまでの全体制御を担います。
-- session state の事前検証、apply 開始の直列化、`running` / `completed` / `error` への状態更新、再実行回数や scope オプションの検証を扱います。
-- 要修正点の抽出・改善・適用、禁止パス検査、`INDEX.md` 保守、apply report と変更要約の生成・検証まで含む運用中枢です。
+- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の中核実装で、session branch から専用 apply branch / worktree を作成し、調査・修正ループを完走させるための全体制御を担います。
+- このモジュールには、事前条件の検証、並列調査、要修正点リストの改善、実装修正の適用、コミット、report 保存、エラー時の復旧までをまとめて扱う補助関数群も含まれます。
+- `apply.state` の更新、`INDEX.md` のメンテナンス、変更要約の生成・検証、編集禁止領域のチェックまで含む、`cmoc apply fork` の運用中枢です。
 
 ## Read this when
 
-- `cmoc apply fork` の実装全体、処理順、終了条件を確認したいとき。
-- session state の検証、apply branch / worktree の生成、`--repeat-investigate-and-fix` / `--repeat-improove-fixing-list` / `--scope` の扱いを確認したいとき。
-- 要修正点の Structured Output schema、Codex CLI への調査・修正依頼、report 保存や変更要約の流れを追いたいとき。
+- `cmoc apply fork` の本体実装として、開始から完了レポートまでの処理順を追いたいとき。
+- session state の検証、apply branch / worktree の作成、`running` / `completed` / `error` への遷移条件を確認したいとき。
+- 要修正点の調査、改善、適用、禁止パス検査、`INDEX.md` 保守、レポート生成と Structured Output 検証の流れを把握したいとき。
 
 ## Do not read this when
 
-- `cmoc apply join` や `cmoc apply abandon` の処理だけを確認したいとき。
-- `cmoc session fork/join/abandon` など、apply 以外のサブコマンド仕様だけを確認したいとき。
-- `oracles` 側の個別仕様断片や `INDEX.md` の生成ルールだけを確認したいとき。
+- `cmoc apply fork` そのものの実装や状態遷移ではなく、`cmoc apply join` / `cmoc apply abandon` の処理だけを確認したいとき。
+- `cmoc apply fork` の仕様断片や利用手順だけを確認したいときは、`oracles/app_specs/sub_commands/apply_fork.md` を読むべきです。
+- `src/sub_commands/apply` パッケージ全体の役割だけを見たいときは、このファイルではなく `src/sub_commands/apply/INDEX.md` を読むべきです。
 
 ## hash
 
-- 9fd7314081bd05c00dde12abb413bcbb3ec465cc58059739e67f6dbddf7d1357
+- 408aa8829bdf2bd2ae2a293bcfc55a0a8e31739fcae7db05c6e2033c8a3746b1
 <!-- cmoc-index-kind: file -->
 
 # `join.py`
