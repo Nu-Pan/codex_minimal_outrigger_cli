@@ -1,7 +1,6 @@
 """`cmoc review oracles` の本体処理。"""
 
 from concurrent.futures import Future, ThreadPoolExecutor
-from inspect import Parameter, signature
 import json
 from pathlib import Path
 import sys
@@ -314,24 +313,8 @@ def _validate_repeat_improve_issues_list(value: int) -> None:
 
 
 def _maintain_indexes_preserving_oracle_snapshot(repo_root: Path) -> bool:
-    """review 対象の oracle file set を固定して INDEX.md をメンテナンスする。"""
-    if _maintain_indexes_accepts_excluded_roots():
-        return maintain_indexes(
-            repo_root,
-            excluded_index_roots=[repo_root / "oracles"],
-        )
+    """review 対象の oracle file set を固定後に INDEX.md をメンテナンスする。"""
     return maintain_indexes(repo_root)
-
-
-def _maintain_indexes_accepts_excluded_roots() -> bool:
-    """テスト用 monkeypatch も考慮して除外 root 引数の有無を判定する。"""
-    parameters = signature(maintain_indexes).parameters.values()
-    for parameter in parameters:
-        if parameter.name == "excluded_index_roots":
-            return True
-        if parameter.kind == Parameter.VAR_KEYWORD:
-            return True
-    return False
 
 
 def _evaluate_oracle_file(
@@ -347,7 +330,6 @@ def _evaluate_oracle_file(
             read_only=True,
             expect_json=True,
             output_schema=_EVALUATION_OUTPUT_SCHEMA,
-            skip_index_maintenance=True,
             json_validator=lambda value: _validate_evaluation_payload(
                 value,
                 repo_root,
@@ -430,7 +412,6 @@ def _improve_evaluations(
                 read_only=True,
                 expect_json=True,
                 output_schema=_EVALUATION_OUTPUT_SCHEMA,
-                skip_index_maintenance=True,
                 model=FRONTIER_MODEL,
                 reasoning_effort=FRONTIER_HIGH_REASONING_EFFORT,
                 json_validator=lambda value: _validate_issues_payload(

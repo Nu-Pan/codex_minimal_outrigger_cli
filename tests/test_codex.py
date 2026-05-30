@@ -1,5 +1,6 @@
 """Codex CLI 呼び出しラッパーのテスト。"""
 
+import ast
 import json
 import os
 import subprocess
@@ -3735,6 +3736,32 @@ def test_run_codex_exec_can_skip_index_maintenance(
     )
 
     assert output.strip() == "done"
+
+
+def test_production_skip_index_maintenance_calls_are_limited_to_exceptions() -> None:
+    """skip_index_maintenance=True は INDEX 生成と conflict 解消だけで使う。"""
+    repo_root = Path(__file__).resolve().parents[1]
+    allowed_paths = {
+        Path("src/commons/indexing.py"),
+        Path("src/sub_commands/session/join.py"),
+    }
+    actual_paths: set[Path] = set()
+
+    for source_path in (repo_root / "src").rglob("*.py"):
+        tree = ast.parse(source_path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            for keyword in node.keywords:
+                if keyword.arg != "skip_index_maintenance":
+                    continue
+                if (
+                    isinstance(keyword.value, ast.Constant)
+                    and keyword.value.value is True
+                ):
+                    actual_paths.add(source_path.relative_to(repo_root))
+
+    assert actual_paths == allowed_paths
 
 
 def _init_git_repo(tmp_path: Path) -> Path:

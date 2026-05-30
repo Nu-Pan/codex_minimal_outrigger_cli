@@ -1076,15 +1076,11 @@ def test_eval_oracles_writes_report_with_fake_codex(
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
 
-    maintain_calls: list[tuple[Path, list[Path]]] = []
+    maintain_calls: list[Path] = []
 
-    def fake_maintain_indexes(
-        repo_root: Path,
-        *,
-        excluded_index_roots: list[Path],
-    ) -> bool:
+    def fake_maintain_indexes(repo_root: Path) -> bool:
         """review oracles 冒頭の INDEX.md メンテナンスを記録する。"""
-        maintain_calls.append((repo_root, excluded_index_roots))
+        maintain_calls.append(repo_root)
         return False
 
     monkeypatch.setattr(
@@ -1109,7 +1105,7 @@ def test_eval_oracles_writes_report_with_fake_codex(
     reports = list((repo / ".cmoc" / "reports" / "review_oracles").glob("*.md"))
     assert len(reports) == 1
     report = reports[0].read_text(encoding="utf-8")
-    assert maintain_calls == [(repo, [repo / "oracles"])]
+    assert maintain_calls == [repo]
     assert codex_kwargs[0]["expect_json"] is True
     assert codex_kwargs[0]["output_schema"] == (
         eval_oracles_module._EVALUATION_OUTPUT_SCHEMA
@@ -1125,7 +1121,7 @@ def test_eval_oracles_writes_report_with_fake_codex(
             "基づくことの説明。"
         ),
     }
-    assert codex_kwargs[0]["skip_index_maintenance"] is True
+    assert codex_kwargs[0].get("skip_index_maintenance") is not True
     assert "json_validator" in codex_kwargs[0]
     assert 'mode: "full"' in report
     assert 'result: "ok"' in report
@@ -1189,11 +1185,11 @@ def test_eval_oracles_freezes_snapshot_before_index_maintenance(
     assert "oracles/generated.md" not in report
 
 
-def test_eval_oracles_index_maintenance_does_not_touch_oracles_index(
+def test_eval_oracles_index_maintenance_updates_oracles_index(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """review 前の INDEX.md メンテナンスは oracles 配下を更新しない。"""
+    """review 前の INDEX.md メンテナンスは oracles 配下も最新化する。"""
     repo = _init_repo(tmp_path)
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -1224,7 +1220,7 @@ def test_eval_oracles_index_maintenance_does_not_touch_oracles_index(
 
     cmoc_eval_oracles_impl(repo, full=True, repeat_improve_issues_list=0)
 
-    assert (oracle_root / "INDEX.md").read_text(encoding="utf-8") == stale_index
+    assert (oracle_root / "INDEX.md").read_text(encoding="utf-8") != stale_index
     changed_files = _git(
         repo,
         "diff-tree",
@@ -1233,7 +1229,7 @@ def test_eval_oracles_index_maintenance_does_not_touch_oracles_index(
         "-r",
         "HEAD",
     ).stdout.splitlines()
-    assert "oracles/INDEX.md" not in changed_files
+    assert "oracles/INDEX.md" in changed_files
 
 
 def test_eval_oracles_runs_file_evaluations_in_parallel(
@@ -1820,8 +1816,8 @@ def test_review_oracles_improves_combined_issue_list(
         "oracle 問題点リスト改善 2",
     ]
     assert [
-        kwargs["skip_index_maintenance"] for kwargs in codex_kwargs
-    ] == [True, True, True]
+        kwargs.get("skip_index_maintenance") for kwargs in codex_kwargs
+    ] == [None, None, None]
     improve_kwargs = [
         kwargs for kwargs in codex_kwargs if "問題点リスト改善" in kwargs["purpose"]
     ]
@@ -2672,7 +2668,11 @@ def test_apply_returns_complete_when_no_discrepancies(
         for kwargs in investigation_kwargs
     )
     assert all(
-        kwargs["skip_index_maintenance"] is True
+        kwargs.get("skip_index_maintenance") is not True
+        for kwargs in investigation_kwargs
+    )
+    assert all(
+        kwargs["index_excluded_roots"] == [apply_worktree / "oracles"]
         for kwargs in investigation_kwargs
     )
     report_kwargs = [
@@ -2967,7 +2967,10 @@ def test_apply_commits_index_changes_when_no_discrepancies(
         "# `docs`\n"
     )
     assert len(report_kwargs) == 1
-    assert report_kwargs[0]["skip_index_maintenance"] is True
+    assert report_kwargs[0].get("skip_index_maintenance") is not True
+    assert report_kwargs[0]["index_excluded_roots"] == [
+        apply_worktree / "oracles"
+    ]
     assert maintained_roots.count(apply_worktree) == 2
     assert f"session_head_at_apply_start: \"{session_head}\"" in report_text
     assert f"session_head_at_apply_finish: \"{session_head}\"" in report_text

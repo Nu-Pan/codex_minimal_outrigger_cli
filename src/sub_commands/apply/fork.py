@@ -937,7 +937,6 @@ def _run_investigation_job(
             json_validator=_validate_discrepancy_payload,
             model=FRONTIER_MODEL,
             reasoning_effort=FRONTIER_REASONING_EFFORT,
-            skip_index_maintenance=True,
             index_excluded_roots=_apply_index_excluded_roots(repo_root),
         )
     )
@@ -1592,7 +1591,7 @@ def _generate_change_summary(
             json_validator=_validate_change_summary_payload,
             model=COST_PERFORMANCE_MODEL,
             reasoning_effort=COST_PERFORMANCE_REASONING_EFFORT,
-            skip_index_maintenance=True,
+            index_excluded_roots=_apply_index_excluded_roots(repo_root),
         )
     )
     changes = payload.get("changes")
