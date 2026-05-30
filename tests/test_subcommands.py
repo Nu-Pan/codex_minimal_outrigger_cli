@@ -5968,6 +5968,111 @@ def test_apply_files_at_commit_exclude_tracked_root_gitignored_files(
     assert implementation_paths == [".gitignore", "README.md", "kept.py"]
 
 
+def test_apply_files_at_commit_use_snapshot_root_gitignore(
+    tmp_path: Path,
+) -> None:
+    """snapshot 調査対象は現在の worktree ではなく snapshot の .gitignore で絞る。"""
+    repo = _init_repo(tmp_path)
+    base_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    (repo / ".gitignore").write_text(
+        "oracles/snapshot_ignored.md\nsnapshot_ignored.py\n",
+        encoding="utf-8",
+    )
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "kept.md").write_text("kept\n", encoding="utf-8")
+    (oracle_root / "snapshot_ignored.md").write_text(
+        "snapshot ignored\n",
+        encoding="utf-8",
+    )
+    (oracle_root / "worktree_ignored.md").write_text(
+        "worktree ignored\n",
+        encoding="utf-8",
+    )
+    (repo / "kept.py").write_text("kept\n", encoding="utf-8")
+    (repo / "snapshot_ignored.py").write_text(
+        "snapshot ignored\n",
+        encoding="utf-8",
+    )
+    (repo / "worktree_ignored.py").write_text(
+        "worktree ignored\n",
+        encoding="utf-8",
+    )
+    _git(
+        repo,
+        "add",
+        ".gitignore",
+        "oracles/kept.md",
+        "oracles/worktree_ignored.md",
+        "kept.py",
+        "worktree_ignored.py",
+    )
+    _git(
+        repo,
+        "add",
+        "-f",
+        "oracles/snapshot_ignored.md",
+        "snapshot_ignored.py",
+    )
+    _git(repo, "commit", "-m", "snapshot targets")
+    snapshot_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    (repo / ".gitignore").write_text(
+        "oracles/worktree_ignored.md\nworktree_ignored.py\n",
+        encoding="utf-8",
+    )
+
+    oracle_paths = [
+        path.relative_to(repo).as_posix()
+        for path in apply_module._oracle_files_at_commit(
+            repo,
+            snapshot_commit,
+        )
+    ]
+    implementation_paths = [
+        path.relative_to(repo).as_posix()
+        for path in apply_module._implementation_files_at_commit(
+            repo,
+            snapshot_commit,
+        )
+    ]
+    changed_oracle_paths = [
+        path.relative_to(repo).as_posix()
+        for path in apply_module._changed_oracle_files_at_commit(
+            repo,
+            base_commit,
+            snapshot_commit,
+        )
+    ]
+    changed_implementation_paths = [
+        path.relative_to(repo).as_posix()
+        for path in apply_module._changed_implementation_files_at_commit(
+            repo,
+            base_commit,
+            snapshot_commit,
+        )
+    ]
+
+    assert oracle_paths == [
+        "oracles/kept.md",
+        "oracles/worktree_ignored.md",
+    ]
+    assert implementation_paths == [
+        ".gitignore",
+        "README.md",
+        "kept.py",
+        "worktree_ignored.py",
+    ]
+    assert changed_oracle_paths == [
+        "oracles/kept.md",
+        "oracles/worktree_ignored.md",
+    ]
+    assert changed_implementation_paths == [
+        ".gitignore",
+        "kept.py",
+        "worktree_ignored.py",
+    ]
+
+
 def test_apply_partial_targets_exclude_tracked_root_gitignored_files(
     tmp_path: Path,
 ) -> None:

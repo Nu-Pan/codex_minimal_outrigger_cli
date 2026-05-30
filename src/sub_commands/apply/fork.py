@@ -36,7 +36,9 @@ from commons.repo import (
     current_branch,
     ensure_cmoc_ignored,
     filter_apply_implementation_file_paths,
+    filter_apply_implementation_file_paths_at_commit,
     filter_oracle_file_paths,
+    filter_oracle_file_paths_at_commit,
     git_name_only_paths,
     git_name_status_entries,
     git_status_paths,
@@ -1020,7 +1022,14 @@ def _target_implementation_files(
 def _oracle_files_at_commit(repo_root: Path, commit_hash: str) -> list[Path]:
     """指定 commit に存在する oracle ファイルを列挙する。"""
     paths = _tracked_files_at_commit(repo_root, commit_hash, "oracles")
-    return [repo_root / path for path in filter_oracle_file_paths(repo_root, paths)]
+    return [
+        repo_root / path
+        for path in filter_oracle_file_paths_at_commit(
+            repo_root,
+            commit_hash,
+            paths,
+        )
+    ]
 
 
 def _implementation_files_at_commit(
@@ -1031,7 +1040,11 @@ def _implementation_files_at_commit(
     paths = _tracked_files_at_commit(repo_root, commit_hash, ".")
     return [
         repo_root / path
-        for path in _filter_implementation_file_paths(repo_root, paths)
+        for path in _filter_implementation_file_paths_at_commit(
+            repo_root,
+            commit_hash,
+            paths,
+        )
     ]
 
 
@@ -1043,8 +1056,9 @@ def _changed_oracle_files_at_commit(
     """指定 commit 範囲で変更された oracle ファイルを列挙する。"""
     return [
         repo_root / path
-        for path in filter_oracle_file_paths(
+        for path in filter_oracle_file_paths_at_commit(
             repo_root,
+            commit_hash,
             _changed_files_between_commits(
                 repo_root,
                 base_commit,
@@ -1063,8 +1077,9 @@ def _changed_implementation_files_at_commit(
     """指定 commit 範囲で変更された実装ファイルを列挙する。"""
     return [
         repo_root / path
-        for path in _filter_implementation_file_paths(
+        for path in _filter_implementation_file_paths_at_commit(
             repo_root,
+            commit_hash,
             _changed_files_between_commits(
                 repo_root,
                 base_commit,
@@ -1081,6 +1096,19 @@ def _filter_implementation_file_paths(
 ) -> list[str]:
     """root 相対 path から apply fork の実装調査対象だけを返す。"""
     return filter_apply_implementation_file_paths(repo_root, relative_paths)
+
+
+def _filter_implementation_file_paths_at_commit(
+    repo_root: Path,
+    commit_hash: str,
+    relative_paths: list[str],
+) -> list[str]:
+    """指定 commit の root `.gitignore` で apply 実装調査対象だけを返す。"""
+    return filter_apply_implementation_file_paths_at_commit(
+        repo_root,
+        commit_hash,
+        relative_paths,
+    )
 
 
 def _tracked_files_at_commit(

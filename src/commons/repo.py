@@ -2,7 +2,6 @@
 
 import json
 import os
-import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -1285,6 +1284,24 @@ def filter_oracle_file_paths(
     return [path for path in candidates if path not in ignored]
 
 
+def filter_oracle_file_paths_at_commit(
+    repo_root: Path,
+    commit_hash: str,
+    relative_paths: list[str],
+) -> list[str]:
+    """指定 commit の root `.gitignore` で oracles ファイルだけを返す。"""
+    candidates = sorted(
+        {
+            path
+            for path in relative_paths
+            if path.startswith("oracles/")
+            and Path(path).name != "INDEX.md"
+        }
+    )
+    ignored = root_gitignored_paths_at_commit(repo_root, commit_hash, candidates)
+    return [path for path in candidates if path not in ignored]
+
+
 def list_implementation_files(repo_root: Path) -> list[Path]:
     """仕様に従って実装ファイルを列挙する。"""
     # repo root 配下の全ファイルから、仕様上の除外対象だけを落とす。
@@ -1331,6 +1348,24 @@ def filter_apply_implementation_file_paths(
     return [path for path in candidates if path not in ignored]
 
 
+def filter_apply_implementation_file_paths_at_commit(
+    repo_root: Path,
+    commit_hash: str,
+    relative_paths: list[str],
+) -> list[str]:
+    """指定 commit の root `.gitignore` で apply 実装調査対象だけを返す。"""
+    candidates = sorted(
+        {
+            path
+            for path in relative_paths
+            if not _is_excluded_implementation_path(path)
+            and not _is_forbidden_apply_implementation_path(path)
+        }
+    )
+    ignored = root_gitignored_paths_at_commit(repo_root, commit_hash, candidates)
+    return [path for path in candidates if path not in ignored]
+
+
 def is_apply_implementation_path(repo_root: Path, relative_path: str) -> bool:
     """root 相対 path が apply の調査対象になる実装ファイルか判定する。"""
     return (
@@ -1345,6 +1380,24 @@ def root_gitignored_paths(
 ) -> set[str]:
     """root `.gitignore` の pattern に一致する path 集合を返す。"""
     return _root_gitignored_paths(repo_root, relative_paths)
+
+
+def root_gitignored_paths_at_commit(
+    repo_root: Path,
+    commit_hash: str,
+    relative_paths: list[str],
+) -> set[str]:
+    """指定 commit の root `.gitignore` pattern に一致する path 集合を返す。"""
+    if not relative_paths:
+        return set()
+    result = run_git(
+        repo_root,
+        ["show", f"{commit_hash}:.gitignore"],
+        check=False,
+    )
+    if result.returncode != 0:
+        return set()
+    return _root_gitignored_paths_from_content(relative_paths, result.stdout)
 
 
 def changed_oracle_files(repo_root: Path, base_commit: str) -> list[Path]:
@@ -2035,12 +2088,28 @@ def _root_gitignored_paths(
     gitignore = repo_root / ".gitignore"
     if not relative_paths or not gitignore.exists():
         return set()
+    return _root_gitignored_paths_from_content(
+        relative_paths,
+        gitignore.read_text(encoding="utf-8"),
+    )
+
+
+def _root_gitignored_paths_from_content(
+    relative_paths: list[str],
+    gitignore_content: str,
+) -> set[str]:
+    """root `.gitignore` 内容で path 集合を Git wildmatch 評価する。"""
+    if not relative_paths or not gitignore_content:
+        return set()
 
     # 一時 git repository に root `.gitignore` だけを複製して評価環境を作る。
     env = _root_gitignore_git_env()
     with tempfile.TemporaryDirectory(prefix="cmoc-gitignore-") as temp_name:
         temp_root = Path(temp_name)
-        shutil.copyfile(gitignore, temp_root / ".gitignore")
+        (temp_root / ".gitignore").write_text(
+            gitignore_content,
+            encoding="utf-8",
+        )
         subprocess.run(
             ["git", "init", "-q"],
             cwd=temp_root,
