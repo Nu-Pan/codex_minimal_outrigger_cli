@@ -7645,16 +7645,23 @@ def test_main_delegates_group_completion_probe_to_typer(
         assert expected_command in result.stdout
 
 
-def test_main_treats_empty_completion_env_as_completion_probe() -> None:
-    """_CMOC_COMPLETE が空文字でも通常 CLI エラーを出さない。"""
-    result = _run_completion_probe([], "cmoc ", 1, complete_value="")
+def test_main_delegates_empty_completion_env_to_typer(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """_CMOC_COMPLETE が空文字でも cmoc 側で握りつぶさず Typer へ委譲する。"""
+    import main as main_module
 
-    assert result.returncode == 0
-    assert result.stderr == ""
-    assert result.stdout == ""
-    assert "ERROR" not in result.stdout
-    assert "Summary:" not in result.stdout
-    assert "コマンドが指定されていません。" not in result.stdout
+    calls: list[dict[str, str]] = []
+
+    def fake_app(*, prog_name: str) -> None:
+        calls.append({"prog_name": prog_name})
+
+    monkeypatch.setenv("_CMOC_COMPLETE", "")
+    monkeypatch.setattr(main_module, "app", fake_app)
+
+    main_module.main()
+
+    assert calls == [{"prog_name": "cmoc"}]
 
 
 def test_format_error_report_fills_empty_generic_detail() -> None:
@@ -7784,10 +7791,10 @@ def test_bin_cmoc_reports_missing_venv_to_stdout(tmp_path: Path) -> None:
     assert "仮想環境 Python の実行可能性チェック" not in result.stdout
 
 
-def test_bin_cmoc_suppresses_missing_venv_error_for_completion_probe(
+def test_bin_cmoc_reports_missing_venv_for_completion_probe(
     tmp_path: Path,
 ) -> None:
-    """補完プローブでは launcher 独自の venv 欠落エラーを混ぜない。"""
+    """venv 欠落時は補完プローブでも成功扱いで握りつぶさない。"""
     repo_root = Path(__file__).resolve().parents[1]
     launcher = tmp_path / "repo" / "bin" / "cmoc"
     launcher.parent.mkdir(parents=True)
@@ -7810,9 +7817,11 @@ def test_bin_cmoc_suppresses_missing_venv_error_for_completion_probe(
         stderr=subprocess.PIPE,
     )
 
-    assert result.returncode == 0
-    assert result.stdout == ""
+    assert result.returncode == 1
     assert result.stderr == ""
+    assert "ERROR" in result.stdout
+    assert "Summary:" in result.stdout
+    assert "仮想環境 Python" in result.stdout
 
 
 def test_session_join_conflict_prompt_allows_marker_only_oracle_fix() -> None:

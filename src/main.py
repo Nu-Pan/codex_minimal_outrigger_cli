@@ -133,8 +133,6 @@ def apply_abandon_command() -> None:
 def main() -> None:
     """Typer の parse error も共通エラーレポートへ変換して起動する。"""
     if _is_completion_probe():
-        if _completion_probe_value() == "":
-            return
         app(prog_name="cmoc")
         return
 
@@ -161,11 +159,6 @@ def main() -> None:
 def _is_completion_probe() -> bool:
     """Click/Typer の自動補完プローブとして起動されたか判定する。"""
     return "_CMOC_COMPLETE" in os.environ
-
-
-def _completion_probe_value() -> str:
-    """Click/Typer の補完モード指定値を返す。"""
-    return os.environ.get("_CMOC_COMPLETE", "")
 
 
 def _raise_missing_command_error_if_needed(arguments: list[str]) -> None:

@@ -37,9 +37,6 @@ require_venv_python() {
     if [ -x "$venv_python" ]; then
         return 0
     fi
-    if [ "${_CMOC_COMPLETE+x}" ]; then
-        exit 0
-    fi
     print_missing_venv_error
     exit 1
 }
