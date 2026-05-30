@@ -27,26 +27,26 @@
 
 ## Summary
 
-- cmoc CLI のエントリーポイントで、Typer のルート app と `session` / `apply` / `review` のサブアプリを組み立てます。
-- `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`review oracles` の登録と、それぞれのオプション既定値やエイリアスをまとめます。
-- サブコマンド未指定時の利用者向けエラー、Click/Typer 例外の共通整形、`python src/main.py` 直実行の起動経路を扱います。
+- cmoc CLI のエントリーポイントで、Typer のルート `app` と `session` / `apply` / `review` の各サブアプリを組み立てるファイルです。
+- `init`、`session`、`apply`、`review` の各コマンド登録に加えて、`eval-oracle` / `eval-oracles` の隠し別名や、`apply fork` の繰り返し回数・`scope`、`apply join` の `--force-resolve` などの既定値をまとめています。
+- サブコマンド未指定時の `CmocError` 生成、補完プローブ時の分岐、Click/Typer 例外の共通整形、`python src/main.py` 直実行の起動経路を扱います。
 
 ## Read this when
 
-- cmoc の起動点やサブコマンド登録の全体像を確認したいとき。
-- `init`、`session`、`apply`、`review` のコマンド名、エイリアス、既定値を確認したいとき。
-- サブコマンド未指定時の利用者向けエラーや終了コードの扱いを確認したいとき。
-- `python src/main.py` で直接起動する経路と、その例外ハンドリングを確認したいとき。
+- cmoc CLI の起動点と、`session` / `apply` / `review` のサブアプリ構成を確認したいとき。
+- `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`review oracles` の登録名、エイリアス、既定オプションを確認したいとき。
+- サブコマンド未指定時の利用者向けエラー、補完プローブの扱い、Click/Typer 例外の共通整形を追いたいとき。
+- `python src/main.py` で直接起動する経路と、そのときの例外処理を確認したいとき。
 
 ## Do not read this when
 
 - `src/sub_commands/` 配下の各サブコマンド本体の処理だけを確認したいとき。
-- 共通エラー型やエラーレポート整形の詳細だけを確認したいとき。
-- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
+- 共通エラー型や `format_error_report()` の整形仕様だけを確認したいとき。
+- `INDEX.md` の生成ルールや `oracles` 側のルーティング方針だけを確認したいとき。
 
 ## hash
 
-- d03b4e0b3d0c12971884d8bc1e159f95c3f0efe50e8fca99dc96066066992456
+- 7eb6c6be9a4576cdc697c9a82f65de46450efcff9825b8fc064595ec07baf889
 <!-- cmoc-index-kind: file -->
 
 # `sub_commands`
