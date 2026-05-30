@@ -83,17 +83,18 @@
 ## Read this when
 
 - `cmoc apply join` の実装・修正・レビュー・テストで、処理順や責務の境界を確認したいとき。
-- apply branch を session branch に取り込む前提条件や、`--force-resolve` による想定外差分の扱いを追いたいとき。
+- apply branch を session branch に取り込む前提条件や、`--force-resolve` による想定外差分の扱いを確認したいとき。
 - `INDEX.md` の conflict を自動解消する条件、merge 後の `apply.state` 更新、不要になった apply branch / worktree の削除条件を確認したいとき。
 - report/result の保存状況に応じた cleanup の warning 条件を把握したいとき。
 
 ## Do not read this when
 
-- `cmoc apply fork` の調査・修正ループや要修正点の作成だけを確認したいときは、このファイルではなく `fork.py` を読むべきです。
-- `cmoc apply abandon` の破棄手順や running 中の停止処理だけを確認したいときは、このファイルではなく `abandon.py` を読むべきです。
-- `cmoc apply join` の仕様断片や利用手順だけを確認したいときは、実装ではなく `oracles/app_specs/sub_commands/apply_join.md` を直接読むべきです。
-- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいときは、このファイルを読む必要はありません。
+- `cmoc apply fork` の調査・修正ループや要修正点リスト作成だけを確認したいとき。
+- `cmoc apply abandon` の破棄手順や running 中の停止処理だけを確認したいとき。
+- `cmoc apply join` の仕様断片や利用手順だけを確認したいときは、実装ではなく正本仕様を直接参照したいとき。
+- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
 
 ## hash
 
-- 207120b6a06653b60ed62622f12c341e84a1865df5126ccdf22a9c9c6efc752c
+- 5aefd2f80aec3dd2d61d4a8b6c886f932f6c88239e5cb7746964f2f90510b85b
+<!-- cmoc-index-kind: file -->

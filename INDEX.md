@@ -194,12 +194,12 @@
 ## Do not read this when
 
 - `oracles` 配下の正本仕様や `INDEX.md` の生成ルールだけを確認したいとき。
-- `src/commons` の個別共通モジュールや `src/sub_commands` の各実装ファイルだけを深掘りしたいとき。
+- `src/commons` の個別共通モジュールや `src/sub_commands` の各実装ファイルを直接深掘りしたいとき。
 - 実装コードやテストコードの修正だけで足りて、`src` 全体の入口整理が不要なとき。
 
 ## hash
 
-- 6cf24c65bf3cad4513c6ecac2389ecd8b20991bcb93632ec2772821ed245e4db
+- 26b8bc02e31c73b5a70b59823d7ef41277ce6d67e455872efa5420db818c764d
 <!-- cmoc-index-kind: directory -->
 
 # `test.sh`
@@ -230,23 +230,23 @@
 
 ## Summary
 
-- `tests` 配下のテスト群をまとめる目次です。
-- pytest の共通設定、Codex CLI 呼び出し、`INDEX.md` メンテナンス、git 共通処理、レポート保存、サブコマンド制御、タイムスタンプ仕様の回帰テストを案内します。
-- 実装変更時に、関連するテストファイルへすばやく辿るための入口です。
+- pytest による cmoc の回帰テスト群をまとめた `tests` ディレクトリの入口です。
+- `conftest.py` による import path 設定と、`test_codex.py`・`test_indexing.py`・`test_repo.py` などの機能別テストを案内します。
+- cmoc の決定論的な制御ロジック、CLI の公開入口、共通ヘルパーの回帰確認を読むための目次です。
 
 ## Read this when
 
-- `tests` 配下の回帰テスト全体の入口を確認したいとき。
-- `conftest.py`、`test_codex.py`、`test_indexing.py` など、個別テストの担当範囲を探したいとき。
-- `src/commons` や `src/sub_commands` の変更が、どのテスト群に影響するかを把握したいとき。
+- pytest の共通設定と、各テストファイルが何を検証しているかを素早く把握したいとき。
+- `src` の変更に対して、どの `tests/test_*.py` を更新すべきか判断したいとき。
+- Codex CLI 自体の品質ではなく、cmoc の制御ロジックやファイル管理の回帰を確認したいとき。
 
 ## Do not read this when
 
-- cmoc 本体の実装ロジックだけを確認したいとき。
-- `oracles` 配下の正本仕様だけを確認したいとき。
-- `INDEX.md` の生成ルールや内容ハッシュの仕様だけを確認したいとき。
+- cmoc の正本仕様を確認したいときは、この目次ではなく `oracles` 配下を読むべきです。
+- 個別テストの実装や期待値を確認したいときは、該当する `tests/test_*.py` を直接読むべきです。
+- テストではなく CLI 実装や共通処理そのものを追いたいときは、`src` 配下を読むべきです。
 
 ## hash
 
-- 06c0b5b4eb0842c6001c2fd0a167d6fb892f686f96032a3bb48337734ab2b770
+- d74861a0cbd494f67ea3789c29c8a13c90ccf36f1a986523cd3e63d6e6a1f98c
 <!-- cmoc-index-kind: directory -->
