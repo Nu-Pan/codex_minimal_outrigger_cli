@@ -49,7 +49,6 @@
 ## hash
 
 - bb13c41685a86d7c30c00d9da0db1a975c3444135ad959649967df26692c71a1
-<!-- cmoc-index-kind: file -->
 
 # `test_file_naming.py`
 
@@ -73,7 +72,7 @@
 
 ## hash
 
-- 8cffbbd037cfef7eddae93b596fc8e14a5e496a69ec1a9cc344e42ba99a22f43
+- 7abe9ede601af68a8a246e895f9952a426868048a3a0c12aacf939b4ab8e8c50
 
 # `test_indexing.py`
 
@@ -98,7 +97,6 @@
 ## hash
 
 - ca92d4f8ae0ab1ad5af06b24e2cd6de771974db09db746d149e01205831dcabe
-<!-- cmoc-index-kind: file -->
 
 # `test_repo.py`
 
@@ -126,7 +124,6 @@
 ## hash
 
 - 80385bba58bf311ef6c963184cfd1b01b1d81f1b9871704381ed6c9040b63a19
-<!-- cmoc-index-kind: file -->
 
 # `test_report_files.py`
 
@@ -177,7 +174,6 @@
 ## hash
 
 - f457e1942c7d5f93d94298a361d28fc821c36daf5507980d030b3ec8832d31f0
-<!-- cmoc-index-kind: file -->
 
 # `test_timestamps.py`
 

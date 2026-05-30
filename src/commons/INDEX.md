@@ -44,7 +44,6 @@
 ## hash
 
 - e0525fbd73de1c9f9e5997152afc853869956904b139b0bd13f201feb11d1ea8
-<!-- cmoc-index-kind: file -->
 
 # `command_runner.py`
 
@@ -124,7 +123,6 @@
 ## hash
 
 - c87fca6c587c34ee0d5886d27ba8e52a06920dbba99bba514a8b0f7484b8ab69
-<!-- cmoc-index-kind: file -->
 
 # `repo.py`
 
@@ -153,7 +151,6 @@
 ## hash
 
 - 45cf782e36de52bd107d0c4087da432ecde1c4633a7f6545e00caf5f9ae3fa09
-<!-- cmoc-index-kind: file -->
 
 # `report_files.py`
 

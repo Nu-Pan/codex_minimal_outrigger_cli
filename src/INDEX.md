@@ -22,7 +22,6 @@
 ## hash
 
 - e96c77a0a4f9c1684cb598a016371c6e97a12f05165463aed067a752844a737e
-<!-- cmoc-index-kind: directory -->
 
 # `main.py`
 
@@ -73,4 +72,3 @@
 ## hash
 
 - cf7f4287c853ec187a16380d5f11907995c4351163ca247c57444d583f5a862b
-<!-- cmoc-index-kind: directory -->

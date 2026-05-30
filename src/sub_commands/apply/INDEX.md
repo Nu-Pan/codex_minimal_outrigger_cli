@@ -45,7 +45,6 @@
 ## hash
 
 - 62f15798e9638f295e46c5cc870085cfdc0a751b855334cabacac6cdc98b9ed0
-<!-- cmoc-index-kind: file -->
 
 # `fork.py`
 
@@ -72,7 +71,6 @@
 ## hash
 
 - e758898d83e6e3786ff1c14dc4ccb4975d5dee190ef8a7a0f9b2ecd693ea8c41
-<!-- cmoc-index-kind: file -->
 
 # `join.py`
 
@@ -99,4 +97,3 @@
 ## hash
 
 - 207120b6a06653b60ed62622f12c341e84a1865df5126ccdf22a9c9c6efc752c
-<!-- cmoc-index-kind: file -->

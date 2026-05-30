@@ -203,7 +203,6 @@
 ## hash
 
 - 130cbbb0526b2a80f80aea661658c6599b71e819cd8c2ff8967bcee5d8eee8e4
-<!-- cmoc-index-kind: directory -->
 
 # `test.sh`
 
@@ -251,5 +250,4 @@
 
 ## hash
 
-- f0562b980c59c640aad8809027df0f66ea32ee34661c53199e0de4032d943e26
-<!-- cmoc-index-kind: directory -->
+- 16632904ddd7aa4a3e45afa4a0d2586b6b4332989a1e448c8b89407210b05636
