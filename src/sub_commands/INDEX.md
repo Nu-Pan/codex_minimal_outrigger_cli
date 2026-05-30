@@ -38,14 +38,14 @@
 
 ## Do not read this when
 
-- `cmoc apply` の利用手順や引数だけを確認したいとき。
-- 個別の `fork` / `join` / `abandon` の詳細な状態遷移や例外条件だけを確認したいときは、該当モジュールを直接読むべきです。
-- `cmoc session` 側の開始・統合・破棄の仕様を確認したいとき。
-- `src/commons` の共通処理や `tests` の回帰観点だけを確認したいとき。
+- `cmoc apply fork` / `cmoc apply join` / `cmoc apply abandon` のうち、1 つだけの詳細仕様や状態遷移を確認したいときは、この目次ではなく該当モジュールを直接読むべきです。
+- `cmoc apply` の利用手順や引数だけを確認したいときは、このディレクトリの実装入口ではなく正本仕様側を読むべきです。
+- `src/sub_commands/session` 側の開始・統合・破棄の仕様を確認したいときは、このディレクトリではなく session 側の目次を読むべきです。
+- `src/sub_commands` 配下の共通処理や `tests` の観点だけを確認したいときは、この目次を読む必要はありません。
 
 ## hash
 
-- b94995af61e6a31c2d511065e4776562a32db307752d7196d74452787dbbff03
+- fdc4780733334562810cf3956f2ac3c5c2a538895f2a4767a547e5bb80707110
 
 # `eval_oracles.py`
 

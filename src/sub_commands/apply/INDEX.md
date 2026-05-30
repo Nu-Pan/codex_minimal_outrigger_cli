@@ -60,13 +60,13 @@
 
 ## Do not read this when
 
-- `cmoc apply fork` の引数、前提条件、完了条件だけを確認したいとき。
+- `cmoc apply fork` の引数、前提条件、終了条件だけを確認したいとき。
 - `cmoc apply join` や `cmoc apply abandon` の処理を確認したいとき。
 - `INDEX.md` の生成ルールや `oracles` 側の仕様断片だけを確認したいとき。
 
 ## hash
 
-- 707a1f9c3d666492e0de570cd8aa87be926fc5603906a72b17fc7dd314dfdc84
+- 3d2a1aac79247266c6aec206d6987d0040f143056bfd4846f3c59b59e815ed84
 
 # `join.py`
 
