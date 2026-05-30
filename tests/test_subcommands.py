@@ -4432,7 +4432,7 @@ def test_apply_rejects_incomplete_change_summary_from_codex(
     monkeypatch: MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """report 失敗時も完了済み apply run を error へ戻さない。"""
+    """report 失敗時は apply run を completed にせず error として残す。"""
     repo = _init_repo(tmp_path)
     _checkout_session_branch(repo)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
@@ -4488,7 +4488,7 @@ def test_apply_rejects_incomplete_change_summary_from_codex(
         ).read_text(encoding="utf-8")
     )
     report_dir = repo / ".cmoc" / "reports" / "apply" / "fork"
-    assert state["apply"]["state"] == "completed"
+    assert state["apply"]["state"] == "error"
     assert state["apply"]["apply_branch"].startswith(
         "cmoc/apply/2026-05-10_22-21_10_000000123/"
     )
@@ -4523,6 +4523,65 @@ def test_apply_rejects_incomplete_change_summary_from_codex(
     assert "カテゴリ: 変更ファイル一覧" in report_text
     assert "docs/INDEX.md" in report_text
     assert "Codex CLI による意味論的カテゴリ別要約には失敗しました。" in report_text
+
+
+def test_apply_marks_error_when_final_output_fails(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """report 作成後の最終出力失敗も completed にせず error として残す。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "oracle")
+
+    class FailingReportTimer(apply_module.StepTimer):
+        """最終 timer report だけ失敗させるテスト用 timer。"""
+
+        def report(self) -> None:
+            raise RuntimeError("fake final output failure")
+
+    monkeypatch.setattr(
+        "sub_commands.apply.fork.maintain_indexes",
+        lambda repo_root: False,
+    )
+    monkeypatch.setattr(apply_module, "StepTimer", FailingReportTimer)
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """調査は収束させ、必要なら変更要約を返す。"""
+        if kwargs.get("purpose") == "apply 変更要約":
+            return _change_summary_json()
+        if kwargs.get("expect_json") is True:
+            return '{"git_head_commit_hash": null, "fixing_points": []}'
+        return "No changes"
+
+    monkeypatch.setattr("sub_commands.apply.fork.run_codex_exec", fake_codex)
+
+    with pytest.raises(RuntimeError, match="fake final output failure"):
+        cmoc_apply_impl(repo)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
+        ).read_text(encoding="utf-8")
+    )
+    reports = list(
+        (repo / ".cmoc" / "reports" / "apply" / "fork").glob("*.md")
+    )
+    report_texts = [report.read_text(encoding="utf-8") for report in reports]
+
+    assert state["apply"]["state"] == "error"
+    assert state["apply"]["apply_branch"].startswith(
+        "cmoc/apply/2026-05-10_22-21_10_000000123/"
+    )
+    assert any('result: "エラー"' in text for text in report_texts)
+    assert any(
+        "- Failed stage: `write final output`" in text for text in report_texts
+    )
 
 
 def test_apply_fallback_change_summary_preserves_special_path_tokens(

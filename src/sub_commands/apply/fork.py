@@ -301,7 +301,6 @@ def cmoc_apply_impl(
     apply_branch = ""
     apply_worktree = state_root / ".cmoc" / "worktrees" / "apply" / session_id
     discrepancy_counts: list[int] = []
-    apply_completed_recorded = False
     apply_start_needs_error_record = False
     apply_error_recorded = False
     try:
@@ -421,16 +420,11 @@ def cmoc_apply_impl(
             if not found_dirty_evidences and not dirty_implementation_paths:
                 dirty_implementation_paths = None
 
-        # 要修正点 0 件の経路も含め、apply run 中に生じた差分を確定してから
-        # apply run の完了状態を記録し、その後 report を生成する。
+        # 要修正点 0 件の経路も含め、apply run 中に生じた差分を確定する。
+        # report 生成と最終出力も apply fork の処理範囲なので、
+        # completed は最後に確定する。
         _assert_forbidden_paths_clean(apply_worktree)
         _commit_all_changes(apply_worktree)
-        _mark_apply_completed(
-            state_root,
-            session_id,
-            state,
-        )
-        apply_completed_recorded = True
 
         # 実行結果を人間向け report と exit code に変換する。
         failed_stage = "write report"
@@ -453,14 +447,21 @@ def cmoc_apply_impl(
             completed,
             discrepancy_counts,
         )
+        failed_stage = "write final output"
         print(f"apply run id: {apply_run_id}")
         print(str(report_path))
         timer.report()
+        failed_stage = "mark apply completed"
+        _mark_apply_completed(
+            state_root,
+            session_id,
+            state,
+        )
         return 0 if completed else _APPLY_INCOMPLETE_EXIT_CODE
     except Exception as error:
         if not apply_start_needs_error_record:
             raise
-        if not apply_completed_recorded and not apply_error_recorded:
+        if not apply_error_recorded:
             _mark_apply_error(state_root, session_id, state)
         try:
             session_head_at_apply_finish = _session_branch_head_for_report(
