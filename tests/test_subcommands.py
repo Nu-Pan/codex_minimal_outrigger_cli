@@ -6275,6 +6275,125 @@ def test_session_join_rejects_codex_change_in_forbidden_path(
     assert _git(repo, "log", "-1", "--pretty=%s").stdout.strip() == "home change"
 
 
+def test_session_join_rejects_codex_created_merge_commit(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Codex が git add/commit まで進めた場合は cmoc の commit に進まない。"""
+    repo = _repo_with_session_join_conflict(tmp_path)
+
+    def fake_codex(
+        repo_root: Path,
+        prompt: str,
+        **kwargs: object,
+    ) -> None:
+        """prompt 違反として merge commit を作成する。"""
+        del prompt, kwargs
+        (repo_root / "conflict.txt").write_text("resolved\n", encoding="utf-8")
+        _git(repo_root, "add", "conflict.txt")
+        _git(repo_root, "commit", "--no-edit")
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_codex)
+
+    with pytest.raises(CmocError) as error:
+        cmoc_session_join_impl(repo)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert "merge state" in error.value.message
+    assert "head:" in error.value.detail
+    assert "merge_head:" in error.value.detail
+    assert state["session"]["state"] == "active"
+    assert _git(repo, "log", "-1", "--pretty=%s").stdout.strip().startswith(
+        "Merge branch"
+    )
+
+
+def test_session_join_rejects_codex_staged_conflict_resolution(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Codex が git add だけ実行した場合も cmoc の add/commit に進まない。"""
+    repo = _repo_with_session_join_conflict(tmp_path)
+
+    def fake_codex(
+        repo_root: Path,
+        prompt: str,
+        **kwargs: object,
+    ) -> None:
+        """prompt 違反として conflict 対象を stage する。"""
+        del prompt, kwargs
+        (repo_root / "conflict.txt").write_text("resolved\n", encoding="utf-8")
+        _git(repo_root, "add", "conflict.txt")
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_codex)
+
+    with pytest.raises(CmocError) as error:
+        cmoc_session_join_impl(repo)
+
+    assert "merge state" in error.value.message
+    assert "unmerged_index: changed" in error.value.detail
+    assert (repo / ".git" / "MERGE_HEAD").exists()
+    assert _git(repo, "log", "-1", "--pretty=%s").stdout.strip() == "home change"
+
+
+def test_session_join_rejects_codex_aborted_merge(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Codex が merge state を中止した場合は後続の add/commit に進まない。"""
+    repo = _repo_with_session_join_conflict(tmp_path)
+
+    def fake_codex(
+        repo_root: Path,
+        prompt: str,
+        **kwargs: object,
+    ) -> None:
+        """prompt 違反として merge を abort する。"""
+        del prompt, kwargs
+        _git(repo_root, "merge", "--abort")
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_codex)
+
+    with pytest.raises(CmocError) as error:
+        cmoc_session_join_impl(repo)
+
+    assert "merge state" in error.value.message
+    assert "merge_head:" in error.value.detail
+    assert _git(repo, "log", "-1", "--pretty=%s").stdout.strip() == "home change"
+
+
+def test_session_join_rejects_codex_switched_branch_after_abort(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Codex が branch を移動した場合は現在 branch の変化を明示検出する。"""
+    repo = _repo_with_session_join_conflict(tmp_path)
+    session_branch = _git(repo, "branch", "--show-current").stdout.strip()
+
+    def fake_codex(
+        repo_root: Path,
+        prompt: str,
+        **kwargs: object,
+    ) -> None:
+        """prompt 違反として merge を abort して session branch へ戻る。"""
+        del prompt, kwargs
+        _git(repo_root, "merge", "--abort")
+        _git(repo_root, "switch", session_branch)
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_codex)
+
+    with pytest.raises(CmocError) as error:
+        cmoc_session_join_impl(repo)
+
+    assert "merge state" in error.value.message
+    assert "branch:" in error.value.detail
+    assert _git(repo, "branch", "--show-current").stdout.strip() == session_branch
+
+
 def test_session_abandon_marks_state_and_force_deletes_branch(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

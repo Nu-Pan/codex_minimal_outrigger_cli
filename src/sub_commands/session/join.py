@@ -193,6 +193,7 @@ def _resolve_conflicts(repo_root: Path) -> None:
         )
     _assert_no_forbidden_conflict_paths(unmerged)
     _assert_no_forbidden_pending_paths(repo_root)
+    merge_state = _merge_state_snapshot(repo_root)
     protected_snapshot = _protected_conflict_snapshot(repo_root, unmerged)
 
     # conflict 解消用 Codex 呼び出しは INDEX メンテナンス例外として実行する。
@@ -206,6 +207,7 @@ def _resolve_conflicts(repo_root: Path) -> None:
         allowed_uncommitted_oracle_paths=_oracle_conflict_paths(unmerged),
     )
 
+    _assert_merge_state_unchanged(repo_root, merge_state)
     _assert_no_forbidden_pending_paths(repo_root)
 
     # conflict 対象外の差分は Codex 呼び出し前と同一でなければならない。
@@ -242,6 +244,69 @@ def _resolve_conflicts(repo_root: Path) -> None:
 
     # marker 確認と git add が完了してから merge commit を作成する。
     run_git(repo_root, ["commit", "--no-edit"])
+
+
+def _merge_state_snapshot(repo_root: Path) -> dict[str, str]:
+    """Codex 呼び出し前の merge state を保存する。"""
+    return {
+        "branch": current_branch(repo_root),
+        "head": _rev_parse(repo_root, "HEAD"),
+        "merge_head": _rev_parse(repo_root, "MERGE_HEAD"),
+        "unmerged_index": _unmerged_index_snapshot(repo_root),
+    }
+
+
+def _assert_merge_state_unchanged(
+    repo_root: Path,
+    before: dict[str, str],
+) -> None:
+    """Codex が merge state を完了・中止・移動していないことを確認する。"""
+    after = _merge_state_snapshot(repo_root)
+    if after == before and after["merge_head"]:
+        return
+
+    details = []
+    for key in ("branch", "head", "merge_head", "unmerged_index"):
+        if after.get(key) == before.get(key):
+            continue
+        if key == "unmerged_index":
+            details.append("unmerged_index: changed")
+            continue
+        details.append(
+            f"{key}: {before.get(key) or '(none)'}"
+            f" -> {after.get(key) or '(none)'}"
+        )
+    if not after["merge_head"] and "merge_head" not in {
+        detail.split(":", 1)[0] for detail in details
+    }:
+        details.append("merge_head: merge state is missing")
+
+    raise CmocError(
+        "Codex CLI が session join の merge state を変更しました。",
+        [
+            "merge commit は作成していません。",
+            "git status と git log を確認し、merge を手動で復旧または解消してください。",
+        ],
+        "\n".join(details),
+    )
+
+
+def _rev_parse(repo_root: Path, revision: str) -> str:
+    """存在する revision を full hash に解決し、存在しない場合は空文字を返す。"""
+    result = run_git(
+        repo_root,
+        ["rev-parse", "-q", "--verify", revision],
+        check=False,
+    )
+    if result.returncode != 0:
+        return ""
+    return result.stdout.strip()
+
+
+def _unmerged_index_snapshot(repo_root: Path) -> str:
+    """unmerged index stage 情報を Codex の git add 検出用に保存する。"""
+    result = run_git(repo_root, ["ls-files", "-u", "-z"])
+    return result.stdout
 
 
 def _raise_unexpected_merge_failure(
