@@ -24,24 +24,24 @@
 ## Summary
 
 - `codex exec` の共通起動基盤として、コマンド組み立て、実行、再試行、`resume` をまとめるモジュールです。
-- Structured Output の JSON / schema 検証、`output-last-message` の読み取り、JSON object パースを扱います。
+- Structured Output の JSON / schema 検証、`output-last-message` の読み取り、JSON 応答の解釈を扱います。
 - quota 待機と再開、capacity の指数バックオフ、oracle 保護、実行直前の `INDEX.md` メンテナンス連携まで含みます。
 
 ## Read this when
 
 - `cmoc` から `codex exec` をどう起動し、`read-only` と `workspace-write` をどう切り替えるか確認したいとき。
-- Structured Output の JSON / schema 検証、`output-last-message` の読み取り、JSON 応答の解釈を確認したいとき。
-- quota 枯渇、capacity の一時失敗、launch failure、oracle 変更検知、実行前の `INDEX.md` メンテナンスの流れを確認したいとき。
+- Structured Output の JSON / schema 検証、`output-last-message` の読み取り、JSON object パースを確認したいとき。
+- quota 枯渇時の待機と `resume`、capacity の指数バックオフ、oracle 保護、実行前の `INDEX.md` メンテナンス、呼び出しログの保存を確認したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの業務ロジックや引数定義だけを確認したいとき。
+- 個別サブコマンドの業務ロジックや CLI 引数定義だけを確認したいとき。
 - `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
 - git 操作、レポート保存、タイムスタンプ、サブコマンドログなど、他の共通モジュールの詳細だけを追いたいとき。
 
 ## hash
 
-- 3dca35ff9a4574d23dcf739b725b9599f825d1ff9f9097f5e8427508cf549bf4
+- f94ff2c98bd6d0d9af967a169c867ad97d0fc995abf84a4f70192cb041bbb81a
 
 # `command_runner.py`
 
