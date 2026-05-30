@@ -2,7 +2,6 @@
 
 from concurrent.futures import Future, ThreadPoolExecutor
 import json
-from inspect import signature
 from pathlib import Path
 import sys
 
@@ -314,9 +313,7 @@ def _validate_repeat_improve_issues_list(value: int) -> None:
 
 
 def _maintain_indexes_preserving_oracle_snapshot(repo_root: Path) -> bool:
-    """review 対象の `oracles` tree を変更せずに INDEX.md をメンテナンスする。"""
-    if _maintain_indexes_accepts_excluded_roots():
-        return maintain_indexes(repo_root, excluded_index_roots=["oracles"])
+    """review 対象の oracle file set を固定して INDEX.md をメンテナンスする。"""
     return maintain_indexes(repo_root)
 
 
@@ -351,12 +348,6 @@ def _append_evaluation_records_in_order(
     """並列評価結果を dispatch 時の順序で回収する。"""
     for future in futures:
         evaluations.append(future.result())
-
-
-def _maintain_indexes_accepts_excluded_roots() -> bool:
-    """現在の maintain_indexes が excluded_index_roots を受け取るか判定する。"""
-    parameters = signature(maintain_indexes).parameters.values()
-    return any(parameter.name == "excluded_index_roots" for parameter in parameters)
 
 
 def _evaluation_prompt(repo_root: Path, oracle_file: Path) -> str:

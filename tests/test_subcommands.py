@@ -1069,13 +1069,9 @@ def test_eval_oracles_freezes_snapshot_before_index_maintenance(
 
     maintain_exclusions: list[list[str]] = []
 
-    def fake_maintain_indexes(
-        repo_root: Path,
-        *,
-        excluded_index_roots: list[str],
-    ) -> bool:
+    def fake_maintain_indexes(repo_root: Path) -> bool:
         """メンテナンス中に HEAD と oracle file set が動く状況を模擬する。"""
-        maintain_exclusions.append(excluded_index_roots)
+        maintain_exclusions.append([])
         (repo_root / "oracles" / "generated.md").write_text(
             "generated\n",
             encoding="utf-8",
@@ -1104,7 +1100,7 @@ def test_eval_oracles_freezes_snapshot_before_index_maintenance(
     report = next(
         (repo / ".cmoc" / "reports" / "review_oracles").glob("*.md")
     ).read_text(encoding="utf-8")
-    assert maintain_exclusions == [["oracles"]]
+    assert maintain_exclusions == [[]]
     assert evaluated_purposes == ["oracle 評価 oracles/original.md"]
     assert f'head_commit: "{review_start_head}"' in report
     assert "oracle_count_total: 1" in report
@@ -3366,14 +3362,14 @@ def test_apply_join_stops_on_apply_branch_memo_index_diff(
     assert f"{apply_branch}: memo/INDEX.md" in error_info.value.detail
 
 
-def test_apply_join_stops_on_apply_branch_oracles_index_diff(
+def test_apply_join_accepts_apply_branch_oracles_index_diff(
     tmp_path: Path,
 ) -> None:
-    """apply branch 側の oracles/INDEX.md 差分は想定外差分として停止する。"""
+    """apply branch 側の oracles/INDEX.md 差分は merge 対象にする。"""
     repo = _init_repo(tmp_path)
     _checkout_session_branch(repo)
     oracle_snapshot = _add_oracle_snapshot(repo)
-    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+    _apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
         repo,
         oracle_snapshot,
     )
@@ -3384,11 +3380,11 @@ def test_apply_join_stops_on_apply_branch_oracles_index_diff(
     _git(apply_worktree, "add", "oracles/INDEX.md")
     _git(apply_worktree, "commit", "-m", "maintain oracle index")
 
-    with pytest.raises(CmocError) as error_info:
-        cmoc_apply_join_impl(repo)
+    cmoc_apply_join_impl(repo)
 
-    assert "想定外の差分" in error_info.value.message
-    assert f"{apply_branch}: oracles/INDEX.md" in error_info.value.detail
+    assert (repo / "oracles" / "INDEX.md").read_text(encoding="utf-8") == (
+        "index\n"
+    )
 
 
 def test_apply_join_accepts_session_branch_oracles_index_diff(
@@ -5669,12 +5665,12 @@ def test_commit_all_changes_rechecks_forbidden_paths_after_index_update(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """INDEX メンテナンス後に禁止領域差分が出た場合は commit 前に止める。"""
+    """INDEX メンテナンス後の oracle INDEX 差分は commit 対象にする。"""
     repo = _init_repo(tmp_path)
     (repo / "app.py").write_text("changed\n", encoding="utf-8")
 
     def fake_maintain_indexes(repo_root: Path) -> bool:
-        """INDEX メンテナンス時に禁止領域差分を作る fake。"""
+        """INDEX メンテナンス時に oracle INDEX 差分を作る fake。"""
         oracle_index = repo_root / "oracles" / "INDEX.md"
         oracle_index.parent.mkdir()
         oracle_index.write_text("forbidden\n", encoding="utf-8")
@@ -5684,10 +5680,44 @@ def test_commit_all_changes_rechecks_forbidden_paths_after_index_update(
         "sub_commands.apply.fork.maintain_indexes",
         fake_maintain_indexes,
     )
+    monkeypatch.setattr(
+        "sub_commands.apply.fork.run_codex_exec",
+        lambda *args, **kwargs: "maintain indexes",
+    )
 
-    with pytest.raises(CmocError):
+    _commit_all_changes(repo)
+
+    assert _git(repo, "status", "--porcelain").stdout == ""
+    assert _git(repo, "log", "-1", "--pretty=%s").stdout.strip() == (
+        "maintain indexes"
+    )
+
+
+def test_commit_all_changes_rejects_oracle_file_after_index_update(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """INDEX メンテナンス後も oracle ファイル差分は commit 前に止める。"""
+    repo = _init_repo(tmp_path)
+    (repo / "app.py").write_text("changed\n", encoding="utf-8")
+
+    def fake_maintain_indexes(repo_root: Path) -> bool:
+        """INDEX メンテナンス時に oracle ファイル差分を作る fake。"""
+        oracle_file = repo_root / "oracles" / "spec.md"
+        oracle_file.parent.mkdir()
+        oracle_file.write_text("forbidden\n", encoding="utf-8")
+        return True
+
+    monkeypatch.setattr(
+        "sub_commands.apply.fork.maintain_indexes",
+        fake_maintain_indexes,
+    )
+
+    with pytest.raises(CmocError) as error:
         _commit_all_changes(repo)
 
+    assert "編集禁止パス" in error.value.message
+    assert "oracles/spec.md" in error.value.detail
     assert _git(repo, "status", "--porcelain").stdout
 
 

@@ -75,8 +75,8 @@ def test_maintain_indexes_generates_routing_entries_and_respects_gitignore(
         ("docs/memo/INDEX.md", True),
         ("memo/INDEX.md", False),
         ("memo/sub/INDEX.md", False),
-        ("oracles/INDEX.md", False),
-        ("oracles/nested/INDEX.md", False),
+        ("oracles/INDEX.md", True),
+        ("oracles/nested/INDEX.md", True),
         (".cmoc/INDEX.md", False),
         (".agents/INDEX.md", False),
         (".git/INDEX.md", False),
@@ -90,17 +90,10 @@ def test_is_maintained_index_path_matches_index_placement_rules(
     relative_path: str,
     expected: bool,
 ) -> None:
-    """INDEX.md path 判定は配置対象外 root や禁止領域を許可しない。"""
+    """INDEX.md path 判定は配置対象外 root を許可しない。"""
     repo = _init_repo(tmp_path)
 
-    assert (
-        is_maintained_index_path(
-            repo,
-            relative_path,
-            excluded_index_roots=["oracles"],
-        )
-        is expected
-    )
+    assert is_maintained_index_path(repo, relative_path) is expected
 
 
 def test_is_maintained_index_path_allows_ignored_index_file(

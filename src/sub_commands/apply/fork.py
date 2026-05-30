@@ -1375,7 +1375,7 @@ def _commit_all_changes(repo_root: Path) -> None:
 
 
 def _maintain_apply_indexes(repo_root: Path) -> bool:
-    """apply worktree 上で編集禁止の `oracles/` を避けて INDEX を保守する。"""
+    """apply worktree 上で cmoc 管理 INDEX.md を保守する。"""
     excluded_roots = _apply_index_excluded_roots(repo_root)
     if _maintain_indexes_accepts_excluded_roots():
         return maintain_indexes(
@@ -1398,7 +1398,7 @@ def _maintain_indexes_accepts_excluded_roots() -> bool:
 
 def _apply_index_excluded_roots(repo_root: Path) -> list[Path]:
     """apply worktree の INDEX メンテナンスで書かない root 群を返す。"""
-    return [repo_root / "oracles"]
+    return []
 
 
 def _assert_forbidden_paths_clean(repo_root: Path) -> None:
@@ -1406,7 +1406,7 @@ def _assert_forbidden_paths_clean(repo_root: Path) -> None:
     # prompt 上の禁止領域に差分があれば、commit 前に中断する。
     forbidden = [
         path
-        for path in changed_paths(repo_root)
+        for path in _changed_paths_for_forbidden_check(repo_root)
         if _is_forbidden_changed_path(path)
     ]
     if forbidden:
@@ -1420,11 +1420,23 @@ def _assert_forbidden_paths_clean(repo_root: Path) -> None:
         )
 
 
+def _changed_paths_for_forbidden_check(repo_root: Path) -> list[str]:
+    """禁止 path 検査用に未追跡ディレクトリ内の file path まで展開する。"""
+    result = run_git(
+        repo_root,
+        ["status", "--porcelain=v1", "-z", "--untracked-files=all"],
+    )
+    return [path for _status, path in git_status_paths(result.stdout)]
+
+
 def _is_forbidden_changed_path(relative_path: str) -> bool:
     """workspace-write prompt で禁止した変更 path か判定する。"""
     return (
         relative_path == "oracles"
-        or relative_path.startswith("oracles/")
+        or (
+            relative_path.startswith("oracles/")
+            and Path(relative_path).name != "INDEX.md"
+        )
         or relative_path == "README.md"
         or relative_path == "AGENTS.md"
         or relative_path == ".cmoc"
