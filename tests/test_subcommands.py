@@ -300,6 +300,8 @@ def test_run_command_reports_nonzero_typer_exit(
     assert "Detail:" in captured.out
     assert "typer.Exit(7)" in captured.out
     assert "Call stack:" in captured.out
+    assert "raise typer.Exit(7)" in captured.out
+    assert "Traceback is not available for this exception." not in captured.out
     assert "# Command completion report" in captured.out
     assert "subcommand return code: 7" in captured.out
     log_events = [json.loads(line) for line in log_content.splitlines()]
