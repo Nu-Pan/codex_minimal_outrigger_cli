@@ -55,23 +55,23 @@
 
 ## Summary
 
-- `src/sub_commands` は cmoc のサブコマンド実装をまとめたパッケージの入口です。
-- 配下には `cmoc init` と `cmoc review oracles` の実装モジュール、および `cmoc apply` / `cmoc session` 系のサブパッケージが入っています。
-- このディレクトリの `INDEX.md` は、各サブコマンドの実装へ進むための目次として使います。
+- `src/sub_commands` は cmoc のサブコマンド実装をまとめた入口です。
+- 直下には `init.py` と `eval_oracles.py`、および `apply` / `session` の各パッケージがあり、CLI の主要な実行処理を分担しています。
+- この `INDEX.md` は、各サブコマンドの実装や下位パッケージへ進むための案内役です。
 
 ## Read this when
 
-- cmoc のサブコマンド実装全体の配置を把握したいとき。
-- `cmoc init` や `cmoc review oracles`、`cmoc apply`、`cmoc session` のどれを読むべきか判断したいとき。
-- 新しいサブコマンド追加や、既存サブコマンドの入口整理を行う前に構成を確認したいとき。
+- `cmoc` のサブコマンド実装全体の配置を把握したいとき。
+- `init`、`review oracles`、`apply`、`session` のどこを読むべきかを判断したいとき。
+- 新しいサブコマンド追加や既存入口の整理の前に、構成を確認したいとき。
 
 ## Do not read this when
 
-- 特定のサブコマンドの詳細仕様や状態遷移だけを確認したいときは、このディレクトリではなく該当モジュールやその下位の `INDEX.md` を読むべきです。
-- CLI の利用手順や人間向けの開発フローだけを確認したいときは、`oracles/app_specs/` 側を読むべきです。
+- 個別コマンドの引数、状態遷移、例外条件だけを確認したいときは、該当モジュールや下位の `INDEX.md` を直接読むべきです。
+- `oracles` 側の利用手順や人間向けの作業フローだけを確認したいときは、`oracles/app_specs/` 側を読むべきです。
 - Python パッケージ宣言だけを確認したいときは、`src/sub_commands/__init__.py` を直接見れば足ります。
 
 ## hash
 
-- 8839c1fe561f32882aab762e5ed3c9b48c86218e6791c6d0f9af161d196751e1
+- 107d6c42f5facba35e96246e38cffe6a32bf6743ee8a1b4833edc65d9982f934
 <!-- cmoc-index-kind: directory -->

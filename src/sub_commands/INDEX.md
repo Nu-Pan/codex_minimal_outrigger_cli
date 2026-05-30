@@ -37,13 +37,13 @@
 
 ## Do not read this when
 
-- 各 `cmoc apply` コマンドの詳細仕様、状態遷移、例外条件だけを確認したいとき。
+- 個別の `cmoc apply fork` / `cmoc apply join` / `cmoc apply abandon` の詳細仕様、状態遷移、例外条件だけを確認したいとき。
 - `cmoc` 全体の使い方や `session` 側の仕様だけを確認したいとき。
 - `oracles` 側の仕様断片や `INDEX.md` の生成ルールだけを確認したいとき。
 
 ## hash
 
-- a6d06865610d3dfaaf0aadabe483c3d64b86ab5ca5ce1c21cca287d501165f04
+- ea641367249b47d0ecd22ce8633d998c7bd96ff29715b4395862cfffae189e24
 <!-- cmoc-index-kind: directory -->
 
 # `eval_oracles.py`
@@ -68,7 +68,8 @@
 
 ## hash
 
-- a4b4cedd92e397a119d16e0e938acce3a3c1e85a2d1379d7e85aa24105973cdb
+- 32c52ffb1730f21fb3f25efd0ad0dd3134496e439e695c0456a2d4ebc45c5498
+<!-- cmoc-index-kind: file -->
 
 # `init.py`
 

@@ -80,24 +80,25 @@
 ## Summary
 
 - `tests/test_indexing.py` は `INDEX.md` メンテナンス処理の回帰テスト集です。
-- 目次エントリの生成・再利用・再生成条件・ハッシュ更新を検証します。
-- gitignore、symlink、binary、非 UTF-8 path、並列処理、排他 lock、自動 commit までを広く押さえます。
+- 目次エントリの生成・再利用・再生成条件と、ハッシュ更新や Structured Output の検証を扱います。
+- gitignore、symlink、binary、非 UTF-8 path、並列処理、排他 lock、自動 commit まで広く押さえます。
 
 ## Read this when
 
-- `commons.indexing` の `maintain_indexes` や `is_maintained_index_path` の期待動作を確認したいとき。
+- `maintain_indexes` と `is_maintained_index_path` の期待動作を確認したいとき。
 - `INDEX.md` の生成・再利用・再生成条件や、特殊な path の扱いを調べたいとき。
-- INDEX メンテナンスの並列実行、排他制御、自動 commit の回帰を追加・修正したいとき。
+- 並列実行、排他 lock、自動 commit、gitignore、symlink、binary、非 UTF-8 path の回帰を修正・追加したいとき。
 
 ## Do not read this when
 
-- `cmoc` の他サブコマンドの引数や実行フローだけを確認したいとき。
-- `session` や `apply` など、INDEX 以外の機能の仕様を探しているとき。
-- 開発ルールや `oracles` 全体のルーティング方針だけを見たいとき。
+- `commons.indexing` の実装本体だけを確認したいとき。
+- `INDEX.md` の生成ルール全体や `oracles` 側の正本仕様だけを確認したいとき。
+- `session` や `apply` など、INDEX 以外のサブコマンド仕様を探しているとき。
 
 ## hash
 
-- 88242db22c36acf60467b819439d38cac87250c0ee8922ed07128cd188bacc6d
+- d23632ba86e6e1020c3e585534ebb37ce5d9dc0b19c3e0aa7bb9e576836388dc
+<!-- cmoc-index-kind: file -->
 
 # `test_repo.py`
 
@@ -153,25 +154,27 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は、`cmoc` のサブコマンド周りの決定論的な制御ロジックを検証するテスト群への入口です。
-- 起動経路、引数解釈、状態遷移、エラー表示、ヘルプ登録、各種補助関数の仕様回帰をまとめて扱います。
-- `init` / `session` / `apply` / `eval_oracles` / `main` と、関連するプロンプト・検証ヘルパーの期待値を見直すときの目次です。
+- `tests/test_subcommands.py` は、`cmoc` のサブコマンド群に関する決定論的な制御ロジックの回帰テストの入口です。
+- `init`、`session`、`apply`、`eval_oracles`、`main` の起動経路、引数解釈、状態遷移、エラー表示、ヘルプ登録をまとめて確認します。
+- 共通 runner、`INDEX.md` 保守、session/apply の状態記録、oracle 評価と report 保存、関連する補助ヘルパーの期待動作を押さえます。
 
 ## Read this when
 
 - サブコマンドの追加・削除・名称変更に伴って、テスト期待値を見直したいとき。
 - CLI のルーティング、引数解釈、状態遷移、エラー表示、ヘルプ登録の回帰を確認したいとき。
-- `init` / `session` / `apply` / `eval_oracles` / `main` と、それらに付随する検証ヘルパーの期待値を把握したいとき。
+- `init` / `session` / `apply` / `eval_oracles` / `main` と、それらに付随する検証ヘルパーの挙動を把握したいとき。
+- `run_command`、`cmoc_init_impl`、`cmoc_session_*`、`cmoc_apply_*`、`cmoc_eval_oracles_impl` の回帰を追いたいとき。
 
 ## Do not read this when
 
 - `src/sub_commands` の実装本体や `commons` の共通処理だけを確認したいとき。
 - `cmoc` の個別サブコマンド仕様そのものや、`oracles` 側の正本仕様だけを追いたいとき。
-- サブコマンド以外の CLI 仕様や、別カテゴリのテストを見たいとき。
+- サブコマンド以外の CLI 挙動や、別カテゴリのテストを見たいとき。
+- `INDEX.md` の生成ルールや、内容ハッシュの管理方法だけを調べたいとき。
 
 ## hash
 
-- 8d5f32cddc370ba6a94a812f3c9b5461ac60649a6ce4b8c4fffd3bddc3e76ff7
+- ea07907ef31734b55ab0fbcbe3fdde8a0141f18ee0266c339ef3954a23032fac
 <!-- cmoc-index-kind: file -->
 
 # `test_timestamps.py`
