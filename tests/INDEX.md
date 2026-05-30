@@ -122,7 +122,7 @@
 
 ## hash
 
-- 2f17346440835ccbc38d0f4098ae506756c422b78a86531807d817ce3b5601a2
+- a181e14f100411359561998f21285511f778fcfb987ba8624eb95090cda59f04
 <!-- cmoc-index-kind: file -->
 
 # `test_report_files.py`
@@ -167,11 +167,11 @@
 
 - `src/sub_commands/apply/` や `src/sub_commands/session/` の個別実装だけを追いたいとき。
 - `src/commons/codex.py`、`src/commons/repo.py`、`src/commons/errors.py` など共通処理だけを確認したいとき。
-- `tests/test_repo.py`、`tests/test_indexing.py`、`tests/test_codex.py` など他のテスト群で足りるとき。
+- `tests/test_repo.py`、`tests/test_indexing.py`、`tests/test_codex.py` など、`tests/test_subcommands.py` 以外のテスト群で足りるとき。
 
 ## hash
 
-- ab749ef07f5229f269643536238d6a141f181d565df395b9eb30b0b1be6a4fd4
+- 57c5e141bb9e31177d818800725ac66fdb64bb226cf05969c52d7560cb79ae91
 <!-- cmoc-index-kind: file -->
 
 # `test_timestamps.py`

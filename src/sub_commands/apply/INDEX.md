@@ -77,22 +77,23 @@
 - `src/sub_commands/apply/join.py` は `cmoc apply join` の本体処理を実装するモジュールです。
 - session/apply state の検証を行い、apply branch を session branch へ merge します。
 - 想定外の差分を検出して通常は停止し、`--force-resolve` 指定時は差分を revert してから merge を試みます。
-- merge 時の `INDEX.md` conflict は自動解消対象として扱い、必要なら merge commit まで進めます。
-- merge 後は `apply.state` を ready に戻し、条件を満たす場合のみ apply branch と worktree を cleanup します。
+- merge 時の `INDEX.md` conflict は自動解消対象として扱い、merge 後は `apply.state` を ready に戻して、条件を満たす場合のみ apply branch と worktree を cleanup します。
 
 ## Read this when
 
 - `src/sub_commands/apply/join.py` の実装・修正・レビュー・テストで、処理順や責務境界を確認したいとき。
 - 完了済みの apply branch を session branch に取り込む前提条件や、`apply.state = completed` / `error` の扱いを確認したいとき。
 - 想定外の差分の検出、`--force-resolve` による差分の戻し方、`INDEX.md` conflict の自動解消、cleanup 条件を追いたいとき。
+- merge 後に `apply.state` を ready に戻し、条件を満たす場合だけ apply branch と worktree を削除する流れを確認したいとき。
 
 ## Do not read this when
 
 - `cmoc apply fork` の調査・修正ループや要修正点の整理だけを確認したいとき。
 - `cmoc apply abandon` や `cmoc session join` / `cmoc session abandon` など、別サブコマンドの終了・破棄・統合だけを確認したいとき。
 - `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
+- `cmoc apply join` の実装内容を既に把握していて、ソースコードだけを直接追えば足りるとき。
 
 ## hash
 
-- 410e52eed97fbd4d1a03cc7118c6cb1a252d86469fb4b5619c630cdd64b95c73
+- 3ddcd7ff7bd3a08bc5b4d832c74001af338398b20796ed6ad625f2ae81050914
 <!-- cmoc-index-kind: file -->

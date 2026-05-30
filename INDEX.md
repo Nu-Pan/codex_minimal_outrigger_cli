@@ -190,13 +190,13 @@
 
 ## Do not read this when
 
-- 個別コマンドの引数や状態遷移、エラー処理の詳細だけを見たいとき。
+- 個別サブコマンドの引数、状態遷移、エラー処理の詳細だけを確認したいとき。
 - `src/commons` の共通処理だけ、または `src/sub_commands` の個別実装だけを直接追いたいとき。
 - `src` 全体ではなく、`oracles` 側の正本仕様や別ディレクトリの目次ルールだけを確認したいとき。
 
 ## hash
 
-- 86845d756aa1e8bca1a2156a26080c86eff6282f289dc4524839689b4cf9b5bb
+- 328f2706c60e9714c22bbe5a8459ae340af6e2e5e44d39c6f2bf1311ac19490e
 <!-- cmoc-index-kind: directory -->
 
 # `test.sh`
@@ -227,23 +227,25 @@
 
 ## Summary
 
-- pytest による cmoc の回帰テスト群を集めたディレクトリの入口です。
-- CLI 起動経路、INDEX.md メンテナンス、repo 共有処理、時刻・報告ファイルなどの検証をまとめています。
-- 各テストが本体実装のどの振る舞いを守るかを素早く振り分けるための目次です。
+- `tests` は cmoc の決定論的な制御ロジックを守る pytest 回帰テスト群の入口です。
+- `conftest.py` による import 設定と、`test_codex.py`、`test_file_naming.py`、`test_indexing.py`、`test_repo.py`、`test_report_files.py`、`test_subcommands.py`、`test_timestamps.py` の各テスト領域を案内します。
+- CLI 起動、サブコマンド委譲、INDEX.md メンテナンス、Git 共通処理、レポート保存、タイムスタンプ、命名規則など、実装変更の影響範囲を見極めるための目次です。
 
 ## Read this when
 
-- どの機能がどのテストで守られているかを確認したいとき。
-- 新しいテストを追加・修正する前に、既存の回帰範囲を把握したいとき。
-- `conftest.py` や `test_*.py` の役割分担をざっと見たいとき。
+- `tests` 配下の pytest が何を守っているか、全体の回帰範囲を把握したいとき。
+- `src/commons`、`src/sub_commands`、CLI 起動経路、`INDEX.md` 維持、Git まわりの仕様変更がどのテストに影響するか確認したいとき。
+- テスト共通設定の `conftest.py` や、`test_codex.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py` などの役割を振り分けたいとき。
+- 新しい回帰テストを追加する前に、既存のテスト群がどの機能領域をカバーしているか整理したいとき。
 
 ## Do not read this when
 
-- cmoc の本体実装や CLI の実行ロジックそのものを追いたいとき。
-- oracles の正本仕様や開発ルールだけを確認したいとき。
-- README、AGENTS、memo などのリポジトリ運用ルールだけを探したいとき。
+- cmoc の実装ロジックそのものや、`src` 配下の個別モジュールのコードだけを確認したいとき。
+- `oracles` 側の正本仕様やサブコマンド仕様を読みたいだけで、テストの回帰範囲は不要なとき。
+- `README.md`、`AGENTS.md`、`memo` などのファイルアクセス規則や、テスト以外の文書だけを確認したいとき。
+- Codex CLI や LLM の品質そのものを検証したいのではなく、決定論的な制御ロジックの仕様確認に目的がないとき。
 
 ## hash
 
-- d33567e0c7b27f4c4d59a92321c81ab98f455325bb1dfc225b4050b542e3b32c
+- 0bcfb23be5a9ec6321edd5e1c66ef5090b09a587323de818d0e8f41ea322290b
 <!-- cmoc-index-kind: directory -->
