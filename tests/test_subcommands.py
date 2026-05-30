@@ -6050,6 +6050,48 @@ def test_apply_deleted_investigation_target_prompt_mentions_history(
     assert "削除差分や履歴上の変更内容" in prompt
 
 
+def test_apply_oracle_investigation_prompt_orders_completion_before_details() -> None:
+    """oracle 起点調査 prompt はロール、作業、完了条件、詳細指示の順にする。"""
+    repo = Path("/repo")
+    target = apply_module._InvestigationTarget(
+        repo / "oracles/spec.md",
+        deleted_at_snapshot=False,
+    )
+
+    prompt = apply_module._investigation_prompt(repo, target)
+    lines = prompt.splitlines()
+
+    assert lines[0] == "あなたはソフトウェア実装の監査担当です。"
+    assert lines[1] == "`/repo/oracles/spec.md` を起点に `/repo` の要修正点を調査してください。"
+    assert lines[2] == (
+        "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。"
+    )
+    assert lines.index("この起点 path は oracle snapshot 時点に存在するファイルです。") > 2
+
+
+def test_apply_implementation_investigation_prompt_orders_completion_before_details() -> None:
+    """実装起点調査 prompt はロール、作業、完了条件、詳細指示の順にする。"""
+    repo = Path("/repo")
+    target = apply_module._InvestigationTarget(
+        repo / "src/app.py",
+        deleted_at_snapshot=True,
+    )
+
+    prompt = apply_module._implementation_investigation_prompt(repo, target)
+    lines = prompt.splitlines()
+
+    assert lines[0] == "あなたはソフトウェア実装の監査担当です。"
+    assert lines[1] == "`/repo/src/app.py` を起点に、"
+    assert lines[2] == "`/repo` の要修正点を調査してください。"
+    assert lines[3] == (
+        "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。"
+    )
+    assert lines.index(
+        "この起点 path は oracle snapshot 時点では存在しません。"
+        "削除差分や履歴上の変更内容を確認して調査してください。"
+    ) > 3
+
+
 def test_commit_all_changes_rejects_memo_changes(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
