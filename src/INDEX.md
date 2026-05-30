@@ -58,7 +58,7 @@
 
 ## Read this when
 
-- `src/sub_commands` 配下でどのファイルがどのサブコマンドを担当するか確認したいとき。
+- src/sub_commands 配下でどのファイルがどのサブコマンドを担当するか確認したいとき。
 - サブコマンド実装・修正・レビュー・テストの前に、該当モジュールや配下ディレクトリへ進む入口を整理したいとき。
 - `__init__.py`、`init.py`、`eval_oracles.py`、`apply/`、`session/` の役割分担を素早く把握したいとき。
 
@@ -70,5 +70,5 @@
 
 ## hash
 
-- 559343c75ad577d00cdef0cc8c907395812059b3f4ad528a037961a252188fb3
+- 7eeb26a6794245d5c0b0f32698b1239975f34f260b4b9459202fbe0ba6e292d6
 <!-- cmoc-index-kind: directory -->
