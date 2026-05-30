@@ -4144,6 +4144,48 @@ def test_apply_join_force_resolves_with_missing_apply_worktree(
     assert f"- {apply_branch}: ignored.txt" in output
 
 
+def test_apply_join_force_resolves_from_apply_branch_without_apply_worktree(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """強制モードは現在の apply branch worktree で想定外差分を revert する。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text("/ignored.txt\n", encoding="utf-8")
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-m", "ignore non implementation file")
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    (apply_worktree / "ignored.txt").write_text("ignored\n", encoding="utf-8")
+    (apply_worktree / "feature.txt").write_text("implemented\n", encoding="utf-8")
+    _git(apply_worktree, "add", "-f", "ignored.txt", "feature.txt")
+    _git(apply_worktree, "commit", "-m", "implement with unexpected ignored file")
+    _git(repo, "worktree", "remove", "--force", str(apply_worktree))
+    _git(repo, "switch", apply_branch)
+
+    cmoc_apply_join_impl(repo, force_resolve=True)
+
+    output = capsys.readouterr().out
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert _git(repo, "branch", "--show-current").stdout.strip() == (
+        "cmoc/session/2026-05-10_22-21_10_000000123"
+    )
+    assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
+    assert not (repo / "ignored.txt").exists()
+    assert state["apply"]["state"] == "ready"
+    assert _git(repo, "branch", "--list", apply_branch).stdout == ""
+    assert not apply_worktree.exists()
+    assert not (repo / ".cmoc" / "worktrees" / "tmp").exists()
+    assert f"- {apply_branch}: ignored.txt" in output
+
+
 def test_apply_join_accepts_apply_branch_copy_to_expected_path(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

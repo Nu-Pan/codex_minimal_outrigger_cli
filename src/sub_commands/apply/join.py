@@ -528,6 +528,10 @@ def _revert_worktree(
         yield branch_worktree
         return
 
+    if current_branch(repo_root) == branch_name:
+        yield repo_root
+        return
+
     temporary_root = repo_root / ".cmoc" / "worktrees" / "tmp"
     temporary_root.mkdir(parents=True, exist_ok=True)
     run_git(repo_root, ["worktree", "prune"])
