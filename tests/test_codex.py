@@ -211,6 +211,63 @@ def test_run_codex_exec_uses_utf8_for_process_text_and_logs_japanese(
     assert "```text\n最後の応答\n```" in log_content
 
 
+def test_run_codex_exec_logs_launch_failure_as_cmoc_error(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """codex 起動失敗は CmocError と診断可能な call log に正規化する。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    monkeypatch.setenv("PATH", str(tmp_path / "empty-bin"))
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(repo, "prompt", read_only=True)
+
+    log_files = sorted(
+        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.log")
+    )
+    assert "codex exec を起動できませんでした" in error.value.message
+    assert len(log_files) == 1
+    log_content = log_files[0].read_text(encoding="utf-8")
+    assert log_content.startswith("---\n")
+    assert "returncode: 127" in log_content
+    assert 'launch_error: "builtins.FileNotFoundError"' in log_content
+    assert "### Launch Error" in log_content
+    assert "### Stderr" in log_content
+    assert "codex exec launch failed" in log_content
+    assert log_content.count("## Codex Exec Call") == 1
+    captured = capsys.readouterr().out
+    assert "## Codex CLI 呼び出し完了" in captured
+    assert "- returncode: 127" in captured
+
+
+def test_run_codex_exec_removes_reserved_log_when_guard_fails_after_prepare(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """call log 本文を書けない失敗では予約済み空ファイルを残さない。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    def fail_guard(*_: object) -> object:
+        raise CmocError(
+            "guard failed",
+            [
+                "状態を確認してください。",
+                "修正後に cmoc を再実行してください。",
+            ],
+        )
+
+    monkeypatch.setattr("commons.codex._start_oracle_guard", fail_guard)
+
+    with pytest.raises(CmocError):
+        run_codex_exec(repo, "prompt", read_only=True)
+
+    call_dir = repo / ".cmoc" / "logs" / "codex_exec" / "call"
+    assert list(call_dir.glob("*.log")) == []
+
+
 def test_prepare_codex_exec_paths_reserves_call_log_atomically(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,

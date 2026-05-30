@@ -54,6 +54,7 @@ _CAPACITY_INITIAL_RETRY_DELAY_SECONDS = 5
 _FORBIDDEN_REASONING_EFFORTS = {"xhigh"}
 _CODEX_TEXT_ENCODING = "utf-8"
 _CODEX_TEXT_ERRORS = "replace"
+_CODEX_LAUNCH_FAILURE_RETURN_CODE = 127
 
 
 @dataclass(frozen=True)
@@ -295,6 +296,40 @@ def _raise_codex_failure(
     )
 
 
+def _codex_launch_failure_error(
+    log_path: Path,
+    result: subprocess.CompletedProcess[str],
+    error: OSError,
+) -> CmocError:
+    """Codex CLI 起動例外を利用者向けエラーに正規化する。"""
+    return CmocError(
+        "codex exec を起動できませんでした。",
+        [
+            "codex コマンドが PATH 上に存在し、実行権限があることを確認してください。",
+            "codex exec のログを確認し、環境または権限を修正してから cmoc を再実行してください。",
+        ],
+        "\n".join(
+            [
+                f"Log: {log_path}",
+                f"Command: {' '.join(result.args)}",
+                f"Error class: {error.__class__.__module__}.{error.__class__.__name__}",
+                "STDERR:",
+                result.stderr,
+            ]
+        ),
+    )
+
+
+def _codex_launch_failure_stderr(error: OSError) -> str:
+    """起動失敗を stderr 相当の診断文字列にする。"""
+    return "\n".join(
+        [
+            "codex exec launch failed before the process produced stderr.",
+            f"{error.__class__.__module__}.{error.__class__.__name__}: {error}",
+        ]
+    )
+
+
 def _validate_model_options(model: str, reasoning_effort: str) -> None:
     """Codex CLI に渡す model と reasoning effort の制約を検査する。"""
     # oracle が禁止する xhigh だけを呼び出し前に拒否する。
@@ -533,45 +568,78 @@ def _run_codex_command(
     log_path = paths["call"]
     last_message_path = paths["last_message"]
     run_command = _command_with_last_message(command, last_message_path)
-    oracle_guard = _start_oracle_guard(
-        repo_root,
-        command,
-        allowed_uncommitted_oracle_paths,
-    )
-    started = perf_counter()
-    result = subprocess.run(
-        run_command,
-        cwd=repo_root,
-        input=prompt,
-        text=True,
-        encoding=_CODEX_TEXT_ENCODING,
-        errors=_CODEX_TEXT_ERRORS,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    _append_codex_log(
-        log_path,
-        run_command,
-        prompt,
-        attempt,
-        result,
-        schema_path,
-        last_message_path,
-    )
-    _print_codex_notification(
-        purpose=purpose,
-        repo_root=repo_root,
-        log_path=log_path,
-        elapsed_seconds=perf_counter() - started,
-        returncode=result.returncode,
-    )
-    _assert_workspace_write_oracles_unchanged(repo_root, oracle_guard)
-    return _CodexCommandRun(
-        result=result,
-        log_path=log_path,
-        last_message_path=last_message_path,
-        command=run_command,
-    )
+    log_written = False
+    try:
+        oracle_guard = _start_oracle_guard(
+            repo_root,
+            command,
+            allowed_uncommitted_oracle_paths,
+        )
+        started = perf_counter()
+        try:
+            result = subprocess.run(
+                run_command,
+                cwd=repo_root,
+                input=prompt,
+                text=True,
+                encoding=_CODEX_TEXT_ENCODING,
+                errors=_CODEX_TEXT_ERRORS,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+        except OSError as error:
+            result = subprocess.CompletedProcess(
+                run_command,
+                _CODEX_LAUNCH_FAILURE_RETURN_CODE,
+                stdout="",
+                stderr=_codex_launch_failure_stderr(error),
+            )
+            _append_codex_log(
+                log_path,
+                run_command,
+                prompt,
+                attempt,
+                result,
+                schema_path,
+                last_message_path,
+                launch_error=error,
+            )
+            log_written = True
+            _print_codex_notification(
+                purpose=purpose,
+                repo_root=repo_root,
+                log_path=log_path,
+                elapsed_seconds=perf_counter() - started,
+                returncode=result.returncode,
+            )
+            raise _codex_launch_failure_error(log_path, result, error) from error
+        _append_codex_log(
+            log_path,
+            run_command,
+            prompt,
+            attempt,
+            result,
+            schema_path,
+            last_message_path,
+        )
+        log_written = True
+        _print_codex_notification(
+            purpose=purpose,
+            repo_root=repo_root,
+            log_path=log_path,
+            elapsed_seconds=perf_counter() - started,
+            returncode=result.returncode,
+        )
+        _assert_workspace_write_oracles_unchanged(repo_root, oracle_guard)
+        return _CodexCommandRun(
+            result=result,
+            log_path=log_path,
+            last_message_path=last_message_path,
+            command=run_command,
+        )
+    finally:
+        if not log_written:
+            log_path.unlink(missing_ok=True)
 
 
 def _start_oracle_guard(
@@ -1141,21 +1209,38 @@ def _append_codex_log(
     result: subprocess.CompletedProcess[str],
     schema_path: Path | None,
     last_message_path: Path,
+    launch_error: OSError | None = None,
 ) -> None:
     """1 回分の Codex CLI 入出力を Markdown フルログへ書き出す。"""
     output_last_message = _read_optional_text(last_message_path)
-    body = "\n".join(
+    body_parts = [
+        "## Codex Exec Call",
+        "",
+        "### Prompt",
+        "",
+        _markdown_text_block(prompt),
+        "",
+        "### Return Code",
+        "",
+        f"`{result.returncode}`",
+        "",
+    ]
+    if launch_error is not None:
+        body_parts.extend(
+            [
+                "### Launch Error",
+                "",
+                _markdown_text_block(
+                    (
+                        f"{launch_error.__class__.__module__}."
+                        f"{launch_error.__class__.__name__}: {launch_error}"
+                    )
+                ),
+                "",
+            ]
+        )
+    body_parts.extend(
         [
-            "## Codex Exec Call",
-            "",
-            "### Prompt",
-            "",
-            _markdown_text_block(prompt),
-            "",
-            "### Return Code",
-            "",
-            f"`{result.returncode}`",
-            "",
             "### Stdout",
             "",
             _markdown_text_block(result.stdout),
@@ -1172,12 +1257,14 @@ def _append_codex_log(
             "",
         ]
     )
+    body = "\n".join(body_parts)
     front_matter = _codex_log_front_matter(
         command=command,
         attempt=attempt,
         returncode=result.returncode,
         schema_path=schema_path,
         last_message_path=last_message_path,
+        launch_error=launch_error,
     )
     log_path.write_text(
         front_matter + body,
@@ -1272,12 +1359,18 @@ def _codex_log_front_matter(
     returncode: int,
     schema_path: Path | None,
     last_message_path: Path,
+    launch_error: OSError | None = None,
 ) -> str:
     """codex exec 呼び出し情報を YAML Front Matter として組み立てる。"""
     model = _value_after(command, "--model")
     sandbox = _value_after(command, "--sandbox")
     reasoning_effort = _reasoning_effort_from_command(command)
     output_schema = str(schema_path) if schema_path else None
+    launch_error_class = (
+        f"{launch_error.__class__.__module__}.{launch_error.__class__.__name__}"
+        if launch_error is not None
+        else None
+    )
     lines = [
         "---",
         "command:",
@@ -1290,6 +1383,7 @@ def _codex_log_front_matter(
         f"output_last_message: {_yaml_scalar(str(last_message_path))}",
         f"attempt: {attempt}",
         f"returncode: {returncode}",
+        f"launch_error: {_yaml_scalar(launch_error_class)}",
         "---",
         "",
     ]
