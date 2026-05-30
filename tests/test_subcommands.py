@@ -1745,10 +1745,10 @@ def test_review_oracles_rejects_improved_issue_for_unevaluated_oracle(
         )
 
 
-def test_review_oracles_redistribution_preserves_original_provenance(
+def test_review_oracles_redistribution_uses_only_final_issue_provenance(
     tmp_path: Path,
 ) -> None:
-    """改善後 issue の provenance 欠落時は元 evaluation の根拠情報を残す。"""
+    """改善後 report の根拠情報は最終 issue list だけから再計算する。"""
     repo = _init_repo(tmp_path)
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -1778,16 +1778,50 @@ def test_review_oracles_redistribution_preserves_original_provenance(
     )
 
     issue = redistributed[0]["issues"][0]
-    assert issue["referenced_paths"] == [
-        str(oracle.resolve()),
-        str(oracle_index.resolve()),
+    assert issue["referenced_paths"] == []
+    assert issue["specification_only_basis"] == ""
+    assert redistributed[0]["referenced_paths"] == []
+    assert redistributed[0]["specification_only_basis"] == ""
+
+
+def test_review_oracles_redistribution_clears_deleted_issue_provenance(
+    tmp_path: Path,
+) -> None:
+    """改善で issue が消えた評価には改善前の根拠情報を残さない。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    oracle = oracle_root / "spec.md"
+    oracle_index = oracle_root / "INDEX.md"
+    oracle.write_text("spec\n", encoding="utf-8")
+    oracle_index.write_text("index\n", encoding="utf-8")
+    evaluations = [
+        {
+            "target_oracle_path": str(oracle.resolve()),
+            "referenced_paths": [
+                str(oracle.resolve()),
+                str(oracle_index.resolve()),
+            ],
+            "specification_only_basis": (
+                "元評価は oracles 配下の仕様断片と INDEX だけを参照しました。"
+            ),
+            "issues": [_eval_oracle_issue("warning", "warning", oracle, 1, 1)],
+        }
     ]
-    assert issue["specification_only_basis"] == basis
-    assert redistributed[0]["referenced_paths"] == [
-        str(oracle.resolve()),
-        str(oracle_index.resolve()),
+
+    redistributed = eval_oracles_module._redistribute_improved_issues(
+        evaluations,
+        [],
+    )
+
+    assert redistributed == [
+        {
+            "target_oracle_path": str(oracle.resolve()),
+            "referenced_paths": [],
+            "specification_only_basis": "",
+            "issues": [],
+        }
     ]
-    assert redistributed[0]["specification_only_basis"] == basis
 
 
 def test_eval_oracles_result_precedence() -> None:

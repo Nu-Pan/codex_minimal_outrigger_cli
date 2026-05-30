@@ -486,10 +486,8 @@ def _redistribute_improved_issues(
     result = [
         {
             "target_oracle_path": evaluation["target_oracle_path"],
-            "referenced_paths": _string_list(evaluation.get("referenced_paths", [])),
-            "specification_only_basis": str(
-                evaluation.get("specification_only_basis", "")
-            ),
+            "referenced_paths": [],
+            "specification_only_basis": "",
             "issues": [],
         }
         for evaluation in evaluations
@@ -507,26 +505,8 @@ def _redistribute_improved_issues(
                 "issues item oracle_path must match an evaluated oracle file."
             )
         index = target_to_index[target]
-        issue = _issue_with_fallback_provenance(issue, result[index])
         result[index]["issues"].append(issue)
     return [_refresh_evaluation_metadata(evaluation) for evaluation in result]
-
-
-def _issue_with_fallback_provenance(
-    issue: dict[object, object],
-    evaluation: dict[str, object],
-) -> dict[object, object]:
-    """改善後 issue の provenance 欠落を元 evaluation の情報で補完する。"""
-    result = dict(issue)
-    if not _string_list(result.get("referenced_paths", [])):
-        result["referenced_paths"] = _string_list(
-            evaluation.get("referenced_paths", [])
-        )
-    if not str(result.get("specification_only_basis", "")).strip():
-        result["specification_only_basis"] = str(
-            evaluation.get("specification_only_basis", "")
-        )
-    return result
 
 
 def _evaluation_payload_to_record(
@@ -566,11 +546,7 @@ def _refresh_evaluation_metadata(
             if issue.get("specification_only_basis")
         ]
     )
-    if not referenced_paths:
-        referenced_paths = _string_list(evaluation.get("referenced_paths", []))
     basis = " / ".join(bases)
-    if not basis:
-        basis = str(evaluation.get("specification_only_basis", ""))
     return {
         "target_oracle_path": str(
             Path(str(evaluation["target_oracle_path"])).resolve()
