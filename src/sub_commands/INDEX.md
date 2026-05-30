@@ -27,7 +27,7 @@
 
 - `src/sub_commands/apply` は `cmoc apply` 系サブコマンドの実装パッケージです。
 - `__init__.py` はパッケージ宣言のみを担い、`fork.py`、`join.py`、`abandon.py` に各コマンド本体があります。
-- apply 実行の開始、マージ、破棄の入口をまとめてたどるための目次です。
+- apply の開始、マージ、破棄の入口をまとめてたどるための目次です。
 
 ## Read this when
 
@@ -43,7 +43,7 @@
 
 ## hash
 
-- ecfa06d91320267b6d07fdbd35ee51e2cf3fa9740decdcf9daf69d7dc06ff7a1
+- b07f436b08bb6b1cf4a5da301390b8df3fb760db8a02275ff35e9ba4f52d82c2
 
 # `eval_oracles.py`
 

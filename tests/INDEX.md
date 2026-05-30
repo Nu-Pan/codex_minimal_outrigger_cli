@@ -150,15 +150,15 @@
 ## Summary
 
 - `tests/test_subcommands.py` は `cmoc` のサブコマンド群と共通 CLI 入口の決定論的な制御ロジックを横断的に検証するテスト集です。
-- `init`、`session`、`apply`、`review oracles` / `eval-oracles`、`main`、`format_error_report`、CLI 登録、`bin/cmoc` まで含めて、起動・状態遷移・エラー整形・出力整合性を押さえます。
-- branch、worktree、session/apply state、レポート、Structured Output schema、validation helper、prompt 文言、ファイル差分や衝突処理の回帰をまとめて扱います。
+- `init`、`session`、`apply`、`review oracles`、`eval-oracles`、`main`、`bin/cmoc` まで含めて、起動・状態遷移・レポート・エラー処理の整合性を押さえます。
+- branch、worktree、session/apply state、Structured Output schema、prompt 文言、ファイル差分や衝突処理など、実行制御まわりの回帰を広く扱います。
 
 ## Read this when
 
-- `cmoc init`、`session`、`apply`、`review oracles` / `eval-oracles` の制御フローを横断して確認したいとき。
+- `cmoc init`、`session`、`apply`、`review oracles`、`eval-oracles` の制御フローを横断して確認したいとき。
 - `run_command`、`main`、`format_error_report`、CLI 登録、`bin/cmoc` の変更がこのテスト群に影響するか判断したいとき。
 - branch、worktree、session/apply state、レポート出力、Structured Output schema、validation helper、prompt 文言、差分・衝突処理の回帰を確認したいとき。
-- `cmoc` の起動・状態遷移・エラー整形・出力整合性をまとめて把握したいとき。
+- `cmoc` の起動、状態遷移、エラー整形、出力整合性をまとめて把握したいとき。
 
 ## Do not read this when
 
@@ -169,7 +169,7 @@
 
 ## hash
 
-- de51cceb18702c5fc85bc11edc1da3414051550bee3c36d5df609823c67e724f
+- effdb0198c9e5bb768c2d7a8c1426770f11987ce4ab61ab408f1de0e1dfaaaef
 
 # `test_timestamps.py`
 

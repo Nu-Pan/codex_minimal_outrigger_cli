@@ -49,25 +49,25 @@
 
 ## Summary
 
-- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体実装で、session state の検証から apply 実行の開始までを担います。
-- apply branch と専用 worktree の作成、要修正点の調査・適用ループ、`INDEX.md` の保守をまとめて扱います。
-- 完了レポートとエラーレポートの生成、Structured Output の検証、禁止パスの確認もこのファイルに含まれます。
+- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体実装をまとめたモジュールです。
+- apply 実行の開始から、専用 worktree の作成、要修正点の整理・適用、完了/エラー報告までを扱います。
+- `INDEX.md` の維持や、Structured Output の検証、編集禁止領域のチェックもこのファイルに含まれます。
 
 ## Read this when
 
 - `cmoc apply fork` の実装全体を追いたいとき。
-- session state の検証、apply branch と専用 worktree の作成、調査・修正ループの流れを確認したいとき。
-- `INDEX.md` の保守、要修正点の Structured Output 検証、レポート生成やエラー報告の処理を確認したいとき。
+- session state の検証、apply branch と専用 worktree の作成、要修正点の調査・修正ループを確認したいとき。
+- `INDEX.md` の保守、Structured Output による要修正点・変更要約の生成、レポート保存や禁止パス検査を確認したいとき。
 
 ## Do not read this when
 
 - `cmoc apply fork` の引数、前提条件、終了条件だけを確認したいとき。
-- `cmoc apply join` や `cmoc apply abandon` の処理を確認したいとき。
+- `cmoc apply join` や `cmoc apply abandon` の処理だけを確認したいとき。
 - `INDEX.md` の生成ルールや `oracles` 側の仕様断片だけを確認したいとき。
 
 ## hash
 
-- 3d2a1aac79247266c6aec206d6987d0040f143056bfd4846f3c59b59e815ed84
+- a13b1bea2252369e6e32ee2981c2c088e993d08c41ca072c666034b18775eb43
 
 # `join.py`
 

@@ -191,13 +191,13 @@
 
 ## Do not read this when
 
-- `main.py` の引数解析や `Typer` 登録の詳細だけを確認したいときは、この目次ではなく `src/main.py` を直接読むべきです。
-- `commons` 配下の共通処理だけを確認したいときは、この目次ではなく `src/commons/INDEX.md` を読むべきです。
-- `sub_commands` 配下の個別コマンド実装だけを確認したいときは、この目次ではなく `src/sub_commands/INDEX.md` と各配下の `INDEX.md` を読むべきです。
+- `src/main.py` の引数解析や `Typer` 登録の詳細だけを確認したいとき。
+- `src/commons` 配下の共通処理だけを確認したいとき。
+- `src/sub_commands` 配下の個別コマンド実装だけを確認したいとき。
 
 ## hash
 
-- e84633609aa2b327f1268efce997addc726c3d7dffb79389d85a7fe54dfaf3e6
+- dabfe7fe37aa40132afa4c31a55aadab4fb3a2ef4d7bf198f2fc37cfafb9424d
 
 # `test.sh`
 
@@ -227,23 +227,23 @@
 
 ## Summary
 
-- `tests` 配下の pytest 回帰テスト群への入口です。
-- `conftest.py` は `src` を import 可能にする共通設定です。
-- `test_codex.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py`、`test_timestamps.py`、`test_report_files.py`、`test_file_naming.py` へ案内します。
-- 共通処理、`INDEX.md` 維持、CLI、タイムスタンプ、レポート保存、命名規則の回帰観点を整理します。
+- `pytest` ベースの cmoc 自動テスト一式をまとめたディレクトリです。
+- `conftest.py` による import path 設定と、`test_indexing.py`・`test_codex.py`・`test_repo.py`・`test_subcommands.py`・`test_timestamps.py`・`test_report_files.py`・`test_file_naming.py` が入っています。
+- INDEX.md メンテナンス、Codex 呼び出しラッパー、git/repo 共通処理、サブコマンド制御、タイムスタンプ、レポート保存、命名規則のテストを扱います。
 
 ## Read this when
 
-- `tests` 配下のどのテストがどの機能を守るかを素早く確認したいとき。
-- `pytest` 共通設定、`commons` 系の回帰、CLI サブコマンド、`INDEX.md` 維持の担当範囲を整理したいとき。
-- 新しいテストを追加する前に、既存の入口と重複の有無を把握したいとき。
+- cmoc の自動テストを追加・修正したいとき。
+- `tests/conftest.py` の import path 設定や、テスト共通の前提を確認したいとき。
+- `test_indexing.py`、`test_codex.py`、`test_repo.py`、`test_subcommands.py`、`test_timestamps.py` など、各機能のテスト範囲を確認したいとき。
+- git リポジトリ操作、INDEX.md メンテナンス、Codex CLI ラッパー、レポート保存、サブコマンド制御ロジックの検証方針を見たいとき。
 
 ## Do not read this when
 
-- `src` の実装仕様や、`oracles` の正本仕様そのものだけを確認したいとき。
-- 個別テストケースの期待値や失敗原因を直接追う必要があるときは、該当する `test_*.py` を読むべきです。
-- ルーティング方針ではなく、開発ルールや設計方針だけを確認したいときは別の `INDEX.md` を読むべきです。
+- cmoc の CLI 仕様やサブコマンド仕様そのものを確認したいとき。
+- 実装方針や開発ルールを確認したいとき。
+- `pytest` の個別テストを実行する前提ではなく、仕様や設計の正本を探しているとき。
 
 ## hash
 
-- 7b80475ca2058f4d06fd3f57962cf67e408ca0406ab9a70082cfc2a3cf159dbd
+- 23ebc7774ccacabad17256500193d1e906258db0f01eaa9d790657a804438dec
