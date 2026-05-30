@@ -1708,6 +1708,65 @@ def test_run_codex_exec_reports_json_semantic_validation_failure(
     assert "Last stdout:" in error.value.detail
 
 
+def test_run_codex_exec_retries_json_assertion_validation_failure(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """validator の AssertionError も意味的失敗としてリトライする。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    state = tmp_path / "attempts.txt"
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                f"STATE={state}",
+                "COUNT=0",
+                "if [ -f \"$STATE\" ]; then COUNT=$(cat \"$STATE\"); fi",
+                "COUNT=$((COUNT + 1))",
+                "echo \"$COUNT\" > \"$STATE\"",
+                "if [ \"$COUNT\" -lt 3 ]; then",
+                "  echo '{\"ok\": false}' > \"$LAST\"",
+                "else",
+                "  echo '{\"ok\": true}' > \"$LAST\"",
+                "fi",
+                "echo '{\"event\":\"done\"}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    def validate(value: object) -> None:
+        """`assert` ベースの検証でも semantic retry に載せる。"""
+        assert isinstance(value, dict)
+        assert value.get("ok") is True, "ok must be true."
+
+    output = run_codex_exec(
+        repo,
+        "prompt",
+        read_only=True,
+        expect_json=True,
+        output_schema=_BOOLEAN_SCHEMA,
+        json_validator=validate,
+    )
+
+    assert output.strip() == '{"ok": true}'
+    assert state.read_text(encoding="utf-8").strip() == "3"
+
+
 def test_run_codex_exec_retries_text_semantic_validation_failure(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -1779,6 +1838,62 @@ def test_run_codex_exec_retries_text_semantic_validation_failure(
         for index, content in enumerate(log_contents, 1)
     ]
     assert attempt_flags == [True, True, True]
+
+
+def test_run_codex_exec_reports_text_custom_validation_exception(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """validator 独自例外も全試行後の診断に残す。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    state = tmp_path / "attempts.txt"
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                f"STATE={state}",
+                "COUNT=0",
+                "if [ -f \"$STATE\" ]; then COUNT=$(cat \"$STATE\"); fi",
+                "COUNT=$((COUNT + 1))",
+                "echo \"$COUNT\" > \"$STATE\"",
+                "echo 'incomplete report' > \"$LAST\"",
+                "echo '{\"event\":\"done\"}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    class ReportValidationError(Exception):
+        """テスト用の独自 validator 例外。"""
+
+    def validate(_: str) -> None:
+        """常に semantic validation failure を発生させる。"""
+        raise ReportValidationError("report is incomplete.")
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(
+            repo,
+            "prompt",
+            read_only=True,
+            text_validator=validate,
+        )
+
+    assert state.read_text(encoding="utf-8").strip() == "3"
+    assert "Last validation error: report is incomplete." in error.value.detail
 
 
 def test_run_codex_exec_retries_missing_last_message_without_validator(

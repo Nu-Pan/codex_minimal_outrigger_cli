@@ -208,7 +208,7 @@ def run_codex_exec(
             if text_validator is None:
                 return output
             try:
-                text_validator(output)
+                _run_text_validator(text_validator, output)
                 return output
             except ValueError as error:
                 last_validation_error = str(error)
@@ -220,9 +220,9 @@ def run_codex_exec(
             value = json.loads(output)
             _validate_json_schema(value, output_schema)
             if json_validator is not None:
-                json_validator(value)
+                _run_json_validator(json_validator, value)
             if text_validator is not None:
-                text_validator(output)
+                _run_text_validator(text_validator, output)
             return output
         except (json.JSONDecodeError, ValueError) as error:
             last_validation_error = str(error)
@@ -255,6 +255,36 @@ def run_codex_exec(
             ]
         ),
     )
+
+
+def _run_json_validator(
+    json_validator: Callable[[object], None],
+    value: object,
+) -> None:
+    """JSON 意味検証失敗を retry 可能な ValueError に正規化する。"""
+    try:
+        json_validator(value)
+    except Exception as error:
+        raise _semantic_validation_error(error) from error
+
+
+def _run_text_validator(
+    text_validator: Callable[[str], None],
+    output: str,
+) -> None:
+    """text 意味検証失敗を retry 可能な ValueError に正規化する。"""
+    try:
+        text_validator(output)
+    except Exception as error:
+        raise _semantic_validation_error(error) from error
+
+
+def _semantic_validation_error(error: Exception) -> ValueError:
+    """validator 境界の例外を診断可能な意味検証失敗へ変換する。"""
+    message = str(error)
+    if not message:
+        message = error.__class__.__name__
+    return ValueError(message)
 
 
 def parse_json_object(raw: str) -> dict[str, object]:
