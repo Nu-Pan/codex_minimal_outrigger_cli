@@ -33,20 +33,21 @@
 
 ## Read this when
 
-- `run_codex_exec` の呼び出し条件、戻り値、例外、再試行の挙動を変更したいとき。
-- Structured Output の schema 検証、JSON / text validator、`reasoning_effort` の扱いを修正したいとき。
-- codex 呼び出しログ、コンソール通知、`output_schema` のファイル化やキャッシュ再生成の仕様を確認したいとき。
-- workspace-write 時の `INDEX.md` 保守、oracle 変更検知、HEAD / reflog / commit range の事前検査や例外判定を確認したいとき。
+- `run_codex_exec` の呼び出し条件、戻り値、例外、再試行の挙動を変更したいとき
+- Structured Output の schema 検証、JSON / text の検証、`reasoning_effort` の制約を確認したいとき
+- codex 呼び出しログ、コンソール通知、`output_schema` のキャッシュやファイル化の仕様を確認したいとき
+- workspace-write 時の `INDEX.md` 保守、oracle 変更検知、HEAD / reflog / commit range の事前検査や例外判定を確認したいとき
+- quota 復旧の `resume` や、`skip_index_maintenance` の境界条件を確認したいとき
 
 ## Do not read this when
 
-- `cmoc` 全体の利用手順や各サブコマンドの詳細仕様だけを確認したいとき。
-- `commons.codex` 以外の共通処理や、`session` / `apply` 本体の実装を追いたいとき。
-- `INDEX.md` の生成ルールや `oracles` の正本仕様だけを確認したいとき。
+- `commons.codex` の実装コードそのものを追いたいとき
+- `commons.indexing` や `commons.repo` など、`run_codex_exec` 以外の共通処理だけを確認したいとき
+- `INDEX.md` の生成ルールや `oracles` の正本仕様そのものを確認したいとき
 
 ## hash
 
-- 1010f8d654672f9fd867f001701ea94adb3b6703c2b5095ce681a46148739f88
+- ace67e6c5a0d5c153d83768cf8e9784622e7a5bbe777596dedeadbc4b2b1c300
 
 # `test_file_naming.py`
 

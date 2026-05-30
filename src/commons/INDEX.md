@@ -23,25 +23,25 @@
 
 ## Summary
 
-- Codex CLI の共通実行基盤で、`codex exec` の起動、再試行、`resume`、ログ保存をまとめています。
+- Codex CLI の共通実行基盤で、`codex exec` の起動、再試行、`resume`、ログ保存をまとめるモジュールです。
 - Structured Output の schema 検証、JSON 解析、`output-last-message` の読み取りなど、応答の受け取りと検証まわりを扱います。
 - quota 枯渇時の待機・再開、capacity 一時失敗の指数バックオフ、oracle 保護チェック、実行前の `INDEX.md` メンテナンス連携も含みます。
 
 ## Read this when
 
 - `cmoc` から `codex exec` を起動する共通処理、`resume`、再試行、quota/capacity 対応を確認したいとき。
-- Structured Output の schema 生成・検証、JSON 解析、`output-last-message` の読み取り方法を確認したいとき。
-- Codex CLI 実行時のログ保存、表示用メッセージ、oracle 保護チェック、実行前の `INDEX.md` メンテナンス連携を確認したいとき。
+- Structured Output の schema 検証、JSON 解析、`output-last-message` の読み取り方法を確認したいとき。
+- Codex CLI 実行時のログ保存、表示メッセージ、oracle 保護チェック、実行前の `INDEX.md` メンテナンス連携を確認したいとき。
 
 ## Do not read this when
 
-- `codex exec` の呼び出し方そのものではなく、個別サブコマンドの仕様や引数だけを確認したいとき。
+- `codex exec` の起動や再試行の共通処理ではなく、個別サブコマンドの業務ロジックだけを確認したいとき。
 - `INDEX.md` の生成・更新ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
-- Git 操作、サブコマンドログ、タイムスタンプなどの共通部品の個別実装だけを追いたいとき。
+- Git 操作、サブコマンドログ、タイムスタンプなど、他の共通モジュールの詳細だけを追いたいとき。
 
 ## hash
 
-- 8acb39a1730f6ca2a69fbf3cee91bc99914740997de0a6b91d1e1c80831f2d68
+- 956df40c2ff928cc7b2a2e972c4eae2fc48b972c9a835b8d610e4cc33d9ca750
 
 # `command_runner.py`
 
