@@ -97,7 +97,7 @@
 ## Summary
 
 - `src/sub_commands/session` は `cmoc session` 系サブコマンドのパッケージ入口で、`__init__.py`、`fork.py`、`join.py`、`abandon.py` に各コマンド本体を持つディレクトリです。
-- `fork.py` は session branch の作成と session state 記録を担当し、`join.py` は session branch の merge と conflict 解消、`abandon.py` は session branch の破棄を担当します。
+- `fork.py` は session branch の作成と session state の記録を担当し、`join.py` は session branch の merge と conflict 解消、`abandon.py` は session branch の破棄を担当します。
 - この配下は session の開始・統合・破棄を扱う実装の入口であり、個別の処理詳細は各モジュールへ分かれています。
 
 ## Read this when
@@ -109,9 +109,9 @@
 ## Do not read this when
 
 - `cmoc session fork`、`cmoc session join`、`cmoc session abandon` のうち 1 つだけの詳細仕様、状態遷移、例外条件を確認したいとき。
-- `cmoc apply` 系の開始・統合・破棄だけを確認したいとき。
+- `cmoc apply` 系の開始・統合・破棄の流れだけを確認したいとき。
 - `src/sub_commands/session` のパッケージ宣言だけを確認したいときは `__init__.py` を直接見れば足ります。
 
 ## hash
 
-- 410af06ceefc2e9ae29142bbbfa7159dc8455146843d057b7029329651103b78
+- 8ea568b0c8d87de3d09006b421c6f815463cec5002409e539faf7b47e90660de

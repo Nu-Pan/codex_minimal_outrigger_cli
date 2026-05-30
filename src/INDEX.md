@@ -51,7 +51,7 @@
 
 ## Summary
 
-- `src/sub_commands` は `cmoc` のサブコマンド実装群をまとめるパッケージで、`__init__.py`、`init.py`、`eval_oracles.py`、`apply/`、`session/` に役割が分かれています。
+- `src/sub_commands` は `cmoc` のサブコマンド実装群をまとめるパッケージです。
 - `__init__.py` はパッケージ宣言だけを担い、`init.py` は `cmoc init`、`eval_oracles.py` は `cmoc review oracles`、`apply/` と `session/` は各系サブコマンドの入口です。
 - ここは実装入口の全体地図であり、個別の詳細仕様は各モジュールや下位の `INDEX.md` に分かれています。
 
@@ -60,14 +60,13 @@
 - `src/sub_commands` 配下で、どのモジュールがどのサブコマンドを担当するか把握したいとき。
 - `cmoc init`、`cmoc review oracles`、`cmoc apply`、`cmoc session` の実装入口を見分けたいとき。
 - このパッケージ配下の実装・修正・レビュー・テストを始める前に、関連ファイルの役割を整理したいとき。
-- `src/sub_commands` が Python パッケージとして宣言されていることと、下位パッケージが分割されていることを確認したいとき。
 
 ## Do not read this when
 
-- `cmoc init`、`cmoc review oracles`、`cmoc apply`、`cmoc session` の詳細仕様や状態遷移だけを確認したいとき。
-- `src/sub_commands` のパッケージ宣言だけを確認したいときは、`__init__.py` を直接見れば足ります。
+- `cmoc init`、`cmoc review oracles`、`cmoc apply`、`cmoc session` の個別仕様だけを確認したいとき。
+- `src/sub_commands` 配下の実装コードやテストコードを直接修正するだけで足りるとき。
 - `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
 
 ## hash
 
-- 728e3bbfbd277c77e6314ca1a62d4f6cc4fa0cd4d59e6bb6793f6254755a4108
+- beea7528881a9cb9942e2ee24f3feb6bf2638b7a5776bcb1aae900f6a1ee58f9

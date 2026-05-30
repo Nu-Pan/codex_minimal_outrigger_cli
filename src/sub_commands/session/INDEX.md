@@ -72,21 +72,21 @@
 ## Summary
 
 - `src/sub_commands/session/join.py` は `cmoc session join` の本体処理を実装するモジュールです。
-- 現在の session branch が active で `apply.state = ready` であることを確認し、session home branch へ `git merge --no-ff` します。
-- merge conflict が発生した場合は禁止対象や未解決差分を確認して Codex CLI に conflict marker 解消を依頼し、`session.state` 更新と session branch の削除可否判定まで行います。
+- 現在の session branch が join 可能であることを検証し、session home branch へ `git merge --no-ff` します。
+- conflict が起きた場合は Codex CLI に marker 解消を依頼し、`session.state` 更新と branch 削除可否判定まで行います。
 
 ## Read this when
 
-- `cmoc session join` の処理順、事前条件、後始末を実装・修正・レビュー・テストしたいとき。
-- merge conflict 時の自動解消や手動復旧、`oracles` と禁止領域の扱いを追いたいとき。
-- `src/sub_commands/session/join.py` の副作用境界や、merge 後に何が更新・削除されるかを確認したいとき。
+- `src/sub_commands/session/join.py` の処理順、事前条件、後始末を実装・修正・レビュー・テストしたいとき。
+- `session.state` と `apply.state` の検証、`git merge --no-ff`、conflict 時の Codex CLI 依頼の流れを確認したいとき。
+- merge 後の `session` 反映、`oracles` を含む conflict marker の扱い、安全な session branch 削除条件を追いたいとき。
 
 ## Do not read this when
 
-- `cmoc session fork` や `cmoc session abandon` の作成・破棄手順だけを確認したいとき。
-- `cmoc apply` 側の開始・終了や、一般的な `git merge` の説明だけで足りるとき。
-- 利用手順だけを知りたくて、conflict 解消や state 更新の実装詳細が不要なとき。
+- `cmoc session fork` や `cmoc session abandon` の実装・修正・レビューだけを確認したいとき。
+- `cmoc apply` 系の開始・終了・破棄の流れだけを確認したいとき。
+- 一般的な `git merge` の説明だけで足り、`session.state` 更新や conflict 解消の実装詳細が不要なとき。
 
 ## hash
 
-- 14287bd53945aadfe61038bcfbbedcc0d8080f5dfb660d031a49a43b7cba5ff3
+- 61f4b42440c3fda5ead506427f77739e3c6008309da010ff51e4ade2c87317a9
