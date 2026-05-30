@@ -70,7 +70,8 @@
 
 ## hash
 
-- cdf2ae7badf79cef208422c27c9d1e5c7fa0979589bbdcbcb50c218fcdad7d30
+- fb8b525a34d873d1070035cae87b17be49cd73d9f27228024f1dd4718ae888f7
+<!-- cmoc-index-kind: file -->
 
 # `errors.py`
 

@@ -154,27 +154,27 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は cmoc のサブコマンド群に関する決定論的な制御ロジックの回帰テスト入口です。
-- `init`、`session`、`apply`、`eval_oracles`、`main`、および CLI 入口やヘルプ登録、エラー整形をまとめて検証します。
-- 共通 runner、状態遷移、レポート保存、補助ヘルパー、bin 入口の挙動まで含むため、サブコマンド全体の制御面を俯瞰するときに使います。
+- tests/test_subcommands.py は、cmoc のサブコマンド群に関する決定論的な制御ロジックの回帰テスト入口です。
+- init、session、apply、review oracles、main、CLI エントリポイント、ヘルプ登録、エラー整形をまとめて検証します。
+- 共通 runner、状態遷移、レポート保存、補助ヘルパー、bin 入口の挙動まで含むため、サブコマンド全体の制御面を俯瞰するときの目次です。
 
 ## Read this when
 
-- `tests/test_subcommands.py` がどのサブコマンドの制御ロジックを守っているか確認したいとき。
-- `run_command`、`cmoc_init_impl`、`cmoc_session_*`、`cmoc_apply_*`、`cmoc_eval_oracles_impl`、`main` の回帰観点を整理したいとき。
-- CLI のヘルプ登録、エラー表示、起動経路、共通 runner の挙動を追いたいとき。
-- `apply` と `session` の状態遷移や、関連する prompt / validation ヘルパーの期待動作を確認したいとき。
+- tests/test_subcommands.py がどのサブコマンドの制御ロジックを守っているか確認したいとき。
+- run_command、cmoc_init_impl、cmoc_session_*、cmoc_apply_*、cmoc_eval_oracles_impl、main、bin/cmoc の回帰観点を整理したいとき。
+- CLI のヘルプ登録、エラー表示、起動経路、共通 runner、report 生成、prompt や validation ヘルパーの期待動作を追いたいとき。
+- apply と session の状態遷移や、Fake Codex CLI を使う評価・レポート系のテスト意図を確認したいとき。
 
 ## Do not read this when
 
-- `src/sub_commands` 配下の実装本体や、`oracles` 側の正本仕様を直接追いたいとき。
-- 個別サブコマンドの仕様断片だけを確認したく、テスト観点は不要なとき。
-- `INDEX.md` の生成ルールや内容ハッシュの扱いだけを確認したいとき。
-- `tests/test_repo.py` や `tests/test_indexing.py` など、別カテゴリの回帰テストを探しているとき。
+- src/sub_commands 配下の実装本体や、oracles 側の正本仕様を直接追いたいとき。
+- 個別サブコマンドの仕様断片だけを確認したく、テスト観点が不要なとき。
+- INDEX.md の生成ルールや内容ハッシュの扱いだけを確認したいとき。
+- tests/test_repo.py や tests/test_indexing.py など、別カテゴリの回帰テストを探しているとき。
 
 ## hash
 
-- dea4aff4373b4ea2289feff6b6664fdfe31b603048af5a6fbd659658c6b2ad04
+- 31222f9f7cc77a85197d87f25fae9ddaba994f50cc1742eea39c1ec25dc8faf4
 <!-- cmoc-index-kind: file -->
 
 # `test_timestamps.py`
