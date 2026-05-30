@@ -4508,6 +4508,81 @@ def test_apply_improoves_fixing_list_until_same_result_or_limit(
     assert "first improvement" in organize_prompts[1]
 
 
+def test_apply_improove_fixing_list_uses_oracle_snapshot_base(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """要修正点整理の過去修正範囲は apply snapshot 起点に限定する。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "old.md").write_text("old spec\n", encoding="utf-8")
+    (repo / "old.py").write_text("print('old')\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "old targets")
+    last_joined_snapshot = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    state_path = (
+        repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
+    )
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["session"]["last_joined_apply_oracle_snapshot_commit"] = (
+        last_joined_snapshot
+    )
+    write_session_state(repo, "2026-05-10_22-21_10_000000123", state)
+
+    (oracle_root / "new.md").write_text("new spec\n", encoding="utf-8")
+    (repo / "new.py").write_text("print('new')\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "new targets")
+    oracle_snapshot_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    monkeypatch.setattr(
+        "sub_commands.apply.fork.maintain_indexes",
+        lambda repo_root: False,
+    )
+    purposes: list[str] = []
+    organize_prompts: list[str] = []
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """rolling の調査範囲と整理 prompt の base を記録する。"""
+        purpose = str(kwargs.get("purpose"))
+        purposes.append(purpose)
+        if purpose.startswith("oracle 調査") or purpose.startswith("実装調査"):
+            return _discrepancy_json("initial")
+        if purpose == "要修正点整理":
+            organize_prompts.append(str(args[1]))
+            return '{"git_head_commit_hash": null, "fixing_points": []}'
+        if purpose == "apply 変更要約":
+            return _change_summary_json()
+        return ""
+
+    monkeypatch.setattr("sub_commands.apply.fork.run_codex_exec", fake_codex)
+
+    assert cmoc_apply_impl(
+        repo,
+        repeat_investigate_and_fix=1,
+        repeat_improove_fixing_list=1,
+        scope="rolling",
+    ) == 0
+
+    assert any(purpose.endswith("oracles/new.md") for purpose in purposes)
+    assert any(purpose.endswith("new.py") for purpose in purposes)
+    assert not any(purpose.endswith("oracles/old.md") for purpose in purposes)
+    assert not any(purpose.endswith("old.py") for purpose in purposes)
+    assert organize_prompts
+    assert (
+        f"`{oracle_snapshot_commit}..{oracle_snapshot_commit}`"
+        in organize_prompts[0]
+    )
+    assert (
+        f"`{last_joined_snapshot}..{oracle_snapshot_commit}`"
+        not in organize_prompts[0]
+    )
+
+
 def test_apply_stops_improoving_fixing_list_when_it_becomes_empty(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,

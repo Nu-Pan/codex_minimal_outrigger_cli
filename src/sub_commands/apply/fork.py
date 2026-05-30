@@ -400,6 +400,7 @@ def cmoc_apply_impl(
                 apply_worktree,
                 investigation_base_commit,
                 oracle_snapshot_commit,
+                improvement_base_commit=oracle_snapshot_commit,
                 timer=timer,
                 step_path=loop_step_path,
                 repeat_improove_fixing_list=repeat_improove_fixing_list,
@@ -837,9 +838,10 @@ def _mutable_apply_section(
 
 def _investigate_discrepancies(
     repo_root: Path,
-    base_commit: str,
+    investigation_base_commit: str,
     oracle_snapshot_commit: str,
     *,
+    improvement_base_commit: str | None = None,
     timer: StepTimer,
     step_path: StepIndexPath,
     repeat_improove_fixing_list: int,
@@ -859,14 +861,14 @@ def _investigate_discrepancies(
     )
     oracle_targets = _target_oracle_files(
         repo_root,
-        base_commit,
+        investigation_base_commit,
         oracle_snapshot_commit,
         partial,
         dirty_paths=dirty_oracle_paths,
     )
     implementation_targets = _target_implementation_files(
         repo_root,
-        base_commit,
+        investigation_base_commit,
         oracle_snapshot_commit,
         partial,
         dirty_paths=dirty_implementation_paths,
@@ -906,7 +908,7 @@ def _investigate_discrepancies(
     return _improove_fixing_list(
         repo_root,
         discrepancies,
-        base_commit,
+        improvement_base_commit or oracle_snapshot_commit,
         repeat_improove_fixing_list,
         timer=timer,
         step_path=(*step_path, (4, 5)),
