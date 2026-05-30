@@ -44,7 +44,6 @@
 ## hash
 
 - df70bdad918cf3514d145f81350a64d9b612330e677bf24126de790d3d8a0da7
-<!-- cmoc-index-kind: directory -->
 
 # `eval_oracles.py`
 
@@ -69,7 +68,6 @@
 ## hash
 
 - 32c52ffb1730f21fb3f25efd0ad0dd3134496e439e695c0456a2d4ebc45c5498
-<!-- cmoc-index-kind: file -->
 
 # `init.py`
 
@@ -117,4 +115,3 @@
 ## hash
 
 - 70e82e873e2b738c06c6f04f3ff8cc5914dfbbf60f8d27e5a899ca0ae5d1de11
-<!-- cmoc-index-kind: directory -->

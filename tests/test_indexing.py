@@ -57,6 +57,7 @@ def test_maintain_indexes_generates_routing_entries_and_respects_gitignore(
     assert changed is True
     assert "# `kept.txt`" in content
     assert "kept summary" in content
+    assert "cmoc-index-kind" not in content
     assert "# `ignored.txt`" not in content
     assert any(f"`{repo / 'README.md'}`" in prompt for prompt in codex_prompts)
     assert any(f"`{repo / 'kept.txt'}`" in prompt for prompt in codex_prompts)
@@ -1469,7 +1470,88 @@ def test_maintain_indexes_regenerates_entry_when_empty_file_becomes_directory(
     assert purposes == ["INDEX entry 生成 target"]
     assert "- old file summary" not in content
     assert "- INDEX entry 生成 target" in content
-    assert "<!-- cmoc-index-kind: directory -->" in content
+    assert "cmoc-index-kind" not in content
+
+
+def test_maintain_indexes_regenerates_entry_with_internal_kind_comment(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """仕様外の内部種別コメントを含む既存 entry は再生成する。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    target = repo / "target.txt"
+    target.write_text("target\n", encoding="utf-8")
+    readme_digest = hashlib.sha256(
+        (repo / "README.md").read_bytes()
+    ).hexdigest()
+    digest = hashlib.sha256(target.read_bytes()).hexdigest()
+    (repo / "INDEX.md").write_text(
+        "\n".join(
+            [
+                "# `README.md`",
+                "",
+                "## Summary",
+                "",
+                "- readme summary",
+                "",
+                "## Read this when",
+                "",
+                "- read readme",
+                "",
+                "## Do not read this when",
+                "",
+                "- skip readme",
+                "",
+                "## hash",
+                "",
+                f"- {readme_digest}",
+                "",
+                "# `target.txt`",
+                "",
+                "## Summary",
+                "",
+                "- old summary",
+                "",
+                "## Read this when",
+                "",
+                "- read old",
+                "",
+                "## Do not read this when",
+                "",
+                "- skip old",
+                "",
+                "## hash",
+                "",
+                f"- {digest}",
+                "<!-- cmoc-index-kind: file -->",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "index with internal comment")
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """再生成されたことを識別できる Structured Output を返す。"""
+        return json.dumps(
+            {
+                "summary": ["regenerated summary"],
+                "read_this_when": ["read regenerated"],
+                "do_not_read_this_when": ["skip regenerated"],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    changed = maintain_indexes(repo)
+    content = (repo / "INDEX.md").read_text(encoding="utf-8")
+
+    assert changed is True
+    assert "- old summary" not in content
+    assert "- regenerated summary" in content
+    assert "cmoc-index-kind" not in content
 
 
 def test_maintain_indexes_round_trips_special_names_and_multiline_text(
