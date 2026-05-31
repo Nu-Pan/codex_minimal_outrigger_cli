@@ -26,6 +26,7 @@ from .repo import (
 )
 from .subcommand_log import add_quota_wait
 from .subcommand_log import log_event
+from .subcommand_log import resolve_log_repo_root
 from .timing import format_duration
 from .timestamps import make_timestamp
 
@@ -82,6 +83,7 @@ def run_codex_exec(
     repo_root: Path,
     prompt: str,
     *,
+    log_repo_root: Path | None = None,
     purpose: str = "codex exec",
     read_only: bool,
     expect_json: bool = False,
@@ -107,6 +109,7 @@ def run_codex_exec(
         if index_excluded_roots is not None
         else None
     )
+    codex_log_root = resolve_log_repo_root(log_repo_root or repo_root)
 
     # 必要なら output schema ファイルを準備する。call log と last message は実行単位で払い出す。
     base_command = _build_codex_command(
@@ -115,7 +118,7 @@ def run_codex_exec(
         reasoning_effort=reasoning_effort,
     )
     _preflight_workspace_write_oracle_guard(repo_root, base_command)
-    schema_path = _write_output_schema(repo_root, output_schema)
+    schema_path = _write_output_schema(codex_log_root, output_schema)
     if schema_path is not None:
         base_command.extend(["--output-schema", str(schema_path)])
     base_command.append("-")
@@ -142,6 +145,7 @@ def run_codex_exec(
         print(f"- prompt preview: {_console_log_safe_head80(prompt)}")
         run = _run_codex_command(
             repo_root,
+            codex_log_root,
             command,
             prompt,
             purpose,
@@ -151,6 +155,7 @@ def run_codex_exec(
         )
         run = _retry_after_capacity_if_needed(
             repo_root,
+            codex_log_root,
             run,
             command,
             prompt,
@@ -174,6 +179,7 @@ def run_codex_exec(
             print("quota が枯渇したため、resume 前に復旧を待機します")
             run = _wait_for_quota_and_resume(
                 repo_root,
+                codex_log_root,
                 resume_command,
                 prompt,
                 purpose,
@@ -372,6 +378,7 @@ def _validate_model_options(model: str, reasoning_effort: str) -> None:
 
 def _wait_for_quota_and_resume(
     repo_root: Path,
+    log_repo_root: Path,
     command: list[str],
     prompt: str,
     purpose: str,
@@ -400,6 +407,7 @@ def _wait_for_quota_and_resume(
         )
         poll_run = _run_codex_command(
             repo_root,
+            log_repo_root,
             poll_command,
             poll_prompt,
             "quota 復旧確認",
@@ -409,6 +417,7 @@ def _wait_for_quota_and_resume(
         )
         poll_run = _retry_after_capacity_if_needed(
             repo_root,
+            log_repo_root,
             poll_run,
             poll_command,
             poll_prompt,
@@ -443,6 +452,7 @@ def _wait_for_quota_and_resume(
             )
             resume_run = _run_codex_command(
                 repo_root,
+                log_repo_root,
                 command,
                 prompt,
                 purpose,
@@ -452,6 +462,7 @@ def _wait_for_quota_and_resume(
             )
             resume_run = _retry_after_capacity_if_needed(
                 repo_root,
+                log_repo_root,
                 resume_run,
                 command,
                 prompt,
@@ -487,6 +498,7 @@ def _sleep_for_quota_poll_interval() -> None:
 
 def _retry_after_capacity_if_needed(
     repo_root: Path,
+    log_repo_root: Path,
     run: _CodexCommandRun,
     command: list[str],
     prompt: str,
@@ -503,9 +515,10 @@ def _retry_after_capacity_if_needed(
     for retry_index in range(1, _CAPACITY_RETRY_LIMIT + 1):
         if not _stdout_jsonl_indicates_capacity(current_run.result.stdout):
             return current_run
+        formatted_delay = format_duration(float(delay_seconds))
         print(
             "選択された model が capacity 上限に達しています。"
-            f"{delay_seconds} sec 後に codex exec を再試行します "
+            f"{formatted_delay} 後に codex exec を再試行します "
             f"({retry_index}/{_CAPACITY_RETRY_LIMIT})"
         )
         time.sleep(delay_seconds)
@@ -518,6 +531,7 @@ def _retry_after_capacity_if_needed(
         )
         current_run = _run_codex_command(
             repo_root,
+            log_repo_root,
             command,
             prompt,
             purpose,
@@ -585,6 +599,7 @@ def _build_codex_command(
 
 def _run_codex_command(
     repo_root: Path,
+    log_repo_root: Path,
     command: list[str],
     prompt: str,
     purpose: str,
@@ -593,7 +608,7 @@ def _run_codex_command(
     allowed_uncommitted_oracle_paths: Iterable[Path | str] | None,
 ) -> _CodexCommandRun:
     """Codex CLI を 1 回起動し、その呼び出し専用ログを出力する。"""
-    paths = _prepare_codex_exec_paths(repo_root)
+    paths = _prepare_codex_exec_paths(log_repo_root)
     log_path = paths["call"]
     last_message_path = paths["last_message"]
     run_command = _command_with_last_message(command, last_message_path)
@@ -916,6 +931,7 @@ def _committed_oracle_file_paths(
             "--format=",
             "--name-status",
             "-z",
+            "-m",
             "-M",
             "--diff-filter=ACDMRT",
             f"{before_head}..HEAD",
@@ -984,6 +1000,7 @@ def _head_reflog_oracle_file_paths(
                 "--format=",
                 "--name-status",
                 "-z",
+                "-m",
                 "-M",
                 "--diff-filter=ACDMRT",
                 f"{commit}^!",

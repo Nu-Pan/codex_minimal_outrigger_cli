@@ -2,14 +2,17 @@
 
 import json
 import subprocess
+from _thread import LockType
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
-from datetime import datetime
+from dataclasses import field
 from pathlib import Path
+from threading import Lock
 from time import perf_counter
 from typing import IO, Iterator
 
+from .timestamps import console_timestamp
 from .timestamps import make_timestamp
 
 
@@ -21,6 +24,7 @@ class SubcommandLogContext:
     path: Path
     started: float
     quota_wait_seconds: float = 0.0
+    lock: LockType = field(default_factory=Lock)
 
 
 _CURRENT_LOG: ContextVar[SubcommandLogContext | None] = ContextVar(
@@ -30,9 +34,15 @@ _CURRENT_LOG: ContextVar[SubcommandLogContext | None] = ContextVar(
 
 
 @contextmanager
-def subcommand_log(repo_root: Path) -> Iterator[SubcommandLogContext]:
+def subcommand_log(
+    repo_root: Path,
+    *,
+    command_path: str | None = None,
+    argv: list[str] | None = None,
+    cwd: Path | None = None,
+) -> Iterator[SubcommandLogContext]:
     """サブコマンドイベントを `<repo-root>/.cmoc/logs/sub_commands` へ記録する。"""
-    log_root = _subcommand_log_repo_root(repo_root)
+    log_root = resolve_log_repo_root(repo_root)
     _ensure_logs_excluded(log_root)
     log_dir = log_root / ".cmoc" / "logs" / "sub_commands"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -45,8 +55,20 @@ def subcommand_log(repo_root: Path) -> Iterator[SubcommandLogContext]:
         )
         token = _CURRENT_LOG.set(context)
         try:
-            log_event("subcommand_start", {"repo_root": str(log_root)})
-            print(f"# cmoc subcommand start")
+            log_event(
+                "subcommand_start",
+                {
+                    "command_path": command_path,
+                    "argv": argv,
+                    "cwd": str(cwd) if cwd is not None else None,
+                    "repo_root": str(log_root),
+                    "subcommand_log": str(log_path),
+                },
+            )
+            if command_path is None:
+                print("# cmoc subcommand start")
+            else:
+                print(f"# cmoc subcommand start: {command_path}")
             print(f"- subcommand log: {log_path}")
             yield context
         finally:
@@ -60,14 +82,15 @@ def log_event(event: str, payload: dict[str, object]) -> None:
         return
     record = {
         "event": event,
-        "time": _console_timestamp(),
+        "time": console_timestamp(),
         "elapsed_seconds": perf_counter() - context.started,
         **payload,
     }
-    with context.path.open("a", encoding="utf-8") as log_file:
-        log_file.write(json.dumps(record, ensure_ascii=False, sort_keys=True))
-        log_file.write("\n")
-        log_file.flush()
+    line = json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n"
+    with context.lock:
+        with context.path.open("a", encoding="utf-8") as log_file:
+            log_file.write(line)
+            log_file.flush()
 
 
 def add_quota_wait(duration_seconds: float) -> None:
@@ -75,8 +98,10 @@ def add_quota_wait(duration_seconds: float) -> None:
     context = current_subcommand_log()
     if context is None:
         return
-    context.quota_wait_seconds += max(0.0, duration_seconds)
-    log_event("quota_wait_added", {"duration_seconds": max(0.0, duration_seconds)})
+    duration = max(0.0, duration_seconds)
+    with context.lock:
+        context.quota_wait_seconds += duration
+    log_event("quota_wait_added", {"duration_seconds": duration})
 
 
 def current_subcommand_log() -> SubcommandLogContext | None:
@@ -149,8 +174,12 @@ def _git_exclude_path(repo_root: Path) -> Path | None:
     return repo_root / path
 
 
-def _subcommand_log_repo_root(repo_root: Path) -> Path:
-    """サブコマンドログを書き込む repo root を返す。"""
+def resolve_log_repo_root(repo_root: Path) -> Path:
+    """cmoc の実行ログを書き込む repo root を返す。"""
+    owner_root = _owning_repo_root_from_apply_worktree_path(repo_root)
+    if owner_root is not None:
+        return owner_root
+
     if not (repo_root / ".git").exists():
         return repo_root
     result = subprocess.run(
@@ -177,6 +206,23 @@ def _subcommand_log_repo_root(repo_root: Path) -> Path:
     return repo_root
 
 
+def _subcommand_log_repo_root(repo_root: Path) -> Path:
+    """サブコマンドログを書き込む repo root を返す。"""
+    return resolve_log_repo_root(repo_root)
+
+
+def _owning_repo_root_from_apply_worktree_path(repo_root: Path) -> Path | None:
+    """cmoc apply worktree path から所有元 repo root を復元する。"""
+    parts = repo_root.resolve().parts
+    marker = (".cmoc", "worktrees", "apply")
+    for index in range(0, len(parts) - len(marker)):
+        if parts[index : index + len(marker)] != marker:
+            continue
+        if len(parts) == index + len(marker) + 2:
+            return Path(*parts[:index])
+    return None
+
+
 def _is_cmoc_managed_worktree_root(repo_root: Path, common_root: Path) -> bool:
     """repo_root が common_root 配下の cmoc 管理 worktree なら真を返す。"""
     try:
@@ -186,13 +232,3 @@ def _is_cmoc_managed_worktree_root(repo_root: Path, common_root: Path) -> bool:
     except ValueError:
         return False
     return True
-
-
-def _console_timestamp() -> str:
-    """コンソールログ用のミリ秒付き日時を返す。"""
-    now = datetime.now().astimezone()
-    return (
-        f"{now.year:04d}/{now.month:02d}/{now.day:02d} "
-        f"{now.hour:02d}:{now.minute:02d}:{now.second:02d}."
-        f"{now.microsecond // 1000:03d}"
-    )

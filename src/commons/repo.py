@@ -19,10 +19,8 @@ SESSION_STATE_KEYS = {
     "session_start_commit",
     "last_joined_apply_oracle_snapshot_commit",
 }
-OPTIONAL_SESSION_STATE_KEYS = {
-    "last_joined_apply_result",
-}
 APPLY_STATE_KEYS = {"state", "apply_branch", "oracle_snapshot_commit"}
+CMOC_IGNORE_PROBE_PATH = ".cmoc/.__cmoc_ignore_probe__"
 
 
 def enter_repo_root(start: Path | None = None) -> Path:
@@ -67,6 +65,13 @@ def head_commit(repo_root: Path) -> str:
 def is_cmoc_branch(branch_name: str) -> bool:
     """cmoc 管理ブランチ名か判定する。"""
     return is_session_branch(branch_name) or is_apply_branch(branch_name)
+
+
+def is_cmoc_reserved_branch(branch_name: str) -> bool:
+    """cmoc が予約している branch namespace 配下か判定する。"""
+    return branch_name.startswith(SESSION_BRANCH_PREFIX) or branch_name.startswith(
+        APPLY_BRANCH_PREFIX
+    )
 
 
 def is_session_branch(branch_name: str) -> bool:
@@ -323,7 +328,7 @@ def initial_session_state(
     return {
         "session": {
             "state": "active",
-            "session_home_branch": session_home_branch,
+            "session_home_branch": None,
             "session_start_commit": session_start_commit,
             "last_joined_apply_oracle_snapshot_commit": None,
         },
@@ -497,33 +502,22 @@ def _session_state_payload(
                 "破損した session state を復旧してください。",
             ],
         )
-    _validate_required_keys(
-        session,
-        SESSION_STATE_KEYS,
-        "session",
-        path,
-    )
+    _validate_required_keys(session, SESSION_STATE_KEYS, "session", path)
     _validate_required_keys(
         apply,
         APPLY_STATE_KEYS,
         "apply",
         path,
     )
-    session_payload = {
-        "state": session.get("state"),
-        "session_home_branch": session.get("session_home_branch"),
-        "session_start_commit": session.get("session_start_commit"),
-        "last_joined_apply_oracle_snapshot_commit": session.get(
-            "last_joined_apply_oracle_snapshot_commit"
-        ),
-    }
-    if "last_joined_apply_result" in session:
-        session_payload["last_joined_apply_result"] = session.get(
-            "last_joined_apply_result"
-        )
-
     return {
-        "session": session_payload,
+        "session": {
+            "state": session.get("state"),
+            "session_home_branch": session.get("session_home_branch"),
+            "session_start_commit": session.get("session_start_commit"),
+            "last_joined_apply_oracle_snapshot_commit": session.get(
+                "last_joined_apply_oracle_snapshot_commit"
+            ),
+        },
         "apply": {
             "state": apply.get("state"),
             "apply_branch": apply.get("apply_branch"),
@@ -609,13 +603,7 @@ def _validate_session_state_schema(
             ],
             str(path),
         )
-    _validate_exact_keys(
-        session,
-        SESSION_STATE_KEYS,
-        "session",
-        path,
-        optional_keys=OPTIONAL_SESSION_STATE_KEYS,
-    )
+    _validate_exact_keys(session, SESSION_STATE_KEYS, "session", path)
     _validate_exact_keys(
         apply,
         APPLY_STATE_KEYS,
@@ -648,13 +636,6 @@ def _validate_session_state_schema(
         "session.last_joined_apply_oracle_snapshot_commit",
         path,
     )
-    if "last_joined_apply_result" in session:
-        _validate_optional_string(
-            session,
-            "last_joined_apply_result",
-            "session.last_joined_apply_result",
-            path,
-        )
     apply_state = _validate_required_string(apply, "state", "apply.state", path)
     _validate_state_value(apply_state, APPLY_STATES, "apply.state", path)
     _validate_optional_string(apply, "apply_branch", "apply.apply_branch", path)
@@ -919,7 +900,7 @@ def active_session_ids_for_home_branch(
             session.get("state") == "active"
             and (
                 session.get("session_home_branch") == session_home_branch
-                or _legacy_active_session_home_branch_matches(
+                or _active_session_home_branch_matches(
                     repo_root,
                     session_id,
                     session,
@@ -940,25 +921,59 @@ def active_session_ids_for_home_branch(
     return session_ids
 
 
-def _legacy_active_session_home_branch_matches(
+def _active_session_home_branch_matches(
     repo_root: Path,
     session_id: str,
     session: dict[str, object],
     session_home_branch: str,
 ) -> bool:
-    """home branch が null の古い active session を一意復元できる場合だけ照合する。"""
+    """home branch が null の active session を復元し、判定不能なら止める。"""
     if session.get("session_home_branch") is not None:
         return False
     start_commit = session.get("session_start_commit")
     if not isinstance(start_commit, str) or not start_commit:
-        return False
+        _raise_unresolved_active_session_home_branch(
+            session_id,
+            "session.session_start_commit が不正です。",
+            [f"session.session_start_commit: {start_commit}"],
+        )
     session_branch = f"{SESSION_BRANCH_PREFIX}{session_id}"
     candidates = _session_home_branch_candidates(
         repo_root,
         session_branch,
         start_commit,
     )
-    return candidates == [session_home_branch]
+    if len(candidates) == 1:
+        return candidates[0] == session_home_branch
+    detail_items = [
+        f"session branch: {session_branch}",
+        f"session_start_commit: {start_commit}",
+    ]
+    if candidates:
+        detail_items.extend(f"candidate: {branch}" for branch in candidates)
+    else:
+        detail_items.append("candidate: (none)")
+    _raise_unresolved_active_session_home_branch(
+        session_id,
+        "session home branch を一意に特定できませんでした。",
+        detail_items,
+    )
+
+
+def _raise_unresolved_active_session_home_branch(
+    session_id: str,
+    reason: str,
+    detail_items: list[str],
+) -> None:
+    """home branch 未確定の active session を fail closed にする。"""
+    raise CmocError(
+        "home branch 未確定の active session が存在します。",
+        [
+            "この状態では active session の一意性を判定できないため、新しい session は開始できません。",
+            "既存 session を join/abandon するか、session state の session.session_home_branch を復旧してください。",
+        ],
+        "\n".join([f"session id: {session_id}", reason, *detail_items]),
+    )
 
 
 def _session_branch_names(repo_root: Path) -> list[str]:
@@ -1086,14 +1101,13 @@ def assert_paths_clean(repo_root: Path, paths: list[str]) -> None:
 
 
 def gitignore_has_cmoc_rule(repo_root: Path) -> bool:
-    """作業ツリーの `.gitignore` が `/.cmoc/` 行を既に持つか返す。"""
-    # init 開始前からある ignore ルールを、init で発生した差分と区別する。
+    """作業ツリーの `.gitignore` が有効な `/.cmoc/` 専用行を持つか返す。"""
+    # init 開始前から guarantee 済みの ignore ルールを、init 差分と区別する。
     gitignore = repo_root / ".gitignore"
     if not gitignore.exists():
         return False
     content = _read_gitignore_text(gitignore)
-    lines = [line.strip() for line in content.splitlines()]
-    return "/.cmoc/" in lines
+    return _gitignore_content_has_effective_cmoc_rule(content)
 
 
 def staged_diff_from_head(repo_root: Path) -> str:
@@ -1130,7 +1144,7 @@ def commit_cmoc_initialization_changes(
             run_git(repo_root, ["read-tree", "--empty"], env=env)
         else:
             run_git(repo_root, ["read-tree", "HEAD"], env=env)
-        if parent_hash is None and had_cmoc_rule:
+        if parent_hash is None:
             _stage_worktree_gitignore(repo_root, env)
         elif not had_cmoc_rule:
             _stage_gitignore_with_cmoc_rule_from_head(repo_root, env)
@@ -1769,8 +1783,15 @@ def _is_excluded_implementation_path(relative_path: str) -> bool:
 
 def _is_forbidden_apply_implementation_path(relative_path: str) -> bool:
     """apply の Codex 調査起点にしてはいけない path か判定する。"""
-    # root 直下 memo は prompt 上で読み書き禁止にしているため調査対象からも外す。
-    return relative_path == "memo" or relative_path.startswith("memo/")
+    # workspace-write で編集できない root 管理文書と禁止領域は調査対象からも外す。
+    return (
+        relative_path == "README.md"
+        or relative_path == "AGENTS.md"
+        or relative_path == "memo"
+        or relative_path.startswith("memo/")
+        or relative_path == ".agents"
+        or relative_path.startswith(".agents/")
+    )
 
 
 def read_session_start_commit(repo_root: Path, branch_name: str) -> str:
@@ -1982,8 +2003,7 @@ def _stage_gitignore_with_cmoc_rule_from_head(
     """HEAD の `.gitignore` に `/.cmoc/` だけを足した blob を stage する。"""
     # HEAD 側の内容を基準にすることで、作業ツリーの既存差分を commit から外す。
     head_text = _head_file_text(repo_root, ".gitignore") or ""
-    lines = [line.strip() for line in head_text.splitlines()]
-    if "/.cmoc/" in lines:
+    if _gitignore_content_has_effective_cmoc_rule(head_text):
         return
 
     # commit 対象にする `.gitignore` 内容を一時ファイル経由で git object 化する。
@@ -2053,11 +2073,10 @@ def _head_file_text(repo_root: Path, relative_path: str) -> str | None:
 
 def _ensure_cmoc_ignore_rule(repo_root: Path) -> bool:
     """`.gitignore` に oracle 指定の `/.cmoc/` 行を追加する。"""
-    # 既存 `.gitignore` を読み、必要な ignore 行の重複を避ける。
+    # broad rule ではなく、oracle 指定の専用行が有効な場合だけ重複を避ける。
     gitignore = repo_root / ".gitignore"
     existing = _read_gitignore_text(gitignore) if gitignore.exists() else ""
-    lines = [line.strip() for line in existing.splitlines()]
-    if "/.cmoc/" in lines:
+    if _gitignore_content_has_effective_cmoc_rule(existing):
         return False
 
     # 既存内容の末尾改行を整えてから ignore 行を追加する。
@@ -2101,8 +2120,7 @@ def _assert_cmoc_ignore_guarantee(
     """`.cmoc` 追跡対象外保証の完了条件を検証する。"""
     # tracked path と ignore probe の両方で保証状態を確認する。
     tracked = _tracked_cmoc_paths(repo_root, env=env)
-    probe = ".cmoc/.__cmoc_ignore_probe__"
-    ignored = _is_root_gitignored(repo_root, probe)
+    ignored = _is_cmoc_ignore_probe_ignored(repo_root)
     if tracked or not ignored:
         raise CmocError(
             ".cmoc が git 追跡対象外として初期化されていません。",
@@ -2111,7 +2129,8 @@ def _assert_cmoc_ignore_guarantee(
                 ".gitignore と git index を確認してください。",
                 "追跡済みの .cmoc ファイルは `cmoc init` で index から外してください。",
             ],
-            "\n".join(tracked) or f"probe が ignore されませんでした: {probe}",
+            "\n".join(tracked)
+            or f"probe が ignore されませんでした: {CMOC_IGNORE_PROBE_PATH}",
         )
 
 
@@ -2129,6 +2148,51 @@ def _is_root_gitignored(repo_root: Path, relative_path: str) -> bool:
     """root `.gitignore` の pattern だけで ignore 対象か判定する。"""
     # 単一 path の判定も集合判定の実装に揃える。
     return relative_path in _root_gitignored_paths(repo_root, [relative_path])
+
+
+def _gitignore_content_ignores_cmoc_probe(gitignore_content: str) -> bool:
+    """root `.gitignore` 内容が `.cmoc` probe を ignore するか返す。"""
+    return (
+        CMOC_IGNORE_PROBE_PATH
+        in _root_gitignored_paths_from_content(
+            [CMOC_IGNORE_PROBE_PATH],
+            gitignore_content,
+        )
+    )
+
+
+def _gitignore_content_has_effective_cmoc_rule(gitignore_content: str) -> bool:
+    """root `.gitignore` 内容に有効な `/.cmoc/` 専用行があるか返す。"""
+    return (
+        _gitignore_content_has_cmoc_rule_line(gitignore_content)
+        and _gitignore_content_ignores_cmoc_probe(gitignore_content)
+    )
+
+
+def _gitignore_content_has_cmoc_rule_line(gitignore_content: str) -> bool:
+    """root `.gitignore` 内容に oracle 指定の `/.cmoc/` 行があるか返す。"""
+    return any(line.strip() == "/.cmoc/" for line in gitignore_content.splitlines())
+
+
+def _is_cmoc_ignore_probe_ignored(repo_root: Path) -> bool:
+    """実リポジトリで `.cmoc` probe が ignore 対象か判定する。"""
+    result = run_git(
+        repo_root,
+        ["check-ignore", "-q", "--", CMOC_IGNORE_PROBE_PATH],
+        check=False,
+    )
+    if result.returncode == 0:
+        return True
+    if result.returncode == 1:
+        return False
+    raise CmocError(
+        ".cmoc ignore probe の評価に失敗しました。",
+        [
+            ".gitignore の構文を確認してからコマンドを再実行してください。",
+            "git check-ignore が実行できる状態にしてから再実行してください。",
+        ],
+        result.stderr.strip(),
+    )
 
 
 def _root_gitignored_paths(

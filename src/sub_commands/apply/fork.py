@@ -7,6 +7,7 @@ import re
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
+from contextvars import copy_context
 from dataclasses import dataclass
 from inspect import Parameter, signature
 from pathlib import Path
@@ -26,6 +27,7 @@ from commons.codex import (
 )
 from commons.command_runner import run_command
 from commons.errors import CmocError
+from commons.indexing import is_maintained_index_path
 from commons.indexing import maintain_indexes
 from commons.report_files import write_timestamped_report
 from commons.repo import (
@@ -34,7 +36,7 @@ from commons.repo import (
     changed_paths,
     clear_apply_process_id,
     current_branch,
-    ensure_cmoc_ignored,
+    ensure_cmoc_ignored_and_committed,
     filter_apply_implementation_file_paths,
     filter_apply_implementation_file_paths_at_commit,
     filter_oracle_file_paths,
@@ -58,16 +60,24 @@ from commons.timestamps import make_timestamp
 
 ApplyScope = Literal["rolling", "session", "full"]
 _APPLY_SCOPES = {"rolling", "session", "full"}
-APPLY_FORK_EXIT_CODE_CONVERGED = 0
-APPLY_FORK_EXIT_CODE_UNCONVERGED = 3
+APPLY_FORK_EXIT_CODE_SUCCESS = 0
+APPLY_FORK_EXIT_CODE_CONVERGED = APPLY_FORK_EXIT_CODE_SUCCESS
+# 未収束はエラーではないが、呼び出し元が収束と判別できる終了コードにする。
+APPLY_FORK_EXIT_CODE_UNCONVERGED = 10
 
 
 @dataclass(frozen=True)
 class _InvestigationTarget:
-    """不整合調査を開始する repo 内 path と snapshot 上の存在状態。"""
+    """不整合調査を開始する repo 内 path と存在状態。"""
 
     path: Path
-    deleted_at_snapshot: bool = False
+    exists_at_snapshot: bool = True
+    exists_in_worktree: bool = True
+
+    @property
+    def deleted_at_snapshot(self) -> bool:
+        """snapshot にも現在 worktree にもない履歴調査対象かを返す。"""
+        return not self.exists_at_snapshot and not self.exists_in_worktree
 
 
 @dataclass(frozen=True)
@@ -83,6 +93,7 @@ class _ApplyWorktreeCreationError(RuntimeError):
     """apply worktree 作成失敗時に、最後に実試行した候補を保持する。"""
 
     def __init__(self, message: str, last_plan: _ApplyWorktreePlan) -> None:
+        """復旧表示で参照する最後の worktree 作成計画を例外へ添付する。"""
         super().__init__(message)
         self.last_plan = last_plan
 
@@ -265,7 +276,9 @@ def cmoc_apply_impl(
                     repeat_improove_fixing_list
                 ),
                 scope=scope,
-            )
+            ),
+            command_path="cmoc apply fork",
+            non_error_exit_codes={APPLY_FORK_EXIT_CODE_UNCONVERGED},
         )
         return None
 
@@ -282,7 +295,6 @@ def cmoc_apply_impl(
             f"現在の branch: {session_branch or '(detached HEAD)'}",
         )
 
-    start_step(timer, 1, 6, "ensure .cmoc is ignored")
     session_id = session_id_from_branch(session_branch)
     state_root = session_state_root(repo_root)
     _validate_repeat_options(
@@ -290,20 +302,22 @@ def cmoc_apply_impl(
         repeat_improove_fixing_list,
     )
     _validate_apply_scope(scope)
-    ensure_cmoc_ignored(repo_root)
-    assert_no_uncommitted_changes(repo_root)
 
-    start_step(timer, 2, 6, "validate session state")
+    start_step(timer, 1, 6, "session 状態検証")
     state = read_session_state(state_root, session_id)
     session_start_commit = _validate_apply_fork_state(
         state,
         session_branch,
     )
     assert_no_uncommitted_changes(repo_root)
+
+    start_step(timer, 2, 6, ".cmoc ignore 確認")
+    ensure_cmoc_ignored_and_committed(repo_root)
+    assert_no_uncommitted_changes(repo_root)
     session_head_at_apply_start = ""
     oracle_snapshot_commit = ""
 
-    failed_stage = "create apply worktree"
+    failed_stage = "apply worktree 作成"
     apply_run_id = ""
     apply_branch = ""
     apply_worktree = state_root / ".cmoc" / "worktrees" / "apply" / session_id
@@ -326,8 +340,8 @@ def cmoc_apply_impl(
             session_head_at_apply_start = head_commit(repo_root)
             oracle_snapshot_commit = session_head_at_apply_start
 
-            failed_stage = "create apply worktree"
-            start_step(timer, 3, 6, "create apply worktree")
+            failed_stage = "apply worktree 作成"
+            start_step(timer, 3, 6, "apply worktree 作成")
             apply_start_needs_error_record = True
             apply_plan = _plan_apply_worktree(state_root, session_id)
             apply_run_id = apply_plan.apply_run_id
@@ -375,13 +389,19 @@ def cmoc_apply_impl(
                 raise
 
         # ユーザー向けステップとして INDEX.md を明示メンテナンスする。
-        failed_stage = "maintain INDEX.md files"
-        start_step(timer, 4, 6, "maintain INDEX.md files")
+        failed_stage = "INDEX.md メンテナンス"
+        start_step(timer, 4, 6, "INDEX.md メンテナンス")
+        before_index_head = head_commit(apply_worktree)
         _maintain_apply_indexes(apply_worktree)
+        _assert_forbidden_paths_unchanged_since(
+            apply_worktree,
+            before_index_head,
+            allow_maintained_index_paths=True,
+        )
 
         # 不整合調査と追従作業を指定回数まで反復する。
-        failed_stage = "要修正点の調査と適用"
-        start_step(timer, 5, 6, "要修正点の調査と適用")
+        failed_stage = "要修正点調査・適用"
+        start_step(timer, 5, 6, "要修正点調査・適用")
         completed = False
         dirty_oracle_paths: set[Path] | None = None
         dirty_implementation_paths: set[Path] | None = None
@@ -418,16 +438,16 @@ def cmoc_apply_impl(
                     discrepancies,
                 )
             )
-            found_dirty_evidences = bool(
-                next_dirty_oracle_paths or next_dirty_implementation_paths
-            )
+            # 要修正点が残る反復では、空集合も「全候補 dirty=false」
+            # という有効な dirty フラグ状態として次ループへ渡す。
+            found_dirty_evidences = bool(discrepancies)
             dirty_oracle_paths = (
                 next_dirty_oracle_paths if found_dirty_evidences else None
             )
             dirty_implementation_paths = next_dirty_implementation_paths
             discrepancy_counts.append(len(discrepancies))
             print(
-                "実装ループ "
+                "実装反復 "
                 f"({loop_index}/{repeat_investigate_and_fix}) 要修正点: "
                 f"{len(discrepancies)}"
             )
@@ -446,18 +466,19 @@ def cmoc_apply_impl(
                 dirty_implementation_paths = None
 
         # 要修正点 0 件の経路も含め、apply run 中に生じた差分を確定する。
-        # report 生成と最終出力も apply fork の処理範囲なので、
-        # completed は最後に確定する。
-        _assert_forbidden_paths_clean(apply_worktree)
+        _assert_forbidden_paths_clean(
+            apply_worktree,
+            allow_maintained_index_paths=True,
+        )
         _commit_all_changes(apply_worktree)
 
-        # 実行結果を人間向け report に変換する。
-        failed_stage = "write report"
-        start_step(timer, 6, 6, "write report")
         session_head_at_apply_finish = _session_branch_head_for_report(
             repo_root,
             session_branch,
         )
+        # 実行結果を人間向け report に変換する。
+        failed_stage = "report 書き込み"
+        start_step(timer, 6, 6, "report 書き込み")
         report_path = _write_apply_report(
             apply_worktree,
             state_root,
@@ -472,16 +493,16 @@ def cmoc_apply_impl(
             completed,
             discrepancy_counts,
         )
-        failed_stage = "write final output"
+        failed_stage = "final output 書き込み"
         print(f"apply run id: {apply_run_id}")
         print(str(report_path))
-        timer.report()
-        failed_stage = "mark apply completed"
+        failed_stage = "apply 完了記録"
         _mark_apply_completed(
             state_root,
             session_id,
             state,
         )
+        apply_start_needs_error_record = False
         if completed:
             return APPLY_FORK_EXIT_CODE_CONVERGED
         return APPLY_FORK_EXIT_CODE_UNCONVERGED
@@ -675,7 +696,7 @@ def _create_apply_worktree(
         )
         last_plan = plan
         print(
-            "create apply worktree attempt "
+            "apply worktree 作成試行 "
             f"({attempt}/10) {plan.apply_branch}"
         )
         branch_result = run_git(
@@ -857,7 +878,7 @@ def _investigate_discrepancies(
         timer,
         (*step_path, (1, 5)),
         None,
-        "調査対象選択",
+        "調査対象選定",
     )
     oracle_targets = _target_oracle_files(
         repo_root,
@@ -891,15 +912,24 @@ def _investigate_discrepancies(
         timer,
         (*step_path, (2, 5)),
         None,
-        "file 起点調査を並列実行",
+        "ファイル別調査を並列実行",
     )
     for job in jobs:
-        label = "oracle 調査" if job.kind == "oracle" else "実装調査"
+        label = (
+            "oracle 調査"
+            if job.kind == "oracle"
+            else "実装調査"
+        )
         print(f"{label} ({job.index}/{job.total}) {job.target.path}")
     if jobs:
         with ThreadPoolExecutor(max_workers=len(jobs)) as executor:
             futures = [
-                executor.submit(_run_investigation_job, repo_root, job)
+                executor.submit(
+                    copy_context().run,
+                    _run_investigation_job,
+                    repo_root,
+                    job,
+                )
                 for job in jobs
             ]
             for future in futures:
@@ -925,7 +955,10 @@ def _run_investigation_job(
         purpose = f"oracle 調査 {job.target.path.relative_to(repo_root)}"
     else:
         prompt = _implementation_investigation_prompt(repo_root, job.target)
-        purpose = f"実装調査 {job.target.path.relative_to(repo_root)}"
+        purpose = (
+            "実装調査 "
+            f"{job.target.path.relative_to(repo_root)}"
+        )
     payload = parse_json_object(
         run_codex_exec(
             repo_root,
@@ -959,10 +992,10 @@ def _target_oracle_files(
         return [
             _InvestigationTarget(
                 path,
-                deleted_at_snapshot=path not in snapshot_paths,
+                exists_at_snapshot=path in snapshot_paths,
+                exists_in_worktree=path.exists(),
             )
             for path in sorted(dirty_paths)
-            if path in snapshot_paths or path.exists()
         ]
     if not partial:
         return [_InvestigationTarget(path) for path in all_files]
@@ -999,10 +1032,10 @@ def _target_implementation_files(
         return [
             _InvestigationTarget(
                 path,
-                deleted_at_snapshot=path not in snapshot_paths,
+                exists_at_snapshot=path in snapshot_paths,
+                exists_in_worktree=path.exists(),
             )
             for path in sorted(dirty_paths)
-            if path in snapshot_paths or path.exists()
         ]
     if not partial:
         return [_InvestigationTarget(path) for path in all_files]
@@ -1130,10 +1163,13 @@ def _changed_files_between_commits(
     base_commit: str,
     commit_hash: str,
     pathspec: str,
+    *,
+    include_deleted: bool = False,
 ) -> list[str]:
     """指定 commit 範囲で変更された path を返す。
 
-    削除差分は対象外にし、rename/copy は変更後 path だけを返す。
+    既定では削除差分は対象外にし、rename/copy は変更後 path だけを返す。
+    include_deleted=True では削除 path と rename 前 path も返す。
     """
     result = run_git(
         repo_root,
@@ -1151,10 +1187,16 @@ def _changed_files_between_commits(
     paths: set[str] = set()
     for status, status_paths in git_name_status_entries(result.stdout):
         status_kind = status[:1]
-        if status_kind not in {"A", "C", "M", "R", "T"}:
+        if status_kind not in {"A", "C", "D", "M", "R", "T"}:
+            continue
+        if status_kind == "D":
+            if include_deleted and status_paths:
+                paths.add(status_paths[0])
             continue
         if status_kind in {"C", "R"}:
             if len(status_paths) >= 2:
+                if include_deleted and status_kind == "R":
+                    paths.add(status_paths[0])
                 paths.add(status_paths[1])
             continue
         if status_paths:
@@ -1323,13 +1365,20 @@ def _changed_implementation_files_since(
     commit_hash: str,
 ) -> set[Path]:
     """指定 commit 範囲で変更された実装 path を絶対 path 集合で返す。"""
-    return set(
-        _changed_implementation_files_at_commit(
+    return {
+        repo_root / path
+        for path in _filter_implementation_file_paths_at_commit(
             repo_root,
-            base_commit,
             commit_hash,
+            _changed_files_between_commits(
+                repo_root,
+                base_commit,
+                commit_hash,
+                ".",
+                include_deleted=True,
+            ),
         )
-    )
+    }
 
 
 def _apply_discrepancies(
@@ -1359,7 +1408,15 @@ def _apply_discrepancies(
             expect_json=False,
             index_excluded_roots=_apply_index_excluded_roots(repo_root),
         )
-        _assert_forbidden_paths_clean(repo_root)
+        _assert_forbidden_paths_unchanged_since(
+            repo_root,
+            before_head,
+            allow_maintained_index_paths=True,
+        )
+        _assert_forbidden_paths_clean(
+            repo_root,
+            allow_maintained_index_paths=True,
+        )
         _commit_all_changes(repo_root)
         after_head = head_commit(repo_root)
         if dirty_implementation_paths is not None and after_head != before_head:
@@ -1379,8 +1436,17 @@ def _commit_all_changes(repo_root: Path) -> None:
         return
 
     # 実装差分によって INDEX.md が古くなった場合は commit 前に更新する。
+    before_index_head = head_commit(repo_root)
     _maintain_apply_indexes(repo_root)
-    _assert_forbidden_paths_clean(repo_root)
+    _assert_forbidden_paths_unchanged_since(
+        repo_root,
+        before_index_head,
+        allow_maintained_index_paths=True,
+    )
+    _assert_forbidden_paths_clean(
+        repo_root,
+        allow_maintained_index_paths=True,
+    )
     if not changed_paths(repo_root):
         return
 
@@ -1426,17 +1492,26 @@ def _maintain_indexes_accepts_excluded_roots() -> bool:
 
 
 def _apply_index_excluded_roots(repo_root: Path) -> list[Path]:
-    """apply worktree の INDEX メンテナンスで書かない root 群を返す。"""
+    """apply worktree の INDEX メンテナンス除外 root 群を返す。"""
     return [repo_root / "oracles"]
 
 
-def _assert_forbidden_paths_clean(repo_root: Path) -> None:
+def _assert_forbidden_paths_clean(
+    repo_root: Path,
+    *,
+    allow_maintained_index_paths: bool = False,
+) -> None:
     """Codex CLI が編集禁止領域を変更していないことを確認する。"""
     # prompt 上の禁止領域に差分があれば、commit 前に中断する。
     forbidden = [
         path
         for path in _changed_paths_for_forbidden_check(repo_root)
         if _is_forbidden_changed_path(path)
+        and not _is_allowed_maintained_index_path_in_forbidden_check(
+            repo_root,
+            path,
+            allow_maintained_index_paths,
+        )
     ]
     if forbidden:
         raise CmocError(
@@ -1449,6 +1524,53 @@ def _assert_forbidden_paths_clean(repo_root: Path) -> None:
         )
 
 
+def _assert_forbidden_paths_unchanged_since(
+    repo_root: Path,
+    before_commit: str,
+    *,
+    allow_maintained_index_paths: bool = False,
+) -> None:
+    """Codex CLI 中の commit 済み禁止 path 変更を検出する。"""
+    forbidden = [
+        path
+        for path in _changed_paths_since_for_forbidden_check(
+            repo_root,
+            before_commit,
+        )
+        if _is_forbidden_changed_path(path)
+        and not _is_allowed_maintained_index_path_in_forbidden_check(
+            repo_root,
+            path,
+            allow_maintained_index_paths,
+        )
+    ]
+    if forbidden:
+        raise CmocError(
+            "実装作業により編集禁止パスが変更されました。",
+            [
+                "編集禁止パスの変更を確認し、手動で解消してください。",
+                "作業ツリーが許容できる状態になってから `cmoc apply` を再実行してください。",
+            ],
+            "\n".join(forbidden),
+        )
+
+
+def _is_allowed_maintained_index_path_in_forbidden_check(
+    repo_root: Path,
+    relative_path: str,
+    allow_maintained_index_paths: bool,
+) -> bool:
+    """cmoc 管理 INDEX.md の自動差分だけ禁止 path 検査で許可する。"""
+    return (
+        allow_maintained_index_paths
+        and is_maintained_index_path(
+            repo_root,
+            relative_path,
+            excluded_index_roots=_apply_index_excluded_roots(repo_root),
+        )
+    )
+
+
 def _changed_paths_for_forbidden_check(repo_root: Path) -> list[str]:
     """禁止 path 検査用に未追跡ディレクトリ内の file path まで展開する。"""
     result = run_git(
@@ -1458,13 +1580,40 @@ def _changed_paths_for_forbidden_check(repo_root: Path) -> list[str]:
     return [path for _status, path in git_status_paths(result.stdout)]
 
 
+def _changed_paths_since_for_forbidden_check(
+    repo_root: Path,
+    before_commit: str,
+) -> list[str]:
+    """禁止 path 検査用に commit 範囲内の変更 path を列挙する。"""
+    result = run_git(
+        repo_root,
+        [
+            "diff",
+            "--name-status",
+            "-z",
+            "-M",
+            "-C",
+            "--find-copies-harder",
+            f"{before_commit}..HEAD",
+            "--",
+        ],
+    )
+    paths: list[str] = []
+    for status, entry_paths in git_name_status_entries(result.stdout):
+        if status.startswith("R"):
+            paths.extend(entry_paths)
+        elif entry_paths:
+            paths.append(entry_paths[-1])
+    return paths
+
+
 def _is_forbidden_changed_path(relative_path: str) -> bool:
     """workspace-write prompt で禁止した変更 path か判定する。"""
     return (
-        relative_path == "oracles"
-        or relative_path.startswith("oracles/")
-        or relative_path == "README.md"
+        relative_path == "README.md"
         or relative_path == "AGENTS.md"
+        or relative_path == "oracles"
+        or relative_path.startswith("oracles/")
         or relative_path == ".cmoc"
         or relative_path.startswith(".cmoc/")
         or relative_path == ".agents"
@@ -1499,6 +1648,7 @@ def _write_apply_report(
     )
 
     def build_report(generated_at: str) -> str:
+        """同一内容の report を一貫した front matter 付きで再生成する。"""
         report = _apply_report_with_front_matter(
             report_body=_render_apply_report_body(
                 apply_branch=branch_name,
@@ -1865,6 +2015,7 @@ def _write_apply_error_report(
     body = "\n".join(body_lines).strip()
 
     def build_report(generated_at: str) -> str:
+        """エラー終了 report を衝突回避後の生成時刻で再生成する。"""
         report = _apply_report_with_front_matter(
             report_body=body,
             generated_at=generated_at,
@@ -2183,13 +2334,28 @@ def _implementation_investigation_prompt(
 
 
 def _investigation_target_note(target: _InvestigationTarget) -> str:
-    """削除済み target の履歴調査が必要なことを prompt に明示する。"""
-    if target.deleted_at_snapshot:
+    """target の存在状態に応じた調査観点を prompt に明示する。"""
+    if target.exists_at_snapshot:
+        if target.exists_in_worktree:
+            return "この起点 path は調査対象として固定された commit 時点に存在するファイルです。"
+        return (
+            "この起点 path は調査対象として固定された commit 時点には存在し、"
+            "現在の worktree には存在しません。"
+            "前回までの修正で削除されたファイルとして、"
+            "削除差分や履歴上の変更内容を確認して調査してください。"
+        )
+    if target.exists_in_worktree:
+        return (
+            "この起点 path は調査対象として固定された commit 時点では存在せず、"
+            "現在の worktree には存在します。"
+            "前回までの修正で新規作成されたファイルとして、"
+            "現在の worktree の内容を確認して調査してください。"
+        )
+    else:
         return (
             "この起点 path は調査対象として固定された commit 時点では存在しません。"
             "削除差分や履歴上の変更内容を確認して調査してください。"
         )
-    return "この起点 path は調査対象として固定された commit 時点に存在するファイルです。"
 
 
 def _organize_prompt(

@@ -409,7 +409,7 @@ def test_run_codex_exec_notifies_console_and_subcommand_log(
         output = run_codex_exec(
             repo,
             "prompt",
-            purpose="unit test codex 呼び出し",
+            purpose="unit test codex call",
             read_only=True,
         )
 
@@ -423,13 +423,13 @@ def test_run_codex_exec_notifies_console_and_subcommand_log(
     ]
     assert output == "ok\n"
     assert "## Codex CLI 呼び出し完了" in captured
-    assert "- purpose: unit test codex 呼び出し" in captured
+    assert "- purpose: unit test codex call" in captured
     assert f"- log path: {repo}/.cmoc/logs/codex_exec/call/" in captured
     assert "- elapsed:" in captured
     assert "- returncode: 0" in captured
     assert any(
         event["event"] == "codex_exec_call"
-        and event["purpose"] == "unit test codex 呼び出し"
+        and event["purpose"] == "unit test codex call"
         and event["returncode"] == 0
         for event in log_events
     )
@@ -1109,6 +1109,69 @@ def test_run_codex_exec_rejects_committed_oracle_change_after_workspace_write(
     assert _git(repo, "status", "--porcelain", "--", "oracles").stdout == ""
 
 
+def test_run_codex_exec_rejects_merge_commit_oracle_change_after_workspace_write(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """merge commit 自体に含まれる oracle 変更を commit range から拒否する。"""
+    repo = _init_git_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("initial spec\n", encoding="utf-8")
+    (repo / "app.py").write_text("base\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md", "app.py")
+    _git(repo, "commit", "-m", "add oracle and app")
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                "MAIN=$(git branch --show-current)",
+                "git checkout -b side >/dev/null",
+                "echo 'side' > app.py",
+                "git add app.py",
+                "git commit -m 'side app change' >/dev/null",
+                "git checkout \"$MAIN\" >/dev/null",
+                "echo 'main' > app.py",
+                "git add app.py",
+                "git commit -m 'main app change' >/dev/null",
+                "git merge --no-ff side >/dev/null 2>&1",
+                "echo 'merged' > app.py",
+                "echo 'merge changed oracle' > oracles/spec.md",
+                "git add app.py oracles/spec.md",
+                "git commit -m 'merge side with oracle change' >/dev/null",
+                "echo 'ok' > \"$LAST\"",
+                "echo '{\"event\":\"done\"}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(
+            repo,
+            "prompt",
+            read_only=False,
+            skip_index_maintenance=True,
+        )
+
+    assert "Codex CLI 実行中の commit range 変更:" in error.value.detail
+    assert "oracles/spec.md" in error.value.detail
+    assert _git(repo, "status", "--porcelain", "--", "oracles").stdout == ""
+
+
 def test_run_codex_exec_rejects_committed_oracle_hidden_by_changed_gitignore(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -1243,6 +1306,72 @@ def test_run_codex_exec_rejects_hidden_oracle_commit_after_workspace_write(
                 "echo 'hidden by codex' > oracles/spec.md",
                 "git add oracles/spec.md",
                 "git commit -m 'codex hidden oracle change' >/dev/null",
+                f"git reset --hard {before_head} >/dev/null",
+                "echo 'ok' > \"$LAST\"",
+                "echo '{\"event\":\"done\"}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(
+            repo,
+            "prompt",
+            read_only=False,
+            skip_index_maintenance=True,
+        )
+
+    assert "Codex CLI 実行中の commit range 変更:" in error.value.detail
+    assert "oracles/spec.md" in error.value.detail
+    assert _git(repo, "rev-parse", "HEAD").stdout.strip() == before_head
+    assert _git(repo, "status", "--porcelain", "--", "oracles").stdout == ""
+
+
+def test_run_codex_exec_rejects_hidden_merge_commit_oracle_change(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """oracle 変更 merge commit を reset で隠しても HEAD reflog から拒否する。"""
+    repo = _init_git_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("initial spec\n", encoding="utf-8")
+    (repo / "app.py").write_text("base\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md", "app.py")
+    _git(repo, "commit", "-m", "add oracle and app")
+    before_head = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                "MAIN=$(git branch --show-current)",
+                "git checkout -b side >/dev/null",
+                "echo 'side' > app.py",
+                "git add app.py",
+                "git commit -m 'side app change' >/dev/null",
+                "git checkout \"$MAIN\" >/dev/null",
+                "echo 'main' > app.py",
+                "git add app.py",
+                "git commit -m 'main app change' >/dev/null",
+                "git merge --no-ff side >/dev/null 2>&1",
+                "echo 'merged' > app.py",
+                "echo 'merge changed oracle' > oracles/spec.md",
+                "git add app.py oracles/spec.md",
+                "git commit -m 'merge side with oracle change' >/dev/null",
                 f"git reset --hard {before_head} >/dev/null",
                 "echo 'ok' > \"$LAST\"",
                 "echo '{\"event\":\"done\"}'",
@@ -1554,6 +1683,129 @@ def test_subcommand_log_from_apply_worktree_writes_to_main_repo(
         (apply_worktree / ".cmoc" / "logs" / "sub_commands").glob("*.jsonl")
     )
     assert len(main_logs) == 1
+    assert apply_logs == []
+
+
+def test_run_codex_exec_from_apply_worktree_writes_logs_to_main_repo(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """apply worktree の Codex CLI 証跡は所有元 repo 側へ集約する。"""
+    repo = _init_git_repo(tmp_path)
+    session_id = "2026-05-28_05-10_00_000000000"
+    apply_run_id = "2026-05-28_05-11_00_000000000"
+    apply_worktree = (
+        repo / ".cmoc" / "worktrees" / "apply" / session_id / apply_run_id
+    )
+    apply_worktree.parent.mkdir(parents=True)
+    _git(
+        repo,
+        "worktree",
+        "add",
+        "-b",
+        f"cmoc/apply/{session_id}/{apply_run_id}",
+        str(apply_worktree),
+        "HEAD",
+    )
+    cwd_seen = tmp_path / "cwd_seen.txt"
+    schema_arg = tmp_path / "schema_arg.txt"
+    last_arg = tmp_path / "last_arg.txt"
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                "LAST=''",
+                "SCHEMA=''",
+                "PREV=''",
+                "for ARG in \"$@\"; do",
+                "  if [ \"$PREV\" = \"--output-last-message\" ]; then",
+                "    LAST=\"$ARG\"",
+                "  fi",
+                "  if [ \"$PREV\" = \"--output-schema\" ]; then",
+                "    SCHEMA=\"$ARG\"",
+                "  fi",
+                "  PREV=\"$ARG\"",
+                "done",
+                f"pwd > {cwd_seen}",
+                f"printf '%s\\n' \"$SCHEMA\" > {schema_arg}",
+                f"printf '%s\\n' \"$LAST\" > {last_arg}",
+                "printf '{\"ok\":true}\\n' > \"$LAST\"",
+                "echo '{\"event\":\"done\"}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    output = run_codex_exec(
+        apply_worktree,
+        "prompt",
+        read_only=True,
+        expect_json=True,
+        output_schema=_BOOLEAN_SCHEMA,
+        skip_index_maintenance=True,
+    )
+
+    assert output == '{"ok":true}\n'
+    assert Path(cwd_seen.read_text(encoding="utf-8").strip()) == apply_worktree
+    call_logs = list(
+        (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.md")
+    )
+    last_messages = list(
+        (repo / ".cmoc" / "logs" / "codex_exec" / "output_last_message").glob(
+            "*.json"
+        )
+    )
+    schemas = list(
+        (repo / ".cmoc" / "logs" / "codex_exec" / "output_schema").glob("*.log")
+    )
+    assert len(call_logs) == 1
+    assert len(last_messages) == 1
+    assert len(schemas) == 1
+    assert schema_arg.read_text(encoding="utf-8").strip() == str(schemas[0])
+    assert last_arg.read_text(encoding="utf-8").strip() == str(last_messages[0])
+    assert not (apply_worktree / ".cmoc" / "logs" / "codex_exec").exists()
+
+
+def test_subcommand_log_from_linked_apply_worktree_writes_to_linked_repo(
+    tmp_path: Path,
+) -> None:
+    """linked worktree 配下の apply worktree では linked repo-root 側へログを書く。"""
+    repo = _init_git_repo(tmp_path)
+    linked = tmp_path / "linked"
+    _git(repo, "worktree", "add", "-b", "feature", str(linked), "HEAD")
+    session_id = "2026-05-28_05-10_00_000000000"
+    apply_run_id = "2026-05-28_05-11_00_000000000"
+    apply_worktree = (
+        linked / ".cmoc" / "worktrees" / "apply" / session_id / apply_run_id
+    )
+    apply_worktree.parent.mkdir(parents=True)
+    _git(
+        linked,
+        "worktree",
+        "add",
+        "-b",
+        f"cmoc/apply/{session_id}/{apply_run_id}",
+        str(apply_worktree),
+        "HEAD",
+    )
+
+    with subcommand_log(apply_worktree):
+        print("linked apply worktree invocation")
+
+    main_logs = list((repo / ".cmoc" / "logs" / "sub_commands").glob("*.jsonl"))
+    linked_logs = list(
+        (linked / ".cmoc" / "logs" / "sub_commands").glob("*.jsonl")
+    )
+    apply_logs = list(
+        (apply_worktree / ".cmoc" / "logs" / "sub_commands").glob("*.jsonl")
+    )
+    assert main_logs == []
+    assert len(linked_logs) == 1
     assert apply_logs == []
 
 
@@ -2542,6 +2794,7 @@ def test_resume_command_fails_when_resume_id_is_missing() -> None:
 def test_run_codex_exec_retries_zero_exit_capacity_stdout_jsonl(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """0 終了でも stdout JSONL が capacity なら同じ条件で再実行する。"""
     repo = tmp_path / "repo"
@@ -2596,11 +2849,14 @@ def test_run_codex_exec_retries_zero_exit_capacity_stdout_jsonl(
     monkeypatch.setattr("commons.indexing.maintain_indexes", fake_maintain)
 
     output = run_codex_exec(repo, "prompt", read_only=True)
+    captured = capsys.readouterr().out
 
     log_files = sorted(
         (repo / ".cmoc" / "logs" / "codex_exec" / "call").glob("*.md")
     )
     assert output.strip() == "done"
+    assert " 0h  0m  5.0s 後に codex exec を再試行します (1/8)" in captured
+    assert "5 sec 後" not in captured
     assert state.read_text(encoding="utf-8").strip() == "2"
     assert sleeps == [5]
     assert calls == [repo, repo]

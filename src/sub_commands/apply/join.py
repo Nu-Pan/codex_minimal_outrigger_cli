@@ -10,20 +10,20 @@ from typing import Iterator
 
 from commons.command_runner import run_command
 from commons.errors import CmocError
-from commons.indexing import is_maintained_index_path
+from commons.indexing import is_maintained_index_path_at_commit
 from commons.repo import (
     apply_worktree_path_from_branch,
     assert_no_uncommitted_changes,
     clear_apply_process_id,
     current_branch,
-    filter_oracle_file_paths,
+    filter_apply_implementation_file_paths_at_commit,
     git_name_only_paths,
     git_name_status_entries,
     is_apply_branch,
-    is_apply_implementation_path,
     is_session_branch,
     read_session_state,
     resolve_session_home_branch,
+    root_gitignored_paths_at_commit,
     run_git,
     session_id_from_branch,
     session_state_repo_root,
@@ -44,12 +44,13 @@ def cmoc_apply_join_impl(
             lambda resolved_repo_root: cmoc_apply_join_impl(
                 resolved_repo_root,
                 force_resolve=force_resolve,
-            )
+            ),
+            command_path="cmoc apply join",
         )
         return
 
     timer = StepTimer("apply join")
-    start_step(timer, 1, 5, "validate apply state")
+    start_step(timer, 1, 5, "apply 状態検証")
     branch_name = current_branch(repo_root)
     session_id = session_id_from_branch(branch_name)
     cmoc_root = session_state_repo_root(repo_root, session_id)
@@ -69,7 +70,7 @@ def cmoc_apply_join_impl(
     if join_state.apply_worktree is not None and join_state.apply_worktree.exists():
         assert_no_uncommitted_changes(join_state.apply_worktree)
 
-    start_step(timer, 2, 5, "inspect unexpected diffs")
+    start_step(timer, 2, 5, "想定外差分確認")
     unexpected = _unexpected_diffs(cmoc_root, join_state)
     if unexpected and not force_resolve:
         raise CmocError(
@@ -81,14 +82,14 @@ def cmoc_apply_join_impl(
             "\n".join(unexpected),
         )
 
-    start_step(timer, 3, 5, "resolve unexpected diffs")
+    start_step(timer, 3, 5, "想定外差分解消")
     if unexpected:
         _force_resolve_unexpected_diffs(cmoc_root, join_state)
         print("force-resolved unexpected diffs:")
         for line in unexpected:
             print(f"- {line}")
 
-    start_step(timer, 4, 5, "merge apply branch")
+    start_step(timer, 4, 5, "apply branch merge")
     run_git(cmoc_root, ["switch", join_state.session_branch])
     merge_result = run_git(
         cmoc_root,
@@ -114,12 +115,10 @@ def cmoc_apply_join_impl(
                 path for path in unmerged if not _is_index_path(path)
             ]
         if non_index_conflicts or not index_conflicts:
-            if auto_resolved_index_conflicts and unmerged:
-                detail = "\n".join(["unmerged paths:", *unmerged]).strip()
+            if unmerged:
+                detail = _unmerged_paths_detail(cmoc_root, unmerged)
             else:
                 detail = merge_result.stderr.strip()
-            if unmerged and not detail.startswith("unmerged paths:"):
-                detail = "\n".join(["unmerged paths:", *unmerged, detail]).strip()
             raise CmocError(
                 "apply branch の merge で conflict が発生しました。",
                 [
@@ -129,7 +128,7 @@ def cmoc_apply_join_impl(
                 detail,
             )
 
-    start_step(timer, 5, 5, "record ready apply state")
+    start_step(timer, 5, 5, "apply ready 状態記録")
     cleanup_evidence = _snapshot_cleanup_evidence(cmoc_root, join_state)
     _mark_apply_ready(
         cmoc_root,
@@ -141,7 +140,6 @@ def cmoc_apply_join_impl(
             state,
             join_state.session_branch,
         ),
-        cleanup_evidence.apply_result,
     )
     warnings = _cleanup_apply_artifacts(
         cmoc_root,
@@ -154,10 +152,9 @@ def cmoc_apply_join_impl(
     if auto_resolved_index_conflicts:
         print("auto-resolved INDEX.md conflicts:")
         for path in auto_resolved_index_conflicts:
-            print(f"- {path}")
+            print(f"- {_display_repo_path(cmoc_root, path)}")
     for warning in warnings:
         print(f"warning: {warning}")
-    timer.report()
 
 
 class _JoinState:
@@ -171,6 +168,7 @@ class _JoinState:
         apply_worktree: Path | None,
         oracle_snapshot_commit: str,
     ) -> None:
+        """検証済み state から join 実行に必要な識別子を固定する。"""
         self.session_branch = session_branch
         self.apply_branch = apply_branch
         self.apply_worktree = apply_worktree
@@ -187,6 +185,7 @@ class _CleanupEvidence:
         apply_result: str | None,
         warnings: list[str],
     ) -> None:
+        """cleanup 判断で後続の state 変更前に参照する証跡を固定する。"""
         self.report_saved = report_saved
         self.apply_result = apply_result
         self.warnings = warnings
@@ -196,6 +195,7 @@ class _ChangedPathEntry:
     """1 つの git diff entry が触る path 群。"""
 
     def __init__(self, paths: list[str]) -> None:
+        """rename など複数 path を含む diff entry の比較対象を保持する。"""
         self.paths = paths
 
 
@@ -328,10 +328,16 @@ def _unexpected_diffs(repo_root: Path, join_state: _JoinState) -> list[str]:
         invalid_paths = [
             path
             for path in entry.paths
-            if not _is_apply_branch_expected_path(repo_root, path)
+            if not _is_apply_branch_expected_path(
+                repo_root,
+                join_state.oracle_snapshot_commit,
+                path,
+            )
         ]
         for path in invalid_paths:
-            unexpected.append(f"{join_state.apply_branch}: {path}")
+            unexpected.append(
+                _display_branch_path(repo_root, join_state.apply_branch, path)
+            )
 
     session_entries = _changed_path_entries_between(
         repo_root,
@@ -342,11 +348,37 @@ def _unexpected_diffs(repo_root: Path, join_state: _JoinState) -> list[str]:
         invalid_paths = [
             path
             for path in entry.paths
-            if not _is_session_branch_expected_path(repo_root, path)
+            if not _is_session_branch_expected_path(
+                repo_root,
+                join_state.session_branch,
+                path,
+            )
         ]
         for path in invalid_paths:
-            unexpected.append(f"{join_state.session_branch}: {path}")
+            unexpected.append(
+                _display_branch_path(repo_root, join_state.session_branch, path)
+            )
     return unexpected
+
+
+def _display_branch_path(repo_root: Path, branch_name: str, relative_path: str) -> str:
+    """branch 名と repo 内 path をユーザー表示用に整形する。"""
+    return f"{branch_name}: {_display_repo_path(repo_root, relative_path)}"
+
+
+def _display_repo_path(repo_root: Path, relative_path: str) -> str:
+    """repo 相対 path を区切り付き絶対 path 表現にする。"""
+    path = Path(relative_path)
+    if not path.is_absolute():
+        path = repo_root / path
+    return json.dumps(path.resolve().as_posix())
+
+
+def _unmerged_paths_detail(repo_root: Path, unmerged: list[str]) -> str:
+    """unmerged path detail をユーザー表示用に整形する。"""
+    return "\n".join(
+        ["unmerged paths:", *[_display_repo_path(repo_root, path) for path in unmerged]]
+    ).strip()
 
 
 def _changed_path_entries_between(
@@ -384,21 +416,30 @@ def _is_oracle_path(path: str) -> bool:
     return path == "oracles" or path.startswith("oracles/")
 
 
-def _is_apply_branch_expected_path(repo_root: Path, path: str) -> bool:
+def _is_apply_branch_expected_path(
+    repo_root: Path,
+    oracle_snapshot_commit: str,
+    path: str,
+) -> bool:
     """apply branch 側で cmoc が積み得る想定内 path か判定する。"""
+    if _is_snapshot_index_path(repo_root, oracle_snapshot_commit, path):
+        return True
     if _is_apply_branch_forbidden_path(path):
         return False
-    if is_maintained_index_path(repo_root, path):
-        return True
-    return is_apply_implementation_path(repo_root, path)
+    return (
+        filter_apply_implementation_file_paths_at_commit(
+            repo_root,
+            oracle_snapshot_commit,
+            [path],
+        )
+        == [path]
+    )
 
 
 def _is_apply_branch_forbidden_path(path: str) -> bool:
     """apply branch 側の正規成果物として扱わない path か判定する。"""
     return (
         _is_oracle_path(path)
-        or path == "README.md"
-        or path == "AGENTS.md"
         or path == ".cmoc"
         or path.startswith(".cmoc/")
         or path == ".agents"
@@ -407,12 +448,31 @@ def _is_apply_branch_forbidden_path(path: str) -> bool:
     )
 
 
-def _is_session_branch_expected_path(repo_root: Path, path: str) -> bool:
+def _is_session_branch_expected_path(
+    repo_root: Path,
+    session_branch: str,
+    path: str,
+) -> bool:
     """session branch 側で利用者が編集し得る想定内 path か判定する。"""
     return (
-        filter_oracle_file_paths(repo_root, [path]) == [path]
+        _is_session_branch_oracle_path_at_commit(repo_root, session_branch, path)
         or _is_memo_path(path)
         or _is_index_path(path)
+    )
+
+
+def _is_session_branch_oracle_path_at_commit(
+    repo_root: Path,
+    commit_hash: str,
+    path: str,
+) -> bool:
+    """session branch 側で利用者が編集し得る oracle file path か判定する。"""
+    if not path.startswith("oracles/") or Path(path).name == "INDEX.md":
+        return False
+    return path not in root_gitignored_paths_at_commit(
+        repo_root,
+        commit_hash,
+        [path],
     )
 
 
@@ -424,6 +484,19 @@ def _is_memo_path(path: str) -> bool:
 def _is_index_path(path: str) -> bool:
     """cmoc が再生成可能な INDEX.md path か判定する。"""
     return Path(path).name == "INDEX.md"
+
+
+def _is_snapshot_index_path(
+    repo_root: Path,
+    oracle_snapshot_commit: str,
+    path: str,
+) -> bool:
+    """snapshot 時点でも INDEX 配置対象だった path か判定する。"""
+    return is_maintained_index_path_at_commit(
+        repo_root,
+        oracle_snapshot_commit,
+        path,
+    )
 
 
 def _force_resolve_unexpected_diffs(
@@ -441,7 +514,11 @@ def _force_resolve_unexpected_diffs(
                 join_state.oracle_snapshot_commit,
                 join_state.apply_branch,
             ),
-            lambda path: _is_apply_branch_expected_path(repo_root, path),
+            lambda path: _is_apply_branch_expected_path(
+                repo_root,
+                join_state.oracle_snapshot_commit,
+                path,
+            ),
         ),
         join_state.apply_worktree,
     )
@@ -455,7 +532,11 @@ def _force_resolve_unexpected_diffs(
                 join_state.oracle_snapshot_commit,
                 join_state.session_branch,
             ),
-            lambda path: _is_session_branch_expected_path(repo_root, path),
+            lambda path: _is_session_branch_expected_path(
+                repo_root,
+                join_state.session_branch,
+                path,
+            ),
         ),
         repo_root,
     )
@@ -611,13 +692,9 @@ def _resolve_index_conflicts(
         path for path in remaining if _is_index_path(path)
     ]
     if remaining_index_conflicts or (commit_merge and remaining):
-        detail = "\n".join(
-            [
-                "unmerged paths:",
-                *remaining,
-                merge_stderr,
-            ]
-        ).strip()
+        detail = _unmerged_paths_detail(repo_root, remaining)
+        if not detail:
+            detail = merge_stderr
         raise CmocError(
             "INDEX.md conflict の自動解消に失敗しました。",
             [
@@ -654,7 +731,6 @@ def _mark_apply_ready(
     state: dict[str, object],
     oracle_snapshot_commit: str,
     session_home_branch: str,
-    apply_result: str | None,
 ) -> None:
     """最後に join した snapshot を記録し、apply セクションを ready に戻す。"""
     session = state.get("session")
@@ -669,10 +745,6 @@ def _mark_apply_ready(
         )
     session["session_home_branch"] = session_home_branch
     session["last_joined_apply_oracle_snapshot_commit"] = oracle_snapshot_commit
-    if apply_result is not None and apply_result.strip() != "":
-        session["last_joined_apply_result"] = apply_result
-    else:
-        session.pop("last_joined_apply_result", None)
     state["apply"] = {
         "state": "ready",
         "apply_branch": None,
@@ -836,10 +908,12 @@ def _cleanup_preconditions_hold(
         return False
     if not cleanup_evidence.report_saved:
         return False
-    result = session.get("last_joined_apply_result")
-    if not isinstance(result, str) or result.strip() == "":
+    if (
+        cleanup_evidence.apply_result is None
+        or cleanup_evidence.apply_result.strip() == ""
+    ):
         warnings.append(
-            "apply cleanup skipped: apply result was not saved in session state"
+            "apply cleanup skipped: saved apply report does not contain result metadata"
         )
         return False
     ancestor = run_git(

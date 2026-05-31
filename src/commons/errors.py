@@ -30,7 +30,7 @@ class CmocError(RuntimeError):
 
 
 def format_error_report(error: BaseException) -> str:
-    """仕様で要求される stdout 向けエラーレポートを作る。"""
+    """仕様で要求される markdown 形式のエラーレポートを作る。"""
     # CmocError は利用者向け action/detail をそのまま使う。
     if isinstance(error, CmocError):
         actions = error.actions
@@ -44,25 +44,21 @@ def format_error_report(error: BaseException) -> str:
         detail = _format_exception_detail(error)
         message = error.__class__.__name__
 
-    # エラー内容と復旧操作を機械的に並べる。
+    # コンソールログ規則に合わせて、区切りは markdown 見出しにする。
     lines = [
-        "ERROR",
-        "",
-        "Summary:",
+        "# ERROR",
+        "## Summary",
         message,
-        "",
-        "Next actions:",
+        "## Next actions",
     ]
     for action in actions:
         lines.append(f"- {action}")
     lines.extend(
         [
-            "",
-            "Detail:",
-            detail,
-            "",
-            "Call stack:",
-            _format_call_stack(error),
+            "## Detail",
+            *_non_blank_lines(detail),
+            "## Call stack",
+            *_non_blank_lines(_format_call_stack(error)),
         ]
     )
     return "\n".join(lines)
@@ -87,23 +83,30 @@ def _format_called_process_error_detail(error: subprocess.CalledProcessError) ->
     """subprocess が capture した stdout/stderr を Detail に含める。"""
     lines = [
         str(error),
-        "",
         "returncode:",
         str(error.returncode),
-        "",
         "cmd:",
         _format_command(error.cmd),
     ]
 
     stderr = _format_process_stream(error.stderr)
     if stderr is not None:
-        lines.extend(["", "stderr:", stderr])
+        lines.extend(["stderr:", stderr])
 
     stdout = _format_process_stream(error.stdout)
     if stdout is not None:
-        lines.extend(["", "stdout:", stdout])
+        lines.extend(["stdout:", stdout])
 
     return "\n".join(lines)
+
+
+def _non_blank_lines(text: str) -> list[str]:
+    """コンソール出力用に空行を除去し、複数行テキストを行リストへ変換する。"""
+    lines = []
+    for line in text.splitlines():
+        if line.strip():
+            lines.append(line)
+    return lines
 
 
 def _format_command(command: object) -> str:

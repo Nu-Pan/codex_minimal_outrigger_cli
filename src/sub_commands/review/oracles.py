@@ -159,7 +159,7 @@ class _OracleEvaluationSnapshot:
     reference_files: frozenset[Path]
 
 
-def cmoc_eval_oracles_impl(
+def cmoc_review_oracles_impl(
     repo_root: Path | None = None,
     *,
     full: bool,
@@ -169,11 +169,12 @@ def cmoc_eval_oracles_impl(
     # 直接呼び出し時は共通 runner で repo root 解決とエラー整形を行う。
     if repo_root is None:
         run_command(
-            lambda resolved_repo_root: cmoc_eval_oracles_impl(
+            lambda resolved_repo_root: cmoc_review_oracles_impl(
                 resolved_repo_root,
                 full=full,
                 repeat_improve_issues_list=repeat_improve_issues_list,
-            )
+            ),
+            command_path="cmoc review oracles",
         )
         return
     _validate_repeat_improve_issues_list(repeat_improve_issues_list)
@@ -189,16 +190,16 @@ def cmoc_eval_oracles_impl(
     all_oracle_files_known = False
     oracle_files: list[Path] = []
     evaluations = []
-    failed_stage = "initialize review oracles"
+    failed_stage = "review oracles 初期化"
     try:
         # 評価前に `.cmoc` の ignore 保証を済ませる。
-        failed_stage = "ensure .cmoc is ignored"
-        start_step(timer, 1, 6, "ensure .cmoc is ignored")
+        failed_stage = ".cmoc ignore 確認"
+        start_step(timer, 1, 6, ".cmoc ignore 確認")
         ensure_cmoc_ignored(repo_root)
 
         # branch 状態と `--full` だけから、部分評価か全体評価かを決める。
-        failed_stage = "select oracle files"
-        start_step(timer, 2, 6, "select oracle files")
+        failed_stage = "oracle ファイル選定"
+        start_step(timer, 2, 6, "oracle ファイル選定")
         branch_name = current_branch(repo_root)
         cmoc_branch = is_cmoc_branch(branch_name)
         session_branch = is_session_branch(branch_name)
@@ -223,21 +224,24 @@ def cmoc_eval_oracles_impl(
             oracle_files = all_oracle_files
         commit_hash = head_commit(repo_root)
 
-        failed_stage = "create oracle snapshot"
+        failed_stage = "oracle snapshot 作成"
         with tempfile.TemporaryDirectory(
             prefix="cmoc-review-oracles-"
         ) as snapshot_dir:
+            # Codex CLI が読む oracle 本文は review 開始時点 snapshot に固定する。
             oracle_snapshot = _create_oracle_evaluation_snapshot(
                 repo_root,
                 all_oracle_files,
                 Path(snapshot_dir),
             )
 
-            # review は開始時点の oracles tree を評価対象にするため、
-            # INDEX.md メンテナンス後も Codex CLI には固定 copy を読ませる。
-            failed_stage = "maintain INDEX.md files"
-            start_step(timer, 3, 6, "maintain INDEX.md files")
-            _maintain_indexes_preserving_oracle_snapshot(repo_root)
+            failed_stage = "INDEX.md メンテナンス"
+            start_step(timer, 3, 6, "INDEX.md メンテナンス")
+            _maintain_indexes_after_oracle_snapshot(repo_root)
+            oracle_snapshot = _sync_maintained_indexes_to_oracle_snapshot(
+                repo_root,
+                oracle_snapshot,
+            )
 
             # oracle ファイルごとに Codex CLI 評価を実行する。
             failed_stage = "oracle ファイル評価"
@@ -262,8 +266,8 @@ def cmoc_eval_oracles_impl(
                     ]
                     _append_evaluation_records_in_order(futures, evaluations)
 
-            failed_stage = "improve issues list"
-            start_step(timer, 5, 6, "improve issues list")
+            failed_stage = "問題点リスト改善"
+            start_step(timer, 5, 6, "問題点リスト改善")
             evaluations = _improve_evaluations(
                 repo_root,
                 evaluations,
@@ -272,8 +276,8 @@ def cmoc_eval_oracles_impl(
             )
 
             # 評価結果を 1 つの Markdown レポートとして保存する。
-            failed_stage = "write report"
-            start_step(timer, 6, 6, "write report")
+            failed_stage = "report 書き込み"
+            start_step(timer, 6, 6, "report 書き込み")
             report_path = _write_report(
                 repo_root,
                 mode,
@@ -329,7 +333,6 @@ def cmoc_eval_oracles_impl(
             print(str(report_path))
         raise
     print(str(report_path))
-    timer.report()
 
 
 def _validate_repeat_improve_issues_list(value: int) -> None:
@@ -341,8 +344,8 @@ def _validate_repeat_improve_issues_list(value: int) -> None:
         )
 
 
-def _maintain_indexes_preserving_oracle_snapshot(repo_root: Path) -> bool:
-    """review 対象の oracle file set を固定後に INDEX.md をメンテナンスする。"""
+def _maintain_indexes_after_oracle_snapshot(repo_root: Path) -> bool:
+    """評価 snapshot とは分離して INDEX.md をメンテナンスする。"""
     return maintain_indexes(repo_root)
 
 
@@ -375,6 +378,56 @@ def _create_oracle_evaluation_snapshot(
         snapshot_root=snapshot_root.resolve(),
         snapshot_oracle_root=snapshot_oracle_root.resolve(),
         oracle_files=frozenset(path.resolve() for path in oracle_files),
+        reference_files=frozenset(reference_files),
+    )
+
+
+def _sync_maintained_indexes_to_oracle_snapshot(
+    repo_root: Path,
+    snapshot: _OracleEvaluationSnapshot,
+) -> _OracleEvaluationSnapshot:
+    """メンテナンス後の INDEX.md だけを評価 snapshot へ反映する。"""
+    original_oracle_root = (repo_root / "oracles").resolve()
+    snapshot_oracle_root = snapshot.snapshot_oracle_root
+
+    live_index_relatives: set[Path] = set()
+    if original_oracle_root.exists():
+        for original_index_path in original_oracle_root.rglob("INDEX.md"):
+            if not original_index_path.is_file():
+                continue
+            relative_path = original_index_path.relative_to(original_oracle_root)
+            live_index_relatives.add(relative_path)
+            snapshot_index_path = snapshot_oracle_root / relative_path
+            snapshot_index_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(
+                original_index_path,
+                snapshot_index_path,
+                follow_symlinks=True,
+            )
+
+    for snapshot_index_path in snapshot_oracle_root.rglob("INDEX.md"):
+        if not snapshot_index_path.is_file():
+            continue
+        relative_path = snapshot_index_path.relative_to(snapshot_oracle_root)
+        if relative_path not in live_index_relatives:
+            snapshot_index_path.unlink()
+
+    reference_files = set(snapshot.oracle_files)
+    reference_files.update(
+        _original_path_for_snapshot_path(
+            repo_root,
+            snapshot_oracle_root,
+            index_path,
+        )
+        for index_path in snapshot_oracle_root.rglob("INDEX.md")
+        if index_path.is_file()
+    )
+    return _OracleEvaluationSnapshot(
+        original_repo_root=snapshot.original_repo_root,
+        original_oracle_root=snapshot.original_oracle_root,
+        snapshot_root=snapshot.snapshot_root,
+        snapshot_oracle_root=snapshot.snapshot_oracle_root,
+        oracle_files=snapshot.oracle_files,
         reference_files=frozenset(reference_files),
     )
 
@@ -495,6 +548,8 @@ def _evaluation_prompt(
             "または INDEX.md に対応する元リポジトリ側の絶対パスをすべて返してください。",
             f"出力する oracle_path / referenced_paths は `{concrete_oracle_root}` "
             "配下の絶対パスにしてください。",
+            "INDEX.md は自動生成されるため評価対象ではありません。",
+            "INDEX.md は関連ファイル選定・参照根拠としてだけ読んでください。",
             "各 issue の specification_only_basis には、評価が仕様ファイルと",
             "INDEX.md だけに基づくことの説明を書いてください。",
             "対象仕様ファイル、関連する仕様ファイル、関連判断に必要な",
@@ -589,6 +644,7 @@ def _improvement_prompt(
     lines = [
         "あなたはソフトウェア仕様レビュー結果の整理担当です。",
         f"`{concrete_repo_root}` の仕様評価で得られた問題点リストを改善してください。",
+        "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。",
     ]
     if oracle_snapshot is not None:
         lines.append(
@@ -597,7 +653,6 @@ def _improvement_prompt(
         )
     lines.extend(
         [
-            "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。",
             "入力 issues を意味論的に統合・改善し、重複、矛盾、False-Positive を",
             "ベストエフォートで減らしてください。",
             "問題点がない場合は issues: [] を返してください。",
@@ -648,11 +703,7 @@ def _redistribute_improved_issues(
         if not isinstance(issue, dict):
             raise ValueError("issues item must be an object.")
         target = str(Path(str(issue["oracle_path"])).resolve())
-        if target not in target_to_index:
-            raise ValueError(
-                "issues item oracle_path must match an evaluated oracle file."
-            )
-        index = target_to_index[target]
+        index = target_to_index.get(target, 0)
         result[index]["issues"].append(issue)
     return [_refresh_evaluation_metadata(evaluation) for evaluation in result]
 
@@ -718,10 +769,6 @@ def _validate_evaluation_payload(
     if set(value) != {"issues"}:
         raise ValueError("Evaluation payload keys do not match schema.")
     _validate_evaluation_issues(value["issues"], repo_root, oracle_snapshot)
-    _validate_issue_oracle_paths_match_targets(
-        value["issues"],
-        {oracle_file.resolve()},
-    )
 
 
 def _validate_issues_payload(
@@ -736,10 +783,6 @@ def _validate_issues_payload(
     if set(value) != {"issues"}:
         raise ValueError("Issues payload keys do not match schema.")
     _validate_evaluation_issues(value["issues"], repo_root, oracle_snapshot)
-    _validate_issue_oracle_paths_match_targets(
-        value["issues"],
-        target_oracle_paths,
-    )
 
 
 def _target_oracle_paths(evaluations: list[dict[str, object]]) -> set[Path]:
@@ -748,24 +791,6 @@ def _target_oracle_paths(evaluations: list[dict[str, object]]) -> set[Path]:
         Path(str(evaluation["target_oracle_path"])).resolve()
         for evaluation in evaluations
     }
-
-
-def _validate_issue_oracle_paths_match_targets(
-    issues: object,
-    target_oracle_paths: set[Path],
-) -> None:
-    """改善後 issue の帰属先が評価対象と一致することを検査する。"""
-    if not isinstance(issues, list):
-        raise ValueError("issues must be a list.")
-    for index, issue in enumerate(issues):
-        if not isinstance(issue, dict):
-            raise ValueError(f"issues[{index}] must be an object.")
-        target = Path(str(issue["oracle_path"])).resolve()
-        if target not in target_oracle_paths:
-            raise ValueError(
-                f"issues[{index}].oracle_path must match an "
-                "evaluated oracle file."
-            )
 
 
 def _write_report(
@@ -1088,12 +1113,7 @@ def _validate_evaluation_issues(
         if item["severity"] not in _SEVERITY_ORDER:
             raise ValueError(f"issues[{index}].severity is invalid.")
         _require_issue_string(item, "title", index)
-        _require_absolute_oracle_path(
-            item["oracle_path"],
-            repo_root,
-            f"issues[{index}].oracle_path",
-            oracle_snapshot,
-        )
+        _require_issue_oracle_path_string(item["oracle_path"], index)
         _validate_issue_lines(item, index)
         _validate_referenced_paths(
             item["referenced_paths"],
@@ -1116,27 +1136,13 @@ def _validate_evaluation_issues(
         )
 
 
-def _require_absolute_oracle_path(
-    value: object,
-    repo_root: Path,
-    label: str,
-    oracle_snapshot: _OracleEvaluationSnapshot | None = None,
-) -> Path:
-    """JSON 値を issue の根拠となる oracle file path として検査する。"""
-    resolved_path = _require_absolute_oracles_file(
-        value,
-        repo_root,
-        label,
-        require_current_existence=oracle_snapshot is None,
-    )
-    oracle_files = (
-        oracle_snapshot.oracle_files
-        if oracle_snapshot is not None
-        else frozenset(path.resolve() for path in list_oracle_files(repo_root))
-    )
-    if resolved_path not in oracle_files:
-        raise ValueError(f"{label} must be an oracle file.")
-    return resolved_path
+def _require_issue_oracle_path_string(value: object, index: int) -> None:
+    """issues[].oracle_path は後処理で必要な最小限だけ検査する。"""
+    if not isinstance(value, str):
+        raise ValueError(f"issues[{index}].oracle_path must be a string.")
+    stripped_value = value.strip()
+    if not stripped_value:
+        raise ValueError(f"issues[{index}].oracle_path must not be empty.")
 
 
 def _require_absolute_oracle_reference_path(

@@ -1,2 +1,3 @@
-CMOC_ROOT="/home/happy/codex_minimal_outrigger_cli_stage1"
-export PATH="$CMOC_ROOT/.venv/bin:$CMOC_ROOT/bin:$PATH"
+CMOC_ROOT=$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE:-$0}")" && pwd)
+export CMOC_ROOT
+export PATH="$CMOC_ROOT/bin:$CMOC_ROOT/.venv/bin:$PATH"

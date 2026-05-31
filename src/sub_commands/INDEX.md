@@ -14,7 +14,7 @@
 ## Do not read this when
 
 - `src.sub_commands` 配下の個別サブコマンド実装や実行フローを確認したいとき。
-- `apply`、`session`、`init`、`eval_oracles` などの各モジュールの仕様を追いたいとき。
+- `apply`、`session`、`review`、`init` などの各モジュールの仕様を追いたいとき。
 - `src.sub_commands` のパッケージ宣言ではなく、実際の業務ロジックや CLI 入口を見たいとき。
 
 ## hash
@@ -25,99 +25,94 @@
 
 ## Summary
 
-- `src/sub_commands/apply` は `cmoc apply` 系サブコマンドの実装入口です。
-- `__init__.py` はパッケージ宣言のみを担い、本体ロジックは `fork.py`、`join.py`、`abandon.py` に分かれています。
-- この目次は、開始・統合・破棄のどの実装ファイルへ進むべきかを素早く振り分けるためのものです。
+- `src/sub_commands/apply` は `cmoc apply` 系サブコマンドの実装をまとめた Python パッケージです。
+- `__init__.py` のパッケージ宣言と、`abandon.py` / `fork.py` / `join.py` の各本体実装を含みます。
+- apply の開始・修正反復・取り消し・統合の処理順と共通補助を確認するための入口です。
 
 ## Read this when
 
-- `src/sub_commands/apply` の実装入口と各モジュールの担当範囲を確認したいとき。
-- `cmoc apply fork`、`cmoc apply join`、`cmoc apply abandon` のどれを読めばよいか整理したいとき。
-- 実装・修正・レビュー・テストを始める前に、関連ファイルの入口を把握したいとき。
-- パッケージ宣言だけでなく、開始・統合・破棄の役割分担を俯瞰したいとき。
+- `cmoc apply` の入口構造や各モジュールの役割分担を把握したいとき。
+- apply run の開始、取り消し、merge 取り込みの実装位置を素早く選びたいとき。
+- どのモジュールを修正・テスト・レビューすべきかを判断したいとき。
 
 ## Do not read this when
 
-- 個別の `cmoc apply fork`、`cmoc apply join`、`cmoc apply abandon` の詳細仕様、状態遷移、例外条件を確認したいときは、それぞれのモジュールを直接読むべきです。
-- `src/sub_commands/apply` のパッケージ宣言だけを確認したいときは、この目次ではなく `__init__.py` を直接読むべきです。
-- 利用手順や仕様断片だけを確認したいときは、`oracles/app_specs/sub_commands/` 側の正本仕様を読むべきです。
-- `branch_model`、`codex_call`、`indexing`、`error_handling` などの共通仕様だけを確認したいときは、別の入口文書を読むべきです。
+- `cmoc session` や `cmoc review` の実装だけを追いたいとき。
+- `cmoc apply` の利用手順や正本仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/` 側を読むべきとき。
+- `src/sub_commands/apply` 配下の個別挙動ではなく、共通開発ルールや `INDEX.md` 生成ルールだけを確認したいとき。
 
 ## hash
 
-- 0e95f4221090b4196421a7db9aa3fc4502cfff850e0661320277e889081ea30d
-<!-- cmoc-index-kind: directory -->
-
-# `eval_oracles.py`
-
-## Summary
-
-- `src/sub_commands/eval_oracles.py` は `cmoc review oracles` の本体実装です。
-- oracles スナップショットの評価対象選定、部分/全体評価の分岐、並列評価、問題点リストの改善反復をまとめて扱います。
-- 評価前の `INDEX.md` メンテナンス、Structured Output 検証、Codex CLI 用 prompt 構築、Markdown レポート生成と失敗時の報告処理も担います。
-
-## Read this when
-
-- `cmoc review oracles` の実行順、部分評価・全体評価の切り替え、評価対象の oracle ファイル選定を確認したいとき。
-- 評価前の `INDEX.md` メンテナンス、開始時点の oracles tree の固定、参照可能ファイルの制約を実装・修正・レビューしたいとき。
-- Structured Output の検証条件、問題点リストの改善反復、Codex CLI 向けの prompt 構築を確認したいとき。
-- レポート保存、error report、stderr フォールバックまで含めて `cmoc review oracles` の挙動を把握したいとき。
-
-## Do not read this when
-
-- `cmoc review oracles` の CLI 引数や `main.py` への登録だけを確認したいとき。
-- `cmoc apply`、`cmoc session`、`cmoc init` など、別サブコマンドの実装や仕様を追いたいとき。
-- `oracles` 配下の個別仕様断片そのものを直接読みたいとき。
-
-## hash
-
-- 34c6e91d4fd996acd96b7440b5c556325973d9c961bb127bb6201f24864bedc8
-<!-- cmoc-index-kind: file -->
+- 20b1b3be3968501e19bb84769cdf6cb700401a1af14bf1e52f1aa2fe55336593
 
 # `init.py`
 
 ## Summary
 
-- `cmoc init` の本体処理を実装している。
-- 直接呼び出し時は共通 runner に委譲し、`.cmoc` の ignore 保証と初期化差分の commit を進める。
+- `src/sub_commands/init.py` は `cmoc init` の本体処理を持つモジュールです。
+- `repo_root` が未指定なら共通 runner に委譲し、指定済みなら `.cmoc` の ignore 確認と初期化変更の commit という 2 段階で処理します。
+- `.cmoc` の ignore 保証、既存 tracked `.cmoc` の追跡解除、初期化に伴う差分 commit と結果表示をまとめて扱います。
 
 ## Read this when
 
-- `cmoc init` の実際の処理順や、`repo_root` 未指定時に共通 runner へ委譲する流れを確認したいとき。
-- `.cmoc` を git 追跡対象外にする保証や、初期化時に発生した差分の commit 処理を実装・修正・レビューしたいとき。
-- `src/sub_commands/init.py` の役割と、関連する共通処理の入口を把握したいとき。
+- `cmoc init` の実装・修正・テスト・レビューを行いたいとき。
+- `.cmoc` を git 追跡対象外にする処理、`.gitignore` 更新、tracked file の解除、初期化差分の commit 規則を確認したいとき。
+- `run_command()` 経由で repo root を解決しつつ、`StepTimer` と `start_step()` で 2 段階の初期化フローをどう実行するかを把握したいとき。
 
 ## Do not read this when
 
-- `cmoc init` 以外のサブコマンドの処理を見たいとき。
-- `.cmoc` の git ignore 追加や tracked ファイル解除、初期化差分の commit が論点に含まれないとき。
-- 初期化後の session/apply の運用仕様だけを確認したいとき。
+- `cmoc init` 以外のサブコマンドの入口や CLI 登録だけを確認したいとき。
+- `.cmoc` の ignore 保証や初期化 commit の流れが論点に入っていないとき。
+- 初期化後の session / apply の運用仕様だけを追いたいとき。
 
 ## hash
 
-- 766eb4ef5567a176766be2bb55dbc8f955c55af92c1ddc3f64043c1be4bda4ee
+- d521f2e6b339670dceeea2ae04fae5971c16a7ac9760586977de57e4f82240e6
+
+# `review`
+
+## Summary
+
+- `src/sub_commands/review` は `cmoc review` 系サブコマンドの入口ディレクトリです。
+- `__init__.py` はパッケージ宣言だけを担う最小モジュールです。
+- `oracles.py` は `cmoc review oracles` の本体処理を担い、スナップショット固定、評価、改善、レポート出力までを実行します。
+
+## Read this when
+
+- `src/sub_commands/review` が Python パッケージとして宣言されていることを確認したいとき。
+- `cmoc review` 系サブコマンドの入口構造や、`oracles.py` の役割を把握したいとき。
+- `cmoc review oracles` の本体処理、開始時点の `oracles` スナップショット固定、評価、改善、レポート出力の流れを確認したいとき。
+
+## Do not read this when
+
+- `cmoc review oracles` の利用手順や引数だけを確認したいときは、`oracles/docs/app_specs/sub_commands/review_oracles.md` を読むべきです。
+- `cmoc review` の CLI 登録や hidden alias だけを確認したいときは、`src/main.py` を読むべきです。
+- `INDEX.md` の生成・更新ルールや、`oracles` 全体のルーティング方針だけを確認したいときは、このディレクトリを読む必要はありません。
+
+## hash
+
+- 85794ff51a4f9a190c00cedff044aa30985d0fa29a59ff9ca6121f5d889e709d
 
 # `session`
 
 ## Summary
 
-- `src/sub_commands/session` は `cmoc session` 系サブコマンドの実装入口です。
-- `__init__.py` はパッケージ宣言のみで、実行ロジックは `fork.py`、`join.py`、`abandon.py` に分かれています。
-- この目次は session の開始・統合・破棄のどの実装へ進むべきかを素早く振り分けるためのものです。
+- `src/sub_commands/session` は `cmoc session` 系サブコマンド実装の入口ディレクトリです。
+- `__init__.py` はパッケージ宣言だけを担う最小モジュールです。
+- `abandon.py` は session branch の破棄、`fork.py` は session branch の作成、`join.py` は session branch の統合を担います。
 
 ## Read this when
 
-- `cmoc session` 系サブコマンドの入口と各モジュールの担当範囲を把握したいとき。
-- `cmoc session fork`、`cmoc session join`、`cmoc session abandon` のどれを読むべきか整理したいとき。
-- `src/sub_commands/session` 配下の実装・修正・レビュー・テストを始める前に、関連ファイルの入口を整理したいとき。
+- `src/sub_commands/session` 配下の入口構造と、どのモジュールを開くべきかを把握したいとき。
+- `cmoc session fork` / `join` / `abandon` の責務分担や、各実装モジュールの役割を確認したいとき。
+- session 系の実装・修正・レビュー・テストに入る前に、パッケージ全体の目次を整理したいとき。
 
 ## Do not read this when
 
-- 個別の `cmoc session fork`、`cmoc session join`、`cmoc session abandon` の詳細仕様、状態遷移、例外条件だけを確認したいとき。
-- `cmoc apply` 系の開始・統合・破棄の流れだけを確認したいとき。
-- `src/sub_commands/session` のパッケージ宣言だけを確認したいときは、`__init__.py` を直接読むべきです。
+- `cmoc session` 以外のサブコマンドの実装や CLI 登録だけを確認したいとき。
+- `cmoc apply` 系や `cmoc review` 系の仕様・実装を追いたいとき。
+- `oracles` 側の正本仕様だけを確認したいとき。
 
 ## hash
 
-- 81fb0f4d687be7393e1c8257c8036f5d9c57f4ac1de1348d4dee6ecae64e3048
-<!-- cmoc-index-kind: directory -->
+- 92a4881bdb0a53d39acb955bd2f2b695b91c7332cb32fc52ab8c5771bd25536a

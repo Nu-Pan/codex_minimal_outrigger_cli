@@ -46,7 +46,7 @@ def test_subcommand_bodies_use_hierarchical_importable_layout() -> None:
         sub_commands / "session" / "fork.py",
         sub_commands / "session" / "join.py",
         sub_commands / "session" / "abandon.py",
-        sub_commands / "eval_oracles.py",
+        sub_commands / "review" / "oracles.py",
     ]
     legacy_paths = [
         sub_commands / "apply.py",
@@ -55,6 +55,7 @@ def test_subcommand_bodies_use_hierarchical_importable_layout() -> None:
         sub_commands / "session_fork.py",
         sub_commands / "session_join.py",
         sub_commands / "session_abandon.py",
+        sub_commands / "eval_oracles.py",
         sub_commands / "eval-oracles.py",
     ]
 

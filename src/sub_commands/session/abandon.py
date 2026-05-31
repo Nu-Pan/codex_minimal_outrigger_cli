@@ -37,11 +37,14 @@ def cmoc_session_abandon_impl(repo_root: Path | None = None) -> None:
     """現在の session branch を merge せず破棄する。"""
     # 直接呼び出し時は共通 runner で repo root 解決とエラー整形を行う。
     if repo_root is None:
-        run_command(cmoc_session_abandon_impl)
+        run_command(
+            cmoc_session_abandon_impl,
+            command_path="cmoc session abandon",
+        )
         return
 
     timer = StepTimer("session abandon")
-    start_step(timer, 1, 4, "validate session state")
+    start_step(timer, 1, 4, "session 状態検証")
     session_branch = _current_session_branch(repo_root)
     session_id = session_id_from_branch(session_branch)
     state_root = session_state_root(repo_root)
@@ -62,18 +65,18 @@ def cmoc_session_abandon_impl(repo_root: Path | None = None) -> None:
     )
 
     try:
-        start_step(timer, 2, 4, "ensure .cmoc is ignored")
+        start_step(timer, 2, 4, ".cmoc ignore 確認")
         ensure_cmoc_ignored_and_committed(repo_root)
         assert_no_uncommitted_changes(repo_root)
         _record_session_home_branch(state_root, session_id, state, home_branch)
 
-        start_step(timer, 3, 4, "switch to session home branch")
+        start_step(timer, 3, 4, "session home branch 切替")
         run_git(repo_root, ["switch", home_branch])
         ensure_cmoc_ignored_and_committed(repo_root)
         assert_no_uncommitted_changes(repo_root)
-        start_step(timer, 4, 4, "delete session branch and record abandoned session")
-        run_git(repo_root, ["branch", "-D", session_branch])
+        start_step(timer, 4, 4, "session abandon 記録・session branch 削除")
         _mark_session_abandoned(state_root, session_id, state)
+        run_git(repo_root, ["branch", "-D", session_branch])
     except Exception as error:
         restore_errors = _restore_abandon_state(
             repo_root,
@@ -96,7 +99,6 @@ def cmoc_session_abandon_impl(repo_root: Path | None = None) -> None:
 
     print(f"abandoned session branch: {session_branch}")
     print(f"session home branch: {home_branch}")
-    timer.report()
 
 
 def _current_session_branch(repo_root: Path) -> str:

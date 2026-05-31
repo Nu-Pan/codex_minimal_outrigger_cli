@@ -1,7 +1,9 @@
 """CLI サブコマンド共通の実行制御。"""
 
 from collections.abc import Callable
+from collections.abc import Iterable
 from pathlib import Path
+import sys
 from time import perf_counter
 
 import typer
@@ -14,14 +16,27 @@ from .subcommand_log import subcommand_log
 from .timing import clear_current_timer, format_duration, report_current_timer
 
 
-def run_command(handler: Callable[[Path], int | None]) -> None:
+def run_command(
+    handler: Callable[[Path], int | None],
+    *,
+    command_path: str | None = None,
+    non_error_exit_codes: Iterable[int] = (),
+) -> None:
     """repo root 解決と共通エラー報告を行って本体処理を実行する。"""
     # Typer 関数を薄く保つため、横断的な実行制御は commons 側に集約する。
     exit_code = 0
+    non_error_exit_code_set = set(non_error_exit_codes)
     started = perf_counter()
+    invocation_cwd = Path.cwd()
+    argv = list(sys.argv)
     try:
         repo_root = enter_repo_root()
-        with subcommand_log(repo_root) as log_context:
+        with subcommand_log(
+            repo_root,
+            command_path=command_path,
+            argv=argv,
+            cwd=invocation_cwd,
+        ) as log_context:
             try:
                 clear_current_timer()
                 result = handler(repo_root)
@@ -29,7 +44,10 @@ def run_command(handler: Callable[[Path], int | None]) -> None:
                     exit_code = result
             except typer.Exit as exit_error:
                 exit_code = exit_error.exit_code or 0
-                if exit_code != 0:
+                if (
+                    exit_code != 0
+                    and exit_code not in non_error_exit_code_set
+                ):
                     report_error = CmocError(
                         "サブコマンドがエラー終了しました。",
                         actions=[
@@ -48,10 +66,10 @@ def run_command(handler: Callable[[Path], int | None]) -> None:
                     report_error = report_error.with_traceback(
                         exit_error.__traceback__
                     )
-                    print(format_error_report(report_error))
+                    print(format_error_report(report_error), file=sys.stderr)
                 raise
             except Exception as error:
-                print(format_error_report(error))
+                print(format_error_report(error), file=sys.stderr)
                 exit_code = getattr(error, "exit_code", 1)
                 raise typer.Exit(exit_code) from error
             finally:
@@ -64,7 +82,7 @@ def run_command(handler: Callable[[Path], int | None]) -> None:
     except typer.Exit:
         raise
     except Exception as error:
-        print(format_error_report(error))
+        print(format_error_report(error), file=sys.stderr)
         exit_code = getattr(error, "exit_code", 1)
         _print_completion_report(
             started=started,

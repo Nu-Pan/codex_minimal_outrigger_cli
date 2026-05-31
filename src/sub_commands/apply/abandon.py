@@ -31,11 +31,11 @@ def cmoc_apply_abandon_impl(repo_root: Path | None = None) -> None:
     """現在の session に紐づく未 join apply run を破棄する。"""
     # 直接呼び出し時は共通 runner で repo root 解決とエラー整形を行う。
     if repo_root is None:
-        run_command(cmoc_apply_abandon_impl)
+        run_command(cmoc_apply_abandon_impl, command_path="cmoc apply abandon")
         return
 
     timer = StepTimer("apply abandon")
-    start_step(timer, 1, 4, "validate apply state")
+    start_step(timer, 1, 4, "apply 状態検証")
     branch_name = current_branch(repo_root)
     session_id = session_id_from_branch(branch_name)
     cmoc_root = session_state_repo_root(repo_root, session_id)
@@ -54,10 +54,10 @@ def cmoc_apply_abandon_impl(repo_root: Path | None = None) -> None:
     if session_worktree is not None:
         assert_no_uncommitted_changes(session_worktree)
 
-    start_step(timer, 2, 4, "stop running apply")
+    start_step(timer, 2, 4, "実行中 apply 停止")
     warnings = _stop_running_apply(abandon_state)
 
-    start_step(timer, 3, 4, "cleanup apply artifacts")
+    start_step(timer, 3, 4, "apply 成果物 cleanup")
     _relocate_from_apply_branch(
         cmoc_root,
         branch_name,
@@ -66,7 +66,7 @@ def cmoc_apply_abandon_impl(repo_root: Path | None = None) -> None:
     )
     warnings.extend(_cleanup_apply_artifacts(cmoc_root, abandon_state))
 
-    start_step(timer, 4, 4, "record ready apply state")
+    start_step(timer, 4, 4, "apply ready 状態記録")
     _mark_apply_ready(cmoc_root, session_id, state)
 
     print(f"abandoned apply branch: {abandon_state.apply_branch}")
@@ -75,7 +75,6 @@ def cmoc_apply_abandon_impl(repo_root: Path | None = None) -> None:
     print("current apply.state: ready")
     for warning in warnings:
         print(f"warning: {warning}")
-    timer.report()
 
 
 class _AbandonState:
@@ -92,6 +91,7 @@ class _AbandonState:
         session_id: str,
         process_record: dict[str, object] | None,
     ) -> None:
+        """検証済み state から abandon の復旧と cleanup に必要な値を固定する。"""
         self.apply_branch = apply_branch
         self.session_branch = session_branch
         self.apply_worktree = apply_worktree

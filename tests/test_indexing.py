@@ -112,6 +112,71 @@ def test_maintain_indexes_prompts_with_recoverable_json_path_for_symbols(
     assert not any("a%25b%60c.txt" in prompt for prompt in codex_prompts)
 
 
+def test_maintain_indexes_refreshes_stale_oracle_routing_path(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """古い oracles/app_specs 導線は hash が同じでも実在 path へ更新する。"""
+    repo = _init_repo(tmp_path)
+    (repo / "README.md").write_text(
+        "基本ワークフローは oracles/app_specs/usage.md を参照\n",
+        encoding="utf-8",
+    )
+    current_usage = repo / "oracles/docs/app_specs/usage.md"
+    current_usage.parent.mkdir(parents=True)
+    current_usage.write_text("usage\n", encoding="utf-8")
+    readme_digest = hashlib.sha256((repo / "README.md").read_bytes()).hexdigest()
+    (repo / "INDEX.md").write_text(
+        "\n".join(
+            [
+                "# `README.md`",
+                "",
+                "## Summary",
+                "",
+                "- README summary",
+                "",
+                "## Read this when",
+                "",
+                "- 基本ワークフローの入口として `oracles/app_specs/usage.md` を読むとき",
+                "",
+                "## Do not read this when",
+                "",
+                "- skip",
+                "",
+                "## hash",
+                "",
+                f"- {readme_digest}",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "stale index")
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """古い path を返す INDEX 生成応答も実在 path へ正規化される。"""
+        del args, kwargs
+        return json.dumps(
+            {
+                "summary": ["README summary"],
+                "read_this_when": [
+                    "基本ワークフローの入口として `oracles/app_specs/usage.md` を読むとき"
+                ],
+                "do_not_read_this_when": ["skip"],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    changed = maintain_indexes(repo)
+    content = (repo / "INDEX.md").read_text(encoding="utf-8")
+
+    assert changed is True
+    assert "oracles/app_specs/" not in content
+    assert "oracles/docs/app_specs/usage.md" in content
+
+
 @pytest.mark.parametrize(
     ("relative_path", "expected"),
     [
@@ -755,6 +820,39 @@ def test_maintain_indexes_skips_excluded_index_roots(
     assert not (nested_oracle / "INDEX.md").exists()
 
 
+def test_maintain_indexes_creates_missing_oracles_index(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """oracles 直下の INDEX.md 欠落は通常の配置対象として補正する。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_docs = oracle_root / "docs"
+    oracle_docs.mkdir(parents=True)
+    (oracle_docs / "spec.md").write_text("spec\n", encoding="utf-8")
+    _git(repo, "add", "oracles/docs/spec.md")
+    _git(repo, "commit", "-m", "oracles without index")
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """INDEX 生成用の最小 Structured Output を返す。"""
+        return json.dumps(
+            {
+                "summary": ["summary"],
+                "read_this_when": ["read"],
+                "do_not_read_this_when": ["skip"],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    changed = maintain_indexes(repo)
+
+    assert changed is True
+    assert (oracle_root / "INDEX.md").exists()
+    assert (oracle_docs / "INDEX.md").exists()
+    assert "# `docs`" in (oracle_root / "INDEX.md").read_text(encoding="utf-8")
+
+
 def test_maintain_indexes_includes_build_and_tmp_as_entries(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -1255,6 +1353,40 @@ def test_maintain_indexes_regenerates_known_cmoc_command_typo(
     assert changed is True
     assert "cmo apply fork" not in content
     assert "cmoc apply fork" in content
+
+
+def test_maintain_indexes_normalizes_known_cmoc_command_typo_in_generated_text(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """生成された routing 文の既知 command typo も INDEX.md へ残さない。"""
+    repo = _init_repo(tmp_path)
+    (repo / "apply_join.md").write_text(
+        "cmo apply fork からの合流仕様を扱います。\n",
+        encoding="utf-8",
+    )
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "source command typo")
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """仕様本文由来の typo を含む routing 文を返す。"""
+        return json.dumps(
+            {
+                "summary": ["cmo apply fork からの合流仕様を扱います。"],
+                "read_this_when": ["cmo apply join を確認するとき。"],
+                "do_not_read_this_when": ["cmo apply 以外の仕様を見るとき。"],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    changed = maintain_indexes(repo)
+    content = (repo / "INDEX.md").read_text(encoding="utf-8")
+
+    assert changed is True
+    assert "cmo apply" not in content
+    assert "cmoc apply fork" in content
+    assert "cmoc apply join" in content
 
 
 def test_maintain_indexes_regenerates_non_utf8_index(

@@ -12,9 +12,9 @@ from commons.errors import format_error_report
 from sub_commands.apply.abandon import cmoc_apply_abandon_impl
 from sub_commands.apply.fork import cmoc_apply_impl
 from sub_commands.apply.join import cmoc_apply_join_impl
-from sub_commands.eval_oracles import _MAX_REPEAT_IMPROVE_ISSUES_LIST
-from sub_commands.eval_oracles import cmoc_eval_oracles_impl
 from sub_commands.init import cmoc_init_impl
+from sub_commands.review.oracles import _MAX_REPEAT_IMPROVE_ISSUES_LIST
+from sub_commands.review.oracles import cmoc_review_oracles_impl
 from sub_commands.session.abandon import cmoc_session_abandon_impl
 from sub_commands.session.fork import cmoc_session_fork_impl
 from sub_commands.session.join import cmoc_session_join_impl
@@ -70,7 +70,7 @@ def session_abandon_command() -> None:
 @app.command("eval-oracle", hidden=True)
 @app.command("eval-oracles", hidden=True)
 @review_app.command("oracles")
-def eval_oracles_command(
+def review_oracles_command(
     full: bool = typer.Option(False, "--full", "-f"),
     repeat_improve_issues_list: int = typer.Option(
         3,
@@ -81,7 +81,7 @@ def eval_oracles_command(
 ) -> None:
     """Review oracle files."""
     # CLI callback は review oracles の本体実装へ処理を委譲する。
-    cmoc_eval_oracles_impl(
+    cmoc_review_oracles_impl(
         full=full,
         repeat_improve_issues_list=repeat_improve_issues_list,
     )
@@ -147,11 +147,11 @@ def main() -> None:
     except click.ClickException as error:
         # CLI parse error は Click の exit_code を維持する。
         exit_code = error.exit_code
-        print(format_error_report(error))
+        print(format_error_report(error), file=sys.stderr)
         raise SystemExit(exit_code) from error
     except Exception as error:
         # 想定外エラーも共通形式で表示し、可能なら例外側の exit_code を使う。
-        print(format_error_report(error))
+        print(format_error_report(error), file=sys.stderr)
         code = getattr(error, "exit_code", 1)
         raise SystemExit(code) from error
 
