@@ -225,22 +225,28 @@
 
 ## Summary
 
-- `cmoc` の自動テスト群をまとめるディレクトリの入口です。
-- `INDEX.md` メンテナンス、Codex 呼び出しラッパー、git 共通処理、タイムスタンプ、レポート保存などの回帰テストを扱います。
-- pytest 共通設定と各テストファイルの役割分担をたどり、仕様に対する決定論的な検証範囲を把握するための案内です。
+- `tests` 配下の pytest 回帰テスト群の入口です。
+- `conftest.py`: `src` を import できるようにするテスト共通設定です。
+- `test_codex.py`: Codex CLI 呼び出し、Structured Output、ログ、quota、resume、oracle 保護を検証します。
+- `test_file_naming.py`: 旧ルーティング名の残存防止と、保持対象ファイル名の規約を検証します。
+- `test_indexing.py`: `INDEX.md` の生成・更新・再利用・排他制御・例外処理を検証します。
+- `test_repo.py`: git 共通処理、`.cmoc` の ignore、変更検出、session state を検証します。
+- `test_report_files.py`: タイムスタンプ付きレポート保存の衝突回避と上書き防止を検証します。
+- `test_subcommands.py`: `init` / `session` / `apply` / `review oracles` の統合制御と CLI 配線を検証します。
+- `test_timestamps.py`: タイムスタンプ生成、経過時間表示、補助関数の並び順を検証します。
 
 ## Read this when
 
-- `cmoc` の回帰テストが何を守っているか、全体像を把握したいとき。
-- `src/commons` の共通処理や CLI 配線に対する pytest の期待動作を確認したいとき。
-- 新しいテストを追加・修正する前に、既存のテスト分類や共通 fixture を確認したいとき。
+- `tests` 配下のどのテストが何を守っているかを一覧で把握したいとき。
+- `commons` や `sub_commands` の共通処理に対して、どの回帰テストが対応しているかを確認したいとき。
+- 新しいテストを追加・整理する前に、既存のテスト責務の分担を確認したいとき。
 
 ## Do not read this when
 
-- cmoc のユーザー向け CLI 仕様やサブコマンドの業務ロジックだけを確認したいとき。
-- 本体実装の配置や設計方針を確認したく、`src` 側のコードを追うべきとき。
-- `oracles` 配下の正本仕様や `INDEX.md` の生成ルールだけを確認したいとき。
+- `src` 側の実装ロジックや関数の内部挙動を直接追いたいとき。
+- 個別テストのアサーション内容をそのまま拾うのではなく、実装コードを読むべきとき。
+- `README.md`、`AGENTS.md`、`oracles`、`memo` の運用ルールだけを確認したいとき。
 
 ## hash
 
-- 18a037438fcc6f54d7fdc4b549b34c65859a2100a0353928e9a785cc3a9ede00
+- 3428c76cea8c95be18223fbb641b271ae84eafd0b5c7b076a6d48464120525a8
