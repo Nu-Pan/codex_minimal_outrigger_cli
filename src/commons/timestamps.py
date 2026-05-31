@@ -4,7 +4,9 @@ import re
 from datetime import datetime
 
 TIMESTAMP_PATTERN = re.compile(
-    r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}_\d{2}_\d{9}$"
+    r"^(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})_"
+    r"(?P<hour>\d{2})-(?P<minute>\d{2})_(?P<second>\d{2})_"
+    r"(?P<msec>\d{9})$"
 )
 
 
@@ -36,4 +38,24 @@ def console_timestamp(now: datetime | None = None) -> str:
 
 def is_timestamp(value: str) -> bool:
     """cmoc の `<time-stamp>` 形式か判定する。"""
-    return bool(TIMESTAMP_PATTERN.fullmatch(value))
+    match = TIMESTAMP_PATTERN.fullmatch(value)
+    if match is None:
+        return False
+
+    msec = int(match["msec"])
+    if msec > 999:
+        return False
+
+    try:
+        datetime(
+            int(match["year"]),
+            int(match["month"]),
+            int(match["day"]),
+            int(match["hour"]),
+            int(match["minute"]),
+            int(match["second"]),
+        )
+    except ValueError:
+        return False
+
+    return True

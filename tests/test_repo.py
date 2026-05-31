@@ -1250,7 +1250,14 @@ def test_changed_paths_preserves_special_path_tokens(tmp_path: Path) -> None:
             True,
         ),
         ("cmoc/session/test", False),
+        ("cmoc/session/2026-99-99_99-99_99_999999999", False),
         ("cmoc/apply/2026-05-10_22-21_10_000000123/run-1", False),
+        (
+            "cmoc/apply/"
+            "2026-05-10_22-21_10_000000123/"
+            "2026-99-99_99-99_99_999999999",
+            False,
+        ),
         ("cmoc/apply/a/b", False),
         ("cmoc/session/2026-05-10_22-21_10_000000123/extra", False),
         ("cmoc/apply/2026-05-10_22-21_10_000000123", False),
