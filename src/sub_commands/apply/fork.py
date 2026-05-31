@@ -27,6 +27,7 @@ from commons.codex import (
 )
 from commons.command_runner import run_command
 from commons.errors import CmocError
+from commons.indexing import is_maintained_index_path
 from commons.indexing import maintain_indexes
 from commons.report_files import write_timestamped_report
 from commons.repo import (
@@ -392,6 +393,7 @@ def cmoc_apply_impl(
         _assert_forbidden_paths_unchanged_since(
             apply_worktree,
             before_index_head,
+            allow_maintained_index_paths=True,
         )
 
         # 不整合調査と追従作業を指定回数まで反復する。
@@ -1409,7 +1411,11 @@ def _commit_all_changes(repo_root: Path) -> None:
     # 実装差分によって INDEX.md が古くなった場合は commit 前に更新する。
     before_index_head = head_commit(repo_root)
     _maintain_apply_indexes(repo_root)
-    _assert_forbidden_paths_unchanged_since(repo_root, before_index_head)
+    _assert_forbidden_paths_unchanged_since(
+        repo_root,
+        before_index_head,
+        allow_maintained_index_paths=True,
+    )
     _assert_forbidden_paths_clean(repo_root)
     if not changed_paths(repo_root):
         return
@@ -1456,8 +1462,9 @@ def _maintain_indexes_accepts_excluded_roots() -> bool:
 
 
 def _apply_index_excluded_roots(repo_root: Path) -> list[Path]:
-    """apply worktree の INDEX メンテナンスで書かない root 群を返す。"""
-    return [repo_root / "oracles"]
+    """apply worktree の INDEX メンテナンス除外 root 群を返す。"""
+    del repo_root
+    return []
 
 
 def _assert_forbidden_paths_clean(repo_root: Path) -> None:
@@ -1482,6 +1489,8 @@ def _assert_forbidden_paths_clean(repo_root: Path) -> None:
 def _assert_forbidden_paths_unchanged_since(
     repo_root: Path,
     before_commit: str,
+    *,
+    allow_maintained_index_paths: bool = False,
 ) -> None:
     """Codex CLI 中の commit 済み禁止 path 変更を検出する。"""
     forbidden = [
@@ -1491,6 +1500,10 @@ def _assert_forbidden_paths_unchanged_since(
             before_commit,
         )
         if _is_forbidden_changed_path(path)
+        and not (
+            allow_maintained_index_paths
+            and is_maintained_index_path(repo_root, path)
+        )
     ]
     if forbidden:
         raise CmocError(
