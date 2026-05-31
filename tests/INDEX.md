@@ -104,12 +104,12 @@
 ## Summary
 
 - `src/commons/repo.py` の git 共通処理を検証する回帰テスト群です。
-- repo root 検出、`.cmoc` の ignore 保証、実装/正本ファイルの列挙と変更検出を扱います。
+- `find_repo_root`、`.cmoc` の ignore 保証、実装/正本ファイルの列挙と変更検出を扱います。
 - session state、apply process id、`cmoc` ブランチ判定、active session 判定の境界条件も押さえます。
 
 ## Read this when
 
-- repo root 検出、`.cmoc` ignore、`list_implementation_files` / `list_oracle_files` の対象判定を確認したいとき。
+- repo root 検出、`.cmoc` の ignore、`list_implementation_files` / `list_oracle_files` の対象判定を確認したいとき。
 - `changed_paths`、`changed_oracle_files`、`changed_implementation_files`、削除検出の境界条件を調べたいとき。
 - `commit_if_changed` のコミット可否や、失敗時に index と HEAD を壊さない挙動を確認したいとき。
 - session state の読み書き、`active_session_ids_for_home_branch`、`is_cmoc_branch` の判定条件を確認したいとき。
@@ -124,7 +124,7 @@
 
 ## hash
 
-- 9b161ea86e694294664b96fa64e49d1a4553647560a59b5dccf1f85a9c7536ee
+- d8cd32cc46ff21b90d2d2feb6821ea192f08e8010336b04a0c094472e412f46b
 
 # `test_report_files.py`
 
@@ -171,16 +171,15 @@
 
 ## Do not read this when
 
-- 個別の `cmoc init` / `session` / `apply` / `review oracles` の実装そのものだけを追いたいとき。
-- `src/sub_commands/` 配下の本体ロジックだけを確認したいとき。
-- `run_command` や `format_error_report` の共通実行基盤だけを知りたいとき。
+- 個別の `init` / `session` / `apply` / `review oracles` の実装ロジックそのものを追いたいとき。
+- `src/sub_commands/` 配下の本体コードだけを確認したいとき。
+- `run_command` や `format_error_report` だけの共通基盤仕様を知りたいとき。
 - pytest の共通設定や `tests/INDEX.md` 全体の生成ルールだけを確認したいとき。
-- `session join` の conflict 解消プロンプトや `apply` の discrepancy schema 以外の、局所的な補助関数だけを見たいとき。
 - `bin/cmoc` の起動要件や help 表示だけを単独で確認したいとき。
 
 ## hash
 
-- a6e899ca693f6923906f8d3aae256093f5e1d1eb42025bfe9ee9a15843e8f264
+- bd0fe5ef2c54ad9c59371341342983724f35e52b1edd40813051126abe0f6099
 
 # `test_timestamps.py`
 

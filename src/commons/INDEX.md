@@ -129,28 +129,29 @@
 
 ## Summary
 
-- Git リポジトリ root の探索と cwd 固定、現在 branch と HEAD commit の取得を扱う共通モジュールです。
-- `cmoc/session/*` と `cmoc/apply/*` の branch 判定、session id の復元、apply worktree の復元をまとめています。
-- `.cmoc` の ignore 保証、session state / apply process id の永続化と検証、active session の整合性確認を担当します。
-- `git status` / `git diff` / `git check-ignore` / pathspec を使った差分検出、oracle・implementation ファイル列挙、内部 commit 後の index 復元まで含みます。
+- Git リポジトリの root 探索と cwd 固定、現在 branch と HEAD commit の取得をまとめた共通モジュールです。
+- `cmoc/session/*` と `cmoc/apply/*` の branch 判定、session id の復元、apply worktree の配置復元を扱います。
+- `.cmoc` の ignore 保証、session/apply state JSON、apply process id の保存・読込・検証、active session の整合性確認を担います。
+- 未コミット差分、削除検出、oracles / 実装ファイル列挙、pathspec commit 後の index 復元も含みます。
 
 ## Read this when
 
-- リポジトリルートの探索や、`cmoc` 実行時の cwd 固定の流れを確認したいとき。
-- `cmoc/session/*` と `cmoc/apply/*` の branch 命名、session id の復元、apply worktree の場所特定を確認したいとき。
-- `.cmoc` の ignore 保証、session state と apply process id の保存・読込・検証を実装または修正したいとき。
-- 未コミット差分の検出、`.gitignore` / pathspec を使った commit 補助、内部 commit 後の index 復元処理を追いたいとき。
-- oracle ファイルや実装ファイルの列挙、削除検出、変更対象の抽出ロジックを確認したいとき。
+- repo root を見つけて `cmoc` の実行基準ディレクトリを揃えたいとき。
+- `session` / `apply` の branch ルール、session id の復元、apply worktree の場所特定を確認したいとき。
+- .cmoc の ignore 保証、session state / apply process id の永続化と検証を実装・修正したいとき。
+- `oracles` / 実装ファイルの列挙、変更抽出、削除検出、未コミット差分や pathspec commit の扱いを確認したいとき。
+- 現在の branch 名や HEAD commit を取得する共通処理を確認したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの CLI 引数や業務ロジックだけを確認したいとき。
-- `codex.py`、`errors.py`、`timing.py` など他の共通モジュールの仕様だけを追いたいとき。
-- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
+- `cmoc init` や `session` / `apply` の操作手順、CLI 引数だけを確認したいとき。
+- `INDEX.md` の生成ルールや Structured Output の仕様だけを確認したいとき。
+- エラーレポート整形や共通例外だけを確認したいときは、`errors.py` を読むべきです。
+- `timestamps.py`、`subcommand_log.py`、`report_files.py` など他の共通モジュールだけを確認したいとき。
 
 ## hash
 
-- 4a61436d63b2b70cdc10117ca3ad066bc38a7819ee01f7fc26ef380f561b3258
+- 8fa2e18d2814d064368f0c2c7330a02af2ee5df2f7691366545900c8ca355270
 
 # `report_files.py`
 
