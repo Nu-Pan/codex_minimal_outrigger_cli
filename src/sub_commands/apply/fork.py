@@ -282,7 +282,6 @@ def cmoc_apply_impl(
             f"現在の branch: {session_branch or '(detached HEAD)'}",
         )
 
-    start_step(timer, 1, 6, "ensure .cmoc is ignored")
     session_id = session_id_from_branch(session_branch)
     state_root = session_state_root(repo_root)
     _validate_repeat_options(
@@ -290,15 +289,17 @@ def cmoc_apply_impl(
         repeat_improove_fixing_list,
     )
     _validate_apply_scope(scope)
-    ensure_cmoc_ignored(repo_root)
-    assert_no_uncommitted_changes(repo_root)
 
-    start_step(timer, 2, 6, "validate session state")
+    start_step(timer, 1, 6, "validate session state")
     state = read_session_state(state_root, session_id)
     session_start_commit = _validate_apply_fork_state(
         state,
         session_branch,
     )
+    assert_no_uncommitted_changes(repo_root)
+
+    start_step(timer, 2, 6, "ensure .cmoc is ignored")
+    ensure_cmoc_ignored(repo_root)
     assert_no_uncommitted_changes(repo_root)
     session_head_at_apply_start = ""
     oracle_snapshot_commit = ""
