@@ -150,27 +150,27 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は、cmoc のサブコマンド群と共通実行基盤に対する回帰テストの集約です。
-- `run_command` と `main`、CLI 登録、completion、`bin/cmoc` などの共通制御を検証しつつ、`init`、`session`、`apply`、`review oracles`、`eval-oracles` の主要フローを横断的に押さえます。
+- `tests/test_subcommands.py` は cmoc のサブコマンド群と共通実行基盤に対する回帰テストの集約です。
+- `run_command`、`main`、CLI 登録、completion、`bin/cmoc` を含む共通制御を押さえつつ、`init`、`session`、`apply`、`review oracles`、`eval-oracles` の主要フローを横断的に検証します。
 - 状態遷移、レポート生成、エラー変換、プロンプト生成、Structured Output の検証、差分・競合の扱いまで、このファイルを入口に広く確認できます。
 
 ## Read this when
 
-- `run_command` のログ出力、終了コード、経過時間計測、例外からのエラー変換を確認したいとき。
-- `cmoc init`、`session fork/join/abandon`、`apply fork/join/abandon`、`review oracles`、`eval-oracles` の回帰範囲をまとめて把握したいとき。
-- CLI 登録、completion、`main` のエラー処理、`bin/cmoc` の起動条件、error report の整形を確認したいとき。
-- プロンプト生成、Structured Output の検証、差分・競合・レポート保存まわりのサブコマンド横断テストを探しているとき。
+- `run_command` と `main` の共通実行基盤、終了コード、エラー変換、ログ出力を確認したいとき。
+- `cmoc init`、`session fork/join/abandon`、`apply fork/join/abandon`、`review oracles`、`eval-oracles` の横断的な回帰範囲を把握したいとき。
+- CLI 登録、completion、`bin/cmoc` の起動条件、error report の整形を確認したいとき。
+- プロンプト生成、Structured Output 検証、差分・競合・レポート保存まわりのサブコマンド横断テストを探したいとき。
 
 ## Do not read this when
 
-- 個別の実装本体を確認したいときは、`src/sub_commands/...`、`src/main.py`、`bin/cmoc` を直接読むべきです。
-- `commons.repo`、`commons.command_runner`、`commons.errors` など、単体モジュールの仕様だけを追いたいときはこのファイルは遠回りです。
-- `tests/test_indexing.py`、`tests/test_repo.py`、`tests/test_codex.py` など、特定領域だけの回帰を確認したいときは専用テストを読むべきです。
-- サブコマンド横断ではなく、`cmoc init` や `session`、`apply` の個別仕様だけを知りたいときは各専用テストを優先すべきです。
+- `tests/test_indexing.py` や `tests/test_repo.py` のような個別領域の回帰だけを確認したいとき。
+- `src/sub_commands/...`、`src/main.py`、`bin/cmoc` の実装本体を直接追いたいとき。
+- `commons.repo`、`commons.command_runner`、`commons.errors` など単体モジュールの仕様だけを確認したいとき。
+- `tests/INDEX.md` でテスト全体の入口だけを把握できれば十分なとき。
 
 ## hash
 
-- d4d13fd639660e72cca68a5ece109bcd0f20bbfdbd52a336260b7bbd1dcca32a
+- 46e9029947f4e70981ec312c3f1b7b6f5b986d49c47acb6d9a59562b9cca760c
 
 # `test_timestamps.py`
 
