@@ -1437,7 +1437,6 @@ def test_write_session_state_persists_only_oracle_session_schema(
             "session_home_branch": "main",
             "session_start_commit": "abc123",
             "last_joined_apply_oracle_snapshot_commit": "prev789",
-            "last_joined_apply_result": None,
         },
         "apply": {
             "state": "completed",
@@ -1448,10 +1447,10 @@ def test_write_session_state_persists_only_oracle_session_schema(
             "oracle_snapshot_commit": "def456",
         },
     }
-    assert read_session_state(
+    assert "last_joined_apply_result" not in read_session_state(
         repo,
         session_id,
-    )["session"]["last_joined_apply_result"] is None
+    )["session"]
 
 
 def test_write_session_state_rejects_cross_session_apply_branch(
@@ -1534,7 +1533,7 @@ def test_initial_session_state_starts_with_null_session_home_branch() -> None:
 
     assert state["session"]["session_home_branch"] is None
     assert state["session"]["session_start_commit"] == "abc123"
-    assert state["session"]["last_joined_apply_result"] is None
+    assert "last_joined_apply_result" not in state["session"]
 
 
 def test_read_session_state_allows_null_session_home_branch(
@@ -1768,10 +1767,10 @@ def test_read_session_state_rejects_non_string_last_joined_snapshot(
     )
 
 
-def test_read_session_state_rejects_non_string_last_joined_apply_result(
+def test_read_session_state_rejects_last_joined_apply_result_field(
     tmp_path: Path,
 ) -> None:
-    """最後に join した apply result は null または文字列に限る。"""
+    """永続 session state は oracle 未定義の apply result field を拒否する。"""
     repo = _init_repo(tmp_path)
     session_id = "2026-05-10_22-21_10_000000123"
     state_path = session_state_path(repo, session_id)
@@ -1784,7 +1783,7 @@ def test_read_session_state_rejects_non_string_last_joined_apply_result(
                     "session_home_branch": "main",
                     "session_start_commit": "abc123",
                     "last_joined_apply_oracle_snapshot_commit": None,
-                    "last_joined_apply_result": 123,
+                    "last_joined_apply_result": "収束",
                 },
                 "apply": {
                     "state": "ready",
@@ -1799,8 +1798,8 @@ def test_read_session_state_rejects_non_string_last_joined_apply_result(
     with pytest.raises(CmocError) as error:
         read_session_state(repo, session_id)
 
-    assert "session.last_joined_apply_result" in error.value.actions[0]
-    assert "session.last_joined_apply_result: 123" in error.value.detail
+    assert "session セクションの field 集合" in error.value.actions[0]
+    assert "unknown session fields: last_joined_apply_result" in error.value.detail
 
 
 def test_write_session_state_rejects_completed_apply_without_run_fields(
