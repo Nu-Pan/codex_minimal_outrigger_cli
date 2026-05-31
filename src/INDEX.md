@@ -65,10 +65,10 @@
 
 ## Do not read this when
 
-- 個別のサブコマンド実装や引数・状態遷移を確認したいときは、対応する `apply`、`session`、`review`、`init.py` を直接読むべきです。
+- 個別のサブコマンド実装や引数・状態遷移を確認したいときは、対応する `apply`、`review`、`session`、`init.py` を直接読むべきです。
 - `src/commons` の共通基盤や `src/main.py` の CLI 登録だけを確認したいときは、このディレクトリではなく該当箇所を読むべきです。
-- `INDEX.md` の生成・更新ルールや `oracles` 側の正本仕様だけを確認したいときは、別の仕様文書を参照すべきです。
+- `INDEX.md` の生成・更新ルールや、`oracles` 側の正本仕様だけを確認したいときは、このディレクトリではなく別の仕様文書を参照すべきです.
 
 ## hash
 
-- f69e0a9174a4dd569e525d8d60bbdfb0e27520788e283e1c2b674b1e2b4f81a5
+- 5407c1e97ae6cd2e085bdc381aed7e547e441ac0734e4c8186dc2c1eafbfdf3e

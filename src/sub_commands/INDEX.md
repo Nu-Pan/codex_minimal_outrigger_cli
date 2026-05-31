@@ -43,15 +43,15 @@
 
 ## hash
 
-- 94abc904b4bc4594fcf526b8a269dc5fab05e96976fd9e38bf969cec2700274c
+- e7a7e8e4bf2ba44d32af75d4428bb5198a0bf52801e617836676afe6ed4eba28
 
 # `init.py`
 
 ## Summary
 
 - `src/sub_commands/init.py` は `cmoc init` の本体処理を持つモジュールです。
-- `repo_root` が未指定なら `run_command()` に処理を委譲し、指定済みなら `.cmoc ignore 確認` と `初期化変更 commit` の 2 ステップで初期化を進めます。
-- `.cmoc` の ignore 保証、既存 tracked `.cmoc` の追跡解除、初期化に伴う差分の commit と結果表示をまとめて扱います。
+- `repo_root` が未指定なら共通 runner に委譲し、指定済みなら `.cmoc` の ignore 確認と初期化変更の commit という 2 段階で処理します。
+- `.cmoc` の ignore 保証、既存 tracked `.cmoc` の追跡解除、初期化に伴う差分 commit と結果表示をまとめて扱います。
 
 ## Read this when
 
@@ -67,53 +67,52 @@
 
 ## hash
 
-- b9f241adfbc212ed6bd5bdbbab857c8655a53319b89c2119409e8c3d14c59733
+- d521f2e6b339670dceeea2ae04fae5971c16a7ac9760586977de57e4f82240e6
 
 # `review`
 
 ## Summary
 
 - `src/sub_commands/review` は `cmoc review` 系サブコマンドの入口ディレクトリです。
-- `__init__.py` はパッケージ宣言のみを担う最小モジュールです。
-- `oracles.py` は `cmoc review oracles` の本体処理を担い、snapshot 固定、評価、改善、レポート出力までを実行します。
+- `__init__.py` はパッケージ宣言だけを担う最小モジュールです。
+- `oracles.py` は `cmoc review oracles` の本体処理を担い、スナップショット固定、評価、改善、レポート出力までを実行します。
 
 ## Read this when
 
 - `src/sub_commands/review` が Python パッケージとして宣言されていることを確認したいとき。
-- `cmoc review oracles` の本体処理、開始時点の `oracles` スナップショット固定、`INDEX.md` メンテナンス、oracle ファイルごとの評価、問題点リスト改善、レポート保存の流れを確認したいとき。
-- Structured Output の検証条件や、参照してよい `oracles` 配下ファイルの制約を確認したいとき。
-- 評価失敗時のエラーレポート生成や、`.cmoc/reports/review_oracles` への出力規則を確認したいとき。
+- `cmoc review` 系サブコマンドの入口構造や、`oracles.py` の役割を把握したいとき。
+- `cmoc review oracles` の本体処理、開始時点の `oracles` スナップショット固定、評価、改善、レポート出力の流れを確認したいとき。
 
 ## Do not read this when
 
-- このディレクトリ全体の入口構造ではなく、`cmoc review oracles` の利用手順や引数だけを確認したいとき。
-- `cmoc review oracles` ではなく、`cmoc review` の CLI 登録や hidden alias の扱いだけを確認したいとき。
-- `oracles` 側の正本仕様を直接確認したいとき。
+- `cmoc review oracles` の利用手順や引数だけを確認したいときは、`oracles/docs/app_specs/sub_commands/review_oracles.md` を読むべきです。
+- `cmoc review` の CLI 登録や hidden alias だけを確認したいときは、`src/main.py` を読むべきです。
+- `INDEX.md` の生成・更新ルールや、`oracles` 全体のルーティング方針だけを確認したいときは、このディレクトリを読む必要はありません。
 
 ## hash
 
-- 1e63bb590674da7f24778bc2e117c5132d0b50e58f4ce1b3048c368d5edaa25f
+- 85794ff51a4f9a190c00cedff044aa30985d0fa29a59ff9ca6121f5d889e709d
 
 # `session`
 
 ## Summary
 
-- `src/sub_commands/session` は `cmoc session` 系サブコマンドをまとめるパッケージです。
-- `__init__.py` はパッケージ宣言のみを担い、`abandon.py`、`fork.py`、`join.py` がそれぞれ `cmoc session abandon`、`cmoc session fork`、`cmoc session join` の本体実装です。
-- session の開始、統合、破棄に関する処理を、このディレクトリ配下で一通り扱います。
+- src/sub_commands/session は `cmoc session` 系サブコマンドをまとめる実装ディレクトリです。
+- ここにはパッケージ宣言用の `__init__.py` と、`session fork`、`session join`、`session abandon` の本体実装が入っています。
+- session の開始、統合、破棄に関する処理の入口を、このディレクトリからたどれます。
 
 ## Read this when
 
-- `cmoc session fork`、`cmoc session join`、`cmoc session abandon` の実装や修正、レビュー、テストを行うとき。
-- `src/sub_commands/session` ディレクトリ全体の役割と、どの実装ファイルへ進むべきかを把握したいとき。
-- `cmoc session` 系サブコマンドの入口となる Python パッケージ構造を確認したいとき。
+- cmoc session fork / join / abandon の実装、修正、レビュー、テストを行うとき。
+- このディレクトリ全体の役割と、どの実装ファイルを開くべきかを整理したいとき。
+- cmoc session 系サブコマンドのパッケージ構造を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc session` ではなく、`cmoc apply` や `cmoc review` など別系統のサブコマンド仕様だけを確認したいとき。
-- `session` 配下の個別実装ではなく、`oracles/docs/app_specs/sub_commands/` 側の利用手順や仕様断片を直接確認したいとき。
-- `src/sub_commands/session` の入口構造ではなく、一般的な git の使い方や他ディレクトリの目次だけを確認したいとき。
+- cmoc session ではなく、cmoc apply や cmoc review など別系統のサブコマンドを確認したいとき。
+- 個別実装ではなく、`oracles/docs/app_specs/sub_commands/` 側の利用手順や仕様断片を直接確認したいとき。
+- このディレクトリの入口構造ではなく、一般的な git の使い方や他ディレクトリの目次だけを確認したいとき。
 
 ## hash
 
-- ed2c7ee7987d83daf4ac9fe867871fa34ebcea43e847e62ffa5af4b802c4ac89
+- 6619157a18baa06475373c808120a90c431dd600ab58df9ce87cefd960382d38

@@ -165,19 +165,19 @@
 - `run_command` の終了コード、標準出力の要約、例外時のエラーレポート、実行ログ出力の挙動を確認したいとき。
 - `cmoc init`、`session fork/join/abandon`、`apply fork/join/abandon`、`review oracles` の状態遷移や副作用をテスト観点から把握したいとき。
 - `src/main.py` の Typer 登録、補完プローブ処理、コマンド群の委譲関係を確認したいとき。
-- `format_error_report()` や `bin/cmoc` の起動失敗時メッセージなど、CLI 周辺の利用者向け表示を回帰テストで追いたいとき。
+- CLI 周辺の利用者向け表示や `bin/cmoc` の起動失敗時メッセージを回帰テストで追いたいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの仕様断片だけを確認したいときは、このテストファイルではなく対応する `oracles/app_specs/sub_commands/` 側の仕様を読むべきです。
-- `src/commons` の各モジュールの実装詳細だけを追いたいときは、このテストではなく `src/commons/` 配下の実装を直接読むべきです。
-- `src/sub_commands` の各本体実装だけを確認したいときは、このテストではなく `src/sub_commands/init.py`、`src/sub_commands/apply/`、`src/sub_commands/session/`、`src/sub_commands/eval_oracles.py` を読むべきです。
-- CLI の登録や補完ではなく、エラー整形そのものだけを確認したいときは `src/commons/errors.py` を読むべきです。
-- `bin/cmoc` の起動条件や仮想環境の扱いだけを確認したいときは、このテストではなく `bin/INDEX.md` 側の案内を読むべきです。
+- 個別サブコマンドの引数や状態遷移だけを確認したいとき。
+- `src/commons` の実装詳細だけを追いたいとき。
+- `src/sub_commands` の各本体実装だけを確認したいとき。
+- `bin/cmoc` の起動条件や仮想環境の扱いだけを確認したいとき。
+- `format_error_report()` そのものの実装だけを確認したいとき。
 
 ## hash
 
-- 43e67aebaabaa8392fbf886279864f03b7f8d2afcd50abb93d3ae6574d2d6eae
+- d1d610c27a7b8ce98567903a1efb1a230072f24b044b1dd28f039d8d298f860b
 
 # `test_timestamps.py`
 
