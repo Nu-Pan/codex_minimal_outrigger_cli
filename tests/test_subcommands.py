@@ -2798,6 +2798,28 @@ def test_apply_returns_complete_when_no_discrepancies(
     )
     codex_kwargs: list[dict[str, object]] = []
     codex_prompts: list[str] = []
+    event_order: list[str] = []
+    original_mark_apply_completed = apply_module._mark_apply_completed
+    original_write_apply_report = apply_module._write_apply_report
+
+    def record_mark_apply_completed(*args: object, **kwargs: object) -> None:
+        event_order.append("mark completed")
+        original_mark_apply_completed(*args, **kwargs)
+
+    def record_write_apply_report(*args: object, **kwargs: object) -> Path:
+        event_order.append("write report")
+        return original_write_apply_report(*args, **kwargs)
+
+    monkeypatch.setattr(
+        apply_module,
+        "_mark_apply_completed",
+        record_mark_apply_completed,
+    )
+    monkeypatch.setattr(
+        apply_module,
+        "_write_apply_report",
+        record_write_apply_report,
+    )
 
     def fake_codex(*args: object, **kwargs: object) -> str:
         """調査なら不整合なし JSON、変更要約なら summary JSON を返す。"""
@@ -2824,6 +2846,7 @@ def test_apply_returns_complete_when_no_discrepancies(
     assert exit_code == 0
     assert len(reports) == 1
     assert state["apply"]["state"] == "completed"
+    assert event_order == ["mark completed", "write report"]
     assert state["apply"]["apply_branch"].startswith(
         "cmoc/apply/2026-05-10_22-21_10_000000123/"
     )
@@ -5492,9 +5515,8 @@ def test_apply_report_validation_requires_change_summary_item() -> None:
 def test_apply_rejects_incomplete_change_summary_from_codex(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """report 失敗時は apply run を completed にせず error として残す。"""
+    """completed 更新後の report 失敗は state を error に戻さない。"""
     repo = _init_repo(tmp_path)
     _checkout_session_branch(repo)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
@@ -5550,48 +5572,27 @@ def test_apply_rejects_incomplete_change_summary_from_codex(
         ).read_text(encoding="utf-8")
     )
     report_dir = repo / ".cmoc" / "reports" / "apply" / "fork"
-    assert state["apply"]["state"] == "error"
+    assert state["apply"]["state"] == "completed"
     assert state["apply"]["apply_branch"].startswith(
         "cmoc/apply/2026-05-10_22-21_10_000000123/"
     )
     reports = list(report_dir.glob("*.md"))
-    assert len(reports) == 1
-    report_text = reports[0].read_text(encoding="utf-8")
     apply_head = _git(
         repo,
         "rev-parse",
         state["apply"]["apply_branch"],
     ).stdout.strip()
     session_head_at_finish = _git(repo, "rev-parse", "HEAD").stdout.strip()
-    captured = capsys.readouterr()
-    assert str(reports[0]) in captured.out
-    assert "result: \"エラー\"" in report_text
-    assert f"session_head_at_apply_start: \"{session_head}\"" in report_text
-    assert (
-        f"session_head_at_apply_finish: \"{session_head_at_finish}\""
-        in report_text
-    )
+    assert reports == []
     assert session_head != session_head_at_finish
     assert session_head != apply_head
-    assert f"session_head_at_apply_finish: \"{apply_head}\"" not in report_text
-    assert "## 作業結果" in report_text
-    assert "エラー" in report_text
-    assert "## エラー詳細" in report_text
-    assert "- Failed stage: `write report`" in report_text
-    assert "- Exception type: `CmocError`" in report_text
-    assert "apply report の生成に必要な変更要約が不足しています。" in report_text
-    assert "## 要修正点件数の推移" in report_text
-    assert "- 1 回目: 0 件" in report_text
-    assert "カテゴリ: 変更ファイル一覧" in report_text
-    assert "docs/INDEX.md" in report_text
-    assert "Codex CLI による意味論的カテゴリ別要約には失敗しました。" in report_text
 
 
-def test_apply_marks_error_when_final_output_fails(
+def test_apply_keeps_completed_when_final_output_fails(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """report 作成後の最終出力失敗も completed にせず error として残す。"""
+    """completed 更新後の最終出力失敗は state を error に戻さない。"""
     repo = _init_repo(tmp_path)
     _checkout_session_branch(repo)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
@@ -5636,14 +5637,12 @@ def test_apply_marks_error_when_final_output_fails(
     )
     report_texts = [report.read_text(encoding="utf-8") for report in reports]
 
-    assert state["apply"]["state"] == "error"
+    assert state["apply"]["state"] == "completed"
     assert state["apply"]["apply_branch"].startswith(
         "cmoc/apply/2026-05-10_22-21_10_000000123/"
     )
-    assert any('result: "エラー"' in text for text in report_texts)
-    assert any(
-        "- Failed stage: `write final output`" in text for text in report_texts
-    )
+    assert len(reports) == 1
+    assert any('result: "収束"' in text for text in report_texts)
 
 
 def test_apply_fallback_change_summary_preserves_special_path_tokens(

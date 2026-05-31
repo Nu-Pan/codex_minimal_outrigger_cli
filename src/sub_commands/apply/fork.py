@@ -463,18 +463,24 @@ def cmoc_apply_impl(
                 dirty_implementation_paths = None
 
         # 要修正点 0 件の経路も含め、apply run 中に生じた差分を確定する。
-        # report 生成と最終出力も apply fork の処理範囲なので、
-        # completed は最後に確定する。
         _assert_forbidden_paths_clean(apply_worktree)
         _commit_all_changes(apply_worktree)
 
-        # 実行結果を人間向け report に変換する。
-        failed_stage = "write report"
-        start_step(timer, 6, 6, "write report")
         session_head_at_apply_finish = _session_branch_head_for_report(
             repo_root,
             session_branch,
         )
+        failed_stage = "mark apply completed"
+        _mark_apply_completed(
+            state_root,
+            session_id,
+            state,
+        )
+        apply_start_needs_error_record = False
+
+        # 実行結果を人間向け report に変換する。
+        failed_stage = "write report"
+        start_step(timer, 6, 6, "write report")
         report_path = _write_apply_report(
             apply_worktree,
             state_root,
@@ -493,12 +499,6 @@ def cmoc_apply_impl(
         print(f"apply run id: {apply_run_id}")
         print(str(report_path))
         timer.report()
-        failed_stage = "mark apply completed"
-        _mark_apply_completed(
-            state_root,
-            session_id,
-            state,
-        )
         if completed:
             return APPLY_FORK_EXIT_CODE_CONVERGED
         return APPLY_FORK_EXIT_CODE_UNCONVERGED
