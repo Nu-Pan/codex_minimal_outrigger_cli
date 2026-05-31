@@ -154,29 +154,29 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は cmoc のサブコマンド全体に対する横断的な回帰テスト入口です。
-- 共通の `run_command` / `main` / `bin/cmoc` / `format_error_report` と、補完・エラー表示・終了コードの境界をまとめて検証します。
-- `init`、`session`、`apply`、`review oracles` にまたがる状態遷移、ブランチ操作、レポート生成、補完登録を一箇所で押さえます。
+- `tests/test_subcommands.py` は cmoc の横断回帰テストの入口で、`run_command`、`main`、`bin/cmoc`、`format_error_report` など共通制御をまとめて検証します。
+- `init`、`session`、`apply`、`review oracles` の状態遷移、ブランチ操作、エラー表示、終了コード、レポート出力を一括で押さえます。
+- 補完プローブ、`.cmoc` ignore 修復、作業ツリー復旧、サブコマンドログ、error report の境界条件まで含みます。
 
 ## Read this when
 
-- サブコマンド横断の制御フロー、終了コード、エラー報告の整合性を確認したいとき。
-- `cmoc init` の `.cmoc` ignore 修復、untrack、初回 commit の回帰を確認したいとき。
-- `session fork` / `join` / `abandon` の branch 管理、state 記録、rollback、cleanup を追いたいとき。
-- `apply fork` / `join` / `abandon` の差分調査、`--force-resolve`、レポート、未収束時の扱いを確認したいとき。
-- `review oracles` の評価フロー、payload 検証、エラーレポート、`main` の補完登録、`bin/cmoc` の起動前提を確認したいとき。
+- サブコマンド横断の制御フローや終了コードの仕様を確認したいとき。
+- `cmoc init`、`session fork`、`session join`、`session abandon`、`apply fork`、`apply join`、`apply abandon`、`review oracles` の回帰観点を整理したいとき。
+- `main` の補完登録、`bin/cmoc` の起動前提、`format_error_report` の出力整形を確認したいとき。
+- `run_command` がコンソール出力と JSONL サブコマンドログをどう残すか確認したいとき。
+- `tests/test_subcommands.py` がどの範囲の振る舞いを守るか把握したいとき。
 
 ## Do not read this when
 
-- `tests/test_subcommands.py` 以外の個別テストケースだけを確認したいとき。
-- `src/sub_commands/*` の本体実装や `bin/cmoc` の実装詳細だけを追いたいとき。
-- `commons.command_runner`、`commons.errors`、`commons.repo` など共通基盤だけを個別に調べたいとき。
-- `INDEX.md` 全体の生成ルールや `oracles` 側の正本仕様だけを確認したいとき。
-- pytest の共通設定やファイル命名規則だけを確認したいとき。
+- 個別サブコマンドの内部実装だけを追いたいときは、`src/sub_commands/*` を直接読むべきです。
+- `commons.command_runner` や `commons.errors` など単一の共通ヘルパーだけを確認したいとき。
+- `tests/test_timestamps.py` や `tests/test_report_files.py` のような別のテスト入口を見たいとき。
+- pytest の共通設定やテスト命名規則だけを確認したいとき。
+- `INDEX.md` の生成ルール全体や `oracles` 側の正本仕様だけを確認したいとき。
 
 ## hash
 
-- 7493aea976805774590f1460a6f8784e2347b1070562e9a27978eb2b1253cf6f
+- a06b5aef920742eb5287fe0019ee77b8b826f00589b1e053d7e1eaafd5afed4f
 
 # `test_timestamps.py`
 

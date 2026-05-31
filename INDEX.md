@@ -188,13 +188,13 @@
 
 ## Do not read this when
 
-- `cmoc` の正本仕様や運用手順だけを確認したいときは、この配下ではなく `oracles` 側を読むべきです。
+- `cmoc` の正本仕様や運用手順だけを確認したいときは、`oracles` 側を読むべきです。
 - テスト実装や期待値だけを追いたいときは、この配下ではなく `tests` を確認すべきです。
 - 個別サブコマンドの詳細仕様だけを見たいときは、ここではなく `src/sub_commands/` 配下の該当モジュールやその `INDEX.md` を読むべきです。
 
 ## hash
 
-- 0cab8aae6a4db5c7407cca3d3d18af0e95f0c2c260386463c5617f88a4263aae
+- 46548a05aa270dd38eb74608b9be3c7a19de343958f54398851b4574fd12c7c4
 
 # `test.sh`
 
@@ -223,26 +223,22 @@
 
 ## Summary
 
-- `tests` 配下は cmoc 本体の回帰テスト群の入口で、`src` の import 設定や各機能の仕様回帰をまとめています。
-- `conftest.py` は pytest で `src` を import 可能にする共通設定です。
-- 各 `test_*.py` は `commons.codex`、`commons.indexing`、`commons.repo`、`commons.report_files`、サブコマンド群、タイムスタンプ処理、命名規則を分担して検証します。
+- `tests` 配下には pytest の共通設定と、cmoc の各機能に対する回帰テストがまとまっています。
+- `conftest.py` に加えて、`codex`、`indexing`、`repo`、`subcommands`、`timestamps`、`report_files`、`file_naming` の各テストがあります。
+- cmoc の実装変更がどのテスト領域に影響するかを判断するための入口です。
 
 ## Read this when
 
-- pytest 実行時の import path 設定や `tests/conftest.py` の役割を確認したいとき。
-- `commons.codex` の Structured Output、再試行、ログ出力、resume 周りの回帰を追いたいとき。
-- `commons.indexing` の `INDEX.md` 生成・更新・lock・hash 判定を確認したいとき。
-- `commons.repo` の gitignore、tracked / untracked 判定、変更検出、session state を調べたいとき。
-- `sub_commands/*` や CLI 入口、`commons.timestamps`、`commons.report_files` の挙動を検証したいとき。
+- pytest の共通設定や、`tests` 配下の回帰テストの入口を探したいとき。
+- `codex` 呼び出し、INDEX メンテナンス、repo 共通処理、subcommand、timestamp、report file などのテスト範囲を把握したいとき。
+- 個別テストファイルが何を守っているかを一覧で確認したいとき。
 
 ## Do not read this when
 
-- 本番実装のアルゴリズムや内部ロジックだけを確認したいときは、`src` 側の実装を読むべきです。
-- `oracles` の正本仕様断片やルーティング方針だけを確認したいときは、このディレクトリではなく `oracles/INDEX.md` を起点にすべきです。
-- `README.md`、`AGENTS.md`、`memo` などのリポジトリ規約だけを確認したいときは、このテスト群ではなく上位の作業ルールを参照すべきです。
-- 個別機能の詳細だけを探すなら、対応する `test_*.py` を直接読むほうが早いです。
-- `__pycache__` などの生成物は目次対象ではありません。
+- cmoc 本体の実装ロジックや `src` 配下のコードを追いたいとき。
+- `oracles` 側の正本仕様や、INDEX 生成ルールそのものだけを確認したいとき。
+- テスト以外のサブコマンド仕様、CLI のユーザー向け挙動、ファイル命名規則だけを調べたいとき。
 
 ## hash
 
-- e4dd7c69fff33f722e1a6866f2352be81622e019776511d02c6bd000214bf262
+- a31b2e080f3c6ee94079eaa56d6f0a00d37fa084ec9d78911a57e4233b1cc11d
