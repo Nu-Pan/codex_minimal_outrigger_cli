@@ -6998,6 +6998,37 @@ def test_maintain_apply_indexes_updates_oracles_index(
     )
 
 
+def test_maintain_apply_indexes_creates_missing_oracles_index(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """apply 用 INDEX メンテナンスは欠落した oracles/INDEX.md も作る。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """INDEX 生成用の最小 Structured Output を返す。"""
+        return json.dumps(
+            {
+                "summary": ["summary"],
+                "read_this_when": ["read"],
+                "do_not_read_this_when": ["skip"],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    changed = apply_module._maintain_apply_indexes(repo)
+
+    assert changed is True
+    assert (oracle_root / "INDEX.md").exists()
+    assert "# `spec.md`" in (oracle_root / "INDEX.md").read_text(
+        encoding="utf-8"
+    )
+
+
 def test_commit_all_changes_rejects_oracle_file_after_index_update(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
