@@ -113,7 +113,7 @@
 - `list_implementation_files` / `list_oracle_files` や変更検出系の境界条件を調べたいとき。
 - `commit_if_changed` のコミット可否や、失敗時に index と HEAD を壊さない挙動を確認したいとき。
 - session state の読み書き、`active_session_ids_for_home_branch`、`is_cmoc_branch` の判定条件を確認したいとき。
-- `.gitignore`、`.git/info/exclude`、`INDEX.md`、`memo` の除外・対象判定の回帰を修正するとき。
+- .gitignore`、`.git/info/exclude`、`INDEX.md`、`memo` の除外・対象判定の回帰を修正するとき。
 
 ## Do not read this when
 
@@ -124,7 +124,7 @@
 
 ## hash
 
-- e7a543402fa97ab31ff50a98a48baac534caac7a16a10f771df6b14623701c83
+- 9f0a63e4c10b81e0dcbeeee2667216b95f2bb12f0c5092fd096773bd8baf4982
 
 # `test_report_files.py`
 
@@ -154,9 +154,9 @@
 
 ## Summary
 
-- cmoc の各サブコマンドを横断する決定論的な制御ロジックと CLI 入口の回帰テスト群です。
-- `run_command` の標準出力 tee、終了コード、例外時レポート、repo root 解決失敗などの共通処理を検証します。
-- `init`、`session`、`apply`、`review oracles`、`main`、`bin/cmoc` にまたがる登録、状態遷移、補完、エラー整形まで広く押さえます。
+- `tests/test_subcommands.py` は cmoc の各サブコマンドをまたぐ決定論的な制御ロジックと CLI 入口の回帰を検証するテスト群です。
+- `run_command` の標準出力 tee、終了コード、例外時レポート、repo root 解決失敗などの共通処理を重点的に確認します。
+- `init`、`session`、`apply`、`review oracles`、`main`、`bin/cmoc` にまたがる登録、状態遷移、補完、エラー整形まで広く扱います。
 
 ## Read this when
 
@@ -171,15 +171,15 @@
 
 ## Do not read this when
 
-- 個別の `init` / `session` / `apply` / `review oracles` の実装そのものを追いたいとき。
-- `src/sub_commands/` 配下の本体コードだけを確認したいとき。
-- `commons.command_runner` や `format_error_report` など共通基盤だけを知りたいとき。
+- `tests/test_subcommands.py` 以外の個別テストの内容だけを確認したいとき。
+- `src/sub_commands/apply` や `src/sub_commands/session` の本体実装を追いたいとき。
+- `commons.command_runner` や `format_error_report` など共通基盤だけを確認したいとき。
 - `tests/test_indexing.py` や `tests/test_repo.py` など、別領域の回帰を探したいとき。
-- pytest 共通設定や `tests/INDEX.md` 全体の生成ルールだけを確認したいとき。
+- pytest の共通設定や `tests/INDEX.md` 全体の生成規則だけを確認したいとき。
 
 ## hash
 
-- 888df9221335512c45b6814c3f10fa3a045a41f4a3fb5952dff03096d166f35b
+- a95314ee7aa8d7912dd66adaf1f1658c436652a28b6fe0f9f540f8b141b46de2
 
 # `test_timestamps.py`
 
