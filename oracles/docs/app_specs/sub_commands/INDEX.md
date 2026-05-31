@@ -25,9 +25,9 @@
 
 ## Summary
 
-- `cmoc apply fork` の開始から完了レポートまでを扱うサブコマンド仕様への入口です。
-- 調査・修正ループ、作業用ブランチと worktree、評価対象スナップショット、レポート境界をまとめています。
-- `apply.state` の遷移、要修正点リストの Structured Output、レポート保存先と終了コードの前提を案内します。
+- `cmoc apply fork` の開始から完了レポートまでを扱うサブコマンド仕様です。
+- 調査・修正ループ、作業用ブランチと worktree、評価対象スナップショットをまとめています。
+- `apply.state` の遷移、要修正点リストの Structured Output、レポート境界を案内します。
 
 ## Read this when
 
@@ -38,35 +38,35 @@
 
 ## Do not read this when
 
-- `cmoc apply join` のマージ手順や `--force-resolve` の挙動だけを確認したいとき。
+- `cmoc apply join` のマージ手順や `--force-resolve` の扱いだけを確認したいとき。
 - `cmoc apply abandon` の破棄手順や cleanup の扱いだけを確認したいとき。
 - `cmoc session fork` や `cmoc session join` など、session 側の開始・終了・統合だけを確認したいとき。
-- `cmoc review oracles` の評価モードや評価レポート仕様だけを確認したいとき。
+- `cmoc review oracles` の評価モードやレポート仕様だけを確認したいとき。
 
 ## hash
 
-- c99f6d0ebf0d6765e8a42d3ec398e0120815b05911e236c389888ddc88004f46
+- 5a7b8fb2701115b1466b61ed94b8cd34faed802a305f72675ed45d18fe881a7c
 
 # `apply_join.md`
 
 ## Summary
 
-- `cmoc apply join` は、`cmo apply fork` によって作られた `<cmoc-apply-branch>` を `<cmoc-session-branch>` に取り込むための手順をまとめた仕様です。
-- 引数は位置引数なしで、オプション引数 `--force-resolve` により想定外の差分の扱いが変わります。
-- 事前条件、通常モードと強制モードの分岐、`apply.state = error` の扱い、`INDEX.md` のコンフリクト自動解決、使用済みブランチ削除条件までを含みます。
+- `cmoc apply join` の仕様断片への入口で、`apply` で作成した成果物を session 側へ取り込む手順をまとめた文書です。
+- 位置引数なしで実行し、`--force-resolve` によって想定外の差分の扱いが変わる点を案内します。
+- 事前条件、通常モードと強制モードの分岐、`apply.state = error` の扱い、`INDEX.md` のコンフリクト自動解決、使用済みブランチの削除条件までを扱います。
 
 ## Read this when
 
-- `<cmoc-apply-branch>` の成果物を `<cmoc-session-branch>` にマージする処理の仕様を確認したいとき。
+- `<cmoc-apply-branch>` を `<cmoc-session-branch>` に取り込む流れを確認したいとき。
 - `--force-resolve` の有無で、想定外の差分をどう扱うかを知りたいとき。
-- `apply.state = error` を許容して続行する条件や、マージコンフリクトの自動解決対象を確認したいとき。
+- `apply.state = error` を許容して続行できる条件や、マージコンフリクト時の `INDEX.md` 自動解決を確認したいとき。
 - 処理後に `<cmoc-apply-branch>` と `<cmoc-apply-worktree>` を削除してよい条件を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply join` のコマンド仕様や実行手順を確認したいときは、このファイルではなく正本仕様そのものを読むべきです。
-- `cmoc apply join` ではなく、別の `cmoc apply` サブコマンドの仕様を探しているときは、このファイルは対象外です。
-- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいときは、このファイルを読む必要はありません。
+- `cmoc apply join` の実行手順や引数の詳細を確認したいだけのとき。
+- `cmoc apply fork` や `cmoc apply abandon` など、別の `apply` サブコマンドの仕様を探しているとき。
+- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
 
 ## hash
 
@@ -99,24 +99,24 @@
 ## Summary
 
 - `cmoc review oracles` の仕様入口で、`<repo-root>/oracles` のスナップショットを評価して人間にレポートする手順をまとめた文書です。
-- 部分評価・全体評価のモード分岐、評価対象ファイルの選定、レポート形式、致命的問題の定義を案内します。
 - `review_oracles.md` の実装・修正・レビュー時に、どの仕様断片へ進むべきかを素早く判断するための目次です。
+- 部分評価・全体評価のモード分岐、評価対象の選定、レポート形式、致命的問題の定義を案内します。
 
 ## Read this when
 
-- 現在の `<repo-root>/oracles` スナップショットに致命的な問題がないかを評価し、その結果を人間へ報告する `cmoc review oracles` の仕様入口を確認したいとき。
-- 部分評価モード・全体評価モードの切り替え条件、`--full` の扱い、評価対象 `oracle` ファイルの列挙方法を確認したいとき。
+- 現在の `<repo-root>/oracles` スナップショットに致命的な問題がないかを評価し、人間へレポートする入口を確認したいとき。
+- 部分評価モード・全体評価モードの切り替え条件や、`--full` の扱い、評価対象 `oracle` ファイルの列挙方法を確認したいとき。
 - 評価レポートの構成、`fatal` / `inconclusive` / `warning` の判定基準、出力先や参照ファイル一覧の仕様を確認したいとき。
 
 ## Do not read this when
 
 - `cmoc review oracles` 以外の `cmoc` サブコマンドの手順や引数だけを確認したいとき。
-- `oracles` 配下の個別仕様ファイルを直接確認したいときは、この目次ではなく `review_oracles.md` を読むべきです。
+- `oracles` 配下の個別仕様ファイルを直接確認したいとき。
 - `INDEX.md` の生成・更新ルールや、`oracles` 全体のルーティング方針だけを確認したいとき。
 
 ## hash
 
-- 9b609e6ec95591af1f56245af65ace428ae873898310c8ffbdfa07b976aeabdb
+- 3e9a7e2782585d528db7b4dfa50c2333b9ee44517efb93de41360913de145e02
 
 # `session_abandon.md`
 
