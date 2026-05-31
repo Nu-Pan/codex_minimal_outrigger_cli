@@ -2,29 +2,31 @@
 
 ## Summary
 
-- `cmoc` のサブコマンド群が共通で使う基盤モジュールをまとめたディレクトリです。
-- `repo.py` が repo root・branch・session/apply state・差分検査・`git` 操作補助を担当します。
-- `codex.py` が `codex exec` 実行、Structured Output 検証、再試行、quota 待機、`INDEX.md` メンテナンス連携を担当します。
-- `command_runner.py`、`errors.py`、`subcommand_log.py`、`timing.py`、`timestamps.py`、`report_files.py` が実行ラッパー、エラー整形、ログ、計測、時刻、レポート保存を支えます。
-- `indexing.py` が `INDEX.md` の自動維持と再生成の中心になっています。
+- `cmoc` のサブコマンド群で共通利用する基盤モジュールをまとめたディレクトリです。
+- `__init__.py` は `src.commons` パッケージ宣言だけを行う最小モジュールです。
+- `codex.py` が `codex exec` の起動、Structured Output 検証、再試行、quota 待機、INDEX メンテナンス連携を担当します。
+- `command_runner.py`、`errors.py`、`subcommand_log.py`、`timing.py`、`timestamps.py`、`report_files.py` が実行制御、エラー整形、ログ、計測、時刻、レポート保存を支えます。
+- `indexing.py` が `INDEX.md` の自動維持と再生成を担います。
+- `repo.py` が repo root 探索、branch / state 判定、`git` 補助、apply process 保存を担当します。
 
 ## Read this when
 
-- `cmoc` のサブコマンド群で共通に使う基盤処理を確認したいとき。
-- `repo.py` による repo root 探索、branch 判定、session/apply state、差分検査、`git` 補助の挙動を確認・修正したいとき。
-- `codex.py` の `codex exec` 起動、Structured Output 検証、quota 待機、`INDEX.md` メンテナンス連携を追いたいとき。
-- `command_runner.py`、`errors.py`、`subcommand_log.py`、`timing.py`、`timestamps.py`、`report_files.py` のような横断的な共通処理を理解したいとき。
-- このディレクトリ配下の共通モジュールを追加・整理するときに、既存の役割分担を把握したいとき。
+- `cmoc` の共通処理を横断的に確認・修正したいとき。
+- `repo.py` の repo root 探索、branch / state 判定、`git` 補助、runtime 保存の挙動を追いたいとき。
+- `codex.py` の `codex exec` 実行、Structured Output 検証、再試行、quota 待機、INDEX メンテナンス連携を理解したいとき。
+- `indexing.py` の `INDEX.md` 生成・更新・再利用判定・自動コミットの流れを確認したいとき。
+- `subcommand_log.py`、`timing.py`、`timestamps.py`、`errors.py`、`report_files.py` の横断処理を追いたいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドごとの業務ロジック、引数、状態遷移だけを確認したいときは、`src/sub_commands` 側を読むべきです。
-- `oracles` 側のコマンド仕様や利用手順だけを確認したいときは、このディレクトリではなく `oracles/docs/app_specs/sub_commands/` 側を参照すべきです。
-- 共通処理ではなくテスト実装や CLI エントリーポイントだけを追いたいときは、このディレクトリを読む必要はありません。
+- 個別サブコマンド `apply` / `session` / `review` / `init` の業務ロジックだけを確認したいときは、`src/sub_commands` 側を読むべきです。
+- `cmoc` の利用手順や `oracles` 側の仕様断片だけを見たいときは、このディレクトリではなく `oracles/docs/app_specs/` 側を参照すべきです。
+- `INDEX.md` の生成ルールだけを確認したいときは、このディレクトリではなく `indexing.py` を直接読むべきです。
+- `__init__.py` のような package marker や、`__pycache__` などの生成物だけを確認したいときは、この目次を読む必要はありません。
 
 ## hash
 
-- eedc09290d9f5e35fb9925db75442fb006c0c2929cd8317ab94b0b0f0436d66b
+- d5e41c1a835580022e6e13766e2f0ed30a039f4da3f1c7922953298af19ef7b9
 
 # `main.py`
 
@@ -55,23 +57,22 @@
 
 ## Summary
 
-- `src/sub_commands` は `cmoc` の個別サブコマンド実装の入口で、`apply`、`session`、`review`、`init.py` を束ねるディレクトリです。
-- この配下には `__init__.py` と、`apply` 配下の `abandon.py`、`fork.py`、`join.py`、`session` 配下の `abandon.py`、`fork.py`、`join.py`、`review/oracles.py`、`init.py` があります。
-- 個別実装に進む前に、各サブコマンドの責務分担と入口構造を俯瞰するための目次です。
+- `src/sub_commands` は cmoc の各サブコマンド実装を束ねる入口ディレクトリで、`__init__.py`、`init.py`、`apply/`、`review/`、`session/` を案内します。
+- `__init__.py` はパッケージ宣言のみを担い、`init.py` は `cmoc init` の本体処理を担います。
+- `apply/`、`review/`、`session/` はそれぞれ apply / review / session 系サブコマンドの入口目次です。
 
 ## Read this when
 
-- `cmoc` の個別サブコマンドの入口をまとめて確認したいとき。
-- `apply`、`session`、`review`、`init` のどの仕様断片へ進むべきか整理したいとき。
-- サブコマンドごとの目的、入力条件、実行手順、状態遷移、終了条件を俯瞰したいとき。
-- `src/sub_commands/apply`、`src/sub_commands/session`、`src/sub_commands/review` の下位 `INDEX.md` に進む前の入口を探したいとき。
+- `src/sub_commands` 配下のどの入口ファイルやサブディレクトリを読むべきか切り分けたいとき。
+- `cmoc init` の本体や、`apply` / `review` / `session` 系の責務分担を俯瞰したいとき。
+- `src/sub_commands` がパッケージ入口としてどう構成されているか確認したいとき。
 
 ## Do not read this when
 
-- 個別の `apply`、`session`、`review`、`init` の詳細仕様だけを確認したいときは、この目次ではなく該当する下位ディレクトリやモジュールの `INDEX.md` を直接読むべきです。
-- 実装コードやテストコードの作業だけで足りるときは、この目次を読む必要はありません。
-- `branch_model`、`codex_call`、ログ、エラーハンドリング、`oracles` 全体の扱いなど、別の共通仕様を確認したいときはこのディレクトリではなく他の入口文書を読むべきです。
+- `src/sub_commands/init.py` の個別処理や `apply/join` などの詳細実装を追いたいとき。
+- `review oracles` や `session` / `apply` の仕様断片を直接確認したいときは、各配下の仕様書を読むべきです。
+- `src/sub_commands` ではなく、CLI 登録や共通基盤だけを確認したいとき。
 
 ## hash
 
-- a39223f0a04973f3bebd1bc04d371e3b82388bb24224b1475c019208347a1b45
+- 8c91c2396f302826bbe9d1ce2fd39109ecfae119ba96a3301ce8d2052376944a

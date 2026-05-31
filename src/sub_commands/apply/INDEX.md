@@ -25,25 +25,25 @@
 
 - `src/sub_commands/apply/abandon.py` は `cmoc apply abandon` の本体処理を実装するモジュールです。
 - 現在の session に紐づく未 join の apply run を破棄し、必要に応じて実行中の apply プロセスを停止したうえで、apply branch と worktree を強制削除して `apply.state` を `ready` に戻します。
-- 現在の branch から cleanup 基点を session branch に移し、破棄結果と warning を標準出力へ出力し、次回の apply に向けて session state の補助情報を初期化します。
+- 現在の branch から cleanup 基点を session branch へ移し、破棄結果と warning を標準出力へ出力し、次回の apply に向けて session state の補助情報を初期化します。
 
 ## Read this when
 
 - `cmoc apply abandon` の役割と責務を素早く把握したいとき。
-- `cmoc apply abandon` の実装・修正・レビュー・テストを始める前に入口を確認したいとき。
-- 未 join の apply run の破棄条件、`session.state` / `apply.state` の検証、実行中プロセス停止、apply branch / worktree の cleanup 方針を追いたいとき。
-- 破棄後に標準出力へ何が出るか、warning の扱いを確認したいとき。
+- `cmoc apply abandon` の実装・修正・レビュー・テストを始める前に、前提条件、状態検証、cleanup の流れを確認したいとき。
+- 未 join の apply run の破棄条件、`session.state` / `apply.state` の検証、実行中プロセスの停止、apply branch / worktree の削除方針を追いたいとき。
+- 破棄結果、warning の扱い、`apply.state` を `ready` に戻す後始末を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply fork` の不整合調査や要修正点整理だけを確認したいとき。
-- `cmoc apply join` や `cmoc session abandon` など、別サブコマンドの終了・統合・破棄手順だけを確認したいとき。
-- `cmoc apply abandon` の仕様断片や利用手順だけを確認したいときは、実装ではなく正本仕様を直接読むべきとき。
-- `src/sub_commands/apply` パッケージ全体の入口だけを確認したいとき。
+- `cmoc apply fork` の要修正点調査や修正反映の仕様を確認したいとき。
+- `cmoc apply join` や `cmoc session abandon` など、別サブコマンドの終了・統合・破棄処理だけを確認したいとき。
+- `cmoc apply abandon` の利用手順や正本仕様だけを確認したいときは、実装コードではなく `oracles/docs/app_specs/sub_commands/apply_abandon.md` を読むべきとき。
+- `src/sub_commands/apply` パッケージ全体の入口構造だけを確認したいとき。
 
 ## hash
 
-- 55fc71299214989dbb8672c9d047080338b21b1bcce055d4c6bf7a6af3f5d73a
+- 62fe450290efc5bbee42fa14bd25d1ca4a223a9614b17e9f03d63de8fe73faad
 
 # `fork.py`
 
@@ -69,7 +69,7 @@
 
 ## hash
 
-- b199bf6def0a8bef9df2bc42aad0d4ec7a31e9ba7d119e108af953e5df5c2f02
+- b578e82041313343918f96291b0d2b90d95e8699ec8eedc6cdbd44218be0f6f0
 
 # `join.py`
 
@@ -95,4 +95,4 @@
 
 ## hash
 
-- efbb36d52de7cdaa17e9fcc7c059f46bafa09e25c4cb6b1151d6b48db7af865c
+- 14303d5581db27bba3b4241b36937c4aba65beea650ba93c33e6e91c79926fe3

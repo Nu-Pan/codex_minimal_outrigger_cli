@@ -195,13 +195,13 @@
 ## Do not read this when
 
 - 個別サブコマンドの引数解析や業務ロジックだけを追いたいとき
-- コンソール表示やエラーレポートの整形だけを確認したいとき
 - `codex exec` の呼び出し方や Structured Output の仕様だけを確認したいとき
+- コンソール表示やエラーレポートの整形だけを確認したいとき
 - `INDEX.md` の生成ルールや他の共通仕様だけを確認したいとき
 
 ## hash
 
-- e7d00e3d3c4701e80a0c2dcdfa842b3571d02d7b8e29fecd2f66baab847c3c6f
+- a9328edb9d0f301d27767a791e92a023f953cbde99ddd5eba89375998e145bc3
 
 # `timestamps.py`
 
