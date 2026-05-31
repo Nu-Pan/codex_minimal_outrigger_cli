@@ -1137,14 +1137,12 @@ def _validate_evaluation_issues(
 
 
 def _require_issue_oracle_path_string(value: object, index: int) -> None:
-    """issues[].oracle_path は INDEX.md 自体を評価対象にしない。"""
+    """issues[].oracle_path は後処理で必要な最小限だけ検査する。"""
     if not isinstance(value, str):
         raise ValueError(f"issues[{index}].oracle_path must be a string.")
     stripped_value = value.strip()
     if not stripped_value:
         raise ValueError(f"issues[{index}].oracle_path must not be empty.")
-    if Path(stripped_value).name == "INDEX.md":
-        raise ValueError(f"issues[{index}].oracle_path must not be INDEX.md.")
 
 
 def _require_absolute_oracle_reference_path(

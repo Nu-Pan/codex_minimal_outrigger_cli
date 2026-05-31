@@ -2295,10 +2295,10 @@ def test_eval_oracles_payload_accepts_existing_oracle_and_index_paths(
     )
 
 
-def test_eval_oracles_payload_rejects_index_as_issue_oracle_path(
+def test_eval_oracles_payload_accepts_index_as_issue_oracle_path(
     tmp_path: Path,
 ) -> None:
-    """issues[].oracle_path は評価対象外の INDEX.md を受理しない。"""
+    """issues[].oracle_path が INDEX.md でも後処理エラーにしない。"""
     repo = _init_repo(tmp_path)
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -2315,17 +2315,13 @@ def test_eval_oracles_payload_rejects_index_as_issue_oracle_path(
         [oracle, oracle_index],
     )
 
-    with pytest.raises(
-        ValueError,
-        match="issues\\[0\\]\\.oracle_path must not be INDEX.md",
-    ):
-        review_oracles_module._validate_evaluation_payload(
-            {
-                "issues": [issue],
-            },
-            repo,
-            oracle,
-        )
+    review_oracles_module._validate_evaluation_payload(
+        {
+            "issues": [issue],
+        },
+        repo,
+        oracle,
+    )
 
 
 def test_eval_oracles_payload_accepts_other_oracle_as_issue_oracle_path(
