@@ -40,6 +40,7 @@ from commons.timestamps import is_timestamp
 from sub_commands.apply.fork import cmoc_apply_impl
 from sub_commands.apply.fork import _apply_prompt
 from sub_commands.apply.fork import _apply_index_excluded_roots
+from sub_commands.apply.fork import APPLY_FORK_EXIT_CODE_CONVERGED
 from sub_commands.apply.fork import APPLY_FORK_EXIT_CODE_UNCONVERGED
 from sub_commands.apply.fork import _DISCREPANCY_OUTPUT_SCHEMA
 from sub_commands.apply.fork import _commit_all_changes
@@ -315,30 +316,45 @@ def test_run_command_reports_nonzero_typer_exit(
     )
 
 
-def test_run_command_treats_apply_unconverged_as_success(
+def test_run_command_treats_apply_unconverged_as_non_error_exit(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """apply fork の未収束区分は CLI 実行失敗として扱わない。"""
+    """apply fork の未収束区分はエラーレポートなしで終了コードを保持する。"""
     repo = _init_repo(tmp_path)
     monkeypatch.chdir(repo)
+
+    assert APPLY_FORK_EXIT_CODE_CONVERGED == 0
+    assert APPLY_FORK_EXIT_CODE_UNCONVERGED not in {
+        APPLY_FORK_EXIT_CODE_CONVERGED,
+        1,
+        2,
+    }
 
     def handler(_repo: Path) -> int:
         """未収束の apply fork 本体と同じ終了コードを返す。"""
         return APPLY_FORK_EXIT_CODE_UNCONVERGED
 
-    run_command(handler)
+    with pytest.raises(typer.Exit) as exit_info:
+        run_command(
+            handler,
+            non_error_exit_codes={APPLY_FORK_EXIT_CODE_UNCONVERGED},
+        )
 
     captured = capsys.readouterr()
     log_content = next(
         (repo / ".cmoc" / "logs" / "sub_commands").glob("*.jsonl")
     ).read_text(encoding="utf-8")
+    assert exit_info.value.exit_code == APPLY_FORK_EXIT_CODE_UNCONVERGED
     assert captured.err == ""
     assert "ERROR" not in captured.out
     assert "# Command completion report" in captured.out
-    assert "subcommand return code: 0" in captured.out
-    assert '"returncode": 0' in log_content
+    assert (
+        f"subcommand return code: {APPLY_FORK_EXIT_CODE_UNCONVERGED}"
+        in captured.out
+    )
+    assert f'"returncode": {APPLY_FORK_EXIT_CODE_UNCONVERGED}' in log_content
 
 
 def test_run_command_reports_repo_root_resolution_error(
@@ -4840,6 +4856,14 @@ def test_apply_uses_investigate_repeat_option_for_loop_limit(
     def fake_codex(*args: object, **kwargs: object) -> str:
         """常に不整合を返し、指定回数で incomplete になることを見やすくする。"""
         codex_prompts.append(str(args[1]))
+        if str(kwargs.get("purpose")).startswith("apply fixing point"):
+            (Path(args[0]) / "app.py").write_text(
+                "fixed but still needs review\n",
+                encoding="utf-8",
+            )
+            return ""
+        if kwargs.get("purpose") == "summarize apply changes":
+            return _change_summary_json()
         if kwargs.get("expect_json") is True:
             return _discrepancy_json("f")
         return _apply_report(str(args[1]), "未収束", [1, 1])

@@ -62,8 +62,8 @@ ApplyScope = Literal["rolling", "session", "full"]
 _APPLY_SCOPES = {"rolling", "session", "full"}
 APPLY_FORK_EXIT_CODE_SUCCESS = 0
 APPLY_FORK_EXIT_CODE_CONVERGED = APPLY_FORK_EXIT_CODE_SUCCESS
-# 未収束はレポート上の作業結果区分であり、CLI 実行としては正常終了する。
-APPLY_FORK_EXIT_CODE_UNCONVERGED = APPLY_FORK_EXIT_CODE_SUCCESS
+# 未収束はエラーではないが、呼び出し元が収束と判別できる終了コードにする。
+APPLY_FORK_EXIT_CODE_UNCONVERGED = 10
 
 
 @dataclass(frozen=True)
@@ -275,7 +275,8 @@ def cmoc_apply_impl(
                     repeat_improove_fixing_list
                 ),
                 scope=scope,
-            )
+            ),
+            non_error_exit_codes={APPLY_FORK_EXIT_CODE_UNCONVERGED},
         )
         return None
 

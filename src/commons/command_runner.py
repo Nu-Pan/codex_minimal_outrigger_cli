@@ -1,6 +1,7 @@
 """CLI サブコマンド共通の実行制御。"""
 
 from collections.abc import Callable
+from collections.abc import Iterable
 from pathlib import Path
 from time import perf_counter
 
@@ -14,10 +15,15 @@ from .subcommand_log import subcommand_log
 from .timing import clear_current_timer, format_duration, report_current_timer
 
 
-def run_command(handler: Callable[[Path], int | None]) -> None:
+def run_command(
+    handler: Callable[[Path], int | None],
+    *,
+    non_error_exit_codes: Iterable[int] = (),
+) -> None:
     """repo root 解決と共通エラー報告を行って本体処理を実行する。"""
     # Typer 関数を薄く保つため、横断的な実行制御は commons 側に集約する。
     exit_code = 0
+    non_error_exit_code_set = set(non_error_exit_codes)
     started = perf_counter()
     try:
         repo_root = enter_repo_root()
@@ -29,7 +35,10 @@ def run_command(handler: Callable[[Path], int | None]) -> None:
                     exit_code = result
             except typer.Exit as exit_error:
                 exit_code = exit_error.exit_code or 0
-                if exit_code != 0:
+                if (
+                    exit_code != 0
+                    and exit_code not in non_error_exit_code_set
+                ):
                     report_error = CmocError(
                         "サブコマンドがエラー終了しました。",
                         actions=[
