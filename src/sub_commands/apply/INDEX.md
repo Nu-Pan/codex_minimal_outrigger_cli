@@ -50,28 +50,25 @@
 
 ## Summary
 
-- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体で、session branch 上に専用 apply branch と worktree を作り、調査・修正・commit・report 生成までを一括で担う。
-- session/apply state の検証、repeat 系オプションと `scope` の解釈、apply 開始時の排他制御と worktree 作成リトライを扱う。
-- oracle / 実装ファイルを対象に Structured Output で不整合を調査し、要修正点の整理、追従修正、禁止領域検査、commit を反復する。
-- Markdown + YAML Front Matter の apply report、変更要約の Structured Output、各種 validation と prompt 生成の補助関数をまとめている。
+- `cmoc apply fork` の本体実装で、session branch 上で専用の apply branch と worktree を作成し、`session.state` / `apply.state` の検証・更新、排他ロック、作業開始・終了の制御をまとめている。
+- oracle ファイルと実装ファイルを対象に、Structured Output で不整合を調査し、要修正点の整理・改善・適用を並列実行しながら、`--repeat-investigate-and-fix`、`--repeat-improove-fixing-list`、`--scope` を扱う。
+- 禁止領域の変更検査、`INDEX.md` の維持、コミット生成、Markdown + YAML Front Matter の apply report / error report 生成、および各種 prompt・validation helper をまとめている。
 
 ## Read this when
 
-- `cmoc apply fork` の処理順や、開始から report 出力までの全体フローを追いたいとき。
-- session.state / apply.state の前提条件、`--repeat-investigate-and-fix`、`--repeat-improove-fixing-list`、`--scope` の扱いを確認したいとき。
-- 不整合調査の Structured Output、要修正点の整理、実装修正ループ、commit の境界を確認したいとき。
-- apply report の YAML Front Matter、Markdown セクション検証、変更要約の生成条件を確認したいとき。
+- `cmoc apply fork` の開始から report 出力までの全体フローを追いたいとき。
+- `session.state` / `apply.state` の前提条件、`--repeat-investigate-and-fix`、`--repeat-improove-fixing-list`、`--scope` の挙動、または apply branch / worktree の作成リトライを確認したいとき。
+- 不整合調査の Structured Output、要修正点リストの整理、修正の適用、禁止領域チェック、commit / report 生成の実装やテストを確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply join` や `cmoc apply abandon` の終了・破棄処理だけを追いたいとき。
-- `cmoc apply` の入口定義だけで十分で、実装の細部や helper 群まで要らないとき。
-- 個別の oracle 仕様や `oracles` 配下の正本断片そのものを確認したいとき。
-- `cmoc session`、`cmoc init`、`cmoc review` など別サブコマンドの実装を見たいとき。
+- `cmoc apply join` や `cmoc apply abandon`、`cmoc session fork/join/abandon` など、別サブコマンドの手順だけを確認したいとき。
+- `cmoc apply fork` の CLI 登録や入口だけを確認したいときは、このファイルではなく `src/main.py` や `src/sub_commands/apply/INDEX.md` を先に読むべきです。
+- `oracles` 配下の正本仕様そのものや、`INDEX.md` の生成ルールだけを確認したいときは、この実装ファイルを読む必要はありません。
 
 ## hash
 
-- c04bc891f48a043350b16e690cc6a8380c87327fb45b06374a026a1fc8b3f85d
+- 97d354fa21c33b42457c37a4a5bdf7c8f21c69ac53f3e21dc89c3b504673d6d8
 
 # `join.py`
 

@@ -154,19 +154,17 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は cmoc のサブコマンド群を横断して、共通実行制御と個別サブコマンドの回帰をまとめて検証するテスト集です。
-- `init`、`session`、`apply`、`review oracles`、`main`、`bin/cmoc` にまたがる登録、状態遷移、レポート、補完、エラー整形を扱います。
-- サブコマンド共通基盤の出力、終了コード、conflict 判定、補助ヘルパーの仕様境界もここで押さえます。
+- `tests/test_subcommands.py` は cmoc のサブコマンド全体に対する横断的な回帰テスト集です。
+- `run_command`、`main`、`bin/cmoc`、`format_error_report` などの共通起動・エラー表示の境界を確認します。
+- `init`、`session`、`apply`、`review oracles` の状態遷移、ブランチ操作、レポート生成、補完登録までをまとめて検証します。
 
 ## Read this when
 
-- サブコマンド間をまたぐ制御フローや状態遷移の回帰を確認したいとき。
-- `run_command` の tee 出力、終了コード、例外レポート、repo root 解決失敗の扱いを調べたいとき。
-- `cmoc init` の `.cmoc` ignore 補修、tracked `.cmoc` の untrack、初回 commit の挙動を確認したいとき。
-- `session fork` / `join` / `abandon` の branch 管理、state 記録、rollback、cleanup の回帰を追いたいとき。
-- `apply fork` / `join` / `abandon` の差分調査、並列処理、commit、レポート生成、未収束時の扱いを確認したいとき。
-- `review oracles` の評価フロー、prompt 生成、payload 検証、エラーレポートの回帰を確認したいとき。
-- `main` の Typer 登録、補完プローブ、`bin/cmoc` の実行前提、`format_error_report` の整形仕様を確認したいとき。
+- サブコマンド間をまたぐ制御フローや終了コードの扱いを確認したいとき。
+- `cmoc init` の `.cmoc` ignore 修復、untrack、初回 commit の挙動を確認したいとき。
+- `session fork` / `join` / `abandon` の branch 管理、state 記録、rollback、cleanup を追いたいとき。
+- `apply fork` / `join` / `abandon` の差分調査、`--force-resolve`、レポート、未収束時の扱いを確認したいとき。
+- `review oracles` の評価フロー、payload 検証、エラーレポート、`main` の補完登録、`bin/cmoc` の起動前提を確認したいとき。
 
 ## Do not read this when
 
@@ -178,7 +176,7 @@
 
 ## hash
 
-- 3c0f3f9ee572717e0cbf1d796807850cdee9d4b46ec1312d50f767c156d649a5
+- 9f2e458dab29da45f3c02c0c716306b882fbbdc58e93dde16d2926c02996dd39
 
 # `test_timestamps.py`
 

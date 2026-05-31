@@ -50,29 +50,27 @@
 
 ## Summary
 
-- Typer から呼ばれるサブコマンド共通の実行ラッパーで、`<repo-root>` の解決、`subcommand_log` の開始、例外の変換、終了コード決定をまとめています。
-- 通常のサブコマンド本体は `Path` を受け取り、`subcommand_log` と `timing` と連携して実行結果を集約します。
-- `typer.Exit` と通常例外を分けて扱い、必要に応じて `CmocError` と `format_error_report()` で利用者向けのエラー表示を行います。
-- 終了時には `log_event()`、`report_current_timer()`、`format_duration()`、`clear_current_timer()` を使って完了レポートを出します。
+- Typer サブコマンドの共通実行ラッパーで、`<repo-root>` の解決、`subcommand_log` の開始、例外変換、終了コード確定をまとめる。
+- 通常のサブコマンド本体を `Path` 受け取りに統一し、`typer.Exit`、通常例外、`CmocError` を分けて stdout のエラーレポートと終了集計を出す。
+- 実行完了時に `log_event()`、`report_current_timer()`、`format_duration()`、`clear_current_timer()` を使ってログと経過時間を集約する。
 
 ## Read this when
 
-- サブコマンドの入口をどこに集約し、共通の実行制御をどう掛けているか確認したいとき。
-- 各サブコマンドが `<repo-root>` の `Path` をどう受け取るか確認したいとき。
-- 例外時のエラー表示、終了コード、`typer.Exit` への変換規則を見直したいとき。
-- 実行ログ、経過時間、待機時間、戻り値の集計出力の流れを追いたいとき。
+- サブコマンドの共通入口がどこで `repo root` を解決し、どう本体へ渡すか確認したいとき。
+- `typer.Exit`、通常例外、`CmocError` の扱いと、非 0 終了時のレポート出力規則を確認したいとき。
+- 実行ログ、`quota` 待ち時間、経過時間、終了コードの最終集計を追いたいとき。
+- `run_command()` を使うサブコマンドを実装・修正するとき。
 
 ## Do not read this when
 
 - 個別サブコマンドの業務ロジックや CLI 引数定義だけを確認したいとき。
-- `<repo-root>` 探索や `.cmoc` の扱いの詳細を追いたいときは、`repo.py` を読むべきです。
-- エラーメッセージ本文の整形や共通例外の定義そのものを確認したいときは、`errors.py` を読むべきです。
-- サブコマンドログやタイミング計測の実装だけを調べたいときは、`subcommand_log.py` と `timing.py` を直接読むべきです。
-- Codex CLI 呼び出し、Structured Output、`INDEX.md` 生成など別機能を調べたいとき。
+- `<repo-root>` 探索や `.cmoc` の状態管理の詳細を追いたいときは `repo.py` を読むべきです。
+- エラーメッセージの整形仕様そのものを確認したいときは `errors.py` を読むべきです。
+- サブコマンドログや時間計測の実装だけを確認したいときは `subcommand_log.py` と `timing.py` を読むべきです。
 
 ## hash
 
-- fb8b525a34d873d1070035cae87b17be49cd73d9f27228024f1dd4718ae888f7
+- a21c1222e282f147389a35cb8a6bedab12da3431dc4c134af4bd2ed09b37a35a
 
 # `errors.py`
 
