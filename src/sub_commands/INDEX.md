@@ -14,7 +14,7 @@
 ## Do not read this when
 
 - `src.sub_commands` 配下の個別サブコマンド実装や実行フローを確認したいとき。
-- `apply`、`session`、`init`、`eval_oracles` などの各モジュールの仕様を追いたいとき。
+- `apply`、`session`、`review`、`init` などの各モジュールの仕様を追いたいとき。
 - `src.sub_commands` のパッケージ宣言ではなく、実際の業務ロジックや CLI 入口を見たいとき。
 
 ## hash
@@ -45,31 +45,6 @@
 
 - 26ab0a7046477037f1c7028614197738752261a44f8dc4a27e2df8e04a1e3d43
 
-# `eval_oracles.py`
-
-## Summary
-
-- `src/sub_commands/eval_oracles.py` は `cmoc review oracles` の本体実装です。
-- oracles スナップショットの評価対象選定、部分/全体評価の分岐、並列評価、問題点リストの改善反復をまとめて扱います。
-- 評価前の `INDEX.md` メンテナンス、Structured Output 検証、Codex CLI 用 prompt 構築、Markdown レポート生成と失敗時の報告処理も担います。
-
-## Read this when
-
-- `cmoc review oracles` の実行順、部分評価・全体評価の切り替え、評価対象の oracle ファイル選定を確認したいとき。
-- 評価前の `INDEX.md` メンテナンス、開始時点の oracles tree の固定、参照可能ファイルの制約を実装・修正・レビューしたいとき。
-- Structured Output の検証条件、問題点リストの改善反復、Codex CLI 向けの prompt 構築を確認したいとき。
-- レポート保存、error report、stderr フォールバックまで含めて `cmoc review oracles` の挙動を把握したいとき。
-
-## Do not read this when
-
-- `cmoc review oracles` の CLI 引数や `main.py` への登録だけを確認したいとき。
-- `cmoc apply`、`cmoc session`、`cmoc init` など、別サブコマンドの実装や仕様を追いたいとき。
-- `oracles` 配下の個別仕様断片そのものを直接読みたいとき。
-
-## hash
-
-- 34c6e91d4fd996acd96b7440b5c556325973d9c961bb127bb6201f24864bedc8
-
 # `init.py`
 
 ## Summary
@@ -92,6 +67,30 @@
 ## hash
 
 - 766eb4ef5567a176766be2bb55dbc8f955c55af92c1ddc3f64043c1be4bda4ee
+
+# `review`
+
+## Summary
+
+- `src/sub_commands/review` は `cmoc review` 系サブコマンド実装の入口です。
+- `oracles.py` は `cmoc review oracles` の本体実装です。
+- oracles スナップショットの評価対象選定、部分/全体評価の分岐、並列評価、問題点リストの改善反復、Markdown レポート生成までを扱います。
+
+## Read this when
+
+- `cmoc review` 系の実装ファイルを読む前に、どのモジュールへ進むべきか整理したいとき。
+- `cmoc review oracles` の本体実装がコマンド path と対応する配置にあることを確認したいとき。
+- oracle 評価、`INDEX.md` 保守、Structured Output 検証、レポート生成の流れを追いたいとき。
+
+## Do not read this when
+
+- `cmoc review oracles` の CLI 引数や `main.py` への登録だけを確認したいとき。
+- `cmoc apply`、`cmoc session`、`cmoc init` など、別サブコマンドの実装や仕様を追いたいとき。
+- `oracles` 配下の個別仕様断片そのものを直接読みたいとき。
+
+## hash
+
+- e0d6b42c66d697f3f26dbc84dba153a12b9a0a90125dc9b5e769cd95dcc6144c
 
 # `session`
 
