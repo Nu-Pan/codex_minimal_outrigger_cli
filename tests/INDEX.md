@@ -114,18 +114,18 @@
 - `list_implementation_files` / `list_oracle_files` や変更検出系の境界条件を調べたいとき。
 - `commit_if_changed` のコミット可否や、失敗時に index と HEAD を壊さない挙動を確認したいとき。
 - session state の読み書き、`active_session_ids_for_home_branch`、`is_cmoc_branch` の判定条件を確認したいとき。
-- .gitignore`、`.git/info/exclude`、`INDEX.md`、`memo` の除外・対象判定の回帰を修正するとき。
+- `.gitignore`、`.git/info/exclude`、`INDEX.md`、`memo` の除外・対象判定の回帰を修正するとき。
 
 ## Do not read this when
 
 - `src/commons/repo.py` の実装ロジックを直接追いたいとき。
-- 個別の git ユーティリティや単体関数の使い方だけを確認したいとき。
+- 個別の git ユーティリティや単一関数の使い方だけを確認したいとき。
 - `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを知りたいとき。
 - `session` や `apply` など、repo 共通処理以外のサブコマンド仕様を調べたいとき。
 
 ## hash
 
-- 9f0a63e4c10b81e0dcbeeee2667216b95f2bb12f0c5092fd096773bd8baf4982
+- 0d44915829434ff15ff4320e0c9043c77393065485ae818e0bdd7b02e3276932
 
 # `test_report_files.py`
 
@@ -156,28 +156,28 @@
 ## Summary
 
 - `tests/test_subcommands.py` は `run_command` と `main` を中心に、cmoc の横断回帰をまとめたテスト入口です。
-- `init`、`session`、`apply`、`review oracles` の状態遷移、前提条件、終了コード、エラー報告、レポート出力を広く確認します。
-- 補完プローブ、`.cmoc` ignore 修復、作業ツリーやブランチの復旧、Codex 呼び出しのプロンプト/検証、JSONL サブコマンドログ、テスト用ヘルパー群も含みます。
+- `init`、`session`、`apply`、`review oracles` の状態遷移、前提条件、終了コード、エラー報告、レポート保存を広く検証します。
+- 補完プローブ、`.cmoc` ignore 修復、作業ツリーや branch の復旧、Codex 呼び出しの prompt と validation、JSONL サブコマンドログ、テスト用 helper 群まで含みます。
 
 ## Read this when
 
-- サブコマンド横断の制御フロー、終了コード、例外処理、レポート出力を追いたいとき。
-- `cmoc init`、`session fork/join/abandon`、`apply fork/join/abandon`、`review oracles` のテスト観点をまとめて確認したいとき。
-- `main` のコマンド登録、補完プローブ、`bin/cmoc` 起動前提、`format_error_report` の整形を確認したいとき。
-- `run_command` のコンソール出力や JSONL サブコマンドログの記録内容を確認したいとき。
-- ファイル末尾のテスト補助関数やリポジトリ構築ヘルパーを参照したいとき。
+- `run_command` と `main` の横断的な制御フロー、終了コード、例外整形、レポート出力を追いたいとき。
+- `cmoc init`、`session fork/join/abandon`、`apply fork/join/abandon`、`review oracles` の回帰観点をまとめて確認したいとき。
+- `.cmoc` ignore 修復、tracked ファイルの追跡解除、session/apply branch や worktree の復旧・削除・再利用の境界条件を確認したいとき。
+- oracle 評価の Structured Output、INDEX.md メンテナンス、prompt 内容、issue 集約、force resolve、失敗時の error report 仕様を確認したいとき。
+- 補完プローブ、JSONL サブコマンドログ、テスト用 helper 関数や repo 構築ヘルパーの意図を把握したいとき。
 
 ## Do not read this when
 
 - `src/sub_commands/apply/*`、`src/sub_commands/session/*`、`src/sub_commands/review/*` の個別実装だけを追いたいとき。
-- `commons.command_runner`、`commons.errors`、`commons.repo` など、単一の共通ヘルパーだけを確認したいとき。
-- `tests/test_indexing.py`、`tests/test_report_files.py`、`tests/test_timestamps.py` など、別領域のテスト入口を確認したいとき。
-- `INDEX.md` の生成ルール全体や `oracles` 側の正本仕様だけを確認したいとき。
-- pytest の共通設定やファイル命名規則だけを確認したいとき。
+- `commons.command_runner`、`commons.errors`、`commons.repo`、`commons.subcommand_log` など、単一の共通ヘルパーだけを確認したいとき。
+- `tests/test_indexing.py`、`tests/test_report_files.py`、`tests/test_timestamps.py` など、別のテスト入口の仕様を調べたいとき。
+- `oracles` 側の正本仕様や `INDEX.md` 生成ルールそのものだけを確認したいとき。
+- pytest 共通設定やファイル命名規則だけを確認したいとき。
 
 ## hash
 
-- 0025c7f00cc7ddc68a1d9c4c92da6987121b6e53cf39186a2de0134d8bf16695
+- 7ae7cbabd304709883f83c079a049675e1c22b3871613e229e55b36d6bd26014
 
 # `test_timestamps.py`
 
