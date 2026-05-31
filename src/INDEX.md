@@ -65,11 +65,11 @@
 
 ## Do not read this when
 
-- `src/sub_commands` 配下の個別実装の詳細や処理分岐だけを確認したいときは、この目次ではなく各モジュールや各サブディレクトリの `INDEX.md` を直接読むべきです。
+- `src/sub_commands` 配下の個別実装や処理分岐だけを確認したいときは、この目次ではなく各モジュールや各サブディレクトリの `INDEX.md` を直接読むべきです。
 - `cmoc` の利用手順や仕様断片だけを確認したいときは、実装ではなく `oracles/app_specs/sub_commands/` 側を読むべきです。
 - `src/sub_commands` のパッケージ宣言だけを確認したいときは、この目次ではなく `src/sub_commands/__init__.py` を直接読むべきです。
 - `cmoc` の CLI 全体構成や共通基盤だけを追いたいときは、このディレクトリではなく `src/main.py` や `src/commons` を読むべきです。
 
 ## hash
 
-- 103687468b136529948700d6d61a0c3d946729cd42ae1bde54030b6a97355056
+- d91c91c243612d8b0bd857f16e994b2ed602eec5cf80fa975a4cb53e3c470dc0

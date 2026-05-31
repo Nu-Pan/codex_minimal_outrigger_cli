@@ -73,9 +73,9 @@
 
 ## Summary
 
-- `src/sub_commands/session/join.py` は `cmoc session join` の本体で、現在の session branch を記録済み home branch へ merge し、join 完了までの後始末を行う。
-- session / apply state の前提条件を検証し、`git switch` と `git merge --no-ff`、`session.state=joined` の保存、安全な場合のみ branch 削除までをまとめて扱う。
-- merge conflict 時は Codex CLI に conflict marker の解消だけを依頼し、conflict 対象外の変更や禁止領域を保護しつつ、rollback せず手動復旧を案内する。
+- `src/sub_commands/session/join.py` は `cmoc session join` の本体で、現在の session branch を記録済み home branch へ merge し、join 完了までの後始末を行う実装です。
+- session / apply state の前提条件を検証し、`git switch` と `git merge --no-ff`、`session.state=joined` の保存、安全な場合のみ branch 削除までをまとめて扱います。
+- merge conflict 時は Codex CLI に conflict marker の解消だけを依頼し、conflict 対象外の変更や禁止領域を保護しつつ、rollback せず手動復旧を案内します。
 
 ## Read this when
 
@@ -91,4 +91,4 @@
 
 ## hash
 
-- 507a5ab0b85aa2c06cb816adbd2d78608a6f96b672f55ed70d0da0dd2935408e
+- 18db410454320796c2ca943abd8c4d95f5e596360cdf59792950bd8895fffd16

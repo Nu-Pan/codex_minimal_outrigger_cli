@@ -99,8 +99,8 @@
 ## Summary
 
 - `src/sub_commands/session` は `cmoc session` 系サブコマンドの実装入口です。
-- `__init__.py` はパッケージ宣言のみで、実行ロジックは `fork.py`、`join.py`、`abandon.py` に分かれています。
-- この目次は session の開始・統合・破棄のどの実装へ進むべきかを素早く振り分けるためのものです。
+- `__init__.py` はパッケージ宣言のみで、実行ロジックは持ちません。
+- 実行ロジックは `fork.py`、`join.py`、`abandon.py` に分かれており、この目次は開始・統合・破棄のどの実装へ進むべきかを素早く振り分けるためのものです。
 
 ## Read this when
 
@@ -116,4 +116,4 @@
 
 ## hash
 
-- 81fb0f4d687be7393e1c8257c8036f5d9c57f4ac1de1348d4dee6ecae64e3048
+- 7fcec9f6d76700a194fa8f215123bb567938634ec47149331b315aa10e6d3c1a

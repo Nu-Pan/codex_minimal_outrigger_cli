@@ -155,24 +155,24 @@
 
 - このファイルは cmoc のサブコマンド全体に対する決定論的な制御ロジックを検証する pytest テスト群です。
 - `run_command` のログ出力、エラーレポート、終了コード、経過時間計測を広く押さえます。
-- `cmoc init`、`session`、`apply`、`eval oracles` の状態遷移、副作用、レポート生成、プロンプト検証、CLI ルーティングや補完の回帰を扱います。
+- `cmoc init`、`session`、`apply`、`review oracles` の状態遷移、副作用、レポート生成、プロンプト検証、CLI ルーティングや補完の回帰を扱います。
 
 ## Read this when
 
 - サブコマンド群の制御ロジックや状態遷移の回帰テストを確認したいとき。
+- `cmoc init`、`session fork/join/abandon`、`apply fork/join/abandon`、`review oracles`、`main` の登録や補完、エラー変換を修正するとき。
 - `run_command` の tee 出力、終了集計、例外時の stdout レポート、repo root 解決失敗時の扱いを変更するとき。
-- `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`eval oracles`、`main` の登録や補完、エラー変換を修正するとき。
 - サブコマンドのプロンプトや validation helper、`INDEX.md` メンテナンス連携の回帰を探したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの仕様そのものを確認したいときは、`oracles/app_specs/sub_commands/` 配下の該当仕様を読むべきです。
-- `src/sub_commands/` 側の実装ロジックだけを追いたいとき。
-- コマンド実行制御やエラー処理ではなく、一般的なテスト規約だけを確認したいときは、`oracles/dev_rules/test_rules.md` を読むべきです。
+- 個別の `cmoc apply` / `cmoc session` / `cmoc review oracles` の実装ロジックだけを追いたいとき。
+- `src/sub_commands/` 配下の本体実装や共通ユーティリティだけを確認したいとき。
+- pytest の一般的な使い方や、`INDEX.md` 生成ルールそのものだけを確認したいとき。
 
 ## hash
 
-- b360e76a086ba8fd86486f5063f179be569ee77d96f940f5219528f2060c5685
+- e0a6937e2e247c7dda3b40f530a142f0c7ac97d4dca099f82499f370dd0b2fcb
 
 # `test_timestamps.py`
 
