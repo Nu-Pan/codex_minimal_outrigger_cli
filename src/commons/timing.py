@@ -2,6 +2,7 @@
 
 from collections.abc import Sequence
 from contextvars import ContextVar
+from dataclasses import dataclass
 from math import floor
 from time import perf_counter
 
@@ -16,6 +17,29 @@ _CURRENT_TIMER: ContextVar["StepTimer | None"] = ContextVar(
 StepIndexPath = Sequence[tuple[int, int]]
 
 
+@dataclass
+class _StepRecord:
+    """開始済みステップの表示名と開始・終了時刻。"""
+
+    name: str
+    started: float
+    step_index: str | None
+    step_path: tuple[tuple[int, int], ...] | None
+    ended: float | None = None
+
+    def label(self) -> str:
+        """完了サマリー用に step index と説明を結合する。"""
+        if self.step_index is None:
+            return self.name
+        return f"{self.step_index} {self.name}"
+
+    def duration(self) -> float:
+        """確定済みステップの経過秒数を返す。"""
+        if self.ended is None:
+            return perf_counter() - self.started
+        return self.ended - self.started
+
+
 class StepTimer:
     """サブコマンド全体と各ステップの経過時間を記録する。"""
 
@@ -24,18 +48,33 @@ class StepTimer:
         # サブコマンド全体の開始時刻と現在ステップ状態を初期化する。
         self.command_name = command_name
         self._started = perf_counter()
-        self._current_name: str | None = None
-        self._current_started: float | None = None
-        self._durations: list[tuple[str, float]] = []
+        self._active_records: list[_StepRecord] = []
+        self._records: list[_StepRecord] = []
         self._reported = False
         _CURRENT_TIMER.set(self)
 
-    def start(self, step_name: str) -> None:
-        """新しいステップを開始し、直前のステップを終了する。"""
-        # 直前ステップを確定してから新しいステップ名と開始時刻を保持する。
-        self.finish_current()
-        self._current_name = step_name
-        self._current_started = perf_counter()
+    def start(
+        self,
+        step_name: str,
+        *,
+        step_index: str | None = None,
+        step_path: StepIndexPath | None = None,
+    ) -> None:
+        """新しいステップを開始し、階層上不要になったステップを終了する。"""
+        normalized_path = (
+            tuple(step_path)
+            if step_path is not None
+            else None
+        )
+        self._finish_steps_not_containing(normalized_path)
+        record = _StepRecord(
+            name=step_name,
+            started=perf_counter(),
+            step_index=step_index,
+            step_path=normalized_path,
+        )
+        self._active_records.append(record)
+        self._records.append(record)
 
     def report(self) -> None:
         """ステップ別とサブコマンド全体の経過時間を stdout へ出力する。"""
@@ -44,8 +83,8 @@ class StepTimer:
         # 未確定の最後のステップを含めてから stdout に集計を出す。
         self.finish_current()
         print(f"{self.command_name} step timings:")
-        for name, duration in self._durations:
-            print(f"- {name}: {format_duration(duration)}")
+        for record in self._records:
+            print(f"- {record.label()}: {format_duration(record.duration())}")
         print(
             f"{self.command_name} total elapsed: "
             f"{format_duration(perf_counter() - self._started)}"
@@ -54,16 +93,34 @@ class StepTimer:
 
     def finish_current(self) -> None:
         """実行中のステップがあれば経過時間を確定する。"""
-        # 計測中ステップが無ければ idempotent に何もしない。
-        if self._current_name is None or self._current_started is None:
+        self._finish_active_steps()
+
+    def _finish_steps_not_containing(
+        self,
+        step_path: tuple[tuple[int, int], ...] | None,
+    ) -> None:
+        """新ステップの親ではない active step を終了する。"""
+        if step_path is None:
+            self._finish_active_steps()
             return
 
-        # 現在ステップの経過時間を保存して、計測中状態をクリアする。
-        self._durations.append(
-            (self._current_name, perf_counter() - self._current_started)
-        )
-        self._current_name = None
-        self._current_started = None
+        now = perf_counter()
+        while self._active_records:
+            active = self._active_records[-1]
+            if (
+                active.step_path is not None
+                and _is_strict_prefix(active.step_path, step_path)
+            ):
+                return
+            active.ended = now
+            self._active_records.pop()
+
+    def _finish_active_steps(self) -> None:
+        """active stack 上の全ステップを終了する。"""
+        now = perf_counter()
+        while self._active_records:
+            record = self._active_records.pop()
+            record.ended = now
 
 
 def start_step(
@@ -74,7 +131,8 @@ def start_step(
 ) -> None:
     """ステップ開始を計測し、oracle 指定フォーマットで通知する。"""
     step_index = _format_step_index(step_number, total_steps)
-    timer.start(description)
+    step_path = _normalize_step_path(step_number, total_steps)
+    timer.start(description, step_index=step_index, step_path=step_path)
     timestamp = console_timestamp()
     log_event(
         "step_start",
@@ -85,6 +143,23 @@ def start_step(
         },
     )
     print(f"# {timestamp} ({step_index}) {description}")
+
+
+def _normalize_step_path(
+    step_number: int | StepIndexPath,
+    total_steps: int | None,
+) -> tuple[tuple[int, int], ...]:
+    """単一階層または階層化ステップ番号を内部 path へ正規化する。"""
+    if isinstance(step_number, int):
+        if total_steps is None:
+            raise ValueError("total_steps is required for flat step index.")
+        return ((step_number, total_steps),)
+
+    if total_steps is not None:
+        raise ValueError("total_steps must be None for hierarchical step index.")
+    if not step_number:
+        raise ValueError("hierarchical step index must not be empty.")
+    return tuple(step_number)
 
 
 def _format_step_index(
@@ -107,6 +182,14 @@ def _format_step_index(
     for current_step, current_total in step_number:
         parts.append(f"{current_step}/{current_total}")
     return ", ".join(parts)
+
+
+def _is_strict_prefix(
+    candidate: tuple[tuple[int, int], ...],
+    value: tuple[tuple[int, int], ...],
+) -> bool:
+    """candidate が value の真の親階層なら True を返す。"""
+    return len(candidate) < len(value) and value[: len(candidate)] == candidate
 
 
 def report_current_timer() -> None:

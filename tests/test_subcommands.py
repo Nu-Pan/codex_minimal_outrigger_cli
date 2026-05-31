@@ -22,6 +22,7 @@ import sub_commands.session.abandon as session_abandon_module
 import sub_commands.session.fork as session_fork_module
 import sub_commands.session.join as session_join_module
 import commons.repo as repo_module
+import commons.timing as timing_module
 from commons.codex import COST_PERFORMANCE_MODEL
 from commons.codex import COST_PERFORMANCE_REASONING_EFFORT
 from commons.codex import FRONTIER_HIGH_REASONING_EFFORT
@@ -174,7 +175,7 @@ def test_run_command_tees_subcommand_output_and_summary(
         "sample step timings:"
     )
     assert "sample step timings:" in captured.out
-    assert "- first step:" in captured.out
+    assert "- 1/1 first step:" in captured.out
     assert "subcommand total elapsed:" in captured.out
     assert "subcommand quota wait elapsed:" in captured.out
     assert "subcommand return code: 2" in captured.out
@@ -237,6 +238,29 @@ def test_start_step_logs_hierarchical_step_index(
         and event["step_index"] == "5/6, 2/3, 1/4"
         for event in log_events
     )
+
+
+def test_step_timer_reports_hierarchical_step_timings(
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """完了サマリーは階層 step index ごとに親子の経過時間を出す。"""
+    times = iter(float(value) for value in range(12))
+    monkeypatch.setattr(timing_module, "perf_counter", lambda: next(times))
+
+    timer = StepTimer("sample")
+    start_step(timer, 5, 6, "parent")
+    start_step(timer, ((5, 6), (1, 2)), None, "child")
+    start_step(timer, ((5, 6), (2, 2)), None, "child")
+    start_step(timer, 6, 6, "next")
+
+    timer.report()
+
+    captured = capsys.readouterr()
+    assert "- 5/6 parent:  0h  0m  5.0s" in captured.out
+    assert "- 5/6, 1/2 child:  0h  0m  1.0s" in captured.out
+    assert "- 5/6, 2/2 child:  0h  0m  1.0s" in captured.out
+    assert "- 6/6 next:  0h  0m  1.0s" in captured.out
 
 
 def test_run_command_logs_summary_on_exception(
