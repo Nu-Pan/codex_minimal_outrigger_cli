@@ -163,7 +163,7 @@
 
 - cmoc のサブコマンド群をまたぐ決定論的な制御ロジックの回帰テストを確認したいとき。
 - `run_command` の tee 出力、終了コード、例外時の stdout レポート、repo root 解決失敗時の扱いを調べたいとき。
-- `cmoc init`、`cmoc session fork/join/abandon`、`cmoc apply fork/join/join/abandon` の状態遷移や commit 挙動をまとめて追いたいとき。
+- `cmoc init`、`cmoc session fork/join/abandon`、`cmoc apply fork/join/abandon` の状態遷移や commit 挙動をまとめて追いたいとき。
 - `review oracles` の評価フロー、プロンプト、payload 検証、レポート生成の回帰を確認したいとき。
 - `main` の Typer 登録、補完プローブ、エラー変換、`bin/cmoc` の実行前提をまとめて確認したいとき。
 - テスト全体がどのサブシステムを横断しているかを把握し、読むべき個別モジュールを切り分けたいとき。
@@ -179,7 +179,7 @@
 
 ## hash
 
-- d988e992f5ee57c256005b42c313f6ceff1c2d1c959eb44adf2a67d7341aa5aa
+- f192fcfea99e22bcc376350cc39df4ea3e3ef2483362ed42447b0fc378f3fdf6
 
 # `test_timestamps.py`
 
