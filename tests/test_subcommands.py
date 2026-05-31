@@ -3656,7 +3656,10 @@ def test_apply_join_stops_on_unexpected_diff_in_normal_mode(
         cmoc_apply_join_impl(repo)
 
     assert "想定外の差分" in error_info.value.message
-    assert f"{apply_branch}: oracles/spec.md" in error_info.value.detail
+    assert (
+        f"{apply_branch}: {json.dumps((repo / 'oracles/spec.md').resolve().as_posix())}"
+        in error_info.value.detail
+    )
     state = json.loads(
         (
             repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
@@ -3689,7 +3692,10 @@ def test_apply_join_stops_on_apply_branch_non_implementation_diff(
         cmoc_apply_join_impl(repo)
 
     assert "想定外の差分" in error_info.value.message
-    assert f"{apply_branch}: ignored.txt" in error_info.value.detail
+    assert (
+        f"{apply_branch}: {json.dumps((repo / 'ignored.txt').resolve().as_posix())}"
+        in error_info.value.detail
+    )
     assert not (repo / "ignored.txt").exists()
     assert _git(repo, "branch", "--list", apply_branch).stdout.strip()
     assert apply_worktree.exists()
@@ -3731,7 +3737,10 @@ def test_apply_join_stops_on_apply_branch_forbidden_diff(
         cmoc_apply_join_impl(repo)
 
     assert "想定外の差分" in error_info.value.message
-    assert f"{apply_branch}: {relative_path}" in error_info.value.detail
+    assert (
+        f"{apply_branch}: {json.dumps((repo / relative_path).resolve().as_posix())}"
+        in error_info.value.detail
+    )
     assert repo_target.exists() is before_exists
     if before_content is not None:
         assert repo_target.read_text(encoding="utf-8") == before_content
@@ -3762,9 +3771,15 @@ def test_apply_join_reports_unexpected_diff_with_control_chars(
         cmoc_apply_join_impl(repo)
 
     assert "想定外の差分" in error_info.value.message
-    assert f"{apply_branch}: {relative_path}" in error_info.value.detail
+    assert (
+        f"{apply_branch}: "
+        f"{json.dumps((repo / relative_path).resolve().as_posix())}"
+        in error_info.value.detail
+    )
     assert "\tignored" not in error_info.value.detail
-    assert '"ignored\\nline\\tname.md"' not in error_info.value.detail
+    assert json.dumps((repo / relative_path).resolve().as_posix()) in (
+        error_info.value.detail
+    )
 
 
 def test_apply_join_accepts_apply_branch_index_diff(
@@ -3808,7 +3823,10 @@ def test_apply_join_stops_on_apply_branch_memo_index_diff(
         cmoc_apply_join_impl(repo)
 
     assert "想定外の差分" in error_info.value.message
-    assert f"{apply_branch}: memo/INDEX.md" in error_info.value.detail
+    assert (
+        f"{apply_branch}: {json.dumps((repo / 'memo/INDEX.md').resolve().as_posix())}"
+        in error_info.value.detail
+    )
 
 
 @pytest.mark.parametrize(
@@ -3837,7 +3855,10 @@ def test_apply_join_stops_on_apply_branch_unmaintained_index_diff(
         cmoc_apply_join_impl(repo)
 
     assert "想定外の差分" in error_info.value.message
-    assert f"{apply_branch}: {relative_path}" in error_info.value.detail
+    assert (
+        f"{apply_branch}: {json.dumps((repo / relative_path).resolve().as_posix())}"
+        in error_info.value.detail
+    )
     assert not (repo / relative_path).exists()
 
 
@@ -3863,7 +3884,11 @@ def test_apply_join_rejects_apply_branch_oracles_index_diff(
         cmoc_apply_join_impl(repo)
 
     assert "想定外の差分" in error_info.value.message
-    assert f"{apply_branch}: oracles/INDEX.md" in error_info.value.detail
+    assert (
+        f"{apply_branch}: "
+        f"{json.dumps((repo / 'oracles/INDEX.md').resolve().as_posix())}"
+        in error_info.value.detail
+    )
     assert not (repo / "oracles" / "INDEX.md").exists()
 
 
@@ -3983,7 +4008,11 @@ def test_apply_join_stops_on_session_branch_ignored_oracle_diff(
         cmoc_apply_join_impl(repo)
 
     assert "想定外の差分" in error_info.value.message
-    assert f"{session_branch}: oracles/ignored.md" in error_info.value.detail
+    assert (
+        f"{session_branch}: "
+        f"{json.dumps((repo / 'oracles/ignored.md').resolve().as_posix())}"
+        in error_info.value.detail
+    )
 
 
 def test_apply_join_force_resolve_keeps_expected_apply_index_diff(
@@ -4018,7 +4047,10 @@ def test_apply_join_force_resolve_keeps_expected_apply_index_diff(
     assert (repo / "INDEX.md").read_text(encoding="utf-8") == "index\n"
     assert not (repo / "memo" / "note.md").exists()
     assert state["apply"]["state"] == "ready"
-    assert f"- {apply_branch}: memo/note.md" in output
+    assert (
+        f"- {apply_branch}: {json.dumps((repo / 'memo/note.md').resolve().as_posix())}"
+        in output
+    )
 
 
 def test_apply_join_force_resolve_keeps_session_branch_new_oracle_file(
@@ -4054,8 +4086,16 @@ def test_apply_join_force_resolve_keeps_session_branch_new_oracle_file(
     assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
     assert not (repo / "unexpected.txt").exists()
     assert state["apply"]["state"] == "ready"
-    assert f"- {apply_branch}: feature.txt" not in output
-    assert "- cmoc/session/2026-05-10_22-21_10_000000123: unexpected.txt" in output
+    assert (
+        f"- {apply_branch}: "
+        f"{json.dumps((repo / 'feature.txt').resolve().as_posix())}"
+        not in output
+    )
+    assert (
+        "- cmoc/session/2026-05-10_22-21_10_000000123: "
+        f"{json.dumps((repo / 'unexpected.txt').resolve().as_posix())}"
+        in output
+    )
     assert "oracles/new_spec.md" not in output
 
 
@@ -4090,7 +4130,7 @@ def test_apply_join_auto_resolves_index_conflict(
     assert state["apply"]["state"] == "ready"
     assert _git(repo, "branch", "--list", apply_branch).stdout == ""
     assert "auto-resolved INDEX.md conflicts:" in output
-    assert "- INDEX.md" in output
+    assert f"- {json.dumps((repo / 'INDEX.md').resolve().as_posix())}" in output
 
 
 def test_apply_join_unmerged_paths_are_nul_safe(
@@ -4200,8 +4240,12 @@ def test_apply_join_resolves_index_conflict_before_reporting_other_conflict(
         ).read_text(encoding="utf-8")
     )
     assert removed_index
-    assert "feature.txt" in error_info.value.detail
-    assert "INDEX.md" not in error_info.value.detail
+    assert json.dumps((repo / "feature.txt").resolve().as_posix()) in (
+        error_info.value.detail
+    )
+    assert json.dumps((repo / "INDEX.md").resolve().as_posix()) not in (
+        error_info.value.detail
+    )
     assert state["apply"]["state"] == "completed"
     assert _git(repo, "branch", "--list", apply_branch).stdout.strip()
     assert apply_worktree.exists()
@@ -4265,7 +4309,9 @@ def test_apply_join_stops_on_non_index_conflict(
         ).read_text(encoding="utf-8")
     )
     assert "conflict" in error_info.value.message
-    assert "feature.txt" in error_info.value.detail
+    assert json.dumps((repo / "feature.txt").resolve().as_posix()) in (
+        error_info.value.detail
+    )
     assert state["apply"]["state"] == "completed"
     assert _git(repo, "branch", "--list", apply_branch).stdout.strip()
     assert apply_worktree.exists()
@@ -4294,7 +4340,10 @@ def test_apply_join_stops_on_apply_branch_rename_from_oracle_to_implementation(
         ).read_text(encoding="utf-8")
     )
     assert "想定外の差分" in error_info.value.message
-    assert f"{apply_branch}: oracles/spec.md" in error_info.value.detail
+    assert (
+        f"{apply_branch}: {json.dumps((repo / 'oracles/spec.md').resolve().as_posix())}"
+        in error_info.value.detail
+    )
     assert not (repo / "feature.txt").exists()
     assert (repo / "oracles" / "spec.md").read_text(encoding="utf-8") == "spec\n"
     assert state["apply"]["state"] == "completed"
@@ -4331,7 +4380,10 @@ def test_apply_join_force_resolves_apply_branch_non_implementation_diff(
     assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
     assert not (repo / "ignored.txt").exists()
     assert state["apply"]["state"] == "ready"
-    assert f"- {apply_branch}: ignored.txt" in output
+    assert (
+        f"- {apply_branch}: {json.dumps((repo / 'ignored.txt').resolve().as_posix())}"
+        in output
+    )
 
 
 def test_apply_join_force_resolve_uses_snapshot_gitignore_for_apply_paths(
@@ -4364,8 +4416,16 @@ def test_apply_join_force_resolve_uses_snapshot_gitignore_for_apply_paths(
     assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
     assert not (repo / ".gitignore").exists()
     assert state["apply"]["state"] == "ready"
-    assert f"- {apply_branch}: feature.txt" not in output
-    assert "- cmoc/session/2026-05-10_22-21_10_000000123: .gitignore" in output
+    assert (
+        f"- {apply_branch}: "
+        f"{json.dumps((repo / 'feature.txt').resolve().as_posix())}"
+        not in output
+    )
+    assert (
+        "- cmoc/session/2026-05-10_22-21_10_000000123: "
+        f"{json.dumps((repo / '.gitignore').resolve().as_posix())}"
+        in output
+    )
 
 
 def test_apply_join_force_resolves_apply_branch_rename_from_oracle(
@@ -4398,7 +4458,11 @@ def test_apply_join_force_resolves_apply_branch_rename_from_oracle(
     assert not (repo / "feature.txt").exists()
     assert (repo / "oracles" / "spec.md").read_text(encoding="utf-8") == "spec\n"
     assert state["apply"]["state"] == "ready"
-    assert f"- {apply_branch}: oracles/spec.md" in output
+    assert (
+        f"- {apply_branch}: "
+        f"{json.dumps((repo / 'oracles/spec.md').resolve().as_posix())}"
+        in output
+    )
 
 
 def test_apply_join_force_resolves_with_missing_apply_worktree(
@@ -4436,7 +4500,10 @@ def test_apply_join_force_resolves_with_missing_apply_worktree(
     assert _git(repo, "branch", "--list", apply_branch).stdout == ""
     assert not apply_worktree.exists()
     assert list((repo / ".cmoc" / "worktrees" / "tmp").glob("*")) == []
-    assert f"- {apply_branch}: ignored.txt" in output
+    assert (
+        f"- {apply_branch}: {json.dumps((repo / 'ignored.txt').resolve().as_posix())}"
+        in output
+    )
 
 
 def test_apply_join_force_resolves_from_apply_branch_without_apply_worktree(
@@ -4478,7 +4545,10 @@ def test_apply_join_force_resolves_from_apply_branch_without_apply_worktree(
     assert _git(repo, "branch", "--list", apply_branch).stdout == ""
     assert not apply_worktree.exists()
     assert not (repo / ".cmoc" / "worktrees" / "tmp").exists()
-    assert f"- {apply_branch}: ignored.txt" in output
+    assert (
+        f"- {apply_branch}: {json.dumps((repo / 'ignored.txt').resolve().as_posix())}"
+        in output
+    )
 
 
 def test_apply_join_accepts_apply_branch_copy_to_expected_path(

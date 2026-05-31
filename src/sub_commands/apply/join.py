@@ -114,12 +114,10 @@ def cmoc_apply_join_impl(
                 path for path in unmerged if not _is_index_path(path)
             ]
         if non_index_conflicts or not index_conflicts:
-            if auto_resolved_index_conflicts and unmerged:
-                detail = "\n".join(["unmerged paths:", *unmerged]).strip()
+            if unmerged:
+                detail = _unmerged_paths_detail(cmoc_root, unmerged)
             else:
                 detail = merge_result.stderr.strip()
-            if unmerged and not detail.startswith("unmerged paths:"):
-                detail = "\n".join(["unmerged paths:", *unmerged, detail]).strip()
             raise CmocError(
                 "apply branch の merge で conflict が発生しました。",
                 [
@@ -153,7 +151,7 @@ def cmoc_apply_join_impl(
     if auto_resolved_index_conflicts:
         print("auto-resolved INDEX.md conflicts:")
         for path in auto_resolved_index_conflicts:
-            print(f"- {path}")
+            print(f"- {_display_repo_path(cmoc_root, path)}")
     for warning in warnings:
         print(f"warning: {warning}")
     timer.report()
@@ -334,7 +332,9 @@ def _unexpected_diffs(repo_root: Path, join_state: _JoinState) -> list[str]:
             )
         ]
         for path in invalid_paths:
-            unexpected.append(f"{join_state.apply_branch}: {path}")
+            unexpected.append(
+                _display_branch_path(repo_root, join_state.apply_branch, path)
+            )
 
     session_entries = _changed_path_entries_between(
         repo_root,
@@ -352,8 +352,30 @@ def _unexpected_diffs(repo_root: Path, join_state: _JoinState) -> list[str]:
             )
         ]
         for path in invalid_paths:
-            unexpected.append(f"{join_state.session_branch}: {path}")
+            unexpected.append(
+                _display_branch_path(repo_root, join_state.session_branch, path)
+            )
     return unexpected
+
+
+def _display_branch_path(repo_root: Path, branch_name: str, relative_path: str) -> str:
+    """branch 名と repo 内 path をユーザー表示用に整形する。"""
+    return f"{branch_name}: {_display_repo_path(repo_root, relative_path)}"
+
+
+def _display_repo_path(repo_root: Path, relative_path: str) -> str:
+    """repo 相対 path を区切り付き絶対 path 表現にする。"""
+    path = Path(relative_path)
+    if not path.is_absolute():
+        path = repo_root / path
+    return json.dumps(path.resolve().as_posix())
+
+
+def _unmerged_paths_detail(repo_root: Path, unmerged: list[str]) -> str:
+    """unmerged path detail をユーザー表示用に整形する。"""
+    return "\n".join(
+        ["unmerged paths:", *[_display_repo_path(repo_root, path) for path in unmerged]]
+    ).strip()
 
 
 def _changed_path_entries_between(
@@ -681,13 +703,9 @@ def _resolve_index_conflicts(
         path for path in remaining if _is_index_path(path)
     ]
     if remaining_index_conflicts or (commit_merge and remaining):
-        detail = "\n".join(
-            [
-                "unmerged paths:",
-                *remaining,
-                merge_stderr,
-            ]
-        ).strip()
+        detail = _unmerged_paths_detail(repo_root, remaining)
+        if not detail:
+            detail = merge_stderr
         raise CmocError(
             "INDEX.md conflict の自動解消に失敗しました。",
             [
