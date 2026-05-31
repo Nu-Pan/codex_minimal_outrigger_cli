@@ -114,6 +114,11 @@ def test_run_command_tees_subcommand_output_and_summary(
     """共通入口はコンソールログと JSONL イベントログを出す。"""
     repo = _init_repo(tmp_path)
     monkeypatch.chdir(repo)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["cmoc", "sample", "--flag", "value"],
+    )
 
     def handler(resolved_repo: Path) -> int:
         """正常終了するサブコマンド本体として tee 対象の進捗を出す。"""
@@ -123,7 +128,7 @@ def test_run_command_tees_subcommand_output_and_summary(
         return 2
 
     with pytest.raises(typer.Exit) as exit_info:
-        run_command(handler)
+        run_command(handler, command_path="cmoc sample")
 
     captured = capsys.readouterr()
     log_files = list((repo / ".cmoc" / "logs" / "sub_commands").glob("*.jsonl"))
@@ -134,6 +139,7 @@ def test_run_command_tees_subcommand_output_and_summary(
     assert exit_info.value.exit_code == 2
     assert captured.err == ""
     assert len(log_files) == 1
+    assert "# cmoc subcommand start: cmoc sample" in captured.out
     assert "(1/1) first step" in captured.out
     assert "sample (1/1) first step" not in captured.out
     assert "# Command completion report" in captured.out
@@ -146,6 +152,12 @@ def test_run_command_tees_subcommand_output_and_summary(
     assert "subcommand total elapsed:" in captured.out
     assert "subcommand quota wait elapsed:" in captured.out
     assert "subcommand return code: 2" in captured.out
+    assert log_events[0]["event"] == "subcommand_start"
+    assert log_events[0]["command_path"] == "cmoc sample"
+    assert log_events[0]["argv"] == ["cmoc", "sample", "--flag", "value"]
+    assert log_events[0]["cwd"] == str(repo)
+    assert log_events[0]["repo_root"] == str(repo)
+    assert log_events[0]["subcommand_log"] == str(log_files[0])
     assert any(
         event["event"] == "step_start"
         and event["step"] == "first step"

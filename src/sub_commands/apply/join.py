@@ -44,7 +44,8 @@ def cmoc_apply_join_impl(
             lambda resolved_repo_root: cmoc_apply_join_impl(
                 resolved_repo_root,
                 force_resolve=force_resolve,
-            )
+            ),
+            command_path="cmoc apply join",
         )
         return
 

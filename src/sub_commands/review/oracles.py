@@ -173,7 +173,8 @@ def cmoc_review_oracles_impl(
                 resolved_repo_root,
                 full=full,
                 repeat_improve_issues_list=repeat_improve_issues_list,
-            )
+            ),
+            command_path="cmoc review oracles",
         )
         return
     _validate_repeat_improve_issues_list(repeat_improve_issues_list)

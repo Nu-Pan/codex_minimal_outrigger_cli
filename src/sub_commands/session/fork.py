@@ -29,7 +29,7 @@ def cmoc_session_fork_impl(repo_root: Path | None = None) -> None:
     """cmoc session branch を作成し、session state を記録する。"""
     # 直接呼び出し時は共通 runner で repo root 解決とエラー整形を行う。
     if repo_root is None:
-        run_command(cmoc_session_fork_impl)
+        run_command(cmoc_session_fork_impl, command_path="cmoc session fork")
         return
 
     timer = StepTimer("session fork")

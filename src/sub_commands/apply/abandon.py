@@ -31,7 +31,7 @@ def cmoc_apply_abandon_impl(repo_root: Path | None = None) -> None:
     """現在の session に紐づく未 join apply run を破棄する。"""
     # 直接呼び出し時は共通 runner で repo root 解決とエラー整形を行う。
     if repo_root is None:
-        run_command(cmoc_apply_abandon_impl)
+        run_command(cmoc_apply_abandon_impl, command_path="cmoc apply abandon")
         return
 
     timer = StepTimer("apply abandon")

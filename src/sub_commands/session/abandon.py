@@ -37,7 +37,10 @@ def cmoc_session_abandon_impl(repo_root: Path | None = None) -> None:
     """現在の session branch を merge せず破棄する。"""
     # 直接呼び出し時は共通 runner で repo root 解決とエラー整形を行う。
     if repo_root is None:
-        run_command(cmoc_session_abandon_impl)
+        run_command(
+            cmoc_session_abandon_impl,
+            command_path="cmoc session abandon",
+        )
         return
 
     timer = StepTimer("session abandon")

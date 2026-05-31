@@ -16,7 +16,7 @@ def cmoc_init_impl(repo_root: Path | None = None) -> None:
     """cmoc 作業用ディレクトリを git 追跡対象外にする。"""
     # 直接呼び出し時は共通 runner で repo root 解決とエラー整形を行う。
     if repo_root is None:
-        run_command(cmoc_init_impl)
+        run_command(cmoc_init_impl, command_path="cmoc init")
         return
 
     # `.cmoc` ignore ルールと tracked file 解除を保証する。

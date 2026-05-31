@@ -19,6 +19,7 @@ from .timing import clear_current_timer, format_duration, report_current_timer
 def run_command(
     handler: Callable[[Path], int | None],
     *,
+    command_path: str | None = None,
     non_error_exit_codes: Iterable[int] = (),
 ) -> None:
     """repo root 解決と共通エラー報告を行って本体処理を実行する。"""
@@ -26,9 +27,16 @@ def run_command(
     exit_code = 0
     non_error_exit_code_set = set(non_error_exit_codes)
     started = perf_counter()
+    invocation_cwd = Path.cwd()
+    argv = list(sys.argv)
     try:
         repo_root = enter_repo_root()
-        with subcommand_log(repo_root) as log_context:
+        with subcommand_log(
+            repo_root,
+            command_path=command_path,
+            argv=argv,
+            cwd=invocation_cwd,
+        ) as log_context:
             try:
                 clear_current_timer()
                 result = handler(repo_root)

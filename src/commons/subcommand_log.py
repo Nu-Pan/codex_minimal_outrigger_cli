@@ -34,7 +34,13 @@ _CURRENT_LOG: ContextVar[SubcommandLogContext | None] = ContextVar(
 
 
 @contextmanager
-def subcommand_log(repo_root: Path) -> Iterator[SubcommandLogContext]:
+def subcommand_log(
+    repo_root: Path,
+    *,
+    command_path: str | None = None,
+    argv: list[str] | None = None,
+    cwd: Path | None = None,
+) -> Iterator[SubcommandLogContext]:
     """サブコマンドイベントを `<repo-root>/.cmoc/logs/sub_commands` へ記録する。"""
     log_root = _subcommand_log_repo_root(repo_root)
     _ensure_logs_excluded(log_root)
@@ -49,8 +55,20 @@ def subcommand_log(repo_root: Path) -> Iterator[SubcommandLogContext]:
         )
         token = _CURRENT_LOG.set(context)
         try:
-            log_event("subcommand_start", {"repo_root": str(log_root)})
-            print(f"# cmoc subcommand start")
+            log_event(
+                "subcommand_start",
+                {
+                    "command_path": command_path,
+                    "argv": argv,
+                    "cwd": str(cwd) if cwd is not None else None,
+                    "repo_root": str(log_root),
+                    "subcommand_log": str(log_path),
+                },
+            )
+            if command_path is None:
+                print("# cmoc subcommand start")
+            else:
+                print(f"# cmoc subcommand start: {command_path}")
             print(f"- subcommand log: {log_path}")
             yield context
         finally:

@@ -277,6 +277,7 @@ def cmoc_apply_impl(
                 ),
                 scope=scope,
             ),
+            command_path="cmoc apply fork",
             non_error_exit_codes={APPLY_FORK_EXIT_CODE_UNCONVERGED},
         )
         return None
