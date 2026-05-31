@@ -1504,11 +1504,11 @@ def test_read_session_state_rejects_cross_session_apply_branch(
     assert f"apply branch session id: {other_session_id}" in error.value.detail
 
 
-def test_initial_session_state_records_session_home_branch() -> None:
-    """session fork 直後の home branch を state に記録する。"""
+def test_initial_session_state_starts_with_null_session_home_branch() -> None:
+    """session fork 直後の home branch は null で初期化する。"""
     state = initial_session_state("main", "abc123")
 
-    assert state["session"]["session_home_branch"] == "main"
+    assert state["session"]["session_home_branch"] is None
     assert state["session"]["session_start_commit"] == "abc123"
     assert "last_joined_apply_result" not in state["session"]
 
