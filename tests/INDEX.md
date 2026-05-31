@@ -154,14 +154,14 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は cmoc のサブコマンド群を横断する決定論的な制御ロジックの回帰テスト集です。
-- `init`、`session`、`apply`、`review oracles`、`main`、`bin/cmoc` にまたがる登録・遷移・補完・エラー整形をまとめて検証します。
-- 共通入口の出力、終了コード、例外レポート、conflict 判定や補助ロジックの境界もここで押さえます。
+- `tests/test_subcommands.py` は cmoc のサブコマンド群を横断して、共通実行制御と個別サブコマンドの回帰をまとめて検証するテスト集です。
+- `init`、`session`、`apply`、`review oracles`、`main`、`bin/cmoc` にまたがる登録、状態遷移、レポート、補完、エラー整形を扱います。
+- サブコマンド共通基盤の出力、終了コード、conflict 判定、補助ヘルパーの仕様境界もここで押さえます。
 
 ## Read this when
 
-- サブコマンドをまたぐ制御フロー、状態遷移、共通入口の回帰を確認したいとき。
-- `run_command` の tee 出力、終了コード、例外時レポート、repo root 解決失敗の扱いを調べたいとき。
+- サブコマンド間をまたぐ制御フローや状態遷移の回帰を確認したいとき。
+- `run_command` の tee 出力、終了コード、例外レポート、repo root 解決失敗の扱いを調べたいとき。
 - `cmoc init` の `.cmoc` ignore 補修、tracked `.cmoc` の untrack、初回 commit の挙動を確認したいとき。
 - `session fork` / `join` / `abandon` の branch 管理、state 記録、rollback、cleanup の回帰を追いたいとき。
 - `apply fork` / `join` / `abandon` の差分調査、並列処理、commit、レポート生成、未収束時の扱いを確認したいとき。
@@ -178,7 +178,7 @@
 
 ## hash
 
-- 30bc79dd684f749109651f8c0ea5233d07097a4fe185ce67121aa13503b3438b
+- 3c0f3f9ee572717e0cbf1d796807850cdee9d4b46ec1312d50f767c156d649a5
 
 # `test_timestamps.py`
 

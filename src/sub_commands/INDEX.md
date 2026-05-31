@@ -36,13 +36,13 @@
 
 ## Do not read this when
 
-- `cmoc session` 系サブコマンドの開始・終了処理だけを確認したいときは、`src/sub_commands/session` 側を読むべきです。
-- `cmoc apply` の個別実装を深く追いたいときは、このディレクトリの INDEX ではなく `abandon.py` / `fork.py` / `join.py` を直接読むべきです。
-- 仕様断片や利用手順だけを確認したいときは、`oracles` 側の正本仕様を参照すべきです。
+- `cmoc session` 系サブコマンドの開始・終了・破棄だけを確認したいときは、このディレクトリではなく `src/sub_commands/session` 側を読むべきです。
+- `cmoc apply` の個別実装を深く追いたいときは、このディレクトリの INDEX ではなく `__init__.py` / `abandon.py` / `fork.py` / `join.py` を直接読むべきです。
+- `cmoc apply` の仕様断片や利用手順だけを確認したいときは、`oracles/docs/app_specs/sub_commands/` 側を読むべきです。
 
 ## hash
 
-- 24bfd699af13344f4a1a70432c07ddbc36fc46536a492ab92821c1412708f7a0
+- 06668229fdc63ff42b6b9db42f6377fb4542e8f311c5e9dce6abd771ab6fd44c
 
 # `init.py`
 

@@ -50,28 +50,28 @@
 
 ## Summary
 
-- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体実装です。
-- session branch 上に専用の apply branch と worktree を作成し、要修正点の調査、修正適用、コミット、レポート生成までをまとめて担当します。
-- 起動前の `session.state` / `apply.state` 検証、引数検証、反復回数と `scope` の扱い、失敗時の状態更新を含みます。
-- 調査結果の Structured Output 検証、編集禁止領域の確認、出力レポートの保存条件も扱います。
+- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体で、session branch 上に専用 apply branch と worktree を作り、調査・修正・commit・report 生成までを一括で担う。
+- session/apply state の検証、repeat 系オプションと `scope` の解釈、apply 開始時の排他制御と worktree 作成リトライを扱う。
+- oracle / 実装ファイルを対象に Structured Output で不整合を調査し、要修正点の整理、追従修正、禁止領域検査、commit を反復する。
+- Markdown + YAML Front Matter の apply report、変更要約の Structured Output、各種 validation と prompt 生成の補助関数をまとめている。
 
 ## Read this when
 
-- `cmoc apply fork` の処理順と責務の境界を確認したいとき。
-- `session.state` / `apply.state` の検証条件、apply branch と worktree の作成条件、`scope` の扱いを確認したいとき。
-- 要修正点リストの Structured Output、差分整理、コミット、レポート生成の流れを実装・修正・レビュー・テストしたいとき。
-- 編集禁止領域の検査や、失敗時を含むレポート保存条件を確認したいとき。
+- `cmoc apply fork` の処理順や、開始から report 出力までの全体フローを追いたいとき。
+- session.state / apply.state の前提条件、`--repeat-investigate-and-fix`、`--repeat-improove-fixing-list`、`--scope` の扱いを確認したいとき。
+- 不整合調査の Structured Output、要修正点の整理、実装修正ループ、commit の境界を確認したいとき。
+- apply report の YAML Front Matter、Markdown セクション検証、変更要約の生成条件を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply join` や `cmoc apply abandon` の終了・破棄処理だけを確認したいとき。
-- `cmoc apply fork` の利用手順や正本仕様だけを確認したいとき。
-- `src/sub_commands/apply` パッケージ全体の入口だけを確認したいとき。
-- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
+- `cmoc apply join` や `cmoc apply abandon` の終了・破棄処理だけを追いたいとき。
+- `cmoc apply` の入口定義だけで十分で、実装の細部や helper 群まで要らないとき。
+- 個別の oracle 仕様や `oracles` 配下の正本断片そのものを確認したいとき。
+- `cmoc session`、`cmoc init`、`cmoc review` など別サブコマンドの実装を見たいとき。
 
 ## hash
 
-- 45b5dfc9252792d1d28abb88aac9694388b5ae7a83cd213a84af4bc2e21b94d3
+- c04bc891f48a043350b16e690cc6a8380c87327fb45b06374a026a1fc8b3f85d
 
 # `join.py`
 
