@@ -317,14 +317,14 @@ def _owning_repo_root_from_apply_worktree_path(
 
 
 def initial_session_state(
-    _session_home_branch: str,
+    session_home_branch: str,
     session_start_commit: str,
 ) -> dict[str, object]:
     """`cmoc session fork` 直後の session state を返す。"""
     return {
         "session": {
             "state": "active",
-            "session_home_branch": None,
+            "session_home_branch": session_home_branch,
             "session_start_commit": session_start_commit,
             "last_joined_apply_oracle_snapshot_commit": None,
         },

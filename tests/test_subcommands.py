@@ -702,7 +702,7 @@ def test_session_fork_creates_session_branch_and_records_state(
     state = json.loads(record_path.read_text(encoding="utf-8"))
     assert branch_name.startswith("cmoc/session/")
     assert state["session"]["state"] == "active"
-    assert state["session"]["session_home_branch"] is None
+    assert state["session"]["session_home_branch"] == home_branch
     assert state["session"]["session_start_commit"] == base_commit
     assert state["session"]["last_joined_apply_oracle_snapshot_commit"] is None
     assert state["apply"] == {
@@ -882,16 +882,16 @@ def test_session_fork_rejects_ambiguous_null_active_session_at_same_commit(
     cmoc_session_fork_impl(repo)
     first_session_branch = _git(repo, "branch", "--show-current").stdout.strip()
     first_session_id = first_session_branch.removeprefix("cmoc/session/")
+    first_state_path = repo / ".cmoc" / "sessions" / f"{first_session_id}.json"
+    first_state = json.loads(first_state_path.read_text(encoding="utf-8"))
+    first_state["session"]["session_home_branch"] = None
+    write_session_state(repo, first_session_id, first_state)
     _git(repo, "checkout", "feature")
 
     with pytest.raises(CmocError) as error:
         cmoc_session_fork_impl(repo)
 
-    first_state = json.loads(
-        (
-            repo / ".cmoc" / "sessions" / f"{first_session_id}.json"
-        ).read_text(encoding="utf-8")
-    )
+    first_state = json.loads(first_state_path.read_text(encoding="utf-8"))
     assert "home branch 未確定の active session" in error.value.message
     assert first_state["session"]["session_home_branch"] is None
     assert _git(repo, "branch", "--show-current").stdout.strip() == "feature"
@@ -1153,7 +1153,7 @@ def test_session_fork_keeps_state_when_rollback_branch_delete_fails(
     assert _git(repo, "branch", "--show-current").stdout.strip() == home_branch
     assert session_branch in branches
     assert state["session"]["state"] == "active"
-    assert state["session"]["session_home_branch"] is None
+    assert state["session"]["session_home_branch"] == home_branch
     assert state["apply"]["state"] == "ready"
 
 
