@@ -1493,7 +1493,7 @@ def _maintain_indexes_accepts_excluded_roots() -> bool:
 
 def _apply_index_excluded_roots(repo_root: Path) -> list[Path]:
     """apply worktree の INDEX メンテナンス除外 root 群を返す。"""
-    return []
+    return [repo_root / "oracles"]
 
 
 def _assert_forbidden_paths_clean(
@@ -1563,7 +1563,11 @@ def _is_allowed_maintained_index_path_in_forbidden_check(
     """cmoc 管理 INDEX.md の自動差分だけ禁止 path 検査で許可する。"""
     return (
         allow_maintained_index_paths
-        and is_maintained_index_path(repo_root, relative_path)
+        and is_maintained_index_path(
+            repo_root,
+            relative_path,
+            excluded_index_roots=_apply_index_excluded_roots(repo_root),
+        )
     )
 
 
@@ -2430,7 +2434,7 @@ def _apply_prompt(
             "作業目的は、要修正点が指摘している問題の修正を試みることです。",
             "要修正点本文への逐語的追従や、要修正点で述べている目的を達成した保証は不要です。",
             f"要修正点: {json.dumps(discrepancy, ensure_ascii=False)}",
-            f"`{repo_root / 'oracles'}` 配下の `INDEX.md` 以外は編集禁止です。",
+            f"`{repo_root / 'oracles'}` は編集禁止です。",
             f"`{repo_root / '.cmoc'}` は編集禁止です。",
             f"`{repo_root / '.agents'}` は編集禁止です。",
             f"`{repo_root / 'memo'}` は読み書き禁止です。",
