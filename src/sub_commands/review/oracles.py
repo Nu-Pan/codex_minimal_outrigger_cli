@@ -223,21 +223,21 @@ def cmoc_review_oracles_impl(
             oracle_files = all_oracle_files
         commit_hash = head_commit(repo_root)
 
-        # 評価対象 file set と report head は review 開始時点で固定しつつ、
-        # Codex CLI が読む INDEX.md は評価前メンテナンス後の内容を使う。
-        failed_stage = "maintain INDEX.md files"
-        start_step(timer, 3, 6, "maintain INDEX.md files")
-        _maintain_indexes_before_oracle_snapshot(repo_root)
-
         failed_stage = "create oracle snapshot"
         with tempfile.TemporaryDirectory(
             prefix="cmoc-review-oracles-"
         ) as snapshot_dir:
+            # Codex CLI が読む oracle / INDEX.md は、メンテナンス前の
+            # review 開始時点 snapshot に固定する。
             oracle_snapshot = _create_oracle_evaluation_snapshot(
                 repo_root,
                 all_oracle_files,
                 Path(snapshot_dir),
             )
+
+            failed_stage = "maintain INDEX.md files"
+            start_step(timer, 3, 6, "maintain INDEX.md files")
+            _maintain_indexes_after_oracle_snapshot(repo_root)
 
             # oracle ファイルごとに Codex CLI 評価を実行する。
             failed_stage = "evaluate oracle files"
@@ -341,8 +341,8 @@ def _validate_repeat_improve_issues_list(value: int) -> None:
         )
 
 
-def _maintain_indexes_before_oracle_snapshot(repo_root: Path) -> bool:
-    """評価 snapshot を作る前に INDEX.md をメンテナンスする。"""
+def _maintain_indexes_after_oracle_snapshot(repo_root: Path) -> bool:
+    """評価 snapshot とは分離して INDEX.md をメンテナンスする。"""
     return maintain_indexes(repo_root)
 
 

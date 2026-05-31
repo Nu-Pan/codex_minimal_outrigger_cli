@@ -1254,16 +1254,18 @@ def test_eval_oracles_writes_report_with_fake_codex(
     assert "## Specification-only basis" not in report
 
 
-def test_eval_oracles_snapshots_maintained_indexes_before_evaluation(
+def test_eval_oracles_snapshots_oracles_before_index_maintenance(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """review 対象は開始時点で固定し、評価 snapshot は最新 INDEX を含む。"""
+    """評価 snapshot は INDEX.md メンテナンス前の開始時点 tree に固定する。"""
     repo = _init_repo(tmp_path)
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     original_oracle = oracle_root / "original.md"
     original_oracle.write_text("original\n", encoding="utf-8")
+    original_index = oracle_root / "INDEX.md"
+    original_index.write_text("initial oracle index\n", encoding="utf-8")
     _git(repo, "add", "oracles")
     _git(repo, "commit", "-m", "add original oracle")
     review_start_head = _git(repo, "rev-parse", "HEAD").stdout.strip()
@@ -1292,19 +1294,27 @@ def test_eval_oracles_snapshots_maintained_indexes_before_evaluation(
         fake_maintain_indexes,
     )
     evaluated_purposes: list[str] = []
-    snapshot_index_texts: list[str] = []
+    snapshot_reads: list[tuple[str, str]] = []
 
     def fake_codex(*args: object, **kwargs: object) -> str:
-        """固定済み oracle だけが最新 INDEX snapshot で評価されることを記録する。"""
+        """固定済み oracle だけが開始時点 INDEX snapshot で評価されることを記録する。"""
         evaluated_purposes.append(str(kwargs["purpose"]))
         prompt = str(args[1])
-        match = re.search(
+        index_match = re.search(
             r"`([^`]+/oracles/INDEX\.md)` から始まる INDEX\.md",
             prompt,
         )
-        assert match is not None
-        snapshot_index_texts.append(
-            Path(match.group(1)).read_text(encoding="utf-8")
+        oracle_match = re.search(
+            r"開始時点の内容を固定したコピー `([^`]+/oracles/original\.md)`",
+            prompt,
+        )
+        assert index_match is not None
+        assert oracle_match is not None
+        snapshot_reads.append(
+            (
+                Path(oracle_match.group(1)).read_text(encoding="utf-8"),
+                Path(index_match.group(1)).read_text(encoding="utf-8"),
+            )
         )
         return json.dumps({"issues": []}, ensure_ascii=False)
 
@@ -1317,7 +1327,7 @@ def test_eval_oracles_snapshots_maintained_indexes_before_evaluation(
     ).read_text(encoding="utf-8")
     assert maintain_exclusions == [[]]
     assert evaluated_purposes == ["evaluate oracle oracles/original.md"]
-    assert snapshot_index_texts == ["maintained oracle index\n"]
+    assert snapshot_reads == [("original\n", "initial oracle index\n")]
     assert f'head_commit: "{review_start_head}"' in report
     assert "oracle_count_total: 1" in report
     assert "oracle_count_evaluated: 1" in report
