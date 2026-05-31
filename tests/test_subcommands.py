@@ -3023,7 +3023,7 @@ def test_apply_returns_complete_when_no_discrepancies(
         for kwargs in investigation_kwargs
     )
     assert all(
-        kwargs["index_excluded_roots"] == []
+        kwargs["index_excluded_roots"] == [apply_worktree / "oracles"]
         for kwargs in investigation_kwargs
     )
     report_kwargs = [
@@ -3322,7 +3322,9 @@ def test_apply_commits_index_changes_when_no_discrepancies(
     )
     assert len(report_kwargs) == 1
     assert report_kwargs[0].get("skip_index_maintenance") is not True
-    assert report_kwargs[0]["index_excluded_roots"] == []
+    assert report_kwargs[0]["index_excluded_roots"] == [
+        apply_worktree / "oracles"
+    ]
     assert maintained_roots.count(apply_worktree) == 2
     assert f"session_head_at_apply_start: \"{session_head}\"" in report_text
     assert f"session_head_at_apply_finish: \"{session_head}\"" in report_text
@@ -6787,11 +6789,11 @@ def test_commit_all_changes_rejects_oracles_index_after_index_update(
     assert _git(repo, "log", "-1", "--pretty=%s").stdout.strip() == "initial"
 
 
-def test_commit_all_changes_allows_committed_maintained_oracles_index(
+def test_commit_all_changes_rejects_committed_maintained_oracles_index(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """INDEX メンテナンス自身の oracles/INDEX.md commit は禁止 path 検査で許可する。"""
+    """INDEX メンテナンス自身の oracles/INDEX.md commit も禁止 path として止める。"""
     repo = _init_repo(tmp_path)
     (repo / "app.py").write_text("changed\n", encoding="utf-8")
 
@@ -6813,21 +6815,54 @@ def test_commit_all_changes_allows_committed_maintained_oracles_index(
         lambda *args, **kwargs: "apply changes",
     )
 
-    _commit_all_changes(repo)
+    with pytest.raises(CmocError) as error:
+        _commit_all_changes(repo)
 
+    assert "編集禁止パス" in error.value.message
+    assert "oracles/INDEX.md" in error.value.detail
     assert _git(repo, "log", "-1", "--pretty=%s").stdout.strip() == (
-        "apply changes"
+        "Maintain INDEX.md files"
     )
-    assert _git(repo, "status", "--porcelain").stdout == ""
 
 
-def test_apply_index_maintenance_includes_oracles_root(
+def test_apply_index_maintenance_excludes_oracles_root(
     tmp_path: Path,
 ) -> None:
-    """apply worktree の INDEX メンテナンスも oracles 配下を対象にする。"""
+    """apply worktree の INDEX メンテナンスは oracles 配下を対象外にする。"""
     repo = _init_repo(tmp_path)
 
-    assert _apply_index_excluded_roots(repo) == []
+    assert _apply_index_excluded_roots(repo) == [repo / "oracles"]
+
+
+def test_maintain_apply_indexes_does_not_touch_oracles_index(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """apply 用 INDEX メンテナンスは oracles/INDEX.md を更新しない。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    (oracle_root / "INDEX.md").write_text("manual oracle index\n", encoding="utf-8")
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """INDEX 生成用の最小 Structured Output を返す。"""
+        return json.dumps(
+            {
+                "summary": ["summary"],
+                "read_this_when": ["read"],
+                "do_not_read_this_when": ["skip"],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    changed = apply_module._maintain_apply_indexes(repo)
+
+    assert changed is True
+    assert (oracle_root / "INDEX.md").read_text(encoding="utf-8") == (
+        "manual oracle index\n"
+    )
 
 
 def test_commit_all_changes_rejects_oracle_file_after_index_update(

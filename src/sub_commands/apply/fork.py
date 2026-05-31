@@ -1465,8 +1465,7 @@ def _maintain_indexes_accepts_excluded_roots() -> bool:
 
 def _apply_index_excluded_roots(repo_root: Path) -> list[Path]:
     """apply worktree の INDEX メンテナンス除外 root 群を返す。"""
-    del repo_root
-    return []
+    return [repo_root / "oracles"]
 
 
 def _assert_forbidden_paths_clean(repo_root: Path) -> None:
@@ -1502,9 +1501,10 @@ def _assert_forbidden_paths_unchanged_since(
             before_commit,
         )
         if _is_forbidden_changed_path(path)
-        and not (
-            allow_maintained_index_paths
-            and is_maintained_index_path(repo_root, path)
+        and not _is_allowed_maintained_index_path_in_forbidden_check(
+            repo_root,
+            path,
+            allow_maintained_index_paths,
         )
     ]
     if forbidden:
@@ -1516,6 +1516,19 @@ def _assert_forbidden_paths_unchanged_since(
             ],
             "\n".join(forbidden),
         )
+
+
+def _is_allowed_maintained_index_path_in_forbidden_check(
+    repo_root: Path,
+    relative_path: str,
+    allow_maintained_index_paths: bool,
+) -> bool:
+    """禁止領域ではない cmoc 管理 INDEX.md のみ許可する。"""
+    return (
+        allow_maintained_index_paths
+        and is_maintained_index_path(repo_root, relative_path)
+        and not _is_forbidden_changed_path(relative_path)
+    )
 
 
 def _changed_paths_for_forbidden_check(repo_root: Path) -> list[str]:
