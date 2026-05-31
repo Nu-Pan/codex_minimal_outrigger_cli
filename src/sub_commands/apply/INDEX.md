@@ -50,27 +50,27 @@
 
 ## Summary
 
-- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体実装で、session branch 上に専用 apply branch と worktree を作成し、要修正点の調査・修正・コミット・レポート生成までを一括で担います。
-- 起動前の session/apply state 検証、`--repeat-investigate-and-fix` / `--repeat-improove-fixing-list` / `--scope` の検証、`apply.state` の `running` / `completed` / `error` 遷移、排他ロック、worktree 作成リトライを含みます。
-- Structured Output による不整合調査と要修正点整理、修正反映、禁止領域の検査、commit message 生成、YAML Front Matter 付き report 出力、変更要約の生成と検証までをまとめています。
+- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体で、session branch 上で専用 apply branch と worktree を作成し、要修正点の調査・整理・適用までをまとめて担当するモジュールです。
+- 起動前の state 検証、repeat オプションと scope の検証、`apply.state` の遷移、排他ロック、worktree 作成リトライ、Structured Output による不整合調査を扱います。
+- 修正反映、禁止領域チェック、commit、YAML Front Matter 付き report 生成、失敗時の error report 生成とフォールバック要約まで含めて、apply run 全体の流れを持ちます。
 
 ## Read this when
 
 - `cmoc apply fork` の処理順と責務の境界を確認したいとき。
-- `session.state` / `apply.state` の検証条件、apply branch と worktree の作成条件、`--scope` ごとの調査対象選定を確認したいとき。
-- 不整合調査、要修正点の整理、修正適用、commit、レポート生成までの流れを実装・修正・レビュー・テストしたいとき。
-- 編集禁止領域の検査や、YAML Front Matter 付き report の検証条件を確認したいとき。
+- `session.state` / `apply.state` の検証条件や、apply branch / worktree の作成条件を確認したいとき。
+- 要修正点の調査、修正適用、commit、report 生成の流れを実装・修正・レビュー・テストしたいとき。
+- 編集禁止領域の検査や、apply report の検証条件を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply join` や `cmoc apply abandon` の実装・終了処理だけを確認したいとき。
-- `cmoc apply fork` の利用手順や正本仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/apply_fork.md` を直接参照したいとき。
-- `src/sub_commands/apply` パッケージ全体の入口やディレクトリ案内だけを確認したいとき。
-- `INDEX.md` の生成ルールや更新方針だけを確認したいとき。
+- `cmoc apply join` や `cmoc apply abandon` の終了処理だけを確認したいとき。
+- `cmoc apply fork` の利用手順や正本仕様だけを確認したいとき。
+- `src/sub_commands/apply` パッケージ全体の入口だけを確認したいとき。
+- `INDEX.md` の生成ルールだけを確認したいとき。
 
 ## hash
 
-- 0534081485fc107eed8c716ce9cfc4eea2297ad39a948b8d2d6f88920886800b
+- 802995a109c6235c4f81b8d80a085ca5728e19a24c978e26976b079f9ba9bbbb
 
 # `join.py`
 
