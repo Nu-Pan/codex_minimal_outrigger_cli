@@ -316,14 +316,14 @@ def _owning_repo_root_from_apply_worktree_path(
 
 
 def initial_session_state(
-    session_home_branch: str,
+    _session_home_branch: str,
     session_start_commit: str,
 ) -> dict[str, object]:
     """`cmoc session fork` 直後の session state を返す。"""
     return {
         "session": {
             "state": "active",
-            "session_home_branch": session_home_branch,
+            "session_home_branch": None,
             "session_start_commit": session_start_commit,
             "last_joined_apply_oracle_snapshot_commit": None,
         },
@@ -919,7 +919,7 @@ def active_session_ids_for_home_branch(
             session.get("state") == "active"
             and (
                 session.get("session_home_branch") == session_home_branch
-                or _legacy_active_session_home_branch_matches(
+                or _active_session_home_branch_matches(
                     repo_root,
                     session_id,
                     session,
@@ -940,25 +940,59 @@ def active_session_ids_for_home_branch(
     return session_ids
 
 
-def _legacy_active_session_home_branch_matches(
+def _active_session_home_branch_matches(
     repo_root: Path,
     session_id: str,
     session: dict[str, object],
     session_home_branch: str,
 ) -> bool:
-    """home branch が null の古い active session を一意復元できる場合だけ照合する。"""
+    """home branch が null の active session を復元し、判定不能なら止める。"""
     if session.get("session_home_branch") is not None:
         return False
     start_commit = session.get("session_start_commit")
     if not isinstance(start_commit, str) or not start_commit:
-        return False
+        _raise_unresolved_active_session_home_branch(
+            session_id,
+            "session.session_start_commit が不正です。",
+            [f"session.session_start_commit: {start_commit}"],
+        )
     session_branch = f"{SESSION_BRANCH_PREFIX}{session_id}"
     candidates = _session_home_branch_candidates(
         repo_root,
         session_branch,
         start_commit,
     )
-    return candidates == [session_home_branch]
+    if len(candidates) == 1:
+        return candidates[0] == session_home_branch
+    detail_items = [
+        f"session branch: {session_branch}",
+        f"session_start_commit: {start_commit}",
+    ]
+    if candidates:
+        detail_items.extend(f"candidate: {branch}" for branch in candidates)
+    else:
+        detail_items.append("candidate: (none)")
+    _raise_unresolved_active_session_home_branch(
+        session_id,
+        "session home branch を一意に特定できませんでした。",
+        detail_items,
+    )
+
+
+def _raise_unresolved_active_session_home_branch(
+    session_id: str,
+    reason: str,
+    detail_items: list[str],
+) -> None:
+    """home branch 未確定の active session を fail closed にする。"""
+    raise CmocError(
+        "home branch 未確定の active session が存在します。",
+        [
+            "この状態では active session の一意性を判定できないため、新しい session は開始できません。",
+            "既存 session を join/abandon するか、session state の session.session_home_branch を復旧してください。",
+        ],
+        "\n".join([f"session id: {session_id}", reason, *detail_items]),
+    )
 
 
 def _session_branch_names(repo_root: Path) -> list[str]:

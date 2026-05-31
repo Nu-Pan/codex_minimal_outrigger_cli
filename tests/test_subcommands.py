@@ -643,7 +643,7 @@ def test_session_fork_creates_session_branch_and_records_state(
     state = json.loads(record_path.read_text(encoding="utf-8"))
     assert branch_name.startswith("cmoc/session/")
     assert state["session"]["state"] == "active"
-    assert state["session"]["session_home_branch"] == home_branch
+    assert state["session"]["session_home_branch"] is None
     assert state["session"]["session_start_commit"] == base_commit
     assert state["session"]["last_joined_apply_oracle_snapshot_commit"] is None
     assert state["apply"] == {
@@ -801,13 +801,12 @@ def test_session_fork_rejects_existing_active_session_for_home_branch(
     ]
 
 
-def test_session_fork_allows_distinct_home_branch_at_same_commit(
+def test_session_fork_rejects_ambiguous_null_active_session_at_same_commit(
     tmp_path: Path,
 ) -> None:
-    """同じ commit を指す別 local branch は別の home branch として扱う。"""
+    """null home branch の active session が曖昧なら新規 session を止める。"""
     repo = _init_repo(tmp_path)
     cmoc_init_impl(repo)
-    first_home_branch = _git(repo, "branch", "--show-current").stdout.strip()
     start_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
     _git(repo, "branch", "feature", start_commit)
 
@@ -816,23 +815,20 @@ def test_session_fork_allows_distinct_home_branch_at_same_commit(
     first_session_id = first_session_branch.removeprefix("cmoc/session/")
     _git(repo, "checkout", "feature")
 
-    cmoc_session_fork_impl(repo)
+    with pytest.raises(CmocError) as error:
+        cmoc_session_fork_impl(repo)
 
-    second_session_branch = _git(repo, "branch", "--show-current").stdout.strip()
-    second_session_id = second_session_branch.removeprefix("cmoc/session/")
     first_state = json.loads(
         (
             repo / ".cmoc" / "sessions" / f"{first_session_id}.json"
         ).read_text(encoding="utf-8")
     )
-    second_state = json.loads(
-        (
-            repo / ".cmoc" / "sessions" / f"{second_session_id}.json"
-        ).read_text(encoding="utf-8")
-    )
-    assert first_session_id != second_session_id
-    assert first_state["session"]["session_home_branch"] == first_home_branch
-    assert second_state["session"]["session_home_branch"] == "feature"
+    assert "home branch 未確定の active session" in error.value.message
+    assert first_state["session"]["session_home_branch"] is None
+    assert _git(repo, "branch", "--show-current").stdout.strip() == "feature"
+    assert _session_state_paths(repo) == [
+        repo / ".cmoc" / "sessions" / f"{first_session_id}.json",
+    ]
 
 
 def test_session_fork_rechecks_active_session_before_branch_creation(
@@ -1088,7 +1084,7 @@ def test_session_fork_keeps_state_when_rollback_branch_delete_fails(
     assert _git(repo, "branch", "--show-current").stdout.strip() == home_branch
     assert session_branch in branches
     assert state["session"]["state"] == "active"
-    assert state["session"]["session_home_branch"] == home_branch
+    assert state["session"]["session_home_branch"] is None
     assert state["apply"]["state"] == "ready"
 
 
