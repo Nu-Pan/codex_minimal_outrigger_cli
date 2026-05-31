@@ -4128,6 +4128,40 @@ def test_apply_join_force_resolves_apply_branch_non_implementation_diff(
     assert f"- {apply_branch}: ignored.txt" in output
 
 
+def test_apply_join_force_resolve_uses_snapshot_gitignore_for_apply_paths(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """session 側の後続 .gitignore 変更で apply 成果物を誤って戻さない。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    (apply_worktree / "feature.txt").write_text("implemented\n", encoding="utf-8")
+    _git(apply_worktree, "add", "feature.txt")
+    _git(apply_worktree, "commit", "-m", "implement feature")
+    (repo / ".gitignore").write_text("/feature.txt\n", encoding="utf-8")
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-m", "ignore feature on session")
+
+    cmoc_apply_join_impl(repo, force_resolve=True)
+
+    output = capsys.readouterr().out
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
+    assert not (repo / ".gitignore").exists()
+    assert state["apply"]["state"] == "ready"
+    assert f"- {apply_branch}: feature.txt" not in output
+    assert "- cmoc/session/2026-05-10_22-21_10_000000123: .gitignore" in output
+
+
 def test_apply_join_force_resolves_apply_branch_rename_from_oracle(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

@@ -10,20 +10,20 @@ from typing import Iterator
 
 from commons.command_runner import run_command
 from commons.errors import CmocError
-from commons.indexing import is_maintained_index_path
 from commons.repo import (
     apply_worktree_path_from_branch,
     assert_no_uncommitted_changes,
     clear_apply_process_id,
     current_branch,
-    filter_oracle_file_paths,
+    filter_apply_implementation_file_paths_at_commit,
+    filter_oracle_file_paths_at_commit,
     git_name_only_paths,
     git_name_status_entries,
     is_apply_branch,
-    is_apply_implementation_path,
     is_session_branch,
     read_session_state,
     resolve_session_home_branch,
+    root_gitignored_paths_at_commit,
     run_git,
     session_id_from_branch,
     session_state_repo_root,
@@ -328,7 +328,11 @@ def _unexpected_diffs(repo_root: Path, join_state: _JoinState) -> list[str]:
         invalid_paths = [
             path
             for path in entry.paths
-            if not _is_apply_branch_expected_path(repo_root, path)
+            if not _is_apply_branch_expected_path(
+                repo_root,
+                join_state.oracle_snapshot_commit,
+                path,
+            )
         ]
         for path in invalid_paths:
             unexpected.append(f"{join_state.apply_branch}: {path}")
@@ -342,7 +346,11 @@ def _unexpected_diffs(repo_root: Path, join_state: _JoinState) -> list[str]:
         invalid_paths = [
             path
             for path in entry.paths
-            if not _is_session_branch_expected_path(repo_root, path)
+            if not _is_session_branch_expected_path(
+                repo_root,
+                join_state.oracle_snapshot_commit,
+                path,
+            )
         ]
         for path in invalid_paths:
             unexpected.append(f"{join_state.session_branch}: {path}")
@@ -384,13 +392,24 @@ def _is_oracle_path(path: str) -> bool:
     return path == "oracles" or path.startswith("oracles/")
 
 
-def _is_apply_branch_expected_path(repo_root: Path, path: str) -> bool:
+def _is_apply_branch_expected_path(
+    repo_root: Path,
+    oracle_snapshot_commit: str,
+    path: str,
+) -> bool:
     """apply branch 側で cmoc が積み得る想定内 path か判定する。"""
     if _is_apply_branch_forbidden_path(path):
         return False
-    if is_maintained_index_path(repo_root, path):
+    if _is_snapshot_index_path(repo_root, oracle_snapshot_commit, path):
         return True
-    return is_apply_implementation_path(repo_root, path)
+    return (
+        filter_apply_implementation_file_paths_at_commit(
+            repo_root,
+            oracle_snapshot_commit,
+            [path],
+        )
+        == [path]
+    )
 
 
 def _is_apply_branch_forbidden_path(path: str) -> bool:
@@ -407,10 +426,19 @@ def _is_apply_branch_forbidden_path(path: str) -> bool:
     )
 
 
-def _is_session_branch_expected_path(repo_root: Path, path: str) -> bool:
+def _is_session_branch_expected_path(
+    repo_root: Path,
+    oracle_snapshot_commit: str,
+    path: str,
+) -> bool:
     """session branch 側で利用者が編集し得る想定内 path か判定する。"""
     return (
-        filter_oracle_file_paths(repo_root, [path]) == [path]
+        filter_oracle_file_paths_at_commit(
+            repo_root,
+            oracle_snapshot_commit,
+            [path],
+        )
+        == [path]
         or _is_memo_path(path)
         or _is_index_path(path)
     )
@@ -424,6 +452,29 @@ def _is_memo_path(path: str) -> bool:
 def _is_index_path(path: str) -> bool:
     """cmoc が再生成可能な INDEX.md path か判定する。"""
     return Path(path).name == "INDEX.md"
+
+
+def _is_snapshot_index_path(
+    repo_root: Path,
+    oracle_snapshot_commit: str,
+    path: str,
+) -> bool:
+    """snapshot の root `.gitignore` で除外されない INDEX.md か判定する。"""
+    index_path = Path(path)
+    if index_path.is_absolute() or index_path.name != "INDEX.md":
+        return False
+    if any(part in {"", ".", ".."} for part in index_path.parts):
+        return False
+    directory = index_path.parent.as_posix()
+    candidates = [path]
+    if directory != ".":
+        candidates.append(directory)
+    ignored = root_gitignored_paths_at_commit(
+        repo_root,
+        oracle_snapshot_commit,
+        candidates,
+    )
+    return path not in ignored and directory not in ignored
 
 
 def _force_resolve_unexpected_diffs(
@@ -441,7 +492,11 @@ def _force_resolve_unexpected_diffs(
                 join_state.oracle_snapshot_commit,
                 join_state.apply_branch,
             ),
-            lambda path: _is_apply_branch_expected_path(repo_root, path),
+            lambda path: _is_apply_branch_expected_path(
+                repo_root,
+                join_state.oracle_snapshot_commit,
+                path,
+            ),
         ),
         join_state.apply_worktree,
     )
@@ -455,7 +510,11 @@ def _force_resolve_unexpected_diffs(
                 join_state.oracle_snapshot_commit,
                 join_state.session_branch,
             ),
-            lambda path: _is_session_branch_expected_path(repo_root, path),
+            lambda path: _is_session_branch_expected_path(
+                repo_root,
+                join_state.oracle_snapshot_commit,
+                path,
+            ),
         ),
         repo_root,
     )
