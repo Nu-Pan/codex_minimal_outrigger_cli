@@ -31,19 +31,23 @@
 
 ## Read this when
 
-- `src/sub_commands/apply` が Python パッケージとしてどう分かれているかを把握したいとき。
-- `cmoc apply fork`、`cmoc apply join`、`cmoc apply abandon` のどの実装ファイルを先に読むべきか整理したいとき。
-- apply 系サブコマンド全体の開始・統合・破棄の役割分担を、実装ベースで素早く確認したいとき。
+- `src/sub_commands/apply` 配下の実装ファイルの役割分担を把握したいとき。
+- `cmoc apply fork`、`cmoc apply join`、`cmoc apply abandon` のどの実装へ進むべきか整理したいとき。
+- apply 系サブコマンドの開始・統合・破棄の流れを、実装ベースで素早く確認したいとき。
+- このディレクトリを起点に、必要なモジュールだけを最短で読み分けたいとき。
 
 ## Do not read this when
 
 - `src/sub_commands/apply/__init__.py` のパッケージ宣言だけを確認したいとき。
-- `cmoc apply fork`、`cmoc apply join`、`cmoc apply abandon` の個別仕様や前提条件だけを確認したいとき。
-- `cmoc apply` の利用手順や正本仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/` 側を直接読むべきとき。
+- `cmoc apply fork` の実行ループや調査・修正対象の列挙だけを確認したいとき。
+- `cmoc apply join` のマージ条件や `--force-resolve` の扱いだけを確認したいとき。
+- `cmoc apply abandon` の破棄条件や cleanup 手順だけを確認したいとき。
+- `cmoc session` や `cmoc review oracles` など、apply 以外のサブコマンド仕様を探しているとき。
+- `oracles` 側の正本仕様や `INDEX.md` 生成ルールだけを確認したいとき。
 
 ## hash
 
-- f487023ae0fc9920811800592626668b865cbc2e5584e2cc3bd5529dceab94c6
+- 7a050d35910cf93eb1e7245948202ee451fe0eb7f614dbb1f4f0068ece0b3221
 
 # `init.py`
 

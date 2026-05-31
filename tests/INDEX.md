@@ -163,14 +163,14 @@
 
 ## Do not read this when
 
-- `tests/test_indexing.py` や `tests/test_repo.py` のような個別領域の回帰だけを確認したいとき。
+- `tests/test_indexing.py` や `tests/test_repo.py` のように、個別領域だけの回帰を確認したいとき。
 - `src/sub_commands/...`、`src/main.py`、`bin/cmoc` の実装本体を直接追いたいとき。
 - `commons.repo`、`commons.command_runner`、`commons.errors` など単体モジュールの仕様だけを確認したいとき。
 - `tests/INDEX.md` でテスト全体の入口だけを把握できれば十分なとき。
 
 ## hash
 
-- 46e9029947f4e70981ec312c3f1b7b6f5b986d49c47acb6d9a59562b9cca760c
+- adef955babccf8560f92d696aa9dad72f6c726c70669d7356d26cca2bef2b865
 
 # `test_timestamps.py`
 
