@@ -2835,6 +2835,43 @@ def test_eval_oracles_prompt_orders_completion_before_details() -> None:
     ) > 2
 
 
+def test_eval_oracles_improvement_prompt_orders_completion_before_snapshot_details() -> None:
+    """snapshot 付き改善 prompt も完了条件を詳細指示より前に置く。"""
+    snapshot = review_oracles_module._OracleEvaluationSnapshot(
+        original_repo_root=Path("/repo"),
+        original_oracle_root=Path("/repo/oracles"),
+        snapshot_root=Path("/snapshot"),
+        snapshot_oracle_root=Path("/snapshot/oracles"),
+        oracle_files=frozenset({Path("/repo/oracles/spec.md")}),
+        reference_files=frozenset({Path("/repo/oracles/spec.md")}),
+    )
+    prompt = _improvement_prompt(
+        Path("/repo"),
+        {
+            "issues": [
+                {
+                    "oracle_path": "/repo/oracles/spec.md",
+                    "referenced_paths": ["/repo/oracles/INDEX.md"],
+                }
+            ]
+        },
+        snapshot,
+    )
+    lines = prompt.splitlines()
+
+    assert lines[0] == "あなたはソフトウェア仕様レビュー結果の整理担当です。"
+    assert lines[1] == (
+        "`/repo` の仕様評価で得られた問題点リストを改善してください。"
+    )
+    assert lines[2] == (
+        "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。"
+    )
+    assert lines.index(
+        "必要に応じて読む仕様ファイル群は、開始時点の内容を固定したコピー "
+        "`/snapshot/oracles` です。"
+    ) > 2
+
+
 def test_apply_returns_complete_when_no_discrepancies(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,

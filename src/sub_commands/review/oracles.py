@@ -644,6 +644,7 @@ def _improvement_prompt(
     lines = [
         "あなたはソフトウェア仕様レビュー結果の整理担当です。",
         f"`{concrete_repo_root}` の仕様評価で得られた問題点リストを改善してください。",
+        "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。",
     ]
     if oracle_snapshot is not None:
         lines.append(
@@ -652,7 +653,6 @@ def _improvement_prompt(
         )
     lines.extend(
         [
-            "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。",
             "入力 issues を意味論的に統合・改善し、重複、矛盾、False-Positive を",
             "ベストエフォートで減らしてください。",
             "問題点がない場合は issues: [] を返してください。",
