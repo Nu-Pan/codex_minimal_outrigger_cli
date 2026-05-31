@@ -76,24 +76,24 @@
 ## Summary
 
 - `src/sub_commands/review` は `cmoc review` 系サブコマンドの入口ディレクトリです。
-- `__init__.py` はパッケージ宣言のみを担い、`oracles.py` は `cmoc review oracles` の本体処理を担います。
-- この目次は、review 系の入口と oracles 評価本体の役割分担を整理するための案内です。
+- `__init__.py` はパッケージ宣言のみを担い、公開 API や実行ロジックは持ちません。
+- `oracles.py` は `cmoc review oracles` の本体処理を担い、`oracles` の snapshot 固定、`INDEX.md` メンテナンス、各 oracle の評価、レポート出力をまとめます。
 
 ## Read this when
 
-- `src/sub_commands/review` が Python パッケージとしてどう構成されているか確認したいとき。
-- `cmoc review` 系サブコマンドの入口構造を把握したいとき。
-- `cmoc review oracles` の本体処理や評価フローを追いたいとき。
+- `src/sub_commands/review` のモジュール構成と役割分担を確認したいとき。
+- `cmoc review oracles` の実装・修正・レビュー・テストを始めたいとき。
+- 評価結果の保存先や Structured Output の検証条件を把握したいとき。
 
 ## Do not read this when
 
-- `src/sub_commands/review/__init__.py` の内容だけを確認したいときは、この目次ではなく該当モジュールを直接読むべきです。
-- `cmoc review oracles` の実行フローや評価ロジックを追いたいときは、`oracles.py` を直接読むべきです。
+- `src/sub_commands/review/__init__.py` だけを確認したいときは、この目次ではなく該当モジュールを直接読むべきです。
+- `cmoc review oracles` の利用手順や仕様断片だけを確認したいときは、`oracles/docs/app_specs/sub_commands/review_oracles.md` を読むべきです。
 - `cmoc review` の CLI 登録や hidden alias だけを確認したいときは、`src/main.py` を読むべきです。
 
 ## hash
 
-- 780dd99e55d176ac8ddd8f619f32e2f11d7c28011897969f71ea8ed0dbde98a2
+- 0bbce1594bb9646259592fbbb9c1d632137b9157152d7c9e2d1eeaf408c1560c
 
 # `session`
 

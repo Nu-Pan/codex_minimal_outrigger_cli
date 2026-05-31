@@ -23,24 +23,23 @@
 
 ## Summary
 
-- `src/sub_commands/review/oracles.py` は `cmoc review oracles` の本体処理を担い、開始時点の `oracles` ツリーを snapshot として固定したうえで、評価・改善・レポート保存までを一括で実行します。
-- 部分評価 / 全体評価の切り替え、`INDEX.md` メンテナンスの反映、oracle ファイルごとの並列評価、問題点リストの反復改善を扱います。
-- 評価結果とエラー時の代替レポートを `.cmoc/reports/review_oracles` に保存し、参照ファイル検証や Structured Output の妥当性確認も行います。
+- `src/sub_commands/review/oracles.py` は `cmoc review oracles` の本体処理を担うモジュールです。
+- 開始時点の `oracles` ツリーを snapshot として固定し、部分評価・全体評価の切り替え、`INDEX.md` メンテナンス、oracle ファイルごとの評価、問題点リスト改善を順に実行します。
+- 評価結果やエラー時の代替レポートを `.cmoc/reports/review_oracles` に保存し、Structured Output の妥当性確認も行います。
 
 ## Read this when
 
-- `cmoc review oracles` の実行フロー全体を実装・修正・レビューしたいとき。
-- 開始時点の `oracles` snapshot 固定、`INDEX.md` 反映、並列評価、問題点リスト改善の流れを確認したいとき。
-- 評価レポートや error report の保存先、frontmatter、issue の severity 集計を確認したいとき。
-- Structured Output の検証条件や、参照可能な `oracles` 配下ファイルの制約を確認したいとき。
+- `cmoc review oracles` の本体処理を実装・修正・レビューしたいとき。
+- 開始時点の `oracles` スナップショット固定、`INDEX.md` の反映、oracle ファイルごとの並列評価、問題点リスト改善、レポート保存の流れを確認したいとき。
+- Structured Output の検証条件や、参照してよい `oracles` 配下ファイルの制約を確認したいとき。
+- 評価失敗時のエラーレポート生成や、` .cmoc/reports/review_oracles` への出力規則を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc review` の CLI 登録や hidden alias だけを確認したいときは、`src/main.py` を読むべきです。
-- `cmoc review oracles` の利用手順や仕様断片だけを確認したいときは、`oracles/docs/app_specs/sub_commands/review_oracles.md` を読むべきです。
-- 個別の `oracles` 仕様ファイルの内容だけを追いたいときは、この実装ではなく `oracles/docs/app_specs/` 側を読むべきです。
-- `INDEX.md` の生成・更新ルールだけを確認したいときは、このファイルではなく `src/commons/indexing.py` を読むべきです。
+- `cmoc review oracles` の利用手順や引数、仕様断片だけを確認したいときは、`oracles/docs/app_specs/sub_commands/review_oracles.md` を読むべきです。
+- `cmoc review` の CLI 登録や隠し別名だけを確認したいときは、`src/main.py` を読むべきです。
+- `src/sub_commands/review` ディレクトリ全体の入口構造や `__init__.py` だけを確認したいときは、このファイルではなくディレクトリの `INDEX.md` を読むべきです。
 
 ## hash
 
-- b31ccee38fb5b008834c6c8ac6569b36a2ee664257786627f8d3c4f522bd3daa
+- dcdfcbeda439e56148eb3d4317d8aae90d9eaa8a4ceffd6d8b3b82175cd6d11a

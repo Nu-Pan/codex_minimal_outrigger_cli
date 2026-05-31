@@ -155,29 +155,29 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は cmoc の横断回帰テストの入口で、`run_command` と `main` を中心に共通制御を確認します。
-- `init`、`session`、`apply`、`review oracles` の状態遷移、エラー表示、終了コード、レポート出力をまとめて検証します。
-- 補完プローブ、`.cmoc` ignore 修復、作業ツリー復旧、サブコマンドログの境界条件も含みます。
+- `tests/test_subcommands.py` は `run_command` と `main` を中心に、cmoc の横断回帰をまとめたテスト入口です。
+- `init`、`session`、`apply`、`review oracles` の状態遷移、前提条件、終了コード、エラー報告、レポート出力を広く確認します。
+- 補完プローブ、`.cmoc` ignore 修復、作業ツリーやブランチの復旧、Codex 呼び出しのプロンプト/検証、JSONL サブコマンドログ、テスト用ヘルパー群も含みます。
 
 ## Read this when
 
-- サブコマンド横断の制御フロー、終了コード、エラー表示、レポート出力の回帰を確認したいとき。
-- `cmoc init`、`cmoc session fork/join/abandon`、`cmoc apply fork/join/abandon`、`cmoc review oracles` の状態遷移や受け入れ条件を整理したいとき。
-- `main` のコマンド登録、補完プローブ、`bin/cmoc` の起動前提、`format_error_report` の整形仕様を確認したいとき。
-- `run_command` がコンソール出力と JSONL サブコマンドログをどう残すか確認したいとき。
-- このファイルにまとまっている共通テスト補助関数や `_init_repo`、`_git` などのテスト用セットアップを参照したいとき。
+- サブコマンド横断の制御フロー、終了コード、例外処理、レポート出力を追いたいとき。
+- `cmoc init`、`session fork/join/abandon`、`apply fork/join/abandon`、`review oracles` のテスト観点をまとめて確認したいとき。
+- `main` のコマンド登録、補完プローブ、`bin/cmoc` 起動前提、`format_error_report` の整形を確認したいとき。
+- `run_command` のコンソール出力や JSONL サブコマンドログの記録内容を確認したいとき。
+- ファイル末尾のテスト補助関数やリポジトリ構築ヘルパーを参照したいとき。
 
 ## Do not read this when
 
 - `src/sub_commands/apply/*`、`src/sub_commands/session/*`、`src/sub_commands/review/*` の個別実装だけを追いたいとき。
 - `commons.command_runner`、`commons.errors`、`commons.repo` など単一の共通ヘルパーだけを確認したいとき。
-- `tests/test_timestamps.py`、`tests/test_report_files.py`、`tests/test_indexing.py` のような別領域のテスト入口を見たいとき。
+- `tests/test_indexing.py`、`tests/test_report_files.py`、`tests/test_timestamps.py` など別領域のテスト入口を見たいとき。
 - `INDEX.md` の生成ルール全体や `oracles` 側の正本仕様だけを確認したいとき。
 - pytest の共通設定やファイル命名規則だけを確認したいとき。
 
 ## hash
 
-- 0cde27efba7d425645f362f65994029712223ef0bb9c93f23206fed505a4c3fd
+- 721824673ac7ed636c122ac4ddbb16b7f0b6bfa9344b6ebcaac1630b8e92cb56
 
 # `test_timestamps.py`
 
