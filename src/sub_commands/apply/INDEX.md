@@ -50,26 +50,25 @@
 
 ## Summary
 
-- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体で、session branch 上で専用 apply branch と worktree を作成し、要修正点の調査・適用・report 生成までをまとめて担当するモジュールです。
-- 起動前の session/apply state 検証、`--repeat-investigate-and-fix` / `--repeat-improove-fixing-list` / `--scope` の検証、`apply.state` の `running` / `completed` / `error` 遷移、排他ロックと worktree 作成リトライを含みます。
-- Structured Output による不整合調査、要修正点の整理、修正反映、commit、編集禁止領域の検査、YAML Front Matter 付き report 出力と変更要約生成まで扱います。
+- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体で、session branch 上で専用 apply branch と worktree を作成し、不整合調査から修正適用、report 生成までをまとめて担当するモジュールです。
+- `session.state` / `apply.state` の検証、`--repeat-investigate-and-fix` / `--repeat-improove-fixing-list` / `--scope` の検証、`running` / `completed` / `error` への state 遷移、排他ロックと worktree 作成リトライを含みます。
+- Structured Output による要修正点抽出、`INDEX.md` の保守、禁止領域検査、commit、YAML Front Matter 付き report / error report の出力まで扱います。
 
 ## Read this when
 
-- `cmoc apply fork` の処理順と責務の境界を確認したいとき。
-- `session.state` / `apply.state` の検証条件、apply branch/worktree の作成条件、scope ごとの調査対象選定を確認したいとき。
-- Structured Output の要修正点生成、修正反映、commit、report 生成の流れを実装・修正・レビュー・テストしたいとき。
-- 編集禁止領域の検査や report の検証条件を確認したいとき。
+- `src/sub_commands/apply/fork.py` の処理順と責務の境界を確認したいとき。
+- `session.state` / `apply.state` の検証条件、apply branch / worktree の作成条件、`--scope` と反復回数オプションの扱いを確認したいとき。
+- Structured Output による要修正点の抽出、修正適用、commit、report 生成、エラー時の report 出力まで含めて実装・修正・レビュー・テストしたいとき。
 
 ## Do not read this when
 
-- `cmoc apply join` や `cmoc apply abandon` の実装・終了処理だけを確認したいとき。
-- `cmoc apply fork` の利用手順や正本仕様だけを確認したいときは、`oracles/app_specs/sub_commands/apply_fork.md` を直接読むべきとき。
-- `src/sub_commands/apply` パッケージ全体の入口だけを確認したいときや、`INDEX.md` の生成ルールだけを確認したいとき。
+- `cmoc apply join` や `cmoc apply abandon` の実装・終了処理だけを確認したいときは、このファイルではなく各モジュールを読むべきです。
+- `cmoc apply fork` の利用手順や正本仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/apply_fork.md` を直接読むべきです。
+- `src/sub_commands/apply` パッケージ全体の入口だけを確認したいときや、`INDEX.md` の生成ルールだけを確認したいときは、このファイルではなく親の目次を読むべきです。
 
 ## hash
 
-- 899b27c632c0f057a1887962c8e6cf3cfb6f6fc68e8504222bc361053ac8bca4
+- 1d30cc0919587c70402bd7aeb20b6f2df40df38dd82423db16af91f2b3f065ea
 
 # `join.py`
 
