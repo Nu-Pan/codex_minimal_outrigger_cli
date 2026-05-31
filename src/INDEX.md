@@ -57,13 +57,13 @@
 
 ## Summary
 
-- `src/sub_commands` は `cmoc` のサブコマンド実装をまとめる入口ディレクトリで、`__init__.py` がパッケージ宣言、`init.py` が `cmoc init`、`apply/`・`session/`・`review/` が各系統の実装入口です。
-- このディレクトリは、個別実装へ進む前に責務ごとの読み先を振り分けるためのルーティング目次として使います。
+- `src/sub_commands` は `cmoc` のサブコマンド実装の入口で、`__init__.py` によるパッケージ宣言、`init.py` による `cmoc init`、および `apply/`・`session/`・`review/` の各系統への入口をまとめるルーティング用ディレクトリです。
+- この目次は、個別サブコマンドの実装へ進む前に、どのファイルや下位ディレクトリを読むべきかを振り分けるための案内です。
 
 ## Read this when
 
 - `cmoc` のどのサブコマンド実装がこの配下にあるかを俯瞰したいとき。
-- `init`、`apply`、`session`、`review` のうち、どの入口ファイルや配下ディレクトリを読むべきか振り分けたいとき。
+- `init`、`apply`、`session`、`review` のうち、どの入口ファイルや配下ディレクトリを読むべきか整理したいとき。
 - `src/sub_commands` が Python パッケージとして成立していることや、各サブコマンドの入口構造を確認したいとき。
 
 ## Do not read this when
@@ -74,4 +74,4 @@
 
 ## hash
 
-- f109f2013d9a92257e7b0e5f698ef7b6a6a21fc186abe76f742ce30a280847f7
+- 64ed138cfb1cfa275503e239f8f5378e7557a32803a636d0a557f07cb83cf22c

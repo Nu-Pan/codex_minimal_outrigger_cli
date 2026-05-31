@@ -154,20 +154,20 @@
 
 ## Summary
 
-- cmoc の各サブコマンドをまたぐ共通制御ロジックと CLI 入口の回帰テスト群です。
-- `run_command` の標準出力 tee、終了コード、例外時レポート、repo root 解決失敗などの共通挙動を検証します。
-- `init`、`session`、`apply`、`review oracles`、`main`、`bin/cmoc` の登録・状態遷移・補完・エラー整形まで広く押さえます。
+- cmoc の各サブコマンドを横断する決定論的な制御ロジックと CLI 入口の回帰テスト群です。
+- `run_command` の標準出力 tee、終了コード、例外時レポート、repo root 解決失敗などの共通処理を検証します。
+- `init`、`session`、`apply`、`review oracles`、`main`、`bin/cmoc` にまたがる登録、状態遷移、補完、エラー整形まで広く押さえます。
 
 ## Read this when
 
-- cmoc のサブコマンド群をまたぐ決定論的な制御ロジックの回帰を確認したいとき。
+- サブコマンド群をまたぐ制御フローや共通入口の挙動を確認したいとき。
 - `run_command` の tee 出力、終了コード、例外時レポート、repo root 解決失敗の扱いを調べたいとき。
 - `cmoc init` の `.cmoc` ignore 修復、tracked `.cmoc` の untrack、初回 commit の挙動を確認したいとき。
 - `session fork` / `join` / `abandon` の状態遷移、branch 管理、rollback、cleanup の回帰を追いたいとき。
 - `apply fork` / `join` / `abandon` の差分調査、並列処理、commit、レポート生成、未収束時の扱いを確認したいとき。
 - `review oracles` の評価フロー、prompt 生成、payload 検証、エラーレポートの回帰を確認したいとき。
 - `main` の Typer 登録、補完プローブ、`bin/cmoc` の実行前提、`format_error_report` の整形仕様を確認したいとき。
-- `_conflict_prompt` や `_files_with_conflict_markers` のような、サブコマンド横断で使う補助ロジックの仕様を追いたいとき。
+- `_conflict_prompt` や `_files_with_conflict_markers` のような横断補助ロジックの仕様を追いたいとき。
 
 ## Do not read this when
 
@@ -179,7 +179,7 @@
 
 ## hash
 
-- e9f45d69b145c59ff12775d75f24253f774aa4413484a76f809ac3d8bfdb52a6
+- 888df9221335512c45b6814c3f10fa3a045a41f4a3fb5952dff03096d166f35b
 
 # `test_timestamps.py`
 

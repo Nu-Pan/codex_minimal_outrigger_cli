@@ -38,12 +38,12 @@
 ## Do not read this when
 
 - `cmoc apply` の利用手順や正本仕様だけを確認したいとき。
-- 個別の前提条件や終了条件だけを確認したいときは、`oracles/docs/app_specs/sub_commands/` の該当文書を直接読むべきです。
+- 個別の前提条件や終了条件だけを確認したいときは、`oracles/docs/app_specs/` 側の該当文書を直接読むべきです。
 - `session` 系の実装や仕様を追いたいときは、このディレクトリではなく `src/sub_commands/session` を読むべきです。
 
 ## hash
 
-- 971650d1e1a706aa82b9bcc96350791c00fad27c294112c405dba83e073a25c7
+- ccb99e1735a281bda1076912e4a131579c99546c6e6d897134a36ab47fc0d204
 
 # `init.py`
 

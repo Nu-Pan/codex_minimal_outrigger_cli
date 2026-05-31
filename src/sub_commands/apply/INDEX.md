@@ -50,27 +50,27 @@
 
 ## Summary
 
-- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体実装で、session branch 上に専用の apply branch と worktree を作り、oracle と実装の不整合を調査・修正・記録するモジュールです。
-- 起動前の session/apply state 検証、repeat / scope のチェック、排他ロック、worktree 作成リトライ、`apply.state` 遷移、`INDEX.md` メンテナンスを扱います。
-- Structured Output による要修正点抽出、修正適用、禁止領域チェック、commit、apply report / error report 生成、完了時の戻り値までを一通り含みます。
+- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体実装で、session branch 上に専用の apply branch と worktree を作成し、要修正点の調査から適用、commit、report 出力までを担当するモジュールです。
+- 起動前の session/apply state 検証、`--repeat-investigate-and-fix` / `--repeat-improove-fixing-list` / `--scope` の検証、排他ロックと worktree 作成リトライ、apply.state の遷移をまとめて扱います。
+- 調査結果の Structured Output 検証、差分の整理、編集禁止領域の確認、YAML Front Matter 付きの報告書生成まで含めて、`cmoc apply fork` の完結した実行経路を把握するための入口です。
 
 ## Read this when
 
-- `cmoc apply fork` の実行フロー、前提条件、終了条件を確認したいとき。
-- `session.state` / `apply.state` の検証条件や `rolling` / `session` / `full` scope の扱いを実装・修正・レビューしたいとき。
-- apply worktree の生成、排他制御、`INDEX.md` の維持、要修正点の Structured Output、修正適用、commit、report 生成の流れを追いたいとき。
-- forbidden path の検査や、失敗時の error report / fallback 要約の扱いを確認したいとき。
+- `cmoc apply fork` の処理順と責務の境界を確認したいとき。
+- `session.state` / `apply.state` の検証条件、apply branch と worktree の作成条件、`scope` の扱いを確認したいとき。
+- Structured Output による要修正点の調査、修正適用、commit、report 生成の流れを実装・修正・レビュー・テストしたいとき。
+- 編集禁止領域の検査や、失敗時を含む report 保存条件を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply join` や `cmoc apply abandon` の後処理だけを確認したいとき。
-- `cmoc session fork/join/abandon` など session 側の仕様だけを確認したいとき。
-- `oracles` 側の正本仕様や `INDEX.md` の生成ルールだけを確認したいとき。
-- `src/sub_commands/apply` パッケージ全体の入口や `__init__.py` だけを確認したいとき。
+- `cmoc apply join` や `cmoc apply abandon` の終了・破棄処理だけを確認したいとき。
+- `cmoc apply fork` の利用手順や正本仕様だけを確認したいとき。
+- `src/sub_commands/apply` パッケージ全体の入口だけを確認したいとき。
+- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
 
 ## hash
 
-- a0b0c6ad3d3ca96a3c678cebc831f32309b229997ce02491619356934c0f187b
+- d060d86b7e1fb63e31129abb4b28f2219be2ef0398e178f41d8521afdfe2d63e
 
 # `join.py`
 
