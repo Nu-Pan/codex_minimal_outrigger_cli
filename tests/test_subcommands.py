@@ -6660,10 +6660,10 @@ def test_apply_partial_targets_exclude_deleted_and_keep_reverted_paths(
     assert implementation_targets == {"app.py": False}
 
 
-def test_apply_dirty_targets_exclude_paths_missing_at_snapshot(
+def test_apply_dirty_targets_record_snapshot_and_worktree_existence(
     tmp_path: Path,
 ) -> None:
-    """dirty path 経由でも snapshot に存在しない削除済み path は対象外にする。"""
+    """dirty path は snapshot/worktree の存在状態を分けて対象化する。"""
     repo = _init_repo(tmp_path)
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -6674,9 +6674,15 @@ def test_apply_dirty_targets_exclude_paths_missing_at_snapshot(
     snapshot_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
     (oracle_root / "created.md").write_text("created\n", encoding="utf-8")
     (repo / "created.py").write_text("created\n", encoding="utf-8")
+    (oracle_root / "spec.md").unlink()
+    (repo / "app.py").unlink()
 
-    oracle_targets = [
-        target.path.relative_to(repo).as_posix()
+    oracle_targets = {
+        target.path.relative_to(repo).as_posix(): (
+            target.exists_at_snapshot,
+            target.exists_in_worktree,
+            target.deleted_at_snapshot,
+        )
         for target in apply_module._target_oracle_files(
             repo,
             snapshot_commit,
@@ -6688,9 +6694,13 @@ def test_apply_dirty_targets_exclude_paths_missing_at_snapshot(
                 oracle_root / "spec.md",
             },
         )
-    ]
-    implementation_targets = [
-        target.path.relative_to(repo).as_posix()
+    }
+    implementation_targets = {
+        target.path.relative_to(repo).as_posix(): (
+            target.exists_at_snapshot,
+            target.exists_in_worktree,
+            target.deleted_at_snapshot,
+        )
         for target in apply_module._target_implementation_files(
             repo,
             snapshot_commit,
@@ -6702,10 +6712,18 @@ def test_apply_dirty_targets_exclude_paths_missing_at_snapshot(
                 repo / "deleted.py",
             },
         )
-    ]
+    }
 
-    assert oracle_targets == ["oracles/created.md", "oracles/spec.md"]
-    assert implementation_targets == ["app.py", "created.py"]
+    assert oracle_targets == {
+        "oracles/created.md": (False, True, False),
+        "oracles/deleted.md": (False, False, True),
+        "oracles/spec.md": (True, False, False),
+    }
+    assert implementation_targets == {
+        "app.py": (True, False, False),
+        "created.py": (False, True, False),
+        "deleted.py": (False, False, True),
+    }
 
 
 def test_apply_partial_targets_use_renamed_new_paths(
@@ -6801,7 +6819,8 @@ def test_apply_deleted_investigation_target_prompt_mentions_history(
     repo = _init_repo(tmp_path)
     target = apply_module._InvestigationTarget(
         repo / "deleted.py",
-        deleted_at_snapshot=True,
+        exists_at_snapshot=False,
+        exists_in_worktree=False,
     )
 
     prompt = apply_module._implementation_investigation_prompt(repo, target)
@@ -6816,7 +6835,8 @@ def test_apply_oracle_investigation_prompt_orders_completion_before_details() ->
     repo = Path("/repo")
     target = apply_module._InvestigationTarget(
         repo / "oracles/spec.md",
-        deleted_at_snapshot=False,
+        exists_at_snapshot=True,
+        exists_in_worktree=True,
     )
 
     prompt = apply_module._investigation_prompt(repo, target)
@@ -6840,7 +6860,8 @@ def test_apply_implementation_investigation_prompt_orders_completion_before_deta
     repo = Path("/repo")
     target = apply_module._InvestigationTarget(
         repo / "src/app.py",
-        deleted_at_snapshot=True,
+        exists_at_snapshot=False,
+        exists_in_worktree=False,
     )
 
     prompt = apply_module._implementation_investigation_prompt(repo, target)
@@ -6856,6 +6877,47 @@ def test_apply_implementation_investigation_prompt_orders_completion_before_deta
         "この起点 path は調査対象として固定された commit 時点では存在しません。"
         "削除差分や履歴上の変更内容を確認して調査してください。"
     ) > 3
+
+
+def test_apply_created_dirty_investigation_target_prompt_mentions_worktree_content(
+    tmp_path: Path,
+) -> None:
+    """新規作成 dirty 起点は現在 worktree の内容確認を促す。"""
+    repo = _init_repo(tmp_path)
+    target = apply_module._InvestigationTarget(
+        repo / "created.py",
+        exists_at_snapshot=False,
+        exists_in_worktree=True,
+    )
+
+    prompt = apply_module._implementation_investigation_prompt(repo, target)
+
+    assert "`" + str(repo / "created.py") + "` を起点" in prompt
+    assert "調査対象として固定された commit 時点では存在せず" in prompt
+    assert "現在の worktree には存在します" in prompt
+    assert "前回までの修正で新規作成されたファイル" in prompt
+    assert "現在の worktree の内容を確認" in prompt
+    assert "削除差分や履歴上の変更内容" not in prompt
+
+
+def test_apply_removed_dirty_investigation_target_prompt_mentions_deletion_diff(
+    tmp_path: Path,
+) -> None:
+    """削除された dirty 起点は snapshot 上の存在と削除差分確認を伝える。"""
+    repo = _init_repo(tmp_path)
+    target = apply_module._InvestigationTarget(
+        repo / "removed.py",
+        exists_at_snapshot=True,
+        exists_in_worktree=False,
+    )
+
+    prompt = apply_module._implementation_investigation_prompt(repo, target)
+
+    assert "`" + str(repo / "removed.py") + "` を起点" in prompt
+    assert "調査対象として固定された commit 時点には存在し" in prompt
+    assert "現在の worktree には存在しません" in prompt
+    assert "前回までの修正で削除されたファイル" in prompt
+    assert "削除差分や履歴上の変更内容" in prompt
 
 
 def test_commit_all_changes_rejects_memo_changes(

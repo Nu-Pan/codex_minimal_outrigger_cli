@@ -66,10 +66,16 @@ APPLY_FORK_EXIT_CODE_UNCONVERGED = APPLY_FORK_EXIT_CODE_SUCCESS
 
 @dataclass(frozen=True)
 class _InvestigationTarget:
-    """不整合調査を開始する repo 内 path と snapshot 上の存在状態。"""
+    """不整合調査を開始する repo 内 path と存在状態。"""
 
     path: Path
-    deleted_at_snapshot: bool = False
+    exists_at_snapshot: bool = True
+    exists_in_worktree: bool = True
+
+    @property
+    def deleted_at_snapshot(self) -> bool:
+        """snapshot にも現在 worktree にもない履歴調査対象かを返す。"""
+        return not self.exists_at_snapshot and not self.exists_in_worktree
 
 
 @dataclass(frozen=True)
@@ -967,10 +973,10 @@ def _target_oracle_files(
         return [
             _InvestigationTarget(
                 path,
-                deleted_at_snapshot=path not in snapshot_paths,
+                exists_at_snapshot=path in snapshot_paths,
+                exists_in_worktree=path.exists(),
             )
             for path in sorted(dirty_paths)
-            if path in snapshot_paths or path.exists()
         ]
     if not partial:
         return [_InvestigationTarget(path) for path in all_files]
@@ -1007,10 +1013,10 @@ def _target_implementation_files(
         return [
             _InvestigationTarget(
                 path,
-                deleted_at_snapshot=path not in snapshot_paths,
+                exists_at_snapshot=path in snapshot_paths,
+                exists_in_worktree=path.exists(),
             )
             for path in sorted(dirty_paths)
-            if path in snapshot_paths or path.exists()
         ]
     if not partial:
         return [_InvestigationTarget(path) for path in all_files]
@@ -2245,13 +2251,28 @@ def _implementation_investigation_prompt(
 
 
 def _investigation_target_note(target: _InvestigationTarget) -> str:
-    """削除済み target の履歴調査が必要なことを prompt に明示する。"""
-    if target.deleted_at_snapshot:
+    """target の存在状態に応じた調査観点を prompt に明示する。"""
+    if target.exists_at_snapshot:
+        if target.exists_in_worktree:
+            return "この起点 path は調査対象として固定された commit 時点に存在するファイルです。"
+        return (
+            "この起点 path は調査対象として固定された commit 時点には存在し、"
+            "現在の worktree には存在しません。"
+            "前回までの修正で削除されたファイルとして、"
+            "削除差分や履歴上の変更内容を確認して調査してください。"
+        )
+    if target.exists_in_worktree:
+        return (
+            "この起点 path は調査対象として固定された commit 時点では存在せず、"
+            "現在の worktree には存在します。"
+            "前回までの修正で新規作成されたファイルとして、"
+            "現在の worktree の内容を確認して調査してください。"
+        )
+    else:
         return (
             "この起点 path は調査対象として固定された commit 時点では存在しません。"
             "削除差分や履歴上の変更内容を確認して調査してください。"
         )
-    return "この起点 path は調査対象として固定された commit 時点に存在するファイルです。"
 
 
 def _organize_prompt(
