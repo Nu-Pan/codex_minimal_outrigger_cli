@@ -154,32 +154,33 @@
 
 ## Summary
 
-- このファイルは cmoc のサブコマンド全体に対する決定論的な制御ロジックを検証する pytest テスト群です。
-- `run_command`、`format_error_report`、`main`、`bin/cmoc` などの共通制御とエラー整形を広く押さえます。
-- `cmoc init`、`session`、`apply`、`review oracles` の状態遷移、commit、recovery、レポート生成の回帰を扱います。
-- 補完プローブ、Typer 登録、prompt / validation helper、payload 検証、ルーティング関連の回帰も含みます。
+- cmoc の各サブコマンドをまたぐ共通制御ロジックと CLI 入口の回帰テスト群です。
+- `run_command` の標準出力 tee、終了コード、例外時レポート、repo root 解決失敗などの共通挙動を検証します。
+- `init`、`session`、`apply`、`review oracles`、`main`、`bin/cmoc` の登録・状態遷移・補完・エラー整形まで広く押さえます。
 
 ## Read this when
 
-- cmoc のサブコマンド群をまたぐ決定論的な制御ロジックの回帰テストを確認したいとき。
+- cmoc のサブコマンド群をまたぐ決定論的な制御ロジックの回帰を確認したいとき。
 - `run_command` の tee 出力、終了コード、例外時の stdout レポート、repo root 解決失敗時の扱いを調べたいとき。
-- `cmoc init`、`cmoc session fork/join/abandon`、`cmoc apply fork/join/abandon` の状態遷移や commit 挙動をまとめて追いたいとき。
-- `review oracles` の評価フロー、プロンプト、payload 検証、レポート生成の回帰を確認したいとき。
-- `main` の Typer 登録、補完プローブ、エラー変換、`bin/cmoc` の実行前提をまとめて確認したいとき。
-- テスト全体がどのサブシステムを横断しているかを把握し、読むべき個別モジュールを切り分けたいとき。
+- `cmoc init` の `.cmoc` ignore 修復、tracked `.cmoc` の untrack、初回 commit の挙動を確認したいとき。
+- `session fork` / `join` / `abandon` の状態遷移、branch 管理、rollback、cleanup の回帰を追いたいとき。
+- `apply fork` / `join` / `abandon` の差分調査、並列処理、commit、レポート生成、未収束時の扱いを確認したいとき。
+- `review oracles` の評価フロー、prompt 生成、payload 検証、エラーレポートの回帰を確認したいとき。
+- `main` の Typer 登録、補完プローブ、`bin/cmoc` の実行前提、`format_error_report` の整形仕様を確認したいとき。
+- `_conflict_prompt` や `_files_with_conflict_markers` のような、サブコマンド横断で使う補助ロジックの仕様を追いたいとき。
 
 ## Do not read this when
 
-- 個別の `cmoc init`、`cmoc session`、`cmoc apply`、`cmoc review oracles` の実装ロジックだけを追いたいとき。
-- `src/sub_commands/` 配下の本体実装や共通ユーティリティのコードを確認したいとき。
-- `run_command`、`format_error_report`、`main`、`bin/cmoc` の実装そのものではなく、別モジュールの仕様を知りたいとき。
-- pytest の共通設定や一般的なテスト補助だけを確認したいとき。
-- `INDEX.md` の生成ルールや `oracles` 側の正本仕様だけを確認したいとき。
-- サブコマンドごとに局所化された回帰だけを見たいとき。
+- 個別の `cmoc init` / `session` / `apply` / `review oracles` の実装そのものだけを追いたいとき。
+- `src/sub_commands/` 配下の本体ロジックだけを確認したいとき。
+- `run_command` や `format_error_report` の共通実行基盤だけを知りたいとき。
+- pytest の共通設定や `tests/INDEX.md` 全体の生成ルールだけを確認したいとき。
+- `session join` の conflict 解消プロンプトや `apply` の discrepancy schema 以外の、局所的な補助関数だけを見たいとき。
+- `bin/cmoc` の起動要件や help 表示だけを単独で確認したいとき。
 
 ## hash
 
-- 1ce94c1afa70fbd9215df859233edbfbbd79d69d09909ae1e7f98e3ff338936a
+- a6e899ca693f6923906f8d3aae256093f5e1d1eb42025bfe9ee9a15843e8f264
 
 # `test_timestamps.py`
 
