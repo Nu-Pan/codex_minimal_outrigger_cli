@@ -91,8 +91,8 @@
 
 - `cmoc apply fork` の調査・修正ループやレポート生成だけを確認したいとき。
 - `cmoc apply abandon` や `cmoc session` 系の終了・破棄処理だけを確認したいとき。
-- `cmoc apply join` の利用手順や正本仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/apply_join.md` を読むべきです。
+- `cmoc apply join` の利用手順や正本仕様だけを確認したいときは、実装ではなく `oracles/docs/app_specs/sub_commands/apply_join.md` を読むべきです。
 
 ## hash
 
-- 877db52c423a4f3e39239fdf27be8ce8649a7830c3aeaf6163aefd0d64f87510
+- e7b45bab554c3b55954e9101e918bc288bf37737da55b119ce41b0bef84c7b57

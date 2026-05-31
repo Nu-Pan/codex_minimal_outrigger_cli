@@ -145,15 +145,15 @@
 
 ## Do not read this when
 
-- `src/commons/repo.py` の個々の関数実装ではなく、`src/commons` 全体の役割を確認したいとき。
-- `CmocError` の整形や出力形式だけを確認したいときは、`errors.py` を読むべきです。
-- 経過時間計測やサブコマンドログだけを追いたいときは、このファイルではなく `timing.py` や `subcommand_log.py` を読むべきです。
-- `INDEX.md` の生成・更新ルールそのものを確認したいときは、このファイルではなく `indexing.py` を読むべきです。
-- `codex exec` の起動や Structured Output の扱いだけを確認したいとき。
+- `src/commons/repo.py` の個々の関数実装や細部の例外メッセージを確認したいときは、本文を直接読むべきです。
+- `INDEX.md` の生成・更新ルールそのものを確認したいときは、`src/commons/indexing.py` を読むべきです。
+- `CmocError` の整形や stdout 向けエラーレポートだけを確認したいときは、`src/commons/errors.py` を読むべきです。
+- 経過時間計測やサブコマンドログだけを追いたいときは、`timing.py` や `subcommand_log.py` を読むべきです。
+- `codex exec` の起動や Structured Output の扱いだけを確認したいときは、この文書の範囲外です。
 
 ## hash
 
-- 19392af361f4d8124d8868d0f03e44a9ff9a6f97675ddc6c5f2bece2afcda47e
+- fc5052391ab23aa18cd4e4ef0d5658c02f1afa869173bcbab7a9057af7f384b4
 
 # `report_files.py`
 
