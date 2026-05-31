@@ -2732,7 +2732,7 @@ def test_apply_returns_complete_when_no_discrepancies(
         for kwargs in investigation_kwargs
     )
     assert all(
-        kwargs["index_excluded_roots"] == [apply_worktree / "oracles"]
+        kwargs["index_excluded_roots"] == []
         for kwargs in investigation_kwargs
     )
     report_kwargs = [
@@ -3028,9 +3028,7 @@ def test_apply_commits_index_changes_when_no_discrepancies(
     )
     assert len(report_kwargs) == 1
     assert report_kwargs[0].get("skip_index_maintenance") is not True
-    assert report_kwargs[0]["index_excluded_roots"] == [
-        apply_worktree / "oracles"
-    ]
+    assert report_kwargs[0]["index_excluded_roots"] == []
     assert maintained_roots.count(apply_worktree) == 2
     assert f"session_head_at_apply_start: \"{session_head}\"" in report_text
     assert f"session_head_at_apply_finish: \"{session_head}\"" in report_text
@@ -6216,11 +6214,11 @@ def test_apply_commits_preexisting_staged_oracles_after_cmoc_guarantee(
     )
 
 
-def test_commit_all_changes_rejects_forbidden_oracles_index_after_index_update(
+def test_commit_all_changes_allows_oracles_index_after_index_update(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """INDEX メンテナンス後の oracle INDEX 差分は commit 前に止める。"""
+    """INDEX メンテナンス後の oracle INDEX 差分は commit できる。"""
     repo = _init_repo(tmp_path)
     (repo / "app.py").write_text("changed\n", encoding="utf-8")
 
@@ -6228,7 +6226,7 @@ def test_commit_all_changes_rejects_forbidden_oracles_index_after_index_update(
         """INDEX メンテナンス時に oracle INDEX 差分を作る fake。"""
         oracle_index = repo_root / "oracles" / "INDEX.md"
         oracle_index.parent.mkdir()
-        oracle_index.write_text("forbidden\n", encoding="utf-8")
+        oracle_index.write_text("index\n", encoding="utf-8")
         return True
 
     monkeypatch.setattr(
@@ -6240,19 +6238,29 @@ def test_commit_all_changes_rejects_forbidden_oracles_index_after_index_update(
         lambda *args, **kwargs: "maintain indexes",
     )
 
-    with pytest.raises(CmocError) as error:
-        _commit_all_changes(repo)
+    _commit_all_changes(repo)
 
-    assert "編集禁止パス" in error.value.message
-    assert "oracles/INDEX.md" in error.value.detail
-    assert _git(repo, "log", "-1", "--pretty=%s").stdout.strip() == "initial"
+    assert _git(repo, "log", "-1", "--pretty=%s").stdout.strip() == (
+        "maintain indexes"
+    )
+    committed_files = _git(
+        repo,
+        "diff-tree",
+        "--no-commit-id",
+        "--name-only",
+        "-r",
+        "HEAD",
+    ).stdout.splitlines()
+    assert "oracles/INDEX.md" in committed_files
 
 
-def test_apply_index_maintenance_excludes_oracles_root(tmp_path: Path) -> None:
-    """apply worktree の INDEX メンテナンスは oracles 配下を書かない。"""
+def test_apply_index_maintenance_does_not_exclude_oracles_root(
+    tmp_path: Path,
+) -> None:
+    """apply worktree の INDEX メンテナンスは oracles 配下も対象にする。"""
     repo = _init_repo(tmp_path)
 
-    assert _apply_index_excluded_roots(repo) == [repo / "oracles"]
+    assert _apply_index_excluded_roots(repo) == []
 
 
 def test_commit_all_changes_rejects_oracle_file_after_index_update(
