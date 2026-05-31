@@ -2,28 +2,25 @@
 
 ## Summary
 
-- `src/commons` は cmoc の共通基盤をまとめるディレクトリで、CLI 実行制御、repo/worktree 操作、エラー整形、`INDEX.md` 生成、ログ、計測、タイムスタンプ、レポート保存を担います。
-- `__init__.py` はパッケージ宣言のみで、実体は `codex.py`、`command_runner.py`、`errors.py`、`indexing.py`、`repo.py`、`report_files.py`、`subcommand_log.py`、`timestamps.py`、`timing.py` に分かれています。
-- `codex.py` と `indexing.py` は共通処理の中核で、Codex CLI 呼び出しと `INDEX.md` の維持を扱います。
-- `repo.py` は Git 状態や `session` / `apply` 管理、`errors.py` は共通エラー、`subcommand_log.py` / `timing.py` / `timestamps.py` / `report_files.py` は実行記録と時刻・レポート周辺を担当します。
+- cmoc 全体で共有する基盤処理をまとめた Python パッケージです。
+- リポジトリルート探索と branch / worktree / session 状態の扱い、共通例外とエラーレポート整形を含みます。
+- Codex CLI 呼び出し、`INDEX.md` メンテナンス、サブコマンドログ、経過時間計測、タイムスタンプ生成、レポートファイル保存などの補助処理を集約しています。
 
 ## Read this when
 
-- `src/commons` 全体の役割をまず把握したいとき。
-- `codex.py`、`repo.py`、`indexing.py`、`errors.py` のどれに何があるか確認したいとき。
-- CLI 実行制御、Git リポジトリ解析、`session` / `apply` 状態管理、ログ記録、時間計測、日時文字列生成の共通処理を探したいとき。
-- 共通ユーティリティを新しく追加する前に、既存の責務分担を確認したいとき。
+- 複数のサブコマンドで共通に使う処理を実装・修正したいとき。
+- リポジトリルート探索、`cmoc/session/*`・`cmoc/apply/*` の branch 判定、worktree 復元、`session` / `apply` 状態保存を確認したいとき。
+- エラー整形、ログ出力、時間計測、Codex 実行、`INDEX.md` 生成や更新の共通挙動を追いたいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの業務ロジックだけを見たいときは、この目次ではなく `src/sub_commands` を読むべきです。
-- 特定の関数やクラスの実装だけを追いたいときは、このディレクトリの目次ではなく該当モジュールを直接読むべきです。
-- テスト仕様やユーザー向けワークフローだけを確認したいときは、この目次ではなく `tests` や `oracles` を参照すべきです。
-- `__pycache__` のような生成物だけを確認したいときは、このディレクトリの対象外です。
+- 個別サブコマンドの引数、状態遷移、業務ロジックだけを確認したいとき。
+- `src/commons` 以外のドメイン固有コードや `tests` の実装だけを追いたいとき。
+- `INDEX.md` の配置ルール全体や `oracles` の正本仕様だけを確認したいとき。
 
 ## hash
 
-- 15aaf4ea83494f154591cf9e25b0162eeef57feb2422b938c5259007c6a4db71
+- feecba336afe9564f258d664f619e870da97af06fc611ad92b018ac1a3e04013
 
 # `main.py`
 

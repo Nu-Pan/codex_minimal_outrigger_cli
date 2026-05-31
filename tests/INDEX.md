@@ -109,11 +109,11 @@
 
 ## Read this when
 
-- repo root 検出、`.cmoc` の ignore 保証、`list_implementation_files` / `list_oracle_files` の対象判定を確認したいとき。
+- repo root 検出、`.cmoc` ignore、`list_implementation_files` / `list_oracle_files` の対象判定を確認したいとき。
 - `changed_paths`、`changed_oracle_files`、`changed_implementation_files`、削除検出の境界条件を調べたいとき。
 - `commit_if_changed` のコミット可否や、失敗時に index と HEAD を壊さない挙動を確認したいとき。
 - session state の読み書き、`active_session_ids_for_home_branch`、`is_cmoc_branch` の判定条件を確認したいとき。
-- .gitignore、`.git/info/exclude`、`INDEX.md`、`memo` の除外・対象判定の回帰を修正するとき。
+- `.gitignore`、`.git/info/exclude`、`INDEX.md`、`memo` の除外・対象判定の回帰を修正するとき。
 
 ## Do not read this when
 
@@ -124,7 +124,7 @@
 
 ## hash
 
-- cdcad3979c8ef07784b8341bae8213647f7086003f1797373e6dc284906c7e77
+- 9b161ea86e694294664b96fa64e49d1a4553647560a59b5dccf1f85a9c7536ee
 
 # `test_report_files.py`
 
@@ -157,7 +157,7 @@
 - このファイルは cmoc のサブコマンド全体に対する決定論的な制御ロジックを検証する pytest テスト群です。
 - `run_command`、`format_error_report`、`main`、`bin/cmoc` などの共通制御とエラー整形を広く押さえます。
 - `cmoc init`、`session`、`apply`、`review oracles` の状態遷移、commit、recovery、レポート生成の回帰を扱います。
-- 補完プローブ、Typer 登録、prompt/validation helper、payload 検証、ルーティング関連の回帰も含みます。
+- 補完プローブ、Typer 登録、prompt / validation helper、payload 検証、ルーティング関連の回帰も含みます。
 
 ## Read this when
 
@@ -170,7 +170,7 @@
 
 ## Do not read this when
 
-- 個別の `cmoc init`、`session`、`apply`、`review oracles` の実装ロジックだけを追いたいとき。
+- 個別の `cmoc init`、`cmoc session`、`cmoc apply`、`cmoc review oracles` の実装ロジックだけを追いたいとき。
 - `src/sub_commands/` 配下の本体実装や共通ユーティリティのコードを確認したいとき。
 - `run_command`、`format_error_report`、`main`、`bin/cmoc` の実装そのものではなく、別モジュールの仕様を知りたいとき。
 - pytest の共通設定や一般的なテスト補助だけを確認したいとき。
@@ -179,7 +179,7 @@
 
 ## hash
 
-- f75ab6ee51805599338e296d2820883c7931254dc03cc9cd1e597194387ec828
+- 1ce94c1afa70fbd9215df859233edbfbbd79d69d09909ae1e7f98e3ff338936a
 
 # `test_timestamps.py`
 
