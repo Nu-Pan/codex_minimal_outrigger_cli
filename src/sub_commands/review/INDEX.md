@@ -35,10 +35,10 @@
 
 ## Do not read this when
 
-- `cmoc review oracles` の CLI 引数や `main.py` への登録だけを確認したいときは、このファイルではなく `src/main.py` を読むべきです。
-- `cmoc apply`、`cmoc session`、`cmoc init` など別サブコマンドの実装や仕様を追いたいときは、このファイルではなく該当する仕様や実装を読むべきです。
-- `oracles` 配下の個別仕様断片そのものを直接読みたいときは、このファイルではなく各仕様ファイルを読むべきです。
+- `cmoc review oracles` の CLI 引数や `main.py` への登録だけを確認したいとき。
+- `cmoc apply`、`cmoc session`、`cmoc init` など別サブコマンドの実装や仕様を追いたいとき。
+- `oracles` 配下の個別仕様断片そのものを直接読みたいとき。
 
 ## hash
 
-- c1919244a6b1936978e2b7bb2bb8bc3357c84a826b8398381732dabd8032c73a
+- 837bf529c6021dc33f63b55fabd717bccfbe10f319d08e8d05fe6e3440b788e1

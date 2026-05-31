@@ -25,25 +25,25 @@
 
 ## Summary
 
-- `src/sub_commands/apply` は `cmoc apply` 系サブコマンドの実装パッケージで、`__init__.py`、`abandon.py`、`fork.py`、`join.py` をまとめています。
-- このディレクトリは `cmoc apply` の本体処理と各サブコマンドの責務分担を読むための入口です。
-- 利用手順や正本仕様ではなく、実装コードを追うときの案内先として使います。
+- `src/sub_commands/apply` は `cmoc apply` 系サブコマンドの実装パッケージです。
+- `__init__.py` はパッケージ宣言を担い、`abandon.py`、`fork.py`、`join.py` がそれぞれ `cmoc apply abandon`、`cmoc apply fork`、`cmoc apply join` の本体です。
+- このディレクトリの目次は、`cmoc apply` の入口と各サブコマンド実装の責務分担を素早く確認するための案内です。
 
 ## Read this when
 
-- `src/sub_commands/apply` 配下の実装全体を把握したいとき。
-- `cmoc apply abandon` / `cmoc apply fork` / `cmoc apply join` の実装・修正・レビュー・テストを進める前に、入口を確認したいとき。
-- `src/sub_commands/apply` がどのモジュールで構成されているか、パッケージとしての役割を把握したいとき。
+- `src/sub_commands/apply` 配下がどのモジュールで構成されているか、`cmoc apply` 系の入口を俯瞰したいとき。
+- `cmoc apply fork` / `cmoc apply join` / `cmoc apply abandon` の実装・修正・レビュー・テストを始める前に、対象ファイルの位置関係を確認したいとき。
+- `src/sub_commands/apply/__init__.py` がパッケージ宣言 בלבדで、実装本体は `abandon.py` / `fork.py` / `join.py` に分かれていることを把握したいとき。
 
 ## Do not read this when
 
-- `cmoc apply` の利用手順や仕様断片だけを確認したいときは、このディレクトリではなく `oracles/docs/app_specs/sub_commands/` 側を読むべきです。
-- `cmoc session` や `cmoc review oracles` など、別サブコマンドの実装・仕様を確認したいときは、このディレクトリは対象外です。
-- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいときは、このディレクトリを読む必要はありません。
+- `cmoc apply fork` / `join` / `abandon` の個別処理や状態遷移だけを確認したいとき。
+- `cmoc apply` の利用手順や仕様断片だけを確認したいときは、実装ではなく `oracles/docs/app_specs/sub_commands/` 側を直接参照したいとき。
+- `src/sub_commands/apply` 配下ではなく、`src/sub_commands/session` や `src/sub_commands/review` の実装を追いたいとき。
 
 ## hash
 
-- 96b08ed84d1908639a2375bcdbaef8316951c0440241ce43c5063f5d142038c1
+- 0bb0cb7f16538c519caa60474c03078c265e8e7f5d16b507627e8af9afd8a85b
 
 # `init.py`
 
@@ -84,13 +84,13 @@
 
 ## Do not read this when
 
-- `cmoc apply`、`cmoc session`、`cmoc init` など別サブコマンドの実装や仕様を追いたいとき。
+- `cmoc apply`、`cmoc session`、`cmoc init` など別サブコマンドの実装や仕様を確認したいとき。
 - `cmoc review oracles` ではなく、`oracles` 配下の個別仕様断片そのものを直接確認したいとき。
 - `src/sub_commands/review` のパッケージ宣言だけを確認したいときは、`__init__.py` を直接読むべきです。
 
 ## hash
 
-- 1f6e4bb667025e8e35cdaa458b6674cb5018bc33043fdff73836dad1e5102560
+- a45c36bf2ed636fda5bc637ebba35a00a096ac07679f5d9a8714e5e25a2e05e7
 
 # `session`
 
@@ -109,9 +109,9 @@
 ## Do not read this when
 
 - 個別の `cmoc session fork`、`cmoc session join`、`cmoc session abandon` の詳細仕様、状態遷移、例外条件だけを確認したいとき。
-- `cmoc apply` 系の開始・統合・破棄の流れだけを確認したいとき。
+- `cmoc apply` 系の開始・統合・破棄だけを確認したいとき。
 - `src/sub_commands/session` のパッケージ宣言だけを確認したいときは、`__init__.py` を直接読むべきです。
 
 ## hash
 
-- 4c9f81c6c268782fe2a63c75da67e8be4603ce48d25c5ea4823cf9b0925ff95b
+- 12fcb52dae6772bb590f47d3c19263ef032152cf9d7b4f8d377cbe2b654d0035

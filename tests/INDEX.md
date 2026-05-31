@@ -41,15 +41,15 @@
 
 ## Do not read this when
 
-- `commons.indexing` や `commons.repo` のような別モジュールの実装だけを追いたいとき。
+- `commons.indexing` や `commons.repo` の実装だけを追いたいとき。
 - `tests/test_indexing.py`、`tests/test_repo.py`、`tests/test_subcommands.py` など、別領域の回帰を確認したいとき。
 - `INDEX.md` 全体の生成ルールや `oracles` 側の正本仕様だけを知りたいとき。
 - `run_codex_exec` 以外の CLI サブコマンドやファイル命名ルールを調べたいとき。
-- codex 呼び出しログや quota/resume ではなく、純粋な git 共通処理や session state だけを確認したいとき。
+- codex 呼び出しログや quota / resume ではなく、純粋な git 共通処理や session state だけを確認したいとき。
 
 ## hash
 
-- 1d3dda0c444cd0a3181e98f775f1b372bb7674ffc81cb5f206264dedc3f08a23
+- f9c8bc2903de2b63db6bf59fcfc3998666576214efe3b7d6758971904f6658a6
 
 # `test_file_naming.py`
 
@@ -79,26 +79,25 @@
 
 ## Summary
 
-- INDEX.md メンテナンス処理の回帰テスト群です。
-- `maintain_indexes` と `is_maintained_index_path` の判定、`_locked_index_maintenance` と `_index_maintenance_lock_path` の排他制御を確認します。
-- 生成・再生成・除外・並列化・コミットの境界条件を広く押さえます。
+- `INDEX.md` メンテナンス処理の回帰テスト集です。
+- 目次エントリの生成・再利用・再生成条件、hash 更新、Structured Output の検証を扱います。
+- gitignore、symlink、binary、非 UTF-8 path、並列処理、排他 lock、自動 commit まで広く押さえます。
 
 ## Read this when
 
-- INDEX.md の生成・再生成条件や、既存エントリの再利用ルールを変えたいとき。
-- gitignore、`.git/info/exclude`、`build` / `tmp`、symlink、binary、非 UTF-8 path の扱いを確認したいとき。
-- 排他 lock、並列生成、既存差分の扱い、自動コミット条件を修正したいとき。
-- Structured Output の検証や Codex 呼び出しのリトライ挙動を追いたいとき。
+- `maintain_indexes` と `is_maintained_index_path` の期待動作を確認したいとき。
+- gitignore、symlink、binary、非 UTF-8 path、空ディレクトリ、特殊文字を含む path の扱いを修正・追加したいとき。
+- 並列生成、排他 lock、Codex 呼び出しの再試行、既存 INDEX の再利用・再生成、自動 commit の境界条件を確認したいとき。
 
 ## Do not read this when
 
-- `commons.indexing` の実装ロジックそのものを追いたいだけのとき。
+- `commons.indexing` の実装ロジックをそのまま追いたいだけのとき。
 - `oracles` 側の正本仕様や、`INDEX.md` 全体の生成ルールだけを確認したいとき。
-- INDEX.md 以外のサブコマンド仕様や CLI の挙動だけを確認したいとき。
+- `session` や `apply` など、INDEX 保守以外のサブコマンド仕様を調べたいとき。
 
 ## hash
 
-- 2f39c4a9f258e8f7b2164bc75aea67eb317894321fd6dfdeb9e6cfe3ede92909
+- 90fac4fafbe963a89ecec462a3c90e70c2465a73482e36e86671c172a9432205
 
 # `test_repo.py`
 
@@ -180,7 +179,7 @@
 
 ## hash
 
-- f192fcfea99e22bcc376350cc39df4ea3e3ef2483362ed42447b0fc378f3fdf6
+- f75ab6ee51805599338e296d2820883c7931254dc03cc9cd1e597194387ec828
 
 # `test_timestamps.py`
 
