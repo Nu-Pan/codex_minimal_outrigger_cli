@@ -215,7 +215,7 @@
 - `cmoc` 仕様で使う `<time-stamp>` 文字列を生成する共通モジュールです。
 - `make_timestamp(now: datetime | None = None) -> str` は、指定された `datetime` または現在のローカル時刻からタイムスタンプを作ります。
 - aware な `datetime` はローカルタイムゾーンへ変換し、naive な `datetime` はローカル時刻として扱います。
-- 出力形式は `YYYY-MM-DD_HH-MM_SS_mmm` で、年月日時分秒はゼロ埋めし、ミリ秒は `microsecond // 1000` を 3 桁で表現します。
+- 出力形式は `YYYY-MM-DD_HH-MM_SS_mmmmmmmmm` で、年月日時分秒はゼロ埋めし、msec は `microsecond // 1000` を 9 桁ゼロ埋めで表現します。
 
 ## Read this when
 
