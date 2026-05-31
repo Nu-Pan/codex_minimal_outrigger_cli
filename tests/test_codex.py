@@ -1686,6 +1686,44 @@ def test_subcommand_log_from_apply_worktree_writes_to_main_repo(
     assert apply_logs == []
 
 
+def test_subcommand_log_from_linked_apply_worktree_writes_to_linked_repo(
+    tmp_path: Path,
+) -> None:
+    """linked worktree 配下の apply worktree では linked repo-root 側へログを書く。"""
+    repo = _init_git_repo(tmp_path)
+    linked = tmp_path / "linked"
+    _git(repo, "worktree", "add", "-b", "feature", str(linked), "HEAD")
+    session_id = "2026-05-28_05-10_00_000000000"
+    apply_run_id = "2026-05-28_05-11_00_000000000"
+    apply_worktree = (
+        linked / ".cmoc" / "worktrees" / "apply" / session_id / apply_run_id
+    )
+    apply_worktree.parent.mkdir(parents=True)
+    _git(
+        linked,
+        "worktree",
+        "add",
+        "-b",
+        f"cmoc/apply/{session_id}/{apply_run_id}",
+        str(apply_worktree),
+        "HEAD",
+    )
+
+    with subcommand_log(apply_worktree):
+        print("linked apply worktree invocation")
+
+    main_logs = list((repo / ".cmoc" / "logs" / "sub_commands").glob("*.jsonl"))
+    linked_logs = list(
+        (linked / ".cmoc" / "logs" / "sub_commands").glob("*.jsonl")
+    )
+    apply_logs = list(
+        (apply_worktree / ".cmoc" / "logs" / "sub_commands").glob("*.jsonl")
+    )
+    assert main_logs == []
+    assert len(linked_logs) == 1
+    assert apply_logs == []
+
+
 def test_subcommand_log_from_submodule_keeps_submodule_repo_root(
     tmp_path: Path,
 ) -> None:

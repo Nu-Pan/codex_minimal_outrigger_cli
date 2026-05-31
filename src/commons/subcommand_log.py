@@ -158,6 +158,10 @@ def _git_exclude_path(repo_root: Path) -> Path | None:
 
 def _subcommand_log_repo_root(repo_root: Path) -> Path:
     """サブコマンドログを書き込む repo root を返す。"""
+    owner_root = _owning_repo_root_from_apply_worktree_path(repo_root)
+    if owner_root is not None:
+        return owner_root
+
     if not (repo_root / ".git").exists():
         return repo_root
     result = subprocess.run(
@@ -182,6 +186,18 @@ def _subcommand_log_repo_root(repo_root: Path) -> Path:
     if _is_cmoc_managed_worktree_root(repo_root, common_root):
         return common_root
     return repo_root
+
+
+def _owning_repo_root_from_apply_worktree_path(repo_root: Path) -> Path | None:
+    """cmoc apply worktree path から所有元 repo root を復元する。"""
+    parts = repo_root.resolve().parts
+    marker = (".cmoc", "worktrees", "apply")
+    for index in range(0, len(parts) - len(marker)):
+        if parts[index : index + len(marker)] != marker:
+            continue
+        if len(parts) == index + len(marker) + 2:
+            return Path(*parts[:index])
+    return None
 
 
 def _is_cmoc_managed_worktree_root(repo_root: Path, common_root: Path) -> bool:
