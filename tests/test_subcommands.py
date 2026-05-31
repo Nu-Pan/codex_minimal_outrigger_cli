@@ -3811,6 +3811,36 @@ def test_apply_join_stops_on_apply_branch_memo_index_diff(
     assert f"{apply_branch}: memo/INDEX.md" in error_info.value.detail
 
 
+@pytest.mark.parametrize(
+    "relative_path",
+    ["build/INDEX.md", "tmp/INDEX.md", ".cache/INDEX.md"],
+)
+def test_apply_join_stops_on_apply_branch_unmaintained_index_diff(
+    tmp_path: Path,
+    relative_path: str,
+) -> None:
+    """apply branch 側の配置対象外 INDEX.md 差分は想定外として停止する。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    index_path = apply_worktree / relative_path
+    index_path.parent.mkdir(parents=True)
+    index_path.write_text("index\n", encoding="utf-8")
+    _git(apply_worktree, "add", "-f", relative_path)
+    _git(apply_worktree, "commit", "-m", "maintain untracked index")
+
+    with pytest.raises(CmocError) as error_info:
+        cmoc_apply_join_impl(repo)
+
+    assert "想定外の差分" in error_info.value.message
+    assert f"{apply_branch}: {relative_path}" in error_info.value.detail
+    assert not (repo / relative_path).exists()
+
+
 def test_apply_join_rejects_apply_branch_oracles_index_diff(
     tmp_path: Path,
 ) -> None:

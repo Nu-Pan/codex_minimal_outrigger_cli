@@ -10,6 +10,7 @@ from typing import Iterator
 
 from commons.command_runner import run_command
 from commons.errors import CmocError
+from commons.indexing import is_maintained_index_path
 from commons.repo import (
     apply_worktree_path_from_branch,
     assert_no_uncommitted_changes,
@@ -458,11 +459,13 @@ def _is_snapshot_index_path(
     oracle_snapshot_commit: str,
     path: str,
 ) -> bool:
-    """snapshot の root `.gitignore` で除外されない INDEX.md か判定する。"""
+    """snapshot 時点でも INDEX 配置対象だった path か判定する。"""
     index_path = Path(path)
-    if index_path.is_absolute() or index_path.name != "INDEX.md":
-        return False
-    if any(part in {"", ".", ".."} for part in index_path.parts):
+    if not is_maintained_index_path(
+        repo_root,
+        path,
+        excluded_index_roots=[repo_root / "oracles"],
+    ):
         return False
     directory = index_path.parent.as_posix()
     candidates = [path]
