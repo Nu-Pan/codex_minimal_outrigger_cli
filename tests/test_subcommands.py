@@ -602,6 +602,28 @@ def test_init_can_create_first_commit(tmp_path: Path) -> None:
     assert _git(repo, "status", "--porcelain").stdout == ""
 
 
+def test_init_first_commit_keeps_existing_gitignore_content(
+    tmp_path: Path,
+) -> None:
+    """unborn HEAD の初期 commit は既存 `.gitignore` 内容も保持する。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init")
+    _git(repo, "config", "user.email", "test@example.com")
+    _git(repo, "config", "user.name", "Test User")
+    (repo / ".gitignore").write_text("user-rule\n", encoding="utf-8")
+
+    cmoc_init_impl(repo)
+
+    assert (repo / ".gitignore").read_text(encoding="utf-8") == (
+        "user-rule\n/.cmoc/\n"
+    )
+    assert _git(repo, "show", "HEAD:.gitignore").stdout == (
+        "user-rule\n/.cmoc/\n"
+    )
+    assert _git(repo, "status", "--porcelain").stdout == ""
+
+
 def test_init_can_create_first_commit_with_existing_cmoc_ignore_rule(
     tmp_path: Path,
 ) -> None:

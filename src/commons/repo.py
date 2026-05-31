@@ -1164,7 +1164,7 @@ def commit_cmoc_initialization_changes(
             run_git(repo_root, ["read-tree", "--empty"], env=env)
         else:
             run_git(repo_root, ["read-tree", "HEAD"], env=env)
-        if parent_hash is None and had_cmoc_rule:
+        if parent_hash is None:
             _stage_worktree_gitignore(repo_root, env)
         elif not had_cmoc_rule:
             _stage_gitignore_with_cmoc_rule_from_head(repo_root, env)
