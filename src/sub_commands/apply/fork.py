@@ -466,7 +466,10 @@ def cmoc_apply_impl(
                 dirty_implementation_paths = None
 
         # 要修正点 0 件の経路も含め、apply run 中に生じた差分を確定する。
-        _assert_forbidden_paths_clean(apply_worktree)
+        _assert_forbidden_paths_clean(
+            apply_worktree,
+            allow_maintained_index_paths=True,
+        )
         _commit_all_changes(apply_worktree)
 
         session_head_at_apply_finish = _session_branch_head_for_report(
@@ -1405,8 +1408,15 @@ def _apply_discrepancies(
             expect_json=False,
             index_excluded_roots=_apply_index_excluded_roots(repo_root),
         )
-        _assert_forbidden_paths_unchanged_since(repo_root, before_head)
-        _assert_forbidden_paths_clean(repo_root)
+        _assert_forbidden_paths_unchanged_since(
+            repo_root,
+            before_head,
+            allow_maintained_index_paths=True,
+        )
+        _assert_forbidden_paths_clean(
+            repo_root,
+            allow_maintained_index_paths=True,
+        )
         _commit_all_changes(repo_root)
         after_head = head_commit(repo_root)
         if dirty_implementation_paths is not None and after_head != before_head:
@@ -1433,7 +1443,10 @@ def _commit_all_changes(repo_root: Path) -> None:
         before_index_head,
         allow_maintained_index_paths=True,
     )
-    _assert_forbidden_paths_clean(repo_root)
+    _assert_forbidden_paths_clean(
+        repo_root,
+        allow_maintained_index_paths=True,
+    )
     if not changed_paths(repo_root):
         return
 
@@ -1480,16 +1493,25 @@ def _maintain_indexes_accepts_excluded_roots() -> bool:
 
 def _apply_index_excluded_roots(repo_root: Path) -> list[Path]:
     """apply worktree の INDEX メンテナンス除外 root 群を返す。"""
-    return [repo_root / "oracles"]
+    return []
 
 
-def _assert_forbidden_paths_clean(repo_root: Path) -> None:
+def _assert_forbidden_paths_clean(
+    repo_root: Path,
+    *,
+    allow_maintained_index_paths: bool = False,
+) -> None:
     """Codex CLI が編集禁止領域を変更していないことを確認する。"""
     # prompt 上の禁止領域に差分があれば、commit 前に中断する。
     forbidden = [
         path
         for path in _changed_paths_for_forbidden_check(repo_root)
         if _is_forbidden_changed_path(path)
+        and not _is_allowed_maintained_index_path_in_forbidden_check(
+            repo_root,
+            path,
+            allow_maintained_index_paths,
+        )
     ]
     if forbidden:
         raise CmocError(
@@ -1538,11 +1560,10 @@ def _is_allowed_maintained_index_path_in_forbidden_check(
     relative_path: str,
     allow_maintained_index_paths: bool,
 ) -> bool:
-    """禁止領域ではない cmoc 管理 INDEX.md のみ許可する。"""
+    """cmoc 管理 INDEX.md の自動差分だけ禁止 path 検査で許可する。"""
     return (
         allow_maintained_index_paths
         and is_maintained_index_path(repo_root, relative_path)
-        and not _is_forbidden_changed_path(relative_path)
     )
 
 
@@ -2411,7 +2432,7 @@ def _apply_prompt(
             "作業目的は、要修正点が指摘している問題の修正を試みることです。",
             "要修正点本文への逐語的追従や、要修正点で述べている目的を達成した保証は不要です。",
             f"要修正点: {json.dumps(discrepancy, ensure_ascii=False)}",
-            f"`{repo_root / 'oracles'}` は編集禁止です。",
+            f"`{repo_root / 'oracles'}` 配下の `INDEX.md` 以外は編集禁止です。",
             f"`{repo_root / 'README.md'}` は編集禁止です。",
             f"`{repo_root / 'AGENTS.md'}` は編集禁止です。",
             f"`{repo_root / '.cmoc'}` は編集禁止です。",

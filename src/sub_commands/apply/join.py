@@ -422,10 +422,10 @@ def _is_apply_branch_expected_path(
     path: str,
 ) -> bool:
     """apply branch 側で cmoc が積み得る想定内 path か判定する。"""
-    if _is_apply_branch_forbidden_path(path):
-        return False
     if _is_snapshot_index_path(repo_root, oracle_snapshot_commit, path):
         return True
+    if _is_apply_branch_forbidden_path(path):
+        return False
     return (
         filter_apply_implementation_file_paths_at_commit(
             repo_root,
@@ -495,11 +495,7 @@ def _is_snapshot_index_path(
 ) -> bool:
     """snapshot 時点でも INDEX 配置対象だった path か判定する。"""
     index_path = Path(path)
-    if not is_maintained_index_path(
-        repo_root,
-        path,
-        excluded_index_roots=[repo_root / "oracles"],
-    ):
+    if not is_maintained_index_path(repo_root, path):
         return False
     directory = index_path.parent.as_posix()
     candidates = [path]
