@@ -104,7 +104,7 @@
 
 ## Summary
 
-- `src/commons/repo.py` の git 共通処理を検証する回帰テスト群です。
+- `tests/test_repo.py` は `src/commons/repo.py` の git 共通処理を検証する回帰テスト群です。
 - .cmoc の ignore 保証、repo root 検出、実装/正本ファイルの列挙と変更検出を扱います。
 - session state、apply process id、`cmoc` ブランチ判定、active session 判定の境界条件も押さえます。
 
@@ -114,7 +114,6 @@
 - `list_implementation_files` / `list_oracle_files` や変更検出系の境界条件を調べたいとき。
 - `commit_if_changed` のコミット可否や、失敗時に index と HEAD を壊さない挙動を確認したいとき。
 - session state の読み書き、`active_session_ids_for_home_branch`、`is_cmoc_branch` の判定条件を確認したいとき。
-- `.gitignore`、`.git/info/exclude`、`INDEX.md`、`memo` の除外・対象判定の回帰を修正するとき。
 
 ## Do not read this when
 
@@ -125,7 +124,7 @@
 
 ## hash
 
-- 3bb2002cc19d0fc5686f54f1cb747368882cce704a5e799ee7506f5cb942c815
+- 36d8f21bb32658a590c4edc9d3d72c22ef3e4c1504897c0b97dd6356ff101d6d
 
 # `test_report_files.py`
 

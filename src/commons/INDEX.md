@@ -131,31 +131,29 @@
 ## Summary
 
 - `src/commons/repo.py` は、git リポジトリと cmoc の作業領域を扱う共通基盤モジュールです。
-- repo root の検出、現在ブランチや HEAD commit の取得、cmoc 管理ブランチの判定をまとめています。
-- session / apply の状態保存先と読み書き、スキーマ検証、active session の整合性確認を担います。
-- apply worktree から所有元 repo root を復元する処理や、`.cmoc` の ignore 保証、未コミット差分の検査も提供します。
-- `oracles` と実装ファイルの列挙、差分抽出、削除判定、`git` コマンド実行の補助関数群も含みます。
+- repo root の探索、現在ブランチ名と HEAD commit の取得、cmoc 管理ブランチの判定と session id 抽出をまとめています。
+- session / apply の状態ファイルと apply process id の保存・読込・検証、active session の整合性確認を担います。
+- `.cmoc` の ignore 保証、未コミット差分の検査、`oracles` と実装ファイルの列挙・差分抽出・削除判定、`run_git()` を含む git 共通ラッパーを提供します。
 
 ## Read this when
 
-- `repo root` の検出や `cwd` 固定、現在ブランチ名・HEAD commit の取得を確認したいとき
-- `cmoc/session/*` と `cmoc/apply/*` のブランチ判定や session id 抽出を追いたいとき
-- session state や apply process id の保存・読込・検証、active session の一意性確認を確認したいとき
-- apply worktree から所有元の repo root を復元する処理を確認したいとき
-- `.cmoc` の ignore 保証、`.gitignore` の評価、未コミット差分や削除検出を含むファイル列挙を追いたいとき
-- `git status` / `diff` / `ls-files` の解析や `run_git()` の共通ラッパーを確認したいとき
+- repo root の検出、現在ブランチ名、HEAD commit の取得方法を確認したいとき。
+- `cmoc/session/*` と `cmoc/apply/*` のブランチ命名規則や、session id の抽出処理を追いたいとき。
+- session state と apply process id の保存・読込・検証、active session の整合性確認を確認したいとき。
+- apply worktree から所有元 repo root を復元する処理や、`.cmoc` の ignore 保証を確認したいとき。
+- root `.gitignore` と git index を使った未コミット差分・削除検出、`oracles` と実装ファイルの列挙やフィルタリングを追いたいとき。
 
 ## Do not read this when
 
-- サブコマンドの引数解釈や業務フローだけを追いたいとき
-- エラーレポートの整形仕様だけを確認したいときは `src/commons/errors.py` を読むべきとき
-- 経過時間やログ出力の挙動だけを確認したいときは `src/commons/timing.py` や `src/commons/subcommand_log.py` を読むべきとき
-- `INDEX.md` の生成・更新ルールそのものを追いたいときは `src/commons/indexing.py` を読むべきとき
-- `codex.py` など他の共通モジュールの実装詳細だけを見たいとき
+- `src/commons/repo.py` の個々の関数実装ではなく、`src/commons` 全体の役割を確認したいとき。
+- `CmocError` の整形や出力形式だけを確認したいときは、`errors.py` を読むべきです。
+- 経過時間計測やサブコマンドログだけを追いたいときは、このファイルではなく `timing.py` や `subcommand_log.py` を読むべきです。
+- `INDEX.md` の生成・更新ルールそのものを確認したいときは、このファイルではなく `indexing.py` を読むべきです。
+- `codex exec` の起動や Structured Output の扱いだけを確認したいとき。
 
 ## hash
 
-- 7006b1d894cfa9a4694e08674a5ca65ab939785f16d8b1dc4a98c8119c16bca8
+- 19392af361f4d8124d8868d0f03e44a9ff9a6f97675ddc6c5f2bece2afcda47e
 
 # `report_files.py`
 
