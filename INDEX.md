@@ -60,7 +60,7 @@
 
 - このリポジトリ全体の概要を短く把握したいとき
 - 初期セットアップとして clone、仮想環境作成、`cmoc` への PATH 設定を確認したいとき
-- 基本ワークフローの入口として `oracles/app_specs/usage.md` への導線を知りたいとき
+- 基本ワークフローの入口として `oracles/docs/app_specs/usage.md` への導線を知りたいとき
 - Ctrl+S によるターミナルロックなど、作業時の補足情報を確認したいとき
 
 ## Do not read this when
@@ -194,7 +194,7 @@
 
 ## hash
 
-- 6126780cae948c05888c98310c40884b52f291e92824bf4ffa8c2b852c3ef56e
+- f6fb3aa8733844da970ed1b72d757bfc117051096d1b17b1f8b5a52ddf73b070
 
 # `test.sh`
 
@@ -223,23 +223,32 @@
 
 ## Summary
 
-- `tests` は cmoc の回帰テスト群の入口で、共通設定と個別テストをまとめて案内するディレクトリです。
-- この配下には、Codex 呼び出し、INDEX 生成、git 共通処理、報告ファイル、サブコマンド制御、タイムスタンプ、ファイル命名の各領域を検証するテストがあります。
-- 実装変更時に、どのテストファイルへ進むべきかを素早く判断するための目次として使います。
+- `tests/` は cmoc の pytest 回帰テスト群の入口です。
+- `conftest.py` は `src` を import 可能にする共通設定を提供します。
+- `test_codex.py` は Codex CLI 呼び出しラッパーの回帰を検証します。
+- `test_subcommands.py` は サブコマンド群の制御ロジックとエラー整形を検証します。
+- `test_indexing.py` は `INDEX.md` の生成・再生成・配置判定を検証します。
+- `test_repo.py` は git リポジトリ共通処理と `.cmoc` ignore 周りを検証します。
+- `test_report_files.py` は タイムスタンプ付きレポート保存の挙動を検証します。
+- `test_timestamps.py` は タイムスタンプ生成と時間表示の仕様を検証します。
+- `test_file_naming.py` は 旧ルーティングファイルの不存在と命名規則を検証します。
 
 ## Read this when
 
-- `tests` 配下のどのモジュールに目的の回帰があるかを最初に切り分けたいとき。
-- `src/commons` や `src/sub_commands` の変更に対応するテスト箇所を探したいとき。
-- `conftest.py` を含むテスト共通設定と、個別テストの役割分担を把握したいとき。
-- `INDEX.md` を起点に、テスト群の入口を素早くたどりたいとき。
+- pytest の共通設定として `conftest.py` が何をしているか確認したいとき。
+- Codex CLI 呼び出し、Structured Output、ログ、resume の回帰を追いたいとき。
+- `INDEX.md` 生成、配置判定、ロック、gitignore まわりの挙動を確認したいとき。
+- git リポジトリ root 検出、`.cmoc` の ignore、変更検出の仕様を確認したいとき。
+- タイムスタンプ形式や経過時間表示の仕様を確認したいとき。
+- ファイル命名規則や旧ルーティングファイルの廃止方針を確認したいとき。
 
 ## Do not read this when
 
-- 個別のテストファイル 1 本の期待値やモックの細部だけを確認したいとき。
-- `src` 側の実装ロジックや `oracles` の正本仕様だけを確認したいとき。
-- `pytest` の一般論やルーティング文書の運用ではなく、別の開発作法だけを確認したいとき。
+- `src/` の実装だけを追いたいとき。
+- `oracles/` 側の正本仕様だけを確認したいとき。
+- テストではなく CLI 本体の実装差分や設計変更を読みたいとき。
+- `README.md`、`AGENTS.md`、`memo` の扱いだけを確認したいとき。
 
 ## hash
 
-- 03256138dc2f3058975df60afc82c8056968d94dddf355011db9dbd34a81d5c0
+- d14f1479700c76eb1c610cc1c7368221c351a5879a239d4f47393ad4da2ff37f

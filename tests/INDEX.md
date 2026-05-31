@@ -79,25 +79,26 @@
 
 ## Summary
 
-- `tests/test_indexing.py` は `INDEX.md` メンテナンス処理の回帰テスト集です。
-- 目次エントリの生成・再利用・再生成条件、hash 更新、Structured Output の検証を扱います。
-- gitignore、symlink、binary、非 UTF-8 path、並列処理、排他 lock、自動 commit まで広く押さえます。
+- INDEX.md メンテナンス処理の回帰テスト群です。
+- `maintain_indexes` と `is_maintained_index_path` の判定、`_locked_index_maintenance` と `_index_maintenance_lock_path` の排他制御を確認します。
+- 生成・再生成・除外・並列化・コミットの境界条件を広く押さえます。
 
 ## Read this when
 
-- `maintain_indexes` と `is_maintained_index_path` の期待動作を確認したいとき。
-- gitignore、symlink、binary、非 UTF-8 path、空ディレクトリ、特殊文字を含む path の扱いを修正・追加したいとき。
-- 並列生成、排他 lock、Codex 呼び出しの再試行、既存 INDEX の再利用・再生成、自動 commit の境界条件を確認したいとき。
+- INDEX.md の生成・再生成条件や、既存エントリの再利用ルールを変えたいとき。
+- gitignore、`.git/info/exclude`、`build` / `tmp`、symlink、binary、非 UTF-8 path の扱いを確認したいとき。
+- 排他 lock、並列生成、既存差分の扱い、自動コミット条件を修正したいとき。
+- Structured Output の検証や Codex 呼び出しのリトライ挙動を追いたいとき。
 
 ## Do not read this when
 
-- `commons.indexing` の実装ロジックをそのまま追いたいだけのとき。
+- `commons.indexing` の実装ロジックそのものを追いたいだけのとき。
 - `oracles` 側の正本仕様や、`INDEX.md` 全体の生成ルールだけを確認したいとき。
-- `session` や `apply` など、INDEX 保守以外のサブコマンド仕様を調べたいとき。
+- INDEX.md 以外のサブコマンド仕様や CLI の挙動だけを確認したいとき。
 
 ## hash
 
-- ca92d4f8ae0ab1ad5af06b24e2cd6de771974db09db746d149e01205831dcabe
+- 11d97fecfd2327f3031555929376d1656c8885ba597c6a44a6cfc75c9fcf015d
 
 # `test_repo.py`
 
