@@ -155,29 +155,27 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は cmoc のサブコマンド群と CLI 入口まわりの決定論的な制御を検証する統合回帰テスト集約です。
-- `run_command` の共通実行制御、`src/main.py` のコマンド登録、`bin/cmoc` の起動ラッパー、`format_error_report()` の表示仕様まで広く扱います。
-- `init`、`session`、`apply`、`review oracles` の主要な状態遷移・エラー処理・補助ヘルパーの回帰をここで守ります。
+- `tests/test_subcommands.py` は、cmoc のサブコマンド群と CLI 入口まわりの決定論的な制御ロジックをまとめて検証する統合回帰テストです。
+- `main.py` のコマンド登録、`run_command` の共通実行制御、`format_error_report()` の表示仕様、`bin/cmoc` の起動ラッパーまで広くカバーします。
+- `init`、`session`、`apply`、`review oracles` の状態遷移やエラー処理、関連ヘルパーの回帰をこのファイルで守ります。
 
 ## Read this when
 
-- `tests/test_subcommands.py` がどのサブコマンドや共通処理をまたいで回帰を守っているか確認したいとき。
-- `run_command` の終了コード、標準出力の要約、例外時のエラーレポート、実行ログ出力の挙動を確認したいとき。
-- `cmoc init`、`session fork/join/abandon`、`apply fork/join/abandon`、`review oracles` の状態遷移や副作用をテスト観点から把握したいとき。
-- `src/main.py` の Typer 登録、補完プローブ処理、コマンド群の委譲関係を確認したいとき。
-- CLI 周辺の利用者向け表示や `bin/cmoc` の起動失敗時メッセージを回帰テストで追いたいとき。
+- `tests/test_subcommands.py` がどのサブコマンド横断の回帰を守っているか確認したいとき。
+- `run_command` の終了コード、標準出力の要約、例外時のエラーレポート、実行ログ出力を確認したいとき。
+- `cmoc init`、`session fork/join/abandon`、`apply fork/join/abandon`、`review oracles` の主要な制御フローをテスト観点で把握したいとき。
+- `src/main.py` の Typer 登録や補完プローブの委譲関係、`bin/cmoc` の起動失敗時メッセージを回帰テストで追いたいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの引数や状態遷移だけを確認したいとき。
-- `src/commons` の実装詳細だけを追いたいとき。
-- `src/sub_commands` の各本体実装だけを確認したいとき。
-- `bin/cmoc` の起動条件や仮想環境の扱いだけを確認したいとき。
-- `format_error_report()` そのものの実装だけを確認したいとき。
+- 個別サブコマンドの引数仕様や状態遷移だけを確認したいとき。
+- `src/commons` の内部実装や共通ヘルパーの詳細だけを追いたいとき。
+- `src/sub_commands` の各本体実装そのものを直接確認したいとき。
+- `bin/cmoc` の起動ラッパーだけを単独で確認したいとき。
 
 ## hash
 
-- d1d610c27a7b8ce98567903a1efb1a230072f24b044b1dd28f039d8d298f860b
+- 4b65c48a83199e00ea7f7ba1576a608cf92f6a49e510080e996150e33ae834bc
 
 # `test_timestamps.py`
 
