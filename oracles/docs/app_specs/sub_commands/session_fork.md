@@ -25,7 +25,7 @@
 ## 実行手順
 
 1. 現在 checkout している `<local-branch>` 名を `<cmoc-session-home-branch>` として取得する
-2. 現在の HEAD commit を `<session-start-commit>` として取得する
+2. 現在の HEAD commit を `<cmoc-session-fork-commit>` として取得する
 3. `<repo-root>/.cmoc` が git の追跡対象外であることを保証する
 4. 一意な `<session-id>` を生成する
 5. `<cmoc-session-branch>` を作成して checkout する
