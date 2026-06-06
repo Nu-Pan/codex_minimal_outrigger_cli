@@ -34,10 +34,10 @@
 ## 実行作業
 
 1. `<repo-root>/.cmoc` が git の追跡対象外であることを保証する
-2. 現在の `<cmoc-session-branch>` HEAD を `<oracle-snapshot-commit>` として取得する
-3. 一意な `<apply-run-id>` を生成する
-4. `<oracle-snapshot-commit>` から `<cmoc-apply-branch>` を作成する
-5. `<cmoc-apply-branch>` を checkout した専用 `<cmoc-apply-worktree>` を作成する
+2. この時点で `<cmoc-apply-fork-commit>` を確定させる
+3. 一意な `<run-id>` を生成する
+4. `<cmoc-apply-branch>` を作成する
+5. `<cmoc-apply-worktree>` を作成する
 6. `<cmoc-session-state-file>` の状態を更新
 7. `<cmoc-apply-worktree>` 上で調査・修正ループを実行する
     1. 調査対象となる oracles ファイル・実装ファイルを列挙する
@@ -63,12 +63,6 @@
 - ループが回数上限に達した場合も、コマンド実行としては正常系として扱う
 - 回数上限到達後にさらに `cmoc apply fork` を再実行するか、`cmoc review oracles` や人手レビューを行うか、作業を打ち切るかは人間が判断する
 
-## 調査対象 oracles ファイルの snapshot 原則
-
-- `cmoc apply fork` 開始時点の `<cmoc-session-branch>` HEAD を `<oracle-snapshot-commit>` として固定し、その snapshot から `<cmoc-apply-branch>` を作成する。
-- `cmoc apply fork` 開始後に `<cmoc-session-branch>` が進んでも、実行中の apply はその変更を取り込まない。
-- `cmoc apply fork` の収束・未収束判定は `<oracle-snapshot-commit>` に対する判定である。
-
 ## `<cmoc-session-state-file>` 状態遷移
 
 - 調査・修正ループ開始直前
@@ -83,9 +77,8 @@
 
 ## git worktree と編集操作
 
-- `<cmoc-apply-worktree>` 上の `oracles/` は編集禁止である。
-- Codex CLI による実装修正が `<apply-worktree>/oracles` を変更した場合はエラー終了する。
-- 一方、apply 実行中にユーザーが `<cmoc-session-branch>` 側で `oracles/` を編集・commit しても、実行中の apply には取り込まれない。
+- `<cmoc-apply-worktree>` 上の `oracles/` は編集禁止である
+- Codex CLI による実装修正が `<apply-worktree>/oracles` を変更した場合はエラー終了する
 
 ## ループの反復回数の決め方
 
@@ -98,10 +91,15 @@
 
 ## 調査対象ファイルリストアップの仕様
 
-### 対象となる git スナップショット
+### 調査対象 oracles ファイルの snapshot 原則
 
-`cmoc apply fork` の評価対象は開始時点の `<oracle-snapshot-commit>` に固定される。
-つまり、例えば、 `cmoc apply fork` の実行開始後にユーザーによって oracles ファイルの編集が `<cmoc-session-branch>` へ commit された場合、その編集内容は既に実行開始した `cmoc apply fork` の調査対象には含まれない。
+- `<cmoc-apply-branch>` の HEAD を調査対象とする
+    - 本来的には `<cmoc-apply-fork-commit>` を調査対象のスナップショットとして扱うべきである
+    - 一方で、「git で過去バージョンのファイルを参照すること」といったような細かいルールは出来るだけ削減したい
+    - ところで、apply 系サブコマンドでは oracles ファイルの編集は行われないから、「`<cmoc-apply-fork-commit>` を調査対象とする」と「`<cmoc-apply-branch>` の HEAD を調査対象とする」は意味論的には同値である
+    - よって、`<cmoc-apply-branch>` の HEAD を調査対象として代替した
+- `cmoc apply fork` 開始後に `<cmoc-session-branch>` が進んでも、実行中の apply はその変更を取り込まない
+- `cmoc apply fork` の収束・未収束判定は `<cmoc-apply-fork-commit>` に対する判定である
 
 ### 候補ファイルリスト、ダーティフラグ
 
@@ -117,11 +115,11 @@
     - `--scope session` ならセッションスコープ
     - `--scope full` ならフルスコープ
 - ローリングスコープ
-    - 候補ファイルリストを、「最後に join された apply の `<oracle-snapshot-commit>`」から「今回の apply の `<oracle-snapshot-commit>`」の間に変更があったファイルだけに絞り込む
+    - 「前回の apply の `<cmoc-apply-join-commit>`」から「今回の apply の `<cmoc-apply-fork-commit>`」の間に変更があったファイルだけ、ダーティーフラグの初期値を true とする
     - そのセッションの最初の apply の場合は、セッションモードにフォールバックする
-    - i.e. 前回の `cmoc apply fork` 後に変更があったファイルについて、最低 1 回は調査が行われるということ
+    - i.e. `cmoc apply fork` 後に変更があったファイルについて、最低 1 回は調査が行われるということ
 - セッションスコープ
-    - 候補ファイルリストを、 `<session-start-commit>..<oracle-snapshot-commit>` で変更されたファイルだけに絞り込む
+    - `<session-start-commit>` から `<oracle-snapshot-commit>` の間で変更があったファイルだけ、ダーティーフラグの初期値を true とする
     - i.e. そのセッション上で変更のあったファイルについて、最低 1 回は調査が行われるということ
 - フルスコープ
     - 候補ファイル全てのダーティフラグを true で初期化する
@@ -284,11 +282,10 @@
 - レポートの形式は markdown + YAML Front Matter とする
 - YAML Front Matter に必ず含める項目
     - `<cmoc-session-branch>`
+    - `<cmoc-session-fork-commit>`
     - `<cmoc-apply-branch>`
-    - apply worktree path
-    - oracle snapshot commit
-    - session head at apply start
-    - session head at apply finish
+    - `<cmoc-apply-fork-commit>`
+    - `<cmoc-apply-worktree>`
 - レポート本文に必ず含める項目
     - 作業結果
         - 収束 : 「検出された要修正点リストが空」によりループを終了した
