@@ -154,9 +154,9 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は、cmoc のサブコマンド本体に対する横断的な回帰テスト群の入口です。
-- 共通実行制御、エラーハンドリング、終了コード、タイマとログ出力に加えて、`init` / `session` / `apply` / `review oracles` の主要フローをまとめて検証します。
-- CLI 登録や補完、レポート生成、各サブコマンドの補助関数と検証ロジックの整合性もこのテスト群で押さえます。
+- この `tests/test_subcommands.py` は、cmoc のサブコマンド本体に対する横断的な回帰テスト群の入口です。
+- 共通実行制御、エラーハンドリング、終了コード、タイマとログ出力をまとめて検証します。
+- `init` / `session` / `apply` / `review oracles` の主要フローと、CLI 登録・補完・レポート生成の整合性も確認します。
 
 ## Read this when
 
@@ -172,7 +172,7 @@
 
 ## hash
 
-- e0b9e0edeec9b8d344ecc617afee146a4f5d1006da417922de3361282d2c3a09
+- 578996c315b5afc9987860033cc96a7cb105771b37892a418c8900b15aac00c2
 
 # `test_timestamps.py`
 
