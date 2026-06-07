@@ -59,18 +59,17 @@
 
 ## Read this when
 
-- `src/sub_commands` 配下の入口構造をまとめて把握したいとき。
-- `__init__.py`、`init.py`、`indexing.py`、`apply/`、`review/`、`session/` のどこへ進むべきか迷ったとき。
+- `src/sub_commands` 配下の入口構造をまとめて把握し、どの実装ファイルへ進むべきか整理したいとき。
+- `__init__.py`、`init.py`、`indexing.py`、`apply/`、`review/`、`session/` の役割分担を確認したいとき。
 - `cmoc init` や `cmoc indexing` を含むサブコマンド実装の起点を確認したいとき。
 - この階層から個別実装や下位の `INDEX.md` に分岐し始めたいとき。
 
 ## Do not read this when
 
-- すでに進む先の個別モジュールや下位ディレクトリが決まっているとき。
-- `cmoc init` や `cmoc indexing` の詳細仕様だけを確認したいときは、正本仕様や実装本体を直接読むべきとき。
-- `apply/`、`review/`、`session/` の各入口ではなく、別階層のルーティングだけを確認したいとき。
-- 生成物や `__pycache__` のような対象外ファイルをたどる必要がないとき。
+- すでに読む先の個別モジュールや下位ディレクトリが決まっていて、この階層の目次を確認する必要がないとき。
+- `cmoc init`、`cmoc indexing`、`cmoc apply`、`cmoc review` のいずれかの実装本体だけを直接確認したいとき。
+- `oracles` 側の正本仕様や、生成物・`__pycache__` のような対象外ファイルだけを確認したいとき。
 
 ## hash
 
-- cb56839e35cd83d4655662436f56664125782c9b8c21f4d7a8a107f26c59e2d6
+- 938729801e184f56c7e3dc081278a4c4df328c4138ba68d89db61cc413ecd18d

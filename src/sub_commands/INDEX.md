@@ -99,7 +99,7 @@
 
 ## Summary
 
-- `src/sub_commands/review` ディレクトリのルーティング文書で、`cmoc review` 系サブコマンドの入口をまとめる階層です。
+- `src/sub_commands/review` 配下のルーティング文書で、`cmoc review` 系サブコマンドの入口をまとめる階層です。
 - `__init__.py` は review サブコマンド用パッケージ宣言のみを担い、`oracles.py` は `cmoc review oracles` の本体実装です。
 - review branch / worktree、oracle スナップショット、所見パイプライン、エラーレポートの流れへ進む前の目次です。
 
@@ -107,7 +107,7 @@
 
 - `src/sub_commands/review` からどの実装ファイルへ進むか整理したいとき。
 - `cmoc review oracles` の実装・修正・レビュー・テストを行うとき。
-- review branch / worktree、oracle スナップショット、所見の列挙・統合・検証・判定、レポート出力までの流れを把握したいとき。
+- review branch / worktree、oracle スナップショット、所見の列挙・マージ・検証・判定、レポート出力までの流れを把握したいとき。
 - `src/sub_commands/review` 配下のパッケージ構造と役割分担を確認したいとき。
 
 ## Do not read this when
@@ -119,7 +119,7 @@
 
 ## hash
 
-- e61e98662df7ae8ac0acfb7d1ac16fe0553f6d711b11a1ba91e2593b80209a1a
+- 794c84c3d5185ff49e247aad038432f1b99eaf7a39ce40d152a311c67640022f
 
 # `session`
 

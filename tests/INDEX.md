@@ -170,12 +170,12 @@
 
 - 個別の回帰テストだけを確認したいときで、`tests/test_codex.py`、`tests/test_repo.py`、`tests/test_indexing.py`、`tests/test_report_files.py`、`tests/test_timestamps.py` のいずれかに直接進むべきとき。
 - `src/sub_commands/apply/`、`src/sub_commands/session/`、`src/sub_commands/review/`、`src/main.py`、`bin/cmoc` の個別実装だけを追いたいとき。
-- `cmoc apply join` や `cmoc session fork` のように、特定のサブコマンド仕様だけを確認したいとき。
 - `run_command()`、`StepTimer`、`subcommand_log`、`format_error_report` などの共通実行基盤だけを確認したいとき。
+- `cmoc apply join` や `cmoc session fork` のように、特定のサブコマンド仕様だけを確認したいとき。
 
 ## hash
 
-- 2f5aa4fff4d91c4113b3a08aec3f47a4b220eb673492c605652b86fb85c499b6
+- f24bb3448b97d66f161f271d509cff6bd23fd35f3da18172d148d7239015d563
 
 # `test_timestamps.py`
 
