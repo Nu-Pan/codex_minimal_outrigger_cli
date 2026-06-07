@@ -81,7 +81,7 @@
 
 ## Summary
 
-- `src/commons/indexing.py` の `INDEX.md` メンテナンス処理に関する回帰テストをまとめたファイルです。
+- `tests/test_indexing.py` は `src/commons/indexing.py` の `INDEX.md` メンテナンス処理に関する回帰テスト群です。
 - 生成・再利用・再生成、hash 更新、Structured Output の妥当性確認を中心に扱います。
 - `gitignore`、symlink、binary、非 UTF-8 path、空ディレクトリ、並列処理、排他 lock、自動 commit の境界条件も押さえます。
 
@@ -95,11 +95,11 @@
 
 - `src/commons/indexing.py` の実装ロジックそのものを追いたいとき。
 - `INDEX.md` の正本仕様や配置ルールだけを確認したいとき。
-- `repo.py` や `codex.py` など、INDEX 保守以外の共通基盤を探したいとき。
+- `tests/test_repo.py` や `tests/test_codex.py` など、別の回帰テストを確認したいとき。
 
 ## hash
 
-- b07402fb4b8847e036f4ee9da0aaaca0457d43a76e80fc1abf4419e114e2ec88
+- 54cb2b16e11329e5a0a4c8c274ab51fd9f1b85f5555f460234c6463341603236
 
 # `test_repo.py`
 

@@ -105,25 +105,26 @@
 ## Summary
 
 - `src/commons/indexing.py` は `INDEX.md` のメンテナンスを担う共通モジュールです。
-- 配置対象ディレクトリの列挙、既存 `INDEX.md` の再利用判定、Codex CLI による目次生成、ファイル置換、自動コミットまでをまとめて扱います。
-- `memo`、`.gitignore`、隠し要素、symlink、バイナリ、UTF-8 外の内容など、配置可否と内容検査の境界条件も集約しています。
+- ディレクトリの列挙、既存 `INDEX.md` の再利用判定、Codex CLI による目次生成、ファイル置換、自動コミットまでを一通りまとめています。
+- `.gitignore`、`memo`、隠し要素、symlink、バイナリ、UTF-8 外の内容など、配置可否と内容検査の境界条件もここで集約しています。
 
 ## Read this when
 
 - `INDEX.md` の自動生成・再生成・更新ロジックを修正したいとき。
-- 配置対象ディレクトリの列挙、`.gitignore` 判定、`memo` 除外、バイナリ判定、symlink 除外の条件を確認したいとき。
-- 既存 `INDEX.md` の再利用判定、Structured Output の検証、目次ブロックの整形ルールを見直したいとき。
+- 配置対象ディレクトリの列挙条件、`.gitignore` 除外、`memo` 除外、symlink やバイナリの扱いを確認したいとき。
+- 既存 `INDEX.md` の再利用判定や、Structured Output で受け取る目次情報の検証方法を見直したいとき。
 - INDEX 生成の並列実行、排他ロック、自動コミット、I/O エラー処理の流れを追いたいとき。
 
 ## Do not read this when
 
-- `cmoc indexing` のコマンド入口や引数処理だけを確認したいとき。
-- `INDEX.md` の正本仕様や配置ルールだけを確認したいとき。
-- `src/commons` の別モジュールや、`tests/test_indexing.py` の回帰条件だけを追いたいとき。
+- `cmoc indexing` のコマンド引数や CLI の起動経路だけを確認したいとき。
+- `INDEX.md` の人手による記述方針や正本仕様だけを確認したいとき。
+- `src/commons/indexing.py` ではなく、個別サブコマンドや他の共通モジュールの実装を追いたいとき。
+- `tests/test_indexing.py` の回帰条件だけを確認したいとき。
 
 ## hash
 
-- 6c02fc4a4bb86d6743e864abf3f805edf22035e2ac89963bbd4f33509c243d14
+- 0938a8e44083171fec7f64a59a0575d671a178a43463404d7a87582c71b669ba
 
 # `repo.py`
 
