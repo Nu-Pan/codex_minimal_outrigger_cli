@@ -10458,20 +10458,32 @@ def test_main_delegates_group_completion_probe_to_typer(
 
 
 @pytest.mark.parametrize("complete_value", ["", "bash_complete", "invalid"])
-def test_main_silently_exits_for_unsupported_completion_instruction(
+def test_main_delegates_any_completion_probe_value_to_typer(
+    monkeypatch: MonkeyPatch,
     complete_value: str,
 ) -> None:
-    """未対応の補完指示では通常 parse error を出さず静かに終了する。"""
-    result = _run_completion_probe(
-        [],
-        "cmoc ",
-        1,
-        complete_value=complete_value,
+    """補完指示値の解釈は cmoc 側で事前検査せず Typer に委譲する。"""
+    import main
+
+    app_calls: list[dict[str, object]] = []
+
+    def fake_app(*args: object, **kwargs: object) -> None:
+        app_calls.append({"args": args, "kwargs": kwargs})
+
+    def fail_missing_command_check(_arguments: list[str]) -> None:
+        raise AssertionError("completion probe must not run cmoc pre-checks")
+
+    monkeypatch.setenv("_CMOC_COMPLETE", complete_value)
+    monkeypatch.setattr(main, "app", fake_app)
+    monkeypatch.setattr(
+        main,
+        "_raise_missing_command_error_if_needed",
+        fail_missing_command_check,
     )
 
-    assert result.returncode == 0
-    assert result.stdout == ""
-    assert result.stderr == ""
+    main.main()
+
+    assert app_calls == [{"args": (), "kwargs": {"prog_name": "cmoc"}}]
 
 
 def test_format_error_report_fills_empty_generic_detail() -> None:
