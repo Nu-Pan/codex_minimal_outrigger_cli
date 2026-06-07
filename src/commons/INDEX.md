@@ -23,28 +23,28 @@
 
 ## Summary
 
-- `src/commons/codex.py` は、Codex CLI 呼び出しの共通処理をまとめるモジュールで、`codex exec` のコマンド組み立て、実行、再試行、`resume` 再開を扱います。
-- Structured Output の JSON Schema 検証、`output-last-message` の読み取り、JSON/text の意味検査、起動失敗の診断整形を含みます。
-- quota 待機、capacity の指数バックオフ、呼び出しログ保存、`workspace-write` 実行前の oracle 保護と `INDEX.md` メンテナンス前処理も担います。
+- `src/commons/codex.py` は、Codex CLI 呼び出しの共通処理をまとめるモジュールです。
+- `codex exec` のコマンド組み立て、実行、再試行、`resume` 再開、JSON / text の検証を扱います。
+- Structured Output の JSON Schema 検証、呼び出しログ保存、quota 復旧待機、workspace-write 時の oracle 保護と `INDEX.md` メンテナンス前処理も含みます。
 
 ## Read this when
 
-- `codex exec` の起動オプション、`read-only` / `workspace-write` の切り替え、`--model` と `reasoning_effort` の制約を確認したいとき。
-- Structured Output の JSON Schema 検証、JSON パース、`output-last-message` の読み取り、JSON/text の意味検証を確認したいとき。
-- quota 枯渇時の待機と `resume`、capacity 失敗時の指数バックオフ再試行を追いたいとき。
-- 実行前の `INDEX.md` メンテナンスや、workspace-write 時の oracle 保護の挙動を確認したいとき。
-- Codex CLI 呼び出しの Markdown フルログ、出力スキーマ保存、再試行時の診断情報の扱いを確認したいとき。
+- `codex exec` のコマンド組み立て、起動、再試行、`resume` 再開の流れを確認したいとき。
+- Structured Output の JSON Schema 検証、`output-last-message` の読み取り、JSON / text の意味検査を確認したいとき。
+- quota 枯渇時の待機・復旧確認や、capacity 失敗時の指数バックオフ再試行を追いたいとき。
+- workspace-write 実行前後の oracle 保護や、`INDEX.md` メンテナンス前処理の挙動を確認したいとき。
+- Codex CLI 呼び出しログ、出力 schema の保存・再利用、起動失敗時の診断整形を確認したいとき。
 
 ## Do not read this when
 
 - 個別サブコマンドの引数や業務ロジックだけを確認したいとき。
-- `repo.py`、`errors.py`、`timing.py`、`timestamps.py` など他の共通モジュールだけを確認したいとき。
-- `INDEX.md` の生成・更新ルールそのものや、`oracles` 全体のルーティング方針だけを確認したいとき。
-- `codex exec` 以外の CLI 起動制御や、サブコマンド共通ラッパーだけを見たいとき。
+- `repo.py` や `errors.py` など、Codex 呼び出し以外の共通処理だけを確認したいとき。
+- `INDEX.md` の生成ルールそのものや、`oracles` 側の正本仕様だけを確認したいとき。
+- `codex exec` の出力検証ではなく、CLI 全体の起動経路や補完処理だけを見たいとき。
 
 ## hash
 
-- ec6bd4936dfcc6f9dd8931210a1c0d846ad3bfa12d5d171ea5132ec363be38c4
+- 14d6dd0c20dd399920378588a145069caedf146965db0494e71ecfb0f2e06f37
 
 # `command_runner.py`
 
@@ -186,30 +186,30 @@
 
 ## Summary
 
-- `src/commons/subcommand_log.py` はサブコマンド呼び出しごとの JSON Lines ログを生成・追記する共通モジュールです。
-- `SubcommandLogContext` と `ContextVar` で現在のログ状態を保持し、`log_event()` と `add_quota_wait()` がイベント記録を担います。
-- ログは `<repo-root>/.cmoc/logs/sub_commands/` に排他的に作成され、apply worktree や linked worktree では保存先 repo root を解決して集約します。
-- 起動時には `subcommand_log()` が開始イベントとコンソール通知を出し、`info/exclude` 更新で `.cmoc/logs/` を未追跡に保ちます。
+- `src/commons/subcommand_log.py` は、cmoc のサブコマンド呼び出しごとの JSON Lines ログを作成・追記する共通モジュールです。
+- `SubcommandLogContext` と `ContextVar` で現在のログ状態を管理し、イベント記録、quota 待ち時間の集計、標準出力の同時書き込み制御を行います。
+- ログは `<repo-root>/.cmoc/logs/sub_commands/` に一意なタイムスタンプ名で作成され、apply worktree などでは保存先 repo root を解決して集約します。
+- 起動時には開始イベントとコンソール通知を出し、`.cmoc/logs/` を `git` の除外設定へ追加して追跡対象外に保ちます。
 
 ## Read this when
 
-- サブコマンド呼び出し単位の JSON Lines ログの保存先、作成手順、追記方法を確認したいとき。
-- 現在のログ状態を `ContextVar` で管理し、イベントや quota 待ち時間をどう残すか追いたいとき。
-- apply worktree や linked worktree から呼んだときの保存先解決や、`.cmoc/logs/` の除外設定を確認したいとき。
-- 開始メッセージやログファイルパスのコンソール出力仕様を確認したいとき。
-- `tests/test_codex.py` や `tests/test_subcommands.py` でサブコマンドログの回帰を追いたいとき。
+- サブコマンド呼び出し単位の JSON Lines ログをどこに、どの順序で作成して追記するか確認したいとき。
+- 現在のログ状態を `ContextVar` で保持し、イベント記録や quota 待ち時間の加算をどう扱うか追いたいとき。
+- apply worktree や linked worktree から呼んだときに、ログ保存先の repo root をどう解決するか確認したいとき。
+- `.cmoc/logs/` を `git info/exclude` に追加して、サブコマンド自身の未コミット差分にしない挙動を確認したいとき。
+- 開始時のコンソール見出しやログファイルパスの表示仕様、並行出力時のロック処理を確認したいとき。
+- `tests/test_codex.py` や `tests/test_subcommands.py` から、サブコマンドログの回帰を追いたいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの引数解析や業務ロジックだけを確認したいとき。
-- `codex exec` の起動制御や Structured Output の扱いだけを確認したいときは、`src/commons/codex.py` を読むべきです。
-- ステップ計測や経過時間表示だけを確認したいときは、`src/commons/timing.py` を読むべきです。
-- repo root 探索やブランチ・worktree・state 管理だけを確認したいときは、`src/commons/repo.py` を読むべきです。
-- `INDEX.md` の生成・更新ルールだけを確認したいときは、`src/commons/indexing.py` や `oracles/docs/app_specs/indexing.md` を読むべきです。
+- `src/commons` 全体の役割分担や、他の共通モジュールの入口だけを確認したいとき。
+- `commons.command_runner` や `commons.timing` など、サブコマンド実行の共通処理そのものを追いたいとき。
+- `commons.repo` の repo root 探索や `.cmoc` 管理の詳細、`timestamps.py` のタイムスタンプ生成だけを確認したいとき。
+- `INDEX.md` の生成ルールや `oracles` 側の正本仕様だけを確認したいとき。
 
 ## hash
 
-- 741d58a56edc70209f48a158103f3b0bf30a8d64f5dae9c502bdf4f6ecd9d326
+- 6cfef5a967fa01a80101c1bccf57dfca655beba243e4ee6eae2984be60b9723d
 
 # `timestamps.py`
 

@@ -37,13 +37,13 @@
 
 ## Do not read this when
 
-- `src/sub_commands/apply` 配下の個別モジュールを読むべき対象がすでに決まっていて、ここで入口の案内を確認する必要がないとき。
-- `cmoc apply fork` / `join` / `abandon` の実装詳細や状態遷移を追いたいときは、この `INDEX.md` ではなく各モジュールを直接読むべきです。
-- `cmoc apply` の利用手順や正本仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/` 側を読むべきです。
+- 読むべき個別モジュールがすでに決まっていて、ここで入口の案内が不要なとき。
+- `cmoc apply fork` / `join` / `abandon` の詳細な実行フローや状態遷移だけを確認したいとき。
+- `cmoc apply` の正本仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/` 側を直接読むべきとき。
 
 ## hash
 
-- 623b0d60698e2e9233e602c1cb85a005ddfd8941486fce066c916d79e32bf88c
+- 1e646a9b355c8ec69557705a52f63e0c279cbadc9d7d39383f2fc933e2ea3443
 
 # `indexing.py`
 
