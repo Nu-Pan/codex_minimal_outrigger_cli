@@ -1390,8 +1390,8 @@ def test_eval_oracles_writes_report_with_fake_codex(
     assert "json_validator" in codex_kwargs[0]
     assert 'scope: "full"' in report
     assert 'result: "ok"' in report
-    assert "## Accepted fatal findings" in report
-    assert "## Accepted minor findings" in report
+    assert "## Fatal findings" in report
+    assert "## Minor findings" in report
     assert "## Rejected fatal findings" in report
     assert "## Rejected minor findings" in report
     assert "No findings." in report
@@ -1966,8 +1966,8 @@ def test_eval_oracles_writes_error_report_when_evaluation_fails(
     assert "成功評価ではありません" in report
     assert "今回評価した範囲では問題点が検出されませんでした" not in report
     assert "## Evaluated oracle files" in report
-    assert "## Accepted fatal findings" in report
-    assert "## Accepted minor findings" in report
+    assert "## Fatal findings" in report
+    assert "## Minor findings" in report
     assert "## Rejected fatal findings" in report
     assert "## Rejected minor findings" in report
     assert "## Referenced files" in report
@@ -1975,8 +1975,8 @@ def test_eval_oracles_writes_error_report_when_evaluation_fails(
         "# cmoc review oracles report",
         "## Verdict",
         "## Evaluated oracle files",
-        "## Accepted fatal findings",
-        "## Accepted minor findings",
+        "## Fatal findings",
+        "## Minor findings",
         "## Rejected fatal findings",
         "## Rejected minor findings",
         "## Referenced files",
@@ -1986,7 +1986,7 @@ def test_eval_oracles_writes_error_report_when_evaluation_fails(
     )
     evaluated_section = report[
         report.index("## Evaluated oracle files") : report.index(
-            "## Accepted fatal findings"
+            "## Fatal findings"
         )
     ]
     assert "Not evaluated oracle files:" not in evaluated_section
@@ -2083,7 +2083,7 @@ def test_eval_oracles_error_report_marks_unevaluated_files_in_table(
     assert "| 2 | `oracles/b.md` | evaluated | 0 |" not in report
     assert "Not evaluated oracle files:" not in report
     assert report.index("## Evaluated oracle files") < report.index(
-        "## Accepted fatal findings"
+        "## Fatal findings"
     )
 
 
@@ -2299,8 +2299,8 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
         "# cmoc review oracles report",
         "## Verdict",
         "## Evaluated oracle files",
-        "## Accepted fatal findings",
-        "## Accepted minor findings",
+        "## Fatal findings",
+        "## Minor findings",
         "## Rejected fatal findings",
         "## Rejected minor findings",
         "## Referenced files",
@@ -2474,8 +2474,8 @@ def test_eval_oracles_report_groups_rejected_findings(
     assert "minor_findings_rejected_count: 1" in report
     assert 'result: "fatal"' in report
     expected_sections = [
-        "## Accepted fatal findings",
-        "## Accepted minor findings",
+        "## Fatal findings",
+        "## Minor findings",
         "## Rejected fatal findings",
         "## Rejected minor findings",
     ]

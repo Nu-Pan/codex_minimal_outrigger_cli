@@ -2634,8 +2634,8 @@ def _finding_sections_lines(
     """仕様順の finding セクション行を返す。"""
     lines = []
     for verdict, severity, heading in [
-        ("accept", "fatal", "## Accepted fatal findings"),
-        ("accept", "minor", "## Accepted minor findings"),
+        ("accept", "fatal", "## Fatal findings"),
+        ("accept", "minor", "## Minor findings"),
         ("reject", "fatal", "## Rejected fatal findings"),
         ("reject", "minor", "## Rejected minor findings"),
     ]:
