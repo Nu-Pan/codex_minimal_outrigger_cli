@@ -106,7 +106,7 @@
 ## Summary
 
 - `tests/test_repo.py` は `src/commons/repo.py` の Git 共通処理を検証する回帰テスト群の入口です。
-- `.cmoc` の ignore 保証、repo root 検出、oracle / implementation の列挙と差分検出、コミット可否を扱います。
+- .cmoc` の ignore 保証、repo root 検出、oracle / implementation の列挙と差分検出、コミット可否を扱います。
 - session state の永続化、apply process id、cmoc 予約ブランチ判定、active session 判定の境界条件も押さえます。
 
 ## Read this when
@@ -120,12 +120,12 @@
 
 - `src/commons/repo.py` の実装そのものや Git ユーティリティの内部処理だけを追いたいとき。
 - cmoc の CLI サブコマンド仕様や実行フローを確認したいとき。
-- INDEX.md の生成ルールや oracles 全体のルーティング方針だけを確認したいとき。
+- INDEX.md の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
 - `tests/test_indexing.py` など、repo 共通処理以外のテストを探しているとき。
 
 ## hash
 
-- 4fb30bba5612585b3120ac461efbab199153716db5580639969929ac4730ea9c
+- 14a86f1b4b5f3096e3791adeddd26db3d62a88f5d44c53e94d345af8c78b7400
 
 # `test_report_files.py`
 
@@ -168,14 +168,14 @@
 
 ## Do not read this when
 
-- 個別の `sub_commands/` 実装や内部ヘルパーだけを見たいとき。
+- 個別の `sub_commands/` 実装や内部ヘルパーだけを確認したいとき。
 - `tests/test_repo.py` や `tests/test_indexing.py` など、別機能の回帰テストを探しているとき。
 - `cmoc init` / `session` / `apply` / `review oracles` の操作手順や引数仕様だけを知りたいとき。
 - `INDEX.md` の生成ルールや `oracles` 側の正本仕様だけを確認したいとき。
 
 ## hash
 
-- 6f11a7aff572b3b5d54507e34b4a7c4dfeaee247580c9b97ac86af9a6280ba6f
+- 43e9217f2a0da8bdf174ffa07c4eb6a955df16f92f8e36844a574e4d43ac7ed5
 
 # `test_timestamps.py`
 

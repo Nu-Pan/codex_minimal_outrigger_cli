@@ -138,17 +138,17 @@
 - repo root の検出、現在ブランチ名、HEAD commit、`cmoc` 管理ブランチ判定を確認したいとき。
 - session / apply の state JSON、apply process id、active session の整合性チェックを追いたいとき。
 - `.cmoc` の ignore 保証、未コミット差分の検査、apply worktree から所有元 repo root を復元する処理を確認したいとき。
-- `oracles` ファイルや実装ファイルの列挙・絞り込み、変更済み oracle の収集ロジックを確認したいとき。
+- `oracles` ファイルや実装ファイルの列挙・絞り込み、変更済み oracle / 実装ファイルの収集ロジックを確認したいとき。
 
 ## Do not read this when
 
-- `src/commons/repo.py` の個々の関数実装や細かな例外メッセージだけを確認したいとき。
-- `INDEX.md` の生成・更新ルールや `oracles` 全体の仕様だけを確認したいとき。
+- `src/commons/repo.py` の個別関数実装や細かな例外メッセージだけを確認したいとき。
+- `INDEX.md` の生成・更新ルールや、`oracles` 全体の仕様だけを確認したいとき。
 - `CmocError` の整形、`codex exec` の起動、経過時間計測など、別の共通モジュールを追いたいとき。
 
 ## hash
 
-- 7fa4087e64ec5173451aa5639429487bc75123a9173de952448ccfbfd05d1b04
+- 7ee92a212a7d1f884719a083dd3cdc5482a68de68b3987c6fee8b4d3a818748c
 
 # `report_files.py`
 
