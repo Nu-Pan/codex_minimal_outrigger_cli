@@ -33,7 +33,7 @@
 
 - `src/sub_commands/apply` 配下の入口構造をまとめて把握し、どの実装モジュールへ進むべきか整理したいとき。
 - `cmoc apply` 系サブコマンドのパッケージ宣言と、`abandon.py`・`fork.py`・`join.py` の役割分担を確認したいとき。
-- apply の開始・継続・破棄の処理順をたどる前に、この階層のルーティング文書として概要を押さえたいとき。
+- apply の開始・中断・統合の処理順をたどる前に、この階層のルーティング文書として概要を押さえたいとき。
 
 ## Do not read this when
 
@@ -43,7 +43,7 @@
 
 ## hash
 
-- 83252cd56ea7ec81c224410ee0c7bb0b6ccdc9e38b48fe655c6855ee4fcca763
+- 794d4d0aed803f84854318d0d9dbb627bd180d06f8038aef2cad8af695a9759f
 
 # `indexing.py`
 

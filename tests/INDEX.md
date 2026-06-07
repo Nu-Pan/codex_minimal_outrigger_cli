@@ -154,27 +154,27 @@
 ## Summary
 
 - `tests/test_subcommands.py` は、cmoc のサブコマンド本体と CLI 周辺にまたがる横断的な回帰テストの入口です。
-- `init`、`indexing`、`session`、`apply`、`review oracles`、`main.py`、`bin/cmoc`、`test.sh` の登録・補完・出力・終了コードをまとめて検証します。
+- `init`、`indexing`、`session`、`apply`、`review oracles`、`main.py`、`bin/cmoc`、`test.sh` の登録・補完・出力・終了コード・エラー報告をまとめて検証します。
 - サブコマンド固有の詳細へ進む前に、共通実行基盤と各サブコマンド仕様のどちらへ分岐するかを切り分けるための目次です。
 
 ## Read this when
 
-- `tests/test_subcommands.py` が扱う、サブコマンド横断の回帰テスト全体像を把握したいとき。
-- `cmoc init`、`cmoc indexing`、`cmoc session`、`cmoc apply`、`cmoc review oracles` の登録・補完・終了コード・出力仕様をたどりたいとき。
-- `run_command()` の共通制御、`StepTimer`、`subcommand_log`、`format_error_report`、`bin/cmoc`、`test.sh` の整合性を確認したいとき。
-- `oracles/docs/app_specs/sub_commands/INDEX.md` から各サブコマンド仕様へ分岐し、さらに `console_and_file_log.md`、`error_handling.md`、`cli_auto_completion.md`、`codex_call.md`、`branch_model.md`、`session_state.md` を参照したいとき。
-- `session_join` の conflict まわりや、`apply` / `review oracles` のプロンプト・スキーマ・レポート仕様の回帰を追いたいとき。
+- `tests/test_subcommands.py` が扱う、cmoc のサブコマンド横断の回帰テスト全体像を把握したいとき。
+- `cmoc init`、`cmoc indexing`、`cmoc session fork/join/abandon`、`cmoc apply fork/join/abandon`、`cmoc review oracles` の登録・補完・終了コード・出力・エラー処理をまとめて確認したいとき。
+- `main.py`、`bin/cmoc`、`test.sh` を含む CLI 起点の挙動や、`run_command()`、`StepTimer`、`subcommand_log` の共通制御を確認したいとき。
+- `apply` と `review oracles` のプロンプト、スキーマ、レポート生成、`session_join` の conflict 解決、`init` や `session_fork` の事前条件を追いたいとき。
+- `INDEX.md` から `oracles/docs/app_specs/sub_commands/INDEX.md` へ進み、各サブコマンドの詳細仕様に分岐したいとき。
 
 ## Do not read this when
 
-- 個別の回帰テストだけを確認したいときで、`tests/test_codex.py`、`tests/test_repo.py`、`tests/test_indexing.py`、`tests/test_report_files.py`、`tests/test_timestamps.py` のいずれかに直接進むべきとき。
+- `tests/test_subcommands.py` ではなく、`tests/test_codex.py`、`tests/test_repo.py`、`tests/test_indexing.py`、`tests/test_report_files.py`、`tests/test_timestamps.py` のような個別テスト群を確認したいとき。
 - `src/sub_commands/apply/`、`src/sub_commands/session/`、`src/sub_commands/review/`、`src/main.py`、`bin/cmoc` の個別実装だけを追いたいとき。
-- `run_command()`、`StepTimer`、`subcommand_log`、`format_error_report` などの共通実行基盤だけを確認したいとき。
-- `cmoc apply join` や `cmoc session fork` のように、特定のサブコマンド仕様だけを確認したいとき。
+- `run_command()`、`StepTimer`、`subcommand_log`、`format_error_report` などの共通基盤だけを確認したいとき。
+- `oracles/docs/app_specs/sub_commands/` 配下の各仕様文書を直接たどりたいとき。
 
 ## hash
 
-- 0f90bb5baa1ee751b3e8bba8a93a19badd13271290e290fec8dd5a49fa56d25e
+- f7bc28f3e59c0a944181a069142431ff082c7ce7446b6b8ea5dd1a2d5cc071fd
 
 # `test_timestamps.py`
 
