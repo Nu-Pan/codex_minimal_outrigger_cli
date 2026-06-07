@@ -335,6 +335,7 @@ def cmoc_apply_impl(
                 session_branch,
             )
             investigation_base_commit = _scope_base_commit(
+                state_root,
                 state,
                 session_start_commit,
                 scope,
@@ -656,6 +657,7 @@ def _validate_apply_scope(scope: str) -> None:
 
 
 def _scope_base_commit(
+    repo_root: Path,
     state: dict[str, object],
     session_start_commit: str,
     scope: ApplyScope,
@@ -672,28 +674,91 @@ def _scope_base_commit(
                 "復旧できない場合は、現在の session を使わず新しい session を開始してください。",
             ],
         )
-    last_joined = session.get("last_joined_apply_join_commit")
-    if last_joined is None:
-        if session.get("last_joined_apply_oracle_snapshot_commit") is not None:
-            raise CmocError(
-                "session state ファイルの形式が不正です。",
-                [
-                    "session.last_joined_apply_join_commit を確認して復旧してください。",
-                    "rolling scope には最後に join した apply の join commit が必要です。",
-                ],
-                "last_joined_apply_join_commit: None",
-            )
+    last_snapshot = session.get("last_joined_apply_oracle_snapshot_commit")
+    if last_snapshot is None:
         return session_start_commit
-    if not isinstance(last_joined, str) or not last_joined:
+    if not isinstance(last_snapshot, str) or not last_snapshot:
         raise CmocError(
             "session state ファイルの形式が不正です。",
             [
-                "session.last_joined_apply_join_commit を確認して復旧してください。",
+                "session.last_joined_apply_oracle_snapshot_commit を確認して復旧してください。",
                 "復旧できない場合は、現在の session を使わず新しい session を開始してください。",
             ],
-            f"last_joined_apply_join_commit: {last_joined}",
+            f"last_joined_apply_oracle_snapshot_commit: {last_snapshot}",
         )
-    return last_joined
+    return _last_joined_apply_join_commit(repo_root, last_snapshot)
+
+
+def _last_joined_apply_join_commit(
+    repo_root: Path,
+    oracle_snapshot_commit: str,
+) -> str:
+    """最後に join した apply の merge commit を git 履歴から導出する。"""
+    result = run_git(
+        repo_root,
+        [
+            "log",
+            "--merges",
+            "--first-parent",
+            "--format=%H",
+            f"{oracle_snapshot_commit}..HEAD",
+        ],
+        check=False,
+    )
+    if result.returncode != 0:
+        raise CmocError(
+            "rolling scope の基準 commit を導出できませんでした。",
+            [
+                "session.last_joined_apply_oracle_snapshot_commit が git 履歴上に存在するか確認してください。",
+                "復旧できない場合は `cmoc apply fork --scope session` を使って再実行してください。",
+            ],
+            "\n".join(
+                [
+                    f"last_joined_apply_oracle_snapshot_commit: {oracle_snapshot_commit}",
+                    result.stderr.strip(),
+                ]
+            ).strip(),
+        )
+    for commit_hash in result.stdout.splitlines():
+        commit_hash = commit_hash.strip()
+        if not commit_hash:
+            continue
+        subject = run_git(
+            repo_root,
+            ["show", "-s", "--format=%s", commit_hash],
+        ).stdout.strip()
+        if not _is_apply_branch_merge_subject(subject):
+            continue
+        parents = run_git(
+            repo_root,
+            ["rev-list", "--parents", "-n", "1", commit_hash],
+        ).stdout.split()
+        if len(parents) < 3:
+            continue
+        apply_tip = parents[2]
+        contains_result = run_git(
+            repo_root,
+            ["merge-base", "--is-ancestor", oracle_snapshot_commit, apply_tip],
+            check=False,
+        )
+        if contains_result.returncode == 0:
+            return commit_hash
+    raise CmocError(
+        "rolling scope の基準 commit を導出できませんでした。",
+        [
+            "最後に join した apply の merge commit が session branch の履歴にあるか確認してください。",
+            "復旧できない場合は `cmoc apply fork --scope session` を使って再実行してください。",
+        ],
+        f"last_joined_apply_oracle_snapshot_commit: {oracle_snapshot_commit}",
+    )
+
+
+def _is_apply_branch_merge_subject(subject: str) -> bool:
+    """git merge が作る apply branch merge message か判定する。"""
+    return (
+        subject.startswith(f"Merge branch '{APPLY_BRANCH_PREFIX}")
+        or subject.startswith(f'Merge branch "{APPLY_BRANCH_PREFIX}')
+    )
 
 
 def _create_apply_worktree(

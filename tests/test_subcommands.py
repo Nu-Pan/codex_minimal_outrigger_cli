@@ -845,7 +845,7 @@ def test_session_fork_creates_session_branch_and_records_state(
     assert state["session"]["session_home_branch"] == home_branch
     assert state["session"]["session_start_commit"] == base_commit
     assert state["session"]["last_joined_apply_oracle_snapshot_commit"] is None
-    assert state["session"]["last_joined_apply_join_commit"] is None
+    assert "last_joined_apply_join_commit" not in state["session"]
     assert state["apply"] == {
         "state": "ready",
         "apply_branch": None,
@@ -3888,11 +3888,11 @@ def test_apply_investigates_file_origin_targets_in_parallel(
     )
 
 
-def test_apply_scope_rolling_uses_last_joined_apply_join_commit(
+def test_apply_scope_rolling_derives_last_joined_apply_join_commit(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """rolling scope は最後に join された apply join commit 以降だけを調査する。"""
+    """rolling scope は履歴上の最後に join された apply merge 以降だけを調査する。"""
     repo = _init_repo(tmp_path)
     _checkout_session_branch(repo)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
@@ -3903,14 +3903,13 @@ def test_apply_scope_rolling_uses_last_joined_apply_join_commit(
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "old targets")
     last_joined_snapshot = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    apply_branch = "cmoc/apply/2026-05-10_22-21_10_000000123/2026-05-10_22-22_10_000000123"
+    _git(repo, "switch", "-c", apply_branch, last_joined_snapshot)
     (repo / "joined.py").write_text("print('joined')\n", encoding="utf-8")
     _git(repo, "add", "joined.py")
     _git(repo, "commit", "-m", "joined implementation")
-    last_joined_apply_join_commit = _git(
-        repo,
-        "rev-parse",
-        "HEAD",
-    ).stdout.strip()
+    _git(repo, "switch", "cmoc/session/2026-05-10_22-21_10_000000123")
+    _git(repo, "merge", "--no-ff", apply_branch)
 
     state_path = (
         repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
@@ -3918,9 +3917,6 @@ def test_apply_scope_rolling_uses_last_joined_apply_join_commit(
     state = json.loads(state_path.read_text(encoding="utf-8"))
     state["session"]["last_joined_apply_oracle_snapshot_commit"] = (
         last_joined_snapshot
-    )
-    state["session"]["last_joined_apply_join_commit"] = (
-        last_joined_apply_join_commit
     )
     write_session_state(repo, "2026-05-10_22-21_10_000000123", state)
 
@@ -3957,20 +3953,25 @@ def test_apply_scope_rolling_uses_last_joined_apply_join_commit(
     assert not any(purpose.endswith("joined.py") for purpose in purposes)
 
 
-def test_apply_scope_rolling_rejects_joined_snapshot_without_join_commit() -> None:
-    """rolling scope は join 済み snapshot だけでは base commit を決めない。"""
+def test_apply_scope_rolling_rejects_joined_snapshot_without_merge(
+    tmp_path: Path,
+) -> None:
+    """rolling scope は join 済み snapshot に対応する merge commit を必要とする。"""
+    repo = _init_repo(tmp_path)
+    snapshot_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
     state = {
         "session": {
-            "last_joined_apply_oracle_snapshot_commit": "snapshot123",
-            "last_joined_apply_join_commit": None,
+            "last_joined_apply_oracle_snapshot_commit": snapshot_commit,
         }
     }
 
     with pytest.raises(CmocError) as error:
-        apply_module._scope_base_commit(state, "start123", "rolling")
+        apply_module._scope_base_commit(repo, state, "start123", "rolling")
 
-    assert "session.last_joined_apply_join_commit" in error.value.actions[0]
-    assert "last_joined_apply_join_commit: None" in error.value.detail
+    assert "merge commit" in error.value.actions[0]
+    assert f"last_joined_apply_oracle_snapshot_commit: {snapshot_commit}" in (
+        error.value.detail
+    )
 
 
 def test_apply_scope_target_selection_supports_session_and_full(
@@ -4238,7 +4239,6 @@ def test_apply_join_merges_completed_apply_branch_and_resets_state(
 
     cmoc_apply_join_impl(repo)
 
-    join_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
     output = capsys.readouterr().out
     state = json.loads(
         (
@@ -4255,7 +4255,7 @@ def test_apply_join_merges_completed_apply_branch_and_resets_state(
     assert state["session"]["last_joined_apply_oracle_snapshot_commit"] == (
         oracle_snapshot
     )
-    assert state["session"]["last_joined_apply_join_commit"] == join_commit
+    assert "last_joined_apply_join_commit" not in state["session"]
     assert "last_joined_apply_result" not in state["session"]
     assert _git(repo, "branch", "--show-current").stdout.strip() == (
         "cmoc/session/2026-05-10_22-21_10_000000123"
@@ -4365,7 +4365,6 @@ def test_apply_join_cleans_worktree_created_under_linked_worktree_repo_root(
     _git(linked, "switch", session_branch)
     cmoc_apply_join_impl(linked)
 
-    join_commit = _git(linked, "rev-parse", "HEAD").stdout.strip()
     state = json.loads(state_path.read_text(encoding="utf-8"))
     assert state["apply"] == {
         "apply_branch": None,
@@ -4377,7 +4376,7 @@ def test_apply_join_cleans_worktree_created_under_linked_worktree_repo_root(
     assert state["session"]["last_joined_apply_oracle_snapshot_commit"] == (
         oracle_snapshot
     )
-    assert state["session"]["last_joined_apply_join_commit"] == join_commit
+    assert "last_joined_apply_join_commit" not in state["session"]
     assert "last_joined_apply_result" not in state["session"]
     assert _git(repo, "branch", "--list", apply_branch).stdout == ""
     assert not apply_worktree.exists()
@@ -6276,14 +6275,13 @@ def test_apply_improove_fixing_list_uses_oracle_snapshot_base(
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "old targets")
     last_joined_snapshot = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    apply_branch = "cmoc/apply/2026-05-10_22-21_10_000000123/2026-05-10_22-22_10_000000123"
+    _git(repo, "switch", "-c", apply_branch, last_joined_snapshot)
     (repo / "joined.py").write_text("print('joined')\n", encoding="utf-8")
     _git(repo, "add", "joined.py")
     _git(repo, "commit", "-m", "joined implementation")
-    last_joined_apply_join_commit = _git(
-        repo,
-        "rev-parse",
-        "HEAD",
-    ).stdout.strip()
+    _git(repo, "switch", "cmoc/session/2026-05-10_22-21_10_000000123")
+    _git(repo, "merge", "--no-ff", apply_branch)
 
     state_path = (
         repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
@@ -6291,9 +6289,6 @@ def test_apply_improove_fixing_list_uses_oracle_snapshot_base(
     state = json.loads(state_path.read_text(encoding="utf-8"))
     state["session"]["last_joined_apply_oracle_snapshot_commit"] = (
         last_joined_snapshot
-    )
-    state["session"]["last_joined_apply_join_commit"] = (
-        last_joined_apply_join_commit
     )
     write_session_state(repo, "2026-05-10_22-21_10_000000123", state)
 

@@ -1521,7 +1521,6 @@ def test_write_session_state_persists_only_oracle_session_schema(
             "session_home_branch": "main",
             "session_start_commit": "abc123",
             "last_joined_apply_oracle_snapshot_commit": "prev789",
-            "last_joined_apply_join_commit": "join999",
         },
         "apply": {
             "state": "completed",
@@ -1618,7 +1617,7 @@ def test_initial_session_state_records_session_home_branch() -> None:
 
     assert state["session"]["session_home_branch"] == "main"
     assert state["session"]["session_start_commit"] == "abc123"
-    assert state["session"]["last_joined_apply_join_commit"] is None
+    assert "last_joined_apply_join_commit" not in state["session"]
     assert "last_joined_apply_result" not in state["session"]
 
 
