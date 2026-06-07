@@ -182,12 +182,10 @@ class _CleanupEvidence:
         self,
         *,
         report_saved: bool,
-        apply_result: str | None,
         warnings: list[str],
     ) -> None:
         """cleanup 判断で後続の state 変更前に参照する証跡を固定する。"""
         self.report_saved = report_saved
-        self.apply_result = apply_result
         self.warnings = warnings
 
 
@@ -760,8 +758,8 @@ def _snapshot_cleanup_evidence(
     repo_root: Path,
     join_state: _JoinState,
 ) -> _CleanupEvidence:
-    """apply artifact 削除前に report/result 保存済み証跡を取得する。"""
-    report_path, metadata = _find_apply_report(repo_root, join_state.apply_branch)
+    """apply artifact 削除前に report 保存済み証跡を取得する。"""
+    report_path, _metadata = _find_apply_report(repo_root, join_state.apply_branch)
     warnings: list[str] = []
     if report_path is None:
         warnings.append(
@@ -770,20 +768,11 @@ def _snapshot_cleanup_evidence(
         )
         return _CleanupEvidence(
             report_saved=False,
-            apply_result=None,
             warnings=warnings,
         )
 
-    result = metadata.get("result")
-    result_saved = isinstance(result, str) and result.strip() != ""
-    if not result_saved:
-        warnings.append(
-            "apply cleanup skipped: saved apply report does not contain result "
-            f"metadata: {report_path}"
-        )
     return _CleanupEvidence(
         report_saved=True,
-        apply_result=result if result_saved else None,
         warnings=warnings,
     )
 
@@ -910,12 +899,10 @@ def _cleanup_preconditions_hold(
         return False
     if not cleanup_evidence.report_saved:
         return False
-    if (
-        cleanup_evidence.apply_result is None
-        or cleanup_evidence.apply_result.strip() == ""
-    ):
+    if not _session_state_has_saved_apply_result(session):
         warnings.append(
-            "apply cleanup skipped: saved apply report does not contain result metadata"
+            "apply cleanup skipped: session state does not contain saved apply "
+            "result metadata"
         )
         return False
     ancestor = run_git(
@@ -931,6 +918,13 @@ def _cleanup_preconditions_hold(
     if ancestor.returncode != 0:
         return False
     return True
+
+
+def _session_state_has_saved_apply_result(_session: dict[object, object]) -> bool:
+    """session state schema に定義された apply result 保存済み情報を判定する。"""
+    # 現行 oracle の session state schema には apply result field がないため、
+    # schema が追加されるまでは cleanup の必須条件を満たせない。
+    return False
 
 
 def _is_safe_apply_worktree(repo_root: Path, path: Path) -> bool:
