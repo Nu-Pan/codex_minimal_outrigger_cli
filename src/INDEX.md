@@ -2,27 +2,27 @@
 
 ## Summary
 
-- `src/commons` 配下の共通モジュール群へのルーティング文書で、cmoc の実行基盤と補助処理をまとめて案内する階層です。
-- `__init__.py`、`codex.py`、`command_runner.py`、`errors.py`、`indexing.py`、`repo.py`、`report_files.py`、`subcommand_log.py`、`timestamps.py`、`timing.py` へ進むための入口です。
-- CLI 実行、エラー整形、repo / worktree 操作、`INDEX.md` 維持、サブコマンドログ、時間計測、タイムスタンプ、レポート保存の役割を切り分けるための目次です。
+- `src/commons` 配下の共通モジュール群へ案内するルーティング文書です。
+- `__init__.py`、`codex.py`、`command_runner.py`、`errors.py`、`indexing.py`、`repo.py`、`report_files.py`、`subcommand_log.py`、`timestamps.py`、`timing.py` をまとめて案内します。
+- CLI 実行制御、エラー整形、repo / worktree 操作、`INDEX.md` 維持、ログ、時刻、経過時間、レポート保存の役割分担を確認する入口です。
 
 ## Read this when
 
-- `src/commons` 配下でどの共通モジュールがどの役割を担うかを一覧したいとき。
-- `codex.py`、`command_runner.py`、`errors.py`、`indexing.py`、`repo.py`、`report_files.py`、`subcommand_log.py`、`timestamps.py`、`timing.py` のどれへ進むべきか迷ったとき。
-- CLI 実行基盤、共通エラー整形、repo / worktree 操作、`INDEX.md` 維持、ログ、時刻、経過時間、レポート保存の入口を切り分けたいとき。
-- package 入口の `__init__.py` を含めて、commons 配下の役割分担を把握したいとき。
+- `src/commons` のどのモジュールがどの役割かを一覧したいとき。
+- `codex.py`、`command_runner.py`、`errors.py`、`indexing.py`、`repo.py`、`report_files.py`、`subcommand_log.py`、`timestamps.py`、`timing.py` のどれを読むべきか迷ったとき。
+- CLI 実行基盤、共通エラー、repo / worktree 操作、`INDEX.md` 維持、サブコマンドログ、時間計測、タイムスタンプ、レポート保存の入口を切り分けたいとき。
+- package 入口の `__init__.py` を含めて commons 配下の役割分担を把握したいとき。
 
 ## Do not read this when
 
-- すでに進む先の共通モジュールが決まっていて、この階層の目次を確認する必要がないとき。
-- `src/sub_commands` や各サブコマンドの業務ロジックだけを確認したいとき。
+- すでに読む先の共通モジュールが決まっていて、この階層の目次を確認する必要がないとき。
+- `src/sub_commands` や個別サブコマンドの業務ロジックだけを確認したいとき。
 - `oracles` 側の正本仕様や、`README.md`・`AGENTS.md` などのリポジトリ運用ルールだけを確認したいとき。
-- `__pycache__` などの生成物ではなく、ソースコードの個別実装だけを確認したいとき。
+- 生成物や `__pycache__` ではなく、個別実装だけを確認したいとき。
 
 ## hash
 
-- 48d2e8ab32df4bb6948e8344369301e02b843fe86f43a318569d44a3848fbb05
+- d6beff3aa9f8416d0473c32d8582edf729746bb95102fc095753417096350669
 
 # `main.py`
 
