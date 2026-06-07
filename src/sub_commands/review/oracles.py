@@ -258,6 +258,29 @@ class _Finding:
     judge_reason: str = ""
 
 
+@dataclass
+class _FindingIdAllocator:
+    """所見 pipeline 全体で finding_id の再利用を防ぐ採番状態。"""
+
+    next_index: int = 1
+
+    @classmethod
+    def from_findings(cls, findings: list[_Finding]) -> "_FindingIdAllocator":
+        """既存所見の最大 FINDING number より後ろから採番する。"""
+        max_index = 0
+        for finding in findings:
+            parsed_index = _parse_finding_id_index(finding.finding_id)
+            if parsed_index is not None:
+                max_index = max(max_index, parsed_index)
+        return cls(max_index + 1)
+
+    def allocate(self) -> int:
+        """次に使用する finding number を返し、内部状態を進める。"""
+        index = self.next_index
+        self.next_index += 1
+        return index
+
+
 def cmoc_review_oracles_impl(
     repo_root: Path | None = None,
     *,
@@ -932,6 +955,7 @@ def _run_findings_pipeline(
 ) -> list[dict[str, object]]:
     """仕様どおりの所見 list pipeline を実行し、既存 report 形式へ変換する。"""
     findings: list[_Finding] = []
+    finding_ids = _FindingIdAllocator.from_findings(findings)
     dirty_files = {str(path.resolve()): True for path in oracle_files}
 
     for _ in range(enumerate_findings_loop):
@@ -972,7 +996,7 @@ def _run_findings_pipeline(
                         dirty_files[str(oracle_file.resolve())] = False
                     continue
                 if new_findings:
-                    _append_new_findings(findings, new_findings)
+                    _append_new_findings(findings, new_findings, finding_ids)
                 else:
                     dirty_files[str(oracle_file.resolve())] = False
         if legacy_payload_seen:
@@ -989,6 +1013,7 @@ def _run_findings_pipeline(
             execution_repo_root,
             display_repo_root,
             findings,
+            finding_ids,
             merge_findings_loop,
             oracle_snapshot,
         )
@@ -1048,16 +1073,18 @@ def _enumerate_oracle_findings(
 def _append_new_findings(
     findings: list[_Finding],
     payloads: list[dict[str, object]],
+    finding_ids: _FindingIdAllocator,
 ) -> None:
     """新規所見に安定 ID を付与して所見 list へ追加する。"""
     for payload in payloads:
-        findings.append(_finding_from_payload(payload, len(findings) + 1))
+        findings.append(_finding_from_payload(payload, finding_ids.allocate()))
 
 
 def _merge_findings_loop(
     execution_repo_root: Path,
     display_repo_root: Path,
     findings: list[_Finding],
+    finding_ids: _FindingIdAllocator,
     merge_findings_loop: int,
     oracle_snapshot: _OracleEvaluationSnapshot | None = None,
 ) -> list[_Finding]:
@@ -1090,13 +1117,16 @@ def _merge_findings_loop(
                 for item_index, issue in enumerate(payload["issues"], start=1)
                 if isinstance(issue, dict)
             ]
+            finding_ids.next_index = _FindingIdAllocator.from_findings(
+                current
+            ).next_index
             break
         operations = payload["operations"]
         if not isinstance(operations, list):
             raise ValueError("operations must be a list.")
         if not operations:
             break
-        current = _apply_merge_operations(current, operations)
+        current = _apply_merge_operations(current, operations, finding_ids)
     return current
 
 
@@ -1519,6 +1549,17 @@ def _finding_from_payload(payload: dict[str, object], index: int) -> _Finding:
     )
 
 
+def _parse_finding_id_index(finding_id: str) -> int | None:
+    """FINDING-0001 形式の ID から number を取り出す。"""
+    prefix = "FINDING-"
+    if not finding_id.startswith(prefix):
+        return None
+    suffix = finding_id[len(prefix) :]
+    if len(suffix) != 4 or not suffix.isdigit():
+        return None
+    return int(suffix)
+
+
 def _finding_to_payload(finding: _Finding) -> dict[str, object]:
     """Codex CLI に渡す所見 payload を作る。"""
     return {
@@ -1563,11 +1604,12 @@ def _issue_to_finding_payload(issue: dict[str, object]) -> dict[str, object]:
 def _apply_merge_operations(
     findings: list[_Finding],
     operations: list[object],
+    finding_ids: _FindingIdAllocator | None = None,
 ) -> list[_Finding]:
     """merge_findings operations を所見 list に適用する。"""
     current = list(findings)
+    allocator = finding_ids or _FindingIdAllocator.from_findings(current)
     by_id = {finding.finding_id: finding for finding in current}
-    next_index = len(current) + 1
     for operation in operations:
         if not isinstance(operation, dict):
             continue
@@ -1595,8 +1637,7 @@ def _apply_merge_operations(
             replacement = _finding_from_payload(payload, 1)
             replacement.finding_id = target_ids[0]
         else:
-            replacement = _finding_from_payload(payload, next_index)
-            next_index += 1
+            replacement = _finding_from_payload(payload, allocator.allocate())
         for target_id in target_ids:
             old = by_id.get(target_id)
             if old is None:

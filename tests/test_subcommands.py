@@ -2910,6 +2910,91 @@ def test_review_oracles_reasons_payload_rejects_empty_and_speculative_reasons() 
             )
 
 
+def test_review_oracles_append_new_findings_does_not_reuse_deleted_id(
+    tmp_path: Path,
+) -> None:
+    """delete 後に列挙された新規所見は削除済み ID 番号を再利用しない。"""
+    repo = _init_repo(tmp_path)
+    oracle_file = repo / "oracles" / "spec.md"
+    oracle_file.parent.mkdir()
+    oracle_file.write_text("spec\n", encoding="utf-8")
+    payload = {
+        "severity": "fatal",
+        "title": "Finding",
+        "oracle_path": str(oracle_file.resolve()),
+        "reason": "reason",
+    }
+    findings = [
+        review_oracles_module._finding_from_payload(
+            {**payload, "title": f"Finding {index}"},
+            index,
+        )
+        for index in range(1, 4)
+    ]
+    finding_ids = review_oracles_module._FindingIdAllocator.from_findings(findings)
+
+    findings = review_oracles_module._apply_merge_operations(
+        findings,
+        [
+            {
+                "kind": "delete",
+                "target_ids": ["FINDING-0002"],
+                "finding": None,
+            }
+        ],
+        finding_ids,
+    )
+    review_oracles_module._append_new_findings(
+        findings,
+        [{**payload, "title": "Finding 4"}],
+        finding_ids,
+    )
+
+    assert [finding.finding_id for finding in findings] == [
+        "FINDING-0001",
+        "FINDING-0003",
+        "FINDING-0004",
+    ]
+
+
+def test_review_oracles_merge_operation_allocates_after_max_existing_id(
+    tmp_path: Path,
+) -> None:
+    """gap がある所見 list の merge 生成でも既存 finding_id と衝突しない。"""
+    repo = _init_repo(tmp_path)
+    oracle_file = repo / "oracles" / "spec.md"
+    oracle_file.parent.mkdir()
+    oracle_file.write_text("spec\n", encoding="utf-8")
+    payload = {
+        "severity": "minor",
+        "title": "Finding",
+        "oracle_path": str(oracle_file.resolve()),
+        "reason": "reason",
+    }
+    findings = [
+        review_oracles_module._finding_from_payload(payload, 1),
+        review_oracles_module._finding_from_payload(
+            {**payload, "title": "Finding 3"},
+            3,
+        ),
+    ]
+
+    merged = review_oracles_module._apply_merge_operations(
+        findings,
+        [
+            {
+                "kind": "merge",
+                "target_ids": ["FINDING-0001"],
+                "finding": {**payload, "title": "Merged finding"},
+            }
+        ],
+    )
+
+    finding_ids = [finding.finding_id for finding in merged]
+    assert finding_ids == ["FINDING-0004", "FINDING-0003"]
+    assert len(finding_ids) == len(set(finding_ids))
+
+
 def test_review_oracles_uses_finding_pipeline_schemas(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
