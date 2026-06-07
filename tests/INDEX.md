@@ -56,14 +56,14 @@
 ## Summary
 
 - `tests/test_file_naming.py` はリポジトリ構成のファイル名が命名規則に従うことを検証するテストです。
-- 旧ルーティングファイルである `routing.md` と `ROUTING.md` が残存していないことを確認します。
-- ルート直下の案内ファイルを増やさず、現行のルーティング入口を `INDEX.md` 群へ統合していることを検証します。
+- 旧ルーティングファイルである `routing.md` と `ROUTING.md` が残存していないこと、`INDEX.md` に旧内部種別コメントが残っていないことを確認します。
+- `cmoc apply/session/review` のサブコマンド本体が階層化された import 可能モジュールに置かれ、旧 flat module が残っていないことを検証します。
 
 ## Read this when
 
-- リポジトリ直下の旧ルーティングファイルが残っていないことを確認したいとき。
-- `routing.md` と `ROUTING.md` の不存在をテスト観点から把握したいとき。
-- ルーティング入口を `INDEX.md` 群へ統合する方針の回帰テストを探したいとき。
+- 旧ルーティングファイルや旧 INDEX 内部コメントが残っていないことを確認したいとき。
+- `src/sub_commands/apply/`、`src/sub_commands/session/`、`src/sub_commands/review/` 配下の階層化 layout を検証するテストを探したいとき。
+- `apply.py`、`apply_join.py`、`session_fork.py`、`eval_oracles.py` などの旧 flat module を禁止する回帰テストを把握したいとき。
 - ファイル命名規則に関する検証範囲を確認したいとき。
 
 ## Do not read this when
@@ -87,20 +87,19 @@
 
 ## Read this when
 
-- `maintain_indexes()` と `is_maintained_index_path()` 系の判定条件を見直したいとき。
-- `INDEX.md` の生成・再生成条件、Structured Output 検証、既存エントリ再利用の挙動を確認したいとき。
-- gitignore、symlink、binary、非 UTF-8 path、空ディレクトリ、特殊文字 path の扱いを変更したいとき。
-- 並列生成、排他 lock、自動 commit、I/O 失敗時の `CmocError` 化を確認したいとき。
+- `maintain_indexes()` と `is_maintained_index_path()` 系の判定条件を見直したいとき
+- `INDEX.md` の生成・再利用・再生成、hash 更新、Structured Output 検証を確認したいとき
+- `gitignore`、symlink、binary、非 UTF-8 path、空ディレクトリ、並列処理、排他 lock、自動 commit の境界条件を確認したいとき
 
 ## Do not read this when
 
-- `src/commons/indexing.py` の実装ロジックそのものを追いたいとき。
-- `INDEX.md` の正本仕様やルーティング規約だけを確認したいとき。
-- `repo.py` や `codex.py` など、INDEX 保守以外の共通基盤を調べたいとき。
+- `src/commons/indexing.py` の実装ロジックそのものを追いたいとき
+- `INDEX.md` の正本仕様や配置ルールだけを確認したいとき
+- `repo.py` や `codex.py` など、INDEX 保守以外の共通基盤を探したいとき
 
 ## hash
 
-- ba4be4ad428dcc290fa9cdc691e1479a09d11356581230a96b4806b97e1d092a
+- 6b3aadff18710f89c5c456b92b05b5d181a00e1d51c3f6a60054e4a13557bdc3
 
 # `test_repo.py`
 

@@ -104,27 +104,26 @@
 
 ## Summary
 
-- `src/commons/indexing.py` は `INDEX.md` 生成・更新を担う共通モジュールで、配置対象ディレクトリの列挙、既存目次の再利用判定、Structured Output による目次生成、ファイル置換、必要に応じた自動コミットまでをまとめています。
-- 公開的に参照されやすい入口は `maintain_indexes()`、`is_maintained_index_path()`、`is_maintained_index_path_at_commit()` で、`gitignore`、`memo`、隠し要素、symlink、バイナリ、UTF-8 外の内容をどう扱うかもこのモジュールに集約されています。
-- 同一 git repository 内での INDEX メンテナンスを lock で直列化し、I/O 失敗や不正な `INDEX.md` を `CmocError` として扱う基盤です。
+- `src/commons/indexing.py` は `INDEX.md` の生成・更新をまとめる共通モジュールです。
+- 配置対象ディレクトリの列挙、既存 `INDEX.md` の再利用判定、Structured Output による目次生成、書き換え、必要時の自動コミットまでを担います。
+- `memo`、隠し要素、`gitignore`、symlink、binary、UTF-8 外など、配置可否と内容検査の境界も集約しています。
 
 ## Read this when
 
-- `INDEX.md` の自動生成・再生成・更新・自動コミットの実装を修正したいとき。
-- `maintain_indexes()`、`is_maintained_index_path()`、`is_maintained_index_path_at_commit()` の判定条件を確認したいとき。
-- `.gitignore`、`memo`、隠し要素、`build` / `tmp` / `__pycache__`、symlink、binary、非 UTF-8 `INDEX.md`、排他 lock、並列生成、Structured Output の扱いを追いたいとき。
-- `tests/test_indexing.py` の回帰テストが何を守っているかを、実装側から整理したいとき。
+- `INDEX.md` を自動生成・再生成・更新する処理を修正したいとき。
+- `maintain_indexes()` や `is_maintained_index_path()` / `is_maintained_index_path_at_commit()` の判定条件を確認したいとき。
+- 排他 lock、`gitignore`、`memo` 除外、binary / UTF-8 判定、Structured Output の検証を追いたいとき。
+- `tests/test_indexing.py` が守っている回帰条件を実装側から整理したいとき。
 
 ## Do not read this when
 
-- `cmoc indexing` のサブコマンド入口や実行フローだけを確認したいときは、`src/sub_commands/indexing.py` を読むべきです。
-- `INDEX.md` の配置・更新ルールの正本仕様だけを確認したいときは、`oracles/docs/app_specs/indexing.md` を読むべきです。
-- repo root 検出、`git` ラッパー、session/apply state などの共通基盤だけを追いたいときは、`src/commons/repo.py` や関連モジュールを読むべきです。
-- `codex exec` の起動制御や Structured Output の共通処理だけを追いたいときは、`src/commons/codex.py` を読むべきです。
+- `cmoc indexing` のコマンド入口や引数処理だけを見たいときは、`src/sub_commands/indexing.py` を読むべきです。
+- `INDEX.md` 配置・更新の正本仕様だけを確認したいときは、`oracles/docs/app_specs/indexing.md` を読むべきです。
+- repo root 探索や state 管理、`codex exec` 起動など別の共通基盤を追いたいときは、このモジュールではなく関連モジュールを読むべきです。
 
 ## hash
 
-- 8a39275b427ae74a12fa40e02167b708694f781a60997ba40bf5a01d2259b7df
+- f26068739a977e85f7883fd0f3a303f30dd907ec151af9a9e81f46d1a115b919
 
 # `repo.py`
 
