@@ -20,6 +20,7 @@ from commons.repo import (
     ensure_cmoc_ignored,
     find_repo_root,
     filter_apply_implementation_file_paths,
+    filter_apply_implementation_file_paths_at_commit,
     gitignore_has_cmoc_rule,
     has_deleted_implementation_files,
     has_deleted_oracle_files,
@@ -502,7 +503,7 @@ def test_list_implementation_files_ignores_system_excludes_file(
 def test_filter_apply_implementation_file_paths_matches_implementation_files(
     tmp_path: Path,
 ) -> None:
-    """apply の実装調査対象は実装ファイル列挙規則と一致する。"""
+    """apply の実装調査対象は読み取り禁止の root memo を除外する。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text(
         "/.cmoc/\nignored.py\n",
@@ -528,18 +529,48 @@ def test_filter_apply_implementation_file_paths_matches_implementation_files(
         "README.md",
         "app.py",
         "docs/memo/note.md",
-        "memo",
-        "memo/note.md",
     ]
     assert is_apply_implementation_path(repo, "README.md")
     assert is_apply_implementation_path(repo, "AGENTS.md")
     assert is_apply_implementation_path(repo, ".agents")
     assert is_apply_implementation_path(repo, ".agents/skill.md")
     assert not is_apply_implementation_path(repo, ".cmoc/state.json")
-    assert is_apply_implementation_path(repo, "memo")
-    assert is_apply_implementation_path(repo, "memo/note.md")
+    assert not is_apply_implementation_path(repo, "memo")
+    assert not is_apply_implementation_path(repo, "memo/note.md")
     assert is_apply_implementation_path(repo, "docs/memo/note.md")
     assert is_apply_implementation_path(repo, "app.py")
+
+
+def test_filter_apply_implementation_file_paths_at_commit_excludes_root_memo(
+    tmp_path: Path,
+) -> None:
+    """commit 時点の apply 実装調査対象も読み取り禁止の root memo を除外する。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text(
+        "/.cmoc/\nignored.py\n",
+        encoding="utf-8",
+    )
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-m", "base")
+    commit_hash = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    relative_paths = [
+        "memo",
+        "memo/note.md",
+        "docs/memo/note.md",
+        ".cmoc/state.json",
+        "ignored.py",
+        "app.py",
+    ]
+
+    assert filter_apply_implementation_file_paths_at_commit(
+        repo,
+        commit_hash,
+        relative_paths,
+    ) == [
+        "app.py",
+        "docs/memo/note.md",
+    ]
 
 
 def test_changed_oracle_files_uses_session_start_and_uncommitted_changes(
