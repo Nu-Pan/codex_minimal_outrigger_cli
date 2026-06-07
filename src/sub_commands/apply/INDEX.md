@@ -63,14 +63,14 @@
 
 ## Do not read this when
 
-- `cmoc apply fork` の利用手順だけを確認したいときは、このファイルではなく `oracles/docs/app_specs/sub_commands/apply_fork.md` を読むべきです。
-- `cmoc apply join` や `cmoc apply abandon` の実装・状態遷移だけを追いたいときは、このファイルではなく各モジュール本体へ進むべきです。
+- `cmoc apply fork` の利用手順や引数の意味だけを確認したいときは、実装ではなく `oracles/docs/app_specs/sub_commands/apply_fork.md` を読むべきです。
+- `cmoc apply join` や `cmoc apply abandon` の開始・統合・破棄だけを追いたいときは、このファイルではなく各モジュール本体を読むべきです。
 - `src/sub_commands/apply` 配下の入口構造だけを確認したいときは、このファイルではなく `src/sub_commands/apply/INDEX.md` を読むべきです。
 - `INDEX.md` の生成ルールや `oracles` 側の共通仕様だけを確認したいときは、このファイルではなく `src/commons/indexing.py` や `oracles/docs/app_specs/` 側を読むべきです。
 
 ## hash
 
-- 8683ba3792627173b9ea56042659da112adf8e95a5b39312655d7b0af6ed6939
+- 67e2769693e25d3b4eae288682e20f01f221100045b3cd8a69d41eb2b63e2425
 
 # `join.py`
 
@@ -97,4 +97,4 @@
 
 ## hash
 
-- 05b64815ab4ec9fd70535e8b3868aa04a65a838082258550654ee9678b02ddf0
+- feba0ad16bcc06ad038e08772245bcc6ec904afc7de352ad5399312054331538
