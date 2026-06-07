@@ -9,20 +9,20 @@
 ## Read this when
 
 - `src/commons` がどの共通モジュールをまとめているかを一覧したいとき。
-- `codex` 実行、サブコマンド共通化、エラー整形、repo / worktree 管理、ログ、タイマー、タイムスタンプの入口を切り分けたいとき。
+- `codex` 実行、サブコマンド共通化、エラー整形、repo / worktree 管理、ログ、タイムスタンプ、時間計測の入口を切り分けたいとき。
 - `INDEX.md` から `src/commons/*.py` のどれへ進むべきか迷ったとき。
 - package 入口の `__init__.py` を含めて、commons 配下の役割分担を確認したいとき。
 
 ## Do not read this when
 
-- 目的の共通モジュールがすでに分かっていて、`codex.py` や `repo.py` などの個別ファイルへ直接進むとき。
+- 目的の共通モジュールがすでに分かっていて、`codex.py` や `repo.py` などの個別ファイルへ直接進めるとき。
 - サブコマンド固有の手順や `src/sub_commands` 側の実装だけを確認したいとき。
-- `oracles` 側の正本仕様や `docs/` のルーティングを確認したいとき。
+- `oracles` 側の正本仕様や `docs/` のルーティングだけを確認したいとき。
 - `README.md` や `AGENTS.md` など、リポジトリ運用ルールだけを確認したいとき。
 
 ## hash
 
-- 2ea06e17c361cd1f9f6182093cf3167717cbf24e2384915c2e83c773dfbe16ae
+- 76bb1584b6010eb3894af18dabed6f3a55d4bedbdc01c321c5a37ac12dfed172
 
 # `main.py`
 

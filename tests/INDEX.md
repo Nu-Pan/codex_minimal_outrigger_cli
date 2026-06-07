@@ -107,7 +107,7 @@
 ## Summary
 
 - `tests/test_repo.py` は `src/commons/repo.py` の Git 共通処理を検証する回帰テスト群の入口です。
-- .cmoc` の ignore 保証、repo root 検出、oracle / implementation の列挙と差分検出、コミット可否を扱います。
+- .cmoc の ignore 保証、repo root 検出、oracle / implementation の列挙と差分検出、コミット可否を扱います。
 - session state の永続化、apply process id、cmoc 予約ブランチ判定、active session 判定の境界条件も押さえます。
 
 ## Read this when
@@ -126,7 +126,7 @@
 
 ## hash
 
-- 14a86f1b4b5f3096e3791adeddd26db3d62a88f5d44c53e94d345af8c78b7400
+- c7ac61b25fc3b13dfe671581444cffca27b0ec9d956e150e1a06a50fea99ec67
 
 # `test_report_files.py`
 
@@ -156,27 +156,26 @@
 
 ## Summary
 
-- この `tests/test_subcommands.py` のルーティング文書で、cmoc のサブコマンド横断の回帰テスト群への入口です。
-- `run_command()` による共通実行制御、エラーレポート、終了コード、タイマ、補完委譲を扱います。
-- `init`、`session`、`apply`、`review oracles` の状態遷移や CLI 登録までをまとめて確認するための目次です。
+- `tests/test_subcommands.py` は、cmoc のサブコマンド本体に対する横断的な回帰テスト群の入口です。
+- 共通実行制御、エラーレポート、終了コード、タイマ、補完委譲に加えて、`init`、`session`、`apply`、`review oracles` の主要な状態遷移と CLI 登録をまとめて扱います。
 
 ## Read this when
 
-- `run_command()` を中心に、サブコマンド横断の制御ロジックや共通エラーレポートを確認したいとき。
+- `run_command()` を中心としたサブコマンド横断の共通制御とエラーレポートの挙動を確認したいとき。
 - `init` / `session` / `apply` / `review oracles` の状態遷移、復旧、cleanup を横断的に追いたいとき。
-- CLI 登録、補完応答、起動経路、終了コード、ログ出力、経過時間サマリーの挙動を確認したいとき。
-- Structured Output の検証、`session` / `apply` / `review` のテスト補助関数の意図を把握したいとき。
+- CLI 登録、補完応答、起動経路、終了コード、ログ出力、経過時間サマリーの仕様を確認したいとき。
+- Structured Output の検証や、`session` / `apply` / `review` 系のテスト補助関数の意図を把握したいとき。
 
 ## Do not read this when
 
+- `tests/test_subcommands.py` ではなく、`tests/test_repo.py` や `tests/test_indexing.py` など別機能の回帰テストを確認したいとき。
 - 個別の `src/sub_commands/...` 実装本体だけを追いたいとき。
-- `tests/test_repo.py` や `tests/test_indexing.py` など、別機能の回帰テストを探しているとき。
-- `cmoc init` / `session` / `apply` / `review oracles` の操作手順や引数仕様だけを知りたいとき。
-- `INDEX.md` の生成ルールや、`oracles` 側の正本仕様だけを確認したいとき。
+- `cmoc init` / `session` / `apply` / `review oracles` の利用手順や引数仕様だけを知りたいとき。
+- `INDEX.md` の生成ルールや `oracles` 側の正本仕様だけを確認したいとき。
 
 ## hash
 
-- 1dfeb59e2a924cd7d72a51ed3b90afa2de9766c54b5bc304384ff080a582a206
+- 286222323df0acf0ee9c145ff8e51322bf0439d368a5ee2dbce9d3d09f383732
 
 # `test_timestamps.py`
 

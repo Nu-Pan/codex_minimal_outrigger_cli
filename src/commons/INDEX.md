@@ -133,26 +133,27 @@
 
 ## Summary
 
-- `src/commons/repo.py` は git リポジトリと cmoc の作業領域を扱う共通基盤モジュールです。
-- repo root 探索、ブランチ判定、session/apply の state 管理、process id の保存・読込、`.cmoc` の ignore 保証、git 共通ラッパーをまとめています。
-- また、oracle / implementation ファイルの列挙と変更検出も担い、cmoc の各サブコマンドから再利用される基盤機能の入口になっています。
+- `src/commons/repo.py` は git リポジトリと `.cmoc` 作業領域を扱う共通基盤モジュールです。
+- repo root 探索、ブランチ判定、session / apply state の管理、apply process id の保存・読込、`.cmoc` 追跡対象外保証をまとめています。
+- oracle / 実装ファイルの列挙や変更検出、`.gitignore` の評価・復元補助、`git` 呼び出しの共通ラッパーも含みます。
 
 ## Read this when
 
-- repo root の検出、現在ブランチ名、HEAD commit、`cmoc` 管理ブランチ判定を確認したいとき。
-- session / apply の state JSON、apply process id、active session の整合性チェックを追いたいとき。
-- `.cmoc` の ignore 保証、未コミット差分の検査、apply worktree から所有元 repo root を復元する処理を確認したいとき。
-- `oracles` ファイルや実装ファイルの列挙・絞り込み、変更済み oracle / 実装ファイルの収集ロジックを確認したいとき。
+- repo root の探索、現在ブランチ名、HEAD commit、cmoc 予約ブランチ判定を確認したいとき。
+- session / apply state の初期化・保存・読込・検証や、session home branch の復元を追いたいとき。
+- apply process id の runtime file、worktree path の復元、`.cmoc` の ignore 保証、未コミット差分の検査を確認したいとき。
+- `oracles` と実装ファイルの列挙・絞り込み、変更済みファイルの収集、`run_git()` を含む git 共通処理を確認したいとき。
 
 ## Do not read this when
 
-- `src/commons/repo.py` の個別関数実装や細かな例外メッセージだけを確認したいとき。
-- `INDEX.md` の生成・更新ルールや、`oracles` 全体の仕様だけを確認したいとき。
-- `CmocError` の整形、`codex exec` の起動、経過時間計測など、別の共通モジュールを追いたいとき。
+- `src/commons/repo.py` の個々のヘルパー実装や例外文言だけを確認したいとき。
+- `CmocError` の整形、`codex exec` 呼び出し、時間計測など、別の共通モジュールを確認したいとき。
+- サブコマンド固有の業務ロジックや CLI 引数だけを追いたいとき。
+- `INDEX.md` の生成ルールや `oracles` 側の正本仕様だけを確認したいとき。
 
 ## hash
 
-- 7ee92a212a7d1f884719a083dd3cdc5482a68de68b3987c6fee8b4d3a818748c
+- 8dad95b20c334af198aa732407cf749ce1178047e61a9d51f38816d45c735a41
 
 # `report_files.py`
 
