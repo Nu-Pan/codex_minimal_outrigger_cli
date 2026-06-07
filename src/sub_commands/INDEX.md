@@ -100,9 +100,9 @@
 
 ## Summary
 
-- `src/sub_commands/review` は `cmoc review` 系サブコマンドの入口ディレクトリです。
-- `__init__.py` はパッケージ宣言だけを担う最小モジュールです。
-- `oracles.py` は `cmoc review oracles` の本体処理を担い、スナップショット固定、評価、改善、レポート出力までを実行します。
+- `src/sub_commands/review` は `cmoc review` 系サブコマンドの入口ディレクトリで、`__init__.py` と `oracles.py` の役割分担をまとめる目次です。
+- `__init__.py` はパッケージ宣言だけを担う最小モジュールで、`oracles.py` は `cmoc review oracles` の本体処理を担います。
+- この階層で、`cmoc review` の実装を読む前にどのファイルへ進むべきかを切り分けるための案内です。
 
 ## Read this when
 
@@ -118,7 +118,7 @@
 
 ## hash
 
-- bd4cd2206abe5578480f3ceb7aa080cccbb625fac716286f6265d192d4bec033
+- eb96d22736cea76b129b29e1743912584c16fa10eca8a69584925621fbb4a6bd
 
 # `session`
 

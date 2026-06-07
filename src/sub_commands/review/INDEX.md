@@ -23,24 +23,24 @@
 
 ## Summary
 
-- `/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03_16_000000754/2026-06-07_10-40_51_000000114/src/sub_commands/review/oracles.py` は `cmoc review oracles` の本体処理を担うモジュールです。
-- `.cmoc` の ignore 保証、評価対象 oracle の選定、開始時点 snapshot の固定、`INDEX.md` のメンテナンス、oracle ファイルごとの並列評価、所見の整理、最終レポート保存までを一連で実行します。
-- `--scope` と各種反復回数の上限を使いながら、fatal / minor の所見を列挙・検証・判定するための入口です。
+- `/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03_16_000000754/2026-06-07_10-40_51_000000114/src/sub_commands/review/oracles.py` は `cmoc review oracles` の本体実装で、oracles スナップショット固定、`INDEX.md` メンテナンス、oracle ファイルごとの並列評価、所見改善、レポート保存までを一括で担います。
+- `--scope` と旧 `--full` の互換、各種反復回数の検証、fatal / inconclusive / warning の issue payload 検証、エラー時のレポート生成もまとめています。
+- `cmoc review oracles` の実行フローと、評価対象ファイルの選定・検証・出力のどこを読むべきかを切り分けるための目次です。
 
 ## Read this when
 
-- `cmoc review oracles` の実行フロー、開始時点 snapshot の固定、評価対象 oracle の選定を確認したいとき。
-- `INDEX.md` メンテナンスを含む review の処理順と、oracle ファイルごとの並列評価・所見整理・レポート出力の流れを追いたいとき。
-- `--scope`、`--enumerate-findings-loop`、`--merge-findings-loop`、`--refine-findings-loop` の処理位置や、どこで評価・検証ループに入るかを知りたいとき。
-- `cmoc review oracles` が `.cmoc` の ignore 保証、評価対象の絞り込み、改善ループ、最終レポート保存をどうまとめて実行するかを把握したいとき。
+- `cmoc review oracles` の実装・修正・レビュー・テストを行うとき。
+- 開始時点の oracles スナップショット固定、`.cmoc` の ignore 確認、`INDEX.md` メンテナンス反映後の評価対象スナップショットの扱いを追いたいとき。
+- oracle ファイルの並列評価、所見の集約・改善、レポート保存や error report の分岐を確認したいとき。
+- `--scope` / `--full` の互換、`--enumerate-findings-loop`、`--merge-findings-loop`、`--refine-findings-loop` の制御点を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc review oracles` の利用手順や引数仕様だけを確認したいときは、`/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03_16_000000754/2026-06-07_10-40_51_000000114/oracles/docs/app_specs/sub_commands/review_oracles.md` を読むべきです。
-- `cmoc review` の CLI 登録や hidden alias だけを確認したいときは、`/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03_16_000000754/2026-06-07_10-40_51_000000114/src/main.py` を読むべきです。
-- `cmoc review` のパッケージ宣言だけを確認したいときは、`/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03_16_000000754/2026-06-07_10-40_51_000000114/src/sub_commands/review/__init__.py` を読むべきです。
-- `oracles` の正本仕様そのものを確認したいときは、このファイルではなく `/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03_16_000000754/2026-06-07_10-40_51_000000114/oracles/` 配下の仕様断片を読むべきです。
+- `cmoc review oracles` の利用手順や引数仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/review_oracles.md` を読むべきです。
+- `cmoc review` の CLI 登録や hidden alias だけを確認したいときは、`src/main.py` を読むべきです。
+- `src/sub_commands/review` のパッケージ宣言だけを確認したいときは、`src/sub_commands/review/__init__.py` を読むべきです。
+- `oracles` 側の正本仕様そのものを確認したいときは、このファイルではなく `oracles/` 配下の仕様断片とその `INDEX.md` を読むべきです。
 
 ## hash
 
-- 013a8f829a216815e9394dc838185d059198cd501a0101c484852b5d1da537fe
+- 629bdb78a2b4417bb87df617827dd9db39a5f2e9bf445b87a49aac51a25aa2b4

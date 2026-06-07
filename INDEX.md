@@ -176,25 +176,27 @@
 
 ## Summary
 
-- `src` は cmoc の実装本体をまとめるルートディレクトリです。
-- `main.py` は CLI のエントリーポイントで、`commons` は共通基盤、`sub_commands` は各コマンド実装への入口です。
-- このディレクトリは、起動経路と機能領域の切り分けを把握するための上位目次です。
+- この `src` ディレクトリのルーティング文書で、cmoc の実装本体へ進むための入口です。
+- `commons/`、`main.py`、`sub_commands/` を、用途ごとにたどるための目次です。
+- CLI 起動、共通基盤、個別サブコマンド実装のどこを読むべきかを切り分けます。
 
 ## Read this when
 
-- cmoc CLI の起点として、どの入口モジュールやサブコマンド群があるかを整理したいとき。
-- 共通基盤モジュールとコマンド実装モジュールの責務分担をざっと把握したいとき。
-- `src/main.py` から各サブコマンド実装へどうつながるかを確認したいとき。
+- cmoc の src 配下全体の入口構造を把握したいとき。
+- 共通基盤、CLI エントリーポイント、サブコマンド群のどこへ進むべきか整理したいとき。
+- `cmoc init`、`cmoc indexing`、`cmoc apply`、`cmoc session`、`cmoc review` の実装・修正・レビュー・テストに入る前に参照先を切り分けたいとき。
+- 実装やテストの前に、`src` 配下の依存関係や責務分担を確認したいとき。
 
 ## Do not read this when
 
-- `src/commons` 内の共通ユーティリティだけを追いたいときは、このディレクトリ全体ではなく該当モジュールを直接読むべきです。
-- `src/sub_commands` 配下の個別コマンド実装だけを確認したいときは、この目次ではなく各サブコマンドの実装ファイルを読むべきです。
-- テストコードや運用ルールだけを確認したいときは、このディレクトリではなく `tests` やリポジトリ上位の文書を読むべきです。
+- `src/commons`、`src/main.py`、`src/sub_commands` のうち、読む対象がすでに決まっていて、そのファイルへ直接進むとき。
+- 個別モジュールの実装詳細だけを確認したいとき。
+- `oracles` 側の正本仕様だけを確認したいとき。
+- リポジトリ運用ルールだけを確認したいとき。
 
 ## hash
 
-- b5c75a165ade2b8a9c36f4e819b0450d2746175c4ebd13c6c02115da605d6eac
+- ea2dc4979c891144cc1ddf585598b46936397dbba0c0c4e92eadc09c7fa97393
 
 # `test.sh`
 
@@ -223,22 +225,22 @@
 
 ## Summary
 
-- この `tests` ディレクトリは、cmoc の主要な共通処理と CLI 挙動を検証する pytest 回帰テスト群の入口です。
-- `conftest.py` で `src` を import 可能にし、`test_codex.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py`、`test_timestamps.py`、`test_report_files.py`、`test_file_naming.py` が各機能の境界条件を担います。
-- 個別のテストファイルを読む前に、どの機能領域の検証がここに集約されているかを切り分けるための目次です。
+- `tests` 配下の pytest テスト群の入口で、`conftest.py` の共通設定と `test_*.py` の回帰テストをまとめて案内します。
+- `test_codex.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py` が主要な実行・索引・Git 共通処理・サブコマンド制御の回帰を担います。
+- `test_file_naming.py`、`test_report_files.py`、`test_timestamps.py` が命名規則、レポート保存、タイムスタンプ関連の境界条件を押さえます。
 
 ## Read this when
 
-- cmoc の回帰テスト全体の入口を把握したいとき。
-- `commons.codex`、`commons.indexing`、`commons.repo`、`commons.timestamps`、`commons.report_files`、サブコマンド横断の挙動をどのテストが守っているか確認したいとき。
-- pytest の共通設定や、各テストファイルの役割分担を素早く整理したいとき。
+- `tests` 配下のどのテストが何を守るかを把握したいとき。
+- `commons` 共通処理や `sub_commands` の回帰テストを探したいとき。
+- pytest の import path 設定や fixture の入口を確認したいとき。
 
 ## Do not read this when
 
-- 個別の本番実装や `src/` 配下のロジックそのものを確認したいとき。
-- `tests` 配下のどの回帰テストがどの責務を持つかを把握する必要がないとき。
-- すでに読むべき具体的なテストファイルが分かっていて、このディレクトリ全体の案内は不要なとき。
+- 実装ロジックや CLI 仕様そのものを確認したいときは、`src` 側や正本仕様を読むべきです。
+- `oracles` や `docs` のルーティング文書をたどりたいときは、`tests` ではなく該当ディレクトリの `INDEX.md` を読むべきです。
+- 個別テストケースの詳細な期待値だけを追いたいときは、該当する `test_*.py` を直接読むべきです。
 
 ## hash
 
-- 9dc091a801a183cd0ec1c4d15adb2052f6f646baed8fd5f2147d25f1d5172644
+- f080c670b62e241f95336e8683897c83725ce6b96889df7643d43948ed8de3fc

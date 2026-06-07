@@ -155,26 +155,27 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は、cmoc のサブコマンド群をまたぐ決定論的な制御ロジックを検証する pytest テストの集約です。
-- `run_command()` を中心に、共通エラーレポート、終了コード、経過時間集計、CLI の委譲や補完応答までをまとめて確認します。
-- `init`、`session`、`apply`、`review oracles` の遷移と副作用の回帰を、個別実装ではなくサブコマンド全体の入口として押さえます。
+- `tests/test_subcommands.py` は、cmoc のサブコマンド群を横断する決定論的な制御ロジックをまとめて検証する pytest テスト群の入口です。
+- `run_command()` を中心に、共通エラーレポート、終了コード、経過時間集計、CLI 委譲、補完応答を確認します。
+- `init`、`session`、`apply`、`review oracles` の状態遷移と副作用を、個別実装ではなくサブコマンド全体の入口として押さえます。
 
 ## Read this when
 
-- `cmoc` のサブコマンド群に対する横断的な制御ロジックのテスト範囲を把握したいとき。
-- `run_command()` の stdout への進捗表示、エラー報告、終了コード処理、repo ルート解決失敗時の挙動を確認したいとき。
-- `init`、`session`、`apply`、`review oracles` の状態遷移、branch/worktree/state の整合性、Structured Output の受け渡しと検証を追いたいとき。
+- `cmoc` のサブコマンド群をまたぐ制御ロジックのテスト範囲を把握したいとき。
+- `run_command()` の終了コード処理、エラーレポート、経過時間集計、標準出力への案内を確認したいとき。
+- `init`、`session`、`apply`、`review oracles` の遷移、状態管理、作業ツリーや branch の副作用を横断的に追いたいとき。
 - CLI の登録、補完応答、`main()` の委譲、`bin/cmoc` や `test.sh` の起動経路まで含めて確認したいとき。
 
 ## Do not read this when
 
-- `src/sub_commands/` 配下の個別実装や内部ヘルパーだけを追いたいとき。
-- `tests/test_repo.py`、`tests/test_indexing.py`、`tests/test_timestamps.py` など、別機能の回帰テストだけを確認したいとき。
-- 個別の `cmoc init`、`cmoc session`、`cmoc apply`、`cmoc review oracles` の操作手順や引数仕様だけを知りたいとき。
+- 個別の `sub_commands/` 実装や内部ヘルパーの挙動だけを確認したいとき。
+- `tests/test_repo.py` や `tests/test_indexing.py` など、別機能の回帰テストだけを追いたいとき。
+- `cmoc init`、`cmoc session`、`cmoc apply`、`cmoc review oracles` の操作手順や引数仕様だけを知りたいとき。
+- `INDEX.md` の生成ルールや、`oracles` 側の正本仕様断片だけを確認したいとき。
 
 ## hash
 
-- 3cc27cfb8882dac3df90e1b469598bf35c4dd90cc3a47595cee364c9147d1bb6
+- 739d5b50c4c5beb2d1f4ee1d1e5a2aeb3256ac7c835d4c2920e9e9b418e7ef76
 
 # `test_timestamps.py`
 
