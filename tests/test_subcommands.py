@@ -7039,6 +7039,8 @@ def test_apply_change_summary_treats_uncommitted_paths_as_changes(
 
     assert prompts
     assert "working tree / staging area" in prompts[0]
+    assert 'top-level JSON object として {"changes": [...]} を返す' in prompts[0]
+    assert "changes 配列だけを返す" not in prompts[0]
     assert summary[0]["category"] == "実装修正"
 
 

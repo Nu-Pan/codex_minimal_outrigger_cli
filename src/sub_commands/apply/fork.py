@@ -1763,7 +1763,10 @@ def _generate_change_summary(
         [
             "あなたはソフトウェア変更内容の要約担当です。",
             f"`{repo_root}` のブランチ `{branch_name}` の変更内容をカテゴリ別に要約してください。",
-            "完了条件は Structured Output schema に従い、changes 配列だけを返すことです。",
+            (
+                "完了条件は Structured Output schema に従い、top-level JSON object として "
+                '{"changes": [...]} を返すことです。'
+            ),
             f"具体的には `{oracle_snapshot_commit}` から `{branch_name}` の HEAD までの差分と、"
             "working tree / staging area に残っている未コミット差分を対象にしてください。",
             "対象変更 path の機械的な収集結果は次の JSON 配列です。",
