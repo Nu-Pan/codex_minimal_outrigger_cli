@@ -104,30 +104,28 @@
 
 ## Summary
 
-- `src/commons/indexing.py` は `INDEX.md` の生成・再生成・整合性確認を担う共通モジュールです。
-- 配置対象ディレクトリの列挙、`.gitignore`・`memo`・隠し要素・symlink・バイナリ・非 UTF-8 内容の除外判定をまとめています。
-- 既存 `INDEX.md` の再利用判定、Structured Output による目次生成、原子的な置換、排他ロック、差分の自動コミットまで扱います。
-- `is_maintained_index_path` 系の判定と `find_index_inconsistencies` による検査補助も含みます。
+- `src/commons/indexing.py` は `INDEX.md` の生成・再生成・整合性検査を担う共通モジュールです。
+- 配置対象ディレクトリの列挙、`.gitignore`・`memo`・隠し要素・symlink・バイナリの除外、既存 `INDEX.md` の再利用判定をまとめています。
+- Structured Output による目次生成、原子的な置換、排他ロック、自動コミット、差分検査まで扱います。
+- `is_maintained_index_path*` と `find_index_inconsistencies` で配置可否や不整合の確認もできます。
 
 ## Read this when
 
-- `INDEX.md` の生成・再生成・更新ルールを修正したいとき。
-- 配置対象ディレクトリや目次作成対象の除外条件を確認したいとき。
-- 既存 `INDEX.md` の再利用条件、ハッシュ比較、Structured Output の検証方法を見直したいとき。
-- INDEX 生成の並列実行、排他制御、原子置換、自動コミット、I/O エラー処理を追いたいとき。
+- `INDEX.md` の生成・更新・再生成ルールを修正したいとき。
+- 配置対象や目次対象の除外条件、`.gitignore` 判定、バイナリ判定を確認したいとき。
+- 既存 `INDEX.md` の再利用条件、Structured Output 検証、排他ロック、原子的な置換、自動コミットの流れを追いたいとき。
 - 特定の相対 path が cmoc の管理対象 `INDEX.md` かどうかを判定したいとき。
 
 ## Do not read this when
 
-- `cmoc indexing` の CLI 引数や実行入口だけを確認したいときは、`src/sub_commands/indexing.py` を読むべきです。
-- サブコマンド本体の業務ロジックや引数解析だけを追いたいときは、このファイルではなく各サブコマンドを読むべきです。
+- `cmoc indexing` の CLI 引数やコマンド入口だけを確認したいときは、`src/sub_commands/indexing.py` を読むべきです。
+- サブコマンド本体や repo 探索、ログ、タイムスタンプなど別の共通処理を追いたいときは、このファイルではありません。
 - `INDEX.md` の正本仕様や利用手順だけを確認したいときは、`oracles/docs/app_specs/indexing.md` を読むべきです。
-- `src/commons` の package 目次や他の共通モジュールだけを見たいときは、`src/commons/INDEX.md` から辿るべきです。
-- `tests/test_indexing.py` の回帰条件だけを確認したいときは、実装ではなくテスト側を読むべきです。
+- `tests/test_indexing.py` の回帰条件だけを追いたいときは、テスト側を読むべきです。
 
 ## hash
 
-- 65d555c92796a7ce17edd83fe1c0b862f324bbef69e98ae27c6144004a6c337e
+- 927a775a3771fceed0a1737fb7278b7185aba262463f045a49b5c3338df3a08c
 
 # `repo.py`
 
