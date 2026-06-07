@@ -3021,7 +3021,6 @@ def test_apply_returns_complete_when_no_discrepancies(
         repo
         / ".cmoc"
         / "worktrees"
-        / "apply"
         / "2026-05-10_22-21_10_000000123"
         / apply_run_id
     )
@@ -3358,7 +3357,6 @@ def test_apply_commits_index_changes_when_no_discrepancies(
         repo
         / ".cmoc"
         / "worktrees"
-        / "apply"
         / "2026-05-10_22-21_10_000000123"
         / apply_run_id
     )
@@ -3534,7 +3532,6 @@ def test_apply_join_rejects_cross_session_apply_branch_without_merge(
         repo
         / ".cmoc"
         / "worktrees"
-        / "apply"
         / other_session_id
         / other_apply_run_id
     )
@@ -3603,12 +3600,8 @@ def test_apply_join_cleans_worktree_created_under_linked_worktree_repo_root(
     apply_branch = state["apply"]["apply_branch"]
     oracle_snapshot = state["apply"]["oracle_snapshot_commit"]
     apply_run_id = apply_branch.rsplit("/", 1)[1]
-    apply_worktree = (
-        linked / ".cmoc" / "worktrees" / "apply" / session_id / apply_run_id
-    )
-    main_apply_worktree = (
-        repo / ".cmoc" / "worktrees" / "apply" / session_id / apply_run_id
-    )
+    apply_worktree = linked / ".cmoc" / "worktrees" / session_id / apply_run_id
+    main_apply_worktree = repo / ".cmoc" / "worktrees" / session_id / apply_run_id
     reports = list(
         (linked / ".cmoc" / "reports" / "apply" / "fork").glob("*.md")
     )
@@ -4904,7 +4897,6 @@ def test_apply_abandon_rejects_cross_session_apply_branch_without_cleanup(
         repo
         / ".cmoc"
         / "worktrees"
-        / "apply"
         / other_session_id
         / other_apply_run_id
     )
@@ -6658,7 +6650,7 @@ def test_apply_revalidates_ready_state_under_start_lock(
     }
     assert read_calls == 2
     assert "cmoc/apply/" not in branches
-    assert not (repo / ".cmoc" / "worktrees" / "apply").exists()
+    assert not (repo / ".cmoc" / "worktrees").exists()
     assert reports == []
 
 
@@ -6728,7 +6720,6 @@ def test_apply_marks_error_when_worktree_creation_fails(
         repo
         / ".cmoc"
         / "worktrees"
-        / "apply"
         / "2026-05-10_22-21_10_000000123"
         / apply_run_id
     )
@@ -6761,7 +6752,7 @@ def test_create_apply_worktree_failure_reports_last_attempted_plan(
     initial_plan = apply_module._ApplyWorktreePlan(
         "run0",
         f"cmoc/apply/{session_id}/run0",
-        repo / ".cmoc" / "worktrees" / "apply" / session_id / "run0",
+        repo / ".cmoc" / "worktrees" / session_id / "run0",
     )
     timestamps = iter(f"run{index}" for index in range(1, 10))
     attempted_branches: list[str] = []
@@ -6797,7 +6788,7 @@ def test_create_apply_worktree_failure_reports_last_attempted_plan(
     assert error.value.last_plan.apply_run_id == "run9"
     assert error.value.last_plan.apply_branch == attempted_branches[-1]
     assert error.value.last_plan.apply_worktree == (
-        repo / ".cmoc" / "worktrees" / "apply" / session_id / "run9"
+        repo / ".cmoc" / "worktrees" / session_id / "run9"
     )
 
 
@@ -6813,7 +6804,7 @@ def test_create_apply_worktree_reports_branch_cleanup_failure(
     initial_plan = apply_module._ApplyWorktreePlan(
         "run0",
         f"cmoc/apply/{session_id}/run0",
-        repo / ".cmoc" / "worktrees" / "apply" / session_id / "run0",
+        repo / ".cmoc" / "worktrees" / session_id / "run0",
     )
     git_calls: list[list[str]] = []
 
@@ -10344,7 +10335,6 @@ def _create_completed_apply_run(
         repo
         / ".cmoc"
         / "worktrees"
-        / "apply"
         / session_id
         / "2026-05-10_22-22_10_000000123"
     )

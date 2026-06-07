@@ -9,6 +9,7 @@ import pytest
 from commons.errors import CmocError
 from commons.repo import (
     active_session_ids_for_home_branch,
+    apply_worktree_path_from_branch,
     apply_process_id_path,
     assert_cmoc_ignored,
     assert_no_uncommitted_changes,
@@ -1358,10 +1359,43 @@ def test_session_state_root_keeps_linked_worktree_repo_root(
     assert session_state_root(linked) == linked
 
 
+def test_apply_worktree_path_from_branch_uses_run_worktree_layout(
+    tmp_path: Path,
+) -> None:
+    """apply branch 名から仕様通りの run worktree path を復元する。"""
+    repo = _init_repo(tmp_path)
+    session_id = "2026-05-10_22-21_10_000000123"
+    apply_run_id = "2026-05-10_22-22_10_000000123"
+
+    assert apply_worktree_path_from_branch(
+        repo,
+        f"cmoc/apply/{session_id}/{apply_run_id}",
+    ) == repo / ".cmoc" / "worktrees" / session_id / apply_run_id
+
+
 def test_session_state_repo_root_recovers_owner_from_apply_worktree_path(
     tmp_path: Path,
 ) -> None:
     """apply worktree からの join/abandon は所有元 repo root の state を使う。"""
+    repo = _init_repo(tmp_path)
+    linked = tmp_path / "linked"
+    _git(repo, "worktree", "add", "-b", "feature", str(linked), "HEAD")
+    session_id = "2026-05-10_22-21_10_000000123"
+    apply_worktree = (
+        linked
+        / ".cmoc"
+        / "worktrees"
+        / session_id
+        / "2026-05-10_22-22_10_000000123"
+    )
+
+    assert session_state_repo_root(apply_worktree, session_id) == linked
+
+
+def test_session_state_repo_root_recovers_owner_from_legacy_apply_worktree_path(
+    tmp_path: Path,
+) -> None:
+    """旧 apply worktree 配置でも所有元 repo root を復元できる。"""
     repo = _init_repo(tmp_path)
     linked = tmp_path / "linked"
     _git(repo, "worktree", "add", "-b", "feature", str(linked), "HEAD")
@@ -1421,7 +1455,7 @@ def test_write_session_state_persists_only_oracle_session_schema(
                     "2026-05-10_22-22_10_000000123"
                 ),
                 "oracle_snapshot_commit": "def456",
-                "apply_worktree": "/repo/.cmoc/worktrees/apply/session/run",
+                "apply_worktree": "/repo/.cmoc/worktrees/session/run",
                 "completed": True,
                 "discrepancy_counts": [0],
                 "report_path": "/repo/.cmoc/reports/apply/fork/report.md",

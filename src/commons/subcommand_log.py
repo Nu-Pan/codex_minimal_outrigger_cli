@@ -214,12 +214,16 @@ def _subcommand_log_repo_root(repo_root: Path) -> Path:
 def _owning_repo_root_from_apply_worktree_path(repo_root: Path) -> Path | None:
     """cmoc apply worktree path から所有元 repo root を復元する。"""
     parts = repo_root.resolve().parts
-    marker = (".cmoc", "worktrees", "apply")
-    for index in range(0, len(parts) - len(marker)):
-        if parts[index : index + len(marker)] != marker:
-            continue
-        if len(parts) == index + len(marker) + 2:
-            return Path(*parts[:index])
+    markers = (
+        (".cmoc", "worktrees"),
+        (".cmoc", "worktrees", "apply"),
+    )
+    for marker in markers:
+        for index in range(0, len(parts) - len(marker)):
+            if parts[index : index + len(marker)] != marker:
+                continue
+            if len(parts) == index + len(marker) + 2:
+                return Path(*parts[:index])
     return None
 
 

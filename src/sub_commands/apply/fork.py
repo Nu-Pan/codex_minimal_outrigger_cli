@@ -320,7 +320,7 @@ def cmoc_apply_impl(
     failed_stage = "apply worktree 作成"
     apply_run_id = ""
     apply_branch = ""
-    apply_worktree = state_root / ".cmoc" / "worktrees" / "apply" / session_id
+    apply_worktree = state_root / ".cmoc" / "worktrees" / session_id
     discrepancy_counts: list[int] = []
     apply_start_needs_error_record = False
     apply_error_recorded = False
@@ -776,14 +776,7 @@ def _plan_apply_worktree(
     """次に作成を試みる apply run id、branch、worktree path を組み立てる。"""
     apply_run_id = make_timestamp()
     apply_branch = f"{APPLY_BRANCH_PREFIX}{session_id}/{apply_run_id}"
-    apply_worktree = (
-        repo_root
-        / ".cmoc"
-        / "worktrees"
-        / "apply"
-        / session_id
-        / apply_run_id
-    )
+    apply_worktree = repo_root / ".cmoc" / "worktrees" / session_id / apply_run_id
     return _ApplyWorktreePlan(apply_run_id, apply_branch, apply_worktree)
 
 

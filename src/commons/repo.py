@@ -115,14 +115,7 @@ def apply_worktree_path_from_branch(repo_root: Path, apply_branch: str) -> Path:
     session_id, apply_run_id = apply_branch.removeprefix(
         APPLY_BRANCH_PREFIX
     ).split("/", 1)
-    return (
-        repo_root
-        / ".cmoc"
-        / "worktrees"
-        / "apply"
-        / session_id
-        / apply_run_id
-    )
+    return repo_root / ".cmoc" / "worktrees" / session_id / apply_run_id
 
 
 def worktree_path_for_branch(repo_root: Path, branch_name: str) -> Path | None:
@@ -311,12 +304,16 @@ def _owning_repo_root_from_apply_worktree_path(
 ) -> Path | None:
     """cmoc apply worktree path から所有元 repo root を復元する。"""
     parts = repo_root.resolve().parts
-    marker = (".cmoc", "worktrees", "apply", session_id)
-    for index in range(0, len(parts) - len(marker)):
-        if parts[index : index + len(marker)] != marker:
-            continue
-        if len(parts) == index + len(marker) + 1:
-            return Path(*parts[:index])
+    markers = (
+        (".cmoc", "worktrees", session_id),
+        (".cmoc", "worktrees", "apply", session_id),
+    )
+    for marker in markers:
+        for index in range(0, len(parts) - len(marker)):
+            if parts[index : index + len(marker)] != marker:
+                continue
+            if len(parts) == index + len(marker) + 1:
+                return Path(*parts[:index])
     return None
 
 

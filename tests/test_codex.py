@@ -1660,7 +1660,6 @@ def test_subcommand_log_from_apply_worktree_writes_to_main_repo(
         repo
         / ".cmoc"
         / "worktrees"
-        / "apply"
         / "2026-05-28_05-10_00_000000000"
         / "2026-05-28_05-11_00_000000000"
     )
@@ -1694,9 +1693,7 @@ def test_run_codex_exec_from_apply_worktree_writes_logs_to_main_repo(
     repo = _init_git_repo(tmp_path)
     session_id = "2026-05-28_05-10_00_000000000"
     apply_run_id = "2026-05-28_05-11_00_000000000"
-    apply_worktree = (
-        repo / ".cmoc" / "worktrees" / "apply" / session_id / apply_run_id
-    )
+    apply_worktree = repo / ".cmoc" / "worktrees" / session_id / apply_run_id
     apply_worktree.parent.mkdir(parents=True)
     _git(
         repo,
@@ -1780,9 +1777,7 @@ def test_subcommand_log_from_linked_apply_worktree_writes_to_linked_repo(
     _git(repo, "worktree", "add", "-b", "feature", str(linked), "HEAD")
     session_id = "2026-05-28_05-10_00_000000000"
     apply_run_id = "2026-05-28_05-11_00_000000000"
-    apply_worktree = (
-        linked / ".cmoc" / "worktrees" / "apply" / session_id / apply_run_id
-    )
+    apply_worktree = linked / ".cmoc" / "worktrees" / session_id / apply_run_id
     apply_worktree.parent.mkdir(parents=True)
     _git(
         linked,
