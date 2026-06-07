@@ -4,7 +4,7 @@
 
 - この `src/commons` ディレクトリのルーティング文書で、cmoc 全体で共有する基盤モジュールへの入口です。
 - `codex.py`、`command_runner.py`、`errors.py`、`repo.py`、`subcommand_log.py`、`timing.py`、`timestamps.py`、`report_files.py`、`indexing.py` を、用途ごとにたどるための目次です。
-- CLI 起動、エラー整形、リポジトリ操作、ログ保存、時間計測、`INDEX.md` 維持のどこを読むべきかを切り分けます。
+- CLI 起動、共通エラー整形、リポジトリ操作、ログ保存、時間計測、レポート保存、`INDEX.md` 維持のどこを読むべきかを切り分けます。
 
 ## Read this when
 
@@ -15,14 +15,14 @@
 
 ## Do not read this when
 
-- 個別モジュールの実装詳細だけを確認したいときは、このディレクトリではなく該当する `*.py` を直接読むとき。
+- 個別モジュールの実装詳細だけを確認したいときは、このディレクトリではなく該当する `*.py` を直接読むべきとき。
 - `src/sub_commands` 側の引数解析や業務ロジックだけを追いたいとき。
 - `oracles` の正本仕様だけを確認したいとき。
 - `README.md` や `AGENTS.md` など、リポジトリ運用ルールだけを確認したいとき。
 
 ## hash
 
-- 5f314a1c6f13003ed37c74986372f07b3db74775ce5783ddd529f5bdf0c1fe36
+- 59104107970b9b9547c1d104dba8cf5e0a769149fea8fbabad0b851a0b4531da
 
 # `main.py`
 
@@ -68,10 +68,10 @@
 ## Do not read this when
 
 - `src/sub_commands/__init__.py` だけを確認したいとき。
-- `cmoc init`、`cmoc indexing`、`cmoc apply`、`cmoc session`、`cmoc review` のうち、すでに対象モジュールが分かっていて直接そちらへ進むとき。
+- `cmoc init`、`cmoc indexing`、`cmoc apply`、`cmoc session`、`cmoc review` の対象モジュールがすでに分かっていて、直接そのファイルへ進むとき。
 - `apply/`、`session/`、`review/` の個別実装や、さらに下位のモジュールだけを追いたいとき。
 - `src/sub_commands` の入口構造ではなく、`oracles` 側の正本仕様や別階層の文書だけを確認したいとき。
 
 ## hash
 
-- ff10d734c6532b18493da4dc023b8620e34f6e95a324c1a21ff26f3ba64f9fdd
+- c0cef77718e5e7706f92e29e0b3d83ea29fc114810556b7afb1ca240a8ad54d5

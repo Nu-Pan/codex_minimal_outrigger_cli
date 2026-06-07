@@ -83,23 +83,23 @@
 
 - `src/commons/indexing.py` の `INDEX.md` メンテナンス処理に関する回帰テストをまとめたファイルです。
 - 生成・再利用・再生成、hash 更新、Structured Output の妥当性確認を中心に扱います。
-- gitignore、symlink、binary、非 UTF-8 path、空ディレクトリ、並列処理、排他 lock、自動 commit の境界条件も押さえます。
+- `gitignore`、symlink、binary、非 UTF-8 path、空ディレクトリ、並列処理、排他 lock、自動 commit の境界条件も押さえます。
 
 ## Read this when
 
-- `maintain_indexes()` と `is_maintained_index_path()` 系の判定条件を見直したいとき
-- `INDEX.md` の生成・再利用・再生成、hash 更新、Structured Output 検証を確認したいとき
-- `gitignore`、symlink、binary、非 UTF-8 path、空ディレクトリ、並列処理、排他 lock、自動 commit の境界条件を確認したいとき
+- `maintain_indexes()` と `is_maintained_index_path()` 系の判定条件を見直したいとき。
+- `INDEX.md` の生成・再利用・再生成、hash 更新、Structured Output 検証を確認したいとき。
+- `gitignore`、symlink、binary、非 UTF-8 path、空ディレクトリ、並列処理、排他 lock、自動 commit の境界条件を確認したいとき。
 
 ## Do not read this when
 
-- `src/commons/indexing.py` の実装ロジックそのものを追いたいとき
-- `INDEX.md` の正本仕様や配置ルールだけを確認したいとき
-- `repo.py` や `codex.py` など、INDEX 保守以外の共通基盤を探したいとき
+- `src/commons/indexing.py` の実装ロジックそのものを追いたいとき。
+- `INDEX.md` の正本仕様や配置ルールだけを確認したいとき。
+- `repo.py` や `codex.py` など、INDEX 保守以外の共通基盤を探したいとき。
 
 ## hash
 
-- 6b3aadff18710f89c5c456b92b05b5d181a00e1d51c3f6a60054e4a13557bdc3
+- b07402fb4b8847e036f4ee9da0aaaca0457d43a76e80fc1abf4419e114e2ec88
 
 # `test_repo.py`
 
@@ -174,7 +174,7 @@
 
 ## hash
 
-- 899d1b3d5dfa57a35c5a21b6eee915a956acef835d40d6926497de5f88d86ebd
+- 3cc27cfb8882dac3df90e1b469598bf35c4dd90cc3a47595cee364c9147d1bb6
 
 # `test_timestamps.py`
 

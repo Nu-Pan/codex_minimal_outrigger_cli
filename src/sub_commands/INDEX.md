@@ -112,13 +112,13 @@
 
 ## Do not read this when
 
-- `cmoc review oracles` の利用手順や引数だけを確認したいときは、`oracles/docs/app_specs/sub_commands/review_oracles.md` を読むべきです。
-- `cmoc review` の CLI 登録や hidden alias だけを確認したいときは、`src/main.py` を読むべきです。
-- `INDEX.md` の生成・更新ルールや、`oracles` 全体のルーティング方針だけを確認したいときは、このディレクトリを読む必要はありません。
+- `cmoc review oracles` の利用手順や引数仕様だけを確認したいとき。
+- `cmoc review` の CLI 登録や hidden alias だけを確認したいとき。
+- `INDEX.md` の生成・更新ルールや、`oracles` 全体のルーティング方針だけを確認したいとき。
 
 ## hash
 
-- 85794ff51a4f9a190c00cedff044aa30985d0fa29a59ff9ca6121f5d889e709d
+- bd4cd2206abe5578480f3ceb7aa080cccbb625fac716286f6265d192d4bec033
 
 # `session`
 
