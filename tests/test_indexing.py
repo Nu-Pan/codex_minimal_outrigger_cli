@@ -237,7 +237,10 @@ def test_is_maintained_index_path_at_commit_allows_ignored_index_file(
         "INDEX.md\ndocs/INDEX.md\n",
         encoding="utf-8",
     )
-    _git(repo, "add", ".gitignore")
+    docs = repo / "docs"
+    docs.mkdir()
+    (docs / "target.txt").write_text("target\n", encoding="utf-8")
+    _git(repo, "add", ".gitignore", "docs/target.txt")
     _git(repo, "commit", "-m", "ignore index")
     commit_hash = _git(repo, "rev-parse", "HEAD").stdout.strip()
 
@@ -290,6 +293,49 @@ def test_is_maintained_index_path_at_commit_respects_nested_gitignore(
             "docs/kept/INDEX.md",
         )
         is True
+    )
+
+
+def test_is_maintained_index_path_at_commit_uses_commit_tree_for_symlink_prune(
+    tmp_path: Path,
+) -> None:
+    """snapshot の通常 directory は現 worktree で symlink でも配置対象にする。"""
+    repo = _init_repo(tmp_path)
+    docs = repo / "docs"
+    docs.mkdir()
+    (docs / "target.txt").write_text("target\n", encoding="utf-8")
+    _git(repo, "add", "docs/target.txt")
+    _git(repo, "commit", "-m", "add docs directory")
+    commit_hash = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    (docs / "target.txt").unlink()
+    docs.rmdir()
+    os.symlink("elsewhere", docs, target_is_directory=True)
+
+    assert (
+        is_maintained_index_path_at_commit(repo, commit_hash, "docs/INDEX.md")
+        is True
+    )
+
+
+def test_is_maintained_index_path_at_commit_excludes_snapshot_symlink_ancestor(
+    tmp_path: Path,
+) -> None:
+    """snapshot の symlink ancestor は現 worktree で通常 directory でも除外する。"""
+    repo = _init_repo(tmp_path)
+    docs = repo / "docs"
+    os.symlink("elsewhere", docs, target_is_directory=True)
+    _git(repo, "add", "docs")
+    _git(repo, "commit", "-m", "add docs symlink")
+    commit_hash = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    docs.unlink()
+    docs.mkdir()
+    (docs / "target.txt").write_text("target\n", encoding="utf-8")
+
+    assert (
+        is_maintained_index_path_at_commit(repo, commit_hash, "docs/INDEX.md")
+        is False
     )
 
 

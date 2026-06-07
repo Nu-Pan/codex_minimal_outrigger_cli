@@ -155,7 +155,11 @@ def is_maintained_index_path_at_commit(
     )
     if _is_under_any_path(repo_root / directory, excluded_roots):
         return False
-    if _has_pruned_index_directory_ancestor(repo_root, repo_root / directory):
+    if _has_pruned_index_directory_ancestor_at_commit(
+        repo_root,
+        commit_hash,
+        directory,
+    ):
         return False
 
     candidates = []
@@ -792,6 +796,61 @@ def _has_pruned_index_directory_ancestor(
         if _should_prune_index_directory(repo_root, ancestor):
             return True
     return False
+
+
+def _has_pruned_index_directory_ancestor_at_commit(
+    repo_root: Path,
+    commit_hash: str,
+    directory: Path,
+) -> bool:
+    """指定 commit 時点で prune される ancestor 配下の INDEX 配置か判定する。"""
+    relative_parts = directory.parts
+    for depth in range(1, len(relative_parts) + 1):
+        ancestor = Path(*relative_parts[:depth])
+        if (
+            ancestor.name.startswith(".")
+            or ancestor.as_posix() == "memo"
+            or not _is_tree_path_at_commit(repo_root, commit_hash, ancestor)
+        ):
+            return True
+    return False
+
+
+def _is_tree_path_at_commit(
+    repo_root: Path,
+    commit_hash: str,
+    relative_path: Path,
+) -> bool:
+    """指定 commit の tree 上で relative path が directory か判定する。"""
+    from .repo import run_git
+
+    result = run_git(
+        repo_root,
+        [
+            "ls-tree",
+            "-z",
+            commit_hash,
+            "--",
+            relative_path.as_posix(),
+        ],
+        check=False,
+    )
+    if result.returncode != 0:
+        raise CmocError(
+            "commit 時点の INDEX.md 配置対象判定に失敗しました。",
+            [
+                "対象 commit と git repository の状態を確認してから cmoc を再実行してください。",
+                "git ls-tree が失敗する場合は、対象 branch や commit hash が存在するか確認してください。",
+            ],
+            result.stderr.strip(),
+        )
+
+    entries = [entry for entry in result.stdout.split("\0") if entry]
+    if len(entries) != 1:
+        return False
+    metadata, _separator, _path = entries[0].partition("\t")
+    fields = metadata.split()
+    return len(fields) >= 2 and fields[1] == "tree"
 
 
 def _is_repo_memo(repo_root: Path, path: Path) -> bool:
