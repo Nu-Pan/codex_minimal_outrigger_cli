@@ -26,6 +26,11 @@ from commons.indexing import maintain_indexes
 from commons.subcommand_log import log_event
 from commons.subcommand_log import subcommand_log
 
+_EMPTY_FILE_DIGEST = hashlib.sha256(b"cmoc-index-empty-file\0").hexdigest()
+_EMPTY_DIRECTORY_DIGEST = hashlib.sha256(
+    b"cmoc-index-empty-directory\0"
+).hexdigest()
+
 
 def test_maintain_indexes_generates_routing_entries_and_respects_gitignore(
     tmp_path: Path,
@@ -1930,6 +1935,101 @@ def test_maintain_indexes_does_not_call_codex_when_index_is_current(
     assert changed is False
 
 
+def test_maintain_indexes_does_not_call_codex_for_current_empty_entries(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """空 file/directory entry も最新なら Codex CLI を呼ばず再利用する。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    empty_file = repo / "empty.txt"
+    empty_file.write_bytes(b"")
+    empty_dir = repo / "empty-dir"
+    empty_dir.mkdir()
+    (empty_dir / "INDEX.md").write_text("", encoding="utf-8")
+    readme_digest = _file_digest(repo / "README.md")
+    empty_file_digest = _file_digest(empty_file)
+    empty_dir_digest = _directory_digest(repo, empty_dir)
+    (repo / "INDEX.md").write_text(
+        "\n".join(
+            [
+                "# `README.md`",
+                "",
+                "## Summary",
+                "",
+                "- readme summary",
+                "",
+                "## Read this when",
+                "",
+                "- read readme",
+                "",
+                "## Do not read this when",
+                "",
+                "- skip readme",
+                "",
+                "## hash",
+                "",
+                f"- {readme_digest}",
+                "",
+                "# `empty-dir`",
+                "",
+                "## Summary",
+                "",
+                "- empty directory summary",
+                "",
+                "## Read this when",
+                "",
+                "- read empty directory",
+                "",
+                "## Do not read this when",
+                "",
+                "- skip empty directory",
+                "",
+                "## hash",
+                "",
+                f"- {empty_dir_digest}",
+                "",
+                "# `empty.txt`",
+                "",
+                "## Summary",
+                "",
+                "- empty file summary",
+                "",
+                "## Read this when",
+                "",
+                "- read empty file",
+                "",
+                "## Do not read this when",
+                "",
+                "- skip empty file",
+                "",
+                "## hash",
+                "",
+                f"- {empty_file_digest}",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    original_content = (repo / "INDEX.md").read_text(encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "current empty entries")
+
+    def fail_codex(*args: object, **kwargs: object) -> str:
+        """最新の空 entry では呼ばれてはいけない fake Codex CLI。"""
+        raise AssertionError(
+            "codex exec should not be called for current empty entries"
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fail_codex)
+
+    changed = maintain_indexes(repo)
+
+    assert changed is False
+    assert (repo / "INDEX.md").read_text(encoding="utf-8") == original_content
+    assert "cmoc-index-kind" not in original_content
+
+
 def test_maintain_indexes_regenerates_entry_when_empty_file_becomes_directory(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -2594,7 +2694,7 @@ def _directory_digest(repo: Path, directory: Path) -> str:
         if child.is_dir():
             content_hash = _directory_digest(repo, child)
         else:
-            content_hash = hashlib.sha256(child.read_bytes()).hexdigest()
+            content_hash = _file_digest(child)
         serialized_entries.append(
             (
                 f"{entry_type}\0"
@@ -2602,9 +2702,19 @@ def _directory_digest(repo: Path, directory: Path) -> str:
                 f"{content_hash}\n"
             )
         )
+    if not serialized_entries:
+        return _EMPTY_DIRECTORY_DIGEST
     return hashlib.sha256(
         "".join(serialized_entries).encode("utf-8")
     ).hexdigest()
+
+
+def _file_digest(path: Path) -> str:
+    """テスト用に file hash を計算する。"""
+    content = path.read_bytes()
+    if not content:
+        return _EMPTY_FILE_DIGEST
+    return hashlib.sha256(content).hexdigest()
 
 
 def _directory_hash_relative_path(value: str) -> str:
