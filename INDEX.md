@@ -196,7 +196,7 @@
 
 ## hash
 
-- d4770fa1b3da4ecf3753510c5ffba4095c6d78e0b84fd4c9230ee47ff9fd9a40
+- b3cbcd88e923167ae49208d693e0f7bdf1f6c3dfbbceeeba89d5eb6e1415358c
 
 # `test.sh`
 
@@ -225,22 +225,28 @@
 
 ## Summary
 
-- この `tests/` ディレクトリのルーティング文書で、pytest 共通設定と各回帰テスト群への入口をまとめる階層です。
-- `conftest.py` はテスト共通設定、`test_codex.py` は Codex CLI 呼び出しラッパー、`test_indexing.py` は `INDEX.md` メンテナンス、`test_repo.py` は Git 共通処理を扱います。
-- `test_file_naming.py` は命名規則、`test_report_files.py` はタイムスタンプ付きレポート保存、`test_subcommands.py` はサブコマンド横断、`test_timestamps.py` はタイムスタンプと経過時間表示を検証します。
+- `conftest.py` は pytest 実行時に `<cmoc-root>/src` を import path へ追加する共通設定です。
+- `test_codex.py` は `commons.codex` の実行フロー、Structured Output 検証、ログ、quota/resume、workspace-write 保護をまとめて検証します。
+- `test_file_naming.py` はファイル命名規則と旧ルーティングファイルの残存有無を検証します。
+- `test_indexing.py` は `commons.indexing` の `INDEX.md` 維持、再生成、hash 更新、コミット境界を検証します。
+- `test_repo.py` は Git / repo 共通処理、oracle と implementation の差分検出、session state、commit 可否を検証します。
+- `test_report_files.py` はタイムスタンプ付きレポート保存の非上書き挙動を検証します。
+- `test_subcommands.py` は `init` / `session` / `apply` / `review oracles` を含むサブコマンド横断の制御と CLI 接続を検証します。
+- `test_timestamps.py` はタイムスタンプ生成、経過時間表示、補助関数の並び順を検証します。
 
 ## Read this when
 
-- `tests/` 配下の回帰テスト群の入口として、どのファイルが何を守っているか一覧したいとき。
-- `tests/conftest.py` の共通 pytest 設定や、`test_codex.py`、`test_indexing.py`、`test_repo.py` などの役割を把握したいとき。
-- `test_file_naming.py`、`test_report_files.py`、`test_subcommands.py`、`test_timestamps.py` の検証対象を短く整理したいとき。
-- 新しいテストを追加・修正する前に、既存の回帰テストの守備範囲を確認したいとき。
+- `tests` 配下でどの回帰テストを読むべきかを、目的別に切り分けたいとき。
+- `commons.codex` の実行制御、Structured Output、quota/resume、workspace-write ガードの回帰を確認したいとき。
+- `INDEX.md` 生成・維持、リポジトリ判定、サブコマンド横断、レポート出力、タイムスタンプ整形の仕様を確認したいとき。
+- pytest の import path 設定や、テスト共通設定の役割を把握したいとき。
 
 ## Do not read this when
 
-- cmoc 本体の実装ロジックや `src/` 配下のモジュール設計だけを確認したいとき。
-- 個別の回帰テストではなく、`oracles` 側の正本仕様や Structured Output schema だけをたどりたいとき。
+- 読むべき `test_*.py` がすでに分かっていて、この階層の `INDEX.md` を経由せず個別テストへ直接進むとき。
+- `src/` 側の実装ロジックだけを追いたくて、テストの入口整理は不要なとき。
+- この階層ではなく、上位ディレクトリの運用ルールや `oracles` 側の正本仕様だけを確認したいとき。
 
 ## hash
 
-- 0cf7a8e49b79238e57ffdc7a6263320ae5a51fd67a4510bdaef48cc557d201e9
+- 07ea0fbbdcbc751f00efdf023bedf7b1642bc1cc6bbcb82109bbb4a5acc81371

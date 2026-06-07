@@ -37,13 +37,13 @@
 
 ## Do not read this when
 
-- 読むべき個別モジュールがすでに決まっていて、ここで入口の案内が不要なとき。
+- 読むべき個別モジュールがすでに決まっていて、この階層の案内が不要なとき。
 - `cmoc apply fork` / `join` / `abandon` の詳細な実行フローや状態遷移だけを確認したいとき。
 - `cmoc apply` の正本仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/` 側を直接読むべきとき。
 
 ## hash
 
-- 1e646a9b355c8ec69557705a52f63e0c279cbadc9d7d39383f2fc933e2ea3443
+- 7696dbab2f5757e6dd997a93de51462a740945b55606c6d6174262af38a18efb
 
 # `indexing.py`
 
