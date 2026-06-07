@@ -8,6 +8,7 @@ from pathlib import Path
 import shutil
 import sys
 import tempfile
+from time import sleep
 from typing import Literal
 
 from commons.codex import (
@@ -21,10 +22,11 @@ from commons.errors import CmocError
 from commons.indexing import maintain_indexes
 from commons.report_files import write_timestamped_report
 from commons.repo import (
+    REVIEW_BRANCH_PREFIX,
     assert_no_uncommitted_changes,
     changed_oracle_files,
     current_branch,
-    ensure_cmoc_ignored,
+    ensure_cmoc_ignored_and_committed,
     has_deleted_oracle_files,
     head_commit,
     is_cmoc_branch,
@@ -34,8 +36,10 @@ from commons.repo import (
     read_session_start_commit,
     session_id_from_branch,
     session_state_root,
+    run_git,
 )
 from commons.timing import StepTimer, start_step
+from commons.timestamps import make_timestamp
 
 _SEVERITY_ORDER = ["fatal", "inconclusive", "warning"]
 _ISSUE_ID_PREFIXES = {
@@ -169,6 +173,15 @@ class _OracleEvaluationSnapshot:
     reference_files: frozenset[Path]
 
 
+@dataclass(frozen=True)
+class _ReviewWorktreePlan:
+    """review run 用 branch/worktree 作成計画。"""
+
+    review_run_id: str
+    review_branch: str
+    review_worktree: Path
+
+
 def cmoc_review_oracles_impl(
     repo_root: Path | None = None,
     *,
@@ -216,13 +229,26 @@ def cmoc_review_oracles_impl(
     oracle_files: list[Path] = []
     evaluations = []
     failed_stage = "review oracles 初期化"
+    review_plan: _ReviewWorktreePlan | None = None
     try:
         branch_name = _validate_review_oracles_preconditions(repo_root)
 
         # 評価前に `.cmoc` の ignore 保証を済ませる。
         failed_stage = ".cmoc ignore 確認"
         start_step(timer, 1, 6, ".cmoc ignore 確認")
-        ensure_cmoc_ignored(repo_root)
+        ensure_cmoc_ignored_and_committed(repo_root)
+        assert_no_uncommitted_changes(repo_root)
+
+        session_id = session_id_from_branch(branch_name)
+        commit_hash = head_commit(repo_root)
+
+        failed_stage = "review worktree 作成"
+        review_plan = _create_review_worktree(
+            repo_root,
+            session_id,
+            commit_hash,
+        )
+        review_repo_root = review_plan.review_worktree
 
         # branch 状態と scope から、部分評価か全体評価かを決める。
         failed_stage = "oracle ファイル選定"
@@ -233,24 +259,30 @@ def cmoc_review_oracles_impl(
         mode = "partial" if partial else "full"
         if partial:
             base_commit = read_session_start_commit(repo_root, branch_name)
-            deleted_oracles = has_deleted_oracle_files(repo_root, base_commit)
+            deleted_oracles = has_deleted_oracle_files(review_repo_root, base_commit)
         else:
             deleted_oracles = False
 
         # 評価モードに応じて Codex CLI に渡す oracle ファイル一覧を作る。
-        all_oracle_files = list_oracle_files(repo_root)
+        all_review_oracle_files = list_oracle_files(review_repo_root)
+        all_oracle_files = [
+            _owner_path_for_worktree_path(repo_root, review_repo_root, path)
+            for path in all_review_oracle_files
+        ]
         all_oracle_files_known = True
         if enumerate_findings_loop == 0:
             oracle_files = []
         elif partial:
             assert base_commit is not None
-            changed_files = set(changed_oracle_files(repo_root, base_commit))
+            changed_files = {
+                _owner_path_for_worktree_path(repo_root, review_repo_root, path)
+                for path in changed_oracle_files(review_repo_root, base_commit)
+            }
             oracle_files = [
                 path for path in all_oracle_files if path in changed_files
             ]
         else:
             oracle_files = all_oracle_files
-        commit_hash = head_commit(repo_root)
 
         failed_stage = "oracle snapshot 作成"
         with tempfile.TemporaryDirectory(
@@ -258,17 +290,19 @@ def cmoc_review_oracles_impl(
         ) as snapshot_dir:
             # Codex CLI が読む oracle 本文は review 開始時点 snapshot に固定する。
             oracle_snapshot = _create_oracle_evaluation_snapshot(
-                repo_root,
-                all_oracle_files,
+                review_repo_root,
+                all_review_oracle_files,
                 Path(snapshot_dir),
+                display_repo_root=repo_root,
             )
 
             failed_stage = "INDEX.md メンテナンス"
             start_step(timer, 3, 6, "INDEX.md メンテナンス")
-            _maintain_indexes_after_oracle_snapshot(repo_root)
+            _maintain_indexes_after_oracle_snapshot(review_repo_root)
             oracle_snapshot = _sync_maintained_indexes_to_oracle_snapshot(
-                repo_root,
+                review_repo_root,
                 oracle_snapshot,
+                display_repo_root=repo_root,
             )
 
             # oracle ファイルごとに Codex CLI 評価を実行する。
@@ -287,6 +321,7 @@ def cmoc_review_oracles_impl(
                         executor.submit(
                             copy_context().run,
                             _evaluate_oracle_file,
+                            review_repo_root,
                             repo_root,
                             oracle_file,
                             oracle_snapshot,
@@ -298,11 +333,15 @@ def cmoc_review_oracles_impl(
             failed_stage = "問題点リスト改善"
             start_step(timer, 5, 6, "問題点リスト改善")
             evaluations = _improve_evaluations(
+                review_repo_root,
                 repo_root,
                 evaluations,
                 refine_findings_loop,
                 oracle_snapshot,
             )
+
+            failed_stage = "review branch merge"
+            _merge_review_branch_into_session(repo_root, branch_name, review_plan)
 
             # 評価結果を 1 つの Markdown レポートとして保存する。
             failed_stage = "report 書き込み"
@@ -428,6 +467,185 @@ def _validate_repeat_improve_issues_list(value: int) -> None:
     _validate_review_oracles_loop(value, "--repeat-improve-issues-list")
 
 
+def _create_review_worktree(
+    repo_root: Path,
+    session_id: str,
+    session_head_commit: str,
+) -> _ReviewWorktreePlan:
+    """session HEAD から review branch と専用 worktree を作成する。"""
+    last_plan = _plan_review_worktree(repo_root, session_id)
+    for attempt in range(1, 11):
+        plan = (
+            last_plan
+            if attempt == 1
+            else _plan_review_worktree(repo_root, session_id)
+        )
+        last_plan = plan
+        print(
+            "review worktree 作成試行 "
+            f"({attempt}/10) {plan.review_branch}"
+        )
+        branch_result = run_git(
+            repo_root,
+            ["branch", plan.review_branch, session_head_commit],
+            check=False,
+        )
+        if branch_result.returncode != 0:
+            sleep(0.001)
+            continue
+        worktree_result = run_git(
+            repo_root,
+            ["worktree", "add", str(plan.review_worktree), plan.review_branch],
+            check=False,
+        )
+        if worktree_result.returncode == 0:
+            return plan
+        cleanup_result = run_git(
+            repo_root,
+            ["branch", "-D", plan.review_branch],
+            check=False,
+        )
+        if cleanup_result.returncode != 0:
+            raise RuntimeError(
+                "\n".join(
+                    [
+                        "review worktree 作成失敗後の branch cleanup に失敗しました。",
+                        f"review_branch: {plan.review_branch}",
+                        f"review_worktree: {plan.review_worktree}",
+                        "worktree add failure:",
+                        _format_git_failure(worktree_result),
+                        "branch cleanup failure:",
+                        _format_git_failure(cleanup_result),
+                    ]
+                )
+            )
+        sleep(0.001)
+    raise RuntimeError(
+        "\n".join(
+            [
+                "リトライ後も一意な review worktree を作成できませんでした。",
+                f"last_review_branch: {last_plan.review_branch}",
+                f"last_review_worktree: {last_plan.review_worktree}",
+            ]
+        )
+    )
+
+
+def _plan_review_worktree(repo_root: Path, session_id: str) -> _ReviewWorktreePlan:
+    """次に作成を試みる review run id、branch、worktree path を組み立てる。"""
+    review_run_id = make_timestamp()
+    review_branch = f"{REVIEW_BRANCH_PREFIX}{session_id}/{review_run_id}"
+    review_worktree = (
+        repo_root / ".cmoc" / "worktrees" / session_id / "review" / review_run_id
+    )
+    return _ReviewWorktreePlan(review_run_id, review_branch, review_worktree)
+
+
+def _merge_review_branch_into_session(
+    repo_root: Path,
+    session_branch: str,
+    review_plan: _ReviewWorktreePlan,
+) -> None:
+    """review branch の INDEX.md 更新を session branch へ自動 merge する。"""
+    assert_no_uncommitted_changes(repo_root)
+    assert_no_uncommitted_changes(review_plan.review_worktree)
+    run_git(repo_root, ["switch", session_branch])
+    merge_result = run_git(
+        repo_root,
+        ["merge", "--no-ff", review_plan.review_branch],
+        check=False,
+    )
+    if merge_result.returncode == 0:
+        return
+
+    unmerged = _unmerged_paths(repo_root)
+    index_conflicts = [path for path in unmerged if _is_index_path(path)]
+    non_index_conflicts = [path for path in unmerged if not _is_index_path(path)]
+    if index_conflicts:
+        _resolve_index_conflicts_with_session_side(repo_root, index_conflicts)
+        unmerged = _unmerged_paths(repo_root)
+        non_index_conflicts = [
+            path for path in unmerged if not _is_index_path(path)
+        ]
+    if non_index_conflicts or not index_conflicts:
+        detail = _unmerged_paths_detail(repo_root, unmerged)
+        if not detail:
+            detail = merge_result.stderr.strip()
+        raise CmocError(
+            "review branch の merge で conflict が発生しました。",
+            [
+                "cmoc は review branch の INDEX.md conflict だけを自動解消します。",
+                "git status を確認し、手動で merge 状態を解消してください。",
+            ],
+            detail,
+        )
+
+    commit_result = run_git(repo_root, ["commit", "--no-edit"], check=False)
+    if commit_result.returncode != 0:
+        detail = "\n".join(
+            [
+                merge_result.stderr.strip(),
+                commit_result.stderr.strip(),
+            ]
+        ).strip()
+        raise CmocError(
+            "INDEX.md conflict 解消後の review merge commit に失敗しました。",
+            [
+                "git status を確認し、merge 状態を手動で完了してください。",
+                "不要な merge 状態であれば `git merge --abort` で戻してください。",
+            ],
+            detail,
+        )
+
+
+def _resolve_index_conflicts_with_session_side(
+    repo_root: Path,
+    paths: list[str],
+) -> None:
+    """INDEX.md conflict を session branch 側の内容で解消する。"""
+    for path in sorted(paths):
+        run_git(repo_root, ["checkout", "--ours", "--", path], check=False)
+    run_git(repo_root, ["add", "--", *sorted(paths)])
+
+
+def _unmerged_paths(repo_root: Path) -> list[str]:
+    """unmerged path を git から取得する。"""
+    result = run_git(repo_root, ["diff", "--name-only", "-z", "--diff-filter=U"])
+    return [path for path in result.stdout.split("\0") if path]
+
+
+def _unmerged_paths_detail(repo_root: Path, unmerged: list[str]) -> str:
+    """unmerged path detail をユーザー表示用に整形する。"""
+    return "\n".join(str((repo_root / path).resolve()) for path in unmerged)
+
+
+def _is_index_path(path: str) -> bool:
+    """cmoc が再生成可能な INDEX.md path か判定する。"""
+    return Path(path).name == "INDEX.md"
+
+
+def _format_git_failure(result: object) -> str:
+    """git 失敗時の診断情報をユーザー向け detail に載せる。"""
+    return "\n".join(
+        [
+            f"returncode: {getattr(result, 'returncode', '')}",
+            f"stdout: {getattr(result, 'stdout', '').strip()}",
+            f"stderr: {getattr(result, 'stderr', '').strip()}",
+        ]
+    )
+
+
+def _owner_path_for_worktree_path(
+    owner_repo_root: Path,
+    worktree_root: Path,
+    path: Path,
+) -> Path:
+    """review worktree 内 path に対応する呼び出し元 repo path を返す。"""
+    return (
+        owner_repo_root / path.resolve().relative_to(worktree_root.resolve())
+    ).resolve()
+
+
 def _maintain_indexes_after_oracle_snapshot(repo_root: Path) -> bool:
     """評価 snapshot とは分離して INDEX.md をメンテナンスする。"""
     return maintain_indexes(repo_root)
@@ -437,9 +655,13 @@ def _create_oracle_evaluation_snapshot(
     repo_root: Path,
     oracle_files: list[Path],
     snapshot_root: Path,
+    *,
+    display_repo_root: Path | None = None,
 ) -> _OracleEvaluationSnapshot:
     """開始時点の oracles tree を一時 copy として固定する。"""
+    display_root = (display_repo_root or repo_root).resolve()
     original_oracle_root = (repo_root / "oracles").resolve()
+    display_oracle_root = (display_root / "oracles").resolve()
     snapshot_oracle_root = snapshot_root / "oracles"
     if original_oracle_root.exists():
         _copy_oracles_tree_snapshot(original_oracle_root, snapshot_oracle_root)
@@ -447,9 +669,14 @@ def _create_oracle_evaluation_snapshot(
         snapshot_oracle_root.mkdir(parents=True)
 
     reference_files = {path.resolve() for path in oracle_files}
+    if display_root != repo_root.resolve():
+        reference_files = {
+            _owner_path_for_worktree_path(display_root, repo_root, path)
+            for path in reference_files
+        }
     reference_files.update(
         _original_path_for_snapshot_path(
-            repo_root,
+            display_root,
             snapshot_oracle_root,
             index_path,
         )
@@ -457,11 +684,19 @@ def _create_oracle_evaluation_snapshot(
         if index_path.is_file()
     )
     return _OracleEvaluationSnapshot(
-        original_repo_root=repo_root.resolve(),
-        original_oracle_root=original_oracle_root,
+        original_repo_root=display_root,
+        original_oracle_root=display_oracle_root,
         snapshot_root=snapshot_root.resolve(),
         snapshot_oracle_root=snapshot_oracle_root.resolve(),
-        oracle_files=frozenset(path.resolve() for path in oracle_files),
+        oracle_files=frozenset(reference_files - {
+            _original_path_for_snapshot_path(
+                display_root,
+                snapshot_oracle_root,
+                index_path,
+            )
+            for index_path in snapshot_oracle_root.rglob("INDEX.md")
+            if index_path.is_file()
+        }),
         reference_files=frozenset(reference_files),
     )
 
@@ -469,8 +704,11 @@ def _create_oracle_evaluation_snapshot(
 def _sync_maintained_indexes_to_oracle_snapshot(
     repo_root: Path,
     snapshot: _OracleEvaluationSnapshot,
+    *,
+    display_repo_root: Path | None = None,
 ) -> _OracleEvaluationSnapshot:
     """メンテナンス後の INDEX.md だけを評価 snapshot へ反映する。"""
+    display_root = (display_repo_root or repo_root).resolve()
     original_oracle_root = (repo_root / "oracles").resolve()
     snapshot_oracle_root = snapshot.snapshot_oracle_root
 
@@ -499,7 +737,7 @@ def _sync_maintained_indexes_to_oracle_snapshot(
     reference_files = set(snapshot.oracle_files)
     reference_files.update(
         _original_path_for_snapshot_path(
-            repo_root,
+            display_root,
             snapshot_oracle_root,
             index_path,
         )
@@ -556,28 +794,29 @@ def _snapshot_path_for_original_path(
 
 
 def _evaluate_oracle_file(
-    repo_root: Path,
+    execution_repo_root: Path,
+    display_repo_root: Path,
     oracle_file: Path,
     oracle_snapshot: _OracleEvaluationSnapshot | None = None,
 ) -> dict[str, object]:
     """1 oracle ファイルの評価を実行し、report 用レコードを返す。"""
     payload = parse_json_object(
         run_codex_exec(
-            repo_root,
-            _evaluation_prompt(repo_root, oracle_file, oracle_snapshot),
-            purpose=f"oracle 評価 {oracle_file.relative_to(repo_root)}",
+            execution_repo_root,
+            _evaluation_prompt(display_repo_root, oracle_file, oracle_snapshot),
+            purpose=f"oracle 評価 {oracle_file.relative_to(display_repo_root)}",
             read_only=True,
             expect_json=True,
             output_schema=_EVALUATION_OUTPUT_SCHEMA,
             json_validator=lambda value: _validate_evaluation_payload(
                 value,
-                repo_root,
+                display_repo_root,
                 oracle_file,
                 oracle_snapshot,
             ),
         )
     )
-    return _evaluation_payload_to_record(payload, repo_root, oracle_file)
+    return _evaluation_payload_to_record(payload, display_repo_root, oracle_file)
 
 
 def _append_evaluation_records_in_order(
@@ -659,7 +898,8 @@ def _evaluation_prompt(
 
 
 def _improve_evaluations(
-    repo_root: Path,
+    execution_repo_root: Path,
+    display_repo_root: Path,
     evaluations: list[dict[str, object]],
     repeat_improve_issues_list: int,
     oracle_snapshot: _OracleEvaluationSnapshot | None = None,
@@ -680,8 +920,12 @@ def _improve_evaluations(
         )
         payload = parse_json_object(
             run_codex_exec(
-                repo_root,
-                _improvement_prompt(repo_root, current_payload, oracle_snapshot),
+                execution_repo_root,
+                _improvement_prompt(
+                    display_repo_root,
+                    current_payload,
+                    oracle_snapshot,
+                ),
                 purpose=f"oracle 問題点リスト改善 {index + 1}",
                 read_only=True,
                 expect_json=True,
@@ -690,7 +934,7 @@ def _improve_evaluations(
                 reasoning_effort=FRONTIER_HIGH_REASONING_EFFORT,
                 json_validator=lambda value: _validate_issues_payload(
                     value,
-                    repo_root,
+                    display_repo_root,
                     _target_oracle_paths(evaluations),
                     oracle_snapshot,
                 ),

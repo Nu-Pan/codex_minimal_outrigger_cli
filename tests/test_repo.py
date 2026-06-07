@@ -1271,6 +1271,12 @@ def test_changed_paths_preserves_special_path_tokens(tmp_path: Path) -> None:
             "2026-05-10_22-22_10_000000123",
             True,
         ),
+        (
+            "cmoc/review/"
+            "2026-05-10_22-21_10_000000123/"
+            "2026-05-10_22-22_10_000000123",
+            True,
+        ),
         ("cmoc/session/2026-05-10_22-21_10_123", False),
         ("cmoc/session/test", False),
         ("cmoc/session/2026-99-99_99-99_99_999999999", False),
@@ -1303,9 +1309,18 @@ def test_is_cmoc_branch(branch_name: str, expected: bool) -> None:
             "2026-05-10_22-22_10_000000123",
             True,
         ),
+        (
+            "cmoc/review/"
+            "2026-05-10_22-21_10_000000123/"
+            "2026-05-10_22-22_10_000000123",
+            True,
+        ),
         ("cmoc/apply/2026-05-10_22-21_10_000000123/run-1", True),
         ("cmoc/apply/a/b", True),
         ("cmoc/apply/2026-05-10_22-21_10_000000123", True),
+        ("cmoc/review/2026-05-10_22-21_10_000000123/run-1", True),
+        ("cmoc/review/a/b", True),
+        ("cmoc/review/2026-05-10_22-21_10_000000123", True),
         ("feature/cmoc/session/test", False),
         ("cmoc/sessionish/test", False),
         ("main", False),

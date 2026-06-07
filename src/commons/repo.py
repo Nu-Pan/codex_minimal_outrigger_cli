@@ -11,6 +11,7 @@ from .timestamps import is_timestamp
 
 SESSION_BRANCH_PREFIX = "cmoc/session/"
 APPLY_BRANCH_PREFIX = "cmoc/apply/"
+REVIEW_BRANCH_PREFIX = "cmoc/review/"
 SESSION_STATES = {"active", "joined", "abandoned", "error"}
 APPLY_STATES = {"ready", "running", "completed", "error"}
 SESSION_STATE_KEYS = {
@@ -64,13 +65,19 @@ def head_commit(repo_root: Path) -> str:
 
 def is_cmoc_branch(branch_name: str) -> bool:
     """cmoc 管理ブランチ名か判定する。"""
-    return is_session_branch(branch_name) or is_apply_branch(branch_name)
+    return (
+        is_session_branch(branch_name)
+        or is_apply_branch(branch_name)
+        or is_review_branch(branch_name)
+    )
 
 
 def is_cmoc_reserved_branch(branch_name: str) -> bool:
     """cmoc が予約している branch namespace 配下か判定する。"""
-    return branch_name.startswith(SESSION_BRANCH_PREFIX) or branch_name.startswith(
-        APPLY_BRANCH_PREFIX
+    return (
+        branch_name.startswith(SESSION_BRANCH_PREFIX)
+        or branch_name.startswith(APPLY_BRANCH_PREFIX)
+        or branch_name.startswith(REVIEW_BRANCH_PREFIX)
     )
 
 
@@ -94,12 +101,25 @@ def is_apply_branch(branch_name: str) -> bool:
     )
 
 
+def is_review_branch(branch_name: str) -> bool:
+    """`cmoc/review/<session-id>/<review-run-id>` 形式のブランチ名か判定する。"""
+    suffix = branch_name.removeprefix(REVIEW_BRANCH_PREFIX)
+    parts = suffix.split("/")
+    return (
+        branch_name.startswith(REVIEW_BRANCH_PREFIX)
+        and len(parts) == 2
+        and all(is_timestamp(part) for part in parts)
+    )
+
+
 def session_id_from_branch(branch_name: str) -> str:
     """cmoc 管理ブランチ名から session id を取り出す。"""
     if is_session_branch(branch_name):
         return branch_name.removeprefix(SESSION_BRANCH_PREFIX)
     if is_apply_branch(branch_name):
         return branch_name.removeprefix(APPLY_BRANCH_PREFIX).split("/", 1)[0]
+    if is_review_branch(branch_name):
+        return branch_name.removeprefix(REVIEW_BRANCH_PREFIX).split("/", 1)[0]
     raise CmocError(
         "cmoc 管理 branch ではありません。",
         [

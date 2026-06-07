@@ -1367,7 +1367,14 @@ def test_eval_oracles_writes_report_with_fake_codex(
     reports = list((repo / ".cmoc" / "reports" / "review_oracles").glob("*.md"))
     assert len(reports) == 1
     report = reports[0].read_text(encoding="utf-8")
-    assert maintain_calls == [repo]
+    assert len(maintain_calls) == 1
+    review_worktree = maintain_calls[0]
+    assert review_worktree != repo
+    assert review_worktree.is_dir()
+    assert review_worktree.is_relative_to(repo / ".cmoc" / "worktrees")
+    assert _git(review_worktree, "branch", "--show-current").stdout.startswith(
+        "cmoc/review/"
+    )
     assert codex_kwargs[0]["expect_json"] is True
     assert codex_kwargs[0]["output_schema"] == (
         review_oracles_module._EVALUATION_OUTPUT_SCHEMA
@@ -1452,6 +1459,148 @@ def test_review_oracles_parallel_evaluation_records_worker_codex_events(
         "oracle 評価 oracles/a.md",
         "oracle 評価 oracles/b.md",
     ]
+
+
+def test_review_oracles_runs_codex_in_review_worktree(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """review oracles の Codex 評価は session worktree ではなく review worktree で動く。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _prepare_review_oracles_session(repo)
+
+    monkeypatch.setattr(
+        review_oracles_module,
+        "maintain_indexes",
+        lambda repo_root: False,
+    )
+    codex_repo_roots: list[Path] = []
+
+    def fake_codex(repo_root: Path, *args: object, **kwargs: object) -> str:
+        """Codex 実行 root を記録して問題なしを返す。"""
+        codex_repo_roots.append(repo_root)
+        return json.dumps({"issues": []}, ensure_ascii=False)
+
+    monkeypatch.setattr(review_oracles_module, "run_codex_exec", fake_codex)
+
+    cmoc_review_oracles_impl(repo, full=True, repeat_improve_issues_list=0)
+
+    assert len(codex_repo_roots) == 1
+    assert codex_repo_roots[0] != repo
+    assert codex_repo_roots[0].is_relative_to(repo / ".cmoc" / "worktrees")
+    assert _git(codex_repo_roots[0], "branch", "--show-current").stdout.startswith(
+        "cmoc/review/"
+    )
+
+
+def test_review_oracles_merges_review_branch_to_session(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """review branch の INDEX.md 更新は終了時に session branch へ自動 merge される。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    (repo / "docs").mkdir()
+    (repo / "docs" / "guide.md").write_text("guide\n", encoding="utf-8")
+    _git(repo, "add", "oracles", "docs")
+    _git(repo, "commit", "-m", "add docs and oracles")
+    _prepare_review_oracles_session(repo)
+    session_branch = _git(repo, "branch", "--show-current").stdout.strip()
+
+    def fake_maintain_indexes(repo_root: Path) -> bool:
+        """review worktree 側だけで INDEX.md 更新 commit を作る。"""
+        (repo_root / "docs" / "INDEX.md").write_text(
+            "review maintained docs index\n",
+            encoding="utf-8",
+        )
+        _git(repo_root, "add", "docs/INDEX.md")
+        _git(repo_root, "commit", "-m", "fake review index maintenance")
+        return True
+
+    monkeypatch.setattr(
+        review_oracles_module,
+        "maintain_indexes",
+        fake_maintain_indexes,
+    )
+    monkeypatch.setattr(
+        review_oracles_module,
+        "run_codex_exec",
+        lambda *args, **kwargs: json.dumps({"issues": []}, ensure_ascii=False),
+    )
+
+    cmoc_review_oracles_impl(repo, full=True, repeat_improve_issues_list=0)
+
+    assert _git(repo, "branch", "--show-current").stdout.strip() == session_branch
+    assert (repo / "docs" / "INDEX.md").read_text(encoding="utf-8") == (
+        "review maintained docs index\n"
+    )
+    head_parents = _git(repo, "rev-list", "--parents", "-n", "1", "HEAD").stdout.split()
+    assert len(head_parents) == 3
+    assert "fake review index maintenance" in _git(repo, "log", "--oneline").stdout
+
+
+def test_review_oracles_index_conflict_keeps_session_side(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """review branch merge の INDEX.md conflict は session branch 側を採用する。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    docs = repo / "docs"
+    docs.mkdir()
+    (docs / "guide.md").write_text("guide\n", encoding="utf-8")
+    (docs / "INDEX.md").write_text("base docs index\n", encoding="utf-8")
+    _git(repo, "add", "oracles", "docs")
+    _git(repo, "commit", "-m", "add docs index")
+    _prepare_review_oracles_session(repo)
+
+    def fake_maintain_indexes(repo_root: Path) -> bool:
+        """review worktree 側の INDEX.md 更新 commit を作る。"""
+        (repo_root / "docs" / "INDEX.md").write_text(
+            "review docs index\n",
+            encoding="utf-8",
+        )
+        _git(repo_root, "add", "docs/INDEX.md")
+        _git(repo_root, "commit", "-m", "fake review index maintenance")
+        return True
+
+    codex_called = False
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """merge 前に session branch 側の同じ INDEX.md を変更済み commit にする。"""
+        nonlocal codex_called
+        if not codex_called:
+            codex_called = True
+            (repo / "docs" / "INDEX.md").write_text(
+                "session docs index\n",
+                encoding="utf-8",
+            )
+            _git(repo, "add", "docs/INDEX.md")
+            _git(repo, "commit", "-m", "session index update during review")
+        return json.dumps({"issues": []}, ensure_ascii=False)
+
+    monkeypatch.setattr(
+        review_oracles_module,
+        "maintain_indexes",
+        fake_maintain_indexes,
+    )
+    monkeypatch.setattr(review_oracles_module, "run_codex_exec", fake_codex)
+
+    cmoc_review_oracles_impl(repo, full=True, repeat_improve_issues_list=0)
+
+    assert (repo / "docs" / "INDEX.md").read_text(encoding="utf-8") == (
+        "session docs index\n"
+    )
+    assert _git(repo, "diff", "--name-only", "--diff-filter=U").stdout == ""
+    head_parents = _git(repo, "rev-list", "--parents", "-n", "1", "HEAD").stdout.split()
+    assert len(head_parents) == 3
 
 
 def test_eval_oracles_snapshots_oracles_with_maintained_indexes(
@@ -1553,6 +1702,8 @@ def test_eval_oracles_snapshot_gets_missing_oracles_index_after_maintenance(
             "created oracle index\n",
             encoding="utf-8",
         )
+        _git(repo_root, "add", "oracles/INDEX.md")
+        _git(repo_root, "commit", "-m", "fake oracle index maintenance")
         return True
 
     monkeypatch.setattr(
@@ -1600,6 +1751,8 @@ def test_eval_oracles_reads_fixed_snapshot_after_oracle_tree_changes(
             "maintained index\n",
             encoding="utf-8",
         )
+        _git(repo_root, "add", "oracles/INDEX.md")
+        _git(repo_root, "commit", "-m", "fake oracle index maintenance")
         return True
 
     monkeypatch.setattr(
@@ -1622,6 +1775,8 @@ def test_eval_oracles_reads_fixed_snapshot_after_oracle_tree_changes(
             "later live text\n",
             encoding="utf-8",
         )
+        _git(repo, "add", "-A", "oracles")
+        _git(repo, "commit", "-m", "change live oracle tree during review")
         snapshot_path = Path(match.group(1))
         snapshot_texts.append(snapshot_path.read_text(encoding="utf-8"))
         issue = _eval_oracle_issue(
@@ -1686,10 +1841,9 @@ def test_eval_oracles_index_maintenance_updates_oracles_index(
     assert (oracle_root / "INDEX.md").read_text(encoding="utf-8") != stale_index
     changed_files = _git(
         repo,
-        "diff-tree",
-        "--no-commit-id",
+        "diff",
         "--name-only",
-        "-r",
+        "HEAD^1",
         "HEAD",
     ).stdout.splitlines()
     assert "oracles/INDEX.md" in changed_files
