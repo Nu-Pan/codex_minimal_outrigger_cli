@@ -110,6 +110,10 @@ _FINDING_VERDICT_ORDER = _schema_string_enum(
     _JUDGE_FINDINGS_OUTPUT_SCHEMA,
     ("properties", "verdict"),
 )
+_SPECULATIVE_REASON_PHRASES = [
+    "かもしれない",
+    "可能性がある",
+]
 _ISSUE_OUTPUT_SCHEMA: dict[str, object] = {
     "type": "object",
     "additionalProperties": False,
@@ -1315,15 +1319,19 @@ def _validate_finding_prompt(
     if role == "challenger":
         task = "その所見が妥当ではない理由を新規に列挙してください。"
         existing = finding.challenger_reasons
+        opposite = finding.advocate_reasons
     else:
         task = "その所見が妥当である理由を新規に列挙してください。"
         existing = finding.advocate_reasons
+        opposite = finding.challenger_reasons
     return "\n".join(
         [
             "あなたはソフトウェア仕様レビュー所見の検証担当です。",
             task,
             "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。",
             "理由には具体的な根拠を必ず含めてください。",
+            "「かもしれない」「可能性がある」などの推測だけを根拠にした理由は返さないでください。",
+            "反対側の既存理由がある場合は、対応する反対側理由への反論を含めてください。",
             "既存理由と重複する理由は返さないでください。",
             f"`{readable_oracle_root}` 配下の仕様ファイルと INDEX.md だけを読んでください。",
             f"`{concrete_oracle_root}` は path 変換のためにだけ使い、読まないでください。",
@@ -1331,6 +1339,8 @@ def _validate_finding_prompt(
             json.dumps(_finding_to_payload(finding), ensure_ascii=False, indent=2),
             "既存理由:",
             json.dumps(existing, ensure_ascii=False, indent=2),
+            "反対側の既存理由:",
+            json.dumps(opposite, ensure_ascii=False, indent=2),
             f"`{concrete_repo_root / 'memo'}` は読み書き禁止です。",
             "ファイル編集は禁止です。",
         ]
@@ -1461,6 +1471,15 @@ def _validate_reasons_payload(value: object) -> None:
     for index, reason in enumerate(value["reasons"]):
         if not isinstance(reason, str):
             raise ValueError(f"reasons[{index}] must be a string.")
+        if not reason.strip():
+            raise ValueError(f"reasons[{index}] must be a non-empty string.")
+        if _contains_speculative_reason_phrase(reason):
+            raise ValueError(f"reasons[{index}] contains speculative wording.")
+
+
+def _contains_speculative_reason_phrase(reason: str) -> bool:
+    """理由の根拠として禁止する推測表現を最小限に検出する。"""
+    return any(phrase in reason for phrase in _SPECULATIVE_REASON_PHRASES)
 
 
 def _validate_judge_findings_payload(value: object) -> None:

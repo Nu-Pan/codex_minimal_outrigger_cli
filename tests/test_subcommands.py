@@ -2730,6 +2730,55 @@ def test_review_oracles_finding_pipeline_schemas_are_canonical_files() -> None:
         ) in source
 
 
+def test_review_oracles_validate_finding_prompt_states_reason_principles(
+    tmp_path: Path,
+) -> None:
+    """所見検証 prompt は理由生成の 3 原則と反対側理由を伝える。"""
+    repo = _init_repo(tmp_path)
+    finding = review_oracles_module._Finding(
+        finding_id="FINDING-0001",
+        severity="fatal",
+        title="Finding",
+        oracle_path=str((repo / "oracles" / "spec.md").resolve()),
+        reason="指摘理由",
+        challenger_reasons=["妥当ではない既存理由"],
+        advocate_reasons=["妥当である既存理由"],
+    )
+
+    challenger_prompt = review_oracles_module._validate_finding_prompt(
+        repo,
+        finding,
+        "challenger",
+    )
+    advocate_prompt = review_oracles_module._validate_finding_prompt(
+        repo,
+        finding,
+        "advocate",
+    )
+
+    for prompt in [challenger_prompt, advocate_prompt]:
+        assert "理由には具体的な根拠を必ず含めてください。" in prompt
+        assert "推測だけを根拠にした理由は返さないでください。" in prompt
+        assert "対応する反対側理由への反論を含めてください。" in prompt
+        assert "反対側の既存理由:" in prompt
+
+    assert '"妥当である既存理由"' in challenger_prompt
+    assert '"妥当ではない既存理由"' in advocate_prompt
+
+
+def test_review_oracles_reasons_payload_rejects_empty_and_speculative_reasons() -> None:
+    """所見検証理由 payload は空白理由と禁止された推測表現を拒否する。"""
+    review_oracles_module._validate_reasons_payload(
+        {"reasons": ["spec.md の記述と実装の条件分岐が一致しないため。"]}
+    )
+
+    for reason in ["", "   ", "仕様違反かもしれない。", "不整合の可能性がある。"]:
+        with pytest.raises(ValueError, match="reasons\\[0\\]"):
+            review_oracles_module._validate_reasons_payload(
+                {"reasons": [reason]}
+            )
+
+
 def test_review_oracles_uses_finding_pipeline_schemas(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
