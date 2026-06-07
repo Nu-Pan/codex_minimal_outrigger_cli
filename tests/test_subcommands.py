@@ -9586,11 +9586,30 @@ def test_cmoc_apply_fork_help_exposes_oracle_repeat_options() -> None:
         stderr=subprocess.PIPE,
     )
 
-    assert "--repeat-investigate-" in result.stdout
-    assert "--repeat-improove-fix" in result.stdout
+    assert "--apply-loop" in result.stdout
+    assert "--improove-fixing" in result.stdout
     assert "--scope" in result.stdout
     assert "-s" in result.stdout
     assert "--full" not in result.stdout
+
+
+def test_cmoc_apply_fork_repeat_validation_reports_oracle_option_names() -> None:
+    """apply fork の回数検証メッセージは oracle の正式オプション名を案内する。"""
+    with pytest.raises(CmocError) as apply_loop_error:
+        apply_module._validate_repeat_options(-1, 0)
+    assert "--apply-loop" in "\n".join(apply_loop_error.value.actions)
+    assert "--repeat-investigate-and-fix" not in "\n".join(
+        apply_loop_error.value.actions,
+    )
+
+    with pytest.raises(CmocError) as fixing_list_loop_error:
+        apply_module._validate_repeat_options(0, -1)
+    assert "--improove-fixing-list-loop" in "\n".join(
+        fixing_list_loop_error.value.actions,
+    )
+    assert "--repeat-improove-fixing-list" not in "\n".join(
+        fixing_list_loop_error.value.actions,
+    )
 
 
 def test_cmoc_review_oracles_rejects_too_many_issue_list_improvements() -> None:

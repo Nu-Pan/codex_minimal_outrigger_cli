@@ -617,8 +617,8 @@ def _validate_repeat_options(
         raise CmocError(
             "調査・修正ループ回数に負の値は指定できません。",
             [
-                "`--repeat-investigate-and-fix` には 0 以上の整数を指定してください。",
-                "既定の上限を使う場合は `--repeat-investigate-and-fix` を省略してください。",
+                "`--apply-loop` には 0 以上の整数を指定してください。",
+                "既定の上限を使う場合は `--apply-loop` を省略してください。",
             ],
             f"repeat_investigate_and_fix: {repeat_investigate_and_fix}",
         )
@@ -626,8 +626,8 @@ def _validate_repeat_options(
         raise CmocError(
             "要修正点リスト改善ループ回数に負の値は指定できません。",
             [
-                "`--repeat-improove-fixing-list` には 0 以上の整数を指定してください。",
-                "既定の上限を使う場合は `--repeat-improove-fixing-list` を省略してください。",
+                "`--improove-fixing-list-loop` には 0 以上の整数を指定してください。",
+                "既定の上限を使う場合は `--improove-fixing-list-loop` を省略してください。",
             ],
             f"repeat_improove_fixing_list: {repeat_improove_fixing_list}",
         )

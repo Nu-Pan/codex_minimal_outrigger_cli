@@ -91,12 +91,14 @@ def review_oracles_command(
 def apply_fork_command(
     repeat_investigate_and_fix: int = typer.Option(
         5,
+        "--apply-loop",
         "--repeat-investigate-and-fix",
         "--repeat",
         "-r",
     ),
     repeat_improove_fixing_list: int = typer.Option(
         3,
+        "--improove-fixing-list-loop",
         "--repeat-improove-fixing-list",
     ),
     scope: Literal["rolling", "session", "full"] = typer.Option(
