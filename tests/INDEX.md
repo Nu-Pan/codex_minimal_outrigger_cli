@@ -104,27 +104,27 @@
 
 ## Summary
 
-- `tests/test_repo.py` は `src/commons/repo.py` の Git 共通処理を検証する回帰テスト群の入口です。
-- .cmoc の ignore、repo root 検出、oracle / implementation の列挙と差分検出、コミット可否を扱います。
-- session state の永続化、apply process id、cmoc 予約ブランチ判定、active session 判定の境界条件も押さえます。
+- `tests/test_repo.py` は `src/commons/repo.py` の git 共通処理を検証する回帰テスト群の入口です。
+- `.cmoc` の ignore 保証、repo root 検出、実装ファイルと正本ファイルの列挙・変更検出を中心に扱います。
+- session state、apply process id、`cmoc` ブランチ判定、active session 判定の境界条件も確認します。
 
 ## Read this when
 
-- repo root 検出、`.cmoc` の ignore 保証、tracked `.cmoc` の untrack 挙動を確認したいとき。
-- `list_oracle_files` / `list_implementation_files` の列挙条件や、`changed_*` / `has_deleted_*` の差分判定を追いたいとき。
-- `commit_if_changed` や `assert_no_uncommitted_changes` のコミット可否・拒否条件を確認したいとき。
-- session state の読み書き、`active_session_ids_for_home_branch`、`is_cmoc_branch`、`is_cmoc_reserved_branch` の判定条件を確認したいとき。
+- repo root の検出や `.cmoc` の ignore 保証の挙動を確認したいとき。
+- `list_oracle_files` / `list_implementation_files` や変更検出の境界条件を調べたいとき。
+- `commit_if_changed` のコミット可否や、失敗時に index と HEAD を壊さない挙動を確認したいとき。
+- session state の読み書き、`active_session_ids_for_home_branch`、`is_cmoc_branch` の判定条件を確認したいとき。
 
 ## Do not read this when
 
-- `src/commons/repo.py` の実装そのものや Git コマンドの細部だけを追いたいとき。
-- cmoc の CLI サブコマンドや実行フローを確認したいとき。
-- `tests/test_indexing.py` や `tests/test_subcommands.py` など、別の回帰テスト群を探しているとき。
-- `INDEX.md` の生成ルール全体や `oracles` 側の正本仕様だけを確認したいとき。
+- `src/commons/repo.py` の実装そのものを直接追いたいとき。
+- 個別の git ユーティリティの使い方だけを確認したいとき。
+- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
+- `session` や `apply` など、repo 共通処理以外のサブコマンド仕様を調べたいとき。
 
 ## hash
 
-- 082c3826f1de6c18f160f3005758acb27fe3a73ce29422a78852094dd6b68e90
+- bb390588c23dd1bacb0789d1d62b4d60fbea0fa305061263baedef04ad3ffe5d
 
 # `test_report_files.py`
 
@@ -162,18 +162,18 @@
 
 - `run_command()` を中心にしたサブコマンド横断の共通制御、終了コード、例外処理を確認したいとき。
 - `init` / `session` / `apply` / `review oracles` の主要フロー、復旧、cleanup、branch と worktree の状態遷移を横断的に追いたいとき。
-- CLI 登録、補完委譲、起動経路、ログ出力、経過時間サマリー、エラーレポートの整合性を把握したいとき。
-- review oracles の prompt、Structured Output schema、評価 payload 検証、改善ループ、レポート生成の回帰をまとめて確認したいとき。
+- CLI 登録、自動補完の委譲、起動経路、ログ出力、経過時間サマリー、エラーレポートの整合性を把握したいとき。
+- review oracles の prompt、Structured Output schema、評価 payload 検証、改善ループ、レポート生成の回帰をまとめて確認したいとき.
 
 ## Do not read this when
 
-- `tests/test_codex.py` や `tests/test_repo.py` など、別の回帰テスト群の内容を確認したいとき。
+- `tests/test_codex.py` や `tests/test_repo.py` など、別の回帰テスト群の内容だけを確認したいとき。
 - `src/sub_commands/apply/`、`src/sub_commands/session/`、`src/sub_commands/review/` の個別実装だけを追いたいとき。
 - cmoc の利用手順や各サブコマンドの引数仕様だけを確認したいとき。
 
 ## hash
 
-- f40533449f083e12e29c7fd19e9b444ba6963c097eb972ca8bef1d0bd5e928a2
+- 29bbc53236b4312cca6fd20b772721fc0a267907df519c231341608c08da137f
 
 # `test_timestamps.py`
 

@@ -146,14 +146,14 @@
 
 ## Do not read this when
 
-- `src/commons/repo.py` の個々のヘルパー実装や例外文言だけを確認したいとき。
+- `src/commons/repo.py` の個々のヘルパー実装や例外メッセージだけを確認したいとき。
 - `CmocError` の整形、`codex exec` 呼び出し、時間計測など、別の共通モジュールを確認したいとき。
 - サブコマンド固有の業務ロジックや CLI 引数だけを追いたいとき。
 - `INDEX.md` の生成ルールや `oracles` 側の正本仕様だけを確認したいとき。
 
 ## hash
 
-- 8118d89dc7bd42a12862cecd08897b3ae8f2a1b28489afd10fcf3eae99dfdbf3
+- 7fc97df4692cfb4558cb8995c0f78f99e2a10e236d92769f508a5090b907f72e
 
 # `report_files.py`
 

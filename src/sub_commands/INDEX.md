@@ -25,9 +25,9 @@
 
 ## Summary
 
-- `src/sub_commands/apply` は `cmoc apply` 系サブコマンドの入口ディレクトリで、`__init__.py` と `fork.py` / `join.py` / `abandon.py` への案内をまとめる場所です。
-- `__init__.py` はパッケージ宣言のみ、`fork.py` は apply run の開始と不整合調査・修正・レポート生成、`join.py` は完了済み apply branch の取り込み、`abandon.py` は未 join の apply run の破棄を担当します。
-- この階層は、`cmoc apply` の役割分担を確認してから個別モジュールへ進むための目次です。
+- `src/sub_commands/apply` は `cmoc apply` 系サブコマンドの入口ディレクトリで、`__init__.py` と `fork.py` / `join.py` / `abandon.py` への導線をまとめる階層です。
+- `fork.py` は apply run の開始と不整合調査・修正・レポート生成、`join.py` は完了済み apply branch の取り込み、`abandon.py` は未 join の apply run の破棄を担当します。
+- この階層は、`cmoc apply` の役割分担を把握してから個別モジュールへ進むための目次です。
 
 ## Read this when
 
@@ -37,13 +37,13 @@
 
 ## Do not read this when
 
-- 読むべき個別モジュールがすでに決まっていて、この階層の案内が不要なとき。
+- すでに読むべき個別モジュールが決まっていて、この階層の案内が不要なとき。
 - `cmoc apply fork` / `join` / `abandon` の詳細な実行フローや状態遷移だけを確認したいとき。
 - `cmoc apply` の正本仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/` 側を直接読むべきとき。
 
 ## hash
 
-- 7696dbab2f5757e6dd997a93de51462a740945b55606c6d6174262af38a18efb
+- a453e496ac0f75f4eb325faadc4feb18625a2c71431fad0d889be1d527032ef7
 
 # `indexing.py`
 
