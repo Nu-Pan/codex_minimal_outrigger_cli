@@ -76,7 +76,7 @@
 
 ## Summary
 
-- `/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_08-51_06_000000872/2026-05-31_08-52_22_000000612/src/sub_commands/apply/join.py` は `cmoc apply join` の本体実装です。
+- `src/sub_commands/apply/join.py` は `cmoc apply join` の本体実装です。
 - 完了済みの apply branch を session branch へ `git merge --no-ff` で取り込み、state 検証、想定外差分の判定、`INDEX.md` conflict の扱いまでまとめて実行します。
 - merge 後は session state を `ready` に戻し、最後に joined した snapshot の記録、apply branch / worktree の安全な削除、warning の出力を行います。
 
@@ -88,7 +88,7 @@
 
 ## Do not read this when
 
-- `/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_08-51_06_000000872/2026-05-31_08-52_22_000000612/src/sub_commands/apply/join.py` ではなく、`src/sub_commands/apply/__init__.py` だけで十分なとき。
+- `src/sub_commands/apply/__init__.py` だけで十分なとき。
 - `cmoc apply fork` や `cmoc apply abandon` の実装だけを追いたいとき。
 - 実装ではなく、`oracles/docs/app_specs/sub_commands/` 側の `cmoc apply join` 仕様断片だけを確認したいとき。
 

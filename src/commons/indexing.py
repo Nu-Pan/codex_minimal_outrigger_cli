@@ -349,7 +349,7 @@ def _write_index_if_needed(
             # Without storing non-spec metadata in INDEX.md, regenerate these
             # entries so file/directory replacement cannot silently reuse text.
             and digest != _EMPTY_SHA256_DIGEST
-            and _entry_format_is_valid(existing, child.name, digest)
+            and _entry_format_is_valid(repo_root, existing, child.name, digest)
         ):
             entry_items.append(existing)
         else:
@@ -890,11 +890,16 @@ def _entry_hash(entry: str) -> str | None:
     return match.group(1)
 
 
-def _entry_format_is_valid(entry: str, name: str, digest: str) -> bool:
+def _entry_format_is_valid(
+    repo_root: Path,
+    entry: str,
+    name: str,
+    digest: str,
+) -> bool:
     """既存目次ブロックが仕様の固定フォーマットに一致するか判定する。"""
     # 見出しと 4 セクションの順序、説明欄の bullet 形式まで検査する。
     # Structured Output schema は空配列を許容するため、bullet 0 件も有効。
-    if _entry_has_known_stale_routing_text(entry):
+    if _entry_has_known_stale_routing_text(repo_root, entry):
         return False
 
     encoded_name = _encode_index_token(name)
@@ -921,18 +926,11 @@ def _entry_format_is_valid(entry: str, name: str, digest: str) -> bool:
     return pattern.match(entry) is not None
 
 
-def _entry_has_known_stale_routing_text(entry: str) -> bool:
+def _entry_has_known_stale_routing_text(repo_root: Path, entry: str) -> bool:
     """既知の古い routing text を含む entry を弾く。"""
     # `cmo apply fork` のような誤誘導や、過去の仕様配置に基づく存在しない
-    # oracles path は hash が最新でも再生成対象にする。
-    return (
-        re.search(
-            r"(?<![A-Za-z0-9_-])cmo\s+(?:init|session|review|apply)\b",
-            entry,
-        )
-        is not None
-        or "oracles/app_specs/" in entry
-    )
+    # oracles path、別 worktree の絶対 path は hash が最新でも再生成対象にする。
+    return _normalize_known_index_routes(repo_root, entry) != entry
 
 
 def _safe_index_texts(repo_root: Path, values: list[str]) -> list[str]:
@@ -957,6 +955,7 @@ def _safe_index_text(repo_root: Path, value: str) -> str:
 def _normalize_known_index_routes(repo_root: Path, text: str) -> str:
     """INDEX.md 用 text に含まれる既知の古い表記を現在の表記へ寄せる。"""
     text = _normalize_known_command_names(text)
+    text = _normalize_absolute_repository_paths(repo_root, text)
     stale_prefix = "oracles/app_specs/"
     current_prefix = "oracles/docs/app_specs/"
     if stale_prefix not in text:
@@ -966,6 +965,39 @@ def _normalize_known_index_routes(repo_root: Path, text: str) -> str:
     if not (repo_root / "oracles/docs/app_specs").exists():
         return text
     return text.replace(stale_prefix, current_prefix)
+
+
+def _normalize_absolute_repository_paths(repo_root: Path, text: str) -> str:
+    """INDEX.md の説明文に混入した repository 絶対 path を相対 path へ寄せる。"""
+
+    def replace(match: re.Match[str]) -> str:
+        candidate = match.group(0)
+        replacement = _relative_repository_path_for_text(repo_root, candidate)
+        if replacement is None:
+            return candidate
+        return replacement
+
+    return re.sub(r"/[A-Za-z0-9._~!$&'()*+,;=:@%/-]+", replace, text)
+
+
+def _relative_repository_path_for_text(
+    repo_root: Path,
+    candidate: str,
+) -> str | None:
+    """説明文内の絶対 path が repo 内項目を指すなら repo 相対表記を返す。"""
+    candidate_path = Path(candidate)
+    resolved_repo_root = repo_root.resolve()
+    try:
+        return candidate_path.resolve().relative_to(resolved_repo_root).as_posix()
+    except (OSError, ValueError):
+        pass
+
+    parts = candidate_path.parts
+    for start in range(1, len(parts)):
+        relative_candidate = Path(*parts[start:])
+        if relative_candidate.parts and (repo_root / relative_candidate).exists():
+            return relative_candidate.as_posix()
+    return None
 
 
 def _normalize_known_command_names(text: str) -> str:

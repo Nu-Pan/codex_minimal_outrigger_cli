@@ -1425,6 +1425,106 @@ def test_maintain_indexes_regenerates_known_cmoc_command_typo(
     assert "cmoc apply fork" in content
 
 
+def test_maintain_indexes_regenerates_stale_absolute_repository_path(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """hash が最新でも別 worktree の絶対 path は repo 相対 path へ更新する。"""
+    repo = _init_repo(tmp_path)
+    target = repo / "src/sub_commands/apply/join.py"
+    target.parent.mkdir(parents=True)
+    target.write_text("join implementation\n", encoding="utf-8")
+    readme_digest = hashlib.sha256(
+        (repo / "README.md").read_bytes()
+    ).hexdigest()
+    digest = hashlib.sha256(target.read_bytes()).hexdigest()
+    stale_absolute_path = (
+        tmp_path
+        / "old-worktree"
+        / "src/sub_commands/apply/join.py"
+    ).as_posix()
+    relative_path = "src/sub_commands/apply/join.py"
+    (repo / "src/sub_commands/apply/INDEX.md").write_text(
+        "\n".join(
+            [
+                "# `join.py`",
+                "",
+                "## Summary",
+                "",
+                f"- `{stale_absolute_path}` は `cmoc apply join` の本体です。",
+                "",
+                "## Read this when",
+                "",
+                f"- `{stale_absolute_path}` の merge 手順を確認するとき。",
+                "",
+                "## Do not read this when",
+                "",
+                "- unrelated.",
+                "",
+                "## hash",
+                "",
+                f"- {digest}",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (repo / "INDEX.md").write_text(
+        "\n".join(
+            [
+                "# `README.md`",
+                "",
+                "## Summary",
+                "",
+                "- readme summary",
+                "",
+                "## Read this when",
+                "",
+                "- read readme",
+                "",
+                "## Do not read this when",
+                "",
+                "- skip readme",
+                "",
+                "## hash",
+                "",
+                f"- {readme_digest}",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "stale absolute index path")
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """再生成時にも混入した絶対 path は正規化される。"""
+        del args, kwargs
+        return json.dumps(
+            {
+                "summary": [
+                    f"`{stale_absolute_path}` は `cmoc apply join` の本体です。"
+                ],
+                "read_this_when": [
+                    f"`{stale_absolute_path}` の merge 手順を確認するとき。"
+                ],
+                "do_not_read_this_when": ["unrelated."],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    changed = maintain_indexes(repo)
+    content = (repo / "src/sub_commands/apply/INDEX.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert changed is True
+    assert stale_absolute_path not in content
+    assert f"`{relative_path}` は `cmoc apply join` の本体です。" in content
+    assert f"`{relative_path}` の merge 手順を確認するとき。" in content
+
+
 def test_maintain_indexes_normalizes_known_cmoc_command_typo_in_generated_text(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
