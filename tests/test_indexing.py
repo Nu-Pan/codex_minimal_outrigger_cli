@@ -20,6 +20,7 @@ from commons.indexing import _INDEX_OUTPUT_SCHEMA
 from commons.indexing import _index_maintenance_lock_path
 from commons.indexing import _locked_index_maintenance
 from commons.indexing import is_maintained_index_path
+from commons.indexing import is_maintained_index_path_at_commit
 from commons.indexing import maintain_indexes
 
 
@@ -217,6 +218,29 @@ def test_is_maintained_index_path_allows_ignored_index_file(
     _git(repo, "commit", "-m", "ignore index")
 
     assert is_maintained_index_path(repo, "INDEX.md") is True
+
+
+def test_is_maintained_index_path_at_commit_allows_ignored_index_file(
+    tmp_path: Path,
+) -> None:
+    """commit 時点判定も INDEX.md file 自身の ignore では除外しない。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text(
+        "INDEX.md\ndocs/INDEX.md\n",
+        encoding="utf-8",
+    )
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-m", "ignore index")
+    commit_hash = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    assert (
+        is_maintained_index_path_at_commit(repo, commit_hash, "INDEX.md")
+        is True
+    )
+    assert (
+        is_maintained_index_path_at_commit(repo, commit_hash, "docs/INDEX.md")
+        is True
+    )
 
 
 def test_maintain_indexes_reports_directory_iteration_failure(

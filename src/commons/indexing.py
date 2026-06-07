@@ -117,14 +117,14 @@ def is_maintained_index_path_at_commit(
     if _has_pruned_index_directory_ancestor(repo_root, repo_root / directory):
         return False
 
-    candidates = [relative_path]
+    candidates = []
     if directory.as_posix() != ".":
         candidates.append(directory.as_posix())
 
     from .repo import root_gitignored_paths_at_commit
 
     ignored = root_gitignored_paths_at_commit(repo_root, commit_hash, candidates)
-    return relative_path not in ignored and directory.as_posix() not in ignored
+    return directory.as_posix() not in ignored
 
 
 def _maintain_indexes_unlocked(
