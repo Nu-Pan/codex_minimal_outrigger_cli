@@ -9794,23 +9794,21 @@ def test_main_delegates_group_completion_probe_to_typer(
         assert expected_command in result.stdout
 
 
-def test_main_delegates_empty_completion_env_to_typer(
-    monkeypatch: MonkeyPatch,
+@pytest.mark.parametrize("complete_value", ["", "bash_complete", "invalid"])
+def test_main_silently_exits_for_unsupported_completion_instruction(
+    complete_value: str,
 ) -> None:
-    """_CMOC_COMPLETE が空文字でも cmoc 側で握りつぶさず Typer へ委譲する。"""
-    import main as main_module
+    """未対応の補完指示では通常 parse error を出さず静かに終了する。"""
+    result = _run_completion_probe(
+        [],
+        "cmoc ",
+        1,
+        complete_value=complete_value,
+    )
 
-    calls: list[dict[str, str]] = []
-
-    def fake_app(*, prog_name: str) -> None:
-        calls.append({"prog_name": prog_name})
-
-    monkeypatch.setenv("_CMOC_COMPLETE", "")
-    monkeypatch.setattr(main_module, "app", fake_app)
-
-    main_module.main()
-
-    assert calls == [{"prog_name": "cmoc"}]
+    assert result.returncode == 0
+    assert result.stdout == ""
+    assert result.stderr == ""
 
 
 def test_format_error_report_fills_empty_generic_detail() -> None:

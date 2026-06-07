@@ -133,6 +133,10 @@ def apply_abandon_command() -> None:
 def main() -> None:
     """Typer の parse error も共通エラーレポートへ変換して起動する。"""
     if _is_completion_probe():
+        if not _is_supported_completion_instruction(
+            os.environ.get("_CMOC_COMPLETE", ""),
+        ):
+            return
         app(prog_name="cmoc")
         return
 
@@ -159,6 +163,20 @@ def main() -> None:
 def _is_completion_probe() -> bool:
     """Click/Typer の自動補完プローブとして起動されたか判定する。"""
     return "_CMOC_COMPLETE" in os.environ
+
+
+def _is_supported_completion_instruction(instruction: str) -> bool:
+    """Typer が補完処理として解釈できる `_CMOC_COMPLETE` 値か判定する。"""
+    completion_instruction, separator, shell = instruction.partition("_")
+    if separator == "":
+        return False
+    return completion_instruction in {"complete", "source"} and shell in {
+        "bash",
+        "zsh",
+        "fish",
+        "powershell",
+        "pwsh",
+    }
 
 
 def _raise_missing_command_error_if_needed(arguments: list[str]) -> None:
