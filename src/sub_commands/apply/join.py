@@ -182,20 +182,18 @@ class _CleanupEvidence:
         self,
         *,
         report_saved: bool,
-        apply_result: str | None,
         warnings: list[str],
     ) -> None:
         """cleanup 判断で後続の state 変更前に参照する証跡を固定する。"""
         self.report_saved = report_saved
-        self.apply_result = apply_result
         self.warnings = warnings
 
 
 class _ChangedPathEntry:
-    """1 つの git diff entry が触る path 群。"""
+    """1 つの git diff entry の判定対象 path 群。"""
 
     def __init__(self, paths: list[str]) -> None:
-        """rename など複数 path を含む diff entry の比較対象を保持する。"""
+        """想定外差分判定に使う repo 相対 path を保持する。"""
         self.paths = paths
 
 
@@ -386,7 +384,7 @@ def _changed_path_entries_between(
     base_commit: str,
     branch_name: str,
 ) -> list[_ChangedPathEntry]:
-    """base..branch の変更 entry が触る path 群を返す。"""
+    """base..branch の変更 entry ごとの判定対象 path 群を返す。"""
     result = run_git(
         repo_root,
         [
@@ -403,11 +401,10 @@ def _changed_path_entries_between(
     entries: list[_ChangedPathEntry] = []
     for status, paths in git_name_status_entries(result.stdout):
         if paths:
-            if status.startswith("R"):
-                entries.append(_ChangedPathEntry(paths))
-            else:
-                # copy は source を変更しないため、変更後 path を対象にする。
-                entries.append(_ChangedPathEntry([paths[-1]]))
+            if status.startswith("D"):
+                continue
+            # rename/copy は source ではなく変更後 path を対象にする。
+            entries.append(_ChangedPathEntry([paths[-1]]))
     return entries
 
 
@@ -440,6 +437,8 @@ def _is_apply_branch_forbidden_path(path: str) -> bool:
     """apply branch 側の正規成果物として扱わない path か判定する。"""
     return (
         _is_oracle_path(path)
+        or path == "README.md"
+        or path == "AGENTS.md"
         or path == ".cmoc"
         or path.startswith(".cmoc/")
         or path == ".agents"
@@ -758,8 +757,8 @@ def _snapshot_cleanup_evidence(
     repo_root: Path,
     join_state: _JoinState,
 ) -> _CleanupEvidence:
-    """apply artifact 削除前に report/result 保存済み証跡を取得する。"""
-    report_path, metadata = _find_apply_report(repo_root, join_state.apply_branch)
+    """apply artifact 削除前に report 保存済み証跡を取得する。"""
+    report_path, _metadata = _find_apply_report(repo_root, join_state.apply_branch)
     warnings: list[str] = []
     if report_path is None:
         warnings.append(
@@ -768,20 +767,11 @@ def _snapshot_cleanup_evidence(
         )
         return _CleanupEvidence(
             report_saved=False,
-            apply_result=None,
             warnings=warnings,
         )
 
-    result = metadata.get("result")
-    result_saved = isinstance(result, str) and result.strip() != ""
-    if not result_saved:
-        warnings.append(
-            "apply cleanup skipped: saved apply report does not contain result "
-            f"metadata: {report_path}"
-        )
     return _CleanupEvidence(
         report_saved=True,
-        apply_result=result if result_saved else None,
         warnings=warnings,
     )
 
@@ -908,12 +898,10 @@ def _cleanup_preconditions_hold(
         return False
     if not cleanup_evidence.report_saved:
         return False
-    if (
-        cleanup_evidence.apply_result is None
-        or cleanup_evidence.apply_result.strip() == ""
-    ):
+    if not _session_state_has_saved_apply_result(session, join_state):
         warnings.append(
-            "apply cleanup skipped: saved apply report does not contain result metadata"
+            "apply cleanup skipped: session state does not contain saved apply "
+            "result metadata"
         )
         return False
     ancestor = run_git(
@@ -929,6 +917,17 @@ def _cleanup_preconditions_hold(
     if ancestor.returncode != 0:
         return False
     return True
+
+
+def _session_state_has_saved_apply_result(
+    session: dict[object, object],
+    join_state: _JoinState,
+) -> bool:
+    """session state schema に定義された apply result 保存済み情報を判定する。"""
+    return (
+        session.get("last_joined_apply_oracle_snapshot_commit")
+        == join_state.oracle_snapshot_commit
+    )
 
 
 def _is_safe_apply_worktree(repo_root: Path, path: Path) -> bool:

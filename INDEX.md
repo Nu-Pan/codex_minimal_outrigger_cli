@@ -77,32 +77,28 @@
 
 ## Summary
 
-- `bin/cmoc` は cmoc コマンドのシェル製エントリーポイントです。
-- スクリプト自身の位置から `<cmoc-root>` を解決し、`<cmoc-root>/.venv/bin/python` を実行 Python として使います。
-- 仮想環境 Python が使えるときは、全引数を `<cmoc-root>/src/main.py` にそのまま渡して `exec` します。
-- 自動補完プローブでも、Python が使える場合は同じく `src/main.py` を起動し、使えない場合は終了ステータス 1 で終わります。
-- 仮想環境 Python が見つからない、または実行できないときは、日本語の構造化エラー、セットアップ手順、必要な実行ファイル、簡易 Call stack を標準エラーに出します。
-- `line_number_of` は、エラー表示用の Call stack に必要な行番号を求める補助関数です。
+- `bin/` は `cmoc` コマンドのシェル製エントリーポイントを置く場所です。
+- `bin/cmoc` は `<cmoc-root>/.venv/bin/python` を使って `src/main.py` を起動し、通常実行では全引数をそのまま渡します。
+- 仮想環境 Python が利用できない場合は、日本語の構造化エラー、セットアップ手順、必要な実行ファイル、簡易 Call stack を標準エラーに出します。
+- `_CMOC_COMPLETE` が設定された自動補完プローブ時も同じ Python 可否判定を行い、使える場合は `src/main.py` を起動します。
 
 ## Read this when
 
-- `cmoc` がどの Python で `src/main.py` を起動するか確認したいとき。
-- `_CMOC_COMPLETE` が設定された自動補完プローブ時の分岐を確認したいとき。
-- 仮想環境 Python が無い、または実行できない場合のエラー文面、終了ステータス、復旧手順を確認したいとき。
+- `cmoc` がどの Python を使って起動するか確認したいとき。
+- 自動補完プローブ `_CMOC_COMPLETE` の分岐を確認したいとき。
+- 仮想環境 Python が見つからない、または実行できない場合のエラー文面、終了ステータス 1、復旧手順を確認したいとき。
 - `src/main.py` へ引数をそのまま渡す流れを確認したいとき。
 - エラー表示に出る簡易 Call stack の行番号の取り方を追いたいとき。
 
 ## Do not read this when
 
-- `src/main.py` 以降の Python 実装や共通処理の仕様だけを確認したいとき。
-- `cmoc` の各サブコマンド本体や引数解析の仕様だけを確認したいとき。
-- pytest などのテスト観点やテストケースの整理だけを確認したいとき。
-- `oracles` 側の仕様断片や `INDEX.md` の生成ルールだけを確認したいとき。
-- 仮想環境の作成手順そのものではなく、依存関係や Python パッケージ構成を確認したいとき。
+- `src/main.py` のサブコマンド登録や Python 側の実装だけを確認したいとき。
+- 仮想環境の作成手順や導入手順だけを確認したいとき。
+- `bin/cmoc` ではなく、他のディレクトリのルーティング文書を確認したいとき。
 
 ## hash
 
-- 266af899cfd1d573ae1697ad75b016e90b859fb186f232969b030804a465f247
+- 06c5f5f4145b6aa6d3f881761b05f09b4fdf00336454e1336db384b724d37e98
 
 # `codex_minimal_outrigger_cli.code-workspace`
 
@@ -132,25 +128,25 @@
 
 ## Summary
 
-- `cmoc` の正本仕様断片をまとめる `oracles` ディレクトリの入口です。
-- 配下の `docs` から、開発ルール、アプリ仕様、代替案、各種共通仕様へたどれます。
-- このディレクトリ自体はルーティング用で、詳細仕様は下位の文書に分かれています。
+- この `oracles` ディレクトリのルーティング文書で、`docs/` と `schemas/` への入口を案内します。
+- `docs/` は人間向けの正本仕様断片、`schemas/` は Structured Output schema の置き場として扱います。
+- 個別文書に入る前に、参照先の系統を切り分けるための目次です。
 
 ## Read this when
 
-- `cmoc` の正本仕様断片がどこにあるか、全体の入口を把握したいとき。
-- `oracles` 配下の `docs` 以下へどの順で進むべきかを整理したいとき。
-- `oracles` 全体の役割や、仕様断片の配置場所を俯瞰したいとき。
+- `oracles` 配下で、人間向けの仕様と機械向けのスキーマのどちらへ進むべきか整理したいとき。
+- `docs/` にある仕様断片と、`schemas/` にある Structured Output schema の役割分担を把握したいとき。
+- 目的に応じて、どの下位ディレクトリの文書を読むべきか迷ったとき。
 
 ## Do not read this when
 
-- 個別のサブコマンド仕様や設計判断だけを確認したいときは、このディレクトリではなく配下の該当文書を直接読むべきです。
-- 実装コードやテストコードの作業だけで足りるときは、この目次を読む必要はありません。
-- `oracles` 配下のどの仕様を読むべきか自明な場合は、入口ではなく目的のファイルへ直接進むべきです。
+- すでに目的の文書やスキーマの場所が分かっていて、`docs/` や `schemas/` の下位ファイルへ直接進めるとき。
+- `oracles` 配下の個別仕様や Structured Output schema だけを確認したいとき。
+- この階層ではなく、リポジトリ全体の運用ルールや別ディレクトリの目次だけを確認したいとき。
 
 ## hash
 
-- fa379c76438c952476ee4ff0ca92f2a3c97fbb392e45c3043f50318524144f11
+- 138646edaf0942b63715d5888a0f9c984718ab72b096f9caf6f5c09e70bc4c42
 
 # `pyproject.toml`
 
@@ -180,25 +176,27 @@
 
 ## Summary
 
-- `src` は cmoc 本体の実装をまとめるルートディレクトリです。
-- `main.py` に CLI の起点があり、`commons/` に共通基盤、`sub_commands/` に各サブコマンド実装が入っています。
-- このディレクトリは、機能ごとの実装へ進むための最上位ルーティング地点です。
+- この `src` ディレクトリは、cmoc の CLI 入口、共通基盤、サブコマンド実装をまとめる本体コードの入口です。
+- `main.py` は Typer のルート構成と例外整形を担い、`commons/` は共有モジュール群、`sub_commands/` は各コマンド本体へのルーティングを担います。
+- 個別実装へ進む前の案内として、この階層でどの入口から読むべきかを切り分けるための目次です。
 
 ## Read this when
 
-- `cmoc` 本体の実装入口として、`src` 全体の役割と構成を把握したいとき。
-- CLI エントリポイント、共通基盤モジュール、サブコマンド実装の配置を俯瞰したいとき。
-- `main.py`、`commons/`、`sub_commands/` のどこを読むべきか切り分けたいとき。
+- cmoc の CLI 全体構成や起動経路を把握したいとき。
+- 共通モジュールの役割分担や、サブコマンド実装の入口を探したいとき。
+- `src/main.py`、`src/commons/`、`src/sub_commands/` のどこへ進むべきか迷ったとき。
+- 実装やレビューの前に、この階層の責務を整理したいとき。
 
 ## Do not read this when
 
-- cmoc の利用手順や `oracles` 側の正本仕様だけを確認したいとき。
-- 個別の実装ファイル 1 つだけを追いたいときで、ディレクトリ全体の案内が不要なとき。
-- テストコードや README など、`src` 以外の資料を確認したいとき。
+- すでに `src/main.py` や特定の `src/commons/*`、`src/sub_commands/*` を直接読む対象が決まっているとき。
+- 個別コマンドの引数仕様や処理本体だけを確認したいとき。
+- `oracles` 側の正本仕様や利用手順だけを確認したいとき。
+- この階層ではなく、より下位の `INDEX.md` を直接参照したいとき。
 
 ## hash
 
-- 39ad2bfdba6deedd287fea2f1f934b0a60a9e6b026a8c61fd68b59222a51b5f9
+- 8ee74181dce4af9dc2fb35a280d4e1793c6f394d14daa9e74c929876e95d29b7
 
 # `test.sh`
 
@@ -227,29 +225,22 @@
 
 ## Summary
 
-- `tests` は cmoc の pytest 回帰テストをまとめるディレクトリで、共通設定と機能別テストを置きます。
-- `conftest.py` は `src` を import path に追加し、テストから本体モジュールを直接 import できるようにします。
-- `test_codex.py` は `commons.codex` の `run_codex_exec`、Structured Output、再試行、quota / resume、oracle 保護を検証します。
-- `test_indexing.py` は `INDEX.md` 自動生成と更新、除外条件、再利用判定、排他 lock を検証します。
-- `test_repo.py` は repo root 検出、`.cmoc` の ignore 保証、差分検出、session / apply 状態管理を検証します。
-- `test_subcommands.py` は `init` / `session` / `apply` / `review` の制御フローと CLI 登録を検証します。
-- `test_report_files.py` と `test_timestamps.py` はタイムスタンプ生成、経過時間表示、レポート保存の境界を検証します。
-- `test_file_naming.py` は旧ルーティングファイルの残存がないことを検証します。
+- `tests/` は cmoc の pytest テスト群の入口で、共通 fixture と各機能領域の回帰テストをまとめるディレクトリです。
+- `conftest.py` が import path の共通設定を担い、各 `test_*.py` が `commons`、`sub_commands`、CLI 周辺の個別仕様を検証します。
+- 個別テストへ入る前に、何を守るテスト群かを切り分けるための目次として機能します。
 
 ## Read this when
 
-- pytest の共通設定や `src` への import path 追加方法を確認したいとき。
-- `commons.codex`、`commons.indexing`、`commons.repo`、`commons.report_files`、`commons.timestamps`、`commons.timing` の回帰テスト範囲を確認したいとき。
-- `cmoc` のサブコマンド群や `INDEX.md` メンテナンスの期待挙動を変更・レビューしたいとき。
-- 旧 `routing.md` / `ROUTING.md` を使わない方針や、テスト命名の前提を確認したいとき。
+- pytest 用の共通設定と、`tests/` 配下の回帰テスト全体の入口を把握したいとき。
+- `commons.codex`、`commons.indexing`、`commons.repo`、`commons.report_files`、`commons.timestamps`、`sub_commands` 周辺のどのテストを読むべきか整理したいとき。
+- INDEX 生成、ファイル命名規則、CLI 横断制御、タイムスタンプやレポート保存の境界を確認したいとき。
 
 ## Do not read this when
 
-- 実装本体のロジックだけを追いたいとき。
-- `oracles` の正本仕様や個別サブコマンドの利用手順だけを確認したいとき。
-- テストの具体的な fixture、mock、補助関数の実装詳細だけを探したいとき。
-- `memo` や編集禁止ファイルの扱いを確認したいとき。
+- 読みたい個別テストファイルがすでに決まっていて、`conftest.py` や各 `test_*.py` へ直接進めるとき。
+- pytest の共通設定よりも、本番実装の `src/` 側を先に追いたいとき。
+- `__pycache__/` のような生成物や、テスト以外の運用ファイルだけを確認したいとき。
 
 ## hash
 
-- 9bef87e975733f09fb4f2e1e1e1df16c3eb44235b5b7c1a46dc2d273c1b2a7ad
+- bf4132e1ddd44b377cfc6d39e6bbddc70a3ac1420afabc0bbab4cb620f9eea21

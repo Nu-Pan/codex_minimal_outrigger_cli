@@ -28,7 +28,7 @@ print_missing_venv_error() {
         printf '%s\n' "  at print_missing_venv_error ($0:$(line_number_of "^print_missing_venv_error[(][)] [{]$"))"
         printf '%s\n' "  at require_venv_python ($0:$(line_number_of "^    print_missing_venv_error$"))"
         printf '%s\n' "  at main ($0:$(line_number_of "^require_venv_python$"))"
-    } >&2
+    }
 }
 
 require_venv_python() {

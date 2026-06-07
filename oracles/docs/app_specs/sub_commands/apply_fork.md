@@ -2,12 +2,12 @@
 
 ## 概要
 
-- `cmoc apply fork` は、Codex CLI による調査・修正ループを実行する
-- この調査・修正ループは以下の状態を目標とする
+- `cmoc apply fork` は、Codex CLI による apply ループを実行する
+- この apply ループは以下の状態を目標とする
     - `<repo-root>` の実装が `<repo-root>/oracles` の正本仕様断片と一致している
     - `<repo-root>` の実装が最低限度の品質を満たしている
 - `cmoc apply fork` が正常に実行完了したからといって、目標達成が保証されるわけではない
-    - あくまで、調査・修正ループの実行し、目標達成のために努力する所までが `cmoc apply fork` の責任範囲である
+    - あくまで、apply ループの実行し、目標達成のために努力する所までが `cmoc apply fork` の責任範囲である
     - i.e. ベストエフォート的な振る舞いで良い
 - `cmoc apply fork` は `<cmoc-session-branch>` と作業用コピーを直接汚すことはしない
     - `<cmoc-apply-branch>` を作成し、そこにコミットを積み上げる
@@ -15,15 +15,15 @@
 ## 引数
 
 - 位置引数なし
-- オプション引数 `--repeat-investigate-and-fix` を受け取る
-- オプション引数 `--repeat-improove-fixing-list` を受け取る
 - オプション引数 `--scope={rolling|session|full}` を受け取る
     - ショートネームは `-s`
     - デフォルト値は `rolling`
+- オプション引数 `--apply-loop` を受け取る
+- オプション引数 `--improove-fixing-list-loop` を受け取る
 
 ## 事前条件
 
-以下の場合はエラー終了する。
+以下の場合はエラー終了する
 
 - 現在のブランチが `<cmoc-session-branch>` ではない
 - 対応する `<cmoc-session-state-file>` が存在しない
@@ -34,15 +34,11 @@
 ## 実行作業
 
 1. `<repo-root>/.cmoc` が git の追跡対象外であることを保証する
-2. 現在の `<cmoc-session-branch>` HEAD を `<oracle-snapshot-commit>` として取得する
-3. 一意な `<apply-run-id>` を生成する
-4. `<oracle-snapshot-commit>` から `<cmoc-apply-branch>` を作成する
-5. `<cmoc-apply-branch>` を checkout した専用 `<cmoc-apply-worktree>` を作成する
-6. `<cmoc-session-state-file>` の状態を更新
-7. `<cmoc-apply-worktree>` 上で調査・修正ループを実行する
-    1. 調査対象となる oracles ファイル・実装ファイルを列挙する
+2. run の隔離実行を開始する
+3. apply ループ
+    1. 調査対象となるファイルを列挙する
     2. Codex CLI に、列挙したファイルリストを元に要修正点をリストアップさせる
-    3. 要修正点リスト改善ループ (最大 M 回)
+    3. 要修正点リスト改善ループ
         1. Codex CLI に、要修正点リストを改善させる
         2. 改善点がなければここで要修正点リスト改善ループを抜ける
         3. 要修正点リスト改善ループ先頭に戻る
@@ -51,30 +47,29 @@
         1. 要修正点 1 つに対する修正作業を Codex CLI に依頼する
         2. `<repo-root>/oracles` などの編集禁止ディレクトリに未コミット差分が有る場合はエラー終了
         3. 全ての未コミット差分を git にコミット（コミットメッセージは Codex CLI で適切なものを生成）
-    6. 調査・修正ループ先頭に戻る
-8. `<cmoc-session-state-file>` の状態を更新
-9. 作業結果をレポートする
+    6. apply ループ先頭に戻る
+4. `<cmoc-session-state-file>` の状態を更新
+5. 作業結果をレポートする
+
+### 「run の隔離実行を開始する」とは
+
+- それ以降の実際の作業を `<cmoc-review-worktree>` 上で隔離実行することを指す
+- 詳しくは `<cmoc-root>/oracles/docs/app_specs/run_isolation.md` を参照すること
 
 ## `cmoc apply fork` の責務境界
 
-- `cmoc apply fork` の責務は、指定された最大回数の範囲で調査・修正ループを実行し、その結果を人間が判断できる形でレポートすることである
+- `cmoc apply fork` の責務は、指定された最大回数の範囲でapply ループを実行し、その結果を人間が判断できる形でレポートすることである
 - `cmoc apply fork` は、要修正点が残っていないことを保証しない
 - `cmoc apply fork` は、全ての要修正点を漏れなく発見することは保証しない（あくまでベストエフォート的に振る舞う）
 - ループが回数上限に達した場合も、コマンド実行としては正常系として扱う
 - 回数上限到達後にさらに `cmoc apply fork` を再実行するか、`cmoc review oracles` や人手レビューを行うか、作業を打ち切るかは人間が判断する
 
-## 調査対象 oracles ファイルの snapshot 原則
-
-- `cmoc apply fork` 開始時点の `<cmoc-session-branch>` HEAD を `<oracle-snapshot-commit>` として固定し、その snapshot から `<cmoc-apply-branch>` を作成する。
-- `cmoc apply fork` 開始後に `<cmoc-session-branch>` が進んでも、実行中の apply はその変更を取り込まない。
-- `cmoc apply fork` の収束・未収束判定は `<oracle-snapshot-commit>` に対する判定である。
-
 ## `<cmoc-session-state-file>` 状態遷移
 
-- 調査・修正ループ開始直前
+- apply ループ開始直前
     - `apply.state` を `running` に遷移させる
     - `apply` セクションの各フィールドを、適切な値で更新する
-- 調査・修正ループ完了直後
+- apply ループ完了直後
     - i.e. 全ての処理が正常に完了出来た場合
     - `apply.state` を `completed` に遷移させる
     - `apply` セクションの各フィールドを、適切な値で更新する
@@ -83,25 +78,29 @@
 
 ## git worktree と編集操作
 
-- `<cmoc-apply-worktree>` 上の `oracles/` は編集禁止である。
-- Codex CLI による実装修正が `<apply-worktree>/oracles` を変更した場合はエラー終了する。
-- 一方、apply 実行中にユーザーが `<cmoc-session-branch>` 側で `oracles/` を編集・commit しても、実行中の apply には取り込まれない。
+- `<cmoc-apply-worktree>` 上の `oracles/` は編集禁止である
+- Codex CLI による実装修正が `<apply-worktree>/oracles` を変更した場合はエラー終了する
 
 ## ループの反復回数の決め方
 
-- 調査・修正ループ
-    - サブコマンドの引数 `--repeat-investigate-and-fix` で調査・修正ループの反復回数を受け取る
+- apply ループ
+    - サブコマンドの引数 `--apply-loop` で apply ループの反復回数を受け取る
     - デフォルト値は 5 とする
 - 要修正点リスト改善ループ
-    - サブコマンドの引数 `--repeat-improove-fixing-list` で要修正点リスト改善ループの反復回数を受け取る
+    - サブコマンドの引数 `--improove-fixing-list-loop` で要修正点リスト改善ループの反復回数を受け取る
     - デフォルト値は 3 とする
 
 ## 調査対象ファイルリストアップの仕様
 
-### 対象となる git スナップショット
+### 調査対象 oracles ファイルの snapshot 原則
 
-`cmoc apply fork` の評価対象は開始時点の `<oracle-snapshot-commit>` に固定される。
-つまり、例えば、 `cmoc apply fork` の実行開始後にユーザーによって oracles ファイルの編集が `<cmoc-session-branch>` へ commit された場合、その編集内容は既に実行開始した `cmoc apply fork` の調査対象には含まれない。
+- `<cmoc-apply-branch>` の HEAD を調査対象とする
+    - 本来的には `<cmoc-apply-fork-commit>` を調査対象のスナップショットとして扱うべきである
+    - 一方で、「git で過去バージョンのファイルを参照すること」といったような細かいルールは出来るだけ削減したい
+    - ところで、apply 系サブコマンドでは oracles ファイルの編集は行われないから、「`<cmoc-apply-fork-commit>` を調査対象とする」と「`<cmoc-apply-branch>` の HEAD を調査対象とする」は意味論的には同値である
+    - よって、`<cmoc-apply-branch>` の HEAD を調査対象として代替した
+- `cmoc apply fork` 開始後に `<cmoc-session-branch>` が進んでも、実行中の apply はその変更を取り込まない
+- `cmoc apply fork` の収束・未収束判定は `<cmoc-apply-fork-commit>` に対する判定である
 
 ### 候補ファイルリスト、ダーティフラグ
 
@@ -117,13 +116,13 @@
     - `--scope session` ならセッションスコープ
     - `--scope full` ならフルスコープ
 - ローリングスコープ
-    - 候補ファイルリストを、「最後に join された apply の `<oracle-snapshot-commit>`」から「今回の apply の `<oracle-snapshot-commit>`」の間に変更があったファイルだけに絞り込む
+    - 「前回の apply の `<cmoc-apply-join-commit>`」から「今回の apply の `<cmoc-apply-fork-commit>`」の間に変更があったファイルだけ、ダーティーフラグの初期値を true とする
     - そのセッションの最初の apply の場合は、セッションモードにフォールバックする
-    - i.e. 前回の `cmoc apply fork` 後に変更があったファイルについて、最低 1 回は調査が行われるということ
+    - i.e. `cmoc apply fork` 後に変更があったファイルについて、最低 1 回は調査が行われるということ
 - セッションスコープ
-    - 候補ファイルリストを、 `<session-start-commit>..<oracle-snapshot-commit>` で変更されたファイルだけに絞り込む
+    - `<cmoc-session-fork-commit>` から `<cmoc-apply-fork-commit>` の間で変更があったファイルだけ、ダーティーフラグの初期値を true とする
     - i.e. そのセッション上で変更のあったファイルについて、最低 1 回は調査が行われるということ
-- 全体適用スコープ
+- フルスコープ
     - 候補ファイル全てのダーティフラグを true で初期化する
     - i.e. 全候補ファイルについて、最低 1 回は調査が行われるということ
 
@@ -284,11 +283,10 @@
 - レポートの形式は markdown + YAML Front Matter とする
 - YAML Front Matter に必ず含める項目
     - `<cmoc-session-branch>`
+    - `<cmoc-session-fork-commit>`
     - `<cmoc-apply-branch>`
-    - apply worktree path
-    - oracle snapshot commit
-    - session head at apply start
-    - session head at apply finish
+    - `<cmoc-apply-fork-commit>`
+    - `<cmoc-apply-worktree>`
 - レポート本文に必ず含める項目
     - 作業結果
         - 収束 : 「検出された要修正点リストが空」によりループを終了した

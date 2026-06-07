@@ -2,6 +2,7 @@
 
 import json
 import subprocess
+import sys
 from _thread import LockType
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -25,12 +26,14 @@ class SubcommandLogContext:
     started: float
     quota_wait_seconds: float = 0.0
     lock: LockType = field(default_factory=Lock)
+    console_lock: LockType = field(default_factory=Lock)
 
 
 _CURRENT_LOG: ContextVar[SubcommandLogContext | None] = ContextVar(
     "cmoc_subcommand_log",
     default=None,
 )
+_FALLBACK_CONSOLE_LOCK = Lock()
 
 
 @contextmanager
@@ -65,11 +68,17 @@ def subcommand_log(
                     "subcommand_log": str(log_path),
                 },
             )
-            if command_path is None:
-                print("# cmoc subcommand start")
-            else:
-                print(f"# cmoc subcommand start: {command_path}")
-            print(f"- subcommand log: {log_path}")
+            heading = (
+                "# cmoc subcommand start"
+                if command_path is None
+                else f"# cmoc subcommand start: {command_path}"
+            )
+            write_console_block(
+                [
+                    heading,
+                    f"- subcommand log: {log_path}",
+                ]
+            )
             yield context
         finally:
             _CURRENT_LOG.reset(token)
@@ -91,6 +100,21 @@ def log_event(event: str, payload: dict[str, object]) -> None:
         with context.path.open("a", encoding="utf-8") as log_file:
             log_file.write(line)
             log_file.flush()
+
+
+def write_console_block(lines: list[str] | tuple[str, ...] | str) -> None:
+    """複数行の console markdown block を同一ロック下でまとめて出力する。"""
+    if isinstance(lines, str):
+        text = lines
+    else:
+        text = "\n".join(lines)
+    if text and not text.endswith("\n"):
+        text += "\n"
+    context = current_subcommand_log()
+    lock = context.console_lock if context is not None else _FALLBACK_CONSOLE_LOCK
+    with lock:
+        sys.stdout.write(text)
+        sys.stdout.flush()
 
 
 def add_quota_wait(duration_seconds: float) -> None:
@@ -214,12 +238,16 @@ def _subcommand_log_repo_root(repo_root: Path) -> Path:
 def _owning_repo_root_from_apply_worktree_path(repo_root: Path) -> Path | None:
     """cmoc apply worktree path から所有元 repo root を復元する。"""
     parts = repo_root.resolve().parts
-    marker = (".cmoc", "worktrees", "apply")
-    for index in range(0, len(parts) - len(marker)):
-        if parts[index : index + len(marker)] != marker:
-            continue
-        if len(parts) == index + len(marker) + 2:
-            return Path(*parts[:index])
+    markers = (
+        (".cmoc", "worktrees"),
+        (".cmoc", "worktrees", "apply"),
+    )
+    for marker in markers:
+        for index in range(0, len(parts) - len(marker)):
+            if parts[index : index + len(marker)] != marker:
+                continue
+            if len(parts) == index + len(marker) + 2:
+                return Path(*parts[:index])
     return None
 
 

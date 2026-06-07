@@ -18,7 +18,7 @@
    - cmoc は `<cmoc-session-branch>` を作成して checkout する
 3. 記述・実装ループ
    1. 人間がやってほしいと思っている事を `<repo-root>/oracles` に反映する
-   2. 人間が `cmoc review oracles` を呼び出して、評価レポートを読む
+   2. 人間が `cmoc review oracles` を呼び出して、レビューレポートを読む
    3. 人間が必要に応じて `<repo-root>/oracles` を修正する
    4. 人間が `<repo-root>/oracles` の変更を commit する
    5. 人間が `cmoc apply fork` を呼び出す

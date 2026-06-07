@@ -2,77 +2,72 @@
 
 ## Summary
 
-- `src/commons` は、cmoc 全体で共有する基盤モジュール群をまとめたパッケージです。
-- repo root の解決、共通エラー整形、サブコマンド実行ラッパー、Codex CLI 呼び出し、`INDEX.md` 生成、サブコマンドログ、タイムスタンプ、経過時間計測、レポート保存を扱います。
-- 個別サブコマンドの業務ロジックではなく、各機能が横断的に依存する共通部品の入口になっています。
+- `src/commons` は、cmoc 全体で再利用する共通基盤モジュールをまとめたパッケージです。
+- `codex.py`、`repo.py`、`errors.py`、`indexing.py`、`subcommand_log.py`、`timing.py`、`timestamps.py`、`report_files.py`、`command_runner.py` など、CLI 実行やログ、エラー、リポジトリ操作、`INDEX.md` 維持に関わる処理が入っています。
+- サブコマンド固有の処理ではなく、複数の機能から横断的に使う共通処理の入口として使います。
 
 ## Read this when
 
-- cmoc 全体で共通に使う基盤処理の入口を確認したいとき。
-- repo root の解決、`CmocError`、`codex exec` 呼び出し、`INDEX.md` メンテナンス、ログ、計測、レポート保存の関係を把握したいとき。
-- 各サブコマンドや自動メンテナンス処理が依存する共通部品をまとめて追いたいとき。
-- どの共通モジュールに入るべきかを最初に切り分けたいとき。
+- `cmoc` 全体で共有する基盤モジュールの役割分担を把握したいとき。
+- `codex` 呼び出し、repo 操作、エラー整形、ログ、時間計測、タイムスタンプ、レポート保存、共通コマンド実行のどれを読むべきか迷ったとき。
+- `src/commons` 配下の各モジュールへ進む前に、このディレクトリ全体の入口を整理したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの引数や業務ロジックだけを追いたいとき。
-- `src/main.py` や `src/sub_commands/` 配下の登録・配線だけを確認したいとき。
-- `oracles` 側の正本仕様だけを確認したいとき。
-- このディレクトリのうち 1 つのモジュールだけの実装詳細を確認したいとき。
+- 個別サブコマンドの引数解析や業務ロジックだけを確認したいとき。
+- `src/main.py` や `src/sub_commands/` など、CLI の入口や各コマンド本体を直接追いたいとき。
+- `INDEX.md` の生成ルールそのものや `oracles` 側の正本仕様だけを確認したいとき。
 
 ## hash
 
-- 3a12b946b2ea21139ab98f385cea24130d63fd6e11337bbaa79c5e4a2f648d17
+- 37c70754ad4c088b5516a594242afbefdb20778b999243daf90ac93ba5e72d7b
 
 # `main.py`
 
 ## Summary
 
-- cmoc CLI のエントリーポイントで、Typer のルート `app` と `session` / `apply` / `review` の各サブアプリを組み立てるファイルです。
-- `init`、`session`、`apply`、`review` の各コマンド登録に加えて、`eval-oracle` / `eval-oracles` の隠し別名や各コマンドの既定オプションをまとめています。
+- `src/main.py` は cmoc CLI のエントリーポイントで、Typer のルート `app` と `session` / `apply` / `review` の各サブアプリを組み立てるファイルです。
+- `init`、`indexing`、`session`、`apply`、`review` の各コマンド登録に加えて、`eval-oracle` / `eval-oracles` の隠し別名や各コマンドの既定オプションをまとめています。
 - サブコマンド未指定時の `CmocError` 生成、補完プローブ時の分岐、Click/Typer 例外の共通整形、`python src/main.py` 直実行の起動経路を扱います。
 
 ## Read this when
 
-- cmoc CLI の起点と、`session` / `apply` / `review` のサブアプリ構成を確認したいとき。
+- cmoc CLI の起点として、`session` / `apply` / `review` のサブアプリ構成を確認したいとき。
 - `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`review oracles` の登録名や隠し別名を確認したいとき。
-- `apply fork` の繰り返し回数や `scope`、`apply join` の `--force-resolve` など既定オプションを確認したいとき。
-- サブコマンド未指定時の利用者向けエラー、補完プローブ時の分岐、Click/Typer 例外の共通整形を追いたいとき。
-- `python src/main.py` で直接起動する経路と、そのときの例外処理を確認したいとき。
+- `apply fork` の既定反復回数や `scope`、`apply join` の `--force-resolve` などの既定オプションを確認したいとき。
+- サブコマンド未指定時の利用者向けエラー、補完プローブ時の分岐、Click/Typer 例外の共通整形、`python src/main.py` 直実行の経路を確認したいとき。
 
 ## Do not read this when
 
-- `src/sub_commands/` 配下の個別サブコマンド本体だけを確認したいとき。
-- `commons.errors` の例外型や `format_error_report()` の整形ロジックだけを確認したいとき。
-- CLI 登録や補完、例外変換ではなく、各機能の業務ロジックそのものを追いたいとき。
-- `INDEX.md` の生成ルールや `oracles` 側の正本仕様だけを確認したいとき。
+- `session`、`apply`、`review` など個別サブコマンドの本体実装だけを確認したいとき。
+- `commons.errors` や `format_error_report()` の共通エラー整形だけを確認したいとき。
+- `bin/cmoc` のシェル起動ラッパーだけを確認したいとき。
 
 ## hash
 
-- 1a1bb5753238e77dc6df1252d876b3fc6c7cc1706bd8b8499554963755c0a4d7
+- c83df0f63c63b1a360c5760dc43e68cc8d494f7996479b6b40969ede0ee74f1b
 
 # `sub_commands`
 
 ## Summary
 
-- `src/sub_commands` は `cmoc` のサブコマンド実装をまとめる入口ディレクトリです。
-- 直下には最小のパッケージ宣言 `__init__.py`、`cmoc init` 本体の `init.py`、および `apply/`、`session/`、`review/` の各サブパッケージがあります。
-- 各下位ディレクトリはそれぞれ独自の `INDEX.md` を持ち、個別サブコマンド実装へ進むためのルーティング先になっています。
+- `src/sub_commands` は `cmoc` の各サブコマンド実装をまとめるルーティング用パッケージです。
+- `__init__.py`、`init.py`、`indexing.py` に加えて、`apply`・`review`・`session` の各パッケージへの入口を含みます。
+- 個別実装に入る前の案内として、どのモジュールを読むべきかを整理する目次の役割を持ちます。
 
 ## Read this when
 
-- `cmoc` のサブコマンド群全体の入口構造と、どの実装へ進むべきかを整理したいとき。
-- `init.py` と `apply/`、`session/`、`review/` の責務分担を俯瞰して、修正・テスト・レビュー先を選びたいとき。
-- CLI の配線や各サブコマンドの位置関係を把握してから、個別モジュールへ入る前の導線が欲しいとき。
-- `src/sub_commands` 配下にある直接の子要素が何で、それぞれがどの系統の実装かを確認したいとき。
+- `src/sub_commands` 配下の入口構造をまとめて把握したいとき。
+- `cmoc init` と `cmoc indexing` の実装入口、ならびに `apply`・`review`・`session` の各パッケージのどこへ進むべきか整理したいとき。
+- サブコマンドの追加、整理、再配置に伴って、この階層の目次を確認したいとき。
+- 個別実装に入る前に、どのモジュールを読むべきかを切り分けたいとき。
 
 ## Do not read this when
 
-- 個別の `cmoc` サブコマンド 1 つだけの引数や終了条件を確認したいときは、この入口ではなく該当モジュールを直接読むべきです。
-- `apply`、`session`、`review` のうち特定の系統だけを追いたいときは、このディレクトリ全体ではなく各下位ディレクトリの `INDEX.md` を読むべきです。
-- `oracles` 側の正本仕様断片や利用手順だけを確認したいときは、実装側のこのディレクトリではなく該当する仕様文書を読むべきです。
-- `src/sub_commands` のパッケージ宣言だけを確認したいときは、この目次ではなく `__init__.py` を見るだけで足ります。
+- すでに読む対象が `cmoc init`、`cmoc indexing`、`cmoc apply`、`cmoc review`、`cmoc session` のいずれかに決まっていて、この階層の案内が不要なとき。
+- 個別サブコマンドの引数仕様や処理本体だけを直接確認したいとき。
+- `oracles` 側の正本仕様や利用手順だけを確認したいとき。
 
 ## hash
 
-- 72f144e6881fa6744f359c3baf99eb62acda7c47d1377f4dbf4d39ca051e821b
+- 94fd49c4caafb054be059c5d2977a69674faef6fb9be41a43aeb5e9cf92933ae

@@ -1,12 +1,15 @@
 """`cmoc review oracles` の本体処理。"""
 
 from concurrent.futures import Future, ThreadPoolExecutor
+from contextvars import copy_context
 from dataclasses import dataclass
 import json
 from pathlib import Path
 import shutil
 import sys
 import tempfile
+from time import sleep
+from typing import Literal
 
 from commons.codex import (
     FRONTIER_HIGH_REASONING_EFFORT,
@@ -15,20 +18,28 @@ from commons.codex import (
     run_codex_exec,
 )
 from commons.command_runner import run_command
+from commons.errors import CmocError
 from commons.indexing import maintain_indexes
 from commons.report_files import write_timestamped_report
 from commons.repo import (
+    REVIEW_BRANCH_PREFIX,
+    assert_no_uncommitted_changes,
     changed_oracle_files,
     current_branch,
-    ensure_cmoc_ignored,
+    ensure_cmoc_ignored_and_committed,
     has_deleted_oracle_files,
     head_commit,
     is_cmoc_branch,
     is_session_branch,
     list_oracle_files,
+    read_session_state,
     read_session_start_commit,
+    session_id_from_branch,
+    session_state_root,
+    run_git,
 )
 from commons.timing import StepTimer, start_step
+from commons.timestamps import make_timestamp
 
 _SEVERITY_ORDER = ["fatal", "inconclusive", "warning"]
 _ISSUE_ID_PREFIXES = {
@@ -36,10 +47,74 @@ _ISSUE_ID_PREFIXES = {
     "inconclusive": "INCONCLUSIVE",
     "warning": "WARN",
 }
+ReviewOraclesScope = Literal["session", "full"]
 _REPORT_COMMAND = "cmoc review oracles"
 _REPORT_DIR_NAME = "review_oracles"
-_DEFAULT_REPEAT_IMPROVE_ISSUES_LIST = 3
-_MAX_REPEAT_IMPROVE_ISSUES_LIST = 3
+_REVIEW_ORACLES_TMP_DIR = Path(".cmoc") / "tmp"
+_DEFAULT_REVIEW_ORACLES_LOOP = 3
+_MAX_REVIEW_ORACLES_LOOP = 3
+_DEFAULT_REPEAT_IMPROVE_ISSUES_LIST = _DEFAULT_REVIEW_ORACLES_LOOP
+_MAX_REPEAT_IMPROVE_ISSUES_LIST = _MAX_REVIEW_ORACLES_LOOP
+_CMOC_ROOT = Path(__file__).resolve().parents[3]
+_REVIEW_ORACLES_SCHEMA_ROOT = (
+    _CMOC_ROOT / "oracles" / "schemas" / "structured_output" / "review" / "oracles"
+)
+
+
+def _load_review_oracles_output_schema(file_name: str) -> dict[str, object]:
+    """review oracles の正本 Structured Output schema を読む。"""
+    schema = json.loads(
+        (_REVIEW_ORACLES_SCHEMA_ROOT / file_name).read_text(encoding="utf-8")
+    )
+    if not isinstance(schema, dict):
+        raise TypeError(f"{file_name} must contain a JSON object schema.")
+    return schema
+
+
+def _schema_string_enum(schema: dict[str, object], keys: tuple[str, ...]) -> list[str]:
+    """正本 schema 内の string enum を Python 側処理順にも使う。"""
+    current: object = schema
+    for key in keys:
+        if not isinstance(current, dict):
+            raise TypeError(f"schema path {'.'.join(keys)} is not an object.")
+        current = current[key]
+    if not isinstance(current, dict):
+        raise TypeError(f"schema path {'.'.join(keys)} is not an object.")
+    values = current["enum"]
+    if not isinstance(values, list) or not all(
+        isinstance(value, str) for value in values
+    ):
+        raise TypeError(f"schema path {'.'.join(keys)} must contain a string enum.")
+    return values
+
+
+_ENUMERATE_FINDINGS_OUTPUT_SCHEMA = _load_review_oracles_output_schema(
+    "enumerate_findings.json"
+)
+_MERGE_FINDINGS_OUTPUT_SCHEMA = _load_review_oracles_output_schema(
+    "merge_findings.json"
+)
+_VALIDATE_FINDINGS_CHALLENGER_OUTPUT_SCHEMA = _load_review_oracles_output_schema(
+    "validate_findings_challenger.json"
+)
+_VALIDATE_FINDINGS_ADVOCATE_OUTPUT_SCHEMA = _load_review_oracles_output_schema(
+    "validate_findings_advocate.json"
+)
+_JUDGE_FINDINGS_OUTPUT_SCHEMA = _load_review_oracles_output_schema(
+    "judge_findings.json"
+)
+_FINDING_SEVERITY_ORDER = _schema_string_enum(
+    _ENUMERATE_FINDINGS_OUTPUT_SCHEMA,
+    ("properties", "findings", "items", "properties", "severity"),
+)
+_FINDING_VERDICT_ORDER = _schema_string_enum(
+    _JUDGE_FINDINGS_OUTPUT_SCHEMA,
+    ("properties", "verdict"),
+)
+_SPECULATIVE_REASON_PHRASES = [
+    "かもしれない",
+    "可能性がある",
+]
 _ISSUE_OUTPUT_SCHEMA: dict[str, object] = {
     "type": "object",
     "additionalProperties": False,
@@ -159,121 +234,211 @@ class _OracleEvaluationSnapshot:
     reference_files: frozenset[Path]
 
 
+@dataclass(frozen=True)
+class _ReviewWorktreePlan:
+    """review run 用 branch/worktree 作成計画。"""
+
+    review_run_id: str
+    review_branch: str
+    review_worktree: Path
+
+
+@dataclass
+class _Finding:
+    """review oracles の所見処理 pipeline で扱う所見。"""
+
+    finding_id: str
+    severity: Literal["fatal", "minor"]
+    title: str
+    oracle_path: str
+    reason: str
+    challenger_reasons: list[str]
+    advocate_reasons: list[str]
+    judge_verdict: Literal["accept", "reject"] | None = None
+    judge_reason: str = ""
+
+
+@dataclass
+class _FindingIdAllocator:
+    """所見 pipeline 全体で finding_id の再利用を防ぐ採番状態。"""
+
+    next_index: int = 1
+
+    @classmethod
+    def from_findings(cls, findings: list[_Finding]) -> "_FindingIdAllocator":
+        """既存所見の最大 FINDING number より後ろから採番する。"""
+        max_index = 0
+        for finding in findings:
+            parsed_index = _parse_finding_id_index(finding.finding_id)
+            if parsed_index is not None:
+                max_index = max(max_index, parsed_index)
+        return cls(max_index + 1)
+
+    def allocate(self) -> int:
+        """次に使用する finding number を返し、内部状態を進める。"""
+        index = self.next_index
+        self.next_index += 1
+        return index
+
+
 def cmoc_review_oracles_impl(
     repo_root: Path | None = None,
     *,
-    full: bool,
-    repeat_improve_issues_list: int = _DEFAULT_REPEAT_IMPROVE_ISSUES_LIST,
+    scope: ReviewOraclesScope = "session",
+    enumerate_findings_loop: int = _DEFAULT_REVIEW_ORACLES_LOOP,
+    merge_findings_loop: int = _DEFAULT_REVIEW_ORACLES_LOOP,
+    refine_findings_loop: int = _DEFAULT_REVIEW_ORACLES_LOOP,
+    full: bool | None = None,
+    repeat_improve_issues_list: int | None = None,
 ) -> None:
     """oracle 断片を Codex CLI で評価し、レポートを作る。"""
+    scope = _normalize_review_oracles_scope(scope, full)
+    if repeat_improve_issues_list is not None:
+        refine_findings_loop = repeat_improve_issues_list
+
     # 直接呼び出し時は共通 runner で repo root 解決とエラー整形を行う。
     if repo_root is None:
         run_command(
             lambda resolved_repo_root: cmoc_review_oracles_impl(
                 resolved_repo_root,
-                full=full,
-                repeat_improve_issues_list=repeat_improve_issues_list,
+                scope=scope,
+                enumerate_findings_loop=enumerate_findings_loop,
+                merge_findings_loop=merge_findings_loop,
+                refine_findings_loop=refine_findings_loop,
             ),
             command_path="cmoc review oracles",
         )
         return
-    _validate_repeat_improve_issues_list(repeat_improve_issues_list)
+    _validate_review_oracles_loop(
+        enumerate_findings_loop,
+        "--enumerate-findings-loop",
+    )
+    _validate_review_oracles_loop(merge_findings_loop, "--merge-findings-loop")
+    _validate_review_oracles_loop(refine_findings_loop, "--refine-findings-loop")
 
     timer = StepTimer("review oracles")
     mode = None
     branch_name = None
     cmoc_branch = None
     base_commit = None
-    commit_hash = None
+    session_fork_commit = None
+    review_start_commit = None
+    review_fork_commit = None
+    review_join_commit = None
     deleted_oracles = None
     all_oracle_files: list[Path] = []
     all_oracle_files_known = False
     oracle_files: list[Path] = []
     evaluations = []
     failed_stage = "review oracles 初期化"
+    review_plan: _ReviewWorktreePlan | None = None
     try:
+        branch_name = _validate_review_oracles_preconditions(repo_root)
+
+        session_fork_commit = read_session_start_commit(repo_root, branch_name)
+
         # 評価前に `.cmoc` の ignore 保証を済ませる。
         failed_stage = ".cmoc ignore 確認"
         start_step(timer, 1, 6, ".cmoc ignore 確認")
-        ensure_cmoc_ignored(repo_root)
+        ensure_cmoc_ignored_and_committed(repo_root)
+        assert_no_uncommitted_changes(repo_root)
 
-        # branch 状態と `--full` だけから、部分評価か全体評価かを決める。
+        session_id = session_id_from_branch(branch_name)
+        review_start_commit = head_commit(repo_root)
+
+        failed_stage = "review worktree 作成"
+        review_plan = _create_review_worktree(
+            repo_root,
+            session_id,
+            review_start_commit,
+        )
+        review_repo_root = review_plan.review_worktree
+        review_fork_commit = head_commit(review_repo_root)
+
+        # branch 状態と scope から、部分評価か全体評価かを決める。
         failed_stage = "oracle ファイル選定"
         start_step(timer, 2, 6, "oracle ファイル選定")
-        branch_name = current_branch(repo_root)
         cmoc_branch = is_cmoc_branch(branch_name)
         session_branch = is_session_branch(branch_name)
-        partial = session_branch and not full
+        partial = session_branch and scope == "session"
         mode = "partial" if partial else "full"
         if partial:
-            base_commit = read_session_start_commit(repo_root, branch_name)
-            deleted_oracles = has_deleted_oracle_files(repo_root, base_commit)
+            base_commit = session_fork_commit
+            deleted_oracles = has_deleted_oracle_files(review_repo_root, base_commit)
         else:
             deleted_oracles = False
 
         # 評価モードに応じて Codex CLI に渡す oracle ファイル一覧を作る。
-        all_oracle_files = list_oracle_files(repo_root)
+        all_review_oracle_files = list_oracle_files(review_repo_root)
+        all_oracle_files = [
+            _owner_path_for_worktree_path(repo_root, review_repo_root, path)
+            for path in all_review_oracle_files
+        ]
         all_oracle_files_known = True
-        if partial:
+        if enumerate_findings_loop == 0:
+            oracle_files = []
+        elif partial:
             assert base_commit is not None
-            changed_files = set(changed_oracle_files(repo_root, base_commit))
+            changed_files = {
+                _owner_path_for_worktree_path(repo_root, review_repo_root, path)
+                for path in changed_oracle_files(review_repo_root, base_commit)
+            }
             oracle_files = [
                 path for path in all_oracle_files if path in changed_files
             ]
         else:
             oracle_files = all_oracle_files
-        commit_hash = head_commit(repo_root)
 
         failed_stage = "oracle snapshot 作成"
+        backup_parent_dir = _review_oracles_backup_parent_dir(review_repo_root)
         with tempfile.TemporaryDirectory(
-            prefix="cmoc-review-oracles-"
-        ) as snapshot_dir:
-            # Codex CLI が読む oracle 本文は review 開始時点 snapshot に固定する。
-            oracle_snapshot = _create_oracle_evaluation_snapshot(
-                repo_root,
-                all_oracle_files,
-                Path(snapshot_dir),
+            prefix="cmoc-review-oracles-backup-",
+            dir=backup_parent_dir,
+        ) as backup_dir:
+            # Codex CLI に読ませる内容を review worktree 内の oracles に固定する。
+            backup_snapshot = _create_oracle_evaluation_snapshot(
+                review_repo_root,
+                all_review_oracle_files,
+                Path(backup_dir),
+                display_repo_root=repo_root,
             )
 
             failed_stage = "INDEX.md メンテナンス"
             start_step(timer, 3, 6, "INDEX.md メンテナンス")
-            _maintain_indexes_after_oracle_snapshot(repo_root)
-            oracle_snapshot = _sync_maintained_indexes_to_oracle_snapshot(
-                repo_root,
-                oracle_snapshot,
+            _maintain_indexes_after_oracle_snapshot(review_repo_root)
+            _restore_oracle_snapshot_to_review_worktree(
+                review_repo_root,
+                backup_snapshot,
+            )
+            oracle_snapshot = _create_worktree_oracle_evaluation_snapshot(
+                review_repo_root,
+                all_review_oracle_files,
+                display_repo_root=repo_root,
             )
 
-            # oracle ファイルごとに Codex CLI 評価を実行する。
+            # oracle ファイルごとに所見を列挙し、所見単位で検証・判定する。
             failed_stage = "oracle ファイル評価"
-            start_step(timer, 4, 6, "oracle ファイル評価")
+            start_step(timer, 4, 6, "所見リスト処理")
             for index, oracle_file in enumerate(oracle_files, start=1):
                 print(
-                    f"oracle 評価 ({index}/{len(oracle_files)}) "
+                    f"oracle 所見列挙 ({index}/{len(oracle_files)}) "
                     f"{oracle_file}"
                 )
-            if oracle_files:
-                with ThreadPoolExecutor(
-                    max_workers=len(oracle_files)
-                ) as executor:
-                    futures = [
-                        executor.submit(
-                            _evaluate_oracle_file,
-                            repo_root,
-                            oracle_file,
-                            oracle_snapshot,
-                        )
-                        for oracle_file in oracle_files
-                    ]
-                    _append_evaluation_records_in_order(futures, evaluations)
-
-            failed_stage = "問題点リスト改善"
-            start_step(timer, 5, 6, "問題点リスト改善")
-            evaluations = _improve_evaluations(
+            evaluations = _run_findings_pipeline(
+                review_repo_root,
                 repo_root,
-                evaluations,
-                repeat_improve_issues_list,
+                oracle_files,
+                enumerate_findings_loop,
+                merge_findings_loop,
+                refine_findings_loop,
                 oracle_snapshot,
+                progress_evaluations=evaluations,
             )
+
+            failed_stage = "review branch merge"
+            start_step(timer, 5, 6, "review branch merge")
+            _merge_review_branch_into_session(repo_root, branch_name, review_plan)
+            review_join_commit = head_commit(repo_root)
 
             # 評価結果を 1 つの Markdown レポートとして保存する。
             failed_stage = "report 書き込み"
@@ -281,30 +446,38 @@ def cmoc_review_oracles_impl(
             report_path = _write_report(
                 repo_root,
                 mode,
-                full,
+                scope == "full",
                 branch_name,
                 cmoc_branch,
                 base_commit,
-                commit_hash,
+                session_fork_commit,
                 deleted_oracles,
                 len(all_oracle_files),
                 oracle_files,
                 evaluations,
+                scope,
+                review_plan.review_branch,
+                review_fork_commit,
+                review_join_commit,
             )
     except Exception as error:
         try:
             report_path = _write_error_report(
                 repo_root,
                 mode,
-                full,
+                scope == "full",
                 branch_name,
                 cmoc_branch,
                 base_commit,
-                commit_hash,
+                session_fork_commit,
                 deleted_oracles,
                 len(all_oracle_files) if all_oracle_files_known else None,
                 oracle_files,
                 evaluations,
+                scope,
+                review_plan.review_branch if review_plan is not None else None,
+                review_fork_commit,
+                review_join_commit,
                 failed_stage,
                 error,
             )
@@ -320,7 +493,7 @@ def cmoc_review_oracles_impl(
                 branch_name,
                 cmoc_branch,
                 base_commit,
-                commit_hash,
+                review_start_commit,
                 deleted_oracles,
                 len(all_oracle_files) if all_oracle_files_known else None,
                 oracle_files,
@@ -335,13 +508,245 @@ def cmoc_review_oracles_impl(
     print(str(report_path))
 
 
-def _validate_repeat_improve_issues_list(value: int) -> None:
-    """問題点リスト改善の反復回数が oracle の上限内か検証する。"""
-    if value < 0 or value > _MAX_REPEAT_IMPROVE_ISSUES_LIST:
-        raise ValueError(
-            "--repeat-improve-issues-list must be between 0 and "
-            f"{_MAX_REPEAT_IMPROVE_ISSUES_LIST}."
+def _normalize_review_oracles_scope(
+    scope: ReviewOraclesScope,
+    full: bool | None,
+) -> ReviewOraclesScope:
+    """正式 scope と旧 `--full` alias を 1 つの scope 値へ正規化する。"""
+    if scope not in {"session", "full"}:
+        raise ValueError("--scope must be one of: session, full.")
+    if full is True:
+        return "full"
+    return scope
+
+
+def _validate_review_oracles_preconditions(repo_root: Path) -> str:
+    """review oracles の session / clean worktree 前提条件を検証する。"""
+    branch_name = current_branch(repo_root)
+    if not is_session_branch(branch_name):
+        raise CmocError(
+            "`cmoc review oracles` は session branch 上で実行してください。",
+            [
+                "`cmoc session fork` で作成した branch へ移動してから再実行してください。",
+                "通常 branch や apply branch 上では、先に対象 session branch へ切り替えてください。",
+            ],
+            f"現在の branch: {branch_name or '(detached HEAD)'}",
         )
+
+    session_id = session_id_from_branch(branch_name)
+    state = read_session_state(session_state_root(repo_root), session_id)
+    session = state.get("session")
+    if not isinstance(session, dict):
+        raise CmocError(
+            "session state ファイルの形式が不正です。",
+            [
+                "state JSON の session セクションを確認して復旧してください。",
+                "復旧できない場合は、現在の session を使わず新しい session を開始してください。",
+            ],
+            f"現在の branch: {branch_name}",
+        )
+    if session.get("state") != "active":
+        raise CmocError(
+            "active な session ではありません。",
+            [
+                "対象 session の state を確認してください。",
+                "既に join または abandon 済みの場合は、新しい session を開始してください。",
+            ],
+            f"session.state: {session.get('state')}",
+        )
+
+    assert_no_uncommitted_changes(repo_root)
+    return branch_name
+
+
+def _validate_review_oracles_loop(value: int, option_name: str) -> None:
+    """review oracles の各ループ回数が oracle の上限内か検証する。"""
+    if value < 0 or value > _MAX_REVIEW_ORACLES_LOOP:
+        raise ValueError(
+            f"{option_name} must be between 0 and {_MAX_REVIEW_ORACLES_LOOP}."
+        )
+
+
+def _validate_repeat_improve_issues_list(value: int) -> None:
+    """旧 option 名の問題点リスト改善回数を互換検証する。"""
+    _validate_review_oracles_loop(value, "--repeat-improve-issues-list")
+
+
+def _create_review_worktree(
+    repo_root: Path,
+    session_id: str,
+    session_head_commit: str,
+) -> _ReviewWorktreePlan:
+    """session HEAD から review branch と専用 worktree を作成する。"""
+    last_plan = _plan_review_worktree(repo_root, session_id)
+    for attempt in range(1, 11):
+        plan = (
+            last_plan
+            if attempt == 1
+            else _plan_review_worktree(repo_root, session_id)
+        )
+        last_plan = plan
+        print(
+            "review worktree 作成試行 "
+            f"({attempt}/10) {plan.review_branch}"
+        )
+        branch_result = run_git(
+            repo_root,
+            ["branch", plan.review_branch, session_head_commit],
+            check=False,
+        )
+        if branch_result.returncode != 0:
+            sleep(0.001)
+            continue
+        worktree_result = run_git(
+            repo_root,
+            ["worktree", "add", str(plan.review_worktree), plan.review_branch],
+            check=False,
+        )
+        if worktree_result.returncode == 0:
+            return plan
+        cleanup_result = run_git(
+            repo_root,
+            ["branch", "-D", plan.review_branch],
+            check=False,
+        )
+        if cleanup_result.returncode != 0:
+            raise RuntimeError(
+                "\n".join(
+                    [
+                        "review worktree 作成失敗後の branch cleanup に失敗しました。",
+                        f"review_branch: {plan.review_branch}",
+                        f"review_worktree: {plan.review_worktree}",
+                        "worktree add failure:",
+                        _format_git_failure(worktree_result),
+                        "branch cleanup failure:",
+                        _format_git_failure(cleanup_result),
+                    ]
+                )
+            )
+        sleep(0.001)
+    raise RuntimeError(
+        "\n".join(
+            [
+                "リトライ後も一意な review worktree を作成できませんでした。",
+                f"last_review_branch: {last_plan.review_branch}",
+                f"last_review_worktree: {last_plan.review_worktree}",
+            ]
+        )
+    )
+
+
+def _plan_review_worktree(repo_root: Path, session_id: str) -> _ReviewWorktreePlan:
+    """次に作成を試みる review run id、branch、worktree path を組み立てる。"""
+    review_run_id = make_timestamp()
+    review_branch = f"{REVIEW_BRANCH_PREFIX}{session_id}/{review_run_id}"
+    review_worktree = repo_root / ".cmoc" / "worktrees" / session_id / review_run_id
+    return _ReviewWorktreePlan(review_run_id, review_branch, review_worktree)
+
+
+def _merge_review_branch_into_session(
+    repo_root: Path,
+    session_branch: str,
+    review_plan: _ReviewWorktreePlan,
+) -> None:
+    """review branch の INDEX.md 更新を session branch へ自動 merge する。"""
+    assert_no_uncommitted_changes(repo_root)
+    assert_no_uncommitted_changes(review_plan.review_worktree)
+    run_git(repo_root, ["switch", session_branch])
+    merge_result = run_git(
+        repo_root,
+        ["merge", "--no-ff", review_plan.review_branch],
+        check=False,
+    )
+    if merge_result.returncode == 0:
+        return
+
+    unmerged = _unmerged_paths(repo_root)
+    index_conflicts = [path for path in unmerged if _is_index_path(path)]
+    non_index_conflicts = [path for path in unmerged if not _is_index_path(path)]
+    if index_conflicts:
+        _resolve_index_conflicts_with_session_side(repo_root, index_conflicts)
+        unmerged = _unmerged_paths(repo_root)
+        non_index_conflicts = [
+            path for path in unmerged if not _is_index_path(path)
+        ]
+    if non_index_conflicts or not index_conflicts:
+        detail = _unmerged_paths_detail(repo_root, unmerged)
+        if not detail:
+            detail = merge_result.stderr.strip()
+        raise CmocError(
+            "review branch の merge で conflict が発生しました。",
+            [
+                "cmoc は review branch の INDEX.md conflict だけを自動解消します。",
+                "git status を確認し、手動で merge 状態を解消してください。",
+            ],
+            detail,
+        )
+
+    commit_result = run_git(repo_root, ["commit", "--no-edit"], check=False)
+    if commit_result.returncode != 0:
+        detail = "\n".join(
+            [
+                merge_result.stderr.strip(),
+                commit_result.stderr.strip(),
+            ]
+        ).strip()
+        raise CmocError(
+            "INDEX.md conflict 解消後の review merge commit に失敗しました。",
+            [
+                "git status を確認し、merge 状態を手動で完了してください。",
+                "不要な merge 状態であれば `git merge --abort` で戻してください。",
+            ],
+            detail,
+        )
+
+
+def _resolve_index_conflicts_with_session_side(
+    repo_root: Path,
+    paths: list[str],
+) -> None:
+    """INDEX.md conflict を session branch 側の内容で解消する。"""
+    for path in sorted(paths):
+        run_git(repo_root, ["checkout", "--ours", "--", path], check=False)
+    run_git(repo_root, ["add", "--", *sorted(paths)])
+
+
+def _unmerged_paths(repo_root: Path) -> list[str]:
+    """unmerged path を git から取得する。"""
+    result = run_git(repo_root, ["diff", "--name-only", "-z", "--diff-filter=U"])
+    return [path for path in result.stdout.split("\0") if path]
+
+
+def _unmerged_paths_detail(repo_root: Path, unmerged: list[str]) -> str:
+    """unmerged path detail をユーザー表示用に整形する。"""
+    return "\n".join(str((repo_root / path).resolve()) for path in unmerged)
+
+
+def _is_index_path(path: str) -> bool:
+    """cmoc が再生成可能な INDEX.md path か判定する。"""
+    return Path(path).name == "INDEX.md"
+
+
+def _format_git_failure(result: object) -> str:
+    """git 失敗時の診断情報をユーザー向け detail に載せる。"""
+    return "\n".join(
+        [
+            f"returncode: {getattr(result, 'returncode', '')}",
+            f"stdout: {getattr(result, 'stdout', '').strip()}",
+            f"stderr: {getattr(result, 'stderr', '').strip()}",
+        ]
+    )
+
+
+def _owner_path_for_worktree_path(
+    owner_repo_root: Path,
+    worktree_root: Path,
+    path: Path,
+) -> Path:
+    """review worktree 内 path に対応する呼び出し元 repo path を返す。"""
+    return (
+        owner_repo_root / path.resolve().relative_to(worktree_root.resolve())
+    ).resolve()
 
 
 def _maintain_indexes_after_oracle_snapshot(repo_root: Path) -> bool:
@@ -349,13 +754,24 @@ def _maintain_indexes_after_oracle_snapshot(repo_root: Path) -> bool:
     return maintain_indexes(repo_root)
 
 
+def _review_oracles_backup_parent_dir(review_repo_root: Path) -> Path:
+    """review run 中の一時退避先を review worktree 内に閉じ込める。"""
+    parent_dir = review_repo_root / _REVIEW_ORACLES_TMP_DIR
+    parent_dir.mkdir(parents=True, exist_ok=True)
+    return parent_dir
+
+
 def _create_oracle_evaluation_snapshot(
     repo_root: Path,
     oracle_files: list[Path],
     snapshot_root: Path,
+    *,
+    display_repo_root: Path | None = None,
 ) -> _OracleEvaluationSnapshot:
     """開始時点の oracles tree を一時 copy として固定する。"""
+    display_root = (display_repo_root or repo_root).resolve()
     original_oracle_root = (repo_root / "oracles").resolve()
+    display_oracle_root = (display_root / "oracles").resolve()
     snapshot_oracle_root = snapshot_root / "oracles"
     if original_oracle_root.exists():
         _copy_oracles_tree_snapshot(original_oracle_root, snapshot_oracle_root)
@@ -363,9 +779,14 @@ def _create_oracle_evaluation_snapshot(
         snapshot_oracle_root.mkdir(parents=True)
 
     reference_files = {path.resolve() for path in oracle_files}
+    if display_root != repo_root.resolve():
+        reference_files = {
+            _owner_path_for_worktree_path(display_root, repo_root, path)
+            for path in reference_files
+        }
     reference_files.update(
         _original_path_for_snapshot_path(
-            repo_root,
+            display_root,
             snapshot_oracle_root,
             index_path,
         )
@@ -373,63 +794,114 @@ def _create_oracle_evaluation_snapshot(
         if index_path.is_file()
     )
     return _OracleEvaluationSnapshot(
-        original_repo_root=repo_root.resolve(),
-        original_oracle_root=original_oracle_root,
+        original_repo_root=display_root,
+        original_oracle_root=display_oracle_root,
         snapshot_root=snapshot_root.resolve(),
         snapshot_oracle_root=snapshot_oracle_root.resolve(),
-        oracle_files=frozenset(path.resolve() for path in oracle_files),
+        oracle_files=frozenset(reference_files - {
+            _original_path_for_snapshot_path(
+                display_root,
+                snapshot_oracle_root,
+                index_path,
+            )
+            for index_path in snapshot_oracle_root.rglob("INDEX.md")
+            if index_path.is_file()
+        }),
         reference_files=frozenset(reference_files),
     )
 
 
-def _sync_maintained_indexes_to_oracle_snapshot(
+def _create_worktree_oracle_evaluation_snapshot(
+    repo_root: Path,
+    oracle_files: list[Path],
+    *,
+    display_repo_root: Path | None = None,
+) -> _OracleEvaluationSnapshot:
+    """review worktree の oracles tree を Codex CLI の読み取り対象にする。"""
+    display_root = (display_repo_root or repo_root).resolve()
+    worktree_root = repo_root.resolve()
+    worktree_oracle_root = (worktree_root / "oracles").resolve()
+    display_oracle_root = (display_root / "oracles").resolve()
+
+    reference_files = {path.resolve() for path in oracle_files}
+    if display_root != worktree_root:
+        reference_files = {
+            _owner_path_for_worktree_path(display_root, worktree_root, path)
+            for path in reference_files
+        }
+    if worktree_oracle_root.exists():
+        reference_files.update(
+            _owner_path_for_worktree_path(display_root, worktree_root, index_path)
+            for index_path in worktree_oracle_root.rglob("INDEX.md")
+            if index_path.is_file()
+        )
+
+    index_files = {
+        path
+        for path in reference_files
+        if path.name == "INDEX.md"
+    }
+    return _OracleEvaluationSnapshot(
+        original_repo_root=display_root,
+        original_oracle_root=display_oracle_root,
+        snapshot_root=worktree_root,
+        snapshot_oracle_root=worktree_oracle_root,
+        oracle_files=frozenset(reference_files - index_files),
+        reference_files=frozenset(reference_files),
+    )
+
+
+def _restore_oracle_snapshot_to_review_worktree(
     repo_root: Path,
     snapshot: _OracleEvaluationSnapshot,
-) -> _OracleEvaluationSnapshot:
-    """メンテナンス後の INDEX.md だけを評価 snapshot へ反映する。"""
+) -> None:
+    """開始時点の oracle 本文とメンテナンス後 INDEX.md を worktree へ固定する。"""
     original_oracle_root = (repo_root / "oracles").resolve()
-    snapshot_oracle_root = snapshot.snapshot_oracle_root
+    maintained_indexes = _read_maintained_index_files(original_oracle_root)
 
-    live_index_relatives: set[Path] = set()
     if original_oracle_root.exists():
-        for original_index_path in original_oracle_root.rglob("INDEX.md"):
-            if not original_index_path.is_file():
-                continue
-            relative_path = original_index_path.relative_to(original_oracle_root)
-            live_index_relatives.add(relative_path)
-            snapshot_index_path = snapshot_oracle_root / relative_path
-            snapshot_index_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(
-                original_index_path,
-                snapshot_index_path,
-                follow_symlinks=True,
-            )
-
-    for snapshot_index_path in snapshot_oracle_root.rglob("INDEX.md"):
-        if not snapshot_index_path.is_file():
-            continue
-        relative_path = snapshot_index_path.relative_to(snapshot_oracle_root)
-        if relative_path not in live_index_relatives:
-            snapshot_index_path.unlink()
-
-    reference_files = set(snapshot.oracle_files)
-    reference_files.update(
-        _original_path_for_snapshot_path(
-            repo_root,
-            snapshot_oracle_root,
-            index_path,
+        shutil.rmtree(original_oracle_root)
+    if snapshot.snapshot_oracle_root.exists():
+        _copy_oracles_tree_snapshot(
+            snapshot.snapshot_oracle_root,
+            original_oracle_root,
         )
-        for index_path in snapshot_oracle_root.rglob("INDEX.md")
+    else:
+        original_oracle_root.mkdir(parents=True)
+
+    for index_path in original_oracle_root.rglob("INDEX.md"):
+        if not index_path.is_file():
+            continue
+        relative_path = index_path.relative_to(original_oracle_root)
+        if relative_path not in maintained_indexes:
+            index_path.unlink()
+    for relative_path, content in maintained_indexes.items():
+        index_path = original_oracle_root / relative_path
+        index_path.parent.mkdir(parents=True, exist_ok=True)
+        index_path.write_bytes(content)
+
+    status = run_git(
+        repo_root,
+        ["status", "--porcelain", "--", "oracles"],
+    ).stdout
+    if not status:
+        return
+    run_git(repo_root, ["add", "-A", "--", "oracles"])
+    run_git(
+        repo_root,
+        ["commit", "-m", "Restore review oracle evaluation snapshot"],
+    )
+
+
+def _read_maintained_index_files(oracle_root: Path) -> dict[Path, bytes]:
+    """メンテナンス後の INDEX.md 内容を oracle root 相対 path で読む。"""
+    if not oracle_root.exists():
+        return {}
+    return {
+        index_path.relative_to(oracle_root): index_path.read_bytes()
+        for index_path in oracle_root.rglob("INDEX.md")
         if index_path.is_file()
-    )
-    return _OracleEvaluationSnapshot(
-        original_repo_root=snapshot.original_repo_root,
-        original_oracle_root=snapshot.original_oracle_root,
-        snapshot_root=snapshot.snapshot_root,
-        snapshot_oracle_root=snapshot.snapshot_oracle_root,
-        oracle_files=snapshot.oracle_files,
-        reference_files=frozenset(reference_files),
-    )
+    }
 
 
 def _copy_oracles_tree_snapshot(source_root: Path, destination_root: Path) -> None:
@@ -471,29 +943,825 @@ def _snapshot_path_for_original_path(
     ).resolve()
 
 
-def _evaluate_oracle_file(
+def _run_findings_pipeline(
+    execution_repo_root: Path,
+    display_repo_root: Path,
+    oracle_files: list[Path],
+    enumerate_findings_loop: int,
+    merge_findings_loop: int,
+    refine_findings_loop: int,
+    oracle_snapshot: _OracleEvaluationSnapshot | None = None,
+    progress_evaluations: list[dict[str, object]] | None = None,
+) -> list[dict[str, object]]:
+    """仕様どおりの所見 list pipeline を実行し、既存 report 形式へ変換する。"""
+    findings: list[_Finding] = []
+    finding_ids = _FindingIdAllocator.from_findings(findings)
+    dirty_files = {str(path.resolve()): True for path in oracle_files}
+
+    for _ in range(enumerate_findings_loop):
+        targets = [
+            path for path in oracle_files if dirty_files.get(str(path.resolve()), False)
+        ]
+        if not targets:
+            break
+        legacy_evaluations: list[dict[str, object]] = []
+        legacy_payload_seen = False
+        with ThreadPoolExecutor(max_workers=len(targets)) as executor:
+            futures = [
+                executor.submit(
+                    copy_context().run,
+                    _enumerate_oracle_findings,
+                    execution_repo_root,
+                    display_repo_root,
+                    oracle_file,
+                    findings,
+                    oracle_snapshot,
+                )
+                for oracle_file in targets
+            ]
+            for oracle_file, future in zip(targets, futures):
+                new_findings = future.result()
+                legacy_items = _legacy_issues_from_enumerate_result(new_findings)
+                if legacy_items is not None:
+                    legacy_payload_seen = True
+                    record = _evaluation_payload_to_record(
+                        {"issues": legacy_items},
+                        display_repo_root,
+                        oracle_file,
+                    )
+                    legacy_evaluations.append(record)
+                    if progress_evaluations is not None:
+                        progress_evaluations.append(record)
+                    if not legacy_items:
+                        dirty_files[str(oracle_file.resolve())] = False
+                    continue
+                if new_findings:
+                    _append_new_findings(findings, new_findings, finding_ids)
+                else:
+                    dirty_files[str(oracle_file.resolve())] = False
+        if legacy_payload_seen:
+            return _improve_evaluations(
+                execution_repo_root,
+                display_repo_root,
+                legacy_evaluations,
+                refine_findings_loop,
+                oracle_snapshot,
+            )
+        if not any(dirty_files.values()):
+            break
+        findings = _merge_findings_loop(
+            execution_repo_root,
+            display_repo_root,
+            findings,
+            finding_ids,
+            merge_findings_loop,
+            oracle_snapshot,
+        )
+
+    findings = _validate_findings_loop(
+        execution_repo_root,
+        display_repo_root,
+        findings,
+        refine_findings_loop,
+        oracle_snapshot,
+    )
+    findings = _judge_findings(
+        execution_repo_root,
+        display_repo_root,
+        findings,
+        oracle_snapshot,
+    )
+    return _findings_to_evaluations(display_repo_root, oracle_files, findings)
+
+
+def _enumerate_oracle_findings(
+    execution_repo_root: Path,
+    display_repo_root: Path,
+    oracle_file: Path,
+    existing_findings: list[_Finding],
+    oracle_snapshot: _OracleEvaluationSnapshot | None = None,
+) -> list[dict[str, object]]:
+    """1 oracle ファイルから新規所見を列挙する。"""
+    payload = parse_json_object(
+        run_codex_exec(
+            execution_repo_root,
+            _enumerate_findings_prompt(
+                display_repo_root,
+                oracle_file,
+                existing_findings,
+                oracle_snapshot,
+            ),
+            purpose=f"oracle 評価 {oracle_file.relative_to(display_repo_root)}",
+            read_only=True,
+            expect_json=True,
+            output_schema=_ENUMERATE_FINDINGS_OUTPUT_SCHEMA,
+            json_validator=lambda value: _validate_enumerate_findings_payload(
+                value,
+                display_repo_root,
+                oracle_snapshot,
+            ),
+        )
+    )
+    if "issues" in payload:
+        return [{"__legacy_issues": payload["issues"]}]
+    findings = payload["findings"]
+    if not isinstance(findings, list):
+        raise ValueError("findings must be a list.")
+    return [finding for finding in findings if isinstance(finding, dict)]
+
+
+def _append_new_findings(
+    findings: list[_Finding],
+    payloads: list[dict[str, object]],
+    finding_ids: _FindingIdAllocator,
+) -> None:
+    """新規所見に安定 ID を付与して所見 list へ追加する。"""
+    for payload in payloads:
+        findings.append(_finding_from_payload(payload, finding_ids.allocate()))
+
+
+def _merge_findings_loop(
+    execution_repo_root: Path,
+    display_repo_root: Path,
+    findings: list[_Finding],
+    finding_ids: _FindingIdAllocator,
+    merge_findings_loop: int,
+    oracle_snapshot: _OracleEvaluationSnapshot | None = None,
+) -> list[_Finding]:
+    """Codex CLI の編集操作を所見 list に反映する。"""
+    if not findings:
+        return findings
+    current = list(findings)
+    for index in range(merge_findings_loop):
+        payload = parse_json_object(
+            run_codex_exec(
+                execution_repo_root,
+                _merge_findings_prompt(display_repo_root, current, oracle_snapshot),
+                purpose=f"oracle 所見リストマージ {index + 1}",
+                read_only=True,
+                expect_json=True,
+                output_schema=_MERGE_FINDINGS_OUTPUT_SCHEMA,
+                model=FRONTIER_MODEL,
+                reasoning_effort=FRONTIER_HIGH_REASONING_EFFORT,
+                json_validator=lambda value: _validate_merge_findings_payload(
+                    value,
+                    display_repo_root,
+                    {finding.finding_id for finding in current},
+                    oracle_snapshot,
+                ),
+            )
+        )
+        if "issues" in payload:
+            current = [
+                _finding_from_payload(_issue_to_finding_payload(issue), item_index)
+                for item_index, issue in enumerate(payload["issues"], start=1)
+                if isinstance(issue, dict)
+            ]
+            finding_ids.next_index = _FindingIdAllocator.from_findings(
+                current
+            ).next_index
+            break
+        operations = payload["operations"]
+        if not isinstance(operations, list):
+            raise ValueError("operations must be a list.")
+        if not operations:
+            break
+        current = _apply_merge_operations(current, operations, finding_ids)
+    return current
+
+
+def _validate_findings_loop(
+    execution_repo_root: Path,
+    display_repo_root: Path,
+    findings: list[_Finding],
+    refine_findings_loop: int,
+    oracle_snapshot: _OracleEvaluationSnapshot | None = None,
+) -> list[_Finding]:
+    """各所見の challenger / advocate reason を反復収集する。"""
+    dirty = {finding.finding_id: True for finding in findings}
+    for _ in range(refine_findings_loop):
+        targets = [finding for finding in findings if dirty.get(finding.finding_id)]
+        if not targets:
+            break
+        with ThreadPoolExecutor(max_workers=len(targets) * 2) as executor:
+            futures: list[tuple[_Finding, str, Future[list[str]]]] = []
+            for finding in targets:
+                futures.append(
+                    (
+                        finding,
+                        "challenger",
+                        executor.submit(
+                            copy_context().run,
+                            _validate_finding_reasons,
+                            execution_repo_root,
+                            display_repo_root,
+                            finding,
+                            "challenger",
+                            oracle_snapshot,
+                        ),
+                    )
+                )
+                futures.append(
+                    (
+                        finding,
+                        "advocate",
+                        executor.submit(
+                            copy_context().run,
+                            _validate_finding_reasons,
+                            execution_repo_root,
+                            display_repo_root,
+                            finding,
+                            "advocate",
+                            oracle_snapshot,
+                        ),
+                    )
+                )
+            changed = {finding.finding_id: False for finding in targets}
+            for finding, role, future in futures:
+                reasons = future.result()
+                if role == "challenger":
+                    added = _extend_unique(finding.challenger_reasons, reasons)
+                else:
+                    added = _extend_unique(finding.advocate_reasons, reasons)
+                changed[finding.finding_id] = changed[finding.finding_id] or added
+            for finding in targets:
+                if not changed[finding.finding_id]:
+                    dirty[finding.finding_id] = False
+        if not any(dirty.values()):
+            break
+    return findings
+
+
+def _validate_finding_reasons(
+    execution_repo_root: Path,
+    display_repo_root: Path,
+    finding: _Finding,
+    role: Literal["challenger", "advocate"],
+    oracle_snapshot: _OracleEvaluationSnapshot | None = None,
+) -> list[str]:
+    """1 所見について advocate/challenger reason を取得する。"""
+    if role == "challenger":
+        schema = _VALIDATE_FINDINGS_CHALLENGER_OUTPUT_SCHEMA
+        purpose_role = "不採用理由"
+    else:
+        schema = _VALIDATE_FINDINGS_ADVOCATE_OUTPUT_SCHEMA
+        purpose_role = "採用理由"
+    payload = parse_json_object(
+        run_codex_exec(
+            execution_repo_root,
+            _validate_finding_prompt(display_repo_root, finding, role, oracle_snapshot),
+            purpose=f"oracle 所見検証 {purpose_role} {finding.finding_id}",
+            read_only=True,
+            expect_json=True,
+            output_schema=schema,
+            model=FRONTIER_MODEL,
+            reasoning_effort=FRONTIER_HIGH_REASONING_EFFORT,
+            json_validator=_validate_reasons_payload,
+        )
+    )
+    if "issues" in payload:
+        return []
+    reasons = payload["reasons"]
+    if not isinstance(reasons, list):
+        raise ValueError("reasons must be a list.")
+    return [reason for reason in reasons if isinstance(reason, str)]
+
+
+def _judge_findings(
+    execution_repo_root: Path,
+    display_repo_root: Path,
+    findings: list[_Finding],
+    oracle_snapshot: _OracleEvaluationSnapshot | None = None,
+) -> list[_Finding]:
+    """各所見を人間に提示すべきか判定する。"""
+    for finding in findings:
+        payload = parse_json_object(
+            run_codex_exec(
+                execution_repo_root,
+                _judge_finding_prompt(display_repo_root, finding, oracle_snapshot),
+                purpose=f"oracle 所見判定 {finding.finding_id}",
+                read_only=True,
+                expect_json=True,
+                output_schema=_JUDGE_FINDINGS_OUTPUT_SCHEMA,
+                model=FRONTIER_MODEL,
+                reasoning_effort=FRONTIER_HIGH_REASONING_EFFORT,
+                json_validator=_validate_judge_findings_payload,
+            )
+        )
+        if "issues" in payload:
+            finding.judge_verdict = "accept"
+            finding.judge_reason = "旧 issues payload 互換入力のため採用扱いにしました。"
+            continue
+        finding.judge_verdict = payload["verdict"]  # type: ignore[assignment]
+        finding.judge_reason = str(payload["reason"])
+    return findings
+
+
+def _enumerate_findings_prompt(
     repo_root: Path,
+    oracle_file: Path,
+    existing_findings: list[_Finding],
+    oracle_snapshot: _OracleEvaluationSnapshot | None = None,
+) -> str:
+    """新規所見列挙用 prompt を組み立てる。"""
+    concrete_repo_root = repo_root.resolve()
+    concrete_oracle_root = (concrete_repo_root / "oracles").resolve()
+    readable_oracle_file = oracle_file.resolve()
+    readable_oracle_root = concrete_oracle_root
+    readable_oracle_index = (concrete_oracle_root / "INDEX.md").resolve()
+    if oracle_snapshot is not None:
+        readable_oracle_file = _snapshot_path_for_original_path(
+            oracle_snapshot,
+            oracle_file,
+        )
+        readable_oracle_root = oracle_snapshot.snapshot_oracle_root
+        readable_oracle_index = (
+            oracle_snapshot.snapshot_oracle_root / "INDEX.md"
+        ).resolve()
+    relevant_findings = [
+        _finding_to_payload(finding)
+        for finding in existing_findings
+        if _finding_may_relate_to_oracle(finding, oracle_file)
+    ]
+    return "\n".join(
+        [
+            "あなたはソフトウェア仕様のレビュー担当です。",
+            f"`{concrete_repo_root}` 内の仕様ファイル `{oracle_file.resolve()}` から新規所見を列挙してください。",
+            "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。",
+            "所見は fatal または minor だけを対象にしてください。",
+            "fatal は仕様断片同士の明確な矛盾、または実装者の裁量では解消不能な問題です。",
+            "minor は誤字、脱字、助詞抜け、用語不統一、表記揺れ、typo などの単純な問題です。",
+            "oracles ファイルだけから問題と言い切れないものは所見にしないでください。",
+            f"評価時に読む対象ファイルは、開始時点の内容を固定したコピー `{readable_oracle_file}` です。",
+            f"`{readable_oracle_root}` 配下の仕様ファイルと INDEX.md だけを読んでください。",
+            f"`{readable_oracle_index}` から始まる INDEX.md の Summary /",
+            "Read this when / Do not read this when を根拠に、",
+            "関連する仕様ファイルを選定してください。",
+            f"`{concrete_oracle_root}` は path 変換のためにだけ使い、読まないでください。",
+            f"出力する oracle_path は `{concrete_oracle_root}` 配下の絶対パスにしてください。",
+            "既知所見と内容的に重複する所見は返さないでください。",
+            "既知所見:",
+            json.dumps(relevant_findings, ensure_ascii=False, indent=2),
+            f"`{concrete_repo_root / 'memo'}` は読み書き禁止です。",
+            "ファイル編集は禁止です。",
+        ]
+    )
+
+
+def _merge_findings_prompt(
+    repo_root: Path,
+    findings: list[_Finding],
+    oracle_snapshot: _OracleEvaluationSnapshot | None = None,
+) -> str:
+    """所見 list merge 用 prompt を組み立てる。"""
+    concrete_repo_root = repo_root.resolve()
+    concrete_oracle_root = (concrete_repo_root / "oracles").resolve()
+    readable_oracle_root = (
+        oracle_snapshot.snapshot_oracle_root
+        if oracle_snapshot is not None
+        else concrete_oracle_root
+    )
+    return "\n".join(
+        [
+            "あなたはソフトウェア仕様レビュー結果の整理担当です。",
+            "所見リストの重複と矛盾を解消する編集操作を返してください。",
+            "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。",
+            "変更不要なら operations: [] を返してください。",
+            "operation は finding_id を target_ids で参照してください。",
+            f"必要に応じて `{readable_oracle_root}` 配下の仕様ファイルと INDEX.md だけを読んでください。",
+            f"`{concrete_oracle_root}` は path 変換のためにだけ使い、読まないでください。",
+            "現状の所見リスト:",
+            json.dumps(
+                [_finding_to_payload(finding) for finding in findings],
+                ensure_ascii=False,
+                indent=2,
+            ),
+            f"`{concrete_repo_root / 'memo'}` は読み書き禁止です。",
+            "ファイル編集は禁止です。",
+        ]
+    )
+
+
+def _validate_finding_prompt(
+    repo_root: Path,
+    finding: _Finding,
+    role: Literal["challenger", "advocate"],
+    oracle_snapshot: _OracleEvaluationSnapshot | None = None,
+) -> str:
+    """所見検証用 prompt を組み立てる。"""
+    concrete_repo_root = repo_root.resolve()
+    concrete_oracle_root = (concrete_repo_root / "oracles").resolve()
+    readable_oracle_root = (
+        oracle_snapshot.snapshot_oracle_root
+        if oracle_snapshot is not None
+        else concrete_oracle_root
+    )
+    if role == "challenger":
+        task = "その所見が妥当ではない理由を新規に列挙してください。"
+        existing = finding.challenger_reasons
+        opposite = finding.advocate_reasons
+    else:
+        task = "その所見が妥当である理由を新規に列挙してください。"
+        existing = finding.advocate_reasons
+        opposite = finding.challenger_reasons
+    return "\n".join(
+        [
+            "あなたはソフトウェア仕様レビュー所見の検証担当です。",
+            task,
+            "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。",
+            "理由には具体的な根拠を必ず含めてください。",
+            "「かもしれない」「可能性がある」などの推測だけを根拠にした理由は返さないでください。",
+            "反対側の既存理由がある場合は、対応する反対側理由への反論を含めてください。",
+            "既存理由と重複する理由は返さないでください。",
+            f"`{readable_oracle_root}` 配下の仕様ファイルと INDEX.md だけを読んでください。",
+            f"`{concrete_oracle_root}` は path 変換のためにだけ使い、読まないでください。",
+            "対象所見:",
+            json.dumps(_finding_to_payload(finding), ensure_ascii=False, indent=2),
+            "既存理由:",
+            json.dumps(existing, ensure_ascii=False, indent=2),
+            "反対側の既存理由:",
+            json.dumps(opposite, ensure_ascii=False, indent=2),
+            f"`{concrete_repo_root / 'memo'}` は読み書き禁止です。",
+            "ファイル編集は禁止です。",
+        ]
+    )
+
+
+def _judge_finding_prompt(
+    repo_root: Path,
+    finding: _Finding,
+    oracle_snapshot: _OracleEvaluationSnapshot | None = None,
+) -> str:
+    """所見判定用 prompt を組み立てる。"""
+    concrete_repo_root = repo_root.resolve()
+    concrete_oracle_root = (concrete_repo_root / "oracles").resolve()
+    readable_oracle_root = (
+        oracle_snapshot.snapshot_oracle_root
+        if oracle_snapshot is not None
+        else concrete_oracle_root
+    )
+    return "\n".join(
+        [
+            "あなたはソフトウェア仕様レビュー所見の判定担当です。",
+            "この所見を人間に提示すべきなら accept、提示すべきでないなら reject を返してください。",
+            "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。",
+            f"`{readable_oracle_root}` 配下の仕様ファイルと INDEX.md だけを読んでください。",
+            f"`{concrete_oracle_root}` は path 変換のためにだけ使い、読まないでください。",
+            "対象所見:",
+            json.dumps(_finding_to_payload(finding), ensure_ascii=False, indent=2),
+            "妥当ではない理由:",
+            json.dumps(finding.challenger_reasons, ensure_ascii=False, indent=2),
+            "妥当である理由:",
+            json.dumps(finding.advocate_reasons, ensure_ascii=False, indent=2),
+            f"`{concrete_repo_root / 'memo'}` は読み書き禁止です。",
+            "ファイル編集は禁止です。",
+        ]
+    )
+
+
+def _validate_enumerate_findings_payload(
+    value: object,
+    repo_root: Path,
+    oracle_snapshot: _OracleEvaluationSnapshot | None = None,
+) -> None:
+    """enumerate_findings の payload を検査する。"""
+    if not isinstance(value, dict):
+        raise ValueError("Expected JSON object.")
+    if set(value) == {"issues"}:
+        _validate_evaluation_issues(value["issues"], repo_root, oracle_snapshot)
+        return
+    if set(value) != {"findings"}:
+        raise ValueError("Enumerate findings payload keys do not match schema.")
+    _validate_finding_payloads(value["findings"], repo_root, oracle_snapshot)
+
+
+def _validate_merge_findings_payload(
+    value: object,
+    repo_root: Path,
+    known_finding_ids: set[str],
+    oracle_snapshot: _OracleEvaluationSnapshot | None = None,
+) -> None:
+    """merge_findings の payload を検査する。"""
+    if not isinstance(value, dict):
+        raise ValueError("Expected JSON object.")
+    if set(value) == {"issues"}:
+        _validate_evaluation_issues(value["issues"], repo_root, oracle_snapshot)
+        return
+    if set(value) != {"operations"}:
+        raise ValueError("Merge findings payload keys do not match schema.")
+    operations = value["operations"]
+    if not isinstance(operations, list):
+        raise ValueError("operations must be a list.")
+    for index, operation in enumerate(operations):
+        if not isinstance(operation, dict):
+            raise ValueError(f"operations[{index}] must be an object.")
+        if set(operation) != {"kind", "target_ids", "finding"}:
+            raise ValueError(f"operations[{index}] keys do not match schema.")
+        if operation["kind"] not in {"delete", "replace", "merge"}:
+            raise ValueError(f"operations[{index}].kind is invalid.")
+        target_ids = operation["target_ids"]
+        if not isinstance(target_ids, list) or not target_ids:
+            raise ValueError(f"operations[{index}].target_ids is invalid.")
+        for target_id in target_ids:
+            if target_id not in known_finding_ids:
+                raise ValueError(f"operations[{index}].target_ids is unknown.")
+        if operation["kind"] == "delete":
+            if operation["finding"] is not None:
+                raise ValueError(f"operations[{index}].finding must be null.")
+        else:
+            _validate_finding_payloads([operation["finding"]], repo_root, oracle_snapshot)
+
+
+def _validate_finding_payloads(
+    findings: object,
+    repo_root: Path,
+    oracle_snapshot: _OracleEvaluationSnapshot | None = None,
+) -> None:
+    """finding item の Python 側の最小検査を行う。"""
+    if not isinstance(findings, list):
+        raise ValueError("findings must be a list.")
+    for index, finding in enumerate(findings):
+        if not isinstance(finding, dict):
+            raise ValueError(f"findings[{index}] must be an object.")
+        if set(finding) != {"severity", "title", "oracle_path", "reason"}:
+            raise ValueError(f"findings[{index}] keys do not match schema.")
+        if finding["severity"] not in set(_FINDING_SEVERITY_ORDER):
+            raise ValueError(f"findings[{index}].severity is invalid.")
+        _require_absolute_oracle_file(
+            finding["oracle_path"],
+            repo_root,
+            f"findings[{index}].oracle_path",
+            oracle_snapshot,
+        )
+        for key in ["title", "reason"]:
+            if not isinstance(finding[key], str) or not str(finding[key]).strip():
+                raise ValueError(f"findings[{index}].{key} must be a non-empty string.")
+
+
+def _validate_reasons_payload(value: object) -> None:
+    """validate_findings_* の payload を検査する。"""
+    if not isinstance(value, dict):
+        raise ValueError("Expected JSON object.")
+    if set(value) == {"issues"}:
+        return
+    if set(value) != {"reasons"}:
+        raise ValueError("Reasons payload keys do not match schema.")
+    if not isinstance(value["reasons"], list):
+        raise ValueError("reasons must be a list.")
+    for index, reason in enumerate(value["reasons"]):
+        if not isinstance(reason, str):
+            raise ValueError(f"reasons[{index}] must be a string.")
+        if not reason.strip():
+            raise ValueError(f"reasons[{index}] must be a non-empty string.")
+        if _contains_speculative_reason_phrase(reason):
+            raise ValueError(f"reasons[{index}] contains speculative wording.")
+
+
+def _contains_speculative_reason_phrase(reason: str) -> bool:
+    """理由の根拠として禁止する推測表現を最小限に検出する。"""
+    return any(phrase in reason for phrase in _SPECULATIVE_REASON_PHRASES)
+
+
+def _validate_judge_findings_payload(value: object) -> None:
+    """judge_findings の payload を検査する。"""
+    if not isinstance(value, dict):
+        raise ValueError("Expected JSON object.")
+    if set(value) == {"issues"}:
+        return
+    if set(value) != {"verdict", "reason"}:
+        raise ValueError("Judge findings payload keys do not match schema.")
+    if value["verdict"] not in set(_FINDING_VERDICT_ORDER):
+        raise ValueError("verdict is invalid.")
+    if not isinstance(value["reason"], str):
+        raise ValueError("reason must be a string.")
+
+
+def _finding_from_payload(payload: dict[str, object], index: int) -> _Finding:
+    """schema payload から stable finding_id 付き Finding を作る。"""
+    return _Finding(
+        finding_id=f"FINDING-{index:04d}",
+        severity=payload["severity"],  # type: ignore[arg-type]
+        title=str(payload["title"]),
+        oracle_path=str(Path(str(payload["oracle_path"])).resolve()),
+        reason=str(payload["reason"]),
+        challenger_reasons=[],
+        advocate_reasons=[],
+    )
+
+
+def _parse_finding_id_index(finding_id: str) -> int | None:
+    """FINDING-0001 形式の ID から number を取り出す。"""
+    prefix = "FINDING-"
+    if not finding_id.startswith(prefix):
+        return None
+    suffix = finding_id[len(prefix) :]
+    if len(suffix) != 4 or not suffix.isdigit():
+        return None
+    return int(suffix)
+
+
+def _finding_to_payload(finding: _Finding) -> dict[str, object]:
+    """Codex CLI に渡す所見 payload を作る。"""
+    return {
+        "finding_id": finding.finding_id,
+        "severity": finding.severity,
+        "title": finding.title,
+        "oracle_path": finding.oracle_path,
+        "reason": finding.reason,
+        "challenger_reasons": finding.challenger_reasons,
+        "advocate_reasons": finding.advocate_reasons,
+        "judge_verdict": finding.judge_verdict,
+        "judge_reason": finding.judge_reason,
+    }
+
+
+def _legacy_issues_from_enumerate_result(
+    findings: list[dict[str, object]],
+) -> list[object] | None:
+    """旧 issues payload 互換用 marker から issues を取り出す。"""
+    if len(findings) != 1:
+        return None
+    marker = findings[0]
+    if set(marker) != {"__legacy_issues"}:
+        return None
+    issues = marker["__legacy_issues"]
+    if not isinstance(issues, list):
+        raise ValueError("issues must be a list.")
+    return issues
+
+
+def _issue_to_finding_payload(issue: dict[str, object]) -> dict[str, object]:
+    """旧 issues payload を enumerate_findings payload 相当に変換する。"""
+    severity = "fatal" if issue.get("severity") == "fatal" else "minor"
+    return {
+        "severity": severity,
+        "title": str(issue.get("title") or "Untitled finding"),
+        "oracle_path": str(issue.get("oracle_path") or ""),
+        "reason": str(issue.get("reason") or issue.get("problem") or ""),
+    }
+
+
+def _apply_merge_operations(
+    findings: list[_Finding],
+    operations: list[object],
+    finding_ids: _FindingIdAllocator | None = None,
+) -> list[_Finding]:
+    """merge_findings operations を所見 list に適用する。"""
+    current = list(findings)
+    allocator = finding_ids or _FindingIdAllocator.from_findings(current)
+    by_id = {finding.finding_id: finding for finding in current}
+    for operation in operations:
+        if not isinstance(operation, dict):
+            continue
+        target_ids = [
+            target_id
+            for target_id in operation.get("target_ids", [])
+            if isinstance(target_id, str)
+        ]
+        target_positions = [
+            index
+            for index, finding in enumerate(current)
+            if finding.finding_id in set(target_ids)
+        ]
+        if not target_positions:
+            continue
+        if operation["kind"] == "delete":
+            current = [
+                finding for finding in current if finding.finding_id not in target_ids
+            ]
+            continue
+        payload = operation.get("finding")
+        if not isinstance(payload, dict):
+            continue
+        if operation["kind"] == "replace" and len(target_ids) == 1:
+            replacement = _finding_from_payload(payload, 1)
+            replacement.finding_id = target_ids[0]
+        else:
+            replacement = _finding_from_payload(payload, allocator.allocate())
+        for target_id in target_ids:
+            old = by_id.get(target_id)
+            if old is None:
+                continue
+            _extend_unique(replacement.challenger_reasons, old.challenger_reasons)
+            _extend_unique(replacement.advocate_reasons, old.advocate_reasons)
+        first_position = min(target_positions)
+        current = [
+            finding for finding in current if finding.finding_id not in target_ids
+        ]
+        current.insert(min(first_position, len(current)), replacement)
+        by_id = {finding.finding_id: finding for finding in current}
+    return current
+
+
+def _findings_to_evaluations(
+    repo_root: Path,
+    oracle_files: list[Path],
+    findings: list[_Finding],
+) -> list[dict[str, object]]:
+    """判定済み所見 list を report 用 evaluation list に変換する。"""
+    result = [
+        {
+            "target_oracle_path": str(path.resolve()),
+            "referenced_paths": [],
+            "specification_only_basis": "",
+            "issues": [],
+        }
+        for path in oracle_files
+    ]
+    if not result:
+        return []
+    target_to_index = {
+        str(evaluation["target_oracle_path"]): index
+        for index, evaluation in enumerate(result)
+    }
+    for finding in findings:
+        issue = _finding_to_issue(repo_root, finding)
+        index = target_to_index.get(str(Path(finding.oracle_path).resolve()), 0)
+        result[index]["issues"].append(issue)
+    return [_refresh_evaluation_metadata(evaluation) for evaluation in result]
+
+
+def _finding_to_issue(repo_root: Path, finding: _Finding) -> dict[str, object]:
+    """Finding を report renderer の issue 互換形式へ変換する。"""
+    severity = "fatal" if finding.severity == "fatal" else "warning"
+    judge_verdict = finding.judge_verdict or "accept"
+    reason_parts = [finding.reason]
+    if finding.advocate_reasons:
+        reason_parts.append(
+            "採用理由: " + " / ".join(finding.advocate_reasons)
+        )
+    if finding.challenger_reasons:
+        reason_parts.append(
+            "不採用理由: " + " / ".join(finding.challenger_reasons)
+        )
+    if finding.judge_reason:
+        reason_parts.append(f"判定理由: {finding.judge_reason}")
+    return {
+        "severity": severity,
+        "title": f"{finding.finding_id}: {finding.title}",
+        "oracle_path": finding.oracle_path,
+        "oracle_line_start": None,
+        "oracle_line_end": None,
+        "referenced_paths": [finding.oracle_path],
+        "affected_workflow": "cmoc review oracles",
+        "requirement": "oracles ファイルは fatal/minor の所見としてレビュー可能であること。",
+        "problem": finding.reason,
+        "reason": "\n".join(reason_parts),
+        "suggested_oracle_change": "人間が該当 oracle 断片を確認してください。",
+        "specification_only_basis": (
+            f"`{repo_root / 'oracles'}` 配下の仕様ファイルと INDEX.md だけに基づく所見です。"
+        ),
+        "finding_id": finding.finding_id,
+        "finding_severity": finding.severity,
+        "judge_verdict": judge_verdict,
+    }
+
+
+def _finding_may_relate_to_oracle(finding: _Finding, oracle_file: Path) -> bool:
+    """列挙 prompt に渡す既知所見を対象ファイル中心に絞る。"""
+    try:
+        return Path(finding.oracle_path).resolve() == oracle_file.resolve()
+    except OSError:
+        return False
+
+
+def _extend_unique(target: list[str], values: list[str]) -> bool:
+    """文字列 list に未登録値だけを追加し、追加有無を返す。"""
+    changed = False
+    seen = set(target)
+    for value in values:
+        if value in seen:
+            continue
+        target.append(value)
+        seen.add(value)
+        changed = True
+    return changed
+
+
+def _evaluate_oracle_file(
+    execution_repo_root: Path,
+    display_repo_root: Path,
     oracle_file: Path,
     oracle_snapshot: _OracleEvaluationSnapshot | None = None,
 ) -> dict[str, object]:
     """1 oracle ファイルの評価を実行し、report 用レコードを返す。"""
     payload = parse_json_object(
         run_codex_exec(
-            repo_root,
-            _evaluation_prompt(repo_root, oracle_file, oracle_snapshot),
-            purpose=f"oracle 評価 {oracle_file.relative_to(repo_root)}",
+            execution_repo_root,
+            _evaluation_prompt(display_repo_root, oracle_file, oracle_snapshot),
+            purpose=f"oracle 評価 {oracle_file.relative_to(display_repo_root)}",
             read_only=True,
             expect_json=True,
             output_schema=_EVALUATION_OUTPUT_SCHEMA,
             json_validator=lambda value: _validate_evaluation_payload(
                 value,
-                repo_root,
+                display_repo_root,
                 oracle_file,
                 oracle_snapshot,
             ),
         )
     )
-    return _evaluation_payload_to_record(payload, repo_root, oracle_file)
+    return _evaluation_payload_to_record(payload, display_repo_root, oracle_file)
 
 
 def _append_evaluation_records_in_order(
@@ -575,7 +1843,8 @@ def _evaluation_prompt(
 
 
 def _improve_evaluations(
-    repo_root: Path,
+    execution_repo_root: Path,
+    display_repo_root: Path,
     evaluations: list[dict[str, object]],
     repeat_improve_issues_list: int,
     oracle_snapshot: _OracleEvaluationSnapshot | None = None,
@@ -596,8 +1865,12 @@ def _improve_evaluations(
         )
         payload = parse_json_object(
             run_codex_exec(
-                repo_root,
-                _improvement_prompt(repo_root, current_payload, oracle_snapshot),
+                execution_repo_root,
+                _improvement_prompt(
+                    display_repo_root,
+                    current_payload,
+                    oracle_snapshot,
+                ),
                 purpose=f"oracle 問題点リスト改善 {index + 1}",
                 read_only=True,
                 expect_json=True,
@@ -606,7 +1879,7 @@ def _improve_evaluations(
                 reasoning_effort=FRONTIER_HIGH_REASONING_EFFORT,
                 json_validator=lambda value: _validate_issues_payload(
                     value,
-                    repo_root,
+                    display_repo_root,
                     _target_oracle_paths(evaluations),
                     oracle_snapshot,
                 ),
@@ -800,83 +2073,70 @@ def _write_report(
     branch_name: str,
     cmoc_branch: bool,
     base_commit: str | None,
-    commit_hash: str,
+    session_fork_commit: str,
     deleted_oracles: bool,
     oracle_count_total: int,
     oracle_files: list[Path],
     evaluations: list[dict[str, object]],
+    scope: ReviewOraclesScope,
+    review_branch: str | None,
+    review_fork_commit: str | None,
+    review_join_commit: str | None,
 ) -> Path:
     """評価結果を `.cmoc/reports/review_oracles` に保存する。"""
     report_dir = repo_root / ".cmoc" / "reports" / _REPORT_DIR_NAME
     generated_at = "__CMOC_REPORT_GENERATED_AT__"
-    issue_counts = _issue_counts(evaluations)
-    result = _evaluation_result(len(oracle_files), issue_counts)
+    finding_records = _finding_records(evaluations)
+    finding_counts = _finding_counts(finding_records)
+    result = _evaluation_result(len(oracle_files), finding_counts)
 
-    # frontmatter と問題点単位の本文を結合する。
     lines = [
         "---",
-        "schema_version: 1",
         f"command: {_yaml_string(_REPORT_COMMAND)}",
         f"generated_at: {_yaml_string(generated_at)}",
         f"repo_root: {_yaml_string(str(repo_root.resolve()))}",
-        f"oracle_root: {_yaml_string(str((repo_root / 'oracles').resolve()))}",
-        f"mode: {_yaml_string(mode)}",
-        f"full_requested: {str(full_requested).lower()}",
-        f"branch: {_yaml_string(branch_name)}",
-        f"is_cmoc_branch: {str(cmoc_branch).lower()}",
-        f"base_commit: {_yaml_nullable(base_commit)}",
-        f"head_commit: {_yaml_string(commit_hash)}",
-        f"commit: {_yaml_string(commit_hash)}",
-        f"deleted_oracles_detected: {str(deleted_oracles).lower()}",
+        f"scope: {_yaml_string(scope)}",
+        f"session_branch: {_yaml_string(branch_name)}",
+        f"session_fork_commit: {_yaml_string(session_fork_commit)}",
+        f"review_branch: {_yaml_nullable(review_branch)}",
+        f"review_fork_commit: {_yaml_nullable(review_fork_commit)}",
+        f"review_join_commit: {_yaml_nullable(review_join_commit)}",
         f"oracle_count_total: {oracle_count_total}",
         f"oracle_count_evaluated: {len(oracle_files)}",
-        f"oracle_count: {len(oracle_files)}",
-        f"fatal_issue_count: {issue_counts['fatal']}",
-        f"warning_issue_count: {issue_counts['warning']}",
-        f"inconclusive_issue_count: {issue_counts['inconclusive']}",
+        f"fatal_findings_accepted_count: {finding_counts['fatal']['accept']}",
+        f"minor_findings_accepted_count: {finding_counts['minor']['accept']}",
+        f"fatal_findings_rejected_count: {finding_counts['fatal']['reject']}",
+        f"minor_findings_rejected_count: {finding_counts['minor']['reject']}",
         f"result: {_yaml_string(result)}",
         "---",
         "",
         f"# {_REPORT_COMMAND} report",
         "",
-        "## Summary",
-        "",
-        f"- Result: `{result}`",
-        f"- Mode: `{mode}`",
-        f"- Evaluated oracle files: `{len(oracle_files)}`",
-        f"- Fatal issues: `{issue_counts['fatal']}`",
-        f"- Inconclusive issues: `{issue_counts['inconclusive']}`",
-        f"- Warning issues: `{issue_counts['warning']}`",
-        "",
         "## Verdict",
         "",
         _verdict_text(result),
         "",
+        f"- Scope: `{scope}`",
+        f"- Evaluated oracle files: `{len(oracle_files)}`",
+        f"- Accepted fatal findings: `{finding_counts['fatal']['accept']}`",
+        f"- Accepted minor findings: `{finding_counts['minor']['accept']}`",
+        f"- Rejected fatal findings: `{finding_counts['fatal']['reject']}`",
+        f"- Rejected minor findings: `{finding_counts['minor']['reject']}`",
+        "",
         "## Evaluated oracle files",
         "",
-        "| No. | Oracle file | Issues |",
+        "| No. | Oracle file | Findings |",
         "|---:|---|---:|",
     ]
-    issue_count_by_target = _issue_count_by_target(evaluations)
+    finding_count_by_target = _finding_count_by_target(evaluations)
     for index, oracle_file in enumerate(oracle_files, start=1):
         target = str(oracle_file.resolve())
         lines.append(
             f"| {index} | `{oracle_file.relative_to(repo_root)}` | "
-            f"{issue_count_by_target.get(target, 0)} |"
+            f"{finding_count_by_target.get(target, 0)} |"
         )
     lines.extend([""])
-    for severity, heading in [
-        ("fatal", "## Fatal issues"),
-        ("inconclusive", "## Inconclusive issues"),
-        ("warning", "## Warnings"),
-    ]:
-        lines.extend([heading, ""])
-        issues = _issues_for_severity(evaluations, severity)
-        if not issues:
-            lines.extend(["No issues.", ""])
-            continue
-        for issue_id, issue in _numbered_issues(severity, issues):
-            lines.extend(_issue_lines(repo_root, issue_id, issue))
+    lines.extend(_finding_sections_lines(repo_root, finding_records))
     lines.extend(["## Referenced files", ""])
     referenced_path_rows = _referenced_path_rows(repo_root, evaluations)
     if referenced_path_rows:
@@ -903,78 +2163,67 @@ def _write_error_report(
     branch_name: str | None,
     cmoc_branch: bool | None,
     base_commit: str | None,
-    commit_hash: str | None,
+    session_fork_commit: str | None,
     deleted_oracles: bool | None,
     oracle_count_total: int | None,
     oracle_files: list[Path],
     evaluations: list[dict[str, object]],
+    scope: ReviewOraclesScope | None,
+    review_branch: str | None,
+    review_fork_commit: str | None,
+    review_join_commit: str | None,
     failed_stage: str,
     error: Exception,
 ) -> Path:
     """評価処理失敗時の `result: error` レポートを best effort で保存する。"""
     report_dir = repo_root / ".cmoc" / "reports" / _REPORT_DIR_NAME
     generated_at = "__CMOC_REPORT_GENERATED_AT__"
-    issue_counts = _issue_counts(evaluations)
+    finding_records = _finding_records(evaluations)
+    finding_counts = _finding_counts(finding_records)
     result = "error"
     lines = [
         "---",
-        "schema_version: 1",
         f"command: {_yaml_string(_REPORT_COMMAND)}",
         f"generated_at: {_yaml_string(generated_at)}",
         f"repo_root: {_yaml_string(str(repo_root.resolve()))}",
-        f"oracle_root: {_yaml_string(str((repo_root / 'oracles').resolve()))}",
-        f"mode: {_yaml_string(mode or 'unknown')}",
-        f"full_requested: {str(full_requested).lower()}",
-        f"branch: {_yaml_nullable(branch_name)}",
-        f"is_cmoc_branch: {_yaml_bool_nullable(cmoc_branch)}",
-        f"base_commit: {_yaml_nullable(base_commit)}",
-        f"head_commit: {_yaml_nullable(commit_hash)}",
-        f"commit: {_yaml_nullable(commit_hash)}",
-        f"deleted_oracles_detected: {_yaml_bool_nullable(deleted_oracles)}",
+        f"scope: {_yaml_nullable(scope)}",
+        f"session_branch: {_yaml_nullable(branch_name)}",
+        f"session_fork_commit: {_yaml_nullable(session_fork_commit)}",
+        f"review_branch: {_yaml_nullable(review_branch)}",
+        f"review_fork_commit: {_yaml_nullable(review_fork_commit)}",
+        f"review_join_commit: {_yaml_nullable(review_join_commit)}",
         f"oracle_count_total: {_yaml_int_nullable(oracle_count_total)}",
         f"oracle_count_evaluated: {len(evaluations)}",
-        f"oracle_count: {len(evaluations)}",
-        f"fatal_issue_count: {issue_counts['fatal']}",
-        f"warning_issue_count: {issue_counts['warning']}",
-        f"inconclusive_issue_count: {issue_counts['inconclusive']}",
+        f"fatal_findings_accepted_count: {finding_counts['fatal']['accept']}",
+        f"minor_findings_accepted_count: {finding_counts['minor']['accept']}",
+        f"fatal_findings_rejected_count: {finding_counts['fatal']['reject']}",
+        f"minor_findings_rejected_count: {finding_counts['minor']['reject']}",
         f"result: {_yaml_string(result)}",
         "---",
         "",
         f"# {_REPORT_COMMAND} report",
         "",
-        "## Summary",
-        "",
-        f"- Result: `{result}`",
-        f"- Mode: `{mode or 'unknown'}`",
-        f"- Evaluated oracle files: `{len(evaluations)}`",
-        f"- Requested oracle files: `{len(oracle_files)}`",
-        f"- Fatal issues: `{issue_counts['fatal']}`",
-        f"- Inconclusive issues: `{issue_counts['inconclusive']}`",
-        f"- Warning issues: `{issue_counts['warning']}`",
-        f"- Failed stage: `{failed_stage}`",
-        f"- Exception type: `{type(error).__name__}`",
-        f"- Exception message: `{str(error)}`",
-        "",
         "## Verdict",
         "",
         _verdict_text(result),
         "",
-        f"Failed stage: `{failed_stage}`",
-        "",
-        f"Exception: `{type(error).__name__}: {str(error)}`",
+        f"- Scope: `{scope or 'unknown'}`",
+        f"- Failed stage: `{failed_stage}`",
+        f"- Exception type: `{type(error).__name__}`",
+        f"- Exception message: `{str(error)}`",
         "",
         "## Evaluated oracle files",
         "",
-        "| No. | Oracle file | Evaluation status | Issues |",
+        "| No. | Oracle file | Evaluation status | Findings |",
         "|---:|---|---|---:|",
     ]
-    issue_count_by_target = _issue_count_by_target(evaluations)
+    finding_count_by_target = _finding_count_by_target(evaluations)
     evaluated_files = _evaluated_oracle_files(evaluations)
     for index, oracle_file in enumerate(evaluated_files, start=1):
         target = str(oracle_file)
         lines.append(
             f"| {index} | `{_display_path(repo_root, str(oracle_file))}` | "
-            f"evaluated | {issue_count_by_target.get(target, 0)} |"
+            f"evaluated | {finding_count_by_target.get(target, 0)} |"
         )
     not_evaluated_files = _not_evaluated_oracle_files(
         repo_root,
@@ -992,18 +2241,7 @@ def _write_error_report(
     if not evaluated_files and not not_evaluated_files:
         lines.append("| - | No requested oracle files. | - | - |")
     lines.extend([""])
-    for severity, heading in [
-        ("fatal", "## Fatal issues"),
-        ("inconclusive", "## Inconclusive issues"),
-        ("warning", "## Warnings"),
-    ]:
-        lines.extend([heading, ""])
-        issues = _issues_for_severity(evaluations, severity)
-        if not issues:
-            lines.extend(["No issues.", ""])
-            continue
-        for issue_id, issue in _numbered_issues(severity, issues):
-            lines.extend(_issue_lines(repo_root, issue_id, issue))
+    lines.extend(_finding_sections_lines(repo_root, finding_records))
     lines.extend(["## Referenced files", ""])
     referenced_path_rows = _referenced_path_rows(repo_root, evaluations)
     if referenced_path_rows:
@@ -1030,7 +2268,7 @@ def _print_error_report_fallback(
     branch_name: str | None,
     cmoc_branch: bool | None,
     base_commit: str | None,
-    commit_hash: str | None,
+    review_start_commit: str | None,
     deleted_oracles: bool | None,
     oracle_count_total: int | None,
     oracle_files: list[Path],
@@ -1050,7 +2288,7 @@ def _print_error_report_fallback(
         f"- branch: {_yaml_nullable(branch_name)}",
         f"- is_cmoc_branch: {_yaml_bool_nullable(cmoc_branch)}",
         f"- base_commit: {_yaml_nullable(base_commit)}",
-        f"- head_commit: {_yaml_nullable(commit_hash)}",
+        f"- head_commit: {_yaml_nullable(review_start_commit)}",
         f"- deleted_oracles_detected: {_yaml_bool_nullable(deleted_oracles)}",
         f"- oracle_count_total: {_yaml_int_nullable(oracle_count_total)}",
         f"- oracle_count_requested: {len(oracle_files)}",
@@ -1143,6 +2381,30 @@ def _require_issue_oracle_path_string(value: object, index: int) -> None:
     stripped_value = value.strip()
     if not stripped_value:
         raise ValueError(f"issues[{index}].oracle_path must not be empty.")
+
+
+def _require_absolute_oracle_file(
+    value: object,
+    repo_root: Path,
+    label: str,
+    oracle_snapshot: _OracleEvaluationSnapshot | None = None,
+) -> Path:
+    """JSON 値を oracles ファイル path として検査する。"""
+    resolved_path = _require_absolute_oracles_file(
+        value,
+        repo_root,
+        label,
+        require_current_existence=oracle_snapshot is None,
+    )
+    if oracle_snapshot is not None:
+        if resolved_path not in oracle_snapshot.oracle_files:
+            raise ValueError(f"{label} must be an oracle file.")
+        return resolved_path
+
+    oracle_files = {path.resolve() for path in list_oracle_files(repo_root)}
+    if resolved_path not in oracle_files:
+        raise ValueError(f"{label} must be an oracle file.")
+    return resolved_path
 
 
 def _require_absolute_oracle_reference_path(
@@ -1239,17 +2501,77 @@ def _issue_counts(
     return counts
 
 
+def _finding_records(
+    evaluations: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """evaluation 内 issue を仕様上の finding record に正規化する。"""
+    records = []
+    for issue in _all_issues(evaluations):
+        records.append(
+            {
+                "severity": _finding_severity_for_issue(issue),
+                "verdict": _finding_verdict_for_issue(issue),
+                "issue": issue,
+            }
+        )
+    return records
+
+
+def _finding_severity_for_issue(issue: dict[str, object]) -> str:
+    """旧 issue severity を fatal/minor に畳む。"""
+    finding_severity = issue.get("finding_severity")
+    if finding_severity in _FINDING_SEVERITY_ORDER:
+        return str(finding_severity)
+    return "fatal" if issue.get("severity") == "fatal" else "minor"
+
+
+def _finding_verdict_for_issue(issue: dict[str, object]) -> str:
+    """issue metadata から accept/reject を返す。旧 issue は accept 扱い。"""
+    judge_verdict = issue.get("judge_verdict")
+    if judge_verdict in _FINDING_VERDICT_ORDER:
+        return str(judge_verdict)
+    return "accept"
+
+
+def _finding_counts(
+    finding_records: list[dict[str, object]],
+) -> dict[str, dict[str, int]]:
+    """fatal/minor と accept/reject ごとの finding 件数を数える。"""
+    counts = {
+        severity: {verdict: 0 for verdict in _FINDING_VERDICT_ORDER}
+        for severity in _FINDING_SEVERITY_ORDER
+    }
+    for record in finding_records:
+        severity = str(record["severity"])
+        verdict = str(record["verdict"])
+        counts[severity][verdict] += 1
+    return counts
+
+
 def _evaluation_result(
     oracle_count: int,
-    issue_counts: dict[str, int],
+    issue_counts: dict[str, object],
 ) -> str:
-    """issue 件数からレポート result を決める。"""
+    """件数から仕様上許可されたレポート result を決める。"""
     if oracle_count == 0:
         return "no_targets"
-    for severity in _SEVERITY_ORDER:
-        if issue_counts[severity] > 0:
-            return severity
+    if _count_value(issue_counts, "fatal") > 0:
+        return "fatal"
+    if (
+        _count_value(issue_counts, "minor") > 0
+        or _count_value(issue_counts, "warning") > 0
+        or _count_value(issue_counts, "inconclusive") > 0
+    ):
+        return "minor"
     return "ok"
+
+
+def _count_value(counts: dict[str, object], key: str) -> int:
+    """plain count と verdict 別 count の両方から検出件数を読む。"""
+    value = counts.get(key, 0)
+    if isinstance(value, dict):
+        return sum(count for count in value.values() if isinstance(count, int))
+    return value if isinstance(value, int) else 0
 
 
 def _verdict_text(result: str) -> str:
@@ -1264,10 +2586,8 @@ def _verdict_text(result: str) -> str:
             "oracle スナップショットには、仕様だけから判断して主要ワークフロー、"
             "完了判定、または中核目的を壊しうる問題があります。"
         )
-    if result == "inconclusive":
-        return "致命的問題ありとは断定できませんが、仕様評価として判断不能な点があります。"
-    if result == "warning":
-        return "致命的ではありませんが、仕様品質・可読性・将来の実装安定性に問題があります。"
+    if result == "minor":
+        return "致命的ではありませんが、oracles ファイルに細かな問題があります。"
     if result == "no_targets":
         return "評価対象 oracle が 0 件だったため、問題点の評価は行われませんでした。"
     if result == "error":
@@ -1290,6 +2610,17 @@ def _issue_count_by_target(
         issues = _evaluation_issues(evaluation)
         target = Path(str(evaluation["target_oracle_path"])).resolve()
         result[str(target)] = len(issues)
+    return result
+
+
+def _finding_count_by_target(
+    evaluations: list[dict[str, object]],
+) -> dict[str, int]:
+    """評価対象ファイルごとの finding 件数を返す。"""
+    result = {}
+    for evaluation in evaluations:
+        target = Path(str(evaluation["target_oracle_path"])).resolve()
+        result[str(target)] = len(_evaluation_issues(evaluation))
     return result
 
 
@@ -1362,6 +2693,60 @@ def _issue_lines(
         "- Specification-only basis:",
         f"  - {issue['specification_only_basis']}",
         "",
+    ]
+
+
+def _finding_sections_lines(
+    repo_root: Path,
+    finding_records: list[dict[str, object]],
+) -> list[str]:
+    """仕様順の finding セクション行を返す。"""
+    lines = []
+    for verdict, severity, heading in [
+        ("accept", "fatal", "## Fatal findings"),
+        ("accept", "minor", "## Minor findings"),
+        ("reject", "fatal", "## Rejected fatal findings"),
+        ("reject", "minor", "## Rejected minor findings"),
+    ]:
+        lines.extend([heading, ""])
+        lines.extend(
+            _finding_group_lines(repo_root, finding_records, verdict, severity)
+        )
+    return lines
+
+
+def _finding_group_lines(
+    repo_root: Path,
+    finding_records: list[dict[str, object]],
+    verdict: str,
+    severity: str,
+) -> list[str]:
+    """指定 verdict/severity の finding 行を返す。"""
+    lines = []
+    records = [
+        record
+        for record in finding_records
+        if record["severity"] == severity and record["verdict"] == verdict
+    ]
+    if not records:
+        lines.extend(["No findings.", ""])
+        return lines
+    for finding_id, record in _numbered_finding_records(severity, records):
+        issue = record["issue"]
+        if isinstance(issue, dict):
+            lines.extend(_issue_lines(repo_root, finding_id, issue))
+    return lines
+
+
+def _numbered_finding_records(
+    severity: str,
+    records: list[dict[str, object]],
+) -> list[tuple[str, dict[str, object]]]:
+    """finding severity ごとに report-local id を付ける。"""
+    prefix = "FATAL" if severity == "fatal" else "MINOR"
+    return [
+        (f"{prefix}-{index:03d}", record)
+        for index, record in enumerate(records, start=1)
     ]
 
 

@@ -2,379 +2,269 @@
 
 ## 概要
 
-- 現在の `<repo-root>/oracles` のスナップショットに致命的な問題が無いか評価し、評価結果を人間にレポートする
+- 現在の `<repo-root>/oracles` に致命的な問題が無いかレビューし、レビュー結果を人間にレポートする
 
 ## 引数
 
 - 位置引数なし
-- オプション引数 `--full` (`-f`) を受け取る
-- オプション引数 `--repeat-improve-issues-list` を受け取る
+- オプション引数 `--scope={session|full}` を受け取る
+    - ショートネームは `-s`
+    - デフォルト値は `session`
+- オプション引数 `--enumerate-findings-loop` を受け取る
+- オプション引数 `--merge-findings-loop` を受け取る
+- オプション引数 `--refine-findings-loop` を受け取る
 
 ## 事前条件
 
-- なし
+以下の場合はエラー終了する
 
-## 部分・全体評価モード
-
-- `cmoc review oracles` は部分評価・全体評価の２つのモードを持つ
-- `<cmoc-session-branch>` 上に居る場合
-    - `--full` がついている場合は全体評価モードへ
-    - `--full` が付いていない場合は部分評価モードへ
-- `<cmoc-session-branch>` に居ない場合 (e.g. `master` ブランチ上)
-    - 全体評価モードへ
+- 現在のブランチが `<cmoc-session-branch>` ではない
+- 対応する `<cmoc-session-state-file>` が存在しない
+- 対応する `<cmoc-session-state-file>` の `session.state` が `active` ではない
+- git 未コミット差分が存在する
 
 ## 実行手順
 
 1. `<repo-root>/.cmoc` が git の追跡対象外であることを保証する
-2. oracles ファイルを列挙
-3. 部分評価モードの場合、列挙した oracles ファイルリストを「`<cmoc-session-branch>` 上で変更があった oracles ファイル」のみに絞り込む
-4. 列挙した oracles ファイルリストに対して、ファイルごとの評価を行う
-5. 問題点リストを改善する
-6. 改善済みの問題点リストをレポートとしてレンダリングする
+2. run の隔離実行を開始する
+3. 所見リストを空配列で初期化
+4. 所見リスト列挙ループ
+    1. レビュー対象ファイルを列挙
+    2. ファイルごとに「新規所見の列挙」を Codex CLI に依頼、新規所見を所見リストに結合
+    3. 全ファイルのダーティフラグが false であれば所見リスト列挙ループをここで打ち切る
+    4. 所見リストマージループ
+        1. 所見リストのマージを Codex CLI に依頼
+        2. この周回で所見のマージが無ければ、所見リストマージループを打ち切る
+        3. 所見リストマージループの先頭に戻る
+    5. 所見リスト列挙ループ先頭に戻る
+5. 所見リスト検証ループ
+    1. 所見ごとに「その所見が妥当ではない理由の記述」を Codex CLI に依頼する
+    2. 所見ごとに「その所見が妥当である理由の記述」を Codex CLI に依頼する
+    3. 全所見のダーティフラグが false であれば所見リスト検証ループをここで打ち切る
+    4. 所見リスト検証ループ先頭に戻る
+6. 所見ごとに「その所見の採用・不採用の判定」を Codex CLI に依頼する
+7. run の隔離実行を終了する
+8. 所見リストをレポートとしてレンダリングする
 
-## 評価対象はスナップショットである
+## 「run の隔離実行」とは
 
-- `cmoc review oracles` は、コマンド開始時点で現在チェックアウトされている `<repo-root>/oracles` ツリーを「閉じた oracle スナップショット」として評価する
-- 過去にあった状態遷移は評価対象としない
-  - i.e. このコマンドは git 履歴・base commit・過去の oracle スナップショットとの差分を oracle の存在可否や仕様欠落の根拠としては扱わない。
-  - e.g. 現在の `<repo-root>/oracles` に存在しないファイル（過去に削除されたファイル）は評価対象にしない。
-- 現在の oracle スナップショット上の記述だけから、判断可能な問題は問題として報告して良い
-  - e.g. 参照切れ、INDEX の不整合、主要ワークフローの仕様不足、完了判定不能
-  - この場合も、問題の根拠としてよいのは、現在存在するファイルの記述だけである（過去に存在したファイルではない）
+- その範囲内で、実際の作業を `<cmoc-review-worktree>` 上で隔離実行することを指す
+- 隔離実行については `<cmoc-root>/oracles/docs/app_specs/run_isolation.md` を参照すること
+- 隔離実行の終了時、`<cmoc-session-branch>` へのマージを自動で行う
+    - `<cmoc-review-branch>` 上で更新される可能性があるのは `INDEX.md` のみである
+    - `INDEX.md` は自動生成ファイルであるため `<cmoc-review-branch>` 側の変更が失われても何ら問題ない
+    - よって `INDEX.md` のコンフリクトは `<cmoc-session-branch>` 側を採用することで機械的に解決する
 
-## 「致命的な問題」の定義
+## `cmoc review oracles` の責務境界
 
-- 実装を参照せずに、仕様だけからの判断として、以下の問題が発生しうるものを「致命的な問題」と定義する。
-    - 主要ワークフローが破綻する
-    - 各サブコマンドが作業完了の判定をできない
-    - cmoc の中核目的を満たしたと判定できない
-- ただし、以下の緩和を持ち込む
-    - 仕様を元に実装が一意に定まらなくても良いものとする（そのために oracles が過剰に詳細になってしまうと、人間の負担が増えて oracles のビジョンと反してしまう）
-- この定義は `codex exec` のプロンプトに「リポジトリ固有の事情に依存しない汎用的な評価観点」として注入する。
+- `cmoc review oracles` の責務であること
+    - oracles ファイルに対する所見をリスト化して人間にレポートとして提示する
+    - 人間の認知コストを節約するために、指定された最大回数の範囲内で所見リストを高品質化する
+    - oracles ファイルに基づいたレビューを行う
+    - oracles ファイル上の「間違っていることが明白な要素」を人間に知らせる
+    - oracles ファイルのスナップショットをレビューする
+- `cmoc review oracles` の責務ではないこと
+    - 漏れなく所見を発見出来ていることは保証しない
+    - `cmoc review oracles` の結果を元に次に何をするべきか判断するのは人間の責任であり cmoc の責任ではない
+    - cmoc によって自動生成されたファイル (e.g. `INDEX.md`) に対するレビュー対象ではない
+    - 実装ファイルを交えたレビューは目的ではない
+    - 「oracles ファイルもっと良くするには」の人間への提案は目的ではない
+    - 過去 oracles ファイルに何があったか (i.e. 編集・追加・削除) はレビュー対象ではない
 
-## Codex CLI 呼び出しの規則
+## 「所見」の定義
 
-- 以下の作業を Codex CLI に依頼する時、この規則を適用する
-    - ファイル毎の評価
-    - 問題点リストを改善
+- 致命的な問題 (fatal) を対象とする
+    - 仕様断片同士に明確な矛盾がある
+    - 仕様に従って実装した時に、実装者の裁量では解消不能な問題が発生する
+- 単純な問題 (minor) を対象とする
+    - 日本語的な誤り（e.g. 誤字、脱字、助詞の抜け）
+    - 用語の不統一・表記揺れ・typo
+    - その他ケアレスミスの疑いが濃厚なもの
+- 以下の問題は対象としない
+    - oracles ファイルだけからは問題だとは言い切れない
+    - 仕様からは実装が一意に定まらない
+- これら定義は `codex exec` のプロンプトに「リポジトリ固有の事情に依存しない汎用的なレビュー観点」として注入する。
+
+## Codex CLI によるファイルアクセス規則
+
 - `codex exec` は読み取り専用で実行する。
-- 評価にあたってエージェントは以下のファイルを読んで良い
-    - 対象 oracle ファイル
-    - `<repo-root>/oracles` 配下の関連 oracles ファイル
-    - 関連判断に必要な `<repo-root>/oracles` 配下の `INDEX.md`
-- 逆に、評価にあたってエージェントは以下のファイルを読んではいけない
-    - oracles 外のファイル
-    - e.g. 実装ファイル、テストファイル、設定ファイル、ビルド成果物
-- 関連する oracles ファイルの選定方法
-    - `oracles/INDEX.md` から始まる `INDEX.md` の Summary / Read this when / Do not read this when を根拠に行う
+- レビューにあたってエージェントは...
+    - `<repo-root>/oracles` 配下のファイルを自由に読んで良い
+    - `<repo-root>/oracles` 以外のファイルは読んではいけない
+    - 指定されたファイルだけでなく、関連する oracles ファイルも読みに行く
+    - どの oracles ファイルが関連するかは `INDEX.md` を根拠に判断する
 
-## 「ファイル毎の評価」の詳細
+## 所見の ID 管理
 
-- 1 回の `codex exec` 呼び出しで oracles ファイル 1 つを評価し、問題点リストを生成する
-- このファイルごとの評価は並列に実行する
-- 問題点リストは Structured Output で受け取る
-- 評価作業のヒントとして以下の情報をプロンプトで渡すこと
-    - oracles ファイルの内容に対する指摘が必要であること
-    - この指摘を人間が読んで oracles ファイルの修正を行うこと
-    - `INDEX.md` は自動生成されるため、評価対象ではないこと
+- cmoc は、所見リストへ所見を追加する時点で安定した `finding_id` を付与する
+- Codex CLI が特定の所見を一意に指し示す必要がある場合 (e.g. 所見リストのマージ) は、この `finding_id` を参照する
 
-## 「問題点リストを改善」の詳細
+## 「所見リスト列挙ループ」の詳細
 
-- ファイル毎に生成した問題点リストを１つに単純結合する
-- 結合された問題点リストを元に、意味論的に統合・改善された新しい問題点リストの生成を `codex exec` に依頼す
-- 作業完了後、問題点リストは以下の要件を満たしている事を目指す（ベストエフォートで良い）
-    - 問題点の内容の品質に明確な問題が存在しないこと
-    - 問題点同士に内容的な重複がないこと
-    - 問題点同士が相互に矛盾していないこと
-    - 問題点が False-Positive ではないこと
-- この改善作業は繰り返し実行する
-  - 最大で 3 回 (`--repeat-improve-issues-list` で指定された場合そちらを優先) 繰り返す
-  - 入力として与えた問題点リストと、出力として返ってきた問題点リストとが完全一致する場合はそこでループを打ち切る
-- 問題点リストは Structured Output で受け取る
+- このループでは、所見リストを可能な限り網羅的にする事を目的とする
+- oracles ファイル 1 つごとにダーティーフラグを用意する
+- ダーティーフラグが true のファイルのみを Codex CLI による「新規所見の列挙」の対象とする
+- ダーティーフラグの初期値はスコープモードによって変わる
+    - セッションスコープ (`--scope session`) の場合、`<cmoc-session-fork-commit>` から `<cmoc-review-fork-commit>` の間で変更があったファイルのみ、ダーティフラグを true とする
+    - フルスコープ (`--scope full`) の場合、全ての oracles ファイルのダーティフラグを true とする
+- ダーティフラグは以下のルールで更新される
+    - 「新規所見の列挙」の結果、新規所見なしと判断された場合、そのファイルのダーティフラグを false にする
+- ループ回数の上限
+    - `--enumerate-findings-loop` で指定される
+    - デフォルト値は 3
 
-## 問題点リストの Structured Output schema
+## 「新規所見の列挙」の詳細
 
-- 「ファイル毎の評価」「問題点リストを改善」共に、以下の schema を使用する。
-- そのため、出力は常に問題点単位の `issues` 配列だけを持つ。
-- 評価対象ファイル単位のメタ情報は schema に含めない。
-- 問題がない場合は `issues: []` を返し、その場合は参照ファイル情報も出力しない。
+- 1 回の `codex exec` 呼び出しで 1 つの oracles ファイルをレビューする
+- プロンプトで「現状の所見リストのうち、今回のレビュー対象ファイルと関連するもの」を渡す
+- Codex CLI は新規所見（既知でない所見）のリストを Structured Output で出力する
+- Structured Output schema として `<cmoc-root>/oracles/schemas/structured_output/review/oracles/enumerate_findings.json` を使用する
+- 所見リストが既に十分網羅的であるなら、新規所見なしとなるはずである
+- このファイルごとのレビューは並列に実行する
 
-```json
-{
-  "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "issues"
-  ],
-  "properties": {
-    "issues": {
-      "type": "array",
-      "description": "検出した問題点。問題がない場合は空配列。",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "severity",
-          "title",
-          "oracle_path",
-          "oracle_line_start",
-          "oracle_line_end",
-          "referenced_paths",
-          "affected_workflow",
-          "requirement",
-          "problem",
-          "reason",
-          "suggested_oracle_change",
-          "specification_only_basis"
-        ],
-        "properties": {
-          "severity": {
-            "type": "string",
-            "enum": ["fatal", "warning", "inconclusive"],
-            "description": "問題点の分類。"
-          },
-          "title": {
-            "type": "string",
-            "description": "問題点の短い見出し。"
-          },
-          "oracle_path": {
-            "type": "string",
-            "description": "この issue の帰属先となる評価対象 oracle ファイルの絶対パス。"
-          },
-          "oracle_line_start": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "この issue の帰属先となる oracle 記述の開始行。特定できない場合は null。"
-          },
-          "oracle_line_end": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "この issue の帰属先となる oracle 記述の終了行。特定できない場合は null。"
-          },
-          "referenced_paths": {
-            "type": "array",
-            "description": "この問題点の評価時に参照した oracle / INDEX ファイルの絶対パス。oracle_path 自身は含めても含めなくてもよいが、レポートでは重複排除する。",
-            "items": {
-              "type": "string"
-            }
-          },
-          "affected_workflow": {
-            "type": "string",
-            "description": "影響を受ける workflow / subcommand / concept。例: cmoc apply fork, cmoc review oracles, overall。"
-          },
-          "requirement": {
-            "type": "string",
-            "description": "oracle が要求している、または要求すべき仕様。"
-          },
-          "problem": {
-            "type": "string",
-            "description": "仕様上の問題点。"
-          },
-          "reason": {
-            "type": "string",
-            "description": "なぜその severity と判断したのか。fatal の場合は致命的問題の定義との対応を明示する。"
-          },
-          "suggested_oracle_change": {
-            "type": "string",
-            "description": "oracle をどう修正すべきか。"
-          },
-          "specification_only_basis": {
-            "type": "string",
-            "description": "この問題点の評価が oracles 配下の仕様断片と INDEX だけに基づくことの説明。"
-          }
-        }
-      }
-    }
-  }
-}
-```
+## 「所見リストマージループ」の詳細
 
-## 問題点リストの Structured Output の後処理・事後検証
+- このループでは、所見リストの冗長性・不整合を解決することを目的とする
+- ループ回数の上限
+    - `--merge-findings-loop` で指定される
+    - デフォルト値は 3
 
-- `issues[*].oracle_path` が oracles ファイルではない場合、それはエラーとしては扱わない
-- その他は AI の裁量で決めて良い
+## 「所見リストのマージ」の詳細
+
+- 所見リストの冗長性・不整合の解決を `codex exec` に依頼する
+- プロンプトで、現状の所見リストを Codex CLI に渡す
+- Codex CLI は問題解決に必要な編集操作のリストを Structured Output で出力する
+- Structured Output schema として `<cmoc-root>/oracles/schemas/structured_output/review/oracles/merge_findings.json` を使用する
+- 作業完了後、所見リストが以下の要件を満たしている事を目指す（ベストエフォートで良い）
+    - 所見同士に内容的な重複がないこと
+    - 所見同士が相互に矛盾していないこと
+- 所見リストが既に十分コンパクトで整合的であるなら、編集操作リストは空となるはずである
+
+## 「所見リスト検証ループ」の詳細
+
+- このループでは、所見が妥当である・妥当ではない理由を出し尽くす事を目的とする
+- 所見 1 つごとにダーティーフラグを用意する
+- ダーティーフラグが true の所見のみを Codex CLI によるレビューの対象とする
+- ダーティーフラグの初期値はすべて true とする
+- ダーティフラグは、その周回で「その所見が妥当ではない理由」「その所見が妥当である理由」が 1 つも出なかった場合に false にする
+- ループ回数の上限
+    - `--refine-findings-loop` で指定される
+    - デフォルト値は 3
+
+## 「その所見が妥当ではない理由の記述」「その所見が妥当である理由の記述」の詳細
+
+- 1 回の `codex exec` 呼び出しで 1 つの所見をレビューする
+- プロンプトで、レビュー対象の所見の詳細を Codex CLI に渡す
+- Codex CLI は新規の理由のリストを Structured Output で出力する
+- Structured Output schema として `<cmoc-root>/oracles/schemas/structured_output/review/oracles/validate_findings_challenger.json`, `<cmoc-root>/oracles/schemas/structured_output/review/oracles/validate_findings_advocate.json` を使用する
+- その所見が妥当ではない・妥当であるとする理由は以下の原則に従う
+    - 具体的な根拠 (e.g. 事実と異なる) を必ず示す
+    - 「かもしれない」「可能性がある」は根拠としない
+    - 「妥当である（ではない）理由」と対応する「妥当ではない（である）理由」に対する反論をする
+- 理由が既に出尽くしているなら、新規理由なしとなるはずである
+- この所見ごとのレビューは並列に実行する
+
+## 「その所見の採用・不採用の判定」の詳細
+
+- その所見を、要確認項目として人間に見せるべきかの判定を `codex exec` に依頼する
+- 1 回の `codex exec` 呼び出しで 1 つの所見を判定する
+- プロンプトで、レビュー対象の所見を Codex CLI に渡す
+- Codex CLI は判定結果を Structured Output で出力する
+- Structured Output schema として `<cmoc-root>/oracles/schemas/structured_output/review/oracles/judge_findings.json` を使用する
 
 ## レポート
 
 ### レポートの体裁
 
-評価レポートは Markdown ファイルとし、yaml frontmatter と本文で構成する。
+レビューレポートは Markdown ファイルとし、yaml frontmatter と本文で構成する。
 
-## 問題点単位の集約
+### 所見単位の集約
 
-- 最終レポートでは、評価対象ファイル単位ではなく、検出された問題点単位で結果を並べる。
-- 1 つの oracle ファイルから複数の問題点が検出された場合、それぞれを独立した項目として扱う。
-- `cmoc` は全ファイルの `issues` 配列を連結し、問題点ごとの一覧を作る。
-- 問題点は severity ごとに以下の順序で表示する。
-
-  1. `fatal`
-  2. `inconclusive`
-  3. `warning`
-- 同一 severity 内の順序は、原則として評価対象ファイルの列挙順、および各ファイル内の `issues` 配列順を維持する。
-- `cmoc` は問題点に安定した report-local id を付与する。
-
-  - fatal: `FATAL-001`, `FATAL-002`, ...
-  - inconclusive: `INCONCLUSIVE-001`, `INCONCLUSIVE-002`, ...
-  - warning: `WARN-001`, `WARN-002`, ...
+- 最終レポートでは、レビュー対象ファイル単位ではなく、所見単位で結果を並べる。
+- 所見は以下の順序で表示する。
+    1. 採用と判定された `fatal`
+    2. 採用と判定された `minor`
+    3. 不採用と判定された `fatal`
+    4. 不採用と判定された `minor`
 
 ### yaml frontmatter
 
-frontmatter には少なくとも以下の項目を書く。
+frontmatter 以下の項目を書く（いずれも、不明な場合は null 可）
 
-- `schema_version`
 - `command`
 - `generated_at`
 - `repo_root`
-- `oracle_root`
-- `mode`
-- `full_requested`
-- `branch`
-- `is_cmoc_branch`
-- `base_commit`
-- `head_commit`
+- `scope`
+- `session_branch`
+- `session_fork_commit`
+- `review_branch`
+- `review_fork_commit`
+- `review_join_commit`
 - `oracle_count_total`
 - `oracle_count_evaluated`
-- `fatal_issue_count`
-- `warning_issue_count`
-- `inconclusive_issue_count`
+- `fatal_findings_accepted_count`
+- `minor_findings_accepted_count`
+- `fatal_findings_rejected_count`
+- `minor_findings_rejected_count`
 - `result`
 
 `result` は以下のいずれかとする。
 
 - `ok`
-  - 評価対象の範囲では問題点が検出されなかった。
+    - レビュー対象の範囲では問題点が検出されなかった。
 - `fatal`
-  - `fatal` issue が 1 件以上検出された。
-- `inconclusive`
-  - `fatal` issue は検出されていないが、`inconclusive` issue が 1 件以上検出された。
-- `warning`
-  - `fatal` / `inconclusive` は検出されていないが、`warning` issue が 1 件以上検出された。
+    - `fatal` 所見が 1 件以上検出された。
+- `minor`
+    - `fatal` は検出されていないが、`minor` な所見が 1 件以上検出された。
 - `no_targets`
-  - 評価対象 oracle が 0 件だった。
+    - レビュー対象 oracle が 0 件だった。
 - `error`
-  - 評価処理またはレポート生成に失敗した。
+    - レビュー処理またはレポート生成に失敗した。
 
 ### 本文セクション
 
 本文には以下のセクションをこの順番で必ず含める。
 
 1. `# cmoc review oracles report`
-2. `## Summary`
-3. `## Verdict`
-4. `## Evaluated oracle files`
-5. `## Fatal issues`
-6. `## Inconclusive issues`
-7. `## Warnings`
-8. `## Referenced files`
-
-### `Summary`
-
-`Summary` には、少なくとも以下を書く。
-
-- 評価結果 `result`
-- 評価モード
-- 評価対象 oracle ファイル数
-- 検出された `fatal` / `inconclusive` / `warning` issue 数
+2. `## Verdict`
+3. `## Evaluated oracle files`
+4. `## Fatal findings`
+5. `## Minor findings`
 
 ### `Verdict`
 
-`Verdict` には、人間が次に何を判断すべきかを書く。
-
 - `fatal` の場合
-  - oracle スナップショットには、仕様だけから判断して主要ワークフロー、完了判定、または中核目的を壊しうる問題があることを書く。
-- `inconclusive` の場合
-  - 致命的問題ありとは断定できないが、仕様評価として判断不能な点があることを書く。
-- `warning` の場合
-  - 致命的ではないが、仕様品質・可読性・将来の実装安定性に問題があることを書く。
+    - oracle ファイルに、直ちに修正するべき問題が存在することを書く
+- `minor` の場合
+    - oracles ファイルに、致命的ではない、細かい問題があることを書く
 - `ok` の場合
-  - 今回評価した範囲では問題点が検出されなかったことを書く。
-  - ただし、問題点の不存在を完全保証するものではないことも書く。
+    - oracles ファイルに、問題は何ら見つからなかったことを書く
+    - ただし、問題点の不存在を完全保証するものではないことも書く
+- `no_targets`
+    - レビュー対象 oracle が 0 件だったことを書く
+- `error`
+    - レビュー処理が途中で失敗したことを書く
 
 ### `Evaluated oracle files`
 
-評価対象 oracle ファイルを一覧表示する。
-
-この一覧は、レポートの主結果ではなく、評価範囲を確認するための補助情報である。
-
-例:
-
+- 実際にレビューした oracle ファイルを、表形式で一覧表示する
+- e.g.
 ```markdown
-| No. | Oracle file | Issues |
+| No. | Oracle file | Findings |
 |---:|---|---:|
-| 1 | `oracles/app_specs/sub_commands/review_oracles.md` | 2 |
-| 2 | `oracles/app_specs/workflow.md` | 0 |
+| 1 | `oracles/docs/app_specs/sub_commands/review_oracles.md` | 2 |
+| 2 | `oracles/docs/app_specs/workflow.md` | 0 |
 ```
 
-### `Fatal issues`
+### `Fatal findings`
 
-`severity = fatal` の問題点を、問題点単位で列挙する。
+- `fatal` な所見を列挙する
 
-例:
+### `Minor fIndings`
 
-```markdown
-### FATAL-001: レポートの成功判定条件が曖昧
-
-- Oracle file: `oracles/app_specs/sub_commands/review_oracles.md`
-- Lines: `72-80`
-- Affected workflow: `cmoc review oracles`
-- Requirement:
-  - 評価結果を人間が判断可能な形でレポートする。
-- Problem:
-  - レポート本文の形式が固定されておらず、致命的問題の有無を安定して確認できない。
-- Reason:
-  - `cmoc review oracles` の中核目的は oracle スナップショットの致命的問題を人間に報告することだが、報告形式が曖昧だと作業完了を判断できない。
-- Suggested oracle change:
-  - レポート本文の必須セクションと issue 項目の必須フィールドを仕様化する。
-```
-
-### `Inconclusive issues`
-
-`severity = inconclusive` の問題点を、問題点単位で列挙する。
-
-### `Warnings`
-
-`severity = warning` の問題点を、問題点単位で列挙する。
-
-### `Referenced files`
-
-ファイルごとの `referenced_paths` を重複排除して一覧表示する。
-
-- どの oracle / INDEX ファイルが評価根拠として使われたかを確認するための補助情報である。
-- 実装ファイル、テストファイル、設定ファイル、ビルド成果物が混入していないことを人間が確認しやすくする。
+- `minor` な所見を列挙する
 
 ## レポートの提示方法
 
-- 評価レポートは `<repo-root>/.cmoc/reports/review_oracles/<time-stamp>.md` にファイルに保存する
+- レビューレポートは `<repo-root>/.cmoc/reports/review_oracles/<time-stamp>.md` にファイル保存する
 - レポートファイルのフルパスを stdout に流す
-
-## 評価時のワークフロー解釈
-
-cmoc の利用ワークフローは、人間が各コマンドの間で状態を確認・修正することを前提とする。
-
-各サブコマンド仕様は、原則として「そのコマンドが呼び出された時点」の契約を述べるものであり、直前の cmoc コマンドの終了状態から次の cmoc コマンドの開始状態までを、cmoc が完全に自動遷移させることまでは要求しない。
-
-したがって、以下はそれだけでは致命的問題とみなさない。
-
-- 前のコマンドが、次のコマンドの事前条件を自動的に満たすとは書かれていない
-- 人間が branch checkout、working tree の整理、`/oracles` の修正、commit / revert、再実行判断などを行えば、次のコマンドの事前条件を満たせる
-- 想定ワークフローが概略手順であり、各人間判断ステップの内部操作を網羅していない
-
-ただし、以下は致命的問題として扱ってよい。
-
-- 人間が許容された操作をしても、主要ワークフローを完了可能な状態にできない
-- ある仕様が「cmoc が自動で保証する」と明示している状態と、別の仕様が要求する状態が矛盾している
-- あるコマンドの完了判定が、そのコマンド呼び出し時点の情報だけでは定義できない

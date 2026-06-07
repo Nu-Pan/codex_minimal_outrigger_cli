@@ -5,9 +5,13 @@
 - cmoc ワ―フロー上発生する fork, join の挙動を一意に定めるための情報をファイル永続化するための json ファイル
 - 保存先は `<repo-root>/.cmoc/sessions/<session-id>.json`
 
-## スキーマ定義
 
-※ファイル永続化しなくてもその場その場で解決可能な情報は持たせない方針
+## スキーマ設計の基本原則
+
+- ファイルに永続化する情報は必要最小限度に留める
+- プログラム上の「その場その場で解決可能な情報」はステートに持たせることはしない
+
+## スキーマ定義
 
 ```json
 {
@@ -21,7 +25,7 @@
   "apply": {
     "state": "ready | running | completed | error",
     "apply_branch": "cmoc/apply/.../...",
-    "oracle_snapshot_commit": "..."
+    "oracle_snapshot_commit": "..."    
   }
 }
 ```
@@ -37,8 +41,7 @@
 ### `session.session_home_branch`
 
 - そのセッションの fork 元ブランチ名であり join 先でもある
-- セッション新規作成直後の初期値は null
-- `cmoc apply join` によって適切な値に更新される
+- セッション新規作成直後、`cmoc session fork` が現在 checkout している `<local-branch>` 名で初期化する
 
 ### `session_start_commit`
 

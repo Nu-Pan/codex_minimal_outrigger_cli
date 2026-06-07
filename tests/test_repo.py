@@ -9,6 +9,7 @@ import pytest
 from commons.errors import CmocError
 from commons.repo import (
     active_session_ids_for_home_branch,
+    apply_worktree_path_from_branch,
     apply_process_id_path,
     assert_cmoc_ignored,
     assert_no_uncommitted_changes,
@@ -19,6 +20,7 @@ from commons.repo import (
     ensure_cmoc_ignored,
     find_repo_root,
     filter_apply_implementation_file_paths,
+    filter_apply_implementation_file_paths_at_commit,
     gitignore_has_cmoc_rule,
     has_deleted_implementation_files,
     has_deleted_oracle_files,
@@ -501,7 +503,7 @@ def test_list_implementation_files_ignores_system_excludes_file(
 def test_filter_apply_implementation_file_paths_matches_implementation_files(
     tmp_path: Path,
 ) -> None:
-    """apply の実装調査対象は Codex 編集不能 path を含めない。"""
+    """apply の実装調査対象は読み取り禁止の root memo を除外する。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text(
         "/.cmoc/\nignored.py\n",
@@ -522,18 +524,53 @@ def test_filter_apply_implementation_file_paths_matches_implementation_files(
     ]
 
     assert filter_apply_implementation_file_paths(repo, relative_paths) == [
+        ".agents/skill.md",
+        "AGENTS.md",
+        "README.md",
         "app.py",
         "docs/memo/note.md",
     ]
-    assert not is_apply_implementation_path(repo, "README.md")
-    assert not is_apply_implementation_path(repo, "AGENTS.md")
-    assert not is_apply_implementation_path(repo, ".agents")
-    assert not is_apply_implementation_path(repo, ".agents/skill.md")
+    assert is_apply_implementation_path(repo, "README.md")
+    assert is_apply_implementation_path(repo, "AGENTS.md")
+    assert is_apply_implementation_path(repo, ".agents")
+    assert is_apply_implementation_path(repo, ".agents/skill.md")
     assert not is_apply_implementation_path(repo, ".cmoc/state.json")
     assert not is_apply_implementation_path(repo, "memo")
     assert not is_apply_implementation_path(repo, "memo/note.md")
     assert is_apply_implementation_path(repo, "docs/memo/note.md")
     assert is_apply_implementation_path(repo, "app.py")
+
+
+def test_filter_apply_implementation_file_paths_at_commit_excludes_root_memo(
+    tmp_path: Path,
+) -> None:
+    """commit 時点の apply 実装調査対象も読み取り禁止の root memo を除外する。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text(
+        "/.cmoc/\nignored.py\n",
+        encoding="utf-8",
+    )
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-m", "base")
+    commit_hash = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    relative_paths = [
+        "memo",
+        "memo/note.md",
+        "docs/memo/note.md",
+        ".cmoc/state.json",
+        "ignored.py",
+        "app.py",
+    ]
+
+    assert filter_apply_implementation_file_paths_at_commit(
+        repo,
+        commit_hash,
+        relative_paths,
+    ) == [
+        "app.py",
+        "docs/memo/note.md",
+    ]
 
 
 def test_changed_oracle_files_uses_session_start_and_uncommitted_changes(
@@ -1270,6 +1307,12 @@ def test_changed_paths_preserves_special_path_tokens(tmp_path: Path) -> None:
             "2026-05-10_22-22_10_000000123",
             True,
         ),
+        (
+            "cmoc/review/"
+            "2026-05-10_22-21_10_000000123/"
+            "2026-05-10_22-22_10_000000123",
+            True,
+        ),
         ("cmoc/session/2026-05-10_22-21_10_123", False),
         ("cmoc/session/test", False),
         ("cmoc/session/2026-99-99_99-99_99_999999999", False),
@@ -1302,9 +1345,18 @@ def test_is_cmoc_branch(branch_name: str, expected: bool) -> None:
             "2026-05-10_22-22_10_000000123",
             True,
         ),
+        (
+            "cmoc/review/"
+            "2026-05-10_22-21_10_000000123/"
+            "2026-05-10_22-22_10_000000123",
+            True,
+        ),
         ("cmoc/apply/2026-05-10_22-21_10_000000123/run-1", True),
         ("cmoc/apply/a/b", True),
         ("cmoc/apply/2026-05-10_22-21_10_000000123", True),
+        ("cmoc/review/2026-05-10_22-21_10_000000123/run-1", True),
+        ("cmoc/review/a/b", True),
+        ("cmoc/review/2026-05-10_22-21_10_000000123", True),
         ("feature/cmoc/session/test", False),
         ("cmoc/sessionish/test", False),
         ("main", False),
@@ -1358,10 +1410,43 @@ def test_session_state_root_keeps_linked_worktree_repo_root(
     assert session_state_root(linked) == linked
 
 
+def test_apply_worktree_path_from_branch_uses_run_worktree_layout(
+    tmp_path: Path,
+) -> None:
+    """apply branch 名から仕様通りの run worktree path を復元する。"""
+    repo = _init_repo(tmp_path)
+    session_id = "2026-05-10_22-21_10_000000123"
+    apply_run_id = "2026-05-10_22-22_10_000000123"
+
+    assert apply_worktree_path_from_branch(
+        repo,
+        f"cmoc/apply/{session_id}/{apply_run_id}",
+    ) == repo / ".cmoc" / "worktrees" / session_id / apply_run_id
+
+
 def test_session_state_repo_root_recovers_owner_from_apply_worktree_path(
     tmp_path: Path,
 ) -> None:
     """apply worktree からの join/abandon は所有元 repo root の state を使う。"""
+    repo = _init_repo(tmp_path)
+    linked = tmp_path / "linked"
+    _git(repo, "worktree", "add", "-b", "feature", str(linked), "HEAD")
+    session_id = "2026-05-10_22-21_10_000000123"
+    apply_worktree = (
+        linked
+        / ".cmoc"
+        / "worktrees"
+        / session_id
+        / "2026-05-10_22-22_10_000000123"
+    )
+
+    assert session_state_repo_root(apply_worktree, session_id) == linked
+
+
+def test_session_state_repo_root_recovers_owner_from_legacy_apply_worktree_path(
+    tmp_path: Path,
+) -> None:
+    """旧 apply worktree 配置でも所有元 repo root を復元できる。"""
     repo = _init_repo(tmp_path)
     linked = tmp_path / "linked"
     _git(repo, "worktree", "add", "-b", "feature", str(linked), "HEAD")
@@ -1412,6 +1497,7 @@ def test_write_session_state_persists_only_oracle_session_schema(
                 "session_home_branch": "main",
                 "session_start_commit": "abc123",
                 "last_joined_apply_oracle_snapshot_commit": "prev789",
+                "last_joined_apply_join_commit": "join999",
                 "runtime_note": "not durable",
             },
             "apply": {
@@ -1421,7 +1507,7 @@ def test_write_session_state_persists_only_oracle_session_schema(
                     "2026-05-10_22-22_10_000000123"
                 ),
                 "oracle_snapshot_commit": "def456",
-                "apply_worktree": "/repo/.cmoc/worktrees/apply/session/run",
+                "apply_worktree": "/repo/.cmoc/worktrees/session/run",
                 "completed": True,
                 "discrepancy_counts": [0],
                 "report_path": "/repo/.cmoc/reports/apply/fork/report.md",
@@ -1525,19 +1611,20 @@ def test_read_session_state_rejects_cross_session_apply_branch(
     assert f"apply branch session id: {other_session_id}" in error.value.detail
 
 
-def test_initial_session_state_starts_with_null_session_home_branch() -> None:
-    """session fork 直後の home branch は null で初期化する。"""
+def test_initial_session_state_records_session_home_branch() -> None:
+    """session fork 直後の home branch は fork 元 branch 名で初期化する。"""
     state = initial_session_state("main", "abc123")
 
-    assert state["session"]["session_home_branch"] is None
+    assert state["session"]["session_home_branch"] == "main"
     assert state["session"]["session_start_commit"] == "abc123"
+    assert "last_joined_apply_join_commit" not in state["session"]
     assert "last_joined_apply_result" not in state["session"]
 
 
-def test_read_session_state_allows_null_session_home_branch(
+def test_read_session_state_rejects_null_session_home_branch(
     tmp_path: Path,
 ) -> None:
-    """session_home_branch は session 作成直後の null を受け入れる。"""
+    """session_home_branch は fork 元 branch 名として必須にする。"""
     repo = _init_repo(tmp_path)
     session_id = "2026-05-10_22-21_10_000000123"
     state_path = session_state_path(repo, session_id)
@@ -1561,9 +1648,41 @@ def test_read_session_state_allows_null_session_home_branch(
         encoding="utf-8",
     )
 
-    assert read_session_state(repo, session_id)["session"][
-        "session_home_branch"
-    ] is None
+    with pytest.raises(CmocError) as error:
+        read_session_state(repo, session_id)
+
+    assert "session.session_home_branch を確認してください。" in error.value.actions
+    assert "session.session_home_branch: None" in error.value.detail
+
+
+def test_write_session_state_rejects_null_session_home_branch(
+    tmp_path: Path,
+) -> None:
+    """write_session_state でも null home branch を永続化しない。"""
+    repo = _init_repo(tmp_path)
+    session_id = "2026-05-10_22-21_10_000000123"
+
+    with pytest.raises(CmocError) as error:
+        write_session_state(
+            repo,
+            session_id,
+            {
+                "session": {
+                    "state": "active",
+                    "session_home_branch": None,
+                    "session_start_commit": "abc123",
+                    "last_joined_apply_oracle_snapshot_commit": None,
+                },
+                "apply": {
+                    "state": "ready",
+                    "apply_branch": None,
+                    "oracle_snapshot_commit": None,
+                },
+            },
+        )
+
+    assert "session.session_home_branch を確認してください。" in error.value.actions
+    assert "session.session_home_branch: None" in error.value.detail
 
 
 def test_read_session_state_rejects_unknown_state_values(
@@ -1943,77 +2062,83 @@ def test_active_session_scan_fails_on_active_state_without_branch(
     assert session_id in error.value.detail
 
 
-def test_active_session_scan_matches_null_home_branch_by_origin(
+def test_active_session_scan_rejects_null_home_branch(
     tmp_path: Path,
 ) -> None:
-    """古い null state は分岐元 branch が一意なら重複として扱う。"""
+    """active session scan でも null home branch state は不正として拒否する。"""
     repo = _init_repo(tmp_path)
     session_id = "2026-05-10_22-21_10_000000123"
     home_branch = _git(repo, "branch", "--show-current").stdout.strip()
     start_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
     _git(repo, "branch", f"cmoc/session/{session_id}")
-    write_session_state(
-        repo,
-        session_id,
-        {
-            "session": {
-                "state": "active",
-                "session_home_branch": None,
-                "session_start_commit": start_commit,
-                "last_joined_apply_oracle_snapshot_commit": None,
+    session_state_path(repo, session_id).parent.mkdir(parents=True)
+    session_state_path(repo, session_id).write_text(
+        json.dumps(
+            {
+                "session": {
+                    "state": "active",
+                    "session_home_branch": None,
+                    "session_start_commit": start_commit,
+                    "last_joined_apply_oracle_snapshot_commit": None,
+                },
+                "apply": {
+                    "state": "ready",
+                    "apply_branch": None,
+                    "oracle_snapshot_commit": None,
+                },
             },
-            "apply": {
-                "state": "ready",
-                "apply_branch": None,
-                "oracle_snapshot_commit": None,
-            },
-        },
+        ),
+        encoding="utf-8",
     )
 
-    assert active_session_ids_for_home_branch(repo, home_branch) == [session_id]
+    with pytest.raises(CmocError) as error:
+        active_session_ids_for_home_branch(repo, home_branch)
+
+    assert "session state ファイルの形式が不正です。" in error.value.message
+    assert "session.session_home_branch: None" in error.value.detail
 
 
-def test_active_session_scan_fails_on_ambiguous_null_home_branch(
+def test_active_session_scan_rejects_ambiguous_null_home_branch(
     tmp_path: Path,
 ) -> None:
-    """null home branch の active state が判定不能なら新規作成を止める。"""
+    """候補曖昧性の前に null home branch state 自体を拒否する。"""
     repo = _init_repo(tmp_path)
     session_id = "2026-05-10_22-21_10_000000123"
     home_branch = _git(repo, "branch", "--show-current").stdout.strip()
     start_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
     _git(repo, "branch", "feature", start_commit)
     _git(repo, "branch", f"cmoc/session/{session_id}")
-    write_session_state(
-        repo,
-        session_id,
-        {
-            "session": {
-                "state": "active",
-                "session_home_branch": None,
-                "session_start_commit": start_commit,
-                "last_joined_apply_oracle_snapshot_commit": None,
+    session_state_path(repo, session_id).parent.mkdir(parents=True)
+    session_state_path(repo, session_id).write_text(
+        json.dumps(
+            {
+                "session": {
+                    "state": "active",
+                    "session_home_branch": None,
+                    "session_start_commit": start_commit,
+                    "last_joined_apply_oracle_snapshot_commit": None,
+                },
+                "apply": {
+                    "state": "ready",
+                    "apply_branch": None,
+                    "oracle_snapshot_commit": None,
+                },
             },
-            "apply": {
-                "state": "ready",
-                "apply_branch": None,
-                "oracle_snapshot_commit": None,
-            },
-        },
+        ),
+        encoding="utf-8",
     )
 
     with pytest.raises(CmocError) as error:
         active_session_ids_for_home_branch(repo, home_branch)
 
-    assert "home branch 未確定の active session" in error.value.message
-    assert session_id in error.value.detail
-    assert home_branch in error.value.detail
-    assert "feature" in error.value.detail
+    assert "session state ファイルの形式が不正です。" in error.value.message
+    assert "session.session_home_branch: None" in error.value.detail
 
 
-def test_active_session_scan_fails_on_null_home_branch_without_candidates(
+def test_active_session_scan_rejects_null_home_branch_without_candidates(
     tmp_path: Path,
 ) -> None:
-    """null home branch の active state を復元できない場合も fail closed にする。"""
+    """候補なし判定の前に null home branch state 自体を拒否する。"""
     repo = _init_repo(tmp_path)
     session_id = "2026-05-10_22-21_10_000000123"
     start_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
@@ -2022,30 +2147,31 @@ def test_active_session_scan_fails_on_null_home_branch_without_candidates(
     _git(repo, "add", "README.md")
     _git(repo, "commit", "-m", "unrelated")
     _git(repo, "branch", f"cmoc/session/{session_id}")
-    write_session_state(
-        repo,
-        session_id,
-        {
-            "session": {
-                "state": "active",
-                "session_home_branch": None,
-                "session_start_commit": start_commit,
-                "last_joined_apply_oracle_snapshot_commit": None,
+    session_state_path(repo, session_id).parent.mkdir(parents=True)
+    session_state_path(repo, session_id).write_text(
+        json.dumps(
+            {
+                "session": {
+                    "state": "active",
+                    "session_home_branch": None,
+                    "session_start_commit": start_commit,
+                    "last_joined_apply_oracle_snapshot_commit": None,
+                },
+                "apply": {
+                    "state": "ready",
+                    "apply_branch": None,
+                    "oracle_snapshot_commit": None,
+                },
             },
-            "apply": {
-                "state": "ready",
-                "apply_branch": None,
-                "oracle_snapshot_commit": None,
-            },
-        },
+        ),
+        encoding="utf-8",
     )
 
     with pytest.raises(CmocError) as error:
         active_session_ids_for_home_branch(repo, "unrelated")
 
-    assert "home branch 未確定の active session" in error.value.message
-    assert session_id in error.value.detail
-    assert "candidate: (none)" in error.value.detail
+    assert "session state ファイルの形式が不正です。" in error.value.message
+    assert "session.session_home_branch: None" in error.value.detail
 
 
 def _init_repo(tmp_path: Path) -> Path:

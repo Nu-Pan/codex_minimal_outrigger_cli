@@ -27,6 +27,7 @@ from .repo import (
 from .subcommand_log import add_quota_wait
 from .subcommand_log import log_event
 from .subcommand_log import resolve_log_repo_root
+from .subcommand_log import write_console_block
 from .timing import format_duration
 from .timestamps import make_timestamp
 
@@ -140,9 +141,13 @@ def run_codex_exec(
             skip_index_maintenance,
             normalized_index_excluded_roots,
         )
-        print("## Codex CLI 実行準備")
-        print(f"- attempt: {attempt}/{attempts}")
-        print(f"- prompt preview: {_console_log_safe_head80(prompt)}")
+        write_console_block(
+            [
+                "## Codex CLI 実行準備",
+                f"- attempt: {attempt}/{attempts}",
+                f"- prompt preview: {_console_log_safe_head80(prompt)}",
+            ]
+        )
         run = _run_codex_command(
             repo_root,
             codex_log_root,
@@ -176,7 +181,7 @@ def run_codex_exec(
         if _stdout_jsonl_indicates_quota_exhaustion(result.stdout):
             session_id = _extract_session_id(result.stdout, result.stderr)
             resume_command = _resume_command(run.command, session_id)
-            print("quota が枯渇したため、resume 前に復旧を待機します")
+            write_console_block("quota が枯渇したため、resume 前に復旧を待機します")
             run = _wait_for_quota_and_resume(
                 repo_root,
                 codex_log_root,
@@ -204,9 +209,13 @@ def run_codex_exec(
             last_validation_error = str(error)
             continue
 
-        print("## Codex CLI 応答プレビュー")
-        print(f"- attempt: {attempt}/{attempts}")
-        print(f"- output preview: {_console_log_safe_head80(output)}")
+        write_console_block(
+            [
+                "## Codex CLI 応答プレビュー",
+                f"- attempt: {attempt}/{attempts}",
+                f"- output preview: {_console_log_safe_head80(output)}",
+            ]
+        )
         last_output = output
 
         if not validates_structured_output:
@@ -391,8 +400,12 @@ def _wait_for_quota_and_resume(
     """quota 復活まで疎通確認を繰り返してから元セッションを再開する。"""
     while True:
         poll_prompt = _quota_poll_prompt(repo_root)
-        print("quota poll: 最小限の codex exec 疎通確認を実行します")
-        print(f"quota poll prompt: {_console_log_safe_head80(poll_prompt)}")
+        write_console_block(
+            [
+                "quota poll: 最小限の codex exec 疎通確認を実行します",
+                f"quota poll prompt: {_console_log_safe_head80(poll_prompt)}",
+            ]
+        )
         poll_command = _build_codex_command(
             read_only=True,
             model=_POLL_MODEL,
@@ -437,13 +450,15 @@ def _wait_for_quota_and_resume(
                 poll_output = _read_last_message(poll_run.last_message_path)
             except ValueError as error:
                 _raise_quota_poll_failure(poll_run, str(error))
-            print(f"quota poll output: {_console_log_safe_head80(poll_output)}")
+            write_console_block(
+                f"quota poll output: {_console_log_safe_head80(poll_output)}"
+            )
             if poll_output.strip() != "ok":
                 _raise_quota_poll_failure(
                     poll_run,
                     "quota poll の output-last-message が ok ではありませんでした。",
                 )
-            print("quota が復旧したため、codex exec を resume します")
+            write_console_block("quota が復旧したため、codex exec を resume します")
             _preflight_workspace_write_oracle_guard(repo_root, command)
             _maintain_indexes_before_codex(
                 repo_root,
@@ -476,7 +491,7 @@ def _wait_for_quota_and_resume(
             if _stdout_jsonl_indicates_quota_exhaustion(
                 resume_run.result.stdout,
             ):
-                print("resume 後に quota が再度枯渇したため、待機します")
+                write_console_block("resume 後に quota が再度枯渇したため、待機します")
                 _sleep_for_quota_poll_interval()
                 continue
             if resume_run.result.returncode == 0:
@@ -516,7 +531,7 @@ def _retry_after_capacity_if_needed(
         if not _stdout_jsonl_indicates_capacity(current_run.result.stdout):
             return current_run
         formatted_delay = format_duration(float(delay_seconds))
-        print(
+        write_console_block(
             "選択された model が capacity 上限に達しています。"
             f"{formatted_delay} 後に codex exec を再試行します "
             f"({retry_index}/{_CAPACITY_RETRY_LIMIT})"
@@ -1088,11 +1103,15 @@ def _print_codex_notification(
             "returncode": returncode,
         },
     )
-    print("## Codex CLI 呼び出し完了")
-    print(f"- purpose: {_console_log_safe_text(purpose)}")
-    print(f"- log path: {_console_log_safe_text(str(log_path))}")
-    print(f"- elapsed: {format_duration(elapsed_seconds)}")
-    print(f"- returncode: {returncode}")
+    write_console_block(
+        [
+            "## Codex CLI 呼び出し完了",
+            f"- purpose: {_console_log_safe_text(purpose)}",
+            f"- log path: {_console_log_safe_text(str(log_path))}",
+            f"- elapsed: {format_duration(elapsed_seconds)}",
+            f"- returncode: {returncode}",
+        ]
+    )
 
 
 def _console_log_safe_text(value: str) -> str:
