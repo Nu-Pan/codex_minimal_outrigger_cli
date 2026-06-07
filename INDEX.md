@@ -185,18 +185,18 @@
 - cmoc CLI 全体の構成と、どの階層へ進むべきかを一度に把握したいとき。
 - `src/main.py` の起動経路やサブコマンド登録を確認したいとき。
 - 共通処理を `src/commons`、個別コマンド実装を `src/sub_commands` のどちらで追うべきか整理したいとき。
-- 実装・レビュー・テストの前に、`src` 配下の役割分担を切り分けたいとき.
+- 実装・レビュー・テストの前に、`src` 配下の役割分担を切り分けたいとき。
 
 ## Do not read this when
 
 - 読みたい個別モジュールがすでに分かっていて、`main.py` や各下位ディレクトリへ直接進めるとき。
 - `src` 全体の案内ではなく、`src/commons/*.py` や `src/sub_commands/*` の個別仕様だけを確認したいとき。
 - CLI の実装ではなく、`oracles` 側の正本仕様や利用手順だけを確認したいとき。
-- `README.md` や `AGENTS.md` など、リポジトリ運用ルールだけを確認したいとき.
+- `README.md` や `AGENTS.md` など、リポジトリ運用ルールだけを確認したいとき。
 
 ## hash
 
-- 5905879f43a58791b3bfb526fb15b89105cf69dc4261aae101ee79f4ec7d7397
+- 47234b4f901ad6f0e037ef143f04f107c485a23cd4e1aeac95f473c39097ea44
 
 # `test.sh`
 
@@ -225,23 +225,25 @@
 
 ## Summary
 
-- `tests` ディレクトリのルーティング文書で、pytest 共通設定と各回帰テスト群へ案内する入口です。
-- `conftest.py` は import path 設定、`test_codex.py` は Codex 実行ラッパー、`test_indexing.py` は `INDEX.md` メンテナンス、`test_repo.py` は Git 共通処理、`test_subcommands.py` はサブコマンド横断制御を扱います。
-- `test_file_naming.py`、`test_report_files.py`、`test_timestamps.py` は命名規則、レポート保存、タイムスタンプと経過時間表示の検証をまとめます。
+- `tests` ディレクトリの pytest 回帰テスト群の入口です。
+- `conftest.py` は `src` を import path の先頭へ通す共通設定です。
+- `test_codex.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py` などで主要な回帰挙動を確認します。
+- `test_file_naming.py`、`test_report_files.py`、`test_timestamps.py` は命名規則、レポート保存、日時・経過時間表示を検証します。
 
 ## Read this when
 
-- pytest の共通設定や `src` の import path を確認したいとき。
-- Codex CLI 呼び出し、Structured Output、repo 操作、`INDEX.md` 更新、サブコマンド制御など、個別の回帰テストを探したいとき。
-- ファイル命名規則、レポート出力、タイムスタンプ仕様のような横断的な補助機能のテスト入口を確認したいとき。
-- どのテストファイルを読むべきか迷ったとき。
+- pytest で cmoc 本体の挙動を確認したいとき。
+- `INDEX.md` の生成・再利用・不整合検出・配置ルールを確認したいとき。
+- repo 検出、レポート保存、タイムスタンプ、サブコマンド全体の回帰範囲を把握したいとき。
+- テスト共通設定や個別テストの役割分担を知りたいとき。
 
 ## Do not read this when
 
-- すでに目的のテストファイル名が分かっていて、`tests` 配下の個別ファイルへ直接進めるとき。
-- `src` 配下の実装そのものや、`oracles` / `docs` / `README.md` など他階層の仕様を確認したいとき。
-- この階層ではなく、各テストファイルの詳細な期待値だけを確認したいとき。
+- 目的の個別テストファイルがすでに分かっていて、そのファイルへ直接進むとき。
+- `src` の実装そのものや CLI の利用手順だけを確認したいとき。
+- テストではなく `oracles` の正本仕様やリポジトリ運用ルールだけを確認したいとき。
+- この階層の下位ではなく、より詳細な pytest fixture や個別関数を探しているとき。
 
 ## hash
 
-- 103a90d835303669d9ef3404bbd905306f8aae184eedcd3b8f588da20445e4f2
+- a9da2009bdb95651f452e6a8602502df73849e4ccfe204d0da75557cde7becad

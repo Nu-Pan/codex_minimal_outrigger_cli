@@ -36,11 +36,11 @@
 
 ## Do not read this when
 
-- `cmoc review oracles` の利用手順、引数仕様、出力仕様だけを確認したいときは、実装ではなく [`oracles/docs/app_specs/sub_commands/review_oracles.md`](/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03_16_000000754/2026-06-07_10-40_51_000000114/oracles/docs/app_specs/sub_commands/review_oracles.md) を読むべきです。
-- `src/sub_commands/review` のパッケージ宣言だけを確認したいときは、[`src/sub_commands/review/__init__.py`](/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03_16_000000754/2026-06-07_10-40_51_000000114/src/sub_commands/review/__init__.py) を読むべきです。
-- `cmoc review oracles` の CLI 登録や hidden alias だけを確認したいときは、[`src/main.py`](/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03_16_000000754/2026-06-07_10-40_51_000000114/src/main.py) を読むべきです。
-- `INDEX.md` の生成・更新ルールや、`oracles` 全体のルーティング方針だけを確認したいときは、[`oracles/docs/app_specs/indexing.md`](/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03_16_000000754/2026-06-07_10-40_51_000000114/oracles/docs/app_specs/indexing.md) を読むべきです。
+- `cmoc review oracles` の利用手順、引数、出力仕様だけを確認したいときは、実装ではなく `oracles/docs/app_specs/sub_commands/review_oracles.md` を読むべきです。
+- `src/sub_commands/review` のパッケージ宣言だけを確認したいときは、`src/sub_commands/review/__init__.py` を読むべきです。
+- `cmoc review oracles` の CLI 登録や hidden alias だけを確認したいときは、`src/main.py` を読むべきです。
+- `INDEX.md` の生成・更新ルールや、`oracles` 全体のルーティング方針だけを確認したいときは、`oracles/docs/app_specs/indexing.md` を読むべきです。
 
 ## hash
 
-- d9b4074a17e25a4bfa1b4a656bc5f563f92155e992ab20f18c8014530409c0b4
+- 3e0299bcbb8c345b09ce1b6c4618f3d83f0857b0745f6b6007baf20ae57a393b
