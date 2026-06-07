@@ -30,17 +30,17 @@
 ## Read this when
 
 - このモジュールの実装・修正・レビュー・テストを行いたいとき。
-- `cmoc review oracles` の前提条件検証、worktree / branch 作成、oracle 固定、所見パイプライン、レポート出力の流れを追いたいとき。
+- `cmoc review oracles` の前提条件検証、review worktree / branch 作成、oracle スナップショット固定、所見パイプライン、レポート出力の流れを追いたいとき。
 - Structured Output schema の読み込み方や、所見の列挙・マージ・検証・判定に使う helper の役割を確認したいとき。
 - 失敗時の error report 生成条件や、`INDEX.md` を根拠にした対象 oracle 選定の仕組みを把握したいとき。
 
 ## Do not read this when
 
+- `src/sub_commands/review` 全体の入口構造だけを確認したいときは、このファイルではなく `src/sub_commands/review/INDEX.md` を読むべきです。
 - `cmoc review oracles` の利用手順、引数、出力仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/review_oracles.md` を直接読むべきです。
-- `src/sub_commands/review` 全体の入口構造だけを確認したいときは、`src/sub_commands/review/INDEX.md` を読むべきです。
 - `cmoc review` の CLI 登録や hidden alias だけを確認したいときは、`src/main.py` を読むべきです。
 - `review` ではなく `apply` や `session` の実装を追いたいときは、このファイルではなく各サブコマンド側を読むべきです。
 
 ## hash
 
-- e6cdfc3e75a5f5e9b039830af64b4ae1807bfd5905467a0e6c860b3b1a34ad3a
+- 7e98e2deed2a8daca69a4e5d9f63c177d1d469ed43d21ab16b207389c87aa342

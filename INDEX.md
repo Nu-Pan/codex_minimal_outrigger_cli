@@ -176,9 +176,9 @@
 
 ## Summary
 
-- `src` は cmoc の実装本体を置くソースツリーで、CLI エントリーポイント、共通基盤、サブコマンド実装をまとめています。
+- この `src` ディレクトリは cmoc の実装本体を置くソースツリーで、CLI エントリーポイント、共通基盤、サブコマンド実装をまとめています。
 - `main.py` が CLI の組み立てと起動制御を担い、`commons/` が横断的な共通処理、`sub_commands/` が各コマンドの本体実装を担います。
-- この階層は、cmoc の実装を読むときの起点であり、上位の入口から個別モジュールへ分岐するための目次です。
+- この階層は cmoc の実装を読む起点であり、上位の入口から個別モジュールへ分岐するための目次です。
 
 ## Read this when
 
@@ -194,7 +194,7 @@
 
 ## hash
 
-- 307f001002ba19488ff8436edfdef1bd368a338c6e9d55da4fa37d5ce611c644
+- 9c59b4dd346a21bc652cc4ceb23cd97d3bd7f7c57d3e663ef9e80ca9ba5a3bfa
 
 # `test.sh`
 
@@ -223,24 +223,23 @@
 
 ## Summary
 
-- `tests` は cmoc の回帰テスト一式をまとめるディレクトリで、`conftest.py` の共通設定と各 `test_*.py` の入口を置く場所です。
-- `test_codex.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py`、`test_file_naming.py`、`test_report_files.py`、`test_timestamps.py` がそれぞれ Codex 呼び出し、INDEX 維持、git 共通処理、CLI 横断、命名規則、レポート保存、時刻ヘルパーを検証します。
-- 個別実装の細部よりも、`src` 側の共通処理と CLI 挙動を回帰的に守るためのテスト群の目次として使うディレクトリです。
+- `tests` ディレクトリのルーティング文書で、pytest による回帰テスト群への入口です。
+- `conftest.py` が共通の import path 設定を担い、各 `test_*.py` が `codex`、`indexing`、`repo`、`subcommands`、`report_files`、`timestamps` などの責務別に分かれています。
+- 個別テストへ入る前に、この階層でどの検証系統へ進むかを切り分けるための目次です。
 
 ## Read this when
 
-- pytest の共通 import 設定や `src` 追加の仕組みを確認したいとき。
-- `commons.codex`、`commons.indexing`、`commons.repo`、`commons.report_files`、`commons.timestamps`、`commons.timing` のどの回帰テストに進むべきか整理したいとき。
-- `cmoc init`、`cmoc indexing`、`cmoc apply`、`cmoc session`、`cmoc review oracles` の横断的な CLI 回帰を探したいとき。
-- `INDEX.md` の維持、タイムスタンプ、レポートファイル保存、ファイル命名規則などの共通テストの入口を見たいとき。
+- `tests` ディレクトリ全体の役割と、どの回帰テストがどこにあるかを整理したいとき。
+- `conftest.py` を含む pytest 共通設定や、`test_codex.py`、`test_indexing.py`、`test_repo.py`、`test_subcommands.py` などの担当範囲を把握したいとき。
+- cmoc の CLI、索引生成、git 共通処理、レポート保存、タイムスタンプ処理のテスト群をたどりたいとき。
+- 新しくテストを追加・修正する前に、既存のテスト構成と入口を確認したいとき。
 
 ## Do not read this when
 
-- すでに読むべき個別テストファイルが決まっていて、このディレクトリの入口だけは不要なとき。
-- `src` の本体実装や `oracles` 側の正本仕様を直接追いたいとき。
-- pytest 以外の実行方式やビルド設定だけを確認したいとき。
-- 旧ファイル名やディレクトリ構成の確認だけが目的で、各回帰テストの内容は不要なとき。
+- すでに読むべきテストファイルが決まっていて、`test_codex.py`、`test_indexing.py`、`test_repo.py` などの個別ファイルへ直接進むとき。
+- 実装本体や `src` 配下のロジックだけを追いたいとき。
+- `tests` 全体の入口ではなく、特定のヘルパーや単一テストケースだけを確認したいとき。
 
 ## hash
 
-- 72b7befa260277452a0d1bbecfc0f4f4c6b3fd465d0c1c239f3b9291843be3e5
+- 166eabe5945cf437985d38f74bf8df32501b894a1c3decd295d1e904cd12ce27
