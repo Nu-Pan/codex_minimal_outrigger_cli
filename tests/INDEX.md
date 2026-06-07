@@ -157,25 +157,24 @@
 ## Summary
 
 - `tests/test_subcommands.py` は、cmoc のサブコマンド本体に対する横断的な回帰テスト群の入口です。
-- 共通実行制御、エラーレポート、終了コード、タイマ、補完委譲に加えて、`init`、`session`、`apply`、`review oracles` の主要な状態遷移と CLI 登録をまとめて扱います。
+- 共通実行制御、エラーハンドリング、終了コード、タイマとログ出力に加えて、`init` / `session` / `apply` / `review oracles` の主要フローをまとめて検証します。
+- CLI 登録や補完、レポート生成、各サブコマンドの補助関数と検証ロジックの整合性もこのテスト群で押さえます。
 
 ## Read this when
 
-- `run_command()` を中心としたサブコマンド横断の共通制御とエラーレポートの挙動を確認したいとき。
-- `init` / `session` / `apply` / `review oracles` の状態遷移、復旧、cleanup を横断的に追いたいとき。
-- CLI 登録、補完応答、起動経路、終了コード、ログ出力、経過時間サマリーの仕様を確認したいとき。
-- Structured Output の検証や、`session` / `apply` / `review` 系のテスト補助関数の意図を把握したいとき。
+- `run_command()` を中心にしたサブコマンド横断の共通制御、エラーレポート、終了コードの扱いを確認したいとき。
+- `init` / `session` / `apply` / `review oracles` の主要な状態遷移、復旧、cleanup を横断的に追いたいとき。
+- CLI 登録、補完委譲、起動経路、ログ出力、経過時間サマリー、Structured Output 検証の意図を把握したいとき。
 
 ## Do not read this when
 
-- `tests/test_subcommands.py` ではなく、`tests/test_repo.py` や `tests/test_indexing.py` など別機能の回帰テストを確認したいとき。
-- 個別の `src/sub_commands/...` 実装本体だけを追いたいとき。
-- `cmoc init` / `session` / `apply` / `review oracles` の利用手順や引数仕様だけを知りたいとき。
-- `INDEX.md` の生成ルールや `oracles` 側の正本仕様だけを確認したいとき。
+- 個別の `src/sub_commands/...` 実装の詳細や状態遷移だけを追いたいとき。
+- `cmoc init` / `session` / `apply` / `review oracles` の利用手順や引数仕様だけを確認したいとき。
+- `tests/test_repo.py` や `tests/test_indexing.py` など、別の回帰テスト群を確認したいとき。
 
 ## hash
 
-- 286222323df0acf0ee9c145ff8e51322bf0439d368a5ee2dbce9d3d09f383732
+- a37bcf6f8509b214f8cbaa2a64b78ec78399602653d5c539e9184a3e83f97b32
 
 # `test_timestamps.py`
 

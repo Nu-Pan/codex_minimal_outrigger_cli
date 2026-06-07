@@ -29,7 +29,7 @@
 ## Summary
 
 - `src/main.py` は cmoc CLI のエントリーポイントで、Typer のルート `app` と `session` / `apply` / `review` の各サブアプリを組み立てるファイルです。
-- `init`、`session`、`apply`、`review` の各コマンド登録に加えて、`eval-oracle` / `eval-oracles` の隠し別名や各コマンドの既定オプションをまとめています。
+- `init`、`indexing`、`session`、`apply`、`review` の各コマンド登録に加えて、`eval-oracle` / `eval-oracles` の隠し別名や各コマンドの既定オプションをまとめています。
 - サブコマンド未指定時の `CmocError` 生成、補完プローブ時の分岐、Click/Typer 例外の共通整形、`python src/main.py` 直実行の起動経路を扱います。
 
 ## Read this when
@@ -41,14 +41,13 @@
 
 ## Do not read this when
 
-- `src/sub_commands/` 配下の個別サブコマンド本体だけを確認したいとき。
-- `commons.errors` や `format_error_report()` の例外整形だけを確認したいとき。
-- `oracles` 側の正本仕様や `INDEX.md` 生成ルールだけを確認したいとき。
+- `session`、`apply`、`review` など個別サブコマンドの本体実装だけを確認したいとき。
+- `commons.errors` や `format_error_report()` の共通エラー整形だけを確認したいとき。
 - `bin/cmoc` のシェル起動ラッパーだけを確認したいとき。
 
 ## hash
 
-- 8e5c543120f5d8c879497bffa31a440854f689cb349abab0deb3f8a0cf8bf19e
+- a756de7b8e379a66e5e1bdfc4aa80c43d910a513c480de908c6d46a9f1196f81
 
 # `sub_commands`
 
