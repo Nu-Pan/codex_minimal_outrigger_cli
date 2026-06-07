@@ -2066,12 +2066,7 @@ def _write_report(
             f"{finding_count_by_target.get(target, 0)} |"
         )
     lines.extend([""])
-    for severity, heading in [
-        ("fatal", "## Fatal findings"),
-        ("minor", "## Minor findings"),
-    ]:
-        lines.extend([heading, ""])
-        lines.extend(_finding_section_lines(repo_root, finding_records, severity))
+    lines.extend(_finding_sections_lines(repo_root, finding_records))
     lines.extend(["## Referenced files", ""])
     referenced_path_rows = _referenced_path_rows(repo_root, evaluations)
     if referenced_path_rows:
@@ -2176,12 +2171,7 @@ def _write_error_report(
     if not evaluated_files and not not_evaluated_files:
         lines.append("| - | No requested oracle files. | - | - |")
     lines.extend([""])
-    for severity, heading in [
-        ("fatal", "## Fatal findings"),
-        ("minor", "## Minor findings"),
-    ]:
-        lines.extend([heading, ""])
-        lines.extend(_finding_section_lines(repo_root, finding_records, severity))
+    lines.extend(_finding_sections_lines(repo_root, finding_records))
     lines.extend(["## Referenced files", ""])
     referenced_path_rows = _referenced_path_rows(repo_root, evaluations)
     if referenced_path_rows:
@@ -2637,27 +2627,45 @@ def _issue_lines(
     ]
 
 
-def _finding_section_lines(
+def _finding_sections_lines(
     repo_root: Path,
     finding_records: list[dict[str, object]],
+) -> list[str]:
+    """仕様順の finding セクション行を返す。"""
+    lines = []
+    for verdict, severity, heading in [
+        ("accept", "fatal", "## Accepted fatal findings"),
+        ("accept", "minor", "## Accepted minor findings"),
+        ("reject", "fatal", "## Rejected fatal findings"),
+        ("reject", "minor", "## Rejected minor findings"),
+    ]:
+        lines.extend([heading, ""])
+        lines.extend(
+            _finding_group_lines(repo_root, finding_records, verdict, severity)
+        )
+    return lines
+
+
+def _finding_group_lines(
+    repo_root: Path,
+    finding_records: list[dict[str, object]],
+    verdict: str,
     severity: str,
 ) -> list[str]:
-    """指定 severity の accepted/rejected finding 行を返す。"""
+    """指定 verdict/severity の finding 行を返す。"""
     lines = []
-    for verdict, label in [("accept", "Accepted"), ("reject", "Rejected")]:
-        lines.extend([f"### {label}", ""])
-        records = [
-            record
-            for record in finding_records
-            if record["severity"] == severity and record["verdict"] == verdict
-        ]
-        if not records:
-            lines.extend(["No findings.", ""])
-            continue
-        for finding_id, record in _numbered_finding_records(severity, records):
-            issue = record["issue"]
-            if isinstance(issue, dict):
-                lines.extend(_issue_lines(repo_root, finding_id, issue))
+    records = [
+        record
+        for record in finding_records
+        if record["severity"] == severity and record["verdict"] == verdict
+    ]
+    if not records:
+        lines.extend(["No findings.", ""])
+        return lines
+    for finding_id, record in _numbered_finding_records(severity, records):
+        issue = record["issue"]
+        if isinstance(issue, dict):
+            lines.extend(_issue_lines(repo_root, finding_id, issue))
     return lines
 
 
