@@ -176,25 +176,27 @@
 
 ## Summary
 
-- `src` 直下のルーティング文書で、`main.py`、`commons/`、`sub_commands/` への入口をまとめる階層です。
-- cmoc CLI の起点、共通モジュール群、サブコマンド実装群を切り分けて案内するための目次です。
-- 個別実装に入る前に、`src` 配下の役割分担を俯瞰するための入口です。
+- この `src` ディレクトリのルーティング文書で、`main.py`、`commons/`、`sub_commands/` へ案内する入口です。
+- CLI エントリーポイント、共通基盤、サブコマンド実装を切り分けるための目次です。
+- 個別モジュールへ進む前に、`src` 配下の役割分担を確認できます。
 
 ## Read this when
 
-- `src` 配下にどの実装ファイルや下位ディレクトリがあるかを一覧したいとき。
-- cmoc CLI の起点、共通基盤、サブコマンド実装の入口をまとめて把握したいとき。
-- `INDEX.md` から `main.py`、`commons/`、`sub_commands/` のどこへ進むべきか迷ったとき。
+- cmoc CLI の起点、共通処理、サブコマンド実装のどれを読むべきか整理したいとき。
+- `src/main.py`、`src/commons/`、`src/sub_commands/` の役割を一覧したいとき。
+- `src` 配下のどのファイルや下位 `INDEX.md` に進むべきか迷ったとき。
+- 実装やレビューの前に、CLI と共通基盤とサブコマンドの境界を把握したいとき。
 
 ## Do not read this when
 
-- `src/main.py`、`src/commons/`、`src/sub_commands/` のどれを見るかすでに決まっていて、この階層の案内が不要なとき。
-- `src` 直下ではなく、個別モジュールや下位ディレクトリの `INDEX.md` を直接確認したいとき。
-- `oracles` 側の正本仕様や、リポジトリ運用ルールだけを確認したいとき。
+- すでに `main.py`、`commons/`、`sub_commands/` の目的が分かっていて、個別モジュールへ直接進めるとき。
+- `src` 全体ではなく、特定ファイルの実装や下位階層の `INDEX.md` だけを確認したいとき。
+- `oracles/` 側の正本仕様だけを確認したいとき。
+- リポジトリ運用ルールだけを確認したいとき。
 
 ## hash
 
-- 2caf8053be2d71697a32a17ef4e1b6478008fdb56ad3c9835547e016bfe79a1d
+- d4770fa1b3da4ecf3753510c5ffba4095c6d78e0b84fd4c9230ee47ff9fd9a40
 
 # `test.sh`
 
@@ -223,7 +225,7 @@
 
 ## Summary
 
-- `tests/` ディレクトリのルーティング文書で、pytest 共通設定と各回帰テスト群への入口をまとめる階層です。
+- この `tests/` ディレクトリのルーティング文書で、pytest 共通設定と各回帰テスト群への入口をまとめる階層です。
 - `conftest.py` はテスト共通設定、`test_codex.py` は Codex CLI 呼び出しラッパー、`test_indexing.py` は `INDEX.md` メンテナンス、`test_repo.py` は Git 共通処理を扱います。
 - `test_file_naming.py` は命名規則、`test_report_files.py` はタイムスタンプ付きレポート保存、`test_subcommands.py` はサブコマンド横断、`test_timestamps.py` はタイムスタンプと経過時間表示を検証します。
 
@@ -238,8 +240,7 @@
 
 - cmoc 本体の実装ロジックや `src/` 配下のモジュール設計だけを確認したいとき。
 - 個別の回帰テストではなく、`oracles` 側の正本仕様や Structured Output schema だけをたどりたいとき。
-- pytest の共通設定やテスト補助ではなく、CLI の利用手順や運用ルールだけを確認したいとき。
 
 ## hash
 
-- 35ad0be1f61b2b65f6e677634cf314ac146d5d3fd55233f45eaa5b3cd81c37ff
+- 0cf7a8e49b79238e57ffdc7a6263320ae5a51fd67a4510bdaef48cc557d201e9

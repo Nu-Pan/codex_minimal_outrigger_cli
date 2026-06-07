@@ -23,24 +23,24 @@
 
 ## Summary
 
-- `src/sub_commands/review/oracles.py` は `cmoc review oracles` の本体実装で、review 実行の前提検証から worktree / branch の作成、oracle スナップショットの固定、所見の列挙・統合・検証・判定、レポート出力までを一連で担うモジュールです。
-- Structured Output schema を読み込み、所見リストと評価メタデータを処理するための helper 群もこのファイルに含まれます。
-- `INDEX.md` を根拠にレビュー対象 oracle を選定し、失敗時には error report を生成する流れまで含めて、`cmoc review oracles` の中核を構成します。
+- `src/sub_commands/review/oracles.py` は `cmoc review oracles` の本体で、前提検証から review worktree / branch の作成、oracle スナップショットの固定、所見の列挙・統合・検証・判定、レポート出力までをまとめて担う実装です。
+- 正本の Structured Output schema を読み込み、所見リストや評価メタデータを処理する helper 群もこのモジュールに含まれます。
+- `INDEX.md` を根拠に対象 oracle を選び、失敗時の error report 生成まで含めてレビュー実行の中核を構成します。
 
 ## Read this when
 
 - `src/sub_commands/review/oracles.py` の実装・修正・レビュー・テストを行うとき。
-- `cmoc review oracles` の前提条件検証、review worktree / branch 作成、oracle スナップショット固定、所見の列挙・統合・検証・判定、レポート出力までの流れを追いたいとき。
+- `cmoc review oracles` の前提条件検証、worktree / branch 作成、oracle 固定、所見の列挙・統合・検証・判定、レポート出力の流れを追いたいとき。
 - Structured Output schema の読み込みや、所見パイプラインで使う helper 群の役割を確認したいとき。
-- `INDEX.md` を根拠にした対象 oracle の選定、`INDEX.md` コンフリクトの機械的解消、失敗時の error report 生成条件を確認したいとき。
+- `INDEX.md` を根拠にした対象 oracle の選定や、失敗時の error report 生成条件を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc review oracles` の利用手順、引数、出力仕様だけを確認したいときは `oracles/docs/app_specs/sub_commands/review_oracles.md` を読むべきです。
-- `src/sub_commands/review` の入口構造だけを確認したいときは `src/sub_commands/review/INDEX.md` を読むべきです。
+- `cmoc review oracles` の利用手順、引数、出力仕様だけを確認したいときは `oracles/docs/app_specs/sub_commands/review_oracles.md` を直接読むべきです。
+- `src/sub_commands/review` 全体の入口構造だけを確認したいときは `src/sub_commands/review/INDEX.md` を読むべきです。
 - `cmoc review` の CLI 登録や hidden alias だけを確認したいときは `src/main.py` を読むべきです。
-- `review` 系ではなく、`apply` や `session` など別サブコマンドの実装を追いたいときは、このファイルではなく各サブコマンド側の実装を読むべきです。
+- `review` ではなく `apply` や `session` の実装を追いたいときは、このファイルではなく各サブコマンド側を読むべきです。
 
 ## hash
 
-- 06222872450bb1dee957983fecebe98250bb3feec879144a289509539e8b27cf
+- 68bcf0b80ea1c118bed5ec96ff65cdfb554246c0090bbe6590ba26b20dc5f0f4
