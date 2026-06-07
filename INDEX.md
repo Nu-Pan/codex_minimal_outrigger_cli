@@ -187,13 +187,13 @@
 
 ## Do not read this when
 
-- すでに読む対象が `main.py`、`commons/`、`sub_commands/` のいずれかに決まっているとき。
-- 個別の実装や仕様を直接追いたいときは、この階層の目次ではなく該当モジュールへ進むとき。
+- すでに読む対象が `main.py`、`commons/`、`sub_commands/` のいずれかに決まっていて、この階層の案内が不要なとき。
+- 個別の実装や仕様を直接追いたいときで、`src` 全体の入口案内が不要なとき。
 - `src` 全体ではなく、下位ディレクトリの `INDEX.md` だけを確認したいとき。
 
 ## hash
 
-- f66a5ae2dcb862a5e788be908edf245afef14dc3e1441b06c01da91da9f631b2
+- 80ab6058a16597d6bdfefc09bf02bbceb6e61162d4fc1e5245c48461151b3516
 
 # `test.sh`
 
@@ -222,23 +222,22 @@
 
 ## Summary
 
-- この `tests` ディレクトリのルーティング文書で、pytest 共通設定の `conftest.py` と各 `test_*.py` へ案内する入口です。
-- テストは `commons.codex`、ファイル命名規則、`INDEX.md` 維持、git リポジトリ共通処理、レポート保存、サブコマンド横断ロジック、タイムスタンプ/経過時間表示に分かれています。
-- 個別テストに入る前に、どの機能群の回帰テストを読むべきかを切り分けるための目次です。
+- この `tests` ディレクトリのルーティング文書で、pytest の共通設定と各回帰テスト群への入口をまとめています。
+- `conftest.py` は `src` への import path 設定を担い、`test_*.py` は `codex`、`repo`、`indexing`、`subcommands`、`timestamps`、`report_files` などの回帰を分担します。
+- どのテストファイルへ進むべきかを、対象モジュールや CLI 挙動ごとに切り分けるための目次です。
 
 ## Read this when
 
-- `tests/conftest.py` や `tests/test_*.py` 全体の役割を一覧で把握したいとき。
-- `tests/test_codex.py`、`tests/test_indexing.py`、`tests/test_repo.py`、`tests/test_report_files.py`、`tests/test_subcommands.py`、`tests/test_timestamps.py`、`tests/test_file_naming.py` のどれを読むべきか迷ったとき。
-- pytest の共通設定や `src` の import path 追加を確認したいとき。
-- Codex CLI 呼び出し、INDEX 管理、git 共通処理、レポート保存、サブコマンド横断ロジック、タイムスタンプ仕様の回帰テストを探したいとき。
+- pytest の共通設定や、`src` を import できる仕組みを確認したいとき。
+- `commons.codex`、`commons.repo`、`commons.indexing`、`commons.report_files`、`commons.timestamps`、`sub_commands` など、どの機能がどのテストで守られているかを探したいとき。
+- `tests` 配下の個別ファイルへ進む前に、回帰テスト群の役割分担を整理したいとき。
 
 ## Do not read this when
 
-- 読む対象の個別テストファイル名がすでに分かっていて、この階層の案内が不要なとき。
-- テストではなく `src` 側の実装ロジックそのものを追いたいとき。
-- 個別の fixture やアサーションの細部だけを確認したいとき。
+- すでに読むべきテストファイルが分かっていて、`tests/test_*.py` を直接開けるとき。
+- 本番コードの実装や `oracles` 側の正本仕様だけを確認したいとき。
+- `INDEX.md` の生成や再生成ルールそのものではなく、テストの中身だけを追いたいとき。
 
 ## hash
 
-- 7b5a768ada666c50c5e77d78654d4588d8d78ff49fa9d2c522c28c4ddef2964d
+- 704ce5430c58373f81570ba3f11c8d33cc1a0ab23f381792969781edf856604e

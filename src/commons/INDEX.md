@@ -104,14 +104,14 @@
 
 ## Summary
 
-- `src/commons/indexing.py` は `INDEX.md` の生成・再生成・整合性検査を担う共通モジュールです。
-- .gitignore・`memo`・隠し要素・symlink・バイナリの除外と、既存 `INDEX.md` の再利用判定をまとめています。
-- Structured Output による目次生成、排他ロック、原子的な置換、自動コミット、差分検査まで扱います。
-- `is_maintained_index_path*` と `find_index_inconsistencies` で配置可否や不整合の確認もできます。
+- `src/commons/indexing.py` は `INDEX.md` の生成、再生成、整合性検査をまとめる共通モジュールです。
+- `.gitignore`、`memo`、隠し要素、symlink、バイナリを除外し、既存 `INDEX.md` は再利用可否を判定して差分がなければ書き換えません。
+- Structured Output の JSON schema 検証、排他ロック、原子的な置換、自動コミット、機械的な不整合チェックまで扱います。
+- `is_maintained_index_path*` と `find_index_inconsistencies` で、どの `INDEX.md` が管理対象かを判定できます。
 
 ## Read this when
 
-- `INDEX.md` の生成・更新・再生成ルールを修正したいとき。
+- `INDEX.md` の生成・更新・再生成ルールを変更したいとき。
 - 配置対象や目次対象の除外条件、`.gitignore` 判定、バイナリ判定を確認したいとき。
 - 既存 `INDEX.md` の再利用条件、Structured Output 検証、排他ロック、原子的な置換、自動コミットの流れを追いたいとき。
 - 特定の相対 path が cmoc の管理対象 `INDEX.md` かどうかを判定したいとき。
@@ -124,7 +124,7 @@
 
 ## hash
 
-- 04d4317ab1725c9e50a65f1dc7a9adfb33fca65b402bef7e9faa00dbb280c5c5
+- 6058d3035fbcfe211f2bd449485ccef9fe43c4753cc1fa2026a9bbcb820800d8
 
 # `repo.py`
 

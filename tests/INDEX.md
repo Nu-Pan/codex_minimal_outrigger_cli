@@ -80,13 +80,13 @@
 ## Summary
 
 - `tests/test_indexing.py` は `src/commons/indexing.py` の `INDEX.md` メンテナンス処理に関する回帰テスト群です。
-- `INDEX.md` の生成・再利用・再生成条件・hash 更新・Structured Output 検証を中心に、gitignore、symlink、binary、非 UTF-8 path、並列処理、排他 lock、自動 commit の境界条件も確認します。
-- `maintain_indexes` と `is_maintained_index_path` の期待動作や、I/O 失敗時の `CmocError` 化も押さえます。
+- `maintain_indexes` と `is_maintained_index_path` の期待動作、再生成条件、hash 更新、Structured Output 検証を中心に扱います。
+- gitignore、symlink、binary、非 UTF-8 path、並列処理、排他 lock、自動 commit の境界条件も確認します。
 
 ## Read this when
 
-- `maintain_indexes` と `is_maintained_index_path` の期待動作を確認したいとき。
-- gitignore、symlink、binary、非 UTF-8 path、空ディレクトリ、特殊文字を含む path の扱いを変更したいとき。
+- `maintain_indexes` と `is_maintained_index_path` の仕様変更や不具合修正を行うとき。
+- gitignore、symlink、binary、非 UTF-8 path、空 directory、特殊文字を含む path の扱いを変更するとき。
 - 並列生成、排他 lock、再試行、既存 `INDEX.md` の再利用・再生成、自動 commit の境界条件を確認したいとき。
 
 ## Do not read this when
@@ -97,7 +97,7 @@
 
 ## hash
 
-- 502ec340fa01f7dc0858caa6be72cf9fcb8fb745a34a718df5dbcdac2188918b
+- 32500e8866562796cbe466707faa2b1b409c8a1549be10aeeae1ba88ef3db08a
 
 # `test_repo.py`
 
