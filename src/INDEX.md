@@ -29,27 +29,24 @@
 ## Summary
 
 - cmoc CLI のエントリーポイントで、Typer のルート `app` と `session` / `apply` / `review` の各サブアプリを組み立てるファイルです。
-- `init`、`session`、`apply`、`review` の各コマンド登録に加えて、`eval-oracle` / `eval-oracles` の隠し別名や各コマンドの既定オプションをまとめています。
-- サブコマンド未指定時の `CmocError` 生成、補完プローブ時の分岐、Click/Typer 例外の共通整形、`python src/main.py` 直実行の起動経路を扱います。
+- `init` や各サブコマンドの登録に加えて、`eval-oracle` / `eval-oracles` の隠し別名や既定オプションをまとめています。
+- サブコマンド未指定時の `CmocError` 生成、自動補完プローブ時の分岐、Click/Typer 例外の共通整形、`python src/main.py` 直実行の起動経路を扱います。
 
 ## Read this when
 
-- cmoc CLI の起点と、`session` / `apply` / `review` のサブアプリ構成を確認したいとき。
+- cmoc CLI の起点として、`app` と `session` / `apply` / `review` のサブアプリ構成を確認したいとき。
 - `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`review oracles` の登録名や隠し別名を確認したいとき。
-- `apply fork` の繰り返し回数や `scope`、`apply join` の `--force-resolve` など既定オプションを確認したいとき。
-- サブコマンド未指定時の利用者向けエラー、補完プローブ時の分岐、Click/Typer 例外の共通整形を追いたいとき。
-- `python src/main.py` で直接起動する経路と、そのときの例外処理を確認したいとき。
+- サブコマンド未指定時のエラー処理、補完プローブ時の分岐、Click/Typer 例外の共通整形、`python src/main.py` 直実行の経路を追いたいとき。
 
 ## Do not read this when
 
-- `src/sub_commands/` 配下の個別サブコマンド本体だけを確認したいとき。
+- `src/sub_commands/` 配下の各サブコマンド本体の処理や引数解釈を確認したいとき。
 - `commons.errors` の例外型や `format_error_report()` の整形ロジックだけを確認したいとき。
-- CLI 登録や補完、例外変換ではなく、各機能の業務ロジックそのものを追いたいとき。
-- `INDEX.md` の生成ルールや `oracles` 側の正本仕様だけを確認したいとき。
+- CLI の登録や補完分岐ではなく、各機能の業務ロジックそのものを追いたいとき。
 
 ## hash
 
-- 34ab9fdae7d4622e261437958669dd52ce211f233a2300c1c7c831efc256c365
+- 6534c818d649a5bf27c91568e5d0f98ec2a3ca42c83e255968a94e7742459b54
 
 # `sub_commands`
 
