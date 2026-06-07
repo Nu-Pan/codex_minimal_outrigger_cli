@@ -2470,6 +2470,92 @@ def test_review_oracles_rejects_too_many_refine_findings_loops(
         cmoc_review_oracles_impl(repo, scope="full", refine_findings_loop=4)
 
 
+def test_review_oracles_uses_finding_pipeline_schemas(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """review oracles は列挙、マージ、検証、判定の schema で所見を処理する。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    oracle_file = oracle_root / "spec.md"
+    oracle_file.write_text("spec\n", encoding="utf-8")
+    _prepare_review_oracles_session(repo)
+
+    monkeypatch.setattr(
+        review_oracles_module,
+        "maintain_indexes",
+        lambda repo_root: False,
+    )
+    output_schemas: list[dict[str, object]] = []
+    purposes: list[str] = []
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """schema ごとに finding pipeline の最小 JSON を返す。"""
+        purpose = str(kwargs["purpose"])
+        purposes.append(purpose)
+        output_schemas.append(kwargs["output_schema"])
+        if kwargs["output_schema"] == review_oracles_module._ENUMERATE_FINDINGS_OUTPUT_SCHEMA:
+            return json.dumps(
+                {
+                    "findings": [
+                        {
+                            "severity": "fatal",
+                            "title": "Fatal finding",
+                            "oracle_path": str(oracle_file.resolve()),
+                            "reason": "fatal reason",
+                        }
+                    ]
+                },
+                ensure_ascii=False,
+            )
+        if kwargs["output_schema"] == review_oracles_module._MERGE_FINDINGS_OUTPUT_SCHEMA:
+            return json.dumps({"operations": []}, ensure_ascii=False)
+        if kwargs["output_schema"] in [
+            review_oracles_module._VALIDATE_FINDINGS_CHALLENGER_OUTPUT_SCHEMA,
+            review_oracles_module._VALIDATE_FINDINGS_ADVOCATE_OUTPUT_SCHEMA,
+        ]:
+            return json.dumps({"reasons": []}, ensure_ascii=False)
+        if kwargs["output_schema"] == review_oracles_module._JUDGE_FINDINGS_OUTPUT_SCHEMA:
+            return json.dumps(
+                {"verdict": "accept", "reason": "show it"},
+                ensure_ascii=False,
+            )
+        raise AssertionError(f"unexpected schema for {purpose}")
+
+    monkeypatch.setattr(review_oracles_module, "run_codex_exec", fake_codex)
+
+    cmoc_review_oracles_impl(
+        repo,
+        full=True,
+        enumerate_findings_loop=1,
+        merge_findings_loop=1,
+        refine_findings_loop=1,
+    )
+
+    report = next(
+        (repo / ".cmoc" / "reports" / "review_oracles").glob("*.md")
+    ).read_text(encoding="utf-8")
+    assert output_schemas[0] == review_oracles_module._ENUMERATE_FINDINGS_OUTPUT_SCHEMA
+    assert review_oracles_module._MERGE_FINDINGS_OUTPUT_SCHEMA in output_schemas
+    assert (
+        review_oracles_module._VALIDATE_FINDINGS_CHALLENGER_OUTPUT_SCHEMA
+        in output_schemas
+    )
+    assert (
+        review_oracles_module._VALIDATE_FINDINGS_ADVOCATE_OUTPUT_SCHEMA
+        in output_schemas
+    )
+    assert review_oracles_module._JUDGE_FINDINGS_OUTPUT_SCHEMA in output_schemas
+    assert "oracle 評価 oracles/spec.md" in purposes
+    assert "oracle 所見リストマージ 1" in purposes
+    assert "oracle 所見検証 不採用理由 FINDING-0001" in purposes
+    assert "oracle 所見検証 採用理由 FINDING-0001" in purposes
+    assert "oracle 所見判定 FINDING-0001" in purposes
+    assert "Fatal finding" in report
+    assert "FINDING-0001" in report
+
+
 def test_review_oracles_accepts_improved_issue_for_unevaluated_oracle(
     tmp_path: Path,
 ) -> None:
