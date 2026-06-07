@@ -160,20 +160,21 @@
 
 ## Read this when
 
-- `run_command()` を中心にしたサブコマンド横断の共通制御、エラーレポート、終了コードの扱いを確認したいとき。
+- `run_command()` を中心にしたサブコマンド横断の共通制御、終了コード、例外処理を確認したいとき。
 - `init` / `session` / `apply` / `review oracles` の主要な状態遷移、復旧、cleanup を横断的に追いたいとき。
-- CLI 登録、補完委譲、起動経路、ログ出力、経過時間サマリー、Structured Output 検証の意図を把握したいとき。
+- CLI 登録、補完委譲、起動経路、ログ出力、経過時間サマリーの整合性を把握したいとき。
 - サブコマンド共通のテスト補助や、エラー文面・レポート形式の回帰をまとめて確認したいとき。
 
 ## Do not read this when
 
-- 個別の `src/sub_commands/...` 実装の詳細や、各サブコマンドの状態遷移だけを追いたいとき。
+- `src/sub_commands/...` の個別実装だけを追いたいとき。
 - `cmoc init` / `session` / `apply` / `review oracles` の利用手順や引数仕様だけを確認したいとき。
 - `tests/test_repo.py` や `tests/test_indexing.py` など、別の回帰テスト群を確認したいとき。
+- サブコマンド共通のエラーレポートや CLI 登録ではなく、特定機能の内部ロジックだけを見たいとき。
 
 ## hash
 
-- 058d22b77c95de24602a3a7db27bc976e9c5335e0afc2d944d746dd0439f393c
+- fed56d7e0e4490394a9523deb7bcc1c1e05dfea67c70e11c42dcbd5f649f9174
 
 # `test_timestamps.py`
 
