@@ -166,13 +166,13 @@
 
 ## Do not read this when
 
-- `src/sub_commands/` 配下の個別実装や内部ヘルパーの詳細だけを追いたいとき。
+- `src/sub_commands/` 配下の個別実装や内部ヘルパーだけを追いたいとき。
 - `tests/test_repo.py`、`tests/test_indexing.py`、`tests/test_timestamps.py` など、別機能の回帰テストだけを確認したいとき。
 - 個別の `cmoc init`、`cmoc session`、`cmoc apply`、`cmoc review oracles` の操作手順や引数仕様だけを知りたいとき。
 
 ## hash
 
-- e1d8618ed22ce262dadd6950fbbc8c698924626bcaf264a782f10c16af0847c0
+- 8fef1e35de64148ab86e40d59eb5de2a62d468a3aa6066f2437e081d42afa79d
 
 # `test_timestamps.py`
 
