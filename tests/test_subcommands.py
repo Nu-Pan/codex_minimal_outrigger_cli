@@ -2497,6 +2497,73 @@ def test_eval_oracles_report_groups_rejected_findings(
     )
 
 
+@pytest.mark.parametrize(
+    ("finding_severity", "issue_severity", "expected_result"),
+    [
+        ("fatal", "fatal", "fatal"),
+        ("minor", "warning", "minor"),
+    ],
+)
+def test_eval_oracles_report_result_counts_rejected_findings(
+    tmp_path: Path,
+    finding_severity: str,
+    issue_severity: str,
+    expected_result: str,
+) -> None:
+    """不採用 finding のみでも result は検出 severity を反映する。"""
+    repo = tmp_path / "repo"
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir(parents=True)
+    oracle_file = oracle_root / "spec.md"
+    oracle_file.write_text("spec\n", encoding="utf-8")
+    issue = _eval_oracle_issue(
+        issue_severity,
+        f"Rejected {finding_severity}",
+        oracle_file,
+        None,
+        None,
+        [oracle_file],
+    )
+    issue["finding_severity"] = finding_severity
+    issue["judge_verdict"] = "reject"
+
+    report_path = review_oracles_module._write_report(
+        repo,
+        "full",
+        True,
+        "cmoc/session/example",
+        True,
+        None,
+        "session-commit",
+        False,
+        1,
+        [oracle_file],
+        [
+            {
+                "target_oracle_path": str(oracle_file.resolve()),
+                "referenced_paths": [str(oracle_file.resolve())],
+                "specification_only_basis": "",
+                "issues": [issue],
+            }
+        ],
+        "full",
+        "cmoc/review/example/run",
+        "review-fork",
+        "review-join",
+    )
+
+    report = report_path.read_text(encoding="utf-8")
+    assert "fatal_findings_accepted_count: 0" in report
+    assert "minor_findings_accepted_count: 0" in report
+    assert f'result: "{expected_result}"' in report
+    if finding_severity == "fatal":
+        assert "fatal_findings_rejected_count: 1" in report
+        assert "minor_findings_rejected_count: 0" in report
+    else:
+        assert "fatal_findings_rejected_count: 0" in report
+        assert "minor_findings_rejected_count: 1" in report
+
+
 def test_eval_oracles_error_report_frontmatter_quotes_string_scalars(
     tmp_path: Path,
 ) -> None:
@@ -2984,6 +3051,14 @@ def test_eval_oracles_result_precedence() -> None:
         1,
         {"fatal": 0, "inconclusive": 0, "warning": 0},
     ) == "ok"
+    assert review_oracles_module._evaluation_result(
+        1,
+        {"fatal": {"accept": 0, "reject": 1}, "minor": {"accept": 0, "reject": 0}},
+    ) == "fatal"
+    assert review_oracles_module._evaluation_result(
+        1,
+        {"fatal": {"accept": 0, "reject": 0}, "minor": {"accept": 0, "reject": 1}},
+    ) == "minor"
 
 
 def test_eval_oracles_payload_accepts_existing_oracle_and_index_paths(

@@ -2497,11 +2497,10 @@ def _evaluation_result(
 
 
 def _count_value(counts: dict[str, object], key: str) -> int:
-    """plain count と verdict 別 count の両方から accept 件数を読む。"""
+    """plain count と verdict 別 count の両方から検出件数を読む。"""
     value = counts.get(key, 0)
     if isinstance(value, dict):
-        accepted = value.get("accept", 0)
-        return accepted if isinstance(accepted, int) else 0
+        return sum(count for count in value.values() if isinstance(count, int))
     return value if isinstance(value, int) else 0
 
 
