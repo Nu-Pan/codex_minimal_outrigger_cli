@@ -623,9 +623,7 @@ def _plan_review_worktree(repo_root: Path, session_id: str) -> _ReviewWorktreePl
     """次に作成を試みる review run id、branch、worktree path を組み立てる。"""
     review_run_id = make_timestamp()
     review_branch = f"{REVIEW_BRANCH_PREFIX}{session_id}/{review_run_id}"
-    review_worktree = (
-        repo_root / ".cmoc" / "worktrees" / session_id / "review" / review_run_id
-    )
+    review_worktree = repo_root / ".cmoc" / "worktrees" / session_id / review_run_id
     return _ReviewWorktreePlan(review_run_id, review_branch, review_worktree)
 
 

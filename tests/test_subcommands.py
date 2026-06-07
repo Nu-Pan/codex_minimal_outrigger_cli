@@ -1373,6 +1373,11 @@ def test_eval_oracles_writes_report_with_fake_codex(
     assert review_worktree != repo
     assert review_worktree.is_dir()
     assert review_worktree.is_relative_to(repo / ".cmoc" / "worktrees")
+    review_worktree_relative = review_worktree.relative_to(
+        repo / ".cmoc" / "worktrees"
+    )
+    assert len(review_worktree_relative.parts) == 2
+    assert review_worktree_relative.parts[1] != "review"
     assert _git(review_worktree, "branch", "--show-current").stdout.startswith(
         "cmoc/review/"
     )
@@ -1482,6 +1487,11 @@ def test_review_oracles_runs_codex_in_review_worktree(
     assert len(codex_repo_roots) == 1
     assert codex_repo_roots[0] != repo
     assert codex_repo_roots[0].is_relative_to(repo / ".cmoc" / "worktrees")
+    review_worktree_relative = codex_repo_roots[0].relative_to(
+        repo / ".cmoc" / "worktrees"
+    )
+    assert len(review_worktree_relative.parts) == 2
+    assert review_worktree_relative.parts[1] != "review"
     assert _git(codex_repo_roots[0], "branch", "--show-current").stdout.startswith(
         "cmoc/review/"
     )
