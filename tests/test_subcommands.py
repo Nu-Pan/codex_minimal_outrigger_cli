@@ -2682,6 +2682,98 @@ def test_review_oracles_uses_finding_pipeline_schemas(
     assert "FINDING-0001" in report
 
 
+def test_review_oracles_finding_payload_rejects_non_oracle_files(
+    tmp_path: Path,
+) -> None:
+    """所見本体の oracle_path は oracles ファイル定義に限定する。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text("oracles/ignored.md\n", encoding="utf-8")
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    oracle_file = oracle_root / "spec.md"
+    index_file = oracle_root / "INDEX.md"
+    ignored_file = oracle_root / "ignored.md"
+    oracle_file.write_text("spec\n", encoding="utf-8")
+    index_file.write_text("# index\n", encoding="utf-8")
+    ignored_file.write_text("ignored\n", encoding="utf-8")
+
+    def payload(oracle_path: Path) -> list[dict[str, object]]:
+        return [
+            {
+                "severity": "fatal",
+                "title": "Finding",
+                "oracle_path": str(oracle_path.resolve()),
+                "reason": "reason",
+            }
+        ]
+
+    review_oracles_module._validate_finding_payloads(payload(oracle_file), repo)
+    for rejected_path in [index_file, ignored_file]:
+        with pytest.raises(
+            ValueError,
+            match="findings\\[0\\].oracle_path must be an oracle file",
+        ):
+            review_oracles_module._validate_finding_payloads(
+                payload(rejected_path),
+                repo,
+            )
+
+
+def test_review_oracles_finding_payload_uses_snapshot_oracle_files(
+    tmp_path: Path,
+) -> None:
+    """snapshot 経路でも所見本体の oracle_path は oracle_files と照合する。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    oracle_file = oracle_root / "spec.md"
+    index_file = oracle_root / "INDEX.md"
+    ignored_file = oracle_root / "ignored.md"
+    oracle_file.write_text("spec\n", encoding="utf-8")
+    index_file.write_text("# index\n", encoding="utf-8")
+    ignored_file.write_text("ignored\n", encoding="utf-8")
+    snapshot = review_oracles_module._OracleEvaluationSnapshot(
+        original_repo_root=repo.resolve(),
+        original_oracle_root=oracle_root.resolve(),
+        snapshot_root=repo.resolve(),
+        snapshot_oracle_root=oracle_root.resolve(),
+        oracle_files=frozenset({oracle_file.resolve()}),
+        reference_files=frozenset(
+            {
+                oracle_file.resolve(),
+                index_file.resolve(),
+                ignored_file.resolve(),
+            }
+        ),
+    )
+
+    def payload(oracle_path: Path) -> list[dict[str, object]]:
+        return [
+            {
+                "severity": "fatal",
+                "title": "Finding",
+                "oracle_path": str(oracle_path.resolve()),
+                "reason": "reason",
+            }
+        ]
+
+    review_oracles_module._validate_finding_payloads(
+        payload(oracle_file),
+        repo,
+        snapshot,
+    )
+    for rejected_path in [index_file, ignored_file]:
+        with pytest.raises(
+            ValueError,
+            match="findings\\[0\\].oracle_path must be an oracle file",
+        ):
+            review_oracles_module._validate_finding_payloads(
+                payload(rejected_path),
+                repo,
+                snapshot,
+            )
+
+
 def test_review_oracles_accepts_improved_issue_for_unevaluated_oracle(
     tmp_path: Path,
 ) -> None:

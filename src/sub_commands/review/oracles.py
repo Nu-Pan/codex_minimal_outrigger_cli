@@ -1434,11 +1434,11 @@ def _validate_finding_payloads(
             raise ValueError(f"findings[{index}] keys do not match schema.")
         if finding["severity"] not in set(_FINDING_SEVERITY_ORDER):
             raise ValueError(f"findings[{index}].severity is invalid.")
-        _require_absolute_oracles_file(
+        _require_absolute_oracle_file(
             finding["oracle_path"],
             repo_root,
             f"findings[{index}].oracle_path",
-            require_current_existence=oracle_snapshot is None,
+            oracle_snapshot,
         )
         for key in ["title", "reason"]:
             if not isinstance(finding[key], str) or not str(finding[key]).strip():
@@ -2318,6 +2318,30 @@ def _require_issue_oracle_path_string(value: object, index: int) -> None:
     stripped_value = value.strip()
     if not stripped_value:
         raise ValueError(f"issues[{index}].oracle_path must not be empty.")
+
+
+def _require_absolute_oracle_file(
+    value: object,
+    repo_root: Path,
+    label: str,
+    oracle_snapshot: _OracleEvaluationSnapshot | None = None,
+) -> Path:
+    """JSON 値を oracles ファイル path として検査する。"""
+    resolved_path = _require_absolute_oracles_file(
+        value,
+        repo_root,
+        label,
+        require_current_existence=oracle_snapshot is None,
+    )
+    if oracle_snapshot is not None:
+        if resolved_path not in oracle_snapshot.oracle_files:
+            raise ValueError(f"{label} must be an oracle file.")
+        return resolved_path
+
+    oracle_files = {path.resolve() for path in list_oracle_files(repo_root)}
+    if resolved_path not in oracle_files:
+        raise ValueError(f"{label} must be an oracle file.")
+    return resolved_path
 
 
 def _require_absolute_oracle_reference_path(
