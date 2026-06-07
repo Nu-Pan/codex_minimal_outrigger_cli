@@ -167,14 +167,14 @@
 
 ## Do not read this when
 
-- `tests/test_subcommands.py` ではなく、`tests/test_codex.py`、`tests/test_repo.py`、`tests/test_indexing.py`、`tests/test_report_files.py`、`tests/test_timestamps.py` のような個別テスト群を確認したいとき。
-- `src/sub_commands/apply/`、`src/sub_commands/session/`、`src/sub_commands/review/`、`src/main.py`、`bin/cmoc` の個別実装だけを追いたいとき。
+- `tests/test_subcommands.py` ではなく、`tests/test_codex.py`、`tests/test_repo.py`、`tests/test_indexing.py`、`tests/test_report_files.py`、`tests/test_timestamps.py` などの個別テスト群を確認したいとき。
+- `src/sub_commands/apply/`、`src/sub_commands/session/`、`src/sub_commands/review/`、`src/main.py`、`bin/cmoc`、`test.sh` の個別実装だけを追いたいとき。
 - `run_command()`、`StepTimer`、`subcommand_log`、`format_error_report` などの共通基盤だけを確認したいとき。
 - `oracles/docs/app_specs/sub_commands/` 配下の各仕様文書を直接たどりたいとき。
 
 ## hash
 
-- e7374a0b58c41735b4ef781449d884753d7388bb3c6e83fad9cb5ffb256006ef
+- 8b6a1e5b3d6a2929f30f0d10dc88d9f3e394e840f5b6f6fad42f93dd3b4ad5ca
 
 # `test_timestamps.py`
 

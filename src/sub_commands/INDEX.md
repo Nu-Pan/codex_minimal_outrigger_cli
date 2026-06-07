@@ -101,8 +101,8 @@
 ## Summary
 
 - `src/sub_commands/review` 配下のルーティング文書で、`cmoc review` 系サブコマンドの入口を整理する階層です。
-- `__init__.py` はパッケージ宣言のみを担い、`oracles.py` は `cmoc review oracles` の本体実装です。
-- review branch / worktree の準備、oracle スナップショットの固定、所見パイプライン、レポート出力へ分岐する前の目次です。
+- `__init__.py` はパッケージ宣言だけを担う最小モジュールです。
+- `oracles.py` は `cmoc review oracles` の本体実装です。
 
 ## Read this when
 
@@ -118,7 +118,7 @@
 
 ## hash
 
-- 39a85f5192782d0ef4cfea1e7ad5aaa03ee3080e5216cffc1347f1a9ee75be3a
+- 324b076001f5daac44d3d344d5bad8b51bccc55f62f2a659ab2e241c966471dc
 
 # `session`
 
