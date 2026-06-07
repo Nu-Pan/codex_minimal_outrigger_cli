@@ -161,18 +161,18 @@
 
 - `cmoc` のサブコマンド群に対する横断的な制御ロジックのテスト範囲を把握したいとき。
 - `run_command()` の stdout への進捗表示、エラー報告、終了コード処理、repo ルート解決失敗時の挙動を確認したいとき。
-- `init`、`session`、`apply`、`review oracles` の状態遷移、branch/worktree/STATE の整合性、Structured Output の受け渡しと検証を追いたいとき。
+- `init`、`session`、`apply`、`review oracles` の状態遷移、branch/worktree/state の整合性、Structured Output の受け渡しと検証を追いたいとき。
 - CLI の登録、補完応答、`main()` の委譲、`bin/cmoc` や `test.sh` の起動経路まで含めて確認したいとき。
 
 ## Do not read this when
 
-- `src/sub_commands/` 配下の個別実装や内部ヘルパーの詳細を直接追いたいとき。
+- `src/sub_commands/` 配下の個別実装や内部ヘルパーの詳細だけを追いたいとき。
 - `tests/test_repo.py`、`tests/test_indexing.py`、`tests/test_timestamps.py` など、別機能の回帰テストだけを確認したいとき。
 - 個別の `cmoc init`、`cmoc session`、`cmoc apply`、`cmoc review oracles` の操作手順や引数仕様だけを知りたいとき。
 
 ## hash
 
-- 7f3e4bb0bd1894044223a669e2bd13ad756fb52c7290158b381e51ee788a8ae9
+- e1d8618ed22ce262dadd6950fbbc8c698924626bcaf264a782f10c16af0847c0
 
 # `test_timestamps.py`
 
