@@ -24,7 +24,7 @@
 ## Summary
 
 - `src/sub_commands/review/oracles.py` は `cmoc review oracles` の本体実装で、review 実行の前提検証から worktree / branch の作成、oracle スナップショットの固定、所見の列挙・統合・検証・判定、レポート出力までを一連で担うモジュールです。
-- Structured Output の schema を読み込み、所見リストと評価メタデータを処理するための helper 群もこのファイルに含まれます。
+- Structured Output schema を読み込み、所見リストと評価メタデータを処理するための helper 群もこのファイルに含まれます。
 - `INDEX.md` を根拠にレビュー対象 oracle を選定し、失敗時には error report を生成する流れまで含めて、`cmoc review oracles` の中核を構成します。
 
 ## Read this when
@@ -36,11 +36,11 @@
 
 ## Do not read this when
 
-- `cmoc review oracles` の利用手順、引数、出力仕様だけを確認したいときは [`oracles/docs/app_specs/sub_commands/review_oracles.md`](/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03-16_000000754/2026-06-07_10-40_51_000000114/oracles/docs/app_specs/sub_commands/review_oracles.md) を読むべきです。
-- `src/sub_commands/review` の入口構造だけを確認したいときは [`src/sub_commands/review/INDEX.md`](/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03-16_000000754/2026-06-07_10-40_51_000000114/src/sub_commands/review/INDEX.md) を読むべきです。
-- `cmoc review` の CLI 登録や hidden alias だけを確認したいときは [`src/main.py`](/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03-16_000000754/2026-06-07_10-40_51_000000114/src/main.py) を読むべきです。
-- `oracles` 全体の共通仕様や別サブコマンドの入口だけを追いたいときは、このファイルではなく上位のルーティング文書を読むべきです。
+- `cmoc review oracles` の利用手順、引数、出力仕様だけを確認したいときは `oracles/docs/app_specs/sub_commands/review_oracles.md` を読むべきです。
+- `src/sub_commands/review` の入口構造だけを確認したいときは `src/sub_commands/review/INDEX.md` を読むべきです。
+- `cmoc review` の CLI 登録や hidden alias だけを確認したいときは `src/main.py` を読むべきです。
+- `review` 系ではなく、`apply` や `session` など別サブコマンドの実装を追いたいときは、このファイルではなく各サブコマンド側の実装を読むべきです。
 
 ## hash
 
-- 778869fb9aea8dd66f07f07cd5c60ca6b5e260ab569cbb4e8dba3e6bfe8feb30
+- 06222872450bb1dee957983fecebe98250bb3feec879144a289509539e8b27cf
