@@ -278,7 +278,7 @@ def test_run_command_logs_summary_on_exception(
     monkeypatch: MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """例外終了時は stderr へエラー、stdout へ終了集計を出す。"""
+    """例外終了時は stdout へエラーと終了集計を出す。"""
     repo = _init_repo(tmp_path)
     monkeypatch.chdir(repo)
 
@@ -297,10 +297,10 @@ def test_run_command_logs_summary_on_exception(
     )
     log_content = log_file.read_text(encoding="utf-8")
     assert exit_info.value.exit_code == 1
-    _assert_markdown_error_report(captured.err)
-    assert "RuntimeError" in captured.err
-    assert "boom" in captured.err
-    assert "ERROR" not in captured.out
+    assert captured.err == ""
+    _assert_markdown_error_report(captured.out)
+    assert "RuntimeError" in captured.out
+    assert "boom" in captured.out
     assert "# Command completion report" in captured.out
     assert f"subcommand log: {log_file}" in captured.out
     assert "subcommand return code: 1" in captured.out
@@ -353,7 +353,7 @@ def test_run_command_reports_nonzero_typer_exit(
     monkeypatch: MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """非 0 の typer.Exit も共通エラーレポートとして stderr に出す。"""
+    """非 0 の typer.Exit も共通エラーレポートとして stdout に出す。"""
     repo = _init_repo(tmp_path)
     monkeypatch.chdir(repo)
 
@@ -369,12 +369,12 @@ def test_run_command_reports_nonzero_typer_exit(
         (repo / ".cmoc" / "logs" / "sub_commands").glob("*.jsonl")
     ).read_text(encoding="utf-8")
     assert exit_info.value.exit_code == 7
-    _assert_markdown_error_report(captured.err)
-    assert "サブコマンドがエラー終了しました。" in captured.err
-    assert "typer.Exit(7)" in captured.err
-    assert "raise typer.Exit(7)" in captured.err
-    assert "Traceback is not available for this exception." not in captured.err
-    assert "ERROR" not in captured.out
+    assert captured.err == ""
+    _assert_markdown_error_report(captured.out)
+    assert "サブコマンドがエラー終了しました。" in captured.out
+    assert "typer.Exit(7)" in captured.out
+    assert "raise typer.Exit(7)" in captured.out
+    assert "Traceback is not available for this exception." not in captured.out
     assert "# Command completion report" in captured.out
     assert "subcommand return code: 7" in captured.out
     log_events = [json.loads(line) for line in log_content.splitlines()]
@@ -430,7 +430,7 @@ def test_run_command_reports_repo_root_resolution_error(
     monkeypatch: MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """repo root 解決失敗は stderr へエラー、stdout へ終了集計を出す。"""
+    """repo root 解決失敗は stdout へエラーと終了集計を出す。"""
     def fail_enter_repo_root() -> Path:
         """repo root 解決に失敗する setup 処理。"""
         raise CmocError(
@@ -456,10 +456,10 @@ def test_run_command_reports_repo_root_resolution_error(
 
     captured = capsys.readouterr()
     assert exit_info.value.exit_code == 1
-    _assert_markdown_error_report(captured.err)
-    assert "Git リポジトリのルートが見つかりませんでした。" in captured.err
-    assert f"開始パス: {tmp_path.resolve()}" in captured.err
-    assert "ERROR" not in captured.out
+    assert captured.err == ""
+    _assert_markdown_error_report(captured.out)
+    assert "Git リポジトリのルートが見つかりませんでした。" in captured.out
+    assert f"開始パス: {tmp_path.resolve()}" in captured.out
     assert "# Command completion report" in captured.out
     assert "subcommand log: unavailable" in captured.out
     assert "subcommand total elapsed:" in captured.out
@@ -9621,9 +9621,9 @@ def test_cmoc_review_oracles_rejects_too_many_issue_list_improvements() -> None:
     )
 
     assert result.returncode != 0
-    assert result.stdout == ""
-    _assert_markdown_error_report(result.stderr)
-    assert "4 is not in the range 0<=x<=3" in result.stderr
+    assert result.stderr == ""
+    _assert_markdown_error_report(result.stdout)
+    assert "4 is not in the range 0<=x<=3" in result.stdout
 
 
 def test_cmoc_session_and_apply_workflow_commands_are_registered() -> None:
@@ -9686,13 +9686,13 @@ def test_main_returns_nonzero_for_subcommand_error() -> None:
     )
 
     assert result.returncode == 1
-    _assert_markdown_error_report(result.stderr)
-    assert "ERROR" not in result.stdout
+    assert result.stderr == ""
+    _assert_markdown_error_report(result.stdout)
     assert "# Command completion report" in result.stdout
 
 
 def test_main_reports_no_args_error_with_non_empty_detail() -> None:
-    """引数なし起動も help と混ざらない stderr エラーレポートにする。"""
+    """引数なし起動も help と混ざらない stdout エラーレポートにする。"""
     repo_root = Path(__file__).resolve().parents[1]
     result = subprocess.run(
         [sys.executable, "-m", "main"],
@@ -9705,15 +9705,15 @@ def test_main_reports_no_args_error_with_non_empty_detail() -> None:
     )
 
     assert result.returncode == 2
-    assert result.stdout == ""
-    _assert_markdown_error_report(result.stderr)
-    assert "## Summary\nコマンドが指定されていません。" in result.stderr
-    assert "- 利用可能なコマンドを確認するには `cmoc --help` を実行してください。" in result.stderr
-    assert "## Detail\ncmoc がサブコマンドなしで起動されました。" in result.stderr
-    assert "Traceback (most recent call last):" in result.stderr
-    assert "raise _missing_command_error(\"cmoc\")" in result.stderr
-    assert "Traceback is not available for this exception." not in result.stderr
-    assert "Usage: cmoc [OPTIONS] COMMAND [ARGS]..." not in result.stderr
+    assert result.stderr == ""
+    _assert_markdown_error_report(result.stdout)
+    assert "## Summary\nコマンドが指定されていません。" in result.stdout
+    assert "- 利用可能なコマンドを確認するには `cmoc --help` を実行してください。" in result.stdout
+    assert "## Detail\ncmoc がサブコマンドなしで起動されました。" in result.stdout
+    assert "Traceback (most recent call last):" in result.stdout
+    assert "raise _missing_command_error(\"cmoc\")" in result.stdout
+    assert "Traceback is not available for this exception." not in result.stdout
+    assert "Usage: cmoc [OPTIONS] COMMAND [ARGS]..." not in result.stdout
 
 
 def test_main_delegates_root_completion_probe_to_typer() -> None:
@@ -9734,7 +9734,7 @@ def test_main_delegates_root_completion_probe_to_typer() -> None:
 def test_main_reports_command_group_without_subcommand_as_single_error_report(
     command_group: str,
 ) -> None:
-    """command group だけの起動も help と混ぜず stderr に報告する。"""
+    """command group だけの起動も help と混ぜず stdout に報告する。"""
     repo_root = Path(__file__).resolve().parents[1]
     result = subprocess.run(
         [sys.executable, "-m", "main", command_group],
@@ -9747,21 +9747,21 @@ def test_main_reports_command_group_without_subcommand_as_single_error_report(
     )
 
     assert result.returncode == 2
-    assert result.stdout == ""
-    assert result.stderr.count("ERROR") == 1
-    _assert_markdown_error_report(result.stderr)
-    assert "## Summary\nコマンドが指定されていません。" in result.stderr
+    assert result.stderr == ""
+    assert result.stdout.count("ERROR") == 1
+    _assert_markdown_error_report(result.stdout)
+    assert "## Summary\nコマンドが指定されていません。" in result.stdout
     assert (
         f"- 利用可能なコマンドを確認するには `cmoc {command_group} --help` を実行してください。"
-        in result.stderr
+        in result.stdout
     )
     assert (
         f"## Detail\ncmoc {command_group} がサブコマンドなしで起動されました。"
-        in result.stderr
+        in result.stdout
     )
-    assert "Traceback (most recent call last):" in result.stderr
-    assert "Traceback is not available for this exception." not in result.stderr
-    assert f"Usage: cmoc {command_group}" not in result.stderr
+    assert "Traceback (most recent call last):" in result.stdout
+    assert "Traceback is not available for this exception." not in result.stdout
+    assert f"Usage: cmoc {command_group}" not in result.stdout
 
 
 @pytest.mark.parametrize(
@@ -9914,14 +9914,14 @@ def test_user_facing_error_text_does_not_keep_known_english_phrases() -> None:
 
 
 def test_bin_cmoc_requires_venv_python() -> None:
-    """ランチャーは system python3 へフォールバックせず、エラーは stderr へ出す。"""
+    """ランチャーは system python3 へフォールバックせず、エラーは stdout へ出す。"""
     repo_root = Path(__file__).resolve().parents[1]
     launcher = (repo_root / "bin" / "cmoc").read_text(encoding="utf-8")
 
     assert launcher.startswith("#!/bin/sh")
     assert "#!/usr/bin/env python3" not in launcher
     assert 'exec "$venv_python"' in launcher
-    assert "} >&2" in launcher
+    assert "} >&2" not in launcher
 
 
 def test_test_sh_uses_own_worktree_bin_before_venv(tmp_path: Path) -> None:
@@ -9973,8 +9973,8 @@ def test_test_sh_uses_own_worktree_bin_before_venv(tmp_path: Path) -> None:
     ]
 
 
-def test_bin_cmoc_reports_missing_venv_to_stderr(tmp_path: Path) -> None:
-    """仮想環境が無い場合も共通エラーレポートを stderr へ出す。"""
+def test_bin_cmoc_reports_missing_venv_to_stdout(tmp_path: Path) -> None:
+    """仮想環境が無い場合も共通エラーレポートを stdout へ出す。"""
     repo_root = Path(__file__).resolve().parents[1]
     launcher = tmp_path / "repo" / "bin" / "cmoc"
     launcher.parent.mkdir(parents=True)
@@ -9993,13 +9993,13 @@ def test_bin_cmoc_reports_missing_venv_to_stderr(tmp_path: Path) -> None:
     )
 
     assert result.returncode == 1
-    assert result.stdout == ""
-    _assert_markdown_error_report(result.stderr)
-    assert "仮想環境 Python" in result.stderr
-    assert "at print_missing_venv_error" in result.stderr
-    assert "at require_venv_python" in result.stderr
-    assert "at main" in result.stderr
-    assert "仮想環境 Python の実行可能性チェック" not in result.stderr
+    assert result.stderr == ""
+    _assert_markdown_error_report(result.stdout)
+    assert "仮想環境 Python" in result.stdout
+    assert "at print_missing_venv_error" in result.stdout
+    assert "at require_venv_python" in result.stdout
+    assert "at main" in result.stdout
+    assert "仮想環境 Python の実行可能性チェック" not in result.stdout
 
 
 @pytest.mark.parametrize("complete_value", ["complete_bash", ""])

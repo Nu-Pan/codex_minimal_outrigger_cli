@@ -147,11 +147,11 @@ def main() -> None:
     except click.ClickException as error:
         # CLI parse error は Click の exit_code を維持する。
         exit_code = error.exit_code
-        print(format_error_report(error), file=sys.stderr)
+        print(format_error_report(error))
         raise SystemExit(exit_code) from error
     except Exception as error:
         # 想定外エラーも共通形式で表示し、可能なら例外側の exit_code を使う。
-        print(format_error_report(error), file=sys.stderr)
+        print(format_error_report(error))
         code = getattr(error, "exit_code", 1)
         raise SystemExit(code) from error
 
