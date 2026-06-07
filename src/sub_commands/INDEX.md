@@ -112,13 +112,13 @@
 
 ## Do not read this when
 
-- `cmoc review oracles` の実行フローや評価ロジックを追いたいときは、この目次ではなく `oracles.py` を直接読むべきとき。
-- `cmoc review oracles` の利用手順、引数、出力仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/review_oracles.md` を直接読むべきとき。
-- `cmoc review` の CLI 登録や hidden alias だけを確認したいときは、`src/main.py` を読むべきとき。
+- `cmoc review oracles` の実行フローや評価ロジックを追いたいときは、この目次ではなく `oracles.py` を直接読むべきです。
+- `cmoc review oracles` の利用手順、引数、出力仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/review_oracles.md` を直接読むべきです。
+- `cmoc review` の CLI 登録や hidden alias だけを確認したいときは、`src/main.py` を読むべきです。
 
 ## hash
 
-- 324b076001f5daac44d3d344d5bad8b51bccc55f62f2a659ab2e241c966471dc
+- beaa2e35b0b59614221f0b84b2973c57a8b66bcbcd13d6e1cf168884a7639701
 
 # `session`
 

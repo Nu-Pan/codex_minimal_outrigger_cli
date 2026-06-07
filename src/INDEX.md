@@ -52,13 +52,13 @@
 ## Summary
 
 - `src/sub_commands` は `cmoc` の各サブコマンド実装をまとめるルーティング用パッケージです。
-- `__init__.py`、`init.py`、`indexing.py` に加えて、`apply`・`review`・`session` の各サブパッケージへの入口を含みます。
+- `__init__.py`、`init.py`、`indexing.py` に加えて、`apply`・`review`・`session` の各パッケージへの入口を含みます。
 - 個別実装に入る前の案内として、どのモジュールを読むべきかを整理する目次の役割を持ちます。
 
 ## Read this when
 
 - `src/sub_commands` 配下の入口構造をまとめて把握したいとき。
-- `cmoc init` と `cmoc indexing` の実装入口、ならびに `apply`・`review`・`session` の各サブパッケージのどこへ進むべきか整理したいとき。
+- `cmoc init` と `cmoc indexing` の実装入口、ならびに `apply`・`review`・`session` の各パッケージのどこへ進むべきか整理したいとき。
 - サブコマンドの追加、整理、再配置に伴って、この階層の目次を確認したいとき。
 - 個別実装に入る前に、どのモジュールを読むべきかを切り分けたいとき。
 
@@ -70,4 +70,4 @@
 
 ## hash
 
-- 6779f4a2e3926451d5e4e7b5f75c5172d43482d39895ddd5a02131fd5f662444
+- 0feb9f6aec6689ed8d9d603d415e09262c6027834948e52a4c09d2662bd2e6d3
