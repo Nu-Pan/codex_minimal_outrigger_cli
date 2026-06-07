@@ -23,24 +23,24 @@
 
 ## Summary
 
-- `/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03_16_000000754/2026-06-07_10-40_51_000000114/src/sub_commands/review/oracles.py` は `cmoc review oracles` の本体実装で、oracles スナップショット固定、`INDEX.md` メンテナンス、oracle ファイルごとの並列評価、所見改善、レポート保存までを一括で担います。
-- `--scope` と旧 `--full` の互換、各種反復回数の検証、fatal / inconclusive / warning の issue payload 検証、エラー時のレポート生成もまとめています。
+- `src/sub_commands/review/oracles.py` は `cmoc review oracles` の本体実装で、oracles スナップショット固定、`INDEX.md` メンテナンス、oracle ファイルごとの並列評価、所見改善、レポート保存までを一括して担います。
+- `--scope` と旧 `--full` の互換、各種反復回数の検証、issue payload の検証、エラー時のレポート生成もまとめて扱います。
 - `cmoc review oracles` の実行フローと、評価対象ファイルの選定・検証・出力のどこを読むべきかを切り分けるための目次です。
 
 ## Read this when
 
-- `cmoc review oracles` の実装・修正・レビュー・テストを行うとき。
+- `cmoc review oracles` の実装・修正・レビュー・テストを行いたいとき。
 - 開始時点の oracles スナップショット固定、`.cmoc` の ignore 確認、`INDEX.md` メンテナンス反映後の評価対象スナップショットの扱いを追いたいとき。
-- oracle ファイルの並列評価、所見の集約・改善、レポート保存や error report の分岐を確認したいとき。
-- `--scope` / `--full` の互換、`--enumerate-findings-loop`、`--merge-findings-loop`、`--refine-findings-loop` の制御点を確認したいとき。
+- oracle ファイルの並列評価、問題点リストの改善、レポート保存や error report の分岐を確認したいとき。
+- `--scope` / 旧 `--full` の互換、`--enumerate-findings-loop`、`--merge-findings-loop`、`--refine-findings-loop` の制御点を確認したいとき。
 
 ## Do not read this when
 
 - `cmoc review oracles` の利用手順や引数仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/review_oracles.md` を読むべきです。
 - `cmoc review` の CLI 登録や hidden alias だけを確認したいときは、`src/main.py` を読むべきです。
 - `src/sub_commands/review` のパッケージ宣言だけを確認したいときは、`src/sub_commands/review/__init__.py` を読むべきです。
-- `oracles` 側の正本仕様そのものを確認したいときは、このファイルではなく `oracles/` 配下の仕様断片とその `INDEX.md` を読むべきです。
+- `oracles` 側の正本仕様そのものを確認したいときは、この実装ではなく `oracles/` 配下の仕様断片とその `INDEX.md` を読むべきです。
 
 ## hash
 
-- 629bdb78a2b4417bb87df617827dd9db39a5f2e9bf445b87a49aac51a25aa2b4
+- f623f708d09b0f1b8b646c1e9ec492394ee76bce441811b0c7202da7ee61acfe
