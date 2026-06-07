@@ -51,24 +51,22 @@
 
 ## Summary
 
-- `src/sub_commands` ディレクトリ全体のルーティング文書で、`cmoc` のサブコマンド実装へ案内する入口です。
-- この階層では、`__init__.py` のパッケージ宣言、`init.py` の `cmoc init`、`indexing.py` の `cmoc indexing` を起点に、`apply/`、`session/`、`review/` の各系統へ分岐します。
-- 個別の実装や仕様に進む前に、どの下位ディレクトリを読むべきかを切り分けるための目次です。
+- `src/sub_commands` は `cmoc` の各サブコマンド実装をまとめるパッケージです。
+- `init.py` と `indexing.py` に加えて、`apply`・`review`・`session` の各サブパッケージを含みます。
+- 各サブコマンドの入口から実装本体へ案内するルーティング起点になります。
 
 ## Read this when
 
-- `src/sub_commands` 配下の入口構造をまとめて把握し、どのモジュールや下位ディレクトリへ進むべきか整理したいとき。
-- `src/sub_commands/__init__.py`、`init.py`、`indexing.py` の役割分担を確認したいとき。
-- `apply`、`session`、`review` の各サブコマンド群へ分岐する前に、この階層のルーティングだけを押さえたいとき。
-- `cmoc init` と `cmoc indexing` の実装入口、および各サブコマンド系ディレクトリの案内を一括で見たいとき。
+- `cmoc` のサブコマンド実装の全体構造を把握したいとき。
+- `cmoc init`、`cmoc indexing`、`cmoc apply`、`cmoc review`、`cmoc session` のどこへ進むべきか判断したいとき。
+- サブコマンド追加・整理・再配置に伴って、入口ディレクトリの目次を確認したいとき。
 
 ## Do not read this when
 
-- `src/sub_commands` 配下の入口構造ではなく、すでに対象の個別モジュールやサブコマンドが決まっているとき。
-- `cmoc init` や `cmoc indexing` などの本体実装を直接読みたいときは、この目次ではなく各 `.py` を読むべきとき。
-- `cmoc apply` / `cmoc session` / `cmoc review` の個別仕様だけを確認したいときは、この階層ではなく各下位ディレクトリの `INDEX.md` や `oracles` 側を読むべきとき。
-- CLI 登録や起動点だけを確認したいときは、この目次ではなく `src/main.py` を読むべきとき。
+- 個別の `cmoc apply` / `cmoc review` / `cmoc session` の処理順や状態遷移だけを確認したいときは、このディレクトリではなく各サブパッケージの `INDEX.md` や実装ファイルを読むべきです。
+- `oracles` 側の正本仕様や利用手順だけを確認したいときは、このディレクトリではなく `oracles/docs/app_specs/sub_commands/` を読むべきです。
+- `cmoc` 全体のブランチモデルや repo 初期化の仕様だけを確認したいときは、ここではなく該当する専用モジュールを読むべきです。
 
 ## hash
 
-- 695744e4fa1b38cc2a709486dcc5e98b9aa4ebf087484a444080279e25047734
+- 15d0829d9a8ce21e33a438ef42ad2bdf40c39b7ac9e62183aaa923f7737e3657
