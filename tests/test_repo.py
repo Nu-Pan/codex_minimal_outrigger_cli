@@ -502,7 +502,7 @@ def test_list_implementation_files_ignores_system_excludes_file(
 def test_filter_apply_implementation_file_paths_matches_implementation_files(
     tmp_path: Path,
 ) -> None:
-    """apply の実装調査対象は Codex 編集不能 path を含めない。"""
+    """apply の実装調査対象は実装ファイル列挙規則と一致する。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text(
         "/.cmoc/\nignored.py\n",
@@ -523,16 +523,21 @@ def test_filter_apply_implementation_file_paths_matches_implementation_files(
     ]
 
     assert filter_apply_implementation_file_paths(repo, relative_paths) == [
+        ".agents/skill.md",
+        "AGENTS.md",
+        "README.md",
         "app.py",
         "docs/memo/note.md",
+        "memo",
+        "memo/note.md",
     ]
-    assert not is_apply_implementation_path(repo, "README.md")
-    assert not is_apply_implementation_path(repo, "AGENTS.md")
-    assert not is_apply_implementation_path(repo, ".agents")
-    assert not is_apply_implementation_path(repo, ".agents/skill.md")
+    assert is_apply_implementation_path(repo, "README.md")
+    assert is_apply_implementation_path(repo, "AGENTS.md")
+    assert is_apply_implementation_path(repo, ".agents")
+    assert is_apply_implementation_path(repo, ".agents/skill.md")
     assert not is_apply_implementation_path(repo, ".cmoc/state.json")
-    assert not is_apply_implementation_path(repo, "memo")
-    assert not is_apply_implementation_path(repo, "memo/note.md")
+    assert is_apply_implementation_path(repo, "memo")
+    assert is_apply_implementation_path(repo, "memo/note.md")
     assert is_apply_implementation_path(repo, "docs/memo/note.md")
     assert is_apply_implementation_path(repo, "app.py")
 

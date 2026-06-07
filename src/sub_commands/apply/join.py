@@ -443,6 +443,8 @@ def _is_apply_branch_forbidden_path(path: str) -> bool:
     """apply branch 側の正規成果物として扱わない path か判定する。"""
     return (
         _is_oracle_path(path)
+        or path == "README.md"
+        or path == "AGENTS.md"
         or path == ".cmoc"
         or path.startswith(".cmoc/")
         or path == ".agents"

@@ -7992,7 +7992,7 @@ def test_commit_all_changes_rejects_oracle_file_after_index_update(
 def test_apply_implementation_files_at_commit_matches_implementation_files(
     tmp_path: Path,
 ) -> None:
-    """apply の snapshot 調査対象は Codex 編集不能 path を含めない。"""
+    """apply の snapshot 調査対象は実装ファイル列挙規則と一致する。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     memo_root = repo / "memo"
@@ -8019,9 +8019,13 @@ def test_apply_implementation_files_at_commit_matches_implementation_files(
     ]
 
     assert relative_paths == [
+        ".agents/skill.md",
         ".gitignore",
+        "AGENTS.md",
+        "README.md",
         "app.py",
         "docs/memo/note.md",
+        "memo/note.md",
     ]
 
 
@@ -8058,7 +8062,7 @@ def test_apply_files_at_commit_exclude_tracked_root_gitignored_files(
     ]
 
     assert oracle_paths == ["oracles/kept.md"]
-    assert implementation_paths == [".gitignore", "kept.py"]
+    assert implementation_paths == [".gitignore", "README.md", "kept.py"]
 
 
 def test_apply_files_at_commit_use_snapshot_root_gitignore(
@@ -8151,6 +8155,7 @@ def test_apply_files_at_commit_use_snapshot_root_gitignore(
     ]
     assert implementation_paths == [
         ".gitignore",
+        "README.md",
         "kept.py",
         "worktree_ignored.py",
     ]
