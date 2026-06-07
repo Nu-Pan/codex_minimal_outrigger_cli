@@ -104,9 +104,9 @@
 
 ## Summary
 
-- `INDEX.md` メンテナンスを担当する共通モジュールで、配置対象ディレクトリの列挙、既存 `INDEX.md` の再利用判定、目次ブロックの生成・置換、自動コミットまでをまとめています。
-- `codex exec` の Structured Output で目次情報を生成しつつ、hash の埋め込みや再利用判定は cmoc 側で機械的に処理します。
-- 同一 git repository 内の INDEX メンテナンスを lock で直列化し、I/O 失敗や不正な `INDEX.md` を `CmocError` として扱います。
+- `src/commons/indexing.py` は `INDEX.md` 生成・更新を担う共通モジュールで、配置対象ディレクトリの列挙、既存目次の再利用判定、Structured Output による目次生成、ファイル置換、必要に応じた自動コミットまでをまとめています。
+- 公開的に参照されやすい入口は `maintain_indexes()`、`is_maintained_index_path()`、`is_maintained_index_path_at_commit()` で、`gitignore`、`memo`、隠し要素、symlink、バイナリ、UTF-8 外の内容をどう扱うかもこのモジュールに集約されています。
+- 同一 git repository 内での INDEX メンテナンスを lock で直列化し、I/O 失敗や不正な `INDEX.md` を `CmocError` として扱う基盤です。
 
 ## Read this when
 
@@ -117,13 +117,14 @@
 
 ## Do not read this when
 
-- `cmoc indexing` のサブコマンド入口や実行フローだけを確認したいときは、[`src/sub_commands/indexing.py`](/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03_16_000000754/2026-06-07_10-40_51_000000114/src/sub_commands/indexing.py) を読むべきです。
-- `INDEX.md` の配置・更新ルールの正本仕様だけを確認したいときは、[`oracles/docs/app_specs/indexing.md`](/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03_16_000000754/2026-06-07_10-40_51_000000114/oracles/docs/app_specs/indexing.md) を読むべきです。
-- repo root 検出、`git` ラッパー、session/apply state などの共通基盤だけを追いたいときは、このモジュールではなく [`src/commons/repo.py`](/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03_16_000000754/2026-06-07_10-40_51_000000114/src/commons/repo.py) や関連モジュールを読むべきです。
+- `cmoc indexing` のサブコマンド入口や実行フローだけを確認したいときは、`src/sub_commands/indexing.py` を読むべきです。
+- `INDEX.md` の配置・更新ルールの正本仕様だけを確認したいときは、`oracles/docs/app_specs/indexing.md` を読むべきです。
+- repo root 検出、`git` ラッパー、session/apply state などの共通基盤だけを追いたいときは、`src/commons/repo.py` や関連モジュールを読むべきです。
+- `codex exec` の起動制御や Structured Output の共通処理だけを追いたいときは、`src/commons/codex.py` を読むべきです。
 
 ## hash
 
-- c5f32977d2d26a9bb8947b0ad2eb57f80a3ff5d10ad02bdcf3dad8a3109dcedd
+- 8a39275b427ae74a12fa40e02167b708694f781a60997ba40bf5a01d2259b7df
 
 # `repo.py`
 

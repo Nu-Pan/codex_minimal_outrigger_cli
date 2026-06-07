@@ -81,25 +81,26 @@
 
 ## Summary
 
-- `tests/test_indexing.py` は `src/commons/indexing.py` の `INDEX.md` メンテナンス処理に関する回帰テスト群です。
-- `INDEX.md` の生成・再利用・再生成条件・hash 更新・Structured Output 検証を中心に、gitignore、symlink、binary、非 UTF-8 path、並列処理、排他 lock、自動 commit の境界条件も確認します。
-- `maintain_indexes()` と `is_maintained_index_path()` の期待動作や、I/O 失敗時の `CmocError` 化も押さえます。
+- `src/commons/indexing.py` の `INDEX.md` メンテナンス処理に関する回帰テストをまとめたファイルです。
+- 生成・再利用・再生成、hash 更新、Structured Output の妥当性確認を中心に扱います。
+- gitignore、symlink、binary、非 UTF-8 path、空ディレクトリ、並列処理、排他 lock、自動 commit の境界条件も押さえます。
 
 ## Read this when
 
-- `maintain_indexes()` と `is_maintained_index_path()` の期待動作を確認したいとき。
-- gitignore、symlink、binary、非 UTF-8 path、空ディレクトリ、特殊文字を含む path の扱いを修正・追加したいとき。
-- 並列生成、排他 lock、Codex 呼び出しの再試行、既存 INDEX の再利用・再生成、自動 commit の境界条件を確認したいとき。
+- `maintain_indexes()` と `is_maintained_index_path()` 系の判定条件を見直したいとき。
+- `INDEX.md` の生成・再生成条件、Structured Output 検証、既存エントリ再利用の挙動を確認したいとき。
+- gitignore、symlink、binary、非 UTF-8 path、空ディレクトリ、特殊文字 path の扱いを変更したいとき。
+- 並列生成、排他 lock、自動 commit、I/O 失敗時の `CmocError` 化を確認したいとき。
 
 ## Do not read this when
 
-- `src/commons/indexing.py` の実装ロジックを直接追いたいとき。
-- `oracles` 側の正本仕様や `INDEX.md` 全体の生成ルールだけを確認したいとき。
-- session や apply など、INDEX 保守以外のサブコマンド仕様を調べたいとき。
+- `src/commons/indexing.py` の実装ロジックそのものを追いたいとき。
+- `INDEX.md` の正本仕様やルーティング規約だけを確認したいとき。
+- `repo.py` や `codex.py` など、INDEX 保守以外の共通基盤を調べたいとき。
 
 ## hash
 
-- 715641310a288809998d59f267faca617fea9ce3fff6ca0589e5a115749c8551
+- ba4be4ad428dcc290fa9cdc691e1479a09d11356581230a96b4806b97e1d092a
 
 # `test_repo.py`
 
