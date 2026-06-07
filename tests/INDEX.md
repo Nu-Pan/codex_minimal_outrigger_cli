@@ -103,7 +103,7 @@
 
 ## Summary
 
-- `tests/test_repo.py` は `src/commons/repo.py` の git 共通処理を検証する回帰テスト群です。
+- `tests/test_repo.py` は `src/commons/repo.py` の Git 共通処理を検証する回帰テスト群です。
 - .cmoc の ignore 保証、repo root 検出、実装 / 正本ファイルの列挙と変更検出を扱います。
 - session state、apply process id、`cmoc` ブランチ判定、active session 判定の境界条件も押さえます。
 
@@ -117,13 +117,13 @@
 ## Do not read this when
 
 - `src/commons/repo.py` の実装そのものを直接追いたいとき。
-- 個別の git ユーティリティの使い方だけを確認したいとき。
+- 個別の Git ユーティリティの使い方だけを確認したいとき。
 - `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
 - `session` や `apply` など、repo 共通処理以外のサブコマンド仕様を調べたいとき。
 
 ## hash
 
-- 6882f93a0a128af642f31cb7d765eafee93ae2e0c6db7fcf2bc05f1fc850cebb
+- 24637378f1f2d603615c9e1678629408a9e5f2fc77819fd347cd14fbab0d19bb
 
 # `test_report_files.py`
 
@@ -171,7 +171,7 @@
 
 ## hash
 
-- 63d39c7d3a360049cc41f1bf9627cc6143df8fdde0c0ac86c9461468be77fb47
+- ca2fff0e925bbdc40ac27631698875e5b8eefcaa58658f93c58d8d9db2231fac
 
 # `test_timestamps.py`
 

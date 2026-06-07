@@ -129,30 +129,30 @@
 
 ## Summary
 
-- `src/commons/repo.py` は、git リポジトリと cmoc の作業領域を扱う共通基盤モジュールです。
-- repo root の探索、ブランチ名と HEAD commit の取得、cmoc 管理ブランチの判定と session id 抽出をまとめています。
-- session / apply の状態ファイルと apply process id の保存・読込・検証、active session の整合性確認を担います。
-- .cmoc の ignore 保証、未コミット差分の検査、`oracles` と実装ファイルの列挙・差分抽出・削除判定、`run_git()` を含む git 共通ラッパーを提供します。
+- `src/commons/repo.py` は git リポジトリと cmoc の作業領域を扱う共通基盤モジュールです。
+- repo root の探索、現在ブランチ名、HEAD commit、cmoc 管理ブランチ判定、session id 抽出をまとめています。
+- session / apply の state JSON と apply process id の保存・読込・検証、active session の整合性確認を担います。
+- .cmoc の ignore 保証、未コミット差分の検査、apply worktree からの所有元 repo root 復元、`run_git()` を含む git 共通ラッパーを提供します。
 
 ## Read this when
 
 - repo root の検出、現在ブランチ名、HEAD commit の取得方法を確認したいとき。
 - `cmoc/session/*` と `cmoc/apply/*` のブランチ命名規則や session id の抽出処理を追いたいとき。
-- session state と apply process id の保存・読込・検証、active session の整合性確認を確認したいとき。
+- session state と apply state の保存・読込・検証、active session の整合性確認を確認したいとき。
 - apply worktree から所有元 repo root を復元する処理や、`.cmoc` の ignore 保証を確認したいとき。
-- root `.gitignore` と git index を使った未コミット差分・削除検出、`oracles` と実装ファイルの列挙やフィルタリングを追いたいとき。
+- 未コミット差分の検査、`cmoc` 管理ブランチの判定、git 共通操作の入口を把握したいとき。
 
 ## Do not read this when
 
 - `src/commons/repo.py` の個々の関数実装や細かな例外メッセージだけを確認したいとき。
 - `INDEX.md` の生成・更新ルールそのものを確認したいとき。
-- `CmocError` の整形や stdout 向けエラーレポートだけを確認したいとき。
+- `CmocError` の整形や stdout 向けエラーレポートだけを追いたいとき。
 - 経過時間計測やサブコマンドログだけを追いたいとき。
 - `codex exec` の起動や Structured Output の扱いだけを確認したいとき。
 
 ## hash
 
-- 9af3a7fa3d4ad70c1128877acb5b6a318944db3388181866678c921bce8c058d
+- 3e3a79d33b7e8de9ca2929b88aa034d89ca1ee5d6197034a14ebd670a37550d1
 
 # `report_files.py`
 
