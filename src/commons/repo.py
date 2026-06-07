@@ -635,7 +635,7 @@ def _validate_session_state_schema(
         path,
     )
     _validate_state_value(session_state, SESSION_STATES, "session.state", path)
-    _validate_optional_string(
+    _validate_required_string(
         session,
         "session_home_branch",
         "session.session_home_branch",

@@ -1040,10 +1040,10 @@ def test_session_fork_rejects_existing_active_session_for_home_branch(
     ]
 
 
-def test_session_fork_rejects_ambiguous_null_active_session_at_same_commit(
+def test_session_fork_rejects_null_active_session_home_branch(
     tmp_path: Path,
 ) -> None:
-    """null home branch の active session が曖昧なら新規 session を止める。"""
+    """null home branch の active session state は schema 検証で止める。"""
     repo = _init_repo(tmp_path)
     cmoc_init_impl(repo)
     start_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
@@ -1055,14 +1055,15 @@ def test_session_fork_rejects_ambiguous_null_active_session_at_same_commit(
     first_state_path = repo / ".cmoc" / "sessions" / f"{first_session_id}.json"
     first_state = json.loads(first_state_path.read_text(encoding="utf-8"))
     first_state["session"]["session_home_branch"] = None
-    write_session_state(repo, first_session_id, first_state)
+    first_state_path.write_text(json.dumps(first_state), encoding="utf-8")
     _git(repo, "checkout", "feature")
 
     with pytest.raises(CmocError) as error:
         cmoc_session_fork_impl(repo)
 
     first_state = json.loads(first_state_path.read_text(encoding="utf-8"))
-    assert "home branch 未確定の active session" in error.value.message
+    assert "session state ファイルの形式が不正です。" in error.value.message
+    assert "session.session_home_branch: None" in error.value.detail
     assert first_state["session"]["session_home_branch"] is None
     assert _git(repo, "branch", "--show-current").stdout.strip() == "feature"
     assert _session_state_paths(repo) == [
@@ -8624,10 +8625,10 @@ def test_session_join_merges_current_session_branch_and_deletes_it(
     assert "cmoc/session/2026-05-10_22-21_10_000000123" not in branches
 
 
-def test_session_join_recovers_null_session_home_branch(
+def test_session_join_rejects_null_session_home_branch(
     tmp_path: Path,
 ) -> None:
-    """fresh fork 後の null home branch でも session join できる。"""
+    """null home branch の session state では session join しない。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
@@ -8639,24 +8640,28 @@ def test_session_join_recovers_null_session_home_branch(
     )
     state = json.loads(state_path.read_text(encoding="utf-8"))
     state["session"]["session_home_branch"] = None
-    write_session_state(repo, "2026-05-10_22-21_10_000000123", state)
+    state_path.write_text(json.dumps(state), encoding="utf-8")
     (repo / "feature.txt").write_text("feature\n", encoding="utf-8")
     _git(repo, "add", "feature.txt")
     _git(repo, "commit", "-m", "feature")
 
-    cmoc_session_join_impl(repo)
+    with pytest.raises(CmocError) as error:
+        cmoc_session_join_impl(repo)
 
     state_after = json.loads(state_path.read_text(encoding="utf-8"))
-    assert _git(repo, "branch", "--show-current").stdout.strip() == home_branch
-    assert (repo / "feature.txt").read_text(encoding="utf-8") == "feature\n"
-    assert state_after["session"]["state"] == "joined"
-    assert state_after["session"]["session_home_branch"] == home_branch
+    assert "session state ファイルの形式が不正です。" in error.value.message
+    assert "session.session_home_branch: None" in error.value.detail
+    assert _git(repo, "branch", "--show-current").stdout.strip() == (
+        "cmoc/session/2026-05-10_22-21_10_000000123"
+    )
+    assert state_after["session"]["state"] == "active"
+    assert state_after["session"]["session_home_branch"] is None
 
 
-def test_session_join_dirty_worktree_does_not_record_recovered_home_branch(
+def test_session_join_dirty_worktree_rejects_null_session_home_branch_first(
     tmp_path: Path,
 ) -> None:
-    """dirty な session branch では復元 home branch を永続化しない。"""
+    """dirty 判定前に null home branch state を schema 検証で拒否する。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
@@ -8667,7 +8672,7 @@ def test_session_join_dirty_worktree_does_not_record_recovered_home_branch(
     )
     state = json.loads(state_path.read_text(encoding="utf-8"))
     state["session"]["session_home_branch"] = None
-    write_session_state(repo, "2026-05-10_22-21_10_000000123", state)
+    state_path.write_text(json.dumps(state), encoding="utf-8")
     state_before = json.loads(state_path.read_text(encoding="utf-8"))
     (repo / "dirty.txt").write_text("dirty\n", encoding="utf-8")
 
@@ -8675,7 +8680,8 @@ def test_session_join_dirty_worktree_does_not_record_recovered_home_branch(
         cmoc_session_join_impl(repo)
 
     state_after = json.loads(state_path.read_text(encoding="utf-8"))
-    assert "未コミットの変更" in error.value.message
+    assert "session state ファイルの形式が不正です。" in error.value.message
+    assert "session.session_home_branch: None" in error.value.detail
     assert state_after == state_before
     assert state_after["session"]["session_home_branch"] is None
 
@@ -9513,10 +9519,10 @@ def test_session_abandon_marks_state_and_force_deletes_branch(
     )
 
 
-def test_session_abandon_recovers_null_session_home_branch(
+def test_session_abandon_rejects_null_session_home_branch(
     tmp_path: Path,
 ) -> None:
-    """fresh fork 後の null home branch でも session abandon できる。"""
+    """null home branch の session state では session abandon しない。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
@@ -9528,26 +9534,30 @@ def test_session_abandon_recovers_null_session_home_branch(
     )
     state = json.loads(state_path.read_text(encoding="utf-8"))
     state["session"]["session_home_branch"] = None
-    write_session_state(repo, "2026-05-10_22-21_10_000000123", state)
+    state_path.write_text(json.dumps(state), encoding="utf-8")
     (repo / "feature.txt").write_text("session only\n", encoding="utf-8")
     _git(repo, "add", "feature.txt")
     _git(repo, "commit", "-m", "session only")
 
-    cmoc_session_abandon_impl(repo)
+    with pytest.raises(CmocError) as error:
+        cmoc_session_abandon_impl(repo)
 
     branches = _git(repo, "branch", "--format=%(refname:short)").stdout
     state_after = json.loads(state_path.read_text(encoding="utf-8"))
-    assert _git(repo, "branch", "--show-current").stdout.strip() == home_branch
-    assert (repo / "feature.txt").exists() is False
-    assert state_after["session"]["state"] == "abandoned"
-    assert state_after["session"]["session_home_branch"] == home_branch
-    assert "cmoc/session/2026-05-10_22-21_10_000000123" not in branches
+    assert "session state ファイルの形式が不正です。" in error.value.message
+    assert "session.session_home_branch: None" in error.value.detail
+    assert _git(repo, "branch", "--show-current").stdout.strip() == (
+        "cmoc/session/2026-05-10_22-21_10_000000123"
+    )
+    assert state_after["session"]["state"] == "active"
+    assert state_after["session"]["session_home_branch"] is None
+    assert "cmoc/session/2026-05-10_22-21_10_000000123" in branches
 
 
-def test_session_abandon_dirty_worktree_does_not_record_recovered_home_branch(
+def test_session_abandon_dirty_worktree_rejects_null_session_home_branch_first(
     tmp_path: Path,
 ) -> None:
-    """dirty な session branch では復元 home branch を永続化しない。"""
+    """dirty 判定前に null home branch state を schema 検証で拒否する。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
@@ -9558,7 +9568,7 @@ def test_session_abandon_dirty_worktree_does_not_record_recovered_home_branch(
     )
     state = json.loads(state_path.read_text(encoding="utf-8"))
     state["session"]["session_home_branch"] = None
-    write_session_state(repo, "2026-05-10_22-21_10_000000123", state)
+    state_path.write_text(json.dumps(state), encoding="utf-8")
     state_before = json.loads(state_path.read_text(encoding="utf-8"))
     (repo / "dirty.txt").write_text("dirty\n", encoding="utf-8")
 
@@ -9567,7 +9577,8 @@ def test_session_abandon_dirty_worktree_does_not_record_recovered_home_branch(
 
     state_after = json.loads(state_path.read_text(encoding="utf-8"))
     branches = _git(repo, "branch", "--format=%(refname:short)").stdout
-    assert "未コミットの変更" in error.value.message
+    assert "session state ファイルの形式が不正です。" in error.value.message
+    assert "session.session_home_branch: None" in error.value.detail
     assert _git(repo, "branch", "--show-current").stdout.strip() == (
         "cmoc/session/2026-05-10_22-21_10_000000123"
     )
@@ -11041,7 +11052,6 @@ def _create_completed_apply_run(
             encoding="utf-8"
         )
     )
-    state["session"]["session_home_branch"] = None
     state["apply"] = {
         "state": "completed",
         "apply_branch": apply_branch,
