@@ -82,18 +82,18 @@
 
 ## Read this when
 
-- `cmoc apply join` の実装・修正・レビュー・テストを行いたいとき。
-- 完了済み apply branch を session branch へ merge する処理順、state 更新、cleanup 条件を確認したいとき。
+- `src/sub_commands/apply/join.py` の実装・修正・レビュー・テストを行いたいとき。
+- 完了済み apply branch を session branch へ取り込む処理順、state 更新、cleanup 条件を確認したいとき。
 - `--force-resolve`、未コミット差分チェック、想定外差分の扱い、`INDEX.md` conflict の自動解消を追いたいとき。
 - 保存済み report の有無や apply worktree / branch 削除の安全条件を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply fork` や `cmoc apply abandon` の実装だけを追いたいとき。
+- `cmoc apply fork` や `cmoc apply abandon` の開始・破棄フローだけを確認したいとき。
 - `cmoc session` 系の開始・統合・破棄だけを確認したいとき。
-- `cmoc apply join` の利用手順や正本仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/apply_join.md` を読むべきとき。
-- `src/sub_commands/apply` 全体の入口構造だけを確認したいときで、`join.py` の処理本体は不要なとき。
+- `cmoc apply join` の利用手順や正本仕様だけを確認したいとき。
+- `src/sub_commands/apply` 配下の入口構造だけを確認したくて、`join.py` の処理本体は不要なとき。
 
 ## hash
 
-- 5ed14874b54c812ebff31b0bff1d3293604bb0017985f269e826e2a625c36a57
+- fe85f15a3295a86166e1670f07e77e7a7ab6eaa4c2a81e5b2f61db9f0bdcc827

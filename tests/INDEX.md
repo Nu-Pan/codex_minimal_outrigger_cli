@@ -163,18 +163,18 @@
 - `cmoc init`、`cmoc indexing`、`cmoc session fork/join/abandon`、`cmoc apply fork/join/abandon`、`cmoc review oracles` の登録・補完・終了コード・出力・エラー処理をまとめて確認したいとき。
 - `main.py`、`bin/cmoc`、`test.sh` を含む CLI 起点の挙動や、`run_command()`、`StepTimer`、`subcommand_log` の共通制御を確認したいとき。
 - `apply` と `review oracles` のプロンプト、スキーマ、レポート生成、`session_join` の conflict 解決、`init` や `session_fork` の事前条件を追いたいとき。
-- `INDEX.md` から `oracles/docs/app_specs/sub_commands/INDEX.md` へ進み、各サブコマンドの詳細仕様に分岐したいとき。
+- このファイルが、個別サブコマンド仕様へ進む前の横断目次として機能しているかを確認したいとき。
 
 ## Do not read this when
 
-- `tests/test_codex.py`、`tests/test_repo.py`、`tests/test_indexing.py`、`tests/test_report_files.py` など、別のテスト群の内容を確認したいとき。
-- `src/sub_commands/apply/`、`src/sub_commands/session/`、`src/sub_commands/review/`、`src/main.py`、`bin/cmoc`、`test.sh` の個別実装だけを追いたいとき。
+- `tests/test_codex.py`、`tests/test_repo.py`、`tests/test_indexing.py`、`tests/test_report_files.py` など、個別の回帰テストの内容を確認したいとき。
+- `src/sub_commands/apply/`、`src/sub_commands/session/`、`src/sub_commands/review/`、`src/sub_commands/init.py`、`src/main.py`、`bin/cmoc`、`test.sh` の個別実装だけを追いたいとき。
+- `oracles/docs/app_specs/sub_commands/INDEX.md` 以下の各サブコマンド仕様を直接確認したいとき。
 - `run_command()`、`StepTimer`、`subcommand_log`、`format_error_report` など、共通基盤だけを確認したいとき。
-- `oracles/docs/app_specs/sub_commands/` 配下の各仕様文書を直接たどりたいとき。
 
 ## hash
 
-- 1055a5e86ea515b1b95b02b9f59096bc44e4b50039ad97f4e3127e5aff7171fb
+- 0954217cff1ccb398276b2faa4cb660b7fe9fafc525fa17eed786aeb00d26e0a
 
 # `test_timestamps.py`
 
