@@ -1377,25 +1377,15 @@ def test_eval_oracles_writes_report_with_fake_codex(
     )
     assert codex_kwargs[0]["expect_json"] is True
     assert codex_kwargs[0]["output_schema"] == (
-        review_oracles_module._EVALUATION_OUTPUT_SCHEMA
+        review_oracles_module._ENUMERATE_FINDINGS_OUTPUT_SCHEMA
     )
-    issue_schema = review_oracles_module._EVALUATION_OUTPUT_SCHEMA["properties"][
-        "issues"
-    ]["items"]
-    basis_schema = issue_schema["properties"]["specification_only_basis"]
-    assert basis_schema == {
-        "type": "string",
-        "description": (
-            "この問題点の評価が仕様ファイルと INDEX.md だけに"
-            "基づくことの説明。"
-        ),
-    }
     assert codex_kwargs[0].get("skip_index_maintenance") is not True
     assert "json_validator" in codex_kwargs[0]
-    assert 'mode: "full"' in report
+    assert 'scope: "full"' in report
     assert 'result: "ok"' in report
-    assert "## Fatal issues" in report
-    assert "No issues." in report
+    assert "## Fatal findings" in report
+    assert "## Minor findings" in report
+    assert "No findings." in report
     assert "## Specification-only basis" not in report
 
 
@@ -1678,7 +1668,7 @@ def test_eval_oracles_snapshots_oracles_with_maintained_indexes(
     assert maintain_exclusions == [[]]
     assert evaluated_purposes == ["oracle 評価 oracles/original.md"]
     assert snapshot_reads == [("original\n", "maintained oracle index\n")]
-    assert f'head_commit: "{review_start_head}"' in report
+    assert f'session_fork_commit: "{review_start_head}"' in report
     assert "oracle_count_total: 1" in report
     assert "oracle_count_evaluated: 1" in report
     assert "oracles/generated.md" not in report
@@ -1943,24 +1933,20 @@ def test_eval_oracles_writes_error_report_when_evaluation_fails(
     assert "- Exception type: `RuntimeError`" in report
     assert "- Exception message: `fake evaluation failure`" in report
     assert "# cmoc review oracles report" in report
-    assert "## Summary" in report
     assert "## Verdict" in report
     assert "## Specification-only basis" not in report
     assert "成功評価ではありません" in report
     assert "今回評価した範囲では問題点が検出されませんでした" not in report
     assert "## Evaluated oracle files" in report
-    assert "## Fatal issues" in report
-    assert "## Inconclusive issues" in report
-    assert "## Warnings" in report
+    assert "## Fatal findings" in report
+    assert "## Minor findings" in report
     assert "## Referenced files" in report
     expected_sections = [
         "# cmoc review oracles report",
-        "## Summary",
         "## Verdict",
         "## Evaluated oracle files",
-        "## Fatal issues",
-        "## Inconclusive issues",
-        "## Warnings",
+        "## Fatal findings",
+        "## Minor findings",
         "## Referenced files",
     ]
     assert [report.index(section) for section in expected_sections] == sorted(
@@ -1968,7 +1954,7 @@ def test_eval_oracles_writes_error_report_when_evaluation_fails(
     )
     evaluated_section = report[
         report.index("## Evaluated oracle files") : report.index(
-            "## Fatal issues"
+            "## Fatal findings"
         )
     ]
     assert "Not evaluated oracle files:" not in evaluated_section
@@ -2002,10 +1988,9 @@ def test_eval_oracles_writes_error_report_when_preparation_fails(
     assert len(reports) == 1
     report = reports[0].read_text(encoding="utf-8")
     assert 'result: "error"' in report
-    assert 'mode: "full"' in report
-    assert "branch:" in report
-    assert "head_commit: null" not in report
-    assert "deleted_oracles_detected: false" in report
+    assert 'scope: "full"' in report
+    assert "session_branch:" in report
+    assert "session_fork_commit: null" not in report
     assert "oracle_count_total: 1" in report
     assert "oracle_count_evaluated: 0" in report
     assert "- Failed stage: `INDEX.md メンテナンス`" in report
@@ -2058,7 +2043,7 @@ def test_eval_oracles_error_report_marks_unevaluated_files_in_table(
     assert "| 2 | `oracles/b.md` | evaluated | 0 |" not in report
     assert "Not evaluated oracle files:" not in report
     assert report.index("## Evaluated oracle files") < report.index(
-        "## Fatal issues"
+        "## Fatal findings"
     )
 
 
@@ -2251,35 +2236,31 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
         (repo / ".cmoc" / "reports" / "review_oracles").glob("*.md")
     ).read_text(encoding="utf-8")
     for field in [
-        "schema_version: 1",
         'command: "cmoc review oracles"',
         "generated_at:",
         f'repo_root: "{repo.resolve()}"',
-        f'oracle_root: "{oracle_root.resolve()}"',
-        'mode: "full"',
-        "full_requested: true",
-        "branch:",
-        "is_cmoc_branch: true",
-        "base_commit: null",
-        "head_commit:",
-        "deleted_oracles_detected: false",
+        'scope: "full"',
+        "session_branch:",
+        "session_fork_commit:",
+        "review_branch:",
+        "review_fork_commit:",
+        "review_join_commit:",
         "oracle_count_total: 2",
         "oracle_count_evaluated: 2",
-        "fatal_issue_count: 2",
-        "warning_issue_count: 2",
-        "inconclusive_issue_count: 1",
+        "fatal_findings_accepted_count: 2",
+        "minor_findings_accepted_count: 3",
+        "fatal_findings_rejected_count: 0",
+        "minor_findings_rejected_count: 0",
         'result: "fatal"',
     ]:
         assert field in report
 
     expected_sections = [
         "# cmoc review oracles report",
-        "## Summary",
         "## Verdict",
         "## Evaluated oracle files",
-        "## Fatal issues",
-        "## Inconclusive issues",
-        "## Warnings",
+        "## Fatal findings",
+        "## Minor findings",
         "## Referenced files",
     ]
     assert [report.index(section) for section in expected_sections] == sorted(
@@ -2290,13 +2271,13 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
         "### FATAL-002: B fatal"
     )
     assert report.index("### FATAL-002: B fatal") < report.index(
-        "### INCONCLUSIVE-001: B inconclusive"
+        "### MINOR-001: A warning"
     )
-    assert report.index("### INCONCLUSIVE-001: B inconclusive") < report.index(
-        "### WARN-001: A warning"
+    assert report.index("### MINOR-001: A warning") < report.index(
+        "### MINOR-002: B inconclusive"
     )
-    assert report.index("### WARN-001: A warning") < report.index(
-        "### WARN-002: B warning"
+    assert report.index("### MINOR-002: B inconclusive") < report.index(
+        "### MINOR-003: B warning"
     )
     assert "| 1 | `oracles/a.md` | 2 |" in report
     assert "| 2 | `oracles/b.md` | 3 |" in report
@@ -2337,20 +2318,98 @@ def test_eval_oracles_report_frontmatter_quotes_string_scalars(
         1,
         [oracle_file],
         [],
+        "full",
+        "cmoc/review/session/run: #branch\nquoted \"review\"",
+        "review-fork: #hash\nquoted",
+        "review-join: #hash\nquoted",
     )
 
     frontmatter = report_path.read_text(encoding="utf-8").split("---\n", 2)[1]
     repo_root_value = review_oracles_module._yaml_string(str(repo.resolve()))
-    oracle_root_value = review_oracles_module._yaml_string(
-        str(oracle_root.resolve())
-    )
     branch_value = review_oracles_module._yaml_string(branch_name)
     commit_value = review_oracles_module._yaml_string(commit_hash)
+    review_branch_value = review_oracles_module._yaml_string(
+        "cmoc/review/session/run: #branch\nquoted \"review\""
+    )
+    review_fork_value = review_oracles_module._yaml_string(
+        "review-fork: #hash\nquoted"
+    )
+    review_join_value = review_oracles_module._yaml_string(
+        "review-join: #hash\nquoted"
+    )
     assert f"repo_root: {repo_root_value}" in frontmatter
-    assert f"oracle_root: {oracle_root_value}" in frontmatter
-    assert f"branch: {branch_value}" in frontmatter
-    assert f"head_commit: {commit_value}" in frontmatter
-    assert f"commit: {commit_value}" in frontmatter
+    assert f"session_branch: {branch_value}" in frontmatter
+    assert f"session_fork_commit: {commit_value}" in frontmatter
+    assert f"review_branch: {review_branch_value}" in frontmatter
+    assert f"review_fork_commit: {review_fork_value}" in frontmatter
+    assert f"review_join_commit: {review_join_value}" in frontmatter
+
+
+def test_eval_oracles_report_groups_rejected_findings(
+    tmp_path: Path,
+) -> None:
+    """不採用 finding も件数と本文に fatal/minor 別で残す。"""
+    repo = tmp_path / "repo"
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir(parents=True)
+    oracle_file = oracle_root / "spec.md"
+    oracle_file.write_text("spec\n", encoding="utf-8")
+    fatal_issue = _eval_oracle_issue(
+        "fatal",
+        "Accepted fatal",
+        oracle_file,
+        None,
+        None,
+        [oracle_file],
+    )
+    fatal_issue["finding_severity"] = "fatal"
+    fatal_issue["judge_verdict"] = "accept"
+    minor_issue = _eval_oracle_issue(
+        "warning",
+        "Rejected minor",
+        oracle_file,
+        None,
+        None,
+        [oracle_file],
+    )
+    minor_issue["finding_severity"] = "minor"
+    minor_issue["judge_verdict"] = "reject"
+
+    report_path = review_oracles_module._write_report(
+        repo,
+        "full",
+        True,
+        "cmoc/session/example",
+        True,
+        None,
+        "session-commit",
+        False,
+        1,
+        [oracle_file],
+        [
+            {
+                "target_oracle_path": str(oracle_file.resolve()),
+                "referenced_paths": [str(oracle_file.resolve())],
+                "specification_only_basis": "",
+                "issues": [fatal_issue, minor_issue],
+            }
+        ],
+        "full",
+        "cmoc/review/example/run",
+        "review-fork",
+        "review-join",
+    )
+
+    report = report_path.read_text(encoding="utf-8")
+    assert "fatal_findings_accepted_count: 1" in report
+    assert "minor_findings_accepted_count: 0" in report
+    assert "fatal_findings_rejected_count: 0" in report
+    assert "minor_findings_rejected_count: 1" in report
+    assert 'result: "fatal"' in report
+    assert report.index("## Fatal findings") < report.index("## Minor findings")
+    assert report.index("### Accepted") < report.index("### Rejected")
+    assert "### FATAL-001: Accepted fatal" in report
+    assert "### MINOR-001: Rejected minor" in report
 
 
 def test_eval_oracles_error_report_frontmatter_quotes_string_scalars(
@@ -2375,19 +2434,30 @@ def test_eval_oracles_error_report_frontmatter_quotes_string_scalars(
         None,
         [],
         [],
+        "session",
+        "cmoc/review/session/run: #branch\nquoted \"review\"",
+        "review-fork: #hash\nquoted",
+        None,
         "stage: #failure",
         RuntimeError("boom"),
     )
 
     frontmatter = report_path.read_text(encoding="utf-8").split("---\n", 2)[1]
     repo_root_value = review_oracles_module._yaml_string(str(repo.resolve()))
-    mode_value = review_oracles_module._yaml_string("partial: #mode")
     branch_value = review_oracles_module._yaml_string(branch_name)
     commit_value = review_oracles_module._yaml_string(commit_hash)
+    review_branch_value = review_oracles_module._yaml_string(
+        "cmoc/review/session/run: #branch\nquoted \"review\""
+    )
+    review_fork_value = review_oracles_module._yaml_string(
+        "review-fork: #hash\nquoted"
+    )
     assert f"repo_root: {repo_root_value}" in frontmatter
-    assert f"mode: {mode_value}" in frontmatter
-    assert f"branch: {branch_value}" in frontmatter
-    assert f"head_commit: {commit_value}" in frontmatter
+    assert 'scope: "session"' in frontmatter
+    assert f"session_branch: {branch_value}" in frontmatter
+    assert f"session_fork_commit: {commit_value}" in frontmatter
+    assert f"review_branch: {review_branch_value}" in frontmatter
+    assert f"review_fork_commit: {review_fork_value}" in frontmatter
 
 
 def test_review_oracles_improves_combined_issue_list(
@@ -2690,11 +2760,11 @@ def test_eval_oracles_result_precedence() -> None:
     assert review_oracles_module._evaluation_result(
         1,
         {"fatal": 0, "inconclusive": 1, "warning": 1},
-    ) == "inconclusive"
+    ) == "minor"
     assert review_oracles_module._evaluation_result(
         1,
         {"fatal": 0, "inconclusive": 0, "warning": 1},
-    ) == "warning"
+    ) == "minor"
     assert review_oracles_module._evaluation_result(
         1,
         {"fatal": 0, "inconclusive": 0, "warning": 0},
@@ -3079,9 +3149,9 @@ def test_eval_oracles_stays_partial_when_oracle_was_deleted(
     assert len(evaluated_prompts) == 1
     assert str(changed_oracle) in evaluated_prompts[0]
     assert str(unchanged_oracle) not in evaluated_prompts[0]
-    assert 'mode: "partial"' in report
-    assert "deleted_oracles_detected: true" in report
-    assert "oracle_count: 1" in report
+    assert 'scope: "session"' in report
+    assert "oracle_count_total: 2" in report
+    assert "oracle_count_evaluated: 1" in report
 
 
 def test_eval_oracles_full_mode_requires_valid_session_state(

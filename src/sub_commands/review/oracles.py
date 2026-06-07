@@ -55,6 +55,7 @@ _MAX_REVIEW_ORACLES_LOOP = 3
 _DEFAULT_REPEAT_IMPROVE_ISSUES_LIST = _DEFAULT_REVIEW_ORACLES_LOOP
 _MAX_REPEAT_IMPROVE_ISSUES_LIST = _MAX_REVIEW_ORACLES_LOOP
 _FINDING_SEVERITY_ORDER = ["fatal", "minor"]
+_FINDING_VERDICT_ORDER = ["accept", "reject"]
 _FINDING_OUTPUT_SCHEMA: dict[str, object] = {
     "type": "object",
     "additionalProperties": False,
@@ -313,6 +314,8 @@ def cmoc_review_oracles_impl(
     cmoc_branch = None
     base_commit = None
     commit_hash = None
+    review_fork_commit = None
+    review_join_commit = None
     deleted_oracles = None
     all_oracle_files: list[Path] = []
     all_oracle_files_known = False
@@ -339,6 +342,7 @@ def cmoc_review_oracles_impl(
             commit_hash,
         )
         review_repo_root = review_plan.review_worktree
+        review_fork_commit = head_commit(review_repo_root)
 
         # branch 状態と scope から、部分評価か全体評価かを決める。
         failed_stage = "oracle ファイル選定"
@@ -417,6 +421,7 @@ def cmoc_review_oracles_impl(
             failed_stage = "review branch merge"
             start_step(timer, 5, 6, "review branch merge")
             _merge_review_branch_into_session(repo_root, branch_name, review_plan)
+            review_join_commit = head_commit(repo_root)
 
             # 評価結果を 1 つの Markdown レポートとして保存する。
             failed_stage = "report 書き込み"
@@ -433,6 +438,10 @@ def cmoc_review_oracles_impl(
                 len(all_oracle_files),
                 oracle_files,
                 evaluations,
+                scope,
+                review_plan.review_branch,
+                review_fork_commit,
+                review_join_commit,
             )
     except Exception as error:
         try:
@@ -448,6 +457,10 @@ def cmoc_review_oracles_impl(
                 len(all_oracle_files) if all_oracle_files_known else None,
                 oracle_files,
                 evaluations,
+                scope,
+                review_plan.review_branch if review_plan is not None else None,
+                review_fork_commit,
+                review_join_commit,
                 failed_stage,
                 error,
             )
@@ -1550,7 +1563,7 @@ def _findings_to_evaluations(
     oracle_files: list[Path],
     findings: list[_Finding],
 ) -> list[dict[str, object]]:
-    """判定済み所見 list を既存 report 用 evaluation list に変換する。"""
+    """判定済み所見 list を report 用 evaluation list に変換する。"""
     result = [
         {
             "target_oracle_path": str(path.resolve()),
@@ -1567,8 +1580,6 @@ def _findings_to_evaluations(
         for index, evaluation in enumerate(result)
     }
     for finding in findings:
-        if finding.judge_verdict == "reject":
-            continue
         issue = _finding_to_issue(repo_root, finding)
         index = target_to_index.get(str(Path(finding.oracle_path).resolve()), 0)
         result[index]["issues"].append(issue)
@@ -1576,8 +1587,9 @@ def _findings_to_evaluations(
 
 
 def _finding_to_issue(repo_root: Path, finding: _Finding) -> dict[str, object]:
-    """Finding を既存 Markdown renderer の issue 形式へ変換する。"""
+    """Finding を report renderer の issue 互換形式へ変換する。"""
     severity = "fatal" if finding.severity == "fatal" else "warning"
+    judge_verdict = finding.judge_verdict or "accept"
     reason_parts = [finding.reason]
     if finding.advocate_reasons:
         reason_parts.append(
@@ -1606,7 +1618,7 @@ def _finding_to_issue(repo_root: Path, finding: _Finding) -> dict[str, object]:
         ),
         "finding_id": finding.finding_id,
         "finding_severity": finding.severity,
-        "judge_verdict": finding.judge_verdict or "accept",
+        "judge_verdict": judge_verdict,
     }
 
 
@@ -1971,78 +1983,70 @@ def _write_report(
     oracle_count_total: int,
     oracle_files: list[Path],
     evaluations: list[dict[str, object]],
+    scope: ReviewOraclesScope,
+    review_branch: str | None,
+    review_fork_commit: str | None,
+    review_join_commit: str | None,
 ) -> Path:
     """評価結果を `.cmoc/reports/review_oracles` に保存する。"""
     report_dir = repo_root / ".cmoc" / "reports" / _REPORT_DIR_NAME
     generated_at = "__CMOC_REPORT_GENERATED_AT__"
-    issue_counts = _issue_counts(evaluations)
-    result = _evaluation_result(len(oracle_files), issue_counts)
+    finding_records = _finding_records(evaluations)
+    finding_counts = _finding_counts(finding_records)
+    result = _evaluation_result(len(oracle_files), finding_counts)
 
-    # frontmatter と問題点単位の本文を結合する。
     lines = [
         "---",
-        "schema_version: 1",
         f"command: {_yaml_string(_REPORT_COMMAND)}",
         f"generated_at: {_yaml_string(generated_at)}",
         f"repo_root: {_yaml_string(str(repo_root.resolve()))}",
-        f"oracle_root: {_yaml_string(str((repo_root / 'oracles').resolve()))}",
-        f"mode: {_yaml_string(mode)}",
-        f"full_requested: {str(full_requested).lower()}",
-        f"branch: {_yaml_string(branch_name)}",
-        f"is_cmoc_branch: {str(cmoc_branch).lower()}",
-        f"base_commit: {_yaml_nullable(base_commit)}",
-        f"head_commit: {_yaml_string(commit_hash)}",
-        f"commit: {_yaml_string(commit_hash)}",
-        f"deleted_oracles_detected: {str(deleted_oracles).lower()}",
+        f"scope: {_yaml_string(scope)}",
+        f"session_branch: {_yaml_string(branch_name)}",
+        f"session_fork_commit: {_yaml_string(commit_hash)}",
+        f"review_branch: {_yaml_nullable(review_branch)}",
+        f"review_fork_commit: {_yaml_nullable(review_fork_commit)}",
+        f"review_join_commit: {_yaml_nullable(review_join_commit)}",
         f"oracle_count_total: {oracle_count_total}",
         f"oracle_count_evaluated: {len(oracle_files)}",
-        f"oracle_count: {len(oracle_files)}",
-        f"fatal_issue_count: {issue_counts['fatal']}",
-        f"warning_issue_count: {issue_counts['warning']}",
-        f"inconclusive_issue_count: {issue_counts['inconclusive']}",
+        f"fatal_findings_accepted_count: {finding_counts['fatal']['accept']}",
+        f"minor_findings_accepted_count: {finding_counts['minor']['accept']}",
+        f"fatal_findings_rejected_count: {finding_counts['fatal']['reject']}",
+        f"minor_findings_rejected_count: {finding_counts['minor']['reject']}",
         f"result: {_yaml_string(result)}",
         "---",
         "",
         f"# {_REPORT_COMMAND} report",
         "",
-        "## Summary",
-        "",
-        f"- Result: `{result}`",
-        f"- Mode: `{mode}`",
-        f"- Evaluated oracle files: `{len(oracle_files)}`",
-        f"- Fatal issues: `{issue_counts['fatal']}`",
-        f"- Inconclusive issues: `{issue_counts['inconclusive']}`",
-        f"- Warning issues: `{issue_counts['warning']}`",
-        "",
         "## Verdict",
         "",
         _verdict_text(result),
         "",
+        f"- Scope: `{scope}`",
+        f"- Evaluated oracle files: `{len(oracle_files)}`",
+        f"- Accepted fatal findings: `{finding_counts['fatal']['accept']}`",
+        f"- Accepted minor findings: `{finding_counts['minor']['accept']}`",
+        f"- Rejected fatal findings: `{finding_counts['fatal']['reject']}`",
+        f"- Rejected minor findings: `{finding_counts['minor']['reject']}`",
+        "",
         "## Evaluated oracle files",
         "",
-        "| No. | Oracle file | Issues |",
+        "| No. | Oracle file | Findings |",
         "|---:|---|---:|",
     ]
-    issue_count_by_target = _issue_count_by_target(evaluations)
+    finding_count_by_target = _finding_count_by_target(evaluations)
     for index, oracle_file in enumerate(oracle_files, start=1):
         target = str(oracle_file.resolve())
         lines.append(
             f"| {index} | `{oracle_file.relative_to(repo_root)}` | "
-            f"{issue_count_by_target.get(target, 0)} |"
+            f"{finding_count_by_target.get(target, 0)} |"
         )
     lines.extend([""])
     for severity, heading in [
-        ("fatal", "## Fatal issues"),
-        ("inconclusive", "## Inconclusive issues"),
-        ("warning", "## Warnings"),
+        ("fatal", "## Fatal findings"),
+        ("minor", "## Minor findings"),
     ]:
         lines.extend([heading, ""])
-        issues = _issues_for_severity(evaluations, severity)
-        if not issues:
-            lines.extend(["No issues.", ""])
-            continue
-        for issue_id, issue in _numbered_issues(severity, issues):
-            lines.extend(_issue_lines(repo_root, issue_id, issue))
+        lines.extend(_finding_section_lines(repo_root, finding_records, severity))
     lines.extend(["## Referenced files", ""])
     referenced_path_rows = _referenced_path_rows(repo_root, evaluations)
     if referenced_path_rows:
@@ -2074,73 +2078,62 @@ def _write_error_report(
     oracle_count_total: int | None,
     oracle_files: list[Path],
     evaluations: list[dict[str, object]],
+    scope: ReviewOraclesScope | None,
+    review_branch: str | None,
+    review_fork_commit: str | None,
+    review_join_commit: str | None,
     failed_stage: str,
     error: Exception,
 ) -> Path:
     """評価処理失敗時の `result: error` レポートを best effort で保存する。"""
     report_dir = repo_root / ".cmoc" / "reports" / _REPORT_DIR_NAME
     generated_at = "__CMOC_REPORT_GENERATED_AT__"
-    issue_counts = _issue_counts(evaluations)
+    finding_records = _finding_records(evaluations)
+    finding_counts = _finding_counts(finding_records)
     result = "error"
     lines = [
         "---",
-        "schema_version: 1",
         f"command: {_yaml_string(_REPORT_COMMAND)}",
         f"generated_at: {_yaml_string(generated_at)}",
         f"repo_root: {_yaml_string(str(repo_root.resolve()))}",
-        f"oracle_root: {_yaml_string(str((repo_root / 'oracles').resolve()))}",
-        f"mode: {_yaml_string(mode or 'unknown')}",
-        f"full_requested: {str(full_requested).lower()}",
-        f"branch: {_yaml_nullable(branch_name)}",
-        f"is_cmoc_branch: {_yaml_bool_nullable(cmoc_branch)}",
-        f"base_commit: {_yaml_nullable(base_commit)}",
-        f"head_commit: {_yaml_nullable(commit_hash)}",
-        f"commit: {_yaml_nullable(commit_hash)}",
-        f"deleted_oracles_detected: {_yaml_bool_nullable(deleted_oracles)}",
+        f"scope: {_yaml_nullable(scope)}",
+        f"session_branch: {_yaml_nullable(branch_name)}",
+        f"session_fork_commit: {_yaml_nullable(commit_hash)}",
+        f"review_branch: {_yaml_nullable(review_branch)}",
+        f"review_fork_commit: {_yaml_nullable(review_fork_commit)}",
+        f"review_join_commit: {_yaml_nullable(review_join_commit)}",
         f"oracle_count_total: {_yaml_int_nullable(oracle_count_total)}",
         f"oracle_count_evaluated: {len(evaluations)}",
-        f"oracle_count: {len(evaluations)}",
-        f"fatal_issue_count: {issue_counts['fatal']}",
-        f"warning_issue_count: {issue_counts['warning']}",
-        f"inconclusive_issue_count: {issue_counts['inconclusive']}",
+        f"fatal_findings_accepted_count: {finding_counts['fatal']['accept']}",
+        f"minor_findings_accepted_count: {finding_counts['minor']['accept']}",
+        f"fatal_findings_rejected_count: {finding_counts['fatal']['reject']}",
+        f"minor_findings_rejected_count: {finding_counts['minor']['reject']}",
         f"result: {_yaml_string(result)}",
         "---",
         "",
         f"# {_REPORT_COMMAND} report",
         "",
-        "## Summary",
-        "",
-        f"- Result: `{result}`",
-        f"- Mode: `{mode or 'unknown'}`",
-        f"- Evaluated oracle files: `{len(evaluations)}`",
-        f"- Requested oracle files: `{len(oracle_files)}`",
-        f"- Fatal issues: `{issue_counts['fatal']}`",
-        f"- Inconclusive issues: `{issue_counts['inconclusive']}`",
-        f"- Warning issues: `{issue_counts['warning']}`",
-        f"- Failed stage: `{failed_stage}`",
-        f"- Exception type: `{type(error).__name__}`",
-        f"- Exception message: `{str(error)}`",
-        "",
         "## Verdict",
         "",
         _verdict_text(result),
         "",
-        f"Failed stage: `{failed_stage}`",
-        "",
-        f"Exception: `{type(error).__name__}: {str(error)}`",
+        f"- Scope: `{scope or 'unknown'}`",
+        f"- Failed stage: `{failed_stage}`",
+        f"- Exception type: `{type(error).__name__}`",
+        f"- Exception message: `{str(error)}`",
         "",
         "## Evaluated oracle files",
         "",
-        "| No. | Oracle file | Evaluation status | Issues |",
+        "| No. | Oracle file | Evaluation status | Findings |",
         "|---:|---|---|---:|",
     ]
-    issue_count_by_target = _issue_count_by_target(evaluations)
+    finding_count_by_target = _finding_count_by_target(evaluations)
     evaluated_files = _evaluated_oracle_files(evaluations)
     for index, oracle_file in enumerate(evaluated_files, start=1):
         target = str(oracle_file)
         lines.append(
             f"| {index} | `{_display_path(repo_root, str(oracle_file))}` | "
-            f"evaluated | {issue_count_by_target.get(target, 0)} |"
+            f"evaluated | {finding_count_by_target.get(target, 0)} |"
         )
     not_evaluated_files = _not_evaluated_oracle_files(
         repo_root,
@@ -2159,17 +2152,11 @@ def _write_error_report(
         lines.append("| - | No requested oracle files. | - | - |")
     lines.extend([""])
     for severity, heading in [
-        ("fatal", "## Fatal issues"),
-        ("inconclusive", "## Inconclusive issues"),
-        ("warning", "## Warnings"),
+        ("fatal", "## Fatal findings"),
+        ("minor", "## Minor findings"),
     ]:
         lines.extend([heading, ""])
-        issues = _issues_for_severity(evaluations, severity)
-        if not issues:
-            lines.extend(["No issues.", ""])
-            continue
-        for issue_id, issue in _numbered_issues(severity, issues):
-            lines.extend(_issue_lines(repo_root, issue_id, issue))
+        lines.extend(_finding_section_lines(repo_root, finding_records, severity))
     lines.extend(["## Referenced files", ""])
     referenced_path_rows = _referenced_path_rows(repo_root, evaluations)
     if referenced_path_rows:
@@ -2405,17 +2392,78 @@ def _issue_counts(
     return counts
 
 
+def _finding_records(
+    evaluations: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """evaluation 内 issue を仕様上の finding record に正規化する。"""
+    records = []
+    for issue in _all_issues(evaluations):
+        records.append(
+            {
+                "severity": _finding_severity_for_issue(issue),
+                "verdict": _finding_verdict_for_issue(issue),
+                "issue": issue,
+            }
+        )
+    return records
+
+
+def _finding_severity_for_issue(issue: dict[str, object]) -> str:
+    """旧 issue severity を fatal/minor に畳む。"""
+    finding_severity = issue.get("finding_severity")
+    if finding_severity in _FINDING_SEVERITY_ORDER:
+        return str(finding_severity)
+    return "fatal" if issue.get("severity") == "fatal" else "minor"
+
+
+def _finding_verdict_for_issue(issue: dict[str, object]) -> str:
+    """issue metadata から accept/reject を返す。旧 issue は accept 扱い。"""
+    judge_verdict = issue.get("judge_verdict")
+    if judge_verdict in _FINDING_VERDICT_ORDER:
+        return str(judge_verdict)
+    return "accept"
+
+
+def _finding_counts(
+    finding_records: list[dict[str, object]],
+) -> dict[str, dict[str, int]]:
+    """fatal/minor と accept/reject ごとの finding 件数を数える。"""
+    counts = {
+        severity: {verdict: 0 for verdict in _FINDING_VERDICT_ORDER}
+        for severity in _FINDING_SEVERITY_ORDER
+    }
+    for record in finding_records:
+        severity = str(record["severity"])
+        verdict = str(record["verdict"])
+        counts[severity][verdict] += 1
+    return counts
+
+
 def _evaluation_result(
     oracle_count: int,
-    issue_counts: dict[str, int],
+    issue_counts: dict[str, object],
 ) -> str:
-    """issue 件数からレポート result を決める。"""
+    """件数から仕様上許可されたレポート result を決める。"""
     if oracle_count == 0:
         return "no_targets"
-    for severity in _SEVERITY_ORDER:
-        if issue_counts[severity] > 0:
-            return severity
+    if _count_value(issue_counts, "fatal") > 0:
+        return "fatal"
+    if (
+        _count_value(issue_counts, "minor") > 0
+        or _count_value(issue_counts, "warning") > 0
+        or _count_value(issue_counts, "inconclusive") > 0
+    ):
+        return "minor"
     return "ok"
+
+
+def _count_value(counts: dict[str, object], key: str) -> int:
+    """plain count と verdict 別 count の両方から accept 件数を読む。"""
+    value = counts.get(key, 0)
+    if isinstance(value, dict):
+        accepted = value.get("accept", 0)
+        return accepted if isinstance(accepted, int) else 0
+    return value if isinstance(value, int) else 0
 
 
 def _verdict_text(result: str) -> str:
@@ -2430,10 +2478,8 @@ def _verdict_text(result: str) -> str:
             "oracle スナップショットには、仕様だけから判断して主要ワークフロー、"
             "完了判定、または中核目的を壊しうる問題があります。"
         )
-    if result == "inconclusive":
-        return "致命的問題ありとは断定できませんが、仕様評価として判断不能な点があります。"
-    if result == "warning":
-        return "致命的ではありませんが、仕様品質・可読性・将来の実装安定性に問題があります。"
+    if result == "minor":
+        return "致命的ではありませんが、oracles ファイルに細かな問題があります。"
     if result == "no_targets":
         return "評価対象 oracle が 0 件だったため、問題点の評価は行われませんでした。"
     if result == "error":
@@ -2456,6 +2502,17 @@ def _issue_count_by_target(
         issues = _evaluation_issues(evaluation)
         target = Path(str(evaluation["target_oracle_path"])).resolve()
         result[str(target)] = len(issues)
+    return result
+
+
+def _finding_count_by_target(
+    evaluations: list[dict[str, object]],
+) -> dict[str, int]:
+    """評価対象ファイルごとの finding 件数を返す。"""
+    result = {}
+    for evaluation in evaluations:
+        target = Path(str(evaluation["target_oracle_path"])).resolve()
+        result[str(target)] = len(_evaluation_issues(evaluation))
     return result
 
 
@@ -2528,6 +2585,42 @@ def _issue_lines(
         "- Specification-only basis:",
         f"  - {issue['specification_only_basis']}",
         "",
+    ]
+
+
+def _finding_section_lines(
+    repo_root: Path,
+    finding_records: list[dict[str, object]],
+    severity: str,
+) -> list[str]:
+    """指定 severity の accepted/rejected finding 行を返す。"""
+    lines = []
+    for verdict, label in [("accept", "Accepted"), ("reject", "Rejected")]:
+        lines.extend([f"### {label}", ""])
+        records = [
+            record
+            for record in finding_records
+            if record["severity"] == severity and record["verdict"] == verdict
+        ]
+        if not records:
+            lines.extend(["No findings.", ""])
+            continue
+        for finding_id, record in _numbered_finding_records(severity, records):
+            issue = record["issue"]
+            if isinstance(issue, dict):
+                lines.extend(_issue_lines(repo_root, finding_id, issue))
+    return lines
+
+
+def _numbered_finding_records(
+    severity: str,
+    records: list[dict[str, object]],
+) -> list[tuple[str, dict[str, object]]]:
+    """finding severity ごとに report-local id を付ける。"""
+    prefix = "FATAL" if severity == "fatal" else "MINOR"
+    return [
+        (f"{prefix}-{index:03d}", record)
+        for index, record in enumerate(records, start=1)
     ]
 
 
