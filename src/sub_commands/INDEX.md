@@ -100,25 +100,25 @@
 
 ## Summary
 
-- `src/sub_commands/review` は `cmoc review` 系サブコマンドの入口ディレクトリで、`__init__.py` と `oracles.py` の役割分担をまとめる目次です。
+- `src/sub_commands/review` は `cmoc review` 系サブコマンドの入口ディレクトリで、`__init__.py` と `oracles.py` の役割分担を案内する目次です。
 - `__init__.py` はパッケージ宣言だけを担う最小モジュールで、`oracles.py` は `cmoc review oracles` の本体処理を担います。
-- この階層で、`cmoc review` の実装を読む前にどのファイルへ進むべきかを切り分けるための案内です。
+- この階層では、`cmoc review` の実装を読む前にどのファイルへ進むべきかを切り分けます。
 
 ## Read this when
 
-- `src/sub_commands/review` が Python パッケージとして宣言されていることを確認したいとき。
-- `cmoc review` 系サブコマンドの入口構造や、`oracles.py` の役割を把握したいとき。
-- `cmoc review oracles` の本体処理、開始時点の `oracles` スナップショット固定、評価、改善、レポート出力の流れを確認したいとき。
+- `src/sub_commands/review` が Python パッケージとしてどう構成されているか確認したいとき。
+- `cmoc review` 系サブコマンドの入口構造と、`oracles.py` が担う本体処理の役割を把握したいとき。
+- `cmoc review oracles` のスナップショット固定、所見の列挙・統合・検証・判定、レポート出力までの流れを追う前に、読むべきファイルを絞り込みたいとき。
 
 ## Do not read this when
 
-- `cmoc review oracles` の利用手順や引数仕様だけを確認したいとき。
-- `cmoc review` の CLI 登録や hidden alias だけを確認したいとき。
-- `INDEX.md` の生成・更新ルールや、`oracles` 全体のルーティング方針だけを確認したいとき。
+- `src/sub_commands/review/oracles.py` を読むべきことが最初から分かっていて、入口の案内が不要なとき。
+- `src/sub_commands/review/__init__.py` のようなパッケージ宣言だけを確認したいときで、この階層全体の目次は不要なとき。
+- `cmoc review oracles` の利用手順や仕様断片だけを確認したいときは、`oracles/docs/app_specs/sub_commands/review_oracles.md` を直接読むべきとき。
 
 ## hash
 
-- 14037087720597262125be52952d847ce67e6913055dbb16531d0f316431c801
+- c1a5915f6807c9cd56b42ab75fdf6c71c1621da7fda41019cf729d3eac3dc90c
 
 # `session`
 

@@ -163,19 +163,19 @@
 
 - `run_command()` を中心に、サブコマンド横断の制御ロジックや共通エラーレポートを確認したいとき。
 - `init` / `session` / `apply` / `review oracles` の状態遷移、復旧、cleanup を横断的に追いたいとき。
-- CLI 登録、補完応答、`bin/cmoc`、`test.sh` の起動経路を確認したいとき。
-- 経過時間サマリー、ログ出力、終了コード、Structured Output の検証や、`test_subcommands.py` 内の補助関数の意図を把握したいとき。
+- CLI 登録、補完応答、起動経路、終了コード、ログ出力、経過時間サマリーの挙動を確認したいとき。
+- Structured Output の検証、session/apply/review のテスト補助関数の意図を把握したいとき。
 
 ## Do not read this when
 
-- `tests/test_subcommands.py` ではなく、個別の `src/sub_commands/...` 実装そのものを追いたいとき。
+- 個別の `src/sub_commands/...` 実装本体だけを追いたいとき。
 - `tests/test_repo.py` や `tests/test_indexing.py` など、別機能の回帰テストを探しているとき。
 - `cmoc init` / `session` / `apply` / `review oracles` の操作手順や引数仕様だけを知りたいとき。
 - `INDEX.md` の生成ルールや `oracles` 側の正本仕様だけを確認したいとき。
 
 ## hash
 
-- 4b4c156e4ca5e711f879735e16badcc6648c910e9fd7706851d7ad012b19bc7e
+- 644aa15f23f88cc438dfc713250e340e346db3175a189fa50068cce0d44aa1b3
 
 # `test_timestamps.py`
 

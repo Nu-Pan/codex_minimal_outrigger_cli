@@ -54,7 +54,7 @@
 ## Summary
 
 - この `src/sub_commands` ディレクトリのルーティング文書で、`__init__.py`、`indexing.py`、`init.py`、`apply/`、`review/`、`session/` への入口をまとめています。
-- `__init__.py` はパッケージ宣言、`indexing.py` は INDEX.md 維持処理、`init.py` は初期化処理、`apply/`・`review/`・`session/` は各サブコマンド群の入口です。
+- `__init__.py` はパッケージ宣言、`indexing.py` は `INDEX.md` 維持処理、`init.py` は初期化処理、`apply/`・`review/`・`session/` は各サブコマンド群の入口です。
 - 個別実装へ入る前に、`cmoc` のサブコマンド実装をどの系統から読むかを切り分けるための目次です。
 
 ## Read this when
@@ -72,4 +72,4 @@
 
 ## hash
 
-- dbfde66384f701f483024f4618a7918c67cb9121e147ef2a1ecb96dc9fe909d2
+- 85480e738bea46670ab7a32d73e8efb72c9bddf05da07a00731cdfabc10a64fb
