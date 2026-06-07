@@ -14,7 +14,7 @@ from sub_commands.apply.fork import cmoc_apply_impl
 from sub_commands.apply.join import cmoc_apply_join_impl
 from sub_commands.init import cmoc_init_impl
 from sub_commands.indexing import cmoc_indexing_impl
-from sub_commands.review.oracles import _MAX_REPEAT_IMPROVE_ISSUES_LIST
+from sub_commands.review.oracles import _MAX_REVIEW_ORACLES_LOOP
 from sub_commands.review.oracles import cmoc_review_oracles_impl
 from sub_commands.session.abandon import cmoc_session_abandon_impl
 from sub_commands.session.fork import cmoc_session_fork_impl
@@ -79,19 +79,49 @@ def session_abandon_command() -> None:
 @app.command("eval-oracles", hidden=True)
 @review_app.command("oracles")
 def review_oracles_command(
-    full: bool = typer.Option(False, "--full", "-f"),
-    repeat_improve_issues_list: int = typer.Option(
+    scope: Literal["session", "full"] = typer.Option(
+        "session",
+        "--scope",
+        "-s",
+    ),
+    enumerate_findings_loop: int = typer.Option(
         3,
+        "--enumerate-findings-loop",
+        min=0,
+        max=_MAX_REVIEW_ORACLES_LOOP,
+    ),
+    merge_findings_loop: int = typer.Option(
+        3,
+        "--merge-findings-loop",
+        min=0,
+        max=_MAX_REVIEW_ORACLES_LOOP,
+    ),
+    refine_findings_loop: int = typer.Option(
+        3,
+        "--refine-findings-loop",
+        min=0,
+        max=_MAX_REVIEW_ORACLES_LOOP,
+    ),
+    full: bool = typer.Option(False, "--full", "-f", hidden=True),
+    repeat_improve_issues_list: int | None = typer.Option(
+        None,
         "--repeat-improve-issues-list",
         min=0,
-        max=_MAX_REPEAT_IMPROVE_ISSUES_LIST,
+        max=_MAX_REVIEW_ORACLES_LOOP,
+        hidden=True,
     ),
 ) -> None:
     """Review oracle files."""
     # CLI callback は review oracles の本体実装へ処理を委譲する。
+    if full:
+        scope = "full"
+    if repeat_improve_issues_list is not None:
+        refine_findings_loop = repeat_improve_issues_list
     cmoc_review_oracles_impl(
-        full=full,
-        repeat_improve_issues_list=repeat_improve_issues_list,
+        scope=scope,
+        enumerate_findings_loop=enumerate_findings_loop,
+        merge_findings_loop=merge_findings_loop,
+        refine_findings_loop=refine_findings_loop,
     )
 
 

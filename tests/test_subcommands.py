@@ -2289,17 +2289,17 @@ def test_review_oracles_improves_combined_issue_list(
     assert "Raw warning" not in report
 
 
-def test_eval_oracles_rejects_too_many_issue_list_improvements(
+def test_review_oracles_rejects_too_many_refine_findings_loops(
     tmp_path: Path,
 ) -> None:
-    """問題点リスト改善の反復回数は oracle の最大 3 回を超えられない。"""
+    """所見リスト検証ループの反復回数は oracle の最大 3 回を超えられない。"""
     repo = _init_repo(tmp_path)
 
     with pytest.raises(
         ValueError,
-        match="--repeat-improve-issues-list must be between 0 and 3",
+        match="--refine-findings-loop must be between 0 and 3",
     ):
-        cmoc_review_oracles_impl(repo, full=True, repeat_improve_issues_list=4)
+        cmoc_review_oracles_impl(repo, scope="full", refine_findings_loop=4)
 
 
 def test_review_oracles_accepts_improved_issue_for_unevaluated_oracle(
@@ -9679,7 +9679,10 @@ def test_main_typer_functions_delegate_only_to_impls() -> None:
     assert "eval-oracles.py" not in source
     assert "eval_oracles_source" not in review_oracles_source
     assert "cmoc_review_oracles_impl(" in source
-    assert "repeat_improve_issues_list=repeat_improve_issues_list" in source
+    assert "scope=scope" in source
+    assert "enumerate_findings_loop=enumerate_findings_loop" in source
+    assert "merge_findings_loop=merge_findings_loop" in source
+    assert "refine_findings_loop=refine_findings_loop" in source
     assert "repeat_investigate_and_fix=repeat_investigate_and_fix" in source
     assert "repeat_improove_fixing_list=repeat_improove_fixing_list" in source
     assert "cmoc_session_join_impl()" in source
@@ -9745,7 +9748,13 @@ def test_cmoc_review_oracles_command_and_compat_alias_are_registered() -> None:
     assert plural_alias.returncode == 0
     assert singular.returncode == 0
     assert "Usage: cmoc review oracles [OPTIONS]" in review.stdout
-    assert "--repeat-improve-issu" in review.stdout
+    assert "--scope" in review.stdout
+    assert "-s" in review.stdout
+    assert "--enumerate-findings" in review.stdout
+    assert "--merge-findings-loop" in review.stdout
+    assert "--refine-findings-loop" in review.stdout
+    assert "--full" not in review.stdout
+    assert "--repeat-improve-issu" not in review.stdout
     assert "Usage: cmoc eval-oracles [OPTIONS]" in plural_alias.stdout
     assert "Usage: cmoc eval-oracle [OPTIONS]" in singular.stdout
     assert review.stderr == ""
@@ -9824,8 +9833,8 @@ def test_cmoc_apply_fork_repeat_validation_reports_oracle_option_names() -> None
     )
 
 
-def test_cmoc_review_oracles_rejects_too_many_issue_list_improvements() -> None:
-    """CLI 入口でも問題点リスト改善の最大 3 回制限を検証する。"""
+def test_cmoc_review_oracles_rejects_too_many_refine_findings_loops() -> None:
+    """CLI 入口でも所見リスト検証ループの最大 3 回制限を検証する。"""
     repo_root = Path(__file__).resolve().parents[1]
     result = subprocess.run(
         [
@@ -9834,7 +9843,7 @@ def test_cmoc_review_oracles_rejects_too_many_issue_list_improvements() -> None:
             "main",
             "review",
             "oracles",
-            "--repeat-improve-issues-list",
+            "--refine-findings-loop",
             "4",
         ],
         cwd=repo_root,

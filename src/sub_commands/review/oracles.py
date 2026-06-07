@@ -8,6 +8,7 @@ from pathlib import Path
 import shutil
 import sys
 import tempfile
+from typing import Literal
 
 from commons.codex import (
     FRONTIER_HIGH_REASONING_EFFORT,
@@ -37,10 +38,13 @@ _ISSUE_ID_PREFIXES = {
     "inconclusive": "INCONCLUSIVE",
     "warning": "WARN",
 }
+ReviewOraclesScope = Literal["session", "full"]
 _REPORT_COMMAND = "cmoc review oracles"
 _REPORT_DIR_NAME = "review_oracles"
-_DEFAULT_REPEAT_IMPROVE_ISSUES_LIST = 3
-_MAX_REPEAT_IMPROVE_ISSUES_LIST = 3
+_DEFAULT_REVIEW_ORACLES_LOOP = 3
+_MAX_REVIEW_ORACLES_LOOP = 3
+_DEFAULT_REPEAT_IMPROVE_ISSUES_LIST = _DEFAULT_REVIEW_ORACLES_LOOP
+_MAX_REPEAT_IMPROVE_ISSUES_LIST = _MAX_REVIEW_ORACLES_LOOP
 _ISSUE_OUTPUT_SCHEMA: dict[str, object] = {
     "type": "object",
     "additionalProperties": False,
@@ -163,22 +167,37 @@ class _OracleEvaluationSnapshot:
 def cmoc_review_oracles_impl(
     repo_root: Path | None = None,
     *,
-    full: bool,
-    repeat_improve_issues_list: int = _DEFAULT_REPEAT_IMPROVE_ISSUES_LIST,
+    scope: ReviewOraclesScope = "session",
+    enumerate_findings_loop: int = _DEFAULT_REVIEW_ORACLES_LOOP,
+    merge_findings_loop: int = _DEFAULT_REVIEW_ORACLES_LOOP,
+    refine_findings_loop: int = _DEFAULT_REVIEW_ORACLES_LOOP,
+    full: bool | None = None,
+    repeat_improve_issues_list: int | None = None,
 ) -> None:
     """oracle 断片を Codex CLI で評価し、レポートを作る。"""
+    scope = _normalize_review_oracles_scope(scope, full)
+    if repeat_improve_issues_list is not None:
+        refine_findings_loop = repeat_improve_issues_list
+
     # 直接呼び出し時は共通 runner で repo root 解決とエラー整形を行う。
     if repo_root is None:
         run_command(
             lambda resolved_repo_root: cmoc_review_oracles_impl(
                 resolved_repo_root,
-                full=full,
-                repeat_improve_issues_list=repeat_improve_issues_list,
+                scope=scope,
+                enumerate_findings_loop=enumerate_findings_loop,
+                merge_findings_loop=merge_findings_loop,
+                refine_findings_loop=refine_findings_loop,
             ),
             command_path="cmoc review oracles",
         )
         return
-    _validate_repeat_improve_issues_list(repeat_improve_issues_list)
+    _validate_review_oracles_loop(
+        enumerate_findings_loop,
+        "--enumerate-findings-loop",
+    )
+    _validate_review_oracles_loop(merge_findings_loop, "--merge-findings-loop")
+    _validate_review_oracles_loop(refine_findings_loop, "--refine-findings-loop")
 
     timer = StepTimer("review oracles")
     mode = None
@@ -198,13 +217,13 @@ def cmoc_review_oracles_impl(
         start_step(timer, 1, 6, ".cmoc ignore 確認")
         ensure_cmoc_ignored(repo_root)
 
-        # branch 状態と `--full` だけから、部分評価か全体評価かを決める。
+        # branch 状態と scope から、部分評価か全体評価かを決める。
         failed_stage = "oracle ファイル選定"
         start_step(timer, 2, 6, "oracle ファイル選定")
         branch_name = current_branch(repo_root)
         cmoc_branch = is_cmoc_branch(branch_name)
         session_branch = is_session_branch(branch_name)
-        partial = session_branch and not full
+        partial = session_branch and scope == "session"
         mode = "partial" if partial else "full"
         if partial:
             base_commit = read_session_start_commit(repo_root, branch_name)
@@ -215,7 +234,9 @@ def cmoc_review_oracles_impl(
         # 評価モードに応じて Codex CLI に渡す oracle ファイル一覧を作る。
         all_oracle_files = list_oracle_files(repo_root)
         all_oracle_files_known = True
-        if partial:
+        if enumerate_findings_loop == 0:
+            oracle_files = []
+        elif partial:
             assert base_commit is not None
             changed_files = set(changed_oracle_files(repo_root, base_commit))
             oracle_files = [
@@ -273,7 +294,7 @@ def cmoc_review_oracles_impl(
             evaluations = _improve_evaluations(
                 repo_root,
                 evaluations,
-                repeat_improve_issues_list,
+                refine_findings_loop,
                 oracle_snapshot,
             )
 
@@ -283,7 +304,7 @@ def cmoc_review_oracles_impl(
             report_path = _write_report(
                 repo_root,
                 mode,
-                full,
+                scope == "full",
                 branch_name,
                 cmoc_branch,
                 base_commit,
@@ -298,7 +319,7 @@ def cmoc_review_oracles_impl(
             report_path = _write_error_report(
                 repo_root,
                 mode,
-                full,
+                scope == "full",
                 branch_name,
                 cmoc_branch,
                 base_commit,
@@ -337,13 +358,29 @@ def cmoc_review_oracles_impl(
     print(str(report_path))
 
 
-def _validate_repeat_improve_issues_list(value: int) -> None:
-    """問題点リスト改善の反復回数が oracle の上限内か検証する。"""
-    if value < 0 or value > _MAX_REPEAT_IMPROVE_ISSUES_LIST:
+def _normalize_review_oracles_scope(
+    scope: ReviewOraclesScope,
+    full: bool | None,
+) -> ReviewOraclesScope:
+    """正式 scope と旧 `--full` alias を 1 つの scope 値へ正規化する。"""
+    if scope not in {"session", "full"}:
+        raise ValueError("--scope must be one of: session, full.")
+    if full is True:
+        return "full"
+    return scope
+
+
+def _validate_review_oracles_loop(value: int, option_name: str) -> None:
+    """review oracles の各ループ回数が oracle の上限内か検証する。"""
+    if value < 0 or value > _MAX_REVIEW_ORACLES_LOOP:
         raise ValueError(
-            "--repeat-improve-issues-list must be between 0 and "
-            f"{_MAX_REPEAT_IMPROVE_ISSUES_LIST}."
+            f"{option_name} must be between 0 and {_MAX_REVIEW_ORACLES_LOOP}."
         )
+
+
+def _validate_repeat_improve_issues_list(value: int) -> None:
+    """旧 option 名の問題点リスト改善回数を互換検証する。"""
+    _validate_review_oracles_loop(value, "--repeat-improve-issues-list")
 
 
 def _maintain_indexes_after_oracle_snapshot(repo_root: Path) -> bool:
