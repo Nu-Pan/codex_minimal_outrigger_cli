@@ -143,12 +143,12 @@ def test_subcommands_do_not_emit_step_timer_report_directly() -> None:
     assert violating_locations == []
 
 
-def test_run_command_tees_subcommand_output_and_summary(
+def test_run_command_reports_returned_nonzero_exit_code(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """共通入口はコンソールログと JSONL イベントログを出す。"""
+    """handler が返した非 0 終了コードは共通エラーレポートにする。"""
     repo = _init_repo(tmp_path)
     monkeypatch.chdir(repo)
     monkeypatch.setattr(
@@ -158,7 +158,7 @@ def test_run_command_tees_subcommand_output_and_summary(
     )
 
     def handler(resolved_repo: Path) -> int:
-        """正常終了するサブコマンド本体として tee 対象の進捗を出す。"""
+        """非 0 終了コードを返すサブコマンド本体。"""
         assert resolved_repo == repo
         timer = StepTimer("sample")
         start_step(timer, 1, 1, "first step")
@@ -176,6 +176,9 @@ def test_run_command_tees_subcommand_output_and_summary(
     assert exit_info.value.exit_code == 2
     assert captured.err == ""
     assert len(log_files) == 1
+    _assert_markdown_error_report(captured.out)
+    assert "サブコマンドがエラー終了しました。" in captured.out
+    assert "終了コード 2 を返しました。" in captured.out
     assert "# cmoc subcommand start: cmoc sample" in captured.out
     assert "(1/1) first step" in captured.out
     assert "sample (1/1) first step" not in captured.out
