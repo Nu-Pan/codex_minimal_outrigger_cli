@@ -3035,6 +3035,7 @@ def test_apply_returns_complete_when_no_discrepancies(
     )
     report_text = reports[0].read_text(encoding="utf-8")
     assert report_text.startswith("---\n")
+    session_fork_commit = state["session"]["session_start_commit"]
     assert "cmoc_session_id: \"2026-05-10_22-21_10_000000123\"" in report_text
     assert "cmoc_apply_run_id: " in report_text
     assert (
@@ -3042,9 +3043,15 @@ def test_apply_returns_complete_when_no_discrepancies(
         in report_text
     )
     assert (
+        f"cmoc_session_fork_commit: \"{session_fork_commit}\""
+        in report_text
+    )
+    assert (
         "cmoc_apply_branch: \"cmoc/apply/2026-05-10_22-21_10_000000123/"
         in report_text
     )
+    apply_fork_commit = state["apply"]["oracle_snapshot_commit"]
+    assert f"cmoc_apply_fork_commit: \"{apply_fork_commit}\"" in report_text
     assert "apply_worktree_path: " in report_text
     assert "oracle_snapshot_commit: " in report_text
     assert "session_head_at_apply_start: " in report_text
@@ -5965,6 +5972,49 @@ def test_apply_report_validation_requires_change_summary_item() -> None:
     assert "ブランチ上の全変更内容" in str(error.value)
 
 
+def test_apply_report_validation_requires_fork_commit_metadata() -> None:
+    """Front Matter は session/apply それぞれの分岐元 commit を必須にする。"""
+    report = "\n".join(
+        [
+            "---",
+            "generated_at: \"2026-05-10T22:21:10\"",
+            "cmoc_session_id: \"session\"",
+            "cmoc_apply_run_id: \"run\"",
+            "cmoc_session_branch: \"cmoc/session/session\"",
+            "cmoc_apply_branch: \"cmoc/apply/session/run\"",
+            "apply_worktree_path: \"/tmp/worktree\"",
+            "oracle_snapshot_commit: \"apply-fork\"",
+            "session_head_at_apply_start: \"apply-fork\"",
+            "session_head_at_apply_finish: \"apply-finish\"",
+            "result: \"収束\"",
+            "---",
+            "",
+            "## 作業結果",
+            "収束",
+            "",
+            "## 要修正点件数の推移",
+            "- 1 回目: 0 件",
+            "",
+            "## ブランチ cmoc/apply/session/run 上の全変更内容",
+            "- カテゴリ: 実装修正",
+            "  - 要約を記録しました。",
+        ]
+    )
+
+    with pytest.raises(ValueError) as error:
+        apply_module._validate_apply_report(
+            report,
+            "cmoc/apply/session/run",
+            "収束",
+            True,
+            [0],
+            require_front_matter=True,
+        )
+
+    assert "YAML Front Matter cmoc_session_fork_commit" in str(error.value)
+    assert "YAML Front Matter cmoc_apply_fork_commit" in str(error.value)
+
+
 def test_apply_marks_error_when_success_report_generation_fails(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -6322,12 +6372,19 @@ def test_apply_writes_error_report_when_midway_stage_fails(
     assert len(reports) == 1
     assert str(reports[0]) in captured.out
     report_text = reports[0].read_text(encoding="utf-8")
+    session_fork_commit = state["session"]["session_start_commit"]
     assert "result: \"エラー\"" in report_text
     assert "cmoc_apply_run_id: " in report_text
+    assert (
+        f"cmoc_session_fork_commit: \"{session_fork_commit}\""
+        in report_text
+    )
     assert (
         "cmoc_apply_branch: \"cmoc/apply/2026-05-10_22-21_10_000000123/"
         in report_text
     )
+    apply_fork_commit = state["apply"]["oracle_snapshot_commit"]
+    assert f"cmoc_apply_fork_commit: \"{apply_fork_commit}\"" in report_text
     assert "apply_worktree_path: " in report_text
     assert "- Failed stage: `INDEX.md メンテナンス`" in report_text
     assert "- Exception type: `RuntimeError`" in report_text
@@ -6368,6 +6425,7 @@ def test_apply_error_report_includes_codex_change_summary(
         "cmoc/session/session",
         apply_branch,
         repo,
+        oracle_snapshot_commit,
         oracle_snapshot_commit,
         oracle_snapshot_commit,
         oracle_snapshot_commit,
