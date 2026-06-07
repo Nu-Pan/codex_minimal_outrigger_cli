@@ -79,25 +79,25 @@
 
 ## Summary
 
-- `tests/test_indexing.py` は `src/commons/indexing.py` の `INDEX.md` メンテナンス処理を検証する回帰テスト群の入口です。
-- `.gitignore`、symlink、binary、非 UTF-8 path、空ディレクトリ、除外 root、並列実行、排他 lock、自動コミットなどの境界条件を扱います。
-- `find_index_inconsistencies()`、`is_maintained_index_path()` / `is_maintained_index_path_at_commit()`、`maintain_indexes()` の挙動を確認します。
+- `tests/test_indexing.py` は `src/commons/indexing.py` の `INDEX.md` メンテナンス処理に関する回帰テスト群です。
+- `INDEX.md` の生成・再利用・再生成条件・hash 更新・Structured Output 検証を中心に、gitignore、symlink、binary、非 UTF-8 path、並列処理、排他 lock、自動 commit の境界条件も確認します。
+- `maintain_indexes` と `is_maintained_index_path` の期待動作や、I/O 失敗時の `CmocError` 化も押さえます。
 
 ## Read this when
 
-- `commons.indexing` の `maintain_indexes()`、`find_index_inconsistencies()`、`is_maintained_index_path()` 系の仕様変更を確認したいとき。
-- `INDEX.md` の生成・再生成・再利用、並列処理、排他 lock、自動コミットの回帰を追いたいとき。
-- `gitignore`、symlink、binary、非 UTF-8 path、空ディレクトリなどの境界条件を把握したいとき。
+- `maintain_indexes` と `is_maintained_index_path` の期待動作を確認したいとき。
+- gitignore、symlink、binary、非 UTF-8 path、空ディレクトリ、特殊文字を含む path の扱いを変更したいとき。
+- 並列生成、排他 lock、再試行、既存 `INDEX.md` の再利用・再生成、自動 commit の境界条件を確認したいとき。
 
 ## Do not read this when
 
-- `src/commons/indexing.py` の実装詳細そのものを追いたいとき。
-- `tests/test_repo.py` や `tests/test_codex.py` など、別の回帰テスト群を確認したいとき。
-- `INDEX.md` の正本仕様や配置ルールだけを確認したいとき。
+- `src/commons/indexing.py` の実装ロジックを直接追いたいとき。
+- `INDEX.md` の生成ルールや `oracles` 全体の仕様だけを確認したいとき。
+- `session` や `apply` など、INDEX 保守以外の機能を調べたいとき。
 
 ## hash
 
-- d8ac00d23742a3cf73b0e486820343f0f3ab52a7ce8df989c60a758d79b00e57
+- 0588d6fd864ccc9a16ea9ffc0553cb9a2f01ce5c4674223059be0a97b54a87ce
 
 # `test_repo.py`
 

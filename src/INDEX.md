@@ -2,27 +2,25 @@
 
 ## Summary
 
-- `src/commons` は cmoc 全体で共有する基盤モジュール群をまとめるディレクトリです。
-- Codex CLI 呼び出し、共通実行制御、エラー整形、`INDEX.md` メンテナンス、repo 操作、レポート保存、サブコマンドログ、タイムスタンプ、時間計測を含みます。
-- この `INDEX.md` は、共通処理の役割を把握して、必要な実装へ素早く分岐するための目次です。
+- `src/commons` は、cmoc 全体で共有する基盤モジュールをまとめたパッケージです。
+- `codex.py`、`repo.py`、`errors.py`、`indexing.py`、`subcommand_log.py`、`timing.py`、`timestamps.py`、`report_files.py`、`command_runner.py` など、CLI 実行・ログ・エラー・リポジトリ操作・`INDEX.md` 維持に必要な共通処理が入っています。
+- サブコマンド固有の処理ではなく、複数機能から再利用される横断的な処理を読む入口として使います。
 
 ## Read this when
 
-- `src/commons` 全体の役割分担を把握し、どの共通モジュールへ進むべきか整理したいとき。
-- `codex.py`、`command_runner.py`、`errors.py`、`indexing.py`、`repo.py`、`report_files.py`、`subcommand_log.py`、`timestamps.py`、`timing.py` の入口を探したいとき。
-- 共通エラー処理、repo まわり、ログ保存、時間計測、`INDEX.md` 生成の担当を切り分けたいとき。
-- この階層から下位の個別モジュールへ素早くルーティングしたいとき。
+- `codex exec` の共通呼び出し、Structured Output 検証、oracle 保護、`INDEX.md` 維持の流れを確認したいとき。
+- repo root 探索、`.cmoc` 配下の状態管理、git 共通処理、変更検出を確認したいとき。
+- サブコマンド実行の共通制御、エラー整形、JSONL ログ、時間計測、タイムスタンプ生成などの共通基盤を探したいとき。
 
 ## Do not read this when
 
-- `src/commons` 配下の個別実装をすでに特定していて、この階層の目次を確認する必要がないとき。
-- `codex exec` の呼び出し制御、repo 探索、エラー整形、タイムスタンプ、時間計測のうち、特定の 1 モジュールだけを直接読みたいとき。
-- `INDEX.md` の生成規則そのものや、`oracles` 側の正本仕様だけを確認したいとき。
-- CLI のサブコマンド本体や引数仕様だけを追いたいとき。
+- 個別サブコマンドの引数解析や業務ロジックだけを確認したいとき。
+- `INDEX.md` の生成ルールそのものや、`oracles` 側の正本仕様だけを確認したいとき。
+- `src/commons` ではなく、CLI の各コマンド実装やテストを直接追いたいとき。
 
 ## hash
 
-- 3b50b0c26d554b7276d6da74bab6a1c6e09409a952dea216d07ddd09d824b321
+- ca232b9c147f8f9830085ec8af79982dae7e5a642d4fce5b581e25a9f5bea765
 
 # `main.py`
 

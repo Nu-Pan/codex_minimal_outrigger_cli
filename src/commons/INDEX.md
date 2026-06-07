@@ -105,8 +105,8 @@
 ## Summary
 
 - `src/commons/indexing.py` は `INDEX.md` の生成・再生成・整合性検査を担う共通モジュールです。
-- 配置対象ディレクトリの列挙、`.gitignore`・`memo`・隠し要素・symlink・バイナリの除外、既存 `INDEX.md` の再利用判定をまとめています。
-- Structured Output による目次生成、原子的な置換、排他ロック、自動コミット、差分検査まで扱います。
+- .gitignore・`memo`・隠し要素・symlink・バイナリの除外と、既存 `INDEX.md` の再利用判定をまとめています。
+- Structured Output による目次生成、排他ロック、原子的な置換、自動コミット、差分検査まで扱います。
 - `is_maintained_index_path*` と `find_index_inconsistencies` で配置可否や不整合の確認もできます。
 
 ## Read this when
@@ -119,13 +119,12 @@
 ## Do not read this when
 
 - `cmoc indexing` の CLI 引数やコマンド入口だけを確認したいときは、`src/sub_commands/indexing.py` を読むべきです。
-- サブコマンド本体や repo 探索、ログ、タイムスタンプなど別の共通処理を追いたいときは、このファイルではありません。
 - `INDEX.md` の正本仕様や利用手順だけを確認したいときは、`oracles/docs/app_specs/indexing.md` を読むべきです。
 - `tests/test_indexing.py` の回帰条件だけを追いたいときは、テスト側を読むべきです。
 
 ## hash
 
-- 927a775a3771fceed0a1737fb7278b7185aba262463f045a49b5c3338df3a08c
+- 1b9342292d844ab9b821a7fad053a8e83fa889d04d9b10b7b26b26dd40c64ede
 
 # `repo.py`
 
