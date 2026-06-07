@@ -2558,6 +2558,44 @@ def test_review_oracles_rejects_too_many_refine_findings_loops(
         cmoc_review_oracles_impl(repo, scope="full", refine_findings_loop=4)
 
 
+def test_review_oracles_finding_pipeline_schemas_are_canonical_files() -> None:
+    """review oracles の finding pipeline schema は oracles 配下の正本 JSON を使う。"""
+    repo_root = Path(__file__).resolve().parents[1]
+    schema_root = (
+        repo_root
+        / "oracles"
+        / "schemas"
+        / "structured_output"
+        / "review"
+        / "oracles"
+    )
+    expected_schemas = {
+        "_ENUMERATE_FINDINGS_OUTPUT_SCHEMA": "enumerate_findings.json",
+        "_MERGE_FINDINGS_OUTPUT_SCHEMA": "merge_findings.json",
+        "_VALIDATE_FINDINGS_CHALLENGER_OUTPUT_SCHEMA": (
+            "validate_findings_challenger.json"
+        ),
+        "_VALIDATE_FINDINGS_ADVOCATE_OUTPUT_SCHEMA": (
+            "validate_findings_advocate.json"
+        ),
+        "_JUDGE_FINDINGS_OUTPUT_SCHEMA": "judge_findings.json",
+    }
+
+    for constant_name, file_name in expected_schemas.items():
+        expected_schema = json.loads(
+            (schema_root / file_name).read_text(encoding="utf-8")
+        )
+        assert getattr(review_oracles_module, constant_name) == expected_schema
+
+    source = inspect.getsource(review_oracles_module)
+    for constant_name, file_name in expected_schemas.items():
+        assert (
+            f'{constant_name} = _load_review_oracles_output_schema(\n'
+            f'    "{file_name}"\n'
+            ")"
+        ) in source
+
+
 def test_review_oracles_uses_finding_pipeline_schemas(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,

@@ -54,82 +54,62 @@ _DEFAULT_REVIEW_ORACLES_LOOP = 3
 _MAX_REVIEW_ORACLES_LOOP = 3
 _DEFAULT_REPEAT_IMPROVE_ISSUES_LIST = _DEFAULT_REVIEW_ORACLES_LOOP
 _MAX_REPEAT_IMPROVE_ISSUES_LIST = _MAX_REVIEW_ORACLES_LOOP
-_FINDING_SEVERITY_ORDER = ["fatal", "minor"]
-_FINDING_VERDICT_ORDER = ["accept", "reject"]
-_FINDING_OUTPUT_SCHEMA: dict[str, object] = {
-    "type": "object",
-    "additionalProperties": False,
-    "required": ["severity", "title", "oracle_path", "reason"],
-    "properties": {
-        "severity": {"type": "string", "enum": _FINDING_SEVERITY_ORDER},
-        "title": {"type": "string"},
-        "oracle_path": {"type": "string"},
-        "reason": {"type": "string"},
-    },
-}
-_ENUMERATE_FINDINGS_OUTPUT_SCHEMA: dict[str, object] = {
-    "type": "object",
-    "additionalProperties": False,
-    "required": ["findings"],
-    "properties": {
-        "findings": {
-            "type": "array",
-            "items": _FINDING_OUTPUT_SCHEMA,
-        },
-    },
-}
-_MERGE_FINDINGS_OUTPUT_SCHEMA: dict[str, object] = {
-    "type": "object",
-    "additionalProperties": False,
-    "required": ["operations"],
-    "properties": {
-        "operations": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "additionalProperties": False,
-                "required": ["kind", "target_ids", "finding"],
-                "properties": {
-                    "kind": {
-                        "type": "string",
-                        "enum": ["delete", "replace", "merge"],
-                    },
-                    "target_ids": {
-                        "type": "array",
-                        "minItems": 1,
-                        "items": {"type": "string"},
-                    },
-                    "finding": {
-                        "anyOf": [
-                            _FINDING_OUTPUT_SCHEMA,
-                            {"type": "null"},
-                        ],
-                    },
-                },
-            },
-        },
-    },
-}
-_VALIDATE_FINDINGS_CHALLENGER_OUTPUT_SCHEMA: dict[str, object] = {
-    "type": "object",
-    "additionalProperties": False,
-    "required": ["reasons"],
-    "properties": {
-        "reasons": {"type": "array", "items": {"type": "string"}},
-    },
-}
-_VALIDATE_FINDINGS_ADVOCATE_OUTPUT_SCHEMA = (
-    _VALIDATE_FINDINGS_CHALLENGER_OUTPUT_SCHEMA
+_CMOC_ROOT = Path(__file__).resolve().parents[3]
+_REVIEW_ORACLES_SCHEMA_ROOT = (
+    _CMOC_ROOT / "oracles" / "schemas" / "structured_output" / "review" / "oracles"
 )
-_JUDGE_FINDINGS_OUTPUT_SCHEMA: dict[str, object] = {
-    "type": "object",
-    "additionalProperties": False,
-    "required": ["verdict", "reason"],
-    "properties": {
-        "verdict": {"type": "string", "enum": ["accept", "reject"]},
-        "reason": {"type": "string"},
-    },
-}
+
+
+def _load_review_oracles_output_schema(file_name: str) -> dict[str, object]:
+    """review oracles の正本 Structured Output schema を読む。"""
+    schema = json.loads(
+        (_REVIEW_ORACLES_SCHEMA_ROOT / file_name).read_text(encoding="utf-8")
+    )
+    if not isinstance(schema, dict):
+        raise TypeError(f"{file_name} must contain a JSON object schema.")
+    return schema
+
+
+def _schema_string_enum(schema: dict[str, object], keys: tuple[str, ...]) -> list[str]:
+    """正本 schema 内の string enum を Python 側処理順にも使う。"""
+    current: object = schema
+    for key in keys:
+        if not isinstance(current, dict):
+            raise TypeError(f"schema path {'.'.join(keys)} is not an object.")
+        current = current[key]
+    if not isinstance(current, dict):
+        raise TypeError(f"schema path {'.'.join(keys)} is not an object.")
+    values = current["enum"]
+    if not isinstance(values, list) or not all(
+        isinstance(value, str) for value in values
+    ):
+        raise TypeError(f"schema path {'.'.join(keys)} must contain a string enum.")
+    return values
+
+
+_ENUMERATE_FINDINGS_OUTPUT_SCHEMA = _load_review_oracles_output_schema(
+    "enumerate_findings.json"
+)
+_MERGE_FINDINGS_OUTPUT_SCHEMA = _load_review_oracles_output_schema(
+    "merge_findings.json"
+)
+_VALIDATE_FINDINGS_CHALLENGER_OUTPUT_SCHEMA = _load_review_oracles_output_schema(
+    "validate_findings_challenger.json"
+)
+_VALIDATE_FINDINGS_ADVOCATE_OUTPUT_SCHEMA = _load_review_oracles_output_schema(
+    "validate_findings_advocate.json"
+)
+_JUDGE_FINDINGS_OUTPUT_SCHEMA = _load_review_oracles_output_schema(
+    "judge_findings.json"
+)
+_FINDING_SEVERITY_ORDER = _schema_string_enum(
+    _ENUMERATE_FINDINGS_OUTPUT_SCHEMA,
+    ("properties", "findings", "items", "properties", "severity"),
+)
+_FINDING_VERDICT_ORDER = _schema_string_enum(
+    _JUDGE_FINDINGS_OUTPUT_SCHEMA,
+    ("properties", "verdict"),
+)
 _ISSUE_OUTPUT_SCHEMA: dict[str, object] = {
     "type": "object",
     "additionalProperties": False,
@@ -1488,7 +1468,7 @@ def _validate_judge_findings_payload(value: object) -> None:
         return
     if set(value) != {"verdict", "reason"}:
         raise ValueError("Judge findings payload keys do not match schema.")
-    if value["verdict"] not in {"accept", "reject"}:
+    if value["verdict"] not in set(_FINDING_VERDICT_ORDER):
         raise ValueError("verdict is invalid.")
     if not isinstance(value["reason"], str):
         raise ValueError("reason must be a string.")
