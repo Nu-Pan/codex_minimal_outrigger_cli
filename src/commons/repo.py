@@ -328,7 +328,7 @@ def initial_session_state(
     return {
         "session": {
             "state": "active",
-            "session_home_branch": None,
+            "session_home_branch": session_home_branch,
             "session_start_commit": session_start_commit,
             "last_joined_apply_oracle_snapshot_commit": None,
         },

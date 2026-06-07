@@ -787,7 +787,7 @@ def test_session_fork_creates_session_branch_and_records_state(
     assert branch_name.startswith("cmoc/session/")
     assert is_timestamp(session_id)
     assert state["session"]["state"] == "active"
-    assert state["session"]["session_home_branch"] is None
+    assert state["session"]["session_home_branch"] == home_branch
     assert state["session"]["session_start_commit"] == base_commit
     assert state["session"]["last_joined_apply_oracle_snapshot_commit"] is None
     assert state["apply"] == {
@@ -1268,7 +1268,7 @@ def test_session_fork_keeps_state_when_rollback_branch_delete_fails(
     assert _git(repo, "branch", "--show-current").stdout.strip() == home_branch
     assert session_branch in branches
     assert state["session"]["state"] == "active"
-    assert state["session"]["session_home_branch"] is None
+    assert state["session"]["session_home_branch"] == home_branch
     assert state["apply"]["state"] == "ready"
 
 
