@@ -13,6 +13,7 @@ from sub_commands.apply.abandon import cmoc_apply_abandon_impl
 from sub_commands.apply.fork import cmoc_apply_impl
 from sub_commands.apply.join import cmoc_apply_join_impl
 from sub_commands.init import cmoc_init_impl
+from sub_commands.indexing import cmoc_indexing_impl
 from sub_commands.review.oracles import _MAX_REPEAT_IMPROVE_ISSUES_LIST
 from sub_commands.review.oracles import cmoc_review_oracles_impl
 from sub_commands.session.abandon import cmoc_session_abandon_impl
@@ -44,6 +45,13 @@ def init_command() -> None:
     """Initialize a repository for cmoc work."""
     # CLI callback は init の本体実装へ処理を委譲する。
     cmoc_init_impl()
+
+
+@app.command("indexing")
+def indexing_command() -> None:
+    """Run INDEX.md maintenance explicitly."""
+    # CLI callback は indexing の本体実装へ処理を委譲する。
+    cmoc_indexing_impl()
 
 
 @session_app.command("fork")
@@ -205,7 +213,8 @@ def _missing_command_error(command_path: str) -> CmocError:
         "コマンドが指定されていません。",
         [
             f"利用可能なコマンドを確認するには `{command_path} --help` を実行してください。",
-            "`cmoc init`, `cmoc session fork`, `cmoc review oracles`, "
+            "`cmoc init`, `cmoc indexing`, `cmoc session fork`, "
+            "`cmoc review oracles`, "
             "`cmoc apply fork`, `cmoc apply join`, "
             "`cmoc session join` のいずれかを実行してください。",
         ],

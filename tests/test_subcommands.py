@@ -17,6 +17,7 @@ from pytest import MonkeyPatch
 
 import sub_commands.apply.fork as apply_module
 import sub_commands.apply.join as apply_join_module
+import sub_commands.indexing as indexing_module
 import sub_commands.review.oracles as review_oracles_module
 import sub_commands.session.abandon as session_abandon_module
 import sub_commands.session.fork as session_fork_module
@@ -51,6 +52,7 @@ from sub_commands.apply.fork import _validate_discrepancy_payload
 from sub_commands.apply.abandon import cmoc_apply_abandon_impl
 from sub_commands.apply.join import cmoc_apply_join_impl
 from sub_commands.review.oracles import cmoc_review_oracles_impl
+from sub_commands.indexing import cmoc_indexing_impl
 from sub_commands.review.oracles import _evaluation_prompt
 from sub_commands.review.oracles import _improvement_prompt
 from sub_commands.init import cmoc_init_impl
@@ -483,6 +485,59 @@ def test_init_adds_cmoc_ignore_and_commits_it(tmp_path: Path) -> None:
         _git(repo, "log", "-1", "--pretty=%s").stdout.strip()
         == "Initialize cmoc"
     )
+
+
+def test_indexing_impl_runs_maintenance_on_clean_repo(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """`cmoc indexing` 本体は clean repo で INDEX メンテナンスへ委譲する。"""
+    repo = _init_repo(tmp_path)
+    maintained_roots: list[Path] = []
+
+    def fake_maintain_indexes(repo_root: Path) -> bool:
+        maintained_roots.append(repo_root)
+        return True
+
+    monkeypatch.setattr(
+        indexing_module,
+        "maintain_indexes",
+        fake_maintain_indexes,
+    )
+
+    cmoc_indexing_impl(repo)
+
+    captured = capsys.readouterr()
+    assert maintained_roots == [repo]
+    assert "committed INDEX.md maintenance changes" in captured.out
+
+
+def test_indexing_impl_rejects_dirty_repo_before_maintenance(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """`cmoc indexing` は実行前の未コミット差分があれば止まる。"""
+    repo = _init_repo(tmp_path)
+    (repo / "dirty.txt").write_text("dirty\n", encoding="utf-8")
+    maintained_roots: list[Path] = []
+
+    def fake_maintain_indexes(repo_root: Path) -> bool:
+        maintained_roots.append(repo_root)
+        return True
+
+    monkeypatch.setattr(
+        indexing_module,
+        "maintain_indexes",
+        fake_maintain_indexes,
+    )
+
+    with pytest.raises(CmocError) as error:
+        cmoc_indexing_impl(repo)
+
+    assert maintained_roots == []
+    assert "未コミットの変更があります。" in error.value.message
+    assert "dirty.txt" in error.value.detail
 
 
 def test_init_repairs_negated_cmoc_ignore_rule_and_commits_it(
@@ -9551,10 +9606,15 @@ def test_main_typer_functions_delegate_only_to_impls() -> None:
     assert "def _run_command" not in source
     assert "_run_command(" not in source
     assert "cmoc_init_impl()" in source
+    assert "cmoc_indexing_impl()" in source
     assert "cmoc_session_fork_impl()" in source
     assert "importlib.util" not in source
     assert "spec_from_file_location" not in source
-    assert "from sub_commands.review.oracles import cmoc_review_oracles_impl" in source
+    assert (
+        "from sub_commands.review.oracles import cmoc_review_oracles_impl"
+        in source
+    )
+    assert "from sub_commands.indexing import cmoc_indexing_impl" in source
     assert "eval-oracles.py" not in source
     assert "eval_oracles_source" not in review_oracles_source
     assert "cmoc_review_oracles_impl(" in source
@@ -9583,6 +9643,7 @@ def test_cmoc_help_uses_cmoc_command_name() -> None:
     assert "session" in result.stdout
     assert "apply" in result.stdout
     assert "review" in result.stdout
+    assert "indexing" in result.stdout
     assert re.search(r"\bbranch\b", result.stdout) is None
     assert re.search(r"\bmerge\b", result.stdout) is None
     assert re.search(r"\beval-oracle(?!s)\b", result.stdout) is None
@@ -9629,6 +9690,38 @@ def test_cmoc_review_oracles_command_and_compat_alias_are_registered() -> None:
     assert review.stderr == ""
     assert plural_alias.stderr == ""
     assert singular.stderr == ""
+
+
+def test_cmoc_indexing_command_is_registered_and_takes_no_arguments() -> None:
+    """`cmoc indexing` は root 直下の引数なしサブコマンドとして登録される。"""
+    repo_root = Path(__file__).resolve().parents[1]
+    env = {"PYTHONPATH": str(repo_root / "src")}
+    help_result = subprocess.run(
+        [sys.executable, "-m", "main", "indexing", "--help"],
+        cwd=repo_root,
+        env=env,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    extra_arg_result = subprocess.run(
+        [sys.executable, "-m", "main", "indexing", "unexpected"],
+        cwd=repo_root,
+        env=env,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    assert help_result.returncode == 0
+    assert "Usage: cmoc indexing [OPTIONS]" in help_result.stdout
+    assert help_result.stderr == ""
+    assert extra_arg_result.returncode == 2
+    assert extra_arg_result.stderr == ""
+    _assert_markdown_error_report(extra_arg_result.stdout)
+    assert "Got unexpected extra argument" in extra_arg_result.stdout
 
 
 def test_cmoc_apply_fork_help_exposes_oracle_repeat_options() -> None:
@@ -9780,6 +9873,7 @@ def test_main_reports_no_args_error_with_non_empty_detail() -> None:
     _assert_markdown_error_report(result.stdout)
     assert "## Summary\nコマンドが指定されていません。" in result.stdout
     assert "- 利用可能なコマンドを確認するには `cmoc --help` を実行してください。" in result.stdout
+    assert "`cmoc indexing`" in result.stdout
     assert "## Detail\ncmoc がサブコマンドなしで起動されました。" in result.stdout
     assert "Traceback (most recent call last):" in result.stdout
     assert "raise _missing_command_error(\"cmoc\")" in result.stdout
@@ -9796,6 +9890,7 @@ def test_main_delegates_root_completion_probe_to_typer() -> None:
     assert "ERROR" not in result.stdout
     assert "## Summary" not in result.stdout
     assert "init" in result.stdout
+    assert "indexing" in result.stdout
     assert "session" in result.stdout
     assert "apply" in result.stdout
     assert "review" in result.stdout
