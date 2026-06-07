@@ -513,6 +513,80 @@ def test_indexing_impl_runs_maintenance_on_clean_repo(
     assert "committed INDEX.md maintenance changes" in captured.out
 
 
+def test_indexing_impl_check_reports_current_indexes(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """`cmoc indexing --check` は更新せずに INDEX 整合性だけを検査する。"""
+    repo = _init_repo(tmp_path)
+    checked_roots: list[tuple[Path, list[str] | None]] = []
+    maintained_roots: list[Path] = []
+
+    def fake_find_index_inconsistencies(
+        repo_root: Path,
+        *,
+        index_roots: list[str] | None = None,
+    ) -> list[str]:
+        checked_roots.append((repo_root, index_roots))
+        return []
+
+    def fake_maintain_indexes(repo_root: Path) -> bool:
+        maintained_roots.append(repo_root)
+        return True
+
+    monkeypatch.setattr(
+        indexing_module,
+        "find_index_inconsistencies",
+        fake_find_index_inconsistencies,
+    )
+    monkeypatch.setattr(
+        indexing_module,
+        "maintain_indexes",
+        fake_maintain_indexes,
+    )
+
+    cmoc_indexing_impl(repo, check=True, index_roots=["oracles"])
+
+    captured = capsys.readouterr()
+    assert checked_roots == [(repo, ["oracles"])]
+    assert maintained_roots == []
+    assert "INDEX.md files are current" in captured.out
+
+
+def test_indexing_impl_check_fails_on_index_inconsistencies(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """`cmoc indexing --check` は不整合を Detail に出して失敗する。"""
+    repo = _init_repo(tmp_path)
+
+    def fake_find_index_inconsistencies(
+        repo_root: Path,
+        *,
+        index_roots: list[str] | None = None,
+    ) -> list[str]:
+        assert repo_root == repo
+        assert index_roots == ["oracles"]
+        return [
+            "oracles/INDEX.md: missing entry for schemas",
+            "oracles/schemas/INDEX.md: missing INDEX.md",
+        ]
+
+    monkeypatch.setattr(
+        indexing_module,
+        "find_index_inconsistencies",
+        fake_find_index_inconsistencies,
+    )
+
+    with pytest.raises(CmocError) as error:
+        cmoc_indexing_impl(repo, check=True, index_roots=["oracles"])
+
+    assert "未反映のルーティング差分" in error.value.message
+    assert "missing entry for schemas" in error.value.detail
+    assert "oracles/schemas/INDEX.md: missing INDEX.md" in error.value.detail
+
+
 def test_indexing_impl_rejects_dirty_repo_before_maintenance(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -10504,7 +10578,7 @@ def test_main_typer_functions_delegate_only_to_impls() -> None:
     assert "def _run_command" not in source
     assert "_run_command(" not in source
     assert "cmoc_init_impl()" in source
-    assert "cmoc_indexing_impl()" in source
+    assert "cmoc_indexing_impl(check=check, index_roots=index_roots)" in source
     assert "cmoc_session_fork_impl()" in source
     assert "importlib.util" not in source
     assert "spec_from_file_location" not in source
@@ -10599,8 +10673,8 @@ def test_cmoc_review_oracles_command_and_compat_alias_are_registered() -> None:
     assert singular.stderr == ""
 
 
-def test_cmoc_indexing_command_is_registered_and_takes_no_arguments() -> None:
-    """`cmoc indexing` は root 直下の引数なしサブコマンドとして登録される。"""
+def test_cmoc_indexing_command_is_registered_with_check_options() -> None:
+    """`cmoc indexing` は root 直下の明示サブコマンドとして登録される。"""
     repo_root = Path(__file__).resolve().parents[1]
     env = {"PYTHONPATH": str(repo_root / "src")}
     help_result = subprocess.run(
@@ -10624,6 +10698,8 @@ def test_cmoc_indexing_command_is_registered_and_takes_no_arguments() -> None:
 
     assert help_result.returncode == 0
     assert "Usage: cmoc indexing [OPTIONS]" in help_result.stdout
+    assert "--check" in help_result.stdout
+    assert "--index-root" in help_result.stdout
     assert help_result.stderr == ""
     assert extra_arg_result.returncode == 2
     assert extra_arg_result.stderr == ""

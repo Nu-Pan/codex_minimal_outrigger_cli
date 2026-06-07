@@ -48,10 +48,21 @@ def init_command() -> None:
 
 
 @app.command("indexing")
-def indexing_command() -> None:
+def indexing_command(
+    check: bool = typer.Option(
+        False,
+        "--check",
+        help="Check INDEX.md consistency without modifying files.",
+    ),
+    index_roots: list[str] | None = typer.Option(
+        None,
+        "--index-root",
+        help="Limit --check to this repository-relative root. Repeatable.",
+    ),
+) -> None:
     """Run INDEX.md maintenance explicitly."""
     # CLI callback は indexing の本体実装へ処理を委譲する。
-    cmoc_indexing_impl()
+    cmoc_indexing_impl(check=check, index_roots=index_roots)
 
 
 @session_app.command("fork")
