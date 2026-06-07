@@ -79,6 +79,7 @@
 - 単純な問題 (minor) を対象とする
     - 日本語的な誤り（e.g. 誤字、脱字、助詞の抜け）
     - 用語の不統一・表記揺れ・typo
+    - その他ケアレスミスの疑いが濃厚なもの
 - 以下の問題は対象としない
     - oracles ファイルだけからは問題だとは言い切れない
     - 仕様からは実装が一意に定まらない
@@ -93,13 +94,18 @@
     - 指定されたファイルだけでなく、関連する oracles ファイルも読みに行く
     - どの oracles ファイルが関連するかは `INDEX.md` を根拠に判断する
 
+## 所見の ID 管理
+
+- cmoc は、所見リストへ所見を追加する時点で安定した `finding_id` を付与する
+- Codex CLI が特定の所見を一意に指し示す必要がある場合 (e.g. 所見リストのマージ) は、この `finding_id` を参照する
+
 ## 「所見リスト列挙ループ」の詳細
 
 - このループでは、所見リストを可能な限り網羅的にする事を目的とする
 - oracles ファイル 1 つごとにダーティーフラグを用意する
 - ダーティーフラグが true のファイルのみを Codex CLI による「新規所見の列挙」の対象とする
 - ダーティーフラグの初期値はスコープモードによって変わる
-    - セッションスコープ (`--scope session`) の場合、`<cmoc-session-fork-commit>` から `<cmoc-apply-fork-commit>` の間で変更があったファイルのみ、ダーティフラグを true とする
+    - セッションスコープ (`--scope session`) の場合、`<cmoc-session-fork-commit>` から `<cmoc-review-fork-commit>` の間で変更があったファイルのみ、ダーティフラグを true とする
     - フルスコープ (`--scope full`) の場合、全ての oracles ファイルのダーティフラグを true とする
 - ダーティフラグは以下のルールで更新される
     - 「新規所見の列挙」の結果、新規所見なしと判断された場合、そのファイルのダーティフラグを false にする
@@ -111,7 +117,7 @@
 
 - 1 回の `codex exec` 呼び出しで 1 つの oracles ファイルをレビューする
 - プロンプトで「現状の所見リストのうち、今回のレビュー対象ファイルと関連するもの」を渡す
-- Coodex CLI は新規所見（既知でない所見）のリストを Structured Output で出力する
+- Codex CLI は新規所見（既知でない所見）のリストを Structured Output で出力する
 - Structured Output schema として `<cmoc-root>/oracles/schemas/structured_output/review/oracles/enumerate_findings.json` を使用する
 - 所見リストが既に十分網羅的であるなら、新規所見なしとなるはずである
 - このファイルごとのレビューは並列に実行する
@@ -125,7 +131,7 @@
 
 ## 「所見リストのマージ」の詳細
 
-- 所見リストの冗長性・不整合を解決を `codex exec` に依頼する
+- 所見リストの冗長性・不整合の解決を `codex exec` に依頼する
 - プロンプトで、現状の所見リストを Codex CLI に渡す
 - Codex CLI は問題解決に必要な編集操作のリストを Structured Output で出力する
 - Structured Output schema として `<cmoc-root>/oracles/schemas/structured_output/review/oracles/merge_findings.json` を使用する
@@ -172,18 +178,18 @@
 
 レビューレポートは Markdown ファイルとし、yaml frontmatter と本文で構成する。
 
-## 問題点単位の集約
+### 所見単位の集約
 
 - 最終レポートでは、レビュー対象ファイル単位ではなく、所見単位で結果を並べる。
 - 所見は以下の順序で表示する。
     1. 採用と判定された `fatal`
     2. 採用と判定された `minor`
-    1. 不採用と判定された `fatal`
-    2. 不採用と判定された `minor`
+    3. 不採用と判定された `fatal`
+    4. 不採用と判定された `minor`
 
 ### yaml frontmatter
 
-frontmatter 以下の項目を書く
+frontmatter 以下の項目を書く（いずれも、不明な場合は null 可）
 
 - `command`
 - `generated_at`
@@ -207,9 +213,9 @@ frontmatter 以下の項目を書く
 - `ok`
     - レビュー対象の範囲では問題点が検出されなかった。
 - `fatal`
-    - `fatal` issue が 1 件以上検出された。
+    - `fatal` 所見が 1 件以上検出された。
 - `minor`
-    - `fatal` は検出されていないが、`warning` issue が 1 件以上検出された。
+    - `fatal` は検出されていないが、`minor` な所見が 1 件以上検出された。
 - `no_targets`
     - レビュー対象 oracle が 0 件だった。
 - `error`
@@ -220,19 +226,24 @@ frontmatter 以下の項目を書く
 本文には以下のセクションをこの順番で必ず含める。
 
 1. `# cmoc review oracles report`
-2. `## Evaluated oracle files`
-3. `## Fatal findings`
-4. `## Minor findings`
+2. `## Verdict`
+3. `## Evaluated oracle files`
+4. `## Fatal findings`
+5. `## Minor findings`
 
 ### `Verdict`
 
 - `fatal` の場合
     - oracle ファイルに、直ちに修正するべき問題が存在することを書く
-- `warning` の場合
+- `minor` の場合
     - oracles ファイルに、致命的ではない、細かい問題があることを書く
 - `ok` の場合
     - oracles ファイルに、問題は何ら見つからなかったことを書く
     - ただし、問題点の不存在を完全保証するものではないことも書く
+- `no_targets`
+    - レビュー対象 oracle が 0 件だったことを書く
+- `error`
+    - レビュー処理が途中で失敗したことを書く
 
 ### `Evaluated oracle files`
 
@@ -241,11 +252,11 @@ frontmatter 以下の項目を書く
 ```markdown
 | No. | Oracle file | Findings |
 |---:|---|---:|
-| 1 | `oracles/app_specs/sub_commands/review_oracles.md` | 2 |
-| 2 | `oracles/app_specs/workflow.md` | 0 |
+| 1 | `oracles/docs/app_specs/sub_commands/review_oracles.md` | 2 |
+| 2 | `oracles/docs/app_specs/workflow.md` | 0 |
 ```
 
-### `Fatal fIndings`
+### `Fatal findings`
 
 - `fatal` な所見を列挙する
 
@@ -255,5 +266,5 @@ frontmatter 以下の項目を書く
 
 ## レポートの提示方法
 
-- レビューレポートは `<repo-root>/.cmoc/reports/review_oracles/<time-stamp>.md` にファイルに保存する
+- レビューレポートは `<repo-root>/.cmoc/reports/review_oracles/<time-stamp>.md` にファイル保存する
 - レポートファイルのフルパスを stdout に流す
