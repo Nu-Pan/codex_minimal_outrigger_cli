@@ -3,24 +3,26 @@
 ## Summary
 
 - `src/commons` にある cmoc 共通モジュール群のルーティング入口です。
-- `codex.py`、`command_runner.py`、`errors.py`、`indexing.py`、`repo.py`、`report_files.py`、`subcommand_log.py`、`timestamps.py`、`timing.py` などの基盤処理をまとめています。
-- 個別サブコマンドの実装ではなく、複数機能から再利用される共通部品を案内するための目次です。
+- `codex.py`、`command_runner.py`、`errors.py`、`indexing.py`、`repo.py`、`report_files.py`、`subcommand_log.py`、`timestamps.py`、`timing.py` など、CLI 全体で再利用する基盤処理をまとめています。
+- 個別サブコマンド実装ではなく、共通実行制御・エラー整形・リポジトリ操作・ログ/時間計測・レポート保存・INDEX.md メンテナンスの参照先を切り分けるための目次です。
 
 ## Read this when
 
 - `src/commons` 配下の共通基盤モジュールの入口を把握したいとき。
-- repo 管理、コマンド実行ラッパー、共通エラー、INDEX.md 生成、ログ、時刻、時間計測の役割分担を確認したいとき。
+- repo root 検出、サブコマンド実行ラッパー、共通エラー、INDEX.md 生成、ログ、タイムスタンプ、時間計測、レポート保存の役割分担を確認したいとき。
 - `src/commons/__init__.py` と各モジュールの位置関係を整理してから、個別ファイルへ進みたいとき。
+- どの共通モジュールを読むべきか迷ったとき。
 
 ## Do not read this when
 
 - `src/commons` の目的のモジュールがすでに分かっていて、`codex.py` や `repo.py` などへ直接進めるとき。
-- `src/commons` ではなく、個別サブコマンドの実装や `src/sub_commands/` 側だけを確認したいとき。
+- 個別サブコマンドの実装や `src/sub_commands/` 側だけを確認したいとき。
 - `README.md` や `AGENTS.md` など、リポジトリ運用ルールだけを確認したいとき。
+- `__pycache__` やテスト生成物を追いたいとき。
 
 ## hash
 
-- 241d72d59800142f6b1de16b6e77fc5bf594139a1682589d563ef9a536a7bb54
+- 119934ab65433985ef621287a34db5daf74ff5f4088e6a10a69e9de95d4b0455
 
 # `main.py`
 

@@ -104,26 +104,26 @@
 
 ## Summary
 
-- `INDEX.md` の自動生成・再生成・更新・自動コミットを担当する共通モジュールです。
-- 対象ディレクトリの列挙、既存 `INDEX.md` の再利用判定、目次ブロックの生成・置換、`INDEX.md` 用 lock、I/O 失敗の `CmocError` 化までまとめています。
-- .gitignore`、`memo`、隠し要素、`build` / `tmp` / `__pycache__`、symlink、バイナリを除外しつつ、Codex CLI の Structured Output で目次項目を作成します。
+- `INDEX.md` メンテナンスを担当する共通モジュールで、配置対象ディレクトリの列挙、既存 `INDEX.md` の再利用判定、目次ブロックの生成・置換、自動コミットまでをまとめています。
+- `codex exec` の Structured Output で目次情報を生成しつつ、hash の埋め込みや再利用判定は cmoc 側で機械的に処理します。
+- 同一 git repository 内の INDEX メンテナンスを lock で直列化し、I/O 失敗や不正な `INDEX.md` を `CmocError` として扱います。
 
 ## Read this when
 
-- `INDEX.md` を自動作成・更新する処理を実装・修正・レビューしたいとき。
-- 目次対象の列挙条件、`.gitignore` 判定、`memo` や隠しディレクトリの除外条件を確認したいとき。
-- 既存 `INDEX.md` の再利用条件、内容ハッシュによる更新判定、Structured Output から Markdown 目次への変換を追いたいとき。
-- `INDEX.md` メンテナンス用 lock や、I/O エラーを `CmocError` に変換する挙動を確認したいとき。
+- `INDEX.md` の自動生成・再生成・更新・自動コミットの実装を修正したいとき。
+- `maintain_indexes()`、`is_maintained_index_path()`、`is_maintained_index_path_at_commit()` の判定条件を確認したいとき。
+- `.gitignore`、`memo`、隠し要素、`build` / `tmp` / `__pycache__`、symlink、binary、非 UTF-8 `INDEX.md`、排他 lock、並列生成、Structured Output の扱いを追いたいとき。
+- `tests/test_indexing.py` の回帰テストが何を守っているかを、実装側から整理したいとき。
 
 ## Do not read this when
 
-- `INDEX.md` の配置ルール全体の概要だけを確認したいときは、この実装ではなく `oracles` 側の索引仕様を読むべきです。
-- `codex.py`、`repo.py`、`errors.py` など他の共通モジュールの仕様だけを確認したいとき。
-- 個別サブコマンドの引数や業務フローだけを確認したいとき。
+- `cmoc indexing` のサブコマンド入口や実行フローだけを確認したいときは、[`src/sub_commands/indexing.py`](/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03_16_000000754/2026-06-07_10-40_51_000000114/src/sub_commands/indexing.py) を読むべきです。
+- `INDEX.md` の配置・更新ルールの正本仕様だけを確認したいときは、[`oracles/docs/app_specs/indexing.md`](/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03_16_000000754/2026-06-07_10-40_51_000000114/oracles/docs/app_specs/indexing.md) を読むべきです。
+- repo root 検出、`git` ラッパー、session/apply state などの共通基盤だけを追いたいときは、このモジュールではなく [`src/commons/repo.py`](/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03_16_000000754/2026-06-07_10-40_51_000000114/src/commons/repo.py) や関連モジュールを読むべきです。
 
 ## hash
 
-- edf0ee33ac81e4e8009d685ccac1c3ccfa9d5cf105144c8488ecdd7b6d50fb2b
+- c5f32977d2d26a9bb8947b0ad2eb57f80a3ff5d10ad02bdcf3dad8a3109dcedd
 
 # `repo.py`
 

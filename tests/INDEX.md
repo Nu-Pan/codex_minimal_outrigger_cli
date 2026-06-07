@@ -61,19 +61,21 @@
 
 ## Read this when
 
-- リポジトリ直下に旧ルーティングファイルが残っていないことを確認したいとき。
-- `routing.md` と `ROUTING.md` の不存在をテスト観点から確認したいとき。
-- ルーティング入口を `INDEX.md` 群へ一本化する方針の回帰テストを探すとき。
+- リポジトリ直下の旧ルーティングファイルが残っていないことを確認したいとき。
+- `routing.md` と `ROUTING.md` の不存在をテスト観点から把握したいとき。
+- ルーティング入口を `INDEX.md` 群へ統合する方針の回帰テストを探したいとき。
+- ファイル命名規則に関する検証範囲を確認したいとき。
 
 ## Do not read this when
 
-- cmoc のサブコマンド仕様や Codex CLI 連携の挙動を確認したいとき。
-- Python 実装規約、INDEX.md メンテナンス、git 共通処理など別機能のテストを探しているとき。
-- README、AGENTS、oracles、memo などの編集可否やファイルアクセス規則だけを確認したいとき。
+- cmoc のサブコマンド実装や実行フローを確認したいとき。
+- `INDEX.md` 自体の生成・再利用・再生成ルールを追いたいとき。
+- `tests/test_indexing.py` や `tests/test_repo.py` など、別の回帰テストの内容を確認したいとき。
+- ファイルアクセス規則やリポジトリ運用ルールだけを確認したいとき。
 
 ## hash
 
-- 9212a0b14153b59d46d1634605fe82aa95084212fd00545d88aefefcac59c1c3
+- 19d26b700e712e55500144a00541ab4733ecc1b35d24a3d6824cf2f556aa0b33
 
 # `test_indexing.py`
 
@@ -81,23 +83,23 @@
 
 - `tests/test_indexing.py` は `src/commons/indexing.py` の `INDEX.md` メンテナンス処理に関する回帰テスト群です。
 - `INDEX.md` の生成・再利用・再生成条件・hash 更新・Structured Output 検証を中心に、gitignore、symlink、binary、非 UTF-8 path、並列処理、排他 lock、自動 commit の境界条件も確認します。
-- `maintain_indexes` と `is_maintained_index_path` の期待動作や、I/O 失敗時の `CmocError` 化も押さえます。
+- `maintain_indexes()` と `is_maintained_index_path()` の期待動作や、I/O 失敗時の `CmocError` 化も押さえます。
 
 ## Read this when
 
-- `maintain_indexes` と `is_maintained_index_path` の期待動作を確認したいとき。
+- `maintain_indexes()` と `is_maintained_index_path()` の期待動作を確認したいとき。
 - gitignore、symlink、binary、非 UTF-8 path、空ディレクトリ、特殊文字を含む path の扱いを修正・追加したいとき。
 - 並列生成、排他 lock、Codex 呼び出しの再試行、既存 INDEX の再利用・再生成、自動 commit の境界条件を確認したいとき。
 
 ## Do not read this when
 
-- src/commons/indexing.py の実装ロジックを直接追いたいとき。
-- oracles 側の正本仕様や `INDEX.md` 全体の生成ルールだけを確認したいとき。
+- `src/commons/indexing.py` の実装ロジックを直接追いたいとき。
+- `oracles` 側の正本仕様や `INDEX.md` 全体の生成ルールだけを確認したいとき。
 - session や apply など、INDEX 保守以外のサブコマンド仕様を調べたいとき。
 
 ## hash
 
-- 9e596de407b3d4186c8509c6d5d6a306aafc3b02666024631461b1610054c110
+- 715641310a288809998d59f267faca617fea9ce3fff6ca0589e5a115749c8551
 
 # `test_repo.py`
 
@@ -172,7 +174,7 @@
 
 ## hash
 
-- 8fef1e35de64148ab86e40d59eb5de2a62d468a3aa6066f2437e081d42afa79d
+- 899d1b3d5dfa57a35c5a21b6eee915a956acef835d40d6926497de5f88d86ebd
 
 # `test_timestamps.py`
 
