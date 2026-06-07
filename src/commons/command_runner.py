@@ -42,34 +42,33 @@ def run_command(
                 result = handler(repo_root)
                 if isinstance(result, int):
                     exit_code = result
+                    if (
+                        exit_code != 0
+                        and exit_code not in non_error_exit_code_set
+                    ):
+                        raise _subcommand_exit_error(
+                            exit_code,
+                            "サブコマンド本体が "
+                            f"終了コード {exit_code} を返しました。",
+                        )
             except typer.Exit as exit_error:
                 exit_code = exit_error.exit_code or 0
                 if (
                     exit_code != 0
                     and exit_code not in non_error_exit_code_set
                 ):
-                    report_error = CmocError(
-                        "サブコマンドがエラー終了しました。",
-                        actions=[
-                            "直前の出力に個別の失敗理由がある場合は、"
-                            "その内容に従って入力値やリポジトリ状態を"
-                            "修正してください。",
-                            "原因が特定できない場合は、Detail と Call stack を"
-                            "確認してから cmoc を再実行してください。",
-                        ],
-                        detail=(
-                            "サブコマンド本体が "
-                            f"typer.Exit({exit_code}) を送出しました。"
-                        ),
-                        exit_code=exit_code,
+                    report_error = _subcommand_exit_error(
+                        exit_code,
+                        "サブコマンド本体が "
+                        f"typer.Exit({exit_code}) を送出しました。",
                     )
                     report_error = report_error.with_traceback(
                         exit_error.__traceback__
                     )
-                    print(format_error_report(report_error), file=sys.stderr)
+                    print(format_error_report(report_error))
                 raise
             except Exception as error:
-                print(format_error_report(error), file=sys.stderr)
+                print(format_error_report(error))
                 exit_code = getattr(error, "exit_code", 1)
                 raise typer.Exit(exit_code) from error
             finally:
@@ -82,7 +81,7 @@ def run_command(
     except typer.Exit:
         raise
     except Exception as error:
-        print(format_error_report(error), file=sys.stderr)
+        print(format_error_report(error))
         exit_code = getattr(error, "exit_code", 1)
         _print_completion_report(
             started=started,
@@ -94,6 +93,22 @@ def run_command(
 
     if exit_code != 0:
         raise typer.Exit(exit_code)
+
+
+def _subcommand_exit_error(exit_code: int, detail: str) -> CmocError:
+    """サブコマンド本体の非 0 終了を共通エラーレポート用に正規化する。"""
+    return CmocError(
+        "サブコマンドがエラー終了しました。",
+        actions=[
+            "直前の出力に個別の失敗理由がある場合は、"
+            "その内容に従って入力値やリポジトリ状態を"
+            "修正してください。",
+            "原因が特定できない場合は、Detail と Call stack を"
+            "確認してから cmoc を再実行してください。",
+        ],
+        detail=detail,
+        exit_code=exit_code,
+    )
 
 
 def _print_completion_report(

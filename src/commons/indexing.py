@@ -13,6 +13,7 @@ import threading
 from collections.abc import Iterable
 from collections.abc import Iterator
 from contextlib import contextmanager
+from contextvars import copy_context
 from pathlib import Path
 from urllib.parse import unquote_to_bytes
 
@@ -24,9 +25,7 @@ from .codex import (
 )
 from .errors import CmocError
 
-_INDEX_DIRECTORY_EXCLUDED_NAMES: set[str] = {"build", "tmp", "__pycache__"}
 _BINARY_DETECTION_CHUNK_SIZE = 8192
-_EMPTY_SHA256_DIGEST = hashlib.sha256(b"").hexdigest()
 _INDEX_OUTPUT_SCHEMA: dict[str, object] = {
     "type": "object",
     "additionalProperties": False,
@@ -59,6 +58,43 @@ def maintain_indexes(
             repo_root,
             excluded_index_roots=excluded_index_roots,
         )
+
+
+def find_index_inconsistencies(
+    repo_root: Path,
+    *,
+    index_roots: Iterable[Path | str] | None = None,
+    excluded_index_roots: Iterable[Path | str] | None = None,
+) -> list[str]:
+    """`INDEX.md` を更新せず、配置対象と entry/hash の不整合を返す。"""
+    gitignore_matcher = _GitignoreMatcher(repo_root)
+    excluded_roots = _normalize_excluded_index_roots(
+        repo_root,
+        excluded_index_roots,
+    )
+    directories = _index_directories(
+        repo_root,
+        gitignore_matcher,
+        excluded_index_roots=excluded_roots,
+    )
+    included_roots = _normalize_optional_index_roots(repo_root, index_roots)
+    if included_roots is not None:
+        directories = [
+            directory
+            for directory in directories
+            if _is_under_any_path(directory, included_roots)
+        ]
+
+    inconsistencies: list[str] = []
+    for directory in sorted(directories):
+        inconsistencies.extend(
+            _index_directory_inconsistencies(
+                repo_root,
+                directory,
+                gitignore_matcher,
+            )
+        )
+    return inconsistencies
 
 
 def is_maintained_index_path(
@@ -115,17 +151,19 @@ def is_maintained_index_path_at_commit(
     )
     if _is_under_any_path(repo_root / directory, excluded_roots):
         return False
-    if _has_pruned_index_directory_ancestor(repo_root, repo_root / directory):
+    if _has_pruned_index_directory_ancestor_at_commit(
+        repo_root,
+        commit_hash,
+        directory,
+    ):
         return False
 
-    candidates = [relative_path]
+    candidates = []
     if directory.as_posix() != ".":
         candidates.append(directory.as_posix())
 
-    from .repo import root_gitignored_paths_at_commit
-
-    ignored = root_gitignored_paths_at_commit(repo_root, commit_hash, candidates)
-    return relative_path not in ignored and directory.as_posix() not in ignored
+    ignored = _gitignored_paths_at_commit(repo_root, commit_hash, candidates)
+    return directory.as_posix() not in ignored
 
 
 def _maintain_indexes_unlocked(
@@ -160,6 +198,7 @@ def _maintain_indexes_unlocked(
         ) as executor:
             future_by_directory = {
                 executor.submit(
+                    copy_context().run,
                     _write_index_if_needed,
                     repo_root,
                     directory,
@@ -186,6 +225,19 @@ def _maintain_indexes_unlocked(
             repo_root,
             sorted(changed_paths),
             "Maintain INDEX.md files",
+        )
+    inconsistencies = find_index_inconsistencies(
+        repo_root,
+        excluded_index_roots=excluded_roots,
+    )
+    if inconsistencies:
+        raise CmocError(
+            "INDEX.md メンテナンス後の機械的チェックに失敗しました。",
+            [
+                "Detail の不整合一覧を確認し、INDEX.md 生成処理を修正してから再実行してください。",
+                "一時的なファイル変更が同時に起きていないか確認してください。",
+            ],
+            "\n".join(inconsistencies),
         )
     return bool(changed_paths)
 
@@ -278,10 +330,7 @@ def _index_directories(
         if _is_under_any_path(directory, excluded_index_roots):
             continue
         relative_parts = directory.relative_to(repo_root).parts
-        if any(
-            part.startswith(".") or part in _INDEX_DIRECTORY_EXCLUDED_NAMES
-            for part in relative_parts
-        ):
+        if any(part.startswith(".") for part in relative_parts):
             continue
         if _is_repo_memo(repo_root, directory):
             continue
@@ -309,6 +358,16 @@ def _normalize_excluded_index_roots(
             continue
         normalized_roots.add(repo_root / relative)
     return normalized_roots
+
+
+def _normalize_optional_index_roots(
+    repo_root: Path,
+    index_roots: Iterable[Path | str] | None,
+) -> set[Path] | None:
+    """検査対象 root 群を repo 内の絶対 path に正規化する。"""
+    if index_roots is None:
+        return None
+    return _normalize_excluded_index_roots(repo_root, index_roots)
 
 
 def _is_under_any_path(path: Path, roots: set[Path]) -> bool:
@@ -349,11 +408,7 @@ def _write_index_if_needed(
         if (
             existing is not None
             and _entry_hash(existing) == digest
-            # Empty file and empty directory hashes collide by specification.
-            # Without storing non-spec metadata in INDEX.md, regenerate these
-            # entries so file/directory replacement cannot silently reuse text.
-            and digest != _EMPTY_SHA256_DIGEST
-            and _entry_format_is_valid(existing, child.name, digest)
+            and _entry_format_is_valid(repo_root, existing, child.name, digest)
         ):
             entry_items.append(existing)
         else:
@@ -379,6 +434,51 @@ def _write_index_if_needed(
     return True
 
 
+def _index_directory_inconsistencies(
+    repo_root: Path,
+    directory: Path,
+    gitignore_matcher: "_GitignoreMatcher",
+) -> list[str]:
+    """1 directory の `INDEX.md` と直下目次対象の不整合を返す。"""
+    index_path = directory / "INDEX.md"
+    relative_index = index_path.relative_to(repo_root).as_posix()
+    old_content = _read_existing_index_content(index_path)
+    if old_content is None:
+        return [f"{relative_index}: invalid INDEX.md content"]
+    if not index_path.exists():
+        return [f"{relative_index}: missing INDEX.md"]
+
+    existing_entries = _parse_index_entries(old_content)
+    current_entries: dict[str, str] = {}
+    try:
+        children = sorted(directory.iterdir(), key=lambda path: path.name)
+    except OSError as error:
+        _raise_index_io_error("directory の直下項目列挙", directory, error)
+    for child in _index_entry_targets(repo_root, children, gitignore_matcher):
+        digest = _hash_path(repo_root, child, gitignore_matcher)
+        if digest is not None:
+            current_entries[child.name] = digest
+
+    inconsistencies: list[str] = []
+    for name, digest in sorted(current_entries.items()):
+        existing = existing_entries.get(name)
+        if existing is None:
+            inconsistencies.append(
+                f"{relative_index}: missing entry for {name}"
+            )
+            continue
+        if _entry_hash(existing) != digest:
+            inconsistencies.append(f"{relative_index}: stale hash for {name}")
+            continue
+        if not _entry_format_is_valid(repo_root, existing, name, digest):
+            inconsistencies.append(
+                f"{relative_index}: invalid entry for {name}"
+            )
+    for name in sorted(set(existing_entries) - set(current_entries)):
+        inconsistencies.append(f"{relative_index}: extra entry for {name}")
+    return inconsistencies
+
+
 def _resolve_index_entries(
     repo_root: Path,
     entry_items: list[str | tuple[Path, str]],
@@ -394,7 +494,13 @@ def _resolve_index_entries(
         max_workers=_index_worker_count(pending_count)
     ) as executor:
         future_by_position = {
-            executor.submit(_entry_for, repo_root, item[0], item[1]): position
+            executor.submit(
+                copy_context().run,
+                _entry_for,
+                repo_root,
+                item[0],
+                item[1],
+            ): position
             for position, item in enumerate(entry_items)
             if not isinstance(item, str)
         }
@@ -535,18 +641,18 @@ def _hash_path(
     gitignore_matcher: "_GitignoreMatcher",
 ) -> str | None:
     """ファイル内容または直下項目 serialization から sha256 を計算する。"""
-    # ファイルは内容 bytes をそのまま hash 化する。
     if path.is_file():
         try:
-            return hashlib.sha256(path.read_bytes()).hexdigest()
+            content = path.read_bytes()
         except OSError as error:
             _raise_index_io_error("ファイル内容の hash 計算", path, error)
+        return hashlib.sha256(content).hexdigest()
 
     if not path.is_dir():
         return None
 
-    # ディレクトリは直下目次対象の type/path/hash を安定形式で連結する。
-    serialized_entries: list[bytes] = []
+    # ディレクトリは直下目次対象の type/path/hash を文字列として連結する。
+    serialized_entries: list[str] = []
     try:
         children = sorted(
             path.iterdir(),
@@ -561,18 +667,15 @@ def _hash_path(
         if content_hash is None:
             continue
         serialized_entries.append(
-            b"".join(
-                [
-                    entry_type.encode("ascii"),
-                    b"\0",
-                    _filesystem_text_bytes(relative_path),
-                    b"\0",
-                    content_hash.encode("ascii"),
-                    b"\n",
-                ]
+            (
+                f"{entry_type}\0"
+                f"{_directory_hash_relative_path(relative_path)}\0"
+                f"{content_hash}\n"
             )
         )
-    return hashlib.sha256(b"".join(serialized_entries)).hexdigest()
+    return hashlib.sha256(
+        "".join(serialized_entries).encode("utf-8")
+    ).hexdigest()
 
 
 def _index_entry_targets(
@@ -661,12 +764,10 @@ def _raise_index_io_error(
 
 def _should_prune_index_directory(repo_root: Path, directory: Path) -> bool:
     """探索時に配下を読まない INDEX 配置除外ディレクトリか判定する。"""
-    # root 直下 memo と、名前ベース除外ディレクトリの配下は探索しない。
     name = directory.name
     return (
         directory.is_symlink()
         or name.startswith(".")
-        or name in _INDEX_DIRECTORY_EXCLUDED_NAMES
         or _is_repo_memo(repo_root, directory)
     )
 
@@ -685,6 +786,61 @@ def _has_pruned_index_directory_ancestor(
         if _should_prune_index_directory(repo_root, ancestor):
             return True
     return False
+
+
+def _has_pruned_index_directory_ancestor_at_commit(
+    repo_root: Path,
+    commit_hash: str,
+    directory: Path,
+) -> bool:
+    """指定 commit 時点で prune される ancestor 配下の INDEX 配置か判定する。"""
+    relative_parts = directory.parts
+    for depth in range(1, len(relative_parts) + 1):
+        ancestor = Path(*relative_parts[:depth])
+        if (
+            ancestor.name.startswith(".")
+            or ancestor.as_posix() == "memo"
+            or not _is_tree_path_at_commit(repo_root, commit_hash, ancestor)
+        ):
+            return True
+    return False
+
+
+def _is_tree_path_at_commit(
+    repo_root: Path,
+    commit_hash: str,
+    relative_path: Path,
+) -> bool:
+    """指定 commit の tree 上で relative path が directory か判定する。"""
+    from .repo import run_git
+
+    result = run_git(
+        repo_root,
+        [
+            "ls-tree",
+            "-z",
+            commit_hash,
+            "--",
+            relative_path.as_posix(),
+        ],
+        check=False,
+    )
+    if result.returncode != 0:
+        raise CmocError(
+            "commit 時点の INDEX.md 配置対象判定に失敗しました。",
+            [
+                "対象 commit と git repository の状態を確認してから cmoc を再実行してください。",
+                "git ls-tree が失敗する場合は、対象 branch や commit hash が存在するか確認してください。",
+            ],
+            result.stderr.strip(),
+        )
+
+    entries = [entry for entry in result.stdout.split("\0") if entry]
+    if len(entries) != 1:
+        return False
+    metadata, _separator, _path = entries[0].partition("\t")
+    fields = metadata.split()
+    return len(fields) >= 2 and fields[1] == "tree"
 
 
 def _is_repo_memo(repo_root: Path, path: Path) -> bool:
@@ -779,6 +935,95 @@ def _gitignore_git_env() -> dict[str, str]:
     return env
 
 
+def _gitignored_paths_at_commit(
+    repo_root: Path,
+    commit_hash: str,
+    relative_paths: list[str],
+) -> set[str]:
+    """指定 commit の全階層 `.gitignore` で ignore 対象 path を返す。"""
+    if not relative_paths:
+        return set()
+
+    from .repo import run_git
+
+    gitignore_paths = _ancestor_gitignore_paths(relative_paths)
+    gitignores: dict[str, str] = {}
+    for gitignore_path in gitignore_paths:
+        result = run_git(
+            repo_root,
+            ["show", f"{commit_hash}:{gitignore_path}"],
+            check=False,
+        )
+        if result.returncode == 0:
+            gitignores[gitignore_path] = result.stdout
+
+    if not gitignores:
+        return set()
+
+    env = _gitignore_git_env()
+    with tempfile.TemporaryDirectory(prefix="cmoc-gitignore-commit-") as temp_name:
+        temp_root = Path(temp_name)
+        subprocess.run(
+            ["git", "init", "-q"],
+            cwd=temp_root,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+        )
+        for gitignore_path, content in gitignores.items():
+            target = temp_root / gitignore_path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding="utf-8")
+        for relative_path in relative_paths:
+            target = temp_root / relative_path
+            target.mkdir(parents=True, exist_ok=True)
+
+        result = subprocess.run(
+            [
+                "git",
+                "-c",
+                f"core.excludesFile={os.devnull}",
+                "check-ignore",
+                "-z",
+                "--no-index",
+                "--stdin",
+            ],
+            cwd=temp_root,
+            check=False,
+            input=b"\0".join(os.fsencode(path) for path in relative_paths)
+            + b"\0",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+        )
+
+    if result.returncode not in {0, 1}:
+        raise CmocError(
+            ".gitignore の評価に失敗しました。",
+            [
+                ".gitignore の構文を確認してから cmoc を再実行してください。",
+                "一時的に .gitignore を単純化してから cmoc を再実行してください。",
+            ],
+            result.stderr.decode(errors="replace").strip(),
+        )
+    return {
+        os.fsdecode(path)
+        for path in result.stdout.split(b"\0")
+        if path
+    }
+
+
+def _ancestor_gitignore_paths(relative_paths: list[str]) -> list[str]:
+    """path の ancestor にある `.gitignore` path を root から順に返す。"""
+    gitignore_paths: set[str] = {".gitignore"}
+    for relative_path in relative_paths:
+        parts = Path(relative_path).parts
+        for depth in range(1, len(parts)):
+            gitignore_paths.add(Path(*parts[:depth], ".gitignore").as_posix())
+    return sorted(gitignore_paths, key=lambda path: (path.count("/"), path))
+
+
 def _validate_index_payload(value: object) -> None:
     """INDEX 生成用 Structured Output の schema を検査する。"""
     # top-level object と key 集合を先に検証する。
@@ -862,6 +1107,15 @@ def _decode_index_token(value: str) -> str:
     return os.fsdecode(unquote_to_bytes(value))
 
 
+def _directory_hash_relative_path(value: str) -> str:
+    """directory hash 用 relative path を UTF-8 文字列へ正規化する。"""
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        return _encode_index_token(value)
+    return value
+
+
 def _filesystem_text_bytes(value: str) -> bytes:
     """filesystem 由来文字列を surrogateescape を含めて bytes へ戻す。"""
     return os.fsencode(value)
@@ -896,11 +1150,16 @@ def _entry_hash(entry: str) -> str | None:
     return match.group(1)
 
 
-def _entry_format_is_valid(entry: str, name: str, digest: str) -> bool:
+def _entry_format_is_valid(
+    repo_root: Path,
+    entry: str,
+    name: str,
+    digest: str,
+) -> bool:
     """既存目次ブロックが仕様の固定フォーマットに一致するか判定する。"""
     # 見出しと 4 セクションの順序、説明欄の bullet 形式まで検査する。
     # Structured Output schema は空配列を許容するため、bullet 0 件も有効。
-    if _entry_has_known_stale_routing_text(entry):
+    if _entry_has_known_stale_routing_text(repo_root, entry):
         return False
 
     encoded_name = _encode_index_token(name)
@@ -927,18 +1186,11 @@ def _entry_format_is_valid(entry: str, name: str, digest: str) -> bool:
     return pattern.match(entry) is not None
 
 
-def _entry_has_known_stale_routing_text(entry: str) -> bool:
+def _entry_has_known_stale_routing_text(repo_root: Path, entry: str) -> bool:
     """既知の古い routing text を含む entry を弾く。"""
     # `cmo apply fork` のような誤誘導や、過去の仕様配置に基づく存在しない
-    # oracles path は hash が最新でも再生成対象にする。
-    return (
-        re.search(
-            r"(?<![A-Za-z0-9_-])cmo\s+(?:init|session|review|apply)\b",
-            entry,
-        )
-        is not None
-        or "oracles/app_specs/" in entry
-    )
+    # oracles path、別 worktree の絶対 path は hash が最新でも再生成対象にする。
+    return _normalize_known_index_routes(repo_root, entry) != entry
 
 
 def _safe_index_texts(repo_root: Path, values: list[str]) -> list[str]:
@@ -963,6 +1215,7 @@ def _safe_index_text(repo_root: Path, value: str) -> str:
 def _normalize_known_index_routes(repo_root: Path, text: str) -> str:
     """INDEX.md 用 text に含まれる既知の古い表記を現在の表記へ寄せる。"""
     text = _normalize_known_command_names(text)
+    text = _normalize_absolute_repository_paths(repo_root, text)
     stale_prefix = "oracles/app_specs/"
     current_prefix = "oracles/docs/app_specs/"
     if stale_prefix not in text:
@@ -972,6 +1225,48 @@ def _normalize_known_index_routes(repo_root: Path, text: str) -> str:
     if not (repo_root / "oracles/docs/app_specs").exists():
         return text
     return text.replace(stale_prefix, current_prefix)
+
+
+def _normalize_absolute_repository_paths(repo_root: Path, text: str) -> str:
+    """INDEX.md の説明文に混入した repository 絶対 path を相対 path へ寄せる。"""
+
+    def replace(match: re.Match[str]) -> str:
+        candidate = match.group(0)
+        replacement = _relative_repository_path_for_text(repo_root, candidate)
+        if replacement is None:
+            return candidate
+        return replacement
+
+    # Markdown link destinations such as `](/abs/path)` and code spans such as
+    # `` `/abs/path` `` can contain old worktree absolute paths.  Do not start
+    # matching at the slash inside relative paths or placeholders like
+    # `<cmoc-root>/src`; those are routing text, not absolute paths.
+    return re.sub(
+        r"(?<![A-Za-z0-9._~!$&'()*+,;=:@%<>-])"
+        r"/[A-Za-z0-9._~!$&'()*+,;=:@%/-]+",
+        replace,
+        text,
+    )
+
+
+def _relative_repository_path_for_text(
+    repo_root: Path,
+    candidate: str,
+) -> str | None:
+    """説明文内の絶対 path が repo 内項目を指すなら repo 相対表記を返す。"""
+    candidate_path = Path(candidate)
+    resolved_repo_root = repo_root.resolve()
+    try:
+        return candidate_path.resolve().relative_to(resolved_repo_root).as_posix()
+    except (OSError, ValueError):
+        pass
+
+    parts = candidate_path.parts
+    for start in range(1, len(parts)):
+        relative_candidate = Path(*parts[start:])
+        if relative_candidate.parts and (repo_root / relative_candidate).exists():
+            return relative_candidate.as_posix()
+    return None
 
 
 def _normalize_known_command_names(text: str) -> str:

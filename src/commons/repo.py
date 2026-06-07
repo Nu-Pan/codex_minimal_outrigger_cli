@@ -11,6 +11,7 @@ from .timestamps import is_timestamp
 
 SESSION_BRANCH_PREFIX = "cmoc/session/"
 APPLY_BRANCH_PREFIX = "cmoc/apply/"
+REVIEW_BRANCH_PREFIX = "cmoc/review/"
 SESSION_STATES = {"active", "joined", "abandoned", "error"}
 APPLY_STATES = {"ready", "running", "completed", "error"}
 SESSION_STATE_KEYS = {
@@ -64,13 +65,19 @@ def head_commit(repo_root: Path) -> str:
 
 def is_cmoc_branch(branch_name: str) -> bool:
     """cmoc 管理ブランチ名か判定する。"""
-    return is_session_branch(branch_name) or is_apply_branch(branch_name)
+    return (
+        is_session_branch(branch_name)
+        or is_apply_branch(branch_name)
+        or is_review_branch(branch_name)
+    )
 
 
 def is_cmoc_reserved_branch(branch_name: str) -> bool:
     """cmoc が予約している branch namespace 配下か判定する。"""
-    return branch_name.startswith(SESSION_BRANCH_PREFIX) or branch_name.startswith(
-        APPLY_BRANCH_PREFIX
+    return (
+        branch_name.startswith(SESSION_BRANCH_PREFIX)
+        or branch_name.startswith(APPLY_BRANCH_PREFIX)
+        or branch_name.startswith(REVIEW_BRANCH_PREFIX)
     )
 
 
@@ -94,12 +101,25 @@ def is_apply_branch(branch_name: str) -> bool:
     )
 
 
+def is_review_branch(branch_name: str) -> bool:
+    """`cmoc/review/<session-id>/<review-run-id>` 形式のブランチ名か判定する。"""
+    suffix = branch_name.removeprefix(REVIEW_BRANCH_PREFIX)
+    parts = suffix.split("/")
+    return (
+        branch_name.startswith(REVIEW_BRANCH_PREFIX)
+        and len(parts) == 2
+        and all(is_timestamp(part) for part in parts)
+    )
+
+
 def session_id_from_branch(branch_name: str) -> str:
     """cmoc 管理ブランチ名から session id を取り出す。"""
     if is_session_branch(branch_name):
         return branch_name.removeprefix(SESSION_BRANCH_PREFIX)
     if is_apply_branch(branch_name):
         return branch_name.removeprefix(APPLY_BRANCH_PREFIX).split("/", 1)[0]
+    if is_review_branch(branch_name):
+        return branch_name.removeprefix(REVIEW_BRANCH_PREFIX).split("/", 1)[0]
     raise CmocError(
         "cmoc 管理 branch ではありません。",
         [
@@ -115,14 +135,7 @@ def apply_worktree_path_from_branch(repo_root: Path, apply_branch: str) -> Path:
     session_id, apply_run_id = apply_branch.removeprefix(
         APPLY_BRANCH_PREFIX
     ).split("/", 1)
-    return (
-        repo_root
-        / ".cmoc"
-        / "worktrees"
-        / "apply"
-        / session_id
-        / apply_run_id
-    )
+    return repo_root / ".cmoc" / "worktrees" / session_id / apply_run_id
 
 
 def worktree_path_for_branch(repo_root: Path, branch_name: str) -> Path | None:
@@ -311,12 +324,16 @@ def _owning_repo_root_from_apply_worktree_path(
 ) -> Path | None:
     """cmoc apply worktree path から所有元 repo root を復元する。"""
     parts = repo_root.resolve().parts
-    marker = (".cmoc", "worktrees", "apply", session_id)
-    for index in range(0, len(parts) - len(marker)):
-        if parts[index : index + len(marker)] != marker:
-            continue
-        if len(parts) == index + len(marker) + 1:
-            return Path(*parts[:index])
+    markers = (
+        (".cmoc", "worktrees", session_id),
+        (".cmoc", "worktrees", "apply", session_id),
+    )
+    for marker in markers:
+        for index in range(0, len(parts) - len(marker)):
+            if parts[index : index + len(marker)] != marker:
+                continue
+            if len(parts) == index + len(marker) + 1:
+                return Path(*parts[:index])
     return None
 
 
@@ -328,7 +345,7 @@ def initial_session_state(
     return {
         "session": {
             "state": "active",
-            "session_home_branch": None,
+            "session_home_branch": session_home_branch,
             "session_start_commit": session_start_commit,
             "last_joined_apply_oracle_snapshot_commit": None,
         },
@@ -618,7 +635,7 @@ def _validate_session_state_schema(
         path,
     )
     _validate_state_value(session_state, SESSION_STATES, "session.state", path)
-    _validate_optional_string(
+    _validate_required_string(
         session,
         "session_home_branch",
         "session.session_home_branch",
@@ -1407,7 +1424,7 @@ def filter_apply_implementation_file_paths(
             path
             for path in relative_paths
             if not _is_excluded_implementation_path(path)
-            and not _is_forbidden_apply_implementation_path(path)
+            and not _is_forbidden_apply_investigation_path(path)
         }
     )
     ignored = _root_gitignored_paths(repo_root, candidates)
@@ -1425,7 +1442,7 @@ def filter_apply_implementation_file_paths_at_commit(
             path
             for path in relative_paths
             if not _is_excluded_implementation_path(path)
-            and not _is_forbidden_apply_implementation_path(path)
+            and not _is_forbidden_apply_investigation_path(path)
         }
     )
     ignored = root_gitignored_paths_at_commit(repo_root, commit_hash, candidates)
@@ -1435,8 +1452,8 @@ def filter_apply_implementation_file_paths_at_commit(
 def is_apply_implementation_path(repo_root: Path, relative_path: str) -> bool:
     """root 相対 path が apply の調査対象になる実装ファイルか判定する。"""
     return (
-        is_implementation_path(repo_root, relative_path)
-        and not _is_forbidden_apply_implementation_path(relative_path)
+        not _is_forbidden_apply_investigation_path(relative_path)
+        and is_implementation_path(repo_root, relative_path)
     )
 
 
@@ -1781,17 +1798,9 @@ def _is_excluded_implementation_path(relative_path: str) -> bool:
     )
 
 
-def _is_forbidden_apply_implementation_path(relative_path: str) -> bool:
-    """apply の Codex 調査起点にしてはいけない path か判定する。"""
-    # workspace-write で編集できない root 管理文書と禁止領域は調査対象からも外す。
-    return (
-        relative_path == "README.md"
-        or relative_path == "AGENTS.md"
-        or relative_path == "memo"
-        or relative_path.startswith("memo/")
-        or relative_path == ".agents"
-        or relative_path.startswith(".agents/")
-    )
+def _is_forbidden_apply_investigation_path(relative_path: str) -> bool:
+    """Codex read-only 調査の起点にしてはいけない path か判定する。"""
+    return relative_path == "memo" or relative_path.startswith("memo/")
 
 
 def read_session_start_commit(repo_root: Path, branch_name: str) -> str:

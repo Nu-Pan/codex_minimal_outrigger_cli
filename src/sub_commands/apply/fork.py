@@ -27,9 +27,11 @@ from commons.codex import (
 )
 from commons.command_runner import run_command
 from commons.errors import CmocError
+from commons.indexing import find_index_inconsistencies
 from commons.indexing import is_maintained_index_path
 from commons.indexing import maintain_indexes
 from commons.report_files import write_timestamped_report
+from commons.subcommand_log import write_console_block
 from commons.repo import (
     APPLY_BRANCH_PREFIX,
     assert_no_uncommitted_changes,
@@ -320,10 +322,11 @@ def cmoc_apply_impl(
     failed_stage = "apply worktree 作成"
     apply_run_id = ""
     apply_branch = ""
-    apply_worktree = state_root / ".cmoc" / "worktrees" / "apply" / session_id
+    apply_worktree = state_root / ".cmoc" / "worktrees" / session_id
     discrepancy_counts: list[int] = []
     apply_start_needs_error_record = False
     apply_error_recorded = False
+    success_report_path: Path | None = None
     try:
         with _locked_apply_start(state_root, session_id):
             state = read_session_state(state_root, session_id)
@@ -332,6 +335,7 @@ def cmoc_apply_impl(
                 session_branch,
             )
             investigation_base_commit = _scope_base_commit(
+                state_root,
                 state,
                 session_start_commit,
                 scope,
@@ -487,12 +491,14 @@ def cmoc_apply_impl(
             session_branch,
             apply_branch,
             apply_worktree,
+            session_start_commit,
             oracle_snapshot_commit,
             session_head_at_apply_start,
             session_head_at_apply_finish,
             completed,
             discrepancy_counts,
         )
+        success_report_path = report_path
         failed_stage = "final output 書き込み"
         print(f"apply run id: {apply_run_id}")
         print(str(report_path))
@@ -517,6 +523,8 @@ def cmoc_apply_impl(
                 apply_branch=apply_branch,
                 oracle_snapshot_commit=oracle_snapshot_commit,
             )
+        if failed_stage == "final output 書き込み" and success_report_path:
+            success_report_path.unlink(missing_ok=True)
         try:
             session_head_at_apply_finish = _session_branch_head_for_report(
                 repo_root,
@@ -529,6 +537,7 @@ def cmoc_apply_impl(
                 session_branch,
                 apply_branch,
                 apply_worktree,
+                session_start_commit,
                 oracle_snapshot_commit,
                 session_head_at_apply_start,
                 session_head_at_apply_finish,
@@ -617,8 +626,8 @@ def _validate_repeat_options(
         raise CmocError(
             "調査・修正ループ回数に負の値は指定できません。",
             [
-                "`--repeat-investigate-and-fix` には 0 以上の整数を指定してください。",
-                "既定の上限を使う場合は `--repeat-investigate-and-fix` を省略してください。",
+                "`--apply-loop` には 0 以上の整数を指定してください。",
+                "既定の上限を使う場合は `--apply-loop` を省略してください。",
             ],
             f"repeat_investigate_and_fix: {repeat_investigate_and_fix}",
         )
@@ -626,8 +635,8 @@ def _validate_repeat_options(
         raise CmocError(
             "要修正点リスト改善ループ回数に負の値は指定できません。",
             [
-                "`--repeat-improove-fixing-list` には 0 以上の整数を指定してください。",
-                "既定の上限を使う場合は `--repeat-improove-fixing-list` を省略してください。",
+                "`--improove-fixing-list-loop` には 0 以上の整数を指定してください。",
+                "既定の上限を使う場合は `--improove-fixing-list-loop` を省略してください。",
             ],
             f"repeat_improove_fixing_list: {repeat_improove_fixing_list}",
         )
@@ -648,6 +657,7 @@ def _validate_apply_scope(scope: str) -> None:
 
 
 def _scope_base_commit(
+    repo_root: Path,
     state: dict[str, object],
     session_start_commit: str,
     scope: ApplyScope,
@@ -664,19 +674,91 @@ def _scope_base_commit(
                 "復旧できない場合は、現在の session を使わず新しい session を開始してください。",
             ],
         )
-    last_joined = session.get("last_joined_apply_oracle_snapshot_commit")
-    if last_joined is None:
+    last_snapshot = session.get("last_joined_apply_oracle_snapshot_commit")
+    if last_snapshot is None:
         return session_start_commit
-    if not isinstance(last_joined, str) or not last_joined:
+    if not isinstance(last_snapshot, str) or not last_snapshot:
         raise CmocError(
             "session state ファイルの形式が不正です。",
             [
                 "session.last_joined_apply_oracle_snapshot_commit を確認して復旧してください。",
                 "復旧できない場合は、現在の session を使わず新しい session を開始してください。",
             ],
-            f"last_joined_apply_oracle_snapshot_commit: {last_joined}",
+            f"last_joined_apply_oracle_snapshot_commit: {last_snapshot}",
         )
-    return last_joined
+    return _last_joined_apply_join_commit(repo_root, last_snapshot)
+
+
+def _last_joined_apply_join_commit(
+    repo_root: Path,
+    oracle_snapshot_commit: str,
+) -> str:
+    """最後に join した apply の merge commit を git 履歴から導出する。"""
+    result = run_git(
+        repo_root,
+        [
+            "log",
+            "--merges",
+            "--first-parent",
+            "--format=%H",
+            f"{oracle_snapshot_commit}..HEAD",
+        ],
+        check=False,
+    )
+    if result.returncode != 0:
+        raise CmocError(
+            "rolling scope の基準 commit を導出できませんでした。",
+            [
+                "session.last_joined_apply_oracle_snapshot_commit が git 履歴上に存在するか確認してください。",
+                "復旧できない場合は `cmoc apply fork --scope session` を使って再実行してください。",
+            ],
+            "\n".join(
+                [
+                    f"last_joined_apply_oracle_snapshot_commit: {oracle_snapshot_commit}",
+                    result.stderr.strip(),
+                ]
+            ).strip(),
+        )
+    for commit_hash in result.stdout.splitlines():
+        commit_hash = commit_hash.strip()
+        if not commit_hash:
+            continue
+        subject = run_git(
+            repo_root,
+            ["show", "-s", "--format=%s", commit_hash],
+        ).stdout.strip()
+        if not _is_apply_branch_merge_subject(subject):
+            continue
+        parents = run_git(
+            repo_root,
+            ["rev-list", "--parents", "-n", "1", commit_hash],
+        ).stdout.split()
+        if len(parents) < 3:
+            continue
+        apply_tip = parents[2]
+        contains_result = run_git(
+            repo_root,
+            ["merge-base", "--is-ancestor", oracle_snapshot_commit, apply_tip],
+            check=False,
+        )
+        if contains_result.returncode == 0:
+            return commit_hash
+    raise CmocError(
+        "rolling scope の基準 commit を導出できませんでした。",
+        [
+            "最後に join した apply の merge commit が session branch の履歴にあるか確認してください。",
+            "復旧できない場合は `cmoc apply fork --scope session` を使って再実行してください。",
+        ],
+        f"last_joined_apply_oracle_snapshot_commit: {oracle_snapshot_commit}",
+    )
+
+
+def _is_apply_branch_merge_subject(subject: str) -> bool:
+    """git merge が作る apply branch merge message か判定する。"""
+    return (
+        subject.startswith(f"Merge branch '{APPLY_BRANCH_PREFIX}")
+        or subject.startswith(f'Merge branch "{APPLY_BRANCH_PREFIX}')
+    )
 
 
 def _create_apply_worktree(
@@ -776,14 +858,7 @@ def _plan_apply_worktree(
     """次に作成を試みる apply run id、branch、worktree path を組み立てる。"""
     apply_run_id = make_timestamp()
     apply_branch = f"{APPLY_BRANCH_PREFIX}{session_id}/{apply_run_id}"
-    apply_worktree = (
-        repo_root
-        / ".cmoc"
-        / "worktrees"
-        / "apply"
-        / session_id
-        / apply_run_id
-    )
+    apply_worktree = repo_root / ".cmoc" / "worktrees" / session_id / apply_run_id
     return _ApplyWorktreePlan(apply_run_id, apply_branch, apply_worktree)
 
 
@@ -920,7 +995,9 @@ def _investigate_discrepancies(
             if job.kind == "oracle"
             else "実装調査"
         )
-        print(f"{label} ({job.index}/{job.total}) {job.target.path}")
+        write_console_block(
+            f"{label} ({job.index}/{job.total}) {job.target.path}"
+        )
     if jobs:
         with ThreadPoolExecutor(max_workers=len(jobs)) as executor:
             futures = [
@@ -1231,7 +1308,7 @@ def _improove_fixing_list(
             improved,
             base_commit,
         )
-        print(
+        write_console_block(
             "要修正点リスト改善ループ "
             f"({loop_index}/{repeat_improove_fixing_list}) 要修正点: "
             f"{len(next_improved)}"
@@ -1398,7 +1475,9 @@ def _apply_discrepancies(
             None,
             "要修正点適用",
         )
-        print(f"要修正点適用 ({index}/{len(discrepancies)})")
+        write_console_block(
+            f"要修正点適用 ({index}/{len(discrepancies)})"
+        )
         before_head = head_commit(repo_root)
         run_codex_exec(
             repo_root,
@@ -1472,6 +1551,7 @@ def _commit_all_changes(repo_root: Path) -> None:
 def _maintain_apply_indexes(repo_root: Path) -> bool:
     """apply worktree 上で cmoc 管理 INDEX.md を保守する。"""
     excluded_roots = _apply_index_excluded_roots(repo_root)
+    _assert_excluded_indexes_current(repo_root, excluded_roots)
     if _maintain_indexes_accepts_excluded_roots():
         return maintain_indexes(
             repo_root,
@@ -1494,6 +1574,34 @@ def _maintain_indexes_accepts_excluded_roots() -> bool:
 def _apply_index_excluded_roots(repo_root: Path) -> list[Path]:
     """apply worktree の INDEX メンテナンス除外 root 群を返す。"""
     return [repo_root / "oracles"]
+
+
+def _assert_excluded_indexes_current(
+    repo_root: Path,
+    excluded_roots: list[Path],
+) -> None:
+    """編集禁止 root の INDEX 不整合を、更新せずに事前検出する。"""
+    indexed_roots = [
+        root
+        for root in excluded_roots
+        if root.exists() and any(root.rglob("INDEX.md"))
+    ]
+    if not indexed_roots:
+        return
+    inconsistencies = find_index_inconsistencies(
+        repo_root,
+        index_roots=indexed_roots,
+    )
+    if not inconsistencies:
+        return
+    raise CmocError(
+        "編集禁止パス配下の INDEX.md が実在ファイル構成と一致していません。",
+        [
+            "編集禁止パスは apply では自動更新できないため、先に INDEX.md を整備してください。",
+            "整備後に `cmoc apply` を再実行してください。",
+        ],
+        "\n".join(inconsistencies),
+    )
 
 
 def _assert_forbidden_paths_clean(
@@ -1631,6 +1739,7 @@ def _write_apply_report(
     session_branch: str,
     branch_name: str,
     apply_worktree: Path,
+    session_fork_commit: str,
     oracle_snapshot_commit: str,
     session_head_at_apply_start: str,
     session_head_at_apply_finish: str,
@@ -1663,6 +1772,7 @@ def _write_apply_report(
             session_branch=session_branch,
             apply_branch=branch_name,
             apply_worktree=apply_worktree,
+            session_fork_commit=session_fork_commit,
             oracle_snapshot_commit=oracle_snapshot_commit,
             session_head_at_apply_start=session_head_at_apply_start,
             session_head_at_apply_finish=session_head_at_apply_finish,
@@ -1718,7 +1828,10 @@ def _generate_change_summary(
         [
             "あなたはソフトウェア変更内容の要約担当です。",
             f"`{repo_root}` のブランチ `{branch_name}` の変更内容をカテゴリ別に要約してください。",
-            "完了条件は Structured Output schema に従い、changes 配列だけを返すことです。",
+            (
+                "完了条件は Structured Output schema に従い、top-level JSON object として "
+                '{"changes": [...]} を返すことです。'
+            ),
             f"具体的には `{oracle_snapshot_commit}` から `{branch_name}` の HEAD までの差分と、"
             "working tree / staging area に残っている未コミット差分を対象にしてください。",
             "対象変更 path の機械的な収集結果は次の JSON 配列です。",
@@ -1967,6 +2080,7 @@ def _write_apply_error_report(
     session_branch: str,
     apply_branch: str,
     apply_worktree: Path,
+    session_fork_commit: str,
     oracle_snapshot_commit: str,
     session_head_at_apply_start: str,
     session_head_at_apply_finish: str,
@@ -2024,6 +2138,7 @@ def _write_apply_error_report(
             session_branch=session_branch,
             apply_branch=apply_branch,
             apply_worktree=apply_worktree,
+            session_fork_commit=session_fork_commit,
             oracle_snapshot_commit=oracle_snapshot_commit,
             session_head_at_apply_start=session_head_at_apply_start,
             session_head_at_apply_finish=session_head_at_apply_finish,
@@ -2062,7 +2177,9 @@ def _validate_apply_report(
             "cmoc_session_id",
             "cmoc_apply_run_id",
             "cmoc_session_branch",
+            "cmoc_session_fork_commit",
             "cmoc_apply_branch",
+            "cmoc_apply_fork_commit",
             "apply_worktree_path",
             "oracle_snapshot_commit",
             "session_head_at_apply_start",
@@ -2215,6 +2332,7 @@ def _apply_report_with_front_matter(
     session_branch: str,
     apply_branch: str,
     apply_worktree: Path,
+    session_fork_commit: str,
     oracle_snapshot_commit: str,
     session_head_at_apply_start: str,
     session_head_at_apply_finish: str,
@@ -2228,7 +2346,9 @@ def _apply_report_with_front_matter(
         f"cmoc_session_id: {_yaml_string(session_id)}",
         f"cmoc_apply_run_id: {_yaml_string(apply_run_id)}",
         f"cmoc_session_branch: {_yaml_string(session_branch)}",
+        f"cmoc_session_fork_commit: {_yaml_string(session_fork_commit)}",
         f"cmoc_apply_branch: {_yaml_string(apply_branch)}",
+        f"cmoc_apply_fork_commit: {_yaml_string(oracle_snapshot_commit)}",
         f"apply_worktree_path: {_yaml_string(str(apply_worktree))}",
         f"oracle_snapshot_commit: {_yaml_string(oracle_snapshot_commit)}",
         f"session_head_at_apply_start: {_yaml_string(session_head_at_apply_start)}",

@@ -50,47 +50,50 @@
 
 ## Summary
 
-- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体実装で、session branch 上で apply run を開始し、不整合調査から修正反復、報告書作成までを担当するモジュールです。
-- state 検証、apply worktree 作成、scope に応じた調査対象の絞り込み、Codex CLI への file 起点調査、修正適用、INDEX 保守、終了コード分岐をまとめています。
+- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体実装モジュールで、session state の検証から apply worktree の作成、不整合調査と修正適用、最終レポート生成までをまとめて担当します。
+- このモジュールには、`apply` 開始時の状態遷移、`.cmoc` の追跡対象外保証、scope / repeat オプションの検証、dirty path の管理、報告書の書き込みまでを支える主要ヘルパー群が含まれます。
+- 不整合調査の Structured Output schema、要修正点リストの改善、変更要約の生成、エラーレポートのフォールバックなど、`cmoc apply fork` の実行制御と診断処理の中核を担うファイルです。
 
 ## Read this when
 
-- `cmoc apply fork` の処理順や責務を追いたいとき。
-- session/apply state の検証、apply worktree 作成、排他制御、`.cmoc` の ignore 保証を確認したいとき。
-- 要修正点の Structured Output、調査・修正ループ、レポート出力、`INDEX.md` の自動メンテナンスを確認したいとき。
-- 途中失敗時の error report と、収束・未収束の終了コードを確認したいとき。
+- `src/sub_commands/apply/fork.py` の実装・修正・レビュー・テストを行いたいとき。
+- `cmoc apply fork` の開始条件、`session.state` / `apply.state` の検証、`--scope` や反復回数オプションの扱いを確認したいとき。
+- apply worktree の作成、`.cmoc` の追跡対象外保証、不整合調査・修正ループ、レポート出力までの一連の処理順を追いたいとき。
+- Structured Output の schema、要修正点リストの改善、change summary の生成、payload 検証、commit や forbidden path の扱いを確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply` の利用手順や正本仕様だけを確認したいとき。
-- `cmoc apply join` や `cmoc apply abandon` の終了・破棄処理だけを確認したいとき。
-- `src/sub_commands/apply` 配下のパッケージ宣言や入口構造だけを確認したいとき。
-- `apply_fork` とは無関係な `session` や `review` の実装を確認したいとき。
+- `cmoc apply fork` の利用手順や引数の意味だけを確認したいときは、実装ではなく `oracles/docs/app_specs/sub_commands/apply_fork.md` を読むべきです。
+- `cmoc apply join` や `cmoc apply abandon` の開始・統合・破棄だけを追いたいときは、このファイルではなく各モジュール本体を読むべきです。
+- `src/sub_commands/apply` 配下の入口構造だけを確認したいときは、このファイルではなく `src/sub_commands/apply/INDEX.md` を読むべきです。
+- `INDEX.md` の生成ルールや `oracles` 側の共通仕様だけを確認したいときは、このファイルではなく `src/commons/indexing.py` や `oracles/docs/app_specs/` 側を読むべきです。
 
 ## hash
 
-- 32d6a8303e10a035e0d204854cb69837fcb4a290225661f459c13ac7655a8305
+- 67e2769693e25d3b4eae288682e20f01f221100045b3cd8a69d41eb2b63e2425
 
 # `join.py`
 
 ## Summary
 
-- `/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_08-51_06_000000872/2026-05-31_08-52_22_000000612/src/sub_commands/apply/join.py` は `cmoc apply join` の本体実装です。
-- 完了済みの apply branch を session branch へ `git merge --no-ff` で取り込み、state 検証、想定外差分の判定、`INDEX.md` conflict の扱いまでまとめて実行します。
-- merge 後は session state を `ready` に戻し、最後に joined した snapshot の記録、apply branch / worktree の安全な削除、warning の出力を行います。
+- `src/sub_commands/apply/join.py` は `cmoc apply join` の本体実装で、完了済み apply branch を session branch へ取り込む処理を担います。
+- `session.state` / `apply.state` の検証、想定外差分の判定と `--force-resolve`、`INDEX.md` conflict の自動解消、merge 後の cleanup と warning 出力をまとめています。
+- 保存済み report の確認、apply branch と worktree の削除条件、join 後の session state 更新もこのモジュールの責務です。
 
 ## Read this when
 
-- `cmoc apply join` の merge 手順、前提 state、現在 branch の検証を確認したいとき。
-- 想定外差分の検出、`--force-resolve` による revert、`INDEX.md` conflict の自動解消条件を追いたいとき。
-- join 後の session state 更新、apply branch / worktree の cleanup 条件、警告出力の流れを確認したいとき。
+- `src/sub_commands/apply/join.py` の実装・修正・レビュー・テストを行いたいとき。
+- 完了済み apply branch を session branch へ取り込む処理順、state 更新、cleanup 条件を確認したいとき。
+- `--force-resolve`、未コミット差分チェック、想定外差分の扱い、`INDEX.md` conflict の自動解消を追いたいとき。
+- 保存済み report の有無や apply worktree / branch 削除の安全条件を確認したいとき。
 
 ## Do not read this when
 
-- `/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_08-51_06_000000872/2026-05-31_08-52_22_000000612/src/sub_commands/apply/join.py` ではなく、`src/sub_commands/apply/__init__.py` だけで十分なとき。
-- `cmoc apply fork` や `cmoc apply abandon` の実装だけを追いたいとき。
-- 実装ではなく、`oracles/docs/app_specs/sub_commands/` 側の `cmoc apply join` 仕様断片だけを確認したいとき。
+- `cmoc apply fork` や `cmoc apply abandon` の開始・破棄フローだけを確認したいとき。
+- `cmoc session` 系の開始・統合・破棄だけを確認したいとき。
+- `cmoc apply join` の利用手順や正本仕様だけを確認したいとき。
+- `src/sub_commands/apply` 配下の入口構造だけを確認したくて、`join.py` の処理本体は不要なとき。
 
 ## hash
 
-- f1f4573b646b46e0ea797e1f435ae2fd61d83a97c86c2c1a204cf4291c2fbf93
+- fe85f15a3295a86166e1670f07e77e7a7ab6eaa4c2a81e5b2f61db9f0bdcc827

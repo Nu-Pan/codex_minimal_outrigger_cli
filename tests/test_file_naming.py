@@ -66,7 +66,4 @@ def test_subcommand_bodies_use_hierarchical_importable_layout() -> None:
 def _has_excluded_index_ancestor(repo_root: Path, path: Path) -> bool:
     """検査対象外のディレクトリ配下か判定する。"""
     relative_parts = path.relative_to(repo_root).parts[:-1]
-    return any(
-        part.startswith(".") or part in {"memo", "build", "tmp"}
-        for part in relative_parts
-    )
+    return any(part.startswith(".") or part == "memo" for part in relative_parts)
