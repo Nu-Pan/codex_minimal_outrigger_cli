@@ -65,13 +65,18 @@ def find_index_inconsistencies(
     repo_root: Path,
     *,
     index_roots: Iterable[Path | str] | None = None,
+    excluded_index_roots: Iterable[Path | str] | None = None,
 ) -> list[str]:
     """`INDEX.md` を更新せず、配置対象と entry/hash の不整合を返す。"""
     gitignore_matcher = _GitignoreMatcher(repo_root)
+    excluded_roots = _normalize_excluded_index_roots(
+        repo_root,
+        excluded_index_roots,
+    )
     directories = _index_directories(
         repo_root,
         gitignore_matcher,
-        excluded_index_roots=set(),
+        excluded_index_roots=excluded_roots,
     )
     included_roots = _normalize_optional_index_roots(repo_root, index_roots)
     if included_roots is not None:
@@ -217,6 +222,19 @@ def _maintain_indexes_unlocked(
             repo_root,
             sorted(changed_paths),
             "Maintain INDEX.md files",
+        )
+    inconsistencies = find_index_inconsistencies(
+        repo_root,
+        excluded_index_roots=excluded_roots,
+    )
+    if inconsistencies:
+        raise CmocError(
+            "INDEX.md メンテナンス後の機械的チェックに失敗しました。",
+            [
+                "Detail の不整合一覧を確認し、INDEX.md 生成処理を修正してから再実行してください。",
+                "一時的なファイル変更が同時に起きていないか確認してください。",
+            ],
+            "\n".join(inconsistencies),
         )
     return bool(changed_paths)
 

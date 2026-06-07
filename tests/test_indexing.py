@@ -983,6 +983,68 @@ def test_maintain_indexes_creates_missing_oracles_index(
     assert "# `docs`" in (oracle_root / "INDEX.md").read_text(encoding="utf-8")
 
 
+def test_maintain_indexes_repairs_oracle_tree_indexes_until_check_is_clean(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """missing/stale/extra が混在する oracles INDEX を修復後検査まで通す。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    app_specs = oracle_root / "docs" / "app_specs"
+    app_oracles = app_specs / "oracles"
+    schema_oracles = (
+        oracle_root
+        / "schemas"
+        / "structured_output"
+        / "review"
+        / "oracles"
+    )
+    app_oracles.mkdir(parents=True)
+    schema_oracles.mkdir(parents=True)
+    (app_specs / "indexing.md").write_text("indexing spec\n", encoding="utf-8")
+    (app_oracles / "enumerate.md").write_text("oracle spec\n", encoding="utf-8")
+    (schema_oracles / "enumerate_findings.json").write_text(
+        '{"type":"object"}\n',
+        encoding="utf-8",
+    )
+    zero_digest = "0" * 64
+    (oracle_root / "INDEX.md").write_text(
+        _index_entry("docs", zero_digest),
+        encoding="utf-8",
+    )
+    (app_specs / "INDEX.md").write_text(
+        _index_entry("oracles.md", zero_digest),
+        encoding="utf-8",
+    )
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "stale oracle tree indexes")
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """INDEX 生成用の最小 Structured Output を返す。"""
+        purpose = str(kwargs["purpose"])
+        return json.dumps(
+            {
+                "summary": [purpose],
+                "read_this_when": ["read"],
+                "do_not_read_this_when": ["skip"],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    changed = maintain_indexes(repo)
+
+    assert changed is True
+    assert find_index_inconsistencies(repo, index_roots=["oracles"]) == []
+    root_index = (oracle_root / "INDEX.md").read_text(encoding="utf-8")
+    app_specs_index = (app_specs / "INDEX.md").read_text(encoding="utf-8")
+    assert "# `docs`" in root_index
+    assert "# `schemas`" in root_index
+    assert "# `oracles`" in app_specs_index
+    assert "# `oracles.md`" not in app_specs_index
+    assert (schema_oracles / "INDEX.md").exists()
+
+
 def test_find_index_inconsistencies_reports_missing_extra_and_stale_entries(
     tmp_path: Path,
 ) -> None:
