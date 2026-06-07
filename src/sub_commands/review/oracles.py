@@ -380,22 +380,26 @@ def cmoc_review_oracles_impl(
 
         failed_stage = "oracle snapshot 作成"
         with tempfile.TemporaryDirectory(
-            prefix="cmoc-review-oracles-"
-        ) as snapshot_dir:
-            # Codex CLI が読む oracle 本文は review 開始時点 snapshot に固定する。
-            oracle_snapshot = _create_oracle_evaluation_snapshot(
+            prefix="cmoc-review-oracles-backup-"
+        ) as backup_dir:
+            # Codex CLI に読ませる内容を review worktree 内の oracles に固定する。
+            backup_snapshot = _create_oracle_evaluation_snapshot(
                 review_repo_root,
                 all_review_oracle_files,
-                Path(snapshot_dir),
+                Path(backup_dir),
                 display_repo_root=repo_root,
             )
 
             failed_stage = "INDEX.md メンテナンス"
             start_step(timer, 3, 6, "INDEX.md メンテナンス")
             _maintain_indexes_after_oracle_snapshot(review_repo_root)
-            oracle_snapshot = _sync_maintained_indexes_to_oracle_snapshot(
+            _restore_oracle_snapshot_to_review_worktree(
                 review_repo_root,
-                oracle_snapshot,
+                backup_snapshot,
+            )
+            oracle_snapshot = _create_worktree_oracle_evaluation_snapshot(
+                review_repo_root,
+                all_review_oracle_files,
                 display_repo_root=repo_root,
             )
 
@@ -787,57 +791,97 @@ def _create_oracle_evaluation_snapshot(
     )
 
 
-def _sync_maintained_indexes_to_oracle_snapshot(
+def _create_worktree_oracle_evaluation_snapshot(
     repo_root: Path,
-    snapshot: _OracleEvaluationSnapshot,
+    oracle_files: list[Path],
     *,
     display_repo_root: Path | None = None,
 ) -> _OracleEvaluationSnapshot:
-    """メンテナンス後の INDEX.md だけを評価 snapshot へ反映する。"""
+    """review worktree の oracles tree を Codex CLI の読み取り対象にする。"""
     display_root = (display_repo_root or repo_root).resolve()
-    original_oracle_root = (repo_root / "oracles").resolve()
-    snapshot_oracle_root = snapshot.snapshot_oracle_root
+    worktree_root = repo_root.resolve()
+    worktree_oracle_root = (worktree_root / "oracles").resolve()
+    display_oracle_root = (display_root / "oracles").resolve()
 
-    live_index_relatives: set[Path] = set()
-    if original_oracle_root.exists():
-        for original_index_path in original_oracle_root.rglob("INDEX.md"):
-            if not original_index_path.is_file():
-                continue
-            relative_path = original_index_path.relative_to(original_oracle_root)
-            live_index_relatives.add(relative_path)
-            snapshot_index_path = snapshot_oracle_root / relative_path
-            snapshot_index_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(
-                original_index_path,
-                snapshot_index_path,
-                follow_symlinks=True,
-            )
-
-    for snapshot_index_path in snapshot_oracle_root.rglob("INDEX.md"):
-        if not snapshot_index_path.is_file():
-            continue
-        relative_path = snapshot_index_path.relative_to(snapshot_oracle_root)
-        if relative_path not in live_index_relatives:
-            snapshot_index_path.unlink()
-
-    reference_files = set(snapshot.oracle_files)
-    reference_files.update(
-        _original_path_for_snapshot_path(
-            display_root,
-            snapshot_oracle_root,
-            index_path,
+    reference_files = {path.resolve() for path in oracle_files}
+    if display_root != worktree_root:
+        reference_files = {
+            _owner_path_for_worktree_path(display_root, worktree_root, path)
+            for path in reference_files
+        }
+    if worktree_oracle_root.exists():
+        reference_files.update(
+            _owner_path_for_worktree_path(display_root, worktree_root, index_path)
+            for index_path in worktree_oracle_root.rglob("INDEX.md")
+            if index_path.is_file()
         )
-        for index_path in snapshot_oracle_root.rglob("INDEX.md")
-        if index_path.is_file()
-    )
+
+    index_files = {
+        path
+        for path in reference_files
+        if path.name == "INDEX.md"
+    }
     return _OracleEvaluationSnapshot(
-        original_repo_root=snapshot.original_repo_root,
-        original_oracle_root=snapshot.original_oracle_root,
-        snapshot_root=snapshot.snapshot_root,
-        snapshot_oracle_root=snapshot.snapshot_oracle_root,
-        oracle_files=snapshot.oracle_files,
+        original_repo_root=display_root,
+        original_oracle_root=display_oracle_root,
+        snapshot_root=worktree_root,
+        snapshot_oracle_root=worktree_oracle_root,
+        oracle_files=frozenset(reference_files - index_files),
         reference_files=frozenset(reference_files),
     )
+
+
+def _restore_oracle_snapshot_to_review_worktree(
+    repo_root: Path,
+    snapshot: _OracleEvaluationSnapshot,
+) -> None:
+    """開始時点の oracle 本文とメンテナンス後 INDEX.md を worktree へ固定する。"""
+    original_oracle_root = (repo_root / "oracles").resolve()
+    maintained_indexes = _read_maintained_index_files(original_oracle_root)
+
+    if original_oracle_root.exists():
+        shutil.rmtree(original_oracle_root)
+    if snapshot.snapshot_oracle_root.exists():
+        _copy_oracles_tree_snapshot(
+            snapshot.snapshot_oracle_root,
+            original_oracle_root,
+        )
+    else:
+        original_oracle_root.mkdir(parents=True)
+
+    for index_path in original_oracle_root.rglob("INDEX.md"):
+        if not index_path.is_file():
+            continue
+        relative_path = index_path.relative_to(original_oracle_root)
+        if relative_path not in maintained_indexes:
+            index_path.unlink()
+    for relative_path, content in maintained_indexes.items():
+        index_path = original_oracle_root / relative_path
+        index_path.parent.mkdir(parents=True, exist_ok=True)
+        index_path.write_bytes(content)
+
+    status = run_git(
+        repo_root,
+        ["status", "--porcelain", "--", "oracles"],
+    ).stdout
+    if not status:
+        return
+    run_git(repo_root, ["add", "-A", "--", "oracles"])
+    run_git(
+        repo_root,
+        ["commit", "-m", "Restore review oracle evaluation snapshot"],
+    )
+
+
+def _read_maintained_index_files(oracle_root: Path) -> dict[Path, bytes]:
+    """メンテナンス後の INDEX.md 内容を oracle root 相対 path で読む。"""
+    if not oracle_root.exists():
+        return {}
+    return {
+        index_path.relative_to(oracle_root): index_path.read_bytes()
+        for index_path in oracle_root.rglob("INDEX.md")
+        if index_path.is_file()
+    }
 
 
 def _copy_oracles_tree_snapshot(source_root: Path, destination_root: Path) -> None:

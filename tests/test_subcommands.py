@@ -1649,6 +1649,7 @@ def test_eval_oracles_snapshots_oracles_with_maintained_indexes(
 
     def fake_codex(*args: object, **kwargs: object) -> str:
         """固定済み oracle だけが開始時点 INDEX snapshot で評価されることを記録する。"""
+        execution_repo_root = Path(args[0])
         evaluated_purposes.append(str(kwargs["purpose"]))
         prompt = str(args[1])
         index_match = re.search(
@@ -1661,6 +1662,8 @@ def test_eval_oracles_snapshots_oracles_with_maintained_indexes(
         )
         assert index_match is not None
         assert oracle_match is not None
+        Path(index_match.group(1)).relative_to(execution_repo_root)
+        Path(oracle_match.group(1)).relative_to(execution_repo_root)
         snapshot_reads.append(
             (
                 Path(oracle_match.group(1)).read_text(encoding="utf-8"),
@@ -1716,12 +1719,14 @@ def test_eval_oracles_snapshot_gets_missing_oracles_index_after_maintenance(
 
     def fake_codex(*args: object, **kwargs: object) -> str:
         """評価 prompt が指す snapshot 側 INDEX.md の実在と内容を記録する。"""
+        execution_repo_root = Path(args[0])
         prompt = str(args[1])
         index_match = re.search(
             r"`([^`]+/oracles/INDEX\.md)` から始まる INDEX\.md",
             prompt,
         )
         assert index_match is not None
+        Path(index_match.group(1)).relative_to(execution_repo_root)
         snapshot_index_texts.append(
             Path(index_match.group(1)).read_text(encoding="utf-8")
         )
@@ -1765,12 +1770,14 @@ def test_eval_oracles_reads_fixed_snapshot_after_oracle_tree_changes(
 
     def fake_codex(*args: object, **kwargs: object) -> str:
         """prompt 上の snapshot path を読み、live tree 変更の影響がないことを返す。"""
+        execution_repo_root = Path(args[0])
         prompt = str(args[1])
         match = re.search(
             r"開始時点の内容を固定したコピー `([^`]+/oracles/spec\.md)`",
             prompt,
         )
         assert match is not None
+        Path(match.group(1)).relative_to(execution_repo_root)
         oracle_file.unlink()
         (repo / "oracles" / "later.md").write_text(
             "later live text\n",
