@@ -4,14 +4,18 @@ import ast
 import json
 import os
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
+from contextvars import copy_context
 from hashlib import sha256
 from pathlib import Path
+from threading import Barrier
 
 import pytest
 from pytest import MonkeyPatch
 
 from commons.codex import _active_allowed_oracle_conflict_paths
 from commons.codex import _extract_session_id
+from commons.codex import _print_codex_notification
 from commons.codex import _prepare_codex_exec_paths
 from commons.codex import _resume_command
 from commons.codex import _write_output_schema
@@ -483,6 +487,59 @@ def test_run_codex_exec_escapes_control_chars_in_console_notification(
     assert notification_lines[1].startswith(f"- log path: {repo}/")
     assert notification_lines[2].startswith("- elapsed: ")
     assert notification_lines[3] == "- returncode: 0"
+
+
+def test_codex_console_notifications_are_not_interleaved_between_threads(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """並列 worker の Codex CLI 通知は markdown block 単位で連続して出る。"""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    worker_count = 8
+    barrier = Barrier(worker_count)
+
+    def notify(index: int) -> None:
+        barrier.wait()
+        _print_codex_notification(
+            purpose=f"parallel purpose {index}",
+            repo_root=repo,
+            log_path=repo / ".cmoc" / "logs" / "codex_exec" / f"{index}.md",
+            elapsed_seconds=float(index),
+            returncode=index,
+        )
+
+    with subcommand_log(repo):
+        with ThreadPoolExecutor(max_workers=worker_count) as executor:
+            futures = [
+                executor.submit(copy_context().run, notify, index)
+                for index in range(worker_count)
+            ]
+            for future in futures:
+                future.result()
+
+    captured_lines = capsys.readouterr().out.splitlines()
+    starts = [
+        index
+        for index, line in enumerate(captured_lines)
+        if line == "## Codex CLI 呼び出し完了"
+    ]
+    assert len(starts) == worker_count
+    seen_purposes: set[str] = set()
+    for start in starts:
+        block = captured_lines[start : start + 5]
+        assert block[0] == "## Codex CLI 呼び出し完了"
+        assert block[1].startswith("- purpose: parallel purpose ")
+        assert block[2].startswith(
+            f"- log path: {repo}/.cmoc/logs/codex_exec/"
+        )
+        assert block[3].startswith("- elapsed: ")
+        assert block[4].startswith("- returncode: ")
+        seen_purposes.add(block[1])
+    assert seen_purposes == {
+        f"- purpose: parallel purpose {index}"
+        for index in range(worker_count)
+    }
 
 
 def test_workspace_write_oracle_guard_runs_when_call_log_write_fails(

@@ -31,6 +31,7 @@ from commons.indexing import find_index_inconsistencies
 from commons.indexing import is_maintained_index_path
 from commons.indexing import maintain_indexes
 from commons.report_files import write_timestamped_report
+from commons.subcommand_log import write_console_block
 from commons.repo import (
     APPLY_BRANCH_PREFIX,
     assert_no_uncommitted_changes,
@@ -916,7 +917,9 @@ def _investigate_discrepancies(
             if job.kind == "oracle"
             else "実装調査"
         )
-        print(f"{label} ({job.index}/{job.total}) {job.target.path}")
+        write_console_block(
+            f"{label} ({job.index}/{job.total}) {job.target.path}"
+        )
     if jobs:
         with ThreadPoolExecutor(max_workers=len(jobs)) as executor:
             futures = [
@@ -1227,7 +1230,7 @@ def _improove_fixing_list(
             improved,
             base_commit,
         )
-        print(
+        write_console_block(
             "要修正点リスト改善ループ "
             f"({loop_index}/{repeat_improove_fixing_list}) 要修正点: "
             f"{len(next_improved)}"
@@ -1394,7 +1397,9 @@ def _apply_discrepancies(
             None,
             "要修正点適用",
         )
-        print(f"要修正点適用 ({index}/{len(discrepancies)})")
+        write_console_block(
+            f"要修正点適用 ({index}/{len(discrepancies)})"
+        )
         before_head = head_commit(repo_root)
         run_codex_exec(
             repo_root,
