@@ -176,26 +176,27 @@
 
 ## Summary
 
-- `src` 配下のルーティング文書で、`main.py`、`commons/`、`sub_commands/` へ進むための入口です。
-- CLI 起点、共通処理、サブコマンド実装を分けて案内する最上位の目次です。
-- 下位階層の `INDEX.md` を読む前に、どの系統の文書へ進むかを切り分けるための階層です。
+- `src` 配下のルーティング文書で、cmoc の CLI 入口と共通処理、サブコマンド実装への分岐をまとめる階層です。
+- `main.py`、`commons/`、`sub_commands/` へ進むための入口です。
+- CLI の起動経路、共通ユーティリティ、個別サブコマンド実装の役割を切り分けるための目次です。
 
 ## Read this when
 
-- `src` 配下全体の役割分担をまとめて把握したいとき。
-- `main.py` を起点に CLI の入口を確認したいとき。
-- `commons/` と `sub_commands/` のどちらへ進むべきか迷っているとき。
-- `src` の入口構造を一覧してから、下位ディレクトリの `INDEX.md` へ進みたいとき。
+- `src` 配下でどのファイルが CLI 入口、共通処理、サブコマンド本体かを一覧したいとき。
+- `main.py`、`commons/`、`sub_commands/` のどれへ進むべきか迷ったとき。
+- `cmoc` の起動経路や共通ユーティリティ、各サブコマンド実装の全体構成を把握したいとき。
+- `src` 配下の役割分担を整理してから、個別ファイルの実装やテストへ進みたいとき。
 
 ## Do not read this when
 
-- すでに `main.py`、`commons/`、`sub_commands/` のどこを見るか決まっていて、この階層の目次を経由する必要がないとき。
-- 個別モジュールや下位の `INDEX.md` へ直接進む対象が明確なとき。
+- 進む先のファイルやディレクトリがすでに決まっていて、この階層の目次を読む必要がないとき。
+- `main.py`、`commons/`、`sub_commands/` の個別実装だけを確認したいとき。
+- `__pycache__` などの生成物ではなく、ソースの個別ファイルだけを確認したいとき。
 - `oracles` 側の正本仕様や、`README.md`・`AGENTS.md` などのリポジトリ運用ルールだけを確認したいとき。
 
 ## hash
 
-- 96da5a1b3dd2b376535c5dd8a541817c9efea0716bae28f6230bdf1864d4056d
+- 4fb6417f094845890ccef58ee6f95f34221448d3b21a9441055ec43e0090f509
 
 # `test.sh`
 
@@ -224,23 +225,29 @@
 
 ## Summary
 
-- この `tests` ディレクトリのルーティング文書で、pytest 共通設定と各回帰テスト群への入口です。
-- 共有 fixture・repo 操作・`INDEX.md` 生成・サブコマンド制御・命名規則・タイムスタンプ・レポート保存の確認先を分岐します。
-- 個別テストファイルへ進む前に、どの検証領域を読むべきかを整理するための目次です。
+- `tests` 配下の回帰テスト群の入口で、共通設定と各 `test_*.py` の役割を案内する目次です。
+- `conftest.py` は pytest から `src` を import できるようにする共通設定です。
+- `test_codex.py` は Codex CLI 呼び出しラッパーと Structured Output 周辺の回帰テストです。
+- `test_file_naming.py` は `INDEX.md` とサブコマンド配置の命名規則を検証するテストです。
+- `test_indexing.py` は `INDEX.md` の生成・再利用・再生成や不整合検査を扱うテストです。
+- `test_repo.py` は git 共通処理や `.cmoc` の ignore、状態管理を検証するテストです。
+- `test_report_files.py` はタイムスタンプ付きレポート保存の衝突回避を検証するテストです。
+- `test_subcommands.py` は cmoc のサブコマンド本体と CLI 周辺の横断的な回帰テストです。
+- `test_timestamps.py` はタイムスタンプ生成と経過時間表示の仕様を確認するテストです。
 
 ## Read this when
 
-- pytest 共通設定や `<cmoc-root>/src` への import path 追加の意図を確認したいとき。
-- `commons.repo`、`commons.indexing`、`commons.command_runner`、`commons.timestamps` などの回帰テストの入口を探したいとき。
-- サブコマンド横断の制御ロジック、`INDEX.md` メンテナンス、ファイル命名規則、レポート保存のテストを探したいとき。
-- 各テストファイルの役割を把握して、読むべき個別テストへ素早く分岐したいとき。
+- pytest 実行時の import path 設定や共通 fixture を確認したいとき。
+- `commons.codex`、`commons.indexing`、`commons.repo`、`commons.report_files`、`commons.timestamps` の回帰テストを探したいとき。
+- cmoc のサブコマンド横断ロジックや CLI 周辺の仕様を確認したいとき。
+- ファイル命名規則や `INDEX.md` の維持ルールに関するテストを確認したいとき。
 
 ## Do not read this when
 
-- cmoc の実装ロジックそのものや CLI の利用手順だけを確認したいとき。
-- `oracles` や `docs` 配下の仕様文書だけを確認したいとき。
-- この階層の `tests/INDEX.md` ではなく、個別の `test_*.py` ファイルを直接読む目的がすでに決まっているとき。
+- 目的のテストファイルがすでに分かっていて、`tests/` 配下の個別ファイルへ直接進めるとき。
+- `src` 側の実装ロジックだけを確認したいとき。
+- `tests` 以外のリポジトリ運用ルールや共通仕様だけを確認したいとき。
 
 ## hash
 
-- c3d6be58ce4181e5fbdbb7aacb9df2500741126ccbfc4b6883f1595fdd894c1f
+- 7ca6bc8c32d9adf82b84db2655dc0ee73ed2b7816829d91176a0feecb461593b

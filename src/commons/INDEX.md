@@ -134,7 +134,7 @@
 ## Summary
 
 - `src/commons/repo.py` は git リポジトリと `.cmoc` 作業領域を扱う共通基盤モジュールです。
-- repo root 探索、ブランチ判定、session / apply state の管理、apply process id の保存・読込、`.cmoc` 追跡対象外保証をまとめています。
+- repo root 探索、ブランチ判定、session / apply state 管理、apply process id の保存・読込、`.cmoc` 追跡外保証をまとめています。
 - oracle / 実装ファイルの列挙や変更検出、`.gitignore` の評価・復元補助、`git` 呼び出しの共通ラッパーも含みます。
 
 ## Read this when
@@ -146,14 +146,14 @@
 
 ## Do not read this when
 
-- `src/commons/repo.py` の個々のヘルパー実装や例外メッセージだけを確認したいとき。
-- `CmocError` の整形、`codex exec` 呼び出し、時間計測など、別の共通モジュールを確認したいとき。
-- サブコマンド固有の業務ロジックや CLI 引数だけを追いたいとき。
+- 個々のヘルパー実装や例外メッセージの細部だけを確認したいとき。
+- `CmocError` の整形や `codex exec`、時間計測など、別の共通モジュールを追いたいとき。
+- サブコマンド固有の業務ロジックや CLI 引数だけを見たいとき。
 - `INDEX.md` の生成ルールや `oracles` 側の正本仕様だけを確認したいとき。
 
 ## hash
 
-- 7fc97df4692cfb4558cb8995c0f78f99e2a10e236d92769f508a5090b907f72e
+- 918bf05cb125aa87d6439facea32c3cb45aecae8b0bc2d0794eeab304a6491e6
 
 # `report_files.py`
 

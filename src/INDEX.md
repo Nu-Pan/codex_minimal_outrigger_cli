@@ -2,9 +2,9 @@
 
 ## Summary
 
-- `src/commons` 配下の共通モジュール群へのルーティング文書で、cmoc の実行基盤や補助処理をまとめて案内する階層です。
-- `__init__.py` に加えて、`codex.py`、`command_runner.py`、`errors.py`、`indexing.py`、`repo.py`、`report_files.py`、`subcommand_log.py`、`timestamps.py`、`timing.py` へ進むための入口です。
-- CLI 実行、共通エラー整形、repo / worktree 操作、`INDEX.md` 維持、サブコマンドログ、時間計測、タイムスタンプ、レポート保存を切り分けるための目次です。
+- `src/commons` 配下の共通モジュール群へのルーティング文書で、cmoc の実行基盤と補助処理をまとめて案内する階層です。
+- `__init__.py`、`codex.py`、`command_runner.py`、`errors.py`、`indexing.py`、`repo.py`、`report_files.py`、`subcommand_log.py`、`timestamps.py`、`timing.py` へ進むための入口です。
+- CLI 実行、エラー整形、repo / worktree 操作、`INDEX.md` 維持、サブコマンドログ、時間計測、タイムスタンプ、レポート保存の役割を切り分けるための目次です。
 
 ## Read this when
 
@@ -18,10 +18,11 @@
 - 個別の共通モジュールの実装へすでに進む先が決まっていて、この階層の目次を読む必要がないとき。
 - `src/sub_commands` や各サブコマンドの業務ロジックだけを確認したいとき。
 - `oracles` 側の正本仕様や、`README.md`・`AGENTS.md` などのリポジトリ運用ルールだけを確認したいとき。
+- `__pycache__` などの生成物ではなく、ソースコードの個別実装だけを確認したいとき。
 
 ## hash
 
-- 385caa4f33aea27308a04121745d7147e0140428d36aa27b162b0fc49951e9a9
+- dd0a9fdc440e8c7f63da9a2d64ec372e1d8a06a0ccd5b7f1ec08706793d614e5
 
 # `main.py`
 
