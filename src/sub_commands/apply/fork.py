@@ -326,6 +326,7 @@ def cmoc_apply_impl(
     discrepancy_counts: list[int] = []
     apply_start_needs_error_record = False
     apply_error_recorded = False
+    success_report_path: Path | None = None
     try:
         with _locked_apply_start(state_root, session_id):
             state = read_session_state(state_root, session_id)
@@ -496,6 +497,7 @@ def cmoc_apply_impl(
             completed,
             discrepancy_counts,
         )
+        success_report_path = report_path
         failed_stage = "final output 書き込み"
         print(f"apply run id: {apply_run_id}")
         print(str(report_path))
@@ -520,6 +522,8 @@ def cmoc_apply_impl(
                 apply_branch=apply_branch,
                 oracle_snapshot_commit=oracle_snapshot_commit,
             )
+        if failed_stage == "final output 書き込み" and success_report_path:
+            success_report_path.unlink(missing_ok=True)
         try:
             session_head_at_apply_finish = _session_branch_head_for_report(
                 repo_root,
@@ -668,17 +672,26 @@ def _scope_base_commit(
                 "復旧できない場合は、現在の session を使わず新しい session を開始してください。",
             ],
         )
-    last_joined = session.get("last_joined_apply_oracle_snapshot_commit")
+    last_joined = session.get("last_joined_apply_join_commit")
     if last_joined is None:
+        if session.get("last_joined_apply_oracle_snapshot_commit") is not None:
+            raise CmocError(
+                "session state ファイルの形式が不正です。",
+                [
+                    "session.last_joined_apply_join_commit を確認して復旧してください。",
+                    "rolling scope には最後に join した apply の join commit が必要です。",
+                ],
+                "last_joined_apply_join_commit: None",
+            )
         return session_start_commit
     if not isinstance(last_joined, str) or not last_joined:
         raise CmocError(
             "session state ファイルの形式が不正です。",
             [
-                "session.last_joined_apply_oracle_snapshot_commit を確認して復旧してください。",
+                "session.last_joined_apply_join_commit を確認して復旧してください。",
                 "復旧できない場合は、現在の session を使わず新しい session を開始してください。",
             ],
-            f"last_joined_apply_oracle_snapshot_commit: {last_joined}",
+            f"last_joined_apply_join_commit: {last_joined}",
         )
     return last_joined
 

@@ -19,6 +19,7 @@ from commons.repo import (
     filter_apply_implementation_file_paths_at_commit,
     git_name_only_paths,
     git_name_status_entries,
+    head_commit,
     is_apply_branch,
     is_session_branch,
     read_session_state,
@@ -129,12 +130,14 @@ def cmoc_apply_join_impl(
             )
 
     start_step(timer, 5, 5, "apply ready 状態記録")
+    join_commit = head_commit(cmoc_root)
     cleanup_evidence = _snapshot_cleanup_evidence(cmoc_root, join_state)
     _mark_apply_ready(
         cmoc_root,
         session_id,
         state,
         join_state.oracle_snapshot_commit,
+        join_commit,
         resolve_session_home_branch(
             cmoc_root,
             state,
@@ -730,6 +733,7 @@ def _mark_apply_ready(
     session_id: str,
     state: dict[str, object],
     oracle_snapshot_commit: str,
+    join_commit: str,
     session_home_branch: str,
 ) -> None:
     """最後に join した snapshot を記録し、apply セクションを ready に戻す。"""
@@ -745,6 +749,7 @@ def _mark_apply_ready(
         )
     session["session_home_branch"] = session_home_branch
     session["last_joined_apply_oracle_snapshot_commit"] = oracle_snapshot_commit
+    session["last_joined_apply_join_commit"] = join_commit
     state["apply"] = {
         "state": "ready",
         "apply_branch": None,

@@ -19,6 +19,10 @@ SESSION_STATE_KEYS = {
     "session_home_branch",
     "session_start_commit",
     "last_joined_apply_oracle_snapshot_commit",
+    "last_joined_apply_join_commit",
+}
+LEGACY_SESSION_STATE_KEYS = SESSION_STATE_KEYS - {
+    "last_joined_apply_join_commit"
 }
 APPLY_STATE_KEYS = {"state", "apply_branch", "oracle_snapshot_commit"}
 CMOC_IGNORE_PROBE_PATH = ".cmoc/.__cmoc_ignore_probe__"
@@ -348,6 +352,7 @@ def initial_session_state(
             "session_home_branch": session_home_branch,
             "session_start_commit": session_start_commit,
             "last_joined_apply_oracle_snapshot_commit": None,
+            "last_joined_apply_join_commit": None,
         },
         "apply": {
             "state": "ready",
@@ -519,7 +524,7 @@ def _session_state_payload(
                 "破損した session state を復旧してください。",
             ],
         )
-    _validate_required_keys(session, SESSION_STATE_KEYS, "session", path)
+    _validate_required_keys(session, LEGACY_SESSION_STATE_KEYS, "session", path)
     _validate_required_keys(
         apply,
         APPLY_STATE_KEYS,
@@ -533,6 +538,9 @@ def _session_state_payload(
             "session_start_commit": session.get("session_start_commit"),
             "last_joined_apply_oracle_snapshot_commit": session.get(
                 "last_joined_apply_oracle_snapshot_commit"
+            ),
+            "last_joined_apply_join_commit": session.get(
+                "last_joined_apply_join_commit"
             ),
         },
         "apply": {
@@ -620,7 +628,13 @@ def _validate_session_state_schema(
             ],
             str(path),
         )
-    _validate_exact_keys(session, SESSION_STATE_KEYS, "session", path)
+    _validate_exact_keys(
+        session,
+        LEGACY_SESSION_STATE_KEYS,
+        "session",
+        path,
+        optional_keys={"last_joined_apply_join_commit"},
+    )
     _validate_exact_keys(
         apply,
         APPLY_STATE_KEYS,
@@ -651,6 +665,12 @@ def _validate_session_state_schema(
         session,
         "last_joined_apply_oracle_snapshot_commit",
         "session.last_joined_apply_oracle_snapshot_commit",
+        path,
+    )
+    _validate_optional_string(
+        session,
+        "last_joined_apply_join_commit",
+        "session.last_joined_apply_join_commit",
         path,
     )
     apply_state = _validate_required_string(apply, "state", "apply.state", path)
