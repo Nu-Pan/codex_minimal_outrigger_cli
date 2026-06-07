@@ -50,26 +50,27 @@
 ## Summary
 
 - `cmoc indexing` の本体実装で、`repo_root` が未指定なら `run_command()` に処理を委譲します。
-- `StepTimer` と `start_step()` を使って、repository 状態検証と `INDEX.md` メンテナンスの 2 段階で進みます。
-- `assert_no_uncommitted_changes()` で clean repo を確認し、`maintain_indexes()` の結果に応じて `INDEX.md` 変更の有無を標準出力へ表示します。
+- `StepTimer` と `start_step()` を使って、repository 状態検証と `INDEX.md` メンテナンスまたは整合性検査の 2 段階で進みます。
+- `assert_no_uncommitted_changes()` で clean repo を確認し、`check` モードでは `find_index_inconsistencies()`、通常モードでは `maintain_indexes()` を呼び分けます。
+- 通常モードでは `INDEX.md` の変更有無に応じて標準出力を変え、`check` モードでは未反映の不整合があれば `CmocError` を送出します。
 
 ## Read this when
 
-- `cmoc indexing` の実装・修正・レビュー・テストを行うとき。
+- `cmoc indexing` の実装・修正・レビュー・テストを行いたいとき。
 - 実行前の未コミット差分チェックと `INDEX.md` メンテナンスの呼び出し順を確認したいとき。
-- `run_command()` による `repo_root` 解決や、`StepTimer` / `start_step()` を使った 2 段階の処理フローを追いたいとき。
-- `commons.indexing.maintain_indexes()` の実行結果に応じて、どこで標準出力が出るか確認したいとき。
+- `run_command()` による `repo_root` 解決や、`StepTimer` と `start_step()` を使った 2 段階の処理フローを追いたいとき。
+- `find_index_inconsistencies()` と `maintain_indexes()` のどちらを使うか、またその結果に応じてどこで標準出力やエラーが出るか確認したいとき。
 
 ## Do not read this when
 
-- `cmoc indexing` の正本仕様だけを確認したいときは、[`oracles/docs/app_specs/sub_commands/indexing.md`](/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03_16_000000754/2026-06-07_10-40_51_000000114/oracles/docs/app_specs/sub_commands/indexing.md) を読むべきです。
-- `INDEX.md` の生成アルゴリズムや、深い階層からの更新順、コミット対象の制御だけを確認したいときは、[`src/commons/indexing.py`](/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03_16_000000754/2026-06-07_10-40_51_000000114/src/commons/indexing.py) を読むべきです。
-- `cmoc init` や `session` / `apply` / `review` など、別サブコマンドの実装を追いたいとき。
+- `cmoc indexing` の正本仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/indexing.md` を直接読むべきです。
+- `INDEX.md` の生成アルゴリズム、深い階層からの更新順、コミット対象の制御だけを確認したいときは、`src/commons/indexing.py` を直接読むべきです。
+- `cmoc init`、`session`、`apply`、`review` など、別サブコマンドの実装を追いたいとき。
 - `src/sub_commands` 配下の入口構造だけを確認したいときで、`cmoc indexing` 本体の処理は不要なとき。
 
 ## hash
 
-- f1d616eada62c2854aeb7f5a7200ca588d1572458ea8b404d2e5159f7936cb08
+- fce12fd41ef1f022d65537b43eb35089e1832b43e3b9973a0636cb4f23380efb
 
 # `init.py`
 

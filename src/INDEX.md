@@ -45,28 +45,29 @@
 
 ## hash
 
-- a756de7b8e379a66e5e1bdfc4aa80c43d910a513c480de908c6d46a9f1196f81
+- c83df0f63c63b1a360c5760dc43e68cc8d494f7996479b6b40969ede0ee74f1b
 
 # `sub_commands`
 
 ## Summary
 
 - `src/sub_commands` は `cmoc` の各サブコマンド実装をまとめるルーティング用パッケージです。
-- `__init__.py`、`init.py`、`indexing.py` に加えて、`apply`・`review`・`session` の各サブパッケージへ案内します。
-- 個別実装に入る前の入口として、どのモジュールを読むべきかを整理する目次の役割を持ちます。
+- `__init__.py`、`init.py`、`indexing.py` に加えて、`apply`・`review`・`session` の各サブパッケージへの入口を含みます。
+- 個別実装に入る前の案内として、どのモジュールを読むべきかを整理する目次の役割を持ちます。
 
 ## Read this when
 
 - `src/sub_commands` 配下の入口構造をまとめて把握したいとき。
-- `cmoc init`、`cmoc indexing`、`cmoc apply`、`cmoc review`、`cmoc session` のどこへ進むべきか整理したいとき。
-- サブコマンド追加・整理・再配置に伴って、この階層の目次を確認したいとき。
+- `cmoc init` と `cmoc indexing` の実装入口、ならびに `apply`・`review`・`session` の各サブパッケージのどこへ進むべきか整理したいとき。
+- サブコマンドの追加、整理、再配置に伴って、この階層の目次を確認したいとき。
+- 個別実装に入る前に、どのモジュールを読むべきかを切り分けたいとき。
 
 ## Do not read this when
 
-- すでに `cmoc apply`、`cmoc review`、`cmoc session` のどれを読むか決まっていて、この階層の案内が不要なとき。
-- 個別サブコマンドの引数仕様や処理本体だけを直接追いたいとき。
-- `oracles` 側の正本仕様だけを確認したいとき。
+- すでに読む対象が `cmoc init`、`cmoc indexing`、`cmoc apply`、`cmoc review`、`cmoc session` のいずれかに決まっていて、この階層の案内が不要なとき。
+- 個別サブコマンドの引数仕様や処理本体だけを直接確認したいとき。
+- `oracles` 側の正本仕様や利用手順だけを確認したいとき。
 
 ## hash
 
-- 8ba8817a62ecd233f410a670f358164341caf3b60591b0dae0f8e93d58b763b0
+- 94ba0cc50fc9d8789d2241d79642ae8e8471a81967a702d12aae358332431536
