@@ -50,30 +50,30 @@
 
 ## Summary
 
-- `codex exec` 以外の各 CLI サブコマンドに共通する実行ラッパーをまとめたモジュールです。
-- `<repo-root>` の解決、`subcommand_log` の開始、例外の変換、終了コード決定、完了レポート出力を担当します。
-- 通常のサブコマンド本体は `Path` を受け取り、`subcommand_log` と `timing` と連携して実行結果を集約します。
-- `typer.Exit` と通常例外を分けて扱い、必要に応じて `CmocError` と `format_error_report()` で利用者向けのエラー表示を行います。
+- `src/commons/command_runner.py` は、`cmoc` の各サブコマンドを共通実行するラッパーで、repo root 解決、ログ開始、例外変換、終了集計をまとめます。
+- `run_command()` はサブコマンド本体に `<repo-root>` の `Path` を渡し、整数戻り値や `typer.Exit` を共通規則で終了コードへ変換します。
+- 実行中は `subcommand_log` と `timing` を連携し、完了時にログパス、総経過時間、quota 待機時間、戻り値を stdout と JSONL ログへ出力します。
+- 内部ヘルパー `_subcommand_exit_error()` と `_print_completion_report()` が非 0 終了の診断文と完了レポート生成を担います。
 
 ## Read this when
 
-- サブコマンドの入口をどこに集約し、共通の実行制御をどう掛けているか確認したいとき。
-- 各サブコマンドが `<repo-root>` の `Path` をどう受け取るか確認したいとき。
-- 例外時のエラー表示、終了コード、`typer.Exit` への変換規則を見直したいとき。
-- 実行ログ、経過時間、待機時間、戻り値の集計出力の流れを追いたいとき。
-- `init`、`session`、`apply`、`review` 系のサブコマンドが共通の実行ラッパーをどう使うか確認したいとき。
+- `cmoc init` / `session` / `apply` / `review` などの入口がどの共通処理で包まれているかを確認したいとき。
+- サブコマンド本体が `Path` を受け取り、戻り値や例外がどう終了コードに反映されるかを見直したいとき。
+- `subcommand_log`、`timing`、`format_error_report()` がどの順序で使われるか追いたいとき。
+- 非 0 の `typer.Exit` や通常例外がどう利用者向けのエラー表示になるか確認したいとき。
+- 完了サマリーに何が出るか、`subcommand_end` ログがどう書かれるかを見たいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの引数解析や業務ロジックだけを確認したいとき。
-- `<repo-root>` の探索や `.cmoc` の扱いの詳細だけを追いたいときは、このファイルではなく `src/commons/repo.py` を読むべきです。
-- エラーメッセージ本文の整形や共通例外の定義そのものを確認したいときは、このファイルではなく `src/commons/errors.py` を読むべきです。
-- サブコマンドログや経過時間計測の実装だけを調べたいときは、このファイルではなく `src/commons/subcommand_log.py` と `src/commons/timing.py` を直接読むべきです。
-- Codex 呼び出しや `INDEX.md` 生成など、別機能の仕様だけを確認したいとき。
+- 個別サブコマンドの業務ロジックや引数解析だけを確認したいとき。
+- `<repo-root>` の探索や `.cmoc` まわりの詳細だけを追いたいときは、`src/commons/repo.py` を読むべきです。
+- エラーメッセージ型や詳細な整形規則だけを見たいときは、`src/commons/errors.py` を読むべきです。
+- JSONL ログの保存や時間計測の実装だけを見たいときは、`src/commons/subcommand_log.py` と `src/commons/timing.py` を読むべきです。
+- `INDEX.md` 生成ルールや `oracles` 側の仕様だけを確認したいとき。
 
 ## hash
 
-- 4140203f659873ad3b91df98f63c731177ecfef556475a2816f649372b5f2f2c
+- 2183c4c608e64b3411b8fde23b9048fe84f439e849ea5d7561d1cb7548ac929c
 
 # `errors.py`
 
