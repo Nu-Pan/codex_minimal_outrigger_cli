@@ -122,9 +122,7 @@ def is_maintained_index_path_at_commit(
     if directory.as_posix() != ".":
         candidates.append(directory.as_posix())
 
-    from .repo import root_gitignored_paths_at_commit
-
-    ignored = root_gitignored_paths_at_commit(repo_root, commit_hash, candidates)
+    ignored = _gitignored_paths_at_commit(repo_root, commit_hash, candidates)
     return directory.as_posix() not in ignored
 
 
@@ -779,6 +777,95 @@ def _gitignore_git_env() -> dict[str, str]:
     env["GIT_CONFIG_SYSTEM"] = os.devnull
     env["GIT_CONFIG_NOSYSTEM"] = "1"
     return env
+
+
+def _gitignored_paths_at_commit(
+    repo_root: Path,
+    commit_hash: str,
+    relative_paths: list[str],
+) -> set[str]:
+    """指定 commit の全階層 `.gitignore` で ignore 対象 path を返す。"""
+    if not relative_paths:
+        return set()
+
+    from .repo import run_git
+
+    gitignore_paths = _ancestor_gitignore_paths(relative_paths)
+    gitignores: dict[str, str] = {}
+    for gitignore_path in gitignore_paths:
+        result = run_git(
+            repo_root,
+            ["show", f"{commit_hash}:{gitignore_path}"],
+            check=False,
+        )
+        if result.returncode == 0:
+            gitignores[gitignore_path] = result.stdout
+
+    if not gitignores:
+        return set()
+
+    env = _gitignore_git_env()
+    with tempfile.TemporaryDirectory(prefix="cmoc-gitignore-commit-") as temp_name:
+        temp_root = Path(temp_name)
+        subprocess.run(
+            ["git", "init", "-q"],
+            cwd=temp_root,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+        )
+        for gitignore_path, content in gitignores.items():
+            target = temp_root / gitignore_path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding="utf-8")
+        for relative_path in relative_paths:
+            target = temp_root / relative_path
+            target.mkdir(parents=True, exist_ok=True)
+
+        result = subprocess.run(
+            [
+                "git",
+                "-c",
+                f"core.excludesFile={os.devnull}",
+                "check-ignore",
+                "-z",
+                "--no-index",
+                "--stdin",
+            ],
+            cwd=temp_root,
+            check=False,
+            input=b"\0".join(os.fsencode(path) for path in relative_paths)
+            + b"\0",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+        )
+
+    if result.returncode not in {0, 1}:
+        raise CmocError(
+            ".gitignore の評価に失敗しました。",
+            [
+                ".gitignore の構文を確認してから cmoc を再実行してください。",
+                "一時的に .gitignore を単純化してから cmoc を再実行してください。",
+            ],
+            result.stderr.decode(errors="replace").strip(),
+        )
+    return {
+        os.fsdecode(path)
+        for path in result.stdout.split(b"\0")
+        if path
+    }
+
+
+def _ancestor_gitignore_paths(relative_paths: list[str]) -> list[str]:
+    """path の ancestor にある `.gitignore` path を root から順に返す。"""
+    gitignore_paths: set[str] = {".gitignore"}
+    for relative_path in relative_paths:
+        parts = Path(relative_path).parts
+        for depth in range(1, len(parts)):
+            gitignore_paths.add(Path(*parts[:depth], ".gitignore").as_posix())
+    return sorted(gitignore_paths, key=lambda path: (path.count("/"), path))
 
 
 def _validate_index_payload(value: object) -> None:

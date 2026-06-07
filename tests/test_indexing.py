@@ -245,6 +245,48 @@ def test_is_maintained_index_path_at_commit_allows_ignored_index_file(
     )
 
 
+def test_is_maintained_index_path_at_commit_respects_nested_gitignore(
+    tmp_path: Path,
+) -> None:
+    """commit 時点判定は下位 `.gitignore` の directory 除外も使う。"""
+    repo = _init_repo(tmp_path)
+    docs = repo / "docs"
+    ignored = docs / "ignored"
+    kept = docs / "kept"
+    ignored.mkdir(parents=True)
+    kept.mkdir()
+    (docs / ".gitignore").write_text("ignored/\n", encoding="utf-8")
+    (ignored / "target.txt").write_text("ignored\n", encoding="utf-8")
+    (kept / "target.txt").write_text("kept\n", encoding="utf-8")
+    _git(
+        repo,
+        "add",
+        "-f",
+        "docs/.gitignore",
+        "docs/ignored/target.txt",
+        "docs/kept/target.txt",
+    )
+    _git(repo, "commit", "-m", "add nested gitignore")
+    commit_hash = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    assert (
+        is_maintained_index_path_at_commit(
+            repo,
+            commit_hash,
+            "docs/ignored/INDEX.md",
+        )
+        is False
+    )
+    assert (
+        is_maintained_index_path_at_commit(
+            repo,
+            commit_hash,
+            "docs/kept/INDEX.md",
+        )
+        is True
+    )
+
+
 def test_maintain_indexes_reports_directory_iteration_failure(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
