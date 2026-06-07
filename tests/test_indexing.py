@@ -26,12 +26,6 @@ from commons.indexing import maintain_indexes
 from commons.subcommand_log import log_event
 from commons.subcommand_log import subcommand_log
 
-_EMPTY_FILE_DIGEST = hashlib.sha256(b"cmoc-index-empty-file\0").hexdigest()
-_EMPTY_DIRECTORY_DIGEST = hashlib.sha256(
-    b"cmoc-index-empty-directory\0"
-).hexdigest()
-
-
 def test_maintain_indexes_generates_routing_entries_and_respects_gitignore(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -2042,6 +2036,9 @@ def test_maintain_indexes_does_not_call_codex_for_current_empty_entries(
     readme_digest = _file_digest(repo / "README.md")
     empty_file_digest = _file_digest(empty_file)
     empty_dir_digest = _directory_digest(repo, empty_dir)
+    empty_content_digest = hashlib.sha256(b"").hexdigest()
+    assert empty_file_digest == empty_content_digest
+    assert empty_dir_digest == empty_content_digest
     (repo / "INDEX.md").write_text(
         "\n".join(
             [
@@ -2122,11 +2119,11 @@ def test_maintain_indexes_does_not_call_codex_for_current_empty_entries(
     assert "cmoc-index-kind" not in original_content
 
 
-def test_maintain_indexes_regenerates_entry_when_empty_file_becomes_directory(
+def test_maintain_indexes_regenerates_legacy_empty_sentinel_hash(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """旧形式の空 file entry は空 directory への種別変更時に再生成する。"""
+    """旧 sentinel hash の空 file entry は仕様上の hash へ再生成する。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     target = repo / "target"
@@ -2134,7 +2131,9 @@ def test_maintain_indexes_regenerates_entry_when_empty_file_becomes_directory(
     readme_digest = hashlib.sha256(
         (repo / "README.md").read_bytes()
     ).hexdigest()
-    empty_digest = hashlib.sha256(b"").hexdigest()
+    legacy_empty_file_digest = hashlib.sha256(
+        b"cmoc-index-empty-file\0"
+    ).hexdigest()
     (repo / "INDEX.md").write_text(
         "\n".join(
             [
@@ -2172,17 +2171,14 @@ def test_maintain_indexes_regenerates_entry_when_empty_file_becomes_directory(
                 "",
                 "## hash",
                 "",
-                f"- {empty_digest}",
+                f"- {legacy_empty_file_digest}",
                 "",
             ]
         ),
         encoding="utf-8",
     )
     _git(repo, "add", ".")
-    _git(repo, "commit", "-m", "old empty file index")
-
-    target.unlink()
-    target.mkdir()
+    _git(repo, "commit", "-m", "legacy empty file index")
     purposes: list[str] = []
 
     def fake_codex(*args: object, **kwargs: object) -> str:
@@ -2206,6 +2202,8 @@ def test_maintain_indexes_regenerates_entry_when_empty_file_becomes_directory(
     assert purposes == ["INDEX entry 生成 target"]
     assert "- old file summary" not in content
     assert "- INDEX entry 生成 target" in content
+    assert f"- {hashlib.sha256(b'').hexdigest()}" in content
+    assert legacy_empty_file_digest not in content
     assert "cmoc-index-kind" not in content
 
 
@@ -2795,7 +2793,7 @@ def _directory_digest(repo: Path, directory: Path) -> str:
             )
         )
     if not serialized_entries:
-        return _EMPTY_DIRECTORY_DIGEST
+        return hashlib.sha256(b"").hexdigest()
     return hashlib.sha256(
         "".join(serialized_entries).encode("utf-8")
     ).hexdigest()
@@ -2804,8 +2802,6 @@ def _directory_digest(repo: Path, directory: Path) -> str:
 def _file_digest(path: Path) -> str:
     """テスト用に file hash を計算する。"""
     content = path.read_bytes()
-    if not content:
-        return _EMPTY_FILE_DIGEST
     return hashlib.sha256(content).hexdigest()
 
 

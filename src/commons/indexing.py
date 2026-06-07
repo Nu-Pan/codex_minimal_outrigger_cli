@@ -26,10 +26,6 @@ from .codex import (
 from .errors import CmocError
 
 _BINARY_DETECTION_CHUNK_SIZE = 8192
-_EMPTY_FILE_DIGEST = hashlib.sha256(b"cmoc-index-empty-file\0").hexdigest()
-_EMPTY_DIRECTORY_DIGEST = hashlib.sha256(
-    b"cmoc-index-empty-directory\0"
-).hexdigest()
 _INDEX_OUTPUT_SCHEMA: dict[str, object] = {
     "type": "object",
     "additionalProperties": False,
@@ -645,15 +641,11 @@ def _hash_path(
     gitignore_matcher: "_GitignoreMatcher",
 ) -> str | None:
     """ファイル内容または直下項目 serialization から sha256 を計算する。"""
-    # 空 file/directory は種別を含む sentinel hash で衝突を避ける。
-    # 非空ファイルは既存 INDEX との互換性を保つため内容 bytes をそのまま hash 化する。
     if path.is_file():
         try:
             content = path.read_bytes()
         except OSError as error:
             _raise_index_io_error("ファイル内容の hash 計算", path, error)
-        if not content:
-            return _EMPTY_FILE_DIGEST
         return hashlib.sha256(content).hexdigest()
 
     if not path.is_dir():
@@ -681,8 +673,6 @@ def _hash_path(
                 f"{content_hash}\n"
             )
         )
-    if not serialized_entries:
-        return _EMPTY_DIRECTORY_DIGEST
     return hashlib.sha256(
         "".join(serialized_entries).encode("utf-8")
     ).hexdigest()
