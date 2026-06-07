@@ -5490,6 +5490,64 @@ def test_apply_join_unmerged_paths_are_nul_safe(
     assert calls == [["diff", "--name-only", "-z", "--diff-filter=U"]]
 
 
+def test_apply_join_changed_entries_use_destination_paths_and_exclude_deletes(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """想定外差分判定の path は共通定義に従って正規化する。"""
+    repo = _init_repo(tmp_path)
+    calls: list[list[str]] = []
+
+    def fake_run_git(
+        _repo_root: Path,
+        args: list[str],
+        *,
+        check: bool = True,
+        text: bool = True,
+        input_text: str | None = None,
+        env: dict[str, str] | None = None,
+    ) -> subprocess.CompletedProcess[str]:
+        del check, text, input_text, env
+        calls.append(args)
+        return subprocess.CompletedProcess(
+            ["git", *args],
+            0,
+            (
+                "R100\0oracles/spec.md\0feature.txt\0"
+                "C100\0src/source.py\0src/copied.py\0"
+                "D\0deleted.txt\0"
+                "M\0modified.txt\0"
+            ),
+            "",
+        )
+
+    monkeypatch.setattr(apply_join_module, "run_git", fake_run_git)
+
+    entries = apply_join_module._changed_path_entries_between(
+        repo,
+        "base-commit",
+        "branch-name",
+    )
+
+    assert [entry.paths for entry in entries] == [
+        ["feature.txt"],
+        ["src/copied.py"],
+        ["modified.txt"],
+    ]
+    assert calls == [
+        [
+            "diff",
+            "--name-status",
+            "-z",
+            "-M",
+            "-C",
+            "--find-copies-harder",
+            "base-commit..branch-name",
+            "--",
+        ]
+    ]
+
+
 def test_apply_join_resolves_index_conflict_before_reporting_other_conflict(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -5639,10 +5697,11 @@ def test_apply_join_stops_on_non_index_conflict(
     assert apply_worktree.exists()
 
 
-def test_apply_join_stops_on_apply_branch_rename_from_oracle_to_implementation(
+def test_apply_join_allows_apply_branch_rename_from_oracle_to_implementation(
     tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """apply branch 側の oracle source rename は想定外差分として停止する。"""
+    """apply branch 側の rename は rename 後 path 基準で判定する。"""
     repo = _init_repo(tmp_path)
     _checkout_session_branch(repo)
     oracle_snapshot = _add_oracle_snapshot(repo)
@@ -5653,22 +5712,20 @@ def test_apply_join_stops_on_apply_branch_rename_from_oracle_to_implementation(
     _git(apply_worktree, "mv", "oracles/spec.md", "feature.txt")
     _git(apply_worktree, "commit", "-m", "rename oracle to implementation")
 
-    with pytest.raises(CmocError) as error_info:
-        cmoc_apply_join_impl(repo)
+    cmoc_apply_join_impl(repo)
 
+    output = capsys.readouterr().out
     state = json.loads(
         (
             repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
         ).read_text(encoding="utf-8")
     )
-    assert "想定外の差分" in error_info.value.message
-    assert (
-        f"{apply_branch}: {json.dumps((repo / 'oracles/spec.md').resolve().as_posix())}"
-        in error_info.value.detail
-    )
-    assert not (repo / "feature.txt").exists()
-    assert (repo / "oracles" / "spec.md").read_text(encoding="utf-8") == "spec\n"
-    assert state["apply"]["state"] == "completed"
+    assert (repo / "feature.txt").read_text(encoding="utf-8") == "spec\n"
+    assert not (repo / "oracles" / "spec.md").exists()
+    assert state["apply"]["state"] == "ready"
+    assert "想定外の差分" not in output
+    assert "force-resolved unexpected diffs:" not in output
+    assert _git(repo, "branch", "--list", apply_branch).stdout == ""
 
 
 def test_apply_join_force_resolves_apply_branch_non_implementation_diff(
@@ -5805,7 +5862,7 @@ def test_apply_join_force_resolves_apply_branch_rename_from_oracle(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """強制モードは oracle source rename の source/destination を戻す。"""
+    """強制モードでも rename source は想定外差分として戻さない。"""
     repo = _init_repo(tmp_path)
     _checkout_session_branch(repo)
     oracle_snapshot = _add_oracle_snapshot(repo)
@@ -5828,14 +5885,15 @@ def test_apply_join_force_resolves_apply_branch_rename_from_oracle(
         ).read_text(encoding="utf-8")
     )
     assert (repo / "other.txt").read_text(encoding="utf-8") == "implemented\n"
-    assert not (repo / "feature.txt").exists()
-    assert (repo / "oracles" / "spec.md").read_text(encoding="utf-8") == "spec\n"
+    assert (repo / "feature.txt").read_text(encoding="utf-8") == "spec\n"
+    assert not (repo / "oracles" / "spec.md").exists()
     assert state["apply"]["state"] == "ready"
     assert (
         f"- {apply_branch}: "
         f"{json.dumps((repo / 'oracles/spec.md').resolve().as_posix())}"
-        in output
+        not in output
     )
+    assert "force-resolved unexpected diffs:" not in output
 
 
 def test_apply_join_force_resolves_with_missing_apply_worktree(

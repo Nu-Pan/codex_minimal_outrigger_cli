@@ -190,10 +190,10 @@ class _CleanupEvidence:
 
 
 class _ChangedPathEntry:
-    """1 つの git diff entry が触る path 群。"""
+    """1 つの git diff entry の判定対象 path 群。"""
 
     def __init__(self, paths: list[str]) -> None:
-        """rename など複数 path を含む diff entry の比較対象を保持する。"""
+        """想定外差分判定に使う repo 相対 path を保持する。"""
         self.paths = paths
 
 
@@ -384,7 +384,7 @@ def _changed_path_entries_between(
     base_commit: str,
     branch_name: str,
 ) -> list[_ChangedPathEntry]:
-    """base..branch の変更 entry が触る path 群を返す。"""
+    """base..branch の変更 entry ごとの判定対象 path 群を返す。"""
     result = run_git(
         repo_root,
         [
@@ -401,11 +401,10 @@ def _changed_path_entries_between(
     entries: list[_ChangedPathEntry] = []
     for status, paths in git_name_status_entries(result.stdout):
         if paths:
-            if status.startswith("R"):
-                entries.append(_ChangedPathEntry(paths))
-            else:
-                # copy は source を変更しないため、変更後 path を対象にする。
-                entries.append(_ChangedPathEntry([paths[-1]]))
+            if status.startswith("D"):
+                continue
+            # rename/copy は source ではなく変更後 path を対象にする。
+            entries.append(_ChangedPathEntry([paths[-1]]))
     return entries
 
 
