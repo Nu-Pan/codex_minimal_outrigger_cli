@@ -154,26 +154,27 @@
 
 ## Summary
 
-- `tests/test_subcommands.py` は、cmoc のサブコマンド本体に対する横断的な回帰テスト群の入口です。
-- 共通実行制御、エラーハンドリング、終了コード、タイマとログ出力をまとめて検証します。
-- `init` / `session` / `apply` / `review oracles` の主要フローと、CLI 登録・補完・レポート生成の整合性も確認します。
+- `tests/test_subcommands.py` は cmoc のサブコマンド本体に対する横断的な回帰テスト群の入口です。
+- `run_command()` を中心に、終了コード、例外処理、タイマ、ログ、エラーレポートの整合性を検証します。
+- `init`、`session`、`apply`、`review oracles` の主要フローと、CLI 登録・補完・出力仕様の整合性も押さえます。
 
 ## Read this when
 
-- `run_command()` を中心にしたサブコマンド横断の共通制御、終了コード、例外処理を確認したいとき。
-- `init` / `session` / `apply` / `review oracles` の主要フロー、復旧、cleanup、branch と worktree の状態遷移を横断的に追いたいとき。
-- CLI 登録、自動補完の委譲、起動経路、ログ出力、経過時間サマリー、エラーレポートの整合性を把握したいとき。
-- review oracles の prompt、Structured Output schema、評価 payload 検証、改善ループ、レポート生成の回帰をまとめて確認したいとき.
+- `run_command()` の共通制御や `StepTimer`、`subcommand_log` の出力仕様を確認したいとき。
+- `cmoc init`、`cmoc session`、`cmoc apply`、`cmoc review oracles` の横断的な正常系・失敗系・復旧系をまとめて追いたいとき。
+- CLI 登録、自動補完、終了コード、エラーレポート、完了サマリーの整合性を確認したいとき。
+- review oracles の prompt、schema、評価 payload、改善ループの回帰を確認したいとき。
 
 ## Do not read this when
 
-- `tests/test_codex.py` や `tests/test_repo.py` など、別の回帰テスト群の内容だけを確認したいとき。
+- `tests/test_codex.py`、`tests/test_repo.py` など別のテスト群だけを確認したいとき。
 - `src/sub_commands/apply/`、`src/sub_commands/session/`、`src/sub_commands/review/` の個別実装だけを追いたいとき。
-- cmoc の利用手順や各サブコマンドの引数仕様だけを確認したいとき。
+- 各サブコマンドの利用手順や引数仕様だけを確認したいとき。
+- `INDEX.md` の生成・更新ルールだけを確認したいとき。
 
 ## hash
 
-- 29bbc53236b4312cca6fd20b772721fc0a267907df519c231341608c08da137f
+- 9560b990086c31500bf1d06cc8b179f434381f8b09cfee1e70b9fe98086c4980
 
 # `test_timestamps.py`
 

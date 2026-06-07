@@ -52,7 +52,7 @@
 
 ## Summary
 
-- `src/sub_commands` ディレクトリのルーティング文書で、`cmoc` のサブコマンド群へ進むための入口です。
+- `src/sub_commands` 配下のルーティング文書で、`cmoc` のサブコマンド群へ進むための入口です。
 - `__init__.py` はパッケージ宣言、`init.py` は `cmoc init`、`indexing.py` は `cmoc indexing` の本体実装を案内します。
 - `apply/`、`review/`、`session/` はそれぞれ専用の下位ルーティングを持ち、個別サブコマンドの実装へ分岐するための目次です。
 
@@ -72,4 +72,4 @@
 
 ## hash
 
-- a19dd64b2f849809e57e1e9fd378c42fdfd66f470d48ba874c08217e29e06cfa
+- f603137b619d6e3f10b9458b365c562d46b60955f6c5050bb9fec25a07e74791

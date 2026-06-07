@@ -58,20 +58,19 @@
 
 - `src/sub_commands/apply/fork.py` の実装・修正・レビュー・テストを行いたいとき。
 - `cmoc apply fork` の開始条件、`session.state` / `apply.state` の検証、`--scope` や反復回数オプションの扱いを確認したいとき。
-- apply worktree の作成、`.cmoc` の保護、調査・修正ループ、不整合の適用、レポート出力までの一連の処理順を追いたいとき。
-- Structured Output の schema、要修正点の整理、prompt 生成、payload 検証、commit / forbidden path の扱いを確認したいとき。
-- `cmoc apply fork` がどの内部ヘルパー群で構成されているかを、上位の実行フローから把握したいとき。
+- apply worktree の作成、`.cmoc` の追跡対象外保証、不整合調査・修正ループ、レポート出力までの一連の処理順を追いたいとき。
+- Structured Output の schema、要修正点リストの改善、change summary の生成、payload 検証、commit や forbidden path の扱いを確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply fork` の利用手順や正本仕様だけを確認したいときは、[`oracles/docs/app_specs/sub_commands/apply_fork.md`](/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03_16_000000754/2026-06-07_10-40_51_000000114/oracles/docs/app_specs/sub_commands/apply_fork.md) を直接読むべきです。
-- `cmoc apply` の入口構造や `fork/join/abandon` の役割分担だけを確認したいときは、[`src/sub_commands/apply/INDEX.md`](/home/happy/codex_minimal_outrigger_cli_stage1/.cmoc/worktrees/apply/2026-05-31_22-03_16_000000754/2026-06-07_10-40_51_000000114/src/sub_commands/apply/INDEX.md) を先に見るべきです。
-- `cmoc session fork` や `cmoc apply join` / `cmoc apply abandon` の実装を追いたいときは、このファイルではなく各モジュール本体へ進むべきです。
-- `INDEX.md` の生成規則や `oracles` 側の共通仕様だけを確認したいときは、このファイルではなく `src/commons/indexing.py` や `oracles/docs/app_specs/` 側を読むべきです。
+- `cmoc apply fork` の利用手順だけを確認したいときは、このファイルではなく `oracles/docs/app_specs/sub_commands/apply_fork.md` を読むべきです。
+- `cmoc apply join` や `cmoc apply abandon` の実装・状態遷移だけを追いたいときは、このファイルではなく各モジュール本体へ進むべきです。
+- `src/sub_commands/apply` 配下の入口構造だけを確認したいときは、このファイルではなく `src/sub_commands/apply/INDEX.md` を読むべきです。
+- `INDEX.md` の生成ルールや `oracles` 側の共通仕様だけを確認したいときは、このファイルではなく `src/commons/indexing.py` や `oracles/docs/app_specs/` 側を読むべきです。
 
 ## hash
 
-- 8966b36f21c44f512f75c3101a833c60e9686451c05c32868013e0b5a0c38f75
+- 8683ba3792627173b9ea56042659da112adf8e95a5b39312655d7b0af6ed6939
 
 # `join.py`
 
