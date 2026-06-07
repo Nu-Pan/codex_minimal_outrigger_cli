@@ -1247,7 +1247,16 @@ def _normalize_absolute_repository_paths(repo_root: Path, text: str) -> str:
             return candidate
         return replacement
 
-    return re.sub(r"/[A-Za-z0-9._~!$&'()*+,;=:@%/-]+", replace, text)
+    # Markdown link destinations such as `](/abs/path)` and code spans such as
+    # `` `/abs/path` `` can contain old worktree absolute paths.  Do not start
+    # matching at the slash inside relative paths or placeholders like
+    # `<cmoc-root>/src`; those are routing text, not absolute paths.
+    return re.sub(
+        r"(?<![A-Za-z0-9._~!$&'()*+,;=:@%<>-])"
+        r"/[A-Za-z0-9._~!$&'()*+,;=:@%/-]+",
+        replace,
+        text,
+    )
 
 
 def _relative_repository_path_for_text(

@@ -1777,6 +1777,52 @@ def test_maintain_indexes_regenerates_stale_absolute_repository_path(
     assert f"`{relative_path}` の merge 手順を確認するとき。" in content
 
 
+def test_find_index_inconsistencies_keeps_relative_paths_and_root_placeholders_valid(
+    tmp_path: Path,
+) -> None:
+    """相対 path や `<cmoc-root>/...` は古い絶対 path と誤判定しない。"""
+    repo = _init_repo(tmp_path)
+    (repo / "src").mkdir()
+    target = repo / "src/tool.py"
+    target.write_text("tool\n", encoding="utf-8")
+    digest = hashlib.sha256(target.read_bytes()).hexdigest()
+    (repo / "src/INDEX.md").write_text(
+        "\n".join(
+            [
+                "# `tool.py`",
+                "",
+                "## Summary",
+                "",
+                "- `<cmoc-root>/src` と `src/tool.py` を案内します。",
+                "",
+                "## Read this when",
+                "",
+                "- `src/tool.py` の実装を確認するとき。",
+                "",
+                "## Do not read this when",
+                "",
+                "- `oracles/docs/app_specs/indexing.md` だけを読むとき。",
+                "",
+                "## hash",
+                "",
+                f"- {digest}",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "relative index paths")
+
+    content = (repo / "src/INDEX.md").read_text(encoding="utf-8")
+
+    assert "`<cmoc-root>/src`" in content
+    assert "`src/tool.py`" in content
+    assert "`oracles/docs/app_specs/indexing.md`" in content
+    assert "srcINDEX.md" not in content
+    assert find_index_inconsistencies(repo, index_roots=["src"]) == []
+
+
 def test_maintain_indexes_normalizes_known_cmoc_command_typo_in_generated_text(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
