@@ -899,7 +899,7 @@ def _cleanup_preconditions_hold(
         return False
     if not cleanup_evidence.report_saved:
         return False
-    if not _session_state_has_saved_apply_result(session):
+    if not _session_state_has_saved_apply_result(session, join_state):
         warnings.append(
             "apply cleanup skipped: session state does not contain saved apply "
             "result metadata"
@@ -920,11 +920,15 @@ def _cleanup_preconditions_hold(
     return True
 
 
-def _session_state_has_saved_apply_result(_session: dict[object, object]) -> bool:
+def _session_state_has_saved_apply_result(
+    session: dict[object, object],
+    join_state: _JoinState,
+) -> bool:
     """session state schema に定義された apply result 保存済み情報を判定する。"""
-    # 現行 oracle の session state schema には apply result field がないため、
-    # schema が追加されるまでは cleanup の必須条件を満たせない。
-    return False
+    return (
+        session.get("last_joined_apply_oracle_snapshot_commit")
+        == join_state.oracle_snapshot_commit
+    )
 
 
 def _is_safe_apply_worktree(repo_root: Path, path: Path) -> bool:
