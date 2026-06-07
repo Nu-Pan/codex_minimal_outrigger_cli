@@ -1619,7 +1619,13 @@ def test_eval_oracles_snapshots_oracles_with_maintained_indexes(
     _git(repo, "add", "oracles")
     _git(repo, "commit", "-m", "add original oracle")
     _prepare_review_oracles_session(repo)
+    branch_name = _git(repo, "branch", "--show-current").stdout.strip()
+    session_fork_commit = repo_module.read_session_start_commit(repo, branch_name)
+    (repo / "session-note.txt").write_text("session change\n", encoding="utf-8")
+    _git(repo, "add", "session-note.txt")
+    _git(repo, "commit", "-m", "add session change before review")
     review_start_head = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    assert session_fork_commit != review_start_head
 
     maintain_exclusions: list[list[str]] = []
 
@@ -1682,7 +1688,8 @@ def test_eval_oracles_snapshots_oracles_with_maintained_indexes(
     assert maintain_exclusions == [[]]
     assert evaluated_purposes == ["oracle 評価 oracles/original.md"]
     assert snapshot_reads == [("original\n", "maintained oracle index\n")]
-    assert f'session_fork_commit: "{review_start_head}"' in report
+    assert f'session_fork_commit: "{session_fork_commit}"' in report
+    assert f'review_fork_commit: "{review_start_head}"' in report
     assert "oracle_count_total: 1" in report
     assert "oracle_count_evaluated: 1" in report
     assert "oracles/generated.md" not in report
@@ -1988,6 +1995,13 @@ def test_eval_oracles_writes_error_report_when_preparation_fails(
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
     _prepare_review_oracles_session(repo)
+    branch_name = _git(repo, "branch", "--show-current").stdout.strip()
+    session_fork_commit = repo_module.read_session_start_commit(repo, branch_name)
+    (repo / "session-note.txt").write_text("session change\n", encoding="utf-8")
+    _git(repo, "add", "session-note.txt")
+    _git(repo, "commit", "-m", "add session change before review")
+    review_start_head = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    assert session_fork_commit != review_start_head
 
     def fake_maintain_indexes(_repo_root: Path) -> bool:
         """INDEX.md メンテナンス中の失敗を模擬する。"""
@@ -2008,7 +2022,8 @@ def test_eval_oracles_writes_error_report_when_preparation_fails(
     assert 'result: "error"' in report
     assert 'scope: "full"' in report
     assert "session_branch:" in report
-    assert "session_fork_commit: null" not in report
+    assert f'session_fork_commit: "{session_fork_commit}"' in report
+    assert f'review_fork_commit: "{review_start_head}"' in report
     assert "oracle_count_total: 1" in report
     assert "oracle_count_evaluated: 0" in report
     assert "- Failed stage: `INDEX.md メンテナンス`" in report

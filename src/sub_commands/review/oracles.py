@@ -293,7 +293,8 @@ def cmoc_review_oracles_impl(
     branch_name = None
     cmoc_branch = None
     base_commit = None
-    commit_hash = None
+    session_fork_commit = None
+    review_start_commit = None
     review_fork_commit = None
     review_join_commit = None
     deleted_oracles = None
@@ -306,6 +307,8 @@ def cmoc_review_oracles_impl(
     try:
         branch_name = _validate_review_oracles_preconditions(repo_root)
 
+        session_fork_commit = read_session_start_commit(repo_root, branch_name)
+
         # 評価前に `.cmoc` の ignore 保証を済ませる。
         failed_stage = ".cmoc ignore 確認"
         start_step(timer, 1, 6, ".cmoc ignore 確認")
@@ -313,13 +316,13 @@ def cmoc_review_oracles_impl(
         assert_no_uncommitted_changes(repo_root)
 
         session_id = session_id_from_branch(branch_name)
-        commit_hash = head_commit(repo_root)
+        review_start_commit = head_commit(repo_root)
 
         failed_stage = "review worktree 作成"
         review_plan = _create_review_worktree(
             repo_root,
             session_id,
-            commit_hash,
+            review_start_commit,
         )
         review_repo_root = review_plan.review_worktree
         review_fork_commit = head_commit(review_repo_root)
@@ -332,7 +335,7 @@ def cmoc_review_oracles_impl(
         partial = session_branch and scope == "session"
         mode = "partial" if partial else "full"
         if partial:
-            base_commit = read_session_start_commit(repo_root, branch_name)
+            base_commit = session_fork_commit
             deleted_oracles = has_deleted_oracle_files(review_repo_root, base_commit)
         else:
             deleted_oracles = False
@@ -417,7 +420,7 @@ def cmoc_review_oracles_impl(
                 branch_name,
                 cmoc_branch,
                 base_commit,
-                commit_hash,
+                session_fork_commit,
                 deleted_oracles,
                 len(all_oracle_files),
                 oracle_files,
@@ -436,7 +439,7 @@ def cmoc_review_oracles_impl(
                 branch_name,
                 cmoc_branch,
                 base_commit,
-                commit_hash,
+                session_fork_commit,
                 deleted_oracles,
                 len(all_oracle_files) if all_oracle_files_known else None,
                 oracle_files,
@@ -460,7 +463,7 @@ def cmoc_review_oracles_impl(
                 branch_name,
                 cmoc_branch,
                 base_commit,
-                commit_hash,
+                review_start_commit,
                 deleted_oracles,
                 len(all_oracle_files) if all_oracle_files_known else None,
                 oracle_files,
@@ -2000,7 +2003,7 @@ def _write_report(
     branch_name: str,
     cmoc_branch: bool,
     base_commit: str | None,
-    commit_hash: str,
+    session_fork_commit: str,
     deleted_oracles: bool,
     oracle_count_total: int,
     oracle_files: list[Path],
@@ -2024,7 +2027,7 @@ def _write_report(
         f"repo_root: {_yaml_string(str(repo_root.resolve()))}",
         f"scope: {_yaml_string(scope)}",
         f"session_branch: {_yaml_string(branch_name)}",
-        f"session_fork_commit: {_yaml_string(commit_hash)}",
+        f"session_fork_commit: {_yaml_string(session_fork_commit)}",
         f"review_branch: {_yaml_nullable(review_branch)}",
         f"review_fork_commit: {_yaml_nullable(review_fork_commit)}",
         f"review_join_commit: {_yaml_nullable(review_join_commit)}",
@@ -2095,7 +2098,7 @@ def _write_error_report(
     branch_name: str | None,
     cmoc_branch: bool | None,
     base_commit: str | None,
-    commit_hash: str | None,
+    session_fork_commit: str | None,
     deleted_oracles: bool | None,
     oracle_count_total: int | None,
     oracle_files: list[Path],
@@ -2120,7 +2123,7 @@ def _write_error_report(
         f"repo_root: {_yaml_string(str(repo_root.resolve()))}",
         f"scope: {_yaml_nullable(scope)}",
         f"session_branch: {_yaml_nullable(branch_name)}",
-        f"session_fork_commit: {_yaml_nullable(commit_hash)}",
+        f"session_fork_commit: {_yaml_nullable(session_fork_commit)}",
         f"review_branch: {_yaml_nullable(review_branch)}",
         f"review_fork_commit: {_yaml_nullable(review_fork_commit)}",
         f"review_join_commit: {_yaml_nullable(review_join_commit)}",
@@ -2205,7 +2208,7 @@ def _print_error_report_fallback(
     branch_name: str | None,
     cmoc_branch: bool | None,
     base_commit: str | None,
-    commit_hash: str | None,
+    review_start_commit: str | None,
     deleted_oracles: bool | None,
     oracle_count_total: int | None,
     oracle_files: list[Path],
@@ -2225,7 +2228,7 @@ def _print_error_report_fallback(
         f"- branch: {_yaml_nullable(branch_name)}",
         f"- is_cmoc_branch: {_yaml_bool_nullable(cmoc_branch)}",
         f"- base_commit: {_yaml_nullable(base_commit)}",
-        f"- head_commit: {_yaml_nullable(commit_hash)}",
+        f"- head_commit: {_yaml_nullable(review_start_commit)}",
         f"- deleted_oracles_detected: {_yaml_bool_nullable(deleted_oracles)}",
         f"- oracle_count_total: {_yaml_int_nullable(oracle_count_total)}",
         f"- oracle_count_requested: {len(oracle_files)}",
