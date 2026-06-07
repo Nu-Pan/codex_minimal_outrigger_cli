@@ -24,7 +24,6 @@ from .codex import (
 )
 from .errors import CmocError
 
-_INDEX_DIRECTORY_EXCLUDED_NAMES: set[str] = {"build", "tmp", "__pycache__"}
 _BINARY_DETECTION_CHUNK_SIZE = 8192
 _EMPTY_SHA256_DIGEST = hashlib.sha256(b"").hexdigest()
 _INDEX_OUTPUT_SCHEMA: dict[str, object] = {
@@ -278,10 +277,7 @@ def _index_directories(
         if _is_under_any_path(directory, excluded_index_roots):
             continue
         relative_parts = directory.relative_to(repo_root).parts
-        if any(
-            part.startswith(".") or part in _INDEX_DIRECTORY_EXCLUDED_NAMES
-            for part in relative_parts
-        ):
+        if any(part.startswith(".") for part in relative_parts):
             continue
         if _is_repo_memo(repo_root, directory):
             continue
@@ -661,12 +657,10 @@ def _raise_index_io_error(
 
 def _should_prune_index_directory(repo_root: Path, directory: Path) -> bool:
     """探索時に配下を読まない INDEX 配置除外ディレクトリか判定する。"""
-    # root 直下 memo と、名前ベース除外ディレクトリの配下は探索しない。
     name = directory.name
     return (
         directory.is_symlink()
         or name.startswith(".")
-        or name in _INDEX_DIRECTORY_EXCLUDED_NAMES
         or _is_repo_memo(repo_root, directory)
     )
 

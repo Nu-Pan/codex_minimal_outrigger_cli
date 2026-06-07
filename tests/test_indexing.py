@@ -190,8 +190,9 @@ def test_maintain_indexes_refreshes_stale_oracle_routing_path(
         (".cmoc/INDEX.md", False),
         (".agents/INDEX.md", False),
         (".git/INDEX.md", False),
-        ("build/INDEX.md", False),
-        ("tmp/INDEX.md", False),
+        ("build/INDEX.md", True),
+        ("tmp/INDEX.md", True),
+        ("__pycache__/INDEX.md", True),
         ("docs/readme.md", False),
     ],
 )
@@ -853,18 +854,21 @@ def test_maintain_indexes_creates_missing_oracles_index(
     assert "# `docs`" in (oracle_root / "INDEX.md").read_text(encoding="utf-8")
 
 
-def test_maintain_indexes_includes_build_and_tmp_as_entries(
+def test_maintain_indexes_places_indexes_in_generated_named_directories(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """build/tmp は配置対象からは除外しても親 INDEX の目次対象には含める。"""
+    """build/tmp/__pycache__ も gitignore 対象でなければ配置対象にする。"""
     repo = _init_repo(tmp_path)
     build = repo / "build"
     tmp = repo / "tmp"
+    pycache = repo / "__pycache__"
     build.mkdir()
     tmp.mkdir()
+    pycache.mkdir()
     (build / "artifact.txt").write_text("artifact\n", encoding="utf-8")
     (tmp / "scratch.txt").write_text("scratch\n", encoding="utf-8")
+    (pycache / "module.pyc.txt").write_text("pycache\n", encoding="utf-8")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "generated dirs")
 
@@ -885,8 +889,50 @@ def test_maintain_indexes_includes_build_and_tmp_as_entries(
     content = (repo / "INDEX.md").read_text(encoding="utf-8")
     assert "# `build`" in content
     assert "# `tmp`" in content
-    assert not (build / "INDEX.md").exists()
-    assert not (tmp / "INDEX.md").exists()
+    assert "# `__pycache__`" in content
+    assert (build / "INDEX.md").exists()
+    assert (tmp / "INDEX.md").exists()
+    assert (pycache / "INDEX.md").exists()
+
+
+def test_maintain_indexes_excludes_gitignored_generated_named_directories(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """build/tmp/__pycache__ は .gitignore 対象の場合だけ配置対象から除外する。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text(
+        "build/\ntmp/\n__pycache__/\n",
+        encoding="utf-8",
+    )
+    for name in ("build", "tmp", "__pycache__"):
+        directory = repo / name
+        directory.mkdir()
+        (directory / "artifact.txt").write_text("artifact\n", encoding="utf-8")
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-m", "ignore generated dirs")
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """INDEX 生成用の最小 Structured Output を返す。"""
+        return json.dumps(
+            {
+                "summary": ["summary"],
+                "read_this_when": ["read"],
+                "do_not_read_this_when": ["skip"],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    maintain_indexes(repo)
+
+    content = (repo / "INDEX.md").read_text(encoding="utf-8")
+    assert "# `build`" not in content
+    assert "# `tmp`" not in content
+    assert "# `__pycache__`" not in content
+    assert not (repo / "build" / "INDEX.md").exists()
+    assert not (repo / "tmp" / "INDEX.md").exists()
+    assert not (repo / "__pycache__" / "INDEX.md").exists()
 
 
 def test_maintain_indexes_excludes_symlink_entries(

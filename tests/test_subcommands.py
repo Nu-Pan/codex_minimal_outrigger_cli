@@ -4106,7 +4106,7 @@ def test_apply_join_stops_on_apply_branch_memo_index_diff(
 
 @pytest.mark.parametrize(
     "relative_path",
-    ["build/INDEX.md", "tmp/INDEX.md", ".cache/INDEX.md"],
+    [".cache/INDEX.md", ".cache/nested/INDEX.md"],
 )
 def test_apply_join_stops_on_apply_branch_unmaintained_index_diff(
     tmp_path: Path,
