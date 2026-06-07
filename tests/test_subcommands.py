@@ -1336,6 +1336,7 @@ def test_eval_oracles_writes_report_with_fake_codex(
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _prepare_review_oracles_session(repo)
 
     maintain_calls: list[Path] = []
 
@@ -1401,6 +1402,7 @@ def test_review_oracles_parallel_evaluation_records_worker_codex_events(
     oracle_root.mkdir()
     for name in ["a.md", "b.md"]:
         (oracle_root / name).write_text(f"{name}\n", encoding="utf-8")
+    _prepare_review_oracles_session(repo)
 
     monkeypatch.setattr(
         review_oracles_module,
@@ -1466,6 +1468,7 @@ def test_eval_oracles_snapshots_oracles_with_maintained_indexes(
     original_index.write_text("initial oracle index\n", encoding="utf-8")
     _git(repo, "add", "oracles")
     _git(repo, "commit", "-m", "add original oracle")
+    _prepare_review_oracles_session(repo)
     review_start_head = _git(repo, "rev-parse", "HEAD").stdout.strip()
 
     maintain_exclusions: list[list[str]] = []
@@ -1542,6 +1545,7 @@ def test_eval_oracles_snapshot_gets_missing_oracles_index_after_maintenance(
     oracle_root.mkdir()
     oracle_file = oracle_root / "spec.md"
     oracle_file.write_text("spec\n", encoding="utf-8")
+    _prepare_review_oracles_session(repo)
 
     def fake_maintain_indexes(repo_root: Path) -> bool:
         """欠落していた oracles/INDEX.md がメンテナンスで作られる状況を模擬する。"""
@@ -1588,6 +1592,7 @@ def test_eval_oracles_reads_fixed_snapshot_after_oracle_tree_changes(
     oracle_root.mkdir()
     oracle_file = oracle_root / "spec.md"
     oracle_file.write_text("original snapshot text\n", encoding="utf-8")
+    _prepare_review_oracles_session(repo)
 
     def fake_maintain_indexes(repo_root: Path) -> bool:
         """INDEX.md メンテナンス自体は oracle 本文を変えない。"""
@@ -1656,6 +1661,7 @@ def test_eval_oracles_index_maintenance_updates_oracles_index(
     (oracle_root / "INDEX.md").write_text(stale_index, encoding="utf-8")
     _git(repo, "add", "oracles")
     _git(repo, "commit", "-m", "add stale oracle index")
+    _prepare_review_oracles_session(repo)
 
     def fake_index_codex(*args: object, **kwargs: object) -> str:
         """repo root INDEX 生成だけを決定論的に返す。"""
@@ -1699,6 +1705,7 @@ def test_eval_oracles_runs_file_evaluations_in_parallel(
     oracle_root.mkdir()
     for name in ["a.md", "b.md", "c.md"]:
         (oracle_root / name).write_text(f"{name}\n", encoding="utf-8")
+    _prepare_review_oracles_session(repo)
 
     monkeypatch.setattr(
         review_oracles_module,
@@ -1755,6 +1762,7 @@ def test_eval_oracles_writes_error_report_when_evaluation_fails(
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _prepare_review_oracles_session(repo)
 
     monkeypatch.setattr(
         review_oracles_module,
@@ -1821,6 +1829,7 @@ def test_eval_oracles_writes_error_report_when_preparation_fails(
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _prepare_review_oracles_session(repo)
 
     def fake_maintain_indexes(_repo_root: Path) -> bool:
         """INDEX.md メンテナンス中の失敗を模擬する。"""
@@ -1861,6 +1870,7 @@ def test_eval_oracles_error_report_marks_unevaluated_files_in_table(
     oracle_b = oracle_root / "b.md"
     oracle_a.write_text("a\n", encoding="utf-8")
     oracle_b.write_text("b\n", encoding="utf-8")
+    _prepare_review_oracles_session(repo)
 
     monkeypatch.setattr(
         review_oracles_module,
@@ -1908,6 +1918,7 @@ def test_eval_oracles_writes_error_report_when_report_generation_fails(
     oracle_root.mkdir()
     oracle_file = oracle_root / "spec.md"
     oracle_file.write_text("spec\n", encoding="utf-8")
+    _prepare_review_oracles_session(repo)
 
     monkeypatch.setattr(
         review_oracles_module,
@@ -1959,6 +1970,7 @@ def test_eval_oracles_preserves_original_error_when_error_report_fails(
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _prepare_review_oracles_session(repo)
 
     monkeypatch.setattr(
         review_oracles_module,
@@ -2010,6 +2022,7 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
     oracle_a.write_text("a\n", encoding="utf-8")
     oracle_b.write_text("b\n", encoding="utf-8")
     oracle_index.write_text("index\n", encoding="utf-8")
+    _prepare_review_oracles_session(repo)
 
     monkeypatch.setattr(
         review_oracles_module,
@@ -2092,7 +2105,7 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
         'mode: "full"',
         "full_requested: true",
         "branch:",
-        "is_cmoc_branch: false",
+        "is_cmoc_branch: true",
         "base_commit: null",
         "head_commit:",
         "deleted_oracles_detected: false",
@@ -2233,6 +2246,7 @@ def test_review_oracles_improves_combined_issue_list(
     oracle_root.mkdir()
     oracle_file = oracle_root / "spec.md"
     oracle_file.write_text("spec\n", encoding="utf-8")
+    _prepare_review_oracles_session(repo)
 
     monkeypatch.setattr(
         review_oracles_module,
@@ -2798,6 +2812,8 @@ def test_eval_oracles_stays_partial_when_oracle_was_deleted(
     _checkout_session_branch(repo)
     changed_oracle.write_text("after\n", encoding="utf-8")
     deleted_oracle.unlink()
+    _git(repo, "add", "-A", "oracles")
+    _git(repo, "commit", "-m", "change session oracles")
 
     evaluated_prompts: list[str] = []
     monkeypatch.setattr(
@@ -2828,11 +2844,11 @@ def test_eval_oracles_stays_partial_when_oracle_was_deleted(
     assert "oracle_count: 1" in report
 
 
-def test_eval_oracles_full_mode_does_not_depend_on_session_state(
+def test_eval_oracles_full_mode_requires_valid_session_state(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """session branch 上の full mode は session state を前提にしない。"""
+    """session branch 上の full mode でも session state を検証する。"""
     repo = _init_repo(tmp_path)
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -2862,24 +2878,87 @@ def test_eval_oracles_full_mode_does_not_depend_on_session_state(
 
     monkeypatch.setattr(review_oracles_module, "run_codex_exec", fake_codex)
 
-    cmoc_review_oracles_impl(repo, full=True)
+    with pytest.raises(CmocError) as error:
+        cmoc_review_oracles_impl(repo, full=True)
 
-    report = next(
-        (repo / ".cmoc" / "reports" / "review_oracles").glob("*.md")
-    ).read_text(encoding="utf-8")
-    assert 'mode: "full"' in report
-    assert "full_requested: true" in report
-    assert "is_cmoc_branch: true" in report
-    assert "base_commit: null" in report
-    assert "deleted_oracles_detected: false" in report
-    assert "| 1 | `oracles/existing.md` | 0 |" in report
+    assert "session state ファイルの JSON が不正です。" in error.value.message
 
 
-def test_eval_oracles_uses_full_mode_on_apply_branch(
+def test_eval_oracles_rejects_non_session_branch(tmp_path: Path) -> None:
+    """通常 branch 上の `review oracles` は事前条件違反として拒否する。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _git(repo, "add", ".gitignore", "oracles")
+    _git(repo, "commit", "-m", "prepare clean normal branch")
+
+    with pytest.raises(CmocError) as error:
+        cmoc_review_oracles_impl(repo, full=True)
+
+    assert "`cmoc review oracles` は session branch 上で実行してください。" in (
+        error.value.message
+    )
+    assert "現在の branch:" in error.value.detail
+
+
+def test_eval_oracles_rejects_missing_session_state(tmp_path: Path) -> None:
+    """session state file がない session branch では実行しない。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _prepare_review_oracles_session(repo)
+    next((repo / ".cmoc" / "sessions").glob("*.json")).unlink()
+
+    with pytest.raises(CmocError) as error:
+        cmoc_review_oracles_impl(repo, full=True)
+
+    assert "session state ファイルが見つかりませんでした。" in error.value.message
+
+
+def test_eval_oracles_rejects_inactive_session_state(tmp_path: Path) -> None:
+    """session.state が active でない session branch では実行しない。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _prepare_review_oracles_session(repo)
+    state_path = next((repo / ".cmoc" / "sessions").glob("*.json"))
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["session"]["state"] = "joined"
+    state_path.write_text(json.dumps(state), encoding="utf-8")
+
+    with pytest.raises(CmocError) as error:
+        cmoc_review_oracles_impl(repo, full=True)
+
+    assert "active な session ではありません。" in error.value.message
+    assert "session.state: joined" in error.value.detail
+
+
+def test_eval_oracles_rejects_uncommitted_changes(tmp_path: Path) -> None:
+    """git 未コミット差分がある session branch では実行しない。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    oracle_file = oracle_root / "spec.md"
+    oracle_file.write_text("spec\n", encoding="utf-8")
+    _prepare_review_oracles_session(repo)
+    oracle_file.write_text("changed\n", encoding="utf-8")
+
+    with pytest.raises(CmocError) as error:
+        cmoc_review_oracles_impl(repo, full=True)
+
+    assert "未コミットの変更があります。" in error.value.message
+    assert "oracles/spec.md" in error.value.detail
+
+
+def test_eval_oracles_rejects_apply_branch(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """apply branch 上の `eval-oracles` は `--full` なしでも全体評価する。"""
+    """apply branch 上の `review oracles` は事前条件違反として拒否する。"""
     repo = _init_repo(tmp_path)
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
@@ -2920,21 +2999,13 @@ def test_eval_oracles_uses_full_mode_on_apply_branch(
 
     monkeypatch.setattr(review_oracles_module, "run_codex_exec", fake_codex)
 
-    cmoc_review_oracles_impl(repo, full=False)
+    with pytest.raises(CmocError) as error:
+        cmoc_review_oracles_impl(repo, full=False)
 
-    report = next(
-        (repo / ".cmoc" / "reports" / "review_oracles").glob("*.md")
-    ).read_text(encoding="utf-8")
-    assert sorted(evaluated_targets) == [changed_oracle, unchanged_oracle]
-    assert 'mode: "full"' in report
-    assert "full_requested: false" in report
-    assert "is_cmoc_branch: true" in report
-    assert "base_commit: null" in report
-    assert "deleted_oracles_detected: false" in report
-    assert "oracle_count: 2" in report
-    assert report.index("| 1 | `oracles/changed.md` | 0 |") < report.index(
-        "| 2 | `oracles/unchanged.md` | 0 |"
+    assert "`cmoc review oracles` は session branch 上で実行してください。" in (
+        error.value.message
     )
+    assert evaluated_targets == []
 
 
 def test_review_oracles_body_uses_command_path_module_name() -> None:
@@ -10477,6 +10548,25 @@ def _checkout_session_branch(repo: Path) -> None:
     )
     exclude = repo / ".git" / "info" / "exclude"
     exclude.write_text(f"{exclude.read_text(encoding='utf-8')}\n.cmoc/\n")
+
+
+def _prepare_review_oracles_session(repo: Path) -> None:
+    """review oracles 実行用に clean な session branch へ移動する。"""
+    gitignore = repo / ".gitignore"
+    content = gitignore.read_text(encoding="utf-8") if gitignore.exists() else ""
+    if "/.cmoc/" not in content.splitlines():
+        prefix = content
+        if prefix and not prefix.endswith("\n"):
+            prefix += "\n"
+        gitignore.write_text(f"{prefix}/.cmoc/\n", encoding="utf-8")
+
+    if _git(repo, "status", "--porcelain").stdout.strip():
+        _git(repo, "add", "-A")
+        _git(repo, "commit", "-m", "prepare review oracles")
+
+    branch_name = _git(repo, "branch", "--show-current").stdout.strip()
+    if not branch_name.startswith("cmoc/session/"):
+        _checkout_session_branch(repo)
 
 
 def _repo_with_session_join_conflict(

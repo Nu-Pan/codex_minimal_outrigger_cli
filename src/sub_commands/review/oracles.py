@@ -17,9 +17,11 @@ from commons.codex import (
     run_codex_exec,
 )
 from commons.command_runner import run_command
+from commons.errors import CmocError
 from commons.indexing import maintain_indexes
 from commons.report_files import write_timestamped_report
 from commons.repo import (
+    assert_no_uncommitted_changes,
     changed_oracle_files,
     current_branch,
     ensure_cmoc_ignored,
@@ -28,7 +30,10 @@ from commons.repo import (
     is_cmoc_branch,
     is_session_branch,
     list_oracle_files,
+    read_session_state,
     read_session_start_commit,
+    session_id_from_branch,
+    session_state_root,
 )
 from commons.timing import StepTimer, start_step
 
@@ -212,6 +217,8 @@ def cmoc_review_oracles_impl(
     evaluations = []
     failed_stage = "review oracles 初期化"
     try:
+        branch_name = _validate_review_oracles_preconditions(repo_root)
+
         # 評価前に `.cmoc` の ignore 保証を済ませる。
         failed_stage = ".cmoc ignore 確認"
         start_step(timer, 1, 6, ".cmoc ignore 確認")
@@ -220,7 +227,6 @@ def cmoc_review_oracles_impl(
         # branch 状態と scope から、部分評価か全体評価かを決める。
         failed_stage = "oracle ファイル選定"
         start_step(timer, 2, 6, "oracle ファイル選定")
-        branch_name = current_branch(repo_root)
         cmoc_branch = is_cmoc_branch(branch_name)
         session_branch = is_session_branch(branch_name)
         partial = session_branch and scope == "session"
@@ -368,6 +374,45 @@ def _normalize_review_oracles_scope(
     if full is True:
         return "full"
     return scope
+
+
+def _validate_review_oracles_preconditions(repo_root: Path) -> str:
+    """review oracles の session / clean worktree 前提条件を検証する。"""
+    branch_name = current_branch(repo_root)
+    if not is_session_branch(branch_name):
+        raise CmocError(
+            "`cmoc review oracles` は session branch 上で実行してください。",
+            [
+                "`cmoc session fork` で作成した branch へ移動してから再実行してください。",
+                "通常 branch や apply branch 上では、先に対象 session branch へ切り替えてください。",
+            ],
+            f"現在の branch: {branch_name or '(detached HEAD)'}",
+        )
+
+    session_id = session_id_from_branch(branch_name)
+    state = read_session_state(session_state_root(repo_root), session_id)
+    session = state.get("session")
+    if not isinstance(session, dict):
+        raise CmocError(
+            "session state ファイルの形式が不正です。",
+            [
+                "state JSON の session セクションを確認して復旧してください。",
+                "復旧できない場合は、現在の session を使わず新しい session を開始してください。",
+            ],
+            f"現在の branch: {branch_name}",
+        )
+    if session.get("state") != "active":
+        raise CmocError(
+            "active な session ではありません。",
+            [
+                "対象 session の state を確認してください。",
+                "既に join または abandon 済みの場合は、新しい session を開始してください。",
+            ],
+            f"session.state: {session.get('state')}",
+        )
+
+    assert_no_uncommitted_changes(repo_root)
+    return branch_name
 
 
 def _validate_review_oracles_loop(value: int, option_name: str) -> None:
