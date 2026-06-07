@@ -50,27 +50,27 @@
 
 ## Summary
 
-- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体実装で、session branch 上で apply run を開始し、調査・修正ループからレポート出力までを一気通貫で扱うモジュールです。
-- session/apply state 検証、専用 apply worktree の作成、`.cmoc` の追跡外保証、排他ロック、終了コード分岐をまとめています。
-- 不整合調査の Structured Output、要修正点の改善、INDEX.md 保守、変更要約と error report の生成に関する補助関数群も含みます。
+- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体実装で、session branch 上で apply run を開始し、不整合調査・修正ループからレポート出力までを一気通貫で扱うモジュールです。
+- session/apply state の検証、apply worktree と apply branch の作成、排他ロック、終了コード分岐、`.cmoc` の追跡外保証、禁止パス検査をまとめています。
+- 不整合調査の Structured Output schema、要修正点の改善、`INDEX.md` メンテナンス、変更要約と error report の生成に関する補助関数群も含みます。
 
 ## Read this when
 
-- `cmoc apply fork` の処理順、状態遷移、失敗時の復旧を確認したいとき。
-- apply worktree / apply branch の生成とロック制御、`.cmoc` の確認、未コミット差分や state 前提を追いたいとき。
-- Codex CLI への不整合調査・修正依頼、要修正点リスト改善、Structured Output schema、レポート生成の実装を確認したいとき。
-- INDEX.md の自動メンテナンス、禁止パス検査、コミット確定、正常終了と未収束終了の分岐を追いたいとき。
+- `cmoc apply fork` の処理順、状態遷移、成功・未収束・エラーの分岐を確認したいとき。
+- apply worktree / apply branch の生成、ロック制御、`.cmoc` の ignore 確認、未コミット差分や forbidden path の検証を追いたいとき。
+- 不整合調査、要修正点リスト改善、Structured Output schema、レポート生成、`INDEX.md` メンテナンスの実装を確認したいとき。
+- `cmoc apply fork` の実装・修正・レビュー・テストに入る前に、処理の大枠を把握したいとき。
 
 ## Do not read this when
 
 - `cmoc apply fork` の利用手順や正本仕様断片だけを確認したいときは、`oracles/docs/app_specs/sub_commands/apply_fork.md` を読むべきです。
-- `cmoc apply join` や `cmoc apply abandon` の実装だけを追いたいときは、このファイルではなく各実装モジュールを読むべきです。
-- `src/sub_commands/apply` の入口構造やパッケージ宣言だけを確認したいときは、`src/sub_commands/apply/INDEX.md` や `__init__.py` で足ります。
+- `cmoc apply join` や `cmoc apply abandon` の実装だけを追いたいときは、このファイルではなく各モジュールを読むべきです。
+- `src/sub_commands/apply` の入口構造だけを確認したいときは、`src/sub_commands/apply/INDEX.md` や `__init__.py` で足ります。
 - `session` や `review` の実装だけを追いたいときは、このファイルではなく各系統のモジュールを読むべきです。
 
 ## hash
 
-- 5fa428d5e2cbe7d4e73ef777b95b9673b791f54ed5030bea7f3dcabfa823c634
+- e2fe86ff3f76d8a7ce60604913f3fe93464305b10ba68449af7b0670810438fb
 
 # `join.py`
 

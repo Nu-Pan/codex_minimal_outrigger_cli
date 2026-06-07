@@ -82,14 +82,15 @@
 ## Summary
 
 - `tests/test_indexing.py` は `src/commons/indexing.py` の `INDEX.md` メンテナンス処理に関する回帰テスト群です。
-- 生成・再利用・再生成、hash 更新、Structured Output の妥当性確認を中心に扱います。
-- `gitignore`、symlink、binary、非 UTF-8 path、空ディレクトリ、並列処理、排他 lock、自動 commit の境界条件も押さえます。
+- 生成・再利用・再生成、hash 更新、Structured Output 検証に加えて、`find_index_inconsistencies()` の検査や自動コミットまでを扱います。
+- `gitignore`、symlink、binary、非 UTF-8 path、空ディレクトリ、並列処理、排他 lock の境界条件も押さえます。
 
 ## Read this when
 
-- `maintain_indexes()` と `is_maintained_index_path()` 系の判定条件を見直したいとき。
-- `INDEX.md` の生成・再利用・再生成、hash 更新、Structured Output 検証を確認したいとき。
-- `gitignore`、symlink、binary、非 UTF-8 path、空ディレクトリ、並列処理、排他 lock、自動 commit の境界条件を確認したいとき。
+- `maintain_indexes()` や `is_maintained_index_path()` / `is_maintained_index_path_at_commit()` の判定条件を見直したいとき。
+- `INDEX.md` の生成・再利用・再生成、hash 更新、Structured Output の妥当性確認を追いたいとき。
+- `gitignore`、symlink、binary、非 UTF-8 path、空ディレクトリ、並列実行、排他 lock、自動 commit の挙動を確認したいとき。
+- `find_index_inconsistencies()` が不整合をどう報告するか確認したいとき。
 
 ## Do not read this when
 
@@ -99,7 +100,7 @@
 
 ## hash
 
-- 54cb2b16e11329e5a0a4c8c274ab51fd9f1b85f5555f460234c6463341603236
+- e8e359c211d7f66d45b00c9aae1817575838153a465c5c45b8e931682f50b3a8
 
 # `test_repo.py`
 
@@ -164,18 +165,18 @@
 - `run_command()` を中心に、サブコマンド横断の制御ロジックや共通エラーレポートを確認したいとき。
 - `init` / `session` / `apply` / `review oracles` の状態遷移、復旧、cleanup を横断的に追いたいとき。
 - CLI 登録、補完応答、起動経路、終了コード、ログ出力、経過時間サマリーの挙動を確認したいとき。
-- Structured Output の検証、session/apply/review のテスト補助関数の意図を把握したいとき。
+- Structured Output の検証、`session` / `apply` / `review` のテスト補助関数の意図を把握したいとき。
 
 ## Do not read this when
 
 - 個別の `src/sub_commands/...` 実装本体だけを追いたいとき。
 - `tests/test_repo.py` や `tests/test_indexing.py` など、別機能の回帰テストを探しているとき。
 - `cmoc init` / `session` / `apply` / `review oracles` の操作手順や引数仕様だけを知りたいとき。
-- `INDEX.md` の生成ルールや `oracles` 側の正本仕様だけを確認したいとき。
+- `INDEX.md` の生成ルールや、`oracles` 側の正本仕様だけを確認したいとき。
 
 ## hash
 
-- 644aa15f23f88cc438dfc713250e340e346db3175a189fa50068cce0d44aa1b3
+- 1dfeb59e2a924cd7d72a51ed3b90afa2de9766c54b5bc304384ff080a582a206
 
 # `test_timestamps.py`
 
