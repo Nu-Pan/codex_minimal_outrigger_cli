@@ -634,8 +634,8 @@ def _hash_path(
     if not path.is_dir():
         return None
 
-    # ディレクトリは直下目次対象の type/path/hash を安定形式で連結する。
-    serialized_entries: list[bytes] = []
+    # ディレクトリは直下目次対象の type/path/hash を文字列として連結する。
+    serialized_entries: list[str] = []
     try:
         children = sorted(
             path.iterdir(),
@@ -650,18 +650,15 @@ def _hash_path(
         if content_hash is None:
             continue
         serialized_entries.append(
-            b"".join(
-                [
-                    entry_type.encode("ascii"),
-                    b"\0",
-                    _filesystem_text_bytes(relative_path),
-                    b"\0",
-                    content_hash.encode("ascii"),
-                    b"\n",
-                ]
+            (
+                f"{entry_type}\0"
+                f"{_directory_hash_relative_path(relative_path)}\0"
+                f"{content_hash}\n"
             )
         )
-    return hashlib.sha256(b"".join(serialized_entries)).hexdigest()
+    return hashlib.sha256(
+        "".join(serialized_entries).encode("utf-8")
+    ).hexdigest()
 
 
 def _index_entry_targets(
@@ -1036,6 +1033,15 @@ def _encode_index_token(value: str) -> str:
 def _decode_index_token(value: str) -> str:
     """heading 内 token を元のファイル・ディレクトリ名へ戻す。"""
     return os.fsdecode(unquote_to_bytes(value))
+
+
+def _directory_hash_relative_path(value: str) -> str:
+    """directory hash 用 relative path を UTF-8 文字列へ正規化する。"""
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        return _encode_index_token(value)
+    return value
 
 
 def _filesystem_text_bytes(value: str) -> bytes:

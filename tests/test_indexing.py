@@ -830,10 +830,14 @@ def test_maintain_indexes_round_trips_non_utf8_paths(
     root_index = (repo / "INDEX.md").read_text(encoding="utf-8")
     bad_dir = repo / os.fsdecode(raw_dir_name)
     child_index = (bad_dir / "INDEX.md").read_text(encoding="utf-8")
+    bad_dir_digest = _directory_digest(repo, bad_dir)
+    note_digest = hashlib.sha256(b"note\n").hexdigest()
 
     assert changed is True
     assert "# `bad_%FF_dir`" in root_index
     assert "# `note_%FE.txt`" in child_index
+    assert f"- {bad_dir_digest}" in root_index
+    assert f"- {note_digest}" in child_index
     assert any("bad_%FF_dir" in purpose for purpose in purposes)
     assert any(
         json.dumps(bad_dir.resolve().as_posix()) in prompt
@@ -2530,11 +2534,44 @@ def _directory_digest(repo: Path, directory: Path) -> str:
         else:
             content_hash = hashlib.sha256(child.read_bytes()).hexdigest()
         serialized_entries.append(
-            f"{entry_type}\0{relative_path}\0{content_hash}\n"
+            (
+                f"{entry_type}\0"
+                f"{_directory_hash_relative_path(relative_path)}\0"
+                f"{content_hash}\n"
+            )
         )
     return hashlib.sha256(
         "".join(serialized_entries).encode("utf-8")
     ).hexdigest()
+
+
+def _directory_hash_relative_path(value: str) -> str:
+    """テスト用に directory hash の relative path 表現へ揃える。"""
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        return _encode_index_token_for_test(value)
+    return value
+
+
+def _encode_index_token_for_test(value: str) -> str:
+    """テスト用に INDEX token と同じ可逆な 1 行 token を返す。"""
+    encoded_parts: list[str] = []
+    for character in value:
+        codepoint = ord(character)
+        if (
+            character == "%"
+            or character == "`"
+            or codepoint < 0x20
+            or codepoint == 0x7F
+            or 0xD800 <= codepoint <= 0xDFFF
+        ):
+            encoded_parts.extend(
+                f"%{byte:02X}" for byte in os.fsencode(character)
+            )
+        else:
+            encoded_parts.append(character)
+    return "".join(encoded_parts)
 
 
 def _index_entry(name: str, digest: str) -> str:
