@@ -44,29 +44,28 @@
 
 ## hash
 
-- 6534c818d649a5bf27c91568e5d0f98ec2a3ca42c83e255968a94e7742459b54
+- 8fc9b7c2c0694a002ed3129ad239c90bfa7fba52cbed104640d431f03365aa70
 
 # `sub_commands`
 
 ## Summary
 
-- `src/sub_commands` ディレクトリのルーティング文書で、`apply/`、`session/`、`review/`、`init.py`、`__init__.py` へ案内する入口です。
-- `cmoc` の各サブコマンド実装のどこへ進むべきかを切り分けるための目次です。
-- この階層では、実装本体よりも入口構造と参照先の案内を優先します。
+- `src/sub_commands` パッケージ配下の実装入口をまとめたルーティング文書です。
+- `__init__.py`、`init.py`、`apply/`、`review/`、`session/` へ進むための目次です。
+- 各サブコマンドの実装ファイルを読む前に、どの系統へ分岐するかを整理します。
 
 ## Read this when
 
-- `src/sub_commands` 配下の入口構造と、どのサブコマンド実装へ進むべきかを整理したいとき。
-- `cmoc apply`、`cmoc session`、`cmoc review`、`cmoc init` の責務分担をまとめて把握したいとき。
-- `src/sub_commands/__init__.py` のパッケージ宣言と、各サブディレクトリ・モジュールの役割を確認したいとき。
-- この階層のルーティング文書として、次に読むべき下位ファイルを切り分けたいとき。
+- `src/sub_commands` 配下のどのモジュールを開くべきか確認したいとき。
+- `cmoc init` / `apply` / `review` / `session` の実装入口を俯瞰したいとき。
+- サブコマンド実装やレビューの前に、パッケージ全体の配置を把握したいとき。
 
 ## Do not read this when
 
-- すでに目的のサブコマンド実装が分かっていて、`apply/`、`session/`、`review/`、`init.py` の該当ファイルへ直接進めるとき。
-- `src/sub_commands` ではなく、個別モジュールの実装やテストだけを確認したいとき。
-- `oracles` 側の正本仕様や、リポジトリ全体の運用ルールだけを確認したいとき。
+- 目的のファイルがすでに分かっていて、該当モジュールへ直接進むとき。
+- 各サブコマンドの詳細仕様や実装フローだけを確認したいとき。
+- この階層ではなく、上位の CLI 登録や `oracles` 側の仕様だけを見たいとき。
 
 ## hash
 
-- 1b3600f86b236e6ddae1e7a0f6394fab267d8b1901a6f11a34f4f5ab087b56b6
+- 07a9c7b7e427032d494f337f8a31c9c22c57b4a9c1aa5fe891b83612308214d1
