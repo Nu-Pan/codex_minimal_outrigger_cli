@@ -154,26 +154,26 @@
 ## Summary
 
 - `tests/test_subcommands.py` は、`cmoc` のサブコマンド群に対する決定論的な制御ロジックを検証する pytest テストの集約です。
-- `run_command` の標準出力 tee、エラー報告、終了集計、`repo` ルート解決失敗時の扱いを広く押さえます。
+- `run_command` の stdout tee、エラー報告、終了集計、`repo` ルート解決失敗時の扱いを広く押さえます。
 - `init`、`session`、`apply`、`eval_oracles` の状態遷移と副作用、CLI 登録、completion、`main` の例外変換まで回帰対象に含みます。
 
 ## Read this when
 
 - `cmoc` のサブコマンド群に対する決定論的な制御ロジックのテスト範囲を把握したいとき。
 - `run_command` のログ出力、終了コード、例外時レポート、経過時間集計の挙動を確認したいとき。
-- `init`、`session`、`apply`、`eval_oracles` の状態遷移、副作用、回帰テストの観点を追いたいとき。
+- `init`、`session`、`apply`、`eval_oracles` の状態遷移、副作用、回帰観点を追いたいとき。
 - CLI エントリポイントの登録、`main` のエラー変換、completion、バイナリ起動ラッパーの検証範囲を知りたいとき。
 
 ## Do not read this when
 
-- 個別の `cmoc init`、`cmoc session`、`cmoc apply`、`cmoc review oracles` の手順や引数仕様だけを確認したいとき。
+- 個別の `cmoc init`、`cmoc session`、`cmoc apply`、`cmoc review oracles` の引数や操作手順だけを確認したいとき。
 - `src/sub_commands/` 側の実装ロジックを直接追いたいとき。
 - `oracles` 配下の個別仕様断片や、`INDEX.md` 生成ルールそのものだけを確認したいとき。
-- サブコマンド制御やエラー処理ではなく、一般的な pytest の書き方やテスト規約だけを見たいとき。
+- 一般的な pytest の書き方や、テスト規約だけを見たいとき。
 
 ## hash
 
-- d20db406f91abc48f69ad990eb24e23b18189739f0e46b7623bd0243c5a92bd8
+- 818bd0ae3b36f85e26ca9bb0bbf5912c7a17e8b996565c1ac76dda02f3af92fd
 
 # `test_timestamps.py`
 
