@@ -1,6 +1,7 @@
 """`cmoc review oracles` の本体処理。"""
 
 from concurrent.futures import Future, ThreadPoolExecutor
+from contextvars import copy_context
 from dataclasses import dataclass
 import json
 from pathlib import Path
@@ -257,6 +258,7 @@ def cmoc_review_oracles_impl(
                 ) as executor:
                     futures = [
                         executor.submit(
+                            copy_context().run,
                             _evaluate_oracle_file,
                             repo_root,
                             oracle_file,

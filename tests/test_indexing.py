@@ -22,6 +22,8 @@ from commons.indexing import _locked_index_maintenance
 from commons.indexing import is_maintained_index_path
 from commons.indexing import is_maintained_index_path_at_commit
 from commons.indexing import maintain_indexes
+from commons.subcommand_log import log_event
+from commons.subcommand_log import subcommand_log
 
 
 def test_maintain_indexes_generates_routing_entries_and_respects_gitignore(
@@ -426,6 +428,62 @@ def test_maintain_indexes_generates_entries_in_parallel_with_stable_order(
     assert content.index("# `README.md`") < content.index("# `a.txt`")
     assert content.index("# `a.txt`") < content.index("# `b.txt`")
     assert content.index("# `b.txt`") < content.index("# `c.txt`")
+
+
+def test_maintain_indexes_parallel_entries_record_worker_codex_events(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """並列 INDEX entry 生成の worker 内 Codex 呼び出しも JSONL に残す。"""
+    repo = _init_repo(tmp_path)
+    for name in ["a.txt", "b.txt"]:
+        (repo / name).write_text(f"{name}\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "parallel log events")
+
+    def fake_codex(
+        repo_root: Path,
+        prompt: str,
+        *,
+        purpose: str,
+        **kwargs: object,
+    ) -> str:
+        """run_codex_exec の完了通知と同じイベントだけを worker thread で記録する。"""
+        log_event(
+            "codex_exec_call",
+            {
+                "purpose": purpose,
+                "log_path": str(
+                    repo_root / ".cmoc" / "logs" / "codex_exec" / "fake.log"
+                ),
+                "elapsed_seconds": 0.1,
+                "returncode": 0,
+            },
+        )
+        return json.dumps(
+            {
+                "summary": [purpose],
+                "read_this_when": ["read"],
+                "do_not_read_this_when": ["skip"],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    with subcommand_log(repo):
+        changed = maintain_indexes(repo)
+
+    log_file = next((repo / ".cmoc" / "logs" / "sub_commands").glob("*.jsonl"))
+    events = [
+        json.loads(line)
+        for line in log_file.read_text(encoding="utf-8").splitlines()
+    ]
+    codex_events = [
+        event for event in events if event["event"] == "codex_exec_call"
+    ]
+    assert changed is True
+    assert len(codex_events) >= 2
+    assert all(event["returncode"] == 0 for event in codex_events)
 
 
 def test_maintain_indexes_parallelizes_unrelated_indexes_at_same_depth(

@@ -1391,6 +1391,67 @@ def test_eval_oracles_writes_report_with_fake_codex(
     assert "## Specification-only basis" not in report
 
 
+def test_review_oracles_parallel_evaluation_records_worker_codex_events(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """並列 oracle 評価の worker 内 Codex 呼び出しもサブコマンド JSONL に残す。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    for name in ["a.md", "b.md"]:
+        (oracle_root / name).write_text(f"{name}\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        review_oracles_module,
+        "maintain_indexes",
+        lambda repo_root: False,
+    )
+
+    def fake_codex(
+        repo_root: Path,
+        prompt: str,
+        *,
+        purpose: str,
+        **kwargs: object,
+    ) -> str:
+        """run_codex_exec の完了通知と同じイベントだけを worker thread で記録する。"""
+        log_event(
+            "codex_exec_call",
+            {
+                "purpose": purpose,
+                "log_path": str(
+                    repo_root / ".cmoc" / "logs" / "codex_exec" / "fake.log"
+                ),
+                "elapsed_seconds": 0.1,
+                "returncode": 0,
+            },
+        )
+        return json.dumps({"issues": []}, ensure_ascii=False)
+
+    monkeypatch.setattr(review_oracles_module, "run_codex_exec", fake_codex)
+
+    with subcommand_log(repo):
+        cmoc_review_oracles_impl(
+            repo,
+            full=True,
+            repeat_improve_issues_list=0,
+        )
+
+    log_file = next((repo / ".cmoc" / "logs" / "sub_commands").glob("*.jsonl"))
+    events = [
+        json.loads(line)
+        for line in log_file.read_text(encoding="utf-8").splitlines()
+    ]
+    codex_events = [
+        event for event in events if event["event"] == "codex_exec_call"
+    ]
+    assert sorted(event["purpose"] for event in codex_events) == [
+        "oracle 評価 oracles/a.md",
+        "oracle 評価 oracles/b.md",
+    ]
+
+
 def test_eval_oracles_snapshots_oracles_with_maintained_indexes(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,

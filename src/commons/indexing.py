@@ -13,6 +13,7 @@ import threading
 from collections.abc import Iterable
 from collections.abc import Iterator
 from contextlib import contextmanager
+from contextvars import copy_context
 from pathlib import Path
 from urllib.parse import unquote_to_bytes
 
@@ -159,6 +160,7 @@ def _maintain_indexes_unlocked(
         ) as executor:
             future_by_directory = {
                 executor.submit(
+                    copy_context().run,
                     _write_index_if_needed,
                     repo_root,
                     directory,
@@ -390,7 +392,13 @@ def _resolve_index_entries(
         max_workers=_index_worker_count(pending_count)
     ) as executor:
         future_by_position = {
-            executor.submit(_entry_for, repo_root, item[0], item[1]): position
+            executor.submit(
+                copy_context().run,
+                _entry_for,
+                repo_root,
+                item[0],
+                item[1],
+            ): position
             for position, item in enumerate(entry_items)
             if not isinstance(item, str)
         }
