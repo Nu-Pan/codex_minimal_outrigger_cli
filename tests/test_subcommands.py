@@ -1574,6 +1574,63 @@ def test_review_oracles_runs_codex_in_review_worktree(
     )
 
 
+def test_review_oracles_backup_snapshot_stays_in_review_worktree(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """review oracles の退避 snapshot は review worktree 内に作る。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _prepare_review_oracles_session(repo)
+
+    original_create_snapshot = review_oracles_module._create_oracle_evaluation_snapshot
+    snapshot_roots: list[tuple[Path, Path]] = []
+
+    def fake_create_snapshot(
+        repo_root: Path,
+        oracle_files: list[Path],
+        snapshot_root: Path,
+        *,
+        display_repo_root: Path | None = None,
+    ) -> review_oracles_module._OracleEvaluationSnapshot:
+        """退避 snapshot の作成先を記録してから通常処理する。"""
+        snapshot_roots.append((repo_root, snapshot_root))
+        return original_create_snapshot(
+            repo_root,
+            oracle_files,
+            snapshot_root,
+            display_repo_root=display_repo_root,
+        )
+
+    monkeypatch.setattr(
+        review_oracles_module,
+        "_create_oracle_evaluation_snapshot",
+        fake_create_snapshot,
+    )
+    monkeypatch.setattr(
+        review_oracles_module,
+        "maintain_indexes",
+        lambda repo_root: False,
+    )
+    monkeypatch.setattr(
+        review_oracles_module,
+        "run_codex_exec",
+        lambda *args, **kwargs: json.dumps({"issues": []}, ensure_ascii=False),
+    )
+
+    cmoc_review_oracles_impl(repo, full=True, repeat_improve_issues_list=0)
+
+    assert len(snapshot_roots) == 1
+    review_worktree, snapshot_root = snapshot_roots[0]
+    assert review_worktree != repo
+    assert review_worktree.is_relative_to(repo / ".cmoc" / "worktrees")
+    assert snapshot_root.is_relative_to(
+        review_worktree / review_oracles_module._REVIEW_ORACLES_TMP_DIR
+    )
+
+
 def test_review_oracles_merges_review_branch_to_session(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,

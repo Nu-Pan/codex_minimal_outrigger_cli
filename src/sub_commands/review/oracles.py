@@ -50,6 +50,7 @@ _ISSUE_ID_PREFIXES = {
 ReviewOraclesScope = Literal["session", "full"]
 _REPORT_COMMAND = "cmoc review oracles"
 _REPORT_DIR_NAME = "review_oracles"
+_REVIEW_ORACLES_TMP_DIR = Path(".cmoc") / "tmp"
 _DEFAULT_REVIEW_ORACLES_LOOP = 3
 _MAX_REVIEW_ORACLES_LOOP = 3
 _DEFAULT_REPEAT_IMPROVE_ISSUES_LIST = _DEFAULT_REVIEW_ORACLES_LOOP
@@ -366,8 +367,10 @@ def cmoc_review_oracles_impl(
             oracle_files = all_oracle_files
 
         failed_stage = "oracle snapshot 作成"
+        backup_parent_dir = _review_oracles_backup_parent_dir(review_repo_root)
         with tempfile.TemporaryDirectory(
-            prefix="cmoc-review-oracles-backup-"
+            prefix="cmoc-review-oracles-backup-",
+            dir=backup_parent_dir,
         ) as backup_dir:
             # Codex CLI に読ませる内容を review worktree 内の oracles に固定する。
             backup_snapshot = _create_oracle_evaluation_snapshot(
@@ -726,6 +729,13 @@ def _owner_path_for_worktree_path(
 def _maintain_indexes_after_oracle_snapshot(repo_root: Path) -> bool:
     """評価 snapshot とは分離して INDEX.md をメンテナンスする。"""
     return maintain_indexes(repo_root)
+
+
+def _review_oracles_backup_parent_dir(review_repo_root: Path) -> Path:
+    """review run 中の一時退避先を review worktree 内に閉じ込める。"""
+    parent_dir = review_repo_root / _REVIEW_ORACLES_TMP_DIR
+    parent_dir.mkdir(parents=True, exist_ok=True)
+    return parent_dir
 
 
 def _create_oracle_evaluation_snapshot(
