@@ -19,6 +19,7 @@ from commons.errors import CmocError
 from commons.indexing import _INDEX_OUTPUT_SCHEMA
 from commons.indexing import _index_maintenance_lock_path
 from commons.indexing import _locked_index_maintenance
+from commons.indexing import find_index_inconsistencies
 from commons.indexing import is_maintained_index_path
 from commons.indexing import is_maintained_index_path_at_commit
 from commons.indexing import maintain_indexes
@@ -976,6 +977,40 @@ def test_maintain_indexes_creates_missing_oracles_index(
     assert (oracle_root / "INDEX.md").exists()
     assert (oracle_docs / "INDEX.md").exists()
     assert "# `docs`" in (oracle_root / "INDEX.md").read_text(encoding="utf-8")
+
+
+def test_find_index_inconsistencies_reports_missing_extra_and_stale_entries(
+    tmp_path: Path,
+) -> None:
+    """INDEX 検査は更新せずに entry の過不足と hash 不一致を返す。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_docs = oracle_root / "docs"
+    oracle_docs.mkdir(parents=True)
+    (oracle_docs / "spec.md").write_text("spec\n", encoding="utf-8")
+    zero_digest = "0" * 64
+    (oracle_root / "INDEX.md").write_text(
+        _index_entry("ghost.md", zero_digest),
+        encoding="utf-8",
+    )
+    (oracle_docs / "INDEX.md").write_text(
+        _index_entry("spec.md", zero_digest),
+        encoding="utf-8",
+    )
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "stale oracle indexes")
+
+    inconsistencies = find_index_inconsistencies(
+        repo,
+        index_roots=["oracles"],
+    )
+
+    assert "oracles/INDEX.md: missing entry for docs" in inconsistencies
+    assert "oracles/INDEX.md: extra entry for ghost.md" in inconsistencies
+    assert "oracles/docs/INDEX.md: stale hash for spec.md" in inconsistencies
+    assert not (repo / "oracles" / "docs" / "spec.md").read_text(
+        encoding="utf-8"
+    ).startswith("#")
 
 
 def test_maintain_indexes_places_indexes_in_generated_named_directories(
@@ -2500,6 +2535,32 @@ def _directory_digest(repo: Path, directory: Path) -> str:
     return hashlib.sha256(
         "".join(serialized_entries).encode("utf-8")
     ).hexdigest()
+
+
+def _index_entry(name: str, digest: str) -> str:
+    """テスト用の最小 INDEX entry を返す。"""
+    return "\n".join(
+        [
+            f"# `{name}`",
+            "",
+            "## Summary",
+            "",
+            "- summary",
+            "",
+            "## Read this when",
+            "",
+            "- read",
+            "",
+            "## Do not read this when",
+            "",
+            "- skip",
+            "",
+            "## hash",
+            "",
+            f"- {digest}",
+            "",
+        ]
+    )
 
 
 def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:

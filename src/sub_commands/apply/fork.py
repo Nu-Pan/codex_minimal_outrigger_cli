@@ -27,6 +27,7 @@ from commons.codex import (
 )
 from commons.command_runner import run_command
 from commons.errors import CmocError
+from commons.indexing import find_index_inconsistencies
 from commons.indexing import is_maintained_index_path
 from commons.indexing import maintain_indexes
 from commons.report_files import write_timestamped_report
@@ -1467,6 +1468,7 @@ def _commit_all_changes(repo_root: Path) -> None:
 def _maintain_apply_indexes(repo_root: Path) -> bool:
     """apply worktree 上で cmoc 管理 INDEX.md を保守する。"""
     excluded_roots = _apply_index_excluded_roots(repo_root)
+    _assert_excluded_indexes_current(repo_root, excluded_roots)
     if _maintain_indexes_accepts_excluded_roots():
         return maintain_indexes(
             repo_root,
@@ -1489,6 +1491,34 @@ def _maintain_indexes_accepts_excluded_roots() -> bool:
 def _apply_index_excluded_roots(repo_root: Path) -> list[Path]:
     """apply worktree の INDEX メンテナンス除外 root 群を返す。"""
     return [repo_root / "oracles"]
+
+
+def _assert_excluded_indexes_current(
+    repo_root: Path,
+    excluded_roots: list[Path],
+) -> None:
+    """編集禁止 root の INDEX 不整合を、更新せずに事前検出する。"""
+    indexed_roots = [
+        root
+        for root in excluded_roots
+        if root.exists() and any(root.rglob("INDEX.md"))
+    ]
+    if not indexed_roots:
+        return
+    inconsistencies = find_index_inconsistencies(
+        repo_root,
+        index_roots=indexed_roots,
+    )
+    if not inconsistencies:
+        return
+    raise CmocError(
+        "編集禁止パス配下の INDEX.md が実在ファイル構成と一致していません。",
+        [
+            "編集禁止パスは apply では自動更新できないため、先に INDEX.md を整備してください。",
+            "整備後に `cmoc apply` を再実行してください。",
+        ],
+        "\n".join(inconsistencies),
+    )
 
 
 def _assert_forbidden_paths_clean(

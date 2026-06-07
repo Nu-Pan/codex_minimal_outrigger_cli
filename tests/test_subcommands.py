@@ -7615,6 +7615,10 @@ def test_maintain_apply_indexes_leaves_oracles_index_unchanged(
         )
 
     monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+    monkeypatch.setattr(
+        "sub_commands.apply.fork.find_index_inconsistencies",
+        lambda *args, **kwargs: [],
+    )
 
     changed = apply_module._maintain_apply_indexes(repo)
 
@@ -7651,6 +7655,10 @@ def test_maintain_apply_indexes_does_not_create_missing_oracles_index(
         )
 
     monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+    monkeypatch.setattr(
+        "sub_commands.apply.fork.find_index_inconsistencies",
+        lambda *args, **kwargs: [],
+    )
 
     changed = apply_module._maintain_apply_indexes(repo)
 
@@ -7662,6 +7670,36 @@ def test_maintain_apply_indexes_does_not_create_missing_oracles_index(
         "--name-only",
         "--pretty=",
     ).stdout
+
+
+def test_maintain_apply_indexes_rejects_stale_excluded_oracles_index(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """apply は編集禁止 oracles の INDEX 不整合を更新せずに拒否する。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    (oracle_root / "INDEX.md").write_text(
+        "manual oracle index\n",
+        encoding="utf-8",
+    )
+
+    def fail_codex(*args: object, **kwargs: object) -> str:
+        """oracles 不整合検出後は INDEX 生成へ進まない。"""
+        raise AssertionError("codex exec should not run")
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fail_codex)
+
+    with pytest.raises(CmocError) as error:
+        apply_module._maintain_apply_indexes(repo)
+
+    assert "編集禁止パス配下の INDEX.md" in error.value.message
+    assert "oracles/INDEX.md" in error.value.detail
+    assert (oracle_root / "INDEX.md").read_text(encoding="utf-8") == (
+        "manual oracle index\n"
+    )
 
 
 def test_commit_all_changes_rejects_oracle_file_after_index_update(

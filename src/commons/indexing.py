@@ -61,6 +61,38 @@ def maintain_indexes(
         )
 
 
+def find_index_inconsistencies(
+    repo_root: Path,
+    *,
+    index_roots: Iterable[Path | str] | None = None,
+) -> list[str]:
+    """`INDEX.md` を更新せず、配置対象と entry/hash の不整合を返す。"""
+    gitignore_matcher = _GitignoreMatcher(repo_root)
+    directories = _index_directories(
+        repo_root,
+        gitignore_matcher,
+        excluded_index_roots=set(),
+    )
+    included_roots = _normalize_optional_index_roots(repo_root, index_roots)
+    if included_roots is not None:
+        directories = [
+            directory
+            for directory in directories
+            if _is_under_any_path(directory, included_roots)
+        ]
+
+    inconsistencies: list[str] = []
+    for directory in sorted(directories):
+        inconsistencies.extend(
+            _index_directory_inconsistencies(
+                repo_root,
+                directory,
+                gitignore_matcher,
+            )
+        )
+    return inconsistencies
+
+
 def is_maintained_index_path(
     repo_root: Path,
     relative_path: str,
@@ -307,6 +339,16 @@ def _normalize_excluded_index_roots(
     return normalized_roots
 
 
+def _normalize_optional_index_roots(
+    repo_root: Path,
+    index_roots: Iterable[Path | str] | None,
+) -> set[Path] | None:
+    """検査対象 root 群を repo 内の絶対 path に正規化する。"""
+    if index_roots is None:
+        return None
+    return _normalize_excluded_index_roots(repo_root, index_roots)
+
+
 def _is_under_any_path(path: Path, roots: set[Path]) -> bool:
     """path が指定 root のいずれか自身または配下か判定する。"""
     for root in roots:
@@ -373,6 +415,51 @@ def _write_index_if_needed(
     except OSError as error:
         _raise_index_io_error("INDEX.md の置換", index_path, error)
     return True
+
+
+def _index_directory_inconsistencies(
+    repo_root: Path,
+    directory: Path,
+    gitignore_matcher: "_GitignoreMatcher",
+) -> list[str]:
+    """1 directory の `INDEX.md` と直下目次対象の不整合を返す。"""
+    index_path = directory / "INDEX.md"
+    relative_index = index_path.relative_to(repo_root).as_posix()
+    old_content = _read_existing_index_content(index_path)
+    if old_content is None:
+        return [f"{relative_index}: invalid INDEX.md content"]
+    if not index_path.exists():
+        return [f"{relative_index}: missing INDEX.md"]
+
+    existing_entries = _parse_index_entries(old_content)
+    current_entries: dict[str, str] = {}
+    try:
+        children = sorted(directory.iterdir(), key=lambda path: path.name)
+    except OSError as error:
+        _raise_index_io_error("directory の直下項目列挙", directory, error)
+    for child in _index_entry_targets(repo_root, children, gitignore_matcher):
+        digest = _hash_path(repo_root, child, gitignore_matcher)
+        if digest is not None:
+            current_entries[child.name] = digest
+
+    inconsistencies: list[str] = []
+    for name, digest in sorted(current_entries.items()):
+        existing = existing_entries.get(name)
+        if existing is None:
+            inconsistencies.append(
+                f"{relative_index}: missing entry for {name}"
+            )
+            continue
+        if _entry_hash(existing) != digest:
+            inconsistencies.append(f"{relative_index}: stale hash for {name}")
+            continue
+        if not _entry_format_is_valid(repo_root, existing, name, digest):
+            inconsistencies.append(
+                f"{relative_index}: invalid entry for {name}"
+            )
+    for name in sorted(set(existing_entries) - set(current_entries)):
+        inconsistencies.append(f"{relative_index}: extra entry for {name}")
+    return inconsistencies
 
 
 def _resolve_index_entries(
