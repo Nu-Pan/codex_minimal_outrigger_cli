@@ -2,22 +2,20 @@
 
 ## Summary
 
-- `tests/test_subcommands` パッケージの入口となる空のマーカーです。
-- サブコマンド横断テスト群全体の案内役として、個別テストへ進む前の入口に使います。
-- `helpers.py`、`test_core.py`、`test_cli.py`、`test_apply_*.py`、`test_session_*.py`、`test_review_oracles.py` へ分岐する前提のファイルです。
+- `tests/test_subcommands/__init__.py` は `tests/test_subcommands` パッケージの空のマーカーです。
+- サブコマンド横断テスト群の入口を示すだけで、公開 API や実行ロジックは持ちません。
 
 ## Read this when
 
-- `tests/test_subcommands` 配下全体の役割を把握したいとき。
-- このパッケージがサブコマンド横断テスト群の入口であることを確認したいとき。
-- 個別テストに進む前に、どの系統のテストへ分岐するか整理したいとき。
+- `tests/test_subcommands` パッケージ全体の入口としての役割を確認したいとき。
+- このディレクトリが Python パッケージとして成立していることを把握したいとき。
+- 個別テストへ進む前に、この階層の案内役だけを確認したいとき。
 
 ## Do not read this when
 
-- 個別テストケースの本文やアサーションを確認したいとき。
-- `helpers.py` や各 `test_*.py` の詳細を直接追いたいとき。
-- `src/sub_commands/` や `main.py` など実装側の挙動を確認したいとき。
-- 仕様断片は `oracles/docs/app_specs/sub_commands/INDEX.md` を見たいとき。
+- 個別のサブコマンド回帰テストの本文やアサーションを確認したいとき。
+- `helpers.py` や各 `test_*.py` の詳細な役割を直接追いたいとき。
+- `src/sub_commands/` 側の実装や `oracles` 側の仕様断片を確認したいとき。
 
 ## hash
 
