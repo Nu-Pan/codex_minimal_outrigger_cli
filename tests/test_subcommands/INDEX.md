@@ -3,8 +3,7 @@
 ## Summary
 
 - `<cmoc-root>/tests/test_subcommands/__init__.py` は `tests.test_subcommands` を Python パッケージとして宣言するための最小モジュールです。
-- 公開 API、定数、実行ロジック、再エクスポートは持ちません。
-- サブコマンド群のテストディレクトリをパッケージとして成立させるための入口です。
+- 公開 API、定数、実行ロジック、再エクスポートは持たず、サブコマンド群のテストディレクトリをパッケージとして成立させるための入口です。
 
 ## Read this when
 
@@ -16,7 +15,7 @@
 
 - 個別のサブコマンド回帰テストやアサーション内容を確認したいとき。
 - `helpers.py` や各 `test_*.py` の実装を追いたいとき。
-- `tests/test_subcommands` の仕様や CLI 挙動そのものを知りたいときは、ここではなく該当テストファイルや `src/sub_commands/` 側を読むべきとき。
+- `tests/test_subcommands` の仕様や CLI 挙動そのものを知りたいとき。
 
 ## hash
 
