@@ -110,7 +110,8 @@ def test_apply_join_cleans_worktree_created_under_main_repo_root_from_linked(
     oracle_root = linked / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
-    _git(linked, "add", "oracles/spec.md")
+    _write_flat_oracles_index(oracle_root, "spec.md")
+    _git(linked, "add", "oracles/spec.md", "oracles/INDEX.md")
     _git(linked, "commit", "-m", "add oracle")
 
     monkeypatch.setattr(

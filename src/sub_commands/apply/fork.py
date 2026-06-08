@@ -1581,11 +1581,7 @@ def _assert_excluded_indexes_current(
     excluded_roots: list[Path],
 ) -> None:
     """編集禁止 root の INDEX 不整合を、更新せずに事前検出する。"""
-    indexed_roots = [
-        root
-        for root in excluded_roots
-        if root.exists() and any(root.rglob("INDEX.md"))
-    ]
+    indexed_roots = [root for root in excluded_roots if root.exists()]
     if not indexed_roots:
         return
     inconsistencies = find_index_inconsistencies(
