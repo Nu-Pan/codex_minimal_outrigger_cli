@@ -33,18 +33,18 @@
 
 - `src/sub_commands/apply` 配下の入口構造をまとめて把握し、どの実装モジュールへ進むべきか整理したいとき。
 - `cmoc apply` 系サブコマンドのパッケージ宣言と、`abandon.py`・`fork.py`・`join.py` の役割分担を確認したいとき。
-- apply の開始・統合・破棄の処理順をたどる前に、この階層のルーティング文書として概要を押さえたいとき。
+- apply の開始・統合・破棄に関する処理順をたどる前に、この階層のルーティング文書として概要を押さえたいとき。
 - `src/sub_commands/apply` 配下の構成を変更・追加・再配置する前に、既存の案内先を確認したいとき。
 
 ## Do not read this when
 
-- すでに `cmoc apply fork`、`cmoc apply join`、`cmoc apply abandon` のどれを読むか決まっていて、この階層の目次が不要なとき。
-- 個別サブコマンドの引数仕様や処理本体だけを直接確認したいとき。
+- すでに `cmoc apply fork`、`cmoc apply join`、`cmoc apply abandon` のどれを読むか決まっていて、個別の実装モジュールへ直接進めるとき。
+- 個別サブコマンドの引数仕様や処理本体だけを確認したいとき。
 - `oracles` 側の正本仕様や利用手順だけを確認したいとき。
 
 ## hash
 
-- 2bc1ad8a6ac5f01432718eb7218affb03119aae9a829aa7cb36c75a6d950c601
+- eb7bf45e95efc57506f723a4a3763eeb10c1e95c98c77c483facfb7e0ee9c058
 
 # `indexing.py`
 

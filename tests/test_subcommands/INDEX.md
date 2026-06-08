@@ -2,20 +2,20 @@
 
 ## Summary
 
-- `tests/test_subcommands/__init__.py` は `tests.test_subcommands` パッケージを宣言するだけの最小モジュールです。
-- 公開 API、定数、実行ロジック、再エクスポートは持ちません。
+- `tests/test_subcommands` をテストパッケージとして成立させるための初期化ファイルです。
+- このファイル自体にはテストロジックはなく、サブコマンド関連テスト群のパッケージ境界を示します。
 
 ## Read this when
 
-- `tests.test_subcommands` が Python パッケージとして宣言されていることを確認したいとき。
-- この階層の最小限の入口として、`__init__.py` の役割を把握したいとき。
-- テスト本体ではなく、パッケージ境界の存在確認だけで足りるとき。
+- `tests.test_subcommands` をパッケージとして import する前提を確認したいとき。
+- 相対 import や共有テスト補助の前提として、このテストパッケージの入口を確認したいとき。
+- サブコマンド系テスト群が同一パッケージとしてまとめられているかを把握したいとき。
 
 ## Do not read this when
 
-- 個別のテストケース本文やアサーションを確認したいとき。
-- `tests/test_subcommands` 配下の各 `test_*.py` の役割分担を確認したいとき。
-- `src/sub_commands` 側の実装や CLI 登録を追いたいとき。
+- 個々のテストケースの実装やアサーションを確認したいとき。
+- `tests/test_subcommands` 配下の他のテストモジュールや `helpers.py` を直接たどりたいとき。
+- パッケージ初期化ではなく、サブコマンド本体の仕様や実装を確認したいとき。
 
 ## hash
 
@@ -73,7 +73,7 @@
 
 ## Summary
 
-- `tests/test_subcommands/test_apply_fork.py` は、`cmoc apply fork` の回帰テスト群を意味カテゴリ別にまとめたファイルです。
+- `<cmoc-root>/tests/test_subcommands/test_apply_fork.py` は、`cmoc apply fork` の回帰テスト群を意味カテゴリ別にまとめたファイルです。
 - apply 開始時の前提条件、調査対象 scope の決定、要修正点の抽出・改善・再調査のループ、report 出力と state 更新を幅広く検証します。
 - 不整合調査の JSON schema、並列実行、`INDEX.md` メンテナンス、エラー報告、path 制約や変更要約の生成条件もこのファイルの守備範囲です。
 
@@ -91,7 +91,7 @@
 
 ## hash
 
-- de3ebaba1b98ef7339e40df56554b71572e2edf3ccf58213dc64a7c86efc1bfa
+- 6226e59c3a1a9638e5653d001650492842e183ef3c79b10d7861671495a2879e
 
 # `test_apply_join.py`
 
