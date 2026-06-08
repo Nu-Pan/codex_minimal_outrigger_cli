@@ -434,6 +434,49 @@ def test_indexing_impl_runs_maintenance_on_clean_repo(
     assert "committed INDEX.md maintenance changes" in captured.out
 
 
+def test_indexing_impl_maintains_oracles_indexes(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """`cmoc indexing` は oracles 配下も通常の INDEX 配置対象として保守する。"""
+    repo = _init_repo(tmp_path)
+    oracle_docs = repo / "oracles" / "docs"
+    oracle_docs.mkdir(parents=True)
+    (oracle_docs / "spec.md").write_text("spec\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "add oracle docs")
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """INDEX 生成用の最小 Structured Output を返す。"""
+        return json.dumps(
+            {
+                "summary": [str(kwargs["purpose"])],
+                "read_this_when": ["read"],
+                "do_not_read_this_when": ["skip"],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    cmoc_indexing_impl(repo)
+
+    captured = capsys.readouterr()
+    assert "committed INDEX.md maintenance changes" in captured.out
+    assert "# `oracles`" in (repo / "INDEX.md").read_text(encoding="utf-8")
+    assert "# `docs`" in (repo / "oracles" / "INDEX.md").read_text(
+        encoding="utf-8"
+    )
+    assert "# `spec.md`" in (repo / "oracles" / "docs" / "INDEX.md").read_text(
+        encoding="utf-8"
+    )
+    assert (
+        _git(repo, "log", "-1", "--pretty=%s").stdout.strip()
+        == "Maintain INDEX.md files"
+    )
+    assert _git(repo, "status", "--porcelain").stdout == ""
+
+
 def test_indexing_impl_rejects_dirty_repo_before_maintenance(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,

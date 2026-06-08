@@ -1595,7 +1595,7 @@ def _assert_excluded_indexes_current(
     raise CmocError(
         "編集禁止パス配下の INDEX.md が実在ファイル構成と一致していません。",
         [
-            "編集禁止パスは apply では自動更新できないため、先に INDEX.md を整備してください。",
+            "編集禁止パスは apply では自動更新できないため、編集が許可された作業環境で `cmoc indexing` を実行してください。",
             "整備後に `cmoc apply` を再実行してください。",
         ],
         "\n".join(inconsistencies),

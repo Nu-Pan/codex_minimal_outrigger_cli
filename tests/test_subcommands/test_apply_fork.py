@@ -2605,6 +2605,7 @@ def test_maintain_apply_indexes_rejects_missing_oracles_index(
         apply_module._maintain_apply_indexes(repo)
 
     assert "編集禁止パス配下の INDEX.md" in error.value.message
+    assert "`cmoc indexing`" in "\n".join(error.value.actions)
     assert "oracles/INDEX.md: missing INDEX.md" in error.value.detail
     assert not (oracle_root / "INDEX.md").exists()
     assert "oracles/INDEX.md" not in _git(
@@ -2639,6 +2640,7 @@ def test_maintain_apply_indexes_rejects_stale_excluded_oracles_index(
         apply_module._maintain_apply_indexes(repo)
 
     assert "編集禁止パス配下の INDEX.md" in error.value.message
+    assert "`cmoc indexing`" in "\n".join(error.value.actions)
     assert "oracles/INDEX.md" in error.value.detail
     assert (oracle_root / "INDEX.md").read_text(encoding="utf-8") == (
         "manual oracle index\n"
