@@ -72,6 +72,47 @@ def test_eval_oracles_writes_report_with_fake_codex(
     assert "## Specification-only basis" not in report
 
 
+def test_review_oracles_enumerate_loop_zero_keeps_target_files(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """列挙 loop 0 回でも、対象 oracle の存在判定は通常どおり行う。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    oracle_file = oracle_root / "spec.md"
+    oracle_file.write_text("spec\n", encoding="utf-8")
+    _prepare_review_oracles_session(repo)
+
+    monkeypatch.setattr(
+        review_oracles_module,
+        "maintain_indexes",
+        lambda repo_root: False,
+    )
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """列挙 loop 0 回では Codex 評価は実行されない。"""
+        raise AssertionError("run_codex_exec should not be called")
+
+    monkeypatch.setattr(review_oracles_module, "run_codex_exec", fake_codex)
+
+    cmoc_review_oracles_impl(
+        repo,
+        full=True,
+        enumerate_findings_loop=0,
+        repeat_improve_issues_list=0,
+    )
+
+    report = next(
+        (repo / ".cmoc" / "reports" / "review_oracles").glob("*.md")
+    ).read_text(encoding="utf-8")
+    assert "oracle_count_total: 1" in report
+    assert "oracle_count_evaluated: 1" in report
+    assert 'result: "ok"' in report
+    assert 'result: "no_targets"' not in report
+    assert f"| 1 | `{oracle_file.resolve()}` | 0 |" in report
+
+
 def test_review_oracles_parallel_evaluation_records_worker_codex_events(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,

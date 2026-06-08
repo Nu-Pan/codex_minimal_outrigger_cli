@@ -374,9 +374,7 @@ def cmoc_review_oracles_impl(
             for path in all_review_oracle_files
         ]
         all_oracle_files_known = True
-        if enumerate_findings_loop == 0:
-            oracle_files = []
-        elif partial:
+        if partial:
             assert base_commit is not None
             changed_files = {
                 _owner_path_for_worktree_path(repo_root, review_repo_root, path)
