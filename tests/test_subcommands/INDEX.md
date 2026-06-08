@@ -4,6 +4,7 @@
 
 - `<cmoc-root>/tests/test_subcommands/__init__.py` は `tests.test_subcommands` パッケージを宣言するための最小限の初期化ファイルです。
 - 実行ロジック、公開 API、再エクスポートは持たず、相対インポートとパッケージ認識を成立させる役割だけを担います。
+- このディレクトリのルーティングでは、個別テストへ進む前の最小入口として扱います。
 
 ## Read this when
 
@@ -115,11 +116,11 @@
 - `cmoc apply join` の実装ロジックそのものを追いたいときは、`src/sub_commands/apply/join.py` を読むべきです。
 - `cmoc apply join` の利用手順や仕様断片だけを確認したいときは、`oracles/docs/app_specs/sub_commands/apply_join.md` を読むべきです。
 - `cmoc session fork/join/abandon` や `cmoc apply fork/abandon` など、別サブコマンドのテストを探しているとき。
-- `tests/test_subcommands.py` 全体の横断入口や、`tests/INDEX.md` の上位目次だけを確認したいとき。
+- `tests/test_subcommands` 全体の横断入口や、`tests/INDEX.md` の上位目次だけを確認したいとき。
 
 ## hash
 
-- c573a747525e7202fb3b31b20ffff2d4cccb190ae34a61d694325e12f707e300
+- c5cb78f3148aecb5198237a611e2725dbc4923359b343ea774f52cfb9ccb6419
 
 # `test_cli.py`
 
@@ -225,7 +226,9 @@
 
 ## Summary
 
-- `tests/test_subcommands/test_session_fork.py` は `cmoc session fork` の回帰テスト群で、session branch の作成、session state の記録、`.cmoc` の ignore 補修、active session 競合、detached HEAD や managed branch からの開始拒否、linked worktree での state 保存先、失敗時 rollback を検証します。
+- `tests/test_subcommands/test_session_fork.py` は `cmoc session fork` の回帰テスト群で、session branch の作成、session state の記録、`.cmoc` の ignore 補修を扱います。
+- active session の競合、detached HEAD や managed branch からの開始拒否、linked worktree での state 保存先の確認も対象です。
+- state 保存失敗時の rollback と、rollback が branch を完全に消せない場合の復旧挙動まで検証します。
 
 ## Read this when
 
@@ -241,7 +244,7 @@
 
 ## hash
 
-- 4287f8ae9d6031511b6942a7eb553f7f57094dcf2883c246779034e376041fd0
+- 8fe967f0f3532b01cc8715f86492dcf2eb52f5b097cfc25b16ddb0abaf751c89
 
 # `test_session_join.py`
 

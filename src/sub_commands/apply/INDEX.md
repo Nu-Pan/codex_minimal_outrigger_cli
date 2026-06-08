@@ -76,14 +76,14 @@
 
 ## Summary
 
-- `src/sub_commands/apply/join.py` は `cmoc apply join` の本体実装で、完了済み apply branch を session branch へ取り込む処理を担います。
+- `src/sub_commands/apply/join.py` は `cmoc apply join` の本体実装モジュールで、完了済みの apply branch を session branch へ取り込む処理を担います。
 - `session.state` / `apply.state` の検証、想定外差分の判定と `--force-resolve`、`INDEX.md` conflict の自動解消、merge 後の cleanup と warning 出力をまとめています。
 - 保存済み report の確認、apply branch と worktree の削除条件、join 後の session state 更新もこのモジュールの責務です。
 
 ## Read this when
 
 - `src/sub_commands/apply/join.py` の実装・修正・レビュー・テストを行いたいとき。
-- 完了済み apply branch を session branch へ取り込む処理順、state 更新、cleanup 条件を確認したいとき。
+- 完了済みの apply branch を session branch へ取り込む処理順、state 更新、cleanup 条件を確認したいとき。
 - `--force-resolve`、未コミット差分チェック、想定外差分の扱い、`INDEX.md` conflict の自動解消を追いたいとき。
 - 保存済み report の有無や apply worktree / branch 削除の安全条件を確認したいとき。
 
@@ -96,4 +96,4 @@
 
 ## hash
 
-- fe85f15a3295a86166e1670f07e77e7a7ab6eaa4c2a81e5b2f61db9f0bdcc827
+- 8322fdb7a5db9421fcf5b60f07aa219868b4c00343fc76e8cf45b7b7d4dc035a

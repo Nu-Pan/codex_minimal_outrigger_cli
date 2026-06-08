@@ -24,23 +24,24 @@
 ## Summary
 
 - `src/sub_commands/review/oracles.py` は `cmoc review oracles` の本体実装です。
-- review 実行前提の検証、review branch / worktree の準備、oracle snapshot の固定、所見パイプライン、レポート出力をまとめて担います。
-- Structured Output schema の読み込みと検証ヘルパー群を含み、`INDEX.md` を手がかりに評価対象を選び、エラー時の report 生成まで扱います。
+- session branch の前提条件確認、`.cmoc` の ignore 保証、review 用 branch / worktree の作成と merge をまとめて担います。
+- oracle tree の snapshot 固定、`INDEX.md` を起点にした評価対象の選定、所見パイプライン、評価結果レポートと error report の出力を扱います。
+- Structured Output schema の読込・検証、所見の列挙 / 統合 / 検証 / 判定、および関連ヘルパー群もこのファイルに含まれます。
 
 ## Read this when
 
 - `src/sub_commands/review/oracles.py` の実装・修正・レビュー・テストを行いたいとき。
-- session branch 前提の検証、clean worktree の確認、review branch / worktree の作成手順を追いたいとき。
-- oracle snapshot の固定、`INDEX.md` を基準にした対象 oracle の選定、所見の列挙・統合・検証・判定の流れを確認したいとき。
-- Structured Output schema の読み込みと payload 検証、ならびに失敗時の Markdown レポート生成までを把握したいとき。
+- session branch 前提の検証、clean worktree 確認、review worktree 作成と merge の流れを追いたいとき。
+- oracle snapshot の固定、`INDEX.md` を基準にした対象ファイル選定、所見の列挙・統合・検証・判定の処理順を確認したいとき。
+- Structured Output schema の読み込みと payload 検証、失敗時を含む report 生成の流れを把握したいとき。
 
 ## Do not read this when
 
-- `src/sub_commands/review` 配下全体の入口構造だけを確認したいときは、親ディレクトリの `INDEX.md` を読むべきです。
-- `cmoc review oracles` の利用手順、引数、出力仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/review_oracles.md` を直接読むべきです。
-- `cmoc review` の CLI 登録や hidden alias だけを確認したいときは、`src/main.py` を読むべきです。
-- `review` ではなく `apply` や `session` の実装を追いたいときは、それぞれのサブコマンド側を読むべきです。
+- `src/sub_commands/review` 配下の入口構造だけを把握したいときで、個別の評価フローまでは不要なとき。
+- `cmoc review oracles` の利用手順、引数、出力仕様だけを確認したいとき。
+- `cmoc review` の CLI 登録や hidden alias だけを確認したいとき。
+- `apply` や `session` など、review 以外のサブコマンド実装を追いたいとき。
 
 ## hash
 
-- 70f72fff118ed37f0b7882fd23959eb07e1d2533feed0e6fab5aaaae24842556
+- 87c5d09edec2fc697a818012ccd31eb47a7b0969d8acf53a884ce7da442fcc42

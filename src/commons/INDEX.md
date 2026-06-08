@@ -143,14 +143,14 @@
 
 ## Do not read this when
 
-- 個々のヘルパーの実装詳細や例外メッセージの細部だけを確認したいとき。
-- `CmocError` の整形や `codex exec`、時間計測など、別の共通モジュールを追いたいとき。
+- 個々のヘルパー実装や例外文言の細部だけを確認したいとき。
+- `CmocError` の整形、`codex exec`、時間計測など、別の共通モジュールを確認したいとき。
 - サブコマンド固有の業務ロジックや CLI 引数だけを見たいとき。
 - `INDEX.md` の生成ルールや `oracles` 側の正本仕様だけを確認したいとき。
 
 ## hash
 
-- 480bbb05b064763cdb79af7e6009b3ad36d774865fd48dbee624e8045e94e929
+- 0d67ddc6f74578e6d7d082dc8ad92e1633e306773f73c091f510e568055e9478
 
 # `report_files.py`
 
@@ -206,7 +206,7 @@
 
 ## hash
 
-- 6cfef5a967fa01a80101c1bccf57dfca655beba243e4ee6eae2984be60b9723d
+- 473dc7e0137054f0fabef4eea13883542cfe3c68beabb5cf007eb5f38e22dc8f
 
 # `timestamps.py`
 

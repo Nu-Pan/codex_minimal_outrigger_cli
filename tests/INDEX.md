@@ -29,25 +29,24 @@
 
 - `tests/test_codex.py` は `commons.codex` の `run_codex_exec` と関連ヘルパーの回帰テスト群です。
 - Structured Output の再試行、schema 検証、出力ログ、UTF-8 処理、quota/resume 復旧、workspace-write 時の oracle 保護を扱います。
-- `output_schema` の生成・キャッシュ・検証や、`_extract_session_id`、`_resume_command`、`_prepare_codex_exec_paths`、通知出力も確認します。
+- `output_schema` の生成・キャッシュ・修復や、`_extract_session_id`、`_resume_command`、通知出力も確認します。
 
 ## Read this when
 
-- `run_codex_exec` の正常系・失敗系・再試行条件を確認したいとき。
-- Structured Output の schema 検証、JSON/text validator、`output_schema` ファイルの生成・再利用を変更したいとき。
-- Codex CLI 呼び出しログ、コンソール通知、`subcommand_log` への記録内容を確認したいとき。
-- quota 枯渇時の poll/resume、`_extract_session_id`、`_resume_command`、workspace-write 時の oracle 保護や `skip_index_maintenance` の適用範囲を追いたいとき。
+- `run_codex_exec` の正常系・失敗系・再試行条件・ログ出力を確認したいとき。
+- Structured Output の schema 検証、`output_schema` の生成・キャッシュ・再利用・修復を変更したいとき。
+- quota 枯渇時の poll/resume、workspace-write 時の oracle 保護、`skip_index_maintenance` の適用範囲を確認したいとき。
+- `_extract_session_id`、`_resume_command`、`_prepare_codex_exec_paths`、通知出力などの補助関数の仕様を確認したいとき。
 
 ## Do not read this when
 
-- `tests/test_indexing.py` や `tests/test_repo.py` など、別の回帰テストの内容を確認したいとき。
-- `commons.indexing` や `commons.repo` の個別実装だけを追いたいとき。
-- `tests/test_subcommands.py` のサブコマンド横断ロジックだけを確認したいとき。
-- `commons.timestamps`、`commons.report_files`、`commons.subcommand_log` など、他の共通ヘルパーだけを確認したいとき。
+- `tests/test_indexing.py` や `tests/test_repo.py` など、`commons.codex` 以外の回帰テストを確認したいとき。
+- `commons.indexing` や `commons.subcommand_log` の実装そのものだけを追いたいとき。
+- `tests/test_subcommands` の各サブコマンド別テストへ直接進みたいとき。
 
 ## hash
 
-- e90aca968b428cb0367e8ff89dfeb115f13e45c967bfe1a748b1c135bbb27d5e
+- b7915e20129d94ce8d6aa23afaa97d89ff015c45c64056fef59fb24a39567ea8
 
 # `test_file_naming.py`
 
@@ -116,14 +115,14 @@
 
 ## Do not read this when
 
-- `src/commons/repo.py` の実装ロジックそのものを確認したいとき。
+- `src/commons/repo.py` の実装ロジックそのものを追いたいとき。
 - 個別の git ユーティリティや helper の使い方だけを確認したいとき。
 - `tests/test_codex.py` や `tests/test_indexing.py` など、別の回帰テスト群を確認したいとき。
-- `INDEX.md` の生成ルールや、`oracles` 全体のルーティング方針だけを確認したいとき。
+- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを調べたいとき。
 
 ## hash
 
-- 7c6df0acda6a0fc37b6b0f7c111c4f39b2fbe74ea2545eb345d71c70385c25a8
+- a3b7ecec25ba58b81bb2fac65d02ed067ddeae9e2ca4719f8406bbf9bdbb8972
 
 # `test_report_files.py`
 
@@ -163,19 +162,17 @@
 - CLI 入口 (`test_cli.py`)・共通実行基盤 (`test_core.py`)・共通ヘルパー (`helpers.py`) を分けて確認したいとき。
 - `cmoc apply`、`cmoc session`、`cmoc review oracles` の個別回帰テストへ進む前に、どの入口を読むか判断したいとき。
 - `__init__.py` がまとめるパッケージ全体の役割を確認したいとき。
-- `tests/test_subcommands` の各テストが、`main.py`、`bin/cmoc`、`test.sh`、各 `src/sub_commands/*` のどれに対応するか見たいとき。
 
 ## Do not read this when
 
 - 個別テストケースの本文やアサーション内容を直接確認したいとき。
-- `src/sub_commands/` や `main.py` の本体実装を確認したいとき。
+- `src/sub_commands/` や `main.py` の実装本体を確認したいとき。
 - `oracles/docs/app_specs/sub_commands/INDEX.md` 以下の仕様断片を直接確認したいとき。
-- `tests/test_subcommands` ではなく、`tests/test_codex.py` や `tests/test_repo.py` など他の回帰テストへ進みたいとき。
-- `INDEX.md` の生成ルールそのものやハッシュ管理だけを調べたいとき。
+- `tests/test_subcommands` ではなく、`tests/test_codex.py` や `tests/test_repo.py` など別の回帰テストへ進みたいとき。
 
 ## hash
 
-- 78152091eb09b66c0c2e934684e355e54b5f7e9f07033de38c470ae3484107ad
+- 7709b9a2e42ad51757fdcb0ba6a3eb9ff98d29b2ab5489dfaf91ac18ae52b49f
 
 # `test_timestamps.py`
 
