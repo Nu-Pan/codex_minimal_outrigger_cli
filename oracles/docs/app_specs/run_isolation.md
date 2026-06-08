@@ -12,6 +12,7 @@
 - comc サブコマンド呼び出し 1 つに対して run 1 つが存在する
 - `<repo-root>` は git で管理されている
 - 人間が直接触るのは `<repo-root>` だけである
+- 人間が `<run-root>` を直接触ることはない
 - `<cmoc-session-branch>` 上では他の何者かがコミットを積み上げる可能性がある
 
 ## git branch
@@ -34,8 +35,8 @@
     - e.g. `cmoc apply fork` --> `<cmoc-apply-worktree>`
 - cmoc の run 作業は `<cmoc-run-worktree>` 上で `<cmoc-run-branch>` を checkout した状態で行う
 
-## `<cmoc-run-worktree>` 外への書き込み例外規則
+## `<run-root>` 外への書き込み例外規則
 
-- 原則として、cmoc の run 作業中は `<cmoc-run-worktree>` 上のみ読み書き可能である
-- ただし、oracles ファイル上で例外として明示したケースにおいては、 `<cmoc-run-worktree>` 上での作業中に `<repo-root>` 配下のファイルを読み書きしても良い
-- e.g. cmoc 実行中のログ・ステートファイルは `<cmoc-run-worktree>` ではなく `<repo-root>/.cmoc` に書き込まなければならない
+- 原則として、cmoc の run 作業は `<run-root>` 内のみ読み書き可能である
+- ただし、例外として明示したケースにおいては、cmoc の run 作業として `<repo-root>` 配下のファイルを読み書きしても良い
+- e.g. cmoc 実行中のログ・ステートファイルは `<run-root>/.cmoc` ではなく `<repo-root>/.cmoc` に書き込まなければならない

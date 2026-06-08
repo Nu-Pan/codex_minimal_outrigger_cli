@@ -4,8 +4,8 @@
 
 正本仕様中で「oracles ファイル」と言った場合、それは以下の条件をすべて満たしたファイルの事を指す
 
-- `<repo-root>/oracles` 配下である（サブディレクトリを含む）
-- `<repo-root>/.gitignore` の対象ではない
+- `<work-root>/oracles` 配下である（サブディレクトリを含む）
+- `<work-root>/.gitignore` の対象ではない
 - `INDEX.md` ではない
 
 ## oracles ファイルの役割
@@ -16,18 +16,18 @@
 
 ## oracles ファイルの構成
 
-- `<repo-root>/oracles` 配下にはサブディレクトリを作成しても良い
+- `<work-root>/oracles` 配下にはサブディレクトリを作成しても良い
 - 具体的にどのようなサブディレクトリを作成するかは cmoc としては制限をしない
 - 典型的には以下のような構成を想定する
-    - `<repo-root>/oracles/docs`: 自然言語の markdown ドキュメント形式で仕様断片を記述する
-    - `<repo-root>/oracles/schema`: 入出力・ステートなどの構造を定義するスキーマを記述する
-    - `<repo-root>/oracles/src`: ソースコードを配置する
-    - `<repo-root>/oracles/tests`: 
+    - `<work-root>/oracles/docs`: 自然言語の markdown ドキュメント形式で仕様断片を記述する
+    - `<work-root>/oracles/schema`: 入出力・ステートなどの構造を定義するスキーマを記述する
+    - `<work-root>/oracles/src`: ソースコードを配置する
+    - `<work-root>/oracles/tests`: 
 
 ## oracles ファイルと Codex CLI による読み書き
 
 - Codex CLI は oracles ファイルを読んで良いが、書き換えてはいけない
-- Codex CLI は `<repo-root>/oracles` 配下の非 oracles ファイル (e.g. `INDEX.md`) を読み書きして良い
+- Codex CLI は `<work-root>/oracles` 配下の非 oracles ファイル (e.g. `INDEX.md`) を読み書きして良い
 
 ## Codex CLI 実行後の oracles 検査規則
 

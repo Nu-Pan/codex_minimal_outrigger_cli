@@ -1,18 +1,18 @@
 
-# `cmoc` における `<repo-root>` 上の `INDEX.md` の扱い
+# `cmoc` における `<work-root>` 上の `INDEX.md` の扱い
 
 ## 概要
 
-- `<repo-root>` 配下の大半のディレクトリ（後述）には `cmoc` によって `INDEX.md` が配置される
+- `<work-root>` 配下の大半のディレクトリ（後述）には `cmoc` によって `INDEX.md` が配置される
 - この `INDEX.md` 配置は `cmoc` によって自動的にインデクシングされる（人間は書かなくて良い）
 
 ## `INDEX.md` 配置対象ディレクトリ
 
-- `<repo-root>` 配下のディレクトリを再帰的に列挙する
+- `<work-root>` 配下のディレクトリを再帰的に列挙する
 - 以下のディレクトリは配置対象から除外する
     - `.` から始まるディレクトリ
     - `.gitignore` の対象
-    - `<repo-root>/memo`
+    - `<work-root>/memo`
     - バイナリファイル
 
 ## 目次作成対象ファイル・ディレクトリ
@@ -21,7 +21,7 @@
 - 以下のファイル・ディレクトリは目次作成対象から除外する
     - `.` から始まるファイル・ディレクトリ
     - `.gitignore` の対象
-    - `<repo-root>/memo`
+    - `<work-root>/memo`
     - `INDEX.md`
     - バイナリファイル
 
@@ -69,7 +69,7 @@
 
 1. 配置対象ディレクトリは前述のルールで機械的に列挙する
 2. 列挙されたディレクトリを「深い方から」順番に処理する
-    - e.g. `<repo-root>/parent/INDEX.md` で `<repo-root>/parent/child` の目次情報を作成するために `<repo-root>/parent/child/INDEX.md` を閲覧する可能性がある
+    - e.g. `<work-root>/parent/INDEX.md` で `<work-root>/parent/child` の目次情報を作成するために `<work-root>/parent/child/INDEX.md` を閲覧する可能性がある
     - よって、子ディレクトリ側を優先して新鮮な状態にする
 3. インデクシングによって発生した git 未コミット差分を自動コミット
     - インデクシングの呼び出し１回ごとに１つのコミットになるようにまとめる事
