@@ -25,25 +25,25 @@
 
 ## Summary
 
-- `cmoc apply` 系サブコマンドの実装本体をまとめたディレクトリです。
-- `fork.py` は apply の開始と調査・修正ループを担当し、`join.py` は apply 成果物を session 側へ取り込む処理を担当します。
-- `abandon.py` は未 join の apply run を破棄する処理を担当し、`__init__.py` はこのパッケージの入口です。
+- `src/sub_commands/apply` 配下のルーティング文書で、`cmoc apply` 系サブコマンドの入口を整理する階層です。
+- `__init__.py` はパッケージ宣言だけを担う最小モジュールです。
+- `abandon.py` は未 join の apply run の破棄、`fork.py` は apply 開始と調査・修正ループ、`join.py` は apply 成果物の session への取り込みを担います。
 
 ## Read this when
 
-- `cmoc apply fork`、`cmoc apply join`、`cmoc apply abandon` の実装・修正・テスト・レビューを行うとき。
-- apply run の状態遷移、worktree / branch の管理、想定外差分の処理、cleanup の流れを確認したいとき。
-- `cmoc apply` 配下の各モジュールがどの責務を持つかを把握したいとき。
+- `src/sub_commands/apply` 配下の入口構造と、どの実装ファイルを開くべきかを把握したいとき。
+- `cmoc apply fork` / `join` / `abandon` の責務分担や、各実装モジュールの役割を確認したいとき。
+- apply run の状態遷移、worktree / branch 管理、想定外差分の処理、cleanup の流れを整理したいとき。
 
 ## Do not read this when
 
-- `cmoc apply` 以外のサブコマンド、たとえば `cmoc session` 系や `cmoc init` の実装だけを確認したいとき。
-- `oracles` 配下の仕様断片や `INDEX.md` の生成ルールだけを確認したいとき。
-- `README.md` や `AGENTS.md` など、このディレクトリ外のリポジトリ運用ルールだけを確認したいとき。
+- すでに読む対象が `__init__.py`、`abandon.py`、`fork.py`、`join.py` のいずれかに決まっていて、この階層の案内が不要なとき。
+- `cmoc apply` の利用手順や引数仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/` 側を読むべきとき。
+- `cmoc apply` 以外のサブコマンドや、`README.md` / `AGENTS.md` などのリポジトリ運用ルールだけを確認したいとき。
 
 ## hash
 
-- ce97c96e8d82a59f659e359ac62a2f39ef69acd1aefc762af78dfdc5eb4ae3b0
+- 56759843c5299c4851dc86329ea3492e368caa72fa58229098b3f14c97d55aca
 
 # `indexing.py`
 

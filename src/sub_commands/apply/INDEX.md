@@ -51,26 +51,26 @@
 ## Summary
 
 - `src/sub_commands/apply/fork.py` のルーティング目次で、`cmoc apply fork` の本体実装へ進む入口です。
-- session state 検証、apply worktree 作成、`.cmoc` 追跡対象外保証、不整合調査・修正ループ、レポート生成を担当する主要処理群へ案内します。
-- Structured Output の検証、dirty path 管理、commit / error report の分岐など、apply 実行制御の中核を整理します。
+- session state 検証、apply worktree 作成、`.cmoc` の追跡対象外保証、不整合調査・修正ループ、レポート生成を担当する主要処理群へ案内します。
+- Structured Output の検証、dirty path 管理、commit と error report の分岐など、apply 実行制御の中核を整理します。
 
 ## Read this when
 
-- `cmoc apply fork` の実装・修正・レビュー・テストを始めるとき
-- `session.state` / `apply.state` の前提条件や、`--scope` と反復回数オプションの扱いを確認したいとき
-- apply worktree 作成、`.cmoc` の非追跡保証、調査・修正ループ、最終レポート書き込みまでの流れを追いたいとき
-- 不整合調査用 Structured Output schema、要修正点整理、change summary、エラー時のフォールバックを確認したいとき
+- `src/sub_commands/apply/fork.py` の実装・修正・レビュー・テストを始めるとき。
+- `session.state` / `apply.state` の前提条件や、`--scope` と反復回数オプションの扱いを確認したいとき。
+- apply worktree 作成、`.cmoc` の非追跡保証、不整合調査・修正ループ、レポート生成までの流れを追いたいとき。
+- 不整合調査用の Structured Output schema、要修正点の整理、change summary、エラー時のフォールバックを確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply fork` の利用手順や完了条件だけを確認したいときは `oracles/docs/app_specs/sub_commands/apply_fork.md` を読むべきとき
-- `src/sub_commands/apply` 配下の入口構造だけを確認したいときは `src/sub_commands/apply/INDEX.md` を読むべきとき
-- `cmoc apply join` や `cmoc apply abandon` の開始・統合・破棄フローだけを確認したいとき
-- `apply` の本体処理ではなく、`oracles` 側の仕様断片や利用手順だけを確認したいとき
+- `cmoc apply fork` の利用手順や完了条件だけを確認したいときは、実装ではなく `oracles/docs/app_specs/sub_commands/apply_fork.md` を読むべきです。
+- `src/sub_commands/apply` 配下の入口構造だけを確認したいときは、`src/sub_commands/apply/INDEX.md` を読むべきです。
+- `cmoc apply join` や `cmoc apply abandon` の開始・統合・破棄フローだけを確認したいときは、このファイルではなく各実装モジュールへ進むべきです。
+- `apply` 本体の実行制御ではなく、`oracles` 側の仕様断片や利用手順だけを確認したいときには、この目次は不要です。
 
 ## hash
 
-- a273b11bc8ca9abec134aa3fe0752eb764b05b5702241048bf7723d3f9db9648
+- 78820ca01231f912a9b2007048e09892df94e1684e94ec5fcd732b38d350da34
 
 # `join.py`
 

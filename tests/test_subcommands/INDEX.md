@@ -151,27 +151,26 @@
 
 ## Summary
 
-- `tests/test_subcommands/test_core.py` は、サブコマンド共通の実行基盤と `cmoc init` / `cmoc indexing` の主要な回帰テストをまとめたファイルです。
-- `run_command()` のエラー報告、終了コード、ログ記録、総経過時間、repo root 解決失敗、`apply` の非エラー終了を検証します。
-- あわせて `cmoc init` の ignore 修復・commit・tracked `.cmoc` の解除や、`cmoc indexing` の maintenance / check / dirty repo 判定も扱います。
+- サブコマンド共通の実行基盤、エラーレポート、ステップ計測の回帰テストをまとめたファイルです。
+- `run_command()` の終了コード、ログ出力、総経過時間、例外時の報告、`apply` の非エラー終了を確認します。
+- `cmoc init` の `.cmoc` ignore 修復・commit・tracked ファイル解除と、`cmoc indexing` の maintenance / check / dirty repo 判定も扱います。
 
 ## Read this when
 
-- `run_command()`、`StepTimer`、`start_step()` による共通の終了処理、ログ出力、経過時間表示を確認したいとき。
-- `cmoc init` の `.cmoc` ignore 追加、tracked `.cmoc` の解除、既存 `.gitignore` や stage 済み差分の扱いを確認したいとき。
-- `cmoc indexing` の通常実行、`--check`、dirty repo 判定、INDEX メンテナンスの委譲条件を確認したいとき。
-- サブコマンド横断の共通動作と、初期化・インデックス保守の境界をこのテスト群がどう守っているかを把握したいとき。
+- `run_command()`、`StepTimer`、`start_step()` の終了処理やログ・計測表示を変更するとき。
+- `cmoc init` の `.cmoc` ignore 追加、既存 `.gitignore` の扱い、tracked `.cmoc` の解除を確認したいとき。
+- `cmoc indexing` の通常実行、`--check`、dirty リポジトリ判定、INDEX 保守の委譲条件を確認したいとき。
+- サブコマンド横断の共通動作や、初期化とインデックス保守の境界を把握したいとき。
 
 ## Do not read this when
 
-- CLI 引数の登録や補完、ヘルプ表示だけを確認したいとき。
-- `apply` や `session` の個別サブコマンドの詳細な状態遷移や処理順を追いたいとき。
-- `src/commons/command_runner.py`、`src/sub_commands/init.py`、`src/sub_commands/indexing.py` などの実装本体を直接読みたいとき。
-- `tests/test_subcommands` 全体の入口や、他の個別テストファイルだけを先に確認したいとき。
+- CLI 引数登録、補完、ヘルプ表示だけを確認したいとき。
+- `apply` や `session` の個別サブコマンドの状態遷移や処理順だけを追いたいとき。
+- `src/commons/command_runner.py`、`src/sub_commands/init.py`、`src/sub_commands/indexing.py` の実装本体を直接読みたいとき。
 
 ## hash
 
-- dbb8d69a687c92ec554e90c08f6849c056a98c2382c4c47179f63eb301a4901f
+- a40341ead2f19209eb543aa97396134abbb4f587575ed0eac49d3a8a1adf6d96
 
 # `test_review_oracles.py`
 
