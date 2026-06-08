@@ -149,32 +149,33 @@
 
 - 5d46cca82b67cc3fea042c2120193bf0b83020a0f788966ea5aad42d0aa9d587
 
-# `test_subcommands.py`
+# `test_subcommands`
 
 ## Summary
 
-- `tests/test_subcommands.py` は、cmoc のサブコマンド本体と CLI 周辺にまたがる横断的な回帰テストの入口です。
-- `init`、`indexing`、`session`、`apply`、`review oracles`、`main.py`、`bin/cmoc`、`test.sh` の登録・補完・出力・終了コード・エラー報告をまとめて検証します。
-- サブコマンド固有の詳細へ進む前に、共通実行基盤と各サブコマンド仕様のどちらへ分岐するかを切り分けるための目次です。
+- `tests/test_subcommands` 配下のサブコマンド横断テスト群のルーティング文書で、CLI 入口・共通基盤・各サブコマンド別回帰テストへ案内する入口です。
+- 個別テストへ進む前に、`__init__.py`、`helpers.py`、`test_core.py`、`test_cli.py`、`test_review_oracles.py`、`test_session_*.py`、`test_apply_*.py` のどれを読むべきかを切り分けます。
+- サブコマンド実装や `oracles` 仕様に直接入る前の、テスト群の見取り図として使います。
 
 ## Read this when
 
-- `tests/test_subcommands.py` が扱う、cmoc のサブコマンド横断の回帰テスト全体像を把握したいとき。
-- `cmoc init`、`cmoc indexing`、`cmoc session fork/join/abandon`、`cmoc apply fork/join/abandon`、`cmoc review oracles` の登録・補完・終了コード・出力・エラー処理をまとめて確認したいとき。
-- `main.py`、`bin/cmoc`、`test.sh` を含む CLI 起点の挙動や、`run_command()`、`StepTimer`、`subcommand_log` の共通制御を確認したいとき。
-- `apply` と `review oracles` のプロンプト、スキーマ、レポート生成、`session_join` の conflict 解決、`init` や `session_fork` の事前条件を追いたいとき。
-- このファイルが、個別サブコマンド仕様へ進む前の横断目次として機能しているかを確認したいとき。
+- `tests/test_subcommands` 配下のどのテストファイルに何が書かれているか把握したいとき。
+- CLI 入口 (`test_cli.py`)・共通実行基盤 (`test_core.py`)・共通ヘルパー (`helpers.py`) を分けて確認したいとき。
+- `cmoc apply`、`cmoc session`、`cmoc review oracles` の個別回帰テストへ進む前に、どの入口を読むか判断したいとき。
+- `__init__.py` がまとめるパッケージ全体の役割を確認したいとき。
+- `tests/test_subcommands` の各テストが、`main.py`、`bin/cmoc`、`test.sh`、各 `src/sub_commands/*` のどれに対応するか見たいとき。
 
 ## Do not read this when
 
-- `tests/test_codex.py`、`tests/test_repo.py`、`tests/test_indexing.py`、`tests/test_report_files.py` など、個別の回帰テストの内容を確認したいとき。
-- `src/sub_commands/apply/`、`src/sub_commands/session/`、`src/sub_commands/review/`、`src/sub_commands/init.py`、`src/main.py`、`bin/cmoc`、`test.sh` の個別実装だけを追いたいとき。
-- `oracles/docs/app_specs/sub_commands/INDEX.md` 以下の各サブコマンド仕様を直接確認したいとき。
-- `run_command()`、`StepTimer`、`subcommand_log`、`format_error_report` など、共通基盤だけを確認したいとき。
+- 個別テストケースの本文やアサーション内容を直接確認したいとき。
+- `src/sub_commands/` や `main.py` の本体実装を確認したいとき。
+- `oracles/docs/app_specs/sub_commands/INDEX.md` 以下の仕様断片を直接確認したいとき。
+- `tests/test_subcommands` ではなく、`tests/test_codex.py` や `tests/test_repo.py` など他の回帰テストへ進みたいとき。
+- `INDEX.md` の生成ルールそのものやハッシュ管理だけを調べたいとき。
 
 ## hash
 
-- 0954217cff1ccb398276b2faa4cb660b7fe9fafc525fa17eed786aeb00d26e0a
+- 78152091eb09b66c0c2e934684e355e54b5f7e9f07033de38c470ae3484107ad
 
 # `test_timestamps.py`
 

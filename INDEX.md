@@ -2,18 +2,17 @@
 
 ## Summary
 
-- `cmoc` リポジトリ全体の作業ルールとルーティング方針をまとめた入口です。
-- `cmoc` の開発と `cmoc` を用いた開発を区別し、参照してよい・よくないファイルの扱いを示します。
-- `oracles` 配下の `INDEX.md` を起点に必要最小限の仕様断片だけを読むための案内です。
-- 実装は `<cmoc-root>/src`、自動テストは `<cmoc-root>/tests` に置く前提を明示します。
+- この `AGENTS.md` のルーティング文書で、リポジトリ全体の作業ルールと参照先の入口を案内します。
+- 閲覧・編集の制約、`oracles` 配下の読み方、`src` と `tests` の配置前提を整理するための目次です。
+- 作業開始前に、どの規約や仕様断片を読むべきかを切り分けるための入口です。
 
 ## Read this when
 
-- このリポジトリで作業する前に、基本ルールと役割分担を確認したいとき。
-- `cmoc` 自体の開発と `cmoc` を使った開発を区別したいとき。
-- `memo` や `README.md` などの閲覧・編集制約を確認したいとき。
+- このリポジトリで作業を始める前に、基本ルールと役割分担を確認したいとき。
+- `cmoc` の開発と `cmoc` を用いた開発の違いを整理したいとき。
+- `memo`、`README.md`、`AGENTS.md`、`oracles` の閲覧・編集制約を確認したいとき。
 - `oracles` の正本仕様を読む前に、どの `INDEX.md` を起点にたどるか知りたいとき。
-- 実装を `<cmoc-root>/src`、テストを `<cmoc-root>/tests` に置く前提を確認したいとき。
+- 実装を `<cmoc-root>/src`、自動テストを `<cmoc-root>/tests` に置く前提を確認したいとき。
 
 ## Do not read this when
 
@@ -23,7 +22,7 @@
 
 ## hash
 
-- b2f93d440fb91234a2ff90e3b533ff1ba9230037690851040d4d8e5de5d0bf37
+- 01c836ca6fff27353230dbf64f045cc58b947af22edcf8bc22b5575f80a1e37e
 
 # `LICENSE`
 
@@ -128,25 +127,25 @@
 
 ## Summary
 
-- この `oracles` ディレクトリのルーティング文書で、`docs/` と `schemas/` への入口を案内します。
-- `docs/` は人間向けの正本仕様断片、`schemas/` は Structured Output schema の置き場として扱います。
-- 個別文書に入る前に、参照先の系統を切り分けるための目次です。
+- `oracles` ディレクトリ全体のルーティング文書で、`docs/` と `schemas/` への入口をまとめたものです。
+- `docs/` は仕様断片の目次、`schemas/` は Structured Output schema の置き場です。
+- まず目的に応じて仕様本文か schema 定義かを切り分けるための最上位目次です。
 
 ## Read this when
 
-- `oracles` 配下で、人間向けの仕様と機械向けのスキーマのどちらへ進むべきか整理したいとき。
-- `docs/` にある仕様断片と、`schemas/` にある Structured Output schema の役割分担を把握したいとき。
-- 目的に応じて、どの下位ディレクトリの文書を読むべきか迷ったとき。
+- `oracles` 配下で読むべき入口を探したいとき。
+- cmoc の仕様本文をたどるために `docs/` 側へ進むか、Structured Output schema を確認するために `schemas/` 側へ進むか判断したいとき。
+- `INDEX.md` の更新や配置ルールを確認する前段として、最上位の案内だけ見たいとき。
 
 ## Do not read this when
 
-- すでに目的の文書やスキーマの場所が分かっていて、`docs/` や `schemas/` の下位ファイルへ直接進めるとき。
-- `oracles` 配下の個別仕様や Structured Output schema だけを確認したいとき。
-- この階層ではなく、リポジトリ全体の運用ルールや別ディレクトリの目次だけを確認したいとき。
+- 目的の文書がすでに分かっていて、`docs/` か `schemas/` の配下へ直接進めるとき。
+- `docs/` 配下の個別仕様や `schemas/structured_output/review/oracles/` 配下の個別 schema を直接確認したいとき。
+- `README.md`、`AGENTS.md` など、`oracles` 以外の運用ルールだけを確認したいとき。
 
 ## hash
 
-- 138646edaf0942b63715d5888a0f9c984718ab72b096f9caf6f5c09e70bc4c42
+- 776cffd8590d802a50e18c70107e21f51d2ad6b65c053cdd79532bbff598b68d
 
 # `pyproject.toml`
 
@@ -225,22 +224,23 @@
 
 ## Summary
 
-- `tests/` は cmoc の pytest テスト群の入口で、共通 fixture と各機能領域の回帰テストをまとめるディレクトリです。
-- `conftest.py` が import path の共通設定を担い、各 `test_*.py` が `commons`、`sub_commands`、CLI 周辺の個別仕様を検証します。
-- 個別テストへ入る前に、何を守るテスト群かを切り分けるための目次として機能します。
+- `tests` ディレクトリのルーティング文書で、テスト群全体の入口になります。
+- 共通設定、共通ヘルパー、主要な回帰テスト、サブコマンド別テストへ案内するための目次です。
+- 個別テストへ進む前に、どの目的ならどのファイルを読むべきかを切り分けるために使います。
 
 ## Read this when
 
-- pytest 用の共通設定と、`tests/` 配下の回帰テスト全体の入口を把握したいとき。
-- `commons.codex`、`commons.indexing`、`commons.repo`、`commons.report_files`、`commons.timestamps`、`sub_commands` 周辺のどのテストを読むべきか整理したいとき。
-- INDEX 生成、ファイル命名規則、CLI 横断制御、タイムスタンプやレポート保存の境界を確認したいとき。
+- pytest の共通設定として `conftest.py` が何をしているか確認したいとき。
+- `commons.codex`、`commons.indexing`、`commons.repo`、`commons.report_files`、`commons.timestamps` の回帰テストの入口を探したいとき。
+- CLI 横断テストや `cmoc apply` / `cmoc session` / `cmoc review oracles` の個別回帰を読む前に、どのテストファイルへ進むべきか整理したいとき。
+- `tests` 配下の命名規則や `INDEX.md` の維持ルールを確認したいとき。
 
 ## Do not read this when
 
-- 読みたい個別テストファイルがすでに決まっていて、`conftest.py` や各 `test_*.py` へ直接進めるとき。
-- pytest の共通設定よりも、本番実装の `src/` 側を先に追いたいとき。
-- `__pycache__/` のような生成物や、テスト以外の運用ファイルだけを確認したいとき。
+- 個別の実装ロジックや `src/` 側の本体コードを直接追いたいとき。
+- `tests/test_subcommands/INDEX.md` など、下位ディレクトリの目次だけを確認したいとき。
+- `README.md` や `AGENTS.md` など、テスト以外のリポジトリ運用ルールだけを確認したいとき。
 
 ## hash
 
-- bf4132e1ddd44b377cfc6d39e6bbddc70a3ac1420afabc0bbab4cb620f9eea21
+- 945186ab8c086e53272fe083837457b1c5e27d5a72a45f7a7d84ec6e06875aa2
