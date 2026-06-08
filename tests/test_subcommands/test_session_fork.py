@@ -80,7 +80,7 @@ def test_session_fork_ensures_cmoc_ignore_before_active_state_scan(
         cmoc_session_fork_impl(repo)
 
     assert "未コミットの変更" in error.value.message
-    assert ".cmoc/" in error.value.detail
+    assert str((repo / ".cmoc").resolve()) in error.value.detail
     assert "JSON が不正" not in error.value.message
     assert _git(repo, "branch", "--show-current").stdout.strip() == home_branch
     assert _session_state_paths(repo) == [broken_path]

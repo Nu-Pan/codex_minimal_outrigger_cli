@@ -1136,7 +1136,7 @@ def assert_no_uncommitted_changes(repo_root: Path) -> None:
     """未コミット差分がある場合は仕様通りエラーにする。"""
     # 未コミット path を利用者に見せるため、bool ではなく一覧を取得する。
     paths = changed_paths(repo_root)
-    _raise_uncommitted_changes(paths)
+    _raise_uncommitted_changes(repo_root, paths)
 
 
 def assert_no_uncommitted_changes_outside_cmoc(repo_root: Path) -> None:
@@ -1146,10 +1146,10 @@ def assert_no_uncommitted_changes_outside_cmoc(repo_root: Path) -> None:
         for path in changed_paths(repo_root)
         if not _is_cmoc_managed_path(path)
     ]
-    _raise_uncommitted_changes(paths)
+    _raise_uncommitted_changes(repo_root, paths)
 
 
-def _raise_uncommitted_changes(paths: list[str]) -> None:
+def _raise_uncommitted_changes(repo_root: Path, paths: list[str]) -> None:
     """未コミット path 一覧が空でなければ共通エラーを送出する。"""
     if paths:
         raise CmocError(
@@ -1158,8 +1158,16 @@ def _raise_uncommitted_changes(paths: list[str]) -> None:
                 "現在の変更を commit または stash してください。",
                 "作業ツリーを clean にしてからコマンドを再実行してください。",
             ],
-            "\n".join(paths),
+            "\n".join(
+                _uncommitted_change_display_path(repo_root, path)
+                for path in paths
+            ),
         )
+
+
+def _uncommitted_change_display_path(repo_root: Path, path: str) -> str:
+    """git status の repo 相対 path token をユーザー表示用の絶対 path にする。"""
+    return str((repo_root / path).resolve())
 
 
 def assert_paths_clean(repo_root: Path, paths: list[str]) -> None:

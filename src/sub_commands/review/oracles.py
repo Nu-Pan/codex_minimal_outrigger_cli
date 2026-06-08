@@ -2133,7 +2133,7 @@ def _write_report(
     for index, oracle_file in enumerate(oracle_files, start=1):
         target = str(oracle_file.resolve())
         lines.append(
-            f"| {index} | `{oracle_file.relative_to(repo_root)}` | "
+            f"| {index} | `{_display_path(repo_root, str(oracle_file))}` | "
             f"{finding_count_by_target.get(target, 0)} |"
         )
     lines.extend([""])
@@ -2850,9 +2850,8 @@ def _unique_strings(values: list[str]) -> list[str]:
 
 
 def _display_path(repo_root: Path, path_text: str) -> str:
-    """repo 配下の絶対パスをレポート向けの相対パスにする。"""
+    """path_text をレポート向けの絶対パスにする。"""
     path = Path(path_text)
-    try:
-        return path.resolve().relative_to(repo_root.resolve()).as_posix()
-    except ValueError:
-        return path_text
+    if not path.is_absolute():
+        path = repo_root / path
+    return str(path.resolve())

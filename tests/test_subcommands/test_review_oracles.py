@@ -547,8 +547,8 @@ def test_eval_oracles_reads_fixed_snapshot_after_oracle_tree_changes(
     ).read_text(encoding="utf-8")
     assert snapshot_texts == ["original snapshot text\n"]
     assert "snapshot warning" in report
-    assert "| 1 | `oracles/spec.md` | 1 |" in report
-    assert "oracles/later.md" not in report
+    assert f"| 1 | `{oracle_file.resolve()}` | 1 |" in report
+    assert str((repo / "oracles" / "later.md").resolve()) not in report
 
 
 def test_eval_oracles_index_maintenance_updates_oracles_index(
@@ -648,12 +648,11 @@ def test_eval_oracles_runs_file_evaluations_in_parallel(
         "oracle 評価 oracles/b.md",
         "oracle 評価 oracles/c.md",
     ]
-    assert report.index("| 1 | `oracles/a.md` | 0 |") < report.index(
-        "| 2 | `oracles/b.md` | 0 |"
-    )
-    assert report.index("| 2 | `oracles/b.md` | 0 |") < report.index(
-        "| 3 | `oracles/c.md` | 0 |"
-    )
+    row_a = f"| 1 | `{(oracle_root / 'a.md').resolve()}` | 0 |"
+    row_b = f"| 2 | `{(oracle_root / 'b.md').resolve()}` | 0 |"
+    row_c = f"| 3 | `{(oracle_root / 'c.md').resolve()}` | 0 |"
+    assert report.index(row_a) < report.index(row_b)
+    assert report.index(row_b) < report.index(row_c)
 
 
 def test_eval_oracles_writes_error_report_when_evaluation_fails(
@@ -765,7 +764,11 @@ def test_eval_oracles_writes_error_report_when_preparation_fails(
     assert "oracle_count_total: 1" in report
     assert "oracle_count_evaluated: 0" in report
     assert "- Failed stage: `INDEX.md メンテナンス`" in report
-    assert "| 1 | `oracles/spec.md` | not_evaluated | - |" in report
+    spec_row = (
+        f"| 1 | `{(oracle_root / 'spec.md').resolve()}` | "
+        "not_evaluated | - |"
+    )
+    assert spec_row in report
 
 
 def test_eval_oracles_error_report_marks_unevaluated_files_in_table(
@@ -809,9 +812,9 @@ def test_eval_oracles_error_report_marks_unevaluated_files_in_table(
     assert "oracle_count_total: 2" in report
     assert "oracle_count_evaluated: 1" in report
     assert "## Specification-only basis" not in report
-    assert "| 1 | `oracles/a.md` | evaluated | 0 |" in report
-    assert "| 2 | `oracles/b.md` | not_evaluated | - |" in report
-    assert "| 2 | `oracles/b.md` | evaluated | 0 |" not in report
+    assert f"| 1 | `{oracle_a.resolve()}` | evaluated | 0 |" in report
+    assert f"| 2 | `{oracle_b.resolve()}` | not_evaluated | - |" in report
+    assert f"| 2 | `{oracle_b.resolve()}` | evaluated | 0 |" not in report
     assert "Not evaluated oracle files:" not in report
     assert report.index("## Evaluated oracle files") < report.index(
         "## Fatal findings"
@@ -1052,19 +1055,19 @@ def test_eval_oracles_report_aggregates_issues_by_severity(
     assert report.index("### MINOR-002: B inconclusive") < report.index(
         "### MINOR-003: B warning"
     )
-    assert "| 1 | `oracles/a.md` | 2 |" in report
-    assert "| 2 | `oracles/b.md` | 3 |" in report
-    assert "- Oracle file: `oracles/a.md`" in report
-    assert "- Oracle file: `oracles/b.md`" in report
+    assert f"| 1 | `{oracle_a.resolve()}` | 2 |" in report
+    assert f"| 2 | `{oracle_b.resolve()}` | 3 |" in report
+    assert f"- Oracle file: `{oracle_a.resolve()}`" in report
+    assert f"- Oracle file: `{oracle_b.resolve()}`" in report
     assert "- Specification-only basis:" in report
     assert "oracles 配下の仕様だけを参照しました。" in report
-    assert f"- Oracle file: `{oracle_a.resolve()}`" not in report
-    assert f"- Oracle file: `{oracle_b.resolve()}`" not in report
+    assert "- Oracle file: `oracles/a.md`" not in report
+    assert "- Oracle file: `oracles/b.md`" not in report
     assert "| No. | Referenced file |" in report
-    assert "| 1 | `oracles/a.md` |" in report
-    assert "| 2 | `oracles/INDEX.md` |" in report
-    assert "| 3 | `oracles/b.md` |" in report
-    assert report.count("| 2 | `oracles/INDEX.md` |") == 1
+    assert f"| 1 | `{oracle_a.resolve()}` |" in report
+    assert f"| 2 | `{(oracle_root / 'INDEX.md').resolve()}` |" in report
+    assert f"| 3 | `{oracle_b.resolve()}` |" in report
+    assert report.count(f"| 2 | `{(oracle_root / 'INDEX.md').resolve()}` |") == 1
 
 
 def test_eval_oracles_report_frontmatter_quotes_string_scalars(
@@ -2416,7 +2419,7 @@ def test_eval_oracles_rejects_uncommitted_changes(tmp_path: Path) -> None:
         cmoc_review_oracles_impl(repo, full=True)
 
     assert "未コミットの変更があります。" in error.value.message
-    assert "oracles/spec.md" in error.value.detail
+    assert str(oracle_file.resolve()) in error.value.detail
 
 
 def test_eval_oracles_rejects_apply_branch(

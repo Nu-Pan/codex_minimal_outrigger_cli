@@ -1284,7 +1284,7 @@ def test_assert_no_uncommitted_changes_rejects_oracle_changes(
         assert_no_uncommitted_changes(repo)
 
     assert "未コミットの変更があります。" in error.value.message
-    assert "oracles/" in error.value.detail
+    assert str(oracle_root.resolve()) in error.value.detail
 
 
 def test_changed_paths_preserves_special_path_tokens(tmp_path: Path) -> None:

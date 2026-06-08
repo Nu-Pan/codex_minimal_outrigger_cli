@@ -2277,7 +2277,7 @@ def test_apply_commits_untracked_oracle_changes_after_cmoc_guarantee(
         cmoc_apply_impl(repo)
 
     assert "未コミットの変更" in error.value.message
-    assert "oracles/" in error.value.detail
+    assert str(oracle_root.resolve()) in error.value.detail
     assert _git(repo, "log", "-1", "--pretty=%s").stdout.strip() == "initial"
     assert _git(repo, "status", "--porcelain", "--", "oracles").stdout == (
         "?? oracles/\n"
