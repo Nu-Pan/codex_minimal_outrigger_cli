@@ -175,27 +175,26 @@
 
 ## Summary
 
-- `src` は cmoc の実装本体をまとめるルートディレクトリで、`main.py`、`commons/`、`sub_commands/` へ案内する入口です。
-- `main.py` は CLI エントリーポイント、`commons/` は共通基盤、`sub_commands/` は各サブコマンド実装の入口です。
-- この階層は、実装の起点を整理し、目的に応じて読むべきモジュール系統を切り分ける目次です。
+- `src` ディレクトリのルーティング目次で、`commons/`、`main.py`、`sub_commands/` へ案内する入口です。
+- 共通基盤、CLI エントリーポイント、サブコマンド実装群の役割分担をたどる前の案内役です。
+- `src` 配下の個別モジュールへ進む前に、どの階層を読むべきか切り分けるための目次です。
 
 ## Read this when
 
-- cmoc の CLI 起点やコマンド登録、補完の流れを確認したいとき。
-- 共通基盤モジュールの役割分担を把握したいとき。
-- サブコマンド実装の入口構造を整理して、どの系統のモジュールを開くべきか迷っているとき。
-- `src` 配下のどのファイル・ディレクトリを先に読むべきか切り分けたいとき。
+- `src` 配下で、共通基盤・CLI 入口・サブコマンド本体のどれを読むべきか整理したいとき。
+- `src/commons`、`src/main.py`、`src/sub_commands` の全体構成を先に把握したいとき。
+- 具体的な実装ファイルへ進む前に、階層ごとの役割を確認したいとき。
+- `src` の下位 `INDEX.md` をたどってさらに細かい案内を見たいとき。
 
 ## Do not read this when
 
-- すでに `src/main.py`、`src/commons/`、`src/sub_commands/` のどれを読むか決まっていて、この階層の案内が不要なとき。
-- CLI の入口ではなく、個別モジュールの実装詳細だけを確認したいとき。
-- `oracles` 側の正本仕様や `tests` 側の回帰条件だけを確認したいとき。
-- `src` 配下の目次全体ではなく、特定ファイルの本文だけを直接追いたいとき。
+- すでに `commons`、`main.py`、`sub_commands` の対象が決まっていて、この階層の目次が不要なとき。
+- 個別モジュールの実装や CLI の詳細だけを確認したいとき。
+- `src` 全体の入口ではなく、下位ディレクトリの `INDEX.md` を直接読むとき。
 
 ## hash
 
-- c8380e4ad6e5ad00dff6a4dde2a6b2bb75e7613408f81c7bfeef0781130e0e76
+- fb6a16bdca763f9d8446435661a3b1e802ca40ec4bc415874aaa0e6327e2892f
 
 # `test.sh`
 
@@ -224,22 +223,24 @@
 
 ## Summary
 
-- `tests` ディレクトリ全体のルーティング文書で、pytest 共通設定と主要な回帰テスト群への入口です。
-- 個別のテスト本体を読む前に、`conftest.py` と各 `test_*.py` の役割を切り分けるための目次として機能します。
-- サブコマンド系の詳細をたどる場合は、この階層の入口から `tests/test_subcommands/INDEX.md` に分岐します。
+- この `tests` ディレクトリのルーティング文書で、pytest 共通設定と各回帰テスト群への入口をまとめます。
+- 共通ユーティリティ、`commons` 系の回帰、ファイル命名や `INDEX.md` 保守の検証、時刻・レポート出力の検証を目的別に切り分けます。
+- 個別のテスト本文へ進む前に、どのファイル群を読むべきかを整理するための目次です。
 
 ## Read this when
 
-- pytest の共通設定や import path の扱いを確認したいとき。
-- `tests/test_codex.py`、`tests/test_indexing.py`、`tests/test_repo.py`、`tests/test_report_files.py`、`tests/test_timestamps.py`、`tests/test_file_naming.py` のどれを読むべきか整理したいとき。
-- `tests/test_subcommands/INDEX.md` へ進む前に、`tests` 配下全体の入口を把握したいとき。
+- pytest の共通設定である `tests/conftest.py` の役割を確認したいとき。
+- `tests/test_codex.py`、`tests/test_indexing.py`、`tests/test_repo.py`、`tests/test_report_files.py`、`tests/test_timestamps.py` の回帰観点を整理したいとき。
+- `tests/test_file_naming.py` でファイル命名や旧ルーティングの残存確認を調べたいとき。
+- `tests/test_subcommands/` へ進む前に、サブコマンド横断テスト全体の入口を確認したいとき。
 
 ## Do not read this when
 
-- 個別のテストケース本文やアサーションを直接確認したいとき。
-- `tests/test_subcommands/INDEX.md` 配下の個別サブコマンド別テストへ直接進むとき。
-- `tests` 配下ではなく、`src` 側の実装ロジックや `oracles` 側の仕様だけを確認したいとき。
+- 個別テストケースのアサーションやモックの細部だけを確認したいとき。
+- すでに目的のファイルが分かっていて、`tests` 直下の目次を経由せず直接開けるとき。
+- `src` 側の実装そのものや `oracles` 側の正本仕様だけを追いたいとき。
+- `__pycache__` などの生成物を扱う必要があるとき。
 
 ## hash
 
-- ed72183dc49eb0d8c0fb0c076bc1243772445d559e452efeb37cff5767533064
+- 15dc3ea202e387f2e1b62dd059a37dd677ac460d778b9b75c2058675baf16524

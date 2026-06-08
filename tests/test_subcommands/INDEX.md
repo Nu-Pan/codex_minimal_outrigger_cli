@@ -131,21 +131,21 @@
 
 ## Read this when
 
-- `cmoc --help`、`cmoc indexing --help`、`cmoc review oracles --help` など、CLI 登録とヘルプ表示の挙動を確認したいとき。
+- `cmoc --help`、`cmoc review oracles --help`、`cmoc indexing --help` など、CLI 登録とヘルプ表示の挙動を確認したいとき。
 - `session`、`apply`、`review` の各コマンド群に対する補完プローブや、Typer への委譲方針を確認したいとき。
 - 引数なし起動やサブコマンドエラー時に、stdout へ Markdown 形式のエラーレポートが出るかを確認したいとき。
 - `main.py`、`bin/cmoc`、`format_error_report`、`eval-oracles` / `eval-oracle` の互換 alias を含む CLI 横断の回帰を把握したいとき。
 
 ## Do not read this when
 
-- 個別の `cmoc apply`、`cmoc session`、`cmoc review oracles`、`cmoc indexing` の実装や状態遷移そのものを追いたいとき。
+- `cmoc apply`、`cmoc session`、`cmoc review oracles`、`cmoc indexing` など、個別サブコマンドの実装や状態遷移そのものを追いたいとき。
 - `tests/test_subcommands/test_apply_fork.py` や `tests/test_subcommands/test_session_join.py` など、サブコマンド固有の回帰テストを確認したいとき。
 - `format_error_report` や補完プローブの共通ヘルパーだけを直接確認したいとき。
 - `bin/cmoc` の起動スクリプトや `main.py` の CLI 登録ではなく、個別仕様ファイルだけを確認したいとき。
 
 ## hash
 
-- 3a184fde576965fa8404286b990cb8f139888422e1a644a6ffa8a756f3394b1f
+- 6f76212a4a678302e172a0e73b84352370f2f4c8764a6bf833feb33d402021a6
 
 # `test_core.py`
 
@@ -157,21 +157,21 @@
 
 ## Read this when
 
-- `run_command()`、`StepTimer`、`start_step()` を中心に、サブコマンド共通の終了処理・ログ出力・経過時間表示を確認したいとき。
-- `cmoc init` の `.cmoc` ignore 追加、tracked `.cmoc` の解除、既存 `.gitignore` や staged 差分の保持・復旧条件を確認したいとき。
-- `cmoc indexing` の通常実行、`--check`、不整合検出、dirty repo での停止条件を確認したいとき。
-- `tests/test_subcommands/test_core.py` が、サブコマンド横断の共通動作と初期化・インデックス保守の境界をどう守っているかを把握したいとき。
+- `run_command()`、`StepTimer`、`start_step()` による共通の終了処理、ログ出力、経過時間表示を確認したいとき。
+- `cmoc init` の `.cmoc` ignore 追加、tracked `.cmoc` の解除、既存 `.gitignore` や stage 済み差分の扱いを確認したいとき。
+- `cmoc indexing` の通常実行、`--check`、dirty repo 判定、INDEX メンテナンスの委譲条件を確認したいとき。
+- サブコマンド横断の共通動作と、初期化・インデックス保守の境界をこのテスト群がどう守っているかを把握したいとき。
 
 ## Do not read this when
 
-- `tests/test_subcommands/test_cli.py` など、CLI 引数や補完の挙動だけを確認したいとき。
-- `tests/test_subcommands/test_apply_*.py` や `tests/test_subcommands/test_session_*.py` など、個別サブコマンドの詳細な回帰テストを追いたいとき。
-- `src/commons/command_runner.py`、`src/sub_commands/init.py`、`src/sub_commands/indexing.py` など、実装そのものを直接確認したいとき。
-- `oracles/docs/app_specs/sub_commands/INDEX.md` 以下の個別仕様を読みたいとき。
+- CLI 引数の登録や補完、ヘルプ表示だけを確認したいとき。
+- `apply` や `session` の個別サブコマンドの詳細な状態遷移や処理順を追いたいとき。
+- `src/commons/command_runner.py`、`src/sub_commands/init.py`、`src/sub_commands/indexing.py` などの実装本体を直接読みたいとき。
+- `tests/test_subcommands` 全体の入口や、他の個別テストファイルだけを先に確認したいとき。
 
 ## hash
 
-- e6245bbad872991c845d61ec8ce4de95f5cd06d9d2ea9bc96a19c9dd70939489
+- dbb8d69a687c92ec554e90c08f6849c056a98c2382c4c47179f63eb301a4901f
 
 # `test_review_oracles.py`
 

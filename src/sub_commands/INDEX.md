@@ -50,28 +50,25 @@
 
 ## Summary
 
-- `cmoc indexing` の本体実装で、`repo_root` が未指定なら `run_command()` に処理を委譲します。
-- `StepTimer` と `start_step()` を使って、repository 状態検証と `INDEX.md` メンテナンスまたは整合性検査の 2 段階で進みます。
-- `assert_no_uncommitted_changes()` で clean repo を確認し、`check` モードでは `find_index_inconsistencies()`、通常モードでは `maintain_indexes()` を呼び分けます。
-- 通常モードでは `INDEX.md` の変更有無に応じて標準出力を変え、`check` モードでは未反映の不整合があれば `CmocError` を送出します。
+- `src/sub_commands/indexing.py` は `cmoc indexing` の本体処理を持つモジュールです。
+- `repo_root` が未指定なら共通 runner に処理を委譲し、指定済みなら repository 状態検証と `INDEX.md` メンテナンスの 2 段階で進みます。
+- `assert_no_uncommitted_changes()` で clean repo を確認し、`maintain_indexes()` の結果に応じて標準出力を切り替えます。
 
 ## Read this when
 
 - `cmoc indexing` の実装・修正・レビュー・テストを行いたいとき。
-- 実行前の未コミット差分チェックと `INDEX.md` メンテナンスの呼び出し順を確認したいとき。
-- `run_command()` による `repo_root` 解決や、`StepTimer` と `start_step()` を使った 2 段階の処理フローを追いたいとき。
-- `find_index_inconsistencies()` と `maintain_indexes()` のどちらを使うか、またその結果に応じてどこで標準出力やエラーが出るか確認したいとき。
+- `repo_root` の自動解決や、`StepTimer` と `start_step()` を使った 2 段階の処理フローを確認したいとき。
+- 実行前の未コミット差分チェックと、`INDEX.md` メンテナンス後の標準出力を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc indexing` の正本仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/indexing.md` を直接読むべきです。
-- `INDEX.md` の生成アルゴリズム、深い階層からの更新順、コミット対象の制御だけを確認したいときは、`src/commons/indexing.py` を直接読むべきです。
-- `cmoc init`、`session`、`apply`、`review` など、別サブコマンドの実装を追いたいとき。
-- `src/sub_commands` 配下の入口構造だけを確認したいときで、`cmoc indexing` 本体の処理は不要なとき。
+- `INDEX.md` の生成アルゴリズム、再利用条件、配置対象の判定だけを確認したいときは、このモジュールではなく `src/commons/indexing.py` を読むべきです。
+- `cmoc indexing` の正本仕様や利用手順だけを確認したいときは、`oracles/docs/app_specs/sub_commands/indexing.md` を直接読むべきです。
+- `cmoc` の他のサブコマンドの入口や実装を追いたいときは、このファイルではなく該当モジュールを読むべきです。
 
 ## hash
 
-- fce12fd41ef1f022d65537b43eb35089e1832b43e3b9973a0636cb4f23380efb
+- 1d50ad1105d309676b3745dcc539bb313c9b31f155df7a1cd8a90c6459d5b2de
 
 # `init.py`
 

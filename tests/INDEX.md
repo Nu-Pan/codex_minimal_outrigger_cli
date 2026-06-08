@@ -160,7 +160,7 @@
 
 - `tests/test_subcommands` 配下で、どのファイルに何が書かれているかを最初に整理したいとき。
 - CLI 入口、共通ヘルパー、共通基盤、`apply` 系、`session` 系、`review oracles` 系のどれへ進むべきかを切り分けたいとき。
-- `__init__.py`、`helpers.py`、`test_core.py`、`test_cli.py`、`test_review_oracles.py`、`test_apply_*.py`、`test_session_*.py` の役割分担を把握したいとき。
+- `__init__.py`、`helpers.py`、`test_core.py`、`test_cli.py`、`test_review_oracles.py`、`test_apply_*.py`、`test_session_*.py` の役割分担を把握したいとき.
 
 ## Do not read this when
 
@@ -170,7 +170,7 @@
 
 ## hash
 
-- be2d6b50b9f458dc99d75f607c16beeda89711d7d92b524d5dd82f42445ae005
+- af8df228f2e832d5dff664da816df13345d9a080ee536ba4bf120bc3053d2c66
 
 # `test_timestamps.py`
 
