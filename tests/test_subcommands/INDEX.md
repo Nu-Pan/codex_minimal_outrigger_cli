@@ -2,7 +2,7 @@
 
 ## Summary
 
-- `tests/test_subcommands/__init__.py` は `tests.test_subcommands` をテストパッケージとして成立させるための初期化ファイルです。
+- `tests.test_subcommands` をテストパッケージとして成立させるための初期化ファイルです。
 - このファイル自体にはテストロジックがなく、サブコマンド関連テスト群のパッケージ境界だけを示します。
 
 ## Read this when
