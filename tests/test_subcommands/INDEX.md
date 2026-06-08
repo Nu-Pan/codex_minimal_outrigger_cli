@@ -33,7 +33,7 @@
 
 - `tests/test_subcommands` 配下のテストで共通利用している import とヘルパー関数を確認したいとき。
 - テスト用 git リポジトリ、session/apply 状態、conflict 状態の作り方を把握したいとき。
-- subcommand log、StepTimer、エラーレポート、補完プローブなどの共通テスト基盤を変更・レビューしたいとき。
+- subcommand log、`StepTimer`、エラーレポート、補完プローブなどの共通テスト基盤を変更・レビューしたいとき。
 
 ## Do not read this when
 
@@ -43,7 +43,7 @@
 
 ## hash
 
-- d311673e0302d66a652af18b19d57f8607eeec7594ae1055f0ea039e1aebb254
+- 4e108249a532c9f12bdf12736720f4571e33c052bf478e04490392cc77611b95
 
 # `test_apply_abandon.py`
 
@@ -80,20 +80,18 @@
 ## Read this when
 
 - `cmoc apply fork` の正常系・異常系・回帰テストをまとめて把握したいとき。
-- 不整合調査の Structured Output schema、scope 判定、要修正点抽出、改善ループ、report 生成の検証観点を確認したいとき。
-- `INDEX.md` メンテナンス、index 変更の commit、session/apply state 更新、session HEAD 記録の挙動を追いたいとき。
-- 並列調査、エラー時のレポート生成、絶対パスや forbidden path の扱い、schema バリデーションの境界条件を確認したいとき。
+- 不整合調査の流れ、要修正点の改善ループ、report 生成、state 更新、session HEAD 記録の検証観点を確認したいとき。
+- 絶対パスや forbidden path、並列調査、Structured Output schema、change summary の境界条件を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply fork` 以外の `apply join` / `apply abandon` の挙動を確認したいとき。
-- `cmoc session fork/join/abandon` や `cmoc review oracles` など、別サブコマンドの回帰テストを探しているとき。
-- `src/sub_commands/apply/fork.py` などの実装本体や、`oracles/docs/app_specs/sub_commands/apply_fork.md` の仕様断片だけを確認したいとき。
-- CLI 登録や `bin/cmoc`、`main.py` の横断的な起点だけを追いたいとき。
+- `cmoc apply join` や `cmoc apply abandon` など、別の `apply` サブコマンドの回帰テストを確認したいとき。
+- `cmoc session fork/join/abandon` や `cmoc review oracles` など、`apply fork` 以外のサブコマンドの挙動を確認したいとき。
+- `src/sub_commands/apply/fork.py` の実装本体や、`oracles/docs/app_specs/sub_commands/apply_fork.md` の仕様断片だけを確認したいとき。
 
 ## hash
 
-- 23d2f93052ab10f68905037dbf1351124a67aeeaabccddba52f35c08402114da
+- de3ebaba1b98ef7339e40df56554b71572e2edf3ccf58213dc64a7c86efc1bfa
 
 # `test_apply_join.py`
 
@@ -119,7 +117,7 @@
 
 ## hash
 
-- c5cb78f3148aecb5198237a611e2725dbc4923359b343ea774f52cfb9ccb6419
+- 8ad4ad8afbbbe6b63592ee7c4b5242293cd34d4ecb6658cc341d2b7dc8837b1a
 
 # `test_cli.py`
 

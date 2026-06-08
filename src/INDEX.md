@@ -65,10 +65,10 @@
 
 ## Do not read this when
 
-- `cmoc` の CLI 登録やサブコマンド接続だけを追いたいときは `src/main.py` を読むべきです。
-- すでに読む対象が `init.py`、`indexing.py`、`apply/`、`review/`、`session/` のいずれかに決まっているときは、この目次は不要です。
-- `cmoc apply`、`cmoc review`、`cmoc session` の正本仕様だけを確認したいときは `oracles/docs/app_specs/sub_commands/` 側を読むべきです。
+- すでに読む対象が `src/sub_commands/__init__.py`、`src/sub_commands/init.py`、`src/sub_commands/indexing.py`、`src/sub_commands/apply/`、`src/sub_commands/review/`、`src/sub_commands/session/` のいずれかに決まっていて、この階層の目次が不要なとき。
+- `cmoc` の CLI 登録やサブコマンド接続だけを追いたいときは `src/main.py` を読むべきとき。
+- `cmoc apply`、`cmoc review`、`cmoc session` など個別サブコマンドの正本仕様だけを確認したいときは `oracles/docs/app_specs/sub_commands/` 側を読むべきとき。
 
 ## hash
 
-- 5711a5010b8bb558012571105f08a36ea6a937657ae9d5e250a5f109bdc2cc15
+- 0d86eb0ca2224f2bc3de87976f3f831a5b1a8f92ac31db2db30a346ecb2a7529

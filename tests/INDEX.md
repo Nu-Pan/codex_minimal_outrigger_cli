@@ -152,25 +152,25 @@
 
 ## Summary
 
-- `tests/test_subcommands` 配下のサブコマンド横断テスト群のルーティング文書で、個別テストへ進む前の入口です。
-- 共通ヘルパー、CLI 横断、共通基盤、`apply`、`session`、`review oracles` の各系統へ案内する目次として機能します。
-- この階層のテストを読む前に、目的に応じてどのファイルへ進むべきかを切り分けるための案内です。
+- `<cmoc-root>/tests/test_subcommands` 配下のサブコマンド横断テストのルーティング文書で、個別テストへ進む前の入口です。
+- 共通ヘルパー、CLI 横断、共通基盤、`apply` 系、`session` 系、`review oracles` 系のどこへ進むかを切り分けます。
+- `__init__.py`、`helpers.py`、`test_cli.py`、`test_core.py`、`test_review_oracles.py`、`test_apply_*.py`、`test_session_*.py` の役割を整理するための目次です。
 
 ## Read this when
 
-- `tests/test_subcommands` 配下で、どのファイルに何が書かれているかを最初に整理したいとき。
-- CLI 入口、共通ヘルパー、共通基盤、`apply` 系、`session` 系、`review oracles` 系のどれへ進むべきかを切り分けたいとき。
-- `__init__.py`、`helpers.py`、`test_core.py`、`test_cli.py`、`test_review_oracles.py`、`test_apply_*.py`、`test_session_*.py` の役割分担を把握したいとき.
+- `tests/test_subcommands` 配下のどのファイルに何が書かれているかを最初に整理したいとき。
+- CLI 入口、共通ヘルパー、共通基盤、`apply`、`session`、`review oracles` のどの系統へ進むべきか決めたいとき。
+- 個別テストケースへ入る前に、このディレクトリの見取り図だけ確認したいとき。
 
 ## Do not read this when
 
-- 個別テストケースの本文やアサーションを直接確認したいとき。
+- 個別テストケース本文やアサーションを直接確認したいとき。
 - `src/sub_commands/` 側の実装本体や CLI 登録を追いたいとき。
 - `tests/test_subcommands` ではなく、`tests/test_codex.py` や `tests/test_repo.py` など別の回帰テスト群を確認したいとき。
 
 ## hash
 
-- af8df228f2e832d5dff664da816df13345d9a080ee536ba4bf120bc3053d2c66
+- 48f9fe69ddec4c7d85e56ea7befdd1bac77b5c00aed96272f90870c3c9ea0663
 
 # `test_timestamps.py`
 
