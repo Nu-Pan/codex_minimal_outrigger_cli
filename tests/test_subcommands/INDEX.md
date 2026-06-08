@@ -2,21 +2,20 @@
 
 ## Summary
 
-- `tests/test_subcommands/__init__.py` は `tests/test_subcommands` パッケージの空のマーカーです。
-- サブコマンド横断テスト群の入口を示すだけで、公開 API や実行ロジックは持ちません。
-- パッケージレベルの存在確認だけを目的とする最小モジュールです。
+- `tests/test_subcommands/__init__.py` は `tests.test_subcommands` を Python パッケージとして宣言するための最小モジュールです。
+- 公開 API、定数、実行ロジック、再エクスポートは持ちません。
 
 ## Read this when
 
-- `tests/test_subcommands` パッケージ全体の入口としての役割を確認したいとき。
-- このディレクトリが Python パッケージとして成立していることを把握したいとき。
-- 個別テストへ進む前に、この階層の案内役だけを確認したいとき。
+- `tests/test_subcommands` が Python パッケージとして成立しているか確認したいとき。
+- `tests/test_subcommands` 配下のテスト群の入口として、空の `__init__.py` の役割を把握したいとき。
+- テストパッケージ構造を整理したいとき。
 
 ## Do not read this when
 
-- 個別のサブコマンド回帰テストの本文やアサーション内容を確認したいとき。
-- `helpers.py` や他の `test_*.py` の詳細な役割を直接追いたいとき。
-- `INDEX.md` の生成ルールやメタデータ管理方法そのものを確認したいとき。
+- `tests/test_subcommands` の個別テストケースやアサーション内容を確認したいとき。
+- `helpers.py` や各 `test_*.py` の実装・回帰テスト本体を追いたいとき。
+- `tests/test_subcommands` の仕様や CLI 挙動を知りたいときは、ここではなく該当するテストファイルや `src/sub_commands/` 側を読むべきです。
 
 ## hash
 
