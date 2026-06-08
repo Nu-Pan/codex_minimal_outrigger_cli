@@ -67,8 +67,8 @@
 
 - すでに読む対象が `src/sub_commands/__init__.py`、`src/sub_commands/init.py`、`src/sub_commands/indexing.py`、`src/sub_commands/apply/`、`src/sub_commands/review/`、`src/sub_commands/session/` のいずれかに決まっていて、この階層の目次が不要なとき。
 - `cmoc` の CLI 登録やサブコマンド接続だけを追いたいときは `src/main.py` を読むべきとき。
-- `cmoc apply`、`cmoc review`、`cmoc session` など個別サブコマンドの正本仕様だけを確認したいときは `oracles/docs/app_specs/sub_commands/` 側を読むべきとき。
+- `cmoc init`、`cmoc indexing`、`cmoc apply`、`cmoc review`、`cmoc session` など個別サブコマンドの仕様だけを確認したいときは、該当する正本仕様や実装へ直接進みたいとき。
 
 ## hash
 
-- 13b5246fd09ace438731e77866ba5e8a073b3107119f807cf9638644d0a0091d
+- e9cb313ed377f9a92a12e1f8b6301bb13c485db2982d05d16aa571bf16edf88b

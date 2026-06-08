@@ -50,27 +50,27 @@
 
 ## Summary
 
-- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体実装モジュールで、session state の検証から apply worktree の作成、不整合調査と修正適用、最終レポート生成までをまとめて担当します。
-- このモジュールには、`apply` 開始時の状態遷移、`.cmoc` の追跡対象外保証、scope / repeat オプションの検証、dirty path の管理、報告書の書き込みまでを支える主要ヘルパー群が含まれます。
-- 不整合調査の Structured Output schema、要修正点リストの改善、変更要約の生成、エラーレポートのフォールバックなど、`cmoc apply fork` の実行制御と診断処理の中核を担うファイルです。
+- `src/sub_commands/apply/fork.py` のルーティング目次で、`cmoc apply fork` の本体実装へ進む入口です。
+- session state 検証、apply worktree 作成、`.cmoc` 追跡対象外保証、不整合調査・修正ループ、レポート生成を担当する主要処理群へ案内します。
+- Structured Output の検証、dirty path 管理、commit / error report の分岐など、apply 実行制御の中核を整理します。
 
 ## Read this when
 
-- `src/sub_commands/apply/fork.py` の実装・修正・レビュー・テストを行いたいとき。
-- `cmoc apply fork` の開始条件、`session.state` / `apply.state` の検証、`--scope` や反復回数オプションの扱いを確認したいとき。
-- apply worktree の作成、`.cmoc` の追跡対象外保証、不整合調査・修正ループ、レポート出力までの一連の処理順を追いたいとき。
-- Structured Output の schema、要修正点リストの改善、change summary の生成、payload 検証、commit や forbidden path の扱いを確認したいとき。
+- `cmoc apply fork` の実装・修正・レビュー・テストを始めるとき
+- `session.state` / `apply.state` の前提条件や、`--scope` と反復回数オプションの扱いを確認したいとき
+- apply worktree 作成、`.cmoc` の非追跡保証、調査・修正ループ、最終レポート書き込みまでの流れを追いたいとき
+- 不整合調査用 Structured Output schema、要修正点整理、change summary、エラー時のフォールバックを確認したいとき
 
 ## Do not read this when
 
-- `cmoc apply fork` の利用手順、引数の意味、完了条件だけを確認したいときは、実装ではなく `oracles/docs/app_specs/sub_commands/apply_fork.md` を読むとき。
-- `src/sub_commands/apply` 配下の入口構造だけを確認したいときは、このファイルではなく `src/sub_commands/apply/INDEX.md` を読むとき。
-- `cmoc apply join` や `cmoc apply abandon` の開始・統合・破棄フローだけを確認したいとき。
-- `INDEX.md` の生成ルールや共通のルーティング仕様だけを確認したいときは、この実装ファイルではなく `src/commons/indexing.py` や `oracles/docs/app_specs/` 側を読むとき。
+- `cmoc apply fork` の利用手順や完了条件だけを確認したいときは `oracles/docs/app_specs/sub_commands/apply_fork.md` を読むべきとき
+- `src/sub_commands/apply` 配下の入口構造だけを確認したいときは `src/sub_commands/apply/INDEX.md` を読むべきとき
+- `cmoc apply join` や `cmoc apply abandon` の開始・統合・破棄フローだけを確認したいとき
+- `apply` の本体処理ではなく、`oracles` 側の仕様断片や利用手順だけを確認したいとき
 
 ## hash
 
-- dbf4b3e80831edec639011a67cdca2564ca2fa0e6a18c9b30297b0357c6248c7
+- a273b11bc8ca9abec134aa3fe0752eb764b05b5702241048bf7723d3f9db9648
 
 # `join.py`
 

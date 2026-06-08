@@ -2,7 +2,7 @@
 
 ## Summary
 
-- `tests/test_subcommands` をテストパッケージとして成立させるための初期化ファイルです。
+- `tests/test_subcommands/__init__.py` は `tests/test_subcommands` をテストパッケージとして成立させるための初期化ファイルです。
 - このファイル自体にはテストロジックはなく、サブコマンド関連テスト群のパッケージ境界を示します。
 
 ## Read this when
@@ -73,25 +73,27 @@
 
 ## Summary
 
-- `<cmoc-root>/tests/test_subcommands/test_apply_fork.py` は、`cmoc apply fork` の回帰テスト群を意味カテゴリ別にまとめたファイルです。
-- apply 開始時の前提条件、調査対象 scope の決定、要修正点の抽出・改善・再調査のループ、report 出力と state 更新を幅広く検証します。
-- 不整合調査の JSON schema、並列実行、`INDEX.md` メンテナンス、エラー報告、path 制約や変更要約の生成条件もこのファイルの守備範囲です。
+- `<cmoc-root>/tests/test_subcommands/test_apply_fork.py` は `cmoc apply fork` の回帰テストを意味カテゴリ別にまとめたファイルです。
+- 開始前提の判定、調査対象 scope の決定、要修正点の改善ループ、report 出力、state 更新を扱います。
+- 不整合調査の JSON schema、並列実行、変更要約、path 制約、エラー報告の境界条件も確認します。
 
 ## Read this when
 
-- `cmoc apply fork` の正常系・異常系・回帰テストをまとめて把握したいとき。
-- 不整合調査の流れ、要修正点の改善ループ、report 生成、state 更新、session HEAD 記録の検証観点を確認したいとき。
-- 絶対パスや forbidden path、並列調査、Structured Output schema、change summary の境界条件を確認したいとき。
+- `cmoc apply fork` の正常系・異常系・回帰観点をまとめて把握したいとき。
+- 不整合調査の流れ、要修正点の抽出と再調査、report 生成、state 更新の検証ポイントを確認したいとき。
+- 絶対パス、禁止パス、並列調査、Structured Output schema、change summary の生成条件を追いたいとき。
+- `<cmoc-root>/tests/test_subcommands/test_apply_fork.py` が何を守っているかを先に整理したいとき。
 
 ## Do not read this when
 
-- `cmoc apply join` や `cmoc apply abandon` など、別の `apply` サブコマンドの回帰テストを確認したいとき。
-- `cmoc session fork/join/abandon` や `cmoc review oracles` など、`apply fork` 以外のサブコマンドの挙動を確認したいとき。
-- `src/sub_commands/apply/fork.py` の実装本体や、`oracles/docs/app_specs/sub_commands/apply_fork.md` の仕様断片だけを確認したいとき。
+- `cmoc apply join` や `cmoc apply abandon` など、別の `apply` サブコマンドのテストを確認したいとき。
+- `cmoc session fork/join/abandon` や `cmoc review oracles` など、`apply fork` 以外の挙動を追いたいとき。
+- `src/sub_commands/apply/fork.py` の実装本体や、`oracles/docs/app_specs/sub_commands/apply_fork.md` の仕様断片だけを読みたいとき。
+- `tests/test_subcommands` の共通ヘルパーや CLI 横断テストではなく、このファイル固有の確認だけで足りるとき。
 
 ## hash
 
-- 6226e59c3a1a9638e5653d001650492842e183ef3c79b10d7861671495a2879e
+- 4d77497ad074cb70ef600b15e682d899192f30e677ea6dd662d74c3c9c0ab0b1
 
 # `test_apply_join.py`
 
