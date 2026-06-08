@@ -2,7 +2,7 @@
 
 ## Summary
 
-- `<cmoc-root>/tests/test_subcommands/__init__.py` は `tests.test_subcommands` を Python パッケージとして宣言するための最小モジュールです。
+- <cmoc-root>/tests/test_subcommands/__init__.py は `tests.test_subcommands` を Python パッケージとして宣言するための最小モジュールです。
 - 公開 API、定数、実行ロジック、再エクスポートは持たず、サブコマンド群のテストディレクトリをパッケージとして成立させるための入口です。
 
 ## Read this when
