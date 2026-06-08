@@ -4,6 +4,7 @@
 
 - `tests/test_subcommands/__init__.py` は `tests.test_subcommands` を Python パッケージとして宣言するための最小モジュールです。
 - 公開 API、定数、実行ロジック、再エクスポートは持ちません。
+- テストサブコマンド群のディレクトリを Python パッケージとして成立させるための入口です。
 
 ## Read this when
 
@@ -13,8 +14,8 @@
 
 ## Do not read this when
 
-- `tests/test_subcommands` の個別テストケースやアサーション内容を確認したいとき。
-- `helpers.py` や各 `test_*.py` の実装・回帰テスト本体を追いたいとき。
+- 個別テストケースやアサーション内容を確認したいとき。
+- `helpers.py` や各 `test_*.py` の実装を追いたいとき。
 - `tests/test_subcommands` の仕様や CLI 挙動を知りたいときは、ここではなく該当するテストファイルや `src/sub_commands/` 側を読むべきです。
 
 ## hash
