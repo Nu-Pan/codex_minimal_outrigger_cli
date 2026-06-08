@@ -1692,19 +1692,20 @@ def _changed_paths_since_for_forbidden_check(
     result = run_git(
         repo_root,
         [
-            "diff",
+            "log",
             "--name-status",
             "-z",
             "-M",
             "-C",
             "--find-copies-harder",
+            "--format=",
             f"{before_commit}..HEAD",
             "--",
         ],
     )
     paths: list[str] = []
     for status, entry_paths in git_name_status_entries(result.stdout):
-        if status.startswith("R"):
+        if status[:1] in {"R", "C"}:
             paths.extend(entry_paths)
         elif entry_paths:
             paths.append(entry_paths[-1])

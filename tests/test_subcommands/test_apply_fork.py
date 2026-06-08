@@ -2422,6 +2422,39 @@ def test_commit_all_changes_rejects_committed_maintained_oracles_index(
     )
 
 
+def test_forbidden_path_check_rejects_reverted_oracles_change_in_commit_range(
+    tmp_path: Path,
+) -> None:
+    """最終差分が空でも、範囲内の oracle 変更 commit は拒否する。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md")
+    _git(repo, "commit", "-m", "add oracle")
+    before_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    (oracle_root / "spec.md").write_text("changed\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md")
+    _git(repo, "commit", "-m", "change oracle")
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md")
+    _git(repo, "commit", "-m", "revert oracle")
+
+    assert (
+        _git(repo, "diff", "--name-only", f"{before_commit}..HEAD").stdout == ""
+    )
+    assert apply_module._changed_paths_since_for_forbidden_check(
+        repo,
+        before_commit,
+    ) == ["oracles/spec.md", "oracles/spec.md"]
+    with pytest.raises(CmocError) as error:
+        apply_module._assert_forbidden_paths_unchanged_since(repo, before_commit)
+
+    assert "編集禁止パス" in error.value.message
+    assert "oracles/spec.md" in error.value.detail
+
+
 def test_apply_index_maintenance_excludes_oracles_root(
     tmp_path: Path,
 ) -> None:
