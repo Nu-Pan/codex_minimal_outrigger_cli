@@ -14,7 +14,7 @@
 ## Do not read this when
 
 - 個別のサブコマンド回帰テストの本文やアサーション内容を確認したいとき。
-- `helpers.py` や各 `test_*.py` の詳細な役割を直接追いたいとき。
+- `helpers.py` や他の `test_*.py` の詳細な役割を直接追いたいとき。
 - `src/sub_commands/` 側の実装や `oracles` 側の仕様断片を確認したいとき。
 
 ## hash
