@@ -165,13 +165,14 @@
 
 ## Do not read this when
 
-- 個別のテストケース本文やアサーションを直接確認したいとき。
+- 個別のテストケース本文やアサーションを直接追いたいとき。
 - `tests/test_subcommands` ではなく、`tests/test_codex.py` や `tests/test_repo.py` など別の回帰テスト群を確認したいとき。
 - `src/sub_commands/` 側の実装本体や CLI 登録の流れを追いたいとき。
+- このディレクトリ全体ではなく、`helpers.py` や特定の `test_*.py` だけを単独で確認したいとき。
 
 ## hash
 
-- 9dc770fad7d268c3caff93f09f3cc26c4318c1fead4ac63b495a77eaa165f17a
+- ea1af32fd7ea64da7492fec2b17b285dde84ae8bf359d9c390528dc214b1ea43
 
 # `test_timestamps.py`
 

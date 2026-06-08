@@ -13,7 +13,7 @@
 
 ## Do not read this when
 
-- 個々のテストケース本文やアサーションを確認したいとき。
+- 個々のテストケース本文やアサーションを直接確認したいとき。
 - `tests/test_subcommands` 配下の他モジュールや共有ヘルパーを直接たどりたいとき。
 - サブコマンド本体の実装や仕様を確認したいとき。
 
@@ -176,26 +176,26 @@
 ## Summary
 
 - `tests/test_subcommands/test_review_oracles.py` は、`cmoc review oracles` と旧別名 `cmoc eval-oracles` の回帰テスト群です。
-- review worktree の隔離、`oracles` の固定 snapshot、所見の列挙・統合・検証・判定までの pipeline をまとめて検証します。
+- review worktree の隔離、oracles の固定 snapshot、所見の列挙・統合・検証・判定までの pipeline をまとめて検証します。
 - Structured Output schema、レポート出力、エラー処理、prompt 文言、検証ヘルパー、ループ回数の境界条件も扱います。
 
 ## Read this when
 
 - `cmoc review oracles` と旧別名 `cmoc eval-oracles` の挙動をテスト観点で追いたいとき。
 - review worktree の作成・merge、oracles snapshot の固定、`INDEX.md` メンテナンスの扱いを確認したいとき。
-- finding pipeline の列挙・マージ・検証・判定、report / error report 生成、prompt 仕様、loop option を確認したいとき。
-- `_evaluation_prompt`、`_improvement_prompt`、validation helper、output schema 定数、issue ID 付与などの補助ロジックを確認したいとき。
+- finding pipeline の列挙・統合・検証・判定、report / error report 生成、prompt 仕様、loop option を確認したいとき。
+- `_evaluation_prompt`、`_improvement_prompt`、検証ヘルパー、output schema 定数、issue ID 付与などの補助ロジックを確認したいとき。
 
 ## Do not read this when
 
 - `cmoc apply`、`cmoc session`、`cmoc init`、`cmoc indexing` の回帰テストを確認したいとき。
 - `src/sub_commands/review/oracles.py` の実装本体や CLI 登録だけを追いたいとき。
-- `tests/test_subcommands` の共通ヘルパーや他の個別テストファイルを確認したいとき。
+- `tests/test_subcommands` の共通ヘルパーや、他の個別テストファイルを確認したいとき。
 - `cmoc review oracles` の利用手順だけで足り、回帰テストの詳細が不要なとき。
 
 ## hash
 
-- 9e60278a910d0bca19343f099e32671a321d257c66dbce80351d7239c9659d2a
+- d82b790c9613586349cc1a297fa62abb8a25a3c43cce7a5992d100bd80ad6986
 
 # `test_session_abandon.py`
 
