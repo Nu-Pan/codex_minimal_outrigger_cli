@@ -7,7 +7,7 @@
 
 ## Read this when
 
-- `tests.test_subcommands` をパッケージとして import できる前提を確認したいとき。
+- `tests.test_subcommands` をテストパッケージとして import できる前提を確認したいとき。
 - 相対 import や共有テスト補助のための境界を確認したいとき。
 - サブコマンド関連テスト群の入口がどこかを把握したいとき。
 
