@@ -4,6 +4,7 @@
 
 - `tests/test_subcommands/__init__.py` は `tests/test_subcommands` パッケージの空のマーカーです。
 - サブコマンド横断テスト群の入口を示すだけで、公開 API や実行ロジックは持ちません。
+- パッケージレベルの存在確認だけを目的とする最小モジュールです。
 
 ## Read this when
 
