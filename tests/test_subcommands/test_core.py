@@ -319,37 +319,28 @@ def test_run_command_reports_nonzero_typer_exit(
     )
 
 
-def test_run_command_treats_apply_unconverged_as_non_error_exit(
+def test_run_command_treats_apply_unconverged_as_success_exit(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """apply fork の未収束区分はエラーレポートなしで終了コードを保持する。"""
+    """apply fork の未収束区分はエラーレポートなしで正常終了する。"""
     repo = _init_repo(tmp_path)
     monkeypatch.chdir(repo)
 
     assert APPLY_FORK_EXIT_CODE_CONVERGED == 0
-    assert APPLY_FORK_EXIT_CODE_UNCONVERGED not in {
-        APPLY_FORK_EXIT_CODE_CONVERGED,
-        1,
-        2,
-    }
+    assert APPLY_FORK_EXIT_CODE_UNCONVERGED == APPLY_FORK_EXIT_CODE_CONVERGED
 
     def handler(_repo: Path) -> int:
         """未収束の apply fork 本体と同じ終了コードを返す。"""
         return APPLY_FORK_EXIT_CODE_UNCONVERGED
 
-    with pytest.raises(typer.Exit) as exit_info:
-        run_command(
-            handler,
-            non_error_exit_codes={APPLY_FORK_EXIT_CODE_UNCONVERGED},
-        )
+    run_command(handler)
 
     captured = capsys.readouterr()
     log_content = next(
         (repo / ".cmoc" / "logs" / "sub_commands").glob("*.jsonl")
     ).read_text(encoding="utf-8")
-    assert exit_info.value.exit_code == APPLY_FORK_EXIT_CODE_UNCONVERGED
     assert captured.err == ""
     assert "ERROR" not in captured.out
     assert "# Command completion report" in captured.out
