@@ -2,20 +2,20 @@
 
 ## Summary
 
-- `<cmoc-root>/tests/test_subcommands/__init__.py` は `tests/test_subcommands` を Python パッケージとして扱うための初期化ファイルです。
-- 内容は実質的に空で、相対インポートとパッケージ認識のために置かれています。
+- `<cmoc-root>/tests/test_subcommands/__init__.py` は `tests.test_subcommands` パッケージを宣言するための最小限の初期化ファイルです。
+- 実行ロジック、公開 API、再エクスポートは持たず、相対インポートとパッケージ認識を成立させる役割だけを担います。
 
 ## Read this when
 
-- `<cmoc-root>/tests/test_subcommands` を Python パッケージとして成立させる意図を確認したいとき。
-- このディレクトリで相対インポートが使えるかを確認したいとき。
-- テスト用ディレクトリに初期化ファイルが必要かどうかを判断したいとき。
+- このディレクトリが Python パッケージとして成立しているか確認したいとき。
+- 相対インポートを使う前提や、テスト用パッケージの初期化ファイルが必要かを判断したいとき。
+- `tests/test_subcommands` 配下の入口を最小単位で把握したいとき。
 
 ## Do not read this when
 
-- このファイルにテスト本体や実装ロジックが書かれていることを期待するとき。
-- `tests/test_subcommands` 配下の個別テストケースや共通ヘルパーの内容を確認したいとき。
-- CLI 実装や `src/sub_commands/` 側の振る舞いを確認したいとき。
+- 個別のテストケースや共通ヘルパーの内容を確認したいとき。
+- CLI 実装や `src/sub_commands` 側の振る舞いを追いたいとき。
+- このファイルにテスト本体や実装ロジックがあることを期待しているとき。
 
 ## hash
 
