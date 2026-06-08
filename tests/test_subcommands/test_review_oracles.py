@@ -1413,17 +1413,32 @@ def test_review_oracles_improves_combined_issue_list(
     assert "Raw warning" not in report
 
 
-def test_review_oracles_rejects_too_many_refine_findings_loops(
-    tmp_path: Path,
-) -> None:
-    """所見リスト検証ループの反復回数は oracle の最大 3 回を超えられない。"""
-    repo = _init_repo(tmp_path)
+def test_review_oracles_loop_options_accept_values_above_default() -> None:
+    """review oracles の各ループ回数はデフォルト 3 より大きい値も許可する。"""
+    review_oracles_module._validate_review_oracles_loop(
+        4,
+        "--enumerate-findings-loop",
+    )
+    review_oracles_module._validate_review_oracles_loop(
+        5,
+        "--merge-findings-loop",
+    )
+    review_oracles_module._validate_review_oracles_loop(
+        6,
+        "--refine-findings-loop",
+    )
 
+
+def test_review_oracles_rejects_negative_loop_options() -> None:
+    """review oracles の各ループ回数は負数を拒否する。"""
     with pytest.raises(
         ValueError,
-        match="--refine-findings-loop must be between 0 and 3",
+        match="--refine-findings-loop must be greater than or equal to 0",
     ):
-        cmoc_review_oracles_impl(repo, scope="full", refine_findings_loop=4)
+        review_oracles_module._validate_review_oracles_loop(
+            -1,
+            "--refine-findings-loop",
+        )
 
 
 def test_review_oracles_finding_pipeline_schemas_are_canonical_files() -> None:

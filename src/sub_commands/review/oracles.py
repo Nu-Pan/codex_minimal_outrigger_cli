@@ -52,9 +52,7 @@ _REPORT_COMMAND = "cmoc review oracles"
 _REPORT_DIR_NAME = "review_oracles"
 _REVIEW_ORACLES_TMP_DIR = Path(".cmoc") / "tmp"
 _DEFAULT_REVIEW_ORACLES_LOOP = 3
-_MAX_REVIEW_ORACLES_LOOP = 3
 _DEFAULT_REPEAT_IMPROVE_ISSUES_LIST = _DEFAULT_REVIEW_ORACLES_LOOP
-_MAX_REPEAT_IMPROVE_ISSUES_LIST = _MAX_REVIEW_ORACLES_LOOP
 _CMOC_ROOT = Path(__file__).resolve().parents[3]
 _REVIEW_ORACLES_SCHEMA_ROOT = (
     _CMOC_ROOT / "oracles" / "schemas" / "structured_output" / "review" / "oracles"
@@ -561,11 +559,9 @@ def _validate_review_oracles_preconditions(repo_root: Path) -> str:
 
 
 def _validate_review_oracles_loop(value: int, option_name: str) -> None:
-    """review oracles の各ループ回数が oracle の上限内か検証する。"""
-    if value < 0 or value > _MAX_REVIEW_ORACLES_LOOP:
-        raise ValueError(
-            f"{option_name} must be between 0 and {_MAX_REVIEW_ORACLES_LOOP}."
-        )
+    """review oracles の各ループ回数が非負整数か検証する。"""
+    if value < 0:
+        raise ValueError(f"{option_name} must be greater than or equal to 0.")
 
 
 def _validate_repeat_improve_issues_list(value: int) -> None:
