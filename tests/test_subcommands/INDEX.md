@@ -7,15 +7,15 @@
 
 ## Read this when
 
-- `tests.test_subcommands` をテストパッケージとして import できる前提を確認したいとき。
-- 相対 import や共有テスト補助のためのパッケージ境界を確認したいとき。
+- `tests/test_subcommands` をテストパッケージとして import できる前提を確認したいとき。
+- 相対 import や共有 fixture のためのパッケージ境界を確認したいとき。
 - サブコマンド関連テスト群の入口がどこかを把握したいとき。
 
 ## Do not read this when
 
-- `tests.test_subcommands` の個別テスト本文やアサーションだけを確認したいとき。
-- `tests/test_subcommands` 配下の `helpers.py` や他の `test_*.py` に直接進みたいとき。
-- サブコマンド本体の実装や仕様を確認したいとき。
+- 個別テストケースの本文やアサーションだけを確認したいとき。
+- `tests/test_subcommands` 配下の `helpers.py` や他の `test_*.py` を直接読みたいとき。
+- サブコマンド本体の実装や CLI の仕様を確認したいとき。
 
 ## hash
 
