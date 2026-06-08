@@ -1825,10 +1825,10 @@ def test_run_codex_exec_from_apply_worktree_writes_logs_to_main_repo(
     assert not (apply_worktree / ".cmoc" / "logs" / "codex_exec").exists()
 
 
-def test_subcommand_log_from_linked_apply_worktree_writes_to_linked_repo(
+def test_subcommand_log_from_linked_apply_worktree_writes_to_main_repo(
     tmp_path: Path,
 ) -> None:
-    """linked worktree 配下の apply worktree では linked repo-root 側へログを書く。"""
+    """linked worktree 配下の apply worktree でも main repo-root 側へログを書く。"""
     repo = _init_git_repo(tmp_path)
     linked = tmp_path / "linked"
     _git(repo, "worktree", "add", "-b", "feature", str(linked), "HEAD")
@@ -1856,8 +1856,8 @@ def test_subcommand_log_from_linked_apply_worktree_writes_to_linked_repo(
     apply_logs = list(
         (apply_worktree / ".cmoc" / "logs" / "sub_commands").glob("*.jsonl")
     )
-    assert main_logs == []
-    assert len(linked_logs) == 1
+    assert len(main_logs) == 1
+    assert linked_logs == []
     assert apply_logs == []
 
 

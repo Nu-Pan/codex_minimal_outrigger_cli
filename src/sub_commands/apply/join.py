@@ -28,6 +28,7 @@ from commons.repo import (
     session_id_from_branch,
     session_state_repo_root,
     write_session_state,
+    worktree_path_for_branch,
 )
 from commons.timing import StepTimer, start_step
 
@@ -69,6 +70,12 @@ def cmoc_apply_join_impl(
         assert_no_uncommitted_changes(cmoc_root)
     if join_state.apply_worktree is not None and join_state.apply_worktree.exists():
         assert_no_uncommitted_changes(join_state.apply_worktree)
+    merge_root = _session_merge_worktree(
+        cmoc_root,
+        repo_root,
+        join_state.session_branch,
+        branch_name,
+    )
 
     start_step(timer, 2, 5, "想定外差分確認")
     unexpected = _unexpected_diffs(cmoc_root, join_state)
@@ -90,33 +97,33 @@ def cmoc_apply_join_impl(
             print(f"- {line}")
 
     start_step(timer, 4, 5, "apply branch merge")
-    run_git(cmoc_root, ["switch", join_state.session_branch])
+    run_git(merge_root, ["switch", join_state.session_branch])
     merge_result = run_git(
-        cmoc_root,
+        merge_root,
         ["merge", "--no-ff", join_state.apply_branch],
         check=False,
     )
     auto_resolved_index_conflicts: list[str] = []
     if merge_result.returncode != 0:
-        unmerged = _unmerged_paths(cmoc_root)
+        unmerged = _unmerged_paths(merge_root)
         index_conflicts = [path for path in unmerged if _is_index_path(path)]
         non_index_conflicts = [
             path for path in unmerged if not _is_index_path(path)
         ]
         if index_conflicts:
             auto_resolved_index_conflicts = _resolve_index_conflicts(
-                cmoc_root,
+                merge_root,
                 index_conflicts,
                 merge_result.stderr.strip(),
                 commit_merge=not non_index_conflicts,
             )
-            unmerged = _unmerged_paths(cmoc_root)
+            unmerged = _unmerged_paths(merge_root)
             non_index_conflicts = [
                 path for path in unmerged if not _is_index_path(path)
             ]
         if non_index_conflicts or not index_conflicts:
             if unmerged:
-                detail = _unmerged_paths_detail(cmoc_root, unmerged)
+                detail = _unmerged_paths_detail(merge_root, unmerged)
             else:
                 detail = merge_result.stderr.strip()
             raise CmocError(
@@ -146,6 +153,7 @@ def cmoc_apply_join_impl(
         session_id,
         join_state,
         cleanup_evidence,
+        branch_delete_root=merge_root,
     )
     print(f"joined apply branch: {join_state.apply_branch}")
     print(f"session branch: {join_state.session_branch}")
@@ -155,6 +163,21 @@ def cmoc_apply_join_impl(
             print(f"- {_display_repo_path(cmoc_root, path)}")
     for warning in warnings:
         print(f"warning: {warning}")
+
+
+def _session_merge_worktree(
+    cmoc_root: Path,
+    invocation_root: Path,
+    session_branch: str,
+    current_branch_name: str,
+) -> Path:
+    """session branch への merge を実行する worktree root を返す。"""
+    if current_branch_name == session_branch:
+        return invocation_root
+    session_worktree = worktree_path_for_branch(cmoc_root, session_branch)
+    if session_worktree is not None:
+        return session_worktree
+    return cmoc_root
 
 
 class _JoinState:
@@ -828,6 +851,8 @@ def _cleanup_apply_artifacts(
     session_id: str,
     join_state: _JoinState,
     cleanup_evidence: _CleanupEvidence,
+    *,
+    branch_delete_root: Path | None = None,
 ) -> list[str]:
     """安全条件を満たす場合だけ apply worktree と branch を削除する。"""
     warnings: list[str] = [*cleanup_evidence.warnings]
@@ -864,7 +889,7 @@ def _cleanup_apply_artifacts(
             return warnings
 
     result = run_git(
-        repo_root,
+        branch_delete_root or repo_root,
         ["branch", "-d", join_state.apply_branch],
         check=False,
     )

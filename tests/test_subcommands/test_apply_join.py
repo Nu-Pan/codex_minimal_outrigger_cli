@@ -93,11 +93,11 @@ def test_apply_join_rejects_cross_session_apply_branch_without_merge(
     assert other_apply_worktree.exists()
 
 
-def test_apply_join_cleans_worktree_created_under_linked_worktree_repo_root(
+def test_apply_join_cleans_worktree_created_under_main_repo_root_from_linked(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """linked worktree で fork した apply run は linked repo-root 側で cleanup する。"""
+    """linked worktree で fork した apply run は main repo-root 側で cleanup する。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
@@ -128,19 +128,19 @@ def test_apply_join_cleans_worktree_created_under_linked_worktree_repo_root(
 
     exit_code = cmoc_apply_impl(linked)
 
-    state_path = linked / ".cmoc" / "sessions" / f"{session_id}.json"
+    state_path = repo / ".cmoc" / "sessions" / f"{session_id}.json"
     state = json.loads(state_path.read_text(encoding="utf-8"))
     apply_branch = state["apply"]["apply_branch"]
     oracle_snapshot = state["apply"]["oracle_snapshot_commit"]
     apply_run_id = apply_branch.rsplit("/", 1)[1]
-    apply_worktree = linked / ".cmoc" / "worktrees" / session_id / apply_run_id
-    main_apply_worktree = repo / ".cmoc" / "worktrees" / session_id / apply_run_id
+    apply_worktree = repo / ".cmoc" / "worktrees" / session_id / apply_run_id
+    linked_apply_worktree = linked / ".cmoc" / "worktrees" / session_id / apply_run_id
     reports = list(
-        (linked / ".cmoc" / "reports" / "apply" / "fork").glob("*.md")
+        (repo / ".cmoc" / "reports" / "apply" / "fork").glob("*.md")
     )
     assert exit_code == 0
     assert apply_worktree.is_dir()
-    assert not main_apply_worktree.exists()
+    assert not linked_apply_worktree.exists()
     assert len(reports) == 1
     assert f'apply_worktree_path: "{apply_worktree}"' in reports[0].read_text(
         encoding="utf-8"

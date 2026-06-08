@@ -33,7 +33,7 @@ def enter_repo_root(start: Path | None = None) -> Path:
 
 
 def find_repo_root(start: Path | None = None) -> Path:
-    """カレントから親方向へ `.git` を持つリポジトリルートを探す。"""
+    """カレントから親方向へ worktree root を探す。"""
     # 指定起点または現在ディレクトリから親方向へ順番に探索する。
     current = (start or Path.cwd()).resolve()
     for candidate in [current, *current.parents]:
@@ -47,6 +47,72 @@ def find_repo_root(start: Path | None = None) -> Path:
         ],
         f"開始パス: {current}",
     )
+
+
+def main_worktree_repo_root(worktree_root: Path) -> Path:
+    """worktree root から main worktree の repo root を返す。"""
+    git_entry = worktree_root / ".git"
+    if git_entry.is_dir():
+        return worktree_root
+    if not git_entry.exists():
+        if _is_path_under_cmoc_worktrees(worktree_root):
+            try:
+                nearest_worktree = find_repo_root(worktree_root)
+            except CmocError:
+                nearest_worktree = worktree_root
+            if nearest_worktree != worktree_root:
+                return main_worktree_repo_root(nearest_worktree)
+        return worktree_root
+
+    result = run_git(
+        worktree_root,
+        ["rev-parse", "--path-format=absolute", "--git-common-dir"],
+        check=False,
+    )
+    if result.returncode != 0:
+        return _main_worktree_repo_root_from_git_file(git_entry) or worktree_root
+
+    common_dir = result.stdout.strip()
+    if not common_dir:
+        return worktree_root
+    common_path = Path(common_dir)
+    if not common_path.is_absolute():
+        common_path = worktree_root / common_path
+    if common_path.name == ".git":
+        return common_path.parent.resolve()
+    return worktree_root
+
+
+def _is_path_under_cmoc_worktrees(path: Path) -> bool:
+    """path が `.cmoc/worktrees` 配下を指していれば True を返す。"""
+    parts = path.parts
+    marker = (".cmoc", "worktrees")
+    return any(
+        parts[index : index + len(marker)] == marker
+        for index in range(0, len(parts) - len(marker) + 1)
+    )
+
+
+def _main_worktree_repo_root_from_git_file(git_entry: Path) -> Path | None:
+    """linked worktree の `.git` file から main worktree root を復元する。"""
+    if not git_entry.is_file():
+        return None
+    try:
+        content = git_entry.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    prefix = "gitdir:"
+    if not content.lower().startswith(prefix):
+        return None
+    git_dir = Path(content[len(prefix) :].strip())
+    if not git_dir.is_absolute():
+        git_dir = (git_entry.parent / git_dir).resolve()
+    parts = git_dir.parts
+    marker = (".git", "worktrees")
+    for index in range(0, len(parts) - len(marker)):
+        if parts[index : index + len(marker)] == marker:
+            return Path(*parts[: index + 1]).parent.resolve()
+    return None
 
 
 def current_branch(repo_root: Path) -> str:
@@ -302,19 +368,16 @@ def clear_apply_process_id(repo_root: Path, session_id: str) -> None:
 
 
 def session_state_root(repo_root: Path) -> Path:
-    """session state を置く repo root を返す。"""
-    return repo_root
+    """session state を置く main worktree repo root を返す。"""
+    return main_worktree_repo_root(repo_root)
 
 
 def session_state_repo_root(repo_root: Path, session_id: str) -> Path:
     """session state を保持する repo root を返す。
 
-    通常の repo root ではそのまま返す。cmoc 管理 apply worktree から
-    join/abandon する場合だけ、worktree 配置規則から所有元 repo root を復元する。
+    通常 worktree からも linked worktree からも main worktree を返す。
+    cmoc 管理 apply worktree も git common dir から main worktree へ解決する。
     """
-    owner_root = _owning_repo_root_from_apply_worktree_path(repo_root, session_id)
-    if owner_root is not None:
-        return owner_root
     return session_state_root(repo_root)
 
 

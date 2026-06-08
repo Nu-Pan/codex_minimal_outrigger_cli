@@ -344,11 +344,12 @@ def cmoc_review_oracles_impl(
         assert_no_uncommitted_changes(repo_root)
 
         session_id = session_id_from_branch(branch_name)
+        state_root = session_state_root(repo_root)
         review_start_commit = head_commit(repo_root)
 
         failed_stage = "review worktree 作成"
         review_plan = _create_review_worktree(
-            repo_root,
+            state_root,
             session_id,
             review_start_commit,
         )
@@ -444,7 +445,7 @@ def cmoc_review_oracles_impl(
             failed_stage = "report 書き込み"
             start_step(timer, 6, 6, "report 書き込み")
             report_path = _write_report(
-                repo_root,
+                state_root,
                 mode,
                 scope == "full",
                 branch_name,
@@ -463,7 +464,7 @@ def cmoc_review_oracles_impl(
     except Exception as error:
         try:
             report_path = _write_error_report(
-                repo_root,
+                session_state_root(repo_root),
                 mode,
                 scope == "full",
                 branch_name,

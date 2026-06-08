@@ -30,6 +30,7 @@ from commons.repo import (
     is_cmoc_reserved_branch,
     list_implementation_files,
     list_oracle_files,
+    main_worktree_repo_root,
     read_apply_process_id,
     read_session_state,
     read_session_start_commit,
@@ -47,6 +48,19 @@ def test_find_repo_root_walks_up_from_nested_directory(tmp_path: Path) -> None:
     nested.mkdir(parents=True)
 
     assert find_repo_root(nested) == repo
+
+
+def test_main_worktree_repo_root_resolves_linked_worktree_to_main(
+    tmp_path: Path,
+) -> None:
+    """linked worktree から main worktree の repo root を復元する。"""
+    repo = _init_repo(tmp_path)
+    linked = tmp_path / "linked"
+    _git(repo, "worktree", "add", "-b", "feature", str(linked), "HEAD")
+
+    assert find_repo_root(linked) == linked
+    assert main_worktree_repo_root(linked) == repo
+    assert session_state_root(linked) == repo
 
 
 def test_ensure_cmoc_ignored_is_idempotent(tmp_path: Path) -> None:
@@ -1399,15 +1413,15 @@ def test_read_session_start_commit_uses_session_state(
     )
 
 
-def test_session_state_root_keeps_linked_worktree_repo_root(
+def test_session_state_root_uses_main_worktree_repo_root(
     tmp_path: Path,
 ) -> None:
-    """linked worktree ではその worktree 自体が session state root になる。"""
+    """linked worktree でも session state root は main worktree になる。"""
     repo = _init_repo(tmp_path)
     linked = tmp_path / "linked"
     _git(repo, "worktree", "add", "-b", "feature", str(linked), "HEAD")
 
-    assert session_state_root(linked) == linked
+    assert session_state_root(linked) == repo
 
 
 def test_apply_worktree_path_from_branch_uses_run_worktree_layout(
@@ -1427,7 +1441,7 @@ def test_apply_worktree_path_from_branch_uses_run_worktree_layout(
 def test_session_state_repo_root_recovers_owner_from_apply_worktree_path(
     tmp_path: Path,
 ) -> None:
-    """apply worktree からの join/abandon は所有元 repo root の state を使う。"""
+    """apply worktree path からも main repo root の state を使う。"""
     repo = _init_repo(tmp_path)
     linked = tmp_path / "linked"
     _git(repo, "worktree", "add", "-b", "feature", str(linked), "HEAD")
@@ -1440,13 +1454,13 @@ def test_session_state_repo_root_recovers_owner_from_apply_worktree_path(
         / "2026-05-10_22-22_10_000000123"
     )
 
-    assert session_state_repo_root(apply_worktree, session_id) == linked
+    assert session_state_repo_root(apply_worktree, session_id) == repo
 
 
 def test_session_state_repo_root_recovers_owner_from_legacy_apply_worktree_path(
     tmp_path: Path,
 ) -> None:
-    """旧 apply worktree 配置でも所有元 repo root を復元できる。"""
+    """旧 apply worktree 配置でも main repo root を復元できる。"""
     repo = _init_repo(tmp_path)
     linked = tmp_path / "linked"
     _git(repo, "worktree", "add", "-b", "feature", str(linked), "HEAD")
@@ -1460,7 +1474,7 @@ def test_session_state_repo_root_recovers_owner_from_legacy_apply_worktree_path(
         / "2026-05-10_22-22_10_000000123"
     )
 
-    assert session_state_repo_root(apply_worktree, session_id) == linked
+    assert session_state_repo_root(apply_worktree, session_id) == repo
 
 
 def test_read_apply_process_id_rejects_non_utf8_pid_file(
