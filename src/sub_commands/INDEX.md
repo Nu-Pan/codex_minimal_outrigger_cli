@@ -25,25 +25,24 @@
 
 ## Summary
 
-- `src/sub_commands/apply` 配下のルーティング文書で、`cmoc apply` 系サブコマンドの入口を整理する階層です。
-- `__init__.py` はパッケージ宣言だけを担う最小モジュールです。
-- `abandon.py` は未 join の apply run の破棄、`fork.py` は apply 開始と調査・修正ループ、`join.py` は apply 成果物の session への取り込みを担います。
+- `src/sub_commands/apply` 配下のルーティング文書で、`cmoc apply` パッケージ内の実装モジュールへ案内する入口です。
+- パッケージ宣言の `__init__.py` と、`abandon.py` / `fork.py` / `join.py` の各実装ファイルを目的別に切り分けます。
 
 ## Read this when
 
-- `src/sub_commands/apply` 配下の入口構造と、どの実装ファイルを開くべきかを把握したいとき。
-- `cmoc apply fork` / `join` / `abandon` の責務分担や、各実装モジュールの役割を確認したいとき。
-- apply run の状態遷移、worktree / branch 管理、想定外差分の処理、cleanup の流れを整理したいとき。
+- `cmoc apply` 配下のどの実装ファイルを読むべきか迷ったとき。
+- `abandon` / `fork` / `join` の責務や処理の入口を一覧で把握したいとき。
+- `src/sub_commands/apply` の構成をレビュー・修正・テスト前に整理したいとき。
 
 ## Do not read this when
 
-- すでに読む対象が `__init__.py`、`abandon.py`、`fork.py`、`join.py` のいずれかに決まっていて、この階層の案内が不要なとき。
-- `cmoc apply` の利用手順や引数仕様だけを確認したいとき。
-- `oracles` 側の正本仕様や、`apply` 以外のサブコマンド実装を確認したいとき。
+- 読みたい対象ファイルがすでに決まっているときは、この目次ではなく `abandon.py` / `fork.py` / `join.py` / `__init__.py` を直接読むとよいです。
+- `cmoc apply` の利用手順や正本仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/` 側を読むべきです。
+- この階層より上の `src/sub_commands/INDEX.md` だけで十分なとき。
 
 ## hash
 
-- b0fb822914643044d163da5ef1ee2b0c2d3ea604f8acde1c628342f41cb0453b
+- 9041229b7035f46a6fe2af52987fc2aa8fc49418ea2144b0d8d2513e94c0dd53
 
 # `indexing.py`
 

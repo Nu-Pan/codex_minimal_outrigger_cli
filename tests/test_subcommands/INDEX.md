@@ -86,14 +86,14 @@
 
 ## Do not read this when
 
-- `cmoc apply join` や `cmoc apply abandon` など、別の `apply` サブコマンドのテストを確認したいとき。
-- `cmoc session fork/join/abandon` や `cmoc review oracles` など、`apply fork` 以外の挙動を追いたいとき。
+- `cmoc apply join` や `cmoc apply abandon` など、別の apply サブコマンドの挙動を確認したいとき。
+- `cmoc session fork/join/abandon` や `cmoc review oracles` など、apply fork 以外のサブコマンドを確認したいとき。
 - `src/sub_commands/apply/fork.py` の実装本体や、`oracles/docs/app_specs/sub_commands/apply_fork.md` の仕様断片だけを読みたいとき。
 - `tests/test_subcommands` の共通ヘルパーや CLI 横断テストではなく、このファイル固有の確認だけで足りるとき。
 
 ## hash
 
-- 4d77497ad074cb70ef600b15e682d899192f30e677ea6dd662d74c3c9c0ab0b1
+- 67342edc991d9a34e817dd35ee7b8f7f21742ed4bb6eff66a3646bbcd52f916c
 
 # `test_apply_join.py`
 
@@ -150,26 +150,26 @@
 
 ## Summary
 
-- サブコマンド共通の実行基盤、エラーレポート、ステップ計測の回帰テストをまとめたファイルです。
-- `run_command()` の終了コード、ログ出力、総経過時間、例外時の報告、`apply` の非エラー終了を確認します。
+- `tests/test_subcommands/test_core.py` は、サブコマンド共通の実行基盤、エラーレポート、ステップ計測の回帰テストをまとめたファイルです。
+- `run_command()` の終了コード、ログ出力、総経過時間、例外時の報告、`apply` の非エラー終了を検証します。
 - `cmoc init` の `.cmoc` ignore 修復・commit・tracked ファイル解除と、`cmoc indexing` の maintenance / check / dirty repo 判定も扱います。
 
 ## Read this when
 
-- `run_command()`、`StepTimer`、`start_step()` の終了処理やログ・計測表示を変更するとき。
-- `cmoc init` の `.cmoc` ignore 追加、既存 `.gitignore` の扱い、tracked `.cmoc` の解除を確認したいとき。
-- `cmoc indexing` の通常実行、`--check`、dirty リポジトリ判定、INDEX 保守の委譲条件を確認したいとき。
-- サブコマンド横断の共通動作や、初期化とインデックス保守の境界を把握したいとき。
+- `run_command()`、`StepTimer`、`start_step()` の終了処理やログ・計測表示を変更したいとき。
+- `cmoc init` の `.cmoc` ignore 修復、commit、tracked ファイル解除の挙動を確認したいとき。
+- `cmoc indexing` の通常実行、`--check`、dirty リポジトリ判定、INDEX 保守への委譲条件を確認したいとき。
+- サブコマンド横断の共通動作と、初期化・インデックス保守の境界を把握したいとき。
 
 ## Do not read this when
 
-- CLI 引数登録、補完、ヘルプ表示だけを確認したいとき。
+- CLI のサブコマンド登録、補完、ヘルプ表示だけを確認したいとき。
 - `apply` や `session` の個別サブコマンドの状態遷移や処理順だけを追いたいとき。
-- `src/commons/command_runner.py`、`src/sub_commands/init.py`、`src/sub_commands/indexing.py` の実装本体を直接読みたいとき。
+- `src/commons/command_runner.py`、`src/sub_commands/init.py`、`src/sub_commands/indexing.py` の実装本体を直接確認したいとき。
 
 ## hash
 
-- a40341ead2f19209eb543aa97396134abbb4f587575ed0eac49d3a8a1adf6d96
+- 704382d25778dd4df531cc5c14fc48905539ca49b6a0060db9d05b24c585996d
 
 # `test_review_oracles.py`
 
