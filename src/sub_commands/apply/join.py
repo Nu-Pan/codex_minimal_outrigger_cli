@@ -424,8 +424,6 @@ def _changed_path_entries_between(
     entries: list[_ChangedPathEntry] = []
     for status, paths in git_name_status_entries(result.stdout):
         if paths:
-            if status.startswith("D"):
-                continue
             # rename/copy は source ではなく変更後 path を対象にする。
             entries.append(_ChangedPathEntry([paths[-1]]))
     return entries

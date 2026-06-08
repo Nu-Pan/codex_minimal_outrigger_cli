@@ -397,6 +397,33 @@ def test_apply_join_stops_on_unexpected_diff_in_normal_mode(
     assert apply_worktree.exists()
 
 
+def test_apply_join_stops_on_apply_branch_forbidden_deletion(
+    tmp_path: Path,
+) -> None:
+    """apply branch 側の禁止 path 削除も想定外差分として停止する。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    _git(apply_worktree, "rm", "oracles/spec.md")
+    _git(apply_worktree, "commit", "-m", "delete oracle unexpectedly")
+
+    with pytest.raises(CmocError) as error_info:
+        cmoc_apply_join_impl(repo)
+
+    assert "想定外の差分" in error_info.value.message
+    assert (
+        f"{apply_branch}: {json.dumps((repo / 'oracles/spec.md').resolve().as_posix())}"
+        in error_info.value.detail
+    )
+    assert (repo / "oracles" / "spec.md").read_text(encoding="utf-8") == "spec\n"
+    assert _git(repo, "branch", "--list", apply_branch).stdout.strip()
+    assert apply_worktree.exists()
+
+
 def test_apply_join_stops_on_apply_branch_non_implementation_diff(
     tmp_path: Path,
 ) -> None:
@@ -780,6 +807,35 @@ def test_apply_join_stops_on_session_branch_ignored_oracle_diff(
     )
 
 
+def test_apply_join_stops_on_session_branch_implementation_deletion(
+    tmp_path: Path,
+) -> None:
+    """session branch 側の実装ファイル削除も想定外差分として停止する。"""
+    repo = _init_repo(tmp_path)
+    (repo / "app.py").write_text("print('base')\n", encoding="utf-8")
+    _git(repo, "add", "app.py")
+    _git(repo, "commit", "-m", "add implementation file")
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    _apply_branch, _apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    session_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    _git(repo, "rm", "app.py")
+    _git(repo, "commit", "-m", "delete implementation on session")
+
+    with pytest.raises(CmocError) as error_info:
+        cmoc_apply_join_impl(repo)
+
+    assert "想定外の差分" in error_info.value.message
+    assert (
+        f"{session_branch}: {json.dumps((repo / 'app.py').resolve().as_posix())}"
+        in error_info.value.detail
+    )
+    assert not (repo / "app.py").exists()
+
+
 def test_apply_join_force_resolve_keeps_expected_apply_index_diff(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -864,6 +920,79 @@ def test_apply_join_force_resolve_keeps_session_branch_new_oracle_file(
     assert "oracles/new_spec.md" not in output
 
 
+def test_apply_join_force_resolves_apply_branch_forbidden_deletion(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """強制モードは apply branch 側の禁止 path 削除を snapshot から復元する。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    (apply_worktree / "feature.txt").write_text("implemented\n", encoding="utf-8")
+    _git(apply_worktree, "add", "feature.txt")
+    _git(apply_worktree, "rm", "oracles/spec.md")
+    _git(apply_worktree, "commit", "-m", "implement and delete oracle")
+
+    cmoc_apply_join_impl(repo, force_resolve=True)
+
+    output = capsys.readouterr().out
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
+    assert (repo / "oracles" / "spec.md").read_text(encoding="utf-8") == "spec\n"
+    assert state["apply"]["state"] == "ready"
+    assert (
+        f"- {apply_branch}: {json.dumps((repo / 'oracles/spec.md').resolve().as_posix())}"
+        in output
+    )
+
+
+def test_apply_join_force_resolves_session_branch_implementation_deletion(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """強制モードは session branch 側の実装ファイル削除を snapshot から復元する。"""
+    repo = _init_repo(tmp_path)
+    (repo / "app.py").write_text("print('base')\n", encoding="utf-8")
+    _git(repo, "add", "app.py")
+    _git(repo, "commit", "-m", "add implementation file")
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    _apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    session_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    _git(repo, "rm", "app.py")
+    _git(repo, "commit", "-m", "delete implementation on session")
+    (apply_worktree / "feature.txt").write_text("implemented\n", encoding="utf-8")
+    _git(apply_worktree, "add", "feature.txt")
+    _git(apply_worktree, "commit", "-m", "implement feature")
+
+    cmoc_apply_join_impl(repo, force_resolve=True)
+
+    output = capsys.readouterr().out
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert (repo / "app.py").read_text(encoding="utf-8") == "print('base')\n"
+    assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
+    assert state["apply"]["state"] == "ready"
+    assert (
+        f"- {session_branch}: {json.dumps((repo / 'app.py').resolve().as_posix())}"
+        in output
+    )
+
+
 def test_apply_join_auto_resolves_index_conflict(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -934,7 +1063,7 @@ def test_apply_join_unmerged_paths_are_nul_safe(
     assert calls == [["diff", "--name-only", "-z", "--diff-filter=U"]]
 
 
-def test_apply_join_changed_entries_use_destination_paths_and_exclude_deletes(
+def test_apply_join_changed_entries_use_destination_paths_and_include_deletes(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
@@ -976,6 +1105,7 @@ def test_apply_join_changed_entries_use_destination_paths_and_exclude_deletes(
     assert [entry.paths for entry in entries] == [
         ["feature.txt"],
         ["src/copied.py"],
+        ["deleted.txt"],
         ["modified.txt"],
     ]
     assert calls == [
