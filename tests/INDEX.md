@@ -122,7 +122,7 @@
 
 ## hash
 
-- a3b7ecec25ba58b81bb2fac65d02ed067ddeae9e2ca4719f8406bbf9bdbb8972
+- 13348b88581e6c58d811d998c2f6a0050ecf797f50b0478586ced937b28c547b
 
 # `test_report_files.py`
 
@@ -152,27 +152,25 @@
 
 ## Summary
 
-- `tests/test_subcommands` 配下のサブコマンド横断テスト群のルーティング文書で、CLI 入口・共通基盤・各サブコマンド別回帰テストへ案内する入口です。
-- 個別テストへ進む前に、`__init__.py`、`helpers.py`、`test_core.py`、`test_cli.py`、`test_review_oracles.py`、`test_session_*.py`、`test_apply_*.py` のどれを読むべきかを切り分けます。
-- サブコマンド実装や `oracles` 仕様に直接入る前の、テスト群の見取り図として使います。
+- `tests/test_subcommands` 配下のサブコマンド横断テスト群のルーティング文書で、個別テストへ進む前の入口です。
+- 共通ヘルパー、CLI 横断、共通基盤、`apply`、`session`、`review oracles` の各系統へ案内する目次として機能します。
+- この階層のテストを読む前に、目的に応じてどのファイルへ進むべきかを切り分けるための案内です。
 
 ## Read this when
 
-- `tests/test_subcommands` 配下のどのテストファイルに何が書かれているか把握したいとき。
-- CLI 入口 (`test_cli.py`)・共通実行基盤 (`test_core.py`)・共通ヘルパー (`helpers.py`) を分けて確認したいとき。
-- `cmoc apply`、`cmoc session`、`cmoc review oracles` の個別回帰テストへ進む前に、どの入口を読むか判断したいとき。
-- `__init__.py` がまとめるパッケージ全体の役割を確認したいとき。
+- `tests/test_subcommands` 配下で、どのファイルに何が書かれているかを最初に整理したいとき。
+- CLI 入口、共通ヘルパー、共通基盤、`apply` 系、`session` 系、`review oracles` 系のどれへ進むべきかを切り分けたいとき。
+- `__init__.py`、`helpers.py`、`test_core.py`、`test_cli.py`、`test_review_oracles.py`、`test_apply_*.py`、`test_session_*.py` の役割分担を把握したいとき。
 
 ## Do not read this when
 
-- 個別テストケースの本文やアサーション内容を直接確認したいとき。
-- `src/sub_commands/` や `main.py` の実装本体を確認したいとき。
-- `oracles/docs/app_specs/sub_commands/INDEX.md` 以下の仕様断片を直接確認したいとき。
-- `tests/test_subcommands` ではなく、`tests/test_codex.py` や `tests/test_repo.py` など別の回帰テストへ進みたいとき。
+- 個別テストケースの本文やアサーションを直接確認したいとき。
+- `src/sub_commands/` 側の実装本体や CLI 登録を追いたいとき。
+- `tests/test_subcommands` ではなく、`tests/test_codex.py` や `tests/test_repo.py` など別の回帰テスト群を確認したいとき。
 
 ## hash
 
-- 7709b9a2e42ad51757fdcb0ba6a3eb9ff98d29b2ab5489dfaf91ac18ae52b49f
+- be2d6b50b9f458dc99d75f607c16beeda89711d7d92b524d5dd82f42445ae005
 
 # `test_timestamps.py`
 

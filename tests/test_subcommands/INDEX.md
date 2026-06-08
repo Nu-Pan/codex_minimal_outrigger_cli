@@ -74,27 +74,27 @@
 
 ## Summary
 
-- `tests/test_subcommands/test_apply_fork.py` は、`cmoc apply fork` の回帰テスト群を意味カテゴリ別にまとめた入口です。
-- apply 開始時の前提条件、調査対象の scope 判定、要修正点の抽出・改善・適用ループ、report 出力と session/apply state の更新を検証します。
-- 不整合調査の JSON schema、絶対パス制約、並列実行、`INDEX.md` メンテナンス、終了時の session HEAD 記録や再調査対象の選定もこのファイルの守備範囲です。
+- `tests/test_subcommands/test_apply_fork.py` は、`cmoc apply fork` の回帰テスト群を意味カテゴリ別にまとめたファイルです。
+- apply 開始時の前提条件、調査対象 scope の決定、要修正点の抽出・改善・再調査のループ、report 出力と state 更新を幅広く検証します。
+- 不整合調査の JSON schema、並列実行、`INDEX.md` メンテナンス、エラー報告、path 制約や変更要約の生成条件もこのファイルの守備範囲です。
 
 ## Read this when
 
-- `cmoc apply fork` の開始条件、scope 選択、反復回数、report 生成、状態遷移を確認したいとき。
-- 不整合調査の Structured Output schema、要修正点リスト、evidence path、対象ファイルの選定ロジックを確認したいとき。
-- apply 実行中の `INDEX.md` メンテナンス、修正適用後の再調査、要修正点改善ループ、session HEAD 記録の挙動を追いたいとき。
-- apply fork の並列調査、ログ記録、rollback 条件、完了・未収束の分岐をテスト観点で把握したいとき。
+- `cmoc apply fork` の正常系・異常系・回帰テストをまとめて把握したいとき。
+- 不整合調査の Structured Output schema、scope 判定、要修正点抽出、改善ループ、report 生成の検証観点を確認したいとき。
+- `INDEX.md` メンテナンス、index 変更の commit、session/apply state 更新、session HEAD 記録の挙動を追いたいとき。
+- 並列調査、エラー時のレポート生成、絶対パスや forbidden path の扱い、schema バリデーションの境界条件を確認したいとき。
 
 ## Do not read this when
 
 - `cmoc apply fork` 以外の `apply join` / `apply abandon` の挙動を確認したいとき。
-- `cmoc session fork/join/abandon` や他サブコマンドの状態遷移を調べたいとき。
-- CLI 登録、`main.py`、`bin/cmoc`、`test.sh` などの横断的な起点だけを追いたいとき。
-- `src/sub_commands/apply/fork.py` の実装本体や、`src/commons/indexing.py` の一般的なメンテナンス処理だけを直接確認したいとき。
+- `cmoc session fork/join/abandon` や `cmoc review oracles` など、別サブコマンドの回帰テストを探しているとき。
+- `src/sub_commands/apply/fork.py` などの実装本体や、`oracles/docs/app_specs/sub_commands/apply_fork.md` の仕様断片だけを確認したいとき。
+- CLI 登録や `bin/cmoc`、`main.py` の横断的な起点だけを追いたいとき。
 
 ## hash
 
-- 7169bd0764d93d4d2e961b5c2c4955f90030400173cea903a93a56f2bafec526
+- 23d2f93052ab10f68905037dbf1351124a67aeeaabccddba52f35c08402114da
 
 # `test_apply_join.py`
 
@@ -179,24 +179,25 @@
 ## Summary
 
 - `tests/test_subcommands/test_review_oracles.py` は、`cmoc review oracles` と旧別名 `cmoc eval-oracles` の回帰テスト群です。
-- review 用ワークツリーの隔離実行、`oracles` スナップショットの固定、所見パイプライン、レポート生成、エラー時の報告を検証します。
-- このサブディレクトリでは、`review oracles` に固有の挙動を追う入口になります。
+- review 専用ワークツリーでの実行、`oracles` の固定 snapshot、所見の列挙・マージ・検証・判定、レポート生成とエラー処理をまとめて検証します。
+- このファイルは、`review oracles` 固有の前提条件と出力仕様を確認するための入口です。
 
 ## Read this when
 
-- `cmoc review oracles` の実行条件、出力、終了時の挙動を確認したいとき。
-- review ブランチ・review ワークツリー・`oracles` スナップショット・`INDEX.md` メンテナンスの関係を追いたいとき。
-- 所見の列挙、マージ、検証、判定、Structured Output schema、プロンプト文言の変更がテストに与える影響を見たいとき。
+- `cmoc review oracles` と旧別名 `cmoc eval-oracles` の回帰テスト内容を把握したいとき。
+- review ワークツリーの隔離、`oracles` スナップショット固定、所見パイプライン、レポート生成、エラー報告の挙動を確認したいとき。
+- Structured Output schema、所見の列挙・マージ・検証・判定、プロンプト文言、`INDEX.md` 参照ルールの変更影響を確認したいとき。
+- session branch 前提、`INDEX.md` メンテナンス、部分評価・全件評価・改善ループの分岐をテスト観点で追いたいとき。
 
 ## Do not read this when
 
-- `cmoc apply`、`cmoc session`、`cmoc init`、`cmoc indexing` など、別サブコマンドのテストだけを探しているとき。
-- `sub_commands.review.oracles` の実装本体や共通基盤の処理だけを確認したいとき。
-- `tests/test_subcommands` の共通 helpers や、`review oracles` 以外の個別テストを追いたいとき。
+- `cmoc apply`、`cmoc session`、`cmoc init`、`cmoc indexing` など、別サブコマンドのテストだけを確認したいとき。
+- `src/sub_commands/review/oracles.py` の実装本体だけを直接追いたいとき。
+- `tests/test_subcommands` の共通ヘルパーや他の個別テストファイルを先に確認したいとき。
 
 ## hash
 
-- 677644cd2f6b4a354069420e7ac54b599acb0325ecd7031c5ec69aab8b3ea935
+- 37578fa16cbe4fc89080a54657695425e4f29cfdf24fc34851cfa8326329e852
 
 # `test_session_abandon.py`
 
@@ -226,25 +227,28 @@
 
 ## Summary
 
-- `tests/test_subcommands/test_session_fork.py` は `cmoc session fork` の回帰テスト群で、session branch の作成、session state の記録、`.cmoc` の ignore 補修を扱います。
-- active session の競合、detached HEAD や managed branch からの開始拒否、linked worktree での state 保存先の確認も対象です。
-- state 保存失敗時の rollback と、rollback が branch を完全に消せない場合の復旧挙動まで検証します。
+- `tests/test_subcommands/test_session_fork.py` は `cmoc session fork` の回帰テスト群の入口です。
+- session branch の作成、state 保存、`.cmoc` の ignore 補修、前提条件チェック、競合検出、rollback をまとめて確認します。
+- このファイルから、`cmoc session fork` の正常系と失敗系を横断的にたどれます。
 
 ## Read this when
 
-- `cmoc session fork` の実装・修正・レビュー・テストを行うとき。
-- session branch の作成条件、session state の記録、rollback、linked worktree での挙動、エラー文言を確認したいとき。
-- `src/sub_commands/session/fork.py` と `oracles/docs/app_specs/sub_commands/session_fork.md` に進む前に、この回帰テストの観点を把握したいとき。
+- `cmoc session fork` の回帰テストが何を守っているかを把握したいとき。
+- session branch 作成、session state 記録、`.cmoc` ignore 補修の流れを確認したいとき。
+- local branch 限定、detached HEAD、cmoc 管理 branch、未コミット差分、既存 active session などの拒否条件を確認したいとき。
+- linked worktree から実行したときの state 保存先や、main repo-root 側の active session 判定を確認したいとき。
+- state 保存失敗時の rollback、branch 削除失敗時の後始末、壊れた session state や orphan branch の扱いを確認したいとき。
 
 ## Do not read this when
 
-- `cmoc session join` / `cmoc session abandon` / `cmoc apply` 系の挙動だけを確認したいとき。
-- 実装ロジックそのものや `src/sub_commands/session/INDEX.md` の入口構造だけを確認したいとき。
-- `tests/test_subcommands/helpers.py` や他のサブコマンド回帰テストを探しているとき。
+- `cmoc session fork` の実装本体や git 操作の詳細を追いたいときは、`src/sub_commands/session/fork.py` を直接読むとき。
+- `cmoc session join` / `cmoc session abandon` など、session の別サブコマンドを確認したいとき。
+- `tests/test_subcommands` 全体の入口や、他の回帰テスト群の見取り図だけを確認したいとき。
+- `oracles/docs/app_specs/sub_commands/session_fork.md` の仕様断片だけを読みたいとき。
 
 ## hash
 
-- 8fe967f0f3532b01cc8715f86492dcf2eb52f5b097cfc25b16ddb0abaf751c89
+- 361451016d2c4d8f1341ea6cc4cf59a9f6cc7de37dae4605956458335633d0d1
 
 # `test_session_join.py`
 

@@ -130,27 +130,26 @@
 
 ## Summary
 
-- `src/commons/repo.py` は git リポジトリと `.cmoc` 作業領域を扱う共通基盤モジュールです。
+- `src/commons/repo.py` は git リポジトリと cmoc 作業領域を扱う共通基盤モジュールです。
 - repo root 探索、ブランチ判定、session / apply state 管理、apply process id の保存・読込、`.cmoc` 追跡外保証をまとめています。
-- oracle / 実装ファイルの列挙や変更検出、`.gitignore` の評価・復元補助、`git` 呼び出しの共通ラッパーも含みます。
+- `oracles` と実装ファイルの列挙や変更検出、`.gitignore` の評価・復元補助、`git` 呼び出しの共通ラッパーも含みます。
 
 ## Read this when
 
 - repo root の探索、現在ブランチ名、HEAD commit、cmoc 予約ブランチ判定を確認したいとき。
-- session / apply state の初期化・保存・読込・検証や、session home branch の復元を追いたいとき。
-- apply process id の runtime file、worktree path の復元、`.cmoc` の ignore 保証、未コミット差分の検査を確認したいとき。
-- `oracles` と実装ファイルの列挙・絞り込み、変更済みファイルの収集、`run_git()` を含む git 共通処理を確認したいとき。
+- session / apply state の保存・読込・検証や、session home branch の復元ロジックを確認したいとき。
+- apply process id の runtime file、worktree path の復元、`.cmoc` の追跡外保証、未コミット差分の検査を確認したいとき。
+- `oracles` と実装ファイルの列挙・絞り込み、変更済みファイルの収集、`git` 呼び出しの共通ラッパーを確認したいとき。
 
 ## Do not read this when
 
-- 個々のヘルパー実装や例外文言の細部だけを確認したいとき。
-- `CmocError` の整形、`codex exec`、時間計測など、別の共通モジュールを確認したいとき。
-- サブコマンド固有の業務ロジックや CLI 引数だけを見たいとき。
+- `CmocError` の整形や `codex exec` など、repo 以外の共通基盤だけを確認したいとき。
+- サブコマンド固有の引数解析や業務ロジックだけを追いたいとき。
 - `INDEX.md` の生成ルールや `oracles` 側の正本仕様だけを確認したいとき。
 
 ## hash
 
-- 0d67ddc6f74578e6d7d082dc8ad92e1633e306773f73c091f510e568055e9478
+- 70f7ad98203f830e3db54a5b165732c17e6e6e3ef3ccca043c68fd7f480121ae
 
 # `report_files.py`
 
