@@ -73,7 +73,7 @@ def test_apply_returns_complete_when_no_discrepancies(
     assert exit_code == 0
     assert len(reports) == 1
     assert state["apply"]["state"] == "completed"
-    assert event_order == ["report 書き込み", "apply 完了記録"]
+    assert event_order == ["apply 完了記録", "report 書き込み"]
     assert state["apply"]["apply_branch"].startswith(
         "cmoc/apply/2026-05-10_22-21_10_000000123/"
     )
@@ -1421,6 +1421,86 @@ def test_apply_marks_error_when_success_report_generation_fails(
     assert 'result: "エラー"' in reports[0].read_text(encoding="utf-8")
     assert session_head != session_head_at_finish
     assert session_head != apply_head
+    assert not (
+        repo
+        / ".cmoc"
+        / "sessions"
+        / "2026-05-10_22-21_10_000000123.apply_process.json"
+    ).exists()
+
+
+def test_apply_marks_error_before_success_report_when_completion_record_fails(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """完了 state 更新失敗時は成功 report を保存せず error として記録する。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _write_flat_oracles_index(oracle_root, "spec.md")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "oracle")
+
+    monkeypatch.setattr(
+        "sub_commands.apply.fork.maintain_indexes",
+        lambda repo_root: False,
+    )
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """調査は収束させ、error report の変更要約も返す。"""
+        if kwargs.get("purpose") == "apply 変更要約":
+            return _change_summary_json()
+        if kwargs.get("expect_json") is True:
+            return '{"git_head_commit_hash": null, "fixing_points": []}'
+        return "No changes"
+
+    success_report_called = False
+
+    def fake_write_apply_report(*args: object, **kwargs: object) -> Path:
+        """完了記録後の成功 report へ進んでいないことを検証する。"""
+        nonlocal success_report_called
+        success_report_called = True
+        raise AssertionError("success report must not be written")
+
+    def fake_mark_apply_completed(*args: object, **kwargs: object) -> None:
+        """session state の completed 永続化失敗を模擬する。"""
+        raise RuntimeError("fake completion record failure")
+
+    monkeypatch.setattr("sub_commands.apply.fork.run_codex_exec", fake_codex)
+    monkeypatch.setattr(
+        apply_module,
+        "_write_apply_report",
+        fake_write_apply_report,
+    )
+    monkeypatch.setattr(
+        apply_module,
+        "_mark_apply_completed",
+        fake_mark_apply_completed,
+    )
+
+    with pytest.raises(RuntimeError, match="fake completion record failure"):
+        cmoc_apply_impl(repo)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
+        ).read_text(encoding="utf-8")
+    )
+    reports = list(
+        (repo / ".cmoc" / "reports" / "apply" / "fork").glob("*.md")
+    )
+    report_texts = [report.read_text(encoding="utf-8") for report in reports]
+
+    assert not success_report_called
+    assert state["apply"]["state"] == "error"
+    assert len(reports) == 1
+    assert any('result: "エラー"' in text for text in report_texts)
+    assert any(
+        "- Failed stage: `apply 完了記録`" in text for text in report_texts
+    )
     assert not (
         repo
         / ".cmoc"

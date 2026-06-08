@@ -480,7 +480,13 @@ def cmoc_apply_impl(
             repo_root,
             session_branch,
         )
-        # 実行結果を人間向け report に変換する。
+        failed_stage = "apply 完了記録"
+        _mark_apply_completed(
+            state_root,
+            session_id,
+            state,
+        )
+        # 永続 state を completed に更新した後で、人間向け report を出力する。
         failed_stage = "report 書き込み"
         start_step(timer, 6, 6, "report 書き込み")
         report_path = _write_apply_report(
@@ -502,12 +508,6 @@ def cmoc_apply_impl(
         failed_stage = "final output 書き込み"
         print(f"apply run id: {apply_run_id}")
         print(str(report_path))
-        failed_stage = "apply 完了記録"
-        _mark_apply_completed(
-            state_root,
-            session_id,
-            state,
-        )
         apply_start_needs_error_record = False
         if completed:
             return APPLY_FORK_EXIT_CODE_CONVERGED
@@ -523,7 +523,10 @@ def cmoc_apply_impl(
                 apply_branch=apply_branch,
                 oracle_snapshot_commit=oracle_snapshot_commit,
             )
-        if failed_stage == "final output 書き込み" and success_report_path:
+        if (
+            failed_stage in {"report 書き込み", "final output 書き込み"}
+            and success_report_path
+        ):
             success_report_path.unlink(missing_ok=True)
         try:
             session_head_at_apply_finish = _session_branch_head_for_report(
