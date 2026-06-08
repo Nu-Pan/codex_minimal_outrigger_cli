@@ -90,10 +90,10 @@
 ## Do not read this when
 
 - `cmoc apply fork` や `cmoc apply abandon` の開始・破棄フローだけを確認したいとき。
-- `cmoc session` 系の開始・統合・破棄だけを確認したいとき。
-- `cmoc apply join` の利用手順や正本仕様だけを確認したいとき。
+- `cmoc session` 系サブコマンドの開始・統合・破棄だけを確認したいとき。
 - `src/sub_commands/apply` 配下の入口構造だけを確認したくて、`join.py` の処理本体は不要なとき。
+- `cmoc apply join` の利用手順や正本仕様断片だけを確認したいとき。
 
 ## hash
 
-- 8322fdb7a5db9421fcf5b60f07aa219868b4c00343fc76e8cf45b7b7d4dc035a
+- 6008f07de4a859416448e20eeacdf97252412bcd0a61f8877baaec4d5452f5fb

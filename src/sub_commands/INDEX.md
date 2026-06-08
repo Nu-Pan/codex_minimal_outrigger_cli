@@ -38,12 +38,12 @@
 ## Do not read this when
 
 - すでに読む対象が `__init__.py`、`abandon.py`、`fork.py`、`join.py` のいずれかに決まっていて、この階層の案内が不要なとき。
-- `cmoc apply` の利用手順や引数仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/` 側を読むべきとき。
-- `cmoc apply` 以外のサブコマンドや、`README.md` / `AGENTS.md` などのリポジトリ運用ルールだけを確認したいとき。
+- `cmoc apply` の利用手順や引数仕様だけを確認したいとき。
+- `oracles` 側の正本仕様や、`apply` 以外のサブコマンド実装を確認したいとき。
 
 ## hash
 
-- 56759843c5299c4851dc86329ea3492e368caa72fa58229098b3f14c97d55aca
+- b0fb822914643044d163da5ef1ee2b0c2d3ea604f8acde1c628342f41cb0453b
 
 # `indexing.py`
 
