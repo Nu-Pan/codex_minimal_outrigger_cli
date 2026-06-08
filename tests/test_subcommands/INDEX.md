@@ -3,11 +3,11 @@
 ## Summary
 
 - `tests/test_subcommands/__init__.py` は `tests.test_subcommands` パッケージを宣言するだけの最小モジュールです。
-- 公開 API、定数、テスト実行ロジック、再エクスポートは持ちません。
+- 公開 API、定数、実行ロジック、再エクスポートは持ちません。
 
 ## Read this when
 
-- `tests.test_subcommands` が Python パッケージとして宣言されていることだけを確認したいとき。
+- `tests.test_subcommands` が Python パッケージとして宣言されていることを確認したいとき。
 - この階層の最小限の入口として、`__init__.py` の役割を把握したいとき。
 - テスト本体ではなく、パッケージ境界の存在確認だけで足りるとき。
 
