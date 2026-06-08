@@ -29,38 +29,37 @@
 ## Summary
 
 - `src/main.py` は cmoc CLI のエントリーポイントで、Typer のルート `app` と `session` / `apply` / `review` の各サブアプリを組み立てるファイルです。
-- `init`、`indexing`、`session`、`apply`、`review` の各コマンド登録に加えて、`eval-oracle` / `eval-oracles` の隠し別名や各コマンドの既定オプションをまとめています。
+- `init`、`indexing`、各サブコマンドの登録に加えて、`eval-oracle` / `eval-oracles` の隠し別名や各コマンドの既定オプションをまとめています。
 - サブコマンド未指定時の `CmocError` 生成、補完プローブ時の分岐、Click/Typer 例外の共通整形、`python src/main.py` 直実行の起動経路を扱います。
 
 ## Read this when
 
-- cmoc CLI の起点として、`session` / `apply` / `review` のサブアプリ構成を確認したいとき。
-- `init`、`session fork/join/abandon`、`apply fork/join/abandon`、`review oracles` の登録名や隠し別名を確認したいとき。
-- `apply fork` の既定反復回数や `scope`、`apply join` の `--force-resolve` などの既定オプションを確認したいとき。
-- サブコマンド未指定時の利用者向けエラー、補完プローブ時の分岐、Click/Typer 例外の共通整形、`python src/main.py` 直実行の経路を確認したいとき。
+- cmoc CLI のルート構成と、`session` / `apply` / `review` のサブアプリを確認したいとき。
+- `init`、`indexing`、`session fork/join/abandon`、`apply fork/join/abandon`、`review oracles` の登録名や既定引数を確認したいとき。
+- サブコマンド未指定時のエラー生成、補完プローブ時の分岐、Click/Typer 例外の共通整形、`python src/main.py` 直実行の経路を確認したいとき。
 
 ## Do not read this when
 
-- `session`、`apply`、`review` など個別サブコマンドの本体実装だけを確認したいとき。
-- `commons.errors` や `format_error_report()` の共通エラー整形だけを確認したいとき。
-- `bin/cmoc` のシェル起動ラッパーだけを確認したいとき。
+- 個別サブコマンドの実装本体だけを確認したいとき。
+- `commons.errors` や `commons.command_runner` など、共通基盤の詳細だけを追いたいとき。
+- CLI 入口ではなく、`oracles` 側の正本仕様や利用手順だけを確認したいとき。
 
 ## hash
 
-- a756de7b8e379a66e5e1bdfc4aa80c43d910a513c480de908c6d46a9f1196f81
+- ee925dc07d26b235724d5d792adb638166ae640a05e4b1f6ca38f773e8c24834
 
 # `sub_commands`
 
 ## Summary
 
-- `src/sub_commands` ディレクトリのルーティング文書で、`cmoc` の各サブコマンド実装への入口を整理する階層です。
-- `__init__.py` はパッケージ宣言のみを担い、`init.py` は初期化、`indexing.py` は `INDEX.md` の維持、`apply/`・`session/`・`review/` は各系統の入口です。
-- この目次は、個別実装へ進む前にどのファイルを読むべきかを切り分けるための案内です。
+- `src/sub_commands` は cmoc の各サブコマンド実装へのルーティング目次です。
+- `__init__.py` はパッケージ宣言のみ、`init.py` は初期化、`indexing.py` は `INDEX.md` 維持、`apply/`・`review/`・`session/` は各系統の入口です。
+- この階層は、個別実装に進む前にどのファイルを読むべきかを切り分ける案内役です。
 
 ## Read this when
 
 - `src/sub_commands` 配下の入口構造と、どの実装ファイルを開くべきかを把握したいとき。
-- `cmoc init`、`cmoc indexing`、`cmoc apply`、`cmoc session`、`cmoc review` の担当範囲をひと目で整理したいとき。
+- `cmoc init`、`cmoc indexing`、`cmoc apply`、`cmoc review`、`cmoc session` の担当範囲を整理したいとき。
 - このディレクトリ以下の各 `INDEX.md` や個別モジュールへ進む前に、全体の役割分担を確認したいとき。
 
 ## Do not read this when
@@ -71,4 +70,4 @@
 
 ## hash
 
-- b7f1eb7ad695410a40873bb04c15cf2c1acf14ef693b9903596127900ac27038
+- d96cba62e4c293410fe729f0b2e1980b07ef267b502105a4979f8ebcb6b032e0

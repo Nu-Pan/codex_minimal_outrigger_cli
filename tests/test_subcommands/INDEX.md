@@ -2,19 +2,19 @@
 
 ## Summary
 
-- `tests/test_subcommands/__init__.py` は `tests/test_subcommands` をテストパッケージとして成立させるための初期化ファイルです。
-- このファイル自体にはテストロジックはなく、サブコマンド関連テスト群のパッケージ境界を示します。
+- `tests/test_subcommands/__init__.py` は `tests.test_subcommands` をテストパッケージとして成立させるための初期化ファイルです。
+- このファイル自体にはテストロジックがなく、サブコマンド関連テスト群のパッケージ境界だけを示します。
 
 ## Read this when
 
-- `tests.test_subcommands` をテストパッケージとして成立させる前提を確認したいとき。
-- 相対 import や共有テスト補助のためのパッケージ境界を確認したいとき。
+- `tests.test_subcommands` をパッケージとして import できる前提を確認したいとき。
+- 相対 import や共有テスト補助のための境界を確認したいとき。
 - サブコマンド関連テスト群の入口がどこかを把握したいとき。
 
 ## Do not read this when
 
 - 個々のテストケース本文やアサーションを確認したいとき。
-- `tests/test_subcommands` 配下の他のモジュールや共有ヘルパーを直接たどりたいとき。
+- `tests/test_subcommands` 配下の他モジュールや共有ヘルパーを直接たどりたいとき。
 - サブコマンド本体の実装や仕様を確認したいとき。
 
 ## hash
@@ -125,27 +125,26 @@
 
 ## Summary
 
-- `tests/test_subcommands/test_cli.py` は、`main.py` と `bin/cmoc` を中心にした CLI 横断の回帰テストをまとめるファイルです。
-- サブコマンド登録、hidden alias、補完、終了コード、エラーレポート整形など、ユーザーが最初に触れる CLI 入口の挙動をまとめて検証します。
-- 個別サブコマンドの詳細実装へ進む前に、CLI 全体の接続点と共通の表示仕様を確認するための目次として機能します。
+- `tests/test_subcommands/test_cli.py` は cmoc の CLI 入口と周辺ランチャーの横断回帰テストをまとめたファイルです。
+- root help、completion probe、公開サブコマンドの登録、エラー報告の Markdown 整形、`bin/cmoc` と `test.sh` の振る舞いを扱います。
+- `session`、`apply`、`review`、`indexing` の公開面と、`review oracles` や `eval-oracles` の互換性も確認します。
 
 ## Read this when
 
-- `cmoc --help`、`cmoc review oracles --help`、`cmoc indexing --help` など、CLI 登録とヘルプ表示の挙動を確認したいとき。
-- `session`、`apply`、`review` の各コマンド群に対する補完プローブや、Typer への委譲方針を確認したいとき。
-- 引数なし起動やサブコマンドエラー時に、stdout へ Markdown 形式のエラーレポートが出るかを確認したいとき。
-- `main.py`、`bin/cmoc`、`format_error_report`、`eval-oracles` / `eval-oracle` の互換 alias を含む CLI 横断の回帰を把握したいとき。
+- `main` の root CLI 入口、`Typer` への委譲、サブコマンド登録の境界を確認したいとき。
+- `cmoc --help`、completion probe、`review oracles` の alias、`indexing` の公開有無を確認したいとき。
+- `apply fork` や `review oracles` の help 表示、正式オプション名、エラー報告の整形を変更したいとき。
+- `bin/cmoc` ランチャーや `test.sh` の PATH 優先順位、仮想環境未検出時の挙動を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply`、`cmoc session`、`cmoc review oracles`、`cmoc indexing` など、個別サブコマンドの実装や状態遷移そのものを追いたいとき。
-- `tests/test_subcommands/test_apply_fork.py` や `tests/test_subcommands/test_session_join.py` など、サブコマンド固有の回帰テストを確認したいとき。
-- `format_error_report` や補完プローブの共通ヘルパーだけを直接確認したいとき。
-- `bin/cmoc` の起動スクリプトや `main.py` の CLI 登録ではなく、個別仕様ファイルだけを確認したいとき。
+- 個別サブコマンドの業務ロジックや引数検証の詳細だけを追いたいとき。
+- `commons.codex`、`commons.indexing`、`commons.repo` など別モジュールの実装を確認したいとき。
+- `tests/test_codex.py` や `tests/test_repo.py` など、CLI 以外の回帰テストを探したいとき。
 
 ## hash
 
-- 6f76212a4a678302e172a0e73b84352370f2f4c8764a6bf833feb33d402021a6
+- e1296a5251d512fb48a393ee22b16ba9bb0c71b142217eaaba1acd85bc9d7762
 
 # `test_core.py`
 
@@ -177,25 +176,26 @@
 ## Summary
 
 - `tests/test_subcommands/test_review_oracles.py` は、`cmoc review oracles` と旧別名 `cmoc eval-oracles` の回帰テスト群です。
-- review 専用ワークツリーでの実行、`oracles` の固定 snapshot、所見の列挙・マージ・検証・判定、レポート生成とエラー処理をまとめて検証します。
-- このファイルは、`review oracles` 固有の前提条件と出力仕様を確認するための入口です。
+- review worktree の隔離、`oracles` の固定 snapshot、所見の列挙・統合・検証・判定までの pipeline をまとめて検証します。
+- Structured Output schema、レポート出力、エラー処理、prompt 文言、検証ヘルパー、ループ回数の境界条件も扱います。
 
 ## Read this when
 
-- `cmoc review oracles` と旧別名 `cmoc eval-oracles` の回帰テスト内容を把握したいとき。
-- review ワークツリーの隔離、`oracles` スナップショット固定、所見パイプライン、レポート生成、エラー報告の挙動を確認したいとき。
-- Structured Output schema、所見の列挙・マージ・検証・判定、プロンプト文言、`INDEX.md` 参照ルールの変更影響を確認したいとき。
-- session branch 前提、`INDEX.md` メンテナンス、部分評価・全件評価・改善ループの分岐をテスト観点で追いたいとき。
+- `cmoc review oracles` と旧別名 `cmoc eval-oracles` の挙動をテスト観点で追いたいとき。
+- review worktree の作成・merge、oracles snapshot の固定、`INDEX.md` メンテナンスの扱いを確認したいとき。
+- finding pipeline の列挙・マージ・検証・判定、report / error report 生成、prompt 仕様、loop option を確認したいとき。
+- `_evaluation_prompt`、`_improvement_prompt`、validation helper、output schema 定数、issue ID 付与などの補助ロジックを確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply`、`cmoc session`、`cmoc init`、`cmoc indexing` など、別サブコマンドのテストだけを確認したいとき。
-- `src/sub_commands/review/oracles.py` の実装本体だけを直接追いたいとき。
-- `tests/test_subcommands` の共通ヘルパーや他の個別テストファイルを先に確認したいとき。
+- `cmoc apply`、`cmoc session`、`cmoc init`、`cmoc indexing` の回帰テストを確認したいとき。
+- `src/sub_commands/review/oracles.py` の実装本体や CLI 登録だけを追いたいとき。
+- `tests/test_subcommands` の共通ヘルパーや他の個別テストファイルを確認したいとき。
+- `cmoc review oracles` の利用手順だけで足り、回帰テストの詳細が不要なとき。
 
 ## hash
 
-- 37578fa16cbe4fc89080a54657695425e4f29cfdf24fc34851cfa8326329e852
+- 9e60278a910d0bca19343f099e32671a321d257c66dbce80351d7239c9659d2a
 
 # `test_session_abandon.py`
 
