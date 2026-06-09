@@ -48,25 +48,25 @@
 
 ## Summary
 
-- `src/sub_commands/indexing.py` は `cmoc indexing` の本体処理を持つモジュールです。
-- `repo_root` が未指定なら共通 runner に処理を委譲し、指定済みなら repository 状態検証と `INDEX.md` メンテナンスの 2 段階で進みます。
-- `assert_no_uncommitted_changes()` で clean repo を確認し、`maintain_indexes()` の結果に応じて標準出力を切り替えます。
+- `src/sub_commands/indexing.py` は `cmoc indexing` の本体実装モジュールで、CLI から渡された `repo_root` を受けて共通 runner と `commons.indexing` に処理を振り分けます。
+- `repo_root` が未指定なら `commons.command_runner.run_command()` で作業対象のルートを解決し、指定済みなら `assert_no_uncommitted_changes()` の後に `maintain_indexes()` を実行します。
+- 変更があれば `committed INDEX.md maintenance changes`、変更がなければ `no INDEX.md maintenance changes` を標準出力へ出します。
 
 ## Read this when
 
-- `cmoc indexing` の実装・修正・レビュー・テストを行いたいとき。
-- `repo_root` の自動解決や、`StepTimer` と `start_step()` を使った 2 段階の処理フローを確認したいとき。
-- 実行前の未コミット差分チェックと、`INDEX.md` メンテナンス後の標準出力を確認したいとき。
+- `cmoc indexing` の本体処理と、`repo_root` の未指定時に共通 runner へ委譲する流れを確認したいとき。
+- `assert_no_uncommitted_changes()` による事前チェックと、`maintain_indexes()` 実行後の標準出力を確認したいとき。
+- `StepTimer` と `start_step()` を使った `INDEX.md` メンテナンスの実行順を把握したいとき。
 
 ## Do not read this when
 
-- `INDEX.md` の生成アルゴリズム、再利用条件、配置対象の判定だけを確認したいときは、このモジュールではなく `src/commons/indexing.py` を読むべきです。
-- `cmoc indexing` の正本仕様や利用手順だけを確認したいときは、`oracles/docs/app_specs/sub_commands/indexing.md` を直接読むべきです。
-- `cmoc` の他のサブコマンドの入口や実装を追いたいときは、このファイルではなく該当モジュールを読むべきです。
+- `cmoc indexing` の生成アルゴリズム、配置対象の判定、既存 `INDEX.md` の再利用条件だけを確認したいときは、このファイルではなく `src/commons/indexing.py` を読むべきです。
+- CLI 登録やサブコマンドの起動経路だけを確認したいときは、このファイルではなく `src/main.py` を読むべきです。
+- 利用手順や正本仕様だけを確認したいときは、このファイルではなく `oracles/docs/app_specs/sub_commands/indexing.md` を読むべきです。
 
 ## hash
 
-- 665148ad6fef5f3f6501dfe4c554d3ee6211d94e0e7eaaf2576c389151766c13
+- 822801872f1ebdc971018787dcf090c67c3ef542bfe891e0108a41b090cadf19
 
 # `init.py`
 
