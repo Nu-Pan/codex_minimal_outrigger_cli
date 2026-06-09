@@ -2,8 +2,8 @@
 
 ## Summary
 
-- `tests/test_subcommands/__init__.py` は `tests.test_subcommands` を Python パッケージとして成立させるための空ファイルです。
-- このファイルには実装ロジックやテストケースはなく、同ディレクトリの `test_*.py` や `helpers.py` を import 可能にする役割だけを持ちます。
+- `<cmoc-root>/tests/test_subcommands/__init__.py` は `tests.test_subcommands` を Python パッケージとして成立させるための空ファイルです。
+- このファイル自体にはテストケースや実装ロジックはなく、同ディレクトリ配下の `test_*.py` や `helpers.py` を import 可能にする役割だけを持ちます。
 - このファイル単体ではサブコマンド仕様や回帰テストの振る舞いは分かりません。
 
 ## Read this when
@@ -14,9 +14,9 @@
 
 ## Do not read this when
 
-- 個別の `test_*.py` のテストケースやアサーションを確認したいとき。
-- `helpers.py` の共通 fixture や補助関数を追いたいとき。
-- `src/sub_commands` 側の CLI 実装やサブコマンド仕様を確認したいとき。
+- 個別の test_*.py のテストケースやアサーションを確認したいとき。
+- helpers.py の共通 fixture や補助関数を追いたいとき。
+- `<cmoc-root>/src/sub_commands` 側の CLI 実装やサブコマンド仕様を確認したいとき。
 
 ## hash
 
