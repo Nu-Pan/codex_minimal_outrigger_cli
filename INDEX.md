@@ -176,7 +176,7 @@
 ## Summary
 
 - `src` ディレクトリのルーティング目次で、`main.py`、`commons/`、`sub_commands/` へ案内する入口です。
-- `src/main.py` は CLI 入口、`src/commons/` は共通基盤、`src/sub_commands/` は各サブコマンド実装をまとめます。
+- `main.py` は CLI 入口、`commons/` は共通基盤、`sub_commands/` は各サブコマンド実装をまとめます。
 - この階層で、実装本体へ進む前に役割分担を切り分けます。
 
 ## Read this when
@@ -193,7 +193,7 @@
 
 ## hash
 
-- 6cf58da468e1d63ad42547513a69ff4f36b206991bb19074ef7a206b36ea2af3
+- d64898bb58c1a0248bd949449150d9de34d88862b044116509865b73348e21cc
 
 # `test.sh`
 
@@ -222,22 +222,24 @@
 
 ## Summary
 
-- この `<cmoc-root>/tests` ディレクトリのルーティング文書で、共通 pytest 設定、個別回帰テスト、`test_subcommands/` 配下の詳細へ案内する入口です。
-- `conftest.py`、`test_codex.py`、`test_file_naming.py`、`test_indexing.py`、`test_repo.py`、`test_report_files.py`、`test_timestamps.py` と、`test_subcommands/` をまとめて導線化します。
-- テストの目的ごとに読むべき場所を切り分けるための目次で、実装本体ではなくテスト群の役割を整理します。
+- `<cmoc-root>/tests` ディレクトリのルーティング文書で、共通設定と各回帰テスト群への入口をまとめる目次です。
+- `conftest.py`、`test_codex.py`、`test_file_naming.py`、`test_indexing.py`、`test_repo.py`、`test_report_files.py`、`test_timestamps.py`、`test_subcommands/` へ案内します。
+- 個別のテスト内容を読む前に、どのファイルがどの責務を持つかを切り分けるための導線です。
 
 ## Read this when
 
-- `tests/` 配下にある回帰テスト全体の見取り図を先に把握したいとき。
-- `conftest.py` や `test_*.py`、`test_subcommands/` の役割分担を整理したいとき。
-- `commons.codex`、`commons.indexing`、`commons.repo`、`commons.timestamps` など、どの回帰テストを読むべきか切り分けたいとき。
+- `<cmoc-root>/tests` 配下の各テストファイルが何を検証しているかを俯瞰したいとき。
+- pytest 共通設定、コア回帰テスト、サブコマンド別テストの入口を整理したいとき。
+- どのテストファイルを読むべきか迷っていて、最初の案内が欲しいとき。
+- `tests` 配下の個別 `INDEX.md` へ進む前に、担当範囲の切り分けをしたいとき。
 
 ## Do not read this when
 
-- 読みたい対象のテストファイルがすでに分かっていて、`tests/` 配下の個別ファイルへ直接進めるとき。
-- `src/` 側の本体実装や `oracles/` の仕様断片だけを確認したいとき。
-- `tests/test_subcommands/INDEX.md` など、下位ディレクトリの目次だけを見れば足りるとき。
+- 目的のテストファイルがすでに分かっていて、`<cmoc-root>/tests/conftest.py` や各 `test_*.py` へ直接進めるとき。
+- `tests` 全体の見取り図ではなく、`<cmoc-root>/tests/test_subcommands/INDEX.md` など下位の目次だけを確認したいとき。
+- 本番実装や `src/` 側のロジックを追いたいとき。
+- pytest 共通設定や回帰テストの担当範囲ではなく、`README.md` や運用ルールだけを確認したいとき。
 
 ## hash
 
-- 53f90e4ff947e4a7a9410b4471f7d164dd1a22bd5505db65dc844db76da9829f
+- eed344b70bc8c3c7b649d2d1f5070df928dab257712a1449a452effae29c89c6

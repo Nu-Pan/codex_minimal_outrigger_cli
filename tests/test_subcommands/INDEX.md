@@ -149,26 +149,25 @@
 
 ## Summary
 
-- `tests/test_subcommands/test_core.py` は、サブコマンド共通の実行基盤、エラーレポート、ステップ計測の回帰テストをまとめたファイルです。
-- `run_command()` の終了コード、ログ出力、総経過時間、例外時の報告、`apply` の非エラー終了を検証します。
+- `tests/test_subcommands/test_core.py` は、サブコマンド横断の共通実行基盤、エラーレポート、`StepTimer` の回帰テストをまとめたファイルです。
 - `cmoc init` の `.cmoc` ignore 修復・commit・tracked ファイル解除と、`cmoc indexing` の maintenance / check / dirty repo 判定も扱います。
 
 ## Read this when
 
 - `run_command()`、`StepTimer`、`start_step()` の終了処理やログ・計測表示を変更したいとき。
-- `cmoc init` の `.cmoc` ignore 修復、commit、tracked ファイル解除の挙動を確認したいとき。
+- `cmoc init` の `.cmoc` ignore 修復、commit、tracked `.cmoc` の追跡解除の挙動を確認したいとき。
 - `cmoc indexing` の通常実行、`--check`、dirty リポジトリ判定、INDEX 保守への委譲条件を確認したいとき。
 - サブコマンド横断の共通動作と、初期化・インデックス保守の境界を把握したいとき。
 
 ## Do not read this when
 
-- CLI のサブコマンド登録、補完、ヘルプ表示だけを確認したいとき。
+- CLI のサブコマンド登録、補完、`help` 表示だけを確認したいとき。
 - `apply` や `session` の個別サブコマンドの状態遷移や処理順だけを追いたいとき。
 - `src/commons/command_runner.py`、`src/sub_commands/init.py`、`src/sub_commands/indexing.py` の実装本体を直接確認したいとき。
 
 ## hash
 
-- 704382d25778dd4df531cc5c14fc48905539ca49b6a0060db9d05b24c585996d
+- 10e331752e90435b54c94e14c84e4263cabb605974191e86e13ef8b98c216ea5
 
 # `test_review_oracles.py`
 

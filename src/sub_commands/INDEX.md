@@ -36,13 +36,13 @@
 
 ## Do not read this when
 
-- `src/sub_commands/apply` 配下の読み先がすでに決まっていて、`__init__.py`、`abandon.py`、`fork.py`、`join.py` のいずれかへ直接進むとき。
+- 読み先がすでに決まっていて、`__init__.py`、`abandon.py`、`fork.py`、`join.py` のいずれかへ直接進むとき。
 - `cmoc apply` の利用手順や正本仕様だけを確認したいとき。
 - この階層ではなく、上位の `src/sub_commands/INDEX.md` だけで十分なとき。
 
 ## hash
 
-- 92101a40048dabe808713af15ca35aad2f4a025a8d217204ad9b5273d322aebe
+- aa13322739ea23a30db84d005b167fd5af600bf90b86803ced620c834819d285
 
 # `indexing.py`
 

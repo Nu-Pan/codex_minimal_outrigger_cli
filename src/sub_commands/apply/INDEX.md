@@ -50,27 +50,27 @@
 
 ## Summary
 
-- `src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体実装モジュールです。
-- session/apply の状態検証、apply worktree の作成、`.cmoc` の非追跡保証、要修正点の収集・改善・修正適用を担当します。
-- 不整合調査用の Structured Output schema、ダーティフラグ管理、コミットとレポート出力の分岐をまとめます。
+- `<cmoc-root>/src/sub_commands/apply/fork.py` は `cmoc apply fork` の本体実装モジュールで、apply 実行の全体制御を担います。
+- session/apply の状態検証、apply worktree 作成、`.cmoc` の非追跡保証、調査・修正ループ、レポート出力までをまとめて扱います。
+- 不整合調査用 Structured Output schema、要修正点の整理、コミット確定、成功時と失敗時の報告分岐もこのファイルの役割です。
 
 ## Read this when
 
-- `src/sub_commands/apply/fork.py` の実装・修正・レビュー・テストを行いたいとき。
+- `<cmoc-root>/src/sub_commands/apply/fork.py` の実装・修正・レビュー・テストを行いたいとき。
 - `session.state` / `apply.state` の前提条件や、`--scope` と反復回数オプションの扱いを確認したいとき。
-- apply worktree 作成、`.cmoc` の非追跡保証、不整合調査・修正ループ、レポート生成までの流れを追いたいとき。
-- 要修正点リストの Structured Output 仕様、改善ループ、エラー時のフォールバックを確認したいとき。
+- apply worktree の作成、`.cmoc` の非追跡保証、不整合調査から修正適用までの流れを追いたいとき。
+- 要修正点リストの Structured Output schema、改善ループ、エラー時のフォールバックを確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply fork` の利用手順や完了条件だけを確認したいときは、正本仕様を読むべきです。
-- `src/sub_commands/apply` 配下の入口構造だけを確認したいときは、親階層の `INDEX.md` を読むべきです。
-- `cmoc apply join` や `cmoc apply abandon` の開始・統合・破棄フローだけを確認したいときは、このファイルではなく各実装モジュールへ進むべきです。
-- `apply` 本体の実行制御ではなく、`oracles` 側の仕様断片や利用手順だけを確認したいときには、この目次は不要です。
+- `cmoc apply fork` の利用手順や完了条件だけを確認したいとき。
+- `src/sub_commands/apply` 配下の入口構造だけを確認したく、親階層の `INDEX.md` で足りるとき。
+- `cmoc apply join` や `cmoc apply abandon` の開始・統合・破棄フローだけを確認したいとき。
+- `apply` の実行制御ではなく、`oracles` 側の仕様断片や利用手順だけを確認したいとき。
 
 ## hash
 
-- 7450c26e7b672910a222d7b4ab1c73f5d6671c0d4711a9a51bac11081b5ba15e
+- 8c51f171b38ec987591235d01ac2f8f7bf77ad570de605c98257d982361a96f5
 
 # `join.py`
 
