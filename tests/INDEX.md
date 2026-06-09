@@ -154,25 +154,25 @@
 
 ## Summary
 
-- この `tests/test_subcommands` ディレクトリの回帰テスト群をまとめる入口で、`apply`、`session`、`review`、CLI 横断の各サブコマンドテストを案内します。
-- 共通ヘルパーの `helpers.py` とパッケージ初期化用の `__init__.py`、各サブコマンド別の `test_*.py` から構成されます。
-- サブコマンドごとの状態遷移、エラー処理、CLI 登録、レポート出力、oracle 検証の確認先を切り分けるための目次です。
+- `tests/test_subcommands` 配下のサブコマンド横断テスト群への入口です。
+- `helpers.py` と `test_core.py` が共通基盤を担い、`test_cli.py` が CLI 入口を検証します。
+- `test_apply_*.py`、`test_session_*.py`、`test_review_oracles.py` が各サブコマンドの回帰テストを分担します。
 
 ## Read this when
 
-- `tests/test_subcommands` 配下のどのテストファイルを読むべきか迷ったとき。
-- `apply`、`session`、`review`、CLI 横断のどの回帰テストが何を守っているかを把握したいとき。
-- 共通ヘルパーや個別テストへの入口を先に整理してから詳細を確認したいとき。
+- `tests/test_subcommands` 配下の回帰テストをどのファイルで扱っているか整理したいとき。
+- CLI 入口、共通実行基盤、`apply` 系、`session` 系、`review oracles` 系のテストの入口を探したいとき。
+- 共通ヘルパーの使い方や、各サブコマンドのテストがどの責務に分かれているかを確認したいとき。
 
 ## Do not read this when
 
-- 読みたい対象の `test_*.py` がすでに分かっていて、個別ファイルへ直接進めるとき。
-- `src/sub_commands` 側の実装や `oracles` の仕様断片だけを確認したいとき。
-- このディレクトリ全体の見取り図ではなく、特定の helper 関数やアサーションだけを追いたいとき。
+- `tests/test_subcommands` 全体ではなく、`test_apply_fork.py` や `test_session_join.py` など個別ファイルだけを確認したいとき。
+- `src/sub_commands/` 側の実装や `oracles/docs/app_specs/sub_commands/` 側の正本仕様だけを読みたいとき。
+- CLI の利用手順や設計方針ではなく、テスト用ヘルパーや共通基盤の詳細だけを追いたいとき。
 
 ## hash
 
-- 1d59203b6c0621b692416f7b87db88b759fbdb9aed29dd5791555f21e38771f3
+- a7f9f44c64f327ba3091902c2aa7d326511a5c31e672f1c54cca033e3782bb20
 
 # `test_timestamps.py`
 

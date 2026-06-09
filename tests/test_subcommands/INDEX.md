@@ -13,7 +13,7 @@
 
 ## Do not read this when
 
-- 個別テストや共通ヘルパーの内容を確認したいとき。
+- `tests/test_subcommands` 配下の個別テストや共通ヘルパーの内容を確認したいとき。
 - サブコマンド実装や CLI 挙動の詳細を追いたいとき。
 - このファイルに公開 API や実装ロジックがある前提で探したいとき。
 
@@ -120,7 +120,7 @@
 
 ## hash
 
-- 61668fba567c6adee3cb9291dc66c07db3e7babe51d994fddfa687d08ec797be
+- ed1c75b6587bf77f9d2ab1f1c5e3bf240ffcb850294b4cede0259d9866ffb9f8
 
 # `test_cli.py`
 

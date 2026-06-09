@@ -82,7 +82,7 @@
 
 ## Read this when
 
-- `src/sub_commands/apply/join.py` の実装・修正・レビュー・テストを行うとき。
+- `<cmoc-root>/src/sub_commands/apply/join.py` の実装・修正・レビュー・テストを行うとき。
 - 完了済みの apply branch を session branch へ取り込む手順と、その前提条件を確認したいとき。
 - `apply.state` が `completed` または `error` のときの扱い、想定外差分の検出と `--force-resolve` の分岐を追いたいとき。
 - `INDEX.md` conflict の自動解消条件や、join 後に apply branch / worktree を削除してよい条件を確認したいとき。
@@ -91,9 +91,9 @@
 
 - `cmoc apply fork` や `cmoc apply abandon` の開始・破棄フローだけを確認したいとき。
 - `cmoc session` 系サブコマンドの開始・統合・破棄だけを確認したいとき。
-- サブコマンドの利用手順や正本仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/apply_join.md` を読むべきです。
-- `src/sub_commands/apply` 配下の入口構造だけを確認したく、`join.py` の処理本体は不要なとき。
+- `cmoc apply join` の利用手順や正本仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/apply_join.md` を読むとき。
+- `src/sub_commands/apply` 配下の入口構造だけを確認したく、`join.py` の処理本体が不要なとき。
 
 ## hash
 
-- b935558dc89799db65b08e98d7c23cb611c189f122486ed6cd60ce1d02910ab0
+- fc12fe60a37eb92f4d9fa3feb0af083cb45d13ff8eff61fb24d24cd8e49e03b6
