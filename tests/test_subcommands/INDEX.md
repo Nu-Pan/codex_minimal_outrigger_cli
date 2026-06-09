@@ -12,8 +12,8 @@
 
 ## Do not read this when
 
-- `tests/test_subcommands/helpers.py` や個別の `test_*.py` の内容を確認したいとき。
-- `cmoc apply`、`cmoc session`、`cmoc review` などのサブコマンド実装や CLI 挙動を追いたいとき。
+- `tests/test_subcommands` 配下の個別の `test_*.py` や `helpers.py` の内容を確認したいとき。
+- `cmoc apply`、`cmoc session`、`cmoc review` など、サブコマンド実装や CLI 挙動を追いたいとき。
 - このファイルに公開 API、定数、実行ロジック、再エクスポートがある前提で探したいとき。
 
 ## hash
