@@ -324,31 +324,70 @@ def test_run_command_treats_apply_unconverged_as_success_exit(
     monkeypatch: MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """apply fork の未収束区分はエラーレポートなしで正常終了する。"""
+    """apply fork の未収束区分は非 0 でもエラーレポート化しない。"""
     repo = _init_repo(tmp_path)
     monkeypatch.chdir(repo)
 
     assert APPLY_FORK_EXIT_CODE_CONVERGED == 0
-    assert APPLY_FORK_EXIT_CODE_UNCONVERGED == APPLY_FORK_EXIT_CODE_CONVERGED
+    assert APPLY_FORK_EXIT_CODE_UNCONVERGED != APPLY_FORK_EXIT_CODE_CONVERGED
+    assert APPLY_FORK_EXIT_CODE_UNCONVERGED != 1
 
     def handler(_repo: Path) -> int:
         """未収束の apply fork 本体と同じ終了コードを返す。"""
         return APPLY_FORK_EXIT_CODE_UNCONVERGED
 
-    run_command(handler)
+    with pytest.raises(typer.Exit) as exit_info:
+        run_command(
+            handler,
+            non_error_exit_codes=(APPLY_FORK_EXIT_CODE_UNCONVERGED,),
+        )
 
     captured = capsys.readouterr()
     log_content = next(
         (repo / ".cmoc" / "logs" / "sub_commands").glob("*.jsonl")
     ).read_text(encoding="utf-8")
+    assert exit_info.value.exit_code == APPLY_FORK_EXIT_CODE_UNCONVERGED
     assert captured.err == ""
     assert "ERROR" not in captured.out
+    assert "サブコマンドがエラー終了しました。" not in captured.out
     assert "# Command completion report" in captured.out
     assert (
         f"subcommand return code: {APPLY_FORK_EXIT_CODE_UNCONVERGED}"
         in captured.out
     )
     assert f'"returncode": {APPLY_FORK_EXIT_CODE_UNCONVERGED}' in log_content
+
+
+def test_apply_fork_cli_allows_unconverged_exit_code(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """apply fork の CLI 経路は未収束終了コードを正常系として runner へ渡す。"""
+    calls: list[dict[str, object]] = []
+
+    def fake_run_command(
+        handler: object,
+        *,
+        command_path: str | None = None,
+        non_error_exit_codes: object = (),
+    ) -> None:
+        """cmoc_apply_impl(repo_root=None) から runner への委譲内容を記録する。"""
+        calls.append(
+            {
+                "handler": handler,
+                "command_path": command_path,
+                "non_error_exit_codes": non_error_exit_codes,
+            }
+        )
+
+    monkeypatch.setattr(apply_module, "run_command", fake_run_command)
+
+    assert apply_module.cmoc_apply_impl() is None
+
+    assert len(calls) == 1
+    assert calls[0]["command_path"] == "cmoc apply fork"
+    assert tuple(calls[0]["non_error_exit_codes"]) == (
+        APPLY_FORK_EXIT_CODE_UNCONVERGED,
+    )
 
 
 def test_run_command_reports_repo_root_resolution_error(

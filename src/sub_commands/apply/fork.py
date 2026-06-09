@@ -64,8 +64,8 @@ ApplyScope = Literal["rolling", "session", "full"]
 _APPLY_SCOPES = {"rolling", "session", "full"}
 APPLY_FORK_EXIT_CODE_SUCCESS = 0
 APPLY_FORK_EXIT_CODE_CONVERGED = APPLY_FORK_EXIT_CODE_SUCCESS
-# 未収束はコマンド実行として正常系であり、区分は report で判別する。
-APPLY_FORK_EXIT_CODE_UNCONVERGED = APPLY_FORK_EXIT_CODE_SUCCESS
+# 未収束はコマンド実行として正常系だが、収束とは終了コードで区別する。
+APPLY_FORK_EXIT_CODE_UNCONVERGED = 2
 
 
 @dataclass(frozen=True)
@@ -280,6 +280,7 @@ def cmoc_apply_impl(
                 scope=scope,
             ),
             command_path="cmoc apply fork",
+            non_error_exit_codes=(APPLY_FORK_EXIT_CODE_UNCONVERGED,),
         )
         return None
 
