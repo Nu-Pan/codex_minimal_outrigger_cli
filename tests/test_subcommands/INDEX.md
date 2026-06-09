@@ -2,18 +2,18 @@
 
 ## Summary
 
-- <cmoc-root>/tests/test_subcommands/__init__.py は tests.test_subcommands を Python パッケージとして成立させるための最小モジュールです。
+- `<cmoc-root>/tests/test_subcommands/__init__.py` は `tests.test_subcommands` を Python パッケージとして成立させるための最小モジュールです。
 - 公開 API、定数、実行ロジック、再エクスポートは持ちません。
 
 ## Read this when
 
-- tests.test_subcommands が Python パッケージとして import できる理由を確認したいとき。
-- <cmoc-root>/tests/test_subcommands の入口だけを把握してから個別テストへ進みたいとき。
+- `tests.test_subcommands` が Python パッケージとして import できる理由を確認したいとき。
+- `<cmoc-root>/tests/test_subcommands` の入口だけを把握してから個別テストへ進みたいとき。
 
 ## Do not read this when
 
-- tests/test_subcommands/helpers.py や個別の test_*.py の内容を確認したいとき。
-- cmoc apply、cmoc session、cmoc review などのサブコマンド実装や CLI 挙動を追いたいとき。
+- `tests/test_subcommands/helpers.py` や個別の `test_*.py` の内容を確認したいとき。
+- `cmoc apply`、`cmoc session`、`cmoc review` などのサブコマンド実装や CLI 挙動を追いたいとき。
 - このファイルに公開 API、定数、実行ロジック、再エクスポートがある前提で探したいとき。
 
 ## hash
