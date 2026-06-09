@@ -1216,23 +1216,33 @@ def _normalize_known_index_routes(repo_root: Path, text: str) -> str:
     """INDEX.md 用 text に含まれる既知の古い表記を現在の表記へ寄せる。"""
     text = _normalize_known_command_names(text)
     text = _normalize_absolute_repository_paths(repo_root, text)
+    text = _normalize_stale_oracle_app_specs_paths(repo_root, text)
+    text = _normalize_bare_repository_paths(repo_root, text)
+    return text
+
+
+def _normalize_stale_oracle_app_specs_paths(repo_root: Path, text: str) -> str:
+    """古い oracle routing path を root token 付きの現在 path へ寄せる。"""
     stale_prefix = "oracles/app_specs/"
-    current_prefix = "oracles/docs/app_specs/"
     if stale_prefix not in text:
         return text
     if (repo_root / "oracles/app_specs").exists():
         return text
     if not (repo_root / "oracles/docs/app_specs").exists():
         return text
+    current_prefix = _root_token_repository_path("oracles/docs/app_specs/")
     return text.replace(stale_prefix, current_prefix)
 
 
 def _normalize_absolute_repository_paths(repo_root: Path, text: str) -> str:
-    """INDEX.md の説明文に混入した repository 絶対 path を相対 path へ寄せる。"""
+    """INDEX.md の説明文に混入した repository 絶対 path を root token 付き path へ寄せる。"""
 
     def replace(match: re.Match[str]) -> str:
         candidate = match.group(0)
-        replacement = _relative_repository_path_for_text(repo_root, candidate)
+        replacement = _root_token_repository_path_for_absolute_text(
+            repo_root,
+            candidate,
+        )
         if replacement is None:
             return candidate
         return replacement
@@ -1249,15 +1259,39 @@ def _normalize_absolute_repository_paths(repo_root: Path, text: str) -> str:
     )
 
 
-def _relative_repository_path_for_text(
+def _normalize_bare_repository_paths(repo_root: Path, text: str) -> str:
+    """INDEX.md の説明文に混入した repo 内 bare relative path を root token 付きへ寄せる。"""
+
+    def replace(match: re.Match[str]) -> str:
+        candidate = match.group(0)
+        replacement = _root_token_repository_path_for_bare_text(
+            repo_root,
+            candidate,
+        )
+        if replacement is None:
+            return candidate
+        return replacement
+
+    # `<cmoc-root>/src` のような root token 付き表記、絶対 path、URL 内の
+    # path 断片は対象外にし、repo 内に実在する裸の相対 path だけを置換する。
+    return re.sub(
+        r"(?<![A-Za-z0-9._~!$&'()*+,;=:@%<>/-])"
+        r"(?:[A-Za-z0-9._~-]+/)+[A-Za-z0-9._~-]+",
+        replace,
+        text,
+    )
+
+
+def _root_token_repository_path_for_absolute_text(
     repo_root: Path,
     candidate: str,
 ) -> str | None:
-    """説明文内の絶対 path が repo 内項目を指すなら repo 相対表記を返す。"""
+    """説明文内の絶対 path が repo 内項目を指すなら root token 付き表記を返す。"""
     candidate_path = Path(candidate)
     resolved_repo_root = repo_root.resolve()
     try:
-        return candidate_path.resolve().relative_to(resolved_repo_root).as_posix()
+        relative = candidate_path.resolve().relative_to(resolved_repo_root)
+        return _root_token_repository_path(relative.as_posix())
     except (OSError, ValueError):
         pass
 
@@ -1265,8 +1299,30 @@ def _relative_repository_path_for_text(
     for start in range(1, len(parts)):
         relative_candidate = Path(*parts[start:])
         if relative_candidate.parts and (repo_root / relative_candidate).exists():
-            return relative_candidate.as_posix()
+            return _root_token_repository_path(relative_candidate.as_posix())
     return None
+
+
+def _root_token_repository_path_for_bare_text(
+    repo_root: Path,
+    candidate: str,
+) -> str | None:
+    """説明文内の裸 relative path が repo 内項目を指すなら root token 付き表記を返す。"""
+    candidate_path = Path(candidate)
+    if (
+        candidate_path.is_absolute()
+        or any(part in {"", ".", ".."} for part in candidate_path.parts)
+        or candidate.startswith("<")
+    ):
+        return None
+    if not (repo_root / candidate_path).exists():
+        return None
+    return _root_token_repository_path(candidate_path.as_posix())
+
+
+def _root_token_repository_path(relative_path: str) -> str:
+    """repo 内 relative path を path_model の root token 付き表記へ変換する。"""
+    return f"<work-root>/{relative_path}"
 
 
 def _normalize_known_command_names(text: str) -> str:
