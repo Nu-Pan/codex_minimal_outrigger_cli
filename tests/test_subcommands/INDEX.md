@@ -2,14 +2,13 @@
 
 ## Summary
 
-- `tests.test_subcommands` を Python パッケージとして成立させるための空の初期化ファイルです。
-- テストケースや共通ヘルパー、公開 API は持たず、パッケージの入口だけを提供します。
+- `tests/test_subcommands/__init__.py` は `tests.test_subcommands` を Python パッケージとして成立させるための最小モジュールです。
+- 公開 API、テストケース、共通ヘルパー、実行ロジック、再エクスポートは持ちません。
 
 ## Read this when
 
-- `tests.test_subcommands` を import できる理由を確認したいとき。
-- 個別の `test_*.py` や `helpers.py` を読む前に、この入口だけ把握したいとき。
-- このファイルが空であることを前提に、ルーティングの目次を作りたいとき。
+- `tests.test_subcommands` が Python パッケージとして import できる理由を確認したいとき。
+- 個別の `test_*.py` や `helpers.py` を読む前に、パッケージの入口だけ把握したいとき。
 
 ## Do not read this when
 
