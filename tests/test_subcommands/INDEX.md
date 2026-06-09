@@ -2,7 +2,7 @@
 
 ## Summary
 
-- `<cmoc-root>/tests/test_subcommands` をテストパッケージとして成立させるための空の初期化ファイルです。
+- `<cmoc-root>/tests/test_subcommands/__init__.py` はテストパッケージを成立させるための空の初期化ファイルです。
 - 同階層のテストモジュールをパッケージとして扱うための境界だけを示し、このファイル自体にはテストロジックはありません。
 
 ## Read this when
