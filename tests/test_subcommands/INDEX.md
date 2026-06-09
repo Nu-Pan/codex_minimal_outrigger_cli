@@ -3,19 +3,19 @@
 ## Summary
 
 - `tests/test_subcommands/__init__.py` は `tests.test_subcommands` を Python パッケージとして成立させるための最小モジュールです。
-- テストケース、ヘルパー関数、実行ロジック、公開 API は持ちません。
+- テストケース、共通ヘルパー、実行ロジック、公開 API は持ちません。
 
 ## Read this when
 
-- このディレクトリがパッケージとして import 可能であることを確認したいとき。
-- 個別の `test_*.py` や `helpers.py` に進む前に、入口だけ把握したいとき。
-- このファイルに共通ロジックやテスト本体が置かれていないことを確認したいとき。
+- `tests.test_subcommands` が Python パッケージとして import 可能であることを確認したいとき。
+- 個別テストやヘルパーへ進む前に、この入口だけ把握したいとき。
+- このファイルが最小のパッケージ初期化用モジュールであることを確認したいとき。
 
 ## Do not read this when
 
-- 個別のサブコマンド回帰テストや共通ヘルパーの内容を確認したいとき。
-- `cmoc` の CLI 実装や `src/sub_commands` 側の仕様を確認したいとき。
-- サブコマンドごとの状態遷移、エラー処理、レポート出力、oracle 検証の詳細を追いたいとき。
+- 個別の `test_*.py` や `helpers.py` の内容を確認したいとき。
+- `tests/test_subcommands` 配下の実行ロジックやサブコマンド仕様を追いたいとき。
+- このファイルに共通ロジックやテスト本体がある前提で探したいとき。
 
 ## hash
 
@@ -166,7 +166,7 @@
 
 ## hash
 
-- 10e331752e90435b54c94e14c84e4263cabb605974191e86e13ef8b98c216ea5
+- e83e4d6bfb860b35948d10505ade0d0a1b896d9e0b165c0172aa33e2ef73ef67
 
 # `test_review_oracles.py`
 
