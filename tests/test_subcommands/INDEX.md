@@ -13,7 +13,7 @@
 
 ## Do not read this when
 
-- `tests/test_subcommands` 配下の個別 `test_*.py` や `helpers.py` の内容を確認したいとき。
+- 個別テストや共通ヘルパーへ進みたいとき。
 - `tests/test_subcommands` の実行ロジックやサブコマンド仕様を追いたいとき。
 - このファイルに共通ロジックやテスト本体がある前提で探したいとき。
 
