@@ -310,6 +310,26 @@ def test_session_fork_from_linked_worktree_records_state_in_main_repo_root(
     assert not (linked / ".cmoc" / "sessions" / f"{session_id}.json").exists()
 
 
+def test_session_fork_from_linked_worktree_ignores_main_cmoc_state_root(
+    tmp_path: Path,
+) -> None:
+    """linked worktree 実行でも state 保存先 main root の `.cmoc` を ignore する。"""
+    repo = _init_repo(tmp_path)
+    main_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    linked = tmp_path / "linked"
+    _git(repo, "worktree", "add", "-b", "feature", str(linked), "HEAD")
+
+    cmoc_session_fork_impl(linked)
+
+    branch_name = _git(linked, "branch", "--show-current").stdout.strip()
+    session_id = branch_name.removeprefix("cmoc/session/")
+    assert (repo / ".cmoc" / "sessions" / f"{session_id}.json").exists()
+    assert _git(repo, "show", f"{main_branch}:.gitignore").stdout == "/.cmoc/\n"
+    assert _git(linked, "show", "HEAD:.gitignore").stdout == "/.cmoc/\n"
+    assert _git(repo, "status", "--porcelain").stdout == ""
+    assert _git(linked, "status", "--porcelain").stdout == ""
+
+
 def test_session_fork_from_linked_worktree_rejects_main_active_session(
     tmp_path: Path,
 ) -> None:
