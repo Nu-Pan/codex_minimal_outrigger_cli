@@ -13,7 +13,7 @@
 
 ## Do not read this when
 
-- 個別の `test_*.py` や `helpers.py` へ直接進みたいとき。
+- 個別の `test_*.py` や `helpers.py` に直接進みたいとき。
 - サブコマンド実装や CLI 挙動の詳細を確認したいとき。
 - このファイルにテスト本体や公開 API がある前提で探したいとき。
 
