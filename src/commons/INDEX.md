@@ -106,7 +106,7 @@
 
 - `src/commons/indexing.py` は `INDEX.md` の生成、再生成、整合性検査をまとめる共通モジュールです。
 - `.gitignore`、`memo`、隠し要素、symlink、バイナリを除外し、既存 `INDEX.md` は再利用可否を判定して差分がなければ書き換えません。
-- Structured Output の JSON schema 検証、排他ロック、原子的な置換、自動コミット、機械的な不整合チェックまで扱います。
+- Structured Output の JSON schema 検証、排他ロック、原子的な置換、自動コミット、不整合チェックまで扱います。
 - `is_maintained_index_path*` と `find_index_inconsistencies` で、どの `INDEX.md` が管理対象かを判定できます。
 
 ## Read this when
@@ -124,7 +124,7 @@
 
 ## hash
 
-- 6058d3035fbcfe211f2bd449485ccef9fe43c4753cc1fa2026a9bbcb820800d8
+- 18b64a5edc2804daf126f7546326a9f324c64df4a73f238faa37a1a510ba392b
 
 # `repo.py`
 

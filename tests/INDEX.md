@@ -78,25 +78,28 @@
 
 ## Summary
 
-- `tests/test_indexing.py` は `src/commons/indexing.py` の `INDEX.md` メンテナンス処理に関する回帰テスト群です。
-- `maintain_indexes` と `is_maintained_index_path` の期待動作、再生成条件、hash 更新、Structured Output 検証を中心に扱います。
-- gitignore、symlink、binary、非 UTF-8 path、並列処理、排他 lock、自動 commit の境界条件も確認します。
+- `tests/test_indexing.py` は `src/commons/indexing.py` の `INDEX.md` メンテナンスと不整合検査の回帰テスト群です。
+- `maintain_indexes` と `find_index_inconsistencies` を中心に、再生成・再利用・整合性確認の境界を押さえます。
+- `.gitignore`、symlink、binary、非 UTF-8 path、並列化、自動 commit などの例外条件も網羅します。
 
 ## Read this when
 
-- `maintain_indexes` と `is_maintained_index_path` の仕様変更や不具合修正を行うとき。
-- gitignore、symlink、binary、非 UTF-8 path、空 directory、特殊文字を含む path の扱いを変更するとき。
-- 並列生成、排他 lock、再試行、既存 `INDEX.md` の再利用・再生成、自動 commit の境界条件を確認したいとき。
+- `maintain_indexes` の生成・再生成・再利用条件を確認したいとき。
+- `is_maintained_index_path` / `is_maintained_index_path_at_commit` の判定規則を確認したいとき。
+- `find_index_inconsistencies` の検査内容や、古い path の正規化を追いたいとき。
+- gitignore、symlink、binary、空 directory、非 UTF-8 path の扱いを確認したいとき。
+- 自動 commit、排他 lock、並列生成、Structured Output 検証の回帰を見たいとき。
 
 ## Do not read this when
 
-- `src/commons/indexing.py` の実装ロジックを直接追いたいとき。
-- `INDEX.md` の生成ルールや `oracles` 全体の仕様だけを確認したいとき。
-- `session` や `apply` など、INDEX 保守以外の機能を調べたいとき。
+- `src/commons/indexing.py` の実装ロジックそのものを追いたいとき。
+- `cmoc indexing` の CLI 引数や本体入口だけを確認したいとき。
+- `oracles/docs/app_specs/indexing.md` の正本仕様だけを確認したいとき。
+- `tests/test_repo.py` や `tests/test_codex.py` など、別の回帰テストを確認したいとき。
 
 ## hash
 
-- 32500e8866562796cbe466707faa2b1b409c8a1549be10aeeae1ba88ef3db08a
+- 05b7c7c0bfa9d174d850a41098c4dd99f48f11662f750ac4e2805696ea35229a
 
 # `test_repo.py`
 
