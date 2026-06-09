@@ -371,7 +371,7 @@ def _unexpected_diffs(repo_root: Path, join_state: _JoinState) -> list[str]:
             for path in entry.paths
             if not _is_session_branch_expected_path(
                 repo_root,
-                join_state.session_branch,
+                join_state.oracle_snapshot_commit,
                 path,
             )
         ]
@@ -470,12 +470,16 @@ def _is_apply_branch_forbidden_path(path: str) -> bool:
 
 def _is_session_branch_expected_path(
     repo_root: Path,
-    session_branch: str,
+    oracle_snapshot_commit: str,
     path: str,
 ) -> bool:
     """session branch 側で利用者が編集し得る想定内 path か判定する。"""
     return (
-        _is_session_branch_oracle_path_at_commit(repo_root, session_branch, path)
+        _is_session_branch_oracle_path_at_commit(
+            repo_root,
+            oracle_snapshot_commit,
+            path,
+        )
         or _is_memo_path(path)
         or _is_index_path(path)
     )
@@ -555,7 +559,7 @@ def _force_resolve_unexpected_diffs(
             ),
             lambda path: _is_session_branch_expected_path(
                 repo_root,
-                join_state.session_branch,
+                join_state.oracle_snapshot_commit,
                 path,
             ),
         ),
