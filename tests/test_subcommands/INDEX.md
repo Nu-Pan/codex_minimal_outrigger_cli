@@ -7,15 +7,15 @@
 
 ## Read this when
 
-- `tests.test_subcommands` が Python パッケージとして import 可能であることを確認したいとき。
+- `tests.test_subcommands` を Python パッケージとして import できることを確認したいとき。
 - 個別テストやヘルパーへ進む前に、この入口だけ把握したいとき。
 - このファイルが最小のパッケージ初期化用モジュールであることを確認したいとき。
 
 ## Do not read this when
 
-- 個別テストや共通ヘルパーへ進みたいとき。
-- `tests/test_subcommands` の実行ロジックやサブコマンド仕様を追いたいとき。
-- このファイルに共通ロジックやテスト本体がある前提で探したいとき。
+- `tests.test_subcommands` の個別テストや共通ヘルパーへ進みたいとき。
+- サブコマンドの実装や実行ロジックを確認したいとき。
+- このファイルにテスト本体や公開 API がある前提で探したいとき。
 
 ## hash
 
