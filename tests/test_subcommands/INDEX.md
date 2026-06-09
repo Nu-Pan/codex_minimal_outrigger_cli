@@ -13,8 +13,8 @@
 
 ## Do not read this when
 
-- 個別の `test_*.py` や `helpers.py` の内容を確認したいとき。
-- `tests/test_subcommands` 配下の実行ロジックやサブコマンド仕様を追いたいとき。
+- `tests/test_subcommands` 配下の個別 `test_*.py` や `helpers.py` の内容を確認したいとき。
+- `tests/test_subcommands` の実行ロジックやサブコマンド仕様を追いたいとき。
 - このファイルに共通ロジックやテスト本体がある前提で探したいとき。
 
 ## hash
