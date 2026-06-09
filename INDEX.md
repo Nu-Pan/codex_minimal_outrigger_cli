@@ -193,7 +193,7 @@
 
 ## hash
 
-- d64898bb58c1a0248bd949449150d9de34d88862b044116509865b73348e21cc
+- c7d25fbf0c0fa890fc633437c7cfcf76ee6983ecfe22c0d1df6089b73e44c9de
 
 # `test.sh`
 
@@ -222,24 +222,23 @@
 
 ## Summary
 
-- `<cmoc-root>/tests` ディレクトリのルーティング文書で、共通設定と各回帰テスト群への入口をまとめる目次です。
-- `conftest.py`、`test_codex.py`、`test_file_naming.py`、`test_indexing.py`、`test_repo.py`、`test_report_files.py`、`test_timestamps.py`、`test_subcommands/` へ案内します。
-- 個別のテスト内容を読む前に、どのファイルがどの責務を持つかを切り分けるための導線です。
+- この `tests` ディレクトリのルーティング文書で、共通設定、共通回帰テスト、`test_subcommands/` への入口を案内します。
+- `conftest.py`、`test_codex.py`、`test_indexing.py`、`test_repo.py`、`test_report_files.py`、`test_timestamps.py` をそれぞれ個別の確認先として切り分けます。
+- `test_subcommands/` 配下のサブコマンド別回帰テストと共通ヘルパーへの見取り図です。
 
 ## Read this when
 
-- `<cmoc-root>/tests` 配下の各テストファイルが何を検証しているかを俯瞰したいとき。
-- pytest 共通設定、コア回帰テスト、サブコマンド別テストの入口を整理したいとき。
-- どのテストファイルを読むべきか迷っていて、最初の案内が欲しいとき。
-- `tests` 配下の個別 `INDEX.md` へ進む前に、担当範囲の切り分けをしたいとき。
+- pytest の共通設定や `src` の import path 追加の有無を確認したいとき。
+- `commons.codex`、`commons.indexing`、`commons.repo`、`commons.report_files`、`commons.timestamps` のどの回帰テストを読むべきか整理したいとき。
+- `tests/test_subcommands` 配下の `apply`、`session`、`review`、CLI 横断のテストに進む前に入口を把握したいとき。
+- テスト全体の見取り図を先に理解してから個別ファイルへ進みたいとき。
 
 ## Do not read this when
 
-- 目的のテストファイルがすでに分かっていて、`<cmoc-root>/tests/conftest.py` や各 `test_*.py` へ直接進めるとき。
-- `tests` 全体の見取り図ではなく、`<cmoc-root>/tests/test_subcommands/INDEX.md` など下位の目次だけを確認したいとき。
-- 本番実装や `src/` 側のロジックを追いたいとき。
-- pytest 共通設定や回帰テストの担当範囲ではなく、`README.md` や運用ルールだけを確認したいとき。
+- 個別の `test_*.py` がすでに分かっていて、そのファイルへ直接進めるとき。
+- `src/commons` や `src/sub_commands` の実装本体だけを追いたいとき。
+- `oracles` の仕様断片やリポジトリ運用ルールだけを確認したいとき。
 
 ## hash
 
-- eed344b70bc8c3c7b649d2d1f5070df928dab257712a1449a452effae29c89c6
+- be6e606f086b2006ff7f6f0489273eef2360c79ac9e49ea822c44eec1c75d390

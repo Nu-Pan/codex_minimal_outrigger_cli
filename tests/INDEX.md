@@ -116,13 +116,12 @@
 ## Do not read this when
 
 - `src/commons/repo.py` の実装ロジックそのものを追いたいとき。
-- 個別の git ユーティリティや helper の使い方だけを確認したいとき。
+- 個別の git ユーティリティやヘルパー関数の使い方だけを確認したいとき。
 - `tests/test_codex.py` や `tests/test_indexing.py` など、別の回帰テスト群を確認したいとき。
-- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを調べたいとき。
 
 ## hash
 
-- 13348b88581e6c58d811d998c2f6a0050ecf797f50b0478586ced937b28c547b
+- 424e1cdace0552bac58b0ca8412be6a45313be1e637cad159d71ba650ccb34da
 
 # `test_report_files.py`
 
