@@ -516,14 +516,14 @@ def test_indexing_impl_maintains_oracles_indexes(
     assert _git(repo, "status", "--porcelain").stdout == ""
 
 
-def test_indexing_impl_runs_maintenance_on_dirty_repo(
+def test_indexing_impl_rejects_dirty_repo_before_maintenance(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """`cmoc indexing` は既存差分があっても INDEX メンテナンスへ委譲する。"""
+    """`cmoc indexing` は既存差分があれば INDEX メンテナンス前にエラーにする。"""
     repo = _init_repo(tmp_path)
-    (repo / "dirty.txt").write_text("dirty\n", encoding="utf-8")
+    dirty_path = repo / "dirty.txt"
+    dirty_path.write_text("dirty\n", encoding="utf-8")
     maintained_roots: list[Path] = []
 
     def fake_maintain_indexes(repo_root: Path) -> bool:
@@ -536,11 +536,12 @@ def test_indexing_impl_runs_maintenance_on_dirty_repo(
         fake_maintain_indexes,
     )
 
-    cmoc_indexing_impl(repo)
+    with pytest.raises(CmocError) as error:
+        cmoc_indexing_impl(repo)
 
-    captured = capsys.readouterr()
-    assert maintained_roots == [repo]
-    assert "committed INDEX.md maintenance changes" in captured.out
+    assert maintained_roots == []
+    assert "未コミットの変更があります。" in error.value.message
+    assert str(dirty_path.resolve()) in error.value.detail
 
 
 def test_init_repairs_negated_cmoc_ignore_rule_and_commits_it(
