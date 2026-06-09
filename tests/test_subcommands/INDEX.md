@@ -4,10 +4,11 @@
 
 - `tests/test_subcommands/__init__.py` は `tests.test_subcommands` を Python パッケージとして成立させるための空ファイルです。
 - このファイルには実装ロジックやテストケースはなく、同ディレクトリの `test_*.py` や `helpers.py` を import 可能にする役割だけを持ちます。
+- このファイル単体ではサブコマンド仕様や回帰テストの振る舞いは分かりません。
 
 ## Read this when
 
-- `tests/test_subcommands` をパッケージとして成立させる意図を確認したいとき。
+- `tests/test_subcommands` を Python パッケージとして成立させる意図を確認したいとき。
 - このディレクトリに共通の実装や補助ロジックが置かれていないことを確認したいとき。
 - 個別テストへ進む前に、ディレクトリの土台だけ把握したいとき。
 
