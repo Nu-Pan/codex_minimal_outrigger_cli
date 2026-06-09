@@ -45,11 +45,11 @@ def cmoc_session_fork_impl(repo_root: Path | None = None) -> None:
             f"現在の branch: {home_branch}",
         )
     start_commit = head_commit(repo_root)
+    state_root = session_state_root(repo_root)
     assert_no_uncommitted_changes(repo_root)
 
     start_step(timer, 2, 4, ".cmoc ignore 確認")
-    ensure_cmoc_ignored_and_committed(repo_root)
-    assert_no_uncommitted_changes(repo_root)
+    _ensure_session_roots_cmoc_ignored_and_clean(repo_root, state_root)
 
     active_session_ids = active_session_ids_for_home_branch(
         repo_root,
@@ -58,7 +58,6 @@ def cmoc_session_fork_impl(repo_root: Path | None = None) -> None:
     _assert_no_active_session(active_session_ids)
 
     start_step(timer, 3, 4, "session branch 作成")
-    state_root = session_state_root(repo_root)
     with _locked_session_creation(state_root):
         active_session_ids = active_session_ids_for_home_branch(
             repo_root,
@@ -73,11 +72,11 @@ def cmoc_session_fork_impl(repo_root: Path | None = None) -> None:
         start_step(timer, 4, 4, "session 状態記録")
         session_state = initial_session_state(home_branch, start_commit)
         try:
-            ensure_cmoc_ignored_and_committed(
+            _ensure_session_roots_cmoc_ignored_and_clean(
                 repo_root,
+                state_root,
                 message="Initialize cmoc session branch",
             )
-            assert_no_uncommitted_changes(repo_root)
             write_session_state(
                 state_root,
                 session_id,
@@ -95,6 +94,21 @@ def cmoc_session_fork_impl(repo_root: Path | None = None) -> None:
             )
     print(f"created session branch: {branch_name}")
     print(f"session home branch: {home_branch}")
+
+
+def _ensure_session_roots_cmoc_ignored_and_clean(
+    repo_root: Path,
+    state_root: Path,
+    message: str = "Initialize cmoc",
+) -> None:
+    """呼び出し元 worktree と state 保存先の `.cmoc` ignore 保証を行う。"""
+    ensure_cmoc_ignored_and_committed(repo_root, message=message)
+    assert_no_uncommitted_changes(repo_root)
+    if repo_root.resolve() == state_root.resolve():
+        return
+    assert_no_uncommitted_changes(state_root)
+    ensure_cmoc_ignored_and_committed(state_root, message=message)
+    assert_no_uncommitted_changes(state_root)
 
 
 def _assert_no_active_session(active_session_ids: list[str]) -> None:

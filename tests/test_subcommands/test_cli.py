@@ -13,7 +13,7 @@ def test_main_typer_functions_delegate_only_to_impls() -> None:
     assert "def _run_command" not in source
     assert "_run_command(" not in source
     assert "cmoc_init_impl()" in source
-    assert "cmoc_indexing_impl(check=check, index_roots=index_roots)" in source
+    assert "cmoc_indexing_impl()" in source
     assert "cmoc_session_fork_impl()" in source
     assert "importlib.util" not in source
     assert "spec_from_file_location" not in source
@@ -108,7 +108,7 @@ def test_cmoc_review_oracles_command_and_compat_alias_are_registered() -> None:
     assert singular.stderr == ""
 
 
-def test_cmoc_indexing_command_is_registered_with_check_options() -> None:
+def test_cmoc_indexing_command_is_registered_without_public_options() -> None:
     """`cmoc indexing` は root 直下の明示サブコマンドとして登録される。"""
     repo_root = Path(__file__).resolve().parents[2]
     env = {"PYTHONPATH": str(repo_root / "src")}
@@ -133,8 +133,8 @@ def test_cmoc_indexing_command_is_registered_with_check_options() -> None:
 
     assert help_result.returncode == 0
     assert "Usage: cmoc indexing [OPTIONS]" in help_result.stdout
-    assert "--check" in help_result.stdout
-    assert "--index-root" in help_result.stdout
+    assert "--check" not in help_result.stdout
+    assert "--index-root" not in help_result.stdout
     assert help_result.stderr == ""
     assert extra_arg_result.returncode == 2
     assert extra_arg_result.stderr == ""
@@ -181,8 +181,8 @@ def test_cmoc_apply_fork_repeat_validation_reports_oracle_option_names() -> None
     )
 
 
-def test_cmoc_review_oracles_rejects_too_many_refine_findings_loops() -> None:
-    """CLI 入口でも所見リスト検証ループの最大 3 回制限を検証する。"""
+def test_cmoc_review_oracles_accepts_refine_findings_loop_above_default() -> None:
+    """CLI 入口では所見リスト検証ループのデフォルト 3 超を parse 時に拒否しない。"""
     repo_root = Path(__file__).resolve().parents[2]
     result = subprocess.run(
         [
@@ -205,7 +205,7 @@ def test_cmoc_review_oracles_rejects_too_many_refine_findings_loops() -> None:
     assert result.returncode != 0
     assert result.stderr == ""
     _assert_markdown_error_report(result.stdout)
-    assert "4 is not in the range 0<=x<=3" in result.stdout
+    assert "4 is not in the range 0<=x<=3" not in result.stdout
 
 
 def test_cmoc_session_and_apply_workflow_commands_are_registered() -> None:

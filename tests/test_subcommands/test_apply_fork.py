@@ -14,6 +14,7 @@ def test_apply_returns_complete_when_no_discrepancies(
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _write_flat_oracles_index(oracle_root, "spec.md")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "oracle")
     session_head = _git(repo, "rev-parse", "HEAD").stdout.strip()
@@ -72,7 +73,7 @@ def test_apply_returns_complete_when_no_discrepancies(
     assert exit_code == 0
     assert len(reports) == 1
     assert state["apply"]["state"] == "completed"
-    assert event_order == ["report 書き込み", "apply 完了記録"]
+    assert event_order == ["apply 完了記録", "report 書き込み"]
     assert state["apply"]["apply_branch"].startswith(
         "cmoc/apply/2026-05-10_22-21_10_000000123/"
     )
@@ -188,6 +189,7 @@ def test_apply_investigates_file_origin_targets_in_parallel(
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _write_flat_oracles_index(oracle_root, "spec.md")
     (repo / "app.py").write_text("print('hello')\n", encoding="utf-8")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "targets")
@@ -252,6 +254,7 @@ def test_apply_scope_rolling_derives_last_joined_apply_join_commit(
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "old.md").write_text("old spec\n", encoding="utf-8")
+    _write_flat_oracles_index(oracle_root, "old.md")
     (repo / "old.py").write_text("print('old')\n", encoding="utf-8")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "old targets")
@@ -274,6 +277,7 @@ def test_apply_scope_rolling_derives_last_joined_apply_join_commit(
     write_session_state(repo, "2026-05-10_22-21_10_000000123", state)
 
     (oracle_root / "new.md").write_text("new spec\n", encoding="utf-8")
+    _write_flat_oracles_index(oracle_root, "new.md", "old.md")
     (repo / "new.py").write_text("print('new')\n", encoding="utf-8")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "new targets")
@@ -337,12 +341,14 @@ def test_apply_scope_target_selection_supports_session_and_full(
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "old.md").write_text("old spec\n", encoding="utf-8")
+    _write_flat_oracles_index(oracle_root, "old.md")
     (repo / "old.py").write_text("print('old')\n", encoding="utf-8")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "old targets")
     last_joined_snapshot = _git(repo, "rev-parse", "HEAD").stdout.strip()
 
     (oracle_root / "new.md").write_text("new spec\n", encoding="utf-8")
+    _write_flat_oracles_index(oracle_root, "new.md", "old.md")
     (repo / "new.py").write_text("print('new')\n", encoding="utf-8")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "new targets")
@@ -409,6 +415,7 @@ def test_apply_commits_index_changes_when_no_discrepancies(
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _write_flat_oracles_index(oracle_root, "spec.md")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "oracle")
     session_head = _git(repo, "rev-parse", "HEAD").stdout.strip()
@@ -509,6 +516,7 @@ def test_apply_report_records_session_head_at_finish_when_session_advances(
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _write_flat_oracles_index(oracle_root, "spec.md")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "oracle")
     session_head_at_start = _git(repo, "rev-parse", "HEAD").stdout.strip()
@@ -583,6 +591,7 @@ def test_apply_uses_investigate_repeat_option_for_loop_limit(
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _write_flat_oracles_index(oracle_root, "spec.md")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "oracle")
 
@@ -638,7 +647,8 @@ def test_apply_reinvestigates_files_changed_by_previous_fix(
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
-    _git(repo, "add", "oracles/spec.md")
+    _write_flat_oracles_index(oracle_root, "spec.md")
+    _git(repo, "add", "oracles/spec.md", "oracles/INDEX.md")
     _git(repo, "commit", "-m", "oracle")
 
     monkeypatch.setattr(
@@ -701,6 +711,7 @@ def test_apply_keeps_empty_oracle_dirty_set_when_only_implementation_evidence(
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _write_flat_oracles_index(oracle_root, "spec.md")
     (repo / "app.py").write_text("base\n", encoding="utf-8")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "targets")
@@ -764,6 +775,7 @@ def test_apply_improoves_fixing_list_until_same_result_or_limit(
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _write_flat_oracles_index(oracle_root, "spec.md")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "oracle")
 
@@ -833,6 +845,7 @@ def test_apply_improove_fixing_list_uses_oracle_snapshot_base(
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "old.md").write_text("old spec\n", encoding="utf-8")
+    _write_flat_oracles_index(oracle_root, "old.md")
     (repo / "old.py").write_text("print('old')\n", encoding="utf-8")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "old targets")
@@ -855,6 +868,7 @@ def test_apply_improove_fixing_list_uses_oracle_snapshot_base(
     write_session_state(repo, "2026-05-10_22-21_10_000000123", state)
 
     (oracle_root / "new.md").write_text("new spec\n", encoding="utf-8")
+    _write_flat_oracles_index(oracle_root, "new.md", "old.md")
     (repo / "new.py").write_text("print('new')\n", encoding="utf-8")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "new targets")
@@ -919,6 +933,7 @@ def test_apply_stops_improoving_fixing_list_when_it_becomes_empty(
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _write_flat_oracles_index(oracle_root, "spec.md")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "oracle")
 
@@ -979,6 +994,7 @@ def test_apply_fills_discrepancy_head_commit_hash(
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _write_flat_oracles_index(oracle_root, "spec.md")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "oracle")
     expected_head = _git(repo, "rev-parse", "HEAD").stdout.strip()
@@ -1033,6 +1049,7 @@ def test_apply_commits_each_discrepancy_before_next_codex_call(
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _write_flat_oracles_index(oracle_root, "spec.md")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "oracle")
 
@@ -1339,6 +1356,7 @@ def test_apply_marks_error_when_success_report_generation_fails(
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _write_flat_oracles_index(oracle_root, "spec.md")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "oracle")
     session_head = _git(repo, "rev-parse", "HEAD").stdout.strip()
@@ -1411,6 +1429,86 @@ def test_apply_marks_error_when_success_report_generation_fails(
     ).exists()
 
 
+def test_apply_marks_error_before_success_report_when_completion_record_fails(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """完了 state 更新失敗時は成功 report を保存せず error として記録する。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _write_flat_oracles_index(oracle_root, "spec.md")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "oracle")
+
+    monkeypatch.setattr(
+        "sub_commands.apply.fork.maintain_indexes",
+        lambda repo_root: False,
+    )
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """調査は収束させ、error report の変更要約も返す。"""
+        if kwargs.get("purpose") == "apply 変更要約":
+            return _change_summary_json()
+        if kwargs.get("expect_json") is True:
+            return '{"git_head_commit_hash": null, "fixing_points": []}'
+        return "No changes"
+
+    success_report_called = False
+
+    def fake_write_apply_report(*args: object, **kwargs: object) -> Path:
+        """完了記録後の成功 report へ進んでいないことを検証する。"""
+        nonlocal success_report_called
+        success_report_called = True
+        raise AssertionError("success report must not be written")
+
+    def fake_mark_apply_completed(*args: object, **kwargs: object) -> None:
+        """session state の completed 永続化失敗を模擬する。"""
+        raise RuntimeError("fake completion record failure")
+
+    monkeypatch.setattr("sub_commands.apply.fork.run_codex_exec", fake_codex)
+    monkeypatch.setattr(
+        apply_module,
+        "_write_apply_report",
+        fake_write_apply_report,
+    )
+    monkeypatch.setattr(
+        apply_module,
+        "_mark_apply_completed",
+        fake_mark_apply_completed,
+    )
+
+    with pytest.raises(RuntimeError, match="fake completion record failure"):
+        cmoc_apply_impl(repo)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
+        ).read_text(encoding="utf-8")
+    )
+    reports = list(
+        (repo / ".cmoc" / "reports" / "apply" / "fork").glob("*.md")
+    )
+    report_texts = [report.read_text(encoding="utf-8") for report in reports]
+
+    assert not success_report_called
+    assert state["apply"]["state"] == "error"
+    assert len(reports) == 1
+    assert any('result: "エラー"' in text for text in report_texts)
+    assert any(
+        "- Failed stage: `apply 完了記録`" in text for text in report_texts
+    )
+    assert not (
+        repo
+        / ".cmoc"
+        / "sessions"
+        / "2026-05-10_22-21_10_000000123.apply_process.json"
+    ).exists()
+
+
 def test_apply_marks_error_when_final_output_fails(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -1422,6 +1520,7 @@ def test_apply_marks_error_when_final_output_fails(
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _write_flat_oracles_index(oracle_root, "spec.md")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "oracle")
 
@@ -1656,6 +1755,7 @@ def test_apply_writes_error_report_when_midway_stage_fails(
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _write_flat_oracles_index(oracle_root, "spec.md")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "oracle")
 
@@ -2277,7 +2377,7 @@ def test_apply_commits_untracked_oracle_changes_after_cmoc_guarantee(
         cmoc_apply_impl(repo)
 
     assert "未コミットの変更" in error.value.message
-    assert "oracles/" in error.value.detail
+    assert str(oracle_root.resolve()) in error.value.detail
     assert _git(repo, "log", "-1", "--pretty=%s").stdout.strip() == "initial"
     assert _git(repo, "status", "--porcelain", "--", "oracles").stdout == (
         "?? oracles/\n"
@@ -2402,6 +2502,39 @@ def test_commit_all_changes_rejects_committed_maintained_oracles_index(
     )
 
 
+def test_forbidden_path_check_rejects_reverted_oracles_change_in_commit_range(
+    tmp_path: Path,
+) -> None:
+    """最終差分が空でも、範囲内の oracle 変更 commit は拒否する。"""
+    repo = _init_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md")
+    _git(repo, "commit", "-m", "add oracle")
+    before_commit = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    (oracle_root / "spec.md").write_text("changed\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md")
+    _git(repo, "commit", "-m", "change oracle")
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    _git(repo, "add", "oracles/spec.md")
+    _git(repo, "commit", "-m", "revert oracle")
+
+    assert (
+        _git(repo, "diff", "--name-only", f"{before_commit}..HEAD").stdout == ""
+    )
+    assert apply_module._changed_paths_since_for_forbidden_check(
+        repo,
+        before_commit,
+    ) == ["oracles/spec.md", "oracles/spec.md"]
+    with pytest.raises(CmocError) as error:
+        apply_module._assert_forbidden_paths_unchanged_since(repo, before_commit)
+
+    assert "編集禁止パス" in error.value.message
+    assert "oracles/spec.md" in error.value.detail
+
+
 def test_apply_index_maintenance_excludes_oracles_root(
     tmp_path: Path,
 ) -> None:
@@ -2452,35 +2585,28 @@ def test_maintain_apply_indexes_leaves_oracles_index_unchanged(
     ).stdout
 
 
-def test_maintain_apply_indexes_does_not_create_missing_oracles_index(
+def test_maintain_apply_indexes_rejects_missing_oracles_index(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """apply 用 INDEX メンテナンスは欠落した oracles/INDEX.md も作らない。"""
+    """apply は欠落した oracles/INDEX.md を更新せずに拒否する。"""
     repo = _init_repo(tmp_path)
     oracle_root = repo / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
 
-    def fake_codex(*args: object, **kwargs: object) -> str:
-        """INDEX 生成用の最小 Structured Output を返す。"""
-        return json.dumps(
-            {
-                "summary": ["summary"],
-                "read_this_when": ["read"],
-                "do_not_read_this_when": ["skip"],
-            }
-        )
+    def fail_codex(*args: object, **kwargs: object) -> str:
+        """oracles 不整合検出後は INDEX 生成へ進まない。"""
+        raise AssertionError("codex exec should not run")
 
-    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
-    monkeypatch.setattr(
-        "sub_commands.apply.fork.find_index_inconsistencies",
-        lambda *args, **kwargs: [],
-    )
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fail_codex)
 
-    changed = apply_module._maintain_apply_indexes(repo)
+    with pytest.raises(CmocError) as error:
+        apply_module._maintain_apply_indexes(repo)
 
-    assert changed is True
+    assert "編集禁止パス配下の INDEX.md" in error.value.message
+    assert "`cmoc indexing`" in "\n".join(error.value.actions)
+    assert "oracles/INDEX.md: missing INDEX.md" in error.value.detail
     assert not (oracle_root / "INDEX.md").exists()
     assert "oracles/INDEX.md" not in _git(
         repo,
@@ -2514,6 +2640,7 @@ def test_maintain_apply_indexes_rejects_stale_excluded_oracles_index(
         apply_module._maintain_apply_indexes(repo)
 
     assert "編集禁止パス配下の INDEX.md" in error.value.message
+    assert "`cmoc indexing`" in "\n".join(error.value.actions)
     assert "oracles/INDEX.md" in error.value.detail
     assert (oracle_root / "INDEX.md").read_text(encoding="utf-8") == (
         "manual oracle index\n"

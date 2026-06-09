@@ -108,7 +108,7 @@ def test_apply_abandon_accepts_apply_branch_worktree(
 def test_apply_abandon_relocates_from_apply_branch_before_cleanup(
     tmp_path: Path,
 ) -> None:
-    """apply branch からの実行時は session branch の worktree へ移動してから消す。"""
+    """apply branch からの実行時もプロセス cwd は変更せず cleanup する。"""
     repo = _init_repo(tmp_path)
     home_branch = _git(repo, "branch", "--show-current").stdout.strip()
     _checkout_session_branch(repo)
@@ -119,9 +119,11 @@ def test_apply_abandon_relocates_from_apply_branch_before_cleanup(
         oracle_snapshot,
     )
     _git(repo, "switch", home_branch)
+    original_cwd = Path.cwd()
 
     cmoc_apply_abandon_impl(apply_worktree)
 
+    assert Path.cwd() == original_cwd
     assert _git(repo, "branch", "--show-current").stdout.strip() == session_branch
     assert _git(repo, "branch", "--list", apply_branch).stdout == ""
     assert not apply_worktree.exists()
@@ -199,6 +201,7 @@ def test_apply_abandon_does_not_check_unrelated_owner_worktree(
     session_worktree = tmp_path / "session-worktree"
     _git(repo, "worktree", "add", str(session_worktree), session_branch)
     (repo / "home-dirty.txt").write_text("dirty\n", encoding="utf-8")
+    original_cwd = Path.cwd()
 
     cmoc_apply_abandon_impl(apply_worktree)
 
@@ -211,6 +214,7 @@ def test_apply_abandon_does_not_check_unrelated_owner_worktree(
     assert _git(repo, "branch", "--list", apply_branch).stdout == ""
     assert not apply_worktree.exists()
     assert (repo / "home-dirty.txt").exists()
+    assert Path.cwd() == original_cwd
 
 
 def test_apply_abandon_rejects_dirty_owner_before_session_switch(

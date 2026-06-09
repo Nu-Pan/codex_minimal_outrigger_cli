@@ -93,11 +93,11 @@ def test_apply_join_rejects_cross_session_apply_branch_without_merge(
     assert other_apply_worktree.exists()
 
 
-def test_apply_join_cleans_worktree_created_under_linked_worktree_repo_root(
+def test_apply_join_cleans_worktree_created_under_main_repo_root_from_linked(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """linked worktree で fork した apply run は linked repo-root 側で cleanup する。"""
+    """linked worktree で fork した apply run は main repo-root 側で cleanup する。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
@@ -110,7 +110,8 @@ def test_apply_join_cleans_worktree_created_under_linked_worktree_repo_root(
     oracle_root = linked / "oracles"
     oracle_root.mkdir()
     (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
-    _git(linked, "add", "oracles/spec.md")
+    _write_flat_oracles_index(oracle_root, "spec.md")
+    _git(linked, "add", "oracles/spec.md", "oracles/INDEX.md")
     _git(linked, "commit", "-m", "add oracle")
 
     monkeypatch.setattr(
@@ -128,28 +129,30 @@ def test_apply_join_cleans_worktree_created_under_linked_worktree_repo_root(
 
     exit_code = cmoc_apply_impl(linked)
 
-    state_path = linked / ".cmoc" / "sessions" / f"{session_id}.json"
+    state_path = repo / ".cmoc" / "sessions" / f"{session_id}.json"
     state = json.loads(state_path.read_text(encoding="utf-8"))
     apply_branch = state["apply"]["apply_branch"]
     oracle_snapshot = state["apply"]["oracle_snapshot_commit"]
     apply_run_id = apply_branch.rsplit("/", 1)[1]
-    apply_worktree = linked / ".cmoc" / "worktrees" / session_id / apply_run_id
-    main_apply_worktree = repo / ".cmoc" / "worktrees" / session_id / apply_run_id
+    apply_worktree = repo / ".cmoc" / "worktrees" / session_id / apply_run_id
+    linked_apply_worktree = linked / ".cmoc" / "worktrees" / session_id / apply_run_id
     reports = list(
-        (linked / ".cmoc" / "reports" / "apply" / "fork").glob("*.md")
+        (repo / ".cmoc" / "reports" / "apply" / "fork").glob("*.md")
     )
     assert exit_code == 0
     assert apply_worktree.is_dir()
-    assert not main_apply_worktree.exists()
+    assert not linked_apply_worktree.exists()
     assert len(reports) == 1
     assert f'apply_worktree_path: "{apply_worktree}"' in reports[0].read_text(
         encoding="utf-8"
     )
 
     _git(linked, "switch", session_branch)
+    original_cwd = Path.cwd()
     cmoc_apply_join_impl(linked)
 
     state = json.loads(state_path.read_text(encoding="utf-8"))
+    assert Path.cwd() == original_cwd
     assert state["apply"] == {
         "apply_branch": None,
         "oracle_snapshot_commit": None,
@@ -360,6 +363,43 @@ def test_apply_join_ignores_worktree_local_log_cmoc(
     assert not apply_worktree.exists()
 
 
+def test_apply_join_from_apply_branch_rejects_dirty_session_linked_worktree(
+    tmp_path: Path,
+) -> None:
+    """apply branch からの join も実際の session worktree の dirty を拒否する。"""
+    repo = _init_repo(tmp_path)
+    home_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    session_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    _git(repo, "switch", home_branch)
+    session_worktree = tmp_path / "session-linked"
+    _git(repo, "worktree", "add", str(session_worktree), session_branch)
+    (session_worktree / "dirty.txt").write_text("dirty\n", encoding="utf-8")
+    (apply_worktree / "feature.txt").write_text("implemented\n", encoding="utf-8")
+    _git(apply_worktree, "add", "feature.txt")
+    _git(apply_worktree, "commit", "-m", "implement feature")
+
+    with pytest.raises(CmocError) as error_info:
+        cmoc_apply_join_impl(apply_worktree)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert "未コミットの変更" in error_info.value.message
+    assert str((session_worktree / "dirty.txt").resolve()) in error_info.value.detail
+    assert not (session_worktree / "feature.txt").exists()
+    assert state["apply"]["state"] == "completed"
+    assert _git(repo, "branch", "--list", apply_branch).stdout.strip()
+    assert apply_worktree.exists()
+
+
 def test_apply_join_stops_on_unexpected_diff_in_normal_mode(
     tmp_path: Path,
 ) -> None:
@@ -392,6 +432,33 @@ def test_apply_join_stops_on_unexpected_diff_in_normal_mode(
         ).read_text(encoding="utf-8")
     )
     assert state["apply"]["state"] == "completed"
+    assert _git(repo, "branch", "--list", apply_branch).stdout.strip()
+    assert apply_worktree.exists()
+
+
+def test_apply_join_stops_on_apply_branch_forbidden_deletion(
+    tmp_path: Path,
+) -> None:
+    """apply branch 側の禁止 path 削除も想定外差分として停止する。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    _git(apply_worktree, "rm", "oracles/spec.md")
+    _git(apply_worktree, "commit", "-m", "delete oracle unexpectedly")
+
+    with pytest.raises(CmocError) as error_info:
+        cmoc_apply_join_impl(repo)
+
+    assert "想定外の差分" in error_info.value.message
+    assert (
+        f"{apply_branch}: {json.dumps((repo / 'oracles/spec.md').resolve().as_posix())}"
+        in error_info.value.detail
+    )
+    assert (repo / "oracles" / "spec.md").read_text(encoding="utf-8") == "spec\n"
     assert _git(repo, "branch", "--list", apply_branch).stdout.strip()
     assert apply_worktree.exists()
 
@@ -779,6 +846,35 @@ def test_apply_join_stops_on_session_branch_ignored_oracle_diff(
     )
 
 
+def test_apply_join_stops_on_session_branch_implementation_deletion(
+    tmp_path: Path,
+) -> None:
+    """session branch 側の実装ファイル削除も想定外差分として停止する。"""
+    repo = _init_repo(tmp_path)
+    (repo / "app.py").write_text("print('base')\n", encoding="utf-8")
+    _git(repo, "add", "app.py")
+    _git(repo, "commit", "-m", "add implementation file")
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    _apply_branch, _apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    session_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    _git(repo, "rm", "app.py")
+    _git(repo, "commit", "-m", "delete implementation on session")
+
+    with pytest.raises(CmocError) as error_info:
+        cmoc_apply_join_impl(repo)
+
+    assert "想定外の差分" in error_info.value.message
+    assert (
+        f"{session_branch}: {json.dumps((repo / 'app.py').resolve().as_posix())}"
+        in error_info.value.detail
+    )
+    assert not (repo / "app.py").exists()
+
+
 def test_apply_join_force_resolve_keeps_expected_apply_index_diff(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -863,6 +959,128 @@ def test_apply_join_force_resolve_keeps_session_branch_new_oracle_file(
     assert "oracles/new_spec.md" not in output
 
 
+def test_apply_join_force_resolves_apply_branch_forbidden_deletion(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """強制モードは apply branch 側の禁止 path 削除を snapshot から復元する。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    (apply_worktree / "feature.txt").write_text("implemented\n", encoding="utf-8")
+    _git(apply_worktree, "add", "feature.txt")
+    _git(apply_worktree, "rm", "oracles/spec.md")
+    _git(apply_worktree, "commit", "-m", "implement and delete oracle")
+
+    cmoc_apply_join_impl(repo, force_resolve=True)
+
+    output = capsys.readouterr().out
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
+    assert (repo / "oracles" / "spec.md").read_text(encoding="utf-8") == "spec\n"
+    assert state["apply"]["state"] == "ready"
+    assert (
+        f"- {apply_branch}: {json.dumps((repo / 'oracles/spec.md').resolve().as_posix())}"
+        in output
+    )
+
+
+def test_apply_join_force_resolves_session_branch_implementation_deletion(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """強制モードは session branch 側の実装ファイル削除を snapshot から復元する。"""
+    repo = _init_repo(tmp_path)
+    (repo / "app.py").write_text("print('base')\n", encoding="utf-8")
+    _git(repo, "add", "app.py")
+    _git(repo, "commit", "-m", "add implementation file")
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    _apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    session_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    _git(repo, "rm", "app.py")
+    _git(repo, "commit", "-m", "delete implementation on session")
+    (apply_worktree / "feature.txt").write_text("implemented\n", encoding="utf-8")
+    _git(apply_worktree, "add", "feature.txt")
+    _git(apply_worktree, "commit", "-m", "implement feature")
+
+    cmoc_apply_join_impl(repo, force_resolve=True)
+
+    output = capsys.readouterr().out
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert (repo / "app.py").read_text(encoding="utf-8") == "print('base')\n"
+    assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
+    assert state["apply"]["state"] == "ready"
+    assert (
+        f"- {session_branch}: {json.dumps((repo / 'app.py').resolve().as_posix())}"
+        in output
+    )
+
+
+def test_apply_join_force_resolves_session_linked_worktree_from_apply_branch(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """apply branch からの強制 join は session linked worktree で revert する。"""
+    repo = _init_repo(tmp_path)
+    home_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    (repo / "app.py").write_text("print('base')\n", encoding="utf-8")
+    _git(repo, "add", "app.py")
+    _git(repo, "commit", "-m", "add implementation file")
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    session_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    _git(repo, "switch", home_branch)
+    session_worktree = tmp_path / "session-linked"
+    _git(repo, "worktree", "add", str(session_worktree), session_branch)
+    _git(session_worktree, "rm", "app.py")
+    _git(session_worktree, "commit", "-m", "delete implementation on session")
+    (apply_worktree / "feature.txt").write_text("implemented\n", encoding="utf-8")
+    _git(apply_worktree, "add", "feature.txt")
+    _git(apply_worktree, "commit", "-m", "implement feature")
+
+    cmoc_apply_join_impl(apply_worktree, force_resolve=True)
+
+    output = capsys.readouterr().out
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert (session_worktree / "app.py").read_text(encoding="utf-8") == (
+        "print('base')\n"
+    )
+    assert (session_worktree / "feature.txt").read_text(encoding="utf-8") == (
+        "implemented\n"
+    )
+    assert state["apply"]["state"] == "ready"
+    assert _git(repo, "branch", "--list", apply_branch).stdout == ""
+    assert not apply_worktree.exists()
+    assert (
+        f"- {session_branch}: {json.dumps((repo / 'app.py').resolve().as_posix())}"
+        in output
+    )
+
+
 def test_apply_join_auto_resolves_index_conflict(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -933,7 +1151,7 @@ def test_apply_join_unmerged_paths_are_nul_safe(
     assert calls == [["diff", "--name-only", "-z", "--diff-filter=U"]]
 
 
-def test_apply_join_changed_entries_use_destination_paths_and_exclude_deletes(
+def test_apply_join_changed_entries_use_destination_paths_and_include_deletes(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
@@ -975,6 +1193,7 @@ def test_apply_join_changed_entries_use_destination_paths_and_exclude_deletes(
     assert [entry.paths for entry in entries] == [
         ["feature.txt"],
         ["src/copied.py"],
+        ["deleted.txt"],
         ["modified.txt"],
     ]
     assert calls == [
@@ -1298,6 +1517,57 @@ def test_apply_join_force_resolve_uses_snapshot_gitignore_for_apply_indexes(
         "- cmoc/session/2026-05-10_22-21_10_000000123: "
         f"{json.dumps((repo / '.gitignore').resolve().as_posix())}"
         in output
+    )
+
+
+def test_apply_join_force_resolve_uses_snapshot_gitignore_for_session_oracles(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """session 側の後続 .gitignore 変更で oracle ファイル変更を戻さない。"""
+    repo = _init_repo(tmp_path)
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    (apply_worktree / "feature.txt").write_text("implemented\n", encoding="utf-8")
+    _git(apply_worktree, "add", "feature.txt")
+    _git(apply_worktree, "commit", "-m", "implement feature")
+    new_oracle = repo / "oracles" / "new_spec.md"
+    new_oracle.write_text("new spec\n", encoding="utf-8")
+    _git(repo, "add", "oracles/new_spec.md")
+    (repo / ".gitignore").write_text("/oracles/new_spec.md\n", encoding="utf-8")
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-m", "edit session oracle and gitignore")
+
+    cmoc_apply_join_impl(repo, force_resolve=True)
+
+    output = capsys.readouterr().out
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
+    assert new_oracle.read_text(encoding="utf-8") == "new spec\n"
+    assert not (repo / ".gitignore").exists()
+    assert state["apply"]["state"] == "ready"
+    assert (
+        "- cmoc/session/2026-05-10_22-21_10_000000123: "
+        f"{json.dumps((repo / 'oracles' / 'new_spec.md').resolve().as_posix())}"
+        not in output
+    )
+    assert (
+        "- cmoc/session/2026-05-10_22-21_10_000000123: "
+        f"{json.dumps((repo / '.gitignore').resolve().as_posix())}"
+        in output
+    )
+    assert (
+        f"- {apply_branch}: "
+        f"{json.dumps((repo / 'feature.txt').resolve().as_posix())}"
+        not in output
     )
 
 

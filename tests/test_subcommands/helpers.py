@@ -2,6 +2,7 @@
 
 import ast
 import builtins
+import hashlib
 import inspect
 import json
 import re
@@ -114,6 +115,40 @@ def _change_summary_json() -> str:
             ]
         }
     )
+
+
+def _write_flat_oracles_index(oracle_root: Path, *names: str) -> None:
+    """テスト用に oracles 直下ファイルだけの最小 INDEX.md を書く。"""
+    entries = []
+    for name in sorted(names):
+        digest = hashlib.sha256(
+            (oracle_root / name).read_bytes()
+        ).hexdigest()
+        entries.append(
+            "\n".join(
+                [
+                    f"# `{name}`",
+                    "",
+                    "## Summary",
+                    "",
+                    "- summary",
+                    "",
+                    "## Read this when",
+                    "",
+                    "- read",
+                    "",
+                    "## Do not read this when",
+                    "",
+                    "- skip",
+                    "",
+                    "## hash",
+                    "",
+                    f"- {digest}",
+                    "",
+                ]
+            )
+        )
+    (oracle_root / "INDEX.md").write_text("".join(entries), encoding="utf-8")
 
 
 def _apply_report(prompt: str, result_label: str, counts: list[int]) -> str:

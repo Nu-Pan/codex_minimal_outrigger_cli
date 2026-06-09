@@ -57,7 +57,7 @@
 
 - `cmoc session fork` の実装・修正・レビュー・テストを行うとき。
 - 現在 checkout 中の local branch を session home branch とみなす条件や、detached HEAD / remote-tracking branch / cmoc 管理 branch の扱いを確認したいとき。
-- 未コミット差分の検査、既存 active session の排他、`.cmoc` の ignore 保証を含む事前条件を確認したいとき。
+- 未コミット差分の検査、既存 active session の排他、`.cmoc` の非追跡保証を含む事前条件を確認したいとき。
 - session branch 名の生成、作成時の直列化、state 保存、保存失敗時の rollback や再試行の流れを追いたいとき。
 
 ## Do not read this when
@@ -69,7 +69,7 @@
 
 ## hash
 
-- 6c57d470c5f3e5f9693ba1ddfb1523e003c33d7e693fb2f222a8a890b36be692
+- 1d8f03df4976dc975e2982a0864d5e953404d961a93544b2ae69743ca57df07c
 
 # `join.py`
 

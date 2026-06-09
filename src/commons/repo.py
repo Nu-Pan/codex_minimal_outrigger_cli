@@ -33,7 +33,7 @@ def enter_repo_root(start: Path | None = None) -> Path:
 
 
 def find_repo_root(start: Path | None = None) -> Path:
-    """カレントから親方向へ `.git` を持つリポジトリルートを探す。"""
+    """カレントから親方向へ worktree root を探す。"""
     # 指定起点または現在ディレクトリから親方向へ順番に探索する。
     current = (start or Path.cwd()).resolve()
     for candidate in [current, *current.parents]:
@@ -47,6 +47,72 @@ def find_repo_root(start: Path | None = None) -> Path:
         ],
         f"開始パス: {current}",
     )
+
+
+def main_worktree_repo_root(worktree_root: Path) -> Path:
+    """worktree root から main worktree の repo root を返す。"""
+    git_entry = worktree_root / ".git"
+    if git_entry.is_dir():
+        return worktree_root
+    if not git_entry.exists():
+        if _is_path_under_cmoc_worktrees(worktree_root):
+            try:
+                nearest_worktree = find_repo_root(worktree_root)
+            except CmocError:
+                nearest_worktree = worktree_root
+            if nearest_worktree != worktree_root:
+                return main_worktree_repo_root(nearest_worktree)
+        return worktree_root
+
+    result = run_git(
+        worktree_root,
+        ["rev-parse", "--path-format=absolute", "--git-common-dir"],
+        check=False,
+    )
+    if result.returncode != 0:
+        return _main_worktree_repo_root_from_git_file(git_entry) or worktree_root
+
+    common_dir = result.stdout.strip()
+    if not common_dir:
+        return worktree_root
+    common_path = Path(common_dir)
+    if not common_path.is_absolute():
+        common_path = worktree_root / common_path
+    if common_path.name == ".git":
+        return common_path.parent.resolve()
+    return worktree_root
+
+
+def _is_path_under_cmoc_worktrees(path: Path) -> bool:
+    """path が `.cmoc/worktrees` 配下を指していれば True を返す。"""
+    parts = path.parts
+    marker = (".cmoc", "worktrees")
+    return any(
+        parts[index : index + len(marker)] == marker
+        for index in range(0, len(parts) - len(marker) + 1)
+    )
+
+
+def _main_worktree_repo_root_from_git_file(git_entry: Path) -> Path | None:
+    """linked worktree の `.git` file から main worktree root を復元する。"""
+    if not git_entry.is_file():
+        return None
+    try:
+        content = git_entry.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    prefix = "gitdir:"
+    if not content.lower().startswith(prefix):
+        return None
+    git_dir = Path(content[len(prefix) :].strip())
+    if not git_dir.is_absolute():
+        git_dir = (git_entry.parent / git_dir).resolve()
+    parts = git_dir.parts
+    marker = (".git", "worktrees")
+    for index in range(0, len(parts) - len(marker)):
+        if parts[index : index + len(marker)] == marker:
+            return Path(*parts[: index + 1]).parent.resolve()
+    return None
 
 
 def current_branch(repo_root: Path) -> str:
@@ -302,19 +368,16 @@ def clear_apply_process_id(repo_root: Path, session_id: str) -> None:
 
 
 def session_state_root(repo_root: Path) -> Path:
-    """session state を置く repo root を返す。"""
-    return repo_root
+    """session state を置く main worktree repo root を返す。"""
+    return main_worktree_repo_root(repo_root)
 
 
 def session_state_repo_root(repo_root: Path, session_id: str) -> Path:
     """session state を保持する repo root を返す。
 
-    通常の repo root ではそのまま返す。cmoc 管理 apply worktree から
-    join/abandon する場合だけ、worktree 配置規則から所有元 repo root を復元する。
+    通常 worktree からも linked worktree からも main worktree を返す。
+    cmoc 管理 apply worktree も git common dir から main worktree へ解決する。
     """
-    owner_root = _owning_repo_root_from_apply_worktree_path(repo_root, session_id)
-    if owner_root is not None:
-        return owner_root
     return session_state_root(repo_root)
 
 
@@ -1073,7 +1136,7 @@ def assert_no_uncommitted_changes(repo_root: Path) -> None:
     """未コミット差分がある場合は仕様通りエラーにする。"""
     # 未コミット path を利用者に見せるため、bool ではなく一覧を取得する。
     paths = changed_paths(repo_root)
-    _raise_uncommitted_changes(paths)
+    _raise_uncommitted_changes(repo_root, paths)
 
 
 def assert_no_uncommitted_changes_outside_cmoc(repo_root: Path) -> None:
@@ -1083,10 +1146,10 @@ def assert_no_uncommitted_changes_outside_cmoc(repo_root: Path) -> None:
         for path in changed_paths(repo_root)
         if not _is_cmoc_managed_path(path)
     ]
-    _raise_uncommitted_changes(paths)
+    _raise_uncommitted_changes(repo_root, paths)
 
 
-def _raise_uncommitted_changes(paths: list[str]) -> None:
+def _raise_uncommitted_changes(repo_root: Path, paths: list[str]) -> None:
     """未コミット path 一覧が空でなければ共通エラーを送出する。"""
     if paths:
         raise CmocError(
@@ -1095,8 +1158,16 @@ def _raise_uncommitted_changes(paths: list[str]) -> None:
                 "現在の変更を commit または stash してください。",
                 "作業ツリーを clean にしてからコマンドを再実行してください。",
             ],
-            "\n".join(paths),
+            "\n".join(
+                _uncommitted_change_display_path(repo_root, path)
+                for path in paths
+            ),
         )
+
+
+def _uncommitted_change_display_path(repo_root: Path, path: str) -> str:
+    """git status の repo 相対 path token をユーザー表示用の絶対 path にする。"""
+    return str((repo_root / path).resolve())
 
 
 def assert_paths_clean(repo_root: Path, paths: list[str]) -> None:
@@ -1477,10 +1548,15 @@ def root_gitignored_paths_at_commit(
         repo_root,
         ["show", f"{commit_hash}:.gitignore"],
         check=False,
+        text=False,
     )
     if result.returncode != 0:
         return set()
-    return _root_gitignored_paths_from_content(relative_paths, result.stdout)
+    gitignore_content = _decode_gitignore_blob_at_commit(
+        result.stdout,
+        commit_hash,
+    )
+    return _root_gitignored_paths_from_content(relative_paths, gitignore_content)
 
 
 def changed_oracle_files(repo_root: Path, base_commit: str) -> list[Path]:
@@ -2122,6 +2198,21 @@ def _read_utf8_text(path: Path, message: str, actions: list[str]) -> str:
         ) from error
 
 
+def _decode_gitignore_blob_at_commit(content: bytes, commit_hash: str) -> str:
+    """commit 上の root `.gitignore` blob を UTF-8 として decode する。"""
+    try:
+        return content.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise CmocError(
+            "commit 上の .gitignore ファイルを読めませんでした。",
+            [
+                "対象 commit の .gitignore の文字コードを確認してください。",
+                ".gitignore を UTF-8 で読める内容に直した commit を使って再実行してください。",
+            ],
+            f"commit: {commit_hash}\npath: .gitignore\nUTF-8 decode error: {error}",
+        ) from error
+
+
 def _assert_cmoc_ignore_guarantee(
     repo_root: Path,
     env: dict[str, str] | None = None,
@@ -2215,7 +2306,7 @@ def _root_gitignored_paths(
         return set()
     return _root_gitignored_paths_from_content(
         relative_paths,
-        gitignore.read_text(encoding="utf-8"),
+        _read_gitignore_text(gitignore),
     )
 
 

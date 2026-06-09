@@ -14,7 +14,6 @@ from sub_commands.apply.fork import cmoc_apply_impl
 from sub_commands.apply.join import cmoc_apply_join_impl
 from sub_commands.init import cmoc_init_impl
 from sub_commands.indexing import cmoc_indexing_impl
-from sub_commands.review.oracles import _MAX_REVIEW_ORACLES_LOOP
 from sub_commands.review.oracles import cmoc_review_oracles_impl
 from sub_commands.session.abandon import cmoc_session_abandon_impl
 from sub_commands.session.fork import cmoc_session_fork_impl
@@ -48,21 +47,10 @@ def init_command() -> None:
 
 
 @app.command("indexing")
-def indexing_command(
-    check: bool = typer.Option(
-        False,
-        "--check",
-        help="Check INDEX.md consistency without modifying files.",
-    ),
-    index_roots: list[str] | None = typer.Option(
-        None,
-        "--index-root",
-        help="Limit --check to this repository-relative root. Repeatable.",
-    ),
-) -> None:
+def indexing_command() -> None:
     """Run INDEX.md maintenance explicitly."""
     # CLI callback は indexing の本体実装へ処理を委譲する。
-    cmoc_indexing_impl(check=check, index_roots=index_roots)
+    cmoc_indexing_impl()
 
 
 @session_app.command("fork")
@@ -99,26 +87,22 @@ def review_oracles_command(
         3,
         "--enumerate-findings-loop",
         min=0,
-        max=_MAX_REVIEW_ORACLES_LOOP,
     ),
     merge_findings_loop: int = typer.Option(
         3,
         "--merge-findings-loop",
         min=0,
-        max=_MAX_REVIEW_ORACLES_LOOP,
     ),
     refine_findings_loop: int = typer.Option(
         3,
         "--refine-findings-loop",
         min=0,
-        max=_MAX_REVIEW_ORACLES_LOOP,
     ),
     full: bool = typer.Option(False, "--full", "-f", hidden=True),
     repeat_improve_issues_list: int | None = typer.Option(
         None,
         "--repeat-improve-issues-list",
         min=0,
-        max=_MAX_REVIEW_ORACLES_LOOP,
         hidden=True,
     ),
 ) -> None:

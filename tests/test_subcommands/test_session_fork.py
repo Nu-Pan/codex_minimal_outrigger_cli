@@ -80,7 +80,7 @@ def test_session_fork_ensures_cmoc_ignore_before_active_state_scan(
         cmoc_session_fork_impl(repo)
 
     assert "未コミットの変更" in error.value.message
-    assert ".cmoc/" in error.value.detail
+    assert str((repo / ".cmoc").resolve()) in error.value.detail
     assert "JSON が不正" not in error.value.message
     assert _git(repo, "branch", "--show-current").stdout.strip() == home_branch
     assert _session_state_paths(repo) == [broken_path]
@@ -291,10 +291,10 @@ def test_session_fork_rechecks_active_session_before_branch_creation(
     assert _session_state_paths(repo) == []
 
 
-def test_session_fork_from_linked_worktree_records_state_in_linked_repo_root(
+def test_session_fork_from_linked_worktree_records_state_in_main_repo_root(
     tmp_path: Path,
 ) -> None:
-    """linked worktree で作った session state は linked repo-root 側へ保存する。"""
+    """linked worktree で作った session state は main repo-root 側へ保存する。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
@@ -306,14 +306,34 @@ def test_session_fork_from_linked_worktree_records_state_in_linked_repo_root(
 
     branch_name = _git(linked, "branch", "--show-current").stdout.strip()
     session_id = branch_name.removeprefix("cmoc/session/")
-    assert (linked / ".cmoc" / "sessions" / f"{session_id}.json").exists()
-    assert not (repo / ".cmoc" / "sessions" / f"{session_id}.json").exists()
+    assert (repo / ".cmoc" / "sessions" / f"{session_id}.json").exists()
+    assert not (linked / ".cmoc" / "sessions" / f"{session_id}.json").exists()
 
 
-def test_session_fork_from_linked_worktree_rejects_linked_active_session(
+def test_session_fork_from_linked_worktree_ignores_main_cmoc_state_root(
     tmp_path: Path,
 ) -> None:
-    """active session 判定は linked repo-root 側の state を見る。"""
+    """linked worktree 実行でも state 保存先 main root の `.cmoc` を ignore する。"""
+    repo = _init_repo(tmp_path)
+    main_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    linked = tmp_path / "linked"
+    _git(repo, "worktree", "add", "-b", "feature", str(linked), "HEAD")
+
+    cmoc_session_fork_impl(linked)
+
+    branch_name = _git(linked, "branch", "--show-current").stdout.strip()
+    session_id = branch_name.removeprefix("cmoc/session/")
+    assert (repo / ".cmoc" / "sessions" / f"{session_id}.json").exists()
+    assert _git(repo, "show", f"{main_branch}:.gitignore").stdout == "/.cmoc/\n"
+    assert _git(linked, "show", "HEAD:.gitignore").stdout == "/.cmoc/\n"
+    assert _git(repo, "status", "--porcelain").stdout == ""
+    assert _git(linked, "status", "--porcelain").stdout == ""
+
+
+def test_session_fork_from_linked_worktree_rejects_main_active_session(
+    tmp_path: Path,
+) -> None:
+    """active session 判定は main repo-root 側の state を見る。"""
     repo = _init_repo(tmp_path)
     (repo / ".gitignore").write_text("/.cmoc/\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
@@ -324,7 +344,7 @@ def test_session_fork_from_linked_worktree_rejects_linked_active_session(
     session_id = "2026-05-10_22-21_10_000000123"
     _git(linked, "branch", f"cmoc/session/{session_id}")
     write_session_state(
-        linked,
+        repo,
         session_id,
         {
             "session": {
@@ -347,10 +367,10 @@ def test_session_fork_from_linked_worktree_rejects_linked_active_session(
     assert "active session" in error.value.message
     assert error.value.detail == session_id
     assert _git(linked, "branch", "--show-current").stdout.strip() == "feature"
-    assert _session_state_paths(linked) == [
-        linked / ".cmoc" / "sessions" / f"{session_id}.json",
+    assert _session_state_paths(repo) == [
+        repo / ".cmoc" / "sessions" / f"{session_id}.json",
     ]
-    assert _session_state_paths(repo) == []
+    assert _session_state_paths(linked) == []
 
 
 def test_session_fork_rejects_malformed_session_state_before_branch_creation(

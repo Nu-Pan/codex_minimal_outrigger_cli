@@ -119,7 +119,7 @@ def test_maintain_indexes_refreshes_stale_oracle_routing_path(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """古い oracles/app_specs 導線は hash が同じでも実在 path へ更新する。"""
+    """古い oracles/app_specs 導線は hash が同じでも root token 付き実在 path へ更新する。"""
     repo = _init_repo(tmp_path)
     (repo / "README.md").write_text(
         "基本ワークフローは oracles/app_specs/usage.md を参照\n",
@@ -177,7 +177,7 @@ def test_maintain_indexes_refreshes_stale_oracle_routing_path(
 
     assert changed is True
     assert "oracles/app_specs/" not in content
-    assert "oracles/docs/app_specs/usage.md" in content
+    assert "<work-root>/oracles/docs/app_specs/usage.md" in content
 
 
 @pytest.mark.parametrize(
@@ -1675,7 +1675,7 @@ def test_maintain_indexes_regenerates_stale_absolute_repository_path(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """hash が最新でも別 worktree の絶対 path は repo 相対 path へ更新する。"""
+    """hash が最新でも別 worktree の絶対 path は root token 付き path へ更新する。"""
     repo = _init_repo(tmp_path)
     target = repo / "src/sub_commands/apply/join.py"
     target.parent.mkdir(parents=True)
@@ -1689,7 +1689,7 @@ def test_maintain_indexes_regenerates_stale_absolute_repository_path(
         / "old-worktree"
         / "src/sub_commands/apply/join.py"
     ).as_posix()
-    relative_path = "src/sub_commands/apply/join.py"
+    token_path = "<work-root>/src/sub_commands/apply/join.py"
     (repo / "src/sub_commands/apply/INDEX.md").write_text(
         "\n".join(
             [
@@ -1767,14 +1767,48 @@ def test_maintain_indexes_regenerates_stale_absolute_repository_path(
 
     assert changed is True
     assert stale_absolute_path not in content
-    assert f"`{relative_path}` は `cmoc apply join` の本体です。" in content
-    assert f"`{relative_path}` の merge 手順を確認するとき。" in content
+    assert f"`{token_path}` は `cmoc apply join` の本体です。" in content
+    assert f"`{token_path}` の merge 手順を確認するとき。" in content
 
 
-def test_find_index_inconsistencies_keeps_relative_paths_and_root_placeholders_valid(
+def test_maintain_indexes_normalizes_generated_bare_relative_repository_path(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """生成応答内の repo 内 bare relative path は root token 付き path へ更新する。"""
+    repo = _init_repo(tmp_path)
+    target = repo / "src/tool.py"
+    target.parent.mkdir()
+    target.write_text("tool\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "tool")
+
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """裸 relative path を含む INDEX 生成応答を返す。"""
+        del args, kwargs
+        return json.dumps(
+            {
+                "summary": ["`src/tool.py` を案内します。"],
+                "read_this_when": ["`src/tool.py` の実装を確認するとき。"],
+                "do_not_read_this_when": ["unrelated."],
+            }
+        )
+
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
+
+    changed = maintain_indexes(repo)
+    content = (repo / "src/INDEX.md").read_text(encoding="utf-8")
+
+    assert changed is True
+    assert "`src/tool.py`" not in content
+    assert "`<work-root>/src/tool.py` を案内します。" in content
+    assert "`<work-root>/src/tool.py` の実装を確認するとき。" in content
+
+
+def test_find_index_inconsistencies_rejects_bare_relative_paths(
     tmp_path: Path,
 ) -> None:
-    """相対 path や `<cmoc-root>/...` は古い絶対 path と誤判定しない。"""
+    """repo 内 bare relative path は hash が最新でも再利用不可にする。"""
     repo = _init_repo(tmp_path)
     (repo / "src").mkdir()
     target = repo / "src/tool.py"
@@ -1808,13 +1842,9 @@ def test_find_index_inconsistencies_keeps_relative_paths_and_root_placeholders_v
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "relative index paths")
 
-    content = (repo / "src/INDEX.md").read_text(encoding="utf-8")
+    inconsistencies = find_index_inconsistencies(repo, index_roots=["src"])
 
-    assert "`<cmoc-root>/src`" in content
-    assert "`src/tool.py`" in content
-    assert "`oracles/docs/app_specs/indexing.md`" in content
-    assert "srcINDEX.md" not in content
-    assert find_index_inconsistencies(repo, index_roots=["src"]) == []
+    assert inconsistencies == ["src/INDEX.md: invalid entry for tool.py"]
 
 
 def test_maintain_indexes_normalizes_known_cmoc_command_typo_in_generated_text(

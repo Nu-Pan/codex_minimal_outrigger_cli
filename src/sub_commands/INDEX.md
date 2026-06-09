@@ -25,52 +25,49 @@
 
 ## Summary
 
-- `src/sub_commands/apply` 配下のルーティング文書で、`cmoc apply` 系サブコマンドへ進むための入口です。
-- `__init__.py` はパッケージ宣言、`abandon.py` は `cmoc apply abandon`、`fork.py` は `cmoc apply fork`、`join.py` は `cmoc apply join` の本体実装を案内します。
-- apply の開始・中断・統合に関する実装へ分岐する前の、最小限の目次として役割を切り分けます。
+- この `src/sub_commands/apply` ディレクトリのルーティング文書で、`cmoc apply` 系サブコマンド実装への入口です。
+- `__init__.py`、`abandon.py`、`fork.py`、`join.py` の役割を素早く切り分けるための目次です。
+- `apply` の実行制御、破棄、取り込みのどの実装へ進むべきかを判断する起点です。
 
 ## Read this when
 
-- `src/sub_commands/apply` 配下の入口構造をまとめて把握し、どの実装モジュールへ進むべきか整理したいとき。
-- `cmoc apply` 系サブコマンドのパッケージ宣言と、`abandon.py`・`fork.py`・`join.py` の役割分担を確認したいとき。
-- apply の開始・中断・統合の処理順をたどる前に、この階層のルーティング文書として概要を押さえたいとき。
+- `cmoc apply` 系のパッケージ構成や、どのモジュールを読むべきか迷ったとき。
+- `cmoc apply fork` の調査・修正ループや `abandon` / `join` の処理本体を追いたいとき。
+- このディレクトリの各実装ファイルの役割を確認してから、詳細実装やテストに進みたいとき。
 
 ## Do not read this when
 
-- すでに `cmoc apply fork`、`cmoc apply join`、`cmoc apply abandon` のどれを読むか決まっていて、この階層の目次を確認する必要がないとき。
-- 個別サブコマンドの実装や引数仕様だけを直接確認したいとき。
-- `oracles` 側の正本仕様や利用手順だけを確認したいとき。
+- すでに読む対象の `abandon.py`、`fork.py`、`join.py` が分かっていて、直接そのファイルへ進めるとき。
+- `cmoc apply` の利用手順や仕様断片だけを確認したいときは、`oracles/docs/app_specs/sub_commands/` 側を読むべきです。
+- `src/sub_commands/apply` 以外のサブコマンド実装や、`README.md` などの運用ルールだけを確認したいとき。
 
 ## hash
 
-- daf9e108bc5b082f0b7278b526dddee34f9c2939b7438c468a31d3944be21b79
+- 337d2f6e1cee835c1d783081f387b87040dd1117e1e24f5d9cb9b7c167383621
 
 # `indexing.py`
 
 ## Summary
 
-- `cmoc indexing` の本体実装で、`repo_root` が未指定なら `run_command()` に処理を委譲します。
-- `StepTimer` と `start_step()` を使って、repository 状態検証と `INDEX.md` メンテナンスまたは整合性検査の 2 段階で進みます。
-- `assert_no_uncommitted_changes()` で clean repo を確認し、`check` モードでは `find_index_inconsistencies()`、通常モードでは `maintain_indexes()` を呼び分けます。
-- 通常モードでは `INDEX.md` の変更有無に応じて標準出力を変え、`check` モードでは未反映の不整合があれば `CmocError` を送出します。
+- `src/sub_commands/indexing.py` は `cmoc indexing` の本体実装モジュールで、CLI から渡された `repo_root` を受けて共通 runner と `commons.indexing` に処理を振り分けます。
+- `repo_root` が未指定なら `commons.command_runner.run_command()` で作業対象のルートを解決し、指定済みなら `assert_no_uncommitted_changes()` の後に `maintain_indexes()` を実行します。
+- 変更があれば `committed INDEX.md maintenance changes`、変更がなければ `no INDEX.md maintenance changes` を標準出力へ出します。
 
 ## Read this when
 
-- `cmoc indexing` の実装・修正・レビュー・テストを行いたいとき。
-- 実行前の未コミット差分チェックと `INDEX.md` メンテナンスの呼び出し順を確認したいとき。
-- `run_command()` による `repo_root` 解決や、`StepTimer` と `start_step()` を使った 2 段階の処理フローを追いたいとき。
-- `find_index_inconsistencies()` と `maintain_indexes()` のどちらを使うか、またその結果に応じてどこで標準出力やエラーが出るか確認したいとき。
+- `cmoc indexing` の本体処理と、`repo_root` の未指定時に共通 runner へ委譲する流れを確認したいとき。
+- `assert_no_uncommitted_changes()` による事前チェックと、`maintain_indexes()` 実行後の標準出力を確認したいとき。
+- `StepTimer` と `start_step()` を使った `INDEX.md` メンテナンスの実行順を把握したいとき。
 
 ## Do not read this when
 
-- `cmoc indexing` の正本仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/indexing.md` を直接読むべきです。
-- `INDEX.md` の生成アルゴリズム、深い階層からの更新順、コミット対象の制御だけを確認したいときは、`src/commons/indexing.py` を直接読むべきです。
-- `cmoc init`、`session`、`apply`、`review` など、別サブコマンドの実装を追いたいとき。
-- `src/sub_commands` 配下の入口構造だけを確認したいときで、`cmoc indexing` 本体の処理は不要なとき。
+- `cmoc indexing` の生成アルゴリズム、配置対象の判定、既存 `INDEX.md` の再利用条件だけを確認したいときは、このファイルではなく `src/commons/indexing.py` を読むべきです。
+- CLI 登録やサブコマンドの起動経路だけを確認したいときは、このファイルではなく `src/main.py` を読むべきです。
+- 利用手順や正本仕様だけを確認したいときは、このファイルではなく `oracles/docs/app_specs/sub_commands/indexing.md` を読むべきです。
 
 ## hash
 
-- fce12fd41ef1f022d65537b43eb35089e1832b43e3b9973a0636cb4f23380efb
+- 822801872f1ebdc971018787dcf090c67c3ef542bfe891e0108a41b090cadf19
 
 # `init.py`
 
@@ -100,25 +97,25 @@
 
 ## Summary
 
-- `src/sub_commands/review` 配下のルーティング文書で、`cmoc review` 系サブコマンドの入口を整理する階層です。
-- `__init__.py` はパッケージ宣言だけを担う最小モジュールです。
-- `oracles.py` は `cmoc review oracles` の本体実装です。
+- `src/sub_commands/review` ディレクトリのルーティング文書で、`__init__.py` と `oracles.py` へ案内する入口です。
+- `__init__.py` はパッケージ宣言のみを担う最小モジュールで、`oracles.py` は `cmoc review oracles` の本体実装です。
+- この階層では、パッケージ構造の確認か、レビュー処理の実装確認かを切り分けて次の参照先を選びます。
 
 ## Read this when
 
-- `src/sub_commands/review` の入口構造と、どの実装ファイルへ進むべきかを把握したいとき。
-- `cmoc review oracles` の実装・修正・レビュー・テストを行いたいとき。
-- review 用パッケージ宣言と中核実装の役割分担を確認したいとき。
+- `src/sub_commands/review` が Python パッケージとして宣言されていることを確認したいとき。
+- `cmoc review oracles` の実装本体である `oracles.py` の実行フロー、評価パイプライン、Structured Output schema の扱いを追いたいとき。
+- `cmoc review` 系サブコマンドの入口構造を把握してから、関連ファイルへ進みたいとき。
 
 ## Do not read this when
 
-- `cmoc review oracles` の実行フローや評価ロジックを追いたいときは、この目次ではなく `oracles.py` を直接読むべきです。
-- `cmoc review oracles` の利用手順、引数、出力仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/review_oracles.md` を直接読むべきです。
+- `cmoc review oracles` の利用手順や引数仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/review_oracles.md` を読むべきです。
 - `cmoc review` の CLI 登録や hidden alias だけを確認したいときは、`src/main.py` を読むべきです。
+- `src/sub_commands/review` の入口構造ではなく、`oracles.py` の実装詳細だけを直接確認したいときは、この `INDEX.md` を経由する必要はありません。
 
 ## hash
 
-- beaa2e35b0b59614221f0b84b2973c57a8b66bcbcd13d6e1cf168884a7639701
+- 2cd09861a16a37ce63a059a9eb1a26222059b958680bedfc0d124ab6ff3d97b8
 
 # `session`
 
@@ -142,4 +139,4 @@
 
 ## hash
 
-- 92a4881bdb0a53d39acb955bd2f2b695b91c7332cb32fc52ab8c5771bd25536a
+- b12b591472c17099b833589a6ea8fdeffa5febc7a25d65b8493a9682ebdb256b

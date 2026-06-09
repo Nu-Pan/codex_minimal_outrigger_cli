@@ -52,9 +52,7 @@ _REPORT_COMMAND = "cmoc review oracles"
 _REPORT_DIR_NAME = "review_oracles"
 _REVIEW_ORACLES_TMP_DIR = Path(".cmoc") / "tmp"
 _DEFAULT_REVIEW_ORACLES_LOOP = 3
-_MAX_REVIEW_ORACLES_LOOP = 3
 _DEFAULT_REPEAT_IMPROVE_ISSUES_LIST = _DEFAULT_REVIEW_ORACLES_LOOP
-_MAX_REPEAT_IMPROVE_ISSUES_LIST = _MAX_REVIEW_ORACLES_LOOP
 _CMOC_ROOT = Path(__file__).resolve().parents[3]
 _REVIEW_ORACLES_SCHEMA_ROOT = (
     _CMOC_ROOT / "oracles" / "schemas" / "structured_output" / "review" / "oracles"
@@ -344,11 +342,12 @@ def cmoc_review_oracles_impl(
         assert_no_uncommitted_changes(repo_root)
 
         session_id = session_id_from_branch(branch_name)
+        state_root = session_state_root(repo_root)
         review_start_commit = head_commit(repo_root)
 
         failed_stage = "review worktree 作成"
         review_plan = _create_review_worktree(
-            repo_root,
+            state_root,
             session_id,
             review_start_commit,
         )
@@ -375,9 +374,7 @@ def cmoc_review_oracles_impl(
             for path in all_review_oracle_files
         ]
         all_oracle_files_known = True
-        if enumerate_findings_loop == 0:
-            oracle_files = []
-        elif partial:
+        if partial:
             assert base_commit is not None
             changed_files = {
                 _owner_path_for_worktree_path(repo_root, review_repo_root, path)
@@ -444,7 +441,7 @@ def cmoc_review_oracles_impl(
             failed_stage = "report 書き込み"
             start_step(timer, 6, 6, "report 書き込み")
             report_path = _write_report(
-                repo_root,
+                state_root,
                 mode,
                 scope == "full",
                 branch_name,
@@ -463,7 +460,7 @@ def cmoc_review_oracles_impl(
     except Exception as error:
         try:
             report_path = _write_error_report(
-                repo_root,
+                session_state_root(repo_root),
                 mode,
                 scope == "full",
                 branch_name,
@@ -560,11 +557,9 @@ def _validate_review_oracles_preconditions(repo_root: Path) -> str:
 
 
 def _validate_review_oracles_loop(value: int, option_name: str) -> None:
-    """review oracles の各ループ回数が oracle の上限内か検証する。"""
-    if value < 0 or value > _MAX_REVIEW_ORACLES_LOOP:
-        raise ValueError(
-            f"{option_name} must be between 0 and {_MAX_REVIEW_ORACLES_LOOP}."
-        )
+    """review oracles の各ループ回数が非負整数か検証する。"""
+    if value < 0:
+        raise ValueError(f"{option_name} must be greater than or equal to 0.")
 
 
 def _validate_repeat_improve_issues_list(value: int) -> None:
@@ -2132,7 +2127,7 @@ def _write_report(
     for index, oracle_file in enumerate(oracle_files, start=1):
         target = str(oracle_file.resolve())
         lines.append(
-            f"| {index} | `{oracle_file.relative_to(repo_root)}` | "
+            f"| {index} | `{_display_path(repo_root, str(oracle_file))}` | "
             f"{finding_count_by_target.get(target, 0)} |"
         )
     lines.extend([""])
@@ -2849,9 +2844,8 @@ def _unique_strings(values: list[str]) -> list[str]:
 
 
 def _display_path(repo_root: Path, path_text: str) -> str:
-    """repo 配下の絶対パスをレポート向けの相対パスにする。"""
+    """path_text をレポート向けの絶対パスにする。"""
     path = Path(path_text)
-    try:
-        return path.resolve().relative_to(repo_root.resolve()).as_posix()
-    except ValueError:
-        return path_text
+    if not path.is_absolute():
+        path = repo_root / path
+    return str(path.resolve())

@@ -319,21 +319,18 @@ def test_run_command_reports_nonzero_typer_exit(
     )
 
 
-def test_run_command_treats_apply_unconverged_as_non_error_exit(
+def test_run_command_treats_apply_unconverged_as_success_exit(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """apply fork の未収束区分はエラーレポートなしで終了コードを保持する。"""
+    """apply fork の未収束区分は非 0 でもエラーレポート化しない。"""
     repo = _init_repo(tmp_path)
     monkeypatch.chdir(repo)
 
     assert APPLY_FORK_EXIT_CODE_CONVERGED == 0
-    assert APPLY_FORK_EXIT_CODE_UNCONVERGED not in {
-        APPLY_FORK_EXIT_CODE_CONVERGED,
-        1,
-        2,
-    }
+    assert APPLY_FORK_EXIT_CODE_UNCONVERGED != APPLY_FORK_EXIT_CODE_CONVERGED
+    assert APPLY_FORK_EXIT_CODE_UNCONVERGED != 1
 
     def handler(_repo: Path) -> int:
         """未収束の apply fork 本体と同じ終了コードを返す。"""
@@ -342,7 +339,7 @@ def test_run_command_treats_apply_unconverged_as_non_error_exit(
     with pytest.raises(typer.Exit) as exit_info:
         run_command(
             handler,
-            non_error_exit_codes={APPLY_FORK_EXIT_CODE_UNCONVERGED},
+            non_error_exit_codes=(APPLY_FORK_EXIT_CODE_UNCONVERGED,),
         )
 
     captured = capsys.readouterr()
@@ -352,12 +349,45 @@ def test_run_command_treats_apply_unconverged_as_non_error_exit(
     assert exit_info.value.exit_code == APPLY_FORK_EXIT_CODE_UNCONVERGED
     assert captured.err == ""
     assert "ERROR" not in captured.out
+    assert "サブコマンドがエラー終了しました。" not in captured.out
     assert "# Command completion report" in captured.out
     assert (
         f"subcommand return code: {APPLY_FORK_EXIT_CODE_UNCONVERGED}"
         in captured.out
     )
     assert f'"returncode": {APPLY_FORK_EXIT_CODE_UNCONVERGED}' in log_content
+
+
+def test_apply_fork_cli_allows_unconverged_exit_code(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """apply fork の CLI 経路は未収束終了コードを正常系として runner へ渡す。"""
+    calls: list[dict[str, object]] = []
+
+    def fake_run_command(
+        handler: object,
+        *,
+        command_path: str | None = None,
+        non_error_exit_codes: object = (),
+    ) -> None:
+        """cmoc_apply_impl(repo_root=None) から runner への委譲内容を記録する。"""
+        calls.append(
+            {
+                "handler": handler,
+                "command_path": command_path,
+                "non_error_exit_codes": non_error_exit_codes,
+            }
+        )
+
+    monkeypatch.setattr(apply_module, "run_command", fake_run_command)
+
+    assert apply_module.cmoc_apply_impl() is None
+
+    assert len(calls) == 1
+    assert calls[0]["command_path"] == "cmoc apply fork"
+    assert tuple(calls[0]["non_error_exit_codes"]) == (
+        APPLY_FORK_EXIT_CODE_UNCONVERGED,
+    )
 
 
 def test_run_command_reports_repo_root_resolution_error(
@@ -443,87 +473,57 @@ def test_indexing_impl_runs_maintenance_on_clean_repo(
     assert "committed INDEX.md maintenance changes" in captured.out
 
 
-def test_indexing_impl_check_reports_current_indexes(
+def test_indexing_impl_maintains_oracles_indexes(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """`cmoc indexing --check` は更新せずに INDEX 整合性だけを検査する。"""
+    """`cmoc indexing` は oracles 配下も通常の INDEX 配置対象として保守する。"""
     repo = _init_repo(tmp_path)
-    checked_roots: list[tuple[Path, list[str] | None]] = []
-    maintained_roots: list[Path] = []
+    oracle_docs = repo / "oracles" / "docs"
+    oracle_docs.mkdir(parents=True)
+    (oracle_docs / "spec.md").write_text("spec\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "add oracle docs")
 
-    def fake_find_index_inconsistencies(
-        repo_root: Path,
-        *,
-        index_roots: list[str] | None = None,
-    ) -> list[str]:
-        checked_roots.append((repo_root, index_roots))
-        return []
+    def fake_codex(*args: object, **kwargs: object) -> str:
+        """INDEX 生成用の最小 Structured Output を返す。"""
+        return json.dumps(
+            {
+                "summary": [str(kwargs["purpose"])],
+                "read_this_when": ["read"],
+                "do_not_read_this_when": ["skip"],
+            }
+        )
 
-    def fake_maintain_indexes(repo_root: Path) -> bool:
-        maintained_roots.append(repo_root)
-        return True
+    monkeypatch.setattr("commons.indexing.run_codex_exec", fake_codex)
 
-    monkeypatch.setattr(
-        indexing_module,
-        "find_index_inconsistencies",
-        fake_find_index_inconsistencies,
-    )
-    monkeypatch.setattr(
-        indexing_module,
-        "maintain_indexes",
-        fake_maintain_indexes,
-    )
-
-    cmoc_indexing_impl(repo, check=True, index_roots=["oracles"])
+    cmoc_indexing_impl(repo)
 
     captured = capsys.readouterr()
-    assert checked_roots == [(repo, ["oracles"])]
-    assert maintained_roots == []
-    assert "INDEX.md files are current" in captured.out
-
-
-def test_indexing_impl_check_fails_on_index_inconsistencies(
-    tmp_path: Path,
-    monkeypatch: MonkeyPatch,
-) -> None:
-    """`cmoc indexing --check` は不整合を Detail に出して失敗する。"""
-    repo = _init_repo(tmp_path)
-
-    def fake_find_index_inconsistencies(
-        repo_root: Path,
-        *,
-        index_roots: list[str] | None = None,
-    ) -> list[str]:
-        assert repo_root == repo
-        assert index_roots == ["oracles"]
-        return [
-            "oracles/INDEX.md: missing entry for schemas",
-            "oracles/schemas/INDEX.md: missing INDEX.md",
-        ]
-
-    monkeypatch.setattr(
-        indexing_module,
-        "find_index_inconsistencies",
-        fake_find_index_inconsistencies,
+    assert "committed INDEX.md maintenance changes" in captured.out
+    assert "# `oracles`" in (repo / "INDEX.md").read_text(encoding="utf-8")
+    assert "# `docs`" in (repo / "oracles" / "INDEX.md").read_text(
+        encoding="utf-8"
     )
-
-    with pytest.raises(CmocError) as error:
-        cmoc_indexing_impl(repo, check=True, index_roots=["oracles"])
-
-    assert "未反映のルーティング差分" in error.value.message
-    assert "missing entry for schemas" in error.value.detail
-    assert "oracles/schemas/INDEX.md: missing INDEX.md" in error.value.detail
+    assert "# `spec.md`" in (repo / "oracles" / "docs" / "INDEX.md").read_text(
+        encoding="utf-8"
+    )
+    assert (
+        _git(repo, "log", "-1", "--pretty=%s").stdout.strip()
+        == "Maintain INDEX.md files"
+    )
+    assert _git(repo, "status", "--porcelain").stdout == ""
 
 
 def test_indexing_impl_rejects_dirty_repo_before_maintenance(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """`cmoc indexing` は実行前の未コミット差分があれば止まる。"""
+    """`cmoc indexing` は既存差分があれば INDEX メンテナンス前にエラーにする。"""
     repo = _init_repo(tmp_path)
-    (repo / "dirty.txt").write_text("dirty\n", encoding="utf-8")
+    dirty_path = repo / "dirty.txt"
+    dirty_path.write_text("dirty\n", encoding="utf-8")
     maintained_roots: list[Path] = []
 
     def fake_maintain_indexes(repo_root: Path) -> bool:
@@ -541,7 +541,7 @@ def test_indexing_impl_rejects_dirty_repo_before_maintenance(
 
     assert maintained_roots == []
     assert "未コミットの変更があります。" in error.value.message
-    assert "dirty.txt" in error.value.detail
+    assert str(dirty_path.resolve()) in error.value.detail
 
 
 def test_init_repairs_negated_cmoc_ignore_rule_and_commits_it(
