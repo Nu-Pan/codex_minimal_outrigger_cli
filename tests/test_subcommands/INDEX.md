@@ -14,8 +14,8 @@
 
 ## Do not read this when
 
-- 個別の test_*.py のテストケースやアサーションを確認したいとき。
-- helpers.py の共通 fixture や補助関数を追いたいとき。
+- 個別の `test_*.py` のテストケースやアサーションを確認したいとき。
+- `helpers.py` の共通 fixture や補助関数を追いたいとき。
 - `<cmoc-root>/src/sub_commands` 側の CLI 実装やサブコマンド仕様を確認したいとき。
 
 ## hash
