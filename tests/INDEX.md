@@ -152,27 +152,25 @@
 
 ## Summary
 
-- `<cmoc-root>/tests/test_subcommands` 配下のサブコマンド横断テストのルーティング文書です。
-- `helpers.py` の共通基盤と、`test_cli.py`、`test_core.py`、`test_review_oracles.py`、`test_apply_*.py`、`test_session_*.py` への入口をまとめます。
-- `apply`、`session`、`review oracles`、CLI 入口の責務分担を先に切り分けるための目次です。
+- この `tests/test_subcommands` ディレクトリの回帰テスト群をまとめる入口で、`apply`、`session`、`review`、CLI 横断の各サブコマンドテストを案内します。
+- 共通ヘルパーの `helpers.py` とパッケージ初期化用の `__init__.py`、各サブコマンド別の `test_*.py` から構成されます。
+- サブコマンドごとの状態遷移、エラー処理、CLI 登録、レポート出力、oracle 検証の確認先を切り分けるための目次です。
 
 ## Read this when
 
-- `tests/test_subcommands` 配下の各ファイルが何を担当しているかを最初に整理したいとき。
-- `helpers.py` の共通 fixture、import、テスト用リポジトリ構築関数を把握したいとき。
-- CLI 横断、`apply` 系、`session` 系、`review oracles` 系のどこへ進むべきかを決めたいとき。
-- 個別テストに入る前に、このディレクトリ全体の見取り図だけ確認したいとき。
+- `tests/test_subcommands` 配下のどのテストファイルを読むべきか迷ったとき。
+- `apply`、`session`、`review`、CLI 横断のどの回帰テストが何を守っているかを把握したいとき。
+- 共通ヘルパーや個別テストへの入口を先に整理してから詳細を確認したいとき。
 
 ## Do not read this when
 
-- 個別のテストケース本文やアサーションを直接追いたいとき。
-- `tests/test_subcommands` ではなく、`tests/test_codex.py` や `tests/test_repo.py` など別の回帰テスト群を確認したいとき。
-- `src/sub_commands/` 側の実装本体や CLI 登録の流れを追いたいとき。
-- このディレクトリ全体ではなく、`helpers.py` や特定の `test_*.py` だけを単独で確認したいとき。
+- 読みたい対象の `test_*.py` がすでに分かっていて、個別ファイルへ直接進めるとき。
+- `src/sub_commands` 側の実装や `oracles` の仕様断片だけを確認したいとき。
+- このディレクトリ全体の見取り図ではなく、特定の helper 関数やアサーションだけを追いたいとき。
 
 ## hash
 
-- eb5addfbd8b8d15fe52c6ffbb35e2cd64ef2f34c5788d9b7c5a11abef2451ff0
+- 0be7ba9d6ab7a0e76b30e5372a2ce710c29702ea8adc9ad588f563c872b42376
 
 # `test_timestamps.py`
 

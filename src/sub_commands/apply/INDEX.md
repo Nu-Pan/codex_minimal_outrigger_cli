@@ -84,16 +84,16 @@
 
 - `src/sub_commands/apply/join.py` の実装・修正・レビュー・テストを行いたいとき。
 - 完了済みの apply branch を session branch へ取り込む処理順、state 更新、cleanup 条件を確認したいとき。
-- `--force-resolve`、未コミット差分チェック、想定外差分の扱い、`INDEX.md` conflict の自動解消を追いたいとき。
-- 保存済み report の有無や apply worktree / branch 削除の安全条件を確認したいとき。
+- `--force-resolve`、未コミット差分チェック、想定外の差分の扱い、`INDEX.md` conflict の自動解消を追いたいとき。
+- 保存済み report の有無や、apply worktree / branch を削除してよい安全条件を確認したいとき。
 
 ## Do not read this when
 
 - `cmoc apply fork` や `cmoc apply abandon` の開始・破棄フローだけを確認したいとき。
 - `cmoc session` 系サブコマンドの開始・統合・破棄だけを確認したいとき。
-- `src/sub_commands/apply` 配下の入口構造だけを確認したくて、`join.py` の処理本体は不要なとき。
+- `src/sub_commands/apply` 配下の入口構造だけを確認したく、`join.py` の処理本体は不要なとき。
 - `cmoc apply join` の利用手順や正本仕様断片だけを確認したいとき。
 
 ## hash
 
-- 6008f07de4a859416448e20eeacdf97252412bcd0a61f8877baaec4d5452f5fb
+- 1379090e2545bdd6b5a5fed61236bb671691dd62abaf3b3464e3236888bdf8f8

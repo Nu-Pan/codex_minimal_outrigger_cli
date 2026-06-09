@@ -2,20 +2,20 @@
 
 ## Summary
 
-- `tests/test_subcommands/__init__.py` は `tests.test_subcommands` をパッケージ化するための空ファイルです。
-- ここには実装ロジックやテスト本体はなく、ディレクトリ内の各テストモジュールへの入口を成立させる役割だけを持ちます。
+- `tests/test_subcommands/__init__.py` は `tests.test_subcommands` を Python パッケージとして成立させるための空ファイルです。
+- このファイルには実装ロジックやテストケースはなく、同ディレクトリの `test_*.py` や `helpers.py` を import 可能にする役割だけを持ちます。
 
 ## Read this when
 
-- `tests/test_subcommands` を Python パッケージとして成立させる意図を確認したいとき。
-- このディレクトリに共通の実装やテストロジックが置かれていないことを確認したいとき。
-- 個別の `test_*.py` や `helpers.py` へ進む前に、ディレクトリの土台だけ把握したいとき。
+- `tests/test_subcommands` をパッケージとして成立させる意図を確認したいとき。
+- このディレクトリに共通の実装や補助ロジックが置かれていないことを確認したいとき。
+- 個別テストへ進む前に、ディレクトリの土台だけ把握したいとき。
 
 ## Do not read this when
 
-- 個別の `test_*.py` にあるテストケース本文やアサーションを確認したいとき。
-- `helpers.py` の共通 fixture や補助関数の内容を追いたいとき。
-- `src/sub_commands` 側の CLI 実装やサブコマンド本体の仕様を確認したいとき。
+- 個別の `test_*.py` のテストケースやアサーションを確認したいとき。
+- `helpers.py` の共通 fixture や補助関数を追いたいとき。
+- `src/sub_commands` 側の CLI 実装やサブコマンド仕様を確認したいとき。
 
 ## hash
 
@@ -100,26 +100,24 @@
 ## Summary
 
 - `tests/test_subcommands/test_apply_join.py` は `cmoc apply join` の回帰テスト群です。
-- session/apply state の検証、想定外差分の判定、`--force-resolve`、`INDEX.md` conflict の自動解決と cleanup をまとめて確認します。
-- apply branch と session branch のどちらで実行してもよい経路や、worktree / report / branch 削除の境界条件も扱います。
+- session/apply の state 遷移、想定外差分の検出、`--force-resolve` による復旧を扱います。
+- `INDEX.md` の自動解決、rename/copy の判定、NUL 安全な path 処理、linked worktree からの join も確認します。
 
 ## Read this when
 
-- `cmoc apply join` の正常系・失敗系・cleanup 条件を確認したいとき。
-- 想定外差分の判定基準、`--force-resolve` の挙動、`INDEX.md` conflict の自動解決を追いたいとき。
-- apply branch / session branch / linked worktree / report / result の分岐や、rename/copy・NUL 安全な path・制御文字を含む差分表示の回帰を確認したいとき。
-- このファイルが何を守っているかを先に整理してから、個別テストケースへ進みたいとき。
+- `cmoc apply join` の正常系・失敗系・強制復旧・cleanup の回帰を確認したいとき。
+- 想定外差分の判定、`--force-resolve`、`INDEX.md` の自動解決、rename/copy、NUL 安全な path 取り扱いを追いたいとき。
+- session/apply state、linked worktree、レポート保存、branch/worktree 削除条件の扱いを確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply join` の実装ロジックそのものを追いたいとき。
-- `cmoc apply join` の利用手順や仕様断片だけを確認したいとき。
-- `cmoc session` や `cmoc apply fork/abandon` など、別サブコマンドのテストを探しているとき。
-- `tests/test_subcommands` 全体の横断入口や、上位の `INDEX.md` だけを確認したいとき。
+- `cmoc apply fork`、`cmoc session join`、`cmoc session fork` など、別サブコマンドの挙動を確認したいとき。
+- `tests/test_subcommands` 全体の入口や共通ヘルパーだけを確認したいとき。
+- `src/sub_commands/apply/join.py` の実装本体や、`oracles/docs/app_specs/sub_commands/apply_join.md` の仕様断片だけを読みたいとき。
 
 ## hash
 
-- d8023325e1a46b9ecc8cf8d44cc1c1d5e171c6dae1f06ca7d377c9015f5f405b
+- 3a4b93a8001e3c01da99c3804d942bf99f40070e23a997c31ff87866dcb0869e
 
 # `test_cli.py`
 
