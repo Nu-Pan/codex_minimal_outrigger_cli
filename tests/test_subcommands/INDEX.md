@@ -2,7 +2,7 @@
 
 ## Summary
 
-- `tests/test_subcommands` をテストパッケージとして成立させるための空の初期化ファイルです。
+- `<cmoc-root>/tests/test_subcommands` をテストパッケージとして成立させるための空の初期化ファイルです。
 - このファイル自体には実装やテストロジックはなく、同階層のテストモジュールをパッケージとして扱う境界だけを示します。
 
 ## Read this when
@@ -14,7 +14,7 @@
 ## Do not read this when
 
 - このファイルの中身そのものの実装やテスト本文を確認したいとき。
-- `tests/test_subcommands` 配下の `helpers.py` や各 `test_*.py` を直接追いたいとき。
+- `<cmoc-root>/tests/test_subcommands` 配下の `helpers.py` や各 `test_*.py` を直接追いたいとき。
 - サブコマンド本体の実装や CLI 仕様を確認したいとき。
 
 ## hash
