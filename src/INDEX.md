@@ -2,9 +2,9 @@
 
 ## Summary
 
-- cmoc の共通基盤をまとめた `src/commons` パッケージで、repo/worktree 解決、Codex 呼び出し、エラー整形、ログ、タイムスタンプ、経過時間計測、レポート保存、`INDEX.md` 生成を担うモジュール群です。
-- 個別サブコマンドの本体ではなく、複数コマンドから再利用される横断処理を集約しています。
-- この階層は、`__init__.py` を含む各モジュールへの入口として、必要に応じて `codex.py`、`repo.py`、`indexing.py`、`subcommand_log.py` などへ分岐します。
+- cmoc の共通基盤をまとめた `src/commons` パッケージのルーティング文書で、repo/worktree 解決、Codex 呼び出し、エラー整形、ログ、タイムスタンプ、経過時間計測、レポート保存、`INDEX.md` 生成を担うモジュール群への入口です。
+- この階層は個別サブコマンド本体ではなく、複数コマンドから再利用される横断処理を集約しています。
+- 必要に応じて `__init__.py`、`codex.py`、`command_runner.py`、`errors.py`、`indexing.py`、`repo.py`、`report_files.py`、`subcommand_log.py`、`timestamps.py`、`timing.py` へ分岐します。
 
 ## Read this when
 
@@ -15,12 +15,12 @@
 ## Do not read this when
 
 - 個別サブコマンドの引数解析や業務ロジックだけを確認したいとき。
-- すでに `codex.py`、`repo.py`、`indexing.py` などの個別モジュールの読み先が決まっているとき。
+- すでに `codex.py`、`repo.py`、`indexing.py`、`subcommand_log.py` などの読む先が決まっていて、直接そのモジュールへ進めるとき。
 - `oracles` 側の正本仕様や `tests` の回帰条件だけを確認したいとき。
 
 ## hash
 
-- 4d1c5258c179522400d107914b29db66a91a0aff2b99db7337fac905770a0816
+- 81ebe9996bbce9e8c88c4b6d3ed1217939ee1f8378e9fe4e7a3198b6a04339cd
 
 # `main.py`
 

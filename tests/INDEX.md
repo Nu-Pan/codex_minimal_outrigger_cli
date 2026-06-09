@@ -27,26 +27,28 @@
 
 ## Summary
 
-- `tests/test_codex.py` は `commons.codex` の `run_codex_exec` と関連ヘルパーの回帰テスト群です。
-- Structured Output の再試行、schema 検証、出力ログ、UTF-8 処理、quota/resume 復旧、workspace-write 時の oracle 保護を扱います。
-- `output_schema` の生成・キャッシュ・修復や、`_extract_session_id`、`_resume_command`、通知出力も確認します。
+- `tests/test_codex.py` は `commons.codex` の `run_codex_exec` と関連ヘルパーを対象にした回帰テスト群です。
+- Structured Output の再試行、schema 検証、出力ログ、UTF-8 処理、quota/resume 復旧、workspace-write 時の oracle 保護をまとめて検証します。
+- `_extract_session_id`、`_resume_command`、`_prepare_codex_exec_paths`、`_write_output_schema`、通知出力や index maintenance の境界も確認します。
 
 ## Read this when
 
-- `run_codex_exec` の正常系・失敗系・再試行条件・ログ出力を確認したいとき。
-- Structured Output の schema 検証、`output_schema` の生成・キャッシュ・再利用・修復を変更したいとき。
-- quota 枯渇時の poll/resume、workspace-write 時の oracle 保護、`skip_index_maintenance` の適用範囲を確認したいとき。
-- `_extract_session_id`、`_resume_command`、`_prepare_codex_exec_paths`、通知出力などの補助関数の仕様を確認したいとき。
+- `commons.codex` の `run_codex_exec` と関連ヘルパーの回帰テスト範囲を把握したいとき。
+- Structured Output の再試行、schema 検証、`output_schema` の生成・キャッシュ・修復を変更したいとき。
+- 呼び出しログ、UTF-8 処理、通知出力、launch failure の正規化を確認したいとき。
+- workspace-write 時の oracle 保護、`skip_index_maintenance` の適用範囲、active conflict の許可条件を確認したいとき。
+- quota 検出と resume 復旧、`_extract_session_id`、`_resume_command`、`_prepare_codex_exec_paths` の仕様を確認したいとき。
 
 ## Do not read this when
 
-- `tests/test_indexing.py` や `tests/test_repo.py` など、`commons.codex` 以外の回帰テストを確認したいとき。
-- `commons.indexing` や `commons.subcommand_log` の実装そのものだけを追いたいとき。
-- `tests/test_subcommands` の各サブコマンド別テストへ直接進みたいとき。
+- `tests/test_repo.py`、`tests/test_indexing.py`、`tests/test_subcommands` など、`commons.codex` 以外の回帰テストを確認したいとき。
+- `src/commons/codex.py` の実装ロジックそのものだけを追いたいとき。
+- CLI 全体のサブコマンド登録や `cmoc` の利用手順だけを確認したいとき。
+- `output_schema` や workspace-write 保護の詳細ではなく、別の共通ヘルパーや別機能のテストを探したいとき。
 
 ## hash
 
-- b7915e20129d94ce8d6aa23afaa97d89ff015c45c64056fef59fb24a39567ea8
+- 206d248e8d9825570bd4c18a3f3e1d4a23a66eb5595598b9730afec1bddc009d
 
 # `test_file_naming.py`
 
