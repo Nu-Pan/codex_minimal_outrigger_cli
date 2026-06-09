@@ -148,9 +148,11 @@ def test_apply_join_cleans_worktree_created_under_main_repo_root_from_linked(
     )
 
     _git(linked, "switch", session_branch)
+    original_cwd = Path.cwd()
     cmoc_apply_join_impl(linked)
 
     state = json.loads(state_path.read_text(encoding="utf-8"))
+    assert Path.cwd() == original_cwd
     assert state["apply"] == {
         "apply_branch": None,
         "oracle_snapshot_commit": None,

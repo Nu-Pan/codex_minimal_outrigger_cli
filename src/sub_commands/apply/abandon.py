@@ -39,7 +39,6 @@ def cmoc_apply_abandon_impl(repo_root: Path | None = None) -> None:
     branch_name = current_branch(repo_root)
     session_id = session_id_from_branch(branch_name)
     cmoc_root = session_state_repo_root(repo_root, session_id)
-    os.chdir(cmoc_root)
     state = read_session_state(cmoc_root, session_id)
     abandon_state = _validate_abandonable_state(
         cmoc_root,
@@ -378,11 +377,10 @@ def _relocate_from_apply_branch(
     abandon_state: _AbandonState,
     session_worktree: Path | None,
 ) -> None:
-    """apply branch 上からの実行時に cleanup 基点を session branch へ移す。"""
+    """apply branch 上からの実行時に削除可能な checkout 状態へ整える。"""
     if current_branch_name != abandon_state.apply_branch:
         return
     if session_worktree is not None:
-        os.chdir(session_worktree)
         return
     assert_no_uncommitted_changes(repo_root)
     switch_result = run_git(

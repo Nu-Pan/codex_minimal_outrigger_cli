@@ -1,7 +1,6 @@
 """`cmoc apply join` の本体処理。"""
 
 import json
-import os
 import tempfile
 from collections.abc import Callable
 from contextlib import contextmanager
@@ -55,7 +54,6 @@ def cmoc_apply_join_impl(
     branch_name = current_branch(repo_root)
     session_id = session_id_from_branch(branch_name)
     cmoc_root = session_state_repo_root(repo_root, session_id)
-    os.chdir(cmoc_root)
     state = read_session_state(cmoc_root, session_id)
     join_state = _validate_joinable_state(
         cmoc_root,
