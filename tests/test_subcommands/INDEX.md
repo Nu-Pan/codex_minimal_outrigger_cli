@@ -2,21 +2,20 @@
 
 ## Summary
 
-- `<cmoc-root>/tests/test_subcommands/__init__.py` は `tests.test_subcommands` を Python パッケージとして成立させるための空ファイルです。
-- このファイル自体にはテストケースや実装ロジックはなく、同ディレクトリ配下の `test_*.py` や `helpers.py` を import 可能にする役割だけを持ちます。
-- このファイル単体ではサブコマンド仕様や回帰テストの振る舞いは分かりません。
+- `tests/test_subcommands/__init__.py` は `tests.test_subcommands` を Python パッケージとして成立させるための最小モジュールです。
+- テストケース、ヘルパー関数、実行ロジック、公開 API は持ちません。
 
 ## Read this when
 
-- `tests/test_subcommands` を Python パッケージとして成立させる意図を確認したいとき。
-- このディレクトリに共通の実装や補助ロジックが置かれていないことを確認したいとき。
-- 個別テストへ進む前に、ディレクトリの土台だけ把握したいとき。
+- このディレクトリがパッケージとして import 可能であることを確認したいとき。
+- 個別の `test_*.py` や `helpers.py` に進む前に、入口だけ把握したいとき。
+- このファイルに共通ロジックやテスト本体が置かれていないことを確認したいとき。
 
 ## Do not read this when
 
-- 個別の `test_*.py` のテストケースやアサーションを確認したいとき。
-- `helpers.py` の共通 fixture や補助関数を追いたいとき。
-- `<cmoc-root>/src/sub_commands` 側の CLI 実装やサブコマンド仕様を確認したいとき。
+- 個別のサブコマンド回帰テストや共通ヘルパーの内容を確認したいとき。
+- `cmoc` の CLI 実装や `src/sub_commands` 側の仕様を確認したいとき。
+- サブコマンドごとの状態遷移、エラー処理、レポート出力、oracle 検証の詳細を追いたいとき。
 
 ## hash
 
