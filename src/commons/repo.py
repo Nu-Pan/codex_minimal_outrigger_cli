@@ -1548,10 +1548,15 @@ def root_gitignored_paths_at_commit(
         repo_root,
         ["show", f"{commit_hash}:.gitignore"],
         check=False,
+        text=False,
     )
     if result.returncode != 0:
         return set()
-    return _root_gitignored_paths_from_content(relative_paths, result.stdout)
+    gitignore_content = _decode_gitignore_blob_at_commit(
+        result.stdout,
+        commit_hash,
+    )
+    return _root_gitignored_paths_from_content(relative_paths, gitignore_content)
 
 
 def changed_oracle_files(repo_root: Path, base_commit: str) -> list[Path]:
@@ -2193,6 +2198,21 @@ def _read_utf8_text(path: Path, message: str, actions: list[str]) -> str:
         ) from error
 
 
+def _decode_gitignore_blob_at_commit(content: bytes, commit_hash: str) -> str:
+    """commit 上の root `.gitignore` blob を UTF-8 として decode する。"""
+    try:
+        return content.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise CmocError(
+            "commit 上の .gitignore ファイルを読めませんでした。",
+            [
+                "対象 commit の .gitignore の文字コードを確認してください。",
+                ".gitignore を UTF-8 で読める内容に直した commit を使って再実行してください。",
+            ],
+            f"commit: {commit_hash}\npath: .gitignore\nUTF-8 decode error: {error}",
+        ) from error
+
+
 def _assert_cmoc_ignore_guarantee(
     repo_root: Path,
     env: dict[str, str] | None = None,
@@ -2286,7 +2306,7 @@ def _root_gitignored_paths(
         return set()
     return _root_gitignored_paths_from_content(
         relative_paths,
-        gitignore.read_text(encoding="utf-8"),
+        _read_gitignore_text(gitignore),
     )
 
 

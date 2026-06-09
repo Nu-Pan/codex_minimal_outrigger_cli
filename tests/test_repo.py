@@ -195,6 +195,23 @@ def test_ensure_cmoc_ignored_rejects_non_utf8_gitignore(
     assert str(gitignore) in error.value.detail
 
 
+def test_list_implementation_files_rejects_non_utf8_root_gitignore(
+    tmp_path: Path,
+) -> None:
+    """実装ファイル列挙の root `.gitignore` decode failure は CmocError にする。"""
+    repo = _init_repo(tmp_path)
+    gitignore = repo / ".gitignore"
+    gitignore.write_bytes(b"\xff\n")
+    (repo / "app.py").write_text("app\n", encoding="utf-8")
+
+    with pytest.raises(CmocError) as error:
+        list_implementation_files(repo)
+
+    assert ".gitignore ファイルを読めませんでした。" in error.value.message
+    assert "UTF-8 decode error" in error.value.detail
+    assert str(gitignore) in error.value.detail
+
+
 def test_assert_cmoc_ignored_does_not_modify_repository(
     tmp_path: Path,
 ) -> None:
@@ -585,6 +602,29 @@ def test_filter_apply_implementation_file_paths_at_commit_excludes_root_memo(
         "app.py",
         "docs/memo/note.md",
     ]
+
+
+def test_filter_apply_implementation_file_paths_at_commit_rejects_non_utf8_gitignore(
+    tmp_path: Path,
+) -> None:
+    """commit 上の root `.gitignore` decode failure は CmocError にする。"""
+    repo = _init_repo(tmp_path)
+    (repo / ".gitignore").write_bytes(b"\xff\n")
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-m", "non utf8 gitignore")
+    commit_hash = _git(repo, "rev-parse", "HEAD").stdout.strip()
+
+    with pytest.raises(CmocError) as error:
+        filter_apply_implementation_file_paths_at_commit(
+            repo,
+            commit_hash,
+            ["app.py"],
+        )
+
+    assert "commit 上の .gitignore ファイルを読めませんでした。" in error.value.message
+    assert "UTF-8 decode error" in error.value.detail
+    assert f"commit: {commit_hash}" in error.value.detail
+    assert "path: .gitignore" in error.value.detail
 
 
 def test_changed_oracle_files_uses_session_start_and_uncommitted_changes(
