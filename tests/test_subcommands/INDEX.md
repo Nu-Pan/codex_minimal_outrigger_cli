@@ -13,8 +13,8 @@
 
 ## Do not read this when
 
-- このファイルの中身そのものの実装やテスト本文を確認したいとき。
-- `<cmoc-root>/tests/test_subcommands` 配下の `helpers.py` や各 `test_*.py` を直接追いたいとき。
+- このファイル自体の中身やテスト本文を確認したいとき。
+- `tests/test_subcommands` 配下の `helpers.py` や個別の `test_*.py` を直接追いたいとき。
 - サブコマンド本体の実装や CLI 仕様を確認したいとき。
 
 ## hash
