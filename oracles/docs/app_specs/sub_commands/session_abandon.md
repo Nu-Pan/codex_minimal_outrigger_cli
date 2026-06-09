@@ -47,7 +47,7 @@
 
 1. 事前検証
     - 事前条件を満たしている事を確認する
-2. `<repo-root>/.cmoc` が git の追跡対象外であることを保証する。
+2. `<work-root>/.cmoc` が git の追跡対象外であることを保証する。
 3. クリーンアップ
     1. `git switch <cmoc-session-home-branch>` を実行する。
     2. `<cmoc-session-state-file>` の `session.state` を `abandoned` に更新する。

@@ -13,6 +13,7 @@ from threading import Lock
 from time import perf_counter
 from typing import IO, Iterator
 
+from .repo import main_worktree_repo_root
 from .timestamps import console_timestamp
 from .timestamps import make_timestamp
 
@@ -200,34 +201,7 @@ def _git_exclude_path(repo_root: Path) -> Path | None:
 
 def resolve_log_repo_root(repo_root: Path) -> Path:
     """cmoc の実行ログを書き込む repo root を返す。"""
-    owner_root = _owning_repo_root_from_apply_worktree_path(repo_root)
-    if owner_root is not None:
-        return owner_root
-
-    if not (repo_root / ".git").exists():
-        return repo_root
-    result = subprocess.run(
-        [
-            "git",
-            "rev-parse",
-            "--path-format=absolute",
-            "--git-common-dir",
-        ],
-        cwd=repo_root,
-        check=False,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    if result.returncode != 0:
-        return repo_root
-    common_dir = result.stdout.strip()
-    if not common_dir:
-        return repo_root
-    common_root = Path(common_dir).parent
-    if _is_cmoc_managed_worktree_root(repo_root, common_root):
-        return common_root
-    return repo_root
+    return main_worktree_repo_root(repo_root)
 
 
 def _subcommand_log_repo_root(repo_root: Path) -> Path:

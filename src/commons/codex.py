@@ -567,11 +567,13 @@ def _maintain_indexes_before_codex(
     """通常の Codex CLI 起動直前に INDEX.md メンテナンスを実行する。"""
     if skip_index_maintenance or not (repo_root / ".git").exists():
         return
+    from .indexing import assert_index_roots_current
     from .indexing import maintain_indexes
 
     if index_excluded_roots is None:
         maintain_indexes(repo_root)
         return
+    assert_index_roots_current(repo_root, index_excluded_roots)
     maintain_indexes(repo_root, excluded_index_roots=index_excluded_roots)
 
 

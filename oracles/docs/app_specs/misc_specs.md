@@ -4,29 +4,27 @@
 ## 実装ファイルの列挙方法
 
 - 「実装ファイルを列挙」と言った場合、以下の方法で機械的に列挙する
-    - `<repo-root>` 配下の全てのファイルを glob する（拡張子で制限しない）
-    - `<repo-root>/oracles` は除外
-    - `<repo-root>/.gitignore` の対象は除外
+    - `<work-root>` 配下の全てのファイルを glob する（拡張子で制限しない）
+    - `<work-root>/oracles` は除外
+    - `<work-root>/.gitignore` の対象は除外
     - `.git` は対象外
     - `INDEX.md` は除外
 
-## `<repo-root>` に対する仮定
+## `<work-root>` に対する仮定
 
-cmoc による操作対象リポジトリである `<repo-root>` は以下の要件を満たすものと仮定する
+cmoc による操作対象リポジトリである `<work-root>` は以下の要件を満たすものと仮定する
 
 - git で管理されている
-- `<repo-root>/oracles` 配下に断片的な正本情報が記載されている（`<cmoc-root>` 配下がそうであるように）
-- `<repo-root>` に固有の作業のノウハウは全てリポジトリ上で実装済みである
-    - 言い換えれば cmoc が無くても Codex CLI の直接利用でも作業を完遂出来るように `<repo-root>` がメンテナンスされている事を仮定する
+- `<work-root>/oracles` 配下に断片的な正本情報が記載されている（`<cmoc-root>` 配下がそうであるように）
+- `<work-root>` に固有の作業のノウハウは全てリポジトリ上で実装済みである
+    - 言い換えれば cmoc が無くても Codex CLI の直接利用でも作業を完遂出来るように `<work-root>` がメンテナンスされている事を仮定する
     - e.g.
-        - 「`<repo-root>/oracles` 配下のファイル別に `codex exec` セッションを起動する責任」は cmoc が負う
-        - 「開発必要な特定のツールの使用方法を説明する責任」は cmoc ではなく `<repo-root>/.agents/skills` が担う
+        - 「`<work-root>/oracles` 配下のファイル別に `codex exec` セッションを起動する責任」は cmoc が負う
+        - 「開発必要な特定のツールの使用方法を説明する責任」は cmoc ではなく `<work-root>/.agents/skills` が担う
 
 ## cmoc 実行時のカレントディレクトリ
 
-- cmoc が呼び出された時のカレントを起点に、ルートに向けて「直下に `.git` ファイル・ディレクトリを持つディレクトリ」を探索する
-- 最初に見つかったディレクトリを `<repo-root>` とする
-- cmoc 実行時のカレントは必ず `<repo-root>` に変更する
+- cmoc 実行時のカレント (pwd) は必ず  `<work-root>` とする
 
 ## `<repo-root>/.cmoc`
 

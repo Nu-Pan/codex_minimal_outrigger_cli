@@ -22,7 +22,7 @@
 - ログファイルはサブコマンドと 1:1 で存在すること
 - ログファイルは JSON Lines 形式であること
 - ログファイルは `<repo-root>/.cmoc/logs/sub_commands/<time-stamp>.jsonl` に出力すること
-- ログファイルは git worktree 上 (e.g. `<cmoc-apply-worktree>/.cmoc/logs/sub_commands/<time-stamp>.jsonl`) に出力してはいけない
+- ログファイルは `<run-root>` 側に出力してはいけない
 - サブコマンド中に発生したイベント 1 つ = ログファイルの 1 行とすること
 - イベントの追記ははバッファリングせずに即時 flush すること
 

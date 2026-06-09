@@ -3,7 +3,7 @@
 
 ## 前提
 
-- oracles ファイルの基本的な定義については `<repo-root>/oracles/docs/app_specs/oracles/basic_definitions.md` を参照すること
+- oracles ファイルの基本的な定義については `<cmoc-root>/oracles/docs/app_specs/oracles/basic_definitions.md` を参照すること
 - 基本的な定義を踏まえた上で、「oracles ファイル記述標準」は oracles ファイルについての標準的な原則・規則を述べる
 
 ## 原則
