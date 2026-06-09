@@ -97,6 +97,30 @@ def find_index_inconsistencies(
     return inconsistencies
 
 
+def assert_index_roots_current(
+    repo_root: Path,
+    index_roots: Iterable[Path | str],
+) -> None:
+    """更新対象外 root の `INDEX.md` が最新か、更新せずに検査する。"""
+    indexed_roots = _existing_normalized_index_roots(repo_root, index_roots)
+    if not indexed_roots:
+        return
+    inconsistencies = find_index_inconsistencies(
+        repo_root,
+        index_roots=indexed_roots,
+    )
+    if not inconsistencies:
+        return
+    raise CmocError(
+        "編集禁止パス配下の INDEX.md が実在ファイル構成と一致していません。",
+        [
+            "編集禁止パスはこの処理では自動更新できないため、編集が許可された作業環境で `cmoc indexing` を実行してください。",
+            "整備後に cmoc コマンドを再実行してください。",
+        ],
+        "\n".join(inconsistencies),
+    )
+
+
 def is_maintained_index_path(
     repo_root: Path,
     relative_path: str,
@@ -368,6 +392,15 @@ def _normalize_optional_index_roots(
     if index_roots is None:
         return None
     return _normalize_excluded_index_roots(repo_root, index_roots)
+
+
+def _existing_normalized_index_roots(
+    repo_root: Path,
+    index_roots: Iterable[Path | str],
+) -> list[Path]:
+    """repo 内に実在する検査 root だけを絶対 path として返す。"""
+    normalized_roots = _normalize_excluded_index_roots(repo_root, index_roots)
+    return sorted(root for root in normalized_roots if root.exists())
 
 
 def _is_under_any_path(path: Path, roots: set[Path]) -> bool:

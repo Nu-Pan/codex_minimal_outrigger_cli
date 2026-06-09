@@ -3998,6 +3998,65 @@ def test_run_codex_exec_maintains_indexes_before_each_retry(
     assert calls == [repo, repo, repo]
 
 
+def test_run_codex_exec_rejects_stale_excluded_indexes_before_codex(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """除外 root の INDEX 不整合は更新せず、Codex CLI 起動前に止める。"""
+    repo = _init_git_repo(tmp_path)
+    oracle_root = repo / "oracles"
+    oracle_root.mkdir()
+    (oracle_root / "spec.md").write_text("spec\n", encoding="utf-8")
+    (oracle_root / "INDEX.md").write_text(
+        "manual oracle index\n",
+        encoding="utf-8",
+    )
+    _git(repo, "add", "oracles/spec.md", "oracles/INDEX.md")
+    _git(repo, "commit", "-m", "stale oracle index")
+
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    marker = tmp_path / "codex-invoked"
+    codex = fake_bin / "codex"
+    codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env bash",
+                f"touch {marker}",
+                "echo '{\"event\":\"done\"}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    codex.chmod(0o755)
+    maintain_calls: list[Path] = []
+
+    def fake_maintain(
+        repo_root: Path,
+        **kwargs: object,
+    ) -> bool:
+        """除外 root 不整合があれば呼ばれてはいけないメンテナンス。"""
+        del kwargs
+        maintain_calls.append(repo_root)
+        return False
+
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setattr("commons.indexing.maintain_indexes", fake_maintain)
+
+    with pytest.raises(CmocError) as error:
+        run_codex_exec(
+            repo,
+            "prompt",
+            read_only=True,
+            index_excluded_roots=[oracle_root],
+        )
+
+    assert "編集禁止パス配下の INDEX.md" in error.value.message
+    assert "oracles/INDEX.md" in error.value.detail
+    assert maintain_calls == []
+    assert not marker.exists()
+
+
 def test_run_codex_exec_can_skip_index_maintenance(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
