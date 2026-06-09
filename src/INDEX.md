@@ -50,13 +50,13 @@
 
 ## Summary
 
-- `src/sub_commands` ディレクトリのルーティング文書で、`__init__.py`、`indexing.py`、`init.py`、および `apply/`、`review/`、`session/` へ案内する入口です。
+- `<cmoc-root>/src/sub_commands` ディレクトリのルーティング文書で、`__init__.py`、`indexing.py`、`init.py`、および `apply/`、`review/`、`session/` へ案内する入口です。
 - この階層では、パッケージ宣言、`cmoc indexing`、`cmoc init`、各サブコマンド群の入口をまとめて切り分けます。
 - 個別実装へ進む前に、どのモジュールや下位ディレクトリを読むべきか整理するための目次です。
 
 ## Read this when
 
-- `src/sub_commands` 配下で、どの実装モジュールや下位ディレクトリを開くべきか迷ったとき。
+- `<cmoc-root>/src/sub_commands` 配下で、どの実装モジュールや下位ディレクトリを開くべきか迷ったとき。
 - `cmoc indexing` と `cmoc init` の本体実装、または `apply` / `review` / `session` 系の入口を一覧で把握したいとき。
 - パッケージ宣言と実装モジュール、下位サブコマンド群の役割分担を確認してから作業したいとき。
 - この階層の構成をレビュー・修正・テストの前に整理したいとき。
@@ -70,4 +70,4 @@
 
 ## hash
 
-- c9d4d6515c58e0934ecd843eaa56082a74eb28c1128729515d8404df9a0808fb
+- 1a1139951db947a86a55a22c96433ce62d19726d7ca26cb149916f67904a4bbe

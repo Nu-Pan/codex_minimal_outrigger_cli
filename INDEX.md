@@ -175,25 +175,24 @@
 
 ## Summary
 
-- `src` は cmoc の実装本体をまとめた階層で、CLI 入口の `main.py`、共通基盤の `commons/`、サブコマンド実装の `sub_commands/` へ分岐する入口です。
-- 個別実装へ進む前に、どのモジュールが何を担うかを俯瞰するための目次です。
-- この階層では、アプリ全体の起点と横断処理、サブコマンド群の配置を切り分けます。
+- cmoc のソースコードをまとめたルートで、CLI エントリーポイントの `main.py`、共通基盤の `commons/`、サブコマンド実装の `sub_commands/` を束ねる入口です。
+- この階層は、実装の全体像を把握してから個別モジュールへ進むための目次として機能します。
 
 ## Read this when
 
-- cmoc のソースコード本体で、CLI 入口・共通基盤・サブコマンド実装の役割分担をまとめて把握したいとき。
-- `main.py`、`commons/`、`sub_commands/` のどこへ進むべきかを判断したいとき。
-- `src` 配下の構成をレビュー、修正、テストの前に整理したいとき。
+- cmoc のソースコード全体の入口構成を把握したいとき。
+- CLI エントリーポイントと共通基盤、サブコマンド実装の役割分担を整理したいとき。
+- `src` 配下のどの下位ディレクトリやファイルを開くべきか迷ったとき。
 
 ## Do not read this when
 
-- すでに `src/main.py`、`src/commons/`、`src/sub_commands/` の読み先が決まっていて、この階層の目次が不要なとき。
-- 個別モジュールの実装詳細だけを直接確認したいとき。
-- `src` 全体ではなく、特定の下位ディレクトリやファイルだけを確認したいとき。
+- すでに `src/main.py`、`src/commons/`、`src/sub_commands/` のどれを読むべきか決まっているとき。
+- 個別モジュールの実装や CLI 引数だけを確認したいとき。
+- `oracles` 側の正本仕様や `tests` だけを追いたいとき。
 
 ## hash
 
-- 2527d3cf020253b28129875705b15514ac06c678ada8b5cca532074ee0936365
+- ffcd0b61d3045c3ee6423720d5b3c6300e59bb5c3da2cba03c5062a6a1d34a06
 
 # `test.sh`
 
@@ -222,22 +221,22 @@
 
 ## Summary
 
-- `tests` ディレクトリ全体のルーティング文書で、共通 pytest 設定と各回帰テスト群への入口をまとめたものです。
-- `conftest.py` は `src` を import path に追加する共通設定で、各 `test_*.py` は `commons` や CLI、ファイル命名、時刻処理、リポジトリ操作の回帰を担います。
-- `test_subcommands/` は `apply`、`session`、`review`、CLI 横断のサブコマンド回帰テストへ進む入口です。
+- `<cmoc-root>/tests` ディレクトリのルーティング文書で、共通設定と各回帰テスト群への入口をまとめるための目次です。
+- `conftest.py` は pytest の共通設定、`test_codex.py`、`test_indexing.py`、`test_repo.py`、`test_report_files.py`、`test_timestamps.py` は各共通機能の回帰テスト、`test_subcommands/` はサブコマンド別テスト群への入口です。
+- この階層では、個別テストの詳細に入る前に、どのファイルへ進むべきかを切り分けます。
 
 ## Read this when
 
-- pytest の共通設定と個別テストの役割分担を先に把握したいとき。
-- `tests/test_codex.py`、`tests/test_indexing.py`、`tests/test_repo.py` など、どの回帰テストを読むべきか迷ったとき。
-- `tests/test_subcommands/` 配下のサブコマンド別テストへ進む前に、全体の見取り図を確認したいとき。
+- `<cmoc-root>/tests` 配下の回帰テスト全体の役割分担を先に把握したいとき。
+- 共通 pytest 設定の `conftest.py` と、各 `test_*.py` が何を守っているかを整理したいとき。
+- `tests/test_subcommands/` へ進む前に、どの種類のテストがここに集約されているか確認したいとき。
 
 ## Do not read this when
 
-- 読みたい個別テストファイルがすでに分かっていて、この階層の目次が不要なとき。
-- `src` 側の実装本体や `oracles` 側の正本仕様だけを確認したいとき。
-- `tests` 配下の特定の helper 関数やアサーションだけを直接追いたいとき。
+- 個別のテスト関数やアサーションの内容を直接確認したいとき。
+- `src` 側の実装ロジックや `oracles` の正本仕様だけを追いたいとき。
+- この階層ではなく、`tests/test_subcommands/` など下位ディレクトリの個別目次へ直接進めるとき。
 
 ## hash
 
-- 68ae448be57277f2d2046ab05c338f389ecf1d9a69ddbb3f0d2a8d7e53509081
+- 61bf78c743edc28af2fd676e8bb5314604cb0701311e1e48ba15af026172f733

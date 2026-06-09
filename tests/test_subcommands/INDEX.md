@@ -49,25 +49,25 @@
 
 ## Summary
 
-- `tests/test_subcommands/test_apply_abandon.py` は、`cmoc apply abandon` の回帰テスト群です。
-- 未 join の apply run を安全に破棄できること、`apply.state` を `ready` に戻すこと、apply branch と worktree を削除することを検証します。
-- session / apply の state 境界、実行中 process の停止、legacy PID file の安全性、dirty な作業ツリーや別 session 混入時の拒否も確認します。
+- `tests/test_subcommands/test_apply_abandon.py` は、`cmoc apply abandon` の回帰テスト群をまとめたファイルです。
+- 未 join の apply run を安全に破棄し、`apply.state` を `ready` に戻して、apply branch と worktree を削除する挙動を検証します。
+- 実行中 process の停止、legacy PID file の安全性、dirty な作業ツリーや別 session 混入時の拒否も確認します。
 
 ## Read this when
 
 - `cmoc apply abandon` の破棄条件、state 遷移、cleanup の流れを確認したいとき。
-- apply branch / apply worktree の削除、session branch への復帰、実行中 process の停止条件を確認したいとき。
+- apply branch と apply worktree の削除、session branch への復帰、実行中 process の停止条件を確認したいとき。
 - 別 session の apply branch を誤って消さない条件、dirty worktree の検出、`ready` / `error` / `running` / 未知 state の扱いを確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply fork` / `cmoc apply join` の処理順やレポート生成だけを確認したいとき。
-- `cmoc session fork/join/abandon` など、session 側の開始・統合・破棄ロジックだけを確認したいとき。
-- `tests/test_subcommands.py` の横断的な入口や、他のサブコマンド回帰テストを確認したいとき。
+- `cmoc apply fork` や `cmoc apply join` の処理順、調査・取り込み・レポート生成だけを確認したいとき。
+- `cmoc session fork`、`cmoc session join`、`cmoc session abandon` など、session 側の開始・統合・破棄ロジックを確認したいとき。
+- `tests/test_subcommands` 全体の入口や、他のサブコマンド回帰テストを探したいとき。
 
 ## hash
 
-- fd783bed47bada01e6e4b1b52a28b7abe373f24879451a96ea89003e0d19405b
+- 3c34ff885a8c08fa3d0b563cbac11cfca79f046dfa63432f4140eb2f8d1b55b8
 
 # `test_apply_fork.py`
 
@@ -99,25 +99,28 @@
 
 ## Summary
 
-- `tests/test_subcommands/test_apply_join.py` は `cmoc apply join` の回帰テスト群です。
-- session/apply の state 遷移、想定外差分の検出、`--force-resolve` による復旧を扱います。
-- `INDEX.md` の自動解決、rename/copy の判定、NUL 安全な path 処理、linked worktree からの join も確認します。
+- この `tests/test_subcommands/test_apply_join.py` は、`cmoc apply join` の回帰テスト群をまとめたファイルです。
+- `session/apply` の state 遷移、想定外差分の検出、`--force-resolve` による復旧、`INDEX.md` の自動解決を扱います。
+- rename/copy の差分判定、NUL 安全な path 処理、linked worktree からの join、join 後の branch / worktree cleanup も確認します。
 
 ## Read this when
 
 - `cmoc apply join` の正常系・失敗系・強制復旧・cleanup の回帰を確認したいとき。
-- 想定外差分の判定、`--force-resolve`、`INDEX.md` の自動解決、rename/copy、NUL 安全な path 取り扱いを追いたいとき。
-- session/apply state、linked worktree、レポート保存、branch/worktree 削除条件の扱いを確認したいとき。
+- session/apply の state 遷移や、完了済み apply branch を session branch に取り込む前提条件を確認したいとき。
+- 想定外差分の判定基準や、`--force-resolve` でどの差分だけを復元・維持するかを追いたいとき。
+- `INDEX.md` conflict の自動解決、rename/copy の扱い、NUL を含む path の安全性を確認したいとき。
+- linked worktree から join した場合の cleanup 先や、branch / worktree 削除条件を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply fork`、`cmoc session join`、`cmoc session fork` など、別サブコマンドの挙動を確認したいとき。
-- `tests/test_subcommands` 全体の入口や共通ヘルパーだけを確認したいとき。
+- `cmoc apply fork` や `cmoc apply abandon` など、別の apply サブコマンドの挙動を確認したいとき。
+- `cmoc session fork`、`cmoc session join`、`cmoc session abandon` など、session 側のテストを確認したいとき。
 - `src/sub_commands/apply/join.py` の実装本体や、`oracles/docs/app_specs/sub_commands/apply_join.md` の仕様断片だけを読みたいとき。
+- `tests/test_subcommands` 全体の入口や共通ヘルパーだけを先に確認したいとき。
 
 ## hash
 
-- 3a4b93a8001e3c01da99c3804d942bf99f40070e23a997c31ff87866dcb0869e
+- 61668fba567c6adee3cb9291dc66c07db3e7babe51d994fddfa687d08ec797be
 
 # `test_cli.py`
 
