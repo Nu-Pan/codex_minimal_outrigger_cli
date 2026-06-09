@@ -76,6 +76,8 @@ def cmoc_apply_join_impl(
         join_state.session_branch,
         branch_name,
     )
+    if all(merge_root != clean_root for clean_root in {repo_root, cmoc_root}):
+        assert_no_uncommitted_changes(merge_root)
 
     start_step(timer, 2, 5, "想定外差分確認")
     unexpected = _unexpected_diffs(cmoc_root, join_state)
@@ -91,7 +93,7 @@ def cmoc_apply_join_impl(
 
     start_step(timer, 3, 5, "想定外差分解消")
     if unexpected:
-        _force_resolve_unexpected_diffs(cmoc_root, join_state)
+        _force_resolve_unexpected_diffs(cmoc_root, join_state, merge_root)
         print("force-resolved unexpected diffs:")
         for line in unexpected:
             print(f"- {line}")
@@ -522,6 +524,7 @@ def _is_snapshot_index_path(
 def _force_resolve_unexpected_diffs(
     repo_root: Path,
     join_state: _JoinState,
+    session_worktree: Path,
 ) -> None:
     """想定外差分を snapshot の内容へ戻す。"""
     _revert_branch_paths(
@@ -558,7 +561,7 @@ def _force_resolve_unexpected_diffs(
                 path,
             ),
         ),
-        repo_root,
+        session_worktree,
     )
 
 

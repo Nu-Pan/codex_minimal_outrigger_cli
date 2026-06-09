@@ -361,6 +361,43 @@ def test_apply_join_ignores_worktree_local_log_cmoc(
     assert not apply_worktree.exists()
 
 
+def test_apply_join_from_apply_branch_rejects_dirty_session_linked_worktree(
+    tmp_path: Path,
+) -> None:
+    """apply branch からの join も実際の session worktree の dirty を拒否する。"""
+    repo = _init_repo(tmp_path)
+    home_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    session_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    _git(repo, "switch", home_branch)
+    session_worktree = tmp_path / "session-linked"
+    _git(repo, "worktree", "add", str(session_worktree), session_branch)
+    (session_worktree / "dirty.txt").write_text("dirty\n", encoding="utf-8")
+    (apply_worktree / "feature.txt").write_text("implemented\n", encoding="utf-8")
+    _git(apply_worktree, "add", "feature.txt")
+    _git(apply_worktree, "commit", "-m", "implement feature")
+
+    with pytest.raises(CmocError) as error_info:
+        cmoc_apply_join_impl(apply_worktree)
+
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert "未コミットの変更" in error_info.value.message
+    assert str((session_worktree / "dirty.txt").resolve()) in error_info.value.detail
+    assert not (session_worktree / "feature.txt").exists()
+    assert state["apply"]["state"] == "completed"
+    assert _git(repo, "branch", "--list", apply_branch).stdout.strip()
+    assert apply_worktree.exists()
+
+
 def test_apply_join_stops_on_unexpected_diff_in_normal_mode(
     tmp_path: Path,
 ) -> None:
@@ -987,6 +1024,55 @@ def test_apply_join_force_resolves_session_branch_implementation_deletion(
     assert (repo / "app.py").read_text(encoding="utf-8") == "print('base')\n"
     assert (repo / "feature.txt").read_text(encoding="utf-8") == "implemented\n"
     assert state["apply"]["state"] == "ready"
+    assert (
+        f"- {session_branch}: {json.dumps((repo / 'app.py').resolve().as_posix())}"
+        in output
+    )
+
+
+def test_apply_join_force_resolves_session_linked_worktree_from_apply_branch(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """apply branch からの強制 join は session linked worktree で revert する。"""
+    repo = _init_repo(tmp_path)
+    home_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    (repo / "app.py").write_text("print('base')\n", encoding="utf-8")
+    _git(repo, "add", "app.py")
+    _git(repo, "commit", "-m", "add implementation file")
+    _checkout_session_branch(repo)
+    oracle_snapshot = _add_oracle_snapshot(repo)
+    apply_branch, apply_worktree, _report_path = _create_completed_apply_run(
+        repo,
+        oracle_snapshot,
+    )
+    session_branch = _git(repo, "branch", "--show-current").stdout.strip()
+    _git(repo, "switch", home_branch)
+    session_worktree = tmp_path / "session-linked"
+    _git(repo, "worktree", "add", str(session_worktree), session_branch)
+    _git(session_worktree, "rm", "app.py")
+    _git(session_worktree, "commit", "-m", "delete implementation on session")
+    (apply_worktree / "feature.txt").write_text("implemented\n", encoding="utf-8")
+    _git(apply_worktree, "add", "feature.txt")
+    _git(apply_worktree, "commit", "-m", "implement feature")
+
+    cmoc_apply_join_impl(apply_worktree, force_resolve=True)
+
+    output = capsys.readouterr().out
+    state = json.loads(
+        (
+            repo / ".cmoc" / "sessions" / "2026-05-10_22-21_10_000000123.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert (session_worktree / "app.py").read_text(encoding="utf-8") == (
+        "print('base')\n"
+    )
+    assert (session_worktree / "feature.txt").read_text(encoding="utf-8") == (
+        "implemented\n"
+    )
+    assert state["apply"]["state"] == "ready"
+    assert _git(repo, "branch", "--list", apply_branch).stdout == ""
+    assert not apply_worktree.exists()
     assert (
         f"- {session_branch}: {json.dumps((repo / 'app.py').resolve().as_posix())}"
         in output
