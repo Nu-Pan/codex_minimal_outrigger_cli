@@ -52,9 +52,9 @@
 
 ## Summary
 
-- `<cmoc-root>/src/sub_commands` ディレクトリのルーティング文書で、`cmoc` の各サブコマンド実装への入口を整理する階層です。
-- `__init__.py` はパッケージ宣言だけを担い、`init.py` と `indexing.py` は単独コマンド本体、`apply/`、`session/`、`review/` は各系統の入口です。
-- この階層では、どのコマンド本体や下位 `INDEX.md` に進むべきかを切り分けます。
+- `<cmoc-root>/src/sub_commands` ディレクトリのルーティング目次で、cmoc の各サブコマンド実装への入口を整理する階層です。
+- `__init__.py` はパッケージ宣言のみ、`init.py` と `indexing.py` は単独コマンド本体、`apply/`、`session/`、`review/` は各系統の入口です。
+- どのコマンド本体や下位 `INDEX.md` に進むべきかを切り分けるための案内役です。
 
 ## Read this when
 
@@ -72,4 +72,4 @@
 
 ## hash
 
-- e561f5155d696fe50806b6290c2305c0dafdeb826ec7b5fa304ed28b98538919
+- e72a895375c5d5877f7f86e4aa9d6dd928621b86ca50a663747df63c9f03a865
