@@ -2,15 +2,15 @@
 
 ## Summary
 
-- `cmoc` の呼び出し手順から共通仕様、各サブコマンド入口までをまとめた `docs/app_specs` の目次です。
-- `usage.md` で日常フロー、`branch_model.md` でブランチモデル、`sub_commands/` で個別サブコマンド仕様へ分岐します。
-- `indexing.md` や `oracles.md` を含み、`INDEX.md` の配置・更新方針と `oracles` 取り扱いの入口にもなります。
+- この `docs/app_specs` ディレクトリの目次で、`cmoc` の呼び出し手順から共通仕様、各サブコマンド入口までをまとめます。
+- `usage.md`、`cli_auto_completion.md`、`codex_call.md`、`console_and_file_log.md`、`error_handling.md`、`misc_specs.md`、`run_isolation.md`、`session_state.md` を案内します。
+- `indexing.md`、`oracles/`、`sub_commands/` を含み、`INDEX.md` の生成・更新方針と個別サブコマンド仕様への入口にもなります。
 
 ## Read this when
 
-- `cmoc` の利用方法、初回初期化、session/apply の反復フローをまとめて把握したいとき。
-- branch モデル、`codex exec` 呼び出し、エラーハンドリング、セッション状態などの共通仕様を確認したいとき。
-- `INDEX.md` の生成ルールや `oracles` 配下の読み方、個別サブコマンド仕様の入口を素早くたどりたいとき。
+- `cmoc` の使い方、初期化、セッション・apply の往復をまとめて把握したいとき。
+- `codex exec` 呼び出し、ログ出力、エラー処理、作業分離、セッション状態などの共通仕様を確認したいとき。
+- `INDEX.md` の更新ルールや、`oracles` 配下の読み方、個別サブコマンド仕様への分岐点を素早くたどりたいとき。
 
 ## Do not read this when
 
@@ -20,7 +20,32 @@
 
 ## hash
 
-- 646256542f483fabc4c22b4a4c72529b0accc4d4bedc9634dc8ff0bcdbd80abc
+- 4be00bcd63f7ff157d91ddd63e43dfa4a83297ad985c790f4763d340116d89ea
+
+# `branch_model.md`
+
+## Summary
+
+- `cmoc` における通常ブランチ、session ブランチ、run ブランチ、commit、worktree の関係をまとめたブランチモデルの入口です。
+- `repository-default-branch` を特別扱いしない方針と、`session fork` 時点の `local-branch` を `session home branch` とする考え方を示します。
+- 各種 `cmoc-managed-branch` の命名規則と、`fork` / `join` に対応するコミットの意味をたどるための目次です。
+
+## Read this when
+
+- `cmoc` のブランチモデル全体を把握したいとき。
+- `<local-branch>`、`<cmoc-session-branch>`、`<cmoc-run-branch>`、`<cmoc-session-home-branch>` の関係や役割を確認したいとき。
+- `session fork` と `session join`、および run の fork / join における commit と worktree の対応関係を整理したいとき。
+- ブランチ名・コミット名・worktree 名の命名規則を素早く参照したいとき。
+
+## Do not read this when
+
+- `cmoc` のブランチ命名や session/run の分離方針ではなく、個別サブコマンドの引数や手順だけを確認したいとき。
+- `session fork` / `session join` / `apply` などの実装手順そのものを追いたいときは、この概念整理ではなく該当する正本仕様を直接読むべきです。
+- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
+
+## hash
+
+- c72ad07c95591dd5ecb3c243c6660fb623636f135e25b446bf9e141d00546f94
 
 # `considered_alternatives`
 
@@ -69,3 +94,27 @@
 ## hash
 
 - 3e4d31733982a9b80629b97d1b9396964a868e7cbfeda46f65c00eb9564a46fd
+
+# `path_model.md`
+
+## Summary
+
+- `cmoc` におけるパス表記の基本ルールと、各 root token の意味をまとめた文書です。
+- 絶対パス・相対パスの扱い、`<cmoc-root>` / `<repo-root>` / `<run-root>` / `<work-root>` の定義、具体例を説明します。
+- パスの解決方法や表記の統一が必要な場面で参照するための入口です。
+
+## Read this when
+
+- `cmoc` で使う絶対パス・相対パスの書き方を確認したいとき。
+- `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` の定義と使い分けを整理したいとき。
+- `run-root` と `repo-root`、`work-root` の関係や、どの root token を使うべきか迷ったとき。
+
+## Do not read this when
+
+- パス表記の規則を確認したいのではなく、個別コマンドや機能の仕様だけを確認したいとき。
+- `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` の意味がすでに確定していて、表記ルールを再確認する必要がないとき。
+- `docs` 配下の入口や他のルーティング文書だけをたどりたいとき。
+
+## hash
+
+- 46aa1a2bfb1cc78be1fee42eede0977a5c288b0589890d7b73f18e0fc4d24703
