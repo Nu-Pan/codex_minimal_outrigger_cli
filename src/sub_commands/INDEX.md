@@ -2,19 +2,19 @@
 
 ## Summary
 
-- `src/sub_commands/__init__.py` は `src.sub_commands` パッケージを宣言するだけの最小モジュールです。
+- `<work-root>/src/sub_commands/__init__.py` は `src.sub_commands` パッケージを宣言するだけの最小モジュールです。
 - 公開 API、定数、実行ロジック、再エクスポートは持ちません。
 
 ## Read this when
 
 - `src.sub_commands` が Python パッケージとして宣言されていることを確認したいとき。
-- `src/sub_commands` ディレクトリの入口として、最小限の役割だけを把握したいとき。
+- `<work-root>/src/sub_commands` ディレクトリの入口として、最小限の役割だけを把握したいとき。
 - パッケージとしての存在確認だけで足り、追加の公開 API や実行処理が不要なとき。
 
 ## Do not read this when
 
-- `src.sub_commands` 配下の個別サブコマンド実装や実行フローを確認したいとき。
-- `apply`、`session`、`review`、`init` などの各モジュールの仕様を追いたいとき。
+- `<work-root>/src/sub_commands` 配下の個別サブコマンド実装や実行フローを確認したいとき。
+- `apply`、`session`、`review`、`init`、`indexing` などの各モジュールの仕様を追いたいとき。
 - `src.sub_commands` のパッケージ宣言ではなく、実際の業務ロジックや CLI 入口を見たいとき。
 
 ## hash
@@ -25,7 +25,7 @@
 
 ## Summary
 
-- この `src/sub_commands/apply` ディレクトリのルーティング文書で、`cmoc apply` 系サブコマンド実装への入口です。
+- この `<work-root>/src/sub_commands/apply` ディレクトリのルーティング文書で、`cmoc apply` 系サブコマンド実装への入口です。
 - `__init__.py`、`abandon.py`、`fork.py`、`join.py` の役割を素早く切り分けるための目次です。
 - `apply` の実行制御、破棄、取り込みのどの実装へ進むべきかを判断する起点です。
 
@@ -38,32 +38,32 @@
 ## Do not read this when
 
 - すでに読む対象の `abandon.py`、`fork.py`、`join.py` が分かっていて、直接そのファイルへ進めるとき。
-- `cmoc apply` の利用手順や仕様断片だけを確認したいときは、`oracles/docs/app_specs/sub_commands/` 側を読むべきです。
-- `src/sub_commands/apply` 以外のサブコマンド実装や、`README.md` などの運用ルールだけを確認したいとき。
+- `cmoc apply` の利用手順や仕様断片だけを確認したいときは、`<work-root>/oracles/docs/app_specs/sub_commands/` 側を読むべきとき。
+- `<work-root>/src/sub_commands/apply` 以外のサブコマンド実装や、`README.md` などの運用ルールだけを確認したいとき。
 
 ## hash
 
-- 337d2f6e1cee835c1d783081f387b87040dd1117e1e24f5d9cb9b7c167383621
+- 527850383368036f8a48abf21594f411153558643e45094e47b5fa70dabc789a
 
 # `indexing.py`
 
 ## Summary
 
-- `src/sub_commands/indexing.py` は `cmoc indexing` の本体実装モジュールで、CLI から渡された `repo_root` を受けて共通 runner と `commons.indexing` に処理を振り分けます。
-- `repo_root` が未指定なら `commons.command_runner.run_command()` で作業対象のルートを解決し、指定済みなら `assert_no_uncommitted_changes()` の後に `maintain_indexes()` を実行します。
-- 変更があれば `committed INDEX.md maintenance changes`、変更がなければ `no INDEX.md maintenance changes` を標準出力へ出します。
+- `<cmoc-root>/src/sub_commands/indexing.py` は `cmoc indexing` の本体実装モジュールで、CLI から受け取った `repo_root` を起点に共通 runner と `commons.indexing` へ処理を振り分けます。
+- `repo_root` が未指定なら `commons.command_runner.run_command()` に委譲し、指定済みなら未コミット差分の事前チェック後に `maintain_indexes()` を実行します。
+- 差分が発生した場合は `committed INDEX.md maintenance changes`、差分がなければ `no INDEX.md maintenance changes` を標準出力に出します。
 
 ## Read this when
 
-- `cmoc indexing` の本体処理と、`repo_root` の未指定時に共通 runner へ委譲する流れを確認したいとき。
+- `cmoc indexing` の本体処理と、`repo_root` 未指定時の共通 runner への委譲経路を確認したいとき。
 - `assert_no_uncommitted_changes()` による事前チェックと、`maintain_indexes()` 実行後の標準出力を確認したいとき。
 - `StepTimer` と `start_step()` を使った `INDEX.md` メンテナンスの実行順を把握したいとき。
 
 ## Do not read this when
 
-- `cmoc indexing` の生成アルゴリズム、配置対象の判定、既存 `INDEX.md` の再利用条件だけを確認したいときは、このファイルではなく `src/commons/indexing.py` を読むべきです。
-- CLI 登録やサブコマンドの起動経路だけを確認したいときは、このファイルではなく `src/main.py` を読むべきです。
-- 利用手順や正本仕様だけを確認したいときは、このファイルではなく `oracles/docs/app_specs/sub_commands/indexing.md` を読むべきです。
+- `cmoc indexing` の生成アルゴリズム、配置対象の判定、既存 `INDEX.md` の再利用条件そのものを確認したいときは、`<cmoc-root>/src/commons/indexing.py` を読むべきです。
+- CLI 登録やサブコマンドの起動経路だけを確認したいときは、`<cmoc-root>/src/main.py` を読むべきです。
+- 利用手順や正本仕様だけを確認したいときは、`<cmoc-root>/oracles/docs/app_specs/sub_commands/indexing.md` を読むべきです。
 
 ## hash
 
@@ -73,20 +73,20 @@
 
 ## Summary
 
-- `src/sub_commands/init.py` は `cmoc init` の本体処理を持つモジュールです。
+- `<work-root>/src/sub_commands/init.py` は `cmoc init` の本体処理を持つモジュールです。
 - `repo_root` が未指定なら共通 runner に委譲し、指定済みなら `.cmoc` の ignore 確認と初期化変更の commit という 2 段階で処理します。
-- `.cmoc` の ignore 保証、既存 tracked `.cmoc` の追跡解除、初期化に伴う差分 commit と結果表示をまとめて扱います。
+- .cmoc の ignore 保証、既存 tracked `.cmoc` の追跡解除、初期化に伴う差分 commit と結果表示をまとめて扱います。
 
 ## Read this when
 
 - `cmoc init` の実装・修正・テスト・レビューを行いたいとき。
-- `.cmoc` を git 追跡対象外にする処理、`.gitignore` 更新、tracked file の解除、初期化差分の commit 規則を確認したいとき。
+- `.cmoc` を git 追跡対象外にする処理、`.gitignore` 更新、tracked file の解除、初期化に伴う差分 commit 規則を確認したいとき。
 - `run_command()` 経由で repo root を解決しつつ、`StepTimer` と `start_step()` で 2 段階の初期化フローをどう実行するかを把握したいとき。
 
 ## Do not read this when
 
 - `cmoc init` 以外のサブコマンドの入口や CLI 登録だけを確認したいとき。
-- `.cmoc` の ignore 保証や初期化 commit の流れが論点に入っていないとき。
+- .cmoc の ignore 保証や初期化 commit の流れが論点に入っていないとき。
 - 初期化後の session / apply の運用仕様だけを追いたいとき。
 
 ## hash
@@ -97,21 +97,21 @@
 
 ## Summary
 
-- `src/sub_commands/review` ディレクトリのルーティング文書で、`__init__.py` と `oracles.py` へ案内する入口です。
+- `<cmoc-root>/src/sub_commands/review` ディレクトリのルーティング文書で、`__init__.py` と `oracles.py` へ案内する入口です。
 - `__init__.py` はパッケージ宣言のみを担う最小モジュールで、`oracles.py` は `cmoc review oracles` の本体実装です。
 - この階層では、パッケージ構造の確認か、レビュー処理の実装確認かを切り分けて次の参照先を選びます。
 
 ## Read this when
 
-- `src/sub_commands/review` が Python パッケージとして宣言されていることを確認したいとき。
+- `<cmoc-root>/src/sub_commands/review` が Python パッケージとして宣言されていることを確認したいとき。
 - `cmoc review oracles` の実装本体である `oracles.py` の実行フロー、評価パイプライン、Structured Output schema の扱いを追いたいとき。
 - `cmoc review` 系サブコマンドの入口構造を把握してから、関連ファイルへ進みたいとき。
 
 ## Do not read this when
 
-- `cmoc review oracles` の利用手順や引数仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/review_oracles.md` を読むべきです。
-- `cmoc review` の CLI 登録や hidden alias だけを確認したいときは、`src/main.py` を読むべきです。
-- `src/sub_commands/review` の入口構造ではなく、`oracles.py` の実装詳細だけを直接確認したいときは、この `INDEX.md` を経由する必要はありません。
+- `cmoc review oracles` の利用手順や引数仕様だけを確認したいときは、`<cmoc-root>/oracles/docs/app_specs/sub_commands/review_oracles.md` を読むべきです。
+- `cmoc review` の CLI 登録や hidden alias だけを確認したいときは、`<cmoc-root>/src/main.py` を読むべきです。
+- `<work-root>/src/sub_commands/review` の入口構造ではなく、`oracles.py` の実装詳細だけを直接確認したいときは、この `INDEX.md` を経由する必要はありません。
 
 ## hash
 
@@ -121,13 +121,13 @@
 
 ## Summary
 
-- `src/sub_commands/session` は `cmoc session` 系サブコマンド実装の入口ディレクトリです。
+- `<work-root>/src/sub_commands/session` は `cmoc session` 系サブコマンド実装の入口ディレクトリです。
 - `__init__.py` はパッケージ宣言だけを担う最小モジュールです。
 - `abandon.py` は session branch の破棄、`fork.py` は session branch の作成、`join.py` は session branch の統合を担います。
 
 ## Read this when
 
-- `src/sub_commands/session` 配下の入口構造と、どのモジュールを開くべきかを把握したいとき。
+- `<work-root>/src/sub_commands/session` 配下の入口構造と、どのモジュールを開くべきかを把握したいとき。
 - `cmoc session fork` / `join` / `abandon` の責務分担や、各実装モジュールの役割を確認したいとき。
 - session 系の実装・修正・レビュー・テストに入る前に、パッケージ全体の目次を整理したいとき。
 

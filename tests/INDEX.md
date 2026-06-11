@@ -27,7 +27,7 @@
 
 ## Summary
 
-- `tests/test_codex.py` は `commons.codex` の `run_codex_exec` と関連ヘルパーを対象にした回帰テスト群です。
+- `<work-root>/tests/test_codex.py` は `commons.codex` の `run_codex_exec` と関連ヘルパーを対象にした回帰テスト群です。
 - Structured Output の再試行、schema 検証、出力ログ、UTF-8 処理、quota/resume 復旧、workspace-write 時の oracle 保護をまとめて検証します。
 - `_extract_session_id`、`_resume_command`、`_prepare_codex_exec_paths`、`_write_output_schema`、通知出力や index maintenance の境界も確認します。
 
@@ -41,8 +41,8 @@
 
 ## Do not read this when
 
-- `tests/test_repo.py`、`tests/test_indexing.py`、`tests/test_subcommands` など、`commons.codex` 以外の回帰テストを確認したいとき。
-- `src/commons/codex.py` の実装ロジックそのものだけを追いたいとき。
+- `<work-root>/tests/test_repo.py`、`<work-root>/tests/test_indexing.py`、`<work-root>/tests/test_subcommands` など、`commons.codex` 以外の回帰テストを確認したいとき。
+- `<work-root>/src/commons/codex.py` の実装ロジックそのものだけを追いたいとき。
 - CLI 全体のサブコマンド登録や `cmoc` の利用手順だけを確認したいとき。
 - `output_schema` や workspace-write 保護の詳細ではなく、別の共通ヘルパーや別機能のテストを探したいとき。
 
@@ -54,14 +54,14 @@
 
 ## Summary
 
-- `tests/test_file_naming.py` はリポジトリ構成のファイル名が命名規則に従うことを検証するテストです。
+- `<work-root>/tests/test_file_naming.py` はリポジトリ構成のファイル名が命名規則に従うことを検証するテストです。
 - 旧ルーティングファイルである `routing.md` と `ROUTING.md` が残存していないこと、`INDEX.md` に旧内部種別コメントが残っていないことを確認します。
 - `cmoc apply/session/review` のサブコマンド本体が階層化された import 可能モジュールに置かれ、旧 flat module が残っていないことを検証します。
 
 ## Read this when
 
 - 旧ルーティングファイルや旧 INDEX 内部コメントが残っていないことを確認したいとき。
-- `src/sub_commands/apply/`、`src/sub_commands/session/`、`src/sub_commands/review/` 配下の階層化 layout を検証するテストを探したいとき。
+- `<work-root>/src/sub_commands/apply/`、`<work-root>/src/sub_commands/session/`、`<work-root>/src/sub_commands/review/` 配下の階層化 layout を検証するテストを探したいとき。
 - `apply.py`、`apply_join.py`、`session_fork.py`、`eval_oracles.py` などの旧 flat module を禁止する回帰テストを把握したいとき。
 - ファイル命名規則に関する検証範囲を確認したいとき。
 
@@ -69,7 +69,7 @@
 
 - cmoc のサブコマンド実装や実行フローを確認したいとき。
 - `INDEX.md` 自体の生成・再利用・再生成ルールを追いたいとき。
-- `tests/test_indexing.py` や `tests/test_repo.py` など、別の回帰テストの内容を確認したいとき。
+- `<work-root>/tests/test_indexing.py` や `<work-root>/tests/test_repo.py` など、別の回帰テストの内容を確認したいとき。
 - ファイルアクセス規則やリポジトリ運用ルールだけを確認したいとき。
 
 ## hash
@@ -80,9 +80,9 @@
 
 ## Summary
 
-- `tests/test_indexing.py` は `src/commons/indexing.py` の `INDEX.md` メンテナンスと不整合検査の回帰テスト群です。
+- `<work-root>/tests/test_indexing.py` は `<work-root>/src/commons/indexing.py` の `INDEX.md` メンテナンスと不整合検査の回帰テスト群です。
 - `maintain_indexes` と `find_index_inconsistencies` を中心に、再生成・再利用・整合性確認の境界を押さえます。
-- `.gitignore`、symlink、binary、非 UTF-8 path、並列化、自動 commit などの例外条件も網羅します。
+- .gitignore、symlink、binary、非 UTF-8 path、並列化、自動 commit などの例外条件も網羅します。
 
 ## Read this when
 
@@ -94,10 +94,10 @@
 
 ## Do not read this when
 
-- `src/commons/indexing.py` の実装ロジックそのものを追いたいとき。
+- `<work-root>/src/commons/indexing.py` の実装ロジックそのものを追いたいとき。
 - `cmoc indexing` の CLI 引数や本体入口だけを確認したいとき。
-- `oracles/docs/app_specs/indexing.md` の正本仕様だけを確認したいとき。
-- `tests/test_repo.py` や `tests/test_codex.py` など、別の回帰テストを確認したいとき。
+- `<work-root>/oracles/docs/app_specs/indexing.md` の正本仕様だけを確認したいとき。
+- `<work-root>/tests/test_repo.py` や `<work-root>/tests/test_codex.py` など、別の回帰テストを確認したいとき。
 
 ## hash
 
@@ -107,7 +107,7 @@
 
 ## Summary
 
-- `tests/test_repo.py` は `src/commons/repo.py` の git 共通処理を検証する回帰テスト群の入口です。
+- `<work-root>/tests/test_repo.py` は `<work-root>/src/commons/repo.py` の git 共通処理を検証する回帰テスト群の入口です。
 - .cmoc の ignore 保証、repo root 検出、実装ファイルと正本ファイルの列挙・変更検出を中心に扱います。
 - session state、apply process id、cmoc ブランチ判定、active session 判定の境界条件も確認します。
 
@@ -120,9 +120,9 @@
 
 ## Do not read this when
 
-- `src/commons/repo.py` の実装ロジックそのものを追いたいとき。
+- `<work-root>/src/commons/repo.py` の実装ロジックそのものを追いたいとき。
 - 個別の git ユーティリティやヘルパー関数の使い方だけを確認したいとき。
-- `tests/test_codex.py` や `tests/test_indexing.py` など、別の回帰テスト群を確認したいとき。
+- `<work-root>/tests/test_codex.py` や `<work-root>/tests/test_indexing.py` など、別の回帰テスト群を確認したいとき。
 
 ## hash
 
@@ -132,21 +132,22 @@
 
 ## Summary
 
-- `src/commons/report_files.py` の `write_timestamped_report` が、同名ファイルを上書きせず別名で保存することを検証するテストです。
-- タイムスタンプ衝突時の再試行と、既存レポートの内容が保持されることを確認します。
-- `make_timestamp` を差し替えて衝突条件を再現し、保存処理の境界を押さえます。
+- `<work-root>/tests/test_report_files.py` は `write_timestamped_report` の保存挙動を検証するテストです。
+- タイムスタンプ衝突時に既存ファイルを上書きせず、再試行して別名のレポートを作成することを確認します。
+- `make_timestamp` を差し替えて衝突条件を再現し、既存レポートが保持されることも合わせて検証します。
 
 ## Read this when
 
-- `write_timestamped_report` の排他的作成や再試行の仕様を変更するとき。
-- レポート保存時の上書き防止や、タイムスタンプ衝突時の回帰を確認したいとき。
-- `tests/test_report_files.py` が何を守っているかを把握したいとき。
+- `<work-root>/src/commons/report_files.py` のレポート保存ヘルパーの回帰テスト範囲を把握したいとき。
+- 同名ファイルが既に存在する場合に、上書きせず別名で保存する挙動を確認したいとき。
+- タイムスタンプ衝突時の再試行ロジックと、既存レポートの内容保持を確認したいとき。
+- `<work-root>/tests/test_report_files.py` が何を守っているかを整理したいとき。
 
 ## Do not read this when
 
-- レポート本文の構成や評価結果の意味づけを確認したいとき。
-- タイムスタンプ生成そのものの仕様を確認したいとき。
-- `INDEX.md` の生成ルールや、他の共通ヘルパーの仕様だけを確認したいとき。
+- レポート本文の構成や保存先ディレクトリの設計意図ではなく、`write_timestamped_report` の上書き防止と再試行だけを確認したいとき。
+- タイムスタンプ生成の詳細や `make_timestamp` の仕様そのものを追いたいとき。
+- `<work-root>/tests/INDEX.md` など上位のテスト目次や、他の共通ヘルパーの仕様を確認したいとき。
 
 ## hash
 
@@ -156,31 +157,32 @@
 
 ## Summary
 
-- `tests/test_subcommands` 配下のサブコマンド横断テスト群への入口です。
-- `helpers.py` と `test_core.py` が共通基盤を担い、`test_cli.py` が CLI 入口を検証します。
-- `test_apply_*.py`、`test_session_*.py`、`test_review_oracles.py` が各サブコマンドの回帰テストを分担します。
+- この `<work-root>/tests/test_subcommands` ディレクトリのルーティング文書で、サブコマンド横断の回帰テスト群への入口です。
+- `__init__.py` はパッケージ成立用の最小モジュール、`helpers.py` は共通の import・fixture 補助・テスト用 repo 構築をまとめた基盤です。
+- `test_cli.py`、`test_core.py`、`test_review_oracles.py` は CLI 入口・共通実行基盤・review 系を扱い、`test_apply_*.py` と `test_session_*.py` は `apply` / `session` の各サブコマンド回帰を分担しています。
+- `apply` は `fork` / `join` / `abandon`、`session` は `fork` / `join` / `abandon` の各ファイルに分かれており、それぞれの正常系・異常系・cleanup を追うための入口になっています。
 
 ## Read this when
 
-- `tests/test_subcommands` 配下の回帰テストをどのファイルで扱っているか整理したいとき。
-- CLI 入口、共通実行基盤、`apply` 系、`session` 系、`review oracles` 系のテストの入口を探したいとき。
-- 共通ヘルパーの使い方や、各サブコマンドのテストがどの責務に分かれているかを確認したいとき。
+- `<cmoc-root>/tests/test_subcommands` 配下のテスト群が、どのサブコマンドをどの観点で分担しているかを把握したいとき。
+- 共通ヘルパー、CLI 入口、`apply` 系、`session` 系、`review oracles`、`indexing`、`init` を横断して入口を探したいとき。
+- 個別テストへ入る前に、このディレクトリの役割とファイル配置をまとめて確認したいとき。
 
 ## Do not read this when
 
-- `tests/test_subcommands` 全体ではなく、`test_apply_fork.py` や `test_session_join.py` など個別ファイルだけを確認したいとき。
-- `src/sub_commands/` 側の実装や `oracles/docs/app_specs/sub_commands/` 側の正本仕様だけを読みたいとき。
-- CLI の利用手順や設計方針ではなく、テスト用ヘルパーや共通基盤の詳細だけを追いたいとき。
+- <cmoc-root>/tests/test_subcommands 内の目的の `test_*.py` や `helpers.py` がすでに分かっていて、個別ファイルへ直接進むとき。
+- `cmoc apply`、`cmoc session`、`cmoc review oracles`、`cmoc indexing`、`cmoc init` の実装本体や仕様断片を `<work-root>/src` や `<cmoc-root>/oracles` 側で直接確認したいとき。
+- この階層の目次ではなく、各テストファイル固有の期待値やケース一覧だけを確認したいとき。
 
 ## hash
 
-- a7f9f44c64f327ba3091902c2aa7d326511a5c31e672f1c54cca033e3782bb20
+- aa6c4f27fefd3c6d7dfe838d4b401c66abbe2b6117bdb05d86929da182f25ca2
 
 # `test_timestamps.py`
 
 ## Summary
 
-- `tests/test_timestamps.py` は `commons.timestamps.make_timestamp` と `commons.timing.format_duration` の仕様を確認するテスト群の入口です。
+- `<work-root>/tests/test_timestamps.py` は `commons.timestamps.make_timestamp` と `commons.timing.format_duration` の仕様を確認するテスト群の入口です。
 - タイムスタンプはローカルタイムゾーン基準で `YYYY-MM-DD_HH-MM_SS_mmmmmmmmm` 形式に整形され、ミリ秒が 9 桁ゼロ埋めになることを検証します。
 - `format_duration` の固定幅表示、0.1 秒単位の切り捨て、そして同一ファイル内の補助関数が caller first, callee last で並ぶことを確認します。
 

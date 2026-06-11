@@ -34,7 +34,7 @@
 
 - `cmoc review oracles` で使う Structured Output schema の種類と役割を確認したいとき。
 - `enumerate_findings`、`merge_findings`、`validate_findings_advocate`、`validate_findings_challenger`、`judge_findings` のどれを使うか切り分けたいとき。
-- レビュー工程ごとの JSON 出力形式を、`oracles/schemas/structured_output/review/oracles` 配下でたどりたいとき。
+- レビュー工程ごとの JSON 出力形式を、`<work-root>/oracles/schemas/structured_output/review/oracles` 配下でたどりたいとき。
 
 ## Do not read this when
 

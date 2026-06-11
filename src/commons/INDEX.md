@@ -2,18 +2,20 @@
 
 ## Summary
 
-- Declares the src.commons package with a short module docstring.
-- Contains no imports, exports, runtime logic, constants, or public API definitions.
+- `src.commons` パッケージを宣言するだけの最小モジュールです。
+- 公開 API、定数、再エクスポート、実行ロジックは持ちません。
 
 ## Read this when
 
-- You need to confirm that src.commons is a Python package.
-- You are documenting or routing the commons package at a package-level overview.
+- `src.commons` が Python パッケージとして宣言されていることを確認したいとき。
+- `<work-root>/src/commons` の入口として、最小限の役割だけを把握したいとき。
+- 共通モジュール群の詳細に進む前に、パッケージの存在確認だけを行いたいとき。
 
 ## Do not read this when
 
-- You need implementation details for shared utilities; inspect the concrete modules under src/commons instead.
-- You are looking for command behavior, workflow logic, configuration handling, or tests.
+- `src.commons` 配下の実装詳細や共通ユーティリティの振る舞いを確認したいとき。
+- `codex exec` 呼び出し、repo/worktree 解決、エラー整形、ログ、インデクシングなどの具体的な処理を追いたいとき。
+- パッケージ宣言の確認だけで足り、追加の公開 API や実行ロジックが不要なとき。
 
 ## hash
 
@@ -49,26 +51,24 @@
 
 ## Summary
 
-- `src/commons/command_runner.py` は、`cmoc` の各サブコマンドを共通実行するラッパーで、repo root 解決、ログ開始、例外変換、終了集計をまとめます。
-- `run_command()` はサブコマンド本体に `<repo-root>` の `Path` を渡し、整数戻り値や `typer.Exit` を共通規則で終了コードへ変換します。
-- 実行中は `subcommand_log` と `timing` を連携し、完了時にログパス、総経過時間、quota 待機時間、戻り値を stdout と JSONL ログへ出力します。
-- 内部ヘルパー `_subcommand_exit_error()` と `_print_completion_report()` が非 0 終了の診断文と完了レポート生成を担います。
+- `<work-root>/src/commons/command_runner.py` は、cmoc の各サブコマンドを共通実行するラッパーで、repo root 解決、ログ開始、例外整形、完了集計をまとめるモジュールです。
+- `run_command()` はサブコマンド本体に `<repo-root>` の `Path` を渡し、整数戻り値、`typer.Exit`、通常例外を共通規則で終了コードへ変換します。
+- 実行終了時には `subcommand_end` ログを書き、総経過時間、quota 待ち時間、戻り値を stdout の完了レポートとして出力します。
 
 ## Read this when
 
-- `cmoc init` / `session` / `apply` / `review` などの入口がどの共通処理で包まれているかを確認したいとき。
-- サブコマンド本体が `Path` を受け取り、戻り値や例外がどう終了コードに反映されるかを見直したいとき。
-- `subcommand_log`、`timing`、`format_error_report()` がどの順序で使われるか追いたいとき。
-- 非 0 の `typer.Exit` や通常例外がどう利用者向けのエラー表示になるか確認したいとき。
-- 完了サマリーに何が出るか、`subcommand_end` ログがどう書かれるかを見たいとき。
+- `cmoc init` / `session` / `apply` / `review` などの入口が、どの共通実行処理で包まれているかを確認したいとき。
+- サブコマンド本体が `Path` を受け取り、戻り値や例外が終了コードへどう反映されるかを見直したいとき。
+- `enter_repo_root()`、`subcommand_log`、`format_error_report()`、`report_current_timer()` の呼び出し順を追いたいとき。
+- 非 0 の `typer.Exit` や通常例外が利用者向けのエラーレポートになる流れを確認したいとき。
+- 完了サマリーや `subcommand_end` ログに何が出るかを確認したいとき。
 
 ## Do not read this when
 
 - 個別サブコマンドの業務ロジックや引数解析だけを確認したいとき。
-- `<repo-root>` の探索や `.cmoc` まわりの詳細だけを追いたいときは、`src/commons/repo.py` を読むべきです。
-- エラーメッセージ型や詳細な整形規則だけを見たいときは、`src/commons/errors.py` を読むべきです。
-- JSONL ログの保存や時間計測の実装だけを見たいときは、`src/commons/subcommand_log.py` と `src/commons/timing.py` を読むべきです。
-- `INDEX.md` 生成ルールや `oracles` 側の仕様だけを確認したいとき。
+- `<repo-root>` の探索や `.cmoc` 管理の詳細だけを追いたいときは、`<work-root>/src/commons/repo.py` を読むべきです。
+- エラーメッセージの型や Markdown 形式の整形規則だけを見たいときは、`<work-root>/src/commons/errors.py` を読むべきです。
+- JSONL ログの保存や経過時間計測の実装だけを見たいときは、`<work-root>/src/commons/subcommand_log.py` と `<work-root>/src/commons/timing.py` を読むべきです。
 
 ## hash
 
@@ -78,22 +78,21 @@
 
 ## Summary
 
-- `src/commons/errors.py` は、cmoc 全体で共通に使う例外型 `CmocError` と、エラーレポート整形関数 `format_error_report()` をまとめるモジュールです。
+- `<work-root>/src/commons/errors.py` は、cmoc 全体で共通に使う例外型 `CmocError` と、エラーレポート整形関数 `format_error_report()` をまとめるモジュールです。
 - `CmocError` は利用者向けメッセージ、複数の次アクション、詳細、終了コードを保持し、次アクションは最低 2 件を必須にします。
 - `format_error_report()` は `ERROR` / `Summary` / `Next actions` / `Detail` / `Call stack` 形式で Markdown を生成し、通常例外と `CmocError` を分けて扱います。
 
 ## Read this when
 
 - cmoc 全体で使う共通例外 `CmocError` の構造、制約、利用条件を確認したいとき。
-- stdout 向けのエラーレポート `format_error_report()` の出力形式や、通常例外と `CmocError` の分岐を確認したいとき。
-- `subprocess.CalledProcessError` の `returncode`、`cmd`、`stderr`、`stdout` を含む診断情報の整形方法を確認したいとき。
+- 標準例外と `CmocError` を含むエラーレポートの Markdown 形式や、`subprocess.CalledProcessError` の診断情報の整形方法を確認したいとき。
 - `message`、`actions`、`detail`、`exit_code` の意味や、`actions` が 2 件以上必須である制約を確認したいとき。
 
 ## Do not read this when
 
 - 個別サブコマンドの引数解析、git 操作、`codex exec` 呼び出しなど、エラー整形以外の業務ロジックを追いたいとき。
 - `repo.py`、`codex.py`、`indexing.py`、`timing.py`、`timestamps.py` など、他の共通モジュールの実装を確認したいとき。
-- CLI エントリーポイントやテストコードを確認したいとき。
+- CLI の入口実装やテストコードを確認したいとき。
 
 ## hash
 
@@ -103,7 +102,7 @@
 
 ## Summary
 
-- `src/commons/indexing.py` は `INDEX.md` の生成、再生成、整合性検査をまとめる共通モジュールです。
+- `<work-root>/src/commons/indexing.py` は `INDEX.md` の生成、再生成、整合性検査をまとめる共通モジュールです。
 - .gitignore、`memo`、隠し要素、symlink、バイナリを除外し、既存 `INDEX.md` は再利用可否を判定して差分がなければ書き換えません。
 - Structured Output の JSON schema 検証、排他ロック、原子的な置換、自動コミット、不整合チェックまで扱います。
 - `is_maintained_index_path*` と `find_index_inconsistencies` で、どの `INDEX.md` が管理対象かを判定できます。
@@ -117,10 +116,10 @@
 
 ## Do not read this when
 
-- `cmoc indexing` の CLI 引数やコマンド入口だけを確認したいときは、`src/sub_commands/indexing.py` を読むべきです。
-- `INDEX.md` の正本仕様や利用手順だけを確認したいときは、`oracles/docs/app_specs/indexing.md` を読むべきです。
-- `INDEX.md` 生成の回帰条件だけを追いたいときは、`tests/test_indexing.py` を読むべきです。
-- `src/commons` の他の共通処理だけを確認したいときは、このファイルではなく該当モジュールを読むべきです。
+- `cmoc indexing` の CLI 引数やコマンド入口だけを確認したいときは、`<work-root>/src/sub_commands/indexing.py` を読むべきです。
+- `INDEX.md` の正本仕様や利用手順だけを確認したいときは、`<work-root>/oracles/docs/app_specs/indexing.md` を読むべきです。
+- `INDEX.md` 生成の回帰条件だけを追いたいときは、`<work-root>/tests/test_indexing.py` を読むべきです。
+- `<work-root>/src/commons` の他の共通処理だけを確認したいときは、このファイルではなく該当モジュールを読むべきです。
 
 ## hash
 
@@ -130,7 +129,7 @@
 
 ## Summary
 
-- `src/commons/repo.py` は git リポジトリと cmoc 作業領域を扱う共通基盤モジュールです。
+- `<work-root>/src/commons/repo.py` は git リポジトリと cmoc 作業領域を扱う共通基盤モジュールです。
 - repo root 探索、ブランチ判定、session / apply state 管理、apply process id の保存・読込、`.cmoc` 追跡外保証をまとめています。
 - `oracles` と実装ファイルの列挙や変更検出、`.gitignore` の評価・復元補助、`git` 呼び出しの共通ラッパーも含みます。
 
@@ -182,25 +181,23 @@
 
 ## Summary
 
-- `src/commons/subcommand_log.py` は、cmoc のサブコマンド呼び出しごとの JSON Lines ログを作成・追記する共通モジュールです。
-- `SubcommandLogContext` と `ContextVar` で現在のログ状態を管理し、イベント記録、quota 待ち時間の集計、標準出力の同時書き込み制御を行います。
-- ログは `<repo-root>/.cmoc/logs/sub_commands/` に一意なタイムスタンプ名で作成され、apply worktree などでは保存先 repo root を解決して集約します。
-- 起動時には開始イベントとコンソール通知を出し、`.cmoc/logs/` を `git` の除外設定へ追加して追跡対象外に保ちます。
+- `<work-root>/src/commons/subcommand_log.py` は、cmoc のサブコマンド呼び出しごとの JSON Lines ログを作成・追記する共通モジュールへの入口です。
+- `SubcommandLogContext` と `ContextVar` による現在のログ状態管理、イベント記録、quota 待ち時間の集計、標準出力との同時書き込み制御を扱います。
+- ログ保存先の repo root 解決、`<repo-root>/.cmoc/logs/sub_commands/` への一意なタイムスタンプ保存、`<work-root>/.cmoc/logs/` の git 除外設定まで含みます。
 
 ## Read this when
 
-- サブコマンド呼び出し単位の JSON Lines ログをどこに、どの順序で作成して追記するか確認したいとき。
-- 現在のログ状態を `ContextVar` で保持し、イベント記録や quota 待ち時間の加算をどう扱うか追いたいとき。
-- apply worktree や linked worktree から呼んだときに、ログ保存先の repo root をどう解決するか確認したいとき。
-- `.cmoc/logs/` を `git info/exclude` に追加して、サブコマンド自身の未コミット差分にしない挙動を確認したいとき。
-- 開始時のコンソール見出しやログファイルパスの表示仕様、並行出力時のロック処理を確認したいとき。
-- `tests/test_codex.py` や `tests/test_subcommands.py` から、サブコマンドログの回帰を追いたいとき。
+- サブコマンド呼び出し単位の JSON Lines ログの保存先、作成順序、追記方法を確認したいとき。
+- `ContextVar` を使ったログ状態管理、イベント記録、quota 待ち時間の集計の流れを追いたいとき。
+- apply worktree や linked worktree から実行したときの保存先 repo root の解決方法を知りたいとき。
+- 起動時の開始イベント、コンソール見出し、ログファイルパス表示、並行出力時のロック処理を確認したいとき。
+- <work-root>/.cmoc/logs/` を git の追跡対象外にする挙動を確認したいとき。
 
 ## Do not read this when
 
-- `src/commons` 全体の役割分担や、他の共通モジュールの入口だけを確認したいとき。
-- `commons.command_runner` や `commons.timing` など、サブコマンド実行の共通処理そのものを追いたいとき。
-- `commons.repo` の repo root 探索や `.cmoc` 管理の詳細、`timestamps.py` のタイムスタンプ生成だけを確認したいとき。
+- `<work-root>/src/commons` 全体の役割分担や、他の共通モジュールの入口だけを確認したいとき。
+- `command_runner.py` や `timing.py` など、サブコマンド実行の共通処理本体を追いたいとき。
+- `repo.py` の repo root 探索や `.cmoc` 管理、`timestamps.py` のタイムスタンプ生成だけを確認したいとき。
 - `INDEX.md` の生成ルールや `oracles` 側の正本仕様だけを確認したいとき。
 
 ## hash
@@ -211,7 +208,7 @@
 
 ## Summary
 
-- `src/commons/timestamps.py` は cmoc 仕様の `<time-stamp>` 文字列生成と判定をまとめた共通モジュールです。
+- `<work-root>/src/commons/timestamps.py` は cmoc 仕様の `<time-stamp>` 文字列生成と判定をまとめた共通モジュールです。
 - `make_timestamp()` はローカル時刻基準で `YYYY-MM-DD_HH-MM_SS_mmm` 形式の文字列を返します。
 - `is_timestamp()` は正規表現と日時の妥当性確認で、その形式かどうかを判定します。
 - `console_timestamp()` はコンソール表示向けの日時文字列を返します。
@@ -237,25 +234,25 @@
 
 ## Summary
 
-- `src/commons/timing.py` は、サブコマンド実行中のステップ計測と経過時間表示をまとめるモジュールです。
-- `StepTimer` で全体時間と各ステップ時間を保持し、`start_step()` で開始通知とログイベントを出します。
-- `_format_step_index()` は単一階層と階層化の両方のステップ番号を表示用文字列へ整形します。
-- `format_duration()` は oracle 指定の stdout 形式へ経過時間を変換し、`current_timer()` 系で現在の計測器を管理します。
+- `StepTimer` がサブコマンド全体と各ステップの開始・終了時刻を記録し、親子関係を保ったまま完了サマリーを出力します。
+- `start_step()` が step 番号を `i/N` または階層化表記に整形し、`subcommand_log` へ `step_start` を記録して stdout に見出しを出します。
+- `current_timer()` / `report_current_timer()` / `clear_current_timer()` で `ContextVar` ベースの現在の計測器を管理します。
+- `format_duration()` が経過秒を 0.1 秒単位で切り捨てた固定幅の `h/m/s` 形式に整形します。
 
 ## Read this when
 
-- サブコマンド全体と各ステップの経過時間の計測方法を確認したいとき。
-- ステップ開始通知の表示形式や、`step_index` の flat / hierarchical 表現を確認したいとき。
-- `current_timer()`、`report_current_timer()`、`clear_current_timer()` など現在の計測器管理を追いたいとき。
-- `format_duration()` の stdout 向け表示や、0.1 秒単位の切り捨て規則を確認したいとき。
-- ネストしたステップで、どのステップがいつ終了扱いになるかを確認したいとき。
+- サブコマンドのステップ時間表示や、完了サマリーの出力順を確認したいとき。
+- 階層化された step index の扱いと、親ステップをどのタイミングで終了するかを追いたいとき。
+- `step_start` ログや stdout の見出しがどう組み立てられるか確認したいとき。
+- 時間の表示幅・切り捨て規則を確認したいとき。
+- 現在の計測器の取得・破棄・自動出力の流れを確認したいとき。
 
 ## Do not read this when
 
-- サブコマンド本体の引数解析や業務ロジックだけを確認したいとき。
-- `codex exec` の起動制御、Structured Output、`INDEX.md` メンテナンスそのものを確認したいとき。
-- タイムスタンプ生成やサブコマンドログ保存だけを調べたいとき。
-- `StepTimer` 以外の共通例外、repo 探索、ファイルレポート保存を確認したいとき。
+- サブコマンド実行の共通入口、終了コード変換、例外整形を確認したいときは `command_runner.py` や `errors.py` を読むべきです。
+- タイムスタンプ文字列そのものの生成や検証を確認したいときは `timestamps.py` を読むべきです。
+- サブコマンドログの保存先や JSONL 記録仕様を確認したいときは `subcommand_log.py` を読むべきです。
+- repo/worktree 解決や `.cmoc` 管理を確認したいときは `repo.py` を読むべきです。
 
 ## hash
 
