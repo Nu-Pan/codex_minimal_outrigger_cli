@@ -264,7 +264,7 @@ def cmoc_apply_impl(
     repo_root: Path | None = None,
     *,
     repeat_investigate_and_fix: int = 5,
-    repeat_improove_fixing_list: int = 3,
+    repeat_improove_fixing_list: int = 1,
     scope: ApplyScope = "rolling",
 ) -> int | None:
     """oracle と実装の不整合を Codex CLI へ追従させる。"""
