@@ -130,6 +130,11 @@ def test_apply_returns_complete_when_no_discrepancies(
     assert codex_kwargs[0]["output_schema"] == _DISCREPANCY_OUTPUT_SCHEMA
     assert "fixing_points" in codex_prompts[0]
     assert "実装だけから見た成果物品質上の致命的な問題" in codex_prompts[0]
+    assert "realization files の肥大化抑制" in codex_prompts[0]
+    assert "同じ責務の実装・テスト・fixture・定数・コメント" in (
+        codex_prompts[0]
+    )
+    assert "現行仕様に不要な旧実装、互換分岐" in codex_prompts[0]
     assert "oracle_requirement" in codex_prompts[0]
     investigation_kwargs = [
         kwargs
@@ -1142,7 +1147,7 @@ def test_apply_commits_each_discrepancy_before_next_codex_call(
 def test_organize_prompt_includes_fixing_list_quality_requirements(
     tmp_path: Path,
 ) -> None:
-    """要修正点リスト改善 prompt は oracle の品質観点を明示する。"""
+    """要修正点リスト改善 prompt は成果物品質の観点を明示する。"""
     prompt = _organize_prompt(
         tmp_path,
         json.loads(_discrepancy_json("fix"))["fixing_points"],
@@ -1152,6 +1157,9 @@ def test_organize_prompt_includes_fixing_list_quality_requirements(
     )
 
     assert "内容の品質に明確な問題がない" in prompt
+    assert "realization files の肥大化抑制" in prompt
+    assert "新しい抽象化、CLI 引数、設定項目、状態、外部依存" in prompt
+    assert "同じ観点のテストは統合可能か確認" in prompt
     assert "重複する要修正点は 1 件にマージ" in prompt
     assert "矛盾する修正方針は矛盾しない内容に調整" in prompt
     assert "git ブランチ `cmoc/session/2026-05-10_22-21_10_000000123`" in prompt
@@ -1183,6 +1191,8 @@ def test_apply_prompt_treats_discrepancy_as_optional_hint(
 
     assert "作業のためのヒント" in prompt
     assert "絶対に従わなければならない指示書としては扱わない" in prompt
+    assert "realization files の肥大化抑制" in prompt
+    assert "追加した realization files の削除・統合・短縮余地" in prompt
     assert "無視してかまいません" in prompt
     assert "ベストエフォート" in prompt
     assert "目的を達成した保証は不要" in prompt

@@ -127,25 +127,26 @@
 
 ## Summary
 
-- `oracles` ディレクトリ全体のルーティング文書で、`docs/` と `schemas/` への入口をまとめたものです。
-- `docs/` は仕様断片の目次、`schemas/` は Structured Output schema の置き場です。
-- まず目的に応じて仕様本文か schema 定義かを切り分けるための最上位目次です。
+- `<cmoc-root>/oracles` 配下のルーティング文書で、`docs/` と `schemas/` への入口を案内する。
+- `docs/` は利用手順・共通仕様・開発規約・パス表記・branch モデルの案内を扱う。
+- `schemas/` は Structured Output schema の置き場所と役割分担を案内する。
 
 ## Read this when
 
-- `oracles` 配下で読むべき入口を探したいとき。
-- cmoc の仕様本文をたどるために `docs/` 側へ進むか、Structured Output schema を確認するために `schemas/` 側へ進むか判断したいとき。
-- `INDEX.md` の更新や配置ルールを確認する前段として、最上位の案内だけ見たいとき。
+- cmoc の利用方法、共通仕様、パス表記、branch モデルの入口をまとめて把握したいとき。
+- 採用しなかった設計案や、その理由を確認したいとき。
+- Structured Output schema の置き場所や役割分担を確認したいとき。
+- どの下位ディレクトリの文書や個別仕様を読むべきか迷ったとき。
 
 ## Do not read this when
 
-- 目的の文書がすでに分かっていて、`docs/` か `schemas/` の配下へ直接進めるとき。
-- `docs/` 配下の個別仕様や `schemas/structured_output/review/oracles/` 配下の個別 schema を直接確認したいとき。
-- `README.md`、`AGENTS.md` など、`oracles` 以外の運用ルールだけを確認したいとき。
+- `docs/` や `schemas/` の配下ファイルがすでに決まっていて、そこへ直接進むとき。
+- この階層ではなく、下位ディレクトリの `INDEX.md` や個別仕様だけを確認したいとき。
+- `README.md` や `AGENTS.md` など、`oracles` 以外の運用ルールを探しているとき。
 
 ## hash
 
-- 776cffd8590d802a50e18c70107e21f51d2ad6b65c053cdd79532bbff598b68d
+- 202767e17d08cbb937c3732d418bf1f409b46ff60b614eaf55f918bf811bb5ac
 
 # `pyproject.toml`
 

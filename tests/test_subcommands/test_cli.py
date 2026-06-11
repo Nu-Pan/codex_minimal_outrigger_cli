@@ -9,6 +9,8 @@ def test_main_typer_functions_delegate_only_to_impls() -> None:
 
     source = inspect.getsource(main)
     review_oracles_source = inspect.getsource(main.review_oracles_command)
+    apply_signature = inspect.signature(main.apply_fork_command)
+    apply_impl_signature = inspect.signature(apply_module.cmoc_apply_impl)
 
     assert "def _run_command" not in source
     assert "_run_command(" not in source
@@ -31,6 +33,16 @@ def test_main_typer_functions_delegate_only_to_impls() -> None:
     assert "refine_findings_loop=refine_findings_loop" in source
     assert "repeat_investigate_and_fix=repeat_investigate_and_fix" in source
     assert "repeat_improove_fixing_list=repeat_improove_fixing_list" in source
+    assert (
+        apply_signature.parameters["repeat_improove_fixing_list"]
+        .default
+        .default
+        == 1
+    )
+    assert (
+        apply_impl_signature.parameters["repeat_improove_fixing_list"].default
+        == 1
+    )
     assert "cmoc_session_join_impl()" in source
     assert "cmoc_session_abandon_impl()" in source
     assert "cmoc_apply_abandon_impl()" in source

@@ -130,7 +130,7 @@ def apply_fork_command(
         "-r",
     ),
     repeat_improove_fixing_list: int = typer.Option(
-        3,
+        1,
         "--improove-fixing-list-loop",
         "--repeat-improove-fixing-list",
     ),

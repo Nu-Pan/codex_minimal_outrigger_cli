@@ -264,7 +264,7 @@ def cmoc_apply_impl(
     repo_root: Path | None = None,
     *,
     repeat_investigate_and_fix: int = 5,
-    repeat_improove_fixing_list: int = 3,
+    repeat_improove_fixing_list: int = 1,
     scope: ApplyScope = "rolling",
 ) -> int | None:
     """oracle と実装の不整合を Codex CLI へ追従させる。"""
@@ -2408,6 +2408,7 @@ def _investigation_prompt(
             f"要修正点には、`{repo_root / 'oracles'}` 配下の仕様ファイルと"
             "実装との明確な不整合だけでなく、",
             "実装だけから見た成果物品質上の致命的な問題も含めてください。",
+            *_realization_standards_review_lines(),
             "実装のみから発見した要修正点でも、関係する仕様要求を "
             "oracle_requirement に記載してください。",
             "指定ファイルは調査の起点であり、必要なら他の仕様ファイル・実装ファイルも読んでください。",
@@ -2439,6 +2440,7 @@ def _implementation_investigation_prompt(
             f"要修正点には、`{repo_root / 'oracles'}` 配下の仕様ファイルと"
             "実装との明確な不整合だけでなく、",
             "実装だけから見た成果物品質上の致命的な問題も含めてください。",
+            *_realization_standards_review_lines(),
             "実装のみから発見した要修正点でも、関係する仕様要求を "
             "oracle_requirement に記載してください。",
             "指定ファイルは調査の起点であり、必要なら他の仕様ファイル・実装ファイルも読んでください。",
@@ -2496,6 +2498,7 @@ def _organize_prompt(
             f"`{repo_root}` の要修正点リストを整理してください。",
             "完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです。",
             "要修正点の内容の品質に明確な問題がない状態を目指してください。",
+            *_realization_standards_review_lines(),
             (
                 "重複する要修正点は 1 件にマージし、"
                 "矛盾する修正方針は矛盾しない内容に調整してください。"
@@ -2549,6 +2552,8 @@ def _apply_prompt(
             "追従するようベストエフォートで更新してください。",
             "完了条件は、必要と判断した実装修正とテスト更新を終え、変更内容と残課題を報告することです。",
             "作業が必要と判断できる場合は、実装修正と必要なテスト更新を行ってください。",
+            *_realization_standards_review_lines(),
+            "変更完了前に、追加した realization files の削除・統合・短縮余地を確認してください。",
             "以下の要修正点情報は作業のためのヒントです。",
             "絶対に従わなければならない指示書としては扱わないでください。",
             "実装状況や仕様ファイルを確認した結果として不適切なら、"
@@ -2564,6 +2569,17 @@ def _apply_prompt(
             f"`{repo_root / 'memo'}` は読み書き禁止です。",
         ]
     )
+
+
+def _realization_standards_review_lines() -> list[str]:
+    """realization standards の肥大化抑制観点を Codex prompt へ渡す。"""
+    return [
+        "realization standards に従い、realization files の肥大化抑制も確認してください。",
+        "同じ責務の実装・テスト・fixture・定数・コメントが重複している場合は要修正点として扱ってください。",
+        "現行仕様に不要な旧実装、互換分岐、未使用 import、未使用 helper、古いテストは削除対象として扱ってください。",
+        "新しい抽象化、CLI 引数、設定項目、状態、外部依存、補助ファイルが現行仕様上必要か確認してください。",
+        "テストは外部挙動または制御ロジックを検証し、同じ観点のテストは統合可能か確認してください。",
+    ]
 
 
 def _commit_message_prompt(repo_root: Path) -> str:

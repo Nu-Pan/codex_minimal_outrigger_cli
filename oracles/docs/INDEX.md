@@ -2,25 +2,51 @@
 
 ## Summary
 
-- `cmoc` の呼び出し手順から共通仕様、各サブコマンド入口までをまとめた `docs/app_specs` の目次です。
-- `usage.md` で日常フロー、`branch_model.md` でブランチモデル、`sub_commands/` で個別サブコマンド仕様へ分岐します。
-- `indexing.md` や `oracles.md` を含み、`INDEX.md` の配置・更新方針と `oracles` 取り扱いの入口にもなります。
+- この `docs/app_specs` ディレクトリの目次で、`cmoc` の利用手順と共通仕様の入口をまとめます。
+- `usage.md`、`cli_auto_completion.md`、`codex_call.md`、`console_and_file_log.md`、`error_handling.md`、`indexing.md`、`misc_specs.md`、`run_isolation.md`、`session_state.md` を案内します。
+- `oracles/`、`realization/`、`sub_commands/` を含み、個別仕様への入口と `INDEX.md` の更新方針をたどるためのハブです。
 
 ## Read this when
 
-- `cmoc` の利用方法、初回初期化、session/apply の反復フローをまとめて把握したいとき。
-- branch モデル、`codex exec` 呼び出し、エラーハンドリング、セッション状態などの共通仕様を確認したいとき。
-- `INDEX.md` の生成ルールや `oracles` 配下の読み方、個別サブコマンド仕様の入口を素早くたどりたいとき。
+- `cmoc` の利用手順、共通仕様、エラー処理、ログ、パス、状態管理をまとめて把握したいとき。
+- `usage.md`、`cli_auto_completion.md`、`codex_call.md`、`console_and_file_log.md`、`error_handling.md`、`indexing.md`、`misc_specs.md`、`run_isolation.md`、`session_state.md` のどれを読むべきか迷ったとき。
+- `sub_commands/`、`oracles/`、`realization/` の各入口へ分岐する前に、この階層の全体像を確認したいとき。
+- `INDEX.md` の更新や、`docs/app_specs` 配下のルーティングをたどりたいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの引数や状態遷移だけを確認したいときは、`sub_commands/` 配下の該当文書を直接読むべきです。
-- `dev_rules/` 側のコーディング規則、設計方針、テスト規約だけを確認したいときは、この目次ではなくそちらを読むべきです。
-- `README.md` や `AGENTS.md` などのリポジトリ運用ルールだけを確認したいときは、このディレクトリを読む必要はありません。
+- 個別サブコマンドの仕様をすでに把握していて、`sub_commands/` 配下の該当文書へ直接進むとき。
+- `oracles/` や `realization/` の個別仕様を直接確認したいだけで、この目次を経由する必要がないとき。
+- `docs/` 配下の開発規約や代替案だけを確認したいとき。
 
 ## hash
 
-- 646256542f483fabc4c22b4a4c72529b0accc4d4bedc9634dc8ff0bcdbd80abc
+- f92db23a3e0bad7a8542418641d9a32eee07e96e19e6b48bf0c075802169ece4
+
+# `branch_model.md`
+
+## Summary
+
+- `cmoc` における通常ブランチ、session ブランチ、run ブランチ、commit、worktree の関係をまとめたブランチモデルの入口です。
+- `repository-default-branch` を特別扱いしない方針と、`session fork` 時点の `local-branch` を `session home branch` とする考え方を示します。
+- 各種 `cmoc-managed-branch` の命名規則と、`fork` / `join` に対応するコミットの意味をたどるための目次です。
+
+## Read this when
+
+- `cmoc` のブランチモデル全体を把握したいとき。
+- `<local-branch>`、`<cmoc-session-branch>`、`<cmoc-run-branch>`、`<cmoc-session-home-branch>` の関係や役割を確認したいとき。
+- `session fork` と `session join`、および run の fork / join における commit と worktree の対応関係を整理したいとき。
+- ブランチ名・コミット名・worktree 名の命名規則を素早く参照したいとき。
+
+## Do not read this when
+
+- `cmoc` のブランチ命名や session/run の分離方針ではなく、個別サブコマンドの引数や手順だけを確認したいとき。
+- `session fork` / `session join` / `apply` などの実装手順そのものを追いたいときは、この概念整理ではなく該当する正本仕様を直接読むべきです。
+- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
+
+## hash
+
+- c72ad07c95591dd5ecb3c243c6660fb623636f135e25b446bf9e141d00546f94
 
 # `considered_alternatives`
 
@@ -50,22 +76,47 @@
 
 ## Summary
 
-- `cmoc` の開発ルールをまとめたディレクトリの入口です。
-- Python のコーディング規則、CLI と共通処理の設計方針、開発環境の前提、テスト実装規約を案内します。
-- 実装やテストを書く前に、共通の作法と前提条件を素早く確認するための目次です。
+- `<cmoc-root>/oracles/docs/dev_rules/` 配下の開発ルール文書への入口です。
+- `coding_rules.md`、`design_rules.md`、`development_environment.md`、`standards_format.md`、`test_rules.md` を案内します。
+- cmoc の Python 実装規約、設計方針、開発環境、oracles 標準文書の書式、テスト規約を横断的にたどるための目次です。
 
 ## Read this when
 
-- cmoc 全体のコーディング規則、設計方針、開発環境、テスト規約をまとめて確認したいとき。
-- `src` と `tests` に実装を書く前に、共通の開発ルールを整理したいとき。
-- Python の書き方、CLI の構成、仮想環境の扱い、テストの目的と範囲を俯瞰したいとき。
+- cmoc の実装や修正の前に、開発ルール全体の入口をまとめて把握したいとき。
+- Python の書き方、CLI の配置方針、仮想環境や実行環境、標準文書の書式、テスト方針のどれを参照すべきか迷ったとき。
+- `<cmoc-root>/src` や `<cmoc-root>/tests` で作業する前に、守るべき基本ルールを確認したいとき。
+- 新しいコード、テスト、または oracles の標準文書を追加・修正する前に、関連する開発規約の所在を整理したいとき。
 
 ## Do not read this when
 
-- cmoc の個別サブコマンドの仕様や引数だけを確認したいとき。
-- `oracles` 全体のルーティング方針や他ディレクトリの入口文書だけを確認したいとき。
-- `INDEX.md` の生成・更新ルールそのものだけを確認したいときは、ここではなく `indexing.md` を参照すべきとき。
+- `<cmoc-root>/oracles/docs/dev_rules/` 配下の個別文書をすでに特定していて、`coding_rules.md`、`design_rules.md`、`development_environment.md`、`standards_format.md`、`test_rules.md` のいずれかへ直接進むとき。
+- コーディング規約だけ、設計規約だけ、開発環境だけ、テスト規約だけのように、単一テーマの正本仕様を確認したいとき。
+- `docs/` の利用方法や `considered_alternatives/` の設計記録だけを探していて、開発ルールの入口は不要なとき。
 
 ## hash
 
-- 3e4d31733982a9b80629b97d1b9396964a868e7cbfeda46f65c00eb9564a46fd
+- 0f9fb88e7a4e51c144f6bb706e0cdea6aed8fe7c5e5b039e8953f3f29a354f06
+
+# `path_model.md`
+
+## Summary
+
+- `cmoc` におけるパス表記の基本ルールと、各 root token の意味をまとめた文書です。
+- 絶対パス・相対パスの扱い、`<cmoc-root>` / `<repo-root>` / `<run-root>` / `<work-root>` の定義、具体例を説明します。
+- パスの解決方法や表記の統一が必要な場面で参照するための入口です。
+
+## Read this when
+
+- `cmoc` で使う絶対パス・相対パスの書き方を確認したいとき。
+- `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` の定義と使い分けを整理したいとき。
+- `run-root` と `repo-root`、`work-root` の関係や、どの root token を使うべきか迷ったとき。
+
+## Do not read this when
+
+- パス表記の規則を確認したいのではなく、個別コマンドや機能の仕様だけを確認したいとき。
+- `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` の意味がすでに確定していて、表記ルールを再確認する必要がないとき。
+- `docs` 配下の入口や他のルーティング文書だけをたどりたいとき。
+
+## hash
+
+- 46aa1a2bfb1cc78be1fee42eede0977a5c288b0589890d7b73f18e0fc4d24703
