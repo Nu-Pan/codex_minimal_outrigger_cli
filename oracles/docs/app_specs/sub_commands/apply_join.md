@@ -25,7 +25,7 @@
 - 想定外の差分に対する対する対応方法がモードによって異なる
 - 想定外の差分とは、以下に述べる想定から外れる差分の事を指す
     - `<cmoc-session-branch>` 上で apply が実行している裏で変更して良いのは
-        - oracles ファイル
+        - oracles files 
         - `memo`
         - `INDEX.md`
     - `<cmoc-apply-branch>` 上で cmoc が積み上げて良い対象は

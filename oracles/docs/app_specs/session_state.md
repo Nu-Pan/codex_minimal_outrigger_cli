@@ -65,5 +65,5 @@
 
 ### `apply.oracle_snapshot_commit`
 
-- その apply で oracles ファイルの参照に使用するコミットのハッシュ
+- その apply で oracles files の参照に使用するコミットのハッシュ
 - `apply.state` が `ready` に遷移した時に null で初期化される

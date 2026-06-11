@@ -54,10 +54,10 @@ merge conflict が発生した場合は通常の conflict として扱う。
 5. unmerged path が残っていないことを確認する
 6. cmoc が merge commit を作成する
 
-### oracles ファイル規則とコンフリクト解決の優先順位
+### oracles files 規則とコンフリクト解決の優先順位
 
-- 前提として、 oracles ファイルは AI 編集禁止・差分検査といった規則が cmoc の仕様として定められている
-- コンフリクト解消のための操作に対しては、例外的にこれら oracles ファイル規則を適用しない
+- 前提として、 oracles files は AI 編集禁止・差分検査といった規則が cmoc の仕様として定められている
+- コンフリクト解消のための操作に対しては、例外的にこれら oracles files 規則を適用しない
 - Codex CLI に依頼する作業は…
     - conflict marker の解消に限定する
     - 仕様の意味的な改訂や、conflict 対象外の oracles 編集は禁止する
