@@ -127,24 +127,26 @@
 
 ## Summary
 
-- `<cmoc-root>/oracles` 配下全体のルーティング文書で、自然言語の仕様断片をまとめる `docs/` と、Structured Output の JSON schema をまとめる `schemas/` への入口です。
-- `oracles` の中でどの系統の文書に進むべきかを判断するための最上位目次として使います。
+- `<cmoc-root>/oracles` 配下のルーティング文書で、`docs/` と `schemas/` への入口を案内する。
+- `docs/` は利用手順・共通仕様・開発規約・パス表記・branch モデルの案内を扱う。
+- `schemas/` は Structured Output schema の置き場所と役割分担を案内する。
 
 ## Read this when
 
-- `oracles` 配下全体の役割分担と、`docs/` と `schemas/` のどちらへ進むべきかを整理したいとき。
-- 自然言語の正本仕様断片と Structured Output の JSON schema を切り分けて確認したいとき。
-- `oracles` の入口として、次に読むべき下位ディレクトリや個別文書を素早く決めたいとき。
+- cmoc の利用方法、共通仕様、パス表記、branch モデルの入口をまとめて把握したいとき。
+- 採用しなかった設計案や、その理由を確認したいとき。
+- Structured Output schema の置き場所や役割分担を確認したいとき。
+- どの下位ディレクトリの文書や個別仕様を読むべきか迷ったとき。
 
 ## Do not read this when
 
-- `docs/` や `schemas/` の配下で読むべき文書がすでに決まっていて、該当の `INDEX.md` や個別ファイルへ直接進めるとき。
-- `oracles` 全体の入口ではなく、個別の仕様断片・JSON schema・開発ルールだけを確認したいとき。
-- `README.md` や `AGENTS.md` など、`oracles` 以外のリポジトリ運用ルールだけを確認したいとき。
+- `docs/` や `schemas/` の配下ファイルがすでに決まっていて、そこへ直接進むとき。
+- この階層ではなく、下位ディレクトリの `INDEX.md` や個別仕様だけを確認したいとき。
+- `README.md` や `AGENTS.md` など、`oracles` 以外の運用ルールを探しているとき。
 
 ## hash
 
-- a7eaf3b05105aa2814780238007facb84cadb886e81ede8ebb93259628276a35
+- 202767e17d08cbb937c3732d418bf1f409b46ff60b614eaf55f918bf811bb5ac
 
 # `pyproject.toml`
 

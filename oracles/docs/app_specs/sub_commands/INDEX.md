@@ -45,32 +45,31 @@
 
 ## hash
 
-- 54860088428871af19ce47baa212d3c7f8a6f533d1aa29c8373dc1000d649cbf
+- ea2f57d2f338c0e5b69d595b03245c31a543fa755678934ec56a12dc171066c9
 
 # `apply_join.md`
 
 ## Summary
 
-- `cmoc apply join` の仕様断片への入口で、`apply` で作成した成果物を session 側へ取り込む手順をまとめた文書です。
-- 位置引数なしで実行し、`--force-resolve` によって想定外の差分の扱いが変わる点を案内します。
-- 事前条件、通常モードと強制モードの分岐、`apply.state = error` の扱い、`INDEX.md` のコンフリクト自動解決、使用済みブランチの削除条件までを扱います。
+- `cmoc apply join` の仕様断片への入口で、`apply` で作成した成果物を session 側へ取り込む手順をまとめる。
+- 位置引数なしで実行し、`--force-resolve` の有無で想定外の差分の扱いが変わる。
+- 事前条件、通常モードと強制モードの分岐、`apply.state = error` の扱い、`INDEX.md` のコンフリクト自動解決、使用済みブランチの削除条件を案内する。
 
 ## Read this when
 
-- `<cmoc-apply-branch>` を `<cmoc-session-branch>` に取り込む流れを確認したいとき。
-- `--force-resolve` の有無で、想定外の差分をどう扱うかを知りたいとき。
-- `apply.state = error` を許容して続行できる条件や、マージコンフリクト時の `INDEX.md` 自動解決を確認したいとき。
-- 処理後に `<cmoc-apply-branch>` と `<cmoc-apply-worktree>` を削除してよい条件を確認したいとき。
+- `<cmoc-apply-branch>` を `<cmoc-session-branch>` に取り込む `cmoc apply join` の入口を確認したいとき。
+- `--force-resolve` の有無で、想定外の差分や revert の扱いがどう変わるかを確認したいとき。
+- `apply.state = error` を許容して続行できる条件や、`INDEX.md` のコンフリクト自動解決方針、使用済みブランチと worktree の削除条件を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply join` の実行手順や引数の詳細を確認したいだけのとき。
-- `cmoc apply fork` や `cmoc apply abandon` など、別の `apply` サブコマンドの仕様を探しているとき。
-- `INDEX.md` の生成ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
+- `cmoc apply fork` や `cmoc apply abandon` など、別の `apply` サブコマンドの仕様を確認したいとき。
+- `cmoc apply join` の実行手順そのものを細かく追うより、他の共通仕様や上位の目次を先に確認したいとき。
+- `INDEX.md` の生成・更新ルールや `oracles` 全体のルーティング方針だけを確認したいとき。
 
 ## hash
 
-- 08d097e56ecd4ed0c02fc21fd6c88a252fb2d166a9a683297f31e54ff5081c3f
+- c8de7accd879f549febc93c91b8e0b719078b11c4ca107a5138e4cfe977110c8
 
 # `indexing.md`
 
@@ -124,7 +123,7 @@
 
 ## Summary
 
-- `cmoc review oracles` の仕様入口で、`<repo-root>/oracles` のスナップショットを評価して人間にレポートする手順をまとめた文書です。
+- `cmoc review oracles` の仕様入口で、`<repo-root>/oracles` スナップショットを評価して人間にレポートする手順をまとめた文書です。
 - 部分評価・全体評価のモード分岐、所見の列挙・マージ・検証・判定ループ、レポート形式を案内します。
 - 致命的問題と単純な問題の定義、および `codex exec` に渡す Structured Output の使い方を扱います。
 
@@ -143,7 +142,7 @@
 
 ## hash
 
-- 84a327d125bc7ee83eb336a11c2f9ec81fdc75c1f2337c7cf0aeec85bccbcdba
+- 2ee92dcf2aa7613b9c4486a32fbc44b3afd863f2aebac35d9b7b77f7602fb7b8
 
 # `session_abandon.md`
 
@@ -198,9 +197,9 @@
 
 ## Summary
 
-- `cmoc session join` の仕様断片への入口です。
-- 引数なしで現在の `<cmoc-session-branch>` を `<cmoc-session-home-branch>` へ `git merge --no-ff` して session を完了する流れを案内します。
-- 事前条件、`apply.state` の確認、conflict 時の Codex CLI 依頼、終了後の `session.state` 更新とブランチ削除までをたどるための目次です。
+- この `session_join.md` の目次で、`cmoc session join` の仕様断片への入口です。
+- 現在の `<cmoc-session-branch>` を `<cmoc-session-home-branch>` に `git merge --no-ff` して session を完了する流れを案内します。
+- 事前条件、`apply.state` の確認、conflict 時の Codex CLI 依頼、終了後の `session.state` 更新とブランチ削除までをたどるための文書です。
 
 ## Read this when
 
@@ -217,4 +216,4 @@
 
 ## hash
 
-- 666aedaa7021a6bbcc4b03c6a3e3d2921cb0557b1dbbdf7c42600619adc377bd
+- 3a6ddd312ff3d6296d5ea15ffa951765bcf28169077978471d9c2382271a0fd3

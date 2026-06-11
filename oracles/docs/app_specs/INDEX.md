@@ -144,25 +144,49 @@
 
 ## Summary
 
-- `oracles` 配下の基本定義と記述標準への入口です。
-- `basic_definitions.md` では `oracles` ファイルの定義・役割・扱いを案内します。
-- `writing_standards.md` では `oracles` ファイルの書き方の原則と規則を案内します。
+- `oracles files` の基本定義と記述標準への入口となる目次です。
+- `basics.md` では `oracles files` の条件、役割、Codex CLI による読み書き可否を案内します。
+- `standards.md` では `oracles files` の書き方の原則、用語統一、未定義部分の扱いを案内します。
 
 ## Read this when
 
-- `oracles` ファイルの基本的な定義、役割、読み書き可否を確認したいとき。
-- `oracles` ファイルをどう書くべきか、記述標準や原則を確認したいとき。
-- この配下のどの文書から読むべきかを切り分けたいとき。
+- `oracles files` の定義、役割、読み書き可否をまとめて確認したいとき。
+- `oracles` 配下の正本仕様断片を書く前に、記述標準と人間意図の扱いを確認したいとき。
+- `basics.md` と `standards.md` のどちらを先に読むべきか迷ったとき。
 
 ## Do not read this when
 
-- この配下の個別文書をすでに読む先として決めていて、`basic_definitions.md` か `writing_standards.md` に直接進むとき。
-- `oracles` の基本定義や記述標準ではなく、別の仕様階層や別ディレクトリの目次を確認したいとき。
-- `INDEX.md` の役割よりも、個別の正本仕様断片そのものだけを確認したいとき。
+- `oracles files` の定義だけを確認したいときは、`basics.md` に直接進めるとき。
+- `oracles files` の書き方や原則だけを確認したいときは、`standards.md` に直接進めるとき。
+- `INDEX.md` の生成・更新ルールや、上位階層のルーティングを確認したいとき。
 
 ## hash
 
-- 7710c43a4e92859b7a765fd226f68a4b791288c46c09b82ede374a9a472cd6c1
+- 1279debf71273f0c7a4711e91213dc659ad4a8c8ddd852bbe009fb5489e5589f
+
+# `realization`
+
+## Summary
+
+- `realization` 配下の目次で、`basics.md` と `standards.md` への入口をまとめた文書です。
+- `basics.md` では `realization files` の定義と、`realization code` / `implementation` / `test` / `ancillary` の区分を扱います。
+- `standards.md` では `realization files` に適用する編集・設計標準を扱います。
+
+## Read this when
+
+- `realization files` に該当するかどうかを判定したいとき。
+- 実装・テスト・補助ファイルのどれに当たるかを切り分けたいとき。
+- `standards.md` を読む前に、`realization` の基本定義と対象範囲を確認したいとき。
+
+## Do not read this when
+
+- `realization files` の定義がすでに分かっていて、`basics.md` または `standards.md` に直接進みたいとき。
+- `realization` 以外のサブコマンド仕様や共通仕様を探しているとき。
+- `oracles` 全体の読み方や、他の階層の `INDEX.md` だけを確認したいとき。
+
+## hash
+
+- 8554baa92e2715173c50008cee42dabac901452c0061b76549ec99fd3c55d511
 
 # `run_isolation.md`
 
@@ -211,31 +235,31 @@
 
 ## hash
 
-- 3239264f00d0b908202b32898ac3f126e33629d36653c5fc0ef8e4d3d8c0f1bf
+- 20f190b37350878524db1e9e118719639fde9dd568a7e2ffe0951ccafeb6e818
 
 # `sub_commands`
 
 ## Summary
 
-- `cmoc` の個別サブコマンド仕様への入口で、`apply` 系、`session` 系、`review oracles`、`init` を用途別に辿るための目次です。
-- `apply_abandon.md`、`apply_fork.md`、`apply_join.md`、`init.md`、`review_oracles.md`、`session_abandon.md`、`session_fork.md`、`session_join.md` へのルーティング情報をまとめます。
-- 各ファイルは、個別サブコマンドの手順、前提条件、状態遷移、終了条件を確認するための仕様断片です。
+- `cmoc` の個別サブコマンド仕様をまとめた入口で、`apply` 系、`session` 系、`review oracles`、`init`、`indexing` へ案内するディレクトリです。
+- この配下には `apply_abandon.md`、`apply_fork.md`、`apply_join.md`、`session_abandon.md`、`session_fork.md`、`session_join.md`、`review_oracles.md`、`init.md`、`indexing.md` が並びます。
+- 用途ごとに読むべき仕様を切り分けるための目次として使います。
 
 ## Read this when
 
-- `apply` 系、`session` 系、`review oracles`、`init` のどの仕様断片へ進むべきか迷うとき。
-- 特定のサブコマンドの実装、修正、テスト、レビューの前に入口を確認したいとき。
-- `apply` / `session` の開始・終了・破棄・統合を整理してから個別文書へ進みたいとき。
+- `cmoc` の apply 系・session 系・`review oracles`・`init`・`indexing` のどの仕様を読むべきか迷ったとき。
+- 個別サブコマンドの実装、修正、テスト、レビューの前に、該当する仕様断片への入口を確認したいとき。
+- `cmoc` のサブコマンド仕様全体を、このディレクトリの目次からたどりたいとき。
 
 ## Do not read this when
 
-- branch モデル、ログ、エラーハンドリングなどの共通仕様だけを確認したいとき。
-- 個別サブコマンドの引数や状態遷移を知りたい場合は、ここではなく該当する仕様断片を直接読むとき。
-- `INDEX.md` の生成・更新ルールや `oracles` 全体のメンテナンス方針だけを確認したいとき。
+- 読むべき対象のサブコマンド仕様がすでに分かっていて、`apply_abandon.md`、`apply_fork.md`、`apply_join.md`、`session_abandon.md`、`session_fork.md`、`session_join.md`、`review_oracles.md`、`init.md`、`indexing.md` のいずれかへ直接進めるとき。
+- `docs/` や `oracles/` の上位目次、あるいは別階層のルーティング文書だけを確認したいとき。
+- 個別サブコマンドの引数や状態遷移ではなく、`INDEX.md` の生成・更新ルールそのものを確認したいとき。
 
 ## hash
 
-- cadfda72cc80d5f04fc44a22897cfbe933ec7832306b2d0635ddd541fda51279
+- 81d1137ecec3ad6fee25beb91eb4667d76b76c6720623c5a8515265e86f79bc9
 
 # `usage.md`
 

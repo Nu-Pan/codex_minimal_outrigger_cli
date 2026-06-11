@@ -31,13 +31,13 @@
 ## Summary
 
 - cmoc のコード設計方針を定める開発ルールです。
-- CLI 実装では typer を使い、エントリーポイントと引数解釈は `src/main.py`、各サブコマンド本体は `src/sub_commands/<sub command name>.py` に置きます。
-- 共有機能は `src/commons` に置き、関数分割は基本的に許容しつつ、安易な単独抽出は避けて caller first, callee last を基本とします。
+- CLI 実装では typer を使い、エントリーポイントと引数解釈は `<cmoc-root>/src/main.py`、各サブコマンド本体は `<cmoc-root>/src/sub_commands/<sub command name>.py` に置きます。
+- 共有機能は `<cmoc-root>/src/commons` に置き、関数分割は基本的に許容しつつ、安易な単独抽出は避けて caller first, callee last を基本とします。
 
 ## Read this when
 
 - cmoc の CLI エントリーポイントや引数解釈の置き場所を決めたいとき。
-- `src/main.py`、`src/sub_commands`、`src/commons` の役割分担を確認したいとき。
+- `<cmoc-root>/src/main.py`、`<cmoc-root>/src/sub_commands`、`<cmoc-root>/src/commons` の役割分担を確認したいとき。
 - 新しいサブコマンドを追加するとき、または既存サブコマンド本体の配置を判断したいとき。
 - 共通ユーティリティ、定数、エラー処理をどこに置くべきか確認したいとき。
 - 関数分割の粒度や、同一ファイル内での caller / callee の並び順を確認したいとき。
@@ -51,7 +51,7 @@
 
 ## hash
 
-- 85cd1e6afcfd06db7108bc71683260a7553bddf86e6ac5bc709ef4682b9cb721
+- 9072b8512b6671c4550343f461a7c411d7066a9cb5f83108766055e822dff9c5
 
 # `development_environment.md`
 
@@ -78,6 +78,32 @@
 ## hash
 
 - 445d7aebcbb7bfff316937b900022ca51a44bcd853728a2c22959e941e89ef01
+
+# `standards_format.md`
+
+## Summary
+
+- `<cmoc-root>` の oracles files に置く standards 文書の書式ルールを定めた文書です。
+- 標準文書の構成として、対象・背景・要求・判定・例示をどう書くかを案内します。
+- このルールは `<cmoc-root>` 上の oracles files に適用され、`<repo-root>` 側の oracles files は対象外です。
+
+## Read this when
+
+- `<cmoc-root>/oracles` 配下で新しい standards を書く、または既存の standards を修正するとき。
+- 標準文書の章立て、各フィールドの書き方、OK/NG 例の付け方を確認したいとき。
+- standards 文書のレビューで、形式面の不足や逸脱を点検したいとき。
+- oracles files に対する共通の記述フォーマットを揃えたいとき。
+
+## Do not read this when
+
+- `<cmoc-root>/oracles` 配下の実際の standards 本文や個別仕様を確認したいとき。
+- `oracles` 以外の設計方針、CLI 仕様、テスト規約だけを探しているとき。
+- 単に既存の standards を読みたいだけで、書式ルールの確認が不要なとき。
+- `<repo-root>` 側の oracles files を対象にしたルールを探しているとき。
+
+## hash
+
+- fb41ebd349bfb0277f887830344d4ccc74d20af62239b663c59b15f6ea79edce
 
 # `test_rules.md`
 
