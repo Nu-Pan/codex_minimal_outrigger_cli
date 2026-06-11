@@ -1576,7 +1576,7 @@ def _maintain_indexes_accepts_excluded_roots() -> bool:
 
 def _apply_index_excluded_roots(repo_root: Path) -> list[Path]:
     """apply worktree の INDEX メンテナンス除外 root 群を返す。"""
-    return [repo_root / "oracles"]
+    return []
 
 
 def _assert_excluded_indexes_current(
