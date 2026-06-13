@@ -207,30 +207,3 @@ def resolve_log_repo_root(repo_root: Path) -> Path:
 def _subcommand_log_repo_root(repo_root: Path) -> Path:
     """サブコマンドログを書き込む repo root を返す。"""
     return resolve_log_repo_root(repo_root)
-
-
-def _owning_repo_root_from_apply_worktree_path(repo_root: Path) -> Path | None:
-    """cmoc apply worktree path から所有元 repo root を復元する。"""
-    parts = repo_root.resolve().parts
-    markers = (
-        (".cmoc", "worktrees"),
-        (".cmoc", "worktrees", "apply"),
-    )
-    for marker in markers:
-        for index in range(0, len(parts) - len(marker)):
-            if parts[index : index + len(marker)] != marker:
-                continue
-            if len(parts) == index + len(marker) + 2:
-                return Path(*parts[:index])
-    return None
-
-
-def _is_cmoc_managed_worktree_root(repo_root: Path, common_root: Path) -> bool:
-    """repo_root が common_root 配下の cmoc 管理 worktree なら真を返す。"""
-    try:
-        repo_root.resolve().relative_to(
-            (common_root / ".cmoc" / "worktrees").resolve()
-        )
-    except ValueError:
-        return False
-    return True

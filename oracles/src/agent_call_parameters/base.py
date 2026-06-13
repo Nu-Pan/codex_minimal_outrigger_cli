@@ -1,7 +1,11 @@
+"""
+# Agent call parameters base
+
+- AI エージェント CLI (e.g. Codex CLI) を呼び出す
+"""
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
 from enum import Enum
 
 
@@ -45,11 +49,10 @@ class ReasoningEffort(Enum):
     Reasoning effort の列挙値。
     実際の設定値への解決はバックエンドの責任。
     """
-    
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
-
 
 
 @dataclass(frozen=True)
@@ -69,4 +72,3 @@ class AgentCallParameters:
 
     # Structured output schema ファイルパス
     structured_output_schema_path: Path
-

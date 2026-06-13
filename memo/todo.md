@@ -11,6 +11,7 @@
     - ファイル分割・ディレクトリ階層化原則を oracles に追記
     - apply 関係のプロンプト生成を oracles python 関数化
         - AI に書かせると `realization standards に従い、realization files の肥大化抑制も確認してください。` みたいなアホプロンプトを生成しやがるので、絶対に人間握らなければいけない
+        - Structured output schema の書き方は dataclass とレンダラーの組み合わせでどうにかしたい
     - 既存の実装・テストを全削除、 apply を実行
 
 ## oracles ファイル編集のワークフローが回るようにする

@@ -1,13 +1,13 @@
 
 # realization 基本情報
 
-## realization files
+## realization file
 
-- realization files とは、oracles files ではない、cmoc の裁量で読み書きして良いファイルの総称である
+- realization file とは、oracles file ではない、cmoc の裁量で読み書きして良いファイルの総称である
 
 ## realization code
 
-- realization code とは、realization files のうち、実装またはテストのソースコードを指す
+- realization code とは、realization file のうち、実装またはテストのソースコードを指す
 
 ## realization implementation
 
@@ -22,5 +22,5 @@
 
 ## realization ancillary
 
-- realization ancillary とは、realization files のうち、補助的なファイルを指す
+- realization ancillary とは、realization file のうち、補助的なファイルを指す
 - e.g. `<work-root>/.gitignore`, `<work-root>/bin/**/*`
