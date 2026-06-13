@@ -8,7 +8,7 @@
 
 ## パス表記
 
-- ファイル・ディレクトリパスの表記に `<cmoc-root>`, `<work-root>`, `<state-root>`, `<run-root>` を用いる
+- ファイル・ディレクトリパスの表記に `<cmoc-root>`, `<work-root>`, `<run-root>` を用いる
 - 特に `<cmoc-root>` は、このリポジトリのルートディレクトリパスを表す
 - これらパスキーワードの説明は `<cmoc-root>/oracles/docs/path_model.md` を参照すること
 
