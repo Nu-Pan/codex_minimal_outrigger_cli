@@ -17,13 +17,16 @@ ApplyForkFileAuditTargetKind = Literal["oracle", "implementation"]
 def build_apply_fork_file_audit_parameter(
     *,
     target_path: Path,
-    target_type: CmocFileType,
     exists_at_snapshot: bool,
     exists_in_worktree: bool,
 ) -> AgentCallParameters:
     """
     `cmoc apply fork` サブコマンド用。
     ファイル単位監査用の AI エージェント呼び出しパラメータを構築する。
+
+    taraget_path: Path
+        監査の起点となるファイルのパス
+        oracle file, realization file が渡される想定。
     """
     # エイリアス
     cmoc_root = resolve_cmoc_root()
@@ -31,7 +34,7 @@ def build_apply_fork_file_audit_parameter(
     work_root = resolve_work_root()
 
     # プロンプトを構築
-    # TODO 削除されたファイルもハンドル出来るようにする
+    # TODO 削除されたファイルもハンドル出来るようにする？
     # TODO 定義・標準をモジュール化・挿入出来るようにする
     prompt: list[StructDocs] = list()
     prompt = [
@@ -47,7 +50,7 @@ def build_apply_fork_file_audit_parameter(
             "要修正点の観点",
             StructDocs(
                 "基本的な観点",
-                """
+                f"""
                 - 要修正点には、`{repo_root / 'oracles'}` 配下の仕様ファイルと実装との明確な不整合を含めて下さい
                 - 要修正点には、実装だけから見た成果物品質上の致命的な問題も含めてください
                 """,

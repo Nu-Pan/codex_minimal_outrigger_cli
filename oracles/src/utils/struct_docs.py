@@ -9,6 +9,9 @@ import textwrap
 
 
 class StructDocs:
+    """
+    構造化文章クラス
+    """
 
     def __init__(
         self,
