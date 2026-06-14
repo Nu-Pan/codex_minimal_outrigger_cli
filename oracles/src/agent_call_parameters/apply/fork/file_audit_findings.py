@@ -43,7 +43,7 @@ def build_apply_fork_file_audit_parameter(
             """,
         ),
         build_file_access_rule("readonly"),
-        build_oracles_standards(),  # TODO 無くても良いような気もする
+        build_oracles_standards(),  # TODO apply の時は無くても良いような気もする
         build_realization_standards(),
         StructDocs(
             "要修正点の観点",
