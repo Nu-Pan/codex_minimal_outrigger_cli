@@ -13,12 +13,16 @@ class Standard:
 
     def __init__(
         self,
+        title: str,
         targets: list[str],
         backgrounds: list[str],
         requirements: list["Requirement"],
         criteria: list[str] = list(),
         examples: list[str] = list(),
     ):
+        # title
+        # - この standard の見出し
+        self._title = title
         # targets
         # - この standard が適用される対象
         # - 必須フィールド
@@ -99,6 +103,10 @@ class Standard:
             raise ValueError(f"Invalid example (example={examples})")
 
     @property
+    def title(self) -> str:
+        return self._title
+
+    @property
     def targetgs(self) -> list[str]:
         return self._targets
 
@@ -142,7 +150,7 @@ class Requirement:
     body: str
 
 
-def standard_to_struct_docs(title: str, standard: Standard) -> StructDocs:
+def standard_to_struct_docs(standard: Standard) -> StructDocs:
     """
     standard を StructDocs に変換する。
     """
@@ -174,4 +182,4 @@ def standard_to_struct_docs(title: str, standard: Standard) -> StructDocs:
                 ".\n".join(f"- {e}" for e in standard.examples),
             ),
         )
-    return StructDocs(title, *fields)
+    return StructDocs(standard.title, *fields)

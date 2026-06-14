@@ -23,6 +23,7 @@
     - apply 実行して仕様変更を反映
     - review oracles の裁判モデルに high を使うのは重すぎる
         - １周で良いでしょとか、 FATAL だけで良くない？　とかある
+    - プロンプトが満たすべき基本要件の定義は関数化したい
     - 実際に `cmoc review oracles` を使って oracles の改善を図る
 
 # cmoc の作業品質

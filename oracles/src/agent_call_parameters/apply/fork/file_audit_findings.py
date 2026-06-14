@@ -3,26 +3,22 @@
 # std
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
 
 # cmoc
 from agent_call_parameters.base import AgentCallParameters, ModelClass, ReasoningEffort
 from utils.struct_docs import StructDocs, render_as_markdown
 from utils.path_model import resolve_cmoc_root, resolve_repo_root, resolve_work_root
-from utils.constants import CmocFileType
-
-ApplyForkFileAuditTargetKind = Literal["oracle", "implementation"]
+from prompt_parts.general import build_file_access_rule
+from prompt_parts.oracles_standards import build_oracles_standards
+from prompt_parts.realization_standards import build_realization_standards
 
 
 def build_apply_fork_file_audit_parameter(
-    *,
     target_path: Path,
-    exists_at_snapshot: bool,
-    exists_in_worktree: bool,
 ) -> AgentCallParameters:
     """
-    `cmoc apply fork` サブコマンド用。
-    ファイル単位監査用の AI エージェント呼び出しパラメータを構築する。
+    `cmoc apply fork` サブコマンド、ファイル単位監査用。
+    AI エージェント呼び出しパラメータを構築する。
 
     taraget_path: Path
         監査の起点となるファイルのパス
@@ -39,13 +35,16 @@ def build_apply_fork_file_audit_parameter(
     prompt: list[StructDocs] = list()
     prompt = [
         StructDocs(
-            "基本的な指示",
+            "summary",
             f"""
             - あなたはソフトウェア実装の監査担当です
             - `{target_path}` を起点に `{repo_root.name}` の要修正点を調査してください
             - 完了条件は、指定された Structured Output schema に一致する JSON だけを返すことです
             """,
         ),
+        build_file_access_rule("readonly"),
+        build_oracles_standards(),  # TODO 無くても良いような気もする
+        build_realization_standards(),
         StructDocs(
             "要修正点の観点",
             StructDocs(
