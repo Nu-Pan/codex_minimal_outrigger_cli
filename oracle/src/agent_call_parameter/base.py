@@ -41,7 +41,7 @@ class ModelClass(Enum):
     # その時々の最安価モデルが選ばれる想定
     # 極端に簡単なことをやらせる時に選ぶ
     # 結果的に MINIMUM = EFFICIENCY となることも許容する
-    MINIMUM = "medium"
+    MINIMUM = "minimum"
 
 
 class ReasoningEffort(Enum):

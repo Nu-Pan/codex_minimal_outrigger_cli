@@ -35,6 +35,7 @@
           "evidences": {
             "type": "array",
             "description": "要修正点の根拠となる文言の位置情報。仕様ファイル・実装ファイルのどちらかが必ず 1 つは根拠として存在するはずであるから空配列は想定しない。",
+            "minItems": 1,
             "items": {
               "type": "object",
               "additionalProperties": false,

@@ -397,6 +397,6 @@ def build_realization_standard() -> StructDoc:
         ),
     ]
     return StructDoc(
-        "realization ",
+        "realization standard",
         *[standard_to_struct_doc(rs) for rs in standards],
     )

@@ -28,7 +28,7 @@ def build_complete_prompt(
             role,
         ),
         StructDoc(
-            "sumary",
+            "summary",
             summary,
         ),
         StructDoc(

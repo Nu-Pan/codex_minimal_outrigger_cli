@@ -82,7 +82,7 @@ class Standard:
         ):
             self._criteria = criteria
         elif isinstance(criteria, list) and len(criteria) == 0:
-            pass
+            self._criteria = list()
         else:
             raise ValueError(f"Invalid criteria (criteria={criteria})")
         # example
@@ -98,7 +98,7 @@ class Standard:
         ):
             self._examples = examples
         elif isinstance(examples, list) and len(examples) == 0:
-            pass
+            self._examples = list()
         else:
             raise ValueError(f"Invalid example (example={examples})")
 
@@ -107,7 +107,7 @@ class Standard:
         return self._title
 
     @property
-    def targetgs(self) -> list[str]:
+    def targets(self) -> list[str]:
         return self._targets
 
     @property
@@ -157,7 +157,7 @@ def standard_to_struct_doc(standard: Standard) -> StructDoc:
     fields = [
         StructDoc(
             "対象",
-            ".\n".join(f"- {t}" for t in standard.targetgs),
+            ".\n".join(f"- {t}" for t in standard.targets),
         ),
         StructDoc(
             "背景",

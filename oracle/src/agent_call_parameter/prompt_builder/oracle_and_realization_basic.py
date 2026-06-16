@@ -1,11 +1,6 @@
 # cmoc
-from oracle.src.utils.struct_doc import StructDoc
-from utils.path_model import (
-    resolve_cmoc_root,
-    resolve_repo_root,
-    resolve_run_root,
-    resolve_work_root,
-)
+from utils.struct_doc import StructDoc
+from utils.path_model import resolve_work_root
 
 
 def build_oracle_and_realization_basic() -> StructDoc:

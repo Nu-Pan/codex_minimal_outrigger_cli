@@ -2,13 +2,8 @@
 from typing import Literal
 
 # cmoc
-from utils.path_model import (
-    resolve_cmoc_root,
-    resolve_repo_root,
-    resolve_run_root,
-    resolve_work_root,
-)
-from oracle.src.utils.struct_doc import StructDoc, ntqs
+from utils.path_model import resolve_work_root
+from utils.struct_doc import StructDoc, ntqs
 
 type FileAccessMode = Literal[
     "readonly",

@@ -2,7 +2,7 @@
 from pathlib import Path
 
 # cmoc
-from oracle.src.utils.struct_doc import StructDoc
+from utils.struct_doc import StructDoc
 from utils.standard import (
     Requirement,
     Standard,
@@ -266,10 +266,10 @@ def build_oracle_standard() -> StructDoc:
             ],
         ),
         Standard(
-            title="ベストプラクティスよりも oracle  で定義されている要求が優先される",
+            title="ベストプラクティスよりも oracle file で定義されている要求が優先される",
             targets=[
                 "oracle file",
-                "oracle  の解釈",
+                "oracle file の解釈",
                 "cmoc による oracle file 支援機能",
             ],
             backgrounds=[
@@ -279,19 +279,19 @@ def build_oracle_standard() -> StructDoc:
             requirements=[
                 Requirement(
                     "必須",
-                    "一般的に知られているベストプラクティスと oracle  の要求が競合した場合は、oracle  を優先する",
+                    "一般的に知られているベストプラクティスと oracle file の要求が競合した場合は、oracle file を優先する",
                 ),
                 Requirement(
                     "必須",
-                    "一般的に知られているベストプラクティスを理由に、oracle  の要求を無視してはいけない",
+                    "一般的に知られているベストプラクティスを理由に、oracle file の要求を無視してはいけない",
                 ),
             ],
             criteria=[
-                "判断の根拠が、一般論ではなく oracle  と正本仕様断片に置かれている",
-                "ベストプラクティスを採用する場合でも、oracle  と矛盾していない",
+                "判断の根拠が、一般論ではなく oracle file と正本仕様断片に置かれている",
+                "ベストプラクティスを採用する場合でも、oracle file と矛盾していない",
             ],
             examples=[
-                "OK: 一般には網羅的な仕様書が望ましい場面でも、oracle  が疎な正本仕様断片を求めるなら疎に保つ",
+                "OK: 一般には網羅的な仕様書が望ましい場面でも、oracle file が疎な正本仕様断片を求めるなら疎に保つ",
                 "NG: 一般的なドキュメントベストプラクティスを理由に、oracle file を網羅的に書き直す",
             ],
         ),
