@@ -6,8 +6,8 @@ from utils.struct_doc import StructDoc
 class Standard:
     """
     何らかの事柄について、標準的に従うべき事項
-    - `<cmoc-root>` の oracle file 上には cmoc 成果物 (e.g. oracle, realization, ...) に対する  が存在する
-    - これら  の記述は一定のフォーマットに従うものとする
+    - `<cmoc-root>` の oracle file 上には cmoc 成果物 (e.g. oracle, realization, ...) に対する standard が存在する
+    - これら standard の記述は一定のフォーマットに従うものとする
     - このフォーマット規則は `<cmoc-root>` 上の oracle file に適用されるものであり、`<repo-root>` 上の oracle file は対象外である
     """
 
@@ -58,7 +58,7 @@ class Standard:
         else:
             raise ValueError(f"Invalid backgrounds (backgrounds={backgrounds})")
         # requirements
-        # - この  が要求する規範
+        # - この standard が要求する規範
         # - 必須フィールド
         if (
             isinstance(requirements, list)
@@ -135,7 +135,7 @@ class Requirement:
     """
 
     # ラベル
-    # 必須: 破ると  違反になる
+    # 必須: 破ると standard 違反になる
     # 禁止: してはいけない
     # 推奨: 原則として従うが、理由があれば外してよい
     # 許容: 禁止ではないことを明示する

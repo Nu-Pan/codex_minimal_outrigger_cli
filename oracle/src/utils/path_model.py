@@ -20,11 +20,11 @@
 - `<run-root>` 外の `<repo-root>` 内で cmoc を起動した場合 `<repo-root>` と同値
 """
 
-
 from pathlib import Path
 from enum import Enum
 from typing import Generator
 import subprocess
+
 
 class RootToken(Enum):
     """
@@ -49,7 +49,7 @@ class RootToken(Enum):
     WORK = "<work-root>"
 
 
-def resolve_real_path(source: RootToken|str|Path) -> Path:
+def resolve_real_path(source: RootToken | str | Path) -> Path:
     """
     root token そのもの、あるいは root token を含むパスを、現実の絶対パスに解決する。
     """
@@ -65,13 +65,13 @@ def resolve_real_path(source: RootToken|str|Path) -> Path:
             case RootToken.WORK:
                 return resolve_work_root()
             case _:
-                raise ValueError(f"{source} is invalid RootToken.")        
+                raise ValueError(f"{source} is invalid RootToken.")
     elif isinstance(source, str):
         # 引数が str の場合は Path に処理を回す
         return resolve_real_path(Path(source))
     elif isinstance(source, Path):
         # Path の場合は先頭のトークンを置換
-        # 絶対パスならそのまま返す（simlink とかの可能性があるので resolve はする）
+        # 絶対パスならそのまま返す（symlink とかの可能性があるので resolve はする）
         if source.is_absolute():
             return source.resolve()
         # 空パスは禁止
@@ -84,13 +84,15 @@ def resolve_real_path(source: RootToken|str|Path) -> Path:
                 result = resolve_real_path(root_token) / Path(*source.parts[1:])
                 return result.resolve()
         else:
-            raise ValueError(f"source is relative path without root token (source={source})")
+            raise ValueError(
+                f"source is relative path without root token (source={source})"
+            )
     else:
         raise TypeError(f"{source} is unexpected type")
 
 
 def resolve_cmoc_root(
-    start_path: Path|None = None,
+    start_path: Path | None = None,
 ) -> Path:
     """
     `<cmoc-root>` を返す。
@@ -99,7 +101,7 @@ def resolve_cmoc_root(
 
     - `.git` ディレクトリを直下に持つディレクトリ
     - `bin/cmoc` ファイルを直下に持つディレクトリ
-    
+
     を探索する。
     """
     # 直下に `.git` ディレクトリを持つディレクトリを探す
@@ -113,7 +115,7 @@ def resolve_cmoc_root(
 
 
 def resolve_repo_root(
-    start_path: Path|None = None,
+    start_path: Path | None = None,
 ) -> Path:
     """
     `<repo-root>` を返す。
@@ -138,18 +140,18 @@ def resolve_repo_root(
         ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
         cwd=start_dir,
         text=True,
-        capture_output=True
+        capture_output=True,
     )
     if git_result.returncode == 0:
         common_dir = git_result.stdout.strip()
         if common_dir:
             return Path(common_dir).parent
-    # 全部ダメだったら例外    
+    # 全部ダメだったら例外
     raise ValueError("`<repo-root>` was not found")
 
 
 def resolve_run_root(
-    start_path: Path|None = None,
+    start_path: Path | None = None,
 ) -> Path:
     """
     `<run-root>` を返す。
@@ -165,14 +167,14 @@ def resolve_run_root(
 
 
 def resolve_work_root(
-    start_path: Path|None = None,
+    start_path: Path | None = None,
 ) -> Path:
     """
     `<work-root>` を返す。
     これは内部実装であり、`resolve_real_path` からのみ呼び出される想定。
     cwd を起点として「`.git` ファイル・ディレクトリを直下に持つディレクトリ」を探索する。
     """
-    # .git ディレクトリ・ディレクトリを探索
+    # .git ファイル・ディレクトリを探索
     for candidate in _enumerate_candidates(start_path, Path.cwd()):
         dot_git_path = candidate / ".git"
         if dot_git_path.is_dir() or dot_git_path.is_file():
@@ -181,10 +183,7 @@ def resolve_work_root(
         raise ValueError("`<work-root>` was not found")
 
 
-def resolve_token_path(
-    real_path: Path,
-    root_token: RootToken
-) -> Path:
+def resolve_token_path(real_path: Path, root_token: RootToken) -> Path:
     """
     実パス (`real_path`) を root token 表記に変換する。
     変換先は `root_token` で指定し、マッチしなかった場合は例外を投げる。
@@ -194,13 +193,15 @@ def resolve_token_path(
     try:
         relative_path = real_path.relative_to(root_real_path)
     except ValueError:
-        raise ValueError(f"real_path is not matched with root_token (real_path={real_path}, root_token={root_token})")
-    return (Path(root_token.value) / relative_path)
+        raise ValueError(
+            f"real_path is not matched with root_token (real_path={real_path}, root_token={root_token})"
+        )
+    return Path(root_token.value) / relative_path
 
 
 def _enumerate_candidates(
-    start_path:Path|None,
-    default_path:Path,
+    start_path: Path | None,
+    default_path: Path,
 ) -> Generator[Path, None, None]:
     """
     `resolve_***_root` 系関数向けに root token と対応する実パスの候補を列挙する。

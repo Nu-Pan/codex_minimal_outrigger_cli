@@ -17,11 +17,7 @@ def build_oracle_standard() -> StructDoc:
     standards = [
         Standard(
             title="人間の認知能力の消費は節約しなければならない",
-            targets=[
-                "oracle file",
-                "oracle ",
-                "cmoc による oracle file 支援機能",
-            ],
+            targets=["oracle file"],
             backgrounds=[
                 "人間の認知能力は人間だけが提供できる希少なリソースである",
                 "希少性ゆえに、あらゆるケースで人間の認知能力の供給不足がボトルネックになる",
@@ -76,10 +72,7 @@ def build_oracle_standard() -> StructDoc:
         ),
         Standard(
             title="仕様断片の隙間の未定義部分は許容する",
-            targets=[
-                "oracle file",
-                "oracle file を解釈する実装者",
-            ],
+            targets=["oracle file"],
             backgrounds=[
                 "oracle file は正本仕様断片である",
                 "仕様断片の隙間には未定義部分が生まれる",

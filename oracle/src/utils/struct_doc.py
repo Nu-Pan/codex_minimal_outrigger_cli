@@ -92,7 +92,7 @@ def _render_as_markdown(struct_doc: StructDoc, depth: int = 1) -> str:
 
 def ntqs(text: str) -> str:
     """
-    Triple quarted string で書かれた文字列を正規化する。
+    Triple quoted string で書かれた文字列を正規化する。
     インデントを維持して書いた tqs を、インデントされていないような感じにする
     """
     # 先頭・末尾の空行だけを落としてから、共通インデントを解除する。
