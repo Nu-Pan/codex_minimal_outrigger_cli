@@ -27,22 +27,22 @@
 
 ## Summary
 
-- この `<work-root>/oracle/src/agent_call_parameter/apply/fork` ディレクトリは、`cmoc apply fork` のファイル単位監査用 agent call parameter をまとめる入口です。
-- `file_audit_finding.py` では監査プロンプトと呼び出しパラメータ生成を定義し、`file_audit_finding.json` では要修正点一覧の Structured Output schema を定義します。
-- ここは、調査対象ファイルを起点に oracle file と realization file の不整合や致命的問題を洗い出すための目次です。
+- `cmoc apply fork` のファイル単位監査用 agent call parameter を構築する入口です。
+- `build_apply_fork_file_audit_parameter()` が監査対象パスから prompt と `AgentCallParameters` を生成し、返却先の Structured Output schema は隣接する `file_audit_finding.json` です。
+- 監査対象ファイルを起点に、oracle file と realization file の不整合や致命的問題を洗い出すための正本です。
 
 ## Read this when
 
-- `cmoc apply fork` のファイル単位監査プロンプトや Structured Output schema を確認・修正したいとき。
-- 要修正点の検出条件、`fixing_points` の構造、証拠の持ち方を確認したいとき。
-- `file_audit_finding.py` と `file_audit_finding.json` のどちらを読むべきか迷ったとき。
+- `cmoc apply fork` のファイル単位監査 prompt や呼び出しパラメータの組み立てを確認・修正したいとき。
+- `target_path` を起点にどのモデル・推論強度・Structured Output schema が使われるか追いたいとき。
+- `file_audit_finding.py` と `file_audit_finding.json` のどちらを開くべきか迷ったとき。
 
 ## Do not read this when
 
 - `cmoc apply join` や `cmoc apply abandon` など、`apply fork` 以外のフローを確認したいとき。
-- 他の agent call parameter や review 用 schema を探していて、このディレクトリの内容は不要なとき。
-- 監査対象の oracle file / realization file 本体や、上位の共通仕様・開発規約だけを確認したいとき。
+- すでに目的の関数や schema 名が分かっていて、直接 `file_audit_finding.py` または `file_audit_finding.json` を確認するとき。
+- oracle 全体の共通規約や `INDEX.md` 生成ルールだけを確認したいとき。
 
 ## hash
 
-- 1b00beaa92742d52500415397aef847a4cf54fcb8a867c1040634abb4c89bc9c
+- 414fa61b13f8e62dc6b73dfd2a1ac452adf936bf97a9aa18d0a000a31439511c

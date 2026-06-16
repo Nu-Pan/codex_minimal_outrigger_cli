@@ -2,9 +2,9 @@
 
 ## Summary
 
-- `cmoc apply fork` のファイル単位監査用 agent call parameter をまとめるディレクトリです。
+- `cmoc apply fork` のファイル単位監査用 agent call parameter をまとめるディレクトリのルーティング文書で、`file_audit_finding.py` と `file_audit_finding.json` への入口です。
 - `file_audit_finding.py` は監査用の呼び出しパラメータ生成を、`file_audit_finding.json` は要修正点一覧の Structured Output schema を定義します。
-- 監査対象ファイルを起点に、`oracle file` と `realization file` の差分や致命的問題を洗い出すための入口です。
+- 監査対象ファイルを起点に、`oracle file` と `realization file` の差分や致命的問題を洗い出すための目次です。
 
 ## Read this when
 
@@ -20,4 +20,4 @@
 
 ## hash
 
-- c216bf42e358d89bc62e7e815c2e5609a156b9902a829de65706d51e0f3b22ce
+- 800af45a15d499e8af3d2263c1b5232b66c3b7e714bdc1378cca1ec5333a1113

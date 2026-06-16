@@ -27,23 +27,23 @@
 
 ## Summary
 
-- この `src` ディレクトリのルーティング文書で、`agent_call_parameter/`、`agent_call_parameters/`、`utils/` への入口です。
+- この `src` ディレクトリのルーティング文書で、`agent_call_parameter/` と `utils/` への入口です。
 - `agent_call_parameter/` は `base.py`、`prompt_builder/`、`apply/`、`review/` をまとめる主要パッケージです。
-- `agent_call_parameters/` は `prompt_builder/` 配下の `oracles_standards.py` を案内し、`utils/` は `path_model.py`、`standard.py`、`struct_doc.py` の共通基盤をまとめます。
+- `utils/` は `path_model.py`、`standard.py`、`struct_doc.py` の共通基盤をまとめます。
 
 ## Read this when
 
-- `<work-root>/oracle/src` 配下のどのパッケージから読むべきか迷ったとき。
-- `agent_call_parameter/` と `agent_call_parameters/` の役割差を整理したいとき。
-- パス解決、標準定義、`StructDoc` 変換の共通基盤を探したいとき。
-- `apply` / `review` / `prompt_builder` の入口をまとめて把握したいとき。
+- `<cmoc-root>/oracle/src` 配下のどのパッケージから読むべきか迷ったとき。
+- `agent_call_parameter/` と `utils/` の役割差を整理したいとき。
+- `AgentCallParameters`、`ModelClass`、`ReasoningEffort`、prompt builder、`apply` / `review` の入口をまとめて把握したいとき。
+- `<cmoc-root>` / `<repo-root>` / `<run-root>` / `<work-root>` の解決規則や、`StructDoc` と標準定義の共通基盤を確認したいとき。
 
 ## Do not read this when
 
-- 読みたい対象のファイルやサブディレクトリがすでに分かっていて、直接 `base.py`、`path_model.py`、`standard.py`、`struct_doc.py`、各 `INDEX.md` に進むとき。
-- `<work-root>/oracle/src` 全体ではなく、個別の実装やテストだけを確認したいとき。
-- すでに `agent_call_parameter/`、`agent_call_parameters/`、`utils/` のいずれかの目次に入ることが決まっているとき。
+- 読みたい対象のファイルやサブディレクトリがすでに分かっていて、`base.py`、`path_model.py`、`standard.py`、`struct_doc.py`、各 `INDEX.md` を直接開くとき。
+- `<work-root>/oracle/src` 全体ではなく、`agent_call_parameter/` や `utils/` の個別実装だけを確認したいとき。
+- すでに `agent_call_parameter/` か `utils/` のどちらへ進むか決まっていて、この階層の入口を経由する必要がないとき。
 
 ## hash
 
-- 498ed00632205a5ed90fefdbd3706181a99c2d76ca21f9d18c508577f0bc214b
+- 03fe23c1264a0d88113c1f16773e4547a635f5c101c212edb7f321c8e9fb0caf

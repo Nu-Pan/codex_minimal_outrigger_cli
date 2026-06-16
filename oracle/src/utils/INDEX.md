@@ -26,26 +26,28 @@
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/utils/standard.py` は、標準の共通表現を定義し、`Standard` と `Requirement` を `StructDoc` に変換するための入口です。
-- このモジュールは、oracle 文書群で共通に使う標準フォーマットの基盤をまとめます。
-- 標準定義そのものを読む前に、共通データ構造と変換関数の役割を確認するための目次です。
+- `<cmoc-root>/oracle/src/utils/standard.py` は、oracle 文書で共通に使う標準表現を定義し、`Standard` と `Requirement` を `StructDoc` へ変換する入口です。
+- `Standard` は見出し・対象・背景・要求・判定基準・例示をまとめ、入力の型や空配列を検証します。
+- `Requirement` は `必須` / `禁止` / `推奨` / `許容` のラベルと本文を持つ凍結 dataclass です。
+- `standard_to_struct_doc()` は `Standard` を階層化された `StructDoc` に整形して、markdown 出力や文書組み立てに渡せる形へ変換します。
 
 ## Read this when
 
-- `Standard` と `Requirement` の役割、および標準定義を `StructDoc` に変換する流れを把握したいとき。
-- `oracle` 配下の標準文書を追加・修正する前に、共通の標準表現を確認したいとき。
-- `oracle.src.utils.standard` を呼び出す側の実装やテストを読む前に、共通ユーティリティの入口を整理したいとき。
-- `oracle` 配下の各種 `*_standard.py` がどの共通基盤を使っているか確認したいとき。
+- `oracle` 配下の標準文書を新規追加・修正するとき。
+- `Standard` と `Requirement` の役割、または `StructDoc` への変換経路を確認したいとき。
+- `oracle.src.utils.standard` を利用する実装やテストを書く前に、共通の標準フォーマットを把握したいとき。
+- `oracle` の各種 `*_standard.py` がどの共通基盤を使うか追いたいとき。
 
 ## Do not read this when
 
-- `Standard`、`Requirement`、`standard_to_struct_doc()` の定義がすでに分かっていて、このファイル本体を直接確認するとき。
+- `Standard`、`Requirement`、`standard_to_struct_doc()` の定義をすでに把握していて、このファイル本体を直接読むとき。
 - `StructDoc` の実装や markdown レンダリングだけを確認したいとき。
-- パス解決や root token の扱いを確認したいだけで、`standard.py` は不要なとき。
+- パス解決や root token の扱いだけを確認したいとき。
+- 個別の仕様本文だけを読み、共通ユーティリティの目次は不要なとき。
 
 ## hash
 
-- 3f3b52d6376cbe9a2898c1f1c8c8186b9f5c9bda18a40d3f1ddae48e8832f803
+- 3c712a1aa52c1d19761ba973b590d0e53c6bf1e9392e5963652760373449ca02
 
 # `struct_doc.py`
 
