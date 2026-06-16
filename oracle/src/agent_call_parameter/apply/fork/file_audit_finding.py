@@ -4,10 +4,10 @@
 from pathlib import Path
 
 # cmoc
-from agent_call_parameter.base import AgentCallParameters, ModelClass, ReasoningEffort
-from oracle.src.utils.struct_doc import render_as_markdown
+from utils.struct_doc import render_as_markdown
 from utils.path_model import resolve_repo_root
-from prompt_builder.complete_prompt import build_complete_prompt
+from agent_call_parameter.base import AgentCallParameters, ModelClass, ReasoningEffort
+from agent_call_parameter.prompt_builder.complete_prompt import build_complete_prompt
 
 
 def build_apply_fork_file_audit_parameter(
@@ -17,7 +17,7 @@ def build_apply_fork_file_audit_parameter(
     `cmoc apply fork` サブコマンド、ファイル単位監査用。
     AI エージェント呼び出しパラメータを構築する。
 
-    taraget_path: Path
+    target_path: Path
         監査の起点となるファイルのパス
         oracle file, realization file が渡される想定。
     """

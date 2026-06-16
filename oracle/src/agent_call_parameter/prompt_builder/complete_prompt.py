@@ -1,5 +1,7 @@
 # cmoc
-from oracle.src.utils.struct_doc import StructDoc
+from utils.struct_doc import StructDoc
+
+# local
 from .file_access_rule import build_file_access_rule, FileAccessMode
 from .oracle_standard import build_oracle_standard
 from .realization_standard import build_realization_standard

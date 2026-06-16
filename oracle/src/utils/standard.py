@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Literal
-from oracle.src.utils.struct_doc import StructDoc
+from utils.struct_doc import StructDoc
 
 
 class Standard:
