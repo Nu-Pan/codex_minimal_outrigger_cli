@@ -7,7 +7,7 @@ from pathlib import Path
 from utils.struct_doc import render_as_markdown
 from utils.path_model import resolve_repo_root
 from agent_call_parameter.base import AgentCallParameters, ModelClass, ReasoningEffort
-from agent_call_parameter.prompt_builder.complete_prompt import build_complete_prompt
+from prompt_parts.complete_prompt import build_complete_prompt
 
 
 def build_apply_fork_fixing_point_application_parameter(
