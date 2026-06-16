@@ -1,3 +1,27 @@
+# `index_entry.json`
+
+## Summary
+
+- `INDEX.md` 用の目次情報を表す Structured Output schema である。
+- 必要な項目は `summary`、`read_this_when`、`do_not_read_this_when` の 3 つである。
+- 機械的な識別情報は含めず、ルーティング説明の自然言語だけを受け付ける。
+
+## Read this when
+
+- `INDEX.md` 用の目次情報を JSON でどう返すか確認したいとき。
+- 対象を紹介する要約、読むべき条件、読まなくてよい条件の 3 分類を揃えたいとき。
+- `cmoc indexing` の出力 schema を把握して、生成結果の検証をしたいとき。
+
+## Do not read this when
+
+- 目次情報の markdown レンダリング方法や、`INDEX.md` への書き込み手順だけを確認したいとき。
+- インデクシング以外の Structured Output schema や別の agent call parameter を探しているとき。
+- 出力に含めるべき項目がすでに分かっていて、JSON の形だけを再確認したいとき。
+
+## hash
+
+- 39fab97858c4e81c5ec3ebe8a1c0d3cfcc3d798ffbe3631ddcf5ba639eac9916
+
 # `index_entry.py`
 
 ## Summary
@@ -19,27 +43,4 @@
 
 ## hash
 
-- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-
-# `index_entry.json`
-
-## Summary
-
-- `cmoc indexing` の目次情報生成結果を表す Structured Output schema です。
-- `summary`、`read_this_when`、`do_not_read_this_when` の 3 項目を要求します。
-- ファイル名や hash など機械的に決まる情報は含めず、自然言語のルーティング説明だけを扱います。
-
-## Read this when
-
-- 目次情報生成の JSON 形式を確認したいとき。
-- `build_indexing_index_entry_parameter()` の返却 schema path が指す内容を確認したいとき。
-- `INDEX.md` へのレンダリング前に Codex CLI 出力として必要な項目を確認したいとき。
-
-## Do not read this when
-
-- 目次情報の markdown レンダリングや hash 算出方法だけを確認したいとき。
-- インデクシング以外の Structured Output schema を探しているとき。
-
-## hash
-
-- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+- a20416e04751eb42b0c412c2bf861746c3527cdc2e78eb01d9738e6e20b991b7

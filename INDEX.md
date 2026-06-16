@@ -121,26 +121,26 @@
 
 ## Summary
 
-- この `<cmoc-root>/oracle` ディレクトリのルーティング文書で、`doc/` と `src/` への入口です。
-- `doc/` は cmoc の仕様断片、採用しなかった設計判断、開発規約などの正本群をまとめます。
-- `src/` は prompt 生成、呼び出しパラメータ、共通ユーティリティ、Structured Output schema 周辺の入口をまとめます。
+- この `oracle` ディレクトリのルーティング文書で、`doc/` と `src/` への入口です。
+- `doc/` では利用手順・共通仕様・開発規約・設計判断の入口を案内し、`src/` では実装に近い共通基盤と各種パッケージの入口を案内します。
+- この階層は、`cmoc` の正本仕様断片をたどる起点として使います。
 
 ## Read this when
 
-- `<cmoc-root>/oracle` 配下のどの階層から読むべきか迷ったとき。
-- `doc/` の自然言語仕様群と `src/` の実装・schema 周辺を分けて把握したいとき。
-- 正本仕様断片と、それを支える prompt 生成や Structured Output schema の入口を横断して確認したいとき。
-- この階層の `INDEX.md` を更新する前に、トップレベルの分岐先を整理したいとき。
+- `oracle` 配下の全体像を最初に把握したいとき。
+- `doc/` と `src/` の役割の違いを整理してから、下位の `INDEX.md` に進みたいとき。
+- `cmoc` の仕様断片がどこにあるかを大まかに掴みたいとき。
+- どの下位ディレクトリから読むべきか迷っているとき。
 
 ## Do not read this when
 
-- 目的の場所がすでに `doc/` か `src/` に決まっていて、この階層の入口を経由する必要がないとき。
-- `app_spec/`、`considered_alternative/`、`dev_rule/`、`branch_model.md` などの個別文書を直接確認したいとき。
-- oracle 全体ではなく、特定のファイルや特定の Structured Output schema だけを確認したいとき。
+- すでに `doc/` か `src/` のどちらへ進むか決まっていて、この階層の案内を経由する必要がないとき。
+- `doc/INDEX.md` や `<work-root>/src/INDEX.md` など、下位ディレクトリの目次を直接開きたいとき。
+- `oracle` 全体の入口ではなく、個別の仕様ファイルや個別コードだけを確認したいとき。
 
 ## hash
 
-- 79d5d26118e23cbe55d33cc92c5498b06ef21a8161bdf71a7153b48d23b060db
+- 9783cb6ca480987a85fab5d89f01bc3dcf095b6a956c69ab4227eeb63626233e
 
 # `pyproject.toml`
 

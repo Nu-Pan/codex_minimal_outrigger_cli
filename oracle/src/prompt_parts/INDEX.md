@@ -2,25 +2,25 @@
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/agent_call_parameter/prompt_builder/complete_prompt.py` は、AI エージェントへ渡す完全な prompt を `StructDoc` の列として組み立てる入口です。
-- 同ディレクトリの `file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py` を組み合わせて、役割・要約・目標・ファイルアクセス規則・補助標準をまとめます。
-- `structured_output` の有無に応じて出力形式の指示を追加し、呼び出し側がそのまま利用できる prompt 構造を返します。
+- `<cmoc-root>/oracle/src/prompt_parts/complete_prompt.py` は、AI エージェントへ渡す完全な prompt を `StructDoc` の列として組み立てる入口です。
+- 必須要素として `role`、`summary`、`goal`、`file_access_rule` を含み、必要に応じて `oracle_and_realization_basic`、`oracle_standard`、`realization_standard` を追加します。
+- `structured_output` が有効な場合は、指定された Structured Output schema に従うよう促す出力形式の指示を末尾に加えます。
 
 ## Read this when
 
-- `build_complete_prompt()` の構成や、どの prompt 断片が最終的に入るか確認したいとき。
-- `<cmoc-root>/oracle/src/agent_call_parameter/prompt_builder/` 配下で、ファイルアクセス規則や oracle / realization の基本説明、標準文をどこから参照するか迷ったとき。
-- 新しい agent call parameter の prompt 断片を追加・整理する前に、このディレクトリの役割を把握したいとき。
+- `build_complete_prompt()` がどの `StructDoc` 断片を順に結合するか確認したいとき。
+- ファイルアクセス規則、oracle / realization の基本説明、各種 standard、Structured Output 指示のどれが最終 prompt に入るかを整理したいとき。
+- `prompt_parts/` 配下で新しい prompt 断片を追加・整理する前に、この完全 prompt の組み立て方を把握したいとき。
 
 ## Do not read this when
 
-- すでに `build_complete_prompt()` の呼び出し先や構成が分かっていて、直接 `<cmoc-root>/oracle/src/agent_call_parameter/prompt_builder/complete_prompt.py` を確認するとき。
-- ファイルアクセス規則だけ、または `oracle_standard.py` / `realization_standard.py` だけを個別に確認したいとき。
-- `<cmoc-root>/oracle/src/agent_call_parameter/` 全体の他サブディレクトリや review / apply の別フローを探しているとき。
+- すでに `<cmoc-root>/oracle/src/prompt_parts/complete_prompt.py` の呼び出し先や構成が分かっていて、このファイル本体を直接確認するとき。
+- `file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py` など、組み立て元の断片だけを個別に確認したいとき。
+- `prompt_parts/` 配下のルーティングではなく、別の `<work-root>/oracle/src` サブディレクトリや別フローの入口を探しているとき。
 
 ## hash
 
-- 426f10184394d6cde295bf8bce6595b2d30620d20936b6680a5eb15f31832380
+- 19bfcc921faf8f1650be0c70dc3a7b74229e40a47b7bbb3fce20688f78087054
 
 # `file_access_rule.py`
 

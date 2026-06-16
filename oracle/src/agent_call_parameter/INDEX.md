@@ -28,25 +28,24 @@
 ## Summary
 
 - この `apply` ディレクトリのルーティング文書で、`fork/` への入口です。
-- `fork/` は `cmoc apply fork` のファイル単位監査用 agent call parameter をまとめ、`file_audit_finding.py` と `file_audit_finding.json` を案内します。
-- 監査対象ファイルを起点に、`oracle file` と `realization file` の差分や致命的問題を調べるための目次です。
+- `fork/` は `cmoc apply fork` の 4 つの主要段階である、ファイル単位監査、要修正点の整理、要修正点 1 件の実装修正、変更要約生成を案内します。
+- Structured Output schema を使う読み取り中心の呼び出しと、schema を使わず realization file を修正する書き込み中心の呼び出しをまとめる目次です。
 
 ## Read this when
 
-- `cmoc apply fork` のファイル単位監査 prompt と Structured Output schema の入口をまとめて把握したいとき。
-- `fork/INDEX.md` か `file_audit_finding.py` / `file_audit_finding.json` のどちらを読むべきか迷ったとき。
-- 監査対象ファイルを起点に、`oracle file` と `realization file` の不整合や要修正点を確認したいとき。
-- この階層の `INDEX.md` を追加・修正する前に、下位ファイルへの分岐を確認したいとき。
+- `cmoc apply fork` の各段階で、どの prompt と Structured Output schema が使われるかをまとめて確認したいとき。
+- ファイル単位監査、要修正点リスト改善、要修正点 1 件の実装修正、作業レポート用変更要約のどれに進むべきか迷ったとき。
+- この階層の `INDEX.md` を追加・修正する前に、役割分担と分岐先を整理したいとき。
 
 ## Do not read this when
 
-- `cmoc apply fork` 以外のサブコマンドや、別の agent call parameter を探しているとき。
-- 対象ファイルがすでに分かっていて、`fork/INDEX.md` や `file_audit_finding.py` / `file_audit_finding.json` を直接開くとき。
-- `oracle` 全体の共通ルールや、`INDEX.md` の生成方針だけを確認したいとき。
+- `cmoc apply fork` 以外のサブコマンドや、`review` / `indexing` / `session` 系の agent call parameter を探しているとき。
+- 対象ファイルがすでに分かっていて、`file_audit_finding.py`、`file_audit_finding.json`、`fixing_point_refinement.py`、`fixing_point_refinement.json`、`fixing_point_application.py`、`change_summary.py`、`change_summary.json` を直接開くとき。
+- この階層ではなく、`apply/` 全体の入口や `oracle` 全体の共通規約だけを確認したいとき。
 
 ## hash
 
-- 0e14b9610d06bb13f5edc11b5367e29eb11afe7f1c8d4c73a3f3e5fe48f49b15
+- 524d2efd90b5dbc242410b717b481bfc84eb2d0ac17d4f5fb91d858ac9974791
 
 # `base.py`
 
@@ -59,65 +58,42 @@
 ## Read this when
 
 - `<cmoc-root>/oracle/src/agent_call_parameter/base.py` にある共通の呼び出しパラメータ定義を確認したいとき。
-- `AgentCallParameters` の項目や、`ModelClass` / `ReasoningEffort` の選択肢を把握したいとき。
+- `AgentCallParameters` の項目や、`ModelClass` / `ReasoningEffort` / `BackendType` の役割を把握したいとき。
 - AI エージェント呼び出しの共通基盤が `apply/` や `review/` からどう使われるかをたどりたいとき。
 
 ## Do not read this when
 
-- すでに `AgentCallParameters`、`ModelClass`、`ReasoningEffort` の定義を把握していて、`base.py` を直接確認するとき。
+- すでに `AgentCallParameters`、`ModelClass`、`ReasoningEffort`、`BackendType` の定義を把握していて、この `base.py` を直接確認するとき。
 - `prompt_builder/` の個別実装や Structured Output schema だけを確認したいとき。
 - `apply/` や `review/` の個別フローを追いたくて、この共通基盤を経由する必要がないとき。
 
 ## hash
 
-- d8b4a5b9ddd34f3b5884cb2bf121eea14a4e12c61f5cc4fe3e8bc5a05c27c557
-
-# `prompt_builder`
-
-## Summary
-
-- このディレクトリは、`cmoc` の prompt 生成まわりをまとめたルーティング文書の入口です。
-- `complete_prompt.py`、`file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py` を案内します。
-- AI エージェントへ渡す完全な prompt の組み立てと、その前提になる規則・標準の所在をたどるための目次です。
-
-## Read this when
-
-- `<cmoc-root>/oracle/src/agent_call_parameter/prompt_builder/` 配下のプロンプト生成全体の入口を把握したいとき。
-- `complete_prompt.py` がどの断片を組み合わせて最終的な prompt を作るか確認したいとき。
-- ファイルアクセス規則、oracle / realization の基本概念、oracle 標準、realization 標準の役割分担を整理したいとき。
-- このディレクトリ配下のルーティング文書を追加・修正する前に、どのファイルへ分岐するか確認したいとき。
-
-## Do not read this when
-
-- すでに `build_complete_prompt()` など目的のファイルが分かっていて、この目次を経由せずに `complete_prompt.py`、`file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py` を直接確認するとき。
-- `prompt_builder` 配下のうち、特定の 1 ファイルだけを確認したいとき。
-- `agent_call_parameter` の別ディレクトリや、別フローの agent call parameter を探しているとき。
-
-## hash
-
-- 97f2e74a805d7916ccce5ff2fd98ac2f4f9ac02f498b3d4fdac49cf7fe55a134
+- 53c98b7504d0479951bc685266fb54b0c3235daa936ca0330498239084893732
 
 # `indexing`
 
 ## Summary
 
-- `cmoc indexing` と Codex CLI 実行前メンテナンスにおける `INDEX.md` 目次情報生成用 agent call parameter への入口です。
-- `indexing/` は `index_entry.py` と `index_entry.json` を案内します。
-- 目次作成対象 1 件ごとに Codex CLI へ自然言語ルーティング説明を生成させる呼び出し仕様をまとめます。
+- 目次情報を生成するための呼び出し仕様と出力形式をまとめた入口である。
+- 対象の内容に対して、要約・読むべき条件・読む必要がない条件を整理して返す。
+- 目次作成の前提となる自然言語の案内を、機械判定しやすい形で定義している。
 
 ## Read this when
 
-- `cmoc indexing` で発生する Codex CLI 呼び出し仕様を確認したいとき。
-- `INDEX.md` の目次情報生成 prompt と Structured Output schema を探しているとき。
+- 目次情報の生成ルールと出力形式を確認したいとき。
+- 対象に何を書けばよいか、要約と利用条件の切り分け方を確認したいとき。
+- この領域の呼び出し仕様をたどって、目次生成の入口を把握したいとき。
 
 ## Do not read this when
 
-- apply、review、session join の agent call parameter を探しているとき。
-- インデクシングのディレクトリ列挙、hash 計算、git commit 処理だけを確認したいとき。
+- すでに目次情報を生成するための入力仕様と出力形式が分かっていて、細部を確認する必要がないとき。
+- 別の呼び出し仕様や別のサブコマンド向けの案内を探しているとき。
+- 対象の列挙やコミット処理だけを確認したいとき。
 
 ## hash
 
-- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+- 03e13fe2a47153731cd221834f546e4ef8fd46914c0e8f6a192708336301a140
 
 # `review`
 
@@ -129,38 +105,40 @@
 
 ## Read this when
 
-- `cmoc review oracle` 用の prompt/schema 入口をまとめて確認したいとき。
+- `cmoc review oracle` 用の prompt と schema の入口をまとめて確認したいとき。
 - `oracles/` に進む前に、レビュー用 Codex CLI 呼び出しの役割分担を把握したいとき。
 - どのレビュー用 Python 関数または JSON schema を開くべきか迷ったとき。
 
 ## Do not read this when
 
-- 対象の関数や schema 名がすでに分かっていて、`oracles/INDEX.md` や個別ファイルを直接開くとき。
+- 対象の関数名や JSON schema 名がすでに分かっていて、`oracles/INDEX.md` や個別ファイルを直接開くとき。
 - `cmoc review oracle` の run isolation やレポート生成だけを確認したいとき。
 - `apply/`、`indexing/`、`session/` など別の agent call parameter を探しているとき。
 
 ## hash
 
-- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+- 6e0ae7bb9c4e178d3b24748fade429bde7d2421ca17ead15095464c9880ee54f
 
 # `session`
 
 ## Summary
 
 - `cmoc session` 系サブコマンドで発生する Codex CLI 呼び出し仕様への入口です。
-- `session/` は `join/` を案内し、merge conflict marker 解消用 agent call parameter をまとめます。
-- Structured Output を要求しない、ファイル編集を伴う Codex CLI 呼び出し仕様を扱います。
+- このディレクトリは `join/` を案内し、merge conflict marker 解消用 agent call parameter をまとめます。
+- Structured Output を要求しない、ファイル編集を伴う `session join` の呼び出し仕様を扱います。
 
 ## Read this when
 
-- `cmoc session join` の conflict 解消時に Codex CLI へ何を依頼するか確認したいとき。
+- `cmoc session join` で conflict 発生時に Codex CLI へ何を依頼するか確認したいとき。
 - session 系サブコマンドの agent call parameter を探しているとき。
+- `cmoc session join` の conflict 解消用 prompt と、その入口となる `join/` の所在を把握したいとき。
 
 ## Do not read this when
 
 - apply、review、indexing の agent call parameter を探しているとき。
-- session 状態ファイル更新や branch 削除など Codex CLI 以外の制御処理だけを確認したいとき。
+- session 状態ファイル更新や branch 削除など、Codex CLI 以外の制御処理だけを確認したいとき。
+- すでに目的のファイルが `join/conflict_resolution.py` だと分かっていて、この目次を経由せず直接開くとき。
 
 ## hash
 
-- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+- ff3d38e390bec92af9577a9892a9aab03f86562682cdfa52b2e3c29099a37b7d

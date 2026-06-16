@@ -27,23 +27,24 @@
 
 ## Summary
 
-- この `src` ディレクトリのルーティング文書で、`agent_call_parameter/` と `utils/` への入口です。
-- `agent_call_parameter/` は `base.py`、`prompt_builder/`、`apply/`、`review/` をまとめる主要パッケージです。
+- この `src` ディレクトリのルーティング文書で、`agent_call_parameter/`、`prompt_parts/`、`utils/` への入口です。
+- `agent_call_parameter/` は `base.py` と各サブコマンド別の呼び出し仕様をまとめ、`prompt_parts/` は prompt 断片と組み立て処理をまとめます。
 - `utils/` は `path_model.py`、`standard.py`、`struct_doc.py` の共通基盤をまとめます。
 
 ## Read this when
 
-- `<cmoc-root>/oracle/src` 配下のどのパッケージから読むべきか迷ったとき。
-- `agent_call_parameter/` と `utils/` の役割差を整理してから、下位のファイルや `INDEX.md` に進みたいとき。
-- `AgentCallParameters`、`ModelClass`、`ReasoningEffort`、prompt builder、`apply` / `review` の入口をまとめて把握したいとき。
-- `<cmoc-root>` / `<repo-root>` / `<run-root>` / `<work-root>` の解決規則や、`StructDoc` と標準定義の共通基盤を確認したいとき。
+- `<cmoc-root>/oracle/src` 配下で、どのパッケージから読むべきか迷ったとき。
+- `agent_call_parameter/`、`prompt_parts/`、`utils/` の役割差を整理してから、下位の `INDEX.md` や個別ファイルに進みたいとき。
+- `AgentCallParameters`、`complete_prompt.py`、`StructDoc`、`RootToken` など、この階層の共通基盤や主要入口をまとめて把握したいとき。
+- `<cmoc-root>` / `.<repo-root>` / `<run-root>` / `<work-root>` の解決規則、prompt 組み立て、Structured Output schema、共通ユーティリティの入口を確認したいとき。
 
 ## Do not read this when
 
-- 読みたい対象がすでに `agent_call_parameter/` か `utils/` のどちらかに決まっていて、この階層の入口を経由する必要がないとき。
-- `base.py`、`path_model.py`、`standard.py`、`struct_doc.py`、または各配下の `INDEX.md` を直接開くとき。
-- `<work-root>/oracle/src` 全体ではなく、個別の実装や個別の Structured Output schema だけを確認したいとき。
+- 読みたい対象がすでに `agent_call_parameter/`、`prompt_parts/`、`utils/` のいずれかに決まっていて、この階層の入口を経由する必要がないとき。
+- `agent_call_parameter/INDEX.md`、`prompt_parts/INDEX.md`、`utils/INDEX.md` など、下位ディレクトリの目次を直接開くとき。
+- `base.py`、`complete_prompt.py`、`path_model.py` など、個別ファイルをそのまま確認したいとき。
+- `<work-root>/oracle/src` ではなく、`<work-root>/oracle/doc` や他のリポジトリ運用ルールだけを確認したいとき。
 
 ## hash
 
-- 85c56ffda9a7a4dd6148c24875b62ef3f61483439e5b4c86b1487332ef30a9d5
+- ec33fa0bdaedb3f2023456bb52b25ff682e6c036c7119c15885e342942f1cb0a
