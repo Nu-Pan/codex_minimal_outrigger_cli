@@ -3,21 +3,21 @@
 ## Summary
 
 - この `AGENTS.md` のルーティング文書で、リポジトリ全体の作業ルールと参照先の入口を案内します。
-- 閲覧・編集の制約、`oracles` 配下の読み方、`src` と `tests` の配置前提を整理するための目次です。
+- 閲覧・編集の制約、`oracle` 配下の読み方、`src` と `tests` の配置前提を整理するための目次です。
 - 作業開始前に、どの規約や仕様断片を読むべきかを切り分けるための入口です。
 
 ## Read this when
 
 - このリポジトリで作業を始める前に、基本ルールと役割分担を確認したいとき。
 - `cmoc` の開発と `cmoc` を用いた開発の違いを整理したいとき。
-- `memo`、`README.md`、`AGENTS.md`、`oracles` の閲覧・編集制約を確認したいとき。
-- `oracles` の正本仕様を読む前に、どの `INDEX.md` を起点にたどるか知りたいとき。
+- `memo`、`README.md`、`AGENTS.md`、`oracle` の閲覧・編集制約を確認したいとき。
+- `oracle` の正本仕様を読む前に、どの `INDEX.md` を起点にたどるか知りたいとき。
 - 実装を `<cmoc-root>/src`、自動テストを `<cmoc-root>/tests` に置く前提を確認したいとき。
 
 ## Do not read this when
 
 - 個別サブコマンドの引数や終了条件だけを確認したいとき。
-- `oracles` 配下の特定仕様断片を直接確認したいとき。
+- `oracle` 配下の特定仕様断片を直接確認したいとき。
 - 実装コードやテストコードの内容だけを見たいとき。
 
 ## hash
@@ -41,7 +41,7 @@
 ## Do not read this when
 
 - このリポジトリの実装方針、CLI 仕様、テスト方針を確認したいとき。
-- `cmoc` の使い方や `oracles` のルーティングを調べたいとき。
+- `cmoc` の使い方や `oracle` のルーティングを調べたいとき。
 - ライセンス条文そのものではなく、ファイル構成や開発手順を確認したいとき。
 
 ## hash
@@ -59,13 +59,13 @@
 
 - このリポジトリ全体の概要を短く把握したいとき
 - 初期セットアップとして clone、仮想環境作成、`cmoc` への PATH 設定を確認したいとき
-- 基本ワークフローの入口として `<work-root>/oracles/docs/app_specs/usage.md` への導線を知りたいとき
+- 基本ワークフローの入口として `<work-root>/oracle/docs/app_specs/usage.md` への導線を知りたいとき
 - Ctrl+S によるターミナルロックなど、作業時の補足情報を確認したいとき
 
 ## Do not read this when
 
 - cmoc の個別サブコマンドの引数や終了条件を確認したいとき
-- `oracles` 配下の正本仕様を直接たどって、実装やテストの詳細を確認したいとき
+- `oracle` 配下の正本仕様を直接たどって、実装やテストの詳細を確認したいとき
 - 実装ルールやテスト規約だけを確認したいとき
 
 ## hash
@@ -88,7 +88,7 @@
 ## Do not read this when
 
 - `<work-root>/bin/cmoc` の実装内容を直接確認したいとき。
-- `bin/` 配下ではなく、`src/` や `oracles/` の別ディレクトリの文書を探しているとき。
+- `bin/` 配下ではなく、`src/` や `oracle/` の別ディレクトリの文書を探しているとき。
 - `cmoc` コマンドの利用手順全体ではなく、個別の実行ファイルだけを追いたいとき。
 
 ## hash
@@ -113,17 +113,17 @@
 
 - cmoc の実装コードやサブコマンド仕様そのものを確認したいとき。
 - `src` や `tests` の個別モジュールの役割を調べたいとき。
-- `oracles` 側の正本仕様や `INDEX.md` の生成ルールだけを確認したいとき。
+- `oracle` 側の正本仕様や `INDEX.md` の生成ルールだけを確認したいとき。
 
 ## hash
 
 - 6acff2a397cd0c66553c35c5c3f0f45a551ed34bcae704aa612b4b485cce20d0
 
-# `oracles`
+# `oracle`
 
 ## Summary
 
-- `<cmoc-root>/oracles` 配下のルーティング文書で、`docs/` と `schemas/` への入口を案内する。
+- `<cmoc-root>/oracle` 配下のルーティング文書で、`docs/` と `schemas/` への入口を案内する。
 - `docs/` は利用手順・共通仕様・開発規約・パス表記・branch モデルの案内を扱う。
 - `schemas/` は Structured Output schema の置き場所と役割分担を案内する。
 
@@ -138,7 +138,7 @@
 
 - `docs/` や `schemas/` の配下ファイルがすでに決まっていて、そこへ直接進むとき。
 - この階層ではなく、下位ディレクトリの `INDEX.md` や個別仕様だけを確認したいとき。
-- `README.md` や `AGENTS.md` など、`oracles` 以外の運用ルールを探しているとき。
+- `README.md` や `AGENTS.md` など、`oracle` 以外の運用ルールを探しているとき。
 
 ## hash
 
@@ -209,7 +209,7 @@
 
 - cmoc の実装本体やサブコマンド仕様を確認したいとき。
 - pytest や個別テストケースの内容を確認したいとき。
-- `oracles` の正本仕様や `INDEX.md` 生成ルールだけを確認したいとき。
+- `oracle` の正本仕様や `INDEX.md` 生成ルールだけを確認したいとき。
 
 ## hash
 
@@ -232,7 +232,7 @@
 ## Do not read this when
 
 - 目的の個別テストファイルや `test_subcommands/` 配下の特定ファイルがすでに分かっていて、そこへ直接進むとき。
-- `<cmoc-root>/src` の実装ロジックや `<cmoc-root>/oracles` の仕様断片だけを直接確認したいとき。
+- `<cmoc-root>/src` の実装ロジックや `<cmoc-root>/oracle` の仕様断片だけを直接確認したいとき。
 - `INDEX.md` の自動生成ルールやハッシュ管理だけを確認したいとき。
 
 ## hash

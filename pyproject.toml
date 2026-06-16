@@ -22,7 +22,7 @@ package-dir = {"" = "src"}
 py-modules = ["main"]
 
 [tool.setuptools.packages.find]
-where = ["src", "oracles/src"]
+where = ["src", "oracle/src"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src", "oracles/src"]
+pythonpath = ["src", "oracle/src"]
