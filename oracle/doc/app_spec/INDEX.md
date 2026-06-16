@@ -26,14 +26,14 @@
 ## Summary
 
 - `cmoc` から `codex exec` を呼び出すための共通規約をまとめた文書です。
-- stdin でプロンプト本文を渡す方法、プロンプトの構成要件、アクセス制限の書き方、モデル指定と出力方法を扱います。
-- 失敗時の扱いとして、quota 不足時の待機・再開、サーバー一時不調時のリトライ方針まで定義しています。
+- stdin でのプロンプト受け渡し、プロンプト構成、アクセス制限、Model / Reasoning Effort、Structured Output の利用方針を扱います。
+- quota 不足時の待機・再開、サーバー一時不調時のリトライ、呼び出しログの残し方まで定義します。
 
 ## Read this when
 
-- cmoc から `codex exec` を呼び出す方法や、stdin 経由でのプロンプト送信ルールを実装・修正・レビューしたいとき。
-- プロンプトの構成、argv に載せてよい情報の制約、`--output-schema` や `--output-last-message` を含む出力規約を確認したいとき。
-- sandbox の read-only / workspace-write の選択基準、Model / Reasoning Effort の指定方針、quota 不足時の待機・再開手順を確認したいとき。
+- cmoc から `codex exec` を呼び出す実装・修正・レビューを行いたいとき。
+- プロンプト本文を stdin で渡す方法や、argv に載せてよい情報の制約を確認したいとき。
+- sandbox、モデル指定、Structured Output、失敗時の待機・リトライ、`--output-last-message` を含む出力規約を確認したいとき。
 
 ## Do not read this when
 
@@ -43,7 +43,7 @@
 
 ## hash
 
-- 84aa53f4db8749d16c08edc74d212e3dd66868f7dcc414fe779edefd2f1bb7dc
+- 196badd804da12b523ea88b890ccbbf7c13d6e771a0b957d09b20b2508004314
 
 # `console_and_file_log.md`
 
@@ -114,19 +114,19 @@
 
 - 266055d0699398866a52c918e9e2ad17fa6eb1c94d4310cf97b607268168576c
 
-# `misc_specs.md`
+# `misc_spec.md`
 
 ## Summary
 
-- `cmoc` 全体に共通する雑多な基礎仕様をまとめた文書です。
-- 実装ファイルの列挙ルール、`<work-root>` の前提、`cmoc` 実行時のカレントディレクトリ、`<repo-root>/.cmoc` の扱いを定義します。
+- cmoc 全体に共通する雑多な基礎仕様をまとめた文書です。
+- 実装ファイルの列挙ルール、`<work-root>` の前提、cmoc 実行時のカレントディレクトリ、`<repo-root>/.cmoc` の扱いを定義します。
 - タイムスタンプ形式と、`<cmoc-managed-branch>` の意味も含みます。
 
 ## Read this when
 
 - `<work-root>` 配下の実装ファイルを機械的に列挙するルールを確認したいとき。
 - `<work-root>` の探索方法や、`<work-root>/oracle`、`.gitignore`、`.git`、`INDEX.md` の扱いを確認したいとき。
-- `cmoc` 実行時のカレントディレクトリの前提や、`<repo-root>/.cmoc` の追跡対象外ルールを確認したいとき。
+- cmoc 実行時のカレントディレクトリの前提や、`<repo-root>/.cmoc` の追跡対象外ルールを確認したいとき。
 - タイムスタンプ形式や、`<cmoc-managed-branch>` 上で何を指すかの定義を確認したいとき。
 
 ## Do not read this when
@@ -137,80 +137,31 @@
 
 ## hash
 
-- 570240583dd1a527ce2631a1ca3e548873e33542a53e2f2eca539b6253a0b443
-
-# `oracle`
-
-## Summary
-
-- `oracle files` の基本定義と記述標準への入口となる目次です。
-- `basics.md` では `oracle files` の条件、役割、Codex CLI による読み書き可否を案内します。
-- `.md` では `oracle files` の書き方の原則、用語統一、未定義部分の扱いを案内します。
-
-## Read this when
-
-- `oracle files` の定義、役割、読み書き可否をまとめて確認したいとき。
-- `oracle` 配下の正本仕様断片を書く前に、記述標準と人間意図の扱いを確認したいとき。
-- `basics.md` と `.md` のどちらを先に読むべきか迷ったとき。
-
-## Do not read this when
-
-- `oracle files` の定義だけを確認したいときは、`basics.md` に直接進めるとき。
-- `oracle files` の書き方や原則だけを確認したいときは、`.md` に直接進めるとき。
-- `INDEX.md` の生成・更新ルールや、上位階層のルーティングを確認したいとき。
-
-## hash
-
-- 1279debf71273f0c7a4711e91213dc659ad4a8c8ddd852bbe009fb5489e5589f
-
-# `realization`
-
-## Summary
-
-- `realization` 配下の目次で、`basics.md` と `.md` への入口をまとめた文書です。
-- `basics.md` では `realization files` の定義と、`realization code` / `implementation` / `test` / `ancillary` の区分を扱います。
-- `.md` では `realization files` に適用する編集・設計標準を扱います。
-
-## Read this when
-
-- `realization files` に該当するかどうかを判定したいとき。
-- 実装・テスト・補助ファイルのどれに当たるかを切り分けたいとき。
-- `.md` を読む前に、`realization` の基本定義と対象範囲を確認したいとき。
-
-## Do not read this when
-
-- `realization files` の定義がすでに分かっていて、`basics.md` または `.md` に直接進みたいとき。
-- `realization` 以外のサブコマンド仕様や共通仕様を探しているとき。
-- `oracle` 全体の読み方や、他の階層の `INDEX.md` だけを確認したいとき。
-
-## hash
-
-- 8554baa92e2715173c50008cee42dabac901452c0061b76549ec99fd3c55d511
+- 69c963981887477d4763539bc1d4d802043f5e3795d0dc6c923a41eab08016c7
 
 # `run_isolation.md`
 
 ## Summary
 
-- cmoc サブコマンドの run を、人間の操作と衝突しないよう git branch と worktree で隔離する規則をまとめた文書です。
-- run は `<cmoc-session-branch>` の HEAD を起点に `<cmoc-run-branch>` を作成し、`<cmoc-run-worktree>` 上で実行・記録する前提を示します。
-- `<run-root>` 内のみを原則として読み書き可能にしつつ、ログやステートなど明示された例外では `<repo-root>` 配下への書き込みを許す方針を示します。
+- cmoc サブコマンドの run を、git branch と worktree で人間の操作から隔離する規則をまとめた文書です。
+- run は `<cmoc-session-branch>` の HEAD を起点に `<cmoc-run-branch>` を作成し、`<cmoc-run-worktree>` 上で実行・記録します。
+- 原則として `<run-root>` 内のみを扱い、明示された例外では `<repo-root>` 配下への読み書きを許します。
 
 ## Read this when
 
-- cmoc サブコマンドの run を人間の作業と衝突しないように隔離する規則を確認したいとき。
-- `<cmoc-session-branch>` を基点に `<cmoc-run-branch>` と `<cmoc-run-worktree>` をどう作るか、どう checkout して作業するかを確認したいとき。
+- cmoc の run を、人間の操作と衝突しないように隔離する規則を確認したいとき。
+- `<cmoc-session-branch>` を起点に `<cmoc-run-branch>` と `<cmoc-run-worktree>` をどう作成し、どう checkout して作業するかを確認したいとき。
 - `<run-root>` 外への書き込み例外として、どのケースで `<repo-root>` 配下への読み書きが許されるかを確認したいとき。
-- sub command 実行時の作業環境分離や、ブランチ・worktree の責務分担を実装・修正・レビューしたいとき。
 
 ## Do not read this when
 
-- 各サブコマンド固有の引数や処理手順だけを確認したいとき。
+- 個別サブコマンドの引数や処理手順だけを確認したいとき。
 - 通常の git branch / worktree の一般論だけを確認したいとき。
 - `session` / `apply` など、run 隔離以外のフローや `INDEX.md` 生成ルールを確認したいとき。
 
 ## hash
 
-- e3da9e6971aaffa3211df28d9fd840d6aad8ebc7582087745e6f3324e234dcd9
+- 4ce051fea17daf64aa2c0285f4381244608cf0dd073cac8d85e6990a94db17d4
 
 # `session_state.md`
 
@@ -234,52 +185,52 @@
 
 ## hash
 
-- 20f190b37350878524db1e9e118719639fde9dd568a7e2ffe0951ccafeb6e818
+- 3e56c02becb452f6181e383b125f3aff1f3010d8158e2ab309df379bead1824b
 
-# `sub_commands`
+# `sub_command`
 
 ## Summary
 
-- `cmoc` の個別サブコマンド仕様をまとめた入口で、`apply` 系、`session` 系、`review oracle`、`init`、`indexing` へ案内するディレクトリです。
-- この配下には `apply_abandon.md`、`apply_fork.md`、`apply_join.md`、`session_abandon.md`、`session_fork.md`、`session_join.md`、`review_oracle.md`、`init.md`、`indexing.md` が並びます。
-- 用途ごとに読むべき仕様を切り分けるための目次として使います。
+- この `sub_command` ディレクトリのルーティング文書で、`cmoc` の各サブコマンド仕様への入口です。
+- `apply` 系、`session` 系、`indexing`、`init`、`review oracle` の個別仕様をまとめて案内します。
+- 各ファイルはサブコマンド名ごとの入口で、実行条件・状態遷移・後始末の詳細へ分岐します。
 
 ## Read this when
 
-- `cmoc` の apply 系・session 系・`review oracle`・`init`・`indexing` のどの仕様を読むべきか迷ったとき。
-- 個別サブコマンドの実装、修正、テスト、レビューの前に、該当する仕様断片への入口を確認したいとき。
-- `cmoc` のサブコマンド仕様全体を、このディレクトリの目次からたどりたいとき。
+- `cmoc` の各サブコマンド仕様をまとめて確認したいとき。
+- `apply` 系、`session` 系、`indexing`、`init`、`review oracle` の入口を切り分けたいとき。
+- 実装・修正・レビュー前に、どの個別仕様ファイルを読むべきか迷ったとき。
 
 ## Do not read this when
 
-- 読むべき対象のサブコマンド仕様がすでに分かっていて、`apply_abandon.md`、`apply_fork.md`、`apply_join.md`、`session_abandon.md`、`session_fork.md`、`session_join.md`、`review_oracle.md`、`init.md`、`indexing.md` のいずれかへ直接進めるとき。
-- `docs/` や `oracle/` の上位目次、あるいは別階層のルーティング文書だけを確認したいとき。
-- 個別サブコマンドの引数や状態遷移ではなく、`INDEX.md` の生成・更新ルールそのものを確認したいとき。
+- 目的のサブコマンドがすでに分かっていて、対応する個別の `*.md` へ直接進めるとき。
+- この階層ではなく、さらに下位の仕様や実行手順だけを確認したいとき。
+- `docs` 全体の入口や共通規約だけを確認したいとき。
 
 ## hash
 
-- 81d1137ecec3ad6fee25beb91eb4667d76b76c6720623c5a8515265e86f79bc9
+- 77f9252749172763a196c7f48be380e370097491d85ef5fb8f7ef330bec841d1
 
 # `usage.md`
 
 ## Summary
 
-- `cmoc` の利用方法と、ユーザーが日常的にたどる基本ワークフローをまとめた入口です。
-- `cmoc init` を最初に一度だけ実行する前提、`session fork` でのセッション開始、`review oracle` と `apply` 系コマンドを交えた反復作業の流れを示します。
-- `apply fork` 実行中の `oracle` 変更はその実行には反映されず、別周回になる点など、運用上の重要な前提を説明します。
+- `cmoc` の呼び出し方法、初回の `cmoc init`、標準的な作業フローを説明する利用案内です。
+- `cmoc session fork` でセッションを開始し、`cmoc apply fork` と `cmoc apply join` を経て、最後に `cmoc session join` で戻る流れをまとめています。
+- `apply fork` 時点の `oracle` スナップショットを正本として実装を追従させる、運用上の前提も含みます。
 
 ## Read this when
 
-- エンドユーザーが `cmoc` をどう呼び出すか、`PATH` 設定を含めて確認したいとき。
-- `cmoc init` を最初に一度だけ実行する前提と、その後の基本ワークフローを把握したいとき。
-- `session fork` から `review oracle`、`apply fork`、`apply join`、`session join` までの流れと、`oracle` の変更がどの時点で反映されるかを確認したいとき。
+- `cmoc` の基本的な呼び出し方と、利用開始時に最初に何をするか確認したいとき。
+- `cmoc session fork` から `cmoc apply fork`、`cmoc apply join`、`cmoc session join` までの標準的な作業ループを把握したいとき。
+- 人間が `oracle` を更新しながら、`cmoc` がどの順序で実装追従するのかを全体像として理解したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの引数や内部手順など、`cmoc init`・`session fork`・`review oracle`・`apply` 系の正本仕様そのものを確認したいとき。
-- `INDEX.md` の生成ルールや、`oracle` 全体のルーティング方針だけを確認したいとき。
-- `cmoc` の実装コードやテストコードだけで足りる作業で、この利用方法の入口を参照する必要がないとき。
+- `cmoc` の個別サブコマンド仕様をすでに把握していて、`session fork`・`apply fork`・`apply join`・`session join` の各正本仕様へ直接進むとき。
+- `cmoc` の導入手順や標準ワークフローではなく、特定のサブコマンド引数や状態遷移だけを確認したいとき。
+- `oracle` 配下のルーティング文書ではなく、実装やテストの規約・別階層の目次を探しているとき。
 
 ## hash
 
-- 7f1642bb9cd287e4b9efa5612eebeadf977ea4280447a729e822d466708b6325
+- 2cef745a630a8dce3041828d8b8004564a124ada78f21dbe0a55d79302081d95

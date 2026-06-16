@@ -45,14 +45,14 @@
 
 ## hash
 
-- ea2f57d2f338c0e5b69d595b03245c31a543fa755678934ec56a12dc171066c9
+- 9a410fc6f35e0204f9713c1d13824ca324585dd0b15b9e2e40f4dcc1e1efa5fd
 
 # `apply_join.md`
 
 ## Summary
 
 - `cmoc apply join` の仕様断片への入口で、`apply` で作成した成果物を session 側へ取り込む手順をまとめる。
-- 位置引数なしで実行し、`--force-resolve` の有無で想定外の差分の扱いが変わる。
+- 位置引数はなく、`--force-resolve` の有無で想定外の差分の扱いが変わる。
 - 事前条件、通常モードと強制モードの分岐、`apply.state = error` の扱い、`INDEX.md` のコンフリクト自動解決、使用済みブランチの削除条件を案内する。
 
 ## Read this when
@@ -69,7 +69,7 @@
 
 ## hash
 
-- c8de7accd879f549febc93c91b8e0b719078b11c4ca107a5138e4cfe977110c8
+- 8cd2425c6a8ae9b88c0fef539076160d9f8bf341bc5cb40a607960ebaceb9c85
 
 # `indexing.md`
 
@@ -93,7 +93,7 @@
 
 ## hash
 
-- 000c7f787bedd7230e77b80f5a06484638dd5302b521dc97be65f3f364c178ad
+- 56dd83624b22d9f2e9219cb4fc720d730f72ace8968376b51b9cb29b70d96cca
 
 # `init.md`
 
@@ -119,7 +119,7 @@
 
 - d7d79ec30c118e067dbee08ca5840d7aa23501c4d6f1a1030b3bc85886c7bfdb
 
-# `review_oracle.md`
+# `review_oracles.md`
 
 ## Summary
 
@@ -142,7 +142,7 @@
 
 ## hash
 
-- 2ee92dcf2aa7613b9c4486a32fbc44b3afd863f2aebac35d9b7b77f7602fb7b8
+- 66dbf914d86e8ae0352804765f9dca029d70d96a8e5eb264b0f643f571a0979c
 
 # `session_abandon.md`
 
@@ -216,4 +216,4 @@
 
 ## hash
 
-- 3a6ddd312ff3d6296d5ea15ffa951765bcf28169077978471d9c2382271a0fd3
+- ce95d6b2ca47fe7ceb3f4251e10e045b06456cadc9803ee6cfb443da1890d292

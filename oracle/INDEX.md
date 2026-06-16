@@ -1,10 +1,10 @@
-# `docs`
+# `doc`
 
 ## Summary
 
-- この `docs` ディレクトリのルーティング文書で、`app_specs/`、`considered_alternatives/`、`dev_rules/` への入口です。
-- `path_model.md` ではパス表記の基本ルールとルートトークンを、`branch_model.md` では cmoc の branch/worktree モデルを案内します。
-- 利用手順や共通仕様をたどるときは `app_specs/`、採用しなかった設計判断をたどるときは `considered_alternatives/`、開発規約を確認するときは `dev_rules/` に分岐します。
+- この `doc` ディレクトリのルーティング文書で、`app_spec/`、`considered_alternative/`、`dev_rule/`、`branch_model.md` への入口です。
+- `app_spec/` では利用手順と共通仕様を、`considered_alternative/` では採用しなかった設計判断を、`dev_rule/` では開発規約を案内します。
+- `branch_model.md` では cmoc の branch と worktree の関係をまとめ、各下位文書へ分岐するための起点になります。
 
 ## Read this when
 
@@ -15,34 +15,35 @@
 
 ## Do not read this when
 
-- 目的の文書がすでに分かっていて、`app_specs/`、`considered_alternatives/`、`dev_rules/`、`path_model.md`、`branch_model.md` の該当ファイルへ直接進めるとき。
+- 目的の文書がすでに分かっていて、`app_spec/`、`considered_alternative/`、`dev_rule/`、`branch_model.md` の該当ファイルへ直接進めるとき。
 - この階層ではなく、各下位ディレクトリの `INDEX.md` や個別仕様ファイルだけを確認したいとき。
-- `README.md` や `AGENTS.md` など、`docs` 以外のリポジトリ運用ルールだけを確認したいとき。
+- `README.md` や `AGENTS.md` など、`doc` 以外のリポジトリ運用ルールだけを確認したいとき。
 
 ## hash
 
-- f737c1fc659284ca0b8275ebc165ac36cc342d04d1b6219ce8fdc6d4b4e48556
+- 45ecdb3afe2ae6383f469c0471265a71948b301b322e4b8ac75e03e414822207
 
-# `schemas`
+# `src`
 
 ## Summary
 
-- `<cmoc-root>/oracle/schemas/structured_output/` 配下の Structured Output schema をまとめた目次です。
-- 現状は `structured_output/` を案内し、`cmoc review oracle` で使う JSON schema 群へ分岐します。
-- 所見の列挙・統合・妥当性検証・採否判定の各段階に応じて、読むべき schema を切り分ける入口です。
+- この `src` ディレクトリのルーティング文書で、`agent_call_parameter/`、`agent_call_parameters/`、`utils/` への入口です。
+- `agent_call_parameter/` は `base.py`、`prompt_builder/`、`apply/`、`review/` をまとめる主要パッケージです。
+- `agent_call_parameters/` は `prompt_builder/` 配下の `oracles_standards.py` を案内し、`utils/` は `path_model.py`、`standard.py`、`struct_doc.py` の共通基盤をまとめます。
 
 ## Read this when
 
-- Structured Output schema の置き場所と役割分担を確認したいとき。
-- `structured_output/` 配下の schema 一式へ進むべきか迷ったとき。
-- `cmoc review oracle` 用の JSON schema を追加・修正・レビューしているとき。
+- `<work-root>/oracle/src` 配下のどのパッケージから読むべきか迷ったとき。
+- `agent_call_parameter/` と `agent_call_parameters/` の役割差を整理したいとき。
+- パス解決、標準定義、`StructDoc` 変換の共通基盤を探したいとき。
+- `apply` / `review` / `prompt_builder` の入口をまとめて把握したいとき。
 
 ## Do not read this when
 
-- `structured_output/` 配下の個別 schema がすでに分かっていて、直接読むとき。
-- `cmoc review oracle` の利用手順や評価フローだけを確認したいとき。
-- Structured Output ではなく、`docs/` 配下の自然言語仕様や開発規約を探しているとき。
+- 読みたい対象のファイルやサブディレクトリがすでに分かっていて、直接 `base.py`、`path_model.py`、`standard.py`、`struct_doc.py`、各 `INDEX.md` に進むとき。
+- `<work-root>/oracle/src` 全体ではなく、個別の実装やテストだけを確認したいとき。
+- すでに `agent_call_parameter/`、`agent_call_parameters/`、`utils/` のいずれかの目次に入ることが決まっているとき。
 
 ## hash
 
-- fddfcc48c7f8fba67f3d097f0607e14f7ccd8cfd95924cca10b9c201dbce1040
+- 498ed00632205a5ed90fefdbd3706181a99c2d76ca21f9d18c508577f0bc214b
