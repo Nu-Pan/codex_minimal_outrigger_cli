@@ -5,7 +5,7 @@ from pathlib import Path
 
 # cmoc
 from utils.struct_doc import render_as_markdown
-from utils.path_model import resolve_repo_root
+from utils.path_model import resolve_repo_root, resolve_real_path
 from agent_call_parameter.base import AgentCallParameters, ModelClass, ReasoningEffort
 from agent_call_parameter.prompt_builder.complete_prompt import build_complete_prompt
 
@@ -21,8 +21,9 @@ def build_apply_fork_file_audit_parameter(
         監査の起点となるファイルのパス
         oracle file, realization file が渡される想定。
     """
-    # エイリアス
+    # パス
     repo_root = resolve_repo_root()
+    target_path = resolve_real_path(target_path)
     # プロンプト
     prompt = build_complete_prompt(
         "- あなたはソフトウェア実装の監査担当です",
