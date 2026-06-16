@@ -70,5 +70,5 @@ class AgentCallParameters:
     # プロンプト本文
     prompt: str
 
-    # Structured output schema ファイルパス
+    # Structured Output schema ファイルパス
     structured_output_schema_path: Path

@@ -11,7 +11,7 @@
         "string",
         "null"
       ],
-      "description": "要修正点を発見した時点での git HEAD commit hash。後で機械的にフィルされるので AI による出力は null で良い。"
+      "description": "要修正点を発見した時点での git HEAD commit hash。後で機械的に補完されるので AI による出力は null で良い。"
     },
     "fixing_points": {
       "type": "array",
@@ -34,7 +34,7 @@
           },
           "evidences": {
             "type": "array",
-            "description": "要修正点の根拠となる文言の位置情報。仕様ファイル・実装ファイルのどちらかが必ず 1 つは根拠として存在するはずであるから空配列は想定しない。",
+            "description": "要修正点の根拠となる文言の位置情報。仕様ファイル・実装ファイルのどちらかが必ず 1 つは根拠として存在するはずなので空配列は想定しない。",
             "minItems": 1,
             "items": {
               "type": "object",
@@ -73,7 +73,7 @@
           },
           "oracle_requirement": {
             "type": "string",
-            "description": "仕様ファイルが要求している仕様。実装のみから発見した要修正点であったとしても必ず関係する仕様を記載する。"
+            "description": "仕様ファイルまたは共通標準が要求している仕様・規範。実装品質のみから発見した要修正点の場合は、関係する realization standard などの共通標準を記載する。"
           },
           "observed_implementation": {
             "type": "string",

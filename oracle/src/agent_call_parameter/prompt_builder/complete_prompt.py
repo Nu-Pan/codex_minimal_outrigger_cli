@@ -14,7 +14,7 @@ def build_complete_prompt(
     goal: str,
     file_access_mode: FileAccessMode,
     *,
-    oracles_and_realization_basic: bool = False,
+    oracle_and_realization_basic: bool = False,
     oracle_standard: bool = False,
     realization_standard: bool = False,
     structured_output: bool,
@@ -37,7 +37,7 @@ def build_complete_prompt(
         ),
         build_file_access_rule(file_access_mode),
     ]
-    if oracles_and_realization_basic or oracle_standard or realization_standard:
+    if oracle_and_realization_basic or oracle_standard or realization_standard:
         struct_doc.append(build_oracle_and_realization_basic())
     if oracle_standard:
         struct_doc.append(build_oracle_standard())
@@ -48,7 +48,7 @@ def build_complete_prompt(
             StructDoc(
                 "output format",
                 """
-                - 指定された Structured output schema に従う結果を返すこと
+                - 指定された Structured Output schema に従う結果を返すこと
                 """,
             )
         )

@@ -5,7 +5,7 @@ from utils.path_model import resolve_work_root
 
 def build_oracle_and_realization_basic() -> StructDoc:
     """
-    oracles, realization についての基本知識の説明文章を構築する
+    oracle, realization についての基本知識の説明文章を構築する
     """
     # エイリアス
     work_root = resolve_work_root()

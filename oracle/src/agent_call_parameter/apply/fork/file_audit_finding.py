@@ -25,10 +25,11 @@ def build_apply_fork_file_audit_parameter(
     repo_root = resolve_repo_root()
     target_path = resolve_real_path(target_path)
     # プロンプト
+    # TODO 要修正点の説明を別ファイルにする
     prompt = build_complete_prompt(
         "- あなたはソフトウェア実装の監査担当です",
         f"""
-        - `{target_path}` を起点に `{repo_root.name}` の要修正点を調査すること
+        - `{target_path}` を起点に `{repo_root}` ツリー内の realization file の要修正点を調査すること
         - 必要なら `{target_path}` 以外の oracle file, realization file も読むこと
         - 要修正点とは
             - oracle file と realization file との明確な不整合

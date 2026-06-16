@@ -226,7 +226,8 @@ def build_oracle_standard() -> StructDoc:
             ],
             examples=[
                 "OK: 同じ概念を常に `oracle file` と表記する",
-                "NG: 同じ概念を `oracle file`, `oracle file`, `oracle file` と揺らして書く",
+                "NG: 同じ概念を `oracle file`, `oracles file`, `oracle files`, `oracles files` と揺らして書く",
+                "NG: 同じ概念を `oracle file`, `oracle spec`, `仕様ファイル` と揺らして書く",
             ],
         ),
         Standard(
