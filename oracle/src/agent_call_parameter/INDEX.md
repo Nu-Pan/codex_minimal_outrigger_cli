@@ -2,21 +2,21 @@
 
 ## Summary
 
-- この `agent_call_parameter` パッケージのルーティング文書で、`base.py`、`prompt_builder/`、`apply/`、`review/` への入口です。
-- `base.py` は `AgentCallParameters` などの共通型を定義し、`prompt_builder/` は prompt 組み立て、`apply/` と `review/` はそれぞれ `cmoc apply fork` と `cmoc review oracle` 系の入口をまとめます。
+- この `agent_call_parameter` パッケージのルーティング文書で、`base.py`、`prompt_builder/`、`apply/`、`review/`、`indexing/`、`session/` への入口です。
+- `base.py` は `AgentCallParameters` などの共通型を定義し、`prompt_builder/` は prompt 組み立て、`apply/`、`review/`、`indexing/`、`session/` は各サブコマンドで発生する Codex CLI 呼び出し仕様をまとめます。
 - `__init__py` はこのパッケージの Python モジュール入口として、他モジュールからの参照点になります。
 
 ## Read this when
 
 - `AgentCallParameters`、`ModelClass`、`ReasoningEffort` の定義場所を確認したいとき。
-- AI エージェント向け prompt の組み立てと、`apply` / `review` のどちらの入口を読むべきか迷ったとき。
+- AI エージェント向け prompt の組み立てと、`apply` / `review` / `indexing` / `session` のどの入口を読むべきか迷ったとき。
 - `agent_call_parameter` 配下で共有される呼び出しパラメータや、サブコマンド別の構成をまとめて把握したいとき。
 - このパッケージ配下の `INDEX.md` を追加・修正する前に、全体の役割分担を整理したいとき。
 
 ## Do not read this when
 
 - すでに `base.py`、`prompt_builder/complete_prompt.py`、`apply/fork/file_audit_finding.py`、`review/oracles/` など目的のファイルが分かっていて、直接開くとき。
-- `cmoc apply fork` や `cmoc review oracle` の個別手順だけを確認したいとき。
+- `cmoc apply fork`、`cmoc review oracle`、`cmoc indexing`、`cmoc session join` の個別手順だけを確認したいとき。
 - このパッケージではなく、`oracle` 全体の自然言語仕様や別系統の Structured Output schema を探しているとき。
 
 ## hash
@@ -97,26 +97,70 @@
 
 - 97f2e74a805d7916ccce5ff2fd98ac2f4f9ac02f498b3d4fdac49cf7fe55a134
 
+# `indexing`
+
+## Summary
+
+- `cmoc indexing` と Codex CLI 実行前メンテナンスにおける `INDEX.md` 目次情報生成用 agent call parameter への入口です。
+- `indexing/` は `index_entry.py` と `index_entry.json` を案内します。
+- 目次作成対象 1 件ごとに Codex CLI へ自然言語ルーティング説明を生成させる呼び出し仕様をまとめます。
+
+## Read this when
+
+- `cmoc indexing` で発生する Codex CLI 呼び出し仕様を確認したいとき。
+- `INDEX.md` の目次情報生成 prompt と Structured Output schema を探しているとき。
+
+## Do not read this when
+
+- apply、review、session join の agent call parameter を探しているとき。
+- インデクシングのディレクトリ列挙、hash 計算、git commit 処理だけを確認したいとき。
+
+## hash
+
+- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+
 # `review`
 
 ## Summary
 
-- `cmoc review oracle` の Structured Output schema 群への入口です。
-- `oracles/` を案内し、所見の列挙・統合・妥当性検証・採否判定に使う schema へ分岐します。
-- `agent_call_parameter/review` 配下の目次として、レビュー用 schema をたどる起点です。
+- `cmoc review oracle` の Codex CLI 呼び出し仕様への入口です。
+- `oracles/` を案内し、所見の列挙・統合・妥当性検証・採否判定に使う prompt と schema へ分岐します。
+- `agent_call_parameter/review` 配下の目次として、レビュー用 agent call parameter をたどる起点です。
 
 ## Read this when
 
-- `cmoc review oracle` 用の schema 入口をまとめて確認したいとき。
-- `oracles/` に進む前に、レビュー用 schema 全体の役割分担を把握したいとき。
-- どのレビュー用 JSON schema を開くべきか迷ったとき。
+- `cmoc review oracle` 用の prompt/schema 入口をまとめて確認したいとき。
+- `oracles/` に進む前に、レビュー用 Codex CLI 呼び出しの役割分担を把握したいとき。
+- どのレビュー用 Python 関数または JSON schema を開くべきか迷ったとき。
 
 ## Do not read this when
 
-- 対象の schema 名がすでに分かっていて、`oracles/INDEX.md` や個別の JSON schema を直接開くとき。
-- `cmoc review oracle` の実行手順だけを確認したいとき。
-- Structured Output ではなく、`apply/` や `prompt_builder/` など別の agent call parameter を探しているとき。
+- 対象の関数や schema 名がすでに分かっていて、`oracles/INDEX.md` や個別ファイルを直接開くとき。
+- `cmoc review oracle` の run isolation やレポート生成だけを確認したいとき。
+- `apply/`、`indexing/`、`session/` など別の agent call parameter を探しているとき。
 
 ## hash
 
-- 61570d5602ba15e0dd3353f42b211234768a037f8860e235e7452880f88ebaa1
+- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+
+# `session`
+
+## Summary
+
+- `cmoc session` 系サブコマンドで発生する Codex CLI 呼び出し仕様への入口です。
+- `session/` は `join/` を案内し、merge conflict marker 解消用 agent call parameter をまとめます。
+- Structured Output を要求しない、ファイル編集を伴う Codex CLI 呼び出し仕様を扱います。
+
+## Read this when
+
+- `cmoc session join` の conflict 解消時に Codex CLI へ何を依頼するか確認したいとき。
+- session 系サブコマンドの agent call parameter を探しているとき。
+
+## Do not read this when
+
+- apply、review、indexing の agent call parameter を探しているとき。
+- session 状態ファイル更新や branch 削除など Codex CLI 以外の制御処理だけを確認したいとき。
+
+## hash
+
+- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855

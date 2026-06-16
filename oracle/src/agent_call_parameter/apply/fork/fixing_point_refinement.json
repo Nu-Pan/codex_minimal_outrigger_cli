@@ -1,0 +1,94 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "git_head_commit_hash",
+    "fixing_points"
+  ],
+  "properties": {
+    "git_head_commit_hash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "要修正点を改善した時点での git HEAD commit hash。後で機械的に補完されるので AI による出力は null で良い。"
+    },
+    "fixing_points": {
+      "type": "array",
+      "description": "改善後の要修正点のリスト。空配列の場合のみ要修正点なしとみなす。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "evidences",
+          "oracle_requirement",
+          "observed_implementation",
+          "reason",
+          "suggested_fix"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "要修正点の短い見出し。"
+          },
+          "evidences": {
+            "type": "array",
+            "description": "要修正点の根拠となる文言の位置情報。仕様ファイル・実装ファイルのどちらかが必ず 1 つは根拠として存在するはずなので空配列は想定しない。",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path",
+                "line_start",
+                "line_end",
+                "summary"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "description": "要修正点の根拠となるファイルの絶対パス。"
+                },
+                "line_start": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "description": "要修正点の根拠となる記述の開始行。行番号を特定できない場合は null。"
+                },
+                "line_end": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "description": "要修正点の根拠となる記述の終了行。行番号を特定できない場合は null。"
+                },
+                "summary": {
+                  "type": "string",
+                  "description": "該当箇所の短い要約。位置情報がズレた場合にそれを検知するための冗長情報。"
+                }
+              }
+            }
+          },
+          "oracle_requirement": {
+            "type": "string",
+            "description": "仕様ファイルまたは共通標準が要求している仕様・規範。実装品質のみから発見した要修正点の場合は、関係する realization standard などの共通標準を記載する。"
+          },
+          "observed_implementation": {
+            "type": "string",
+            "description": "調査時点の実装が実際にどうなっているか。"
+          },
+          "reason": {
+            "type": "string",
+            "description": "なぜ、明確に問題があり修正が必要であると言えるのか。推測や未確認事項は含めない。"
+          },
+          "suggested_fix": {
+            "type": "string",
+            "description": "問題を解決するために必要な実装修正の方針。"
+          }
+        }
+      }
+    }
+  }
+}

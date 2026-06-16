@@ -1,0 +1,29 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "summary",
+    "read_this_when",
+    "do_not_read_this_when"
+  ],
+  "properties": {
+    "summary": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "read_this_when": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "do_not_read_this_when": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

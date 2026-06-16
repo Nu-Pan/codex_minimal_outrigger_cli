@@ -71,4 +71,5 @@ class AgentCallParameters:
     prompt: str
 
     # Structured Output schema ファイルパス
-    structured_output_schema_path: Path
+    # Structured Output を要求しない呼び出しでは None。
+    structured_output_schema_path: Path | None

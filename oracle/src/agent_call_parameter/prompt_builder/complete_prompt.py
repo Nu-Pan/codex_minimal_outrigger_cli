@@ -13,6 +13,7 @@ def build_complete_prompt(
     summary: str,
     goal: str,
     file_access_mode: FileAccessMode,
+    file_access_aux_rules: str | None = None,
     *,
     oracle_and_realization_basic: bool = False,
     oracle_standard: bool = False,
@@ -35,7 +36,7 @@ def build_complete_prompt(
             "goal",
             goal,
         ),
-        build_file_access_rule(file_access_mode),
+        build_file_access_rule(file_access_mode, file_access_aux_rules),
     ]
     if oracle_and_realization_basic or oracle_standard or realization_standard:
         struct_doc.append(build_oracle_and_realization_basic())
