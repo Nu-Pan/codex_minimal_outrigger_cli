@@ -34,16 +34,16 @@
 ## Read this when
 
 - `<cmoc-root>/oracle/src` 配下のどのパッケージから読むべきか迷ったとき。
-- `agent_call_parameter/` と `utils/` の役割差を整理したいとき。
+- `agent_call_parameter/` と `utils/` の役割差を整理してから、下位のファイルや `INDEX.md` に進みたいとき。
 - `AgentCallParameters`、`ModelClass`、`ReasoningEffort`、prompt builder、`apply` / `review` の入口をまとめて把握したいとき。
 - `<cmoc-root>` / `<repo-root>` / `<run-root>` / `<work-root>` の解決規則や、`StructDoc` と標準定義の共通基盤を確認したいとき。
 
 ## Do not read this when
 
-- 読みたい対象のファイルやサブディレクトリがすでに分かっていて、`base.py`、`path_model.py`、`standard.py`、`struct_doc.py`、各 `INDEX.md` を直接開くとき。
-- `<work-root>/oracle/src` 全体ではなく、`agent_call_parameter/` や `utils/` の個別実装だけを確認したいとき。
-- すでに `agent_call_parameter/` か `utils/` のどちらへ進むか決まっていて、この階層の入口を経由する必要がないとき。
+- 読みたい対象がすでに `agent_call_parameter/` か `utils/` のどちらかに決まっていて、この階層の入口を経由する必要がないとき。
+- `base.py`、`path_model.py`、`standard.py`、`struct_doc.py`、または各配下の `INDEX.md` を直接開くとき。
+- `<work-root>/oracle/src` 全体ではなく、個別の実装や個別の Structured Output schema だけを確認したいとき。
 
 ## hash
 
-- 03fe23c1264a0d88113c1f16773e4547a635f5c101c212edb7f321c8e9fb0caf
+- 85c56ffda9a7a4dd6148c24875b62ef3f61483439e5b4c86b1487332ef30a9d5

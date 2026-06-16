@@ -36,40 +36,41 @@
 - `cmoc apply fork` のファイル単位監査 prompt と Structured Output schema の入口をまとめて把握したいとき。
 - `fork/INDEX.md` か `file_audit_finding.py` / `file_audit_finding.json` のどちらを読むべきか迷ったとき。
 - 監査対象ファイルを起点に、`oracle file` と `realization file` の不整合や要修正点を確認したいとき。
+- この階層の `INDEX.md` を追加・修正する前に、下位ファイルへの分岐を確認したいとき。
 
 ## Do not read this when
 
 - `cmoc apply fork` 以外のサブコマンドや、別の agent call parameter を探しているとき。
-- 対象ファイルが既に分かっていて、`fork/INDEX.md` や `file_audit_finding.py` / `file_audit_finding.json` を直接開くとき。
+- 対象ファイルがすでに分かっていて、`fork/INDEX.md` や `file_audit_finding.py` / `file_audit_finding.json` を直接開くとき。
 - `oracle` 全体の共通ルールや、`INDEX.md` の生成方針だけを確認したいとき。
 
 ## hash
 
-- 6aa9731b4d9726e97a443649e72959bfd694458f4d8e094146d27c5283dc5db9
+- 0e14b9610d06bb13f5edc11b5367e29eb11afe7f1c8d4c73a3f3e5fe48f49b15
 
 # `base.py`
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/agent_call_parameter/base.py` は、AI コーディングエージェント呼び出し用の基本データ型を定義する入口です。
-- `BackendType`、`ModelClass`、`ReasoningEffort`、`AgentCallParameters` をまとめ、バックエンド種別、モデル選択、推論強度、プロンプト本体、Structured Output schema パスを表します。
+- `<cmoc-root>/oracle/src/agent_call_parameter/base.py` は、AI コーディングエージェント呼び出し用の基本データ型をまとめる入口です。
+- `BackendType`、`ModelClass`、`ReasoningEffort`、`AgentCallParameters` を案内し、バックエンド種別、モデル選択、推論強度、プロンプト本文、Structured Output schema パスの所在を示します。
 - `agent_call_parameter` 配下の各サブコマンド実装が共通して参照する、呼び出しパラメータ基盤の目次です。
 
 ## Read this when
 
-- `AgentCallParameters` の項目や、`ModelClass` / `ReasoningEffort` の選択肢を確認したいとき。
-- Codex CLI などの AI エージェント呼び出しパラメータを追加・変更するとき。
-- `apply` / `review` 系の入口から、この共通基盤がどう使われるかをたどりたいとき。
+- `<cmoc-root>/oracle/src/agent_call_parameter/base.py` にある共通の呼び出しパラメータ定義を確認したいとき。
+- `AgentCallParameters` の項目や、`ModelClass` / `ReasoningEffort` の選択肢を把握したいとき。
+- AI エージェント呼び出しの共通基盤が `apply/` や `review/` からどう使われるかをたどりたいとき。
 
 ## Do not read this when
 
-- すでに目的のクラス定義が分かっていて、`base.py` を直接確認するとき。
-- `prompt_builder` や Structured Output schema の内容だけを確認したいとき。
-- この共通基盤ではなく、`apply` や `review` の個別フロー実装を直接追いたいとき。
+- すでに `AgentCallParameters`、`ModelClass`、`ReasoningEffort` の定義を把握していて、`base.py` を直接確認するとき。
+- `prompt_builder/` の個別実装や Structured Output schema だけを確認したいとき。
+- `apply/` や `review/` の個別フローを追いたくて、この共通基盤を経由する必要がないとき。
 
 ## hash
 
-- 0af3e724eb65cc3fcdddabeafe5adf5817a4e672c36e5bb62d280407120d3b12
+- d8b4a5b9ddd34f3b5884cb2bf121eea14a4e12c61f5cc4fe3e8bc5a05c27c557
 
 # `prompt_builder`
 
@@ -88,13 +89,13 @@
 
 ## Do not read this when
 
-- `build_complete_prompt()` など、目的のファイルがすでに分かっていて、この目次を経由せずに `complete_prompt.py`、`file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py` を直接確認するとき。
+- すでに `build_complete_prompt()` など目的のファイルが分かっていて、この目次を経由せずに `complete_prompt.py`、`file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py` を直接確認するとき。
 - `prompt_builder` 配下のうち、特定の 1 ファイルだけを確認したいとき。
 - `agent_call_parameter` の別ディレクトリや、別フローの agent call parameter を探しているとき。
 
 ## hash
 
-- 501ac9f2df249d80acd9a7eff049fa970c01216c62f7934cca3d976949a4c73e
+- 97f2e74a805d7916ccce5ff2fd98ac2f4f9ac02f498b3d4fdac49cf7fe55a134
 
 # `review`
 

@@ -2,26 +2,26 @@
 
 ## Summary
 
-- この `agent_call_parameter` ディレクトリのルーティング文書で、`base.py`、`prompt_builder/`、`apply/`、`review/`、`__init__py` への入口です。
-- `base.py` は共通の呼び出しパラメータ型を定義し、`prompt_builder/` は prompt 組み立て、`apply/` と `review/` はそれぞれ `cmoc apply fork` と `cmoc review oracle` の入口をまとめます。
-- `__init__py` はこのパッケージの Python モジュール入口として、他モジュールからの参照点になります。
+- この `<cmoc-root>/oracle/src/agent_call_parameter` ディレクトリのルーティング文書で、`__init__py`、`base.py`、`prompt_builder/`、`apply/`、`review/` への入口です。
+- `__init__py` はパッケージの Python モジュール入口、`base.py` は共有の呼び出しパラメータ型、`prompt_builder/` は prompt 組み立て、`apply/` と `review/` は各サブコマンド系の入口をまとめます。
+- この階層で、AI エージェント呼び出しに関わる共通基盤と用途別の分岐先を整理するための目次です。
 
 ## Read this when
 
-- `AgentCallParameters`、`ModelClass`、`ReasoningEffort` の定義場所を確認したいとき。
-- AI エージェント向け prompt の組み立てと、`apply` / `review` のどちらの入口を読むべきか迷ったとき。
-- `agent_call_parameter` 配下で共有される呼び出しパラメータや、サブコマンド別の構成をまとめて把握したいとき。
-- このパッケージ配下の `INDEX.md` を追加・修正する前に、全体の役割分担を整理したいとき。
+- `AgentCallParameters`、`ModelClass`、`ReasoningEffort` の定義場所を把握したいとき。
+- `prompt_builder/` の断片、`apply/` の監査フロー、`review/` の Structured Output schema をどこから読むべきか迷ったとき。
+- `agent_call_parameter` 配下で共有される呼び出しパラメータ基盤と、サブディレクトリごとの役割分担をまとめて確認したいとき。
+- この階層の `INDEX.md` を追加・修正する前に、配下の入口を整理したいとき。
 
 ## Do not read this when
 
-- すでに `base.py`、`prompt_builder/complete_prompt.py`、`apply/fork/file_audit_finding.py`、`review/oracles/` など目的のファイルが分かっていて、直接開くとき。
+- 目的のファイルがすでに分かっていて、`base.py`、`prompt_builder/` 配下、`apply/`、`review/` を直接開くとき。
 - `cmoc apply fork` や `cmoc review oracle` の個別手順だけを確認したいとき。
-- このパッケージではなく、`oracle` 全体の自然言語仕様や別系統の Structured Output schema を探しているとき。
+- `oracle` 全体の自然言語仕様や `doc/` 側の運用文書を探しているとき。
 
 ## hash
 
-- bb9c2c9b98cd6e731daa8e642639c597daf5704e9330038764a7ac863ab4012f
+- 698bae45af2b7fa00d00d52ce6901ec8eb6f5586e6e3b5866c9093e1233c3745
 
 # `utils`
 
@@ -46,4 +46,4 @@
 
 ## hash
 
-- dd3e17909e60de05ea96f1aed310c091efdc9ed9b5ef022f40a6844c2917478f
+- 7c4b7de450a02bac5e852eab54fb95bf9ce808e564fb840f4d87fec22e21151c

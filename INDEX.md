@@ -121,49 +121,50 @@
 
 ## Summary
 
-- この `oracle` ディレクトリのルーティング文書で、`doc/` と `src/` への入口をまとめます。
-- `doc/` は利用手順、共通仕様、branch モデル、採用しなかった設計判断、開発規約への案内を担います。
-- `src/` は `agent_call_parameter/` と `utils/` の実装基盤へ進むための入口を担います。
+- この `<cmoc-root>/oracle` ディレクトリのルーティング文書で、`doc/` と `src/` への入口です。
+- `doc/` は cmoc の仕様断片、採用しなかった設計判断、開発規約などの正本群をまとめます。
+- `src/` は prompt 生成、呼び出しパラメータ、共通ユーティリティ、Structured Output schema 周辺の入口をまとめます。
 
 ## Read this when
 
-- `oracle` 配下の文書全体をざっと把握して、まず `doc/` と `src/` のどちらに進むべきか判断したいとき。
-- `cmoc` の利用仕様、設計判断、開発規約、あるいは実装基盤の入口をまとめて確認したいとき。
-- `oracle` 直下から下位のルーティング文書へ進む前に、全体の役割分担を確認したいとき。
+- `<cmoc-root>/oracle` 配下のどの階層から読むべきか迷ったとき。
+- `doc/` の自然言語仕様群と `src/` の実装・schema 周辺を分けて把握したいとき。
+- 正本仕様断片と、それを支える prompt 生成や Structured Output schema の入口を横断して確認したいとき。
+- この階層の `INDEX.md` を更新する前に、トップレベルの分岐先を整理したいとき。
 
 ## Do not read this when
 
-- すでに `doc/INDEX.md` か `<work-root>/src/INDEX.md` のどちらへ進むか決まっていて、この階層の目次を経由する必要がないとき。
-- `doc/` 配下の利用手順・共通仕様・開発規約だけ、または `src/` 配下の実装基盤だけを個別に確認したいとき。
-- 各下位ディレクトリの `INDEX.md` や個別ファイルを直接読みたいだけで、`oracle` 直下の総合目次は不要なとき。
+- 目的の場所がすでに `doc/` か `src/` に決まっていて、この階層の入口を経由する必要がないとき。
+- `app_spec/`、`considered_alternative/`、`dev_rule/`、`branch_model.md` などの個別文書を直接確認したいとき。
+- oracle 全体ではなく、特定のファイルや特定の Structured Output schema だけを確認したいとき。
 
 ## hash
 
-- 9238ded58996dee73ec01162c858ba878e3ee73a60e09cd6dc6e6a8744c137cb
+- 79d5d26118e23cbe55d33cc92c5498b06ef21a8161bdf71a7153b48d23b060db
 
 # `pyproject.toml`
 
 ## Summary
 
-- このリポジトリの Python パッケージ定義とビルド設定をまとめたファイルです。
-- プロジェクト名、バージョン、説明、必要な Python 版、依存関係、CLI エントリポイント `cmoc` が定義されています。
-- `setuptools` を使った `src` レイアウトのパッケージ配置設定と、pytest の基本設定も含まれています。
+- この `pyproject.toml` のルーティング文書で、Python パッケージ定義とビルド設定の入口です。
+- プロジェクト情報、依存関係、CLI エントリポイント `cmoc`、`setuptools` のパッケージ探索設定、pytest 設定を案内します。
+- `src` と `<work-root>/oracle/src` を含むパッケージ配置前提を確認したいときの起点です。
 
 ## Read this when
 
-- このプロジェクトの名前、バージョン、説明、対応 Python 版を確認したいとき。
+- プロジェクト名、バージョン、説明、対応 Python 版を確認したいとき。
 - 依存パッケージや `cmoc` のコンソールスクリプト定義を確認したいとき。
-- ビルド方式や `setuptools` のパッケージ探索設定を確認したいとき。
+- `setuptools` の `src` レイアウト設定や pytest の基本設定を把握したいとき。
 
 ## Do not read this when
 
-- CLI の個別サブコマンドの実装や引数仕様だけを確認したいとき。
-- テストコードや期待挙動を確認したいとき。
-- `src` 配下の内部ロジックや共通処理だけを追いたいとき。
+- このリポジトリ全体の作業ルールや `oracle` 配下のルーティングを確認したいとき。
+- CLI の個別サブコマンド実装やテストコードの内容だけを追いたいとき。
+- `src` や `<work-root>/oracle/src` の内部モジュールの詳細だけを直接確認したいとき。
 
 ## hash
 
-- 87177fa08fea59be724e6824fdab953e6035beb2a6d66d94536208127389cf2e
+- 4243188ef61246c642868f481696df0e74dd4f8e86c7495b6dece745ea8ae350
 
 # `src`
 

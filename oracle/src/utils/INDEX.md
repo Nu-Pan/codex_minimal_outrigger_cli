@@ -14,13 +14,13 @@
 
 ## Do not read this when
 
-- `resolve_real_path()` などの呼び先がすでに分かっていて、このファイルを直接確認するとき。
-- パス表記規則ではなく、`StructDoc` など別の `<work-root>/oracle/src/utils` 基盤を探しているとき。
-- root token の定義ではなく、`oracle` 配下の個別仕様や開発規約を確認したいとき。
+- `RootToken` や `resolve_real_path()` の実装をすでに把握していて、このファイル本体を直接確認するとき。
+- パス解決ではなく、`StructDoc` や `standard.py` など別の `utils` 基盤を探しているとき。
+- root token の定義ではなく、`oracle` 配下の個別仕様や開発規約だけを確認したいとき。
 
 ## hash
 
-- e7c36dedf9b965debff58914874f07bebbe9ea10ad0b5e06db4504593e962db1
+- da048fc9cbd327d4867d675e9377f9692a49de6ccf38ec008eebb0a91ebdd7ad
 
 # `standard.py`
 
@@ -40,36 +40,36 @@
 
 ## Do not read this when
 
-- `Standard`、`Requirement`、`standard_to_struct_doc()` の定義をすでに把握していて、このファイル本体を直接読むとき。
+- `Standard`、`Requirement`、`standard_to_struct_doc()` の役割がすでに分かっていて、このファイル本体を直接確認するとき。
 - `StructDoc` の実装や markdown レンダリングだけを確認したいとき。
 - パス解決や root token の扱いだけを確認したいとき。
-- 個別の仕様本文だけを読み、共通ユーティリティの目次は不要なとき。
+- 個別の仕様本文だけを読み、`standard.py` の共通定義は不要なとき。
 
 ## hash
 
-- 3c712a1aa52c1d19761ba973b590d0e53c6bf1e9392e5963652760373449ca02
+- f1c731a2f6faf2a326e85a6d9f2fdd0adb0d1fd5f46e515b6e7146a997bd7a4d
 
 # `struct_doc.py`
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/utils/struct_doc.py` は、階層構造を持つ文章を `StructDoc` として保持し、markdown にレンダリングする共通ヘルパーです。
+- `<cmoc-root>/oracle/src/utils/struct_doc.py` は、階層構造を持つ文章を `StructDoc` として保持し、markdown にレンダリングするための共通ヘルパーです。
 - 見出しを再帰的に組み立てる `render_as_markdown()` と、三重クォート文字列のインデントを整える `ntqs()` を提供します。
 - prompt 生成や標準文書の組み立てで `StructDoc` を使うときの、共通基盤の入口です。
 
 ## Read this when
 
-- 階層化された文章を `StructDoc` で表現し、markdown 出力したいとき。
-- `render_as_markdown()` の見出し階層や、`ntqs()` の改行・インデント正規化の挙動を確認したいとき。
-- `<work-root>/oracle/src/utils/standard.py` や prompt_builder 配下から `StructDoc` を使う前に、共通表現の仕様を把握したいとき。
+- 階層構造を持つ文章を `StructDoc` で表現し、markdown に出力したいとき。
+- `render_as_markdown()` の見出し階層の生成方法や、`ntqs()` の改行・インデント正規化の挙動を確認したいとき。
+- `standard.py` や prompt_builder 配下から `StructDoc` を使う前に、共通表現の仕様を把握したいとき。
 - `StructDoc` を使う新しいヘルパーを追加・修正する前に、既存の共通基盤を確認したいとき。
 
 ## Do not read this when
 
-- 既に `StructDoc` の使い方が分かっていて、`struct_doc.py` のコード本体を直接確認するとき。
-- `path_model.py` だけ、または `standard.py` だけを個別に確認したいとき。
-- markdown の共通化ではなく、個別の prompt 文書やレビュー規約だけを追いたいとき。
+- `StructDoc` の使い方がすでに分かっていて、`struct_doc.py` の実装を直接確認したいとき。
+- `path_model.py` や `standard.py` だけを個別に確認したいとき。
+- 個別の prompt 文書やレビュー規約を追っていて、共通の markdown レンダリング基盤は不要なとき。
 
 ## hash
 
-- db91b79116cc87a37124cc214cd697e91182656d38b2f33dcabb792cd38e8e10
+- e32829336f19e839e8f0cbc28fae24d48d58413d451b04ad36f07345f47022fc
