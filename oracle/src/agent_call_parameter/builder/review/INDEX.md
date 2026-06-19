@@ -15,11 +15,11 @@
 
 ## Do not read this when
 
-- すでに対象ファイル名が分かっていて、`enumerate_finding.py`、`enumerate_finding.json`、`merge_finding.py`、`merge_finding.json`、`validate_finding_advocate.py`、`validate_finding_advocate.json`、`validate_finding_challenger.py`、`validate_finding_challenger.json`、`judge_finding.py`、`judge_finding.json` を直接開くとき。
+- すでに目的のファイル名が分かっていて、`enumerate_finding.py`、`enumerate_finding.json`、`merge_finding.py`、`merge_finding.json`、`validate_finding_advocate.py`、`validate_finding_advocate.json`、`validate_finding_challenger.py`、`validate_finding_challenger.json`、`judge_finding.py`、`judge_finding.json` を直接開くとき。
 - `cmoc review oracle` 以外のサブコマンドの agent call parameter を探しているとき。
 - 所見の列挙、統合、擁護理由列挙、否定理由列挙、採否判定のどれか 1 つだけを個別に確認したいとき。
-- Structured Output schema ではなく、`review/oracles` 配下の実装コードだけを確認したいとき。
+- Structured Output schema ではなく、このディレクトリ配下の実装コードだけを確認したいとき。
 
 ## hash
 
-- c46e8a12d766e3b769b6843bb62d9ff2bfac66d1bd87172260de9661481ff5e1
+- 920268cf0d75d61a1cda820627b150be1e60e11e4a9bd7714c9978b328a3fa10

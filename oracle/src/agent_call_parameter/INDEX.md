@@ -27,7 +27,7 @@
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/agent_call_parameter/base.py` は、AI コーディングエージェント呼び出し用の基本データ型をまとめる入口です。
+- この `base.py` の目次文書で、AI コーディングエージェント呼び出し用の基本データ型をまとめる入口です。
 - `BackendType`、`ModelClass`、`ReasoningEffort`、`FileAccessMode`、`AgentCallParameters` を案内し、バックエンド種別、モデル選択、推論強度、ファイルアクセスモード、プロンプト本文、Structured Output schema パスの所在を示します。
 - `agent_call_parameter` 配下の各サブコマンド実装が共通して参照する、呼び出しパラメータ基盤の目次です。
 
@@ -35,18 +35,17 @@
 
 - `<cmoc-root>/oracle/src/agent_call_parameter/base.py` にある共通の呼び出しパラメータ定義を確認したいとき。
 - `AgentCallParameters` の項目や、`ModelClass` / `ReasoningEffort` / `FileAccessMode` の役割を把握したいとき。
-- AI コーディングエージェント呼び出しの共通基盤が `apply/` や `review/` からどう使われるかをたどりたいとき。
-- `<cmoc-root>/oracle/src/agent_call_parameter` 配下で、共通型の入口を探しているとき。
+- AI コーディングエージェント呼び出しの共通基盤が各サブコマンド実装からどう使われるかをたどりたいとき。
 
 ## Do not read this when
 
-- すでに `AgentCallParameters`、`ModelClass`、`ReasoningEffort`、`FileAccessMode` の定義内容を把握していて、このファイルを直接確認するだけのとき。
-- `prompt_builder/` の個別実装や Structured Output schema だけを確認したいとき。
+- すでに `BackendType`、`ModelClass`、`ReasoningEffort`、`FileAccessMode`、`AgentCallParameters` の定義内容を把握していて、このファイルの中身を直接確認するだけのとき。
+- `prompt_parts/` の個別実装や Structured Output schema だけを確認したいとき。
 - `apply/` や `review/` の個別フローを追いたくて、この共通基盤を経由する必要がないとき。
 
 ## hash
 
-- 35f71d3079152fe12e55bb17ccfa74fe6f844f826c8aba5fe34b1deecd96d1ec
+- 59bc6778ae5e1c0bf4500b96e90a4850209152901930572db9ce8d693b829d50
 
 # `builder`
 
@@ -58,19 +57,19 @@
 
 ## Read this when
 
-- `builder` 配下で、どの入口から読むべきか迷ったとき。
-- `apply` / `indexing` / `review` / `session` の役割差を整理してから下位の `INDEX.md` や個別ファイルに進みたいとき。
-- この階層の目次を確認して、目的の Structured Output schema や呼び出し仕様へ進みたいとき。
+- `builder` 配下で、`apply`、`indexing`、`review`、`session` のどれから読むべきか整理したいとき。
+- `cmoc apply fork`、`cmoc indexing`、`cmoc review oracle`、`cmoc session join` の呼び出し仕様の入口をまとめて把握したいとき。
+- この階層の目次を確認してから、下位の `INDEX.md` や個別ファイルへ進みたいとき。
 
 ## Do not read this when
 
-- すでに `apply/`、`indexing/`、`review/`、`session/` のどれを読むか決まっていて、この階層の案内を経由する必要がないとき。
-- `AgentCallParameters` や各サブコマンドの個別仕様を直接確認したいとき。
-- この階層ではなく、下位ディレクトリの `INDEX.md` や個別ファイルをそのまま開くとき。
+- すでに読む対象が `apply/`、`indexing/`、`review/`、`session/` のいずれかに決まっていて、この階層の目次を経由する必要がないとき。
+- `change_summary.py`、`file_audit_finding.py`、`index_entry.py`、`enumerate_finding.py`、`conflict_resolution.py` などの個別ファイルを直接開きたいとき。
+- この階層の案内ではなく、各下位ディレクトリの `INDEX.md` や個別仕様だけを確認したいとき。
 
 ## hash
 
-- 3c04be8f01d24d32a6e8094467a6668dca237f90cbafaa4d1ecba6618214eaeb
+- 385e5f6181ccc5c2986e5e97e405a643062fd7f7ae52161166aa1b4daa02c71f
 
 # `prompt_parts`
 
@@ -95,4 +94,4 @@
 
 ## hash
 
-- 07ecdd968b8c01b249d46dcbfb55f8391f6be15903a42ad7fd99a56123b71425
+- f800904ba87e10d636f3a0f2ad297bc40fa37229755eb3442718de5b81cbab98

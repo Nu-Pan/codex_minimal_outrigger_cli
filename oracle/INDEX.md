@@ -21,29 +21,29 @@
 
 ## hash
 
-- bd7daaf6406236cd73c5a2d5fd867c66796e747ad3487bcc0072a58ac3742910
+- c5ef2fa51801fa79c13ec269404aa0694fa6fea0be4ca6bea650d994bd1a0380
 
 # `src`
 
 ## Summary
 
-- この `src` ディレクトリのルーティング文書で、`agent_call_parameter/` と `utils/` への入口です。
+- この `src` ディレクトリのルーティング文書で、`agent_call_parameter/`、`cmoc_config/`、`utils/` への入口です。
 - `agent_call_parameter/` は共通型、サブコマンド別の呼び出し仕様、prompt 断片と完全 prompt の組み立てを案内します。
-- `utils/` はパス解決、標準表現、構造化文章レンダリングの共通基盤を案内します。
+- `cmoc_config/` は cmoc 全体設定の入口で、`utils/` はパス解決、標準表現、構造化文章レンダリングの共通基盤を案内します。
 
 ## Read this when
 
-- `<cmoc-root>/oracle/src` 配下で、まず `agent_call_parameter/` と `utils/` のどちらから読むべきか整理したいとき。
+- `<cmoc-root>/oracle/src` 配下で、まず `agent_call_parameter/`、`cmoc_config/`、`utils/` のどれから読むべきか整理したいとき。
 - `AgentCallParameters`、`ModelClass`、`ReasoningEffort`、`FileAccessMode`、`RootToken`、`Standard`、`StructDoc` など、この階層の共通基盤をまとめて把握したいとき。
-- `<cmoc-root>` / `<repo-root>` / `<run-root>` / `<work-root>` の解決規則や、prompt 組み立て・標準文書・markdown レンダリングの入口を確認したいとき。
+- `<cmoc-root>` / `<repo-root>` / `<run-root>` / `<work-root>` の解決規則や、設定・prompt 組み立て・標準文書・markdown レンダリングの入口を確認したいとき。
 - この階層の下位 `INDEX.md` や個別仕様へ進む前に、役割分担を先に整理したいとき。
 
 ## Do not read this when
 
-- 読む対象がすでに `agent_call_parameter/` または `utils/` に決まっていて、この階層の入口を経由せず直接進めるとき。
-- `base.py`、`builder/INDEX.md`、`prompt_parts/INDEX.md`、`path_model.py`、`standard.py`、`struct_doc.py` など、個別ファイルをそのまま確認したいとき。
+- すでに読む対象が `agent_call_parameter/`、`cmoc_config/`、`utils/` のいずれかに決まっていて、この階層の入口を経由する必要がないとき。
+- `base.py`、`cmoc_config.py`、`path_model.py`、`standard.py`、`struct_doc.py` など個別ファイルを直接開きたいとき。
 - この階層の案内ではなく、`oracle` 全体の別ルートや運用規約だけを確認したいとき。
 
 ## hash
 
-- e3011bd9b70e06113a64c3f1e9d135bd0fb75b233c00b0b01796b5a2b428a68a
+- c4c1442ede8218198d34d6fd94e1c9aefe76737865de1e053bf015ec042e2a5b

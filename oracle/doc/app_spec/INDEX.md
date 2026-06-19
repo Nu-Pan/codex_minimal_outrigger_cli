@@ -32,18 +32,18 @@
 ## Read this when
 
 - cmoc から `codex exec` を呼び出す実装・修正・レビューをしたいとき。
-- stdin 経由でのプロンプト受け渡し、アクセス制限、Model / Reasoning Effort、Structured Output、出力方法を確認したいとき。
-- quota 不足時の待機・再開、サーバー一時不調時のリトライ、`codex exec` 呼び出しログの残し方を確認したいとき。
+- stdin 経由でのプロンプト受け渡し、アクセス制限、Model / Reasoning Effort、Structured Output の扱いを確認したいとき。
+- quota 不足時の待機・再開、サーバー一時不調時のリトライ、呼び出しログの残し方を確認したいとき。
 
 ## Do not read this when
 
-- `codex exec` 以外の一般的なシェル実行方針や、他のサブコマンド固有の仕様だけを確認したいとき。
+- `codex exec` 以外の一般的なシェル実行方針だけを確認したいとき。
+- `session`、`apply`、`review oracle` など別フローの詳細だけを確認したいとき。
 - `INDEX.md` の生成・更新ルールだけを確認したいとき。
-- この文書の対象外である、`session`・`apply`・`review oracle` など別フローの詳細だけを確認したいとき。
 
 ## hash
 
-- 0a8e0589030dc32b9038ad889f8f13e0924ce5ed761588852ed79747fcd1bc45
+- 0650178e9b4c85792d957bf5d54bee1d823247a27b5678ee1d3d3138279912dc
 
 # `console_and_file_log.md`
 
@@ -138,6 +138,27 @@
 ## hash
 
 - 69c963981887477d4763539bc1d4d802043f5e3795d0dc6c923a41eab08016c7
+
+# `prompt_standard.md`
+
+## Summary
+
+- cmoc が AI エージェントへ渡すプロンプトの標準規則をまとめた文書です。
+- cmoc 固有の用語や概念をプロンプトに含めず、ファイル・ディレクトリ・ブランチは具体的なパスへ解決し、エージェントのメタ認知や特定スキルの存在を前提にしない方針を案内します。
+
+## Read this when
+
+- Codex CLI に渡すプロンプトの標準ルールを確認したいとき。
+- cmoc 固有の概念をプロンプトへ含めないこと、具体パスへ解決すること、メタ認知や特定スキルの前提を置かないことを整理したいとき。
+
+## Do not read this when
+
+- cmoc 全体の利用手順やサブコマンド仕様だけを確認したいとき。
+- すでに渡すプロンプトの構成が決まっていて、この標準のルールを参照する必要がないとき。
+
+## hash
+
+- 5ed45fb734759565751b83ad60b4f5e8080fc809ed0038e5700d582e2a5946b7
 
 # `run_isolation.md`
 

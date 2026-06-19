@@ -8,19 +8,20 @@
 
 ## Read this when
 
-- `<cmoc-root>/oracle/src/utils/path_model.py` の `RootToken` と各 root 解決処理の役割を把握したいとき。
+- `<cmoc-root>/oracle/src/utils/path_model.py` の役割と、`RootToken` による root 解決の入口を把握したいとき。
 - ルートトークン付きの相対パスを絶対パスへ解決したいとき。
-- `<cmoc-root>` / `<repo-root>` / `<run-root>` / `<work-root>` の違いと使い分けを確認したいとき。
+- 実パスを `<cmoc-root>` / `<repo-root>` / `<run-root>` / `<work-root>` 表記へ戻す方法を確認したいとき。
+- 各 root token の違いと使い分けを整理したいとき。
 
 ## Do not read this when
 
-- `RootToken` や `resolve_real_path()` の実装をすでに把握していて、このファイル本体を直接確認するとき。
-- パス解決ではなく、`StructDoc` や `standard.py` など別の `utils` 基盤を探しているとき。
-- root token の定義ではなく、`oracle` 配下の個別仕様や開発規約だけを確認したいとき。
+- `RootToken` と `resolve_real_path()` の役割がすでに分かっていて、このファイル本体を直接確認したいとき。
+- パス解決ではなく、`standard.py` や `struct_doc.py` など別の `utils` 基盤を探しているとき。
+- `<cmoc-root>` / `<repo-root>` / `<run-root>` / `<work-root>` の定義ではなく、別の oracle 文書や開発規約だけを確認したいとき。
 
 ## hash
 
-- da048fc9cbd327d4867d675e9377f9692a49de6ccf38ec008eebb0a91ebdd7ad
+- 027714ffb8df9a610273154c3576c6f114050fedcea38cd005f3fc034aec3519
 
 # `standard.py`
 

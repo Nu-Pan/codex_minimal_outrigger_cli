@@ -26,22 +26,23 @@
 
 ## Summary
 
-- `cmoc indexing` の `INDEX.md` 目次情報生成用 prompt 正本で、`index_entry.json` への入口です。
-- `build_indexing_index_entry_parameter()` は対象パス・対象内容・兄弟エントリ情報を組み立てて、目次情報生成の呼び出しパラメータを返します。
-- `resolve_real_path()` と `build_complete_prompt()`、`render_as_markdown()` を使い、構造化出力付きの呼び出しを構成します。
+- ルーティング文書の目次情報を生成する呼び出しの入口である。
+- 対象パスを正規化し、対象内容と同階層の情報を含む完全な prompt を組み立てる。
+- 読み取り専用前提で、効率重視モデルと中程度の推論強度を使う構成になっている。
 
 ## Read this when
 
-- `cmoc indexing` の各エントリに対する目次情報をどう生成するか確認したいとき。
-- `target_path`、`target_content`、`sibling_entries` を prompt にどう渡すか把握したいとき。
-- `index_entry.json` の Structured Output schema と対応を確認したいとき。
+- ルーティング文書の目次情報をどう生成するか確認したいとき。
+- 対象パス、対象内容、同階層の情報がどのように prompt に入るか知りたいとき。
+- 生成呼び出しのモデル種別、推論強度、読み取り専用前提を確認したいとき。
+- Structured Output 付きの呼び出しの流れを整理したいとき。
 
 ## Do not read this when
 
-- `cmoc indexing` のディレクトリ列挙や git commit 処理だけを確認したいとき。
-- `index_entry.json` の JSON schema だけを直接確認したいとき。
-- 目次生成ではなく、別サブコマンドの agent call parameter を探しているとき。
+- 入力の組み立て方と出力形式がすでに分かっていて、実装を直接追いたいとき。
+- 目次生成ではなく、別の呼び出し仕様を探しているとき。
+- パス解決や prompt 部品の個別仕様だけを確認したいとき。
 
 ## hash
 
-- c95e74c4b53fd50116c89a28aca55207fd4ab76a70522acc5cf07d207aadcc4b
+- 17067b80fa795c4985bd797561fd92f86c849461634a31d4c0d9287cb588b26d

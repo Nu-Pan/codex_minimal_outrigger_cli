@@ -92,31 +92,31 @@
 
 ## hash
 
-- 99e74b2a01831aa639c431c7cc8d451c9d54a6120e89be983cf953b482195602
+- 2d48ad35653b0e8a48e815ed73983e9b2df607f23da6adfef18b7608465056cc
 
 # `fixing_point_application.py`
 
 ## Summary
 
-- `cmoc apply fork` の要修正点 1 件に対する実装修正作業 prompt の入口です。
+- `cmoc apply fork` の要修正点 1 件に対する実装修正作業用の入口です。
 - realization file の修正を前提とし、Structured Output は要求しません。
-- 要修正点情報は作業ヒントとして扱い、`git add` と `git commit` は実行しない方針を案内します。
+- 要修正点は作業ヒントとして扱い、`git add` と `git commit` は実行しない前提を案内します。
 
 ## Read this when
 
-- `cmoc apply fork` で検出済みの要修正点 1 件を、実際に修正するための prompt 正本を確認したいとき。
-- realization file を編集する write-enabled な呼び出しで、どのようなファイルアクセス規則が前提になるか知りたいとき。
-- 要修正点を絶対指示ではなく作業ヒントとして扱う、という実行方針を確認したいとき。
+- `cmoc apply fork` で検出済みの要修正点 1 件を実際に修正する prompt 正本を確認したいとき。
+- realization file を書き換える write-enabled な呼び出しで、どのファイルアクセス規則と実行方針が前提か知りたいとき。
+- 要修正点情報を絶対指示ではなく作業ヒントとして扱い、`git add` と `git commit` を行わない方針を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc apply fork` のファイル単位監査や要修正点リスト改善など、読み取り専用の処理を探しているとき。
-- 要修正点の抽出結果や Structured Output schema だけを確認したいとき。
-- Codex CLI 実行後の `git add` や `git commit` の扱いだけを確認したいとき。
+- すでに `build_apply_fork_fixing_point_application_parameter()` の用途が分かっていて、実装コードを直接確認したいとき。
+- `cmoc apply fork` の変更要約、ファイル単位監査、要修正点リスト改善など、別段階の入口を探しているとき。
+- Structured Output schema だけを確認したいとき。
 
 ## hash
 
-- 3511f9957d03d0e45a39e50875c7e7baa8d66f42b3021512e92bf921511643d4
+- cb80ca239bb903d40a52e430efb0db9867912b01827bf3d1105bcd467f0db477
 
 # `fixing_point_refinement.json`
 
@@ -148,20 +148,20 @@
 
 - `<cmoc-root>/oracle/src/agent_call_parameter/builder/apply/fork/fixing_point_refinement.py` は、`cmoc apply fork` の連結済み要修正点リスト改善用 agent call parameter の入口です。
 - `fixing_point_refinement.json` は、改善後の要修正点リストを表す Structured Output schema です。
-- 重複、相互矛盾、False Positive を整理し、必要な見落としを補完する Codex CLI 呼び出しをたどるための目次です。
+- 重複、相互矛盾、False Positive を整理し、必要な見落としを補完するための目次です。
 
 ## Read this when
 
-- 連結済み要修正点リストの改善 prompt や schema を確認したいとき。
-- 要修正点の重複整理、矛盾解消、False Positive の扱いを確認したいとき。
+- 連結済み要修正点リストの改善用 prompt や Structured Output schema を確認したいとき。
+- 要修正点の重複整理、相互矛盾の解消、False Positive の扱いを把握したいとき。
 - このファイルの `INDEX.md` を作成・修正する前に、どの資料へ分岐するか整理したいとき。
 
 ## Do not read this when
 
-- ファイル単位監査を行う `file_audit_finding.py` / `file_audit_finding.json` を確認したいとき。
-- 要修正点 1 件の実装修正を行う `fixing_point_application.py` を探しているとき。
-- `cmoc review oracle` や別サブコマンドの agent call parameter を探しているとき。
+- すでに `fixing_point_refinement.json` や `fixing_point_application.py` を読む対象として決まっていて、この目次を経由する必要がないとき。
+- `cmoc apply fork` のファイル単位監査や変更要約など、別段階の入口を探しているとき。
+- この階層の案内ではなく、`cmoc review oracle` や `cmoc indexing` など別サブコマンドの目次を確認したいとき。
 
 ## hash
 
-- 6c6273ad3136363747cfcb6e404f026253deac4f0b4799dc824845ae85c5e8ce
+- 72b7f8cd315cbe1907d04f03026b314a0bc79c4a9927994f773f825eb89d6973

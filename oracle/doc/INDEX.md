@@ -10,17 +10,17 @@
 
 - `cmoc` の利用手順、共通仕様、エラーハンドリング、run 隔離、session 状態、補完、ログ、入力規約をまとめて把握したいとき。
 - `app_spec/` 配下のどの個別仕様や `sub_command/` へ進むべきか迷ったとき。
-- `cmoc` の実装やテストを始める前に、ここを起点として関連仕様の入口を整理したいとき。
+- `cmoc` の実装やテストを始める前に、ここを起点として関連仕様の入口を整理したいとき.
 
 ## Do not read this when
 
 - 目的の仕様ファイルがすでに分かっていて、`cli_auto_completion.md`、`codex_call.md`、`console_and_file_log.md`、`error_handling.md`、`indexing.md`、`misc_spec.md`、`run_isolation.md`、`session_state.md`、`sub_command/INDEX.md`、`usage.md` の該当文書へ直接進めるとき。
 - この階層ではなく、個別のサブコマンド仕様や実装ファイルだけを確認したいとき。
-- `oracle` 配下の他のルーティング文書や、リポジトリ運用ルールだけを確認したいとき。
+- `oracle` 配下の他のルーティング文書や、リポジトリ運用ルールだけを確認したいとき.
 
 ## hash
 
-- 1123b28268a033e4bdc463dd0a7f05f23ce67840977915e0ad8ec04708bdd794
+- f39aedd04c35544dbcf0c633d3b689b9be4202bb49cd91cfe34371ce5b8d8712
 
 # `branch_model.md`
 

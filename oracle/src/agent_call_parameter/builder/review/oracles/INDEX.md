@@ -26,24 +26,26 @@
 
 ## Summary
 
-- `cmoc review oracle` の新規所見列挙 prompt 正本で、`enumerate_finding.json` への入口です。
-- レビュー対象 oracle file と既知の関連所見を入力に、新規所見だけを列挙する呼び出し仕様を案内します。
+- この `enumerate_finding.py` のルーティング文書で、`enumerate_finding.json` への入口です。
+- `cmoc review oracle` の新規所見列挙 prompt 正本として、レビュー対象 oracle file と既知の関連所見から新規所見だけを機械可読に返す呼び出し仕様を案内します。
+- 対象 file の周辺で、どの prompt と schema を読むべきかを切り分けるための目次です。
 
 ## Read this when
 
-- `cmoc review oracle` で新規所見を列挙する prompt と Structured Output schema を確認したいとき。
-- 既知の関連所見と重複しない所見だけを返す仕様や、新規所見がない場合の空配列返却を確認したいとき。
-- `enumerate_finding.py` から対応する `enumerate_finding.json` へ進む入口を把握したいとき。
+- `cmoc review oracle` で新規所見を列挙する prompt と、その出力先 Structured Output schema の対応を確認したいとき。
+- 既知の関連所見と重複しない新規所見だけを返す仕様や、新規所見が無い場合に空配列を返す条件を確認したいとき。
+- `enumerate_finding.py` から `enumerate_finding.json` へ進む入口を把握したいとき。
+- `oracle` 配下の仕様断片を根拠に、レビュー対象 file と関連所見を入力へ渡す呼び出し条件を整理したいとき。
 
 ## Do not read this when
 
-- `cmoc review oracle` の所見マージ、擁護理由列挙、否定理由列挙、採否判定の仕様を確認したいとき。
-- `enumerate_finding.py` ではなく、別の review oracle 用 agent call parameter や JSON schema を直接開くとき。
-- 既知の関連所見を参照せずに、別系統のレビュー入口を探しているとき。
+- すでに `enumerate_finding.py` か対応する `enumerate_finding.json` を読む目的が決まっていて、この目次を経由せず直接開くとき。
+- `merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py` など、別の review oracle を確認したいとき。
+- `cmoc review oracle` 以外のサブコマンドの agent call parameter や、Structured Output schema そのものだけを確認したいとき。
 
 ## hash
 
-- 606191b0601ebc7a7c2aa049aed41df3ddb77397d9b9df04716ffdb58255c660
+- 8d84c9b16c89f16521f791122028221f90ffb54c032e0425fe981d025b2ccc3e
 
 # `judge_finding.json`
 
@@ -73,25 +75,25 @@
 
 ## Summary
 
-- この `judge_finding.py` のルーティング文書で、`judge_finding.json` への入口です。
-- `cmoc review oracle` の所見採否判定を担う prompt 正本と、その Structured Output schema を案内します。
-- 対象所見と、その妥当性を支持する理由・否定する理由を入力に、人間へ提示すべき所見かどうかを判定するための目次です。
+- `judge_finding.py` は `cmoc review oracle` の所見採否判定 prompt 正本への入口です。
+- 対象所見と擁護理由・否定理由を入力に、提示すべき所見かどうかを判定するための呼び出し仕様を案内します。
+- 対応する Structured Output schema は `judge_finding.json` で、`verdict` と `reason` を返す構成です。
 
 ## Read this when
 
-- 所見の最終採否判定で、`judge_finding.py` の prompt 正本を確認したいとき。
+- `cmoc review oracle` の所見採否判定で、`judge_finding.py` の prompt 正本を確認したいとき。
 - `accept` / `reject` の判定基準と、`reason` の書き方を整理したいとき。
 - `judge_finding.py` と `judge_finding.json` の役割分担を把握したいとき。
 
 ## Do not read this when
 
-- 所見の新規列挙、マージ、擁護理由列挙、否定理由列挙の仕様を確認したいとき。
-- `judge_finding.json` の JSON schema だけを直接確認したいとき。
-- `cmoc review oracle` 以外のサブコマンドや別系統の agent call parameter を探しているとき。
+- すでに `judge_finding.json` の出力 schema だけを確認したいとき。
+- 所見の新規列挙・統合・擁護理由列挙・否定理由列挙の仕様を探しているとき。
+- `cmoc review oracle` 以外のサブコマンドや、別系統の agent call parameter を確認したいとき。
 
 ## hash
 
-- 6432165b519b778781fbd7e662652308ad7218ac9c10c53c30ab2f9fdb34e38f
+- 6595d394dd1d665d65db3cb6af99bedc8a1f9241cea6999e545c7218be8d8ac7
 
 # `merge_finding.json`
 
@@ -122,24 +124,24 @@
 ## Summary
 
 - `cmoc review oracle` の所見リストマージ用 prompt 正本への入口です。
-- 対応する `merge_finding.json` は、所見群に対する delete・replace・merge 操作を返す Structured Output schema です。
+- 対応する `merge_finding.json` は、所見群に対する `delete`、`replace`、`merge` 操作を返す Structured Output schema です。
 - 入力された所見群を整理し、重複や矛盾を解消するための呼び出し仕様をまとめます。
 
 ## Read this when
 
 - `cmoc review oracle` の所見リストマージ用 prompt 正本と、その出力先 schema の対応を確認したいとき。
-- 所見同士の重複や相互矛盾を解消する編集操作として、delete・replace・merge のどれを返すか整理したいとき。
+- 所見同士の重複や相互矛盾を解消する編集操作として、`delete`、`replace`、`merge` のどれを返すか整理したいとき。
 - 入力所見の `finding_id` を使った整理フローや、十分コンパクトなら空配列を返す仕様を把握したいとき。
 
 ## Do not read this when
 
-- 新規所見の列挙仕様や、擁護理由・否定理由の列挙仕様を探しているとき。
-- `merge_finding.json` を含む所見マージ用 Structured Output schema ではなく、別の review oracle の入口を確認したいとき。
-- `cmoc review oracle` 以外のサブコマンドや、レビュー以外の agent call parameter を探しているとき。
+- すでに `merge_finding.py` と対応する `merge_finding.json` を確認する目的が決まっていて、この目次を経由せず直接開くとき。
+- 新規所見の列挙、擁護理由列挙、否定理由列挙、採否判定など、別の review oracle の入口を探しているとき。
+- `cmoc review oracle` 以外のサブコマンドや、レビュー以外の agent call parameter を確認したいとき。
 
 ## hash
 
-- f4ce50f5ef7843113c66cc83dd78161d74ac45c561e25e9f31f140b935e6ea99
+- bff4d807de75f2afa7d2b66f11131e7477205f2a43568746f6344f93deb344dc
 
 # `validate_finding_advocate.json`
 
@@ -169,9 +171,9 @@
 
 ## Summary
 
-- この `validate_finding_advocate.py` は、`cmoc review oracle` の所見擁護理由列挙 prompt 正本で、`validate_finding_advocate.json` への入口です。
-- 対象所見と既知の理由を受け取り、`oracle` 配下のファイルを根拠に、新規の妥当理由だけを機械可読に列挙する呼び出し仕様を案内します。
-- レビュー用の入力生成と出力 schema の対応関係をまとめる、所見擁護フローのルーティング文書です。
+- `cmoc review oracle` の所見擁護理由列挙 prompt 正本で、`validate_finding_advocate.json` への入口です。
+- `finding`、`known_advocate_reasons`、`known_challenger_reasons` を受け取り、`oracle` 配下のファイルを根拠に新規の妥当理由だけを機械可読に列挙する呼び出し仕様をまとめます。
+- Markdown 化された prompt と JSON schema を結び付ける、所見擁護フローのルーティング文書です。
 
 ## Read this when
 
@@ -181,13 +183,13 @@
 
 ## Do not read this when
 
-- すでに `validate_finding_advocate.py` か `validate_finding_advocate.json` を確認する目的が決まっていて、この目次を経由する必要がないとき。
+- すでに `validate_finding_advocate.py` か `validate_finding_advocate.json` を開く目的が決まっていて、この目次を経由せず直接確認できるとき。
 - 所見が妥当ではない理由を列挙する `validate_finding_challenger.py` / `validate_finding_challenger.json` を探しているとき。
-- 所見の採否判定を行う `judge_finding.py` / `judge_finding.json` や、別系統の review oracle の入口を確認したいとき。
+- 所見の採否判定を行う `judge_finding.py` / `judge_finding.json` や、別系統の review oracle を確認したいとき。
 
 ## hash
 
-- 5db4466eeedae444efe1b72ca3cf8af724077057bef2111549fadd26611ff464
+- 965d365c2c1c12a1a4fa63dfadd6cfc4cd9108726c40fca7d36eddecb2122cf4
 
 # `validate_finding_challenger.json`
 
@@ -217,22 +219,22 @@
 
 ## Summary
 
-- `cmoc review oracle` の所見が妥当ではない理由を列挙する prompt 正本です。
-- `validate_finding_challenger.json` という Structured Output schema に接続し、新規の否定理由だけを返す呼び出し仕様を案内します。
-- 対象所見、既知の擁護理由、既知の否定理由を入力として扱い、反証候補を整理するための目次です。
+- この `validate_finding_challenger.py` のルーティング文書で、`validate_finding_challenger.json` への入口です。
+- `cmoc review oracle` の所見が妥当ではない理由を列挙する prompt 正本と、その Structured Output schema を案内します。
+- 対象所見と既知の理由を入力として、反証候補を整理するための目次です。
 
 ## Read this when
 
-- 所見が妥当ではない理由を Codex CLI に列挙させる仕様を確認したいとき。
-- 具体的な根拠に基づく反証理由を返させる prompt と Structured Output schema の対応を確認したいとき。
-- 既知の擁護理由・否定理由を踏まえたレビュー用の入力仕様をたどりたいとき。
+- `cmoc review oracle` で、所見が妥当ではない理由を列挙する prompt と Structured Output schema の対応を確認したいとき。
+- 対象所見、既知の擁護理由、既知の否定理由を入力にして、新規の否定理由だけを返す仕様を把握したいとき。
+- `oracle` ツリー内の仕様断片を根拠に調査する前提や、`pure_oracle_read`・`oracle_standard=True`・`structured_output=True` を伴う呼び出し条件を確認したいとき。
 
 ## Do not read this when
 
-- 所見が妥当である理由を列挙したいとき。
-- 所見の採否判定を確認したいとき。
-- すでに `validate_finding_challenger.py` または対応する JSON schema を直接開く予定があるとき。
+- すでに `validate_finding_challenger.py` か `validate_finding_challenger.json` を開く目的が決まっていて、この目次を経由する必要がないとき。
+- 所見が妥当である理由を列挙する `validate_finding_advocate.py` / `validate_finding_advocate.json` を探しているとき。
+- 所見の採否判定を行う `judge_finding.py` / `judge_finding.json` や、別系統の review oracle の入口を確認したいとき。
 
 ## hash
 
-- 8768240de4f3d5afc71c0cb666fcddc34e1f679ce093f6fc784aa793ba691aca
+- bd6fb6a9f882eeda82d02b13b5551227a1db70d13af5bf8fa33dd171a6ac8332
