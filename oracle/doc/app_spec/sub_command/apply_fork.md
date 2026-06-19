@@ -135,133 +135,20 @@
 
 ## 要修正点リストアップの仕様
 
-- Codex CLI の呼び出し 1 回で 1 つのファイルを起点とした要修正点リストアップ作業を Codex CLI に依頼する
-- この「起点とした」とは
-    - `codex exec` に渡すプロンプトで、調査するべきファイルを指定することを指す
-    - ただし、この指定は「だけ」の意味ではない
-    - i.e. 指定したファイルは以外のファイルも、調査のために必要ならば読むべきである
+- 具体的な `codex exec` 呼び出しの仕様は `build_apply_fork_file_audit_parameter` を正本とする
 - このファイル起点の依頼は、事前に列挙したファイルリスト上のファイル全てに対して個別に行う
     - i.e. 調査対象となる oracle file が N 件と実装ファイルが M 件存在するのであれば `codex exec` を N + M 回呼び出すということ
 - このファイル起点の依頼は並列に実行する
-    - i.e. N + M 並列で実行するということ
-- 要修正点リストは Structured Output で受け取る
 
 ## 「要修正点」の定義
 
-- oracle file と実装との明確な不整合
-    - 「oracle file 上で記述されている仕様」と「実装」とが明確に不整合している点を指す
-    - oracle は仕様断片であるから、明記されていない仕様の隙間は AI の裁量であり、原則として不整合とはみなさない
-    - しかしながら、仕様文言から推測可能な意図と実装とが著しく乖離する場合は要修正点とみなす
-- 実装上の明確な問題点
-    - 実装だけから見た成果物の品質としての問題を指す
-    - バグのような致命的な問題だけを対象とする
-    - 「こうした方が良い」のようなクオリティアップ的な話は対象としない
-    - 当然ながら、修正後の実装は oracle file 上で記述されている仕様を満たしている必要がある
+- `<cmoc-root>/oracle/src/acp/prompt_parts/apply_audit_finding.py` を参照
 
 ## 要修正点リスト改善の仕様
 
-- ファイルごとに個別に列挙された要修正点リストを１つに連結する
-- 連結した要修正点リストの改善作業を Codex CLI に依頼する
-- 改善作業完了後、要修正点リストは以下の要件を満たしている事を目指す（ベストエフォートで良い）
-    - 要修正点の内容の品質に明確な問題が存在しないこと
-    - 要修正点同士に内容的な重複がないこと
-    - 要修正点同士が相互に矛盾していないこと
-    - 要修正点の内容が、 `<cmoc-apply-branch>` 上の過去の修正内容を考慮したものになっていること
-    - 要修正点が False-Positive ではないこと
-    - 要修正点を先頭から順番に対応した時に、それが作業順序として適切であること
-    - 要修正点リスト改善の過程で発見した「漏れ」が要修正点リストに追加されていること
-- 改善後の要修正点リストが空の場合のみ「検出された要修正点なし」と扱う
-    - これは「この調査結果においては」という但し書きが付くが、要修正点の完全解消は `cmoc apply fork` の目的ではないので、これでよい
-- 改善語の要修正点リストは Structured Output で受け取る
-
-## 要修正点リストの Structured Output schema
-
-```json
-{
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-        "git_head_commit_hash",
-        "fixing_points"
-    ],
-    "properties": {
-        "git_head_commit_hash": {
-            "type": ["string", "null"],
-            "description": "要修正点を発見した時点での git HEAD commit hash。後で機械的にフィルされるので AI による出力は null で良い。"
-        },
-        "fixing_points": {
-            "type": "array",
-            "description": "実装に対する要修正点のリスト。空配列の場合のみ要修正点なしとみなす。",
-            "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                    "title",
-                    "evidences",
-                    "oracle_requirement",
-                    "observed_implementation",
-                    "reason",
-                    "suggested_fix"
-                ],
-                "properties": {
-                    "title": {
-                        "type": "string",
-                        "description": "要修正点の短い見出し。"
-                    },
-                    "evidences": {
-                        "type": "array",
-                        "description": "要修正点の根拠となる文言の位置情報。oracle・実装どちらかのファイルが必ず 1 つは根拠として存在するはずであるから空配列は想定しない。",
-                        "items": {
-                            "type": "object",
-                            "additionalProperties": false,
-                            "required": [
-                                "path",
-                                "line_start",
-                                "line_end",
-                                "summary"
-                            ],
-                            "properties": {
-                                "path": {
-                                    "type": "string",
-                                    "description": "要修正点の根拠となるファイルの絶対パス。"
-                                },
-                                "line_start": {
-                                    "type": ["integer", "null"],
-                                    "description": "要修正点の根拠となる記述の開始行。行番号を特定できない場合は null。"
-                                },
-                                "line_end": {
-                                    "type": ["integer", "null"],
-                                    "description": "要修正点の根拠となる記述の終了行。行番号を特定できない場合は null。"
-                                },
-                                "summary": {
-                                    "type": "string",
-                                    "description": "該当箇所の短い要約。位置情報がズレた場合にそれを検知するための冗長情報。"
-                                }
-                            }
-                        }
-                    },
-                    "oracle_requirement": {
-                        "type": "string",
-                        "description": "oracle が要求している仕様。実装のみから発見した要修正点であったとしても必ず関係する仕様を記載する。"
-                    },
-                    "observed_implementation": {
-                        "type": "string",
-                        "description": "調査時点の実装が実際にどうなっているか。"
-                    },
-                    "reason": {
-                        "type": "string",
-                        "description": "なぜ、明確に問題があり修正が必要であると言えるのか。推測や未確認事項は含めない。"
-                    },
-                    "suggested_fix": {
-                        "type": "string",
-                        "description": "問題を解決するために必要な実装修正の方針。"
-                    }
-                }
-            }
-        }
-    }
-}
-```
+- `codex exec` 呼び出しの仕様は `build_apply_fork_fixing_point_refinement_parameter` を正本とする
+- ファイルごとに個別に要修正点リストを列挙した後、それを１つに連結する
+- 要修正点リストが空の場合のみ「検出された要修正点なし」と扱う
 
 ## 要修正点対応作業の仕様
 

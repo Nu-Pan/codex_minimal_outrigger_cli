@@ -88,32 +88,11 @@
 
 ### 目次情報の生成方法
 
-- Codex CLI に目次情報の生成を依頼する
+- `codex exec` に目次情報の生成を依頼する
 - `codex exec` の呼び出しは、目次ファイルの生成対象１つごとに独立に行う
 - 「ファイル・ディレクトリ名」「ハッシュ値」などの機械的に処理可能な部分は `cmoc` が責任を持つ（Codex CLI にやらせない）
 - 目次情報は Structured Output で受け取る
-- Structured Output の schema は以下の通り
-    ```json
-    {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["summary", "read_this_when", "do_not_read_this_when"],
-        "properties": {
-        "summary": {
-            "type": "array",
-            "items": { "type": "string" }
-        },
-        "read_this_when": {
-            "type": "array",
-            "items": { "type": "string" }
-        },
-        "do_not_read_this_when": {
-            "type": "array",
-            "items": { "type": "string" }
-        }
-        }
-    }
-    ```
+- `codex exec` 呼び出しの具体的なパラメータは `build_indexing_index_entry_parameter` を正本とする
 
 ## 目次情報生成の並列実行
 
