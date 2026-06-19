@@ -2,22 +2,22 @@
 
 ## Summary
 
-- この `<cmoc-root>/oracle/src/agent_call_parameter/apply/fork` ディレクトリのルーティング文書で、`file_audit_finding.py`、`fixing_point_refinement.py`、`fixing_point_application.py`、`change_summary.py` への入口です。
-- `file_audit_finding.py` / `fixing_point_refinement.py` / `change_summary.py` は Structured Output schema を伴う読み取り中心の呼び出しを案内し、`fixing_point_application.py` は schema を使わず realization file を修正する書き込み中心の呼び出しを案内します。
-- `cmoc apply fork` の 4 つの主要段階である、ファイル単位監査、要修正点の整理、要修正点 1 件の実装修正、変更要約生成の分岐先を整理する目次です。
+- `cmoc apply fork` のルーティング文書で、変更要約・ファイル単位監査・要修正点リスト改善・要修正点 1 件の実装修正への入口を案内する。
+- `change_summary.json` と `change_summary.py` は変更要約、`file_audit_finding.json` と `file_audit_finding.py` はファイル単位監査、`fixing_point_refinement.json` と `fixing_point_refinement.py` は要修正点リスト改善の入口である。
+- `fixing_point_application.py` は要修正点 1 件を実際に修正する write-enabled な入口であり、Structured Output schema は使わない。
 
 ## Read this when
 
-- `cmoc apply fork` の各段階で、どの prompt と Structured Output schema が使われるかをまとめて確認したいとき。
-- ファイル単位監査、要修正点リスト改善、要修正点 1 件の実装修正、作業レポート用変更要約のどれに進むべきか迷ったとき。
-- `fork/INDEX.md` を追加・修正する前に、この階層の役割分担を整理したいとき。
+- `cmoc apply fork` 配下で、どの機能入口や Structured Output schema へ進むべきかを整理したいとき。
+- 変更要約、ファイル単位監査、要修正点リスト改善、要修正点 1 件の実装修正の各入口をまとめて確認したいとき。
+- `build_apply_fork_change_summary_parameter()`、`build_apply_fork_file_audit_parameter()`、`build_apply_fork_fixing_point_refinement_parameter()`、`build_apply_fork_fixing_point_application_parameter()` の対応関係を把握したいとき。
 
 ## Do not read this when
 
-- `cmoc apply fork` 以外のサブコマンドや、`review` / `indexing` / `session` 系の agent call parameter を探しているとき。
-- 対象ファイルがすでに分かっていて、`file_audit_finding.py`、`file_audit_finding.json`、`fixing_point_refinement.py`、`fixing_point_refinement.json`、`fixing_point_application.py`、`change_summary.py`、`change_summary.json` を直接開くとき。
-- この階層ではなく、`apply/` 全体の入口や `oracle` 全体の共通規約だけを確認したいとき。
+- すでに `cmoc apply fork` の対象が決まっていて、目的の `*.py` や `*.json` を直接開くとき。
+- ファイル単位監査、要修正点リスト改善、要修正点 1 件の実装修正、変更要約のうち、読む対象が明確に一つへ絞れているとき。
+- `cmoc review oracle` や `cmoc indexing` など、別系統の agent call parameter を探しているとき。
 
 ## hash
 
-- a175c279b19897d75f7614520aff0b5f11800414fd6be3e7a92edf2d7df7cb0a
+- 63f93c6596c9b9260bb65513d583e460f4e340a3476e630c1a79fc29be1b486f

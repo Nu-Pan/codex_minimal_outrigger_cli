@@ -44,7 +44,7 @@
 
 ## hash
 
-- 544bebd0d091f080e13c82e59b21fee8fb938e755dcbb40bcfc7e1d389243fcd
+- f150b3084ea69bc2e0c129c43e03ba5cc3c0cc47266c7b6433f264b2532b95ac
 
 # `file_audit_finding.json`
 
@@ -74,7 +74,7 @@
 
 ## Summary
 
-- この `<cmoc-root>/oracle/src/agent_call_parameter/apply/fork/file_audit_finding.py` のルーティング文書で、`cmoc apply fork` のファイル単位監査用 agent call parameter への入口です。
+- この `<cmoc-root>/oracle/src/agent_call_parameter/builder/apply/fork/file_audit_finding.py` のルーティング文書で、`cmoc apply fork` のファイル単位監査用 agent call parameter への入口です。
 - `build_apply_fork_file_audit_parameter()` は `target_path` を起点に prompt と `AgentCallParameters` を組み立て、`file_audit_finding.json` で使う Structured Output schema を指します。
 - 監査対象ファイルを起点に、oracle file と realization file の不整合や、実装上の致命的問題を洗い出す流れを案内します。
 
@@ -82,17 +82,17 @@
 
 - `build_apply_fork_file_audit_parameter()` がどう prompt と `AgentCallParameters` を構築するか確認したいとき。
 - `cmoc apply fork` のファイル単位監査の入口をまとめて把握したいとき。
-- 監査対象ファイルを起点に、oracle file と realization file の差分や要修正点を確認したいとき。
+- 監査対象ファイルを起点に、oracle file と realization file の不整合や実装上の致命的問題を確認したいとき。
 
 ## Do not read this when
 
-- 要修正点リスト全体の改善や、要修正点 1 件の修正作業、作業レポート要約を探しているとき。
-- `cmoc review oracle` や `cmoc indexing`、`cmoc session join` の agent call parameter を探しているとき。
-- すでに対象ファイルが分かっていて、`file_audit_finding.py` や `file_audit_finding.json` を直接開くとき。
+- すでに目的のファイルが分かっていて、`file_audit_finding.py` や `file_audit_finding.json` を直接開くとき。
+- `cmoc apply fork` の要修正点リスト改善、要修正点 1 件の実装修正、変更要約生成を探しているとき。
+- `cmoc review oracle`、`cmoc indexing`、`cmoc session join` など、別系統の agent call parameter を探しているとき。
 
 ## hash
 
-- 0fca617d79f3693ef46178f3882502ecdec1e33dad2df498b459c26acac3ebf5
+- 99e74b2a01831aa639c431c7cc8d451c9d54a6120e89be983cf953b482195602
 
 # `fixing_point_application.py`
 
@@ -100,7 +100,7 @@
 
 - `cmoc apply fork` の要修正点 1 件に対する実装修正作業 prompt の入口です。
 - realization file の修正を前提とし、Structured Output は要求しません。
-- 要修正点情報は作業ヒントとして扱い、git add と git commit は実行しない方針を案内します。
+- 要修正点情報は作業ヒントとして扱い、`git add` と `git commit` は実行しない方針を案内します。
 
 ## Read this when
 
@@ -112,11 +112,11 @@
 
 - `cmoc apply fork` のファイル単位監査や要修正点リスト改善など、読み取り専用の処理を探しているとき。
 - 要修正点の抽出結果や Structured Output schema だけを確認したいとき。
-- Codex CLI 実行後の git add や git commit の扱いだけを確認したいとき。
+- Codex CLI 実行後の `git add` や `git commit` の扱いだけを確認したいとき。
 
 ## hash
 
-- e98d6343e14034e55cd4f35abc99687421ebfe3415d95d18fb371284e8cb6b52
+- 3511f9957d03d0e45a39e50875c7e7baa8d66f42b3021512e92bf921511643d4
 
 # `fixing_point_refinement.json`
 
@@ -146,7 +146,7 @@
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/agent_call_parameter/apply/fork/fixing_point_refinement.py` は、`cmoc apply fork` の連結済み要修正点リスト改善用 agent call parameter の入口です。
+- `<cmoc-root>/oracle/src/agent_call_parameter/builder/apply/fork/fixing_point_refinement.py` は、`cmoc apply fork` の連結済み要修正点リスト改善用 agent call parameter の入口です。
 - `fixing_point_refinement.json` は、改善後の要修正点リストを表す Structured Output schema です。
 - 重複、相互矛盾、False Positive を整理し、必要な見落としを補完する Codex CLI 呼び出しをたどるための目次です。
 
@@ -164,4 +164,4 @@
 
 ## hash
 
-- b9f6bab6c844b62dfe890b486509ea46454b622b0797d96ca13b2e3e45a33455
+- 6c6273ad3136363747cfcb6e404f026253deac4f0b4799dc824845ae85c5e8ce

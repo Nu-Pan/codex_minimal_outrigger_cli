@@ -31,19 +31,19 @@
 
 ## Read this when
 
-- cmoc から `codex exec` を呼び出す実装・修正・レビューを行いたいとき。
-- プロンプト本文を stdin で渡す方法や、argv に載せてよい情報の制約を確認したいとき。
-- sandbox、モデル指定、Structured Output、失敗時の待機・リトライ、`--output-last-message` を含む出力規約を確認したいとき。
+- cmoc から `codex exec` を呼び出す実装・修正・レビューをしたいとき。
+- stdin 経由でのプロンプト受け渡し、アクセス制限、Model / Reasoning Effort、Structured Output、出力方法を確認したいとき。
+- quota 不足時の待機・再開、サーバー一時不調時のリトライ、`codex exec` 呼び出しログの残し方を確認したいとき。
 
 ## Do not read this when
 
-- `codex exec` 以外の実行手段や、一般的なシェル呼び出し方針だけを確認したいとき。
-- `INDEX.md` の生成・更新ルールや、他の仕様ファイルのルーティングだけを確認したいとき。
-- この文書の対象外である、他のサブコマンド固有の手順や状態遷移だけを確認したいとき。
+- `codex exec` 以外の一般的なシェル実行方針や、他のサブコマンド固有の仕様だけを確認したいとき。
+- `INDEX.md` の生成・更新ルールだけを確認したいとき。
+- この文書の対象外である、`session`・`apply`・`review oracle` など別フローの詳細だけを確認したいとき。
 
 ## hash
 
-- 196badd804da12b523ea88b890ccbbf7c13d6e771a0b957d09b20b2508004314
+- 0a8e0589030dc32b9038ad889f8f13e0924ce5ed761588852ed79747fcd1bc45
 
 # `console_and_file_log.md`
 

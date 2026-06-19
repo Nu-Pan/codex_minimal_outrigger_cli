@@ -2,26 +2,25 @@
 
 ## Summary
 
-- この `app_spec` ディレクトリのルーティング文書で、`cmoc` の利用手順と共通仕様の入口をまとめます。
-- `usage.md`、`cli_auto_completion.md`、`codex_call.md`、`console_and_file_log.md`、`error_handling.md`、`indexing.md`、`misc_spec.md`、`run_isolation.md`、`session_state.md` を案内します。
-- `sub_command/` から `apply` 系、`session` 系、`init`、`review oracle`、`indexing` の各個別仕様へ分岐するためのハブです。
+- この `app_spec` ディレクトリのルーティング文書で、`cmoc` の利用仕様と共通仕様群への入口です。
+- `usage.md` で基本的な使い方を、`codex_call.md` で Codex 呼び出し規約を、`run_isolation.md` と `session_state.md` で作業分離と状態管理を案内します。
+- `error_handling.md`、`console_and_file_log.md`、`cli_auto_completion.md`、`misc_spec.md`、`indexing.md` は横断的な共通仕様をまとめ、`sub_command/INDEX.md` から各サブコマンド仕様へ分岐します。
 
 ## Read this when
 
-- `cmoc` の利用手順、共通仕様、エラー処理、ログ、状態管理、実行隔離をまとめて把握したいとき。
-- `usage.md`、`cli_auto_completion.md`、`codex_call.md`、`console_and_file_log.md`、`error_handling.md`、`indexing.md`、`misc_spec.md`、`run_isolation.md`、`session_state.md` のどれを読むべきか迷ったとき。
-- `sub_command/`、`init`、`review oracle`、`apply` 系、`session` 系の各入口へ分岐する前に、この階層の全体像を確認したいとき。
-- `INDEX.md` の更新や、`app_spec` 配下のルーティングをたどりたいとき。
+- `cmoc` の利用手順、共通仕様、エラーハンドリング、run 隔離、session 状態、補完、ログ、入力規約をまとめて把握したいとき。
+- `app_spec/` 配下のどの個別仕様や `sub_command/` へ進むべきか迷ったとき。
+- `cmoc` の実装やテストを始める前に、ここを起点として関連仕様の入口を整理したいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの仕様をすでに把握していて、対応する個別の `*.md` へ直接進むとき。
-- `sub_command/` の下位の個別仕様を直接確認したいだけで、この目次を経由する必要がないとき。
-- `README.md` や `AGENTS.md` など、`app_spec` 以外のリポジトリ運用ルールだけを確認したいとき。
+- 目的の仕様ファイルがすでに分かっていて、`cli_auto_completion.md`、`codex_call.md`、`console_and_file_log.md`、`error_handling.md`、`indexing.md`、`misc_spec.md`、`run_isolation.md`、`session_state.md`、`sub_command/INDEX.md`、`usage.md` の該当文書へ直接進めるとき。
+- この階層ではなく、個別のサブコマンド仕様や実装ファイルだけを確認したいとき。
+- `oracle` 配下の他のルーティング文書や、リポジトリ運用ルールだけを確認したいとき。
 
 ## hash
 
-- 8ae02e9ac8d634b5727652c178257a438f190bedd71d81bfeb0558657772a1d0
+- 1123b28268a033e4bdc463dd0a7f05f23ce67840977915e0ad8ec04708bdd794
 
 # `branch_model.md`
 

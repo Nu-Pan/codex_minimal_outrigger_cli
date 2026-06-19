@@ -26,25 +26,25 @@
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/agent_call_parameter/prompt_builder/file_access_rule.py` は、AI エージェント向けのファイル読み書き規則を `StructDoc` として組み立てる入口です。
-- 4 つの `FileAccessMode` ごとに、`<work-root>` 配下の読み書き可否と `memo` などの禁止条件を切り分けて定義します。
-- 必要に応じて `aux_rules` を末尾に連結し、完全なアクセス規則文を返します。
+- `<cmoc-root>/oracle/src/agent_call_parameter/prompt_parts/file_access_rule.py` は、AI エージェント向けのファイル読み書き規則を `StructDoc` として組み立てる入口です。
+- `FileAccessMode` に応じて `<work-root>` / `<work-root>/oracle` / `<work-root>/memo` の読み書き可否を切り替え、必要に応じて `aux_rules` を末尾に連結します。
+- `build_file_access_rule()` は `complete_prompt.py` から呼ばれ、完全な prompt に入るアクセス制約文を返します。
 
 ## Read this when
 
-- `build_file_access_rule()` がどのような読み書き制約を組み立てるか把握したいとき。
-- `readonly`、`pure_oracle_read`、`realization_write`、`oracle_write` の各モードの差分や、`aux_rules` の付与方法を確認したいとき。
-- prompt 生成の前提になるファイルアクセス規則を整理してから実装・修正したいとき。
+- ファイル読み書き制約の具体的な内容と、`readonly` / `pure_oracle_read` / `realization_write` / `oracle_write` の差分を確認したいとき。
+- プロンプト生成の前提として、`memo` の禁止条件や `oracle` ツリー内外の扱いを整理したいとき。
+- このファイルを `complete_prompt.py` からどう組み込むか、また `aux_rules` をどのように付加するかを把握したいとき。
 
 ## Do not read this when
 
-- `build_file_access_rule()` の中身がすでに分かっていて、`<cmoc-root>/oracle/src/agent_call_parameter/prompt_builder/file_access_rule.py` 本体を直接確認したいとき。
-- ファイル読み書き規則ではなく、`<cmoc-root>/oracle/src/utils/path_model.py` や `StructDoc` などの共通基盤だけを確認したいとき。
-- `prompt_builder` 配下の別ファイルや、他の agent call parameter の入口を探しているとき。
+- すでに `build_file_access_rule()` の役割が分かっていて、このファイル本体を直接確認したいとき。
+- ファイルアクセス規則ではなく、`StructDoc`、`path_model.py`、`AgentCallParameters` などの共通基盤だけを確認したいとき。
+- `prompt_parts/` の他の断片や、別の agent call parameter の入口を探しているとき。
 
 ## hash
 
-- d49a60d40d2ca63385e4008dfc9b4ac9fc267dba6c4d08c5b9c45b1740b4a97f
+- 7064525d26e6ba092f0c95bba8e2dd3c5c3c8214e911231639cbf630316df755
 
 # `oracle_and_realization_basic.py`
 

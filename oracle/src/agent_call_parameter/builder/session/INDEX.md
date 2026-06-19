@@ -17,8 +17,8 @@
 
 - `cmoc session join` 以外の session 状態管理や git 操作だけを確認したいとき。
 - すでに目的のファイルが `conflict_resolution.py` だと分かっていて、この目次を経由せず直接開くとき。
-- apply、review、indexing など別の agent call parameter を探しているとき。
+- `apply`、`review`、`indexing` など別サブコマンドの agent call parameter を探しているとき。
 
 ## hash
 
-- bde43f48980e59ef6d14809885d9fbfbcc15ccaa21f52108be5dc17beb3d88cd
+- da91ad8ff4cdde1aacda4ba5f8dff6be77d523ebdf8834c22d9ef283ce2fc8da
