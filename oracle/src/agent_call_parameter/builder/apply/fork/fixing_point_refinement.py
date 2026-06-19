@@ -6,7 +6,12 @@ from pathlib import Path
 # cmoc
 from utils.struct_doc import render_as_markdown
 from utils.path_model import resolve_repo_root
-from agent_call_parameter.base import AgentCallParameters, ModelClass, ReasoningEffort
+from agent_call_parameter.base import (
+    AgentCallParameters,
+    ModelClass,
+    ReasoningEffort,
+    FileAccessMode,
+)
 from agent_call_parameter.prompt_parts.complete_prompt import build_complete_prompt
 
 
@@ -39,7 +44,7 @@ def build_apply_fork_fixing_point_refinement_parameter(
         - 先頭から順に対応する作業順序として自然なリストへ整えること
         - 改善後の要修正点リストを Structured Output schema に一致する JSON だけで返すこと
         """,
-        "readonly",
+        FileAccessMode.READONLY,
         oracle_standard=True,
         realization_standard=True,
         structured_output=True,
@@ -48,6 +53,7 @@ def build_apply_fork_fixing_point_refinement_parameter(
     return AgentCallParameters(
         ModelClass.FLAGSHIP,
         ReasoningEffort.HIGH,
+        FileAccessMode.READONLY,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),
     )

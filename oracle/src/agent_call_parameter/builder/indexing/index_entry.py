@@ -6,7 +6,12 @@ from pathlib import Path
 # cmoc
 from utils.struct_doc import render_as_markdown
 from utils.path_model import resolve_real_path
-from agent_call_parameter.base import AgentCallParameters, ModelClass, ReasoningEffort
+from agent_call_parameter.base import (
+    AgentCallParameters,
+    ModelClass,
+    ReasoningEffort,
+    FileAccessMode,
+)
 from agent_call_parameter.prompt_parts.complete_prompt import build_complete_prompt
 
 
@@ -51,13 +56,14 @@ def build_indexing_index_entry_parameter(
         - do_not_read_this_when には過剰に読みに行かないための条件を箇条書き項目として返すこと
         - ファイル名、ディレクトリ名、hash は返さないこと
         """,
-        "readonly",
+        FileAccessMode.READONLY,
         structured_output=True,
     )
     # パラメータを生成して返す
     return AgentCallParameters(
         ModelClass.EFFICIENCY,
         ReasoningEffort.MEDIUM,
+        FileAccessMode.READONLY,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),
     )

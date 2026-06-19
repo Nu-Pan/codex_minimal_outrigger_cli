@@ -21,12 +21,12 @@
 """
 
 from pathlib import Path
-from enum import Enum
+from enum import StrEnum
 from typing import Generator
 import subprocess
 
 
-class RootToken(Enum):
+class RootToken(StrEnum):
     """
     root token 一覧
     """

@@ -6,7 +6,12 @@ from pathlib import Path
 # cmoc
 from utils.struct_doc import render_as_markdown
 from utils.path_model import resolve_real_path, resolve_work_root
-from agent_call_parameter.base import AgentCallParameters, ModelClass, ReasoningEffort
+from agent_call_parameter.base import (
+    AgentCallParameters,
+    ModelClass,
+    ReasoningEffort,
+    FileAccessMode,
+)
 from agent_call_parameter.prompt_parts.complete_prompt import build_complete_prompt
 
 
@@ -40,7 +45,7 @@ def build_session_join_conflict_resolution_parameter(
         - git add と git commit は実行しないこと
         - 作業後に conflict marker が残らない状態にすること
         """,
-        "realization_write",
+        FileAccessMode.REALIZATION_WRITE,
         file_access_aux_rules="""
         - conflict 対象 oracle file は、この conflict marker 解消に必要な範囲だけ編集して良い
         """,
@@ -50,6 +55,7 @@ def build_session_join_conflict_resolution_parameter(
     return AgentCallParameters(
         ModelClass.MAINSTREAM,
         ReasoningEffort.MEDIUM,
+        FileAccessMode.REALIZATION_WRITE,
         render_as_markdown(prompt),
         None,
     )

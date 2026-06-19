@@ -1,6 +1,3 @@
-# std
-from enum import Enum
-
 # cmoc
 from utils.path_model import resolve_work_root
 from utils.struct_doc import StructDoc, ntqs
@@ -26,25 +23,25 @@ def build_file_access_rule(
 
     # 本文を構築
     match mode:
-        case "readonly":
+        case FileAccessMode.READONLY:
             body = ntqs(f"""
             - `{work_root}` ツリー外は読み書き共に禁止
             - リポジトリに対する書き込み操作は一切禁止
             - `{work_root}/memo` は読み込みも禁止
             """)
-        case "pure_oracle_read":
+        case FileAccessMode.PURE_ORACLE_READ:
             body = ntqs(f"""
             - `{work_root}` ツリー外は読み書き共に禁止
             - `{work_root}/oracle` ツリー内は書き込み禁止
             - `{work_root}/oracle` ツリー外は読み書き共に禁止
             """)
-        case "realization_write":
+        case FileAccessMode.REALIZATION_WRITE:
             body = ntqs(f"""
             - `{work_root}` ツリー外は読み書き共に禁止
             - `{work_root}/oracle` ツリー内は書き込み禁止
             - `{work_root}/memo` は読み書き共に禁止
             """)
-        case "oracle_write":
+        case FileAccessMode.ORACLE_WRITE:
             body = ntqs(f"""
             - `{work_root}` ツリー外は読み書き共に禁止
             - `{work_root}/oracle` ツリー外は書き込み禁止

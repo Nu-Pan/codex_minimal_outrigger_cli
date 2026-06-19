@@ -6,7 +6,12 @@ from pathlib import Path
 # cmoc
 from utils.struct_doc import render_as_markdown
 from utils.path_model import resolve_repo_root, resolve_real_path
-from agent_call_parameter.base import AgentCallParameters, ModelClass, ReasoningEffort
+from agent_call_parameter.base import (
+    AgentCallParameters,
+    ModelClass,
+    ReasoningEffort,
+    FileAccessMode,
+)
 from agent_call_parameter.prompt_parts.complete_prompt import build_complete_prompt
 
 
@@ -36,7 +41,7 @@ def build_apply_fork_file_audit_parameter(
             - realization file だけから見た品質上の致命的な問題
         """,
         "- 指定された Structured Output schema に一致する JSON だけを返すこと",
-        "readonly",
+        FileAccessMode.READONLY,
         oracle_standard=True,
         realization_standard=True,
         structured_output=True,
@@ -45,6 +50,7 @@ def build_apply_fork_file_audit_parameter(
     return AgentCallParameters(
         ModelClass.MAINSTREAM,
         ReasoningEffort.MEDIUM,
+        FileAccessMode.READONLY,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),
     )

@@ -6,7 +6,12 @@ from pathlib import Path
 # cmoc
 from utils.struct_doc import render_as_markdown
 from utils.path_model import resolve_real_path
-from agent_call_parameter.base import AgentCallParameters, ModelClass, ReasoningEffort
+from agent_call_parameter.base import (
+    AgentCallParameters,
+    ModelClass,
+    ReasoningEffort,
+    FileAccessMode,
+)
 from agent_call_parameter.prompt_parts.complete_prompt import build_complete_prompt
 
 
@@ -56,7 +61,7 @@ def build_review_oracle_validate_finding_challenger_parameter(
         - 具体的な根拠を必ず示し、「かもしれない」「可能性がある」は根拠にしないこと
         - 既知理由と重複する理由が無い場合は空配列を返すこと
         """,
-        "pure_oracle_read",
+        FileAccessMode.PURE_ORACLE_READ,
         oracle_standard=True,
         structured_output=True,
     )
@@ -64,6 +69,7 @@ def build_review_oracle_validate_finding_challenger_parameter(
     return AgentCallParameters(
         ModelClass.MAINSTREAM,
         ReasoningEffort.MEDIUM,
+        FileAccessMode.PURE_ORACLE_READ,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),
     )

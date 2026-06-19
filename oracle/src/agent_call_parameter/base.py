@@ -1,7 +1,7 @@
 # std
 from dataclasses import dataclass
 from pathlib import Path
-from enum import Enum
+from enum import StrEnum, auto
 
 
 class BackendType:
@@ -9,10 +9,10 @@ class BackendType:
     バックエンドとして使用する AI エージェント CLI ツールの種類。
     """
 
-    OPENAI_CODEX_CLI = "OpenAI Codex CLI"
+    OPENAI_CODEX_CLI = auto()
 
 
-class ModelClass(Enum):
+class ModelClass(StrEnum):
     """
     AI (LLM) モデルのクラス。
     バックエンドが受理可能なモデル名への解決はバックエンドの責任。
@@ -21,45 +21,45 @@ class ModelClass(Enum):
     # その時々の主力モデルが選ばれる想定
     # 判断材料が足りなくてなんとも言えない時に選ぶ
     # ある種のデフォルト選択肢
-    MAINSTREAM = "mainstream"
+    MAINSTREAM = auto()
 
     # フラッグシップモデルが選ばれる想定
     # 応答品質が何よりも重要な場合に選ぶ
     # 本当によほどの場合のみ使用する選択肢
     # 結果的に FLAGSHIP = MAINSTREAM となることも許容する
-    FLAGSHIP = "flagship"
+    FLAGSHIP = auto()
 
     # その時々の効率重視モデルが選ばれる想定
     # 品質に対してある程度妥協が可能で、かつトークン節約効果が高い時に選ぶ
-    EFFICIENCY = "efficiency"
+    EFFICIENCY = auto()
 
     # その時々の最安価モデルが選ばれる想定
     # 極端に簡単なことをやらせる時に選ぶ
     # 結果的に MINIMUM = EFFICIENCY となることも許容する
-    MINIMUM = "minimum"
+    MINIMUM = auto()
 
 
-class ReasoningEffort(Enum):
+class ReasoningEffort(StrEnum):
     """
     Reasoning effort の列挙値。
     バックエンドが受理可能な設定値への解決はバックエンドの責任。
     """
 
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
+    LOW = auto()
+    MEDIUM = auto()
+    HIGH = auto()
 
 
-class FileAccessMode(Enum):
+class FileAccessMode(StrEnum):
     """
-    サンドボックスモードの列挙値。
+    ファイルアクセスモードの列挙値。
     バックエンドが受理可能なモードへの解決はバックエンドの責任。
     """
 
-    READONLY = "readonly"
-    PURE_ORACLE_READ = "pure_oracle_read"
-    REALIZATION_WRITE = "realization_write"
-    ORACLE_WRITE = "oracle_write"
+    READONLY = auto()
+    PURE_ORACLE_READ = auto()
+    REALIZATION_WRITE = auto()
+    ORACLE_WRITE = auto()
 
 
 @dataclass(frozen=True)

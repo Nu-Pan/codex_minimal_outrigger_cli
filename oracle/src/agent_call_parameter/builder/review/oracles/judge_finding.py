@@ -6,7 +6,12 @@ from pathlib import Path
 # cmoc
 from utils.struct_doc import render_as_markdown
 from utils.path_model import resolve_real_path
-from agent_call_parameter.base import AgentCallParameters, ModelClass, ReasoningEffort
+from agent_call_parameter.base import (
+    AgentCallParameters,
+    ModelClass,
+    ReasoningEffort,
+    FileAccessMode,
+)
 from agent_call_parameter.prompt_parts.complete_prompt import build_complete_prompt
 
 
@@ -56,7 +61,7 @@ def build_review_oracle_judge_finding_parameter(
         - 提示すべきではない所見なら reject と判定すること
         - 判定理由は具体的に書くこと
         """,
-        "pure_oracle_read",
+        FileAccessMode.PURE_ORACLE_READ,
         oracle_standard=True,
         structured_output=True,
     )
@@ -64,6 +69,7 @@ def build_review_oracle_judge_finding_parameter(
     return AgentCallParameters(
         ModelClass.FLAGSHIP,
         ReasoningEffort.HIGH,
+        FileAccessMode.PURE_ORACLE_READ,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),
     )

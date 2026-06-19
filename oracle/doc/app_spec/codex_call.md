@@ -3,63 +3,33 @@
 ## 基本
 
 - cmoc からの Codex CLI 呼び出しは、すべて `codex exec` で行う
+- プロンプトの構築には `build_complete_prompt` を使用すること
 
 ## Codex CLI へのプロンプトの渡し方
 
-- run_codex_exec() は、プロンプト本文を argv に載せてはならない。
-- プロンプト本文は stdin 経由で `codex exec -` に渡す。
-- argv に載せてよいのは、フラグ、短い固定文字列、短いファイルパスのみとする。
+- run_codex_exec() は、プロンプト本文を argv に載せてはならない
+- プロンプト本文は stdin 経由 (`codex exec -`) で渡す
+- argv に載せてよいのは、フラグ、短い固定文字列、短いファイルパスのみとする
 
-## Codex CLI に渡すプロンプトの規約
+## codex profile
 
-### 構成
+- cmoc は Codex CLI 呼び出し前に `<cmoc-root>/.codex/cmoc_<uuid>.config.toml` を動的に生成する
+- cmoc は `codex exec --profile "<cmoc-root>/.codex/cmoc_<uuid>.config.toml"` の形式で、動的に生成した codex profile を指定する
+- `<cmoc-root>/.codex/cmoc_<uuid>.config.toml` の内容は `AgentCallParameters`, `CmocConfig` cmoc 側の設定から一意に決まる
+- `<uuid>` は `cmoc_<uuid>.config.toml` 本文の sha256 ハッシュ値とする
 
-プロンプトは以下の構成に従うこと
+## ファイルアクセス制限
 
-1. エージェントのロール
-    - e.g. あなたは `ProjectHoge` の開発チームの一員で、レビューを担当します。
-2. かいつまんだ作業内容
-    - e.g. git ブランチ `cmoc/session/2026-05-10_22-21-10_123` の変更内容をレビューしてください。
-3. 作業完了条件
-    - e.g. レビューの結果として、致命的な要修正項目の有無と、必要な修正内容を報告したら完了です。
-4. 詳細な作業内容（自由記述・任意）
-    - e.g. レビュー観点については `/path/to/review/instruction.md` を読んでください。...
-    - e.g. 要修正項目のリストは Structured Output で返してください
-
-## cmoc 知識注入の禁止
-
-- `<cmoc-root>`, `<repo-root>` などの cmoc 仕様特有のワード・概念は使わないこと
-    - ファイル・ディレクトリ・ブランチなどを指定する場合は、必ず具体的なパスをプロンプトに埋め込む
-    - e.g.
-        - NG: `<repo-root>` の実装を `<repo-root>/oracle` に追従させてください。
-        - OK: `/path/to/repositry/root` の実装を `/path/to/repositry/root/oracle` に追従させてください
-- 呼び出された AI エージェントが、プロンプトの情報だけから自走開始出来ること
-    - e.g. AI エージェントが「自分は cmoc から呼び出されたエージェントであるというメタ認知」を持っていないと成立しないようなプロンプトは NG
-- 特定のリポジトリに依存しない、汎用的な内容であること
-    - e.g. cmoc の作業対象環境に特定のスキルが実装されていることを前提としたプロンプトは NG
-
-## アクセス制限指示
-
-ファイルシステムのアクセス制限指示を含める事
-
-- 読み取り専用 (i.e. `--sandbox read-only`) で実行する場合
-    - 仕様上明示されている読み書き両方禁止ルールを指示に含める
-    - e.g. `/absolute/path/to/memo` は読み書き両方禁止
-- 書き込み可能 (i.e. `--sandbox workspace-write`) で実行する場合
-    - 仕様上明示されている編集禁止ルールを指示に含める
-    - e.g. `oracle` ファイルは原則禁止だが、個別仕様で明示された例外ケースでは編集可能
-    - e.g. `/absolute/path/to/.agents` は編集不可能
+- Codex CLI に対するサンドボックス的なファイルアクセス制限は codex profile 経由で行う
+- 具体的なファイルアクセス制限設定は `FileAccessMode` から動的生成する
+- それに加えて、 cmoc はファイルアクセス制限についての説明をプロンプトとして注入して Codex CLI に知らせる
 
 ## Model, Reasoning Effort
 
-- Code CLI 呼び出し時に必ず指定すること
-    - Model: `--model <model>`
-    - Reasoning Effort: `-c 'model_reasoning_effort="<reasoning-effort>"'`
-- 具体的な設定値の解決規則
-    - oracle file では backend AI agent が受理可能な具体的な model, reasoning effort を書かない
-    - oracle file では cmoc で定義した論理的な名前 (`<cmoc-root>/oracle/src/agent_call_parameter/base.py` を参照) を書く
-    - `<cmoc-root>/` `build_*` 関数が返すクラス `AgentCallParameters` のメンバ `model_class`, `reasoning_effort` を正本とする
-    - 具体的なモデル名への解決は realization file の責任とする
+- Codex CLI に対する Model, Reasoning Effort 設定は codex profile 経由で行う
+- 具体的なファイルアクセス制限設定は `CmocConfigCodex.model`, `CmocConfigCodex.reasoning_effort` から動的生成する
+- cmoc はファイルアクセス制限についての説明を Codex CLI プロンプトに注入しない
+
 
 ## サンドボックスモード
 

@@ -6,7 +6,12 @@ from pathlib import Path
 # cmoc
 from utils.struct_doc import render_as_markdown
 from utils.path_model import resolve_repo_root
-from agent_call_parameter.base import AgentCallParameters, ModelClass, ReasoningEffort
+from agent_call_parameter.base import (
+    AgentCallParameters,
+    ModelClass,
+    ReasoningEffort,
+    FileAccessMode,
+)
 from agent_call_parameter.prompt_parts.complete_prompt import build_complete_prompt
 
 
@@ -38,7 +43,7 @@ def build_apply_fork_fixing_point_application_parameter(
         - 要修正点情報は作業のためのヒントであり、絶対に従うべき指示書としては扱わないこと
         - git add と git commit は実行しないこと
         """,
-        "realization_write",
+        FileAccessMode.REALIZATION_WRITE,
         oracle_standard=True,
         realization_standard=True,
         structured_output=False,
@@ -47,6 +52,7 @@ def build_apply_fork_fixing_point_application_parameter(
     return AgentCallParameters(
         ModelClass.MAINSTREAM,
         ReasoningEffort.MEDIUM,
+        FileAccessMode.REALIZATION_WRITE,
         render_as_markdown(prompt),
         None,
     )
