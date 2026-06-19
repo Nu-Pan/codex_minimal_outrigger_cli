@@ -2,7 +2,7 @@
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/cmoc_config/cmoc_config.py` は、cmoc 全体の設定をまとめる `CmocConfig` と、Codex CLI 向けの対応表を持つ `CmocConfigCodex` を定義する入口です。
+- `<cmoc-root>/oracle/src/config/cmoc_config.py` は、cmoc 全体の設定をまとめる `CmocConfig` と、Codex CLI 向けの対応表を持つ `CmocConfigCodex` を定義する入口です。
 - この設定は `<cmoc-root>/.cmoc/config.json` として永続化され、`BackendType`、`ModelClass`、`ReasoningEffort` を束ねる前提になっています。
 
 ## Read this when
@@ -19,4 +19,4 @@
 
 ## hash
 
-- 27fc1c26c773b767e4ba15c6f45826c1f2b9e85924a9990d4e77fc96823c5ea1
+- 9f05404ca3d102c626a17ee5c887e9949019fd335a1e7ce384bd82b4615a560e

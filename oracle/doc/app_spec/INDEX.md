@@ -21,29 +21,28 @@
 
 - 480051b6d39bcaaf30039ef43ae1a8853e51bcadc27cd83c7c39a44cf76ef3c4
 
-# `codex_call.md`
+# `codex_exec_rule.md`
 
 ## Summary
 
-- `cmoc` から `codex exec` を呼び出すための共通規約をまとめた文書です。
-- stdin でのプロンプト受け渡し、プロンプト構成、アクセス制限、Model / Reasoning Effort、Structured Output の利用方針を扱います。
-- quota 不足時の待機・再開、サーバー一時不調時のリトライ、呼び出しログの残し方まで定義します。
+- cmoc から `codex exec` を呼び出すための共通規約をまとめた文書です。
+- stdin でのプロンプト受け渡し、codex profile の生成、ログ保存、Structured Output、失敗時の再実行方針までを扱います。
 
 ## Read this when
 
-- cmoc から `codex exec` を呼び出す実装・修正・レビューをしたいとき。
-- stdin 経由でのプロンプト受け渡し、アクセス制限、Model / Reasoning Effort、Structured Output の扱いを確認したいとき。
-- quota 不足時の待機・再開、サーバー一時不調時のリトライ、呼び出しログの残し方を確認したいとき。
+- cmoc から `codex exec` を呼び出す共通規約を確認したいとき。
+- stdin 経由でのプロンプト受け渡し、`--profile`、`--json`、`--output-last-message`、Structured Output の扱いを確認したいとき。
+- ファイルアクセス制限、Model / Reasoning Effort、呼び出しログ、失敗時のリトライや待機の方針を確認したいとき。
 
 ## Do not read this when
 
-- `codex exec` 以外の一般的なシェル実行方針だけを確認したいとき。
+- `codex exec` ではなく、通常のシェル実行や別コマンドの運用だけを確認したいとき。
 - `session`、`apply`、`review oracle` など別フローの詳細だけを確認したいとき。
 - `INDEX.md` の生成・更新ルールだけを確認したいとき。
 
 ## hash
 
-- 0650178e9b4c85792d957bf5d54bee1d823247a27b5678ee1d3d3138279912dc
+- a9f58a54a5a417500de2ecfb36919f11b85f6e904500622d36b6022bd3d9406b
 
 # `console_and_file_log.md`
 
@@ -94,25 +93,27 @@
 
 ## Summary
 
-- `cmoc` における `<work-root>` 上の `INDEX.md` の扱いを定めた仕様です。
-- `INDEX.md` の配置対象ディレクトリ、目次作成対象、除外条件、記載フォーマットを説明します。
-- `INDEX.md` をどう生成・更新し、どの順序で処理し、どの条件で自動コミットするかまで含めた運用仕様です。
+- `cmoc` における `<work-root>` 上の `INDEX.md` の扱いを定めた仕様で、`INDEX.md` の配置対象・除外対象・記載フォーマットを説明する。
+- `INDEX.md` の生成・更新手順として、深いディレクトリからの処理、差分の検査、必要時の再生成、自動コミットまでを扱う。
+- 目次情報の生成は `codex exec` に依頼し、Structured Output で `summary`・`read_this_when`・`do_not_read_this_when` を受け取る前提を示す。
+- 目次情報生成の並列実行条件と、インデクシングを cmoc 実行前に直列化して行う運用も含む。
 
 ## Read this when
 
-- `cmoc` における `<work-root>` 上の `INDEX.md` の配置対象、目次作成対象、フォーマット、メンテナンス手順を確認したいとき。
-- `INDEX.md` を自動生成・自動更新する際の Structured Output schema、処理順序、並列実行規則、自動コミット条件を実装・レビューしたいとき。
-- `INDEX.md` の記載内容を人間が直接書かない前提で、ルーティング文書の維持仕様を押さえたいとき。
+- `cmoc` における `<work-root>` 上の `INDEX.md` の配置対象、目次作成対象、除外条件を確認したいとき。
+- `INDEX.md` の生成順序、並列実行、自動コミット条件を実装・レビューしたいとき。
+- `codex exec` に目次情報を Structured Output で返させる仕様や、目次情報の JSON schema を確認したいとき。
+- `INDEX.md` の人手編集ではなく、自動インデクシングの運用ルールを押さえたいとき。
 
 ## Do not read this when
 
-- `INDEX.md` の配置ルールや自動更新の実装方針ではなく、個別サブコマンドや別の仕様ファイルだけを確認したいとき。
-- `oracle` 全体の読み方や、他のドキュメント階層の入口だけをたどりたいとき。
-- `INDEX.md` の生成対象・除外条件・並列化・自動コミット条件そのものを扱う必要がないとき。
+- `INDEX.md` の生成やメンテナンスではなく、通常の `cmoc` 利用手順や個別サブコマンドの詳細だけを確認したいとき。
+- `INDEX.md` の配置対象、除外条件、記載フォーマット、並列化、自動コミットなどのルールを扱う必要がないとき。
+- 一般的な git commit / branch / worktree の運用だけを確認したいとき。
 
 ## hash
 
-- 266055d0699398866a52c918e9e2ad17fa6eb1c94d4310cf97b607268168576c
+- c1f96ebc2330f6ed26f78ece225c2b119d57b86cf8f0b8f699e4839dd0f8a137
 
 # `misc_spec.md`
 
@@ -139,26 +140,51 @@
 
 - 69c963981887477d4763539bc1d4d802043f5e3795d0dc6c923a41eab08016c7
 
+# `new`
+
+## Summary
+
+- 内容がまだ無い `new` ファイルのため、`<work-root>/oracle/doc/app_spec/` 配下で新しく仕様を置くときの入口候補として扱います。
+- `app_spec/INDEX.md` からこの場所へ来た人が、新設仕様の配置先を判断するための目印です。
+
+## Read this when
+
+- この `new` ファイルに今後追加される仕様の置き場所や役割を確認したいとき。
+- `app_spec/` 配下に新しい仕様を足す前に、この空ファイルの扱いを整理したいとき。
+- `app_spec/INDEX.md` から新規追加先へ進む入口をたどりたいとき。
+
+## Do not read this when
+
+- すでに具体的な `app_spec/` 配下の仕様ファイル名が分かっていて、その文書へ直接進めるとき。
+- 新規仕様の入口ではなく、既存の `cli_auto_completion.md`、`codex_exec_rule.md`、`indexing.md` などを確認したいとき。
+- この空ファイルの扱いではなく、`oracle` 全体の別階層のルーティング文書を探しているとき。
+
+## hash
+
+- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+
 # `prompt_standard.md`
 
 ## Summary
 
 - cmoc が AI エージェントへ渡すプロンプトの標準規則をまとめた文書です。
-- cmoc 固有の用語や概念をプロンプトに含めず、ファイル・ディレクトリ・ブランチは具体的なパスへ解決し、エージェントのメタ認知や特定スキルの存在を前提にしない方針を案内します。
+- cmoc 固有の用語や概念をプロンプトに含めず、ファイル・ディレクトリ・ブランチは具体的なパスへ解決し、エージェントのメタ認知や特定スキルの存在を前提にしない方針を定めています。
 
 ## Read this when
 
 - Codex CLI に渡すプロンプトの標準ルールを確認したいとき。
 - cmoc 固有の概念をプロンプトへ含めないこと、具体パスへ解決すること、メタ認知や特定スキルの前提を置かないことを整理したいとき。
+- プロンプトの自然言語部分を日本語で扱う原則と例外を確認したいとき。
 
 ## Do not read this when
 
 - cmoc 全体の利用手順やサブコマンド仕様だけを確認したいとき。
 - すでに渡すプロンプトの構成が決まっていて、この標準のルールを参照する必要がないとき。
+- プロンプト標準ではなく、個別サブコマンドや別の oracle 文書を確認したいとき。
 
 ## hash
 
-- 5ed45fb734759565751b83ad60b4f5e8080fc809ed0038e5700d582e2a5946b7
+- a9131c69d1df568d6c225c66cc279c5e2adc01d56b422581bb1728607ce275bc
 
 # `run_isolation.md`
 
@@ -226,11 +252,11 @@
 
 - 目的のサブコマンドがすでに分かっていて、対応する個別の `*.md` へ直接進めるとき。
 - この階層ではなく、さらに下位の仕様や実行手順だけを確認したいとき。
-- `docs` 全体の入口や共通規約だけを確認したいとき。
+- `app_spec` 全体の入口や共通規約だけを確認したいとき。
 
 ## hash
 
-- 77f9252749172763a196c7f48be380e370097491d85ef5fb8f7ef330bec841d1
+- df29fb7b9cfd6d6cda9be923d0c513be54a1ab25b3d58b97bd4870b4f1cc8e86
 
 # `usage.md`
 

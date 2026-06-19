@@ -2,24 +2,23 @@
 
 ## Summary
 
-- この `oracles` ディレクトリのルーティング文書で、`enumerate_finding.py/json`、`merge_finding.py/json`、`validate_finding_advocate.py/json`、`validate_finding_challenger.py/json`、`judge_finding.py/json` への入口です。
-- 新規所見の列挙、所見リストの整理、妥当理由の列挙、否定理由の列挙、採否判定の 5 系統を案内します。
-- いずれも `cmoc review oracle` の所見処理に使う、読み取り中心の prompt と Structured Output schema の対応をまとめます。
+- この `review/oracles` ディレクトリのルーティング文書で、`enumerate_finding`、`merge_finding`、`validate_finding_advocate`、`validate_finding_challenger`、`judge_finding` の各 prompt と対応 schema への入口です。
+- `enumerate_finding` は新規所見列挙、`merge_finding` は所見整理、`validate_finding_advocate` は妥当理由列挙、`validate_finding_challenger` は否定理由列挙、`judge_finding` は採否判定を案内します。
+- 各 `.py` は prompt 正本、各 `.json` は対応する Structured Output schema を表します。
 
 ## Read this when
 
-- `cmoc review oracle` の所見処理フロー全体をまとめて把握したいとき。
-- 新規所見列挙、所見マージ、擁護理由列挙、否定理由列挙、採否判定のどれを使うべきか迷ったとき。
-- `oracles/` 配下の Python 実装と JSON schema の対応関係を確認したいとき。
-- 各所見処理が返す JSON 形式や入力前提を確認したいとき。
+- `cmoc review oracle` のレビュー用 oracle 群で、どの prompt 本体や schema に進むべきかを整理したいとき。
+- 新規所見列挙、所見マージ、所見が妥当である理由の列挙、所見が妥当ではない理由の列挙、採否判定のどれを使うかを切り分けたいとき。
+- 各 `.py` が参照する対応 `.json` の Structured Output schema を確認したいとき。
+- レビュー対象 oracle file と関連所見を入力に取る各フローの入口を把握したいとき。
 
 ## Do not read this when
 
-- すでに目的のファイル名が分かっていて、`enumerate_finding.py`、`enumerate_finding.json`、`merge_finding.py`、`merge_finding.json`、`validate_finding_advocate.py`、`validate_finding_advocate.json`、`validate_finding_challenger.py`、`validate_finding_challenger.json`、`judge_finding.py`、`judge_finding.json` を直接開くとき。
-- `cmoc review oracle` 以外のサブコマンドの agent call parameter を探しているとき。
-- 所見の列挙、統合、擁護理由列挙、否定理由列挙、採否判定のどれか 1 つだけを個別に確認したいとき。
-- Structured Output schema ではなく、このディレクトリ配下の実装コードだけを確認したいとき。
+- すでに読む対象の `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py`、または各 `.json` が決まっていて、この階層の目次を経由せず直接開くとき。
+- 新規所見列挙・所見マージ・妥当理由列挙・否定理由列挙・採否判定のうち、特定の 1 本だけを確認したいとき。
+- `cmoc review oracle` 以外のサブコマンドや、レビュー用 Structured Output schema 以外の仕様を探しているとき。
 
 ## hash
 
-- 920268cf0d75d61a1cda820627b150be1e60e11e4a9bd7714c9978b328a3fa10
+- 80408f801d1ae49e96966a02f80e45833661d36d8bdf32c4e6efdb1151413988

@@ -1,123 +1,148 @@
+# `apply_audit_finding.py`
+
+## Summary
+
+- `<cmoc-root>/oracle/src/acp/prompt_parts/apply_audit_finding.py` は、`cmoc apply fork` の監査所見を「oracle file と実装との明確な不整合」と「実装上の明確な問題点」に切り分けるための prompt 断片です。
+- この断片は、仕様の隙間を無理に不整合扱いせず、仕様文言から推測できる意図と実装の乖離が大きい場合のみ要修正とみなす前提を示します。
+- あわせて、成果物品質の問題としてはバグ級の明確な問題のみを対象にし、単なる改善提案は含めない方針を案内します。
+
+## Read this when
+
+- `apply` の監査所見をどう分類するか確認したいとき。
+- `oracle` と実装の不整合を、仕様の隙間と区別して扱う基準を整理したいとき。
+- バグ級の明確な問題だけを所見対象にするかどうか、prompt 側の方針を確認したいとき。
+
+## Do not read this when
+
+- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/apply_audit_finding.py` の中身を直接確認する対象が決まっていて、この目次を経由する必要がないとき。
+- `file_audit_finding.py` や `change_summary.py` など、`apply/fork/` 側の別段階の prompt 断片を探しているとき。
+- `oracle` の正本仕様や開発規約だけを確認したいときで、このファイルの入口が不要なとき。
+
+## hash
+
+- 096df8d83ac845055444092e371de227c72a79cc17a9af4cfac04d786478cad7
+
 # `complete_prompt.py`
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/prompt_parts/complete_prompt.py` は、AI エージェントへ渡す完全な prompt を `StructDoc` の列として組み立てる入口です。
+- `<cmoc-root>/oracle/src/acp/prompt_parts/complete_prompt.py` は、AI エージェントへ渡す完全な prompt を `StructDoc` の列として組み立てる入口です。
 - 必須要素として `role`、`summary`、`goal`、`file_access_rule` を含み、必要に応じて `oracle_and_realization_basic`、`oracle_standard`、`realization_standard` を追加します。
-- `structured_output` が有効な場合は、指定された Structured Output schema に従うよう促す出力形式の指示を末尾に加えます。
+- `structured_output` が有効な場合は、指定された Structured Output schema に従うよう促す出力形式の指示を末尾に追加します。
 
 ## Read this when
 
-- `build_complete_prompt()` がどの `StructDoc` 断片を順に結合するか確認したいとき。
-- ファイルアクセス規則、oracle / realization の基本説明、各種 standard、Structured Output 指示のどれが最終 prompt に入るかを整理したいとき。
-- `prompt_parts/` 配下で新しい prompt 断片を追加・整理する前に、この完全 prompt の組み立て方を把握したいとき。
+- 完全な prompt がどの `StructDoc` 断片で構成されるかを確認したいとき。
+- `role`、`summary`、`goal`、`file_access_rule` に加えて、どの条件で oracle / realization の基本説明や標準が追加されるかを知りたいとき。
+- `structured_output` が有効なときに、末尾へどの出力形式指示が付くかを把握したいとき。
+- `prompt_parts/` 配下に新しい断片を追加・整理する前に、完全 prompt の組み立て順を押さえたいとき。
 
 ## Do not read this when
 
-- すでに `<cmoc-root>/oracle/src/prompt_parts/complete_prompt.py` の呼び出し先や構成が分かっていて、このファイル本体を直接確認するとき。
-- `file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py` など、組み立て元の断片だけを個別に確認したいとき。
-- `prompt_parts/` 配下のルーティングではなく、別の `<work-root>/oracle/src` サブディレクトリや別フローの入口を探しているとき。
+- `build_complete_prompt()` の呼び出し元や、個別の prompt 断片の実装を直接確認したいとき。
+- `file_access_rule.py`、`oracle_standard.py`、`realization_standard.py`、`oracle_and_realization_basic.py` など、組み立て元の断片だけを見たいとき。
+- `prompt_parts/` 全体ではなく、別の `<cmoc-root>/oracle/src` サブディレクトリや別フローの入口を探しているとき。
 
 ## hash
 
-- 19bfcc921faf8f1650be0c70dc3a7b74229e40a47b7bbb3fce20688f78087054
+- 159c0b4f2b7ccbbe97526b28b5c58c28d8d738d27ae6008c3e760393ac6d9431
 
 # `file_access_rule.py`
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/agent_call_parameter/prompt_parts/file_access_rule.py` は、AI エージェント向けのファイル読み書き規則を `StructDoc` として組み立てる入口です。
-- `FileAccessMode` に応じて `<work-root>` / `<work-root>/oracle` / `<work-root>/memo` の読み書き可否を切り替え、必要に応じて `aux_rules` を末尾に連結します。
-- `build_file_access_rule()` は `complete_prompt.py` から呼ばれ、完全な prompt に入るアクセス制約文を返します。
+- `FileAccessMode` に応じた読み書き制約を `StructDoc` として組み立てる入口です。
+- `complete_prompt.py` から呼ばれ、`<work-root>` / `<work-root>/oracle` / `<work-root>/memo` の扱いを切り替えます。
+- 任意の `aux_rules` を末尾に追加できます。
 
 ## Read this when
 
-- ファイル読み書き制約の具体的な内容と、`readonly` / `pure_oracle_read` / `realization_write` / `oracle_write` の差分を確認したいとき。
-- プロンプト生成の前提として、`memo` の禁止条件や `oracle` ツリー内外の扱いを整理したいとき。
-- このファイルを `complete_prompt.py` からどう組み込むか、また `aux_rules` をどのように付加するかを把握したいとき。
+- ファイルアクセス規則の具体的な制約内容を確認したいとき。
+- `readonly` / `pure_oracle_read` / `realization_write` / `oracle_write` の違いを整理したいとき。
+- `complete_prompt.py` がどのようにアクセス制約文を組み込むか確認したいとき。
+- `aux_rules` の付加方法を把握したいとき。
 
 ## Do not read this when
 
-- すでに `build_file_access_rule()` の役割が分かっていて、このファイル本体を直接確認したいとき。
-- ファイルアクセス規則ではなく、`StructDoc`、`path_model.py`、`AgentCallParameters` などの共通基盤だけを確認したいとき。
-- `prompt_parts/` の他の断片や、別の agent call parameter の入口を探しているとき。
+- `build_file_access_rule()` の実装本体を直接読みたいとき。
+- `StructDoc`、`FileAccessMode`、`path_model.py` の定義だけを確認したいとき。
+- ファイル読み書き規則ではなく、prompt 全体の構成や他の断片を探しているとき。
 
 ## hash
 
-- 7114d126ce3e7018f668b187bbf4400581e97b425c343c3100febf0e0a95c73f
+- 1d05efb6bb2393844151bd847d9e5f77bdbc8d628c6bd107c5c7c02f98174d3b
 
 # `oracle_and_realization_basic.py`
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/agent_call_parameter/prompt_builder/oracle_and_realization_basic.py` は、`oracle file` と `realization file` の基本概念を `StructDoc` としてまとめる入口です。
+- `<cmoc-root>/oracle/src/acp/prompt_parts/oracle_and_realization_basic.py` は、`oracle file` と `realization file` の基本概念を `StructDoc` としてまとめる入口です。
 - このファイルは、両者の定義・役割・下位概念を整理し、`complete_prompt.py` が使う prompt 断片の基礎説明を提供します。
-- `prompt_builder/` 配下の共通前提を確認したいときの、基本概念への入口です。
+- `prompt_parts/` 配下で、AI 呼び出し用プロンプトの共通前提を確認したいときの起点になります。
 
 ## Read this when
 
-- `oracle file` と `realization file` の基本概念、役割、下位概念をまとめて把握したいとき。
+- `oracle file` と `realization file` の違い、定義、役割をまとめて把握したいとき。
 - `build_oracle_and_realization_basic()` がどのような説明文を組み立てるか確認したいとき。
 - `complete_prompt.py` に入る前に、prompt 生成で使う共通前提を整理したいとき。
 - `oracle` ツリーとそれ以外のツリーをどう区別するか、基本定義を確認したいとき。
 
 ## Do not read this when
 
-- すでに `<cmoc-root>/oracle/src/agent_call_parameter/prompt_builder/oracle_and_realization_basic.py` を直接確認する対象として把握できていて、この目次を経由する必要がないとき。
-- `complete_prompt.py`、`file_access_rule.py`、`oracle_standard.py`、`realization_standard.py` など、同階層の別ファイルだけを確認したいとき。
-- `agent_call_parameter` 全体の構成や、別サブコマンドの呼び出しパラメータを探しているとき。
+- すでに `oracle_and_realization_basic.py` の役割が分かっていて、この目次を経由せずに本体へ直接進むとき。
+- `complete_prompt.py`、`file_access_rule.py`、`oracle_standard.py`、`realization_standard.py` など、同じ `prompt_parts` 配下の別ファイルだけを確認したいとき。
+- `oracle` 全体の正本仕様や開発規約ではなく、別の階層や別フローの案内を探しているとき。
 
 ## hash
 
-- 5a815fcffb8e409653790fc71e3bf3bde6542114a865cea785ec8889210a0ad9
+- fe33761da72ba70e8745a65b7ba3562e83c07ac65605f824a71f3fadb8996a03
 
 # `oracle_standard.py`
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/agent_call_parameter/prompt_builder/` 配下で、`oracle file` に対する標準的なレビュー観点を組み立てる `oracle_standard.py` への入口です。
-- `build_oracle_standard()` は `oracle file` の標準を `StructDoc` として定義し、`complete_prompt.py` から `oracle_standard` フラグ経由で組み込まれます。
-- `oracle_and_realization_basic.py` や `realization_standard.py` と合わせて、AI 呼び出し用プロンプトの文脈を切り分けるための目次です。
+- `<cmoc-root>/oracle/src/acp/prompt_parts/oracle_standard.py` は、`oracle file` に対する標準的なレビュー観点を `StructDoc` として組み立てる入口です。
+- `build_oracle_standard()` は、認知負荷の節約、正本仕様断片としての扱い、未定義部分の許容、総文字数の最小化、仕様断片間の整合、実装から仕様への逆流禁止、用語・命名の統一、ベストプラクティスより `oracle file` を優先すること、`goal` だけでなく `non-goal` も書くことの推奨をまとめます。
+- このファイルは `complete_prompt.py` から `oracle_standard=True` のときに組み込まれ、`oracle` ツリーを根拠にした read-only な prompt の前提となります。
 
 ## Read this when
 
-- `oracle file` の標準的なレビュー観点をまとめて確認したいとき。
-- `build_oracle_standard()` がどの文脈で呼ばれ、`complete_prompt.py` のどこから組み込まれるかを確認したいとき。
-- `oracle_and_realization_basic.py` や `realization_standard.py` との役割分担を整理したいとき。
-- `oracle_standard.py` を修正する前に、同階層の関連ファイルの入口をたどりたいとき。
+- `oracle file` に対する標準的なレビュー観点を、`StructDoc` としてまとめて把握したいとき。
+- `build_oracle_standard()` に含まれる標準項目や、その優先順位・禁止事項を確認したいとき。
+- `complete_prompt.py` で `oracle_standard=True` が有効になる前提や、`oracle_standard.py` を修正する前の関連文脈を整理したいとき。
 
 ## Do not read this when
 
-- `build_oracle_standard()` がすでに目的の対象で、このファイル本体を直接読むとき。
-- `oracle file` ではなく、`realization file` や別フローの agent call parameter を確認したいとき。
-- `prompt_builder` 全体の組み立てではなく、すでに個別の prompt 文書だけを特定しているとき。
-- ルーティング文書ではなく、`oracle` 配下の正本仕様や開発規約そのものを確認したいとき。
+- `build_oracle_standard()` の実装内容を、目次を経由せず直接確認したいとき。
+- `complete_prompt.py` や `oracle_and_realization_basic.py` など、関連する別ファイルだけを個別に読みたいとき。
+- `oracle` ツリー内の共通標準ではなく、個別の正本仕様断片そのものを確認したいとき。
 
 ## hash
 
-- fabd285b85fd2e315a7eebb34c1160253daeb5bd1e41ea6392b3d24083795479
+- 8227d2300002501cc2aaacd55548b6d50d8ca9a960cc85004bd5bd311d8b674e
 
 # `realization_standard.py`
 
 ## Summary
 
-- この `<cmoc-root>/oracle/src/agent_call_parameter/prompt_builder/realization_standard.py` は、realization file に対する標準的な観点を `StructDoc` として組み立てる入口です。
-- `build_realization_standard()` は、最小化・高品質化・既存実装整理・抽象化抑制・公開面抑制といった realization 向けの standard をまとめ、`complete_prompt.py` から必要に応じて組み込まれます。
-- realization file の実装・保守方針を、prompt 生成側から参照するための目次です。
+- この `realization_standard.py` は、realization file に対する標準的な観点を `StructDoc` として組み立てる入口です。
+- `build_realization_standard()` は、総文字数の最小化、高品質化、既存 realization code の整理との一体化、実在する重複または明確な責務境界に基づく抽象化、公開面・設定面・状態の増加抑制といった観点をまとめます。
+- このファイルは、`complete_prompt.py` から必要に応じて組み込まれる realization 向け標準の目次として機能します。
 
 ## Read this when
 
-- realization file に対してどのような標準が定義されているかを確認したいとき。
-- `build_realization_standard()` がどの内容を `StructDoc` として返すかを追いたいとき。
+- realization file に対する標準的な実装・保守方針をまとめて把握したいとき。
+- `build_realization_standard()` がどのような `StructDoc` を組み立てるか確認したいとき。
 - `complete_prompt.py` で realization 向け標準がどの条件で追加されるかを確認したいとき。
-- realization file の最小化、重複排除、抽象化の抑制、公開面の増加抑制に関する方針をまとめて把握したいとき。
+- realization file の最小化、重複排除、既存実装整理、抽象化の抑制、公開面や状態の増加抑制に関する指針を確認したいとき。
 
 ## Do not read this when
 
-- すでに `build_realization_standard()` を読む目的が決まっていて、このファイル本体を直接確認するとき。
-- realization 標準ではなく、`complete_prompt.py`、`oracle_standard.py`、`file_access_rule.py` など別の prompt_builder ファイルを確認したいとき。
-- prompt_builder 全体の入口ではなく、個別の標準や補助関数だけを直接見たいとき。
+- すでに `build_realization_standard()` の役割や返却内容が分かっていて、このファイル本体を直接確認するとき。
+- `complete_prompt.py`、`oracle_standard.py`、`file_access_rule.py` など、別の prompt 断片や関連ヘルパーだけを確認したいとき。
+- realization 標準そのものではなく、`Standard` や `Requirement` の共通定義、または `StructDoc` のレンダリング基盤だけを確認したいとき。
+- `realization` 向けの方針ではなく、`oracle` 側の標準や別サブコマンドの呼び出し仕様を探しているとき。
 
 ## hash
 
-- 0bf3d056ad8b651989d9df7d94ac46610e634c6e80fcd639976b6ce84015fb4b
+- 138f10f02b35c5fcec377f6b663c09a2596beddffc01938231bbe2910d99a8f3

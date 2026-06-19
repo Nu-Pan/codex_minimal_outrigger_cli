@@ -1,52 +1,3 @@
-# `__init__py`
-
-## Summary
-
-- この `agent_call_parameter` パッケージのルーティング文書で、`base.py`、`prompt_builder/`、`apply/`、`review/`、`indexing/`、`session/` への入口です。
-- `base.py` は `AgentCallParameters` などの共通型を定義し、`prompt_builder/` は prompt 組み立て、`apply/`、`review/`、`indexing/`、`session/` は各サブコマンドで発生する Codex CLI 呼び出し仕様をまとめます。
-- `__init__py` はこのパッケージの Python モジュール入口として、他モジュールからの参照点になります。
-
-## Read this when
-
-- `AgentCallParameters`、`ModelClass`、`ReasoningEffort` の定義場所を確認したいとき。
-- AI エージェント向け prompt の組み立てと、`apply` / `review` / `indexing` / `session` のどの入口を読むべきか迷ったとき。
-- `agent_call_parameter` 配下で共有される呼び出しパラメータや、サブコマンド別の構成をまとめて把握したいとき。
-- このパッケージ配下の `INDEX.md` を追加・修正する前に、全体の役割分担を整理したいとき。
-
-## Do not read this when
-
-- すでに `base.py`、`prompt_builder/complete_prompt.py`、`apply/fork/file_audit_finding.py`、`review/oracles/` など目的のファイルが分かっていて、直接開くとき。
-- `cmoc apply fork`、`cmoc review oracle`、`cmoc indexing`、`cmoc session join` の個別手順だけを確認したいとき。
-- このパッケージではなく、`oracle` 全体の自然言語仕様や別系統の Structured Output schema を探しているとき。
-
-## hash
-
-- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-
-# `base.py`
-
-## Summary
-
-- この `base.py` の目次文書で、AI コーディングエージェント呼び出し用の基本データ型をまとめる入口です。
-- `BackendType`、`ModelClass`、`ReasoningEffort`、`FileAccessMode`、`AgentCallParameters` を案内し、バックエンド種別、モデル選択、推論強度、ファイルアクセスモード、プロンプト本文、Structured Output schema パスの所在を示します。
-- `agent_call_parameter` 配下の各サブコマンド実装が共通して参照する、呼び出しパラメータ基盤の目次です。
-
-## Read this when
-
-- `<cmoc-root>/oracle/src/agent_call_parameter/base.py` にある共通の呼び出しパラメータ定義を確認したいとき。
-- `AgentCallParameters` の項目や、`ModelClass` / `ReasoningEffort` / `FileAccessMode` の役割を把握したいとき。
-- AI コーディングエージェント呼び出しの共通基盤が各サブコマンド実装からどう使われるかをたどりたいとき。
-
-## Do not read this when
-
-- すでに `BackendType`、`ModelClass`、`ReasoningEffort`、`FileAccessMode`、`AgentCallParameters` の定義内容を把握していて、このファイルの中身を直接確認するだけのとき。
-- `prompt_parts/` の個別実装や Structured Output schema だけを確認したいとき。
-- `apply/` や `review/` の個別フローを追いたくて、この共通基盤を経由する必要がないとき。
-
-## hash
-
-- 59bc6778ae5e1c0bf4500b96e90a4850209152901930572db9ce8d693b829d50
-
 # `builder`
 
 ## Summary
@@ -65,33 +16,32 @@
 
 - すでに読む対象が `apply/`、`indexing/`、`review/`、`session/` のいずれかに決まっていて、この階層の目次を経由する必要がないとき。
 - `change_summary.py`、`file_audit_finding.py`、`index_entry.py`、`enumerate_finding.py`、`conflict_resolution.py` などの個別ファイルを直接開きたいとき。
-- この階層の案内ではなく、各下位ディレクトリの `INDEX.md` や個別仕様だけを確認したいとき。
+- この階層の案内ではなく、下位の `INDEX.md` や各個別仕様だけを確認したいとき。
 
 ## hash
 
-- 385e5f6181ccc5c2986e5e97e405a643062fd7f7ae52161166aa1b4daa02c71f
+- a17c348253188d6afc04fd3d6721727863727e146154a1296d49d4873311e05f
 
 # `prompt_parts`
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/agent_call_parameter/prompt_parts/` ディレクトリのルーティング文書で、`complete_prompt.py` を中心に prompt 断片の組み立てと各標準の入口を案内する。
-- `file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py` をまとめ、AI 呼び出し用 prompt に入る要素の役割分担を示す。
-- Structured Output 指示やファイル読み書き規則を含む完全な prompt 構成を確認するための目次である。
+- `<cmoc-root>/oracle/src/acp/prompt_parts` ディレクトリのルーティング文書で、`complete_prompt.py` を中心に prompt 断片の組み立てと各標準・規則の入口を案内する。
+- `file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py`、`apply_audit_finding.py` を束ね、AI 呼び出し用 prompt に入る要素の役割分担を示す。
+- 完全な prompt の構成、ファイル読み書き規則、oracle / realization の前提、oracle / realization 向け標準、`cmoc apply fork` の監査所見分類を確認するための目次である。
 
 ## Read this when
 
-- `build_complete_prompt()` がどの断片を結合するか確認したいとき。
-- ファイル読み書き規則、oracle / realization の基本定義、oracle 標準、realization 標準のどれを読むべきか迷ったとき。
-- prompt 断片を追加・整理する前に、このディレクトリ全体の役割を把握したいとき。
-- Structured Output schema を要求する prompt の末尾に何が追加されるか確認したいとき。
+- `build_complete_prompt()` がどの prompt 断片をどの順序で結合するか確認したいとき。
+- ファイル読み書き規則、oracle / realization の基本定義、oracle 標準、realization 標準、監査所見の分類方針をまとめて把握したいとき。
+- Structured Output schema を伴う prompt の末尾に何が追加されるか、または prompt 断片を追加・整理する前にこのディレクトリ全体の役割を押さえたいとき。
 
 ## Do not read this when
 
-- すでに `complete_prompt.py`、`file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py` の目的が分かっていて、個別ファイルへ直接進めるとき。
-- prompt 組み立てではなく、`agent_call_parameter` 全体の共通型や別サブコマンドの仕様を探しているとき。
-- `oracle` 正本仕様や開発規約そのものを確認したいだけで、このディレクトリの入口が不要なとき。
+- すでに `complete_prompt.py`、`file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py`、`apply_audit_finding.py` の目的が分かっていて、個別ファイルへ直接進めるとき。
+- `agent_call_parameter` 全体の共通型や、他のサブコマンドの呼び出し仕様を確認したいとき。
+- `oracle` 正本仕様や開発規約そのものを確認したいだけで、この `prompt_parts` ディレクトリの入口が不要なとき。
 
 ## hash
 
-- f800904ba87e10d636f3a0f2ad297bc40fa37229755eb3442718de5b81cbab98
+- d6463e2c26b4d24242db180ed8e9afd26dd67c903f903da8dacd21842001a586

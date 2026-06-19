@@ -14,10 +14,10 @@
 
 ## Do not read this when
 
-- すでに `cmoc session join` の conflict 解消用 prompt 仕様が分かっていて、`conflict_resolution.py` を直接確認するとき。
+- すでに `cmoc session join` の conflict 解消用 prompt 仕様が分かっていて、このファイルを直接確認するとき。
 - conflict 後の `git add`、`unmerged path` 検査、merge commit 作成など、cmoc 側の機械的処理だけを確認したいとき。
 - `apply`、`review`、`indexing` など別サブコマンドの agent call parameter を探しているとき。
 
 ## hash
 
-- 13a9b054d04f9aec70ac6e21d06d2be11d16c54494f33167bba9e1e76b05e803
+- a05c30e0a56dac74a563331c7d609ee7b47805a98f3d092b97db479e56a250e6

@@ -1,72 +1,75 @@
-# `agent_call_parameter`
+# `acp`
 
 ## Summary
 
-- この `agent_call_parameter` ディレクトリのルーティング文書で、`base.py`、`builder/`、`prompt_parts/` への入口です。
-- `base.py` は共有型と呼び出しパラメータ基盤を定義し、`builder/` はサブコマンド別の呼び出し仕様、`prompt_parts/` は prompt 断片と完全 prompt の組み立てを案内します。
-- この階層は、AI コーディングエージェント呼び出しに共通する型・仕様・prompt 構成を切り分けるための起点です.
+- この `acp` ディレクトリのルーティング文書で、`builder/` と `prompt_parts/` への入口です。
+- `builder/` は `cmoc apply fork`、`cmoc indexing`、`cmoc review oracle`、`cmoc session join` の呼び出し仕様を案内し、`prompt_parts/` は prompt 断片と完全 prompt の組み立てを案内します。
+- この階層は、AI コーディングエージェント呼び出しに関する仕様と prompt 構成を切り分けるための起点です。
 
 ## Read this when
 
-- `<cmoc-root>/oracle/src/agent_call_parameter` 配下で、まずどのファイルや下位ディレクトリから読むべきか整理したいとき。
-- `AgentCallParameters` を中心に、AI コーディングエージェント呼び出しの共通基盤を把握したいとき。
-- `builder/` と `prompt_parts/` の役割分担を先に確認してから、下位の個別仕様へ進みたいとき。
-- この階層の `INDEX.md` を作成・修正する前に、全体の入口構成を把握したいとき.
+- `<work-root>/oracle/src/acp` 配下で、まず `builder/` と `prompt_parts/` のどちらから読むべきか整理したいとき。
+- `cmoc` のサブコマンド別呼び出し仕様と、prompt 断片・完全 prompt の組み立て方をまとめて把握したいとき。
+- この階層の `INDEX.md` を作成・修正する前に、下位ディレクトリの役割分担を先に確認したいとき。
+- AI コーディングエージェント呼び出しに関する仕様と prompt 構成の入口を確認したいとき。
 
 ## Do not read this when
 
-- すでに `base.py`、`builder/INDEX.md`、`prompt_parts/INDEX.md` のいずれかを開く対象が決まっていて、この階層の案内を経由する必要がないとき。
-- `AgentCallParameters`、`ModelClass`、`ReasoningEffort`、`FileAccessMode` の定義だけを直接確認したいとき。
-- `complete_prompt.py` や各 prompt 断片など、個別ファイルの中身をそのまま確認したいとき。
-- `agent_call_parameter` 以外の `oracle` 配下の別ルートや、開発規約だけを探しているとき.
+- すでに読む対象が `builder/` または `prompt_parts/` のどちらかに決まっていて、この階層の目次を経由する必要がないとき。
+- `cmoc apply fork`、`cmoc indexing`、`cmoc review oracle`、`cmoc session join` のうち、特定の 1 系統だけを直接確認したいとき。
+- `change_summary.py`、`index_entry.py`、`enumerate_finding.py`、`conflict_resolution.py` など、下位の個別ファイルをそのまま開きたいとき。
+- この階層の案内ではなく、`oracle` 全体の別ルートや開発規約だけを確認したいとき。
 
 ## hash
 
-- 160b62a89d8762ad35f541684ab2ccb1fe6a5d34ed6a8d2a8d46b0abdec1fd3a
+- bb09070ade08754a50fb8f3bd0bbb6c9903329ff6d93e3c42943d57fb9e3a5e4
 
-# `cmoc_config`
+# `basic`
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/cmoc_config/cmoc_config.py` は、cmoc 全体の設定をまとめる `CmocConfig` と、Codex CLI 向けの対応表を持つ `CmocConfigCodex` を定義する入口です。
-- この設定は `<cmoc-root>/.cmoc/config.json` として永続化され、`BackendType`、`ModelClass`、`ReasoningEffort` を束ねる前提になっています。
+- この `basic` ディレクトリのルーティング文書で、`acp.py`、`path_model.py`、`standard.py`、`struct_doc.py` への入口です。
+- `acp.py` は AI コーディングエージェント呼び出し用の共通型を、`path_model.py` は root token 付きパス解決を、`standard.py` は標準表現を、`struct_doc.py` は階層文書の markdown レンダリングを案内します。
+- この階層は、cmoc の共通基盤をまとめて扱うための目次です。
 
 ## Read this when
 
-- cmoc の設定項目をどこに集約しているか確認したいとき。
-- `CmocConfig` と `CmocConfigCodex` の役割や、Codex CLI 向けの `model` / `reasoning_effort` 対応付けを把握したいとき。
-- 設定を `<cmoc-root>/.cmoc/config.json` に永続化する前提や、Enum 値を value 化して保存する方針を確認したいとき。
+- `<cmoc-root>/oracle/src/basic` 配下で、どの基盤ファイルから読むべきか整理したいとき。
+- `BackendType`、`ModelClass`、`ReasoningEffort`、`FileAccessMode`、`AgentCallParameter` の所在を確認したいとき。
+- `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` の解決規則や、標準表現、StructDoc の役割をまとめて把握したいとき。
+- この階層の下位 `INDEX.md` や個別ファイルへ進む前に、役割分担を先に整理したいとき。
 
 ## Do not read this when
 
-- すでに `CmocConfig` と `CmocConfigCodex` の定義場所が分かっていて、この目次を経由せずに `cmoc_config.py` 本体を直接確認するとき。
-- 設定の読み書き処理や JSON 変換の実装を探しているとき。
-- `agent_call_parameter/base.py` の `BackendType`、`ModelClass`、`ReasoningEffort` だけを確認したいとき。
+- すでに読む対象が `acp.py`、`path_model.py`、`standard.py`、`struct_doc.py` のいずれかに決まっていて、この階層の目次を経由する必要がないとき。
+- `BackendType`、`ModelClass`、`ReasoningEffort`、`FileAccessMode`、`AgentCallParameter` の定義内容を直接確認したいとき。
+- パス解決、標準表現、StructDoc のうち、個別機能だけを直接確認したいとき。
+- `oracle` 全体の別ルートや開発規約だけを確認したいとき。
 
 ## hash
 
-- 2660eef8145250bbc576a57fd446a50343d2ea949ce58845aaa6e488ba5bb7e9
+- 07c38564a3e9410ddcb9e81dd46e896423e4d9467dcf4264de513c99d1a23a28
 
-# `utils`
+# `config`
 
 ## Summary
 
-- この `utils` ディレクトリのルーティング文書で、`path_model.py`、`standard.py`、`struct_doc.py` への入口です。
-- `path_model.py` は root token 付きパスの解決を、`standard.py` は oracle 文書の標準表現を、`struct_doc.py` は階層的な文章の markdown レンダリングを案内します。
-- この階層は、パス表記・標準定義・構造化文章という cmoc の共通基盤をまとめて扱う目次です。
+- この `config` ディレクトリのルーティング文書で、`cmoc_config.py` への入口です。
+- `CmocConfig` は cmoc の実行設定を束ね、`CmocConfigCodex` は Codex CLI 向けのモデル・推論強度の対応を持ちます。
+- 設定は `<repo-root>/.cmoc/config.json` に永続化され、`cmoc init` によって生成・同期される前提です。
 
 ## Read this when
 
-- `<work-root>/oracle/src/utils/` 配下で、`path_model.py`、`standard.py`、`struct_doc.py` のどれから読むべきか整理したいとき。
-- `RootToken` による root 解決、`Standard` と `Requirement` の標準表現、`StructDoc` の markdown レンダリングをまとめて把握したいとき。
-- `<cmoc-root>` / `<repo-root>` / `<run-root>` / `<work-root>` の扱い、共通標準文書、構造化文章ヘルパーの入口を確認したいとき。
+- cmoc のリポジトリごとの設定をどこに集約しているか確認したいとき。
+- `<repo-root>/.cmoc/config.json` に保存される設定内容と、その更新前提を把握したいとき。
+- Codex CLI 向けの `model` / `reasoning_effort` の対応表を確認したいとき。
 
 ## Do not read this when
 
-- `path_model.py`、`standard.py`、`struct_doc.py` のうち、読む対象がすでに 1 つに決まっていて、このディレクトリの目次を経由せず直接開くとき。
-- `<cmoc-root>` / `<repo-root>` / `<run-root>` / `<work-root>` の解決規則だけを確認したいときで、`standard.py` や `struct_doc.py` の案内が不要なとき。
-- 標準文書の定義や markdown レンダリングだけを個別に確認したくて、この `utils/` 全体の役割整理が不要なとき。
+- すでに `<cmoc-root>/oracle/src/config/cmoc_config.py` を直接開いて、`CmocConfig` と `CmocConfigCodex` の定義本体を確認するとき。
+- 設定の永続化や JSON 変換の実装ではなく、`BackendType` や `ModelClass` などの個別型だけを追いたいとき。
+- この階層の案内ではなく、`<work-root>/oracle/src` 全体の別ディレクトリにある共通基盤や別仕様を確認したいとき。
 
 ## hash
 
-- aae60079e816dfb3970a7251ecd44bc3940c55229b4834ab915d9cd366a07f14
+- d17dfe75dcddd3f78b708ad690eebfaade280bf60b376c42d8319ef0817f4135

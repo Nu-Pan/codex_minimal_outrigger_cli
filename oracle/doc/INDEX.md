@@ -3,24 +3,24 @@
 ## Summary
 
 - この `app_spec` ディレクトリのルーティング文書で、`cmoc` の利用仕様と共通仕様群への入口です。
-- `usage.md` で基本的な使い方を、`codex_call.md` で Codex 呼び出し規約を、`run_isolation.md` と `session_state.md` で作業分離と状態管理を案内します。
-- `error_handling.md`、`console_and_file_log.md`、`cli_auto_completion.md`、`misc_spec.md`、`indexing.md` は横断的な共通仕様をまとめ、`sub_command/INDEX.md` から各サブコマンド仕様へ分岐します。
+- `usage.md` で基本的な使い方を、`codex_exec_rule.md` で Codex 呼び出し規約を、`run_isolation.md` と `session_state.md` で作業分離と状態管理を案内します。
+- `cli_auto_completion.md`、`console_and_file_log.md`、`error_handling.md`、`indexing.md`、`misc_spec.md`、`prompt_standard.md` は横断的な共通仕様をまとめ、`sub_command/INDEX.md` から各サブコマンド仕様へ分岐します。
 
 ## Read this when
 
-- `cmoc` の利用手順、共通仕様、エラーハンドリング、run 隔離、session 状態、補完、ログ、入力規約をまとめて把握したいとき。
-- `app_spec/` 配下のどの個別仕様や `sub_command/` へ進むべきか迷ったとき。
-- `cmoc` の実装やテストを始める前に、ここを起点として関連仕様の入口を整理したいとき.
+- `cmoc` の利用仕様と共通仕様をまとめて把握したいとき。
+- `usage.md`、`codex_exec_rule.md`、`cli_auto_completion.md`、`console_and_file_log.md`、`error_handling.md`、`indexing.md`、`misc_spec.md`、`prompt_standard.md`、`run_isolation.md`、`session_state.md` のどれを読むべきか迷ったとき。
+- `sub_command/INDEX.md` から各サブコマンド仕様へ進む前に、この階層の役割分担を整理したいとき。
 
 ## Do not read this when
 
-- 目的の仕様ファイルがすでに分かっていて、`cli_auto_completion.md`、`codex_call.md`、`console_and_file_log.md`、`error_handling.md`、`indexing.md`、`misc_spec.md`、`run_isolation.md`、`session_state.md`、`sub_command/INDEX.md`、`usage.md` の該当文書へ直接進めるとき。
-- この階層ではなく、個別のサブコマンド仕様や実装ファイルだけを確認したいとき。
-- `oracle` 配下の他のルーティング文書や、リポジトリ運用ルールだけを確認したいとき.
+- 目的の文書がすでに分かっていて、`usage.md`、`codex_exec_rule.md`、`cli_auto_completion.md`、`console_and_file_log.md`、`error_handling.md`、`indexing.md`、`misc_spec.md`、`prompt_standard.md`、`run_isolation.md`、`session_state.md`、`sub_command/INDEX.md` の該当ファイルへ直接進めるとき。
+- この階層ではなく、個別サブコマンドの仕様や下位ディレクトリのさらに詳細な文書だけを確認したいとき。
+- `oracle` 配下の他のルーティング文書や、リポジトリ運用ルールだけを確認したいとき。
 
 ## hash
 
-- f39aedd04c35544dbcf0c633d3b689b9be4202bb49cd91cfe34371ce5b8d8712
+- 131a60d823d024c251a00759f8b70e46ad7dcf4c25cc3dde0520c51c381d666c
 
 # `branch_model.md`
 

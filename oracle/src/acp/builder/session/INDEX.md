@@ -9,7 +9,7 @@
 ## Read this when
 
 - `cmoc session join` で conflict 発生時に Codex CLI へ何を依頼するか確認したいとき。
-- `build_session_join_conflict_resolution_parameter()` が組み立てる prompt と `AgentCallParameters` の所在を確認したいとき。
+- `build_session_join_conflict_resolution_parameter()` が組み立てる prompt と `AgentCallParameter` の所在を確認したいとき。
 - conflict 解消時の禁止事項、特に `git add` と `git commit` の禁止を確認したいとき。
 - この階層から `conflict_resolution.py` へ進むべきか迷ったとき。
 
@@ -21,4 +21,4 @@
 
 ## hash
 
-- 48280d28163d2abbac39d5df5eb0829836adeaaa045e33ce8ec2a545434ba9d6
+- 0765f9daf5894fdb564a3aaffbdcdddb2b12c3dcb626c2a1e05a7cf7681ff5f7
