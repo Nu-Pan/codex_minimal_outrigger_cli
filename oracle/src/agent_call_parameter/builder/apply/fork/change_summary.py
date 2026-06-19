@@ -6,8 +6,13 @@ from pathlib import Path
 # cmoc
 from utils.struct_doc import render_as_markdown
 from utils.path_model import resolve_repo_root
-from agent_call_parameter.base import AgentCallParameters, ModelClass, ReasoningEffort
-from prompt_parts.complete_prompt import build_complete_prompt
+from agent_call_parameter.base import (
+    AgentCallParameters,
+    ModelClass,
+    ReasoningEffort,
+    FileAccessMode,
+)
+from agent_call_parameter.prompt_parts.complete_prompt import build_complete_prompt
 
 
 def build_apply_fork_change_summary_parameter(
@@ -38,7 +43,7 @@ def build_apply_fork_change_summary_parameter(
         - 各カテゴリで何をどう変えたかを要約すること
         - 主要な変更ファイルを changed_paths に列挙すること
         """,
-        "readonly",
+        FileAccessMode.READONLY,
         oracle_standard=True,
         realization_standard=True,
         structured_output=True,
@@ -47,6 +52,7 @@ def build_apply_fork_change_summary_parameter(
     return AgentCallParameters(
         ModelClass.EFFICIENCY,
         ReasoningEffort.MEDIUM,
+        FileAccessMode.READONLY,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),
     )

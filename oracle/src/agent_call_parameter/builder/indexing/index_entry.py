@@ -7,7 +7,7 @@ from pathlib import Path
 from utils.struct_doc import render_as_markdown
 from utils.path_model import resolve_real_path
 from agent_call_parameter.base import AgentCallParameters, ModelClass, ReasoningEffort
-from prompt_parts.complete_prompt import build_complete_prompt
+from agent_call_parameter.prompt_parts.complete_prompt import build_complete_prompt
 
 
 def build_indexing_index_entry_parameter(

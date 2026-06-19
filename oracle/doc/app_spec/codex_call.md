@@ -52,65 +52,14 @@
 
 ## Model, Reasoning Effort
 
-### 指定規則
-
-Code CLI 呼び出し時に Model, Reasoning Effort を必ず指定すること
-
-- Model: `--model <model>`
-- Reasoning Effort: `-c 'model_reasoning_effort="<reasoning-effort>"'`
-
-### モデル選択
-
-具体的なモデル名は時期によって異なるため、cmoc の仕様上としては「抽象的なモデル名」と「そのモデルの特徴」だけを述べるに留める。実装を行う AI あるいは実装されたコードは、仕様を満たすように具体的なモデル名を選択しなければならない。
-
-- フロンティアモデル
-    - その時の最新・高性能モデル
-    - 2026/5/22 現在で言えば GPT-5.5 のこと
-- コストパフォーマンスモデル
-    - コスト（トークン）パフォーマンスに優れるモデル
-    - 必ずしも最新である必要は無い
-    - 2026/5/22 現在で言えば GPT-5.4-mini のこと
-
-### 設定原則
-
-Model, Reasoning Effort の設定は、以下の原則に従って AI が裁量で決めて良い
-
-- Reasoning Effort = xhigh は使用禁止 
-- 結果の品質が重要ではない作業は、コストパフォーマンスモデルの Reasoning Effort = medium を使う
-- 本当に全く結果の品質が重要ではない場合は、コストパフォーマンスモデルの Reasoning Effort = low を使う
-- 特別に品質が重要な場合は、フロンティアモデルの Reasoning Effort = high を使う
-- 特定の条件に当てはまらない場合は、フロンティアモデルの Reasoning Effort = medium を使う
-
-### 実際の設定例
-
-以下に、人間による判断の例を参考として挙げる。
-
-- `INDEX.md` の生成
-    - コストパフォーマンスモデル (medium)
-- quota poll
-    - コストパフォーマンスモデル (low)
-- commit message 生成
-    - コストパフォーマンスモデル (low)
-- `cmoc apply fork` のレポート生成 
-    - コストパフォーマンスモデル (medium)
-- `cmoc review oracle` の仕様レビュー
-    - フロンティアモデル (medium)
-    - 人間が偽陽性に振り回されるのは cmoc の価値観に反する
-    - トークン消費の激しさを呑んででも品質を確保するべきと判断して、フロンティアモデルとした
-- `cmoc review oracle` の「問題点を改善」
-    - フロンティアモデル (high)
-    - 人間が低品質なレビュー結果に振り回されるのは cmoc の価値観に反する
-    - 特に、ここは低品質なレビューから人間を守る最後の砦である
-    - よって、フロンティモデルの high とした
-- `cmoc apply fork` の要修正点調査
-    - フロンティアモデル (medium)
-    - ダーティフラグによる無駄な呼び出しの削減を前提に、ある程度の重たさは許容
-    - モデルの性能不足による、要修正点の撃ち漏らしを避けるには、ここの性能を上げるしか無い
-    - 要修正点の撃ち漏らしが将来的に及ぼす影響を鑑みて、フロンティアモデルとした
-- `cmoc apply fork` の要修正点リストの改善
-    - フロンティアモデル (high)
-    - この後に続く実装作業にゴミを流し込まないための最後の砦なので品質がとても大事
-    - よってフロンティアモデルの high とした
+- Code CLI 呼び出し時に必ず指定すること
+    - Model: `--model <model>`
+    - Reasoning Effort: `-c 'model_reasoning_effort="<reasoning-effort>"'`
+- 具体的な設定値の解決規則
+    - oracle file では backend AI agent が受理可能な具体的な model, reasoning effort を書かない
+    - oracle file では cmoc で定義した論理的な名前 (`<cmoc-root>/oracle/src/agent_call_parameter/base.py` を参照) を書く
+    - `<cmoc-root>/` `build_*` 関数が返すクラス `AgentCallParameters` のメンバ `model_class`, `reasoning_effort` を正本とする
+    - 具体的なモデル名への解決は realization file の責任とする
 
 ## サンドボックスモード
 

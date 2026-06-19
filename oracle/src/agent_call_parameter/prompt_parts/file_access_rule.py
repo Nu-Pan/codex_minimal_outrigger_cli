@@ -1,16 +1,10 @@
 # std
-from typing import Literal
+from enum import Enum
 
 # cmoc
 from utils.path_model import resolve_work_root
 from utils.struct_doc import StructDoc, ntqs
-
-type FileAccessMode = Literal[
-    "readonly",
-    "pure_oracle_read",
-    "realization_write",
-    "oracle_write",
-]
+from agent_call_parameter.base import FileAccessMode
 
 
 def build_file_access_rule(

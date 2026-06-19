@@ -7,12 +7,22 @@
 	"settings": {
 		"files.exclude": {
 			"**/__pycache__": true,
-			"**/*.egg-info": true
+			"**/*.egg-info": true,
+            "**/INDEX.md": true
 		},
 		"[python]": {
 			"editor.defaultFormatter": "ms-python.black-formatter",
 			"editor.formatOnSave": true
 		},
+        "python.analysis.extraPaths": [
+            "./src",
+            "./oracle/src"
+        ],
+        "python.analysis.include": [
+            "src",
+            "oracle/src",
+            "test"
+        ],
 		"[markdown]": {
 			"editor.insertSpaces": true,
 			"editor.tabSize": 4,

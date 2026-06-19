@@ -1,9 +1,4 @@
-"""
-# Agent call parameters base
-
-- AI エージェント CLI (e.g. Codex CLI) を呼び出す
-"""
-
+# std
 from dataclasses import dataclass
 from pathlib import Path
 from enum import Enum
@@ -20,7 +15,7 @@ class BackendType:
 class ModelClass(Enum):
     """
     AI (LLM) モデルのクラス。
-    実際のモデル名への解決はバックエンドの責任。
+    バックエンドが受理可能なモデル名への解決はバックエンドの責任。
     """
 
     # その時々の主力モデルが選ばれる想定
@@ -47,12 +42,24 @@ class ModelClass(Enum):
 class ReasoningEffort(Enum):
     """
     Reasoning effort の列挙値。
-    実際の設定値への解決はバックエンドの責任。
+    バックエンドが受理可能な設定値への解決はバックエンドの責任。
     """
 
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
+
+
+class FileAccessMode(Enum):
+    """
+    サンドボックスモードの列挙値。
+    バックエンドが受理可能なモードへの解決はバックエンドの責任。
+    """
+
+    READONLY = "readonly"
+    PURE_ORACLE_READ = "pure_oracle_read"
+    REALIZATION_WRITE = "realization_write"
+    ORACLE_WRITE = "oracle_write"
 
 
 @dataclass(frozen=True)
@@ -66,6 +73,9 @@ class AgentCallParameters:
 
     # Reasoning Effort
     reasoning_effort: ReasoningEffort
+
+    # ファイルアクセスモード
+    file_access_mode: FileAccessMode
 
     # プロンプト本文
     prompt: str
