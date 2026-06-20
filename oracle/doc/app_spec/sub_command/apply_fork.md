@@ -139,7 +139,6 @@
 - このファイル起点の依頼は、事前に列挙したファイルリスト上のファイル全てに対して個別に行う
     - i.e. 調査対象となる oracle file が N 件と実装ファイルが M 件存在するのであれば `codex exec` を N + M 回呼び出すということ
 - このファイル起点の依頼は並列に実行する
-- 要修正点の agent 向け定義は `build_apply_reviewpoint` を正本とする
 
 ## 要修正点リスト改善の仕様
 
@@ -184,7 +183,7 @@
 
 - `<cmoc-apply-branch>` 上の全ての変更内容に対する要約の生成を agent call に依頼する
 - この agent call の詳細仕様は `build_apply_fork_change_summary_parameter` を正本とする
- - cmoc は Structured Output を作業レポート用 Markdown にレンダリングする
+- cmoc は Structured Output を作業レポート用 Markdown にレンダリングする
 
 ## サブコマンドの終了コード
 
