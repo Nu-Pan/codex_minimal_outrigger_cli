@@ -13,7 +13,7 @@
 from dataclasses import dataclass, field
 
 # cmoc
-from basic.acp import BackendType, ModelClass, ReasoningEffort
+from basic.acp import ModelClass, ReasoningEffort
 
 
 @dataclass(frozen=True)
@@ -24,9 +24,6 @@ class CmocConfig:
 
     # AI エージェント呼び出しの最大並列数
     num_parallel: int = field(default=8)
-
-    # 使用するバックエンドの種類
-    backend: BackendType = field(default=BackendType.OPENAI_CODEX_CLI)
 
     # Codex CLI 用の設定
     codex: "CmocConfigCodex" = field(default_factory=lambda: CmocConfigCodex())

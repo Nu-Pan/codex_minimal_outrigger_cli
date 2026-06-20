@@ -8,14 +8,6 @@ from pathlib import Path
 from enum import StrEnum, auto
 
 
-class BackendType(StrEnum):
-    """
-    バックエンドとして使用する AI エージェント CLI ツールの種類。
-    """
-
-    OPENAI_CODEX_CLI = auto()
-
-
 class ModelClass(StrEnum):
     """
     cmoc 上の論理的なモデルクラス

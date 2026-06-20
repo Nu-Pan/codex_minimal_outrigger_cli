@@ -47,12 +47,17 @@ merge conflict が発生した場合は通常の conflict として扱う。
 
 ### 解決手順
 
-1. cmoc は Codex CLI に conflict marker 解消を依頼する
-2. Codex CLI には `git add` と `git commit` を禁止する
-3. cmoc は conflict marker が残っていないことを確認する
+1. cmoc は conflict 対象ファイルを列挙する
+2. conflict marker 解消用の agent call を行う
+3. cmoc は conflict marker が残っていない事を確認する
 4. cmoc は conflict 対象ファイルを `git add` する
 5. unmerged path が残っていないことを確認する
 6. cmoc が merge commit を作成する
+
+## conflict marker 解消用の agent call
+
+- この agent call の詳細仕様は `build_session_join_conflict_resolution_parameter` を正本とする
+- この agent call は `<work-root>` に対する編集操作を伴うため、必ず直列に実行すること
 
 ### oracle file 規則とコンフリクト解決の優先順位
 

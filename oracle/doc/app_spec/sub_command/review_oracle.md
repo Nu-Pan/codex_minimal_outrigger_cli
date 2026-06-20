@@ -46,6 +46,10 @@
 7. run の隔離実行を終了する
 8. 所見リストをレポートとしてレンダリングする
 
+## agent call 規則
+
+- 個別 agent call の詳細仕様は、対応する `build_review_oracle_*_parameter()` を正本とする
+
 ## 「run の隔離実行」とは
 
 - その範囲内で、実際の作業を `<cmoc-review-worktree>` 上で隔離実行することを指す
@@ -85,15 +89,6 @@
     - 仕様からは実装が一意に定まらない
 - これら定義は `codex exec` のプロンプトに「リポジトリ固有の事情に依存しない汎用的なレビュー観点」として注入する。
 
-## Codex CLI によるファイルアクセス規則
-
-- `codex exec` は読み取り専用で実行する。
-- レビューにあたってエージェントは...
-    - `<work-root>/oracle` 配下のファイルを自由に読んで良い
-    - `<work-root>/oracle` 以外のファイルは読んではいけない
-    - 指定されたファイルだけでなく、関連する oracle file も読みに行く
-    - どの oracle file が関連するかは `INDEX.md` を根拠に判断する
-
 ## 所見の ID 管理
 
 - cmoc は、所見リストへ所見を追加する時点で安定した `finding_id` を付与する
@@ -115,12 +110,9 @@
 
 ## 「新規所見の列挙」の詳細
 
-- 1 回の `codex exec` 呼び出しで 1 つの oracle file をレビューする
-- プロンプトで「現状の所見リストのうち、今回のレビュー対象ファイルと関連するもの」を渡す
-- Codex CLI は新規所見（既知でない所見）のリストを Structured Output で出力する
-- Structured Output schema として `<cmoc-root>/oracle/schemas/structured_output/review/oracle/enumerate_findings.json` を使用する
-- 所見リストが既に十分網羅的であるなら、新規所見なしとなるはずである
-- このファイルごとのレビューは並列に実行する
+- ダーティフラグが true の oracle file 1 件ごとに、独立した agent call を行う
+- このファイルごとの agent call は配列実行して良い
+- agent call の詳細は `build_review_oracle_enumerate_finding_parameter` を正本とする
 
 ## 「所見リストマージループ」の詳細
 
@@ -131,14 +123,9 @@
 
 ## 「所見リストのマージ」の詳細
 
-- 所見リストの冗長性・不整合の解決を `codex exec` に依頼する
-- プロンプトで、現状の所見リストを Codex CLI に渡す
-- Codex CLI は問題解決に必要な編集操作のリストを Structured Output で出力する
-- Structured Output schema として `<cmoc-root>/oracle/schemas/structured_output/review/oracle/merge_findings.json` を使用する
-- 作業完了後、所見リストが以下の要件を満たしている事を目指す（ベストエフォートで良い）
-    - 所見同士に内容的な重複がないこと
-    - 所見同士が相互に矛盾していないこと
-- 所見リストが既に十分コンパクトで整合的であるなら、編集操作リストは空となるはずである
+- 所見リストマージループの各周回で、所見リスト全体に対する agent call を行う
+- cmoc は返却された編集操作を所見リストへ適用する
+- agent call の詳細仕様は `build_review_oracle_merge_finding_parameter` を正本とする
 
 ## 「所見リスト検証ループ」の詳細
 
@@ -151,26 +138,23 @@
     - `--refine-findings-loop` で指定される
     - デフォルト値は 3
 
-## 「その所見が妥当ではない理由の記述」「その所見が妥当である理由の記述」の詳細
+## 「その所見が妥当である理由の記述」の詳細
 
-- 1 回の `codex exec` 呼び出しで 1 つの所見をレビューする
-- プロンプトで、レビュー対象の所見の詳細を Codex CLI に渡す
-- Codex CLI は新規の理由のリストを Structured Output で出力する
-- Structured Output schema として `<cmoc-root>/oracle/schemas/structured_output/review/oracle/validate_findings_challenger.json`, `<cmoc-root>/oracle/schemas/structured_output/review/oracle/validate_findings_advocate.json` を使用する
-- その所見が妥当ではない・妥当であるとする理由は以下の原則に従う
-    - 具体的な根拠 (e.g. 事実と異なる) を必ず示す
-    - 「かもしれない」「可能性がある」は根拠としない
-    - 「妥当である（ではない）理由」と対応する「妥当ではない（である）理由」に対する反論をする
-- 理由が既に出尽くしているなら、新規理由なしとなるはずである
-- この所見ごとのレビューは並列に実行する
+- ダーティフラグが true の所見 1 件ごとに agent call を行う
+- この所見ごとの agent call は並列実行してよい
+- agent call 詳細仕様は `build_review_oracle_validate_finding_challenger_parameter` を正本とする
+
+## 「その所見が妥当ではない理由の記述」の詳細
+
+- ダーティフラグが true の所見 1 件ごとに agent call を行う
+- この所見ごとの agent call は並列実行してよい
+- agent call 詳細仕様は `build_review_oracle_validate_finding_advocate_parameter` を正本とする
 
 ## 「その所見の採用・不採用の判定」の詳細
 
-- その所見を、要確認項目として人間に見せるべきかの判定を `codex exec` に依頼する
-- 1 回の `codex exec` 呼び出しで 1 つの所見を判定する
-- プロンプトで、レビュー対象の所見を Codex CLI に渡す
-- Codex CLI は判定結果を Structured Output で出力する
-- Structured Output schema として `<cmoc-root>/oracle/schemas/structured_output/review/oracle/judge_findings.json` を使用する
+- 所見 1 件ごとに、採用・不採用判定の agent call を行う
+- この所見ごとの agent call は並列実行してよい
+- agent call 詳細仕様は `build_review_oracle_judge_finding_parameter` を正本とする
 
 ## レポート
 

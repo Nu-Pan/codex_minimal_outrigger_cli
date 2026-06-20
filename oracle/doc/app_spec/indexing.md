@@ -88,11 +88,9 @@
 
 ### 目次情報の生成方法
 
-- `codex exec` に目次情報の生成を依頼する
-- `codex exec` の呼び出しは、目次ファイルの生成対象１つごとに独立に行う
-- 「ファイル・ディレクトリ名」「ハッシュ値」などの機械的に処理可能な部分は `cmoc` が責任を持つ（Codex CLI にやらせない）
-- 目次情報は Structured Output で受け取る
-- `codex exec` 呼び出しの具体的なパラメータは `build_indexing_index_entry_parameter` を正本とする
+ - 目次情報の生成対象 1 件ごとに、独立した agent call を行う
+- 「ファイル・ディレクトリ名」「ハッシュ値」などの機械的に処理可能な部分は cmoc が責任を持つ
+- agent call の具体的なパラメータは `build_indexing_index_entry_parameter` を正本とする
 
 ## 目次情報生成の並列実行
 

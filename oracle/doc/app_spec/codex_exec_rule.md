@@ -3,7 +3,7 @@
 ## 基本
 
 - cmoc からの Codex CLI 呼び出しは、原則として `codex exec` で行う
-- プロンプトの構築には `build_complete_prompt` を使用する
+- 個別の `codex exec` 呼び出しの仕様は `<cmoc-root>/oracle/src/acp/builder` ツリー内の AgentCallParameter builder を正本とする
 
 ## プロンプトの渡し方
 
@@ -21,13 +21,13 @@
 ## ファイルアクセス制限
 
 - Codex CLI に対するファイルアクセス制限の設定は codex profile 経由で行う
-- 具体的なファイルアクセス制限設定は `FileAccessMode` から動的生成する
+- 具体的な設定は AgentCallParameter builder を正本とする
 - cmoc はファイルアクセス制限についての情報をプロンプトとして注入して Codex CLI に知らせる
 
 ## Model, Reasoning Effort
 
 - Codex CLI に対する Model, Reasoning Effort の設定は codex profile 経由で行う
-- 具体的なファイルアクセス制限設定は `CmocConfigCodex` から動的生成する
+- 具体的な設定は AgentCallParameter builder を正本とする
 - cmoc は Model, Reasoning Effort 設定についての情報を Codex CLI プロンプトに注入しない
 
 ## Codex CLI 呼び出し情報の保存
