@@ -45,6 +45,7 @@ def build_apply_fork_file_audit_parameter(
         aux_prompt=[],
         oracle_standard=True,
         realization_standard=True,
+        apply_review_aspect=True,
     )
     # パラメータを生成して返す
     return AgentCallParameter(
