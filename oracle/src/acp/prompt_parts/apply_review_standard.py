@@ -140,6 +140,6 @@ def build_apply_review_standard() -> StructDoc:
         ),
     ]
     return StructDoc(
-        "apply review aspect",
+        "apply review standard",
         *[standard_to_struct_doc(ars) for ars in standards],
     )
