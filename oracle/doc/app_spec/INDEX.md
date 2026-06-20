@@ -26,23 +26,24 @@
 ## Summary
 
 - cmoc から `codex exec` を呼び出すための共通規約をまとめた文書です。
-- stdin でのプロンプト受け渡し、codex profile の生成、ログ保存、Structured Output、失敗時の再実行方針までを扱います。
+- stdin 経由のプロンプト受け渡し、codex profile の生成、ログ保存、Structured Output、失敗時の再実行方針を扱います。
+- Codex CLI 呼び出しに関するファイルアクセス制限と実行条件を定める入口です。
 
 ## Read this when
 
 - cmoc から `codex exec` を呼び出す共通規約を確認したいとき。
-- stdin 経由でのプロンプト受け渡し、`--profile`、`--json`、`--output-last-message`、Structured Output の扱いを確認したいとき。
-- ファイルアクセス制限、Model / Reasoning Effort、呼び出しログ、失敗時のリトライや待機の方針を確認したいとき。
+- stdin でのプロンプト受け渡し、`--profile`、`--json`、`--output-last-message`、Structured Output、失敗時のリトライ方針を確認したいとき。
+- ファイルアクセス制限、Model、Reasoning Effort、呼び出しログの保存方針を実装・調整したいとき。
 
 ## Do not read this when
 
-- `codex exec` ではなく、通常のシェル実行や別コマンドの運用だけを確認したいとき。
+- 通常のシェル実行や `codex exec` 以外のコマンド運用だけを確認したいとき。
 - `session`、`apply`、`review oracle` など別フローの詳細だけを確認したいとき。
 - `INDEX.md` の生成・更新ルールだけを確認したいとき。
 
 ## hash
 
-- a9f58a54a5a417500de2ecfb36919f11b85f6e904500622d36b6022bd3d9406b
+- 15bd5a6d2656d125d02fcd7e174d0a6c1d963fc771abe0b8d53f33243ecbe532
 
 # `console_and_file_log.md`
 
@@ -100,20 +101,20 @@
 
 ## Read this when
 
-- `cmoc` における `<work-root>` 上の `INDEX.md` の配置対象、目次作成対象、除外条件を確認したいとき。
+- `<work-root>` 配下の `INDEX.md` の配置対象、目次作成対象、除外条件を確認したいとき。
 - `INDEX.md` の生成順序、並列実行、自動コミット条件を実装・レビューしたいとき。
 - `codex exec` に目次情報を Structured Output で返させる仕様や、目次情報の JSON schema を確認したいとき。
 - `INDEX.md` の人手編集ではなく、自動インデクシングの運用ルールを押さえたいとき。
 
 ## Do not read this when
 
-- `INDEX.md` の生成やメンテナンスではなく、通常の `cmoc` 利用手順や個別サブコマンドの詳細だけを確認したいとき。
+- 通常の `cmoc` 利用手順や、個別サブコマンドの引数・状態遷移だけを確認したいとき。
 - `INDEX.md` の配置対象、除外条件、記載フォーマット、並列化、自動コミットなどのルールを扱う必要がないとき。
 - 一般的な git commit / branch / worktree の運用だけを確認したいとき。
 
 ## hash
 
-- c1f96ebc2330f6ed26f78ece225c2b119d57b86cf8f0b8f699e4839dd0f8a137
+- b531b34a7d4cf49e9b285d5b6144632fa8721319bfd553acb9111e54f57a7c0b
 
 # `misc_spec.md`
 
@@ -139,29 +140,6 @@
 ## hash
 
 - 69c963981887477d4763539bc1d4d802043f5e3795d0dc6c923a41eab08016c7
-
-# `new`
-
-## Summary
-
-- 内容がまだ無い `new` ファイルのため、`<work-root>/oracle/doc/app_spec/` 配下で新しく仕様を置くときの入口候補として扱います。
-- `app_spec/INDEX.md` からこの場所へ来た人が、新設仕様の配置先を判断するための目印です。
-
-## Read this when
-
-- この `new` ファイルに今後追加される仕様の置き場所や役割を確認したいとき。
-- `app_spec/` 配下に新しい仕様を足す前に、この空ファイルの扱いを整理したいとき。
-- `app_spec/INDEX.md` から新規追加先へ進む入口をたどりたいとき。
-
-## Do not read this when
-
-- すでに具体的な `app_spec/` 配下の仕様ファイル名が分かっていて、その文書へ直接進めるとき。
-- 新規仕様の入口ではなく、既存の `cli_auto_completion.md`、`codex_exec_rule.md`、`indexing.md` などを確認したいとき。
-- この空ファイルの扱いではなく、`oracle` 全体の別階層のルーティング文書を探しているとき。
-
-## hash
-
-- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
 # `prompt_standard.md`
 
@@ -238,25 +216,26 @@
 
 ## Summary
 
-- この `sub_command` ディレクトリのルーティング文書で、`cmoc` の各サブコマンド仕様への入口です。
-- `apply` 系、`session` 系、`indexing`、`init`、`review oracle` の個別仕様をまとめて案内します。
-- 各ファイルはサブコマンド名ごとの入口で、実行条件・状態遷移・後始末の詳細へ分岐します。
+- このディレクトリのルーティング文書で、`cmoc` のサブコマンド仕様への入口です。
+- `apply` 系、`session` 系、`init`、`indexing`、`review oracle` の個別仕様へ進むための目次として機能します。
+- どのサブコマンドの文書を読むべきか迷ったときに、最初に参照する案内です。
 
 ## Read this when
 
-- `cmoc` の各サブコマンド仕様をまとめて確認したいとき。
-- `apply` 系、`session` 系、`indexing`、`init`、`review oracle` の入口を切り分けたいとき。
-- 実装・修正・レビュー前に、どの個別仕様ファイルを読むべきか迷ったとき。
+- `cmoc apply` 系、`cmoc session` 系、`cmoc init`、`cmoc indexing`、`cmoc review oracle` のうち、どの仕様を先に読むべきか整理したいとき。
+- `cmoc apply abandon`、`cmoc apply fork`、`cmoc apply join`、`cmoc session abandon`、`cmoc session fork`、`cmoc session join` の入口をまとめて把握したいとき。
+- サブコマンドごとの役割分担や、実装・修正・テスト・レビュー前の読み順を決めたいとき。
+- このディレクトリ配下の仕様断片へ進むための入口を確認したいとき。
 
 ## Do not read this when
 
-- 目的のサブコマンドがすでに分かっていて、対応する個別の `*.md` へ直接進めるとき。
-- この階層ではなく、さらに下位の仕様や実行手順だけを確認したいとき。
-- `app_spec` 全体の入口や共通規約だけを確認したいとき。
+- 読む対象のサブコマンドがすでに分かっていて、この `INDEX.md` を経由せず個別の `*.md` に直接進めるとき。
+- この階層の目次だけでなく、個別仕様の本文そのものだけを確認したいとき。
+- `oracle` 配下の別ルートや、開発規約・実装規約だけを確認したいとき。
 
 ## hash
 
-- df29fb7b9cfd6d6cda9be923d0c513be54a1ab25b3d58b97bd4870b4f1cc8e86
+- f2b986ab492f319ae42ded4922411ae58b5daabcaa7161939e075ff7a970740f
 
 # `usage.md`
 

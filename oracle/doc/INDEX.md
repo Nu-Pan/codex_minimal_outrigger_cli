@@ -2,25 +2,26 @@
 
 ## Summary
 
-- この `app_spec` ディレクトリのルーティング文書で、`cmoc` の利用仕様と共通仕様群への入口です。
-- `usage.md` で基本的な使い方を、`codex_exec_rule.md` で Codex 呼び出し規約を、`run_isolation.md` と `session_state.md` で作業分離と状態管理を案内します。
-- `cli_auto_completion.md`、`console_and_file_log.md`、`error_handling.md`、`indexing.md`、`misc_spec.md`、`prompt_standard.md` は横断的な共通仕様をまとめ、`sub_command/INDEX.md` から各サブコマンド仕様へ分岐します。
+- この `app_spec` ディレクトリのルーティング文書で、cmoc の利用手順と共通仕様への入口をまとめます。
+- `usage.md`、`sub_command/`、`indexing.md`、`run_isolation.md`、`session_state.md`、`console_and_file_log.md`、`error_handling.md`、`codex_exec_rule.md`、`cli_auto_completion.md`、`prompt_standard.md`、`misc_spec.md` へ分岐します。
+- `sub_command/` は `apply` 系、`session` 系、`init`、`indexing`、`review oracle` の個別仕様へ進むための入口です。
 
 ## Read this when
 
-- `cmoc` の利用仕様と共通仕様をまとめて把握したいとき。
-- `usage.md`、`codex_exec_rule.md`、`cli_auto_completion.md`、`console_and_file_log.md`、`error_handling.md`、`indexing.md`、`misc_spec.md`、`prompt_standard.md`、`run_isolation.md`、`session_state.md` のどれを読むべきか迷ったとき。
-- `sub_command/INDEX.md` から各サブコマンド仕様へ進む前に、この階層の役割分担を整理したいとき。
+- cmoc の利用手順、共通仕様、実行制約、ログ、エラー処理、状態管理をどの順で読むか整理したいとき。
+- `cmoc` の通常利用フローや `apply` / `session` 系の入口をまとめて把握したいとき。
+- `INDEX.md` の生成・更新ルールや、`app_spec` 配下のどの文書に何が書かれているか確認したいとき。
+- `sub_command/` 配下の個別サブコマンド仕様へ進む前に、この階層の役割分担を先に確認したいとき。
 
 ## Do not read this when
 
-- 目的の文書がすでに分かっていて、`usage.md`、`codex_exec_rule.md`、`cli_auto_completion.md`、`console_and_file_log.md`、`error_handling.md`、`indexing.md`、`misc_spec.md`、`prompt_standard.md`、`run_isolation.md`、`session_state.md`、`sub_command/INDEX.md` の該当ファイルへ直接進めるとき。
-- この階層ではなく、個別サブコマンドの仕様や下位ディレクトリのさらに詳細な文書だけを確認したいとき。
-- `oracle` 配下の他のルーティング文書や、リポジトリ運用ルールだけを確認したいとき。
+- 読みたい対象の仕様がすでに決まっていて、`usage.md` や `sub_command/` 配下の個別文書へ直接進めるとき。
+- `cli_auto_completion.md`、`codex_exec_rule.md`、`console_and_file_log.md`、`error_handling.md` など、個別の共通仕様だけを確認したいとき。
+- `app_spec` 全体ではなく、別の `oracle` 配下ディレクトリや上位のルーティング文書を探しているとき。
 
 ## hash
 
-- 131a60d823d024c251a00759f8b70e46ad7dcf4c25cc3dde0520c51c381d666c
+- eff50d5afd19db6a483ca06b5730da788e9e60338827cf2d83cfd8e2fe00e58b
 
 # `branch_model.md`
 

@@ -2,27 +2,27 @@
 
 ## Summary
 
-- この `basic` ディレクトリのルーティング文書で、`acp.py`、`path_model.py`、`standard.py`、`struct_doc.py` への入口です。
-- `acp.py` は AI コーディングエージェント呼び出し用の共通型を、`path_model.py` は root token 付きパス解決を、`standard.py` は標準表現を、`struct_doc.py` は階層文書の markdown レンダリングを案内します。
-- この階層は、cmoc の共通基盤をまとめて扱うための目次です。
+- `<cmoc-root>/oracle/src/basic/acp.py` は、AI コーディングエージェント呼び出し用の共通型を定義するファイルです。
+- `ModelClass`、`ReasoningEffort`、`FileAccessMode` の列挙型と、これらを束ねる `AgentCallParameter` を提供します。
+- backend 実装への具体的なモデル名解決は担当せず、cmoc 上の論理的な呼び出し条件を表現するための基盤です。
 
 ## Read this when
 
-- `<work-root>/oracle/src/basic` 配下で、どの基盤ファイルから読むべきか整理したいとき。
-- `BackendType`、`ModelClass`、`ReasoningEffort`、`FileAccessMode`、`AgentCallParameter` の所在を確認したいとき。
-- `<cmoc-root>` / `/<repo-root>` / `<run-root>` / `<work-root>` の解決規則や、標準表現、StructDoc の役割をまとめて把握したいとき。
-- この階層の下位 `INDEX.md` や個別ファイルへ進む前に、役割分担を先に整理したいとき。
+- AI コーディングエージェントのモデル選択、推論強度、ファイルアクセスモード、prompt、structured output schema の扱いを確認したいとき。
+- `ModelClass`、`ReasoningEffort`、`FileAccessMode`、`AgentCallParameter` の定義や役割を把握したいとき。
+- cmoc 上の論理的な呼び出し条件だけを整理したいとき。
+- このファイルの個別定義を読む前に、共通の入れ物と列挙型の役割を先に把握したいとき。
 
 ## Do not read this when
 
-- すでに読む対象が `acp.py`、`path_model.py`、`standard.py`、`struct_doc.py` のいずれかに決まっていて、この目次を経由する必要がないとき。
-- `BackendType`、`ModelClass`、`ReasoningEffort`、`FileAccessMode`、`AgentCallParameter` の定義内容を直接確認したいとき。
-- パス解決、標準表現、StructDoc のうち、個別機能だけを直接確認したいとき。
-- `oracle` 全体の別ルートや開発規約だけを確認したいとき。
+- バックエンド受理可能なモデル名への解決や、実装側の対応表を確認したいとき。
+- `path_model.py`、`standard.py`、`struct_doc.py` など別の共通基盤だけを追いたいとき。
+- すでに `ModelClass`、`ReasoningEffort`、`FileAccessMode`、`AgentCallParameter` の役割が分かっていて、このファイル本体を直接確認したいとき。
+- AI コーディングエージェント呼び出しではなく、設定や文書レンダリングの仕様を追いたいとき。
 
 ## hash
 
-- f5779d476de953b93122d973246f48e8485f33a55644887d93fe0b15957c138f
+- 899055a64c6c21d9e062970ffb35779c7d1eafeb41fb77388c18af2455faf171
 
 # `path_model.py`
 

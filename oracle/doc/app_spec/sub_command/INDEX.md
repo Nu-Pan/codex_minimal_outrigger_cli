@@ -25,9 +25,9 @@
 
 ## Summary
 
-- このファイルは `cmoc apply fork` の開始から完了レポートまでを扱うサブコマンド仕様です。
-- 調査・修正ループ、作業用ブランチと worktree、評価対象スナップショットの扱いを定めます。
-- `apply.state` の遷移、要修正点リストの Structured Output、レポート境界を案内します。
+- この文書は `cmoc apply fork` の入口で、調査・修正ループの実行から完了レポートまでの全体像を案内します。
+- `<cmoc-session-branch>` から分離した `<cmoc-apply-branch>` と `<cmoc-apply-worktree>` を使い、`apply.state` の遷移、スコープ指定、反復回数、要修正点リストの生成・改善・対応方針をまとめています。
+- 最後に、作業結果のレポート形式や Structured Output による変更要約の生成方法まで含めて確認できます。
 
 ## Read this when
 
@@ -45,7 +45,7 @@
 
 ## hash
 
-- 3091d0bf403141d5564160b2bb155adb45b58b5fd88c3ddb22166da8744374b1
+- 9b62c461972340a6a02316366ba26b6346df99504b6346d5e48bb9638c88a4a5
 
 # `apply_join.md`
 
@@ -119,30 +119,29 @@
 
 - d7d79ec30c118e067dbee08ca5840d7aa23501c4d6f1a1030b3bc85886c7bfdb
 
-# `review_oracles.md`
+# `review_oracle.md`
 
 ## Summary
 
-- `cmoc review oracle` の仕様入口で、`<repo-root>/oracle` スナップショットを評価して人間にレポートする手順をまとめた文書です。
-- 部分評価・全体評価のモード分岐、所見の列挙・マージ・検証・判定ループ、レポート形式を案内します。
-- 致命的問題と単純な問題の定義、および `codex exec` に渡す Structured Output の使い方を扱います。
+- `cmoc review oracle` の仕様入口で、現在の `<work-root>/oracle` スナップショットを評価して人間にレポートする手順をまとめた文書です。
+- 位置引数はなく、`--scope` と各ループ回数オプションで、部分評価・全体評価や反復上限を制御します。
+- 事前条件、run の隔離実行、所見の定義と ID 管理、レポート生成と出力先までを一通り案内します。
 
 ## Read this when
 
-- `cmoc review oracle` の実装・修正・レビュー時に、どの仕様断片へ進むべきかを素早く判断したいとき。
-- 現在の `<repo-root>/oracle` スナップショットに致命的な問題がないかを評価し、人間へレポートする入口を確認したいとき。
-- 部分評価モード・全体評価モードの切り替え条件や、`--scope` の扱い、評価対象 `oracle` ファイルの列挙方法を確認したいとき。
-- 評価レポートの構成、`fatal` / `minor` の判定基準、出力先や参照ファイル一覧の仕様を確認したいとき。
+- `cmoc review oracle` の実装・修正・テスト・レビューを行いたいとき。
+- `--scope={session|full}` による対象範囲の切り替えや、レビュー対象 oracle ファイルの列挙条件を確認したいとき。
+- 所見の列挙・マージ・検証・採否判定ループや、レポートの保存先・形式を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc review oracle` 以外の `cmoc` サブコマンドの手順や引数だけを確認したいとき。
+- `cmoc review oracle` 以外のサブコマンドの手順、引数、出力だけを確認したいとき。
 - `oracle` 配下の個別仕様ファイルを直接確認したいとき。
 - `INDEX.md` の生成・更新ルールや、`oracle` 全体のルーティング方針だけを確認したいとき。
 
 ## hash
 
-- 66dbf914d86e8ae0352804765f9dca029d70d96a8e5eb264b0f643f571a0979c
+- d93d2f7388d3ed2d38603e1225390ec39aa7afc233102ab072cfff963ec06b36
 
 # `session_abandon.md`
 
@@ -197,23 +196,23 @@
 
 ## Summary
 
-- この `session_join.md` の目次で、`cmoc session join` の仕様断片への入口です。
-- 現在の `<cmoc-session-branch>` を `<cmoc-session-home-branch>` に `git merge --no-ff` して session を完了する流れを案内します。
-- 事前条件、`apply.state` の確認、conflict 時の Codex CLI 依頼、終了後の `session.state` 更新とブランチ削除までをたどるための文書です。
+- `cmoc session join` の仕様断片への入口であり、session を完了して `<cmoc-session-home-branch>` に戻すための文書です。
+- 現在の `<cmoc-session-branch>` を `<cmoc-session-home-branch>` に `git merge --no-ff` し、必要なら conflict 解消を Codex CLI に依頼する流れを案内します。
+- 事前条件、`apply.state` の確認、`session.state` の更新、ブランチ削除までの後始末をたどるための目次です。
 
 ## Read this when
 
 - 現在の session を home branch へ戻して完了させる `cmoc session join` の実装・修正・テスト・レビューを行うとき。
-- 引数なし実行の前提条件や、`session.state=active` / `apply.state=ready` の確認条件を整理したいとき。
+- 引数なし実行の前提条件や、`session.state=active` と `apply.state=ready` の確認条件を整理したいとき。
 - `<cmoc-session-home-branch>` が先に進んでいた場合の扱い、merge conflict の解消依頼、後始末の条件を確認したいとき。
-- `cmoc merge` という旧名の扱いを含めて、session join の仕様を素早く把握したいとき。
+- `cmoc merge` という旧名の扱いも含めて、session join の仕様を素早く把握したいとき。
 
 ## Do not read this when
 
-- `cmoc session fork`、`cmoc session abandon`、`cmoc apply` 系など、他のサブコマンドの手順だけを確認したいとき。
-- 一般的な git merge の解説だけで足りるとき。
-- `INDEX.md` の生成・更新ルールや `oracle` 全体のルーティング方針だけを確認したいとき。
+- `cmoc session fork`、`cmoc session abandon`、`cmoc apply` 系など、session join 以外のサブコマンドの手順だけを確認したいとき。
+- 一般的な `git merge` の解説だけで足り、cmoc 固有の session 完了フローを確認する必要がないとき。
+- `INDEX.md` の生成・更新ルールや、`oracle` 全体のルーティング方針だけを確認したいとき。
 
 ## hash
 
-- ce95d6b2ca47fe7ceb3f4251e10e045b06456cadc9803ee6cfb443da1890d292
+- 37ddd0bf71f25b6a0a37b6542df0b18912a821f39c2cd2150d0644b7576f0c01

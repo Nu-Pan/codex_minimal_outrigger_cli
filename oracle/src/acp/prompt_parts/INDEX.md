@@ -1,26 +1,26 @@
-# `apply_audit_finding.py`
+# `apply_reviewpoint.py`
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/acp/prompt_parts/apply_audit_finding.py` は、`cmoc apply fork` の監査所見を「oracle file と実装との明確な不整合」と「実装上の明確な問題点」に切り分けるための prompt 断片です。
-- この断片は、仕様の隙間を無理に不整合扱いせず、仕様文言から推測できる意図と実装の乖離が大きい場合のみ要修正とみなす前提を示します。
-- あわせて、成果物品質の問題としてはバグ級の明確な問題のみを対象にし、単なる改善提案は含めない方針を案内します。
+- `<cmoc-root>/oracle/src/acp/prompt_parts/apply_reviewpoint.py` は、`oracle file` の内容を `realization file` に適用する際のレビュー観点を `StructDoc` としてまとめる入口です。
+- この断片は、`oracle file` と実装の明確な不整合と、実装上の明確な問題点を切り分ける前提を示し、仕様の隙間は原則として不整合扱いしない方針を含みます。
+- あわせて、対象をバグ級の明確な問題に限定し、単なる品質改善案は含めない方針を案内します。
 
 ## Read this when
 
-- `apply` の監査所見をどう分類するか確認したいとき。
-- `oracle` と実装の不整合を、仕様の隙間と区別して扱う基準を整理したいとき。
-- バグ級の明確な問題だけを所見対象にするかどうか、prompt 側の方針を確認したいとき。
+- `oracle file` を `realization file` に適用する際の、レビュー観点や所見の切り分け基準を確認したいとき。
+- `oracle` と実装の明確な不整合と、実装上の明確な問題点をどう区別するか整理したいとき。
+- 単なる改善提案ではなく、バグ級の要修正点だけを対象にする方針を確認したいとき。
 
 ## Do not read this when
 
-- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/apply_audit_finding.py` の中身を直接確認する対象が決まっていて、この目次を経由する必要がないとき。
-- `file_audit_finding.py` や `change_summary.py` など、`apply/fork/` 側の別段階の prompt 断片を探しているとき。
-- `oracle` の正本仕様や開発規約だけを確認したいときで、このファイルの入口が不要なとき。
+- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/apply_reviewpoint.py` を直接確認する対象が決まっていて、この目次を経由する必要がないとき。
+- `apply_audit_finding.py` や `change_summary.py` など、`apply` 系の別段階の prompt 断片を探しているとき。
+- `oracle` の正本仕様や開発規約だけを確認したいときで、この prompt 断片の入口が不要なとき。
 
 ## hash
 
-- 096df8d83ac845055444092e371de227c72a79cc17a9af4cfac04d786478cad7
+- 9315a5b19019a7f90527480b702b4d1159ee66b62e7b6e5b6920ef1536893020
 
 # `complete_prompt.py`
 

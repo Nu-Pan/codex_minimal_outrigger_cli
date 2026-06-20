@@ -54,8 +54,8 @@
 
 ## Summary
 
-- この `review` ディレクトリのルーティング文書で、`oracles/` への入口です。
-- `oracles/` には `enumerate_finding`、`merge_finding`、`validate_finding_advocate`、`validate_finding_challenger`、`judge_finding` の 5 系統があり、それぞれの prompt と対応 schema を案内します。
+- この `review` ディレクトリのルーティング文書で、`oracle/` への入口です。
+- `oracle/` には `enumerate_finding`、`merge_finding`、`validate_finding_advocate`、`validate_finding_challenger`、`judge_finding` の 5 系統があり、それぞれの prompt と対応 schema を案内します。
 - 各 `.py` は prompt 正本、各 `.json` は対応する Structured Output schema を表す、読み取り中心の入口です。
 
 ## Read this when
@@ -66,13 +66,13 @@
 
 ## Do not read this when
 
-- すでに読む対象の `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py`、または各 `.json` が決まっていて、この目次を経由せず直接開くとき。
-- 新規所見列挙・所見マージ・妥当理由列挙・否定理由列挙・採否判定のうち、特定の 1 本だけを個別に確認したいとき。
+- すでに `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py`、または対応する `.json` を直接開く対象が決まっていて、この目次を経由する必要がないとき。
+- 新規所見列挙、所見マージ、妥当理由列挙、否定理由列挙、採否判定のうち、特定の 1 系統だけを個別に確認したいとき。
 - `cmoc review oracle` 以外のサブコマンドや、レビュー用 Structured Output schema 以外の仕様を探しているとき。
 
 ## hash
 
-- 95d950c66b5d74a8e19984d134d24b81a2dfaf50cb7ec21ae148285cad35f09d
+- c770d97d21195c7d956283a327314e41a1dea589f57260f6212c2ad37a579e9a
 
 # `session`
 
