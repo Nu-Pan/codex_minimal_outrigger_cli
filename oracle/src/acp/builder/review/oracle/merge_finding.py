@@ -29,8 +29,8 @@ def build_review_oracle_merge_finding_parameter(
     oracle_root = resolve_real_path(Path("<work-root>/oracle"))
     # プロンプト
     prompt = build_complete_prompt(
-        "- あなたはソフトウェア仕様断片レビュー結果の整理担当です",
-        f"""
+        role="- あなたはソフトウェア仕様断片レビュー結果の整理担当です",
+        summary=f"""
         - `{oracle_root}` ツリー内の oracle file に対する所見リストを整理すること
         - 現状の所見リストは以下である
 
@@ -38,14 +38,14 @@ def build_review_oracle_merge_finding_parameter(
         {findings}
         ```
         """,
-        """
+        goal="""
         - 所見同士の内容的な重複や相互矛盾を解消する編集操作を列挙すること
         - 十分コンパクトで整合的なら空配列を返すこと
         - target_ids には入力所見の finding_id を指定すること
         """,
-        FileAccessMode.PURE_ORACLE_READ,
+        file_access_mode=FileAccessMode.PURE_ORACLE_READ,
+        aux_prompt=[],
         oracle_standard=True,
-        structured_output=True,
     )
     # パラメータを生成して返す
     return AgentCallParameter(

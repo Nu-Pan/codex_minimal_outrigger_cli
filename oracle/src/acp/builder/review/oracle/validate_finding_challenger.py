@@ -35,8 +35,8 @@ def build_review_oracle_validate_finding_challenger_parameter(
     oracle_root = resolve_real_path(Path("<work-root>/oracle"))
     # プロンプト
     prompt = build_complete_prompt(
-        "- あなたはソフトウェア仕様断片レビュー所見の反証担当です",
-        f"""
+        role="- あなたはソフトウェア仕様断片レビュー所見の反証担当です",
+        summary=f"""
         - `{oracle_root}` ツリー内の oracle file を根拠に、対象所見が妥当ではない理由を調査すること
         - 対象所見は以下である
 
@@ -56,14 +56,14 @@ def build_review_oracle_validate_finding_challenger_parameter(
         {known_challenger_reasons}
         ```
         """,
-        """
+        goal="""
         - 対象所見が妥当ではない新規理由だけを列挙すること
         - 具体的な根拠を必ず示し、「かもしれない」「可能性がある」は根拠にしないこと
         - 既知理由と重複する理由が無い場合は空配列を返すこと
         """,
-        FileAccessMode.PURE_ORACLE_READ,
+        file_access_mode=FileAccessMode.PURE_ORACLE_READ,
+        aux_prompt=[],
         oracle_standard=True,
-        structured_output=True,
     )
     # パラメータを生成して返す
     return AgentCallParameter(

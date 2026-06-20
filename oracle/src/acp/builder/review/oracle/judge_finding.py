@@ -35,8 +35,8 @@ def build_review_oracle_judge_finding_parameter(
     oracle_root = resolve_real_path(Path("<work-root>/oracle"))
     # プロンプト
     prompt = build_complete_prompt(
-        "- あなたはソフトウェア仕様断片レビュー所見の採否判定担当です",
-        f"""
+        role="- あなたはソフトウェア仕様断片レビュー所見の採否判定担当です",
+        summary=f"""
         - `{oracle_root}` ツリー内の oracle file を根拠に、対象所見を人間へ提示すべきか判定すること
         - 対象所見は以下である
 
@@ -56,14 +56,14 @@ def build_review_oracle_judge_finding_parameter(
         {challenger_reasons}
         ```
         """,
-        """
+        goal="""
         - 人間に要確認項目として提示すべき所見なら accept と判定すること
         - 提示すべきではない所見なら reject と判定すること
         - 判定理由は具体的に書くこと
         """,
-        FileAccessMode.PURE_ORACLE_READ,
+        file_access_mode=FileAccessMode.PURE_ORACLE_READ,
+        aux_prompt=[],
         oracle_standard=True,
-        structured_output=True,
     )
     # パラメータを生成して返す
     return AgentCallParameter(

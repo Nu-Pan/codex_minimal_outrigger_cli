@@ -35,8 +35,8 @@ def build_indexing_index_entry_parameter(
     target_path = resolve_real_path(target_path)
     # プロンプト
     prompt = build_complete_prompt(
-        "- あなたはソフトウェアリポジトリのルーティング文書作成担当です",
-        f"""
+        role="- あなたはソフトウェアリポジトリのルーティング文書作成担当です",
+        summary=f"""
         - `{target_path}` の INDEX.md 用目次情報を生成すること
         - 対象内容は以下である
 
@@ -50,14 +50,14 @@ def build_indexing_index_entry_parameter(
         {sibling_entries}
         ```
         """,
-        """
+        goal="""
         - summary には対象に何が書いてあるか、または何が入っているかを箇条書き項目として返すこと
         - read_this_when には AI が対象を読む判断を下す条件を箇条書き項目として返すこと
         - do_not_read_this_when には過剰に読みに行かないための条件を箇条書き項目として返すこと
         - ファイル名、ディレクトリ名、hash は返さないこと
         """,
-        FileAccessMode.READONLY,
-        structured_output=True,
+        file_access_mode=FileAccessMode.READONLY,
+        aux_prompt=[],
     )
     # パラメータを生成して返す
     return AgentCallParameter(

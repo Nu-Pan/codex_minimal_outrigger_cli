@@ -7,6 +7,7 @@
 - エグすぎてまともにワークロードを実施出来ないような状態なので、どうにかする必要がある
 - TODO
     - 未実装のプロンプトパーツがある
+    - Structured Output schema の形式を oracle doc で定義する (description を真面目に書く)
     - apply audit --> finding に統一
     - INDEX.md 参照規則をプロンプトパーツに組み込む
     - `cmoc review oralce` の反論側の builder が無い？

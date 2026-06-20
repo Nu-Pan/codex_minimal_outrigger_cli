@@ -33,8 +33,8 @@ def build_review_oracle_enumerate_finding_parameter(
     oracle_root = resolve_real_path(Path("<work-root>/oracle"))
     # プロンプト
     prompt = build_complete_prompt(
-        "- あなたはソフトウェア仕様断片のレビュー担当です",
-        f"""
+        role="- あなたはソフトウェア仕様断片のレビュー担当です",
+        summary=f"""
         - `{oracle_path}` を起点に `{oracle_root}` ツリー内の oracle file をレビューすること
         - 必要なら `{oracle_path}` 以外の関連する oracle file も読むこと
         - 既知の関連所見は以下である
@@ -43,13 +43,13 @@ def build_review_oracle_enumerate_finding_parameter(
         {related_findings}
         ```
         """,
-        """
+        goal="""
         - 既知の関連所見と重複しない新規所見だけを列挙すること
         - 新規所見が無い場合は空配列を返すこと
         """,
-        FileAccessMode.PURE_ORACLE_READ,
+        file_access_mode=FileAccessMode.PURE_ORACLE_READ,
+        aux_prompt=[],
         oracle_standard=True,
-        structured_output=True,
     )
     # パラメータを生成して返す
     return AgentCallParameter(

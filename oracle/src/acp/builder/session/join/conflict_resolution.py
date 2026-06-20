@@ -4,7 +4,7 @@
 from pathlib import Path
 
 # cmoc
-from basic.struct_doc import render_as_markdown
+from basic.struct_doc import StructDoc, render_as_markdown
 from basic.path_model import resolve_real_path, resolve_work_root
 from basic.acp import (
     AgentCallParameter,
@@ -31,25 +31,29 @@ def build_session_join_conflict_resolution_parameter(
     path_list = "\n".join(f"- `{path}`" for path in resolved_paths)
     # プロンプト
     prompt = build_complete_prompt(
-        "- あなたは git merge conflict の解消担当です",
-        f"""
+        role="- あなたは git merge conflict の解消担当です",
+        summary=f"""
         - `{work_root}` ツリー内の merge conflict marker を解消すること
         - conflict 対象ファイルは以下である
 
         {path_list}
         """,
-        """
+        goal="""
         - 作業は conflict marker の解消に限定すること
         - 仕様の意味的な改訂や、conflict 対象外ファイルの編集は禁止
         - oracle file に conflict marker がある場合も、この conflict 解消作業に限って必要最小限の編集を許可する
         - git add と git commit は実行しないこと
         - 作業後に conflict marker が残らない状態にすること
         """,
-        FileAccessMode.REALIZATION_WRITE,
-        file_access_aux_rules="""
-        - conflict 対象 oracle file は、この conflict marker 解消に必要な範囲だけ編集して良い
-        """,
-        structured_output=False,
+        file_access_mode=FileAccessMode.REALIZATION_WRITE,
+        aux_prompt=[
+            StructDoc(
+                "additional file access rule",
+                """
+                - conflict 対象 oracle file は、この conflict marker 解消に必要な範囲だけ編集して良い
+                """,
+            ),
+        ],
     )
     # パラメータを生成して返す
     return AgentCallParameter(

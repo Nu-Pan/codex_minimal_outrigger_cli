@@ -32,19 +32,19 @@ def build_apply_fork_file_audit_parameter(
     # プロンプト
     # TODO 要修正点の説明を別ファイルにする
     prompt = build_complete_prompt(
-        "- あなたはソフトウェア実装の監査担当です",
-        f"""
+        role="- あなたはソフトウェア実装の監査担当です",
+        summary=f"""
         - `{target_path}` を起点に `{repo_root}` ツリー内の realization file の要修正点を調査すること
         - 必要なら `{target_path}` 以外の oracle file, realization file も読むこと
         - 要修正点とは
             - oracle file と realization file との明確な不整合
             - realization file だけから見た品質上の致命的な問題
         """,
-        "- 指定された Structured Output schema に一致する JSON だけを返すこと",
-        FileAccessMode.READONLY,
+        goal="- 指定された Structured Output schema に一致する JSON だけを返すこと",
+        file_access_mode=FileAccessMode.READONLY,
+        aux_prompt=[],
         oracle_standard=True,
         realization_standard=True,
-        structured_output=True,
     )
     # パラメータを生成して返す
     return AgentCallParameter(

@@ -9,19 +9,46 @@ from .oracle_and_realization_basic import build_oracle_and_realization_basic
 
 
 def build_complete_prompt(
+    *,
     role: str,
     summary: str,
     goal: str,
     file_access_mode: FileAccessMode,
-    file_access_aux_rules: str | None = None,
-    *,
+    aux_prompt: list[StructDoc],
     oracle_and_realization_basic: bool = False,
     oracle_standard: bool = False,
     realization_standard: bool = False,
-    structured_output: bool,
 ) -> list[StructDoc]:
     """
-    実際に AI エージェントに渡すことができる完全なプロンプトを構築する
+    agent call にそのまま渡すことができる完全なプロンプトを構築する
+
+    role:
+        agent が果たすべき役割の短い説明
+
+    summaey:
+        agent への依頼する作業の概要・短い説明
+
+    goal:
+        agent が作業完了と判断する条件・基準
+
+    file_access_mode:
+        agent によるファイルアクセスに対する制限設定
+
+    aux_prompt:
+        任意に追加可能なプロンプト
+        典型的には、汎用性の一切ない特殊事情についての説明をプロンプトとして注入する場合に使う事を想定している
+
+    oracle_and_realization_basic:
+        True の時、oracle, realization についての基本情報をプロンプトに注入する
+
+    oracle_standard:
+        True の時、oracle standard をプロンプトに注入する
+
+    realization_standard:
+        True の時、realization standard をプロンプトに注入する
+
+    return:
+        agent call にそのまま渡すことができる完全なプロンプト
     """
     struct_doc = [
         StructDoc(
@@ -36,7 +63,8 @@ def build_complete_prompt(
             "goal",
             goal,
         ),
-        build_file_access_rule(file_access_mode, file_access_aux_rules),
+        build_file_access_rule(file_access_mode),
+        *aux_prompt,
     ]
     if oracle_and_realization_basic or oracle_standard or realization_standard:
         struct_doc.append(build_oracle_and_realization_basic())
@@ -44,13 +72,4 @@ def build_complete_prompt(
         struct_doc.append(build_oracle_standard())
     if realization_standard:
         struct_doc.append(build_realization_standard())
-    if structured_output:
-        struct_doc.append(
-            StructDoc(
-                "output format",
-                """
-                - 指定された Structured Output schema に従う結果を返すこと
-                """,
-            )
-        )
     return struct_doc

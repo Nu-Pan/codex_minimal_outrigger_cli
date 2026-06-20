@@ -29,8 +29,8 @@ def build_apply_fork_change_summary_parameter(
     repo_root = resolve_repo_root()
     # プロンプト
     prompt = build_complete_prompt(
-        "- あなたはソフトウェア変更内容の要約担当です",
-        f"""
+        role="- あなたはソフトウェア変更内容の要約担当です",
+        summary=f"""
         - `{repo_root}` ツリー内の変更内容を、人間向け作業レポートに使える形で要約すること
         - 差分情報は以下である
 
@@ -38,15 +38,15 @@ def build_apply_fork_change_summary_parameter(
         {diff_summary}
         ```
         """,
-        """
+        goal="""
         - 変更内容を意味論に基づくカテゴリへ分けること
         - 各カテゴリで何をどう変えたかを要約すること
         - 主要な変更ファイルを changed_paths に列挙すること
         """,
-        FileAccessMode.READONLY,
+        file_access_mode=FileAccessMode.READONLY,
+        aux_prompt=[],
         oracle_standard=True,
         realization_standard=True,
-        structured_output=True,
     )
     # パラメータを生成して返す
     return AgentCallParameter(
