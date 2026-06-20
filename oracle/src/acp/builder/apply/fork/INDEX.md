@@ -26,25 +26,25 @@
 
 ## Summary
 
-- `cmoc apply fork` の作業レポート用変更要約生成 prompt の正本への入口です。
-- `build_apply_fork_change_summary_parameter()` が `<cmoc-apply-branch>` 上の差分情報を受け取り、人間向けレポート用の要約と Structured Output schema を結びつけます。
-- `change_summary.json` は、変更を意味論カテゴリごとに整理して返す出力形式です。
+- `<cmoc-root>/oracle/src/acp/builder/apply/fork/change_summary.py` のルーティング文書で、`change_summary.json` への入口です。
+- `build_apply_fork_change_summary_parameter()` は `<cmoc-apply-branch>` 上の差分情報を受け取り、作業レポート向けの変更要約 prompt と Structured Output schema を結びつけます。
+- 変更内容を意味論カテゴリごとに整理し、各カテゴリの要約と主要変更ファイルを返す流れを案内します。
 
 ## Read this when
 
-- `cmoc apply fork` の変更要約生成 prompt と、その入力・出力の関係を確認したいとき。
-- `change_summary.json` が定義する変更カテゴリ、要約文、主要変更ファイルの対応を把握したいとき。
-- `build_apply_fork_change_summary_parameter()` が差分要約からどの `AgentCallParameter` を組み立てるかたどりたいとき。
+- `cmoc apply fork` の変更要約生成で、prompt と出力 JSON の関係を確認したいとき。
+- `change_summary.json` が定義する変更カテゴリ、カテゴリ要約、主要変更ファイルの対応を把握したいとき。
+- `build_apply_fork_change_summary_parameter()` がどの `AgentCallParameter` を組み立てるかたどりたいとき。
 
 ## Do not read this when
 
 - すでに `build_apply_fork_change_summary_parameter()` の用途が分かっていて、このファイルの実装を直接確認するとき。
-- `cmoc apply fork` の要修正点検出、要修正点リスト改善、要修正点 1 件の実装修正を探しているとき。
+- `cmoc apply fork` のファイル単位監査、要修正点リスト改善、要修正点 1 件の実装修正を探しているとき。
 - 変更要約ではなく、`change_summary.json` の Structured Output schema だけを確認したいとき。
 
 ## hash
 
-- f6e0d248610fe53e6c8319fe6ba589ec3d6b09ed4356349e3d1fdfcb68190167
+- cfc74bfed881f5e7cad97427b143dbc5110cc38b99a5a8c4852ac9ebd7b43353
 
 # `file_audit_finding.json`
 
@@ -87,36 +87,38 @@
 ## Do not read this when
 
 - すでに目的のファイルが分かっていて、`file_audit_finding.py` や `file_audit_finding.json` を直接開くとき。
-- `cmoc apply fork` の要修正点リスト改善、要修正点 1 件の実装修正、変更要約生成を探しているとき。
-- `cmoc review oracle`、`cmoc indexing`、`cmoc session join` など、別系統の agent call parameter を探しているとき。
+- `cmoc apply fork` の変更要約、要修正点リスト改善、要修正点 1 件の実装修正を探しているとき。
+- Structured Output schema だけを確認したいとき。
 
 ## hash
 
-- b6ad10521f913cb968fd95fa3ca2ffa915d0a78944f80a08086d4fb7eec2557c
+- bfc327295a549245fc8ad9e55c9fff3433d17abcea7fa600b4c15f5a8051ab8c
 
 # `fixing_point_application.py`
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/acp/builder/apply/fork/fixing_point_application.py` のルーティング文書で、`cmoc apply fork` の要修正点 1 件に対する実装修正作業用の入口です。
-- このファイルは realization file の修正を前提とする write-enabled な入口で、Structured Output は要求しません。
-- 要修正点は作業ヒントとして扱い、`git add` と `git commit` を実行しない前提を案内します。
+- この `<cmoc-root>/oracle/src/acp/builder/apply/fork/fixing_point_application.py` のルーティング文書で、`cmoc apply fork` の要修正点 1 件に対する実装修正作業用の入口です。
+- この入口は realization file の修正を前提とする write-enabled な呼び出しで、Structured Output は要求しません。
+- 要修正点は作業ヒントとして扱い、`git add` と `git commit` を行わない前提を案内します。
 
 ## Read this when
 
-- `cmoc apply fork` で検出済みの要修正点 1 件を実際に修正する入口を確認したいとき。
-- realization file を書き換える write-enabled な呼び出しで、どのファイルアクセス規則と実行方針が前提か知りたいとき。
+- 検出済みの要修正点 1 件を実際に修正する入口を確認したいとき。
+- realization file を書き換える write-enabled な呼び出しで、前提となるファイルアクセス規則と実行方針を知りたいとき。
 - 要修正点情報を絶対指示ではなく作業ヒントとして扱い、`git add` と `git commit` を行わない方針を確認したいとき。
+- このファイルの `INDEX.md` を作成・修正する前に、どの資料へ分岐するか整理したいとき。
 
 ## Do not read this when
 
 - すでに `build_apply_fork_fixing_point_application_parameter()` の用途が分かっていて、実装コードを直接確認したいとき。
 - `cmoc apply fork` の変更要約、ファイル単位監査、要修正点リスト改善など、別段階の入口を探しているとき。
 - Structured Output schema だけを確認したいとき。
+- この入口ではなく、他の `cmoc review oracle`、`cmoc indexing`、`cmoc session join` 系の仕様を探しているとき。
 
 ## hash
 
-- b2ee81e4f30d346f7f2d613e3f9c603a1201f4f9d54d875ea9af7151cd8d125d
+- 44ad3e52c2528a022bac07ffbf4438dab09c99f9cbe9dc0f418f5b1815df65eb
 
 # `fixing_point_refinement.json`
 
@@ -164,4 +166,4 @@
 
 ## hash
 
-- 8149c7df2b817d370534ecf9103248ece18c008d6805436e2389943942fa5259
+- 16912e7bc5b98bc6abcbcbb4b39823f883f303c865784ff3d9d3c7b1d20a94d6

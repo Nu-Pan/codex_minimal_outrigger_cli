@@ -39,38 +39,38 @@
 
 ## Do not read this when
 
-- `build_complete_prompt()` の呼び出し元や、個別の prompt 断片の実装を直接確認したいとき。
-- `file_access_rule.py`、`oracle_standard.py`、`realization_standard.py`、`oracle_and_realization_basic.py` など、組み立て元の断片だけを見たいとき。
-- `prompt_parts/` 全体ではなく、別の `<cmoc-root>/oracle/src` サブディレクトリや別フローの入口を探しているとき。
+- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/complete_prompt.py` を直接確認する対象が決まっていて、この目次を経由する必要がないとき。
+- `file_access_rule.py`、`oracle_standard.py`、`realization_standard.py`、`oracle_and_realization_basic.py` など、組み立て元の断片だけを個別に確認したいとき。
+- `prompt_parts/` 全体ではなく、別の `<cmoc-root>/oracle/src` 配下や別フローの入口を探しているとき。
 
 ## hash
 
-- 159c0b4f2b7ccbbe97526b28b5c58c28d8d738d27ae6008c3e760393ac6d9431
+- adc28fd3f4a7423e9a8a836d2e4d31b0baaf24313dac7d6c8ad5d79588a562da
 
 # `file_access_rule.py`
 
 ## Summary
 
-- `FileAccessMode` に応じた読み書き制約を `StructDoc` として組み立てる入口です。
-- `complete_prompt.py` から呼ばれ、`<work-root>` / `<work-root>/oracle` / `<work-root>/memo` の扱いを切り替えます。
+- `<cmoc-root>/oracle/src/acp/prompt_parts/file_access_rule.py` は、`FileAccessMode` に応じたファイル読み書き制約を `StructDoc` として組み立てる入口です。
+- `complete_prompt.py` から呼ばれ、`<work-root>` / `<work-root>/oracle` / `<work-root>/memo` の扱いをモードごとに切り替えます。
 - 任意の `aux_rules` を末尾に追加できます。
 
 ## Read this when
 
-- ファイルアクセス規則の具体的な制約内容を確認したいとき。
+- ファイル読み書き規則の具体的な制約内容を確認したいとき。
 - `readonly` / `pure_oracle_read` / `realization_write` / `oracle_write` の違いを整理したいとき。
 - `complete_prompt.py` がどのようにアクセス制約文を組み込むか確認したいとき。
 - `aux_rules` の付加方法を把握したいとき。
 
 ## Do not read this when
 
-- `build_file_access_rule()` の実装本体を直接読みたいとき。
+- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/file_access_rule.py` を直接確認する対象が決まっていて、この目次を経由する必要がないとき。
 - `StructDoc`、`FileAccessMode`、`path_model.py` の定義だけを確認したいとき。
-- ファイル読み書き規則ではなく、prompt 全体の構成や他の断片を探しているとき。
+- ファイル読み書き規則ではなく、prompt 全体の構成や別の prompt 断片だけを探しているとき。
 
 ## hash
 
-- 1d05efb6bb2393844151bd847d9e5f77bdbc8d628c6bd107c5c7c02f98174d3b
+- 3009529bf6223bbaa7725345349674f88b58e0d9e37925c71f4dc6e10cc957d8
 
 # `oracle_and_realization_basic.py`
 

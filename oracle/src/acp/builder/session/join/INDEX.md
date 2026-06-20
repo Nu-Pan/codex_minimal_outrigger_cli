@@ -8,8 +8,8 @@
 
 ## Read this when
 
-- `build_session_join_conflict_resolution_parameter()` が組み立てる prompt と `AgentCallParameters` の内容を確認したいとき。
 - `cmoc session join` で conflict が発生したときに、Codex CLI へ何を依頼する仕様かを把握したいとき。
+- `build_session_join_conflict_resolution_parameter()` が組み立てる prompt と `AgentCallParameters` の内容を確認したいとき。
 - conflict 解消時の禁止事項、特に `git add` と `git commit` の禁止を確認したいとき。
 
 ## Do not read this when
@@ -20,4 +20,4 @@
 
 ## hash
 
-- a05c30e0a56dac74a563331c7d609ee7b47805a98f3d092b97db479e56a250e6
+- 86c033d178391dcd83f4d699a67d5e1852918c6c9deb628f4e4295264a9c8ac1

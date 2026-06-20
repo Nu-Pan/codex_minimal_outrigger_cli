@@ -15,34 +15,33 @@
 ## Do not read this when
 
 - すでに読む対象が `apply/`、`indexing/`、`review/`、`session/` のいずれかに決まっていて、この階層の目次を経由する必要がないとき。
-- `change_summary.py`、`index_entry.py`、`enumerate_finding.py`、`conflict_resolution.py` などの個別ファイルを直接開きたいとき。
+- `change_summary.py`、`index_entry.py`、`enumerate_finding.py`、`conflict_resolution.py` などの個別ファイルを直接確認したいとき。
 - この階層の案内ではなく、下位の `INDEX.md` や各個別仕様だけを確認したいとき。
 
 ## hash
 
-- 612898a16ec5b5db420d283053e15caf8c1a8c312a125edc198caf38aab25fe2
+- 7790185fcc9878717e8da25d5fdbeba40cc3ccdd5a16f9ccabeb3bde7dad8c03
 
 # `prompt_parts`
 
 ## Summary
 
 - この `prompt_parts` ディレクトリのルーティング文書で、`complete_prompt.py` を中心に prompt 断片の組み立てと各標準・規則の入口を案内する。
-- `file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py`、`apply_reviewpoint.py` を束ね、AI 呼び出し用 prompt に入る要素の役割分担を示す。
-- 完全な prompt の構成、ファイル読み書き規則、`oracle` / `realization` の前提、`oracle` / `realization` 向け標準、`oracle file` を `realization file` に適用するレビュー観点を確認するための目次である。
+- `file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py`、`review_oracle_viewpoint.py`、`apply_reviewpoint.py` を束ね、AI 呼び出し用 prompt に入る要素の役割分担を示す。
+- 完全な prompt の構成、ファイル読み書き規則、`oracle` / `realization` の前提、標準、レビュー観点を確認するための目次である。
 
 ## Read this when
 
 - `build_complete_prompt()` がどの prompt 断片をどの順序で結合するか確認したいとき。
-- ファイル読み書き規則、`oracle` / `realization` の基本定義、`oracle` 標準、`realization` 標準、`oracle file` を `realization file` に適用するレビュー観点をまとめて把握したいとき。
+- ファイル読み書き規則、`oracle` / `realization` の基本定義、`oracle` 標準、`realization` 標準、レビュー観点をまとめて把握したいとき。
 - Structured Output schema を伴う prompt の末尾に何が追加されるか、または prompt 断片を追加・整理する前にこのディレクトリ全体の役割を押さえたいとき。
-- `oracle file` を `realization file` に適用する際の、レビュー観点や所見の切り分け基準を確認したいとき。
 
 ## Do not read this when
 
-- すでに `complete_prompt.py`、`file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py`、`apply_reviewpoint.py` の役割が分かっていて、個別ファイルへ直接進めるとき。
-- `agent_call_parameter` 全体の共通型や、他のサブコマンドの呼び出し仕様を確認したいとき。
-- `oracle` 正本仕様や開発規約そのものを確認したいだけで、この `prompt_parts` ディレクトリの入口が不要なとき。
+- すでに `complete_prompt.py`、`file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py`、`review_oracle_viewpoint.py`、`apply_reviewpoint.py` のうち読む対象が決まっていて、この目次を経由する必要がないとき。
+- `agent call parameter` 全体や `builder/` 側の仕様を探していて、この `prompt_parts/` 階層の案内が不要なとき。
+- `oracle` の正本仕様や開発規約だけを確認したいときで、この prompt 断片の入口が不要なとき。
 
 ## hash
 
-- 8a68672089c1b1ed93fd42d1ac8b318d54555c0c24cb9d628a0a1e4629b57972
+- 8e3f4873cff9f73924d58988600dee86119999e31955f166089c0965f9a31015

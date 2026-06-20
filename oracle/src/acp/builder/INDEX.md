@@ -8,7 +8,7 @@
 
 ## Read this when
 
-- `cmoc apply fork` 配下で、変更要約・ファイル単位監査・要修正点リスト改善・要修正点 1 件の実装修正のどれへ進むべきか整理したいとき。
+- この配下で、変更要約・ファイル単位監査・要修正点リスト改善・要修正点 1 件の実装修正のどれへ進むべきか整理したいとき。
 - `fork/` 配下の各入口の役割分担をまとめて把握したいとき。
 - このディレクトリの `INDEX.md` を作成・修正する前に、下位ファイルの入口構成を確認したいとき。
 - read-only の呼び出しと write-enabled の呼び出しの違いを、この階層で整理したいとき。
@@ -16,63 +16,61 @@
 ## Do not read this when
 
 - すでに読む対象が `fork/INDEX.md`、`change_summary.py`、`change_summary.json`、`file_audit_finding.py`、`file_audit_finding.json`、`fixing_point_refinement.py`、`fixing_point_refinement.json`、`fixing_point_application.py` のいずれかに決まっていて、この目次を経由する必要がないとき。
-- `cmoc apply fork` のうち、変更要約、ファイル単位監査、要修正点リスト改善、要修正点 1 件の実装修正のどれか一つだけを直接確認したいとき。
+- この配下の変更要約、ファイル単位監査、要修正点リスト改善、要修正点 1 件の実装修正のいずれかを単独で確認したいとき。
 - Structured Output schema そのものではなく、個別の prompt 実装や JSON schema を直接読みたいとき。
-- `cmoc review oracle`、`cmoc indexing`、`cmoc session join` など、別系統の agent call parameter を探しているとき。
 
 ## hash
 
-- c75d1ba9b5afb7d4f7ed3c0d5fa99ff5df5a568947ff535f59815f54a7c1964b
+- 8c4eb6235cddfb6b69693cae3effcc15f1d9e92692ac1aaf13f2ac72fdcac0f2
 
 # `indexing`
 
 ## Summary
 
-- このディレクトリの目次情報生成用の入口で、`index_entry.py` と `index_entry.json` を案内する。
-- 対象パスの内容と同階層の情報を受け取り、`summary`、`read_this_when`、`do_not_read_this_when` を返す構成である。
-- ルーティング文書を作るための入力の組み立て方と Structured Output schema をまとめている。
+- ルーティング文書の目次情報を生成するための入口で、対象の内容と同階層の情報を組み合わせて案内します。
+- 要約・読む条件・読まない条件の 3 項目だけを返す Structured Output を前提にしています。
+- 読み取り専用で、目次文の生成と検証に向いた構成です。
 
 ## Read this when
 
-- 目次情報を生成するための入力と出力の形を確認したいとき。
+- 目次情報を JSON でどう返すか確認したいとき。
 - 対象の内容と同階層の情報をどう渡すか把握したいとき。
-- `index_entry.py` と `index_entry.json` の対応関係を確認したいとき。
-- ルーティング文書の作成時に使う要約・読む条件・読まない条件の構成を整理したいとき。
+- ルーティング文書作成時の要約・読む条件・読まない条件の分担を整理したいとき。
 
 ## Do not read this when
 
-- `cmoc indexing` の目次情報生成仕様ではなく、別のサブコマンドや別の呼び出し仕様を探しているとき。
-- すでに `index_entry.py` と `index_entry.json` を直接確認する目的が決まっているとき。
-- Structured Output の出力形式ではなく、この階層の実装コードだけを確認したいとき。
-- 対象の列挙やコミット処理だけを確認したいとき。
+- すでに目的の個別実装や対応 schema が分かっていて、ここを経由せず直接確認したいとき。
+- 目次情報の markdown への反映手順だけを確認したいとき。
+- ルーティング文書以外の呼び出し仕様を探しているとき。
 
 ## hash
 
-- c304ded8dfdd84fcd44a1fc9b64bb89625d1873eb4c3b61d7b00f3639eedc2f7
+- 3eac5e84efcf0c004b1489d9e6e06d5208a39e60a5f53697ead6ef212c5901c1
 
 # `review`
 
 ## Summary
 
 - この `review` ディレクトリのルーティング文書で、`oracle/` への入口です。
-- `oracle/` には `enumerate_finding`、`merge_finding`、`validate_finding_advocate`、`validate_finding_challenger`、`judge_finding` の 5 系統があり、それぞれの prompt と対応 schema を案内します。
-- 各 `.py` は prompt 正本、各 `.json` は対応する Structured Output schema を表す、読み取り中心の入口です。
+- `oracle/` には `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py` と各対応 `*.json` があり、`cmoc review oracle` の 5 系統を案内します。
+- 各 `*.py` は prompt 正本、各 `*.json` は対応する Structured Output schema を表します。
 
 ## Read this when
 
-- `cmoc review oracle` のレビュー用 oracle 群で、どの prompt 本体や schema に進むべきかを整理したいとき。
-- 新規所見列挙、所見マージ、所見が妥当である理由の列挙、所見が妥当ではない理由の列挙、採否判定のどれを使うかを切り分けたいとき。
-- 各 `.py` が参照する対応 `.json` の Structured Output schema を確認したいとき。
+- どの review oracle 系統に進むべきか整理したいとき。
+- `cmoc review oracle` の prompt 本体と Structured Output schema の対応を確認したいとき。
+- 新規所見列挙、所見整理、妥当理由列挙、否定理由列挙、採否判定のどれを使うか切り分けたいとき。
+- レビュー対象 oracle file と関連所見を入力に取る各フローの入口を把握したいとき。
 
 ## Do not read this when
 
-- すでに `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py`、または対応する `.json` を直接開く対象が決まっていて、この目次を経由する必要がないとき。
-- 新規所見列挙、所見マージ、妥当理由列挙、否定理由列挙、採否判定のうち、特定の 1 系統だけを個別に確認したいとき。
+- すでに開く対象が `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py`、または対応する `*.json` に決まっているとき。
+- 5 系統のうち 1 つだけを直接確認したいとき。
 - `cmoc review oracle` 以外のサブコマンドや、レビュー用 Structured Output schema 以外の仕様を探しているとき。
 
 ## hash
 
-- c770d97d21195c7d956283a327314e41a1dea589f57260f6212c2ad37a579e9a
+- 56dddd8160803a9e42ffc8c3bd567dc1a2bfc1cc8de49598e3efe9c37cd654bc
 
 # `session`
 
@@ -84,17 +82,17 @@
 
 ## Read this when
 
-- `cmoc session join` で conflict が発生したときに、Codex CLI へ何を依頼する仕様かを把握したいとき。
+- `cmoc session join` で conflict が発生したときに、Codex CLI へ何を依頼する仕様か確認したいとき。
 - `build_session_join_conflict_resolution_parameter()` が組み立てる prompt と `AgentCallParameters` の所在を確認したいとき。
 - conflict 解消時の禁止事項、特に `git add` と `git commit` の禁止を確認したいとき。
 - この階層から `join/` へ進むべきか迷ったとき。
 
 ## Do not read this when
 
-- すでに `cmoc session join` の conflict 解消用 prompt 仕様が分かっていて、`join/INDEX.md` や `conflict_resolution.py` を直接確認するとき。
 - `cmoc session join` 以外の session 状態管理や git 操作だけを確認したいとき。
+- すでに目的のファイルが `conflict_resolution.py` だと分かっていて、この目次を経由せず直接開くとき。
 - `apply`、`review`、`indexing` など別サブコマンドの agent call parameter を探しているとき。
 
 ## hash
 
-- 7679e03d4cfc90e841f483079836f59f23bb5a0ae49195a4cc72f11962960fa8
+- 5aa8592e57f9f272c613d0d9ee7c115afa795d191b6638d615c070824c3e210f

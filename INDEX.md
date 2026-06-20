@@ -121,25 +121,26 @@
 
 ## Summary
 
-- この `oracle` ディレクトリのルーティング文書で、`doc/` と `src/` への入口です。
-- `doc/` は利用手順・共通仕様・開発規約・採用しなかった設計案・branch モデルの案内を担当します。
-- `src/` は cmoc の共通基盤や設定、AI コーディングエージェント呼び出し関連の仕様入口を担当します。
+- この `oracle` 直下のルーティング文書で、`doc/` と `src/` への入口を案内します。
+- `doc/` では利用手順・共通仕様・設計判断・開発規約・branch モデルをまとめ、`src/` では AI 呼び出し仕様・共通基盤・設定を案内します。
+- この階層は、oracle 全体の下位文書へ分岐する起点として、どの領域を読むべきかを切り分けるための目次です。
 
 ## Read this when
 
-- `<cmoc-root>/oracle` 全体の入口として、まず `doc/` と `src/` の役割分担を把握したいとき。
-- cmoc の仕様断片のうち、利用手順・共通仕様・開発規約・代替案・branch モデルの入口をまとめて追いたいとき。
-- 実装や文書作成の前に、どの下位ディレクトリの `INDEX.md` へ進むべきか整理したいとき。
+- `<cmoc-root>/oracle` 配下で、まずどの下位ディレクトリや文書に進むべきか整理したいとき。
+- cmoc の利用手順、共通仕様、採用しなかった設計判断、開発規約、branch モデルをまとめて把握したいとき。
+- `<cmoc-root>/oracle/doc` 側の仕様群と、`<cmoc-root>/oracle/src` 側の実装基盤の役割分担を先に押さえたいとき。
+- `INDEX.md` の下位ルートとして、`app_spec/`、`considered_alternative/`、`dev_rule/`、`acp/`、`basic/`、`config/` への入口を確認したいとき。
 
 ## Do not read this when
 
-- `doc/` または `src/` のどちらに進むかすでに決まっていて、この階層の入口説明が不要なとき。
-- `doc/INDEX.md` や `<work-root>/src/INDEX.md` など、配下の詳細ルーティングだけを直接確認したいとき。
+- `doc/` 側や `src/` 側の進む先がすでに決まっていて、この最上位の目次を経由する必要がないとき。
+- `app_spec/`、`considered_alternative/`、`dev_rule/`、`branch_model.md` など、下位の個別文書だけを直接確認したいとき。
 - `README.md` や `AGENTS.md` など、`oracle` 以外のリポジトリ運用ルールだけを確認したいとき。
 
 ## hash
 
-- 9e08fcdd153f43a24a4a5e686627be4a43dc51e947616bdd419245a7f0494d79
+- 32cbfacd938379c38cf44637486d53935aebae96d4d11d95dfc7573c94c25bbe
 
 # `pyproject.toml`
 

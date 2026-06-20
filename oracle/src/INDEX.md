@@ -3,7 +3,7 @@
 ## Summary
 
 - この `acp` ディレクトリのルーティング文書で、`builder/` と `prompt_parts/` への入口です。
-- `builder/` は `cmoc apply fork`、`cmoc indexing`、`cmoc review oracle`、`cmoc session join` に関する agent call parameter を案内し、`prompt_parts/` は共通 prompt 断片と標準・規則の組み立てを案内します。
+- `builder/` は `cmoc apply fork`、`cmoc review oracle`、`cmoc indexing`、`cmoc session join` に関する agent call parameter を案内し、`prompt_parts/` は共通 prompt 断片と標準・規則の組み立てを案内します。
 - この階層は、AI 呼び出し仕様と prompt 構成の入口を切り分ける起点です。
 
 ## Read this when
@@ -20,7 +20,7 @@
 
 ## hash
 
-- c08ab01d8af582d68a7fb1b8622c992dc0c09faeaa1857f6f9beec1da230ec3f
+- 0682dfa879194442b47a4d743ad0433acc15084f1041878f5f55e153754b0d79
 
 # `basic`
 

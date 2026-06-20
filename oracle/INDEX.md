@@ -33,17 +33,17 @@
 
 ## Read this when
 
-- `<cmoc-root>/oracle/src` 配下で、まず `acp/`、`basic/`、`config/` のどれから読むべきか整理したいとき。
+- `<cmoc-root>/oracle/src` 配下で、まず `acp/`、`basic/`、`config/` のどこから読むべきか整理したいとき。
 - `AgentCallParameter`、`ModelClass`、`ReasoningEffort`、`FileAccessMode`、`RootToken`、`Standard`、`StructDoc` など、この階層の共通基盤をまとめて把握したいとき。
 - `<cmoc-root>` / `<repo-root>` / `<run-root>` / `<work-root>` の解決規則や、設定・prompt 組み立て・標準文書・markdown レンダリングの入口を確認したいとき。
 - この階層の下位 `INDEX.md` や個別仕様へ進む前に、役割分担を先に整理したいとき。
 
 ## Do not read this when
 
-- すでに `acp/`、`basic/`、`config/` のいずれかに進む対象が決まっていて、この階層の入口を経由する必要がないとき。
+- すでに `acp/`、`basic/`、`config/` のどれに進むか決まっていて、この階層の入口を経由する必要がないとき。
 - `acp.py`、`path_model.py`、`standard.py`、`struct_doc.py`、`cmoc_config.py` などの個別ファイルを直接確認したいとき。
-- `<cmoc-root>/oracle` 全体の別ルートや、開発規約だけを確認したいとき。
+- `<cmoc-root>/oracle/src` ではなく、`<cmoc-root>/oracle` 全体の別ルートや開発規約だけを確認したいとき。
 
 ## hash
 
-- fc4c059e3fe3ae4c97852cd54c1604044c45b22ac181031867cbc617e0955240
+- 0a2138a9e897d907760e9b8d10be2b86632e4f9c1f9138c0f0c93716545f2ac2
