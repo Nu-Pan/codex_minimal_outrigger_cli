@@ -5,6 +5,8 @@
 - 主に見出しの深さを自動計算してくれることに価値がある
 """
 
+from __future__ import annotations
+
 import textwrap
 
 
@@ -16,14 +18,14 @@ class StructDoc:
     def __init__(
         self,
         title: str,
-        *children: "StructDoc|str",
+        *children: "StructDoc|StructCodeBlock|str",
     ):
         """
         コンストラクタ
         """
         self._title = title
-        self._children: list[StructDoc] | str
-        if len(children) == 1 and isinstance(children[0], str):
+        self._children: list[StructDoc] | StructCodeBlock | str
+        if len(children) == 1 and isinstance(children[0], (StructCodeBlock, str)):
             self._children = children[0]
         else:
             self._children = list()
@@ -43,11 +45,49 @@ class StructDoc:
         return self._title
 
     @property
-    def children(self) -> list["StructDoc"] | str:
+    def children(self) -> list["StructDoc"] | "StructCodeBlock" | str:
         """
         子要素を取得する
         """
         return self._children
+
+
+class StructCodeBlock:
+    """
+    StructDoc 内に挿入可能なコードブロック
+    """
+
+    def __init__(
+        self,
+        info: str | None,
+        body: str,
+    ):
+        """コンストラクタ
+
+        info:
+            コードブロックの先頭に挿入される info string
+            指定なしの場合は None を渡す
+            e.g. python, cpp, bash
+
+        body:
+            コードブロックで囲われる本体テキスト
+        """
+        self._info = info
+        self._body = body
+
+    @property
+    def info(self) -> str | None:
+        """
+        info string を取得する
+        """
+        return self._info
+
+    @property
+    def body(self) -> str:
+        """
+        本体テキストを取得する
+        """
+        return self._body
 
 
 def render_as_markdown(struct_doc: StructDoc | list[StructDoc]) -> str:
@@ -79,6 +119,11 @@ def _render_as_markdown(struct_doc: StructDoc, depth: int = 1) -> str:
         for c in struct_doc.children:
             result += "\n"
             result += _render_as_markdown(c, depth + 1) + "\n"
+    elif isinstance(struct_doc.children, StructCodeBlock):
+        result += "\n"
+        result += f"```{struct_doc.children.info}\n"
+        result += ntqs(struct_doc.children.body) + "\n"
+        result += "```\n"
     elif isinstance(struct_doc.children, str):
         result += "\n"
         result += ntqs(struct_doc.children) + "\n"
