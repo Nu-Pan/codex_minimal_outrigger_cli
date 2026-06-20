@@ -1,3 +1,5 @@
+"""`cmoc apply fork` のファイル単位監査 prompt 正本。"""
+
 # std
 from pathlib import Path
 
@@ -17,9 +19,10 @@ def build_apply_fork_file_audit_parameter(
     target_path: Path,
 ) -> AgentCallParameter:
     """
-    `cmoc apply fork` サブコマンドの「ファイル単位監査」用の agent call パラメータを構築する
+    `cmoc apply fork` サブコマンド、ファイル単位監査用。
+    AI エージェント呼び出しパラメータを構築する。
 
-    target_path:
+    target_path: Path
         監査の起点となるファイルのパス
         oracle file, realization file が渡される想定
     """

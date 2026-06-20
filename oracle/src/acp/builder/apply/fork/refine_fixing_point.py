@@ -1,8 +1,8 @@
 """`cmoc apply fork` の要修正点リスト改善 prompt 正本。"""
 
 # std
-from pathlib import Path
 import json
+from pathlib import Path
 
 # cmoc
 from basic.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
@@ -20,9 +20,10 @@ def build_apply_fork_refine_fixing_point_parameter(
     fixing_points: dict,
 ) -> AgentCallParameter:
     """
-    `cmoc apply fork` サブコマンドの「要修正点リスト改善」用の agent call パラメータを構築する
+    `cmoc apply fork` サブコマンド、要修正点リスト改善用。
+    AI エージェント呼び出しパラメータを構築する。
 
-    fixing_points: str
+    fixing_points: dict
         ファイルごとの監査結果を連結した要修正点リスト
     """
     # パス

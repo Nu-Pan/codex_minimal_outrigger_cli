@@ -36,7 +36,7 @@ def build_review_oracle_validate_finding_challenger_parameter(
     # プロンプト
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア仕様断片レビュー所見の反証担当です",
-        summary=f"- 対象所見が妥当ではない理由を調査すること",
+        summary="- 対象所見が妥当ではない理由を調査すること",
         goal=f"""
         - 指定の Structured Output schema に従って、対象所見が妥当ではない理由を返していること
         - 既存の理由と重複しないよう、新規理由だけが列挙されていること

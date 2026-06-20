@@ -1,3 +1,5 @@
+"""`cmoc apply fork` の要修正点対応作業 prompt 正本。"""
+
 # cmoc
 from basic.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
 from basic.path_model import resolve_repo_root
@@ -14,7 +16,8 @@ def build_apply_fork_consume_fixing_point_parameter(
     fixing_point: str,
 ) -> AgentCallParameter:
     """
-    `cmoc apply fork` サブコマンドの「要修正点対応作業用」の agent call パラメータを構築する
+    `cmoc apply fork` サブコマンド、要修正点対応作業用。
+    AI エージェント呼び出しパラメータを構築する。
 
     fixing_point: str
         対応対象の要修正点。

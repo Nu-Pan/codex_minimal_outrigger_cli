@@ -30,13 +30,11 @@ def build_apply_fork_change_summary_parameter(
     repo_root = resolve_repo_root()
     # プロンプト
     prompt = build_complete_prompt(
-        role="""
-        - あなたはソフトウェア変更内容の要約担当です
-        """,
+        role="- あなたはソフトウェア変更内容の要約担当です",
         summary=f"""
         - `{repo_root}` ツリー内の変更内容を、人間向け作業レポートに使える形で要約すること
         """,
-        goal="""
+        goal=f"""
         - `{repo_root}` ツリー内の変更内容を、指定の Structured Output schema に従って返却すること
         """,
         file_access_mode=FileAccessMode.READONLY,

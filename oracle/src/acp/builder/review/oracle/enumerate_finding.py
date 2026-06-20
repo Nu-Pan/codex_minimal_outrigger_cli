@@ -4,7 +4,7 @@
 from pathlib import Path
 
 # cmoc
-from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
+from basic.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
 from basic.path_model import resolve_real_path
 from basic.acp import (
     AgentCallParameter,
@@ -20,7 +20,8 @@ def build_review_oracle_enumerate_finding_parameter(
     related_findings: str,
 ) -> AgentCallParameter:
     """
-    `cmoc review oracle` サブコマンドの「新規所見列挙」用の agent call パラメータを構築する
+    `cmoc review oracle` サブコマンド、新規所見列挙用。
+    AI エージェント呼び出しパラメータを構築する。
 
     oracle_path: Path
         レビュー対象 oracle file のパス
