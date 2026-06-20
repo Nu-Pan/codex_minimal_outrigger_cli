@@ -182,51 +182,9 @@
 
 ## `<cmoc-apply-branch>` 上の全ての変更内容に対する要約の生成方法
 
-- `<cmoc-apply-branch>` 上の全ての変更内容に対する要約は機械的に生成出来ないので Codex CLI に執筆を依頼する
-- 要約は Structured Output で出力させる
-- Structured Output を元に Markdown にレンダリングするのは cmoc の責任である
-- schema は以下の通り
-```json
-{
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-        "changes"
-    ],
-    "properties": {
-        "changes": {
-            "type": "array",
-            "description": "`<oracle-snapshot-commit>` から `<cmoc-apply-branch>` の HEAD までの差分を、変更内容の意味論に基づいてカテゴリ分けした要約。空配列は想定しない。",
-            "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                    "category",
-                    "summary",
-                    "changed_paths"
-                ],
-                "properties": {
-                    "category": {
-                        "type": "string",
-                        "description": "変更内容の意味論に基づくカテゴリ名。例: 実行制御、レポート生成、テスト、ルーティング文書。"
-                    },
-                    "summary": {
-                        "type": "string",
-                        "description": "このカテゴリで行った変更内容の人間向け要約。カテゴリ名の再掲だけではなく、何をどう変えたかを書く。"
-                    },
-                    "changed_paths": {
-                        "type": "array",
-                        "description": "このカテゴリに属する主な変更ファイルのリポジトリ相対パス。網羅よりも、要約の根拠として有用な主要ファイルを列挙する。",
-                        "items": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-```
+- `<cmoc-apply-branch>` 上の全ての変更内容に対する要約の生成を agent call に依頼する
+- この agent call の詳細仕様は `build_apply_fork_change_summary_parameter` を正本とする
+ - cmoc は Structured Output を作業レポート用 Markdown にレンダリングする
 
 ## サブコマンドの終了コード
 
