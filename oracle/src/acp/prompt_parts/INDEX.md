@@ -146,3 +146,28 @@
 ## hash
 
 - 138f10f02b35c5fcec377f6b663c09a2596beddffc01938231bbe2910d99a8f3
+
+# `review_oracle_viewpoint.py`
+
+## Summary
+
+- この `review_oracle_viewpoint.py` のルーティング文書で、`build_review_oracle_viewpoint()` への入口です。
+- `cmoc review oracle` で使うレビュー観点の正本として、`fatal` と `minor` の判定基準、対象外の条件、汎用的なレビュー観点としての扱いを案内します。
+- `codex exec` のプロンプトに注入する、リポジトリ固有の事情に依存しないレビュー観点の定義をまとめます。
+
+## Read this when
+
+- `cmoc review oracle` の所見分類基準や、`fatal` / `minor` の切り分けを確認したいとき。
+- 仕様断片同士の明確な矛盾や、実装者の裁量で解消不能な問題をどう扱うか整理したいとき。
+- 誤字・脱字・用語不統一・表記揺れなどの単純な問題を、レビュー対象に含めるか確認したいとき。
+- `oracle file` だけでは問題と言い切れないものや、仕様から実装が一意に定まらないものを除外する条件を確認したいとき。
+
+## Do not read this when
+
+- すでに `build_review_oracle_viewpoint()` を直接確認する対象が決まっていて、この目次を経由する必要がないとき。
+- `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py` など、別の review oracle を確認したいとき。
+- `cmoc review oracle` の所見リストや Structured Output schema ではなく、別サブコマンドや別階層の仕様を探しているとき。
+
+## hash
+
+- ef82dafc4a59d85457c1f90e00878089b078449fcd6ed481e828b982594baa81

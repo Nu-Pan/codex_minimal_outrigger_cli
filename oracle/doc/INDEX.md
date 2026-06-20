@@ -15,13 +15,13 @@
 
 ## Do not read this when
 
-- 読みたい対象の仕様がすでに決まっていて、`usage.md` や `sub_command/` 配下の個別文書へ直接進めるとき。
+- 読みたい対象がすでに決まっていて、`usage.md` や `sub_command/` 配下の個別文書へ直接進むとき。
 - `cli_auto_completion.md`、`codex_exec_rule.md`、`console_and_file_log.md`、`error_handling.md` など、個別の共通仕様だけを確認したいとき。
 - `app_spec` 全体ではなく、別の `oracle` 配下ディレクトリや上位のルーティング文書を探しているとき。
 
 ## hash
 
-- eff50d5afd19db6a483ca06b5730da788e9e60338827cf2d83cfd8e2fe00e58b
+- 9e501d64b74c1219704b186ea32beb85b8c786a11f80756a35c07c0a42e1313c
 
 # `branch_model.md`
 

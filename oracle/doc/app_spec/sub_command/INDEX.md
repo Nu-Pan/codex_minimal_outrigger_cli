@@ -45,7 +45,7 @@
 
 ## hash
 
-- 9b62c461972340a6a02316366ba26b6346df99504b6346d5e48bb9638c88a4a5
+- fc4e14315765d82829bf8daf01387afd592573fb69b57313dbf006b3162fa787
 
 # `apply_join.md`
 
@@ -141,7 +141,7 @@
 
 ## hash
 
-- d93d2f7388d3ed2d38603e1225390ec39aa7afc233102ab072cfff963ec06b36
+- 2b50d8c1eb16663997717ccb1abbccf860795c5de51b8bb2b1648321a2a0d0f0
 
 # `session_abandon.md`
 
@@ -196,7 +196,7 @@
 
 ## Summary
 
-- `cmoc session join` の仕様断片への入口であり、session を完了して `<cmoc-session-home-branch>` に戻すための文書です。
+- `cmoc session join` の仕様断片への入口であり、session を完了して `<cmoc-session-home-branch>` へ戻すための文書です。
 - 現在の `<cmoc-session-branch>` を `<cmoc-session-home-branch>` に `git merge --no-ff` し、必要なら conflict 解消を Codex CLI に依頼する流れを案内します。
 - 事前条件、`apply.state` の確認、`session.state` の更新、ブランチ削除までの後始末をたどるための目次です。
 
@@ -215,4 +215,4 @@
 
 ## hash
 
-- 37ddd0bf71f25b6a0a37b6542df0b18912a821f39c2cd2150d0644b7576f0c01
+- 31ed0e990d33b60e8355e3bce347d1da6313cac817f7e0139e1e15910b71a41b

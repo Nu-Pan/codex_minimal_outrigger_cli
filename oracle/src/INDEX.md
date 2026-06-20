@@ -3,26 +3,24 @@
 ## Summary
 
 - この `acp` ディレクトリのルーティング文書で、`builder/` と `prompt_parts/` への入口です。
-- `builder/` は `cmoc apply fork`、`cmoc indexing`、`cmoc review oracle`、`cmoc session join` の呼び出し仕様を案内し、`prompt_parts/` は prompt 断片と完全 prompt の組み立てを案内します。
-- この階層は、AI コーディングエージェント呼び出しに関する仕様と prompt 構成を切り分けるための起点です。
+- `builder/` は `cmoc apply fork`、`cmoc indexing`、`cmoc review oracle`、`cmoc session join` に関する agent call parameter を案内し、`prompt_parts/` は共通 prompt 断片と標準・規則の組み立てを案内します。
+- この階層は、AI 呼び出し仕様と prompt 構成の入口を切り分ける起点です。
 
 ## Read this when
 
-- `<cmoc-root>/oracle/src/acp` 配下で、まず `builder/` と `prompt_parts/` のどちらから読むべきか整理したいとき。
-- `cmoc` のサブコマンド別呼び出し仕様と、prompt 断片・完全 prompt の組み立て方をまとめて把握したいとき。
-- この階層の `INDEX.md` を作成・修正する前に、下位ディレクトリの役割分担を先に確認したいとき。
-- AI コーディングエージェント呼び出しに関する仕様と prompt 構成の入口を確認したいとき。
+- `<cmoc-root>/oracle/src/acp` 配下で、まず `builder/` と `prompt_parts/` のどちらに進むべきか整理したいとき。
+- `cmoc apply`、`cmoc review`、`cmoc indexing`、`cmoc session join` に関係する呼び出し仕様や prompt 断片の役割分担をまとめて把握したいとき。
+- この階層の下位 `INDEX.md` や個別ファイルへ進む前に、AI 呼び出し用の構成全体を先に押さえたいとき。
 
 ## Do not read this when
 
-- すでに読む対象が `builder/` または `prompt_parts/` に決まっていて、この階層の入口を経由する必要がないとき。
-- `cmoc apply fork`、`cmoc indexing`、`cmoc review oracle`、`cmoc session join` のうち、特定の 1 系統だけを直接確認したいとき。
-- `change_summary.py`、`index_entry.py`、`enumerate_finding.py`、`conflict_resolution.py` など、下位の個別ファイルをそのまま開きたいとき。
-- この階層の案内ではなく、`oracle` 全体の別ルートや開発規約だけを確認したいとき。
+- すでに読む対象が `builder/` か `prompt_parts/` に決まっていて、この階層の目次を経由する必要がないとき。
+- `build_apply_fork_*` や `build_review_oracle_*` など、個別の agent call parameter や prompt 本体を直接確認したいとき。
+- `<cmoc-root>/oracle/src/acp` ではなく、`basic/` や `config/` など別の `src` 配下の入口を探しているとき。
 
 ## hash
 
-- 5856c42c109fc0082a2c1371f144349ee7afb288e895a1244b648a9b6203c0cb
+- c08ab01d8af582d68a7fb1b8622c992dc0c09faeaa1857f6f9beec1da230ec3f
 
 # `basic`
 

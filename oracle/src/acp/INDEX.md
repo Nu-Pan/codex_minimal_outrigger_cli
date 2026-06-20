@@ -28,21 +28,21 @@
 
 - この `prompt_parts` ディレクトリのルーティング文書で、`complete_prompt.py` を中心に prompt 断片の組み立てと各標準・規則の入口を案内する。
 - `file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py`、`apply_reviewpoint.py` を束ね、AI 呼び出し用 prompt に入る要素の役割分担を示す。
-- 完全な prompt の構成、ファイル読み書き規則、oracle / realization の前提、oracle / realization 向け標準、`oracle file` を `realization file` に適用するレビュー観点を確認するための目次である。
+- 完全な prompt の構成、ファイル読み書き規則、`oracle` / `realization` の前提、`oracle` / `realization` 向け標準、`oracle file` を `realization file` に適用するレビュー観点を確認するための目次である。
 
 ## Read this when
 
 - `build_complete_prompt()` がどの prompt 断片をどの順序で結合するか確認したいとき。
-- ファイル読み書き規則、oracle / realization の基本定義、oracle 標準、realization 標準、`oracle file` を `realization file` に適用するレビュー観点をまとめて把握したいとき。
+- ファイル読み書き規則、`oracle` / `realization` の基本定義、`oracle` 標準、`realization` 標準、`oracle file` を `realization file` に適用するレビュー観点をまとめて把握したいとき。
 - Structured Output schema を伴う prompt の末尾に何が追加されるか、または prompt 断片を追加・整理する前にこのディレクトリ全体の役割を押さえたいとき。
 - `oracle file` を `realization file` に適用する際の、レビュー観点や所見の切り分け基準を確認したいとき。
 
 ## Do not read this when
 
-- すでに `complete_prompt.py`、`file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py`、`apply_reviewpoint.py` の目的が分かっていて、個別ファイルへ直接進めるとき。
+- すでに `complete_prompt.py`、`file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py`、`apply_reviewpoint.py` の役割が分かっていて、個別ファイルへ直接進めるとき。
 - `agent_call_parameter` 全体の共通型や、他のサブコマンドの呼び出し仕様を確認したいとき。
 - `oracle` 正本仕様や開発規約そのものを確認したいだけで、この `prompt_parts` ディレクトリの入口が不要なとき。
 
 ## hash
 
-- 7eb4a71020ffa21d674710ffa0ff337035b4540ff156928cf50336cb2a71fd38
+- 8a68672089c1b1ed93fd42d1ac8b318d54555c0c24cb9d628a0a1e4629b57972

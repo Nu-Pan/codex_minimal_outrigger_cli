@@ -94,27 +94,25 @@
 
 ## Summary
 
-- `cmoc` における `<work-root>` 上の `INDEX.md` の扱いを定めた仕様で、`INDEX.md` の配置対象・除外対象・記載フォーマットを説明する。
-- `INDEX.md` の生成・更新手順として、深いディレクトリからの処理、差分の検査、必要時の再生成、自動コミットまでを扱う。
+- `cmoc` における `<work-root>` 上の `INDEX.md` の扱いを定めた仕様で、配置対象・除外対象・記載フォーマットを説明する。
+- `INDEX.md` の生成・更新手順として、深いディレクトリからの処理、差分検査、必要時の再生成、自動コミットまでを扱う。
 - 目次情報の生成は `codex exec` に依頼し、Structured Output で `summary`・`read_this_when`・`do_not_read_this_when` を受け取る前提を示す。
-- 目次情報生成の並列実行条件と、インデクシングを cmoc 実行前に直列化して行う運用も含む。
 
 ## Read this when
 
-- `<work-root>` 配下の `INDEX.md` の配置対象、目次作成対象、除外条件を確認したいとき。
-- `INDEX.md` の生成順序、並列実行、自動コミット条件を実装・レビューしたいとき。
-- `codex exec` に目次情報を Structured Output で返させる仕様や、目次情報の JSON schema を確認したいとき。
-- `INDEX.md` の人手編集ではなく、自動インデクシングの運用ルールを押さえたいとき。
+- `<work-root>` 配下の `INDEX.md` の扱い、配置対象、除外対象、更新方針を把握したいとき。
+- `INDEX.md` の生成順序、差分の検査、再生成、並列実行、自動コミットのルールを確認したいとき。
+- `codex exec` による目次情報生成の前提や、Structured Output の `summary`・`read_this_when`・`do_not_read_this_when` の位置づけを確認したいとき。
 
 ## Do not read this when
 
-- 通常の `cmoc` 利用手順や、個別サブコマンドの引数・状態遷移だけを確認したいとき。
-- `INDEX.md` の配置対象、除外条件、記載フォーマット、並列化、自動コミットなどのルールを扱う必要がないとき。
-- 一般的な git commit / branch / worktree の運用だけを確認したいとき。
+- `cmoc indexing` の実行手順や事前条件だけを確認したいとき。
+- `INDEX.md` の配置対象や生成ルールではなく、`usage.md` や個別サブコマンド仕様へ直接進めるとき。
+- `app_spec` 全体ではなく、別の `oracle` 配下ディレクトリの仕様を探しているとき。
 
 ## hash
 
-- b531b34a7d4cf49e9b285d5b6144632fa8721319bfd553acb9111e54f57a7c0b
+- af05b433d23be570cf65b8a6ae8871a7c7e69e96efdaedf1c4e0a8b9b3746e4b
 
 # `misc_spec.md`
 
@@ -216,26 +214,25 @@
 
 ## Summary
 
-- このディレクトリのルーティング文書で、`cmoc` のサブコマンド仕様への入口です。
+- この `sub_command` ディレクトリのルーティング文書で、`cmoc` のサブコマンド仕様への入口です。
 - `apply` 系、`session` 系、`init`、`indexing`、`review oracle` の個別仕様へ進むための目次として機能します。
-- どのサブコマンドの文書を読むべきか迷ったときに、最初に参照する案内です。
+- 直下の `apply_fork.md`、`apply_join.md`、`apply_abandon.md`、`session_fork.md`、`session_join.md`、`session_abandon.md`、`init.md`、`indexing.md`、`review_oracle.md` へ案内します。
 
 ## Read this when
 
-- `cmoc apply` 系、`cmoc session` 系、`cmoc init`、`cmoc indexing`、`cmoc review oracle` のうち、どの仕様を先に読むべきか整理したいとき。
-- `cmoc apply abandon`、`cmoc apply fork`、`cmoc apply join`、`cmoc session abandon`、`cmoc session fork`、`cmoc session join` の入口をまとめて把握したいとき。
-- サブコマンドごとの役割分担や、実装・修正・テスト・レビュー前の読み順を決めたいとき。
-- このディレクトリ配下の仕様断片へ進むための入口を確認したいとき。
+- `cmoc` のサブコマンド仕様全体を俯瞰して、どの文書から読むべきか整理したいとき。
+- `apply` 系、`session` 系、`init`、`indexing`、`review oracle` の各個別仕様へ進む前に、この階層の役割分担を確認したいとき。
+- `cmoc` の実装・修正・テスト・レビューの前に、対象サブコマンドの入口文書を素早く探したいとき。
 
 ## Do not read this when
 
-- 読む対象のサブコマンドがすでに分かっていて、この `INDEX.md` を経由せず個別の `*.md` に直接進めるとき。
-- この階層の目次だけでなく、個別仕様の本文そのものだけを確認したいとき。
-- `oracle` 配下の別ルートや、開発規約・実装規約だけを確認したいとき。
+- 読みたい対象の仕様がすでに決まっていて、`apply_fork.md`、`apply_join.md`、`apply_abandon.md`、`session_fork.md`、`session_join.md`、`session_abandon.md`、`init.md`、`indexing.md`、`review_oracle.md` のいずれかへ直接進めるとき。
+- `apply` 系、`session` 系、`init`、`indexing`、`review oracle` のどれを読むべきかではなく、個別サブコマンドの引数や手順だけを確認したいとき。
+- `INDEX.md` の生成・更新ルールや `oracle` 全体のルーティング方針だけを確認したいとき。
 
 ## hash
 
-- f2b986ab492f319ae42ded4922411ae58b5daabcaa7161939e075ff7a970740f
+- 4cd257de17573e14825ddd02118e59976837c9a1d70e45cbd02eec54cbe74be1
 
 # `usage.md`
 
