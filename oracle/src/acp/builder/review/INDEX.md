@@ -15,11 +15,11 @@
 
 ## Do not read this when
 
-- すでに開く対象が `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py`、または対応する `*.json` に決まっていて、この目次を経由する必要がないとき。
+- すでに `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py`、または対応する `*.json` を直接確認する目的が決まっていて、この目次を経由する必要がないとき。
 - 5 系統のうち 1 つだけを直接確認したいとき。
 - `cmoc review oracle` 以外のサブコマンドや、レビュー用 Structured Output schema 以外の仕様を探しているとき。
 - 所見の列挙、整理、擁護理由列挙、否定理由列挙、採否判定のいずれにも当てはまらない文書を探しているとき。
 
 ## hash
 
-- c7e0713ff18ad23fa3683270de5072db228802660f17e74e6d2ac76eba0cc731
+- 98d43116450ea3d49179695a9db1ff3857d61b439167f910a1a6fcd0482304fa

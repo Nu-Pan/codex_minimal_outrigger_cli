@@ -57,19 +57,21 @@
 
 ## Read this when
 
-- どの review oracle 系統に進むべきか整理したいとき。
-- `cmoc review oracle` の prompt 本体と Structured Output schema の対応を確認したいとき。
-- 新規所見列挙、所見整理、妥当理由列挙、否定理由列挙、採否判定のどれを使うか切り分けたいとき。
+- `cmoc review oracle` の 5 系統の入口をひとまとめに把握したいとき。
+- `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py` のどれが何を担当するか整理したいとき。
+- 各 `*.py` が prompt 正本で、各 `*.json` が対応する Structured Output schema である対応関係を確認したいとき。
+- 新規所見列挙、所見整理、妥当理由列挙、否定理由列挙、採否判定のどこから読むべきか迷ったとき。
 
 ## Do not read this when
 
-- すでに開く対象が `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py`、または対応する `*.json` に決まっていて、この目次を経由する必要がないとき。
+- すでに `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py`、または対応する `*.json` を直接確認する目的が決まっていて、この目次を経由する必要がないとき。
 - 5 系統のうち 1 つだけを直接確認したいとき。
 - `cmoc review oracle` 以外のサブコマンドや、レビュー用 Structured Output schema 以外の仕様を探しているとき。
+- 所見の列挙、整理、擁護理由列挙、否定理由列挙、採否判定のいずれにも当てはまらない文書を探しているとき。
 
 ## hash
 
-- 69fb81c581701d9e2f4d0600ad1d3ced5e1d9b38030fa6a78ee5b95357f8fff4
+- b386670446a404ac9292008c76c7c3e0187041be21ae1331b4f4a2c2da4e11cc
 
 # `session`
 
@@ -94,4 +96,4 @@
 
 ## hash
 
-- 5aa8592e57f9f272c613d0d9ee7c115afa795d191b6638d615c070824c3e210f
+- 123ff5f31327b641c8bc893dbb702eb5bcc841dd99b6781b6d07c6f7f59932d1

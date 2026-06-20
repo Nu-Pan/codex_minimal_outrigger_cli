@@ -14,13 +14,13 @@
 
 ## Do not read this when
 
-- すでに読む対象が `apply/`、`indexing/`、`review/`、`session/` のいずれかに決まっていて、この階層の目次を経由する必要がないとき。
+- すでに読む対象が `apply/`、`indexing/`、`review/`、`session/` のいずれかに決まっていて、この目次を経由する必要がないとき。
 - `change_summary.py`、`index_entry.py`、`enumerate_finding.py`、`conflict_resolution.py` などの個別ファイルを直接確認したいとき。
 - この階層の案内ではなく、下位の `INDEX.md` や各個別仕様だけを確認したいとき。
 
 ## hash
 
-- 43a36b57bfa99ec1685f02f7727915da887b4a52b4ca5980ea7746adc5a34200
+- 4a6be0aaf216e67e3c7d5d347d96dfe51abd710d008a1f97abf183a29c711086
 
 # `prompt_parts`
 
