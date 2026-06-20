@@ -7,6 +7,7 @@
   "properties": {
     "operations": {
       "type": "array",
+      "description": "入力された所見リストの重複や矛盾を解消するための編集操作リスト。十分コンパクトで整合的な場合は空配列を返す。",
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -18,6 +19,7 @@
         "properties": {
           "kind": {
             "type": "string",
+            "description": "編集操作の種類。所見を削除する場合は delete、単一所見を置き換える場合は replace、複数所見を統合する場合は merge。",
             "enum": [
               "delete",
               "replace",
@@ -26,12 +28,14 @@
           },
           "target_ids": {
             "type": "array",
+            "description": "編集対象となる入力所見の finding_id のリスト。delete と replace では対象所見、merge では統合元の複数所見を指定する。",
             "minItems": 1,
             "items": {
               "type": "string"
             }
           },
           "finding": {
+            "description": "delete では null、replace または merge では編集後の新しい所見内容。",
             "anyOf": [
               {
                 "type": "object",
@@ -45,19 +49,23 @@
                 "properties": {
                   "severity": {
                     "type": "string",
+                    "description": "所見の重大度。仕様断片として致命的な矛盾・欠落は fatal、軽微な曖昧さ・改善余地は minor。",
                     "enum": [
                       "fatal",
                       "minor"
                     ]
                   },
                   "title": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "所見の短い見出し。問題の要点が分かるように簡潔に書く。"
                   },
                   "oracle_path": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "所見の主な根拠となる oracle file のパス。対象所見群の根拠として最も適切な oracle file を指す。"
                   },
                   "reason": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "編集後の所見として扱うべき理由。重複や矛盾をどう整理したかも分かるように書く。"
                   }
                 }
               },

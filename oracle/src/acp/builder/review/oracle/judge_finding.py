@@ -4,7 +4,7 @@
 from pathlib import Path
 
 # cmoc
-from basic.struct_doc import render_as_markdown
+from basic.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
 from basic.path_model import resolve_real_path
 from basic.acp import (
     AgentCallParameter,
@@ -36,40 +36,39 @@ def build_review_oracle_judge_finding_parameter(
     # プロンプト
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア仕様断片レビュー所見の採否判定担当です",
-        summary=f"""
-        - `{oracle_root}` ツリー内の oracle file を根拠に、対象所見を人間へ提示すべきか判定すること
-        - 対象所見は以下である
-
-        ```text
-        {finding}
-        ```
-
-        - 所見が妥当である理由は以下である
-
-        ```text
-        {advocate_reasons}
-        ```
-
-        - 所見が妥当ではない理由は以下である
-
-        ```text
-        {challenger_reasons}
-        ```
-        """,
-        goal="""
-        - 人間に要確認項目として提示すべき所見なら accept と判定すること
-        - 提示すべきではない所見なら reject と判定すること
-        - 判定理由は具体的に書くこと
-        """,
+        summary="- 指定の所見を人間へ提示すべきか判定すること",
+        goal=f"- 指定された Structured Output schema に従って判定結果を返すこと",
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
-        aux_prompt=[],
+        aux_prompt=[
+            StructDoc(
+                "所見の内容",
+                StructCodeBlock(
+                    "text",
+                    finding,
+                ),
+            ),
+            StructDoc(
+                "所見が妥当であるとする理由",
+                StructCodeBlock(
+                    "text",
+                    advocate_reasons,
+                ),
+            ),
+            StructDoc(
+                "所見が妥当ではないとする理由",
+                StructCodeBlock(
+                    "text",
+                    challenger_reasons,
+                ),
+            ),
+        ],
         oracle_standard=True,
         review_oracle_standard=True,
     )
     # パラメータを生成して返す
     return AgentCallParameter(
-        ModelClass.FLAGSHIP,
-        ReasoningEffort.HIGH,
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.MEDIUM,
         FileAccessMode.PURE_ORACLE_READ,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),

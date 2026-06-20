@@ -4,7 +4,7 @@
 from pathlib import Path
 
 # cmoc
-from basic.struct_doc import render_as_markdown
+from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
 from basic.path_model import resolve_real_path
 from basic.acp import (
     AgentCallParameter,
@@ -20,13 +20,13 @@ def build_review_oracle_enumerate_finding_parameter(
     related_findings: str,
 ) -> AgentCallParameter:
     """
-    `cmoc review oracle` サブコマンド、新規所見列挙用。
-    AI エージェント呼び出しパラメータを構築する。
+    `cmoc review oracle` サブコマンドの「新規所見列挙」用の agent call パラメータを構築する
 
     oracle_path: Path
-        レビュー対象 oracle file のパス。
+        レビュー対象 oracle file のパス
+
     related_findings: str
-        現状の所見リストのうち、レビュー対象ファイルと関連するもの。
+        現状の所見リストのうち、レビュー対象ファイルと関連するもの
     """
     # パス
     oracle_path = resolve_real_path(oracle_path)
@@ -37,18 +37,23 @@ def build_review_oracle_enumerate_finding_parameter(
         summary=f"""
         - `{oracle_path}` を起点に `{oracle_root}` ツリー内の oracle file をレビューすること
         - 必要なら `{oracle_path}` 以外の関連する oracle file も読むこと
-        - 既知の関連所見は以下である
-
-        ```text
-        {related_findings}
-        ```
         """,
         goal="""
-        - 既知の関連所見と重複しない新規所見だけを列挙すること
-        - 新規所見が無い場合は空配列を返すこと
+        - 指定の Structured Output schema に従って所見が列挙されていること
+        - 既知の関連所見と重複しない新規所見だけが列挙されていること
+        - 新規所見が無い場合は空配列を返していること
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
-        aux_prompt=[],
+        aux_prompt=[
+            StructDoc(
+                "既知の関連所見",
+                StructCodeBlock(
+                    "text",
+                    related_findings,
+                ),
+            )
+        ],
+        oracle_and_realization_basic=True,
         oracle_standard=True,
         review_oracle_standard=True,
     )

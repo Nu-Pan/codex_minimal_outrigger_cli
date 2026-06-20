@@ -4,7 +4,7 @@
 from pathlib import Path
 
 # cmoc
-from basic.struct_doc import render_as_markdown
+from basic.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
 from basic.path_model import resolve_real_path
 from basic.acp import (
     AgentCallParameter,
@@ -36,39 +36,43 @@ def build_review_oracle_validate_finding_advocate_parameter(
     # プロンプト
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア仕様断片レビュー所見の擁護担当です",
-        summary=f"""
-        - `{oracle_root}` ツリー内の oracle file を根拠に、対象所見が妥当である理由を調査すること
-        - 対象所見は以下である
-
-        ```text
-        {finding}
-        ```
-
-        - 既知の妥当である理由は以下である
-
-        ```text
-        {known_advocate_reasons}
-        ```
-
-        - 既知の妥当ではない理由は以下である
-
-        ```text
-        {known_challenger_reasons}
-        ```
-        """,
-        goal="""
-        - 対象所見が妥当である新規理由だけを列挙すること
-        - 具体的な根拠を必ず示し、「かもしれない」「可能性がある」は根拠にしないこと
-        - 既知理由と重複する理由が無い場合は空配列を返すこと
+        summary=f"- 対象所見が妥当である理由を調査すること",
+        goal=f"""
+        - 指定の Structured Output schema に従って、対象所見が妥当である理由を返していること
+        - 既存の理由と重複しないよう、新規理由だけが列挙されていること
+        - `{oracle_root}` ツリー内の oracle file を具体的な根拠とし、「かもしれない」「可能性がある」は根拠にしないこと
+        - 新規理由が無い場合は空配列を返すこと
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
-        aux_prompt=[],
+        aux_prompt=[
+            StructDoc(
+                "対象所見",
+                StructCodeBlock(
+                    "text",
+                    finding,
+                ),
+            ),
+            StructDoc(
+                "既知の妥当であるとする理由",
+                StructCodeBlock(
+                    "text",
+                    known_advocate_reasons,
+                ),
+            ),
+            StructDoc(
+                "既知の妥当ではないとする理由",
+                StructCodeBlock(
+                    "text",
+                    known_challenger_reasons,
+                ),
+            ),
+        ],
         oracle_standard=True,
         review_oracle_standard=True,
     )
     # パラメータを生成して返す
     return AgentCallParameter(
-        ModelClass.MAINSTREAM,
+        ModelClass.EFFICIENCY,
         ReasoningEffort.MEDIUM,
         FileAccessMode.PURE_ORACLE_READ,
         render_as_markdown(prompt),

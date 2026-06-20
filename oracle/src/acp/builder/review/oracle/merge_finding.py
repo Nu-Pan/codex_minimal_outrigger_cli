@@ -4,7 +4,7 @@
 from pathlib import Path
 
 # cmoc
-from basic.struct_doc import render_as_markdown
+from basic.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
 from basic.path_model import resolve_real_path
 from basic.acp import (
     AgentCallParameter,
@@ -30,21 +30,20 @@ def build_review_oracle_merge_finding_parameter(
     # プロンプト
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア仕様断片レビュー結果の整理担当です",
-        summary=f"""
-        - `{oracle_root}` ツリー内の oracle file に対する所見リストを整理すること
-        - 現状の所見リストは以下である
-
-        ```text
-        {findings}
-        ```
-        """,
+        summary=f"- `{oracle_root}` ツリー内の oracle file に対する所見リストを整理すること",
         goal="""
-        - 所見同士の内容的な重複や相互矛盾を解消する編集操作を列挙すること
+        - 指定の Structured Output schema に従って編集操作を列挙すること
+        - 編集操作実行後、所見同士の内容的な重複や相互矛盾が解消されていること
         - 十分コンパクトで整合的なら空配列を返すこと
         - target_ids には入力所見の finding_id を指定すること
         """,
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
-        aux_prompt=[],
+        aux_prompt=[
+            StructDoc(
+                "現状の所見リスト",
+                StructCodeBlock("text", findings),
+            ),
+        ],
         oracle_standard=True,
         review_oracle_standard=True,
     )

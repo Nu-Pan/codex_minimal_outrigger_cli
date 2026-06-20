@@ -7,8 +7,10 @@
   "properties": {
     "reasons": {
       "type": "array",
+      "description": "対象所見が妥当である新規理由のリスト。既知理由と重複する理由が無い場合は空配列を返す。",
       "items": {
-        "type": "string"
+        "type": "string",
+        "description": "対象所見が妥当であると言える具体的な根拠。推測ではなく oracle file の記述に基づいて書く。"
       }
     }
   }
