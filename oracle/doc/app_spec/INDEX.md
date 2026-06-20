@@ -226,13 +226,13 @@
 
 ## Do not read this when
 
-- 読みたい対象の仕様がすでに決まっていて、`apply_fork.md`、`apply_join.md`、`apply_abandon.md`、`session_fork.md`、`session_join.md`、`session_abandon.md`、`init.md`、`indexing.md`、`review_oracle.md` のいずれかへ直接進めるとき。
+- 読みたい対象の仕様がすでに決まっていて、`apply_fork.md`、`apply_join.md`、`apply_abandon.md`、`session_fork.md`、`session_join.md`、`session_abandon.md`、`init.md`、`indexing.md`、`review_oracle.md` のいずれかへ直接進むとき。
 - `apply` 系、`session` 系、`init`、`indexing`、`review oracle` のどれを読むべきかではなく、個別サブコマンドの引数や手順だけを確認したいとき。
-- `INDEX.md` の生成・更新ルールや `oracle` 全体のルーティング方針だけを確認したいとき。
+- `INDEX.md` の生成・更新ルールや `<cmoc-root>/oracle` 全体のルーティング方針だけを確認したいとき。
 
 ## hash
 
-- 4cd257de17573e14825ddd02118e59976837c9a1d70e45cbd02eec54cbe74be1
+- e0e45389d83580da99da9694fbc961017243ea94adc203a5e9e38e223de7ce72
 
 # `usage.md`
 

@@ -15,13 +15,13 @@
 
 ## Do not read this when
 
-- 目的の文書がすでに分かっていて、`app_spec/`、`considered_alternative/`、`dev_rule/`、`branch_model.md` の該当文書へ直接進めるとき。
+- 読みたい対象がすでに分かっていて、`app_spec/`、`considered_alternative/`、`dev_rule/`、`branch_model.md` の該当文書へ直接進めるとき。
 - この階層ではなく、各下位ディレクトリの `INDEX.md` や個別仕様ファイルだけを確認したいとき。
 - `README.md` や `AGENTS.md` など、`doc` 以外のリポジトリ運用ルールだけを確認したいとき。
 
 ## hash
 
-- 649c2ab520bd6e36f8ce71c3a7d2f26bb776c008b32a09874700b5480cd4ca23
+- 9bf3737474622a47b8e5d6de29f0214202593198c26e7700d29172585e2f14b1
 
 # `src`
 

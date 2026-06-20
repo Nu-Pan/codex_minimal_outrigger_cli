@@ -25,9 +25,9 @@
 
 ## Summary
 
-- この文書は `cmoc apply fork` の入口で、調査・修正ループの実行から完了レポートまでの全体像を案内します。
+- `cmoc apply fork` の入口で、Codex CLI による apply ループの実行から完了レポートまでの全体像を案内する文書です。
 - `<cmoc-session-branch>` から分離した `<cmoc-apply-branch>` と `<cmoc-apply-worktree>` を使い、`apply.state` の遷移、スコープ指定、反復回数、要修正点リストの生成・改善・対応方針をまとめています。
-- 最後に、作業結果のレポート形式や Structured Output による変更要約の生成方法まで含めて確認できます。
+- 作業結果のレポート形式や Structured Output による変更要約の生成方法まで含めて確認できます。
 
 ## Read this when
 
@@ -45,7 +45,7 @@
 
 ## hash
 
-- fc4e14315765d82829bf8daf01387afd592573fb69b57313dbf006b3162fa787
+- 9e1624ec2b7a5773c171a00eaa9415e8eade5c2c01fbcbaf4aade822a6053929
 
 # `apply_join.md`
 
@@ -123,25 +123,25 @@
 
 ## Summary
 
-- `cmoc review oracle` の仕様入口で、現在の `<work-root>/oracle` スナップショットを評価して人間にレポートする手順をまとめた文書です。
-- 位置引数はなく、`--scope` と各ループ回数オプションで、部分評価・全体評価や反復上限を制御します。
-- 事前条件、run の隔離実行、所見の定義と ID 管理、レポート生成と出力先までを一通り案内します。
+- この `review_oracle.md` の入口で、現在の `<work-root>/oracle` スナップショットをレビューして人間へレポートする手順を案内します。
+- 位置引数はなく、`--scope={session|full}` と各ループ回数オプションで対象範囲と反復上限を制御します。
+- 事前条件、run の隔離実行、所見の列挙・マージ・検証・採否判定、レポート出力までをまとめます。
 
 ## Read this when
 
 - `cmoc review oracle` の実装・修正・テスト・レビューを行いたいとき。
-- `--scope={session|full}` による対象範囲の切り替えや、レビュー対象 oracle ファイルの列挙条件を確認したいとき。
-- 所見の列挙・マージ・検証・採否判定ループや、レポートの保存先・形式を確認したいとき。
+- `--scope={session|full}` による対象範囲の切り替えや、レビュー対象 oracle file の列挙条件を確認したいとき。
+- 所見の ID 管理、反復ループ、レポートの保存先と形式を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc review oracle` 以外のサブコマンドの手順、引数、出力だけを確認したいとき。
-- `oracle` 配下の個別仕様ファイルを直接確認したいとき。
-- `INDEX.md` の生成・更新ルールや、`oracle` 全体のルーティング方針だけを確認したいとき。
+- `cmoc review oracle` 以外のサブコマンド仕様や、別の oracle 文書を確認したいとき。
+- `INDEX.md` の生成・更新ルールだけを確認したいとき。
+- run の隔離実行や一般的なレビュー手順ではなく、個別の実装コードやテストコードを直接確認したいとき。
 
 ## hash
 
-- 2b50d8c1eb16663997717ccb1abbccf860795c5de51b8bb2b1648321a2a0d0f0
+- 7b47a68b9989698ce254ad5ac3cc9596824bb871bab766353ee660100eee6859
 
 # `session_abandon.md`
 
