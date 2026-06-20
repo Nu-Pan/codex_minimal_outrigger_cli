@@ -73,7 +73,7 @@
           },
           "oracle_requirement": {
             "type": "string",
-            "description": "仕様ファイルまたは共通標準が要求している仕様・規範。実装品質のみから発見した要修正点の場合は、関係する realization standard などの共通標準を記載する。"
+            "description": "oracle file または standard が要求している仕様・規範。"
           },
           "observed_implementation": {
             "type": "string",

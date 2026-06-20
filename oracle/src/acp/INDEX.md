@@ -27,7 +27,7 @@
 ## Summary
 
 - この `prompt_parts` ディレクトリのルーティング文書で、`complete_prompt.py` を中心に prompt 断片の組み立てと各標準・規則の入口を案内する。
-- `file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py`、`review_oracle_viewpoint.py`、`apply_reviewpoint.py` を束ね、AI 呼び出し用 prompt に入る要素の役割分担を示す。
+- `file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py`、`oracle_review_standard.py`、`apply_review_standard.py` を束ね、AI 呼び出し用 prompt に入る要素の役割分担を示す。
 - 完全な prompt の構成、ファイル読み書き規則、`oracle` / `realization` の前提、標準、レビュー観点を確認するための目次である。
 
 ## Read this when
@@ -38,7 +38,7 @@
 
 ## Do not read this when
 
-- すでに `complete_prompt.py`、`file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py`、`review_oracle_viewpoint.py`、`apply_reviewpoint.py` のうち読む対象が決まっていて、この目次を経由する必要がないとき。
+- すでに `complete_prompt.py`、`file_access_rule.py`、`oracle_and_realization_basic.py`、`oracle_standard.py`、`realization_standard.py`、`oracle_review_standard.py`、`apply_review_standard.py` のうち読む対象が決まっていて、この目次を経由する必要がないとき。
 - `agent call parameter` 全体や `builder/` 側の仕様を探していて、この `prompt_parts/` 階層の案内が不要なとき。
 - `oracle` の正本仕様や開発規約だけを確認したいときで、この prompt 断片の入口が不要なとき。
 

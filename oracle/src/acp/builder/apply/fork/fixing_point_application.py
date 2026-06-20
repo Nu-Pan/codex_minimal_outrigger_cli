@@ -47,7 +47,7 @@ def build_apply_fork_fixing_point_application_parameter(
         aux_prompt=[],
         oracle_standard=True,
         realization_standard=True,
-        apply_review_aspect=True,
+        apply_review_standard=True,
     )
     # パラメータを生成して返す
     return AgentCallParameter(

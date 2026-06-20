@@ -4,7 +4,7 @@ from basic.standard import Requirement, Standard, standard_to_struct_doc
 
 def build_realization_standard() -> StructDoc:
     """
-    realization file の標準的な実装・保守観点を表す StructDocs を構築する。
+    realization file が従うべき規範を表す StructDocs を構築する。
     """
     standards = [
         Standard(

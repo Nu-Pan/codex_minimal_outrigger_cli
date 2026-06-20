@@ -1,8 +1,8 @@
-# `apply_reviewpoint.py`
+# `apply_review_standard.py`
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/acp/prompt_parts/apply_reviewpoint.py` は、`oracle file` の内容を `realization file` に適用する際のレビュー観点を `StructDoc` としてまとめる入口です。
+- `<cmoc-root>/oracle/src/acp/prompt_parts/apply_review_standard.py` は、`oracle file` の内容を `realization file` に適用する際のレビュー観点を `StructDoc` としてまとめる入口です。
 - この断片は、`oracle file` と実装の明確な不整合と、実装上の明確な問題点を切り分ける前提を示し、仕様の隙間は原則として不整合扱いしない方針を含みます。
 - あわせて、対象をバグ級の明確な問題に限定し、単なる品質改善案は含めない方針を案内します。
 
@@ -14,7 +14,7 @@
 
 ## Do not read this when
 
-- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/apply_reviewpoint.py` を直接確認する対象が決まっていて、この目次を経由する必要がないとき。
+- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/apply_review_standard.py` を直接確認する対象が決まっていて、この目次を経由する必要がないとき。
 - `apply_audit_finding.py` や `change_summary.py` など、`apply` 系の別段階の prompt 断片を探しているとき。
 - `oracle` の正本仕様や開発規約だけを確認したいときで、この prompt 断片の入口が不要なとき。
 
@@ -27,7 +27,7 @@
 ## Summary
 
 - `<cmoc-root>/oracle/src/acp/prompt_parts/complete_prompt.py` は、AI エージェントへ渡す完全な prompt を `StructDoc` の列として組み立てる入口です。
-- 必須要素として `role`、`summary`、`goal`、`file_access_rule` を含み、必要に応じて `oracle_and_realization_basic`、`oracle_standard`、`realization_standard` を追加します。
+- 必須要素として `role`、`summary`、`goal`、`file_access_rule` を含み、必要に応じて `oracle_and_realization_basic`、`oracle_standard`、`realization_standard`、`apply_review_standard`、`review_oracle_standard` を追加します。
 - `structured_output` が有効な場合は、指定された Structured Output schema に従うよう促す出力形式の指示を末尾に追加します。
 
 ## Read this when
@@ -40,7 +40,7 @@
 ## Do not read this when
 
 - すでに `<cmoc-root>/oracle/src/acp/prompt_parts/complete_prompt.py` を直接確認する対象が決まっていて、この目次を経由する必要がないとき。
-- `file_access_rule.py`、`oracle_standard.py`、`realization_standard.py`、`oracle_and_realization_basic.py` など、組み立て元の断片だけを個別に確認したいとき。
+- `file_access_rule.py`、`oracle_standard.py`、`realization_standard.py`、`oracle_and_realization_basic.py`、`apply_review_standard.py`、`oracle_review_standard.py` など、組み立て元の断片だけを個別に確認したいとき。
 - `prompt_parts/` 全体ではなく、別の `<cmoc-root>/oracle/src` 配下や別フローの入口を探しているとき。
 
 ## hash
@@ -147,11 +147,11 @@
 
 - 138f10f02b35c5fcec377f6b663c09a2596beddffc01938231bbe2910d99a8f3
 
-# `review_oracle_viewpoint.py`
+# `oracle_review_standard.py`
 
 ## Summary
 
-- この `review_oracle_viewpoint.py` のルーティング文書で、`build_review_oracle_viewpoint()` への入口です。
+- この `oracle_review_standard.py` のルーティング文書で、`build_review_oracle_standard()` への入口です。
 - `cmoc review oracle` で使うレビュー観点の正本として、`fatal` と `minor` の判定基準、対象外の条件、汎用的なレビュー観点としての扱いを案内します。
 - `codex exec` のプロンプトに注入する、リポジトリ固有の事情に依存しないレビュー観点の定義をまとめます。
 
@@ -164,7 +164,7 @@
 
 ## Do not read this when
 
-- すでに `build_review_oracle_viewpoint()` を直接確認する対象が決まっていて、この目次を経由する必要がないとき。
+- すでに `build_review_oracle_standard()` を直接確認する対象が決まっていて、この目次を経由する必要がないとき。
 - `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py` など、別の review oracle を確認したいとき。
 - `cmoc review oracle` の所見リストや Structured Output schema ではなく、別サブコマンドや別階層の仕様を探しているとき。
 

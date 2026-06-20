@@ -53,7 +53,7 @@
     2. `<cmoc-session-state-file>` の `session.state` を `abandoned` に更新する。
     3. `session.joined_at` は `null` のままとする。
     4. `<cmoc-session-branch>` を強制削除する。
-4. 結果を標準出力に表示する。
+4. 結果を stdout に表示する。
 
 ## 状態遷移
 

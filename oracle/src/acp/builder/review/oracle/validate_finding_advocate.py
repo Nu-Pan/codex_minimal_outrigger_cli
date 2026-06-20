@@ -64,6 +64,7 @@ def build_review_oracle_validate_finding_advocate_parameter(
         file_access_mode=FileAccessMode.PURE_ORACLE_READ,
         aux_prompt=[],
         oracle_standard=True,
+        review_oracle_standard=True,
     )
     # パラメータを生成して返す
     return AgentCallParameter(

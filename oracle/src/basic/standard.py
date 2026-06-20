@@ -5,10 +5,9 @@ from basic.struct_doc import StructDoc
 
 class Standard:
     """
-    何らかの事柄について、標準的に従うべき事項
-    - `<cmoc-root>` の oracle file 上には cmoc 成果物 (e.g. oracle, realization, ...) に対する standard が存在する
-    - これら standard の記述は一定のフォーマットに従うものとする
-    - このフォーマット規則は `<cmoc-root>` 上の oracle file に適用されるものであり、`<repo-root>` 上の oracle file は対象外である
+    「何らかの事柄が従うべき規範」のフォーマットを定義するクラス
+    e.g. oracle file は oracle standard に従うし、oracle standard は `Standard` を元に生成される
+    `Stnadrd` は `<cmoc-root>` ツリー内に対して適用されるものであり、`<work-root>` ツリー内は対象外である
     """
 
     def __init__(

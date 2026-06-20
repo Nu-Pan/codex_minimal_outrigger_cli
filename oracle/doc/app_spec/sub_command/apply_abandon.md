@@ -60,7 +60,7 @@
     - 既に存在しない場合は warning として記録し、処理を続行してよい。
 10. `<cmoc-session-state-file>` の `apply.state` を `ready` に更新する。
 11. active apply run を特定するための補助情報を、次回 apply の妨げにならない状態へ初期化する。
-12. 結果を標準出力に表示する。
+12. 結果を stdout に表示する。
 
 ## 状態遷移
 
@@ -80,7 +80,7 @@
 
 ## report
 
-`cmoc apply abandon` は少なくとも以下を標準出力に表示する。
+`cmoc apply abandon` は少なくとも以下を stdout に表示する。
 
 - 破棄した `<cmoc-apply-branch>`
 - 破棄した `<cmoc-apply-worktree>`

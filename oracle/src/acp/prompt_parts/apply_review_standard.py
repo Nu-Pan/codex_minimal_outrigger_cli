@@ -5,12 +5,14 @@ from basic.standard import (
     Standard,
     standard_to_struct_doc,
 )
+from basic.path_model import resolve_work_root
 
 
-def build_apply_review_aspect() -> StructDoc:
+def build_apply_review_standard() -> StructDoc:
     """
-    oracle file の内容を realization file に適用する際に発生する「所見（要修正点）を列挙する作業」のレビュー観点を構築する
+    oracle file の内容を realization file に適用する際に発生する「所見（要修正点）を列挙する作業」の規範文章を構築する
     """
+    work_root = resolve_work_root()
     standards = [
         Standard(
             title="oracle file と realization file の明確な不整合を要修正点として扱う",
@@ -49,7 +51,7 @@ def build_apply_review_aspect() -> StructDoc:
             ],
             examples=[
                 "OK: oracle file が read-only を要求している処理で、realization file が対象ファイルを書き換えている",
-                "OK: oracle file が `<work-root>/oracle` を編集禁止としているのに、realization file がその配下を更新する",
+                f"OK: oracle file が `{work_root}/oracle` を編集禁止としているのに、realization file がその配下を更新する",
                 "NG: oracle file に規定がない内部関数名が好みと違うという理由だけで要修正点にする",
             ],
         ),

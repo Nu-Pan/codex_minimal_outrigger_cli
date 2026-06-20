@@ -6,7 +6,8 @@ from .file_access_rule import build_file_access_rule, FileAccessMode
 from .oracle_standard import build_oracle_standard
 from .realization_standard import build_realization_standard
 from .oracle_and_realization_basic import build_oracle_and_realization_basic
-from .apply_review_aspect import build_apply_review_aspect
+from .apply_review_standard import build_apply_review_standard
+from .oracle_review_standard import build_review_oracle_standard
 
 
 def build_complete_prompt(
@@ -19,7 +20,8 @@ def build_complete_prompt(
     oracle_and_realization_basic: bool = False,
     oracle_standard: bool = False,
     realization_standard: bool = False,
-    apply_review_aspect: bool = False,
+    apply_review_standard: bool = False,
+    review_oracle_standard: bool = False,
 ) -> list[StructDoc]:
     """
     agent call にそのまま渡すことができる完全なプロンプトを構築する
@@ -49,8 +51,11 @@ def build_complete_prompt(
     realization_standard:
         True の時、realization standard をプロンプトに注入する
 
-    apply_review_aspect:
-        True の時、apply review aspect をプロンプトに注入する
+    apply_review_standard:
+        True の時、apply review standard をプロンプトに注入する
+
+    review_oracle_standard:
+        True の時、review oracle standard をプロンプトに注入する
 
     return:
         agent call にそのまま渡すことができる完全なプロンプト
@@ -75,13 +80,16 @@ def build_complete_prompt(
         oracle_and_realization_basic
         or oracle_standard
         or realization_standard
-        or apply_review_aspect
+        or apply_review_standard
+        or review_oracle_standard
     ):
         struct_doc.append(build_oracle_and_realization_basic())
     if oracle_standard:
         struct_doc.append(build_oracle_standard())
     if realization_standard:
         struct_doc.append(build_realization_standard())
-    if apply_review_aspect:
-        struct_doc.append(build_apply_review_aspect())
+    if apply_review_standard:
+        struct_doc.append(build_apply_review_standard())
+    if review_oracle_standard:
+        struct_doc.append(build_review_oracle_standard())
     return struct_doc
