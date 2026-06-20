@@ -54,33 +54,33 @@
 ## Summary
 
 - この `standard.py` は、`oracle` 文書で共通に使う標準表現を定義し、`Standard` と `Requirement` を `StructDoc` へ変換する入口です。
-- `Standard` は見出し・対象・背景・要求・判定基準・例示をまとめ、入力の型や空配列を検証します。
+- `Standard` は見出し、対象、背景、要求、判定基準、例示をまとめ、各フィールドの型や空配列を検証します。
 - `Requirement` は `必須` / `禁止` / `推奨` / `許容` のラベルと本文を持つ凍結 dataclass です。
-- `standard_to_struct_doc()` は `Standard` を階層化された `StructDoc` に整形して、markdown 出力や文書組み立てに渡せる形へ変換します。
+- `standard_to_struct_doc()` は `Standard` を階層化された `StructDoc` に整形して、markdown 出力や文書組み立てへ渡せる形にします。
 
 ## Read this when
 
-- `oracle` 配下の標準文書を新規追加・修正するとき。
-- `Standard` と `Requirement` の役割、または `StructDoc` への変換経路を確認したいとき。
-- `basic.standard` を利用する実装やテストを書く前に、共通の標準フォーマットを把握したいとき。
-- `oracle` の各種 `*_standard.py` がどの共通基盤を使うか追いたいとき。
+- `Standard` と `Requirement` の定義、入力検証、各フィールドの役割を確認したいとき。
+- `oracle` 配下で新しい標準文書や標準断片を追加・修正するとき。
+- `standard_to_struct_doc()` で `Standard` を `StructDoc` に変換する流れを把握したいとき。
+- `<work-root>/oracle/src/acp/prompt_parts` などで共通の標準フォーマットを使う前に、対象・背景・要求・判定基準・例示の構造を整理したいとき。
 
 ## Do not read this when
 
 - `Standard`、`Requirement`、`standard_to_struct_doc()` の役割がすでに分かっていて、このファイル本体を直接確認したいとき。
 - `StructDoc` の実装や markdown レンダリングだけを確認したいとき。
 - パス解決や root token の扱いだけを確認したいとき。
-- 個別の仕様本文だけを読み、`standard.py` の共通定義は不要なとき。
+- 個別の `oracle` 標準文書や prompt 断片だけを読み、この共通定義は不要なとき。
 
 ## hash
 
-- dfda5b72a8ee44107a9f085d7e21e6c2baa30cbf1ef9836ce48d1ed8f31b6e68
+- 548458cf7c69648918ee1e06bf58430ff24cd1023476aa3e0cc2bd6297c083c3
 
 # `struct_doc.py`
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/utils/struct_doc.py` は、階層構造を持つ文章を `StructDoc` として保持し、markdown にレンダリングするための共通ヘルパーです。
+- この `<cmoc-root>/oracle/src/basic/struct_doc.py` は、階層構造を持つ文章を `StructDoc` として保持し、markdown にレンダリングするための共通ヘルパーです。
 - 見出しを再帰的に組み立てる `render_as_markdown()` と、三重クォート文字列のインデントを整える `ntqs()` を提供します。
 - prompt 生成や標準文書の組み立てで `StructDoc` を使うときの、共通基盤の入口です。
 
@@ -99,4 +99,4 @@
 
 ## hash
 
-- e32829336f19e839e8f0cbc28fae24d48d58413d451b04ad36f07345f47022fc
+- 395c731db73411b43b15d1bfda78b11293da74b06f9d5b35ceec78bec69ee227

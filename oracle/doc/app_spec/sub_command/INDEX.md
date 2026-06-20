@@ -3,7 +3,7 @@
 ## Summary
 
 - `cmoc apply abandon` の仕様断片への入口です。
-- 未 join の apply run を安全に破棄する手順と前提条件、破棄対象、状態遷移、出力内容をまとめています。
+- 未 join の apply run を安全に破棄する手順、前提条件、破棄対象、状態遷移、出力内容を案内します。
 
 ## Read this when
 
@@ -13,13 +13,13 @@
 
 ## Do not read this when
 
-- `cmoc apply fork` の調査・修正ループ開始や要修正点リストアップの仕様だけを確認したいとき。
-- `cmoc apply join` のマージ手順、想定外の差分の処理、`--force-resolve` の挙動だけを確認したいとき。
-- `cmoc session abandon` や `cmoc session join` など、session 側の終了・破棄手順だけを確認したいとき。
+- `cmoc apply fork` の開始条件、反復修正、要修正点リスト、Structured Output の詳細を確認したいとき。
+- `cmoc apply join` の取り込み手順、`--force-resolve`、想定外の差分処理だけを確認したいとき。
+- `cmoc session abandon` や `cmoc session join` など、session 側の終了・統合手順だけを確認したいとき。
 
 ## hash
 
-- 65a56fe5bb8b38e641adf42fd80069b16cca0e2d78c698aecf00f015f9a2789a
+- 1d3d095e144d8770e47c629792206265fad1698d3e1db15313984de55c6946c3
 
 # `apply_fork.md`
 
@@ -165,7 +165,7 @@
 
 ## hash
 
-- 772b40b00c253d8508bf1ec3cd041089c008e57df5ee6f408aafa93e6f679cbb
+- 08b0fe9b67e7874161819b90a1c7a51022ba373a9076aa74a4864597a7b8c098
 
 # `session_fork.md`
 

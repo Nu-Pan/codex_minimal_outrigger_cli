@@ -3,50 +3,48 @@
 ## Summary
 
 - この `acp` ディレクトリのルーティング文書で、`builder/` と `prompt_parts/` への入口です。
-- `builder/` は `cmoc apply fork`、`cmoc review oracle`、`cmoc indexing`、`cmoc session join` に関する agent call parameter を案内し、`prompt_parts/` は共通 prompt 断片と標準・規則の組み立てを案内します。
-- この階層は、AI 呼び出し仕様と prompt 構成の入口を切り分ける起点です。
+- `builder/` はサブコマンド別の agent call parameter、`prompt_parts/` は prompt 組み立て用の断片を案内します。
+- この階層は、AI 呼び出し仕様と prompt 構成のどちらを読むべきかを切り分ける起点です。
 
 ## Read this when
 
 - `<cmoc-root>/oracle/src/acp` 配下で、まず `builder/` と `prompt_parts/` のどちらに進むべきか整理したいとき。
-- `cmoc apply`、`cmoc review`、`cmoc indexing`、`cmoc session join` に関係する呼び出し仕様や prompt 断片の役割分担をまとめて把握したいとき。
-- この階層の下位 `INDEX.md` や個別ファイルへ進む前に、AI 呼び出し用の構成全体を先に押さえたいとき。
+- `cmoc` の agent call parameter と prompt 断片の役割分担を、この階層から把握したいとき。
+- 下位の `INDEX.md` や個別仕様へ進む前に、この階層全体の入口を先に確認したいとき。
 
 ## Do not read this when
 
-- すでに読む対象が `builder/` か `prompt_parts/` に決まっていて、この階層の目次を経由する必要がないとき。
-- `build_apply_fork_*` や `build_review_oracle_*` など、個別の agent call parameter や prompt 本体を直接確認したいとき。
-- `<cmoc-root>/oracle/src/acp` ではなく、`basic/` や `config/` など別の `src` 配下の入口を探しているとき。
+- 読む対象がすでに `builder/` か `prompt_parts/` のどちらかに決まっていて、この階層の案内を経由する必要がないとき。
+- `index_entry.py`、`complete_prompt.py`、`oracle_standard.py` など、個別ファイルを直接確認したいとき。
+- `<cmoc-root>/oracle/src/acp` ではなく、`<cmoc-root>/oracle/src` の他の入口や別階層の仕様だけを確認したいとき。
 
 ## hash
 
-- 0682dfa879194442b47a4d743ad0433acc15084f1041878f5f55e153754b0d79
+- b61595b799a3841839b4493d8c1669aec61d96e12d92cefe9f5e938c0f64c1b8
 
 # `basic`
 
 ## Summary
 
 - この `basic` ディレクトリのルーティング文書で、`acp.py`、`path_model.py`、`standard.py`、`struct_doc.py` への入口です。
-- `acp.py` は AI コーディングエージェント呼び出し用の共通型を、`path_model.py` は root token 付きパス解決を、`standard.py` は標準表現を、`struct_doc.py` は階層文書の markdown レンダリングを案内します。
-- この階層は、cmoc の共通基盤をまとめて扱うための目次です。
+- `acp.py` は AI コーディングエージェント呼び出し用の共通型を、`path_model.py` は root token 付きパス解決を、`standard.py` は標準文書の変換基盤を、`struct_doc.py` は階層文書の Markdown レンダリング基盤を案内します。
+- この階層は、cmoc の共通基盤を役割ごとに切り分けて読むための起点です。
 
 ## Read this when
 
-- `<cmoc-root>/oracle/src/basic` 配下で、どの基盤ファイルから読むべきか整理したいとき。
-- `AgentCallParameter` と、その構成要素である `ModelClass`、`ReasoningEffort`、`FileAccessMode` の所在を確認したいとき。
-- `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` の解決規則や、標準表現、StructDoc の役割をまとめて把握したいとき。
-- この階層の下位 `INDEX.md` や個別ファイルへ進む前に、役割分担を先に整理したいとき。
+- `<cmoc-root>/oracle/src/basic` 配下で、まずどの共通基盤ファイルから読むべきか整理したいとき。
+- AI 呼び出し用の共通型、パス解決、標準文書変換、Markdown レンダリングの入口をまとめて把握したいとき。
+- `ModelClass`、`ReasoningEffort`、`FileAccessMode`、`AgentCallParameter`、`RootToken`、`Standard`、`StructDoc` の役割を一望したいとき。
 
 ## Do not read this when
 
-- すでに読む対象が `acp.py`、`path_model.py`、`standard.py`、`struct_doc.py` のいずれかに決まっていて、この階層の目次を経由する必要がないとき。
-- `ModelClass`、`ReasoningEffort`、`FileAccessMode`、`AgentCallParameter` の定義内容を直接確認したいとき。
-- パス解決、標準表現、StructDoc のうち、個別機能だけを直接確認したいとき。
-- `oracle` 全体の別ルートや開発規約だけを確認したいとき。
+- `acp.py`、`path_model.py`、`standard.py`、`struct_doc.py` のうち、読む対象がすでに決まっていて、この階層の目次を経由する必要がないとき。
+- この階層ではなく、`<work-root>/oracle/src` 配下の別ディレクトリや別のルーティング文書だけを確認したいとき。
+- 個別ファイルの実装を直接確認したいとき。
 
 ## hash
 
-- 07aeefbe503f3e32cc1f44d82804d059c12ddbfd89e486b8c65d8d7865e6fa2f
+- 5248ae85fd766038537e5133911331203f5f2155db5f61ae618ab64298936829
 
 # `config`
 

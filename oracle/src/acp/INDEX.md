@@ -3,12 +3,12 @@
 ## Summary
 
 - この `builder` ディレクトリのルーティング文書で、`apply/`、`indexing/`、`review/`、`session/` への入口です。
-- `apply/` は `cmoc apply fork` の変更要約・ファイル監査・要修正点改善・実装修正を、`indexing/` は `INDEX.md` 目次生成を、`review/` は `cmoc review oracle` の所見処理を、`session/` は `cmoc session join` の conflict 解消を案内します。
+- `apply/` は `cmoc apply fork`、`indexing/` は `cmoc indexing`、`review/` は `cmoc review oracle`、`session/` は `cmoc session join` の入口を案内します。
 - この階層では、どのサブコマンド用の agent call parameter を読むべきかを切り分けます。
 
 ## Read this when
 
-- `builder` 配下で、`apply`、`indexing`、`review`、`session` のどれから読むべきか整理したいとき。
+- `<cmoc-root>/oracle/src/acp/builder` 配下で、まず `apply/`、`indexing/`、`review/`、`session/` のどこから読むべきか整理したいとき。
 - `cmoc apply fork`、`cmoc indexing`、`cmoc review oracle`、`cmoc session join` の呼び出し仕様の入口をまとめて把握したいとき。
 - この階層の目次を確認してから、下位の `INDEX.md` や個別ファイルへ進みたいとき。
 
@@ -20,7 +20,7 @@
 
 ## hash
 
-- 7790185fcc9878717e8da25d5fdbeba40cc3ccdd5a16f9ccabeb3bde7dad8c03
+- 43a36b57bfa99ec1685f02f7727915da887b4a52b4ca5980ea7746adc5a34200
 
 # `prompt_parts`
 
@@ -44,4 +44,4 @@
 
 ## hash
 
-- 8e3f4873cff9f73924d58988600dee86119999e31955f166089c0965f9a31015
+- bf65c71bc482c2dfb1375db0d8c676849938290952ee80bb4bfa18f5022de191

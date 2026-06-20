@@ -121,26 +121,25 @@
 
 ## Summary
 
-- この `oracle` 直下のルーティング文書で、`doc/` と `src/` への入口を案内します。
-- `doc/` では利用手順・共通仕様・設計判断・開発規約・branch モデルをまとめ、`src/` では AI 呼び出し仕様・共通基盤・設定を案内します。
-- この階層は、oracle 全体の下位文書へ分岐する起点として、どの領域を読むべきかを切り分けるための目次です。
+- この `<cmoc-root>/oracle` ディレクトリのルーティング文書で、`doc/` と `src/` への入口をまとめます。
+- `doc/` は cmoc の正本仕様断片、`src/` はその仕様を実装で受けるための基盤・ビルダー・設定を案内します。
+- この階層は、仕様と実装のどちらへ進むべきかを切り分ける起点です。
 
 ## Read this when
 
-- `<cmoc-root>/oracle` 配下で、まずどの下位ディレクトリや文書に進むべきか整理したいとき。
-- cmoc の利用手順、共通仕様、採用しなかった設計判断、開発規約、branch モデルをまとめて把握したいとき。
-- `<cmoc-root>/oracle/doc` 側の仕様群と、`<cmoc-root>/oracle/src` 側の実装基盤の役割分担を先に押さえたいとき。
-- `INDEX.md` の下位ルートとして、`app_spec/`、`considered_alternative/`、`dev_rule/`、`acp/`、`basic/`、`config/` への入口を確認したいとき。
+- cmoc の正本仕様断片と実装側の入口を、この階層からまとめて把握したいとき。
+- まず `doc/` と `src/` のどちらに進むべきか整理したいとき。
+- 下位の `INDEX.md` や個別文書へ進む前に、この階層の役割分担を確認したいとき。
 
 ## Do not read this when
 
-- `doc/` 側や `src/` 側の進む先がすでに決まっていて、この最上位の目次を経由する必要がないとき。
-- `app_spec/`、`considered_alternative/`、`dev_rule/`、`branch_model.md` など、下位の個別文書だけを直接確認したいとき。
-- `README.md` や `AGENTS.md` など、`oracle` 以外のリポジトリ運用ルールだけを確認したいとき。
+- 読みたい対象がすでに `doc/` か `src/` のどちらかに決まっていて、この階層の案内を経由する必要がないとき。
+- 個別の仕様断片や実装ファイルを直接確認したいとき。
+- この階層全体ではなく、`doc/` 側の仕様だけ、あるいは `src/` 側の実装基盤だけを確認したいとき。
 
 ## hash
 
-- 32cbfacd938379c38cf44637486d53935aebae96d4d11d95dfc7573c94c25bbe
+- 9946dc03d7205ed8d117cc8710c4890bbdbfb2397ee137b2f9d936b81167591c
 
 # `pyproject.toml`
 
@@ -196,22 +195,21 @@
 
 ## Summary
 
-- この `test` ディレクトリのルーティング文書で、cmoc の自動テスト実装への入口です。
-- pytest を使ったテスト群を案内し、Git 状態の検査、作業ディレクトリの決定、対象ファイル列挙などの決定論的な制御ロジックを検証する領域です。
-- Codex CLI や LLM の品質そのものではなく、cmoc 側の制御ロジックを確認するための目次です。
+- この `test` ディレクトリのルーティング文書で、`test_prompt_parts.py` への入口を案内します。
+- `test_prompt_parts.py` は prompt 部品の StructDoc 生成と Markdown 表現、ならびに `complete_prompt` への条件付き含有や既定の省略を検証するテスト群です。
 
 ## Read this when
 
-- cmoc の自動テスト実装の入口として、`test` ディレクトリ全体の役割を確認したいとき。
-- 決定論的な制御ロジックの挙動を pytest で検証する方針を把握したいとき。
-- Fake Codex CLI を使ったテストの可否や、テスト実装の前提を整理したいとき。
+- `test` 配下で、まずどのテストファイルを読むべきか整理したいとき。
+- prompt 部品の StructDoc 生成、Markdown レンダリング、`complete_prompt` への含有条件を確認したいとき。
+- `index_entry_standard`、`apply_review_standard`、`review_oracle_standard` の回帰テスト観点を把握したいとき。
 
 ## Do not read this when
 
-- この階層ではなく、`oracle` 配下のテスト規約や個別仕様を確認したいとき。
-- pytest の使い方やテスト方針ではなく、実装コードそのものを直接追いたいとき。
-- `test` 配下の個別テストファイルがすでに分かっていて、そのファイルへ直接進むとき。
+- すでに `test_prompt_parts.py` を直接開く対象が決まっていて、この階層の案内を経由する必要がないとき。
+- prompt 部品の実装本体や `src/` 側の仕様を確認したいだけで、テスト観点の整理が不要なとき。
+- この階層ではなく、別のテスト群や別ディレクトリの目次を探しているとき。
 
 ## hash
 
-- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+- eb475920a6f1be4bc3a617984f8ca2e2611b4ea6a6cb58d5b6f8488fea219d7a

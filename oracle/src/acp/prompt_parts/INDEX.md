@@ -2,50 +2,51 @@
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/acp/prompt_parts/apply_review_standard.py` は、`oracle file` の内容を `realization file` に適用する際のレビュー観点を `StructDoc` としてまとめる入口です。
-- この断片は、`oracle file` と実装の明確な不整合と、実装上の明確な問題点を切り分ける前提を示し、仕様の隙間は原則として不整合扱いしない方針を含みます。
-- あわせて、対象をバグ級の明確な問題に限定し、単なる品質改善案は含めない方針を案内します。
+- `<cmoc-root>/oracle/src/acp/prompt_parts/apply_review_standard.py` は、`oracle file` の内容を `realization file` に適用する場面で使うレビュー標準を `StructDoc` として組み立てる入口です。
+- この断片は、明確な不整合の指摘、仕様の隙間だけを根拠にした過剰な指摘の禁止、`realization file` だけから見たバグ級の明確な問題の扱いを整理します。
+- `complete_prompt.py` では `apply_review_standard=True` のときに追加され、`cmoc apply fork` の所見列挙を支える前提になります。
 
 ## Read this when
 
-- `oracle file` を `realization file` に適用する際の、レビュー観点や所見の切り分け基準を確認したいとき。
-- `oracle` と実装の明確な不整合と、実装上の明確な問題点をどう区別するか整理したいとき。
-- 単なる改善提案ではなく、バグ級の要修正点だけを対象にする方針を確認したいとき。
+- `cmoc apply fork` で `oracle file` を `realization file` に適用する際のレビュー観点を確認したいとき。
+- `oracle file` と `realization file` の不整合を、どこまで要修正点として扱うか整理したいとき。
+- 単なる改善提案ではなく、バグ級の明確な問題だけをレビュー対象にしたいとき。
+- この断片を `complete_prompt.py` へ組み込む前に、役割を把握したいとき。
 
 ## Do not read this when
 
-- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/apply_review_standard.py` を直接確認する対象が決まっていて、この目次を経由する必要がないとき。
-- `apply_audit_finding.py` や `change_summary.py` など、`apply` 系の別段階の prompt 断片を探しているとき。
-- `oracle` の正本仕様や開発規約だけを確認したいときで、この prompt 断片の入口が不要なとき。
+- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/apply_review_standard.py` を直接確認する目的が決まっていて、目次の案内が不要なとき。
+- `change_summary.py`、`file_audit_finding.py`、`refine_fixing_point.py` など、`apply` 系の別断片を探しているとき。
+- `oracle` の正本仕様や `review_oracle_standard.py` だけを確認したいときで、この適用レビュー標準が不要なとき。
 
 ## hash
 
-- 9315a5b19019a7f90527480b702b4d1159ee66b62e7b6e5b6920ef1536893020
+- 620ee33defb76cfcf77a1c369188426e09cf7193c0cf46e2d7d3b7e3650f6309
 
 # `complete_prompt.py`
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/acp/prompt_parts/complete_prompt.py` は、AI エージェントへ渡す完全な prompt を `StructDoc` の列として組み立てる入口です。
-- 必須要素として `role`、`summary`、`goal`、`file_access_rule` を含み、必要に応じて `oracle_and_realization_basic`、`oracle_standard`、`realization_standard`、`apply_review_standard`、`review_oracle_standard` を追加します。
+- `<cmoc-root>/oracle/src/acp/prompt_parts/complete_prompt.py` は、`build_complete_prompt()` で AI エージェントへ渡す完全な prompt を `StructDoc` の列として組み立てる入口です。
+- 必須要素として `role`、`summary`、`goal`、`file_access_rule` を含み、必要に応じて `oracle_and_realization_basic`、`oracle_standard`、`realization_standard`、`review_oracle_standard`、`apply_review_standard`、`index_entry_standard` を追加します。
 - `structured_output` が有効な場合は、指定された Structured Output schema に従うよう促す出力形式の指示を末尾に追加します。
 
 ## Read this when
 
-- 完全な prompt がどの `StructDoc` 断片で構成されるかを確認したいとき。
-- `role`、`summary`、`goal`、`file_access_rule` に加えて、どの条件で oracle / realization の基本説明や標準が追加されるかを知りたいとき。
-- `structured_output` が有効なときに、末尾へどの出力形式指示が付くかを把握したいとき。
-- `prompt_parts/` 配下に新しい断片を追加・整理する前に、完全 prompt の組み立て順を押さえたいとき。
+- 完全な prompt がどの `StructDoc` 断片で構成されるかを把握したいとき。
+- `role`、`summary`、`goal`、`file_access_rule` に加えて、どの条件で `oracle` / `realization` の基本説明や標準、レビュー観点が追加されるか確認したいとき。
+- `structured_output` が有効なときに、末尾へどの出力形式指示が付くかを確認したいとき。
+- `INDEX.md` 目次を追加・整理する前に、`build_complete_prompt()` の組み立て順と依存関係を押さえたいとき。
 
 ## Do not read this when
 
-- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/complete_prompt.py` を直接確認する対象が決まっていて、この目次を経由する必要がないとき。
-- `file_access_rule.py`、`oracle_standard.py`、`realization_standard.py`、`oracle_and_realization_basic.py`、`apply_review_standard.py`、`oracle_review_standard.py` など、組み立て元の断片だけを個別に確認したいとき。
-- `prompt_parts/` 全体ではなく、別の `<cmoc-root>/oracle/src` 配下や別フローの入口を探しているとき。
+- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/complete_prompt.py` を直接確認する対象が決まっていて、目次を経由せず本体へ進むとき。
+- `file_access_rule.py` や `oracle_standard.py` など、個別の prompt 断片だけを確認したいとき。
+- `prompt_parts/` 全体ではなく、別の `src` 配下や別フローの入口を探しているとき。
 
 ## hash
 
-- adc28fd3f4a7423e9a8a836d2e4d31b0baaf24313dac7d6c8ad5d79588a562da
+- f8fbbc947eb7ac120513580612636fd8f155ed1113c57dc98d717814ead98a2c
 
 # `file_access_rule.py`
 
@@ -72,6 +73,30 @@
 
 - 3009529bf6223bbaa7725345349674f88b58e0d9e37925c71f4dc6e10cc957d8
 
+# `index_entry_standard.py`
+
+## Summary
+
+- `<cmoc-root>/oracle/src/acp/prompt_parts/index_entry_standard.py` は、`INDEX.md` のエントリーが従うべき規範文を `StructDoc` としてまとめる入口です。
+- この断片は、`INDEX.md` エントリーを読むべき対象へのルーティング情報として扱い、`summary`、`read_this_when`、`do_not_read_this_when` に何を書くかの方針を示します。
+- `complete_prompt.py` から `index_entry_standard=True` のときに組み込まれ、`cmoc indexing` の目次情報生成を支える前提になります。
+
+## Read this when
+
+- `INDEX.md` の各エントリーに何を書けばよいか、要約・読む条件・読まなくてよい条件の書き方を確認したいとき。
+- `cmoc indexing` で生成する目次情報のルーティング方針を把握したいとき。
+- `complete_prompt.py` で `index_entry_standard=True` のときにどの規範が追加されるか確認したいとき。
+
+## Do not read this when
+
+- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/index_entry_standard.py` 自体を直接確認する対象が決まっていて、この目次を経由する必要がないとき。
+- `cmoc indexing` の出力 JSON 形式や Structured Output schema だけを確認したいとき。
+- `complete_prompt.py` や他の prompt 断片の役割ではなく、別のサブコマンドや別階層の案内を探しているとき。
+
+## hash
+
+- b686cf3efbae97576f9d9511869eaf6ade20633a3fa9390705c69c498dc3f02e
+
 # `oracle_and_realization_basic.py`
 
 ## Summary
@@ -96,6 +121,30 @@
 ## hash
 
 - fe33761da72ba70e8745a65b7ba3562e83c07ac65605f824a71f3fadb8996a03
+
+# `oracle_review_standard.py`
+
+## Summary
+
+- `<cmoc-root>/oracle/src/acp/prompt_parts/oracle_review_standard.py` は、`build_review_oracle_standard()` を起点に `cmoc review oracle` 向けのレビュー観点を `StructDoc` としてまとめる入口です。
+- 仕様断片同士の明確な矛盾や、実装者の裁量では解消できない問題を fatal 所見として扱う方針を案内します。
+- 誤字・脱字・用語不統一などの単純な問題を minor 所見として扱い、仕様の隙間や推測だけでは所見にしない方針を示します。
+
+## Read this when
+
+- `cmoc review oracle` の所見分類基準を確認したいとき。
+- fatal と minor の切り分けや、レビュー対象外の条件を整理したいとき。
+- `build_review_oracle_standard()` がどの観点を `StructDoc` にまとめるか把握したいとき。
+
+## Do not read this when
+
+- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/oracle_review_standard.py` を直接読む対象として決めていて、目次を経由する必要がないとき。
+- `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py` など、別の review 断片を探しているとき。
+- `cmoc review oracle` ではなく、別サブコマンドや別階層の仕様を確認したいとき。
+
+## hash
+
+- 62c948874b421e1bb2e35dfd2c116f1855d6b94114001a16b8e616fafae9044b
 
 # `oracle_standard.py`
 
@@ -125,49 +174,25 @@
 
 ## Summary
 
-- この `realization_standard.py` は、realization file に対する標準的な観点を `StructDoc` として組み立てる入口です。
-- `build_realization_standard()` は、総文字数の最小化、高品質化、既存 realization code の整理との一体化、実在する重複または明確な責務境界に基づく抽象化、公開面・設定面・状態の増加抑制といった観点をまとめます。
-- このファイルは、`complete_prompt.py` から必要に応じて組み込まれる realization 向け標準の目次として機能します。
+- 実装系の標準的な方針をまとめ、読むべき観点の入口になる。
+- 総文字数の最小化、重複排除、既存実装の整理、明確な責務境界に基づく抽象化を案内する。
+- 公開面・設定面・状態の増加、テストの肥大化、依存関係や補助生成物の増加を抑える方針を含む。
+- 変更完了時に削除・統合・短縮できるものが残っていないかを確認する観点も扱う。
 
 ## Read this when
 
-- realization file に対する標準的な実装・保守方針をまとめて把握したいとき。
-- `build_realization_standard()` がどのような `StructDoc` を組み立てるか確認したいとき。
-- `complete_prompt.py` で realization 向け標準がどの条件で追加されるかを確認したいとき。
-- realization file の最小化、重複排除、既存実装整理、抽象化の抑制、公開面や状態の増加抑制に関する指針を確認したいとき。
+- 実装・保守の指針として、削減すべき重複や増やすべきでない公開面をまとめて把握したいとき。
+- 新しい実装、抽象化、テスト、依存関係、状態追加の可否を判断したいとき。
+- 変更後に削除・統合・短縮の余地があるかを確認したいとき。
+- 完全な prompt にこの標準を含める条件を確認したいとき。
 
 ## Do not read this when
 
-- すでに `build_realization_standard()` の役割や返却内容が分かっていて、このファイル本体を直接確認するとき。
-- `complete_prompt.py`、`oracle_standard.py`、`file_access_rule.py` など、別の prompt 断片や関連ヘルパーだけを確認したいとき。
-- realization 標準そのものではなく、`Standard` や `Requirement` の共通定義、または `StructDoc` のレンダリング基盤だけを確認したいとき。
-- `realization` 向けの方針ではなく、`oracle` 側の標準や別サブコマンドの呼び出し仕様を探しているとき。
+- すでにこの標準の役割が分かっていて、本文を直接確認したいとき。
+- 個別の helper、クラス、テストケースだけを確認したいとき。
+- 標準ではなく、共通型やレンダリング基盤の定義を探しているとき。
+- 別の標準やファイル読み書き規則を確認したいとき。
 
 ## hash
 
-- 138f10f02b35c5fcec377f6b663c09a2596beddffc01938231bbe2910d99a8f3
-
-# `oracle_review_standard.py`
-
-## Summary
-
-- この `oracle_review_standard.py` のルーティング文書で、`build_review_oracle_standard()` への入口です。
-- `cmoc review oracle` で使うレビュー観点の正本として、`fatal` と `minor` の判定基準、対象外の条件、汎用的なレビュー観点としての扱いを案内します。
-- `codex exec` のプロンプトに注入する、リポジトリ固有の事情に依存しないレビュー観点の定義をまとめます。
-
-## Read this when
-
-- `cmoc review oracle` の所見分類基準や、`fatal` / `minor` の切り分けを確認したいとき。
-- 仕様断片同士の明確な矛盾や、実装者の裁量で解消不能な問題をどう扱うか整理したいとき。
-- 誤字・脱字・用語不統一・表記揺れなどの単純な問題を、レビュー対象に含めるか確認したいとき。
-- `oracle file` だけでは問題と言い切れないものや、仕様から実装が一意に定まらないものを除外する条件を確認したいとき。
-
-## Do not read this when
-
-- すでに `build_review_oracle_standard()` を直接確認する対象が決まっていて、この目次を経由する必要がないとき。
-- `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py` など、別の review oracle を確認したいとき。
-- `cmoc review oracle` の所見リストや Structured Output schema ではなく、別サブコマンドや別階層の仕様を探しているとき。
-
-## hash
-
-- ef82dafc4a59d85457c1f90e00878089b078449fcd6ed481e828b982594baa81
+- 50527499f8c0d6014d6ddff4b9304061725fba0e147c176b033a9e7e7d2728d7

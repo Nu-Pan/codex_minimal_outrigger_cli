@@ -2,26 +2,25 @@
 
 ## Summary
 
-- この `doc` ディレクトリのルーティング文書で、`app_spec/`、`considered_alternative/`、`dev_rule/`、`branch_model.md` への入口です。
-- `app_spec/` では利用手順と共通仕様を、`considered_alternative/` では採用しなかった設計判断を、`dev_rule/` では開発規約を案内します。
-- `branch_model.md` では cmoc の branch と worktree の関係をまとめ、各下位文書へ分岐するための起点になります。
+- この `doc` ディレクトリのルーティング文書で、`app_spec/`、`considered_alternative/`、`dev_rule/`、`branch_model.md` への入口をまとめます。
+- `app_spec/` は利用手順と共通仕様、`considered_alternative/` は採用しなかった設計判断、`dev_rule/` は開発規約への入口です。
+- `branch_model.md` は cmoc の branch と worktree の関係を整理した、branch モデルの起点です。
 
 ## Read this when
 
-- cmoc の利用方法、共通仕様、branch モデルの入口をまとめて把握したいとき。
-- 採用しなかった設計案とその理由を確認したいとき。
-- 実装やテストの前に、開発規約・設計方針・開発環境・テスト規約を整理したいとき。
-- どの下位ディレクトリの文書や個別仕様を読むべきか迷ったとき。
+- cmoc の利用手順・共通仕様・非採用案・開発規約・branch モデルを、この階層からまとめて把握したいとき。
+- `app_spec/`、`considered_alternative/`、`dev_rule/`、`branch_model.md` のどこから読むべきか迷っているとき。
+- 実装やテストの前に、関連する正本仕様や設計方針の入口を整理したいとき。
 
 ## Do not read this when
 
-- 読みたい対象がすでに分かっていて、`app_spec/`、`considered_alternative/`、`dev_rule/`、`branch_model.md` の該当文書へ直接進めるとき。
-- この階層ではなく、各下位ディレクトリの `INDEX.md` や個別仕様ファイルだけを確認したいとき。
-- `README.md` や `AGENTS.md` など、`doc` 以外のリポジトリ運用ルールだけを確認したいとき。
+- `app_spec/`、`considered_alternative/`、`dev_rule/` の個別文書や `branch_model.md` の内容がすでに分かっていて、該当先へ直接進むとき。
+- この階層全体ではなく、`app_spec/` 内の利用手順・共通仕様だけ、あるいは `dev_rule/` 内の開発規約だけを確認したいとき。
+- `INDEX.md` の生成ルールそのものではなく、リポジトリ運用ルールや別階層の文書を探しているとき。
 
 ## hash
 
-- 9bf3737474622a47b8e5d6de29f0214202593198c26e7700d29172585e2f14b1
+- 1ceddbcd647a2976f9ba92598d30f3a2de3705c0516e72f6ebc2e4a4c1102c78
 
 # `src`
 
@@ -46,4 +45,4 @@
 
 ## hash
 
-- 0a2138a9e897d907760e9b8d10be2b86632e4f9c1f9138c0f0c93716545f2ac2
+- 76efd6981d32138811e4e7e5768b9fd88d778404adf7005ce32afa3a652a47c2

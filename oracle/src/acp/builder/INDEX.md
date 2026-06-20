@@ -2,50 +2,50 @@
 
 ## Summary
 
-- この `apply` ディレクトリのルーティング文書で、`fork/` への入口です。
-- `fork/` では変更要約、ファイル単位監査、要修正点リスト改善、要修正点 1 件の実装修正を案内します。
-- `fork/` 配下には read-only の Structured Output 系と、write-enabled な実装修正系の入口があります。
+- この `fork` ディレクトリのルーティング文書で、`change_summary.py`、`file_audit_finding.py`、`refine_fixing_point.py`、`consume_fixing_point.py` への入口です。
+- `change_summary.py` は `change_summary.json` を使う変更要約、`file_audit_finding.py` は `finding_list.json` を使うファイル監査、`refine_fixing_point.py` は同じく `finding_list.json` を使う要修正点リスト改善を案内します。
+- `consume_fixing_point.py` は要修正点 1 件を受け取って realization file を修正する write-enabled な入口です。
 
 ## Read this when
 
-- この配下で、変更要約・ファイル単位監査・要修正点リスト改善・要修正点 1 件の実装修正のどれへ進むべきか整理したいとき。
-- `fork/` 配下の各入口の役割分担をまとめて把握したいとき。
-- このディレクトリの `INDEX.md` を作成・修正する前に、下位ファイルの入口構成を確認したいとき。
-- read-only の呼び出しと write-enabled の呼び出しの違いを、この階層で整理したいとき。
+- `cmoc apply fork` 配下で、変更要約・ファイル単位監査・要修正点リスト改善・要修正点 1 件の実装修正のどれへ進むか整理したいとき。
+- `change_summary.py`、`file_audit_finding.py`、`refine_fixing_point.py`、`consume_fixing_point.py` の役割分担を把握したいとき。
+- read-only の Structured Output 系と write-enabled な実装修正系の違いを、この階層で確認したいとき。
+- `file_audit_finding.py` と `refine_fixing_point.py` が共通参照する `finding_list.json` を含め、出力先 schema の対応を押さえたいとき。
 
 ## Do not read this when
 
-- すでに読む対象が `fork/INDEX.md`、`change_summary.py`、`change_summary.json`、`file_audit_finding.py`、`file_audit_finding.json`、`fixing_point_refinement.py`、`fixing_point_refinement.json`、`fixing_point_application.py` のいずれかに決まっていて、この目次を経由する必要がないとき。
-- この配下の変更要約、ファイル単位監査、要修正点リスト改善、要修正点 1 件の実装修正のいずれかを単独で確認したいとき。
+- すでに対象が `change_summary.py`、`change_summary.json`、`file_audit_finding.py`、`finding_list.json`、`refine_fixing_point.py`、`consume_fixing_point.py` のいずれかに決まっていて、この目次を経由する必要がないとき。
+- `cmoc apply fork` のうち、変更要約、ファイル単位監査、要修正点リスト改善、要修正点 1 件の実装修正のいずれかを単独で確認したいとき。
 - Structured Output schema そのものではなく、個別の prompt 実装や JSON schema を直接読みたいとき。
 
 ## hash
 
-- 8c4eb6235cddfb6b69693cae3effcc15f1d9e92692ac1aaf13f2ac72fdcac0f2
+- 320daa3f9d85d9c18f3bac1a04b446de54c07bd17f4812d0e3b5cd0ba14d88dd
 
 # `indexing`
 
 ## Summary
 
-- ルーティング文書の目次情報を生成するための入口で、対象の内容と同階層の情報を組み合わせて案内します。
-- 要約・読む条件・読まない条件の 3 項目だけを返す Structured Output を前提にしています。
-- 読み取り専用で、目次文の生成と検証に向いた構成です。
+- この `indexing` ディレクトリのルーティング文書で、`index_entry.py` と `index_entry.json` への入口です。
+- `index_entry.py` は `cmoc indexing` の目次情報生成呼び出しの入口で、対象パスを正規化して complete prompt を組み立てます。
+- `index_entry.json` は `INDEX.md` 用の目次情報を表す Structured Output schema です。
 
 ## Read this when
 
-- 目次情報を JSON でどう返すか確認したいとき。
-- 対象の内容と同階層の情報をどう渡すか把握したいとき。
-- ルーティング文書作成時の要約・読む条件・読まない条件の分担を整理したいとき。
+- ルーティング文書の目次情報を JSON でどう返すか確認したいとき。
+- 対象内容と同階層の情報をどう組み合わせて案内するか把握したいとき。
+- `cmoc indexing` の出力 schema と、その生成呼び出しの入口を整理したいとき。
 
 ## Do not read this when
 
-- すでに目的の個別実装や対応 schema が分かっていて、ここを経由せず直接確認したいとき。
-- 目次情報の markdown への反映手順だけを確認したいとき。
-- ルーティング文書以外の呼び出し仕様を探しているとき。
+- すでに対象が `index_entry.py` か `index_entry.json` に決まっていて、この目次を経由せず直接確認したいとき。
+- `INDEX.md` への反映手順や markdown レンダリング方法だけを確認したいとき。
+- `cmoc indexing` 以外のサブコマンドや、別の Structured Output schema を探しているとき。
 
 ## hash
 
-- 3eac5e84efcf0c004b1489d9e6e06d5208a39e60a5f53697ead6ef212c5901c1
+- 960ee4d6fc9f1af66a665095088a13880ae61d9178aef7ab2ce9de164c4d564e
 
 # `review`
 
@@ -60,17 +60,16 @@
 - どの review oracle 系統に進むべきか整理したいとき。
 - `cmoc review oracle` の prompt 本体と Structured Output schema の対応を確認したいとき。
 - 新規所見列挙、所見整理、妥当理由列挙、否定理由列挙、採否判定のどれを使うか切り分けたいとき。
-- レビュー対象 oracle file と関連所見を入力に取る各フローの入口を把握したいとき。
 
 ## Do not read this when
 
-- すでに開く対象が `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py`、または対応する `*.json` に決まっているとき。
+- すでに開く対象が `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py`、または対応する `*.json` に決まっていて、この目次を経由する必要がないとき。
 - 5 系統のうち 1 つだけを直接確認したいとき。
 - `cmoc review oracle` 以外のサブコマンドや、レビュー用 Structured Output schema 以外の仕様を探しているとき。
 
 ## hash
 
-- 56dddd8160803a9e42ffc8c3bd567dc1a2bfc1cc8de49598e3efe9c37cd654bc
+- 69fb81c581701d9e2f4d0600ad1d3ced5e1d9b38030fa6a78ee5b95357f8fff4
 
 # `session`
 
