@@ -26,23 +26,23 @@
 
 ## Summary
 
-- この `src` ディレクトリのルーティング文書で、`acp/`、`basic/`、`config/` への入口です。
-- `acp/` は AI コーディングエージェント呼び出しに関する仕様と prompt 構成を案内し、`basic/` は共通基盤、`config/` は cmoc 全体設定の入口を案内します。
+- この `src` ディレクトリのルーティング文書で、`acp/`、`basic/`、`config/` への入口をまとめます。
+- `acp/` は AI コーディングエージェント呼び出しに関する仕様と prompt 構成、`basic/` は共通基盤、`config/` は cmoc 全体設定の入口です。
 - この階層は、cmoc の共通仕様・設定・パス解決・文書レンダリングの入口を切り分ける起点です。
 
 ## Read this when
 
 - `<cmoc-root>/oracle/src` 配下で、まず `acp/`、`basic/`、`config/` のどこから読むべきか整理したいとき。
-- `AgentCallParameter`、`ModelClass`、`ReasoningEffort`、`FileAccessMode`、`RootToken`、`Standard`、`StructDoc` など、この階層の共通基盤をまとめて把握したいとき。
+- `ModelClass`、`ReasoningEffort`、`FileAccessMode`、`AgentCallParameter`、`RootToken`、`Standard`、`StructDoc` など、この階層の共通基盤をまとめて把握したいとき。
 - `<cmoc-root>` / `<repo-root>` / `<run-root>` / `<work-root>` の解決規則や、設定・prompt 組み立て・標準文書・Markdown レンダリングの入口を確認したいとき。
-- この階層の下位 `INDEX.md` や個別仕様へ進む前に、役割分担を先に整理したいとき。
+- 下位の `INDEX.md` や個別仕様へ進む前に、この階層の役割分担を先に整理したいとき。
 
 ## Do not read this when
 
-- すでに `acp/`、`basic/`、`config/` のどこへ進むか決まっていて、この階層の入口を経由する必要がないとき。
+- `acp/`、`basic/`、`config/` のうち読む先がすでに決まっていて、この階層の入口説明が不要なとき。
 - `acp.py`、`path_model.py`、`standard.py`、`struct_doc.py`、`cmoc_config.py` など、個別ファイルを直接確認したいとき。
-- `<cmoc-root>/oracle/src` ではなく、`<cmoc-root>/oracle` 全体の別ルートや別階層の仕様だけを確認したいとき。
+- `<cmoc-root>/oracle/src` ではなく、`oracle` 全体の別ルートや別階層の仕様だけを探しているとき。
 
 ## hash
 
-- 804568e4cf3365314a4d44eb2b0320322b09872a959850f8267141b6738de0d1
+- 411bf8228bc32d75791dcef2a0ab43a4ba817e39232c6aaa211ad785f84a6a36

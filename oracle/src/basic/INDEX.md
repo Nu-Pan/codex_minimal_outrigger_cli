@@ -53,7 +53,7 @@
 
 ## Summary
 
-- この `standard.py` は、`oracle` 文書で共通に使う標準表現を定義し、`Standard` と `Requirement` を `StructDoc` へ変換する入口です。
+- この `<cmoc-root>/oracle/src/basic/standard.py` は、`oracle` 文書で共通に使う標準表現を定義し、`Standard` と `Requirement` を `StructDoc` へ変換する入口です。
 - `Standard` は見出し、対象、背景、要求、判定基準、例示をまとめ、各フィールドの型や空配列を検証します。
 - `Requirement` は `必須` / `禁止` / `推奨` / `許容` のラベルと本文を持つ凍結 dataclass です。
 - `standard_to_struct_doc()` は `Standard` を階層化された `StructDoc` に整形して、markdown 出力や文書組み立てへ渡せる形にします。
@@ -74,7 +74,7 @@
 
 ## hash
 
-- 548458cf7c69648918ee1e06bf58430ff24cd1023476aa3e0cc2bd6297c083c3
+- a7ea6a315b670c34b5a4ea670d3eea72d9d1949d0502e3b2c5b31562923162f2
 
 # `struct_doc.py`
 

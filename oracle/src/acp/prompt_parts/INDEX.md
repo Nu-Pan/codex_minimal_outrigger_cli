@@ -9,19 +9,19 @@
 ## Read this when
 
 - `cmoc apply fork` で `oracle file` を `realization file` に適用する際のレビュー観点を確認したいとき。
-- `oracle file` と `realization file` の不整合を、どこまで要修正点として扱うか整理したいとき。
+- `oracle file` と `realization file` の不整合を、どこまで修正対象として扱うか整理したいとき。
 - 単なる改善提案ではなく、バグ級の明確な問題だけをレビュー対象にしたいとき。
 - この断片を `complete_prompt.py` へ組み込む前に、役割を把握したいとき。
 
 ## Do not read this when
 
-- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/apply_review_standard.py` を直接確認する目的が決まっていて、目次の案内が不要なとき。
+- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/apply_review_standard.py` を直接開いて内容を確認する目的が決まっているとき。
 - `change_summary.py`、`file_audit_finding.py`、`refine_fixing_point.py` など、`apply` 系の別断片を探しているとき。
-- `oracle` の正本仕様や `review_oracle_standard.py` だけを確認したいときで、この適用レビュー標準が不要なとき。
+- `oracle` の正本仕様や `oracle_review_standard.py` だけを確認したいときで、この適用レビュー標準が不要なとき。
 
 ## hash
 
-- 620ee33defb76cfcf77a1c369188426e09cf7193c0cf46e2d7d3b7e3650f6309
+- 7cabe95f81fb3c1c25a3f846e088b99dd3efc5f51526d6827263bca78846d536
 
 # `complete_prompt.py`
 
@@ -126,9 +126,9 @@
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/acp/prompt_parts/oracle_review_standard.py` は、`build_review_oracle_standard()` を起点に `cmoc review oracle` 向けのレビュー観点を `StructDoc` としてまとめる入口です。
-- 仕様断片同士の明確な矛盾や、実装者の裁量では解消できない問題を fatal 所見として扱う方針を案内します。
-- 誤字・脱字・用語不統一などの単純な問題を minor 所見として扱い、仕様の隙間や推測だけでは所見にしない方針を示します。
+- `<cmoc-root>/oracle/src/acp/prompt_parts/oracle_review_standard.py` は、`build_review_oracle_standard()` を起点に `cmoc review oracle` 向けのレビュー標準を `StructDoc` として組み立てる入口です。
+- 仕様断片同士の明確な矛盾や、実装者の裁量では解消できない問題を fatal 所見として扱い、誤字・脱字・用語不統一などの単純な問題を minor 所見として扱う方針をまとめます。
+- 仕様の隙間や推測だけでは所見にしない、というレビューの境界条件を示します。
 
 ## Read this when
 
@@ -138,13 +138,13 @@
 
 ## Do not read this when
 
-- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/oracle_review_standard.py` を直接読む対象として決めていて、目次を経由する必要がないとき。
+- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/oracle_review_standard.py` を直接確認する対象として決まっていて、目次を経由する必要がないとき。
 - `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py` など、別の review 断片を探しているとき。
 - `cmoc review oracle` ではなく、別サブコマンドや別階層の仕様を確認したいとき。
 
 ## hash
 
-- 62c948874b421e1bb2e35dfd2c116f1855d6b94114001a16b8e616fafae9044b
+- 1be8098ca88978d61a961d9409aa2a5fdd5d85d7ec1d95b77626dc6cb0596e60
 
 # `oracle_standard.py`
 
@@ -158,26 +158,26 @@
 
 - `oracle file` に対する標準的なレビュー観点を、`StructDoc` としてまとめて把握したいとき。
 - `build_oracle_standard()` に含まれる標準項目や、その優先順位・禁止事項を確認したいとき。
-- `complete_prompt.py` で `oracle_standard=True` が有効になる前提や、`oracle_standard.py` を修正する前の関連文脈を整理したいとき。
+- `complete_prompt.py` で `oracle_standard=True` が有効になる前提や、この標準を修正する前の関連文脈を整理したいとき。
 
 ## Do not read this when
 
-- `build_oracle_standard()` の実装内容を、目次を経由せず直接確認したいとき。
-- `complete_prompt.py` や `oracle_and_realization_basic.py` など、関連する別ファイルだけを個別に読みたいとき。
-- `oracle` ツリー内の共通標準ではなく、個別の正本仕様断片そのものを確認したいとき。
+- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/oracle_standard.py` を直接確認する目的が決まっていて、目次の案内が不要なとき。
+- `complete_prompt.py` や `oracle_and_realization_basic.py` など、関連する別の prompt 断片だけを確認したいとき。
+- `oracle` ツリー内の個別の正本仕様断片ではなく、`prompt_parts/` 全体の入口だけを探しているとき。
 
 ## hash
 
-- 8227d2300002501cc2aaacd55548b6d50d8ca9a960cc85004bd5bd311d8b674e
+- ee08ee47b92c83a79779b1295847815f04500bda6bcf335dc0fabd2a31feaab5
 
 # `realization_standard.py`
 
 ## Summary
 
-- 実装系の標準的な方針をまとめ、読むべき観点の入口になる。
-- 総文字数の最小化、重複排除、既存実装の整理、明確な責務境界に基づく抽象化を案内する。
-- 公開面・設定面・状態の増加、テストの肥大化、依存関係や補助生成物の増加を抑える方針を含む。
-- 変更完了時に削除・統合・短縮できるものが残っていないかを確認する観点も扱う。
+- `<cmoc-root>/oracle/src/acp/prompt_parts/realization_standard.py` は、realization file 向けの標準方針を `StructDoc` として組み立てる入口です。
+- 総文字数の最小化、重複排除、既存実装の整理、明確な責務境界に基づく抽象化を案内します。
+- 公開面・設定面・状態の増加、テストの肥大化、依存関係や補助生成物の増加を抑える方針を含みます。
+- 変更完了時に、削除・統合・短縮できるものが残っていないかを確認する観点も扱います。
 
 ## Read this when
 
@@ -188,11 +188,11 @@
 
 ## Do not read this when
 
-- すでにこの標準の役割が分かっていて、本文を直接確認したいとき。
-- 個別の helper、クラス、テストケースだけを確認したいとき。
-- 標準ではなく、共通型やレンダリング基盤の定義を探しているとき。
-- 別の標準やファイル読み書き規則を確認したいとき。
+- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/realization_standard.py` を直接確認する対象が決まっていて、目次を経由する必要がないとき。
+- 個別の helper、class、テストケース、import の整理だけを確認したいとき。
+- `oracle` 側の正本仕様や別の標準、あるいはファイル読み書き規則を探しているとき。
+- `prompt_parts/` 全体ではなく、別のディレクトリや別フローの案内を探しているとき。
 
 ## hash
 
-- 50527499f8c0d6014d6ddff4b9304061725fba0e147c176b033a9e7e7d2728d7
+- b5f607c2be76052daf7a2dc77d1c99eb855b2ab847511f86e22041e1f0565491

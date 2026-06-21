@@ -2,26 +2,25 @@
 
 ## Summary
 
-- この `fork` ディレクトリのルーティング文書で、`change_summary.py`、`file_audit_finding.py`、`refine_fixing_point.py`、`consume_fixing_point.py` への入口です。
-- `change_summary.py` は `change_summary.json` を使う変更要約、`file_audit_finding.py` は `finding_list.json` を使うファイル監査、`refine_fixing_point.py` は同じく `finding_list.json` を使う要修正点リスト改善を案内します。
-- `consume_fixing_point.py` は要修正点 1 件を受け取って realization file を修正する write-enabled な入口です。
+- この `apply` ディレクトリのルーティング文書で、`fork/` への入口です。
+- `fork/` は `cmoc apply fork` の変更要約、ファイル単位監査、要修正点リスト改善、要修正点 1 件の実装修正を案内します。
+- この階層は、`cmoc apply fork` の入口をまとめる起点です。
 
 ## Read this when
 
-- `cmoc apply fork` 配下で、変更要約・ファイル単位監査・要修正点リスト改善・要修正点 1 件の実装修正のどれへ進むか整理したいとき。
-- `change_summary.py`、`file_audit_finding.py`、`refine_fixing_point.py`、`consume_fixing_point.py` の役割分担を把握したいとき。
-- read-only の Structured Output 系と write-enabled な実装修正系の違いを、この階層で確認したいとき。
-- `file_audit_finding.py` と `refine_fixing_point.py` が共通参照する `finding_list.json` を含め、出力先 schema の対応を押さえたいとき。
+- `<cmoc-root>/oracle/src/acp/builder/apply` 配下で、まず `fork/` のどこから読むべきか整理したいとき。
+- `cmoc apply fork` の変更要約、ファイル単位監査、要修正点リスト改善、要修正点 1 件の実装修正という役割分担をまとめて把握したいとき。
+- この階層の入口を確認してから、下位の `INDEX.md` や個別仕様へ進みたいとき。
 
 ## Do not read this when
 
-- すでに対象が `change_summary.py`、`change_summary.json`、`file_audit_finding.py`、`finding_list.json`、`refine_fixing_point.py`、`consume_fixing_point.py` のいずれかに決まっていて、この目次を経由する必要がないとき。
-- `cmoc apply fork` のうち、変更要約、ファイル単位監査、要修正点リスト改善、要修正点 1 件の実装修正のいずれかを単独で確認したいとき。
-- Structured Output schema そのものではなく、個別の prompt 実装や JSON schema を直接読みたいとき。
+- すでに `fork/` に進むことが決まっていて、この階層の案内を経由する必要がないとき。
+- `change_summary.py`、`file_audit_finding.py`、`refine_fixing_point.py`、`consume_fixing_point.py` など、`cmoc apply fork` の個別ファイルを直接確認したいとき。
+- `INDEX.md` の目次情報ではなく、個別の prompt 実装や Structured Output schema そのものを探しているとき。
 
 ## hash
 
-- 320daa3f9d85d9c18f3bac1a04b446de54c07bd17f4812d0e3b5cd0ba14d88dd
+- 19429252486e9b300c0d07b3a06b9c0b070e5c53ed0b5148351d39375d4a6a19
 
 # `indexing`
 
@@ -51,27 +50,25 @@
 
 ## Summary
 
-- この `review` ディレクトリのルーティング文書で、`oracle/` への入口です。
-- `oracle/` には `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py` と各対応 `*.json` があり、`cmoc review oracle` の 5 系統を案内します。
-- 各 `*.py` は prompt 正本、各 `*.json` は対応する Structured Output schema を表します。
+- この `review` ディレクトリのルーティング文書で、`oracle/` への入口をまとめます。
+- `oracle/` は `cmoc review oracle` の 5 系統を案内し、新規所見列挙、所見整理、妥当理由列挙、否定理由列挙、採否判定を切り分けます。
+- 各 `*.py` は prompt 正本、各 `*.json` は対応する Structured Output schema です。
 
 ## Read this when
 
-- `cmoc review oracle` の 5 系統の入口をひとまとめに把握したいとき。
-- `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py` のどれが何を担当するか整理したいとき。
+- `<cmoc-root>/oracle/src/acp/builder/review` 配下で、まず `oracle/` のどこから読むべきか整理したいとき。
+- `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py` の役割分担をひとまとめに把握したいとき。
 - 各 `*.py` が prompt 正本で、各 `*.json` が対応する Structured Output schema である対応関係を確認したいとき。
-- 新規所見列挙、所見整理、妥当理由列挙、否定理由列挙、採否判定のどこから読むべきか迷ったとき。
 
 ## Do not read this when
 
-- すでに `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py`、または対応する `*.json` を直接確認する目的が決まっていて、この目次を経由する必要がないとき。
-- 5 系統のうち 1 つだけを直接確認したいとき。
-- `cmoc review oracle` 以外のサブコマンドや、レビュー用 Structured Output schema 以外の仕様を探しているとき。
-- 所見の列挙、整理、擁護理由列挙、否定理由列挙、採否判定のいずれにも当てはまらない文書を探しているとき。
+- すでに `oracle/` の 5 系統のいずれか、または対応する `*.py` / `*.json` を直接確認する対象が決まっていて、この目次を経由する必要がないとき。
+- `cmoc review oracle` のうち 1 つの処理だけを直接見たいとき。
+- レビュー用 Structured Output schema ではなく、`cmoc review` の個別実装や別サブコマンドの仕様を探しているとき。
 
 ## hash
 
-- b386670446a404ac9292008c76c7c3e0187041be21ae1331b4f4a2c2da4e11cc
+- 1f44605bcec2f53a34070ccade660845bb6f959934cce5af5adcfb8ed0fd8fae
 
 # `session`
 

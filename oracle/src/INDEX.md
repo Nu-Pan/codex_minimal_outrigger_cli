@@ -2,49 +2,49 @@
 
 ## Summary
 
-- この `acp` ディレクトリのルーティング文書で、`builder/` と `prompt_parts/` への入口です。
-- `builder/` はサブコマンド別の agent call parameter、`prompt_parts/` は prompt 組み立て用の断片を案内します。
-- この階層は、AI 呼び出し仕様と prompt 構成のどちらを読むべきかを切り分ける起点です。
+- この `acp` ディレクトリのルーティング文書で、`builder/` と `prompt_parts/` への入口をまとめます。
+- `builder/` は各サブコマンド向けの agent call parameter の入口で、`prompt_parts/` は完全な prompt を構成する断片群の入口です。
+- この階層は、AI 呼び出し仕様と prompt 構成要素の役割分担を切り分ける起点です。
 
 ## Read this when
 
-- `<cmoc-root>/oracle/src/acp` 配下で、まず `builder/` と `prompt_parts/` のどちらに進むべきか整理したいとき。
-- `cmoc` の agent call parameter と prompt 断片の役割分担を、この階層から把握したいとき。
-- 下位の `INDEX.md` や個別仕様へ進む前に、この階層全体の入口を先に確認したいとき。
+- `<cmoc-root>/oracle/src/acp` 配下で、まず `builder/` と `prompt_parts/` のどこから読むべきか整理したいとき。
+- AI 呼び出し用の agent call parameter を組み立てる入口と、prompt 断片の入口をまとめて把握したいとき。
+- この階層の役割分担を確認してから、下位の `INDEX.md` や個別仕様へ進みたいとき。
 
 ## Do not read this when
 
-- 読む対象がすでに `builder/` か `prompt_parts/` のどちらかに決まっていて、この階層の案内を経由する必要がないとき。
-- `index_entry.py`、`complete_prompt.py`、`oracle_standard.py` など、個別ファイルを直接確認したいとき。
-- `<cmoc-root>/oracle/src/acp` ではなく、`<cmoc-root>/oracle/src` の他の入口や別階層の仕様だけを確認したいとき。
+- すでに `builder/` か `prompt_parts/` のどちらへ進むか決まっていて、この階層の入口説明が不要なとき。
+- `cmoc apply fork`、`cmoc indexing`、`cmoc review oracle`、`cmoc session join` のいずれかの個別仕様を直接確認したいとき。
+- `complete_prompt.py` や各 `*.py` / `*.json` など、下位の個別ファイルをそのまま開く目的で、この目次を経由する必要がないとき。
 
 ## hash
 
-- 829624a3345ba9820b2b41d49cf8f5e12e19c5449127e6bbc8bd62319275410e
+- 95929893383e5cb2be0bd859d0e8785016b63f132acb065c1d6d8433863f2b9e
 
 # `basic`
 
 ## Summary
 
-- この `basic` ディレクトリのルーティング文書で、`acp.py`、`path_model.py`、`standard.py`、`struct_doc.py` への入口です。
-- `acp.py` は AI コーディングエージェント呼び出し用の共通型を、`path_model.py` は root token 付きパス解決を、`standard.py` は標準文書の変換基盤を、`struct_doc.py` は階層文書の Markdown レンダリング基盤を案内します。
-- この階層は、cmoc の共通基盤を役割ごとに切り分けて読むための起点です。
+- この `basic` ディレクトリのルーティング文書で、`acp.py`、`path_model.py`、`standard.py`、`struct_doc.py` への入口をまとめます。
+- `acp.py` は AI コーディングエージェント呼び出し用の共通型、`path_model.py` は root token を含むパス解決、`standard.py` は標準文書の定義と `StructDoc` 変換、`struct_doc.py` は階層文書の markdown レンダリングを案内します。
+- この階層は、AI 呼び出しパラメータ、パス表記、標準文書、構造化文書レンダリングという共通基盤を切り分ける起点です。
 
 ## Read this when
 
-- `<cmoc-root>/oracle/src/basic` 配下で、まずどの共通基盤ファイルから読むべきか整理したいとき。
-- AI 呼び出し用の共通型、パス解決、標準文書変換、Markdown レンダリングの入口をまとめて把握したいとき。
-- `ModelClass`、`ReasoningEffort`、`FileAccessMode`、`AgentCallParameter`、`RootToken`、`Standard`、`StructDoc` の役割を一望したいとき。
+- `<cmoc-root>/oracle/src/basic` 配下で、まずどの共通基盤ファイルを読むべきか整理したいとき。
+- `ModelClass`、`ReasoningEffort`、`FileAccessMode`、`AgentCallParameter`、`RootToken`、`Standard`、`Requirement`、`StructDoc` の役割をまとめて把握したいとき。
+- `<cmoc-root>` / `.<repo-root>` / `<run-root>` / `<work-root>` の解決、標準文書の整形、markdown レンダリングの入口を確認したいとき。
 
 ## Do not read this when
 
-- `acp.py`、`path_model.py`、`standard.py`、`struct_doc.py` のうち、読む対象がすでに決まっていて、この階層の目次を経由する必要がないとき。
-- この階層ではなく、`<work-root>/oracle/src` 配下の別ディレクトリや別のルーティング文書だけを確認したいとき。
-- 個別ファイルの実装を直接確認したいとき。
+- `acp.py`、`path_model.py`、`standard.py`、`struct_doc.py` の個別内容がすでに分かっていて、該当ファイルへ直接進むとき。
+- パス解決だけ、標準文書だけ、Structured markdown だけのように、単一の共通基盤だけを確認したいとき。
+- この階層ではなく、`src` 全体の別ディレクトリや `oracle` の別ルートを探しているとき。
 
 ## hash
 
-- 5248ae85fd766038537e5133911331203f5f2155db5f61ae618ab64298936829
+- 8c84639a17dab7e3959f328203def93ac4920d6dc56f8fb1cb0cc8f668c570e8
 
 # `config`
 

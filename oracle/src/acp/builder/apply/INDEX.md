@@ -15,10 +15,11 @@
 
 ## Do not read this when
 
-- すでに開く対象が `change_summary.py`、`change_summary.json`、`file_audit_finding.py`、`finding_list.json`、`refine_fixing_point.py`、`consume_fixing_point.py` のいずれかに決まっていて、この目次を経由する必要がないとき。
+- すでに対象が `change_summary.py`、`change_summary.json`、`file_audit_finding.py`、`finding_list.json`、`refine_fixing_point.py`、`consume_fixing_point.py` のいずれかに決まっていて、この目次を経由する必要がないとき。
 - `cmoc apply fork` のうち、変更要約、ファイル単位監査、要修正点リスト改善、要修正点 1 件の実装修正のいずれかを単独で確認したいとき。
 - Structured Output schema そのものではなく、個別の prompt 実装や JSON schema を直接読みたいとき。
+- この階層の役割分担ではなく、個別ファイルの実装や出力例を直接確認したいとき。
 
 ## hash
 
-- aa77fe3f64b08016f09e308fab8bc4d16b05dbfec1aacbdabe2f72d0840693c5
+- a4eee3bb53121cabf62527911eb51447393bcedb36d370742fc6894034907e32
