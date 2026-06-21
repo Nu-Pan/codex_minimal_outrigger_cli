@@ -26,22 +26,22 @@
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/acp/prompt_parts/` のルーティング文書で、`complete_prompt.py` を中心に `oracle` / `realization` の基本説明、標準、レビュー標準、ファイルアクセス規則、`INDEX.md` エントリー規範への入口をまとめます。
-- この階層は、`apply_review_standard.py`、`complete_prompt.py`、`file_access_rule.py`、`index_entry_standard.py`、`oracle_and_realization_basic.py`、`oracle_review_standard.py`、`oracle_standard.py`、`realization_standard.py` への入口を切り分ける起点です。
-- AI 呼び出し用 prompt の組み立て順と、`INDEX.md` に書くべき目次項目の方針を整理するための案内です。
+- `<cmoc-root>/oracle/src/acp/prompt_parts/` のルーティング文書で、`complete_prompt.py` を中心に完全な prompt を構成する断片群への入口をまとめます。
+- `oracle_and_realization_basic.py`、`file_access_rule.py`、`oracle_standard.py`、`realization_standard.py`、`oracle_review_standard.py`、`apply_review_standard.py`、`index_entry_standard.py` への入口を切り分けます。
+- AI 呼び出し用 prompt の組み立て順や、`INDEX.md` エントリーに書くべきルーティング規範を整理するための案内です。
 
 ## Read this when
 
-- この階層のどの断片から読むべきかを整理したいとき。
-- 完全な prompt の構成要素と追加条件を把握したいとき。
-- `oracle` / `realization` の基本概念、標準方針、レビュー標準、ファイルアクセス規則、`INDEX.md` 規範を確認したいとき。
+- この階層でまずどの断片から読むべきか整理したいとき。
+- 完全な prompt の構成要素や追加条件を把握したいとき。
+- `oracle` / `realization` の基本、ファイルアクセス規則、各種標準、`INDEX.md` 規範をまとめて確認したいとき。
 
 ## Do not read this when
 
-- すでに `complete_prompt.py` や各標準ファイルへ直接進む対象が決まっているとき。
-- この階層全体ではなく、`oracle` 正本仕様や別階層の案内だけを探しているとき。
-- `INDEX.md` の生成ルールではなく、個別の helper や実装詳細だけを確認したいとき。
+- すでに `complete_prompt.py` や各標準ファイルへ直接進む対象が決まっていて、この目次を経由する必要がないとき。
+- この階層全体ではなく、個別の helper や実装詳細だけを確認したいとき。
+- `oracle` 正本仕様や別階層の案内を探しているとき。
 
 ## hash
 
-- 94f2e9190a90b3e3910c9ed5feb107de55d8ba734b0c7681f53e74656e4953e2
+- d08501a7ac6e9ec11d097e0f2c47ab9658e8471f2f5777e493a7010eb343bf93

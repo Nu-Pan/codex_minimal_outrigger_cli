@@ -27,7 +27,7 @@
 ## Summary
 
 - この `src` ディレクトリのルーティング文書で、`acp/`、`basic/`、`config/` への入口をまとめます。
-- `acp/` は AI コーディングエージェント呼び出しに関する仕様と prompt 構成、`basic/` は共通基盤、`config/` は cmoc 全体設定の入口です。
+- `acp/` は AI コーディングエージェント呼び出しに関する仕様と prompt 断片群、`basic/` は共通基盤、`config/` は cmoc 全体設定の入口です。
 - この階層は、cmoc の共通仕様・設定・パス解決・文書レンダリングの入口を切り分ける起点です。
 
 ## Read this when
@@ -45,4 +45,4 @@
 
 ## hash
 
-- ed7159e82da50945172e139493bf35be73a01127da16611a5bc594bb635ccc2d
+- 1aa14fceaa4696e285cace6235ff4c7c99fd21f829d29e5ec99b63f39c94326c

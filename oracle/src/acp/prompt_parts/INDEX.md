@@ -8,20 +8,19 @@
 
 ## Read this when
 
-- `cmoc apply fork` で `oracle file` を `realization file` に適用する際のレビュー観点を確認したいとき。
-- `oracle file` と `realization file` の不整合を、どこまで修正対象として扱うか整理したいとき。
-- 単なる改善提案ではなく、バグ級の明確な問題だけをレビュー対象にしたいとき。
-- この断片を `complete_prompt.py` へ組み込む前に、役割を把握したいとき。
+- `cmoc apply fork` で、`oracle file` を `realization file` に適用する際のレビュー標準を確認したいとき。
+- `oracle file` と `realization file` の不整合を、どこまで要修正点として扱うか整理したいとき。
+- `complete_prompt.py` で `apply_review_standard=True` のときに追加される内容を把握したいとき。
 
 ## Do not read this when
 
-- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/apply_review_standard.py` を直接開いて内容を確認する目的が決まっているとき。
-- `change_summary.py`、`file_audit_finding.py`、`refine_fixing_point.py` など、`apply` 系の別断片を探しているとき。
-- `oracle` の正本仕様や `oracle_review_standard.py` だけを確認したいときで、この適用レビュー標準が不要なとき。
+- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/apply_review_standard.py` を直接開いて、実装や規範文の中身を確認する目的が決まっているとき。
+- `complete_prompt.py` への組み込み方や、`cmoc apply fork` での所見列挙の全体像を先に確認したいわけではないとき。
+- `oracle_review_standard.py` や `apply` 系の別断片など、このファイル以外のレビュー標準を探しているとき。
 
 ## hash
 
-- 0a5472fe8e7ab5a0382f6b8b30c5ef9307c4df79509ce865cbc1c033ae8fd18d
+- aeb1112e0e4bc5803ab6ce9ca7dac34bfe5875ea53eaf0ef623b87c93b6a67a5
 
 # `complete_prompt.py`
 
@@ -77,25 +76,25 @@
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/acp/prompt_parts/index_entry_standard.py` は、`INDEX.md` のエントリーが従うべき規範文を `StructDoc` としてまとめる入口です。
-- この断片は、`INDEX.md` エントリーを読むべき対象へのルーティング情報として扱い、`summary`、`read_this_when`、`do_not_read_this_when` に何を書くかの方針を示します。
-- `complete_prompt.py` から `index_entry_standard=True` のときに組み込まれ、`cmoc indexing` の目次情報生成を支える前提になります。
+- この `index_entry_standard.py` は、`INDEX.md` の各エントリーが従うべきルーティング規範を `StructDoc` として組み立てる入口です。
+- 対象を読むべき条件、対象の責務、同階層の別対象ではなくここへ進む理由を、最小限の意味情報でまとめます。
+- 機械的に補える情報ではなく、対象を読む判断に必要な意味情報だけを扱います。
 
 ## Read this when
 
-- `INDEX.md` の各エントリーに何を書けばよいか、要約・読む条件・読まなくてよい条件の書き方を確認したいとき。
-- `cmoc indexing` で生成する目次情報のルーティング方針を把握したいとき。
-- `complete_prompt.py` で `index_entry_standard=True` のときにどの規範が追加されるか確認したいとき。
+- `INDEX.md` の各エントリーに何を書くべきか、読む対象への導線の作り方を確認したいとき。
+- `cmoc indexing` で使う目次文の規範や、`complete_prompt.py` がこの断片を組み込む条件を把握したいとき。
+- 対象本文を読む前に、ルーティング情報としての役割だけを確認したいとき。
 
 ## Do not read this when
 
-- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/index_entry_standard.py` 自体を直接確認する対象が決まっていて、この目次を経由する必要がないとき。
-- `cmoc indexing` の出力 JSON 形式や Structured Output schema だけを確認したいとき。
-- `complete_prompt.py` や他の prompt 断片の役割ではなく、別のサブコマンドや別階層の案内を探しているとき。
+- すでにこのファイル本体を直接確認する対象が決まっていて、目次を経由する必要がないとき。
+- Structured Output schema や生成結果の項目名・型・形式だけを確認したいとき。
+- `INDEX.md` エントリーではなく、別の prompt 断片や別サブコマンドの仕様を探しているとき。
 
 ## hash
 
-- b686cf3efbae97576f9d9511869eaf6ade20633a3fa9390705c69c498dc3f02e
+- 9948bdff6712106ea91119db4a9fbd06529bf36046318db4e3adb5863e9c5fb0
 
 # `oracle_and_realization_basic.py`
 
