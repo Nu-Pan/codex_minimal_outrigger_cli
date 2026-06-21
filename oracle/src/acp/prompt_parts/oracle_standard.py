@@ -17,7 +17,6 @@ def build_oracle_standard() -> StructDoc:
     standards = [
         Standard(
             title="人間の認知能力の消費は節約しなければならない",
-            targets=["oracle file"],
             backgrounds=[
                 "人間の認知能力は人間だけが提供できる希少なリソースである",
                 "希少性ゆえに、あらゆるケースで人間の認知能力の供給不足がボトルネックになる",
@@ -47,7 +46,6 @@ def build_oracle_standard() -> StructDoc:
         ),
         Standard(
             title="oracle file は正本仕様断片である",
-            targets=["oracle file"],
             backgrounds=[
                 "oracle file は人間が 100% 責任を持つ",
                 "oracle file の規模は人間のメンテナンスコストに影響する",
@@ -72,7 +70,6 @@ def build_oracle_standard() -> StructDoc:
         ),
         Standard(
             title="仕様断片の隙間の未定義部分は許容する",
-            targets=["oracle file"],
             backgrounds=[
                 "oracle file は正本仕様断片である",
                 "仕様断片の隙間には未定義部分が生まれる",
@@ -112,7 +109,6 @@ def build_oracle_standard() -> StructDoc:
         ),
         Standard(
             title="oracle file の総文字数の最小化を目標とする",
-            targets=["oracle file"],
             backgrounds=[
                 "oracle file の規模が大きいほど、人間の認知負荷が増える",
                 "oracle file の規模が大きいほど、AI が読む文脈量も増える",
@@ -143,10 +139,6 @@ def build_oracle_standard() -> StructDoc:
         ),
         Standard(
             title="正本仕様断片の間で論理的な矛盾はあってはいけない",
-            targets=[
-                "oracle file",
-                "正本仕様断片",
-            ],
             backgrounds=[
                 "実装は正本仕様断片と矛盾してはいけない",
                 "正本仕様断片が矛盾している場合、実装も矛盾する",
@@ -172,10 +164,6 @@ def build_oracle_standard() -> StructDoc:
         ),
         Standard(
             title="実装から仕様への逆流は原則として認めない",
-            targets=[
-                "oracle file",
-                "oracle file の作成・修正提案",
-            ],
             backgrounds=[
                 "oracle file に記述された正本仕様断片を元に実装が生成される",
                 "人間の意図が正確に直接反映されているのは oracle file である",
@@ -206,10 +194,6 @@ def build_oracle_standard() -> StructDoc:
         ),
         Standard(
             title="用語・表記は統一されていなければならない",
-            targets=[
-                "oracle file",
-                "oracle file 内の用語・表記",
-            ],
             backgrounds=[
                 "読むべきファイルを特定する方法として、キーワード検索は重要な手がかりである",
                 "同じ概念に複数の表記があると、人間と AI の検索・読解が不安定になる",
@@ -232,10 +216,6 @@ def build_oracle_standard() -> StructDoc:
         ),
         Standard(
             title="命名は適切でなければいけない",
-            targets=[
-                "oracle file",
-                "oracle file 内で定義・使用される名前",
-            ],
             backgrounds=[
                 "AI は命名から実態を推測しやすい",
                 "名前と実態が乖離していると、人間意図と実装が乖離しやすい",
@@ -261,11 +241,6 @@ def build_oracle_standard() -> StructDoc:
         ),
         Standard(
             title="ベストプラクティスよりも oracle file で定義されている要求が優先される",
-            targets=[
-                "oracle file",
-                "oracle file の解釈",
-                "cmoc による oracle file 支援機能",
-            ],
             backgrounds=[
                 "一般的に良しとされていることが cmoc でも良しとされるとは限らない",
                 "cmoc は oracle file を正本仕様断片として扱う",
@@ -291,10 +266,6 @@ def build_oracle_standard() -> StructDoc:
         ),
         Standard(
             title="仕様断片として goal だけではなく non-goal も書くことが望ましい",
-            targets=[
-                "oracle file",
-                "正本仕様断片",
-            ],
             backgrounds=[
                 "実装者である AI が正本仕様断片を解釈するうえで、「そうである」と「そうではない」の境界は重要である",
                 "non-goal がない場合、AI が人間意図を越えて仕様を広げることがある",

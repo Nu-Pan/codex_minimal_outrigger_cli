@@ -9,7 +9,6 @@ def build_realization_standard() -> StructDoc:
     standards = [
         Standard(
             title="realization file の総文字数の最小化を目標とする",
-            targets=["realization file"],
             backgrounds=[
                 "realization file の規模が大きいほど、実装担当者である AI に与える課題の難易度が上がる",
                 "realization file の規模が大きいほど、トークン消費が増える",
@@ -46,11 +45,6 @@ def build_realization_standard() -> StructDoc:
         ),
         Standard(
             title="realization file の高品質化は望ましいことである",
-            targets=[
-                "realization file",
-                "realization code",
-                "realization ancillary",
-            ],
             backgrounds=[
                 "realization file は cmoc により継続的にメンテナンスされる",
                 "メンテナンスにかかるコストは、AI が読む文脈量や判断すべき分岐量の影響を受ける",
@@ -101,11 +95,6 @@ def build_realization_standard() -> StructDoc:
         ),
         Standard(
             title="realization code の追加は既存 realization code の整理と一体で行う",
-            targets=[
-                "realization code",
-                "realization implementation",
-                "realization test",
-            ],
             backgrounds=[
                 "コードベースの肥大化は、新しいファイル・関数・クラスを追加した時だけでなく、古い実装を残した時にも発生する",
                 "既存実装の近くに同じ責務の実装が残ると、AI はどちらが正しいかを判断するために余計な文脈を読む必要がある",
@@ -146,11 +135,6 @@ def build_realization_standard() -> StructDoc:
         ),
         Standard(
             title="新しい抽象化は実在する重複または明確な責務境界に基づく",
-            targets=[
-                "realization code",
-                "realization implementation",
-                "realization test",
-            ],
             backgrounds=[
                 "抽象化はコード量を減らすこともある",
                 "抽象化は呼び出し関係・引数・概念を増やしてコードベースを肥大化させることもある",
@@ -198,16 +182,6 @@ def build_realization_standard() -> StructDoc:
         ),
         Standard(
             title="公開面・設定面・状態の増加を抑制する",
-            targets=[
-                "realization implementation",
-                "realization ancillary",
-                "CLI 引数",
-                "サブコマンド",
-                "設定項目",
-                "環境変数",
-                "出力 schema",
-                "永続状態",
-            ],
             backgrounds=[
                 "CLI 引数、サブコマンド、設定項目、環境変数、出力 schema、保存ファイルは、一度追加すると互換性維持の対象になりやすい",
                 "公開面が増えると、実装・テスト・ドキュメント・利用者理解のすべてが増える",
@@ -250,10 +224,6 @@ def build_realization_standard() -> StructDoc:
         ),
         Standard(
             title="realization test の肥大化も抑制する",
-            targets=[
-                "realization test",
-                "realization code",
-            ],
             backgrounds=[
                 "realization test も realization code の一部であり、読み取り・保守・更新の対象である",
                 "テストが重複すると、仕様変更時に実装よりテスト修正のほうが大きくなる",
@@ -300,15 +270,6 @@ def build_realization_standard() -> StructDoc:
         ),
         Standard(
             title="依存関係・補助ファイル・生成物の増加を抑制する",
-            targets=[
-                "realization file",
-                "realization implementation",
-                "realization ancillary",
-                "外部依存",
-                "補助スクリプト",
-                "テンプレート",
-                "生成済みファイル",
-            ],
             backgrounds=[
                 "外部依存、補助スクリプト、テンプレート、生成済みファイルは、実装本体以外にもメンテナンス対象を増やす",
                 "realization ancillary の増加は、AI が読むべき文脈と更新すべき対象を増やす",
@@ -351,11 +312,6 @@ def build_realization_standard() -> StructDoc:
         ),
         Standard(
             title="realization file の変更完了時には削除・統合余地を確認する",
-            targets=[
-                "realization file",
-                "realization code",
-                "realization ancillary",
-            ],
             backgrounds=[
                 "肥大化は、実装中よりも実装完了時に見落とされやすい",
                 "「追加して動いた」状態は、「最小で保守しやすい」状態とは限らない",

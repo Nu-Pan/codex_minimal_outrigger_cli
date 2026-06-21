@@ -13,7 +13,6 @@ class Standard:
     def __init__(
         self,
         title: str,
-        targets: list[str],
         backgrounds: list[str],
         requirements: list["Requirement"],
         criteria: list[str] = list(),
@@ -22,22 +21,6 @@ class Standard:
         # title
         # - この standard の見出し
         self._title = title
-        # targets
-        # - この standard が適用される対象
-        # - 必須フィールド
-        # - e.g.
-        #     - oracle file
-        #     - realization file
-        #     - realization code
-        #     - ...
-        if (
-            isinstance(targets, list)
-            and len(targets) > 0
-            and all(isinstance(i, str) for i in targets)
-        ):
-            self._targets = targets
-        else:
-            raise ValueError(f"Invalid targets (targets={targets})")
         # backgrounds
         # - この standard が必要になる理由・前提
         # - 必須フィールド
@@ -106,10 +89,6 @@ class Standard:
         return self._title
 
     @property
-    def targets(self) -> list[str]:
-        return self._targets
-
-    @property
     def backgrounds(self) -> list[str]:
         return self._backgrounds
 
@@ -154,10 +133,6 @@ def standard_to_struct_doc(standard: Standard) -> StructDoc:
     standard を StructDocs に変換する。
     """
     fields = [
-        StructDoc(
-            "対象",
-            ".\n".join(f"- {t}" for t in standard.targets),
-        ),
         StructDoc(
             "背景",
             ".\n".join(f"- {b}" for b in standard.backgrounds),

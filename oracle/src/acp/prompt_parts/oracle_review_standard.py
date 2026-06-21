@@ -9,11 +9,6 @@ def build_review_oracle_standard() -> StructDoc:
     standards = [
         Standard(
             title="致命的な問題を fatal 所見として扱う",
-            targets=[
-                "oracle file",
-                "cmoc review oracle",
-                "fatal 所見",
-            ],
             backgrounds=[
                 "oracle file は正本仕様断片である",
                 "正本仕様断片同士が明確に矛盾している場合、実装者である AI は一貫した実装を導けない",
@@ -46,11 +41,6 @@ def build_review_oracle_standard() -> StructDoc:
         ),
         Standard(
             title="単純な問題を minor 所見として扱う",
-            targets=[
-                "oracle file",
-                "cmoc review oracle",
-                "minor 所見",
-            ],
             backgrounds=[
                 "oracle file は人間が読む正本仕様断片である",
                 "日本語的な誤りや typo は、仕様理解と検索の安定性を下げる",
@@ -87,11 +77,6 @@ def build_review_oracle_standard() -> StructDoc:
         ),
         Standard(
             title="oracle file だけから問題と言い切れないものは所見にしない",
-            targets=[
-                "oracle file",
-                "cmoc review oracle",
-                "所見",
-            ],
             backgrounds=[
                 "oracle file は正本仕様断片であり、仕様全体を網羅するものではない",
                 "oracle file に書かれていない仕様の隙間は、実装者である AI の裁量で補われる",

@@ -16,15 +16,9 @@ def build_apply_review_standard() -> StructDoc:
     standards = [
         Standard(
             title="oracle file と realization file の明確な不整合を要修正点として扱う",
-            targets=[
-                "oracle file",
-                "realization file",
-                "要修正点",
-            ],
             backgrounds=[
                 "realization file は oracle file で述べられた人間意図を具体化したものである",
                 "oracle file 上で記述されている仕様と realization file が矛盾している場合、その realization file は正本仕様断片を満たしていない",
-                "cmoc apply fork の監査・整理・修正では、実装を oracle file に合わせる必要がある",
             ],
             requirements=[
                 Requirement(
@@ -57,11 +51,6 @@ def build_apply_review_standard() -> StructDoc:
         ),
         Standard(
             title="oracle file の仕様断片の隙間だけを根拠に要修正点を作ってはいけない",
-            targets=[
-                "oracle file",
-                "realization file",
-                "要修正点",
-            ],
             backgrounds=[
                 "oracle file は正本仕様断片であり、仕様全体を網羅するものではない",
                 "oracle file に明記されていない仕様の隙間は、実装者である AI の裁量で補われる",
@@ -98,11 +87,6 @@ def build_apply_review_standard() -> StructDoc:
         ),
         Standard(
             title="realization file だけから見た明確な致命的問題を要修正点として扱う",
-            targets=[
-                "realization file",
-                "realization code",
-                "要修正点",
-            ],
             backgrounds=[
                 "realization file には、oracle file との不整合ではなく、実装成果物の品質として発生する問題がある",
                 "cmoc apply fork は oracle file の適用だけでなく、適用後の realization file を動作可能な成果物に近づける役割を持つ",
