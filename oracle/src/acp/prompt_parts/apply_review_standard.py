@@ -5,14 +5,12 @@ from basic.standard import (
     Standard,
     standard_to_struct_doc,
 )
-from basic.path_model import resolve_work_root
 
 
 def build_apply_review_standard() -> StructDoc:
     """
     oracle file の内容を realization file に適用する際に発生する「所見（要修正点）を列挙する作業」の規範文章を構築する
     """
-    work_root = resolve_work_root()
     standards = [
         Standard(
             title="oracle file と realization file の明確な不整合を要修正点として扱う",
@@ -31,97 +29,85 @@ def build_apply_review_standard() -> StructDoc:
                 ),
                 Requirement(
                     "禁止",
-                    "oracle file を根拠にせず、実装だけから正本仕様を推測して不整合を作ってはいけない",
+                    "oracle file を根拠にせずに realization file だけから正本仕様を推測してはいけない",
                 ),
                 Requirement(
                     "許容",
                     "仕様文言から推測可能な意図と realization file が著しく乖離する場合は、要修正点として扱ってよい",
                 ),
             ],
-            criteria=[
-                "oracle file の具体的な記述を根拠にしている",
-                "realization file がその記述に反していることを説明できる",
-                "実装上の選好ではなく、正本仕様断片との不整合として説明できる",
-            ],
-            examples=[
-                "OK: oracle file が read-only を要求している処理で、realization file が対象ファイルを書き換えている",
-                f"OK: oracle file が `{work_root}/oracle` を編集禁止としているのに、realization file がその配下を更新する",
-                "NG: oracle file に規定がない内部関数名が好みと違うという理由だけで要修正点にする",
-            ],
         ),
         Standard(
             title="oracle file の仕様断片の隙間だけを根拠に要修正点を作ってはいけない",
             backgrounds=[
                 "oracle file は正本仕様断片であり、仕様全体を網羅するものではない",
-                "oracle file に明記されていない仕様の隙間は、実装者である AI の裁量で補われる",
-                "仕様の隙間を過剰に問題扱いすると、人間があえて疎に保っている oracle file の意図と衝突する",
+                "oracle file に明記されていない仕様の隙間は、実装者である AI agent の裁量で補われる",
+                "人間の認知コストの負担を小さくするために、oracle file は可能な限り疎に保たなければいけない",
             ],
             requirements=[
                 Requirement(
                     "禁止",
-                    "oracle file に明記されていないという理由だけで、realization file の挙動を要修正点として扱ってはいけない",
-                ),
-                Requirement(
-                    "必須",
-                    "仕様の隙間にある実装差は、oracle file・既存 realization file・既存 test から自然に導ける範囲なら許容する",
-                ),
-                Requirement(
-                    "禁止",
-                    "一般的なベストプラクティスや好みを、oracle file の未定義部分を埋める正本仕様として扱ってはいけない",
+                    "単に oracle file に明記されていないという理由だけで、realization file の挙動を要修正点として扱ってはいけない",
                 ),
                 Requirement(
                     "許容",
-                    "仕様の隙間にある実装でも、仕様文言から推測可能な意図と著しく乖離する場合は要修正点として扱ってよい",
+                    "仕様の隙間にある実装差は、oracle file, realization file から自然に導ける範囲内で許容される",
+                ),
+                Requirement(
+                    "許容",
+                    "oracle file で定義されていない部分は一般的なベストプラクティスに従って埋めて良い",
+                ),
+                Requirement(
+                    "必須",
+                    "一般的なベストプラクティスよりも oracle file の正本仕様断片を優先すること",
+                ),
+                Requirement(
+                    "禁止",
+                    "oracle file で定義されていないが realization file 上存在する要素は正本仕様として扱ってはいけない",
+                ),
+                Requirement(
+                    "許容",
+                    "oracle file から推測可能な意図と realization file とが著しく乖離乖離する場合は要修正点として扱ってよい",
+                ),
+                Requirement(
+                    "許容",
+                    "oracle file で定義されておらず、realization file 上存在し、realization file に残す必要がないこと明確な要素は要修正点として扱って良い",
                 ),
             ],
-            criteria=[
-                "要修正点が、単なる未定義部分の存在だけを根拠にしていない",
-                "AI 裁量で補える範囲の実装差を不整合扱いしていない",
-                "ベストプラクティスや好みよりも oracle file の記述を優先している",
-            ],
             examples=[
-                "OK: oracle file が出力形式を明示しているのに、realization file が別形式を出力している",
-                "NG: oracle file が内部 helper の分割を指定していないのに、分割方法が好みと違うだけで要修正点にする",
-                "NG: 一般的には設定項目化できる挙動だという理由だけで、oracle file にない CLI option の不足を要修正点にする",
+                "一般的には設定項目化できる挙動だという理由だけであれば、oracle file にない CLI option の不足は要修正点としない",
+                "oracle file 上は XXX が定義されているが realization file 上は意味的に全く同じなものが YYY として実装されていたので、これはリネームであると判断して要修正点とする"
+                "realization file 上 XXX という要素が実装されているが、それと意味的に対応する定義は oracle file 上存在しないし、realization からみても残す必要性はなから、これは過去の仕様の残骸であるとみなして要修正点とする",
             ],
         ),
         Standard(
             title="realization file だけから見た明確な致命的問題を要修正点として扱う",
             backgrounds=[
-                "realization file には、oracle file との不整合ではなく、実装成果物の品質として発生する問題がある",
-                "cmoc apply fork は oracle file の適用だけでなく、適用後の realization file を動作可能な成果物に近づける役割を持つ",
-                "単なるクオリティアップ提案まで要修正点に含めると、修正対象が肥大化する",
+                "realization file には、oracle file との不整合ではなく、実装成果物の品質として発生している可能性がある",
+                "realization file は oracle file との整合性を保ちつつ、正常動作可能な状態を保たなければいけない",
+                "AI agent に解かせる問題の規模を小さく保つために realization file の肥大化を防がなければいけない",
             ],
             requirements=[
                 Requirement(
                     "必須",
-                    "realization file だけから見てもバグ級である明確な致命的問題を要修正点として扱う",
+                    "realization file だけから見て明らかにバグであるもの・致命的問題点は要修正点として扱う",
                 ),
                 Requirement(
                     "禁止",
-                    "こうした方が良いというクオリティアップ的な話を要修正点として扱ってはいけない",
-                ),
-                Requirement(
-                    "禁止",
-                    "可読性・命名・分割・抽象化への好みだけを根拠に要修正点を作ってはいけない",
+                    "こうした方が良いというクオリティアップ的な話は要修正点としては扱わない",
                 ),
                 Requirement(
                     "必須",
                     "realization file の致命的問題を修正する場合も、修正後の実装は oracle file 上で記述されている仕様を満たしていなければならない",
                 ),
             ],
-            criteria=[
-                "実行不能、明確な例外、明確なデータ破壊、明確な契約違反など、バグ級の問題として説明できる",
-                "単なる改善提案や設計上の好みではない",
-                "修正方針が oracle file と矛盾していない",
-            ],
             examples=[
-                "OK: import 漏れにより対象サブコマンドが起動直後に失敗する",
-                "OK: パス解決の誤りにより、許可されていないツリーを書き換える可能性がある",
-                "NG: もっと短く書ける、または別名の helper にした方が読みやすいという理由だけで要修正点にする",
-                "NG: 現行仕様を満たしている処理を、一般論としてより美しい設計に置き換えるためだけに要修正点にする",
+                "別名の helper にした方が読みやすいという理由だけでは要修正点とはしない",
+                "すでに oracle file の述べた仕様を満たしている処理を、一般論としてより美しい設計に置き換えるためだけであれば要修正点としない",
             ],
         ),
+        # TODO 無駄の削除規範を追加
+        # TODO コメント規範を追加
     ]
     return StructDoc(
         "apply review standard",

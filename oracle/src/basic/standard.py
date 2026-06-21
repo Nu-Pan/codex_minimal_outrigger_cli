@@ -22,15 +22,9 @@ class Standard:
         # - この standard の見出し
         self._title = title
         # backgrounds
-        # - この standard が必要になる理由・前提
+        # - この standard が必要になる背景・前提
         # - 必須フィールド
-        # - 規範は書かない
-        #     - ～しなければならない、～すべきである、禁止、許容、のような判断は「背景」には書かない
-        # - e.g. 良い背景の書き方
-        #     - file の規模が大きいほど、人間または AI が読む文脈量が増える
-        #     - 同じ責務の記述が複数箇所にあると、どちらを正とみなすべきか判断しにくくなる
-        # - e.g. 良くない背景の書き方
-        #     - file の規模は小さくしなければならない
+        # - requirements と内容が重複しないように注意
         if (
             isinstance(backgrounds, list)
             and len(backgrounds) > 0
@@ -50,29 +44,11 @@ class Standard:
             self._requirements = requirements
         else:
             raise ValueError(f"Invalid requirements (requirements={requirements})")
-        # criteria
-        # - この standard を満たしているかをレビューする際の判定基準を述べる
-        # - ここに要求を書いてはいけない
-        # - 省略可能
-        # - e.g. 良い判定の書き方
-        #     - 同じ責務を持つ記述・実装・テストが複数箇所に残っていない
-        #     - 削除済み仕様に対応する記述・分岐・テストが残っていない
-        if (
-            isinstance(criteria, list)
-            and len(criteria) > 0
-            and all(isinstance(i, str) for i in criteria)
-        ):
-            self._criteria = criteria
-        elif isinstance(criteria, list) and len(criteria) == 0:
-            self._criteria = list()
-        else:
-            raise ValueError(f"Invalid criteria (criteria={criteria})")
-        # example
-        # - 「要求」フィールドで言いたいことを補足するための例示を書く
-        # - ここに新しい要求を書いてはいけない（例示内で要求を増やしてはいけない）
-        # - e.g. 良い例示の書き方
-        #     - OK: 同じ説明を複数箇所に書かず、1 箇所にまとめて参照する
-        #     - NG: 似た仕様説明を各サブコマンド仕様に少しずつコピーする
+        # examples
+        # - requirements フィールドだけからは汲み取り切れない意図を補足するための判断例を書く
+        # - requirements フィールドだけからわかるようなことを examples で冗長に補足することはしない
+        # - requirements フィールドに書いていない事を examples フィールドに新しく書いてはいけない
+        # - 典型的には、状況例、判断の根拠・判断結果の３段構成で書く
         if (
             isinstance(examples, list)
             and len(examples) > 0
@@ -95,10 +71,6 @@ class Standard:
     @property
     def requirements(self) -> list["Requirement"]:
         return self._requirements
-
-    @property
-    def criteria(self) -> list[str]:
-        return self._criteria
 
     @property
     def examples(self) -> list[str]:
@@ -142,17 +114,10 @@ def standard_to_struct_doc(standard: Standard) -> StructDoc:
             ".\n".join(f"- [{r.label}] {r.body}" for r in standard.requirements),
         ),
     ]
-    if standard.criteria:
-        fields.append(
-            StructDoc(
-                "判定基準",
-                ".\n".join(f"- {c}" for c in standard.criteria),
-            ),
-        )
     if standard.examples:
         fields.append(
             StructDoc(
-                "例示",
+                "判断例",
                 ".\n".join(f"- {e}" for e in standard.examples),
             ),
         )
