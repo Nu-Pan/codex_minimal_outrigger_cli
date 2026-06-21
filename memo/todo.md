@@ -7,6 +7,9 @@
 - エグすぎてまともにワークロードを実施出来ないような状態なので、どうにかする必要がある
 - TODO
     - プロンプトパーツの内容の妥当性を人力チェックする
+        - realization 無駄の削除規範を追加
+        - realization コメント規範を追加
+        - oracle, rezalization 規範と、レビュー規範との重複が気になる
     - ループ回数系の設定を CmocConfig 送りにする
     - apply audit --> finding に統一
     - INDEX.md 参照規則をプロンプトパーツに組み込む

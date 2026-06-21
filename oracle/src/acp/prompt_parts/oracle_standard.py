@@ -41,8 +41,8 @@ def build_oracle_standard() -> StructDoc:
                 ),
             ],
             examples=[
-                "人間判断が必要な境界条件だけを oracle file に書き、細部の実装選択は AI に任せる",
-                "人間判断が不要な実装手順を網羅的に列挙してはいけない",
+                "出力互換性の境界は人間判断が必要なので oracle file に書くが、内部 helper の分割は AI が既存実装に合わせて決めてよい",
+                "例外処理の要否だけが人間意図なら、try 文の配置や関数呼び出し順まで oracle file に列挙しない",
             ],
         ),
         Standard(
@@ -69,8 +69,8 @@ def build_oracle_standard() -> StructDoc:
                 ),
             ],
             examples=[
-                "実装差が出ると困る入出力契約だけを正本仕様断片として書く",
-                "必要性の薄い文言を過剰にカテゴリ分けして網羅的に記述してはいけない",
+                "CLI 出力の JSON key は実装差を避けたいので正本仕様断片として書き、内部 dict の組み立て順は書かない",
+                "現在の機能に影響しない将来サブコマンドの分類表は、仕様全体を埋めるだけなら追加しない",
             ],
         ),
         Standard(
@@ -115,8 +115,8 @@ def build_oracle_standard() -> StructDoc:
                 ),
             ],
             examples=[
-                "エラー終了すべき条件だけを明示し、内部実装の関数分割は AI の裁量に任せる",
-                "実装差が許されない出力形式を oracle file に書かず、既存実装から推測させてはいけない",
+                "エラー終了すべき条件は明示し、エラー判定を専用関数にするか呼び出し元に置くかは既存実装に合わせてよい",
+                "利用者が読む出力形式を固定したい場合は oracle file に書き、既存実装の現在値だけを根拠にしない",
             ],
         ),
         Standard(
@@ -152,8 +152,8 @@ def build_oracle_standard() -> StructDoc:
                 ),
             ],
             examples=[
-                "複数箇所で同じ説明を書く代わりに、1 箇所にまとめて参照する",
-                "文字数を減らすために助詞を削り、文の係り受けを曖昧にしてはいけない",
+                "`<work-root>` の定義を複数文書で使う場合は、定義を 1 箇所に置き、他の箇所ではその語だけを使う",
+                "`A を B に渡す` と `A が B に渡る` で責務が変わる箇所では、短縮より係り受けの明確さを優先する",
             ],
         ),
         Standard(
@@ -181,8 +181,8 @@ def build_oracle_standard() -> StructDoc:
                 ),
             ],
             examples=[
-                "基本原則と具体的な詳細仕様が同じ結論を導くように書く",
-                "ある仕様では「必ず実行する」と書き、別の仕様では同じ条件で「実行してはいけない」と書いてはいけない",
+                "一般方針で `INDEX.md` を自動生成対象とし、個別仕様で同じ `INDEX.md` を手編集必須として扱うなら矛盾として直す",
+                "原則は read-only、例外条件では write 可のように優先関係が読める場合は、単なる文言差だけでは矛盾扱いしない",
             ],
         ),
         Standard(
@@ -215,8 +215,8 @@ def build_oracle_standard() -> StructDoc:
                 ),
             ],
             examples=[
-                "oracle file と既存実装が矛盾している箇所を見つけ、人間判断が必要な修正候補として提示する",
-                "既存実装がそうなっているという理由だけで、oracle file に同じ挙動を正本仕様として追記してはいけない",
+                "oracle file が保存禁止としているファイルを既存実装が保存している場合、実装制約の調査材料として人間判断に回す",
+                "既存実装がたまたま空文字を許容しているだけなら、その挙動を正本仕様として oracle file に追記しない",
             ],
         ),
         Standard(
@@ -243,9 +243,8 @@ def build_oracle_standard() -> StructDoc:
                 ),
             ],
             examples=[
-                "同じ概念は常に `oracle file` と表記する",
-                "同じ概念を `oracle file`, `oracles file`, `oracle files`, `oracles files` と揺らして書いてはいけない",
-                "同じ概念を `oracle file`, `oracle spec`, `仕様ファイル` と揺らして書いてはいけない",
+                "`oracle file` を検索語にした時に関連箇所が見つかるよう、同じ概念を `oracle spec` や `仕様ファイル` に言い換えない",
+                "`oracles file` のような typo が別概念に見える場合は、検索性を壊す表記として修正する",
             ],
         ),
         Standard(
@@ -273,8 +272,8 @@ def build_oracle_standard() -> StructDoc:
                 ),
             ],
             examples=[
-                "一時実行用の branch には、永続 branch と誤解されない名前を付ける",
-                "削除される一時ファイルに `permanent` を含む名前を付けてはいけない",
+                "処理後に削除される branch には、永続的な保存場所と読める `home` や `permanent` を含めない",
+                "設定値を検証するだけの関数を `load_config` と呼ぶと読み込みまで行うように見えるため、実態に合う名前にする",
             ],
         ),
         Standard(
@@ -302,8 +301,8 @@ def build_oracle_standard() -> StructDoc:
                 ),
             ],
             examples=[
-                "一般には網羅的な仕様書が望ましい場面でも、oracle file が疎な正本仕様断片を求めるなら疎に保つ",
-                "一般的なドキュメントベストプラクティスを理由に、oracle file を網羅的に書き直してはいけない",
+                "一般論では詳細な API 仕様表が望ましくても、oracle file が実装差を避けたい点だけを求めているなら表を追加しない",
+                "標準的な CLI 慣習と oracle file の出力形式が異なる場合は、慣習ではなく oracle file の出力形式を正とする",
             ],
         ),
         Standard(
@@ -325,8 +324,8 @@ def build_oracle_standard() -> StructDoc:
                 ),
             ],
             examples=[
-                "`cmoc review oracle` が検出する対象と、検出しない対象を対で書く",
-                "目的だけを書き、明らかに対象外にしたい処理まで AI が追加し得る状態にしてはいけない",
+                "`cmoc review oracle` で typo は検出対象、設計改善提案は対象外のように、境界が誤読されやすい場合は対で書く",
+                "新しい補助ファイルを作る目的を書くなら、生成キャッシュを正本として管理しないことも併記する",
             ],
         ),
     ]

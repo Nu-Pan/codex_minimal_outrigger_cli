@@ -75,9 +75,9 @@ def build_apply_review_standard() -> StructDoc:
                 ),
             ],
             examples=[
-                "一般的には設定項目化できる挙動だという理由だけであれば、oracle file にない CLI option の不足は要修正点としない",
-                "oracle file 上は XXX が定義されているが realization file 上は意味的に全く同じなものが YYY として実装されていたので、これはリネームであると判断して要修正点とする"
-                "realization file 上 XXX という要素が実装されているが、それと意味的に対応する定義は oracle file 上存在しないし、realization からみても残す必要性はなから、これは過去の仕様の残骸であるとみなして要修正点とする",
+                "一般的には設定項目化できる挙動でも、oracle file に選択可能にする要求がないなら CLI option の不足だけでは要修正点としない",
+                "oracle file 上の `session home branch` が realization file 上で意味的に同じ `base branch` として実装されているなら、対応関係を示してリネーム候補の要修正点とする",
+                "realization file 上に旧状態ファイルを読む処理が残っており、oracle file に対応仕様がなく現行実装からも必要性が読めないなら、過去仕様の残骸として要修正点とする",
             ],
         ),
         Standard(
@@ -102,12 +102,10 @@ def build_apply_review_standard() -> StructDoc:
                 ),
             ],
             examples=[
-                "別名の helper にした方が読みやすいという理由だけでは要修正点とはしない",
-                "すでに oracle file の述べた仕様を満たしている処理を、一般論としてより美しい設計に置き換えるためだけであれば要修正点としない",
+                "現行仕様を満たして正常動作している処理は、helper 名を変えると読みやすいという程度では要修正点としない",
+                "例外時に必ず未定義変数を参照する処理は、oracle file に直接書かれていなくても実行不能な致命的問題として要修正点にする",
             ],
         ),
-        # TODO 無駄の削除規範を追加
-        # TODO コメント規範を追加
     ]
     return StructDoc(
         "apply review standard",
