@@ -10,9 +10,6 @@
 - オプション引数 `--scope={session|full}` を受け取る
     - ショートネームは `-s`
     - デフォルト値は `session`
-- オプション引数 `--enumerate-findings-loop` を受け取る
-- オプション引数 `--merge-findings-loop` を受け取る
-- オプション引数 `--refine-findings-loop` を受け取る
 
 ## 事前条件
 
@@ -94,9 +91,7 @@
     - フルスコープ (`--scope full`) の場合、全ての oracle file のダーティフラグを true とする
 - ダーティフラグは以下のルールで更新される
     - 「新規所見の列挙」の結果、新規所見なしと判断された場合、そのファイルのダーティフラグを false にする
-- ループ回数の上限
-    - `--enumerate-findings-loop` で指定される
-    - デフォルト値は 3
+- ループ回数の上限は `CmocConfigReviewOracle.num_enumerate_findings_loop` で指定される
 
 ## 「新規所見の列挙」の詳細
 
@@ -107,9 +102,7 @@
 ## 「所見リストマージループ」の詳細
 
 - このループでは、所見リストの冗長性・不整合を解決することを目的とする
-- ループ回数の上限
-    - `--merge-findings-loop` で指定される
-    - デフォルト値は 3
+- ループ回数の上限は `CmocConfigReviewOracle.num_merge_findings_loop` で指定される
 
 ## 「所見リストのマージ」の詳細
 
@@ -124,9 +117,7 @@
 - ダーティーフラグが true の所見のみを Codex CLI によるレビューの対象とする
 - ダーティーフラグの初期値はすべて true とする
 - ダーティフラグは、その周回で「その所見が妥当ではない理由」「その所見が妥当である理由」が 1 つも出なかった場合に false にする
-- ループ回数の上限
-    - `--refine-findings-loop` で指定される
-    - デフォルト値は 3
+- ループ回数の上限は `CmocConfigReviewOracle.num_validate_findings_loop` で指定される
 
 ## 「その所見が妥当ではない理由の記述」の詳細
 

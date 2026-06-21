@@ -28,6 +28,45 @@ class CmocConfig:
     # Codex CLI 用の設定
     codex: "CmocConfigCodex" = field(default_factory=lambda: CmocConfigCodex())
 
+    # `cmoc apply fork` サブコマンドの挙動設定
+    apply_fork: "CmocConfigApplyFork" = field(
+        default_factory=lambda: CmocConfigApplyFork()
+    )
+
+    # `cmoc review oracle` サブコマンドの挙動設定
+    review_oracle: "CmocConfigReviewOracle" = field(
+        default_factory=lambda: CmocConfigReviewOracle()
+    )
+
+
+@dataclass(frozen=True)
+class CmocConfigApplyFork:
+    """
+    `cmoc apply fork` サブコマンドの挙動に関する設定を集約したクラス
+    """
+
+    # apply ループの最大反復回数
+    num_apply_loop: int = field(default=5)
+
+    # 要修正点リスト改善ループの最大回数
+    num_improve_findings_loop: int = field(default=1)
+
+
+@dataclass(frozen=True)
+class CmocConfigReviewOracle:
+    """
+    `cmoc review oracle` サブコマンドの挙動に関する設定を集約したクラス
+    """
+
+    # 所見リスト列挙ループの上限回数
+    num_enumerate_findings_loop: int = field(default=3)
+
+    # 所見リストマージループの上限回数
+    num_merge_findings_loop: int = field(default=3)
+
+    # 所見リスト検証ループの上限回数
+    num_validate_findings_loop: int = field(default=3)
+
 
 @dataclass(frozen=True)
 class CmocConfigCodex:
