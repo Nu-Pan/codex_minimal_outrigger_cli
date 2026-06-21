@@ -79,7 +79,7 @@ def build_realization_standard() -> StructDoc:
                     "将来使うかもしれないだけの抽象化を追加してはいけない",
                 ),
                 Requirement(
-                    "推奨",
+                    "必須",
                     "実装だけから読み取りにくい意図・制約・根拠は、コメントまたは docstring に書く",
                 ),
                 Requirement(
