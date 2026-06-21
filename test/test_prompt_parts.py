@@ -10,7 +10,7 @@ def test_build_apply_review_standard_renders_core_review_aspects() -> None:
     doc = build_apply_review_standard()
 
     assert isinstance(doc, StructDoc)
-    assert doc.title == "apply review aspect"
+    assert doc.title == "apply review standard"
 
     rendered = render_as_markdown(doc)
     assert "oracle file と realization file の明確な不整合" in rendered
@@ -31,7 +31,7 @@ def test_complete_prompt_can_include_apply_review_standard() -> None:
 
     rendered = render_as_markdown(prompt)
     assert "# oracle and realization basic" in rendered
-    assert "# apply review aspect" in rendered
+    assert "# apply review standard" in rendered
 
 
 def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
@@ -44,7 +44,7 @@ def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
     )
 
     rendered = render_as_markdown(prompt)
-    assert "apply review aspect" not in rendered
+    assert "apply review standard" not in rendered
 
 
 def test_build_index_entry_standard_renders_core_output_rules() -> None:
@@ -54,11 +54,15 @@ def test_build_index_entry_standard_renders_core_output_rules() -> None:
     assert doc.title == "index entry standard"
 
     rendered = render_as_markdown(doc)
-    assert "summary" in rendered
-    assert "read_this_when" in rendered
-    assert "do_not_read_this_when" in rendered
-    assert "ファイル名、ディレクトリ名、hash は返さない" in rendered
-    assert "過剰に読みに行かない" in rendered
+    assert "読むべき対象へのルーティング情報" in rendered
+    assert "対象内容に根拠" in rendered
+    assert "機械的に補える情報" in rendered
+    assert "ファイル名・ディレクトリ名・ハッシュ値" in rendered
+    assert "Structured Output schema を読めば分かる出力項目名・型・形式" in rendered
+    assert "関連しそうという理由だけ" in rendered
+    assert "summary" not in rendered
+    assert "read_this_when" not in rendered
+    assert "do_not_read_this_when" not in rendered
 
 
 def test_complete_prompt_can_include_index_entry_standard() -> None:

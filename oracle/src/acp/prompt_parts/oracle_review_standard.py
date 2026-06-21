@@ -1,10 +1,15 @@
+# cmoc
 from basic.struct_doc import StructDoc
-from basic.standard import Requirement, Standard, standard_to_struct_doc
+from basic.standard import (
+    Requirement,
+    Standard,
+    standard_to_struct_doc,
+)
 
 
 def build_review_oracle_standard() -> StructDoc:
     """
-    `cmoc review oracle` におけるレビュー作業が従うべき規範を構築する。
+    `cmoc review oracle` における「所見を列挙する作業」の規範文章を構築する
     """
     standards = [
         Standard(
@@ -27,16 +32,23 @@ def build_review_oracle_standard() -> StructDoc:
                     "禁止",
                     "実装者の裁量で自然に補える仕様の隙間を fatal 所見として扱ってはいけない",
                 ),
-            ],
-            criteria=[
-                "一方の仕様断片に従うと、別の仕様断片に必ず違反することを説明できる",
-                "実装者が選択できる妥当な実装方針が残っていないことを説明できる",
-                "好みや一般的なベストプラクティスではなく、oracle file の具体的な記述を根拠にしている",
+                Requirement(
+                    "必須",
+                    "fatal 所見は、一方の仕様断片に従うと別の仕様断片に必ず違反することを根拠にする",
+                ),
+                Requirement(
+                    "必須",
+                    "fatal 所見は、実装者が選択できる妥当な実装方針が残っていないことを根拠にする",
+                ),
+                Requirement(
+                    "禁止",
+                    "好みや一般的なベストプラクティスを fatal 所見の根拠にしてはいけない",
+                ),
             ],
             examples=[
-                "OK: 同じ条件について、ある oracle file は必ず実行すると書き、別の oracle file は実行してはいけないと書いている",
-                "OK: 必須の出力形式と必須の保存形式が同時に満たせない形で定義されている",
-                "NG: oracle file が内部 helper の分割方法を指定していないことを fatal 所見にする",
+                "同じ条件について、ある oracle file は必ず実行すると書き、別の oracle file は実行してはいけないと書いている場合は fatal 所見として扱う",
+                "必須の出力形式と必須の保存形式が同時に満たせない形で定義されている場合は fatal 所見として扱う",
+                "oracle file が内部 helper の分割方法を指定していないだけであれば fatal 所見とはしない",
             ],
         ),
         Standard(
@@ -63,16 +75,23 @@ def build_review_oracle_standard() -> StructDoc:
                     "許容",
                     "その他ケアレスミスの疑いが濃厚なものは minor 所見として扱ってよい",
                 ),
-            ],
-            criteria=[
-                "文意や検索性を損なう単純な誤りとして説明できる",
-                "同じ概念が複数の表記で現れていることを説明できる",
-                "正本仕様の内容を変える提案ではなく、表記上の問題として説明できる",
+                Requirement(
+                    "必須",
+                    "minor 所見は、文意や検索性を損なう単純な誤りであることを根拠にする",
+                ),
+                Requirement(
+                    "必須",
+                    "minor 所見は、正本仕様の内容を変える提案ではなく表記上の問題として説明できなければならない",
+                ),
+                Requirement(
+                    "禁止",
+                    "正しいが好みではない言い回しを minor 所見として扱ってはいけない",
+                ),
             ],
             examples=[
-                "OK: 同じ概念が `oracle file` と `oracles file` の両方で書かれている",
-                "OK: 助詞の抜けにより係り受けが読み取りにくい",
-                "NG: 正しいが好みではない言い回しを minor 所見にする",
+                "同じ概念が `oracle file` と `oracles file` の両方で書かれている場合は minor 所見として扱う",
+                "助詞の抜けにより係り受けが読み取りにくい場合は minor 所見として扱う",
+                "正しいが好みではない言い回しであるだけであれば minor 所見とはしない",
             ],
         ),
         Standard(
@@ -99,20 +118,27 @@ def build_review_oracle_standard() -> StructDoc:
                     "必須",
                     "所見は oracle file の具体的な記述に基づいて説明できなければならない",
                 ),
-            ],
-            criteria=[
-                "oracle file の記述だけから問題であることを説明できる",
-                "仕様の隙間を実装者が自然に補える余地を問題扱いしていない",
-                "実装方針が複数あり得るだけの状態を所見にしていない",
+                Requirement(
+                    "必須",
+                    "所見は oracle file の記述だけから問題であることを説明できなければならない",
+                ),
+                Requirement(
+                    "禁止",
+                    "仕様の隙間を実装者が自然に補える余地を問題扱いしてはいけない",
+                ),
+                Requirement(
+                    "禁止",
+                    "実装方針が複数あり得るだけの状態を所見として扱ってはいけない",
+                ),
             ],
             examples=[
-                "OK: 同じ用語が同一ファイル内で異なる意味に使われている",
-                "NG: oracle file が実装手順を指定していないという理由だけで所見にする",
-                "NG: 一般論としてより詳しく書けるという理由だけで所見にする",
+                "同じ用語が同一ファイル内で異なる意味に使われている場合は所見として扱ってよい",
+                "oracle file が実装手順を指定していないという理由だけであれば所見とはしない",
+                "一般論としてより詳しく書けるという理由だけであれば所見とはしない",
             ],
         ),
     ]
     return StructDoc(
         "review oracle standard",
-        *[standard_to_struct_doc(standard) for standard in standards],
+        *[standard_to_struct_doc(ros) for ros in standards],
     )
