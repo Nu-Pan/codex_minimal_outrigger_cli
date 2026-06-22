@@ -1,3 +1,50 @@
+# `apply_abandon.md`
+
+## Summary
+
+- `cmoc apply abandon` は、現在の `<cmoc-session>` に紐づく未 join の apply run を破棄し、`<cmoc-apply-branch>` と `<cmoc-apply-worktree>` を片付けるサブコマンドの入口です。
+- `<cmoc-session-branch>` やその commit、oracle 改訂内容は変更せず、`cmoc apply join` 済みの結果を取り消す rollback ではありません。
+- 破棄前提条件、破棄対象、状態遷移、stdout への報告、cleanup 失敗時の扱いを整理するための目次です。
+
+## Read this when
+
+- 未 join の apply run を破棄する `cmoc apply abandon` の実装・修正・テスト・レビューを行うとき。
+- `apply.state` が `running` / `completed` / `error` のときにどう破棄するか、また `ready` でない apply run の扱いを確認したいとき。
+- `<cmoc-apply-branch>` と `<cmoc-apply-worktree>` の削除条件、`<cmoc-session-state-file>` の更新、warning の出し方や終了コードを確認したいとき。
+
+## Do not read this when
+
+- `cmoc apply fork` や `cmoc apply join` の作業フロー自体を確認したいとき。
+- `cmoc session join` や `cmoc session abandon` など、apply 破棄以外の session 系仕様だけを確認したいとき。
+- `INDEX.md` の生成規則や `oracle` 全体のルーティング方針だけを確認したいとき。
+
+## hash
+
+- 1d3d095e144d8770e47c629792206265fad1698d3e1db15313984de55c6946c3
+
+# `apply_fork.md`
+
+## Summary
+
+- この文書は `cmoc apply fork` の入口であり、Codex CLI による apply ループ全体の仕様を案内します。
+- `<cmoc-session-branch>` から隔離された `<cmoc-apply-branch>` と `<cmoc-apply-worktree>` 上で動作し、ベストエフォートで実装追従を進める前提をまとめます。
+- 事前条件、反復回数、所見リスト生成と改善、修正作業、状態遷移、作業レポート、終了コードまでをたどるための目次です。
+
+## Read this when
+
+- `cmoc apply fork` の実装・修正・テスト・レビューを行い、全体の手順と責務境界を整理したいとき。
+- 調査対象ファイルの列挙、所見リスト改善、所見 1 件ごとの修正、コミット、レポート作成までの流れを確認したいとき。
+- `apply.state` の遷移、スコープモード、ダーティフラグ、編集禁止ディレクトリの扱いなど、`cmoc apply fork` 固有の制約を確認したいとき。
+
+## Do not read this when
+
+- `cmoc apply join` や `cmoc apply abandon` など、apply 系の別サブコマンドの仕様を確認したいとき。
+- `cmoc session fork` / `cmoc session join` / `cmoc review oracle` など、apply fork 以外のフローを確認したいとき。
+- `run isolation` や `codex exec` の共通規則だけを確認したいときで、このサブコマンド固有の手順が不要なとき。
+
+## hash
+
+- 8f8a514b8ad9da0d77e83f535396fe87ff8422052f632eb375969056c7438cd3
 
 # `apply_join.md`
 
