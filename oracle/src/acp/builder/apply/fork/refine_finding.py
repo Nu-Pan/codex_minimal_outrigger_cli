@@ -1,4 +1,4 @@
-"""`cmoc apply fork` の要修正点リスト改善 prompt 正本。"""
+"""`cmoc apply fork` の所見リスト改善 prompt 正本。"""
 
 # std
 import json
@@ -16,37 +16,37 @@ from basic.acp import (
 from acp.prompt_parts.complete_prompt import build_complete_prompt
 
 
-def build_apply_fork_refine_fixing_point_parameter(
-    fixing_points: dict,
+def build_apply_fork_refine_finding_parameter(
+    findings: dict,
 ) -> AgentCallParameter:
     """
-    `cmoc apply fork` サブコマンド、要修正点リスト改善用。
+    `cmoc apply fork` サブコマンド、所見リスト改善用。
     AI エージェント呼び出しパラメータを構築する。
 
-    fixing_points: dict
-        ファイルごとの監査結果を連結した要修正点リスト
+    findings: dict
+        ファイルごとの所見リストを連結した所見リスト
     """
     # パス
     repo_root = resolve_repo_root()
     # プロンプト
     prompt = build_complete_prompt(
-        role="- あなたはソフトウェア実装監査結果の整理担当です",
+        role="- あなたはソフトウェアに対する所見をリストアップした結果の整理担当です",
         summary=f"""
-        - `{repo_root}` ツリー内の realization file に対する要修正点リストを改善すること
+        - `{repo_root}` ツリー内の realization file に対する所見リストを改善すること
         """,
         goal="""
-        - 改善後の要修正点リストを Structured Output schema に一致する JSON だけで返すこと
-        - 要修正点の重複、相互矛盾、明らかな False-Positive が取り除かれていること
-        - 改善の仮定で発見した新規の要修正点がリストに追加されていること
-        - 改善後の要修正点リストを、先頭から順番に作業・消化可能であること
+        - 改善後の所見リストを Structured Output schema に一致する JSON だけで返すこと
+        - 所見の重複、相互矛盾、明らかな False-Positive が取り除かれていること
+        - 改善の仮定で発見した新規の所見がリストに追加されていること
+        - 改善後の所見リストを、先頭から順番に作業・消化可能であること
         """,
         file_access_mode=FileAccessMode.READONLY,
         aux_prompt=[
             StructDoc(
-                "要修正点リスト",
+                "所見リスト",
                 StructCodeBlock(
                     "json",
-                    json.dumps(fixing_points, ensure_ascii=False, indent=2),
+                    json.dumps(findings, ensure_ascii=False, indent=2),
                 ),
             )
         ],

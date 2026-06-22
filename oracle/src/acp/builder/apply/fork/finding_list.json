@@ -2,12 +2,12 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "fixing_points"
+    "findings"
   ],
   "properties": {
-    "fixing_points": {
+    "findings": {
       "type": "array",
-      "description": "実装に対する要修正点のリスト。",
+      "description": "実装に対する所見のリスト。",
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -22,11 +22,11 @@
         "properties": {
           "title": {
             "type": "string",
-            "description": "要修正点の短い見出し。"
+            "description": "所見の短い見出し。"
           },
           "evidences": {
             "type": "array",
-            "description": "要修正点の根拠となる文言の位置情報。仕様ファイル・実装ファイルのどちらかが必ず 1 つは根拠として存在するはずなので空配列は想定しない。",
+            "description": "所見の根拠となる文言の位置情報。仕様ファイル・実装ファイルのどちらかが必ず 1 つは根拠として存在するはずなので空配列は想定しない。",
             "minItems": 1,
             "items": {
               "type": "object",
@@ -40,21 +40,21 @@
               "properties": {
                 "path": {
                   "type": "string",
-                  "description": "要修正点の根拠となるファイルの絶対パス。"
+                  "description": "所見の根拠となるファイルの絶対パス。"
                 },
                 "line_start": {
                   "type": [
                     "integer",
                     "null"
                   ],
-                  "description": "要修正点の根拠となる記述の開始行。行番号を特定できない場合は null。"
+                  "description": "所見の根拠となる記述の開始行。行番号を特定できない場合は null。"
                 },
                 "line_end": {
                   "type": [
                     "integer",
                     "null"
                   ],
-                  "description": "要修正点の根拠となる記述の終了行。行番号を特定できない場合は null。"
+                  "description": "所見の根拠となる記述の終了行。行番号を特定できない場合は null。"
                 },
                 "summary": {
                   "type": "string",

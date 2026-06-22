@@ -1,4 +1,4 @@
-"""`cmoc apply fork` のファイル単位監査 prompt 正本。"""
+"""`cmoc apply fork` のファイル単位の所見リストアップ prompt 正本。"""
 
 # std
 from pathlib import Path
@@ -15,15 +15,15 @@ from basic.acp import (
 from acp.prompt_parts.complete_prompt import build_complete_prompt
 
 
-def build_apply_fork_file_audit_parameter(
+def build_apply_fork_file_finding_enumeration_parameter(
     target_path: Path,
 ) -> AgentCallParameter:
     """
-    `cmoc apply fork` サブコマンド、ファイル単位監査用。
+    `cmoc apply fork` サブコマンド、ファイル単位の所見リストアップ用。
     AI エージェント呼び出しパラメータを構築する。
 
     target_path: Path
-        監査の起点となるファイルのパス
+        所見リストアップの起点となるファイルのパス
         oracle file, realization file が渡される想定
     """
     # パス
@@ -31,14 +31,14 @@ def build_apply_fork_file_audit_parameter(
     target_path = resolve_real_path(target_path)
     # プロンプト
     prompt = build_complete_prompt(
-        role="- あなたはソフトウェア実装の監査担当です",
+        role="- あなたはソフトウェア実装の所見リストアップ担当です",
         summary=f"""
-        - `{target_path}` を起点に `{repo_root}` ツリー内の realization file の要修正点を調査すること
+        - `{target_path}` を起点に `{repo_root}` ツリー内の realization file の所見を調査すること
         - 必要なら `{target_path}` 以外の oracle file, realization file も読むこと
         """,
         goal="""
-        - 指定された Structured Output schema に従って監査結果を返すこと
-        - 監査結果が apply review standard を満たしている事
+        - 指定された Structured Output schema に従って所見リストを返すこと
+        - 列挙した所見リストが apply review standard を満たしている事
         """,
         file_access_mode=FileAccessMode.READONLY,
         aux_prompt=[],

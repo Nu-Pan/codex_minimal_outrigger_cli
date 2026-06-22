@@ -9,11 +9,11 @@ from basic.standard import (
 
 def build_apply_review_standard() -> StructDoc:
     """
-    oracle file の内容を realization file に適用する際に発生する「所見（要修正点）を列挙する作業」の規範文章を構築する
+    oracle file の内容を realization file に適用する際に発生する「所見を列挙する作業」の規範文章を構築する
     """
     standards = [
         Standard(
-            title="oracle file と realization file の明確な不整合を要修正点として扱う",
+            title="oracle file と realization file の明確な不整合を所見として扱う",
             backgrounds=[
                 "realization file は oracle file で述べられた人間意図を具体化したものである",
                 "oracle file 上で記述されている仕様と realization file が矛盾している場合、その realization file は正本仕様断片を満たしていない",
@@ -21,11 +21,11 @@ def build_apply_review_standard() -> StructDoc:
             requirements=[
                 Requirement(
                     "必須",
-                    "oracle file 上で記述されている仕様と realization file が明確に不整合している点を要修正点として扱う",
+                    "oracle file 上で記述されている仕様と realization file が明確に不整合している点を所見として扱う",
                 ),
                 Requirement(
                     "必須",
-                    "要修正点は、どの oracle file のどの仕様と、どの realization file のどの実装が不整合しているかを根拠にする",
+                    "所見は、どの oracle file のどの仕様と、どの realization file のどの実装が不整合しているかを根拠にする",
                 ),
                 Requirement(
                     "禁止",
@@ -33,12 +33,12 @@ def build_apply_review_standard() -> StructDoc:
                 ),
                 Requirement(
                     "許容",
-                    "仕様文言から推測可能な意図と realization file が著しく乖離する場合は、要修正点として扱ってよい",
+                    "仕様文言から推測可能な意図と realization file が著しく乖離する場合は、所見として扱ってよい",
                 ),
             ],
         ),
         Standard(
-            title="oracle file の仕様断片の隙間だけを根拠に要修正点を作ってはいけない",
+            title="oracle file の仕様断片の隙間だけを根拠に所見を作ってはいけない",
             backgrounds=[
                 "oracle file は正本仕様断片であり、仕様全体を網羅するものではない",
                 "oracle file に明記されていない仕様の隙間は、実装者である AI agent の裁量で補われる",
@@ -47,7 +47,7 @@ def build_apply_review_standard() -> StructDoc:
             requirements=[
                 Requirement(
                     "禁止",
-                    "単に oracle file に明記されていないという理由だけで、realization file の挙動を要修正点として扱ってはいけない",
+                    "単に oracle file に明記されていないという理由だけで、realization file の挙動を所見として扱ってはいけない",
                 ),
                 Requirement(
                     "許容",
@@ -67,21 +67,21 @@ def build_apply_review_standard() -> StructDoc:
                 ),
                 Requirement(
                     "許容",
-                    "oracle file から推測可能な意図と realization file とが著しく乖離乖離する場合は要修正点として扱ってよい",
+                    "oracle file から推測可能な意図と realization file とが著しく乖離乖離する場合は所見として扱ってよい",
                 ),
                 Requirement(
                     "許容",
-                    "oracle file で定義されておらず、realization file 上存在し、realization file に残す必要がないこと明確な要素は要修正点として扱って良い",
+                    "oracle file で定義されておらず、realization file 上存在し、realization file に残す必要がないこと明確な要素は所見として扱って良い",
                 ),
             ],
             examples=[
-                "一般的には設定項目化できる挙動でも、oracle file に選択可能にする要求がないなら CLI option の不足だけでは要修正点としない",
-                "oracle file 上の `session home branch` が realization file 上で意味的に同じ `base branch` として実装されているなら、対応関係を示してリネーム候補の要修正点とする",
-                "realization file 上に旧状態ファイルを読む処理が残っており、oracle file に対応仕様がなく現行実装からも必要性が読めないなら、過去仕様の残骸として要修正点とする",
+                "一般的には設定項目化できる挙動でも、oracle file に選択可能にする要求がないなら CLI option の不足だけでは所見としない",
+                "oracle file 上の `session home branch` が realization file 上で意味的に同じ `base branch` として実装されているなら、対応関係を示してリネーム候補の所見とする",
+                "realization file 上に旧状態ファイルを読む処理が残っており、oracle file に対応仕様がなく現行実装からも必要性が読めないなら、過去仕様の残骸として所見とする",
             ],
         ),
         Standard(
-            title="realization file だけから見た明確な致命的問題を要修正点として扱う",
+            title="realization file だけから見た明確な致命的問題を所見として扱う",
             backgrounds=[
                 "realization file には、oracle file との不整合ではなく、実装成果物の品質として発生している可能性がある",
                 "realization file は oracle file との整合性を保ちつつ、正常動作可能な状態を保たなければいけない",
@@ -90,11 +90,11 @@ def build_apply_review_standard() -> StructDoc:
             requirements=[
                 Requirement(
                     "必須",
-                    "realization file だけから見て明らかにバグであるもの・致命的問題点は要修正点として扱う",
+                    "realization file だけから見て明らかにバグであるもの・致命的問題点は所見として扱う",
                 ),
                 Requirement(
                     "禁止",
-                    "こうした方が良いというクオリティアップ的な話は要修正点としては扱わない",
+                    "こうした方が良いというクオリティアップ的な話は所見としては扱わない",
                 ),
                 Requirement(
                     "必須",
@@ -102,8 +102,8 @@ def build_apply_review_standard() -> StructDoc:
                 ),
             ],
             examples=[
-                "現行仕様を満たして正常動作している処理は、helper 名を変えると読みやすいという程度では要修正点としない",
-                "例外時に必ず未定義変数を参照する処理は、oracle file に直接書かれていなくても実行不能な致命的問題として要修正点にする",
+                "現行仕様を満たして正常動作している処理は、helper 名を変えると読みやすいという程度では所見としない",
+                "例外時に必ず未定義変数を参照する処理は、oracle file に直接書かれていなくても実行不能な致命的問題として所見にする",
             ],
         ),
     ]

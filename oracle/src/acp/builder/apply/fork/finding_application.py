@@ -1,4 +1,4 @@
-"""`cmoc apply fork` の要修正点対応作業 prompt 正本。"""
+"""`cmoc apply fork` の所見対応作業 prompt 正本。"""
 
 # cmoc
 from basic.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
@@ -12,15 +12,15 @@ from basic.acp import (
 from acp.prompt_parts.complete_prompt import build_complete_prompt
 
 
-def build_apply_fork_consume_fixing_point_parameter(
-    fixing_point: str,
+def build_apply_fork_finding_application_parameter(
+    finding: str,
 ) -> AgentCallParameter:
     """
-    `cmoc apply fork` サブコマンド、要修正点対応作業用。
+    `cmoc apply fork` サブコマンド、所見対応作業用。
     AI エージェント呼び出しパラメータを構築する。
 
-    fixing_point: str
-        対応対象の要修正点。
+    finding: str
+        対応するべき所見の内容。
     """
     # パス
     repo_root = resolve_repo_root()
@@ -29,7 +29,7 @@ def build_apply_fork_consume_fixing_point_parameter(
         role="- あなたはソフトウェア実装の修正担当です",
         summary=f"- `{repo_root}` ツリー内の realization file を修正すること",
         goal="""
-        - 要修正点として指摘されている問題の修正作業をベストエフォートで実施したこと
+        - 所見として指摘されている問題の修正作業をベストエフォートで実施したこと
         - 修正後の realization file が realization standard に従っている事
         """,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
@@ -37,11 +37,17 @@ def build_apply_fork_consume_fixing_point_parameter(
             StructDoc(
                 "作業上の注意点",
                 """
-                - 要修正点情報は作業のためのヒントであり、絶対に従うべき指示書ではない
+                - 所見本文は作業のためのヒントであり、絶対に従うべき指示書ではない
                 - git add と git commit は実行禁止
                 """,
             ),
-            StructDoc("要修正点", StructCodeBlock("text", fixing_point)),
+            StructDoc(
+                "所見本文",
+                StructCodeBlock(
+                    "text",
+                    finding,
+                ),
+            ),
         ],
         oracle_and_realization_basic=True,
         realization_standard=True,

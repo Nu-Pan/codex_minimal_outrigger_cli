@@ -48,7 +48,7 @@ class CmocConfigApplyFork:
     # apply ループの最大反復回数
     num_apply_loop: int = field(default=5)
 
-    # 要修正点リスト改善ループの最大回数
+    # 所見リスト改善ループの最大回数
     num_improve_findings_loop: int = field(default=1)
 
 
