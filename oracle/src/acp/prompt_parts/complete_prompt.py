@@ -9,6 +9,7 @@ from .oracle_and_realization_basic import build_oracle_and_realization_basic
 from .apply_review_standard import build_apply_review_standard
 from .oracle_review_standard import build_review_oracle_standard
 from .index_entry_standard import build_index_entry_standard
+from .routing_rule import build_routing_rule
 
 
 def build_complete_prompt(
@@ -80,6 +81,7 @@ def build_complete_prompt(
             goal,
         ),
         build_file_access_rule(file_access_mode),
+        build_routing_rule(),
         *aux_prompt,
     ]
     # 依存関係の有る情報を必ず含めるようにする

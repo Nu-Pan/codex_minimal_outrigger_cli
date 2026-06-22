@@ -4,6 +4,7 @@ from acp.prompt_parts.apply_review_standard import build_apply_review_standard
 from acp.prompt_parts.complete_prompt import build_complete_prompt
 from acp.prompt_parts.index_entry_standard import build_index_entry_standard
 from acp.prompt_parts.oracle_review_standard import build_review_oracle_standard
+from acp.prompt_parts.routing_rule import build_routing_rule
 
 
 def test_build_apply_review_standard_renders_core_review_aspects() -> None:
@@ -17,6 +18,34 @@ def test_build_apply_review_standard_renders_core_review_aspects() -> None:
     assert "仕様断片の隙間" in rendered
     assert "致命的問題" in rendered
     assert "クオリティアップ" in rendered
+
+
+def test_build_routing_rule_renders_core_reading_rules() -> None:
+    doc = build_routing_rule()
+
+    assert isinstance(doc, StructDoc)
+    assert doc.title == "routing rule"
+
+    rendered = render_as_markdown(doc)
+    assert "INDEX.md" in rendered
+    assert "Summary" in rendered
+    assert "Read this when" in rendered
+    assert "Do not read this when" in rendered
+    assert "必要な文章を読みに行く" in rendered
+    assert "総当たりで読む前" in rendered
+
+
+def test_complete_prompt_always_includes_routing_rule() -> None:
+    prompt = build_complete_prompt(
+        role="- role",
+        summary="- summary",
+        goal="- goal",
+        file_access_mode=FileAccessMode.READONLY,
+        aux_prompt=[],
+    )
+
+    rendered = render_as_markdown(prompt)
+    assert "# routing rule" in rendered
 
 
 def test_complete_prompt_can_include_apply_review_standard() -> None:

@@ -40,12 +40,20 @@ def build_indexing_index_entry_parameter(
         file_access_mode=FileAccessMode.READONLY,
         aux_prompt=[
             StructDoc(
+                "エントリー生成規則",
+                f"""
+                - 必ずオリジナルの本文のみを根拠にエントリーを生成すること
+                - 既存の `INDEX.md` を読むのは禁止
+                - `{target_path}` 以外の文章も必要に応じて参照すること
+                """,
+            ),
+            StructDoc(
                 f"`{target_path}` の内容",
                 StructCodeBlock(
                     None,
                     target_content,
                 ),
-            )
+            ),
         ],
         index_entry_standard=True,
     )

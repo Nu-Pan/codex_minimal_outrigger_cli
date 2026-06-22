@@ -121,7 +121,10 @@ def _render_as_markdown(struct_doc: StructDoc, depth: int = 1) -> str:
             result += _render_as_markdown(c, depth + 1) + "\n"
     elif isinstance(struct_doc.children, StructCodeBlock):
         result += "\n"
-        result += f"```{struct_doc.children.info}\n"
+        if struct_doc.children.info:
+            result += f"```{struct_doc.children.info}\n"
+        else:
+            result += f"```\n"
         result += ntqs(struct_doc.children.body) + "\n"
         result += "```\n"
     elif isinstance(struct_doc.children, str):

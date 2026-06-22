@@ -27,7 +27,7 @@
 ## Summary
 
 - `<cmoc-root>/oracle/src/acp/prompt_parts/complete_prompt.py` は、`build_complete_prompt()` で AI エージェントへ渡す完全な prompt を `StructDoc` の列として組み立てる入口です。
-- 必須要素として `role`、`summary`、`goal`、`file_access_rule` を含み、必要に応じて `oracle_and_realization_basic`、`oracle_standard`、`realization_standard`、`review_oracle_standard`、`apply_review_standard`、`index_entry_standard` を追加します。
+- 必須要素として `role`、`summary`、`goal`、`file_access_rule`、`routing_rule` を含み、必要に応じて `oracle_and_realization_basic`、`oracle_standard`、`realization_standard`、`review_oracle_standard`、`apply_review_standard`、`index_entry_standard` を追加します。
 - `structured_output` が有効な場合は、指定された Structured Output schema に従うよう促す出力形式の指示を末尾に追加します。
 
 ## Read this when
@@ -45,7 +45,7 @@
 
 ## hash
 
-- f8fbbc947eb7ac120513580612636fd8f155ed1113c57dc98d717814ead98a2c
+- 18efdddfcbec9b291f2ca8aac02f42177f6c4fe051e13b6d1953fd1ea9afcc9f
 
 # `file_access_rule.py`
 
@@ -194,3 +194,27 @@
 ## hash
 
 - 7b4ad34a5e4ad05a6dff26576b4398c32d5c504fb773c14299c0a5ef1b5be1a0
+
+# `routing_rule.py`
+
+## Summary
+
+- `<cmoc-root>/oracle/src/acp/prompt_parts/routing_rule.py` は、AI エージェントが `INDEX.md` をヒントに必要な文章へ進むための固定規則を `StructDoc` として組み立てる入口です。
+- `INDEX.md` を本文の代替ではなくルーティング情報として扱い、`Summary`、`Read this when`、`Do not read this when` から読む先を選ぶ方針をまとめます。
+- `complete_prompt.py` では常に追加され、個別の標準フラグに依存せず agent 呼び出しの共通前提になります。
+
+## Read this when
+
+- agent prompt に固定挿入される `INDEX.md` の読み進め規則を確認したいとき。
+- `build_complete_prompt()` がなぜ `routing_rule` を常に含めるか把握したいとき。
+- `INDEX.md` エントリーの書き方ではなく、利用時にどう読むかの規則を確認したいとき。
+
+## Do not read this when
+
+- `INDEX.md` エントリー自体の生成規範を確認したいときは、`index_entry_standard.py` を読むべきとき。
+- ファイル読み書き制約、oracle/realization の基本定義、レビュー標準など、別の prompt 断片だけを探しているとき。
+- `INDEX.md` の配置対象や生成・更新手順を確認したいときは、app spec 側の indexing 仕様を読むべきとき。
+
+## hash
+
+- c3f89bf3c1b0ef3a19cfd0d7d7aee2e3b0ceb8314b7b32ca4551ec3977ecd2da
