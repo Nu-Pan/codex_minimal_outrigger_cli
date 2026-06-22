@@ -136,7 +136,7 @@
 ## 所見リスト改善の仕様
 
 - 所見リスト全体に対する改善作業を agent call に依頼する
-- agent call の仕様は `build_apply_fork_consume_finding_parameter` を正本とする
+- agent call の仕様は `build_apply_fork_refine_finding_parameter` を正本とする
 - ファイルごとに個別に所見リストを列挙した後、それを１つに連結する
 - 所見リストが空の場合のみ「検出された所見なし」と扱う
 
