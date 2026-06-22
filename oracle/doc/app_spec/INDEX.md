@@ -214,25 +214,25 @@
 
 ## Summary
 
-- この `sub_command` ディレクトリのルーティング文書で、`cmoc` のサブコマンド仕様への入口です。
+- この `sub_command` ディレクトリのルーティング文書で、`cmoc` のサブコマンド仕様への入口をまとめます。
 - `apply` 系、`session` 系、`init`、`indexing`、`review oracle` の個別仕様へ進むための目次として機能します。
 - 直下の `apply_fork.md`、`apply_join.md`、`apply_abandon.md`、`session_fork.md`、`session_join.md`、`session_abandon.md`、`init.md`、`indexing.md`、`review_oracle.md` へ案内します。
 
 ## Read this when
 
-- `cmoc` のサブコマンド全体を俯瞰して、どの仕様から読むか整理したいとき。
-- `apply` 系、`session` 系、`init`、`indexing`、`review oracle` の入口をまとめて確認したいとき。
-- サブコマンド横断の目次として、直下の個別文書への案内を必要としているとき。
+- `cmoc` のサブコマンド仕様を、この階層からまとめて把握したいとき。
+- `apply` 系、`session` 系、`init`、`indexing`、`review oracle` のどこから読むべきか迷っているとき。
+- 実装やテストの前に、関連するサブコマンド仕様の入口を整理したいとき。
 
 ## Do not read this when
 
-- 読むべき個別サブコマンド文書がすでに決まっていて、この入口を経由する必要がないとき。
-- `app_spec` 全体や `oracle` 全体の別ディレクトリの入口を確認したいとき。
-- 個別サブコマンドの引数、実行手順、状態遷移そのものを確認したいとき。
+- `cmoc` の個別サブコマンドの引数や処理手順がすでに分かっていて、この階層の案内が不要なとき。
+- `apply`、`session`、`init`、`indexing`、`review oracle` のうち、読む先がすでに決まっていて直接その文書へ進むとき。
+- `INDEX.md` の更新ルールそのものではなく、別の `oracle` 配下ディレクトリの仕様や開発規約を探しているとき。
 
 ## hash
 
-- e9a3d7ccdde3e7aa672696f16035a8388ced6e0703683143170b85d4c83f3c45
+- 3f2acbe110ae36e3b3d2f9ee6cbdcdf6c87db356a60d96d10e2ec17b3a795366
 
 # `usage.md`
 

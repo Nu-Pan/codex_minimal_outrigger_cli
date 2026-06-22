@@ -46,25 +46,25 @@
 
 - e958bca0852f6b124010f16314781a5093835941077ed2faef44217ce9587626
 
-# `file_audit_finding.py`
+# `file_finding_enumeration.py`
 
 ## Summary
 
-- この `file_audit_finding.py` のルーティング文書は、`cmoc apply fork` のファイル単位監査用 agent call parameter への入口です。
-- `build_apply_fork_file_audit_parameter()` は `target_path` を起点に prompt と `AgentCallParameters` を組み立て、`finding_list.json` で使う Structured Output schema を参照します。
-- 監査対象ファイルを起点に、oracle file と realization file の不整合や、実装上の致命的問題を洗い出す流れを案内します。
+- この `file_finding_enumeration.py` のルーティング文書で、`cmoc apply fork` のファイル単位所見リストアップ用 prompt 正本への入口です。
+- `target_path` を起点に、必要なら関連する oracle file や realization file も読みながら所見を調査し、`finding_list.json` 形式の出力を返します。
+- `cmoc apply fork` の調査対象ファイルごとの列挙処理を案内する、所見リスト生成の起点です。
 
 ## Read this when
 
-- `<cmoc-root>/oracle/src/acp/builder/apply/fork/file_audit_finding.py` がどこへつながるか整理したいとき。
-- `build_apply_fork_file_audit_parameter()` が `target_path` を起点に prompt と `AgentCallParameters` をどう組み立てるか確認したいとき。
-- `cmoc apply fork` のファイル単位監査の入口を把握し、oracle file と realization file の不整合や致命的問題の洗い出し方針を確認したいとき。
+- `cmoc apply fork` のファイル単位所見リストアップの入口を確認したいとき。
+- `target_path` を起点に、対象ファイルごとの所見を個別に列挙する仕様を把握したいとき。
+- `build_apply_fork_file_finding_enumeration_parameter()` がどの prompt と出力先 schema を結びつけるか確認したいとき。
 
 ## Do not read this when
 
-- すでに `build_apply_fork_file_audit_parameter()` の用途が分かっていて、実装コードや prompt 本体を直接確認したいとき。
-- `cmoc apply fork` の変更要約、要修正点リスト改善、要修正点 1 件の実装修正を探しているとき。
-- `finding_list.json` そのものの Structured Output schema だけを確認したいとき。
+- すでに `build_apply_fork_file_finding_enumeration_parameter()` の用途が分かっていて、このファイルの実装を直接確認したいとき。
+- `cmoc apply fork` の変更要約、所見リスト改善、所見 1 件の実装修正など、別段階の入口を探しているとき。
+- `finding_list.json` などの Structured Output schema だけを確認したいとき。
 
 ## hash
 

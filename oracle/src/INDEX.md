@@ -3,24 +3,24 @@
 ## Summary
 
 - この `acp` ディレクトリのルーティング文書で、`builder/` と `prompt_parts/` への入口をまとめます。
-- `builder/` は `cmoc apply fork`、`cmoc indexing`、`cmoc review oracle`、`cmoc session join` の呼び出し入口を案内します。
-- `prompt_parts/` は `complete_prompt.py` を中心に、AI 呼び出し用 prompt の断片群と `INDEX.md` 規範への入口を切り分けます。
+- `builder/` は `cmoc apply fork`、`cmoc indexing`、`cmoc review oracle`、`cmoc session join` に対応する agent call parameter の入口を案内します。
+- `prompt_parts/` は complete prompt を組み立てる断片群と、各種標準文書への入口を整理します。
 
 ## Read this when
 
-- この階層でまず `builder/` と `prompt_parts/` のどちらから読むべきか整理したいとき。
-- `cmoc apply fork`、`cmoc indexing`、`cmoc review oracle`、`cmoc session join` の呼び出し仕様をまとめて把握したいとき。
-- 完全な prompt の構成要素や、`INDEX.md` に書くべきルーティング規範を確認したいとき。
+- `<cmoc-root>/oracle/src/acp` 配下で、まず `builder/` と `prompt_parts/` のどちらから読むべきか整理したいとき。
+- AI 呼び出し用 prompt の組み立てと、サブコマンド別 agent call parameter の役割分担をまとめて把握したいとき。
+- この階層の目次を確認してから、下位の `INDEX.md` や個別仕様へ進みたいとき。
 
 ## Do not read this when
 
 - すでに進む先が `builder/` か `prompt_parts/` に決まっていて、この階層の入口説明が不要なとき。
-- `change_summary.py`、`index_entry.py`、`complete_prompt.py` など、個別ファイルを直接確認したいとき。
-- この階層の案内ではなく、下位の `INDEX.md` や個別仕様だけを確認したいとき。
+- `cmoc apply fork`、`cmoc indexing`、`cmoc review oracle`、`cmoc session join` の個別仕様を直接確認したいとき。
+- 完全な prompt 本体や個別の prompt 断片、Structured Output schema を探しているとき。
 
 ## hash
 
-- bd34416024eef6a60a4ecdda33f1f4fa6217d8d34021c647dd6b6731c2525e21
+- 2e6c1986021c1fc98a8b9017536b812e752a8f099fa3616dfb1c640ace4607a0
 
 # `basic`
 
@@ -50,7 +50,7 @@
 
 ## Summary
 
-- この `<cmoc-root>/oracle/src/config` ディレクトリのルーティング文書で、`cmoc_config.py` への入口です。
+- この `<cmoc-root>/oracle/src/config` ディレクトリのルーティング文書で、`cmoc_config.py` への入口をまとめます。
 - `CmocConfig` は cmoc 全体の設定を束ね、`CmocConfigCodex` は Codex CLI 向けのモデル・推論強度の対応表を持ちます。
 - 設定は `<repo-root>/.cmoc/config.json` に永続化され、`cmoc init` によって生成・同期される前提です。
 
@@ -68,4 +68,4 @@
 
 ## hash
 
-- a826a2661c5af939ab480aa20fdb2c46bb8514c0a8a29d2bf5e10395204672e1
+- e333b5511ee2e06b89ac77f9d8ea837a274f30698f6317c5dda1e45925b1239f

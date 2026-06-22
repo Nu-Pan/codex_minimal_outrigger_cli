@@ -25,9 +25,9 @@
 
 ## Summary
 
-- `cmoc apply fork` の入口で、Codex CLI による apply ループの実行から完了レポートまでの全体像を案内する文書です。
-- `<cmoc-session-branch>` から分離した `<cmoc-apply-branch>` と `<cmoc-apply-worktree>` を使い、`apply.state` の遷移、スコープ指定、反復回数、要修正点リストの生成・改善・対応方針をまとめています。
-- 作業結果のレポート形式や Structured Output による変更要約の生成方法まで含めて確認できます。
+- `cmoc apply fork` の入口で、Codex CLI による apply ループの実行から完了レポートまでを案内する文書です。
+- `<cmoc-session-branch>` から分離した `<cmoc-apply-branch>` と `<cmoc-apply-worktree>` を使う前提、`apply.state` の遷移、スコープ指定、反復回数、要修正点リストの扱いをまとめています。
+- 部分適用モードと全体適用モードの違い、開始時点の `<oracle-snapshot-commit>` に固定した調査・修正ループ、作業結果レポートの生成方法を確認できます。
 
 ## Read this when
 
@@ -45,7 +45,7 @@
 
 ## hash
 
-- 9e1624ec2b7a5773c171a00eaa9415e8eade5c2c01fbcbaf4aade822a6053929
+- 8f8a514b8ad9da0d77e83f535396fe87ff8422052f632eb375969056c7438cd3
 
 # `apply_join.md`
 
@@ -123,25 +123,25 @@
 
 ## Summary
 
-- この `review_oracle.md` の入口で、現在の `<work-root>/oracle` スナップショットをレビューして人間へレポートする手順を案内します。
-- 位置引数はなく、`--scope={session|full}` と各ループ回数オプションで対象範囲と反復上限を制御します。
-- 事前条件、run の隔離実行、所見の列挙・マージ・検証・採否判定、レポート出力までをまとめます。
+- この `review_oracle.md` のルーティング文書で、`cmoc review oracle` の実行仕様への入口をまとめます。
+- `--scope={session|full}`、run の隔離実行、所見の列挙・マージ・検証・採否判定、レポート出力の流れを辿るための目次です。
+- 実装・修正・テスト・レビューの前に、`cmoc review oracle` の責務境界と反復ループを整理する起点です。
 
 ## Read this when
 
-- `cmoc review oracle` の実装・修正・テスト・レビューを行いたいとき。
-- `--scope={session|full}` による対象範囲の切り替えや、レビュー対象 oracle file の列挙条件を確認したいとき。
-- 所見の ID 管理、反復ループ、レポートの保存先と形式を確認したいとき。
+- `cmoc review oracle` の仕様全体を、引数・事前条件・実行手順・出力まで通して把握したいとき。
+- `--scope={session|full}` による対象範囲の切り替えや、所見リストの反復ループ条件を確認したいとき。
+- レポート保存先や、所見の列挙・マージ・検証・採否判定の責務分担を確認したいとき。
 
 ## Do not read this when
 
-- `cmoc review oracle` 以外のサブコマンド仕様や、別の oracle 文書を確認したいとき。
+- `cmoc review oracle` 以外のサブコマンド仕様を確認したいとき。
 - `INDEX.md` の生成・更新ルールだけを確認したいとき。
-- run の隔離実行や一般的なレビュー手順ではなく、個別の実装コードやテストコードを直接確認したいとき。
+- 個別の実装ファイルやテストファイルを直接追いたいとき。
 
 ## hash
 
-- 7b47a68b9989698ce254ad5ac3cc9596824bb871bab766353ee660100eee6859
+- df8019d8baa140e05925cec45090ae6a0b3b3e36fa029594bad66eddb64dd48b
 
 # `session_abandon.md`
 

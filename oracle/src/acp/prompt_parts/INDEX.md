@@ -3,24 +3,24 @@
 ## Summary
 
 - `<cmoc-root>/oracle/src/acp/prompt_parts/apply_review_standard.py` は、`oracle file` の内容を `realization file` に適用する場面で使うレビュー標準を `StructDoc` として組み立てる入口です。
-- この断片は、明確な不整合の指摘、仕様の隙間だけを根拠にした過剰な指摘の禁止、`realization file` だけから見たバグ級の明確な問題の扱いを整理します。
+- この断片は、明確な不整合を所見として扱うこと、仕様の隙間だけを根拠に過剰な指摘をしないこと、`realization file` だけから見て明らかな致命的問題を扱うことを整理します。
 - `complete_prompt.py` では `apply_review_standard=True` のときに追加され、`cmoc apply fork` の所見列挙を支える前提になります。
 
 ## Read this when
 
 - `cmoc apply fork` で、`oracle file` を `realization file` に適用する際のレビュー標準を確認したいとき。
-- `oracle file` と `realization file` の不整合を、どこまで要修正点として扱うか整理したいとき。
+- `oracle file` と `realization file` の不整合を、どこまで所見として扱うか整理したいとき。
 - `complete_prompt.py` で `apply_review_standard=True` のときに追加される内容を把握したいとき。
 
 ## Do not read this when
 
-- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/apply_review_standard.py` を直接開いて、実装や規範文の中身を確認する目的が決まっているとき。
-- `complete_prompt.py` への組み込み方や、`cmoc apply fork` での所見列挙の全体像を先に確認したいわけではないとき。
-- `oracle_review_standard.py` や `apply` 系の別断片など、このファイル以外のレビュー標準を探しているとき。
+- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/apply_review_standard.py` を直接開いて、実装本体や規範文の詳細を確認するとき。
+- `complete_prompt.py` への組み込み条件や `cmoc apply fork` での所見列挙の全体像を、この断片経由ではなく別の場所で追いたいとき。
+- `oracle_review_standard.py` など、このファイル以外のレビュー標準を探しているとき。
 
 ## hash
 
-- aeb1112e0e4bc5803ab6ce9ca7dac34bfe5875ea53eaf0ef623b87c93b6a67a5
+- 8084bdb3ce48e798cad1515dc50a8d5c7d66c417ec7d2d32494a4d68d6b43799
 
 # `complete_prompt.py`
 
@@ -173,25 +173,24 @@
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/acp/prompt_parts/realization_standard.py` は、realization file 向けの標準方針を `StructDoc` として組み立てる入口です。
-- 総文字数の最小化、重複排除、既存実装の整理、明確な責務境界に基づく抽象化を案内します。
-- 公開面・設定面・状態の増加、テストの肥大化、依存関係や補助生成物の増加を抑える方針を含みます。
-- 変更完了時に、削除・統合・短縮できるものが残っていないかを確認する観点も扱います。
+- <cmoc-root>/oracle/src/acp/prompt_parts/realization_standard.py は、realization file に求める標準方針を StructDoc として組み立てる入口です。
+- 総文字数の最小化、重複排除、既存実装の整理、明確な責務境界に基づく抽象化を中心に、実装・保守の判断基準をまとめます。
+- 公開面・設定面・状態・テストの増加を抑えつつ、変更後に削除・統合・短縮できるものが残っていないかを確認する観点も含みます。
 
 ## Read this when
 
-- 実装・保守の指針として、削減すべき重複や増やすべきでない公開面をまとめて把握したいとき。
+- realization file の削減すべき重複や、増やすべきでない公開面をまとめて把握したいとき。
 - 新しい実装、抽象化、テスト、依存関係、状態追加の可否を判断したいとき。
 - 変更後に削除・統合・短縮の余地があるかを確認したいとき。
-- 完全な prompt にこの標準を含める条件を確認したいとき。
+- complete_prompt.py にこの標準が追加される前提を把握したいとき。
 
 ## Do not read this when
 
-- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/realization_standard.py` を直接確認する対象が決まっていて、目次を経由する必要がないとき。
+- すでに <cmoc-root>/oracle/src/acp/prompt_parts/realization_standard.py を直接開いて、本体の定義を確認するとき。
 - 個別の helper、class、テストケース、import の整理だけを確認したいとき。
-- `oracle` 側の正本仕様や別の標準、あるいはファイル読み書き規則を探しているとき。
-- `prompt_parts/` 全体ではなく、別のディレクトリや別フローの案内を探しているとき。
+- oracle 側の正本仕様や別の標準、あるいはファイル読み書き規則を探しているとき。
+- prompt_parts/ 全体ではなく、別のディレクトリや別フローの案内を探しているとき。
 
 ## hash
 
-- 7cabd8d512aee25ff5c2d0e3d3e804302456e44eb334c2f7fc2e0969069153a7
+- 7b4ad34a5e4ad05a6dff26576b4398c32d5c504fb773c14299c0a5ef1b5be1a0

@@ -2,21 +2,21 @@
 
 ## Summary
 
-- `<cmoc-root>/oracle/src/config/cmoc_config.py` は、cmoc 全体の設定をまとめる `CmocConfig` と、Codex CLI 向けの対応表を持つ `CmocConfigCodex` を定義する入口です。
-- この設定は `<cmoc-root>/.cmoc/config.json` として永続化され、`BackendType`、`ModelClass`、`ReasoningEffort` を束ねる前提になっています。
+- `<cmoc-root>/oracle/src/config/cmoc_config.py` は、cmoc 全体の設定を束ねる `CmocConfig` と、その下位設定である `CmocConfigCodex`、`CmocConfigApplyFork`、`CmocConfigReviewOracle` を定義する入口です。
+- この設定は `<repo-root>/.cmoc/config.json` として永続化され、`num_parallel` や `cmoc apply fork` / `cmoc review oracle` の反復回数、Codex CLI 向けの `model` / `reasoning_effort` 対応表をまとめます。
 
 ## Read this when
 
-- cmoc の設定項目をどこに集約しているか確認したいとき。
-- `CmocConfig` と `CmocConfigCodex` の役割や、Codex CLI 向けの `model` / `reasoning_effort` 対応付けを把握したいとき。
-- 設定を `<cmoc-root>/.cmoc/config.json` に永続化する前提や、Enum 値を value 化して保存する方針を確認したいとき。
+- cmoc 全体設定をどこに集約しているか確認したいとき。
+- `CmocConfig` と、その下位の `CmocConfigCodex`、`CmocConfigApplyFork`、`CmocConfigReviewOracle` の構成を把握したいとき。
+- `<repo-root>/.cmoc/config.json` に永続化される設定項目や、Enum 値を value 化して保存する方針を確認したいとき。
 
 ## Do not read this when
 
-- すでに `CmocConfig` と `CmocConfigCodex` の定義場所が分かっていて、この目次を経由せずに `cmoc_config.py` 本体を直接確認するとき。
+- `CmocConfig`、`CmocConfigCodex`、`CmocConfigApplyFork`、`CmocConfigReviewOracle` の役割がすでに分かっていて、このファイル本体を直接確認したいとき。
 - 設定の読み書き処理や JSON 変換の実装を探しているとき。
-- `agent_call_parameter/base.py` の `BackendType`、`ModelClass`、`ReasoningEffort` だけを確認したいとき。
+- `basic/acp.py` の `ModelClass` や `ReasoningEffort` だけを確認したいとき。
 
 ## hash
 
-- 1f32a1f9b3916013ad63b41eb48859c2e1943145b5e283dba3ff5f63e91c9fbe
+- ccea2a3965b4022ccab0f635678dd917808b71820431e9e91f76f699315338f6

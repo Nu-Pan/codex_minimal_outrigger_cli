@@ -8,19 +8,19 @@
 
 ## Read this when
 
-- cmoc の利用手順・共通仕様・非採用案・開発規約・branch モデルを、この階層からまとめて把握したいとき。
+- cmoc の利用手順、非採用案、開発規約、branch モデルをこの階層からまとめて把握したいとき。
 - `app_spec/`、`considered_alternative/`、`dev_rule/`、`branch_model.md` のどこから読むべきか迷っているとき。
 - 実装やテストの前に、関連する正本仕様や設計方針の入口を整理したいとき。
 
 ## Do not read this when
 
-- `app_spec/`、`considered_alternative/`、`dev_rule/` の個別文書や `branch_model.md` の内容がすでに分かっていて、該当先へ直接進むとき。
-- この階層全体ではなく、`app_spec/` 内の利用手順・共通仕様だけ、あるいは `dev_rule/` 内の開発規約だけを確認したいとき。
-- `INDEX.md` の生成ルールそのものではなく、リポジトリ運用ルールや別階層の文書を探しているとき。
+- `app_spec/`、`considered_alternative/`、`dev_rule/`、`branch_model.md` の個別文書へ進む先がすでに決まっていて、この階層の案内が不要なとき。
+- `app_spec/` 内の利用手順や共通仕様だけ、`considered_alternative/` 内の非採用案だけ、`dev_rule/` 内の開発規約だけを確認したいとき。
+- この階層全体ではなく、`oracle` の別階層や上位のルーティング文書を探しているとき。
 
 ## hash
 
-- 1ceddbcd647a2976f9ba92598d30f3a2de3705c0516e72f6ebc2e4a4c1102c78
+- 6419f9517ec4dcd514f3522917ce4b064c3cb785f544cffdc87cdece0ba8c17a
 
 # `src`
 
@@ -39,10 +39,10 @@
 
 ## Do not read this when
 
-- `acp/`、`basic/`、`config/` のうち読む先がすでに決まっていて、この階層の入口説明が不要なとき。
+- `acp/`、`basic/`、`config/` のうち、読む先がすでに決まっていて、この階層の入口説明が不要なとき。
 - `acp.py`、`path_model.py`、`standard.py`、`struct_doc.py`、`cmoc_config.py` など、個別ファイルを直接確認したいとき。
 - `<cmoc-root>/oracle/src` ではなく、`oracle` 全体の別ルートや別階層の仕様だけを探しているとき。
 
 ## hash
 
-- 1aa14fceaa4696e285cace6235ff4c7c99fd21f829d29e5ec99b63f39c94326c
+- 053965b0bd9a2d1e78047db8cf1779516aaeb8ca26ed7d52366e1597c8fa1aa6

@@ -10,18 +10,17 @@
 
 - cmoc の利用手順、共通仕様、実行制約、ログ、エラー処理、状態管理をどの順で読むか整理したいとき。
 - `cmoc` の通常利用フローや `apply` / `session` 系の入口をまとめて把握したいとき。
-- `INDEX.md` の生成・更新ルールや、`app_spec` 配下のどの文書に何が書かれているか確認したいとき。
-- `sub_command/` 配下の個別サブコマンド仕様へ進む前に、この階層の役割分担を先に確認したいとき。
+- `app_spec` 配下のどの文書に何が書かれているか確認し、`sub_command/` 配下の個別サブコマンド仕様へ進む前に役割分担を整理したいとき。
 
 ## Do not read this when
 
-- 読みたい対象がすでに決まっていて、`usage.md` や `sub_command/` 配下の個別文書へ直接進むとき。
+- `usage.md` や `sub_command/` 配下の個別文書へ直接進む先がすでに決まっていて、この階層の案内が不要なとき。
 - `cli_auto_completion.md`、`codex_exec_rule.md`、`console_and_file_log.md`、`error_handling.md` など、個別の共通仕様だけを確認したいとき。
-- `app_spec` 全体ではなく、別の `oracle` 配下ディレクトリや上位のルーティング文書を探しているとき。
+- この階層全体ではなく、別の `oracle` 配下ディレクトリや上位のルーティング文書を探しているとき。
 
 ## hash
 
-- 20c254d922c75fd4a5eb093fda51de622af536e9df3e6e1fa3ac4dff3519e0c1
+- 5c023b06c0469fd2e3de97be526cfb2c1426731caf37201bf85867b6f7e359b2
 
 # `branch_model.md`
 

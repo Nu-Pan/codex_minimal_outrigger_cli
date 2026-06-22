@@ -2,25 +2,25 @@
 
 ## Summary
 
-- この `apply` ディレクトリのルーティング文書で、`fork/` への入口です。
-- `fork/` は `cmoc apply fork` の変更要約、ファイル単位監査、要修正点リスト改善、要修正点 1 件の実装修正を案内します。
-- この階層は、`cmoc apply fork` の入口をまとめる起点です。
+- この `apply` ディレクトリのルーティング文書で、`fork/` への入口をまとめます。
+- `fork/` は `cmoc apply fork` の変更要約、ファイル単位所見列挙、所見 1 件の実装修正、所見リスト改善を案内します。
+- この階層は、`cmoc apply fork` の入口を整理する起点です。
 
 ## Read this when
 
 - `<cmoc-root>/oracle/src/acp/builder/apply` 配下で、まず `fork/` のどこから読むべきか整理したいとき。
-- `cmoc apply fork` の変更要約、ファイル単位監査、要修正点リスト改善、要修正点 1 件の実装修正という役割分担をまとめて把握したいとき。
+- `cmoc apply fork` の変更要約、ファイル単位所見列挙、所見 1 件の実装修正、所見リスト改善という役割分担をまとめて把握したいとき。
 - この階層の入口を確認してから、下位の `INDEX.md` や個別仕様へ進みたいとき。
 
 ## Do not read this when
 
 - すでに `fork/` に進むことが決まっていて、この階層の案内を経由する必要がないとき。
-- `change_summary.py`、`file_audit_finding.py`、`refine_fixing_point.py`、`consume_fixing_point.py` など、`cmoc apply fork` の個別ファイルを直接確認したいとき。
+- `change_summary.py`、`file_finding_enumeration.py`、`finding_application.py`、`refine_finding.py` など、`cmoc apply fork` の個別ファイルを直接確認したいとき。
 - `INDEX.md` の目次情報ではなく、個別の prompt 実装や Structured Output schema そのものを探しているとき。
 
 ## hash
 
-- 19429252486e9b300c0d07b3a06b9c0b070e5c53ed0b5148351d39375d4a6a19
+- cb6702b62db86b3347fca734b6e17b4452c485dfea50869db207aa66fe40a7fd
 
 # `indexing`
 
