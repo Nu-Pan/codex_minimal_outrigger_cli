@@ -4,6 +4,7 @@ from acp.prompt_parts.apply_review_standard import build_apply_review_standard
 from acp.prompt_parts.complete_prompt import build_complete_prompt
 from acp.prompt_parts.index_entry_standard import build_index_entry_standard
 from acp.prompt_parts.oracle_review_standard import build_review_oracle_standard
+from acp.prompt_parts.realization_standard import build_realization_standard
 from acp.prompt_parts.routing_rule import build_routing_rule
 
 
@@ -74,6 +75,37 @@ def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
 
     rendered = render_as_markdown(prompt)
     assert "apply review standard" not in rendered
+
+
+def test_build_realization_standard_renders_file_split_and_merge_rules() -> None:
+    doc = build_realization_standard()
+
+    assert isinstance(doc, StructDoc)
+    assert doc.title == "realization standard"
+
+    rendered = render_as_markdown(doc)
+    assert "INDEX.md" in rendered
+    assert "8,000" in rendered
+    assert "16,000" in rendered
+    assert "責務境界" in rendered
+    assert "分割" in rendered
+    assert "統合" in rendered
+
+
+def test_complete_prompt_can_include_realization_standard() -> None:
+    prompt = build_complete_prompt(
+        role="- role",
+        summary="- summary",
+        goal="- goal",
+        file_access_mode=FileAccessMode.READONLY,
+        aux_prompt=[],
+        realization_standard=True,
+    )
+
+    rendered = render_as_markdown(prompt)
+    assert "# realization standard" in rendered
+    assert "意味上のまとまりと適度なサイズ" in rendered
+    assert "16,000" in rendered
 
 
 def test_build_index_entry_standard_renders_core_output_rules() -> None:

@@ -114,6 +114,49 @@ def build_realization_standard() -> StructDoc:
             ],
         ),
         Standard(
+            title="realization file は意味上のまとまりと適度なサイズに保つ",
+            backgrounds=[
+                "cmoc は INDEX.md を手がかりに必要な file だけを読みに行くことで、AI のトークン消費を節約する",
+                "このルーティングが有効に働くためには、各 realization file のサイズ感がある程度揃っている必要がある",
+                "巨大な realization file は、INDEX.md で読む先を絞れても局所的に読むべき文脈を増やす",
+            ],
+            requirements=[
+                Requirement(
+                    "必須",
+                    "file の分割・統合は、コードの意味、責務境界、同時に読む必要がある文脈を主な根拠に判断する",
+                ),
+                Requirement(
+                    "必須",
+                    "1 つの realization file が複数の独立した責務を持つ場合は、責務境界に沿って分割する",
+                ),
+                Requirement(
+                    "推奨",
+                    "1 つの realization file が 8,000 文字を超える場合は、意味上自然な分割点がないか確認する",
+                ),
+                Requirement(
+                    "必須",
+                    "1 つの realization file が 16,000 文字を超える場合は、分割しない理由を責務境界・凝集性・読み取り文脈の観点で説明できなければならない",
+                ),
+                Requirement(
+                    "必須",
+                    "小さすぎる realization file が同じ責務や同じ変更理由で常に一緒に読まれる場合は、統合を検討する",
+                ),
+                Requirement(
+                    "禁止",
+                    "文字数だけを根拠に、強く結合した処理を不自然に分割してはいけない",
+                ),
+                Requirement(
+                    "禁止",
+                    "INDEX.md で読む先を選べても、選んだ先が巨大 file になり、局所的な読解ができない状態を放置してはいけない",
+                ),
+            ],
+            examples=[
+                "CLI command 定義、入出力変換、永続状態操作が同じ file に混在して 16,000 文字を超えるなら、責務ごとの分割を検討する",
+                "互いに短い helper file 群が同じ変更で常に同時に読まれるなら、1 つの責務を持つ module へ統合する",
+                "8,000 文字を超えていても、単一の schema 定義として意味上ひとまとまりなら、分割より命名や局所的な構造化を優先してよい",
+            ],
+        ),
+        Standard(
             title="realization code の追加は既存 realization code の整理と一体で行う",
             backgrounds=[
                 "コードベースの肥大化は、新しいファイル・関数・クラスを追加した時だけでなく、古い実装を残した時にも発生する",
