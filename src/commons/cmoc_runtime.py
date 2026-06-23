@@ -56,6 +56,8 @@ class CodexExecResult:
     stdout_log_path: Path
     stderr_log_path: Path
     output_path: Path
+    codex_home: Path
+    profile_name: str
     profile_path: Path
     schema_path: Path | None
     elapsed_sec: float = 0.0
@@ -568,11 +570,85 @@ def write_hashed_file(directory: Path, prefix: str, suffix: str, content: str) -
     return path
 
 
+def write_hashed_file_in_existing_dir(
+    directory: Path, prefix: str, suffix: str, content: str
+) -> Path:
+    digest = text_sha256(content)
+    path = directory / f"{prefix}{digest}{suffix}"
+    if not path.exists() or path.read_text() != content:
+        path.write_text(content)
+    return path
+
+
+def resolve_codex_home() -> Path:
+    value = os.environ.get("CODEX_HOME")
+    if value:
+        return Path(value).expanduser().resolve()
+    return (Path.home() / ".codex").resolve()
+
+
+def validate_codex_home(codex_home: Path) -> None:
+    if not codex_home.exists():
+        raise CmocError(
+            "Codex home が存在しません。",
+            [
+                "Codex CLI の通常利用環境を初期化してください。",
+                "既存の Codex home を指すように CODEX_HOME を設定してください。",
+            ],
+            f"CODEX_HOME: {codex_home}\nfailed condition: CODEX_HOME exists",
+        )
+    if not codex_home.is_dir():
+        raise CmocError(
+            "Codex home がディレクトリではありません。",
+            [
+                "CODEX_HOME が既存ディレクトリを指すように修正してください。",
+                "CODEX_HOME のファイル種別を確認してください。",
+            ],
+            f"CODEX_HOME: {codex_home}\nfailed condition: CODEX_HOME is directory",
+        )
+    auth_path = codex_home / "auth.json"
+    if not auth_path.is_file():
+        raise CmocError(
+            "Codex CLI 認証情報が存在しません。",
+            [
+                "Codex CLI の通常利用環境を初期化してください。",
+                "既存の Codex home を指すように CODEX_HOME を設定してください。",
+            ],
+            f"CODEX_HOME: {codex_home}\nfailed condition: {auth_path} is file",
+        )
+
+
+def codex_profile_name(profile_path: Path) -> str:
+    suffix = ".config.toml"
+    if profile_path.name.endswith(suffix):
+        return profile_path.name[: -len(suffix)]
+    return profile_path.stem
+
+
 def prepare_codex_profile(
-    parameter: AgentCallParameter, config: CmocConfig | None = None
+    parameter: AgentCallParameter,
+    config: CmocConfig | None = None,
+    codex_home: Path | None = None,
 ) -> Path:
     profile = build_codex_profile(parameter, config or CmocConfig())
-    return write_hashed_file(cmoc_root() / ".codex", "cmoc_", ".config.toml", profile)
+    target_home = codex_home or resolve_codex_home()
+    try:
+        return write_hashed_file_in_existing_dir(
+            target_home, "cmoc_", ".config.toml", profile
+        )
+    except OSError as exc:
+        raise CmocError(
+            "Codex profile を生成できません。",
+            [
+                "CODEX_HOME の権限を確認してください。",
+                "Codex CLI の通常利用環境を初期化してから再実行してください。",
+            ],
+            f"CODEX_HOME: {target_home}\nerror: {exc}",
+        ) from exc
+
+
+def codex_subprocess_env(codex_home: Path) -> dict[str, str]:
+    return {**os.environ, "CODEX_HOME": str(codex_home)}
 
 
 def prepare_schema(root: Path, schema_source_path: Path | None) -> Path | None:
@@ -659,13 +735,17 @@ def run_codex_exec(
     stderr_path = log_dir / f"{ts}_stderr.log"
     output_path = log_dir / f"{ts}_output.json"
     call_path = log_dir / f"{ts}_call.json"
-    profile_path = prepare_codex_profile(parameter, config)
+    codex_home = resolve_codex_home()
+    validate_codex_home(codex_home)
+    codex_env = codex_subprocess_env(codex_home)
+    profile_path = prepare_codex_profile(parameter, config, codex_home)
+    profile_name = codex_profile_name(profile_path)
     schema_path = prepare_schema(root, parameter.structured_output_schema_path)
     argv = [
         "codex",
         "exec",
         "--profile",
-        str(profile_path),
+        profile_name,
         "--json",
         "--output-last-message",
         str(output_path),
@@ -677,6 +757,8 @@ def run_codex_exec(
         "purpose": purpose,
         "timestamp": ts,
         "argv": argv,
+        "codex_home": str(codex_home),
+        "profile_name": profile_name,
         "profile_path": str(profile_path),
         "schema_path": str(schema_path) if schema_path else None,
         "stdout_log_path": str(stdout_path),
@@ -720,6 +802,8 @@ def run_codex_exec(
             "stdout_log_path": str(stdout_path),
             "stderr_log_path": str(stderr_path),
             "output_path": str(output_path),
+            "codex_home": str(codex_home),
+            "profile_name": profile_name,
             "profile_path": str(profile_path),
             "schema_path": str(schema_path) if schema_path else None,
         }
@@ -740,6 +824,7 @@ def run_codex_exec(
             input=parameter.prompt,
             text=True,
             capture_output=True,
+            env=codex_env,
         )
         last_result = result
         stdout_path.write_text(result.stdout)
@@ -806,6 +891,7 @@ def run_codex_exec(
                             input="quota availability probe",
                             text=True,
                             capture_output=True,
+                            env=codex_env,
                         )
                         print(
                             f"# {console_timestamp()} Codex CLI quota probe returned {poll.returncode}",
@@ -864,6 +950,8 @@ def run_codex_exec(
             stdout_log_path=stdout_path,
             stderr_log_path=stderr_path,
             output_path=output_path,
+            codex_home=codex_home,
+            profile_name=profile_name,
             profile_path=profile_path,
             schema_path=schema_path,
             elapsed_sec=elapsed_sec,
