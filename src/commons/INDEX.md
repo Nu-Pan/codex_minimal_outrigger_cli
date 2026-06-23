@@ -17,26 +17,26 @@
 # `cmoc_runtime.py`
 
 ## Summary
-- cmoc の実行時共通基盤を集約する実装。例外表現、サブコマンドログ、git 操作、branch/session state、`.cmoc` 配下の保存先、設定 JSON 変換、worktree 操作、Codex CLI 呼び出し、quota/capacity retry、structured output 検証、hash・binary・gitignore 判定を扱う。
-- 複数サブコマンドから使われる低レベルな副作用付き処理の入口であり、個別コマンド固有の手順ではなく、repository state・Codex CLI 実行・永続補助ファイルを扱う共通処理を確認するための対象。
+- cmoc の実行時共通基盤をまとめる実装。共通エラー型、外部コマンド結果、Codex 呼び出し結果、subcommand ログ、session/apply 状態、設定の読み書き、管理 branch 判定、worktree 操作、実行用パス、Codex profile 生成、Codex CLI/TUI 呼び出し、quota/capacity retry、schema 検証、hash・binary・ignore 判定を扱う。
+- 複数の subcommand から共有される低レベルな実行補助を集約しており、個別 command の業務フローではなく、git・filesystem・設定・状態・Codex 実行を支える入口として位置づけられる。
 
 ## Read this when
-- git command の実行、branch 判定、clean worktree 要求、managed branch 判定、worktree 作成・削除、branch 削除の挙動を確認または変更する。
-- session state の構造、session/apply branch からの session-id 抽出、state file の読み書き、active session 検索を確認または変更する。
-- `.cmoc` 配下の config、session、report、log、worktree、schema 保存先や `.gitignore` への `.cmoc` 除外処理を扱う。
-- cmoc config の dict 変換、JSON 読み込み、既定値同期、不正設定時のエラー化を確認または変更する。
-- Codex CLI を subprocess として呼び出す処理、profile 生成、CODEX_HOME 検証、structured output schema の準備、stdout/stderr/output/call log の記録を扱う。
-- Codex CLI の capacity retry、quota polling、resume token 抽出、quota wait の共有制御、呼び出し結果の検証失敗時 retry を確認または変更する。
-- CmocError の構造、利用者向けエラー表示、subcommand logger の event 記録、実行時間・quota 待ち時間の記録を扱う。
-- file hash、text hash、binary 判定、git ignore 判定など、複数箇所で使う小さな runtime helper の挙動を確認する。
+- cmoc の共通エラー表示、失敗時の次アクション、例外整形、または外部コマンド失敗の扱いを確認・変更したいとき。
+- repository root、cmoc root、session/report/log/worktree/schema/config など、実行時に使う標準的な保存場所やパス生成規則を確認・変更したいとき。
+- 管理 branch の判定、session id の抽出、session/apply 状態ファイルの読み書き、active session の探索を扱うとき。
+- git command 実行、clean worktree 要求、branch 存在確認、worktree 作成・削除、branch 削除、git ignore 判定など、git 操作の共通 helper を扱うとき。
+- cmoc config の dict 変換、読み込み、同期、書き込み、既定値補完、型変換エラーを扱うとき。
+- Codex home の解決・検証、Codex profile の生成、file access mode から sandbox mode への変換、Codex subprocess 環境の構築を扱うとき。
+- Codex CLI/TUI 呼び出し、JSONL/stdout/stderr/output/call log、structured output schema、semantic retry、capacity retry、quota polling/resume、subcommand logger 連携を調べるとき。
+- 内容 hash に基づくファイル生成、sha256 計算、binary 判定の共通処理を扱うとき。
 
 ## Do not read this when
-- 個別サブコマンドの CLI 引数、コマンド固有の処理順、利用者向け出力 schema を確認したいだけの場合は、そのサブコマンド実装や対応する schema を直接読む。
-- config dataclass や AgentCallParameter、FileAccessMode、ModelClass、ReasoningEffort の定義そのものを確認したい場合は、それらの定義元を読む。
-- oracle file や oracle standard の正本仕様内容を確認したい場合は、oracle 側の本文を読む。
-- path keyword の定義や `<cmoc-root>` などの用語モデルを確認したい場合は、path model の定義元を読む。
-- テスト観点や既存テストケースを探す場合は、対応する test 側の対象を読む。
-- 純粋な文字列整形、JSON schema 本体、または command 固有の prompt 生成だけを変更する場合は、この共通 runtime に触れる必要があるかを先に絞り込む。
+- 個別 subcommand の利用者向け手順、引数定義、command 固有の orchestration を知りたいだけなら、該当 command の実装を直接読む。
+- AgentCallParameter、FileAccessMode、ModelClass、ReasoningEffort など agent 呼び出しパラメータそのものの定義を確認したいだけなら、その定義元を読む。
+- 設定 dataclass の項目定義や既定値そのものを確認したいだけなら、設定モデルの定義元を読む。
+- oracle の正本仕様、path keyword の仕様説明、INDEX 生成規則を確認したいだけなら、対応する oracle document を読む。
+- テストケースの期待値や外部挙動の検証観点を確認したいだけなら、対応する test を読む。
+- 特定の report や log の内容を調べたいだけなら、生成物そのものを読む。
 
 ## hash
-- 39b6bd90422efaf685ba124593d38830e9ff9bd528e6528b8806993f81b44464
+- b2146b3bb52f70a7b4b86e6e652b0ed6753bd4aa846fd9420e3dc72a5dc577b9

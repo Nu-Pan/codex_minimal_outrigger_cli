@@ -93,22 +93,21 @@
 # `merge_finding.py`
 
 ## Summary
-- `cmoc review oracle` で、oracle file に対する既存の所見リストを整理するための AI 呼び出しパラメータを構築する realization implementation。
-- 現状の所見リストを補助プロンプトとして渡し、所見同士の内容的な重複や相互矛盾を解消する編集操作を Structured Output として返させるための prompt を組み立てる。
-- oracle 標準および review oracle 標準を含む完全プロンプト生成と、読み取り専用の oracle file アクセス設定を結び付ける入口になっている。
+- `cmoc review oracle` で収集された oracle file 向け所見リストを、AI 呼び出しで整理・マージするためのパラメータ構築を担う。
+- 現状の所見リストを補助プロンプトに埋め込み、oracle review 用の標準プロンプト、読み取り専用アクセス、効率系モデル、対応する structured output schema を組み合わせて返す。
 
 ## Read this when
-- `cmoc review oracle` の所見リスト整理、重複所見の統合、相互矛盾の解消提案に使う AI 呼び出し内容を確認または変更したいとき。
-- review oracle 系の prompt が、現状の所見リストをどの役割・目的・ファイルアクセス方針でエージェントへ渡すかを追いたいとき。
-- oracle file に対するレビュー結果から、target_ids を持つ編集操作を列挙させる処理の入力文脈やモデル設定を確認したいとき。
+- oracle file レビュー結果の所見同士について、重複や相互矛盾を解消する編集操作を AI に列挙させる呼び出し内容を確認したいとき。
+- `cmoc review oracle` の所見マージ段階で、どの役割・目的・入力所見がプロンプトに渡されるかを調べたいとき。
+- 所見マージ用の AgentCallParameter に設定されるモデル種別、reasoning effort、ファイルアクセスモード、schema 参照の責務範囲を確認したいとき。
 
 ## Do not read this when
-- 通常の oracle file レビューそのものの検出基準や、個別所見を生成する prompt を探しているとき。
-- Structured Output の具体的な JSON schema 定義だけを確認したいとき。
-- oracle file や realization file の概念定義、path keyword の意味、または一般的な prompt 共通部品の実装を調べたいとき。
+- oracle file 本文そのもののレビュー基準や、oracle file と realization file の概念定義を確認したいだけのとき。
+- 個別の所見を生成する処理、所見の structured output schema の内容、または実際の所見編集操作の適用処理を調べたいとき。
+- 汎用的な prompt 組み立て処理や AgentCallParameter のデータ構造そのものを確認したいとき。
 
 ## hash
-- 88af6857e331f529f8017682be3fb75d01a7cd10b480906e49beaca208ad5e4c
+- cef1ab068f7ea76c8d48adca81ec3e081263395fe892f09cd72ac73a9906b6d9
 
 # `validate_finding_advocate.json`
 

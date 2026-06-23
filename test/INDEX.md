@@ -1,41 +1,45 @@
 # `test_basic_and_cli.py`
 
 ## Summary
-- cmoc の realization test として、path model、設定既定値、エラー描画、CLI preflight、初期化、session/apply/review/indexing サブコマンド、Codex CLI 呼び出しラッパーの外部挙動と状態遷移を広く検証する統合寄りのテスト群。
-- 一時 Git リポジトリと fake Codex CLI、monkeypatch を使い、ブランチ・worktree・状態 JSON・レポート・ログ・標準出力・終了コード・設定同期・quota 再開制御など、利用者から見える副作用と制御ロジックを確認する。
-- 同階層の単体的な補助テストではなく、主要 CLI コマンドと runtime 結合部の回帰確認へ入る入口になる。
+- cmoc の基本モデル、CLI サブコマンド、セッション・apply・review・indexing の制御フロー、Codex CLI 呼び出しラッパーを横断的に検証する realization test。
+- 一時 Git リポジトリと fake Codex CLI、monkeypatch を使い、外部挙動、状態ファイル、ブランチ・worktree 操作、ログ、エラー出力、設定同期、quota retry などの統合的な期待値を定義する。
+- 個別ユニットというより、主要ユーザー操作とランタイム境界の回帰検知入口として位置づけられる。
 
 ## Read this when
-- CLI サブコマンドの終了コード、標準出力、エラーレポート、preflight、completion probe、init の副作用を変更・確認するとき。
-- session fork/join/abandon、apply fork/join/abandon、review oracle、indexing のブランチ・worktree・状態ファイル・レポート生成・cleanup の挙動を調べるとき。
-- Codex CLI 呼び出しの stdin 渡し、profile/config 生成、structured output schema、ログ出力、認証環境検証、quota polling/resume、並列呼び出し制御を変更・検証するとき。
-- INDEX.md 生成処理や indexing preflight が Codex 呼び出し前に走る条件、または特定目的で skip される条件を確認するとき。
-- 実装変更に対して、主要な外部挙動を既存テストがどう固定しているかを把握したいとき。
+- path token 変換、設定デフォルト、sandbox mode 変換、構造化エラー表示などの基本挙動を変更する。
+- CLI の init、tui、session fork/join/abandon、review oracle、apply fork/join/abandon、indexing の外部出力・副作用・状態遷移を変更する。
+- Git ブランチ、worktree、merge conflict、INDEX.md conflict、禁止差分、dirty worktree の扱いに関わる実装を変更する。
+- Codex CLI 呼び出しの stdin 渡し、profile 生成、CODEX_HOME/auth.json 検証、ログ出力、schema validation retry、quota polling/resume の挙動を変更する。
+- 既存の広い回帰テストにケース追加できるか判断したい。
 
 ## Do not read this when
-- oracle file の正本仕様そのものや、人間が管理する仕様断片の内容を確認したいとき。
-- 個別 helper の詳細実装だけを追えば足り、CLI 経由の外部挙動・Git 副作用・状態遷移を確認する必要がないとき。
-- テスト対象の production code の責務や実装構造を直接調べたいときは、対応する realization implementation を先に読む。
-- INDEX.md エントリー生成規則やルーティング文書の書式だけを確認したいとき。
+- 特定の小さな helper や純粋関数の詳細だけを確認したい場合で、より局所的なテストが存在する。
+- oracle file の正本仕様を確認したい場合。この対象は realization test であり、仕様本文の代替ではない。
+- UI 文面や内部実装の整理方針だけを調べたい場合で、CLI 外部挙動、状態遷移、Codex 呼び出し境界に影響しない。
+- INDEX.md エントリー生成・描画の形式だけを確認したい場合は、indexing 専用の実装や schema を先に読む方が直接的。
 
 ## hash
-- 496b2c093d75298dcf8b46d9cccf4b97717a8bc8a858977125865bf24d123b4a
+- b65fa21f05e21d3ead0a9c030dcb37367f2d8edbf239dec644528fbd2262816d
 
 # `test_prompt_parts.py`
 
 ## Summary
-- プロンプト部品ビルダーと TUI 実行パラメータ解決用ビルダーのテスト群。各標準文書ビルダーが期待する見出し・主要語句を含む構造化文書を返すこと、完全プロンプトが指定フラグに応じて標準文書を含める／省くこと、解決パラメータ用プロンプトと JSON schema が論理 enum や必須項目に一致することを検証する。
+- プロンプト部品と実行パラメータ生成が、期待する文書タイトル・必須文言・既定の含有/省略条件・Structured Output schema の論理構造を満たすことを検証する realization test。
+- レビュー基準、ルーティング規則、ファイルアクセス規則、実現基準、索引エントリー基準、review oracle 基準など、利用者へ渡すプロンプト断片のレンダリング内容を外部挙動として固定する入口になる。
+- TUI のパラメータ解決、indexing 用パラメータ、review oracle merge finding 用パラメータについて、モデル種別・reasoning effort・アクセスモード・schema 内容が意図どおり選ばれることも確認する。
 
 ## Read this when
-- プロンプト部品の出力内容、見出し、主要キーワードを変更した影響を確認したいとき。
-- 完全プロンプト生成で routing rule、review standard、realization standard、index entry standard などの標準文書を含める条件を確認したいとき。
-- TUI の実行パラメータ解決用ビルダーが埋め込むプロンプト、モデル種別、推論 effort、ファイルアクセスモード、構造化出力 schema の期待値を確認したいとき。
-- 標準文書ビルダーやパラメータ解決 schema の変更に合わせて、既存テストの期待語句や enum 整合性チェックを更新する必要があるとき。
+- プロンプト断片を生成する builder の戻り値、タイトル、Markdown レンダリング結果、または必須文言を変更する。
+- complete prompt が標準類を既定で含むか、フラグ指定時だけ含むかという合成条件を変更する。
+- ファイルアクセスモードごとの禁止事項文言や、READONLY / PURE_ORACLE_READ / REALIZATION_WRITE / ORACLE_WRITE / REPO_WRITE の扱いを変更する。
+- TUI パラメータ解決、indexing、review oracle merge finding の model class、reasoning effort、file access mode、または schema の required / enum / boolean flag 構造を変更する。
+- 索引エントリー生成基準で、何を書くべきか、何を出力に混ぜないか、対象内容を根拠にするかというルールを調整する。
 
 ## Do not read this when
-- プロンプト部品の実装そのものや、標準文書の本文生成ロジックを変更したいだけで、テスト上の期待挙動を確認する必要がないとき。
-- CLI コマンド実行、ファイルアクセス制御、パスモデルなど、プロンプト生成以外の挙動を調べたいとき。
-- INDEX.md ルーティング文書の生成規則そのものを読む必要があり、テストで検証される断片的な期待語句ではなく仕様本文を確認すべきとき。
+- CLI コマンド実行、Git 操作、worktree 操作、ファイルシステム操作など、プロンプト部品の文書レンダリングや実行パラメータ生成と無関係な挙動だけを調べる。
+- 個別の oracle 文書そのものの正本仕様を確認したいだけで、生成されたプロンプト断片やそのテスト期待値を確認する必要がない。
+- StructDoc や Markdown renderer の汎用的な実装詳細だけを変更し、このテストで固定している具体的なプロンプト文言やパラメータ選定には触れない。
+- アプリケーション本体の業務ロジックや UI 表示を調べており、プロンプト合成・標準文書 builder・パラメータ schema の期待値に関係しない。
 
 ## hash
-- df383e8e79df703b318954599bbf486e27db7ee9aa5fb8c32b6a8992d1c541ff
+- 61760f748d4b30088b5a4fe9fbd6bd65b8e7a2f926559d577ef17c7b7b2375c8

@@ -106,14 +106,18 @@
 # `tui.py`
 
 ## Summary
-- `cmoc tui` サブコマンドの実処理を担う実装。`.cmoc` の git ignore 保証、オリジナルプロンプト用 markdown ファイルの初期生成、エディタ起動、HTML コメント除去と strip、パラメータ解決 agent call、完全 prompt 生成、Codex CLI/TUI 起動を扱う。
+- 対話的な依頼入力を一時 Markdown として作成し、利用可能なエディタで編集させた後、入力内容を解決用 Codex 実行に渡して TUI 用の AgentCallParameter を組み立てる処理を扱う。
+- プロンプト本文からコメントを除去し、Markdown 見出しを StructDoc 階層へ変換し、解決済み設定に基づいて file access mode や各種標準フラグを complete prompt へ反映する入口になる。
 
 ## Read this when
-- `cmoc tui` の実行フロー、エディタ選択、プロンプト保存先、コメント除去、解決済みパラメータからの最終 `AgentCallParameter` 構築を確認または変更したいとき。
+- `cmoc tui` の実行フロー、特に元プロンプトファイルの初期化、エディタ起動、入力読み取り、解決済みパラメータから Codex TUI 呼び出しを作る処理を確認したいとき。
+- TUI 実行時に使うエディタ探索順、エディタ失敗時の CmocError、または Markdown コメント除去・見出し分解の挙動を変更したいとき。
+- 解決済みパラメータの nested `value` 形式から file access mode や oracle/realization/index-entry 標準フラグを取り出す既定値処理を確認したいとき。
 
 ## Do not read this when
-- TUI 用パラメータ解決 prompt や JSON schema の詳細だけを確認したいときは、`acp/builder/tui` 側を読む。
-- Codex CLI/TUI subprocess の profile 生成や CODEX_HOME 検証そのものを調べたいときは、runtime helper を読む。
+- サブコマンドの登録、CLI 引数解析、または `cmoc tui` を呼び出す外側のコマンド構成だけを確認したいとき。
+- Codex 実行そのもの、Codex TUI プロセスの起動実装、または AgentCallParameter の汎用定義を確認したいとき。
+- TUI 用パラメータ解決プロンプトの内容や complete prompt 全体の構築規則を確認したいだけで、このファイルがそれらを呼び出す箇所に関心がないとき。
 
 ## hash
-- manual
+- a92ec4d509d7f4e77762e013475cb1996e063376a6d00f39b4a530332d5aa72e
