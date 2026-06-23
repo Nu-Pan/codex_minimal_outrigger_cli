@@ -5,8 +5,6 @@
 - 主に見出しの深さを自動計算してくれることに価値がある
 """
 
-from __future__ import annotations
-
 import textwrap
 
 
