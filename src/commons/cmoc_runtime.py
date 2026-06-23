@@ -23,7 +23,6 @@ from config.cmoc_config import (
     CmocConfigReviewOracle,
 )
 
-
 MANAGED_BRANCH_PREFIXES = ("cmoc/session/", "cmoc/apply/", "cmoc/run/")
 _CURRENT_SUBCOMMAND_LOGGER: ContextVar["SubcommandLogger | None"] = ContextVar(
     "CURRENT_SUBCOMMAND_LOGGER",
@@ -57,6 +56,8 @@ class CodexExecResult:
     stdout_log_path: Path
     stderr_log_path: Path
     output_path: Path
+    codex_home: Path
+    profile_name: str
     profile_path: Path
     schema_path: Path | None
     elapsed_sec: float = 0.0
@@ -238,7 +239,7 @@ def codex_log_dir(root: Path) -> Path:
 
 
 def schema_store_dir(root: Path) -> Path:
-    return root / ".cmoc" / "state" / "scehma"
+    return root / ".cmoc" / "state" / "schema"
 
 
 def config_path(root: Path) -> Path:
@@ -251,7 +252,9 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
         "codex": {
             "model": {
                 key.value: value
-                for key, value in sorted(config.codex.model.items(), key=lambda item: item[0].value)
+                for key, value in sorted(
+                    config.codex.model.items(), key=lambda item: item[0].value
+                )
             },
             "reasoning_effort": {
                 key.value: value
@@ -345,7 +348,9 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
 
 def write_config(path: Path, config: CmocConfig) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(config_to_dict(config), ensure_ascii=False, indent=2) + "\n")
+    path.write_text(
+        json.dumps(config_to_dict(config), ensure_ascii=False, indent=2) + "\n"
+    )
 
 
 def load_config(root: Path) -> CmocConfig:
@@ -427,7 +432,9 @@ def write_state(path: Path, state: SessionState) -> None:
     path.write_text(json.dumps(state.to_dict(), ensure_ascii=False, indent=2) + "\n")
 
 
-def create_run_worktree(root: Path, branch: str, worktree: Path, start_point: str = "HEAD") -> Path:
+def create_run_worktree(
+    root: Path, branch: str, worktree: Path, start_point: str = "HEAD"
+) -> Path:
     worktree.parent.mkdir(parents=True, exist_ok=True)
     if worktree.exists():
         shutil.rmtree(worktree)
@@ -436,7 +443,9 @@ def create_run_worktree(root: Path, branch: str, worktree: Path, start_point: st
 
 
 def remove_worktree(root: Path, worktree: Path) -> CommandResult:
-    result = run_git(["worktree", "remove", "--force", str(worktree)], root, check=False)
+    result = run_git(
+        ["worktree", "remove", "--force", str(worktree)], root, check=False
+    )
     if result.returncode != 0 and worktree.exists():
         shutil.rmtree(worktree)
     run_git(["worktree", "prune"], root, check=False)
@@ -498,7 +507,9 @@ def render_error(exc: BaseException) -> str:
         detail = exc.detail
     else:
         summary = str(exc) or exc.__class__.__name__
-        actions = ["エラー内容を確認し、必要なら手動で状態を修復してから再実行してください。"]
+        actions = [
+            "エラー内容を確認し、必要なら手動で状態を修復してから再実行してください。"
+        ]
         detail = repr(exc)
     return "\n".join(
         [
@@ -559,9 +570,85 @@ def write_hashed_file(directory: Path, prefix: str, suffix: str, content: str) -
     return path
 
 
-def prepare_codex_profile(parameter: AgentCallParameter, config: CmocConfig | None = None) -> Path:
+def write_hashed_file_in_existing_dir(
+    directory: Path, prefix: str, suffix: str, content: str
+) -> Path:
+    digest = text_sha256(content)
+    path = directory / f"{prefix}{digest}{suffix}"
+    if not path.exists() or path.read_text() != content:
+        path.write_text(content)
+    return path
+
+
+def resolve_codex_home() -> Path:
+    value = os.environ.get("CODEX_HOME")
+    if value:
+        return Path(value).expanduser().resolve()
+    return (Path.home() / ".codex").resolve()
+
+
+def validate_codex_home(codex_home: Path) -> None:
+    if not codex_home.exists():
+        raise CmocError(
+            "Codex home が存在しません。",
+            [
+                "Codex CLI の通常利用環境を初期化してください。",
+                "既存の Codex home を指すように CODEX_HOME を設定してください。",
+            ],
+            f"CODEX_HOME: {codex_home}\nfailed condition: CODEX_HOME exists",
+        )
+    if not codex_home.is_dir():
+        raise CmocError(
+            "Codex home がディレクトリではありません。",
+            [
+                "CODEX_HOME が既存ディレクトリを指すように修正してください。",
+                "CODEX_HOME のファイル種別を確認してください。",
+            ],
+            f"CODEX_HOME: {codex_home}\nfailed condition: CODEX_HOME is directory",
+        )
+    auth_path = codex_home / "auth.json"
+    if not auth_path.is_file():
+        raise CmocError(
+            "Codex CLI 認証情報が存在しません。",
+            [
+                "Codex CLI の通常利用環境を初期化してください。",
+                "既存の Codex home を指すように CODEX_HOME を設定してください。",
+            ],
+            f"CODEX_HOME: {codex_home}\nfailed condition: {auth_path} is file",
+        )
+
+
+def codex_profile_name(profile_path: Path) -> str:
+    suffix = ".config.toml"
+    if profile_path.name.endswith(suffix):
+        return profile_path.name[: -len(suffix)]
+    return profile_path.stem
+
+
+def prepare_codex_profile(
+    parameter: AgentCallParameter,
+    config: CmocConfig | None = None,
+    codex_home: Path | None = None,
+) -> Path:
     profile = build_codex_profile(parameter, config or CmocConfig())
-    return write_hashed_file(cmoc_root() / ".codex", "cmoc_", ".config.toml", profile)
+    target_home = codex_home or resolve_codex_home()
+    try:
+        return write_hashed_file_in_existing_dir(
+            target_home, "cmoc_", ".config.toml", profile
+        )
+    except OSError as exc:
+        raise CmocError(
+            "Codex profile を生成できません。",
+            [
+                "CODEX_HOME の権限を確認してください。",
+                "Codex CLI の通常利用環境を初期化してから再実行してください。",
+            ],
+            f"CODEX_HOME: {target_home}\nerror: {exc}",
+        ) from exc
+
+
+def codex_subprocess_env(codex_home: Path) -> dict[str, str]:
+    return {**os.environ, "CODEX_HOME": str(codex_home)}
 
 
 def prepare_schema(root: Path, schema_source_path: Path | None) -> Path | None:
@@ -648,13 +735,17 @@ def run_codex_exec(
     stderr_path = log_dir / f"{ts}_stderr.log"
     output_path = log_dir / f"{ts}_output.json"
     call_path = log_dir / f"{ts}_call.json"
-    profile_path = prepare_codex_profile(parameter, config)
+    codex_home = resolve_codex_home()
+    validate_codex_home(codex_home)
+    codex_env = codex_subprocess_env(codex_home)
+    profile_path = prepare_codex_profile(parameter, config, codex_home)
+    profile_name = codex_profile_name(profile_path)
     schema_path = prepare_schema(root, parameter.structured_output_schema_path)
     argv = [
         "codex",
         "exec",
         "--profile",
-        str(profile_path),
+        profile_name,
         "--json",
         "--output-last-message",
         str(output_path),
@@ -666,6 +757,8 @@ def run_codex_exec(
         "purpose": purpose,
         "timestamp": ts,
         "argv": argv,
+        "codex_home": str(codex_home),
+        "profile_name": profile_name,
         "profile_path": str(profile_path),
         "schema_path": str(schema_path) if schema_path else None,
         "stdout_log_path": str(stdout_path),
@@ -680,7 +773,9 @@ def run_codex_exec(
     quota_wait_sec = 0.0
     logger = subcommand_logger or current_subcommand_logger()
 
-    def emit_codex_event(returncode: int, status: str, error: str | None = None) -> None:
+    def emit_codex_event(
+        returncode: int, status: str, error: str | None = None
+    ) -> None:
         elapsed_sec = time.perf_counter() - call_started_at
         print(
             "\n".join(
@@ -707,6 +802,8 @@ def run_codex_exec(
             "stdout_log_path": str(stdout_path),
             "stderr_log_path": str(stderr_path),
             "output_path": str(output_path),
+            "codex_home": str(codex_home),
+            "profile_name": profile_name,
             "profile_path": str(profile_path),
             "schema_path": str(schema_path) if schema_path else None,
         }
@@ -727,13 +824,17 @@ def run_codex_exec(
             input=parameter.prompt,
             text=True,
             capture_output=True,
+            env=codex_env,
         )
         last_result = result
         stdout_path.write_text(result.stdout)
         stderr_path.write_text(result.stderr)
         error_text = codex_error_text(result.stdout, result.stderr)
         if result.returncode != 0:
-            if is_capacity_error(error_text) and capacity_attempts < max_capacity_retries:
+            if (
+                is_capacity_error(error_text)
+                and capacity_attempts < max_capacity_retries
+            ):
                 capacity_attempts += 1
                 time.sleep(sleep_sec)
                 sleep_sec *= 2
@@ -765,11 +866,18 @@ def run_codex_exec(
                 )
                 try:
                     while True:
-                        if max_quota_polls is not None and quota_polls >= max_quota_polls:
-                            emit_codex_event(result.returncode, "quota_exhausted", error_text)
+                        if (
+                            max_quota_polls is not None
+                            and quota_polls >= max_quota_polls
+                        ):
+                            emit_codex_event(
+                                result.returncode, "quota_exhausted", error_text
+                            )
                             raise CmocError(
                                 "Codex CLI quota が枯渇しました。",
-                                ["quota 回復後に同じ cmoc コマンドを再実行してください。"],
+                                [
+                                    "quota 回復後に同じ cmoc コマンドを再実行してください。"
+                                ],
                                 error_text,
                             )
                         quota_polls += 1
@@ -783,12 +891,15 @@ def run_codex_exec(
                             input="quota availability probe",
                             text=True,
                             capture_output=True,
+                            env=codex_env,
                         )
                         print(
                             f"# {console_timestamp()} Codex CLI quota probe returned {poll.returncode}",
                             flush=True,
                         )
-                        if poll.returncode == 0 and not is_quota_error(codex_error_text(poll.stdout, poll.stderr)):
+                        if poll.returncode == 0 and not is_quota_error(
+                            codex_error_text(poll.stdout, poll.stderr)
+                        ):
                             break
                 finally:
                     with _QUOTA_CONDITION:
@@ -813,12 +924,16 @@ def run_codex_exec(
         output_json = read_output_json(output_path)
         if schema_path is not None:
             try:
-                validate(instance=output_json, schema=json.loads(schema_path.read_text()))
+                validate(
+                    instance=output_json, schema=json.loads(schema_path.read_text())
+                )
             except Exception as exc:
                 if semantic_attempts < max_semantic_retries:
                     semantic_attempts += 1
                     continue
-                emit_codex_event(result.returncode, "schema_validation_failed", str(exc))
+                emit_codex_event(
+                    result.returncode, "schema_validation_failed", str(exc)
+                )
                 raise CmocError(
                     "Codex CLI の Structured Output 検証に失敗しました。",
                     ["schema と output を確認してください。"],
@@ -835,6 +950,8 @@ def run_codex_exec(
             stdout_log_path=stdout_path,
             stderr_log_path=stderr_path,
             output_path=output_path,
+            codex_home=codex_home,
+            profile_name=profile_name,
             profile_path=profile_path,
             schema_path=schema_path,
             elapsed_sec=elapsed_sec,

@@ -13,15 +13,22 @@ import main as main_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from basic.path_model import RootToken, resolve_real_path, resolve_token_path
 from config.cmoc_config import CmocConfig
-from cmoc_runtime import CmocError, SubcommandLogger, ensure_cmoc_ignored, render_error, run_codex_exec
+from cmoc_runtime import (
+    CmocError,
+    SubcommandLogger,
+    ensure_cmoc_ignored,
+    render_error,
+    run_codex_exec,
+)
 from main import app
-
 
 runner = CliRunner()
 
 
 def run_git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(["git", *args], cwd=root, text=True, capture_output=True, check=True)
+    return subprocess.run(
+        ["git", *args], cwd=root, text=True, capture_output=True, check=True
+    )
 
 
 def make_repo(tmp_path: Path) -> Path:
@@ -36,6 +43,14 @@ def make_repo(tmp_path: Path) -> Path:
     run_git(root, "add", ".")
     run_git(root, "commit", "-m", "initial")
     return root
+
+
+def setup_codex_home(tmp_path: Path, monkeypatch) -> Path:
+    codex_home = tmp_path / "codex_home"
+    codex_home.mkdir()
+    (codex_home / "auth.json").write_text("{}\n")
+    monkeypatch.setenv("CODEX_HOME", str(codex_home))
+    return codex_home
 
 
 def apply_worktree_from_state(root: Path, state: dict) -> Path:
@@ -83,7 +98,9 @@ def test_cli_error_report_is_written_to_stdout(tmp_path: Path, monkeypatch) -> N
     assert result.stderr == ""
 
 
-def test_cli_requires_current_directory_to_be_work_root(tmp_path: Path, monkeypatch) -> None:
+def test_cli_requires_current_directory_to_be_work_root(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root / "oracle")
 
@@ -97,7 +114,9 @@ def test_cli_requires_current_directory_to_be_work_root(tmp_path: Path, monkeypa
     assert not (root / ".gitignore").exists()
 
 
-def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(tmp_path: Path) -> None:
+def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
+    tmp_path: Path,
+) -> None:
     root = make_repo(tmp_path)
     main_path = Path(main_module.__file__).resolve()
     result = subprocess.run(
@@ -129,7 +148,9 @@ def test_ensure_cmoc_ignored_updates_gitignore(tmp_path: Path) -> None:
     assert ignored.returncode == 0
 
 
-def test_init_untracks_existing_cmoc_files_and_commits_cleanup(tmp_path: Path, monkeypatch) -> None:
+def test_init_untracks_existing_cmoc_files_and_commits_cleanup(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
     tracked_cmoc_file = root / ".cmoc" / "tracked.txt"
     tracked_cmoc_file.parent.mkdir()
@@ -166,8 +187,16 @@ def test_init_writes_default_config_json(tmp_path: Path, monkeypatch) -> None:
     assert data["codex"]["model"]["mainstream"] == "GPT-5.5"
     assert data["codex"]["model"]["efficiency"] == "GPT-5.4-mini"
     assert data["codex"]["reasoning_effort"]["high"] == "high"
-    assert subprocess.run(["git", "check-ignore", "-q", ".cmoc/config.json"], cwd=root).returncode == 0
-    assert run_git(root, "status", "--short", "--", ".cmoc/config.json").stdout.strip() == ""
+    assert (
+        subprocess.run(
+            ["git", "check-ignore", "-q", ".cmoc/config.json"], cwd=root
+        ).returncode
+        == 0
+    )
+    assert (
+        run_git(root, "status", "--short", "--", ".cmoc/config.json").stdout.strip()
+        == ""
+    )
 
 
 def test_init_syncs_config_defaults_without_overwriting_human_values(
@@ -200,7 +229,9 @@ def test_init_syncs_config_defaults_without_overwriting_human_values(
     assert data["review_oracle"]["num_validate_findings_loop"] == 3
 
 
-def test_session_fork_creates_session_branch_and_state(tmp_path: Path, monkeypatch) -> None:
+def test_session_fork_creates_session_branch_and_state(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     init_result = runner.invoke(app, ["init"], catch_exceptions=False)
@@ -218,11 +249,15 @@ def test_session_fork_creates_session_branch_and_state(tmp_path: Path, monkeypat
     assert state["apply"]["state"] == "ready"
 
 
-def test_session_abandon_switches_home_and_marks_state(tmp_path: Path, monkeypatch) -> None:
+def test_session_abandon_switches_home_and_marks_state(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    assert runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
     state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
@@ -231,7 +266,12 @@ def test_session_abandon_switches_home_and_marks_state(tmp_path: Path, monkeypat
 
     assert result.exit_code == 0
     assert run_git(root, "branch", "--show-current").stdout.strip() == "master"
-    assert subprocess.run(["git", "rev-parse", "--verify", session_branch], cwd=root).returncode != 0
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", session_branch], cwd=root
+        ).returncode
+        != 0
+    )
     state = json.loads(state_path.read_text())
     assert state["session"]["state"] == "abandoned"
     assert state["session"]["joined_at"] is None
@@ -240,11 +280,15 @@ def test_session_abandon_switches_home_and_marks_state(tmp_path: Path, monkeypat
     assert "- joined_at: `None`" in result.output
 
 
-def test_session_abandon_requires_existing_home_branch(tmp_path: Path, monkeypatch) -> None:
+def test_session_abandon_requires_existing_home_branch(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    assert runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     run_git(root, "branch", "-D", "master")
 
@@ -254,7 +298,12 @@ def test_session_abandon_requires_existing_home_branch(tmp_path: Path, monkeypat
     assert run_git(root, "branch", "--show-current").stdout.strip() == session_branch
     assert "session home branch が存在しません。" in result.output
     assert result.stderr == ""
-    assert subprocess.run(["git", "rev-parse", "--verify", session_branch], cwd=root).returncode == 0
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", session_branch], cwd=root
+        ).returncode
+        == 0
+    )
 
 
 def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
@@ -277,7 +326,10 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
             return FakeCodexResult({"findings": []})
         if schema_name == "merge_finding.json":
             return FakeCodexResult({"operations": []})
-        if schema_name in {"validate_finding_challenger.json", "validate_finding_advocate.json"}:
+        if schema_name in {
+            "validate_finding_challenger.json",
+            "validate_finding_advocate.json",
+        }:
             return FakeCodexResult({"reasons": []})
         if schema_name == "judge_finding.json":
             return FakeCodexResult({"verdict": "reject", "reason": "no finding"})
@@ -285,10 +337,14 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
 
     monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
 
-    result = runner.invoke(app, ["review", "oracle", "--scope", "full"], catch_exceptions=False)
+    result = runner.invoke(
+        app, ["review", "oracle", "--scope", "full"], catch_exceptions=False
+    )
 
     assert result.exit_code == 0
-    report_path = Path([line for line in result.output.splitlines() if line.startswith("/")][-1])
+    report_path = Path(
+        [line for line in result.output.splitlines() if line.startswith("/")][-1]
+    )
     assert report_path.is_file()
     rendered = report_path.read_text()
     assert "# cmoc review oracle report" in rendered
@@ -302,7 +358,9 @@ def test_review_oracle_accepts_short_scope_option(tmp_path: Path, monkeypatch) -
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    assert runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
 
     class FakeCodexResult:
         def __init__(self, output_json):
@@ -314,7 +372,10 @@ def test_review_oracle_accepts_short_scope_option(tmp_path: Path, monkeypatch) -
             return FakeCodexResult({"findings": []})
         if schema_name == "merge_finding.json":
             return FakeCodexResult({"operations": []})
-        if schema_name in {"validate_finding_challenger.json", "validate_finding_advocate.json"}:
+        if schema_name in {
+            "validate_finding_challenger.json",
+            "validate_finding_advocate.json",
+        }:
             return FakeCodexResult({"reasons": []})
         if schema_name == "judge_finding.json":
             return FakeCodexResult({"verdict": "reject", "reason": "no finding"})
@@ -322,10 +383,14 @@ def test_review_oracle_accepts_short_scope_option(tmp_path: Path, monkeypatch) -
 
     monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
 
-    result = runner.invoke(app, ["review", "oracle", "-s", "full"], catch_exceptions=False)
+    result = runner.invoke(
+        app, ["review", "oracle", "-s", "full"], catch_exceptions=False
+    )
 
     assert result.exit_code == 0
-    report_path = Path([line for line in result.output.splitlines() if line.startswith("/")][-1])
+    report_path = Path(
+        [line for line in result.output.splitlines() if line.startswith("/")][-1]
+    )
     rendered = report_path.read_text()
     assert "scope: full" in rendered
 
@@ -337,12 +402,16 @@ def test_review_oracle_session_scope_reports_total_and_no_targets(
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    assert runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
     calls: list[str] = []
 
     def fail_run_codex_exec(parameter, **kwargs):
         calls.append(kwargs["purpose"])
-        raise AssertionError("no session-scope oracle targets should skip review Codex calls")
+        raise AssertionError(
+            "no session-scope oracle targets should skip review Codex calls"
+        )
 
     monkeypatch.setattr(main_module, "run_codex_exec", fail_run_codex_exec)
 
@@ -350,7 +419,9 @@ def test_review_oracle_session_scope_reports_total_and_no_targets(
 
     assert result.exit_code == 0
     assert calls == []
-    report_path = Path([line for line in result.output.splitlines() if line.startswith("/")][-1])
+    report_path = Path(
+        [line for line in result.output.splitlines() if line.startswith("/")][-1]
+    )
     rendered = report_path.read_text()
     assert "scope: session" in rendered
     assert "oracle_count_total: 1" in rendered
@@ -363,7 +434,9 @@ def test_review_oracle_merges_review_index_changes(tmp_path: Path, monkeypatch) 
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    assert runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
 
     class FakeCodexResult:
         def __init__(self, output_json):
@@ -376,7 +449,10 @@ def test_review_oracle_merges_review_index_changes(tmp_path: Path, monkeypatch) 
             return FakeCodexResult({"findings": []})
         if schema_name == "merge_finding.json":
             return FakeCodexResult({"operations": []})
-        if schema_name in {"validate_finding_challenger.json", "validate_finding_advocate.json"}:
+        if schema_name in {
+            "validate_finding_challenger.json",
+            "validate_finding_advocate.json",
+        }:
             return FakeCodexResult({"reasons": []})
         if schema_name == "judge_finding.json":
             return FakeCodexResult({"verdict": "reject", "reason": "no finding"})
@@ -384,21 +460,31 @@ def test_review_oracle_merges_review_index_changes(tmp_path: Path, monkeypatch) 
 
     monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
 
-    result = runner.invoke(app, ["review", "oracle", "--scope", "full"], catch_exceptions=False)
+    result = runner.invoke(
+        app, ["review", "oracle", "--scope", "full"], catch_exceptions=False
+    )
 
     assert result.exit_code == 0
     assert (root / "INDEX.md").read_text() == "# generated review index\n"
-    rendered = Path([line for line in result.output.splitlines() if line.startswith("/")][-1]).read_text()
+    rendered = Path(
+        [line for line in result.output.splitlines() if line.startswith("/")][-1]
+    ).read_text()
     assert "review_join_commit: null" not in rendered
     review_root = root / ".cmoc" / "worktrees" / "review"
-    assert not any(path.name == ".git" for path in review_root.rglob(".git")) if review_root.exists() else True
+    assert (
+        not any(path.name == ".git" for path in review_root.rglob(".git"))
+        if review_root.exists()
+        else True
+    )
 
 
 def test_file_access_mode_values_are_json_ready() -> None:
     assert FileAccessMode.READONLY.value == "readonly"
 
 
-def test_apply_fork_runs_codex_loop_and_updates_state(tmp_path: Path, monkeypatch) -> None:
+def test_apply_fork_runs_codex_loop_and_updates_state(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     init_result = runner.invoke(app, ["init"], catch_exceptions=False)
@@ -419,7 +505,9 @@ def test_apply_fork_runs_codex_loop_and_updates_state(tmp_path: Path, monkeypatc
 
     monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
 
-    result = runner.invoke(app, ["apply", "fork", "--scope", "full"], catch_exceptions=False)
+    result = runner.invoke(
+        app, ["apply", "fork", "--scope", "full"], catch_exceptions=False
+    )
 
     assert result.exit_code == 0
     branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -435,14 +523,25 @@ def test_apply_fork_runs_codex_loop_and_updates_state(tmp_path: Path, monkeypatc
     assert "apply fork refine findings" in calls
 
 
-def test_apply_fork_writes_report_with_change_summary(tmp_path: Path, monkeypatch) -> None:
+def test_apply_fork_writes_report_with_change_summary(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    assert runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
     finding = {
         "title": "Update README",
-        "evidences": [{"path": str(root / "README.md"), "line_start": 1, "line_end": 1, "summary": "readme"}],
+        "evidences": [
+            {
+                "path": str(root / "README.md"),
+                "line_start": 1,
+                "line_end": 1,
+                "summary": "readme",
+            }
+        ],
         "oracle_requirement": "test requirement",
         "observed_implementation": "old",
         "reason": "needs update",
@@ -457,7 +556,11 @@ def test_apply_fork_writes_report_with_change_summary(tmp_path: Path, monkeypatc
 
     def fake_run_codex_exec(parameter, **kwargs):
         calls.append(kwargs["purpose"])
-        schema = parameter.structured_output_schema_path.name if parameter.structured_output_schema_path else None
+        schema = (
+            parameter.structured_output_schema_path.name
+            if parameter.structured_output_schema_path
+            else None
+        )
         if kwargs["purpose"].startswith("apply fork enumerate findings"):
             return FakeCodexResult({"findings": [finding]})
         if kwargs["purpose"] == "apply fork refine findings":
@@ -483,10 +586,14 @@ def test_apply_fork_writes_report_with_change_summary(tmp_path: Path, monkeypatc
 
     monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
 
-    result = runner.invoke(app, ["apply", "fork", "--scope", "full"], catch_exceptions=False)
+    result = runner.invoke(
+        app, ["apply", "fork", "--scope", "full"], catch_exceptions=False
+    )
 
     assert result.exit_code == 2
-    report_lines = [line for line in result.output.splitlines() if line.startswith("- report:")]
+    report_lines = [
+        line for line in result.output.splitlines() if line.startswith("- report:")
+    ]
     assert report_lines
     report_path = Path(report_lines[-1].split("`")[1])
     assert report_path.is_file()
@@ -502,17 +609,31 @@ def test_apply_fork_writes_report_with_change_summary(tmp_path: Path, monkeypatc
     session_id = branch.removeprefix("cmoc/session/")
     state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
     apply_branch = state["apply"]["apply_branch"]
-    assert run_git(root, "log", "-1", "--pretty=%s", apply_branch).stdout.strip() == "Update README from apply finding"
+    assert (
+        run_git(root, "log", "-1", "--pretty=%s", apply_branch).stdout.strip()
+        == "Update README from apply finding"
+    )
 
 
-def test_apply_fork_rechecks_dirty_files_until_converged(tmp_path: Path, monkeypatch) -> None:
+def test_apply_fork_rechecks_dirty_files_until_converged(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    assert runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
     finding = {
         "title": "Update README",
-        "evidences": [{"path": str(root / "README.md"), "line_start": 1, "line_end": 1, "summary": "readme"}],
+        "evidences": [
+            {
+                "path": str(root / "README.md"),
+                "line_start": 1,
+                "line_end": 1,
+                "summary": "readme",
+            }
+        ],
         "oracle_requirement": "test requirement",
         "observed_implementation": "old",
         "reason": "needs update",
@@ -530,9 +651,13 @@ def test_apply_fork_rechecks_dirty_files_until_converged(tmp_path: Path, monkeyp
         purpose = kwargs["purpose"]
         if purpose.startswith("apply fork enumerate findings"):
             enumerate_calls += 1
-            return FakeCodexResult({"findings": [finding] if enumerate_calls == 1 else []})
+            return FakeCodexResult(
+                {"findings": [finding] if enumerate_calls == 1 else []}
+            )
         if purpose == "apply fork refine findings":
-            return FakeCodexResult({"findings": [finding] if enumerate_calls == 1 else []})
+            return FakeCodexResult(
+                {"findings": [finding] if enumerate_calls == 1 else []}
+            )
         if purpose == "apply fork finding application":
             (Path.cwd() / "README.md").write_text("# updated\n")
             return FakeCodexResult(None)
@@ -544,11 +669,15 @@ def test_apply_fork_rechecks_dirty_files_until_converged(tmp_path: Path, monkeyp
 
     monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
 
-    result = runner.invoke(app, ["apply", "fork", "--scope", "full"], catch_exceptions=False)
+    result = runner.invoke(
+        app, ["apply", "fork", "--scope", "full"], catch_exceptions=False
+    )
 
     assert result.exit_code == 0
     assert enumerate_calls >= 2
-    report_line = [line for line in result.output.splitlines() if line.startswith("- report:")][-1]
+    report_line = [
+        line for line in result.output.splitlines() if line.startswith("- report:")
+    ][-1]
     report_path = Path(report_line.split("`")[1])
     assert "result: converged" in report_path.read_text()
 
@@ -561,10 +690,19 @@ def test_apply_fork_rejects_forbidden_agents_diff(tmp_path: Path, monkeypatch) -
     run_git(root, "commit", "-m", "add agents")
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    assert runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
     finding = {
         "title": "Bad agents edit",
-        "evidences": [{"path": str(root / "README.md"), "line_start": 1, "line_end": 1, "summary": "readme"}],
+        "evidences": [
+            {
+                "path": str(root / "README.md"),
+                "line_start": 1,
+                "line_end": 1,
+                "summary": "readme",
+            }
+        ],
         "oracle_requirement": "test requirement",
         "observed_implementation": "old",
         "reason": "needs update",
@@ -599,16 +737,22 @@ def test_apply_fork_rejects_forbidden_agents_diff(tmp_path: Path, monkeypatch) -
     assert state["apply"]["state"] == "error"
 
 
-def test_apply_abandon_removes_apply_worktree_and_branch(tmp_path: Path, monkeypatch) -> None:
+def test_apply_abandon_removes_apply_worktree_and_branch(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    assert runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
 
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult())
+    monkeypatch.setattr(
+        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
@@ -627,23 +771,34 @@ def test_apply_abandon_removes_apply_worktree_and_branch(tmp_path: Path, monkeyp
     assert "- after: `ready`" in result.output
     assert "- warnings:" in result.output
     assert not apply_worktree.exists()
-    assert subprocess.run(["git", "rev-parse", "--verify", apply_branch], cwd=root).returncode != 0
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", apply_branch], cwd=root
+        ).returncode
+        != 0
+    )
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
     assert state["apply"]["apply_branch"] is None
     assert "apply_worktree" not in state["apply"]
 
 
-def test_apply_abandon_reports_missing_cleanup_targets_as_warnings(tmp_path: Path, monkeypatch) -> None:
+def test_apply_abandon_reports_missing_cleanup_targets_as_warnings(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    assert runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
 
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult())
+    monkeypatch.setattr(
+        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
@@ -669,12 +824,16 @@ def test_apply_abandon_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) 
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    assert runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
 
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult())
+    monkeypatch.setattr(
+        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
@@ -689,21 +848,32 @@ def test_apply_abandon_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) 
     assert result.exit_code == 0
     assert Path.cwd() == root
     assert not apply_worktree.exists()
-    assert subprocess.run(["git", "rev-parse", "--verify", apply_branch], cwd=root).returncode != 0
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", apply_branch], cwd=root
+        ).returncode
+        != 0
+    )
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
 
 
-def test_apply_join_removes_apply_worktree_and_resets_state(tmp_path: Path, monkeypatch) -> None:
+def test_apply_join_removes_apply_worktree_and_resets_state(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    assert runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
 
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult())
+    monkeypatch.setattr(
+        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
@@ -716,7 +886,12 @@ def test_apply_join_removes_apply_worktree_and_resets_state(tmp_path: Path, monk
 
     assert result.exit_code == 0
     assert not apply_worktree.exists()
-    assert subprocess.run(["git", "rev-parse", "--verify", apply_branch], cwd=root).returncode != 0
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", apply_branch], cwd=root
+        ).returncode
+        != 0
+    )
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
     assert state["session"]["last_joined_apply_oracle_snapshot_commit"] is not None
@@ -726,12 +901,16 @@ def test_apply_join_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> 
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    assert runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
 
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult())
+    monkeypatch.setattr(
+        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
@@ -746,7 +925,12 @@ def test_apply_join_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> 
     assert result.exit_code == 0
     assert Path.cwd() == root
     assert not apply_worktree.exists()
-    assert subprocess.run(["git", "rev-parse", "--verify", apply_branch], cwd=root).returncode != 0
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", apply_branch], cwd=root
+        ).returncode
+        != 0
+    )
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
     assert state["session"]["last_joined_apply_oracle_snapshot_commit"] is not None
@@ -754,16 +938,22 @@ def test_apply_join_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> 
     assert "  - none" in result.output
 
 
-def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(tmp_path: Path, monkeypatch) -> None:
+def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    assert runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
 
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult())
+    monkeypatch.setattr(
+        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
@@ -778,23 +968,34 @@ def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(tmp_path: 
 
     assert result.exit_code != 0
     assert apply_worktree.exists()
-    assert subprocess.run(["git", "rev-parse", "--verify", apply_branch], cwd=root).returncode == 0
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", apply_branch], cwd=root
+        ).returncode
+        == 0
+    )
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "completed"
     assert "git 未コミット差分が存在します。" in result.output
     assert result.stderr == ""
 
 
-def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(tmp_path: Path, monkeypatch) -> None:
+def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    assert runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
 
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult())
+    monkeypatch.setattr(
+        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
@@ -809,7 +1010,9 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(tmp_path: Pa
 
     assert normal.exit_code == 1
     assert "想定外差分" in normal.output
-    forced = runner.invoke(app, ["apply", "join", "--force-resolve"], catch_exceptions=False)
+    forced = runner.invoke(
+        app, ["apply", "join", "--force-resolve"], catch_exceptions=False
+    )
     assert forced.exit_code == 0
     assert (root / "oracle" / "spec.md").read_text() == "# spec\n"
 
@@ -821,14 +1024,23 @@ def test_apply_join_treats_gitignore_change_as_unexpected_apply_diff(
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    assert runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
 
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult())
+    monkeypatch.setattr(
+        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
-    state_path = root / ".cmoc" / "sessions" / f"{run_git(root, 'branch', '--show-current').stdout.strip().removeprefix('cmoc/session/')}.json"
+    state_path = (
+        root
+        / ".cmoc"
+        / "sessions"
+        / f"{run_git(root, 'branch', '--show-current').stdout.strip().removeprefix('cmoc/session/')}.json"
+    )
     state = json.loads(state_path.read_text())
     apply_worktree = apply_worktree_from_state(root, state)
     original_gitignore = (apply_worktree / ".gitignore").read_text()
@@ -841,7 +1053,9 @@ def test_apply_join_treats_gitignore_change_as_unexpected_apply_diff(
     assert normal.exit_code == 1
     assert "想定外差分" in normal.output
     assert ".gitignore" in normal.output
-    forced = runner.invoke(app, ["apply", "join", "--force-resolve"], catch_exceptions=False)
+    forced = runner.invoke(
+        app, ["apply", "join", "--force-resolve"], catch_exceptions=False
+    )
     assert forced.exit_code == 0
     assert (root / ".gitignore").read_text() == original_gitignore
 
@@ -859,14 +1073,24 @@ def test_resolve_index_conflicts_deletes_index_and_commits(tmp_path: Path) -> No
     (root / "INDEX.md").write_text("master\n")
     run_git(root, "add", "INDEX.md")
     run_git(root, "commit", "-m", "master index")
-    merge = subprocess.run(["git", "merge", "--no-ff", "side"], cwd=root, text=True, capture_output=True)
+    merge = subprocess.run(
+        ["git", "merge", "--no-ff", "side"], cwd=root, text=True, capture_output=True
+    )
     assert merge.returncode != 0
 
     resolved = main_module.resolve_index_conflicts(root)
 
     assert resolved is True
     assert not (root / "INDEX.md").exists()
-    assert subprocess.run(["git", "diff", "--name-only", "--diff-filter=U"], cwd=root, text=True, capture_output=True).stdout.strip() == ""
+    assert (
+        subprocess.run(
+            ["git", "diff", "--name-only", "--diff-filter=U"],
+            cwd=root,
+            text=True,
+            capture_output=True,
+        ).stdout.strip()
+        == ""
+    )
     assert "Merge branch 'side'" in run_git(root, "log", "-1", "--pretty=%B").stdout
 
 
@@ -874,7 +1098,9 @@ def test_session_join_resolves_conflict_with_codex(tmp_path: Path, monkeypatch) 
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    assert runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     (root / "README.md").write_text("session change\n")
     run_git(root, "add", "README.md")
@@ -904,11 +1130,15 @@ def test_session_join_resolves_conflict_with_codex(tmp_path: Path, monkeypatch) 
     assert calls == ["session join conflict resolution"]
 
 
-def test_session_join_warns_when_session_branch_cannot_be_deleted(tmp_path: Path, monkeypatch) -> None:
+def test_session_join_warns_when_session_branch_cannot_be_deleted(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    assert runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     original_run_git = main_module.run_git
 
@@ -923,12 +1153,19 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(tmp_path: Path
 
     assert result.exit_code == 0
     assert run_git(root, "branch", "--show-current").stdout.strip() == "master"
-    assert subprocess.run(["git", "rev-parse", "--verify", session_branch], cwd=root).returncode == 0
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", session_branch], cwd=root
+        ).returncode
+        == 0
+    )
     assert "- deleted_session_branch: `False`" in result.output
     assert f"session branch was not deleted: {session_branch}" in result.output
 
 
-def test_indexing_uses_codex_index_entry_builder_and_commits(tmp_path: Path, monkeypatch) -> None:
+def test_indexing_uses_codex_index_entry_builder_and_commits(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -962,7 +1199,9 @@ def test_indexing_uses_codex_index_entry_builder_and_commits(tmp_path: Path, mon
     assert "cmoc indexing" in run_git(root, "log", "--oneline", "-1").stdout
 
 
-def test_indexing_skips_codex_when_existing_hashes_are_fresh(tmp_path: Path, monkeypatch) -> None:
+def test_indexing_skips_codex_when_existing_hashes_are_fresh(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -974,7 +1213,9 @@ def test_indexing_skips_codex_when_existing_hashes_are_fresh(tmp_path: Path, mon
             "do_not_read_this_when": ["generated skip condition"],
         }
 
-    monkeypatch.setattr(main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult())
+    monkeypatch.setattr(
+        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    )
     first = runner.invoke(app, ["indexing"], catch_exceptions=False)
     assert first.exit_code == 0
     root_index_before = (root / "INDEX.md").read_text()
@@ -996,7 +1237,9 @@ def test_indexing_skips_codex_when_existing_hashes_are_fresh(tmp_path: Path, mon
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
-def test_update_indexes_generates_sibling_entries_in_parallel(tmp_path: Path, monkeypatch) -> None:
+def test_update_indexes_generates_sibling_entries_in_parallel(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
     docs = root / "docs"
     docs.mkdir()
@@ -1007,7 +1250,9 @@ def test_update_indexes_generates_sibling_entries_in_parallel(tmp_path: Path, mo
     max_active = 0
     lock = threading.Lock()
 
-    def fake_build_index_entry(update_root: Path, path: Path, digest: str | None = None) -> str:
+    def fake_build_index_entry(
+        update_root: Path, path: Path, digest: str | None = None
+    ) -> str:
         nonlocal active, max_active
         if path.parent == docs:
             with lock:
@@ -1035,7 +1280,9 @@ def test_update_indexes_generates_sibling_entries_in_parallel(tmp_path: Path, mo
     assert max_active >= 2
 
 
-def test_command_codex_call_runs_indexing_preflight(tmp_path: Path, monkeypatch) -> None:
+def test_command_codex_call_runs_indexing_preflight(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
     index_path = root / "INDEX.md"
     parameter = AgentCallParameter(
@@ -1062,9 +1309,13 @@ def test_command_codex_call_runs_indexing_preflight(tmp_path: Path, monkeypatch)
         return FakeCodexResult()
 
     monkeypatch.setattr(main_module, "update_indexes", fake_update_indexes)
-    monkeypatch.setattr(main_module, "runtime_run_codex_exec", fake_runtime_run_codex_exec)
+    monkeypatch.setattr(
+        main_module, "runtime_run_codex_exec", fake_runtime_run_codex_exec
+    )
 
-    result = main_module.run_codex_exec(parameter, root=root, purpose="apply fork refine findings")
+    result = main_module.run_codex_exec(
+        parameter, root=root, purpose="apply fork refine findings"
+    )
 
     assert isinstance(result, FakeCodexResult)
     assert events == ["indexing", "codex"]
@@ -1097,10 +1348,16 @@ def test_command_codex_call_skips_indexing_for_index_entry_and_conflict_resoluti
         return FakeCodexResult()
 
     monkeypatch.setattr(main_module, "update_indexes", fail_update_indexes)
-    monkeypatch.setattr(main_module, "runtime_run_codex_exec", fake_runtime_run_codex_exec)
+    monkeypatch.setattr(
+        main_module, "runtime_run_codex_exec", fake_runtime_run_codex_exec
+    )
 
-    main_module.run_codex_exec(parameter, root=root, purpose="indexing index entry for README.md")
-    main_module.run_codex_exec(parameter, root=root, purpose="session join conflict resolution")
+    main_module.run_codex_exec(
+        parameter, root=root, purpose="indexing index entry for README.md"
+    )
+    main_module.run_codex_exec(
+        parameter, root=root, purpose="session join conflict resolution"
+    )
 
     assert calls == [
         "indexing index entry for README.md",
@@ -1108,12 +1365,11 @@ def test_command_codex_call_skips_indexing_for_index_entry_and_conflict_resoluti
     ]
 
 
-def test_run_codex_exec_uses_stdin_and_writes_logs(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_run_codex_exec_uses_stdin_and_writes_logs(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
     root = make_repo(tmp_path)
-    fake_cmoc_root = tmp_path / "cmoc"
-    (fake_cmoc_root / "bin").mkdir(parents=True)
-    (fake_cmoc_root / "bin" / "cmoc").write_text("#!/bin/sh\n")
-    monkeypatch.setattr(cmoc_runtime, "cmoc_root", lambda: fake_cmoc_root)
+    codex_home = setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -1122,13 +1378,13 @@ def test_run_codex_exec_uses_stdin_and_writes_logs(tmp_path: Path, monkeypatch, 
         "\n".join(
             [
                 "#!/usr/bin/env python3",
-                "import json, pathlib, sys",
+                "import json, os, pathlib, sys",
                 f"record = pathlib.Path({str(recorder)!r})",
                 "stdin = sys.stdin.read()",
                 "args = sys.argv[1:]",
                 "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
                 "output.write_text(json.dumps({'ok': True, 'stdin': stdin}))",
-                "record.write_text(json.dumps({'args': args, 'stdin': stdin}))",
+                "record.write_text(json.dumps({'args': args, 'stdin': stdin, 'codex_home': os.environ.get('CODEX_HOME')}))",
                 "print(json.dumps({'type': 'turn.completed'}))",
             ]
         )
@@ -1165,8 +1421,11 @@ def test_run_codex_exec_uses_stdin_and_writes_logs(tmp_path: Path, monkeypatch, 
 
     recorded = json.loads(recorder.read_text())
     assert recorded["stdin"] == "SECRET PROMPT BODY"
+    assert recorded["codex_home"] == str(codex_home)
     assert "SECRET PROMPT BODY" not in " ".join(recorded["args"])
     assert recorded["args"][:2] == ["exec", "--profile"]
+    assert recorded["args"][2].startswith("cmoc_")
+    assert "/" not in recorded["args"][2]
     assert "--json" in recorded["args"]
     assert "--output-schema" in recorded["args"]
     assert recorded["args"][-1] == "-"
@@ -1174,11 +1433,16 @@ def test_run_codex_exec_uses_stdin_and_writes_logs(tmp_path: Path, monkeypatch, 
     assert result.call_log_path.is_file()
     assert result.stdout_log_path.read_text().strip() == '{"type": "turn.completed"}'
     assert result.stderr_log_path.read_text() == ""
+    assert result.codex_home == codex_home
+    assert result.profile_name == recorded["args"][2]
     assert result.profile_path.name.startswith("cmoc_")
     assert result.profile_path.suffixes == [".config", ".toml"]
-    assert result.profile_path.parent == fake_cmoc_root / ".codex"
+    assert result.profile_path.parent == codex_home
     assert result.schema_path is not None
-    assert result.schema_path.parent == root / ".cmoc" / "state" / "scehma"
+    assert result.schema_path.parent == root / ".cmoc" / "state" / "schema"
+    call_log = json.loads(result.call_log_path.read_text())
+    assert call_log["codex_home"] == str(codex_home)
+    assert call_log["profile_name"] == result.profile_name
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
     assert len(codex_events) == 1
@@ -1187,6 +1451,8 @@ def test_run_codex_exec_uses_stdin_and_writes_logs(tmp_path: Path, monkeypatch, 
     assert codex_events[0]["returncode"] == 0
     assert codex_events[0]["call_log_path"] == str(result.call_log_path)
     assert codex_events[0]["stdout_log_path"] == str(result.stdout_log_path)
+    assert codex_events[0]["codex_home"] == str(codex_home)
+    assert codex_events[0]["profile_name"] == result.profile_name
     assert codex_events[0]["elapsed_sec"] >= 0
     console = capsys.readouterr().out
     assert "# " in console
@@ -1198,10 +1464,7 @@ def test_run_codex_exec_uses_stdin_and_writes_logs(tmp_path: Path, monkeypatch, 
 
 def test_run_codex_exec_loads_repo_config_json(tmp_path: Path, monkeypatch) -> None:
     root = make_repo(tmp_path)
-    fake_cmoc_root = tmp_path / "cmoc"
-    (fake_cmoc_root / "bin").mkdir(parents=True)
-    (fake_cmoc_root / "bin" / "cmoc").write_text("#!/bin/sh\n")
-    monkeypatch.setattr(cmoc_runtime, "cmoc_root", lambda: fake_cmoc_root)
+    setup_codex_home(tmp_path, monkeypatch)
     config = cmoc_runtime.config_to_dict(cmoc_runtime.sync_config(root))
     config["codex"]["model"]["efficiency"] = "CUSTOM-EFFICIENCY"
     config["codex"]["reasoning_effort"]["low"] = "minimal"
@@ -1239,12 +1502,137 @@ def test_run_codex_exec_loads_repo_config_json(tmp_path: Path, monkeypatch) -> N
     assert 'reasoning_effort = "minimal"' in profile
 
 
+def test_run_codex_exec_uses_default_codex_home_when_env_unset(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    home = tmp_path / "home"
+    codex_home = home / ".codex"
+    codex_home.mkdir(parents=True)
+    (codex_home / "auth.json").write_text("{}\n")
+    monkeypatch.delenv("CODEX_HOME", raising=False)
+    monkeypatch.setattr(Path, "home", lambda: home)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    recorder = tmp_path / "record.json"
+    fake_codex = bin_dir / "codex"
+    fake_codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env python3",
+                "import json, os, pathlib",
+                f"record = pathlib.Path({str(recorder)!r})",
+                "args = __import__('sys').argv[1:]",
+                "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+                "output.write_text('done\\n')",
+                "record.write_text(json.dumps({'codex_home': os.environ.get('CODEX_HOME'), 'args': args}))",
+                "print(json.dumps({'type': 'turn.completed'}))",
+            ]
+        )
+        + "\n"
+    )
+    fake_codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+    )
+
+    result = run_codex_exec(parameter, root=root, capacity_initial_sleep_sec=0)
+
+    recorded = json.loads(recorder.read_text())
+    assert recorded["codex_home"] == str(codex_home)
+    assert recorded["args"][2] == result.profile_name
+    assert result.codex_home == codex_home
+    assert result.profile_path.parent == codex_home
+
+
+def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    missing_home = tmp_path / "missing_codex_home"
+    monkeypatch.setenv("CODEX_HOME", str(missing_home))
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+    )
+
+    try:
+        run_codex_exec(parameter, root=root, capacity_initial_sleep_sec=0)
+    except CmocError as exc:
+        error = exc
+    else:
+        raise AssertionError("run_codex_exec should fail before invoking Codex CLI")
+
+    assert error.summary == "Codex home が存在しません。"
+    assert str(missing_home) in error.detail
+    assert "Codex CLI の通常利用環境を初期化してください。" in error.next_actions
+
+
+def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    codex_home = tmp_path / "codex_home_file"
+    codex_home.write_text("not a directory\n")
+    monkeypatch.setenv("CODEX_HOME", str(codex_home))
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+    )
+
+    try:
+        run_codex_exec(parameter, root=root, capacity_initial_sleep_sec=0)
+    except CmocError as exc:
+        error = exc
+    else:
+        raise AssertionError("run_codex_exec should fail before invoking Codex CLI")
+
+    assert error.summary == "Codex home がディレクトリではありません。"
+    assert str(codex_home) in error.detail
+    assert "CODEX_HOME のファイル種別を確認してください。" in error.next_actions
+
+
+def test_run_codex_exec_fails_before_codex_when_auth_json_missing(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    codex_home = tmp_path / "codex_home"
+    codex_home.mkdir()
+    monkeypatch.setenv("CODEX_HOME", str(codex_home))
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+    )
+
+    try:
+        run_codex_exec(parameter, root=root, capacity_initial_sleep_sec=0)
+    except CmocError as exc:
+        error = exc
+    else:
+        raise AssertionError("run_codex_exec should fail before invoking Codex CLI")
+
+    assert error.summary == "Codex CLI 認証情報が存在しません。"
+    assert str(codex_home / "auth.json") in error.detail
+    assert "既存の Codex home を指すように CODEX_HOME を設定してください。" in error.next_actions
+
+
 def test_run_codex_exec_retries_semantic_output(tmp_path: Path, monkeypatch) -> None:
     root = make_repo(tmp_path)
-    fake_cmoc_root = tmp_path / "cmoc"
-    (fake_cmoc_root / "bin").mkdir(parents=True)
-    (fake_cmoc_root / "bin" / "cmoc").write_text("#!/bin/sh\n")
-    monkeypatch.setattr(cmoc_runtime, "cmoc_root", lambda: fake_cmoc_root)
+    setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     counter = tmp_path / "counter"
@@ -1293,12 +1681,11 @@ def test_run_codex_exec_retries_semantic_output(tmp_path: Path, monkeypatch) -> 
     assert counter.read_text() == "2"
 
 
-def test_run_codex_exec_polls_and_resumes_after_quota(tmp_path: Path, monkeypatch) -> None:
+def test_run_codex_exec_polls_and_resumes_after_quota(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
-    fake_cmoc_root = tmp_path / "cmoc"
-    (fake_cmoc_root / "bin").mkdir(parents=True)
-    (fake_cmoc_root / "bin" / "cmoc").write_text("#!/bin/sh\n")
-    monkeypatch.setattr(cmoc_runtime, "cmoc_root", lambda: fake_cmoc_root)
+    codex_home = setup_codex_home(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -1308,10 +1695,10 @@ def test_run_codex_exec_polls_and_resumes_after_quota(tmp_path: Path, monkeypatc
         "\n".join(
             [
                 "#!/usr/bin/env python3",
-                "import json, pathlib, sys",
+                "import json, os, pathlib, sys",
                 f"calls = pathlib.Path({str(calls)!r})",
                 "args = sys.argv[1:]",
-                "with calls.open('a') as f: f.write(json.dumps(args) + '\\n')",
+                "with calls.open('a') as f: f.write(json.dumps({'args': args, 'codex_home': os.environ.get('CODEX_HOME')}) + '\\n')",
                 "if 'resume' in args:",
                 "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
                 "    output.write_text(json.dumps({'ok': True}))",
@@ -1343,20 +1730,21 @@ def test_run_codex_exec_polls_and_resumes_after_quota(tmp_path: Path, monkeypatc
         max_quota_polls=1,
     )
 
-    argv_calls = [json.loads(line) for line in calls.read_text().splitlines()]
+    call_records = [json.loads(line) for line in calls.read_text().splitlines()]
+    argv_calls = [record["args"] for record in call_records]
     assert argv_calls[0][-1] == "-"
+    assert all(record["codex_home"] == str(codex_home) for record in call_records)
     assert argv_calls[1] == ["exec", "--json", "-"]
     assert "resume" in argv_calls[2]
     assert "sess-1" in argv_calls[2]
     assert result.output_json == {"ok": True}
 
 
-def test_run_codex_exec_uses_single_representative_quota_probe(tmp_path: Path, monkeypatch) -> None:
+def test_run_codex_exec_uses_single_representative_quota_probe(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
-    fake_cmoc_root = tmp_path / "cmoc"
-    (fake_cmoc_root / "bin").mkdir(parents=True)
-    (fake_cmoc_root / "bin" / "cmoc").write_text("#!/bin/sh\n")
-    monkeypatch.setattr(cmoc_runtime, "cmoc_root", lambda: fake_cmoc_root)
+    setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "parallel_calls.jsonl"
