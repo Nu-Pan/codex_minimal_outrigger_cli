@@ -26,7 +26,7 @@ def build_file_access_rule(mode: FileAccessMode) -> StructDoc:
             body = ntqs(f"""
             - `{work_root}` ツリー外は読み書き禁止
             - `{work_root}/oracle` ツリー内は書き込み禁止
-            - `{work_root}/oracle` ツリー外は読み書き共に禁止
+            - `{work_root}/oracle` ツリー外は読み書き禁止
             """)
         case FileAccessMode.REALIZATION_WRITE:
             body = ntqs(f"""
@@ -49,6 +49,6 @@ def build_file_access_rule(mode: FileAccessMode) -> StructDoc:
             raise ValueError(f"Invalid mode (mode={mode})")
     # 正常終了
     return StructDoc(
-        "file read write rule",
+        f"file read write rule - {mode.value}",
         body,
     )

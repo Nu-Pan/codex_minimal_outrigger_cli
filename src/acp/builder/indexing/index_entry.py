@@ -60,7 +60,7 @@ def build_indexing_index_entry_parameter(
     # パラメータを生成して返す
     return AgentCallParameter(
         ModelClass.EFFICIENCY,
-        ReasoningEffort.MEDIUM,
+        ReasoningEffort.LOW,
         FileAccessMode.READONLY,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),

@@ -102,3 +102,18 @@
 
 ## hash
 - 1ac7da085f1c6dab065f696400c7fce368e566dccb93384559fce067eaca0cb1
+
+# `tui.py`
+
+## Summary
+- `cmoc tui` サブコマンドの実処理を担う実装。`.cmoc` の git ignore 保証、オリジナルプロンプト用 markdown ファイルの初期生成、エディタ起動、HTML コメント除去と strip、パラメータ解決 agent call、完全 prompt 生成、Codex CLI/TUI 起動を扱う。
+
+## Read this when
+- `cmoc tui` の実行フロー、エディタ選択、プロンプト保存先、コメント除去、解決済みパラメータからの最終 `AgentCallParameter` 構築を確認または変更したいとき。
+
+## Do not read this when
+- TUI 用パラメータ解決 prompt や JSON schema の詳細だけを確認したいときは、`acp/builder/tui` 側を読む。
+- Codex CLI/TUI subprocess の profile 生成や CODEX_HOME 検証そのものを調べたいときは、runtime helper を読む。
+
+## hash
+- manual

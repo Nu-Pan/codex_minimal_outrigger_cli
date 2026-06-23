@@ -82,3 +82,17 @@
 
 ## hash
 - 9c349137de9dd93d9b9206760be2310b902102e349c94b45d6be693497c0ef57
+
+# `tui`
+
+## Summary
+- `cmoc tui` の実行前に使う AI エージェント呼び出しパラメータを構築する領域。オリジナルプロンプトから、AI Agent CLI/TUI に渡すファイルアクセスモードと標準文書注入フラグを Structured Output として解決する prompt と schema を扱う。
+
+## Read this when
+- `cmoc tui` のパラメータ解決 agent call、選択可能な file access mode、標準注入フラグ、または専用 schema を確認・変更したいとき。
+
+## Do not read this when
+- TUI サブコマンドのエディタ起動、ログ保存、最終 prompt 生成、Codex CLI/TUI 起動フローを確認したいときは、サブコマンド実装を読む。
+
+## hash
+- manual
