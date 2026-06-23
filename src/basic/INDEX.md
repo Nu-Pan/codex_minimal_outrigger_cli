@@ -1,102 +1,79 @@
 # `acp.py`
 
 ## Summary
-
-- `<cmoc-root>/oracle/src/basic/acp.py` は、AI コーディングエージェント呼び出し用の共通型を定義するファイルです。
-- `ModelClass`、`ReasoningEffort`、`FileAccessMode` の列挙型と、これらを束ねる `AgentCallParameter` を提供します。
-- backend 実装への具体的なモデル名解決は担当せず、cmoc 上の論理的な呼び出し条件を表現するための基盤です。
+- AI コーディングエージェント呼び出し時に渡す基本パラメータの型を定義する実装。論理的なモデルクラス、Reasoning effort、ファイルアクセスモード、およびプロンプトや Structured Output schema パスをまとめた呼び出しパラメータを扱う。
 
 ## Read this when
-
-- AI コーディングエージェントのモデル選択、推論強度、ファイルアクセスモード、prompt、structured output schema の扱いを確認したいとき。
-- `ModelClass`、`ReasoningEffort`、`FileAccessMode`、`AgentCallParameter` の定義や役割を把握したいとき。
-- cmoc 上の論理的な呼び出し条件だけを整理したいとき。
-- このファイルの個別定義を読む前に、共通の入れ物と列挙型の役割を先に把握したいとき。
+- エージェント呼び出しの入力として、モデル種別、推論量、ファイルアクセス権限、プロンプト、Structured Output schema の指定をどの型で受け渡すか確認したいとき。
+- バックエンド固有のモデル名や権限指定へ解決する前段として、cmoc 内部の論理的な呼び出し条件を扱う実装を追うとき。
+- エージェント呼び出しパラメータを生成・検証・受け渡しするコードを変更するため、共有される列挙値やデータ構造を確認したいとき。
 
 ## Do not read this when
-
-- バックエンド受理可能なモデル名への解決や、実装側の対応表を確認したいとき。
-- `path_model.py`、`standard.py`、`struct_doc.py` など別の共通基盤だけを追いたいとき。
-- すでに `ModelClass`、`ReasoningEffort`、`FileAccessMode`、`AgentCallParameter` の役割が分かっていて、このファイル本体を直接確認したいとき。
-- AI コーディングエージェント呼び出しではなく、設定や文書レンダリングの仕様を追いたいとき。
+- バックエンドが実際に受理するモデル名や Reasoning effort へ解決する処理を確認したいとき。この対象は論理値の定義に留まり、具体的な解決責務は持たない。
+- プロンプト本文の組み立て内容や Structured Output schema 自体の中身を確認したいとき。この対象はそれらを保持する呼び出しパラメータの型だけを定義する。
+- エージェント実行プロセスの起動、入出力処理、結果解析、リポジトリ操作の挙動を調べたいとき。この対象は呼び出し条件を表す基本型の定義であり、実行ロジックは含まない。
 
 ## hash
-
-- 899055a64c6c21d9e062970ffb35779c7d1eafeb41fb77388c18af2455faf171
+- b29c0e8554c3f417d6684f400fb782525bfb74856125803ab5e7838779ee2620
 
 # `path_model.py`
 
 ## Summary
-
-- `<cmoc-root>/oracle/src/utils/path_model.py` は、cmoc のパス表記と root token 解決を扱うユーティリティです。
-- `RootToken` で `<cmoc-root>` / `<repo-root>` / `<run-root>` / `<work-root>` を定義し、文字列や `Path` から実パスへ変換します。
-- 逆変換として、実パスを root token 表記に戻す `resolve_token_path()` も提供します。
+- cmoc で使うルートトークン付きパス表記と、実パスとの相互変換を扱う実装。絶対パス、`<cmoc-root>`・`<repo-root>`・`<run-root>`・`<work-root>` 付き相対パスを受け取り、各ルートの探索規則に基づいて現実の絶対パスへ解決する。
+- ルートトークンの定義、ルートディレクトリ探索、ルートトークンなし相対パスの拒否、実パスを指定ルートトークン表記へ戻す処理を確認する入口になる。
 
 ## Read this when
-
-- `<cmoc-root>/oracle/src/utils/path_model.py` の役割と、`RootToken` による root 解決の入口を把握したいとき。
-- ルートトークン付きの相対パスを絶対パスへ解決したいとき。
-- 実パスを `<cmoc-root>` / `<repo-root>` / `<run-root>` / `<work-root>` 表記へ戻す方法を確認したいとき。
-- 各 root token の違いと使い分けを整理したいとき。
+- cmoc 内でパス文字列や `Path` を実際の絶対パスへ解決する挙動を確認・変更したいとき。
+- `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` の意味、探索起点、`.git` ディレクトリまたは `.git` ファイルによる判定条件を確認したいとき。
+- ルートトークン付き相対パスを許可し、ルートトークンなし相対パスを禁止する入力検証の扱いを確認したいとき。
+- linked worktree や git common dir を含む状況で、main worktree と run 用 worktree の判定がどう行われるかを追いたいとき。
+- 実パスを特定のルートトークン基準の表記へ変換する処理や、対象外パスの場合の失敗条件を確認したいとき。
 
 ## Do not read this when
-
-- `RootToken` と `resolve_real_path()` の役割がすでに分かっていて、このファイル本体を直接確認したいとき。
-- パス解決ではなく、`standard.py` や `struct_doc.py` など別の `utils` 基盤を探しているとき。
-- `<cmoc-root>` / `<repo-root>` / `<run-root>` / `<work-root>` の定義ではなく、別の oracle 文書や開発規約だけを確認したいとき。
+- CLI サブコマンドの引数定義、画面出力、終了コードなど、利用者向けコマンド挙動だけを確認したいとき。
+- ルートトークンの概念ではなく、個別機能がどの作業ディレクトリでファイルを作成・更新するかという業務ロジックを確認したいとき。
+- oracle file と realization file の所有関係や編集責務など、仕様管理上の分類だけを確認したいとき。
+- テスト構成、fixture、テストケース追加先を探しているとき。
 
 ## hash
-
 - 027714ffb8df9a610273154c3576c6f114050fedcea38cd005f3fc034aec3519
 
 # `standard.py`
 
 ## Summary
-
-- この `<cmoc-root>/oracle/src/basic/standard.py` は、`oracle` 文書で共通に使う標準表現を定義し、`Standard` と `Requirement` を `StructDoc` へ変換する入口です。
-- `Standard` は見出し、対象、背景、要求、判定基準、例示をまとめ、各フィールドの型や空配列を検証します。
-- `Requirement` は `必須` / `禁止` / `推奨` / `許容` のラベルと本文を持つ凍結 dataclass です。
-- `standard_to_struct_doc()` は `Standard` を階層化された `StructDoc` に整形して、markdown 出力や文書組み立てへ渡せる形にします。
+- 規範文書を表すデータ構造と、その要求項目を構造化ドキュメントへ変換する処理を定義する。
+- 規範の見出し、背景、要求、判断例を保持し、要求ラベルの種類と本文形式を表す入口になる。
 
 ## Read this when
-
-- `Standard` と `Requirement` の定義、入力検証、各フィールドの役割を確認したいとき。
-- `oracle` 配下で新しい標準文書や標準断片を追加・修正するとき。
-- `standard_to_struct_doc()` で `Standard` を `StructDoc` に変換する流れを把握したいとき。
-- `<work-root>/oracle/src/acp/prompt_parts` などで共通の標準フォーマットを使う前に、対象・背景・要求・判定基準・例示の構造を整理したいとき。
+- 規範をコード上で表現するためのクラス、必須フィールド、値検証の挙動を確認したいとき。
+- 要求項目に使えるラベルや、要求本文をどのような単位で保持するかを確認したいとき。
+- 規範オブジェクトから構造化ドキュメントを生成する際の見出し構成や出力されるフィールドを確認したいとき。
 
 ## Do not read this when
-
-- `Standard`、`Requirement`、`standard_to_struct_doc()` の役割がすでに分かっていて、このファイル本体を直接確認したいとき。
-- `StructDoc` の実装や markdown レンダリングだけを確認したいとき。
-- パス解決や root token の扱いだけを確認したいとき。
-- 個別の `oracle` 標準文書や prompt 断片だけを読み、この共通定義は不要なとき。
+- 個別の規範そのものの内容や、人間が責任を持つ正本仕様断片を確認したいとき。
+- 構造化ドキュメント型そのものの責務、表現形式、描画・整形方法を確認したいとき。
+- CLI コマンド、ファイル走査、パスモデル、テスト実行など、規範データ構造の定義と変換以外の実装を調べたいとき。
 
 ## hash
-
 - 65b5061759a3bea66f98b6714a929e7cb1a48970cdc11115d148b0d04bd34727
 
 # `struct_doc.py`
 
 ## Summary
-
-- この `<cmoc-root>/oracle/src/basic/struct_doc.py` は、階層構造を持つ文章を `StructDoc` として保持し、markdown にレンダリングするための共通ヘルパーです。
-- 見出しを再帰的に組み立てる `render_as_markdown()` と、三重クォート文字列のインデントを整える `ntqs()` を提供します。
-- prompt 生成や標準文書の組み立てで `StructDoc` を使うときの、共通基盤の入口です。
+- 階層化された自然言語文書を Markdown に変換するための小さなヘルパー実装。見出し付きノード、挿入用コードブロック、Markdown レンダリング、triple quoted string 由来の本文正規化を扱う。
+- 文章構造をクラスで組み立て、見出し深さを自動で増やしながら Markdown 文字列へ出力する処理への入口になる。
 
 ## Read this when
-
-- 階層構造を持つ文章を `StructDoc` で表現し、markdown に出力したいとき。
-- `render_as_markdown()` の見出し階層の生成方法や、`ntqs()` の改行・インデント正規化の挙動を確認したいとき。
-- `standard.py` や prompt_builder 配下から `StructDoc` を使う前に、共通表現の仕様を把握したいとき。
-- `StructDoc` を使う新しいヘルパーを追加・修正する前に、既存の共通基盤を確認したいとき。
+- 構造化された説明文、仕様断片、レポートなどを Markdown 見出し付きテキストとして生成する処理を確認・変更したいとき。
+- 見出し階層の付け方、子要素として許容される本文・コードブロック・下位ノードの扱い、または不正な子要素型のエラー挙動を確認したいとき。
+- コードブロックの info string と本文が Markdown の fenced code block としてどう出力されるかを確認したいとき。
+- 複数行文字列の先頭末尾の空行除去や共通インデント解除の挙動を確認・変更したいとき。
 
 ## Do not read this when
-
-- `StructDoc` の使い方がすでに分かっていて、`struct_doc.py` の実装を直接確認したいとき。
-- `path_model.py` や `standard.py` だけを個別に確認したいとき。
-- 個別の prompt 文書やレビュー規約を追っていて、共通の markdown レンダリング基盤は不要なとき。
+- Markdown の解析、既存 Markdown から構造を復元する処理、または Markdown AST 全般を探しているとき。
+- CLI コマンド、ファイル探索、パスモデル、oracle と realization の分類規則など、文書レンダリング以外の仕様や制御フローを確認したいとき。
+- INDEX.md エントリーの生成規則やルーティング規則そのものを確認したいとき。
+- HTML、JSON、YAML など Markdown 以外の出力形式を扱う処理を探しているとき。
 
 ## hash
-
 - cfacde64de980a96af23c2725af261040df1c7ed0c585c59f9ba16bc38e2e94c

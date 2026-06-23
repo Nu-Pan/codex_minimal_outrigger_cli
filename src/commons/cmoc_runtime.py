@@ -227,7 +227,7 @@ def reports_dir(root: Path, command: str) -> Path:
 
 
 def logs_dir(root: Path) -> Path:
-    return root / ".cmoc" / "logs" / "sub_commands"
+    return root / ".cmoc" / "log" / "sub_command"
 
 
 def worktrees_dir(root: Path) -> Path:
@@ -541,7 +541,11 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
     match mode:
         case FileAccessMode.READONLY | FileAccessMode.PURE_ORACLE_READ:
             return "read-only"
-        case FileAccessMode.REALIZATION_WRITE | FileAccessMode.ORACLE_WRITE:
+        case (
+            FileAccessMode.REALIZATION_WRITE
+            | FileAccessMode.ORACLE_WRITE
+            | FileAccessMode.REPO_WRITE
+        ):
             return "workspace-write"
         case _:
             raise CmocError("不明な FileAccessMode です。", [], str(mode))
@@ -960,6 +964,77 @@ def run_codex_exec(
         )
 
     assert last_result is not None
+
+
+def run_codex_tui(
+    parameter: AgentCallParameter,
+    *,
+    root: Path | None = None,
+    cwd: Path | None = None,
+    config: CmocConfig | None = None,
+    purpose: str = "codex tui",
+) -> CommandResult:
+    root = root or repo_root()
+    cwd = cwd or root
+    config = config or load_config(root)
+    log_dir = codex_log_dir(root)
+    log_dir.mkdir(parents=True, exist_ok=True)
+    ts = timestamp()
+    call_path = log_dir / f"{ts}_tui_call.json"
+    codex_home = resolve_codex_home()
+    validate_codex_home(codex_home)
+    profile_path = prepare_codex_profile(parameter, config, codex_home)
+    profile_name = codex_profile_name(profile_path)
+    argv = [
+        "codex",
+        "--profile",
+        profile_name,
+        "-",
+    ]
+    call_path.write_text(
+        json.dumps(
+            {
+                "purpose": purpose,
+                "timestamp": ts,
+                "argv": argv,
+                "codex_home": str(codex_home),
+                "profile_name": profile_name,
+                "profile_path": str(profile_path),
+                "model_class": parameter.model_class.value,
+                "reasoning_effort": parameter.reasoning_effort.value,
+                "file_access_mode": parameter.file_access_mode.value,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n"
+    )
+    result = subprocess.run(
+        argv,
+        cwd=cwd,
+        input=parameter.prompt,
+        text=True,
+        capture_output=True,
+        env=codex_subprocess_env(codex_home),
+    )
+    logger = current_subcommand_logger()
+    if logger is not None:
+        logger.event(
+            "codex_tui_call",
+            purpose=purpose,
+            returncode=result.returncode,
+            call_log_path=str(call_path),
+            codex_home=str(codex_home),
+            profile_name=profile_name,
+            profile_path=str(profile_path),
+        )
+    if result.returncode != 0:
+        raise CmocError(
+            "Codex CLI/TUI 呼び出しが失敗しました。",
+            ["Codex CLI/TUI の出力と call log を確認してください。"],
+            f"call_log: {call_path}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}",
+        )
+    return CommandResult(result.returncode, result.stdout, result.stderr)
 
 
 def file_sha256(path: Path) -> str:

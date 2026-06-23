@@ -1,24 +1,21 @@
 # `fork`
 
 ## Summary
-
-- この `fork` ディレクトリのルーティング文書で、`change_summary.py`、`file_finding_enumeration.py`、`finding_application.py`、`refine_finding.py` への入口をまとめます。
-- `change_summary.py` は変更要約、`file_finding_enumeration.py` はファイル単位の所見列挙、`finding_application.py` は所見 1 件の実装修正、`refine_finding.py` は所見リスト改善を案内します。
-- この階層は、`cmoc apply fork` の read-only 系と write-enabled 系の役割分担を切り分ける起点です。
+- 適用処理の分岐実行に関わる AI 呼び出しパラメータと、その入出力に使う所見・変更要約の構造を扱う領域。
+- 差分内容の要約、realization file 調査で得た所見一覧、所見リストの改善、所見に基づく修正作業など、レビューから適用後レポートまでの補助エージェント呼び出し仕様への入口になる。
+- 実際の git 操作や分岐作成そのものではなく、AI に渡す role、goal、補助プロンプト、参照標準、ファイルアクセス権限、Structured Output schema の接続を確認するためのまとまりである。
 
 ## Read this when
-
-- `<cmoc-root>/oracle/src/acp/builder/apply/fork` 配下で、まずどのファイルから読むべきか整理したいとき。
-- `cmoc apply fork` の変更要約、ファイル単位の所見列挙、所見 1 件の実装修正、所見リスト改善という役割分担をまとめて把握したいとき。
-- read-only の Structured Output 系と、実装を書き換える write-enabled 系の違いをこの階層で整理したいとき。
-- `change_summary.py` と `change_summary.json`、`file_finding_enumeration.py` と `finding_list.json` の対応関係を確認したいとき。
+- 適用・分岐処理の中で、差分要約、所見列挙、所見改善、所見対応修正のいずれかに使う AI 呼び出し条件を確認または変更したいとき。
+- レビュー所見や変更要約を、後続処理へ渡せる構造化データとしてどの責務単位で表すかを確認したいとき。
+- 対象ファイル調査や所見対応作業のプロンプトに、oracle・realization・apply review の標準、補助文書、読み書き権限をどう含めるかを追いたいとき。
+- 適用後レポート向けに、git diff や変更内容を人間向けカテゴリへ要約する AI 呼び出しの入口を探しているとき。
 
 ## Do not read this when
-
-- すでに `change_summary.py`、`file_finding_enumeration.py`、`finding_application.py`、`refine_finding.py` のうち読む先が決まっていて、この目次を経由する必要がないとき。
-- `cmoc apply fork` のうち、変更要約・所見列挙・所見適用・所見リスト改善のいずれか一つだけを直接確認したいとき。
-- `change_summary.json` や `finding_list.json` の Structured Output schema だけを直接確認したいとき。
+- 実際のブランチ作成、差分取得、git コマンド実行、CLI 引数解析、サブコマンド登録など、適用処理本体の制御フローを調べたいとき。
+- path keyword、ファイルアクセスモード、モデル種別、reasoning effort、AgentCallParameter、完全プロンプト構築、StructDoc 描画などの共通型・共通部品そのものを変更したいとき。
+- oracle file や realization file の定義、各 standard の本文、または個別の正本仕様を確認したいとき。
+- 実際の変更対象ファイルの内容や、所見で指摘された具体的な修正コードを読む必要があるとき。
 
 ## hash
-
-- ea05cfbc23201018185e49dde1bbcbe3915cb79faca29c736ee99d43fa0094a2
+- ab1cd59800c94f657e370694a0b220349d47699131972c58642e9e5ea491880b

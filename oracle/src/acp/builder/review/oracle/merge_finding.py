@@ -49,7 +49,7 @@ def build_review_oracle_merge_finding_parameter(
     )
     # パラメータを生成して返す
     return AgentCallParameter(
-        ModelClass.MAINSTREAM,
+        ModelClass.EFFICIENCY,
         ReasoningEffort.MEDIUM,
         FileAccessMode.PURE_ORACLE_READ,
         render_as_markdown(prompt),

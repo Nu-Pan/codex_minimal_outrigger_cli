@@ -32,6 +32,7 @@ from cmoc_runtime import (
     reset_current_subcommand_logger,
     format_duration,
     run_codex_exec as runtime_run_codex_exec,
+    run_codex_tui as runtime_run_codex_tui,
     run_git,
     set_current_subcommand_logger,
     timestamp,
@@ -83,6 +84,7 @@ from sub_commands.review import (
     resolve_review_index_conflicts as resolve_review_index_conflicts_impl,
     run_review_oracle_loop as run_review_oracle_loop_impl,
 )
+from sub_commands.tui import cmoc_tui_impl
 
 
 app = typer.Typer(no_args_is_help=True)
@@ -107,6 +109,10 @@ def run_codex_exec(parameter: AgentCallParameter, **kwargs):
             finally:
                 _INDEXING_ACTIVE.reset(token)
     return runtime_run_codex_exec(parameter, **kwargs)
+
+
+def run_codex_tui(parameter: AgentCallParameter, **kwargs):
+    return runtime_run_codex_tui(parameter, **kwargs)
 
 
 def should_skip_indexing_before_codex(purpose: str) -> bool:
@@ -185,6 +191,20 @@ def command_log_root(root: Path) -> Path:
 def init() -> None:
     def handler() -> None:
         cmoc_init_impl()
+
+    _run(handler)
+
+
+@app.command()
+def tui() -> None:
+    def handler() -> None:
+        root = repo_root()
+        cmoc_tui_impl(
+            run_codex_exec,
+            run_codex_tui,
+            root=root,
+            config=load_config(root),
+        )
 
     _run(handler)
 

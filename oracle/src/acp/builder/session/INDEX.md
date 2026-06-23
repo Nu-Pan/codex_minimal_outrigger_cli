@@ -1,24 +1,17 @@
 # `join`
 
 ## Summary
-
-- この `join` ディレクトリのルーティング文書で、`conflict_resolution.py` への入口です。
-- `conflict_resolution.py` は `cmoc session join` の merge conflict marker 解消用 agent call parameter をまとめます。
-- Structured Output を要求しない、ファイル編集を伴う `session join` の呼び出し仕様を案内します。
+- `cmoc session join` 中の merge conflict marker 解消エージェント呼び出し仕様へ進むための領域。conflict 対象パスの解決、解消専用 prompt、編集許可範囲、呼び出し設定を確認する入口になる。
 
 ## Read this when
-
-- `cmoc session join` で conflict が発生したときに、Codex CLI へ何を依頼する仕様か確認したいとき。
-- `build_session_join_conflict_resolution_parameter()` が組み立てる prompt と `AgentCallParameters` の所在を確認したいとき。
-- conflict 解消時の禁止事項、特に `git add` と `git commit` の禁止を確認したいとき。
-- この階層から `conflict_resolution.py` へ進むべきか迷ったとき。
+- `cmoc session join` が merge conflict marker 解消用エージェントをどの条件・設定・prompt で呼び出すか確認したいとき。
+- conflict 対象ファイル一覧を作業ルート基準の実パスとして扱う仕様や、解消作業に限定した role・summary・goal・ファイルアクセス規則を確認したいとき。
+- join 時の conflict 解消で許される最小編集範囲、oracle file の conflict marker への扱い、git add / git commit 禁止方針を確認したいとき。
 
 ## Do not read this when
-
-- `cmoc session join` 以外の session 状態管理や git 操作だけを確認したいとき。
-- すでに目的のファイルが `conflict_resolution.py` だと分かっていて、この目次を経由せず直接開くとき。
-- `apply`、`review`、`indexing` など別サブコマンドの agent call parameter を探しているとき。
+- `cmoc session join` 全体の制御フロー、merge 実行、conflict 検出、join 後処理を確認したいだけのとき。
+- merge conflict marker の具体的な解消アルゴリズムや、対象ファイル本文をどう統合判断するかを探しているとき。
+- `cmoc session join` 以外のサブコマンド用 agent prompt や、汎用的な complete prompt 構築部品の仕様を確認したいとき。
 
 ## hash
-
 - 51eb14ded23a71985441098a20da86d73d213509c631b89034fc0b204e97ed98

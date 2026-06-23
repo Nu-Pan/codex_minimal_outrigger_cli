@@ -47,6 +47,9 @@ def build_apply_fork_file_finding_enumeration_parameter(
         apply_review_standard=True,
     )
     # パラメータを生成して返す
+    # NOTE
+    #   ファイル数だけ呼び出されるということは、トークン消費 N 倍なので重い。
+    #   しかし、ここの失敗が下流全てに影響することを鑑みて MAINSTREAM にしている。
     return AgentCallParameter(
         ModelClass.MAINSTREAM,
         ReasoningEffort.MEDIUM,

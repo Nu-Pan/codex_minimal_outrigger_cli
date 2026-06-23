@@ -1,0 +1,148 @@
+{
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "file_access_mode",
+        "oracle_and_realization_basic",
+        "oracle_standard",
+        "realization_standard",
+        "review_oracle_standard",
+        "apply_review_standard",
+        "index_entry_standard"
+    ],
+    "properties": {
+        "file_access_mode": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "reason"
+            ],
+            "properties": {
+                "value": {
+                    "type": "string",
+                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行する際の論理ファイルアクセスモード。過不足の無い権限設定が望ましい。",
+                    "enum": [
+                        "readonly",
+                        "pure_oracle_read",
+                        "realization_write",
+                        "oracle_write",
+                        "repo_write"
+                    ]
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "選択した論理ファイルアクセスモードが妥当である事の説明・根拠。"
+                }
+            }
+        },
+        "oracle_and_realization_basic": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "reason"
+            ],
+            "properties": {
+                "value": {
+                    "type": "boolean",
+                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行するにあたって `oracle and realization basic` を読む必要があるのなら True を設定する。"
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "`oracle and realization basic` を読む必要がある・ないとする事の説明・根拠。"
+                }
+            }
+        },
+        "oracle_standard": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "reason"
+            ],
+            "properties": {
+                "value": {
+                    "type": "boolean",
+                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行するにあたって `oracle standard` を読む必要があるのなら True を設定する。"
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "`oracle standard` を読む必要がある・ないとする事の説明・根拠。"
+                }
+            }
+        },
+        "realization_standard": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "reason"
+            ],
+            "properties": {
+                "value": {
+                    "type": "boolean",
+                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行するにあたって `realization standard` を読む必要があるのなら True を設定する。"
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "`realization standard` を読む必要がある・ないとする事の説明・根拠。"
+                }
+            }
+        },
+        "review_oracle_standard": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "reason"
+            ],
+            "properties": {
+                "value": {
+                    "type": "boolean",
+                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行するにあたって `review oracle standard` を読む必要があるのなら True を設定する。"
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "`review oracle standard` を読む必要がある・ないとする事の説明・根拠。"
+                }
+            }
+        },
+        "apply_review_standard": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "reason"
+            ],
+            "properties": {
+                "value": {
+                    "type": "boolean",
+                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行するにあたって `apply review standard` を読む必要があるのなら True を設定する。"
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "`apply review standard` を読む必要がある・ないとする事の説明・根拠。"
+                }
+            }
+        },
+        "index_entry_standard": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "reason"
+            ],
+            "properties": {
+                "value": {
+                    "type": "boolean",
+                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行するにあたって `index entry standard` を読む必要があるのなら True を設定する。"
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "`index entry standard` を読む必要がある・ないとする事の説明・根拠。"
+                }
+            }
+        }
+    }
+}

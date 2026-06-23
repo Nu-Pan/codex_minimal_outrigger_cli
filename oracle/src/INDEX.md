@@ -1,71 +1,66 @@
 # `acp`
 
 ## Summary
-
-- この `acp` ディレクトリのルーティング文書で、`builder/` と `prompt_parts/` への入口をまとめます。
-- `builder/` は `cmoc apply fork`、`cmoc indexing`、`cmoc review oracle`、`cmoc session join` に対応する agent call parameter の入口を案内します。
-- `prompt_parts/` は complete prompt を組み立てる断片群と、各種標準文書への入口を整理します。
+- cmoc が AI agent を呼び出すために渡すプロンプト本文、補助文脈、ファイルアクセス制約、モデル種別、reasoning effort、Structured Output 契約を定める正本仕様群への入口。
+- 用途別の agent 呼び出しパラメータと、複数用途で共通注入されるプロンプト部品を扱い、レビュー、apply fork 後の確認・修正支援、INDEX.md エントリー生成、セッション合流時の conflict 解消、TUI 実行前のパラメータ選定へ分岐する。
+- 実際の CLI 制御、git 操作、端末 UI、永続状態更新ではなく、それらの処理から呼ばれる AI agent に何を渡し、どの形式の応答を期待するかを確認するための階層。
 
 ## Read this when
-
-- `<cmoc-root>/oracle/src/acp` 配下で、まず `builder/` と `prompt_parts/` のどちらから読むべきか整理したいとき。
-- AI 呼び出し用 prompt の組み立てと、サブコマンド別 agent call parameter の役割分担をまとめて把握したいとき。
-- この階層の目次を確認してから、下位の `INDEX.md` や個別仕様へ進みたいとき。
+- cmoc の機能が AI agent を呼び出す際の role、summary、goal、補助 prompt、ファイルアクセスモード、モデル種別、reasoning effort、出力 schema の正本値を確認したいとき。
+- oracle review の所見列挙・擁護・反証・採否判定・マージ、apply fork の所見列挙・整理・対応・変更要約、INDEX.md エントリー生成、session join の conflict 解消、TUI 実行前のパラメータ選定について、呼び出し入力と応答契約を調べたいとき。
+- agent に共通注入されるファイルアクセス規則、ルーティング規則、oracle / realization の基本概念、oracle standard、realization standard、review standard、apply review standard、INDEX.md entry standard のプロンプト本文や注入条件を確認したいとき。
+- 新しい AI agent 呼び出し仕様を追加する前に、既存の用途別パラメータ構築と共通プロンプト部品の責務分担、依存関係、Structured Output schema との接続を把握したいとき。
 
 ## Do not read this when
-
-- すでに進む先が `builder/` か `prompt_parts/` に決まっていて、この階層の入口説明が不要なとき。
-- `cmoc apply fork`、`cmoc indexing`、`cmoc review oracle`、`cmoc session join` の個別仕様を直接確認したいとき。
-- 完全な prompt 本体や個別の prompt 断片、Structured Output schema を探しているとき。
+- CLI 引数解析、サブコマンド全体の制御フロー、fork 作成、ブランチ操作、merge 実行、差分取得、端末 UI 描画、永続状態更新など、AI 呼び出しパラメータ以外の実処理を調べたいとき。
+- 実装ファイルやテストにおける具体的な関数、状態ファイル形式、git command 実行手順、パッチ生成手順、UI 表示を探しているとき。
+- 個別の oracle file 本文を読んで、具体的な仕様判断、レビュー所見、変更方針、conflict 解消内容、INDEX.md エントリー文面そのものを考えたいとき。
+- path keyword、repo root、work root、StructDoc、AgentCallParameter など、プロンプト構築で参照される基礎データ構造やパス解決モデル自体の定義を確認したいとき。
 
 ## hash
-
-- 2e6c1986021c1fc98a8b9017536b812e752a8f099fa3616dfb1c640ace4607a0
+- 3a0d8ab92a291f8e9f363aebc6d7847c9172446dab503dea89d717fc29556e3c
 
 # `basic`
 
 ## Summary
-
-- この `basic` ディレクトリのルーティング文書で、`acp.py`、`standard.py`、`struct_doc.py`、`path_model.py` への入口をまとめます。
-- `acp.py` は AI コーディングエージェント呼び出し用の共通型、`standard.py` は標準文書の共通表現、`struct_doc.py` は構造化文書の markdown レンダリング、`path_model.py` は root token を含むパス解決の入口です。
-- この階層は、cmoc の共通基盤を切り分けて把握するための起点です。
+- cmoc の oracle source のうち、複数領域から参照される基礎的な型・変換・文書生成 helper をまとめる領域。エージェント呼び出し条件の抽象モデル、ルートトークン付きパス表記と実パス解決、規範断片を表すモデル、構造化文書を Markdown へ描画する処理への入口になる。
+- 個別機能の公開 CLI や実行フローではなく、他の oracle source が前提にする共通概念と小さな基盤実装を確認するための読む先である。
 
 ## Read this when
-
-- `<cmoc-root>/oracle/src/basic` 配下で、`acp.py`、`standard.py`、`struct_doc.py`、`path_model.py` のどこから読むべきか整理したいとき。
-- AI コーディングエージェント呼び出しの型、標準文書の共通形式、階層化された markdown レンダリング、root token を含むパス解決をまとめて把握したいとき。
-- この階層の共通基盤を先に確認してから、下位の個別仕様へ進みたいとき。
+- cmoc 内部で使う基本概念や共通データ構造を確認してから、より具体的な oracle source を読む必要があるとき。
+- エージェント呼び出し要求を、バックエンド固有値へ解決する前の論理パラメータとして扱う仕様断片を確認したいとき。
+- `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` などのルートトークン表記、実パスとの相互変換、worktree root の検出規則に関わる作業をするとき。
+- oracle standard などの規範を、背景・要求・判断例を持つ構造へ変換するための実装上のモデルを確認したいとき。
+- 構造化された自然言語文書やコードブロックを、見出し階層付き Markdown として生成・整形する基礎処理を確認したいとき。
 
 ## Do not read this when
-
-- `acp.py`、`standard.py`、`struct_doc.py`、`path_model.py` のうち、読む対象がすでに決まっていて、この階層の入口説明が不要なとき。
-- AI 呼び出しパラメータ、標準表現、構造化文書、パス解決のうち、特定の一つだけを直接確認したいとき。
-- この階層全体の案内ではなく、個別ファイルの実装や定義をそのまま読みたいとき。
+- 個別サブコマンドの CLI 引数、出力 schema、実行手順、プロセス制御、入出力処理を調べたいとき。
+- バックエンドが実際に受理するモデル名、Reasoning effort、ファイルアクセス設定への変換や、エージェント起動処理そのものを確認したいとき。
+- 特定の oracle doc、oracle test、realization file の内容や配置を確認したいだけで、基礎モデルや共通 helper の意味に触れないとき。
+- 既存 Markdown の解析、INDEX.md の探索規則、またはリポジトリ全体のルーティング文書構成を把握したいとき。
 
 ## hash
-
-- ccb0ea9b43d7107045ac9101c60dda53152d3652d772a08e709c57b473f7cc12
+- 271cccf9ccdb7b85a3d2eb5702cd6d9a3b23200af4fdfd9a15dd71ff90314919
 
 # `config`
 
 ## Summary
-
-- この `<cmoc-root>/oracle/src/config` ディレクトリのルーティング文書で、`cmoc_config.py` への入口をまとめます。
-- `CmocConfig` は cmoc 全体の設定を束ね、`CmocConfigCodex` は Codex CLI 向けのモデル・推論強度の対応表を持ちます。
-- 設定は `<repo-root>/.cmoc/config.json` に永続化され、`cmoc init` によって生成・同期される前提です。
+- 開発対象リポジトリ単位で変わる cmoc の設定仕様を扱う oracle src 群への入口。
+- 永続化される設定 JSON の構造、既定値、AI エージェント呼び出し・適用分岐・review oracle の上限値、Codex CLI 向けモデル名と reasoning effort 名の対応を確認するための領域。
+- Enum 系の値を JSON 保存時に value 化する前提や、設定ファイルが初期化処理で生成・同期され人間編集される境界を把握するためのルーティング先。
 
 ## Read this when
-
-- cmoc の設定をどこに集約しているか確認したいとき。
-- `<repo-root>/.cmoc/config.json` に保存される設定内容と、その更新前提を把握したいとき。
-- Codex CLI 向けの `model` / `reasoning_effort` 対応付けを確認したいとき。
+- 開発対象リポジトリごとに保持される cmoc 設定の責務、永続化される内容、既定値を確認したいとき。
+- Codex CLI に渡すモデル名や reasoning effort 名が、cmoc 内部のモデル分類・推論努力度からどう対応づくかを確認したいとき。
+- AI エージェント呼び出しの最大並列数、適用分岐や review oracle のループ上限など、設定由来の制御値を仕様根拠として確認したいとき。
+- 設定 JSON へ保存する際に Enum 系インスタンスをどのような表現へ変換する前提かを確認したいとき。
+- 設定ファイルが初期化処理で生成・同期され、人間が編集するものとして扱われる境界を確認したいとき。
 
 ## Do not read this when
-
-- すでに `<cmoc-root>/oracle/src/config/cmoc_config.py` を直接開いて、`CmocConfig` と `CmocConfigCodex` の定義本体を確認するとき。
-- 設定の読み書き処理や JSON 変換の実装を探しているとき。
-- `BackendType`、`ModelClass`、`ReasoningEffort` だけを確認したいとき。
+- パスキーワードやルートディレクトリ概念の定義だけを確認したいとき。
+- 設定ファイルを実際に読み書きする実装、JSON 変換処理、初期化サブコマンドの具体的な処理手順を探しているとき。
+- 適用分岐や review oracle の具体的なアルゴリズム、所見形式、サブコマンド入出力仕様を確認したいとき。
+- リポジトリに依存しない固定仕様、テスト方針、oracle file と realization file の一般的な関係を確認したいとき。
 
 ## hash
-
 - e333b5511ee2e06b89ac77f9d8ea837a274f30698f6317c5dda1e45925b1239f

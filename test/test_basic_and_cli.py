@@ -17,8 +17,10 @@ from cmoc_runtime import (
     CmocError,
     SubcommandLogger,
     ensure_cmoc_ignored,
+    file_access_to_sandbox_mode,
     render_error,
     run_codex_exec,
+    run_codex_tui,
 )
 from main import app
 
@@ -227,6 +229,80 @@ def test_init_syncs_config_defaults_without_overwriting_human_values(
     assert data["codex"]["reasoning_effort"]["low"] == "low"
     assert data["apply_fork"]["num_apply_loop"] == 5
     assert data["review_oracle"]["num_validate_findings_loop"] == 3
+
+
+def test_tui_runs_editor_resolves_parameters_and_launches_codex(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fake_code = bin_dir / "code"
+    fake_code.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env python3",
+                "import pathlib, sys",
+                "path = pathlib.Path(sys.argv[-1])",
+                "text = path.read_text()",
+                "path.write_text(text + '\\n<!-- remove me -->\\n# 依頼\\n\\nsrc を確認して必要なら直す\\n')",
+            ]
+        )
+        + "\n"
+    )
+    fake_code.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    exec_calls = []
+    tui_calls = []
+
+    class FakeResolveResult:
+        output_json = {
+            "file_access_mode": {"value": "repo_write", "reason": "repo wide task"},
+            "oracle_and_realization_basic": {"value": True, "reason": "needed"},
+            "oracle_standard": {"value": False, "reason": "not needed"},
+            "realization_standard": {"value": True, "reason": "needed"},
+            "review_oracle_standard": {"value": False, "reason": "not needed"},
+            "apply_review_standard": {"value": False, "reason": "not needed"},
+            "index_entry_standard": {"value": False, "reason": "not needed"},
+        }
+
+    def fake_run_codex_exec(parameter, **kwargs):
+        exec_calls.append((parameter, kwargs))
+        assert kwargs["purpose"] == "tui resolve parameter"
+        assert parameter.structured_output_schema_path.name == "resolve_parameter.json"
+        assert "remove me" not in parameter.prompt
+        assert "src を確認して必要なら直す" in parameter.prompt
+        return FakeResolveResult()
+
+    def fake_run_codex_tui(parameter, **kwargs):
+        tui_calls.append((parameter, kwargs))
+        assert kwargs["purpose"] == "tui codex"
+        assert parameter.model_class == ModelClass.MAINSTREAM
+        assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
+        assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
+        assert parameter.structured_output_schema_path is None
+        assert "# file read write rule - repo_write" in parameter.prompt
+        assert "# 詳細指示" in parameter.prompt
+        assert "src を確認して必要なら直す" in parameter.prompt
+        assert "remove me" not in parameter.prompt
+
+    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(main_module, "run_codex_tui", fake_run_codex_tui)
+
+    result = runner.invoke(app, ["tui"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert len(exec_calls) == 1
+    assert len(tui_calls) == 1
+    orig_files = list((root / ".cmoc" / "log" / "tui").glob("*_orig.md"))
+    assert len(orig_files) == 1
+    assert "TODO ここから書き始める" in orig_files[0].read_text()
+    assert "/.cmoc/" in (root / ".gitignore").read_text()
+    assert (root / ".cmoc" / "log" / "sub_command").is_dir()
+    assert not (root / ".cmoc" / "logs" / "sub_commands").exists()
 
 
 def test_session_fork_creates_session_branch_and_state(
@@ -480,6 +556,15 @@ def test_review_oracle_merges_review_index_changes(tmp_path: Path, monkeypatch) 
 
 def test_file_access_mode_values_are_json_ready() -> None:
     assert FileAccessMode.READONLY.value == "readonly"
+    assert FileAccessMode.REPO_WRITE.value == "repo_write"
+
+
+def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
+    assert file_access_to_sandbox_mode(FileAccessMode.READONLY) == "read-only"
+    assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_READ) == "read-only"
+    assert file_access_to_sandbox_mode(FileAccessMode.REALIZATION_WRITE) == "workspace-write"
+    assert file_access_to_sandbox_mode(FileAccessMode.ORACLE_WRITE) == "workspace-write"
+    assert file_access_to_sandbox_mode(FileAccessMode.REPO_WRITE) == "workspace-write"
 
 
 def test_apply_fork_runs_codex_loop_and_updates_state(
@@ -1460,6 +1545,52 @@ def test_run_codex_exec_uses_stdin_and_writes_logs(
     assert "- purpose: `codex exec`" in console
     assert f"- call_log: `{result.call_log_path}`" in console
     assert "- returncode: `0`" in console
+
+
+def test_run_codex_tui_uses_codex_command_and_stdin(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    root = make_repo(tmp_path)
+    codex_home = setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    recorder = tmp_path / "tui_record.json"
+    fake_codex = bin_dir / "codex"
+    fake_codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env python3",
+                "import json, os, pathlib, sys",
+                f"record = pathlib.Path({str(recorder)!r})",
+                "record.write_text(json.dumps({'args': sys.argv[1:], 'stdin': sys.stdin.read(), 'codex_home': os.environ.get('CODEX_HOME')}))",
+                "print('opened tui')",
+            ]
+        )
+        + "\n"
+    )
+    fake_codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    parameter = AgentCallParameter(
+        ModelClass.MAINSTREAM,
+        ReasoningEffort.MEDIUM,
+        FileAccessMode.REPO_WRITE,
+        "TUI PROMPT BODY",
+        None,
+    )
+
+    result = run_codex_tui(parameter, root=root)
+
+    recorded = json.loads(recorder.read_text())
+    assert recorded["stdin"] == "TUI PROMPT BODY"
+    assert "TUI PROMPT BODY" not in " ".join(recorded["args"])
+    assert recorded["args"][0] == "--profile"
+    assert recorded["args"][1].startswith("cmoc_")
+    assert "exec" not in recorded["args"]
+    assert recorded["args"][-1] == "-"
+    assert recorded["codex_home"] == str(codex_home)
+    assert result.returncode == 0
+    assert result.stdout == "opened tui\n"
 
 
 def test_run_codex_exec_loads_repo_config_json(tmp_path: Path, monkeypatch) -> None:
