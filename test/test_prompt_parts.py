@@ -195,16 +195,22 @@ def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
         "review_oracle_standard",
         "apply_review_standard",
         "index_entry_standard",
-        "reason",
     ]
     assert schema["additionalProperties"] is False
-    assert schema["properties"]["model_class"]["enum"] == [
+    for parameter_name in schema["required"]:
+        parameter_schema = schema["properties"][parameter_name]
+        assert parameter_schema["type"] == "object"
+        assert parameter_schema["additionalProperties"] is False
+        assert parameter_schema["required"] == ["value", "reason"]
+        assert parameter_schema["properties"]["reason"]["type"] == "string"
+        assert parameter_schema["properties"]["reason"]["description"]
+    assert schema["properties"]["model_class"]["properties"]["value"]["enum"] == [
         model_class.value for model_class in ModelClass
     ]
-    assert schema["properties"]["reasoning_effort"]["enum"] == [
+    assert schema["properties"]["reasoning_effort"]["properties"]["value"]["enum"] == [
         reasoning_effort.value for reasoning_effort in ReasoningEffort
     ]
-    assert schema["properties"]["file_access_mode"]["enum"] == [
+    assert schema["properties"]["file_access_mode"]["properties"]["value"]["enum"] == [
         file_access_mode.value for file_access_mode in FileAccessMode
     ]
     for flag_name in [
@@ -215,22 +221,7 @@ def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
         "apply_review_standard",
         "index_entry_standard",
     ]:
-        assert schema["properties"][flag_name]["type"] == "boolean"
-    assert schema["properties"]["reason"]["type"] == "object"
-    assert schema["properties"]["reason"]["additionalProperties"] is False
-    assert schema["properties"]["reason"]["required"] == [
-        "model_class",
-        "reasoning_effort",
-        "file_access_mode",
-        "oracle_and_realization_basic",
-        "oracle_standard",
-        "realization_standard",
-        "review_oracle_standard",
-        "apply_review_standard",
-        "index_entry_standard",
-    ]
-    for reason_name in schema["properties"]["reason"]["required"]:
-        assert schema["properties"]["reason"]["properties"][reason_name]["type"] == "string"
+        assert schema["properties"][flag_name]["properties"]["value"]["type"] == "boolean"
 
 
 def test_build_review_oracle_standard_renders_core_review_rules() -> None:
