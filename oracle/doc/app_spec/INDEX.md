@@ -20,25 +20,24 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- cmoc が Codex CLI を呼び出すときの実行規約を定める正本仕様断片。`codex exec` の使い方、`$CODEX_HOME` と preflight validation、動的 profile、ファイルアクセス制限、モデル設定、stdin 経由のプロンプト渡し、ログ保存、stdout/stderr、Structured Output、並列実行、失敗時の retry・quota 待機・resume、`.agents` 配下編集禁止の境界を扱う。
-- 個別の呼び出しパラメータ詳細は AgentCallParameter builder を正本とし、この文書は cmoc が Codex CLI 実行をどう包み、検証し、記録し、失敗時にどう制御するかを判断する入口になる。
+- cmoc が Codex CLI を呼び出す際の実行規約を定める正本仕様断片。`codex exec` を前提に、`$CODEX_HOME` の扱い、preflight validation、動的 profile 生成、ファイルアクセス制限、Model/Reasoning Effort、プロンプト受け渡し、ログ保存、stdout/stderr、Structured Output、並列実行、失敗時の retry・待機・resume、`.agents` 配下編集禁止を扱う。
+- 個別の呼び出しパラメータの詳細は AgentCallParameter builder を正本とし、この文書は cmoc から Codex CLI へ渡す外部的な呼び出し契約、保存物、失敗制御、利用者向け進捗表示の入口になる。
 
 ## Read this when
-- cmoc から Codex CLI を起動する処理、`codex exec` の argv/stdin/profile/schema/log 出力を実装または変更する場合。
-- Codex CLI 呼び出し前の `$CODEX_HOME` 決定、`auth.json` 確認、動的 config 生成、profile 指定、ファイルアクセス制限やモデル設定の渡し方を確認する場合。
-- Codex CLI の stdout/stderr/output/call 情報をどこに何として保存するか、またコンソールへ流してよいかを判断する場合。
-- Structured Output を要求する Codex CLI 呼び出しで、schema 保存、`--output-schema` 指定、結果検証の責務を確認する場合。
-- Codex CLI 呼び出しの並列化、レスポンス要件違反、quota 枯渇、レートリミット、サーバー一時的不調、想定外エラーに対する retry・待機・resume 方針を実装またはテストする場合。
-- `.agents` 配下に対する cmoc 経由の編集可否を判断する場合。
+- cmoc から Codex CLI を起動する処理、起動前検証、環境変数引き継ぎ、profile 生成、`codex exec` の argv/stdin 組み立てを実装・変更する。
+- Codex CLI 呼び出し時のファイルアクセス制限、Model、Reasoning Effort を profile とプロンプトのどちらで伝えるべきか判断する。
+- Codex CLI 呼び出しログ、stdout/stderr、最終出力ファイル、Structured Output schema の保存・参照・検証を扱う。
+- `codex exec` の並列実行、レスポンス要件未達、quota 枯渇、レートリミット、サーバー一時不調、想定外エラーに対する retry・待機・resume 方針を実装・確認する。
+- `.agents` 配下を cmoc や Codex CLI 呼び出しで編集してよいか判断する。
 
 ## Do not read this when
-- Codex CLI 呼び出しそのものではなく、個別の AgentCallParameter の具体的な組み立て内容だけを確認したい場合は、builder 側の正本仕様または実装を直接読む。
-- cmoc の一般的なパス用語定義だけを確認したい場合は、path model の定義を読む。
-- Codex CLI を介さない cmoc 内部処理、通常の realization code 品質、テスト肥大化抑制、oracle/realization の一般原則だけを確認したい場合は、この文書ではなく該当する標準を読む。
-- ログファイルの中身そのものの調査や、既に生成された実行結果の解析だけが目的で、呼び出し規約を変更しない場合。
+- 個別の AgentCallParameters の具体的なフィールド値、profile 本文、sandbox 設定、コマンド引数の詳細仕様だけを確認したい場合は、AgentCallParameter builder 側を読む。
+- cmoc のパス語彙や `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` の定義だけを確認したい場合は、パスモデルの仕様へ進む。
+- Codex CLI を呼び出さない通常の CLI サブコマンド処理、リポジトリ解析、oracle/realization の一般規約だけを扱う場合は、この対象から読み始めなくてよい。
+- 保存済みログの内容を利用者向けにどう表示するかという UI・レポート整形だけを扱い、Codex CLI 呼び出し契約や保存条件を変更しない場合は、より直接の出力処理を読む。
 
 ## hash
-- 2b9c4af037cdfc69d2e80316cd95051bc2bef3b2b4c7d594aa74364ac3b52b95
+- 162850174122525d061818ae7d3334c069870312950b77d9a7652b1ccb7bddb2
 
 # `console_and_file_log.md`
 
@@ -201,27 +200,23 @@
 # `sub_command`
 
 ## Summary
-- cmoc の各サブコマンドに固有の正本仕様断片を集めた領域。session の開始・完了・破棄、apply の実行・取り込み・破棄、oracle review、indexing、init、対話的 TUI 起動など、CLI 外部挙動と状態遷移の入口になる。
-- 各文書はサブコマンドごとに、引数、事前条件、branch/worktree/state file の扱い、Codex CLI または agent call との責務境界、レポートや stdout、終了条件など、実装差を避けたい外部仕様を定める。
-- サブコマンド横断の概念そのものではなく、特定の CLI 操作を実行したときに何を検証し、何を変更し、どこまで自動処理してよいかを選ぶための分岐点として読む。
+- CLI サブコマンドごとの正本仕様断片をまとめたディレクトリ。session の fork/join/abandon、apply の fork/join/abandon、oracle review、indexing、init、対話型 TUI 起動について、各サブコマンドの責務、事前条件、状態遷移、git 操作、出力・レポートの境界を扱う。
+- cmoc の利用者向けコマンド挙動を確認する際に、対象サブコマンド固有の仕様へ進むための入口となる。
 
 ## Read this when
-- cmoc のサブコマンドの実装・テスト・CLI 挙動・状態遷移・出力仕様を確認または変更する。
-- session branch と home branch の作成、merge、破棄、active session の制約、session state 更新など、session lifecycle に属する具体的な操作を扱う。
-- apply 用 branch/worktree を使った実装修正ループ、成果物の join、未 join run の破棄、apply.state の遷移、force resolve、想定外差分や cleanup の扱いを確認する。
-- oracle file のレビュー実行、レビュー対象列挙、所見の列挙・検証・採否、レビュー結果レポートの保存や stdout 出力を扱う。
-- 現在の作業ルートに対する indexing や init のように、引数を取らない機械的なサブコマンドの事前条件、git 差分チェック、生成差分の commit 方針を確認する。
-- ユーザー入力プロンプトと自動生成プロンプトを組み合わせ、Codex CLI を TUI として起動するサブコマンドのエディタ入力、agent call、完全プロンプト生成の境界を確認する。
+- cmoc の特定サブコマンドの CLI 挙動、引数、事前条件、終了条件、標準出力、レポート保存、またはエラー時の扱いを確認・実装・テストしたいとき。
+- session lifecycle の開始・完了・破棄、apply run の開始・取り込み・破棄、oracle file レビュー、インデクシング実行、初期化、対話型 AI Agent CLI/TUI 起動のいずれかを扱うとき。
+- サブコマンド実行に伴う branch/worktree 操作、session/apply state の更新、未コミット差分や merge conflict の扱い、cleanup 対象の境界を確認したいとき。
+- 共通概念ではなく、ユーザーが実行するコマンド単位で正本仕様断片を探したいとき。
 
 ## Do not read this when
-- パス語彙、oracle file、realization file、root model など、cmoc 全体の基礎概念だけを確認したい場合は、それらを定義する共通仕様へ進む。
-- run の隔離実行、Codex CLI 起動パラメータ構築、agent call の詳細な parameter builder、Markdown レポートの内部レンダリングなど、サブコマンドから呼ばれる共通部品の詳細だけを調べたい場合は、該当する共通仕様または実装仕様を直接読む。
-- 実装ファイルやテストファイルの配置、helper 分割、既存コード構造など、正本仕様ではなく realization 側の設計だけを確認したい場合は、実装側のルーティングへ進む。
-- INDEX.md の生成規則、oracle file の書き方、仕様断片の一般原則を確認したい場合は、この領域ではなくルーティング文書や oracle 標準の仕様を読む。
-- 汎用的な git 操作、通常の branch merge、手作業での rollback など、cmoc 管理下の特定サブコマンドとして定義されていない操作を調べたい場合。
+- oracle file、realization file、パスモデル、root 語彙など、cmoc 全体の基礎概念だけを確認したいとき。
+- run の隔離実行、agent call parameter builder、Codex CLI 呼び出しパラメータ、レポートレンダリングなど、サブコマンドから参照される内部処理の詳細だけを調べたいとき。
+- インデクシングで生成・更新される内容そのものや、git 操作一般、実装ファイルの helper 分割、テスト構成など、個別サブコマンドの外部挙動ではない責務を確認したいとき。
+- 実装コードやテストコードの配置・構造を調べるだけで、CLI サブコマンドの正本仕様を参照する必要がないとき。
 
 ## hash
-- 64514411b2bc272b47d3b01e142bafc891c5436059d80de2cfa87637131ed518
+- b718c378d7d1fe05d5befc7645d156c9b56eda703d39b881d82a11463963c4a7
 
 # `usage.md`
 

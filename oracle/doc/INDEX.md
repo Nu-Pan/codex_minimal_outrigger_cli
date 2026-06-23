@@ -1,27 +1,26 @@
 # `app_spec`
 
 ## Summary
-- cmoc の利用者向け CLI 挙動と横断的な実行規約を集めた正本仕様断片群。通常ワークフロー、サブコマンド別仕様、run 隔離、セッション状態、Codex CLI 呼び出し、ログ、エラー処理、自動補完、インデクシング、プロンプト言語方針など、外部挙動や状態遷移の判断入口になる。
-- 個別サブコマンドの詳細へ進む前に、サブコマンド固有仕様と共通仕様のどちらを読むべきかを切り分けるための領域。利用手順、公開コマンド、状態ファイル、ブランチ・worktree、ログ、Structured Output、retry・resume、INDEX.md 生成など、複数機能にまたがる仕様の所在を選ぶために使う。
+- cmoc のアプリケーション挙動を定める正本仕様断片群への入口。CLI 起動経路、Codex CLI 呼び出し、ログ、共通エラー処理、インデクシング、run 隔離、セッション状態、利用手順、プロンプト文面、横断的な雑則を扱う。
+- 利用者が実行するサブコマンド単位の仕様へ進むための入口も含み、共通仕様から個別コマンド仕様へ読む先を切り分ける階層として位置づけられる。
 
 ## Read this when
-- cmoc の CLI 操作全体の流れ、初期化からセッション開始、oracle 改訂、レビュー、apply、join、終了までの標準ワークフローを確認したいとき。
-- 特定サブコマンドの引数、事前条件、branch/worktree/state file、stdout、レポート、終了条件、Codex CLI との責務境界を実装・修正・テストするとき。
-- サブコマンド横断の共通規則として、run 隔離、セッション状態の永続化、Codex CLI 実行、ログ出力、エラー処理、自動補完、INDEX.md 自動生成、プロンプト文面の方針を確認したいとき。
-- Codex CLI 呼び出しの preflight validation、動的 profile、ファイルアクセス制限、Structured Output、ログ保存、並列実行、retry・quota 待機・resume の扱いを判断するとき。
-- サブコマンド実行時のコンソール表示、JSON Lines ログ、時間・パス表記、ステップ通知、完了サマリーなど、利用者確認用出力と追跡用ログの境界を確認するとき。
-- cmoc の INDEX.md 生成・更新・除外、hash 更新判定、深い階層からの処理順、インデクシング後の自動コミット範囲を扱うとき。
+- cmoc の CLI としての外部挙動、サブコマンドの責務、標準出力・標準エラー出力、ログ保存、エラー終了、状態遷移、git branch/worktree 操作を確認・実装・テストしたいとき。
+- cmoc から Codex CLI をどう起動し、profile・環境変数・Structured Output・ログ・retry・resume・並列実行をどう扱うか判断したいとき。
+- INDEX.md の自動生成・更新、実行前インデクシング、生成対象・除外対象、hash 更新判定、自動コミット範囲、排他制御を扱うとき。
+- run root、repo root、work root、session branch、run branch、run worktree、セッション状態ファイル、apply 状態など、cmoc の実行単位と永続状態の関係を確認したいとき。
+- 初回初期化から session fork/join、oracle 改訂・レビュー、apply fork/join、セッション終了までの標準ワークフローを把握したいとき。
+- agent に渡すプロンプトや利用者向けレポートの自然言語方針、cmoc 固有概念をプロンプトへ出す境界を確認したいとき。
 
 ## Do not read this when
-- oracle file、realization file、oracle doc、oracle src、realization implementation などの基本的な分類定義や責務分担だけを確認したいとき。
-- パスキーワードや root model の意味そのものを確認したいときは、パスモデルを定義する仕様または実装へ進む。
-- 実装ファイルやテストファイルの具体的なコード構造、helper 分割、依存追加、テスト肥大化抑制など、realization 側の品質判断だけを行うとき。
-- 個別の AgentCallParameter の具体的な組み立て内容だけを確認したいときは、builder 側の正本仕様または実装へ進む。
-- ログファイルの中身そのものの事後調査や、既に生成された実行結果の解析だけが目的で、呼び出し規約やログ仕様を変更しないとき。
-- INDEX.md エントリーの一般的な品質基準、oracle file の書き方、正本仕様断片の原則だけを確認したいとき。
+- oracle file と realization file の基本定義、責務分担、編集権限だけを確認したいとき。
+- パスキーワードやルート種別そのものの定義だけを確認したいときは、パスモデルを定義する仕様または実装へ直接進む。
+- 実装ファイルやテストファイルの具体的なコード構造、関数、クラス、helper 分割、既存挙動だけを調べたいとき。
+- oracle file の品質基準、realization file の品質基準、INDEX.md エントリーの書き方そのものを確認したいだけで、cmoc のアプリケーション挙動を扱わないとき。
+- 特定サブコマンドから参照される内部処理ではなく、単にソース配置やテスト配置を探しているとき。
 
 ## hash
-- 4e962ec66931312f137969f1a072a47907777b57b9114cad1e2c95d06bc7983c
+- f42d91aca9ec1dc9aa12975814609e536b18b31d3deefd3af5a1f39b076a049e
 
 # `branch_model.md`
 
