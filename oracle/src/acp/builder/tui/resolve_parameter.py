@@ -1,0 +1,3 @@
+def build_tui_resolve_parameter_parameter():
+    # TODO 実装
+    ...
