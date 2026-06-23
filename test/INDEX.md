@@ -21,3 +21,27 @@
 ## hash
 
 - 5d7c302901b2feee319c7f721f1b30ba4982d5c51a7aa732bb18ceaaf81eba47
+
+# `test_basic_and_cli.py`
+
+## Summary
+
+- basic/config/runtime/CLI の主要 realization 挙動を検証するテスト群です。
+- path token 解決、config 既定値と永続化、stdout structured error、completion probe の副作用回避、work root 実行検査、`.cmoc` ignore 保証、Codex 呼び出し前 indexing、INDEX entry 並列生成、apply fork 編集禁止差分検査、最小 apply state schema、apply join 想定外差分判定、session fork 状態ファイル、review report frontmatter 生成を扱います。
+- prompt 部品以外の共通基盤と CLI 境界の回帰確認入口です。
+
+## Read this when
+
+- path model、config JSON、runtime/stdout error、completion probe、work root 実行検査、`.cmoc` ignore、Codex 呼び出し前 indexing、INDEX entry 並列生成、apply fork 編集禁止差分検査、最小 apply state schema、apply join 想定外差分判定、session/review CLI と review report のテスト観点を確認したいとき。
+- `src/main.py` や `src/cmoc_runtime.py` を変更した後に、どの CLI 挙動が検証されているか把握したいとき。
+- 一時 git repository を使う CLI テストの作り方を確認したいとき。
+
+## Do not read this when
+
+- prompt 部品の StructDoc 生成と Markdown 表現だけを確認したいとき。
+- 個別の prompt builder や Structured Output schema の内容を直接追いたいとき。
+- CLI ではなく oracle/src と同形の純粋関数だけを確認したいとき。
+
+## hash
+
+- 19d21ac286d881e1fbeeb7e7096702a407270ec9503786fa7ac28f6011f2a33c

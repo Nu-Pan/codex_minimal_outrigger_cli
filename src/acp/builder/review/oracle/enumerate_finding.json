@@ -1,0 +1,45 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "findings"
+  ],
+  "properties": {
+    "findings": {
+      "type": "array",
+      "description": "レビュー対象 oracle file と関連 oracle file から見つけた、既知の関連所見と重複しない新規所見のリスト。新規所見が無い場合は空配列を返す。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "severity",
+          "title",
+          "oracle_path",
+          "reason"
+        ],
+        "properties": {
+          "severity": {
+            "type": "string",
+            "description": "所見の重大度。仕様断片として致命的な矛盾・欠落は fatal、軽微な曖昧さ・改善余地は minor。",
+            "enum": [
+              "fatal",
+              "minor"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "description": "所見の短い見出し。問題の要点が分かるように簡潔に書く。"
+          },
+          "oracle_path": {
+            "type": "string",
+            "description": "所見の主な根拠となる oracle file のパス。レビュー対象または関連する oracle file を指す。"
+          },
+          "reason": {
+            "type": "string",
+            "description": "なぜ新規所見として扱うべきかの理由。oracle file の記述に基づき、既知の関連所見との差分も分かるように書く。"
+          }
+        }
+      }
+    }
+  }
+}
