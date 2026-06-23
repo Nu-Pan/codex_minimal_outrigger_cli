@@ -1,5 +1,9 @@
+import json
+
 from basic.acp import FileAccessMode
+from basic.acp import ModelClass, ReasoningEffort
 from basic.struct_doc import StructDoc, render_as_markdown
+from acp.builder.tui.resolve_parameter import build_tui_resolve_parameter_parameter
 from acp.prompt_parts.apply_review_standard import build_apply_review_standard
 from acp.prompt_parts.complete_prompt import build_complete_prompt
 from acp.prompt_parts.index_entry_standard import build_index_entry_standard
@@ -151,6 +155,82 @@ def test_complete_prompt_omits_index_entry_standard_by_default() -> None:
 
     rendered = render_as_markdown(prompt)
     assert "index entry standard" not in rendered
+
+
+def test_tui_resolve_parameter_builder_embeds_original_prompt() -> None:
+    original_prompt = "# 依頼\n\nsrc の実装を調べて必要なら修正して下さい。"
+
+    parameter = build_tui_resolve_parameter_parameter(original_prompt)
+
+    assert parameter.model_class == ModelClass.EFFICIENCY
+    assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
+    assert parameter.file_access_mode == FileAccessMode.READONLY
+    assert parameter.structured_output_schema_path is not None
+    assert parameter.structured_output_schema_path.name == "resolve_parameter.json"
+    assert parameter.structured_output_schema_path.exists()
+    assert "AI Agent CLI/TUI の実行パラメータ選定担当" in parameter.prompt
+    assert "パラメータ選択結果" in parameter.prompt
+    assert original_prompt in parameter.prompt
+    assert "# oracle and realization basic" in parameter.prompt
+    assert "# oracle standard" in parameter.prompt
+    assert "# realization standard" in parameter.prompt
+    assert "# review oracle standard" in parameter.prompt
+    assert "# apply review standard" in parameter.prompt
+    assert "# index entry standard" in parameter.prompt
+
+
+def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
+    parameter = build_tui_resolve_parameter_parameter("調査して下さい。")
+    assert parameter.structured_output_schema_path is not None
+
+    schema = json.loads(parameter.structured_output_schema_path.read_text())
+
+    assert schema["required"] == [
+        "model_class",
+        "reasoning_effort",
+        "file_access_mode",
+        "oracle_and_realization_basic",
+        "oracle_standard",
+        "realization_standard",
+        "review_oracle_standard",
+        "apply_review_standard",
+        "index_entry_standard",
+        "reason",
+    ]
+    assert schema["additionalProperties"] is False
+    assert schema["properties"]["model_class"]["enum"] == [
+        model_class.value for model_class in ModelClass
+    ]
+    assert schema["properties"]["reasoning_effort"]["enum"] == [
+        reasoning_effort.value for reasoning_effort in ReasoningEffort
+    ]
+    assert schema["properties"]["file_access_mode"]["enum"] == [
+        file_access_mode.value for file_access_mode in FileAccessMode
+    ]
+    for flag_name in [
+        "oracle_and_realization_basic",
+        "oracle_standard",
+        "realization_standard",
+        "review_oracle_standard",
+        "apply_review_standard",
+        "index_entry_standard",
+    ]:
+        assert schema["properties"][flag_name]["type"] == "boolean"
+    assert schema["properties"]["reason"]["type"] == "object"
+    assert schema["properties"]["reason"]["additionalProperties"] is False
+    assert schema["properties"]["reason"]["required"] == [
+        "model_class",
+        "reasoning_effort",
+        "file_access_mode",
+        "oracle_and_realization_basic",
+        "oracle_standard",
+        "realization_standard",
+        "review_oracle_standard",
+        "apply_review_standard",
+        "index_entry_standard",
+    ]
+    for reason_name in schema["properties"]["reason"]["required"]:
+        assert schema["properties"]["reason"]["properties"][reason_name]["type"] == "string"
 
 
 def test_build_review_oracle_standard_renders_core_review_rules() -> None:

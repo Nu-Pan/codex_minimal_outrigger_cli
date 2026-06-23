@@ -44,6 +44,6 @@ def build_file_access_rule(mode: FileAccessMode) -> StructDoc:
             raise ValueError(f"Invalid mode (mode={mode})")
     # 正常終了
     return StructDoc(
-        "file read write rule",
+        f"file read write rule - {mode.value}",
         body,
     )

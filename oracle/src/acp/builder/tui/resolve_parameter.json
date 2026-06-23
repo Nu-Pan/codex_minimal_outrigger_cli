@@ -1,0 +1,131 @@
+{
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "model_class",
+        "reasoning_effort",
+        "file_access_mode",
+        "oracle_and_realization_basic",
+        "oracle_standard",
+        "realization_standard",
+        "review_oracle_standard",
+        "apply_review_standard",
+        "index_entry_standard",
+        "reason"
+    ],
+    "properties": {
+        "model_class": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "reason"
+            ],
+            "properties": {
+                "value": {
+                    "type": "string",
+                    "description": "ユーザーのオリジナルプロンプトを実行する AI Agent CLI/TUI に使う論理モデルクラス。",
+                    "enum": [
+                        "mainstream",
+                        "flagship",
+                        "efficiency",
+                        "minimum"
+                    ]
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "選択した論理モデルクラスが妥当である事の説明・根拠。"
+                }
+            }
+        },
+        "reasoning_effort": {
+            "type": "string",
+            "description": "ユーザーのオリジナルプロンプトを実行する AI Agent CLI/TUI に使う論理 Reasoning effort。",
+            "enum": [
+                "low",
+                "medium",
+                "high"
+            ]
+        },
+        "file_access_mode": {
+            "type": "string",
+            "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行する際の論理ファイルアクセスモード。過不足の無い権限設定が望ましい。",
+            "enum": [
+                "readonly",
+                "pure_oracle_read",
+                "realization_write",
+                "oracle_write",
+                "repo_write"
+            ]
+        },
+        "oracle_and_realization_basic": {
+            "type": "boolean",
+            "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行するにあたって `oracle and realization basic` を読む必要があるのなら True を設定する。"
+        },
+        "oracle_standard": {
+            "type": "boolean",
+            "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行するにあたって `oracle standard` を読む必要があるのなら True を設定する。"
+        },
+        "realization_standard": {
+            "type": "boolean",
+            "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行するにあたって `realization standard` を読む必要があるのなら True を設定する。"
+        },
+        "review_oracle_standard": {
+            "type": "boolean",
+            "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行するにあたって `review oracle standard` を読む必要があるのなら True を設定する。"
+        },
+        "apply_review_standard": {
+            "type": "boolean",
+            "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行するにあたって `apply review standard` を読む必要があるのなら True を設定する。"
+        },
+        "index_entry_standard": {
+            "type": "boolean",
+            "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行するにあたって `index entry standard` を読む必要があるのなら True を設定する。"
+        },
+        "reason": {
+            "type": "object",
+            "description": "選択した model_class, reasoning_effort, file_access_mode, build_complete_prompt 用フラグの根拠を人間が確認するための短い説明。",
+            "additionalProperties": false,
+            "required": [
+                "model_class",
+                "reasoning_effort",
+                "file_access_mode",
+                "oracle_and_realization_basic",
+                "oracle_standard",
+                "realization_standard",
+                "review_oracle_standard",
+                "apply_review_standard",
+                "index_entry_standard"
+            ],
+            "properties": {
+                "model_class": {
+                    "type": "string"
+                },
+                "reasoning_effort": {
+                    "type": "string"
+                },
+                "file_access_mode": {
+                    "type": "string"
+                },
+                "oracle_and_realization_basic": {
+                    "type": "string"
+                },
+                "oracle_standard": {
+                    "type": "string"
+                },
+                "realization_standard": {
+                    "type": "string"
+                },
+                "review_oracle_standard": {
+                    "type": "string"
+                },
+                "apply_review_standard": {
+                    "type": "string"
+                },
+                "index_entry_standard": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
