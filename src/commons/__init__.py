@@ -1,1 +1,1 @@
-"""cmoc 共通モジュール。"""
+"""cmoc shared runtime helpers."""

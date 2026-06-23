@@ -1,142 +1,119 @@
-# `__init__.py`
+# `apply.py`
 
 ## Summary
 
-- `src/sub_commands/__init__.py` は `src.sub_commands` パッケージを宣言するだけの最小モジュールです。
-- 公開 API、定数、実行ロジック、再エクスポートは持ちません。
+- `cmoc apply fork/join/abandon` の本命処理を実装する realization ファイルです。
+- apply loop、finding 列挙・改善・適用、report 生成、apply branch の session branch への merge、想定外差分検査と force-resolve、INDEX.md conflict 自動解決、apply worktree/branch cleanup を扱います。
+- `src/main.py` には既存テストや他処理のための compatibility wrapper を残し、このファイルが apply 系 subcommand の実処理を担当します。
 
 ## Read this when
 
-- `src.sub_commands` が Python パッケージとして宣言されていることを確認したいとき。
-- `src/sub_commands` ディレクトリの入口として、最小限の役割だけを把握したいとき。
-- パッケージとしての存在確認だけで足り、追加の公開 API や実行処理が不要なとき。
+- `cmoc apply fork` の apply loop、finding 列挙・改善・適用、commit message 生成、report 生成を確認したいとき。
+- `cmoc apply join` の事前条件、想定外差分判定、force-resolve、merge、state 更新、cleanup warning を確認したいとき。
+- `cmoc apply abandon` の worktree/branch 破棄、state 初期化、warning 表示を修正したいとき。
 
 ## Do not read this when
 
-- `src.sub_commands` 配下の個別サブコマンド実装や実行フローを確認したいとき。
-- `apply`、`session`、`review`、`init` などの各モジュールの仕様を追いたいとき。
-- `src.sub_commands` のパッケージ宣言ではなく、実際の業務ロジックや CLI 入口を見たいとき。
+- session/review/indexing の本命処理だけを確認したいとき。
+- Typer の command 登録や Codex CLI prompt builder の文面だけを確認したいとき。
+- apply 系 helper の compatibility wrapper だけを `src/main.py` 側で確認したいとき。
 
 ## hash
 
-- ea4df02b820eba1ca77dfb1b2227c81dbff61cd7c4c2bf4d26d891369b57fa77
-
-# `apply`
-
-## Summary
-
-- この `src/sub_commands/apply` ディレクトリのルーティング文書で、`cmoc apply` 系サブコマンド実装への入口です。
-- `__init__.py`、`abandon.py`、`fork.py`、`join.py` の役割を素早く切り分けるための目次です。
-- `apply` の実行制御、破棄、取り込みのどの実装へ進むべきかを判断する起点です。
-
-## Read this when
-
-- `cmoc apply` 系のパッケージ構成や、どのモジュールを読むべきか迷ったとき。
-- `cmoc apply fork` の調査・修正ループや `abandon` / `join` の処理本体を追いたいとき。
-- このディレクトリの各実装ファイルの役割を確認してから、詳細実装やテストに進みたいとき。
-
-## Do not read this when
-
-- すでに読む対象の `abandon.py`、`fork.py`、`join.py` が分かっていて、直接そのファイルへ進めるとき。
-- `cmoc apply` の利用手順や仕様断片だけを確認したいときは、`oracles/docs/app_specs/sub_commands/` 側を読むべきです。
-- `src/sub_commands/apply` 以外のサブコマンド実装や、`README.md` などの運用ルールだけを確認したいとき。
-
-## hash
-
-- 337d2f6e1cee835c1d783081f387b87040dd1117e1e24f5d9cb9b7c167383621
-
-# `indexing.py`
-
-## Summary
-
-- `src/sub_commands/indexing.py` は `cmoc indexing` の本体実装モジュールで、CLI から渡された `repo_root` を受けて共通 runner と `commons.indexing` に処理を振り分けます。
-- `repo_root` が未指定なら `commons.command_runner.run_command()` で作業対象のルートを解決し、指定済みなら `assert_no_uncommitted_changes()` の後に `maintain_indexes()` を実行します。
-- 変更があれば `committed INDEX.md maintenance changes`、変更がなければ `no INDEX.md maintenance changes` を標準出力へ出します。
-
-## Read this when
-
-- `cmoc indexing` の本体処理と、`repo_root` の未指定時に共通 runner へ委譲する流れを確認したいとき。
-- `assert_no_uncommitted_changes()` による事前チェックと、`maintain_indexes()` 実行後の標準出力を確認したいとき。
-- `StepTimer` と `start_step()` を使った `INDEX.md` メンテナンスの実行順を把握したいとき。
-
-## Do not read this when
-
-- `cmoc indexing` の生成アルゴリズム、配置対象の判定、既存 `INDEX.md` の再利用条件だけを確認したいときは、このファイルではなく `src/commons/indexing.py` を読むべきです。
-- CLI 登録やサブコマンドの起動経路だけを確認したいときは、このファイルではなく `src/main.py` を読むべきです。
-- 利用手順や正本仕様だけを確認したいときは、このファイルではなく `oracles/docs/app_specs/sub_commands/indexing.md` を読むべきです。
-
-## hash
-
-- 822801872f1ebdc971018787dcf090c67c3ef542bfe891e0108a41b090cadf19
+- 600a025e951f9f61cd05e6ccdc05afe51907c243ee4b203e5ef76521cd113635
 
 # `init.py`
 
 ## Summary
 
-- `src/sub_commands/init.py` は `cmoc init` の本体処理を持つモジュールです。
-- `repo_root` が未指定なら共通 runner に委譲し、指定済みなら `.cmoc` の ignore 確認と初期化変更の commit という 2 段階で処理します。
-- `.cmoc` の ignore 保証、既存 tracked `.cmoc` の追跡解除、初期化に伴う差分 commit と結果表示をまとめて扱います。
+- `cmoc init` の本命処理を実装する realization ファイルです。
+- `.cmoc` の git ignore 保証、config 同期、必要な `.gitignore` 差分の commit、成功時 stdout の Markdown 表示を扱います。
+- `src/main.py` の Typer callback から呼び出される `cmoc_init_impl()` の入口です。
 
 ## Read this when
 
-- `cmoc init` の実装・修正・テスト・レビューを行いたいとき。
-- `.cmoc` を git 追跡対象外にする処理、`.gitignore` 更新、tracked file の解除、初期化差分の commit 規則を確認したいとき。
-- `run_command()` 経由で repo root を解決しつつ、`StepTimer` と `start_step()` で 2 段階の初期化フローをどう実行するかを把握したいとき。
+- `cmoc init` の副作用、commit 条件、config 同期、stdout 表示を確認したいとき。
+- design rule に沿った subcommand implementation の配置を確認したいとき。
+- `.cmoc` ignore 保証と config 初期化の境界を修正したいとき。
 
 ## Do not read this when
 
-- `cmoc init` 以外のサブコマンドの入口や CLI 登録だけを確認したいとき。
-- `.cmoc` の ignore 保証や初期化 commit の流れが論点に入っていないとき。
-- 初期化後の session / apply の運用仕様だけを追いたいとき。
+- `cmoc init` 以外の session/apply/review/indexing の実行制御を確認したいとき。
+- Typer の command 登録や completion probe の program name 固定だけを確認したいとき。
+- `ensure_cmoc_ignored()` や `sync_config()` の内部実装だけを直接確認したいとき。
 
 ## hash
 
-- d521f2e6b339670dceeea2ae04fae5971c16a7ac9760586977de57e4f82240e6
+- f50ebd2eb96fa024f3634c6b14a5882d4866a2532cf05a13d3b5fe06134d561c
 
-# `review`
+# `indexing.py`
 
 ## Summary
 
-- `src/sub_commands/review` ディレクトリのルーティング文書で、`__init__.py` と `oracles.py` へ案内する入口です。
-- `__init__.py` はパッケージ宣言のみを担う最小モジュールで、`oracles.py` は `cmoc review oracles` の本体実装です。
-- この階層では、パッケージ構造の確認か、レビュー処理の実装確認かを切り分けて次の参照先を選びます。
+- `cmoc indexing` と Codex CLI 呼び出し前 indexing preflight の本命処理を実装する realization ファイルです。
+- INDEX.md の配置対象列挙、既存 entry の hash 検査、entry 生成、更新差分の commit、entry Markdown rendering を扱います。
+- `src/main.py` には既存テストと preflight 境界のための thin wrapper を残し、このファイルが実処理を担当します。
 
 ## Read this when
 
-- `src/sub_commands/review` が Python パッケージとして宣言されていることを確認したいとき。
-- `cmoc review oracles` の実装本体である `oracles.py` の実行フロー、評価パイプライン、Structured Output schema の扱いを追いたいとき。
-- `cmoc review` 系サブコマンドの入口構造を把握してから、関連ファイルへ進みたいとき。
+- `cmoc indexing` の深い directory 優先処理、hash 判定、自動 commit を確認したいとき。
+- INDEX.md entry 生成の Codex CLI 呼び出し、並列生成、Structured Output rendering を修正したいとき。
+- `update_indexes()`、`build_index_entry()`、`render_index_entry()` の実処理を追いたいとき。
 
 ## Do not read this when
 
-- `cmoc review oracles` の利用手順や引数仕様だけを確認したいときは、`oracles/docs/app_specs/sub_commands/review_oracles.md` を読むべきです。
-- `cmoc review` の CLI 登録や hidden alias だけを確認したいときは、`src/main.py` を読むべきです。
-- `src/sub_commands/review` の入口構造ではなく、`oracles.py` の実装詳細だけを直接確認したいときは、この `INDEX.md` を経由する必要はありません。
+- session/apply/review の branch や state 遷移だけを確認したいとき。
+- Typer の command 登録や completion probe の program name 固定だけを確認したいとき。
+- prompt builder 自体の文面や schema だけを直接確認したいとき。
 
 ## hash
 
-- 2cd09861a16a37ce63a059a9eb1a26222059b958680bedfc0d124ab6ff3d97b8
+- a4f9705b93a50e6ce0a719f324ce891ba8149574d1c806f1494123659bb6c23e
 
-# `session`
+# `session.py`
 
 ## Summary
 
-- `src/sub_commands/session` は `cmoc session` 系サブコマンド実装の入口ディレクトリです。
-- `__init__.py` はパッケージ宣言だけを担う最小モジュールです。
-- `abandon.py` は session branch の破棄、`fork.py` は session branch の作成、`join.py` は session branch の統合を担います。
+- `cmoc session fork/join/abandon` の本命処理を実装する realization ファイルです。
+- session branch の作成、session state 更新、session home branch への merge、merge conflict 解消依頼、session abandon の cleanup を扱います。
+- `src/main.py` の Typer callback から呼び出され、Codex CLI 呼び出しと git runner は main 側から注入できます。
 
 ## Read this when
 
-- `src/sub_commands/session` 配下の入口構造と、どのモジュールを開くべきかを把握したいとき。
-- `cmoc session fork` / `join` / `abandon` の責務分担や、各実装モジュールの役割を確認したいとき。
-- session 系の実装・修正・レビュー・テストに入る前に、パッケージ全体の目次を整理したいとき。
+- `cmoc session fork` の branch/state 作成や active session 制約を確認したいとき。
+- `cmoc session join` の merge、conflict resolution agent call、branch 削除 warning を確認したいとき。
+- `cmoc session abandon` の事前条件、home branch 切り替え、state 更新、branch 削除を修正したいとき。
 
 ## Do not read this when
 
-- `cmoc session` 以外のサブコマンドの実装や CLI 登録だけを確認したいとき。
-- `cmoc apply` 系や `cmoc review` 系の仕様・実装を追いたいとき。
-- `oracles` 側の正本仕様だけを確認したいとき。
+- `apply`、`review oracle`、`indexing` の本命処理だけを確認したいとき。
+- Typer の command 登録や completion probe の program name 固定だけを確認したいとき。
+- session state dataclass や git helper の内部実装だけを直接確認したいとき。
 
 ## hash
 
-- b12b591472c17099b833589a6ea8fdeffa5febc7a25d65b8493a9682ebdb256b
+- 1ac7da085f1c6dab065f696400c7fce368e566dccb93384559fce067eaca0cb1
+
+# `review.py`
+
+## Summary
+
+- `cmoc review oracle` の本命処理を実装する realization ファイルです。
+- review worktree/branch の作成、oracle file 対象列挙、finding enumerate/merge/validate/judge loop、review INDEX.md 変更の merge、Markdown report 生成を扱います。
+- `src/main.py` には既存テストや他処理のための compatibility wrapper を残し、このファイルが review oracle の実処理を担当します。
+
+## Read this when
+
+- `cmoc review oracle` の事前条件、scope、run isolation、review loop、report frontmatter を確認したいとき。
+- review branch 上の INDEX.md 差分 commit/merge や conflict 解消を修正したいとき。
+- `run_review_oracle_loop()`、`render_review_oracle_report()`、finding merge operation の実処理を追いたいとき。
+
+## Do not read this when
+
+- init/session/apply/indexing の本命処理だけを確認したいとき。
+- Typer の command 登録や completion probe の program name 固定だけを確認したいとき。
+- review oracle 用 prompt builder の文面や schema だけを直接確認したいとき。
+
+## hash
+
+- 764ded2bfb5029ee6e4e562dc675abe45a11a4f36591f0e50e2d56ece73da8d8

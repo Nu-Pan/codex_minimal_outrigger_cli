@@ -8,36 +8,36 @@
 
 ## パス表記
 
-- ファイル・ディレクトリパスの表記に `<cmoc-root>`, `<work-root>`, `<state-root>`, `<run-root>` を用いる
+- ファイル・ディレクトリパスの表記に `<cmoc-root>`, `<repo-root>`, `<run-root>`, `<work-root>` を用いる
 - 特に `<cmoc-root>` は、このリポジトリのルートディレクトリパスを表す
-- これらパスキーワードの説明は `<cmoc-root>/oracles/docs/path_model.md` を参照すること
-
-## ファイルアクセス規則
-
-以下のファイルは AI 閲覧・編集禁止
-
-- `<cmoc-root>/memo`
-
-以下のファイルは AI 編集禁止
-
-- `<cmoc-root>/README.md`
-- `<cmoc-root>/AGENTS.md`
-- `<cmoc-root>/oracles`
-
-## `<cmoc-root>/oracles`
-
-- cmoc の正本仕様断片は `<cmoc-root>/oracles` 配下のファイルで述べている
-- これはあくまで「断片」であり、 `oracles` に記載の無い「隙間」は実装者である AI の裁量で決めて良い
-- `oracles` とそれ以外とがている場合は実装の方を合わせる
+- これらパスキーワードの説明は `<cmoc-root>/oracle/src/utils/path_model.py` を参照すること
 
 ## ルーティング
 
-- `<cmoc-root>/oracles` 配下の各ディレクトリには `INDEX.md` が存在する
+- `<cmoc-root>` ツリー内の各ディレクトリには `INDEX.md` が存在する
 - `INDEX.md` には、同階層のファイル・ディレクトリへのルーティング情報が記載されている
-- `<cmoc-root>/oracles` 配下の正本仕様を調べる際は、 `INDEX.md` のルーティング情報を手がかりに、最低限必要なファイルだけを読むこと
-- 作業を始める前に `<cmoc-root>/oracles/INDEX.md` を必ず読むこと
+- 作業を始める前に `<cmoc-root>/oracle/INDEX.md` を必ず読むこと
+- 作業中、必要に応じて逐次 `INDEX.md` を読んでファイルを探すこと
+
+## ファイルアクセス規則
+
+以下のファイルは閲覧・編集禁止
+
+- `<cmoc-root>/memo`
+
+以下のファイルは編集禁止
+
+- `<cmoc-root>/README.md`
+- `<cmoc-root>/AGENTS.md`
+- `<cmoc-root>/oracle`
+
+## `<cmoc-root>/oracle`
+
+- cmoc の正本仕様断片は `<cmoc-root>/oracle` 配下のファイルで述べている
+- これはあくまで「断片」であり、oracle に記載の無い「隙間」は実装者である AI の裁量で決めて良い
+- oracle とそれ以外とが乖離している場合は実装の方を合わせる
 
 ## 実装・テスト
 
 - cmoc の実装は `<cmoc-root>/src` に書く
-- cmoc の自動テストは `<cmoc-root>/tests` に書く
+- cmoc の自動テストは `<cmoc-root>/test` に書く

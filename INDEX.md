@@ -2,27 +2,25 @@
 
 ## Summary
 
-- この `AGENTS.md` のルーティング文書で、リポジトリ全体の作業ルールと参照先の入口を案内します。
-- 閲覧・編集の制約、`oracles` 配下の読み方、`src` と `tests` の配置前提を整理するための目次です。
-- 作業開始前に、どの規約や仕様断片を読むべきかを切り分けるための入口です。
+- この `AGENTS.md` のルーティング文書で、リポジトリ全体の作業ルールと参照先の入口を案内する。
+- 閲覧・編集の制約、`oracle` 配下の読み方、`src` と `test` の配置前提を整理するための目次である。
+- 作業開始前に、どの規約や仕様断片を読むべきかを切り分けるための入口である。
 
 ## Read this when
 
 - このリポジトリで作業を始める前に、基本ルールと役割分担を確認したいとき。
-- `cmoc` の開発と `cmoc` を用いた開発の違いを整理したいとき。
-- `memo`、`README.md`、`AGENTS.md`、`oracles` の閲覧・編集制約を確認したいとき。
-- `oracles` の正本仕様を読む前に、どの `INDEX.md` を起点にたどるか知りたいとき。
-- 実装を `<cmoc-root>/src`、自動テストを `<cmoc-root>/tests` に置く前提を確認したいとき。
+- `memo`、`README.md`、`AGENTS.md`、`oracle` の閲覧・編集制約を確認したいとき。
+- `oracle` の正本仕様を読む前に、どの `INDEX.md` を起点にたどるか知りたいとき。
 
 ## Do not read this when
 
-- 個別サブコマンドの引数や終了条件だけを確認したいとき。
-- `oracles` 配下の特定仕様断片を直接確認したいとき。
+- このリポジトリ全体の作業ルールや参照先の入口を確認する必要がないとき。
+- 個別サブコマンドの引数や終了条件だけを直接確認したいとき。
 - 実装コードやテストコードの内容だけを見たいとき。
 
 ## hash
 
-- 01c836ca6fff27353230dbf64f045cc58b947af22edcf8bc22b5575f80a1e37e
+- 3a1ea63ae7c7c50f65474c7a2c0f0e6884ad15e82af35e63fbd80fbee958f7d3
 
 # `LICENSE`
 
@@ -41,7 +39,7 @@
 ## Do not read this when
 
 - このリポジトリの実装方針、CLI 仕様、テスト方針を確認したいとき。
-- `cmoc` の使い方や `oracles` のルーティングを調べたいとき。
+- `cmoc` の使い方や `oracle` のルーティングを調べたいとき。
 - ライセンス条文そのものではなく、ファイル構成や開発手順を確認したいとき。
 
 ## hash
@@ -57,43 +55,39 @@
 
 ## Read this when
 
-- このリポジトリ全体の概要を短く把握したいとき
-- 初期セットアップとして clone、仮想環境作成、`cmoc` への PATH 設定を確認したいとき
-- 基本ワークフローの入口として `oracles/docs/app_specs/usage.md` への導線を知りたいとき
-- Ctrl+S によるターミナルロックなど、作業時の補足情報を確認したいとき
+- このリポジトリ全体の概要を短く把握したいとき。
+- 初期セットアップとして clone、仮想環境作成、`cmoc` への PATH 設定を確認したいとき。
+- 基本ワークフローの入口として `oracle` 配下の利用手順へ進みたいとき。
+- Ctrl+S によるターミナルロックなど、作業時の補足情報を確認したいとき。
 
 ## Do not read this when
 
-- cmoc の個別サブコマンドの引数や終了条件を確認したいとき
-- `oracles` 配下の正本仕様を直接たどって、実装やテストの詳細を確認したいとき
-- 実装ルールやテスト規約だけを確認したいとき
+- cmoc の個別サブコマンドの引数や状態遷移を確認したいとき。
+- `oracle` 配下の正本仕様を直接たどって、実装やテストの詳細を確認したいとき。
+- 実装ルールやテスト規約だけを確認したいとき。
 
 ## hash
 
-- 4fc977607c700055d3453298512ffdb3a3b257d876f1648f23a1b0dc79781ffc
+- e7f8b64d5a986f5bb2a696a71e2d6327bdc6d2cc72c909d0b6e2832c5c7df09a
 
 # `bin`
 
 ## Summary
 
-- `bin/` は `cmoc` コマンドのシェル製エントリーポイントを置く場所です。
-- `bin/cmoc` は `<cmoc-root>/.venv/bin/python` を使って `src/main.py` を起動し、通常実行では全引数をそのまま渡します。
-- 仮想環境 Python が利用できない場合は、日本語の構造化エラー、セットアップ手順、必要な実行ファイル、簡易 Call stack を標準エラーに出します。
-- `_CMOC_COMPLETE` が設定された自動補完プローブ時も同じ Python 可否判定を行い、使える場合は `src/main.py` を起動します。
+- この `bin` ディレクトリのルーティング文書で、`cmoc` コマンドの入口です。
+- `<work-root>/bin/cmoc` の役割、Python 実行ファイルの選択、補完プローブ時の分岐、エラー時の案内へ進むための目次です。
 
 ## Read this when
 
-- `cmoc` がどの Python を使って起動するか確認したいとき。
-- 自動補完プローブ `_CMOC_COMPLETE` の分岐を確認したいとき。
-- 仮想環境 Python が見つからない、または実行できない場合のエラー文面、終了ステータス 1、復旧手順を確認したいとき。
-- `src/main.py` へ引数をそのまま渡す流れを確認したいとき。
-- エラー表示に出る簡易 Call stack の行番号の取り方を追いたいとき。
+- `<work-root>/bin` 配下の入口文書として、どのファイルへ進むべきか確認したいとき。
+- `cmoc` のシェル製エントリーポイントの役割や、起動時の分岐を把握したいとき。
+- 仮想環境 Python の有無によって `cmoc` がどう振る舞うかを知りたいとき。
 
 ## Do not read this when
 
-- `src/main.py` のサブコマンド登録や Python 側の実装だけを確認したいとき。
-- 仮想環境の作成手順や導入手順だけを確認したいとき。
-- `bin/cmoc` ではなく、他のディレクトリのルーティング文書を確認したいとき。
+- `<work-root>/bin/cmoc` の実装内容を直接確認したいとき。
+- `bin/` 配下ではなく、`src/` や `oracle/` の別ディレクトリの文書を探しているとき。
+- `cmoc` コマンドの利用手順全体ではなく、個別の実行ファイルだけを追いたいとき。
 
 ## hash
 
@@ -103,144 +97,119 @@
 
 ## Summary
 
-- `codex_minimal_outrigger_cli.code-workspace` は、このリポジトリ全体を単一ワークスペースとして開くための VS Code ワークスペース設定です。
-- `folders` ではルート `.` を指し、`settings.files.exclude` で `**/__pycache__` と `**/*.egg-info` を非表示にします。
-- このファイルの目次は、エディタ起点でリポジトリを開くときの前提設定を素早く確認するための入口です。
+- `codex_minimal_outrigger_cli.code-workspace` は、このリポジトリ全体を 1 つの VS Code ワークスペースとして開くための設定ファイルです。
+- `folders` でルート `.` を開き、`files.exclude` で `**/__pycache__`、`**/*.egg-info`、`**/INDEX.md` を非表示にします。
+- `python.analysis.extraPaths` と Markdown 設定を含み、Python 編集・補完・整形の前提をまとめます。
 
 ## Read this when
 
-- このリポジトリを VS Code などで 1 つのワークスペースとして開く設定を確認したいとき。
-- ワークスペースのルートがどこか、どのファイルが表示除外されるかを把握したいとき。
-- 開発用エディタ設定の入口を素早く確認したいとき。
+- このリポジトリを VS Code などで単一ワークスペースとして開く設定を確認したいとき。
+- ワークスペースのルート、表示除外、Python 補完パス、Markdown 編集設定を把握したいとき。
+- エディタ起点で `<cmoc-root>` を開く前提を素早く確認したいとき。
 
 ## Do not read this when
 
 - cmoc の実装コードやサブコマンド仕様そのものを確認したいとき。
-- `src` や `tests` の個別モジュールの役割を調べたいとき。
-- `oracles` 側の正本仕様や `INDEX.md` の生成ルールだけを確認したいとき。
+- このワークスペース設定ではなく、`src`、`test`、`oracle` の個別ファイルを直接追いたいとき。
+- リポジトリ運用ルールや仕様断片だけを確認したいとき。
 
 ## hash
 
-- 6acff2a397cd0c66553c35c5c3f0f45a551ed34bcae704aa612b4b485cce20d0
+- a486d130bc988b4be2adee6368d38bc0e0e7ac3825cc1fb472075109c8b5805a
 
-# `oracles`
+# `oracle`
 
 ## Summary
 
-- `<cmoc-root>/oracles` 配下のルーティング文書で、`docs/` と `schemas/` への入口を案内する。
-- `docs/` は利用手順・共通仕様・開発規約・パス表記・branch モデルの案内を扱う。
-- `schemas/` は Structured Output schema の置き場所と役割分担を案内する。
+- この `oracle` ディレクトリのルーティング文書で、`doc/` と `src/` への入口をまとめます。
+- `doc/` は利用手順・共通仕様・非採用案・開発規約・branch モデルへの入口です。
+- `src/` は `acp/`、`basic/`、`config/` の共通基盤と仕様断片への入口です。
 
 ## Read this when
 
-- cmoc の利用方法、共通仕様、パス表記、branch モデルの入口をまとめて把握したいとき。
-- 採用しなかった設計案や、その理由を確認したいとき。
-- Structured Output schema の置き場所や役割分担を確認したいとき。
-- どの下位ディレクトリの文書や個別仕様を読むべきか迷ったとき。
+- `<cmoc-root>/oracle` 配下で、まずどの大分類へ進むべきか整理したいとき。
+- `doc/` と `src/` の役割分担や、この階層からたどれる入口をまとめて把握したいとき。
+- 実装やテストに入る前に、cmoc の正本仕様と共通基盤の入口を先に確認したいとき。
 
 ## Do not read this when
 
-- `docs/` や `schemas/` の配下ファイルがすでに決まっていて、そこへ直接進むとき。
-- この階層ではなく、下位ディレクトリの `INDEX.md` や個別仕様だけを確認したいとき。
-- `README.md` や `AGENTS.md` など、`oracles` 以外の運用ルールを探しているとき。
+- `doc/` 配下や `src/` 配下の進む先がすでに決まっていて、この上位の案内が不要なとき。
+- `app_spec/`、`considered_alternative/`、`dev_rule/`、`branch_model.md`、`acp/`、`basic/`、`config/` の個別文書を直接確認したいとき。
+- `oracle` のルート全体ではなく、別階層のルーティング文書や個別仕様だけを探しているとき。
 
 ## hash
 
-- 202767e17d08cbb937c3732d418bf1f409b46ff60b614eaf55f918bf811bb5ac
+- 3301781a731cdb2e660ba19ebbf06ebc91a260c73a438de4e057b7a69cd1e8b8
 
 # `pyproject.toml`
 
 ## Summary
 
-- このリポジトリの Python パッケージ定義とビルド設定をまとめたファイルです。
-- プロジェクト名、バージョン、説明、必要な Python 版、依存関係、CLI エントリポイント `cmoc` が定義されています。
-- `setuptools` を使った `src` レイアウトのパッケージ配置設定も含まれています。
+- この `pyproject.toml` のルーティング文書で、Python パッケージ定義とビルド設定の入口です。
+- プロジェクト情報、依存関係、CLI エントリポイント `cmoc`、`setuptools` のパッケージ探索設定、pytest 設定を案内します。
+- `src` と `<work-root>/oracle/src` を含むパッケージ配置前提を確認したいときの起点です。
 
 ## Read this when
 
-- このプロジェクトの名前、バージョン、説明、対応 Python 版を確認したいとき。
+- プロジェクト名、バージョン、説明、対応 Python 版を確認したいとき。
 - 依存パッケージや `cmoc` のコンソールスクリプト定義を確認したいとき。
-- ビルド方式や `setuptools` のパッケージ探索設定を確認したいとき。
+- `setuptools` の `src` レイアウト設定や pytest の基本設定を把握したいとき。
 
 ## Do not read this when
 
-- CLI の個別サブコマンドの実装や引数仕様だけを確認したいとき。
-- テストコードや期待挙動を確認したいとき。
-- `src` 配下の内部ロジックや共通処理だけを追いたいとき。
+- このリポジトリ全体の作業ルールや `oracle` 配下のルーティングを確認したいとき。
+- CLI の個別サブコマンド実装やテストコードの内容だけを追いたいとき。
+- `src` や `<work-root>/oracle/src` の内部モジュールの詳細だけを直接確認したいとき。
 
 ## hash
 
-- bc854625f7c4de175d9450ec605a6b8bfdc6254b85c01a8ea41684dd1b943ff8
+- 4243188ef61246c642868f481696df0e74dd4f8e86c7495b6dece745ea8ae350
 
 # `src`
 
 ## Summary
 
-- `src` ディレクトリのルーティング文書で、cmoc 本体の共通基盤、CLI 入口、各サブコマンド実装への入口をまとめる。
-- `commons/`、`main.py`、`sub_commands/` に分岐して、次に読むべき下位モジュールを切り分けるための目次です。
+- この `src` ディレクトリのルーティング文書で、cmoc の実装側ソースへの入口です。
+- 実装本体はこの配下に置き、共通基盤、サブコマンド別処理、補助ユーティリティへ分岐します。
+- どのモジュールから読むべきか迷ったときの起点になります。
 
 ## Read this when
 
-- cmoc の本体ソース全体の入口構造を把握したいとき。
-- 共通基盤 `src/commons`、CLI エントリーポイント `src/main.py`、サブコマンド実装 `src/sub_commands` の役割分担を確認したいとき。
-- `src` 配下のどの下位ディレクトリやモジュールへ進むべきか迷ったとき。
+- `src` 配下で読むべき実装ファイルやサブディレクトリの入口を整理したいとき。
+- 共通型、prompt 組み立て、引数生成、ユーティリティのどこから入るか迷ったとき。
+- 実装やテストの前に、この階層の役割分担を確認したいとき。
+- 新しいソースモジュールや下位 `INDEX.md` を追加・修正する前に、全体の導線を把握したいとき。
 
 ## Do not read this when
 
-- すでに読む先が `src/commons/`、`src/main.py`、`src/sub_commands/` のどれかに決まっていて、直接そのファイルや下位 `INDEX.md` へ進めるとき。
-- `src` 全体ではなく、個別モジュールの実装やテストだけを確認したいとき。
-- CLI の利用手順や正本仕様だけを追いたいとき。
+- すでに目的のファイル名やサブディレクトリが分かっていて、`src` を経由せず直接そちらへ進むとき。
+- この階層の導線ではなく、個別モジュールの実装詳細だけを確認したいとき。
+- `test` や `oracle` 側の文書だけを読みたいとき。
+- この階層に新しい入口を追加する予定がなく、既存ファイルをそのまま開けば足りるとき。
 
 ## hash
 
-- 9535a9286b44dd3310ca4cece53c7430826d12cc01da357f4e1ff75153a7ced3
+- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
-# `test.sh`
+# `test`
 
 ## Summary
 
-- `test.sh` は `<cmoc-root>` を `CMOC_ROOT` として固定し、`.venv/bin` と `bin` を `PATH` の先頭側に通すための環境初期化スニペットです。
-- cmoc コマンドや関連ツールを、このリポジトリのローカル環境で実行できる状態にすることが目的です。
+- この `test` ディレクトリのルーティング文書で、`test_prompt_parts.py` への入口を案内します。
+- `test_prompt_parts.py` は prompt 部品の StructDoc 生成と Markdown 表現、ならびに `complete_prompt` への条件付き含有や既定の省略を検証するテスト群です。
 
 ## Read this when
 
-- `CMOC_ROOT` を固定し、`PATH` に `.venv/bin` と `bin` を追加する環境設定を確認したいとき。
-- cmoc 関連コマンドをこのワークツリーで実行する前の最小セットアップ手順を知りたいとき。
-- シェルから cmoc を使うための前提環境を素早く把握したいとき。
+- `test` 配下で、まずどのテストファイルを読むべきか整理したいとき。
+- prompt 部品の StructDoc 生成、Markdown レンダリング、`complete_prompt` への含有条件を確認したいとき。
+- `index_entry_standard`、`apply_review_standard`、`review_oracle_standard` の回帰テスト観点を把握したいとき。
 
 ## Do not read this when
 
-- cmoc の実装本体やサブコマンド仕様を確認したいとき。
-- pytest や個別テストケースの内容を確認したいとき。
-- `oracles` の正本仕様や `INDEX.md` 生成ルールだけを確認したいとき。
+- すでに `test_prompt_parts.py` を直接開く対象が決まっていて、この階層の案内を経由する必要がないとき。
+- prompt 部品の実装本体や `src/` 側の仕様を確認したいだけで、テスト観点の整理が不要なとき。
+- この階層ではなく、別のテスト群や別ディレクトリの目次を探しているとき。
 
 ## hash
 
-- 9d5f6059b4a5acd4ec851223fc85c0acc2d9ae1ea244ff40ee48993217f1d9fc
-
-# `tests`
-
-## Summary
-
-- pytest 用の共通設定 `conftest.py` と、`commons.codex`、命名規則、インデックス保守、リポジトリ操作、レポート保存、タイムスタンプ処理を検証する回帰テスト群をまとめたディレクトリです。
-- この階層には `test_codex.py`、`test_file_naming.py`、`test_indexing.py`、`test_repo.py`、`test_report_files.py`、`test_timestamps.py` が並びます。
-- `test_subcommands/` は `cmoc` のサブコマンド横断テストの入口で、個別の apply / session / review / CLI / 共通基盤の回帰を収めます。
-- この INDEX は、どのテストファイルがどの責務を持つかを素早く引ける目次です。
-
-## Read this when
-
-- pytest 実行時の共通設定や `src` の import path を確認したいとき。
-- `commons.codex`、`indexing`、`repo`、`report_files`、`timestamps` のどの回帰テストを読むべきか切り分けたいとき。
-- `cmoc` のサブコマンド回帰を探す前に、`tests/test_subcommands/` へ進むべきか判断したいとき。
-- 個別テストファイルの責務を一覧で把握したいとき。
-
-## Do not read this when
-
-- すでに目的の個別テストファイルが分かっていて、この階層の目次を経由する必要がないとき。
-- `src` 側の実装ロジックだけを追いたいとき。
-- `test_subcommands/` 配下の個別テスト本体や、その下位の INDEX を直接読むとき。
-- テスト以外のリポジトリ運用ルールや仕様断片だけを確認したいとき。
-
-## hash
-
-- 20fb57ab4d081947c91b080385d93e46b31d07ac9fae6dbe9fb4cd9ed43c7c6a
+- 08c143ef6448d314d5361c98aa47baf199e633b017962aff8f6faed78c12433c
