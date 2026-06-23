@@ -43,22 +43,23 @@
 # `console_and_file_log.md`
 
 ## Summary
-- cmoc が人間向けに表示するコンソールログと、サブコマンドごとに保存する JSON Lines ログの出力規則を定める正本仕様断片。時間表示・パス表示の共通形式、サブコマンドログファイルの保存先と flush 方針、必須イベント、コンソール上の markdown 形式ログと完了サマリーに含める情報の入口になる。
+- cmoc のコンソール出力とサブコマンド単位のログファイル出力について、表示形式・出力先・イベント粒度・最低限含める情報を定める仕様断片。
+- stdout に出す時間表示とパス表示の共通フォーマット、サブコマンドログを JSON Lines として保存する要件、人間向けコンソールログを markdown 形式で出す要件を扱う。
+- サブコマンド実行の開始、ステップ進入、Codex CLI 呼び出し、終了サマリーを、利用者確認用出力と追跡用ログにどう残すかを判断する入口になる。
 
 ## Read this when
-- サブコマンド実行中のログファイルをどこへ、どの形式で、どの粒度で出力するかを確認・実装・テストするとき。
-- stdout または stderr に出す稼働状況ログの形式、見出し区切り、ステップ開始通知、Codex CLI 呼び出し通知、完了サマリーの表示内容を確認するとき。
-- ログやコンソール出力に含まれる時間表示、ファイルパス・ディレクトリパス表示のフォーマット互換性を扱うとき。
-- サブコマンド呼び出し、ステップ開始、Codex CLI 呼び出し、サブコマンド終了をイベントとして記録する必要があるか判断するとき。
+- サブコマンド実行中または終了時に、stdout・stderr へ何をどの形式で出すべきかを確認したいとき。
+- サブコマンドごとのログファイルの保存場所、JSON Lines 形式、イベント単位、flush 方針を実装またはテストするとき。
+- ステップ開始通知、Codex CLI 呼び出し通知、完了サマリーに含めるべき情報や表示形式を確認するとき。
+- ログやコンソール出力内で時間・経過時間・ファイルパスをどう表記するかを確認するとき。
 
 ## Do not read this when
-- サブコマンドの業務ロジック、入力引数、実行ステップの内容そのものを知りたいだけで、ログ出力形式や記録イベントを変更しないとき。
-- Codex CLI 呼び出しログ自体の内部 schema や保存仕様だけを確認したいとき。
-- パスキーワードの意味やルート種別の定義を確認したいだけのとき。
-- INDEX.md の生成規則、oracle file と realization file の責務分担、またはルーティング文書の書き方を確認したいだけのとき。
+- CLI 引数、サブコマンド構成、設定ファイル、作業ディレクトリモデルなど、ログ出力以外の仕様を確認したいとき。
+- Codex CLI 自体の実行方法や呼び出しログの内部内容など、サブコマンドログに記録される対象の詳細仕様を確認したいとき。
+- 実装内部の helper 分割、具体的な JSON key 一覧、イベント項目の完全な schema など、本文が実装者裁量として残している詳細だけを決めたいとき。
 
 ## hash
-- 941936293c7e582a245af6d53f5281b4e5ff7c8623c0985a7c2bbfc63fa0f0f3
+- 12a896e8767c83c9b3518ceba5148d23610aca8eb3b02013ad2f37499098749c
 
 # `error_handling.md`
 
@@ -200,26 +201,27 @@
 # `sub_command`
 
 ## Summary
-- CLI サブコマンド仕様断片のうち、session、apply、review、indexing、init など利用者が直接実行する操作の外部挙動と状態遷移を扱う領域。
-- 各サブコマンドの事前条件、branch/worktree/state file の扱い、未コミット差分の検査、失敗時の中断・warning・再実行可能性、stdout やレポート出力の境界を確認する入口になる。
-- apply run の fork・join・abandon、session の fork・join・abandon、oracle review、明示 indexing、初期化処理のどれを読むべきかを切り分けるためのまとまり。
+- cmoc の各サブコマンドに固有の正本仕様断片を集めた領域。session の開始・完了・破棄、apply の実行・取り込み・破棄、oracle review、indexing、init、対話的 TUI 起動など、CLI 外部挙動と状態遷移の入口になる。
+- 各文書はサブコマンドごとに、引数、事前条件、branch/worktree/state file の扱い、Codex CLI または agent call との責務境界、レポートや stdout、終了条件など、実装差を避けたい外部仕様を定める。
+- サブコマンド横断の概念そのものではなく、特定の CLI 操作を実行したときに何を検証し、何を変更し、どこまで自動処理してよいかを選ぶための分岐点として読む。
 
 ## Read this when
-- 利用者向け CLI サブコマンドの仕様、実装、テスト、終了条件、状態更新、または出力を確認する。
-- session branch と home branch の作成・完了・破棄、または active session の事前条件やライフサイクルを調べる。
-- apply 用 branch/worktree での実装修正ループ、その成果の取り込み、未 join apply run の破棄、apply.state の遷移を扱う。
-- oracle file レビュー、作業ルートの indexing 実行、初期化時の管理用ディレクトリ ignore 保証など、個別サブコマンドの外部挙動を選んで確認したい。
-- サブコマンドごとの通常系、未収束、エラー、warning、強制モード、conflict 解消、cleanup 範囲の違いを比較して読む先を決めたい。
+- cmoc のサブコマンドの実装・テスト・CLI 挙動・状態遷移・出力仕様を確認または変更する。
+- session branch と home branch の作成、merge、破棄、active session の制約、session state 更新など、session lifecycle に属する具体的な操作を扱う。
+- apply 用 branch/worktree を使った実装修正ループ、成果物の join、未 join run の破棄、apply.state の遷移、force resolve、想定外差分や cleanup の扱いを確認する。
+- oracle file のレビュー実行、レビュー対象列挙、所見の列挙・検証・採否、レビュー結果レポートの保存や stdout 出力を扱う。
+- 現在の作業ルートに対する indexing や init のように、引数を取らない機械的なサブコマンドの事前条件、git 差分チェック、生成差分の commit 方針を確認する。
+- ユーザー入力プロンプトと自動生成プロンプトを組み合わせ、Codex CLI を TUI として起動するサブコマンドのエディタ入力、agent call、完全プロンプト生成の境界を確認する。
 
 ## Do not read this when
-- CLI サブコマンドではなく、oracle file、realization file、path keyword、root model などの基礎概念定義だけを確認したい。
-- run 隔離実行、agent call parameter builder、markdown report renderer、git helper など、サブコマンド内部の共通実装詳細だけを調べたい。
-- 実装ファイルやテストファイルの配置、helper 分割、コード構造など realization 側の設計を直接確認したい。
-- INDEX.md の生成規則、ルーティング文書のレビュー、またはインデクシング処理そのものの生成内容を確認したい。
-- 通常の git 操作一般や、cmoc 管理外の branch/worktree 操作の汎用仕様を探している。
+- パス語彙、oracle file、realization file、root model など、cmoc 全体の基礎概念だけを確認したい場合は、それらを定義する共通仕様へ進む。
+- run の隔離実行、Codex CLI 起動パラメータ構築、agent call の詳細な parameter builder、Markdown レポートの内部レンダリングなど、サブコマンドから呼ばれる共通部品の詳細だけを調べたい場合は、該当する共通仕様または実装仕様を直接読む。
+- 実装ファイルやテストファイルの配置、helper 分割、既存コード構造など、正本仕様ではなく realization 側の設計だけを確認したい場合は、実装側のルーティングへ進む。
+- INDEX.md の生成規則、oracle file の書き方、仕様断片の一般原則を確認したい場合は、この領域ではなくルーティング文書や oracle 標準の仕様を読む。
+- 汎用的な git 操作、通常の branch merge、手作業での rollback など、cmoc 管理下の特定サブコマンドとして定義されていない操作を調べたい場合。
 
 ## hash
-- 3f2acbe110ae36e3b3d2f9ee6cbdcdf6c87db356a60d96d10e2ec17b3a795366
+- 64514411b2bc272b47d3b01e142bafc891c5436059d80de2cfa87637131ed518
 
 # `usage.md`
 

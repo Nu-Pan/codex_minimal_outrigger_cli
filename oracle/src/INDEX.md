@@ -1,28 +1,24 @@
 # `acp`
 
 ## Summary
-- ACP の agent call に関する仕様領域であり、用途別の呼び出し prompt 構築、標準プロンプト断片、file access mode、model/reasoning 設定、Structured Output schema を扱う。
-- fork 適用後のレビュー所見処理、INDEX.md エントリー生成、oracle レビュー、セッション合流時の conflict marker 解消など、AI agent に渡す文脈と出力契約を確認する入口になる。
-- 個別用途の完全な呼び出し仕様へ進む領域と、共通の前提・制約・判断基準を構成する標準プロンプト断片へ進む領域を切り分けるための案内を担う。
+- ACP は agent call parameter 周辺の正本実装を束ねる領域で、用途別の prompt builder / Structured Output schema と、agent に渡す共通 prompt 断片を扱う。
+- 下位には、各サブコマンド・工程ごとの role、goal、補助文脈、model 設定、file access 制約、応答 schema を組み立てる領域と、完全 prompt や標準文書断片を生成する領域がある。
+- サブコマンド実行そのものではなく、AI agent 呼び出しに渡す入力契約と出力契約の正本断片へ進むための入口である。
 
 ## Read this when
-- cmoc のサブコマンドが AI agent を呼び出す際の prompt、入力文脈、file access mode、model/reasoning 設定、Structured Output schema を確認したいとき。
-- fork 適用後の所見列挙・所見精査・修正担当 agent 呼び出し・変更要約生成に関する agent 呼び出し仕様を探したいとき。
-- INDEX.md エントリー生成について、対象本文、読み取り専用制約、出力契約、エントリー品質基準を AI にどう渡すか確認したいとき。
-- oracle レビューの新規所見生成、既存所見の理由調査、採否判定、所見整理など、レビュー工程ごとの AI 呼び出し仕様や共通判断規範を確認したいとき。
-- セッション合流時の conflict marker 解消 agent に渡す prompt、対象パス、編集許可範囲、禁止事項を確認したいとき。
-- agent call 用の完全なプロンプトに含める標準断片、ファイルアクセス規則、ルーティング規則、oracle / realization の基本概念、共通品質規範を確認したいとき。
+- cmoc の各機能が AI agent をどの前提、制約、標準文書、model 設定、Structured Output schema で呼び出すかを調べたいとき。
+- INDEX.md エントリー生成、apply fork の所見処理、review oracle の所見工程、session join の conflict marker 解消、TUI の resolve parameter など、用途別の agent call parameter を確認したいとき。
+- agent call に共通して渡される file access rule、routing rule、oracle / realization の基本概念、各種 standard の prompt 断片を確認したいとき。
+- AI 呼び出しの実装やテストで、prompt に含める文章と応答 JSON schema の意味的な対応先を切り分けたいとき。
 
 ## Do not read this when
-- CLI 解析、git 操作、fork 作成、merge 実行、diff 取得、永続化、表示など、AI agent の prompt 構築や応答 schema 以外の実行制御を調べたいとき。
-- oracle file、realization file、path keyword、standard、complete prompt 構築部品などの共通概念や helper の定義そのものを確認したいとき。
-- 個別の oracle file や realization file の本文を読んで、具体的な仕様問題、修正内容、実装差分、conflict 解消判断を行いたいとき。
-- 特定の CLI サブコマンド、状態ファイル、パスモデル、StructDoc のデータ構造や基本動作など、cmoc の個別機能仕様を探しているとき。
-- 生成済み INDEX.md の内容や各階層のルーティング情報を確認したいだけのとき。
-- AI 呼び出しの用途が fork 適用、INDEX.md エントリー生成、oracle レビュー、セッション合流時 conflict 解消、標準プロンプト断片の確認のいずれにも当てはまらないとき。
+- CLI 引数解析、サブコマンド制御フロー、git 操作、fork 作成、merge、差分取得、状態保存、画面表示など、AI 呼び出しパラメータ以外の処理を調べたいとき。
+- oracle file、realization file、path keyword、StructDoc などの共通データモデルやユーティリティの基礎定義だけを確認したいとき。
+- 個別の oracle file や realization file の本文を読んで、仕様問題、実装修正内容、conflict 解消判断、変更差分そのものを判断したいとき。
+- Structured Output schema の項目定義だけ、または特定工程の prompt builder だけを確認したい場合で、該当する下位対象がすでに分かっているとき。
 
 ## hash
-- 5ec2faf6a487f39f2a4da1fa04aea9e1586fcf1110757c82b63767d066b7c78a
+- 9ea11839b14018bacdc43933c7ce79028a305451e9d8ce24caafa06a938db283
 
 # `basic`
 

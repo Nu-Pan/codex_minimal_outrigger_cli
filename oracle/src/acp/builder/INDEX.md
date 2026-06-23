@@ -81,3 +81,19 @@
 
 ## hash
 - c113d4bfe14ee701ab06d7077e40ba1d21efd4bb21f740645fa0fb92beb07bc9
+
+# `tui`
+
+## Summary
+- TUI builder 領域に属する resolve parameter 用パラメータ構築関数の正本実装断片を収めるディレクトリ。現時点の本文は、該当関数が存在し未実装 stub として置かれていることだけを示す。
+
+## Read this when
+- TUI の resolve parameter に対応する builder 側の正本断片を確認したいとき。
+- TUI builder 配下に resolve parameter 用パラメータ構築関数が用意されているか、また現時点で未実装扱いかを確認したいとき。
+
+## Do not read this when
+- TUI の resolve parameter の具体的な入力、出力、制御、エラー処理を調べたいとき。このディレクトリの本文からはまだ読み取れない。
+- ACP 全体の builder 設計や、TUI 以外の builder 領域を調べたいとき。より直接その対象を述べる正本断片を読む。
+
+## hash
+- 3ee331b739122c1e4e63e0b7852a08045d665df4f68e5eab5c43838199d91c45
