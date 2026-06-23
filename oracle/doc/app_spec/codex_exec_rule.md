@@ -5,17 +5,24 @@
 - cmoc からの Codex CLI 呼び出しは、原則として `codex exec` で行う
 - 個別の `codex exec` 呼び出しの仕様は `<cmoc-root>/oracle/src/acp/builder` ツリー内の AgentCallParameter builder を正本とする
 
-## プロンプトの渡し方
+## 環境変数 `$CODEX_HOME`
 
-- run_codex_exec() は、プロンプト本文を argv に載せてはならない
-- プロンプト本文は stdin 経由 (`codex exec -`) で渡す
-- argv に載せてよいのは、フラグ、短い固定文字列、短いファイルパスのみとする
+- cmoc 呼び出し時点で `$CODEX_HOME` が設定済みであるなら、それをそのまま Codex CLI に渡す
+- cmoc 呼び出し時点で `$CODEX_HOME` が未設定であるなら、`CODEX_HOME=${HOME}/.codex` 相当の絶対パスを設定して Codex CLI に渡す
+
+## preflight validation
+
+- cmoc は Codex CLI 呼び出し前に「Codex CLI が実際に参照する `$CODEX_HOME`」に対する preflight validation を行う
+- preflight validation では以下のことを確かめる
+    - `$CODEX_HOME` がディレクトリとして存在すること
+    - `$CODEX_HOME/auth.json` がファイルとして存在すること
+- preflight validation に失敗した場合、cmoc の実行を即時失敗させる
 
 ## codex profile
 
-- cmoc は Codex CLI 呼び出し前に `<cmoc-root>/.codex/cmoc_<hash>.config.toml` を動的に生成する
-- cmoc は `codex exec --profile "<cmoc-root>/.codex/cmoc_<hash>.config.toml"` の形式で、動的に生成した codex profile を指定する
-- `<cmoc-root>/.codex/cmoc_<hash>.config.toml` の内容は cmoc 側の設定 (e.g. `AgentCallParameters`, `CmocConfig`, ...) から一意に決まる
+- cmoc は Codex CLI 呼び出し前に `$CODEX_HOME/cmoc_<hash>.config.toml` を動的に生成する
+- cmoc は `codex exec --profile cmoc_<hash>` の形式で、動的に生成した codex profile を指定する
+- `$CODEX_HOME/cmoc_<hash>.config.toml` の内容は cmoc 側の設定 (e.g. `AgentCallParameters`, `CmocConfig`, ...) から一意に決まる
 - `<hash>` は `cmoc_<hash>.config.toml` 本文の SHA256 ハッシュとする
 
 ## ファイルアクセス制限
@@ -29,6 +36,12 @@
 - Codex CLI に対する Model, Reasoning Effort の設定は codex profile 経由で行う
 - 具体的な設定は AgentCallParameter builder を正本とする
 - cmoc は Model, Reasoning Effort 設定についての情報を Codex CLI プロンプトに注入しない
+
+## プロンプトの渡し方
+
+- プロンプト本文を `codex exec` の argv に載せてはならない
+- プロンプト本文は stdin 経由 (`codex exec -`) で渡す
+- argv に載せてよいのは、フラグ、短い固定文字列、短いファイルパスのみとする
 
 ## Codex CLI 呼び出し情報の保存
 
@@ -50,11 +63,11 @@
 
 ## Structured Output
 
-- Codex CLI に Structued Output を要求する場合は、必ず `--output-schema` を使うこと
+- Codex CLI に Structured Output を要求する場合は、必ず `--output-schema` を使うこと
 - `--output-schema` を使わずにプロンプト上だけで JSON 出力を要求するのは禁止
-- スキーマは、一度 `<work-root>/.cmoc/state/scehma/<hash>.json` に保存して、これを Codex CLI に参照させること
+- スキーマは、一度 `<work-root>/.cmoc/state/schema/<hash>.json` に保存して、これを Codex CLI に参照させること
 - `<hash>` は schema 本文の SHA256 ハッシュとする
-- Structued Output の結果は cmoc 側でも機械的検証を行うこと
+- Structured Output の結果は cmoc 側でも機械的検証を行うこと
 
 ## `codex exec` の並列呼び出し
 

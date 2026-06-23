@@ -23,7 +23,6 @@ from config.cmoc_config import (
     CmocConfigReviewOracle,
 )
 
-
 MANAGED_BRANCH_PREFIXES = ("cmoc/session/", "cmoc/apply/", "cmoc/run/")
 _CURRENT_SUBCOMMAND_LOGGER: ContextVar["SubcommandLogger | None"] = ContextVar(
     "CURRENT_SUBCOMMAND_LOGGER",
@@ -238,7 +237,7 @@ def codex_log_dir(root: Path) -> Path:
 
 
 def schema_store_dir(root: Path) -> Path:
-    return root / ".cmoc" / "state" / "scehma"
+    return root / ".cmoc" / "state" / "schema"
 
 
 def config_path(root: Path) -> Path:
@@ -251,7 +250,9 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
         "codex": {
             "model": {
                 key.value: value
-                for key, value in sorted(config.codex.model.items(), key=lambda item: item[0].value)
+                for key, value in sorted(
+                    config.codex.model.items(), key=lambda item: item[0].value
+                )
             },
             "reasoning_effort": {
                 key.value: value
@@ -345,7 +346,9 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
 
 def write_config(path: Path, config: CmocConfig) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(config_to_dict(config), ensure_ascii=False, indent=2) + "\n")
+    path.write_text(
+        json.dumps(config_to_dict(config), ensure_ascii=False, indent=2) + "\n"
+    )
 
 
 def load_config(root: Path) -> CmocConfig:
@@ -427,7 +430,9 @@ def write_state(path: Path, state: SessionState) -> None:
     path.write_text(json.dumps(state.to_dict(), ensure_ascii=False, indent=2) + "\n")
 
 
-def create_run_worktree(root: Path, branch: str, worktree: Path, start_point: str = "HEAD") -> Path:
+def create_run_worktree(
+    root: Path, branch: str, worktree: Path, start_point: str = "HEAD"
+) -> Path:
     worktree.parent.mkdir(parents=True, exist_ok=True)
     if worktree.exists():
         shutil.rmtree(worktree)
@@ -436,7 +441,9 @@ def create_run_worktree(root: Path, branch: str, worktree: Path, start_point: st
 
 
 def remove_worktree(root: Path, worktree: Path) -> CommandResult:
-    result = run_git(["worktree", "remove", "--force", str(worktree)], root, check=False)
+    result = run_git(
+        ["worktree", "remove", "--force", str(worktree)], root, check=False
+    )
     if result.returncode != 0 and worktree.exists():
         shutil.rmtree(worktree)
     run_git(["worktree", "prune"], root, check=False)
@@ -498,7 +505,9 @@ def render_error(exc: BaseException) -> str:
         detail = exc.detail
     else:
         summary = str(exc) or exc.__class__.__name__
-        actions = ["エラー内容を確認し、必要なら手動で状態を修復してから再実行してください。"]
+        actions = [
+            "エラー内容を確認し、必要なら手動で状態を修復してから再実行してください。"
+        ]
         detail = repr(exc)
     return "\n".join(
         [
@@ -559,7 +568,9 @@ def write_hashed_file(directory: Path, prefix: str, suffix: str, content: str) -
     return path
 
 
-def prepare_codex_profile(parameter: AgentCallParameter, config: CmocConfig | None = None) -> Path:
+def prepare_codex_profile(
+    parameter: AgentCallParameter, config: CmocConfig | None = None
+) -> Path:
     profile = build_codex_profile(parameter, config or CmocConfig())
     return write_hashed_file(cmoc_root() / ".codex", "cmoc_", ".config.toml", profile)
 
@@ -680,7 +691,9 @@ def run_codex_exec(
     quota_wait_sec = 0.0
     logger = subcommand_logger or current_subcommand_logger()
 
-    def emit_codex_event(returncode: int, status: str, error: str | None = None) -> None:
+    def emit_codex_event(
+        returncode: int, status: str, error: str | None = None
+    ) -> None:
         elapsed_sec = time.perf_counter() - call_started_at
         print(
             "\n".join(
@@ -733,7 +746,10 @@ def run_codex_exec(
         stderr_path.write_text(result.stderr)
         error_text = codex_error_text(result.stdout, result.stderr)
         if result.returncode != 0:
-            if is_capacity_error(error_text) and capacity_attempts < max_capacity_retries:
+            if (
+                is_capacity_error(error_text)
+                and capacity_attempts < max_capacity_retries
+            ):
                 capacity_attempts += 1
                 time.sleep(sleep_sec)
                 sleep_sec *= 2
@@ -765,11 +781,18 @@ def run_codex_exec(
                 )
                 try:
                     while True:
-                        if max_quota_polls is not None and quota_polls >= max_quota_polls:
-                            emit_codex_event(result.returncode, "quota_exhausted", error_text)
+                        if (
+                            max_quota_polls is not None
+                            and quota_polls >= max_quota_polls
+                        ):
+                            emit_codex_event(
+                                result.returncode, "quota_exhausted", error_text
+                            )
                             raise CmocError(
                                 "Codex CLI quota が枯渇しました。",
-                                ["quota 回復後に同じ cmoc コマンドを再実行してください。"],
+                                [
+                                    "quota 回復後に同じ cmoc コマンドを再実行してください。"
+                                ],
                                 error_text,
                             )
                         quota_polls += 1
@@ -788,7 +811,9 @@ def run_codex_exec(
                             f"# {console_timestamp()} Codex CLI quota probe returned {poll.returncode}",
                             flush=True,
                         )
-                        if poll.returncode == 0 and not is_quota_error(codex_error_text(poll.stdout, poll.stderr)):
+                        if poll.returncode == 0 and not is_quota_error(
+                            codex_error_text(poll.stdout, poll.stderr)
+                        ):
                             break
                 finally:
                     with _QUOTA_CONDITION:
@@ -813,12 +838,16 @@ def run_codex_exec(
         output_json = read_output_json(output_path)
         if schema_path is not None:
             try:
-                validate(instance=output_json, schema=json.loads(schema_path.read_text()))
+                validate(
+                    instance=output_json, schema=json.loads(schema_path.read_text())
+                )
             except Exception as exc:
                 if semantic_attempts < max_semantic_retries:
                     semantic_attempts += 1
                     continue
-                emit_codex_event(result.returncode, "schema_validation_failed", str(exc))
+                emit_codex_event(
+                    result.returncode, "schema_validation_failed", str(exc)
+                )
                 raise CmocError(
                     "Codex CLI の Structured Output 検証に失敗しました。",
                     ["schema と output を確認してください。"],
