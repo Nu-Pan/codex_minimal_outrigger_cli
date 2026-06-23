@@ -1,220 +1,189 @@
 # `apply_review_standard.py`
 
 ## Summary
-
-- `<cmoc-root>/oracle/src/acp/prompt_parts/apply_review_standard.py` は、`oracle file` の内容を `realization file` に適用する場面で使うレビュー標準を `StructDoc` として組み立てる入口です。
-- この断片は、明確な不整合を所見として扱うこと、仕様の隙間だけを根拠に過剰な指摘をしないこと、`realization file` だけから見て明らかな致命的問題を扱うことを整理します。
-- `complete_prompt.py` では `apply_review_standard=True` のときに追加され、`cmoc apply fork` の所見列挙を支える前提になります。
+- oracle file の正本仕様断片を realization file に適用してレビューする際、どの差分や問題を所見として扱うべきかを定める規範文章を構築する。
+- 明確な正本仕様との不整合、仕様断片の隙間だけを根拠にした過剰な指摘の禁止、realization file 単体で明らかな致命的問題の扱いを、背景・要求・例としてまとめる。
+- oracle file と realization file の関係を前提に、レビュー所見の根拠を正本仕様断片へ置くための判断基準への入口となる。
 
 ## Read this when
-
-- `cmoc apply fork` で、`oracle file` を `realization file` に適用する際のレビュー標準を確認したいとき。
-- `oracle file` と `realization file` の不整合を、どこまで所見として扱うか整理したいとき。
-- `complete_prompt.py` で `apply_review_standard=True` のときに追加される内容を把握したいとき。
+- oracle file の内容を realization file に適用するレビューで、何を所見として列挙してよいか判断したいとき。
+- oracle file に明記されていない実装差を、不整合として扱うべきか、AI の裁量範囲として許容すべきかを切り分けたいとき。
+- realization file だけから見えるバグや実行不能な問題を、oracle file との不整合ではない所見として扱えるか確認したいとき。
+- レビュー指摘が oracle file の正本仕様断片に根拠を持っているか、または単なる品質改善提案に留まっていないかを判断したいとき。
 
 ## Do not read this when
-
-- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/apply_review_standard.py` を直接開いて、実装本体や規範文の詳細を確認するとき。
-- `complete_prompt.py` への組み込み条件や `cmoc apply fork` での所見列挙の全体像を、この断片経由ではなく別の場所で追いたいとき。
-- `oracle_review_standard.py` など、このファイル以外のレビュー標準を探しているとき。
+- oracle file と realization file の照合レビューではなく、通常の実装追加・リファクタリング・テスト追加の一般規範を確認したいとき。
+- oracle file そのものの書き方、疎な正本仕様断片の維持、用語統一、仕様文書の編集方針を確認したいとき。
+- INDEX.md エントリーの生成規則やルーティング文書の書き方だけを確認したいとき。
+- 特定の CLI 挙動、path model、状態ファイル、サブコマンドなどの個別仕様を探しているとき。
 
 ## hash
-
 - 8084bdb3ce48e798cad1515dc50a8d5c7d66c417ec7d2d32494a4d68d6b43799
 
 # `complete_prompt.py`
 
 ## Summary
-
-- `<cmoc-root>/oracle/src/acp/prompt_parts/complete_prompt.py` は、`build_complete_prompt()` で AI エージェントへ渡す完全な prompt を `StructDoc` の列として組み立てる入口です。
-- 必須要素として `role`、`summary`、`goal`、`file_access_rule`、`routing_rule` を含み、必要に応じて `oracle_and_realization_basic`、`oracle_standard`、`realization_standard`、`review_oracle_standard`、`apply_review_standard`、`index_entry_standard` を追加します。
-- `structured_output` が有効な場合は、指定された Structured Output schema に従うよう促す出力形式の指示を末尾に追加します。
+- agent call に渡す完全なプロンプト構成を組み立てる実装。role、summary、goal、ファイルアクセス規則、ルーティング規則、追加プロンプトを基本要素として並べ、指定された標準プロンプト群を依存関係に従って追加する入口になっている。
+- 各標準プロンプトの有効化フラグを受け取り、上位の標準が必要とする基本情報や関連標準を自動的に有効化してから、最終的な構造化ドキュメント列を返す。
 
 ## Read this when
-
-- 完全な prompt がどの `StructDoc` 断片で構成されるかを把握したいとき。
-- `role`、`summary`、`goal`、`file_access_rule` に加えて、どの条件で `oracle` / `realization` の基本説明や標準、レビュー観点が追加されるか確認したいとき。
-- `structured_output` が有効なときに、末尾へどの出力形式指示が付くかを確認したいとき。
-- `INDEX.md` 目次を追加・整理する前に、`build_complete_prompt()` の組み立て順と依存関係を押さえたいとき。
+- agent に渡すプロンプト全体の組み立て順、必ず含まれる基本要素、任意標準プロンプトの追加条件を確認したいとき。
+- oracle、realization、review、apply review、index entry などの標準プロンプトを有効化した場合に、どの依存プロンプトが同時に含まれるかを確認したいとき。
+- プロンプト部品を追加・削除する変更で、完全なプロンプトに含める位置や依存フラグの扱いを調整する必要があるとき。
 
 ## Do not read this when
-
-- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/complete_prompt.py` を直接確認する対象が決まっていて、目次を経由せず本体へ進むとき。
-- `file_access_rule.py` や `oracle_standard.py` など、個別の prompt 断片だけを確認したいとき。
-- `prompt_parts/` 全体ではなく、別の `src` 配下や別フローの入口を探しているとき。
+- 個別の標準プロンプト本文や文言を確認したいだけのとき。その場合は各標準プロンプトを構築する対象を直接読む。
+- ファイルアクセス規則やルーティング規則そのものの内容を確認したいとき。この実装はそれらを呼び出すだけなので、規則を定義する対象を直接読む。
+- agent call の実行処理、外部プロセス起動、または返されたプロンプトの利用側を調べたいとき。この対象はプロンプト列の構築だけを扱う。
 
 ## hash
-
 - 18efdddfcbec9b291f2ca8aac02f42177f6c4fe051e13b6d1953fd1ea9afcc9f
 
 # `file_access_rule.py`
 
 ## Summary
-
-- `<cmoc-root>/oracle/src/acp/prompt_parts/file_access_rule.py` は、`FileAccessMode` に応じたファイル読み書き制約を `StructDoc` として組み立てる入口です。
-- `complete_prompt.py` から呼ばれ、`<work-root>` / `<work-root>/oracle` / `<work-root>/memo` の扱いをモードごとに切り替えます。
-- 任意の `aux_rules` を末尾に追加できます。
+- AI エージェントへ渡す「file read write rule」セクションを、読み書きモードに応じて組み立てる実装。作業ルートを実行時に解決し、読み取り専用、oracle のみ参照、realization 編集、oracle 編集の各プリセットごとに、ツリー外アクセス、oracle、memo、リポジトリ書き込みの禁止条件を本文化する。
+- ファイルアクセス制限そのものの正本仕様ではなく、ACP プロンプトへ埋め込む制限文を生成する入口として読む対象。未対応のモードをエラーにする境界もここで扱う。
 
 ## Read this when
-
-- ファイル読み書き規則の具体的な制約内容を確認したいとき。
-- `readonly` / `pure_oracle_read` / `realization_write` / `oracle_write` の違いを整理したいとき。
-- `complete_prompt.py` がどのようにアクセス制約文を組み込むか確認したいとき。
-- `aux_rules` の付加方法を把握したいとき。
+- ACP がエージェントへ提示するファイル読み書き規則の本文を確認または変更したいとき。
+- 読み取り専用、oracle 参照専用、realization 編集、oracle 編集の各モードが、どのアクセス禁止文へ展開されるかを確認したいとき。
+- 作業ルートを含むアクセス制限文がどのように構築され、構造化文書として返されるかを追いたいとき。
+- 未対応のファイルアクセスモードに対する失敗挙動を確認したいとき。
 
 ## Do not read this when
-
-- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/file_access_rule.py` を直接確認する対象が決まっていて、この目次を経由する必要がないとき。
-- `StructDoc`、`FileAccessMode`、`path_model.py` の定義だけを確認したいとき。
-- ファイル読み書き規則ではなく、prompt 全体の構成や別の prompt 断片だけを探しているとき。
+- 作業ルートや各ルート語の定義そのものを確認したいだけのときは、パスモデル側を読む。
+- ファイルアクセスモードの列挙値や型定義を確認したいだけのときは、ACP の基本定義側を読む。
+- 構造化文書や複数行文字列整形の仕組みを確認したいだけのときは、文書構築ユーティリティ側を読む。
+- oracle file と realization file の概念上の責務や編集権限を調べたいときは、正本仕様側を読む。
 
 ## hash
-
 - 3009529bf6223bbaa7725345349674f88b58e0d9e37925c71f4dc6e10cc957d8
 
 # `index_entry_standard.py`
 
 ## Summary
-
-- この `index_entry_standard.py` は、`INDEX.md` の各エントリーが従うべきルーティング規範を `StructDoc` として組み立てる入口です。
-- 対象を読むべき条件、対象の責務、同階層の別対象ではなくここへ進む理由を、最小限の意味情報でまとめます。
-- 機械的に補える情報ではなく、対象を読む判断に必要な意味情報だけを扱います。
+- INDEX.md エントリーを、本文を読む前に読むべき対象を判断するためのルーティング情報として扱う規範文章を生成する。
+- エントリーに書くべき意味情報、対象内容への根拠、対象外責務を書かない境界、機械的識別情報を混ぜない方針を定義する。
+- INDEX.md 生成や評価で、エントリーの内容品質を揃えるための規範文書への入口となる。
 
 ## Read this when
-
-- `INDEX.md` の各エントリーに何を書くべきか、読む対象への導線の作り方を確認したいとき。
-- `cmoc indexing` で使う目次文の規範や、`complete_prompt.py` がこの断片を組み込む条件を把握したいとき。
-- 対象本文を読む前に、ルーティング情報としての役割だけを確認したいとき。
+- INDEX.md エントリーにどの程度の要約・読む条件・読まない条件を書くべきかを確認したいとき。
+- ルーティング文書のエントリーが、本文説明に寄りすぎていないか、または読む条件が広すぎないかを判断したいとき。
+- 対象内容に根拠のない責務や将来用途をエントリーへ含めてよいか迷うとき。
+- ファイル名、識別子、出力形式など機械的に補える情報を、自然言語の意味情報へ含めるべきか判断したいとき。
 
 ## Do not read this when
-
-- すでにこのファイル本体を直接確認する対象が決まっていて、目次を経由する必要がないとき。
-- Structured Output schema や生成結果の項目名・型・形式だけを確認したいとき。
-- `INDEX.md` エントリーではなく、別の prompt 断片や別サブコマンドの仕様を探しているとき。
+- 個別の対象について実際の INDEX.md エントリー文面だけを作りたいときは、対象本文そのものを読む方が直接的である。
+- oracle file や realization file の一般的な品質基準、編集方針、責務境界を確認したいときは、それぞれの規範文章を読む方が適切である。
+- Structured Output の項目構造や型そのものを確認したいだけのときは、この規範文章の対象外である。
+- INDEX.md を使った探索手順やリポジトリ内の具体的なルーティング先を調べたいときは、該当階層のルーティング情報を読む方が適切である。
 
 ## hash
-
 - 9948bdff6712106ea91119db4a9fbd06529bf36046318db4e3adb5863e9c5fb0
 
 # `oracle_and_realization_basic.py`
 
 ## Summary
-
-- `<cmoc-root>/oracle/src/acp/prompt_parts/oracle_and_realization_basic.py` は、`oracle file` と `realization file` の基本概念を `StructDoc` としてまとめる入口です。
-- このファイルは、両者の定義・役割・下位概念を整理し、`complete_prompt.py` が使う prompt 断片の基礎説明を提供します。
-- `prompt_parts/` 配下で、AI 呼び出し用プロンプトの共通前提を確認したいときの起点になります。
+- oracle file と realization file の基本概念を説明するプロンプト部品を構築する。
+- oracle file を人間が責任を持つ正本仕様断片、realization file を AI が編集する具体化物として区別し、それぞれの定義・役割・下位概念を扱う。
+- oracle doc/src/test と realization implementation/test/ancillary の配置上の分類を確認する入口になる。
 
 ## Read this when
-
-- `oracle file` と `realization file` の違い、定義、役割をまとめて把握したいとき。
-- `build_oracle_and_realization_basic()` がどのような説明文を組み立てるか確認したいとき。
-- `complete_prompt.py` に入る前に、prompt 生成で使う共通前提を整理したいとき。
-- `oracle` ツリーとそれ以外のツリーをどう区別するか、基本定義を確認したいとき。
+- oracle file と realization file の責務境界をプロンプトに含める処理を確認・変更したいとき。
+- 正本仕様断片と実装・テスト・補助ファイルの違いを説明する文面を調整したいとき。
+- oracle doc、oracle src、oracle test、realization implementation、realization test、realization ancillary の分類や配置説明が必要なとき。
+- AI が編集してよい対象と、人間が所有して編集する対象の境界を確認したいとき。
 
 ## Do not read this when
-
-- すでに `oracle_and_realization_basic.py` の役割が分かっていて、この目次を経由せずに本体へ直接進むとき。
-- `complete_prompt.py`、`file_access_rule.py`、`oracle_standard.py`、`realization_standard.py` など、同じ `prompt_parts` 配下の別ファイルだけを確認したいとき。
-- `oracle` 全体の正本仕様や開発規約ではなく、別の階層や別フローの案内を探しているとき。
+- 個別の oracle 標準や realization 標準の詳細な要求事項を確認したいだけのとき。
+- パスキーワードそのものの定義や解決規則を確認したいとき。
+- 特定の CLI 挙動、サブコマンド、テスト実装の詳細を調べたいとき。
+- INDEX.md エントリーの生成規則やルーティング文書の品質基準だけを確認したいとき。
 
 ## hash
-
 - fe33761da72ba70e8745a65b7ba3562e83c07ac65605f824a71f3fadb8996a03
 
 # `oracle_review_standard.py`
 
 ## Summary
-
-- `<cmoc-root>/oracle/src/acp/prompt_parts/oracle_review_standard.py` は、`build_review_oracle_standard()` を起点に `cmoc review oracle` 向けのレビュー標準を `StructDoc` として組み立てる入口です。
-- 仕様断片同士の明確な矛盾や、実装者の裁量では解消できない問題を fatal 所見として扱い、誤字・脱字・用語不統一などの単純な問題を minor 所見として扱う方針をまとめます。
-- 仕様の隙間や推測だけでは所見にしない、というレビューの境界条件を示します。
+- `cmoc review oracle` で oracle file をレビューするときに、検出した問題を所見として扱うかどうか、また fatal/minor のどちらに分類するかを決めるための規範文章を構築する。
+- 正本仕様断片同士の明確な矛盾や実装者裁量では解消できない問題を fatal とし、日本語の誤り・typo・用語揺れなど表記上の単純な問題を minor とし、oracle file だけから問題と言い切れないものは所見にしない、という判定境界を担う。
+- レビュー所見の列挙ロジックやプロンプト部品から参照される、所見作成の判断基準を構造化文書として提供する入口である。
 
 ## Read this when
-
-- `cmoc review oracle` の所見分類基準を確認したいとき。
-- fatal と minor の切り分けや、レビュー対象外の条件を整理したいとき。
-- `build_review_oracle_standard()` がどの観点を `StructDoc` にまとめるか把握したいとき。
+- `cmoc review oracle` が列挙する所見の分類基準、特に fatal と minor の境界を確認したいとき。
+- oracle file の矛盾、未定義部分、表記揺れ、typo、好みや一般論に基づく指摘を、所見として扱うべきか判断する実装やテストを変更するとき。
+- レビュー結果が oracle file の具体的記述だけを根拠にしているか、実装者の裁量で自然に補える仕様の隙間を誤って問題扱いしていないかを確認したいとき。
 
 ## Do not read this when
-
-- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/oracle_review_standard.py` を直接確認する対象として決まっていて、目次を経由する必要がないとき。
-- `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py` など、別の review 断片を探しているとき。
-- `cmoc review oracle` ではなく、別サブコマンドや別階層の仕様を確認したいとき。
+- oracle file や realization file の基本的な定義、正本仕様断片と実装成果物の関係を確認したいだけのとき。
+- `cmoc review oracle` 以外のサブコマンド、入出力 schema、永続状態、CLI 引数などの具体仕様を探しているとき。
+- 所見分類の規範ではなく、構造化文書を組み立てる共通型、標準文書変換、プロンプト部品の集約方法そのものを確認したいとき。
 
 ## hash
-
 - 1404f2566c5a97fa55822658a9003371e37b786d40ea67b3c81e64c0d013c436
 
 # `oracle_standard.py`
 
 ## Summary
-
-- `<cmoc-root>/oracle/src/acp/prompt_parts/oracle_standard.py` は、`oracle file` に対する標準的なレビュー観点を `StructDoc` として組み立てる入口です。
-- `build_oracle_standard()` は、認知負荷の節約、正本仕様断片としての扱い、未定義部分の許容、総文字数の最小化、仕様断片間の整合、実装から仕様への逆流禁止、用語・命名の統一、ベストプラクティスより `oracle file` を優先すること、`goal` だけでなく `non-goal` も書くことの推奨をまとめます。
-- このファイルは `complete_prompt.py` から `oracle_standard=True` のときに組み込まれ、`oracle` ツリーを根拠にした read-only な prompt の前提となります。
+- oracle file が従うべき規範を StructDoc として構築する実装。人間の認知負荷節約、正本仕様断片としての扱い、未定義部分の許容、文字数最小化、論理的整合性、実装から仕様への逆流禁止、用語統一、命名、oracle file 優先、goal と non-goal の境界記述に関する標準を定義する。
+- oracle file の標準文書を生成するための prompt parts 実装であり、各規範を Standard と Requirement の列として記述し、構造化文書へ変換して返す入口になっている。
 
 ## Read this when
-
-- `oracle file` に対する標準的なレビュー観点を、`StructDoc` としてまとめて把握したいとき。
-- `build_oracle_standard()` に含まれる標準項目や、その優先順位・禁止事項を確認したいとき。
-- `complete_prompt.py` で `oracle_standard=True` が有効になる前提や、この標準を修正する前の関連文脈を整理したいとき。
+- oracle file に適用される共通規範の生成内容や、どの標準項目が prompt parts として組み込まれるかを確認したいとき。
+- oracle file の記述方針について、認知負荷削減、仕様断片の疎さ、未定義部分の扱い、矛盾禁止、用語・命名、ベストプラクティスとの優先関係を実装上どのように表現しているかを確認したいとき。
+- oracle standard の StructDoc を組み立てる処理、または Standard・Requirement から構造化文書へ変換する呼び出し側を変更するとき。
 
 ## Do not read this when
-
-- すでに `<cmoc-root>/oracle/src/acp/prompt_parts/oracle_standard.py` を直接確認する目的が決まっていて、目次の案内が不要なとき。
-- `complete_prompt.py` や `oracle_and_realization_basic.py` など、関連する別の prompt 断片だけを確認したいとき。
-- `oracle` ツリー内の個別の正本仕様断片ではなく、`prompt_parts/` 全体の入口だけを探しているとき。
+- oracle file と realization file の概念定義そのものを確認したいだけのとき。
+- realization file、realization code、realization test に適用される実装・テスト側の規範を確認したいとき。
+- INDEX.md エントリーの書き方やルーティング文書の規範だけを確認したいとき。
+- 個別の oracle file が定めるプロダクト仕様や、特定サブコマンドの挙動仕様を確認したいとき。
 
 ## hash
-
 - 0a349edcd2226daeb977cfec784977f7ba675274ecc1267c01a68e304d36871a
 
 # `realization_standard.py`
 
 ## Summary
-
-- <cmoc-root>/oracle/src/acp/prompt_parts/realization_standard.py は、realization file に求める標準方針を StructDoc として組み立てる入口です。
-- 総文字数の最小化、重複排除、既存実装の整理、明確な責務境界に基づく抽象化を中心に、実装・保守の判断基準をまとめます。
-- 公開面・設定面・状態・テストの増加を抑えつつ、変更後に削除・統合・短縮できるものが残っていないかを確認する観点も含みます。
+- realization file に求める規範文章を構築するための実装。文字数最小化、品質、責務境界とファイルサイズ、既存実装との整理、抽象化、公開面・状態、テスト、依存関係・補助ファイル、変更完了時の削除・統合確認に関する standard 群をまとめて返す。
+- realization standard の文書本文を生成する入口であり、各 standard は背景・要求・判断例を持つ構造化文書として組み立てられる。
 
 ## Read this when
-
-- realization file の削減すべき重複や、増やすべきでない公開面をまとめて把握したいとき。
-- 新しい実装、抽象化、テスト、依存関係、状態追加の可否を判断したいとき。
-- 変更後に削除・統合・短縮の余地があるかを確認したいとき。
-- complete_prompt.py にこの標準が追加される前提を把握したいとき。
+- realization file や realization code が従うべき規範文書の生成内容を確認・変更したいとき。
+- 実装・テスト・補助ファイルの肥大化、重複、旧仕様残存、不要な抽象化、公開面や永続状態の増加を抑制する基準を確認したいとき。
+- realization standard に新しい要求・背景・判断例を追加する、または既存の standard 群の責務範囲を調整したいとき。
+- cmoc が生成する realization standard の StructDoc 構成や、standard から構造化文書へ変換する流れを確認したいとき。
 
 ## Do not read this when
-
-- すでに <cmoc-root>/oracle/src/acp/prompt_parts/realization_standard.py を直接開いて、本体の定義を確認するとき。
-- 個別の helper、class、テストケース、import の整理だけを確認したいとき。
-- oracle 側の正本仕様や別の標準、あるいはファイル読み書き規則を探しているとき。
-- prompt_parts/ 全体ではなく、別のディレクトリや別フローの案内を探しているとき。
+- oracle file の規範、正本仕様断片の書き方、人間責任の仕様管理について確認したいだけのとき。
+- 特定の CLI 挙動、path model、実行状態、入出力 schema など、個別機能の実装詳細を探しているとき。
+- realization standard の本文ではなく、構造化文書型や standard 変換処理そのものの実装を確認したいとき。
+- INDEX.md エントリーの書き方やルーティング文書の一般規範だけを確認したいとき。
 
 ## hash
-
-- 7b4ad34a5e4ad05a6dff26576b4398c32d5c504fb773c14299c0a5ef1b5be1a0
+- fd6040e79dad679cd79b34e76dbc76ec53f367723699c3d20836a28d42a5b54d
 
 # `routing_rule.py`
 
 ## Summary
-
-- `<cmoc-root>/oracle/src/acp/prompt_parts/routing_rule.py` は、AI エージェントが `INDEX.md` をヒントに必要な文章へ進むための固定規則を `StructDoc` として組み立てる入口です。
-- `INDEX.md` を本文の代替ではなくルーティング情報として扱い、`Summary`、`Read this when`、`Do not read this when` から読む先を選ぶ方針をまとめます。
-- `complete_prompt.py` では常に追加され、個別の標準フラグに依存せず agent 呼び出しの共通前提になります。
+- INDEX.md を本文の代替ではなく同階層の対象へ進むための案内として扱い、Summary / Read this when / Do not read this when を手がかりに読むべき本文を選ぶための規則文章を構築する。
+- 作業開始時の起点選択、下位階層へ進む際の追加確認、INDEX.md だけで判断できない場合の本文確認、総当たり前の候補絞り込みという読み進め方を定義する。
+- Read this when と Do not read this when による優先・回避判断、および INDEX.md と本文が乖離し得る場合は本文を根拠にする判断基準をまとめる。
 
 ## Read this when
-
-- agent prompt に固定挿入される `INDEX.md` の読み進め規則を確認したいとき。
-- `build_complete_prompt()` がなぜ `routing_rule` を常に含めるか把握したいとき。
-- `INDEX.md` エントリーの書き方ではなく、利用時にどう読むかの規則を確認したいとき。
+- AI agent が作業前に INDEX.md をどう使って読む対象を選ぶべきかを確認したいとき。
+- 対象領域が推定できる場合とできない場合で、どの階層の INDEX.md から読み始めるかを確認したいとき。
+- 下位ディレクトリへ進む際に追加で INDEX.md を読む条件や、INDEX.md で判断できない場合に本文へ進む条件を確認したいとき。
+- Read this when / Do not read this when / Summary を使ったルーティング判断の優先基準を確認したいとき。
+- INDEX.md と本文の内容が食い違う可能性がある場面で、どちらを根拠に扱うかを確認したいとき。
 
 ## Do not read this when
-
-- `INDEX.md` エントリー自体の生成規範を確認したいときは、`index_entry_standard.py` を読むべきとき。
-- ファイル読み書き制約、oracle/realization の基本定義、レビュー標準など、別の prompt 断片だけを探しているとき。
-- `INDEX.md` の配置対象や生成・更新手順を確認したいときは、app spec 側の indexing 仕様を読むべきとき。
+- 個別ファイルの正本仕様、実装内容、テスト内容そのものを確認したいだけで、INDEX.md を使った読み進め方を確認する必要がないとき。
+- INDEX.md エントリーを生成するための対象本文を探している段階で、既に読むべき本文が特定できているとき。
+- パス概念そのものの定義や root path の意味を確認したいときは、path model の定義を直接読む。
+- oracle file と realization file の責務境界や編集権限を確認したいときは、それらを定義する正本仕様を直接読む。
 
 ## hash
-
-- c3f89bf3c1b0ef3a19cfd0d7d7aee2e3b0ceb8314b7b32ca4551ec3977ecd2da
+- d8e006c47095d5110437cb8a851dee23ad97b314657531a3d570f52d146f8443

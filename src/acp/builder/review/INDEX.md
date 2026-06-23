@@ -1,25 +1,21 @@
 # `oracle`
 
 ## Summary
-
-- この `review/oracle` ディレクトリのルーティング文書で、`enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py` と各対応 `*.json` への入口を案内する。
-- `cmoc review oracle` の新規所見列挙、所見整理、妥当理由列挙、否定理由列挙、採否判定の 5 系統を切り分けて示す。
-- 各 `*.py` は prompt 正本、各 `*.json` は対応する Structured Output schema を表す。
+- oracle file を対象とするレビュー処理の AI 呼び出しビルダーと、その Structured Output schema 群をまとめる領域。新規所見の列挙、所見リストの重複・矛盾整理、所見の妥当性を支持する理由と否定する理由の列挙、最終的な採否判定に関するプロンプト構築と応答契約を扱う。
+- 対象 oracle file、既知の所見や理由、oracle レビュー用の標準プロンプト断片をどのようにエージェントへ渡し、どのモデル設定・ファイルアクセス方針・出力契約でレビュー工程を構成するかを確認する入口になる。
 
 ## Read this when
-
-- `cmoc review oracle` の 5 系統の入口をひとまとめに把握したいとき。
-- `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py` の役割分担を整理したいとき。
-- 各 `*.py` が prompt 正本で、各 `*.json` が対応する Structured Output schema である対応関係を確認したいとき。
-- 新規所見列挙、所見整理、妥当理由列挙、否定理由列挙、採否判定のどこから読むべきか迷ったとき。
+- oracle file に対するレビューで、新規所見の検出、既存所見の整理、所見の擁護・反証、採否判定のいずれかの AI 呼び出し内容や出力契約を確認・変更したいとき。
+- レビュー対象所見、既知の関連所見、既知の妥当理由や非妥当理由が、各レビュー工程のプロンプトへどう渡されるかを追いたいとき。
+- oracle file を根拠にしたレビュー結果を、重大度・見出し・根拠・理由・編集操作・採否理由などの機械検証可能な応答として扱う実装やテストを確認したいとき。
+- review oracle 系の処理で使う標準プロンプト、ファイルアクセスモード、モデル種別、reasoning effort、Structured Output schema の組み合わせを調べたいとき。
 
 ## Do not read this when
-
-- すでに `enumerate_finding.py`、`merge_finding.py`、`validate_finding_advocate.py`、`validate_finding_challenger.py`、`judge_finding.py` のいずれか、または対応する `*.json` を直接確認する対象が決まっているとき。
-- `cmoc review oracle` の 5 系統のうち 1 つだけを直接見たいとき。
-- `cmoc review oracle` 以外のサブコマンドや、レビュー用 Structured Output schema 以外の仕様を探しているとき。
-- 所見の列挙、整理、擁護理由列挙、否定理由列挙、採否判定のいずれにも当てはまらない文書を探しているとき。
+- oracle file や realization file の基本概念、path keyword、正本仕様断片そのもの、または oracle 標準全体を確認したいとき。
+- review 以外のサブコマンド、CLI 引数解析、サブコマンド登録、実行制御、レビュー結果の保存・集計・通知・UI を調べたいとき。
+- 個々の oracle file の仕様本文や、レビュー対象となる正本仕様断片の内容そのものを読みたいとき。
+- 汎用のプロンプト組み立て、構造化 markdown レンダリング、パス解決、エージェント呼び出し型など、review oracle に限定されない共通部品を調べたいとき。
+- INDEX.md エントリー生成やルーティング文書の書き方を確認したいとき。
 
 ## hash
-
-- da391888efa47b3e5ed93fd4c44f5ef7ac12e80550728b003cff6d4e94809b94
+- 1a21ee8fd4e026cc81b8b0175951e9471aa9a3706c4217f800a8d11838f78dfc
