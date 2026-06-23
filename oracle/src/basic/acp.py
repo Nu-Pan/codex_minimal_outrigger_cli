@@ -56,6 +56,7 @@ class FileAccessMode(StrEnum):
     PURE_ORACLE_READ = auto()
     REALIZATION_WRITE = auto()
     ORACLE_WRITE = auto()
+    REPO_WRITE = auto()
 
 
 @dataclass(frozen=True)

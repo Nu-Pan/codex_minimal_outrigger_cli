@@ -62,7 +62,7 @@
 
 ### Codex CLI の場合
 
-- これまでに使用したパラメータを使用して Codex CLI を起動する
+- ここまでの処理で選択したパラメータを使用して Codex CLI を起動する
 - 起動コマンドは `codex` とする (`codex exec` ではない)
 - `<cmoc-root>/oracle/doc/app_spec/codex_exec_rule.md` から、以下の要素を持ち込む
     - 環境変数 `$CODEX_HOME`
