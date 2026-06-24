@@ -1427,6 +1427,41 @@ def test_update_indexes_generates_sibling_entries_in_parallel(
     assert max_active >= 2
 
 
+def test_update_indexes_indexes_nested_memo_directory(tmp_path: Path, monkeypatch) -> None:
+    root = make_repo(tmp_path)
+    root_memo = root / "memo"
+    nested_memo = root / "docs" / "memo"
+    root_memo.mkdir()
+    nested_memo.mkdir(parents=True)
+    (root_memo / "private.txt").write_text("private\n")
+    (nested_memo / "note.txt").write_text("note\n")
+    cmoc_runtime.sync_config(root)
+
+    def fake_build_index_entry(
+        update_root: Path, path: Path, digest: str | None = None
+    ) -> str:
+        return main_module.render_index_entry(
+            update_root,
+            path,
+            {
+                "summary": [path.name],
+                "read_this_when": [path.name],
+                "do_not_read_this_when": [path.name],
+            },
+            digest=digest,
+        ).rstrip()
+
+    monkeypatch.setattr(main_module, "build_index_entry", fake_build_index_entry)
+
+    updated = main_module.update_indexes(root)
+
+    assert root_memo / "INDEX.md" not in updated
+    assert not (root_memo / "INDEX.md").exists()
+    assert nested_memo / "INDEX.md" in updated
+    assert (nested_memo / "INDEX.md").is_file()
+    assert "# `memo`" in (root / "docs" / "INDEX.md").read_text()
+
+
 def test_command_codex_call_runs_indexing_preflight(
     tmp_path: Path, monkeypatch
 ) -> None:

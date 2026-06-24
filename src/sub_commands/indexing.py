@@ -54,7 +54,7 @@ def update_indexes_impl(root: Path, build_index_entry_func: IndexEntryBuilder) -
         for path in root.rglob("*")
         if path.is_dir()
         and not any(part.startswith(".") for part in path.relative_to(root).parts)
-        and "memo" not in path.relative_to(root).parts
+        and not is_root_memo(root, path)
         and not is_git_ignored(root, path)
     ]
     dirs.append(root)
@@ -132,12 +132,17 @@ def indexable_children(root: Path, directory: Path) -> list[Path]:
     for child in sorted(directory.iterdir(), key=lambda p: p.name):
         if child.name == "INDEX.md" or child.name.startswith("."):
             continue
-        if child.resolve() == (root / "memo").resolve():
+        if is_root_memo(root, child):
             continue
         if is_git_ignored(root, child) or (child.is_file() and is_binary(child)):
             continue
         children.append(child)
     return children
+
+
+def is_root_memo(root: Path, path: Path) -> bool:
+    """INDEX.md 対象から除外する `<work-root>/memo` か判定する。"""
+    return path.resolve() == (root / "memo").resolve()
 
 
 def build_index_entry_impl(root: Path, path: Path, codex_exec: CodexExec, digest: str | None = None) -> str:
