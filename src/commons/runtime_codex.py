@@ -65,7 +65,7 @@ def run_codex_exec(
     stderr_path = log_dir / f"{ts}_stderr.log"
     output_path = log_dir / f"{ts}_output.json"
     call_path = log_dir / f"{ts}_call.json"
-    codex_home = resolve_codex_home()
+    codex_home = resolve_codex_home(cwd)
     validate_codex_home(codex_home)
     codex_env = codex_subprocess_env(codex_home)
     profile_path = prepare_codex_profile(parameter, config, codex_home)
@@ -311,7 +311,7 @@ def run_codex_tui(
     log_dir.mkdir(parents=True, exist_ok=True)
     ts = timestamp()
     call_path = log_dir / f"{ts}_tui_call.json"
-    codex_home = resolve_codex_home()
+    codex_home = resolve_codex_home(cwd)
     validate_codex_home(codex_home)
     profile_path = prepare_codex_profile(parameter, config, codex_home)
     profile_name = codex_profile_name(profile_path)

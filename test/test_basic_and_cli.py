@@ -1995,6 +1995,53 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
     assert result.profile_path.parent == codex_home
 
 
+def test_run_codex_exec_preserves_configured_codex_home_env_value(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    codex_home = root / "relative_codex_home"
+    codex_home.mkdir()
+    (codex_home / "auth.json").write_text("{}\n")
+    monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    recorder = tmp_path / "record.json"
+    fake_codex = bin_dir / "codex"
+    fake_codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env python3",
+                "import json, os, pathlib",
+                f"record = pathlib.Path({str(recorder)!r})",
+                "args = __import__('sys').argv[1:]",
+                "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+                "output.write_text('done\\n')",
+                "record.write_text(json.dumps({'codex_home': os.environ.get('CODEX_HOME'), 'args': args}))",
+                "print(json.dumps({'type': 'turn.completed'}))",
+            ]
+        )
+        + "\n"
+    )
+    fake_codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+    )
+
+    result = run_codex_exec(parameter, root=root, capacity_initial_sleep_sec=0)
+
+    recorded = json.loads(recorder.read_text())
+    assert recorded["codex_home"] == "relative_codex_home"
+    assert result.codex_home == codex_home
+    assert result.profile_path.parent == codex_home
+    call_log = json.loads(result.call_log_path.read_text())
+    assert call_log["codex_home"] == str(codex_home)
+
+
 def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
     tmp_path: Path, monkeypatch
 ) -> None:

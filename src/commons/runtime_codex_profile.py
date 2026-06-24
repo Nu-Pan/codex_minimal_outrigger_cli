@@ -39,10 +39,11 @@ def build_codex_profile(parameter: AgentCallParameter, config: CmocConfig) -> st
     )
 
 
-def resolve_codex_home() -> Path:
+def resolve_codex_home(cwd: Path | None = None) -> Path:
     value = os.environ.get("CODEX_HOME")
-    if value:
-        return Path(value).expanduser().resolve()
+    if value is not None:
+        raw_path = Path(value)
+        return raw_path if raw_path.is_absolute() else (cwd or Path.cwd()) / raw_path
     return (Path.home() / ".codex").resolve()
 
 
@@ -107,7 +108,10 @@ def prepare_codex_profile(
 
 
 def codex_subprocess_env(codex_home: Path) -> dict[str, str]:
-    return {**os.environ, "CODEX_HOME": str(codex_home)}
+    value = os.environ.get("CODEX_HOME")
+    if value is None:
+        value = str(codex_home)
+    return {**os.environ, "CODEX_HOME": value}
 
 
 def prepare_schema(root: Path, schema_source_path: Path | None) -> Path | None:
