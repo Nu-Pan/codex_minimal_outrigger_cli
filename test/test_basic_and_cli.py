@@ -11,6 +11,7 @@ from typer.testing import CliRunner
 import cmoc_runtime
 import main as main_module
 import sub_commands.apply as apply_module
+import sub_commands.session as session_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from basic.path_model import RootToken, resolve_real_path, resolve_token_path
 from config.cmoc_config import CmocConfig
@@ -557,6 +558,43 @@ def test_session_abandon_requires_existing_home_branch(
         ).returncode
         == 0
     )
+
+
+def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = session_branch.removeprefix("cmoc/session/")
+    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    original_run_git = session_module.run_git
+
+    def fake_run_git(args, cwd, check=True):
+        if args == ["branch", "-D", session_branch]:
+            raise CmocError("delete failed", ["next"], "branch delete failed")
+        return original_run_git(args, cwd, check)
+
+    monkeypatch.setattr(session_module, "run_git", fake_run_git)
+
+    result = runner.invoke(app, ["session", "abandon"])
+
+    assert result.exit_code != 0
+    assert "session abandon の cleanup に失敗しました。" in result.output
+    assert "`cmoc session abandon` を再実行してください。" in result.output
+    assert run_git(root, "branch", "--show-current").stdout.strip() == session_branch
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", session_branch], cwd=root
+        ).returncode
+        == 0
+    )
+    state = json.loads(state_path.read_text())
+    assert state["session"]["state"] == "active"
 
 
 def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
