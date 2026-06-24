@@ -70,7 +70,7 @@ def cmoc_apply_fork_impl(
     run_id = timestamp()
     apply_branch = f"cmoc/apply/{session_id}/{run_id}"
     oracle_snapshot_commit = head_commit(root)
-    apply_worktree = worktrees_dir(root) / "apply" / session_id / run_id
+    apply_worktree = worktrees_dir(root) / session_id / run_id
     create_run_worktree(root, apply_branch, apply_worktree, "HEAD")
     state.apply = ApplyPart(
         state="running",

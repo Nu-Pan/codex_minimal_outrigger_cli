@@ -679,12 +679,19 @@ def test_review_oracle_merges_review_index_changes(tmp_path: Path, monkeypatch) 
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
+    session_id = (
+        run_git(root, "branch", "--show-current")
+        .stdout.strip()
+        .removeprefix("cmoc/session/")
+    )
+    review_worktrees: list[Path] = []
 
     class FakeCodexResult:
         def __init__(self, output_json):
             self.output_json = output_json
 
     def fake_run_codex_exec(parameter, **kwargs):
+        review_worktrees.append(Path.cwd())
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
             (Path.cwd() / "INDEX.md").write_text("# generated review index\n")
@@ -712,12 +719,13 @@ def test_review_oracle_merges_review_index_changes(tmp_path: Path, monkeypatch) 
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
     assert "review_join_commit: null" not in rendered
-    review_root = root / ".cmoc" / "worktrees" / "review"
-    assert (
-        not any(path.name == ".git" for path in review_root.rglob(".git"))
-        if review_root.exists()
-        else True
+    assert review_worktrees
+    for review_worktree in review_worktrees:
+        assert review_worktree.parent == root / ".cmoc" / "worktrees" / session_id
+    assert not any(
+        path.name == ".git" for path in (root / ".cmoc" / "worktrees").rglob(".git")
     )
+    assert not (root / ".cmoc" / "worktrees" / "review").exists()
 
 
 def test_file_access_mode_values_are_json_ready() -> None:
@@ -767,7 +775,11 @@ def test_apply_fork_runs_codex_loop_and_updates_state(
     state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
     assert state["apply"]["state"] == "completed"
     assert state["apply"]["apply_branch"].startswith(f"cmoc/apply/{session_id}/")
-    assert apply_worktree_from_state(root, state).is_dir()
+    run_id = state["apply"]["apply_branch"].removeprefix(f"cmoc/apply/{session_id}/")
+    apply_worktree = apply_worktree_from_state(root, state)
+    assert apply_worktree == root / ".cmoc" / "worktrees" / session_id / run_id
+    assert apply_worktree.is_dir()
+    assert not (root / ".cmoc" / "worktrees" / "apply").exists()
     assert "apply_worktree" not in state["apply"]
     assert calls
     assert any(call.startswith("apply fork enumerate findings") for call in calls)
