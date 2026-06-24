@@ -25,6 +25,7 @@ from cmoc_runtime import (
     work_root,
 )
 from main import app
+from sub_commands.tui import parse_markdown_prompt
 
 runner = CliRunner()
 
@@ -321,6 +322,28 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     assert "/.cmoc/" in (root / ".gitignore").read_text()
     assert (root / ".cmoc" / "log" / "sub_command").is_dir()
     assert not (root / ".cmoc" / "logs" / "sub_commands").exists()
+
+
+def test_parse_markdown_prompt_ignores_headings_inside_fenced_code_blocks() -> None:
+    parsed = parse_markdown_prompt(
+        "\n".join(
+            [
+                "# 依頼",
+                "",
+                "```python",
+                "# 見出しではない",
+                "print('ok')",
+                "```",
+                "",
+                "## 補足",
+                "本文",
+            ]
+        )
+    )
+
+    assert [doc.title for doc in parsed] == ["依頼", "補足"]
+    assert isinstance(parsed[0].children, str)
+    assert "# 見出しではない" in parsed[0].children
 
 
 def test_session_fork_creates_session_branch_and_state(

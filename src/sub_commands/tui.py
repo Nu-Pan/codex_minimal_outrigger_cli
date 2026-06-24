@@ -135,8 +135,27 @@ def parse_markdown_prompt(markdown: str) -> list[StructDoc] | list[str]:
     sections: list[StructDoc] = []
     current_title: str | None = None
     current_body: list[str] = []
+    fence: tuple[str, int] | None = None
     for line in markdown.splitlines():
-        match = re.match(r"^(#{1,6})\s+(.+?)\s*$", line)
+        fence_pattern = (
+            r"^[ \t]{0,3}(`{3,}|~{3,}).*$"
+            if fence is None
+            else r"^[ \t]{0,3}(`{3,}|~{3,})[ \t]*$"
+        )
+        fence_match = re.match(fence_pattern, line)
+        if fence_match:
+            marker = fence_match.group(1)
+            if fence is None:
+                fence = (marker[0], len(marker))
+            elif marker[0] == fence[0] and len(marker) >= fence[1]:
+                fence = None
+            current_body.append(line)
+            continue
+        match = (
+            None
+            if fence is not None
+            else re.match(r"^(#{1,6})\s+(.+?)\s*$", line)
+        )
         if match:
             if current_title is not None:
                 sections.append(StructDoc(current_title, "\n".join(current_body).strip()))
