@@ -1346,6 +1346,38 @@ def test_indexing_uses_codex_index_entry_builder_and_commits(
     assert "cmoc indexing" in run_git(root, "log", "--oneline", "-1").stdout
 
 
+def test_indexing_targets_current_linked_worktree(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    main_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    linked = root / ".cmoc" / "worktrees" / "indexing"
+    run_git(root, "worktree", "add", "-b", "linked-indexing", str(linked), "HEAD")
+
+    class FakeCodexResult:
+        output_json = {
+            "summary": ["linked summary"],
+            "read_this_when": ["linked read condition"],
+            "do_not_read_this_when": ["linked skip condition"],
+        }
+
+    monkeypatch.setattr(
+        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    )
+    monkeypatch.chdir(linked)
+
+    result = runner.invoke(app, ["indexing"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert (linked / "INDEX.md").is_file()
+    assert not (root / "INDEX.md").exists()
+    assert run_git(linked, "log", "-1", "--pretty=%s").stdout.strip() == "cmoc indexing"
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == main_head
+    assert run_git(linked, "status", "--short").stdout.strip() == ""
+
+
 def test_indexing_skips_codex_when_existing_hashes_are_fresh(
     tmp_path: Path, monkeypatch
 ) -> None:

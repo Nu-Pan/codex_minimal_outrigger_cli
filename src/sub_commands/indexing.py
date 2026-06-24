@@ -12,10 +12,10 @@ from cmoc_runtime import (
     is_binary,
     is_git_ignored,
     load_config,
-    repo_root,
     require_clean_worktree,
     run_git,
     text_sha256,
+    work_root,
 )
 
 
@@ -28,7 +28,7 @@ def cmoc_indexing_impl(
     commit_index_updates_func: Callable[[Path, list[Path]], None],
 ) -> None:
     """現在の work root に対して INDEX.md の maintenance を実行する。"""
-    root = repo_root()
+    root = work_root()
     require_clean_worktree(root)
     ensure_cmoc_ignored(root)
     updated = update_indexes_func(root)
