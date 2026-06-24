@@ -1,6 +1,11 @@
 import traceback
 
 
+DEFAULT_NEXT_ACTIONS = [
+    "エラー内容を確認し、必要なら手動で状態を修復してから再実行してください。"
+]
+
+
 class CmocError(RuntimeError):
     def __init__(self, summary: str, next_actions: list[str], detail: str):
         super().__init__(summary)
@@ -12,13 +17,11 @@ class CmocError(RuntimeError):
 def render_error(exc: BaseException) -> str:
     if isinstance(exc, CmocError):
         summary = exc.summary
-        actions = exc.next_actions
+        actions = exc.next_actions or DEFAULT_NEXT_ACTIONS
         detail = exc.detail
     else:
         summary = str(exc) or exc.__class__.__name__
-        actions = [
-            "エラー内容を確認し、必要なら手動で状態を修復してから再実行してください。"
-        ]
+        actions = DEFAULT_NEXT_ACTIONS
         detail = repr(exc)
     return "\n".join(
         [

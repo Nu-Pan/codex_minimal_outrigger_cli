@@ -110,6 +110,15 @@ def test_render_error_uses_structured_markdown() -> None:
     assert "## Call stack" in rendered
 
 
+def test_render_error_fills_empty_next_actions() -> None:
+    try:
+        raise CmocError("summary", [], "detail")
+    except CmocError as exc:
+        rendered = render_error(exc)
+
+    assert "## Next actions\n- エラー内容を確認し" in rendered
+
+
 def test_cli_error_report_is_written_to_stdout(tmp_path: Path, monkeypatch) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
