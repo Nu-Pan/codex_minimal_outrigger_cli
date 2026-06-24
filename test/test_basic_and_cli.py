@@ -210,6 +210,30 @@ def test_init_does_not_commit_preexisting_staged_changes(
     ]
 
 
+def test_init_does_not_commit_preexisting_gitignore_changes(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    gitignore = root / ".gitignore"
+    gitignore.write_text("base\n")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "add gitignore")
+    gitignore.write_text("base\nstaged\n")
+    run_git(root, "add", ".gitignore")
+    gitignore.write_text("base\nstaged\nunstaged\n")
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(app, ["init"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert run_git(root, "show", "HEAD:.gitignore").stdout == "base\n\n/.cmoc/\n"
+    assert run_git(root, "diff", "--cached", "--", ".gitignore").stdout.count(
+        "+staged"
+    ) == 1
+    assert run_git(root, "diff", "--", ".gitignore").stdout.count("+unstaged") == 1
+    assert gitignore.read_text() == "base\nstaged\nunstaged\n\n/.cmoc/\n"
+
+
 def test_init_targets_current_linked_worktree(tmp_path: Path, monkeypatch) -> None:
     root = make_repo(tmp_path)
     linked = tmp_path / "linked"
