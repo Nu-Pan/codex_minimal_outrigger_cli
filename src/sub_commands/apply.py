@@ -1,5 +1,7 @@
 import json
 import os
+import signal
+import time
 from pathlib import Path
 from typing import Callable
 
@@ -76,6 +78,7 @@ def cmoc_apply_fork_impl(
         state="running",
         apply_branch=apply_branch,
         oracle_snapshot_commit=oracle_snapshot_commit,
+        apply_process_id=os.getpid(),
     )
     write_state(path, state)
     config = load_config(root)
@@ -148,9 +151,11 @@ def cmoc_apply_fork_impl(
                 config,
             )
         state.apply.state = "completed"
+        state.apply.apply_process_id = None
         write_state(path, state)
     except BaseException:
         state.apply.state = "error"
+        state.apply.apply_process_id = None
         write_state(path, state)
         if report_path is None:
             write_error_report(root, branch, state, finding_counts, apply_worktree)
@@ -368,6 +373,17 @@ def cmoc_apply_abandon_impl() -> None:
             str(path),
         )
     warnings: list[str] = []
+    if previous == "running":
+        process_id = state.apply.apply_process_id
+        if process_id is None:
+            raise CmocError(
+                "実行中 apply process を特定できません。",
+                ["session state file の apply.apply_process_id を確認してください。"],
+                str(path),
+            )
+        stopped_warning = stop_apply_process(process_id)
+        if stopped_warning:
+            warnings.append(stopped_warning)
     if branch == apply_branch:
         os.chdir(root)
     if apply_worktree:
@@ -422,3 +438,47 @@ def worktree_for_branch_optional(root: Path, branch: str) -> Path | None:
         elif line == f"branch refs/heads/{branch}" and current_path is not None:
             return current_path
     return None
+
+
+def stop_apply_process(process_id: int) -> str | None:
+    """running abandon では cleanup 前に apply process が消えたことを確認する。"""
+    if process_id == os.getpid():
+        raise CmocError(
+            "現在の apply abandon process は停止対象にできません。",
+            ["別 process から cmoc apply abandon を実行してください。"],
+            f"pid: {process_id}",
+        )
+    if not process_exists(process_id):
+        return f"apply process already stopped: {process_id}"
+    os.kill(process_id, signal.SIGTERM)
+    if wait_process_exit(process_id, 5.0):
+        return None
+    os.kill(process_id, signal.SIGKILL)
+    if wait_process_exit(process_id, 5.0):
+        return None
+    raise CmocError(
+        "実行中 apply process を停止できません。",
+        ["apply process を確認して停止後に再実行してください。"],
+        f"pid: {process_id}",
+    )
+
+
+def wait_process_exit(process_id: int, timeout_sec: float) -> bool:
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        if not process_exists(process_id):
+            return True
+        time.sleep(0.1)
+    return not process_exists(process_id)
+
+
+def process_exists(process_id: int) -> bool:
+    if process_id <= 0:
+        return False
+    try:
+        os.kill(process_id, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
