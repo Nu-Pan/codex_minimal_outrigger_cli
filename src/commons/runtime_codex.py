@@ -87,22 +87,54 @@ def run_codex_exec(
     if schema_path is not None:
         argv.extend(["--output-schema", str(schema_path)])
     argv.append("-")
-    call_data = {
-        "purpose": purpose,
-        "timestamp": ts,
-        "argv": argv,
+    base_call_data = {
         "codex_home": str(codex_home),
         "profile_name": profile_name,
         "profile_path": str(profile_path),
-        "schema_path": str(schema_path) if schema_path else None,
-        "stdout_log_path": str(stdout_path),
-        "stderr_log_path": str(stderr_path),
-        "output_path": str(output_path),
         "model_class": parameter.model_class.value,
         "reasoning_effort": parameter.reasoning_effort.value,
         "file_access_mode": parameter.file_access_mode.value,
     }
-    call_path.write_text(json.dumps(call_data, ensure_ascii=False, indent=2) + "\n")
+
+    def write_call_log(
+        path: Path,
+        *,
+        run_purpose: str,
+        run_ts: str,
+        run_argv: list[str],
+        run_stdout_path: Path,
+        run_stderr_path: Path,
+        run_output_path: Path,
+        run_schema_path: Path | None,
+    ) -> None:
+        path.write_text(
+            json.dumps(
+                {
+                    "purpose": run_purpose,
+                    "timestamp": run_ts,
+                    "argv": run_argv,
+                    **base_call_data,
+                    "schema_path": str(run_schema_path) if run_schema_path else None,
+                    "stdout_log_path": str(run_stdout_path),
+                    "stderr_log_path": str(run_stderr_path),
+                    "output_path": str(run_output_path),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n"
+        )
+
+    write_call_log(
+        call_path,
+        run_purpose=purpose,
+        run_ts=ts,
+        run_argv=argv,
+        run_stdout_path=stdout_path,
+        run_stderr_path=stderr_path,
+        run_output_path=output_path,
+        run_schema_path=schema_path,
+    )
     call_started_at = time.perf_counter()
     quota_wait_sec = 0.0
     logger = subcommand_logger or current_subcommand_logger()
@@ -219,14 +251,41 @@ def run_codex_exec(
                             logger.add_quota_wait(quota_poll_interval_sec)
                         quota_wait_sec += quota_poll_interval_sec
                         time.sleep(quota_poll_interval_sec)
+                        probe_ts = timestamp()
+                        probe_stdout_path = log_dir / f"{probe_ts}_stdout.jsonl"
+                        probe_stderr_path = log_dir / f"{probe_ts}_stderr.log"
+                        probe_output_path = log_dir / f"{probe_ts}_output.json"
+                        probe_call_path = log_dir / f"{probe_ts}_call.json"
+                        probe_argv = [
+                            "codex",
+                            "exec",
+                            "--profile",
+                            profile_name,
+                            "--json",
+                            "--output-last-message",
+                            str(probe_output_path),
+                            "-",
+                        ]
+                        write_call_log(
+                            probe_call_path,
+                            run_purpose="quota availability probe",
+                            run_ts=probe_ts,
+                            run_argv=probe_argv,
+                            run_stdout_path=probe_stdout_path,
+                            run_stderr_path=probe_stderr_path,
+                            run_output_path=probe_output_path,
+                            run_schema_path=None,
+                        )
                         poll = subprocess.run(
-                            ["codex", "exec", "--json", "-"],
+                            probe_argv,
                             cwd=cwd,
                             input="quota availability probe",
                             text=True,
                             capture_output=True,
                             env=codex_env,
                         )
+                        probe_stdout_path.write_text(poll.stdout)
+                        probe_stderr_path.write_text(poll.stderr)
                         print(
                             f"# {console_timestamp()} Codex CLI quota probe returned {poll.returncode}",
                             flush=True,

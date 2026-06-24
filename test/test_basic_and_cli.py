@@ -2190,13 +2190,16 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
                 "import json, os, pathlib, sys",
                 f"calls = pathlib.Path({str(calls)!r})",
                 "args = sys.argv[1:]",
-                "with calls.open('a') as f: f.write(json.dumps({'args': args, 'codex_home': os.environ.get('CODEX_HOME')}) + '\\n')",
+                "stdin = sys.stdin.read()",
+                "with calls.open('a') as f: f.write(json.dumps({'args': args, 'stdin': stdin, 'codex_home': os.environ.get('CODEX_HOME')}) + '\\n')",
                 "if 'resume' in args:",
                 "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
                 "    output.write_text(json.dumps({'ok': True}))",
                 "    print(json.dumps({'type': 'turn.completed'}))",
                 "    sys.exit(0)",
-                "if args == ['exec', '--json', '-']:",
+                "if stdin == 'quota availability probe':",
+                "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+                "    output.write_text(json.dumps({'probe': True}))",
                 "    print(json.dumps({'type': 'turn.completed'}))",
                 "    sys.exit(0)",
                 "print(json.dumps({'type':'error','message':'Quota exceeded','session_id':'sess-1'}))",
@@ -2226,10 +2229,30 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     argv_calls = [record["args"] for record in call_records]
     assert argv_calls[0][-1] == "-"
     assert all(record["codex_home"] == str(codex_home) for record in call_records)
-    assert argv_calls[1] == ["exec", "--json", "-"]
+    assert call_records[1]["stdin"] == "quota availability probe"
+    assert argv_calls[1][:2] == ["exec", "--profile"]
+    assert argv_calls[1][2].startswith("cmoc_")
+    assert "--json" in argv_calls[1]
+    assert "--output-last-message" in argv_calls[1]
+    assert argv_calls[1][-1] == "-"
     assert "resume" in argv_calls[2]
     assert "sess-1" in argv_calls[2]
     assert result.output_json == {"ok": True}
+    call_logs = [
+        json.loads(path.read_text())
+        for path in sorted((root / ".cmoc" / "log" / "codex").glob("*_call.json"))
+    ]
+    probe_logs = [
+        log for log in call_logs if log["purpose"] == "quota availability probe"
+    ]
+    assert len(probe_logs) == 1
+    assert probe_logs[0]["argv"][1:] == argv_calls[1]
+    assert probe_logs[0]["profile_name"] == argv_calls[1][2]
+    assert Path(probe_logs[0]["stdout_log_path"]).read_text().strip() == (
+        '{"type": "turn.completed"}'
+    )
+    assert Path(probe_logs[0]["stderr_log_path"]).read_text() == ""
+    assert Path(probe_logs[0]["output_path"]).read_text() == '{"probe": true}'
 
 
 def test_run_codex_exec_uses_single_representative_quota_probe(
@@ -2248,7 +2271,8 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
                 "import json, pathlib, sys, time",
                 f"calls = pathlib.Path({str(calls)!r})",
                 "args = sys.argv[1:]",
-                "kind = 'resume' if 'resume' in args else 'probe' if args == ['exec', '--json', '-'] else 'initial'",
+                "stdin = sys.stdin.read()",
+                "kind = 'resume' if 'resume' in args else 'probe' if stdin == 'quota availability probe' else 'initial'",
                 "with calls.open('a') as f: f.write(json.dumps({'kind': kind, 'args': args}) + '\\n')",
                 "if kind == 'resume':",
                 "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
@@ -2256,6 +2280,8 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
                 "    print(json.dumps({'type': 'turn.completed'}))",
                 "    sys.exit(0)",
                 "if kind == 'probe':",
+                "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+                "    output.write_text(json.dumps({'probe': True}))",
                 "    print(json.dumps({'type': 'turn.completed'}))",
                 "    sys.exit(0)",
                 "deadline = time.time() + 5",
