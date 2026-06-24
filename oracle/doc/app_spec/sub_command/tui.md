@@ -43,7 +43,7 @@
     - コメント `<!-- ... -->` は削除
     - 前後の空白文字は除去 (`strip`)
 
-## 「必要なパラメータを agent call で決定」の焼成
+## 「必要なパラメータを agent call で決定」の詳細
 
 - `cmoc tui` で必要になるパラメータの大半は agent call で決定する
 - agent call の詳細仕様は `build_tui_resolve_parameter_parameter` を正本とする
@@ -70,4 +70,11 @@
     - codex profile
     - ファイルアクセス制限
     - Model, Reasoning Effort
-    - プロンプトの渡し方
+- プロンプトの渡し方
+    - 完全なプロンプトを `<work-root>/.cmoc/log/tui/<time-stamp>_cmpl.md` に保存する
+    - `codex` 引数経由で以下の初期プロンプトを与える
+        ```text
+        `<work-root>/.cmoc/log/tui/<time-stamp>_cmpl.md` の指示に従って下さい。
+        ```
+    - 実際に `codex` に渡す文字列では `<work-root>`, `<time-stamp>` トークンを実際の値で置き換えること
+    
