@@ -556,6 +556,12 @@ def test_session_abandon_requires_existing_home_branch(
     result = runner.invoke(app, ["session", "abandon"])
 
     assert result.exit_code != 0
+    assert "completed handler" in result.output
+    assert "- sub_command_log: `" in result.output
+    assert "- step_execute_elapsed: `" in result.output
+    assert "- elapsed: `" in result.output
+    assert "- quota_wait: `" in result.output
+    assert "- returncode: `1`" in result.output
     assert run_git(root, "branch", "--show-current").stdout.strip() == session_branch
     assert "session home branch が存在しません。" in result.output
     assert result.stderr == ""

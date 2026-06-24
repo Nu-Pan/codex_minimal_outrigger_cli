@@ -143,12 +143,7 @@ def _run(handler) -> None:
                 elapsed_sec=logger.elapsed(),
                 quota_wait_sec=logger.quota_wait_sec,
             )
-            typer.echo(f"# {console_timestamp()} (3/3) completed {handler.__name__}")
-            typer.echo(f"- sub_command_log: `{logger.path}`")
-            typer.echo(f"- step_execute_elapsed: `{format_duration(logger.elapsed())}`")
-            typer.echo(f"- elapsed: `{format_duration(logger.elapsed())}`")
-            typer.echo(f"- quota_wait: `{format_duration(logger.quota_wait_sec)}`")
-            typer.echo(f"- returncode: `{returncode}`")
+            _emit_completion_summary(logger, handler.__name__, returncode)
         if returncode:
             raise typer.Exit(returncode)
     except typer.Exit:
@@ -162,11 +157,24 @@ def _run(handler) -> None:
                 quota_wait_sec=logger.quota_wait_sec,
                 error=str(exc),
             )
+            _emit_completion_summary(logger, handler.__name__, 1)
         typer.echo(render_error(exc))
         raise typer.Exit(1) from exc
     finally:
         if logger_token is not None:
             reset_current_subcommand_logger(logger_token)
+
+
+def _emit_completion_summary(
+    logger: SubcommandLogger, handler_name: str, returncode: int
+) -> None:
+    elapsed = logger.elapsed()
+    typer.echo(f"# {console_timestamp()} (3/3) completed {handler_name}")
+    typer.echo(f"- sub_command_log: `{logger.path}`")
+    typer.echo(f"- step_execute_elapsed: `{format_duration(elapsed)}`")
+    typer.echo(f"- elapsed: `{format_duration(elapsed)}`")
+    typer.echo(f"- quota_wait: `{format_duration(logger.quota_wait_sec)}`")
+    typer.echo(f"- returncode: `{returncode}`")
 
 
 def require_current_directory_is_work_root(root: Path) -> None:
