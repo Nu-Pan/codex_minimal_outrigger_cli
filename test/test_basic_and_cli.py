@@ -1165,7 +1165,9 @@ def test_apply_join_removes_apply_worktree_and_resets_state(
     )
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
-    assert state["session"]["last_joined_apply_oracle_snapshot_commit"] is not None
+    assert state["session"]["last_joined_apply_commit"] == run_git(
+        root, "rev-parse", "HEAD"
+    ).stdout.strip()
 
 
 def test_apply_join_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> None:
@@ -1204,9 +1206,77 @@ def test_apply_join_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> 
     )
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
-    assert state["session"]["last_joined_apply_oracle_snapshot_commit"] is not None
+    assert state["session"]["last_joined_apply_commit"] == run_git(
+        root, "rev-parse", "HEAD"
+    ).stdout.strip()
     assert "- cleanup_reachable: `True`" in result.output
     assert "  - none" in result.output
+
+
+def test_apply_fork_rolling_uses_previous_apply_join_commit(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = session_branch.removeprefix("cmoc/session/")
+    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    apply_branch = f"cmoc/apply/{session_id}/manual"
+    apply_worktree = root / ".cmoc" / "worktrees" / session_id / "manual"
+    oracle_snapshot_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    run_git(root, "worktree", "add", "-b", apply_branch, str(apply_worktree), "HEAD")
+    (apply_worktree / "README.md").write_text("# updated by apply\n")
+    run_git(apply_worktree, "add", "README.md")
+    run_git(apply_worktree, "commit", "-m", "update readme from apply")
+    state = json.loads(state_path.read_text())
+    state["apply"] = {
+        "state": "completed",
+        "apply_branch": apply_branch,
+        "oracle_snapshot_commit": oracle_snapshot_commit,
+    }
+    state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
+
+    assert (
+        runner.invoke(app, ["apply", "join"], catch_exceptions=False).exit_code == 0
+    )
+    join_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    (root / "oracle" / "spec.md").write_text("# changed after join\n")
+    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "commit", "-m", "change oracle after apply join")
+
+    class FakeCodexResult:
+        def __init__(self, output_json=None):
+            self.output_json = output_json
+
+    target_rels: list[str] = []
+
+    def enumerate_findings(root_arg, targets, config, **kwargs):
+        target_rels.extend(
+            sorted(str(path.relative_to(root_arg)) for path in targets)
+        )
+        return []
+
+    monkeypatch.setattr(
+        main_module, "enumerate_apply_findings_for_targets", enumerate_findings
+    )
+    monkeypatch.setattr(
+        main_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult({"findings": []}),
+    )
+
+    result = runner.invoke(app, ["apply", "fork"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert target_rels == ["oracle/spec.md"]
+    assert (
+        json.loads(state_path.read_text())["session"]["last_joined_apply_commit"]
+        == join_commit
+    )
 
 
 def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(
