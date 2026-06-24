@@ -284,10 +284,7 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
         assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
         assert parameter.structured_output_schema_path is None
-        assert "# file read write rule - repo_write" in parameter.prompt
-        assert "# 詳細指示" in parameter.prompt
-        assert "src を確認して必要なら直す" in parameter.prompt
-        assert "remove me" not in parameter.prompt
+        assert parameter.prompt.endswith("_cmpl.md` の指示に従って下さい。")
 
     monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
     monkeypatch.setattr(main_module, "run_codex_tui", fake_run_codex_tui)
@@ -300,6 +297,14 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     orig_files = list((root / ".cmoc" / "log" / "tui").glob("*_orig.md"))
     assert len(orig_files) == 1
     assert "TODO ここから書き始める" in orig_files[0].read_text()
+    complete_files = list((root / ".cmoc" / "log" / "tui").glob("*_cmpl.md"))
+    assert len(complete_files) == 1
+    complete_prompt = complete_files[0].read_text()
+    assert "# file read write rule - repo_write" in complete_prompt
+    assert "# 詳細指示" in complete_prompt
+    assert "src を確認して必要なら直す" in complete_prompt
+    assert "remove me" not in complete_prompt
+    assert str(complete_files[0]) in tui_calls[0][0].prompt
     assert "/.cmoc/" in (root / ".gitignore").read_text()
     assert (root / ".cmoc" / "log" / "sub_command").is_dir()
     assert not (root / ".cmoc" / "logs" / "sub_commands").exists()
@@ -1547,7 +1552,7 @@ def test_run_codex_exec_uses_stdin_and_writes_logs(
     assert "- returncode: `0`" in console
 
 
-def test_run_codex_tui_uses_codex_command_and_stdin(
+def test_run_codex_tui_uses_codex_command_and_prompt_argument(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -1582,13 +1587,20 @@ def test_run_codex_tui_uses_codex_command_and_stdin(
     result = run_codex_tui(parameter, root=root)
 
     recorded = json.loads(recorder.read_text())
-    assert recorded["stdin"] == "TUI PROMPT BODY"
-    assert "TUI PROMPT BODY" not in " ".join(recorded["args"])
+    assert recorded["stdin"] == ""
     assert recorded["args"][0] == "--profile"
     assert recorded["args"][1].startswith("cmoc_")
     assert "exec" not in recorded["args"]
-    assert recorded["args"][-1] == "-"
+    assert recorded["args"][-1] == "TUI PROMPT BODY"
     assert recorded["codex_home"] == str(codex_home)
+    call_logs = list((root / ".cmoc" / "log" / "codex").glob("*_tui_call.json"))
+    assert len(call_logs) == 1
+    assert json.loads(call_logs[0].read_text())["argv"] == [
+        "codex",
+        "--profile",
+        recorded["args"][1],
+        "TUI PROMPT BODY",
+    ]
     assert result.returncode == 0
     assert result.stdout == "opened tui\n"
 

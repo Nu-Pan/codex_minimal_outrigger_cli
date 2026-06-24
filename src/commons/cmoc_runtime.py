@@ -989,7 +989,7 @@ def run_codex_tui(
         "codex",
         "--profile",
         profile_name,
-        "-",
+        parameter.prompt,
     ]
     call_path.write_text(
         json.dumps(
@@ -1012,7 +1012,6 @@ def run_codex_tui(
     result = subprocess.run(
         argv,
         cwd=cwd,
-        input=parameter.prompt,
         text=True,
         capture_output=True,
         env=codex_subprocess_env(codex_home),
