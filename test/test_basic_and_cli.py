@@ -541,7 +541,9 @@ def test_session_abandon_requires_existing_home_branch(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    home_commit = run_git(root, "rev-parse", "master").stdout.strip()
     run_git(root, "branch", "-D", "master")
+    run_git(root, "tag", "master", home_commit)
 
     result = runner.invoke(app, ["session", "abandon"])
 

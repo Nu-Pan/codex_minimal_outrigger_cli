@@ -57,7 +57,14 @@ def is_managed_branch(branch: str) -> bool:
 
 
 def branch_exists(root: Path, branch: str) -> bool:
-    return run_git(["rev-parse", "--verify", branch], root, check=False).returncode == 0
+    return (
+        run_git(
+            ["show-ref", "--verify", "--quiet", f"refs/heads/{branch}"],
+            root,
+            check=False,
+        ).returncode
+        == 0
+    )
 
 
 def create_run_worktree(
