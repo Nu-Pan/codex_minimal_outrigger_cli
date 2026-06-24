@@ -1,46 +1,27 @@
-import json
 import threading
-from concurrent.futures import ThreadPoolExecutor
 from contextvars import ContextVar
 from pathlib import Path
 
 import typer
 
-from acp.builder.apply.fork.file_finding_enumeration import (
-    build_apply_fork_file_finding_enumeration_parameter,
-)
-from acp.builder.apply.fork.change_summary import (
-    build_apply_fork_change_summary_parameter,
-)
 from cmoc_runtime import (
     CmocError,
     SessionState,
     SubcommandLogger,
     console_timestamp,
-    current_subcommand_logger,
     current_branch,
-    ensure_cmoc_ignored,
-    is_binary,
-    is_git_ignored,
     load_config,
-    load_state_for_branch,
-    logs_dir,
     render_error,
-    reports_dir,
     repo_root,
-    require_clean_worktree,
     reset_current_subcommand_logger,
     format_duration,
     run_codex_exec as runtime_run_codex_exec,
     run_codex_tui as runtime_run_codex_tui,
     run_git,
     set_current_subcommand_logger,
-    timestamp,
-    write_state,
     work_root,
 )
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
+from basic.acp import AgentCallParameter
 from config.cmoc_config import CmocConfig
 from sub_commands.init import cmoc_init_impl
 from sub_commands.indexing import (
@@ -56,7 +37,6 @@ from sub_commands.indexing import (
 )
 from sub_commands.apply import (
     cmoc_apply_abandon_impl,
-    cmoc_apply_fork_impl,
     cmoc_apply_join_impl,
     collect_apply_join_unexpected_changes as collect_apply_join_unexpected_changes_impl,
     is_expected_apply_change as is_expected_apply_change_impl,
@@ -66,6 +46,23 @@ from sub_commands.apply import (
     revert_unexpected_changes as revert_unexpected_changes_impl,
     worktree_for_branch as worktree_for_branch_impl,
     worktree_for_branch_optional as worktree_for_branch_optional_impl,
+)
+from sub_commands.apply_fork import (
+    changed_worktree_paths,
+    cmoc_apply_fork_impl,
+    ensure_no_forbidden_apply_diff,
+    enumerate_apply_findings as enumerate_apply_findings_impl,
+    enumerate_apply_findings_for_targets as enumerate_apply_findings_for_targets_impl,
+    enumerate_apply_targets,
+    generate_apply_commit_message as generate_apply_commit_message_impl,
+    normalize_apply_targets,
+    related_apply_paths,
+    sanitize_commit_message,
+)
+from sub_commands.apply_fork_report import (
+    render_apply_fork_report,
+    write_apply_fork_error_report,
+    write_apply_fork_report as write_apply_fork_report_impl,
 )
 from sub_commands.session import (
     cmoc_session_abandon_impl,
@@ -273,51 +270,16 @@ def write_apply_fork_report(
     result_label: str,
     config: CmocConfig,
 ) -> Path:
-    apply_branch = state.apply.apply_branch or ""
-    fork_commit = state.apply.oracle_snapshot_commit or ""
-    raw_diff = run_git(["diff", f"{fork_commit}..HEAD"], apply_worktree).stdout if fork_commit else run_git(["diff", "HEAD"], apply_worktree).stdout
-    if raw_diff.strip():
-        summary = run_codex_exec(
-            build_apply_fork_change_summary_parameter(raw_diff),
-            root=root,
-            cwd=apply_worktree,
-            config=config,
-            purpose="apply fork change summary",
-        ).output_json
-        changes = list((summary or {}).get("changes", []))
-        if not changes:
-            changes = [
-                {
-                    "category": "変更要約なし",
-                    "summary": "変更差分はありますが、構造化された変更要約は空でした。",
-                    "changed_paths": [],
-                }
-            ]
-    else:
-        changes = [
-            {
-                "category": "変更なし",
-                "summary": "apply fork による実装差分はありません。",
-                "changed_paths": [],
-            }
-        ]
-    report_dir = reports_dir(root, "apply/fork")
-    report_dir.mkdir(parents=True, exist_ok=True)
-    path = report_dir / f"{timestamp()}.md"
-    path.write_text(
-        render_apply_fork_report(
-            root,
-            session_branch,
-            state,
-            apply_branch,
-            fork_commit,
-            apply_worktree,
-            result_label,
-            finding_counts,
-            changes,
-        )
+    return write_apply_fork_report_impl(
+        root,
+        apply_worktree,
+        session_branch,
+        state,
+        finding_counts,
+        result_label,
+        config,
+        run_codex_exec,
     )
-    return path
 
 
 def write_apply_fork_error_report(
@@ -327,81 +289,13 @@ def write_apply_fork_error_report(
     finding_counts: list[int],
     apply_worktree: Path,
 ) -> Path:
-    report_dir = reports_dir(root, "apply/fork")
-    report_dir.mkdir(parents=True, exist_ok=True)
-    path = report_dir / f"{timestamp()}.md"
-    path.write_text(
-        render_apply_fork_report(
-            root,
-            session_branch,
-            state,
-            state.apply.apply_branch or "",
-            state.apply.oracle_snapshot_commit or "",
-            apply_worktree,
-            "error",
-            finding_counts,
-            [{"category": "エラー", "summary": "apply fork が途中で失敗しました。", "changed_paths": []}],
-        )
+    return write_apply_fork_error_report_impl(
+        root,
+        session_branch,
+        state,
+        finding_counts,
+        apply_worktree,
     )
-    return path
-
-
-def render_apply_fork_report(
-    root: Path,
-    session_branch: str,
-    state: SessionState,
-    apply_branch: str,
-    apply_fork_commit: str,
-    apply_worktree: Path,
-    result_label: str,
-    finding_counts: list[int],
-    changes: list[dict],
-) -> str:
-    result_text = {
-        "converged": "収束: 検出された所見リストが空によりループを終了しました。",
-        "unconverged": "未収束: まだ所見が残っている可能性があります。",
-        "error": "エラー: 途中でエラーが起きてループを正常に終了出来ませんでした。",
-    }.get(result_label, result_label)
-    count_lines = "\n".join(f"- loop {idx}: {count}" for idx, count in enumerate(finding_counts, 1)) or "- loop 1: 0"
-    change_lines = "\n".join(
-        [
-            f"- {change.get('category')}: {change.get('summary')} ({', '.join(change.get('changed_paths', [])) or 'no paths'})"
-            for change in changes
-        ]
-    )
-    return "\n".join(
-        [
-            "---",
-            f"cmoc_session_branch: {session_branch}",
-            f"cmoc_session_fork_commit: {state.session.session_start_commit}",
-            f"cmoc_apply_branch: {apply_branch}",
-            f"cmoc_apply_fork_commit: {apply_fork_commit}",
-            f"cmoc_apply_worktree: {apply_worktree}",
-            f"result: {result_label}",
-            "---",
-            "# cmoc apply fork report",
-            "## Result",
-            result_text,
-            "## Finding Count",
-            count_lines,
-            "## Change Summary",
-            change_lines,
-            "",
-        ]
-    )
-
-
-def ensure_no_forbidden_apply_diff(worktree: Path) -> None:
-    forbidden_diff = run_git(
-        ["status", "--short", "--", "oracle", ".agents", "memo", ".gitignore"],
-        worktree,
-    ).stdout.strip()
-    if forbidden_diff:
-        raise CmocError(
-            "apply fork 中に編集禁止対象へ差分が発生しました。",
-            ["該当差分を確認し、apply を abandon してから再実行してください。"],
-            forbidden_diff,
-        )
 
 
 def generate_apply_commit_message(
@@ -410,68 +304,21 @@ def generate_apply_commit_message(
     finding: dict,
     config: CmocConfig,
 ) -> str:
-    raw_diff = run_git(["diff"], apply_worktree).stdout
-    finding_text = json.dumps(finding, ensure_ascii=False, indent=2)
-    prompt = [
-        StructDoc(
-            "Role",
-            "- あなたは git commit message の作成担当です",
-        ),
-        StructDoc(
-            "Goal",
-            """
-            - 以下の所見と git diff から、git commit subject を 1 行だけ生成すること
-            - 出力は commit subject 本文だけにすること
-            - 先頭に箇条書き記号、引用符、Markdown、コードブロックを付けないこと
-            - 72 文字程度を目安に、人間が変更内容を理解できる具体的な文にすること
-            """,
-        ),
-        StructDoc(
-            "Finding",
-            StructCodeBlock("json", finding_text),
-        ),
-        StructDoc(
-            "Git diff",
-            StructCodeBlock("diff", raw_diff),
-        ),
-    ]
-    result = run_codex_exec(
-        AgentCallParameter(
-            ModelClass.EFFICIENCY,
-            ReasoningEffort.LOW,
-            FileAccessMode.READONLY,
-            render_as_markdown(prompt),
-            None,
-        ),
-        root=root,
-        cwd=apply_worktree,
-        config=config,
-        purpose="apply fork commit message",
+    return generate_apply_commit_message_impl(
+        root,
+        apply_worktree,
+        finding,
+        config,
+        run_codex_exec,
     )
-    return sanitize_commit_message(result.output_text, finding)
-
-
-def sanitize_commit_message(message: str, finding: dict) -> str:
-    for line in message.splitlines():
-        subject = line.strip().strip("`").strip("\"'")
-        if not subject:
-            continue
-        for prefix in ("- ", "* ", "commit message:", "Commit message:"):
-            if subject.startswith(prefix):
-                subject = subject.removeprefix(prefix).strip()
-        if subject:
-            return subject[:120]
-    title = finding.get("title")
-    if isinstance(title, str) and title.strip():
-        return f"Apply finding: {title.strip()}"[:120]
-    return "Apply cmoc finding"
 
 
 def enumerate_apply_findings(root: Path, scope: str, config: CmocConfig, log_root: Path | None = None) -> list[dict]:
-    return enumerate_apply_findings_for_targets(
+    return enumerate_apply_findings_impl(
         root,
-        enumerate_apply_targets(root, scope),
+        scope,
         config,
+        run_codex_exec,
         log_root=log_root,
     )
 
@@ -482,93 +329,13 @@ def enumerate_apply_findings_for_targets(
     config: CmocConfig,
     log_root: Path | None = None,
 ) -> list[dict]:
-    logger = current_subcommand_logger()
-
-    def enumerate_one(target: Path) -> list[dict]:
-        result = run_codex_exec(
-            build_apply_fork_file_finding_enumeration_parameter(target),
-            root=log_root or root,
-            cwd=root,
-            config=config,
-            purpose=f"apply fork enumerate findings for {target}",
-            subcommand_logger=logger,
-        )
-        return list((result.output_json or {}).get("findings", []))
-
-    findings: list[dict] = []
-    with ThreadPoolExecutor(max_workers=config.num_parallel) as executor:
-        for target_findings in executor.map(enumerate_one, targets):
-            findings.extend(target_findings)
-    return findings
-
-
-def changed_worktree_paths(root: Path) -> list[Path]:
-    paths: list[Path] = []
-    for line in run_git(["status", "--short"], root).stdout.splitlines():
-        path_text = line[3:]
-        if " -> " in path_text:
-            path_text = path_text.split(" -> ", 1)[1]
-        paths.append(root / path_text)
-    return paths
-
-
-def related_apply_paths(root: Path, findings: list[dict]) -> list[Path]:
-    paths: list[Path] = []
-    for finding in findings:
-        for key in ("oracle_path", "realization_path", "path"):
-            value = finding.get(key)
-            if isinstance(value, str) and value:
-                paths.append(Path(value) if Path(value).is_absolute() else root / value)
-        for evidence in finding.get("evidences", []):
-            if isinstance(evidence, dict) and isinstance(evidence.get("path"), str):
-                value = evidence["path"]
-                paths.append(Path(value) if Path(value).is_absolute() else root / value)
-        for value in finding.get("changed_paths", []):
-            if isinstance(value, str):
-                paths.append(Path(value) if Path(value).is_absolute() else root / value)
-    return paths
-
-
-def normalize_apply_targets(root: Path, candidates: set[Path]) -> list[Path]:
-    targets: list[Path] = []
-    for path in sorted({candidate.resolve() for candidate in candidates}):
-        if not path.exists() or not path.is_file():
-            continue
-        try:
-            rel_parts = path.relative_to(root.resolve()).parts
-        except ValueError:
-            continue
-        if ".git" in rel_parts or ".agents" in rel_parts or "memo" in rel_parts:
-            continue
-        if path.name == "INDEX.md" or path.name.startswith(".") or is_binary(path):
-            continue
-        if is_git_ignored(root, path):
-            continue
-        targets.append(path)
-    return targets
-
-
-def enumerate_apply_targets(root: Path, scope: str, state: SessionState | None = None) -> list[Path]:
-    if scope == "full":
-        candidates = list(root.rglob("*"))
-    elif scope == "session":
-        base = state.session.session_start_commit if state and state.session.session_start_commit else "HEAD"
-        changed = run_git(["diff", "--name-only", base, "HEAD"], root).stdout.splitlines()
-        candidates = [root / path for path in changed]
-    elif state and state.session.last_joined_apply_commit:
-        changed = run_git(
-            ["diff", "--name-only", state.session.last_joined_apply_commit, "HEAD"],
-            root,
-        ).stdout.splitlines()
-        candidates = [root / path for path in changed]
-    elif state and state.session.session_start_commit:
-        changed = run_git(["diff", "--name-only", state.session.session_start_commit, "HEAD"], root).stdout.splitlines()
-        candidates = [root / path for path in changed]
-    else:
-        candidates = list((root / "oracle").rglob("*")) + [
-            path for path in root.rglob("*") if path.is_file() and path.suffix == ".py"
-        ]
-    return normalize_apply_targets(root, set(candidates))
+    return enumerate_apply_findings_for_targets_impl(
+        root,
+        targets,
+        config,
+        run_codex_exec,
+        log_root=log_root,
+    )
 
 
 @apply_app.command("join")

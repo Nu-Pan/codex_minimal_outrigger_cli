@@ -3,30 +3,20 @@ import os
 import signal
 import time
 from pathlib import Path
-from typing import Callable
 
 import typer
 
-from acp.builder.apply.fork.finding_application import (
-    build_apply_fork_finding_application_parameter,
-)
-from acp.builder.apply.fork.refine_finding import (
-    build_apply_fork_refine_finding_parameter,
-)
 from cmoc_runtime import (
     ApplyPart,
     CmocError,
     SessionState,
     branch_exists,
-    create_run_worktree,
     current_branch,
     delete_branch,
     ensure_cmoc_ignored,
     head_commit,
     is_git_ignored,
-    load_config,
     load_state_for_branch,
-    pushd,
     remove_worktree,
     repo_root,
     reports_dir,
@@ -34,149 +24,8 @@ from cmoc_runtime import (
     run_git,
     timestamp,
     work_root,
-    worktrees_dir,
     write_state,
 )
-from config.cmoc_config import CmocConfig
-
-
-CodexExec = Callable[..., object]
-EnumerateApplyTargets = Callable[[Path, str, SessionState | None], list[Path]]
-EnumerateApplyFindings = Callable[[Path, list[Path], CmocConfig], list[dict]]
-
-
-def cmoc_apply_fork_impl(
-    scope: str,
-    codex_exec: CodexExec,
-    enumerate_targets: Callable[..., list[Path]],
-    enumerate_findings_for_targets: Callable[..., list[dict]],
-    related_paths: Callable[[Path, list[dict]], list[Path]],
-    ensure_no_forbidden_diff: Callable[[Path], None],
-    changed_paths: Callable[[Path], list[Path]],
-    generate_commit_message: Callable[[Path, Path, dict, CmocConfig], str],
-    normalize_targets: Callable[[Path, set[Path]], list[Path]],
-    write_report: Callable[[Path, Path, str, SessionState, list[int], str, CmocConfig], Path],
-    write_error_report: Callable[[Path, str, SessionState, list[int], Path], Path],
-) -> int:
-    """Codex CLI による apply loop を isolated apply worktree 上で実行する。"""
-    if scope not in {"rolling", "session", "full"}:
-        raise CmocError("scope が不正です。", ["rolling, session, full のいずれかを指定してください。"], scope)
-    root = repo_root()
-    branch = current_branch(root)
-    session_id, path, state = load_state_for_branch(root, branch)
-    if not branch.startswith("cmoc/session/"):
-        raise CmocError("apply fork は session branch 上で実行してください。", [], branch)
-    if state.session.state != "active" or state.apply.state != "ready":
-        raise CmocError("apply fork の事前条件を満たしていません。", [], str(path))
-    require_clean_worktree(root)
-    ensure_cmoc_ignored(root)
-    run_id = timestamp()
-    apply_branch = f"cmoc/apply/{session_id}/{run_id}"
-    oracle_snapshot_commit = head_commit(root)
-    apply_worktree = worktrees_dir(root) / session_id / run_id
-    create_run_worktree(root, apply_branch, apply_worktree, "HEAD")
-    state.apply = ApplyPart(
-        state="running",
-        apply_branch=apply_branch,
-        oracle_snapshot_commit=oracle_snapshot_commit,
-        apply_process_id=os.getpid(),
-    )
-    write_state(path, state)
-    config = load_config(root)
-    finding_counts: list[int] = []
-    result_label = "error"
-    report_path: Path | None = None
-    try:
-        with pushd(apply_worktree):
-            findings: list[dict] = []
-            dirty_targets = enumerate_targets(apply_worktree, scope, state)
-            for _apply_loop in range(config.apply_fork.num_apply_loop):
-                if not dirty_targets:
-                    result_label = "unconverged" if findings else "converged"
-                    break
-                findings = enumerate_findings_for_targets(
-                    apply_worktree,
-                    dirty_targets,
-                    config,
-                    log_root=root,
-                )
-                for _ in range(config.apply_fork.num_improve_findings_loop):
-                    refined = codex_exec(
-                        build_apply_fork_refine_finding_parameter({"findings": findings}),
-                        root=root,
-                        cwd=apply_worktree,
-                        config=config,
-                        purpose="apply fork refine findings",
-                    ).output_json
-                    next_findings = list((refined or {}).get("findings", []))
-                    if next_findings == findings:
-                        break
-                    findings = next_findings
-                finding_counts.append(len(findings))
-                if not findings:
-                    result_label = "converged"
-                    break
-                next_dirty = set(related_paths(apply_worktree, findings))
-                for finding in findings:
-                    codex_exec(
-                        build_apply_fork_finding_application_parameter(
-                            json.dumps(finding, ensure_ascii=False, indent=2)
-                        ),
-                        root=root,
-                        cwd=apply_worktree,
-                        config=config,
-                        purpose="apply fork finding application",
-                    )
-                    ensure_no_forbidden_diff(apply_worktree)
-                    changed = changed_paths(apply_worktree)
-                    next_dirty.update(changed)
-                    if changed:
-                        commit_message = generate_commit_message(
-                            root,
-                            apply_worktree,
-                            finding,
-                            config,
-                        )
-                        run_git(["add", "."], apply_worktree)
-                        run_git(["commit", "-m", commit_message], apply_worktree)
-                dirty_targets = normalize_targets(apply_worktree, next_dirty)
-            else:
-                result_label = "unconverged"
-            report_path = write_report(
-                root,
-                apply_worktree,
-                branch,
-                state,
-                finding_counts,
-                result_label,
-                config,
-            )
-        state.apply.state = "completed"
-        state.apply.apply_process_id = None
-        write_state(path, state)
-    except BaseException:
-        state.apply.state = "error"
-        state.apply.apply_process_id = None
-        write_state(path, state)
-        if report_path is None:
-            write_error_report(root, branch, state, finding_counts, apply_worktree)
-        raise
-    typer.echo(
-        "\n".join(
-            [
-                "# cmoc apply fork",
-                f"- scope: `{scope}`",
-                f"- apply_branch: `{apply_branch}`",
-                f"- apply_worktree: `{apply_worktree}`",
-                f"- oracle_snapshot_commit: `{oracle_snapshot_commit}`",
-                f"- findings: `{len(findings)}`",
-                f"- result: `{state.apply.state}`",
-                f"- result_label: `{result_label}`",
-                f"- report: `{report_path}`",
-            ]
-        )
-    )
-    return 2 if result_label == "unconverged" else 0
 
 
 def cmoc_apply_join_impl(force_resolve: bool) -> None:

@@ -109,14 +109,13 @@
 ## Summary
 - Typer ベースの cmoc CLI の最上位エントリーポイントであり、root command と session/apply/review のサブコマンドを登録し、各コマンドを実装モジュールへ委譲する薄い接続層。
 - サブコマンド実行共通処理として、work root 実行確認、subcommand log の開始・終了記録、進行表示、例外の整形、returncode の Typer 終了への変換を担う。
-- Codex 呼び出し前の INDEX 更新、apply fork の finding 列挙・対象正規化・禁止差分検査・commit message 生成・report 生成、review oracle や indexing の実装関数へのラッパーをまとめる入口。
+- Codex 呼び出し前の INDEX 更新と、テストや monkeypatch で差し替える最小限の dependency injection wrapper を保持し、apply/review/indexing の本処理は sub_commands 側へ委譲する入口。
 
 ## Read this when
 - CLI サブコマンドの登録名、Typer option、root/session/apply/review/indexing/tui の起動経路を確認・変更したいとき。
 - サブコマンド実行時の共通ログ出力、作業ディレクトリ制約、例外表示、returncode 処理、apply branch 実行時のログ保存先切り替えを追うとき。
 - Codex 実行前に INDEX 更新が走る条件、indexing 用 Codex 呼び出しや conflict resolution でそれをスキップする条件を確認するとき。
-- apply fork のループ周辺で、対象ファイルの列挙・正規化、finding の収集、禁止対象の差分検出、変更要約 report、エラー report、commit message 生成の接続関係を調べるとき。
-- review oracle や indexing の CLI から、実際の処理実装へどの関数・callback が渡されるかを確認するとき。
+- apply fork、review oracle、indexing の CLI から、実際の処理実装へどの関数・callback が渡されるかを確認するとき。
 
 ## Do not read this when
 - 個別サブコマンドの中核ロジックそのものを変更したいだけのときは、委譲先の sub_commands 配下の実装を直接読む方が適切。
@@ -125,7 +124,7 @@
 - apply/review の report 本文フォーマットの利用者向け意味を仕様として確認したいときは、実装ではなく対応する oracle 文書を優先する。
 
 ## hash
-- 8396fb6b677984c1c39f66f206a340066ec7c24f7bc7ff4d6e073316edd1c2b4
+- 6a527b030443ef3ecfa5e1d9ea44d083afeecd7f0566b951bab7c1ac273787d8
 
 # `sub_commands`
 
@@ -149,4 +148,4 @@
 - 生成済み report、過去の review/apply 結果、または個別 run の成果物だけを確認したいときは、該当する出力先の生成物を読む。
 
 ## hash
-- 87bec77778ad21d579ed445e6e06dca124055db341336ec5f760bf2c76be5505
+- bebbbc7ec3f18adcaec48cbafd730ffad02c8e8de584531ec1cbb89bfd985b28

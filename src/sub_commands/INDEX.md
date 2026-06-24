@@ -1,24 +1,63 @@
 # `apply.py`
 
 ## Summary
-- apply fork の実行、apply branch の session branch への join、未 join apply run の abandon を扱うサブコマンド実装。
-- apply 用 linked worktree と branch の作成・削除、session state の apply 状態遷移、finding の列挙・refine・適用 loop、join 時の想定外差分検査と INDEX.md conflict の機械解決をまとめて扱う。
-- apply run のライフサイクル、許可される apply/session 差分、apply branch と session branch の worktree 解決に関する入口になる。
+- apply branch の session branch への join と、未 join apply run の abandon を扱うサブコマンド実装。
+- apply branch の merge、想定外差分の検査・force-resolve、INDEX.md conflict の機械解決、apply worktree/branch cleanup、apply state の ready 復帰を扱う。
+- apply fork の実行 loop や fork report 生成ではなく、完了済みまたは失敗済み apply run を session 側へ取り込む・破棄する lifecycle 後半の入口になる。
 
 ## Read this when
-- apply fork/join/abandon の事前条件、状態遷移、終了コード、表示内容、cleanup 挙動を確認または変更したいとき。
+- apply join/abandon の事前条件、状態遷移、終了コード、表示内容、cleanup 挙動を確認または変更したいとき。
 - apply branch・apply worktree の作成、merge、削除、force-resolve、unexpected changes 判定に関わる挙動を追いたいとき。
-- finding の refine/application loop、dirty target 更新、apply report/error report の呼び出しタイミングを確認したいとき。
-- apply 中に許可される差分と禁止される差分、INDEX.md だけの merge conflict をどう扱うかを確認したいとき。
+- apply join 中に許可される apply/session 差分、禁止差分、INDEX.md だけの merge conflict をどう扱うかを確認したいとき。
+- running apply process の停止、apply worktree 削除、apply branch 削除、cleanup warning 表示を追いたいとき。
 
 ## Do not read this when
 - CLI の typer command 宣言や option 定義だけを確認したいときは、サブコマンドの登録側を読む。
+- apply fork の finding refine/application loop、dirty target 更新、fork report/error report の呼び出しタイミングを確認したいときは `apply_fork.py` または `apply_fork_report.py` を読む。
 - finding の生成プロンプトや apply fork 用パラメータ構築の詳細を確認したいときは、acp.builder.apply.fork 側を読む。
 - git 操作、state 読み書き、worktree 作成削除などの低レベル runtime helper の実装を確認したいときは、runtime 側を読む。
 - 設定 schema や apply fork の loop 回数などの設定項目定義だけを確認したいときは、設定モデル側を読む。
 
 ## hash
-- 600a025e951f9f61cd05e6ccdc05afe51907c243ee4b203e5ef76521cd113635
+- d83b2eeaeaf56ae5ac60c0b45aa86178b95a9da1db5ccf80707be0e1f6a738b6
+
+# `apply_fork.py`
+
+## Summary
+- apply fork の isolated apply worktree 作成、finding 列挙・refine・適用 loop、禁止差分検査、dirty target 更新、finding ごとの commit 作成を扱う実処理。
+- apply scope から対象ファイルを列挙し、Codex CLI による finding enumeration/refinement/application と commit message 生成を orchestrate する。
+- apply fork の実行制御本体と、fork 中に扱う対象 path 正規化・関連 path 抽出の入口になる。
+
+## Read this when
+- apply fork の事前条件、apply branch/worktree 作成、state 更新、loop 終了条件、終了コードを確認または変更したいとき。
+- finding の列挙、refine、application、commit message 生成、dirty target 更新、禁止差分検査の呼び出し順を追いたいとき。
+- rolling/session/full scope から apply 対象 file をどう選ぶか、INDEX.md・memo・binary・git ignored file をどう除外するか確認したいとき。
+
+## Do not read this when
+- apply join/abandon の merge、cleanup、force-resolve、unexpected changes 判定を確認したいときは `apply.py` を読む。
+- apply fork report の Markdown frontmatter、change summary、error report の表示内容だけを確認したいときは `apply_fork_report.py` を読む。
+- apply fork 用 prompt parameter の文面や Structured Output schema の詳細だけを確認したいときは acp.builder.apply.fork 側を読む。
+
+## hash
+- 989e62e355b578d97dae091a8444e2b0543c9a351c7e8abe48ef7c31c15923cb
+
+# `apply_fork_report.py`
+
+## Summary
+- apply fork の通常 report と error report を Markdown + YAML frontmatter として生成する実装。
+- apply branch の diff から Codex CLI による change summary を取得し、finding count、result label、変更要約を report file へ描画する。
+
+## Read this when
+- apply fork report の保存先、frontmatter、Result、Finding Count、Change Summary の内容を確認または変更したいとき。
+- apply fork 失敗時 report の result label や error summary、差分がない場合や change summary が空の場合の fallback 表示を扱うとき。
+
+## Do not read this when
+- apply fork の worktree 作成、finding loop、commit 作成、対象 path 正規化を確認したいときは `apply_fork.py` を読む。
+- apply join report の表示内容を確認したいときは `apply.py` を読む。
+- change summary prompt の文面や schema 定義だけを確認したいときは acp.builder.apply.fork 側を読む。
+
+## hash
+- a8ab87ab6e45620908905a17a83e83f4e0cd26f678834929b33badf9d3ff1203
 
 # `indexing.py`
 
@@ -79,7 +118,7 @@
 - 生成済みレポートの個別内容や過去実行結果を確認したいだけのときは、レポート出力先の生成物を読む。
 
 ## hash
-- 764ded2bfb5029ee6e4e562dc675abe45a11a4f36591f0e50e2d56ece73da8d8
+- f3d43d08484e7e18e8755048a786721d887662c40d59c1c86c9a68c8774c0e7b
 
 # `session.py`
 

@@ -143,7 +143,6 @@ def merge_review_branch(root: Path, review_branch: str) -> str:
 
 
 def resolve_review_index_conflicts(root: Path) -> bool:
-    """review branch merge の INDEX.md conflict を session 側採用で解消する。"""
     conflicted = run_git(["diff", "--name-only", "--diff-filter=U"], root).stdout.splitlines()
     if not conflicted:
         return False
@@ -385,7 +384,6 @@ def render_review_oracle_report(
 
 
 def render_finding_section(findings: list[dict]) -> str:
-    """finding list を report section 本文に描画する。"""
     if not findings:
         return "なし"
     return "\n".join(
@@ -395,7 +393,6 @@ def render_finding_section(findings: list[dict]) -> str:
 
 
 def path_display(root: Path, path: Path) -> str:
-    """report 上の path 表示を oracle 相対優先で整える。"""
     parts = path.parts
     if "oracle" in parts:
         index = parts.index("oracle")
