@@ -761,7 +761,11 @@ def run_codex_exec(
     codex_env = codex_subprocess_env(codex_home)
     profile_path = prepare_codex_profile(parameter, config, codex_home)
     profile_name = codex_profile_name(profile_path)
-    schema_path = prepare_schema(root, parameter.structured_output_schema_path)
+    schema_path = (
+        prepare_schema(work_root(cwd), parameter.structured_output_schema_path)
+        if parameter.structured_output_schema_path
+        else None
+    )
     argv = [
         "codex",
         "exec",

@@ -1565,6 +1565,69 @@ def test_run_codex_exec_uses_stdin_and_writes_logs(
     assert "- returncode: `0`" in console
 
 
+def test_run_codex_exec_stores_schema_in_cwd_work_root(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    linked = root / ".cmoc" / "worktrees" / "apply"
+    linked.parent.mkdir(parents=True)
+    run_git(root, "worktree", "add", "-b", "apply-test", str(linked), "HEAD")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    recorder = tmp_path / "record.json"
+    fake_codex = bin_dir / "codex"
+    fake_codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env python3",
+                "import json, os, pathlib, sys",
+                f"record = pathlib.Path({str(recorder)!r})",
+                "args = sys.argv[1:]",
+                "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+                "output.write_text(json.dumps({'ok': True}))",
+                "record.write_text(json.dumps({'args': args, 'cwd': os.getcwd()}))",
+                "print(json.dumps({'type': 'turn.completed'}))",
+            ]
+        )
+        + "\n"
+    )
+    fake_codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    schema = tmp_path / "schema.json"
+    schema.write_text(
+        json.dumps(
+            {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["ok"],
+                "properties": {"ok": {"type": "boolean"}},
+            }
+        )
+    )
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        schema,
+    )
+
+    result = run_codex_exec(
+        parameter, root=root, cwd=linked, capacity_initial_sleep_sec=0
+    )
+
+    recorded = json.loads(recorder.read_text())
+    schema_arg = recorded["args"][recorded["args"].index("--output-schema") + 1]
+    assert recorded["cwd"] == str(linked)
+    assert result.output_json == {"ok": True}
+    assert result.call_log_path.parent == root / ".cmoc" / "log" / "codex"
+    assert result.schema_path is not None
+    assert result.schema_path.parent == linked / ".cmoc" / "state" / "schema"
+    assert schema_arg == str(result.schema_path)
+    assert not (root / ".cmoc" / "state" / "schema").exists()
+
+
 def test_run_codex_tui_uses_codex_command_and_prompt_argument(
     tmp_path: Path,
     monkeypatch,
