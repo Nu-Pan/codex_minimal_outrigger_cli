@@ -25,9 +25,10 @@ def cmoc_tui_impl(
     run_codex_tui,
     *,
     root: Path,
+    work_root: Path,
     config: CmocConfig,
 ) -> None:
-    ensure_cmoc_ignored(root)
+    ensure_cmoc_ignored(work_root)
     original_path = initialize_original_prompt(root)
     run_editor(original_path)
     original_prompt = read_original_prompt(original_path)
@@ -39,7 +40,7 @@ def cmoc_tui_impl(
         purpose="tui resolve parameter",
     ).output_json
     parameter = build_tui_codex_parameter(original_prompt, resolved or {})
-    complete_prompt_path = save_complete_prompt(original_path, parameter.prompt)
+    complete_prompt_path = save_complete_prompt(work_root, original_path, parameter.prompt)
     run_codex_tui(
         AgentCallParameter(
             parameter.model_class,
@@ -49,7 +50,7 @@ def cmoc_tui_impl(
             parameter.structured_output_schema_path,
         ),
         root=root,
-        cwd=root,
+        cwd=work_root,
         config=config,
         purpose="tui codex",
     )
@@ -62,8 +63,11 @@ def initialize_original_prompt(root: Path) -> Path:
     return path
 
 
-def save_complete_prompt(original_path: Path, prompt: str) -> Path:
-    path = original_path.with_name(original_path.name.replace("_orig.md", "_cmpl.md"))
+def save_complete_prompt(work_root: Path, original_path: Path, prompt: str) -> Path:
+    path = work_root / ".cmoc" / "log" / "tui" / original_path.name.replace(
+        "_orig.md", "_cmpl.md"
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(prompt)
     return path
 

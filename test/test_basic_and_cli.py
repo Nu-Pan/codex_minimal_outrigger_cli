@@ -394,6 +394,61 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     assert not (root / ".cmoc" / "logs" / "sub_commands").exists()
 
 
+def test_tui_saves_complete_prompt_in_linked_worktree(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    linked = root / ".cmoc" / "worktrees" / "linked"
+    run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
+    monkeypatch.chdir(linked)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fake_code = bin_dir / "code"
+    fake_code.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env python3",
+                "import pathlib, sys",
+                "path = pathlib.Path(sys.argv[-1])",
+                "path.write_text(path.read_text() + '\\nlinked worktree task\\n')",
+            ]
+        )
+        + "\n"
+    )
+    fake_code.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    tui_calls = []
+
+    class FakeResolveResult:
+        output_json = {
+            "file_access_mode": {"value": "repo_write"},
+        }
+
+    def fake_run_codex_exec(parameter, **kwargs):
+        return FakeResolveResult()
+
+    def fake_run_codex_tui(parameter, **kwargs):
+        tui_calls.append((parameter, kwargs))
+
+    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(main_module, "run_codex_tui", fake_run_codex_tui)
+
+    result = runner.invoke(app, ["tui"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert len(tui_calls) == 1
+    assert tui_calls[0][1]["root"] == root.resolve()
+    assert tui_calls[0][1]["cwd"] == linked.resolve()
+    assert len(list((root / ".cmoc" / "log" / "tui").glob("*_orig.md"))) == 1
+    assert not list((root / ".cmoc" / "log" / "tui").glob("*_cmpl.md"))
+    complete_files = list((linked / ".cmoc" / "log" / "tui").glob("*_cmpl.md"))
+    assert len(complete_files) == 1
+    assert str(complete_files[0]) in tui_calls[0][0].prompt
+
+
 def test_parse_markdown_prompt_ignores_headings_inside_fenced_code_blocks() -> None:
     parsed = parse_markdown_prompt(
         "\n".join(

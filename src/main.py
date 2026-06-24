@@ -200,10 +200,12 @@ def init() -> None:
 def tui() -> None:
     def handler() -> None:
         root = repo_root()
+        current_root = work_root()
         cmoc_tui_impl(
             run_codex_exec,
             run_codex_tui,
             root=root,
+            work_root=current_root,
             config=load_config(root),
         )
 
