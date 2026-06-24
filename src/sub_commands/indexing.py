@@ -113,25 +113,53 @@ def parse_index_entries(index_path: Path) -> dict[str, dict[str, str]]:
         if line.startswith("# `") and line.endswith("`"):
             if current_name is not None:
                 text = "\n".join(current_lines).rstrip()
-                entries[current_name] = {"text": text, "hash": extract_index_entry_hash(text)}
+                entries[current_name] = {
+                    "text": text,
+                    "hash": extract_valid_index_entry_hash(text, current_name),
+                }
             current_name = line.removeprefix("# `").removesuffix("`")
             current_lines = [line]
         elif current_name is not None:
             current_lines.append(line)
     if current_name is not None:
         text = "\n".join(current_lines).rstrip()
-        entries[current_name] = {"text": text, "hash": extract_index_entry_hash(text)}
+        entries[current_name] = {
+            "text": text,
+            "hash": extract_valid_index_entry_hash(text, current_name),
+        }
     return entries
 
 
-def extract_index_entry_hash(entry_text: str) -> str:
-    """INDEX.md entry の `## hash` セクションから hash 文字列を得る。"""
+def extract_valid_index_entry_hash(entry_text: str, entry_name: str) -> str:
+    """必須形式を満たす INDEX.md entry から hash 文字列を得る。"""
     lines = entry_text.splitlines()
+    if not lines or lines[0] != f"# `{entry_name}`":
+        return ""
+    required_sections = [
+        "## Summary",
+        "## Read this when",
+        "## Do not read this when",
+        "## hash",
+    ]
+    section_positions = [
+        lines.index(section) for section in required_sections if section in lines
+    ]
+    if len(section_positions) != len(required_sections) or section_positions != sorted(
+        section_positions
+    ):
+        return ""
     for idx, line in enumerate(lines):
-        if line == "## hash" and idx + 1 < len(lines):
-            hash_line = lines[idx + 1].strip()
+        if line == "## hash":
+            hash_lines = [
+                candidate.strip() for candidate in lines[idx + 1 :] if candidate.strip()
+            ]
+            if not hash_lines:
+                return ""
+            hash_line = hash_lines[0]
             if hash_line.startswith("- "):
-                return hash_line.removeprefix("- ").strip()
+                digest = hash_line.removeprefix("- ").strip()
+                if len(digest) == 64 and all(c in "0123456789abcdef" for c in digest):
+                    return digest
     return ""
 
 

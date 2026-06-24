@@ -1532,6 +1532,55 @@ def test_indexing_skips_codex_when_existing_hashes_are_fresh(
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
+def test_update_indexes_regenerates_malformed_fresh_hash_entry(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    cmoc_runtime.sync_config(root)
+    readme = root / "README.md"
+    digest = main_module.index_target_hash(root, readme)
+    (root / "INDEX.md").write_text(
+        "\n".join(
+            [
+                "# `README.md`",
+                "",
+                "## hash",
+                f"- {digest}",
+                "",
+            ]
+        )
+    )
+
+    calls: list[Path] = []
+
+    def fake_build_index_entry(
+        update_root: Path, path: Path, digest: str | None = None
+    ) -> str:
+        calls.append(path)
+        return main_module.render_index_entry(
+            update_root,
+            path,
+            {
+                "summary": [f"generated {path.name}"],
+                "read_this_when": [f"read {path.name}"],
+                "do_not_read_this_when": [f"skip {path.name}"],
+            },
+            digest=digest,
+        ).rstrip()
+
+    monkeypatch.setattr(main_module, "build_index_entry", fake_build_index_entry)
+
+    updated = main_module.update_indexes(root)
+
+    assert root / "INDEX.md" in updated
+    assert readme in calls
+    rendered = (root / "INDEX.md").read_text()
+    assert "generated README.md" in rendered
+    assert "## Summary" in rendered
+    assert "## Read this when" in rendered
+    assert "## Do not read this when" in rendered
+
+
 def test_update_indexes_generates_sibling_entries_in_parallel(
     tmp_path: Path, monkeypatch
 ) -> None:
