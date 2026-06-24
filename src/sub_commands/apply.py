@@ -29,6 +29,7 @@ from cmoc_runtime import (
     pushd,
     remove_worktree,
     repo_root,
+    reports_dir,
     require_clean_worktree,
     run_git,
     timestamp,
@@ -231,6 +232,16 @@ def cmoc_apply_join_impl(force_resolve: bool) -> None:
     write_state(path, state)
     warnings: list[str] = []
     merged_reachable = run_git(["merge-base", "--is-ancestor", apply_branch, "HEAD"], root, check=False).returncode == 0
+    report_path = write_apply_join_report(
+        root,
+        session_branch,
+        state,
+        apply_branch,
+        apply_worktree,
+        force_resolve,
+        unexpected,
+        merged_reachable,
+    )
     if merged_reachable:
         if apply_worktree:
             remove_worktree(root, apply_worktree)
@@ -250,10 +261,71 @@ def cmoc_apply_join_impl(force_resolve: bool) -> None:
                 f"- removed_apply_worktree: `{apply_worktree}`",
                 f"- force_resolve: `{force_resolve}`",
                 f"- cleanup_reachable: `{merged_reachable}`",
+                f"- report: `{report_path}`",
                 "- warnings:",
                 *warning_lines,
             ]
         )
+    )
+
+
+def write_apply_join_report(
+    root: Path,
+    session_branch: str,
+    state: SessionState,
+    apply_branch: str,
+    apply_worktree: Path | None,
+    force_resolve: bool,
+    unexpected: dict[str, list[str]],
+    cleanup_reachable: bool,
+) -> Path:
+    report_dir = reports_dir(root, "apply/join")
+    report_dir.mkdir(parents=True, exist_ok=True)
+    path = report_dir / f"{timestamp()}.md"
+    path.write_text(
+        render_apply_join_report(
+            session_branch,
+            state,
+            apply_branch,
+            apply_worktree,
+            force_resolve,
+            unexpected,
+            cleanup_reachable,
+        )
+    )
+    return path
+
+
+def render_apply_join_report(
+    session_branch: str,
+    state: SessionState,
+    apply_branch: str,
+    apply_worktree: Path | None,
+    force_resolve: bool,
+    unexpected: dict[str, list[str]],
+    cleanup_reachable: bool,
+) -> str:
+    unexpected_lines = [
+        f"- {kind}: {', '.join(paths)}"
+        for kind, paths in unexpected.items()
+    ] or ["- none"]
+    return "\n".join(
+        [
+            "---",
+            f"cmoc_session_branch: {session_branch}",
+            f"cmoc_apply_branch: {apply_branch}",
+            f"cmoc_apply_worktree: {apply_worktree}",
+            f"joined_apply_commit: {state.session.last_joined_apply_commit}",
+            f"force_resolve: {force_resolve}",
+            f"cleanup_reachable: {cleanup_reachable}",
+            "---",
+            "# cmoc apply join report",
+            "## Result",
+            "apply branch を session branch へ join しました。",
+            "## Unexpected Changes",
+            *unexpected_lines,
+            "",
+        ]
     )
 
 

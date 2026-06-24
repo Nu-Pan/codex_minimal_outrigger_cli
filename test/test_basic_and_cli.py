@@ -1255,6 +1255,12 @@ def test_apply_join_removes_apply_worktree_and_resets_state(
     assert state["session"]["last_joined_apply_commit"] == run_git(
         root, "rev-parse", "HEAD"
     ).stdout.strip()
+    report_line = [
+        line for line in result.output.splitlines() if line.startswith("- report:")
+    ][-1]
+    report_path = Path(report_line.split("`")[1])
+    assert report_path.is_file()
+    assert "# cmoc apply join report" in report_path.read_text()
 
 
 def test_apply_join_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> None:
