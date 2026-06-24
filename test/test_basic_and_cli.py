@@ -2255,6 +2255,66 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert Path(probe_logs[0]["output_path"]).read_text() == '{"probe": true}'
 
 
+def test_run_codex_exec_fails_after_quota_without_resume_token(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    calls = tmp_path / "calls.jsonl"
+    fake_codex = bin_dir / "codex"
+    fake_codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env python3",
+                "import json, pathlib, sys",
+                f"calls = pathlib.Path({str(calls)!r})",
+                "args = sys.argv[1:]",
+                "stdin = sys.stdin.read()",
+                "with calls.open('a') as f: f.write(json.dumps({'args': args, 'stdin': stdin}) + '\\n')",
+                "if stdin == 'quota availability probe':",
+                "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+                "    output.write_text(json.dumps({'probe': True}))",
+                "    print(json.dumps({'type': 'turn.completed'}))",
+                "    sys.exit(0)",
+                "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
+                "sys.exit(1)",
+            ]
+        )
+        + "\n"
+    )
+    fake_codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+    )
+
+    try:
+        run_codex_exec(
+            parameter,
+            root=root,
+            quota_poll_interval_sec=0,
+            max_quota_polls=1,
+        )
+    except CmocError as exc:
+        assert "resume token" in exc.summary
+    else:
+        raise AssertionError("run_codex_exec should fail without resume token")
+
+    call_records = [json.loads(line) for line in calls.read_text().splitlines()]
+    assert [record["stdin"] for record in call_records] == [
+        "prompt",
+        "quota availability probe",
+    ]
+    assert all("resume" not in record["args"] for record in call_records)
+
+
 def test_run_codex_exec_uses_single_representative_quota_probe(
     tmp_path: Path, monkeypatch
 ) -> None:

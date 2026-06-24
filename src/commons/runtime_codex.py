@@ -183,6 +183,18 @@ def run_codex_exec(
     sleep_sec = capacity_initial_sleep_sec
     last_result: subprocess.CompletedProcess[str] | None = None
     current_argv = argv
+
+    def resume_argv(result: subprocess.CompletedProcess[str], error_text: str) -> list[str]:
+        resume_token = extract_resume_token(result.stdout)
+        if resume_token:
+            return [*argv[:-1], "resume", resume_token, "-"]
+        emit_codex_event(result.returncode, "failed", error_text)
+        raise CmocError(
+            "Codex CLI resume token を取得できませんでした。",
+            ["stdout JSONL の session identifier 出力を確認してください。"],
+            f"call_log: {call_path}\nstdout_log: {stdout_path}\nstderr_log: {stderr_path}\n{error_text}",
+        )
+
     while True:
         result = subprocess.run(
             current_argv,
@@ -219,11 +231,7 @@ def run_codex_exec(
                         quota_wait_sec += waited_sec
                         if logger is not None:
                             logger.add_quota_wait(waited_sec)
-                        resume_token = extract_resume_token(result.stdout)
-                        if resume_token:
-                            current_argv = [*argv[:-1], "resume", resume_token, "-"]
-                        else:
-                            current_argv = argv
+                        current_argv = resume_argv(result, error_text)
                         continue
                     _QUOTA_POLLING = True
                 print(
@@ -302,11 +310,7 @@ def run_codex_exec(
                     f"# {console_timestamp()} Codex CLI quota wait: resuming work",
                     flush=True,
                 )
-                resume_token = extract_resume_token(result.stdout)
-                if resume_token:
-                    current_argv = [*argv[:-1], "resume", resume_token, "-"]
-                else:
-                    current_argv = argv
+                current_argv = resume_argv(result, error_text)
                 continue
             emit_codex_event(result.returncode, "failed", error_text)
             raise CmocError(
