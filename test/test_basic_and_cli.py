@@ -189,6 +189,27 @@ def test_init_untracks_existing_cmoc_files_and_commits_cleanup(
     assert "cmoc init" in run_git(root, "log", "--oneline", "-1").stdout
 
 
+def test_init_does_not_commit_preexisting_staged_changes(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    user_file = root / "user.txt"
+    user_file.write_text("user change\n")
+    run_git(root, "add", "user.txt")
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(app, ["init"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    committed_paths = run_git(
+        root, "show", "--name-only", "--format=", "HEAD"
+    ).stdout
+    assert "user.txt" not in committed_paths
+    assert run_git(root, "diff", "--cached", "--name-only").stdout.splitlines() == [
+        "user.txt"
+    ]
+
+
 def test_init_writes_default_config_json(tmp_path: Path, monkeypatch) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
