@@ -210,6 +210,31 @@ def test_init_does_not_commit_preexisting_staged_changes(
     ]
 
 
+def test_init_targets_current_linked_worktree(tmp_path: Path, monkeypatch) -> None:
+    root = make_repo(tmp_path)
+    linked = tmp_path / "linked"
+    run_git(root, "worktree", "add", "-b", "linked-init", str(linked), "HEAD")
+    monkeypatch.chdir(linked)
+
+    result = runner.invoke(app, ["init"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert "/.cmoc/" in (linked / ".gitignore").read_text()
+    assert not (root / ".gitignore").exists()
+    assert (
+        subprocess.run(
+            ["git", "check-ignore", "-q", ".cmoc/.__cmoc_ignore_probe__"],
+            cwd=linked,
+        ).returncode
+        == 0
+    )
+    assert "cmoc init" in run_git(linked, "log", "--oneline", "-1").stdout
+    committed_paths = run_git(
+        linked, "show", "--name-only", "--format=", "HEAD"
+    ).stdout.splitlines()
+    assert ".gitignore" in committed_paths
+
+
 def test_init_writes_default_config_json(tmp_path: Path, monkeypatch) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
