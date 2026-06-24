@@ -49,14 +49,7 @@ def commit_index_updates_impl(root: Path, updated: list[Path]) -> None:
 
 def update_indexes_impl(root: Path, build_index_entry_func: IndexEntryBuilder) -> list[Path]:
     """INDEX.md を深い directory から順に検査・再生成する。"""
-    dirs = [
-        path
-        for path in root.rglob("*")
-        if path.is_dir()
-        and not any(part.startswith(".") for part in path.relative_to(root).parts)
-        and not is_root_memo(root, path)
-        and not is_git_ignored(root, path)
-    ]
+    dirs = indexable_directories(root)
     dirs.append(root)
     dirs.sort(key=lambda p: len(p.relative_to(root).parts), reverse=True)
     updated: list[Path] = []
@@ -91,6 +84,22 @@ def update_indexes_impl(root: Path, build_index_entry_func: IndexEntryBuilder) -
             index_path.write_text(content)
             updated.append(index_path)
     return updated
+
+
+def indexable_directories(root: Path) -> list[Path]:
+    """INDEX.md 配置対象 directory を、除外 directory 配下へ降りずに列挙する。"""
+    dirs: list[Path] = []
+    stack = [root]
+    while stack:
+        directory = stack.pop()
+        for child in sorted(directory.iterdir(), key=lambda p: p.name, reverse=True):
+            if not child.is_dir() or child.name.startswith("."):
+                continue
+            if is_root_memo(root, child) or is_git_ignored(root, child):
+                continue
+            dirs.append(child)
+            stack.append(child)
+    return dirs
 
 
 def parse_index_entries(index_path: Path) -> dict[str, dict[str, str]]:
@@ -141,8 +150,10 @@ def indexable_children(root: Path, directory: Path) -> list[Path]:
 
 
 def is_root_memo(root: Path, path: Path) -> bool:
-    """INDEX.md 対象から除外する `<work-root>/memo` か判定する。"""
-    return path.resolve() == (root / "memo").resolve()
+    """INDEX.md 対象から除外する `<work-root>/memo` 配下か判定する。"""
+    memo = (root / "memo").resolve()
+    resolved = path.resolve()
+    return resolved == memo or memo in resolved.parents
 
 
 def build_index_entry_impl(root: Path, path: Path, codex_exec: CodexExec, digest: str | None = None) -> str:

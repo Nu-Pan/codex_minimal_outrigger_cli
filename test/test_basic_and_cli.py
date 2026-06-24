@@ -1578,10 +1578,12 @@ def test_update_indexes_generates_sibling_entries_in_parallel(
 def test_update_indexes_indexes_nested_memo_directory(tmp_path: Path, monkeypatch) -> None:
     root = make_repo(tmp_path)
     root_memo = root / "memo"
+    root_memo_child = root_memo / "child"
     nested_memo = root / "docs" / "memo"
-    root_memo.mkdir()
+    root_memo_child.mkdir(parents=True)
     nested_memo.mkdir(parents=True)
     (root_memo / "private.txt").write_text("private\n")
+    (root_memo_child / "deeper.txt").write_text("deeper\n")
     (nested_memo / "note.txt").write_text("note\n")
     cmoc_runtime.sync_config(root)
 
@@ -1605,6 +1607,8 @@ def test_update_indexes_indexes_nested_memo_directory(tmp_path: Path, monkeypatc
 
     assert root_memo / "INDEX.md" not in updated
     assert not (root_memo / "INDEX.md").exists()
+    assert root_memo_child / "INDEX.md" not in updated
+    assert not (root_memo_child / "INDEX.md").exists()
     assert nested_memo / "INDEX.md" in updated
     assert (nested_memo / "INDEX.md").is_file()
     assert "# `memo`" in (root / "docs" / "INDEX.md").read_text()
