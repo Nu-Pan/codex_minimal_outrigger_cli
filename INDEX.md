@@ -101,26 +101,28 @@
 # `oracle`
 
 ## Summary
-- cmoc の人間所有の正本仕様断片を収める領域。自然言語の仕様文書、実装言語・設定ファイルで表された仕様断片、正本テスト仕様へ進むための上位入口であり、realization file が従うべき人間意図・境界条件・規範を確認する場所。
-- ここに含まれる本文は、AI が実装を追従させる根拠であり、実装から仕様へ逆流させないための基準になる。CLI 挙動、git branch/worktree モデル、run 隔離、session/apply 状態、Codex CLI 呼び出し、prompt、設定、パスモデル、Structured Output、oracle/realization の基本定義、各種品質標準を読む下位領域へ分岐する。
+- cmoc の正本仕様断片全体への入口。人間が責任を持つ仕様として、利用者向け CLI 挙動、session / run / branch / worktree モデル、agent 呼び出し、設定、パス表記、構造化文書、ルーティング文書、開発・テスト規約、不採用設計判断などを扱う。
+- 自然言語の仕様文書と、Python・JSON など実装形式で書かれた仕様断片の両方を含む。realization implementation や realization test を変更する前に、実装が従うべき根拠を目的別に探すための階層。
+- 利用者が編集する仕様と AI が生成・修正する実装との境界を定め、oracle file を正本として realization file が追従するという cmoc の基本構造を確認する入口になる。
 
 ## Read this when
-- cmoc の実装・テスト・補助ファイルを変更する前に、従うべき正本仕様断片や人間意図を確認したいとき。
-- CLI サブコマンド、標準出力・標準エラー出力、ログ、終了コード、エラー処理、インデクシング、Codex CLI 呼び出し、Structured Output、retry/resume/並列実行、prompt 文面など、利用者に見える挙動または agent 呼び出し仕様を確認したいとき。
-- session branch、run branch、linked worktree、run root、repo root、work root、状態ファイル、apply 状態など、cmoc の実行単位・永続状態・git 操作モデルを確認したいとき。
-- oracle file と realization file の所有者、編集責任、正本仕様断片としての扱い、仕様断片の隙間、用語統一、non-goal、INDEX.md エントリー品質など、cmoc 開発全体の規範を確認したいとき。
-- 開発対象リポジトリごとの設定、モデル種別、reasoning effort、AI agent 呼び出しパラメータ、基礎データ構造、パス表記、構造化 Markdown 描画など、実装形式で表された正本仕様を探したいとき。
-- 一般的なベストプラクティスや既存実装ではなく、cmoc において何を正とするかを oracle file から判断する必要があるとき。
+- cmoc の挙動や設計判断について、realization code より優先される正本仕様断片を探したいとき。
+- CLI サブコマンド、stdout / stderr、終了コード、ログ、状態遷移、設定ファイル、補完、エラー処理など、利用者に見える cmoc の仕様を確認したいとき。
+- session branch、run branch、home branch、fork / join commit、linked worktree、作業隔離など、git branch / commit / worktree モデルを確認したいとき。
+- Codex CLI などの agent call、prompt、Structured Output、model class、reasoning effort、file access mode、並列実行、retry / resume など、外部 agent 制御の仕様を調べるとき。
+- INDEX.md の生成・更新、hash、ルーティング文書の意味情報、インデクシング、自動コミットや排他制御の仕様を確認したいとき。
+- cmoc の realization implementation や realization test を追加・修正する前に、Python 実装規約、設計規約、開発環境、テスト方針、共通データ構造、パスモデル、設定モデルの根拠を確認したいとき。
+- memory、kaizen、作業計画レビュー、apply 挙動など、採用しなかった案や non-goal の背景を確認したいとき。
 
 ## Do not read this when
-- 実際に編集すべき realization implementation や realization test の現在のコード構造、関数、クラス、既存テストだけを調べたいとき。
-- cmoc の正本仕様ではなく、生成物、実行ログ、一時ファイル、ビルド成果物、ローカル作業メモを探しているとき。
-- 特定の自然言語仕様、設定仕様、agent call 仕様、パスモデルなど読むべき下位本文が既に明確で、その本文へ直接進めるとき。
-- oracle file の変更提案ではなく、既存実装の都合だけから仕様を推測したいとき。
-- INDEX.md のルーティング文書そのものを編集・生成するだけで、下位本文の現在内容から根拠を確認する必要がないとき。
+- 正本仕様ではなく、実際に編集する realization implementation や realization test のコード構造、既存関数、具体的な実装差分だけを調べたいとき。
+- 対象のサブコマンド、agent call builder、パス helper、設定 helper など、読むべき下位領域がすでに特定できているときは、この階層全体ではなく該当する下位対象へ直接進む。
+- 作業対象が生成物、一時ファイル、実行ログ、作業用 worktree 内の成果物などで、cmoc の正本仕様断片を確認する必要がないとき。
+- 既に必要な正本仕様断片を読み終えており、次の作業が realization file の編集・テスト実行・既存実装の局所確認だけで足りるとき。
+- リポジトリ外部の一般的な Git、Python、CLI、Codex のベストプラクティスだけを調べたいとき。cmoc で優先される判断根拠はこの階層の仕様だが、一般論そのものの参照先ではない。
 
 ## hash
-- d76820d8f2a47e2cc5574836146969e5687fff91caea49d4b4bd62476eee5fe1
+- 30c6e7aa67d76cc5435fe906c93da95d389c87a5c851ee129db8605a27a39e07
 
 # `pyproject.toml`
 

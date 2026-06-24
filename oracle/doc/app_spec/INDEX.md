@@ -200,23 +200,25 @@
 # `sub_command`
 
 ## Summary
-- CLI サブコマンドごとの正本仕様断片をまとめたディレクトリ。session の fork/join/abandon、apply の fork/join/abandon、oracle review、indexing、init、対話型 TUI 起動について、各サブコマンドの責務、事前条件、状態遷移、git 操作、出力・レポートの境界を扱う。
-- cmoc の利用者向けコマンド挙動を確認する際に、対象サブコマンド固有の仕様へ進むための入口となる。
+- cmoc の利用者向けサブコマンド仕様断片をまとめた領域。セッション開始・完了・破棄、apply の開始・取込・破棄、oracle レビュー、初期化、明示インデクシング、AI Agent CLI/TUI 起動など、CLI として見える挙動の正本仕様へ進む入口となる。
+- 各サブコマンドの事前条件、状態遷移、branch/worktree 操作、未コミット差分の扱い、agent call や Codex CLI に委ねる境界、レポートや stdout 出力、終了・失敗時の扱いを確認するための階層。
 
 ## Read this when
-- cmoc の特定サブコマンドの CLI 挙動、引数、事前条件、終了条件、標準出力、レポート保存、またはエラー時の扱いを確認・実装・テストしたいとき。
-- session lifecycle の開始・完了・破棄、apply run の開始・取り込み・破棄、oracle file レビュー、インデクシング実行、初期化、対話型 AI Agent CLI/TUI 起動のいずれかを扱うとき。
-- サブコマンド実行に伴う branch/worktree 操作、session/apply state の更新、未コミット差分や merge conflict の扱い、cleanup 対象の境界を確認したいとき。
-- 共通概念ではなく、ユーザーが実行するコマンド単位で正本仕様断片を探したいとき。
+- cmoc のサブコマンド単位で、CLI 引数、実行前提、外部挙動、状態更新、git 操作、出力、失敗時の扱いを実装・修正・テストする。
+- session lifecycle のうち、現在 branch から session を作る、home branch へ join する、または home branch へ取り込まず abandon する挙動を確認する。
+- apply lifecycle のうち、隔離 branch/worktree で修正ループを実行する、成果物を session 側へ join する、または未 join の apply run を abandon する挙動を確認する。
+- oracle file のレビュー用サブコマンド、作業ルートの初期化、明示インデクシング、cmoc 規則を注入して AI Agent CLI/TUI を起動する処理の仕様を探す。
+- サブコマンドから見た agent call、Codex CLI 呼び出し、Markdown report、stdout、終了コードの責務境界を確認したい。
 
 ## Do not read this when
-- oracle file、realization file、パスモデル、root 語彙など、cmoc 全体の基礎概念だけを確認したいとき。
-- run の隔離実行、agent call parameter builder、Codex CLI 呼び出しパラメータ、レポートレンダリングなど、サブコマンドから参照される内部処理の詳細だけを調べたいとき。
-- インデクシングで生成・更新される内容そのものや、git 操作一般、実装ファイルの helper 分割、テスト構成など、個別サブコマンドの外部挙動ではない責務を確認したいとき。
-- 実装コードやテストコードの配置・構造を調べるだけで、CLI サブコマンドの正本仕様を参照する必要がないとき。
+- サブコマンドから呼ばれる共通処理の内部実装、parameter builder、run 隔離実行、path model、状態ファイル schema などの詳細だけを確認したい場合は、それぞれの正本仕様や実装へ直接進む。
+- oracle file、realization file、path keyword、root model など、cmoc 全体の基礎概念定義だけを確認したい。
+- インデクシングで生成・更新される内容そのものや、INDEX.md 生成規則を確認したい場合は、インデクシング全体またはルーティング文書生成の仕様を読む。
+- 通常の git 操作一般、任意 branch の汎用 merge、join 済み結果の rollback、旧サブコマンド互換など、現行サブコマンド仕様が対象外としている機能を探している。
+- 実装ファイルやテストファイルの配置、既存 helper の分割、コード構造だけを調べたい場合は、realization 側の該当領域へ進む。
 
 ## hash
-- b718c378d7d1fe05d5befc7645d156c9b56eda703d39b881d82a11463963c4a7
+- f67324eaf5d87f269456bedfe36a4d921464c92d6e4750a4fd381298eaac04d7
 
 # `usage.md`
 
