@@ -52,6 +52,13 @@ def make_repo(tmp_path: Path) -> Path:
     return root
 
 
+def add_tracked_ignored_oracle_file(root: Path) -> None:
+    (root / ".gitignore").write_text("oracle/ignored.md\n")
+    (root / "oracle" / "ignored.md").write_text("# ignored\n")
+    run_git(root, "add", "-f", ".gitignore", "oracle/ignored.md")
+    run_git(root, "commit", "-m", "add ignored oracle")
+
+
 def setup_codex_home(tmp_path: Path, monkeypatch) -> Path:
     codex_home = tmp_path / "codex_home"
     codex_home.mkdir()
@@ -645,6 +652,52 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
     assert any(call.startswith("review oracle enumerate findings") for call in calls)
 
 
+def test_review_oracle_full_scope_excludes_gitignored_oracle_files(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    root = make_repo(tmp_path)
+    add_tracked_ignored_oracle_file(root)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    calls: list[str] = []
+
+    class FakeCodexResult:
+        def __init__(self, output_json):
+            self.output_json = output_json
+
+    def fake_run_codex_exec(parameter, **kwargs):
+        calls.append(kwargs["purpose"])
+        schema_name = parameter.structured_output_schema_path.name
+        if schema_name == "enumerate_finding.json":
+            return FakeCodexResult({"findings": []})
+        if schema_name == "merge_finding.json":
+            return FakeCodexResult({"operations": []})
+        raise AssertionError(schema_name)
+
+    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(
+        app, ["review", "oracle", "--scope", "full"], catch_exceptions=False
+    )
+
+    assert result.exit_code == 0
+    rendered = Path(
+        [line for line in result.output.splitlines() if line.startswith("/")][-1]
+    ).read_text()
+    assert "oracle_count_total: 1" in rendered
+    assert "oracle_count_evaluated: 1" in rendered
+    assert "`oracle/spec.md`" in rendered
+    assert "oracle/ignored.md" not in rendered
+    enumerate_calls = [
+        call for call in calls if call.startswith("review oracle enumerate findings")
+    ]
+    assert len(enumerate_calls) == 1
+
+
 def test_review_oracle_accepts_short_scope_option(tmp_path: Path, monkeypatch) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -719,6 +772,41 @@ def test_review_oracle_session_scope_reports_total_and_no_targets(
     assert "oracle_count_evaluated: 0" in rendered
     assert "result: no_targets" in rendered
     assert "レビュー対象 oracle が 0 件でした。" in rendered
+
+
+def test_review_oracle_session_scope_excludes_changed_gitignored_oracle_files(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    root = make_repo(tmp_path)
+    add_tracked_ignored_oracle_file(root)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    (root / "oracle" / "ignored.md").write_text("# ignored changed\n")
+    run_git(root, "add", "oracle/ignored.md")
+    run_git(root, "commit", "-m", "change ignored oracle")
+    calls: list[str] = []
+
+    def fail_run_codex_exec(parameter, **kwargs):
+        calls.append(kwargs["purpose"])
+        raise AssertionError("gitignored oracle files should not be reviewed")
+
+    monkeypatch.setattr(main_module, "run_codex_exec", fail_run_codex_exec)
+
+    result = runner.invoke(app, ["review", "oracle"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert calls == []
+    rendered = Path(
+        [line for line in result.output.splitlines() if line.startswith("/")][-1]
+    ).read_text()
+    assert "oracle_count_total: 1" in rendered
+    assert "oracle_count_evaluated: 0" in rendered
+    assert "oracle/ignored.md" not in rendered
+    assert "result: no_targets" in rendered
 
 
 def test_review_oracle_merges_review_index_changes(tmp_path: Path, monkeypatch) -> None:

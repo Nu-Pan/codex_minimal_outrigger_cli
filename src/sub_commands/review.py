@@ -28,6 +28,7 @@ from cmoc_runtime import (
     ensure_cmoc_ignored,
     head_commit,
     is_binary,
+    is_git_ignored,
     load_config,
     load_state_for_branch,
     pushd,
@@ -172,7 +173,10 @@ def enumerate_review_all_oracle_files(root: Path) -> list[Path]:
     return [
         path
         for path in sorted((root / "oracle").rglob("*"))
-        if path.is_file() and path.name != "INDEX.md" and not is_binary(path)
+        if path.is_file()
+        and path.name != "INDEX.md"
+        and not is_git_ignored(root, path)
+        and not is_binary(path)
     ]
 
 
