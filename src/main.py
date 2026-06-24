@@ -37,6 +37,7 @@ from cmoc_runtime import (
     set_current_subcommand_logger,
     timestamp,
     write_state,
+    work_root,
 )
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
@@ -123,9 +124,9 @@ def _run(handler) -> None:
     logger = None
     logger_token = None
     try:
-        current_root = repo_root()
+        current_root = work_root()
         require_current_directory_is_work_root(current_root)
-        root = command_log_root(current_root)
+        root = command_log_root(repo_root(), current_root)
         logger = SubcommandLogger(root, handler.__name__)
         logger_token = set_current_subcommand_logger(logger)
         logger.event("command_invoked", argv=[])
@@ -178,8 +179,8 @@ def require_current_directory_is_work_root(root: Path) -> None:
     )
 
 
-def command_log_root(root: Path) -> Path:
-    branch = current_branch(root)
+def command_log_root(root: Path, current_root: Path | None = None) -> Path:
+    branch = current_branch(current_root or root)
     if branch.startswith("cmoc/apply/"):
         parts = branch.split("/")
         if len(parts) >= 4:

@@ -19,8 +19,10 @@ from cmoc_runtime import (
     ensure_cmoc_ignored,
     file_access_to_sandbox_mode,
     render_error,
+    repo_root,
     run_codex_exec,
     run_codex_tui,
+    work_root,
 )
 from main import app
 
@@ -64,6 +66,17 @@ def test_path_model_resolves_token_path_inside_repo() -> None:
     token_path = resolve_token_path(cmoc_root / "src", RootToken.CMOC)
 
     assert token_path == Path("<cmoc-root>") / "src"
+
+
+def test_runtime_distinguishes_repo_root_from_linked_worktree(
+    tmp_path: Path,
+) -> None:
+    root = make_repo(tmp_path)
+    linked = root / ".cmoc" / "worktrees" / "linked"
+    run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
+
+    assert repo_root(linked) == root.resolve()
+    assert work_root(linked) == linked.resolve()
 
 
 def test_config_defaults_match_logical_model_classes() -> None:

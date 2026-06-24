@@ -16,6 +16,7 @@ from typing import Any
 from jsonschema import validate
 
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from basic.path_model import resolve_repo_root, resolve_work_root
 from config.cmoc_config import (
     CmocConfig,
     CmocConfigApplyFork,
@@ -164,9 +165,25 @@ def run_git(args: list[str], cwd: Path, check: bool = True) -> CommandResult:
 
 
 def repo_root(cwd: Path | None = None) -> Path:
-    cwd = cwd or Path.cwd()
-    result = run_git(["rev-parse", "--show-toplevel"], cwd)
-    return Path(result.stdout.strip()).resolve()
+    try:
+        return resolve_repo_root(cwd)
+    except ValueError as exc:
+        raise CmocError(
+            "<repo-root> を特定できません。",
+            ["git repository 内から cmoc を再実行してください。"],
+            str(cwd or Path.cwd()),
+        ) from exc
+
+
+def work_root(cwd: Path | None = None) -> Path:
+    try:
+        return resolve_work_root(cwd)
+    except ValueError as exc:
+        raise CmocError(
+            "<work-root> を特定できません。",
+            ["git worktree 内から cmoc を再実行してください。"],
+            str(cwd or Path.cwd()),
+        ) from exc
 
 
 def current_branch(root: Path) -> str:

@@ -30,6 +30,7 @@ from cmoc_runtime import (
     require_clean_worktree,
     run_git,
     timestamp,
+    work_root,
     worktrees_dir,
     write_state,
 )
@@ -174,17 +175,18 @@ def cmoc_apply_fork_impl(
 
 def cmoc_apply_join_impl(force_resolve: bool) -> None:
     """apply branch を session branch へ merge し、apply state を ready に戻す。"""
-    current_root = repo_root()
+    repo = repo_root()
+    current_root = work_root()
     branch = current_branch(current_root)
     if branch.startswith("cmoc/apply/"):
         require_clean_worktree(current_root)
         parts = branch.split("/")
         session_id = parts[2] if len(parts) >= 4 else ""
         session_branch = f"cmoc/session/{session_id}"
-        root = worktree_for_branch(current_root, session_branch)
+        root = worktree_for_branch(repo, session_branch)
         os.chdir(root)
     else:
-        root = current_root
+        root = repo
         session_branch = branch
     _session_id, path, state = load_state_for_branch(root, branch)
     if not (branch.startswith("cmoc/session/") or branch.startswith("cmoc/apply/")):
@@ -341,16 +343,17 @@ def resolve_index_conflicts(root: Path) -> bool:
 
 def cmoc_apply_abandon_impl() -> None:
     """未 join の apply run を破棄して apply state を ready に戻す。"""
-    current_root = repo_root()
+    repo = repo_root()
+    current_root = work_root()
     branch = current_branch(current_root)
     if not (branch.startswith("cmoc/session/") or branch.startswith("cmoc/apply/")):
         raise CmocError("apply abandon は session branch または apply branch 上で実行してください。", [], branch)
     if branch.startswith("cmoc/apply/"):
         session_id = branch.split("/")[2]
         session_branch = f"cmoc/session/{session_id}"
-        root = worktree_for_branch(current_root, session_branch)
+        root = worktree_for_branch(repo, session_branch)
     else:
-        root = current_root
+        root = repo
     _session_id, path, state = load_state_for_branch(root, branch)
     if state.session.state != "active" or state.apply.state == "ready":
         raise CmocError("破棄対象の active apply run がありません。", [], str(path))
