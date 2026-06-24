@@ -471,6 +471,14 @@ def test_parse_markdown_prompt_ignores_headings_inside_fenced_code_blocks() -> N
     assert "# 見出しではない" in parsed[0].children
 
 
+def test_parse_markdown_prompt_preserves_preamble_before_headings() -> None:
+    parsed = parse_markdown_prompt("最初の依頼\n\n# 詳細\n\n見出し下の依頼")
+
+    assert [doc.title for doc in parsed] == ["本文", "詳細"]
+    assert parsed[0].children == "最初の依頼"
+    assert parsed[1].children == "見出し下の依頼"
+
+
 def test_session_fork_creates_session_branch_and_state(
     tmp_path: Path, monkeypatch
 ) -> None:

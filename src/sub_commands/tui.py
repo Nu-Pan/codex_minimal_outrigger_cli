@@ -163,6 +163,10 @@ def parse_markdown_prompt(markdown: str) -> list[StructDoc] | list[str]:
         if match:
             if current_title is not None:
                 sections.append(StructDoc(current_title, "\n".join(current_body).strip()))
+            else:
+                preamble = "\n".join(current_body).strip()
+                if preamble:
+                    sections.append(StructDoc("本文", preamble))
             current_title = match.group(2)
             current_body = []
             continue
