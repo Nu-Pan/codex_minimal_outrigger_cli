@@ -1033,8 +1033,6 @@ def run_codex_tui(
     result = subprocess.run(
         argv,
         cwd=cwd,
-        text=True,
-        capture_output=True,
         env=codex_subprocess_env(codex_home),
     )
     logger = current_subcommand_logger()
@@ -1052,9 +1050,9 @@ def run_codex_tui(
         raise CmocError(
             "Codex CLI/TUI 呼び出しが失敗しました。",
             ["Codex CLI/TUI の出力と call log を確認してください。"],
-            f"call_log: {call_path}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}",
+            f"returncode: {result.returncode}\ncall_log: {call_path}",
         )
-    return CommandResult(result.returncode, result.stdout, result.stderr)
+    return CommandResult(result.returncode, "", "")
 
 
 def file_sha256(path: Path) -> str:

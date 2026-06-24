@@ -1636,22 +1636,17 @@ def test_run_codex_tui_uses_codex_command_and_prompt_argument(
     codex_home = setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    recorder = tmp_path / "tui_record.json"
     fake_codex = bin_dir / "codex"
-    fake_codex.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env python3",
-                "import json, os, pathlib, sys",
-                f"record = pathlib.Path({str(recorder)!r})",
-                "record.write_text(json.dumps({'args': sys.argv[1:], 'stdin': sys.stdin.read(), 'codex_home': os.environ.get('CODEX_HOME')}))",
-                "print('opened tui')",
-            ]
-        )
-        + "\n"
-    )
+    fake_codex.write_text("#!/bin/sh\nexit 0\n")
     fake_codex.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    recorded = {}
+
+    def fake_run(argv, **kwargs):
+        recorded.update({"argv": argv, "kwargs": kwargs})
+        return subprocess.CompletedProcess(argv, 0)
+
+    monkeypatch.setattr(cmoc_runtime.subprocess, "run", fake_run)
     parameter = AgentCallParameter(
         ModelClass.MAINSTREAM,
         ReasoningEffort.MEDIUM,
@@ -1662,23 +1657,27 @@ def test_run_codex_tui_uses_codex_command_and_prompt_argument(
 
     result = run_codex_tui(parameter, root=root)
 
-    recorded = json.loads(recorder.read_text())
-    assert recorded["stdin"] == ""
-    assert recorded["args"][0] == "--profile"
-    assert recorded["args"][1].startswith("cmoc_")
-    assert "exec" not in recorded["args"]
-    assert recorded["args"][-1] == "TUI PROMPT BODY"
-    assert recorded["codex_home"] == str(codex_home)
+    assert recorded["kwargs"]["cwd"] == root
+    assert recorded["kwargs"]["env"]["CODEX_HOME"] == str(codex_home)
+    assert "capture_output" not in recorded["kwargs"]
+    assert "stdout" not in recorded["kwargs"]
+    assert "stderr" not in recorded["kwargs"]
+    assert recorded["argv"][0] == "codex"
+    assert recorded["argv"][1] == "--profile"
+    assert recorded["argv"][2].startswith("cmoc_")
+    assert "exec" not in recorded["argv"]
+    assert recorded["argv"][-1] == "TUI PROMPT BODY"
     call_logs = list((root / ".cmoc" / "log" / "codex").glob("*_tui_call.json"))
     assert len(call_logs) == 1
     assert json.loads(call_logs[0].read_text())["argv"] == [
         "codex",
         "--profile",
-        recorded["args"][1],
+        recorded["argv"][2],
         "TUI PROMPT BODY",
     ]
     assert result.returncode == 0
-    assert result.stdout == "opened tui\n"
+    assert result.stdout == ""
+    assert result.stderr == ""
 
 
 def test_run_codex_exec_loads_repo_config_json(tmp_path: Path, monkeypatch) -> None:
