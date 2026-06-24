@@ -63,7 +63,7 @@
 
 ## Summary
 - cmoc の複数 subcommand から共有される実行時支援を集めた領域。共通エラー、外部コマンド結果、Codex 呼び出し結果、ログ、session/apply 状態、設定の読み書き、管理 branch 判定、worktree 操作、実行用パス、Codex profile 生成、CLI/TUI 呼び出し、retry、schema 検証、hash・binary・ignore 判定など、個別 command の業務フローより下位の共通基盤を扱う。
-- 現時点ではパッケージ入口自体に公開 import や初期化処理はなく、実質的な処理は共通 runtime 実装に集約されている。
+- 現時点ではパッケージ入口自体に公開 import や初期化処理はなく、実質的な処理は共通 runtime の責務別 module に分割されている。
 
 ## Read this when
 - cmoc 全体で共有される runtime helper、git・filesystem・設定・状態・Codex 実行の共通処理を探しているとき。
@@ -80,7 +80,7 @@
 - 個別 helper の具体的な関数・クラス・定数だけを探しており、共通 runtime 基盤全体の位置づけやパッケージ境界を確認する必要がないとき。
 
 ## hash
-- 36f3d9f6820aae6f2bce3121f5cbabdedbe636b9a3825039c0b87b2194987922
+- d93bea3bc4e942c40ebfb0d2c59a3eff8073a6eae0d4653e896bd11fc950d829
 
 # `config`
 
