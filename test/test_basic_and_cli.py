@@ -20,6 +20,7 @@ from cmoc_runtime import (
     SubcommandLogger,
     ensure_cmoc_ignored,
     file_access_to_sandbox_mode,
+    format_duration,
     render_error,
     repo_root,
     run_codex_exec,
@@ -76,6 +77,11 @@ def test_path_model_resolves_token_path_inside_repo() -> None:
     token_path = resolve_token_path(cmoc_root / "src", RootToken.CMOC)
 
     assert token_path == Path("<cmoc-root>") / "src"
+
+
+def test_format_duration_truncates_msec_digit() -> None:
+    assert format_duration(0.19) == " 0h  0m 00.1s"
+    assert format_duration(59.99) == " 0h  0m 59.9s"
 
 
 def test_runtime_distinguishes_repo_root_from_linked_worktree(

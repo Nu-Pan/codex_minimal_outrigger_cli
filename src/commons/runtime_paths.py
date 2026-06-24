@@ -39,9 +39,10 @@ def console_timestamp() -> str:
 
 
 def format_duration(seconds: float) -> str:
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    sec = seconds - hours * 3600 - minutes * 60
+    total_tenths = int(seconds * 10)
+    hours = total_tenths // 36000
+    minutes = (total_tenths % 36000) // 600
+    sec = (total_tenths % 600) / 10
     return f"{hours:2d}h {minutes:2d}m {sec:04.1f}s"
 
 
