@@ -31,6 +31,7 @@ def test_apply_join_removes_apply_worktree_and_resets_state(
     session_id = session_branch.removeprefix("cmoc/session/")
     state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
+    oracle_snapshot_commit = state["apply"]["oracle_snapshot_commit"]
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
 
@@ -46,9 +47,10 @@ def test_apply_join_removes_apply_worktree_and_resets_state(
     )
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
-    assert state["session"]["last_joined_apply_commit"] == run_git(
-        root, "rev-parse", "HEAD"
-    ).stdout.strip()
+    assert (
+        state["session"]["last_joined_apply_oracle_snapshot_commit"]
+        == oracle_snapshot_commit
+    )
     report_line = [
         line for line in result.output.splitlines() if line.startswith("- report:")
     ][-1]
@@ -76,6 +78,7 @@ def test_apply_join_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> 
     session_id = session_branch.removeprefix("cmoc/session/")
     state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
+    oracle_snapshot_commit = state["apply"]["oracle_snapshot_commit"]
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
     monkeypatch.chdir(apply_worktree)
@@ -93,9 +96,10 @@ def test_apply_join_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> 
     )
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
-    assert state["session"]["last_joined_apply_commit"] == run_git(
-        root, "rev-parse", "HEAD"
-    ).stdout.strip()
+    assert (
+        state["session"]["last_joined_apply_oracle_snapshot_commit"]
+        == oracle_snapshot_commit
+    )
     assert "- cleanup_reachable: `True`" in result.output
     assert "  - none" in result.output
 

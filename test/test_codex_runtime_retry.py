@@ -5,6 +5,7 @@ from _support import (
     ModelClass,
     Path,
     ReasoningEffort,
+    SubcommandLogger,
     ThreadPoolExecutor,
     cmoc_runtime,
     json,
@@ -108,12 +109,14 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
         "prompt",
         None,
     )
+    logger = SubcommandLogger(root, "test")
 
     result = run_codex_exec(
         parameter,
         root=root,
         quota_poll_interval_sec=0,
         max_quota_polls=1,
+        subcommand_logger=logger,
     )
 
     call_records = [json.loads(line) for line in calls.read_text().splitlines()]
@@ -144,6 +147,16 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     )
     assert Path(probe_logs[0]["stderr_log_path"]).read_text() == ""
     assert Path(probe_logs[0]["output_path"]).read_text() == '{"probe": true}'
+    log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_events = [event for event in log_events if event["event"] == "codex_call"]
+    assert [event["purpose"] for event in codex_events] == [
+        "quota availability probe",
+        "codex exec",
+    ]
+    assert codex_events[0]["status"] == "succeeded"
+    assert codex_events[0]["returncode"] == 0
+    assert codex_events[0]["stdout_log_path"] == probe_logs[0]["stdout_log_path"]
+    assert codex_events[0]["output_path"] == probe_logs[0]["output_path"]
 
 
 def test_run_codex_exec_fails_after_quota_without_resume_token(

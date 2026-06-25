@@ -14,7 +14,6 @@ from cmoc_runtime import (
     current_branch,
     delete_branch,
     ensure_cmoc_ignored,
-    head_commit,
     is_git_ignored,
     load_state_for_branch,
     remove_worktree,
@@ -75,7 +74,10 @@ def cmoc_apply_join_impl(force_resolve: bool) -> None:
             ["git status を確認し、手動で解決してください。"],
             run_git(["diff", "--name-only", "--diff-filter=U"], root).stdout,
         )
-    state.session.last_joined_apply_commit = head_commit(root)
+    joined_apply_oracle_snapshot_commit = state.apply.oracle_snapshot_commit
+    state.session.last_joined_apply_oracle_snapshot_commit = (
+        joined_apply_oracle_snapshot_commit
+    )
     apply_worktree = worktree_for_branch_optional(root, apply_branch)
     state.apply = ApplyPart()
     write_state(path, state)
@@ -164,7 +166,8 @@ def render_apply_join_report(
             f"cmoc_session_branch: {session_branch}",
             f"cmoc_apply_branch: {apply_branch}",
             f"cmoc_apply_worktree: {apply_worktree}",
-            f"joined_apply_commit: {state.session.last_joined_apply_commit}",
+            "joined_apply_oracle_snapshot_commit: "
+            f"{state.session.last_joined_apply_oracle_snapshot_commit}",
             f"force_resolve: {force_resolve}",
             f"cleanup_reachable: {cleanup_reachable}",
             "---",

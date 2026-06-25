@@ -142,13 +142,39 @@ def run_codex_exec(
     def emit_codex_event(
         returncode: int, status: str, error: str | None = None
     ) -> None:
-        elapsed_sec = time.perf_counter() - call_started_at
+        emit_codex_call_event(
+            run_purpose=purpose,
+            run_call_path=call_path,
+            run_stdout_path=stdout_path,
+            run_stderr_path=stderr_path,
+            run_output_path=output_path,
+            run_schema_path=schema_path,
+            started_at=call_started_at,
+            returncode=returncode,
+            status=status,
+            error=error,
+        )
+
+    def emit_codex_call_event(
+        *,
+        run_purpose: str,
+        run_call_path: Path,
+        run_stdout_path: Path,
+        run_stderr_path: Path,
+        run_output_path: Path,
+        run_schema_path: Path | None,
+        started_at: float,
+        returncode: int,
+        status: str,
+        error: str | None = None,
+    ) -> None:
+        elapsed_sec = time.perf_counter() - started_at
         print(
             "\n".join(
                 [
                     f"# {console_timestamp()} Codex CLI call",
-                    f"- purpose: `{purpose}`",
-                    f"- call_log: `{call_path}`",
+                    f"- purpose: `{run_purpose}`",
+                    f"- call_log: `{run_call_path}`",
                     f"- elapsed: `{format_duration(elapsed_sec)}`",
                     f"- returncode: `{returncode}`",
                 ]
@@ -158,20 +184,20 @@ def run_codex_exec(
         if logger is None:
             return
         payload: dict[str, Any] = {
-            "purpose": purpose,
+            "purpose": run_purpose,
             "status": status,
             "returncode": returncode,
             "elapsed_sec": elapsed_sec,
             "quota_wait_sec": quota_wait_sec,
             "quota_polls": quota_polls,
-            "call_log_path": str(call_path),
-            "stdout_log_path": str(stdout_path),
-            "stderr_log_path": str(stderr_path),
-            "output_path": str(output_path),
+            "call_log_path": str(run_call_path),
+            "stdout_log_path": str(run_stdout_path),
+            "stderr_log_path": str(run_stderr_path),
+            "output_path": str(run_output_path),
             "codex_home": str(codex_home),
             "profile_name": profile_name,
             "profile_path": str(profile_path),
-            "schema_path": str(schema_path) if schema_path else None,
+            "schema_path": str(run_schema_path) if run_schema_path else None,
         }
         if error is not None:
             payload["error"] = error
@@ -284,6 +310,7 @@ def run_codex_exec(
                             run_output_path=probe_output_path,
                             run_schema_path=None,
                         )
+                        probe_started_at = time.perf_counter()
                         poll = subprocess.run(
                             probe_argv,
                             cwd=cwd,
@@ -294,13 +321,23 @@ def run_codex_exec(
                         )
                         probe_stdout_path.write_text(poll.stdout)
                         probe_stderr_path.write_text(poll.stderr)
-                        print(
-                            f"# {console_timestamp()} Codex CLI quota probe returned {poll.returncode}",
-                            flush=True,
+                        probe_error_text = codex_error_text(poll.stdout, poll.stderr)
+                        probe_available = poll.returncode == 0 and not is_quota_error(
+                            probe_error_text
                         )
-                        if poll.returncode == 0 and not is_quota_error(
-                            codex_error_text(poll.stdout, poll.stderr)
-                        ):
+                        emit_codex_call_event(
+                            run_purpose="quota availability probe",
+                            run_call_path=probe_call_path,
+                            run_stdout_path=probe_stdout_path,
+                            run_stderr_path=probe_stderr_path,
+                            run_output_path=probe_output_path,
+                            run_schema_path=None,
+                            started_at=probe_started_at,
+                            returncode=poll.returncode,
+                            status="succeeded" if probe_available else "quota_waiting",
+                            error=None if probe_available else probe_error_text,
+                        )
+                        if probe_available:
                             break
                 finally:
                     with _QUOTA_CONDITION:
