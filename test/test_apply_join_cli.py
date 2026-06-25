@@ -34,9 +34,9 @@ def test_apply_join_removes_apply_worktree_and_resets_state(
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
-    oracle_snapshot_commit = state["apply"]["oracle_snapshot_commit"]
 
     result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+    join_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
 
     assert result.exit_code == 0
     assert not apply_worktree.exists()
@@ -50,7 +50,7 @@ def test_apply_join_removes_apply_worktree_and_resets_state(
     assert state["apply"]["state"] == "ready"
     assert (
         state["session"]["last_joined_apply_oracle_snapshot_commit"]
-        == oracle_snapshot_commit
+        == join_commit
     )
     report_line = [
         line for line in result.output.splitlines() if line.startswith("- report:")
@@ -81,10 +81,10 @@ def test_apply_join_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> 
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
-    oracle_snapshot_commit = state["apply"]["oracle_snapshot_commit"]
     monkeypatch.chdir(apply_worktree)
 
     result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+    join_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
 
     assert result.exit_code == 0
     assert Path.cwd() == root
@@ -99,7 +99,7 @@ def test_apply_join_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> 
     assert state["apply"]["state"] == "ready"
     assert (
         state["session"]["last_joined_apply_oracle_snapshot_commit"]
-        == oracle_snapshot_commit
+        == join_commit
     )
     assert "- cleanup_reachable: `True`" in result.output
     assert "  - none" in result.output
@@ -349,7 +349,6 @@ def test_apply_join_continues_after_resolving_index_conflict_in_normal_mode(
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
-    oracle_snapshot_commit = state["apply"]["oracle_snapshot_commit"]
     (apply_worktree / "INDEX.md").write_text("apply\n")
     run_git(apply_worktree, "add", "INDEX.md")
     run_git(apply_worktree, "commit", "-m", "apply index")
@@ -358,6 +357,7 @@ def test_apply_join_continues_after_resolving_index_conflict_in_normal_mode(
     run_git(root, "commit", "-m", "session index")
 
     result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+    join_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
 
     assert result.exit_code == 0
     assert not (root / "INDEX.md").exists()
@@ -366,7 +366,7 @@ def test_apply_join_continues_after_resolving_index_conflict_in_normal_mode(
     assert state["apply"]["state"] == "ready"
     assert (
         state["session"]["last_joined_apply_oracle_snapshot_commit"]
-        == oracle_snapshot_commit
+        == join_commit
     )
     assert not apply_worktree.exists()
     assert (

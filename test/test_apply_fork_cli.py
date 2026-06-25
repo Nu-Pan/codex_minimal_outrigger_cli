@@ -318,6 +318,7 @@ def test_apply_fork_rechecks_dirty_files_until_converged(
         "suggested_fix": "update readme",
     }
     enumerate_calls = 0
+    target_rels: list[str] = []
 
     class FakeCodexResult:
         def __init__(self, output_json=None, output_text: str = ""):
@@ -334,6 +335,7 @@ def test_apply_fork_rechecks_dirty_files_until_converged(
             )
         if purpose == "apply fork finding application":
             (Path.cwd() / "README.md").write_text("# updated\n")
+            (Path.cwd() / "INDEX.md").write_text("generated index\n")
             return FakeCodexResult(None)
         if purpose == "apply fork commit message":
             return FakeCodexResult(output_text="Update README from apply finding\n")
@@ -342,6 +344,15 @@ def test_apply_fork_rechecks_dirty_files_until_converged(
         raise AssertionError(purpose)
 
     monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+    original_enumerate = apply_fork_module.enumerate_apply_findings_for_target
+
+    def enumerate_findings(root_arg, target, config, codex_exec, **kwargs):
+        target_rels.append(str(target.relative_to(root_arg)))
+        return original_enumerate(root_arg, target, config, codex_exec, **kwargs)
+
+    monkeypatch.setattr(
+        apply_fork_module, "enumerate_apply_findings_for_target", enumerate_findings
+    )
 
     result = runner.invoke(
         app, ["apply", "fork", "--scope", "full"], catch_exceptions=False
@@ -349,6 +360,8 @@ def test_apply_fork_rechecks_dirty_files_until_converged(
 
     assert result.exit_code == 0
     assert enumerate_calls >= 2
+    assert "README.md" in target_rels
+    assert "INDEX.md" not in target_rels
     report_line = [
         line for line in result.output.splitlines() if line.startswith("- report:")
     ][-1]
@@ -421,17 +434,7 @@ def test_apply_fork_rejects_forbidden_agents_diff(tmp_path: Path, monkeypatch) -
         if purpose == "apply fork commit message":
             return FakeCodexResult(output_text="Update README before error\n")
         if purpose == "apply fork change summary":
-            return FakeCodexResult(
-                {
-                    "changes": [
-                        {
-                            "category": "ドキュメント",
-                            "summary": "README をエラー前に更新した",
-                            "changed_paths": ["README.md"],
-                        }
-                    ]
-                }
-            )
+            raise AssertionError("error report must not call change summary")
         raise AssertionError(purpose)
 
     monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
@@ -448,15 +451,15 @@ def test_apply_fork_rejects_forbidden_agents_diff(tmp_path: Path, monkeypatch) -
     assert report_path.is_file()
     rendered = report_path.read_text()
     assert "result: error" in rendered
-    assert "ドキュメント: README をエラー前に更新した (README.md)" in rendered
-    assert "apply fork change summary" in calls
+    assert "変更要約生成なし: 変更 path のみを機械的に記録しました。 (README.md)" in rendered
+    assert "apply fork change summary" not in calls
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
     state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
     assert state["apply"]["state"] == "error"
 
 
-def test_apply_fork_rolling_uses_previous_apply_oracle_snapshot_commit(
+def test_apply_fork_rolling_uses_previous_apply_join_commit(
     tmp_path: Path, monkeypatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -486,6 +489,7 @@ def test_apply_fork_rolling_uses_previous_apply_oracle_snapshot_commit(
     assert (
         runner.invoke(app, ["apply", "join"], catch_exceptions=False).exit_code == 0
     )
+    join_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     (root / "oracle" / "spec.md").write_text("# changed after join\n")
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "change oracle after apply join")
@@ -512,10 +516,10 @@ def test_apply_fork_rolling_uses_previous_apply_oracle_snapshot_commit(
     result = runner.invoke(app, ["apply", "fork"], catch_exceptions=False)
 
     assert result.exit_code == 0
-    assert target_rels == ["README.md", "oracle/spec.md"]
+    assert target_rels == ["oracle/spec.md"]
     assert (
         json.loads(state_path.read_text())["session"][
             "last_joined_apply_oracle_snapshot_commit"
         ]
-        == oracle_snapshot_commit
+        == join_commit
     )

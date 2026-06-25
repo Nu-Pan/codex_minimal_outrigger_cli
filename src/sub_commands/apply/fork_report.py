@@ -24,9 +24,7 @@ def write_apply_fork_report(
     """apply fork の実行結果 report を生成する。"""
     apply_branch = state.apply.apply_branch or ""
     fork_commit = state.apply.oracle_snapshot_commit or ""
-    changes = build_change_summary(
-        root, apply_worktree, fork_commit, config, codex_exec
-    )
+    changes = build_change_summary(root, apply_worktree, fork_commit, config, codex_exec)
     report_dir = reports_dir(root, "apply/fork")
     report_dir.mkdir(parents=True, exist_ok=True)
     path = report_dir / f"{timestamp()}.md"
@@ -71,7 +69,7 @@ def write_apply_fork_error_report(
             apply_worktree,
             "error",
             finding_counts,
-            build_change_summary(root, apply_worktree, fork_commit, config, codex_exec),
+            fallback_change_summary(apply_worktree, fork_commit, "変更要約生成なし"),
         )
     )
     return path
@@ -97,13 +95,16 @@ def build_change_summary(
                 "changed_paths": [],
             }
         ]
-    summary = codex_exec(
-        build_apply_fork_change_summary_parameter(raw_diff, apply_worktree),
-        root=root,
-        cwd=apply_worktree,
-        config=config,
-        purpose="apply fork change summary",
-    ).output_json
+    try:
+        summary = codex_exec(
+            build_apply_fork_change_summary_parameter(raw_diff, apply_worktree),
+            root=root,
+            cwd=apply_worktree,
+            config=config,
+            purpose="apply fork change summary",
+        ).output_json
+    except Exception:
+        return fallback_change_summary(apply_worktree, fork_commit, "変更要約生成失敗")
     return list((summary or {}).get("changes", [])) or [
         {
             "category": "変更要約なし",
@@ -111,6 +112,49 @@ def build_change_summary(
             "changed_paths": [],
         }
     ]
+
+
+def fallback_change_summary(
+    apply_worktree: Path, fork_commit: str, category: str
+) -> list[dict]:
+    paths = changed_paths_since_fork(apply_worktree, fork_commit)
+    if not paths:
+        return [
+            {
+                "category": "変更なし",
+                "summary": "apply fork による実装差分はありません。",
+                "changed_paths": [],
+            }
+        ]
+    return [
+        {
+            "category": category,
+            "summary": "変更 path のみを機械的に記録しました。",
+            "changed_paths": paths,
+        }
+    ]
+
+
+def changed_paths_since_fork(apply_worktree: Path, fork_commit: str) -> list[str]:
+    commands = (
+        [
+            ["diff", "--name-only", f"{fork_commit}..HEAD"],
+            ["diff", "--name-only"],
+            ["diff", "--cached", "--name-only"],
+        ]
+        if fork_commit
+        else [
+            ["diff", "--name-only", "HEAD"],
+            ["diff", "--name-only"],
+            ["diff", "--cached", "--name-only"],
+        ]
+    )
+    paths: list[str] = []
+    for command in commands:
+        for path in run_git(command, apply_worktree).stdout.splitlines():
+            if path not in paths:
+                paths.append(path)
+    return paths
 
 
 def render_apply_fork_report(

@@ -110,7 +110,13 @@ def cmoc_apply_fork_impl(
                     codex_exec,
                 )
                 changed = changed_worktree_paths(apply_worktree)
-                dirty_targets.extend(changed)
+                dirty_targets.extend(
+                    normalize_apply_targets(
+                        apply_worktree,
+                        set(changed),
+                        include_oracle=False,
+                    )
+                )
                 if changed:
                     commit_message = generate_apply_commit_message(
                         root,
@@ -337,7 +343,9 @@ def changed_worktree_paths(root: Path) -> list[Path]:
     return paths
 
 
-def normalize_apply_targets(root: Path, candidates: set[Path]) -> list[Path]:
+def normalize_apply_targets(
+    root: Path, candidates: set[Path], include_oracle: bool = True
+) -> list[Path]:
     """apply finding 列挙対象として扱える通常テキスト file だけに正規化する。"""
     targets: list[Path] = []
     for path in sorted({candidate.resolve() for candidate in candidates}):
@@ -347,7 +355,11 @@ def normalize_apply_targets(root: Path, candidates: set[Path]) -> list[Path]:
             rel_parts = path.relative_to(root.resolve()).parts
         except ValueError:
             continue
+        if not rel_parts:
+            continue
         if ".git" in rel_parts or ".agents" in rel_parts or rel_parts[0] == "memo":
+            continue
+        if not include_oracle and rel_parts[0] == "oracle":
             continue
         if path.name == "INDEX.md" or is_binary(path):
             continue
