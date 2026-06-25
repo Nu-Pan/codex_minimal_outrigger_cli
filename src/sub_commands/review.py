@@ -425,26 +425,29 @@ def render_review_oracle_report(
         f"| {idx} | `{path_display(root, path)}` | {findings_by_path.get(str(path), findings_by_path.get(path_display(root, path), 0))} |"
         for idx, path in enumerate(oracle_files, 1)
     )
+    frontmatter = [
+        ("command", "review oracle"),
+        ("generated_at", timestamp()),
+        ("repo_root", root),
+        ("scope", scope),
+        ("session_branch", session_branch),
+        ("session_fork_commit", state.session.session_start_commit),
+        ("review_branch", review_branch),
+        ("review_fork_commit", review_fork_commit),
+        ("review_join_commit", review_join_commit),
+        ("oracle_count_total", oracle_count_total),
+        ("oracle_count_evaluated", len(oracle_files)),
+        ("fatal_findings_accepted_count", len(fatal_accepted)),
+        ("minor_findings_accepted_count", len(minor_accepted)),
+        ("fatal_findings_rejected_count", len(fatal_rejected)),
+        ("minor_findings_rejected_count", len(minor_rejected)),
+        ("result", result),
+        ("session_id", session_id),
+    ]
     return "\n".join(
         [
             "---",
-            "command: review oracle",
-            f"generated_at: {timestamp()}",
-            f"repo_root: {root}",
-            f"scope: {scope}",
-            f"session_branch: {session_branch}",
-            f"session_fork_commit: {state.session.session_start_commit}",
-            f"review_branch: {review_branch}",
-            f"review_fork_commit: {review_fork_commit}",
-            f"review_join_commit: {review_join_commit}",
-            f"oracle_count_total: {oracle_count_total}",
-            f"oracle_count_evaluated: {len(oracle_files)}",
-            f"fatal_findings_accepted_count: {len(fatal_accepted)}",
-            f"minor_findings_accepted_count: {len(minor_accepted)}",
-            f"fatal_findings_rejected_count: {len(fatal_rejected)}",
-            f"minor_findings_rejected_count: {len(minor_rejected)}",
-            f"result: {result}",
-            f"session_id: {session_id}",
+            *(_render_frontmatter_field(name, value) for name, value in frontmatter),
             "---",
             "# cmoc review oracle report",
             "## Verdict",
@@ -460,6 +463,10 @@ def render_review_oracle_report(
             "",
         ]
     )
+
+
+def _render_frontmatter_field(name: str, value: object) -> str:
+    return f"{name}: {'null' if value is None else value}"
 
 
 def render_finding_section(findings: list[dict]) -> str:

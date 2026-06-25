@@ -54,6 +54,7 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
     assert "## Verdict" in rendered
     assert "## Evaluated oracle file" in rendered
     assert "`oracle/spec.md`" in rendered
+    assert "review_join_commit: null" in rendered
     assert any(call.startswith("review oracle enumerate findings") for call in calls)
     assert "review oracle merge findings" not in calls
 
