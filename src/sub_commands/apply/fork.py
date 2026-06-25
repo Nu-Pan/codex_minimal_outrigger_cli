@@ -254,23 +254,6 @@ def sanitize_commit_message(message: str, finding: dict) -> str:
     return "Apply cmoc finding"
 
 
-def enumerate_apply_findings(
-    root: Path,
-    scope: str,
-    config: CmocConfig,
-    codex_exec: CodexExec,
-    log_root: Path | None = None,
-) -> list[dict]:
-    """scope から apply finding 列挙対象を決めて finding を収集する。"""
-    return enumerate_apply_findings_for_targets(
-        root,
-        enumerate_apply_targets(root, scope),
-        config,
-        codex_exec,
-        log_root=log_root,
-    )
-
-
 def enumerate_apply_findings_for_targets(
     root: Path,
     targets: list[Path],
