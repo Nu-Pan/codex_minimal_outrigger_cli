@@ -164,6 +164,21 @@ def test_ensure_cmoc_ignored_updates_gitignore(tmp_path: Path) -> None:
     )
     assert ignored.returncode == 0
 
+
+def test_ensure_cmoc_ignored_keeps_existing_effective_pattern(
+    tmp_path: Path,
+) -> None:
+    root = make_repo(tmp_path)
+    (root / ".gitignore").write_text(".cmoc/\n")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "ignore cmoc")
+
+    ensure_cmoc_ignored(root)
+
+    assert (root / ".gitignore").read_text() == ".cmoc/\n"
+    assert run_git(root, "status", "--short").stdout.strip() == ""
+
+
 def test_file_access_mode_values_are_json_ready() -> None:
     assert FileAccessMode.READONLY.value == "readonly"
     assert FileAccessMode.REPO_WRITE.value == "repo_write"

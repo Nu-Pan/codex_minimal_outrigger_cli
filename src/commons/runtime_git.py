@@ -92,41 +92,45 @@ def delete_branch(root: Path, branch: str, force: bool = False) -> CommandResult
     return run_git(["branch", "-D" if force else "-d", branch], root, check=False)
 
 
+def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
+    tracked = run_git(["ls-files", "--", ".cmoc"], root).stdout.strip()
+    ignored = run_git(
+        ["check-ignore", "-q", ".cmoc/.__cmoc_ignore_probe__"],
+        root,
+        check=False,
+    )
+    return tracked, ignored.returncode
+
+
 def ensure_cmoc_ignored(root: Path) -> None:
+    tracked, ignored_returncode = _cmoc_ignore_status(root)
+    if not tracked and ignored_returncode == 0:
+        return
+
     gitignore = root / ".gitignore"
-    existing = gitignore.read_text().splitlines() if gitignore.exists() else []
-    if "/.cmoc/" not in existing:
+    if ignored_returncode != 0:
+        existing = gitignore.read_text().splitlines() if gitignore.exists() else []
         with gitignore.open("a") as f:
             if existing and existing[-1] != "":
                 f.write("\n")
             f.write("/.cmoc/\n")
     run_git(["rm", "--cached", "-r", "--ignore-unmatch", ".cmoc"], root)
-    tracked = run_git(["ls-files", "--", ".cmoc"], root).stdout.strip()
-    ignored = run_git(
-        ["check-ignore", "-q", ".cmoc/.__cmoc_ignore_probe__"],
-        root,
-        check=False,
-    )
-    if tracked or ignored.returncode != 0:
+    tracked, ignored_returncode = _cmoc_ignore_status(root)
+    if tracked or ignored_returncode != 0:
         raise CmocError(
             ".cmoc を git 追跡対象外にできませんでした。",
             [".gitignore と git index の状態を確認してください。"],
-            f"tracked:\n{tracked}\ncheck-ignore returncode: {ignored.returncode}",
+            f"tracked:\n{tracked}\ncheck-ignore returncode: {ignored_returncode}",
         )
 
 
 def require_cmoc_ignored(root: Path) -> None:
-    tracked = run_git(["ls-files", "--", ".cmoc"], root).stdout.strip()
-    ignored = run_git(
-        ["check-ignore", "-q", ".cmoc/.__cmoc_ignore_probe__"],
-        root,
-        check=False,
-    )
-    if tracked or ignored.returncode != 0:
+    tracked, ignored_returncode = _cmoc_ignore_status(root)
+    if tracked or ignored_returncode != 0:
         raise CmocError(
             ".cmoc が git 追跡対象外に初期化されていません。",
             ["cmoc init を実行してから再実行してください。"],
-            f"tracked:\n{tracked}\ncheck-ignore returncode: {ignored.returncode}",
+            f"tracked:\n{tracked}\ncheck-ignore returncode: {ignored_returncode}",
         )
 
 
