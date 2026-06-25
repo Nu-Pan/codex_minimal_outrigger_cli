@@ -1,23 +1,25 @@
 # `apply`
 
 ## Summary
-- apply サブコマンド群の実装ディレクトリで、apply run の開始、破棄、join、実行時補助処理、実行結果 report 生成を扱う入口。
-- session branch と apply branch/worktree の関係、apply state の遷移、対象ファイルへの finding 適用、禁止領域差分の巻き戻し、merge・cleanup・report 出力まで、apply lifecycle 全体を構成する下位実装へ進むための対象。
+- apply サブコマンドの実行ライフサイクルを扱う実装群への入口。apply run の開始、isolated worktree 上での適用ループ、成果 branch の session branch への join、未 join run の abandon、report 生成、apply 用 worktree・branch・process id の補助処理を含む。
+- apply scope に応じた対象 path の解釈、finding の列挙と適用、編集禁止対象へ差分が出た場合の検出とロールバック、merge conflict や想定外差分の扱いなど、apply 固有の制御フローと安全性境界を確認するための階層。
 
 ## Read this when
-- cmoc apply の lifecycle 全体のどの実装を読むべきか切り分けたいとき。
-- apply fork、apply join、apply abandon の実行条件、状態遷移、branch/worktree/process id の扱い、cleanup、CLI 出力や report 生成の入口を探したいとき。
-- apply 対象ファイルの列挙、finding 適用、禁止対象差分の rollback、apply branch の merge、INDEX.md conflict 自動解決、想定外差分の扱いなど、apply 固有の制御フローを調査・変更したいとき。
-- apply 用 worktree 特定、apply branch 名規則、pid 状態ファイル、実行中 apply process 停止確認など、apply の低レベル補助処理へ進みたいとき。
+- apply サブコマンドの開始、join、abandon を含む apply lifecycle 全体の実行条件、状態遷移、後片付けを調べたいとき。
+- apply run がどの branch・worktree・process id・report を作成、更新、削除するかを確認または変更したいとき。
+- apply scope による対象ファイル選定、finding の列挙・適用、変更 commit、未収束時の扱いなど、適用ループの制御を追いたいとき。
+- apply 中または join 時に、編集禁止対象への差分、想定外差分、merge conflict、force resolve がどのように扱われるか確認したいとき。
+- apply の実行結果 report、エラー report、差分要約、finding count 推移など、apply 固有の report 出力を確認または変更したいとき。
 
 ## Do not read this when
-- apply 以外の session、review、join など他サブコマンドの挙動や CLI 配線を調べたいとき。
-- session state の schema、session_id の生成、path model、git wrapper、report directory、CmocError 表示など、apply 固有ではない共通基盤だけを調べたいとき。
-- Codex CLI 呼び出し用の個別 parameter builder、finding 列挙・適用 prompt、Structured Output schema の詳細だけを変更したいとき。
-- oracle や test など、正本仕様断片またはテスト側から apply の期待挙動を確認したいとき。
+- apply 以外のサブコマンドの CLI 定義、実行フロー、report 出力を調べたいとき。
+- git command 実行、worktree root、branch 操作、clean worktree 判定、設定読み込み、CmocError 表示など、複数機能で共有される低レベル runtime だけを調べたいとき。
+- session state の schema、session_id の生成や管理、apply state の永続化モデルそのものを調べたいとき。
+- Codex CLI 呼び出しの共通 wrapper、prompt builder、Structured Output schema の一般規約だけを確認したいとき。
+- INDEX.md エントリー生成方針、oracle file と realization file の一般規約、または apply 固有ではないルーティング規約を調べたいとき。
 
 ## hash
-- 0128f561fbacf629add18c2b968da7beacc4a42f7cbae5f5129a69f989dcf856
+- 12f21f6b39a6759af5c72b425b55418406ea93ef8cadf24584e49599aaf9882f
 
 # `indexing.py`
 
