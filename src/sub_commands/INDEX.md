@@ -27,24 +27,23 @@
 # `indexing.py`
 
 ## Summary
-- 現在の work root に対して INDEX.md の保守を実行する indexing サブコマンド実装。clean worktree 確認、排他ロック、対象ディレクトリと子要素の列挙、既存エントリーの hash 検証、Codex CLI による不足エントリー生成、INDEX.md 書き戻し、更新分だけの git commit までを扱う。
-- INDEX.md の対象外判定として、git ignore、binary file、dot directory、root 直下の memo 配下を除外するルールを実装している。
-- Structured Output から INDEX.md entry Markdown を描画する処理と、既存 entry の必須セクションおよび hash 形式を検証して再利用可否を判定する処理の入口になる。
+- 現在の work root 全体に対する INDEX.md maintenance の実行手順を実装するサブコマンド領域の中核コード。clean worktree 確認、repository 単位の排他 lock、indexable 対象の列挙、鮮度 hash による既存 entry 再利用、Codex 呼び出しによる不足 entry 生成、INDEX.md 更新差分の commit までを扱う。
+- INDEX.md entry の Markdown 形式を検証・抽出・描画する処理と、対象本文の取り出し、binary・git ignored・root memo 除外、directory hash の再帰計算をまとめて確認する入口になる。
 
 ## Read this when
-- cmoc indexing の実行フロー、preflight での index 更新、または INDEX.md 更新を commit する挙動を確認・変更するとき。
-- INDEX.md の再生成対象になる directory/file の選別、memo や git ignored path や binary file の除外条件を確認・変更するとき。
-- 既存 INDEX.md entry の parse、hash 抽出、鮮度判定、Codex CLI への entry 生成依頼、Structured Output から Markdown への変換を扱うとき。
-- indexing 処理の排他制御や、git path 上の lock file を使った同時実行防止を確認・変更するとき。
+- INDEX.md maintenance の実行順序、排他制御、clean worktree 前提、更新後 commit の条件を確認または変更したいとき。
+- indexable な directory や child の判定、root memo・git ignored・binary file の除外条件、directory traversal の挙動を確認または変更したいとき。
+- 既存 INDEX.md entry の再利用条件、必須 section と hash の検証、対象 hash の計算方式、entry の Markdown rendering を確認または変更したいとき。
+- Codex CLI に INDEX.md entry 生成を依頼する入力内容、並列生成数、codex_exec が未指定の場合のエラー処理を確認または変更したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの通常 CLI 登録や Typer app 全体の配線だけを確認したいとき。
-- INDEX.md entry の内容を生成する prompt や AgentCallParameter の詳細を確認したいときは、entry 生成パラメータを組み立てる acp/builder 側を直接読む。
-- work root の定義、git wrapper、hash 計算、config 読み込み、clean worktree 判定などの共通 runtime helper の詳細だけを確認したいとき。
-- 生成済み INDEX.md の各エントリー内容を読むべきか判断したいだけのときは、対象階層の INDEX.md を読む。
+- 個別サブコマンドの CLI 登録や Typer app 全体の構成だけを確認したいとき。
+- INDEX.md entry 生成 prompt の具体的な AgentCallParameter 構築内容だけを確認したいとき。
+- git 実行 wrapper、config 読み込み、hash 計算、binary 判定、work root 解決などの共通 runtime helper 自体を確認したいとき。
+- 生成された INDEX.md の個別 entry 内容やルーティング文書の文章品質だけを確認したいとき。
 
 ## hash
-- 4b30b315415bcf463bcf923b56e4604d4bc793ed405072d5d0e131fa6f893dc7
+- e9d9c48b2422dc3b9603c8c9211952730e6ea8312162c7bda63ade6ca37cadf4
 
 # `init.py`
 
@@ -180,18 +179,19 @@
 # `tui.py`
 
 ## Summary
-- 対話型実行のために、利用者がエディタで書いた依頼文を読み取り、別の Codex 実行で実行パラメータを解決し、完成プロンプトを保存して Codex TUI を起動するサブコマンド実装。
-- エディタ選択、元プロンプトと完成プロンプトのログ保存、Markdown 見出しの構造化、TUI で許可されるファイルアクセスモード検証、解決済みパラメータから AgentCallParameter を組み立てる処理を含む。
+- 利用者が入力した依頼文を編集させ、依頼内容から TUI 実行パラメータを解決し、完全な prompt を保存して Codex TUI を起動する一連の処理を担う。
+- TUI 用の元 prompt テンプレート作成、エディタ選択と実行、HTML comment 除去、解決済み JSON からの AgentCallParameter 構築、Markdown 見出しの StructDoc 化を扱う。
 
 ## Read this when
-- 対話型依頼入力から Codex TUI を起動する一連の制御フローを確認・変更したいとき。
-- TUI 起動前のパラメータ解決、完成プロンプト生成、ファイルアクセスモード制限、AgentCallParameter の組み立てを扱うとき。
-- 利用者の依頼文を保存する場所、コメント除去、Markdown 見出し単位の分解、エディタ起動失敗時のエラー処理を確認したいとき。
+- `cmoc tui` の起動処理、利用者 prompt の作成・編集・読み込み、または TUI 実行時に Codex へ渡すパラメータの組み立てを確認・変更したいとき。
+- TUI で許可する file access mode、parameter 解決結果の読み取り、完全 prompt の保存先、または Codex TUI 呼び出し時の引数を追う必要があるとき。
+- 利用者が書いた Markdown prompt を構造化された詳細指示へ変換する処理や、コードフェンス内の見出しを無視する解析挙動を確認したいとき。
+- `cmoc tui` 実行時にエディタ未検出、エディタ異常終了、TUI 非対応の file access mode で発生するエラーを調査するとき。
 
 ## Do not read this when
-- 通常の非対話サブコマンド実行や、TUI を介さない Codex 呼び出しだけを扱うとき。
-- TUI 用のパラメータ解決プロンプトそのものや、許可されるファイルアクセスモードの定義だけを確認したいとき。
-- 完成プロンプト全体の共通構築ロジックや StructDoc の Markdown レンダリング仕様を変更したいとき。
+- TUI 以外のサブコマンド本体、CLI 引数定義、設定ファイル形式、または Codex 実行基盤そのものを調べたいだけのとき。
+- TUI パラメータ解決用 prompt の中身や schema 定義を調べたいときは、解決パラメータを構築する別モジュールを直接読む方がよい。
+- 完全 prompt の一般的な構成規則や render 処理そのものを調べたいときは、prompt 構築や構造化 markdown の共通処理を直接読む方がよい。
 
 ## hash
-- f494d4063fe28690ae5c486e0fdb15b09f258d9de30d57547e9e5da0c7691eb3
+- 0be11b2c52c4c301f4207952ae677296c80919fb5408d827ce8e7fc28f87a634

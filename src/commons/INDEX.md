@@ -55,25 +55,25 @@
 # `runtime_codex.py`
 
 ## Summary
-- Codex CLI を外部プロセスとして呼び出す実行時処理を担う実装。exec 呼び出しでは profile・Structured Output schema・ログ出力先を準備し、容量エラーの指数バックオフ、quota 枯渇時の代表プローブによる待機、Structured Output 検証リトライ、結果オブジェクト化までを扱う。
-- 対話型呼び出しでは profile と call log を準備して CLI/TUI を起動し、終了コードに応じたイベント記録と cmoc エラー化を行う。Codex 呼び出しの実行制御、ログ記録、待機時間集計、失敗時メッセージの境界を確認する入口になる。
+- Codex CLI 呼び出しを実行する runtime 層で、exec と TUI の起動準備、profile/schema/log path の生成、subprocess 実行、call log と console/subcommand log への記録、結果オブジェクト化を担う。
+- exec 実行では Structured Output の読み取りと jsonschema 検証、semantic retry、capacity error の指数 backoff、quota error 時の代表 probe による待機共有と resume token 継続を一括して扱う。
+- TUI 実行では profile と call log を準備して対話型 Codex を起動し、終了結果を記録して失敗時に cmoc 用例外へ変換する。
 
 ## Read this when
-- Codex CLI の exec 呼び出し手順、引数構築、標準出力・標準エラー・最終出力・call log の保存先や記録内容を確認したいとき。
-- Structured Output schema を指定した呼び出しで、schema 準備、出力 JSON 読み取り、jsonschema 検証、検証失敗時の semantic retry の挙動を調べるとき。
-- Codex CLI の capacity error や quota error に対する retry・polling・resume token 利用・待機時間集計の制御を変更または検証するとき。
-- Codex CLI 呼び出し結果から返される実行結果オブジェクト、または CLI/TUI 呼び出し失敗時に投げる cmoc エラーの内容を確認するとき。
-- サブコマンドログへ記録される Codex 呼び出しイベント、quota wait 集計、コンソールに出す呼び出し概要の責務を追うとき。
+- Codex CLI の exec/TUI 呼び出し方法、argv、cwd/env、profile/schema 準備、Codex home 検証の流れを確認または変更したいとき。
+- Codex 呼び出しごとの stdout/stderr/output/call log の保存場所、保存内容、console 表示、subcommand log event の内容を確認または変更したいとき。
+- Structured Output の検証失敗時 retry、capacity error retry、quota 枯渇時の polling・待機共有・resume 継続の制御を調査または変更したいとき。
+- Codex CLI 呼び出し失敗を cmoc の例外や結果型へ変換する境界を追いたいとき。
 
 ## Do not read this when
-- Codex profile の生成内容、Codex home の解決・検証、quota/capacity error の判定、resume token 抽出、出力 JSON 読み取りの詳細を確認したいだけのときは、それらを提供する下位 helper を直接読む。
-- cmoc 設定ファイルの読み込み規則や設定値の構造を調べたいときは、設定読み込み・設定型定義を扱う対象を読む。
-- repo root、work root、ログディレクトリ、timestamp、duration 表示などの path・時刻 helper の仕様を確認したいだけのときは、runtime path 系の対象を読む。
-- Codex 呼び出しを使う各サブコマンド側の業務ロジック、prompt 作成、AgentCallParameter の構築条件を調べたいときは、呼び出し元のコマンド実装を読む。
-- 一般的なコマンド結果型や Codex 実行結果型のフィールド定義だけを確認したいときは、結果型を定義する対象を読む。
+- Codex profile 名、Codex home、schema file、resume token、quota/capacity error 判定、output JSON 読み取りなどの個別 helper 実装だけを確認したいときは、それらを定義する profile 周辺の runtime helper を直接読む。
+- cmoc 設定の読み込み規則そのものを確認したいときは、設定読み込み側を読む。
+- repo/work/log path や timestamp/duration 表示の定義そのものを確認したいときは、path runtime 側を読む。
+- Codex 呼び出し結果や通常 command 結果のデータ構造だけを確認したいときは、結果型定義を読む。
+- サブコマンド単位の logger の実装やイベント保存形式そのものを確認したいときは、logging 側を読む。
 
 ## hash
-- 6a391ab01e0f28e9c47f5918dd0be660951f467492bc952bbff75b902ac57a0a
+- c607785317cf43eeaa4368a33db8a5db35146b9b1203b630a3993bffa3dc0d75
 
 # `runtime_codex_profile.py`
 
@@ -237,19 +237,21 @@
 # `runtime_state.py`
 
 ## Summary
-- cmoc の session state file を表すデータ構造と、その JSON 読み書き、session-id 解決、管理 branch からの状態ロードを扱う実装。
-- session 側と apply 側の状態値、home branch、開始 commit、oracle snapshot commit など、session/apply の永続状態を Python の dataclass と dict/JSON の間で変換する入口になる。
-- 管理 branch 名から対応する session state file を特定し、存在しない状態ファイルや不正な branch 名を cmoc の実行時エラーとして扱う責務を持つ。
+- session branch と apply branch に紐づく永続 state の構造、保存先、読み書き、branch 名からの session-id 抽出を扱う共通実装。
+- session state file を dataclass へ復元し、未知 field を無視しつつ欠落 field を既定値で補う互換的な読み込みと、canonical JSON 形式での書き戻しを提供する。
+- home branch に対応する active session の探索や、cmoc 管理 branch ではない場合・state file が存在しない場合の利用者向けエラー生成の入口になる。
 
 ## Read this when
-- session state file の schema、初期値、JSON への保存形式、または既存 JSON から dataclass へ復元する挙動を確認・変更したいとき。
-- cmoc の session branch や apply branch から session-id を取り出す規則、または不正な branch 名に対するエラー条件を確認・変更したいとき。
-- 現在の管理 branch に対応する session state file を読み込む処理、状態ファイルの保存処理、home branch に紐づく active session の探索処理を扱うとき。
+- session state file の schema、既定値、JSON 永続化形式、読み込み時の未知 field・欠落 field の扱いを確認または変更したいとき。
+- cmoc/session または cmoc/apply branch 名から session-id を特定する処理や、branch 名不正時のエラー文言・判定条件を確認または変更したいとき。
+- active session にぶら下がる apply run の状態、session と home branch の対応、最後に join した oracle snapshot commit の保持方法を追うとき。
+- home branch から active session state file を探す処理、または state file の保存場所を決める処理を確認したいとき。
 
 ## Do not read this when
-- CLI コマンドの引数定義、表示文言、コマンド全体の制御フローだけを確認したいとき。
-- sessions directory そのものの配置規則や root path の定義だけを確認したいとき。
-- CmocError の表示形式やエラー出力処理そのものを変更したいとき。
+- CLI サブコマンドの引数定義、画面出力、コマンド全体の制御フローだけを確認したいときは、各 command 実装を読む。
+- session state file の親ディレクトリや run/work/cmoc root の定義そのものを確認したいときは、runtime path を扱う共通実装を読む。
+- CmocError の表示形式、例外クラスの責務、エラー出力全体の整形を確認したいときは、runtime error を扱う共通実装を読む。
+- git branch の作成・切替・削除など、実際の git 操作を確認したいだけのときは、git 操作や各 workflow の実装を読む。
 
 ## hash
-- c348b133dcab2a30614395d8281cb2c70a9b5c16188bdc32eb21f55671e17ff4
+- 624c3a7d79aca459ea3b8c59120e7ebf3f0c478b5898b5c35fa77cb313245791
