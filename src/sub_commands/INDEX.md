@@ -1,91 +1,94 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実装群で、apply run の開始、実行結果の取り込み、破棄、report 生成、worktree・branch・process 状態の補助処理を扱う入口。
-- session branch と apply branch/worktree の関係、apply state の ready/running/done 遷移、Codex による finding 適用、join/abandon 時の cleanup や warning 出力を追うための実装がまとまっている。
-- apply 実行中の編集禁止対象差分の検出・ロールバック、想定外差分や merge conflict の扱い、process id の保存・停止確認など、apply run のライフサイクル全体に関わる制御へ進む起点になる。
+- apply 系サブコマンドの実行ライフサイクルを扱う実装群への入口。isolated worktree での適用開始、active run の破棄、完了・失敗結果の取り込み、report 生成、実行中 process の状態管理と停止確認をまとめて扱う。
+- session branch と apply branch/worktree の対応、apply state の遷移、編集禁止対象の差分検出と復元、join 前後の想定外差分や cleanup など、apply run 全体にまたがる制御を調べる際の起点になる。
+- 個別の処理は開始、破棄、取り込み、report、runtime 補助に分かれているため、apply のどの段階を確認するかを決めてから下位対象へ進むためのルーティング対象。
 
 ## Read this when
-- apply run を開始して isolated worktree 上で finding を適用し、差分 commit と report 作成まで進める全体フローを確認・変更したいとき。
-- 完了した apply run を session branch へ取り込む join 処理、merge conflict、想定外差分、force-resolve、cleanup の挙動を確認・変更したいとき。
-- 未 join の active apply run を破棄し、process 停止、apply worktree/branch 削除、state 初期化を行う abandon 処理を確認・変更したいとき。
-- apply branch や session branch から対象 worktree を特定する規則、apply branch 名からの期待 path 導出、process id 状態ファイルの読み書きや削除を確認・変更したいとき。
-- apply fork や join/abandon の利用者向け report 内容、結果ラベル、frontmatter、変更要約、失敗時フォールバックを確認・変更したいとき。
-- apply 実行中または join 時に、編集禁止対象の差分、想定外差分、INDEX.md だけの conflict 自動解決など、apply 固有の差分制御を調べたいとき。
+- apply run の開始から終了後の取り込みまたは破棄まで、apply 系サブコマンド全体の責務分担を把握したいとき。
+- apply branch/worktree の作成・特定・削除、process id 管理、apply state の ready/active/completed/error 周辺の遷移をどこで扱うか探したいとき。
+- 編集禁止対象の差分ロールバック、所見の適用、変更 commit、join 前の想定外差分検出、force resolve、report 出力など、apply run の段階別実装へ進む入口を選びたいとき。
+- apply abandon、apply fork、apply join のいずれかに関する実行条件、失敗条件、CLI 出力、cleanup、warning の調査対象を切り分けたいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンドの CLI 登録、dispatch、引数定義を調べたいとき。
-- session state の型定義、永続化形式、session_id の生成・管理、apply.apply_branch の schema そのものを調べたいとき。
-- git command wrapper、worktree root、branch 操作、clean worktree 判定、timestamp、report directory、config 読み込みなどの共通 runtime 基盤だけを調べたいとき。
-- Codex 呼び出し用 prompt や structured output builder の詳細だけを調べたいとき。
-- oracle file の正本仕様、INDEX.md 生成規則、編集禁止領域の原則そのものを調べたいとき。
-- apply package に import 時処理や再 export があるかだけを確認したい場合を除き、パッケージ説明だけを読む目的のとき。
+- apply 以外のサブコマンド登録、CLI 全体の引数定義、共通 command dispatch を調べたいときは、上位のサブコマンド実装へ進む。
+- session state や apply state の schema、session_id の生成、状態モデルそのものを確認したいときは、状態定義や session 管理側へ進む。
+- git wrapper、worktree root、path model、CmocError、timestamp、report directory などの共通基盤だけを調べたいときは、共通 runtime や utility 側へ進む。
+- Codex 呼び出し用 prompt、structured output、AgentCallParameter の組み立てだけを確認したいときは、apply 本体ではなく該当 builder 側へ進む。
+- apply の外部挙動を検証するテスト観点や fixture を調べたいときは、対応するテスト領域へ進む。
 
 ## hash
-- f911a56f1c0739f0c4c0544fe220f796d3c75297958c2780ae20d7950bffa663
+- 56dfcc3494341c303562ef37109cc2cca66d512be10b3d73be3eb0edd7f934e0
 
 # `indexing.py`
 
 ## Summary
-- 現在の work root 全体に対する INDEX.md maintenance の実行手順を実装するサブコマンド領域の中核コード。clean worktree 確認、repository 単位の排他 lock、indexable 対象の列挙、鮮度 hash による既存 entry 再利用、Codex 呼び出しによる不足 entry 生成、INDEX.md 更新差分の commit までを扱う。
-- INDEX.md entry の Markdown 形式を検証・抽出・描画する処理と、対象本文の取り出し、binary・git ignored・root memo 除外、directory hash の再帰計算をまとめて確認する入口になる。
+- 現在の work root に対する INDEX.md maintenance サブコマンドと preflight 連携を実装する。
+- repository 単位の排他 lock、indexable children/directories の列挙、既存 entry の hash 検証、Codex CLI による不足 entry 生成、INDEX.md 更新差分の commit までを扱う。
+- INDEX.md entry の Markdown rendering、対象 hash 計算、memo・git ignored・binary file の除外判定など、indexing 処理全体の制御がまとまっている。
 
 ## Read this when
-- INDEX.md maintenance の実行順序、排他制御、clean worktree 前提、更新後 commit の条件を確認または変更したいとき。
-- indexable な directory や child の判定、root memo・git ignored・binary file の除外条件、directory traversal の挙動を確認または変更したいとき。
-- 既存 INDEX.md entry の再利用条件、必須 section と hash の検証、対象 hash の計算方式、entry の Markdown rendering を確認または変更したいとき。
-- Codex CLI に INDEX.md entry 生成を依頼する入力内容、並列生成数、codex_exec が未指定の場合のエラー処理を確認または変更したいとき。
+- INDEX.md の自動生成・再生成・鮮度判定・commit 作成の挙動を変更するとき。
+- indexing サブコマンドまたは Codex 実行前 preflight で INDEX.md を更新する流れを確認するとき。
+- INDEX.md entry の必須 section、hash 抽出、Structured Output から Markdown への変換規則を確認するとき。
+- indexing 対象から除外される directory/file、memo 配下、git ignored、binary file の扱いを確認するとき。
+- INDEX.md 更新処理の並列生成数、排他 lock、git add/commit の制御に関わる不具合を調査するとき。
 
 ## Do not read this when
-- 個別サブコマンドの CLI 登録や Typer app 全体の構成だけを確認したいとき。
-- INDEX.md entry 生成 prompt の具体的な AgentCallParameter 構築内容だけを確認したいとき。
-- git 実行 wrapper、config 読み込み、hash 計算、binary 判定、work root 解決などの共通 runtime helper 自体を確認したいとき。
-- 生成された INDEX.md の個別 entry 内容やルーティング文書の文章品質だけを確認したいとき。
+- 個別の INDEX.md entry 生成 prompt や Structured Output parameter の内容だけを確認したいときは、entry parameter builder 側を読む。
+- CLI 共通実行 wrapper、git 実行、config 読み込み、hash 計算、work root 解決などの runtime helper 自体を変更するときは、それぞれの runtime 実装を読む。
+- indexing 以外のサブコマンドの CLI 挙動や preflight 挙動を調べるときは、対象サブコマンドまたは共通 preflight 実装を読む。
+- 生成済み INDEX.md の個別 entry 内容を読むべきか判断したいだけのときは、対象 directory の routing 情報を読む。
 
 ## hash
-- e9d9c48b2422dc3b9603c8c9211952730e6ea8312162c7bda63ade6ca37cadf4
+- 0caf28ab06e6e86498b05c35bfeadc9c9df90eab947f5936cac13c86cc9f9d8f
 
 # `init.py`
 
 ## Summary
-- リポジトリを cmoc が扱える初期状態へ同期する init サブコマンドの実装。ログ作成前の .cmoc ignore 保証、init commit 作成、利用者が実行前から持っていた .gitignore と staged 差分の退避・復元、成功結果の Markdown 出力を扱う。
+- リポジトリを cmoc が扱える初期状態へ同期する init サブコマンドの実装。repo root の `.cmoc` ignore と設定同期を行い、必要な初期コミットを作成しつつ、実行前から存在した利用者の staged 差分と `.gitignore` の作業ツリー・index 状態を復元する。
+- ログ作成前に `.cmoc` ignore を保証するための事前処理と、その副作用を通常の復元対象から識別する一時状態管理を含む。
+- 成功時に利用者へ表示する Markdown 形式の結果文を組み立てる。
 
 ## Read this when
-- cmoc init の実行内容、init commit の作成条件、stdout に出す成功結果を確認または変更したいとき。
-- init 実行時に .gitignore へ /.cmoc/ を追加する処理や、ログ作成前にその ignore を保証する処理を確認または変更したいとき。
-- init 実行前から存在した staged 差分や .gitignore の worktree/index/head 状態を、init 後にどう復元するか確認または変更したいとき。
+- init サブコマンドが repo root に対してどの初期化処理を行うか確認・変更したいとき。
+- 初期化時の `.gitignore`、`.cmoc`、設定同期、初期コミット作成の扱いを確認したいとき。
+- init 実行前から staged だった利用者差分を初期化コミットへ混ぜない制御や、実行後に staged 差分を戻す処理を確認したいとき。
+- ログ作成前に `.cmoc` ignore を保証する事前処理と、そのときの `.gitignore` 状態保持・失敗時破棄を確認したいとき。
+- init 成功時の stdout 表示内容を変更・検証したいとき。
 
 ## Do not read this when
-- init 以外のサブコマンドの CLI 挙動や出力を調べたいとき。
-- repo root 判定、git コマンド実行、設定同期、.cmoc ignore の基本処理そのものを調べたいとき。
-- init の外部挙動を検証するテストケースだけを探しているとき。
+- 他サブコマンドの通常実行ラッパーやログ保存の共通挙動だけを調べたいときは、CLI サブコマンド実行基盤を扱う共通実装を読む。
+- repo root の特定方法、git 実行 wrapper、設定同期、`.cmoc` ignore の具体的な実装だけを調べたいときは、それらを提供する runtime 側の実装を読む。
+- init 以外のサブコマンドの利用者向け挙動、出力、状態更新を調べたいときは、該当するサブコマンド実装を読む。
+- テストで期待される init の外部挙動だけを確認したいときは、対応するテストを読む。
 
 ## hash
-- 2d2315a5f424230c542ae2b1532a4dd9a9c31d25ff641f9fa0bfdf275980e15f
+- f6cfac0c12fdaaa4d2af3187ac858030cdd5c8c77ab1be9f544af785191ef79a
 
 # `review.py`
 
 ## Summary
-- active な session branch 上で oracle review を実行するサブコマンド統括フローを定義している。
-- session 状態確認、clean worktree 確認、review 用一時 branch/worktree のライフサイクル、対象列挙・finding loop・INDEX 取り込み・レポート生成 helper の呼び出し順序を扱う入口になる。
+- active session branch 上の oracle を isolated review worktree でレビューするサブコマンド実装の入口を扱う。
+- scope 検証、session branch と worktree 状態の前提確認、review 用 branch/worktree の作成と後始末、対象 oracle file の列挙、Codex 実行ループ、INDEX 変更の commit/merge、review report 出力までの orchestration を担う。
+- レビュー対象の列挙、レビュー実行ループ、report 描画、merge conflict 解決などの詳細処理は下位 helper module に委譲し、この対象はそれらを CLI コマンドとして接続する位置づけにある。
 
 ## Read this when
-- oracle をレビューするサブコマンドの実行条件、作業ツリーの清潔性確認、一時 worktree/branch のライフサイクル、または active session branch 制約を確認したいとき。
-- review oracle 全体の呼び出し順序、失敗時にも report を書く制御、または下位 helper の接続を確認・変更したいとき。
+- oracle review サブコマンドの実行順序、前提条件、失敗時 report 出力、または一時 review worktree と一時 branch のライフサイクルを確認したいとき。
+- review scope の受け付け条件や、active session branch・clean worktree・cmoc ignore 確保などの preflight がどこで行われるかを追うとき。
+- oracle review の処理全体で、対象列挙、Codex review loop、INDEX 変更 commit、review branch merge、report 書き込みがどの順でつながるかを把握したいとき。
+- CLI 層から review 関連 helper へ渡される主要な値、特に session state、config、review worktree、review branch、fork/join commit、findings の流れを確認したいとき。
 
 ## Do not read this when
-- 通常の CLI アプリ登録、Typer の command wiring、または他サブコマンドの引数定義だけを調べたいとき。
-- review 対象となる oracle file の列挙条件、session scope と full scope の違い、INDEX.md と binary file を除外する対象選定だけを調べるときは、`review_targets.py` を読む。
-- finding を列挙・統合・反証/擁護検証・判定するループ制御、Structured Output の finding list への適用、finding id や verdict の扱いを変更するときは、`review_loop.py` を読む。
-- review worktree で生成された INDEX.md 差分だけを commit/merge する制御、INDEX.md 以外の差分検出、merge conflict を session 側採用で解消する挙動を確認するときは、`review_index.py` を読む。
-- review 結果レポートの frontmatter、判定区分、対象 oracle file 一覧、fatal/minor finding 表示、path 表示の整形を変更するときは、`review_report.py` を読む。
-- oracle review 用 prompt parameter の具体的な文面や Structured Output schema の定義を確認したいときは、builder 側の該当実装を読む。
-- git command 実行、worktree 操作、branch 操作、設定読み込み、session state 読み込み、report directory 解決などの共通 runtime helper 自体を調べたいときは、runtime 側の実装を読む。
-- oracle file の正本仕様内容そのものや、INDEX.md エントリーとして何を書くべきかの規則を確認したいときは、oracle 側の仕様断片を読む。
-- 生成済みレポートの個別内容や過去実行結果を確認したいだけのときは、レポート出力先の生成物を読む。
+- oracle file の列挙条件や scope ごとの対象選択の詳細だけを確認したい場合は、対象列挙を担当する helper を読む。
+- Codex に渡す review prompt、review loop の反復制御、finding の merge operation 適用の詳細だけを確認したい場合は、review loop 側の helper を読む。
+- review report の表示形式、finding section の描画、report file の書き込み内容だけを変更したい場合は、report 生成を担当する helper を読む。
+- review branch の merge、INDEX 変更 commit、conflict 解決、worktree status path の扱いだけを調べたい場合は、review index 操作を担当する helper を読む。
+- 通常の indexing preflight の中身や、Codex 実行・git worktree 作成・branch 削除など runtime 共通処理の実装詳細を確認したい場合は、それぞれの共通 helper を直接読む。
 
 ## hash
-- da34890c9d586595154820a8b028253f100cb4b390c3742335e67d7621ffc2b5
+- 683f45afe7813f49a04b82cb6d1ba48c5faf9f4a588193292002d1d82a68fc2d
 
 # `review_index.py`
 
@@ -160,38 +163,42 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドの実装をまとめるディレクトリ。active session の作成、home branch への取り込み、破棄など、session branch と session state を操作する各 subcommand 実装への入口になる。
-- 各実装は、現在 branch、worktree cleanliness、cmoc ignore、apply/session state、home branch などの事前条件を確認し、Git 操作・状態更新・利用者向け出力・失敗時のエラー報告を扱う。
+- session 系サブコマンドの実装をまとめる領域。通常 branch から session branch を作成する処理、active session branch を home branch へ取り込む処理、merge せず破棄する処理を扱う。
+- 各サブコマンドは実行前条件、worktree の clean 確認、cmoc ignore の保証、branch 切り替え、session state 更新、利用者向け出力、共通 CLI 実行 wrapper への接続を担う。
+- join では merge conflict 発生時に Codex CLI へ解消を依頼し、残存 conflict marker や unmerged path の検査から merge commit まで進める補助処理も含む。
 
 ## Read this when
-- session 系 subcommand のどの実装を読むべきかを選びたいとき。
-- session branch の作成、取り込み、破棄に関する実行条件、状態遷移、副作用、エラー処理の入口を探したいとき。
-- session 操作が branch 切り替え、branch 削除、state file 更新、clean worktree 要求、cmoc ignore 確認とどう関わるかを調べ始めるとき。
+- session fork、session join、session abandon の実行条件、状態遷移、branch 操作、利用者向け出力を確認または変更したいとき。
+- 通常 branch から session branch を作成する流れ、active session を home branch へ merge する流れ、または merge せず破棄する流れの実装入口を探すとき。
+- session 系サブコマンドが共通 CLI 実行 wrapper、indexing preflight、git 実行 helper、session state 読み書き helper をどの順序で呼び出すかを追いたいとき。
+- session join の conflict 解消依頼、解消後の検査、merge commit までの制御を確認したいとき。
 
 ## Do not read this when
-- session 以外の subcommand、共通 CLI ルーティング、Typer 登録全体を調べたいとき。
-- Git wrapper、branch 判定、worktree 検査、state file schema、path model などの共通 helper の詳細だけを調べたいとき。
-- 個別の session 操作がすでに決まっているとき。その場合は作成、取り込み、破棄など該当する実装へ直接進む。
+- session 以外のサブコマンド、CLI 全体のコマンド登録、Typer app 構成を調べたいとき。
+- session state の schema、state file path 算出、branch 判定、worktree clean 判定、git 実行、timestamp 生成など共通 runtime helper の内部実装を知りたいだけのとき。
+- apply、review、indexing など session 操作以外の業務処理を調べたいとき。
+- Codex CLI に渡す conflict 解消依頼パラメータの構築仕様そのものを確認したいとき。
 
 ## hash
-- af7779bdd3151ca37e91ef8170a3139762d0692fa00838305739f08a6405a43c
+- 466ff6de3251f18b083d7100e33214824fbab69ca3268efc0094e57e67b94cac
 
 # `tui.py`
 
 ## Summary
-- 利用者が入力した依頼文を編集させ、依頼内容から TUI 実行パラメータを解決し、完全な prompt を保存して Codex TUI を起動する一連の処理を担う。
-- TUI 用の元 prompt テンプレート作成、エディタ選択と実行、HTML comment 除去、解決済み JSON からの AgentCallParameter 構築、Markdown 見出しの StructDoc 化を扱う。
+- 利用者が編集した依頼文を起点に、TUI 用の実行パラメータ解決、完全 prompt の生成・保存、Codex TUI 起動までをつなぐサブコマンド実装。
+- 依頼文テンプレートの作成、エディタ選択・起動、HTML コメント除去、解決済み JSON からの AgentCallParameter 構築、Markdown 見出しの StructDoc 変換を扱う。
 
 ## Read this when
-- `cmoc tui` の起動処理、利用者 prompt の作成・編集・読み込み、または TUI 実行時に Codex へ渡すパラメータの組み立てを確認・変更したいとき。
-- TUI で許可する file access mode、parameter 解決結果の読み取り、完全 prompt の保存先、または Codex TUI 呼び出し時の引数を追う必要があるとき。
-- 利用者が書いた Markdown prompt を構造化された詳細指示へ変換する処理や、コードフェンス内の見出しを無視する解析挙動を確認したいとき。
-- `cmoc tui` 実行時にエディタ未検出、エディタ異常終了、TUI 非対応の file access mode で発生するエラーを調査するとき。
+- 対話的に依頼文を編集して Codex TUI を起動する処理の流れを確認・変更したいとき。
+- TUI 起動時の file access mode、model class、reasoning effort、完全 prompt 生成、structured output schema の扱いを確認したいとき。
+- 利用可能なエディタの選択順、エディタ異常終了時のエラー、依頼文テンプレートや保存先 log 領域の扱いを変更したいとき。
+- TUI 向けパラメータ解決結果の JSON から値や真偽値を取り出す規則、または Markdown 見出しを構造化 prompt に変換する規則を確認したいとき。
 
 ## Do not read this when
-- TUI 以外のサブコマンド本体、CLI 引数定義、設定ファイル形式、または Codex 実行基盤そのものを調べたいだけのとき。
-- TUI パラメータ解決用 prompt の中身や schema 定義を調べたいときは、解決パラメータを構築する別モジュールを直接読む方がよい。
-- 完全 prompt の一般的な構成規則や render 処理そのものを調べたいときは、prompt 構築や構造化 markdown の共通処理を直接読む方がよい。
+- 通常の非対話 CLI 実行、Codex exec の低レベル実行、または TUI 以外のサブコマンド起動処理だけを調べたいとき。
+- TUI パラメータ解決用 prompt の具体的な schema や選択肢定義そのものを調べたいときは、その解決パラメータを構築する側を読む。
+- 完全 prompt の共通フォーマットや StructDoc の markdown レンダリング仕様を調べたいときは、prompt 構築・構造化文書レンダリング側を読む。
+- INDEX 生成の preflight 処理そのものを調べたいときは、indexing の preflight 実装を読む。
 
 ## hash
-- 0be11b2c52c4c301f4207952ae677296c80919fb5408d827ce8e7fc28f87a634
+- da24e922e6a1930a64a5667c2c3867e90de41524c59de1c97005abece970b630

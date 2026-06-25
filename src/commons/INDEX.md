@@ -15,21 +15,20 @@
 # `cmoc_runtime.py`
 
 ## Summary
-- 共通 runtime 層の主要な関数・型・定数を一箇所から取り込めるようにする集約入口。Codex 実行、profile・設定・content hash、CLI 前提条件、error 表示、git 操作、logging、path、実行結果、session state などの下位 runtime 要素への公開面をまとめる。
-- 個別処理の実装本体ではなく、上位コードが共通 runtime 機能へアクセスするための import 境界を示す位置づけ。
+- 実行時処理で共通利用される helper・型・定数を一箇所から import できるように集約する入口。Codex 実行、profile、設定、ファイル内容、CLI 前提確認、エラー、git、logging、path、結果型、状態管理の公開 import 面を束ねるだけで、個別処理の実装は持たない。
 
 ## Read this when
-- 共通 runtime API の公開入口にどの下位要素が含まれているかを確認したいとき。
-- 上位モジュールから使える runtime helper、結果型、状態型、git helper、path helper などの import 経路を調整するとき。
-- 共通 runtime 層の分割後に、既存の呼び出し側へ提供する symbol の追加・削除・移動影響を確認するとき。
+- 実行時共通機能を利用する側で、どの helper・型・定数をまとめて import できるか確認したいとき。
+- 実行時共通 API の集約面に、新しい helper の公開や不要になった公開 import の削除を行うとき。
+- サブコマンド周辺の実装が参照する実行時 helper 群の入口を確認したいとき。
 
 ## Do not read this when
-- Codex 実行、profile 準備、設定同期、hash 書き込み、git 操作、logging、path 解決、session state などの具体的な挙動を変更したいとき。その場合は対応する下位実装を直接読む。
-- 特定の CLI subcommand の処理順やユーザー向け出力を調べたいとき。より直接の command 実装や runtime helper を読む。
-- 単一 helper の仕様・例外条件・副作用を確認したいとき。この集約入口ではなく、その helper が定義されている本文を読む。
+- Codex 実行、profile、設定、ファイル内容、CLI、エラー、git、logging、path、結果型、状態管理それぞれの具体的な挙動や副作用を確認したいとき。その場合は該当する個別実装を読む。
+- 特定 helper の仕様、入力、出力、失敗時挙動を変更したいとき。この集約入口ではなく、その helper が定義されている実装を読む。
+- テスト観点や利用者向け挙動を確認したいだけで、実行時共通 API の import 面を扱わないとき。
 
 ## hash
-- 697b93d9c8274835fd24b4573bca6b2be260ed6d224fcf13d28febda9d441568
+- 028f4dbeed1e9bc071b8b98b7f13a8b8e8c31ded9fe29841cc9cf665e8a110f1
 
 # `runtime_cli.py`
 
@@ -74,6 +73,28 @@
 
 ## hash
 - c607785317cf43eeaa4368a33db8a5db35146b9b1203b630a3993bffa3dc0d75
+
+# `runtime_codex_preflight.py`
+
+## Summary
+- Codex 実行/TUI 起動の直前に、設定済みの indexing preflight を一度だけ走らせるための薄い実行ラッパーを定義している。
+- preflight の登録・解除、実行対象 root の決定、再入防止、排他制御、indexing 用途や conflict resolution 用途では preflight を省略する判定を扱う。
+- 実際の Codex 実行処理そのものは runtime 側へ委譲し、この対象は実行前フックの制御だけを担当する。
+
+## Read this when
+- Codex exec または Codex TUI を呼び出す前に、INDEX.md 生成などの indexing 処理を自動実行する経路を確認・変更したいとき。
+- indexing preflight の登録、無効化、再入防止、スレッド間排他、skip 条件の挙動を調べたいとき。
+- Codex 呼び出し時の cwd/root から、indexing 対象 root がどう決まるかを確認したいとき。
+- indexing 自体がさらに Codex exec を呼ぶ場合の循環防止や、conflict resolution 時に preflight を避ける理由を追うとき。
+
+## Do not read this when
+- Codex CLI プロセスの実際の起動、コマンドライン構築、戻り値変換、標準入出力処理を調べたいだけのとき。
+- repo root、work root、cwd 変換などの path model や runtime path 解決そのものを調べたいとき。
+- Codex 実行結果やコマンド実行結果のデータ構造を確認したいだけのとき。
+- INDEX.md の内容生成ロジック、エントリー生成プロンプト、ファイル探索ルールそのものを調べたいとき。
+
+## hash
+- 3878cafea4f3209a564a38a3ebe0f67ca85915e34f09112258511701c00f4c48
 
 # `runtime_codex_profile.py`
 
