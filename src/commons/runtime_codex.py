@@ -465,6 +465,7 @@ def run_codex_tui(
     cwd: Path | None = None,
     config: CmocConfig | None = None,
     purpose: str = "codex tui",
+    extra_read_paths: list[Path] | None = None,
 ) -> CommandResult:
     root = root or repo_root()
     cwd = cwd or root
@@ -476,7 +477,7 @@ def run_codex_tui(
     codex_home = resolve_codex_home(cwd)
     validate_codex_home(codex_home)
     profile_path = prepare_codex_profile(
-        parameter, config, codex_home, work_root(cwd)
+        parameter, config, codex_home, work_root(cwd), extra_read_paths
     )
     profile_name = codex_profile_name(profile_path)
     argv = [

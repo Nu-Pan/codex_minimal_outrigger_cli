@@ -208,7 +208,13 @@ def test_run_codex_tui_uses_codex_command_and_prompt_argument(
     token = cmoc_runtime.set_current_subcommand_logger(logger)
 
     try:
-        result = run_codex_tui(parameter, root=root, purpose="tui codex")
+        prompt_file = root / ".cmoc" / "log" / "tui" / "prompt_cmpl.md"
+        result = run_codex_tui(
+            parameter,
+            root=root,
+            purpose="tui codex",
+            extra_read_paths=[prompt_file],
+        )
     finally:
         cmoc_runtime.reset_current_subcommand_logger(token)
 
@@ -226,7 +232,11 @@ def test_run_codex_tui_uses_codex_command_and_prompt_argument(
     assert len(profiles) == 1
     workspace = tomllib.loads(profiles[0].read_text())["sandbox_workspace_write"]
     assert workspace["writable_roots"] == [str(root)]
-    assert workspace["read_only_paths"] == [str(root / "memo"), str(root / ".agents")]
+    assert workspace["read_only_paths"] == [
+        str(root / "memo"),
+        str(root / ".agents"),
+        str(prompt_file),
+    ]
     call_logs = list((root / ".cmoc" / "log" / "codex").glob("*_tui_call.json"))
     assert len(call_logs) == 1
     assert json.loads(call_logs[0].read_text())["argv"] == [

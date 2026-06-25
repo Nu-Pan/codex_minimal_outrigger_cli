@@ -33,7 +33,9 @@ def _toml_array(values: list[Path]) -> str:
     return "[" + ", ".join(_toml_str(value) for value in values) + "]"
 
 
-def _permission_profile_lines(mode: FileAccessMode, root: Path) -> list[str]:
+def _permission_profile_lines(
+    mode: FileAccessMode, root: Path, extra_read_paths: list[Path] | None = None
+) -> list[str]:
     root = root.resolve()
     match mode:
         case FileAccessMode.READONLY:
@@ -63,6 +65,9 @@ def _permission_profile_lines(mode: FileAccessMode, root: Path) -> list[str]:
             read_only_paths = [root / "memo", root / ".agents"]
         case _:
             raise CmocError("不明な FileAccessMode です。", [], str(mode))
+    if extra_read_paths:
+        read_paths.extend(path.resolve() for path in extra_read_paths)
+        read_only_paths.extend(path.resolve() for path in extra_read_paths)
     # Codex permission profiles carry read restrictions; read_only remains for
     # write exclusions that the legacy workspace profile represented.
     return [
@@ -82,7 +87,10 @@ def _permission_profile_lines(mode: FileAccessMode, root: Path) -> list[str]:
 
 
 def build_codex_profile(
-    parameter: AgentCallParameter, config: CmocConfig, root: Path | None = None
+    parameter: AgentCallParameter,
+    config: CmocConfig,
+    root: Path | None = None,
+    extra_read_paths: list[Path] | None = None,
 ) -> str:
     model = config.codex.model[parameter.model_class]
     reasoning_effort = config.codex.reasoning_effort[parameter.reasoning_effort]
@@ -91,7 +99,9 @@ def build_codex_profile(
         f'reasoning_effort = "{reasoning_effort}"',
     ]
     if root is not None:
-        lines.extend(_permission_profile_lines(parameter.file_access_mode, root))
+        lines.extend(
+            _permission_profile_lines(parameter.file_access_mode, root, extra_read_paths)
+        )
     else:
         sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
         lines.append(f'sandbox_mode = "{sandbox_mode}"')
@@ -150,8 +160,11 @@ def prepare_codex_profile(
     config: CmocConfig | None = None,
     codex_home: Path | None = None,
     root: Path | None = None,
+    extra_read_paths: list[Path] | None = None,
 ) -> Path:
-    profile = build_codex_profile(parameter, config or CmocConfig(), root)
+    profile = build_codex_profile(
+        parameter, config or CmocConfig(), root, extra_read_paths
+    )
     target_home = codex_home or resolve_codex_home()
     try:
         return write_hashed_file_in_existing_dir(

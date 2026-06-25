@@ -240,6 +240,25 @@ def test_codex_profile_contains_file_access_enforcement(tmp_path: Path) -> None:
     assert pure_oracle_fs["read"] == [str(root / "oracle")]
     assert pure_oracle_fs["write"] == []
 
+    prompt_file = root / ".cmoc" / "log" / "tui" / "prompt_cmpl.md"
+    pure_oracle_tui = tomllib.loads(
+        build_codex_profile(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                FileAccessMode.PURE_ORACLE_READ,
+                "prompt",
+                None,
+            ),
+            CmocConfig(),
+            root,
+            [prompt_file],
+        )
+    )
+    pure_oracle_tui_fs = pure_oracle_tui["permissions"]["cmoc"]["file_system"]
+    assert pure_oracle_tui_fs["read"] == [str(root / "oracle"), str(prompt_file)]
+    assert pure_oracle_tui_fs["read_only"] == [str(root / "oracle"), str(prompt_file)]
+
     realization_profile = profile(FileAccessMode.REALIZATION_WRITE)
     realization_fs = realization_profile["permissions"]["cmoc"]["file_system"]
     assert realization_fs["read"] == [str(root)]

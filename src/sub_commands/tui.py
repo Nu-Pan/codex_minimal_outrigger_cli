@@ -63,6 +63,7 @@ def cmoc_tui_impl(
         cwd=work_root,
         config=config,
         purpose="tui codex",
+        extra_read_paths=[complete_prompt_path],
     )
 
 

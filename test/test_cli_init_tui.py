@@ -284,6 +284,8 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
         assert parameter.structured_output_schema_path is None
         assert parameter.prompt.endswith("_cmpl.md` の指示に従って下さい。")
+        assert len(kwargs["extra_read_paths"]) == 1
+        assert str(kwargs["extra_read_paths"][0]) in parameter.prompt
 
     monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
     monkeypatch.setattr(main_module, "run_codex_tui", fake_run_codex_tui)
@@ -382,6 +384,7 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     complete_files = list((linked / ".cmoc" / "log" / "tui").glob("*_cmpl.md"))
     assert len(complete_files) == 1
     assert str(complete_files[0]) in tui_calls[0][0].prompt
+    assert tui_calls[0][1]["extra_read_paths"] == [complete_files[0]]
     recorded = json.loads(recorder.read_text())
     schema_arg = recorded["args"][recorded["args"].index("--output-schema") + 1]
     assert recorded["cwd"] == str(linked)
