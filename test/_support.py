@@ -11,6 +11,8 @@ from typer.testing import CliRunner
 import cmoc_runtime
 import main as main_module
 import sub_commands.apply as apply_module
+import sub_commands.apply_fork as apply_fork_module
+import sub_commands.indexing as indexing_module
 import sub_commands.session as session_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from basic.path_model import RootToken, resolve_real_path, resolve_token_path
@@ -69,4 +71,4 @@ def setup_codex_home(tmp_path: Path, monkeypatch) -> Path:
 
 
 def apply_worktree_from_state(root: Path, state: dict) -> Path:
-    return main_module.worktree_for_branch(root, state["apply"]["apply_branch"])
+    return apply_module.worktree_for_branch(root, state["apply"]["apply_branch"])

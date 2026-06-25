@@ -5,7 +5,9 @@ from _support import (
     Path,
     ReasoningEffort,
     app,
+    apply_module,
     cmoc_runtime,
+    indexing_module,
     main_module,
     make_repo,
     run_git,
@@ -33,7 +35,7 @@ def test_resolve_index_conflicts_deletes_index_and_commits(tmp_path: Path) -> No
     )
     assert merge.returncode != 0
 
-    resolved = main_module.resolve_index_conflicts(root)
+    resolved = apply_module.resolve_index_conflicts(root)
 
     assert resolved is True
     assert not (root / "INDEX.md").exists()
@@ -176,7 +178,7 @@ def test_commit_index_updates_commits_only_index_paths(tmp_path: Path) -> None:
     index_path.write_text("# generated\n")
     (root / ".gitignore").write_text("/.cmoc/\n")
 
-    main_module.commit_index_updates(root, [index_path])
+    indexing_module.commit_index_updates(root, [index_path])
 
     committed_paths = run_git(
         root, "show", "--name-only", "--pretty=", "HEAD"
@@ -191,7 +193,7 @@ def test_update_indexes_regenerates_malformed_fresh_hash_entry(
     root = make_repo(tmp_path)
     cmoc_runtime.sync_config(root)
     readme = root / "README.md"
-    digest = main_module.index_target_hash(root, readme)
+    digest = indexing_module.index_target_hash(root, readme)
     (root / "INDEX.md").write_text(
         "\n".join(
             [
@@ -207,10 +209,13 @@ def test_update_indexes_regenerates_malformed_fresh_hash_entry(
     calls: list[Path] = []
 
     def fake_build_index_entry(
-        update_root: Path, path: Path, digest: str | None = None
+        update_root: Path,
+        path: Path,
+        digest: str | None = None,
+        codex_exec=None,
     ) -> str:
         calls.append(path)
-        return main_module.render_index_entry(
+        return indexing_module.render_index_entry(
             update_root,
             path,
             {
@@ -221,9 +226,9 @@ def test_update_indexes_regenerates_malformed_fresh_hash_entry(
             digest=digest,
         ).rstrip()
 
-    monkeypatch.setattr(main_module, "build_index_entry", fake_build_index_entry)
+    monkeypatch.setattr(indexing_module, "build_index_entry", fake_build_index_entry)
 
-    updated = main_module.update_indexes(root)
+    updated = indexing_module.update_indexes(root)
 
     assert root / "INDEX.md" in updated
     assert readme in calls
@@ -248,7 +253,10 @@ def test_update_indexes_generates_sibling_entries_in_parallel(
     lock = threading.Lock()
 
     def fake_build_index_entry(
-        update_root: Path, path: Path, digest: str | None = None
+        update_root: Path,
+        path: Path,
+        digest: str | None = None,
+        codex_exec=None,
     ) -> str:
         nonlocal active, max_active
         if path.parent == docs:
@@ -258,7 +266,7 @@ def test_update_indexes_generates_sibling_entries_in_parallel(
             time.sleep(0.05)
             with lock:
                 active -= 1
-        return main_module.render_index_entry(
+        return indexing_module.render_index_entry(
             update_root,
             path,
             {
@@ -269,9 +277,9 @@ def test_update_indexes_generates_sibling_entries_in_parallel(
             digest=digest,
         ).rstrip()
 
-    monkeypatch.setattr(main_module, "build_index_entry", fake_build_index_entry)
+    monkeypatch.setattr(indexing_module, "build_index_entry", fake_build_index_entry)
 
-    updated = main_module.update_indexes(root)
+    updated = indexing_module.update_indexes(root)
 
     assert docs / "INDEX.md" in updated
     assert max_active >= 2
@@ -290,9 +298,12 @@ def test_update_indexes_indexes_nested_memo_directory(tmp_path: Path, monkeypatc
     cmoc_runtime.sync_config(root)
 
     def fake_build_index_entry(
-        update_root: Path, path: Path, digest: str | None = None
+        update_root: Path,
+        path: Path,
+        digest: str | None = None,
+        codex_exec=None,
     ) -> str:
-        return main_module.render_index_entry(
+        return indexing_module.render_index_entry(
             update_root,
             path,
             {
@@ -303,9 +314,9 @@ def test_update_indexes_indexes_nested_memo_directory(tmp_path: Path, monkeypatc
             digest=digest,
         ).rstrip()
 
-    monkeypatch.setattr(main_module, "build_index_entry", fake_build_index_entry)
+    monkeypatch.setattr(indexing_module, "build_index_entry", fake_build_index_entry)
 
-    updated = main_module.update_indexes(root)
+    updated = indexing_module.update_indexes(root)
 
     assert root_memo / "INDEX.md" not in updated
     assert not (root_memo / "INDEX.md").exists()
@@ -330,7 +341,7 @@ def test_command_codex_call_runs_indexing_preflight(
     )
     events: list[str] = []
 
-    def fake_update_indexes(update_root: Path) -> list[Path]:
+    def fake_update_indexes(update_root: Path, codex_exec=None) -> list[Path]:
         events.append("indexing")
         assert update_root == root
         index_path.write_text("# generated\n")
@@ -344,7 +355,7 @@ def test_command_codex_call_runs_indexing_preflight(
         assert call_parameter == parameter
         return FakeCodexResult()
 
-    monkeypatch.setattr(main_module, "update_indexes", fake_update_indexes)
+    monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
     monkeypatch.setattr(
         main_module, "runtime_run_codex_exec", fake_runtime_run_codex_exec
     )
@@ -373,7 +384,7 @@ def test_command_tui_codex_call_runs_indexing_preflight(
     )
     events: list[str] = []
 
-    def fake_update_indexes(update_root: Path) -> list[Path]:
+    def fake_update_indexes(update_root: Path, codex_exec=None) -> list[Path]:
         events.append("indexing")
         assert update_root == root
         index_path.write_text("# generated\n")
@@ -383,7 +394,7 @@ def test_command_tui_codex_call_runs_indexing_preflight(
         events.append("codex")
         assert call_parameter == parameter
 
-    monkeypatch.setattr(main_module, "update_indexes", fake_update_indexes)
+    monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
     monkeypatch.setattr(
         main_module, "runtime_run_codex_tui", fake_runtime_run_codex_tui
     )
@@ -412,14 +423,14 @@ def test_command_codex_call_skips_indexing_for_index_entry_and_conflict_resoluti
     class FakeCodexResult:
         output_json = None
 
-    def fail_update_indexes(update_root: Path) -> list[Path]:
+    def fail_update_indexes(update_root: Path, codex_exec=None) -> list[Path]:
         raise AssertionError("indexing preflight should be skipped")
 
     def fake_runtime_run_codex_exec(call_parameter, **kwargs):
         calls.append(kwargs["purpose"])
         return FakeCodexResult()
 
-    monkeypatch.setattr(main_module, "update_indexes", fail_update_indexes)
+    monkeypatch.setattr(indexing_module, "update_indexes", fail_update_indexes)
     monkeypatch.setattr(
         main_module, "runtime_run_codex_exec", fake_runtime_run_codex_exec
     )

@@ -1,6 +1,7 @@
 from _support import (
     Path,
     app,
+    apply_fork_module,
     apply_worktree_from_state,
     json,
     main_module,
@@ -116,7 +117,7 @@ def test_apply_fork_can_target_and_edit_gitignore(tmp_path: Path, monkeypatch) -
             self.output_json = output_json
             self.output_text = output_text
 
-    def enumerate_findings(root_arg, targets, config, **kwargs):
+    def enumerate_findings(root_arg, targets, config, codex_exec, **kwargs):
         nonlocal current_findings
         target_rels_by_call.append(
             sorted(str(path.relative_to(root_arg)) for path in targets)
@@ -138,7 +139,7 @@ def test_apply_fork_can_target_and_edit_gitignore(tmp_path: Path, monkeypatch) -
         raise AssertionError(purpose)
 
     monkeypatch.setattr(
-        main_module, "enumerate_apply_findings_for_targets", enumerate_findings
+        apply_fork_module, "enumerate_apply_findings_for_targets", enumerate_findings
     )
     monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
 
@@ -460,14 +461,14 @@ def test_apply_fork_rolling_uses_previous_apply_oracle_snapshot_commit(
 
     target_rels: list[str] = []
 
-    def enumerate_findings(root_arg, targets, config, **kwargs):
+    def enumerate_findings(root_arg, targets, config, codex_exec, **kwargs):
         target_rels.extend(
             sorted(str(path.relative_to(root_arg)) for path in targets)
         )
         return []
 
     monkeypatch.setattr(
-        main_module, "enumerate_apply_findings_for_targets", enumerate_findings
+        apply_fork_module, "enumerate_apply_findings_for_targets", enumerate_findings
     )
     monkeypatch.setattr(
         main_module,

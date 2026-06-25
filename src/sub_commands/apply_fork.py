@@ -39,6 +39,10 @@ from cmoc_runtime import (
     write_state,
 )
 from config.cmoc_config import CmocConfig
+from sub_commands.apply_fork_report import (
+    write_apply_fork_error_report,
+    write_apply_fork_report,
+)
 
 
 CodexExec = Callable[..., object]
@@ -47,17 +51,6 @@ CodexExec = Callable[..., object]
 def cmoc_apply_fork_impl(
     scope: str,
     codex_exec: CodexExec,
-    enumerate_targets: Callable[..., list[Path]],
-    enumerate_findings_for_targets: Callable[..., list[dict]],
-    related_paths: Callable[[Path, list[dict]], list[Path]],
-    ensure_no_forbidden_diff: Callable[[Path], None],
-    changed_paths: Callable[[Path], list[Path]],
-    generate_commit_message: Callable[[Path, Path, dict, CmocConfig], str],
-    normalize_targets: Callable[[Path, set[Path]], list[Path]],
-    write_report: Callable[[Path, Path, str, SessionState, list[int], str, CmocConfig], Path],
-    write_error_report: Callable[
-        [Path, str, SessionState, list[int], Path, CmocConfig], Path
-    ],
 ) -> int:
     """Codex CLI による apply loop を isolated apply worktree 上で実行する。"""
     if scope not in {"rolling", "session", "full"}:
@@ -90,15 +83,16 @@ def cmoc_apply_fork_impl(
     try:
         with pushd(apply_worktree):
             findings: list[dict] = []
-            dirty_targets = enumerate_targets(apply_worktree, scope, state)
+            dirty_targets = enumerate_apply_targets(apply_worktree, scope, state)
             for _apply_loop in range(config.apply_fork.num_apply_loop):
                 if not dirty_targets:
                     result_label = "unconverged" if findings else "converged"
                     break
-                findings = enumerate_findings_for_targets(
+                findings = enumerate_apply_findings_for_targets(
                     apply_worktree,
                     dirty_targets,
                     config,
+                    codex_exec,
                     log_root=root,
                 )
                 for _ in range(config.apply_fork.num_improve_findings_loop):
@@ -117,7 +111,7 @@ def cmoc_apply_fork_impl(
                 if not findings:
                     result_label = "converged"
                     break
-                next_dirty = set(related_paths(apply_worktree, findings))
+                next_dirty = set(related_apply_paths(apply_worktree, findings))
                 for finding in findings:
                     codex_exec(
                         build_apply_fork_finding_application_parameter(
@@ -128,22 +122,23 @@ def cmoc_apply_fork_impl(
                         config=config,
                         purpose="apply fork finding application",
                     )
-                    ensure_no_forbidden_diff(apply_worktree)
-                    changed = changed_paths(apply_worktree)
+                    ensure_no_forbidden_apply_diff(apply_worktree)
+                    changed = changed_worktree_paths(apply_worktree)
                     next_dirty.update(changed)
                     if changed:
-                        commit_message = generate_commit_message(
+                        commit_message = generate_apply_commit_message(
                             root,
                             apply_worktree,
                             finding,
                             config,
+                            codex_exec,
                         )
                         run_git(["add", "."], apply_worktree)
                         run_git(["commit", "-m", commit_message], apply_worktree)
-                dirty_targets = normalize_targets(apply_worktree, next_dirty)
+                dirty_targets = normalize_apply_targets(apply_worktree, next_dirty)
             else:
                 result_label = "unconverged"
-            report_path = write_report(
+            report_path = write_apply_fork_report(
                 root,
                 apply_worktree,
                 branch,
@@ -151,6 +146,7 @@ def cmoc_apply_fork_impl(
                 finding_counts,
                 result_label,
                 config,
+                codex_exec,
             )
         state.apply.state = "completed"
         state.apply.apply_process_id = None
@@ -160,8 +156,8 @@ def cmoc_apply_fork_impl(
         state.apply.apply_process_id = None
         write_state(path, state)
         if report_path is None:
-            report_path = write_error_report(
-                root, branch, state, finding_counts, apply_worktree, config
+            report_path = write_apply_fork_error_report(
+                root, branch, state, finding_counts, apply_worktree, config, codex_exec
             )
         typer.echo(f"- report: `{report_path}`")
         raise

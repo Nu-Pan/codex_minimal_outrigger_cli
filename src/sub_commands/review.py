@@ -49,12 +49,6 @@ CodexExec = Callable[..., object]
 def cmoc_review_oracle_impl(
     scope: str,
     codex_exec: CodexExec,
-    enumerate_all_oracle_files_func: Callable[[Path], list[Path]],
-    enumerate_targets_func: Callable[[Path, str, SessionState], list[Path]],
-    run_loop_func: Callable[..., list[dict]],
-    commit_index_changes_func: Callable[[Path], bool],
-    merge_review_branch_func: Callable[[Path, str], str],
-    render_report_func: Callable[..., str],
 ) -> None:
     """現在の session branch の oracle を isolated review worktree 上でレビューする。"""
     if scope not in {"session", "full"}:
@@ -81,12 +75,16 @@ def cmoc_review_oracle_impl(
         worktree_created = True
         try:
             with pushd(review_worktree):
-                all_oracle_files = enumerate_all_oracle_files_func(review_worktree)
-                oracle_files = enumerate_targets_func(review_worktree, scope, state)
-                findings = run_loop_func(root, review_worktree, oracle_files, config, codex_exec=codex_exec)
-                review_has_index_commit = commit_index_changes_func(review_worktree)
+                all_oracle_files = enumerate_review_all_oracle_files(review_worktree)
+                oracle_files = enumerate_review_oracle_targets(
+                    review_worktree, scope, state
+                )
+                findings = run_review_oracle_loop(
+                    root, review_worktree, oracle_files, config, codex_exec
+                )
+                review_has_index_commit = commit_review_index_changes(review_worktree)
             if review_has_index_commit:
-                review_join_commit = merge_review_branch_func(root, review_branch)
+                review_join_commit = merge_review_branch(root, review_branch)
         finally:
             if worktree_created:
                 remove_worktree(root, review_worktree)
@@ -103,7 +101,6 @@ def cmoc_review_oracle_impl(
             review_branch,
             review_fork_commit,
             review_join_commit,
-            render_report_func,
         )
     except Exception as exc:
         report_path = write_review_oracle_report(
@@ -118,7 +115,6 @@ def cmoc_review_oracle_impl(
             review_branch,
             review_fork_commit,
             review_join_commit,
-            render_report_func,
             error_message=str(exc) or exc.__class__.__name__,
         )
         typer.echo(str(report_path.resolve()))
@@ -138,14 +134,13 @@ def write_review_oracle_report(
     review_branch: str | None,
     review_fork_commit: str | None,
     review_join_commit: str | None,
-    render_report_func: Callable[..., str],
     error_message: str | None = None,
 ) -> Path:
     report_dir = reports_dir(root, "review_oracle")
     report_dir.mkdir(parents=True, exist_ok=True)
     report_path = report_dir / f"{timestamp()}.md"
     report_path.write_text(
-        render_report_func(
+        render_review_oracle_report(
             root,
             scope,
             session_branch,

@@ -7,6 +7,7 @@ import typer
 from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
 from basic.acp import AgentCallParameter
 from cmoc_runtime import (
+    CmocError,
     file_sha256,
     is_binary,
     is_git_ignored,
@@ -19,23 +20,25 @@ from cmoc_runtime import (
 
 
 CodexExec = Callable[..., object]
-IndexEntryBuilder = Callable[[Path, Path, str | None], str]
 
 
 def cmoc_indexing_impl(
-    update_indexes_func: Callable[[Path], list[Path]],
-    commit_index_updates_func: Callable[[Path, list[Path]], None],
     initial_status: str | None = None,
+    codex_exec: CodexExec | None = None,
 ) -> None:
     """現在の work root に対して INDEX.md の maintenance を実行する。"""
     root = work_root()
     require_clean_worktree(root, initial_status)
-    updated = update_indexes_func(root)
-    commit_index_updates_func(root, updated)
+    updated = update_indexes(root, codex_exec)
+    commit_index_updates(root, updated)
     typer.echo(f"# cmoc indexing\n- updated_index_count: `{len(updated)}`")
 
 
-def commit_index_updates_impl(root: Path, updated: list[Path]) -> None:
+def run_indexing_preflight(root: Path, codex_exec: CodexExec) -> None:
+    commit_index_updates(root, update_indexes(root, codex_exec))
+
+
+def commit_index_updates(root: Path, updated: list[Path]) -> None:
     """INDEX.md の更新差分だけを indexing commit として保存する。"""
     index_paths = [str(path.relative_to(root)) for path in updated]
     if index_paths:
@@ -47,7 +50,7 @@ def commit_index_updates_impl(root: Path, updated: list[Path]) -> None:
         run_git(["commit", "-m", "cmoc indexing", "--", *index_paths], root)
 
 
-def update_indexes_impl(root: Path, build_index_entry_func: IndexEntryBuilder) -> list[Path]:
+def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path]:
     """INDEX.md を深い directory から順に検査・再生成する。"""
     dirs = indexable_directories(root)
     dirs.append(root)
@@ -70,7 +73,9 @@ def update_indexes_impl(root: Path, build_index_entry_func: IndexEntryBuilder) -
             with ThreadPoolExecutor(max_workers=max(1, config.num_parallel)) as executor:
                 generated_entries = list(
                     executor.map(
-                        lambda item: build_index_entry_func(root, item[0], item[1]),
+                        lambda item: build_index_entry(
+                            root, item[0], digest=item[1], codex_exec=codex_exec
+                        ),
                         missing_children,
                     )
                 )
@@ -184,8 +189,19 @@ def is_root_memo(root: Path, path: Path) -> bool:
     return resolved == memo or memo in resolved.parents
 
 
-def build_index_entry_impl(root: Path, path: Path, codex_exec: CodexExec, digest: str | None = None) -> str:
+def build_index_entry(
+    root: Path,
+    path: Path,
+    digest: str | None = None,
+    codex_exec: CodexExec | None = None,
+) -> str:
     """Codex CLI に対象 1 件の INDEX.md entry を生成させる。"""
+    if codex_exec is None:
+        raise CmocError(
+            "INDEX.md entry 生成用の Codex 実行関数が指定されていません。",
+            ["cmoc indexing を通常の CLI 経由で再実行してください。"],
+            str(path),
+        )
     content = target_content_for_indexing(path)
     result = codex_exec(
         build_indexing_index_entry_parameter(path, content),
