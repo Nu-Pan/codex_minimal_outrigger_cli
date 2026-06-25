@@ -5,7 +5,6 @@ from _support import (
     apply_fork_module,
     apply_worktree_from_state,
     json,
-    main_module,
     make_repo,
     run_git,
     runner,
@@ -43,7 +42,7 @@ def test_apply_fork_runs_codex_loop_and_updates_state(
             return FakeCodexResult(None)
         return FakeCodexResult({"findings": []})
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(
         app, ["apply", "fork", "--scope", "full"], catch_exceptions=False
@@ -91,7 +90,7 @@ def test_apply_fork_does_not_rewrite_session_gitignore(
         return FakeCodexResult({"findings": []})
 
     monkeypatch.setattr(
-        main_module,
+        apply_fork_module,
         "run_codex_exec",
         fake_run_codex_exec,
     )
@@ -190,7 +189,7 @@ def test_apply_fork_can_target_and_edit_gitignore(
     monkeypatch.setattr(
         apply_fork_module, "enumerate_apply_findings_for_target", enumerate_findings
     )
-    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(
         app, ["apply", "fork", "--scope", "full"], catch_exceptions=False
@@ -286,7 +285,7 @@ def test_apply_fork_writes_report_with_change_summary(
             )
         raise AssertionError(purpose)
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(
         app, ["apply", "fork", "--scope", "full"], catch_exceptions=False
@@ -367,7 +366,7 @@ def test_apply_fork_rechecks_dirty_files_until_converged(
             return FakeCodexResult({"changes": []})
         raise AssertionError(purpose)
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", fake_run_codex_exec)
     original_enumerate = apply_fork_module.enumerate_apply_findings_for_target
 
     def enumerate_findings(
@@ -469,7 +468,7 @@ def test_apply_fork_rejects_forbidden_agents_diff(
             raise AssertionError("error report must not call change summary")
         raise AssertionError(purpose)
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(app, ["apply", "fork", "--scope", "full"])
 
@@ -549,7 +548,7 @@ def test_apply_fork_rolling_uses_previous_apply_oracle_snapshot_commit(
         apply_fork_module, "enumerate_apply_findings_for_target", enumerate_findings
     )
     monkeypatch.setattr(
-        main_module,
+        apply_fork_module,
         "run_codex_exec",
         fake_run_codex_exec,
     )

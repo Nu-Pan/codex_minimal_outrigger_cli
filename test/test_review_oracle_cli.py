@@ -4,8 +4,8 @@ from _support import (
     Path,
     add_tracked_ignored_oracle_file,
     app,
-    main_module,
     make_repo,
+    review_module,
     run_git,
     runner,
 )
@@ -38,7 +38,7 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
             return FakeCodexResult({"verdict": "reject", "reason": "no finding"})
         raise AssertionError(schema_name)
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(
         app, ["review", "oracle", "--scope", "full"], catch_exceptions=False
@@ -83,7 +83,7 @@ def test_review_oracle_full_scope_excludes_gitignored_oracle_files(
             return FakeCodexResult({"findings": []})
         raise AssertionError(schema_name)
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(
         app, ["review", "oracle", "--scope", "full"], catch_exceptions=False
@@ -128,7 +128,7 @@ def test_review_oracle_accepts_short_scope_option(tmp_path: Path, monkeypatch) -
             return FakeCodexResult({"verdict": "reject", "reason": "no finding"})
         raise AssertionError(schema_name)
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(
         app, ["review", "oracle", "-s", "full"], catch_exceptions=False
@@ -160,7 +160,7 @@ def test_review_oracle_session_scope_reports_total_and_no_targets(
             "no session-scope oracle targets should skip review Codex calls"
         )
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fail_run_codex_exec)
+    monkeypatch.setattr(review_module, "run_codex_exec", fail_run_codex_exec)
 
     result = runner.invoke(app, ["review", "oracle"], catch_exceptions=False)
 
@@ -197,7 +197,7 @@ def test_review_oracle_session_scope_excludes_changed_gitignored_oracle_files(
         calls.append(kwargs["purpose"])
         raise AssertionError("gitignored oracle files should not be reviewed")
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fail_run_codex_exec)
+    monkeypatch.setattr(review_module, "run_codex_exec", fail_run_codex_exec)
 
     result = runner.invoke(app, ["review", "oracle"], catch_exceptions=False)
 
@@ -245,7 +245,7 @@ def test_review_oracle_merges_review_index_changes(tmp_path: Path, monkeypatch) 
             return FakeCodexResult({"verdict": "reject", "reason": "no finding"})
         raise AssertionError(schema_name)
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(
         app, ["review", "oracle", "--scope", "full"], catch_exceptions=False
@@ -302,7 +302,7 @@ def test_review_oracle_writes_error_report_on_processing_failure(
             return FakeCodexResult({"reasons": []})
         raise RuntimeError("judge failed")
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fail_run_codex_exec)
+    monkeypatch.setattr(review_module, "run_codex_exec", fail_run_codex_exec)
 
     result = runner.invoke(app, ["review", "oracle", "--scope", "full"])
 
@@ -349,7 +349,7 @@ def test_review_oracle_rejects_non_index_worktree_changes(
             return FakeCodexResult({"findings": []})
         raise AssertionError(schema_name)
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(app, ["review", "oracle", "--scope", "full"])
 

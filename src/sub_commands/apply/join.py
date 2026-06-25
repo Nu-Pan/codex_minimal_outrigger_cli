@@ -17,12 +17,27 @@ from cmoc_runtime import (
     repo_root,
     reports_dir,
     require_clean_worktree,
+    run_cli_subcommand,
     run_git,
     timestamp,
     work_root,
     write_state,
 )
 from sub_commands.apply._runtime import worktree_for_branch, worktree_for_branch_optional
+
+
+def cmoc_apply_join_command_impl(force_resolve: bool) -> None:
+    run_cli_subcommand(
+        cmoc_apply_join_impl,
+        force_resolve,
+        command_name="apply join",
+        command_argv=[
+            "cmoc",
+            "apply",
+            "join",
+            *(["--force-resolve"] if force_resolve else []),
+        ],
+    )
 
 
 def cmoc_apply_join_impl(force_resolve: bool) -> None:

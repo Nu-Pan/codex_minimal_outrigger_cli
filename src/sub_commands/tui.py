@@ -17,10 +17,14 @@ from cmoc_runtime import (
     ensure_cmoc_ignored,
     load_config,
     repo_root,
+    run_cli_subcommand,
+    run_codex_exec,
+    run_codex_tui,
     timestamp,
     work_root,
 )
 from config.cmoc_config import CmocConfig
+from sub_commands.indexing import enable_indexing_preflight
 
 ORIGINAL_PROMPT_TEMPLATE = """<!--
     AI Agent CLI/TUI に与えるプロンプトを書いて下さい。
@@ -73,9 +77,16 @@ def cmoc_tui_impl(
     )
 
 
-def cmoc_tui_command_impl(
-    run_codex_exec: CodexExec, run_codex_tui: CodexTui
-) -> None:
+def cmoc_tui_command_impl() -> None:
+    enable_indexing_preflight()
+    run_cli_subcommand(
+        _cmoc_tui_command_body,
+        command_name="tui",
+        command_argv=["cmoc", "tui"],
+    )
+
+
+def _cmoc_tui_command_body() -> None:
     """現在の repository 状態から `cmoc tui` の本体処理を起動する。"""
     root = repo_root()
     current_root = work_root()

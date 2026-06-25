@@ -6,10 +6,10 @@ from _support import (
     cmoc_runtime,
     current_branch,
     json,
-    main_module,
     make_repo,
     run_git,
     runner,
+    session_join_module,
     session_module,
     subprocess,
 )
@@ -202,7 +202,7 @@ def test_session_join_resolves_conflict_with_codex(tmp_path: Path, monkeypatch) 
         (root / "README.md").write_text("resolved change\n")
         return FakeCodexResult()
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
 
@@ -268,7 +268,7 @@ def test_session_join_stages_delete_conflict_resolution(
         (root / "README.md").unlink()
         return FakeCodexResult()
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
 
@@ -289,14 +289,14 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
     )
     session_branch = current_branch(root)
     home_branch = session_home_branch(root, session_branch)
-    original_run_git = main_module.run_git
+    original_run_git = session_join_module.run_git
 
     def fake_run_git(args, cwd, check=True):
         if args == ["branch", "-d", session_branch]:
             return cmoc_runtime.CommandResult(1, "", "branch is checked out elsewhere")
         return original_run_git(args, cwd, check=check)
 
-    monkeypatch.setattr(main_module, "run_git", fake_run_git)
+    monkeypatch.setattr(session_join_module, "run_git", fake_run_git)
 
     result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
 

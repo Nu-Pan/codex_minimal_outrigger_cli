@@ -4,14 +4,15 @@ from _support import (
     Path,
     ReasoningEffort,
     app,
+    codex_preflight_module,
     json,
-    main_module,
     make_repo,
     parse_markdown_prompt,
     run_git,
     runner,
     setup_codex_home,
     subprocess,
+    tui_module,
 )
 
 def test_init_untracks_existing_cmoc_files_and_commits_cleanup(
@@ -287,8 +288,8 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         assert len(kwargs["extra_read_paths"]) == 1
         assert str(kwargs["extra_read_paths"][0]) in parameter.prompt
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
-    monkeypatch.setattr(main_module, "run_codex_tui", fake_run_codex_tui)
+    monkeypatch.setattr(tui_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(tui_module, "run_codex_tui", fake_run_codex_tui)
 
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
 
@@ -370,8 +371,9 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     def fake_run_codex_tui(parameter, **kwargs):
         tui_calls.append((parameter, kwargs))
 
-    monkeypatch.setattr(main_module, "_run_indexing_before_codex", lambda *_: None)
-    monkeypatch.setattr(main_module, "run_codex_tui", fake_run_codex_tui)
+    monkeypatch.setattr(tui_module, "enable_indexing_preflight", lambda: None)
+    codex_preflight_module.disable_indexing_preflight()
+    monkeypatch.setattr(tui_module, "run_codex_tui", fake_run_codex_tui)
 
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
 

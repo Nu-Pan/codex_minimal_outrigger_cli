@@ -15,14 +15,24 @@ from cmoc_runtime import (
     is_binary,
     is_git_ignored,
     load_config,
+    require_cmoc_ignored,
     require_clean_worktree,
+    run_cli_subcommand,
+    run_codex_exec,
     run_git,
     text_sha256,
     work_root,
 )
+from commons.runtime_codex_preflight import configure_indexing_preflight
 
 
 CodexExec = Callable[..., object]
+
+
+def enable_indexing_preflight() -> None:
+    configure_indexing_preflight(
+        lambda root, codex_exec: run_indexing_preflight(root, codex_exec)
+    )
 
 
 def cmoc_indexing_impl(
@@ -36,6 +46,17 @@ def cmoc_indexing_impl(
         updated = update_indexes(root, codex_exec)
         commit_index_updates(root, updated)
     typer.echo(f"# cmoc indexing\n- updated_index_count: `{len(updated)}`")
+
+
+def cmoc_indexing_command_impl() -> None:
+    enable_indexing_preflight()
+    run_cli_subcommand(
+        cmoc_indexing_impl,
+        codex_exec=run_codex_exec,
+        pre_log_check=require_cmoc_ignored,
+        command_name="indexing",
+        command_argv=["cmoc", "indexing"],
+    )
 
 
 def run_indexing_preflight(root: Path, codex_exec: CodexExec) -> None:

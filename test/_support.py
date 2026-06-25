@@ -9,12 +9,16 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 import cmoc_runtime
+import commons.runtime_codex_preflight as codex_preflight_module
 import main as main_module
 import sub_commands.apply.abandon as apply_abandon_module
 import sub_commands.apply.fork as apply_fork_module
 import sub_commands.apply.join as apply_module
 import sub_commands.indexing as indexing_module
+import sub_commands.review as review_module
 import sub_commands.session.abandon as session_module
+import sub_commands.session.join as session_join_module
+import sub_commands.tui as tui_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from basic.path_model import RootToken, resolve_real_path, resolve_token_path
 from config.cmoc_config import CmocConfig

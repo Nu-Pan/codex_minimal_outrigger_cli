@@ -16,6 +16,8 @@ from cmoc_runtime import (
     remove_worktree,
     repo_root,
     require_clean_worktree,
+    run_cli_subcommand,
+    run_codex_exec,
     timestamp,
     worktrees_dir,
 )
@@ -39,6 +41,7 @@ from sub_commands.review_targets import (
     enumerate_review_all_oracle_files,
     enumerate_review_oracle_targets,
 )
+from sub_commands.indexing import enable_indexing_preflight
 
 
 CodexExec = Callable[..., object]
@@ -59,6 +62,17 @@ __all__ = [
     "run_review_oracle_loop",
     "write_review_oracle_report",
 ]
+
+
+def cmoc_review_oracle_command_impl(scope: str) -> None:
+    enable_indexing_preflight()
+    run_cli_subcommand(
+        cmoc_review_oracle_impl,
+        scope,
+        run_codex_exec,
+        command_name="review oracle",
+        command_argv=["cmoc", "review", "oracle", "--scope", scope],
+    )
 
 
 def cmoc_review_oracle_impl(

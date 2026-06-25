@@ -10,6 +10,7 @@ from cmoc_runtime import (
     is_managed_branch,
     repo_root,
     require_clean_worktree,
+    run_cli_subcommand,
     run_git,
     state_path,
     timestamp,
@@ -55,4 +56,12 @@ def cmoc_session_fork_impl() -> None:
                 f"- session_state_file: `{state_path(root, session_id)}`",
             ]
         )
+    )
+
+
+def cmoc_session_fork_command_impl() -> None:
+    run_cli_subcommand(
+        cmoc_session_fork_impl,
+        command_name="session fork",
+        command_argv=["cmoc", "session", "fork"],
     )

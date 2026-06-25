@@ -12,6 +12,7 @@ from cmoc_runtime import (
     remove_worktree,
     repo_root,
     require_clean_worktree,
+    run_cli_subcommand,
     work_root,
     write_state,
 )
@@ -22,6 +23,14 @@ from sub_commands.apply._runtime import (
     stop_apply_process,
     worktree_for_branch,
 )
+
+
+def cmoc_apply_abandon_command_impl() -> None:
+    run_cli_subcommand(
+        cmoc_apply_abandon_impl,
+        command_name="apply abandon",
+        command_argv=["cmoc", "apply", "abandon"],
+    )
 
 
 def cmoc_apply_abandon_impl() -> None:

@@ -7,8 +7,8 @@ from _support import (
     ReasoningEffort,
     json,
     make_repo,
-    run_codex_exec,
 )
+from commons.runtime_codex import run_codex_exec
 
 def test_run_codex_exec_uses_default_codex_home_when_env_unset(
     tmp_path: Path, monkeypatch

@@ -8,6 +8,7 @@ from cmoc_runtime import (
     load_state_for_branch,
     repo_root,
     require_clean_worktree,
+    run_cli_subcommand,
     run_git,
     write_state,
 )
@@ -78,4 +79,12 @@ def cmoc_session_abandon_impl() -> None:
                 "- session_state: `abandoned`",
             ]
         )
+    )
+
+
+def cmoc_session_abandon_command_impl() -> None:
+    run_cli_subcommand(
+        cmoc_session_abandon_impl,
+        command_name="session abandon",
+        command_argv=["cmoc", "session", "abandon"],
     )

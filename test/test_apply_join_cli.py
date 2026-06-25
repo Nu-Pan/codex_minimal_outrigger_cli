@@ -1,10 +1,10 @@
 from _support import (
     Path,
     app,
+    apply_fork_module,
     apply_module,
     apply_worktree_from_state,
     json,
-    main_module,
     make_repo,
     run_git,
     runner,
@@ -24,8 +24,7 @@ def test_apply_join_removes_apply_worktree_and_resets_state(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -71,8 +70,7 @@ def test_apply_join_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> 
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -117,8 +115,7 @@ def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -167,8 +164,7 @@ def test_apply_join_from_session_requires_clean_apply_worktree(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -206,8 +202,7 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -254,8 +249,7 @@ def test_apply_join_allows_gitignore_change_as_apply_diff(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     state_path = (
@@ -291,8 +285,7 @@ def test_apply_join_reports_unresolved_non_index_conflict(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     state_path = (
@@ -345,8 +338,7 @@ def test_apply_join_continues_after_resolving_index_conflict_in_normal_mode(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()

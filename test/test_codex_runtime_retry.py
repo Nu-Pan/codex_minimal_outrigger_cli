@@ -10,9 +10,9 @@ from _support import (
     cmoc_runtime,
     json,
     make_repo,
-    run_codex_exec,
     setup_codex_home,
 )
+from commons.runtime_codex import run_codex_exec
 
 def test_run_codex_exec_retries_semantic_output(tmp_path: Path, monkeypatch) -> None:
     root = make_repo(tmp_path)
@@ -303,19 +303,20 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     ]
     main_logs = [log for _path, log in main_entries]
     assert len(main_logs) == 2
-    assert main_logs[0]["argv"][1:] == argv_calls[0]
-    assert "resume" not in main_logs[0]["argv"]
-    assert main_logs[1]["argv"][1:] == argv_calls[2]
-    assert "resume" in main_logs[1]["argv"]
+    initial_log = next(log for log in main_logs if "resume" not in log["argv"])
+    resume_log = next(log for log in main_logs if "resume" in log["argv"])
+    resume_entry = next((path, log) for path, log in main_entries if log is resume_log)
+    assert initial_log["argv"][1:] == argv_calls[0]
+    assert resume_log["argv"][1:] == argv_calls[2]
     assert len({log["stdout_log_path"] for log in main_logs}) == 2
-    assert Path(main_logs[0]["stdout_log_path"]).read_text().strip() == (
+    assert Path(initial_log["stdout_log_path"]).read_text().strip() == (
         '{"type": "thread.started", "thread_id": "sess-1"}\n'
         '{"type": "error", "message": "Quota exceeded"}'
     )
-    assert Path(main_logs[1]["stdout_log_path"]).read_text().strip() == (
+    assert Path(resume_log["stdout_log_path"]).read_text().strip() == (
         '{"type": "turn.completed"}'
     )
-    assert result.call_log_path == main_entries[1][0]
+    assert result.call_log_path == resume_entry[0]
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
     assert [event["purpose"] for event in codex_events] == [

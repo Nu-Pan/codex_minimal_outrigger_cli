@@ -11,9 +11,9 @@ from _support import (
     app,
     apply_module,
     cmoc_runtime,
+    codex_preflight_module,
     current_branch,
     indexing_module,
-    main_module,
     make_repo,
     run_git,
     runner,
@@ -87,7 +87,7 @@ def test_indexing_uses_codex_index_entry_builder_and_commits(
         assert parameter.structured_output_schema_path.name == "index_entry.json"
         return FakeCodexResult()
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(indexing_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(app, ["indexing"], catch_exceptions=False)
 
@@ -136,8 +136,7 @@ def test_indexing_targets_current_linked_worktree(
             "do_not_read_this_when": ["linked skip condition"],
         }
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(indexing_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     monkeypatch.chdir(linked)
 
@@ -165,8 +164,7 @@ def test_indexing_skips_codex_when_existing_hashes_are_fresh(
             "do_not_read_this_when": ["generated skip condition"],
         }
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(indexing_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     first = runner.invoke(app, ["indexing"], catch_exceptions=False)
     assert first.exit_code == 0
@@ -179,7 +177,7 @@ def test_indexing_skips_codex_when_existing_hashes_are_fresh(
         calls.append(kwargs["purpose"])
         raise AssertionError("fresh INDEX.md should not require Codex")
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fail_if_called)
+    monkeypatch.setattr(indexing_module, "run_codex_exec", fail_if_called)
     second = runner.invoke(app, ["indexing"], catch_exceptions=False)
 
     assert second.exit_code == 0
@@ -216,7 +214,7 @@ def test_indexing_rejects_existing_non_index_diff(
     def fail_if_called(*args, **kwargs):
         raise AssertionError("dirty explicit indexing must stop before Codex")
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fail_if_called)
+    monkeypatch.setattr(indexing_module, "run_codex_exec", fail_if_called)
 
     result = runner.invoke(app, ["indexing"], catch_exceptions=False)
 
@@ -436,12 +434,13 @@ def test_command_codex_call_runs_indexing_preflight(
         assert call_parameter == parameter
         return FakeCodexResult()
 
+    indexing_module.enable_indexing_preflight()
     monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
     monkeypatch.setattr(
-        main_module, "runtime_run_codex_exec", fake_runtime_run_codex_exec
+        codex_preflight_module, "runtime_run_codex_exec", fake_runtime_run_codex_exec
     )
 
-    result = main_module.run_codex_exec(
+    result = codex_preflight_module.run_codex_exec(
         parameter, root=root, purpose="apply fork refine findings"
     )
 
@@ -483,12 +482,13 @@ def test_command_codex_call_indexes_cwd_worktree_before_root(
         assert kwargs["cwd"] == codex_cwd
         return FakeCodexResult()
 
+    indexing_module.enable_indexing_preflight()
     monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
     monkeypatch.setattr(
-        main_module, "runtime_run_codex_exec", fake_runtime_run_codex_exec
+        codex_preflight_module, "runtime_run_codex_exec", fake_runtime_run_codex_exec
     )
 
-    result = main_module.run_codex_exec(
+    result = codex_preflight_module.run_codex_exec(
         parameter,
         root=root,
         cwd=codex_cwd,
@@ -530,12 +530,15 @@ def test_command_tui_codex_call_runs_indexing_preflight(
         events.append("codex")
         assert call_parameter == parameter
 
+    indexing_module.enable_indexing_preflight()
     monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
     monkeypatch.setattr(
-        main_module, "runtime_run_codex_tui", fake_runtime_run_codex_tui
+        codex_preflight_module,
+        "runtime_run_codex_tui",
+        fake_runtime_run_codex_tui,
     )
 
-    main_module.run_codex_tui(parameter, root=root, purpose="tui codex")
+    codex_preflight_module.run_codex_tui(parameter, root=root, purpose="tui codex")
 
     assert events == ["indexing", "codex"]
     assert run_git(root, "log", "-1", "--pretty=%s").stdout.strip() == "cmoc indexing"
@@ -610,15 +613,16 @@ def test_command_codex_call_skips_indexing_for_index_entry_and_conflict_resoluti
         calls.append(kwargs["purpose"])
         return FakeCodexResult()
 
+    indexing_module.enable_indexing_preflight()
     monkeypatch.setattr(indexing_module, "update_indexes", fail_update_indexes)
     monkeypatch.setattr(
-        main_module, "runtime_run_codex_exec", fake_runtime_run_codex_exec
+        codex_preflight_module, "runtime_run_codex_exec", fake_runtime_run_codex_exec
     )
 
-    main_module.run_codex_exec(
+    codex_preflight_module.run_codex_exec(
         parameter, root=root, purpose="indexing index entry for README.md"
     )
-    main_module.run_codex_exec(
+    codex_preflight_module.run_codex_exec(
         parameter, root=root, purpose="session join conflict resolution"
     )
 

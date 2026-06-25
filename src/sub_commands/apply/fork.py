@@ -30,6 +30,8 @@ from cmoc_runtime import (
     pushd,
     repo_root,
     require_clean_worktree,
+    run_cli_subcommand,
+    run_codex_exec,
     run_git,
     timestamp,
     worktrees_dir,
@@ -44,9 +46,21 @@ from sub_commands.apply._runtime import (
     delete_apply_process_id,
     write_apply_process_id,
 )
+from sub_commands.indexing import enable_indexing_preflight
 
 
 CodexExec = Callable[..., object]
+
+
+def cmoc_apply_fork_command_impl(scope: str) -> None:
+    enable_indexing_preflight()
+    run_cli_subcommand(
+        cmoc_apply_fork_impl,
+        scope,
+        run_codex_exec,
+        command_name="apply fork",
+        command_argv=["cmoc", "apply", "fork", "--scope", scope],
+    )
 
 
 def cmoc_apply_fork_impl(

@@ -2,9 +2,9 @@ from _support import (
     Path,
     app,
     apply_abandon_module,
+    apply_fork_module,
     apply_worktree_from_state,
     json,
-    main_module,
     make_repo,
     run_git,
     runner,
@@ -24,8 +24,7 @@ def test_apply_abandon_removes_apply_worktree_and_branch(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -70,8 +69,7 @@ def test_apply_abandon_reports_missing_cleanup_targets_as_warnings(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -108,8 +106,7 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -160,8 +157,7 @@ def test_apply_abandon_rejects_running_state_without_process_id(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -224,8 +220,7 @@ def test_apply_abandon_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) 
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -262,8 +257,7 @@ def test_apply_abandon_rejects_stale_apply_branch(tmp_path: Path, monkeypatch) -
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()

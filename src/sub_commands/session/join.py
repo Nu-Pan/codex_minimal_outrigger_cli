@@ -7,6 +7,7 @@ import typer
 from acp.builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter,
 )
+from sub_commands.indexing import enable_indexing_preflight
 from cmoc_runtime import (
     CmocError,
     current_branch,
@@ -14,6 +15,8 @@ from cmoc_runtime import (
     load_state_for_branch,
     repo_root,
     require_clean_worktree,
+    run_cli_subcommand,
+    run_codex_exec,
     run_git,
     work_root,
     write_state,
@@ -65,6 +68,17 @@ def cmoc_session_join_impl(codex_exec: CodexExec, git: GitRun = run_git) -> None
                 *warning_lines,
             ]
         )
+    )
+
+
+def cmoc_session_join_command_impl() -> None:
+    enable_indexing_preflight()
+    run_cli_subcommand(
+        cmoc_session_join_impl,
+        run_codex_exec,
+        run_git,
+        command_name="session join",
+        command_argv=["cmoc", "session", "join"],
     )
 
 

@@ -10,12 +10,11 @@ from _support import (
     cmoc_runtime,
     json,
     make_repo,
-    run_codex_exec,
-    run_codex_tui,
     run_git,
     setup_codex_home,
     subprocess,
 )
+from commons.runtime_codex import run_codex_exec, run_codex_tui
 
 def test_run_codex_exec_uses_stdin_and_writes_logs(
     tmp_path: Path, monkeypatch, capsys

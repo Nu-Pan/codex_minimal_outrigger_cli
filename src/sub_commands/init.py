@@ -3,7 +3,13 @@ from tempfile import NamedTemporaryFile
 
 import typer
 
-from cmoc_runtime import ensure_cmoc_ignored, repo_root, run_git, sync_config
+from cmoc_runtime import (
+    ensure_cmoc_ignored,
+    repo_root,
+    run_cli_subcommand,
+    run_git,
+    sync_config,
+)
 
 # init だけはログ作成前に repo root の .cmoc ignore を保証する。
 # その副作用を利用者の .gitignore 復元ロジックから見分けるため、元状態を一時保持する。
@@ -60,6 +66,15 @@ def cmoc_init_impl() -> None:
             worktree_gitignore,
         )
     typer.echo(render_cmoc_init_result(root))
+
+
+def cmoc_init_command_impl() -> None:
+    run_cli_subcommand(
+        cmoc_init_impl,
+        pre_log_check=ensure_cmoc_ignored_before_init_log,
+        command_name="init",
+        command_argv=["cmoc", "init"],
+    )
 
 
 def ensure_cmoc_ignored_before_init_log(root: Path) -> None:
