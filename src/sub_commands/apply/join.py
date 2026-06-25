@@ -233,7 +233,7 @@ def is_expected_apply_change(root: Path, path: str) -> bool:
     p = Path(path)
     if p.name == "INDEX.md":
         return True
-    if path == ".gitignore" or path.startswith(".git/"):
+    if path.startswith(".git/"):
         return False
     if path.startswith(("oracle/", "memo/", ".agents/")):
         return False

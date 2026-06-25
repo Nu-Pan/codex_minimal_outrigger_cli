@@ -230,7 +230,7 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     assert (root / "oracle" / "spec.md").read_text() == "# spec\n"
 
 
-def test_apply_join_treats_gitignore_change_as_unexpected_apply_diff(
+def test_apply_join_allows_gitignore_change_as_apply_diff(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -256,21 +256,16 @@ def test_apply_join_treats_gitignore_change_as_unexpected_apply_diff(
     )
     state = json.loads(state_path.read_text())
     apply_worktree = apply_worktree_from_state(root, state)
-    original_gitignore = (apply_worktree / ".gitignore").read_text()
-    (apply_worktree / ".gitignore").write_text(original_gitignore + "# unexpected\n")
+    changed_gitignore = (apply_worktree / ".gitignore").read_text() + "# expected\n"
+    (apply_worktree / ".gitignore").write_text(changed_gitignore)
     run_git(apply_worktree, "add", ".gitignore")
-    run_git(apply_worktree, "commit", "-m", "unexpected gitignore change")
+    run_git(apply_worktree, "commit", "-m", "apply gitignore change")
 
-    normal = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+    result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
 
-    assert normal.exit_code == 1
-    assert "想定外差分" in normal.output
-    assert ".gitignore" in normal.output
-    forced = runner.invoke(
-        app, ["apply", "join", "--force-resolve"], catch_exceptions=False
-    )
-    assert forced.exit_code == 0
-    assert (root / ".gitignore").read_text() == original_gitignore
+    assert result.exit_code == 0
+    assert "想定外差分" not in result.output
+    assert (root / ".gitignore").read_text() == changed_gitignore
 
 
 def test_apply_join_reports_unresolved_non_index_conflict(
