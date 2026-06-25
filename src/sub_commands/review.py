@@ -233,6 +233,8 @@ def run_review_oracle_loop(
                 finding.setdefault("judge_reason", None)
                 next_id += 1
                 findings.append(finding)
+        if not dirty_files:
+            break
         for _ in range(config.review_oracle.num_merge_findings_loop):
             operations = codex_exec(
                 build_review_oracle_merge_finding_parameter(

@@ -29,8 +29,6 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
             return FakeCodexResult({"findings": []})
-        if schema_name == "merge_finding.json":
-            return FakeCodexResult({"operations": []})
         if schema_name in {
             "validate_finding_challenger.json",
             "validate_finding_advocate.json",
@@ -57,6 +55,7 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
     assert "## Evaluated oracle file" in rendered
     assert "`oracle/spec.md`" in rendered
     assert any(call.startswith("review oracle enumerate findings") for call in calls)
+    assert "review oracle merge findings" not in calls
 
 
 def test_review_oracle_full_scope_excludes_gitignored_oracle_files(
@@ -81,8 +80,6 @@ def test_review_oracle_full_scope_excludes_gitignored_oracle_files(
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
             return FakeCodexResult({"findings": []})
-        if schema_name == "merge_finding.json":
-            return FakeCodexResult({"operations": []})
         raise AssertionError(schema_name)
 
     monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
@@ -121,8 +118,6 @@ def test_review_oracle_accepts_short_scope_option(tmp_path: Path, monkeypatch) -
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
             return FakeCodexResult({"findings": []})
-        if schema_name == "merge_finding.json":
-            return FakeCodexResult({"operations": []})
         if schema_name in {
             "validate_finding_challenger.json",
             "validate_finding_advocate.json",
@@ -240,8 +235,6 @@ def test_review_oracle_merges_review_index_changes(tmp_path: Path, monkeypatch) 
         if schema_name == "enumerate_finding.json":
             (Path.cwd() / "INDEX.md").write_text("# generated review index\n")
             return FakeCodexResult({"findings": []})
-        if schema_name == "merge_finding.json":
-            return FakeCodexResult({"operations": []})
         if schema_name in {
             "validate_finding_challenger.json",
             "validate_finding_advocate.json",
@@ -299,8 +292,6 @@ def test_review_oracle_rejects_non_index_worktree_changes(
                 if change_kind == "staged":
                     run_git(Path.cwd(), "add", "README.md")
             return FakeCodexResult({"findings": []})
-        if schema_name == "merge_finding.json":
-            return FakeCodexResult({"operations": []})
         raise AssertionError(schema_name)
 
     monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
