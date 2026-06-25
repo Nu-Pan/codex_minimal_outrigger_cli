@@ -60,11 +60,6 @@ def run_codex_exec(
     config = config or load_config(root)
     log_dir = codex_log_dir(root)
     log_dir.mkdir(parents=True, exist_ok=True)
-    ts = timestamp()
-    stdout_path = log_dir / f"{ts}_stdout.jsonl"
-    stderr_path = log_dir / f"{ts}_stderr.log"
-    output_path = log_dir / f"{ts}_output.json"
-    call_path = log_dir / f"{ts}_call.json"
     codex_home = resolve_codex_home(cwd)
     validate_codex_home(codex_home)
     codex_env = codex_subprocess_env(codex_home)
@@ -77,18 +72,6 @@ def run_codex_exec(
         if parameter.structured_output_schema_path
         else None
     )
-    argv = [
-        "codex",
-        "exec",
-        "--profile",
-        profile_name,
-        "--json",
-        "--output-last-message",
-        str(output_path),
-    ]
-    if schema_path is not None:
-        argv.extend(["--output-schema", str(schema_path)])
-    argv.append("-")
     base_call_data = {
         "codex_home": str(codex_home),
         "profile_name": profile_name,
@@ -97,6 +80,36 @@ def run_codex_exec(
         "reasoning_effort": parameter.reasoning_effort.value,
         "file_access_mode": parameter.file_access_mode.value,
     }
+
+    def new_log_paths() -> tuple[str, Path, Path, Path, Path]:
+        while True:
+            run_ts = timestamp()
+            run_call_path = log_dir / f"{run_ts}_call.json"
+            if not run_call_path.exists():
+                return (
+                    run_ts,
+                    log_dir / f"{run_ts}_stdout.jsonl",
+                    log_dir / f"{run_ts}_stderr.log",
+                    log_dir / f"{run_ts}_output.json",
+                    run_call_path,
+                )
+
+    def build_argv(output_path: Path, resume_token: str | None) -> list[str]:
+        run_argv = [
+            "codex",
+            "exec",
+            "--profile",
+            profile_name,
+            "--json",
+            "--output-last-message",
+            str(output_path),
+        ]
+        if schema_path is not None:
+            run_argv.extend(["--output-schema", str(schema_path)])
+        if resume_token:
+            run_argv.extend(["resume", resume_token])
+        run_argv.append("-")
+        return run_argv
 
     def write_call_log(
         path: Path,
@@ -127,35 +140,9 @@ def run_codex_exec(
             + "\n"
         )
 
-    write_call_log(
-        call_path,
-        run_purpose=purpose,
-        run_ts=ts,
-        run_argv=argv,
-        run_stdout_path=stdout_path,
-        run_stderr_path=stderr_path,
-        run_output_path=output_path,
-        run_schema_path=schema_path,
-    )
     call_started_at = time.perf_counter()
     quota_wait_sec = 0.0
     logger = subcommand_logger or current_subcommand_logger()
-
-    def emit_codex_event(
-        returncode: int, status: str, error: str | None = None
-    ) -> None:
-        emit_codex_call_event(
-            run_purpose=purpose,
-            run_call_path=call_path,
-            run_stdout_path=stdout_path,
-            run_stderr_path=stderr_path,
-            run_output_path=output_path,
-            run_schema_path=schema_path,
-            started_at=call_started_at,
-            returncode=returncode,
-            status=status,
-            error=error,
-        )
 
     def emit_codex_call_event(
         *,
@@ -210,20 +197,51 @@ def run_codex_exec(
     quota_polls = 0
     sleep_sec = capacity_initial_sleep_sec
     last_result: subprocess.CompletedProcess[str] | None = None
-    current_argv = argv
+    resume_token: str | None = None
 
-    def resume_argv(result: subprocess.CompletedProcess[str], error_text: str) -> list[str]:
-        resume_token = extract_resume_token(result.stdout)
-        if resume_token:
-            return [*argv[:-1], "resume", resume_token, "-"]
-        emit_codex_event(result.returncode, "failed", error_text)
+    def update_resume_token(
+        result: subprocess.CompletedProcess[str],
+        error_text: str,
+        *,
+        run_call_path: Path,
+        run_stdout_path: Path,
+        run_stderr_path: Path,
+        run_output_path: Path,
+    ) -> str:
+        token = extract_resume_token(result.stdout)
+        if token:
+            return token
+        emit_codex_call_event(
+            run_purpose=purpose,
+            run_call_path=run_call_path,
+            run_stdout_path=run_stdout_path,
+            run_stderr_path=run_stderr_path,
+            run_output_path=run_output_path,
+            run_schema_path=schema_path,
+            started_at=call_started_at,
+            returncode=result.returncode,
+            status="failed",
+            error=error_text,
+        )
         raise CmocError(
             "Codex CLI resume token を取得できませんでした。",
             ["stdout JSONL の session identifier 出力を確認してください。"],
-            f"call_log: {call_path}\nstdout_log: {stdout_path}\nstderr_log: {stderr_path}\n{error_text}",
+            f"call_log: {run_call_path}\nstdout_log: {run_stdout_path}\nstderr_log: {run_stderr_path}\n{error_text}",
         )
 
     while True:
+        ts, stdout_path, stderr_path, output_path, call_path = new_log_paths()
+        current_argv = build_argv(output_path, resume_token)
+        write_call_log(
+            call_path,
+            run_purpose=purpose,
+            run_ts=ts,
+            run_argv=current_argv,
+            run_stdout_path=stdout_path,
+            run_stderr_path=stderr_path,
+            run_output_path=output_path,
+            run_schema_path=schema_path,
+        )
         result = subprocess.run(
             current_argv,
             cwd=cwd,
@@ -259,7 +277,14 @@ def run_codex_exec(
                         quota_wait_sec += waited_sec
                         if logger is not None:
                             logger.add_quota_wait(waited_sec)
-                        current_argv = resume_argv(result, error_text)
+                        resume_token = update_resume_token(
+                            result,
+                            error_text,
+                            run_call_path=call_path,
+                            run_stdout_path=stdout_path,
+                            run_stderr_path=stderr_path,
+                            run_output_path=output_path,
+                        )
                         continue
                     _QUOTA_POLLING = True
                 print(
@@ -272,8 +297,17 @@ def run_codex_exec(
                             max_quota_polls is not None
                             and quota_polls >= max_quota_polls
                         ):
-                            emit_codex_event(
-                                result.returncode, "quota_exhausted", error_text
+                            emit_codex_call_event(
+                                run_purpose=purpose,
+                                run_call_path=call_path,
+                                run_stdout_path=stdout_path,
+                                run_stderr_path=stderr_path,
+                                run_output_path=output_path,
+                                run_schema_path=schema_path,
+                                started_at=call_started_at,
+                                returncode=result.returncode,
+                                status="quota_exhausted",
+                                error=error_text,
                             )
                             raise CmocError(
                                 "Codex CLI quota が枯渇しました。",
@@ -287,11 +321,13 @@ def run_codex_exec(
                             logger.add_quota_wait(quota_poll_interval_sec)
                         quota_wait_sec += quota_poll_interval_sec
                         time.sleep(quota_poll_interval_sec)
-                        probe_ts = timestamp()
-                        probe_stdout_path = log_dir / f"{probe_ts}_stdout.jsonl"
-                        probe_stderr_path = log_dir / f"{probe_ts}_stderr.log"
-                        probe_output_path = log_dir / f"{probe_ts}_output.json"
-                        probe_call_path = log_dir / f"{probe_ts}_call.json"
+                        (
+                            probe_ts,
+                            probe_stdout_path,
+                            probe_stderr_path,
+                            probe_output_path,
+                            probe_call_path,
+                        ) = new_log_paths()
                         probe_argv = [
                             "codex",
                             "exec",
@@ -349,9 +385,27 @@ def run_codex_exec(
                     f"# {console_timestamp()} Codex CLI quota wait: resuming work",
                     flush=True,
                 )
-                current_argv = resume_argv(result, error_text)
+                resume_token = update_resume_token(
+                    result,
+                    error_text,
+                    run_call_path=call_path,
+                    run_stdout_path=stdout_path,
+                    run_stderr_path=stderr_path,
+                    run_output_path=output_path,
+                )
                 continue
-            emit_codex_event(result.returncode, "failed", error_text)
+            emit_codex_call_event(
+                run_purpose=purpose,
+                run_call_path=call_path,
+                run_stdout_path=stdout_path,
+                run_stderr_path=stderr_path,
+                run_output_path=output_path,
+                run_schema_path=schema_path,
+                started_at=call_started_at,
+                returncode=result.returncode,
+                status="failed",
+                error=error_text,
+            )
             raise CmocError(
                 "Codex CLI 呼び出しが失敗しました。",
                 ["stderr/stdout log を確認して原因を解消してください。"],
@@ -367,8 +421,17 @@ def run_codex_exec(
                 if semantic_attempts < max_semantic_retries:
                     semantic_attempts += 1
                     continue
-                emit_codex_event(
-                    result.returncode, "schema_validation_failed", str(exc)
+                emit_codex_call_event(
+                    run_purpose=purpose,
+                    run_call_path=call_path,
+                    run_stdout_path=stdout_path,
+                    run_stderr_path=stderr_path,
+                    run_output_path=output_path,
+                    run_schema_path=schema_path,
+                    started_at=call_started_at,
+                    returncode=result.returncode,
+                    status="schema_validation_failed",
+                    error=str(exc),
                 )
                 raise CmocError(
                     "Codex CLI の Structured Output 検証に失敗しました。",
@@ -377,7 +440,17 @@ def run_codex_exec(
                 ) from exc
         output_text = output_path.read_text() if output_path.exists() else ""
         elapsed_sec = time.perf_counter() - call_started_at
-        emit_codex_event(result.returncode, "succeeded")
+        emit_codex_call_event(
+            run_purpose=purpose,
+            run_call_path=call_path,
+            run_stdout_path=stdout_path,
+            run_stderr_path=stderr_path,
+            run_output_path=output_path,
+            run_schema_path=schema_path,
+            started_at=call_started_at,
+            returncode=result.returncode,
+            status="succeeded",
+        )
         return CodexExecResult(
             returncode=result.returncode,
             output_text=output_text,

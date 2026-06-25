@@ -63,6 +63,15 @@ def test_run_codex_exec_retries_semantic_output(tmp_path: Path, monkeypatch) -> 
 
     assert result.output_json == {"ok": True}
     assert counter.read_text() == "2"
+    call_paths = sorted((root / ".cmoc" / "log" / "codex").glob("*_call.json"))
+    call_logs = [json.loads(path.read_text()) for path in call_paths]
+    assert len(call_logs) == 2
+    assert [Path(log["output_path"]).read_text() for log in call_logs] == [
+        '{"bad": true}',
+        '{"ok": true}',
+    ]
+    assert len({log["stdout_log_path"] for log in call_logs}) == 2
+    assert result.call_log_path == call_paths[1]
 
 
 def test_run_codex_exec_polls_and_resumes_after_quota(
@@ -132,10 +141,11 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert "resume" in argv_calls[2]
     assert "sess-1" in argv_calls[2]
     assert result.output_json == {"ok": True}
-    call_logs = [
-        json.loads(path.read_text())
+    call_entries = [
+        (path, json.loads(path.read_text()))
         for path in sorted((root / ".cmoc" / "log" / "codex").glob("*_call.json"))
     ]
+    call_logs = [log for _path, log in call_entries]
     probe_logs = [
         log for log in call_logs if log["purpose"] == "quota availability probe"
     ]
@@ -147,6 +157,23 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     )
     assert Path(probe_logs[0]["stderr_log_path"]).read_text() == ""
     assert Path(probe_logs[0]["output_path"]).read_text() == '{"probe": true}'
+    main_entries = [
+        (path, log) for path, log in call_entries if log["purpose"] == "codex exec"
+    ]
+    main_logs = [log for _path, log in main_entries]
+    assert len(main_logs) == 2
+    assert main_logs[0]["argv"][1:] == argv_calls[0]
+    assert "resume" not in main_logs[0]["argv"]
+    assert main_logs[1]["argv"][1:] == argv_calls[2]
+    assert "resume" in main_logs[1]["argv"]
+    assert len({log["stdout_log_path"] for log in main_logs}) == 2
+    assert Path(main_logs[0]["stdout_log_path"]).read_text().strip() == (
+        '{"type": "error", "message": "Quota exceeded", "session_id": "sess-1"}'
+    )
+    assert Path(main_logs[1]["stdout_log_path"]).read_text().strip() == (
+        '{"type": "turn.completed"}'
+    )
+    assert result.call_log_path == main_entries[1][0]
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
     assert [event["purpose"] for event in codex_events] == [
