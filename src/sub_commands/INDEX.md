@@ -45,21 +45,20 @@
 # `init.py`
 
 ## Summary
-- 作業ツリーを cmoc が扱える初期状態へ同期する初期化処理を実装する。`.gitignore` と `.cmoc` 設定を init commit に反映しつつ、実行前から staged だった利用者差分や作業ツリー上の `.gitignore` 状態を退避・復元する責務を持つ。
-- 初期化成功時に標準出力へ返す Markdown 形式の結果文もここで組み立てる。
+- リポジトリを cmoc が扱える初期状態へ同期する init サブコマンドの実装。ログ作成前の .cmoc ignore 保証、init commit 作成、利用者が実行前から持っていた .gitignore と staged 差分の退避・復元、成功結果の Markdown 出力を扱う。
 
 ## Read this when
-- 初期化サブコマンドが work root、`.gitignore`、`.cmoc` 設定、init commit をどの順序で扱うか確認したいとき。
-- 初期化処理が利用者の staged 変更や作業ツリー上の `.gitignore` を壊さないための退避・復元ロジックを調べるとき。
-- 初期化後に表示される成功メッセージの内容や形式を変更・確認したいとき。
+- cmoc init の実行内容、init commit の作成条件、stdout に出す成功結果を確認または変更したいとき。
+- init 実行時に .gitignore へ /.cmoc/ を追加する処理や、ログ作成前にその ignore を保証する処理を確認または変更したいとき。
+- init 実行前から存在した staged 差分や .gitignore の worktree/index/head 状態を、init 後にどう復元するか確認または変更したいとき。
 
 ## Do not read this when
-- work root の決定方法、git 実行 wrapper、`.cmoc` 無視設定、設定同期そのものの詳細を調べたいだけのときは、それらを提供する実行時 helper 側を読む。
-- 初期化以外のサブコマンドの CLI 挙動や出力を調べたいときは、該当するサブコマンド実装を読む。
-- INDEX 生成規則、oracle と realization の関係、パス用語の定義を確認したいときは、仕様や path model の本文を読む。
+- init 以外のサブコマンドの CLI 挙動や出力を調べたいとき。
+- repo root 判定、git コマンド実行、設定同期、.cmoc ignore の基本処理そのものを調べたいとき。
+- init の外部挙動を検証するテストケースだけを探しているとき。
 
 ## hash
-- c4aa8aace0fa6ea5b50d5f4bbc9f351451aee531000b83e8c925bb6df227ae25
+- 2d2315a5f424230c542ae2b1532a4dd9a9c31d25ff641f9fa0bfdf275980e15f
 
 # `review.py`
 

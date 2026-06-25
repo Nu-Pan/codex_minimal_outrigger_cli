@@ -106,24 +106,23 @@
 # `test_cli_init_tui.py`
 
 ## Summary
-- CLI の初期化と TUI 起動に関する realization test。初期化時の `.cmoc` 配下の git 管理解除、ignore 設定、既存 staged/unstaged 変更の保持、linked worktree での作業場所、既定設定ファイルの生成・同期、サブコマンド実行ログを検証する。
-- TUI ではエディタで作成された依頼文からパラメータ解決用 Codex 実行と TUI 用 Codex 起動へつなぐ制御、生成された完全プロンプトの保存場所、不要な HTML コメント除去、旧ログパスを使わないことを検証する。
-- Markdown prompt parser が fenced code block 内の見出し風テキストを見出し扱いしないこと、見出し前の前文を本文セクションとして保持することを検証する。
+- CLI の初期化処理と対話型起動処理に対する realization test。既存の `.cmoc` 管理対象の untrack、`.gitignore` 更新、初期化 commit、既存 staged/unstaged 変更の保持、リンク worktree からの初期化、既定設定の生成と既存設定値の保持を検証する。
+- 対話型起動では、エディタで作成された依頼文から不要な HTML コメントを除去し、パラメータ解決用 Codex 実行と TUI Codex 起動へ適切な parameter・cwd・root・ログ保存先を渡すことを検証する。
+- Markdown prompt parser が fenced code block 内の見出し風テキストを見出し扱いしないこと、見出し前の本文を preamble として保持することも検証する。
 
 ## Read this when
-- `init` サブコマンドの git 操作、`.gitignore` 更新、`.cmoc` 配下の ignore・untrack・config 生成、既存 index/worktree 変更を壊さない挙動を変更または確認するとき。
-- linked worktree 上で `init` や `tui` を実行した場合の root/cwd、`.cmoc` state・log・config の配置、親 worktree へ副作用を出さない挙動を確認するとき。
-- `tui` サブコマンドのエディタ起動、依頼文の整形、パラメータ解決用 structured output schema、Codex TUI へ渡す model・reasoning effort・file access mode・prompt を変更するとき。
-- サブコマンド実行ログの保存先や `command_invoked` event の内容を変更するとき。
-- Markdown 依頼文 parser の見出し分割、fenced code block の扱い、見出し前テキストの扱いを変更するとき。
+- `init` サブコマンドの git 操作、副作用、`.cmoc` ignore、初期 commit、設定ファイル生成、既存変更の保護に関する挙動を確認・変更する時。
+- リンク worktree 上で `init` または `tui` を実行した場合に、メイン worktree とリンク worktreeのどちらへ `.cmoc` 状態・ログ・schema・設定を書き込むかを確認する時。
+- `tui` サブコマンドで、エディタ起動、依頼文の補完、コメント除去、パラメータ解決、Codex TUI 起動、ログファイル保存の流れを変更する時。
+- Markdown 依頼文を章構造へ分解する parser の、fenced code block と見出し前本文の扱いを変更する時。
 
 ## Do not read this when
-- CLI の初期化・TUI・Markdown prompt parsing と関係しないサブコマンドの仕様やテストを探しているとき。
-- Codex 実行ラッパーそのものの低レベルな subprocess 組み立て、外部コマンド共通処理、設定 schema 全体の詳細だけを調べたいときは、対応する実装や専用テストを先に読む。
-- oracle の正本仕様を確認したいときは、realization test であるこの対象ではなく oracle 側の本文を読む。
+- CLI の `init`・`tui`・Markdown prompt parsing に関係しないサブコマンドや機能のテストを探している時。
+- 正本仕様そのもの、実装本体、または helper の詳細な実装を読みたい時。この対象は挙動検証であり、仕様判断や実装変更の入口としては対応する oracle file や `src` 側の本文を優先する。
+- Codex CLI や外部エディタの実物挙動を網羅的に確認したい時。この対象は fake executable と monkeypatch による制御ロジック検証に絞っている。
 
 ## hash
-- 228fed3a02ac1c474c76f32497cb7d88320bc0ae08146418d002e1bd10fc3f99
+- d7dee94d4169a2e6503082451f449b9fba5530ef2f60979de74e4973a7dea9cc
 
 # `test_codex_runtime_exec.py`
 
