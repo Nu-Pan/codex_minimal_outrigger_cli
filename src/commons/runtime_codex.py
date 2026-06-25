@@ -68,7 +68,9 @@ def run_codex_exec(
     codex_home = resolve_codex_home(cwd)
     validate_codex_home(codex_home)
     codex_env = codex_subprocess_env(codex_home)
-    profile_path = prepare_codex_profile(parameter, config, codex_home)
+    profile_path = prepare_codex_profile(
+        parameter, config, codex_home, work_root(cwd)
+    )
     profile_name = codex_profile_name(profile_path)
     schema_path = (
         prepare_schema(work_root(cwd), parameter.structured_output_schema_path)
@@ -413,7 +415,9 @@ def run_codex_tui(
     call_path = log_dir / f"{ts}_tui_call.json"
     codex_home = resolve_codex_home(cwd)
     validate_codex_home(codex_home)
-    profile_path = prepare_codex_profile(parameter, config, codex_home)
+    profile_path = prepare_codex_profile(
+        parameter, config, codex_home, work_root(cwd)
+    )
     profile_name = codex_profile_name(profile_path)
     argv = [
         "codex",

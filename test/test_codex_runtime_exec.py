@@ -1,3 +1,5 @@
+import tomllib
+
 from _support import (
     AgentCallParameter,
     FileAccessMode,
@@ -214,6 +216,11 @@ def test_run_codex_tui_uses_codex_command_and_prompt_argument(
     assert recorded["argv"][2].startswith("cmoc_")
     assert "exec" not in recorded["argv"]
     assert recorded["argv"][-1] == "TUI PROMPT BODY"
+    profiles = list(codex_home.glob("cmoc_*.config.toml"))
+    assert len(profiles) == 1
+    workspace = tomllib.loads(profiles[0].read_text())["sandbox_workspace_write"]
+    assert workspace["writable_roots"] == [str(root)]
+    assert workspace["read_only_paths"] == [str(root / "memo"), str(root / ".agents")]
     call_logs = list((root / ".cmoc" / "log" / "codex").glob("*_tui_call.json"))
     assert len(call_logs) == 1
     assert json.loads(call_logs[0].read_text())["argv"] == [

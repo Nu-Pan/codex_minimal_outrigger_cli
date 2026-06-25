@@ -1,3 +1,8 @@
+import tomllib
+
+from basic.acp import AgentCallParameter
+from commons.runtime_codex_profile import build_codex_profile
+
 from _support import (
     CmocConfig,
     CmocError,
@@ -165,3 +170,43 @@ def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
     assert file_access_to_sandbox_mode(FileAccessMode.REALIZATION_WRITE) == "workspace-write"
     assert file_access_to_sandbox_mode(FileAccessMode.ORACLE_WRITE) == "workspace-write"
     assert file_access_to_sandbox_mode(FileAccessMode.REPO_WRITE) == "workspace-write"
+
+
+def test_codex_profile_contains_file_access_enforcement(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+
+    def profile(mode: FileAccessMode) -> dict:
+        return tomllib.loads(
+            build_codex_profile(
+                AgentCallParameter(
+                    ModelClass.EFFICIENCY,
+                    ReasoningEffort.LOW,
+                    mode,
+                    "prompt",
+                    None,
+                ),
+                CmocConfig(),
+                root,
+            )
+        )
+
+    readonly = profile(FileAccessMode.READONLY)
+    assert readonly["sandbox_mode"] == "read-only"
+    assert "sandbox_workspace_write" not in readonly
+
+    realization = profile(FileAccessMode.REALIZATION_WRITE)["sandbox_workspace_write"]
+    assert realization["writable_roots"] == [str(root)]
+    assert realization["read_only_paths"] == [
+        str(root / "oracle"),
+        str(root / "memo"),
+        str(root / ".agents"),
+    ]
+
+    oracle = profile(FileAccessMode.ORACLE_WRITE)["sandbox_workspace_write"]
+    assert oracle["writable_roots"] == [str(root / "oracle")]
+    assert oracle["read_only_paths"] == [str(root / "memo"), str(root / ".agents")]
+
+    repo = profile(FileAccessMode.REPO_WRITE)["sandbox_workspace_write"]
+    assert repo["writable_roots"] == [str(root)]
+    assert repo["read_only_paths"] == [str(root / "memo"), str(root / ".agents")]

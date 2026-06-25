@@ -25,18 +25,52 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
             raise CmocError("不明な FileAccessMode です。", [], str(mode))
 
 
-def build_codex_profile(parameter: AgentCallParameter, config: CmocConfig) -> str:
+def _toml_str(value: Path | str) -> str:
+    return json.dumps(str(value))
+
+
+def _toml_array(values: list[Path]) -> str:
+    return "[" + ", ".join(_toml_str(value) for value in values) + "]"
+
+
+def _workspace_profile_lines(mode: FileAccessMode, root: Path) -> list[str]:
+    if file_access_to_sandbox_mode(mode) == "read-only":
+        return []
+    root = root.resolve()
+    match mode:
+        case FileAccessMode.REALIZATION_WRITE:
+            writable_roots = [root]
+            read_only_paths = [root / "oracle", root / "memo", root / ".agents"]
+        case FileAccessMode.ORACLE_WRITE:
+            writable_roots = [root / "oracle"]
+            read_only_paths = [root / "memo", root / ".agents"]
+        case FileAccessMode.REPO_WRITE:
+            writable_roots = [root]
+            read_only_paths = [root / "memo", root / ".agents"]
+        case _:
+            raise CmocError("不明な FileAccessMode です。", [], str(mode))
+    return [
+        "[sandbox_workspace_write]",
+        f"writable_roots = {_toml_array(writable_roots)}",
+        f"read_only_paths = {_toml_array(read_only_paths)}",
+    ]
+
+
+def build_codex_profile(
+    parameter: AgentCallParameter, config: CmocConfig, root: Path | None = None
+) -> str:
     model = config.codex.model[parameter.model_class]
     reasoning_effort = config.codex.reasoning_effort[parameter.reasoning_effort]
     sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
-    return "\n".join(
-        [
-            f'model = "{model}"',
-            f'reasoning_effort = "{reasoning_effort}"',
-            f'sandbox_mode = "{sandbox_mode}"',
-            "",
-        ]
-    )
+    lines = [
+        f'model = "{model}"',
+        f'reasoning_effort = "{reasoning_effort}"',
+        f'sandbox_mode = "{sandbox_mode}"',
+    ]
+    if root is not None:
+        lines.extend(_workspace_profile_lines(parameter.file_access_mode, root))
+    lines.append("")
+    return "\n".join(lines)
 
 
 def resolve_codex_home(cwd: Path | None = None) -> Path:
@@ -89,8 +123,9 @@ def prepare_codex_profile(
     parameter: AgentCallParameter,
     config: CmocConfig | None = None,
     codex_home: Path | None = None,
+    root: Path | None = None,
 ) -> Path:
-    profile = build_codex_profile(parameter, config or CmocConfig())
+    profile = build_codex_profile(parameter, config or CmocConfig(), root)
     target_home = codex_home or resolve_codex_home()
     try:
         return write_hashed_file_in_existing_dir(
