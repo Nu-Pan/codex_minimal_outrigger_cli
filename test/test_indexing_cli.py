@@ -400,6 +400,61 @@ def test_command_codex_call_runs_indexing_preflight(
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
+def test_command_codex_call_indexes_cwd_worktree_before_root(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    worktree = tmp_path / "codex-worktree"
+    run_git(root, "worktree", "add", "-b", "codex-work", str(worktree))
+    codex_cwd = worktree / "oracle"
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+    )
+    events: list[str] = []
+
+    def fake_update_indexes(update_root: Path, codex_exec=None) -> list[Path]:
+        events.append("indexing")
+        assert update_root == worktree
+        index_path = update_root / "INDEX.md"
+        index_path.write_text("# generated\n")
+        return [index_path]
+
+    class FakeCodexResult:
+        output_json = None
+
+    def fake_runtime_run_codex_exec(call_parameter, **kwargs):
+        events.append("codex")
+        assert kwargs["root"] == root
+        assert kwargs["cwd"] == codex_cwd
+        return FakeCodexResult()
+
+    monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
+    monkeypatch.setattr(
+        main_module, "runtime_run_codex_exec", fake_runtime_run_codex_exec
+    )
+
+    result = main_module.run_codex_exec(
+        parameter,
+        root=root,
+        cwd=codex_cwd,
+        purpose="review oracle enumerate findings",
+    )
+
+    assert isinstance(result, FakeCodexResult)
+    assert events == ["indexing", "codex"]
+    assert (
+        run_git(worktree, "log", "-1", "--pretty=%s").stdout.strip()
+        == "cmoc indexing"
+    )
+    assert run_git(worktree, "status", "--short").stdout.strip() == ""
+    assert run_git(root, "log", "-1", "--pretty=%s").stdout.strip() == "initial"
+    assert not (root / "INDEX.md").exists()
+
+
 def test_command_tui_codex_call_runs_indexing_preflight(
     tmp_path: Path, monkeypatch
 ) -> None:

@@ -94,14 +94,19 @@ _INITIAL_STATUS: ContextVar[str | None] = ContextVar("INITIAL_STATUS", default=N
 
 def run_codex_exec(parameter: AgentCallParameter, **kwargs):
     purpose = str(kwargs.get("purpose", "codex exec"))
-    _run_indexing_before_codex(purpose, kwargs.get("root") or repo_root())
+    _run_indexing_before_codex(purpose, _indexing_root_for_codex(kwargs))
     return runtime_run_codex_exec(parameter, **kwargs)
 
 
 def run_codex_tui(parameter: AgentCallParameter, **kwargs):
     purpose = str(kwargs.get("purpose", "codex tui"))
-    _run_indexing_before_codex(purpose, kwargs.get("root") or repo_root())
+    _run_indexing_before_codex(purpose, _indexing_root_for_codex(kwargs))
     return runtime_run_codex_tui(parameter, **kwargs)
+
+
+def _indexing_root_for_codex(kwargs) -> Path:
+    cwd = kwargs.get("cwd")
+    return work_root(cwd) if cwd else kwargs.get("root") or repo_root()
 
 
 def _run_indexing_before_codex(purpose: str, root: Path) -> None:
