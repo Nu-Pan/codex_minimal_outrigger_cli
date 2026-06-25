@@ -209,21 +209,12 @@ def build_complete_prompt(
     """
     # 基本プロンプト
     struct_doc = [
-        StructDoc(
-            "role",
-            role,
-        ),
-        StructDoc(
-            "summary",
-            summary,
-        ),
-        StructDoc(
-            "goal",
-            goal,
-        ),
+        _for_codex_cli(StructDoc("role", role)),
+        _for_codex_cli(StructDoc("summary", summary)),
+        _for_codex_cli(StructDoc("goal", goal)),
         build_file_access_rule(file_access_mode),
         build_routing_rule(),
-        *aux_prompt,
+        *[_for_codex_cli(prompt) for prompt in aux_prompt],
     ]
     # 依存関係の有る情報を必ず含めるようにする
     if oracle_and_realization_basic:
