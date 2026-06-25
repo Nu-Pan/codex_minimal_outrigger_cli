@@ -75,7 +75,7 @@ def test_run_codex_exec_retries_semantic_output(tmp_path: Path, monkeypatch) -> 
 
 
 def test_run_codex_exec_polls_and_resumes_after_quota(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch, capsys
 ) -> None:
     root = make_repo(tmp_path)
     codex_home = setup_codex_home(tmp_path, monkeypatch)
@@ -149,6 +149,11 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     probe_logs = [
         log for log in call_logs if log["purpose"] == "quota availability probe"
     ]
+    probe_call_path = next(
+        path
+        for path, log in call_entries
+        if log["purpose"] == "quota availability probe"
+    )
     assert len(probe_logs) == 1
     assert probe_logs[0]["argv"][1:] == argv_calls[1]
     assert probe_logs[0]["profile_name"] == argv_calls[1][2]
@@ -184,6 +189,11 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert codex_events[0]["returncode"] == 0
     assert codex_events[0]["stdout_log_path"] == probe_logs[0]["stdout_log_path"]
     assert codex_events[0]["output_path"] == probe_logs[0]["output_path"]
+    console = capsys.readouterr().out
+    assert "- purpose: `quota availability probe`" in console
+    assert f"- call_log: `{probe_call_path}`" in console
+    assert "- elapsed: `" in console
+    assert "- returncode: `0`" in console
 
 
 def test_run_codex_exec_fails_after_quota_without_resume_token(
