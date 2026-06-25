@@ -220,10 +220,11 @@ def extract_resume_token(stdout_text: str) -> str | None:
             item = json.loads(line)
         except json.JSONDecodeError:
             continue
-        for key in ("session_id", "conversation_id", "id"):
-            value = item.get(key)
-            if isinstance(value, str) and value:
-                return value
+        if item.get("type") != "thread.started":
+            continue
+        value = item.get("thread_id")
+        if isinstance(value, str) and value:
+            return value
     return None
 
 

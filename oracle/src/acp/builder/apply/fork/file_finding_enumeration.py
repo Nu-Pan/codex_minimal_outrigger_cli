@@ -33,10 +33,10 @@ def build_apply_fork_file_finding_enumeration_parameter(
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア実装の所見リストアップ担当です",
         summary=f"""
-        - `{target_path}` を起点に `{repo_root}` ツリー内の realization file の所見を調査すること
-        - 必要なら `{target_path}` 以外の oracle file, realization file も読むこと
+        - `{target_path}` を起点に `{repo_root}` ツリー内の所見 (realization file の要修正点) を調査すること
         """,
-        goal="""
+        goal=f"""
+        - `{target_path}` 以外の必要な oracle file, realization file も読んでいること
         - 指定された Structured Output schema に従って所見リストを返すこと
         - 列挙した所見リストが apply review standard を満たしている事
         """,
@@ -55,5 +55,5 @@ def build_apply_fork_file_finding_enumeration_parameter(
         ReasoningEffort.MEDIUM,
         FileAccessMode.READONLY,
         render_as_markdown(prompt),
-        Path(__file__).parent / "finding_list.json",
+        Path(__file__).with_suffix(".json"),
     )

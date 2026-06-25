@@ -1,24 +1,24 @@
 # `builder`
 
 ## Summary
-- 各サブコマンドや用途別に、AI agent 呼び出しパラメータを組み立てるための正本仕様断片へ進む入口。
-- レビュー、apply fork 後の確認・修正支援、INDEX.md エントリー生成、セッション合流時の conflict 解消、TUI 実行前のパラメータ選定について、prompt、補助文脈、ファイルアクセス制約、モデル設定、reasoning effort、Structured Output 契約との接続を扱う下位領域をまとめる。
-- 実際の CLI 制御フロー、git 操作、端末 UI、永続状態更新、本文標準そのものではなく、それらの処理から呼び出される判定・レビュー・整理・修正支援 agent へ何を渡し何を受け取るかを確認するための分岐点になる。
+- AI エージェント呼び出しパラメータ構築に関する正本仕様断片を集める領域。サブコマンドごとに、どの補助文脈を読み取り、どの role・goal・制約・モデル設定・reasoning effort・ファイルアクセス範囲・Structured Output 契約でエージェントを呼び出すかを扱う。
+- fork 適用時の差分要約・所見列挙・所見対応修正、INDEX.md エントリー生成、oracle review の所見生成・理由調査・採否判定・整理、セッション合流時の conflict 解消、TUI 実行前のパラメータ選定など、AI 呼び出しの入出力境界を確認する入口になる。
+- 実際の CLI 制御フロー、git 操作、ファイル修正アルゴリズム、TUI 描画、永続状態更新そのものではなく、それらの処理から呼び出される AI エージェントへ何を渡し何を返させるかを読むための階層。
 
 ## Read this when
-- cmoc の各機能が AI agent を呼び出す際の role、summary、goal、補助 prompt、参照 standard、ファイルアクセスモード、モデル種別、reasoning effort、出力 schema の正本値を探したいとき。
-- oracle review、apply fork 後レビュー、INDEX.md エントリー生成、セッション合流時の conflict 解消、TUI 実行前パラメータ選定のいずれかについて、呼び出し入力と応答契約の対応を調べたいとき。
-- 対象機能の実処理ではなく、AI に渡す文脈の組み立て方や、AI から返る Structured Output をどの意味単位で期待するかを確認したいとき。
-- 同階層の下位領域のうち、どの agent 呼び出し仕様へ進むべきかを、サブコマンドや用途別に切り分けたいとき。
+- cmoc の各処理が AI エージェントを呼び出す場面で、prompt 構成、補助文脈、読み取り・編集権限、モデル種別、reasoning effort、Structured Output schema の対応を確認したいとき。
+- fork 適用後レビュー、INDEX.md エントリー生成、oracle review、セッション合流時の conflict 解消、TUI 実行パラメータ選定のいずれかについて、エージェント呼び出しに渡す入力情報と期待する応答契約を調べたいとき。
+- oracle file、realization file、差分テキスト、既知所見、理由、対象パス、元プロンプト、標準文書などの補助情報を、AI 呼び出し用 prompt にどう組み込むか追いたいとき。
+- AI 呼び出しの結果を検証する実装やテストで、空配列を返す境界、既知情報と重複しない情報だけを返す境界、修正用と読み取り専用のアクセス条件などを確認したいとき。
 
 ## Do not read this when
-- CLI 引数解析、サブコマンド全体の制御フロー、fork 作成、ブランチ操作、merge 実行、差分取得、端末 UI 描画、永続状態更新など、AI 呼び出しパラメータ以外の実装仕様を調べたいとき。
-- oracle file、realization file、path keyword、repo root、work root、各種 standard 本文、共通 prompt 構築部品の一般定義だけを確認したいとき。
-- 個別の oracle file 本文を読んで具体的なレビュー所見、変更判断、conflict 解消方針、INDEX.md エントリー内容そのものを考えたいとき。
-- 実装ファイルやテストにおける具体的な関数、CLI 表示、保存形式、git command 実行手順、パッチ生成手順を探しているとき。
+- CLI 引数解析、サブコマンド登録、branch 作成、merge 実行、git 操作、差分取得、patch 適用、永続状態更新、端末 UI 描画など、AI 呼び出しパラメータ以外の実行フロー本体を調べたいとき。
+- 個別ファイルの patch 内容、merge conflict の具体的な統合判断、realization file の修正ロジック、oracle file 本文からの具体的な所見材料など、対象本文そのものを読んで判断する作業をしたいとき。
+- oracle standard、realization standard、review oracle standard、path 語彙、共通 prompt 部品、AgentCallParameter 型、file access mode などの共通定義そのものを確認したいとき。
+- INDEX.md 全体のルーティング方針、エントリー記述品質基準、生成結果の内容評価、または一般的なルーティング文書の書き方を確認したいとき。
 
 ## hash
-- a123ebbec96bc631fe91246edac90bb495b1958e5aa81517fd1cc4116532674b
+- 8477935ea87066eb3eff8ae75c41dffee5f719231533ca0cee71623b4f09fff7
 
 # `prompt_parts`
 

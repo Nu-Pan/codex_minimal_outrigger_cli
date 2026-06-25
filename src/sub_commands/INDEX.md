@@ -1,28 +1,23 @@
 # `apply`
 
 ## Summary
-- apply サブコマンド群の実装領域で、isolated worktree 上での finding 適用ループ、成果の session branch への join、未 join run の abandon、apply 用 worktree・branch・process id 管理、fork/join report 生成を扱う。
-- apply lifecycle の開始、実行中状態、完了・エラー後の取り込み、破棄、cleanup までを追う入口であり、CLI 入口定義より内側の実行制御と状態遷移を確認するための対象。
-- apply の対象ファイル選定、編集禁止領域の差分検査、想定外差分の検出・復元、INDEX.md conflict の限定的な自動解決、Codex CLI 呼び出しを含む apply 専用制御がまとまっている。
+- apply サブコマンド群の実行単位を扱う実装領域。apply run の開始、isolated worktree 上での finding 適用、成果の join、未 join run の abandon、実行 report 生成、関連する worktree・branch・process id の補助操作を入口としてまとめる。
+- session branch と apply branch の間で成果を作成・取り込み・破棄する lifecycle 全体を追うときの上位入口であり、個別の開始処理、完了取り込み、破棄、report、低レベル runtime 補助へ読み分けるために使う。
 
 ## Read this when
-- apply fork、join、abandon の実行条件、branch 制約、clean worktree 要求、apply state の遷移、cleanup の順序を確認・変更したいとき。
-- apply 用 worktree と branch の特定規則、apply process id の保存・読取・削除、実行中 process の停止確認を調べたいとき。
-- rolling・session・full scope から finding 列挙対象を決める処理、finding 適用後の変更検出、commit、次回対象更新の apply loop を追いたいとき。
-- apply 実行中に oracle、.agents、memo などの編集禁止領域へ差分が出ないことを確認する検査を変更したいとき。
-- apply join 時の想定外差分分類、force-resolve による復元、merge conflict 報告、INDEX.md だけの conflict 解決を確認・変更したいとき。
-- apply fork または join の report 保存先、frontmatter、結果表示、finding count、変更要約、warning 出力の生成条件を確認したいとき。
+- apply run の lifecycle 全体のどこを読むべきかを絞り込みたいとき。
+- apply worktree や apply branch を使った isolated な変更適用、成果 commit、session branch への取り込み、破棄、状態初期化の関係を確認したいとき。
+- apply run の report、想定外差分の扱い、編集禁止対象差分の検出、process id 管理など、apply 固有の責務の入口を探したいとき。
+- apply サブコマンドに関する実装変更やテスト追加のために、開始・join・abandon・report・runtime 補助のどこが直接の変更対象か判断したいとき。
 
 ## Do not read this when
-- apply サブコマンドのユーザー向け CLI 登録、typer option 定義、コマンド名の構造だけを確認したいときは、上位のサブコマンド入口を読む。
-- session state の schema、session_id の生成、session lifecycle 全体、設定値定義そのものを確認したいときは、状態モデル・設定・session 管理側を読む。
-- git command wrapper、work root や worktrees root の定義、CmocError の表示形式、ignored 判定や binary 判定の共通実装だけを調べたいときは、共通 runtime 側を読む。
-- Codex CLI に渡す prompt や structured parameter の詳細だけを確認したいときは、apply 用 parameter builder 側を読む。
-- oracle file、realization file、path keyword などの正本定義を確認したいときは、oracle 側の仕様本文を読む。
-- apply lifecycle ではなく、別サブコマンドの session 開始・終了、review、index 生成などを調べたいときは、それぞれのサブコマンド領域へ進む。
+- サブコマンド共通の CLI 登録、引数 parser、コマンド dispatch の仕組みだけを調べたいとき。
+- session state 全体の schema、session_id の生成、config 読み込み、git command wrapper、path keyword の定義など、apply に閉じない共通 runtime や状態モデルを調べたいとき。
+- Codex prompt parameter の本文や JSON schema の組み立てだけを確認したいとき。
+- oracle file、realization file、INDEX.md 生成規則など、apply 実行制御ではなく正本仕様やルーティング文書の定義を調べたいとき。
 
 ## hash
-- 2c25d3e9ea5c01efedf5a982e28ffdbacfdbb6546ac406287b3e050c0703b655
+- 410939b5cba911b88d5ffbee77c00ce8b625d7ff0ce978c1d28867369c480431
 
 # `indexing.py`
 

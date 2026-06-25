@@ -45,11 +45,8 @@ class CmocConfigApplyFork:
     `cmoc apply fork` サブコマンドの挙動に関する設定を集約したクラス
     """
 
-    # apply ループの最大反復回数
-    num_apply_loop: int = field(default=5)
-
-    # 所見リスト改善ループの最大回数
-    num_improve_findings_loop: int = field(default=1)
+    # apply ループの最大処理ファイル数
+    num_apply_files: int = field(default=200)
 
 
 @dataclass(frozen=True)

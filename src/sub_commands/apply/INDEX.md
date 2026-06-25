@@ -60,27 +60,23 @@
 # `fork.py`
 
 ## Summary
-- session branch 上の isolated apply worktree で apply loop を実行し、finding の列挙・精査・適用・commit・report 作成・状態更新までを統括する apply fork 実装を扱う。
-- apply scope から対象ファイルを決める処理、finding 内の path から次回対象を広げる処理、worktree の変更検出、編集禁止領域の差分検査、Codex CLI による finding 適用と commit subject 生成の入口になる。
-- apply fork 実行中の apply process id、apply branch、oracle snapshot commit、apply state、result label、report 出力など、apply fork の実行ライフサイクルに関わる制御が集約されている。
+- isolated apply worktree 上で apply loop を実行し、対象列挙、finding 列挙、finding 適用、差分 commit、report 生成、session state 更新までを統括する apply fork 実装。
+- scope に応じた調査対象の正規化、重複排除、変更 path の再投入、編集禁止対象差分の検出とロールバック、Codex CLI による commit subject 生成を扱う。
 
 ## Read this when
-- apply fork の開始条件、session branch 制約、clean worktree 制約、cmoc ignore 制約、apply state の遷移を確認したいとき。
-- rolling・session・full の scope が finding 列挙対象へどう変換されるか、対象から除外されるファイル条件を確認したいとき。
-- finding の列挙、refine、application、変更検出、commit、次の dirty target 更新という apply loop の制御を追いたいとき。
-- apply fork 中に oracle、.agents、memo への差分を禁止する検査や、binary・ignored・INDEX 除外の実装を確認したいとき。
-- apply fork の成功・未収束・エラー時に report、process id、state がどの順序で更新・削除されるかを確認したいとき。
-- Codex CLI 呼び出しへ渡す apply fork 用 parameter、purpose、cwd、root、並列 finding 列挙、commit message 生成の流れを調べたいとき。
+- apply fork の実行条件、終了状態、戻り値、report 出力、apply 用 worktree や branch の作成・状態更新を確認したいとき。
+- rolling、session、full の scope ごとに finding 列挙対象がどの変更範囲から選ばれるかを調べたいとき。
+- apply 中に oracle、.agents、memo など編集禁止対象へ差分が出た場合の検出、ロールバック、再実行、エラー化の挙動を変更または確認したいとき。
+- finding 適用後の git 差分から commit message を生成して commit する apply loop の制御を追いたいとき。
 
 ## Do not read this when
-- apply fork の report 本文生成や error report の具体的な markdown 内容だけを調べたい場合は、report 書き込み側を直接読む。
-- apply fork 用の Codex prompt や agent parameter の詳細だけを調べたい場合は、builder 側の各 parameter 生成処理を直接読む。
-- apply process id の保存形式や削除処理の低レベル実装だけを確認したい場合は、apply runtime 側を直接読む。
-- git worktree 作成、branch 取得、state 読み書き、ignored 判定、binary 判定など共通 runtime helper の詳細だけを調べたい場合は、runtime 側を直接読む。
-- CLI コマンド登録、typer option 定義、ユーザー向けコマンド構造だけを確認したい場合は、apply サブコマンドの入口定義を読む。
+- apply fork が呼び出す Codex prompt parameter の本文や JSON schema を確認したいだけなら、builder 側の parameter 生成を読む。
+- apply fork report の具体的な markdown 内容、保存先、error report の構成を確認したいだけなら、report 生成側を読む。
+- process id の保存・削除そのものの永続化形式を確認したいだけなら、apply runtime 側を読む。
+- git worktree 作成、state 読み書き、config 読み込み、git command 実行など共通 runtime helper の詳細を確認したいだけなら、runtime 側を読む。
 
 ## hash
-- f5685ce90ce7f832d8df6f791ac7ca255b95727694316c92d9d5e1d1e67330f7
+- c2bf3b8444fe677abce077f2a2ace7159d4e576e382c229d8ee96eeb89cb97ec
 
 # `fork_report.py`
 

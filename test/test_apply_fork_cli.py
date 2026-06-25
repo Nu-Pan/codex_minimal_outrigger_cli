@@ -56,7 +56,6 @@ def test_apply_fork_runs_codex_loop_and_updates_state(
     ).exists()
     assert calls
     assert any(call.startswith("apply fork enumerate findings") for call in calls)
-    assert "apply fork refine findings" in calls
 
 
 def test_apply_fork_does_not_rewrite_session_gitignore(
@@ -147,18 +146,14 @@ def test_apply_fork_can_target_and_edit_gitignore(tmp_path: Path, monkeypatch) -
             self.output_json = output_json
             self.output_text = output_text
 
-    def enumerate_findings(root_arg, targets, config, codex_exec, **kwargs):
+    def enumerate_findings(root_arg, target, config, codex_exec, **kwargs):
         nonlocal current_findings
-        target_rels_by_call.append(
-            sorted(str(path.relative_to(root_arg)) for path in targets)
-        )
+        target_rels_by_call.append([str(target.relative_to(root_arg))])
         current_findings = [finding] if len(target_rels_by_call) == 1 else []
         return current_findings
 
     def fake_run_codex_exec(parameter, **kwargs):
         purpose = kwargs["purpose"]
-        if purpose == "apply fork refine findings":
-            return FakeCodexResult({"findings": current_findings})
         if purpose == "apply fork finding application":
             (Path.cwd() / ".gitignore").write_text("/.cmoc/\n# editable\n")
             return FakeCodexResult()
@@ -169,7 +164,7 @@ def test_apply_fork_can_target_and_edit_gitignore(tmp_path: Path, monkeypatch) -
         raise AssertionError(purpose)
 
     monkeypatch.setattr(
-        apply_fork_module, "enumerate_apply_findings_for_targets", enumerate_findings
+        apply_fork_module, "enumerate_apply_findings_for_target", enumerate_findings
     )
     monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
 
@@ -179,7 +174,7 @@ def test_apply_fork_can_target_and_edit_gitignore(tmp_path: Path, monkeypatch) -
 
     assert result.exit_code == 0
     assert ".gitignore" in target_rels_by_call[0]
-    assert target_rels_by_call[-1] == [".gitignore"]
+    assert [".gitignore"] in target_rels_by_call
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
     state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
@@ -246,8 +241,6 @@ def test_apply_fork_writes_report_with_change_summary(
             else None
         )
         if kwargs["purpose"].startswith("apply fork enumerate findings"):
-            return FakeCodexResult({"findings": [finding]})
-        if kwargs["purpose"] == "apply fork refine findings":
             return FakeCodexResult({"findings": [finding]})
         if kwargs["purpose"] == "apply fork finding application":
             (Path.cwd() / "README.md").write_text("# updated\n")
@@ -339,10 +332,6 @@ def test_apply_fork_rechecks_dirty_files_until_converged(
             return FakeCodexResult(
                 {"findings": [finding] if enumerate_calls == 1 else []}
             )
-        if purpose == "apply fork refine findings":
-            return FakeCodexResult(
-                {"findings": [finding] if enumerate_calls == 1 else []}
-            )
         if purpose == "apply fork finding application":
             (Path.cwd() / "README.md").write_text("# updated\n")
             return FakeCodexResult(None)
@@ -421,8 +410,6 @@ def test_apply_fork_rejects_forbidden_agents_diff(tmp_path: Path, monkeypatch) -
         purpose = kwargs["purpose"]
         calls.append(purpose)
         if purpose.startswith("apply fork enumerate findings"):
-            return FakeCodexResult({"findings": [readme_finding, agents_finding]})
-        if purpose == "apply fork refine findings":
             return FakeCodexResult({"findings": [readme_finding, agents_finding]})
         if purpose == "apply fork finding application":
             applications += 1
@@ -510,14 +497,12 @@ def test_apply_fork_rolling_uses_previous_apply_join_commit(
 
     target_rels: list[str] = []
 
-    def enumerate_findings(root_arg, targets, config, codex_exec, **kwargs):
-        target_rels.extend(
-            sorted(str(path.relative_to(root_arg)) for path in targets)
-        )
+    def enumerate_findings(root_arg, target, config, codex_exec, **kwargs):
+        target_rels.append(str(target.relative_to(root_arg)))
         return []
 
     monkeypatch.setattr(
-        apply_fork_module, "enumerate_apply_findings_for_targets", enumerate_findings
+        apply_fork_module, "enumerate_apply_findings_for_target", enumerate_findings
     )
     monkeypatch.setattr(
         main_module,

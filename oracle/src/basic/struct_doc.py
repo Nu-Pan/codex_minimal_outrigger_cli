@@ -43,7 +43,7 @@ class StructDoc:
         return self._title
 
     @property
-    def children(self) -> list["StructDoc"] | "StructCodeBlock" | str:
+    def children(self) -> "list[StructDoc] | StructCodeBlock | str":
         """
         子要素を取得する
         """
@@ -132,8 +132,30 @@ def _render_as_markdown(struct_doc: StructDoc, depth: int = 1) -> str:
         raise TypeError(
             f"Invalid type of struct_doc.children (type={type(struct_doc.children)})"
         )
+    result = _collapse_blank_lines(result)
     # 正常終了
     return result
+
+
+def _collapse_blank_lines(text: str) -> str:
+    """
+    2 行以上連続する空行を 1 行にまとめる。
+    空白文字だけの行も空行として扱う。
+    """
+    lines: list[str] = []
+    previous_blank = False
+    for line in text.splitlines():
+        blank = not line.strip()
+        if blank:
+            if previous_blank:
+                continue
+            lines.append("")
+        else:
+            lines.append(line)
+        previous_blank = blank
+    if text.endswith("\n"):
+        return "\n".join(lines) + "\n"
+    return "\n".join(lines)
 
 
 def ntqs(text: str) -> str:

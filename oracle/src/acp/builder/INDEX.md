@@ -1,24 +1,24 @@
 # `apply`
 
 ## Summary
-- `cmoc apply fork` の後段で使う AI 呼び出し契約と入出力 schema をまとめる領域。
-- 適用用ブランチ上の差分要約、ファイル単位の所見列挙、所見整理、所見に基づく realization file 修正用 prompt など、fork 適用後の人間向け確認と実装修正支援に関わる仕様断片への入口になる。
-- 実際の fork 作成・ブランチ操作・差分適用ではなく、apply fork のレビュー・修正支援 agent に渡す役割、制約、参照 standard、出力 schema の接続を扱う。
+- `cmoc apply fork` の fork 適用工程で使う AI エージェント呼び出しパラメータと Structured Output schema の正本断片をまとめる領域。
+- 適用後差分の変更要約、realization file の要修正所見列挙、検出済み所見への修正依頼など、fork 適用時のレビュー・報告・修正支援に関わる入出力契約と prompt 構成を扱う。
+- 実際の branch 操作や patch 適用ではなく、fork 適用フロー内で AI に何を読ませ、どの role・goal・制約・出力 schema で呼び出すかを確認する入口となる。
 
 ## Read this when
-- `cmoc apply fork` のレビュー結果から所見を列挙・精査し、realization file 修正へつなげる AI 呼び出し条件を確認したいとき。
-- fork 適用後の差分を、人間が読める変更カテゴリ別サマリーとして生成する prompt や出力契約を確認・変更したいとき。
-- 所見リストや変更要約の Structured Output schema と、それを使う agent 呼び出しとの対応を確認したいとき。
-- apply fork 系の agent に渡す oracle standard、realization standard、apply review standard、ファイルアクセス制約、model class、reasoning effort の正本値を調べたいとき。
+- `cmoc apply fork` で、適用後差分の変更要約、実装調査の所見列挙、所見対応修正依頼に使う AI 呼び出しの構成を確認したいとき。
+- fork 適用後のレビューや作業レポートで、差分要約や所見リストの Structured Output schema と prompt 側の対応を確認したいとき。
+- oracle file、realization file、起点パス、差分テキスト、検出済み所見を AI エージェント呼び出しへどう渡すかを調べたいとき。
+- apply review standard や realization standard を含む読み取り専用調査、または修正作業用のファイルアクセス権・モデル種別・推論努力量の指定を確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` の CLI 解析、fork 作成、ブランチ操作、差分取得、実際の適用処理そのものを調べたいとき。
-- 個別ファイルのパッチ内容、git 操作の仕様、diff 生成手順を確認したいとき。
-- oracle file と realization file の基本定義、path keyword、repo root 解決、共通 prompt 構築処理、standard 本文そのものを調べたいとき。
-- ルーティング文書、テスト、実装などの変更種別ごとの具体的な判定ロジックや、利用者向け CLI 表示全体の振る舞いを確認したいとき。
+- `cmoc apply fork` の CLI 引数解析、サブコマンド登録、branch 作成、git 操作、差分取得、patch 適用などの実行フロー本体を調べたいとき。
+- 個別ファイルの patch 内容そのものや、実際に realization file をどう修正するかという修正ロジックを探しているとき。
+- oracle standard、realization standard、apply review standard、path 語彙、共通 prompt 部品、AgentCallParameter 型定義そのものを確認したいとき。
+- INDEX.md 用エントリーや一般的なルーティング文書の書き方を確認したいとき。
 
 ## hash
-- 42946e9f3bf9e18cf14f39cc176f7ffcb5fae1b477e559d64231153a3991a8aa
+- 9b3736053b7c27af9ce3aedde50c576f7638c51774f5437e04388828fcc7c0f0
 
 # `indexing`
 

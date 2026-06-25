@@ -105,8 +105,16 @@
 - 並列に呼び出した Codex CLI 呼び出しが同時に待機に突入した場合
     - 一番最初に待機に入ったスレッドだけが代表してポーリングを行う
     - 複数スレッドで並列にポーリングを行うのは禁止
+- 再開対象セッション ID の調査方法
+    - 対象セッションの `<repo-root>/.cmoc/log/codex/<time-stamp>/_output.jsonl` から読み取る
+    - `type == thread.started` になっている要素の `thread_id` フィールドから読み取る
+    - e.g.
+        ```json
+        {"type":"thread.started","thread_id":"019efe07-4886-7423-b252-625febbe31eb"}
+        ```
 - 再開とは
     - 停止した時のセッションを `codex exec ... resume ...` サブコマンドで復元したうえで、全く同じプロンプトで実行する
+    - セッション ID の取得に失敗した場合、resume せずに単に同一の設定で再実行する
 - quota 枯渇の判定方法
     - `codex exec --json` の stdout JSONL に、以下のいずれかが含まれている場合
         - `{"type":"error","message":"...Quota exceeded..."}`
