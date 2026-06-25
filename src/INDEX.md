@@ -1,23 +1,24 @@
 # `acp`
 
 ## Summary
-- AI agent 呼び出しに関する実装領域。呼び出しパラメータの構築と、最終 prompt に含める標準文書・規則文書の生成を扱う。
-- 各サブコマンドや TUI が AI に何を読ませ、どの role・goal・補助文脈・権限・モデル設定・Structured Output schema で実行させるかを追う入口になる。
+- AI エージェント呼び出しに関わる領域。呼び出しパラメータの構築と、そこへ組み込む標準プロンプト部品の生成を扱う。
+- 処理ごとの role、goal、対象本文、補助文脈、ファイルアクセス条件、モデル設定、推論量、Structured Output schema などを組み立てる側と、oracle・realization・レビュー・ルーティング・INDEX.md エントリーなどの標準文書を構造化プロンプトとして生成する側への入口になる。
+- cmoc のサブコマンドや TUI 実行前処理で、AI に何を読ませ、どの権限で作業させ、どの形式で出力させるかを確認するための実装群を探す起点になる。
 
 ## Read this when
-- AI agent へ渡す prompt、role、goal、補助文脈、対象本文、既知所見、差分、出力 schema などの組み立てを確認または変更したいとき。
-- AI 呼び出し時の model class、reasoning effort、file access mode、書き込み可否、git 操作禁止条件などの入力契約を処理ごとに追いたいとき。
-- agent に提示されるファイルアクセス規則、ルーティング規則、oracle / realization の責務境界、レビュー基準、INDEX.md エントリー品質基準などの標準 prompt 部品を確認または変更したいとき。
-- apply、indexing、review、session、TUI 実行前処理などで、AI 呼び出し前の入力契約や Structured Output の責務を実装・テストしたいとき。
+- AI エージェントへ渡すプロンプト、標準文書、補助文脈、対象本文、出力 schema、モデル設定、reasoning effort、file access mode の組み立てを確認または変更したいとき。
+- cmoc apply fork、cmoc indexing、cmoc review oracle、cmoc session join、TUI 実行前パラメータ解決などで、AI 呼び出し前の入力契約や出力契約を実装・テストしたいとき。
+- oracle file と realization file の責務境界、レビュー標準、ルーティング規則、ファイルアクセス規則、INDEX.md エントリー標準などを AI 向けプロンプトへどう組み込むか確認したいとき。
+- Codex CLI 向けの語句・ルート置換、作業ルート解決失敗時の扱い、git 操作禁止条件、realization 書き込み可否など、AI に提示する実行前条件を追いたいとき。
 
 ## Do not read this when
-- CLI 引数解析、サブコマンド全体の実行順序、状態更新、git コマンド実行、保存処理など、AI 呼び出し構築より外側の制御フローを調べたいとき。
-- oracle file、realization file、review standard、apply review standard、INDEX.md 運用規則などの標準本文そのものを確認したいとき。
-- Markdown レンダリング、構造化文書表現、パス解決、AgentCallParameter 型、モデル種別、ファイルアクセスモードなど、呼び出し構築を支える共通基盤を調べたいとき。
-- 個別の変更対象ファイル、差分検出、分類アルゴリズム、conflict marker 検出、TUI 表示や入力取得など、AI に渡す prompt・パラメータ以外の具体処理を確認したいとき。
+- 各サブコマンド全体の CLI 引数解析、実行順序、状態更新、git コマンド実行、保存処理など、AI 呼び出しパラメータ構築より外側の制御フローを調べたいとき。
+- oracle file、realization file、review standard、apply review standard、INDEX.md 運用規則など、標準本文そのものや正本仕様断片を確認したいとき。
+- Markdown レンダリング、構造化文書表現、パス解決、AgentCallParameter 型、モデル種別、ファイルアクセスモード、読み書きモード列挙値など、呼び出し構築を支える共通基盤そのものを調べたいとき。
+- 個別の変更対象ファイル、実際の差分検出、分類アルゴリズム、conflict marker 検出、TUI 表示や入力取得など、AI に渡すパラメータ以外の具体処理を確認したいとき。
 
 ## hash
-- 87d947e92a944d978e1077e4006820be730ab67201bf40bba930656093062d19
+- e181774a219554e4c9e15efd7acaf4936fea24fdc32d675e776dc1999d0f3e76
 
 # `basic`
 
