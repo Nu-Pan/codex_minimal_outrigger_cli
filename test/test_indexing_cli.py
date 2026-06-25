@@ -1,3 +1,5 @@
+import multiprocessing
+
 from _support import (
     AgentCallParameter,
     FileAccessMode,
@@ -16,6 +18,17 @@ from _support import (
     threading,
     time,
 )
+
+
+def hold_indexing_lock(lock_path: Path, ready, release) -> None:
+    import fcntl
+
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a+") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        ready.send(True)
+        release.recv()
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 def test_resolve_index_conflicts_deletes_index_and_commits(tmp_path: Path) -> None:
     root = make_repo(tmp_path)
@@ -489,6 +502,50 @@ def test_command_tui_codex_call_runs_indexing_preflight(
     assert events == ["indexing", "codex"]
     assert run_git(root, "log", "-1", "--pretty=%s").stdout.strip() == "cmoc indexing"
     assert run_git(root, "status", "--short").stdout.strip() == ""
+
+
+def test_indexing_preflight_waits_for_repository_lock(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    lock_path = indexing_module.indexing_lock_path(root)
+    ready_parent, ready_child = multiprocessing.Pipe(duplex=False)
+    release_child, release_parent = multiprocessing.Pipe(duplex=False)
+    process = multiprocessing.Process(
+        target=hold_indexing_lock,
+        args=(lock_path, ready_child, release_child),
+    )
+    events: list[str] = []
+    released = False
+
+    def fake_update_indexes(update_root: Path, codex_exec=None) -> list[Path]:
+        events.append("updated")
+        return []
+
+    monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
+
+    process.start()
+    try:
+        assert ready_parent.recv() is True
+        thread = threading.Thread(
+            target=indexing_module.run_indexing_preflight,
+            args=(root, lambda *args, **kwargs: None),
+        )
+        thread.start()
+        time.sleep(0.2)
+        assert events == []
+        release_parent.send(True)
+        released = True
+        thread.join(timeout=3)
+        assert not thread.is_alive()
+        assert events == ["updated"]
+    finally:
+        if process.is_alive() and not released:
+            release_parent.send(True)
+        process.join(timeout=3)
+        if process.is_alive():
+            process.terminate()
+            process.join()
 
 
 def test_command_codex_call_skips_indexing_for_index_entry_and_conflict_resolution(

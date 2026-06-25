@@ -1,3 +1,5 @@
+import fcntl
+from contextlib import contextmanager
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Callable
@@ -27,13 +29,34 @@ def cmoc_indexing_impl(
 ) -> None:
     """現在の work root に対して INDEX.md の maintenance を実行する。"""
     root = work_root()
-    updated = update_indexes(root, codex_exec)
-    commit_index_updates(root, updated)
+    with indexing_lock(root):
+        updated = update_indexes(root, codex_exec)
+        commit_index_updates(root, updated)
     typer.echo(f"# cmoc indexing\n- updated_index_count: `{len(updated)}`")
 
 
 def run_indexing_preflight(root: Path, codex_exec: CodexExec) -> None:
-    commit_index_updates(root, update_indexes(root, codex_exec))
+    with indexing_lock(root):
+        commit_index_updates(root, update_indexes(root, codex_exec))
+
+
+@contextmanager
+def indexing_lock(root: Path):
+    lock_path = indexing_lock_path(root)
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a+") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
+
+def indexing_lock_path(root: Path) -> Path:
+    path = run_git(
+        ["rev-parse", "--git-path", "cmoc-indexing.lock"], root
+    ).stdout.strip()
+    return root / path
 
 
 def commit_index_updates(root: Path, updated: list[Path]) -> None:
