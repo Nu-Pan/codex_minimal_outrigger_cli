@@ -55,49 +55,43 @@
 # `runtime_codex.py`
 
 ## Summary
-- Codex CLI を実行する runtime 層で、exec 呼び出しと TUI 呼び出しの組み立て、call/stdout/stderr/output のログ記録、Structured Output 検証、失敗時の CmocError 化を担う。
-- exec 呼び出しでは profile・schema・環境を準備し、capacity error の指数バックオフ再試行、quota error の共有 polling 待機と resume token による再開、成功時の実行結果オブジェクト生成までを扱う。
-- TUI 呼び出しでは profile 準備、呼び出しログ作成、Codex CLI/TUI の subprocess 実行、subcommand logger へのイベント記録を扱う。
+- Codex CLI 呼び出しを実行する runtime 層で、exec 形式と TUI 形式の起動、profile/schema 準備、call log/stdout/stderr/output の保存、Structured Output 検証、実行結果オブジェクト化を担う。
+- exec 呼び出しでは capacity error の指数バックオフ再試行、quota error の代表 probe による待機共有、resume token による再開、subcommand logger へのイベント記録まで扱う。
 
 ## Read this when
-- Codex CLI の exec/TUI 呼び出し方法、引数、作業ディレクトリ、環境変数、profile、schema の受け渡しを確認・変更したいとき。
-- Codex CLI 呼び出しのログファイル作成、ログ payload、subcommand logger へ出す codex_call / codex_tui_call event を追いたいとき。
-- Structured Output の出力読み取り、jsonschema 検証、検証失敗時の semantic retry、最終的な実行結果への詰め替えを確認したいとき。
-- capacity error や quota error に対する再試行、待機、代表 probe、resume token 再利用の制御を変更・調査したいとき。
-- Codex CLI の subprocess returncode や stderr/stdout から CmocError を発生させる境界を確認したいとき。
+- Codex CLI を subprocess で呼び出す制御、引数組み立て、作業ディレクトリ、環境変数、profile/schema の準備手順を確認・変更したいとき。
+- Codex exec のログ出力、Structured Output schema 検証、CodexExecResult の内容、失敗時の CmocError 生成を追いたいとき。
+- capacity/quota エラー時の再試行、quota polling の同期、resume token の扱い、Codex 呼び出しイベントの記録を調査したいとき。
+- Codex TUI 起動の call log、profile 適用、失敗時処理、CommandResult 返却を確認したいとき。
 
 ## Do not read this when
-- Codex home の解決、profile ファイル生成、schema ファイル準備、quota/capacity error 判定、resume token 抽出の個別ロジックだけを確認したいときは、それらを提供する profile/runtime 補助層を直接読む。
-- log directory、timestamp、duration 表示、repo/work root など path・時刻 helper の定義だけを確認したいときは、runtime path 補助層を直接読む。
-- 設定ファイルの読み込みや設定型そのものを確認したいときは、config 読み込み・設定定義側を読む。
-- 実行結果型や command result 型のフィールド定義だけを確認したいときは、runtime result 定義側を読む。
-- AgentCallParameter の構造、model class、reasoning effort、file access mode の定義だけを確認したいときは、basic/acp 側を読む。
+- Codex profile の具体的な生成・検証、Codex home の解決、quota/capacity error の判定、output JSON 読み込みの詳細だけを確認したい場合は、それらを定義する runtime profile 側を読む。
+- cmoc config の読み込み仕様、path model、log directory や timestamp の生成規則だけを確認したい場合は、それぞれの runtime config/path/logging 側を読む。
+- Codex を呼び出した後の結果型そのものの定義だけを確認したい場合は、結果型を定義する module を読む。
+- Codex CLI や LLM の出力品質、prompt 本文の意味、agent parameter の構造を調べたいだけの場合は、この実行 wrapper ではなく呼び出し元や parameter 定義を読む。
 
 ## hash
-- 31ac1cf68d1e0f8081562b151041c2532f726ac2266cefae884065d90a7ba167
+- 2bb45f460c817f415b7459f5ce075e79cde5a0e67922f3d5ae3500afc7d80678
 
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI を起動するための実行時 profile と周辺ファイルを組み立てる共通処理を扱う。file access mode から sandbox/permission profile 設定を生成し、Codex home の解決・検証、profile/schema のハッシュ保存、サブプロセス環境、Codex 出力 JSON やエラー文面からの情報抽出をまとめる。
-- Codex 実行前の準備と実行後の結果解釈のうち、Codex 固有の設定ファイル、認証ホーム、quota/capacity 判定、resume token 抽出に関わる入口として読む対象である。
+- Codex CLI 実行用の profile 文字列と関連ファイルを準備する runtime helper。AgentCallParameter と CmocConfig から model・reasoning_effort・sandbox/permission profile を TOML 断片として組み立て、CODEX_HOME の解決・検証、schema/output JSON の入出力、Codex JSONL 由来のエラー文・resume token・capacity/quota 判定を扱う。
 
 ## Read this when
-- AgentCallParameter や FileAccessMode から Codex CLI 用の sandbox mode、permission profile、model/reasoning 設定がどう生成されるか確認したいとき。
-- CODEX_HOME の解決規則、存在・ディレクトリ・auth.json 検証、Codex subprocess に渡す環境変数を扱う変更をするとき。
-- Codex profile や structured output schema をハッシュ付きファイルとして保存する処理、または保存失敗時の CmocError を調整するとき。
-- Codex CLI の stdout/stderr からエラー本文、thread resume token、capacity/quota エラーを抽出・判定する処理を確認または変更するとき。
-- Codex 実行結果の JSON 出力ファイルを読み、空・不存在・不正 JSON を None として扱う挙動を確認したいとき。
+- Codex CLI 呼び出し前に渡す profile 内容、sandbox_mode、permission_profile、writable_roots、read_only_paths、deny_read の生成規則を確認・変更したいとき。
+- FileAccessMode と Codex 側の read-only/workspace-write 権限設定の対応、または root 指定時の詳細なファイルアクセス制御を追いたいとき。
+- CODEX_HOME の解決、auth.json を含む Codex home 検証、profile ファイル生成、サブプロセスへ渡す環境変数の扱いを確認したいとき。
+- Codex 実行に渡す structured output schema の保存、実行結果 JSON の読み取り、stdout/stderr からのエラー抽出、resume token 抽出、capacity/quota エラー判定を扱うとき。
 
 ## Do not read this when
-- cmoc 独自のパス概念や run/work/root の定義だけを確認したいときは、path model や runtime path の責務を持つ対象へ進む。
-- Codex 以外の LLM 実行基盤、コマンド組み立て、プロセス起動全体の制御を調べたいだけなら、呼び出し側の実行 orchestration を扱う対象を読む。
-- CmocConfig の設定 schema や model_class/reasoning_effort の定義そのものを変更したいときは、設定定義を扱う対象へ進む。
-- AgentCallParameter や FileAccessMode の型定義・意味を変更したいときは、basic/acp 側の対象へ進む。
-- ハッシュ保存の実装詳細や schema store directory の場所だけを調べたいときは、runtime content または runtime paths の対象へ進む。
+- AgentCallParameter や FileAccessMode そのもののデータ定義・意味を確認したいだけなら、その基本型を定義する対象を読む。
+- CmocConfig の設定ファイル構造や codex model/reasoning_effort の設定値定義を確認したいだけなら、設定定義を扱う対象を読む。
+- runtime root、schema store directory、hashed file 書き込みの具体的なパス規則や保存実装を確認したいだけなら、runtime path/content を扱う対象を読む。
+- Codex CLI を実際に起動する subprocess 制御、コマンドライン引数構築、実行フロー全体を確認したいだけなら、呼び出し側の実行制御を扱う対象を読む。
 
 ## hash
-- 1c5c29fa4ffd0905038ca7a357702d3b8a65f0eeb67f773e23ba200e316fbade
+- a43192a0de11efb9376d2fdca1aa250ae46d782ab577941dfcd0b1715aec2e0f
 
 # `runtime_config.py`
 

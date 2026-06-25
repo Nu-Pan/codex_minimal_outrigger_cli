@@ -174,20 +174,21 @@
 # `test_codex_runtime_retry.py`
 
 ## Summary
-- Codex 実行ラッパーの再試行制御を検証する realization test。schema 検証失敗時の再実行、capacity エラー時の再試行ログ、quota 超過時の availability probe と resume または通常再実行、並列実行時の代表 probe 集約を、fake Codex CLI とログ副作用で確認する。
+- Codex CLI 呼び出しの retry 制御を検証する realization test。schema 検証失敗後の再実行、capacity 検出時の再試行、quota 検出時の availability probe と resume/rerun、並列呼び出し時の代表 probe 共有、各 call log と subcommand log の記録内容を扱う。
 
 ## Read this when
-- Codex CLI 呼び出しの retry・polling・resume 挙動を変更する。
-- schema validation 失敗、capacity、quota exceeded の扱いと、それぞれの再試行時に記録される call log、stdout/stderr/output path、subcommand log event を確認したい。
-- quota availability probe の argv、stdin、CODEX_HOME、console 表示、並列実行時の probe 数制御に関わるテストを探している。
+- Codex CLI 実行ラッパーの retry 条件、retry 後の成功結果、または失敗時の扱いを変更・調査するとき。
+- stdout JSONL 上の capacity/quota error marker の解釈、stderr や通常出力に出た marker を retry 対象外にする境界を確認するとき。
+- quota 待機後の availability probe、thread id を使った resume、resume token が無い場合の prompt 再実行、並列実行時に probe を 1 回に集約する制御を確認するとき。
+- Codex call log、stdout/stderr/output path、subcommand logger の codex_call event、console 表示に記録される retry 状態や purpose を検証するとき。
 
 ## Do not read this when
-- 通常成功する Codex 実行の基本的な argv 組み立てや sandbox/profile 設定だけを確認したい。
-- Codex 以外のサブコマンド、リポジトリ作成、path model、oracle/realization 分類の仕様を調べたい。
-- retry 制御ではなく、ログ基盤そのものの汎用仕様や helper fixture の定義を確認したい。
+- Codex CLI の通常成功パスだけを確認したいときは、retry ではない実行結果や基本ログを扱うテストを先に読む。
+- 作業対象が path model、oracle/realization 分類、INDEX.md 生成規則など Codex CLI 実行 retry と無関係な仕様・ルーティングであるとき。
+- Codex CLI 本体の引数組み立てや profile 設定だけを調べたい場合で、capacity/quota/schema retry や call log の retry 状態に触れないとき。
 
 ## hash
-- 5655c16688d15dfb44a5eeb4af41c7ea35ed96eddcdcc587c4181007d8fe782f
+- e51aeba28342f8ed0a8dbfc509a105f56e89207aea20648b71adf155b0149a40
 
 # `test_indexing_cli.py`
 
