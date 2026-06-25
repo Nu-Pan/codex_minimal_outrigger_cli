@@ -76,7 +76,6 @@ def cmoc_session_abandon_impl() -> None:
                 f"- abandoned_branch: `{branch}`",
                 f"- switched_to: `{home}`",
                 "- session_state: `abandoned`",
-                f"- joined_at: `{state.session.joined_at}`",
             ]
         )
     )

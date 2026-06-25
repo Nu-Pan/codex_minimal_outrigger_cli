@@ -98,10 +98,8 @@ def test_session_abandon_switches_home_and_marks_state(
     )
     state = json.loads(state_path.read_text())
     assert state["session"]["state"] == "abandoned"
-    assert state["session"]["joined_at"] is None
     assert f"- abandoned_branch: `{session_branch}`" in result.output
     assert "- session_state: `abandoned`" in result.output
-    assert "- joined_at: `None`" in result.output
 
 
 def test_session_abandon_requires_existing_home_branch(
@@ -213,6 +211,34 @@ def test_session_join_resolves_conflict_with_codex(tmp_path: Path, monkeypatch) 
     assert (root / "README.md").read_text() == "resolved change\n"
     assert calls == ["session join conflict resolution"]
     assert modes == [FileAccessMode.REALIZATION_WRITE]
+
+
+def test_session_join_uses_linked_worktree_branch(tmp_path: Path, monkeypatch) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    root_branch = current_branch(root)
+    linked = root / ".cmoc" / "worktrees" / "linked"
+    run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
+    monkeypatch.chdir(linked)
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(linked)
+    home_branch = session_home_branch(root, session_branch)
+    (linked / "README.md").write_text("linked session change\n")
+    run_git(linked, "add", "README.md")
+    run_git(linked, "commit", "-m", "linked session change")
+
+    result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert current_branch(root) == root_branch
+    assert current_branch(linked) == home_branch
+    assert (linked / "README.md").read_text() == "linked session change\n"
+    state = json.loads(session_state_path(root, session_branch).read_text())
+    assert state["session"]["state"] == "joined"
+    assert "joined_at" not in state["session"]
 
 
 def test_session_join_stages_delete_conflict_resolution(
