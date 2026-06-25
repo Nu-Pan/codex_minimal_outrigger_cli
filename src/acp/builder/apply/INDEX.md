@@ -1,22 +1,20 @@
 # `fork`
 
 ## Summary
-- 適用処理を分岐環境で進める際に使う AI 呼び出しと、その構造化出力契約をまとめた領域。所見列挙、所見対応、変更要約など、レビューから修正依頼、作業結果の要約までのプロンプト生成と出力 schema への入口になる。
-- oracle file と realization file の対応確認、realization file の要修正点抽出、検出済み所見をもとにした修正依頼、差分の人間向け要約といった、適用分岐処理内の AI エージェント連携仕様を確認するためのまとまり。
+- `cmoc apply fork` のレビュー・修正・変更要約工程で使う AI エージェント呼び出しと、その Structured Output schema をまとめる領域。差分要約、ファイル単位の所見列挙、検出済み所見の適用依頼に分かれ、git diff や oracle/realization の基準を読み取り専用コンテキストとして渡すための prompt 構築が中心になる。
+- 適用後の差分を人間向けにカテゴリ化して報告する処理、realization file の要修正点を仕様との乖離として列挙する処理、または列挙済み所見を修正担当エージェントへ渡す処理へ進む入口になる。
 
 ## Read this when
-- 適用分岐処理で AI エージェントへ渡す role、goal、補助プロンプト、ファイルアクセス権限、モデル種別、reasoning effort、Structured Output schema の選択を確認または変更したいとき。
-- oracle file と realization file を照合して、realization file の要修正点を列挙するレビュー呼び出しの仕様を追いたいとき。
-- 列挙済みの所見を実装修正担当エージェントへ渡し、realization file を修正させる呼び出し条件を確認したいとき。
-- 適用分岐処理の結果として、未加工の差分や主要な変更対象をもとに人間向けの変更要約を生成する仕様を確認したいとき。
-- レビュー所見や変更要約を JSON の Structured Output として受け取るための契約を確認したいとき。
+- `cmoc apply fork` の内部で、レビュー所見の列挙、所見対応、作業後の変更要約といった AI 呼び出し工程の prompt や呼び出し条件を確認・変更したいとき。
+- ファイル単位の所見リスト、差分カテゴリ別の変更要約など、この領域で使う Structured Output schema の意味上の責務を確認したいとき。
+- oracle file と realization file、apply review standard、git diff、検出済み所見をどのように AI への読み取り専用コンテキストとして渡すかを追いたいとき。
+- `cmoc apply fork` のレビュー工程で使う model class、reasoning effort、file access mode、出力 schema の対応関係を確認したいとき。
 
 ## Do not read this when
-- 適用分岐処理のブランチ作成、ブランチ削除、差分取得、差分適用、レポート保存など、AI 呼び出し以外の制御フローを調べたいとき。
-- AgentCallParameter、ModelClass、ReasoningEffort、FileAccessMode などの共通データ構造や enum の定義そのものを確認したいとき。
-- 共通 prompt 部品のレンダリング、Markdown 化、path model、構造化ドキュメント処理など、複数機能にまたがる基盤実装を調べたいとき。
-- 個別機能の正本仕様、realization standard、apply review standard の本文そのものを読みたいとき。
-- 生成された所見や変更要約を CLI 表示、ログ、保存ファイル、レポート全体へどう組み込むかを調べたいとき。
+- `cmoc apply fork` 全体の orchestration、fork 作成、ブランチ操作、差分適用、git コマンド実行などの制御フローを調べたいとき。
+- oracle standard、realization standard、apply review standard そのものの本文を確認したいとき。
+- 汎用 prompt 部品、markdown rendering、StructDoc、AgentCallParameter 型定義、repo root 解決など、共通基盤側の実装を調べたいとき。
+- 実際の変更対象ファイルの中身や、個々の差分検出・カテゴリ分類アルゴリズムを確認したいとき。
 
 ## hash
-- 94555cab0a65a828745156abf12cef61ee6ad8e44e6b2902504d24a4ee1b6f85
+- 6a6c52c19a23e8306649ab4416e718f8664a6c991cbe19d38575a16ceae0d02a

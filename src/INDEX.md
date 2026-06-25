@@ -1,23 +1,23 @@
 # `acp`
 
 ## Summary
-- AI エージェント呼び出しに渡す実行条件とプロンプト本文を扱う実装領域。呼び出し目的ごとの role、summary、goal、補助文脈、ファイルアクセス方針、モデル種別、reasoning effort、Structured Output schema の選定と、そこに同梱される標準文書・規則文書の生成をまとめている。
-- サブコマンド本体の処理ではなく、別エージェントへ依頼するための AgentCallParameter と構造化プロンプトを追う入口。実装修正、仕様レビュー、目次エントリー生成、TUI 実行パラメータ選定、merge conflict marker 解消など、AI に任せる作業の契約を確認するための領域。
+- AI agent 呼び出しに関する実装領域。呼び出しパラメータの構築と、最終 prompt に含める標準文書・規則文書の生成を扱う。
+- 各サブコマンドや TUI が AI に何を読ませ、どの role・goal・補助文脈・権限・モデル設定・Structured Output schema で実行させるかを追う入口になる。
 
 ## Read this when
-- サブコマンドや内部処理が AI エージェントを呼び出す際、どのような依頼文・標準文書・ファイルアクセス制約・出力 schema を渡しているか確認または変更したいとき。
-- AgentCallParameter の構築箇所、モデル種別、reasoning effort、読み取り専用や書き込み許可などのファイルアクセスモードの選択理由を追いたいとき。
-- agent に渡す共通プロンプトとして、ファイルアクセス規則、INDEX.md ルーティング規則、oracle / realization の基本概念、レビュー基準、INDEX.md エントリー基準などがどう組み込まれるか確認したいとき。
-- 仕様レビュー、apply 系の所見処理、目次生成、TUI 起動前のパラメータ解決、session join の conflict 解消など、AI 呼び出し単位の入力・目的・出力契約を選びたいとき。
+- AI agent へ渡す prompt、role、goal、補助文脈、対象本文、既知所見、差分、出力 schema などの組み立てを確認または変更したいとき。
+- AI 呼び出し時の model class、reasoning effort、file access mode、書き込み可否、git 操作禁止条件などの入力契約を処理ごとに追いたいとき。
+- agent に提示されるファイルアクセス規則、ルーティング規則、oracle / realization の責務境界、レビュー基準、INDEX.md エントリー品質基準などの標準 prompt 部品を確認または変更したいとき。
+- apply、indexing、review、session、TUI 実行前処理などで、AI 呼び出し前の入力契約や Structured Output の責務を実装・テストしたいとき。
 
 ## Do not read this when
-- CLI 引数解析、サブコマンドの実行順序、git 操作、ファイル走査、永続状態、画面表示、レポート保存など、AI 呼び出しを起動する側の制御フローを調べたいだけのとき。
-- AgentCallParameter、ModelClass、ReasoningEffort、FileAccessMode、StructDoc、パスモデルなどの共通型や基盤データ構造そのものを確認したいとき。
-- oracle file や realization file の正本仕様本文、個別機能の実装挙動、またはテスト対象を調べたいだけで、agent に渡すプロンプトや Structured Output schema の契約を確認する必要がないとき。
-- 実際のサンドボックス enforcement、ファイルアクセス制御の実行時実装、または AI 呼び出し後の結果適用・保存処理を追いたいとき。
+- CLI 引数解析、サブコマンド全体の実行順序、状態更新、git コマンド実行、保存処理など、AI 呼び出し構築より外側の制御フローを調べたいとき。
+- oracle file、realization file、review standard、apply review standard、INDEX.md 運用規則などの標準本文そのものを確認したいとき。
+- Markdown レンダリング、構造化文書表現、パス解決、AgentCallParameter 型、モデル種別、ファイルアクセスモードなど、呼び出し構築を支える共通基盤を調べたいとき。
+- 個別の変更対象ファイル、差分検出、分類アルゴリズム、conflict marker 検出、TUI 表示や入力取得など、AI に渡す prompt・パラメータ以外の具体処理を確認したいとき。
 
 ## hash
-- 9fdb7c0628f430e6df53191a9201dee1918ca21087e622b0b548d133d1623f0d
+- 87d947e92a944d978e1077e4006820be730ab67201bf40bba930656093062d19
 
 # `basic`
 
