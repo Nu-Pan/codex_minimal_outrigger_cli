@@ -1,5 +1,7 @@
 import multiprocessing
 
+import pytest
+
 from _support import (
     AgentCallParameter,
     FileAccessMode,
@@ -230,23 +232,42 @@ def test_indexing_allows_existing_non_index_diff_and_commits_only_index(
     assert run_git(root, "status", "--short").stdout == " M README.md\n"
 
 
+@pytest.mark.parametrize(
+    "entry_lines",
+    [
+        [
+            "# `README.md`",
+            "",
+            "## hash",
+            "- {digest}",
+            "",
+        ],
+        [
+            "# `README.md`",
+            "",
+            "## Summary",
+            "",
+            "## Read this when",
+            "- read README.md",
+            "",
+            "## Do not read this when",
+            "- skip README.md",
+            "",
+            "## hash",
+            "- {digest}",
+            "",
+        ],
+    ],
+)
 def test_update_indexes_regenerates_malformed_fresh_hash_entry(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch, entry_lines: list[str]
 ) -> None:
     root = make_repo(tmp_path)
     cmoc_runtime.sync_config(root)
     readme = root / "README.md"
     digest = indexing_module.index_target_hash(root, readme)
     (root / "INDEX.md").write_text(
-        "\n".join(
-            [
-                "# `README.md`",
-                "",
-                "## hash",
-                f"- {digest}",
-                "",
-            ]
-        )
+        "\n".join(line.format(digest=digest) for line in entry_lines)
     )
 
     calls: list[Path] = []

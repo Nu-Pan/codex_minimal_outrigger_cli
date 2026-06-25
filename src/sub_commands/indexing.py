@@ -174,6 +174,9 @@ def extract_valid_index_entry_hash(entry_text: str, entry_name: str) -> str:
         section_positions
     ):
         return ""
+    for start, end in zip(section_positions[:3], section_positions[1:]):
+        if not any(line.strip().startswith("- ") for line in lines[start + 1 : end]):
+            return ""
     for idx, line in enumerate(lines):
         if line == "## hash":
             hash_lines = [
