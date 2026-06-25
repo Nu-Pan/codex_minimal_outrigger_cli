@@ -1,6 +1,7 @@
 from _support import (
     Path,
     app,
+    apply_module,
     apply_worktree_from_state,
     json,
     main_module,
@@ -270,3 +271,54 @@ def test_apply_join_treats_gitignore_change_as_unexpected_apply_diff(
     )
     assert forced.exit_code == 0
     assert (root / ".gitignore").read_text() == original_gitignore
+
+
+def test_apply_join_reports_unresolved_non_index_conflict(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    class FakeCodexResult:
+        output_json = {"findings": []}
+
+    monkeypatch.setattr(
+        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    )
+    assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
+    state_path = (
+        root
+        / ".cmoc"
+        / "sessions"
+        / f"{run_git(root, 'branch', '--show-current').stdout.strip().removeprefix('cmoc/session/')}.json"
+    )
+    state = json.loads(state_path.read_text())
+    apply_worktree = apply_worktree_from_state(root, state)
+    (apply_worktree / "README.md").write_text("# apply\n")
+    run_git(apply_worktree, "add", "README.md")
+    run_git(apply_worktree, "commit", "-m", "apply readme")
+    (root / "README.md").write_text("# session\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "session readme")
+    monkeypatch.setattr(
+        apply_module, "collect_apply_join_unexpected_changes", lambda *args: {}
+    )
+
+    result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 1
+    assert "merge conflict が残っています" in result.output
+    assert "README.md" in result.output
+    report_line = [
+        line for line in result.output.splitlines() if "保存済み report" in line
+    ][0]
+    report_path = Path(report_line.rsplit(": ", 1)[1])
+    report = report_path.read_text()
+    assert "## Merge Conflicts" in report
+    assert "- unresolved: README.md" in report
+    assert json.loads(state_path.read_text())["apply"]["state"] == "completed"
+    assert apply_worktree.exists()

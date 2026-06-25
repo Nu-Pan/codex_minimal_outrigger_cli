@@ -65,18 +65,37 @@ def cmoc_apply_join_impl(force_resolve: bool) -> None:
     if unexpected and force_resolve:
         revert_unexpected_changes(root, unexpected, state)
     merge = run_git(["merge", "--no-ff", apply_branch], root, check=False)
-    if merge.returncode != 0 and not resolve_index_conflicts(root) and not force_resolve:
-        raise CmocError(
-            "apply branch の merge に失敗しました。",
-            ["必要なら手動で解決するか、--force-resolve を検討してください。"],
-            merge.stderr,
-        )
-    if merge.returncode != 0 and run_git(["diff", "--name-only", "--diff-filter=U"], root).stdout.strip():
-        raise CmocError(
-            "apply branch の merge conflict が残っています。",
-            ["git status を確認し、手動で解決してください。"],
-            run_git(["diff", "--name-only", "--diff-filter=U"], root).stdout,
-        )
+    if merge.returncode != 0:
+        resolve_index_conflicts(root)
+        merge_conflicts = run_git(
+            ["diff", "--name-only", "--diff-filter=U"], root
+        ).stdout.splitlines()
+        if merge_conflicts:
+            report_path = write_apply_join_report(
+                root,
+                session_branch,
+                state,
+                apply_branch,
+                apply_worktree,
+                force_resolve,
+                unexpected,
+                False,
+                merge_conflicts,
+            )
+            raise CmocError(
+                "apply branch の merge conflict が残っています。",
+                [
+                    "git status を確認し、手動で解決してください。",
+                    f"保存済み report を確認してください: {report_path}",
+                ],
+                "\n".join(merge_conflicts),
+            )
+        if not force_resolve:
+            raise CmocError(
+                "apply branch の merge に失敗しました。",
+                ["必要なら手動で解決するか、--force-resolve を検討してください。"],
+                merge.stderr,
+            )
     joined_apply_oracle_snapshot_commit = state.apply.oracle_snapshot_commit
     state.session.last_joined_apply_oracle_snapshot_commit = (
         joined_apply_oracle_snapshot_commit
@@ -94,6 +113,7 @@ def cmoc_apply_join_impl(force_resolve: bool) -> None:
         force_resolve,
         unexpected,
         merged_reachable,
+        [],
     )
     if merged_reachable:
         if apply_worktree:
@@ -131,6 +151,7 @@ def write_apply_join_report(
     force_resolve: bool,
     unexpected: dict[str, list[str]],
     cleanup_reachable: bool,
+    merge_conflicts: list[str],
 ) -> Path:
     report_dir = reports_dir(root, "apply/join")
     report_dir.mkdir(parents=True, exist_ok=True)
@@ -144,6 +165,7 @@ def write_apply_join_report(
             force_resolve,
             unexpected,
             cleanup_reachable,
+            merge_conflicts,
         )
     )
     return path
@@ -157,11 +179,20 @@ def render_apply_join_report(
     force_resolve: bool,
     unexpected: dict[str, list[str]],
     cleanup_reachable: bool,
+    merge_conflicts: list[str],
 ) -> str:
     unexpected_lines = [
         f"- {kind}: {', '.join(paths)}"
         for kind, paths in unexpected.items()
     ] or ["- none"]
+    conflict_lines = [
+        f"- unresolved: {path}" for path in merge_conflicts
+    ] or ["- none"]
+    result = (
+        "apply branch の merge conflict が残っています。cmoc は自動解決しませんでした。"
+        if merge_conflicts
+        else "apply branch を session branch へ join しました。"
+    )
     return "\n".join(
         [
             "---",
@@ -175,9 +206,11 @@ def render_apply_join_report(
             "---",
             "# cmoc apply join report",
             "## Result",
-            "apply branch を session branch へ join しました。",
+            result,
             "## Unexpected Changes",
             *unexpected_lines,
+            "## Merge Conflicts",
+            *conflict_lines,
             "",
         ]
     )
