@@ -42,8 +42,9 @@ def head_commit(root: Path) -> str:
     return run_git(["rev-parse", "HEAD"], root).stdout.strip()
 
 
-def require_clean_worktree(root: Path) -> None:
-    status = run_git(["status", "--short"], root).stdout.strip()
+def require_clean_worktree(root: Path, status: str | None = None) -> None:
+    if status is None:
+        status = run_git(["status", "--short"], root).stdout.strip()
     if status:
         raise CmocError(
             "git 未コミット差分が存在します。",

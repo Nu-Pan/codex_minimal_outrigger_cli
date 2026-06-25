@@ -137,6 +137,7 @@ app.add_typer(apply_app, name="apply")
 app.add_typer(review_app, name="review")
 _INDEXING_LOCK = threading.Lock()
 _INDEXING_ACTIVE: ContextVar[bool] = ContextVar("INDEXING_ACTIVE", default=False)
+_INITIAL_STATUS: ContextVar[str | None] = ContextVar("INITIAL_STATUS", default=None)
 
 
 def run_codex_exec(parameter: AgentCallParameter, **kwargs):
@@ -166,13 +167,29 @@ def should_skip_indexing_before_codex(purpose: str) -> bool:
     return purpose.startswith("indexing index entry") or "conflict resolution" in purpose
 
 
+def _status_without_cmoc(status: str) -> str:
+    lines = []
+    for line in status.splitlines():
+        path = line[3:]
+        if " -> " in path:
+            path = path.rsplit(" -> ", 1)[1]
+        if path == ".cmoc" or path.startswith(".cmoc/"):
+            continue
+        lines.append(line)
+    return "\n".join(lines)
+
+
 def _run(handler) -> None:
     logger = None
     logger_token = None
+    status_token = None
     try:
         current_root = work_root()
         require_current_directory_is_work_root(current_root)
         root = repo_root()
+        status_token = _INITIAL_STATUS.set(
+            _status_without_cmoc(run_git(["status", "--short"], root).stdout.strip())
+        )
         logger = SubcommandLogger(root, handler.__name__)
         logger_token = set_current_subcommand_logger(logger)
         logger.event("command_invoked", argv=[])
@@ -209,6 +226,8 @@ def _run(handler) -> None:
     finally:
         if logger_token is not None:
             reset_current_subcommand_logger(logger_token)
+        if status_token is not None:
+            _INITIAL_STATUS.reset(status_token)
 
 
 def _emit_completion_summary(
@@ -516,7 +535,7 @@ def path_display(root: Path, path: Path) -> str:
 @app.command()
 def indexing() -> None:
     def handler() -> None:
-        cmoc_indexing_impl(update_indexes, commit_index_updates)
+        cmoc_indexing_impl(update_indexes, commit_index_updates, _INITIAL_STATUS.get())
 
     _run(handler)
 

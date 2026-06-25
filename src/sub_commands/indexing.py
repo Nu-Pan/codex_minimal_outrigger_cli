@@ -26,10 +26,11 @@ IndexEntryBuilder = Callable[[Path, Path, str | None], str]
 def cmoc_indexing_impl(
     update_indexes_func: Callable[[Path], list[Path]],
     commit_index_updates_func: Callable[[Path, list[Path]], None],
+    initial_status: str | None = None,
 ) -> None:
     """現在の work root に対して INDEX.md の maintenance を実行する。"""
     root = work_root()
-    require_clean_worktree(root)
+    require_clean_worktree(root, initial_status)
     ensure_cmoc_ignored(root)
     updated = update_indexes_func(root)
     commit_index_updates_func(root, updated)
@@ -38,10 +39,18 @@ def cmoc_indexing_impl(
 
 def commit_index_updates_impl(root: Path, updated: list[Path]) -> None:
     """INDEX.md の更新差分だけを indexing commit として保存する。"""
-    if not updated:
+    index_paths = [str(path.relative_to(root)) for path in updated]
+    if index_paths:
+        run_git(["add", "--", *index_paths], root)
+    support_paths: list[str] = []
+    if run_git(["status", "--short", "--", ".gitignore"], root).stdout.strip():
+        run_git(["add", "--", ".gitignore"], root)
+        support_paths.append(".gitignore")
+    if run_git(["status", "--short", "--", ".cmoc"], root).stdout.strip():
+        support_paths.append(".cmoc")
+    rel_paths = index_paths + support_paths
+    if not rel_paths:
         return
-    rel_paths = [str(path.relative_to(root)) for path in updated]
-    run_git(["add", "--", *rel_paths], root)
     diff = run_git(["diff", "--cached", "--quiet", "--", *rel_paths], root, check=False)
     if diff.returncode == 1:
         run_git(["commit", "-m", "cmoc indexing", "--", *rel_paths], root)
