@@ -70,7 +70,6 @@ class _CmocTyperGroup(typer.core.TyperGroup):
                         exc.format_message(),
                     )
                 ),
-                err=True,
             )
             if standalone_mode:
                 raise SystemExit(exc.exit_code) from exc

@@ -101,8 +101,8 @@ def test_session_abandon_requires_existing_home_branch(
     assert "- quota_wait: `" in result.output
     assert "- returncode: `1`" in result.output
     assert current_branch(root) == session_branch
-    assert "session home branch が存在しません。" in result.stderr
-    assert "session home branch が存在しません。" not in result.stdout
+    assert "session home branch が存在しません。" in result.stdout
+    assert "session home branch が存在しません。" not in result.stderr
     assert (
         subprocess.run(
             ["git", "rev-parse", "--verify", session_branch], cwd=root

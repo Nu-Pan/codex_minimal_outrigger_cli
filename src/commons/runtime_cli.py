@@ -60,7 +60,7 @@ def run_cli_subcommand(
                 error=str(exc),
             )
             _emit_completion_summary(logger, name, 1)
-        typer.echo(render_error(exc), err=True)
+        typer.echo(render_error(exc))
         raise typer.Exit(1) from exc
     finally:
         if logger_token is not None:
