@@ -52,6 +52,9 @@ def cmoc_apply_join_impl(force_resolve: bool) -> None:
     apply_branch = state.apply.apply_branch
     if not apply_branch:
         raise CmocError("apply branch を特定できません。", [], str(path))
+    apply_worktree = worktree_for_branch_optional(root, apply_branch)
+    if apply_worktree:
+        require_clean_worktree(apply_worktree)
     unexpected = collect_apply_join_unexpected_changes(root, state, apply_branch, session_branch)
     if unexpected and not force_resolve:
         raise CmocError(
@@ -78,7 +81,6 @@ def cmoc_apply_join_impl(force_resolve: bool) -> None:
     state.session.last_joined_apply_oracle_snapshot_commit = (
         joined_apply_oracle_snapshot_commit
     )
-    apply_worktree = worktree_for_branch_optional(root, apply_branch)
     state.apply = ApplyPart()
     write_state(path, state)
     warnings: list[str] = []
