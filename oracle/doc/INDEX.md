@@ -1,25 +1,28 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様断片をまとめる領域。CLI 補完、Codex CLI 呼び出し、コンソール・ファイルログ、共通エラー処理、インデクシング、横断的な雑則、プロンプト規範、run 隔離、セッション状態、利用者向けサブコマンド、標準利用手順への入口になる。
-- 利用者に見える CLI 挙動と、それを支える状態管理・作業隔離・ログ・agent 呼び出し・ルーティング文書生成の正本仕様を、機能単位に選んで読みに行くための階層。
+- cmoc のアプリケーションとしての外部挙動と横断実行規則を扱う正本仕様断片のまとまり。利用者ワークフロー、CLI サブコマンド、セッション・apply 状態、run 隔離、Codex CLI 呼び出し、ログ、エラー、補完、インデクシング、プロンプト規範などを確認する入口になる。
+- 個別サブコマンドの引数、事前条件、状態遷移、branch/worktree 操作、Codex CLI や agent call に委ねる境界、stdout・report・終了コードの仕様へ進むための領域。
+- cmoc が作業対象リポジトリをどの前提で扱い、実行中の状態・ログ・生成物・補完プローブ・INDEX 更新・プロンプト文面をどう制御するかを、実装差を避けたい範囲で定める。
 
 ## Read this when
-- cmoc の CLI としての外部挙動、サブコマンドの実行前提、状態遷移、git branch/worktree 操作、stdout/stderr、ログ、終了コードを実装・修正・テストするとき。
-- Codex CLI 呼び出し、agent prompt、Structured Output、retry・resume、ファイルアクセス制限、並列実行など、cmoc が外部 agent をどう起動・制御・記録するかを確認したいとき。
-- INDEX.md の生成・更新、ルーティング文書の意味情報、hash 更新、インデクシング実行タイミング、自動コミットや排他制御を扱うとき。
-- セッション状態、apply 状態、run ごとの worktree 隔離、作業対象リポジトリの前提、タイムスタンプ、実装ファイル列挙など、複数機能から参照される共通仕様を確認したいとき。
-- 個別機能の仕様へ進む前に、cmoc のアプリケーションレベルの正本仕様断片がどこに分かれているかを把握したいとき。
+- cmoc の利用者向け CLI 挙動、標準ワークフロー、サブコマンドの呼び出し順、引数、事前条件、正常系・失敗系、出力、終了コードを実装・修正・テストするとき。
+- session の開始・終了・破棄、apply の開始・取込・破棄、oracle review、初期化、明示インデクシング、AI Agent CLI/TUI 起動など、サブコマンド単位の正本仕様を探すとき。
+- セッション状態ファイル、apply 状態、run 用 branch/worktree、作業隔離、作業対象リポジトリの前提、管理 branch 上の変更範囲など、複数サブコマンドにまたがる制御モデルを確認するとき。
+- cmoc から Codex CLI を呼び出す方法、profile・環境変数・stdin・stdout/stderr・Structured Output・retry/resume・quota 待機・並列実行・編集禁止領域の扱いを確認するとき。
+- サブコマンド実行中のコンソール出力、ログファイル、時間・パス表記、共通エラー処理、補完プローブ時の副作用抑制、INDEX.md 自動生成・更新のタイミングを扱うとき。
+- agent に渡すプロンプトや人間向けレポートの文面で、cmoc 固有概念をどう解決して渡すか、日本語と英語識別子をどう使い分けるかを判断するとき。
 
 ## Do not read this when
-- oracle file、realization file、path keyword、root model など、cmoc 全体の基礎概念だけを確認したいときは、それらを定義するより直接の仕様や実装へ進む。
-- 実装ファイルやテストファイルの責務、helper 分割、具体的なコード構造だけを調べたいときは、realization 側の対象領域を読む。
-- 個別の AgentCallParameters のフィールド値、profile 本文、sandbox 設定、argv の詳細だけを確認したいときは、parameter builder 側を読む。
-- 特定サブコマンドの詳細仕様だけが必要で、対象サブコマンドが分かっているときは、この階層全体ではなく該当する下位仕様へ直接進む。
-- INDEX.md エントリー作成の品質基準だけ、または oracle/realization の一般標準だけを確認したいときは、アプリケーション仕様ではなく標準文書を読む。
+- oracle file と realization file の基本定義、編集主体、正本性、責務分担だけを確認したいときは、基礎概念を扱う文書を読む。
+- パスキーワードや root 種別そのものの定義、パス解決の実装詳細だけを確認したいときは、パスモデルの仕様または実装へ直接進む。
+- 個別の Codex CLI 呼び出しごとの具体的な AgentCallParameter、builder の引数構築、schema 定義そのものを確認したいだけなら、対応する builder や schema 実装を読む。
+- realization file の分割、抽象化、依存追加、テスト肥大化抑制など、実装品質基準だけを判断したいときは、realization 向けの規範を読む。
+- 特定の実装ファイル、テストファイル、helper のコード構造、既存挙動、内部関数名を調べたいだけなら、対象の realization implementation または realization test へ進む。
+- 通常の git 操作一般、任意 branch の汎用 merge、join 済み結果の rollback、旧サブコマンド互換など、現行 cmoc のアプリ仕様が対象外としている機能を探しているとき。
 
 ## hash
-- 349c88bee2d586031c20456f9284848d8ce0c39496479a441429e6b39e68382c
+- 05dc9c9ba9708ac26f1b583161188fa7f34ac1303c69e012441476df848f5507
 
 # `branch_model.md`
 
