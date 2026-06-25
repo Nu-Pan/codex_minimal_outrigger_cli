@@ -184,7 +184,7 @@ def test_session_join_resolves_conflict_with_codex(tmp_path: Path, monkeypatch) 
     assert current_branch(root) == home_branch
     assert (root / "README.md").read_text() == "resolved change\n"
     assert calls == ["session join conflict resolution"]
-    assert modes == [FileAccessMode.CONFLICT_RESOLUTION_WRITE]
+    assert modes == [FileAccessMode.REALIZATION_WRITE]
 
 
 def test_session_join_stages_delete_conflict_resolution(

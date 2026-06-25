@@ -195,7 +195,7 @@ def test_ensure_cmoc_ignored_keeps_existing_effective_pattern(
 
 def test_file_access_mode_values_are_json_ready() -> None:
     assert FileAccessMode.READONLY.value == "readonly"
-    assert FileAccessMode.CONFLICT_RESOLUTION_WRITE.value == "conflict_resolution_write"
+    assert FileAccessMode.REALIZATION_WRITE.value == "realization_write"
     assert FileAccessMode.REPO_WRITE.value == "repo_write"
 
 
@@ -203,10 +203,6 @@ def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
     assert file_access_to_sandbox_mode(FileAccessMode.READONLY) == "read-only"
     assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_READ) == "read-only"
     assert file_access_to_sandbox_mode(FileAccessMode.REALIZATION_WRITE) == "workspace-write"
-    assert (
-        file_access_to_sandbox_mode(FileAccessMode.CONFLICT_RESOLUTION_WRITE)
-        == "workspace-write"
-    )
     assert file_access_to_sandbox_mode(FileAccessMode.ORACLE_WRITE) == "workspace-write"
     assert file_access_to_sandbox_mode(FileAccessMode.REPO_WRITE) == "workspace-write"
 
@@ -257,17 +253,6 @@ def test_codex_profile_contains_file_access_enforcement(tmp_path: Path) -> None:
     realization_workspace = realization_profile["sandbox_workspace_write"]
     assert realization_workspace["writable_roots"] == [str(root)]
     assert realization_workspace["read_only_paths"] == realization_fs["read_only"]
-
-    conflict_profile = profile(FileAccessMode.CONFLICT_RESOLUTION_WRITE)
-    conflict_fs = conflict_profile["permissions"]["cmoc"]["file_system"]
-    assert conflict_fs["read"] == [str(root)]
-    assert conflict_fs["write"] == [str(root)]
-    assert conflict_fs["deny_read"] == [str(root / "memo")]
-    assert conflict_fs["read_only"] == [str(root / "memo"), str(root / ".agents")]
-    assert str(root / "oracle") not in conflict_fs["read_only"]
-    conflict_workspace = conflict_profile["sandbox_workspace_write"]
-    assert conflict_workspace["writable_roots"] == [str(root)]
-    assert conflict_workspace["read_only_paths"] == conflict_fs["read_only"]
 
     oracle_fs = profile(FileAccessMode.ORACLE_WRITE)["permissions"]["cmoc"][
         "file_system"

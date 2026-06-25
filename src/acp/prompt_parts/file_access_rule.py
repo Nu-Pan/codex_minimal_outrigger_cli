@@ -34,13 +34,6 @@ def build_file_access_rule(mode: FileAccessMode) -> StructDoc:
             - `{work_root}/oracle` ツリー内は書き込み禁止
             - `{work_root}/memo` は読み書き禁止
             """)
-        case FileAccessMode.CONFLICT_RESOLUTION_WRITE:
-            body = ntqs(f"""
-            - `{work_root}` ツリー外は読み書き禁止
-            - conflict 対象外ファイルは書き込み禁止
-            - conflict 対象 oracle file は conflict marker 解消に必要な範囲だけ書き込み可能
-            - `{work_root}/memo` は読み書き禁止
-            """)
         case FileAccessMode.ORACLE_WRITE:
             body = ntqs(f"""
             - `{work_root}` ツリー外は読み書き禁止

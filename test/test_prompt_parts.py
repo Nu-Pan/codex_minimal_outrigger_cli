@@ -62,6 +62,18 @@ def test_complete_prompt_always_includes_routing_rule() -> None:
     assert "# routing rule" in rendered
 
 
+def test_render_as_markdown_collapses_consecutive_blank_lines() -> None:
+    doc = StructDoc(
+        "root",
+        "first\n\n\n   \nsecond",
+    )
+
+    rendered = render_as_markdown(doc)
+
+    assert "\n\n\n" not in rendered
+    assert rendered == "# root\n\nfirst\n\nsecond\n"
+
+
 def test_file_access_rule_titles_and_bodies_match_modes() -> None:
     expected = {
         FileAccessMode.READONLY: [
@@ -77,12 +89,6 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
         FileAccessMode.REALIZATION_WRITE: [
             "ツリー外は読み書き禁止",
             "/oracle` ツリー内は書き込み禁止",
-            "/memo` は読み書き禁止",
-        ],
-        FileAccessMode.CONFLICT_RESOLUTION_WRITE: [
-            "ツリー外は読み書き禁止",
-            "conflict 対象外ファイルは書き込み禁止",
-            "conflict 対象 oracle file は conflict marker 解消に必要な範囲だけ書き込み可能",
             "/memo` は読み書き禁止",
         ],
         FileAccessMode.ORACLE_WRITE: [
@@ -257,10 +263,6 @@ def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
         file_access_mode.value for file_access_mode in TUI_FILE_ACCESS_MODES
     ]
     assert "repo_write" in schema["properties"]["file_access_mode"]["properties"]["value"]["enum"]
-    assert (
-        "conflict_resolution_write"
-        not in schema["properties"]["file_access_mode"]["properties"]["value"]["enum"]
-    )
     for flag_name in [
         "oracle_and_realization_basic",
         "oracle_standard",
@@ -288,12 +290,12 @@ def test_review_oracle_merge_finding_uses_efficiency_model() -> None:
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
 
 
-def test_session_join_conflict_resolution_uses_conflict_write_mode() -> None:
+def test_session_join_conflict_resolution_uses_realization_write_mode() -> None:
     parameter = build_session_join_conflict_resolution_parameter([__file__])
 
     assert parameter.model_class == ModelClass.MAINSTREAM
     assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
-    assert parameter.file_access_mode == FileAccessMode.CONFLICT_RESOLUTION_WRITE
+    assert parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE
     assert "conflict 対象 oracle file" in parameter.prompt
 
 

@@ -55,7 +55,6 @@ class FileAccessMode(StrEnum):
     READONLY = auto()
     PURE_ORACLE_READ = auto()
     REALIZATION_WRITE = auto()
-    CONFLICT_RESOLUTION_WRITE = auto()
     ORACLE_WRITE = auto()
     REPO_WRITE = auto()
 
