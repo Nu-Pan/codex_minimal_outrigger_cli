@@ -1,45 +1,45 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様断片のうち、自然言語の Markdown 文書で書かれた仕様群を収める領域。公開 CLI 挙動、run 隔離、branch / worktree モデル、セッション状態、ログ、インデクシング、Codex CLI 呼び出し規約、サブコマンド仕様、開発時の実装・テスト規則、採用しなかった設計方針を扱う。
-- 利用者に見える挙動や AI 実装者が従う横断規則について、実装差を避けたい判断の起点になる。下位領域や個別文書は、アプリケーション仕様、開発規則、設計上の non-goal、branch モデルなど、目的別の正本仕様断片へ進む入口として使う。
+- cmoc の正本仕様断片のうち、自然言語 Markdown で書かれた仕様文書群への入口。利用者に見える CLI 挙動、session/run の branch・worktree モデル、Codex CLI 呼び出し、ログ、エラー処理、状態、インデクシング、開発時の実装・テスト規則、採用しなかった設計案の判断背景を扱う。
+- ここに含まれる文書は、実装やテストを直接読む前に、人間が責任を持つ仕様判断、公開挙動、実装者である AI に任せてよい範囲、過去に退けた workflow や状態管理方針を確認するための正本側の入口である。
+- 下位領域は、アプリケーション外部仕様、branch/worktree 用語、開発規則、不採用案の背景に分かれるため、cmoc 全体の仕様判断から個別サブコマンドや開発ルールへ読み先を絞る起点として使う。
 
 ## Read this when
-- cmoc の CLI としての外部挙動、サブコマンドの事前条件・実行手順・状態遷移、stdout / stderr / ログ、エラー処理、補完、インデクシング、Codex CLI 呼び出し境界を確認したいとき。
-- session branch、run branch、linked worktree、session state、apply state、oracle snapshot、run 隔離、merge / abandon / cleanup など、git 状態や永続状態をまたぐ仕様を実装・修正・テストするとき。
-- Python 実装、CLI 構成、共通処理配置、開発環境、依存追加、pytest による決定論的制御ロジックの検証など、realization code を書く前に守るべき開発規則を確認したいとき。
-- 新しい計画フェーズ、AI-generated memory / kaizen、自動注入される改善情報、人間による AI 計画レビューなどを追加すべきか判断する前に、過去に採用しなかった設計方針と理由を確認したいとき。
-- oracle file の自然言語仕様から読む先を絞り込み、実装側へ進む前に人間意図・公開仕様・non-goal の境界を確認したいとき。
+- cmoc の CLI としての利用手順、サブコマンドの外部挙動、標準 workflow、stdout・stderr・ログ・エラー処理、Structured Output、Codex CLI 呼び出し規約を確認したいとき。
+- session branch、session home branch、run branch、linked worktree、fork/join commit、cmoc-managed branch など、session/run の git モデルと隔離単位を実装・修正・テストする前。
+- oracle を正本として realization を追従させる開発で、Python 実装、CLI 構成、共通処理配置、開発環境、pytest による決定論的テストの方針を確認したいとき。
+- インデクシング、agent call 前後の制御、prompt 方針、session/apply 状態、run 隔離、quota 待機や resume など、複数機能にまたがる横断仕様を読む必要があるとき。
+- AI-generated kaizen、作業計画レビュー、apply 系 orchestration などの設計を再検討しており、なぜ採用しなかったのか、人間の認知負荷や暗黙仕様化をどう避ける方針なのかを確認したいとき。
 
 ## Do not read this when
-- oracle file と realization file の基本的な責務分担、正本仕様断片としての位置づけ、AI / 人間の編集権限だけを確認したいとき。
-- パスキーワードや root model の定義そのものを調べたいとき。
-- 特定の実装ファイル、テストファイル、既存関数、helper、schema、設定ファイルの現在のコード構造だけを確認したいとき。
-- 個別の AgentCallParameter builder、Structured Output schema、ログ JSON の具体的な key など、自然言語仕様よりも実装・schema 側が正本になる詳細だけを確認したいとき。
-- 対象のサブコマンド、開発規則、branch モデル、設計上の代替案など読むべき個別文書がすでに明確な場合。
+- oracle file と realization file の基本的な定義、所有者、編集権限、正本仕様断片としての位置づけだけを確認したいとき。
+- パスキーワードや root model の実装上の定義そのもの、またはプログラムとしての path utility の詳細を調べたいとき。
+- 特定の実装ファイル、関数、クラス、テスト fixture、現在の内部ロジックだけを調べたいときは、正本仕様ではなく realization 側の該当箇所を直接読む。
+- oracle src や oracle test に置かれたプログラム・設定・テスト形式の正本断片そのものを確認したいとき。
+- 既に対象の個別サブコマンド、ログ仕様、状態 schema、開発規則、不採用判断の範囲が明確で、下位の該当本文へ直接進めるとき。
 
 ## hash
-- 93d8d6ea2309192265cb6167b4a23d15fc8a82f5581398fd7b49443ee3111175
+- 38e2ec1f89238683a19417f7e05b17fdfa1178e588e1767d30052737e32a7af8
 
 # `src`
 
 ## Summary
-- プログラミング言語・設定ファイルで記述された cmoc の正本仕様断片を集める領域。AI エージェント呼び出しパラメータと prompt 構築、複数領域で使う基礎モデル・パス表記・構造化文書 helper、リポジトリ単位の永続設定仕様へ進む入口になる。
-- 自然言語仕様やテストではなく、実装形態で表された oracle file を根拠に、realization implementation が従うべきモデル、設定値、出力契約、標準文書の組み立て方を確認するための階層である。
+- `oracle/src` は、自然言語の正本仕様断片を支える oracle source の入口であり、AI エージェント呼び出しパラメータ、プロンプト部品、共通データモデル、パス語彙、構造化 Markdown 生成、リポジトリ単位設定の正本実装をまとめる階層。
+- サブコマンド処理そのものではなく、cmoc がどの論理モデル・reasoning effort・ファイルアクセスモード・Structured Output schema・標準文面・設定既定値を前提にするかを確認するための領域。
+- 下位には、AI 呼び出し prompt と応答契約を扱う領域、複数領域から参照される基礎型と helper を扱う領域、開発対象リポジトリごとの設定構造を扱う領域がある。
 
 ## Read this when
-- cmoc の正本仕様断片のうち、Python や JSON schema として定義された内容から読む先を選びたいとき。
-- AI エージェント呼び出しに渡す role・summary・goal、補助文脈、モデルクラス、reasoning effort、ファイルアクセスモード、Structured Output schema の指定を確認したいとき。
-- パスのルートトークン表記、実パス解決、agent call parameter、規範断片モデル、構造化 Markdown 生成など、複数機能が前提にする基礎概念を確認したいとき。
-- リポジトリごとに永続化される cmoc 設定の構造、既定値、Codex CLI 向け設定、apply fork や review oracle の処理上限に関する正本仕様を確認したいとき。
-- realization implementation を実装・修正する前に、対応する source 形式の oracle file がどの制約や契約を定めているか確認したいとき。
+- AI エージェント呼び出しの prompt 構成、モデル選択、reasoning effort、ファイルアクセスモード、Structured Output schema、または標準プロンプト部品の正本仕様断片を確認したいとき。
+- `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` のパス表記、実パス解決、worktree root 検出、構造化文書の Markdown 描画、standard 表現など、複数機能の前提になる基礎モデルを確認したいとき。
+- 開発対象リポジトリごとに永続化される cmoc 設定の構造、既定値、Codex CLI 向けモデル名・reasoning effort 名の対応、apply fork や review oracle の処理予算を確認したいとき。
+- indexing、apply fork、review oracle、session join、tui などで、実行フローが AI に渡す入力境界と期待する応答境界を調べたいとき。
 
 ## Do not read this when
-- oracle file と realization file の基本定義、oracle standard、realization standard など、自然言語で書かれた標準文書本文を確認したいだけのとき。
-- oracle test による期待挙動やテスト観点を確認したいとき。
-- CLI 引数解析、git 操作、プロセス起動、画面描画、ファイル保存、状態更新など、realization implementation の具体的な制御フローを調べたいとき。
-- 特定の prompt、基礎モデル、設定仕様のどれを読むべきか既に分かっており、その下位領域へ直接進めるとき。
-- 既存の INDEX.md 構成やルーティング文書そのものを確認したいとき。
+- CLI 引数解析、サブコマンド登録、git 操作、merge 実行、patch 適用、永続状態の実際の読み書き、端末 UI 描画など、AI 呼び出しパラメータや基礎仕様ではない実行フロー本体を調べたいとき。
+- oracle doc や oracle test の本文、個別仕様レビューの所見材料、realization file の修正対象など、正本仕様断片や実装対象そのものの内容判断をしたいとき。
+- 既に確認したい下位領域が AI 呼び出し、基礎モデル、設定仕様のいずれかに絞れており、その下位項目へ直接進めるとき。
+- 既存 `INDEX.md` の記述方針やルーティング文書全体の構成だけを確認したいとき。
 
 ## hash
-- 8b750dccb55b46ae340b49b0f476cba9db37737982005e427cdfab16a850c685
+- 9e9f0cf86be8634215ead0e24e19c54b86f94798f538628b4374e2456c4963e3

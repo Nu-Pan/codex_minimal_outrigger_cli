@@ -1,22 +1,24 @@
 # `apply`
 
 ## Summary
-- `cmoc apply fork` の適用後レビュー支援で使う AI 呼び出し仕様をまとめる領域。変更差分の人間向け要約、ファイル単位の所見列挙、所見への修正対応について、呼び出し役割、入力として渡す文脈、権限、モデル設定、Structured Output schema との接続を確認する入口となる。
-- 適用後差分や所見を扱う実処理そのものではなく、それらを担当エージェントへどの前提・制約・出力形式で渡すかを定義する。
+- `cmoc apply fork` の fork 適用工程で使う AI エージェント呼び出しパラメータと Structured Output schema の正本断片をまとめる領域。
+- 適用後差分の変更要約、realization file の要修正所見列挙、検出済み所見への修正依頼など、fork 適用時のレビュー・報告・修正支援に関わる入出力契約と prompt 構成を扱う。
+- 実際の branch 操作や patch 適用ではなく、fork 適用フロー内で AI に何を読ませ、どの role・goal・制約・出力 schema で呼び出すかを確認する入口となる。
 
 ## Read this when
-- `cmoc apply fork` の作業レポート向け変更要約を生成する AI 呼び出し仕様や、その出力 schema を確認するとき。
-- `cmoc apply fork` で oracle file または realization file を起点に、realization file の所見を列挙するレビュー用 AI 呼び出しを実装・確認するとき。
-- 列挙された所見を修正担当エージェントへ渡す際の扱い、特に所見本文の位置づけ、realization file への書き込み権限、git 操作禁止などの制約を確認するとき。
-- 差分本文、対象ファイル、所見本文、oracle standard、realization standard、apply review standard が、各エージェント prompt にどの範囲で含まれるかを切り分けたいとき。
+- `cmoc apply fork` で、適用後差分の変更要約、実装調査の所見列挙、所見対応修正依頼に使う AI 呼び出しの構成を確認したいとき。
+- fork 適用後のレビューや作業レポートで、差分要約や所見リストの Structured Output schema と prompt 側の対応を確認したいとき。
+- oracle file、realization file、起点パス、差分テキスト、検出済み所見を AI エージェント呼び出しへどう渡すかを調べたいとき。
+- apply review standard や realization standard を含む読み取り専用調査、または修正作業用のファイルアクセス権・モデル種別・推論努力量の指定を確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` の CLI 引数解析、ブランチ作成、fork 適用、git diff 取得、レポート保存など、適用フロー本体の実装を調べたいとき。
-- oracle file と realization file の基本定義、path keyword、標準 prompt 構築、AgentCallParameter などの共通部品そのものを確認したいとき。
-- レビューで検出された個別所見の妥当性や、所見に対応する具体的な realization file の修正内容を調べたいとき。
+- `cmoc apply fork` の CLI 引数解析、サブコマンド登録、branch 作成、git 操作、差分取得、patch 適用などの実行フロー本体を調べたいとき。
+- 個別ファイルの patch 内容そのものや、実際に realization file をどう修正するかという修正ロジックを探しているとき。
+- oracle standard、realization standard、apply review standard、path 語彙、共通 prompt 部品、AgentCallParameter 型定義そのものを確認したいとき。
+- INDEX.md 用エントリーや一般的なルーティング文書の書き方を確認したいとき。
 
 ## hash
-- 67411d127a8aecf0b58a5abaeedd96d9d5addb81e98fe2d1e002201e2d42db1a
+- 9b3736053b7c27af9ce3aedde50c576f7638c51774f5437e04388828fcc7c0f0
 
 # `indexing`
 
