@@ -1,5 +1,9 @@
 """`cmoc apply fork` の所見対応作業 prompt 正本。"""
 
+# std
+from typing import Any
+import json
+
 # cmoc
 from basic.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
 from basic.path_model import resolve_repo_root
@@ -13,14 +17,15 @@ from acp.prompt_parts.complete_prompt import build_complete_prompt
 
 
 def build_apply_fork_finding_application_parameter(
-    finding: str,
+    findings: list[dict[str, Any]],
 ) -> AgentCallParameter:
     """
     `cmoc apply fork` サブコマンド、所見対応作業用。
     AI エージェント呼び出しパラメータを構築する。
 
     finding: str
-        対応するべき所見の内容。
+        対応するべき所見本文のリスト。
+        1 件につき、
     """
     # パス
     repo_root = resolve_repo_root()
@@ -43,10 +48,16 @@ def build_apply_fork_finding_application_parameter(
             ),
             StructDoc(
                 "所見本文",
-                StructCodeBlock(
-                    "text",
-                    finding,
-                ),
+                *[
+                    StructDoc(
+                        f"FINDING-{i:02d}",
+                        StructCodeBlock(
+                            "json",
+                            json.dumps(f, ensure_ascii=False, indent=2),
+                        ),
+                    )
+                    for i, f in enumerate(findings)
+                ],
             ),
         ],
         oracle_and_realization_basic=True,
