@@ -94,9 +94,9 @@ def cmoc_apply_join_impl(force_resolve: bool) -> None:
                 ["必要なら手動で解決するか、--force-resolve を検討してください。"],
                 merge.stderr,
             )
-    state.session.last_joined_apply_join_commit = run_git(
-        ["rev-parse", "HEAD"], root
-    ).stdout.strip()
+    state.session.last_joined_apply_oracle_snapshot_commit = (
+        state.apply.oracle_snapshot_commit
+    )
     state.apply = ApplyPart()
     write_state(path, state)
     warnings: list[str] = []
@@ -196,8 +196,8 @@ def render_apply_join_report(
             f"cmoc_session_branch: {session_branch}",
             f"cmoc_apply_branch: {apply_branch}",
             f"cmoc_apply_worktree: {apply_worktree}",
-            "joined_apply_join_commit: "
-            f"{state.session.last_joined_apply_join_commit}",
+            "last_joined_apply_oracle_snapshot_commit: "
+            f"{state.session.last_joined_apply_oracle_snapshot_commit}",
             f"force_resolve: {force_resolve}",
             f"cleanup_reachable: {cleanup_reachable}",
             "---",

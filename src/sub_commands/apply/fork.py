@@ -371,12 +371,12 @@ def enumerate_apply_targets(
         )
         changed = run_git(["diff", "--name-only", base, "HEAD"], root).stdout.splitlines()
         candidates = [root / path for path in changed]
-    elif state and state.session.last_joined_apply_join_commit:
+    elif state and state.session.last_joined_apply_oracle_snapshot_commit:
         changed = run_git(
             [
                 "diff",
                 "--name-only",
-                state.session.last_joined_apply_join_commit,
+                state.session.last_joined_apply_oracle_snapshot_commit,
                 "HEAD",
             ],
             root,
