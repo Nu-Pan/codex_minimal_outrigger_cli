@@ -62,9 +62,23 @@ def cmoc_apply_join_impl(force_resolve: bool) -> None:
         require_clean_worktree(apply_worktree)
     unexpected = collect_apply_join_unexpected_changes(root, state, apply_branch, session_branch)
     if unexpected and not force_resolve:
+        report_path = write_apply_join_report(
+            root,
+            session_branch,
+            state,
+            apply_branch,
+            apply_worktree,
+            force_resolve,
+            unexpected,
+            False,
+            [],
+        )
         raise CmocError(
             "apply join の想定外差分があります。",
-            ["--force-resolve で想定外差分を revert するか、手動で内容を確認してください。"],
+            [
+                "--force-resolve で想定外差分を revert するか、手動で内容を確認してください。",
+                f"保存済み report を確認してください: {report_path}",
+            ],
             json.dumps(unexpected, ensure_ascii=False, indent=2),
         )
     if unexpected and force_resolve:
@@ -190,11 +204,12 @@ def render_apply_join_report(
     conflict_lines = [
         f"- unresolved: {path}" for path in merge_conflicts
     ] or ["- none"]
-    result = (
-        "apply branch の merge conflict が残っています。cmoc は自動解決しませんでした。"
-        if merge_conflicts
-        else "apply branch を session branch へ join しました。"
-    )
+    if merge_conflicts:
+        result = "apply branch の merge conflict が残っています。cmoc は自動解決しませんでした。"
+    elif unexpected and not force_resolve:
+        result = "apply join の想定外差分を検出したため、join を中止しました。"
+    else:
+        result = "apply branch を session branch へ join しました。"
     return "\n".join(
         [
             "---",

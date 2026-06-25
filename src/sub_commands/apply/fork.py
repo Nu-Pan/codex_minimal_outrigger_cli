@@ -21,6 +21,7 @@ from cmoc_runtime import (
     create_run_worktree,
     current_branch,
     current_subcommand_logger,
+    ensure_cmoc_ignored,
     head_commit,
     is_binary,
     is_git_ignored,
@@ -28,7 +29,6 @@ from cmoc_runtime import (
     load_state_for_branch,
     pushd,
     repo_root,
-    require_cmoc_ignored,
     require_clean_worktree,
     run_git,
     timestamp,
@@ -64,7 +64,7 @@ def cmoc_apply_fork_impl(
     if state.session.state != "active" or state.apply.state != "ready":
         raise CmocError("apply fork の事前条件を満たしていません。", [], str(path))
     require_clean_worktree(root)
-    require_cmoc_ignored(root)
+    ensure_cmoc_ignored(root)
     config = load_config(root)
     run_id = timestamp()
     apply_branch = f"cmoc/apply/{session_id}/{run_id}"

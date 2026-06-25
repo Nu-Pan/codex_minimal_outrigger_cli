@@ -223,6 +223,16 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
 
     assert normal.exit_code == 1
     assert "想定外差分" in normal.output
+    report_line = [
+        line for line in normal.output.splitlines() if "保存済み report" in line
+    ][0]
+    report_path = Path(report_line.rsplit(": ", 1)[1])
+    report = report_path.read_text()
+    assert "join を中止しました" in report
+    assert "## Unexpected Changes" in report
+    assert "- apply: oracle/spec.md" in report
+    assert "## Merge Conflicts" in report
+    assert "- none" in report
     forced = runner.invoke(
         app, ["apply", "join", "--force-resolve"], catch_exceptions=False
     )
