@@ -11,6 +11,7 @@ from _support import (
     app,
     apply_module,
     cmoc_runtime,
+    current_branch,
     indexing_module,
     main_module,
     make_repo,
@@ -34,6 +35,7 @@ def hold_indexing_lock(lock_path: Path, ready, release) -> None:
 
 def test_resolve_index_conflicts_deletes_index_and_commits(tmp_path: Path) -> None:
     root = make_repo(tmp_path)
+    home_branch = current_branch(root)
     (root / "INDEX.md").write_text("base\n")
     run_git(root, "add", "INDEX.md")
     run_git(root, "commit", "-m", "add index")
@@ -41,10 +43,10 @@ def test_resolve_index_conflicts_deletes_index_and_commits(tmp_path: Path) -> No
     (root / "INDEX.md").write_text("side\n")
     run_git(root, "add", "INDEX.md")
     run_git(root, "commit", "-m", "side index")
-    run_git(root, "switch", "master")
-    (root / "INDEX.md").write_text("master\n")
+    run_git(root, "switch", home_branch)
+    (root / "INDEX.md").write_text("home\n")
     run_git(root, "add", "INDEX.md")
-    run_git(root, "commit", "-m", "master index")
+    run_git(root, "commit", "-m", "home index")
     merge = subprocess.run(
         ["git", "merge", "--no-ff", "side"], cwd=root, text=True, capture_output=True
     )

@@ -42,6 +42,10 @@ def run_git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def current_branch(root: Path) -> str:
+    return run_git(root, "branch", "--show-current").stdout.strip()
+
+
 def make_repo(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
     root.mkdir()
