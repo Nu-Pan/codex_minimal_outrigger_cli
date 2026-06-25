@@ -204,33 +204,48 @@ def test_commit_index_updates_commits_only_index_paths(tmp_path: Path) -> None:
     assert run_git(root, "status", "--short").stdout.strip() == "?? .gitignore"
 
 
-def test_indexing_allows_existing_non_index_diff_and_commits_only_index(
+def test_indexing_rejects_existing_non_index_diff(
     tmp_path: Path, monkeypatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
     (root / "README.md").write_text("# repo\n\nchanged\n")
+    head_before = run_git(root, "rev-parse", "HEAD").stdout.strip()
 
-    class FakeCodexResult:
-        output_json = {
-            "summary": ["generated summary"],
-            "read_this_when": ["generated read condition"],
-            "do_not_read_this_when": ["generated skip condition"],
-        }
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("dirty explicit indexing must stop before Codex")
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
-    )
+    monkeypatch.setattr(main_module, "run_codex_exec", fail_if_called)
 
     result = runner.invoke(app, ["indexing"], catch_exceptions=False)
 
-    assert result.exit_code == 0
+    assert result.exit_code == 1
+    assert "git 未コミット差分が存在します。" in result.stdout
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == head_before
+    assert run_git(root, "status", "--short").stdout == " M README.md\n"
+
+
+def test_indexing_preflight_allows_existing_non_index_diff_and_commits_only_index(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    index_path = root / "INDEX.md"
+    (root / "README.md").write_text("# repo\n\nchanged\n")
+
+    def fake_update_indexes(update_root: Path, codex_exec=None) -> list[Path]:
+        assert update_root == root
+        index_path.write_text("# generated\n")
+        return [index_path]
+
+    monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
+
+    indexing_module.run_indexing_preflight(root, lambda *args, **kwargs: None)
+
     committed_paths = run_git(
         root, "show", "--name-only", "--pretty=", "HEAD"
     ).stdout.splitlines()
-    assert "INDEX.md" in committed_paths
-    assert "README.md" not in committed_paths
+    assert committed_paths == ["INDEX.md"]
     assert run_git(root, "status", "--short").stdout == " M README.md\n"
 
 
