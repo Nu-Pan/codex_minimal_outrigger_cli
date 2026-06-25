@@ -25,21 +25,23 @@
 # `src`
 
 ## Summary
-- `oracle/src` は、自然言語の正本仕様断片を支える oracle source の入口であり、AI エージェント呼び出しパラメータ、プロンプト部品、共通データモデル、パス語彙、構造化 Markdown 生成、リポジトリ単位設定の正本実装をまとめる階層。
-- サブコマンド処理そのものではなく、cmoc がどの論理モデル・reasoning effort・ファイルアクセスモード・Structured Output schema・標準文面・設定既定値を前提にするかを確認するための領域。
-- 下位には、AI 呼び出し prompt と応答契約を扱う領域、複数領域から参照される基礎型と helper を扱う領域、開発対象リポジトリごとの設定構造を扱う領域がある。
+- cmoc の正本仕様断片のうち、プログラミング言語・設定ファイルで記述された oracle src をまとめる階層。AI エージェント呼び出し、基礎データ構造、リポジトリ永続設定など、実装として表された正本仕様断片へ進む入口になる。
+- 呼び出し prompt・補助文脈・Structured Output 契約・file access mode、root token と実パスの相互変換、構造化文書モデル、cmoc 設定の項目・既定値・JSON 保存仕様などを確認するための領域。
+- 自然言語の仕様文書やテストではなく、cmoc 内部で共有される型・設定・パラメータ構築・標準プロンプト部品など、実装形式で管理される oracle file を読むための階層。
 
 ## Read this when
-- AI エージェント呼び出しの prompt 構成、モデル選択、reasoning effort、ファイルアクセスモード、Structured Output schema、または標準プロンプト部品の正本仕様断片を確認したいとき。
-- `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` のパス表記、実パス解決、worktree root 検出、構造化文書の Markdown 描画、standard 表現など、複数機能の前提になる基礎モデルを確認したいとき。
-- 開発対象リポジトリごとに永続化される cmoc 設定の構造、既定値、Codex CLI 向けモデル名・reasoning effort 名の対応、apply fork や review oracle の処理予算を確認したいとき。
-- indexing、apply fork、review oracle、session join、tui などで、実行フローが AI に渡す入力境界と期待する応答境界を調べたいとき。
+- oracle file のうち、実装または設定ファイルとして書かれた正本仕様断片を起点に、cmoc の基本型、パス語彙、設定構造、AI 呼び出しパラメータの仕様を確認したいとき。
+- AI エージェント呼び出しで渡す prompt 構成、補助文脈、読み取り・編集権限、モデル種別、reasoning effort、Structured Output schema の扱いを調べたいとき。
+- `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` の意味や、root token 付きパス表記と実パスの変換規則を確認したいとき。
+- AgentCallParameter、StructDoc、Markdown 描画 helper、oracle / realization の基本概念など、複数領域から参照される基礎的な実装仕様を確認したいとき。
+- リポジトリごとに永続化される cmoc 設定、Codex CLI 向け設定、apply fork 向け設定、review oracle 向け設定の項目・既定値・保存上の扱いを確認したいとき。
 
 ## Do not read this when
-- CLI 引数解析、サブコマンド登録、git 操作、merge 実行、patch 適用、永続状態の実際の読み書き、端末 UI 描画など、AI 呼び出しパラメータや基礎仕様ではない実行フロー本体を調べたいとき。
-- oracle doc や oracle test の本文、個別仕様レビューの所見材料、realization file の修正対象など、正本仕様断片や実装対象そのものの内容判断をしたいとき。
-- 既に確認したい下位領域が AI 呼び出し、基礎モデル、設定仕様のいずれかに絞れており、その下位項目へ直接進めるとき。
-- 既存 `INDEX.md` の記述方針やルーティング文書全体の構成だけを確認したいとき。
+- 自然言語で書かれた正本仕様断片、プロダクト方針、レビュー観点、ルーティング文書の品質基準などを確認したいときは、oracle doc 側を読む。
+- oracle src の実装仕様が満たされているかを検証するテスト仕様やテストケースを確認したいときは、oracle test 側を読む。
+- cmoc の実際の実装コードや自動テストを修正・確認したいときは、realization implementation または realization test 側を読む。
+- CLI 引数解析、git 操作、merge、patch 適用、永続状態の読み書き、端末 UI 描画など、AI 呼び出しパラメータや基本型・設定構造ではない実行フロー本体だけを調べたいとき。
+- 個別の patch 内容、merge conflict の具体的な統合判断、oracle file 本文からの所見材料など、対象本文そのものを読んで判断する作業をしたいとき。
 
 ## hash
-- 9e9f0cf86be8634215ead0e24e19c54b86f94798f538628b4374e2456c4963e3
+- c3eb2698fa1cbc6a625d1383c2f7b06df65307106dc54c175ba53cb6877f3924

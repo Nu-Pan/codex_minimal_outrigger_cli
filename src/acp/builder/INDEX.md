@@ -1,23 +1,23 @@
 # `apply`
 
 ## Summary
-- `cmoc apply fork` の適用・レビュー工程で使う AI 呼び出しパラメータ群と、その入出力に使う構造化スキーマをまとめる領域。ファイル単位の所見列挙、所見リストの整理、所見に基づく realization file 修正、作業後の差分要約という一連のエージェント呼び出し条件を確認する入口になる。
-- 各呼び出しでは、対象パスや git diff、所見リスト、個別所見を補助プロンプトに埋め込み、参照する標準、ファイルアクセス権限、モデルクラス、reasoning effort、Structured Output schema の選択を組み立てる。
+- 適用・分岐処理で使う AI 呼び出し契約のうち、変更要約、ファイル別レビュー所見、検出済み所見への修正依頼を扱う prompt、Structured Output schema、model class、reasoning effort、ファイルアクセス権限の定義を束ねる領域。
+- 実際の分岐作成、差分取得、Git 操作、CLI 制御フローではなく、差分や所見を AI にどう提示し、どの構造化結果として受け取るかを確認するための入口になる。
 
 ## Read this when
-- `cmoc apply fork` のレビュー・修正・レポート生成で、AI エージェントに渡す role、summary、goal、補助プロンプト、参照標準、ファイルアクセスモードを確認または変更したいとき。
-- ファイル単位の所見列挙、集約済み所見リストの改善、個別所見への修正作業、git diff からの変更要約という各段階の呼び出し条件を追いたいとき。
-- apply fork の所見一覧や変更要約が、どの Structured Output schema に従い、どの粒度の情報を保持するかを確認したいとき。
-- レビュー所見を重複・矛盾・False-Positive の除去を経て作業可能な順序に整理する prompt、または所見本文を修正担当エージェントへ渡す prompt を調整したいとき。
+- 適用・分岐処理で、変更要約、所見列挙、所見対応作業のいずれかに使う AI 呼び出し条件や prompt 構成を調べたいとき。
+- 差分本文、起点ファイル、既存所見などの入力が AI 向け prompt にどのように埋め込まれるかを確認したいとき。
+- 各 AI 呼び出しで使う Structured Output schema、model class、reasoning effort、ファイルアクセス権限の参照先を探したいとき。
+- レビュー所見や変更要約を、人間向けカテゴリ、根拠位置、修正方針としてどのように構造化して返すかを確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` のサブコマンド登録、CLI 引数解析、branch 作成、git コマンド実行、差分取得などの実行フロー本体を調べたいとき。
-- 完全プロンプトの共通組み立て処理、構造化 markdown の描画、path keyword の定義、AgentCallParameter やモデル種別などの共通型定義を変更したいとき。
-- oracle file、realization file、各種 standard の本文そのものを確認したいとき。
-- 実際の変更対象ファイルの内容、個別の修正コード、またはテスト実装を調べたいとき。
+- 適用・分岐処理の CLI 引数解析、サブコマンド登録、branch 作成、差分取得、Git コマンド実行など、実行フロー本体を調べたいとき。
+- oracle standard、realization standard、apply review standard、path keyword など、prompt に参照される共通仕様や共通概念の本文を確認したいとき。
+- 汎用的な AgentCallParameter、path 解決、完全 prompt 生成、markdown rendering などの共通部品そのものを調べたいとき。
+- 個別の変更対象ファイルやテストの内容を直接確認したいだけで、変更要約・所見列挙・所見適用の AI 呼び出し契約を変更しないとき。
 
 ## hash
-- e857dc5a93020e28075d60a291c6eed21cd3384dea8bfaed2c216d31657b670f
+- 623f16f589f72888f88ef5a97c5a7976f7a38fa0196644a97cafc0d3743ea4e1
 
 # `indexing`
 

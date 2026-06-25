@@ -43,22 +43,23 @@
 # `test_apply_fork_cli.py`
 
 ## Summary
-- apply fork の CLI 挙動を検証する realization test。セッション fork 後の apply fork 実行、Codex 呼び出し、apply branch と worktree の状態更新、収束・未収束・エラー時の report、gitignore や編集禁止対象の扱い、rolling apply の差分対象を確認する。
+- apply fork コマンドの realization test。session fork 後の apply 実行が Codex ループ、apply branch/worktree、session state、report、commit message、change summary、終了コードをどう扱うかを CLI 経由で検証する。
+- apply fork 周辺の制御ロジックとして、設定読み込み失敗時に apply run を開始しないこと、既存の ignore 設定を不要に書き換えないこと、編集対象にできるファイルと禁止対象差分の扱い、dirty file の再検査、rolling 実行時の前回 join commit 利用を確認する。
 
 ## Read this when
-- apply fork の外部挙動、終了コード、出力 report、状態ファイル更新、apply branch/worktree 作成に関するテストを確認・変更するとき。
-- apply fork が Codex の所見列挙・所見 refine・所見適用・commit message・change summary をどの順に呼び、結果をどう扱うかをテストから確認するとき。
-- apply fork の対象正規化、root 直下の memo 除外、ネストした memo ディレクトリの許可、gitignore を対象として編集できる条件を確認するとき。
-- apply fork が設定ファイル読み込みエラーや編集禁止対象の差分で apply run を開始・継続・失敗状態にする条件を確認するとき。
-- apply join 後に再度 apply fork する rolling apply が、前回 join commit 以降の oracle 変更だけを対象にする挙動を確認するとき。
+- apply fork の CLI 挙動、終了コード、session state の apply セクション、apply branch/worktree の生成規則、report 出力の期待値を変更・調査する時。
+- apply fork が Codex exec をどの purpose で呼び、所見列挙、所見適用、commit message 生成、change summary 生成をどう組み合わせるかをテスト観点から確認したい時。
+- apply fork が repository root の ignore 設定、root 直下の memo 除外、ネストした memo ディレクトリ、編集禁止対象差分をどう扱うべきかを確認する時。
+- apply join 後に oracle 側だけが変わった状態で、次回 apply fork がどの変更対象を再検査するかを確認する時。
 
 ## Do not read this when
-- apply fork の実装詳細だけを変更したく、テスト上の期待される外部挙動や状態遷移を確認する必要がないとき。
-- apply join、session fork、init などの個別コマンドそのものの仕様やテストを確認したいだけで、apply fork との連携挙動が関係しないとき。
-- Codex CLI や LLM 出力品質そのものを検証したいとき。この対象は Codex 呼び出しを fake に置き換え、cmoc 側の制御ロジックを検証する。
+- apply fork 以外の apply サブコマンド、session fork 自体、init 自体の基本仕様だけを調べたい時。
+- CLI テストではなく、apply fork の実装関数の内部構造や helper の責務分割を直接変更するために読む入口を探している時。
+- Codex CLI や LLM の出力品質そのものを検証したい時。ここでは Codex 実行は fake に置き換え、cmoc 側の制御と副作用を検証している。
+- oracle file の正本仕様を確認したい時。この対象は realization test であり、正本仕様の代替ではない。
 
 ## hash
-- 81a4194efd4ab55ac9a66f5e2b425c0f1d377a84bfe4a6cce5de0e4186690ca6
+- 5581aa37603436b33e703e541542087b1a4597749f215898037dc2534011e6ba
 
 # `test_apply_join_cli.py`
 
@@ -105,23 +106,25 @@
 # `test_cli_init_tui.py`
 
 ## Summary
-- CLI の初期化と対話起動まわりの realization test。初期化時の `.cmoc` 管理除外、`.gitignore` 更新、既存 staged/unstaged 変更の保全、linked worktree での保存先分離、既定設定 JSON の生成・同期、対話起動時の editor 入力整形、parameter 解決、Codex TUI 呼び出し、markdown prompt 解析の境界挙動を検証する。
+- CLI の初期化、対話起動、Markdown プロンプト解析に関する realization test。`init` が `.cmoc` の追跡解除、`.gitignore` 更新、既存 staging の保護、linked worktree での保存先分離、既定設定生成と既存設定の同期を行うことを検証する。
+- `tui` がエディタで編集された依頼文から不要コメントを除去し、resolve 用 Codex 実行で起動パラメータを決め、完成プロンプトを保存して Codex TUI を呼ぶ流れを検証する。linked worktree では実リポジトリ root と作業 cwd、schema・log の保存先が分かれることも扱う。
+- Markdown プロンプト解析について、fenced code block 内の見出し風行を見出し扱いしないこと、先頭見出し前の本文を保持することを検証する。
 
 ## Read this when
-- `init` サブコマンドの git 操作、`.cmoc` ignore、cleanup commit、既存 index/worktree 変更の保全、linked worktree 対応を変更・確認する時。
-- 既定設定 JSON の内容、既存 user 設定を上書きしない default 同期、設定項目追加に伴う初期化テストを確認する時。
-- `tui` サブコマンドで editor を起動し、入力 prompt を補完・保存し、parameter 解決用 Codex exec と本体 Codex TUI を呼び分ける流れを変更・確認する時。
-- 対話起動ログや schema 出力先が main worktree と linked worktree のどちらに置かれるかを確認する時。
-- markdown prompt parser が fenced code block 内の見出し風行を無視すること、見出し前の preamble を本文として保持することを確認する時。
+- `init` サブコマンドの Git 副作用を変更・調査する。特に `.cmoc` の ignore、追跡解除、cleanup commit、既存 staged/unstaged 変更の保護、linked worktree 上の初期化挙動を確認したいとき。
+- `.cmoc/config.json` の既定値、既存ユーザー値を上書きしない defaults sync、設定項目追加時の期待テストを確認したいとき。
+- `tui` サブコマンドのエディタ起動、依頼文整形、parameter resolve、Codex TUI 起動、完成プロンプト保存、log/state/schema の配置を変更・調査するとき。
+- linked worktree で `init` または `tui` の保存先、Git root と cwd の扱い、root 側 `.cmoc` と worktree 側 `.cmoc` の分離を確認したいとき。
+- Markdown 依頼文 parser の heading 抽出、fenced code block、見出し前 preamble の扱いを変更・調査するとき。
 
 ## Do not read this when
-- CLI 全体のコマンド一覧、引数定義、実装入口を探しているだけなら、まず実装側の CLI 定義やより上位のテスト案内を読む。
-- `init` や `tui` 以外のサブコマンド、レビュー、apply、index entry 生成などの挙動を調べる時は、それぞれの対象テストへ進む。
-- Codex CLI 自体の出力品質や LLM 応答内容を検証したい時。この対象は外部 Codex 呼び出しを fake 化し、cmoc 側の制御と保存副作用を検証する。
-- 設定ファイルの schema や全設定項目の意味を知りたい時は、設定モデルや生成処理の本文を読む。
+- CLI コマンドの実装詳細だけを読みたい場合は、まず実装側の対象へ進めばよい。この対象は外部挙動と制御結果を検証するテストである。
+- `init`、`tui`、Markdown プロンプト解析に関係しないサブコマンドやドメイン機能のテストを探している場合は読まなくてよい。
+- Codex CLI やエディタ実行そのものの品質、実際の LLM 出力内容を評価したい場合は対象外である。この対象は fake 実行や monkeypatch によって cmoc 側の制御と保存結果を検証している。
+- INDEX 生成、oracle review、apply fork など、この対象内で設定項目名として触れられるだけの機能本体を調査する場合は、より直接の実装・テストへ進む方がよい。
 
 ## hash
-- e9e1c29de6e3ce5fc15db1f4b324bf6b30b98ecc0a7979012f1b0887de8cba42
+- 9de769ced8a3bb018342e8a5c9888ecaac1b15e9fe71a081cdddfad6a92d7336
 
 # `test_codex_runtime_exec.py`
 

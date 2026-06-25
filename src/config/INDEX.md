@@ -1,22 +1,19 @@
 # `cmoc_config.py`
 
 ## Summary
-- 開発対象リポジトリごとに変わりうる cmoc の挙動設定を集約する設定データクラス群を定義する。
-- 永続化される設定の最上位構造、Codex CLI 向けのモデル名・推論 effort 名の対応、`apply fork` と `review oracle` のループ回数上限を扱う。
-- 設定値として `ModelClass` や `ReasoningEffort` を Codex CLI が受理できる文字列へ対応づける箇所への入口になる。
+- 開発対象リポジトリごとに変わりうる cmoc の設定を集約する dataclass 群を定義する。
+- AI エージェント呼び出しの並列数、Codex CLI 向けのモデル名・reasoning effort 対応、apply fork と review oracle のループ上限など、永続化される設定値の既定値を扱う。
+- 設定は `<repo-root>/.cmoc/config.json` に保存され、人間が編集する前提の設定面に対応する。
 
 ## Read this when
-- 開発対象リポジトリごとの cmoc 設定項目、既定値、設定データクラスの構造を確認・変更したいとき。
-- Codex CLI 呼び出しに使うモデル名または reasoning effort 名の対応を確認・変更したいとき。
-- `apply fork` の apply ループや所見リスト改善ループの上限回数を確認・変更したいとき。
-- `review oracle` の所見列挙・マージ・検証ループの上限回数を確認・変更したいとき。
-- 永続化される config の dataclass 構造や Enum 系設定値の value 化前提に関わる実装を追うとき。
+- cmoc のリポジトリ別設定項目や既定値を確認・変更したいとき。
+- `cmoc init` が生成・同期する設定ファイルに含める値や、Enum 系の値を JSON 保存用にどう扱うかを確認したいとき。
+- Codex CLI に渡すモデル名・reasoning effort 名の対応、AI 呼び出し並列数、`cmoc apply fork` や `cmoc review oracle` の処理回数上限を調整したいとき。
 
 ## Do not read this when
-- CLI 引数の定義、サブコマンドの実行フロー、または設定値を実際に読み書きする処理だけを調べたいとき。
-- `ModelClass` や `ReasoningEffort` 自体の定義・意味を確認したいとき。
-- 個別サブコマンドの処理内容や所見リストの生成・改善・検証ロジックを調べたいとき。
-- リポジトリルート、作業ディレクトリ、実行ディレクトリなどのパス概念の定義を確認したいとき。
+- CLI 引数やサブコマンドの構文、実行時の入出力フローを調べたいだけのとき。
+- 設定ファイルの実際の読み書き処理、JSON 変換処理、`.cmoc` 配下のパス解決処理を調べたいとき。
+- oracle file や realization file の概念、パスキーワードの定義、INDEX.md 生成ルールそのものを確認したいとき。
 
 ## hash
-- ccea2a3965b4022ccab0f635678dd917808b71820431e9e91f76f699315338f6
+- 235cc8f4960fade374f47054db3640086c13ec211e0b2df4ef08fe5d61cb06fd

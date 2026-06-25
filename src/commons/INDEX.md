@@ -102,16 +102,21 @@
 # `runtime_config.py`
 
 ## Summary
-- `CmocConfig` の dict 変換、config JSON の読み込み・書き込み・同期、既定値補完、設定値の型変換エラーを扱う。
+- cmoc の実行時設定を、設定オブジェクト、dict、JSON ファイルの間で読み書きするための実装を扱う。
+- 設定ファイルが存在しない場合の初期生成、既存設定の既定値とのマージ、不正な JSON や不正な設定値を利用者向けエラーへ変換する入口になる。
 
 ## Read this when
-- `<repo-root>/.cmoc/config.json` の永続化形式、読み込み時の補完、書き戻し、設定不正時のエラーを変更したいとき。
+- `.cmoc/config.json` の読み込み、同期、書き戻し、既定値補完の挙動を確認または変更したいとき。
+- 設定項目の JSON 表現、モデル種別や reasoning effort の文字列表現、並列数や review oracle / apply fork 関連の設定値変換を追うとき。
+- 設定ファイルがない場合の自動生成、不正な JSON、不正な top-level 型、不正な enum 値や数値変換失敗時のエラー文言を確認したいとき。
 
 ## Do not read this when
-- 設定 dataclass の項目定義や既定値そのものを確認したいだけなら、`src/config` を読む。
+- 設定値そのものの定義や既定値だけを確認したいときは、設定データ構造の定義を読む。
+- 設定ファイルの配置パスや `<repo-root>/.cmoc/config.json` の導出規則だけを確認したいときは、runtime path の定義を読む。
+- cmoc 共通エラー型の表示形式や出力処理を確認したいだけのときは、エラー定義やエラー表示側を読む。
 
 ## hash
-- 3fcf385d58835fbc52bb232c03f8d4634678aba9fe13bf65da3728c24552d4ed
+- 9854b81ae9a3dd9422ac1d3e5f51d45a68e904bc34caa1d5bd25944acf91c495
 
 # `runtime_content.py`
 
