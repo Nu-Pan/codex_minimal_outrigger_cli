@@ -1,5 +1,6 @@
 from _support import (
     CmocError,
+    FileAccessMode,
     Path,
     app,
     cmoc_runtime,
@@ -150,12 +151,14 @@ def test_session_join_resolves_conflict_with_codex(tmp_path: Path, monkeypatch) 
     run_git(root, "commit", "-m", "home change")
     run_git(root, "switch", session_branch)
     calls: list[str] = []
+    modes: list[FileAccessMode] = []
 
     class FakeCodexResult:
         output_json = None
 
     def fake_run_codex_exec(parameter, **kwargs):
         calls.append(kwargs["purpose"])
+        modes.append(parameter.file_access_mode)
         (root / "README.md").write_text("resolved change\n")
         return FakeCodexResult()
 
@@ -167,6 +170,7 @@ def test_session_join_resolves_conflict_with_codex(tmp_path: Path, monkeypatch) 
     assert run_git(root, "branch", "--show-current").stdout.strip() == "master"
     assert (root / "README.md").read_text() == "resolved change\n"
     assert calls == ["session join conflict resolution"]
+    assert modes == [FileAccessMode.CONFLICT_RESOLUTION_WRITE]
 
 
 def test_session_join_stages_delete_conflict_resolution(

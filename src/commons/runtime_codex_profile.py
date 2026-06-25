@@ -17,6 +17,7 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
             return "read-only"
         case (
             FileAccessMode.REALIZATION_WRITE
+            | FileAccessMode.CONFLICT_RESOLUTION_WRITE
             | FileAccessMode.ORACLE_WRITE
             | FileAccessMode.REPO_WRITE
         ):
@@ -51,6 +52,11 @@ def _permission_profile_lines(mode: FileAccessMode, root: Path) -> list[str]:
             write_paths = [root]
             deny_read_paths = [root / "memo"]
             read_only_paths = [root / "oracle", root / "memo", root / ".agents"]
+        case FileAccessMode.CONFLICT_RESOLUTION_WRITE:
+            read_paths = [root]
+            write_paths = [root]
+            deny_read_paths = [root / "memo"]
+            read_only_paths = [root / "memo", root / ".agents"]
         case FileAccessMode.ORACLE_WRITE:
             read_paths = [root]
             write_paths = [root / "oracle"]

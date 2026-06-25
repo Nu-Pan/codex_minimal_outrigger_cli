@@ -3,7 +3,10 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from acp.builder.tui.resolve_parameter import build_tui_resolve_parameter_parameter
+from acp.builder.tui.resolve_parameter import (
+    TUI_FILE_ACCESS_MODES,
+    build_tui_resolve_parameter_parameter,
+)
 from acp.prompt_parts.complete_prompt import build_complete_prompt
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from basic.struct_doc import StructDoc, render_as_markdown
@@ -109,6 +112,12 @@ def build_tui_codex_parameter(
     file_access_mode = FileAccessMode(
         nested_value(resolved_parameter, "file_access_mode", FileAccessMode.READONLY.value)
     )
+    if file_access_mode not in TUI_FILE_ACCESS_MODES:
+        raise CmocError(
+            "TUI では使用できないファイルアクセスモードです。",
+            ["プロンプトを保存して `cmoc tui` を再実行してください。"],
+            f"file_access_mode: {file_access_mode.value}",
+        )
     prompt = build_complete_prompt(
         role="- あなたは AI Agent CLI/TUI として、ユーザーから与えられた依頼を実行します",
         summary="- 後述する詳細指示に従って作業してください",

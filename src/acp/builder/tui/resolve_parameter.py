@@ -15,6 +15,14 @@ from basic.acp import (
 from acp.prompt_parts.complete_prompt import build_complete_prompt
 from acp.prompt_parts.file_access_rule import build_file_access_rule
 
+TUI_FILE_ACCESS_MODES = (
+    FileAccessMode.READONLY,
+    FileAccessMode.PURE_ORACLE_READ,
+    FileAccessMode.REALIZATION_WRITE,
+    FileAccessMode.ORACLE_WRITE,
+    FileAccessMode.REPO_WRITE,
+)
+
 
 def build_tui_resolve_parameter_parameter(
     original_prompt: str,
@@ -50,7 +58,7 @@ def build_tui_resolve_parameter_parameter(
             ),
             StructDoc(
                 "ファイルアクセスモード",
-                *[build_file_access_rule(fam) for fam in FileAccessMode],
+                *[build_file_access_rule(fam) for fam in TUI_FILE_ACCESS_MODES],
             ),
         ],
         oracle_and_realization_basic=True,
