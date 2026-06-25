@@ -3,12 +3,12 @@ from tempfile import NamedTemporaryFile
 
 import typer
 
-from cmoc_runtime import ensure_cmoc_ignored, repo_root, run_git, sync_config
+from cmoc_runtime import ensure_cmoc_ignored, run_git, sync_config, work_root
 
 
 def cmoc_init_impl() -> None:
-    """repo root を cmoc が扱える初期状態へ同期する。"""
-    root = repo_root()
+    """work root を cmoc が扱える初期状態へ同期する。"""
+    root = work_root()
     gitignore = root / ".gitignore"
     head_gitignore = _git_show(root, "HEAD:.gitignore")
     index_gitignore = _git_show(root, ":0:.gitignore")
@@ -129,4 +129,4 @@ def _restore_staged_patch(root: Path, patch: str) -> None:
 
 def render_cmoc_init_result(root: Path) -> str:
     """`cmoc init` の成功結果を stdout 用 Markdown にする。"""
-    return f"# cmoc init\n- repo_root: `{root}`\n- ignored: `{root / '.cmoc'}`"
+    return f"# cmoc init\n- work_root: `{root}`\n- ignored: `{root / '.cmoc'}`"

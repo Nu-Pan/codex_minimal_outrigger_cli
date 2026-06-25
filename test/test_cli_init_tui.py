@@ -109,7 +109,7 @@ def test_init_restores_preexisting_gitignore_unstaged_delete(
     )
 
 
-def test_init_ignores_repo_cmoc_from_linked_worktree(
+def test_init_ignores_worktree_cmoc_from_linked_worktree(
     tmp_path: Path, monkeypatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -121,20 +121,20 @@ def test_init_ignores_repo_cmoc_from_linked_worktree(
     result = runner.invoke(app, ["init"], catch_exceptions=False)
 
     assert result.exit_code == 0
-    assert "/.cmoc/" in (root / ".gitignore").read_text()
-    assert not (linked / ".gitignore").exists()
+    assert not (root / ".gitignore").exists()
+    assert "/.cmoc/" in (linked / ".gitignore").read_text()
     assert (
         subprocess.run(
             ["git", "check-ignore", "-q", ".cmoc/.__cmoc_ignore_probe__"],
-            cwd=root,
+            cwd=linked,
         ).returncode
         == 0
     )
-    assert (root / ".cmoc" / "config.json").is_file()
-    assert (root / ".cmoc" / "log" / "sub_command").is_dir()
+    assert (linked / ".cmoc" / "config.json").is_file()
+    assert not (root / ".cmoc" / "config.json").exists()
     assert (
         run_git(
-            root,
+            linked,
             "status",
             "--short",
             "--",
@@ -143,9 +143,9 @@ def test_init_ignores_repo_cmoc_from_linked_worktree(
         ).stdout.strip()
         == ""
     )
-    assert "cmoc init" in run_git(root, "log", "--oneline", "-1").stdout
+    assert "cmoc init" in run_git(linked, "log", "--oneline", "-1").stdout
     committed_paths = run_git(
-        root, "show", "--name-only", "--format=", "HEAD"
+        linked, "show", "--name-only", "--format=", "HEAD"
     ).stdout.splitlines()
     assert ".gitignore" in committed_paths
 
