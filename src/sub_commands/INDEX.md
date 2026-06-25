@@ -1,25 +1,27 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実装群への入口。apply run の開始、破棄、join、report 生成、実行時 worktree・branch・process 状態の補助処理を扱う。
-- session branch と apply branch/worktree の間で、finding 適用用の isolated run を作成し、その成果を session 側へ取り込むまでの lifecycle を追うための階層。
+- apply サブコマンド群の実装ディレクトリで、apply run の開始、実行中プロセス管理、破棄、join、report 生成までの lifecycle に関する入口になる。
+- session branch と apply branch/worktree の関係、apply state の更新、clean worktree 要件、想定外差分や編集禁止対象差分への対処、Codex CLI 呼び出し、merge と cleanup の制御を下位実装へ振り分けるための対象。
+- 処理本体は fork、join、abandon、runtime helper、report 生成に分かれており、apply 全体の責務境界を見てから具体的なファイルへ進むために読む。
 
 ## Read this when
-- apply run の開始から完了、破棄、join、後片付けまでの状態遷移と制御フローを調べたいとき。
-- apply 対象 file の列挙、finding 適用 loop、編集禁止対象差分の rollback、commit 作成、report 生成の関係を確認したいとき。
-- apply branch または apply worktree の特定、process id 状態ファイル、実行中 process 停止など、apply 実行時の補助状態を確認したいとき。
-- apply join 時の merge、想定外差分の扱い、conflict 処理、state 更新、worktree/branch cleanup の入口を探したいとき。
-- apply fork/join/abandon の利用者向け出力、warning、保存 report に含める情報の出所を調べたいとき。
+- apply run の開始から完了・破棄・join まで、apply lifecycle 全体のどの実装を読むべきか判断したいとき。
+- apply branch、apply worktree、session branch、apply state、apply process id が関わる処理の入口を探したいとき。
+- apply fork の実行条件、対象 file の列挙、Codex CLI による finding 適用、commit、report 生成の流れを調べる前に、関係する実装ファイルを選びたいとき。
+- 実行中 apply run の abandon、process 停止、worktree/branch/pid 状態の掃除、ready 状態への復帰に関する実装へ進みたいとき。
+- apply run の結果を session branch へ join する merge、想定外差分の扱い、conflict 対応、join report、cleanup の実装へ進みたいとき。
+- apply fork report の保存場所、frontmatter、本文構成、change summary 生成など、実行結果の Markdown report 周辺を調べたいとき。
 
 ## Do not read this when
-- apply 以外の session 作成・開始・終了や、session state 全体の schema だけを調べたいとき。
-- repo root、git 実行 wrapper、worktree root、設定、状態保存、エラー表示などの共通 runtime primitive だけを確認したいとき。
-- finding 列挙や finding 適用に渡す prompt/parameter builder だけを変更したいとき。
-- oracle 文書や INDEX.md 生成規則そのものを調べたいとき。
-- apply 系の外部挙動をテスト観点から先に確認したいだけで、実装本体の制御を読む必要がまだないとき。
+- apply 以外のサブコマンド実装、CLI 全体の command 登録、共通引数処理を調べたいとき。
+- session state の schema、設定値、path model、git wrapper、worktree root、CmocError など共通 runtime primitive の定義そのものを調べたいとき。
+- oracle、.agents、memo、INDEX.md などの編集禁止・routing 仕様自体を確認したいとき。
+- apply に対応する自動テスト、fixture、外部挙動の検証観点を調べたいとき。
+- 単にパッケージ import 時の副作用や再 export の有無だけを確認したい場合で、個別の apply 制御ロジックを読む必要がないとき。
 
 ## hash
-- 53017ad30dae555ab69842aab8d4967cd08a3ea6fbdacee5c8051bb17757e5fb
+- 7f4aaad94dfd22e7944c77a39d337c7e6bbfa6fc19439a6d20ae9059be03a3d1
 
 # `indexing.py`
 

@@ -69,22 +69,22 @@
 # `test_apply_join_cli.py`
 
 ## Summary
-- `apply join` の CLI 挙動を検証する realization test。apply 用 worktree と branch の削除、session state の ready 復帰、oracle snapshot commit の記録、report 生成を正常系として確認する。
-- apply worktree から実行した場合の cwd 復帰、cleanup 表示、未コミット差分がある場合の失敗・状態維持・ログ保存先・標準出力エラー文言を検証する。
-- 想定外の apply 差分、`.gitignore` 変更、通常ファイルの未解決 merge conflict、`INDEX.md` conflict の通常解決継続、`--force-resolve` による差分破棄を扱う。
+- apply join の CLI 挙動を検証する realization test。apply 用 worktree と branch の削除、session state の ready への復帰、oracle snapshot commit の記録、report 生成、作業ディレクトリ移動、未コミット差分・想定外差分・merge conflict・INDEX.md conflict 解決時の終了コードと出力を扱う。
 
 ## Read this when
-- `apply join` の終了後 cleanup、apply branch/worktree 削除、session state 更新、join report 出力のテスト期待値を確認・変更したいとき。
-- apply worktree 内から `apply join` を実行するケース、または apply worktree が dirty なときの失敗挙動・ログ出力先・エラーメッセージを確認したいとき。
-- apply 側の想定外差分、`.gitignore` 差分、merge conflict、`--force-resolve`、`INDEX.md` conflict の扱いに関する regression test を確認・追加したいとき。
+- `apply join` の成功時 cleanup、状態更新、report 出力、apply worktree からの実行可否を確認・変更する場合。
+- `apply join` が dirty な apply worktree、想定外の oracle 差分、通常ファイルの未解決 merge conflict をどう扱うかを確認・変更する場合。
+- apply 側の `.gitignore` 変更を join で取り込む挙動や、INDEX.md conflict を通常 mode で解決して join を継続する挙動を確認・変更する場合。
+- `apply fork` で作られた apply branch/worktree と session state が、`apply join` 後にどの外部副作用を持つべきかをテスト観点から確認する場合。
 
 ## Do not read this when
-- `apply fork` が Codex 実行結果を受けて apply worktree を作成するまでの詳細だけを確認したいとき。
-- `session fork` や初期化処理そのものの CLI 契約を確認したいとき。
-- oracle file の正本仕様や INDEX 生成ルールを確認したいとき。
+- `apply join` 以外の apply subcommand、session fork、init の基本挙動だけを調べたい場合。
+- CLI 実装内部の helper 分割、状態 schema の定義、path model の仕様を調べたい場合は、対応する実装または oracle を先に読む。
+- Codex 実行結果の品質や LLM 出力内容そのものを検証したい場合。
+- INDEX.md エントリー生成全般の方針やルーティング文書の書き方を調べたい場合。
 
 ## hash
-- 496e3ef64f2c9429fe4739cb54b3e71fb24324ceac0ddc00c0aaac55b3829f61
+- 90f43b5ab66bf3d9236896fcb154eddfa3d1f11dcdcb1264ad8c7733b14825f2
 
 # `test_basic_runtime.py`
 

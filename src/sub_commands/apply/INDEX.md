@@ -101,23 +101,21 @@
 # `join.py`
 
 ## Summary
-- apply run の成果を session 側へ join する処理を担う。session/apply branch の判定、作業ツリー清潔性確認、想定外差分の検出と必要時の復元、apply branch の merge、INDEX.md だけの conflict 自動解決、state 更新、report 生成、apply worktree と branch の後始末までを扱う。
-- join 結果の利用者向け出力と保存 report の本文もここで組み立てるため、apply join の成功・失敗時にどの情報が残るかを確認する入口になる。
+- apply run の完了またはエラー状態を session branch へ join する処理を実装する。session/apply branch の検証、想定外差分の検出と force-resolve による復元、apply branch の merge、INDEX.md のみの conflict 自動解決、join report 作成、apply state の初期化、apply worktree と branch の後片付けを扱う。
+- join 時に許可される apply/session 側の差分範囲、想定外差分の分類、merge conflict 残存時の報告、成功後の到達性確認と cleanup warning の出力を確認する入口になる。
 
 ## Read this when
-- apply run 完了後または error 後に session branch へ取り込む制御を変更したいとき。
-- apply join が許可される branch/state 条件、clean worktree 要件、apply branch 特定失敗時の扱いを確認したいとき。
-- apply/session branch 上の想定外差分の分類、--force-resolve 時の復元・commit、許可される差分の境界を調べたいとき。
-- apply branch merge の失敗処理、INDEX.md conflict の機械解決、未解決 conflict report の生成を変更したいとき。
-- join 後に session state を ready 相当に戻す処理、last joined oracle snapshot の記録、apply worktree 削除や apply branch 削除の cleanup 挙動を確認したいとき。
-- apply join の標準出力や保存 report に含める項目・文言・warning を変更したいとき。
+- apply run を session branch へ取り込む join 処理の挙動を確認・変更したいとき。
+- apply join が実行可能な branch・state 条件、clean worktree 要件、apply branch の特定失敗時のエラーを調べたいとき。
+- apply join の想定外差分判定、--force-resolve 時の session/apply 側変更の復元 commit、許可される差分範囲を確認したいとき。
+- apply branch merge の失敗時処理、INDEX.md のみの conflict 自動解決、未解決 conflict report の内容を確認したいとき。
+- apply join report の生成内容、成功時の apply state reset、apply worktree 削除、apply branch 削除、warning 出力を確認したいとき。
 
 ## Do not read this when
-- apply run の開始、apply branch/worktree の作成、apply state を completed/error にする処理を探しているとき。
-- session の作成・開始・終了、または session state 全体の schema 定義だけを確認したいとき。
-- git 実行、branch 削除、worktree 削除、report 保存先、cmoc ignore 判定などの共通 runtime helper の実装自体を調べたいとき。
-- INDEX.md エントリー生成や oracle 文書のルーティング仕様そのものを確認したいとき。
-- apply join のテスト観点や期待外部挙動だけを見たいときは、対応する realization test を先に読む。
+- apply run の開始、作業、完了、エラー記録など join 以外の apply lifecycle を調べたいとき。
+- session state のデータ構造や永続化形式そのものを調べたいとき。
+- git wrapper、worktree 探索、branch 削除、report directory、timestamp などの共通 runtime helper の実装詳細を調べたいとき。
+- INDEX.md 生成・更新ルールそのものや routing 文書の仕様を調べたいとき。
 
 ## hash
-- f8726217151f3d623d5b78aa87408012ba5cc861e0d26d7bf3a4703eecde6209
+- 37fd5df8bdae3c62a5b59b0dd1d99cb58c68b967a220bdea8cdb74dab428989c
