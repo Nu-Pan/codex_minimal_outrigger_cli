@@ -11,7 +11,6 @@ from cmoc_runtime import (
     current_branch,
     delete_branch,
     ensure_cmoc_ignored,
-    head_commit,
     is_git_ignored,
     load_state_for_branch,
     remove_worktree,
@@ -51,6 +50,13 @@ def cmoc_apply_join_impl(force_resolve: bool) -> None:
     apply_branch = state.apply.apply_branch
     if not apply_branch:
         raise CmocError("apply branch を特定できません。", [], str(path))
+    apply_oracle_snapshot_commit = state.apply.oracle_snapshot_commit
+    if not apply_oracle_snapshot_commit:
+        raise CmocError(
+            "apply の oracle snapshot commit を特定できません。",
+            ["session state file を確認してください。"],
+            str(path),
+        )
     apply_worktree = worktree_for_branch_optional(root, apply_branch)
     if apply_worktree:
         require_clean_worktree(apply_worktree)
@@ -95,7 +101,7 @@ def cmoc_apply_join_impl(force_resolve: bool) -> None:
                 ["必要なら手動で解決するか、--force-resolve を検討してください。"],
                 merge.stderr,
             )
-    state.session.last_joined_apply_oracle_snapshot_commit = head_commit(root)
+    state.session.last_joined_apply_oracle_snapshot_commit = apply_oracle_snapshot_commit
     state.apply = ApplyPart()
     write_state(path, state)
     warnings: list[str] = []
