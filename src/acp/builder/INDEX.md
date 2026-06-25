@@ -1,24 +1,23 @@
 # `apply`
 
 ## Summary
-- `cmoc apply fork` の作業を AI エージェントへ委譲するための呼び出しパラメータと、その結果を受け取る Structured Output schema をまとめた領域。
-- 適用ブランチ上の差分要約、ファイル単位の所見列挙、検出済み所見に対応する realization file 修正依頼という、fork 適用処理の周辺タスク用 prompt 構築を扱う。
-- 実際の Git 操作や fork 適用の制御フローではなく、各サブタスクに与える role、goal、参照標準、ファイルアクセス権限、モデル指定、出力 schema の入口として位置づく。
+- `cmoc apply` 配下で、サブコマンド実行前後の検証・準備・適用・後処理を組み立てる builder 群を扱う領域。fork 名や worktree path の検証、prompt/approval/rename 設定、run-root 適用、worktree の git 状態確認、引き継ぎ付きの継続入力生成など、apply 系処理の実行材料を作る入口になる。
+- 個別サブコマンドの本体制御ではなく、apply 実行に必要な入力値・プロンプト・状態検証・補助出力をどのように作るかを確認するための領域。
 
 ## Read this when
-- `cmoc apply fork` が変更要約、所見列挙、所見対応作業をどのような AI 呼び出し条件で実行するか確認・変更したいとき。
-- 適用ブランチの差分や所見リストを prompt に埋め込む形式、参照させる標準、読み書き権限、モデルクラス、推論努力の指定を調整したいとき。
-- 作業レポート用の変更要約や、実装レビュー所見リストの Structured Output schema を確認したいとき。
-- fork 適用処理の下流で使う、ファイル単位調査、要修正点報告、修正作業依頼の境界を把握したいとき。
+- `cmoc apply` の各処理で、fork 名、対象 path、run-root、worktree、uncommitted change、merge 済み branch などの検証条件や失敗時メッセージを確認・変更したいとき。
+- apply 系サブコマンドがエージェントに渡す prompt、approval 設定、sandbox 設定、model effort、構造化出力、作業完了後の引き継ぎ文面を確認・変更したいとき。
+- `cmoc apply` が oracle file と realization file の対応、rename 指示、review 所見、git diff、実行ログなどをどのように補助入力として組み立てるかを追いたいとき。
+- apply 実行前後に必要な worktree 状態確認、ブランチ適用、実行結果の要約、継続作業用の入力生成など、複数の apply 系処理で使う builder の責務境界を確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` の CLI 引数解析、サブコマンド登録、実行順序、ブランチ操作、git コマンド実行そのものを調べたいとき。
-- 差分や所見を統合して実際に適用する制御フロー、または適用結果を保存・反映する処理を確認したいとき。
-- oracle standard、realization standard、apply review standard、path 解決、AgentCallParameter、完全 prompt 生成などの共通部品そのものを調べたいとき。
-- 個別の変更対象ファイルの内容、テスト、ルーティング文書など、所見対応後の具体的な realization file を直接確認すれば足りるとき。
+- `cmoc apply` の CLI 引数定義、サブコマンド選択、全体の制御フロー、複数 builder の呼び出し順を調べたいとき。
+- AI 呼び出し基盤、共通 prompt 部品、Markdown レンダリング、Structured Output 実行そのもの、低レベルの path model や git command wrapper の実装を確認したいとき。
+- apply 以外のサブコマンドの builder、prompt、schema、実行設定を調べたいとき。
+- 実際のファイル編集アルゴリズム、差分分類の中身、git merge や worktree 操作の低レベル手順だけを確認したいとき。
 
 ## hash
-- c5ee205913a96a783cb9d8f2b12afae9862eb983462900fdc3edfd27e7ac56d7
+- 744eb0a9ce32e59348c311dba838c9bc54bf55aaf6cd9aca35a375e3087a7be7
 
 # `indexing`
 

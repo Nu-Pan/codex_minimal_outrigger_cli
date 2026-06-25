@@ -1,27 +1,23 @@
 # `apply`
 
 ## Summary
-- apply サブコマンド群の実装ディレクトリで、apply run の開始、実行中プロセス管理、破棄、join、report 生成までの lifecycle に関する入口になる。
-- session branch と apply branch/worktree の関係、apply state の更新、clean worktree 要件、想定外差分や編集禁止対象差分への対処、Codex CLI 呼び出し、merge と cleanup の制御を下位実装へ振り分けるための対象。
-- 処理本体は fork、join、abandon、runtime helper、report 生成に分かれており、apply 全体の責務境界を見てから具体的なファイルへ進むために読む。
+- apply サブコマンド群の実装ディレクトリで、apply run の開始、破棄、join、実行時補助処理、実行結果 report 生成を扱う入口。
+- session branch と apply branch/worktree の関係、apply state の遷移、対象ファイルへの finding 適用、禁止領域差分の巻き戻し、merge・cleanup・report 出力まで、apply lifecycle 全体を構成する下位実装へ進むための対象。
 
 ## Read this when
-- apply run の開始から完了・破棄・join まで、apply lifecycle 全体のどの実装を読むべきか判断したいとき。
-- apply branch、apply worktree、session branch、apply state、apply process id が関わる処理の入口を探したいとき。
-- apply fork の実行条件、対象 file の列挙、Codex CLI による finding 適用、commit、report 生成の流れを調べる前に、関係する実装ファイルを選びたいとき。
-- 実行中 apply run の abandon、process 停止、worktree/branch/pid 状態の掃除、ready 状態への復帰に関する実装へ進みたいとき。
-- apply run の結果を session branch へ join する merge、想定外差分の扱い、conflict 対応、join report、cleanup の実装へ進みたいとき。
-- apply fork report の保存場所、frontmatter、本文構成、change summary 生成など、実行結果の Markdown report 周辺を調べたいとき。
+- cmoc apply の lifecycle 全体のどの実装を読むべきか切り分けたいとき。
+- apply fork、apply join、apply abandon の実行条件、状態遷移、branch/worktree/process id の扱い、cleanup、CLI 出力や report 生成の入口を探したいとき。
+- apply 対象ファイルの列挙、finding 適用、禁止対象差分の rollback、apply branch の merge、INDEX.md conflict 自動解決、想定外差分の扱いなど、apply 固有の制御フローを調査・変更したいとき。
+- apply 用 worktree 特定、apply branch 名規則、pid 状態ファイル、実行中 apply process 停止確認など、apply の低レベル補助処理へ進みたいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド実装、CLI 全体の command 登録、共通引数処理を調べたいとき。
-- session state の schema、設定値、path model、git wrapper、worktree root、CmocError など共通 runtime primitive の定義そのものを調べたいとき。
-- oracle、.agents、memo、INDEX.md などの編集禁止・routing 仕様自体を確認したいとき。
-- apply に対応する自動テスト、fixture、外部挙動の検証観点を調べたいとき。
-- 単にパッケージ import 時の副作用や再 export の有無だけを確認したい場合で、個別の apply 制御ロジックを読む必要がないとき。
+- apply 以外の session、review、join など他サブコマンドの挙動や CLI 配線を調べたいとき。
+- session state の schema、session_id の生成、path model、git wrapper、report directory、CmocError 表示など、apply 固有ではない共通基盤だけを調べたいとき。
+- Codex CLI 呼び出し用の個別 parameter builder、finding 列挙・適用 prompt、Structured Output schema の詳細だけを変更したいとき。
+- oracle や test など、正本仕様断片またはテスト側から apply の期待挙動を確認したいとき。
 
 ## hash
-- 7f4aaad94dfd22e7944c77a39d337c7e6bbfa6fc19439a6d20ae9059be03a3d1
+- 0128f561fbacf629add18c2b968da7beacc4a42f7cbae5f5129a69f989dcf856
 
 # `indexing.py`
 

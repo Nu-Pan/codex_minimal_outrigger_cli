@@ -60,62 +60,63 @@
 # `fork.py`
 
 ## Summary
-- session branch 上で apply fork を開始し、isolated apply worktree を作成して Codex CLI による finding 列挙・適用・commit・report 生成までの apply loop を制御するサブコマンド実装。
-- scope に応じた apply 対象 file の列挙、編集禁止対象差分の検出と rollback、finding 適用後の変更 path 再投入、Codex 生成 commit subject の整形を扱う。
+- isolated apply worktree 上で apply loop を実行し、対象ファイルごとの finding 列挙、適用、禁止領域差分の巻き戻し、変更コミット、レポート生成、apply 状態更新までを統括するサブコマンド実装。
+- scope に応じた apply 対象ファイルの列挙・正規化、重複排除、変更ファイル再投入、Codex CLI 呼び出し用パラメータ生成、commit subject 生成結果の整形もこの中で扱う。
 
 ## Read this when
-- apply fork の実行条件、状態遷移、apply branch/worktree 作成、process id 管理、正常終了・エラー時 report 生成の流れを確認したいとき。
-- rolling、session、full の scope ごとに、どの file を finding 列挙対象にするかを確認または変更したいとき。
-- apply fork 中に oracle、.agents、memo など編集禁止対象へ差分が出た場合の rollback と再実行、最終エラー化の挙動を調べたいとき。
-- Codex CLI に渡す finding 列挙・finding 適用・commit message 生成の呼び出し条件や、commit message の sanitization を変更したいとき。
-- apply loop の収束判定、未収束時の終了コード、変更 commit 作成、dirty target の重複排除や再列挙の制御を追いたいとき。
+- apply fork の実行条件、状態遷移、worktree/branch 作成、process id 管理、成功・失敗時のレポート出力を確認または変更したいとき。
+- apply scope ごとの対象ファイル選択、oracle・memo・.agents・INDEX.md・binary・git ignored file を対象外にする判定を確認または変更したいとき。
+- apply finding の列挙、finding 適用後の禁止対象差分検出と rollback、再実行、エラー化の制御を追いたいとき。
+- apply fork が生成するコミットの作成タイミング、commit subject を Codex CLI で生成する prompt、出力整形 fallback を変更したいとき。
 
 ## Do not read this when
-- apply fork の report 本文の構成や出力 markdown の詳細だけを変更したい場合は、report 生成側を読む。
-- finding 列挙や finding 適用の AgentCallParameter 構築プロンプトそのものを変更したい場合は、builder 側を読む。
-- apply process id の保存形式や削除処理の低レベル実装だけを確認したい場合は、apply runtime 側を読む。
-- repo root、worktree 作成、git 実行、state 読み書きなど共通 runtime primitive の実装を調べたい場合は、cmoc runtime 側を読む。
+- apply fork の最終レポート本文やエラーレポート本文の構造だけを変更したいときは、レポート生成側を直接読む。
+- Codex CLI に渡す finding 列挙用または finding 適用用の AgentCallParameter の詳細だけを変更したいときは、各 builder 側を直接読む。
+- apply process id の保存形式や削除処理そのものだけを確認したいときは、apply runtime 側を直接読む。
+- apply ではない session、join、review など他サブコマンドの CLI 挙動を調べたいときは、それぞれのサブコマンド実装を読む。
 
 ## hash
-- f26fdcfc1e13c081731bf08cbf000da34fde33946fe592f7aca081f6a4f68685
+- 82df1a33aa57124772125e76713decba970ff0208550575a8b1ef196f18b12e1
 
 # `fork_report.py`
 
 ## Summary
-- apply fork の実行結果または失敗結果を Markdown report として保存する処理を扱う。report 保存先の作成、timestamp 名の report file 生成、git diff からの変更要約作成、YAML frontmatter と本文の描画をまとめて担う。
-- apply fork の report に含める session branch、fork commit、apply branch、apply worktree、result、finding count、change summary の組み立てを確認する入口になる。
+- apply fork の実行結果を Markdown report として保存する処理を扱う。通常終了・エラー終了の report 生成、apply fork 差分の要約生成、YAML frontmatter と本文を含む report 描画の入口になる。
+- apply fork report は、session/apply branch、fork commit、worktree、結果ラベル、所見数推移、変更要約をまとめ、差分がない場合や構造化要約が空の場合の fallback 表示もここで決める。
 
 ## Read this when
-- apply fork 実行後または失敗時に生成される report の内容、保存場所、frontmatter、本文構成を確認・変更したいとき。
-- apply fork の変更差分をどの git diff 範囲から取得し、Codex に構造化要約させ、空差分や空要約をどう report に出すかを確認したいとき。
-- finding count の loop 表示、result label から表示文への変換、change summary の行形式など、apply fork report の Markdown 描画を調整したいとき。
+- apply fork の実行結果 report の保存場所、ファイル生成、frontmatter、本文構成を確認・変更したいとき。
+- apply fork の成功・未収束・エラー結果が report 上でどう表現されるかを確認・変更したいとき。
+- apply fork worktree の git diff を Codex に渡して変更要約を作る流れ、または差分なし・要約空の場合の fallback を確認・変更したいとき。
+- finding count の loop ごとの表示や、変更カテゴリ・要約・変更 path の report 表示を扱うとき。
 
 ## Do not read this when
-- apply fork の実行ループ本体、branch 作成、worktree 操作、state 更新の制御を調べたいだけのとき。
-- 変更要約を Codex に依頼する prompt や parameter の詳細を調べたいときは、変更要約 parameter を組み立てる対象を直接読む。
-- reports directory や timestamp の共通仕様、git command 実行 wrapper、SessionState や CmocConfig の定義だけを調べたいときは、それぞれの共通 runtime・config 定義を直接読む。
+- apply fork のループ制御、所見検出、収束判定そのものを調べたいだけのとき。
+- apply fork の変更要約プロンプトや Structured Output schema の詳細を変更したいとき。
+- reports directory や timestamp の共通仕様、git 実行 helper、session state 定義を調べたいとき。
+- 通常の apply 以外の subcommand report や、apply fork 以外の report 出力を調べたいとき。
 
 ## hash
-- 5225eb807c0686a87cc08ac42902b8db251f456d1618867e2a847d2cba9bf17a
+- f8f18a2c7cef586ecd5d69086bce8628dcddbfa215ecd236f482ba1abf8f8cc4
 
 # `join.py`
 
 ## Summary
-- apply run の完了またはエラー状態を session branch へ join する処理を実装する。session/apply branch の検証、想定外差分の検出と force-resolve による復元、apply branch の merge、INDEX.md のみの conflict 自動解決、join report 作成、apply state の初期化、apply worktree と branch の後片付けを扱う。
-- join 時に許可される apply/session 側の差分範囲、想定外差分の分類、merge conflict 残存時の報告、成功後の到達性確認と cleanup warning の出力を確認する入口になる。
+- apply run の完了またはエラー状態を session branch へ join する処理を担う実装。session/apply branch の判定、clean worktree 確認、想定外差分の分類と force-resolve、apply branch の merge、INDEX.md のみの conflict 自動解決、report 出力、apply worktree と branch の cleanup、state 更新までを扱う。
+- join 結果 report の生成内容、想定外差分として扱う apply/session 側の変更範囲、force-resolve 時の復元 commit と commit 作成、merge conflict が残った場合のエラー導線を確認する入口になる。
 
 ## Read this when
-- apply run を session branch へ取り込む join 処理の挙動を確認・変更したいとき。
-- apply join が実行可能な branch・state 条件、clean worktree 要件、apply branch の特定失敗時のエラーを調べたいとき。
-- apply join の想定外差分判定、--force-resolve 時の session/apply 側変更の復元 commit、許可される差分範囲を確認したいとき。
-- apply branch merge の失敗時処理、INDEX.md のみの conflict 自動解決、未解決 conflict report の内容を確認したいとき。
-- apply join report の生成内容、成功時の apply state reset、apply worktree 削除、apply branch 削除、warning 出力を確認したいとき。
+- apply run を session branch に取り込む join 処理の挙動を変更・調査するとき。
+- join 可能条件、対象 branch の決定、apply branch/worktree の cleanup、state の ready 相当へのリセットを確認したいとき。
+- apply join で許容される差分と想定外差分の分類、または --force-resolve による revert 動作を確認したいとき。
+- apply branch の merge 失敗時、特に INDEX.md だけの conflict を機械解決する挙動や、未解決 conflict report の内容を調べるとき。
+- apply join の標準出力、保存 report、警告行、last_joined_apply_join_commit の更新を検証するテストを書くとき。
 
 ## Do not read this when
-- apply run の開始、作業、完了、エラー記録など join 以外の apply lifecycle を調べたいとき。
-- session state のデータ構造や永続化形式そのものを調べたいとき。
-- git wrapper、worktree 探索、branch 削除、report directory、timestamp などの共通 runtime helper の実装詳細を調べたいとき。
-- INDEX.md 生成・更新ルールそのものや routing 文書の仕様を調べたいとき。
+- apply run の開始、分岐作成、Codex 実行、または apply state を completed/error にする処理を調べたいだけのとき。
+- session の作成・終了・状態ファイル schema 全体・path model など、join の制御フローから独立した基盤仕様を調べたいとき。
+- apply join 以外のサブコマンドの CLI 定義や Typer option 配線だけを確認したいとき。
+- git worktree 探索、state 読み書き、report directory 計算、git wrapper など共有 runtime helper 自体の実装を変更したいとき。
 
 ## hash
-- 37fd5df8bdae3c62a5b59b0dd1d99cb58c68b967a220bdea8cdb74dab428989c
+- 738a7b537ea39a752ccb00c3e1081226d89630ca5ab473246b67df6df85b82b7

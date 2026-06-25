@@ -20,21 +20,21 @@
 # `change_summary.py`
 
 ## Summary
-- `cmoc apply fork` の作業レポート向けに、適用ブランチ上の生の差分テキストから人間向け変更要約を生成する AI 呼び出しパラメータを組み立てる。
-- 差分本文を補助プロンプトへ埋め込み、読み取り専用のファイルアクセス、効率重視モデル、中程度の推論努力、対応する Structured Output schema を指定して返す責務を持つ。
+- `cmoc apply fork` の作業レポート向けに、差分テキストから人間向け変更要約を生成する AI 呼び出しパラメータを組み立てる実装。
+- 対象ワークツリー内の git diff を読み取り専用の補助入力として prompt に埋め込み、効率重視モデル・中程度 reasoning・対応する Structured Output schema を指定して返す。
 
 ## Read this when
-- `cmoc apply fork` が作業レポート用の変更要約をどう生成するかを確認・変更したいとき。
-- 適用ブランチの `git diff` 出力を、解析や整形を挟まずに AI プロンプトへ渡す経路を確認したいとき。
-- 変更要約生成で使う role、summary、goal、補助プロンプト、ファイルアクセスモード、モデルクラス、推論努力、出力 schema の指定を調整したいとき。
+- `cmoc apply fork` の変更要約生成 prompt、AI 呼び出しパラメータ、または作業レポート用の差分要約入力を確認・変更したいとき。
+- `cmoc apply fork` が raw な git diff と作業ルートをどのようにエージェント prompt へ渡すかを追いたいとき。
+- 変更要約生成で使うモデルクラス、reasoning effort、ファイルアクセスモード、出力 schema の紐付けを確認したいとき。
 
 ## Do not read this when
-- 実際の fork 適用処理、ブランチ操作、git コマンド実行、差分取得そのものを調べたいとき。
+- fork 適用処理そのもの、git 操作、ブランチ作成・削除、または作業ツリー変更の実行ロジックを調べたいとき。
 - 生成された変更要約の JSON schema の項目定義だけを確認したいとき。
-- apply 系サブコマンド全体の CLI 入口、引数解析、実行フローを調べたいとき。
+- `cmoc apply fork` 以外のサブコマンドの prompt やエージェント呼び出し設定を調べたいとき。
 
 ## hash
-- e67af8eaca19963295dc8e237d26d5d2619001f6757af6a00da778a4cbccc002
+- c68572e71cf2a410fdadf3ea3e8b503be2865fd692e50b280820e7c1b7bb6377
 
 # `file_finding_enumeration.json`
 
@@ -58,41 +58,37 @@
 # `file_finding_enumeration.py`
 
 ## Summary
-- `cmoc apply fork` で、特定ファイルを起点に realization file の要修正点を列挙する AI 呼び出しパラメータを構築する実装。
-- 起点パスを実パスへ解決し、リポジトリ全体を調査範囲として、関連する oracle file と realization file の読解、Structured Output schema への準拠、apply review standard への準拠を求める完全 prompt を組み立てる。
-- ファイル単位で繰り返し呼ばれる重い処理であることを踏まえ、下流への影響を避けるため MAINSTREAM model と MEDIUM reasoning を指定する。
+- `cmoc apply fork` で、指定されたファイルを起点に work root 内の realization file の要修正点をファイル単位で列挙させるための AI エージェント呼び出しパラメータを構築する。
+- 対象ファイルの実パス解決、work root 解決、oracle・realization・apply review standard を含む完全 prompt の組み立て、MAINSTREAM モデルと medium reasoning の read-only 呼び出し設定を担う。
+- ファイル単位の所見列挙が下流処理に影響するため、トークン消費が大きくても主流モデルを選ぶ判断が実装内に含まれる。
 
 ## Read this when
-- `cmoc apply fork` のファイル単位の所見リストアップ用 prompt や AI 呼び出しパラメータを確認・変更したいとき。
-- apply fork の所見列挙が、どの役割・調査範囲・標準・ファイルアクセスモードでエージェントに依頼されるかを確認したいとき。
-- 起点ファイル以外の oracle file / realization file を読むことや、apply review standard を満たす所見リストを返すことが prompt に含まれているか確認したいとき。
-- この所見列挙処理で使用する model class、reasoning effort、出力 schema の参照先を確認したいとき。
+- `cmoc apply fork` の中で、oracle file または realization file を起点に要修正点リストアップ用のエージェント呼び出しを作る処理を確認・変更したいとき。
+- apply fork の所見列挙 prompt に含める role、summary、goal、各種 standard 指定、file access mode の構成を確認したいとき。
+- ファイル単位の所見列挙で使うモデルクラス、reasoning effort、structured output schema の対応ファイル選択を確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` の実際の所見統合、修正適用、差分反映、または Git 操作の制御フローを調べたいとき。
-- oracle standard、realization standard、apply review standard の本文そのものを確認したいとき。
-- AgentCallParameter、path 解決、完全 prompt 生成、markdown rendering などの共通部品の詳細実装を調べたいとき。
-- ファイル単位ではなく、ディレクトリ単位・サブコマンド全体・CLI entrypoint のルーティングを確認したいとき。
+- 所見列挙結果の schema 定義そのものや JSON の項目構造を確認したいだけのとき。
+- apply fork 全体の制御フロー、対象ファイル一覧の作成、または複数ファイル分の呼び出し統合処理を確認したいとき。
+- prompt 部品の markdown レンダリング、完全 prompt の共通組み立て、パス解決 helper の詳細実装を確認したいとき。
 
 ## hash
-- 8c27e836c8957d364dacd591645166d9aa1b00ef081fc85e523add1c6a97963d
+- a9e787a6c29429e621e2a956781934e6c4cc8cec04713d256e3de4728c3f5b5b
 
 # `finding_application.py`
 
 ## Summary
-- `cmoc apply fork` で検出済みの所見に対応する修正作業を AI エージェントへ依頼するための呼び出しパラメータを構築する実装。
-- 所見リストを JSON コードブロックとして prompt に埋め込み、realization file の修正担当向けの role、goal、作業上の注意、oracle/realization standard 参照を含む完全 prompt を生成する。
-- 生成される呼び出し条件は mainstream model、medium reasoning、realization write 権限で、所見対応作業用の単一エントリーポイントとして位置づく。
+- `cmoc apply fork` で所見対応作業を担当する AI エージェント呼び出しパラメータを組み立てる実装。所見リストを JSON コードブロックとしてプロンプトに埋め込み、realization file 修正用の役割・目標・注意点・標準参照を含む完全プロンプトを生成して返す。
 
 ## Read this when
-- `cmoc apply fork` が所見対応作業用にどのような AI 呼び出しパラメータを作るか確認したいとき。
-- 所見本文の prompt への埋め込み形式、作業担当 role、goal、git 操作禁止などの補助指示を変更したいとき。
-- 所見対応作業で realization file の書き込み権限や利用 model class、reasoning effort がどう設定されるか調べたいとき。
+- `cmoc apply fork` が所見に基づく修正作業をエージェントへ依頼する際のプロンプト内容、モデル種別、推論強度、ファイルアクセス権限を確認・変更したいとき。
+- 所見本文がどの形式でプロンプトへ渡されるか、また所見を絶対指示ではなく作業ヒントとして扱わせる制御を確認したいとき。
+- realization file 修正タスク向けに、oracle と realization の基本事項や realization standard をプロンプトへ含める経路を確認したいとき。
 
 ## Do not read this when
-- 所見を検出・生成する処理そのものを調べたいとき。
-- `cmoc apply fork` の CLI 引数解析、サブコマンド登録、または実行フロー全体を調べたいとき。
-- 所見対応作業ではない通常の apply prompt、review prompt、または complete prompt の共通構築処理を変更したいとき。
+- `cmoc apply fork` のサブコマンド全体の分岐、CLI 引数処理、fork 作成・実行・統合など、所見対応プロンプト生成以外の制御を調べたいとき。
+- 生成済みプロンプトの Markdown レンダリングや構造化ドキュメント部品そのものの仕様を調べたいとき。
+- 個別の所見検出ロジック、レビュー結果の生成、または所見データの保存形式を調べたいとき。
 
 ## hash
-- 61fdb8a4dc76cc84716908dffb8d88e88ff5636b58d7589e4c6abfb89d52d93a
+- 4c29c6bda0f02f6cb59bff5714b079870eb0ddfc88c4cfe538a7ec5b96afe5f3

@@ -1,24 +1,23 @@
 # `builder`
 
 ## Summary
-- 各種サブコマンドや対話実行の下流で、別の AI エージェントに渡す呼び出しパラメータを構築する実装領域。役割、目的、補助文脈、参照標準、ファイルアクセスモード、モデル種別、reasoning 設定、Structured Output schema の対応づけを扱う。
-- 対象となる処理は、変更差分の要約、実装所見の列挙と修正依頼、oracle file レビューの各段階、merge conflict marker 解消依頼、目次エントリー生成、TUI 実行前のパラメータ選定に分かれる。
-- 実際の CLI 制御、Git 操作、ファイル走査、レビュー結果の保存、対話 UI の実行ではなく、それらから呼び出される AI タスクの prompt と実行条件を確認するための入口になる。
+- AI エージェント呼び出しに渡す AgentCallParameter と Structured Output schema を、用途別の builder 群として組み立てる領域。apply、indexing、review、session、tui などの上位処理から呼ばれ、role・summary・goal・補助プロンプト・モデル種別・reasoning effort・ファイルアクセス条件・schema 指定を用途ごとにまとめる入口になる。
+- サブコマンド本体の実行制御ではなく、各処理が AI に何を依頼し、どの入力文脈と出力契約で呼び出すかを確認するための実装まとまり。
 
 ## Read this when
-- AI エージェントに委譲するサブタスクで、どの role、summary、goal、補助プロンプト、標準文書、ファイルアクセス権限を渡すか確認または変更したいとき。
-- 変更要約、実装所見、所見修正、oracle file レビュー、conflict 解消、目次エントリー生成、TUI 実行パラメータ選定などの Structured Output schema と呼び出し設定の対応を追いたいとき。
-- モデルクラス、reasoning effort、読み取り専用・realization 書き込み・oracle 限定読み取りなどの実行条件が、各 AI 呼び出しでどう選ばれているか調べたいとき。
-- 対象ファイル、差分テキスト、既知所見、理由リスト、conflict 対象一覧、ユーザー入力プロンプトなどの入力文脈が、AI 向け完全プロンプトにどう埋め込まれるか確認したいとき。
+- apply 系処理、INDEX.md エントリー生成、oracle レビュー、session join の conflict marker 解消、TUI 実行パラメータ選定で、AI 呼び出しに渡すプロンプト内容や実行条件を確認・変更したいとき。
+- 各用途の Structured Output schema が、どの意味情報・判定結果・レビュー所見・整理操作を出力契約として求めているかを確認したいとき。
+- 対象ファイル、関連所見、git diff、review 結果、conflict 対象一覧、ユーザープロンプト、標準文書などの補助文脈が、AI 向け prompt にどう埋め込まれるかを追いたいとき。
+- モデルクラス、reasoning effort、sandbox/approval、ファイルアクセスモード、構造化出力の指定など、複数の AI 呼び出し builder に共通する設定の使い分けを確認したいとき。
 
 ## Do not read this when
-- 各サブコマンドの CLI 引数解析、サブコマンド登録、実行順序、Git 操作、worktree 操作、結果保存など、AI 呼び出しを起動する側の制御フローだけを調べたいとき。
-- oracle file、realization file、各種標準、ファイルアクセスモード、パスモデル、構造化 markdown、完全プロンプト生成などの共通概念や共通部品そのものを詳しく確認したいとき。
-- 実際に修正・レビュー・conflict 解消される個別の oracle file や realization file の本文を確認すれば足りるとき。
-- AI 呼び出し結果を受け取った後の集約、表示、永続化、適用可否判定、または UI 表示や対話処理を調べたいとき。
+- 各サブコマンドの CLI 引数解析、サブコマンド登録、実行順序、結果保存、表示処理など、builder を呼び出す側の制御フローだけを調べたいとき。
+- AI 呼び出し基盤そのもの、共通 prompt 部品、Markdown レンダリング、Structured Output 実行器、低レベルの path model や git command wrapper の詳細だけを確認したいとき。
+- oracle file や realization file の正本仕様本文、レビュー基準本文、INDEX.md エントリーの個別文面そのものを読みたいとき。
+- 実際のファイル編集、差分分類、merge conflict 解消、git merge、worktree 操作など、AI 呼び出し依頼後に行われる下位アルゴリズムや外部操作の詳細だけを調べたいとき。
 
 ## hash
-- 167fe3cdad1b2b6f00fe1c9de975fc5bace8ef7d9365b74fb627146c4f0ed212
+- 528ab39c274e16d459a55423d705c3dd80e923a41770457cfad809bc34ea419f
 
 # `prompt_parts`
 
