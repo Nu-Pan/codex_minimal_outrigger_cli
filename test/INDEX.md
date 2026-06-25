@@ -242,20 +242,19 @@
 # `test_session_cli.py`
 
 ## Summary
-- session サブコマンドの realization test で、fork・abandon・join が Git branch、worktree、session state、CLI 出力、Codex conflict resolution 呼び出しをどう扱うかを検証する。
-- 一時リポジトリを作成し、実際の git 操作と monkeypatch した実行関数を組み合わせて、session branch 作成、home branch 復帰、状態ファイル更新、branch 削除失敗時の挙動、join 時の競合解決を確認する。
+- セッション系 CLI の fork、abandon、join の外部挙動を検証する realization test。Git branch/worktree、セッション状態 JSON、CLI 出力、Codex による join conflict resolution 呼び出し、session branch 削除失敗時の警告など、セッション操作がリポジトリ状態へ与える影響を確認する。
 
 ## Read this when
-- session fork の branch 名、session state、session_home_branch、session_start_commit、linked worktree 上での開始位置に関するテスト挙動を確認したいとき。
-- session abandon が home branch へ戻ること、session branch を削除すること、状態を abandoned にすること、home branch 不在や cleanup 失敗時に rollback することを確認したいとき。
-- session join が競合時に Codex 実行を呼ぶ条件、file access mode、削除競合の staging、成功後の home branch 復帰、session branch 削除失敗時の warning 出力を確認したいとき。
-- session サブコマンドの realization implementation を変更し、既存の外部挙動テストがどの公開出力・状態・Git 副作用を固定しているか把握したいとき。
+- セッションの fork が session branch と状態ファイルを作成し、home branch や開始 commit を正しく記録するかを確認したいとき。
+- リンク済み worktree 上での session fork/join が、元 worktree の branch を汚さず現在の worktree の branch と HEAD を基準に動くかを調べたいとき。
+- session abandon の成功時の branch 切替、session branch 削除、状態更新、利用者向け出力を変更または確認するとき。
+- session abandon の失敗時、特に home branch 不在や cleanup 失敗で、branch と状態が壊れず再実行可能な形で残るかを確認したいとき。
+- session join の merge/conflict 解決、Codex 実行時の file access mode、削除競合の staging、join 後の状態更新や session branch 削除警告を扱うとき。
 
 ## Do not read this when
-- session 以外の CLI サブコマンド、初期化処理全般、path model、oracle 文書処理のテストを探しているとき。
-- session の内部 helper 分割や型定義だけを確認したいときで、CLI 経由の外部挙動や Git 副作用のテスト条件が不要なとき。
-- Codex 実行基盤そのもの、LLM 出力品質、または conflict resolution のプロンプト内容を確認したいとき。
-- session state の schema 全体や永続化形式の正本仕様を確認したいとき。
+- セッション以外の CLI コマンド、初期化処理、oracle 適用、レビュー、設定読み書きなどの挙動だけを調べるとき。
+- セッション機能の実装詳細や helper の責務を確認したいだけで、テストが固定している外部挙動を確認する必要がないとき。
+- Codex CLI や LLM の出力品質そのものを検証したいとき。この対象は Codex 実行を模擬し、cmoc 側の制御と副作用を検証する。
 
 ## hash
-- a2b0b27f0b77e87149b84252123a4286d00b40571b129e680a46d322b4cad868
+- 16c3f5afc8753d334157924e33e5c5e25050f981a4af853af339a33a740e38b7

@@ -157,24 +157,21 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドの実行処理をまとめる領域。通常 branch から managed session branch を作成する処理、active session を home branch へ merge して完了する処理、merge せず破棄する処理を扱う。
-- 各処理は、現在 branch、session state、apply state、clean worktree、cmoc ignore、home branch の存在などの事前条件を検証し、Git branch 操作、state 更新、利用者向け出力、失敗時の扱いを制御する。
-- join では merge conflict 発生時に Codex CLI へ解消を依頼し、conflict marker や unmerged path の残存確認、stage、merge commit 完了までを扱う。abandon では cleanup 失敗時の state rollback と branch rollback を試みる。
+- session 系サブコマンドの実装をまとめるディレクトリ。active session の作成、home branch への取り込み、破棄など、session branch と session state を操作する各 subcommand 実装への入口になる。
+- 各実装は、現在 branch、worktree cleanliness、cmoc ignore、apply/session state、home branch などの事前条件を確認し、Git 操作・状態更新・利用者向け出力・失敗時のエラー報告を扱う。
 
 ## Read this when
-- session fork、join、abandon の実行条件、拒否条件、状態遷移、Git 操作順、利用者向け出力を確認したいとき。
-- active session branch と home branch の関係、session state file の更新タイミング、session branch の作成・削除・破棄の扱いを追いたいとき。
-- join 中の merge conflict 解消フロー、Codex CLI への依頼後の marker 検査や commit 完了条件を確認したいとき。
-- abandon 中の cleanup 失敗時に、state rollback や branch rollback がどのように試みられ、どの情報がエラー詳細に含まれるかを確認したいとき。
+- session 系 subcommand のどの実装を読むべきかを選びたいとき。
+- session branch の作成、取り込み、破棄に関する実行条件、状態遷移、副作用、エラー処理の入口を探したいとき。
+- session 操作が branch 切り替え、branch 削除、state file 更新、clean worktree 要求、cmoc ignore 確認とどう関わるかを調べ始めるとき。
 
 ## Do not read this when
-- CLI 全体のサブコマンド登録、Typer app の構成、または session 以外のサブコマンド実装を調べたいとき。
-- Git コマンド実行、branch 判定、worktree 検査、state file の読み書き形式、path keyword などの共通 runtime helper 自体を調べたいとき。
-- session state の schema、branch 名や state file path の低レベルな生成規則、repo root や work root の定義そのものを確認したいとき。
-- Codex CLI に渡す conflict 解決依頼パラメータの具体的な組み立て内容だけを調べたいとき。
+- session 以外の subcommand、共通 CLI ルーティング、Typer 登録全体を調べたいとき。
+- Git wrapper、branch 判定、worktree 検査、state file schema、path model などの共通 helper の詳細だけを調べたいとき。
+- 個別の session 操作がすでに決まっているとき。その場合は作成、取り込み、破棄など該当する実装へ直接進む。
 
 ## hash
-- 7c8be9c8a1c907aa29ce283f3023bd682cb938045bfb1761fdebb73c6abdea92
+- af7779bdd3151ca37e91ef8170a3139762d0692fa00838305739f08a6405a43c
 
 # `tui.py`
 
