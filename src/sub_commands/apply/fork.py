@@ -220,7 +220,7 @@ def run_finding_application_with_forbidden_rollback(
     codex_exec: CodexExec,
 ) -> None:
     """所見リスト適用を行い、編集禁止対象差分が出た場合は戻して 1 回再実行する。"""
-    parameter = build_apply_fork_finding_application_parameter(findings, apply_worktree)
+    parameter = build_apply_fork_finding_application_parameter(findings)
     for attempt in range(2):
         codex_exec(
             parameter,

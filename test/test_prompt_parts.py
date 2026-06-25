@@ -84,30 +84,26 @@ def test_render_as_markdown_collapses_consecutive_blank_lines() -> None:
     assert rendered == "# root\n\nfirst\n\nsecond\n"
 
 
-def test_apply_fork_prompts_use_apply_worktree_root(
+def test_apply_fork_prompts_use_repo_root(
     tmp_path: Path, monkeypatch
 ) -> None:
     repo_root = tmp_path / "repo"
     apply_worktree = repo_root / ".cmoc" / "worktrees" / "session" / "run"
     apply_worktree.mkdir(parents=True)
+    (repo_root / ".git").mkdir()
     (apply_worktree / ".git").write_text("gitdir: ignored\n")
     target = apply_worktree / "src" / "app.py"
     target.parent.mkdir()
     target.write_text("print('ok')\n")
     monkeypatch.chdir(apply_worktree)
 
-    finding_application = build_apply_fork_finding_application_parameter(
-        [{"title": "t"}], apply_worktree
-    )
+    finding_application = build_apply_fork_finding_application_parameter([{"title": "t"}])
     finding_enumeration = build_apply_fork_file_finding_enumeration_parameter(target)
-    change_summary = build_apply_fork_change_summary_parameter("diff", apply_worktree)
+    change_summary = build_apply_fork_change_summary_parameter("diff")
 
-    assert f"`{apply_worktree}` ツリー内" in finding_application.prompt
-    assert f"`{apply_worktree}` ツリー内" in finding_enumeration.prompt
-    assert f"`{apply_worktree}` ツリー内" in change_summary.prompt
-    assert f"`{repo_root}` ツリー内" not in finding_application.prompt
-    assert f"`{repo_root}` ツリー内" not in finding_enumeration.prompt
-    assert f"`{repo_root}` ツリー内" not in change_summary.prompt
+    assert f"`{repo_root}` ツリー内の realization file" in finding_application.prompt
+    assert f"`{repo_root}` ツリー内の所見" in finding_enumeration.prompt
+    assert f"`{repo_root}` ツリー内の差分" in change_summary.prompt
 
 
 def test_file_access_rule_titles_and_bodies_match_modes() -> None:

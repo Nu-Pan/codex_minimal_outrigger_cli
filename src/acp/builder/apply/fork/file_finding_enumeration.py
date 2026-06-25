@@ -5,7 +5,7 @@ from pathlib import Path
 
 # cmoc
 from basic.struct_doc import render_as_markdown
-from basic.path_model import resolve_real_path, resolve_work_root
+from basic.path_model import resolve_repo_root, resolve_real_path
 from basic.acp import (
     AgentCallParameter,
     ModelClass,
@@ -27,13 +27,13 @@ def build_apply_fork_file_finding_enumeration_parameter(
         oracle file, realization file が渡される想定
     """
     # パス
-    work_root = resolve_work_root()
+    repo_root = resolve_repo_root()
     target_path = resolve_real_path(target_path)
     # プロンプト
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア実装の所見リストアップ担当です",
         summary=f"""
-        - `{target_path}` を起点に `{work_root}` ツリー内の所見 (realization file の要修正点) を調査すること
+        - `{target_path}` を起点に `{repo_root}` ツリー内の所見 (realization file の要修正点) を調査すること
         """,
         goal=f"""
         - `{target_path}` 以外の必要な oracle file, realization file も読んでいること

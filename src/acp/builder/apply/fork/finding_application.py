@@ -3,10 +3,10 @@
 # std
 from typing import Any
 import json
-from pathlib import Path
 
 # cmoc
 from basic.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
+from basic.path_model import resolve_repo_root
 from basic.acp import (
     AgentCallParameter,
     ModelClass,
@@ -18,7 +18,6 @@ from acp.prompt_parts.complete_prompt import build_complete_prompt
 
 def build_apply_fork_finding_application_parameter(
     findings: list[dict[str, Any]],
-    work_root: Path,
 ) -> AgentCallParameter:
     """
     `cmoc apply fork` サブコマンド、所見対応作業用。
@@ -28,10 +27,12 @@ def build_apply_fork_finding_application_parameter(
         対応するべき所見本文のリスト。
         1 件につき、
     """
+    # パス
+    repo_root = resolve_repo_root()
     # プロンプト
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア実装の修正担当です",
-        summary=f"- `{work_root}` ツリー内の realization file を修正すること",
+        summary=f"- `{repo_root}` ツリー内の realization file を修正すること",
         goal="""
         - 所見として指摘されている問題の修正作業をベストエフォートで実施したこと
         - 修正後の realization file が realization standard に従っている事
