@@ -64,6 +64,8 @@ def test_render_error_uses_structured_markdown() -> None:
     assert "# ERROR" in rendered
     assert "## Summary\nsummary" in rendered
     assert "- next" in rendered
+    next_actions = rendered.split("## Next actions\n", 1)[1].split("## Detail", 1)[0]
+    assert sum(line.startswith("- ") for line in next_actions.splitlines()) >= 2
     assert "## Detail\ndetail" in rendered
     assert "## Call stack" in rendered
 
@@ -74,7 +76,10 @@ def test_render_error_fills_empty_next_actions() -> None:
     except CmocError as exc:
         rendered = render_error(exc)
 
-    assert "## Next actions\n- エラー内容を確認し" in rendered
+    next_actions = rendered.split("## Next actions\n", 1)[1].split("## Detail", 1)[0]
+    assert sum(line.startswith("- ") for line in next_actions.splitlines()) >= 2
+    assert "入力、実行場所、設定、作業ツリー状態に問題がある場合" in next_actions
+    assert "原因が実装不具合または仕様不足に見える場合" in next_actions
 
 
 def test_cli_error_report_is_written_to_stdout(tmp_path: Path, monkeypatch) -> None:
