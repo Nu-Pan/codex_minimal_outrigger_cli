@@ -207,22 +207,21 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- プロンプト構成部品とそれらを組み合わせるパラメータ生成処理の回帰テストを担う realization test。レビュー基準、ルーティング規則、ファイルアクセス規則、実装基準、INDEX エントリー基準、レビュー oracle 基準などが StructDoc と Markdown 出力に期待語句を含めることを確認し、完全プロンプト生成時の標準文書の同梱・省略条件も検証する。
-- TUI 用パラメータ選定プロンプト、INDEX エントリー生成パラメータ、レビュー oracle merge finding、session join conflict resolution などの builder が、期待される model class、reasoning effort、file access mode、schema 内容、プロンプト断片を持つことを確認する。
+- プロンプト断片生成と実行パラメータ選定に関するテスト群。ファイルアクセス規則、ルーティング規則、各種標準文書の注入・省略、Markdown レンダリング、Structured Output schema、ビルダーが選ぶモデル種別・推論量・アクセスモードを検証する。
 
 ## Read this when
-- プロンプト部品 builder の出力タイトル、Markdown へのレンダリング内容、標準文書の同梱条件を変更・確認する。
-- 完全プロンプト生成で routing rule が常に含まれることや、apply review standard、realization standard、index entry standard、review oracle standard がフラグに応じて含まれる・省略されることを確認する。
-- ファイルアクセスモードごとの file access rule 文言、TUI resolve parameter の schema と enum、各種 builder の model class・reasoning effort・file access mode を変更・検証する。
-- StructDoc の Markdown レンダリング、特に連続空行の折りたたみ挙動を確認する。
+- プロンプト生成処理が、必要な標準文書やルーティング規則を含めるか、省略すべき標準文書を省略するかを確認したいとき。
+- ファイルアクセスモードごとの読み書き制約文言、レビュー基準、実装保守基準、INDEX.md エントリー基準などのレンダリング期待値を変更・確認したいとき。
+- TUI の実行パラメータ選定、INDEX.md エントリー生成、レビュー結果マージ、セッション join conflict 解決の各パラメータビルダーが返すモデル種別・推論量・アクセスモード・schema を検証したいとき。
+- StructDoc の Markdown 出力で連続空行を畳む挙動や、プロンプト注入時の禁止語句除去の期待値を確認したいとき。
 
 ## Do not read this when
-- 個別のプロンプト部品本文そのものの実装を理解したいだけで、テスト上の期待語句や builder の外部契約を確認する必要がない。
-- CLI 実行、作業ツリー操作、GitHub 連携など、プロンプト構成・パラメータ生成と直接関係しない機能の挙動を調べる。
-- oracle 側の正本仕様断片を確認したい場合。この対象は realization test であり、正本仕様の入口ではない。
+- 個別コマンドの実処理、ファイル操作、git 操作、セッション状態更新など、プロンプト断片やビルダーパラメータ以外の挙動を調べたいとき。
+- 標準文書やルーティング規則そのものの正本仕様を確認したいとき。このテストではなく、対応する仕様文書や実装側の生成関数を読む方が直接的である。
+- テスト基盤全体の設定、pytest の共通 fixture、依存関係、実行方法を調べたいとき。
 
 ## hash
-- 753362288caaa105b846e4e3fc09d7ca8cfad94cc6cdc5b065b8db20f855dc62
+- 0133c9f1ab458b2726ba2f2719995e2d8eba768ea4d72e598dccef536781e644
 
 # `test_review_oracle_cli.py`
 
