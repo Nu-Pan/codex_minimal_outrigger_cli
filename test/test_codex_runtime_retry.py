@@ -1,6 +1,5 @@
 from _support import (
     AgentCallParameter,
-    CmocError,
     FileAccessMode,
     ModelClass,
     Path,
@@ -177,7 +176,8 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
                 "    output.write_text(json.dumps({'probe': True}))",
                 "    print(json.dumps({'type': 'turn.completed'}))",
                 "    sys.exit(0)",
-                "print(json.dumps({'type':'error','message':'Quota exceeded','session_id':'sess-1'}))",
+                "print(json.dumps({'type':'thread.started','thread_id':'sess-1'}))",
+                "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
                 "sys.exit(1)",
             ]
         )
@@ -247,7 +247,8 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert "resume" in main_logs[1]["argv"]
     assert len({log["stdout_log_path"] for log in main_logs}) == 2
     assert Path(main_logs[0]["stdout_log_path"]).read_text().strip() == (
-        '{"type": "error", "message": "Quota exceeded", "session_id": "sess-1"}'
+        '{"type": "thread.started", "thread_id": "sess-1"}\n'
+        '{"type": "error", "message": "Quota exceeded"}'
     )
     assert Path(main_logs[1]["stdout_log_path"]).read_text().strip() == (
         '{"type": "turn.completed"}'
@@ -279,7 +280,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert "- returncode: `0`" in console
 
 
-def test_run_codex_exec_fails_after_quota_without_resume_token(
+def test_run_codex_exec_reruns_after_quota_without_resume_token(
     tmp_path: Path, monkeypatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -297,10 +298,16 @@ def test_run_codex_exec_fails_after_quota_without_resume_token(
                 f"calls = pathlib.Path({str(calls)!r})",
                 "args = sys.argv[1:]",
                 "stdin = sys.stdin.read()",
+                "records = calls.read_text().splitlines() if calls.exists() else []",
                 "with calls.open('a') as f: f.write(json.dumps({'args': args, 'stdin': stdin}) + '\\n')",
                 "if stdin == 'quota availability probe':",
                 "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
                 "    output.write_text(json.dumps({'probe': True}))",
+                "    print(json.dumps({'type': 'turn.completed'}))",
+                "    sys.exit(0)",
+                "if records:",
+                "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+                "    output.write_text(json.dumps({'ok': True}))",
                 "    print(json.dumps({'type': 'turn.completed'}))",
                 "    sys.exit(0)",
                 "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
@@ -319,24 +326,21 @@ def test_run_codex_exec_fails_after_quota_without_resume_token(
         None,
     )
 
-    try:
-        run_codex_exec(
-            parameter,
-            root=root,
-            quota_poll_interval_sec=0,
-            max_quota_polls=1,
-        )
-    except CmocError as exc:
-        assert "resume token" in exc.summary
-    else:
-        raise AssertionError("run_codex_exec should fail without resume token")
+    result = run_codex_exec(
+        parameter,
+        root=root,
+        quota_poll_interval_sec=0,
+        max_quota_polls=1,
+    )
 
     call_records = [json.loads(line) for line in calls.read_text().splitlines()]
     assert [record["stdin"] for record in call_records] == [
         "prompt",
         "quota availability probe",
+        "prompt",
     ]
     assert all("resume" not in record["args"] for record in call_records)
+    assert result.output_json == {"ok": True}
 
 
 def test_run_codex_exec_uses_single_representative_quota_probe(
@@ -374,7 +378,8 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
                 "    if sum(1 for line in lines if json.loads(line)['kind'] == 'initial') >= 2:",
                 "        break",
                 "    time.sleep(0.01)",
-                "print(json.dumps({'type':'error','message':'Quota exceeded','session_id':'sess-parallel'}))",
+                "print(json.dumps({'type':'thread.started','thread_id':'sess-parallel'}))",
+                "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
                 "sys.exit(1)",
             ]
         )

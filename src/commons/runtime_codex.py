@@ -199,23 +199,6 @@ def run_codex_exec(
     last_result: subprocess.CompletedProcess[str] | None = None
     resume_token: str | None = None
 
-    def update_resume_token(
-        result: subprocess.CompletedProcess[str],
-        error_text: str,
-        *,
-        run_call_path: Path,
-        run_stdout_path: Path,
-        run_stderr_path: Path,
-    ) -> str:
-        token = extract_resume_token(result.stdout)
-        if token:
-            return token
-        raise CmocError(
-            "Codex CLI resume token を取得できませんでした。",
-            ["stdout JSONL の session identifier 出力を確認してください。"],
-            f"call_log: {run_call_path}\nstdout_log: {run_stdout_path}\nstderr_log: {run_stderr_path}\n{error_text}",
-        )
-
     while True:
         ts, stdout_path, stderr_path, output_path, call_path = new_log_paths()
         current_argv = build_argv(output_path, resume_token)
@@ -289,13 +272,7 @@ def run_codex_exec(
                         quota_wait_sec += waited_sec
                         if logger is not None:
                             logger.add_quota_wait(waited_sec)
-                        resume_token = update_resume_token(
-                            result,
-                            error_text,
-                            run_call_path=call_path,
-                            run_stdout_path=stdout_path,
-                            run_stderr_path=stderr_path,
-                        )
+                        resume_token = extract_resume_token(result.stdout)
                         continue
                     _QUOTA_POLLING = True
                 print(
@@ -384,13 +361,7 @@ def run_codex_exec(
                     f"# {console_timestamp()} Codex CLI quota wait: resuming work",
                     flush=True,
                 )
-                resume_token = update_resume_token(
-                    result,
-                    error_text,
-                    run_call_path=call_path,
-                    run_stdout_path=stdout_path,
-                    run_stderr_path=stderr_path,
-                )
+                resume_token = extract_resume_token(result.stdout)
                 continue
             emit_codex_call_event(
                 run_purpose=purpose,
