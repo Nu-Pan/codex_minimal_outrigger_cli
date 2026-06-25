@@ -1,53 +1,47 @@
 # `acp`
 
 ## Summary
-- AI agent へ渡す呼び出し契約を組み立てる実装領域。用途別の role、summary、goal、補助文脈、Structured Output schema、model class、reasoning effort、ファイルアクセス権限と、共通プロンプトに含める標準規範・ルーティング規則・基本概念の生成を扱う。
-- 変更要約、レビュー所見の列挙・判定・統合、所見への修正依頼、目次エントリー生成、merge conflict marker 解消、TUI 実行前のパラメータ選定など、cmoc の各機能が別 AI agent に何を読ませ、どの構造化結果を期待し、どの制約で実行させるかを追う入口になる。
-- CLI や Git 操作の本体ではなく、cmoc から AI agent へ処理を委譲する境界で使うプロンプト文面、標準文書の注入条件、出力 schema、実行権限、モデル選択を確認するためのまとまり。
+- AI agent 呼び出しに関わる実装をまとめる領域で、呼び出しパラメータを構築する builder 群と、agent に渡す構造化プロンプト部品の入口になる。
+- 上位機能ごとの prompt、Structured Output schema、model class、reasoning effort、ファイルアクセス権限の組み合わせと、role・summary・goal・各種規則文書などの prompt 構成を確認するためのまとまり。
 
 ## Read this when
-- cmoc の機能が AI agent を呼び出すときの prompt 構成、補助文脈、Structured Output schema、model class、reasoning effort、ファイルアクセス権限を確認または変更したいとき。
-- 変更要約、apply review、oracle review、INDEX.md エントリー生成、merge conflict marker 解消、TUI 実行前パラメータ選定のいずれかについて、AI agent に渡す入力文脈と期待する構造化出力の契約を調べたいとき。
-- oracle/realization の基本概念、ファイルアクセス規則、ルーティング規則、oracle standard、realization standard、review standard、apply review standard、INDEX.md エントリー標準を、agent 用プロンプトへどう組み込むか確認したいとき。
-- 対象ファイル、差分、既存所見、ユーザー入力、conflict 対象パスなどの入力値が、agent 向けの完全なプロンプトや schema 指定へどう接続されるかを追いたいとき。
-- 新しい AI 委譲処理を追加する、既存の委譲処理の標準文書注入条件を変える、または agent に許可する読み書き範囲やモデル選択の境界を調整したいとき。
+- cmoc の機能が AI Agent CLI/TUI や OpenAI API 相当を呼び出す際に、どの条件・補助文脈・構造化出力で実行されるかを調べたいとき。
+- 変更要約、レビュー、INDEX.md エントリー生成、merge conflict marker 解消、TUI 実行など、AI 向け prompt と Structured Output schema の対応を確認したいとき。
+- agent に渡すファイルアクセス規則、ルーティング規則、oracle / realization の概念説明、各種標準文書の prompt 文言や組み立て順を確認・変更したいとき。
+- AI 呼び出しごとのモデル種別、reasoning effort、読み取り専用・編集許可などの実行条件を追いたいとき。
 
 ## Do not read this when
-- サブコマンド登録、CLI 引数解析、実行制御、Git コマンド実行、branch 作成、差分取得、conflict 検出、結果保存など、AI 呼び出しを使う側の処理フロー本体だけを調べたいとき。
-- AgentCallParameter、ModelClass、ReasoningEffort、FileAccessMode などの基礎型や、パス解決、構造化文書、Markdown rendering といった共通 helper そのものの実装詳細を調べたいとき。
-- 生成された prompt を外部プロセスへ渡す処理、標準入力・標準出力の扱い、agent 実行結果を受け取った後の利用側ロジックを調べたいとき。
-- 個別の oracle file、realization file、テスト、変更対象ファイル、差分、conflict 本文の内容を直接確認したいだけで、AI agent への委譲契約や標準プロンプトを変更しないとき。
-- oracle standard、realization standard、review standard、INDEX.md エントリー標準などの内容を正本仕様として検討したいとき。ここにあるのは agent prompt 用に生成される実装であり、仕様判断の正本は oracle 側を読む。
+- CLI 引数解析、サブコマンド登録、Git 操作、branch/worktree 操作、ファイル走査、結果保存、TUI 表示など、AI 呼び出しを利用する側の実行制御を調べたいとき。
+- oracle file、realization file、review standard、INDEX.md entry standard、path keyword など、prompt に埋め込まれる概念や仕様そのものを本文として読みたいとき。
+- AgentCallParameter、path 解決、Markdown 構造化、schema 基盤、外部プロセス起動、LLM 応答処理など、個別の prompt・builder より下位または利用側の共通基盤を調べたいとき。
+- 個別の対象ファイルやテスト本文を確認したいだけで、AI 呼び出し契約や agent 向け prompt 構成を変更しないとき。
 
 ## hash
-- eb347bc4b03d0d06052491d10afe834300fda275319c031724a4e5e76ae33d49
+- 6c693676ae17f509fcbdb3038d5bd2ab54fab2b86507725214bb9da6b20537a0
 
 # `basic`
 
 ## Summary
-- cmoc の realization implementation のうち、複数機能から参照される基礎的なデータ構造と小規模ヘルパーをまとめる領域。AI エージェント呼び出し条件、ルートトークン付きパス表記、規範データ構造、階層化文書の Markdown 生成を扱う。
-- バックエンド実行や CLI 表層へ渡る前の抽象モデル、パス解決、仕様・文書表現の共通部品を確認する入口になる。
+- cmoc の実装全体で共有される基礎的な型・変換ヘルパーをまとめる領域。エージェント呼び出しパラメータ、ルートトークン付きパス解決、規範データ構造、構造化文書から Markdown へのレンダリングを扱う。
+- 特定の CLI サブコマンドや業務フローではなく、複数の上位実装から参照される抽象値、パス表現、仕様・文書表現の共通部品を確認する入口になる。
 
 ## Read this when
-- エージェント呼び出しに渡す抽象的な条件、論理モデル、Reasoning effort、ファイルアクセスモード、Structured Output schema の有無を表す内部データ構造を確認・変更したいとき。
-- cmoc で使う `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` 付きパス表記を実パスへ解決する挙動、または実パスをルートトークン表記へ戻す挙動を確認・変更したいとき。
-- ルートトークンなし相対パスの拒否、ルートディレクトリ探索、linked worktree や git common dir を含む worktree 判定を調べたいとき。
-- 規範をコード上で保持するための構造、要求ラベル、要求本文の単位、規範オブジェクトから構造化文書を生成する処理を確認したいとき。
-- 階層化された自然言語文書、仕様断片、レポートなどを Markdown 見出し付きテキストとして生成する小さな文書レンダリング処理を確認・変更したいとき。
-- Markdown の fenced code block 出力、見出し階層の増加、不正な子要素型の扱い、複数行文字列の空行除去や共通インデント解除を調べたいとき。
+- エージェント呼び出しに渡す論理的なモデル指定、Reasoning effort、ファイルアクセスモード、Structured Output schema パスなどの共通パラメータ構造を確認・変更したいとき。
+- cmoc で使う `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` 付きパス表記と実パスの相互変換、ルート探索、相対パス入力の扱いを確認・変更したいとき。
+- 規範をコード上で表すデータ構造、要求ラベル、要求本文、判断例、構造化ドキュメントへの変換を確認・変更したいとき。
+- 階層化された自然言語文書、仕様断片、レポート、プロンプトなどを Markdown 見出し・本文・コードブロックとしてレンダリングする共通処理を確認・変更したいとき。
+- 上位機能で使う前提となる、型定義、入力検証、文書表現、Markdown 出力の境界を先に把握したいとき。
 
 ## Do not read this when
-- 具体的なモデル名、API パラメータ、サンドボックス設定など、バックエンドが実際に受理する値への解決処理を確認したいとき。
-- エージェント呼び出しの実行、プロセス起動、結果取得、エラー処理の制御フローを確認したいとき。
-- プロンプト本文の生成規則、Structured Output schema ファイル自体の内容、または schema 検証仕様を確認したいとき。
-- CLI サブコマンドの引数定義、利用者向け出力、終了コードなど、コマンド表層の挙動を調べたいとき。
-- oracle file と realization file の所有関係、編集責務、正本仕様断片としての分類だけを確認したいとき。
-- 個別の規範本文や、人間が責任を持つ正本仕様断片そのものを確認したいとき。
-- Markdown の解析、既存 Markdown からの構造復元、Markdown AST 全般、または HTML・JSON・YAML など Markdown 以外の出力形式を扱う処理を探しているとき。
+- CLI サブコマンドの引数定義、画面出力、終了コード、利用者向けコマンド挙動だけを調べたいとき。
+- バックエンドが実際に受理する具体的なモデル名や Reasoning effort、ファイルアクセス指定への変換処理を探しているとき。
+- プロンプト本文の生成ロジック、タスク別テンプレート、呼び出し実行の制御フローを調べたいとき。
+- 個別機能がどの作業ディレクトリでファイルを作成・更新するか、永続状態や Git 操作をどう扱うかという業務ロジックを確認したいとき。
+- 既存 Markdown の解析、INDEX.md のルーティング規則そのもの、正本仕様断片の内容や編集方針を確認したいとき。
 - テスト構成、fixture、テストケース追加先を探しているとき。
 
 ## hash
-- d3aad06d83ff66fc13f8fb9d2b897568f32a25560a111334d1c889e5a85384b5
+- 8d94dca84d270b4fa4b33e15e66d16c39720978cb8732957988df4509bf46751
 
 # `cmoc_runtime.py`
 
@@ -71,26 +65,25 @@
 # `commons`
 
 ## Summary
-- cmoc の共有 runtime helper 群をまとめる領域。上位の CLI command や実行制御から使われる共通処理として、Codex CLI 呼び出し、profile・設定、content hash、CLI 実行ラッパー、error 表示、Git 操作、実行ログ、path 解決、外部コマンド結果型、session/apply 状態の扱いを担う。
-- 個別サブコマンドの業務ロジックではなく、複数の command や上位 runtime から横断的に使われる実行時支援の入口として読む対象を選ぶための階層。
+- cmoc の realization implementation のうち、複数の CLI command や上位モジュールから共有される runtime helper 群をまとめる領域。Codex CLI 呼び出し、profile 準備、設定読み書き、content hash、共通エラー表示、Git 操作、実行ログ、root/path 解決、実行結果型、session/apply state など、サブコマンド横断で使う実行時支援を扱う。
+- 個別機能の業務ロジックではなく、上位の command 実装が共通 runtime 能力へアクセスするための実装群と、その公開 import 境界を提供する階層である。
 
 ## Read this when
-- CLI サブコマンド間で共通化された runtime 処理、例外処理、進捗表示、ログ記録、終了コード化、実行 summary の挙動を確認または変更したいとき。
-- Codex CLI の exec/TUI 呼び出し、profile 生成、schema 準備、Structured Output 検証、capacity/quota retry、resume token 再利用など、Codex 実行の共通制御を追いたいとき。
-- cmoc の設定ファイル読み書き、既定値補完、不正 JSON や不正設定値の利用者向けエラー化を扱うとき。
-- hash 付き生成ファイル、binary 判定、共有データ型、session/apply 状態ファイル、active session 探索など、runtime 横断の補助機能を確認したいとき。
-- repo/work/cmoc root の解決、.cmoc 配下の保存先導出、timestamp や duration 表示、作業ディレクトリ一時変更などの共通 path helper を扱うとき。
-- Git repository 状態検査、一時 worktree/branch の作成・削除、.cmoc の Git 追跡除外、Git ignore 判定などの低レベル Git helper を確認したいとき。
+- CLI サブコマンド間で共有される runtime 実行フロー、Codex 呼び出し、Git 操作、設定、ログ、path、状態、エラー、結果型のいずれかを確認または変更したいとき。
+- 上位 command から利用できる共通 runtime API の入口や、下位 helper の責務分担を把握したいとき。
+- Codex CLI exec/TUI 呼び出し、profile/schema 準備、quota/capacity retry、Structured Output 検証、subprocess 結果の CmocError 化を追いたいとき。
+- `.cmoc` 配下の config、sessions、reports、logs、worktrees、state、schema など、実行時ファイルの読み書きや配置規則に関わる共通処理を調べたいとき。
+- cmoc 管理 branch、worktree、session-id、active session、Git clean 判定など、Git repository 状態や永続状態を runtime 層で扱う箇所を探すとき。
 
 ## Do not read this when
-- 特定サブコマンドの引数定義、業務ロジック、処理順、生成ファイル内容、利用者向け出力だけを調べたいとき。その場合は該当 command 実装へ進む。
-- path キーワードそのものの概念定義や root 種別の正本仕様を確認したいとき。その場合は path model を扱う仕様・実装へ進む。
-- AgentCallParameter、FileAccessMode、model class、reasoning effort などの入力データ構造そのものを確認したいとき。その場合は基本データ定義側へ進む。
-- ログを読む側、集計する側、レポート表示側、または INDEX.md の hash 更新など、この階層の runtime helper を利用する上位機能を調べたいとき。
-- テスト fixture や期待挙動から確認する方が直接的な場合、または個別 helper の利用箇所だけを探したい場合は、該当するテストや呼び出し側へ進む。
+- 個別 CLI subcommand の引数定義、dispatch、業務ロジック、生成ファイル内容、ユーザー向け出力順だけを知りたいとき。その場合は command 実装側へ進む。
+- path keyword の概念定義そのものや `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` の正本説明を確認したいとき。その場合は path model を扱う正本または定義側を読む。
+- 設定値、AgentCallParameter、FileAccessMode、model class、reasoning effort などのデータ構造そのものを変更したいとき。その場合はそれぞれの型定義・設定定義側へ進む。
+- ログを読む側、集計する側、表示する側、または INDEX.md の hash 更新ロジックを調べたいとき。共通 runtime の書き込み helper ではなく、対象機能の実装へ進む。
+- 単にパッケージが存在するか、公開 import を持つかだけを確認したいときはパッケージ入口や集約入口だけで足りるため、下位 runtime 実装群を順に読む必要はない。
 
 ## hash
-- e6177357ac1ae402aba338541033536f2d1e91b70866b35da262ccc08469a42d
+- 72f13772bc401c91734b66806edf15b91ee745bbcb09d1b981700635653d82f6
 
 # `config`
 
