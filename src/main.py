@@ -514,6 +514,7 @@ def render_review_oracle_report(
     review_branch: str | None,
     review_fork_commit: str | None,
     review_join_commit: str | None,
+    error_message: str | None = None,
 ) -> str:
     return render_review_oracle_report_impl(
         root,
@@ -527,6 +528,7 @@ def render_review_oracle_report(
         review_branch,
         review_fork_commit,
         review_join_commit,
+        error_message=error_message,
     )
 
 

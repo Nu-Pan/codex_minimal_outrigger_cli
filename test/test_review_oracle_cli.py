@@ -265,6 +265,34 @@ def test_review_oracle_merges_review_index_changes(tmp_path: Path, monkeypatch) 
     assert not (root / ".cmoc" / "worktrees" / "review").exists()
 
 
+def test_review_oracle_writes_error_report_on_processing_failure(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    def fail_run_codex_exec(parameter, **kwargs):
+        raise RuntimeError("enumeration failed")
+
+    monkeypatch.setattr(main_module, "run_codex_exec", fail_run_codex_exec)
+
+    result = runner.invoke(app, ["review", "oracle", "--scope", "full"])
+
+    assert result.exit_code != 0
+    report_path = Path(
+        [line for line in result.output.splitlines() if line.startswith("/")][-1]
+    )
+    rendered = report_path.read_text()
+    assert "result: error" in rendered
+    assert "レビュー処理が途中で失敗しました。" in rendered
+    assert "Error: `enumeration failed`" in rendered
+    assert "# ERROR" in result.output
+
+
 @pytest.mark.parametrize("change_kind", ["unstaged", "staged", "untracked"])
 def test_review_oracle_rejects_non_index_worktree_changes(
     tmp_path: Path,

@@ -71,24 +71,27 @@ def cmoc_review_oracle_impl(
     review_branch = f"cmoc/run/{session_id}/{run_id}"
     review_worktree = worktrees_dir(root) / session_id / run_id
     review_fork_commit = head_commit(root)
-    create_run_worktree(root, review_branch, review_worktree, "HEAD")
     review_join_commit = None
+    all_oracle_files: list[Path] = []
+    oracle_files: list[Path] = []
+    findings: list[dict] = []
+    worktree_created = False
     try:
-        with pushd(review_worktree):
-            all_oracle_files = enumerate_all_oracle_files_func(review_worktree)
-            oracle_files = enumerate_targets_func(review_worktree, scope, state)
-            findings = run_loop_func(root, review_worktree, oracle_files, config, codex_exec=codex_exec)
-            review_has_index_commit = commit_index_changes_func(review_worktree)
-        if review_has_index_commit:
-            review_join_commit = merge_review_branch_func(root, review_branch)
-    finally:
-        remove_worktree(root, review_worktree)
-        delete_branch(root, review_branch, force=True)
-    report_dir = reports_dir(root, "review_oracle")
-    report_dir.mkdir(parents=True, exist_ok=True)
-    report_path = report_dir / f"{timestamp()}.md"
-    report_path.write_text(
-        render_report_func(
+        create_run_worktree(root, review_branch, review_worktree, "HEAD")
+        worktree_created = True
+        try:
+            with pushd(review_worktree):
+                all_oracle_files = enumerate_all_oracle_files_func(review_worktree)
+                oracle_files = enumerate_targets_func(review_worktree, scope, state)
+                findings = run_loop_func(root, review_worktree, oracle_files, config, codex_exec=codex_exec)
+                review_has_index_commit = commit_index_changes_func(review_worktree)
+            if review_has_index_commit:
+                review_join_commit = merge_review_branch_func(root, review_branch)
+        finally:
+            if worktree_created:
+                remove_worktree(root, review_worktree)
+                delete_branch(root, review_branch, force=True)
+        report_path = write_review_oracle_report(
             root,
             scope,
             branch,
@@ -100,9 +103,64 @@ def cmoc_review_oracle_impl(
             review_branch,
             review_fork_commit,
             review_join_commit,
+            render_report_func,
+        )
+    except Exception as exc:
+        report_path = write_review_oracle_report(
+            root,
+            scope,
+            branch,
+            session_id,
+            state,
+            len(all_oracle_files),
+            oracle_files,
+            findings,
+            review_branch,
+            review_fork_commit,
+            review_join_commit,
+            render_report_func,
+            error_message=str(exc) or exc.__class__.__name__,
+        )
+        typer.echo(str(report_path.resolve()))
+        raise
+    typer.echo(str(report_path.resolve()))
+
+
+def write_review_oracle_report(
+    root: Path,
+    scope: str,
+    session_branch: str,
+    session_id: str,
+    state: SessionState,
+    oracle_count_total: int,
+    oracle_files: list[Path],
+    findings: list[dict],
+    review_branch: str | None,
+    review_fork_commit: str | None,
+    review_join_commit: str | None,
+    render_report_func: Callable[..., str],
+    error_message: str | None = None,
+) -> Path:
+    report_dir = reports_dir(root, "review_oracle")
+    report_dir.mkdir(parents=True, exist_ok=True)
+    report_path = report_dir / f"{timestamp()}.md"
+    report_path.write_text(
+        render_report_func(
+            root,
+            scope,
+            session_branch,
+            session_id,
+            state,
+            oracle_count_total,
+            oracle_files,
+            findings,
+            review_branch,
+            review_fork_commit,
+            review_join_commit,
+            error_message=error_message,
         )
     )
-    typer.echo(str(report_path.resolve()))
+    return report_path
 
 
 def commit_review_index_changes(review_worktree: Path) -> bool:
@@ -340,6 +398,7 @@ def render_review_oracle_report(
     review_branch: str | None,
     review_fork_commit: str | None,
     review_join_commit: str | None,
+    error_message: str | None = None,
 ) -> str:
     """review oracle report を Markdown + YAML frontmatter で描画する。"""
     accepted = [finding for finding in findings if finding.get("verdict") == "accept"]
@@ -347,7 +406,12 @@ def render_review_oracle_report(
     minor_accepted = [finding for finding in accepted if finding.get("severity") == "minor"]
     fatal_rejected = [finding for finding in findings if finding.get("severity") == "fatal" and finding.get("verdict") != "accept"]
     minor_rejected = [finding for finding in findings if finding.get("severity") == "minor" and finding.get("verdict") != "accept"]
-    if not oracle_files:
+    if error_message is not None:
+        error_message = error_message.replace("`", "'")
+    if error_message is not None:
+        result = "error"
+        verdict = f"レビュー処理が途中で失敗しました。\n\nError: `{error_message}`"
+    elif not oracle_files:
         result = "no_targets"
         verdict = "レビュー対象 oracle が 0 件でした。"
     elif fatal_accepted:
