@@ -24,34 +24,9 @@ def write_apply_fork_report(
     """apply fork の実行結果 report を生成する。"""
     apply_branch = state.apply.apply_branch or ""
     fork_commit = state.apply.oracle_snapshot_commit or ""
-    raw_diff = (
-        run_git(["diff", f"{fork_commit}..HEAD"], apply_worktree).stdout
-        if fork_commit
-        else run_git(["diff", "HEAD"], apply_worktree).stdout
+    changes = build_change_summary(
+        root, apply_worktree, fork_commit, config, codex_exec
     )
-    if raw_diff.strip():
-        summary = codex_exec(
-            build_apply_fork_change_summary_parameter(raw_diff),
-            root=root,
-            cwd=apply_worktree,
-            config=config,
-            purpose="apply fork change summary",
-        ).output_json
-        changes = list((summary or {}).get("changes", [])) or [
-            {
-                "category": "変更要約なし",
-                "summary": "変更差分はありますが、構造化された変更要約は空でした。",
-                "changed_paths": [],
-            }
-        ]
-    else:
-        changes = [
-            {
-                "category": "変更なし",
-                "summary": "apply fork による実装差分はありません。",
-                "changed_paths": [],
-            }
-        ]
     report_dir = reports_dir(root, "apply/fork")
     report_dir.mkdir(parents=True, exist_ok=True)
     path = report_dir / f"{timestamp()}.md"
@@ -77,8 +52,12 @@ def write_apply_fork_error_report(
     state: SessionState,
     finding_counts: list[int],
     apply_worktree: Path,
+    config: CmocConfig,
+    codex_exec: CodexExec,
 ) -> Path:
     """apply fork 失敗時の report を生成する。"""
+    apply_branch = state.apply.apply_branch or ""
+    fork_commit = state.apply.oracle_snapshot_commit or ""
     report_dir = reports_dir(root, "apply/fork")
     report_dir.mkdir(parents=True, exist_ok=True)
     path = report_dir / f"{timestamp()}.md"
@@ -87,21 +66,51 @@ def write_apply_fork_error_report(
             root,
             session_branch,
             state,
-            state.apply.apply_branch or "",
-            state.apply.oracle_snapshot_commit or "",
+            apply_branch,
+            fork_commit,
             apply_worktree,
             "error",
             finding_counts,
-            [
-                {
-                    "category": "エラー",
-                    "summary": "apply fork が途中で失敗しました。",
-                    "changed_paths": [],
-                }
-            ],
+            build_change_summary(root, apply_worktree, fork_commit, config, codex_exec),
         )
     )
     return path
+
+
+def build_change_summary(
+    root: Path,
+    apply_worktree: Path,
+    fork_commit: str,
+    config: CmocConfig,
+    codex_exec: CodexExec,
+) -> list[dict]:
+    raw_diff = (
+        run_git(["diff", f"{fork_commit}..HEAD"], apply_worktree).stdout
+        if fork_commit
+        else run_git(["diff", "HEAD"], apply_worktree).stdout
+    )
+    if not raw_diff.strip():
+        return [
+            {
+                "category": "変更なし",
+                "summary": "apply fork による実装差分はありません。",
+                "changed_paths": [],
+            }
+        ]
+    summary = codex_exec(
+        build_apply_fork_change_summary_parameter(raw_diff),
+        root=root,
+        cwd=apply_worktree,
+        config=config,
+        purpose="apply fork change summary",
+    ).output_json
+    return list((summary or {}).get("changes", [])) or [
+        {
+            "category": "変更要約なし",
+            "summary": "変更差分はありますが、構造化された変更要約は空でした。",
+            "changed_paths": [],
+        }
+    ]
 
 
 def render_apply_fork_report(

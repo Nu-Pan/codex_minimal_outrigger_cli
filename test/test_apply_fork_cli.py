@@ -328,7 +328,22 @@ def test_apply_fork_rejects_forbidden_agents_diff(tmp_path: Path, monkeypatch) -
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
-    finding = {
+    readme_finding = {
+        "title": "Update README",
+        "evidences": [
+            {
+                "path": str(root / "README.md"),
+                "line_start": 1,
+                "line_end": 1,
+                "summary": "readme",
+            }
+        ],
+        "oracle_requirement": "test requirement",
+        "observed_implementation": "old",
+        "reason": "needs update",
+        "suggested_fix": "update readme",
+    }
+    agents_finding = {
         "title": "Bad agents edit",
         "evidences": [
             {
@@ -343,6 +358,8 @@ def test_apply_fork_rejects_forbidden_agents_diff(tmp_path: Path, monkeypatch) -
         "reason": "needs update",
         "suggested_fix": "update agents",
     }
+    applications = 0
+    calls: list[str] = []
 
     class FakeCodexResult:
         def __init__(self, output_json=None, output_text: str = ""):
@@ -350,14 +367,34 @@ def test_apply_fork_rejects_forbidden_agents_diff(tmp_path: Path, monkeypatch) -
             self.output_text = output_text
 
     def fake_run_codex_exec(parameter, **kwargs):
+        nonlocal applications
         purpose = kwargs["purpose"]
+        calls.append(purpose)
         if purpose.startswith("apply fork enumerate findings"):
-            return FakeCodexResult({"findings": [finding]})
+            return FakeCodexResult({"findings": [readme_finding, agents_finding]})
         if purpose == "apply fork refine findings":
-            return FakeCodexResult({"findings": [finding]})
+            return FakeCodexResult({"findings": [readme_finding, agents_finding]})
         if purpose == "apply fork finding application":
-            (Path.cwd() / ".agents" / "skill.md").write_text("forbidden\n")
+            applications += 1
+            if applications == 1:
+                (Path.cwd() / "README.md").write_text("# updated before error\n")
+            else:
+                (Path.cwd() / ".agents" / "skill.md").write_text("forbidden\n")
             return FakeCodexResult()
+        if purpose == "apply fork commit message":
+            return FakeCodexResult(output_text="Update README before error\n")
+        if purpose == "apply fork change summary":
+            return FakeCodexResult(
+                {
+                    "changes": [
+                        {
+                            "category": "ドキュメント",
+                            "summary": "README をエラー前に更新した",
+                            "changed_paths": ["README.md"],
+                        }
+                    ]
+                }
+            )
         raise AssertionError(purpose)
 
     monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
@@ -372,11 +409,15 @@ def test_apply_fork_rejects_forbidden_agents_diff(tmp_path: Path, monkeypatch) -
     assert report_lines
     report_path = Path(report_lines[-1].split("`")[1])
     assert report_path.is_file()
-    assert "result: error" in report_path.read_text()
+    rendered = report_path.read_text()
+    assert "result: error" in rendered
+    assert "ドキュメント: README をエラー前に更新した (README.md)" in rendered
+    assert "apply fork change summary" in calls
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
     state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
     assert state["apply"]["state"] == "error"
+
 
 def test_apply_fork_rolling_uses_previous_apply_oracle_snapshot_commit(
     tmp_path: Path, monkeypatch

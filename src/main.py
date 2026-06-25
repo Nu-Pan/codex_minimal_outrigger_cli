@@ -350,6 +350,7 @@ def write_apply_fork_error_report(
     state: SessionState,
     finding_counts: list[int],
     apply_worktree: Path,
+    config: CmocConfig,
 ) -> Path:
     return write_apply_fork_error_report_impl(
         root,
@@ -357,6 +358,8 @@ def write_apply_fork_error_report(
         state,
         finding_counts,
         apply_worktree,
+        config,
+        run_codex_exec,
     )
 
 

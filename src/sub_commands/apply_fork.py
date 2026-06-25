@@ -55,7 +55,9 @@ def cmoc_apply_fork_impl(
     generate_commit_message: Callable[[Path, Path, dict, CmocConfig], str],
     normalize_targets: Callable[[Path, set[Path]], list[Path]],
     write_report: Callable[[Path, Path, str, SessionState, list[int], str, CmocConfig], Path],
-    write_error_report: Callable[[Path, str, SessionState, list[int], Path], Path],
+    write_error_report: Callable[
+        [Path, str, SessionState, list[int], Path, CmocConfig], Path
+    ],
 ) -> int:
     """Codex CLI による apply loop を isolated apply worktree 上で実行する。"""
     if scope not in {"rolling", "session", "full"}:
@@ -159,7 +161,7 @@ def cmoc_apply_fork_impl(
         write_state(path, state)
         if report_path is None:
             report_path = write_error_report(
-                root, branch, state, finding_counts, apply_worktree
+                root, branch, state, finding_counts, apply_worktree, config
             )
         typer.echo(f"- report: `{report_path}`")
         raise
