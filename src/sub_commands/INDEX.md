@@ -1,28 +1,28 @@
 # `apply`
 
 ## Summary
-- apply サブコマンド群の実装領域で、apply run の作成・実行・破棄・join と、それらを支える worktree 特定、apply branch 管理、process id 状態、report 生成を扱う。
-- isolated worktree 上での Codex による finding 列挙・適用・commit・state 更新から、完了後の session branch への取り込み、失敗時や中断時の cleanup まで、apply lifecycle 全体の入口になる。
-- apply 中の編集禁止対象差分、想定外差分、merge conflict、既存 worktree・branch・process の残存など、apply 固有の保護・復旧・警告処理を調べる起点になる。
+- apply 系サブコマンドの実装群で、apply run の開始、実行結果の取り込み、破棄、report 生成、worktree・branch・process 状態の補助処理を扱う入口。
+- session branch と apply branch/worktree の関係、apply state の ready/running/done 遷移、Codex による finding 適用、join/abandon 時の cleanup や warning 出力を追うための実装がまとまっている。
+- apply 実行中の編集禁止対象差分の検出・ロールバック、想定外差分や merge conflict の扱い、process id の保存・停止確認など、apply run のライフサイクル全体に関わる制御へ進む起点になる。
 
 ## Read this when
-- apply run の開始、実行、完了、破棄、join、cleanup までの全体像や責務分担を把握したいとき。
-- apply 用 worktree や branch の作成・特定・削除、session branch との関係、apply state の遷移を確認または変更したいとき。
-- Codex による finding 列挙・適用、変更 commit、apply 結果 report 生成までの apply loop を追いたいとき。
-- 実行中 apply process の pid 保存・削除・停止確認、abandon 時の TERM/KILL 手順、自己 process 除外を確認または変更したいとき。
-- apply join 時の想定外差分検出、force resolve、merge conflict 処理、INDEX.md conflict の自動解決、join report の内容を確認または変更したいとき。
-- oracle、.agents、memo など apply 中に編集してはいけない対象への差分検出、rollback、再試行、最終エラー化を確認または変更したいとき。
+- apply run を開始して isolated worktree 上で finding を適用し、差分 commit と report 作成まで進める全体フローを確認・変更したいとき。
+- 完了した apply run を session branch へ取り込む join 処理、merge conflict、想定外差分、force-resolve、cleanup の挙動を確認・変更したいとき。
+- 未 join の active apply run を破棄し、process 停止、apply worktree/branch 削除、state 初期化を行う abandon 処理を確認・変更したいとき。
+- apply branch や session branch から対象 worktree を特定する規則、apply branch 名からの期待 path 導出、process id 状態ファイルの読み書きや削除を確認・変更したいとき。
+- apply fork や join/abandon の利用者向け report 内容、結果ラベル、frontmatter、変更要約、失敗時フォールバックを確認・変更したいとき。
+- apply 実行中または join 時に、編集禁止対象の差分、想定外差分、INDEX.md だけの conflict 自動解決など、apply 固有の差分制御を調べたいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンドの CLI 登録、dispatch、共通引数処理だけを調べたいとき。
-- session state の型定義、永続化 schema、session id の生成、状態モデル全般を調べたいとき。
-- git command wrapper、worktree root、path model、config 読み込み、CmocError 表示などの共通 runtime 実装だけを調べたいとき。
-- Codex 呼び出しに渡す prompt や AgentCallParameter の詳細だけを調べたいときは、prompt や builder の担当領域へ直接進む。
-- oracle file の正本仕様、INDEX.md 生成規則、routing 文書の標準を確認したいとき。
-- apply の外部挙動を検証するテスト観点や既存テストケースだけを確認したいときは、対応するテスト領域へ進む。
+- apply 以外のサブコマンドの CLI 登録、dispatch、引数定義を調べたいとき。
+- session state の型定義、永続化形式、session_id の生成・管理、apply.apply_branch の schema そのものを調べたいとき。
+- git command wrapper、worktree root、branch 操作、clean worktree 判定、timestamp、report directory、config 読み込みなどの共通 runtime 基盤だけを調べたいとき。
+- Codex 呼び出し用 prompt や structured output builder の詳細だけを調べたいとき。
+- oracle file の正本仕様、INDEX.md 生成規則、編集禁止領域の原則そのものを調べたいとき。
+- apply package に import 時処理や再 export があるかだけを確認したい場合を除き、パッケージ説明だけを読む目的のとき。
 
 ## hash
-- 075b067eddecaa79e7e3c6647e9980ab3284676d8e75916fe17daea520e9d0f0
+- f911a56f1c0739f0c4c0544fe220f796d3c75297958c2780ae20d7950bffa663
 
 # `indexing.py`
 

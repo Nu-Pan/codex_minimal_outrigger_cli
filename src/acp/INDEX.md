@@ -1,23 +1,27 @@
 # `builder`
 
 ## Summary
-- AI エージェント呼び出しに渡す AgentCallParameter と Structured Output schema を、用途別の builder 群として組み立てる領域。apply、indexing、review、session、tui などの上位処理から呼ばれ、role・summary・goal・補助プロンプト・モデル種別・reasoning effort・ファイルアクセス条件・schema 指定を用途ごとにまとめる入口になる。
-- サブコマンド本体の実行制御ではなく、各処理が AI に何を依頼し、どの入力文脈と出力契約で呼び出すかを確認するための実装まとまり。
+- AI エージェント呼び出し用のパラメータ構築実装と Structured Output schema を、機能領域ごとにまとめる入口。適用処理、目次エントリー生成、oracle file レビュー、session join の conflict 解消、TUI 実行前のパラメータ選定などで、role、goal、補助プロンプト、ファイルアクセス方針、モデル種別、reasoning effort、schema 参照をどう組み合わせるかを扱う。
+- 各サブコマンドの本体制御ではなく、別の AI エージェントへ渡す依頼文と実行条件を組み立てる層を追うためのまとまり。下位要素は、レビュー所見列挙・採否・整理、実装修正依頼、差分要約、目次生成、権限選択、conflict marker 解消など、AI 呼び出しの目的別に分かれている。
 
 ## Read this when
-- apply 系処理、INDEX.md エントリー生成、oracle レビュー、session join の conflict marker 解消、TUI 実行パラメータ選定で、AI 呼び出しに渡すプロンプト内容や実行条件を確認・変更したいとき。
-- 各用途の Structured Output schema が、どの意味情報・判定結果・レビュー所見・整理操作を出力契約として求めているかを確認したいとき。
-- 対象ファイル、関連所見、git diff、review 結果、conflict 対象一覧、ユーザープロンプト、標準文書などの補助文脈が、AI 向け prompt にどう埋め込まれるかを追いたいとき。
-- モデルクラス、reasoning effort、sandbox/approval、ファイルアクセスモード、構造化出力の指定など、複数の AI 呼び出し builder に共通する設定の使い分けを確認したいとき。
+- サブコマンド内で AI エージェントを呼び出す際の AgentCallParameter 構築箇所を探したいとき。
+- AI に渡す role、summary、goal、補助文脈、対象パスや入力データの埋め込み方、読み取り専用または書き込み許可のファイルアクセス方針を確認または変更したいとき。
+- AI 呼び出しごとのモデル種別、reasoning effort、Structured Output schema の対応関係を確認したいとき。
+- 適用処理のレビュー所見列挙、所見対応作業、差分からの変更要約に使うプロンプトや出力契約の所在を選びたいとき。
+- oracle file レビューで、新規所見、所見の肯定理由・反証理由、採否判定、所見リスト整理を行う各 AI 呼び出しの設定を追いたいとき。
+- 目次エントリー生成や TUI 実行パラメータ選定など、標準文書やファイルアクセス規則を含めて AI に判断させる呼び出し仕様を確認したいとき。
+- session join で検出された merge conflict marker の解消を別エージェントへ依頼するプロンプト条件を確認したいとき。
 
 ## Do not read this when
-- 各サブコマンドの CLI 引数解析、サブコマンド登録、実行順序、結果保存、表示処理など、builder を呼び出す側の制御フローだけを調べたいとき。
-- AI 呼び出し基盤そのもの、共通 prompt 部品、Markdown レンダリング、Structured Output 実行器、低レベルの path model や git command wrapper の詳細だけを確認したいとき。
-- oracle file や realization file の正本仕様本文、レビュー基準本文、INDEX.md エントリーの個別文面そのものを読みたいとき。
-- 実際のファイル編集、差分分類、merge conflict 解消、git merge、worktree 操作など、AI 呼び出し依頼後に行われる下位アルゴリズムや外部操作の詳細だけを調べたいとき。
+- サブコマンドの CLI 引数解析、実行順序、git 操作、ファイル走査、保存、表示、レポート生成など、AI 呼び出しを起動する側の制御フローを調べたいとき。
+- AgentCallParameter、ModelClass、ReasoningEffort、FileAccessMode などの共通データ構造や enum の定義そのものを確認したいとき。
+- 共通プロンプトのレンダリング、構造化ドキュメント表現、パス解決、ファイルアクセス規則生成など、複数 builder から利用される基盤処理の詳細を調べたいとき。
+- oracle file、realization file、review standard、apply review standard、INDEX.md エントリー標準など、AI 呼び出しに同梱される標準本文そのものを読みたいとき。
+- 個別機能の実装挙動やテスト対象を調べたいだけで、AI に渡すプロンプトや Structured Output schema の契約を確認する必要がないとき。
 
 ## hash
-- 528ab39c274e16d459a55423d705c3dd80e923a41770457cfad809bc34ea419f
+- 167fe3cdad1b2b6f00fe1c9de975fc5bace8ef7d9365b74fb627146c4f0ed212
 
 # `prompt_parts`
 

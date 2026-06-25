@@ -1,23 +1,25 @@
 # `apply`
 
 ## Summary
-- `cmoc apply` 配下で、サブコマンド実行前後の検証・準備・適用・後処理を組み立てる builder 群を扱う領域。fork 名や worktree path の検証、prompt/approval/rename 設定、run-root 適用、worktree の git 状態確認、引き継ぎ付きの継続入力生成など、apply 系処理の実行材料を作る入口になる。
-- 個別サブコマンドの本体制御ではなく、apply 実行に必要な入力値・プロンプト・状態検証・補助出力をどのように作るかを確認するための領域。
+- 適用処理で使う AI エージェント呼び出し定義をまとめる領域。分岐環境でのレビュー所見列挙、所見に基づく実装修正依頼、差分からの人間向け変更要約など、適用処理内で AI に渡すプロンプトと構造化出力契約への入口になる。
+- oracle file と realization file の照合、realization file の要修正点抽出、検出済み所見を渡した修正作業、未加工差分をもとにした変更要約など、適用処理のうち AI 連携の仕様を追うためのまとまり。
 
 ## Read this when
-- `cmoc apply` の各処理で、fork 名、対象 path、run-root、worktree、uncommitted change、merge 済み branch などの検証条件や失敗時メッセージを確認・変更したいとき。
-- apply 系サブコマンドがエージェントに渡す prompt、approval 設定、sandbox 設定、model effort、構造化出力、作業完了後の引き継ぎ文面を確認・変更したいとき。
-- `cmoc apply` が oracle file と realization file の対応、rename 指示、review 所見、git diff、実行ログなどをどのように補助入力として組み立てるかを追いたいとき。
-- apply 実行前後に必要な worktree 状態確認、ブランチ適用、実行結果の要約、継続作業用の入力生成など、複数の apply 系処理で使う builder の責務境界を確認したいとき。
+- 適用処理で AI エージェントへ渡す role、goal、補助プロンプト、ファイルアクセス権限、モデル種別、reasoning effort、Structured Output schema の選択を確認または変更したいとき。
+- oracle file と realization file を照合し、realization file の要修正点を列挙するレビュー呼び出しの仕様を確認したいとき。
+- 列挙済みの所見を実装修正担当エージェントへ渡し、realization file を修正させる呼び出し条件を確認したいとき。
+- 適用処理の結果として、未加工の差分をもとに人間向けの変更要約を生成する仕様を確認したいとき。
+- レビュー所見や変更要約を JSON の Structured Output として受け取るための契約を確認したいとき。
 
 ## Do not read this when
-- `cmoc apply` の CLI 引数定義、サブコマンド選択、全体の制御フロー、複数 builder の呼び出し順を調べたいとき。
-- AI 呼び出し基盤、共通 prompt 部品、Markdown レンダリング、Structured Output 実行そのもの、低レベルの path model や git command wrapper の実装を確認したいとき。
-- apply 以外のサブコマンドの builder、prompt、schema、実行設定を調べたいとき。
-- 実際のファイル編集アルゴリズム、差分分類の中身、git merge や worktree 操作の低レベル手順だけを確認したいとき。
+- 適用処理のブランチ作成、ブランチ削除、差分取得、差分適用、レポート保存など、AI 呼び出し以外の制御フローを調べたいとき。
+- AgentCallParameter、ModelClass、ReasoningEffort、FileAccessMode などの共通データ構造や enum の定義そのものを確認したいとき。
+- 共通 prompt 部品のレンダリング、Markdown 化、path model、構造化ドキュメント処理など、複数機能にまたがる基盤実装を調べたいとき。
+- 個別機能の正本仕様、realization standard、apply review standard の本文そのものを読みたいとき。
+- 生成された所見や変更要約を CLI 表示、ログ、保存ファイル、レポート全体へどう組み込むかを調べたいとき。
 
 ## hash
-- 744eb0a9ce32e59348c311dba838c9bc54bf55aaf6cd9aca35a375e3087a7be7
+- c5ee205913a96a783cb9d8f2b12afae9862eb983462900fdc3edfd27e7ac56d7
 
 # `indexing`
 

@@ -1,20 +1,22 @@
 # `fork`
 
 ## Summary
-- `cmoc apply fork` の補助的な AI エージェント呼び出しと、その構造化出力契約を扱う領域。変更要約、ファイル単位の要修正所見列挙、所見対応作業のためのプロンプト構築と schema がまとまっている。
-- 適用・分岐処理そのものではなく、作業レポートやレビュー所見、所見対応エージェントへの入力をどのように組み立てるかを確認する入口になる。
+- 適用処理を分岐環境で進める際に使う AI 呼び出しと、その構造化出力契約をまとめた領域。所見列挙、所見対応、変更要約など、レビューから修正依頼、作業結果の要約までのプロンプト生成と出力 schema への入口になる。
+- oracle file と realization file の対応確認、realization file の要修正点抽出、検出済み所見をもとにした修正依頼、差分の人間向け要約といった、適用分岐処理内の AI エージェント連携仕様を確認するためのまとまり。
 
 ## Read this when
-- `cmoc apply fork` で差分要約、所見列挙、所見対応作業を AI エージェントへ依頼する際の prompt、モデル種別、reasoning effort、ファイルアクセス権限、Structured Output schema の対応を確認・変更したいとき。
-- apply fork のレビュー結果や変更要約を、カテゴリ単位またはファイル単位の構造化データとしてどの粒度で返すかを確認したいとき。
-- oracle file や realization file を起点にした要修正点調査、または所見リストを使った realization file 修正依頼のプロンプト構成を追いたいとき。
-- 作業レポート用に git diff や所見 JSON がどのように補助入力としてエージェント prompt へ埋め込まれるかを確認したいとき。
+- 適用分岐処理で AI エージェントへ渡す role、goal、補助プロンプト、ファイルアクセス権限、モデル種別、reasoning effort、Structured Output schema の選択を確認または変更したいとき。
+- oracle file と realization file を照合して、realization file の要修正点を列挙するレビュー呼び出しの仕様を追いたいとき。
+- 列挙済みの所見を実装修正担当エージェントへ渡し、realization file を修正させる呼び出し条件を確認したいとき。
+- 適用分岐処理の結果として、未加工の差分や主要な変更対象をもとに人間向けの変更要約を生成する仕様を確認したいとき。
+- レビュー所見や変更要約を JSON の Structured Output として受け取るための契約を確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` 全体の CLI 引数処理、fork 作成・削除、git 操作、対象ファイル一覧の作成、複数呼び出しの統合など、サブコマンド本体の制御フローを調べたいとき。
-- 個々の差分を検出するアルゴリズム、変更をカテゴリへ分類する実処理、または実際のファイル修正ロジックを確認したいとき。
-- 共通の prompt 部品、Markdown レンダリング、パス解決 helper、AI 呼び出し基盤そのものの実装を確認したいとき。
-- apply fork 以外のサブコマンドの prompt、schema、エージェント設定を調べたいとき。
+- 適用分岐処理のブランチ作成、ブランチ削除、差分取得、差分適用、レポート保存など、AI 呼び出し以外の制御フローを調べたいとき。
+- AgentCallParameter、ModelClass、ReasoningEffort、FileAccessMode などの共通データ構造や enum の定義そのものを確認したいとき。
+- 共通 prompt 部品のレンダリング、Markdown 化、path model、構造化ドキュメント処理など、複数機能にまたがる基盤実装を調べたいとき。
+- 個別機能の正本仕様、realization standard、apply review standard の本文そのものを読みたいとき。
+- 生成された所見や変更要約を CLI 表示、ログ、保存ファイル、レポート全体へどう組み込むかを調べたいとき。
 
 ## hash
-- d38cd804b314e18a5f023f0c20960742dc3f039536ec53b5f7daf6fd61647bb2
+- 94555cab0a65a828745156abf12cef61ee6ad8e44e6b2902504d24a4ee1b6f85
