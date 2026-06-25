@@ -1,24 +1,20 @@
-# `apply.py`
+# `apply`
 
 ## Summary
-- apply fork の実行、apply branch の session branch への join、未 join apply run の abandon を扱うサブコマンド実装。
-- apply 用 linked worktree と branch の作成・削除、session state の apply 状態遷移、finding の列挙・refine・適用 loop、join 時の想定外差分検査と INDEX.md conflict の機械解決をまとめて扱う。
-- apply run のライフサイクル、許可される apply/session 差分、apply branch と session branch の worktree 解決に関する入口になる。
+- apply 系サブコマンドの実処理をサブコマンド単位に収める package。`apply/fork.py`、`apply/join.py`、`apply/abandon.py` が各コマンドの本命処理を持つ。
+- fork の isolated worktree 作成と finding loop、join の merge/force-resolve/report、abandon の cleanup/state reset と、それらで共有する apply runtime helper への入口になる。
 
 ## Read this when
-- apply fork/join/abandon の事前条件、状態遷移、終了コード、表示内容、cleanup 挙動を確認または変更したいとき。
-- apply branch・apply worktree の作成、merge、削除、force-resolve、unexpected changes 判定に関わる挙動を追いたいとき。
-- finding の refine/application loop、dirty target 更新、apply report/error report の呼び出しタイミングを確認したいとき。
-- apply 中に許可される差分と禁止される差分、INDEX.md だけの merge conflict をどう扱うかを確認したいとき。
+- apply fork/join/abandon の実行条件、状態遷移、副作用、report、cleanup、対象 path 選定を確認または変更したいとき。
+- apply 系コマンドのどの本命処理ファイルまたは共通 helper を読むべきか選びたいとき。
 
 ## Do not read this when
-- CLI の typer command 宣言や option 定義だけを確認したいときは、サブコマンドの登録側を読む。
+- CLI の Typer command 宣言や option 定義だけを確認したいときは、`main.py` を読む。
 - finding の生成プロンプトや apply fork 用パラメータ構築の詳細を確認したいときは、acp.builder.apply.fork 側を読む。
-- git 操作、state 読み書き、worktree 作成削除などの低レベル runtime helper の実装を確認したいときは、runtime 側を読む。
-- 設定 schema や apply fork の loop 回数などの設定項目定義だけを確認したいときは、設定モデル側を読む。
+- git 操作、state 読み書き、worktree 作成削除などの低レベル runtime helper の実装だけを確認したいときは、runtime 側を読む。
 
 ## hash
-- 600a025e951f9f61cd05e6ccdc05afe51907c243ee4b203e5ef76521cd113635
+- 989e62e355b578d97dae091a8444e2b0543c9a351c7e8abe48ef7c31c15923cb
 
 # `indexing.py`
 
@@ -61,41 +57,110 @@
 # `review.py`
 
 ## Summary
-- active な session branch 上で oracle を isolated review worktree に列挙・レビュー・検証・判定し、INDEX.md 変更だけを取り込んで Markdown レポートを出力するサブコマンド処理を定義している。
-- review 用の一時 branch/worktree 作成、対象 oracle file の scope 別列挙、finding の enumerate/merge/validate/judge loop、INDEX.md 差分だけの commit と merge conflict 解消、レビュー結果レポート描画までを扱う。
+- active な session branch 上で oracle review を実行するサブコマンド統括フローを定義している。
+- session 状態確認、clean worktree 確認、review 用一時 branch/worktree のライフサイクル、対象列挙・finding loop・INDEX 取り込み・レポート生成 helper の呼び出し順序を扱う入口になる。
 
 ## Read this when
 - oracle をレビューするサブコマンドの実行条件、作業ツリーの清潔性確認、一時 worktree/branch のライフサイクル、または active session branch 制約を確認したいとき。
-- review 対象となる oracle file の列挙条件、session scope と full scope の違い、INDEX.md と binary file を除外する対象選定を調べるとき。
-- finding を列挙・統合・反証/擁護検証・判定するループ制御、Structured Output の finding list への適用、finding id や verdict の扱いを変更するとき。
-- review worktree で生成された INDEX.md 差分だけを commit/merge する制御、INDEX.md 以外の差分検出、merge conflict を session 側採用で解消する挙動を確認するとき。
-- review 結果レポートの frontmatter、判定区分、対象 oracle file 一覧、fatal/minor finding 表示、path 表示の整形を変更するとき。
+- review oracle 全体の呼び出し順序、失敗時にも report を書く制御、または下位 helper の接続を確認・変更したいとき。
 
 ## Do not read this when
 - 通常の CLI アプリ登録、Typer の command wiring、または他サブコマンドの引数定義だけを調べたいとき。
+- review 対象となる oracle file の列挙条件、session scope と full scope の違い、INDEX.md と binary file を除外する対象選定だけを調べるときは、`review_targets.py` を読む。
+- finding を列挙・統合・反証/擁護検証・判定するループ制御、Structured Output の finding list への適用、finding id や verdict の扱いを変更するときは、`review_loop.py` を読む。
+- review worktree で生成された INDEX.md 差分だけを commit/merge する制御、INDEX.md 以外の差分検出、merge conflict を session 側採用で解消する挙動を確認するときは、`review_index.py` を読む。
+- review 結果レポートの frontmatter、判定区分、対象 oracle file 一覧、fatal/minor finding 表示、path 表示の整形を変更するときは、`review_report.py` を読む。
 - oracle review 用 prompt parameter の具体的な文面や Structured Output schema の定義を確認したいときは、builder 側の該当実装を読む。
 - git command 実行、worktree 操作、branch 操作、設定読み込み、session state 読み込み、report directory 解決などの共通 runtime helper 自体を調べたいときは、runtime 側の実装を読む。
 - oracle file の正本仕様内容そのものや、INDEX.md エントリーとして何を書くべきかの規則を確認したいときは、oracle 側の仕様断片を読む。
 - 生成済みレポートの個別内容や過去実行結果を確認したいだけのときは、レポート出力先の生成物を読む。
 
 ## hash
-- 764ded2bfb5029ee6e4e562dc675abe45a11a4f36591f0e50e2d56ece73da8d8
+- da34890c9d586595154820a8b028253f100cb4b390c3742335e67d7621ffc2b5
 
-# `session.py`
+# `review_index.py`
 
 ## Summary
-- cmoc の session 操作の実装であり、通常 branch から session branch を作成し、session branch を home branch へ join し、または merge せず abandon する制御を扱う。
-- session 状態ファイルの生成・更新、cmoc 管理 branch での実行拒否、worktree clean 確認、`.cmoc` ignore 確保、session home branch への切り替え、session branch の削除を含む。
-- join 時の merge conflict では、conflict 対象を検出して Codex CLI 用の conflict resolution parameter を組み立て、解決後の marker 残存・unmerged path を確認して merge commit を完了する入口になる。
+- oracle review 用 worktree で生成された INDEX.md 差分の commit と、review branch から session branch への merge を扱う。
+- INDEX.md 以外の差分検出、porcelain status の path 抽出、INDEX.md だけが conflict した場合に session 側採用で解決する処理をまとめている。
 
 ## Read this when
-- session fork、join、abandon の実行条件、状態遷移、git 操作、副作用、CLI 出力を確認または変更したいとき。
-- active session の重複検出、session branch 名、session home branch、session state file の扱いを追いたいとき。
-- session join の merge conflict 解決フロー、Codex CLI 呼び出し、conflict marker 検査、git add/commit の制御を確認したいとき。
-- session 操作で発生する CmocError の条件や利用者向け復旧案を調べたいとき。
+- review worktree の INDEX.md 変更だけを commit する条件、INDEX.md 以外の差分をエラーにする制御、または status parsing を確認・変更したいとき。
+- review branch merge の失敗時に INDEX.md conflict だけを自動解決する挙動、merge 後 commit の取得、手動解決へ回す条件を調べたいとき。
 
 ## Do not read this when
-- session 以外の sub command の CLI 定義、引数宣言、Typer app への登録だけを確認したいとき。
+- review oracle 全体の一時 worktree 作成・削除順序や active session 制約を確認したいときは、`review.py` を読む。
+- oracle file の対象列挙、finding loop、または report rendering を確認したいときは、それぞれ `review_targets.py`、`review_loop.py`、`review_report.py` を読む。
+- git command 実行 wrapper や worktree 操作 helper 自体の実装を調べたいときは、runtime 側を読む。
+
+## hash
+- 42f2f7a768474b5b07e47ec55750ce65ea6bba3439c7cd667355dc5c6ca6efa9
+
+# `review_loop.py`
+
+## Summary
+- oracle review の finding enumerate/merge/validate/judge loop を実行する実装。
+- Codex に渡す review oracle 用 AgentCallParameter builder を呼び分け、finding id、advocate/challenger reasons、verdict、judge reason を Structured Output から更新する。
+
+## Read this when
+- finding の列挙、統合、反証/擁護検証、判定のループ回数や停止条件を確認・変更したいとき。
+- merge finding operation の delete/replace/merge 適用、finding id の採番、finding list の更新規則を調べたいとき。
+- review oracle 用 Codex 呼び出し purpose、作業 cwd、既存 finding JSON の渡し方を変更したいとき。
+
+## Do not read this when
+- oracle review の active session 制約、一時 worktree 作成、INDEX.md commit/merge、report rendering を確認したいときは、それぞれ該当する review 系 module を読む。
+- prompt parameter の文面や Structured Output schema の定義そのものを確認したいときは、acp.builder.review.oracle 側を読む。
+
+## hash
+- 56a9c39c86337277ad4be649704deccd9415f64ce48f6e2194b06b95ca3d9fd5
+
+# `review_report.py`
+
+## Summary
+- oracle review 結果を Markdown + YAML frontmatter の report として描画し、report directory へ書き出す処理を扱う。
+- verdict 判定、frontmatter fields、評価対象 oracle file の表、fatal/minor finding section、path 表示整形をまとめている。
+
+## Read this when
+- review report の出力 path、frontmatter 項目、result/verdict の判定条件、または fatal/minor finding の表示形式を確認・変更したいとき。
+- oracle path の表示整形、finding section の Markdown 文面、エラー時 report の描画を調べたいとき。
+
+## Do not read this when
+- review oracle の実行順序、一時 branch/worktree、対象 oracle file の列挙、finding loop、INDEX.md merge を確認したいときは、それぞれ該当する review 系 module を読む。
+- 生成済み report の個別内容だけを読みたいときは、report 出力先の生成物を直接読む。
+
+## hash
+- 5a4bc1bc25bc2c3390133302a704cfab266f75d5d961859b561a4a82777866ee
+
+# `review_targets.py`
+
+## Summary
+- oracle review の対象 oracle file を scope 別に列挙する処理を扱う。
+- full scope では全 oracle file、session scope では session 開始 commit から変更された oracle file のうち、INDEX.md、git ignored、binary file を除外した対象を返す。
+
+## Read this when
+- review 対象となる oracle file の列挙条件、session scope と full scope の違い、または INDEX.md・binary・git ignored file の除外条件を確認・変更したいとき。
+- session 開始 commit から oracle 配下の変更 path を取得し、列挙済み oracle file と照合する処理を調べたいとき。
+
+## Do not read this when
+- review oracle 全体の実行順序、一時 worktree、finding loop、INDEX.md merge、report rendering を確認したいときは、それぞれ該当する review 系 module を読む。
+- binary 判定、git ignored 判定、git diff wrapper 自体の実装を調べたいときは、runtime 側を読む。
+
+## hash
+- f42029951fa3338498710cca446b7ee6dbf8f87039fc10726d2cecc385a0c05c
+
+# `session`
+
+## Summary
+- session 系サブコマンドの実処理をサブコマンド単位に収める package。`session/fork.py`、`session/join.py`、`session/abandon.py` が各コマンドの本命処理を持つ。
+- 通常 branch からの session branch 作成、home branch への join、merge せず破棄する abandon の入口になる。
+- join 時の merge conflict resolution は `session/join.py` 内で扱う。
+
+## Read this when
+- session fork/join/abandon の実行条件、状態遷移、git 操作、副作用、CLI 出力を確認または変更したいとき。
+- session 系コマンドのどの本命処理ファイルを読むべきか選びたいとき。
+
+## Do not read this when
+- session 以外の subcommand の CLI 定義、引数宣言、Typer app への登録だけを確認したいとき。
 - SessionState のデータ構造、状態ファイルの path 規則、git helper、branch 判定、worktree 判定そのものの実装を確認したいとき。
 - session join conflict resolution parameter の文面や AgentCallParameter の組み立て詳細だけを確認したいとき。
 - oracle 側の正本仕様断片、path keyword の定義、INDEX.md 生成規則を確認したいとき。
@@ -106,14 +171,18 @@
 # `tui.py`
 
 ## Summary
-- `cmoc tui` サブコマンドの実処理を担う実装。`.cmoc` の git ignore 保証、オリジナルプロンプト用 markdown ファイルの初期生成、エディタ起動、HTML コメント除去と strip、パラメータ解決 agent call、完全 prompt 生成、Codex CLI/TUI 起動を扱う。
+- 対話的な依頼入力を一時 Markdown として作成し、利用可能なエディタで編集させた後、入力内容を解決用 Codex 実行に渡して TUI 用の AgentCallParameter を組み立てる処理を扱う。
+- プロンプト本文からコメントを除去し、Markdown 見出しを StructDoc 階層へ変換し、解決済み設定に基づいて file access mode や各種標準フラグを complete prompt へ反映する入口になる。
 
 ## Read this when
-- `cmoc tui` の実行フロー、エディタ選択、プロンプト保存先、コメント除去、解決済みパラメータからの最終 `AgentCallParameter` 構築を確認または変更したいとき。
+- `cmoc tui` の実行フロー、特に元プロンプトファイルの初期化、エディタ起動、入力読み取り、解決済みパラメータから Codex TUI 呼び出しを作る処理を確認したいとき。
+- TUI 実行時に使うエディタ探索順、エディタ失敗時の CmocError、または Markdown コメント除去・見出し分解の挙動を変更したいとき。
+- 解決済みパラメータの nested `value` 形式から file access mode や oracle/realization/index-entry 標準フラグを取り出す既定値処理を確認したいとき。
 
 ## Do not read this when
-- TUI 用パラメータ解決 prompt や JSON schema の詳細だけを確認したいときは、`acp/builder/tui` 側を読む。
-- Codex CLI/TUI subprocess の profile 生成や CODEX_HOME 検証そのものを調べたいときは、runtime helper を読む。
+- サブコマンドの登録、CLI 引数解析、または `cmoc tui` を呼び出す外側のコマンド構成だけを確認したいとき。
+- Codex 実行そのもの、Codex TUI プロセスの起動実装、または AgentCallParameter の汎用定義を確認したいとき。
+- TUI 用パラメータ解決プロンプトの内容や complete prompt 全体の構築規則を確認したいだけで、このファイルがそれらを呼び出す箇所に関心がないとき。
 
 ## hash
-- manual
+- a92ec4d509d7f4e77762e013475cb1996e063376a6d00f39b4a530332d5aa72e

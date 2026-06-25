@@ -39,21 +39,21 @@
 # `file_finding_enumeration.py`
 
 ## Summary
-- `cmoc apply fork` で、指定された起点ファイルから realization file の所見を列挙するための AI 呼び出しパラメータを構築する実装。
-- 起点パスとリポジトリルートを解決し、oracle・realization・apply review の各 standard を含む完全 prompt を組み立て、所見リスト用の Structured Output schema とともに返す入口である。
+- `cmoc apply fork` で、指定された oracle file または realization file を起点に realization file の所見を列挙する AI エージェント呼び出しパラメータを構築する実装。
+- リポジトリルートと対象パスを実パスへ解決し、oracle standard、realization standard、apply review standard を含む read-only の complete prompt を組み立て、MAINSTREAM モデル、MEDIUM reasoning、所見リスト用 schema を指定して返す。
 
 ## Read this when
-- `cmoc apply fork` のファイル単位の所見リストアップで、AI に渡す role・summary・goal・参照 standard・読み取り専用アクセス設定を確認または変更したいとき。
-- 所見列挙用の AgentCallParameter のモデルクラス、reasoning effort、file access mode、prompt 生成、出力 schema の接続を追いたいとき。
-- 起点として渡された oracle file または realization file から、対象リポジトリ内の realization file を調査させる prompt 文面の責務を確認したいとき。
+- `cmoc apply fork` のファイル単位の所見リストアップ呼び出しで、AI に渡す role、summary、goal、標準群、file access mode を確認または変更したいとき。
+- 所見列挙の起点となるパスの解決方法、対象ツリーの扱い、oracle file と realization file を読むよう促す prompt 内容を確認したいとき。
+- ファイル単位レビューの品質やコストに関わるモデルクラス、reasoning effort、出力 schema の選択を確認したいとき。
 
 ## Do not read this when
-- 所見リストの JSON schema 自体の項目や形式を確認したいだけのときは、所見リスト用 schema の本文を読む。
-- complete prompt の共通組み立て規則、各 standard の本文挿入方法、markdown レンダリングの詳細を調べたいときは、それぞれの共通 prompt 構築や構造化文書レンダリングの実装を読む。
-- `cmoc apply fork` の実際の fork 適用処理、所見の評価基準そのもの、またはパス解決 helper の挙動を調べたいときは、この prompt パラメータ構築ではなく該当する実装や正本仕様を読む。
+- `cmoc apply fork` の所見リストそのものの schema 定義を確認したいだけのときは、schema を定義する隣接ファイルを読む。
+- complete prompt の共通組み立て処理や標準文書の本文を確認したいときは、prompt parts や標準定義側を読む。
+- 実際に列挙された所見の集約、適用、表示、CLI 引数処理を調べたいときは、それぞれの責務を持つ apply fork 側の別実装へ進む。
 
 ## hash
-- 0afe13d940c449eb500b7516868d85ccaac1ffe20a43e645c1558ae157322dda
+- 828e4f9dfd774dd768a2937f394254c2d7c1f5cc9145338503b6a3f8207b7700
 
 # `finding_application.py`
 

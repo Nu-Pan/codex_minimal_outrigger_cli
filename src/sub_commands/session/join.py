@@ -7,21 +7,14 @@ import typer
 from acp.builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter,
 )
-from basic.acp import AgentCallParameter
 from cmoc_runtime import (
     CmocError,
-    SessionState,
-    active_session_for_home,
-    branch_exists,
     current_branch,
     ensure_cmoc_ignored,
-    head_commit,
-    is_managed_branch,
     load_state_for_branch,
     repo_root,
     require_clean_worktree,
     run_git,
-    state_path,
     timestamp,
     write_state,
 )
@@ -29,45 +22,6 @@ from cmoc_runtime import (
 
 CodexExec = Callable[..., object]
 GitRun = Callable[..., object]
-
-
-def cmoc_session_fork_impl() -> None:
-    """現在の local branch から cmoc session branch を作成する。"""
-    root = repo_root()
-    branch = current_branch(root)
-    if is_managed_branch(branch):
-        raise CmocError(
-            "cmoc managed branch 上では session fork できません。",
-            ["通常の local branch に checkout してから再実行してください。"],
-            f"current branch: {branch}",
-        )
-    require_clean_worktree(root)
-    ensure_cmoc_ignored(root)
-    existing = active_session_for_home(root, branch)
-    if existing:
-        raise CmocError(
-            "active session が既に存在します。",
-            ["既存 session を join または abandon してから再実行してください。"],
-            str(existing),
-        )
-    session_id = timestamp()
-    session_branch = f"cmoc/session/{session_id}"
-    start_commit = head_commit(root)
-    run_git(["switch", "-c", session_branch], root)
-    state = SessionState()
-    state.session.session_home_branch = branch
-    state.session.session_start_commit = start_commit
-    write_state(state_path(root, session_id), state)
-    typer.echo(
-        "\n".join(
-            [
-                "# cmoc session fork",
-                f"- session_branch: `{session_branch}`",
-                f"- session_home_branch: `{branch}`",
-                f"- session_state_file: `{state_path(root, session_id)}`",
-            ]
-        )
-    )
 
 
 def cmoc_session_join_impl(codex_exec: CodexExec, git: GitRun = run_git) -> None:
@@ -143,8 +97,7 @@ def resolve_session_join_conflict(root: Path, codex_exec: CodexExec, git: GitRun
             "\n".join(str(path) for path in remaining_markers),
         )
     for path in conflicted_paths:
-        if path.exists():
-            git(["add", str(path.relative_to(root))], root)
+        git(["add", "--", str(path.relative_to(root))], root)
     unmerged = git(["diff", "--name-only", "--diff-filter=U"], root).stdout.strip()
     if unmerged:
         raise CmocError(
@@ -153,40 +106,3 @@ def resolve_session_join_conflict(root: Path, codex_exec: CodexExec, git: GitRun
             unmerged,
         )
     git(["commit", "--no-edit"], root)
-
-
-def cmoc_session_abandon_impl() -> None:
-    """active session を home branch へ merge せず破棄する。"""
-    root = repo_root()
-    branch = current_branch(root)
-    _session_id, path, state = load_state_for_branch(root, branch)
-    if not branch.startswith("cmoc/session/"):
-        raise CmocError("session abandon は session branch 上で実行してください。", [], branch)
-    if state.session.state != "active" or state.apply.state != "ready":
-        raise CmocError("session abandon の事前条件を満たしていません。", [], str(path))
-    require_clean_worktree(root)
-    ensure_cmoc_ignored(root)
-    home = state.session.session_home_branch
-    if not home:
-        raise CmocError("session home branch を特定できません。", [], str(path))
-    if not branch_exists(root, home):
-        raise CmocError(
-            "session home branch が存在しません。",
-            ["session state file と git branch の状態を確認してください。"],
-            f"session_home_branch: {home}",
-        )
-    run_git(["switch", home], root)
-    state.session.state = "abandoned"
-    write_state(path, state)
-    run_git(["branch", "-D", branch], root)
-    typer.echo(
-        "\n".join(
-            [
-                "# cmoc session abandon",
-                f"- abandoned_branch: `{branch}`",
-                f"- switched_to: `{home}`",
-                "- session_state: `abandoned`",
-                f"- joined_at: `{state.session.joined_at}`",
-            ]
-        )
-    )
