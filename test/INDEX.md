@@ -1,24 +1,21 @@
 # `_support.py`
 
 ## Summary
-- realization test で共有される補助コードであり、Git 操作、最小リポジトリ作成、CODEX_HOME の一時設定、apply 用 worktree 解決など、複数テストから再利用する setup/helper をまとめている。
-- CLI runner、主要コマンド module、runtime helper、path model、設定型、ACP 型をテストから扱えるように import し、テスト本文側が共通準備処理を重複して持たないための入口になっている。
+- realization test 群で共通利用するテスト補助モジュール。Typer の CLI runner、git 操作、最小リポジトリ作成、Codex home 準備、Python 実行ファイル生成、apply 用 worktree 解決など、CLI テストの前提環境を組み立てる小さな helper をまとめている。
+- 実装本体や個別サブコマンドの仕様を直接検証する本文ではなく、複数のテストが同じセットアップや状態確認を共有するための入口として位置づけられる。
 
 ## Read this when
-- テスト内で一時 Git リポジトリを作る、初期 commit 済みの fixture repo を用意する、現在 branch を確認するなど、Git 前提の共通 setup を使うまたは変更する場合。
-- CODEX_HOME をテスト用に差し替える処理、auth.json を含む一時 Codex home の作成、monkeypatch による環境変数設定を確認する場合。
-- apply 系テストで保存状態から apply branch の worktree path を導く補助処理を使うまたは変更する場合。
-- テストで Typer CLI runner や cmoc runtime、主要 subcommand module、path token 解決、ACP/config 型を共通 import している前提を確認する場合。
-- 複数のテストに同じ setup 処理を追加しようとしており、既存 helper に統合できるか判断する場合。
+- CLI テストで一時 git repository、初期 commit、user 設定、oracle ディレクトリ、ignored な oracle file などの共通 fixture を作る helper を確認・再利用したいとき。
+- テスト内で CODEX_HOME、auth.json、実行可能な Python スクリプト、Typer CliRunner、現在 branch 名、apply branch に対応する worktree path を準備・取得する既存 helper を探すとき。
+- テスト失敗の原因が共通セットアップ、git command 呼び出し、テスト用 repository の初期状態、または shared import の差し替え対象にありそうなとき。
 
 ## Do not read this when
-- 個別コマンドの期待挙動や assertion を確認したいだけの場合は、対象コマンドのテスト本文を読む。
-- cmoc runtime や subcommand の実装仕様を確認したい場合は、実装側の該当 module を読む。
-- path token の意味、repo/work root の仕様、sandbox mode 変換などの本体ロジックを調べる場合は、この共有 test helper ではなく実装側の定義を読む。
-- INDEX 生成、oracle 仕様、またはルーティング文書の方針を調べる場合は、このテスト補助 module ではなく該当する仕様・実装・テストを読む。
+- 個別サブコマンドの期待動作、入出力、永続状態、エラー条件を確認したいだけのときは、対象サブコマンドの実装または個別テストを読む。
+- path token、sandbox mode、preflight、TUI prompt parsing などの本体ロジックを理解・変更したいときは、対応する implementation module を直接読む。
+- テストケース固有の assertion や scenario を探しているときは、この共通 helper ではなく該当する test module を読む。
 
 ## hash
-- fd14d4042fff7ffe5c0d41d27c044e396963aa5a32afb82508bf9b28afe2cd43
+- f6f7fe7881a530da660ffebd31555224dfde6ff5aee8d86792527e253c949bad
 
 # `test_apply_abandon_cli.py`
 
@@ -109,85 +106,83 @@
 # `test_cli_init_tui.py`
 
 ## Summary
-- CLI の初期化と TUI 起動フローの外部挙動を検証する realization test。初期化時の既存状態保護、`.cmoc` の無視設定、既定設定の生成と同期、sub command ログ、linked worktree での保存先、TUI が editor 入力からパラメータ解決と Codex 起動へ進む経路、Markdown prompt 解析の境界を扱う。
+- CLI の初期化と対話起動まわりの外部挙動を検証する realization test。初期化時の `.cmoc` 管理対象外化、`.gitignore` 更新、既存 staged/unstaged 変更の保全、linked worktree での root/cwd/state/log の扱い、既定設定ファイルの生成と既存設定値の保持、サブコマンドログ、対話起動時のプロンプト編集・パラメータ解決・Codex 起動条件を扱う。
+- Markdown プロンプト解析について、 fenced code block 内の見出し記法を見出し扱いしないこと、見出し前の本文を本文セクションとして保持することも検証する。
 
 ## Read this when
-- `cmoc init` の git 操作、`.gitignore` 更新、`.cmoc` 配下の追跡解除、初期化 commit、既存 staged/unstaged 変更の保護を変更する。
-- 既定 `config.json` の生成内容、既存設定への default 補完、人間が書いた設定値を上書きしない挙動を変更する。
-- sub command ログ、TUI prompt ログ、linked worktree 実行時の root/cwd、schema や complete prompt の保存場所を変更する。
-- TUI で editor が書いた依頼文を整形し、パラメータ解決用 Codex 実行と本体 Codex TUI 起動へ渡す制御を変更する。
-- Markdown prompt parser の見出し抽出、fenced code block 内の見出し無視、見出し前本文の扱いを変更する。
+- `init` コマンドの git 操作、`.cmoc` の ignore/untrack、初期コミット、`.gitignore` への追記、既存 index/worktree 変更を壊さない挙動を変更または確認するとき。
+- 初期設定ファイルの既定値、既存設定との同期、既存の人間設定値を上書きしない挙動を変更または確認するとき。
+- linked worktree 上での `init` や対話起動が、main worktree 側と linked worktree 側のどちらに config・log・state・schema・complete prompt を置くかを確認するとき。
+- 対話起動でエディタを開き、コメント除去済みの依頼文から実行パラメータを解決し、その結果に応じて Codex TUI を起動する流れを変更または確認するとき。
+- サブコマンド起動ログの event、command、argv など、起動した CLI コマンドを識別するログ挙動を確認するとき。
+- Markdown プロンプトを見出し単位に分解する処理で、コードブロック内の `#` や見出し前本文の扱いを確認するとき。
 
 ## Do not read this when
-- 対象が `init`、`tui`、Markdown prompt parser の外部挙動ではなく、別サブコマンド固有の CLI 挙動である。
-- 設定 schema の定義そのものや model 名の正本仕様を確認したいだけで、初期化時にそれが書き込まれる挙動を検証しない。
-- git helper、path model、Codex 実行 wrapper などの内部実装だけを局所的に読むべきで、ここで検証している外部副作用や制御フローに関係しない。
-- TUI の見た目や対話 UI の詳細を調べたいだけで、editor 入力、prompt 保存、パラメータ解決、Codex 起動の結合挙動を扱わない。
+- 個別の `init` 実装内部 helper の責務やアルゴリズムだけを調べたい場合は、対応する実装ファイルを直接読む方がよい。
+- 設定 schema の全項目や正本仕様上の既定値そのものを確認したい場合は、設定定義や oracle 側の該当文書を読む方がよい。
+- 対話起動後の Codex/LLM の出力品質や実際の対話 UI 表示を検証したい場合は、この対象は制御ロジックのテストであり直接の入口ではない。
+- Markdown 一般仕様や parser 全体の網羅的な挙動を調べたい場合は、ここで扱うのは見出し分解の限定的なケースだけなので、parser 実装またはより直接のテストを読む方がよい。
 
 ## hash
-- c020984aa7c0a50641148ddf9c370da58dfe96b64616db432f84bc8086663d75
+- e6b4d44cacfedc87208e49827c66651cfb7cdbeb8976627d0aa935b87643e165
 
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 呼び出しラッパーの実行時挙動を検証する realization test。exec 経路ではプロンプトを stdin 経由で渡すこと、構造化出力 schema とログ保存先、CODEX_HOME、profile 生成、subcommand log、console 表示を確認する。TUI 経路では prompt 引数、profile の sandbox 設定、call log、subcommand log、標準出力・標準エラーの扱いを確認する。
-- worktree 上で exec を実行した場合に schema が cwd 側の work root 配下へ保存され、repo root 側へ不要な schema 状態を作らないことも扱う。repo の config.json が Codex profile の model と reasoning_effort に反映されることを検証する入口でもある。
+- Codex CLI 呼び出しを包む runtime 層のテストで、exec 実行と TUI 実行が生成する引数、標準入力、環境変数、プロファイル、schema 保存先、ログ、コンソール表示を検証する。
+- fake の codex コマンドや monkeypatch を使い、外部 Codex 自体ではなく cmoc 側の起動制御、記録、設定反映、作業ディレクトリ別の状態保存を確認する。
 
 ## Read this when
-- Codex CLI を起動する runtime ラッパー、特に exec/TUI の argv、stdin、cwd、env、profile、output schema、ログ出力の外部挙動を変更または調査するとき。
-- AgentCallParameter の model class、reasoning effort、file access mode が Codex profile や起動引数へどう反映されるかをテスト側から確認したいとき。
-- worktree 内の cwd で Codex exec を実行する場合の schema 保存場所や、repo root と work root の使い分けを確認するとき。
-- Codex 呼び出しの subcommand log、call log、stdout/stderr log、console summary の期待値を更新する必要があるとき。
-- repo の config.json から Codex 用 model 名や reasoning_effort が読み込まれる挙動を変更するとき。
+- run_codex_exec または run_codex_tui の挙動を変更する時。
+- Codex CLI へ渡すプロンプト、引数、CODEX_HOME、profile、output schema、cwd の扱いを確認したい時。
+- Codex 呼び出しログ、stdout/stderr ログ、SubcommandLogger の codex_call イベント、コンソール表示の仕様をテストで確認したい時。
+- repo config の codex model や reasoning_effort が生成 profile に反映される挙動を変更または調査する時。
 
 ## Do not read this when
-- Codex CLI 呼び出しではなく、一般的な path model、oracle/realization 分類、INDEX.md 生成規則そのものを調べるとき。
-- Git 操作、worktree 作成、Codex home setup、SubcommandLogger などの test fixture/helper の実装詳細だけを確認したいとき。
-- 個別サブコマンドの業務ロジック、LLM 出力内容の品質、または Codex CLI 以外の外部コマンド実行を調査するとき。
-- 実装ファイル側の責務分割や helper の内部設計だけを変更し、exec/TUI の公開的な起動引数・環境・保存ログ・schema 配置の期待値に影響しないとき。
+- Codex CLI 実行以外のサブコマンド、git 操作、path model、oracle 文書処理のテストを探している時。
+- 実際の Codex CLI や LLM の出力品質、対話内容そのものを検証したい時。
+- runtime 層の実装詳細を先に読みたい場合は、対応する実装ファイルを直接読む方がよい。
 
 ## hash
-- 87586292dfbc07fbd1d30b8dc9fc7a26338516225d73c433dddcbef9ce61395f
+- 601b59c25b65ba1977e77d29c378ac64039b201e02ab969eeb5b66d9875c018c
 
 # `test_codex_runtime_home.py`
 
 ## Summary
-- Codex CLI 実行ラッパーが使用する Codex home の決定と事前検証を扱う realization test。環境変数未設定時は通常の home 配下を使うこと、環境変数設定時はその値を Codex CLI 呼び出し環境に保ちながら解決済みの保存先・ログへ反映することを検証する。
-- Codex home が存在しない、ディレクトリではない、または認証情報を欠く場合に、Codex CLI を起動する前に利用者向けの CmocError として失敗する境界を検証する。
+- Codex CLI 実行ラッパーが使用する Codex home の解決と事前検証を扱う realization test。環境変数が未設定の場合は通常の home 配下を使うこと、環境変数で指定された値を CLI 呼び出し環境には保持しつつ内部では root 基準で解決すること、存在しない・ディレクトリでない・認証情報がない Codex home を Codex CLI 起動前に CmocError として失敗させることを検証する。
 
 ## Read this when
-- Codex CLI 実行時の CODEX_HOME の扱い、既定の Codex home、相対パス指定、実行プロファイルの保存先、または呼び出しログに記録される Codex home を変更・調査する場合。
-- Codex CLI 起動前に行う Codex home と認証情報の検証、またはその失敗時のエラー文言・next_actions を変更・調査する場合。
-- run_codex_exec が fake Codex CLI に渡す環境変数や引数と、戻り値に含まれる codex_home・profile_path・call_log_path の関係を確認する場合。
+- Codex CLI 呼び出し時の CODEX_HOME の既定値、相対パス解決、子プロセスへ渡す環境変数、実行結果に記録される codex_home や profile_path の挙動を確認・変更する時。
+- Codex home や auth.json の事前検証、またはそれらが不正な場合の CmocError の summary・detail・next_actions を変更する時。
+- run_codex_exec が Codex CLI を呼ぶ前に認証環境を検査する制御をテストしたい時。
 
 ## Do not read this when
-- Codex home や CODEX_HOME に関係しない AgentCallParameter、モデル選択、reasoning effort、ファイルアクセスモードの仕様だけを確認したい場合。
-- Codex CLI の実出力品質、LLM 応答内容、または実際の認証フローそのものを検証したい場合。
-- リポジトリ作成 fixture やテスト支援 API の一般的な使い方を知りたいだけで、Codex home の実行時解決や事前検証に触れない場合。
+- Codex CLI の出力イベント解析、容量待ち、プロンプト作成、モデルや reasoning effort の選択など、Codex home の解決・検証と無関係な run_codex_exec の挙動を調べる時。
+- cmoc 全体の oracle/realization 境界、INDEX.md 生成規則、またはルーティング文書の仕様を確認したい時。
+- 実際の Codex CLI や LLM の出力品質そのものを検証したい時。
 
 ## hash
-- 4327dbfd51651c594d492426c94c5d67c607cbb145b3823973c827bd0b17f59c
+- 0b5e6b71990de6210a442b8915b2bf18394492d336d14f0bd7ec248f7f8736de
 
 # `test_codex_runtime_retry.py`
 
 ## Summary
-- Codex CLI 実行ラッパーの retry 制御を検証する realization test。schema validation 失敗後の再実行、capacity エラー時の再試行、quota 超過時の probe と resume/rerun、並列呼び出し時の代表 probe 共有、各試行の call log と subcommand log の記録を扱う。
+- Codex CLI 実行ラッパーのリトライ制御を検証する realization test。構造化出力の schema validation 失敗後の再試行、capacity エラー時の再試行、quota 超過時の probe と resume/rerun、並列呼び出し時の quota probe 集約、各呼び出しログと subcommand event の記録を扱う。
+- 偽の Codex 実行ファイルを一時 PATH に置き、出力 JSONL、終了コード、標準出力・標準エラー、last message ファイル、呼び出し回数を制御して、外部 Codex CLI に依存せず retry と logging の外部挙動を確認する。
 
 ## Read this when
-- Codex CLI 呼び出しで、semantic output の schema validation 失敗後に再試行される挙動を確認・変更したいとき。
-- capacity エラーや quota 超過を stdout JSONL の error event から検出し、再試行・待機・probe・resume を行う制御ロジックを確認・変更したいとき。
-- Codex CLI 呼び出しごとの call log、stdout/stderr/output path、subcommand log event の status・purpose・returncode を検証したいとき。
-- quota 超過後に thread id がある場合は resume し、ない場合は元 prompt で再実行する挙動を確認したいとき。
-- 複数の Codex CLI 呼び出しが同時に quota 超過した場合に、availability probe を代表 1 回に抑える制御を確認したいとき。
+- Codex CLI 呼び出しの retry 条件、retry 後の最終結果、または call log/subcommand log の記録内容を変更・調査する場合。
+- schema validation retry、capacity retry、quota polling、quota availability probe、thread resume、resume token がない場合の rerun の挙動を確認したい場合。
+- quota 超過検出を JSONL の error event に限定する境界や、stderr・通常 stdout に出た同じ文言を直接失敗として扱う挙動を確認したい場合。
+- 複数の同時 Codex 呼び出しが quota 超過したとき、代表 probe を 1 回だけ実行し各呼び出しが復帰する制御を変更・検証する場合。
 
 ## Do not read this when
-- Codex CLI に渡す profile、sandbox、model、reasoning effort などの基本 argv 構築だけを確認したいとき。
-- Codex CLI retry ではなく、通常成功時の出力取得や単純な失敗時エラー変換だけを確認したいとき。
-- oracle file の正本仕様や routing 文書の記述方針を確認したいとき。
-- 実際の Codex CLI や LLM の品質を評価したいとき。
+- Codex CLI 呼び出しの retry や quota/capacity/schema validation と無関係なサブコマンド、path 処理、oracle/realization 分類、通常の CLI 引数解析だけを調べる場合。
+- 実際の retry 実装やログ出力処理そのものを読みたい場合は、先に実装側の Codex runtime を読む方が直接的である。
+- Codex CLI や LLM の品質、実モデルの応答内容、ネットワーク越しの実サービス挙動を検証したい場合。この対象は偽実行ファイルで制御ロジックを検証する。
 
 ## hash
-- 42de0686524bd03c457bf927ed774826d01b851b710bbbbbfbb7a878ac0c9906
+- e6c82b09811e6c3fa97a95d467f4eb4b9d09e49ed9ecc511defeb025a0ffd5e1
 
 # `test_indexing_cli.py`
 
