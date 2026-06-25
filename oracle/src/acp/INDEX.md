@@ -1,24 +1,24 @@
 # `builder`
 
 ## Summary
-- 各サブコマンドや用途別に、AI agent 呼び出しパラメータを組み立てるための正本仕様断片へ進む入口。
-- レビュー、apply fork 後の確認・修正支援、INDEX.md エントリー生成、セッション合流時の conflict 解消、TUI 実行前のパラメータ選定について、prompt、補助文脈、ファイルアクセス制約、モデル設定、reasoning effort、Structured Output 契約との接続を扱う下位領域をまとめる。
-- 実際の CLI 制御フロー、git 操作、端末 UI、永続状態更新、本文標準そのものではなく、それらの処理から呼び出される判定・レビュー・整理・修正支援 agent へ何を渡し何を受け取るかを確認するための分岐点になる。
+- AI エージェント呼び出しパラメータ構築の正本仕様断片へ進むための領域。適用後レビュー支援、目次エントリー生成、oracle review、セッション合流時の conflict 解消、TUI 実行前パラメータ選定について、prompt に渡す文脈、role・summary・goal、モデル設定、reasoning、ファイルアクセス設定、Structured Output schema との接続を確認する入口になる。
+- 各サブコマンドの実処理本体ではなく、担当エージェントへどの前提・制約・入力・出力契約で依頼するかを定義する。
 
 ## Read this when
-- cmoc の各機能が AI agent を呼び出す際の role、summary、goal、補助 prompt、参照 standard、ファイルアクセスモード、モデル種別、reasoning effort、出力 schema の正本値を探したいとき。
-- oracle review、apply fork 後レビュー、INDEX.md エントリー生成、セッション合流時の conflict 解消、TUI 実行前パラメータ選定のいずれかについて、呼び出し入力と応答契約の対応を調べたいとき。
-- 対象機能の実処理ではなく、AI に渡す文脈の組み立て方や、AI から返る Structured Output をどの意味単位で期待するかを確認したいとき。
-- 同階層の下位領域のうち、どの agent 呼び出し仕様へ進むべきかを、サブコマンドや用途別に切り分けたいとき。
+- サブコマンドが AI エージェントを呼び出す際の AgentCallParameter 相当の組み立て方を、用途別に確認したいとき。
+- 変更差分要約、ファイル単位レビュー所見列挙、所見修正依頼、INDEX.md エントリー生成、oracle file レビュー、merge conflict marker 解消、TUI 実行前判定のいずれかの prompt 仕様を確認したいとき。
+- エージェント prompt に含める対象ファイル、差分、所見、既知理由、標準文書、元プロンプト、対象パスなどの補助文脈の範囲を切り分けたいとき。
+- 各 AI 呼び出しで使うモデル種別、reasoning effort、読み取り・書き込み権限、git 操作禁止などの制約、Structured Output schema を確認したいとき。
+- AI 呼び出しの応答が、空配列、判定結果、編集操作、要約、所見、実行パラメータなどとしてどの契約で返るかを確認したいとき。
 
 ## Do not read this when
-- CLI 引数解析、サブコマンド全体の制御フロー、fork 作成、ブランチ操作、merge 実行、差分取得、端末 UI 描画、永続状態更新など、AI 呼び出しパラメータ以外の実装仕様を調べたいとき。
-- oracle file、realization file、path keyword、repo root、work root、各種 standard 本文、共通 prompt 構築部品の一般定義だけを確認したいとき。
-- 個別の oracle file 本文を読んで具体的なレビュー所見、変更判断、conflict 解消方針、INDEX.md エントリー内容そのものを考えたいとき。
-- 実装ファイルやテストにおける具体的な関数、CLI 表示、保存形式、git command 実行手順、パッチ生成手順を探しているとき。
+- CLI 引数解析、ブランチ作成、fork 適用、merge 実行、conflict 検出、git diff 取得、レポート保存、永続状態更新、画面描画など、各サブコマンドの制御フロー本体を調べたいとき。
+- oracle file と realization file の基本定義、path keyword、標準文書本文、Markdown 描画、AgentCallParameter や file access mode の共通部品そのものを確認したいとき。
+- 個別の対象ファイル本文を読んで、具体的なレビュー所見、修正内容、conflict 解消判断、または INDEX.md エントリー内容を作りたいとき。
+- AI Agent CLI/TUI プロセスの起動処理、端末 UI、エディタ入力、コメント除去、ログや保存先など、エージェント呼び出しパラメータ以外の実装を探しているとき。
 
 ## hash
-- a123ebbec96bc631fe91246edac90bb495b1958e5aa81517fd1cc4116532674b
+- ab3492b637be835840a696992625f35d6556939fb07da7b9aa6668d0cc9d0f3d
 
 # `prompt_parts`
 

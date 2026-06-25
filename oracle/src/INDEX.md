@@ -1,24 +1,23 @@
 # `acp`
 
 ## Summary
-- cmoc が AI agent を呼び出すために渡すプロンプト本文、補助文脈、ファイルアクセス制約、モデル種別、reasoning effort、Structured Output 契約を定める正本仕様群への入口。
-- 用途別の agent 呼び出しパラメータと、複数用途で共通注入されるプロンプト部品を扱い、レビュー、apply fork 後の確認・修正支援、INDEX.md エントリー生成、セッション合流時の conflict 解消、TUI 実行前のパラメータ選定へ分岐する。
-- 実際の CLI 制御、git 操作、端末 UI、永続状態更新ではなく、それらの処理から呼ばれる AI agent に何を渡し、どの形式の応答を期待するかを確認するための階層。
+- AI エージェント呼び出しに渡す前提・制約・入力・出力契約を定義する oracle src 領域。agent call parameter の用途別構築と、prompt に含める標準部品の組み立て方へ進む入口になる。
+- 適用後レビュー支援、目次エントリー生成、oracle review、conflict 解消、TUI 実行前判定などで、role・summary・goal、補助文脈、モデル設定、reasoning、ファイルアクセス設定、Structured Output schema との接続を確認するための階層である。
 
 ## Read this when
-- cmoc の機能が AI agent を呼び出す際の role、summary、goal、補助 prompt、ファイルアクセスモード、モデル種別、reasoning effort、出力 schema の正本値を確認したいとき。
-- oracle review の所見列挙・擁護・反証・採否判定・マージ、apply fork の所見列挙・整理・対応・変更要約、INDEX.md エントリー生成、session join の conflict 解消、TUI 実行前のパラメータ選定について、呼び出し入力と応答契約を調べたいとき。
-- agent に共通注入されるファイルアクセス規則、ルーティング規則、oracle / realization の基本概念、oracle standard、realization standard、review standard、apply review standard、INDEX.md entry standard のプロンプト本文や注入条件を確認したいとき。
-- 新しい AI agent 呼び出し仕様を追加する前に、既存の用途別パラメータ構築と共通プロンプト部品の責務分担、依存関係、Structured Output schema との接続を把握したいとき。
+- サブコマンドが AI エージェントを呼び出す際に、どの文脈・制約・モデル設定・出力契約で依頼するかを確認したいとき。
+- 変更差分要約、レビュー所見列挙、所見修正依頼、目次エントリー生成、oracle file レビュー、merge conflict marker 解消、TUI 実行前判定に関する prompt 仕様を調べたいとき。
+- agent に渡すファイルアクセス規則、ルーティング規則、oracle / realization の基本概念、各種標準文書、完全な prompt への組み立て条件を確認したいとき。
+- AI 呼び出しの応答を、判定結果、編集操作、要約、所見、実行パラメータ、空配列などとしてどの契約で扱うか確認したいとき。
 
 ## Do not read this when
-- CLI 引数解析、サブコマンド全体の制御フロー、fork 作成、ブランチ操作、merge 実行、差分取得、端末 UI 描画、永続状態更新など、AI 呼び出しパラメータ以外の実処理を調べたいとき。
-- 実装ファイルやテストにおける具体的な関数、状態ファイル形式、git command 実行手順、パッチ生成手順、UI 表示を探しているとき。
-- 個別の oracle file 本文を読んで、具体的な仕様判断、レビュー所見、変更方針、conflict 解消内容、INDEX.md エントリー文面そのものを考えたいとき。
-- path keyword、repo root、work root、StructDoc、AgentCallParameter など、プロンプト構築で参照される基礎データ構造やパス解決モデル自体の定義を確認したいとき。
+- CLI 引数解析、ブランチ作成、fork 適用、merge 実行、conflict 検出、git diff 取得、レポート保存、永続状態更新、画面描画など、各サブコマンドの制御フロー本体を調べたいとき。
+- oracle file と realization file の基本定義、path keyword、標準文書本文、Markdown 描画、AgentCallParameter や file access mode の共通部品そのものを確認したいとき。
+- 個別の対象ファイル本文を読んで、具体的なレビュー所見、修正内容、conflict 解消判断、または目次エントリー内容を作りたいとき。
+- AI Agent CLI/TUI プロセスの起動処理、端末 UI、エディタ入力、コメント除去、ログ、保存先など、エージェント呼び出しパラメータや prompt 部品以外の実装を探しているとき。
 
 ## hash
-- 3a0d8ab92a291f8e9f363aebc6d7847c9172446dab503dea89d717fc29556e3c
+- 0a8c9d836b88a00c7369e0387d51d4c44fdba4e68367e3a62c1003aa20614048
 
 # `basic`
 
@@ -45,19 +44,17 @@
 # `config`
 
 ## Summary
-- cmoc のリポジトリ単位の永続設定を定義する領域。人間が編集する設定 dataclass、Codex CLI に渡すモデル名・reasoning effort 名との対応、init で生成・同期される設定項目、apply fork と review oracle の各種ループ上限を確認する入口になる。
+- 開発対象リポジトリ単位で永続化される cmoc の設定仕様を扱う領域。全体設定、Codex CLI 向け設定、apply fork 向け設定、review oracle 向け設定の構造、既定値、JSON 保存時の Enum 値の扱いを確認する入口になる。
 
 ## Read this when
-- リポジトリごとに永続化される cmoc 設定の構造、既定値、保存時の扱いを確認したいとき。
-- Codex CLI 向けのモデル名や reasoning effort 名と、cmoc 内部の分類値との対応を確認・実装するとき。
-- apply fork の apply ループ・所見改善ループ、または review oracle の所見列挙・マージ・検証ループの既定回数を確認・変更するとき。
-- init が生成・同期する設定ファイルに含める項目や、人間が編集する設定面の範囲を確認するとき。
+- リポジトリごとに保存される cmoc 設定の項目、入れ子構造、既定値を確認したいとき。
+- 初期化処理が生成または同期する、人間編集対象の設定内容について正本仕様を確認したいとき。
+- AI エージェント呼び出しの並列数、Codex CLI のモデルや reasoning effort、apply fork の処理上限、review oracle のループ回数上限に関わる仕様変更を扱うとき。
 
 ## Do not read this when
-- パスキーワードや root 概念そのものの定義だけを確認したいとき。
-- 設定の永続化先を超えて、実際のファイル読み書き処理、JSON 変換処理、init コマンドの制御フローを確認したいとき。
-- apply fork や review oracle のループ内部で行われる具体的な処理内容や所見生成ロジックを調べたいとき。
-- Codex CLI 呼び出し全体の実行手順、プロンプト、サブプロセス制御を調べたいとき。
+- 設定ファイルの実行時の読み書き、JSON 変換、CLI コマンド処理の実装だけを確認したいとき。
+- パス語彙やルートディレクトリの定義を確認したいとき。
+- apply fork や review oracle の処理アルゴリズム、所見生成、マージ、検証の詳細挙動を確認したいとき。
 
 ## hash
-- a370e0d0cb71ebbb02fef3bb47cd296df0aad0edb64dc9c4bc0638d60e3aeeed
+- a7101c642419b144683a448b15f7b8720bab8601f12897491ec4c7ae00454cd6

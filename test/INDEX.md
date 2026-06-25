@@ -162,22 +162,20 @@
 # `test_codex_runtime_retry.py`
 
 ## Summary
-- Codex 実行ラッパーの retry 制御を検証する realization test。semantic output の schema validation 失敗後の再実行、capacity エラー時の再試行ログ、quota exceeded 後の availability probe と resume、resume token 欠落時の失敗、並列実行時に quota probe を代表 1 回に集約する挙動を扱う。
-- fake codex executable、subcommand log、call log、stdout/stderr/output path、CODEX_HOME、resume session_id など、外部 Codex CLI 呼び出しを模した副作用込みで retry 経路を確認する入口になる。
+- Codex 実行ラッパーの再試行制御を検証する realization test。schema 検証失敗時の再実行、capacity エラー時の再試行ログ、quota 超過時の availability probe と resume または通常再実行、並列実行時の代表 probe 集約を、fake Codex CLI とログ副作用で確認する。
 
 ## Read this when
-- Codex CLI 呼び出しの再試行、quota 待機、resume、capacity handling、schema validation retry の挙動を変更・調査するとき。
-- run_codex_exec が生成する call log や subcommand logger の codex_call event の status、purpose、returncode、path 記録を確認するとき。
-- quota availability probe の起動条件、標準入力、profile、ログ保存、console 表示、並列呼び出し時の probe 集約を検証したいとき。
-- Codex 実行時の CODEX_HOME 引き継ぎ、resume token の扱い、quota exceeded から復帰できない場合のエラー境界を確認するとき。
+- Codex CLI 呼び出しの retry・polling・resume 挙動を変更する。
+- schema validation 失敗、capacity、quota exceeded の扱いと、それぞれの再試行時に記録される call log、stdout/stderr/output path、subcommand log event を確認したい。
+- quota availability probe の argv、stdin、CODEX_HOME、console 表示、並列実行時の probe 数制御に関わるテストを探している。
 
 ## Do not read this when
-- Codex 実行ラッパー以外のサブコマンド、path model、oracle/realization 分類、INDEX.md 生成規則を調べるだけのとき。
-- 通常成功する Codex 呼び出しの基本引数構築だけを確認したい場合で、retry・quota・capacity・schema validation failure が関係しないとき。
-- テスト支援関数や fixture の定義そのものを変更する作業で、retry 経路の期待値を確認する必要がないとき。
+- 通常成功する Codex 実行の基本的な argv 組み立てや sandbox/profile 設定だけを確認したい。
+- Codex 以外のサブコマンド、リポジトリ作成、path model、oracle/realization 分類の仕様を調べたい。
+- retry 制御ではなく、ログ基盤そのものの汎用仕様や helper fixture の定義を確認したい。
 
 ## hash
-- 96880e5a09b35e5ffc38e1cdaed31f104e25cb5733ab25de5539277f576a896d
+- 5655c16688d15dfb44a5eeb4af41c7ea35ed96eddcdcc587c4181007d8fe782f
 
 # `test_indexing_cli.py`
 

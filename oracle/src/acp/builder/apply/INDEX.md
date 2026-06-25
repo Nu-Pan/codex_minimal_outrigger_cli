@@ -1,21 +1,18 @@
 # `fork`
 
 ## Summary
-- `cmoc apply fork` のレビュー・修正・レポート生成に使う AI 呼び出し契約と、その入出力 schema をまとめる領域。
-- 適用用ブランチ上の差分要約、ファイル単位の所見列挙、所見リストの整理、所見に基づく realization file 修正用 prompt など、fork 適用後の人間向け確認と実装修正支援に関わる仕様断片への入口になる。
-- 実際の fork 作成・ブランチ操作・差分適用そのものではなく、apply fork の後段で AI agent に渡す役割、制約、参照標準、出力 schema の接続を扱う。
+- `cmoc apply fork` のレビュー・修正・レポート生成で使う AI 呼び出し仕様と、その入出力 schema をまとめる領域。
+- fork 適用に伴う差分要約、所見列挙、所見対応修正の各段階について、prompt に渡す前提・制約・モデル設定・Structured Output との接続を確認する入口となる。
 
 ## Read this when
-- `cmoc apply fork` のレビュー結果から所見を列挙・精査し、realization file 修正へつなげる AI 呼び出し条件を確認したいとき。
-- fork 適用後の差分を、人間が読める変更カテゴリ別サマリーとして生成する prompt や出力契約を確認・変更したいとき。
-- 所見リストや変更要約の Structured Output schema と、それを使う agent 呼び出しとの対応を確認したいとき。
-- apply fork 系の agent に渡す oracle standard、realization standard、apply review standard、ファイルアクセス制約、model class、reasoning effort の正本値を調べたいとき。
+- `cmoc apply fork` で、適用後差分を人間向けに要約する処理、ファイル単位の所見を列挙する処理、または所見に基づく修正担当エージェント呼び出しを実装・確認するとき。
+- fork 適用後のレビュー結果や変更要約を、機械処理可能な JSON schema と AI 呼び出し prompt のどちらの観点から確認すべきかを切り分けたいとき。
+- oracle file、realization file、standard、git diff、所見本文を `cmoc apply fork` の各エージェントへどの権限・制約で渡すかを確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` の CLI 解析、fork 作成、ブランチ操作、差分取得、実際の適用処理そのものを調べたいとき。
-- 個別ファイルのパッチ内容、git 操作の仕様、diff 生成手順を確認したいとき。
-- oracle file と realization file の基本定義、path keyword、repo root 解決、共通 prompt 構築処理、standard 本文そのものを調べたいとき。
-- ルーティング文書、テスト、実装などの変更種別ごとの具体的な判定ロジックや、利用者向け CLI 表示全体の振る舞いを確認したいとき。
+- `cmoc apply fork` の CLI 解析、ブランチ作成、実際の差分取得、git 操作、fork 適用フローそのものを調べたいとき。
+- oracle file と realization file の基本定義、path keyword、standard 本文、または共通 prompt 構築処理の一般仕様を確認したいとき。
+- 個別ファイルのパッチ内容や、検出された所見を受けた具体的な realization file の修正実装を調べたいとき。
 
 ## hash
-- 510f41031a2e656030632d5757b9b99460f5ba72245b38c56ea494ae40150164
+- 37d5d7e3f6d250ba88303e72a7cf7c5a16ef920689e6a458d32e3002af6e692f

@@ -93,22 +93,3 @@
 
 ## hash
 - 0bed168a2a89c47730cdc914c08c08f2a3ad4022595c4b910c5d8ff9ca335524
-
-# `refine_finding.py`
-
-## Summary
-- `cmoc apply fork` で realization file に対する所見リストを改善する AI エージェント呼び出しパラメータを組み立てる正本実装。入力されたファイル別所見の連結結果を prompt に埋め込み、重複・矛盾・明らかな False-Positive の除去、新規所見の追加、先頭から順に消化可能な所見リストへの整理を依頼する。
-- 読み取り専用のファイルアクセス、oracle・realization・apply review の各標準を含む完全 prompt、 flagship model と高い reasoning effort、所見リスト用 schema を返す呼び出し設定を定義する。
-
-## Read this when
-- `cmoc apply fork` のレビュー結果や所見リストを、実装変更前に整理・精査するための agent 呼び出し内容を確認したいとき。
-- 所見リスト改善 prompt に含める役割、目標、入力所見、参照標準、ファイルアクセス制約を変更・検証したいとき。
-- apply fork 系の処理で、所見リスト用 Structured Output schema がどの agent 呼び出しに紐づくかを確認したいとき。
-
-## Do not read this when
-- `cmoc apply fork` の実際の実装適用、fork 作成、ファイル編集、git 操作の処理を調べたいとき。
-- 所見リストの JSON schema 自体、または改善後 JSON の項目定義を確認したいとき。
-- oracle file や realization file の一般定義、path keyword、共通 prompt 組み立て処理そのものを調べたいとき。
-
-## hash
-- dbcd18cc3d27d4bf74eb05d955961889209e4d95d238beac43350f7867314d6a

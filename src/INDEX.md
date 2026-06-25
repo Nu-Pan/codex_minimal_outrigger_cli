@@ -71,33 +71,29 @@
 # `commons`
 
 ## Summary
-- cmoc の複数サブコマンドから共有される runtime helper 層。CLI サブコマンド実行ラッパー、Codex CLI 呼び出し、Codex profile・sandbox 設定、config 永続化、content hash、共通 error 表示、Git 操作、subcommand logging、runtime path、外部コマンド結果型、session state の実装と、それらの集約 import 入口を扱う。
-- 個別サブコマンドの業務処理ではなく、上位 command 実装が共通して使う実行時支援、永続状態、ログ、外部プロセス連携、root/path 解決失敗の共通エラー化などへ進むための入口となる。
+- cmoc の複数サブコマンドや上位モジュールから共有される runtime helper 群をまとめる実装領域。Codex CLI 呼び出し、profile 生成、設定同期、content hash、CLI 実行ラッパー、error 表示、Git 操作、logging、path 解決、実行結果型、session/apply 状態など、個別 command から横断的に使われる共通処理を扱う。
+- 共有 runtime API の集約入口も含み、上位コードがどの helper・型・状態・git/path/logging 機能を import できるかを確認する入口になる。
 
 ## Read this when
-- CLI サブコマンドを共通の実行フロー、work root 強制、進捗表示、完了 summary、例外表示、終了コード処理、subcommand log に載せる処理を確認または変更したいとき。
-- cmoc から Codex CLI を exec または TUI として起動する処理、Codex profile、CODEX_HOME、subprocess env、Structured Output schema 検証、stdout/stderr/output/call log、semantic retry、capacity retry、quota wait、resume token 再開を調べるとき。
-- FileAccessMode から Codex sandbox・permission profile を組み立てる規則、hashed profile/schema の配置、Codex 出力 JSON 読み取り、error text・resume token 抽出、capacity/quota error 判定を確認したいとき。
-- cmoc config の JSON 読み書き、既定値補完、dict 変換、設定値不正時の CmocError 化を扱うとき。
-- file/text sha256、内容 hash 付きファイル生成、binary 判定など、複数 runtime 処理で使う内容ベース helper を確認または変更したいとき。
-- CmocError の保持情報や、任意の例外を利用者向けの ERROR 文面へ整形する共通表示を確認または変更したいとき。
-- Git コマンド実行の共通 wrapper、branch・HEAD・clean worktree・managed branch 判定、run worktree 作成削除、branch 削除、worktree prune、.cmoc ignore 初期化・検証、git ignore 判定を扱うとき。
-- サブコマンド実行ログの JSON Lines 追記、現在 logger の context-local 管理、経過時間や quota wait の累積を確認または変更したいとき。
-- 実行時の repo root、work root、cmoc root の解決、.cmoc 配下の sessions・reports・logs・worktrees・schema・config の配置、timestamp・duration 表示、一時的な cwd 変更を扱うとき。
-- subprocess や Codex exec の共通戻り値型、session/apply state の JSON 変換・読み書き、cmoc 管理 branch からの session-id 抽出、active session 探索を確認または変更したいとき。
-- 共通 runtime API として上位モジュールへ公開する symbol の追加、削除、移動影響を確認したいとき。
+- CLI サブコマンドに共通する実行フロー、進捗表示、終了コード化、例外表示、subcommand log、current logger 設定を確認または変更したいとき。
+- Codex CLI の exec/TUI 呼び出し、profile/schema/environment の準備、Structured Output 検証、capacity/quota error の retry・待機・resume 制御、呼び出しログを調べるとき。
+- Codex profile、file access mode からの sandbox/permission profile 生成、CODEX_HOME 検証、hashed profile/schema 準備、Codex 出力からの error/resume token 抽出を扱うとき。
+- `.cmoc` 配下の config、sessions、reports、logs、worktrees、schema state など runtime 保存先の組み立て、root path 解決、timestamp、duration 表示、一時 cwd 変更を確認するとき。
+- Git repository 状態検査、cmoc 管理 branch/worktree の作成・削除、worktree prune、`.cmoc` の ignore 保証、Git ignore 判定などの共通 Git helper を確認または変更したいとき。
+- サブコマンド実行ログの JSON Lines record、経過時間、quota 待機時間、context-local logger の受け渡しを調べるとき。
+- session/apply state の JSON schema、読み書き、branch 名からの session-id 抽出、active session 探索を確認または変更したいとき。
+- 外部コマンド結果や Codex exec 結果として共有される型、または共通 runtime API の公開 symbol を追加・削除・移動するとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジック、引数定義、生成する report や prompt の内容、ユーザー向け command 固有出力を調べたいとき。その場合は該当 command 実装へ進む。
-- AgentCallParameter、FileAccessMode、CmocConfig、ModelClass、ReasoningEffort などの型定義や既定値そのものを確認したいとき。その場合は basic または config 側の定義を読む。
-- cmoc の path keyword である cmoc root、repo root、run root、work root の概念定義や root 探索アルゴリズム自体を確認したいとき。その場合は path model 側を読む。
-- oracle file、realization file、INDEX.md 生成方針などの正本仕様断片を確認したいとき。この runtime helper 層ではなく oracle 側を読む。
-- ログ、state、config、Codex call log の利用者向け集計・表示・レポート化の仕様を探しているとき。ここは主に保存・記録・読み書きの低レベル処理を扱う。
-- 特定 helper の呼び出し元での意味や、どの条件でその helper を使うべきかを知りたいとき。呼び出し側の command 実装や上位フローを読む方が直接的。
-- テスト期待値、fixture、回帰観点から挙動を確認したいとき。実装本文ではなく対応するテストへ進む。
+- 個別サブコマンドの業務ロジック、引数定義、ファイル生成内容、ユーザー向け出力の順序だけを調べたいとき。その場合は該当 command 実装へ進む。
+- path キーワードそのものの概念定義や、root path model の正本的な意味を確認したいだけのとき。その場合は path model を扱う仕様・実装へ進む。
+- 設定 dataclass の項目定義や既定値そのもの、AgentCallParameter、FileAccessMode、model class、reasoning effort の入力構造だけを確認したいとき。その場合は basic/acp や config 定義側へ進む。
+- ログを読む側、集計する側、表示する側の仕様や実装を探しているとき。この領域は主にログ生成・追記の共通 runtime を扱う。
+- Codex CLI や Git を使う高レベルな command orchestration 全体を追いたいとき。共通 helper の詳細ではなく、呼び出し側の runner や command 実装から読む。
+- INDEX.md の hash 更新ロジック、oracle/realization のルーティング生成仕様、または Git ignore 判定以外の index 管理処理を調べたいとき。
 
 ## hash
-- 59d7a6e53ff488a645c2ad0e6db2be9ce6087c330520faccc13010300197a7b6
+- 13124618470501c87b407d8bf5a0f946309adfd68053d52593d85cbb9c09361d
 
 # `config`
 
