@@ -64,7 +64,7 @@ def cmoc_apply_join_impl(force_resolve: bool) -> None:
         revert_unexpected_changes(root, unexpected, state)
     merge = run_git(["merge", "--no-ff", apply_branch], root, check=False)
     if merge.returncode != 0:
-        resolve_index_conflicts(root)
+        index_conflicts_resolved = resolve_index_conflicts(root)
         merge_conflicts = run_git(
             ["diff", "--name-only", "--diff-filter=U"], root
         ).stdout.splitlines()
@@ -88,7 +88,7 @@ def cmoc_apply_join_impl(force_resolve: bool) -> None:
                 ],
                 "\n".join(merge_conflicts),
             )
-        if not force_resolve:
+        if not index_conflicts_resolved:
             raise CmocError(
                 "apply branch の merge に失敗しました。",
                 ["必要なら手動で解決するか、--force-resolve を検討してください。"],

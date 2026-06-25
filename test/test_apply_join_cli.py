@@ -316,3 +316,59 @@ def test_apply_join_reports_unresolved_non_index_conflict(
     assert "- unresolved: README.md" in report
     assert json.loads(state_path.read_text())["apply"]["state"] == "completed"
     assert apply_worktree.exists()
+
+
+def test_apply_join_continues_after_resolving_index_conflict_in_normal_mode(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    (root / "INDEX.md").write_text("base\n")
+    run_git(root, "add", "INDEX.md")
+    run_git(root, "commit", "-m", "add index")
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    class FakeCodexResult:
+        output_json = {"findings": []}
+
+    monkeypatch.setattr(
+        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    )
+    assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
+    session_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    state_path = (
+        root
+        / ".cmoc"
+        / "sessions"
+        / f"{session_branch.removeprefix('cmoc/session/')}.json"
+    )
+    state = json.loads(state_path.read_text())
+    apply_branch = state["apply"]["apply_branch"]
+    apply_worktree = apply_worktree_from_state(root, state)
+    (apply_worktree / "INDEX.md").write_text("apply\n")
+    run_git(apply_worktree, "add", "INDEX.md")
+    run_git(apply_worktree, "commit", "-m", "apply index")
+    (root / "INDEX.md").write_text("session\n")
+    run_git(root, "add", "INDEX.md")
+    run_git(root, "commit", "-m", "session index")
+
+    result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert not (root / "INDEX.md").exists()
+    assert "merge に失敗しました" not in result.output
+    state = json.loads(state_path.read_text())
+    assert state["apply"]["state"] == "ready"
+    assert state["session"]["last_joined_apply_join_commit"] == run_git(
+        root, "rev-parse", "HEAD"
+    ).stdout.strip()
+    assert not apply_worktree.exists()
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", apply_branch], cwd=root
+        ).returncode
+        != 0
+    )
