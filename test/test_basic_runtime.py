@@ -95,6 +95,16 @@ def test_cli_error_report_is_written_to_stdout(tmp_path: Path, monkeypatch) -> N
     assert result.stderr == ""
 
 
+def test_cli_parse_error_report_is_written_to_stdout() -> None:
+    result = runner.invoke(app, ["--bad-option"])
+
+    assert result.exit_code != 0
+    assert "# ERROR" in result.output
+    assert "CLI 引数解析に失敗しました。" in result.output
+    assert "No such option: --bad-option" in result.output
+    assert result.stderr == ""
+
+
 def test_cli_requires_current_directory_to_be_work_root(
     tmp_path: Path, monkeypatch
 ) -> None:

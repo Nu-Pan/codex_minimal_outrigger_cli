@@ -1,7 +1,10 @@
+import os
 import threading
+from collections.abc import Sequence
 from contextvars import ContextVar
 from pathlib import Path
 
+import click
 import typer
 
 from cmoc_runtime import (
@@ -84,7 +87,48 @@ from sub_commands.review import (
 from sub_commands.tui import cmoc_tui_impl
 
 
-app = typer.Typer(no_args_is_help=True)
+class _CmocTyperGroup(typer.core.TyperGroup):
+    """通常の CLI 引数解析エラーを cmoc のエラーレポートへ変換する。"""
+
+    def main(
+        self,
+        args: Sequence[str] | None = None,
+        prog_name: str | None = None,
+        complete_var: str | None = None,
+        standalone_mode: bool = True,
+        windows_expand_args: bool = True,
+        **extra: object,
+    ) -> object:
+        click_kwargs = {
+            "args": args,
+            "prog_name": prog_name,
+            "complete_var": complete_var,
+            "windows_expand_args": windows_expand_args,
+            **extra,
+        }
+        if "_CMOC_COMPLETE" in os.environ:
+            return super().main(standalone_mode=standalone_mode, **click_kwargs)
+        try:
+            result = super().main(standalone_mode=False, **click_kwargs)
+        except click.ClickException as exc:
+            typer.echo(
+                render_error(
+                    CmocError(
+                        "CLI 引数解析に失敗しました。",
+                        ["コマンド名、サブコマンド名、option、引数を確認して再実行してください。"],
+                        exc.format_message(),
+                    )
+                )
+            )
+            if standalone_mode:
+                raise SystemExit(exc.exit_code) from exc
+            raise
+        if standalone_mode and isinstance(result, int):
+            raise SystemExit(result)
+        return result
+
+
+app = typer.Typer(cls=_CmocTyperGroup, no_args_is_help=True)
 session_app = typer.Typer(no_args_is_help=True)
 apply_app = typer.Typer(no_args_is_help=True)
 review_app = typer.Typer(no_args_is_help=True)
