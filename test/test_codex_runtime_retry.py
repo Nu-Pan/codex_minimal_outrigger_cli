@@ -11,6 +11,7 @@ from _support import (
     json,
     make_repo,
     setup_codex_home,
+    write_python_executable,
 )
 from commons.runtime_codex import run_codex_exec
 
@@ -21,24 +22,20 @@ def test_run_codex_exec_retries_semantic_output(tmp_path: Path, monkeypatch) -> 
     bin_dir.mkdir()
     counter = tmp_path / "counter"
     fake_codex = bin_dir / "codex"
-    fake_codex.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env python3",
-                "import json, pathlib, sys",
-                f"counter = pathlib.Path({str(counter)!r})",
-                "count = int(counter.read_text()) if counter.exists() else 0",
-                "counter.write_text(str(count + 1))",
-                "args = sys.argv[1:]",
-                "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-                "payload = {'ok': True} if count else {'bad': True}",
-                "output.write_text(json.dumps(payload))",
-                "print(json.dumps({'type': 'turn.completed'}))",
-            ]
-        )
-        + "\n"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "payload = {'ok': True} if count else {'bad': True}",
+            "output.write_text(json.dumps(payload))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
     )
-    fake_codex.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     schema = tmp_path / "schema.json"
     schema.write_text(
@@ -98,29 +95,25 @@ def test_run_codex_exec_logs_capacity_retrying_call(
     bin_dir.mkdir()
     counter = tmp_path / "counter"
     fake_codex = bin_dir / "codex"
-    fake_codex.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env python3",
-                "import json, pathlib, sys",
-                f"counter = pathlib.Path({str(counter)!r})",
-                "count = int(counter.read_text()) if counter.exists() else 0",
-                "counter.write_text(str(count + 1))",
-                "args = sys.argv[1:]",
-                "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-                "if count == 0:",
-                (
-                    "    print(json.dumps({'type': 'error', "
-                    "'message': 'Selected model is at capacity'}))"
-                ),
-                "    sys.exit(1)",
-                "output.write_text(json.dumps({'ok': True}))",
-                "print(json.dumps({'type': 'turn.completed'}))",
-            ]
-        )
-        + "\n"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "if count == 0:",
+            (
+                "    print(json.dumps({'type': 'error', "
+                "'message': 'Selected model is at capacity'}))"
+            ),
+            "    sys.exit(1)",
+            "output.write_text(json.dumps({'ok': True}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
     )
-    fake_codex.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
@@ -184,21 +177,17 @@ def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
     ]
     for name, marker_lines, kwargs, expected_detail in cases:
         counter = tmp_path / f"{name}_counter"
-        fake_codex.write_text(
-            "\n".join(
-                [
-                    "#!/usr/bin/env python3",
-                    "import pathlib, sys",
-                    f"counter = pathlib.Path({str(counter)!r})",
-                    "count = int(counter.read_text()) if counter.exists() else 0",
-                    "counter.write_text(str(count + 1))",
-                    *marker_lines,
-                    "sys.exit(1)",
-                ]
-            )
-            + "\n"
+        write_python_executable(
+            fake_codex,
+            [
+                "import pathlib, sys",
+                f"counter = pathlib.Path({str(counter)!r})",
+                "count = int(counter.read_text()) if counter.exists() else 0",
+                "counter.write_text(str(count + 1))",
+                *marker_lines,
+                "sys.exit(1)",
+            ],
         )
-        fake_codex.chmod(0o755)
         try:
             run_codex_exec(parameter, root=root, **kwargs)
         except CmocError as exc:
@@ -219,33 +208,29 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     bin_dir.mkdir()
     calls = tmp_path / "calls.jsonl"
     fake_codex = bin_dir / "codex"
-    fake_codex.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env python3",
-                "import json, os, pathlib, sys",
-                f"calls = pathlib.Path({str(calls)!r})",
-                "args = sys.argv[1:]",
-                "stdin = sys.stdin.read()",
-                "with calls.open('a') as f: f.write(json.dumps({'args': args, 'stdin': stdin, 'codex_home': os.environ.get('CODEX_HOME')}) + '\\n')",
-                "if 'resume' in args:",
-                "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-                "    output.write_text(json.dumps({'ok': True}))",
-                "    print(json.dumps({'type': 'turn.completed'}))",
-                "    sys.exit(0)",
-                "if stdin == 'quota availability probe':",
-                "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-                "    output.write_text(json.dumps({'probe': True}))",
-                "    print(json.dumps({'type': 'turn.completed'}))",
-                "    sys.exit(0)",
-                "print(json.dumps({'type':'thread.started','thread_id':'sess-1'}))",
-                "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
-                "sys.exit(1)",
-            ]
-        )
-        + "\n"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, os, pathlib, sys",
+            f"calls = pathlib.Path({str(calls)!r})",
+            "args = sys.argv[1:]",
+            "stdin = sys.stdin.read()",
+            "with calls.open('a') as f: f.write(json.dumps({'args': args, 'stdin': stdin, 'codex_home': os.environ.get('CODEX_HOME')}) + '\\n')",
+            "if 'resume' in args:",
+            "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "    output.write_text(json.dumps({'ok': True}))",
+            "    print(json.dumps({'type': 'turn.completed'}))",
+            "    sys.exit(0)",
+            "if stdin == 'quota availability probe':",
+            "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "    output.write_text(json.dumps({'probe': True}))",
+            "    print(json.dumps({'type': 'turn.completed'}))",
+            "    sys.exit(0)",
+            "print(json.dumps({'type':'thread.started','thread_id':'sess-1'}))",
+            "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
+            "sys.exit(1)",
+        ],
     )
-    fake_codex.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
@@ -353,33 +338,29 @@ def test_run_codex_exec_reruns_after_quota_without_resume_token(
     bin_dir.mkdir()
     calls = tmp_path / "calls.jsonl"
     fake_codex = bin_dir / "codex"
-    fake_codex.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env python3",
-                "import json, pathlib, sys",
-                f"calls = pathlib.Path({str(calls)!r})",
-                "args = sys.argv[1:]",
-                "stdin = sys.stdin.read()",
-                "records = calls.read_text().splitlines() if calls.exists() else []",
-                "with calls.open('a') as f: f.write(json.dumps({'args': args, 'stdin': stdin}) + '\\n')",
-                "if stdin == 'quota availability probe':",
-                "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-                "    output.write_text(json.dumps({'probe': True}))",
-                "    print(json.dumps({'type': 'turn.completed'}))",
-                "    sys.exit(0)",
-                "if records:",
-                "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-                "    output.write_text(json.dumps({'ok': True}))",
-                "    print(json.dumps({'type': 'turn.completed'}))",
-                "    sys.exit(0)",
-                "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
-                "sys.exit(1)",
-            ]
-        )
-        + "\n"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, pathlib, sys",
+            f"calls = pathlib.Path({str(calls)!r})",
+            "args = sys.argv[1:]",
+            "stdin = sys.stdin.read()",
+            "records = calls.read_text().splitlines() if calls.exists() else []",
+            "with calls.open('a') as f: f.write(json.dumps({'args': args, 'stdin': stdin}) + '\\n')",
+            "if stdin == 'quota availability probe':",
+            "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "    output.write_text(json.dumps({'probe': True}))",
+            "    print(json.dumps({'type': 'turn.completed'}))",
+            "    sys.exit(0)",
+            "if records:",
+            "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "    output.write_text(json.dumps({'ok': True}))",
+            "    print(json.dumps({'type': 'turn.completed'}))",
+            "    sys.exit(0)",
+            "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
+            "sys.exit(1)",
+        ],
     )
-    fake_codex.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
@@ -415,40 +396,36 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
     bin_dir.mkdir()
     calls = tmp_path / "parallel_calls.jsonl"
     fake_codex = bin_dir / "codex"
-    fake_codex.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env python3",
-                "import json, pathlib, sys, time",
-                f"calls = pathlib.Path({str(calls)!r})",
-                "args = sys.argv[1:]",
-                "stdin = sys.stdin.read()",
-                "kind = 'resume' if 'resume' in args else 'probe' if stdin == 'quota availability probe' else 'initial'",
-                "with calls.open('a') as f: f.write(json.dumps({'kind': kind, 'args': args}) + '\\n')",
-                "if kind == 'resume':",
-                "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-                "    output.write_text(json.dumps({'ok': True}))",
-                "    print(json.dumps({'type': 'turn.completed'}))",
-                "    sys.exit(0)",
-                "if kind == 'probe':",
-                "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-                "    output.write_text(json.dumps({'probe': True}))",
-                "    print(json.dumps({'type': 'turn.completed'}))",
-                "    sys.exit(0)",
-                "deadline = time.time() + 5",
-                "while time.time() < deadline:",
-                "    lines = calls.read_text().splitlines() if calls.exists() else []",
-                "    if sum(1 for line in lines if json.loads(line)['kind'] == 'initial') >= 2:",
-                "        break",
-                "    time.sleep(0.01)",
-                "print(json.dumps({'type':'thread.started','thread_id':'sess-parallel'}))",
-                "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
-                "sys.exit(1)",
-            ]
-        )
-        + "\n"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, pathlib, sys, time",
+            f"calls = pathlib.Path({str(calls)!r})",
+            "args = sys.argv[1:]",
+            "stdin = sys.stdin.read()",
+            "kind = 'resume' if 'resume' in args else 'probe' if stdin == 'quota availability probe' else 'initial'",
+            "with calls.open('a') as f: f.write(json.dumps({'kind': kind, 'args': args}) + '\\n')",
+            "if kind == 'resume':",
+            "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "    output.write_text(json.dumps({'ok': True}))",
+            "    print(json.dumps({'type': 'turn.completed'}))",
+            "    sys.exit(0)",
+            "if kind == 'probe':",
+            "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "    output.write_text(json.dumps({'probe': True}))",
+            "    print(json.dumps({'type': 'turn.completed'}))",
+            "    sys.exit(0)",
+            "deadline = time.time() + 5",
+            "while time.time() < deadline:",
+            "    lines = calls.read_text().splitlines() if calls.exists() else []",
+            "    if sum(1 for line in lines if json.loads(line)['kind'] == 'initial') >= 2:",
+            "        break",
+            "    time.sleep(0.01)",
+            "print(json.dumps({'type':'thread.started','thread_id':'sess-parallel'}))",
+            "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
+            "sys.exit(1)",
+        ],
     )
-    fake_codex.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,

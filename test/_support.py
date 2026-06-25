@@ -79,5 +79,10 @@ def setup_codex_home(tmp_path: Path, monkeypatch) -> Path:
     return codex_home
 
 
+def write_python_executable(path: Path, lines: list[str]) -> None:
+    path.write_text("\n".join([f"#!{sys.executable}", *lines]) + "\n")
+    path.chmod(0o755)
+
+
 def apply_worktree_from_state(root: Path, state: dict) -> Path:
     return apply_module.worktree_for_branch(root, state["apply"]["apply_branch"])

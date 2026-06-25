@@ -13,6 +13,7 @@ from _support import (
     setup_codex_home,
     subprocess,
     tui_module,
+    write_python_executable,
 )
 
 def test_init_untracks_existing_cmoc_files_and_commits_cleanup(
@@ -241,19 +242,15 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     fake_code = bin_dir / "code"
-    fake_code.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env python3",
-                "import pathlib, sys",
-                "path = pathlib.Path(sys.argv[-1])",
-                "text = path.read_text()",
-                "path.write_text(text + '\\n<!-- remove me -->\\n# 依頼\\n\\nsrc を確認して必要なら直す\\n')",
-            ]
-        )
-        + "\n"
+    write_python_executable(
+        fake_code,
+        [
+            "import pathlib, sys",
+            "path = pathlib.Path(sys.argv[-1])",
+            "text = path.read_text()",
+            "path.write_text(text + '\\n<!-- remove me -->\\n# 依頼\\n\\nsrc を確認して必要なら直す\\n')",
+        ],
     )
-    fake_code.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     exec_calls = []
     tui_calls = []
@@ -327,44 +324,36 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     bin_dir.mkdir()
     recorder = tmp_path / "codex_record.json"
     fake_code = bin_dir / "code"
-    fake_code.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env python3",
-                "import pathlib, sys",
-                "path = pathlib.Path(sys.argv[-1])",
-                "path.write_text(path.read_text() + '\\nlinked worktree task\\n')",
-            ]
-        )
-        + "\n"
+    write_python_executable(
+        fake_code,
+        [
+            "import pathlib, sys",
+            "path = pathlib.Path(sys.argv[-1])",
+            "path.write_text(path.read_text() + '\\nlinked worktree task\\n')",
+        ],
     )
-    fake_code.chmod(0o755)
     fake_codex = bin_dir / "codex"
-    fake_codex.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env python3",
-                "import json, os, pathlib, sys",
-                f"record = pathlib.Path({str(recorder)!r})",
-                "args = sys.argv[1:]",
-                "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-                "data = {key: {'value': False, 'reason': 'test'} for key in [",
-                "    'oracle_and_realization_basic',",
-                "    'oracle_standard',",
-                "    'realization_standard',",
-                "    'review_oracle_standard',",
-                "    'apply_review_standard',",
-                "    'index_entry_standard',",
-                "]}",
-                "data['file_access_mode'] = {'value': 'repo_write', 'reason': 'test'}",
-                "output.write_text(json.dumps(data))",
-                "record.write_text(json.dumps({'args': args, 'cwd': os.getcwd()}))",
-                "print(json.dumps({'type': 'turn.completed'}))",
-            ]
-        )
-        + "\n"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, os, pathlib, sys",
+            f"record = pathlib.Path({str(recorder)!r})",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "data = {key: {'value': False, 'reason': 'test'} for key in [",
+            "    'oracle_and_realization_basic',",
+            "    'oracle_standard',",
+            "    'realization_standard',",
+            "    'review_oracle_standard',",
+            "    'apply_review_standard',",
+            "    'index_entry_standard',",
+            "]}",
+            "data['file_access_mode'] = {'value': 'repo_write', 'reason': 'test'}",
+            "output.write_text(json.dumps(data))",
+            "record.write_text(json.dumps({'args': args, 'cwd': os.getcwd()}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
     )
-    fake_codex.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     tui_calls = []
 

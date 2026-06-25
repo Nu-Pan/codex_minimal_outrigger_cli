@@ -13,6 +13,7 @@ from _support import (
     run_git,
     setup_codex_home,
     subprocess,
+    write_python_executable,
 )
 from commons.runtime_codex import run_codex_exec, run_codex_tui
 
@@ -25,23 +26,19 @@ def test_run_codex_exec_uses_stdin_and_writes_logs(
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
     fake_codex = bin_dir / "codex"
-    fake_codex.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env python3",
-                "import json, os, pathlib, sys",
-                f"record = pathlib.Path({str(recorder)!r})",
-                "stdin = sys.stdin.read()",
-                "args = sys.argv[1:]",
-                "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-                "output.write_text(json.dumps({'ok': True, 'stdin': stdin}))",
-                "record.write_text(json.dumps({'args': args, 'stdin': stdin, 'codex_home': os.environ.get('CODEX_HOME')}))",
-                "print(json.dumps({'type': 'turn.completed'}))",
-            ]
-        )
-        + "\n"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, os, pathlib, sys",
+            f"record = pathlib.Path({str(recorder)!r})",
+            "stdin = sys.stdin.read()",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text(json.dumps({'ok': True, 'stdin': stdin}))",
+            "record.write_text(json.dumps({'args': args, 'stdin': stdin, 'codex_home': os.environ.get('CODEX_HOME')}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
     )
-    fake_codex.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     schema = tmp_path / "schema.json"
     schema.write_text(
@@ -125,22 +122,18 @@ def test_run_codex_exec_stores_schema_in_cwd_work_root(
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
     fake_codex = bin_dir / "codex"
-    fake_codex.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env python3",
-                "import json, os, pathlib, sys",
-                f"record = pathlib.Path({str(recorder)!r})",
-                "args = sys.argv[1:]",
-                "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-                "output.write_text(json.dumps({'ok': True}))",
-                "record.write_text(json.dumps({'args': args, 'cwd': os.getcwd()}))",
-                "print(json.dumps({'type': 'turn.completed'}))",
-            ]
-        )
-        + "\n"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, os, pathlib, sys",
+            f"record = pathlib.Path({str(recorder)!r})",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text(json.dumps({'ok': True}))",
+            "record.write_text(json.dumps({'args': args, 'cwd': os.getcwd()}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
     )
-    fake_codex.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     schema = tmp_path / "schema.json"
     schema.write_text(
@@ -270,20 +263,16 @@ def test_run_codex_exec_loads_repo_config_json(tmp_path: Path, monkeypatch) -> N
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     fake_codex = bin_dir / "codex"
-    fake_codex.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env python3",
-                "import json, pathlib, sys",
-                "args = sys.argv[1:]",
-                "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-                "output.write_text('done\\n')",
-                "print(json.dumps({'type': 'turn.completed'}))",
-            ]
-        )
-        + "\n"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text('done\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
     )
-    fake_codex.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
