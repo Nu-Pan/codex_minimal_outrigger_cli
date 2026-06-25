@@ -16,7 +16,9 @@ from cmoc_runtime import (
     write_state,
 )
 from sub_commands.apply._runtime import (
+    delete_apply_process_id,
     expected_apply_worktree,
+    read_apply_process_id,
     stop_apply_process,
     worktree_for_branch,
 )
@@ -35,7 +37,7 @@ def cmoc_apply_abandon_impl() -> None:
         root = worktree_for_branch(repo, session_branch)
     else:
         root = repo
-    _session_id, path, state = load_state_for_branch(root, branch)
+    session_id, path, state = load_state_for_branch(root, branch)
     if state.session.state != "active" or state.apply.state == "ready":
         raise CmocError("破棄対象の active apply run がありません。", [], str(path))
     require_clean_worktree(root)
@@ -56,16 +58,13 @@ def cmoc_apply_abandon_impl() -> None:
     apply_worktree = expected_apply_worktree(root, apply_branch)
     warnings: list[str] = []
     if previous == "running":
-        process_id = state.apply.apply_process_id
+        process_id = read_apply_process_id(root, session_id)
         if process_id is None:
-            raise CmocError(
-                "実行中 apply process を特定できません。",
-                ["session state file の apply.apply_process_id を確認してください。"],
-                str(path),
-            )
-        stopped_warning = stop_apply_process(process_id)
-        if stopped_warning:
-            warnings.append(stopped_warning)
+            warnings.append(f"apply process id file missing: {session_id}")
+        else:
+            stopped_warning = stop_apply_process(process_id)
+            if stopped_warning:
+                warnings.append(stopped_warning)
     if branch == apply_branch:
         os.chdir(root)
     if not apply_worktree.exists():
@@ -79,6 +78,7 @@ def cmoc_apply_abandon_impl() -> None:
         warnings.append(f"orphan apply worktree remains: {apply_worktree}")
     if branch_exists(root, apply_branch):
         warnings.append(f"orphan apply branch remains: {apply_branch}")
+    delete_apply_process_id(root, session_id)
     state.apply = ApplyPart()
     write_state(path, state)
     warning_lines = [f"  - {warning}" for warning in warnings] if warnings else ["  - none"]

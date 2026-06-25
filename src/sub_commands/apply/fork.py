@@ -43,6 +43,10 @@ from sub_commands.apply.fork_report import (
     write_apply_fork_error_report,
     write_apply_fork_report,
 )
+from sub_commands.apply._runtime import (
+    delete_apply_process_id,
+    write_apply_process_id,
+)
 
 
 CodexExec = Callable[..., object]
@@ -70,11 +74,11 @@ def cmoc_apply_fork_impl(
     oracle_snapshot_commit = head_commit(root)
     apply_worktree = worktrees_dir(root) / session_id / run_id
     create_run_worktree(root, apply_branch, apply_worktree, "HEAD")
+    write_apply_process_id(root, session_id, os.getpid())
     state.apply = ApplyPart(
         state="running",
         apply_branch=apply_branch,
         oracle_snapshot_commit=oracle_snapshot_commit,
-        apply_process_id=os.getpid(),
     )
     write_state(path, state)
     finding_counts: list[int] = []
@@ -148,12 +152,12 @@ def cmoc_apply_fork_impl(
                 config,
                 codex_exec,
             )
+        delete_apply_process_id(root, session_id)
         state.apply.state = "completed"
-        state.apply.apply_process_id = None
         write_state(path, state)
     except BaseException:
+        delete_apply_process_id(root, session_id)
         state.apply.state = "error"
-        state.apply.apply_process_id = None
         write_state(path, state)
         if report_path is None:
             report_path = write_apply_fork_error_report(

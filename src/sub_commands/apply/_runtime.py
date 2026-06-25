@@ -46,6 +46,30 @@ def worktree_for_branch_optional(root: Path, branch: str) -> Path | None:
     return None
 
 
+def apply_process_id_path(root: Path, session_id: str) -> Path:
+    return root / ".cmoc" / "state" / "apply_processes" / f"{session_id}.pid"
+
+
+def write_apply_process_id(root: Path, session_id: str, process_id: int) -> None:
+    path = apply_process_id_path(root, session_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(f"{process_id}\n")
+
+
+def read_apply_process_id(root: Path, session_id: str) -> int | None:
+    path = apply_process_id_path(root, session_id)
+    if not path.is_file():
+        return None
+    try:
+        return int(path.read_text().strip())
+    except ValueError:
+        return None
+
+
+def delete_apply_process_id(root: Path, session_id: str) -> None:
+    apply_process_id_path(root, session_id).unlink(missing_ok=True)
+
+
 def stop_apply_process(process_id: int) -> str | None:
     """running abandon では cleanup 前に apply process が消えたことを確認する。"""
     if process_id == os.getpid():

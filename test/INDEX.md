@@ -88,7 +88,7 @@
 # `test_apply_abandon_cli.py`
 
 ## Summary
-- apply abandon の apply worktree/branch cleanup、missing cleanup warning、running process 停止、running state の process id 必須条件、apply worktree からの実行を検証する realization test。
+- apply abandon の apply worktree/branch cleanup、missing cleanup warning、running process 停止、running state の process id file 不在時 cleanup、apply worktree からの実行を検証する realization test。
 
 ## Read this when
 - `cmoc apply abandon` の cleanup、state 遷移、process 終了、warning 表示、実行 worktree 解決を変更する。

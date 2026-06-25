@@ -50,6 +50,10 @@ def test_apply_fork_runs_codex_loop_and_updates_state(
     assert apply_worktree.is_dir()
     assert not (root / ".cmoc" / "worktrees" / "apply").exists()
     assert "apply_worktree" not in state["apply"]
+    assert "apply_process_id" not in state["apply"]
+    assert not (
+        root / ".cmoc" / "state" / "apply_processes" / f"{session_id}.pid"
+    ).exists()
     assert calls
     assert any(call.startswith("apply fork enumerate findings") for call in calls)
     assert "apply fork refine findings" in calls
@@ -106,7 +110,10 @@ def test_apply_fork_config_error_does_not_start_apply_run(
     assert result.exit_code != 0
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
-    assert state["apply"].get("apply_process_id") is None
+    assert "apply_process_id" not in state["apply"]
+    assert not (
+        root / ".cmoc" / "state" / "apply_processes" / f"{session_id}.pid"
+    ).exists()
     assert run_git(root, "branch", "--list", f"cmoc/apply/{session_id}/*").stdout == ""
 
 

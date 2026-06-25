@@ -119,8 +119,12 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
     state["apply"]["state"] = "running"
-    state["apply"]["apply_process_id"] = 12345
     state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
+    process_id_path = (
+        root / ".cmoc" / "state" / "apply_processes" / f"{session_id}.pid"
+    )
+    process_id_path.parent.mkdir(parents=True, exist_ok=True)
+    process_id_path.write_text("12345\n")
     stopped: list[int] = []
 
     def fake_stop_apply_process(process_id: int) -> None:
@@ -139,10 +143,11 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
     assert deleted.returncode != 0
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
-    assert state["apply"]["apply_process_id"] is None
+    assert "apply_process_id" not in state["apply"]
+    assert not process_id_path.exists()
 
 
-def test_apply_abandon_rejects_running_state_without_process_id(
+def test_apply_abandon_allows_running_state_without_process_id(
     tmp_path: Path, monkeypatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -169,16 +174,17 @@ def test_apply_abandon_rejects_running_state_without_process_id(
     state["apply"].pop("apply_process_id", None)
     state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
 
-    result = runner.invoke(app, ["apply", "abandon"])
+    result = runner.invoke(app, ["apply", "abandon"], catch_exceptions=False)
 
-    assert result.exit_code != 0
-    assert "実行中 apply process を特定できません。" in result.output
-    assert apply_worktree.is_dir()
+    assert result.exit_code == 0
+    assert f"apply process id file missing: {session_id}" in result.output
+    assert not apply_worktree.exists()
     remaining = subprocess.run(["git", "rev-parse", "--verify", apply_branch], cwd=root)
-    assert remaining.returncode == 0
+    assert remaining.returncode != 0
     state = json.loads(state_path.read_text())
-    assert state["apply"]["state"] == "running"
-    assert state["apply"]["apply_branch"] == apply_branch
+    assert state["apply"]["state"] == "ready"
+    assert state["apply"]["apply_branch"] is None
+    assert "apply_process_id" not in state["apply"]
 
 
 def test_apply_abandon_rejects_apply_branch_without_derivable_worktree(

@@ -21,7 +21,6 @@ class ApplyPart:
     state: str = "ready"
     apply_branch: str | None = None
     oracle_snapshot_commit: str | None = None
-    apply_process_id: int | None = None
 
 
 @dataclass
