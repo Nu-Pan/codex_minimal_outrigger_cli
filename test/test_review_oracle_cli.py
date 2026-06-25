@@ -1,3 +1,5 @@
+import pytest
+
 from _support import (
     Path,
     add_tracked_ignored_oracle_file,
@@ -7,6 +9,7 @@ from _support import (
     run_git,
     runner,
 )
+
 
 def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
     root = make_repo(tmp_path)
@@ -267,3 +270,44 @@ def test_review_oracle_merges_review_index_changes(tmp_path: Path, monkeypatch) 
         path.name == ".git" for path in (root / ".cmoc" / "worktrees").rglob(".git")
     )
     assert not (root / ".cmoc" / "worktrees" / "review").exists()
+
+
+@pytest.mark.parametrize("change_kind", ["unstaged", "staged", "untracked"])
+def test_review_oracle_rejects_non_index_worktree_changes(
+    tmp_path: Path,
+    monkeypatch,
+    change_kind: str,
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    class FakeCodexResult:
+        def __init__(self, output_json):
+            self.output_json = output_json
+
+    def fake_run_codex_exec(parameter, **kwargs):
+        schema_name = parameter.structured_output_schema_path.name
+        if schema_name == "enumerate_finding.json":
+            if change_kind == "untracked":
+                (Path.cwd() / "generated.txt").write_text("unexpected\n")
+            else:
+                (Path.cwd() / "README.md").write_text("unexpected\n")
+                if change_kind == "staged":
+                    run_git(Path.cwd(), "add", "README.md")
+            return FakeCodexResult({"findings": []})
+        if schema_name == "merge_finding.json":
+            return FakeCodexResult({"operations": []})
+        raise AssertionError(schema_name)
+
+    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["review", "oracle", "--scope", "full"])
+
+    assert result.exit_code != 0
+    assert "review oracle が INDEX.md 以外の差分を作成しました。" in result.output
+    assert (root / "README.md").read_text() == "# repo\n"
+    assert not (root / "generated.txt").exists()

@@ -107,26 +107,44 @@ def cmoc_review_oracle_impl(
 
 def commit_review_index_changes(review_worktree: Path) -> bool:
     """review worktree 上の INDEX.md 変更だけを commit する。"""
-    changed_index_paths = [
-        line[3:]
-        for line in run_git(["status", "--short"], review_worktree).stdout.splitlines()
-        if line[3:].endswith("INDEX.md")
-    ]
-    if not changed_index_paths:
-        return False
-    run_git(["add", "-A", "--", *changed_index_paths], review_worktree)
-    staged = run_git(["diff", "--cached", "--name-only"], review_worktree).stdout.splitlines()
-    non_index = [path for path in staged if Path(path).name != "INDEX.md"]
+    changed_paths = review_worktree_status_paths(review_worktree)
+    non_index = [path for path in changed_paths if Path(path).name != "INDEX.md"]
     if non_index:
         raise CmocError(
             "review oracle が INDEX.md 以外の差分を作成しました。",
             ["review worktree の差分を確認してください。"],
             "\n".join(non_index),
         )
+    changed_index_paths = [
+        path for path in changed_paths if Path(path).name == "INDEX.md"
+    ]
+    if not changed_index_paths:
+        return False
+    run_git(["add", "-A", "--", *changed_index_paths], review_worktree)
+    staged = run_git(
+        ["diff", "--cached", "--name-only"], review_worktree
+    ).stdout.splitlines()
     if staged:
         run_git(["commit", "-m", "cmoc review oracle indexing"], review_worktree)
         return True
     return False
+
+
+def review_worktree_status_paths(review_worktree: Path) -> list[str]:
+    fields = run_git(
+        ["status", "--porcelain=v1", "-z"], review_worktree
+    ).stdout.split("\0")
+    paths: list[str] = []
+    index = 0
+    while index < len(fields) and fields[index]:
+        field = fields[index]
+        status = field[:2]
+        paths.append(field[3:])
+        index += 1
+        if status[0] in {"R", "C"}:
+            paths.append(fields[index])
+            index += 1
+    return paths
 
 
 def merge_review_branch(root: Path, review_branch: str) -> str:
