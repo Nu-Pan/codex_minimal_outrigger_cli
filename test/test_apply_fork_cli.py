@@ -54,6 +54,38 @@ def test_apply_fork_runs_codex_loop_and_updates_state(
     assert "apply fork refine findings" in calls
 
 
+def test_apply_fork_does_not_rewrite_session_gitignore(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    (root / ".gitignore").write_text(".cmoc/\n")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "use alternate cmoc ignore pattern")
+
+    class FakeCodexResult:
+        def __init__(self, output_json):
+            self.output_json = output_json
+
+    monkeypatch.setattr(
+        main_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult({"findings": []}),
+    )
+
+    result = runner.invoke(
+        app, ["apply", "fork", "--scope", "full"], catch_exceptions=False
+    )
+
+    assert result.exit_code == 0
+    assert (root / ".gitignore").read_text() == ".cmoc/\n"
+    assert run_git(root, "status", "--short").stdout.strip() == ""
+
+
 def test_apply_fork_writes_report_with_change_summary(
     tmp_path: Path, monkeypatch
 ) -> None:
