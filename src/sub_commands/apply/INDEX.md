@@ -102,21 +102,20 @@
 # `join.py`
 
 ## Summary
-- apply run の join 処理を実装するモジュール。session branch または apply branch 上で実行され、完了またはエラー状態の apply branch を session branch へ merge し、apply state を ready 相当へ戻す。
-- join 前の clean worktree 確認、想定外差分の検出と force-resolve 時の復元、merge conflict 処理、report 作成、apply worktree と branch の cleanup、CLI 向け結果出力を扱う。
-- INDEX.md は apply 側で許容される差分として扱い、INDEX.md だけの merge conflict は削除 commit により機械解決する。
+- apply run が completed または error になった後、apply branch を session branch へ join する処理を扱う。session/apply branch 上での実行位置判定、clean worktree 確認、想定外差分の検出と force resolve、merge、INDEX.md だけの conflict 自動解決、state 更新、apply worktree/branch cleanup、join report 出力までを担う。
+- join report の生成と、apply/session branch の差分が許可範囲内かを判定する補助処理も含む。apply 側では INDEX.md と gitignore 対象外の通常ファイルを許可し、oracle・memo・.agents・.git などを想定外として扱う一方、session 側では INDEX.md・oracle・memo の差分を許可する。
 
 ## Read this when
-- apply run 完了後またはエラー後に session branch へ変更を取り込む挙動を確認・変更したいとき。
-- apply join の実行可能条件、対象 branch の決定、session/apply state の更新、apply branch cleanup の流れを追いたいとき。
-- apply join における想定外差分の分類、--force-resolve による復元 commit、INDEX.md conflict の自動解決条件を調べたいとき。
-- apply join report の保存先、front matter、Result・Unexpected Changes・Merge Conflicts の内容を変更したいとき。
+- apply join の実行条件、対象 branch の決定、session state の更新、apply branch の merge と後片付けの流れを確認したいとき。
+- apply join 時の想定外差分判定、--force-resolve による revert/commit、または apply/session branch ごとの許可差分ルールを調べたいとき。
+- apply branch merge conflict の扱い、INDEX.md だけの conflict 自動解決、未解決 conflict 時の report 生成とエラー内容を確認したいとき。
+- apply join report の front matter、Result、Unexpected Changes、Merge Conflicts に出る内容を変更・検証したいとき。
 
 ## Do not read this when
-- apply run の開始、apply worktree の作成、Codex 実行そのものを調べたいだけのとき。
-- session state のデータ構造、git helper、path helper、worktree 探索 helper の定義を調べたいときは、それらを定義する runtime 側を直接読む。
-- apply join 以外の subcommand の CLI 登録、引数定義、共通エラー表示を調べたいとき。
-- oracle file や memo の正本仕様を変更・確認したいとき。この実装は realization 側の具体化であり、正本仕様ではない。
+- apply run の開始、実行、完了状態への遷移そのものを調べたいだけのとき。
+- session branch や apply branch の worktree を探す共通ロジックだけを確認したいとき。
+- git 実行、state の読み書き、branch 削除、worktree 削除、report directory、timestamp などの runtime 共通 API の実装を調べたいとき。
+- INDEX.md エントリー生成一般の仕様や、oracle/realization の基本概念を確認したいだけのとき。
 
 ## hash
-- d58f8c679399ae7d90b161a66a8eb9a49bb8c5c6db171626769e2c8229a0e047
+- a46597caba8c76a624e78bd71a978eafb8f0f96fc9c12877b16c8d320534558e
