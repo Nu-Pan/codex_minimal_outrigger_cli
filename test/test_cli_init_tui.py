@@ -10,6 +10,7 @@ from _support import (
     parse_markdown_prompt,
     run_git,
     runner,
+    setup_codex_home,
     subprocess,
 )
 
@@ -294,6 +295,7 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     monkeypatch,
 ) -> None:
     root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
     linked = root / ".cmoc" / "worktrees" / "linked"
@@ -301,6 +303,7 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     monkeypatch.chdir(linked)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
+    recorder = tmp_path / "codex_record.json"
     fake_code = bin_dir / "code"
     fake_code.write_text(
         "\n".join(
@@ -314,21 +317,39 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
         + "\n"
     )
     fake_code.chmod(0o755)
+    fake_codex = bin_dir / "codex"
+    fake_codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env python3",
+                "import json, os, pathlib, sys",
+                f"record = pathlib.Path({str(recorder)!r})",
+                "args = sys.argv[1:]",
+                "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+                "data = {key: {'value': False, 'reason': 'test'} for key in [",
+                "    'oracle_and_realization_basic',",
+                "    'oracle_standard',",
+                "    'realization_standard',",
+                "    'review_oracle_standard',",
+                "    'apply_review_standard',",
+                "    'index_entry_standard',",
+                "]}",
+                "data['file_access_mode'] = {'value': 'repo_write', 'reason': 'test'}",
+                "output.write_text(json.dumps(data))",
+                "record.write_text(json.dumps({'args': args, 'cwd': os.getcwd()}))",
+                "print(json.dumps({'type': 'turn.completed'}))",
+            ]
+        )
+        + "\n"
+    )
+    fake_codex.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     tui_calls = []
-
-    class FakeResolveResult:
-        output_json = {
-            "file_access_mode": {"value": "repo_write"},
-        }
-
-    def fake_run_codex_exec(parameter, **kwargs):
-        return FakeResolveResult()
 
     def fake_run_codex_tui(parameter, **kwargs):
         tui_calls.append((parameter, kwargs))
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(main_module, "_run_indexing_before_codex", lambda *_: None)
     monkeypatch.setattr(main_module, "run_codex_tui", fake_run_codex_tui)
 
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
@@ -342,6 +363,11 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     complete_files = list((linked / ".cmoc" / "log" / "tui").glob("*_cmpl.md"))
     assert len(complete_files) == 1
     assert str(complete_files[0]) in tui_calls[0][0].prompt
+    recorded = json.loads(recorder.read_text())
+    schema_arg = recorded["args"][recorded["args"].index("--output-schema") + 1]
+    assert recorded["cwd"] == str(linked)
+    assert Path(schema_arg).parent == linked / ".cmoc" / "state" / "schema"
+    assert not (root / ".cmoc" / "state" / "schema").exists()
 
 
 def test_parse_markdown_prompt_ignores_headings_inside_fenced_code_blocks() -> None:

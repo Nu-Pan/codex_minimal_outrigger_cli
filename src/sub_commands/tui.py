@@ -38,7 +38,7 @@ def cmoc_tui_impl(
     resolved = run_codex_exec(
         build_tui_resolve_parameter_parameter(original_prompt),
         root=root,
-        cwd=root,
+        cwd=work_root,
         config=config,
         purpose="tui resolve parameter",
     ).output_json
