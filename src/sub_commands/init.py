@@ -3,17 +3,25 @@ from tempfile import NamedTemporaryFile
 
 import typer
 
-from cmoc_runtime import ensure_cmoc_ignored, run_git, sync_config, work_root
+from cmoc_runtime import ensure_cmoc_ignored, repo_root, run_git, sync_config
+
+# init だけはログ作成前に repo root の .cmoc ignore を保証する。
+# その副作用を利用者の .gitignore 復元ロジックから見分けるため、元状態を一時保持する。
+_PRE_LOG_GITIGNORE_STATES: dict[Path, tuple[bool, str | None]] = {}
 
 
 def cmoc_init_impl() -> None:
-    """work root を cmoc が扱える初期状態へ同期する。"""
-    root = work_root()
+    """repo root を cmoc が扱える初期状態へ同期する。"""
+    root = repo_root()
     gitignore = root / ".gitignore"
+    pre_log_gitignore = _PRE_LOG_GITIGNORE_STATES.pop(root.resolve(), None)
     head_gitignore = _git_show(root, "HEAD:.gitignore")
     index_gitignore = _git_show(root, ":0:.gitignore")
-    had_worktree_gitignore = gitignore.exists()
-    worktree_gitignore = gitignore.read_text() if had_worktree_gitignore else None
+    if pre_log_gitignore is None:
+        had_worktree_gitignore = gitignore.exists()
+        worktree_gitignore = gitignore.read_text() if had_worktree_gitignore else None
+    else:
+        had_worktree_gitignore, worktree_gitignore = pre_log_gitignore
     staged_patch = run_git(
         [
             "diff",
@@ -52,6 +60,20 @@ def cmoc_init_impl() -> None:
             worktree_gitignore,
         )
     typer.echo(render_cmoc_init_result(root))
+
+
+def ensure_cmoc_ignored_before_init_log(root: Path) -> None:
+    gitignore = root / ".gitignore"
+    state_key = root.resolve()
+    _PRE_LOG_GITIGNORE_STATES[state_key] = (
+        gitignore.exists(),
+        gitignore.read_text() if gitignore.exists() else None,
+    )
+    try:
+        ensure_cmoc_ignored(root)
+    except BaseException:
+        _PRE_LOG_GITIGNORE_STATES.pop(state_key, None)
+        raise
 
 
 def _git_show(root: Path, spec: str) -> str | None:

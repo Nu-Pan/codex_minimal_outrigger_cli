@@ -144,20 +144,21 @@ def test_init_ignores_worktree_cmoc_from_linked_worktree(
     result = runner.invoke(app, ["init"], catch_exceptions=False)
 
     assert result.exit_code == 0
-    assert not (root / ".gitignore").exists()
-    assert "/.cmoc/" in (linked / ".gitignore").read_text()
+    assert "/.cmoc/" in (root / ".gitignore").read_text()
+    assert not (linked / ".gitignore").exists()
     assert (
         subprocess.run(
             ["git", "check-ignore", "-q", ".cmoc/.__cmoc_ignore_probe__"],
-            cwd=linked,
+            cwd=root,
         ).returncode
         == 0
     )
-    assert (linked / ".cmoc" / "config.json").is_file()
-    assert not (root / ".cmoc" / "config.json").exists()
+    assert (root / ".cmoc" / "config.json").is_file()
+    assert not (linked / ".cmoc" / "config.json").exists()
+    assert len(list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))) == 1
     assert (
         run_git(
-            linked,
+            root,
             "status",
             "--short",
             "--",
@@ -166,9 +167,9 @@ def test_init_ignores_worktree_cmoc_from_linked_worktree(
         ).stdout.strip()
         == ""
     )
-    assert "cmoc init" in run_git(linked, "log", "--oneline", "-1").stdout
+    assert "cmoc init" in run_git(root, "log", "--oneline", "-1").stdout
     committed_paths = run_git(
-        linked, "show", "--name-only", "--format=", "HEAD"
+        root, "show", "--name-only", "--format=", "HEAD"
     ).stdout.splitlines()
     assert ".gitignore" in committed_paths
 

@@ -25,7 +25,7 @@ from cmoc_runtime import (
 from basic.acp import AgentCallParameter
 from config.cmoc_config import CmocConfig
 import sub_commands.indexing as indexing_command
-from sub_commands.init import cmoc_init_impl
+from sub_commands.init import cmoc_init_impl, ensure_cmoc_ignored_before_init_log
 from sub_commands.apply.abandon import cmoc_apply_abandon_impl
 from sub_commands.apply.fork import cmoc_apply_fork_impl
 from sub_commands.apply.join import cmoc_apply_join_impl
@@ -151,7 +151,10 @@ def should_skip_indexing_before_codex(purpose: str) -> bool:
 @app.command()
 def init() -> None:
     run_cli_subcommand(
-        cmoc_init_impl, command_name="init", command_argv=["cmoc", "init"]
+        cmoc_init_impl,
+        pre_log_check=ensure_cmoc_ignored_before_init_log,
+        command_name="init",
+        command_argv=["cmoc", "init"],
     )
 
 
