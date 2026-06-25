@@ -151,7 +151,9 @@ def should_skip_indexing_before_codex(purpose: str) -> bool:
 
 @app.command()
 def init() -> None:
-    run_cli_subcommand(cmoc_init_impl, command_name="handler")
+    run_cli_subcommand(
+        cmoc_init_impl, command_name="init", command_argv=["cmoc", "init"]
+    )
 
 
 @app.command()
@@ -160,13 +162,18 @@ def tui() -> None:
         cmoc_tui_command_impl,
         run_codex_exec,
         run_codex_tui,
-        command_name="handler",
+        command_name="tui",
+        command_argv=["cmoc", "tui"],
     )
 
 
 @session_app.command("fork")
 def session_fork() -> None:
-    run_cli_subcommand(cmoc_session_fork_impl, command_name="handler")
+    run_cli_subcommand(
+        cmoc_session_fork_impl,
+        command_name="session fork",
+        command_argv=["cmoc", "session", "fork"],
+    )
 
 
 @session_app.command("join")
@@ -175,13 +182,18 @@ def session_join() -> None:
         cmoc_session_join_impl,
         run_codex_exec,
         run_git,
-        command_name="handler",
+        command_name="session join",
+        command_argv=["cmoc", "session", "join"],
     )
 
 
 @session_app.command("abandon")
 def session_abandon() -> None:
-    run_cli_subcommand(cmoc_session_abandon_impl, command_name="handler")
+    run_cli_subcommand(
+        cmoc_session_abandon_impl,
+        command_name="session abandon",
+        command_argv=["cmoc", "session", "abandon"],
+    )
 
 
 @apply_app.command("fork")
@@ -190,7 +202,8 @@ def apply_fork(scope: str = typer.Option("rolling", "--scope", "-s")) -> None:
         cmoc_apply_fork_impl,
         scope,
         run_codex_exec,
-        command_name="handler",
+        command_name="apply fork",
+        command_argv=["cmoc", "apply", "fork", "--scope", scope],
     )
 
 
@@ -199,13 +212,23 @@ def apply_join(force_resolve: bool = typer.Option(False, "--force-resolve")) -> 
     run_cli_subcommand(
         cmoc_apply_join_impl,
         force_resolve,
-        command_name="handler",
+        command_name="apply join",
+        command_argv=[
+            "cmoc",
+            "apply",
+            "join",
+            *(["--force-resolve"] if force_resolve else []),
+        ],
     )
 
 
 @apply_app.command("abandon")
 def apply_abandon() -> None:
-    run_cli_subcommand(cmoc_apply_abandon_impl, command_name="handler")
+    run_cli_subcommand(
+        cmoc_apply_abandon_impl,
+        command_name="apply abandon",
+        command_argv=["cmoc", "apply", "abandon"],
+    )
 
 
 @review_app.command("oracle")
@@ -214,7 +237,8 @@ def review_oracle(scope: str = typer.Option("session", "--scope", "-s")) -> None
         cmoc_review_oracle_impl,
         scope,
         run_codex_exec,
-        command_name="handler",
+        command_name="review oracle",
+        command_argv=["cmoc", "review", "oracle", "--scope", scope],
     )
 
 
@@ -224,7 +248,8 @@ def indexing() -> None:
         indexing_command.cmoc_indexing_impl,
         codex_exec=run_codex_exec,
         pre_log_check=require_cmoc_ignored,
-        command_name="handler",
+        command_name="indexing",
+        command_argv=["cmoc", "indexing"],
     )
 
 

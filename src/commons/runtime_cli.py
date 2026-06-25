@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +18,7 @@ def run_cli_subcommand(
     *args: Any,
     pre_log_check: Callable[[Path], None] | None = None,
     command_name: str | None = None,
+    command_argv: Sequence[str] | None = None,
     **kwargs: Any,
 ) -> None:
     logger = None
@@ -31,7 +32,7 @@ def run_cli_subcommand(
             pre_log_check(root)
         logger = SubcommandLogger(root, name)
         logger_token = set_current_subcommand_logger(logger)
-        logger.event("command_invoked", argv=[])
+        logger.event("command_invoked", argv=list(command_argv or [name]))
         typer.echo(f"# {console_timestamp()} (1/3) start {name}")
         typer.echo(f"- sub_command_log: `{logger.path}`")
         logger.event("step_started", step="execute")

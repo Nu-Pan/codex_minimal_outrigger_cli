@@ -39,6 +39,24 @@ def test_init_untracks_existing_cmoc_files_and_commits_cleanup(
     assert "cmoc init" in run_git(root, "log", "--oneline", "-1").stdout
 
 
+def test_subcommand_log_identifies_invoked_cli_command(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(app, ["init"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    log_paths = list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))
+    assert len(log_paths) == 1
+    events = [json.loads(line) for line in log_paths[0].read_text().splitlines()]
+    invoked = events[0]
+    assert invoked["event"] == "command_invoked"
+    assert invoked["command"] == "init"
+    assert invoked["argv"] == ["cmoc", "init"]
+
+
 def test_init_does_not_commit_preexisting_staged_changes(
     tmp_path: Path, monkeypatch
 ) -> None:

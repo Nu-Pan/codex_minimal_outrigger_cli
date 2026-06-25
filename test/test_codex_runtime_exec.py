@@ -180,6 +180,7 @@ def test_run_codex_exec_stores_schema_in_cwd_work_root(
 def test_run_codex_tui_uses_codex_command_and_prompt_argument(
     tmp_path: Path,
     monkeypatch,
+    capsys,
 ) -> None:
     root = make_repo(tmp_path)
     codex_home = setup_codex_home(tmp_path, monkeypatch)
@@ -203,8 +204,13 @@ def test_run_codex_tui_uses_codex_command_and_prompt_argument(
         "TUI PROMPT BODY",
         None,
     )
+    logger = SubcommandLogger(root, "test")
+    token = cmoc_runtime.set_current_subcommand_logger(logger)
 
-    result = run_codex_tui(parameter, root=root)
+    try:
+        result = run_codex_tui(parameter, root=root, purpose="tui codex")
+    finally:
+        cmoc_runtime.reset_current_subcommand_logger(token)
 
     assert recorded["kwargs"]["cwd"] == root
     assert recorded["kwargs"]["env"]["CODEX_HOME"] == str(codex_home)
@@ -229,6 +235,18 @@ def test_run_codex_tui_uses_codex_command_and_prompt_argument(
         recorded["argv"][2],
         "TUI PROMPT BODY",
     ]
+    log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_events = [event for event in log_events if event["event"] == "codex_call"]
+    assert len(codex_events) == 1
+    assert codex_events[0]["purpose"] == "tui codex"
+    assert codex_events[0]["status"] == "succeeded"
+    assert codex_events[0]["returncode"] == 0
+    assert codex_events[0]["call_log_path"] == str(call_logs[0])
+    console = capsys.readouterr().out
+    assert "Codex CLI call" in console
+    assert "- purpose: `tui codex`" in console
+    assert f"- call_log: `{call_logs[0]}`" in console
+    assert "- returncode: `0`" in console
     assert result.returncode == 0
     assert result.stdout == ""
     assert result.stderr == ""

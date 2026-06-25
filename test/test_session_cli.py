@@ -94,7 +94,7 @@ def test_session_abandon_requires_existing_home_branch(
     result = runner.invoke(app, ["session", "abandon"])
 
     assert result.exit_code != 0
-    assert "completed handler" in result.output
+    assert "completed session abandon" in result.output
     assert "- sub_command_log: `" in result.output
     assert "- step_execute_elapsed: `" in result.output
     assert "- elapsed: `" in result.output

@@ -41,6 +41,23 @@ _QUOTA_CONDITION = threading.Condition()
 _QUOTA_POLLING = False
 
 
+def _emit_codex_call_console(
+    purpose: str, call_path: Path, elapsed_sec: float, returncode: int
+) -> None:
+    print(
+        "\n".join(
+            [
+                f"# {console_timestamp()} Codex CLI call",
+                f"- purpose: `{purpose}`",
+                f"- call_log: `{call_path}`",
+                f"- elapsed: `{format_duration(elapsed_sec)}`",
+                f"- returncode: `{returncode}`",
+            ]
+        ),
+        flush=True,
+    )
+
+
 def run_codex_exec(
     parameter: AgentCallParameter,
     *,
@@ -158,18 +175,7 @@ def run_codex_exec(
         error: str | None = None,
     ) -> None:
         elapsed_sec = time.perf_counter() - started_at
-        print(
-            "\n".join(
-                [
-                    f"# {console_timestamp()} Codex CLI call",
-                    f"- purpose: `{run_purpose}`",
-                    f"- call_log: `{run_call_path}`",
-                    f"- elapsed: `{format_duration(elapsed_sec)}`",
-                    f"- returncode: `{returncode}`",
-                ]
-            ),
-            flush=True,
-        )
+        _emit_codex_call_console(run_purpose, run_call_path, elapsed_sec, returncode)
         if logger is None:
             return
         payload: dict[str, Any] = {
@@ -497,17 +503,22 @@ def run_codex_tui(
         )
         + "\n"
     )
+    started_at = time.perf_counter()
     result = subprocess.run(
         argv,
         cwd=cwd,
         env=codex_subprocess_env(codex_home),
     )
+    elapsed_sec = time.perf_counter() - started_at
+    _emit_codex_call_console(purpose, call_path, elapsed_sec, result.returncode)
     logger = current_subcommand_logger()
     if logger is not None:
         logger.event(
-            "codex_tui_call",
+            "codex_call",
             purpose=purpose,
+            status="succeeded" if result.returncode == 0 else "failed",
             returncode=result.returncode,
+            elapsed_sec=elapsed_sec,
             call_log_path=str(call_path),
             codex_home=str(codex_home),
             profile_name=profile_name,
