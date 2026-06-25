@@ -1,5 +1,6 @@
 from _support import (
     AgentCallParameter,
+    CmocError,
     FileAccessMode,
     ModelClass,
     Path,
@@ -108,7 +109,10 @@ def test_run_codex_exec_logs_capacity_retrying_call(
                 "args = sys.argv[1:]",
                 "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
                 "if count == 0:",
-                "    print('Selected model is at capacity', file=sys.stderr)",
+                (
+                    "    print(json.dumps({'type': 'error', "
+                    "'message': 'Selected model is at capacity'}))"
+                ),
                 "    sys.exit(1)",
                 "output.write_text(json.dumps({'ok': True}))",
                 "print(json.dumps({'type': 'turn.completed'}))",
@@ -145,6 +149,64 @@ def test_run_codex_exec_logs_capacity_retrying_call(
     assert codex_events[0]["returncode"] == 1
     assert codex_events[0]["call_log_path"] == str(call_paths[0])
     assert "Selected model is at capacity" in codex_events[0]["error"]
+
+
+def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fake_codex = bin_dir / "codex"
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+    )
+    cases = [
+        (
+            "capacity",
+            ["print('Selected model is at capacity', file=sys.stderr)"],
+            {"capacity_initial_sleep_sec": 0, "max_capacity_retries": 1},
+            "Selected model is at capacity",
+        ),
+        (
+            "quota",
+            ["print('Quota exceeded')", "print('Quota exceeded', file=sys.stderr)"],
+            {"quota_poll_interval_sec": 0, "max_quota_polls": 1},
+            "Quota exceeded",
+        ),
+    ]
+    for name, marker_lines, kwargs, expected_detail in cases:
+        counter = tmp_path / f"{name}_counter"
+        fake_codex.write_text(
+            "\n".join(
+                [
+                    "#!/usr/bin/env python3",
+                    "import pathlib, sys",
+                    f"counter = pathlib.Path({str(counter)!r})",
+                    "count = int(counter.read_text()) if counter.exists() else 0",
+                    "counter.write_text(str(count + 1))",
+                    *marker_lines,
+                    "sys.exit(1)",
+                ]
+            )
+            + "\n"
+        )
+        fake_codex.chmod(0o755)
+        try:
+            run_codex_exec(parameter, root=root, **kwargs)
+        except CmocError as exc:
+            assert exc.summary == "Codex CLI 呼び出しが失敗しました。"
+            assert expected_detail in exc.detail
+        else:
+            raise AssertionError(f"{name} marker outside JSONL should fail directly")
+        assert counter.read_text() == "1"
 
 
 def test_run_codex_exec_polls_and_resumes_after_quota(

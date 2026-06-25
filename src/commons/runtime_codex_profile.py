@@ -222,15 +222,40 @@ def extract_resume_token(stdout_text: str) -> str | None:
     return None
 
 
-def is_capacity_error(text: str) -> bool:
-    return "Selected model is at capacity" in text
+def _codex_jsonl_error_messages(stdout_text: str) -> list[str]:
+    messages: list[str] = []
+    for line in stdout_text.splitlines():
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if item.get("type") == "error":
+            message = item.get("message")
+            if isinstance(message, str):
+                messages.append(message)
+        elif item.get("type") == "turn.failed":
+            error = item.get("error")
+            if isinstance(error, dict) and isinstance(error.get("message"), str):
+                messages.append(error["message"])
+    return messages
 
 
-def is_quota_error(text: str) -> bool:
+def is_capacity_error(stdout_text: str) -> bool:
+    return any(
+        "Selected model is at capacity" in message
+        for message in _codex_jsonl_error_messages(stdout_text)
+    )
+
+
+def is_quota_error(stdout_text: str) -> bool:
     quota_markers = [
         "Quota exceeded",
         "You've hit your usage limit",
         "out of credits",
         "You hit your spend cap",
     ]
-    return any(marker in text for marker in quota_markers)
+    return any(
+        marker in message
+        for message in _codex_jsonl_error_messages(stdout_text)
+        for marker in quota_markers
+    )

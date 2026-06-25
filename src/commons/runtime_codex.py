@@ -227,7 +227,7 @@ def run_codex_exec(
         error_text = codex_error_text(result.stdout, result.stderr)
         if result.returncode != 0:
             if (
-                is_capacity_error(error_text)
+                is_capacity_error(result.stdout)
                 and capacity_attempts < max_capacity_retries
             ):
                 capacity_attempts += 1
@@ -246,7 +246,7 @@ def run_codex_exec(
                 time.sleep(sleep_sec)
                 sleep_sec *= 2
                 continue
-            if is_quota_error(error_text):
+            if is_quota_error(result.stdout):
                 global _QUOTA_POLLING
                 emit_codex_call_event(
                     run_purpose=purpose,
@@ -337,7 +337,7 @@ def run_codex_exec(
                         probe_stderr_path.write_text(poll.stderr)
                         probe_error_text = codex_error_text(poll.stdout, poll.stderr)
                         probe_available = poll.returncode == 0 and not is_quota_error(
-                            probe_error_text
+                            poll.stdout
                         )
                         emit_codex_call_event(
                             run_purpose="quota availability probe",
