@@ -13,6 +13,7 @@ from cmoc_runtime import (
     run_git,
     state_path,
     timestamp,
+    work_root,
     write_state,
 )
 
@@ -20,15 +21,16 @@ from cmoc_runtime import (
 def cmoc_session_fork_impl() -> None:
     """現在の local branch から cmoc session branch を作成する。"""
     root = repo_root()
-    branch = current_branch(root)
+    work = work_root()
+    branch = current_branch(work)
     if is_managed_branch(branch):
         raise CmocError(
             "cmoc managed branch 上では session fork できません。",
             ["通常の local branch に checkout してから再実行してください。"],
             f"current branch: {branch}",
         )
-    require_clean_worktree(root)
-    ensure_cmoc_ignored(root)
+    require_clean_worktree(work)
+    ensure_cmoc_ignored(work)
     existing = active_session_for_home(root, branch)
     if existing:
         raise CmocError(
@@ -38,8 +40,8 @@ def cmoc_session_fork_impl() -> None:
         )
     session_id = timestamp()
     session_branch = f"cmoc/session/{session_id}"
-    start_commit = head_commit(root)
-    run_git(["switch", "-c", session_branch], root)
+    start_commit = head_commit(work)
+    run_git(["switch", "-c", session_branch], work)
     state = SessionState()
     state.session.session_home_branch = branch
     state.session.session_start_commit = start_commit

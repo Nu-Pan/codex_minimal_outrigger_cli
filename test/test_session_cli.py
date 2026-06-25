@@ -46,6 +46,33 @@ def test_session_fork_creates_session_branch_and_state(
     assert state["apply"]["state"] == "ready"
 
 
+def test_session_fork_uses_linked_worktree_branch_and_head(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    root_branch = current_branch(root)
+    linked = root / ".cmoc" / "worktrees" / "linked"
+    run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
+    (linked / "README.md").write_text("# linked\n")
+    run_git(linked, "add", "README.md")
+    run_git(linked, "commit", "-m", "linked change")
+    linked_commit = run_git(linked, "rev-parse", "HEAD").stdout.strip()
+    monkeypatch.chdir(linked)
+
+    result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    session_branch = current_branch(linked)
+    assert session_branch.startswith("cmoc/session/")
+    assert current_branch(root) == root_branch
+    state = json.loads(session_state_path(root, session_branch).read_text())
+    assert state["session"]["session_home_branch"] == "linked-home"
+    assert state["session"]["session_start_commit"] == linked_commit
+    assert run_git(linked, "rev-parse", session_branch).stdout.strip() == linked_commit
+
+
 def test_session_abandon_switches_home_and_marks_state(
     tmp_path: Path, monkeypatch
 ) -> None:
