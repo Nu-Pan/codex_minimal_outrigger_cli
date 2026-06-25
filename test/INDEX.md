@@ -188,24 +188,21 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- indexing コマンドと indexing preflight の realization test。INDEX 生成・更新・commit 対象の限定、既存 hash による再生成 skip、不正 entry の再生成、同階層 entry の並列生成、root 直下 memo 除外と入れ子 memo 対象化、linked worktree 対象化、Codex 呼び出し前の indexing 実行、lock 待機、特定 purpose での preflight skip を検証する。
-- merge conflict 解決時に INDEX を削除して merge commit を成立させる挙動と、未初期化 clean repo で indexing が非 INDEX 差分を残さず失敗する挙動も扱う。
+- cmoc の indexing 機能と indexing preflight の realization test。INDEX.md 生成・更新・commit、fresh hash 時の再生成省略、壊れた既存エントリーの再生成、兄弟エントリーの並列生成、root 直下 memo の除外と入れ子 memo の対象化、git worktree 選択、Codex 呼び出し前の indexing 実行・省略条件、repository lock 待機、INDEX.md merge conflict 解消を検証する。
 
 ## Read this when
-- indexing コマンドの外部挙動、commit される path、dirty worktree の扱い、未初期化 repository での失敗条件を変更・確認するとき。
-- INDEX entry 生成のための Codex structured output 呼び出し、fresh hash による再生成 skip、不正または欠落した entry の再生成判定を変更・確認するとき。
-- worktree 上で indexing がどの repository を対象にするか、Codex exec/tui 呼び出し前に indexing preflight が走る条件、または preflight を skip する purpose 条件を変更・確認するとき。
-- indexing lock の待機、同階層 entry 生成の並列化、root 直下 memo と入れ子 memo の indexing 対象境界を変更・確認するとき。
-- INDEX merge conflict の解決処理が conflict path を削除して commit する制御を変更・確認するとき。
+- indexing コマンド、indexing preflight、INDEX.md の生成・更新・commit、または indexing lock の挙動を変更する。
+- Codex exec/TUI 呼び出し前に indexing を走らせる制御、index entry 生成時や conflict resolution 時に preflight を省略する制御を確認する。
+- worktree 上での indexing 対象選択、未初期化 repository、未コミット差分、INDEX.md 以外の差分を含む repository 状態への挙動を検証する。
+- INDEX.md 既存エントリーの hash freshness 判定、malformed entry の再生成、memo directory の indexing 対象境界、または sibling entry の並列処理を確認する。
 
 ## Do not read this when
-- INDEX.md のルーティング文書としての書式や entry 文面の仕様だけを確認したいとき。正本仕様断片または schema の方が直接の入口になる。
-- Codex 呼び出し一般の parameter 定義、model class、reasoning effort、file access mode の意味を確認したいだけのとき。support module や実装側の型定義がより直接の入口になる。
-- indexing 以外の CLI サブコマンド、session/apply/review などの挙動を確認したいとき。ただしそれらが Codex 呼び出し前の indexing preflight と接続する場合は読む。
-- git helper、repository fixture、runner fixture の作りそのものを変更したいとき。共通 test support の定義がより直接の入口になる。
+- indexing 以外の CLI サブコマンドや workflow のテストだけを確認したい。
+- INDEX.md エントリーの文章構造や schema そのものを調べたいだけで、生成・更新・commit・preflight の制御には触れない。
+- oracle file の正本仕様や path keyword の定義を確認したいだけで、realization test の期待挙動は不要である。
 
 ## hash
-- 7f919eed81196ee108970e3921c3fd2b0d09c423f1a8c148b30477a7364d9190
+- 80a020fbfa4b09b4f2139df23e82a21bcc486ce5db51253acbd75f19ac074b52
 
 # `test_prompt_parts.py`
 

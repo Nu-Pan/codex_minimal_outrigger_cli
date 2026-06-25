@@ -24,23 +24,24 @@
 # `indexing.py`
 
 ## Summary
-- 現在の work root に対する INDEX.md maintenance の実行本体を担う実装。indexing 用ロック、対象ディレクトリと子要素の列挙、既存エントリーの hash 検証、Codex 呼び出しによるエントリー生成、INDEX.md 書き換え、更新差分だけの git commit までをまとめて扱う。
-- INDEX.md エントリーの Markdown 形式、必須 section の検証、対象内容の抽出、鮮度判定用 hash 計算など、INDEX.md 自動生成の制御ロジックを確認する入口になる。
+- 現在の work root に対して INDEX.md の保守を実行する indexing サブコマンド実装。clean worktree 確認、排他ロック、対象ディレクトリと子要素の列挙、既存エントリーの hash 検証、Codex CLI による不足エントリー生成、INDEX.md 書き戻し、更新分だけの git commit までを扱う。
+- INDEX.md の対象外判定として、git ignore、binary file、dot directory、root 直下の memo 配下を除外するルールを実装している。
+- Structured Output から INDEX.md entry Markdown を描画する処理と、既存 entry の必須セクションおよび hash 形式を検証して再利用可否を判定する処理の入口になる。
 
 ## Read this when
-- INDEX.md maintenance の実行順序、ロック取得、更新対象の探索、生成済みエントリーの再利用条件、更新後 commit の挙動を確認・変更するとき。
-- INDEX.md 配置対象から除外する条件、git ignore・binary file・root memo 配下の扱い、directory hash の計算方法を確認・変更するとき。
-- Codex に INDEX.md エントリー生成を依頼する引数、対象内容として file 本文・下位 INDEX.md・子要素名一覧のどれを渡すかを確認・変更するとき。
-- INDEX.md エントリーの必須 section、hash 抽出、Structured Output から Markdown への変換、fallback 文言の扱いを確認・変更するとき。
+- cmoc indexing の実行フロー、preflight での index 更新、または INDEX.md 更新を commit する挙動を確認・変更するとき。
+- INDEX.md の再生成対象になる directory/file の選別、memo や git ignored path や binary file の除外条件を確認・変更するとき。
+- 既存 INDEX.md entry の parse、hash 抽出、鮮度判定、Codex CLI への entry 生成依頼、Structured Output から Markdown への変換を扱うとき。
+- indexing 処理の排他制御や、git path 上の lock file を使った同時実行防止を確認・変更するとき。
 
 ## Do not read this when
-- 個別サブコマンドの Typer 登録や CLI routing だけを確認したいときは、サブコマンド定義やアプリ組み立て側を読む方が直接的。
-- INDEX.md エントリー生成 prompt の文面や Structured Output schema そのものを確認したいときは、ACP builder 側を読む方が直接的。
-- path keyword、work root、git 実行、設定読み込み、hash 関数、binary 判定、git ignore 判定の個別仕様を確認したいときは、それぞれの runtime utility 実装を読む方が直接的。
-- 生成された特定の INDEX.md のルーティング内容を確認したいだけのときは、この実装ではなく対象階層の本文または生成済み INDEX.md を読む方が直接的。
+- 個別サブコマンドの通常 CLI 登録や Typer app 全体の配線だけを確認したいとき。
+- INDEX.md entry の内容を生成する prompt や AgentCallParameter の詳細を確認したいときは、entry 生成パラメータを組み立てる acp/builder 側を直接読む。
+- work root の定義、git wrapper、hash 計算、config 読み込み、clean worktree 判定などの共通 runtime helper の詳細だけを確認したいとき。
+- 生成済み INDEX.md の各エントリー内容を読むべきか判断したいだけのときは、対象階層の INDEX.md を読む。
 
 ## hash
-- 42b222370c5749d2bfa5830d3a7596754c9f68d0a5a8e1d77b66da7bc27b384e
+- 4b30b315415bcf463bcf923b56e4604d4bc793ed405072d5d0e131fa6f893dc7
 
 # `init.py`
 

@@ -130,24 +130,23 @@
 # `sub_commands`
 
 ## Summary
-- CLI のサブコマンド実装を集約する領域。初期化、対話型実行、INDEX.md maintenance、oracle review、session lifecycle、apply lifecycle など、利用者が起動する主要操作の上位フローを扱う。
-- 各実装は、サブコマンド固有の実行前提確認、runtime helper や Codex 呼び出し builder への接続、Git branch/worktree/state/report などの副作用の順序、利用者向け出力の組み立てを担う。
-- review と apply は、対象列挙、loop、INDEX 取り込み、report、join/cleanup などが下位要素に分かれており、該当する lifecycle の入口から詳細担当へ進むための階層になっている。
+- cmoc の各サブコマンド実装へ進むための入口。初期化、INDEX.md 保守、対話型実行、oracle review、apply run、session lifecycle など、利用者が実行する command 単位の統括フローを扱う。
+- サブコマンドごとの実行前提検証、clean worktree 確認、branch/worktree 操作、状態更新、Codex CLI 呼び出し、利用者向け出力や report 生成への接続を確認するための階層。
+- 下位には、apply 系、session 系、review 系の分割実装と、初期化・indexing・TUI など個別サブコマンド本体が並び、目的の command behavior から読む先を選ぶための分岐点になる。
 
 ## Read this when
-- cmoc の個別サブコマンドがどの実装へ分かれているかを把握し、初期化、TUI、INDEX.md maintenance、oracle review、session、apply のいずれを読むべきか選びたいとき。
-- サブコマンド実行時の上位制御フロー、実行条件、状態遷移、Git 操作、worktree/branch lifecycle、report 生成、利用者向け出力の接続先を探したいとき。
-- oracle review の対象列挙、finding loop、INDEX.md merge、report rendering など、review 系の責務分担から読むファイルを絞りたいとき。
-- apply run の開始、破棄、join、report、実行中 process 状態、apply worktree/branch cleanup など、apply 系 lifecycle の入口を探したいとき。
-- session start/join/abandon、active session branch、home branch への取り込み、破棄、merge conflict 解消など、session 系操作の実装入口を探したいとき。
-- INDEX.md maintenance の実行本体、または初期化や対話型実行のサブコマンド固有処理を確認・変更する入口を探したいとき。
+- cmoc のサブコマンドが、CLI 起動後にどの順序で検証・状態確認・Git 操作・Codex 呼び出し・出力生成を行うか調べたいとき。
+- session の開始・join・abandon、apply run の開始・join・破棄、oracle review の実行、INDEX.md 保守、初期化、TUI 起動など、利用者向け command の制御フローを確認・変更したいとき。
+- サブコマンド単位で branch、worktree、session state、report、commit、merge conflict、cleanup の扱いを追いたいとき。
+- 個別 helper ではなく、複数の下位処理をどの command がどう接続しているかを入口から把握したいとき。
+- CLI の外部挙動に近い層で、成功時・失敗時のメッセージ、warning、保存 report、状態更新の出所を探したいとき。
 
 ## Do not read this when
-- Typer アプリ全体の組み立てや、サブコマンド登録だけを確認したいときは、CLI routing を担う上位実装を読む方が直接的。
-- repo root、path keyword、worktree root、git command wrapper、設定読み込み、状態保存、cmoc ignore、エラー表示などの共通 runtime primitive 自体を調べたいときは、runtime 側を読む。
-- Codex に渡す prompt 文面、AgentCallParameter builder、Structured Output schema の具体定義だけを確認したいときは、builder 側の担当実装を読む。
-- oracle file の正本仕様内容、INDEX.md エントリー生成規則、path 用語の定義、oracle と realization の関係を調べたいときは、oracle 側の仕様断片を読む。
-- サブコマンドの外部挙動をテスト観点から確認したいだけで、実装本体の制御フローを読む必要がまだないときは、対応するテストを読む。
+- repo root、work root、path keyword、git 実行 wrapper、config 読み込み、cmoc ignore、clean worktree 判定、状態保存などの共通 runtime primitive だけを調べたいとき。
+- Codex CLI に渡す prompt、AgentCallParameter、Structured Output schema、parameter builder の具体的な文面や構造だけを確認したいとき。
+- oracle file の正本仕様内容、INDEX.md エントリー生成規則、oracle と realization の関係、path model の定義を確認したいとき。
+- サブコマンドの実装本体ではなく、自動テストから外部挙動や期待結果を先に確認したいとき。
+- 生成済み report、生成済み INDEX.md、過去実行結果など、実行後の成果物そのものを読みたいだけのとき。
 
 ## hash
-- 6695000791bc145a26e097e808173aa083dc62c990f8bee9cacef069bf7a08aa
+- c7e7980de9cc581ee6a84bd40f344123028aac698de3e605bde2762e91867850
