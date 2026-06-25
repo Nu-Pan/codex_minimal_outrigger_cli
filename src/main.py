@@ -3,12 +3,16 @@ import threading
 from collections.abc import Sequence
 from contextvars import ContextVar
 from pathlib import Path
+from typing import TypedDict, Unpack
 
 import click
 import typer
 
 from cmoc_runtime import (
     CmocError,
+    CodexExecResult,
+    CommandResult,
+    SubcommandLogger,
     render_error,
     repo_root,
     require_cmoc_ignored,
@@ -19,6 +23,7 @@ from cmoc_runtime import (
     work_root,
 )
 from basic.acp import AgentCallParameter
+from config.cmoc_config import CmocConfig
 import sub_commands.indexing as indexing_command
 from sub_commands.init import cmoc_init_impl
 from sub_commands.apply.abandon import cmoc_apply_abandon_impl
@@ -86,19 +91,45 @@ _INDEXING_LOCK = threading.Lock()
 _INDEXING_ACTIVE: ContextVar[bool] = ContextVar("INDEXING_ACTIVE", default=False)
 
 
-def run_codex_exec(parameter: AgentCallParameter, **kwargs):
+class _CodexExecKwargs(TypedDict, total=False):
+    root: Path | None
+    cwd: Path | None
+    config: CmocConfig | None
+    purpose: str
+    max_semantic_retries: int
+    max_capacity_retries: int
+    capacity_initial_sleep_sec: float
+    quota_poll_interval_sec: float
+    max_quota_polls: int | None
+    subcommand_logger: SubcommandLogger | None
+
+
+class _CodexTuiKwargs(TypedDict, total=False):
+    root: Path | None
+    cwd: Path | None
+    config: CmocConfig | None
+    purpose: str
+
+
+def run_codex_exec(
+    parameter: AgentCallParameter, **kwargs: Unpack[_CodexExecKwargs]
+) -> CodexExecResult:
     purpose = str(kwargs.get("purpose", "codex exec"))
     _run_indexing_before_codex(purpose, _indexing_root_for_codex(kwargs))
     return runtime_run_codex_exec(parameter, **kwargs)
 
 
-def run_codex_tui(parameter: AgentCallParameter, **kwargs):
+def run_codex_tui(
+    parameter: AgentCallParameter, **kwargs: Unpack[_CodexTuiKwargs]
+) -> CommandResult:
     purpose = str(kwargs.get("purpose", "codex tui"))
     _run_indexing_before_codex(purpose, _indexing_root_for_codex(kwargs))
     return runtime_run_codex_tui(parameter, **kwargs)
 
 
-def _indexing_root_for_codex(kwargs) -> Path:
+def _indexing_root_for_codex(
+    kwargs: _CodexExecKwargs | _CodexTuiKwargs,
+) -> Path:
     cwd = kwargs.get("cwd")
     return work_root(cwd) if cwd else kwargs.get("root") or repo_root()
 

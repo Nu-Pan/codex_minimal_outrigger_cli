@@ -1,6 +1,6 @@
 import json
 import time
-from contextvars import ContextVar
+from contextvars import ContextVar, Token
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -15,7 +15,7 @@ _CURRENT_SUBCOMMAND_LOGGER: ContextVar["SubcommandLogger | None"] = ContextVar(
 
 
 class SubcommandLogger:
-    def __init__(self, root: Path, command: str):
+    def __init__(self, root: Path, command: str) -> None:
         self.root = root
         self.command = command
         self.started_at = time.perf_counter()
@@ -41,11 +41,13 @@ class SubcommandLogger:
         self.quota_wait_sec += seconds
 
 
-def set_current_subcommand_logger(logger: SubcommandLogger | None):
+def set_current_subcommand_logger(
+    logger: SubcommandLogger | None,
+) -> Token[SubcommandLogger | None]:
     return _CURRENT_SUBCOMMAND_LOGGER.set(logger)
 
 
-def reset_current_subcommand_logger(token) -> None:
+def reset_current_subcommand_logger(token: Token[SubcommandLogger | None]) -> None:
     _CURRENT_SUBCOMMAND_LOGGER.reset(token)
 
 

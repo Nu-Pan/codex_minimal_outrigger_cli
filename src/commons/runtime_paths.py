@@ -1,4 +1,5 @@
 import os
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -77,7 +78,7 @@ def config_path(root: Path) -> Path:
 
 
 @contextmanager
-def pushd(path: Path):
+def pushd(path: Path) -> Iterator[None]:
     previous = Path.cwd()
     os.chdir(path)
     try:
