@@ -44,6 +44,7 @@ _QUOTA_POLLING = False
 def _emit_codex_call_console(
     purpose: str, call_path: Path, elapsed_sec: float, returncode: int
 ) -> None:
+    """Codex 呼び出し単位の完了サマリーを利用者の console へ出す。"""
     print(
         "\n".join(
             [
@@ -72,6 +73,7 @@ def run_codex_exec(
     max_quota_polls: int | None = None,
     subcommand_logger: SubcommandLogger | None = None,
 ) -> CodexExecResult:
+    """Codex exec の再試行、Structured Output 検証、実行記録を一括制御する。"""
     root = root or repo_root()
     cwd = cwd or root
     config = config or load_config(root)
@@ -99,6 +101,7 @@ def run_codex_exec(
     }
 
     def new_log_paths() -> tuple[str, Path, Path, Path, Path]:
+        """同一 timestamp 衝突を避けた Codex call 用 log path 群を確保する。"""
         while True:
             run_ts = timestamp()
             run_call_path = log_dir / f"{run_ts}_call.json"
@@ -112,6 +115,7 @@ def run_codex_exec(
                 )
 
     def build_argv(output_path: Path, resume_token: str | None) -> list[str]:
+        """schema と resume 状態を反映した `codex exec` の argv を組み立てる。"""
         run_argv = [
             "codex",
             "exec",
@@ -139,6 +143,7 @@ def run_codex_exec(
         run_output_path: Path,
         run_schema_path: Path | None,
     ) -> None:
+        """後から実行条件を追跡できる call log JSON を保存する。"""
         path.write_text(
             json.dumps(
                 {
@@ -174,6 +179,7 @@ def run_codex_exec(
         status: str,
         error: str | None = None,
     ) -> None:
+        """console と subcommand log の両方へ Codex call 結果を記録する。"""
         elapsed_sec = time.perf_counter() - started_at
         _emit_codex_call_console(run_purpose, run_call_path, elapsed_sec, returncode)
         if logger is None:
@@ -467,6 +473,7 @@ def run_codex_tui(
     purpose: str = "codex tui",
     extra_read_paths: list[Path] | None = None,
 ) -> CommandResult:
+    """Codex TUI を profile と call log を準備して起動する。"""
     root = root or repo_root()
     cwd = cwd or root
     config = config or load_config(root)

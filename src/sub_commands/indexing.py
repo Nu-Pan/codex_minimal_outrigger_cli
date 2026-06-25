@@ -1,4 +1,5 @@
 import fcntl
+from collections.abc import Iterator
 from contextlib import contextmanager
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -38,12 +39,14 @@ def cmoc_indexing_impl(
 
 
 def run_indexing_preflight(root: Path, codex_exec: CodexExec) -> None:
+    """Codex 呼び出し前に INDEX.md を最新化し、必要な更新 commit を作る。"""
     with indexing_lock(root):
         commit_index_updates(root, update_indexes(root, codex_exec))
 
 
 @contextmanager
-def indexing_lock(root: Path):
+def indexing_lock(root: Path) -> Iterator[None]:
+    """repository ごとの INDEX.md 更新を直列化する排他 lock を保持する。"""
     lock_path = indexing_lock_path(root)
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+") as lock_file:
@@ -55,6 +58,7 @@ def indexing_lock(root: Path):
 
 
 def indexing_lock_path(root: Path) -> Path:
+    """Git 管理領域内の indexing 用 lock file path を取得する。"""
     path = run_git(
         ["rev-parse", "--git-path", "cmoc-indexing.lock"], root
     ).stdout.strip()
