@@ -141,19 +141,25 @@ _INDEXING_ACTIVE: ContextVar[bool] = ContextVar("INDEXING_ACTIVE", default=False
 
 def run_codex_exec(parameter: AgentCallParameter, **kwargs):
     purpose = str(kwargs.get("purpose", "codex exec"))
-    if not _INDEXING_ACTIVE.get() and not should_skip_indexing_before_codex(purpose):
-        root = kwargs.get("root") or repo_root()
-        with _INDEXING_LOCK:
-            token = _INDEXING_ACTIVE.set(True)
-            try:
-                commit_index_updates(root, update_indexes(root))
-            finally:
-                _INDEXING_ACTIVE.reset(token)
+    _run_indexing_before_codex(purpose, kwargs.get("root") or repo_root())
     return runtime_run_codex_exec(parameter, **kwargs)
 
 
 def run_codex_tui(parameter: AgentCallParameter, **kwargs):
+    purpose = str(kwargs.get("purpose", "codex tui"))
+    _run_indexing_before_codex(purpose, kwargs.get("root") or repo_root())
     return runtime_run_codex_tui(parameter, **kwargs)
+
+
+def _run_indexing_before_codex(purpose: str, root: Path) -> None:
+    if _INDEXING_ACTIVE.get() or should_skip_indexing_before_codex(purpose):
+        return
+    with _INDEXING_LOCK:
+        token = _INDEXING_ACTIVE.set(True)
+        try:
+            commit_index_updates(root, update_indexes(root))
+        finally:
+            _INDEXING_ACTIVE.reset(token)
 
 
 def should_skip_indexing_before_codex(purpose: str) -> bool:
