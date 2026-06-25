@@ -41,21 +41,22 @@
 # `abandon.py`
 
 ## Summary
-- 未 join の apply run を破棄し、apply state を ready に戻す処理を担う。
-- session branch または apply branch 上で実行され、対象 apply branch・worktree・process id を掃除し、状態ファイルの apply 部分を初期化して結果と警告を CLI 出力する。
+- 未 join の active apply run を破棄し、apply state を ready に戻す処理を実装する。session branch または対象 apply branch 上で実行され、作業ツリーの clean 確認、必要に応じた実行中 apply process の停止、apply worktree と apply branch の削除、process id の削除、state の初期化、結果出力を扱う。
 
 ## Read this when
-- active な apply run を中断・破棄して ready 状態へ戻す挙動を確認または変更したいとき。
-- apply branch、apply worktree、apply process id の削除条件や、削除失敗・既欠損時の warning 出力を確認したいとき。
-- session branch と apply branch のどちらから abandon を実行できるか、また実行時に clean worktree を要求する条件を確認したいとき。
+- active な apply run を破棄して session を再び apply 可能な ready 状態へ戻す挙動を確認・変更したいとき。
+- apply run の破棄時に、現在 branch、session state、apply branch、apply worktree、process id がどの順序で検証・削除されるかを追いたいとき。
+- apply state が running の場合に process id を読み、apply process 停止を試みる制御を確認したいとき。
+- apply worktree や apply branch が既に存在しない場合の warning 出力、または破棄後に orphan が残った場合の warning 出力を確認したいとき。
 
 ## Do not read this when
-- apply run の開始、join、通常完了など、破棄以外の apply lifecycle を調べたいとき。
-- apply 用 worktree パス、process id ファイル、プロセス停止などの低レベル helper 自体の実装を確認したいとき。
-- session state のデータ構造、branch 操作、worktree 操作、clean worktree 判定の共通実装を調べたいとき。
+- apply run を作成・開始・join する通常フローを調べたいだけのとき。
+- apply 専用 worktree の期待パス計算、process id ファイルの読み書き、process 停止処理そのものの詳細を調べたいとき。
+- session state のデータ構造、branch 操作、worktree 操作、clean worktree 判定などの共通 runtime 実装を調べたいとき。
+- active apply run が存在しない状態での利用者向けコマンド一覧や CLI 登録だけを確認したいとき。
 
 ## hash
-- b0fc2f6cfbc108dcd378b2ab65b0af8e3ab12b88db8e00fe35862a109e31e67c
+- a71f5892659911c33b485305dbb89dfa9b6a8a407374ddedf2b8eed865935e11
 
 # `fork.py`
 

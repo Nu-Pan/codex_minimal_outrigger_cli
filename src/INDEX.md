@@ -139,24 +139,19 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装への入口となる階層。初期化、INDEX.md 保守、対話型実行、oracle review、apply、session の各実行フローを扱い、CLI 操作ごとの前提条件、状態遷移、Git 操作、Codex 呼び出し、利用者向け出力や report 生成へ進むための分岐点になる。
-- session と apply の lifecycle は下位領域に分かれ、開始・join・abandon、補助 worktree/branch、永続 state、process id、merge conflict、想定外差分、cleanup などのサブコマンド固有制御を追う入口になる。
-- review 系は、active session 上での oracle review 統括、対象 oracle file の列挙、finding の enumerate/merge/validate/judge loop、review 中に生成された INDEX.md 差分の取り込み、Markdown report 描画に責務が分かれている。
-- INDEX.md 保守と TUI はそれぞれ、indexing 対象の選別・entry 生成・commit と、ユーザー入力 prompt の編集・解決・complete prompt 保存・Codex TUI 起動を扱う。
+- CLI サブコマンド実装を集約する領域。初期化、対話実行、INDEX.md 保守、oracle review、apply lifecycle、session lifecycle など、利用者が呼び出す主要操作の入口になる。
+- 各サブコマンドは下位のファイルまたはディレクトリに分かれ、実行条件の検証、worktree・branch・session state・report・Codex 呼び出しなどの制御を担当する。
 
 ## Read this when
-- 特定サブコマンドの実行条件、状態遷移、Git branch/worktree 操作、Codex 呼び出し順序、標準出力や report の内容を確認または変更したいとき。
-- session の開始・join・abandon、または apply の開始・join・abandon に関する lifecycle、cleanup、merge conflict、想定外差分、process id、状態更新を調べたいとき。
-- oracle review の対象選定、finding loop、INDEX.md 差分の commit/merge、review report 出力のどこを読むべきか判断したいとき。
-- INDEX.md の自動保守で、対象 directory/file の列挙、既存 entry の再利用判定、Codex による不足 entry 生成、INDEX.md 更新 commit を確認したいとき。
-- 対話型実行で、入力 prompt の作成・エディタ起動・Markdown prompt 解析・実行パラメータ解決・complete prompt 保存・TUI 起動の流れを確認したいとき。
+- どのサブコマンド実装へ進むべきか切り分けたいとき。特に init、tui、indexing、review、apply、session のいずれが対象か判断したいとき。
+- CLI 操作から始まる実行フロー、サブコマンド単位の preflight、Git worktree/branch 操作、session/apply/review/indexing のライフサイクル制御を調査・変更したいとき。
+- 利用者向けサブコマンドの出力、レポート生成、Codex CLI 呼び出し、INDEX.md 更新、oracle review、apply/session の join や abandon に関わる実装入口を探したいとき。
 
 ## Do not read this when
-- Typer アプリ全体の command 登録や CLI wiring だけを確認したいときは、より上位の CLI 定義を読む。
-- Git wrapper、work root/repo root 解決、branch/worktree helper、clean worktree 判定、設定読み込み、CmocError、state schema など複数サブコマンドで共有される runtime 実装だけを調べたいときは、共通 runtime 側を読む。
-- Codex CLI に渡す prompt builder、AgentCallParameter、Structured Output schema の具体的な文面や構造だけを確認したいときは、builder 側を読む。
-- oracle file の正本仕様、oracle/realization の一般規約、path keyword の定義、INDEX.md エントリー生成方針そのものを確認したいときは、仕様側の本文を読む。
-- 生成済み report、ログ、state file、作業用 worktree など実行結果の個別内容を確認したいだけのときは、出力先の生成物を直接読む。
+- CLI 全体の登録や Typer app の最上位配線だけを確認したいときは、上位の CLI 構成を扱う実装へ進む。
+- git command 実行 wrapper、設定読み込み、path keyword、session state schema、worktree 検証、hash 計算などの共通 runtime helper 自体を調べたいときは、共通実装側へ進む。
+- Codex に渡す prompt parameter や Structured Output schema の具体的な文面だけを確認したいときは、AgentCallParameter builder 側へ進む。
+- oracle file の正本仕様内容、INDEX.md エントリー生成規則、realization 全体の規約、またはテスト側の期待値を確認したいときは、それぞれ oracle または test 側へ進む。
 
 ## hash
-- f9020b6ea2c4efcf1389ccb1a6da45940a20a3ec22b82eaeea88643b892da341
+- 80e4d8520d85344da9bfe85c33e98e41f4abf752e6dc14e36280e87bca39e54f
