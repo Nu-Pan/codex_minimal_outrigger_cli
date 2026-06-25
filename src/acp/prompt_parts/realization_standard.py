@@ -1,16 +1,13 @@
 # cmoc
 from basic.struct_doc import StructDoc
 from basic.standard import (
-    Requirement,
+    Requirement as Req,
     Standard,
     standard_to_struct_doc,
 )
 
 
 def build_realization_standard() -> StructDoc:
-    """
-    realization file が従うべき規範文章を構築する
-    """
     standards = [
         Standard(
             title="realization file の総文字数の最小化を目標とする",
@@ -19,31 +16,31 @@ def build_realization_standard() -> StructDoc:
                 "realization file の規模が大きいほど、トークン消費が増える",
             ],
             requirements=[
-                Requirement(
+                Req(
                     "推奨",
                     "必ず守らなければならない要件を満たしている範囲内（解空間内）で、realization file 全体で見た時の総文字数が最小となること（文字数最小解）を目指す",
                 ),
-                Requirement(
+                Req(
                     "推奨",
                     "複数箇所で出現するよく似た処理は関数化し、それを各所で使い回す",
                 ),
-                Requirement(
+                Req(
                     "推奨",
                     "意味的に重複している実装は 1 つに集約する",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "現行の仕様と関係のない、過去の仕様に基づく実装は削除する",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "同じ意味・同じ責務の実装を複数箇所に重複させてはいけない",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "現行仕様では使われない旧仕様向け実装・テスト・コメントを残してはいけない",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "文字数削減のために可読性や意味の明確さを損なってはいけない",
                 ),
@@ -62,47 +59,47 @@ def build_realization_standard() -> StructDoc:
                 "realization file の品質には、変更容易性・責務の明確さ・不要部分の少なさが含まれる",
             ],
             requirements=[
-                Requirement(
+                Req(
                     "推奨",
                     "realization file は、現行仕様を満たすために必要な情報だけを持つ",
                 ),
-                Requirement(
+                Req(
                     "推奨",
                     "realization code は、責務・入力・出力・副作用が読み取りやすい単位に分割する",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "読み取りやすさを損なう過度な圧縮をしてはいけない",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "将来使うかもしれないだけの抽象化を追加してはいけない",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "実装だけから読み取りにくい意図・制約・根拠は、コメントまたは docstring に書く",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "シグネチャ・型名・実装から明らかな情報だけを、コメントや docstring で冗長に繰り返してはいけない",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "現行仕様・現行実装から不要になった realization file、関数、クラス、分岐、設定、テスト、コメントは削除する",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "各ファイル・関数・クラスの責務が読み取れるようにする",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "実装の意図や制約は、必要な範囲でコメントまたは docstring に残す",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "現行仕様に関係しない古い実装・コメント・補助ファイルを残してはいけない",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "抽象化や分割により、読むべき文脈量を不要に増やしてはいけない",
                 ),
@@ -121,31 +118,31 @@ def build_realization_standard() -> StructDoc:
                 "巨大な realization file は、INDEX.md で読む先を絞れても局所的に読むべき文脈を増やす",
             ],
             requirements=[
-                Requirement(
+                Req(
                     "必須",
                     "file の分割・統合は、コードの意味、責務境界、同時に読む必要がある文脈を主な根拠に判断する",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "1 つの realization file が複数の独立した責務を持つ場合は、責務境界に沿って分割する",
                 ),
-                Requirement(
+                Req(
                     "推奨",
                     "1 つの realization file が 8,000 文字を超える場合は、意味上自然な分割点がないか確認する",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "1 つの realization file が 16,000 文字を超える場合は、分割しない理由を責務境界・凝集性・読み取り文脈の観点で説明できなければならない",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "小さすぎる realization file が同じ責務や同じ変更理由で常に一緒に読まれる場合は、統合を検討する",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "文字数だけを根拠に、強く結合した処理を不自然に分割してはいけない",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "INDEX.md で読む先を選べても、選んだ先が巨大 file になり、局所的な読解ができない状態を放置してはいけない",
                 ),
@@ -163,35 +160,35 @@ def build_realization_standard() -> StructDoc:
                 "既存実装の近くに同じ責務の実装が残ると、AI はどちらが正しいかを判断するために余計な文脈を読む必要がある",
             ],
             requirements=[
-                Requirement(
+                Req(
                     "必須",
                     "realization code を追加する前に、同じ責務または近い責務を持つ既存の realization code を確認する",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "既存実装の修正・移動・置換で現行仕様を満たせる場合は、新しい実装を追加してはいけない",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "新しい実装を追加した場合は、置き換えられた古い実装、不要になった分岐、重複した定数、古いテストも同時に削除または統合する",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "一時的な移行コード・互換コードは、現行仕様から明示的に必要な場合以外は残してはいけない",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "移行コード・互換コードを残す場合は、それを削除できる条件を近くのコメントに書く",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "新旧の実装経路を同じ責務を持ったまま並存させてはいけない",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "新しい実装に置き換えられた古いテスト・fixture・定数を残してはいけない",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "移行コードや互換コードには、残す理由と削除条件を書く",
                 ),
@@ -210,43 +207,43 @@ def build_realization_standard() -> StructDoc:
                 "「将来使うかもしれない」抽象化は、現時点の AI の読解対象を増やす",
             ],
             requirements=[
-                Requirement(
+                Req(
                     "必須",
                     "新しい関数・クラス・モジュールは、現行仕様上の責務境界を明確にする場合、または実在する重複を削減する場合に作る",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "単に処理が短いという理由だけで、1 箇所からしか呼ばれない小関数を増やしてはいけない",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "共通化は、見た目が似ているだけではなく、入力・出力・失敗時挙動・不変条件が同じ場合に行う",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "呼び出し元ごとの差分を大量のフラグや callback で吸収する汎用関数を作ってはいけない",
                 ),
-                Requirement(
+                Req(
                     "推奨",
                     "共有範囲が 1 モジュール内に閉じる場合は、そのモジュール内の private helper に留める",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "共有モジュールへ移動するのは、複数のサブコマンドまたは複数の上位モジュールから使うことが明確な場合に限る",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "新しい抽象化は、実在する重複または明確な責務境界に対応させる",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "抽象化により、呼び出し側の理解に必要な引数・フラグ・callback を過度に増やしてはいけない",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "共通化された処理の入力・出力・失敗時挙動・不変条件は揃える",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "共有モジュールに置く処理は、実際に複数箇所から使われる見込みを持っていなければならない",
                 ),
@@ -264,39 +261,39 @@ def build_realization_standard() -> StructDoc:
                 "公開面が増えると、実装・テスト・ドキュメント・利用者理解のすべてが増える",
             ],
             requirements=[
-                Requirement(
+                Req(
                     "必須",
                     "新しい CLI 引数、サブコマンド、設定項目、環境変数、出力項目、状態ファイルは、現行仕様を満たすために必要な場合だけ追加する",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "内部実装の都合だけで公開面を増やしてはいけない",
                 ),
-                Requirement(
+                Req(
                     "推奨",
                     "単一の妥当な挙動を選べる場合は、設定項目で利用者に選ばせない",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "新しい永続状態を追加する場合は、その生成条件・更新条件・削除条件を仕様または実装上で明確にする",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "同じ情報をログ・状態ファイル・出力 schema に重複して保存してはいけない",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "追加する公開面は、現行仕様上の必要性に対応していなければならない",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "内部実装の都合だけで利用者向けの選択肢を増やしてはいけない",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "永続状態のライフサイクルが読み取れるようにする",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "同じ情報を複数の保存先・出力先に重複させてはいけない",
                 ),
@@ -314,43 +311,43 @@ def build_realization_standard() -> StructDoc:
                 "テストが重複すると、仕様変更時に実装よりテスト修正のほうが大きくなる",
             ],
             requirements=[
-                Requirement(
+                Req(
                     "必須",
                     "テストは、実装詳細ではなく、現行仕様上意味のある外部挙動または制御ロジックを検証する",
                 ),
-                Requirement(
+                Req(
                     "推奨",
                     "同じ観点のテストケースは、可能な範囲で parametrized test や小さな fixture に集約する",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "似たテストを追加する前に、既存テストへケース追加できないか確認する",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "古い仕様に対応するテスト、削除済み実装に対応するテスト、同じ失敗を重複して検出するテストは削除または統合する",
                 ),
-                Requirement(
+                Req(
                     "推奨",
                     "大きな fixture ファイルは、現行仕様の検証に必要な最小内容にする",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "Codex CLI や LLM の出力品質そのものを検証するためのテストを追加してはいけない",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "テストは現行仕様上意味のある挙動または制御ロジックを検証する",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "同じ観点のテストを複数のテスト関数に不要に分散させてはいけない",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "削除済み実装や旧仕様に対応するテストを残してはいけない",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "fixture を検証対象に対して過大にしてはいけない",
                 ),
@@ -368,39 +365,39 @@ def build_realization_standard() -> StructDoc:
                 "realization ancillary の増加は、AI が読むべき文脈と更新すべき対象を増やす",
             ],
             requirements=[
-                Requirement(
+                Req(
                     "必須",
                     "新しい外部依存は、標準ライブラリまたは既存依存で現行仕様を十分に満たせない場合だけ追加する",
                 ),
-                Requirement(
+                Req(
                     "推奨",
                     "外部依存を追加する場合は、それにより自前実装・テスト・保守負担がどれだけ減るかを重視する",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "小さな処理のためだけに大きな依存を追加してはいけない",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "生成可能なキャッシュ、実行ログ、一時ファイル、ビルド成果物を realization file として持ってはいけない",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "補助スクリプトを追加する場合は、既存の CLI・テスト・開発手順で代替できないか確認する",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "追加する外部依存には、標準ライブラリまたは既存依存では代替しにくい理由がなければならない",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "外部依存を追加する場合は、総合的な実装・テスト・保守負担が減っていなければならない",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "再生成可能なファイルを正本のように管理してはいけない",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "補助スクリプトを既存の CLI・テスト・開発手順と重複させてはいけない",
                 ),
@@ -418,39 +415,39 @@ def build_realization_standard() -> StructDoc:
                 "「追加して動いた」状態は、「最小で保守しやすい」状態とは限らない",
             ],
             requirements=[
-                Requirement(
+                Req(
                     "必須",
                     "realization file の変更完了前に、追加したもののうち削除・統合・短縮できるものがないか確認する",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "未使用の関数、クラス、import、定数、fixture、補助ファイルを残してはいけない",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "同じ責務を持つ名前違いの実装を残してはいけない",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "現行仕様の説明に不要な TODO、NOTE、コメントを残してはいけない",
                 ),
-                Requirement(
+                Req(
                     "推奨",
                     "変更後の realization file は、現行仕様を満たすための最小構成にする",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "追加した実装・テスト・補助ファイルに、削除・統合・短縮できるものを残してはいけない",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "未使用の import、定数、fixture、helper を残してはいけない",
                 ),
-                Requirement(
+                Req(
                     "禁止",
                     "同じ責務を持つ実装を名前違いで並存させてはいけない",
                 ),
-                Requirement(
+                Req(
                     "必須",
                     "TODO、NOTE、コメントは現行仕様の理解に寄与していなければならない",
                 ),
