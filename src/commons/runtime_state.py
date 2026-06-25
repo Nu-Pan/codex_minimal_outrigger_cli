@@ -61,7 +61,14 @@ def branch_session_id(branch: str, kind: str = "session") -> str:
             [f"`cmoc {kind}` 系コマンドを cmoc {kind} branch 上で実行してください。"],
             f"current branch: {branch}",
         )
-    return branch.removeprefix(prefix).split("/", 1)[0]
+    parts = branch.split("/")
+    if len(parts) != 3 or not parts[2]:
+        raise CmocError(
+            f"{kind} branch 名から session-id を特定できません。",
+            ["branch 名と session state file を確認してください。"],
+            f"branch: {branch}",
+        )
+    return parts[2]
 
 
 def load_state_for_branch(root: Path, branch: str) -> tuple[str, Path, SessionState]:

@@ -1,7 +1,9 @@
 import tomllib
 
+import pytest
 from basic.acp import AgentCallParameter
 from commons.runtime_codex_profile import build_codex_profile
+from commons.runtime_state import branch_session_id
 
 from _support import (
     CmocConfig,
@@ -85,6 +87,18 @@ def test_render_error_fills_empty_next_actions() -> None:
     assert sum(line.startswith("- ") for line in next_actions.splitlines()) >= 2
     assert "入力、実行場所、設定、作業ツリー状態に問題がある場合" in next_actions
     assert "原因が実装不具合または仕様不足に見える場合" in next_actions
+
+
+@pytest.mark.parametrize(
+    "branch",
+    [
+        "cmoc/session/",
+        "cmoc/session/2026-06-24_20-40_40_571606000/extra",
+    ],
+)
+def test_branch_session_id_rejects_invalid_session_branch_shape(branch: str) -> None:
+    with pytest.raises(CmocError):
+        branch_session_id(branch)
 
 
 def test_cli_error_report_is_written_to_stderr(tmp_path: Path, monkeypatch) -> None:
