@@ -181,7 +181,7 @@ def cmoc_apply_fork_impl(
 def ensure_no_forbidden_apply_diff(worktree: Path) -> None:
     """apply fork 中に編集禁止対象へ差分が出ていないことを確認する。"""
     forbidden_diff = run_git(
-        ["status", "--short", "--", "oracle", ".agents", "memo", ".gitignore"],
+        ["status", "--short", "--", "oracle", ".agents", "memo"],
         worktree,
     ).stdout.strip()
     if forbidden_diff:
@@ -335,7 +335,7 @@ def normalize_apply_targets(root: Path, candidates: set[Path]) -> list[Path]:
             continue
         if ".git" in rel_parts or ".agents" in rel_parts or "memo" in rel_parts:
             continue
-        if path.name == "INDEX.md" or path.name.startswith(".") or is_binary(path):
+        if path.name == "INDEX.md" or is_binary(path):
             continue
         if is_git_ignored(root, path):
             continue

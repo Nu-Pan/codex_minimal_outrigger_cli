@@ -86,6 +86,78 @@ def test_apply_fork_does_not_rewrite_session_gitignore(
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
+def test_apply_fork_can_target_and_edit_gitignore(tmp_path: Path, monkeypatch) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    finding = {
+        "title": "Update gitignore",
+        "evidences": [
+            {
+                "path": str(root / ".gitignore"),
+                "line_start": 1,
+                "line_end": 1,
+                "summary": "gitignore",
+            }
+        ],
+        "oracle_requirement": "test requirement",
+        "observed_implementation": "old",
+        "reason": "needs update",
+        "suggested_fix": "update gitignore",
+    }
+    target_rels_by_call: list[list[str]] = []
+    current_findings = [finding]
+
+    class FakeCodexResult:
+        def __init__(self, output_json=None, output_text: str = ""):
+            self.output_json = output_json
+            self.output_text = output_text
+
+    def enumerate_findings(root_arg, targets, config, **kwargs):
+        nonlocal current_findings
+        target_rels_by_call.append(
+            sorted(str(path.relative_to(root_arg)) for path in targets)
+        )
+        current_findings = [finding] if len(target_rels_by_call) == 1 else []
+        return current_findings
+
+    def fake_run_codex_exec(parameter, **kwargs):
+        purpose = kwargs["purpose"]
+        if purpose == "apply fork refine findings":
+            return FakeCodexResult({"findings": current_findings})
+        if purpose == "apply fork finding application":
+            (Path.cwd() / ".gitignore").write_text("/.cmoc/\n# editable\n")
+            return FakeCodexResult()
+        if purpose == "apply fork commit message":
+            return FakeCodexResult(output_text="Update gitignore\n")
+        if purpose == "apply fork change summary":
+            return FakeCodexResult({"changes": []})
+        raise AssertionError(purpose)
+
+    monkeypatch.setattr(
+        main_module, "enumerate_apply_findings_for_targets", enumerate_findings
+    )
+    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(
+        app, ["apply", "fork", "--scope", "full"], catch_exceptions=False
+    )
+
+    assert result.exit_code == 0
+    assert ".gitignore" in target_rels_by_call[0]
+    assert target_rels_by_call[-1] == [".gitignore"]
+    branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = branch.removeprefix("cmoc/session/")
+    state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
+    assert (
+        run_git(root, "show", f"{state['apply']['apply_branch']}:.gitignore").stdout
+        == "/.cmoc/\n# editable\n"
+    )
+
+
 def test_apply_fork_writes_report_with_change_summary(
     tmp_path: Path, monkeypatch
 ) -> None:
