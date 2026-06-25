@@ -30,8 +30,9 @@ def test_path_model_resolves_token_path_inside_repo() -> None:
     assert token_path == Path("<cmoc-root>") / "src"
 
 
-def test_format_duration_truncates_msec_digit() -> None:
-    assert format_duration(0.19) == " 0h  0m 00.1s"
+def test_format_duration_truncates_msec_digit_and_space_pads_time_parts() -> None:
+    assert format_duration(0.19) == " 0h  0m  0.1s"
+    assert format_duration(3.19) == " 0h  0m  3.1s"
     assert format_duration(59.99) == " 0h  0m 59.9s"
 
 

@@ -42,8 +42,10 @@ def format_duration(seconds: float) -> str:
     total_tenths = int(seconds * 10)
     hours = total_tenths // 36000
     minutes = (total_tenths % 36000) // 600
-    sec = (total_tenths % 600) / 10
-    return f"{hours:2d}h {minutes:2d}m {sec:04.1f}s"
+    sec_tenths = total_tenths % 600
+    sec = sec_tenths // 10
+    msec = sec_tenths % 10
+    return f"{hours:2d}h {minutes:2d}m {sec:2d}.{msec}s"
 
 
 def sessions_dir(root: Path) -> Path:
