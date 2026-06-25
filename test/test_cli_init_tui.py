@@ -207,8 +207,8 @@ def test_init_syncs_config_defaults_without_overwriting_human_values(
     assert data["codex"]["model"]["mainstream"] == "CUSTOM-MAIN"
     assert data["codex"]["model"]["efficiency"] == "GPT-5.4-mini"
     assert data["codex"]["reasoning_effort"]["low"] == "low"
-    assert data["apply_fork"]["num_apply_loop"] == 5
-    assert data["review_oracle"]["num_validate_findings_loop"] == 3
+    assert data["apply_fork"]["num_apply_files"] == 200
+    assert data["review_oracle"]["num_validate_findings_loop"] == 2
 
 
 def test_tui_runs_editor_resolves_parameters_and_launches_codex(

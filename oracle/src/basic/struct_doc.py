@@ -132,6 +132,9 @@ def _render_as_markdown(struct_doc: StructDoc, depth: int = 1) -> str:
         raise TypeError(
             f"Invalid type of struct_doc.children (type={type(struct_doc.children)})"
         )
+    # TODO
+    #   空行が２つ以上連続する場合、１つの空行にまとめる
+    #   空白文字しか無い行も空行とみなす
     # 正常終了
     return result
 

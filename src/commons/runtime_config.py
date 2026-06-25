@@ -33,8 +33,7 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
             },
         },
         "apply_fork": {
-            "num_apply_loop": config.apply_fork.num_apply_loop,
-            "num_improve_findings_loop": config.apply_fork.num_improve_findings_loop,
+            "num_apply_files": config.apply_fork.num_apply_files,
         },
         "review_oracle": {
             "num_enumerate_findings_loop": config.review_oracle.num_enumerate_findings_loop,
@@ -72,16 +71,10 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
             num_parallel=int(data.get("num_parallel", default.num_parallel)),
             codex=CmocConfigCodex(model=model, reasoning_effort=reasoning_effort),
             apply_fork=CmocConfigApplyFork(
-                num_apply_loop=int(
+                num_apply_files=int(
                     apply_fork_data.get(
-                        "num_apply_loop",
-                        default.apply_fork.num_apply_loop,
-                    )
-                ),
-                num_improve_findings_loop=int(
-                    apply_fork_data.get(
-                        "num_improve_findings_loop",
-                        default.apply_fork.num_improve_findings_loop,
+                        "num_apply_files",
+                        default.apply_fork.num_apply_files,
                     )
                 ),
             ),

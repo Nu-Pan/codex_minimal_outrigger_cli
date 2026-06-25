@@ -1,6 +1,6 @@
 import json
 import os
-from concurrent.futures import ThreadPoolExecutor
+import shutil
 from pathlib import Path
 from typing import Callable
 
@@ -11,9 +11,6 @@ from acp.builder.apply.fork.file_finding_enumeration import (
 )
 from acp.builder.apply.fork.finding_application import (
     build_apply_fork_finding_application_parameter,
-)
-from acp.builder.apply.fork.refine_finding import (
-    build_apply_fork_refine_finding_parameter,
 )
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
@@ -88,58 +85,42 @@ def cmoc_apply_fork_impl(
         with pushd(apply_worktree):
             findings: list[dict] = []
             dirty_targets = enumerate_apply_targets(apply_worktree, scope, state)
-            for _apply_loop in range(config.apply_fork.num_apply_loop):
+            for _apply_loop in range(config.apply_fork.num_apply_files):
+                dirty_targets = dedupe_apply_targets(dirty_targets)
                 if not dirty_targets:
-                    result_label = "unconverged" if findings else "converged"
+                    result_label = "converged"
                     break
-                findings = enumerate_apply_findings_for_targets(
+                target = dirty_targets.pop(0)
+                findings = enumerate_apply_findings_for_target(
                     apply_worktree,
-                    dirty_targets,
+                    target,
                     config,
                     codex_exec,
                     log_root=root,
                 )
-                for _ in range(config.apply_fork.num_improve_findings_loop):
-                    refined = codex_exec(
-                        build_apply_fork_refine_finding_parameter({"findings": findings}),
-                        root=root,
-                        cwd=apply_worktree,
-                        config=config,
-                        purpose="apply fork refine findings",
-                    ).output_json
-                    next_findings = list((refined or {}).get("findings", []))
-                    if next_findings == findings:
-                        break
-                    findings = next_findings
                 finding_counts.append(len(findings))
                 if not findings:
-                    result_label = "converged"
-                    break
-                next_dirty = set(related_apply_paths(apply_worktree, findings))
-                for finding in findings:
-                    codex_exec(
-                        build_apply_fork_finding_application_parameter(
-                            json.dumps(finding, ensure_ascii=False, indent=2)
-                        ),
-                        root=root,
-                        cwd=apply_worktree,
-                        config=config,
-                        purpose="apply fork finding application",
+                    continue
+                dirty_targets.append(target)
+                run_finding_application_with_forbidden_rollback(
+                    root,
+                    apply_worktree,
+                    findings,
+                    config,
+                    codex_exec,
+                )
+                changed = changed_worktree_paths(apply_worktree)
+                dirty_targets.extend(changed)
+                if changed:
+                    commit_message = generate_apply_commit_message(
+                        root,
+                        apply_worktree,
+                        {"findings": findings},
+                        config,
+                        codex_exec,
                     )
-                    ensure_no_forbidden_apply_diff(apply_worktree)
-                    changed = changed_worktree_paths(apply_worktree)
-                    next_dirty.update(changed)
-                    if changed:
-                        commit_message = generate_apply_commit_message(
-                            root,
-                            apply_worktree,
-                            finding,
-                            config,
-                            codex_exec,
-                        )
-                        run_git(["add", "."], apply_worktree)
-                        run_git(["commit", "-m", commit_message], apply_worktree)
-                dirty_targets = normalize_apply_targets(apply_worktree, next_dirty)
+                    run_git(["add", "."], apply_worktree)
+                    run_git(["commit", "-m", commit_message], apply_worktree)
             else:
                 result_label = "unconverged"
             report_path = write_apply_fork_report(
@@ -183,16 +164,74 @@ def cmoc_apply_fork_impl(
     return 2 if result_label == "unconverged" else 0
 
 
-def ensure_no_forbidden_apply_diff(worktree: Path) -> None:
-    """apply fork 中に編集禁止対象へ差分が出ていないことを確認する。"""
-    forbidden_diff = run_git(
+def forbidden_apply_diff(worktree: Path) -> str:
+    """apply fork 中の編集禁止対象差分を porcelain status で返す。"""
+    return run_git(
         ["status", "--short", "--", "oracle", ".agents", "memo"],
         worktree,
     ).stdout.strip()
-    if forbidden_diff:
+
+
+def rollback_forbidden_apply_diff(worktree: Path) -> None:
+    """編集禁止対象に発生した未コミット差分だけを HEAD へ戻す。"""
+    tracked_paths: list[str] = []
+    untracked_paths: list[str] = []
+    for line in forbidden_apply_diff(worktree).splitlines():
+        status = line[:2]
+        path_text = line[3:]
+        if " -> " in path_text:
+            path_text = path_text.split(" -> ", 1)[1]
+        if path_text.startswith("agents/") and (worktree / f".{path_text}").exists():
+            path_text = f".{path_text}"
+        if status == "??":
+            untracked_paths.append(path_text)
+        else:
+            tracked_paths.append(path_text)
+    if tracked_paths:
+        run_git(
+            [
+                "restore",
+                "--staged",
+                "--worktree",
+                "--",
+                *[f":(literal){path}" for path in tracked_paths],
+            ],
+            worktree,
+        )
+    for path_text in untracked_paths:
+        path = worktree / path_text
+        if path.is_dir():
+            shutil.rmtree(path)
+        elif path.exists():
+            path.unlink()
+
+
+def run_finding_application_with_forbidden_rollback(
+    root: Path,
+    apply_worktree: Path,
+    findings: list[dict],
+    config: CmocConfig,
+    codex_exec: CodexExec,
+) -> None:
+    """所見リスト適用を行い、編集禁止対象差分が出た場合は戻して 1 回再実行する。"""
+    parameter = build_apply_fork_finding_application_parameter(findings)
+    for attempt in range(2):
+        codex_exec(
+            parameter,
+            root=root,
+            cwd=apply_worktree,
+            config=config,
+            purpose="apply fork finding application",
+        )
+        forbidden_diff = forbidden_apply_diff(apply_worktree)
+        if not forbidden_diff:
+            return
+        rollback_forbidden_apply_diff(apply_worktree)
+        if attempt == 0:
+            continue
         raise CmocError(
             "apply fork 中に編集禁止対象へ差分が発生しました。",
-            ["該当差分を確認し、apply を abandon してから再実行してください。"],
+            ["該当差分をロールバックしました。apply を abandon してから再実行してください。"],
             forbidden_diff,
         )
 
@@ -254,32 +293,37 @@ def sanitize_commit_message(message: str, finding: dict) -> str:
     return "Apply cmoc finding"
 
 
-def enumerate_apply_findings_for_targets(
+def enumerate_apply_findings_for_target(
     root: Path,
-    targets: list[Path],
+    target: Path,
     config: CmocConfig,
     codex_exec: CodexExec,
     log_root: Path | None = None,
 ) -> list[dict]:
-    """対象ファイルごとの apply finding 列挙を並列実行する。"""
+    """対象ファイルを起点に apply finding を列挙する。"""
     logger = current_subcommand_logger()
+    result = codex_exec(
+        build_apply_fork_file_finding_enumeration_parameter(target),
+        root=log_root or root,
+        cwd=root,
+        config=config,
+        purpose=f"apply fork enumerate findings for {target}",
+        subcommand_logger=logger,
+    )
+    return list((result.output_json or {}).get("findings", []))
 
-    def enumerate_one(target: Path) -> list[dict]:
-        result = codex_exec(
-            build_apply_fork_file_finding_enumeration_parameter(target),
-            root=log_root or root,
-            cwd=root,
-            config=config,
-            purpose=f"apply fork enumerate findings for {target}",
-            subcommand_logger=logger,
-        )
-        return list((result.output_json or {}).get("findings", []))
 
-    findings: list[dict] = []
-    with ThreadPoolExecutor(max_workers=config.num_parallel) as executor:
-        for target_findings in executor.map(enumerate_one, targets):
-            findings.extend(target_findings)
-    return findings
+def dedupe_apply_targets(targets: list[Path]) -> list[Path]:
+    """最初に現れた要素だけを残して調査待ちファイルリストの重複を削除する。"""
+    deduped: list[Path] = []
+    seen: set[Path] = set()
+    for target in targets:
+        resolved = target.resolve()
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        deduped.append(target)
+    return deduped
 
 
 def changed_worktree_paths(root: Path) -> list[Path]:
@@ -290,24 +334,6 @@ def changed_worktree_paths(root: Path) -> list[Path]:
         if " -> " in path_text:
             path_text = path_text.split(" -> ", 1)[1]
         paths.append(root / path_text)
-    return paths
-
-
-def related_apply_paths(root: Path, findings: list[dict]) -> list[Path]:
-    """finding に含まれる path 情報を apply dirty target 候補へ変換する。"""
-    paths: list[Path] = []
-    for finding in findings:
-        for key in ("oracle_path", "realization_path", "path"):
-            value = finding.get(key)
-            if isinstance(value, str) and value:
-                paths.append(Path(value) if Path(value).is_absolute() else root / value)
-        for evidence in finding.get("evidences", []):
-            if isinstance(evidence, dict) and isinstance(evidence.get("path"), str):
-                value = evidence["path"]
-                paths.append(Path(value) if Path(value).is_absolute() else root / value)
-        for value in finding.get("changed_paths", []):
-            if isinstance(value, str):
-                paths.append(Path(value) if Path(value).is_absolute() else root / value)
     return paths
 
 
