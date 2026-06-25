@@ -115,47 +115,46 @@
 # `test_cli_init_tui.py`
 
 ## Summary
-- CLI の初期化、対話起動、Markdown プロンプト解析に関する realization test。`init` が `.cmoc` の追跡解除、`.gitignore` 更新、既存 staging の保護、linked worktree での保存先分離、既定設定生成と既存設定の同期を行うことを検証する。
-- `tui` がエディタで編集された依頼文から不要コメントを除去し、resolve 用 Codex 実行で起動パラメータを決め、完成プロンプトを保存して Codex TUI を呼ぶ流れを検証する。linked worktree では実リポジトリ root と作業 cwd、schema・log の保存先が分かれることも扱う。
-- Markdown プロンプト解析について、fenced code block 内の見出し風行を見出し扱いしないこと、先頭見出し前の本文を保持することを検証する。
+- CLI の初期化と TUI 起動に関する realization test。初期化時の `.cmoc` 配下の git 管理解除、ignore 設定、既存 staged/unstaged 変更の保持、linked worktree での作業場所、既定設定ファイルの生成・同期、サブコマンド実行ログを検証する。
+- TUI ではエディタで作成された依頼文からパラメータ解決用 Codex 実行と TUI 用 Codex 起動へつなぐ制御、生成された完全プロンプトの保存場所、不要な HTML コメント除去、旧ログパスを使わないことを検証する。
+- Markdown prompt parser が fenced code block 内の見出し風テキストを見出し扱いしないこと、見出し前の前文を本文セクションとして保持することを検証する。
 
 ## Read this when
-- `init` サブコマンドの Git 副作用を変更・調査する。特に `.cmoc` の ignore、追跡解除、cleanup commit、既存 staged/unstaged 変更の保護、linked worktree 上の初期化挙動を確認したいとき。
-- `.cmoc/config.json` の既定値、既存ユーザー値を上書きしない defaults sync、設定項目追加時の期待テストを確認したいとき。
-- `tui` サブコマンドのエディタ起動、依頼文整形、parameter resolve、Codex TUI 起動、完成プロンプト保存、log/state/schema の配置を変更・調査するとき。
-- linked worktree で `init` または `tui` の保存先、Git root と cwd の扱い、root 側 `.cmoc` と worktree 側 `.cmoc` の分離を確認したいとき。
-- Markdown 依頼文 parser の heading 抽出、fenced code block、見出し前 preamble の扱いを変更・調査するとき。
+- `init` サブコマンドの git 操作、`.gitignore` 更新、`.cmoc` 配下の ignore・untrack・config 生成、既存 index/worktree 変更を壊さない挙動を変更または確認するとき。
+- linked worktree 上で `init` や `tui` を実行した場合の root/cwd、`.cmoc` state・log・config の配置、親 worktree へ副作用を出さない挙動を確認するとき。
+- `tui` サブコマンドのエディタ起動、依頼文の整形、パラメータ解決用 structured output schema、Codex TUI へ渡す model・reasoning effort・file access mode・prompt を変更するとき。
+- サブコマンド実行ログの保存先や `command_invoked` event の内容を変更するとき。
+- Markdown 依頼文 parser の見出し分割、fenced code block の扱い、見出し前テキストの扱いを変更するとき。
 
 ## Do not read this when
-- CLI コマンドの実装詳細だけを読みたい場合は、まず実装側の対象へ進めばよい。この対象は外部挙動と制御結果を検証するテストである。
-- `init`、`tui`、Markdown プロンプト解析に関係しないサブコマンドやドメイン機能のテストを探している場合は読まなくてよい。
-- Codex CLI やエディタ実行そのものの品質、実際の LLM 出力内容を評価したい場合は対象外である。この対象は fake 実行や monkeypatch によって cmoc 側の制御と保存結果を検証している。
-- INDEX 生成、oracle review、apply fork など、この対象内で設定項目名として触れられるだけの機能本体を調査する場合は、より直接の実装・テストへ進む方がよい。
+- CLI の初期化・TUI・Markdown prompt parsing と関係しないサブコマンドの仕様やテストを探しているとき。
+- Codex 実行ラッパーそのものの低レベルな subprocess 組み立て、外部コマンド共通処理、設定 schema 全体の詳細だけを調べたいときは、対応する実装や専用テストを先に読む。
+- oracle の正本仕様を確認したいときは、realization test であるこの対象ではなく oracle 側の本文を読む。
 
 ## hash
-- 9de769ced8a3bb018342e8a5c9888ecaac1b15e9fe71a081cdddfad6a92d7336
+- 228fed3a02ac1c474c76f32497cb7d88320bc0ae08146418d002e1bd10fc3f99
 
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 呼び出し runtime の realization test。exec 経路が prompt を標準入力で渡し、schema・profile・call log・stdout/stderr log・subcommand log を期待どおり生成することを検証する。
-- worktree を cwd にした exec 呼び出しで、schema 保存先が root ではなく作業 cwd 側の state 配下になることを確認する。
-- TUI 経路が exec サブコマンドを使わず prompt を argv 末尾に渡し、CODEX_HOME・workspace write profile・call log・戻り値を設定することを検証する。
-- repository config の codex model と reasoning effort が exec 用 profile に反映されることを確認する。
+- Codex CLI 呼び出しを包む runtime 層の realization test。exec 実行ではプロンプトを stdin で渡し、出力 schema・profile・CODEX_HOME・ログ・Structured Output の読み取りが期待どおりになることを検証する。
+- worktree 上の cwd で exec した場合に、schema の保存先が実行 cwd 側の work root 配下になり、call log は repo root 側のログ領域に残ることを検証する。
+- TUI 起動では exec サブコマンドを使わず、プロンプトをコマンド引数として渡し、capture しない subprocess 呼び出し、sandbox profile、call log、subcommand log、コンソール表示を検証する。
+- repo 設定から Codex model と reasoning effort を読み込み、生成 profile に反映されることを検証する。
 
 ## Read this when
-- Codex CLI を外部プロセスとして起動する runtime の argv、stdin、cwd、環境変数、profile 生成、ログ生成を変更する。
-- structured output schema の一時保存場所、特に worktree や cwd と root の関係を扱う挙動を確認する。
-- TUI 呼び出しと exec 呼び出しの違い、prompt の渡し方、出力 capture の有無を変更または調査する。
-- codex model や reasoning effort の repository config 読み込みと profile 反映を変更する。
+- Codex CLI の exec/TUI 呼び出し方法、引数構成、stdin と prompt 引数の使い分けを変更・確認するとき。
+- Codex 呼び出し用 profile、CODEX_HOME、sandbox writable/read-only paths、repo 設定の反映を扱う runtime 実装を変更するとき。
+- Codex 呼び出しログ、stdout/stderr ログ、subcommand log、コンソール表示、call result オブジェクトの挙動を変更・確認するとき。
+- output schema のコピー先、worktree を cwd にした実行、Structured Output 読み取りの挙動を確認するとき。
 
 ## Do not read this when
-- Codex CLI runtime 以外のサブコマンド、oracle 文書、INDEX.md 生成、path model などの挙動だけを調べる。
-- 実際の Codex CLI や LLM 出力品質そのものを検証したい。ここでは fake codex と monkeypatch による呼び出し制御だけを扱う。
-- Git 操作一般、worktree 作成一般、pytest fixture 全般を調べたい。ここでの git worktree は schema 保存先検証のための補助条件に限られる。
+- Codex CLI 呼び出しではなく、Git 操作、path model、INDEX 生成、oracle review など別領域の挙動だけを確認するとき。
+- runtime 実装の外部挙動ではなく、テスト補助関数や fixture の定義そのものを調べたいときは、補助モジュールを直接読む。
+- Codex や LLM の回答品質そのもの、プロンプト本文の内容設計、モデル選定方針の正本仕様を調べたいとき。
 
 ## hash
-- ee8f42edbf30d992cc13f83d08948cf30473e258ffbfdfcdc76643ded6545c6a
+- 54ece639c73e67bed45444024eb270fe150d0625555e82d2972edac42103076f
 
 # `test_codex_runtime_home.py`
 
@@ -254,19 +253,21 @@
 # `test_session_cli.py`
 
 ## Summary
-- cmoc の session サブコマンドに関する realization test。session fork が session branch と状態ファイルを作ること、session abandon が home branch へ戻って状態を abandoned にすること、session join が衝突解決や session branch 削除失敗時の出力を扱うことを検証する。
-- Git branch、session 状態 JSON、CLI 出力、stderr/stdout、Codex 実行の file access mode、衝突解決後の staged 状態など、session 操作の外部挙動と失敗時ロールバックを読む入口になる。
+- session サブコマンドの realization test。session fork による session branch と状態ファイル生成、session abandon による home branch への復帰・branch 削除・状態更新、session join による home branch への取り込みと競合解決を検証する。
+- Git 操作を伴う一時リポジトリ上で CLI を実行し、branch 状態、session state JSON、標準出力・標準エラー、Codex conflict resolution 呼び出し、未解決 conflict の解消状態を確認する。
 
 ## Read this when
-- session fork / abandon / join の CLI 挙動、branch 遷移、状態ファイル更新、session branch 削除の成否を変更または確認したいとき。
-- session abandon の home branch 不在エラー、cleanup 失敗時のロールバック、再実行案内、診断出力の内容を確認したいとき。
-- session join の merge conflict 解決で Codex 実行が呼ばれる条件、REALIZATION_WRITE mode の指定、削除衝突解決の staging、session branch を削除できない場合の warning 出力を確認したいとき。
-- session 操作に関する realization test を追加・整理する前に、既存の観点と重複していないか確認したいとき。
+- session fork、session abandon、session join の外部挙動や失敗時挙動を変更する。
+- session state JSON の `session.state`、`session_home_branch`、`joined_at`、`apply.state` の生成・更新条件を確認する。
+- session branch の作成、削除、削除失敗時 warning、cleanup 失敗時 rollback、home branch 不在時のエラー処理を確認する。
+- join 時の merge conflict 解決で Codex 実行を呼ぶ条件、file access mode、delete conflict 解決後の staging 状態を確認する。
+- session 系 CLI の出力に含まれる diagnostics、成功・失敗時の stdout/stderr の出し分け、終了コードを確認する。
 
 ## Do not read this when
-- session 以外の CLI サブコマンド、初期化処理、path model、oracle/realization の概念定義そのものを調べたいだけのとき。
-- session 機能の実装詳細を直接変更したい場合で、まず実装側の責務境界や helper を読む必要があるとき。
-- Codex CLI や LLM 出力品質そのものを検証したいとき。この対象は cmoc の session 制御と副作用を検証するものであり、生成品質を評価するものではない。
+- session 以外の CLI サブコマンド、path model、oracle review、設定読み込みなどを調べる場合。
+- session の実装構造や helper の責務を先に理解したい場合。この対象は外部挙動のテストであり、実装入口ではない。
+- Codex 実行そのものの品質や LLM 出力内容を確認したい場合。この対象は Codex 呼び出しの有無と引数相当の制御だけを検証する。
+- INDEX 生成規則やルーティング文書の仕様を調べる場合。
 
 ## hash
-- 08dce9eff13188175d5a0fa6e77b6b5a9c4b478099b1c64c5baec603190f756f
+- 29d619c3245b57120f1a08659b8bdd2a886f41cc744ba7a15b7df52f75a9cf05

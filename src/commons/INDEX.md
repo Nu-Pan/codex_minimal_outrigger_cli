@@ -34,44 +34,48 @@
 # `runtime_cli.py`
 
 ## Summary
-- CLI サブコマンド実行を共通化する runtime helper。work root での実行確認、pre-log 検査、サブコマンドログの開始・現在 logger の設定、3 段階の進捗表示、実装関数の戻り値処理、完了 summary 出力、例外の cmoc 向け表示と終了コード化をまとめて扱う。
-- サブコマンド本体そのものではなく、複数の CLI command から共有される実行ラッパーと、work root 強制、完了時の経過時間・quota wait・returncode 表示を担う。
+- CLI サブコマンドを共通実行するための実行ラッパーを定義している。work root での実行確認、repo root 取得、任意の事前チェック、サブコマンドログの開始・現在 logger の設定、進行状況の標準出力、実装関数の呼び出し、完了サマリー、例外の利用者向け表示、終了コード変換をまとめて扱う。
+- 実行ディレクトリが work root であることを検証し、違う場合は利用者向けの cmoc エラーとして cwd と work_root を示す補助関数を持つ。
+- サブコマンド完了時に、ログパス、実行時間、全体経過時間、quota wait、returncode を一貫した形式で表示する内部 helper を持つ。
 
 ## Read this when
-- CLI サブコマンドの共通実行フロー、進捗表示、終了コード、例外表示、サブコマンドログ生成・current logger 設定の挙動を確認または変更したいとき。
-- コマンド実行前に cwd が work root であることを強制する条件や、その失敗時に利用者へ出す cmoc error の内容を確認したいとき。
-- サブコマンド完了時に標準出力へ出る timestamp、log path、execute elapsed、quota wait、returncode の summary 形式を扱うとき。
-- 個別サブコマンド実装を、共通の logging・error handling・Typer exit 処理に載せる呼び出し側を調べるとき。
+- CLI サブコマンドの共通実行フロー、進行表示、完了表示、終了コード処理、例外処理を変更または確認したいとき。
+- サブコマンドログの生成、current subcommand logger の設定・リセット、command_invoked / step_started / command_finished event の記録タイミングを確認したいとき。
+- cmoc コマンドが work root 以外で実行された場合のエラー文言や判定条件を確認・変更したいとき。
+- 個別サブコマンド実装を共通ラッパーから呼ぶ際の引数、任意の事前チェック、コマンド名、argv 記録の扱いを確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジック、引数定義、ファイル生成内容を知りたいだけのときは、そのサブコマンド実装を読む。
-- ログファイルの具体的な保存形式、event の JSON 構造、quota wait の加算処理を調べたいときは、runtime logging 側を読む。
-- repo root、work root、timestamp、duration format の算出規則を調べたいときは、runtime paths 側を読む。
-- cmoc error の型や render 形式そのものを調べたいときは、runtime errors 側を読む。
+- 個別サブコマンド自体の業務処理、引数定義、Typer app への登録箇所だけを確認したいとき。
+- ログファイルの具体的な保存形式、logger class の内部実装、quota wait の加算方法を確認したいとき。
+- repo root や work root の探索規則、タイムスタンプや duration 文字列の整形規則を確認したいとき。
+- cmoc 独自エラー型やエラーメッセージ描画の詳細を確認したいとき。
 
 ## hash
-- caa3c7d49cc50dc8cb9ca6c702be554b196f73a77bafb93b9c90b5017b3a1610
+- 1c6305228cc49ae2ccad1da1862db8870c8e05b768b86a5564848648d01b6c4b
 
 # `runtime_codex.py`
 
 ## Summary
-- Codex CLI 呼び出しを実行する runtime 層で、exec 形式と TUI 形式の起動、profile/schema 準備、call log/stdout/stderr/output の保存、Structured Output 検証、実行結果オブジェクト化を担う。
-- exec 呼び出しでは capacity error の指数バックオフ再試行、quota error の代表 probe による待機共有、resume token による再開、subcommand logger へのイベント記録まで扱う。
+- Codex CLI の exec/TUI 呼び出しを実行し、プロファイル準備、Structured Output schema の適用、呼び出しログ作成、標準出力・標準エラー・最終出力の保存、実行結果オブジェクトへの変換を担当する。
+- exec 呼び出しでは capacity error の指数バックオフ再試行、quota error 時の代表プローブによる待機共有、resume token を使った再開、schema validation 失敗時の意味的再試行、成功・失敗イベントの記録まで扱う。
+- TUI 呼び出しでは対話用の Codex CLI 起動、call log 記録、コンソール表示、subcommand logger へのイベント送信、失敗時の cmoc エラー化を行う。
 
 ## Read this when
-- Codex CLI を subprocess で呼び出す制御、引数組み立て、作業ディレクトリ、環境変数、profile/schema の準備手順を確認・変更したいとき。
-- Codex exec のログ出力、Structured Output schema 検証、CodexExecResult の内容、失敗時の CmocError 生成を追いたいとき。
-- capacity/quota エラー時の再試行、quota polling の同期、resume token の扱い、Codex 呼び出しイベントの記録を調査したいとき。
-- Codex TUI 起動の call log、profile 適用、失敗時処理、CommandResult 返却を確認したいとき。
+- Codex CLI を外部プロセスとして起動する exec/TUI 実行経路、引数構築、作業ディレクトリ、環境変数、Codex home、プロファイル名の扱いを確認したいとき。
+- Codex 呼び出しログ、stdout/stderr/output の保存先、call log の JSON 内容、コンソールに出る呼び出しサマリ、subcommand logger の codex_call event を変更・調査するとき。
+- Structured Output schema を Codex exec に渡す流れ、出力 JSON の読み取り、jsonschema validation、validation 失敗時の再試行と失敗エラーを扱うとき。
+- Codex CLI の capacity error、quota error、quota 回復プローブ、quota 待機時間集計、resume token による再開、関連するスレッド間待機制御を変更・調査するとき。
+- Codex CLI 呼び出し失敗時に CmocError へ変換されるメッセージ、detail、ログパスの出し方を確認したいとき。
 
 ## Do not read this when
-- Codex profile の具体的な生成・検証、Codex home の解決、quota/capacity error の判定、output JSON 読み込みの詳細だけを確認したい場合は、それらを定義する runtime profile 側を読む。
-- cmoc config の読み込み仕様、path model、log directory や timestamp の生成規則だけを確認したい場合は、それぞれの runtime config/path/logging 側を読む。
-- Codex を呼び出した後の結果型そのものの定義だけを確認したい場合は、結果型を定義する module を読む。
-- Codex CLI や LLM の出力品質、prompt 本文の意味、agent parameter の構造を調べたいだけの場合は、この実行 wrapper ではなく呼び出し元や parameter 定義を読む。
+- Codex profile、Codex home、schema file の準備、quota/capacity 判定、出力 JSON 読み取りなどの個別 helper の中身を確認したいだけなら、それらを定義する profile 関連の実装を読む方が直接的。
+- cmoc 設定ファイルの読み込み仕様や設定モデルそのものを確認したいだけなら、設定読み込み・設定定義の実装を読む方が直接的。
+- ログディレクトリ、timestamp、work root、repo root、duration 表示などパス・時刻 helper の仕様を確認したいだけなら、runtime path 関連の実装を読む方が直接的。
+- CodexExecResult や CommandResult のデータ構造だけを確認したい場合は、結果型を定義する実装を読む方が直接的。
+- AgentCallParameter の項目、model class、reasoning effort、file access mode の定義だけを確認したい場合は、呼び出しパラメータ定義を読む方が直接的。
 
 ## hash
-- 2bb45f460c817f415b7459f5ce075e79cde5a0e67922f3d5ae3500afc7d80678
+- 125bd504a2962ebefc813cf58b5590524a0fb3be570ea31acc114532578a708b
 
 # `runtime_codex_profile.py`
 
