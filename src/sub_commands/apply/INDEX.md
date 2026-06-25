@@ -61,65 +61,62 @@
 # `fork.py`
 
 ## Summary
-- isolated apply worktree 上で apply loop を実行するサブコマンド実装。session branch の状態検証、apply branch/worktree 作成、対象ファイル列挙、finding 列挙、finding 適用、変更 commit、report 作成、状態更新までの制御フローを担う。
-- apply 中に編集禁止対象へ差分が出た場合の検出、ロールバック、再実行、最終エラー化の制御を含む。
-- apply 対象の scope 解釈、対象 path の正規化・除外条件、変更済み path の取得、commit subject 生成とサニタイズを扱う補助関数群も含む。
+- isolated apply worktree 上で apply fork の実行全体を制御する realization implementation。session branch と state の事前条件確認、apply branch/worktree 作成、対象ファイル列挙、finding 列挙と適用、変更 commit、report 出力、apply state と process id の更新・後始末を扱う。
+- apply fork 中に編集禁止対象へ差分が出た場合の検出・ロールバック・再実行制御、Codex CLI による commit subject 生成、apply scope に応じた調査対象の正規化と重複排除もこの対象にまとまっている。
 
 ## Read this when
-- apply fork の実行条件、終了コード、状態遷移、apply branch/worktree/report の生成タイミングを確認または変更したいとき。
-- apply scope が rolling、session、full の各場合にどのファイルを finding 列挙対象にするかを確認または変更したいとき。
-- apply fork 中に oracle、.agents、memo など編集禁止対象へ差分が出た場合のロールバック挙動やエラー処理を確認または変更したいとき。
-- finding 列挙、finding 適用、適用後の git commit、commit subject 生成、未収束時の扱いに関する apply loop の制御を追いたいとき。
-- apply fork が Codex CLI 呼び出しへ渡す parameter、cwd、purpose、logger などの接続点を確認したいとき。
+- apply fork サブコマンドの実行フロー、終了コード、出力内容、state 遷移、process id のライフサイクルを確認・変更したいとき。
+- apply scope が full・session・rolling の各場合に、どのファイルを finding 列挙対象にするかを確認・変更したいとき。
+- apply fork の finding 列挙、finding 適用、適用後 commit、report 作成までの制御順序や Codex CLI 呼び出し条件を追いたいとき。
+- apply fork 中に oracle・エージェント設定・memo などの編集禁止対象へ発生した差分をどう扱うか、ロールバックとエラー化の挙動を確認・変更したいとき。
+- apply fork が変更対象から binary、git ignored、INDEX、特定ディレクトリ配下を除外する条件を確認・変更したいとき。
 
 ## Do not read this when
-- apply fork の report 本文や error report の具体的な出力内容だけを確認したいときは、report 生成側を直接読む。
-- apply fork 用の Codex prompt/parameter の本文や structured output の詳細だけを確認したいときは、builder 側を直接読む。
-- apply process id の保存・削除形式だけを確認したいときは、apply runtime 側を直接読む。
-- git wrapper、worktree 作成、設定読み込み、session state の永続化など共通 runtime の低レベル実装だけを確認したいときは、runtime 側を読む。
-- apply fork ではない apply サブコマンドの CLI 定義や他サブコマンドの挙動を確認したいときは、それぞれの実装を読む。
+- apply fork の report 本文の構成や保存内容だけを確認・変更したい場合は、report 生成を担う対象を読む。
+- finding 列挙用または finding 適用用の AgentCallParameter の prompt 構築だけを確認・変更したい場合は、builder 側の対象を読む。
+- 通常の apply 実行時 process id の低レベルな保存・削除処理だけを確認したい場合は、apply runtime 側の対象を読む。
+- repo root、worktree 作成、git 実行、state 読み書きなど共通 runtime helper の実装だけを確認したい場合は、runtime 側の対象を読む。
+- apply fork 以外の subcommand の CLI 定義や Typer command 登録を確認したい場合は、その command 定義を担う対象を読む。
 
 ## hash
-- 6c79d6153f330178786f35d2c2f7ed387250de60958d9f25530f35b54358fd97
+- 897d7fe865dd1e448402e3d4468a6c9859466d24f87eff8a1637f58f28471cbd
 
 # `fork_report.py`
 
 ## Summary
-- apply fork の実行結果を Markdown report として保存する処理を扱う。通常終了・エラー終了の report 生成、apply fork 差分の要約生成、YAML frontmatter と本文を含む report 描画の入口になる。
-- apply fork report は、session/apply branch、fork commit、worktree、結果ラベル、所見数推移、変更要約をまとめ、差分がない場合や構造化要約が空の場合の fallback 表示もここで決める。
+- apply fork の実行結果または失敗結果を Markdown report として保存する処理を担う。git diff から変更要約を生成し、生成失敗時は変更 path の機械的な要約へフォールバックし、結果・所見数・変更要約を frontmatter 付き report 本文へ描画する。
 
 ## Read this when
-- apply fork の実行結果 report の保存場所、ファイル生成、frontmatter、本文構成を確認・変更したいとき。
-- apply fork の成功・未収束・エラー結果が report 上でどう表現されるかを確認・変更したいとき。
-- apply fork worktree の git diff を Codex に渡して変更要約を作る流れ、または差分なし・要約空の場合の fallback を確認・変更したいとき。
-- finding count の loop ごとの表示や、変更カテゴリ・要約・変更 path の report 表示を扱うとき。
+- apply fork 後に作られる report の保存先、ファイル生成タイミング、本文構成を確認したいとき。
+- apply fork の変更要約が Codex 実行結果、空 diff、例外、空の構造化結果でどう扱われるかを確認したいとき。
+- apply fork の report に含まれる result 表示、finding count、変更 path 収集の挙動を変更したいとき。
 
 ## Do not read this when
-- apply fork のループ制御、所見検出、収束判定そのものを調べたいだけのとき。
-- apply fork の変更要約プロンプトや Structured Output schema の詳細を変更したいとき。
-- reports directory や timestamp の共通仕様、git 実行 helper、session state 定義を調べたいとき。
-- 通常の apply 以外の subcommand report や、apply fork 以外の report 出力を調べたいとき。
+- apply fork のループ制御、worktree 作成、branch 操作そのものを調べたいとき。
+- 変更要約を生成するために Codex へ渡す prompt や parameter の中身を調べたいとき。
+- apply 以外のサブコマンドの report 生成や、report 保存先 helper の共通仕様を調べたいとき。
 
 ## hash
-- f8f18a2c7cef586ecd5d69086bce8628dcddbfa215ecd236f482ba1abf8f8cc4
+- f113ecf9145fa7473d50065a224ebdae4655f0bc1d06993d77053ebf115c9ecc
 
 # `join.py`
 
 ## Summary
-- apply run の成果 branch を session branch へ join する処理を扱う実装。session/apply branch 上での実行判定、state 検証、想定外差分の検出と force-resolve 時の復元、merge conflict 処理、join report 生成、apply worktree と branch の後片付け、利用者向け結果出力をまとめて担う。
-- INDEX.md conflict だけを機械解決する補助処理や、apply/session branch それぞれで許可される差分の判定も含むため、apply join の制御フローと安全性境界を確認する入口になる。
+- apply run の join 処理を実装するモジュール。session branch または apply branch 上で実行され、完了またはエラー状態の apply branch を session branch へ merge し、apply state を ready 相当へ戻す。
+- join 前の clean worktree 確認、想定外差分の検出と force-resolve 時の復元、merge conflict 処理、report 作成、apply worktree と branch の cleanup、CLI 向け結果出力を扱う。
+- INDEX.md は apply 側で許容される差分として扱い、INDEX.md だけの merge conflict は削除 commit により機械解決する。
 
 ## Read this when
-- apply join の実行条件、状態遷移、merge、report 出力、apply branch/worktree の cleanup を変更または調査するとき。
-- apply join で想定外差分がどのように分類され、--force-resolve でどの commit 基準へ戻されるかを確認するとき。
-- apply join の merge conflict 時の挙動、特に INDEX.md conflict の自動解決可否や未解決 conflict report を確認するとき。
-- apply 実行中に session branch または apply branch で許可される変更範囲を調整するとき。
+- apply run 完了後またはエラー後に session branch へ変更を取り込む挙動を確認・変更したいとき。
+- apply join の実行可能条件、対象 branch の決定、session/apply state の更新、apply branch cleanup の流れを追いたいとき。
+- apply join における想定外差分の分類、--force-resolve による復元 commit、INDEX.md conflict の自動解決条件を調べたいとき。
+- apply join report の保存先、front matter、Result・Unexpected Changes・Merge Conflicts の内容を変更したいとき。
 
 ## Do not read this when
-- apply run の開始、実行、完了状態への更新など、join 前の apply lifecycle を調べたいだけのとき。
-- worktree_for_branch など apply worktree 探索 helper の実装詳細だけを確認したいとき。
-- git command 実行、state の読み書き、branch 削除、report directory 解決など runtime 共通処理の詳細を調べたいとき。
-- INDEX.md エントリーの生成方針や oracle/realization の一般規約だけを確認したいとき。
+- apply run の開始、apply worktree の作成、Codex 実行そのものを調べたいだけのとき。
+- session state のデータ構造、git helper、path helper、worktree 探索 helper の定義を調べたいときは、それらを定義する runtime 側を直接読む。
+- apply join 以外の subcommand の CLI 登録、引数定義、共通エラー表示を調べたいとき。
+- oracle file や memo の正本仕様を変更・確認したいとき。この実装は realization 側の具体化であり、正本仕様ではない。
 
 ## hash
-- 37fd5df8bdae3c62a5b59b0dd1d99cb58c68b967a220bdea8cdb74dab428989c
+- d58f8c679399ae7d90b161a66a8eb9a49bb8c5c6db171626769e2c8229a0e047

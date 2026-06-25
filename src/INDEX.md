@@ -139,19 +139,23 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装を集約する領域。初期化、対話実行、INDEX.md 保守、oracle review、apply lifecycle、session lifecycle など、利用者が呼び出す主要操作の入口になる。
-- 各サブコマンドは下位のファイルまたはディレクトリに分かれ、実行条件の検証、worktree・branch・session state・report・Codex 呼び出しなどの制御を担当する。
+- サブコマンド実装を集約する領域。初期化、対話型実行、INDEX.md 保守、oracle review、session lifecycle、apply lifecycle など、利用者向け CLI 操作ごとの実行本体と周辺 helper への入口になる。
+- 各サブコマンドは、実行前提の検証、worktree/branch/state/report/process などの操作、Codex CLI 呼び出し、利用者向け出力、失敗時 cleanup や rollback といった制御をそれぞれの責務範囲で扱う。
+- 下位には、apply 系と session 系のまとまったディレクトリに加え、review の統括・対象列挙・finding loop・INDEX 取り込み・report 描画、indexing、init、tui の個別実装が並ぶ。
 
 ## Read this when
-- どのサブコマンド実装へ進むべきか切り分けたいとき。特に init、tui、indexing、review、apply、session のいずれが対象か判断したいとき。
-- CLI 操作から始まる実行フロー、サブコマンド単位の preflight、Git worktree/branch 操作、session/apply/review/indexing のライフサイクル制御を調査・変更したいとき。
-- 利用者向けサブコマンドの出力、レポート生成、Codex CLI 呼び出し、INDEX.md 更新、oracle review、apply/session の join や abandon に関わる実装入口を探したいとき。
+- 特定の cmoc サブコマンドが、CLI 入力を受けた後にどの順序で検証、Git 操作、状態更新、Codex 呼び出し、出力生成を行うか確認・変更したいとき。
+- apply、session、review、indexing、init、tui のいずれかの実行フロー、失敗条件、cleanup、rollback、report、process 管理、worktree/branch lifecycle を追いたいとき。
+- サブコマンド固有の制御から、より細かい helper 実装へ進む前に、どの下位モジュールまたは下位ディレクトリが担当しているかを選びたいとき。
+- oracle review の対象列挙、finding 処理、INDEX.md 差分取り込み、report 出力のように、review 系機能内の責務分担を見極めたいとき。
+- INDEX.md の保守実行、初期化処理、対話型プロンプト処理など、単独サブコマンドに閉じた利用者向け挙動を確認・変更したいとき。
 
 ## Do not read this when
-- CLI 全体の登録や Typer app の最上位配線だけを確認したいときは、上位の CLI 構成を扱う実装へ進む。
-- git command 実行 wrapper、設定読み込み、path keyword、session state schema、worktree 検証、hash 計算などの共通 runtime helper 自体を調べたいときは、共通実装側へ進む。
-- Codex に渡す prompt parameter や Structured Output schema の具体的な文面だけを確認したいときは、AgentCallParameter builder 側へ進む。
-- oracle file の正本仕様内容、INDEX.md エントリー生成規則、realization 全体の規約、またはテスト側の期待値を確認したいときは、それぞれ oracle または test 側へ進む。
+- Typer app へのサブコマンド登録、共通 CLI wiring、共通エラー表示、引数定義の外枠だけを調べたいときは、CLI 全体を組み立てる上位実装へ進む。
+- repo root、work root、path keyword、git wrapper、worktree helper、branch helper、config、session state schema などの共通 runtime 機能そのものを調べたいときは、runtime や共通 utility 側を読む。
+- Codex CLI に渡す AgentCallParameter や prompt parameter の具体的な文面・Structured Output schema だけを変更したいときは、builder 側の該当実装を読む。
+- oracle file の正本仕様内容、INDEX.md エントリー生成規則、AGENTS 設定、memo の扱いなど、サブコマンド実装ではなく仕様断片やルール本文を確認したいとき。
+- 生成済み report、過去実行結果、pid 状態ファイルなどの個別生成物の内容を確認したいだけのときは、出力先の生成物を直接読む。
 
 ## hash
-- 80e4d8520d85344da9bfe85c33e98e41f4abf752e6dc14e36280e87bca39e54f
+- 73be0dcf777d466ec3008594523e7271fe3fdb2f4b9da85a5b0c37be70a853dd

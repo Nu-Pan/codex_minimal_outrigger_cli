@@ -1,21 +1,27 @@
 # `apply`
 
 ## Summary
-- apply サブコマンド群の実装をまとめるディレクトリ。apply run の開始、破棄、join、report 生成、worktree・branch・process id 管理など、apply lifecycle の主要な制御へ進む入口になる。
-- apply fork の実行フロー、apply 結果の session branch への取り込み、active run の破棄、実行時補助処理、report 描画は下位ファイルごとに分かれているため、apply に関する変更対象を絞るための階層。
+- apply 系サブコマンドの実行本体をまとめるディレクトリ。apply run の作成・実行・join・abandon、専用 worktree と branch の管理、apply process の pid 状態、report 生成、session state の更新を扱う。
+- 通常の apply fork では、session branch の事前条件確認、apply branch/worktree 作成、finding 列挙と適用、変更 commit、report 出力、編集禁止対象の差分検出とロールバックを制御する。
+- join と abandon では、完了・失敗・実行中の apply run を session branch 側へ取り込む、または破棄して ready 相当へ戻すための検証、cleanup、warning/report 出力を扱う。
+- 低レベル補助として、apply branch から期待 worktree path を導く規則、git worktree から対象 worktree を探す処理、pid 状態ファイルの保存・読取・削除、実行中 process の TERM/KILL 停止確認を提供する。
 
 ## Read this when
-- apply サブコマンド全体の中で、fork、join、abandon、runtime helper、report 生成のどこを読むべきか切り分けたいとき。
-- apply run の状態遷移、apply branch/worktree、process id、report、cleanup のいずれかに関わる実装入口を探したいとき。
-- apply 専用 worktree 上での finding 適用から commit、report、join、破棄までの lifecycle を横断して調査・変更したいとき。
+- apply fork、join、abandon の実行フロー、終了条件、出力、state 遷移、worktree/branch cleanup のどれかを確認・変更したいとき。
+- apply run が session branch、apply branch、apply worktree、process id をどの順序で作成・更新・削除するかを追いたいとき。
+- apply scope に応じた finding 列挙対象、finding 適用、変更 commit、Codex CLI 呼び出し、report 保存の制御を確認・変更したいとき。
+- apply 中または join 時に、編集禁止対象・想定外差分・INDEX.md conflict・merge conflict をどう検出、復元、自動解決、エラー化するかを確認したいとき。
+- 実行中 apply process の停止、pid 状態ファイル、apply branch 形式からの worktree path 導出、linked worktree 探索など apply 固有の runtime helper を確認・変更したいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド、CLI 全体の登録、共通 runtime、設定読み込み、session state schema、git wrapper だけを調べたいとき。
-- oracle や realization の一般規約、INDEX.md エントリー生成方針、テスト側の期待値を確認したいとき。
-- 具体的に fork、join、abandon、report、runtime helper のどれを読むべきか既に分かっており、そのファイルへ直接進めるとき。
+- apply 以外のサブコマンドの CLI 登録、引数定義、共通エラー表示、Typer command 構成だけを調べたいとき。
+- session state の schema、session_id の生成・管理、branch 操作、worktree 操作、git wrapper、repo root や worktrees root の共通定義そのものを調べたいとき。
+- oracle file、memo、AGENTS 設定などの正本仕様や編集禁止対象の内容を確認・変更したいとき。
+- apply fork の prompt や AgentCallParameter 構築だけを確認・変更したいときは、builder 側の対象へ直接進む。
+- report 生成、process id 操作、worktree 探索などの個別責務だけを読むべき状況では、このディレクトリ全体ではなく該当する下位実装へ直接進む。
 
 ## hash
-- f2b544a6011fe7a7936562e98137a864ea7065144d773dd9a054935599fe7f48
+- f5c350feaa5340750348d325fc3272b205f01202d856c9d29fbc45b431e505e1
 
 # `indexing.py`
 

@@ -41,47 +41,45 @@
 # `test_apply_fork_cli.py`
 
 ## Summary
-- apply fork CLI の統合的な挙動を検証する realization test。セッション fork 後の apply fork 実行、状態更新、apply 用 worktree/branch、Codex 呼び出し、レポート生成、収束判定、エラー時状態、禁止対象差分の拒否、rolling apply の再対象化を扱う。
-- apply fork が `.gitignore` や README、oracle 差分、`.agents` 配下などの対象をどう扱うかを、CLI 実行結果・Git 状態・セッション状態 JSON・生成レポートから確認する入口になる。
+- `apply fork` CLI の実行フローを検証する realization test。セッション fork 後の apply 実行、Codex 呼び出し、apply branch/worktree/state 更新、report 生成、収束・未収束・エラー時の終了コードと状態遷移を扱う。
+- 対象正規化、`.gitignore` の扱い、root 直下 `memo` の除外、`INDEX.md` の再検査除外、`.agents` 変更拒否、rolling 実行時の前回 join commit 基準など、apply fork 周辺の副作用境界を確認する。
 
 ## Read this when
-- apply fork サブコマンドの外部挙動、終了コード、状態遷移、apply branch/worktree の配置、pid 状態の削除条件を変更・確認したいとき。
-- apply fork が Codex の所見列挙、所見適用、commit message 生成、change summary 生成をどのタイミングで呼ぶかをテストから確認したいとき。
-- apply fork のレポート内容、収束/未収束/エラー表示、変更サマリの描画、コミットメッセージ反映を検証したいとき。
-- apply fork の対象正規化、root 直下 memo の除外、入れ子の memo ディレクトリの保持、`.gitignore` を対象として編集できる挙動を確認したいとき。
-- apply fork が編集禁止対象の差分を検出した場合の失敗、レポート生成、状態更新を変更・確認したいとき。
-- apply join 後の rolling apply が前回 apply の oracle snapshot commit を使って対象を選ぶ挙動を確認したいとき。
+- `apply fork` コマンドの成功・失敗・未収束時の外部挙動、状態ファイル更新、apply branch/worktree の作成規則、report 出力を変更または確認したいとき。
+- apply 処理が Codex 実行目的名、所見列挙、所見適用、commit message 生成、change summary 生成をどの順序・条件で呼ぶかをテスト側から確認したいとき。
+- apply fork の対象 path 正規化、禁止対象 path、`.gitignore` 編集可否、root 直下 `memo` と入れ子の `memo` の扱いを確認したいとき。
+- 前回 apply join 後の rolling apply が、どの oracle 変更を再検査対象にするかを確認したいとき。
 
 ## Do not read this when
-- apply fork 以外の apply サブコマンドや session 操作の詳細だけを確認したいとき。
-- CLI 統合挙動ではなく、個別 helper の純粋な単体仕様やデータ構造だけを確認したいとき。
-- oracle file の正本仕様を確認したいとき。このファイルは realization test であり、仕様本文の代替ではない。
-- Codex CLI や LLM 出力品質そのものを検証したいとき。このテストは fake の Codex 実行結果を使って cmoc 側の制御と副作用を検証している。
+- `apply fork` 以外の apply サブコマンドや session 操作そのものの仕様・実装を調べたいだけのとき。
+- Codex 実行ラッパー、Git 操作 helper、状態 JSON schema、report renderer の内部実装を直接変更したいとき。
+- oracle file の正本仕様やルーティング文書の生成規則を確認したいとき。
+- 単体 helper の小さな入出力だけを確認したく、CLI 経由の統合的な副作用検証が不要なとき。
 
 ## hash
-- 02e02d36539504385039d5d8d26cb629bcde9259370996e4ebd4ae08d40b8be1
+- f44236783e30ca9dfcbec7240596d29d2fb6854bcfdadaff84f753dce0632360
 
 # `test_apply_join_cli.py`
 
 ## Summary
-- apply join の CLI 挙動を検証する realization test。apply worktree と apply branch の cleanup、session state の ready 復帰、join report 生成、apply worktree 上からの実行時の cwd 復帰を扱う。
-- apply join の失敗系として、apply worktree の未コミット差分、想定外の apply diff、未解決 merge conflict を検証し、失敗時に worktree・branch・completed state が保持されることを確認する。
-- INDEX.md や .gitignore のような特定ファイル差分に対する apply join の扱いも含み、index conflict は通常 mode で解決継続できること、.gitignore 変更は想定外差分扱いしないことを確認する。
+- apply join サブコマンドの実現テストで、apply 用 worktree と apply branch の片付け、session 状態の ready 復帰、join commit の記録、report 作成を検証する。
+- apply worktree 側から join を実行した場合の作業ディレクトリ復帰、クリーンアップ到達性表示、root 側へのログ保存を検証する。
+- apply worktree に未コミット差分がある場合、session 側・apply worktree 側のどちらから実行しても join が失敗し、apply 状態や worktree・branch が保持されることを検証する。
+- apply 差分に想定外の oracle 変更がある場合の失敗と、force resolve による破棄、許容される gitignore 変更、merge conflict の報告・report 保存、INDEX conflict の通常解決後の継続を検証する。
 
 ## Read this when
-- apply join の正常終了時に削除される apply worktree・apply branch、更新される session state、出力される report の期待挙動を確認したいとき。
-- apply join を session worktree または apply worktree のどちらから実行した場合でも同じ cleanup・cwd 復帰・ログ保存先になるかを調べるとき。
-- apply worktree に未コミット差分がある場合、想定外の oracle 変更がある場合、merge conflict が残る場合の apply join のエラー出力・状態保持・report 内容を確認したいとき。
-- apply join の --force-resolve が想定外 apply diff を破棄して session 側を維持する挙動、または .gitignore と INDEX.md の conflict・差分処理を変更するとき。
+- apply join の成功時に削除される worktree・branch、更新される session 状態、join report の出力を確認したいとき。
+- apply join を apply worktree 内から実行する経路、作業ディレクトリ移動、ログ保存先、クリーンアップ表示を変更・調査するとき。
+- apply worktree の未コミット差分検出、エラーメッセージの出力先、失敗時に状態や作業物を残す挙動を確認するとき。
+- apply join の差分検査、想定外差分、force resolve、gitignore 変更の扱い、merge conflict report、INDEX conflict 処理に関わるテストを探すとき。
 
 ## Do not read this when
-- apply fork で Codex を起動する処理や apply worktree を作成する前段の仕様だけを調べたいとき。
-- session fork、init、git repository 初期化など、apply join 前提を作るコマンド自体の詳細を確認したいとき。
-- apply join 以外の CLI サブコマンド、または join 後の report 形式ではなく一般的なログ・状態ファイル schema を調べたいとき。
-- oracle file や realization file の概念定義、INDEX.md エントリー生成規則そのものを確認したいとき。
+- apply fork や session fork の生成処理そのものを調べたいだけで、join 後の統合・片付け・状態更新に関心がないとき。
+- Codex 実行結果の品質や LLM 出力内容を検証したいとき。この対象では Codex 実行は固定の偽結果に置き換えている。
+- oracle の正本仕様や INDEX.md のルーティング規則そのものを確認したいとき。ここでは join 中の差分・衝突処理に現れる外部挙動だけを扱う。
 
 ## hash
-- fbecf0368d24681948a83545cbdbf305aecfc3639bbd47f27693231a460aeda1
+- ab4c9e7306be0e583969ed16f4c8a7d0cc8a694550baf711aa4c2e12ef0b3143
 
 # `test_basic_runtime.py`
 
