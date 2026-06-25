@@ -1,4 +1,4 @@
-"""`cmoc tui` の実行パラメータ解決 prompt 正本。"""
+"""`cmoc tui` の実行パラメータ解決 prompt 構築実装。"""
 
 # std
 from pathlib import Path

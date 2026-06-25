@@ -1,4 +1,4 @@
-"""`cmoc apply fork` のファイル単位の所見リストアップ prompt 正本。"""
+"""`cmoc apply fork` のファイル単位の所見リストアップ prompt 構築実装。"""
 
 # std
 from pathlib import Path

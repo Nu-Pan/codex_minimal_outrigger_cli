@@ -1,4 +1,4 @@
-"""`cmoc apply fork` の変更要約生成 prompt 正本。"""
+"""`cmoc apply fork` の変更要約生成 prompt 構築実装。"""
 
 # std
 from pathlib import Path

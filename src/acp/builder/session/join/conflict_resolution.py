@@ -1,4 +1,4 @@
-"""`cmoc session join` の merge conflict marker 解消 prompt 正本。"""
+"""`cmoc session join` の merge conflict marker 解消 prompt 構築実装。"""
 
 # std
 from pathlib import Path
