@@ -12,7 +12,6 @@ from cmoc_runtime import (
     is_binary,
     is_git_ignored,
     load_config,
-    require_clean_worktree,
     run_git,
     text_sha256,
     work_root,
@@ -28,7 +27,6 @@ def cmoc_indexing_impl(
 ) -> None:
     """現在の work root に対して INDEX.md の maintenance を実行する。"""
     root = work_root()
-    require_clean_worktree(root, initial_status)
     updated = update_indexes(root, codex_exec)
     commit_index_updates(root, updated)
     typer.echo(f"# cmoc indexing\n- updated_index_count: `{len(updated)}`")

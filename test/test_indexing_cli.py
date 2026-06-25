@@ -187,6 +187,36 @@ def test_commit_index_updates_commits_only_index_paths(tmp_path: Path) -> None:
     assert run_git(root, "status", "--short").stdout.strip() == "?? .gitignore"
 
 
+def test_indexing_allows_existing_non_index_diff_and_commits_only_index(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    (root / "README.md").write_text("# repo\n\nchanged\n")
+
+    class FakeCodexResult:
+        output_json = {
+            "summary": ["generated summary"],
+            "read_this_when": ["generated read condition"],
+            "do_not_read_this_when": ["generated skip condition"],
+        }
+
+    monkeypatch.setattr(
+        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    )
+
+    result = runner.invoke(app, ["indexing"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    committed_paths = run_git(
+        root, "show", "--name-only", "--pretty=", "HEAD"
+    ).stdout.splitlines()
+    assert "INDEX.md" in committed_paths
+    assert "README.md" not in committed_paths
+    assert run_git(root, "status", "--short").stdout == " M README.md\n"
+
+
 def test_update_indexes_regenerates_malformed_fresh_hash_entry(
     tmp_path: Path, monkeypatch
 ) -> None:
