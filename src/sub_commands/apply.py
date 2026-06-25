@@ -331,6 +331,12 @@ def cmoc_apply_abandon_impl() -> None:
             ["session state file の apply.apply_branch を確認してください。"],
             str(path),
         )
+    if branch.startswith("cmoc/apply/") and branch != apply_branch:
+        raise CmocError(
+            "現在の apply branch は破棄対象の active apply run ではありません。",
+            ["session state file が指す apply branch 上、または session branch 上から再実行してください。"],
+            f"current_branch: {branch}\napply_branch: {apply_branch}",
+        )
     apply_worktree = expected_apply_worktree(root, apply_branch)
     warnings: list[str] = []
     if previous == "running":

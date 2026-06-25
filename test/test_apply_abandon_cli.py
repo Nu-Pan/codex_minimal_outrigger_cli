@@ -243,3 +243,50 @@ def test_apply_abandon_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) 
     )
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
+
+
+def test_apply_abandon_rejects_stale_apply_branch(tmp_path: Path, monkeypatch) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    class FakeCodexResult:
+        output_json = {"findings": []}
+
+    monkeypatch.setattr(
+        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    )
+    assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
+    session_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = session_branch.removeprefix("cmoc/session/")
+    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state = json.loads(state_path.read_text())
+    apply_branch = state["apply"]["apply_branch"]
+    apply_worktree = apply_worktree_from_state(root, state)
+    stale_branch = f"cmoc/apply/{session_id}/stale"
+    stale_worktree = root / ".cmoc" / "worktrees" / session_id / "stale"
+    run_git(
+        root,
+        "worktree",
+        "add",
+        "-b",
+        stale_branch,
+        str(stale_worktree),
+        session_branch,
+    )
+    monkeypatch.chdir(stale_worktree)
+
+    result = runner.invoke(app, ["apply", "abandon"])
+
+    assert result.exit_code != 0
+    assert "現在の apply branch は破棄対象の active apply run ではありません。" in result.output
+    assert f"current_branch: {stale_branch}" in result.output
+    assert f"apply_branch: {apply_branch}" in result.output
+    assert apply_worktree.is_dir()
+    assert run_git(root, "rev-parse", "--verify", apply_branch).returncode == 0
+    state = json.loads(state_path.read_text())
+    assert state["apply"]["state"] == "completed"
+    assert state["apply"]["apply_branch"] == apply_branch
