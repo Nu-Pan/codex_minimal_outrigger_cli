@@ -12,7 +12,8 @@ def cmoc_init_impl() -> None:
     gitignore = root / ".gitignore"
     head_gitignore = _git_show(root, "HEAD:.gitignore")
     index_gitignore = _git_show(root, ":0:.gitignore")
-    worktree_gitignore = gitignore.read_text() if gitignore.exists() else None
+    had_worktree_gitignore = gitignore.exists()
+    worktree_gitignore = gitignore.read_text() if had_worktree_gitignore else None
     staged_patch = run_git(
         [
             "diff",
@@ -43,7 +44,12 @@ def cmoc_init_impl() -> None:
     finally:
         _restore_staged_patch(root, staged_patch)
         _restore_gitignore_state(
-            root, gitignore, head_gitignore, index_gitignore, worktree_gitignore
+            root,
+            gitignore,
+            head_gitignore,
+            index_gitignore,
+            had_worktree_gitignore,
+            worktree_gitignore,
         )
     typer.echo(render_cmoc_init_result(root))
 
@@ -74,6 +80,7 @@ def _restore_gitignore_state(
     path: Path,
     head_content: str | None,
     index_content: str | None,
+    had_worktree_content: bool,
     worktree_content: str | None,
 ) -> None:
     current_head = _git_show(root, "HEAD:.gitignore")
@@ -102,8 +109,10 @@ def _restore_gitignore_state(
                 )
             finally:
                 temp_path.unlink(missing_ok=True)
-    if worktree_content is not None:
+    if had_worktree_content and worktree_content is not None:
         path.write_text(_with_cmoc_ignore(worktree_content))
+    elif head_content is not None or index_content is not None:
+        path.unlink(missing_ok=True)
 
 
 def _restore_staged_patch(root: Path, patch: str) -> None:
