@@ -338,7 +338,7 @@ def normalize_apply_targets(root: Path, candidates: set[Path]) -> list[Path]:
             rel_parts = path.relative_to(root.resolve()).parts
         except ValueError:
             continue
-        if ".git" in rel_parts or ".agents" in rel_parts or "memo" in rel_parts:
+        if ".git" in rel_parts or ".agents" in rel_parts or rel_parts[0] == "memo":
             continue
         if path.name == "INDEX.md" or is_binary(path):
             continue

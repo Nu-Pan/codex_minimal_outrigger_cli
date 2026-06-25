@@ -189,6 +189,24 @@ def test_apply_fork_can_target_and_edit_gitignore(tmp_path: Path, monkeypatch) -
     )
 
 
+def test_apply_fork_target_normalization_keeps_nested_memo_directory(
+    tmp_path: Path,
+) -> None:
+    root = make_repo(tmp_path)
+    (root / "memo").mkdir()
+    (root / "memo" / "root.txt").write_text("private\n")
+    (root / "docs" / "memo").mkdir(parents=True)
+    nested = root / "docs" / "memo" / "public.txt"
+    nested.write_text("target\n")
+
+    targets = apply_fork_module.normalize_apply_targets(
+        root,
+        {root / "memo" / "root.txt", nested},
+    )
+
+    assert targets == [nested.resolve()]
+
+
 def test_apply_fork_writes_report_with_change_summary(
     tmp_path: Path, monkeypatch
 ) -> None:
