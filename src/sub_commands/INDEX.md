@@ -157,24 +157,24 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドの実装をまとめる領域。通常 branch から session を開始し、active session branch を home branch へ取り込む、または取り込まず破棄する一連の session lifecycle 操作を扱う。
-- 各サブコマンドは、実行前提の検証、worktree と cmoc ignore 状態の確認、branch 切り替え・作成・削除、session state の生成・更新、利用者向け出力までを担う。
-- join では merge conflict 発生時に Codex CLI へ解消を依頼し、解消後の検査・stage・merge commit 完了までを扱う。abandon では cleanup 失敗時の state rollback と branch rollback を試み、失敗情報をまとめて報告する。
+- session 系サブコマンドの実行処理をまとめる領域。通常 branch から managed session branch を作成する処理、active session を home branch へ merge して完了する処理、merge せず破棄する処理を扱う。
+- 各処理は、現在 branch、session state、apply state、clean worktree、cmoc ignore、home branch の存在などの事前条件を検証し、Git branch 操作、state 更新、利用者向け出力、失敗時の扱いを制御する。
+- join では merge conflict 発生時に Codex CLI へ解消を依頼し、conflict marker や unmerged path の残存確認、stage、merge commit 完了までを扱う。abandon では cleanup 失敗時の state rollback と branch rollback を試みる。
 
 ## Read this when
-- session の開始、参加終了、破棄に関するサブコマンドの実行条件、失敗条件、状態遷移、Git 操作順、CLI 出力を確認・変更したいとき。
-- 通常 branch から session branch と session state を作る処理、active session の重複検出、managed branch 上での拒否挙動を調べたいとき。
-- active session branch を home branch へ merge する処理、join 後の state 更新、session branch 削除、merge conflict 解消フローを追いたいとき。
-- active session branch を home branch に merge せず破棄する処理、破棄時の state 更新、session branch 削除、失敗時 rollback の扱いを調べたいとき。
+- session fork、join、abandon の実行条件、拒否条件、状態遷移、Git 操作順、利用者向け出力を確認したいとき。
+- active session branch と home branch の関係、session state file の更新タイミング、session branch の作成・削除・破棄の扱いを追いたいとき。
+- join 中の merge conflict 解消フロー、Codex CLI への依頼後の marker 検査や commit 完了条件を確認したいとき。
+- abandon 中の cleanup 失敗時に、state rollback や branch rollback がどのように試みられ、どの情報がエラー詳細に含まれるかを確認したいとき。
 
 ## Do not read this when
-- session state のデータ構造、保存形式、state file と branch の対応そのものを調べたいとき。共通の状態管理実装を読む。
-- repo root、path keyword、worktree 検証、cmoc ignore、git command 実行などの共通 runtime helper の詳細を調べたいとき。
-- CLI 全体のサブコマンド登録、session 以外のサブコマンド、または共通ルーティングだけを確認したいとき。
-- Codex CLI に渡す conflict 解決依頼パラメータの具体的な組み立てだけを調べたいとき。
+- CLI 全体のサブコマンド登録、Typer app の構成、または session 以外のサブコマンド実装を調べたいとき。
+- Git コマンド実行、branch 判定、worktree 検査、state file の読み書き形式、path keyword などの共通 runtime helper 自体を調べたいとき。
+- session state の schema、branch 名や state file path の低レベルな生成規則、repo root や work root の定義そのものを確認したいとき。
+- Codex CLI に渡す conflict 解決依頼パラメータの具体的な組み立て内容だけを調べたいとき。
 
 ## hash
-- 736cf2df88ee6c03334f50cec5a75b9b7dc2d298a3f5f62fa328ba4b97a119a4
+- 7c8be9c8a1c907aa29ce283f3023bd682cb938045bfb1761fdebb73c6abdea92
 
 # `tui.py`
 

@@ -242,19 +242,20 @@
 # `test_session_cli.py`
 
 ## Summary
-- `cmoc session` 系 CLI の realization test。session branch と state file の生成、abandon の正常系・失敗時 rollback、join の conflict resolution、delete conflict の staging、session branch 削除失敗時の警告出力を、実際の git repo と Typer runner を使って検証する。
-- session state path や session home branch を読み出す小さな補助関数を持ち、session サブコマンドの外部挙動、永続状態、branch 遷移、出力メッセージ、Codex 実行時の file access mode を確認する入口になる。
+- session サブコマンドの realization test で、fork・abandon・join が Git branch、worktree、session state、CLI 出力、Codex conflict resolution 呼び出しをどう扱うかを検証する。
+- 一時リポジトリを作成し、実際の git 操作と monkeypatch した実行関数を組み合わせて、session branch 作成、home branch 復帰、状態ファイル更新、branch 削除失敗時の挙動、join 時の競合解決を確認する。
 
 ## Read this when
-- `cmoc session fork` が session branch を作る条件、session state の初期値、home branch 記録、apply state 初期化を確認・変更するとき。
-- `cmoc session abandon` の branch 切り替え、session branch 削除、state 更新、表示される結果項目、home branch 不在時の失敗挙動、cleanup 失敗時の rollback を確認・変更するとき。
-- `cmoc session join` の merge conflict 解決で Codex exec を呼ぶ条件、REALIZATION_WRITE mode の使用、解決後の home branch 復帰、delete conflict 解決の staging、session branch 削除失敗時の warning 出力を確認・変更するとき。
-- session state JSON の `session.state`、`session.session_home_branch`、`session.joined_at`、`last_joined_apply_oracle_snapshot_commit`、`apply.state` など、session CLI が読み書きする永続状態のテスト期待値を確認するとき。
+- session fork の branch 名、session state、session_home_branch、session_start_commit、linked worktree 上での開始位置に関するテスト挙動を確認したいとき。
+- session abandon が home branch へ戻ること、session branch を削除すること、状態を abandoned にすること、home branch 不在や cleanup 失敗時に rollback することを確認したいとき。
+- session join が競合時に Codex 実行を呼ぶ条件、file access mode、削除競合の staging、成功後の home branch 復帰、session branch 削除失敗時の warning 出力を確認したいとき。
+- session サブコマンドの realization implementation を変更し、既存の外部挙動テストがどの公開出力・状態・Git 副作用を固定しているか把握したいとき。
 
 ## Do not read this when
-- session 以外の CLI サブコマンド、path model、oracle review、apply workflow などの挙動だけを調べるとき。
-- session 機能の実装構造や helper の内部責務を先に理解したいときは、対応する実装ファイルを読む方が直接的であり、このテストは外部挙動の期待値確認に使う。
-- Codex CLI や LLM の出力品質そのもの、または conflict 解決内容の品質を検証したいとき。この対象は Codex exec 呼び出しの有無・目的・file access mode と、解決後の repository 状態を検証する。
+- session 以外の CLI サブコマンド、初期化処理全般、path model、oracle 文書処理のテストを探しているとき。
+- session の内部 helper 分割や型定義だけを確認したいときで、CLI 経由の外部挙動や Git 副作用のテスト条件が不要なとき。
+- Codex 実行基盤そのもの、LLM 出力品質、または conflict resolution のプロンプト内容を確認したいとき。
+- session state の schema 全体や永続化形式の正本仕様を確認したいとき。
 
 ## hash
-- ae51f9fba7bfdb3ccc6adb5765a20c3842c51dba7b5a0ea4604fa48fac805a5c
+- a2b0b27f0b77e87149b84252123a4286d00b40571b129e680a46d322b4cad868
