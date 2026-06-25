@@ -64,6 +64,7 @@ def cmoc_apply_fork_impl(
         raise CmocError("apply fork の事前条件を満たしていません。", [], str(path))
     require_clean_worktree(root)
     require_cmoc_ignored(root)
+    config = load_config(root)
     run_id = timestamp()
     apply_branch = f"cmoc/apply/{session_id}/{run_id}"
     oracle_snapshot_commit = head_commit(root)
@@ -76,7 +77,6 @@ def cmoc_apply_fork_impl(
         apply_process_id=os.getpid(),
     )
     write_state(path, state)
-    config = load_config(root)
     finding_counts: list[int] = []
     result_label = "error"
     report_path: Path | None = None

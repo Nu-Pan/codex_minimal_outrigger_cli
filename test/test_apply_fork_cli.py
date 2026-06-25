@@ -87,6 +87,29 @@ def test_apply_fork_does_not_rewrite_session_gitignore(
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
+def test_apply_fork_config_error_does_not_start_apply_run(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = branch.removeprefix("cmoc/session/")
+    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    (root / ".cmoc" / "config.json").write_text("{invalid\n")
+
+    result = runner.invoke(app, ["apply", "fork", "--scope", "full"])
+
+    assert result.exit_code != 0
+    state = json.loads(state_path.read_text())
+    assert state["apply"]["state"] == "ready"
+    assert state["apply"].get("apply_process_id") is None
+    assert run_git(root, "branch", "--list", f"cmoc/apply/{session_id}/*").stdout == ""
+
+
 def test_apply_fork_can_target_and_edit_gitignore(tmp_path: Path, monkeypatch) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
