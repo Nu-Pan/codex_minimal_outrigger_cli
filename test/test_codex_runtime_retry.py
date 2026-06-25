@@ -58,8 +58,14 @@ def test_run_codex_exec_retries_semantic_output(tmp_path: Path, monkeypatch) -> 
         "prompt",
         schema,
     )
+    logger = SubcommandLogger(root, "test")
 
-    result = run_codex_exec(parameter, root=root, capacity_initial_sleep_sec=0)
+    result = run_codex_exec(
+        parameter,
+        root=root,
+        capacity_initial_sleep_sec=0,
+        subcommand_logger=logger,
+    )
 
     assert result.output_json == {"ok": True}
     assert counter.read_text() == "2"
@@ -72,6 +78,74 @@ def test_run_codex_exec_retries_semantic_output(tmp_path: Path, monkeypatch) -> 
     ]
     assert len({log["stdout_log_path"] for log in call_logs}) == 2
     assert result.call_log_path == call_paths[1]
+    log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_events = [event for event in log_events if event["event"] == "codex_call"]
+    assert [event["status"] for event in codex_events] == [
+        "schema_validation_retrying",
+        "succeeded",
+    ]
+    assert codex_events[0]["returncode"] == 0
+    assert codex_events[0]["call_log_path"] == str(call_paths[0])
+
+
+def test_run_codex_exec_logs_capacity_retrying_call(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "counter"
+    fake_codex = bin_dir / "codex"
+    fake_codex.write_text(
+        "\n".join(
+            [
+                "#!/usr/bin/env python3",
+                "import json, pathlib, sys",
+                f"counter = pathlib.Path({str(counter)!r})",
+                "count = int(counter.read_text()) if counter.exists() else 0",
+                "counter.write_text(str(count + 1))",
+                "args = sys.argv[1:]",
+                "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+                "if count == 0:",
+                "    print('Selected model is at capacity', file=sys.stderr)",
+                "    sys.exit(1)",
+                "output.write_text(json.dumps({'ok': True}))",
+                "print(json.dumps({'type': 'turn.completed'}))",
+            ]
+        )
+        + "\n"
+    )
+    fake_codex.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+    )
+    logger = SubcommandLogger(root, "test")
+
+    result = run_codex_exec(
+        parameter,
+        root=root,
+        capacity_initial_sleep_sec=0,
+        subcommand_logger=logger,
+    )
+
+    assert result.output_json == {"ok": True}
+    call_paths = sorted((root / ".cmoc" / "log" / "codex").glob("*_call.json"))
+    log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_events = [event for event in log_events if event["event"] == "codex_call"]
+    assert [event["status"] for event in codex_events] == [
+        "capacity_retrying",
+        "succeeded",
+    ]
+    assert codex_events[0]["returncode"] == 1
+    assert codex_events[0]["call_log_path"] == str(call_paths[0])
+    assert "Selected model is at capacity" in codex_events[0]["error"]
 
 
 def test_run_codex_exec_polls_and_resumes_after_quota(
@@ -182,14 +256,23 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
     assert [event["purpose"] for event in codex_events] == [
+        "codex exec",
         "quota availability probe",
         "codex exec",
     ]
-    assert codex_events[0]["status"] == "succeeded"
-    assert codex_events[0]["returncode"] == 0
-    assert codex_events[0]["stdout_log_path"] == probe_logs[0]["stdout_log_path"]
-    assert codex_events[0]["output_path"] == probe_logs[0]["output_path"]
+    assert [event["status"] for event in codex_events] == [
+        "quota_waiting",
+        "succeeded",
+        "succeeded",
+    ]
+    assert codex_events[0]["returncode"] == 1
+    assert codex_events[0]["stdout_log_path"] == main_logs[0]["stdout_log_path"]
+    assert codex_events[0]["output_path"] == main_logs[0]["output_path"]
+    assert codex_events[1]["returncode"] == 0
+    assert codex_events[1]["stdout_log_path"] == probe_logs[0]["stdout_log_path"]
+    assert codex_events[1]["output_path"] == probe_logs[0]["output_path"]
     console = capsys.readouterr().out
+    assert "- purpose: `codex exec`" in console
     assert "- purpose: `quota availability probe`" in console
     assert f"- call_log: `{probe_call_path}`" in console
     assert "- elapsed: `" in console

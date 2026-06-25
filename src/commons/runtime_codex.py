@@ -206,23 +206,10 @@ def run_codex_exec(
         run_call_path: Path,
         run_stdout_path: Path,
         run_stderr_path: Path,
-        run_output_path: Path,
     ) -> str:
         token = extract_resume_token(result.stdout)
         if token:
             return token
-        emit_codex_call_event(
-            run_purpose=purpose,
-            run_call_path=run_call_path,
-            run_stdout_path=run_stdout_path,
-            run_stderr_path=run_stderr_path,
-            run_output_path=run_output_path,
-            run_schema_path=schema_path,
-            started_at=call_started_at,
-            returncode=result.returncode,
-            status="failed",
-            error=error_text,
-        )
         raise CmocError(
             "Codex CLI resume token を取得できませんでした。",
             ["stdout JSONL の session identifier 出力を確認してください。"],
@@ -242,6 +229,7 @@ def run_codex_exec(
             run_output_path=output_path,
             run_schema_path=schema_path,
         )
+        attempt_started_at = time.perf_counter()
         result = subprocess.run(
             current_argv,
             cwd=cwd,
@@ -260,11 +248,35 @@ def run_codex_exec(
                 and capacity_attempts < max_capacity_retries
             ):
                 capacity_attempts += 1
+                emit_codex_call_event(
+                    run_purpose=purpose,
+                    run_call_path=call_path,
+                    run_stdout_path=stdout_path,
+                    run_stderr_path=stderr_path,
+                    run_output_path=output_path,
+                    run_schema_path=schema_path,
+                    started_at=attempt_started_at,
+                    returncode=result.returncode,
+                    status="capacity_retrying",
+                    error=error_text,
+                )
                 time.sleep(sleep_sec)
                 sleep_sec *= 2
                 continue
             if is_quota_error(error_text):
                 global _QUOTA_POLLING
+                emit_codex_call_event(
+                    run_purpose=purpose,
+                    run_call_path=call_path,
+                    run_stdout_path=stdout_path,
+                    run_stderr_path=stderr_path,
+                    run_output_path=output_path,
+                    run_schema_path=schema_path,
+                    started_at=attempt_started_at,
+                    returncode=result.returncode,
+                    status="quota_waiting",
+                    error=error_text,
+                )
                 with _QUOTA_CONDITION:
                     if _QUOTA_POLLING:
                         wait_started_at = time.perf_counter()
@@ -283,7 +295,6 @@ def run_codex_exec(
                             run_call_path=call_path,
                             run_stdout_path=stdout_path,
                             run_stderr_path=stderr_path,
-                            run_output_path=output_path,
                         )
                         continue
                     _QUOTA_POLLING = True
@@ -297,18 +308,6 @@ def run_codex_exec(
                             max_quota_polls is not None
                             and quota_polls >= max_quota_polls
                         ):
-                            emit_codex_call_event(
-                                run_purpose=purpose,
-                                run_call_path=call_path,
-                                run_stdout_path=stdout_path,
-                                run_stderr_path=stderr_path,
-                                run_output_path=output_path,
-                                run_schema_path=schema_path,
-                                started_at=call_started_at,
-                                returncode=result.returncode,
-                                status="quota_exhausted",
-                                error=error_text,
-                            )
                             raise CmocError(
                                 "Codex CLI quota が枯渇しました。",
                                 [
@@ -391,7 +390,6 @@ def run_codex_exec(
                     run_call_path=call_path,
                     run_stdout_path=stdout_path,
                     run_stderr_path=stderr_path,
-                    run_output_path=output_path,
                 )
                 continue
             emit_codex_call_event(
@@ -401,7 +399,7 @@ def run_codex_exec(
                 run_stderr_path=stderr_path,
                 run_output_path=output_path,
                 run_schema_path=schema_path,
-                started_at=call_started_at,
+                started_at=attempt_started_at,
                 returncode=result.returncode,
                 status="failed",
                 error=error_text,
@@ -420,6 +418,18 @@ def run_codex_exec(
             except Exception as exc:
                 if semantic_attempts < max_semantic_retries:
                     semantic_attempts += 1
+                    emit_codex_call_event(
+                        run_purpose=purpose,
+                        run_call_path=call_path,
+                        run_stdout_path=stdout_path,
+                        run_stderr_path=stderr_path,
+                        run_output_path=output_path,
+                        run_schema_path=schema_path,
+                        started_at=attempt_started_at,
+                        returncode=result.returncode,
+                        status="schema_validation_retrying",
+                        error=str(exc),
+                    )
                     continue
                 emit_codex_call_event(
                     run_purpose=purpose,
@@ -428,7 +438,7 @@ def run_codex_exec(
                     run_stderr_path=stderr_path,
                     run_output_path=output_path,
                     run_schema_path=schema_path,
-                    started_at=call_started_at,
+                    started_at=attempt_started_at,
                     returncode=result.returncode,
                     status="schema_validation_failed",
                     error=str(exc),
@@ -447,7 +457,7 @@ def run_codex_exec(
             run_stderr_path=stderr_path,
             run_output_path=output_path,
             run_schema_path=schema_path,
-            started_at=call_started_at,
+            started_at=attempt_started_at,
             returncode=result.returncode,
             status="succeeded",
         )
