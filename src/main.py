@@ -16,6 +16,7 @@ from cmoc_runtime import (
     render_error,
     repo_root,
     reset_current_subcommand_logger,
+    require_cmoc_ignored,
     format_duration,
     run_codex_exec as runtime_run_codex_exec,
     run_codex_tui as runtime_run_codex_tui,
@@ -179,7 +180,7 @@ def _status_without_cmoc(status: str) -> str:
     return "\n".join(lines)
 
 
-def _run(handler) -> None:
+def _run(handler, pre_log_check=None) -> None:
     logger = None
     logger_token = None
     status_token = None
@@ -190,6 +191,8 @@ def _run(handler) -> None:
         status_token = _INITIAL_STATUS.set(
             _status_without_cmoc(run_git(["status", "--short"], root).stdout.strip())
         )
+        if pre_log_check is not None:
+            pre_log_check(root)
         logger = SubcommandLogger(root, handler.__name__)
         logger_token = set_current_subcommand_logger(logger)
         logger.event("command_invoked", argv=[])
@@ -537,7 +540,7 @@ def indexing() -> None:
     def handler() -> None:
         cmoc_indexing_impl(update_indexes, commit_index_updates, _INITIAL_STATUS.get())
 
-    _run(handler)
+    _run(handler, require_cmoc_ignored)
 
 
 def commit_index_updates(root: Path, updated: list[Path]) -> None:

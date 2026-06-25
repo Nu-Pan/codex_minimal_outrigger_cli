@@ -46,6 +46,7 @@ from commons.runtime_git import (
     is_git_ignored,
     is_managed_branch,
     remove_worktree,
+    require_cmoc_ignored,
     require_clean_worktree,
     run_git,
 )

@@ -84,31 +84,20 @@ def test_indexing_uses_codex_index_entry_builder_and_commits(
     assert "cmoc indexing" in run_git(root, "log", "--oneline", "-1").stdout
 
 
-def test_indexing_uninitialized_clean_repo_ignores_own_log(
+def test_indexing_uninitialized_clean_repo_fails_without_non_index_diff(
     tmp_path: Path, monkeypatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
 
-    class FakeCodexResult:
-        output_json = {
-            "summary": ["generated summary"],
-            "read_this_when": ["generated read condition"],
-            "do_not_read_this_when": ["generated skip condition"],
-        }
-
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
-    )
-
     result = runner.invoke(app, ["indexing"], catch_exceptions=False)
 
-    assert result.exit_code == 0
-    assert (root / ".cmoc" / "log" / "sub_command").is_dir()
-    assert "/.cmoc/" in (root / ".gitignore").read_text()
-    assert (root / "INDEX.md").is_file()
+    assert result.exit_code != 0
+    assert "cmoc init を実行してから再実行してください。" in result.output
+    assert not (root / ".gitignore").exists()
+    assert not (root / ".cmoc").exists()
+    assert not (root / "INDEX.md").exists()
     assert run_git(root, "status", "--short").stdout.strip() == ""
-    assert run_git(root, "log", "-1", "--pretty=%s").stdout.strip() == "cmoc indexing"
 
 
 def test_indexing_targets_current_linked_worktree(
@@ -179,6 +168,21 @@ def test_indexing_skips_codex_when_existing_hashes_are_fresh(
     assert (root / "INDEX.md").read_text() == root_index_before
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == head_before
     assert run_git(root, "status", "--short").stdout.strip() == ""
+
+
+def test_commit_index_updates_commits_only_index_paths(tmp_path: Path) -> None:
+    root = make_repo(tmp_path)
+    index_path = root / "INDEX.md"
+    index_path.write_text("# generated\n")
+    (root / ".gitignore").write_text("/.cmoc/\n")
+
+    main_module.commit_index_updates(root, [index_path])
+
+    committed_paths = run_git(
+        root, "show", "--name-only", "--pretty=", "HEAD"
+    ).stdout.strip()
+    assert committed_paths == "INDEX.md"
+    assert run_git(root, "status", "--short").stdout.strip() == "?? .gitignore"
 
 
 def test_update_indexes_regenerates_malformed_fresh_hash_entry(

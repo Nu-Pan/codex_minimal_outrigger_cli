@@ -7,7 +7,6 @@ import typer
 from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
 from basic.acp import AgentCallParameter
 from cmoc_runtime import (
-    ensure_cmoc_ignored,
     file_sha256,
     is_binary,
     is_git_ignored,
@@ -31,7 +30,6 @@ def cmoc_indexing_impl(
     """現在の work root に対して INDEX.md の maintenance を実行する。"""
     root = work_root()
     require_clean_worktree(root, initial_status)
-    ensure_cmoc_ignored(root)
     updated = update_indexes_func(root)
     commit_index_updates_func(root, updated)
     typer.echo(f"# cmoc indexing\n- updated_index_count: `{len(updated)}`")
@@ -42,18 +40,11 @@ def commit_index_updates_impl(root: Path, updated: list[Path]) -> None:
     index_paths = [str(path.relative_to(root)) for path in updated]
     if index_paths:
         run_git(["add", "--", *index_paths], root)
-    support_paths: list[str] = []
-    if run_git(["status", "--short", "--", ".gitignore"], root).stdout.strip():
-        run_git(["add", "--", ".gitignore"], root)
-        support_paths.append(".gitignore")
-    if run_git(["status", "--short", "--", ".cmoc"], root).stdout.strip():
-        support_paths.append(".cmoc")
-    rel_paths = index_paths + support_paths
-    if not rel_paths:
+    if not index_paths:
         return
-    diff = run_git(["diff", "--cached", "--quiet", "--", *rel_paths], root, check=False)
+    diff = run_git(["diff", "--cached", "--quiet", "--", *index_paths], root, check=False)
     if diff.returncode == 1:
-        run_git(["commit", "-m", "cmoc indexing", "--", *rel_paths], root)
+        run_git(["commit", "-m", "cmoc indexing", "--", *index_paths], root)
 
 
 def update_indexes_impl(root: Path, build_index_entry_func: IndexEntryBuilder) -> list[Path]:

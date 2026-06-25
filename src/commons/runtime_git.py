@@ -115,6 +115,21 @@ def ensure_cmoc_ignored(root: Path) -> None:
         )
 
 
+def require_cmoc_ignored(root: Path) -> None:
+    tracked = run_git(["ls-files", "--", ".cmoc"], root).stdout.strip()
+    ignored = run_git(
+        ["check-ignore", "-q", ".cmoc/.__cmoc_ignore_probe__"],
+        root,
+        check=False,
+    )
+    if tracked or ignored.returncode != 0:
+        raise CmocError(
+            ".cmoc が git 追跡対象外に初期化されていません。",
+            ["cmoc init を実行してから再実行してください。"],
+            f"tracked:\n{tracked}\ncheck-ignore returncode: {ignored.returncode}",
+        )
+
+
 def is_git_ignored(root: Path, path: Path) -> bool:
     rel = path.resolve().relative_to(root)
     return run_git(["check-ignore", "--no-index", "-q", str(rel)], root, check=False).returncode == 0
