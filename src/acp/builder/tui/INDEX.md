@@ -20,18 +20,18 @@
 # `resolve_parameter.py`
 
 ## Summary
-- AI Agent CLI/TUI へ渡す実行パラメータを、ユーザー入力の元プロンプトから選定させるための呼び出しパラメータを構築する。
-- 読み取り専用のファイルアクセスモード、効率重視モデル、中程度の推論 effort、対応する JSON schema 出力先を固定し、完全 prompt には元プロンプト、ファイルアクセスモード一覧、oracle・realization・review・INDEX エントリー関連の標準断片を含める。
+- `cmoc tui` でユーザー入力プロンプトを実行する前に、AI Agent CLI/TUI へ渡す実行パラメータ選定用の呼び出しパラメータを組み立てる実装。
+- 元プロンプト、候補となるファイルアクセスモード、oracle/realization/index entry の各標準を含む完全プロンプトを生成し、効率重視モデル・中程度 reasoning・readonly 実行・対応する Structured Output schema を指定した `AgentCallParameter` として返す。
 
 ## Read this when
-- `cmoc tui` で入力された元プロンプトを実行前に解析し、AI Agent CLI/TUI のモデル、推論 effort、ファイルアクセスモード、prompt、schema をどう決めるか確認したいとき。
-- 実行パラメータ解決用 prompt に含める role、summary、goal、補助文書、標準仕様断片の組み合わせを変更または調査したいとき。
-- 元プロンプトの該当行や work tree 内ファイル行を根拠として示す、パラメータ選択タスクの要求内容を確認したいとき。
+- `cmoc tui` の実行前に、モデル種別、reasoning effort、ファイルアクセスモード、または出力 schema をどう選ばせるかを確認・変更したいとき。
+- TUI から渡された元プロンプトを、実行パラメータ選定担当向けの完全プロンプトへどう埋め込むかを確認したいとき。
+- 実行パラメータ解決で提示するファイルアクセスモード候補、または oracle/realization/review/index entry 標準の同梱有無を調整したいとき。
 
 ## Do not read this when
-- TUI の画面表示、入力編集、イベント処理、対話 UI の挙動を調べたいだけのとき。
-- AI Agent CLI/TUI の実行そのもの、プロセス起動、結果表示、または選定済みパラメータの利用箇所を調べたいとき。
-- 個別のファイルアクセスルール本文、完全 prompt の組み立て共通処理、パス解決、または `AgentCallParameter` などの基礎データ構造そのものを調べたいとき。
+- 実際に選定された実行パラメータの JSON schema 定義だけを確認したいときは、対応する schema 側を読む。
+- 各ファイルアクセスモードの具体的な規則本文を確認したいときは、ファイルアクセス規則を生成する部品側を読む。
+- `cmoc tui` のユーザー入力取得、コメント除去、strip、またはサブコマンド起動フローを確認したいときは、呼び出し元の TUI 実装を読む。
 
 ## hash
-- 11ebb7eea367d7b96ce877c6d17fbb1812301af8b345645272ee8073e4d8a256
+- c93263bfac439dc8c5aa10669cff96e007bad153d8dfc8ecbd9e3a8e18e1cb6f

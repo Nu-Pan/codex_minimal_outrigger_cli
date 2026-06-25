@@ -65,43 +65,40 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドから起動する AI エージェント呼び出しパラメータを組み立てる領域。現在は、session join で merge conflict marker 解消だけを担当するエージェントへ渡す model、reasoning、file access mode、complete prompt の構成を扱う。
-- conflict 対象パスを work root 基準の実パスへ解決し、対象一覧、作業範囲、oracle file の例外的な最小編集許可、git add/commit 禁止などを prompt に埋め込む処理への入口。
+- `cmoc session join` で検出された merge conflict marker を別 AI エージェントに解消させるための呼び出しパラメータを組み立てる領域。
+- conflict 対象パスを実パスへ解決し、対象ファイル一覧、作業範囲、対象外編集禁止、oracle file の例外的な必要最小限編集許可、`git add` / `git commit` 禁止を含む complete prompt を生成する。
+- 返却するエージェント設定は、主流モデル、中程度 reasoning、conflict 解消用の書き込み権限、生成済み Markdown prompt に固定される。
 
 ## Read this when
-- session 系サブコマンドが AI エージェントへ渡す AgentCallParameter の内容を確認または変更したいとき。
-- session join の merge conflict marker 解消エージェントに渡る role、summary、goal、補助 prompt、file access mode、model、reasoning effort を確認したいとき。
-- conflict 対象ファイル一覧が prompt にどう埋め込まれるか、実パス解決後の表示がどう作られるかを確認したいとき。
-- merge conflict marker 解消に限定する指示、仕様改訂禁止、対象外ファイル編集禁止、oracle file の例外的な編集許可、git add/commit 禁止の文言を調整したいとき。
+- `cmoc session join` の merge conflict marker 解消用エージェント呼び出しで、prompt・権限・モデル・reasoning 設定がどう決まるかを確認または変更したいとき。
+- conflict 対象ファイル一覧、作業範囲、対象外ファイル編集禁止、oracle file の例外的編集許可、`git add` / `git commit` 禁止が prompt にどう埋め込まれるかを追いたいとき。
+- conflict 対象として渡されたパスが、作業ルートや実パス解決を経て prompt 内の対象一覧になる流れを確認したいとき。
 
 ## Do not read this when
-- session join の通常実行フロー、merge 実行、conflict marker 検出、join 後処理そのものを調べたいとき。
-- complete prompt の共通組み立て、markdown rendering、AgentCallParameter や FileAccessMode などの型定義を調べたいとき。
-- real path、work root、パスキーワードの定義、パス解決関数そのものの仕様を確認したいとき。
-- merge conflict marker 解消ではない session 系の実行制御、CLI 引数、状態管理、または他サブコマンドの処理を調べたいとき。
+- 通常の `cmoc session join` の合流処理全体、git 操作、conflict 検出、join 後の状態更新を調べたいだけのとき。
+- complete prompt の共通構築、構造化 Markdown レンダリング、パスモデル、ACP の基礎型そのものを調べたいとき。
+- merge conflict の具体的な解消アルゴリズムや、対象ファイル本文をどう編集するべきかの方針を探しているとき。
 
 ## hash
-- 9c349137de9dd93d9b9206760be2310b902102e349c94b45d6be693497c0ef57
+- 2c5f65ab7fb89a2799af6c84b62bf58a98dcd9b8bb2d46d103eaeb6f88c090c8
 
 # `tui`
 
 ## Summary
-- AI Agent CLI/TUI が作業依頼を実行前に解析し、必要なファイルアクセス権限と参照すべき標準群を判定するための TUI 向け parameter resolve 領域。
-- 元プロンプト、利用可能なアクセスモード、oracle・realization・review・ルーティング文書関連の標準断片を組み合わせ、読み取り専用・効率重視・中程度推論 effort・JSON schema 出力で判定させる呼び出し条件を扱う。
-- 判定結果側では、選ばれた論理ファイルアクセス権限と、各標準文書を読む必要があるかどうかの理由付けを構造化して返すための期待形を定義する。
+- TUI 実行前に、ユーザーの作業依頼から AI Agent CLI/TUI へ渡す実行パラメータを選定するための builder 群を扱う。
+- 元プロンプト、候補となる論理ファイルアクセスモード、oracle・realization・review・INDEX.md エントリー関連標準を含む完全プロンプトを組み立て、効率重視モデル・中程度 reasoning・readonly 実行・対応 schema を指定した呼び出しパラメータへ変換する実装と、その選定結果 schema がまとまっている。
+- 権限選択と標準参照要否を、理由付きの構造化出力として扱う領域への入口になる。
 
 ## Read this when
-- TUI で受け取った作業依頼から、実行前にどの論理ファイルアクセス権限を選ぶべきか判定する処理を調べるとき。
-- 作業依頼に対して、oracle・realization・review・ルーティング文書関連の標準を読む必要があるかどうかを構造化して判断する仕様を確認するとき。
-- parameter resolve 用のプロンプトに、元プロンプト、アクセスモード一覧、標準仕様断片、出力 schema をどう含めるか確認するとき。
-- 権限選択や標準参照要否の理由付けを、実装またはテストで検証するための期待形を確認するとき。
+- TUI でユーザー入力を実行する前に、AI Agent CLI/TUI へ渡すモデル種別、reasoning effort、論理ファイルアクセスモード、出力 schema の選び方を確認・変更したいとき。
+- ユーザーの元プロンプトを、実行パラメータ選定担当向けの完全プロンプトへどう埋め込み、どの標準群を同梱するかを確認したいとき。
+- 作業依頼に対する権限選択や、oracle・realization・review・INDEX.md エントリー関連標準を読む必要があるかどうかの判定結果を、実装やテストで扱うとき。
 
 ## Do not read this when
-- TUI の画面表示、入力編集、イベント処理、対話 UI の挙動を調べたいだけのとき。
-- 選定済みパラメータを使った AI Agent CLI/TUI のプロセス起動、実行結果表示、外部コマンド実行を調べたいとき。
-- 個別の oracle file や realization file の責務、編集可否、品質基準そのものを確認したいとき。
-- ルーティング文書エントリーの書き方や、INDEX.md の判断基準そのものを確認したいだけのとき。
-- パス解決、完全 prompt の共通組み立て、基礎データ構造、またはファイルシステム操作の詳細を調べたいとき。
+- TUI のユーザー入力取得、コメント除去、strip、サブコマンド起動フローなど、実行パラメータ解決を呼び出す側の挙動だけを調べたいとき。
+- 個々のファイルアクセスモードの規則本文そのものを確認したいとき。
+- oracle file や realization file の責務、編集可否、品質基準そのもの、または INDEX.md エントリー本文の書き方だけを確認したいとき。
+- 実行パラメータ選定後の実際の AI Agent CLI/TUI 実行、TUI 表示、対話フロー、ファイルシステム操作を調べたいとき。
 
 ## hash
-- a84d3339087bbe0063ec051eda69298c988f97dcac32b663d00328eefcf9ab94
+- 313e4db46a1cb446d666a4a752425c28963d3fdaee76062389ea280ba4be8e41

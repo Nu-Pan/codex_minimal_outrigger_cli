@@ -1,58 +1,68 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実処理をサブコマンド単位に収める package。`apply/fork.py`、`apply/join.py`、`apply/abandon.py` が各コマンドの本命処理を持つ。
-- fork の isolated worktree 作成と finding loop、join の merge/force-resolve/report、abandon の cleanup/state reset と、それらで共有する apply runtime helper への入口になる。
+- apply サブコマンド群の実装領域で、isolated worktree 上での finding 適用ループ、成果の session branch への join、未 join run の abandon、apply 用 worktree・branch・process id 管理、fork/join report 生成を扱う。
+- apply lifecycle の開始、実行中状態、完了・エラー後の取り込み、破棄、cleanup までを追う入口であり、CLI 入口定義より内側の実行制御と状態遷移を確認するための対象。
+- apply の対象ファイル選定、編集禁止領域の差分検査、想定外差分の検出・復元、INDEX.md conflict の限定的な自動解決、Codex CLI 呼び出しを含む apply 専用制御がまとまっている。
 
 ## Read this when
-- apply fork/join/abandon の実行条件、状態遷移、副作用、report、cleanup、対象 path 選定を確認または変更したいとき。
-- apply 系コマンドのどの本命処理ファイルまたは共通 helper を読むべきか選びたいとき。
+- apply fork、join、abandon の実行条件、branch 制約、clean worktree 要求、apply state の遷移、cleanup の順序を確認・変更したいとき。
+- apply 用 worktree と branch の特定規則、apply process id の保存・読取・削除、実行中 process の停止確認を調べたいとき。
+- rolling・session・full scope から finding 列挙対象を決める処理、finding 適用後の変更検出、commit、次回対象更新の apply loop を追いたいとき。
+- apply 実行中に oracle、.agents、memo などの編集禁止領域へ差分が出ないことを確認する検査を変更したいとき。
+- apply join 時の想定外差分分類、force-resolve による復元、merge conflict 報告、INDEX.md だけの conflict 解決を確認・変更したいとき。
+- apply fork または join の report 保存先、frontmatter、結果表示、finding count、変更要約、warning 出力の生成条件を確認したいとき。
 
 ## Do not read this when
-- CLI の Typer command 宣言や option 定義だけを確認したいときは、`main.py` を読む。
-- finding の生成プロンプトや apply fork 用パラメータ構築の詳細を確認したいときは、acp.builder.apply.fork 側を読む。
-- git 操作、state 読み書き、worktree 作成削除などの低レベル runtime helper の実装だけを確認したいときは、runtime 側を読む。
+- apply サブコマンドのユーザー向け CLI 登録、typer option 定義、コマンド名の構造だけを確認したいときは、上位のサブコマンド入口を読む。
+- session state の schema、session_id の生成、session lifecycle 全体、設定値定義そのものを確認したいときは、状態モデル・設定・session 管理側を読む。
+- git command wrapper、work root や worktrees root の定義、CmocError の表示形式、ignored 判定や binary 判定の共通実装だけを調べたいときは、共通 runtime 側を読む。
+- Codex CLI に渡す prompt や structured parameter の詳細だけを確認したいときは、apply 用 parameter builder 側を読む。
+- oracle file、realization file、path keyword などの正本定義を確認したいときは、oracle 側の仕様本文を読む。
+- apply lifecycle ではなく、別サブコマンドの session 開始・終了、review、index 生成などを調べたいときは、それぞれのサブコマンド領域へ進む。
 
 ## hash
-- 989e62e355b578d97dae091a8444e2b0543c9a351c7e8abe48ef7c31c15923cb
+- 2c25d3e9ea5c01efedf5a982e28ffdbacfdbb6546ac406287b3e050c0703b655
 
 # `indexing.py`
 
 ## Summary
-- 現在の work root に対する INDEX.md maintenance サブコマンドの実処理を担う実装。clean worktree 確認、cmoc ignore 確保、深いディレクトリからの INDEX.md 再生成、更新差分だけの git commit、対象 hash による既存エントリー再利用、Codex CLI による個別エントリー生成、Structured Output から Markdown エントリーへの描画を扱う。
-- INDEX.md の対象列挙では、隠しパス、memo、git ignored、binary file、INDEX.md 自体を除外し、ディレクトリは子要素 hash の合成で鮮度判定する。
+- 現在の work root に対する INDEX.md maintenance の実行本体を担う実装。indexing 用ロック、対象ディレクトリと子要素の列挙、既存エントリーの hash 検証、Codex 呼び出しによるエントリー生成、INDEX.md 書き換え、更新差分だけの git commit までをまとめて扱う。
+- INDEX.md エントリーの Markdown 形式、必須 section の検証、対象内容の抽出、鮮度判定用 hash 計算など、INDEX.md 自動生成の制御ロジックを確認する入口になる。
 
 ## Read this when
-- INDEX.md maintenance の実行順序、更新対象の列挙条件、既存エントリーの再利用条件、または indexing commit の作成条件を確認・変更したいとき。
-- INDEX.md エントリー生成で Codex CLI に渡す対象内容、Structured Output から Markdown へ変換する fallback、hash セクションの扱いを確認したいとき。
-- memo、隠しファイル、git ignored、binary file、INDEX.md を索引対象から外す制御や、directory hash の再帰計算を調べたいとき。
+- INDEX.md maintenance の実行順序、ロック取得、更新対象の探索、生成済みエントリーの再利用条件、更新後 commit の挙動を確認・変更するとき。
+- INDEX.md 配置対象から除外する条件、git ignore・binary file・root memo 配下の扱い、directory hash の計算方法を確認・変更するとき。
+- Codex に INDEX.md エントリー生成を依頼する引数、対象内容として file 本文・下位 INDEX.md・子要素名一覧のどれを渡すかを確認・変更するとき。
+- INDEX.md エントリーの必須 section、hash 抽出、Structured Output から Markdown への変換、fallback 文言の扱いを確認・変更するとき。
 
 ## Do not read this when
-- 個別のサブコマンド登録、Typer app への接続、または CLI のルート構成だけを確認したいとき。
-- Codex CLI 呼び出しパラメータの詳細な prompt 構築や Structured Output schema の定義を確認したいとき。
-- path keyword の定義、git wrapper、config 読み込み、binary 判定、ignore 判定など runtime helper の内部仕様を確認したいとき。
+- 個別サブコマンドの Typer 登録や CLI routing だけを確認したいときは、サブコマンド定義やアプリ組み立て側を読む方が直接的。
+- INDEX.md エントリー生成 prompt の文面や Structured Output schema そのものを確認したいときは、ACP builder 側を読む方が直接的。
+- path keyword、work root、git 実行、設定読み込み、hash 関数、binary 判定、git ignore 判定の個別仕様を確認したいときは、それぞれの runtime utility 実装を読む方が直接的。
+- 生成された特定の INDEX.md のルーティング内容を確認したいだけのときは、この実装ではなく対象階層の本文または生成済み INDEX.md を読む方が直接的。
 
 ## hash
-- a4f9705b93a50e6ce0a719f324ce891ba8149574d1c806f1494123659bb6c23e
+- 42b222370c5749d2bfa5830d3a7596754c9f68d0a5a8e1d77b66da7bc27b384e
 
 # `init.py`
 
 ## Summary
-- `cmoc init` の実処理と成功時表示を担う実装。work root の repository root を取得し、`.cmoc` を ignore 対象へ同期し、設定を同期したうえで、必要な場合だけ `.gitignore` をコミットする初期化フローを扱う。
-- 初期化完了後に stdout へ出す Markdown 形式の結果文もここで組み立てる。
+- 作業ツリーを cmoc が扱える初期状態へ同期する初期化処理を実装する。`.gitignore` と `.cmoc` 設定を init commit に反映しつつ、実行前から staged だった利用者差分や作業ツリー上の `.gitignore` 状態を退避・復元する責務を持つ。
+- 初期化成功時に標準出力へ返す Markdown 形式の結果文もここで組み立てる。
 
 ## Read this when
-- `cmoc init` の副作用、特に `.cmoc` の ignore 設定、設定同期、`.gitignore` の git add/commit 条件を確認または変更したいとき。
-- `cmoc init` 成功時の stdout 表示内容、見出し、repository root や ignored path の出し方を確認または変更したいとき。
-- 初期化コマンドが runtime helper をどの順序で呼び出すか、また未コミット差分がある場合にどの git 操作を行うかを追いたいとき。
+- 初期化サブコマンドが work root、`.gitignore`、`.cmoc` 設定、init commit をどの順序で扱うか確認したいとき。
+- 初期化処理が利用者の staged 変更や作業ツリー上の `.gitignore` を壊さないための退避・復元ロジックを調べるとき。
+- 初期化後に表示される成功メッセージの内容や形式を変更・確認したいとき。
 
 ## Do not read this when
-- CLI アプリ全体へのサブコマンド登録、Typer の command 定義、引数や option の追加位置だけを確認したいとき。
-- repository root の判定方法、`.cmoc` ignore の具体的な書き換え規則、設定同期、git 実行 wrapper の内部仕様を確認したいとき。
-- `cmoc init` 以外のサブコマンドの挙動や出力を確認したいとき。
+- work root の決定方法、git 実行 wrapper、`.cmoc` 無視設定、設定同期そのものの詳細を調べたいだけのときは、それらを提供する実行時 helper 側を読む。
+- 初期化以外のサブコマンドの CLI 挙動や出力を調べたいときは、該当するサブコマンド実装を読む。
+- INDEX 生成規則、oracle と realization の関係、パス用語の定義を確認したいときは、仕様や path model の本文を読む。
 
 ## hash
-- f50ebd2eb96fa024f3634c6b14a5882d4866a2532cf05a13d3b5fe06134d561c
+- c4aa8aace0fa6ea5b50d5f4bbc9f351451aee531000b83e8c925bb6df227ae25
 
 # `review.py`
 
@@ -151,38 +161,40 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドの実処理をサブコマンド単位に収める package。`session/fork.py`、`session/join.py`、`session/abandon.py` が各コマンドの本命処理を持つ。
-- 通常 branch からの session branch 作成、home branch への join、merge せず破棄する abandon の入口になる。
-- join 時の merge conflict resolution は `session/join.py` 内で扱う。
+- session 系サブコマンドの実装をまとめる領域。通常 branch から session を開始し、active session branch を home branch へ取り込む、または取り込まず破棄する一連の session lifecycle 操作を扱う。
+- 各サブコマンドは、実行前提の検証、worktree と cmoc ignore 状態の確認、branch 切り替え・作成・削除、session state の生成・更新、利用者向け出力までを担う。
+- join では merge conflict 発生時に Codex CLI へ解消を依頼し、解消後の検査・stage・merge commit 完了までを扱う。abandon では cleanup 失敗時の state rollback と branch rollback を試み、失敗情報をまとめて報告する。
 
 ## Read this when
-- session fork/join/abandon の実行条件、状態遷移、git 操作、副作用、CLI 出力を確認または変更したいとき。
-- session 系コマンドのどの本命処理ファイルを読むべきか選びたいとき。
+- session の開始、参加終了、破棄に関するサブコマンドの実行条件、失敗条件、状態遷移、Git 操作順、CLI 出力を確認・変更したいとき。
+- 通常 branch から session branch と session state を作る処理、active session の重複検出、managed branch 上での拒否挙動を調べたいとき。
+- active session branch を home branch へ merge する処理、join 後の state 更新、session branch 削除、merge conflict 解消フローを追いたいとき。
+- active session branch を home branch に merge せず破棄する処理、破棄時の state 更新、session branch 削除、失敗時 rollback の扱いを調べたいとき。
 
 ## Do not read this when
-- session 以外の subcommand の CLI 定義、引数宣言、Typer app への登録だけを確認したいとき。
-- SessionState のデータ構造、状態ファイルの path 規則、git helper、branch 判定、worktree 判定そのものの実装を確認したいとき。
-- session join conflict resolution parameter の文面や AgentCallParameter の組み立て詳細だけを確認したいとき。
-- oracle 側の正本仕様断片、path keyword の定義、INDEX.md 生成規則を確認したいとき。
+- session state のデータ構造、保存形式、state file と branch の対応そのものを調べたいとき。共通の状態管理実装を読む。
+- repo root、path keyword、worktree 検証、cmoc ignore、git command 実行などの共通 runtime helper の詳細を調べたいとき。
+- CLI 全体のサブコマンド登録、session 以外のサブコマンド、または共通ルーティングだけを確認したいとき。
+- Codex CLI に渡す conflict 解決依頼パラメータの具体的な組み立てだけを調べたいとき。
 
 ## hash
-- 1ac7da085f1c6dab065f696400c7fce368e566dccb93384559fce067eaca0cb1
+- 736cf2df88ee6c03334f50cec5a75b9b7dc2d298a3f5f62fa328ba4b97a119a4
 
 # `tui.py`
 
 ## Summary
-- 対話的な依頼入力を一時 Markdown として作成し、利用可能なエディタで編集させた後、入力内容を解決用 Codex 実行に渡して TUI 用の AgentCallParameter を組み立てる処理を扱う。
-- プロンプト本文からコメントを除去し、Markdown 見出しを StructDoc 階層へ変換し、解決済み設定に基づいて file access mode や各種標準フラグを complete prompt へ反映する入口になる。
+- 対話型実行フローを実装するサブコマンド本体。ユーザー用プロンプトの初期ファイル作成、エディタ起動、入力プロンプトからの実行パラメータ解決、完全プロンプト保存、TUI 用 Codex 呼び出しまでをつなぐ。
+- TUI で許可するファイルアクセスモードの検証、Markdown 入力を構造化プロンプト部品へ分解する処理、解決済みパラメータ辞書から値を取り出す小さな補助処理を含む。
 
 ## Read this when
-- `cmoc tui` の実行フロー、特に元プロンプトファイルの初期化、エディタ起動、入力読み取り、解決済みパラメータから Codex TUI 呼び出しを作る処理を確認したいとき。
-- TUI 実行時に使うエディタ探索順、エディタ失敗時の CmocError、または Markdown コメント除去・見出し分解の挙動を変更したいとき。
-- 解決済みパラメータの nested `value` 形式から file access mode や oracle/realization/index-entry 標準フラグを取り出す既定値処理を確認したいとき。
+- 対話型サブコマンドの実行順序、生成されるプロンプトログ、エディタ選択、TUI 起動時に Codex へ渡す AgentCallParameter の組み立てを確認・変更したいとき。
+- ユーザーが入力した Markdown プロンプトの見出し・本文・コードフェンスの扱い、またはコメント除去後の入力読み取り挙動を確認したいとき。
+- TUI で利用可能なファイルアクセスモード、oracle/realization/review/index entry 系フラグを complete prompt に反映する経路を調べたいとき。
 
 ## Do not read this when
-- サブコマンドの登録、CLI 引数解析、または `cmoc tui` を呼び出す外側のコマンド構成だけを確認したいとき。
-- Codex 実行そのもの、Codex TUI プロセスの起動実装、または AgentCallParameter の汎用定義を確認したいとき。
-- TUI 用パラメータ解決プロンプトの内容や complete prompt 全体の構築規則を確認したいだけで、このファイルがそれらを呼び出す箇所に関心がないとき。
+- 通常の非対話型サブコマンド、設定ファイルの定義そのもの、Codex 実行ラッパーの低レベル実装だけを調べたいとき。
+- TUI パラメータ解決用プロンプトの生成内容そのものを変更したい場合は、その解決パラメータを組み立てるモジュールを直接読む方が適切。
+- complete prompt の各セクション内容やレンダリング規則そのものを変更したい場合は、完全プロンプト生成や構造化ドキュメントの担当箇所を直接読む方が適切。
 
 ## hash
-- a92ec4d509d7f4e77762e013475cb1996e063376a6d00f39b4a530332d5aa72e
+- e274745becf0d7dd19c1f830062a93a54eae26eeb1220a8112a19d2e096833c4
