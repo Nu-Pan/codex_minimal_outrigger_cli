@@ -10,7 +10,14 @@ from acp.builder.tui.resolve_parameter import (
 from acp.prompt_parts.complete_prompt import build_complete_prompt
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from basic.struct_doc import StructDoc, render_as_markdown
-from cmoc_runtime import CmocError, ensure_cmoc_ignored, timestamp
+from cmoc_runtime import (
+    CmocError,
+    ensure_cmoc_ignored,
+    load_config,
+    repo_root,
+    timestamp,
+    work_root,
+)
 from config.cmoc_config import CmocConfig
 
 ORIGINAL_PROMPT_TEMPLATE = """<!--
@@ -56,6 +63,18 @@ def cmoc_tui_impl(
         cwd=work_root,
         config=config,
         purpose="tui codex",
+    )
+
+
+def cmoc_tui_command_impl(run_codex_exec, run_codex_tui) -> None:
+    root = repo_root()
+    current_root = work_root()
+    cmoc_tui_impl(
+        run_codex_exec,
+        run_codex_tui,
+        root=root,
+        work_root=current_root,
+        config=load_config(root),
     )
 
 

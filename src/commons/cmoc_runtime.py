@@ -34,6 +34,10 @@ from commons.runtime_content import (
     write_hashed_file,
     write_hashed_file_in_existing_dir,
 )
+from commons.runtime_cli import (
+    require_current_directory_is_work_root,
+    run_cli_subcommand,
+)
 from commons.runtime_errors import CmocError, render_error
 from commons.runtime_git import (
     MANAGED_BRANCH_PREFIXES,
