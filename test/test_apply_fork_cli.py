@@ -234,6 +234,7 @@ def test_apply_fork_writes_report_with_change_summary(
     assert report_path.is_file()
     rendered = report_path.read_text()
     assert "result: unconverged" in rendered
+    assert "未収束: 回数上限に達したためループを終了しました。まだ所見が残っている可能性があります。" in rendered
     assert "# cmoc apply fork report" in rendered
     assert "## Finding Count" in rendered
     assert "ドキュメント: README を更新した (README.md)" in rendered
