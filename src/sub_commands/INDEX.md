@@ -1,23 +1,25 @@
 # `apply`
 
 ## Summary
-- apply サブコマンド群の実行単位を扱う実装領域。apply run の開始、isolated worktree 上での finding 適用、成果の join、未 join run の abandon、実行 report 生成、関連する worktree・branch・process id の補助操作を入口としてまとめる。
-- session branch と apply branch の間で成果を作成・取り込み・破棄する lifecycle 全体を追うときの上位入口であり、個別の開始処理、完了取り込み、破棄、report、低レベル runtime 補助へ読み分けるために使う。
+- apply 系サブコマンドの実装群への入口。apply run の開始、破棄、join、report 生成、実行時 worktree・branch・process 状態の補助処理を扱う。
+- session branch と apply branch/worktree の間で、finding 適用用の isolated run を作成し、その成果を session 側へ取り込むまでの lifecycle を追うための階層。
 
 ## Read this when
-- apply run の lifecycle 全体のどこを読むべきかを絞り込みたいとき。
-- apply worktree や apply branch を使った isolated な変更適用、成果 commit、session branch への取り込み、破棄、状態初期化の関係を確認したいとき。
-- apply run の report、想定外差分の扱い、編集禁止対象差分の検出、process id 管理など、apply 固有の責務の入口を探したいとき。
-- apply サブコマンドに関する実装変更やテスト追加のために、開始・join・abandon・report・runtime 補助のどこが直接の変更対象か判断したいとき。
+- apply run の開始から完了、破棄、join、後片付けまでの状態遷移と制御フローを調べたいとき。
+- apply 対象 file の列挙、finding 適用 loop、編集禁止対象差分の rollback、commit 作成、report 生成の関係を確認したいとき。
+- apply branch または apply worktree の特定、process id 状態ファイル、実行中 process 停止など、apply 実行時の補助状態を確認したいとき。
+- apply join 時の merge、想定外差分の扱い、conflict 処理、state 更新、worktree/branch cleanup の入口を探したいとき。
+- apply fork/join/abandon の利用者向け出力、warning、保存 report に含める情報の出所を調べたいとき。
 
 ## Do not read this when
-- サブコマンド共通の CLI 登録、引数 parser、コマンド dispatch の仕組みだけを調べたいとき。
-- session state 全体の schema、session_id の生成、config 読み込み、git command wrapper、path keyword の定義など、apply に閉じない共通 runtime や状態モデルを調べたいとき。
-- Codex prompt parameter の本文や JSON schema の組み立てだけを確認したいとき。
-- oracle file、realization file、INDEX.md 生成規則など、apply 実行制御ではなく正本仕様やルーティング文書の定義を調べたいとき。
+- apply 以外の session 作成・開始・終了や、session state 全体の schema だけを調べたいとき。
+- repo root、git 実行 wrapper、worktree root、設定、状態保存、エラー表示などの共通 runtime primitive だけを確認したいとき。
+- finding 列挙や finding 適用に渡す prompt/parameter builder だけを変更したいとき。
+- oracle 文書や INDEX.md 生成規則そのものを調べたいとき。
+- apply 系の外部挙動をテスト観点から先に確認したいだけで、実装本体の制御を読む必要がまだないとき。
 
 ## hash
-- 410939b5cba911b88d5ffbee77c00ce8b625d7ff0ce978c1d28867369c480431
+- 53017ad30dae555ab69842aab8d4967cd08a3ea6fbdacee5c8051bb17757e5fb
 
 # `indexing.py`
 

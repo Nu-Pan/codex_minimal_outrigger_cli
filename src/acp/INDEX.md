@@ -1,23 +1,24 @@
 # `builder`
 
 ## Summary
-- AI エージェント呼び出し用の builder 群を集めた領域で、apply、indexing、review、session、tui などの上位機能ごとに prompt、Structured Output schema、model class、reasoning effort、ファイルアクセス権限を組み合わせた呼び出しパラメータ構築へ進む入口になる。
-- 実行フロー本体ではなく、各処理で AI に何を補助文脈として渡し、どの構造化結果を受け取り、どの実行条件で呼び出すかを確認するためのまとまり。
+- 各種サブコマンドや対話実行の下流で、別の AI エージェントに渡す呼び出しパラメータを構築する実装領域。役割、目的、補助文脈、参照標準、ファイルアクセスモード、モデル種別、reasoning 設定、Structured Output schema の対応づけを扱う。
+- 対象となる処理は、変更差分の要約、実装所見の列挙と修正依頼、oracle file レビューの各段階、merge conflict marker 解消依頼、目次エントリー生成、TUI 実行前のパラメータ選定に分かれる。
+- 実際の CLI 制御、Git 操作、ファイル走査、レビュー結果の保存、対話 UI の実行ではなく、それらから呼び出される AI タスクの prompt と実行条件を確認するための入口になる。
 
 ## Read this when
-- cmoc の各機能で、AI Agent CLI/TUI や OpenAI API 相当の呼び出し条件をどの builder が組み立てるかを探したいとき。
-- 変更要約、レビュー所見、INDEX.md エントリー生成、merge conflict marker 解消、TUI 実行パラメータ選定などで使う prompt と Structured Output schema の対応を確認したいとき。
-- 対象ファイル、差分、所見、ユーザープロンプト、conflict 対象一覧などの補助文脈が AI 向け prompt にどう埋め込まれるかを追いたいとき。
-- AI 呼び出しごとのモデル種別、reasoning effort、論理ファイルアクセスモード、読み取り専用・編集許可条件を確認または変更したいとき。
+- AI エージェントに委譲するサブタスクで、どの role、summary、goal、補助プロンプト、標準文書、ファイルアクセス権限を渡すか確認または変更したいとき。
+- 変更要約、実装所見、所見修正、oracle file レビュー、conflict 解消、目次エントリー生成、TUI 実行パラメータ選定などの Structured Output schema と呼び出し設定の対応を追いたいとき。
+- モデルクラス、reasoning effort、読み取り専用・realization 書き込み・oracle 限定読み取りなどの実行条件が、各 AI 呼び出しでどう選ばれているか調べたいとき。
+- 対象ファイル、差分テキスト、既知所見、理由リスト、conflict 対象一覧、ユーザー入力プロンプトなどの入力文脈が、AI 向け完全プロンプトにどう埋め込まれるか確認したいとき。
 
 ## Do not read this when
-- CLI 引数解析、サブコマンド登録、Git 操作、branch/worktree 操作、ファイル走査、結果保存、TUI 表示など、AI 呼び出し builder を利用する側の実行制御を調べたいとき。
-- oracle file、realization file、review standard、INDEX.md entry standard、path keyword など、prompt に参照される共通仕様や概念そのものを読みたいとき。
-- 汎用的な prompt rendering、AgentCallParameter、path 解決、Markdown 構造化、schema 基盤など、個別 builder より下位の共通部品を調べたいとき。
-- 個別の対象ファイルやテスト本文を確認したいだけで、AI 呼び出し契約や構造化出力の設定を変更しないとき。
+- 各サブコマンドの CLI 引数解析、サブコマンド登録、実行順序、Git 操作、worktree 操作、結果保存など、AI 呼び出しを起動する側の制御フローだけを調べたいとき。
+- oracle file、realization file、各種標準、ファイルアクセスモード、パスモデル、構造化 markdown、完全プロンプト生成などの共通概念や共通部品そのものを詳しく確認したいとき。
+- 実際に修正・レビュー・conflict 解消される個別の oracle file や realization file の本文を確認すれば足りるとき。
+- AI 呼び出し結果を受け取った後の集約、表示、永続化、適用可否判定、または UI 表示や対話処理を調べたいとき。
 
 ## hash
-- 9896b5c2963598d5c9197b129c4841b8ecee7b6a363b73fe3a1a35f3a75abde0
+- 167fe3cdad1b2b6f00fe1c9de975fc5bace8ef7d9365b74fb627146c4f0ed212
 
 # `prompt_parts`
 

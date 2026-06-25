@@ -20,21 +20,21 @@
 # `change_summary.py`
 
 ## Summary
-- `cmoc apply fork` の作業レポート向けに、対象ブランチ上の git diff をそのまま入力として受け取り、変更内容の人間向け要約を生成する AI 呼び出しパラメータを組み立てる。
-- 読み取り専用のファイルアクセス、効率重視モデル、中程度の推論量、変更要約用の Structured Output schema を指定し、完全 prompt に差分本文を補助文書として埋め込む。
+- `cmoc apply fork` の作業レポート向けに、適用ブランチ上の生の差分テキストから人間向け変更要約を生成する AI 呼び出しパラメータを組み立てる。
+- 差分本文を補助プロンプトへ埋め込み、読み取り専用のファイルアクセス、効率重視モデル、中程度の推論努力、対応する Structured Output schema を指定して返す責務を持つ。
 
 ## Read this when
-- `cmoc apply fork` の変更要約 prompt、作業レポート用要約、または git diff を AI に渡す呼び出し条件を確認したいとき。
-- 変更内容要約の入力差分をどのように prompt に含めるか、または要約生成時のモデル種別・推論量・ファイルアクセス権限を確認したいとき。
-- `cmoc apply fork` の実行後レポートに使う Structured Output schema の参照先や、AgentCallParameter の構築責務を追うとき。
+- `cmoc apply fork` が作業レポート用の変更要約をどう生成するかを確認・変更したいとき。
+- 適用ブランチの `git diff` 出力を、解析や整形を挟まずに AI プロンプトへ渡す経路を確認したいとき。
+- 変更要約生成で使う role、summary、goal、補助プロンプト、ファイルアクセスモード、モデルクラス、推論努力、出力 schema の指定を調整したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` の実際の branch 作成、差分取得、作業適用、または git コマンド実行処理を調べたいだけのとき。
-- 変更要約の JSON schema 自体の項目定義や検証内容を確認したいとき。
-- 汎用的な prompt 結合処理、構造化 markdown の描画処理、または path keyword の定義を調べたいとき。
+- 実際の fork 適用処理、ブランチ操作、git コマンド実行、差分取得そのものを調べたいとき。
+- 生成された変更要約の JSON schema の項目定義だけを確認したいとき。
+- apply 系サブコマンド全体の CLI 入口、引数解析、実行フローを調べたいとき。
 
 ## hash
-- e958bca0852f6b124010f16314781a5093835941077ed2faef44217ce9587626
+- e67af8eaca19963295dc8e237d26d5d2619001f6757af6a00da778a4cbccc002
 
 # `file_finding_enumeration.json`
 
