@@ -59,13 +59,17 @@ class CmocConfigReviewOracle:
     """
 
     # 所見リスト列挙ループの上限回数
-    num_enumerate_findings_loop: int = field(default=3)
+    num_enumerate_findings_loop: int = field(default=2)
 
     # 所見リストマージループの上限回数
-    num_merge_findings_loop: int = field(default=3)
+    num_merge_findings_loop: int = field(default=2)
 
     # 所見リスト検証ループの上限回数
-    num_validate_findings_loop: int = field(default=3)
+    # NOTE
+    #   検証ループは収束性が無く、無限に理由を追記し続ける傾向がある（これは現在の仕様上しょうがない）
+    #   よってこのループ回数は「judge 前に advocate/challenger にどれだけ議論させるかの予算」という意味合いを持つ。
+    #   生成される理由の妥当性もわからないので、１度だけ反論の機会を与えるという意味でループ数 2 としている。
+    num_validate_findings_loop: int = field(default=2)
 
 
 @dataclass(frozen=True)

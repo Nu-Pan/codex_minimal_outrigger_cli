@@ -1,20 +1,19 @@
 # `join`
 
 ## Summary
-- `cmoc session join` で merge conflict marker 解消専用のエージェント呼び出しパラメータを組み立てる領域。解消対象パスを実パスへ解決して prompt に埋め込み、conflict marker 解消に限定した役割・目標・ファイルアクセス制約を complete prompt として構成する。
-- join 処理から conflict marker 解消エージェントへ渡す parameter の入口であり、model、reasoning、realization write の扱いと生成 prompt の内容を確認するための読み先。
+- `cmoc session join` で merge conflict marker が検出された後、解消担当 AI エージェントへ渡す呼び出しパラメータを組み立てる領域。
+- 解消対象パスを実パスへ解決し、作業範囲、編集禁止事項、oracle file の例外的編集許可、`git add` / `git commit` 禁止を含む complete prompt を生成する。
+- 返却するエージェント設定は、主流モデル、中程度 reasoning、conflict 解消用の書き込み権限、生成済み Markdown prompt に固定される。
 
 ## Read this when
-- `cmoc session join` の conflict marker 解消用エージェント呼び出し内容を確認または変更したいとき。
-- conflict 対象ファイル一覧が prompt にどう埋め込まれるか、実パス解決や work root 表示の扱いを確認したいとき。
-- merge conflict 解消だけを goal にする指示、git add/commit 禁止、oracle file の例外的な最小編集許可などの制約文を調整したいとき。
-- session join の join 処理から conflict marker 解消用 parameter を生成する流れを追う入口が必要なとき。
+- `cmoc session join` の merge conflict marker 解消用エージェント呼び出しで、prompt・権限・モデル設定がどう決まるかを確認または変更したいとき。
+- conflict 解消対象ファイル一覧、oracle file の例外的編集許可、対象外ファイル編集禁止、`git add` / `git commit` 禁止が prompt にどう埋め込まれるかを追いたいとき。
+- conflict 解消対象として渡されたパスが、作業ルートや実パス解決を経て prompt 内の対象一覧になる流れを確認したいとき。
 
 ## Do not read this when
-- 通常の session join 実行フロー、merge 実行、conflict marker 検出、または join 後処理そのものを調べたいとき。
-- complete prompt の共通組み立て仕様、markdown rendering、エージェント呼び出しパラメータの型定義を調べたいとき。
-- conflict 解消プロンプトではなく、session join の別用途の prompt や他サブコマンド用のエージェント呼び出しパラメータを調べたいとき。
-- real path や work root の定義、パスキーワードの意味、パス解決処理そのものを確認したいとき。
+- 通常の `cmoc session join` の合流処理全体、git 操作、conflict 検出、join 後の状態更新を調べたいだけのとき。
+- complete prompt の共通構築、構造化 Markdown レンダリング、パスモデル、ACP の基礎型そのものを調べたいとき。
+- merge conflict の具体的な解消アルゴリズムや、対象ファイル本文の編集方針を探しているとき。
 
 ## hash
-- 53f7c2a619ad1fe2dc649785825ad617a867006419881f90090b32ffe974c98a
+- 1f946d5dd918f49686c94d756cd73f07f2b173dfbe9da9d3dbace8d5d2590f08
