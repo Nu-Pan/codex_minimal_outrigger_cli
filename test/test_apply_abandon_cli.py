@@ -86,8 +86,9 @@ def test_apply_abandon_reports_missing_cleanup_targets_as_warnings(
     result = runner.invoke(app, ["apply", "abandon"], catch_exceptions=False)
 
     assert result.exit_code == 0
-    assert f"apply worktree already missing for branch: {apply_branch}" in result.output
+    assert f"apply worktree already missing: {apply_worktree}" in result.output
     assert f"apply branch already missing: {apply_branch}" in result.output
+    assert f"- apply_worktree: `{apply_worktree}`" in result.output
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
     assert state["apply"]["apply_branch"] is None
@@ -178,6 +179,32 @@ def test_apply_abandon_rejects_running_state_without_process_id(
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "running"
     assert state["apply"]["apply_branch"] == apply_branch
+
+
+def test_apply_abandon_rejects_apply_branch_without_derivable_worktree(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = session_branch.removeprefix("cmoc/session/")
+    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state = json.loads(state_path.read_text())
+    state["apply"]["state"] = "completed"
+    state["apply"]["apply_branch"] = "cmoc/apply/malformed"
+    state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
+
+    result = runner.invoke(app, ["apply", "abandon"])
+
+    assert result.exit_code != 0
+    assert "apply worktree を特定できません。" in result.output
+    state = json.loads(state_path.read_text())
+    assert state["apply"]["state"] == "completed"
+    assert state["apply"]["apply_branch"] == "cmoc/apply/malformed"
 
 
 def test_apply_abandon_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> None:

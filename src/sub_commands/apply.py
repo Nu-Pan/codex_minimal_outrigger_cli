@@ -23,6 +23,7 @@ from cmoc_runtime import (
     run_git,
     timestamp,
     work_root,
+    worktrees_dir,
     write_state,
 )
 
@@ -324,13 +325,13 @@ def cmoc_apply_abandon_impl() -> None:
     require_clean_worktree(root)
     previous = state.apply.state
     apply_branch = state.apply.apply_branch
-    apply_worktree = worktree_for_branch_optional(root, apply_branch) if apply_branch else None
     if not apply_branch:
         raise CmocError(
             "破棄対象 apply run の補助情報を特定できません。",
             ["session state file の apply.apply_branch を確認してください。"],
             str(path),
         )
+    apply_worktree = expected_apply_worktree(root, apply_branch)
     warnings: list[str] = []
     if previous == "running":
         process_id = state.apply.apply_process_id
@@ -345,10 +346,9 @@ def cmoc_apply_abandon_impl() -> None:
             warnings.append(stopped_warning)
     if branch == apply_branch:
         os.chdir(root)
-    if apply_worktree:
-        remove_worktree(root, apply_worktree)
-    else:
-        warnings.append(f"apply worktree already missing for branch: {apply_branch}")
+    if not apply_worktree.exists():
+        warnings.append(f"apply worktree already missing: {apply_worktree}")
+    remove_worktree(root, apply_worktree)
     if not branch_exists(root, apply_branch):
         warnings.append(f"apply branch already missing: {apply_branch}")
     else:
@@ -385,6 +385,22 @@ def worktree_for_branch(root: Path, branch: str) -> Path:
         ["git worktree list を確認し、session branch の worktree から再実行してください。"],
         f"branch: {branch}",
     )
+
+
+def expected_apply_worktree(root: Path, apply_branch: str) -> Path:
+    parts = apply_branch.split("/")
+    if (
+        len(parts) != 4
+        or parts[:2] != ["cmoc", "apply"]
+        or not parts[2]
+        or not parts[3]
+    ):
+        raise CmocError(
+            "apply worktree を特定できません。",
+            ["session state file の apply.apply_branch を確認してください。"],
+            f"apply_branch: {apply_branch}",
+        )
+    return worktrees_dir(root) / parts[2] / parts[3]
 
 
 def worktree_for_branch_optional(root: Path, branch: str) -> Path | None:
