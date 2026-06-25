@@ -132,22 +132,27 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の利用者向け subcommand 実装をまとめる realization implementation ディレクトリ。初期化、INDEX.md 保守、対話型 TUI、oracle review、apply run、session 操作の実行フローがここから下位実装へ分かれる。
-- 各 subcommand 実装は、現在 branch や session/apply state の事前条件確認、clean worktree 要求、worktree/branch 操作、Codex 呼び出し、report 生成、利用者向け Markdown 出力など、CLI から起動される具体的な制御を担う。
-- review、apply、session は複数 module に分割されているため、全体フロー、対象列挙、loop 制御、INDEX.md merge、report 描画、join/abandon/fork など、調べたい段階に応じて下位対象を選ぶ入口になる。
+- cmoc の各サブコマンド本体を実装する領域で、初期化、INDEX.md 保守、対話実行、oracle review、session 操作、apply 実行 lifecycle の入口になる。
+- 各サブコマンドは、branch/worktree/state の事前条件確認、Git 操作、Codex 呼び出し、report 生成、利用者向け stdout、失敗時のエラー化や cleanup をそれぞれの責務範囲で扱う。
+- session と apply は下位ディレクトリにまとまっており、session branch の作成・取り込み・破棄や、isolated apply worktree 上での finding 列挙・適用・join・abandon を調べる起点になる。
+- oracle review は統括フロー、対象 oracle file 列挙、finding loop、INDEX.md 差分取り込み、review report 描画に分割されており、review 処理のどの段階を読むべきか選ぶ入口になる。
 
 ## Read this when
-- cmoc の個別 subcommand が実際に何を確認し、どの state・branch・worktree・report を更新するかを調べ始めるとき。
-- init、indexing、tui、review oracle、apply fork/join/abandon、session fork/join/abandon のどの実装へ進むべきか切り分けたいとき。
-- CLI 実行時の事前条件、エラー条件、標準出力、report 出力、Codex 呼び出し順序、Git 操作の呼び出し元を確認または変更したいとき。
-- review や apply のように複数段階に分かれる処理について、統括フローから下位 helper までの責務境界を把握したいとき。
+- cmoc の特定サブコマンド実装へ進む前に、初期化、indexing、tui、review、session、apply のどの領域を読むべきか判断したいとき。
+- サブコマンド実行時の事前条件、clean worktree 要求、cmoc ignore 確認、branch/worktree/state 操作、stdout 出力、cleanup、エラー処理の入口を探したいとき。
+- session branch の作成、home branch への join、session abandon、session join conflict 解決など、session lifecycle の実装を調べ始めるとき。
+- apply run の開始、Codex による finding 列挙・適用、apply branch/worktree 管理、編集禁止対象 rollback、process id 管理、join/abandon、report 生成を調べ始めるとき。
+- oracle review の active session 制約、一時 worktree/branch、対象 oracle file 選定、finding の列挙・統合・検証・判定、INDEX.md merge、report 出力の接続を追いたいとき。
+- 現在の work root に対する INDEX.md 更新、対象除外条件、既存 entry の鮮度判定、Codex CLI による entry 生成、indexing commit を確認または変更したいとき。
+- 利用者がエディタで書いた依頼文から完成プロンプトを作り、許可された file access mode で Codex TUI を起動する流れを確認または変更したいとき。
 
 ## Do not read this when
-- Typer app への command 登録、トップレベル CLI 配線、main entrypoint だけを確認したいとき。
-- git wrapper、repo/work root 解決、config 読み込み、state schema、report directory、timestamp、CmocError など共通 runtime API そのものを調べたいとき。
-- Codex に渡す prompt parameter、Structured Output schema、AgentCallParameter builder の文面や schema 定義だけを確認したいとき。
-- oracle file の正本仕様内容、INDEX.md エントリー生成規則、oracle と realization の基本概念を確認したいとき。
-- subcommand の外部挙動を検証するテストだけを探しているとき。
+- サブコマンドの Typer 登録、トップレベル CLI dispatch、共通 option wiring だけを調べたいとき。
+- Git command wrapper、repo/work root 判定、path model、config 読み込み、state schema、report directory 解決、CmocError 表示などの共通 runtime helper 自体を調べたいとき。
+- Codex 呼び出しへ渡す prompt 文面、AgentCallParameter builder、Structured Output schema の定義だけを確認したいとき。
+- oracle file の正本仕様、INDEX.md entry 標準、review oracle 標準、apply review 標準など、仕様断片そのものを確認したいとき。
+- サブコマンドの外部挙動を検証する既存テストや fixture だけを探しているとき。
+- 生成済み report、log、state file、過去実行結果の個別内容を確認したいだけのとき。
 
 ## hash
-- c4881b6a00fd59a05c376f347820e8c5b807c637c43fdccd675d021b59fd3b86
+- 5514cc30de93e700372ecf0ed269eb8b19e0c5a82091dd19656472ec6fc7a7eb

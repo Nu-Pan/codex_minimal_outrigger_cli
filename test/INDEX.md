@@ -64,22 +64,25 @@
 # `test_apply_join_cli.py`
 
 ## Summary
-- apply join の CLI 挙動を、実際の git リポジトリと Typer runner を使って検証する realization test。apply worktree と apply branch の削除、session state の ready 復帰、oracle snapshot commit の記録、join report の生成を確認する。
-- apply worktree 内から join した場合の作業ディレクトリ復帰、未コミット差分がある apply worktree での中断、ログ出力先、エラーメッセージの stdout/stderr 境界を検証する。
-- apply 側の想定外差分、force-resolve による巻き戻し、許容される .gitignore 差分、通常ファイルの未解決 merge conflict、INDEX.md conflict の通常モード自動解決後の継続を扱う。
+- apply join の CLI 挙動を検証する realization test。apply 用 worktree と branch の後片付け、session 状態の ready への復帰、join report の生成、apply oracle snapshot commit の記録を確認する。
+- apply worktree 内から join した場合の作業ディレクトリ復帰、未コミット差分がある場合の中断、ログ保存先、stdout/stderr の扱いを確認する。
+- 想定外の apply 差分、force resolve、許容される .gitignore 差分、通常ファイルの merge conflict、INDEX.md conflict 解決後の継続といった apply join の失敗・復旧経路を扱う。
 
 ## Read this when
-- apply join の終了後クリーンアップ、状態ファイル更新、report 生成、apply branch/worktree 削除の挙動を変更または確認したいとき。
-- apply worktree から apply join を実行する経路、dirty worktree 検出、エラー表示先、sub_command log の保存先に関わる実装を触るとき。
-- apply join の差分検査、想定外差分の検出、force-resolve、merge conflict レポート、INDEX.md conflict 処理の外部挙動を確認したいとき。
+- apply join の成功時に apply worktree と apply branch が削除され、session state と last joined snapshot が更新されるかを確認・変更したいとき。
+- apply join を session worktree または apply worktree のどちらから実行してもよい挙動、特に apply worktree からの実行後に root へ戻る挙動を調べるとき。
+- apply worktree に未コミット差分がある場合に join を拒否し、apply state を completed のまま保ち、apply worktree と apply branch を残す挙動を確認するとき。
+- apply join の report 出力、想定外差分の検出、force resolve による破棄、merge conflict の報告・中断・継続条件を変更するとき。
+- apply join で .gitignore 変更を通常の apply diff として許容する境界や、INDEX.md conflict を通常モードで解決して処理を続ける境界を確認したいとき。
 
 ## Do not read this when
-- apply fork や session fork の単独仕様を確認したいだけで、join 時の状態遷移や cleanup には触れないとき。
-- Codex 実行結果の品質や LLM 出力内容そのものを検証したいとき。このテストは Codex 実行を fake に差し替え、join 制御ロジックを検証している。
-- oracle file の正本仕様や INDEX.md 生成ルールを確認したいとき。ここは realization test であり、正本仕様の入口ではない。
+- apply fork の起動条件、Codex 実行パラメータ、apply worktree 作成そのものだけを調べたいとき。
+- session fork、init、repository fixture、git helper など、join 前提を作る共通テスト基盤の詳細だけを確認したいとき。
+- oracle file や INDEX.md の正本仕様を確認したいとき。この対象は realization test であり、正本仕様ではない。
+- apply join 以外の CLI サブコマンドの正常系・異常系を調べたいとき。
 
 ## hash
-- 0684dc6984286983dc9024be887edf2900caef81da2ef9228b93c6e7621f9230
+- b11a14f6cba6f5a1d8f404c6cb28d0539cf1010f0efc6a8de68e83fc65d6363b
 
 # `test_basic_runtime.py`
 
