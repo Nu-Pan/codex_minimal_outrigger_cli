@@ -69,7 +69,8 @@ class _CmocTyperGroup(typer.core.TyperGroup):
                         ["コマンド名、サブコマンド名、option、引数を確認して再実行してください。"],
                         exc.format_message(),
                     )
-                )
+                ),
+                err=True,
             )
             if standalone_mode:
                 raise SystemExit(exc.exit_code) from exc
@@ -174,7 +175,7 @@ def _run(handler, pre_log_check=None) -> None:
                 error=str(exc),
             )
             _emit_completion_summary(logger, handler.__name__, 1)
-        typer.echo(render_error(exc))
+        typer.echo(render_error(exc), err=True)
         raise typer.Exit(1) from exc
     finally:
         if logger_token is not None:

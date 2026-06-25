@@ -290,7 +290,8 @@ def test_review_oracle_writes_error_report_on_processing_failure(
     assert "result: error" in rendered
     assert "レビュー処理が途中で失敗しました。" in rendered
     assert "Error: `enumeration failed`" in rendered
-    assert "# ERROR" in result.output
+    assert "# ERROR" in result.stderr
+    assert "# ERROR" not in result.stdout
 
 
 @pytest.mark.parametrize("change_kind", ["unstaged", "staged", "untracked"])
