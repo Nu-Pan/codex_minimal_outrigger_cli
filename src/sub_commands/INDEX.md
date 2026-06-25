@@ -57,25 +57,96 @@
 # `review.py`
 
 ## Summary
-- active な session branch 上で oracle を isolated review worktree に列挙・レビュー・検証・判定し、INDEX.md 変更だけを取り込んで Markdown レポートを出力するサブコマンド処理を定義している。
-- review 用の一時 branch/worktree 作成、対象 oracle file の scope 別列挙、finding の enumerate/merge/validate/judge loop、INDEX.md 差分だけの commit と merge conflict 解消、レビュー結果レポート描画までを扱う。
+- active な session branch 上で oracle review を実行するサブコマンド統括フローを定義している。
+- session 状態確認、clean worktree 確認、review 用一時 branch/worktree のライフサイクル、対象列挙・finding loop・INDEX 取り込み・レポート生成 helper の呼び出し順序を扱う入口になる。
 
 ## Read this when
 - oracle をレビューするサブコマンドの実行条件、作業ツリーの清潔性確認、一時 worktree/branch のライフサイクル、または active session branch 制約を確認したいとき。
-- review 対象となる oracle file の列挙条件、session scope と full scope の違い、INDEX.md と binary file を除外する対象選定を調べるとき。
-- finding を列挙・統合・反証/擁護検証・判定するループ制御、Structured Output の finding list への適用、finding id や verdict の扱いを変更するとき。
-- review worktree で生成された INDEX.md 差分だけを commit/merge する制御、INDEX.md 以外の差分検出、merge conflict を session 側採用で解消する挙動を確認するとき。
-- review 結果レポートの frontmatter、判定区分、対象 oracle file 一覧、fatal/minor finding 表示、path 表示の整形を変更するとき。
+- review oracle 全体の呼び出し順序、失敗時にも report を書く制御、または下位 helper の接続を確認・変更したいとき。
 
 ## Do not read this when
 - 通常の CLI アプリ登録、Typer の command wiring、または他サブコマンドの引数定義だけを調べたいとき。
+- review 対象となる oracle file の列挙条件、session scope と full scope の違い、INDEX.md と binary file を除外する対象選定だけを調べるときは、`review_targets.py` を読む。
+- finding を列挙・統合・反証/擁護検証・判定するループ制御、Structured Output の finding list への適用、finding id や verdict の扱いを変更するときは、`review_loop.py` を読む。
+- review worktree で生成された INDEX.md 差分だけを commit/merge する制御、INDEX.md 以外の差分検出、merge conflict を session 側採用で解消する挙動を確認するときは、`review_index.py` を読む。
+- review 結果レポートの frontmatter、判定区分、対象 oracle file 一覧、fatal/minor finding 表示、path 表示の整形を変更するときは、`review_report.py` を読む。
 - oracle review 用 prompt parameter の具体的な文面や Structured Output schema の定義を確認したいときは、builder 側の該当実装を読む。
 - git command 実行、worktree 操作、branch 操作、設定読み込み、session state 読み込み、report directory 解決などの共通 runtime helper 自体を調べたいときは、runtime 側の実装を読む。
 - oracle file の正本仕様内容そのものや、INDEX.md エントリーとして何を書くべきかの規則を確認したいときは、oracle 側の仕様断片を読む。
 - 生成済みレポートの個別内容や過去実行結果を確認したいだけのときは、レポート出力先の生成物を読む。
 
 ## hash
-- f3d43d08484e7e18e8755048a786721d887662c40d59c1c86c9a68c8774c0e7b
+- da34890c9d586595154820a8b028253f100cb4b390c3742335e67d7621ffc2b5
+
+# `review_index.py`
+
+## Summary
+- oracle review 用 worktree で生成された INDEX.md 差分の commit と、review branch から session branch への merge を扱う。
+- INDEX.md 以外の差分検出、porcelain status の path 抽出、INDEX.md だけが conflict した場合に session 側採用で解決する処理をまとめている。
+
+## Read this when
+- review worktree の INDEX.md 変更だけを commit する条件、INDEX.md 以外の差分をエラーにする制御、または status parsing を確認・変更したいとき。
+- review branch merge の失敗時に INDEX.md conflict だけを自動解決する挙動、merge 後 commit の取得、手動解決へ回す条件を調べたいとき。
+
+## Do not read this when
+- review oracle 全体の一時 worktree 作成・削除順序や active session 制約を確認したいときは、`review.py` を読む。
+- oracle file の対象列挙、finding loop、または report rendering を確認したいときは、それぞれ `review_targets.py`、`review_loop.py`、`review_report.py` を読む。
+- git command 実行 wrapper や worktree 操作 helper 自体の実装を調べたいときは、runtime 側を読む。
+
+## hash
+- 42f2f7a768474b5b07e47ec55750ce65ea6bba3439c7cd667355dc5c6ca6efa9
+
+# `review_loop.py`
+
+## Summary
+- oracle review の finding enumerate/merge/validate/judge loop を実行する実装。
+- Codex に渡す review oracle 用 AgentCallParameter builder を呼び分け、finding id、advocate/challenger reasons、verdict、judge reason を Structured Output から更新する。
+
+## Read this when
+- finding の列挙、統合、反証/擁護検証、判定のループ回数や停止条件を確認・変更したいとき。
+- merge finding operation の delete/replace/merge 適用、finding id の採番、finding list の更新規則を調べたいとき。
+- review oracle 用 Codex 呼び出し purpose、作業 cwd、既存 finding JSON の渡し方を変更したいとき。
+
+## Do not read this when
+- oracle review の active session 制約、一時 worktree 作成、INDEX.md commit/merge、report rendering を確認したいときは、それぞれ該当する review 系 module を読む。
+- prompt parameter の文面や Structured Output schema の定義そのものを確認したいときは、acp.builder.review.oracle 側を読む。
+
+## hash
+- 56a9c39c86337277ad4be649704deccd9415f64ce48f6e2194b06b95ca3d9fd5
+
+# `review_report.py`
+
+## Summary
+- oracle review 結果を Markdown + YAML frontmatter の report として描画し、report directory へ書き出す処理を扱う。
+- verdict 判定、frontmatter fields、評価対象 oracle file の表、fatal/minor finding section、path 表示整形をまとめている。
+
+## Read this when
+- review report の出力 path、frontmatter 項目、result/verdict の判定条件、または fatal/minor finding の表示形式を確認・変更したいとき。
+- oracle path の表示整形、finding section の Markdown 文面、エラー時 report の描画を調べたいとき。
+
+## Do not read this when
+- review oracle の実行順序、一時 branch/worktree、対象 oracle file の列挙、finding loop、INDEX.md merge を確認したいときは、それぞれ該当する review 系 module を読む。
+- 生成済み report の個別内容だけを読みたいときは、report 出力先の生成物を直接読む。
+
+## hash
+- 5a4bc1bc25bc2c3390133302a704cfab266f75d5d961859b561a4a82777866ee
+
+# `review_targets.py`
+
+## Summary
+- oracle review の対象 oracle file を scope 別に列挙する処理を扱う。
+- full scope では全 oracle file、session scope では session 開始 commit から変更された oracle file のうち、INDEX.md、git ignored、binary file を除外した対象を返す。
+
+## Read this when
+- review 対象となる oracle file の列挙条件、session scope と full scope の違い、または INDEX.md・binary・git ignored file の除外条件を確認・変更したいとき。
+- session 開始 commit から oracle 配下の変更 path を取得し、列挙済み oracle file と照合する処理を調べたいとき。
+
+## Do not read this when
+- review oracle 全体の実行順序、一時 worktree、finding loop、INDEX.md merge、report rendering を確認したいときは、それぞれ該当する review 系 module を読む。
+- binary 判定、git ignored 判定、git diff wrapper 自体の実装を調べたいときは、runtime 側を読む。
+
+## hash
+- f42029951fa3338498710cca446b7ee6dbf8f87039fc10726d2cecc385a0c05c
 
 # `session`
 
