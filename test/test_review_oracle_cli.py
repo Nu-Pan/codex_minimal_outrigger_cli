@@ -276,8 +276,31 @@ def test_review_oracle_writes_error_report_on_processing_failure(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
 
+    class FakeCodexResult:
+        def __init__(self, output_json):
+            self.output_json = output_json
+
     def fail_run_codex_exec(parameter, **kwargs):
-        raise RuntimeError("enumeration failed")
+        schema_name = parameter.structured_output_schema_path.name
+        if schema_name == "enumerate_finding.json":
+            return FakeCodexResult(
+                {
+                    "findings": [
+                        {
+                            "oracle_path": "oracle/spec.md",
+                            "severity": "fatal",
+                            "title": "unjudged fatal",
+                            "reason": "judge did not run",
+                        }
+                    ]
+                }
+            )
+        if schema_name in {
+            "validate_finding_challenger.json",
+            "validate_finding_advocate.json",
+        }:
+            return FakeCodexResult({"reasons": []})
+        raise RuntimeError("judge failed")
 
     monkeypatch.setattr(main_module, "run_codex_exec", fail_run_codex_exec)
 
@@ -289,8 +312,10 @@ def test_review_oracle_writes_error_report_on_processing_failure(
     )
     rendered = report_path.read_text()
     assert "result: error" in rendered
+    assert "fatal_findings_rejected_count: 0" in rendered
+    assert "[unjudged] unjudged fatal" not in rendered
     assert "レビュー処理が途中で失敗しました。" in rendered
-    assert "Error: `enumeration failed`" in rendered
+    assert "Error: `judge failed`" in rendered
     assert "# ERROR" in result.stderr
     assert "# ERROR" not in result.stdout
 

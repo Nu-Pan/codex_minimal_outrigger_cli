@@ -399,8 +399,8 @@ def render_review_oracle_report(
     accepted = [finding for finding in findings if finding.get("verdict") == "accept"]
     fatal_accepted = [finding for finding in accepted if finding.get("severity") == "fatal"]
     minor_accepted = [finding for finding in accepted if finding.get("severity") == "minor"]
-    fatal_rejected = [finding for finding in findings if finding.get("severity") == "fatal" and finding.get("verdict") != "accept"]
-    minor_rejected = [finding for finding in findings if finding.get("severity") == "minor" and finding.get("verdict") != "accept"]
+    fatal_rejected = [finding for finding in findings if finding.get("severity") == "fatal" and finding.get("verdict") == "reject"]
+    minor_rejected = [finding for finding in findings if finding.get("severity") == "minor" and finding.get("verdict") == "reject"]
     if error_message is not None:
         error_message = error_message.replace("`", "'")
     if error_message is not None:
