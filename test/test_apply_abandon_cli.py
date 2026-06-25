@@ -147,7 +147,7 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
     assert not process_id_path.exists()
 
 
-def test_apply_abandon_allows_running_state_without_process_id(
+def test_apply_abandon_rejects_running_state_without_process_id(
     tmp_path: Path, monkeypatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -176,14 +176,14 @@ def test_apply_abandon_allows_running_state_without_process_id(
 
     result = runner.invoke(app, ["apply", "abandon"], catch_exceptions=False)
 
-    assert result.exit_code == 0
-    assert f"apply process id file missing: {session_id}" in result.output
-    assert not apply_worktree.exists()
+    assert result.exit_code != 0
+    assert "実行中 apply process を特定できません。" in result.output
+    assert apply_worktree.is_dir()
     remaining = subprocess.run(["git", "rev-parse", "--verify", apply_branch], cwd=root)
-    assert remaining.returncode != 0
+    assert remaining.returncode == 0
     state = json.loads(state_path.read_text())
-    assert state["apply"]["state"] == "ready"
-    assert state["apply"]["apply_branch"] is None
+    assert state["apply"]["state"] == "running"
+    assert state["apply"]["apply_branch"] == apply_branch
     assert "apply_process_id" not in state["apply"]
 
 

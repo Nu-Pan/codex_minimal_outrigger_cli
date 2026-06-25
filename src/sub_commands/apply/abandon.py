@@ -60,11 +60,14 @@ def cmoc_apply_abandon_impl() -> None:
     if previous == "running":
         process_id = read_apply_process_id(root, session_id)
         if process_id is None:
-            warnings.append(f"apply process id file missing: {session_id}")
-        else:
-            stopped_warning = stop_apply_process(process_id)
-            if stopped_warning:
-                warnings.append(stopped_warning)
+            raise CmocError(
+                "実行中 apply process を特定できません。",
+                ["apply process id file を確認し、apply process 停止後に再実行してください。"],
+                f"session_id: {session_id}",
+            )
+        stopped_warning = stop_apply_process(process_id)
+        if stopped_warning:
+            warnings.append(stopped_warning)
     if branch == apply_branch:
         os.chdir(root)
     if not apply_worktree.exists():
