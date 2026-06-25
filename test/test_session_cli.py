@@ -169,6 +169,42 @@ def test_session_join_resolves_conflict_with_codex(tmp_path: Path, monkeypatch) 
     assert calls == ["session join conflict resolution"]
 
 
+def test_session_join_stages_delete_conflict_resolution(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    (root / "README.md").unlink()
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "session deletes readme")
+    run_git(root, "switch", "master")
+    (root / "README.md").write_text("home change\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "home changes readme")
+    run_git(root, "switch", session_branch)
+
+    class FakeCodexResult:
+        output_json = None
+
+    def fake_run_codex_exec(parameter, **kwargs):
+        (root / "README.md").unlink()
+        return FakeCodexResult()
+
+    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert run_git(root, "branch", "--show-current").stdout.strip() == "master"
+    assert not (root / "README.md").exists()
+    assert run_git(root, "diff", "--name-only", "--diff-filter=U").stdout == ""
+
+
 def test_session_join_warns_when_session_branch_cannot_be_deleted(
     tmp_path: Path, monkeypatch
 ) -> None:

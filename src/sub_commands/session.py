@@ -143,8 +143,7 @@ def resolve_session_join_conflict(root: Path, codex_exec: CodexExec, git: GitRun
             "\n".join(str(path) for path in remaining_markers),
         )
     for path in conflicted_paths:
-        if path.exists():
-            git(["add", str(path.relative_to(root))], root)
+        git(["add", "--", str(path.relative_to(root))], root)
     unmerged = git(["diff", "--name-only", "--diff-filter=U"], root).stdout.strip()
     if unmerged:
         raise CmocError(
