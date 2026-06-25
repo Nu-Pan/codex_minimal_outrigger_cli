@@ -83,27 +83,43 @@ def test_init_does_not_commit_preexisting_gitignore_changes(
     assert gitignore.read_text() == "base\nstaged\nunstaged\n\n/.cmoc/\n"
 
 
-def test_init_targets_current_linked_worktree(tmp_path: Path, monkeypatch) -> None:
+def test_init_ignores_repo_cmoc_from_linked_worktree(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
-    linked = tmp_path / "linked"
+    linked = root / ".cmoc" / "worktrees" / "linked"
+    linked.parent.mkdir(parents=True)
     run_git(root, "worktree", "add", "-b", "linked-init", str(linked), "HEAD")
     monkeypatch.chdir(linked)
 
     result = runner.invoke(app, ["init"], catch_exceptions=False)
 
     assert result.exit_code == 0
-    assert "/.cmoc/" in (linked / ".gitignore").read_text()
-    assert not (root / ".gitignore").exists()
+    assert "/.cmoc/" in (root / ".gitignore").read_text()
+    assert not (linked / ".gitignore").exists()
     assert (
         subprocess.run(
             ["git", "check-ignore", "-q", ".cmoc/.__cmoc_ignore_probe__"],
-            cwd=linked,
+            cwd=root,
         ).returncode
         == 0
     )
-    assert "cmoc init" in run_git(linked, "log", "--oneline", "-1").stdout
+    assert (root / ".cmoc" / "config.json").is_file()
+    assert (root / ".cmoc" / "log" / "sub_command").is_dir()
+    assert (
+        run_git(
+            root,
+            "status",
+            "--short",
+            "--",
+            ".cmoc/config.json",
+            ".cmoc/log/sub_command",
+        ).stdout.strip()
+        == ""
+    )
+    assert "cmoc init" in run_git(root, "log", "--oneline", "-1").stdout
     committed_paths = run_git(
-        linked, "show", "--name-only", "--format=", "HEAD"
+        root, "show", "--name-only", "--format=", "HEAD"
     ).stdout.splitlines()
     assert ".gitignore" in committed_paths
 
