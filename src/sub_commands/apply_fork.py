@@ -158,7 +158,10 @@ def cmoc_apply_fork_impl(
         state.apply.apply_process_id = None
         write_state(path, state)
         if report_path is None:
-            write_error_report(root, branch, state, finding_counts, apply_worktree)
+            report_path = write_error_report(
+                root, branch, state, finding_counts, apply_worktree
+            )
+        typer.echo(f"- report: `{report_path}`")
         raise
     typer.echo(
         "\n".join(

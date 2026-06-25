@@ -64,7 +64,7 @@ from sub_commands.apply_fork import (
 )
 from sub_commands.apply_fork_report import (
     render_apply_fork_report,
-    write_apply_fork_error_report,
+    write_apply_fork_error_report as write_apply_fork_error_report_impl,
     write_apply_fork_report as write_apply_fork_report_impl,
 )
 from sub_commands.session import (

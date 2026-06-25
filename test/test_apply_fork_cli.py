@@ -366,6 +366,13 @@ def test_apply_fork_rejects_forbidden_agents_diff(tmp_path: Path, monkeypatch) -
 
     assert result.exit_code != 0
     assert "編集禁止対象" in result.output
+    report_lines = [
+        line for line in result.output.splitlines() if line.startswith("- report:")
+    ]
+    assert report_lines
+    report_path = Path(report_lines[-1].split("`")[1])
+    assert report_path.is_file()
+    assert "result: error" in report_path.read_text()
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
     state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
