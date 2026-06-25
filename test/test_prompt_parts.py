@@ -1,8 +1,18 @@
 import json
+from pathlib import Path
 
 from basic.acp import FileAccessMode
 from basic.acp import ModelClass, ReasoningEffort
 from basic.struct_doc import StructDoc, render_as_markdown
+from acp.builder.apply.fork.file_finding_enumeration import (
+    build_apply_fork_file_finding_enumeration_parameter,
+)
+from acp.builder.apply.fork.change_summary import (
+    build_apply_fork_change_summary_parameter,
+)
+from acp.builder.apply.fork.finding_application import (
+    build_apply_fork_finding_application_parameter,
+)
 from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
 from acp.builder.review.oracle.merge_finding import (
     build_review_oracle_merge_finding_parameter,
@@ -72,6 +82,32 @@ def test_render_as_markdown_collapses_consecutive_blank_lines() -> None:
 
     assert "\n\n\n" not in rendered
     assert rendered == "# root\n\nfirst\n\nsecond\n"
+
+
+def test_apply_fork_prompts_use_apply_worktree_root(
+    tmp_path: Path, monkeypatch
+) -> None:
+    repo_root = tmp_path / "repo"
+    apply_worktree = repo_root / ".cmoc" / "worktrees" / "session" / "run"
+    apply_worktree.mkdir(parents=True)
+    (apply_worktree / ".git").write_text("gitdir: ignored\n")
+    target = apply_worktree / "src" / "app.py"
+    target.parent.mkdir()
+    target.write_text("print('ok')\n")
+    monkeypatch.chdir(apply_worktree)
+
+    finding_application = build_apply_fork_finding_application_parameter(
+        [{"title": "t"}], apply_worktree
+    )
+    finding_enumeration = build_apply_fork_file_finding_enumeration_parameter(target)
+    change_summary = build_apply_fork_change_summary_parameter("diff", apply_worktree)
+
+    assert f"`{apply_worktree}` ツリー内" in finding_application.prompt
+    assert f"`{apply_worktree}` ツリー内" in finding_enumeration.prompt
+    assert f"`{apply_worktree}` ツリー内" in change_summary.prompt
+    assert f"`{repo_root}` ツリー内" not in finding_application.prompt
+    assert f"`{repo_root}` ツリー内" not in finding_enumeration.prompt
+    assert f"`{repo_root}` ツリー内" not in change_summary.prompt
 
 
 def test_file_access_rule_titles_and_bodies_match_modes() -> None:

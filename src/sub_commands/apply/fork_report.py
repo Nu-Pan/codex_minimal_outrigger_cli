@@ -98,7 +98,7 @@ def build_change_summary(
             }
         ]
     summary = codex_exec(
-        build_apply_fork_change_summary_parameter(raw_diff),
+        build_apply_fork_change_summary_parameter(raw_diff, apply_worktree),
         root=root,
         cwd=apply_worktree,
         config=config,
