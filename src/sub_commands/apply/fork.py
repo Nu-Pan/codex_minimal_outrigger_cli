@@ -39,7 +39,7 @@ from cmoc_runtime import (
     write_state,
 )
 from config.cmoc_config import CmocConfig
-from sub_commands.apply_fork_report import (
+from sub_commands.apply.fork_report import (
     write_apply_fork_error_report,
     write_apply_fork_report,
 )

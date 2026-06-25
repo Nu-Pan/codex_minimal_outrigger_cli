@@ -26,18 +26,12 @@ from cmoc_runtime import (
 from basic.acp import AgentCallParameter
 import sub_commands.indexing as indexing_command
 from sub_commands.init import cmoc_init_impl
-from sub_commands.apply import (
-    cmoc_apply_abandon_impl,
-    cmoc_apply_join_impl,
-)
-from sub_commands.apply_fork import (
-    cmoc_apply_fork_impl,
-)
-from sub_commands.session import (
-    cmoc_session_abandon_impl,
-    cmoc_session_fork_impl,
-    cmoc_session_join_impl,
-)
+from sub_commands.apply.abandon import cmoc_apply_abandon_impl
+from sub_commands.apply.fork import cmoc_apply_fork_impl
+from sub_commands.apply.join import cmoc_apply_join_impl
+from sub_commands.session.abandon import cmoc_session_abandon_impl
+from sub_commands.session.fork import cmoc_session_fork_impl
+from sub_commands.session.join import cmoc_session_join_impl
 from sub_commands.review import (
     cmoc_review_oracle_impl,
 )

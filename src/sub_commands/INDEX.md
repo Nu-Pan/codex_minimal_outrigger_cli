@@ -1,63 +1,20 @@
-# `apply.py`
+# `apply`
 
 ## Summary
-- apply branch の session branch への join と、未 join apply run の abandon を扱うサブコマンド実装。
-- apply branch の merge、想定外差分の検査・force-resolve、INDEX.md conflict の機械解決、apply worktree/branch cleanup、apply state の ready 復帰を扱う。
-- apply fork の実行 loop や fork report 生成ではなく、完了済みまたは失敗済み apply run を session 側へ取り込む・破棄する lifecycle 後半の入口になる。
+- apply 系サブコマンドの実処理をサブコマンド単位に収める package。`apply/fork.py`、`apply/join.py`、`apply/abandon.py` が各コマンドの本命処理を持つ。
+- fork の isolated worktree 作成と finding loop、join の merge/force-resolve/report、abandon の cleanup/state reset と、それらで共有する apply runtime helper への入口になる。
 
 ## Read this when
-- apply join/abandon の事前条件、状態遷移、終了コード、表示内容、cleanup 挙動を確認または変更したいとき。
-- apply branch・apply worktree の作成、merge、削除、force-resolve、unexpected changes 判定に関わる挙動を追いたいとき。
-- apply join 中に許可される apply/session 差分、禁止差分、INDEX.md だけの merge conflict をどう扱うかを確認したいとき。
-- running apply process の停止、apply worktree 削除、apply branch 削除、cleanup warning 表示を追いたいとき。
+- apply fork/join/abandon の実行条件、状態遷移、副作用、report、cleanup、対象 path 選定を確認または変更したいとき。
+- apply 系コマンドのどの本命処理ファイルまたは共通 helper を読むべきか選びたいとき。
 
 ## Do not read this when
-- CLI の typer command 宣言や option 定義だけを確認したいときは、サブコマンドの登録側を読む。
-- apply fork の finding refine/application loop、dirty target 更新、fork report/error report の呼び出しタイミングを確認したいときは `apply_fork.py` または `apply_fork_report.py` を読む。
+- CLI の Typer command 宣言や option 定義だけを確認したいときは、`main.py` を読む。
 - finding の生成プロンプトや apply fork 用パラメータ構築の詳細を確認したいときは、acp.builder.apply.fork 側を読む。
-- git 操作、state 読み書き、worktree 作成削除などの低レベル runtime helper の実装を確認したいときは、runtime 側を読む。
-- 設定 schema や apply fork の loop 回数などの設定項目定義だけを確認したいときは、設定モデル側を読む。
-
-## hash
-- d83b2eeaeaf56ae5ac60c0b45aa86178b95a9da1db5ccf80707be0e1f6a738b6
-
-# `apply_fork.py`
-
-## Summary
-- apply fork の isolated apply worktree 作成、finding 列挙・refine・適用 loop、禁止差分検査、dirty target 更新、finding ごとの commit 作成を扱う実処理。
-- apply scope から対象ファイルを列挙し、Codex CLI による finding enumeration/refinement/application と commit message 生成を orchestrate する。
-- apply fork の実行制御本体と、fork 中に扱う対象 path 正規化・関連 path 抽出の入口になる。
-
-## Read this when
-- apply fork の事前条件、apply branch/worktree 作成、state 更新、loop 終了条件、終了コードを確認または変更したいとき。
-- finding の列挙、refine、application、commit message 生成、dirty target 更新、禁止差分検査の呼び出し順を追いたいとき。
-- rolling/session/full scope から apply 対象 file をどう選ぶか、INDEX.md・memo・binary・git ignored file をどう除外するか確認したいとき。
-
-## Do not read this when
-- apply join/abandon の merge、cleanup、force-resolve、unexpected changes 判定を確認したいときは `apply.py` を読む。
-- apply fork report の Markdown frontmatter、change summary、error report の表示内容だけを確認したいときは `apply_fork_report.py` を読む。
-- apply fork 用 prompt parameter の文面や Structured Output schema の詳細だけを確認したいときは acp.builder.apply.fork 側を読む。
+- git 操作、state 読み書き、worktree 作成削除などの低レベル runtime helper の実装だけを確認したいときは、runtime 側を読む。
 
 ## hash
 - 989e62e355b578d97dae091a8444e2b0543c9a351c7e8abe48ef7c31c15923cb
-
-# `apply_fork_report.py`
-
-## Summary
-- apply fork の通常 report と error report を Markdown + YAML frontmatter として生成する実装。
-- apply branch の diff から Codex CLI による change summary を取得し、finding count、result label、変更要約を report file へ描画する。
-
-## Read this when
-- apply fork report の保存先、frontmatter、Result、Finding Count、Change Summary の内容を確認または変更したいとき。
-- apply fork 失敗時 report の result label や error summary、差分がない場合や change summary が空の場合の fallback 表示を扱うとき。
-
-## Do not read this when
-- apply fork の worktree 作成、finding loop、commit 作成、対象 path 正規化を確認したいときは `apply_fork.py` を読む。
-- apply join report の表示内容を確認したいときは `apply.py` を読む。
-- change summary prompt の文面や schema 定義だけを確認したいときは acp.builder.apply.fork 側を読む。
-
-## hash
-- a8ab87ab6e45620908905a17a83e83f4e0cd26f678834929b33badf9d3ff1203
 
 # `indexing.py`
 
@@ -120,21 +77,19 @@
 ## hash
 - f3d43d08484e7e18e8755048a786721d887662c40d59c1c86c9a68c8774c0e7b
 
-# `session.py`
+# `session`
 
 ## Summary
-- cmoc の session 操作の実装であり、通常 branch から session branch を作成し、session branch を home branch へ join し、または merge せず abandon する制御を扱う。
-- session 状態ファイルの生成・更新、cmoc 管理 branch での実行拒否、worktree clean 確認、`.cmoc` ignore 確保、session home branch への切り替え、session branch の削除を含む。
-- join 時の merge conflict では、conflict 対象を検出して Codex CLI 用の conflict resolution parameter を組み立て、解決後の marker 残存・unmerged path を確認して merge commit を完了する入口になる。
+- session 系サブコマンドの実処理をサブコマンド単位に収める package。`session/fork.py`、`session/join.py`、`session/abandon.py` が各コマンドの本命処理を持つ。
+- 通常 branch からの session branch 作成、home branch への join、merge せず破棄する abandon の入口になる。
+- join 時の merge conflict resolution は `session/join.py` 内で扱う。
 
 ## Read this when
-- session fork、join、abandon の実行条件、状態遷移、git 操作、副作用、CLI 出力を確認または変更したいとき。
-- active session の重複検出、session branch 名、session home branch、session state file の扱いを追いたいとき。
-- session join の merge conflict 解決フロー、Codex CLI 呼び出し、conflict marker 検査、git add/commit の制御を確認したいとき。
-- session 操作で発生する CmocError の条件や利用者向け復旧案を調べたいとき。
+- session fork/join/abandon の実行条件、状態遷移、git 操作、副作用、CLI 出力を確認または変更したいとき。
+- session 系コマンドのどの本命処理ファイルを読むべきか選びたいとき。
 
 ## Do not read this when
-- session 以外の sub command の CLI 定義、引数宣言、Typer app への登録だけを確認したいとき。
+- session 以外の subcommand の CLI 定義、引数宣言、Typer app への登録だけを確認したいとき。
 - SessionState のデータ構造、状態ファイルの path 規則、git helper、branch 判定、worktree 判定そのものの実装を確認したいとき。
 - session join conflict resolution parameter の文面や AgentCallParameter の組み立て詳細だけを確認したいとき。
 - oracle 側の正本仕様断片、path keyword の定義、INDEX.md 生成規則を確認したいとき。

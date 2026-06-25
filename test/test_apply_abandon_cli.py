@@ -1,7 +1,7 @@
 from _support import (
     Path,
     app,
-    apply_module,
+    apply_abandon_module,
     apply_worktree_from_state,
     json,
     main_module,
@@ -128,7 +128,7 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
         assert run_git(root, "rev-parse", "--verify", apply_branch).returncode == 0
         stopped.append(process_id)
 
-    monkeypatch.setattr(apply_module, "stop_apply_process", fake_stop_apply_process)
+    monkeypatch.setattr(apply_abandon_module, "stop_apply_process", fake_stop_apply_process)
 
     result = runner.invoke(app, ["apply", "abandon"], catch_exceptions=False)
 

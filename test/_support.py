@@ -10,10 +10,11 @@ from typer.testing import CliRunner
 
 import cmoc_runtime
 import main as main_module
-import sub_commands.apply as apply_module
-import sub_commands.apply_fork as apply_fork_module
+import sub_commands.apply.abandon as apply_abandon_module
+import sub_commands.apply.fork as apply_fork_module
+import sub_commands.apply.join as apply_module
 import sub_commands.indexing as indexing_module
-import sub_commands.session as session_module
+import sub_commands.session.abandon as session_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from basic.path_model import RootToken, resolve_real_path, resolve_token_path
 from config.cmoc_config import CmocConfig
