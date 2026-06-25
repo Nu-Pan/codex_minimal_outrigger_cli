@@ -3,11 +3,21 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from acp.builder.tui.resolve_parameter import build_tui_resolve_parameter_parameter
+from acp.builder.tui.resolve_parameter import (
+    TUI_FILE_ACCESS_MODES,
+    build_tui_resolve_parameter_parameter,
+)
 from acp.prompt_parts.complete_prompt import build_complete_prompt
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from basic.struct_doc import StructDoc, render_as_markdown
-from cmoc_runtime import CmocError, ensure_cmoc_ignored, timestamp
+from cmoc_runtime import (
+    CmocError,
+    ensure_cmoc_ignored,
+    load_config,
+    repo_root,
+    timestamp,
+    work_root,
+)
 from config.cmoc_config import CmocConfig
 
 ORIGINAL_PROMPT_TEMPLATE = """<!--
@@ -25,26 +35,46 @@ def cmoc_tui_impl(
     run_codex_tui,
     *,
     root: Path,
+    work_root: Path,
     config: CmocConfig,
 ) -> None:
-    ensure_cmoc_ignored(root)
+    ensure_cmoc_ignored(work_root)
     original_path = initialize_original_prompt(root)
     run_editor(original_path)
     original_prompt = read_original_prompt(original_path)
     resolved = run_codex_exec(
         build_tui_resolve_parameter_parameter(original_prompt),
         root=root,
-        cwd=root,
+        cwd=work_root,
         config=config,
         purpose="tui resolve parameter",
     ).output_json
     parameter = build_tui_codex_parameter(original_prompt, resolved or {})
+    complete_prompt_path = save_complete_prompt(work_root, original_path, parameter.prompt)
     run_codex_tui(
-        parameter,
+        AgentCallParameter(
+            parameter.model_class,
+            parameter.reasoning_effort,
+            parameter.file_access_mode,
+            f"`{complete_prompt_path}` の指示に従って下さい。",
+            parameter.structured_output_schema_path,
+        ),
         root=root,
-        cwd=root,
+        cwd=work_root,
         config=config,
         purpose="tui codex",
+    )
+
+
+def cmoc_tui_command_impl(run_codex_exec, run_codex_tui) -> None:
+    root = repo_root()
+    current_root = work_root()
+    cmoc_tui_impl(
+        run_codex_exec,
+        run_codex_tui,
+        root=root,
+        work_root=current_root,
+        config=load_config(root),
     )
 
 
@@ -52,6 +82,15 @@ def initialize_original_prompt(root: Path) -> Path:
     path = root / ".cmoc" / "log" / "tui" / f"{timestamp()}_orig.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(ORIGINAL_PROMPT_TEMPLATE)
+    return path
+
+
+def save_complete_prompt(work_root: Path, original_path: Path, prompt: str) -> Path:
+    path = work_root / ".cmoc" / "log" / "tui" / original_path.name.replace(
+        "_orig.md", "_cmpl.md"
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(prompt)
     return path
 
 
@@ -92,6 +131,12 @@ def build_tui_codex_parameter(
     file_access_mode = FileAccessMode(
         nested_value(resolved_parameter, "file_access_mode", FileAccessMode.READONLY.value)
     )
+    if file_access_mode not in TUI_FILE_ACCESS_MODES:
+        raise CmocError(
+            "TUI では使用できないファイルアクセスモードです。",
+            ["プロンプトを保存して `cmoc tui` を再実行してください。"],
+            f"file_access_mode: {file_access_mode.value}",
+        )
     prompt = build_complete_prompt(
         role="- あなたは AI Agent CLI/TUI として、ユーザーから与えられた依頼を実行します",
         summary="- 後述する詳細指示に従って作業してください",
@@ -122,11 +167,34 @@ def parse_markdown_prompt(markdown: str) -> list[StructDoc] | list[str]:
     sections: list[StructDoc] = []
     current_title: str | None = None
     current_body: list[str] = []
+    fence: tuple[str, int] | None = None
     for line in markdown.splitlines():
-        match = re.match(r"^(#{1,6})\s+(.+?)\s*$", line)
+        fence_pattern = (
+            r"^[ \t]{0,3}(`{3,}|~{3,}).*$"
+            if fence is None
+            else r"^[ \t]{0,3}(`{3,}|~{3,})[ \t]*$"
+        )
+        fence_match = re.match(fence_pattern, line)
+        if fence_match:
+            marker = fence_match.group(1)
+            if fence is None:
+                fence = (marker[0], len(marker))
+            elif marker[0] == fence[0] and len(marker) >= fence[1]:
+                fence = None
+            current_body.append(line)
+            continue
+        match = (
+            None
+            if fence is not None
+            else re.match(r"^(#{1,6})\s+(.+?)\s*$", line)
+        )
         if match:
             if current_title is not None:
                 sections.append(StructDoc(current_title, "\n".join(current_body).strip()))
+            else:
+                preamble = "\n".join(current_body).strip()
+                if preamble:
+                    sections.append(StructDoc("本文", preamble))
             current_title = match.group(2)
             current_body = []
             continue
