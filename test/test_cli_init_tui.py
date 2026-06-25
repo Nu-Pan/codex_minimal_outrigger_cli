@@ -83,7 +83,7 @@ def test_init_does_not_commit_preexisting_gitignore_changes(
     assert gitignore.read_text() == "base\nstaged\nunstaged\n\n/.cmoc/\n"
 
 
-def test_init_restores_preexisting_gitignore_unstaged_delete(
+def test_init_keeps_cmoc_ignored_after_preexisting_gitignore_unstaged_delete(
     tmp_path: Path, monkeypatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -98,15 +98,19 @@ def test_init_restores_preexisting_gitignore_unstaged_delete(
 
     assert result.exit_code == 0
     assert run_git(root, "show", "HEAD:.gitignore").stdout == "base\n\n/.cmoc/\n"
-    assert not gitignore.exists()
+    assert gitignore.read_text() == "base\n\n/.cmoc/\n"
+    assert (
+        subprocess.run(
+            ["git", "check-ignore", "-q", ".cmoc/.__cmoc_ignore_probe__"],
+            cwd=root,
+        ).returncode
+        == 0
+    )
     assert (
         run_git(root, "diff", "--cached", "--name-only", "--", ".gitignore").stdout
         == ""
     )
-    assert (
-        run_git(root, "diff", "--name-only", "--", ".gitignore").stdout
-        == ".gitignore\n"
-    )
+    assert run_git(root, "diff", "--name-only", "--", ".gitignore").stdout == ""
 
 
 def test_init_ignores_worktree_cmoc_from_linked_worktree(

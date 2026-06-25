@@ -112,7 +112,8 @@ def _restore_gitignore_state(
     if had_worktree_content and worktree_content is not None:
         path.write_text(_with_cmoc_ignore(worktree_content))
     elif head_content is not None or index_content is not None:
-        path.unlink(missing_ok=True)
+        restored_content = current_head or index_content or head_content or ""
+        path.write_text(_with_cmoc_ignore(restored_content))
 
 
 def _restore_staged_patch(root: Path, patch: str) -> None:
