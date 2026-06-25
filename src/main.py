@@ -9,7 +9,6 @@ from cmoc_runtime import (
     SessionState,
     SubcommandLogger,
     console_timestamp,
-    current_branch,
     load_config,
     render_error,
     repo_root,
@@ -123,7 +122,7 @@ def _run(handler) -> None:
     try:
         current_root = work_root()
         require_current_directory_is_work_root(current_root)
-        root = command_log_root(repo_root(), current_root)
+        root = repo_root()
         logger = SubcommandLogger(root, handler.__name__)
         logger_token = set_current_subcommand_logger(logger)
         logger.event("command_invoked", argv=[])
@@ -182,15 +181,6 @@ def require_current_directory_is_work_root(root: Path) -> None:
         ["git repository の root directory へ移動してから再実行してください。"],
         f"cwd: {Path.cwd().resolve()}\nwork_root: {root.resolve()}",
     )
-
-
-def command_log_root(root: Path, current_root: Path | None = None) -> Path:
-    branch = current_branch(current_root or root)
-    if branch.startswith("cmoc/apply/"):
-        parts = branch.split("/")
-        if len(parts) >= 4:
-            return worktree_for_branch(root, f"cmoc/session/{parts[2]}")
-    return root
 
 
 @app.command()

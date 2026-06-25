@@ -127,6 +127,9 @@ def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
     (apply_worktree / "dirty.txt").write_text("dirty\n")
+    root_log_count = len(
+        list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))
+    )
     monkeypatch.chdir(apply_worktree)
 
     result = runner.invoke(app, ["apply", "join"])
@@ -141,6 +144,11 @@ def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(
     )
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "completed"
+    assert (
+        len(list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl")))
+        == root_log_count + 1
+    )
+    assert not (apply_worktree / ".cmoc" / "log" / "sub_command").exists()
     assert "git 未コミット差分が存在します。" in result.output
     assert result.stderr == ""
 
