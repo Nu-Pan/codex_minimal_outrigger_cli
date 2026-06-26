@@ -1,24 +1,25 @@
 # `acp`
 
 ## Summary
-- AI エージェント呼び出しに関わる実装領域。各工程の AgentCallParameter と Structured Output schema を組み立てる処理と、プロンプトを構成する標準部品の生成処理を扱う。
-- サブコマンドや工程ごとの role、summary、goal、補助文脈、標準文書、ファイルアクセス規則、model class、reasoning effort、返却 schema を追う入口になる。
-- 差分要約、レビュー所見、所見対応、正本仕様断片レビュー、merge conflict marker 解消、TUI 実行前のパラメータ解決、ルーティング文書エントリー生成など、AI 呼び出し境界と共通プロンプト規範を確認するためのまとまり。
+- AI エージェント呼び出しに渡す完全なプロンプト、ファイルアクセス規則、ルーティング規則、oracle・realization 関連標準文書、工程別の AgentCallParameter と Structured Output schema の接続を扱う実装領域。
+- 差分要約、実装所見の列挙と修正依頼、正本仕様断片レビューの所見列挙・検証・採否・整理、merge conflict marker 解消、TUI 実行前のパラメータ解決、INDEX.md エントリー生成など、cmoc が AI agent へ作業を委譲する境界の入口になる。
+- 下位要素は、サブコマンドや工程ごとの呼び出し条件を組み立てる領域と、各呼び出しに共通して注入される規則・標準文書・補助プロンプトを構成する領域に分かれる。
 
 ## Read this when
-- AI エージェントへ渡す prompt、実行条件、Structured Output schema の対応を、機能領域別に探し始めたいとき。
-- apply fork、review oracle、session join、tui、indexing などの工程で AgentCallParameter がどのように構築されるか確認または変更したいとき。
-- oracle、realization、レビュー、INDEX.md、ファイルアクセス、ルーティングに関する標準文書や規則文書が、agent prompt にどう含まれるかを調べたいとき。
-- AI 呼び出しごとのファイルアクセス権限、モデル種別、推論強度、標準文書断片、補助入力の埋め込み方を比較したいとき。
+- cmoc が AI agent にどの role、summary、goal、補助文脈、ファイルアクセス権限、model class、reasoning effort、返却 schema を渡すかを調べ始めたいとき。
+- AI 呼び出しの対象工程が apply fork、review oracle、session join、tui、indexing のいずれかに関係し、工程別のプロンプト構築と Structured Output schema の対応を確認または変更したいとき。
+- 複数の AI 呼び出しで共通利用されるファイルアクセス規則、INDEX.md ルーティング規則、oracle・realization の基本説明、各種標準文書が、どの条件で最終プロンプトに注入されるかを追いたいとき。
+- AI agent に渡すプロンプト内容と実行条件の境界を、CLI 実行制御や結果保存側ではなく、呼び出しパラメータ生成側から確認したいとき。
 
 ## Do not read this when
-- AI 呼び出しより上位の CLI 引数解析、サブコマンド実行順序、状態保存、git 操作、対象ファイル探索などの実行制御を調べたいとき。
-- StructDoc、Markdown rendering、AgentCallParameter、FileAccessMode、path 解決、complete prompt 生成など、複数領域で使われる共通基盤の型や helper を調べたいとき。
-- 生成済みのレビュー所見、差分要約、INDEX.md エントリーなど、AI 呼び出し結果の保存・表示・利用側の挙動を確認したいとき。
-- 個別サブコマンドの CLI 挙動、状態ファイル、path model、入出力 schema など、プロンプト部品や AI 呼び出し境界ではない機能仕様・実装を探しているとき。
+- CLI 引数解析、サブコマンドの実行順序、状態ファイル更新、git 操作、対象ファイル探索など、AI 呼び出し前後の制御フローを調べたいとき。
+- AgentCallParameter、FileAccessMode、ModelClass、ReasoningEffort、StructDoc、path 解決など、プロンプト構築側が利用する共通型や基盤 helper そのものを調べたいとき。
+- 生成された差分要約、レビュー所見、INDEX.md エントリー、TUI パラメータ選択結果など、AI agent の返却結果を保存・表示・適用する側の挙動を確認したいとき。
+- 特定工程で使う個別 prompt または個別 schema が既に分かっており、その下位の本文へ直接進めば足りるとき。
+- oracle や realization の正本仕様・実装本体を調べたいだけで、AI agent 向けプロンプトへ標準文書を埋め込む実装には関心がないとき。
 
 ## hash
-- 0e7d135f26551118a732c2882542545038d7374f0be00db8e84bf9aa1a8506bc
+- 3658ba2c30103d4776964cff959c82dcd834962949d9c342d0fae42fa6a40dae
 
 # `basic`
 
