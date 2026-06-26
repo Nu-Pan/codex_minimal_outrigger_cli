@@ -110,22 +110,26 @@
 # `review_loop.py`
 
 ## Summary
-- review oracle による finding の列挙、統合、検証、判定を Codex 実行ループとして制御する実装。oracle ごとの dirty 管理、finding_id や検証理由・判定結果の初期値付与、merge 操作の適用と妥当性検証、finding の oracle_path 解決を扱う。
+- review oracle による finding の列挙、統合、検証、判定を一連のループとして実行する制御ロジックを扱う。
+- oracle path と finding の対応付け、finding_id や検証理由・判定結果の初期値付与、merge operation の適用と妥当性検証を担う。
+- Codex 実行関数に渡す review oracle 用パラメータを組み立て、設定値で定められた反復回数に従って finding list を更新する入口になる。
 
 ## Read this when
-- review oracle の finding enumerate/merge/validate/judge の実行順序、反復回数、dirty 条件、Codex 呼び出しパラメータ生成との接続を確認したいとき。
-- finding の merge 操作で delete/replace/merge がどの条件で受理され、既存 finding がどう削除・追加されるかを確認したいとき。
-- finding に含まれる oracle_path を実パスへ解決し、特定 oracle に関連する finding を絞り込む挙動を確認したいとき。
-- review oracle が finding_id、advocate_reasons、challenger_reasons、verdict、judge_reason をどの段階で補完・更新するかを確認したいとき。
+- review oracle の finding enumerate/merge/validate/judge の実行順序、反復条件、停止条件を確認または変更したいとき。
+- finding の `oracle_path` を実パスへ解決し、既存 finding を対象 oracle file ごとに絞り込む挙動を確認したいとき。
+- merge finding の `delete`、`replace`、`merge` operation が既存 finding list にどう適用されるか、また不正な target や重複利用をどう拒否するかを確認したいとき。
+- finding に `finding_id`、`advocate_reasons`、`challenger_reasons`、`verdict`、`judge_reason` の初期値が付与される箇所を追いたいとき。
+- review oracle の各段階で Codex 実行関数へ渡す目的文字列、作業ディレクトリ、ログルート、設定の受け渡しを確認したいとき。
 
 ## Do not read this when
-- 個々の Codex プロンプトや Structured Output parameter の本文を確認したいだけの場合は、review oracle 用 parameter builder を直接読む。
-- CLI サブコマンドの引数定義、設定読み込み、ログルートや worktree の準備を確認したい場合は、呼び出し元のサブコマンド実装を読む。
-- review oracle の反復回数など設定値の定義やデフォルトを確認したい場合は、設定モデルを読む。
-- oracle file の正本仕様そのものや review 観点を確認したい場合は、対象の oracle 文書を読む。
+- review oracle 用プロンプトや Structured Output parameter の具体的な構築内容を確認したいだけなら、builder 側の対象を読む。
+- 設定ファイル上の review oracle 反復回数や設定 schema の定義を確認したいだけなら、設定モデル側の対象を読む。
+- path keyword の定義や `<...>` 形式の path 解決規則そのものを確認したいだけなら、path model 側の対象を読む。
+- CLI サブコマンドの引数定義、コマンド登録、利用者向け入出力を確認したいだけなら、サブコマンド入口や CLI 定義側の対象を読む。
+- review finding の品質基準や oracle file と realization file の仕様上の関係を確認したいだけなら、正本仕様断片側の対象を読む。
 
 ## hash
-- d116a58b5c91dcc0446b89b792e5dd64c675efd7a66b3858cb3fbbfd92e54581
+- 86cde0b2e0151ed2d36309831353b40d7525abae13ac516f2e8f44bbd517cffb
 
 # `review_report.py`
 

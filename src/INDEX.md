@@ -136,23 +136,21 @@
 # `sub_commands`
 
 ## Summary
-- CLI の各サブコマンド実装をまとめる領域。初期化、TUI 起動、INDEX 生成、review oracle、apply、session 操作など、利用者が実行する上位コマンドの入口と実行ライフサイクルを扱う。
-- サブコマンドごとの事前条件、runtime 連携、worktree・branch・state・report・cleanup・Codex 呼び出しへの接続を調べる際に、対象コマンドまたは下位モジュールへ進むための分岐点になる。
-- apply と session は下位パッケージにまとまっており、review oracle は対象列挙、実行 loop、INDEX 差分処理、report 生成などの責務別モジュールに分かれている。
+- CLI サブコマンドの実行本体を集める領域。初期化、ルーティング文書の生成・更新、TUI 起動、review oracle、apply、session など、利用者が呼び出す操作の入口と上位制御を扱う。
+- 各サブコマンドは runtime helper、git 操作、state、Codex 呼び出し、report、worktree・branch 管理などの共通基盤を呼び出す側に位置し、具体的なサブコマンド別ライフサイクルや読む先を選ぶための分岐点になる。
 
 ## Read this when
-- cmoc のサブコマンド実行フロー、事前条件、利用者向け出力、branch・worktree・state・report の扱いを調査または変更したいとき。
-- init、tui、indexing、review oracle、apply、session のうち、どの実装を読むべきかを切り分けたいとき。
-- review oracle の上位制御、対象列挙、Codex review loop、ルーティング文書差分の commit・merge、Markdown report 生成の接続関係を追いたいとき。
-- apply fork・join・abandon や session start・join・abandon など、実行中の状態遷移、branch 操作、cleanup、process 管理を扱う入口を探したいとき。
-- Codex 実行前の INDEX 生成 preflight、TUI 用 prompt 作成、初期化時の ignore 保証や設定同期など、CLI から共通 runtime helper を呼び出す境界を確認したいとき。
+- CLI サブコマンドの実行順序、事前条件、利用者向け出力、状態遷移、worktree・branch 操作、report 生成のどの実装へ進むべきかを切り分けたいとき。
+- init、indexing、tui、review oracle、apply、session のいずれかについて、コマンド入口から下位 helper や専用モジュールへ処理がどう接続されるかを確認したいとき。
+- review oracle の対象列挙・review loop・INDEX 変更・report、apply の fork・join・abandon、session の開始・join・破棄など、複数モジュールに分かれたサブコマンド処理の入口を探したいとき。
+- Codex 実行前後の preflight、ルーティング文書更新、isolated worktree、一時 branch、cleanup、merge conflict 処理などが、どのサブコマンド責務として扱われるかを判断したいとき。
 
 ## Do not read this when
-- git wrapper、config 読み込み、path 解決、state file 永続化、timestamp、report directory、Codex 外部プロセス実行など、サブコマンドに依存しない共通 runtime 基盤そのものを調べたいとき。
-- Codex に渡す prompt、AgentCallParameter、Structured Output parameter の本文や schema 定義だけを確認したいとき。
-- oracle file の正本仕様、realization 品質基準、INDEX.md の生成規則やルーティング文書の仕様そのものを確認したいとき。
-- テスト観点から外部挙動を確認したいだけで、実装の実行順序や責務分担を読む必要がないとき。
-- 対象サブコマンドや責務が既に特定できており、その個別ファイルまたは下位パッケージを直接読めば足りるとき。
+- git wrapper、config 読み込み、path 解決、state file 永続化、timestamp、reports directory、ignore 判定などの共通 runtime helper 自体を調べたいとき。
+- Codex に渡す prompt、AgentCallParameter、Structured Output parameter、complete prompt、StructDoc 描画など、パラメータ構築や prompt 生成の詳細だけを確認したいとき。
+- oracle file や realization file の正本仕様、品質基準、path keyword 定義、ルーティング文書生成規則そのものを確認したいとき。
+- サブコマンドの外部挙動をテスト観点で確認したいだけのときは、対応するテスト側を読む。
+- 対象サブコマンドや下位責務が既に分かっており、個別ファイルまたは下位ディレクトリを直接読めば足りるとき。
 
 ## hash
-- 4431672e3a7774def34c2267cf6d28b829486798f8732022d85a7fc28977d23c
+- 3cd3f68ac0475a31ad7364d5e51caba424550dcf1e57f23353c7b20e82449d84
