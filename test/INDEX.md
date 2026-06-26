@@ -279,25 +279,25 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- prompt parts と builder parameter のテスト群。StructDoc の Markdown 描画、complete prompt への標準文書注入、file access rule、routing rule、各種 builder が期待する実行パラメータ・schema・root 表現を検証する。
-- プロンプト生成まわりの標準文書、ファイルアクセス制約、INDEX エントリー基準、TUI パラメータ解決、apply fork / review oracle / session join の builder 挙動を横断的に確認する realization test。
+- プロンプト構成部品と実行パラメータ builder の realization test 群。標準文書、ルーティング規則、ファイルアクセス規則、完全プロンプトへの任意標準の注入・省略、禁止語の置換、Markdown レンダリング、schema 制約、model class・reasoning effort・file access mode の選定が期待どおりになることを検証する。
+- apply fork、indexing、review oracle、session join、TUI resolve parameter など複数領域の builder が生成する prompt・schema・実行モードの契約を横断的に確認する入口として位置づけられる。
 
 ## Read this when
-- プロンプト部品が期待する見出し・用語・本文断片を Markdown として出力しているか確認したいとき。
-- complete prompt に routing rule や各種 standard が含まれる条件、または既定で省略される条件を変更・検証するとき。
-- file access mode ごとのプロンプト文言、READONLY / PURE_ORACLE_READ / REALIZATION_WRITE / ORACLE_WRITE / REPO_WRITE の制約表現を確認するとき。
-- apply fork、review oracle、session join、TUI resolve parameter、indexing index entry の builder が設定する model class、reasoning effort、file access mode、schema path、prompt 内容を変更するとき。
-- StructDoc や StructCodeBlock の Markdown rendering、特に連続空行の折りたたみ挙動を変更するとき。
-- builder が参照する JSON schema の制約や oracle 側 schema との一致性を確認するとき。
+- 標準文書やルーティング規則、ファイルアクセス規則、index entry standard、review/apply/realization standard の文言がプロンプトに含まれるかどうかを変更・確認する時。
+- complete prompt の構成、補助プロンプトの注入、禁止された path placeholder や agent 表現の除去、標準文書のデフォルト省略・明示追加の挙動を確認する時。
+- StructDoc や code block の Markdown レンダリング、特に連続空行の畳み込みに関する挙動を変更する時。
+- apply fork、indexing、review oracle、session join、TUI resolve parameter の builder が返す model class、reasoning effort、file access mode、prompt 断片、structured output schema の契約を確認する時。
+- schema の required、additionalProperties、enum、空配列拒否、oracle source との一致など、出力 schema の検証条件を変更する時。
+- worktree 内で実行される apply fork prompt が対象リポジトリの root をどう扱うか、placeholder を実パス表現へどう変換するかを確認する時。
 
 ## Do not read this when
-- 個別 CLI コマンドの実行フローやユーザー向け入出力だけを確認したいとき。
-- prompt parts や builder parameter ではなく、実際の index entry 生成ロジック本体を調べたいとき。
-- oracle file の正本仕様そのものを確認したいとき。該当する oracle doc または oracle src を直接読む方が適切。
-- 特定の実装関数の内部アルゴリズムだけを追うとき。対象の実装ファイルを直接読む方が適切。
+- 個別 builder の実装そのもの、prompt 文書本文の生成ロジック、または schema 定義の正本を読みたい時は、対応する実装・定義ファイルを直接読む方がよい。
+- CLI コマンドの外部挙動やサブコマンド実行フローを調べたいだけで、プロンプト構成や parameter builder の契約に関係しない時。
+- INDEX.md エントリー生成の一般規則だけを確認したい時は、標準文書の生成元や仕様側を読む方が直接的である。
+- 単一の低レベル helper の内部アルゴリズムを調べたい時は、この横断テストではなく、その helper の実装と近接テストを読む方がよい。
 
 ## hash
-- f7645913978ff0cd612281d1e272ef352a2d6ae82aa032ecd84bf5969f9f1f97
+- 9721975d7cabf49cf36781ca3044d2ce3e197f13ab99ff352cd30a19a583b68c
 
 # `test_review_oracle_cli.py`
 
