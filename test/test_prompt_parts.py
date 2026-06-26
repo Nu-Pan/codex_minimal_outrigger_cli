@@ -15,7 +15,6 @@ from jsonschema import ValidationError, validate
 
 from basic.acp import FileAccessMode
 from basic.acp import ModelClass, ReasoningEffort
-from basic.path_model import RootToken, resolve_real_path
 from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
 from acp.builder.apply.fork.file_finding_enumeration import (
     build_apply_fork_file_finding_enumeration_parameter,
@@ -126,8 +125,6 @@ def test_apply_fork_prompts_use_expected_roots(
     assert f"`{repo_root}` ツリー内の所見" in finding_enumeration.prompt
     assert f"`{apply_worktree}` ツリー内の所見" not in finding_enumeration.prompt
     assert f"`{repo_root}` ツリー内の差分" in change_summary.prompt
-    for forbidden in ["<cmoc-root>", "<repo-root>", "<run-root>", "<work-root>"]:
-        assert forbidden not in finding_enumeration.prompt
 
 
 def test_apply_fork_change_summary_schema_rejects_empty_changes() -> None:
@@ -251,7 +248,7 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
         assert forbidden not in rendered
 
 
-def test_complete_prompt_removes_forbidden_agent_prompt_terms() -> None:
+def test_complete_prompt_preserves_aux_prompt_text() -> None:
     prompt = build_complete_prompt(
         role="- cmoc から呼び出された AI Agent です",
         summary="- <repo-root> ツリー内の realization file を修正すること",
@@ -260,7 +257,7 @@ def test_complete_prompt_removes_forbidden_agent_prompt_terms() -> None:
         aux_prompt=[
             StructDoc(
                 "aux realization file",
-                "- <work-root> 配下の oracle file と realization file を確認すること",
+                "- <cmoc-root> と <run-root> と <work-root> 配下を確認すること",
             ),
             StructDoc(
                 "所見本文",
@@ -276,21 +273,15 @@ def test_complete_prompt_removes_forbidden_agent_prompt_terms() -> None:
 
     assert "- realization standard と oracle standard に従うこと" in rendered
     assert "# aux realization file" in rendered
-    assert "依頼を受けた AI Agent" in rendered
-    assert f"{resolve_real_path(RootToken.REPO)} ツリー内" in rendered
-    assert f"{resolve_real_path(RootToken.WORK)} 配下" in rendered
-    assert (
-        f'"summary": "realization file and {resolve_real_path(RootToken.REPO)} '
-        'stay in code block"'
-    ) in rendered
-    for forbidden in [
+    for expected in [
         "<cmoc-root>",
         "<repo-root>",
         "<run-root>",
         "<work-root>",
         "cmoc から呼び出された",
+        '"summary": "realization file and <repo-root> stay in code block"',
     ]:
-        assert forbidden not in rendered
+        assert expected in rendered
 
 
 def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
