@@ -10,6 +10,8 @@ from _support import (
     runner,
     subprocess,
 )
+from sub_commands.apply import _runtime as apply_runtime
+
 
 def test_apply_abandon_removes_apply_worktree_and_branch(
     tmp_path: Path, monkeypatch
@@ -121,15 +123,17 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
         root / ".cmoc" / "state" / "apply_processes" / f"{session_id}.pid"
     )
     process_id_path.parent.mkdir(parents=True, exist_ok=True)
-    process_id_path.write_text("12345\n")
+    process_id_path.write_text("12345 67890\n")
     stopped: list[int] = []
 
-    def fake_stop_apply_process(process_id: int) -> None:
+    def fake_stop_apply_process(process: apply_runtime.ApplyProcessIdentity) -> None:
         assert apply_worktree.is_dir()
         assert run_git(root, "rev-parse", "--verify", apply_branch).returncode == 0
-        stopped.append(process_id)
+        stopped.append(process.process_id)
 
-    monkeypatch.setattr(apply_abandon_module, "stop_apply_process", fake_stop_apply_process)
+    monkeypatch.setattr(
+        apply_abandon_module, "stop_apply_process", fake_stop_apply_process
+    )
 
     result = runner.invoke(app, ["apply", "abandon"], catch_exceptions=False)
 
@@ -142,6 +146,59 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
     assert state["apply"]["state"] == "ready"
     assert "apply_process_id" not in state["apply"]
     assert not process_id_path.exists()
+
+
+def test_stop_apply_process_treats_raced_exit_as_stopped(monkeypatch) -> None:
+    sent: list[int] = []
+
+    def fake_send_signal(process_fd: int, process_id: int, sig) -> None:
+        sent.append(sig)
+
+    monkeypatch.setattr(apply_runtime, "open_process_fd", lambda process_id: 10)
+    monkeypatch.setattr(apply_runtime, "process_start_time", lambda process_id: 20)
+    monkeypatch.setattr(apply_runtime, "send_process_signal", fake_send_signal)
+    monkeypatch.setattr(
+        apply_runtime, "wait_process_fd_exit", lambda process_fd, timeout: True
+    )
+    monkeypatch.setattr(apply_runtime.os, "close", lambda process_fd: None)
+
+    warning = apply_runtime.stop_apply_process(
+        apply_runtime.ApplyProcessIdentity(12345, 20)
+    )
+
+    assert warning is None
+    assert sent == [apply_runtime.signal.SIGTERM]
+
+
+def test_send_process_signal_ignores_already_exited_process(monkeypatch) -> None:
+    def fake_pidfd_send_signal(process_fd: int, sig) -> None:
+        raise ProcessLookupError
+
+    monkeypatch.setattr(
+        apply_runtime.signal, "pidfd_send_signal", fake_pidfd_send_signal
+    )
+
+    apply_runtime.send_process_signal(10, 12345, apply_runtime.signal.SIGTERM)
+
+
+def test_stop_apply_process_does_not_signal_reused_pid(monkeypatch) -> None:
+    sent: list[int] = []
+
+    monkeypatch.setattr(apply_runtime, "open_process_fd", lambda process_id: 10)
+    monkeypatch.setattr(apply_runtime, "process_start_time", lambda process_id: 99)
+    monkeypatch.setattr(
+        apply_runtime,
+        "send_process_signal",
+        lambda process_fd, process_id, sig: sent.append(sig),
+    )
+    monkeypatch.setattr(apply_runtime.os, "close", lambda process_fd: None)
+
+    warning = apply_runtime.stop_apply_process(
+        apply_runtime.ApplyProcessIdentity(12345, 20)
+    )
+
+    assert warning == "stale apply process id ignored: 12345"
+    assert sent == []
 
 
 def test_apply_abandon_rejects_running_state_without_process_id(
