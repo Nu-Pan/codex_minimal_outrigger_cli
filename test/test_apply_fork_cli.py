@@ -106,6 +106,29 @@ def test_apply_fork_does_not_rewrite_session_gitignore(
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
+def test_apply_fork_rejects_tracked_cmoc_without_dirtying_session(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """apply fork は .cmoc の追跡解除を session 側で実行しない。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    (root / ".gitignore").write_text("")
+    run_git(root, "add", "-f", ".gitignore", ".cmoc")
+    run_git(root, "commit", "-m", "track cmoc state")
+    assert run_git(root, "status", "--short").stdout.strip() == ""
+
+    with pytest.raises(apply_fork_module.CmocError) as exc_info:
+        apply_fork_module.cmoc_apply_fork_impl("full", lambda *args, **kwargs: None)
+
+    assert ".cmoc が git 追跡対象外に初期化されていません。" in str(exc_info.value)
+    assert run_git(root, "status", "--short").stdout.strip() == ""
+    assert run_git(root, "ls-files", "--", ".cmoc").stdout.strip()
+
+
 @pytest.mark.parametrize("config_case", ["invalid_json", "missing"])
 def test_apply_fork_config_load_error_does_not_start_apply_run(
     tmp_path: Path, monkeypatch: MonkeyPatch, config_case: str
