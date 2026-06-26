@@ -293,26 +293,24 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle の CLI 経由の外部挙動を検証する realization test。report 生成、対象 oracle の選択、所見の列挙・検証・judge・merge、結果集計、エラー report、join commit、review 用 worktree の扱いを同じ review run の文脈で確認する。
-- 所見 merge 操作の kind 契約、無効操作の拒否、target 再利用拒否など、review oracle の所見評価 loop に関わる制御ロジックも検証する。
-- 大きいテストファイルだが、fake Codex 応答と report 文脈を共有する oracle review の一連の挙動をまとめて扱う入口である。
+- review oracle の CLI 外部挙動と所見評価 loop を検証する realization test。report 生成、所見の列挙・検証・judge・merge、verdict と severity による report 集計・並び順、処理失敗時の error report、対象 oracle の選択、review 用 worktree と join commit、INDEX.md 差分の取り込み・衝突解決を扱う。
+- 16,000 文字を超えるが、同じ review run の fake Codex 応答、report 文脈、状態遷移を共有するため、oracle review の読み取り文脈を一箇所に保つことを意図したテスト群である。
 
 ## Read this when
-- review oracle コマンドの report 出力、Verdict、件数集計、評価対象 oracle の表示、error report の期待挙動を確認・変更したいとき。
-- review oracle の full scope と session scope の対象選択、gitignore 対象 oracle の除外、binary oracle の扱い、short option の受理を確認したいとき。
-- review oracle が linked worktree や review 用 worktree 上でどの branch・commit・oracle を扱うか、INDEX.md 変更をどのように取り込むかを確認したいとき。
-- 所見の列挙 loop、関連所見だけを次回 prompt に渡す制御、validate・judge・merge の fake Codex 応答に基づく状態遷移を確認したいとき。
-- 所見 merge 操作の delete・replace・merge 契約や、不正な target 指定・重複利用を拒否する挙動を確認したいとき。
-- review oracle が INDEX.md 以外の差分を作った場合の拒否と、元 worktree を汚さない挙動を確認したいとき。
+- review oracle サブコマンドの report 内容、終了コード、標準出力、対象 oracle 数、scope 指定、短縮 option の挙動を変更・確認する。
+- review oracle の所見評価 loop における enumerate、validate、judge、merge の呼び出し条件、schema 別 fake 応答、所見 ID、rejected/accepted 集計、severity ごとの結果判定を確認する。
+- review oracle が full scope と session scope で評価対象をどう選ぶか、gitignored oracle、binary、memo 配下、symlink、linked worktree 上の oracle をどう扱うかを確認する。
+- review oracle が review 用 worktree 上で Codex を実行し、生成された INDEX.md だけを session 側へ取り込み、join commit や merge conflict をどう扱うかを確認する。
+- review oracle 実行中に Codex が INDEX.md 以外の差分を作成した場合の拒否挙動や、処理途中の失敗時に error report を残す挙動を確認する。
 
 ## Do not read this when
-- review oracle 以外のサブコマンド、通常 session 操作、設定読み込み、path model などの仕様や実装を調べたいだけのとき。
-- Codex CLI 実行 wrapper や structured output schema の汎用仕様を確認したいときは、それらを定義する実装や schema を直接読む方が適切。
-- oracle file の正本仕様そのものを確認・変更したいときは、この realization test ではなく oracle 配下の該当文書を読む。
-- review oracle の内部 helper の実装詳細だけを局所的に調べたいときは、対象の実装モジュールを先に読む方が直接的。
+- review oracle 以外の CLI サブコマンド、session 操作、init 処理、設定読み込みそのものの仕様や実装を調べたいだけで、oracle review の外部挙動に関心がない。
+- report renderer や review loop の実装詳細を修正したい段階で、まず実装側の関数定義・制御フローを直接読む方が必要な文脈に近い。
+- oracle file の正本仕様や routing 文書の内容そのものを確認したい場合で、realization test の期待値ではなく oracle 配下の本文を根拠にすべきである。
+- 汎用の git helper、worktree helper、test fixture の詳細だけを確認したい場合で、このテストが検証している review oracle のシナリオを追う必要がない。
 
 ## hash
-- 5e1ef76a36540646eb6ffc0b5f6ca430e0797b436e2049c74e1617fe9841d3cb
+- 0696baf19d9fb4ad20071a3699aac7ed6d08753c7a5e4b3b3cfe771427b3dea2
 
 # `test_session_cli.py`
 

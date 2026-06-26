@@ -24,26 +24,24 @@
 # `indexing.py`
 
 ## Summary
-- CLI 実行前後および Codex 呼び出し前の preflight として、INDEX.md の生成・更新・commit を行う indexing サブコマンドの実装を担う。
-- 対象ディレクトリと子要素の列挙、既存エントリーの鮮度判定、Codex による不足エントリー生成、Markdown への描画、排他 lock、git commit までの一連の保守フローを扱う。
-- バイナリ、git ignore 対象、ルート直下の memo を除外しながら、深い階層から順にルーティング文書を再構築する処理の入口になる。
+- INDEX.md の自動保守を行う CLI サブコマンドと preflight 処理を実装している。
+- 対象ツリーを走査して indexable な子要素を選別し、既存エントリーの hash 再利用、Codex による不足エントリー生成、Markdown への描画、更新差分の commit までを一連の処理として扱う。
+- 排他 lock、worktree 事前条件、既存エントリー形式検証、対象内容抽出、鮮度判定用 hash 計算など、INDEX.md 更新処理の制御ロジックの入口になる。
 
 ## Read this when
-- INDEX.md の自動生成・再生成・commit の流れを変更したいとき。
-- indexing サブコマンドの CLI 実行条件、preflight 登録、worktree clean 要件、排他制御を確認したいとき。
-- INDEX.md の対象に含めるファイルやディレクトリの判定、除外条件、ハッシュによる鮮度判定を調べたいとき。
-- 既存エントリーのパース、必須セクション検証、Structured Output から Markdown エントリーを作る処理を変更したいとき。
-- Codex にエントリー生成を依頼する入力内容、並列生成数、設定読み込みとの関係を追いたいとき。
+- INDEX.md を自動生成・更新するサブコマンドの実行順序、preflight 登録、commit 作成条件を確認したいとき。
+- indexable な directory や child の選別条件、memo・git ignored・binary・隠しファイルの除外挙動を変更または調査したいとき。
+- 既存 INDEX.md エントリーの再利用条件、必須 section と hash の検証、対象 hash の計算方法を確認したいとき。
+- Codex CLI に渡す index entry 生成入力、Structured Output の検証、生成結果の Markdown 描画に関わる処理を追いたいとき。
 
 ## Do not read this when
-- 個別のサブコマンド実装や CLI ルーティング全体だけを調べたい場合は、より上位のサブコマンド登録箇所や対象サブコマンドを読む。
-- INDEX.md エントリー生成プロンプトや AgentCallParameter の詳細を変更したい場合は、エントリー生成パラメータを組み立てる builder 側を読む。
-- git 実行、設定読み込み、work root 解決、ignore 判定、ハッシュ計算などの共通 runtime helper 自体の仕様を確認したい場合は、それぞれの共通実装を読む。
-- Codex 実行前 preflight の共通登録機構や呼び出しタイミングを変更したい場合は、preflight 管理側を読む。
-- 生成された INDEX.md の内容そのものを確認したいだけの場合は、対象階層のルーティング文書を読む。
+- 個別サブコマンドの business logic を調べたいだけで、INDEX.md の保守処理や preflight に関係しないとき。
+- Codex 実行そのものの低レベル実装、Git コマンド wrapper、設定読み込み、path model の詳細を確認したいときは、それぞれの runtime や utility 実装を読む方が直接的。
+- INDEX.md エントリー生成 prompt の具体的な構築内容だけを確認したいときは、entry parameter builder 側を読む方が直接的。
+- 生成済み INDEX.md の内容を読むべき対象の選別に使うだけなら、この実装ではなく該当階層のルーティング文書を読む。
 
 ## hash
-- 793c684c28c491b20cb24fabbab9c11fcf0f4ce7ff0099d6ab1866397cdc0980
+- 7dfa3b920d6f4555f8702e5300c1a60e29c76bd3a09bdfd88c9338f9fc64aec0
 
 # `init.py`
 
@@ -151,23 +149,23 @@
 # `review_targets.py`
 
 ## Summary
-- review oracle の対象となる oracle file を列挙するための実装。scope が full の場合は全 oracle file、差分対象の場合は session_start_commit から HEAD までに oracle 配下で変更された oracle file だけを返す。
-- oracle 配下を再帰的に探索し、ファイルであり、INDEX.md ではなく、git ignore 対象でもないものを review 対象候補として扱う。
+- review oracle が検査対象にする oracle file を列挙する処理を担う。scope が full の場合は全対象を返し、それ以外では session_start_commit から HEAD までに oracle 配下で変更された対象だけを返す。
+- oracle file 候補の列挙では oracle ツリーを再帰走査し、通常ファイルのうち INDEX.md、root memo、git ignore 対象を除外して並び順を安定させる。
 
 ## Read this when
-- review oracle の対象ファイル選定ロジックを確認・変更したいとき。
-- full scope と差分 scope で review 対象がどう変わるかを確認したいとき。
-- oracle file の列挙条件、特に INDEX.md 除外や git ignore 除外の扱いを確認したいとき。
-- session_start_commit がない場合の差分 review 対象の扱いを確認したいとき。
+- review oracle の対象ファイル集合が scope によってどう変わるかを確認・変更したいとき。
+- session_start_commit を基準にした差分対象の判定や、git diff の対象範囲を確認・変更したいとき。
+- oracle file 候補から INDEX.md、root memo、git ignore 対象を除外する条件を確認・変更したいとき。
+- review oracle が参照する oracle file の列挙順やフィルタ条件に関する不具合を調査するとき。
 
 ## Do not read this when
-- review の出力形式、診断内容、表示文言、または実際の review 実行処理を確認したいだけのとき。
-- oracle file の概念定義や正本仕様としての扱いを確認したいとき。
-- oracle 以外の realization file やテストファイルの列挙条件を探しているとき。
-- git command 実行 helper や git ignore 判定 helper の内部挙動を確認したいとき。
+- review oracle の結果表示、診断内容、プロンプト、出力形式を確認したいだけのとき。
+- oracle file や realization file の概念定義そのものを確認したいとき。
+- oracle 以外の realization file や test file の列挙条件を確認したいとき。
+- root memo 判定、git ignore 判定、git コマンド実行 helper の詳細を確認したいとき。
 
 ## hash
-- e4fe225944db001b5a92abe25348f5974e8b0f165bb69cba1f701a019706deaa
+- 8757d7467f9e0f50ab5b0c8b0f40fda477f0e603870376d607db08c28669e79e
 
 # `session`
 
