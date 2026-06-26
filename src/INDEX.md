@@ -1,26 +1,26 @@
 # `acp`
 
 ## Summary
-- ACP agent 呼び出しに渡す prompt と実行条件を組み立てる実装領域。用途別の呼び出しパラメータ構築と、agent に注入される標準 prompt 部品の生成が下位要素としてまとまっている。
-- apply、oracle review、session join、TUI 事前判定、ルーティング文書エントリー生成などの各機能が、agent に何を入力し、どの制約と Structured Output 契約で応答させるかを追う入口。
+- AI エージェント呼び出しに渡す ACP 関連の実装をまとめる領域。用途別の呼び出しパラメータ構築と、プロンプト部品として使う標準文書・規則文書の生成処理への入口になる。
+- apply、oracle review、session join、TUI 実行前判定、INDEX.md エントリー生成などの機能で、エージェントへ渡す role、goal、補助入力、読み書き条件、モデル設定、Structured Output 契約をどこで組み立てるかを確認するためのまとまり。
+- 標準文書本文や仕様そのものではなく、それらを agent prompt としてどう構成し、どの実行用途へ接続するかを調べるための実装群である。
 
 ## Read this when
-- cmoc の機能が ACP agent を呼び出す際の role、goal、補助 prompt、対象ファイルや差分の埋め込み、読み書き条件、モデル指定、reasoning 設定を確認・変更したいとき。
-- apply 系の差分要約、realization file 所見列挙、検出済み所見への修正依頼など、後段 agent 呼び出しの入力条件と出力契約を調べたいとき。
-- oracle review の新規所見生成、理由追加、採否判定、所見整理など、正本仕様断片を根拠にした agent prompt と Structured Output schema を確認したいとき。
-- session join の conflict marker 解消、TUI 実行前のファイルアクセスモード判定、標準参照要否判定など、特定用途の事前解決 agent 呼び出しを追いたいとき。
-- agent に渡される標準 prompt 部品の文言、構成、依存関係、追加 prompt の差し込み、root token の実パス置換やサニタイズ処理を確認したいとき。
-- INDEX.md エントリー生成について、対象本文の渡し方、既存目次を根拠にしない方針、読み取り専用条件、出力 schema 指定を実装・検証したいとき。
+- cmoc の各機能が AI エージェントを呼び出す際に、どの prompt、入力断片、対象パス、差分、権限条件、モデル設定、出力 schema を渡すかを確認・変更したいとき。
+- apply 系の差分要約、realization file 所見、検出済み所見への修正依頼など、後段エージェント呼び出しの条件と出力契約を追いたいとき。
+- oracle review の新規所見、理由追加、採否判定、所見整理を生成する prompt と、oracle file を根拠にした Structured Output の接続を確認したいとき。
+- session join の conflict 解消、TUI 実行前のファイルアクセスモード判定、INDEX.md エントリー生成など、特定用途の事前判定・生成エージェント呼び出しを実装・検証したいとき。
+- oracle file、realization file、review standard、file access rule、routing rule、index entry standard など、agent prompt に含める標準的な文書断片の生成元を探したいとき。
 
 ## Do not read this when
-- サブコマンド全体の実行順序、CLI 引数解析、git 操作、フォーク作成・統合、生成結果の保存など、agent 呼び出しパラメータ構築の外側を調べたいとき。
-- oracle file、realization file、review standard、apply review standard、realization standard など、prompt に含められる標準文書や仕様本文そのものを読みたいとき。
-- StructDoc、Standard、Requirement、FileAccessMode、RootToken、AgentCallParameter など、prompt 構築が利用する基盤データ型や列挙値そのものの定義だけを確認したいとき。
-- 個別の所見カテゴリ、レビュー判断基準、対象ファイル探索、git diff 生成、変更ファイル抽出など、呼び出しへ渡す材料を作る側の詳細を調べたいとき。
+- CLI サブコマンド全体の実行順序、引数解析、git 操作、fork 作成・統合、merge conflict marker 検出、生成結果保存など、エージェント呼び出しパラメータ構築の外側を調べたいとき。
+- oracle file や realization file の個別本文、レビュー基準や仕様断片そのものを読みたいだけで、prompt 部品としての組み立て処理を確認する必要がないとき。
+- StructDoc、Standard、Requirement、Markdown rendering、パス解決 helper、AgentCallParameter の基本データ型など、ACP から利用される汎用基盤だけを確認したいとき。
+- 実際の対象ファイル探索、git diff 生成、変更ファイル抽出、外部コマンド実行、LLM 呼び出し、サブプロセス管理など、ACP に渡す材料を作る側または ACP を実行する側の詳細を調べたいとき。
 - 生成済み INDEX.md の内容評価や、ルーティング文書一般の書き方だけを確認したいとき。
 
 ## hash
-- 78808bf2d5069fd1c9e8747bfaf3f94ecc556bc739459fc992f26081fa168269
+- e1ee67476c5bc792a5fc731e841c31f5db81d6fefffda9b0e35c560e2dbaa8d9
 
 # `basic`
 

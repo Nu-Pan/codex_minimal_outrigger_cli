@@ -23,23 +23,24 @@
 # `complete_prompt.py`
 
 ## Summary
-- agent 呼び出しへ渡す完全な構造化プロンプトを組み立てる実装。基本情報、ファイルアクセス規則、ルーティング規則、追加プロンプトを並べ、指定された標準プロンプト群を依存関係込みで注入する。
-- root token や内部呼び出し由来の表現を、agent に渡す前の文面として適切な実パス・表現へ置換するサニタイズ処理も担う。
+- agent call に渡す完全なプロンプトを、基本プロンプト、ファイルアクセス規則、ルーティング規則、任意追加文書、必要に応じた標準プロンプト群から組み立てる処理を定義している。
+- oracle・realization・review・index entry などの標準プロンプト指定に応じて依存する基本情報を自動的に含め、最終的に agent 向け表現へ置換・無害化した構造化文書列を返す。
+- root token の実パス展開や呼び出し元表現の言い換えなど、生成済みプロンプト本文を agent に直接渡せる形へ整える補助処理も含む。
 
 ## Read this when
-- agent に渡す最終プロンプトの構成順序、必ず含まれる基本要素、任意標準プロンプトの追加条件を確認したいとき。
-- oracle、realization、review、index entry などの標準プロンプトを有効化した際に、どの前提プロンプトが連動して含まれるかを確認・変更したいとき。
-- 追加プロンプトが完全プロンプト内のどこに差し込まれるか、また最終的にどのような StructDoc のリストとして返されるかを確認したいとき。
-- agent 向けプロンプトから内部の root token や呼び出し元表現を除去・置換する処理を確認・変更したいとき。
+- agent に渡す最終プロンプト全体がどの順序・構成で作られるかを確認したいとき。
+- role、summary、goal、file access rule、routing rule、aux prompt、各種 standard prompt がどのように結合されるかを調べるとき。
+- oracle standard、realization standard、review standard、apply review standard、index entry standard を有効化した際に、どの依存プロンプトが追加されるかを確認したいとき。
+- prompt 内の root token や `cmoc から呼び出された` という表現が agent 向けにどう変換されるかを確認・変更したいとき。
 
 ## Do not read this when
-- 個々のファイルアクセス規則、ルーティング規則、oracle 標準、realization 標準、review 標準、index entry 標準の本文そのものを確認したいだけのときは、それぞれの標準プロンプトを構築する対象を直接読む。
-- RootToken の定義、実パス解決、StructDoc や StructCodeBlock のデータ構造を確認したいだけのときは、それらを定義する基盤側の対象を直接読む。
-- agent prompt 全体の組み立てではなく、特定のサブプロンプトの文言や仕様だけを変更したいとき。
-- 生成済みプロンプトを実際にどのプロセスへ渡すか、agent 呼び出しの実行制御を追いたいとき。
+- 個別の file access rule、routing rule、oracle standard、realization standard などの本文内容そのものを確認したいだけのときは、それぞれの構築元を直接読む。
+- StructDoc や StructCodeBlock のデータ構造そのものを調べたいときは、構造化文書を定義する基盤側を読む。
+- path token の定義や実パス解決の仕様を確認したいときは、path model 側を読む。
+- agent 実行、サブプロセス起動、LLM 呼び出しの制御を調べたいときは、この構築済みプロンプトを利用する呼び出し側を読む。
 
 ## hash
-- 0005725ac486fc1ef1117decc5620d424a99e32685c81fef05449d8cabf05e63
+- 58c697960b06d3b3a80c6d0ec4c03fa40667dd5b5d8d6760048999d141d25f47
 
 # `file_access_rule.py`
 
@@ -122,42 +123,45 @@
 # `oracle_standard.py`
 
 ## Summary
-- oracle file が従うべき規範文章を StructDoc として構築する実装。人間の認知負荷削減、正本仕様断片としての扱い、未定義部分の許容、文字数最小化、論理的整合性、実装から仕様への逆流禁止、用語統一、命名、ベストプラクティスより oracle file を優先する判断、goal と non-goal の境界を扱う。
-- prompt parts 側で oracle standard を生成する入口であり、Standard と Requirement の列挙から構造化文書へ変換する責務を持つ。
+- oracle file が従うべき規範文章を StructDoc として構築する実装。人間の認知負荷節約、正本仕様断片としての扱い、未定義部分の許容、総文字数最小化、矛盾禁止、実装から仕様への逆流禁止、用語・命名統一、oracle file 優先、goal と non-goal の境界記述といった標準項目をまとめている。
+- oracle file の品質基準をプロンプト部品として参照したい場合の入口になる。各標準は背景、要求、判断例を持ち、oracle file をどう書くべきか、どこまで AI 裁量を許すべきかを判断するためのまとまりを提供する。
 
 ## Read this when
-- oracle file 向け規範文章として出力される項目や文言を確認したいとき。
-- oracle standard の StructDoc 生成処理、Standard/Requirement の並び、または standard_to_struct_doc への渡し方を変更するとき。
-- oracle file の書き方に関する規範が、プロンプト部品としてどの内容で実装されているか確認するとき。
+- oracle file の記述方針、粒度、量、重複、用語、命名、矛盾、未定義部分の扱いに関する標準プロンプトを確認したいとき。
+- oracle file を正本仕様断片として扱うためのルールを、StructDoc 化される元データとして追いたいとき。
+- 実装者である AI に任せてよい範囲と、人間が oracle file に明示すべき範囲の境界を扱うプロンプト部品を調べるとき。
+- oracle file に関する標準文書の生成内容が、どの Standard と Requirement から組み立てられているか確認したいとき。
 
 ## Do not read this when
-- oracle file と realization file の基本定義や所有関係だけを確認したいとき。
-- realization file や realization test の品質・肥大化抑制・依存追加の規範を確認したいとき。
-- StructDoc、Standard、Requirement、standard_to_struct_doc 自体のデータ構造や変換ロジックを確認したいとき。
-- 生成済みの自然言語文書としての oracle standard の表示結果だけを確認したいとき。
+- realization file の品質、分割、抽象化、テスト、依存関係、公開面の増加抑制に関する標準だけを確認したいとき。
+- oracle file と realization file の定義や配置条件そのものを確認したいとき。
+- StructDoc、Standard、Requirement のデータ構造やレンダリング処理の実装を調べたいとき。
+- 特定の oracle file 本文の仕様内容や、個別機能の正本仕様断片を確認したいとき。
 
 ## hash
-- a877eaac93f163ce3855b5c7cb620d1997fcdb55a07d3dc156a7604bff89b99d
+- 0a349edcd2226daeb977cfec784977f7ba675274ecc1267c01a68e304d36871a
 
 # `realization_standard.py`
 
 ## Summary
-- realization file を小さく、読みやすく、現行仕様に必要な範囲へ保つための standard を StructDoc として組み立てる実装。
-- 重複削減、旧仕様実装の削除、責務境界に沿った分割・統合、公開面や依存関係の増加抑制、テスト肥大化の抑制、変更完了時の削除・統合確認といった realization code 全般の品質基準を扱う。
-- ACP の prompt parts として、実装担当 AI に realization file の保守性・最小性・抽象化・状態管理・テスト整理に関する判断基準を渡す入口になる。
+- realization file を小さく保ち、現行仕様に必要な実装・テスト・補助要素だけへ整理するための基準を StructDoc として組み立てる。
+- 重複実装の集約、旧仕様向け実装の削除、責務境界に沿った分割・統合、公開面・状態・依存関係・補助ファイル・テストの増加抑制など、realization 全体の肥大化を防ぐ判断基準を扱う。
+- prompt parts の一部として、実装担当 AI に渡す realization 品質・最小化方針の本文を生成する入口である。
 
 ## Read this when
-- realization file や realization code の品質基準、肥大化抑制、重複削減、旧実装削除に関するプロンプト内容を確認・変更したいとき。
-- 実装追加時に既存実装の整理、抽象化の作成条件、公開面・設定面・永続状態の追加条件を AI にどう指示しているか確認したいとき。
-- realization test、外部依存、補助ファイル、生成物を増やす際の制約や、変更完了前の削除・統合確認に関する標準文書の生成元を確認したいとき。
+- realization file の追加・変更・削除時に、どこまで既存実装を整理し、重複や旧仕様向け要素を取り除くべきか確認したいとき。
+- 新しい関数・クラス・モジュール・共有 helper・公開設定・永続状態・外部依存・補助スクリプトを追加してよい条件を確認したいとき。
+- realization code や realization test のサイズ、責務境界、分割・統合、コメントや docstring の残し方に関する基準を生成・変更したいとき。
+- 実装完了前に、未使用要素、重複した責務、不要な TODO や旧テストなどの削除・統合余地を確認するための標準文書を扱うとき。
 
 ## Do not read this when
-- oracle file の正本仕様としての扱い、人間の認知負荷、仕様断片の未定義部分など oracle 側の標準を確認したいだけのとき。
-- INDEX.md エントリーそのものの書き方やルーティング文書生成ルールを確認したいだけのとき。
-- 個別の CLI 挙動、サブコマンド仕様、パスモデル、実行状態など、realization file 全般の品質基準ではなく具体機能の仕様や実装を調べたいとき。
+- oracle file の責務、人間が持つ正本仕様断片の書き方、または oracle から realization への関係そのものを確認したいだけのとき。
+- INDEX.md エントリーの生成規則やルーティング文書の書き方を確認したいとき。
+- 特定の CLI サブコマンド、状態ファイル、path model、実装処理の具体的な挙動を調べたいとき。
+- StructDoc や Standard、Requirement のデータ構造や変換処理そのものを変更・確認したいとき。
 
 ## hash
-- 1657f67dc21bf798d9725ccacebc23b7b0e8db34d95a3552218e285b30b065ef
+- 8863a0f211c617e6e94e9ec938e0d908aa82d4193ae83c3629d3d2e5d5028d50
 
 # `routing_rule.py`
 

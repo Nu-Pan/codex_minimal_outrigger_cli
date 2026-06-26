@@ -24,20 +24,21 @@
 # `prompt_parts`
 
 ## Summary
-- `src/acp/prompt_parts` は、ACP agent に渡す構造化プロンプトの標準部品を組み立てる実装群です。ファイルアクセス規則、ルーティング規則、oracle/realization の基本概念、各種 standard、レビュー基準、INDEX.md エントリー基準を `StructDoc` として生成し、完全な agent prompt に依存関係込みで注入する入口も含みます。
-- このディレクトリは、agent に提示されるプロンプト本文の内容や構成、標準プロンプト同士の依存関係、root token の実パス置換などを確認・変更するための入口です。
+- AI agent に渡すプロンプトを構成する標準文書・規則文書の断片を生成する実装群をまとめるディレクトリ。
+- oracle / realization の基本概念、file access rule、routing rule、各種 standard、review standard、index entry standard などを StructDoc として組み立て、完全な agent prompt の部品または統合処理への入口になる。
+- 個別のプロンプト断片の本文内容を確認する場合は各生成元へ進み、最終プロンプト全体の組み立て順序や標準プロンプト間の依存関係を確認する場合は完全プロンプト構築処理へ進むためのまとまりである。
 
 ## Read this when
-- ACP agent に渡す標準プロンプト部品の文言、構成、生成処理を確認・変更したいとき。
-- ファイルアクセス規則、INDEX.md ルーティング規則、oracle/realization の基本説明、oracle/realization/review/index-entry 向け standard のどれがどの条件でプロンプトに含まれるか確認したいとき。
-- agent call に渡す完全なプロンプトの組み立て順、追加プロンプトの差し込み位置、標準プロンプト間の依存関係、内部 root token や呼び出し元表現のサニタイズ処理を追いたいとき。
-- cmoc が AI に渡す作業規範やレビュー規範を、自然言語の正本仕様ではなく Python 実装としてどこで構築しているか探したいとき。
+- ACP 経由で agent に渡すプロンプトの文面や標準規範がどこで生成されるかを調べたいとき。
+- oracle file、realization file、review、apply review、routing、file access、index entry などの標準プロンプト部品を確認・変更したいとき。
+- 複数の標準プロンプト断片がどのように最終的な agent prompt に含まれるか、または root token 置換などの仕上げ処理を追いたいとき。
+- AI agent の作業前ルール、読む対象の選び方、レビュー所見の基準、実装・仕様文書の品質基準をプロンプトとして生成する箇所を探しているとき。
 
 ## Do not read this when
-- 個別 CLI サブコマンド、path model、状態ファイル、Git 操作、実行制御など、プロンプト部品ではない具体機能の仕様や実装を調べたいとき。
-- 生成済みプロンプトを受け取った agent が実際にどう実行されるか、プロセス起動や ACP 通信の制御を追いたいとき。
-- StructDoc、StructCodeBlock、Standard、Requirement、FileAccessMode、RootToken など、プロンプト部品が利用する基盤データ型や列挙値そのものの定義を確認したいとき。
-- INDEX.md エントリーの対象本文がすでに個別ファイルまで特定できており、そのファイル単体の責務や文言だけを確認すればよいとき。
+- 特定の CLI サブコマンド、状態ファイル、path model、agent 実行制御など、プロンプト部品ではない具体的な機能実装を調べたいとき。
+- StructDoc、Standard、Requirement などの構造化文書データ型やレンダリング基盤そのものを確認したいとき。
+- oracle file や realization file の個別本文の仕様内容を読みたいだけで、agent に提示する標準文書の生成処理を確認する必要がないとき。
+- テストコード、外部コマンド実行、LLM 呼び出し、サブプロセス管理など、生成済みプロンプトを利用する側の処理を追いたいとき。
 
 ## hash
-- 939c132501d123684bd14a51aed9662bd793ae0159b3b739fdb046968f542763
+- b0162cb9ec1dff590eb958f7a80c22594f30bf752d42738576f81a2f0920a780

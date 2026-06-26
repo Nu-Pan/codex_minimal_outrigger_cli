@@ -278,26 +278,21 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- プロンプト部品、標準文書、ファイルアクセス規則、ルーティング規則、Markdown レンダリング、各種 ACP パラメータビルダーの挙動を検証する realization test。
-- complete prompt が標準文書を既定で含むか、必要な標準を明示的に含むか、禁止語や root token を実パスへ置換するかを確認する。
-- apply fork、review oracle、session join、tui resolve、indexing index entry などのビルダーが、期待されるモデル種別、reasoning effort、file access mode、schema、prompt 断片を返すことを検証する。
-- StructDoc と code block の Markdown 出力で、連続空行の扱いが通常本文と code block 内で期待通り異なることを確認する。
+- プロンプト部品と ACP builder の生成結果を検証する realization test。StructDoc の Markdown レンダリング、routing rule・各 standard・file access rule の文言、complete prompt への標準文書注入や禁止語置換、各種 builder parameter の model/reasoning/file access mode/schema 整合性を横断的に確認する。
 
 ## Read this when
-- プロンプト生成、標準文書の組み込み、禁止語の置換、root path 解決、または complete prompt の構成を変更する。
-- file access mode ごとの prompt 文言、routing rule、apply review standard、realization standard、review oracle standard、index entry standard の出力内容を変更する。
-- ACP パラメータビルダーの model class、reasoning effort、file access mode、structured output schema、または prompt に埋め込む文言を変更する。
-- apply fork の対象 root 判定、change summary schema、review oracle merge finding schema、session join conflict resolution、TUI resolve parameter の schema enum や boolean flag を変更する。
-- StructDoc や StructCodeBlock の Markdown レンダリングで空行の正規化挙動を変更する。
+- プロンプトを構成する標準文書、routing rule、file access rule、complete prompt の出力文言や含まれる見出しを変更する時。
+- ACP builder が返す実行パラメータ、structured output schema、file access mode、model class、reasoning effort の期待値を確認・変更する時。
+- StructDoc や code block の Markdown レンダリング、空行の畳み込み、placeholder や禁止語の置換挙動に関わる変更を行う時。
+- index entry、review oracle merge finding、TUI resolve parameter、apply fork、session join conflict resolution などの prompt builder 群にまたがる回帰テストの観点を確認したい時。
 
 ## Do not read this when
-- 個別 CLI コマンドの実行挙動や永続状態の処理だけを調べたい場合。
-- prompt 部品、標準文書、ACP パラメータ、schema 検証、Markdown レンダリングに関係しない実装変更を行う場合。
-- oracle file の正本仕様そのものを確認したい場合。この対象は realization test であり、仕様本文の代替ではない。
-- 単一の標準文書やビルダーの実装詳細だけを読みたい場合は、まず対応する実装や schema を直接読む方が適切。
+- 個別 builder の実装詳細だけを確認したい場合で、対応する実装モジュールを直接読む方が早い時。
+- oracle file の正本仕様そのものを確認・修正したい時。
+- CLI コマンド実行、永続状態、Git 操作など、プロンプト生成や schema 検証に関係しない挙動を調査する時。
 
 ## hash
-- a2c147f12b93f4f80df098300166926c4ee4c75324e7f4f41581467762aee26e
+- 60e22289527dca38367c753fdde2c5788c5bd0483aa3e81630520c3a5104e23e
 
 # `test_review_oracle_cli.py`
 
