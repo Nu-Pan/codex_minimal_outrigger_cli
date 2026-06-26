@@ -7,6 +7,7 @@ import typer
 from acp.builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter,
 )
+from sub_commands.indexing import enable_indexing_preflight
 from cmoc_runtime import (
     CmocError,
     current_branch,
@@ -14,8 +15,10 @@ from cmoc_runtime import (
     load_state_for_branch,
     repo_root,
     require_clean_worktree,
+    run_cli_subcommand,
+    run_codex_exec,
     run_git,
-    timestamp,
+    work_root,
     write_state,
 )
 
@@ -24,10 +27,24 @@ CodexExec = Callable[..., object]
 GitRun = Callable[..., object]
 
 
-def cmoc_session_join_impl(codex_exec: CodexExec, git: GitRun = run_git) -> None:
+def cmoc_session_join_impl() -> None:
+    """CLI runtime を通して session join を実行する。"""
+    enable_indexing_preflight()
+    run_cli_subcommand(
+        _cmoc_session_join_body,
+        run_codex_exec,
+        run_git,
+        command_name="session join",
+        command_argv=["cmoc", "session", "join"],
+        error_to_stderr=True,
+    )
+
+
+def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> None:
     """active session branch を session home branch へ merge する。"""
     root = repo_root()
-    branch = current_branch(root)
+    work = work_root()
+    branch = current_branch(work)
     session_id, path, state = load_state_for_branch(root, branch)
     if not branch.startswith("cmoc/session/"):
         raise CmocError("session join は session branch 上で実行してください。", [], branch)
@@ -37,19 +54,18 @@ def cmoc_session_join_impl(codex_exec: CodexExec, git: GitRun = run_git) -> None
             ["session.state と apply.state を確認してください。"],
             json.dumps(state.to_dict(), ensure_ascii=False, indent=2),
         )
-    require_clean_worktree(root)
-    ensure_cmoc_ignored(root)
+    require_clean_worktree(work)
+    ensure_cmoc_ignored(work)
     home = state.session.session_home_branch
     if not home:
         raise CmocError("session home branch を特定できません。", [], str(path))
-    run_git(["switch", home], root)
-    merge = git(["merge", "--no-ff", branch], root, check=False)
+    run_git(["switch", home], work)
+    merge = git(["merge", "--no-ff", branch], work, check=False)
     if merge.returncode != 0:
-        resolve_session_join_conflict(root, codex_exec, git)
+        resolve_session_join_conflict(work, codex_exec, git)
     state.session.state = "joined"
-    state.session.joined_at = timestamp()
     write_state(path, state)
-    delete_result = git(["branch", "-d", branch], root, check=False)
+    delete_result = git(["branch", "-d", branch], work, check=False)
     warnings: list[str] = []
     if delete_result.returncode != 0:
         warnings.append(f"session branch was not deleted: {branch}")
@@ -67,7 +83,6 @@ def cmoc_session_join_impl(codex_exec: CodexExec, git: GitRun = run_git) -> None
         )
     )
 
-
 def resolve_session_join_conflict(root: Path, codex_exec: CodexExec, git: GitRun = run_git) -> None:
     """session join の merge conflict を Codex CLI へ依頼して解消する。"""
     conflicted_paths = [
@@ -84,11 +99,12 @@ def resolve_session_join_conflict(root: Path, codex_exec: CodexExec, git: GitRun
         build_session_join_conflict_resolution_parameter(conflicted_paths),
         root=root,
         purpose="session join conflict resolution",
+        extra_writable_paths=conflicted_paths,
     )
     remaining_markers = [
         path
         for path in conflicted_paths
-        if path.exists() and any(marker in path.read_text(errors="ignore") for marker in ("<<<<<<<", "=======", ">>>>>>>"))
+        if path.exists() and _has_conflict_marker_block(path.read_text(errors="ignore"))
     ]
     if remaining_markers:
         raise CmocError(
@@ -106,3 +122,15 @@ def resolve_session_join_conflict(root: Path, codex_exec: CodexExec, git: GitRun
             unmerged,
         )
     git(["commit", "--no-edit"], root)
+
+
+def _has_conflict_marker_block(text: str) -> bool:
+    state = 0
+    for line in text.splitlines():
+        if state == 0 and line.startswith("<<<<<<<"):
+            state = 1
+        elif state == 1 and line == "=======":
+            state = 2
+        elif state == 2 and line.startswith(">>>>>>>"):
+            return True
+    return False

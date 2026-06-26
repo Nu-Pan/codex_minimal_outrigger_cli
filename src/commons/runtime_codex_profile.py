@@ -17,7 +17,6 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
             return "read-only"
         case (
             FileAccessMode.REALIZATION_WRITE
-            | FileAccessMode.CONFLICT_RESOLUTION_WRITE
             | FileAccessMode.ORACLE_WRITE
             | FileAccessMode.REPO_WRITE
         ):
@@ -34,7 +33,12 @@ def _toml_array(values: list[Path]) -> str:
     return "[" + ", ".join(_toml_str(value) for value in values) + "]"
 
 
-def _permission_profile_lines(mode: FileAccessMode, root: Path) -> list[str]:
+def _permission_profile_lines(
+    mode: FileAccessMode,
+    root: Path,
+    extra_read_paths: list[Path] | None = None,
+    extra_writable_paths: list[Path] | None = None,
+) -> list[str]:
     root = root.resolve()
     match mode:
         case FileAccessMode.READONLY:
@@ -52,11 +56,6 @@ def _permission_profile_lines(mode: FileAccessMode, root: Path) -> list[str]:
             write_paths = [root]
             deny_read_paths = [root / "memo"]
             read_only_paths = [root / "oracle", root / "memo", root / ".agents"]
-        case FileAccessMode.CONFLICT_RESOLUTION_WRITE:
-            read_paths = [root]
-            write_paths = [root]
-            deny_read_paths = [root / "memo"]
-            read_only_paths = [root / "memo", root / ".agents"]
         case FileAccessMode.ORACLE_WRITE:
             read_paths = [root]
             write_paths = [root / "oracle"]
@@ -69,8 +68,25 @@ def _permission_profile_lines(mode: FileAccessMode, root: Path) -> list[str]:
             read_only_paths = [root / "memo", root / ".agents"]
         case _:
             raise CmocError("不明な FileAccessMode です。", [], str(mode))
-    # Codex permission profiles carry read restrictions; read_only remains for
-    # write exclusions that the legacy workspace profile represented.
+    if extra_read_paths:
+        read_paths.extend(path.resolve() for path in extra_read_paths)
+        read_only_paths.extend(path.resolve() for path in extra_read_paths)
+    if extra_writable_paths:
+        protected = [root / "memo", root / ".agents"]
+        writable = [path.resolve() for path in extra_writable_paths]
+        writable = [
+            path
+            for path in writable
+            if not any(path.is_relative_to(base) for base in protected)
+        ]
+        write_paths.extend(writable)
+        read_only_paths = [
+            path
+            for path in read_only_paths
+            if path not in writable
+        ]
+    # Codex permission profile は read 制限を持つ。legacy workspace profile が表していた
+    # write 除外は read_only として残す。
     return [
         'permission_profile = "cmoc"',
         'default_permissions = "cmoc"',
@@ -88,7 +104,11 @@ def _permission_profile_lines(mode: FileAccessMode, root: Path) -> list[str]:
 
 
 def build_codex_profile(
-    parameter: AgentCallParameter, config: CmocConfig, root: Path | None = None
+    parameter: AgentCallParameter,
+    config: CmocConfig,
+    root: Path | None = None,
+    extra_read_paths: list[Path] | None = None,
+    extra_writable_paths: list[Path] | None = None,
 ) -> str:
     model = config.codex.model[parameter.model_class]
     reasoning_effort = config.codex.reasoning_effort[parameter.reasoning_effort]
@@ -97,7 +117,14 @@ def build_codex_profile(
         f'reasoning_effort = "{reasoning_effort}"',
     ]
     if root is not None:
-        lines.extend(_permission_profile_lines(parameter.file_access_mode, root))
+        lines.extend(
+            _permission_profile_lines(
+                parameter.file_access_mode,
+                root,
+                extra_read_paths,
+                extra_writable_paths,
+            )
+        )
     else:
         sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
         lines.append(f'sandbox_mode = "{sandbox_mode}"')
@@ -156,8 +183,16 @@ def prepare_codex_profile(
     config: CmocConfig | None = None,
     codex_home: Path | None = None,
     root: Path | None = None,
+    extra_read_paths: list[Path] | None = None,
+    extra_writable_paths: list[Path] | None = None,
 ) -> Path:
-    profile = build_codex_profile(parameter, config or CmocConfig(), root)
+    profile = build_codex_profile(
+        parameter,
+        config or CmocConfig(),
+        root,
+        extra_read_paths,
+        extra_writable_paths,
+    )
     target_home = codex_home or resolve_codex_home()
     try:
         return write_hashed_file_in_existing_dir(
@@ -228,15 +263,40 @@ def extract_resume_token(stdout_text: str) -> str | None:
     return None
 
 
-def is_capacity_error(text: str) -> bool:
-    return "Selected model is at capacity" in text
+def _codex_jsonl_error_messages(stdout_text: str) -> list[str]:
+    messages: list[str] = []
+    for line in stdout_text.splitlines():
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if item.get("type") == "error":
+            message = item.get("message")
+            if isinstance(message, str):
+                messages.append(message)
+        elif item.get("type") == "turn.failed":
+            error = item.get("error")
+            if isinstance(error, dict) and isinstance(error.get("message"), str):
+                messages.append(error["message"])
+    return messages
 
 
-def is_quota_error(text: str) -> bool:
+def is_capacity_error(stdout_text: str) -> bool:
+    return any(
+        "Selected model is at capacity" in message
+        for message in _codex_jsonl_error_messages(stdout_text)
+    )
+
+
+def is_quota_error(stdout_text: str) -> bool:
     quota_markers = [
         "Quota exceeded",
         "You've hit your usage limit",
         "out of credits",
         "You hit your spend cap",
     ]
-    return any(marker in text for marker in quota_markers)
+    return any(
+        marker in message
+        for message in _codex_jsonl_error_messages(stdout_text)
+        for marker in quota_markers
+    )

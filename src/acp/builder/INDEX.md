@@ -1,104 +1,105 @@
 # `apply`
 
 ## Summary
-- 適用・分岐処理で使う AI 呼び出し契約のうち、変更要約、ファイル別レビュー所見、検出済み所見への修正依頼を扱う prompt、Structured Output schema、model class、reasoning effort、ファイルアクセス権限の定義を束ねる領域。
-- 実際の分岐作成、差分取得、Git 操作、CLI 制御フローではなく、差分や所見を AI にどう提示し、どの構造化結果として受け取るかを確認するための入口になる。
+- `cmoc apply fork` の補助エージェント呼び出しを構築する領域。フォーク適用後の変更差分要約、ファイル単位の所見列挙、検出済み所見への修正対応について、prompt に渡す役割・目的・標準文書・読み書き権限・モデル設定・構造化出力契約を扱う。
+- 作業レポート用の差分要約、apply review standard に基づく realization file の要修正点調査、所見 JSON を入力にした realization file 修正依頼の入口として読む対象。
 
 ## Read this when
-- 適用・分岐処理で、変更要約、所見列挙、所見対応作業のいずれかに使う AI 呼び出し条件や prompt 構成を調べたいとき。
-- 差分本文、起点ファイル、既存所見などの入力が AI 向け prompt にどのように埋め込まれるかを確認したいとき。
-- 各 AI 呼び出しで使う Structured Output schema、model class、reasoning effort、ファイルアクセス権限の参照先を探したいとき。
-- レビュー所見や変更要約を、人間向けカテゴリ、根拠位置、修正方針としてどのように構造化して返すかを確認したいとき。
+- `cmoc apply fork` の後段で AI エージェントに差分要約、所見列挙、所見対応を依頼する prompt 内容や呼び出し条件を確認・変更したいとき。
+- ファイルを起点に oracle file と realization file を読ませ、apply review standard に従った所見リストを構造化出力させる条件を追いたいとき。
+- 検出済み所見を修正担当エージェントへ渡す際の所見 JSON の埋め込み方、作業上の注意、realization file への書き込み権限、参照する標準文書を確認したいとき。
+- 作業レポート向けに git 差分をそのまま渡し、人間向けのカテゴリ別変更要約を生成させる呼び出しと出力契約を確認したいとき。
+- 所見リストや変更要約の Structured Output schema が、根拠情報、仕様要求、観測された実装、修正方針、主要な変更パスなどをどう要求しているか確認したいとき。
 
 ## Do not read this when
-- 適用・分岐処理の CLI 引数解析、サブコマンド登録、branch 作成、差分取得、Git コマンド実行など、実行フロー本体を調べたいとき。
-- oracle standard、realization standard、apply review standard、path keyword など、prompt に参照される共通仕様や共通概念の本文を確認したいとき。
-- 汎用的な AgentCallParameter、path 解決、完全 prompt 生成、markdown rendering などの共通部品そのものを調べたいとき。
-- 個別の変更対象ファイルやテストの内容を直接確認したいだけで、変更要約・所見列挙・所見適用の AI 呼び出し契約を変更しないとき。
+- `cmoc apply fork` 全体の実行制御、フォークの作成・適用・統合、ブランチ操作、git コマンド実行そのものを調べたいとき。
+- oracle file、realization file、apply review standard、realization standard など、prompt に組み込まれる標準本文そのものを読みたいとき。
+- 汎用的なエージェント呼び出しパラメータ、完全 prompt の共通構築、構造化ドキュメントの markdown rendering、repo root や実パス解決 helper の詳細を調べたいとき。
+- カテゴリ分けや所見抽出の実際の判断基準、個別カテゴリ名の網羅、git diff の生成方法、変更ファイル抽出アルゴリズムを調べたいとき。
+- INDEX.md エントリーの書き方や一般的なルーティング文書生成の規則だけを確認したいとき。
 
 ## hash
-- 623f16f589f72888f88ef5a97c5a7976f7a38fa0196644a97cafc0d3743ea4e1
+- 784dc2822745537568d9cd1813a3eaaf38eec8de4cb7640b52b89c4dc31784ec
 
 # `indexing`
 
 ## Summary
-- 目次エントリー生成に必要な Structured Output schema と、その schema を使って AI 呼び出しパラメータを組み立てる実装を扱う領域。生成結果に含める意味情報の単位、対象本文を根拠にする制約、読み取り専用プロンプト、モデル設定、schema 指定までを確認する入口になる。
-- 目次エントリーそのものの内容ではなく、目次エントリーを生成するための入力制約・出力制約・呼び出し設定を追うための実装まとまり。
+- ルーティング文書用エントリー生成に関する実装と出力 schema をまとめた領域。対象本文からエントリー生成用のエージェント呼び出しパラメータを組み立てる処理と、生成結果が満たすべき構造化出力の外形を扱う。
+- 既存の目次情報を根拠にせず対象本文を主根拠にする方針、関連文書参照の許可、読み取り専用の実行条件、効率モデル・低 reasoning effort・構造化出力 schema の指定を確認する入口になる。
 
 ## Read this when
-- 目次エントリー生成で AI に渡す role、summary、goal、補助プロンプト、読み取り専用条件を確認または変更したいとき。
-- 目次エントリー生成結果に求める意味情報の構造や必須要素を確認したいとき。
-- 対象本文だけを根拠にし、既存の目次を根拠にしないという生成制約を確認したいとき。
-- 目次エントリー生成用のモデル設定、reasoning effort、構造化出力 schema の指定、対象パスや対象本文の埋め込み処理を追うとき。
+- ルーティング文書用エントリー生成で、AI に渡すプロンプト、補助指示、対象本文の埋め込み方、出力 schema の指定を確認または変更したいとき。
+- エントリー生成結果を検証する実装やテストで、必須項目、文字列配列、追加項目禁止といった structured output の外形を確認したいとき。
+- 対象がファイルまたはディレクトリの場合に、生成対象パスや直下内容がどのようにエージェント呼び出しへ渡るかを追いたいとき。
+- インデックスエントリー生成時のファイルアクセスモード、モデルクラス、reasoning effort、schema 連携を確認したいとき。
 
 ## Do not read this when
-- 個別ファイルや個別ディレクトリの目次エントリー文面を確認または作成したいだけのとき。
-- 目次探索順、読み進め方、正本仕様断片と実装ファイルの関係など、ルーティング運用全体の規則を確認したいとき。
-- 実際の indexing サブコマンドの CLI 引数処理、ファイル走査、目次ファイルの読み書き処理を調べたいとき。
-- 共通プロンプト構築、Markdown レンダリング、構造化ドキュメント部品など、目次エントリー生成呼び出しより下位または周辺の処理を詳しく調べたいとき。
+- 生成済みの目次情報そのものや、各ディレクトリのルーティング内容の良し悪しを確認したいだけのとき。
+- 特定の対象について実際に読むべきかどうか、またはエントリーに書く意味内容の判断基準を確認したいとき。
+- プロンプト部品の共通構築、Markdown レンダリング、構造化文書表現、パス解決、エージェント呼び出し型の定義そのものを調べたいとき。
+- CLI 引数解析、対象ファイル探索、生成結果の保存、コマンド実行フロー、または INDEX.md を利用して作業対象を選ぶ側の挙動を調べたいとき。
 
 ## hash
-- 3d74f86c0f07eeb37d348cf3ebd89582c24295b63d48819c6db3a347ad83f2dc
+- d2279f0da7c6e9f6fb967482165c38fdf8c28afaf6c1ff93dfef1a184fcf09f7
 
 # `review`
 
 ## Summary
-- レビュー系 AI 呼び出しの AgentCallParameter 構築と Structured Output schema をまとめる領域。現状は `cmoc review oracle` の oracle file レビューに特化しており、新規所見列挙、所見の肯定理由・反証理由の列挙、採否判定、所見リスト整理の各段階へ進む入口になる。
-- 各段階では、対象 oracle file、対象所見、既知の関連所見、既知の肯定理由・反証理由、現状の所見リストなどを補助文脈として渡し、oracle file 読み取り専用アクセス、モデル種別、推論量、対応 schema を組み合わせた呼び出し設定を構築する。
+- oracle review で使う AI 呼び出しパラメータ構築と Structured Output 契約を扱う領域。新規所見の列挙、所見を擁護または反証する理由の追加調査、所見の採否判定、重複や矛盾を含む所見群の整理について、プロンプト内容、補助入力、ファイルアクセス制約、モデル設定、出力 schema への接続を確認する入口になる。
+- レビュー対象の正本仕様断片そのものを読む処理ではなく、レビュー結果として扱う所見・理由・判定・整理操作を AI に生成、検証、整形させるための境界をまとめる。
 
 ## Read this when
-- `cmoc review oracle` で、oracle file レビューのどの段階にどの AI 呼び出し設定や Structured Output schema を使うか確認したいとき。
-- oracle file レビューで、新規所見、所見を妥当とする理由、所見を妥当ではないとする理由、所見の採否、所見リストの重複・矛盾解消操作の出力契約を確認したいとき。
-- 対象 oracle file、関連所見、対象所見、既知の肯定理由・反証理由、現状の所見リストが、各レビュー用プロンプトへどう渡されるかを追いたいとき。
-- review oracle 用プロンプトで使う役割、目標、oracle 標準・review oracle 標準、ファイルアクセスモード、モデル種別、reasoning effort、schema の対応関係を確認・変更したいとき。
+- oracle review の各段階で、どの役割の AI 呼び出しがどの入力を受け取り、どの目的でプロンプトを構築するか確認したいとき。
+- 既知の関連所見や既知理由を渡し、新規所見や新規理由だけを返させる重複回避の扱いを確認したいとき。
+- 正本仕様断片を根拠にした所見、妥当理由、不当理由、採否判定、編集操作の Structured Output 契約を実装、検証、調整したいとき。
+- レビュー標準や oracle 標準をプロンプトへ含める経路、読み取り専用の oracle file アクセス制約、呼び出しごとのモデル設定を追いたいとき。
+- 重大度、根拠となる正本仕様断片、採否理由、削除・置換・統合などの後処理方針をレビュー出力としてどの粒度で扱うか確認したいとき。
 
 ## Do not read this when
-- oracle file や realization file の基本概念、正本仕様断片としての一般原則、レビュー基準そのものを確認したいだけのとき。
-- `cmoc review oracle` 全体の CLI 引数解析、サブコマンド登録、実行制御、結果の保存・集約・表示処理を調べたいとき。
-- 汎用的な AgentCallParameter のデータ構造、共通プロンプト組み立て、構造化 markdown レンダリング、パス解決の実装詳細を調べたいとき。
-- oracle file 本文の具体的な仕様内容や、個別の正本仕様断片そのものを読みたいとき。
-- oracle file レビュー以外のレビュー処理、または review 以外のサブコマンドの AI 呼び出し設定を調べたいとき。
+- oracle file や realization file の基本定義、所有責任、配置ルールだけを確認したいとき。
+- 個々の正本仕様断片の内容そのものや、実際にどの oracle file を調査すべきかを探しているとき。
+- review oracle 全体の CLI 引数解析、サブコマンドの実行順序、所見の保存・表示・集計・通知など、AI 呼び出しパラメータ構築より外側または後段の処理を調べたいとき。
+- 汎用的なプロンプト部品、パス解決、AgentCallParameter の基本構造、またはレビュー以外の ACP 呼び出し構築を確認したいとき。
+- 一般的な INDEX.md エントリーの記述方針、ルーティング文書の基準、または JSON Schema 構文そのものを確認したいとき。
 
 ## hash
-- 75efcf37f2080925b304bedbe32ffe2c4d2024d77fa1015d46cbf12e55023a85
+- 574ee24fc5a41aa597e5c9063033e712aededca0ce8adff11db4e8f352a9c9c6
 
 # `session`
 
 ## Summary
-- `cmoc session join` で検出された merge conflict marker を別 AI エージェントに解消させるための呼び出しパラメータを組み立てる領域。
-- conflict 対象パスを実パスへ解決し、対象ファイル一覧、作業範囲、対象外編集禁止、oracle file の例外的な必要最小限編集許可、`git add` / `git commit` 禁止を含む complete prompt を生成する。
-- 返却するエージェント設定は、主流モデル、中程度 reasoning、conflict 解消用の書き込み権限、生成済み Markdown prompt に固定される。
+- `cmoc session join` で検出された merge conflict marker を解消するための AI エージェント呼び出しパラメータ構築を扱う領域。
+- 対象ファイル一覧を prompt に埋め込み、作業範囲を conflict marker 解消に限定し、oracle file を含む追加ファイルアクセス条件、モデル、reasoning、アクセスモードを固定する実装への入口となる。
 
 ## Read this when
-- `cmoc session join` の merge conflict marker 解消用エージェント呼び出しで、prompt・権限・モデル・reasoning 設定がどう決まるかを確認または変更したいとき。
-- conflict 対象ファイル一覧、作業範囲、対象外ファイル編集禁止、oracle file の例外的編集許可、`git add` / `git commit` 禁止が prompt にどう埋め込まれるかを追いたいとき。
-- conflict 対象として渡されたパスが、作業ルートや実パス解決を経て prompt 内の対象一覧になる流れを確認したいとき。
+- session join の merge conflict marker 解消用に、エージェントへ渡す role、summary、goal、補助 prompt、対象パス一覧の組み立てを確認または変更したいとき。
+- conflict 対象ファイルがどのように実パスへ解決され、prompt 内の対象一覧として渡されるかを調べたいとき。
+- conflict marker 解消時だけ許可される oracle file 編集条件や、呼び出し時の file access mode、model class、reasoning effort を確認したいとき。
 
 ## Do not read this when
-- 通常の `cmoc session join` の合流処理全体、git 操作、conflict 検出、join 後の状態更新を調べたいだけのとき。
-- complete prompt の共通構築、構造化 Markdown レンダリング、パスモデル、ACP の基礎型そのものを調べたいとき。
-- merge conflict の具体的な解消アルゴリズムや、対象ファイル本文をどう編集するべきかの方針を探しているとき。
+- session join 全体の制御フロー、merge conflict marker の検出方法、git merge や commit の操作を調べたいとき。
+- conflict marker 解消以外の通常の session join prompt やエージェント呼び出し条件を確認したいとき。
+- prompt 部品の markdown レンダリング、構造化ドキュメント、パス解決、AgentCallParameter 自体の共通実装を調べたいとき。
 
 ## hash
-- 2c5f65ab7fb89a2799af6c84b62bf58a98dcd9b8bb2d46d103eaeb6f88c090c8
+- 9a2f6d3958ca7a062f831b72e14760fc17a7b00c304e271bb519ccae350825a1
 
 # `tui`
 
 ## Summary
-- TUI 実行前に、ユーザーの作業依頼から AI Agent CLI/TUI へ渡す実行パラメータを選定するための builder 群を扱う。
-- 元プロンプト、候補となる論理ファイルアクセスモード、oracle・realization・review・INDEX.md エントリー関連標準を含む完全プロンプトを組み立て、効率重視モデル・中程度 reasoning・readonly 実行・対応 schema を指定した呼び出しパラメータへ変換する実装と、その選定結果 schema がまとまっている。
-- 権限選択と標準参照要否を、理由付きの構造化出力として扱う領域への入口になる。
+- AI Agent CLI/TUI のうち、TUI 実行前に元プロンプトからエージェント呼び出しパラメータを解決する領域。作業依頼に対する論理ファイルアクセス権限の選択と、oracle・realization・review・INDEX.md エントリー作成に関する標準参照要否の判定を、Structured Output schema 付きの読み取り専用エージェント呼び出しへ組み立てる実装と、その判定結果の期待形を扱う。
 
 ## Read this when
-- TUI でユーザー入力を実行する前に、AI Agent CLI/TUI へ渡すモデル種別、reasoning effort、論理ファイルアクセスモード、出力 schema の選び方を確認・変更したいとき。
-- ユーザーの元プロンプトを、実行パラメータ選定担当向けの完全プロンプトへどう埋め込み、どの標準群を同梱するかを確認したいとき。
-- 作業依頼に対する権限選択や、oracle・realization・review・INDEX.md エントリー関連標準を読む必要があるかどうかの判定結果を、実装やテストで扱うとき。
+- TUI で入力された元プロンプトから、実行時に選ぶべきファイルアクセスモードをどう判定するか確認したいとき。
+- TUI 実行前の parameter resolve 処理が、どのモデル・推論努力・アクセス権限・Structured Output schema を指定してエージェントを呼び出すか追うとき。
+- 作業依頼に応じて oracle、realization、review、INDEX.md エントリー作成の各標準を読む必要があるかどうかを、どのような理由付き判定として返すか確認するとき。
+- TUI のパラメータ解決プロンプトに含める標準文書、アクセスモード候補、元プロンプト埋め込み、または判定結果 schema を変更・検証するとき。
 
 ## Do not read this when
-- TUI のユーザー入力取得、コメント除去、strip、サブコマンド起動フローなど、実行パラメータ解決を呼び出す側の挙動だけを調べたいとき。
-- 個々のファイルアクセスモードの規則本文そのものを確認したいとき。
-- oracle file や realization file の責務、編集可否、品質基準そのもの、または INDEX.md エントリー本文の書き方だけを確認したいとき。
-- 実行パラメータ選定後の実際の AI Agent CLI/TUI 実行、TUI 表示、対話フロー、ファイルシステム操作を調べたいとき。
+- 実際の oracle file や realization file の責務、編集可否、品質基準そのものを確認したいだけのとき。
+- INDEX.md エントリー本文の書き方や、ルーティング文書としての判断基準だけを確認したいとき。
+- TUI の表示、対話フロー、エディタ入力の取得、コメント除去、strip 処理、またはコマンドライン引数の挙動を調べたいとき。
+- TUI 以外のサブコマンドにおける実行パラメータ解決を調べたいとき。
 
 ## hash
-- 313e4db46a1cb446d666a4a752425c28963d3fdaee76062389ea280ba4be8e41
+- 20de0fa032e291d3d295507c1029caa4da12575832bfa7fb90fb1b73f91d9dda

@@ -1,15 +1,25 @@
+"""apply join の結合、後片付け、異常検出を CLI 経由で検証する。
+
+このファイルは 16,000 文字を超えるが、責務境界は apply run を session へ join する
+外部挙動の検証に閉じている。worktree/branch cleanup、state 更新、report 生成、
+dirty worktree、想定外差分、merge conflict は同じ join 操作の可否を判断する
+境界条件であり、分割すると同じ fixture と git 状態の読み取り文脈が分散する。
+現状は apply join の成功条件と拒否条件を一箇所で読む方が凝集性が高い。
+"""
+
+import json
+import subprocess
+from pathlib import Path
+
 from _support import (
-    Path,
-    app,
-    apply_module,
     apply_worktree_from_state,
-    json,
-    main_module,
     make_repo,
     run_git,
     runner,
-    subprocess,
 )
+from main import app
+import sub_commands.apply.fork as apply_fork_module
+import sub_commands.apply.join as apply_module
 
 def test_apply_join_removes_apply_worktree_and_resets_state(
     tmp_path: Path, monkeypatch
@@ -24,8 +34,7 @@ def test_apply_join_removes_apply_worktree_and_resets_state(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -33,10 +42,10 @@ def test_apply_join_removes_apply_worktree_and_resets_state(
     state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
+    apply_oracle_snapshot_commit = state["apply"]["oracle_snapshot_commit"]
     apply_worktree = apply_worktree_from_state(root, state)
 
     result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
-    join_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
 
     assert result.exit_code == 0
     assert not apply_worktree.exists()
@@ -48,7 +57,10 @@ def test_apply_join_removes_apply_worktree_and_resets_state(
     )
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
-    assert state["session"]["last_joined_apply_join_commit"] == join_commit
+    assert (
+        state["session"]["last_joined_apply_oracle_snapshot_commit"]
+        == apply_oracle_snapshot_commit
+    )
     report_line = [
         line for line in result.output.splitlines() if line.startswith("- report:")
     ][-1]
@@ -68,8 +80,7 @@ def test_apply_join_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> 
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -77,11 +88,11 @@ def test_apply_join_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> 
     state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
+    apply_oracle_snapshot_commit = state["apply"]["oracle_snapshot_commit"]
     apply_worktree = apply_worktree_from_state(root, state)
     monkeypatch.chdir(apply_worktree)
 
     result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
-    join_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
 
     assert result.exit_code == 0
     assert Path.cwd() == root
@@ -94,9 +105,64 @@ def test_apply_join_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> 
     )
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
-    assert state["session"]["last_joined_apply_join_commit"] == join_commit
+    assert (
+        state["session"]["last_joined_apply_oracle_snapshot_commit"]
+        == apply_oracle_snapshot_commit
+    )
     assert "- cleanup_reachable: `True`" in result.output
     assert "  - none" in result.output
+
+
+def test_apply_join_rejects_stale_apply_branch_for_same_session(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    class FakeCodexResult:
+        output_json = {"findings": []}
+
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    )
+    assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
+    session_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = session_branch.removeprefix("cmoc/session/")
+    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state = json.loads(state_path.read_text())
+    active_apply_branch = state["apply"]["apply_branch"]
+    active_apply_worktree = apply_worktree_from_state(root, state)
+    stale_apply_branch = f"cmoc/apply/{session_id}/stale"
+    stale_apply_worktree = root / ".cmoc" / "worktrees" / session_id / "stale"
+    run_git(
+        root,
+        "worktree",
+        "add",
+        "-b",
+        stale_apply_branch,
+        str(stale_apply_worktree),
+        session_branch,
+    )
+    monkeypatch.chdir(stale_apply_worktree)
+
+    result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 1
+    assert "現在の apply branch は join 対象" in result.output
+    assert f"current_branch: {stale_apply_branch}" in result.output
+    assert f"apply_branch: {active_apply_branch}" in result.output
+    assert active_apply_worktree.exists()
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", active_apply_branch], cwd=root
+        ).returncode
+        == 0
+    )
+    assert json.loads(state_path.read_text())["apply"]["state"] == "completed"
+
 
 def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(
     tmp_path: Path, monkeypatch
@@ -111,8 +177,7 @@ def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -144,8 +209,8 @@ def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(
         == root_log_count + 1
     )
     assert not (apply_worktree / ".cmoc" / "log" / "sub_command").exists()
-    assert "git 未コミット差分が存在します。" in result.stderr
-    assert "git 未コミット差分が存在します。" not in result.stdout
+    assert "git 未コミット差分が存在します。" in result.stdout
+    assert "git 未コミット差分が存在します。" not in result.stderr
 
 
 def test_apply_join_from_session_requires_clean_apply_worktree(
@@ -161,8 +226,7 @@ def test_apply_join_from_session_requires_clean_apply_worktree(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -200,8 +264,7 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -217,6 +280,16 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
 
     assert normal.exit_code == 1
     assert "想定外差分" in normal.output
+    report_line = [
+        line for line in normal.output.splitlines() if "保存済み report" in line
+    ][0]
+    report_path = Path(report_line.rsplit(": ", 1)[1])
+    report = report_path.read_text()
+    assert "join を中止しました" in report
+    assert "## Unexpected Changes" in report
+    assert "- apply: oracle/spec.md" in report
+    assert "## Merge Conflicts" in report
+    assert "- none" in report
     forced = runner.invoke(
         app, ["apply", "join", "--force-resolve"], catch_exceptions=False
     )
@@ -224,7 +297,7 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     assert (root / "oracle" / "spec.md").read_text() == "# spec\n"
 
 
-def test_apply_join_treats_gitignore_change_as_unexpected_apply_diff(
+def test_apply_join_allows_gitignore_change_as_apply_diff(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -238,8 +311,7 @@ def test_apply_join_treats_gitignore_change_as_unexpected_apply_diff(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     state_path = (
@@ -250,21 +322,16 @@ def test_apply_join_treats_gitignore_change_as_unexpected_apply_diff(
     )
     state = json.loads(state_path.read_text())
     apply_worktree = apply_worktree_from_state(root, state)
-    original_gitignore = (apply_worktree / ".gitignore").read_text()
-    (apply_worktree / ".gitignore").write_text(original_gitignore + "# unexpected\n")
+    changed_gitignore = (apply_worktree / ".gitignore").read_text() + "# expected\n"
+    (apply_worktree / ".gitignore").write_text(changed_gitignore)
     run_git(apply_worktree, "add", ".gitignore")
-    run_git(apply_worktree, "commit", "-m", "unexpected gitignore change")
+    run_git(apply_worktree, "commit", "-m", "apply gitignore change")
 
-    normal = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+    result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
 
-    assert normal.exit_code == 1
-    assert "想定外差分" in normal.output
-    assert ".gitignore" in normal.output
-    forced = runner.invoke(
-        app, ["apply", "join", "--force-resolve"], catch_exceptions=False
-    )
-    assert forced.exit_code == 0
-    assert (root / ".gitignore").read_text() == original_gitignore
+    assert result.exit_code == 0
+    assert "想定外差分" not in result.output
+    assert (root / ".gitignore").read_text() == changed_gitignore
 
 
 def test_apply_join_reports_unresolved_non_index_conflict(
@@ -280,8 +347,7 @@ def test_apply_join_reports_unresolved_non_index_conflict(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     state_path = (
@@ -334,8 +400,7 @@ def test_apply_join_continues_after_resolving_index_conflict_in_normal_mode(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -347,6 +412,7 @@ def test_apply_join_continues_after_resolving_index_conflict_in_normal_mode(
     )
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
+    apply_oracle_snapshot_commit = state["apply"]["oracle_snapshot_commit"]
     apply_worktree = apply_worktree_from_state(root, state)
     (apply_worktree / "INDEX.md").write_text("apply\n")
     run_git(apply_worktree, "add", "INDEX.md")
@@ -362,9 +428,10 @@ def test_apply_join_continues_after_resolving_index_conflict_in_normal_mode(
     assert "merge に失敗しました" not in result.output
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
-    assert state["session"]["last_joined_apply_join_commit"] == run_git(
-        root, "rev-parse", "HEAD"
-    ).stdout.strip()
+    assert (
+        state["session"]["last_joined_apply_oracle_snapshot_commit"]
+        == apply_oracle_snapshot_commit
+    )
     assert not apply_worktree.exists()
     assert (
         subprocess.run(

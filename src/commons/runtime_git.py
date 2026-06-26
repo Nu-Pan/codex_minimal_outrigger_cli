@@ -7,6 +7,7 @@ from commons.runtime_results import CommandResult
 
 
 MANAGED_BRANCH_PREFIXES = ("cmoc/session/", "cmoc/apply/", "cmoc/run/")
+CMOC_IGNORE_PATTERN = "/.cmoc/"
 
 
 def run_git(args: list[str], cwd: Path, check: bool = True) -> CommandResult:
@@ -102,18 +103,26 @@ def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
     return tracked, ignored.returncode
 
 
+def with_cmoc_ignore_pattern(content: str) -> str:
+    lines = content.splitlines()
+    if CMOC_IGNORE_PATTERN in lines:
+        return content
+    separator = "\n" if lines and lines[-1] != "" else ""
+    newline = "" if content == "" or content.endswith("\n") else "\n"
+    return f"{content}{newline}{separator}{CMOC_IGNORE_PATTERN}\n"
+
+
 def ensure_cmoc_ignored(root: Path) -> None:
     tracked, ignored_returncode = _cmoc_ignore_status(root)
+    gitignore = root / ".gitignore"
+    content = gitignore.read_text() if gitignore.exists() else ""
+    updated_content = with_cmoc_ignore_pattern(content)
+    if updated_content != content:
+        gitignore.write_text(updated_content)
+
     if not tracked and ignored_returncode == 0:
         return
 
-    gitignore = root / ".gitignore"
-    if ignored_returncode != 0:
-        existing = gitignore.read_text().splitlines() if gitignore.exists() else []
-        with gitignore.open("a") as f:
-            if existing and existing[-1] != "":
-                f.write("\n")
-            f.write("/.cmoc/\n")
     run_git(["rm", "--cached", "-r", "--ignore-unmatch", ".cmoc"], root)
     tracked, ignored_returncode = _cmoc_ignore_status(root)
     if tracked or ignored_returncode != 0:

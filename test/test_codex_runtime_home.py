@@ -1,14 +1,14 @@
+import json
+from pathlib import Path
+
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from cmoc_runtime import CmocError
+from config.cmoc_config import CmocConfig
 from _support import (
-    AgentCallParameter,
-    CmocError,
-    FileAccessMode,
-    ModelClass,
-    Path,
-    ReasoningEffort,
-    json,
     make_repo,
-    run_codex_exec,
+    write_python_executable,
 )
+from commons.runtime_codex import run_codex_exec
 
 def test_run_codex_exec_uses_default_codex_home_when_env_unset(
     tmp_path: Path, monkeypatch
@@ -24,22 +24,18 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
     fake_codex = bin_dir / "codex"
-    fake_codex.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env python3",
-                "import json, os, pathlib",
-                f"record = pathlib.Path({str(recorder)!r})",
-                "args = __import__('sys').argv[1:]",
-                "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-                "output.write_text('done\\n')",
-                "record.write_text(json.dumps({'codex_home': os.environ.get('CODEX_HOME'), 'args': args}))",
-                "print(json.dumps({'type': 'turn.completed'}))",
-            ]
-        )
-        + "\n"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, os, pathlib",
+            f"record = pathlib.Path({str(recorder)!r})",
+            "args = __import__('sys').argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text('done\\n')",
+            "record.write_text(json.dumps({'codex_home': os.environ.get('CODEX_HOME'), 'args': args}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
     )
-    fake_codex.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
@@ -49,7 +45,9 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
         None,
     )
 
-    result = run_codex_exec(parameter, root=root, capacity_initial_sleep_sec=0)
+    result = run_codex_exec(
+        parameter, root=root, capacity_initial_sleep_sec=0, config=CmocConfig()
+    )
 
     recorded = json.loads(recorder.read_text())
     assert recorded["codex_home"] == str(codex_home)
@@ -70,22 +68,18 @@ def test_run_codex_exec_preserves_configured_codex_home_env_value(
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
     fake_codex = bin_dir / "codex"
-    fake_codex.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env python3",
-                "import json, os, pathlib",
-                f"record = pathlib.Path({str(recorder)!r})",
-                "args = __import__('sys').argv[1:]",
-                "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-                "output.write_text('done\\n')",
-                "record.write_text(json.dumps({'codex_home': os.environ.get('CODEX_HOME'), 'args': args}))",
-                "print(json.dumps({'type': 'turn.completed'}))",
-            ]
-        )
-        + "\n"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, os, pathlib",
+            f"record = pathlib.Path({str(recorder)!r})",
+            "args = __import__('sys').argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text('done\\n')",
+            "record.write_text(json.dumps({'codex_home': os.environ.get('CODEX_HOME'), 'args': args}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
     )
-    fake_codex.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
@@ -95,7 +89,9 @@ def test_run_codex_exec_preserves_configured_codex_home_env_value(
         None,
     )
 
-    result = run_codex_exec(parameter, root=root, capacity_initial_sleep_sec=0)
+    result = run_codex_exec(
+        parameter, root=root, capacity_initial_sleep_sec=0, config=CmocConfig()
+    )
 
     recorded = json.loads(recorder.read_text())
     assert recorded["codex_home"] == "relative_codex_home"
@@ -120,7 +116,9 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
     )
 
     try:
-        run_codex_exec(parameter, root=root, capacity_initial_sleep_sec=0)
+        run_codex_exec(
+            parameter, root=root, capacity_initial_sleep_sec=0, config=CmocConfig()
+        )
     except CmocError as exc:
         error = exc
     else:
@@ -147,7 +145,9 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
     )
 
     try:
-        run_codex_exec(parameter, root=root, capacity_initial_sleep_sec=0)
+        run_codex_exec(
+            parameter, root=root, capacity_initial_sleep_sec=0, config=CmocConfig()
+        )
     except CmocError as exc:
         error = exc
     else:
@@ -174,7 +174,9 @@ def test_run_codex_exec_fails_before_codex_when_auth_json_missing(
     )
 
     try:
-        run_codex_exec(parameter, root=root, capacity_initial_sleep_sec=0)
+        run_codex_exec(
+            parameter, root=root, capacity_initial_sleep_sec=0, config=CmocConfig()
+        )
     except CmocError as exc:
         error = exc
     else:

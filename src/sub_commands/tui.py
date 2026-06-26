@@ -1,6 +1,7 @@
 import re
 import shutil
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
 
 from acp.builder.tui.resolve_parameter import (
@@ -12,13 +13,18 @@ from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningE
 from basic.struct_doc import StructDoc, render_as_markdown
 from cmoc_runtime import (
     CmocError,
+    CodexExecResult,
     ensure_cmoc_ignored,
     load_config,
     repo_root,
+    run_cli_subcommand,
+    run_codex_exec,
+    run_codex_tui,
     timestamp,
     work_root,
 )
 from config.cmoc_config import CmocConfig
+from sub_commands.indexing import enable_indexing_preflight
 
 ORIGINAL_PROMPT_TEMPLATE = """<!--
     AI Agent CLI/TUI に与えるプロンプトを書いて下さい。
@@ -29,15 +35,29 @@ ORIGINAL_PROMPT_TEMPLATE = """<!--
 TODO ここから書き始める
 """
 
+CodexExec = Callable[..., CodexExecResult]
+CodexTui = Callable[..., None]
 
-def cmoc_tui_impl(
-    run_codex_exec,
-    run_codex_tui,
+
+def cmoc_tui_impl() -> None:
+    """CLI runtime を通して tui を実行する。"""
+    enable_indexing_preflight()
+    run_cli_subcommand(
+        _cmoc_tui_from_current_context,
+        command_name="tui",
+        command_argv=["cmoc", "tui"],
+    )
+
+
+def _cmoc_tui_body(
+    run_codex_exec: CodexExec,
+    run_codex_tui: CodexTui,
     *,
     root: Path,
     work_root: Path,
     config: CmocConfig,
 ) -> None:
+    """依頼文の編集、実行パラメータ解決、Codex TUI 起動を一連で行う。"""
     ensure_cmoc_ignored(work_root)
     original_path = initialize_original_prompt(root)
     run_editor(original_path)
@@ -63,13 +83,14 @@ def cmoc_tui_impl(
         cwd=work_root,
         config=config,
         purpose="tui codex",
+        extra_read_paths=[complete_prompt_path],
     )
 
-
-def cmoc_tui_command_impl(run_codex_exec, run_codex_tui) -> None:
+def _cmoc_tui_from_current_context() -> None:
+    """現在の repository 状態から `cmoc tui` の本体処理を起動する。"""
     root = repo_root()
     current_root = work_root()
-    cmoc_tui_impl(
+    _cmoc_tui_body(
         run_codex_exec,
         run_codex_tui,
         root=root,
@@ -79,6 +100,7 @@ def cmoc_tui_command_impl(run_codex_exec, run_codex_tui) -> None:
 
 
 def initialize_original_prompt(root: Path) -> Path:
+    """利用者が編集する元 prompt ファイルを TUI log 領域へ作成する。"""
     path = root / ".cmoc" / "log" / "tui" / f"{timestamp()}_orig.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(ORIGINAL_PROMPT_TEMPLATE)
@@ -86,6 +108,7 @@ def initialize_original_prompt(root: Path) -> Path:
 
 
 def save_complete_prompt(work_root: Path, original_path: Path, prompt: str) -> Path:
+    """解決済みの完全 prompt を work root 側の TUI log 領域へ保存する。"""
     path = work_root / ".cmoc" / "log" / "tui" / original_path.name.replace(
         "_orig.md", "_cmpl.md"
     )
@@ -95,6 +118,7 @@ def save_complete_prompt(work_root: Path, original_path: Path, prompt: str) -> P
 
 
 def select_editor() -> list[str]:
+    """cmoc tui で利用できる editor command を PATH から選ぶ。"""
     for command in ["code", "nano", "vim", "vi"]:
         executable = shutil.which(command)
         if executable is None:
@@ -110,6 +134,7 @@ def select_editor() -> list[str]:
 
 
 def run_editor(path: Path) -> None:
+    """利用者の prompt 編集が正常終了したことを確認する。"""
     argv = [*select_editor(), str(path)]
     result = subprocess.run(argv)
     if result.returncode != 0:
@@ -121,6 +146,7 @@ def run_editor(path: Path) -> None:
 
 
 def read_original_prompt(path: Path) -> str:
+    """テンプレート用 HTML comment を除去した利用者 prompt を読む。"""
     return re.sub(r"<!--.*?-->", "", path.read_text(), flags=re.DOTALL).strip()
 
 
@@ -128,6 +154,7 @@ def build_tui_codex_parameter(
     original_prompt: str,
     resolved_parameter: dict,
 ) -> AgentCallParameter:
+    """解決済み JSON から TUI 起動用 AgentCallParameter を構築する。"""
     file_access_mode = FileAccessMode(
         nested_value(resolved_parameter, "file_access_mode", FileAccessMode.READONLY.value)
     )
@@ -164,6 +191,7 @@ def build_tui_codex_parameter(
 
 
 def parse_markdown_prompt(markdown: str) -> list[StructDoc] | list[str]:
+    """Markdown 見出しを StructDoc 階層へ変換し、見出しなし本文は文字列で保つ。"""
     sections: list[StructDoc] = []
     current_title: str | None = None
     current_body: list[str] = []
@@ -206,6 +234,7 @@ def parse_markdown_prompt(markdown: str) -> list[StructDoc] | list[str]:
 
 
 def nested_value(data: dict, name: str, default: str) -> str:
+    """TUI parameter JSON で `{value: ...}` 形式の項目から文字列値を取り出す。"""
     value = data.get(name)
     if isinstance(value, dict) and isinstance(value.get("value"), str):
         return value["value"]
@@ -213,5 +242,6 @@ def nested_value(data: dict, name: str, default: str) -> str:
 
 
 def nested_bool(data: dict, name: str) -> bool:
+    """TUI parameter JSON で `{value: ...}` 形式の項目を真偽値として読む。"""
     value = data.get(name)
     return bool(value.get("value")) if isinstance(value, dict) else False

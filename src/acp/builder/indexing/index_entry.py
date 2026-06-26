@@ -1,4 +1,4 @@
-"""`cmoc indexing` の目次情報生成 prompt 正本。"""
+"""`cmoc indexing` の目次情報生成 prompt 構築実装。"""
 
 # std
 from pathlib import Path

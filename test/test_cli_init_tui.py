@@ -1,18 +1,19 @@
+import json
+import subprocess
+from pathlib import Path
+
+import commons.runtime_codex_preflight as codex_preflight_module
+from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
 from _support import (
-    FileAccessMode,
-    ModelClass,
-    Path,
-    ReasoningEffort,
-    app,
-    json,
-    main_module,
     make_repo,
-    parse_markdown_prompt,
     run_git,
     runner,
     setup_codex_home,
-    subprocess,
+    write_python_executable,
 )
+from main import app
+from sub_commands.tui import parse_markdown_prompt
+import sub_commands.tui as tui_module
 
 def test_init_untracks_existing_cmoc_files_and_commits_cleanup(
     tmp_path: Path, monkeypatch
@@ -37,6 +38,24 @@ def test_init_untracks_existing_cmoc_files_and_commits_cleanup(
     assert ignored.returncode == 0
     assert run_git(root, "status", "--short", "--", ".gitignore").stdout.strip() == ""
     assert "cmoc init" in run_git(root, "log", "--oneline", "-1").stdout
+
+
+def test_subcommand_log_identifies_invoked_cli_command(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(app, ["init"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    log_paths = list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))
+    assert len(log_paths) == 1
+    events = [json.loads(line) for line in log_paths[0].read_text().splitlines()]
+    invoked = events[0]
+    assert invoked["event"] == "command_invoked"
+    assert invoked["command"] == "init"
+    assert invoked["argv"] == ["cmoc", "init"]
 
 
 def test_init_does_not_commit_preexisting_staged_changes(
@@ -114,7 +133,7 @@ def test_init_keeps_cmoc_ignored_after_preexisting_gitignore_unstaged_delete(
     assert run_git(root, "diff", "--name-only", "--", ".gitignore").stdout == ""
 
 
-def test_init_ignores_worktree_cmoc_from_linked_worktree(
+def test_init_initializes_linked_worktree_root(
     tmp_path: Path, monkeypatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -135,8 +154,10 @@ def test_init_ignores_worktree_cmoc_from_linked_worktree(
         ).returncode
         == 0
     )
-    assert (linked / ".cmoc" / "config.json").is_file()
-    assert not (root / ".cmoc" / "config.json").exists()
+    assert (root / ".cmoc" / "config.json").is_file()
+    assert not (linked / ".cmoc" / "config.json").exists()
+    assert len(list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))) == 1
+    assert not (linked / ".cmoc" / "log" / "sub_command").exists()
     assert (
         run_git(
             linked,
@@ -221,19 +242,15 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     fake_code = bin_dir / "code"
-    fake_code.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env python3",
-                "import pathlib, sys",
-                "path = pathlib.Path(sys.argv[-1])",
-                "text = path.read_text()",
-                "path.write_text(text + '\\n<!-- remove me -->\\n# 依頼\\n\\nsrc を確認して必要なら直す\\n')",
-            ]
-        )
-        + "\n"
+    write_python_executable(
+        fake_code,
+        [
+            "import pathlib, sys",
+            "path = pathlib.Path(sys.argv[-1])",
+            "text = path.read_text()",
+            "path.write_text(text + '\\n<!-- remove me -->\\n# 依頼\\n\\nsrc を確認して必要なら直す\\n')",
+        ],
     )
-    fake_code.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     exec_calls = []
     tui_calls = []
@@ -265,9 +282,11 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
         assert parameter.structured_output_schema_path is None
         assert parameter.prompt.endswith("_cmpl.md` の指示に従って下さい。")
+        assert len(kwargs["extra_read_paths"]) == 1
+        assert str(kwargs["extra_read_paths"][0]) in parameter.prompt
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
-    monkeypatch.setattr(main_module, "run_codex_tui", fake_run_codex_tui)
+    monkeypatch.setattr(tui_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(tui_module, "run_codex_tui", fake_run_codex_tui)
 
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
 
@@ -305,52 +324,45 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     bin_dir.mkdir()
     recorder = tmp_path / "codex_record.json"
     fake_code = bin_dir / "code"
-    fake_code.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env python3",
-                "import pathlib, sys",
-                "path = pathlib.Path(sys.argv[-1])",
-                "path.write_text(path.read_text() + '\\nlinked worktree task\\n')",
-            ]
-        )
-        + "\n"
+    write_python_executable(
+        fake_code,
+        [
+            "import pathlib, sys",
+            "path = pathlib.Path(sys.argv[-1])",
+            "path.write_text(path.read_text() + '\\nlinked worktree task\\n')",
+        ],
     )
-    fake_code.chmod(0o755)
     fake_codex = bin_dir / "codex"
-    fake_codex.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env python3",
-                "import json, os, pathlib, sys",
-                f"record = pathlib.Path({str(recorder)!r})",
-                "args = sys.argv[1:]",
-                "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-                "data = {key: {'value': False, 'reason': 'test'} for key in [",
-                "    'oracle_and_realization_basic',",
-                "    'oracle_standard',",
-                "    'realization_standard',",
-                "    'review_oracle_standard',",
-                "    'apply_review_standard',",
-                "    'index_entry_standard',",
-                "]}",
-                "data['file_access_mode'] = {'value': 'repo_write', 'reason': 'test'}",
-                "output.write_text(json.dumps(data))",
-                "record.write_text(json.dumps({'args': args, 'cwd': os.getcwd()}))",
-                "print(json.dumps({'type': 'turn.completed'}))",
-            ]
-        )
-        + "\n"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, os, pathlib, sys",
+            f"record = pathlib.Path({str(recorder)!r})",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "data = {key: {'value': False, 'reason': 'test'} for key in [",
+            "    'oracle_and_realization_basic',",
+            "    'oracle_standard',",
+            "    'realization_standard',",
+            "    'review_oracle_standard',",
+            "    'apply_review_standard',",
+            "    'index_entry_standard',",
+            "]}",
+            "data['file_access_mode'] = {'value': 'repo_write', 'reason': 'test'}",
+            "output.write_text(json.dumps(data))",
+            "record.write_text(json.dumps({'args': args, 'cwd': os.getcwd()}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
     )
-    fake_codex.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     tui_calls = []
 
     def fake_run_codex_tui(parameter, **kwargs):
         tui_calls.append((parameter, kwargs))
 
-    monkeypatch.setattr(main_module, "_run_indexing_before_codex", lambda *_: None)
-    monkeypatch.setattr(main_module, "run_codex_tui", fake_run_codex_tui)
+    monkeypatch.setattr(tui_module, "enable_indexing_preflight", lambda: None)
+    codex_preflight_module.disable_indexing_preflight()
+    monkeypatch.setattr(tui_module, "run_codex_tui", fake_run_codex_tui)
 
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
 
@@ -363,6 +375,7 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     complete_files = list((linked / ".cmoc" / "log" / "tui").glob("*_cmpl.md"))
     assert len(complete_files) == 1
     assert str(complete_files[0]) in tui_calls[0][0].prompt
+    assert tui_calls[0][1]["extra_read_paths"] == [complete_files[0]]
     recorded = json.loads(recorder.read_text())
     schema_arg = recorded["args"][recorded["args"].index("--output-schema") + 1]
     assert recorded["cwd"] == str(linked)

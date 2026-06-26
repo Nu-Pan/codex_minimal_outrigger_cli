@@ -1,4 +1,4 @@
-"""`cmoc apply fork` の変更要約生成 prompt 正本。"""
+"""`cmoc apply fork` の変更要約生成 prompt 構築実装。"""
 
 # std
 from pathlib import Path
@@ -32,10 +32,10 @@ def build_apply_fork_change_summary_parameter(
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア変更内容の要約担当です",
         summary=f"""
-        - `{repo_root}` ツリー内の変更内容を、人間向け作業レポートに使える形で要約すること
+        - `{repo_root}` ツリー内の差分を、人間が読む用に要約すること
         """,
         goal=f"""
-        - `{repo_root}` ツリー内の変更内容を、指定の Structured Output schema に従って返却すること
+        - `{repo_root}` ツリー内の差分を、指定の Structured Output schema に従って返却すること
         """,
         file_access_mode=FileAccessMode.READONLY,
         aux_prompt=[

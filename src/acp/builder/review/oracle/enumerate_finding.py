@@ -1,4 +1,4 @@
-"""`cmoc review oracle` の新規所見列挙 prompt 正本。"""
+"""`cmoc review oracle` の新規所見列挙 prompt 構築実装。"""
 
 # std
 from pathlib import Path

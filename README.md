@@ -1,10 +1,10 @@
-# Codex Minmal Outrigger CLI
+# Codex Minimal Outrigger CLI
 
 ## これを読みに来た AI へ
 
 - 詳しくは `AGENTS.md` を参照
 
-## Codex Minmal Outrigger CLI とは
+## Codex Minimal Outrigger CLI とは
 
 - Codex CLI を用いた開発を補助する最小限度の外部ツール
 - cmoc と略す
@@ -32,7 +32,7 @@
 
 ## 基本ワークフロー
 
-- `<cmoc-root>/oracle/app_specs/usage.md` を参照
+- `<cmoc-root>/oracle/doc/app_spec/usage.md` を参照
 
 ## Tips
 
