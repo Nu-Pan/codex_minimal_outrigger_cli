@@ -31,6 +31,7 @@ CodexExec = Callable[..., object]
 
 
 def enable_indexing_preflight() -> None:
+    """Codex 呼び出し前に indexing を走らせる preflight を登録する。"""
     configure_indexing_preflight(
         lambda root, codex_exec: run_indexing_preflight(root, codex_exec)
     )
@@ -48,6 +49,7 @@ def cmoc_indexing_impl(
 
 
 def cmoc_indexing_command_impl() -> None:
+    """CLI runtime を通して indexing subcommand を実行する。"""
     enable_indexing_preflight()
     run_cli_subcommand(
         cmoc_indexing_impl,
@@ -59,6 +61,7 @@ def cmoc_indexing_command_impl() -> None:
 
 
 def require_indexing_cli_preconditions(root: Path) -> None:
+    """indexing CLI 実行前に worktree の安全条件を検査する。"""
     require_cmoc_ignored(root)
     require_clean_worktree(root)
 

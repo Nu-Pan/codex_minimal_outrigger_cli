@@ -34,7 +34,7 @@ class SessionState:
     apply: ApplyPart = field(default_factory=ApplyPart)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "SessionState":
+    def from_dict(cls: type["SessionState"], data: dict[str, Any]) -> "SessionState":
         """未知 field を無視し、欠けた field は既定値で補って state を復元する。"""
         session_data = {
             key: value

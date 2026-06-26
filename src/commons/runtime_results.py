@@ -5,6 +5,8 @@ from typing import Any
 
 @dataclass(frozen=True)
 class CommandResult:
+    """外部コマンド実行の終了コードと標準入出力を表す。"""
+
     returncode: int
     stdout: str
     stderr: str
@@ -12,6 +14,8 @@ class CommandResult:
 
 @dataclass(frozen=True)
 class CodexExecResult:
+    """Codex exec 呼び出しの生成物と実行結果をまとめて保持する。"""
+
     returncode: int
     output_text: str
     output_json: Any

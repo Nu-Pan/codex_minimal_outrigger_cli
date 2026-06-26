@@ -85,8 +85,8 @@ def _permission_profile_lines(
             for path in read_only_paths
             if not any(target.is_relative_to(path) for target in writable)
         ]
-    # Codex permission profiles carry read restrictions; read_only remains for
-    # write exclusions that the legacy workspace profile represented.
+    # Codex permission profile は read 制限を持つ。legacy workspace profile が表していた
+    # write 除外は read_only として残す。
     return [
         'permission_profile = "cmoc"',
         'default_permissions = "cmoc"',
