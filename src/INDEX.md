@@ -1,25 +1,24 @@
 # `acp`
 
 ## Summary
-- AI agent を ACP 経由で呼び出すためのプロンプト構築領域。用途別の呼び出しパラメータ生成と、agent prompt に注入するファイルアクセス規則・ルーティング規則・oracle/realization 基本説明・各種標準文書の構成部品を扱う。
-- レビュー、適用後確認、ルーティング文書エントリー生成、競合解消、TUI 実行前判定などの補助エージェント依頼について、役割・目的・補助文脈・アクセス権限・モデル設定・Structured Output schema をどう組み立てるか確認する入口になる。
+- AI エージェントへ渡す完全な呼び出しパラメータと、その中核になるプロンプト部品を構築する実装領域。用途別の役割・依頼概要・完了条件・補助文脈・ファイルアクセス権限・モデル種別・推論強度・Structured Output schema を組み合わせ、レビュー、適用後所見、ルーティング文書生成、TUI パラメータ選定、merge conflict marker 解消などのサブタスクを agent call に変換する入口になる。
+- 配下には、個別サブコマンドや処理段階ごとの AgentCallParameter 生成実装と、ファイルアクセス規則・ルーティング規則・oracle/realization 基本説明・各種標準文書を構造化プロンプトとして組み立てる共通部品が置かれている。実際の CLI 制御、git 操作、状態保存、画面表示ではなく、AI に何をどの制約と返却契約で依頼するかを扱う。
 
 ## Read this when
-- 補助エージェントへ渡す最終プロンプトの内容、標準文書の注入条件、ファイルアクセス制約、モデル種別、推論強度、Structured Output schema の対応関係を確認・変更したいとき。
-- 適用後の差分要約や所見列挙、oracle レビューでの新規所見抽出・支持理由・反証理由・採否判定・重複整理など、AI への依頼文と出力契約を追いたいとき。
-- ルーティング文書エントリー生成で、対象本文を根拠にする条件、既存目次を読ませない制約、関連文書参照、読み取り専用条件、返却 schema を確認したいとき。
-- merge conflict marker 解消や TUI 実行前の権限・標準文書要否判定など、実処理の前段で AI agent に判断や整形を依頼する呼び出し内容を調べたいとき。
-- agent prompt に組み込まれるファイルアクセス規則、INDEX.md を使った読み進め方、oracle/realization の基本説明、各種標準文書の文面や注入順序を確認したいとき。
+- AI agent に渡す prompt 本文、補助文脈、標準文書の注入順序、ファイルアクセスモード、モデルクラス、reasoning effort、Structured Output schema の対応関係を確認または変更したいとき。
+- 実装適用後の差分要約、realization file の要修正点列挙、検出済み所見の修正依頼、正本仕様断片レビュー、INDEX.md エントリー生成、TUI 実行パラメータ選定、session join 時の merge conflict marker 解消を、どのような agent call として組み立てているか追いたいとき。
+- oracle/realization の基本説明、oracle standard、realization standard、oracle review standard、apply review standard、index entry standard、routing rule、file access rule が agent prompt にどの条件で含まれるか確認したいとき。
+- 各サブタスクの構造化出力が、変更要約、所見、根拠、採否、整理結果、パラメータ選定理由などをどの schema で返させる設計か確認したいとき。
 
 ## Do not read this when
-- CLI サブコマンド全体の実行順序、引数解析、git 操作、ブランチ操作、保存・表示・集計・通知など、ACP 呼び出しパラメータ構築より外側の制御フローを調べたいとき。
-- oracle file、realization file、レビュー基準、INDEX.md エントリー標準など、agent prompt に組み込まれる標準本文の正本仕様そのものを調べたいとき。
-- 実際の仕様違反判定、レビュー所見の妥当性判断、merge conflict の編集アルゴリズム、git diff や変更ファイル抽出の生成処理そのものを確認したいとき。
-- ACP 呼び出し型、構造化ドキュメント表現、Markdown rendering、パス解決 helper など、prompt 構築領域から利用される共通基盤だけを確認したいとき。
-- TUI の表示・対話、session join の統合処理、apply fork のフォーク作成・適用、review 結果の保存など、利用者向け操作や後続処理の実装を追いたいとき。
+- CLI サブコマンドの引数解析、実行順序、分岐制御、結果の保存・表示・集約、git コマンド実行、セッションやフォークの作成・統合そのものを調べたいとき。
+- oracle file、realization file、各種標準文書、レビュー基準、ルーティング文書作成基準の正本本文そのものを読みたいとき。
+- 構造化ドキュメント型、AgentCallParameter 型、path model、ファイルアクセスモード enum など、プロンプトを組み立てるために利用される基礎型や共通ユーティリティの定義を調べたいとき。
+- TUI の画面表示、エディタ入力取得、コメント除去、入力文字列の strip、対話フローなど、agent call パラメータ選定より外側の UI 実装を調べたいとき。
+- 所見抽出やカテゴリ分けの実際の判断基準、個別レビュー対象の内容、git diff 生成方法、変更ファイル抽出、merge conflict marker を編集する実処理そのものを調べたいとき。
 
 ## hash
-- 5e67c508cc366ca1b5ab081888a4ff70af4902054153d6cc2dabe258d4409116
+- 3658ba2c30103d4776964cff959c82dcd834962949d9c342d0fae42fa6a40dae
 
 # `basic`
 
