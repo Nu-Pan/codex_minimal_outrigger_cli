@@ -1,3 +1,12 @@
+"""apply join の結合、後片付け、異常検出を CLI 経由で検証する。
+
+このファイルは 16,000 文字を超えるが、責務境界は apply run を session へ join する
+外部挙動の検証に閉じている。worktree/branch cleanup、state 更新、report 生成、
+dirty worktree、想定外差分、merge conflict は同じ join 操作の可否を判断する
+境界条件であり、分割すると同じ fixture と git 状態の読み取り文脈が分散する。
+現状は apply join の成功条件と拒否条件を一箇所で読む方が凝集性が高い。
+"""
+
 import json
 import subprocess
 from pathlib import Path

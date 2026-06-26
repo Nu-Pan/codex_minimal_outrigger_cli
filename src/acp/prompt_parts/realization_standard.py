@@ -1,3 +1,12 @@
+"""realization standard 全体の prompt 本文を単一責務として構築する。
+
+このファイルは 16,000 文字を超えるが、責務境界は realization file の品質基準を
+StructDoc 化する prompt part に閉じている。各 Standard は、サイズ、責務分割、
+抽象化、公開面、テスト、依存関係、完了時点検をまたいで相互参照される 1 つの
+規範集合であり、分割すると生成順序と文脈の確認に複数 module を読む必要が生じる。
+現状は同じ prompt 本文として同時に読む方が凝集性と読み取り文脈を保てる。
+"""
+
 # cmoc
 from basic.struct_doc import StructDoc
 from basic.standard import (

@@ -1,3 +1,12 @@
+"""apply fork の report と再検査制御を CLI 経由で検証する。
+
+このファイルは 16,000 文字を超えるが、責務境界は apply fork が所見列挙から
+適用、commit、変更要約、report、session state 更新へ至る制御を検証することに
+閉じている。収束、未収束、error、dirty file 再検査、rolling fork は同じ loop と
+report schema の観測結果として読まれるため、分割すると期待値の文脈が分散する。
+現状は apply fork report の読み取り文脈を一箇所に保つ方が凝集性が高い。
+"""
+
 import json
 from pathlib import Path
 

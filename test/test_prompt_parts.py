@@ -1,3 +1,12 @@
+"""prompt part と ACP builder の生成結果を横断的に検証する。
+
+このファイルは 16,000 文字を超えるが、責務境界は agent prompt と structured output
+schema の構築結果を検証することに閉じている。標準 prompt、routing、file access、
+builder parameter は最終 prompt の同じ読み取り文脈で組み合わさるため、分割すると
+共通の render/schema 期待値を追うために複数ファイルを読む必要が生じる。
+現状は prompt 構築の回帰観点を一箇所に保つ方が凝集性が高い。
+"""
+
 import json
 from pathlib import Path
 

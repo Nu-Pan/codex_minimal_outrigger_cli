@@ -1,3 +1,12 @@
+"""apply abandon の cleanup と process 停止を CLI 経由で検証する。
+
+このファイルは 16,000 文字を超えるが、責務境界は active apply run を破棄する
+外部挙動の検証に閉じている。worktree/branch/state cleanup、実行位置の判定、
+running process の停止は同じ abandon 操作の成功・警告・失敗条件を共有するため、
+分割すると同じ state fixture と境界条件を複数ファイルで読み直すことになる。
+現状は apply abandon の読み取り文脈を一箇所に保つ方が凝集性が高い。
+"""
+
 import json
 import subprocess
 from pathlib import Path

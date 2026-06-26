@@ -1,3 +1,12 @@
+"""review oracle の report 生成と所見 loop を CLI 経由で検証する。
+
+このファイルは 16,000 文字を超えるが、責務境界は oracle review の外部挙動と
+所見評価 loop の制御を検証することに閉じている。対象 oracle の選択、report 生成、
+列挙・検証・judge・merge、上限到達、join commit の扱いは同じ review run の状態と
+出力を共有するため、分割すると同じ fake Codex 応答と report 文脈が分散する。
+現状は review oracle の読み取り文脈を一箇所に保つ方が凝集性が高い。
+"""
+
 import subprocess
 from pathlib import Path
 
