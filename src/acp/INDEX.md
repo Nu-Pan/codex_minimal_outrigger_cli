@@ -1,25 +1,23 @@
 # `builder`
 
 ## Summary
-- AI エージェント呼び出しパラメータを、用途別サブコマンドの文脈から組み立てる実装をまとめた領域。プロンプト本文、補助文脈、ファイルアクセスモード、モデル種別、推論強度、構造化出力 schema の接続を、適用後補助作業、目次エントリー生成、正本仕様断片レビュー、session join の conflict 解消、TUI 実行パラメータ解決ごとに扱う。
-- 各下位領域は、呼び出し先エージェントに何を依頼するか、入力値をどのようにプロンプトへ埋め込むか、どの標準文書を prompt_parts から含めるか、返却結果に schema を要求するかを確認する入口になる。
+- AI エージェント呼び出し用のパラメータ構築を集約する領域。フォーク適用後の要約・所見列挙・所見対応修正、ルーティング文書エントリー生成、正本仕様レビュー、セッション統合時の conflict marker 解消、TUI 実行前のパラメータ選定について、role、summary、goal、補助文脈、参照標準、ファイルアクセスモード、モデル設定、構造化出力 schema の接続を組み立てる。
+- CLI やセッション処理の外側から AI に作業を委譲する境界として、どの入力を prompt に埋め込み、どの権限と schema で結果を受け取るかを確認する入口になる。
 
 ## Read this when
-- cmoc の各処理が AI エージェントへ渡す role、summary、goal、補助文脈、完了プロンプトをどのように構築しているか確認・変更したいとき。
-- 差分要約、realization file の所見列挙、所見対応修正、INDEX.md エントリー生成、oracle review の所見処理、merge conflict marker 解消、TUI 実行前のパラメータ判定に関する ACP 呼び出し定義を探すとき。
-- エージェント呼び出しごとに選ばれるファイルアクセスモード、モデルクラス、reasoning effort、対象パス解決、作業ルートや正本ルートの扱いを追いたいとき。
-- AI から受け取る structured output の外形や、プロンプト構築実装と JSON schema ファイルの対応を確認・検証したいとき。
-- oracle standard、realization standard、review oracle standard、apply review standard、index entry standard などの標準 prompt 断片が、どの種類の呼び出しへ含まれるか調べたいとき。
+- フォーク適用、正本仕様レビュー、ルーティング文書エントリー生成、TUI 実行前判定、または conflict marker 解消で、AI エージェントへ渡す prompt と呼び出し条件を確認・変更したいとき。
+- 差分、対象パス、所見本文、既知理由、元プロンプト、conflict 対象一覧などの入力が、AI 呼び出しの補助文脈へどのように埋め込まれるかを追いたいとき。
+- AI 呼び出しごとのファイルアクセスモード、モデルクラス、reasoning effort、参照する標準文書、構造化出力 schema の対応を確認したいとき。
+- レビュー所見、変更要約、目次エントリー、TUI パラメータ判定など、機械処理される AI 応答の外形を実装側の呼び出し定義と合わせて確認したいとき。
 
 ## Do not read this when
-- エージェント呼び出しで共通利用される prompt 部品そのもの、標準文書の本文、ファイルアクセス規則の文言、markdown rendering、StructDoc、AgentCallParameter、ModelClass、Path 解決 helper の定義を調べたいとき。
-- cmoc apply、cmoc review、cmoc indexing、cmoc session、cmoc tui の CLI 引数解析、実行順序、状態更新、保存処理、git コマンド実行など、呼び出しパラメータ構築より上位の制御フローを確認したいとき。
-- oracle file や realization file の実際の仕様・実装内容、レビュー対象の所見本文、適用対象コード、conflict の具体的な解消内容を調査したいだけのとき。
-- 生成済み INDEX.md のルーティング内容そのものや、個別ディレクトリのエントリー品質を確認したいだけのとき。
-- 構造化出力 schema の一般的な書き方や JSON Schema の仕様を調べたいだけで、cmoc のエージェント呼び出しとの接続を変更しないとき。
+- サブコマンドの引数解析、実行順序、状態保存、git 操作、差分取得、conflict marker 検出など、AI 呼び出しパラメータ構築より外側の制御フローを調べたいとき。
+- 実際の正本仕様本文、レビュー標準、適用後レビュー標準、ルーティング文書標準、または realization file 品質基準の内容そのものを読みたいとき。
+- 汎用 prompt 部品、構造化文書の rendering、パス解決、ファイルアクセスルール、AgentCallParameter や model class の共通定義だけを調べたいとき。
+- AI が返した個別の所見や要約の妥当性、または修正対象コードそのものを調査したいだけで、呼び出し prompt や schema 連携を変更しないとき。
 
 ## hash
-- cc4f73f6205a15106b37a47921549963c5c444d49958d12bfacfdaf919bd58a5
+- 11f8d17c36d41e2c2853ec9f249606fa9f836e99561e44f611e72f8593ddf7e1
 
 # `prompt_parts`
 
