@@ -80,19 +80,29 @@ def branch_session_id(branch: str, kind: str = "session") -> str:
     return parts[2]
 
 
+def apply_branch_session_id(branch: str) -> str:
+    """cmoc apply branch 名から session_id を取り出す。"""
+    parts = branch.split("/")
+    if (
+        len(parts) != 4
+        or parts[:2] != ["cmoc", "apply"]
+        or not parts[2]
+        or not parts[3]
+    ):
+        raise CmocError(
+            "apply branch 名から session-id を特定できません。",
+            ["branch 名と session state file を確認してください。"],
+            f"branch: {branch}",
+        )
+    return parts[2]
+
+
 def load_state_for_branch(root: Path, branch: str) -> tuple[str, Path, SessionState]:
     """現在 branch に対応する session state file を読み込む。"""
     if branch.startswith("cmoc/session/"):
         session_id = branch_session_id(branch, "session")
     elif branch.startswith("cmoc/apply/"):
-        parts = branch.split("/")
-        if len(parts) < 4:
-            raise CmocError(
-                "apply branch 名から session-id を特定できません。",
-                ["branch 名と session state file を確認してください。"],
-                f"branch: {branch}",
-            )
-        session_id = parts[2]
+        session_id = apply_branch_session_id(branch)
     else:
         raise CmocError(
             "現在の branch は cmoc 管理 branch ではありません。",

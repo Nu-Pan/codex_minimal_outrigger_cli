@@ -8,6 +8,7 @@ from cmoc_runtime import (
     ApplyPart,
     CmocError,
     SessionState,
+    apply_branch_session_id,
     current_branch,
     delete_branch,
     ensure_cmoc_ignored,
@@ -47,8 +48,7 @@ def cmoc_apply_join_impl(force_resolve: bool) -> None:
     branch = current_branch(current_root)
     if branch.startswith("cmoc/apply/"):
         require_clean_worktree(current_root)
-        parts = branch.split("/")
-        session_id = parts[2] if len(parts) >= 4 else ""
+        session_id = apply_branch_session_id(branch)
         session_branch = f"cmoc/session/{session_id}"
         root = worktree_for_branch(repo, session_branch)
         os.chdir(root)

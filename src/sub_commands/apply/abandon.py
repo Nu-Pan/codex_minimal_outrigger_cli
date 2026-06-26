@@ -5,6 +5,7 @@ import typer
 from cmoc_runtime import (
     ApplyPart,
     CmocError,
+    apply_branch_session_id,
     branch_exists,
     current_branch,
     delete_branch,
@@ -41,7 +42,7 @@ def cmoc_apply_abandon_impl() -> None:
     if not (branch.startswith("cmoc/session/") or branch.startswith("cmoc/apply/")):
         raise CmocError("apply abandon は session branch または apply branch 上で実行してください。", [], branch)
     if branch.startswith("cmoc/apply/"):
-        session_id = branch.split("/")[2]
+        session_id = apply_branch_session_id(branch)
         session_branch = f"cmoc/session/{session_id}"
         root = worktree_for_branch(repo, session_branch)
     else:

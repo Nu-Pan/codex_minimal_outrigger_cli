@@ -4,7 +4,14 @@ import pytest
 from basic.acp import AgentCallParameter
 from commons.runtime_codex_profile import build_codex_profile
 from commons.runtime_content import is_binary
-from commons.runtime_state import branch_session_id
+from commons.runtime_state import (
+    SessionState,
+    apply_branch_session_id,
+    branch_session_id,
+    load_state_for_branch,
+    state_path,
+    write_state,
+)
 
 from _support import (
     CmocConfig,
@@ -100,6 +107,27 @@ def test_render_error_fills_empty_next_actions() -> None:
 def test_branch_session_id_rejects_invalid_session_branch_shape(branch: str) -> None:
     with pytest.raises(CmocError):
         branch_session_id(branch)
+
+
+@pytest.mark.parametrize(
+    "branch",
+    [
+        "cmoc/apply/",
+        "cmoc/apply/session",
+        "cmoc/apply/session/run/extra",
+    ],
+)
+def test_apply_branch_session_id_rejects_invalid_apply_branch_shape(branch: str) -> None:
+    with pytest.raises(CmocError):
+        apply_branch_session_id(branch)
+
+
+def test_load_state_for_branch_rejects_apply_branch_with_extra_parts(tmp_path: Path) -> None:
+    path = state_path(tmp_path, "session")
+    write_state(path, SessionState())
+
+    with pytest.raises(CmocError):
+        load_state_for_branch(tmp_path, "cmoc/apply/session/run/extra")
 
 
 def test_cli_error_report_is_written_to_stdout(tmp_path: Path, monkeypatch) -> None:
