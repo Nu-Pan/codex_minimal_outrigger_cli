@@ -58,19 +58,21 @@
 # `join.py`
 
 ## Summary
-- active session branch を session home branch へ取り込み、session 状態を joined に更新するサブコマンド実装を扱う。
-- join 実行時の事前条件確認、clean worktree 確認、home branch への切り替え、no-ff merge、session branch 削除、実行結果表示までの制御を担う。
-- merge conflict 発生時は Codex CLI に conflict 解消を依頼し、残存 marker と unmerged path を検査して merge commit まで進める補助処理も含む。
+- active な session branch を session home branch へ join するサブコマンド実装を扱う。現在 branch と保存状態の事前条件確認、clean worktree と ignore 設定確認、home branch への切り替え、no-ff merge、状態更新、session branch 削除、結果表示までの制御を担う。
+- merge conflict 発生時は conflict 対象ファイルを検出し、Codex CLI に解消を依頼した後、残存 conflict marker と unmerged path を検査して add と merge commit を進める。
+- CLI entrypoint では indexing preflight を有効化し、共通の subcommand runner 経由で join 処理を実行する。
 
 ## Read this when
-- session join の実行条件、状態遷移、対象 branch の扱い、成功時の出力内容を確認または変更したいとき。
-- active session branch を session home branch に merge する処理、merge 失敗時の conflict 解消フロー、branch 削除失敗時の warning 表示を調べたいとき。
-- session join コマンド実行前に indexing preflight や CLI subcommand wrapper がどう呼ばれるかを確認したいとき。
+- session join の事前条件、対象 branch、状態遷移、home branch への merge、session branch 削除の挙動を確認または変更したいとき。
+- session join 中の merge conflict を Codex CLI へ渡す流れ、conflict marker 検査、unmerged path 検査、merge commit の完了処理を確認または変更したいとき。
+- session join サブコマンドが indexing preflight や共通 CLI 実行 wrapper とどう接続されているかを確認したいとき。
+- session join の利用者向け出力、warning 表示、CmocError の発生条件を確認したいとき。
 
 ## Do not read this when
-- session join 以外の session 操作、apply 操作、review 操作など別サブコマンドの挙動を調べたいとき。
-- session 状態ファイルの schema、branch からの state 解決、repo/work root の定義、git 実行 helper の詳細を知りたいだけのとき。
-- Codex CLI に渡す conflict 解消依頼パラメータの具体的な構築内容を確認したいとき。
+- session join 以外の session サブコマンドの挙動を確認したいだけのとき。
+- 保存状態の schema、branch からの状態読み込み、git 実行 wrapper、worktree 検査などの共通 runtime 処理そのものを変更したいとき。
+- merge conflict 解消依頼に渡す Codex CLI parameter の内容を変更したいとき。
+- indexing preflight の内部挙動を確認または変更したいとき。
 
 ## hash
-- 2b7cb0612808552e233d7d156407c1801f26d4f23995b66c87986ad9bc0a9456
+- bd673ffaf918b1736dfabac70797b66f32cc052776ae1df514af40ec5ad733bf

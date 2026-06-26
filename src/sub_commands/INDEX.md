@@ -166,22 +166,23 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドの実装をまとめるパッケージで、session branch の作成、home branch への取り込み、破棄などの個別操作へ進む入口になる。
-- 各サブコマンドは、session state、branch 状態、clean worktree などの事前条件を確認し、git 操作と状態更新を組み合わせて session のライフサイクルを制御する。
-- CLI 入口は共通のサブコマンド実行ラッパーに接続され、利用者向け出力や失敗時の CmocError 報告もこの配下の各実装が担う。
+- session 系サブコマンドを実装するパッケージで、通常 branch から session branch を作る処理、active session を home branch へ取り込む処理、merge せず破棄する処理を入口ごとに分けて収める。
+- 各サブコマンドは、branch/state/worktree の事前条件確認、git 操作、状態更新、利用者向け出力、共通 CLI 実行ラッパーへの接続を担い、個別の session 操作を調べる起点になる。
 
 ## Read this when
-- session branch の作成、home branch への merge、merge せずに破棄する処理など、session 操作のサブコマンド実装を探したいとき。
-- session 操作で確認される事前条件、state 遷移、branch 切り替え・削除、clean worktree 判定の呼び出し位置を追いたいとき。
-- session 系 CLI の実処理が共通 CLI ラッパーへどう接続され、成功時出力や失敗時エラーをどう扱うかを確認したいとき。
+- session fork、join、abandon のどれを読むべきかを選びたいとき。
+- session branch の作成、home branch への merge、merge しない破棄など、session 系サブコマンドの実行条件や状態遷移を確認または変更したいとき。
+- session 系サブコマンドが共通 CLI runner、indexing preflight、git 操作、session state 更新とどう接続されているかを追いたいとき。
+- session 操作の失敗時挙動、rollback、merge conflict 解消、利用者向け出力、CmocError の発生条件を調べる入口を探しているとき。
 
 ## Do not read this when
-- session state のデータ構造、state file の schema、branch 判定、git 実行 helper、path model などの共通部品そのものを調べたいとき。
-- session 以外のサブコマンド、Typer アプリ全体の登録構造、共通 CLI ルーティングを調べたいとき。
-- apply、review、indexing など、session 操作から呼ばれる可能性はあっても主責務が別サブコマンドや共通機能にある処理を調べたいとき。
+- session state の schema、state path 算出、branch 判定、worktree clean 判定、git 実行 wrapper、timestamp 生成などの共通 runtime 実装そのものを確認または変更したいとき。
+- Typer アプリへのサブコマンド登録、session 以外のサブコマンド、または CLI 全体のルーティングを調べたいとき。
+- merge conflict 解消依頼に渡す Codex CLI parameter や indexing preflight の内部挙動を確認または変更したいとき。
+- 個別の処理対象が session fork、join、abandon のいずれかに明確に決まっているときは、この階層ではなく該当する実装モジュールへ直接進む。
 
 ## hash
-- 6ed35528e60bc98827337d369834f9c4e5c314839c1a58ba3a70b12539ffdc82
+- 2c94229e6bf4e07f89b80f8307aedabd1e6dbb7912b2d12d0ad472bef5b69bdf
 
 # `tui.py`
 
