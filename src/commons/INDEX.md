@@ -73,27 +73,23 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex CLI の exec 呼び出しを 1 回の状態機械として制御し、profile/schema 準備、subprocess 実行、stdout/stderr/output/call log 保存、Structured Output 検証、capacity retry、quota wait/probe、resume 継続、subcommand event 記録、成功時の結果生成をまとめて扱う実行制御モジュール。
-- quota 処理や resume token、log/event、retry counter が同じ subprocess 結果を共有するため、exec 実行中の再試行・待機・検証・記録の流れを追う入口になる。
-- 同一プロセス内で Codex call log 名の timestamp を単調増加させ、壁時計の後退や同時生成による log path 衝突を避ける補助処理も含む。
+- Codex CLI の exec 呼び出しを 1 回の状態機械として制御する実行基盤。profile/schema 準備、`codex exec` argv 構築、prompt/stdout/stderr/output/call log の保存、Structured Output 検証、capacity retry、quota 待機と代表 probe、resume token による継続、subcommand event への記録をまとめて扱う。
+- TUI 起動ではなく exec 分岐の実行制御に責務を限定しており、quota 処理も resume token と log/event の文脈を共有するため同じ流れの中で読む対象として位置づけられている。
 
 ## Read this when
-- Codex CLI の `exec` 実行時にどの argv、profile、schema、cwd、環境変数、入力 prompt が使われるかを確認したいとき。
-- Structured Output schema の準備、検証、semantic retry、検証失敗時の error/log の扱いを調べるとき。
-- capacity error の指数 backoff retry、quota error の代表 probe、他スレッドの quota wait 共有、quota wait 秒数・poll 回数の記録を変更または確認するとき。
-- Codex CLI 失敗時に保存される stdout/stderr/output/call log と、console/subcommand log へ出る `codex_call` event の内容や status を追うとき。
-- quota 回復後や quota 待機後に resume token を使って同じ作業を継続する制御を調べるとき。
-- Codex exec の戻り値として result object に入る path、profile、schema、elapsed、quota wait 情報を確認するとき。
+- Codex CLI を subprocess として呼び出す実行ループ、retry、resume、Structured Output 検証、quota 待機の挙動を確認・変更したいとき。
+- Codex 呼び出しごとの prompt/stdout/stderr/output/call log の生成内容、命名順序、保存先、subcommand event payload、console 表示の関係を追いたいとき。
+- capacity error と quota error の扱い、代表 probe による quota 回復確認、同一プロセス内での quota polling 共有、待機時間・poll 回数の集計を調べたいとき。
+- Codex 実行結果として返す値と、profile、schema、log path、経過時間、quota wait 情報がどこで組み立てられるかを確認したいとき。
 
 ## Do not read this when
-- Codex profile 名、Codex home、schema file の具体的な生成・解決・検証 helper の内部だけを調べたいときは、それらを提供する profile/config 系の共通処理を直接読む。
-- TUI 起動や対話 UI の制御を調べたいときは、この対象ではなく TUI 側の実行制御を読む。
-- subcommand logger 自体の保存形式、event writer、quota wait 集計の実装を調べたいだけなら logging 系の共通処理を読む。
-- path model、repo/work/log directory、timestamp 生成の一般ルールを調べたいときは path 系の共通処理を読む。
-- Codex exec 成功後の result object の型定義や利用側だけを確認したいときは、結果型または呼び出し元を読む。
+- Codex profile の具体的な作成、Codex home の解決・検証、error 判定、resume token 抽出、output JSON 読み取りなどの個別 helper の詳細だけを調べたいときは、それらを定義する profile/runtime helper 側を読む。
+- TUI 起動や exec 以外の Codex 実行形態を調べたいときは、この対象ではなく起動形態ごとの実行制御を読む。
+- subcommand log の基盤、path model、設定読み込み、実行結果 dataclass の定義そのものを確認したいだけなら、それぞれの共通 module を読む。
+- CLI 利用者向けの公開仕様や oracle file の正本仕様断片を確認したいときは、この realization implementation ではなく該当する oracle doc/source を読む。
 
 ## hash
-- 416908caa21d6d09e16717099112ef44e519f787d81cf214b68a1f8543a3a22a
+- 22c246354d733f9d51dc5d8d941cc56f8c8c99d8f8bdafa2d8ca284219906125
 
 # `runtime_codex_logging.py`
 
@@ -305,21 +301,22 @@
 # `runtime_results.py`
 
 ## Summary
-- 外部コマンド実行結果と Codex exec 呼び出し結果を、変更不可の小さなデータ構造として共有する実装。終了コード、標準出力・標準エラー、生成出力、ログやプロファイル・schema へのパス、実行時間や quota 待機情報を、処理間で受け渡すための型を定義する。
+- 外部コマンド実行結果と Codex exec 実行結果を受け渡すための、不変なデータ保持クラスを定義する。
+- 終了コード、標準出力・標準エラー、生成テキスト・JSON、各種ログや出力先、使用 profile/schema、実行時間や quota 待機状況をまとめる共有の結果モデルである。
 
 ## Read this when
-- 外部コマンドの実行結果を返す・受け取る処理の戻り値構造を確認したいとき。
-- Codex exec の呼び出し後に、出力本文、JSON 出力、ログ保存先、利用した codex home・profile・schema、経過時間や quota 待機情報をどの入れ物で扱うか確認したいとき。
-- 実行系 helper や CLI 処理から返される runtime result の属性名を、利用側の実装やテストで合わせたいとき。
+- 外部コマンドの実行結果を戻り値として扱うコードの型や保持項目を確認したいとき。
+- Codex exec 呼び出し後に、生成物、ログパス、profile 情報、schema 情報、実行時間、quota 待機情報をどのデータ構造で運ぶか確認したいとき。
+- 実行結果を返す関数、結果を受け取る処理、テスト fixture の期待値を変更するとき。
 
 ## Do not read this when
-- 実際に外部コマンドや Codex exec を起動する手順、subprocess 呼び出し、ログファイル作成処理を調べたいとき。
-- Codex exec の出力 JSON schema の意味や内容そのものを調べたいとき。
-- profile、codex home、schema path の決定規則やパス解決規則を調べたいとき。
-- 実行結果を CLI 出力へ変換する表示・整形ロジックを調べたいとき。
+- 実際に外部コマンドや Codex exec を起動する制御フロー、subprocess 呼び出し、リトライ処理を調べたいとき。
+- ログファイルや出力ファイルの生成・保存・削除条件そのものを調べたいとき。
+- profile や schema の読み込み、検証、選択ルールを調べたいとき。
+- CLI の利用者向け出力形式や JSON schema の仕様を確認したいとき。
 
 ## hash
-- d4046ead30e379a37a0dc1acdfaadc9477008c8aa79371515827408aec5f9971
+- 149af60f60abfd4347d39a62b9b27d873af9cb1148cba531f191e860be3a9e8b
 
 # `runtime_state.py`
 

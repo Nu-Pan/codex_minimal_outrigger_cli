@@ -208,27 +208,23 @@
 # `sub_command`
 
 ## Summary
-- cmoc の利用者向けサブコマンドごとの正本仕様断片をまとめる領域。各サブコマンドの外部挙動、引数有無、事前条件、状態遷移、git branch/worktree 操作、レポートや stdout 出力の境界を確認する入口となる。
-- session の開始・完了・破棄、apply run の開始・取り込み・破棄、明示的なインデクシング、初期化、oracle file レビュー、AI Agent CLI/TUI 起動など、サブコマンド単位で読むべき仕様へ進むための中継点。
-- 個々の本文はサブコマンドの責務境界を中心に述べ、内部 helper 分割や実装配置ではなく、利用者に見える CLI 挙動と cmoc 管理状態の変化を判断するための正本仕様断片として位置づけられる。
+- cmoc の CLI サブコマンド仕様断片を集めた領域で、初期化、インデクシング、TUI 起動、session lifecycle、apply lifecycle、oracle review など、利用者向けコマンドの外部挙動と状態遷移を確認する入口となる。
+- 各サブコマンドごとに、引数、事前条件、branch/worktree/state の扱い、失敗時の境界、stdout や report への出力方針など、実装差を避けたい正本仕様断片を分けている。
 
 ## Read this when
-- どのサブコマンド仕様を読むべきかを、処理名や関心領域から選びたいとき。
-- cmoc の CLI 挙動、引数、事前条件、終了結果、stdout 出力、レポート保存、または状態ファイル更新をサブコマンド単位で実装・修正・テストするとき。
-- session branch と home branch の関係、session の作成・join・abandon、または apply run の fork・join・abandon に関する状態遷移や branch/worktree 操作を確認したいとき。
-- 未コミット差分、想定外差分、merge conflict、強制解決、branch/worktree 削除、rollback または再実行可能性など、サブコマンド実行前後の git 状態を扱うとき。
-- インデクシングや初期化を CLI サブコマンドとして実行する際の前提条件と commit 方針を確認したいとき。
-- oracle file のレビュー処理や、AI Agent CLI/TUI 起動時のプロンプト生成・Codex CLI 呼び出し境界をサブコマンド仕様として確認したいとき。
+- cmoc のサブコマンドを実装・修正・テストする前に、対象コマンドの仕様ファイルを選びたいとき。
+- session の開始・完了・破棄、apply の開始・成果取り込み・未 join run 破棄、oracle review、初期化、インデクシング、AI Agent CLI/TUI 起動のどれに進むべきか判断したいとき。
+- CLI 引数、実行前条件、git branch/worktree 操作、session/apply state の遷移、report 保存、stdout 出力など、サブコマンド単位の外部挙動を確認したいとき。
+- 同じ apply や session 領域の中で、fork、join、abandon の責務境界を取り違えないように読む先を絞りたいとき。
 
 ## Do not read this when
-- oracle file、realization file、path keyword、root model など、cmoc 全体の基本概念や用語定義だけを確認したいとき。
-- 実装ファイルの配置、関数分割、既存 helper、テスト構成など、サブコマンドの外部挙動ではなく realization 側の構造だけを調べたいとき。
-- インデクシングで生成・更新される内容そのもの、run の隔離実行そのもの、Codex CLI 全般の実行規則など、サブコマンドから呼ばれる下位処理の共通仕様だけを確認したいとき。
-- 所見列挙、所見適用、変更要約生成、conflict 解消、パラメータ解決など、個別 agent call に渡す schema や builder の詳細だけを確認したいとき。
-- 通常の git 操作一般や、cmoc 管理外の branch/worktree 操作を調べたいとき。
+- oracle file、realization file、パスキーワード、root model など、cmoc 全体の基礎概念や用語定義だけを確認したいとき。
+- インデクシング処理そのもの、Codex CLI 実行規則、agent call parameter builder、run の隔離実行など、サブコマンドから呼ばれる共通処理の詳細仕様だけを確認したいとき。
+- 実装ファイルやテストファイルの配置、helper 分割、既存コード構造だけを調べたいとき。
+- 通常の git 操作一般や、cmoc 管理外の branch/worktree 操作仕様を探しているとき。
 
 ## hash
-- 7a9a23d894b9caa1638462e2d5ce2c317f41050b8d74f3c0e7e6ed8ba701a331
+- 35bfb7e9f8555c4917276e0eed2599994f076a53f7d2be77558c4a505476bfd7
 
 # `usage.md`
 

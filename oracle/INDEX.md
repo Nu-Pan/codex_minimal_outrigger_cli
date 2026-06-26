@@ -1,25 +1,25 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様断片のうち、自然言語で書かれた oracle doc 群への入口。利用者に見える CLI 挙動、branch / worktree モデル、開発時の横断規則、採用しなかった設計案と判断背景を扱う。
-- 実装・テストへ進む前に、確認したい内容がアプリケーション外部仕様、git 隔離モデル、開発規約、設計判断の背景のどれに当たるかを切り分けるための領域である。
+- cmoc の自然言語で書かれた正本仕様断片をまとめる領域。利用者向けの CLI 挙動、サブコマンド、Codex CLI 呼び出し、ログ、エラー処理、状態管理、インデクシング、run 隔離、利用手順、git branch / commit / worktree モデル、採用しなかった設計案、実装・テスト・開発環境の共通規則を扱う。
+- 実装やテストの変更前に、確認すべき正本仕様断片を、外部挙動、git/session/run モデル、設計判断の背景、開発規則のどれとして読むべきか切り分けるための入口になる。
 
 ## Read this when
-- cmoc のサブコマンド、セッション状態、run 隔離、インデクシング、Codex CLI 呼び出し、ログ、エラー処理など、利用者向け CLI 挙動や共通規約を確認したいとき。
-- session branch、run branch、linked worktree、fork / join commit、cmoc-managed branch など、cmoc が扱う git branch / commit / worktree のモデルを確認したいとき。
-- Python 実装、CLI 構成、共通処理の配置、開発環境、依存追加、pytest による決定論的テストなど、realization code を追加・修正・検証する際の横断的な開発規則を確認したいとき。
-- AI の記憶・改善案・作業計画、apply 系 orchestration など、採用しなかった workflow や設計案の non-goal と判断背景を確認したいとき。
-- 正本仕様断片を根拠に実装やテストを進める前に、自然言語仕様として読むべき本文の候補を絞りたいとき。
+- cmoc の機能仕様や開発規則について、自然言語で書かれた正本仕様断片から読む対象を探したいとき。
+- CLI サブコマンド、実行時状態、ログ、エラー処理、Codex CLI 呼び出し、プロンプト、インデクシング、run 隔離、利用ワークフローなど、利用者に見える挙動や実行時の共通規約を確認したいとき。
+- session、run、apply、review に関わる branch、commit、linked worktree の用語、命名、分岐元、merge 先、隔離境界を確認したいとき。
+- AI-generated kaizen の自動注入、作業計画レビュー、apply 系 orchestration など、採用しなかった workflow や設計案の理由を確認したいとき。
+- Python 実装、CLI 構成、共通処理の配置、開発環境、依存追加、pytest によるテスト方針など、realization code を書く前の共通規則を確認したいとき。
 
 ## Do not read this when
-- oracle file、realization file、oracle doc / src / test、realization implementation / test / ancillary など、cmoc 全体の基本分類だけを確認したいとき。
-- path keyword、repo root、run root、work root など、パスモデルの定義だけを確認したいとき。
-- 特定の実装ファイル、関数、テスト、builder、schema、既存 helper の内部構造や現在の実装詳細だけを調べたいとき。
-- 既に読むべき個別仕様本文が特定できており、その詳細だけを確認すればよいとき。
-- INDEX.md エントリーの作成基準、oracle / realization の一般原則、正本仕様断片としての文書品質基準そのものを確認したいだけのとき。
+- oracle file と realization file の定義、責務分担、正本仕様断片としての一般原則、INDEX.md エントリーの作成基準だけを確認したいとき。
+- path キーワードや root model の定義そのものを確認したいとき。
+- 自然言語仕様ではなく、AgentCallParameter builder、path model、その他のプログラム・設定として書かれた正本実装断片の詳細を直接確認したいとき。
+- 既存 realization code の具体的な関数、クラス、テスト期待値、現在の内部ロジックを探したいとき。
+- 読むべき個別の正本仕様断片がすでに特定できており、その本文だけを確認すればよいとき。
 
 ## hash
-- 74314ba3100906ba48fa0f54cef11a0edbf22079618f480e213f4661eb5a4cd0
+- 03fb4564493232bce219e069fbbb919261f75f6ea9f83caa7fe2d695312a543b
 
 # `src`
 
