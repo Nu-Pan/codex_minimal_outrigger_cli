@@ -60,23 +60,23 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork CLI の挙動を pytest で検証する realization test。未収束・収束・error report、変更要約、commit message、dirty file 再検査、編集禁止対象の差分検出、rolling apply fork の対象選択と session state 更新を扱う。
-- Codex 実行を fake に差し替え、実リポジトリ操作と CLI 実行結果、生成 report、git commit、session state の外部挙動を確認する。
+- apply fork CLI の統合的な挙動を検証する realization test。Codex 実行結果を fake に差し替え、report 生成、変更要約、commit message、dirty file 再検査、収束判定、編集禁止差分の error 化、rolling apply fork の対象選択と状態更新を確認する。
 
 ## Read this when
-- apply fork の report 生成、result label、終了コード、変更要約、commit message 反映に関するテストを確認・変更する時。
-- apply 後の dirty file 再検査や、INDEX.md を再検査対象から除外する制御を確認・変更する時。
-- 編集禁止対象への差分を error state と report に落とし込む挙動を確認・変更する時。
-- rolling apply fork が前回 apply の oracle snapshot commit と join 後の差分から対象を選ぶ挙動を確認・変更する時。
+- `apply fork` の CLI 終了コード、標準出力、report 内容、session state、apply branch commit message の挙動を変更・確認したいとき。
+- apply 後に発生した dirty file を再検査する制御、特に `INDEX.md` を再検査対象から除外する挙動を確認したいとき。
+- apply fork の収束・未収束・error の判定、または上限回数到達時の扱いを変更したいとき。
+- `.agents` など編集禁止対象への差分検出と、その結果を CLI 出力・report・state に反映する処理を確認したいとき。
+- rolling apply fork が前回 apply の oracle snapshot commit と join 後の oracle 変更から調査対象を選ぶ挙動を確認したいとき。
 
 ## Do not read this when
-- apply fork 以外の apply CLI、session CLI、init CLI の一般挙動を調べたい時。
-- Codex 実行 wrapper や structured output schema の実装詳細そのものを調べたい時。
-- oracle file の正本仕様や INDEX.md 生成規則を確認したい時。
-- 単にテスト共通 fixture や helper の定義を調べたい時。
+- apply fork 以外の apply command、session command、init command の単体挙動だけを確認したいとき。
+- Codex 実行 wrapper 自体の入出力仕様や実 LLM 品質を確認したいとき。
+- report の markdown レンダリング規則だけを詳細に確認したいとき。
+- 個別 helper の内部実装だけを確認したいとき。ただし CLI 経由の外部挙動に影響する場合は読む。
 
 ## hash
-- 590469078a7276ad86ffb10c463d0b1a8eccb13673f4df6d4011658ee065b7d3
+- 096257c5874c5536189018f3a722f0c9efdae580bbf39f9b2d5b1445447ba14a
 
 # `test_apply_join_cli.py`
 
