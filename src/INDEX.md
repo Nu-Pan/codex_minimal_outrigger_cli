@@ -68,30 +68,29 @@
 # `commons`
 
 ## Summary
-- cmoc の実行時共通処理を集めた implementation 領域で、CLI サブコマンド共通ライフサイクル、Codex exec/TUI 呼び出し、profile/config、content hash、error、git、logging、path、result、session state などの runtime helper を扱う。
-- 複数の runtime helper を集約して再公開する入口と、責務別の実装モジュールが同居しており、上位のサブコマンド実装から共通実行基盤の挙動を確認・変更する際の入口になる。
+- cmoc の実行時共通処理を集めた実装領域。Codex CLI 呼び出し、CLI サブコマンド共通ライフサイクル、設定入出力、content hash、エラー表示、Git 操作、ログ、path 解決、外部コマンド結果型、session/apply 状態永続化など、複数機能から共有される runtime helper を扱う。
+- 個別 helper の実装に加えて、複数の runtime 領域の公開 API をまとめて再公開する入口や、旧 import path を保つ薄い互換入口も含む。
 
 ## Read this when
-- CLI サブコマンド共通の開始・完了表示、終了コード化、例外処理、サブコマンドログ、work root 実行前提を確認または変更したいとき。
-- Codex CLI の exec/TUI 呼び出しについて、profile/schema 準備、argv、cwd/env、call log、Structured Output 検証、retry、quota/capacity 制御、resume 継続、失敗時例外化を追いたいとき。
-- cmoc 設定ファイルの読み書き、既定値補完、永続化 JSON との相互変換、不正設定の利用者向けエラー化を扱うとき。
-- 内容ハッシュ付きファイル保存、SHA-256 digest 計算、binary file の粗い判定など、runtime 生成物やキャッシュの共通 content helper を探すとき。
-- CmocError の構造、利用者向けエラー表示、Git repository/worktree/branch 状態確認、Git command 失敗時の共通エラー変換を確認または変更したいとき。
-- サブコマンド実行ログ、Codex call 完了サマリー、quota 待機時間集計、context-local logger、ログ record の基本項目を扱うとき。
-- repo root、work root、cmoc root、.cmoc 配下の各保存先、timestamp、duration 表示、一時的な cwd 変更など runtime path helper を確認したいとき。
-- 外部コマンド結果や Codex exec 結果の共有データ型、session/apply の永続状態 JSON、cmoc 管理 branch 名と session_id の対応を確認または変更したいとき。
-- runtime 系 helper の公開 import 面を確認し、複数領域をまたぐ共通 API を集約入口から利用または整理する必要があるとき。
+- CLI サブコマンド全体に共通する実行順序、進捗表示、終了コード化、例外時表示、実行ログ記録の入口を確認または変更したいとき。
+- Codex exec/TUI 呼び出しの profile 準備、schema 配置、subprocess 実行、call log、Structured Output 検証、quota/capacity retry、resume 継続、preflight 実行制御を追いたいとき。
+- cmoc 設定ファイルの読み書き、既定値補完、不正 JSON や不正値の利用者向けエラー化を扱うとき。
+- 内容ハッシュ、ハッシュ付きファイル書き込み、binary file 粗判定など、生成物や入力内容を扱う小さな共通処理を探すとき。
+- cmoc 共通の例外表現、利用者向けエラー文面、Git repository 状態検査、worktree/branch 後始末、`.cmoc` の ignore 検証を確認したいとき。
+- サブコマンド実行ログ、Codex 呼び出し完了サマリー、quota 待機時間、context-local logger の扱いを確認または変更したいとき。
+- 実行時 root、`.cmoc` 配下の保存先、timestamp、duration 表示、作業ディレクトリ一時変更、session/apply 状態 JSON の保存形式や branch 名との対応を調べたいとき。
+- 複数の runtime helper を利用する呼び出し側で、どの共通 API を集約入口から import できるかを確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジック、引数定義、利用者向け入出力だけを調べたいときは、そのサブコマンド本体へ進む。
-- path キーワードそのものの意味や oracle 上の root 概念定義を確認したいだけのときは、path model の仕様または定義側へ進む。
-- INDEX.md 生成ロジック、ルーティング文書の内容生成、エントリープロンプト、ファイル探索ルールそのものを調べたいときは、indexing 側の実装へ進む。
-- 設定データクラス、AgentCallParameter、FileAccessMode、CmocConfig などのモデル定義そのものを確認したいだけのときは、モデル定義側へ進む。
-- ログや状態ファイルを読む側、集計する側、表示する側の機能仕様を調べたいときは、それらの利用側へ進む。
-- oracle file の正本仕様、自然言語仕様、oracle src/test の内容を確認したいときは、この realization implementation 領域ではなく oracle 配下の該当本文へ進む。
+- 個別サブコマンド固有の業務処理、引数定義、dispatch、利用者向け出力だけを調べたいときは、そのサブコマンド実装へ進む。
+- path keyword の概念定義や `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` の仕様そのものを確認したいときは、path model の正本仕様または定義実装へ進む。
+- 設定モデル、AgentCallParameter、FileAccessMode、CmocConfig などのデータ構造そのものを確認したいだけのときは、各モデル定義へ進む。
+- INDEX.md 生成ロジック、エントリー生成プロンプト、ファイル探索ルール、oracle/realization の仕様文書を調べたいときは、それぞれの仕様・indexing 実装へ進む。
+- ログや状態を読む側、集計する側、表示する側の仕様だけを調べたいときは、それらの機能実装へ進む。
+- テスト期待値や fixture から特定挙動を確認する方が直接的な場合は、対応するテスト領域へ進む。
 
 ## hash
-- 7c2517fff8c070c1421cc25217677a2e53087be1e6bc85cdf9114dd545ba1d69
+- 1ed0e3e99cee19f83fd86568f2c8249fc1001f0f3d5db48636e0b5602c9bd8eb
 
 # `config`
 
@@ -116,24 +115,23 @@
 # `main.py`
 
 ## Summary
-- cmoc の実行入口として Typer アプリケーションを構築し、トップレベルコマンドと `session`、`apply`、`review` 配下のサブコマンドを各実装関数へ接続する CLI 配線を担う。
-- 通常の CLI 引数解析エラーを cmoc 共通のエラーレポート形式へ変換する TyperGroup 拡張を含み、シェル補完時は通常の Typer/Click 処理に委ねる。
-- 個々のサブコマンドの業務ロジックは保持せず、各サブコマンド実装モジュールへの入口として位置づけられる。
+- cmoc の Typer ベース CLI の最上位エントリーポイントであり、通常起動時にトップレベルコマンドと session/apply/review 配下のサブコマンドを登録する。
+- CLI 引数解析エラーを cmoc 共通のエラー表示形式へ変換する TyperGroup 拡張を持ち、シェル補完実行時だけ通常の Typer/Click 処理へ委ねる。
+- 各コマンド本体の処理はサブコマンド実装へ委譲し、この対象は公開 CLI の配線、既定 option、コマンド名、起動関数の入口を扱う。
 
 ## Read this when
-- cmoc コマンド全体の起動経路、Typer アプリケーション構成、サブコマンド階層を確認したいとき。
-- 新しい CLI サブコマンドや option を公開面として追加・削除・改名し、対応する実装関数との接続を変更したいとき。
-- CLI 引数解析失敗時の表示形式、終了コード、補完時の例外処理回避を確認または変更したいとき。
-- `init`、`tui`、`indexing`、`session fork/join/abandon`、`apply fork/join/abandon`、`review oracle` がどの実装関数へ委譲されるかを確認したいとき。
+- cmoc のコマンド一覧、サブコマンド階層、コマンド名、CLI option の既定値や公開面を確認・変更したいとき。
+- CLI 引数解析に失敗した場合のエラー表示、終了コード、シェル補完時の例外処理分岐を確認・変更したいとき。
+- パッケージ実行や console entry point から呼ばれる起動入口がどのように Typer アプリケーションを実行するか確認したいとき。
+- 新しいサブコマンド実装を CLI に接続する、または既存サブコマンド実装への委譲先を差し替えるとき。
 
 ## Do not read this when
-- 各サブコマンドの具体的な処理内容、状態更新、Git 操作、ファイル生成、レビュー判定の詳細だけを調べたいときは、対応するサブコマンド実装を直接読む。
-- cmoc 共通エラー型やエラーレンダリングそのものの仕様・実装を調べたいときは、共通ランタイム側を読む。
-- path keyword、oracle file、realization file などの正本仕様上の概念定義を調べたいときは、oracle 側の仕様断片を読む。
-- テスト観点や期待される CLI 外部挙動を確認したいだけで、CLI 配線や引数定義を変更しないときは、対象サブコマンドに対応するテストを読む。
+- 個別サブコマンドの業務処理、状態更新、git 操作、ファイル生成などの実装詳細を調べたいだけのときは、対応するサブコマンド実装を直接読む。
+- cmoc 共通エラー型やエラー表示文字列の構造そのものを変更したいときは、共通ランタイム側を読む。
+- Typer/Click の一般的な使い方や外部ライブラリ仕様を調べたいだけのときは、この対象ではなくライブラリ文書を参照する。
 
 ## hash
-- b6ef09b427ea27ff526149b8d840553659470844d3284c42e959505fec5a9395
+- 1d335758bd3acb952f8c1ac069bceb844903688c51741aed8d46a4f83f846171
 
 # `sub_commands`
 
