@@ -66,23 +66,21 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドで AI エージェントを呼び出すためのパラメータ構築を扱う領域。現在は、session join における merge conflict marker 解消担当エージェントへ渡す complete prompt と AgentCallParameter を組み立てる実装への入口となる。
-- 衝突対象ファイルの実パス解決、対象ファイル一覧の補助 prompt 化、作業範囲・編集禁止事項・oracle file への限定的な編集許可、モデル種別・推論量・ファイルアクセス権限の指定を確認するためのまとまり。
+- `cmoc session join` で検出された merge conflict marker を解消するための AI エージェント呼び出しパラメータ構築を扱う領域。
+- 対象ファイル一覧を prompt に埋め込み、作業範囲を conflict marker 解消に限定し、oracle file を含む追加ファイルアクセス条件、モデル、reasoning、アクセスモードを固定する実装への入口となる。
 
 ## Read this when
-- session join の conflict marker 解消用エージェントに渡す prompt、補助 prompt、権限、モデル、推論量、または AgentCallParameter の内容を確認・変更したいとき。
-- conflict marker 解消作業で、対象ファイル以外の編集禁止、仕様の意味的改訂の禁止、git add や git commit の禁止、作業後に marker を残さない指示がどのように組み込まれるかを調べたいとき。
-- 衝突対象として受け取ったパスが作業ルート基準の実パスへ解決され、エージェント向けの対象ファイル一覧として渡される流れを確認したいとき。
-- oracle file に conflict marker がある場合だけ、解消に必要な最小範囲の編集を許可する例外指示を確認したいとき。
+- session join の merge conflict marker 解消用に、エージェントへ渡す role、summary、goal、補助 prompt、対象パス一覧の組み立てを確認または変更したいとき。
+- conflict 対象ファイルがどのように実パスへ解決され、prompt 内の対象一覧として渡されるかを調べたいとき。
+- conflict marker 解消時だけ許可される oracle file 編集条件や、呼び出し時の file access mode、model class、reasoning effort を確認したいとき。
 
 ## Do not read this when
-- session join 全体の制御フロー、git merge の実行、衝突検出、または join コマンドの通常処理を調べたいだけのとき。
-- complete prompt の共通構築、StructDoc の markdown 化、AgentCallParameter 型、モデル enum、ファイルアクセス権限 enum など、呼び出しパラメータ構築に使われる共通部品そのものを確認したいとき。
-- merge conflict marker の検出方法や、衝突内容を実際に解決するアルゴリズムを探しているとき。
-- session join 以外の session 系処理や、AI 呼び出しを伴わない session サブコマンドの挙動を調べたいとき。
+- session join 全体の制御フロー、merge conflict marker の検出方法、git merge や commit の操作を調べたいとき。
+- conflict marker 解消以外の通常の session join prompt やエージェント呼び出し条件を確認したいとき。
+- prompt 部品の markdown レンダリング、構造化ドキュメント、パス解決、AgentCallParameter 自体の共通実装を調べたいとき。
 
 ## hash
-- 01616e04bbe6d0b9b4647750bae282ca9c92d0f3bc46616e13e3668f45051701
+- 9a2f6d3958ca7a062f831b72e14760fc17a7b00c304e271bb519ccae350825a1
 
 # `tui`
 

@@ -1,24 +1,25 @@
 # `builder`
 
 ## Summary
-- AI agent 呼び出し用の AgentCallParameter と Structured Output 契約を、サブ領域ごとに構築する builder 群への入口。apply、indexing、review、session、tui の各処理で、prompt に渡す役割・目的・補助文脈・標準文書・ファイルアクセス権限・モデル設定・推論量・出力 schema を組み立てる責務を持つ。
-- CLI/TUI の本体制御ではなく、対象処理の後段または前段で AI に渡す依頼内容と、AI から受け取る構造化結果の形を確認するための領域。
+- AI エージェント呼び出しパラメータを組み立てる builder 群をまとめた領域。apply、indexing、review、session、tui などの用途ごとに、role・summary・goal・補助 prompt・ファイルアクセス制約・モデル設定・reasoning effort・Structured Output schema を結び付ける実装への入口になる。
+- 正本仕様レビュー、実装差分レビュー、ルーティング文書エントリー生成、merge conflict marker 解消、TUI 実行前のパラメータ解決など、各サブタスクを AI に依頼するための prompt 内容と構造化出力契約を確認する起点となる。
 
 ## Read this when
-- apply、indexing、review、session、tui のいずれかで、AI agent に渡す prompt、補助指示、参照標準、アクセス権限、モデル、reasoning effort、Structured Output schema の指定を確認または変更したいとき。
-- 差分要約、apply review、INDEX.md エントリー生成、oracle review、merge conflict marker 解消、TUI 実行前パラメータ解決など、処理別の AI サブタスク呼び出し条件を探したいとき。
-- AI に渡す入力文脈と、AI から返させる構造化出力の意味単位を、サブコマンドや用途ごとの入口からたどりたいとき。
-- 特定のサブ領域へ進む前に、どの builder がどの AI 呼び出し責務を担うかを切り分けたいとき。
+- cmoc の各機能が、どのような条件・権限・モデル・出力 schema で補助 AI エージェントを呼び出すかを確認または変更したいとき。
+- apply 後の差分要約、realization file 所見列挙、検出済み所見への修正依頼など、apply 系の後段エージェント呼び出しを追いたいとき。
+- ルーティング文書用エントリー生成で、対象本文を根拠にした prompt、読み取り専用条件、効率モデル、structured output の指定を確認したいとき。
+- oracle レビューで、新規所見列挙、理由調査、採否判定、所見整理を AI に依頼する各段階の呼び出し内容を確認したいとき。
+- session join の merge conflict marker 解消や、TUI 実行前のファイルアクセスモード・標準参照要否判定に関するエージェント呼び出しを確認したいとき。
 
 ## Do not read this when
-- CLI サブコマンド全体の実行制御、引数解析、git 操作、ファイル探索、結果保存、表示、統合フローそのものを調べたいとき。
-- prompt に埋め込まれる oracle file、realization file、各種 standard の本文そのもの、または個別の正本仕様断片を読みたいとき。
-- AgentCallParameter 型、モデル enum、ファイルアクセス権限 enum、StructDoc の markdown 化、パス解決 helper など、共通部品そのものの定義を確認したいとき。
-- AI が返した所見・理由・変更要約・判定結果の中身を評価したいだけで、呼び出しパラメータや出力契約を変更しないとき。
-- INDEX.md エントリーの一般的な書き方、ルーティング文書の品質基準、または生成済みルーティング内容の妥当性だけを確認したいとき。
+- CLI サブコマンド全体の実行順序、引数解析、結果の保存・表示、git 操作、フォーク作成・統合など、AI 呼び出しパラメータ構築より外側の制御フローを調べたいとき。
+- oracle file、realization file、apply review standard、realization standard、INDEX.md エントリー標準など、prompt に組み込まれる標準本文そのものを読みたいとき。
+- AgentCallParameter、prompt 部品、Markdown レンダリング、構造化ドキュメント、パス解決 helper、JSON Schema 読み込みなど、複数用途で共有される基盤実装を調べたいとき。
+- 実際のレビュー判断基準、カテゴリ分け、git diff 生成、merge conflict marker 検出、TUI 表示や対話処理など、個別サブタスクのドメインロジック本体を調べたいとき。
+- 生成済みの INDEX.md 内容の評価や、特定ファイルを実際に読むべきかどうかのルーティング判断だけをしたいとき。
 
 ## hash
-- 2760b9582cc34098381e4baa949b5875af0a80ad389f2f7a90aa07ed810d9ee7
+- b352eddb93cfdc1a6bfd2e2cc39dc542e1fcabee8ef7964642e7214992b0641f
 
 # `prompt_parts`
 
