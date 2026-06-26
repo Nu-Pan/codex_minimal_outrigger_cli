@@ -62,23 +62,21 @@
 # `judge_finding.py`
 
 ## Summary
-- 仕様断片レビューで挙がった単一の所見について、採用側・非採用側の理由を材料に、人間へ提示すべきかを判定するための AI 呼び出しパラメータを構築する実装。
-- 判定担当の role、所見採否という goal、対象所見と双方の理由を含む補助プロンプト、oracle/review oracle 標準を組み込んだ complete prompt を生成し、効率重視モデル・中程度推論・oracle 読み取り専用の呼び出し条件と対応 schema を返す。
+- `cmoc review oracle` の所見採否判定用に、所見本文と賛成・反対理由を入力として AI エージェント呼び出しパラメータを組み立てる実装。
+- 判定担当ロール、提示可否の判定目的、純粋 oracle 読み取りモード、レビュー oracle 基準付きの complete prompt、効率向けモデル設定、対応する Structured Output schema への参照をまとめて設定する。
 
 ## Read this when
-- 仕様断片レビュー所見を人間へ提示するかどうかを判定するプロンプトや agent 呼び出し条件を確認・変更したいとき。
-- 判定対象の所見、妥当とする理由、妥当ではない理由が prompt 内でどのように渡されるかを確認したいとき。
-- review oracle 標準や oracle 標準を含めた所見採否判定用 complete prompt の組み立て位置を追いたいとき。
-- 所見採否判定で使う model class、reasoning effort、file access mode、Structured Output schema の選択根拠を実装側から確認したいとき。
+- レビュー oracle が検出した個別所見を人間へ提示するかどうかを判定するプロンプト構築処理を確認・変更したいとき。
+- 所見本文、所見が妥当である理由、所見が妥当ではない理由をどのように採否判定エージェントへ渡すかを確認したいとき。
+- `cmoc review oracle` の所見採否判定で使う file access mode、モデルクラス、reasoning effort、Structured Output schema の紐付けを確認したいとき。
 
 ## Do not read this when
-- 仕様断片レビュー全体の進行、所見の生成、採用後の表示や集約処理を調べたいだけのとき。
-- oracle file の本文仕様や review oracle 標準そのものを確認したいとき。
-- complete prompt の共通構築処理、構造化 markdown の描画、path 解決、agent 呼び出しデータ型の定義を調べたいとき。
-- 所見採否判定の JSON schema の項目や判定結果の形式だけを確認したいとき。
+- 所見候補を生成する処理、所見への賛成理由・反対理由を作る処理、またはレビュー対象の oracle file 自体の解析処理を探しているとき。
+- 所見採否判定の JSON schema の項目や型を確認したいだけのとき。
+- complete prompt の共通構築ロジックや markdown rendering の汎用仕様を確認したいとき。
 
 ## hash
-- 9ae08dcb8fe3d6a171e82fc751672730ab81be8594ca3a034ed3079887ba0680
+- f8769d64f769ab87396c4bd48b4b7bbcbdfaffdb32e6cfcff0c6de828850b943
 
 # `merge_finding.json`
 

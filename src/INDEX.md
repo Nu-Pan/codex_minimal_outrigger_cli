@@ -1,25 +1,23 @@
 # `acp`
 
 ## Summary
-- AI エージェント呼び出しに関する実装領域。上位コマンドが AI に処理を委ねる直前の呼び出し条件を組み立てる builder 群と、その prompt 本文へ注入する標準文書・規則・基礎説明の部品群を扱う。
-- role、summary、goal、補助プロンプト、参照標準、ファイルアクセス規則、モデル種別、推論量、Structured Output schema などの agent call 契約を作る入口であり、用途別の呼び出しパラメータ構築と共通 prompt 断片生成へ進むための分岐点である。
-- フォーク適用、目次エントリー生成、oracle review、session conflict 解消、TUI 実行パラメータ解決など、個別処理を AI に依頼するための条件設定を扱うが、実際の差分解析、git 操作、CLI/TUI 制御、結果検証、保存処理そのものは対象外である。
+- AI agent 呼び出しに渡す実行パラメータとプロンプト文書断片を組み立てる実装領域。各サブコマンドや処理フェーズ向けに、役割、作業概要、完了条件、ファイルアクセス権限、補助文脈、モデル設定、推論量、Structured Output schema を接続する処理と、そこへ注入される標準規範・ルーティング規則・基礎概念の prompt part を扱う。
+- 下位には、フォーク適用、目次エントリー生成、oracle review、session join の conflict 解消、TUI 実行パラメータ解決などの用途別 builder と、file access rule、routing rule、oracle/realization の基本説明、各種 standard を StructDoc として生成する prompt 部品がある。
 
 ## Read this when
-- AI エージェントに渡す complete prompt、補助プロンプト、参照標準、ファイルアクセス権限、モデル設定、Structured Output schema の対応関係を確認または変更したいとき。
-- 上位コマンドの各フェーズが、どの種類の agent 呼び出しや prompt 部品に接続されるかを追いたいとき。
-- raw diff、対象パス、レビュー所見、元プロンプト、conflict 対象ファイル一覧などの入力が、AI への作業指示や出力契約にどう埋め込まれるかを確認したいとき。
-- agent call 用パラメータを作る処理を読むべきか、prompt 本文に含める規則・標準・基礎説明を作る処理を読むべきか判断したいとき。
+- AI agent CLI/TUI や内部 agent call に渡す complete prompt、role、summary、goal、補助文脈、ファイルアクセス権限、モデル種別、推論量、Structured Output schema の対応を確認または変更したいとき。
+- フォーク適用時の所見列挙・所見対応・変更要約、INDEX.md 用エントリー生成、oracle file レビュー所見の列挙・検証・採否・統合、session join の merge conflict marker 解消、TUI 入力からの実行パラメータ選定のどの呼び出し構成へ進むべきか判断したいとき。
+- agent に注入されるファイルアクセス規則、INDEX.md ルーティング規則、oracle と realization の基本概念、oracle standard、realization standard、review/apply/indexing 用の判断基準がどのように prompt 化されるかを追いたいとき。
+- raw diff、対象本文、所見リスト、conflict 対象ファイル、利用者入力などの外部文脈が、どの補助 prompt として組み込まれ、どの返却契約で agent に渡されるかを確認したいとき。
 
 ## Do not read this when
-- コマンド全体の実行フロー、サブコマンド入口、状態管理、ファイル走査、保存、通知、CLI/TUI 入出力など、AI 呼び出し条件を作る前後の外側の制御を調べたいとき。
-- git 操作、ブランチ操作、merge 実行、conflict 検出、差分取得、作業ツリー反映など、実際のリポジトリ操作を調べたいとき。
-- AI 呼び出し後の結果検証、レビュー所見の統合、修正結果の確認、テスト実行など、builder が返したパラメータを使った後段処理を調べたいとき。
-- StructDoc、Standard、Requirement、AgentCallParameter、ファイルアクセスモード、パス解決、Structured Output schema の項目名や型など、汎用部品や schema 定義そのものを確認したいとき。
-- 特定の oracle file や realization file の本文内容、または個別機能の仕様そのものを確認したいとき。
+- CLI サブコマンド全体の制御フロー、引数解析、状態管理、表示、保存、git 操作、merge 実行、差分取得など、agent call parameter 構築の外側にある実処理を調べたいとき。
+- AgentCallParameter、FileAccessMode、ModelClass、StructDoc、Standard、Requirement、パス解決などの基礎データ構造や共通ユーティリティそのものを確認したいとき。
+- AI agent の実行基盤、プロセス起動、サンドボックス強制、実際のファイルシステム権限制御を探しているとき。
+- oracle file や realization file の個別仕様・実装内容そのもの、または review/apply/indexing/session/TUI の利用者向け挙動を調べたいだけのときは、該当する仕様・コマンド実装・テストへ直接進めばよい。
 
 ## hash
-- 459e0244636e6f374738ffd593a2ed04db4038bce5e94a74e1f181612dc07535
+- cf1b8ebcfb98f1a09a2e515c87928f2818e338ac1454ffb160fded23856ac5a9
 
 # `basic`
 

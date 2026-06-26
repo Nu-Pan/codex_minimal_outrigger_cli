@@ -1,25 +1,23 @@
 # `oracle`
 
 ## Summary
-- oracle file レビューに関する AI 呼び出しパラメータ構築と、それに対応する Structured Output schema をまとめる領域。
-- 新規所見の列挙、所見を支持・否定する理由の追加調査、所見採否の判定、所見群の重複・矛盾整理という、review oracle の主要なエージェント呼び出し単位への入口になる。
-- 各処理は、対象所見や既知理由・既知所見を prompt に渡し、oracle file を根拠にした結果だけを返させるための role、goal、標準 prompt、file access mode、model class、reasoning effort、出力契約の対応を担う。
+- `cmoc review oracle` の AI 呼び出しパラメータ構築と Structured Output schema をまとめる領域。
+- oracle file のレビュー所見について、新規列挙、擁護理由・反証理由の追加検証、採否判定、重複・矛盾の整理を行う各段階の出力契約と prompt 構築を扱う。
+- レビュー対象を oracle file に限定した読み取り条件、既知理由や既存所見との重複回避、review oracle 標準を適用した agent 呼び出し設定を確認する入口になる。
 
 ## Read this when
-- `cmoc review oracle` で、oracle file レビュー用の agent 呼び出し内容や prompt 構築を確認・変更したいとき。
-- oracle file から新規所見を列挙する処理、既知所見との重複回避、所見なしの場合の扱いを確認したいとき。
-- レビュー所見について、妥当である理由と妥当ではない理由を oracle file に基づいて追加調査する呼び出しを追いたいとき。
-- 擁護理由・反対理由を踏まえて、単一所見を人間へ提示するかどうか判定する処理を確認したいとき。
-- 複数の oracle review 所見について、重複・矛盾・過剰な細分化を削除・置換・統合で整理する処理を確認したいとき。
-- review oracle 標準や oracle 標準を組み込んだ complete prompt、oracle 読み取り専用のアクセス条件、モデル種別、推論量、対応する Structured Output schema の選択関係を確認したいとき。
+- `cmoc review oracle` で、oracle file から所見候補を列挙し、検証し、採否判定し、整理する一連の agent 呼び出し仕様を追いたいとき。
+- レビュー所見、既知の関連所見、既知の肯定理由・否定理由を prompt にどう渡し、重複しない新規情報だけを返させるか確認したいとき。
+- oracle file レビュー向けの Structured Output schema と、それに対応する AgentCallParameter の紐付けを実装・テスト・調整したいとき。
+- 所見の重大度、根拠、理由、採否、削除・置換・統合といったレビュー結果の構造化された受け渡し境界を確認したいとき。
+- oracle file を根拠にした所見の妥当性支持と反証を分けて扱う検証フローを確認したいとき。
 
 ## Do not read this when
-- oracle file そのものの正本仕様内容や、レビューで実際に調査すべき仕様断片を探しているだけのとき。
-- oracle file と realization file の基本定義、編集責任、配置ルール、または oracle 標準そのものを確認したいとき。
-- レビュー所見の保存、CLI 表示、通知、集計、実行フロー全体、サブコマンド入口処理を確認したいとき。
-- oracle file 以外の実装レビューや、通常の realization file レビューの prompt 構築を調べたいとき。
-- 汎用的な AgentCallParameter、path 解決、Markdown レンダリング、構造化ドキュメント描画などの共通 helper の詳細を調べたいとき。
-- Structured Output schema の項目名・型・JSON 形式だけを機械的に確認したいとき。
+- oracle file や realization file の基本定義、編集責任、配置ルールだけを確認したいとき。
+- 個別の正本仕様断片そのものや、レビュー対象としてどの oracle file を探索するかを調べたいとき。
+- `cmoc review oracle` の CLI 入口、実行制御、保存、表示、集約、通知など、agent 呼び出しパラメータ構築より外側の処理を確認したいとき。
+- oracle file 以外の realization file レビューや、通常の実装レビュー用 prompt 構築を探しているとき。
+- 汎用的な AgentCallParameter、markdown rendering、path 解決、complete prompt 組み立て helper の共通処理だけを調べたいとき。
 
 ## hash
-- 185a64c41d2cd90d0360720f548178b70f83b13227135db9ca5ac2dec73d6d76
+- 73e1b62f0387f4c1ad7bf7435affddf77d7905a178c57b525215fa4c2694cf01

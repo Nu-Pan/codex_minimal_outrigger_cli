@@ -1,25 +1,23 @@
 # `builder`
 
 ## Summary
-- AI エージェント呼び出し用のパラメータ構築を扱う領域。各処理で渡す role、summary、goal、補助プロンプト、参照する標準文書、ファイルアクセスモード、モデル種別、推論量、Structured Output schema の接続を組み立てる入口である。
-- フォーク適用、目次エントリー生成、oracle review、session の conflict 解消、TUI 実行パラメータ解決など、上位コマンドが実際の処理を AI に委ねる直前の呼び出し条件を、用途別の下位領域へ分けて収める。
-- 実際の差分解析、レビュー所見の保存、merge 実行、CLI/TUI の起動制御、共通 prompt 部品そのものを担う領域ではなく、それらを使って個別の agent 呼び出し契約を作る builder 群である。
+- AI エージェント呼び出し用パラメータを組み立てる builder 群への入口。フォーク適用、目次エントリー生成、oracle レビュー、session 処理、TUI パラメータ解決など、各機能が下流エージェントへ渡す役割・目的・補助文脈・権限・モデル設定・Structured Output schema の接続を扱う。
+- 実際の業務処理、差分解析、レビュー判定そのもの、ファイル更新、CLI 制御フローを直接担う領域ではなく、AI に依頼する作業内容と返却契約を機能別に構成するための入口である。
 
 ## Read this when
-- AI エージェントに渡す complete prompt の内容、補助プロンプトへの入力データ埋め込み、参照標準、ファイルアクセス権限、モデル種別、推論量、出力 schema の対応を確認または変更したいとき。
-- 上位コマンドのどのフェーズが、読み取り専用の調査、oracle file のレビュー、realization file の修正、conflict marker 解消、実行パラメータ選定のどの agent 呼び出しへつながるかを追いたいとき。
-- raw diff、対象パス、所見リスト、元プロンプト、conflict 対象ファイル一覧などの入力が、AI への作業指示や Structured Output の契約としてどう渡されるかを確認したいとき。
-- 下位領域のうち、フォーク適用用、目次生成用、oracle review 用、session conflict 解消用、TUI パラメータ解決用のどれを読むべきか判断したいとき。
+- 各コマンドや処理フェーズから AI エージェントへ渡す complete prompt、role、summary、goal、補助プロンプト、モデル選択、推論量、ファイルアクセス権限を確認または変更したいとき。
+- フォーク適用、INDEX.md 用エントリー生成、oracle file レビュー、session 関連の conflict 解消、TUI 入力からの実行パラメータ解決のどの呼び出し設定へ進むべきかを判断したいとき。
+- AI 呼び出しの入力文脈と Structured Output schema の対応、または schema による返却形の制約を、機能別の builder 実装から確認したいとき。
+- raw diff、対象本文、oracle file、既存所見、対象ファイル一覧、利用者入力などが、どのような補助文脈として prompt に埋め込まれ、どの権限でエージェントに渡されるかを追いたいとき。
 
 ## Do not read this when
-- コマンド全体の実行フロー、サブコマンド入口、状態管理、ファイル走査、保存、通知、CLI/TUI 入出力の外側の制御を調べたいとき。
-- git 操作、ブランチ操作、merge 実行、conflict 検出、差分取得、作業ツリーへの反映など、実際のリポジトリ操作を調べたいとき。
-- AI 呼び出し後の結果検証、所見の統合実行、修正結果の確認、テスト実行など、builder が返したパラメータを使った後段処理を調べたいとき。
-- complete prompt の共通構築、構造化 Markdown 描画、パス解決、ファイルアクセスモード定義、AgentCallParameter 型などの汎用部品そのものを確認したいとき。
-- Structured Output schema の項目名・型・JSON 形式だけを機械的に確認したいときは、該当する schema 本文へ直接進めばよい。
+- フォーク適用、目次更新、レビュー、session、TUI などのコマンド全体の制御フロー、保存、表示、状態管理、CLI 入出力を調べたいとき。
+- git 操作、差分解析、所見の統合・重複排除、修正結果の検証、merge 実行や conflict 検出など、AI 呼び出しパラメータ構築の外側にある実処理を探しているとき。
+- complete prompt の共通構築、Markdown レンダリング、パスモデル、ACP の基礎型など、複数領域で共有される汎用部品だけを確認したいとき。
+- 個別の Structured Output 項目の意味や詳細だけを確認したいときは、該当する schema 本文へ直接進めばよい。
 
 ## hash
-- 04335ab886dd86f56ee356ae141d2429baf25c7dacb7cf5975382521c0b241b0
+- db3debc81c0ddff3d09773cf623d66c945face4a1e7eafc5954e8b9fea4f9953
 
 # `prompt_parts`
 

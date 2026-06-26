@@ -148,30 +148,23 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体を置く実装領域。公開 CLI 入口、サブコマンドの実行フロー、AI エージェント呼び出しパラメータ構築、共通 runtime helper、設定モデル、基礎データ構造、パス解決、構造化文書のレンダリングなど、利用者向け挙動を具体化するコードを扱う。
-- 上位コマンドが git worktree、branch、session state、config、Codex exec/TUI、INDEX 更新、review oracle、apply fork/join/abandon、session fork/join/abandon をどう接続するかを追うための入口である。
-- 正本仕様断片そのものではなく、oracle file と既存テストから導かれた実装本文の集合であり、実装変更時には対象サブコマンド、共通 runtime、agent call builder、基礎モデルのどこへ進むべきかを切り分ける起点になる。
+- cmoc の realization implementation 全体を収める実装ルート。AI agent 呼び出し条件、基礎モデル、共通 runtime、設定モデル、最上位 CLI 入口、各サブコマンド実行フローなど、利用者向け CLI と内部処理を具体化するコードの主要な入口である。
+- 下位には、agent call parameter 構築、共有データ構造、Codex/Git/config/log/state などの runtime helper、利用者調整可能な設定、Typer による command 定義、init・TUI・indexing・review・apply・session の上位 command 実装が分かれている。
 
 ## Read this when
-- cmoc の CLI 挙動、サブコマンド構成、引数から実装関数への委譲、または Typer/Click の入口処理を確認・変更したいとき。
-- init、tui、indexing、review oracle、apply、session など、利用者が実行するコマンドの実行順序、事前条件、状態更新、worktree・branch 操作、report 出力、cleanup を追いたいとき。
-- Codex CLI 呼び出し、Structured Output 検証、profile/schema 準備、retry、quota/capacity 処理、TUI 起動、call log、indexing preflight など、外部 AI 実行との runtime 接続を確認したいとき。
-- AI エージェントに渡す role、summary、goal、補助プロンプト、参照標準、ファイルアクセス制約、モデル種別、reasoning effort、Structured Output schema などの呼び出し条件を確認・変更したいとき。
-- cmoc 設定のデータ構造、既定値、JSON 変換、読み書き、モデル名・reasoning effort 名への解決、サブコマンド別ループ上限などを調べたいとき。
-- root token 付きパス解決、AgentCallParameter、FileAccessMode、ModelClass、ReasoningEffort、Standard/Requirement、構造化 Markdown 生成など、複数箇所から参照される基礎モデルを確認したいとき。
-- Git 操作、clean worktree 検査、managed branch 判定、worktree 作成・削除、session state 永続化、内容 hash、共通エラー表示、JSON Lines ログ、runtime path など、サブコマンド間で共有される helper の実装を確認したいとき。
-- INDEX.md 更新処理、対象列挙、既存 entry の hash 判定、entry 生成の Codex 呼び出し、更新 commit、preflight 連携を実装として追いたいとき。
+- cmoc の実装側で、どの領域のコードへ進むべきかを切り分けたいとき。
+- CLI サブコマンド、agent 呼び出し、設定、共通 runtime、path/root モデル、Structured Output、review/apply/session/indexing/TUI の実装責務の位置づけを把握したいとき。
+- oracle file の正本仕様断片を realization code としてどのモジュール群が具体化しているかを調べたいとき。
+- 実装変更に着手する前に、基礎モデル・共通 helper・上位 command・用途別 prompt builder のどこを読むべきか判断したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片、自然言語の要求、実装に対する人間意図そのものを確認したいとき。この領域は正本ではなく realization implementation であり、仕様本文は oracle 側を読む。
-- realization test の期待外部挙動、fixture、回帰観点、テストケースだけを確認したいとき。実装本文ではなくテスト領域へ進む方が直接的である。
-- README、AGENTS、補助文書、開発者向け説明、パッケージ設定、実行スクリプトなど、実装ソース以外の補助ファイルを確認したいとき。
-- 実行中に生成されるログ、report、session state、worktree、config 実体、cache、一時ファイルなどの生成物そのものを読みたいとき。この領域はそれらを作成・利用する実装であり、生成済みデータの保管場所ではない。
-- 特定の責務がすでに下位の個別モジュールやテストに絞れており、その本文だけを読めば足りるとき。まず該当する下位対象へ直接進む。
-- 利用者としてコマンドの使い方や出力を知りたいだけで、内部の実行順序、状態遷移、例外処理、外部コマンド呼び出しを調べる必要がないとき。
+- oracle file の正本仕様断片そのもの、自然言語仕様、仕様上の判断根拠を確認したいときは、実装ルートではなく oracle 側へ進む。
+- realization test の期待外部挙動、fixture、テスト観点を確認したいだけのときは、テスト領域へ進む。
+- README、AGENTS、補助ファイル、生成物、実行ログ、作業メモなど、実装コード以外のリポジトリ補助情報を探しているとき。
+- 対象の責務が既に特定できている場合は、この実装ルート全体ではなく、該当する下位領域や個別ファイルへ直接進めばよい。
 
 ## hash
-- cef502e7d801166020a0afdf4e6de97e094d2789c2df764d3f84e0902f492aec
+- f5b60ca1a5a9b3dadecd242f224593762907f0fe195fa0f82f9d402a71ae9bf9
 
 # `test`
 
