@@ -276,23 +276,22 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- `review oracle` コマンドと review oracle ループ周辺の realization test。レポート生成、対象 oracle の選別、finding の merge 操作、失敗時レポート、review 用 worktree からの `INDEX.md` 反映、想定外差分の拒否を検証する。
-- Codex 実行を fake に差し替え、CLI 実行結果・生成レポート本文・gitignored oracle の除外・finding merge contract の例外条件など、外部挙動と制御ロジックを確認する入口。
+- `review oracle` コマンドの realization test。oracle レビューのレポート生成、対象 oracle file の選別、findings の列挙・統合・検証・判定フロー、レビュー用 worktree からの `INDEX.md` 反映、処理失敗時のエラーレポート、想定外差分の拒否を検証する。
 
 ## Read this when
-- `review oracle` の CLI 挙動、scope option、レポート内容、エラー時出力、対象 oracle 数の扱いを変更・調査するとき。
-- review oracle が gitignored oracle を full/session scope で除外する挙動、または session scope で対象がない場合に Codex 呼び出しを省略する挙動を確認するとき。
-- finding の列挙・validate・judge・merge の制御、特に列挙 loop が対象ごとの既存 finding だけを prompt に渡すことや merge operation の kind contract を確認するとき。
-- review 用 worktree で生成された `INDEX.md` だけを元 worktree に反映し、それ以外の差分を拒否・破棄する安全性を変更または検証するとき。
+- `review oracle` の CLI 挙動、レポート内容、終了コード、scope 指定、対象 oracle file の集計・除外条件を確認または変更するとき。
+- oracle レビュー中に Codex へ渡す prompt や structured output schema ごとの処理順、findings の merge/delete/replace 操作、validate/judge 周辺の制御ロジックを変更するとき。
+- レビュー用 worktree で生成された `INDEX.md` を session 側へ取り込む処理、index conflict 解決、レビュー worktree の配置や後始末を変更するとき。
+- レビュー処理の途中失敗時に生成される error report、fatal finding の扱い、標準出力と標準エラーへの出し分けを確認するとき。
+- レビュー実行中に `INDEX.md` 以外の差分が発生した場合の拒否・復元挙動を確認するとき。
 
 ## Do not read this when
-- review oracle 以外の CLI サブコマンド、session fork/init そのもの、または一般的な設定読み込みだけを調べるとき。
-- oracle 正本仕様の内容や oracle file の編集方針を確認したいとき。この対象は realization test であり、正本仕様の根拠にはしない。
-- Codex CLI や LLM の実出力品質を検証したいとき。この対象は Codex 実行を fake に差し替え、cmoc 側の制御と副作用を検証している。
-- review oracle の実装詳細を直接修正する場所を探しているとき。まず実装側の review oracle 関連モジュールを読む方が直接的。
+- oracle file や realization file の概念定義、正本仕様としての要求を確認したいだけの場合は、oracle 側の仕様文書を読む。
+- `review oracle` 以外の CLI サブコマンド、セッション操作、設定読み込み一般の挙動だけを調べる場合は、それぞれの実装または専用テストへ進む。
+- Codex CLI や LLM 出力そのものの品質評価を調べる場合は、このテストは fake runner で制御フローを検証しているだけなので読まなくてよい。
 
 ## hash
-- 89b8d6fa3fcf79a4223723ad0951331c1b1fee32cdfa223ca324f98bba735bbb
+- ae2abbc7cc7938507597b2a7aaacf3c96591da25ea1f73a246d20c3f9ee3cb91
 
 # `test_session_cli.py`
 
