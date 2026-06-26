@@ -8,7 +8,6 @@ from pathlib import Path
 
 # cmoc
 from basic.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
-from basic.path_model import resolve_real_path
 from basic.acp import (
     AgentCallParameter,
     ModelClass,
@@ -34,8 +33,6 @@ def build_review_oracle_judge_finding_parameter(
     challenger_reasons: str
         所見が妥当ではない理由。
     """
-    # パス
-    oracle_root = resolve_real_path(Path("<work-root>/oracle"))
     # プロンプト
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア仕様断片レビュー所見の採否判定担当です",
