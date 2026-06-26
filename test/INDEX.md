@@ -98,22 +98,20 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎的な runtime 挙動を横断的に検証する realization test。パス token 解決、duration 表示、repo root と work root の判別、設定 default、エラー Markdown 出力、CLI preflight と parse error、.cmoc ignore、file access mode、binary 判定、Codex profile の filesystem 権限生成を扱う。
-- 個別機能の単体テストというより、runtime helper・CLI entrypoint・permission profile の基本契約が実装全体で崩れていないかを確認する入口になる。
+- cmoc の基本的な runtime 挙動を横断的に検証する realization test。パス token 解決、時間表示、repo root と work root の識別、設定既定値、構造化エラー表示、session/apply branch 状態、CLI エラー出力、補完 probe、.cmoc ignore、file access mode、binary 判定、Codex profile のファイルアクセス制御を扱う。
 
 ## Read this when
-- cmoc の実行場所判定、worktree 判定、path token 表記、または `<cmoc-root>` などの path model に関わる挙動を変更する時。
-- CLI エラー表示、引数解析失敗、completion probe、preflight、stdout/stderr の使い分けを変更する時。
-- file access mode、sandbox mode、Codex profile、oracle・memo・.agents の read/write/read_only/deny_read 権限生成を変更する時。
-- 設定 default、reasoning effort、model class、.cmoc の gitignore 登録、binary 判定など、runtime の基本 helper の外部挙動を確認したい時。
+- runtime の基礎挙動や CLI 実行前後の安全制御を変更し、その外部挙動を確認したいとき。
+- path model、設定既定値、エラー markdown、branch session state、gitignore 更新、file access mode から sandbox mode への変換、Codex profile の permission profile 生成に関わる実装を変更するとき。
+- CLI のエラーが stdout に出ること、補完 probe で cmoc preflight や副作用を避けること、work root 以外で init を拒否することを検証したいとき。
 
 ## Do not read this when
-- 特定サブコマンドの詳細な業務フロー、永続状態の個別 schema、または UI/TUI の表示内容を調べたいだけの時は、その責務を持つ実装・テストへ直接進む。
-- oracle file の正本仕様そのものを確認したい時は、実装テストではなく該当する oracle doc または oracle src/test を読む。
-- 単一 helper の内部実装方針だけを調べたい時は、まず該当する runtime module や support fixture を読む。
+- 個別サブコマンドの正常系 workflow やユーザー操作全体の仕様を追いたいだけで、runtime の基礎部品や安全制御に触れないとき。
+- oracle file の正本仕様や自然言語仕様を確認したいとき。
+- Codex CLI や LLM の出力品質そのものを検証したいとき。
 
 ## hash
-- 8961b01452ba7a8c3079c02808be3acf6a26714966b7da9ca6b19e64e94f9bc8
+- c3404b46b12a99d6f68104a300885136d78816e078619287714470bffd0cdc91
 
 # `test_cli_init_tui.py`
 

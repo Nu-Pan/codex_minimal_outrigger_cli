@@ -1,25 +1,26 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実行ライフサイクルを扱う実装群への入口。isolated worktree での適用開始、active run の破棄、完了・失敗結果の取り込み、report 生成、実行中 process の状態管理と停止確認をまとめて扱う。
-- session branch と apply branch/worktree の対応、apply state の遷移、編集禁止対象の差分検出と復元、join 前後の想定外差分や cleanup など、apply run 全体にまたがる制御を調べる際の起点になる。
-- 個別の処理は開始、破棄、取り込み、report、runtime 補助に分かれているため、apply のどの段階を確認するかを決めてから下位対象へ進むためのルーティング対象。
+- apply 系サブコマンド群の実行時ロジックをまとめる実装ディレクトリ。apply run の開始、実行中状態の補助管理、破棄、成果取り込み、実行結果 report 生成までを扱う。
+- apply branch/worktree、apply process id、session state、差分反映、merge、後片付けなど、apply の lifecycle に関わる具体処理への入口になる。
 
 ## Read this when
-- apply run の開始から終了後の取り込みまたは破棄まで、apply 系サブコマンド全体の責務分担を把握したいとき。
-- apply branch/worktree の作成・特定・削除、process id 管理、apply state の ready/active/completed/error 周辺の遷移をどこで扱うか探したいとき。
-- 編集禁止対象の差分ロールバック、所見の適用、変更 commit、join 前の想定外差分検出、force resolve、report 出力など、apply run の段階別実装へ進む入口を選びたいとき。
-- apply abandon、apply fork、apply join のいずれかに関する実行条件、失敗条件、CLI 出力、cleanup、warning の調査対象を切り分けたいとき。
+- apply run の開始から終了、破棄、join までの全体像や、apply state がどの操作で遷移・初期化されるかを追いたいとき。
+- apply branch や apply worktree の作成・特定・削除、session branch との関係、実行可能 branch の検証を確認・変更したいとき。
+- apply process id の保存・削除、実行中 process の停止、abandon 時の TERM/KILL 待機など、apply 実行プロセス管理を調べたいとき。
+- apply fork による finding 列挙、変更適用、編集禁止対象の差分検出と rollback、commit 作成、report 出力を確認・変更したいとき。
+- apply join による apply branch の成果 merge、想定外差分や conflict の扱い、force-resolve、apply worktree と branch の後片付けを確認・変更したいとき。
+- apply fork または join の report 内容、変更要約、失敗時 report の保存内容を確認・変更したいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド登録、CLI 全体の引数定義、共通 command dispatch を調べたいときは、上位のサブコマンド実装へ進む。
-- session state や apply state の schema、session_id の生成、状態モデルそのものを確認したいときは、状態定義や session 管理側へ進む。
-- git wrapper、worktree root、path model、CmocError、timestamp、report directory などの共通基盤だけを調べたいときは、共通 runtime や utility 側へ進む。
-- Codex 呼び出し用 prompt、structured output、AgentCallParameter の組み立てだけを確認したいときは、apply 本体ではなく該当 builder 側へ進む。
-- apply の外部挙動を検証するテスト観点や fixture を調べたいときは、対応するテスト領域へ進む。
+- apply 以外のサブコマンドの CLI 定義、dispatch、共通 Typer 配線だけを確認したいとき。
+- session state の schema、session_id の生成・管理、apply.apply_branch のデータ構造そのものを確認したいときは、状態モデルや session 管理側へ進む。
+- git command wrapper、worktree root、state 読み書き、clean worktree 判定、CmocError の表示形式など、複数サブコマンドで使う共通 runtime の詳細だけを調べたいとき。
+- apply fork で Codex に渡す prompt、AgentCallParameter、structured output の構成だけを確認したいときは、それらを組み立てる専用実装へ進む。
+- oracle file、realization file、INDEX.md 生成規則など、apply 処理が参照・保護する対象概念の仕様自体を調べたいとき。
 
 ## hash
-- 56dfcc3494341c303562ef37109cc2cca66d512be10b3d73be3eb0edd7f934e0
+- fe3df4dd9232765d81636083f223e67c48ce065137c6d16f98ff4830e7f48da1
 
 # `indexing.py`
 

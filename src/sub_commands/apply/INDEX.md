@@ -41,21 +41,24 @@
 # `abandon.py`
 
 ## Summary
-- 未 join の active apply run を破棄し、apply state を ready に戻すサブコマンド実装。session branch または対象 apply branch 上で実行されることを確認し、状態ファイル・apply worktree・apply branch・apply process id を整理して結果と警告を CLI に出力する。
+- 未 join の apply run を破棄し、apply state を ready に戻す apply abandon の実処理を担う実装。
+- session branch または apply branch 上で実行されていることを確認し、対象 apply branch と worktree、apply process id、session state を照合しながら破棄処理を行う。
+- running 状態なら apply process の停止を試み、apply worktree の削除、apply branch の強制削除、process id file の削除、state.apply の初期化と結果表示までを扱う。
 
 ## Read this when
-- apply abandon の実行条件、失敗条件、状態遷移、削除対象を確認したいとき。
-- active apply run を中断・破棄する処理で、apply process の停止、apply worktree の削除、apply branch の強制削除、apply state の初期化に関わる挙動を調べるとき。
-- apply branch 上から実行された場合と session branch 上から実行された場合の root 解決や branch 照合を確認したいとき。
-- apply abandon の CLI 出力に含まれる before/after、apply branch、apply worktree、warnings の内容を確認したいとき。
+- apply abandon の実行条件、破棄対象の判定、active apply run がない場合のエラー条件を確認したいとき。
+- apply branch 上または session branch 上から abandon した場合に、どの root、session branch、apply worktree を使うかを追いたいとき。
+- running apply の停止、apply process id file の読み取り・削除、apply worktree と apply branch の削除順序や warning 出力を確認したいとき。
+- apply state を ready に戻す処理や、ApplyPart の再初期化、write_state による session state 更新を変更・調査したいとき。
 
 ## Do not read this when
-- apply run の開始、join、通常の完了処理など、破棄以外の apply サブコマンド挙動を調べたいとき。
-- apply state や process id の低レベルな読み書き helper、worktree path の算出、process 停止 helper 自体の詳細を変更したいとき。
-- 一般的な git branch/worktree 操作 helper、state schema、clean worktree 判定の共通実装を調べたいとき。
+- apply run の生成、開始、join、通常完了の挙動を調べたいだけで、破棄処理の詳細が不要なとき。
+- apply process id file や apply worktree path の低レベル helper 自体の仕様を調べたいときは、apply runtime helper 側を直接読む。
+- branch 操作、worktree 削除、state 読み書き、clean worktree 判定の共通実装を調べたいときは、cmoc_runtime 側を直接読む。
+- Typer のコマンド登録や CLI 全体のサブコマンド配線だけを確認したいとき。
 
 ## hash
-- 62bb749659c923570b2d7a686dc18b15a65e83f74ff24eae52a55edaaecf31fe
+- c244472d3c7aab7bfbdafb0b800c434a34ed297fbd8116a6861c168385636c51
 
 # `fork.py`
 
@@ -97,24 +100,23 @@
 # `join.py`
 
 ## Summary
-- apply run の完了またはエラー状態を session branch へ取り込む join 処理を実装する。実行位置が apply branch の場合は対応する session worktree へ移動し、状態ファイルを確認して join 可能性を検証する。
-- join 前に session/apply 双方の想定外差分を検出し、通常時は report を保存して中止し、force resolve 時は oracle snapshot 等の基準 commit へ戻してから merge する。
-- merge 後は apply state を初期化し、join 済み oracle snapshot commit を session state に記録し、report 出力、apply worktree 削除、apply branch 削除を試みる。
-- join report の生成、想定外差分の分類、許可差分の判定、force resolve による復元、INDEX.md だけの merge conflict の機械解決を同じ文脈で扱う。
+- apply run 完了後またはエラー後に、apply branch の成果を session branch へ merge して apply state を初期状態へ戻す処理を担う。
+- session/apply branch の状態検証、想定外差分の検出と force-resolve 時の復元、merge conflict の扱い、join report 作成、apply worktree と branch の後片付けまでを扱う。
+- apply join の CLI ラッパーと実処理、join report の描画、想定差分判定、復元、INDEX.md だけの conflict 自動解決 helper への入口になる。
 
 ## Read this when
-- apply run を session branch に取り込む `apply join` の制御フロー、前提条件、状態更新、cleanup の挙動を確認したいとき。
-- join 前に検出される想定外差分の分類条件や、force resolve が session/apply 側の差分をどの基準へ戻すかを確認したいとき。
-- join report の内容、保存タイミング、merge conflict や想定外差分がある場合のエラー報告を調べたいとき。
-- apply branch と session branch の merge 処理、apply worktree の扱い、apply branch 削除失敗時の warning を調べたいとき。
-- INDEX.md だけが conflict した場合に自動で削除 commit して解決する特例を確認したいとき。
+- apply run の結果を session branch に取り込む join 処理の条件、状態遷移、副作用を確認したいとき。
+- apply join がどの branch 上で実行可能か、clean worktree や apply state をどう検証するかを調べるとき。
+- apply/session branch の想定外差分判定、--force-resolve による復元 commit、merge conflict 時の report 出力を変更したいとき。
+- apply join 後に apply worktree を削除し apply branch を消す条件や、削除できない場合の warning 出力を確認したいとき。
+- INDEX.md だけの merge conflict を機械的に解決する特例を確認したいとき。
 
 ## Do not read this when
-- apply run の作成、実行、状態を completed/error にする処理を調べたいだけのとき。
-- session state や apply state のデータ構造定義、永続化形式、共通 runtime helper の詳細を調べたいとき。
-- 通常の git worktree 検出、branch 削除、clean worktree 検証、report directory 計算などの共通処理そのものを変更したいとき。
-- apply join の利用者向け仕様ではなく、他の apply サブコマンドの CLI 定義や command 登録だけを確認したいとき。
-- INDEX.md の一般的な生成規則やルーティング文書の仕様を調べたいとき。
+- apply run の開始、apply branch の作成、または作業用 worktree の初期化だけを調べたいとき。
+- session state のデータ構造そのもの、永続化形式、branch からの state 読み込み規則を確認したいだけのとき。
+- git wrapper、worktree 探索、report 保存先、cmoc ignore 判定などの共通 runtime helper の詳細を調べたいとき。
+- apply join 以外の subcommand の CLI 定義や dispatch だけを確認したいとき。
+- oracle file や realization file の仕様上の扱い、INDEX.md 生成ルールそのものを確認したいとき。
 
 ## hash
-- b1aee735dd8c291dd4c8326519dfcb0528563109ac523d403bcc4b646bf9fd8f
+- db531dc6c7d8aed77c5678dc687dbaa7f52d1681cacaf8da526854a53562291f

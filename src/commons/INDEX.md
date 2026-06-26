@@ -15,20 +15,21 @@
 # `cmoc_runtime.py`
 
 ## Summary
-- 実行時処理で共通利用される helper・型・定数を一箇所から import できるように集約する入口。Codex 実行、profile、設定、ファイル内容、CLI 前提確認、エラー、git、logging、path、結果型、状態管理の公開 import 面を束ねるだけで、個別処理の実装は持たない。
+- Codex 実行、profile、設定、content hashing、CLI 補助、error、git、logging、path、result、state など、runtime 系の共通 API をまとめて再公開する入口である。
+- この対象自体は処理ロジックを持たず、複数の runtime 領域から import した関数・型・定数を一か所から参照できるようにする集約層として位置づけられる。
 
 ## Read this when
-- 実行時共通機能を利用する側で、どの helper・型・定数をまとめて import できるか確認したいとき。
-- 実行時共通 API の集約面に、新しい helper の公開や不要になった公開 import の削除を行うとき。
-- サブコマンド周辺の実装が参照する実行時 helper 群の入口を確認したいとき。
+- runtime 系 helper を利用する呼び出し側で、どの共通 API が集約入口から import 可能かを確認したいとき。
+- 複数の runtime 領域をまたぐ利用箇所で、直接の依存先を増やす代わりに集約入口を使うべきか判断したいとき。
+- runtime 共通 API の再公開範囲を追加・削除・整理する変更を行うとき。
 
 ## Do not read this when
-- Codex 実行、profile、設定、ファイル内容、CLI、エラー、git、logging、path、結果型、状態管理それぞれの具体的な挙動や副作用を確認したいとき。その場合は該当する個別実装を読む。
-- 特定 helper の仕様、入力、出力、失敗時挙動を変更したいとき。この集約入口ではなく、その helper が定義されている実装を読む。
-- テスト観点や利用者向け挙動を確認したいだけで、実行時共通 API の import 面を扱わないとき。
+- Codex 実行、profile 準備、設定読み書き、hash 書き込み、git 操作、logging、path 解決、state 永続化など、個別処理の実装詳細や失敗時挙動を確認したいときは、それぞれの責務を持つ実装本文を直接読む。
+- 特定の関数・型・定数の仕様、引数、副作用、保存先、外部コマンド呼び出し内容を調べたいだけのとき。
+- 集約入口を経由しない個別 runtime module 内の内部整理やテスト変更だけを行うとき。
 
 ## hash
-- 028f4dbeed1e9bc071b8b98b7f13a8b8e8c31ded9fe29841cc9cf665e8a110f1
+- 47965e9d088c7a23b67c3e3a667e6c40549df203e7d5e544a2fd4b02e2a3715e
 
 # `runtime_cli.py`
 
@@ -316,21 +317,20 @@
 # `runtime_state.py`
 
 ## Summary
-- session branch と apply branch に紐づく永続 state の構造、保存先、読み書き、branch 名からの session-id 抽出を扱う共通実装。
-- session state file を dataclass へ復元し、未知 field を無視しつつ欠落 field を既定値で補う互換的な読み込みと、canonical JSON 形式での書き戻しを提供する。
-- home branch に対応する active session の探索や、cmoc 管理 branch ではない場合・state file が存在しない場合の利用者向けエラー生成の入口になる。
+- session branch と apply branch に紐づく永続 state のデータ構造、JSON 復元・保存、branch 名からの session_id 抽出、現在 branch に対応する state file の読み込みを扱う。
+- home branch に紐づく active session state file を探索する入口も持ち、session state file の保存先と内容を扱う共通処理の集約点になっている。
 
 ## Read this when
-- session state file の schema、既定値、JSON 永続化形式、読み込み時の未知 field・欠落 field の扱いを確認または変更したいとき。
-- cmoc/session または cmoc/apply branch 名から session-id を特定する処理や、branch 名不正時のエラー文言・判定条件を確認または変更したいとき。
-- active session にぶら下がる apply run の状態、session と home branch の対応、最後に join した oracle snapshot commit の保持方法を追うとき。
-- home branch から active session state file を探す処理、または state file の保存場所を決める処理を確認したいとき。
+- session state file の schema、既定値、未知 field の扱い、JSON への保存形式を確認したいとき。
+- cmoc 管理 branch 名から session_id を取り出す処理、または session branch と apply branch の branch 名検証を変更・確認したいとき。
+- 現在 branch に対応する session state file を読み込む処理や、state file が存在しない場合のエラーを確認したいとき。
+- home branch に対して active な session が既に存在するかを判定する処理を調べたいとき。
 
 ## Do not read this when
-- CLI サブコマンドの引数定義、画面出力、コマンド全体の制御フローだけを確認したいときは、各 command 実装を読む。
-- session state file の親ディレクトリや run/work/cmoc root の定義そのものを確認したいときは、runtime path を扱う共通実装を読む。
-- CmocError の表示形式、例外クラスの責務、エラー出力全体の整形を確認したいときは、runtime error を扱う共通実装を読む。
-- git branch の作成・切替・削除など、実際の git 操作を確認したいだけのときは、git 操作や各 workflow の実装を読む。
+- 実際の git branch 作成・切替・commit 操作そのものを調べたいとき。
+- session state file の配置先を決める path model や sessions directory の定義だけを確認したいとき。
+- CLI 引数定義、コマンド dispatch、利用者向け出力の組み立てを調べたいとき。
+- CmocError の表示形式やエラー出力共通処理そのものを変更したいとき。
 
 ## hash
-- 624c3a7d79aca459ea3b8c59120e7ebf3f0c478b5898b5c35fa77cb313245791
+- 6210da600bbbe647a5df4d5a14ac143209c4ebd6dfbc83a1ef6b359ba006b31c
