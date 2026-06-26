@@ -80,6 +80,3 @@ class AgentCallParameter:
     # Structured Output schema ファイルパス
     # Structured Output を要求しない呼び出しでは None。
     structured_output_schema_path: Path | None
-
-    # read-only 制約から外してよい実ファイルパス。
-    writable_file_paths: tuple[Path, ...] = ()

@@ -309,14 +309,10 @@ def render_index_entry(root: Path, path: Path, entry: dict | None = None, digest
 def entry_list(root: Path, path: Path, entry: dict | None, key: str) -> list[str]:
     """Structured Output の必須 list[str] 項目を検証して取り出す。"""
     value = entry.get(key) if isinstance(entry, dict) else None
-    if (
-        isinstance(value, list)
-        and value
-        and all(isinstance(item, str) and item.strip() for item in value)
-    ):
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
         return value
     raise CmocError(
         "INDEX.md entry 生成結果が不正です。",
         ["cmoc indexing を再実行してください。"],
-        f"{path.relative_to(root)}: `{key}` は非空の文字列配列である必要があります。",
+        f"{path.relative_to(root)}: `{key}` は文字列配列である必要があります。",
     )
