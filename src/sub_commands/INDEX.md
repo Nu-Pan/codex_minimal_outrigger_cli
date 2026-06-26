@@ -26,24 +26,22 @@
 # `indexing.py`
 
 ## Summary
-- 現在の work root を対象に、階層ごとのルーティング文書を再生成し、差分がある場合は専用 commit として保存するサブコマンド実装。
-- 対象の直下要素を列挙し、既存エントリーの hash を再利用できるか判定し、必要な要素だけ Codex 実行でエントリー生成する処理をまとめている。
-- 排他 lock、事前条件確認、git ignored・binary・memo 除外、ディレクトリ hash 計算、Structured Output から Markdown エントリーへの描画までを扱う。
+- INDEX.md の自動メンテナンスを担う subcommand 実装で、work root 配下の対象を走査し、既存 entry の hash 再利用、Codex による entry 生成、Markdown 描画、更新差分の commit までを制御する。
+- Codex 呼び出し前の indexing preflight 登録と実行、CLI 実行時の clean worktree などの前提条件検査、repository 単位の排他 lock による直列化を扱う。
+- indexable な directory・child の選別、memo・git ignored・binary の除外、対象内容と鮮度判定 hash の計算、Structured Output の検証をまとめて実装している。
 
 ## Read this when
-- ルーティング文書の生成・更新・commit 作成の流れを確認または変更したいとき。
-- エントリー再生成の鮮度判定、hash 抽出、既存エントリー再利用、対象ファイル・ディレクトリの除外条件を調べたいとき。
-- インデックス更新の preflight、CLI 実行時の前提条件、repository ごとの排他制御を扱う必要があるとき。
-- Codex に渡すエントリー生成入力や、Structured Output から Markdown へ変換する処理を変更したいとき。
+- INDEX.md の生成・更新・commit がどの順序で行われるかを確認または変更したいとき。
+- indexing subcommand、Codex preflight、排他 lock、clean worktree 前提条件の挙動を調査・修正するとき。
+- INDEX.md entry の再生成判定、hash 抽出、対象ファイル・ディレクトリの走査除外条件、Structured Output からの Markdown 変換に関わる実装を扱うとき。
 
 ## Do not read this when
-- 個別サブコマンドの一般的な起動ラッパーやログ記録の仕組みだけを調べたいときは、共通の CLI 実行基盤を読む。
-- Codex 実行前 preflight の共通登録・設定方法だけを調べたいときは、preflight 用の共通モジュールを読む。
-- エントリー生成 prompt の内容や AgentCallParameter の組み立て自体を変更したいときは、builder 側のエントリー生成パラメータ実装を読む。
-- パス概念、git 実行、設定読み込み、binary 判定、ignored 判定などの低レベル runtime helper の仕様を調べたいときは、runtime 側の実装を読む。
+- 個別の INDEX.md entry 文面そのものや、各 directory のルーティング内容だけを確認したいとき。
+- Codex CLI 呼び出しパラメータの詳細な組み立てだけを調べたいときは、その builder 側を直接読む。
+- git コマンド実行、設定読み込み、path model、binary 判定、ignore 判定などの共通 runtime helper の内部実装を調べたいときは、それぞれの定義元を読む。
 
 ## hash
-- cce0bc7a9800ec49ec7d474d6f224adefc9d446a99f3f0dbc7eaf161b451fa01
+- f198b74f77eba78abea39b281408b2a92d8c8fe51cb93cbe9cef7297c734e256
 
 # `init.py`
 
