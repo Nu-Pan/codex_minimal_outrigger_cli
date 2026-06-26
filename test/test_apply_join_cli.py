@@ -152,8 +152,8 @@ def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(
         == root_log_count + 1
     )
     assert not (apply_worktree / ".cmoc" / "log" / "sub_command").exists()
-    assert "git 未コミット差分が存在します。" in result.stdout
-    assert "git 未コミット差分が存在します。" not in result.stderr
+    assert "git 未コミット差分が存在します。" in result.stderr
+    assert "git 未コミット差分が存在します。" not in result.stdout
 
 
 def test_apply_join_from_session_requires_clean_apply_worktree(

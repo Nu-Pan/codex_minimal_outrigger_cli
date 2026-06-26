@@ -1,3 +1,4 @@
+import json
 import subprocess
 import threading
 import time
@@ -96,11 +97,20 @@ def test_indexing_uninitialized_clean_repo_fails_without_non_index_diff(
     result = runner.invoke(app, ["indexing"], catch_exceptions=False)
 
     assert result.exit_code != 0
-    assert "cmoc init を実行してから再実行してください。" in result.output
+    assert "cmoc init を実行してから再実行してください。" in result.stderr
     assert not (root / ".gitignore").exists()
-    assert not (root / ".cmoc").exists()
     assert not (root / "INDEX.md").exists()
-    assert run_git(root, "status", "--short").stdout.strip() == ""
+    log_paths = list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))
+    assert len(log_paths) == 1
+    events = [json.loads(line) for line in log_paths[0].read_text().splitlines()]
+    assert [event["event"] for event in events] == [
+        "command_invoked",
+        "step_started",
+        "command_finished",
+    ]
+    assert events[1]["step"] == "pre_log_check"
+    assert events[-1]["returncode"] == 1
+    assert run_git(root, "status", "--short").stdout.strip() == "?? .cmoc/"
 
 
 def test_indexing_targets_current_linked_worktree(
@@ -205,7 +215,7 @@ def test_indexing_rejects_existing_non_index_diff_without_index_commit(
     result = runner.invoke(app, ["indexing"], catch_exceptions=False)
 
     assert result.exit_code != 0
-    assert "git 未コミット差分が存在します。" in result.output
+    assert "git 未コミット差分が存在します。" in result.stderr
     assert calls == []
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == head_before
     assert not (root / "INDEX.md").exists()

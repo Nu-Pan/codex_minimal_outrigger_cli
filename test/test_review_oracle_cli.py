@@ -552,8 +552,8 @@ def test_review_oracle_writes_error_report_on_processing_failure(
     assert "[unjudged] unjudged fatal" not in rendered
     assert "レビュー処理が途中で失敗しました。" in rendered
     assert "Error: `judge failed`" in rendered
-    assert "# ERROR" in result.stdout
-    assert "# ERROR" not in result.stderr
+    assert "# ERROR" in result.stderr
+    assert "# ERROR" not in result.stdout
 
 
 @pytest.mark.parametrize("change_kind", ["unstaged", "staged", "untracked"])
