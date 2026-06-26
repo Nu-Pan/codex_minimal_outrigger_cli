@@ -1,27 +1,25 @@
 # `acp`
 
 ## Summary
-- AI エージェント呼び出しに渡すパラメータと、そのプロンプトへ差し込む標準文書断片を構築する実装領域。用途別の role、summary、goal、補助入力、ファイルアクセスモード、モデル種別、reasoning effort、構造化出力契約への接続を扱う。
-- 呼び出し対象は、適用後の差分要約や所見列挙・修正依頼、正本仕様断片レビュー、競合解消、対話実行前の実行条件判定、ルーティング文書エントリー生成などに分かれる。共通プロンプト側では、ファイルアクセス規則、ルーティング規則、oracle と realization の基本概念、各種規範文書、完全プロンプト組み立てを提供する。
-- 実際のサブコマンド実行、git 操作、変更保存、ファイル探索、レビュー対象の抽出そのものではなく、AI に何を読ませ、どの制約で、どの出力契約に従って応答させるかを確認するための入口。
+- AI エージェント呼び出しに関する実装領域。用途別の呼び出しパラメータ構築と、agent に渡す prompt 部品の構築を扱う。
+- apply、oracle review、session join、TUI 実行前判定、INDEX.md エントリー生成などで、role、goal、補助入力、読み書き権限、モデル設定、Structured Output 契約、標準規則文をどのように agent へ渡すかを確認する入口となる。
+- CLI 実行制御、git 操作、仕様本文、汎用データ構造そのものではなく、AI agent へ渡す内容と制約を組み立てる責務に絞られた領域。
 
 ## Read this when
-- AI エージェント呼び出しのプロンプト内容、補助入力、読み書き権限、モデル設定、reasoning effort、構造化出力 schema の選択を確認・変更したいとき。
-- 適用処理の後段で、差分要約、ファイル単位の所見列挙、所見に基づく realization file 修正依頼がどの条件で組み立てられるかを追いたいとき。
-- 正本仕様断片レビューで、新規所見列挙、所見の妥当性理由生成、採否判定、所見統合に使われるプロンプトと規範注入を確認したいとき。
-- merge conflict marker 解消や対話実行前のパラメータ選定など、AI 実行前に専用プロンプトを構築する処理を調べたいとき。
-- ファイルアクセス規則、ルーティング規則、oracle / realization の基本概念、oracle standard、realization standard、review standard、INDEX.md エントリー規範が、agent 向けプロンプトにどう組み込まれるかを確認したいとき。
-- ルーティング文書エントリー生成で、対象本文の渡し方、既存目次を根拠にしない制約、読み取り専用条件、出力契約を実装・検証したいとき。
+- cmoc の機能が AI agent を呼び出す際に、どの prompt、入力情報、ファイルアクセス条件、モデル設定、出力 schema を使うか確認・変更したいとき。
+- apply 系の後段処理、oracle review、session join の conflict 解消、TUI 実行前判定、INDEX.md エントリー生成など、特定用途の agent 呼び出し条件と出力契約を追いたいとき。
+- agent に渡されるファイルアクセス規則、ルーティング規則、oracle/realization の基本概念、標準文、レビュー規範、INDEX.md エントリー生成規範などの prompt 文面を確認・変更したいとき。
+- 標準 prompt 群や追加 prompt が完全な agent prompt に組み込まれる依存関係、注入位置、表現のサニタイズを調べたいとき。
 
 ## Do not read this when
-- CLI 引数解析、サブコマンド全体の実行順序、git branch や diff の取得、fork 作成・統合、生成結果の保存など、エージェント呼び出しパラメータ構築の外側を調べたいとき。
-- oracle file や realization file の個別本文、レビュー対象ファイルの探索、変更ファイル抽出、merge conflict marker 検出など、プロンプトへ渡す材料を作る側の処理を確認したいとき。
-- 構造化文書や標準規範の基盤データ構造、パス解決 helper、AgentCallParameter 自体の定義だけを確認したいとき。
-- 正本仕様断片や realization code の品質基準の本文そのものを読むだけで、agent に注入されるプロンプト生成実装を確認する必要がないとき。
-- 生成済みルーティング文書の内容評価や、一般的な INDEX.md エントリーの書き方だけを確認したいとき。
+- サブコマンド全体の実行順序、CLI 引数解析、git 操作、フォーク作成・統合、merge conflict marker 検出、生成結果の保存など、agent 呼び出しパラメータ構築の外側を調べたいとき。
+- oracle file、realization file、review standard、apply review standard、realization standard など、prompt に含められる標準文書や仕様本文そのものを読みたいとき。
+- StructDoc、Standard、Requirement、FileAccessMode、RootToken、AgentCallParameter など、基盤データ構造や列挙値そのものだけを確認したいとき。
+- 個別の所見カテゴリ、レビュー判断基準、対象ファイル探索、git diff 生成、変更ファイル抽出など、agent に渡す材料を作る前段の詳細を調べたいとき。
+- 生成済み INDEX.md の内容評価や、ルーティング文書一般の書き方だけを確認したいとき。
 
 ## hash
-- 7d8e0dec3d7294b16ad16771b583d30a88eeb36ca01c3741b9d3c02caa2ea2e6
+- baf1e8de76508471a80d1cbc96d896f2f71a04a5b727a80e9865239783605f5f
 
 # `basic`
 

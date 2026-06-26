@@ -24,22 +24,21 @@
 # `prompt_parts`
 
 ## Summary
-- AI agent に渡す標準プロンプト断片を構築する実装群を収める領域。ファイルアクセス規則、ルーティング規則、oracle / realization の基本概念、各種 standard、レビュー規範、INDEX.md エントリー規範、完全プロンプトの組み立てを扱う。
-- 個々の規範文章を StructDoc として生成する入口であり、agent 向けプロンプトに含める文面・構成順序・標準プロンプト間の依存関係を確認するための下位要素へ進む起点になる。
+- ACP 向けに agent prompt の部品を構築する実装群を収める領域。ファイルアクセス規則、ルーティング規則、oracle/realization の基本概念、各種 standard、レビュー規範、INDEX.md エントリー生成規範などを StructDoc として組み立てる。
+- 完全プロンプトの組み立てでは、基本情報・アクセス制約・ルーティング規則・追加プロンプト・標準プロンプト群を依存関係込みで注入し、agent に渡す前の表現サニタイズも扱う。
+- 個々のプロンプト部品の文言や、標準プロンプトを有効化したときに agent へ渡される前提規則を確認・変更するための入口となる。
 
 ## Read this when
-- ACP が agent に提示する標準プロンプト群の生成元を探しているとき。
-- ファイルアクセス、ルーティング、oracle、realization、review、INDEX.md エントリーなどの規範文書が、どの実装から構築されるかを確認したいとき。
-- agent に渡す完全プロンプトの構成や、任意の標準プロンプトを有効化した際に連動して含まれる前提プロンプトを追いたいとき。
-- 標準プロンプトの自然言語本文を変更するために、対象となるプロンプト部品を選びたいとき。
-- oracle file と realization file の責務境界、realization code の品質基準、oracle レビューや適用レビューの所見基準など、AI へ渡す判断基準の実装箇所を探しているとき。
+- ACP が agent に渡す prompt の構成要素として、どの規則文・標準文・レビュー規範が生成されるかを確認したいとき。
+- ファイルアクセス規則、INDEX.md を使った読み進め方、oracle file と realization file の責務境界、oracle/realization の品質基準を prompt 部品として変更したいとき。
+- oracle review、oracle と realization の照合レビュー、INDEX.md エントリー生成など、agent に渡す判断基準の文面や StructDoc 生成処理を確認・変更したいとき。
+- 標準プロンプト群を完全プロンプトへ組み込む際の依存関係、追加位置、root token や内部表現の置換処理を追いたいとき。
 
 ## Do not read this when
-- 生成済みプロンプトの利用先や agent 呼び出しの実行制御を調べたいときは、呼び出しフロー側を直接読む。
-- StructDoc、StructCodeBlock、Standard、Requirement などの基盤データ構造や変換処理そのものを確認したいときは、それらの定義元を読む。
-- 特定の CLI 挙動、サブコマンド、path model、状態ファイル、テスト対象の仕様を調べたいだけのときは、該当機能の実装や仕様へ直接進む。
-- INDEX.md を使ったルーティング文書の個別エントリーを生成するだけで、標準プロンプト本文やその生成実装を確認する必要がないとき。
-- oracle file 本文そのものの編集方針や個別仕様を確認したいときは、正本仕様断片側を読む。
+- 個別の CLI サブコマンド、path model、状態ファイル、実行フローなど、prompt 文面ではなく cmoc の具体機能仕様や実装を調べたいとき。
+- StructDoc、StructCodeBlock、Standard、Requirement、FileAccessMode、RootToken などの基盤データ構造や列挙値そのものを確認したいとき。
+- oracle file や realization file の本文そのものを編集・レビューしたいだけで、agent prompt に載せる標準文の生成元を確認する必要がないとき。
+- 生成済み prompt をどの agent プロセスへ渡すか、実際の ACP 呼び出し制御や外部プロセス管理を追いたいとき。
 
 ## hash
-- 8036699a9ce3c326a46f05bf099433bbccad55c1b62fdd3df2c3eff845a06f7e
+- d77f48d02eff94645635cd416a450121013ca3798b191787a253b0f8efab7fcf

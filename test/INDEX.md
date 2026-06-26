@@ -277,24 +277,23 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- プロンプト部品と実行パラメータ生成まわりの回帰テストをまとめた realization test。構造化 Markdown の描画、routing rule や各種 standard の挿入条件、file access rule、パス token の実パス展開、builder が返す model・reasoning・file access mode・schema の整合性を検証する。
-- apply fork、review oracle、session join、TUI resolve、indexing など複数の prompt builder が、期待する文言・禁止語除去・構造化出力 schema・実行モードを満たすかを横断的に確認する入口となる。
+- プロンプト部品とプロンプト生成パラメータの realization test。ルーティング規則、ファイルアクセス規則、各種 standard 文書、complete prompt の注入・省略・禁止語除去、builder が返す model/reasoning/file access/schema の契約を検証する。
+- StructDoc の Markdown 描画、空行正規化、コードブロック保持、schema 検証、root token の実パス展開、apply/review/session/tui/indexing 系 builder の主要な統合契約を横断的に確認する入口になる。
 
 ## Read this when
-- プロンプト生成ロジック、prompt_parts、StructDoc/StructCodeBlock の Markdown 描画、または complete prompt の構成を変更する。
-- routing rule、apply review standard、realization standard、review oracle standard、index entry standard、file access rule の文言や挿入条件を変更する。
-- root token の実パス展開、agent 向け prompt からの禁止語除去、コードブロック内外での置換挙動を確認したい。
-- apply fork、review oracle、session join、TUI resolve、indexing の builder が返す model class、reasoning effort、file access mode、structured output schema の期待値を確認したい。
-- change summary、review oracle merge finding、TUI resolve parameter などの JSON schema 制約に関するテスト観点を確認したい。
+- プロンプトに含める standard 文書、ルーティング規則、ファイルアクセス規則、禁止語置換、root path 展開の期待挙動を変更・確認したいとき。
+- apply fork、review oracle、session join、tui resolve、indexing index entry の builder が選ぶ model class、reasoning effort、file access mode、structured output schema の契約を確認したいとき。
+- StructDoc や Markdown レンダリングの空行処理、コードブロック処理、complete prompt への補助文書注入に関する回帰テストを探すとき。
+- プロンプト関連の realization implementation を変更した後、既存の利用者向け文言・標準用語・禁止語の扱いが壊れていないか確認したいとき。
 
 ## Do not read this when
-- 個別 CLI コマンドの実処理、Git 操作、ファイルシステム操作など、プロンプト生成以外の実装詳細だけを調べたい。
-- 単一の prompt builder の実装責務や本文生成ロジックを直接確認したい場合で、対応する実装ファイルや oracle file を読む方が早い。
-- pytest の共通設定、テスト実行環境、fixture 定義そのものを調べたい。
-- INDEX.md エントリー生成の出力規則や routing 文書の正本仕様を確認したいだけで、テスト上の期待文言や回帰条件を参照する必要がない。
+- 個別のプロンプト文書や standard 文書の本文そのものを理解したいだけの場合。まず対応する生成関数や仕様断片を読む方が直接的。
+- CLI 実行、Git 操作、worktree 管理など、プロンプト生成以外の外部挙動を調べたい場合。
+- 特定の structured output schema の詳細定義だけを確認したい場合。schema 本体またはその builder を読む方が直接的。
+- テスト基盤全体の構成、fixture 共通化、pytest 設定を調べたい場合。より上位または共通設定を読む方が適切。
 
 ## hash
-- ea3c16deb7bdb641d5e66ed5fea48d7fa9f5bf269980bc9ee83a384317773843
+- 5efc21c46beeae18e3031964175fee1b69fd08d06d251242a238329f1f2a9de4
 
 # `test_review_oracle_cli.py`
 
