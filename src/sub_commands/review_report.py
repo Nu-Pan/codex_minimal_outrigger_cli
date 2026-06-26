@@ -161,11 +161,16 @@ def render_finding_section(findings: list[dict]) -> str:
 
 
 def path_display(root: Path, path: Path) -> str:
-    parts = path.parts
-    if "oracle" in parts:
-        index = parts.index("oracle")
-        return str(Path(*parts[index:]))
     try:
-        return str(path.relative_to(root))
+        relative = path.relative_to(root)
     except ValueError:
-        return str(path)
+        relative = None
+    if relative is not None and relative.parts[:1] == ("oracle",):
+        return str(relative)
+    parts = path.parts
+    for index in range(len(parts) - 1, -1, -1):
+        if parts[index] == "oracle":
+            return str(Path(*parts[index:]))
+    if relative is not None:
+        return str(relative)
+    return str(path)

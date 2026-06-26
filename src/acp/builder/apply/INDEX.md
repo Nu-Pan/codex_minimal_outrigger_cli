@@ -1,20 +1,22 @@
 # `fork`
 
 ## Summary
-- 適用・分岐処理のうち、AI エージェントへ渡す呼び出しパラメータと、その呼び出しが返す構造化出力の契約を扱う領域。変更要約、ファイル単位の所見列挙、検出済み所見への修正依頼など、`cmoc apply fork` の各段階で使う prompt、schema、model class、reasoning effort、ファイルアクセス権限の入口になる。
-- 実際の分岐作成や Git 操作の制御フローではなく、差分・所見・修正依頼を AI にどう読ませ、どの Structured Output として返させるかを確認するための下位要素を束ねている。
+- `cmoc apply fork` のうち、フォーク適用後の調査・所見列挙・所見対応・変更要約を AI エージェントへ依頼するための prompt と呼び出し条件、および関連する構造化出力契約をまとめる領域。
+- 差分要約、実装レビュー所見、所見対応依頼といった apply fork の補助エージェント工程について、どの標準・文脈・読み書き権限・モデル設定・出力 schema を渡すかを確認する入口になる。
 
 ## Read this when
-- `cmoc apply fork` で、変更要約、所見列挙、所見対応作業のいずれかに使う AI 呼び出し条件や prompt 構成を調べたいとき。
-- 差分本文、起点ファイル、所見リストなどの入力が、AI 向け prompt にどのように埋め込まれるかを確認したいとき。
-- `cmoc apply fork` の各 AI 呼び出しで使う Structured Output schema、model class、reasoning effort、ファイルアクセス権限の参照先を探したいとき。
-- レビュー所見や変更要約を、どのような人間向けカテゴリ・根拠位置・修正方針として構造化して返すかを確認したいとき。
+- `cmoc apply fork` の実行中または実行後に、AI エージェントへ渡す調査依頼、修正依頼、変更要約依頼の prompt 内容や呼び出しパラメータを確認・変更したいとき。
+- apply fork の所見列挙工程で、起点ファイルから関連する oracle file と realization file を調査させる条件、読み取り専用の扱い、標準文書の組み込み、出力 schema の対応を追いたいとき。
+- 検出済み所見を realization file 修正担当へ渡す工程で、所見 JSON の埋め込み方、作業上の注意点、書き込み権限、参照標準、モデル設定を確認したいとき。
+- apply fork の作業レポート向けに、git 差分を AI 要約担当へ渡してカテゴリ別の変更要約を生成する仕組みを確認したいとき。
+- レビュー所見や変更要約の構造化出力について、報告単位、根拠情報、主要な変更パス、カテゴリ別要約などの出力契約を確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` の CLI 引数解析、サブコマンド登録、branch 作成、差分取得、Git コマンド実行など、実行フロー本体を調べたいとき。
-- oracle standard、realization standard、apply review standard、path keyword など、prompt に参照される共通仕様や共通概念の本文を確認したいとき。
-- 汎用的な AgentCallParameter、path 解決、完全 prompt 生成、markdown rendering などの共通部品そのものを調べたいとき。
-- 個別の変更対象ファイルやテストの内容を直接確認したいだけで、変更要約・所見列挙・所見適用の AI 呼び出し契約を変更しないとき。
+- `cmoc apply fork` 全体のコマンド実行フロー、fork の作成・適用・統合、ブランチ操作、git コマンド実行そのものを調べたいとき。
+- oracle file、realization file、apply review standard、realization standard などの標準本文そのものを確認したいとき。
+- 汎用的な AgentCallParameter 型、完全 prompt の共通構築、StructDoc の markdown rendering、repo root やパス解決 helper の詳細を調べたいとき。
+- 個別カテゴリ名の網羅的な一覧、差分生成アルゴリズム、変更パス抽出の具体的な実装規則を探しているとき。
+- INDEX.md 用エントリーや一般的なルーティング文書の書き方を確認したいだけのとき。
 
 ## hash
-- 5271faab99ff0ab2b1969a0d189eb54f62226ecc1395e045d39b0822e5f8d123
+- dbd9e98ad05ec83c80ed9270504805e990b244274c969394ded93274f90a21a5

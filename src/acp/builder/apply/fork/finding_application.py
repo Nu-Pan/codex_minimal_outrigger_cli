@@ -1,4 +1,4 @@
-"""`cmoc apply fork` の所見対応作業 prompt 正本。"""
+"""`cmoc apply fork` の所見対応作業 prompt 構築実装。"""
 
 # std
 from typing import Any

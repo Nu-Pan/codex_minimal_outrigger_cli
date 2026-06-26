@@ -1,33 +1,43 @@
+import subprocess
+import sys
+from pathlib import Path
 import tomllib
 
 import pytest
-from basic.acp import AgentCallParameter
-from commons.runtime_codex_profile import build_codex_profile
-from commons.runtime_state import branch_session_id
-
-from _support import (
-    CmocConfig,
-    CmocError,
-    FileAccessMode,
-    ModelClass,
-    Path,
-    ReasoningEffort,
+import main as main_module
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from basic.path_model import (
     RootToken,
-    app,
+    resolve_real_path,
+    resolve_run_root,
+    resolve_token_path,
+)
+from cmoc_runtime import (
+    CmocError,
     ensure_cmoc_ignored,
     file_access_to_sandbox_mode,
     format_duration,
-    main_module,
-    make_repo,
     render_error,
     repo_root,
-    resolve_real_path,
-    resolve_token_path,
+    work_root,
+)
+from commons.runtime_codex_profile import build_codex_profile
+from commons.runtime_content import is_binary
+from commons.runtime_state import (
+    SessionState,
+    apply_branch_session_id,
+    branch_session_id,
+    load_state_for_branch,
+    state_path,
+    write_state,
+)
+from config.cmoc_config import CmocConfig
+from main import app
+
+from _support import (
+    make_repo,
     run_git,
     runner,
-    subprocess,
-    sys,
-    work_root,
 )
 
 def test_path_model_resolves_token_path_inside_repo() -> None:
@@ -51,7 +61,15 @@ def test_runtime_distinguishes_repo_root_from_linked_worktree(
     run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
 
     assert repo_root(linked) == root.resolve()
+    assert resolve_run_root(linked) == linked.resolve()
     assert work_root(linked) == linked.resolve()
+
+
+def test_resolve_run_root_rejects_main_worktree(tmp_path: Path) -> None:
+    root = make_repo(tmp_path)
+
+    with pytest.raises(ValueError, match="`<run-root>` was not found"):
+        resolve_run_root(root)
 
 
 def test_config_defaults_match_logical_model_classes() -> None:
@@ -101,7 +119,28 @@ def test_branch_session_id_rejects_invalid_session_branch_shape(branch: str) -> 
         branch_session_id(branch)
 
 
-def test_cli_error_report_is_written_to_stderr(tmp_path: Path, monkeypatch) -> None:
+@pytest.mark.parametrize(
+    "branch",
+    [
+        "cmoc/apply/",
+        "cmoc/apply/session",
+        "cmoc/apply/session/run/extra",
+    ],
+)
+def test_apply_branch_session_id_rejects_invalid_apply_branch_shape(branch: str) -> None:
+    with pytest.raises(CmocError):
+        apply_branch_session_id(branch)
+
+
+def test_load_state_for_branch_rejects_apply_branch_with_extra_parts(tmp_path: Path) -> None:
+    path = state_path(tmp_path, "session")
+    write_state(path, SessionState())
+
+    with pytest.raises(CmocError):
+        load_state_for_branch(tmp_path, "cmoc/apply/session/run/extra")
+
+
+def test_cli_error_report_is_written_to_stdout(tmp_path: Path, monkeypatch) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     run_git(root, "switch", "--detach", "HEAD")
@@ -109,22 +148,22 @@ def test_cli_error_report_is_written_to_stderr(tmp_path: Path, monkeypatch) -> N
     result = runner.invoke(app, ["session", "fork"])
 
     assert result.exit_code != 0
-    assert "# ERROR" in result.stderr
-    assert "detached HEAD 上では実行できません。" in result.stderr
-    assert "# ERROR" not in result.stdout
-    assert "detached HEAD 上では実行できません。" not in result.stdout
+    assert "# ERROR" in result.stdout
+    assert "detached HEAD 上では実行できません。" in result.stdout
+    assert "# ERROR" not in result.stderr
+    assert "detached HEAD 上では実行できません。" not in result.stderr
 
 
-def test_cli_parse_error_report_is_written_to_stderr() -> None:
+def test_cli_parse_error_report_is_written_to_stdout() -> None:
     result = runner.invoke(app, ["--bad-option"])
 
     assert result.exit_code != 0
-    assert "# ERROR" in result.stderr
-    assert "CLI 引数解析に失敗しました。" in result.stderr
-    assert "No such option: --bad-option" in result.stderr
-    assert "# ERROR" not in result.stdout
-    assert "CLI 引数解析に失敗しました。" not in result.stdout
-    assert "No such option: --bad-option" not in result.stdout
+    assert "# ERROR" in result.stdout
+    assert "CLI 引数解析に失敗しました。" in result.stdout
+    assert "No such option: --bad-option" in result.stdout
+    assert "# ERROR" not in result.stderr
+    assert "CLI 引数解析に失敗しました。" not in result.stderr
+    assert "No such option: --bad-option" not in result.stderr
 
 
 def test_cli_requires_current_directory_to_be_work_root(
@@ -136,12 +175,12 @@ def test_cli_requires_current_directory_to_be_work_root(
     result = runner.invoke(app, ["init"])
 
     assert result.exit_code != 0
-    assert "# ERROR" in result.stderr
-    assert "cmoc は work root で実行してください。" in result.stderr
-    assert f"cwd: {(root / 'oracle').resolve()}" in result.stderr
-    assert f"work_root: {root.resolve()}" in result.stderr
-    assert "# ERROR" not in result.stdout
-    assert "cmoc は work root で実行してください。" not in result.stdout
+    assert "# ERROR" in result.stdout
+    assert "cmoc は work root で実行してください。" in result.stdout
+    assert f"cwd: {(root / 'oracle').resolve()}" in result.stdout
+    assert f"work_root: {root.resolve()}" in result.stdout
+    assert "# ERROR" not in result.stderr
+    assert "cmoc は work root で実行してください。" not in result.stderr
     assert not (root / ".gitignore").exists()
 
 
@@ -179,7 +218,7 @@ def test_ensure_cmoc_ignored_updates_gitignore(tmp_path: Path) -> None:
     assert ignored.returncode == 0
 
 
-def test_ensure_cmoc_ignored_keeps_existing_effective_pattern(
+def test_ensure_cmoc_ignored_adds_literal_pattern_after_existing_effective_pattern(
     tmp_path: Path,
 ) -> None:
     root = make_repo(tmp_path)
@@ -189,13 +228,13 @@ def test_ensure_cmoc_ignored_keeps_existing_effective_pattern(
 
     ensure_cmoc_ignored(root)
 
-    assert (root / ".gitignore").read_text() == ".cmoc/\n"
-    assert run_git(root, "status", "--short").stdout.strip() == ""
+    assert (root / ".gitignore").read_text() == ".cmoc/\n\n/.cmoc/\n"
+    assert run_git(root, "status", "--short").stdout.strip() == "M .gitignore"
 
 
 def test_file_access_mode_values_are_json_ready() -> None:
     assert FileAccessMode.READONLY.value == "readonly"
-    assert FileAccessMode.CONFLICT_RESOLUTION_WRITE.value == "conflict_resolution_write"
+    assert FileAccessMode.REALIZATION_WRITE.value == "realization_write"
     assert FileAccessMode.REPO_WRITE.value == "repo_write"
 
 
@@ -203,12 +242,37 @@ def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
     assert file_access_to_sandbox_mode(FileAccessMode.READONLY) == "read-only"
     assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_READ) == "read-only"
     assert file_access_to_sandbox_mode(FileAccessMode.REALIZATION_WRITE) == "workspace-write"
-    assert (
-        file_access_to_sandbox_mode(FileAccessMode.CONFLICT_RESOLUTION_WRITE)
-        == "workspace-write"
-    )
     assert file_access_to_sandbox_mode(FileAccessMode.ORACLE_WRITE) == "workspace-write"
     assert file_access_to_sandbox_mode(FileAccessMode.REPO_WRITE) == "workspace-write"
+
+
+def test_is_binary_reads_only_initial_chunk() -> None:
+    class Reader:
+        def __init__(self) -> None:
+            self.size: int | None = None
+
+        def __enter__(self) -> "Reader":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            pass
+
+        def read(self, size: int) -> bytes:
+            self.size = size
+            return b"text"
+
+    class FakePath:
+        def __init__(self) -> None:
+            self.reader = Reader()
+
+        def open(self, mode: str) -> Reader:
+            assert mode == "rb"
+            return self.reader
+
+    path = FakePath()
+
+    assert is_binary(path) is False
+    assert path.reader.size == 4096
 
 
 def test_codex_profile_contains_file_access_enforcement(tmp_path: Path) -> None:
@@ -244,6 +308,25 @@ def test_codex_profile_contains_file_access_enforcement(tmp_path: Path) -> None:
     assert pure_oracle_fs["read"] == [str(root / "oracle")]
     assert pure_oracle_fs["write"] == []
 
+    prompt_file = root / ".cmoc" / "log" / "tui" / "prompt_cmpl.md"
+    pure_oracle_tui = tomllib.loads(
+        build_codex_profile(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                FileAccessMode.PURE_ORACLE_READ,
+                "prompt",
+                None,
+            ),
+            CmocConfig(),
+            root,
+            [prompt_file],
+        )
+    )
+    pure_oracle_tui_fs = pure_oracle_tui["permissions"]["cmoc"]["file_system"]
+    assert pure_oracle_tui_fs["read"] == [str(root / "oracle"), str(prompt_file)]
+    assert pure_oracle_tui_fs["read_only"] == [str(root / "oracle"), str(prompt_file)]
+
     realization_profile = profile(FileAccessMode.REALIZATION_WRITE)
     realization_fs = realization_profile["permissions"]["cmoc"]["file_system"]
     assert realization_fs["read"] == [str(root)]
@@ -258,16 +341,29 @@ def test_codex_profile_contains_file_access_enforcement(tmp_path: Path) -> None:
     assert realization_workspace["writable_roots"] == [str(root)]
     assert realization_workspace["read_only_paths"] == realization_fs["read_only"]
 
-    conflict_profile = profile(FileAccessMode.CONFLICT_RESOLUTION_WRITE)
+    oracle_conflict = root / "oracle" / "spec.md"
+    conflict_profile = tomllib.loads(
+        build_codex_profile(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                FileAccessMode.REALIZATION_WRITE,
+                "prompt",
+                None,
+            ),
+            CmocConfig(),
+            root,
+            extra_writable_paths=[oracle_conflict, root / "memo" / "blocked.md"],
+        )
+    )
     conflict_fs = conflict_profile["permissions"]["cmoc"]["file_system"]
-    assert conflict_fs["read"] == [str(root)]
-    assert conflict_fs["write"] == [str(root)]
-    assert conflict_fs["deny_read"] == [str(root / "memo")]
-    assert conflict_fs["read_only"] == [str(root / "memo"), str(root / ".agents")]
-    assert str(root / "oracle") not in conflict_fs["read_only"]
     conflict_workspace = conflict_profile["sandbox_workspace_write"]
-    assert conflict_workspace["writable_roots"] == [str(root)]
-    assert conflict_workspace["read_only_paths"] == conflict_fs["read_only"]
+    assert str(oracle_conflict) in conflict_fs["write"]
+    assert str(root / "oracle") in conflict_fs["read_only"]
+    assert str(oracle_conflict) in conflict_workspace["writable_roots"]
+    assert str(root / "oracle") in conflict_workspace["read_only_paths"]
+    assert str(root / "memo") in conflict_fs["read_only"]
+    assert str(root / "memo" / "blocked.md") not in conflict_fs["write"]
 
     oracle_fs = profile(FileAccessMode.ORACLE_WRITE)["permissions"]["cmoc"][
         "file_system"
@@ -280,3 +376,4 @@ def test_codex_profile_contains_file_access_enforcement(tmp_path: Path) -> None:
     assert repo_fs["read"] == [str(root)]
     assert repo_fs["write"] == [str(root)]
     assert repo_fs["deny_read"] == [str(root / "memo")]
+    assert repo_fs["read_only"] == [str(root / "memo"), str(root / ".agents")]

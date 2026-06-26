@@ -8,6 +8,7 @@
     "changes": {
       "type": "array",
       "description": "差分を、変更内容の意味論に基づいてカテゴリ分けした要約。空配列は想定しない。",
+      "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,

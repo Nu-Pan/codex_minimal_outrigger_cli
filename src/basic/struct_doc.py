@@ -14,12 +14,15 @@ class StructDoc:
     """
 
     def __init__(
-        self,
+        self: "StructDoc",
         title: str,
         *children: "StructDoc|StructCodeBlock|str",
-    ):
-        """
-        コンストラクタ
+    ) -> None:
+        """見出しと子要素から構造化文章を作る。
+
+        Args:
+            title: Markdown 見出しとして出力するテキスト。
+            children: 下位見出し、本文文字列、またはコードブロック。
         """
         self._title = title
         self._children: list[StructDoc] | StructCodeBlock | str
@@ -36,14 +39,14 @@ class StructDoc:
                     )
 
     @property
-    def title(self) -> str:
+    def title(self: "StructDoc") -> str:
         """
         見出しテキストを取得する
         """
         return self._title
 
     @property
-    def children(self) -> "list[StructDoc] | StructCodeBlock | str":
+    def children(self: "StructDoc") -> "list[StructDoc] | StructCodeBlock | str":
         """
         子要素を取得する
         """
@@ -56,32 +59,28 @@ class StructCodeBlock:
     """
 
     def __init__(
-        self,
+        self: "StructCodeBlock",
         info: str | None,
         body: str,
-    ):
-        """コンストラクタ
+    ) -> None:
+        """Markdown code fence として埋め込む本文を保持する。
 
-        info:
-            コードブロックの先頭に挿入される info string
-            指定なしの場合は None を渡す
-            e.g. python, cpp, bash
-
-        body:
-            コードブロックで囲われる本体テキスト
+        Args:
+            info: code fence の info string。指定しない場合は None。
+            body: code fence 内に出力する本文。
         """
         self._info = info
         self._body = body
 
     @property
-    def info(self) -> str | None:
+    def info(self: "StructCodeBlock") -> str | None:
         """
         info string を取得する
         """
         return self._info
 
     @property
-    def body(self) -> str:
+    def body(self: "StructCodeBlock") -> str:
         """
         本体テキストを取得する
         """
@@ -89,8 +88,10 @@ class StructCodeBlock:
 
 
 def render_as_markdown(struct_doc: StructDoc | list[StructDoc]) -> str:
-    """
-    struct_doc を markdown としてレンダリングする
+    """構造化文章を Markdown としてレンダリングする。
+
+    Args:
+        struct_doc: 単一文書、または同じ深さで並べる文書リスト。
     """
     result = ""
     if isinstance(struct_doc, StructDoc):
@@ -132,8 +133,30 @@ def _render_as_markdown(struct_doc: StructDoc, depth: int = 1) -> str:
         raise TypeError(
             f"Invalid type of struct_doc.children (type={type(struct_doc.children)})"
         )
+    result = _collapse_blank_lines(result)
     # 正常終了
     return result
+
+
+def _collapse_blank_lines(text: str) -> str:
+    """
+    2 行以上連続する空行を 1 行にまとめる。
+    空白文字だけの行も空行として扱う。
+    """
+    lines: list[str] = []
+    previous_blank = False
+    for line in text.splitlines():
+        blank = not line.strip()
+        if blank:
+            if previous_blank:
+                continue
+            lines.append("")
+        else:
+            lines.append(line)
+        previous_blank = blank
+    if text.endswith("\n"):
+        return "\n".join(lines) + "\n"
+    return "\n".join(lines)
 
 
 def ntqs(text: str) -> str:

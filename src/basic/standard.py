@@ -11,13 +11,22 @@ class Standard:
     """
 
     def __init__(
-        self,
+        self: "Standard",
         title: str,
         backgrounds: list[str],
         requirements: list["Requirement"],
         criteria: list[str] = list(),
         examples: list[str] = list(),
-    ):
+    ) -> None:
+        """規範の本文要素を検証して保持する。
+
+        Args:
+            title: 規範文書の見出し。
+            backgrounds: 規範が必要になる背景。
+            requirements: 規範として要求する項目。
+            criteria: 現在は保持しない互換引数。
+            examples: 要求の解釈を補う判断例。
+        """
         # title
         # - この standard の見出し
         self._title = title
@@ -61,19 +70,23 @@ class Standard:
             raise ValueError(f"Invalid example (example={examples})")
 
     @property
-    def title(self) -> str:
+    def title(self: "Standard") -> str:
+        """規範文書の見出しを返す。"""
         return self._title
 
     @property
-    def backgrounds(self) -> list[str]:
+    def backgrounds(self: "Standard") -> list[str]:
+        """規範の背景説明を返す。"""
         return self._backgrounds
 
     @property
-    def requirements(self) -> list["Requirement"]:
+    def requirements(self: "Standard") -> list["Requirement"]:
+        """規範の要求項目を返す。"""
         return self._requirements
 
     @property
-    def examples(self) -> list[str]:
+    def examples(self: "Standard") -> list[str]:
+        """規範の判断例を返す。"""
         return self._examples
 
 

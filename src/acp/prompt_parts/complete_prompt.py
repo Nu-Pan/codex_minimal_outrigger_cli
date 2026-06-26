@@ -68,18 +68,9 @@ def build_complete_prompt(
     """
     # 基本プロンプト
     struct_doc = [
-        StructDoc(
-            "role",
-            role,
-        ),
-        StructDoc(
-            "summary",
-            summary,
-        ),
-        StructDoc(
-            "goal",
-            goal,
-        ),
+        StructDoc("role", role),
+        StructDoc("summary", summary),
+        StructDoc("goal", goal),
         build_file_access_rule(file_access_mode),
         build_routing_rule(),
         *aux_prompt,

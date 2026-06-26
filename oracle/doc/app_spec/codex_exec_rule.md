@@ -40,7 +40,8 @@
 ## プロンプトの渡し方
 
 - プロンプト本文を argv に載せてはならない
-- プロンプト本文は stdin 経由 (コマンド末尾に `-` を付ける) で渡す
+- `codex exec` にわたすプロンプト全文は一度 `<repo-root>/.cmoc/log/codex/<time-stamp>_prompt.jsonl` に出力すること
+- プロンプト本文は stdin 経由 (コマンド末尾に `-` を付ける) で `<time-stamp>_prompt.jsonl` をリダイレクト入力すること
 - argv に載せてよいのは、フラグ、短い固定文字列、短いファイルパスのみとする
 
 ## Codex CLI 呼び出し情報の保存

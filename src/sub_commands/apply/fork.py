@@ -30,8 +30,11 @@ from cmoc_runtime import (
     repo_root,
     require_cmoc_ignored,
     require_clean_worktree,
+    run_cli_subcommand,
+    run_codex_exec,
     run_git,
     timestamp,
+    work_root,
     worktrees_dir,
     write_state,
 )
@@ -44,12 +47,25 @@ from sub_commands.apply._runtime import (
     delete_apply_process_id,
     write_apply_process_id,
 )
+from sub_commands.indexing import enable_indexing_preflight
 
 
 CodexExec = Callable[..., object]
 
 
-def cmoc_apply_fork_impl(
+def cmoc_apply_fork_impl(scope: str) -> None:
+    """CLI runtime を通して apply fork を実行する。"""
+    enable_indexing_preflight()
+    run_cli_subcommand(
+        _cmoc_apply_fork_body,
+        scope,
+        run_codex_exec,
+        command_name="apply fork",
+        command_argv=["cmoc", "apply", "fork", "--scope", scope],
+    )
+
+
+def _cmoc_apply_fork_body(
     scope: str,
     codex_exec: CodexExec,
 ) -> int:
@@ -57,20 +73,21 @@ def cmoc_apply_fork_impl(
     if scope not in {"rolling", "session", "full"}:
         raise CmocError("scope が不正です。", ["rolling, session, full のいずれかを指定してください。"], scope)
     root = repo_root()
-    branch = current_branch(root)
+    current_root = work_root()
+    branch = current_branch(current_root)
     session_id, path, state = load_state_for_branch(root, branch)
     if not branch.startswith("cmoc/session/"):
         raise CmocError("apply fork は session branch 上で実行してください。", [], branch)
     if state.session.state != "active" or state.apply.state != "ready":
         raise CmocError("apply fork の事前条件を満たしていません。", [], str(path))
-    require_clean_worktree(root)
-    require_cmoc_ignored(root)
+    require_clean_worktree(current_root)
+    require_cmoc_ignored(current_root)
     config = load_config(root)
     run_id = timestamp()
     apply_branch = f"cmoc/apply/{session_id}/{run_id}"
-    oracle_snapshot_commit = head_commit(root)
+    oracle_snapshot_commit = head_commit(current_root)
     apply_worktree = worktrees_dir(root) / session_id / run_id
-    create_run_worktree(root, apply_branch, apply_worktree, "HEAD")
+    create_run_worktree(current_root, apply_branch, apply_worktree, "HEAD")
     write_apply_process_id(root, session_id, os.getpid())
     state.apply = ApplyPart(
         state="running",
@@ -110,7 +127,15 @@ def cmoc_apply_fork_impl(
                     codex_exec,
                 )
                 changed = changed_worktree_paths(apply_worktree)
-                dirty_targets.extend(changed)
+                if not changed:
+                    continue
+                dirty_targets.extend(
+                    normalize_apply_targets(
+                        apply_worktree,
+                        set(changed),
+                        include_oracle=False,
+                    )
+                )
                 if changed:
                     commit_message = generate_apply_commit_message(
                         root,
@@ -122,7 +147,8 @@ def cmoc_apply_fork_impl(
                     run_git(["add", "."], apply_worktree)
                     run_git(["commit", "-m", commit_message], apply_worktree)
             else:
-                result_label = "unconverged"
+                dirty_targets = dedupe_apply_targets(dirty_targets)
+                result_label = "unconverged" if dirty_targets else "converged"
             report_path = write_apply_fork_report(
                 root,
                 apply_worktree,
@@ -337,7 +363,9 @@ def changed_worktree_paths(root: Path) -> list[Path]:
     return paths
 
 
-def normalize_apply_targets(root: Path, candidates: set[Path]) -> list[Path]:
+def normalize_apply_targets(
+    root: Path, candidates: set[Path], include_oracle: bool = True
+) -> list[Path]:
     """apply finding 列挙対象として扱える通常テキスト file だけに正規化する。"""
     targets: list[Path] = []
     for path in sorted({candidate.resolve() for candidate in candidates}):
@@ -347,7 +375,11 @@ def normalize_apply_targets(root: Path, candidates: set[Path]) -> list[Path]:
             rel_parts = path.relative_to(root.resolve()).parts
         except ValueError:
             continue
+        if not rel_parts:
+            continue
         if ".git" in rel_parts or ".agents" in rel_parts or rel_parts[0] == "memo":
+            continue
+        if not include_oracle and rel_parts[0] == "oracle":
             continue
         if path.name == "INDEX.md" or is_binary(path):
             continue
@@ -371,14 +403,9 @@ def enumerate_apply_targets(
         )
         changed = run_git(["diff", "--name-only", base, "HEAD"], root).stdout.splitlines()
         candidates = [root / path for path in changed]
-    elif state and state.session.last_joined_apply_join_commit:
+    elif state and (base := previous_apply_join_commit(root, state)):
         changed = run_git(
-            [
-                "diff",
-                "--name-only",
-                state.session.last_joined_apply_join_commit,
-                "HEAD",
-            ],
+            ["diff", "--name-only", base, "HEAD"],
             root,
         ).stdout.splitlines()
         candidates = [root / path for path in changed]
@@ -392,3 +419,28 @@ def enumerate_apply_targets(
             path for path in root.rglob("*") if path.is_file() and path.suffix == ".py"
         ]
     return normalize_apply_targets(root, set(candidates))
+
+
+def previous_apply_join_commit(root: Path, state: SessionState) -> str | None:
+    """最後に join した apply の merge commit を永続 state ではなく git 履歴から解決する。"""
+    snapshot = state.session.last_joined_apply_oracle_snapshot_commit
+    if not snapshot:
+        return None
+    merges = run_git(
+        ["rev-list", "--first-parent", "--merges", "--reverse", f"{snapshot}..HEAD"],
+        root,
+    ).stdout.splitlines()
+    joined: str | None = None
+    for merge_commit in merges:
+        parents = run_git(["show", "-s", "--format=%P", merge_commit], root).stdout.split()
+        if any(
+            run_git(
+                ["merge-base", "--is-ancestor", snapshot, parent],
+                root,
+                check=False,
+            ).returncode
+            == 0
+            for parent in parents[1:]
+        ):
+            joined = merge_commit
+    return joined

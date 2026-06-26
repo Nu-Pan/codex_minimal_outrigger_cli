@@ -8,6 +8,7 @@ from cmoc_runtime import (
     ApplyPart,
     CmocError,
     SessionState,
+    apply_branch_session_id,
     current_branch,
     delete_branch,
     ensure_cmoc_ignored,
@@ -17,6 +18,7 @@ from cmoc_runtime import (
     repo_root,
     reports_dir,
     require_clean_worktree,
+    run_cli_subcommand,
     run_git,
     timestamp,
     work_root,
@@ -26,14 +28,28 @@ from sub_commands.apply._runtime import worktree_for_branch, worktree_for_branch
 
 
 def cmoc_apply_join_impl(force_resolve: bool) -> None:
+    """CLI runtime を通して apply join を実行する。"""
+    run_cli_subcommand(
+        _cmoc_apply_join_body,
+        force_resolve,
+        command_name="apply join",
+        command_argv=[
+            "cmoc",
+            "apply",
+            "join",
+            *(["--force-resolve"] if force_resolve else []),
+        ],
+    )
+
+
+def _cmoc_apply_join_body(force_resolve: bool) -> None:
     """apply branch を session branch へ merge し、apply state を ready に戻す。"""
     repo = repo_root()
     current_root = work_root()
     branch = current_branch(current_root)
     if branch.startswith("cmoc/apply/"):
         require_clean_worktree(current_root)
-        parts = branch.split("/")
-        session_id = parts[2] if len(parts) >= 4 else ""
+        session_id = apply_branch_session_id(branch)
         session_branch = f"cmoc/session/{session_id}"
         root = worktree_for_branch(repo, session_branch)
         os.chdir(root)
@@ -50,14 +66,41 @@ def cmoc_apply_join_impl(force_resolve: bool) -> None:
     apply_branch = state.apply.apply_branch
     if not apply_branch:
         raise CmocError("apply branch を特定できません。", [], str(path))
+    if branch.startswith("cmoc/apply/") and branch != apply_branch:
+        raise CmocError(
+            "現在の apply branch は join 対象の active apply run ではありません。",
+            ["session state file が指す apply branch 上、または session branch 上から再実行してください。"],
+            f"current_branch: {branch}\napply_branch: {apply_branch}",
+        )
+    apply_oracle_snapshot_commit = state.apply.oracle_snapshot_commit
+    if not apply_oracle_snapshot_commit:
+        raise CmocError(
+            "apply の oracle snapshot commit を特定できません。",
+            ["session state file を確認してください。"],
+            str(path),
+        )
     apply_worktree = worktree_for_branch_optional(root, apply_branch)
     if apply_worktree:
         require_clean_worktree(apply_worktree)
     unexpected = collect_apply_join_unexpected_changes(root, state, apply_branch, session_branch)
     if unexpected and not force_resolve:
+        report_path = write_apply_join_report(
+            root,
+            session_branch,
+            state,
+            apply_branch,
+            apply_worktree,
+            force_resolve,
+            unexpected,
+            False,
+            [],
+        )
         raise CmocError(
             "apply join の想定外差分があります。",
-            ["--force-resolve で想定外差分を revert するか、手動で内容を確認してください。"],
+            [
+                "--force-resolve で想定外差分を revert するか、手動で内容を確認してください。",
+                f"保存済み report を確認してください: {report_path}",
+            ],
             json.dumps(unexpected, ensure_ascii=False, indent=2),
         )
     if unexpected and force_resolve:
@@ -94,9 +137,7 @@ def cmoc_apply_join_impl(force_resolve: bool) -> None:
                 ["必要なら手動で解決するか、--force-resolve を検討してください。"],
                 merge.stderr,
             )
-    state.session.last_joined_apply_join_commit = run_git(
-        ["rev-parse", "HEAD"], root
-    ).stdout.strip()
+    state.session.last_joined_apply_oracle_snapshot_commit = apply_oracle_snapshot_commit
     state.apply = ApplyPart()
     write_state(path, state)
     warnings: list[str] = []
@@ -185,19 +226,20 @@ def render_apply_join_report(
     conflict_lines = [
         f"- unresolved: {path}" for path in merge_conflicts
     ] or ["- none"]
-    result = (
-        "apply branch の merge conflict が残っています。cmoc は自動解決しませんでした。"
-        if merge_conflicts
-        else "apply branch を session branch へ join しました。"
-    )
+    if merge_conflicts:
+        result = "apply branch の merge conflict が残っています。cmoc は自動解決しませんでした。"
+    elif unexpected and not force_resolve:
+        result = "apply join の想定外差分を検出したため、join を中止しました。"
+    else:
+        result = "apply branch を session branch へ join しました。"
     return "\n".join(
         [
             "---",
             f"cmoc_session_branch: {session_branch}",
             f"cmoc_apply_branch: {apply_branch}",
             f"cmoc_apply_worktree: {apply_worktree}",
-            "joined_apply_join_commit: "
-            f"{state.session.last_joined_apply_join_commit}",
+            "last_joined_apply_oracle_snapshot_commit: "
+            f"{state.session.last_joined_apply_oracle_snapshot_commit}",
             f"force_resolve: {force_resolve}",
             f"cleanup_reachable: {cleanup_reachable}",
             "---",
@@ -233,7 +275,7 @@ def is_expected_apply_change(root: Path, path: str) -> bool:
     p = Path(path)
     if p.name == "INDEX.md":
         return True
-    if path == ".gitignore" or path.startswith(".git/"):
+    if path.startswith(".git/"):
         return False
     if path.startswith(("oracle/", "memo/", ".agents/")):
         return False

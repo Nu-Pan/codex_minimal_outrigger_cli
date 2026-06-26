@@ -117,7 +117,11 @@ def write_config(path: Path, config: CmocConfig) -> None:
 def load_config(root: Path) -> CmocConfig:
     path = config_path(root)
     if not path.exists():
-        return sync_config(root)
+        raise CmocError(
+            "cmoc config が存在しません。",
+            ["cmoc init を実行して <repo-root>/.cmoc/config.json を生成してください。"],
+            str(path),
+        )
     try:
         data = json.loads(path.read_text())
     except json.JSONDecodeError as exc:

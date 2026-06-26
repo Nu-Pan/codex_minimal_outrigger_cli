@@ -1,37 +1,21 @@
-import multiprocessing
+import subprocess
+import threading
+import time
+from pathlib import Path
 
 import pytest
+import cmoc_runtime
 
 from _support import (
-    AgentCallParameter,
-    FileAccessMode,
-    ModelClass,
-    Path,
-    ReasoningEffort,
-    app,
-    apply_module,
-    cmoc_runtime,
     current_branch,
-    indexing_module,
-    main_module,
     make_repo,
     run_git,
     runner,
-    subprocess,
-    threading,
-    time,
 )
+from main import app
+import sub_commands.apply.join as apply_module
+import sub_commands.indexing as indexing_module
 
-
-def hold_indexing_lock(lock_path: Path, ready, release) -> None:
-    import fcntl
-
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
-    with lock_path.open("a+") as lock_file:
-        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
-        ready.send(True)
-        release.recv()
-        fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 def test_resolve_index_conflicts_deletes_index_and_commits(tmp_path: Path) -> None:
     root = make_repo(tmp_path)
@@ -87,7 +71,7 @@ def test_indexing_uses_codex_index_entry_builder_and_commits(
         assert parameter.structured_output_schema_path.name == "index_entry.json"
         return FakeCodexResult()
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(indexing_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(app, ["indexing"], catch_exceptions=False)
 
@@ -112,10 +96,10 @@ def test_indexing_uninitialized_clean_repo_fails_without_non_index_diff(
     result = runner.invoke(app, ["indexing"], catch_exceptions=False)
 
     assert result.exit_code != 0
-    assert "cmoc init を実行してから再実行してください。" in result.output
+    assert "cmoc init を実行してから再実行してください。" in result.stdout
     assert not (root / ".gitignore").exists()
-    assert not (root / ".cmoc").exists()
     assert not (root / "INDEX.md").exists()
+    assert not (root / ".cmoc").exists()
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
@@ -136,8 +120,7 @@ def test_indexing_targets_current_linked_worktree(
             "do_not_read_this_when": ["linked skip condition"],
         }
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(indexing_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     monkeypatch.chdir(linked)
 
@@ -165,8 +148,7 @@ def test_indexing_skips_codex_when_existing_hashes_are_fresh(
             "do_not_read_this_when": ["generated skip condition"],
         }
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(indexing_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
     )
     first = runner.invoke(app, ["indexing"], catch_exceptions=False)
     assert first.exit_code == 0
@@ -179,7 +161,7 @@ def test_indexing_skips_codex_when_existing_hashes_are_fresh(
         calls.append(kwargs["purpose"])
         raise AssertionError("fresh INDEX.md should not require Codex")
 
-    monkeypatch.setattr(main_module, "run_codex_exec", fail_if_called)
+    monkeypatch.setattr(indexing_module, "run_codex_exec", fail_if_called)
     second = runner.invoke(app, ["indexing"], catch_exceptions=False)
 
     assert second.exit_code == 0
@@ -204,33 +186,52 @@ def test_commit_index_updates_commits_only_index_paths(tmp_path: Path) -> None:
     assert run_git(root, "status", "--short").stdout.strip() == "?? .gitignore"
 
 
-def test_indexing_allows_existing_non_index_diff_and_commits_only_index(
+def test_indexing_rejects_existing_non_index_diff_without_index_commit(
     tmp_path: Path, monkeypatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
     (root / "README.md").write_text("# repo\n\nchanged\n")
+    head_before = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    calls: list[Path] = []
 
-    class FakeCodexResult:
-        output_json = {
-            "summary": ["generated summary"],
-            "read_this_when": ["generated read condition"],
-            "do_not_read_this_when": ["generated skip condition"],
-        }
+    def fake_update_indexes(update_root: Path, codex_exec=None) -> list[Path]:
+        calls.append(update_root)
+        raise AssertionError("dirty cmoc indexing must stop before updating INDEX.md")
 
-    monkeypatch.setattr(
-        main_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
-    )
+    monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
 
     result = runner.invoke(app, ["indexing"], catch_exceptions=False)
 
-    assert result.exit_code == 0
+    assert result.exit_code != 0
+    assert "git 未コミット差分が存在します。" in result.stdout
+    assert calls == []
+    assert run_git(root, "rev-parse", "HEAD").stdout.strip() == head_before
+    assert not (root / "INDEX.md").exists()
+    assert run_git(root, "status", "--short").stdout == " M README.md\n"
+
+
+def test_indexing_preflight_allows_existing_non_index_diff_and_commits_only_index(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    index_path = root / "INDEX.md"
+    (root / "README.md").write_text("# repo\n\nchanged\n")
+
+    def fake_update_indexes(update_root: Path, codex_exec=None) -> list[Path]:
+        assert update_root == root
+        index_path.write_text("# generated\n")
+        return [index_path]
+
+    monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
+
+    indexing_module.run_indexing_preflight(root, lambda *args, **kwargs: None)
+
     committed_paths = run_git(
         root, "show", "--name-only", "--pretty=", "HEAD"
     ).stdout.splitlines()
-    assert "INDEX.md" in committed_paths
-    assert "README.md" not in committed_paths
+    assert committed_paths == ["INDEX.md"]
     assert run_git(root, "status", "--short").stdout == " M README.md\n"
 
 
@@ -303,6 +304,44 @@ def test_update_indexes_regenerates_malformed_fresh_hash_entry(
     assert "## Summary" in rendered
     assert "## Read this when" in rendered
     assert "## Do not read this when" in rendered
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        None,
+        {},
+        {"summary": ["summary"], "read_this_when": ["read"], "do_not_read_this_when": [1]},
+    ],
+)
+def test_render_index_entry_rejects_missing_or_non_string_semantic_fields(
+    tmp_path: Path, entry
+) -> None:
+    root = make_repo(tmp_path)
+    readme = root / "README.md"
+
+    with pytest.raises(cmoc_runtime.CmocError):
+        indexing_module.render_index_entry(root, readme, entry)
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        {"summary": [], "read_this_when": ["read"], "do_not_read_this_when": ["skip"]},
+        {"summary": [""], "read_this_when": ["read"], "do_not_read_this_when": ["skip"]},
+        {"summary": ["   "], "read_this_when": ["read"], "do_not_read_this_when": ["skip"]},
+        {"summary": ["summary"], "read_this_when": [], "do_not_read_this_when": ["skip"]},
+        {"summary": ["summary"], "read_this_when": [""], "do_not_read_this_when": ["skip"]},
+        {"summary": ["summary"], "read_this_when": ["read"], "do_not_read_this_when": []},
+        {"summary": ["summary"], "read_this_when": ["read"], "do_not_read_this_when": ["\t"]},
+    ],
+)
+def test_render_index_entry_rejects_empty_semantic_lists(tmp_path: Path, entry) -> None:
+    root = make_repo(tmp_path)
+    readme = root / "README.md"
+
+    with pytest.raises(cmoc_runtime.CmocError):
+        indexing_module.render_index_entry(root, readme, entry)
 
 
 def test_update_indexes_generates_sibling_entries_in_parallel(
@@ -391,223 +430,3 @@ def test_update_indexes_indexes_nested_memo_directory(tmp_path: Path, monkeypatc
     assert nested_memo / "INDEX.md" in updated
     assert (nested_memo / "INDEX.md").is_file()
     assert "# `memo`" in (root / "docs" / "INDEX.md").read_text()
-
-
-def test_command_codex_call_runs_indexing_preflight(
-    tmp_path: Path, monkeypatch
-) -> None:
-    root = make_repo(tmp_path)
-    index_path = root / "INDEX.md"
-    parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
-    )
-    events: list[str] = []
-
-    def fake_update_indexes(update_root: Path, codex_exec=None) -> list[Path]:
-        events.append("indexing")
-        assert update_root == root
-        index_path.write_text("# generated\n")
-        return [index_path]
-
-    class FakeCodexResult:
-        output_json = None
-
-    def fake_runtime_run_codex_exec(call_parameter, **kwargs):
-        events.append("codex")
-        assert call_parameter == parameter
-        return FakeCodexResult()
-
-    monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
-    monkeypatch.setattr(
-        main_module, "runtime_run_codex_exec", fake_runtime_run_codex_exec
-    )
-
-    result = main_module.run_codex_exec(
-        parameter, root=root, purpose="apply fork refine findings"
-    )
-
-    assert isinstance(result, FakeCodexResult)
-    assert events == ["indexing", "codex"]
-    assert run_git(root, "log", "-1", "--pretty=%s").stdout.strip() == "cmoc indexing"
-    assert run_git(root, "status", "--short").stdout.strip() == ""
-
-
-def test_command_codex_call_indexes_cwd_worktree_before_root(
-    tmp_path: Path, monkeypatch
-) -> None:
-    root = make_repo(tmp_path)
-    worktree = tmp_path / "codex-worktree"
-    run_git(root, "worktree", "add", "-b", "codex-work", str(worktree))
-    codex_cwd = worktree / "oracle"
-    parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
-    )
-    events: list[str] = []
-
-    def fake_update_indexes(update_root: Path, codex_exec=None) -> list[Path]:
-        events.append("indexing")
-        assert update_root == worktree
-        index_path = update_root / "INDEX.md"
-        index_path.write_text("# generated\n")
-        return [index_path]
-
-    class FakeCodexResult:
-        output_json = None
-
-    def fake_runtime_run_codex_exec(call_parameter, **kwargs):
-        events.append("codex")
-        assert kwargs["root"] == root
-        assert kwargs["cwd"] == codex_cwd
-        return FakeCodexResult()
-
-    monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
-    monkeypatch.setattr(
-        main_module, "runtime_run_codex_exec", fake_runtime_run_codex_exec
-    )
-
-    result = main_module.run_codex_exec(
-        parameter,
-        root=root,
-        cwd=codex_cwd,
-        purpose="review oracle enumerate findings",
-    )
-
-    assert isinstance(result, FakeCodexResult)
-    assert events == ["indexing", "codex"]
-    assert (
-        run_git(worktree, "log", "-1", "--pretty=%s").stdout.strip()
-        == "cmoc indexing"
-    )
-    assert run_git(worktree, "status", "--short").stdout.strip() == ""
-    assert run_git(root, "log", "-1", "--pretty=%s").stdout.strip() == "initial"
-    assert not (root / "INDEX.md").exists()
-
-
-def test_command_tui_codex_call_runs_indexing_preflight(
-    tmp_path: Path, monkeypatch
-) -> None:
-    root = make_repo(tmp_path)
-    index_path = root / "INDEX.md"
-    parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
-    )
-    events: list[str] = []
-
-    def fake_update_indexes(update_root: Path, codex_exec=None) -> list[Path]:
-        events.append("indexing")
-        assert update_root == root
-        index_path.write_text("# generated\n")
-        return [index_path]
-
-    def fake_runtime_run_codex_tui(call_parameter, **kwargs):
-        events.append("codex")
-        assert call_parameter == parameter
-
-    monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
-    monkeypatch.setattr(
-        main_module, "runtime_run_codex_tui", fake_runtime_run_codex_tui
-    )
-
-    main_module.run_codex_tui(parameter, root=root, purpose="tui codex")
-
-    assert events == ["indexing", "codex"]
-    assert run_git(root, "log", "-1", "--pretty=%s").stdout.strip() == "cmoc indexing"
-    assert run_git(root, "status", "--short").stdout.strip() == ""
-
-
-def test_indexing_preflight_waits_for_repository_lock(
-    tmp_path: Path, monkeypatch
-) -> None:
-    root = make_repo(tmp_path)
-    lock_path = indexing_module.indexing_lock_path(root)
-    ready_parent, ready_child = multiprocessing.Pipe(duplex=False)
-    release_child, release_parent = multiprocessing.Pipe(duplex=False)
-    process = multiprocessing.Process(
-        target=hold_indexing_lock,
-        args=(lock_path, ready_child, release_child),
-    )
-    events: list[str] = []
-    released = False
-
-    def fake_update_indexes(update_root: Path, codex_exec=None) -> list[Path]:
-        events.append("updated")
-        return []
-
-    monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
-
-    process.start()
-    try:
-        assert ready_parent.recv() is True
-        thread = threading.Thread(
-            target=indexing_module.run_indexing_preflight,
-            args=(root, lambda *args, **kwargs: None),
-        )
-        thread.start()
-        time.sleep(0.2)
-        assert events == []
-        release_parent.send(True)
-        released = True
-        thread.join(timeout=3)
-        assert not thread.is_alive()
-        assert events == ["updated"]
-    finally:
-        if process.is_alive() and not released:
-            release_parent.send(True)
-        process.join(timeout=3)
-        if process.is_alive():
-            process.terminate()
-            process.join()
-
-
-def test_command_codex_call_skips_indexing_for_index_entry_and_conflict_resolution(
-    tmp_path: Path,
-    monkeypatch,
-) -> None:
-    root = make_repo(tmp_path)
-    parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
-    )
-    calls: list[str] = []
-
-    class FakeCodexResult:
-        output_json = None
-
-    def fail_update_indexes(update_root: Path, codex_exec=None) -> list[Path]:
-        raise AssertionError("indexing preflight should be skipped")
-
-    def fake_runtime_run_codex_exec(call_parameter, **kwargs):
-        calls.append(kwargs["purpose"])
-        return FakeCodexResult()
-
-    monkeypatch.setattr(indexing_module, "update_indexes", fail_update_indexes)
-    monkeypatch.setattr(
-        main_module, "runtime_run_codex_exec", fake_runtime_run_codex_exec
-    )
-
-    main_module.run_codex_exec(
-        parameter, root=root, purpose="indexing index entry for README.md"
-    )
-    main_module.run_codex_exec(
-        parameter, root=root, purpose="session join conflict resolution"
-    )
-
-    assert calls == [
-        "indexing index entry for README.md",
-        "session join conflict resolution",
-    ]

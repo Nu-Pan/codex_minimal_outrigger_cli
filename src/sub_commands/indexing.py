@@ -1,4 +1,5 @@
 import fcntl
+from collections.abc import Iterator
 from contextlib import contextmanager
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -14,17 +15,41 @@ from cmoc_runtime import (
     is_binary,
     is_git_ignored,
     load_config,
+    repo_root,
+    require_clean_worktree,
+    require_cmoc_ignored,
+    run_cli_subcommand,
+    run_codex_exec,
     run_git,
     text_sha256,
     work_root,
 )
+from commons.runtime_codex_preflight import configure_indexing_preflight
 
 
 CodexExec = Callable[..., object]
 
 
-def cmoc_indexing_impl(
-    initial_status: str | None = None,
+def enable_indexing_preflight() -> None:
+    """Codex 呼び出し前に indexing を走らせる preflight を登録する。"""
+    configure_indexing_preflight(
+        lambda root, codex_exec: run_indexing_preflight(root, codex_exec)
+    )
+
+
+def cmoc_indexing_impl() -> None:
+    """CLI runtime を通して indexing subcommand を実行する。"""
+    enable_indexing_preflight()
+    run_cli_subcommand(
+        _cmoc_indexing_body,
+        codex_exec=run_codex_exec,
+        pre_log_check=require_indexing_cli_preconditions,
+        command_name="indexing",
+        command_argv=["cmoc", "indexing"],
+    )
+
+
+def _cmoc_indexing_body(
     codex_exec: CodexExec | None = None,
 ) -> None:
     """現在の work root に対して INDEX.md の maintenance を実行する。"""
@@ -35,13 +60,21 @@ def cmoc_indexing_impl(
     typer.echo(f"# cmoc indexing\n- updated_index_count: `{len(updated)}`")
 
 
+def require_indexing_cli_preconditions(root: Path) -> None:
+    """indexing CLI 実行前に worktree の安全条件を検査する。"""
+    require_cmoc_ignored(root)
+    require_clean_worktree(root)
+
+
 def run_indexing_preflight(root: Path, codex_exec: CodexExec) -> None:
+    """Codex 呼び出し前に INDEX.md を最新化し、必要な更新 commit を作る。"""
     with indexing_lock(root):
         commit_index_updates(root, update_indexes(root, codex_exec))
 
 
 @contextmanager
-def indexing_lock(root: Path):
+def indexing_lock(root: Path) -> Iterator[None]:
+    """repository ごとの INDEX.md 更新を直列化する排他 lock を保持する。"""
     lock_path = indexing_lock_path(root)
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+") as lock_file:
@@ -53,6 +86,7 @@ def indexing_lock(root: Path):
 
 
 def indexing_lock_path(root: Path) -> Path:
+    """Git 管理領域内の indexing 用 lock file path を取得する。"""
     path = run_git(
         ["rev-parse", "--git-path", "cmoc-indexing.lock"], root
     ).stdout.strip()
@@ -73,6 +107,7 @@ def commit_index_updates(root: Path, updated: list[Path]) -> None:
 
 def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path]:
     """INDEX.md を深い directory から順に検査・再生成する。"""
+    config_root = repo_root(root)
     dirs = indexable_directories(root)
     dirs.append(root)
     dirs.sort(key=lambda p: len(p.relative_to(root).parts), reverse=True)
@@ -90,7 +125,7 @@ def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path
                 entries.append(None)
                 missing_children.append((child, digest))
         if missing_children:
-            config = load_config(root)
+            config = load_config(config_root)
             with ThreadPoolExecutor(max_workers=max(1, config.num_parallel)) as executor:
                 generated_entries = list(
                     executor.map(
@@ -258,12 +293,10 @@ def index_target_hash(root: Path, path: Path) -> str:
 
 def render_index_entry(root: Path, path: Path, entry: dict | None = None, digest: str | None = None) -> str:
     """Structured Output から INDEX.md entry Markdown を生成する。"""
-    entry = entry or {}
     digest = digest or index_target_hash(root, path)
-    rel = path.relative_to(root)
-    summary = entry_list(entry, "summary", [f"`{rel}` の INDEX.md エントリーです。"])
-    read_this_when = entry_list(entry, "read_this_when", [f"`{rel}` の内容を確認する必要があるとき。"])
-    do_not_read_this_when = entry_list(entry, "do_not_read_this_when", ["より具体的な下位ファイルを直接読むべき対象が分かっているとき。"])
+    summary = entry_list(root, path, entry, "summary")
+    read_this_when = entry_list(root, path, entry, "read_this_when")
+    do_not_read_this_when = entry_list(root, path, entry, "do_not_read_this_when")
     return "\n".join(
         [
             f"# `{path.name}`",
@@ -284,9 +317,15 @@ def render_index_entry(root: Path, path: Path, entry: dict | None = None, digest
     )
 
 
-def entry_list(entry: dict, key: str, fallback: list[str]) -> list[str]:
-    """Structured Output の list[str] 項目を fallback 付きで取り出す。"""
-    value = entry.get(key)
-    if isinstance(value, list) and all(isinstance(item, str) for item in value) and value:
+def entry_list(root: Path, path: Path, entry: dict | None, key: str) -> list[str]:
+    """Structured Output の必須 list[str] 項目を検証して取り出す。"""
+    value = entry.get(key) if isinstance(entry, dict) else None
+    if isinstance(value, list) and value and all(
+        isinstance(item, str) and item.strip() for item in value
+    ):
         return value
-    return fallback
+    raise CmocError(
+        "INDEX.md entry 生成結果が不正です。",
+        ["cmoc indexing を再実行してください。"],
+        f"{path.relative_to(root)}: `{key}` は非空文字列配列である必要があります。",
+    )

@@ -1,21 +1,20 @@
+import json
+import subprocess
+from pathlib import Path
 import tomllib
 
+import cmoc_runtime
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from cmoc_runtime import SubcommandLogger
+from config.cmoc_config import CmocConfig
 from _support import (
-    AgentCallParameter,
-    FileAccessMode,
-    ModelClass,
-    Path,
-    ReasoningEffort,
-    SubcommandLogger,
-    cmoc_runtime,
-    json,
     make_repo,
-    run_codex_exec,
-    run_codex_tui,
     run_git,
     setup_codex_home,
-    subprocess,
+    write_python_executable,
 )
+from commons.runtime_codex import run_codex_exec, run_codex_tui
+
 
 def test_run_codex_exec_uses_stdin_and_writes_logs(
     tmp_path: Path, monkeypatch, capsys
@@ -26,23 +25,20 @@ def test_run_codex_exec_uses_stdin_and_writes_logs(
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
     fake_codex = bin_dir / "codex"
-    fake_codex.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env python3",
-                "import json, os, pathlib, sys",
-                f"record = pathlib.Path({str(recorder)!r})",
-                "stdin = sys.stdin.read()",
-                "args = sys.argv[1:]",
-                "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-                "output.write_text(json.dumps({'ok': True, 'stdin': stdin}))",
-                "record.write_text(json.dumps({'args': args, 'stdin': stdin, 'codex_home': os.environ.get('CODEX_HOME')}))",
-                "print(json.dumps({'type': 'turn.completed'}))",
-            ]
-        )
-        + "\n"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, os, pathlib, sys",
+            f"record = pathlib.Path({str(recorder)!r})",
+            "stdin = sys.stdin.read()",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text(json.dumps({'ok': True, 'stdin': stdin}))",
+            "record.write_text(json.dumps({'args': args, 'stdin': stdin, 'codex_home': os.environ.get('CODEX_HOME')}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+            "print('stderr-only', file=sys.stderr)",
+        ],
     )
-    fake_codex.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     schema = tmp_path / "schema.json"
     schema.write_text(
@@ -68,6 +64,7 @@ def test_run_codex_exec_uses_stdin_and_writes_logs(
         parameter,
         root=root,
         capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
         subcommand_logger=logger,
     )
 
@@ -84,7 +81,8 @@ def test_run_codex_exec_uses_stdin_and_writes_logs(
     assert result.output_json == {"ok": True, "stdin": "SECRET PROMPT BODY"}
     assert result.call_log_path.is_file()
     assert result.stdout_log_path.read_text().strip() == '{"type": "turn.completed"}'
-    assert result.stderr_log_path.read_text() == ""
+    assert "stderr-only" not in result.stdout_log_path.read_text()
+    assert result.stderr_log_path.read_text().strip() == "stderr-only"
     assert result.codex_home == codex_home
     assert result.profile_name == recorded["args"][2]
     assert result.profile_path.name.startswith("cmoc_")
@@ -126,22 +124,18 @@ def test_run_codex_exec_stores_schema_in_cwd_work_root(
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
     fake_codex = bin_dir / "codex"
-    fake_codex.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env python3",
-                "import json, os, pathlib, sys",
-                f"record = pathlib.Path({str(recorder)!r})",
-                "args = sys.argv[1:]",
-                "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-                "output.write_text(json.dumps({'ok': True}))",
-                "record.write_text(json.dumps({'args': args, 'cwd': os.getcwd()}))",
-                "print(json.dumps({'type': 'turn.completed'}))",
-            ]
-        )
-        + "\n"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, os, pathlib, sys",
+            f"record = pathlib.Path({str(recorder)!r})",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text(json.dumps({'ok': True}))",
+            "record.write_text(json.dumps({'args': args, 'cwd': os.getcwd()}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
     )
-    fake_codex.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     schema = tmp_path / "schema.json"
     schema.write_text(
@@ -163,7 +157,11 @@ def test_run_codex_exec_stores_schema_in_cwd_work_root(
     )
 
     result = run_codex_exec(
-        parameter, root=root, cwd=linked, capacity_initial_sleep_sec=0
+        parameter,
+        root=root,
+        cwd=linked,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
     )
 
     recorded = json.loads(recorder.read_text())
@@ -180,6 +178,7 @@ def test_run_codex_exec_stores_schema_in_cwd_work_root(
 def test_run_codex_tui_uses_codex_command_and_prompt_argument(
     tmp_path: Path,
     monkeypatch,
+    capsys,
 ) -> None:
     root = make_repo(tmp_path)
     codex_home = setup_codex_home(tmp_path, monkeypatch)
@@ -203,8 +202,20 @@ def test_run_codex_tui_uses_codex_command_and_prompt_argument(
         "TUI PROMPT BODY",
         None,
     )
+    logger = SubcommandLogger(root, "test")
+    token = cmoc_runtime.set_current_subcommand_logger(logger)
 
-    result = run_codex_tui(parameter, root=root)
+    try:
+        prompt_file = root / ".cmoc" / "log" / "tui" / "prompt_cmpl.md"
+        result = run_codex_tui(
+            parameter,
+            root=root,
+            purpose="tui codex",
+            extra_read_paths=[prompt_file],
+            config=CmocConfig(),
+        )
+    finally:
+        cmoc_runtime.reset_current_subcommand_logger(token)
 
     assert recorded["kwargs"]["cwd"] == root
     assert recorded["kwargs"]["env"]["CODEX_HOME"] == str(codex_home)
@@ -220,7 +231,11 @@ def test_run_codex_tui_uses_codex_command_and_prompt_argument(
     assert len(profiles) == 1
     workspace = tomllib.loads(profiles[0].read_text())["sandbox_workspace_write"]
     assert workspace["writable_roots"] == [str(root)]
-    assert workspace["read_only_paths"] == [str(root / "memo"), str(root / ".agents")]
+    assert workspace["read_only_paths"] == [
+        str(root / "memo"),
+        str(root / ".agents"),
+        str(prompt_file),
+    ]
     call_logs = list((root / ".cmoc" / "log" / "codex").glob("*_tui_call.json"))
     assert len(call_logs) == 1
     assert json.loads(call_logs[0].read_text())["argv"] == [
@@ -229,6 +244,18 @@ def test_run_codex_tui_uses_codex_command_and_prompt_argument(
         recorded["argv"][2],
         "TUI PROMPT BODY",
     ]
+    log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_events = [event for event in log_events if event["event"] == "codex_call"]
+    assert len(codex_events) == 1
+    assert codex_events[0]["purpose"] == "tui codex"
+    assert codex_events[0]["status"] == "succeeded"
+    assert codex_events[0]["returncode"] == 0
+    assert codex_events[0]["call_log_path"] == str(call_logs[0])
+    console = capsys.readouterr().out
+    assert "Codex CLI call" in console
+    assert "- purpose: `tui codex`" in console
+    assert f"- call_log: `{call_logs[0]}`" in console
+    assert "- returncode: `0`" in console
     assert result.returncode == 0
     assert result.stdout == ""
     assert result.stderr == ""
@@ -243,20 +270,16 @@ def test_run_codex_exec_loads_repo_config_json(tmp_path: Path, monkeypatch) -> N
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     fake_codex = bin_dir / "codex"
-    fake_codex.write_text(
-        "\n".join(
-            [
-                "#!/usr/bin/env python3",
-                "import json, pathlib, sys",
-                "args = sys.argv[1:]",
-                "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-                "output.write_text('done\\n')",
-                "print(json.dumps({'type': 'turn.completed'}))",
-            ]
-        )
-        + "\n"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text('done\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
     )
-    fake_codex.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,

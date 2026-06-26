@@ -3,17 +3,44 @@ from tempfile import NamedTemporaryFile
 
 import typer
 
-from cmoc_runtime import ensure_cmoc_ignored, run_git, sync_config, work_root
+from cmoc_runtime import (
+    ensure_cmoc_ignored,
+    repo_root,
+    run_cli_subcommand,
+    run_git,
+    sync_config,
+    with_cmoc_ignore_pattern,
+    work_root,
+)
+
+# ログ作成前の .cmoc ignore 保証による副作用を、利用者の .gitignore 復元ロジックから見分ける。
+_PRE_LOG_GITIGNORE_STATES: dict[Path, tuple[bool, str | None]] = {}
 
 
 def cmoc_init_impl() -> None:
+    """CLI runtime を通して init を実行する。"""
+    run_cli_subcommand(
+        _cmoc_init_body,
+        pre_log_check=ensure_cmoc_ignored_before_init_log,
+        command_name="init",
+        command_argv=["cmoc", "init"],
+        use_work_root_runtime=True,
+    )
+
+
+def _cmoc_init_body() -> None:
     """work root を cmoc が扱える初期状態へ同期する。"""
     root = work_root()
+    config_root = repo_root()
     gitignore = root / ".gitignore"
+    pre_log_gitignore = _PRE_LOG_GITIGNORE_STATES.pop(root.resolve(), None)
     head_gitignore = _git_show(root, "HEAD:.gitignore")
     index_gitignore = _git_show(root, ":0:.gitignore")
-    had_worktree_gitignore = gitignore.exists()
-    worktree_gitignore = gitignore.read_text() if had_worktree_gitignore else None
+    if pre_log_gitignore is None:
+        had_worktree_gitignore = gitignore.exists()
+        worktree_gitignore = gitignore.read_text() if had_worktree_gitignore else None
+    else:
+        had_worktree_gitignore, worktree_gitignore = pre_log_gitignore
     staged_patch = run_git(
         [
             "diff",
@@ -32,7 +59,7 @@ def cmoc_init_impl() -> None:
         run_git(["restore", "--staged", "--", "."], root)
     try:
         ensure_cmoc_ignored(root)
-        sync_config(root)
+        sync_config(config_root)
         run_git(["add", ".gitignore"], root)
         diff = run_git(
             ["diff", "--cached", "--quiet", "--", ".gitignore", ".cmoc"],
@@ -53,6 +80,19 @@ def cmoc_init_impl() -> None:
         )
     typer.echo(render_cmoc_init_result(root))
 
+def ensure_cmoc_ignored_before_init_log(root: Path) -> None:
+    gitignore = root / ".gitignore"
+    state_key = root.resolve()
+    _PRE_LOG_GITIGNORE_STATES[state_key] = (
+        gitignore.exists(),
+        gitignore.read_text() if gitignore.exists() else None,
+    )
+    try:
+        ensure_cmoc_ignored(root)
+    except BaseException:
+        _PRE_LOG_GITIGNORE_STATES.pop(state_key, None)
+        raise
+
 
 def _git_show(root: Path, spec: str) -> str | None:
     result = run_git(["show", spec], root, check=False)
@@ -64,15 +104,6 @@ def _write_or_remove(path: Path, content: str | None) -> None:
         path.unlink(missing_ok=True)
         return
     path.write_text(content)
-
-
-def _with_cmoc_ignore(content: str) -> str:
-    lines = content.splitlines()
-    if "/.cmoc/" in lines:
-        return content
-    separator = "\n" if lines and lines[-1] != "" else ""
-    newline = "" if content == "" or content.endswith("\n") else "\n"
-    return f"{content}{newline}{separator}/.cmoc/\n"
 
 
 def _restore_gitignore_state(
@@ -87,7 +118,7 @@ def _restore_gitignore_state(
     if index_content is None and head_content is not None:
         run_git(["rm", "--cached", "--ignore-unmatch", ".gitignore"], root)
     elif index_content is not None:
-        restored_index = _with_cmoc_ignore(index_content)
+        restored_index = with_cmoc_ignore_pattern(index_content)
         if restored_index != current_head:
             with NamedTemporaryFile("w", delete=False) as f:
                 f.write(restored_index)
@@ -110,10 +141,10 @@ def _restore_gitignore_state(
             finally:
                 temp_path.unlink(missing_ok=True)
     if had_worktree_content and worktree_content is not None:
-        path.write_text(_with_cmoc_ignore(worktree_content))
+        path.write_text(with_cmoc_ignore_pattern(worktree_content))
     elif head_content is not None or index_content is not None:
         restored_content = current_head or index_content or head_content or ""
-        path.write_text(_with_cmoc_ignore(restored_content))
+        path.write_text(with_cmoc_ignore_pattern(restored_content))
 
 
 def _restore_staged_patch(root: Path, patch: str) -> None:

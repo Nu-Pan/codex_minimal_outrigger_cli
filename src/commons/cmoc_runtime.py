@@ -1,7 +1,7 @@
 import subprocess
 import time
 
-from commons.runtime_codex import (
+from commons.runtime_codex_preflight import (
     run_codex_exec,
     run_codex_tui,
 )
@@ -53,6 +53,7 @@ from commons.runtime_git import (
     require_cmoc_ignored,
     require_clean_worktree,
     run_git,
+    with_cmoc_ignore_pattern,
 )
 from commons.runtime_logging import (
     SubcommandLogger,
@@ -82,6 +83,7 @@ from commons.runtime_state import (
     SessionPart,
     SessionState,
     active_session_for_home,
+    apply_branch_session_id,
     branch_session_id,
     load_state_for_branch,
     state_path,
