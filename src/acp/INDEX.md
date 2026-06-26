@@ -1,25 +1,25 @@
 # `builder`
 
 ## Summary
-- AI エージェントを呼び出す前段で、各サブコマンドや工程ごとの AgentCallParameter と Structured Output schema の対応を組み立てる実装群への入口。
-- 差分要約、実装所見の列挙と修正依頼、正本仕様断片レビューの所見列挙・検証・採否・整理、merge conflict marker 解消、TUI 実行前のパラメータ解決、ルーティング文書エントリー生成を扱う。
-- 各工程でエージェントへ渡す role、summary、goal、補助文脈、標準文書参照、ファイルアクセスモード、model class、reasoning effort、返却 schema を確認するための領域。
+- AI エージェント呼び出しパラメータを、用途別サブコマンドの文脈から組み立てる実装をまとめた領域。プロンプト本文、補助文脈、ファイルアクセスモード、モデル種別、推論強度、構造化出力 schema の接続を、適用後補助作業、目次エントリー生成、正本仕様断片レビュー、session join の conflict 解消、TUI 実行パラメータ解決ごとに扱う。
+- 各下位領域は、呼び出し先エージェントに何を依頼するか、入力値をどのようにプロンプトへ埋め込むか、どの標準文書を prompt_parts から含めるか、返却結果に schema を要求するかを確認する入口になる。
 
 ## Read this when
-- サブコマンドや工程が AI エージェントへどのような prompt と実行条件を渡すかを、機能領域別に探し始めたいとき。
-- AgentCallParameter の構築内容と Structured Output schema の接続を、apply fork、review oracle、session join、tui、indexing のいずれかについて確認または変更したいとき。
-- 差分要約、レビュー所見、所見対応作業、conflict 解消、TUI パラメータ選定、INDEX.md エントリー生成などの AI 呼び出し境界を追いたいとき。
-- 各 AI 呼び出しで使うファイルアクセス権限、モデル種別、推論強度、標準文書断片、補助入力の埋め込み方を比較しながら確認したいとき。
+- cmoc の各処理が AI エージェントへ渡す role、summary、goal、補助文脈、完了プロンプトをどのように構築しているか確認・変更したいとき。
+- 差分要約、realization file の所見列挙、所見対応修正、INDEX.md エントリー生成、oracle review の所見処理、merge conflict marker 解消、TUI 実行前のパラメータ判定に関する ACP 呼び出し定義を探すとき。
+- エージェント呼び出しごとに選ばれるファイルアクセスモード、モデルクラス、reasoning effort、対象パス解決、作業ルートや正本ルートの扱いを追いたいとき。
+- AI から受け取る structured output の外形や、プロンプト構築実装と JSON schema ファイルの対応を確認・検証したいとき。
+- oracle standard、realization standard、review oracle standard、apply review standard、index entry standard などの標準 prompt 断片が、どの種類の呼び出しへ含まれるか調べたいとき。
 
 ## Do not read this when
-- AI 呼び出しより上位の CLI 引数解析、サブコマンドの実行順序、状態保存、git 操作、対象ファイル探索などの実行制御を調べたいとき。
-- prompt に含められる oracle standard、realization standard、review standard、apply review standard、index entry standard などの標準文書本文そのものを確認したいとき。
-- StructDoc、Markdown rendering、AgentCallParameter、FileAccessMode、path 解決、complete prompt 生成など、複数領域で使われる共通基盤の型や helper を調べたいとき。
-- 生成済みのレビュー所見、差分要約、INDEX.md エントリーなど、AI 呼び出し結果の保存・表示・利用側の挙動を確認したいとき。
-- 特定工程の対象ファイルが既に分かっており、その工程固有の prompt 構築や schema だけを直接読めば足りるとき。
+- エージェント呼び出しで共通利用される prompt 部品そのもの、標準文書の本文、ファイルアクセス規則の文言、markdown rendering、StructDoc、AgentCallParameter、ModelClass、Path 解決 helper の定義を調べたいとき。
+- cmoc apply、cmoc review、cmoc indexing、cmoc session、cmoc tui の CLI 引数解析、実行順序、状態更新、保存処理、git コマンド実行など、呼び出しパラメータ構築より上位の制御フローを確認したいとき。
+- oracle file や realization file の実際の仕様・実装内容、レビュー対象の所見本文、適用対象コード、conflict の具体的な解消内容を調査したいだけのとき。
+- 生成済み INDEX.md のルーティング内容そのものや、個別ディレクトリのエントリー品質を確認したいだけのとき。
+- 構造化出力 schema の一般的な書き方や JSON Schema の仕様を調べたいだけで、cmoc のエージェント呼び出しとの接続を変更しないとき。
 
 ## hash
-- f72a68ff48e10f4bbb4c1f88d877d3fb606c64fc9d46f223b9c3e49d987adcb2
+- cc4f73f6205a15106b37a47921549963c5c444d49958d12bfacfdaf919bd58a5
 
 # `prompt_parts`
 

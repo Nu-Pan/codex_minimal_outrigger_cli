@@ -259,24 +259,22 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- プロンプト部品とビルダーパラメータの振る舞いを検証する realization test。ルーティング規則、ファイルアクセス規則、各種 standard 文書、complete prompt への任意セクション注入、Structured Output schema の制約、モデル種別・推論量・アクセスモードの選定が期待どおりであることを確認する。
-- StructDoc の Markdown 描画、連続空行の畳み込み、補助プロンプトやコードブロック内文言の保持、apply fork・review oracle・session join・TUI resolve・indexing 系 builder が生成する prompt と schema の主要契約を横断的に扱う。
+- プロンプト部品と実行パラメータ builder の振る舞いを検証する realization test。構造化ドキュメントの Markdown 描画、各種標準プロンプトの挿入条件、ファイルアクセス規則、schema 制約、モデル種別・推論強度・アクセスモード選定が期待どおりかを扱う。
+- apply fork、indexing、review oracle、session join、TUI parameter resolution など複数領域の builder が生成する prompt と structured output schema の契約を横断的に確認する入口になる。
 
 ## Read this when
-- プロンプト本文を構成する部品のタイトル、含まれるべき語句、デフォルトで省略される standard、任意指定で追加される standard のテスト期待値を確認したいとき。
-- file access mode ごとに生成される読み書き規則の見出しや本文断片、repo root を基準にした apply fork 用 prompt の表現、ルーティング規則や index entry standard の出力内容を変更・検証するとき。
-- Structured Output schema の論理制約を変更するとき。特に空の変更要約の拒否、TUI resolve parameter の required 項目と enum、review oracle merge finding の操作種別ごとの target_ids と finding の契約を確認したいとき。
-- builder が選ぶ model class、reasoning effort、file access mode の契約を確認するとき。特に indexing、review oracle merge finding、session join conflict resolution、TUI resolve parameter の実行パラメータに関わる変更を行うとき。
-- StructDoc や render_as_markdown の基礎的な描画仕様、complete prompt が base prompt と aux prompt を壊さず統合する仕様を確認したいとき。
+- 標準プロンプト部品、完全プロンプト生成、または Markdown rendering の出力文言が変わった影響を確認したいとき。
+- file access mode ごとの禁止・許可文言、モデルクラス、reasoning effort、structured output schema path など、builder が返す実行パラメータの契約を変更・検証したいとき。
+- apply fork、review oracle merge finding、TUI resolve parameter などの JSON schema 制約が、空配列拒否・enum・required・operation kind ごとの整合性を保つか確認したいとき。
+- oracle standard、realization standard、apply review standard、index entry standard、review oracle standard の用語や見出しを prompt に含める条件を調べたいとき。
 
 ## Do not read this when
-- 個別 builder の内部実装だけを局所的に追いたい場合で、生成される prompt・schema・実行パラメータの期待値を確認する必要がないとき。
-- CLI のコマンド実行、作業ツリー操作、永続状態、Git 操作など、プロンプト部品生成や builder parameter 契約と直接関係しない実装を調べるとき。
-- oracle file の正本仕様そのものを確認したいとき。この対象は realization test であり、仕様判断の根拠として読む対象ではない。
-- 単一の JSON schema ファイルや prompt 部品本文の現在内容だけを確認すれば十分なとき。まず対象の実装または schema 本体を直接読む方がよい。
+- 個別サブコマンドの実処理ロジックやファイル操作の実装を調べたいだけで、prompt builder の出力契約に関心がないとき。
+- 特定の標準文書そのものの正本内容を確認したいとき。このテストではなく、標準プロンプトを組み立てる実装または oracle 側の該当文書を読む方が直接的。
+- 単一の JSON schema ファイルの静的な定義だけを確認したいとき。builder 経由での schema 選択や validation 挙動まで見ないなら、該当 schema を直接読む方がよい。
 
 ## hash
-- 6c10a8337eaddfb9fb63c2b65373a316388ca475b4075c46011ab05c1b3fd711
+- f5eb0f8090723c4046f086bf83b90fb9bf81e4e1d60225b49bb3c8648bff82ce
 
 # `test_review_oracle_cli.py`
 

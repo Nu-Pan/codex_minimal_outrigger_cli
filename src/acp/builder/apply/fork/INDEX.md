@@ -55,21 +55,21 @@
 # `file_finding_enumeration.py`
 
 ## Summary
-- `cmoc apply fork` で、指定された起点ファイルから関連する oracle file と realization file を読ませ、realization file の要修正点をファイル単位で列挙するための AI 呼び出しパラメータを構築する実装。
-- 読み取り専用の調査プロンプトに oracle standard、realization standard、apply review standard を含め、所見リストを Structured Output schema に従って返させる役割を持つ。
+- `cmoc apply fork` で、指定された oracle file または realization file を起点に、work tree 内の realization file の要修正点をファイル単位で列挙するための AI 呼び出しパラメータを構築する実装。
+- 所見リストアップ担当としての役割、読み取り専用のファイルアクセス、oracle/realization/apply review 各 standard を含む complete prompt を組み立て、MAINSTREAM モデル・MEDIUM reasoning の呼び出し設定として返す。
 
 ## Read this when
-- `cmoc apply fork` のレビュー工程で、ファイル単位の所見リストアップ用プロンプトや AgentCallParameter の組み立てを確認・変更したいとき。
-- apply fork が起点ファイル以外の oracle file や realization file を読むよう促している箇所、または所見列挙時に適用する standard 群を確認したいとき。
-- ファイル単位の所見列挙呼び出しで使う model class、reasoning effort、file access mode、出力 schema の指定を確認したいとき。
+- `cmoc apply fork` の中で、対象ファイル単位に要修正点を調査するエージェント呼び出しの prompt やモデル設定を確認・変更したいとき。
+- apply fork の所見列挙フェーズで、target path と work root がどのように prompt に埋め込まれ、どの standard が有効化されるかを確認したいとき。
+- ファイル単位の所見リストアップ結果に対応する Structured Output schema ファイルの選ばれ方を確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` 全体の orchestration、fork の作成・適用、レビュー結果の集約など、ファイル単位の所見列挙以外の処理を調べたいとき。
-- oracle standard、realization standard、apply review standard の本文そのものを確認したいとき。
-- プロンプト部品の markdown レンダリングや complete prompt 構築の共通処理を変更したいとき。
+- apply fork 全体の制御フロー、複数ファイルへの呼び出し順、列挙結果の集約・適用・表示を調べたいだけのとき。
+- complete prompt の共通構築処理、path 解決処理、AgentCallParameter や ModelClass そのものの定義を調べたいとき。
+- oracle file や realization file の定義、apply review standard の内容そのものを確認したいとき。
 
 ## hash
-- 33e5c2984152c543137452a4e60f63d6cad32739241f55a1545b2df7172f64fc
+- cb7b0d664859e5e14b4544befaed393c3d3d520aa898fbed026cf429c177cfba
 
 # `finding_application.py`
 

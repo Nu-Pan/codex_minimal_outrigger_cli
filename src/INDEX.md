@@ -1,25 +1,27 @@
 # `acp`
 
 ## Summary
-- AI エージェント呼び出しに渡す完全なプロンプト、ファイルアクセス規則、ルーティング規則、oracle・realization 関連標準文書、工程別の AgentCallParameter と Structured Output schema の接続を扱う実装領域。
-- 差分要約、実装所見の列挙と修正依頼、正本仕様断片レビューの所見列挙・検証・採否・整理、merge conflict marker 解消、TUI 実行前のパラメータ解決、INDEX.md エントリー生成など、cmoc が AI agent へ作業を委譲する境界の入口になる。
-- 下位要素は、サブコマンドや工程ごとの呼び出し条件を組み立てる領域と、各呼び出しに共通して注入される規則・標準文書・補助プロンプトを構成する領域に分かれる。
+- cmoc が AI agent を呼び出す直前に使う、呼び出しパラメータ生成とプロンプト部品生成の実装領域。各用途の role、summary、goal、補助文脈、ファイルアクセス制約、標準文書、モデル種別、reasoning effort、structured output schema への接続を扱う。
+- 差分要約、realization file の所見列挙と所見対応、INDEX.md エントリー生成、oracle review の所見処理、merge conflict marker 解消、TUI 実行パラメータ選定など、AI agent に渡す依頼内容を組み立てる入口になる。
+- ファイルアクセス規則、ルーティング規則、oracle/realization の基本説明、oracle・realization・review・apply review・INDEX.md entry の各標準文書を、構造化文書として agent prompt に注入する実装もここで扱う。
 
 ## Read this when
-- cmoc が AI agent にどの role、summary、goal、補助文脈、ファイルアクセス権限、model class、reasoning effort、返却 schema を渡すかを調べ始めたいとき。
-- AI 呼び出しの対象工程が apply fork、review oracle、session join、tui、indexing のいずれかに関係し、工程別のプロンプト構築と Structured Output schema の対応を確認または変更したいとき。
-- 複数の AI 呼び出しで共通利用されるファイルアクセス規則、INDEX.md ルーティング規則、oracle・realization の基本説明、各種標準文書が、どの条件で最終プロンプトに注入されるかを追いたいとき。
-- AI agent に渡すプロンプト内容と実行条件の境界を、CLI 実行制御や結果保存側ではなく、呼び出しパラメータ生成側から確認したいとき。
+- cmoc の処理が AI agent に渡す role、summary、goal、補助プロンプト、対象パス、入力本文をどのように組み立てるか確認・変更したいとき。
+- AI agent 呼び出しごとに選ばれるファイルアクセスモード、モデルクラス、reasoning effort、structured output schema の有無や schema ファイルとの対応を追いたいとき。
+- 差分要約、apply 用の所見列挙や所見対応修正、INDEX.md エントリー生成、oracle review の列挙・検証・採否判定・マージ、session join の conflict marker 解消、TUI 実行パラメータ解決に関する prompt 構築を探すとき。
+- agent prompt に注入されるファイル読み書き規則、INDEX.md を使った読み進め方、oracle file と realization file の責務境界、各種 standard 文書の文面や注入条件を確認・変更したいとき。
+- 標準文書の有効化フラグ間の依存関係や、完全な agent prompt がどの順序で構成されるかを確認したいとき。
 
 ## Do not read this when
-- CLI 引数解析、サブコマンドの実行順序、状態ファイル更新、git 操作、対象ファイル探索など、AI 呼び出し前後の制御フローを調べたいとき。
-- AgentCallParameter、FileAccessMode、ModelClass、ReasoningEffort、StructDoc、path 解決など、プロンプト構築側が利用する共通型や基盤 helper そのものを調べたいとき。
-- 生成された差分要約、レビュー所見、INDEX.md エントリー、TUI パラメータ選択結果など、AI agent の返却結果を保存・表示・適用する側の挙動を確認したいとき。
-- 特定工程で使う個別 prompt または個別 schema が既に分かっており、その下位の本文へ直接進めば足りるとき。
-- oracle や realization の正本仕様・実装本体を調べたいだけで、AI agent 向けプロンプトへ標準文書を埋め込む実装には関心がないとき。
+- CLI サブコマンドの引数解析、実行順序、状態更新、保存処理、git コマンド実行など、AI agent 呼び出しパラメータ構築より上位の制御フローを調べたいとき。
+- AgentCallParameter、ModelClass、ReasoningEffort、FileAccessMode、StructDoc、path 解決 helper など、共通型や基盤 helper の定義そのものを確認したいとき。
+- oracle file や realization file の実際の仕様・実装内容、レビュー対象の本文、修正対象コード、conflict の具体的な解消内容を調査したいだけのとき。
+- AI agent の返却結果を受け取った後の保存、集約、表示、適用処理を調べたいとき。
+- テスト、fixture、生成済みキャッシュ、または個別 JSON Schema の一般的な仕様だけを確認したいとき。
+- 生成済み INDEX.md のルーティング文面そのものや、特定ディレクトリのエントリー品質だけを確認したいとき。
 
 ## hash
-- 3658ba2c30103d4776964cff959c82dcd834962949d9c342d0fae42fa6a40dae
+- 9d17e63d1185a02572bb03e4faf351895d671790fbbd5d60d7375d0ccb6f2e59
 
 # `basic`
 
