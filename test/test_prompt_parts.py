@@ -222,7 +222,7 @@ def test_complete_prompt_rewrites_base_prompt_for_codex_cli() -> None:
     )
     rewritten_text = rendered.replace(code_block, "")
 
-    assert "呼び出し元から呼び出された 作業担当者" in rendered
+    assert "呼び出し元から呼び出された AI Agent" in rendered
     assert "編集対象ファイル" in rendered
     assert "編集対象ファイルの保守基準" in rendered
     assert "仕様文書の記述基準" in rendered
@@ -335,7 +335,8 @@ def test_tui_resolve_parameter_builder_embeds_original_prompt() -> None:
     assert parameter.structured_output_schema_path is not None
     assert parameter.structured_output_schema_path.name == "resolve_parameter.json"
     assert parameter.structured_output_schema_path.exists()
-    assert "作業担当者 CLI/TUI の実行パラメータ選定担当" in parameter.prompt
+    assert "AI Agent CLI/TUI の実行パラメータ選定担当" in parameter.prompt
+    assert "作業担当者 CLI/TUI" not in parameter.prompt
     assert "パラメータ選択結果" in parameter.prompt
     assert original_prompt in parameter.prompt
     assert "# 仕様ファイルと編集対象の扱い" in parameter.prompt

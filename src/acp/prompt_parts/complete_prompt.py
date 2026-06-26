@@ -82,8 +82,6 @@ def _agent_text_replacements() -> list[tuple[str, str]]:
         ("正本仕様", "人間が管理する仕様"),
         ("実装者である AI agent", "作業担当者"),
         ("実装者である AI", "作業担当者"),
-        ("AI agent", "作業担当者"),
-        ("AI Agent", "作業担当者"),
     ]
     for root_token in RootToken:
         replacements.append(
