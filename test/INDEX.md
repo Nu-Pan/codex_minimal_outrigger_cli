@@ -278,25 +278,24 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- プロンプト構成部品と実行パラメータ builder の realization test 群。標準文書、ルーティング規則、ファイルアクセス規則、完全プロンプトへの任意標準の注入・省略、禁止語の置換、Markdown レンダリング、schema 制約、model class・reasoning effort・file access mode の選定が期待どおりになることを検証する。
-- apply fork、indexing、review oracle、session join、TUI resolve parameter など複数領域の builder が生成する prompt・schema・実行モードの契約を横断的に確認する入口として位置づけられる。
+- プロンプト部品とビルダーパラメータのテスト群。レビュー基準、ルーティング規則、ファイルアクセス規則、各種標準文書、完全プロンプトへの注入・除外、パス置換、Structured Output schema、モデル選択やアクセスモードの期待値を検証する。
+- StructDoc の Markdown 描画や空行圧縮、apply fork・review oracle・session join・TUI resolve・indexing などのプロンプト生成系が、正しい文言・schema・実行パラメータを持つことを確認する入口になる。
 
 ## Read this when
-- 標準文書やルーティング規則、ファイルアクセス規則、index entry standard、review/apply/realization standard の文言がプロンプトに含まれるかどうかを変更・確認する時。
-- complete prompt の構成、補助プロンプトの注入、禁止された path placeholder や agent 表現の除去、標準文書のデフォルト省略・明示追加の挙動を確認する時。
-- StructDoc や code block の Markdown レンダリング、特に連続空行の畳み込みに関する挙動を変更する時。
-- apply fork、indexing、review oracle、session join、TUI resolve parameter の builder が返す model class、reasoning effort、file access mode、prompt 断片、structured output schema の契約を確認する時。
-- schema の required、additionalProperties、enum、空配列拒否、oracle source との一致など、出力 schema の検証条件を変更する時。
-- worktree 内で実行される apply fork prompt が対象リポジトリの root をどう扱うか、placeholder を実パス表現へどう変換するかを確認する時。
+- プロンプト生成、標準文書生成、ファイルアクセス規則、ルーティング規則、INDEX エントリー生成基準、レビュー基準の表示内容を変更する。
+- 完全プロンプトに含める補助標準の有無、禁止語の置換、root token の実パス展開、コードブロック内外の文言処理を確認したい。
+- apply fork、review oracle、session join、TUI resolve、indexing の builder が返す model class、reasoning effort、file access mode、Structured Output schema の期待値を確認したい。
+- Markdown レンダリングで連続空行やコードブロック内空行の扱いを変更する。
+- プロンプトや schema の変更後に、既存テストのどの観点が失敗し得るかを把握したい。
 
 ## Do not read this when
-- 個別 builder の実装そのもの、prompt 文書本文の生成ロジック、または schema 定義の正本を読みたい時は、対応する実装・定義ファイルを直接読む方がよい。
-- CLI コマンドの外部挙動やサブコマンド実行フローを調べたいだけで、プロンプト構成や parameter builder の契約に関係しない時。
-- INDEX.md エントリー生成の一般規則だけを確認したい時は、標準文書の生成元や仕様側を読む方が直接的である。
-- 単一の低レベル helper の内部アルゴリズムを調べたい時は、この横断テストではなく、その helper の実装と近接テストを読む方がよい。
+- 個別のプロンプト部品や builder の実装詳細だけを追う場合は、対応する実装側を直接読む。
+- 正本仕様断片そのものの内容や要求を確認したい場合は、oracle 側の該当文書を読む。
+- CLI の実行フロー、永続状態、ワークツリー操作など、プロンプト生成と直接関係しない挙動を調べる場合は対象外。
+- 単にテスト環境や pytest 設定、依存関係の設定を確認したい場合は、設定ファイルやテスト基盤を直接読む。
 
 ## hash
-- 9721975d7cabf49cf36781ca3044d2ce3e197f13ab99ff352cd30a19a583b68c
+- dfff1f0a8d3de5544259dde11a7675485431fc39f786f0526956849cc86cad75
 
 # `test_review_oracle_cli.py`
 
