@@ -272,6 +272,42 @@ def test_apply_finding_merge_operations_rejects_invalid_operations(
         )
 
 
+@pytest.mark.parametrize(
+    "operations",
+    [
+        [
+            {"kind": "replace", "target_ids": ["finding-0001"], "finding": {}},
+            {"kind": "replace", "target_ids": ["finding-0001"], "finding": {}},
+        ],
+        [
+            {
+                "kind": "merge",
+                "target_ids": ["finding-0001", "finding-0002"],
+                "finding": {},
+            },
+            {"kind": "delete", "target_ids": ["finding-0002"], "finding": None},
+        ],
+        [
+            {"kind": "delete", "target_ids": ["finding-0001"], "finding": None},
+            {
+                "kind": "merge",
+                "target_ids": ["finding-0001", "finding-0002"],
+                "finding": {},
+            },
+        ],
+    ],
+)
+def test_apply_finding_merge_operations_rejects_reused_targets(
+    operations: list[dict],
+) -> None:
+    with pytest.raises(ValueError):
+        review_module.apply_finding_merge_operations(
+            [{"finding_id": "finding-0001"}, {"finding_id": "finding-0002"}],
+            operations,
+            3,
+        )
+
+
 def test_review_oracle_full_scope_includes_binary_and_excludes_gitignored_oracle_files(
     tmp_path: Path,
     monkeypatch,

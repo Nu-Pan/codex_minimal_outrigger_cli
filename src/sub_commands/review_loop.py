@@ -179,10 +179,22 @@ def apply_finding_merge_operations(
 ) -> tuple[list[dict], int]:
     """merge finding Structured Output の edit operation を finding list に適用する。"""
     by_id = {finding["finding_id"]: finding for finding in findings}
+    existing_ids = set(by_id)
+    used_ids: set[str] = set()
+    validated_operations: list[tuple[dict, set[str]]] = []
+    for operation in operations:
+        target_ids = _validate_finding_merge_operation(operation, existing_ids)
+        reused_ids = target_ids & used_ids
+        if reused_ids:
+            raise ValueError(
+                "merge finding operation target_ids reuse finding_id: "
+                + ", ".join(sorted(reused_ids))
+            )
+        used_ids.update(target_ids)
+        validated_operations.append((operation, target_ids))
     deleted: set[str] = set()
     additions: list[dict] = []
-    for operation in operations:
-        target_ids = _validate_finding_merge_operation(operation, set(by_id))
+    for operation, target_ids in validated_operations:
         kind = operation.get("kind")
         if kind == "delete":
             deleted.update(target_ids)
