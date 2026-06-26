@@ -1,5 +1,7 @@
 """realization standard 全体の prompt 本文を単一責務として構築する。
 
+対応する oracle file は
+`<work-root>/oracle/src/acp/prompt_parts/realization_standard.py`。
 このファイルは 16,000 文字を超えるが、責務境界は realization file の品質基準を
 StructDoc 化する prompt part に閉じている。各 Standard は、サイズ、コメント、
 責務分割、抽象化、公開面、テスト、依存関係、完了時点検をまたいで相互参照される 1 つの

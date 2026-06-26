@@ -71,22 +71,18 @@ class Standard:
 
     @property
     def title(self: "Standard") -> str:
-        """規範文書の見出しを返す。"""
         return self._title
 
     @property
     def backgrounds(self: "Standard") -> list[str]:
-        """規範の背景説明を返す。"""
         return self._backgrounds
 
     @property
     def requirements(self: "Standard") -> list["Requirement"]:
-        """規範の要求項目を返す。"""
         return self._requirements
 
     @property
     def examples(self: "Standard") -> list[str]:
-        """規範の判断例を返す。"""
         return self._examples
 
 
