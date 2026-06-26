@@ -1,17 +1,18 @@
 # `conflict_resolution.py`
 
 ## Summary
-- `cmoc session join` が検出した merge conflict marker を解消するための AI エージェント呼び出しパラメータを構築する実装。対象パスを実パスへ解決し、conflict 解消に限定した役割・目標・追加アクセス規則を含む完了プロンプトを生成して返す。
+- `cmoc session join` の merge conflict marker 解消を AI エージェントに依頼するための呼び出しパラメータを構築する実装。
+- 解消対象パスを実パスへ正規化し、対象一覧と追加アクセス規則を含む完了プロンプトを組み立て、mainstream model・medium reasoning・realization write の実行条件で返す。
 
 ## Read this when
-- `cmoc session join` の conflict marker 解消用プロンプトや AgentCallParameter の内容を確認・変更したいとき。
-- conflict 対象ファイルの一覧がどのようにプロンプトへ埋め込まれるか、また実パス解決や作業ルート解決の扱いを追いたいとき。
-- merge conflict marker 解消時の許可範囲、禁止事項、oracle file への例外的編集許可、git add/git commit 禁止などのエージェント指示を確認したいとき。
+- `cmoc session join` が検出した merge conflict marker の解消作業を、どの role・goal・file access mode で AI に渡すかを確認または変更したいとき。
+- conflict 対象ファイル一覧がプロンプト内へどう渡されるか、また oracle file に marker がある場合の最小編集許可がどう表現されるかを確認したいとき。
+- session join 系のエージェント呼び出しで、merge conflict 解消に限定した禁止事項や完了条件を調整したいとき。
 
 ## Do not read this when
-- 通常の session join フロー全体、workspace 状態の統合、または conflict marker 検出処理を調べたいだけのとき。
-- merge conflict の実際の解消アルゴリズムやファイル内容の自動編集処理を探しているとき。
-- 汎用的なプロンプト部品、AgentCallParameter の型定義、パスモデルの仕様そのものを確認したいとき。
+- 実際に merge conflict marker を解析・除去するアルゴリズムやファイル編集処理を探しているとき。
+- `cmoc session join` 全体の制御フロー、conflict 対象パスの検出、git 操作、または join 成功後の処理を確認したいとき。
+- 汎用的な prompt 部品の markdown 構築、構造化ドキュメントの描画、path model の実パス解決そのものを調べたいとき。
 
 ## hash
-- d5cf6e98245985065e627071215cb070a4e415d761eabd0420b177e316242b1a
+- caceb7b108026650c89706b5a14843849da1f7f4c861170455ee863feab7f786

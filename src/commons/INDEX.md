@@ -73,24 +73,23 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex CLI の exec 実行を 1 回の状態機械として制御する実装。profile/schema/log path の準備、subprocess 呼び出し、stdout/stderr/output/call log の保存、subcommand event 発行、Structured Output 検証、capacity retry、quota polling と resume 継続、oracle 書き込み guard をまとめて扱う。
-- TUI 起動や profile 生成そのものではなく、Codex exec 呼び出しの再試行・検証・記録・結果返却の分岐を追う入口として読む。
+- Codex CLI の exec 呼び出しを 1 回の状態機械として制御する実行中核。profile/schema 準備、subprocess 起動、call log・stdout/stderr/output 記録、Structured Output 検証、capacity retry、quota 待機と代表 probe、resume token による再開、subcommand event への記録をまとめて扱う。
+- TUI 起動や profile 解析そのものではなく、exec 分岐における再試行・検証・ログ出力・結果オブジェクト生成の接続点を読む入口となる。
 
 ## Read this when
-- Codex CLI の exec 呼び出し条件、argv、cwd/env、profile/schema/output path、call log の内容を確認・変更したいとき。
-- Structured Output schema 検証失敗時の semantic retry、capacity error 時の指数 backoff、quota error 時の代表 probe・待機共有・resume token 継続の制御を確認・変更したいとき。
-- Codex 呼び出しの stdout/stderr/output/call log、console 出力、subcommand log event、quota wait 計上の関係を追いたいとき。
-- REALIZATION_WRITE 時に oracle 配下の許可外変更を検出する guard の対象・タイミング・失敗時挙動を確認したいとき。
-- CodexExecResult に入る実行結果、ログ path、profile/schema 情報、経過時間、quota wait 情報の生成元を確認したいとき。
+- Codex CLI を非対話 exec として呼び出す制御フロー、引数構築、stdin prompt、cwd/env、profile/schema の渡し方を確認・変更したいとき。
+- Structured Output の schema 検証失敗時の semantic retry、capacity error 時の指数 backoff、quota error 時の polling/probe/resume の挙動を調べるとき。
+- Codex call の call log、stdout/stderr/output 保存先、console 表示、subcommand log event、quota wait 集計がどのタイミングで記録されるかを追うとき。
+- CodexExecResult に入る実行結果、各 log path、profile/schema 情報、経過時間、quota 待機時間・poll 回数の生成元を確認するとき。
 
 ## Do not read this when
-- Codex profile 名、Codex home、resume token 抽出、capacity/quota error 判定、output JSON 読み取りなどの個別 helper の仕様を確認したいだけなら、それらを定義する runtime profile 側を読む。
-- cmoc config の読み込みや設定値の構造を確認したいだけなら、config 読み込み・設定定義側を読む。
-- subcommand logger の構造、event 保存形式、runtime path の意味、または CodexExecResult 型そのものを確認したいだけなら、それぞれの logging・paths・results 側を読む。
-- Codex TUI 起動や exec 以外の Codex 実行経路を調べたいときは、この対象ではなく該当する起動制御 module を読む。
+- Codex profile 名、CODEx home、schema ファイル準備、resume token 抽出、quota/capacity error 判定などの個別 helper の詳細だけを調べたいときは、それらを定義する runtime profile 側を直接読む。
+- TUI 起動、対話 UI、または exec 以外の Codex 呼び出し経路を調べたいとき。
+- 実行結果データ構造そのものの型定義や、subcommand logger の実装詳細を確認したいだけのときは、それぞれの結果型・logging 側を読む。
+- repository root、work root、log directory、timestamp などの path 解決規則を調べたいだけのときは、runtime paths 側を読む。
 
 ## hash
-- 0f36f7d17bdfaf05c4986758ec8bc10088d623f3c60475a4d367b390966d2ade
+- 05bb62ba5ade89f1bcfa5592678c4da07925ad5cf6b303f175e2ad8bc97aed22
 
 # `runtime_codex_logging.py`
 
@@ -135,24 +134,25 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI 実行用の設定 profile と実行補助情報を組み立てる共通処理を担う。file access mode から sandbox/permission profile を生成し、Codex home の解決・検証、profile/schema の一時生成、Codex subprocess 用環境、JSONL 出力からの error/resume token/容量・quota 判定を扱う。
+- Codex CLI を cmoc から起動するための実行時プロファイル、権限設定、CODEX_HOME、補助入出力を扱う実装。
+- AgentCallParameter と設定から model・reasoning_effort・sandbox/permission profile を TOML 文字列として組み立て、必要に応じて Codex home 配下へハッシュ付き設定ファイルとして配置する。
+- Codex home の解決・検証、サブプロセス用環境変数、schema JSON の保存、Codex 実行結果 JSON/JSONL からの出力・エラー・resume token・capacity/quota 判定の入口になる。
 
 ## Read this when
-- AgentCallParameter と CmocConfig から Codex CLI に渡す model、reasoning effort、sandbox、permission profile の内容を確認・変更したいとき。
-- FileAccessMode ごとの read/write/deny_read/read_only/writable_roots の扱い、特に oracle・memo・.agents・追加 read path・writable_paths の反映規則を追うとき。
-- CODEX_HOME の解決、認証情報の存在確認、profile ファイル生成、Codex subprocess に渡す環境変数の組み立てを確認するとき。
-- Codex 実行結果の stdout/stderr から error message、resume token、capacity error、quota error を抽出する挙動を確認・変更するとき。
-- structured output schema を Codex 実行用に保存する処理や、出力 JSON ファイルの読み取り失敗時の扱いを確認するとき。
+- FileAccessMode ごとの Codex sandbox_mode、read/write/deny_read/read_only、writable_roots の対応を確認または変更したいとき。
+- cmoc が Codex CLI 用の設定ファイルをどの内容で生成し、どこへ保存するかを追いたいとき。
+- CODEX_HOME の環境変数解決、存在確認、auth.json 必須条件、Codex サブプロセスへ渡す環境を扱う変更をするとき。
+- Codex 実行に渡す schema ファイルの準備、出力 JSON の読み取り、stdout/stderr からのエラーテキスト抽出、thread_id の抽出、capacity/quota エラー判定を調べるとき。
 
 ## Do not read this when
-- Codex を呼び出す上位フロー、subprocess の起動方法、retry や task orchestration 全体を知りたいだけのとき。
-- FileAccessMode や AgentCallParameter の型定義そのもの、または CmocConfig の設定 schema を確認したいとき。
-- runtime directory や schema store の場所の定義だけを知りたいとき。
-- hash 付きファイルの書き込み方式や保存先ディレクトリ作成の詳細を確認したいとき。
-- Codex CLI の仕様そのもの、認証ファイルの内部形式、または LLM 出力品質を調べたいとき。
+- Codex CLI 呼び出し全体のプロセス制御、コマンドライン引数、作業ディレクトリ、リトライなど、プロファイル生成後の実行 orchestration を調べたいだけのとき。
+- cmoc の設定ファイルそのものの schema、model_class や reasoning_effort の定義、設定値の読み込み規則を調べたいとき。
+- FileAccessMode や AgentCallParameter のデータモデル定義を確認したいとき。
+- パスモデル全般、run/work/root/oracle などの概念定義、または runtime ディレクトリや schema store の場所だけを確認したいとき。
+- Codex が生成した本文の品質や LLM 応答内容そのものを評価・解析したいとき。
 
 ## hash
-- fab6b85ee96c7a66017972b494731a4c6f9b3c265ee116c790ffe0191c31c808
+- b810d07a9cfa54d653563506bbea37d97de8ad10928b4599a9ad00865c3de3d6
 
 # `runtime_codex_tui.py`
 

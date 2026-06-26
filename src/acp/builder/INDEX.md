@@ -66,21 +66,23 @@
 # `session`
 
 ## Summary
-- session join 中に検出された merge conflict marker を解消するため、AI エージェント呼び出しのパラメータと完了プロンプトを組み立てる領域。
-- conflict 対象の実パス解決、作業ルート解決、対象ファイル一覧の埋め込み、解消作業に限定した役割・目標・追加アクセス規則を扱う。
+- `cmoc session build` で Codex セッション起動用の依頼文を組み立て、対象ファイルの要約、完了条件、読み書き制約、標準仕様、追加指示をひとつのプロンプトへ統合する領域。
+- セッション種別に応じた goal や role の文面、oracle/realization の基本説明、各種 standard 文書の差し込み、ファイルアクセス規則の描画を確認する入口となる。
 
 ## Read this when
-- session join が merge conflict marker 解消用にどのようなエージェント呼び出し内容を作るか確認・変更したいとき。
-- conflict 対象ファイルの一覧がプロンプトへどのように渡されるか、また対象パスや作業ルートがどのように解決されるかを追いたいとき。
-- merge conflict marker 解消時の許可範囲、禁止事項、oracle file への例外的編集許可、git add や git commit の禁止指示を確認したいとき。
+- Codex へ渡すセッション実行プロンプトの構成、文面、差し込み順序を確認または変更したいとき。
+- oracle file と realization file の定義、基本役割、標準仕様がセッション依頼文へどう含まれるかを確認したいとき。
+- セッション対象ファイル、追加プロンプト、読み取り専用・編集禁止・編集許可などのファイルアクセス規則が依頼文へどう反映されるかを確認したいとき。
+- セッション起動時に使う role、goal、完了条件、禁止事項など、AI エージェント向けの依頼単位を調整したいとき。
 
 ## Do not read this when
-- session join 全体の処理フロー、workspace 状態の統合、または conflict marker の検出処理を調べたいだけのとき。
-- merge conflict の内容を実際にどう編集して解消するかという自動編集アルゴリズムを探しているとき。
-- 汎用的なプロンプト部品、エージェント呼び出しパラメータの型定義、またはパスモデルの仕様そのものを確認したいとき。
+- 実際に Codex プロセスを起動する処理、CLI 引数の解析、セッション状態の保存や更新を調べたいとき。
+- session join の merge conflict marker 解消専用プロンプトや、conflict 対象検出・git 操作の制御フローを確認したいとき。
+- oracle/realization の正本仕様そのものを確認したいとき。
+- Markdown の低レベル描画部品、path model の実パス解決、個別ファイルの内容要約アルゴリズムそのものを調べたいとき。
 
 ## hash
-- 6db380564eacbecaf7b8408e8d043936111d3713b708311986248c9f0734f837
+- 9a2f6d3958ca7a062f831b72e14760fc17a7b00c304e271bb519ccae350825a1
 
 # `tui`
 
