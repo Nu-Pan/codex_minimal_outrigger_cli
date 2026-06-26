@@ -147,25 +147,26 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体への入口となる領域。利用者向け CLI の配線、各サブコマンドの実行制御、AI エージェントへ渡す prompt・権限・Structured Output schema の構築、Codex CLI 呼び出しや Git・設定・状態・ログなどの共通 runtime helper、内部で共有される基礎型や文書表現を扱う。
-- 下位要素は、公開コマンド面、個別 workflow、共通 runtime、エージェント呼び出し構築、リポジトリ別設定、低水準の型・変換処理に分かれるため、cmoc の実装挙動を追う際に、どの責務層へ進むかを決める上位ルーティング対象である。
+- cmoc の realization implementation を置く中心領域。利用者向け CLI の公開面とサブコマンド接続、各サブコマンドの orchestration、共通 runtime helper、リポジトリ別設定、基礎データ構造、AI agent 呼び出し用 prompt・schema・実行条件の組み立てを扱う。
+- 下位対象は、CLI 配線、利用者操作単位の実行処理、Codex 呼び出し・Git・設定・状態・ログ・path などの共通 runtime、AgentCallParameter や path model などの基礎表現、標準文書を構造化 prompt として組み立てる処理に分かれている。cmoc の実装変更で、どの責務領域へ進むべきかを判断する入口になる。
+- 正本仕様そのものではなく、oracle file で述べられた人間意図を具体化する実装側の領域である。仕様断片、生成済みレビュー所見、テスト期待値、補助ファイルそのものを読む入口ではなく、実装の責務境界と処理経路を追うためのまとまり。
 
 ## Read this when
-- cmoc の CLI 実装、サブコマンド処理、Codex 呼び出し、設定、状態管理、Git 操作、ログ、path 解決、構造化文書レンダリング、AI prompt 構築のいずれかを確認または変更したいとき。
-- 利用者が起動する init、indexing、TUI、session 操作、apply 操作、oracle review が、どの実装層と共通 helper に接続されるかを調べたいとき。
-- oracle file の正本仕様断片を実現する realization code の挙動を確認し、実装・設定・公開 CLI 面・内部 helper のどこを変更すべきか判断したいとき。
-- AI エージェント呼び出し時の model class、reasoning effort、file access mode、Structured Output schema、prompt 部品、Codex profile、実行ログや結果処理の実装側の流れを追いたいとき。
-- 下位ディレクトリや単一 module のどれを読むべきかまだ決まっておらず、実装本体の責務分担から読む先を選びたいとき。
+- cmoc の利用者向け挙動を実装側から調べ、CLI 公開面、サブコマンド処理、共通 runtime、設定、AI 委譲、基礎モデルのどこへ進むべきか判断したいとき。
+- 新しいサブコマンドや option の公開、既存サブコマンドの実行順序・状態更新・Git 操作・Codex 呼び出し・report 生成など、実装上の制御フローを確認または変更したいとき。
+- Codex exec/TUI の起動、profile や sandbox 設定、Structured Output schema、call log、quota/capacity 扱い、設定ファイル入出力、session state、共通エラー、path 解決など、複数機能から共有される runtime 基盤を探したいとき。
+- AI agent に渡す標準文書、ファイルアクセス規則、ルーティング規則、INDEX.md エントリー規範、oracle review や apply fork などの委譲ステップごとの prompt・model class・reasoning effort・権限・schema の対応を追いたいとき。
+- cmoc 内部で共有される論理モデル、ファイルアクセスモード、root token 付き path 解決、構造化文書、Markdown rendering、リポジトリ別設定 dataclass と既定値を確認したいとき。
 
 ## Do not read this when
-- 正本仕様断片そのもの、oracle file の意味、path keyword の仕様、INDEX.md 生成規範など、人間が所有する仕様本文を確認したいときは oracle 側を読む。
-- realization test の期待値、fixture、テスト追加先、外部挙動の検証観点だけを確認したいときは test 側を読む。
-- リポジトリ全体の説明、パッケージ設定、依存関係定義、ビルド・実行設定、補助スクリプトなど、実装ソース以外の補助ファイルを確認したいときは該当する上位または補助領域を読む。
-- 生成済み cache、実行ログ、一時ファイル、作業メモ、または Git 管理外の成果物を調べたいとき。
-- 特定のサブコマンド、共通 runtime helper、prompt builder、設定 dataclass、基礎型など読むべき対象がすでに分かっているときは、この領域全体ではなく該当する下位対象へ直接進む。
+- oracle file に書かれた正本仕様断片そのもの、path keyword の仕様説明、oracle/realization の概念定義、INDEX.md 生成方針など、人間所有の仕様文書を確認したいだけのとき。
+- 外部挙動の期待値、fixture、テストケース追加先、回帰確認の観点を調べたいとき。その場合は realization test 側を読む。
+- README、パッケージ設定、補助スクリプト、ignore 設定など、実装ソース以外の補助ファイルや配布設定を確認したいとき。
+- 特定の責務を担う下位対象がすでに分かっており、その詳細な入力・出力・失敗時挙動だけを読む方が直接的なとき。
+- 生成済みのルーティング文書、レビュー結果、実行ログ、一時成果物などの本文を読みたいだけのとき。
 
 ## hash
-- 84aac77b2b0c713fdeefb95e34dc260b038052b1540083cbd364932b5d11d0e6
+- 3389938ea6bb5468e93ffdee21a1cec9b046f52f6ee0d8ef124b3da6d6f73a7c
 
 # `test`
 

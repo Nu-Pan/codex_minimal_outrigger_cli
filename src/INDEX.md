@@ -1,23 +1,24 @@
 # `acp`
 
 ## Summary
-- AI エージェントへ渡すプロンプト部品と呼び出しパラメータ構築を扱う領域。共通の作業規則・標準文書を構造化プロンプトとして生成する下位要素と、それらを各機能の具体的な agent call、権限、model class、reasoning effort、Structured Output schema に接続する下位要素への入口になる。
-- サブコマンドや TUI の実行制御そのものではなく、cmoc が AI に何を読ませ、何を依頼し、どの出力契約で返させるかを追うための上位ルーティング対象である。
+- AI エージェントへ渡すプロンプト部品と呼び出しパラメータを扱う実装領域。標準文書・規則文書を構造化プロンプトとして組み立てる処理と、それらを各作業段階の agent 呼び出し条件・構造化出力契約へ接続する処理への入口になる。
+- 対象範囲は、oracle / realization / review / INDEX.md / ファイルアクセス / ルーティングに関する共通プロンプト部品と、フォーク適用レビュー、oracle レビュー、ルーティング文書生成、conflict 解消、TUI パラメータ解決などの AI 委譲ステップに渡す prompt・補助入力・権限・モデル設定・schema 指定の組み立て。
+- CLI サブコマンド全体の実行制御ではなく、AI 呼び出しに提示される作業規則と、個別機能がどの complete prompt・実行条件・構造化出力を使うかを追うためのまとまり。
 
 ## Read this when
-- agent prompt に含める標準文書・作業規則・ファイルアクセス規則・ルーティング規則・INDEX.md エントリー規範の生成処理を確認または変更したいとき。
-- apply fork、INDEX.md エントリー生成、oracle review、session join の conflict 解消、TUI 実行前パラメータ解決などで、AI エージェントへ渡す prompt、補助文脈、権限、model class、reasoning effort、Structured Output schema の対応を追いたいとき。
-- 共通プロンプト部品と個別機能向け builder のどちらを読むべきか判断したいとき。
-- AI 呼び出し時に、標準文書や対象ファイル情報がどのように文脈化され、読み取り・編集制約や構造化出力契約と結び付けられるかを調べたいとき。
+- AI agent に提示される標準文書、作業規則、ファイルアクセス規則、ルーティング規則、INDEX.md エントリー規範などのプロンプト本文を確認または変更したいとき。
+- フォーク適用レビュー、oracle レビュー、ルーティング文書生成、merge conflict 解消、TUI 実行前パラメータ選定のいずれかで、agent 呼び出しに渡す prompt、補助文脈、model class、reasoning effort、読み取りまたは編集権限、期待する構造化出力の対応を確認したいとき。
+- 新しい AI 委譲ステップを追加するために、既存の標準プロンプト部品の組み合わせ方、complete prompt への入力形、schema 契約との紐づけ方を参考にしたいとき。
+- AI に渡される規範文面の生成処理と、その文面を使う呼び出しパラメータ構築処理の境界を合わせて追いたいとき。
 
 ## Do not read this when
-- CLI 引数解析、サブコマンドの実行順序、保存、表示、集計、git 操作、merge 実行、conflict marker 検出など、AI 呼び出しパラメータ構築より外側または下位の処理を調べたいとき。
-- oracle file、realization file、path model、各種 standard など、プロンプトへ含められる標準文書や正本仕様断片の本文そのものを確認したいとき。
-- Markdown rendering、構造化文書表現、AgentCallParameter 型、パス解決など、prompt 部品や builder に閉じない共通基盤の実装を調べたいとき。
-- 生成済み INDEX.md の内容、特定ディレクトリのルーティング判断、TUI 表示や対話 UI の挙動を確認したいとき。
+- CLI 引数解析、サブコマンドの実行順序、git 操作、対象ファイル探索、結果の保存・表示など、AI 呼び出しの外側にある制御フローを調べたいとき。
+- oracle file、realization file、各種 standard、生成済みレビュー所見、生成済みルーティング文書などの本文そのものを読みたいだけのとき。
+- 構造化文書表現、markdown rendering、ファイルアクセスモードや agent 呼び出し型そのものの基盤定義を調べたいとき。
+- path model の語彙定義、repo root や work root の解決、実パス変換の共通実装を確認したいとき。
 
 ## hash
-- 98cf633b0a44c2fcb402d44e42fb111b2fded27e4f6661ab3d5639be059759b9
+- 01a33bb4400c45839620d3d009170df74cefe85afebe774f1659f9fffc104ed8
 
 # `basic`
 
