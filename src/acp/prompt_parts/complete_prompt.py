@@ -1,4 +1,5 @@
 # cmoc
+from basic.path_model import RootToken, resolve_real_path
 from basic.struct_doc import StructCodeBlock, StructDoc
 
 # local
@@ -12,39 +13,42 @@ from .index_entry_standard import build_index_entry_standard
 from .routing_rule import build_routing_rule
 
 
-_FORBIDDEN_PROMPT_REPLACEMENTS = {
-    "<cmoc-root>": "実装ルートの実パス",
-    "<repo-root>": "対象リポジトリの実パス",
-    "<run-root>": "実行用 worktree の実パス",
-    "<work-root>": "作業対象ルートの実パス",
-    "cmoc から呼び出された": "依頼を受けた",
-}
+def _agent_prompt_replacements() -> dict[str, str]:
+    return {
+        **{
+            root_token.value: str(resolve_real_path(root_token))
+            for root_token in RootToken
+        },
+        "cmoc から呼び出された": "依頼を受けた",
+    }
 
 
-def _sanitize_agent_prompt_text(text: str) -> str:
-    for forbidden, replacement in _FORBIDDEN_PROMPT_REPLACEMENTS.items():
+def _sanitize_agent_prompt_text(text: str, replacements: dict[str, str]) -> str:
+    for forbidden, replacement in replacements.items():
         text = text.replace(forbidden, replacement)
     return text
 
 
-def _sanitize_agent_prompt_doc(doc: StructDoc) -> StructDoc:
+def _sanitize_agent_prompt_doc(
+    doc: StructDoc, replacements: dict[str, str]
+) -> StructDoc:
     children = doc.children
     if isinstance(children, str):
         return StructDoc(
-            _sanitize_agent_prompt_text(doc.title),
-            _sanitize_agent_prompt_text(children),
+            _sanitize_agent_prompt_text(doc.title, replacements),
+            _sanitize_agent_prompt_text(children, replacements),
         )
     if isinstance(children, StructCodeBlock):
         return StructDoc(
-            _sanitize_agent_prompt_text(doc.title),
+            _sanitize_agent_prompt_text(doc.title, replacements),
             StructCodeBlock(
                 children.info,
-                _sanitize_agent_prompt_text(children.body),
+                _sanitize_agent_prompt_text(children.body, replacements),
             ),
         )
     return StructDoc(
-        _sanitize_agent_prompt_text(doc.title),
-        *[_sanitize_agent_prompt_doc(child) for child in children],
+        _sanitize_agent_prompt_text(doc.title, replacements),
+        *[_sanitize_agent_prompt_doc(child, replacements) for child in children],
     )
 
 
@@ -141,4 +145,5 @@ def build_complete_prompt(
         struct_doc.append(build_review_oracle_standard())
     if index_entry_standard:
         struct_doc.append(build_index_entry_standard())
-    return [_sanitize_agent_prompt_doc(doc) for doc in struct_doc]
+    replacements = _agent_prompt_replacements()
+    return [_sanitize_agent_prompt_doc(doc, replacements) for doc in struct_doc]

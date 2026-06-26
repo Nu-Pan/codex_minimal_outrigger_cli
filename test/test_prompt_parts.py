@@ -6,6 +6,7 @@ from jsonschema import ValidationError, validate
 
 from basic.acp import FileAccessMode
 from basic.acp import ModelClass, ReasoningEffort
+from basic.path_model import RootToken, resolve_real_path
 from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
 from acp.builder.apply.fork.file_finding_enumeration import (
     build_apply_fork_file_finding_enumeration_parameter,
@@ -265,8 +266,12 @@ def test_complete_prompt_removes_forbidden_agent_prompt_terms() -> None:
     assert "- realization standard と oracle standard に従うこと" in rendered
     assert "# aux realization file" in rendered
     assert "依頼を受けた AI Agent" in rendered
-    assert "対象リポジトリの実パス" in rendered
-    assert "作業対象ルートの実パス" in rendered
+    assert f"{resolve_real_path(RootToken.REPO)} ツリー内" in rendered
+    assert f"{resolve_real_path(RootToken.WORK)} 配下" in rendered
+    assert (
+        f'"summary": "realization file and {resolve_real_path(RootToken.REPO)} '
+        'stay in code block"'
+    ) in rendered
     for forbidden in [
         "<cmoc-root>",
         "<repo-root>",

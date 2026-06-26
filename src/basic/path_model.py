@@ -157,13 +157,14 @@ def resolve_run_root(
     `<run-root>` を返す。
     これは内部実装であり、`resolve_real_path` からのみ呼び出される想定。
     cwd を起点として「`.git` ファイルを直下に持つディレクトリ」を探索する。
+    run 外の repo 内では `<repo-root>` と同値として扱う。
     """
     # .git ファイルを探索
     for candidate in _enumerate_candidates(start_path, Path.cwd()):
         if (candidate / ".git").is_file():
             return candidate
     else:
-        raise ValueError("`<run-root>` was not found")
+        return resolve_repo_root(start_path)
 
 
 def resolve_work_root(
