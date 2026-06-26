@@ -259,22 +259,22 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- プロンプト部品と実行パラメータ builder の振る舞いを検証する realization test。構造化ドキュメントの Markdown 描画、各種標準プロンプトの挿入条件、ファイルアクセス規則、schema 制約、モデル種別・推論強度・アクセスモード選定が期待どおりかを扱う。
-- apply fork、indexing、review oracle、session join、TUI parameter resolution など複数領域の builder が生成する prompt と structured output schema の契約を横断的に確認する入口になる。
+- プロンプト部品と実行パラメータ生成の振る舞いを検証する realization test。レビュー基準、ルーティング規則、ファイルアクセス規則、各種 standard の挿入制御、Markdown レンダリング、構造化出力 schema、モデルクラス・reasoning effort・アクセスモードの選定が期待どおりかを確認する。
+- apply fork、review oracle、session join、TUI parameter resolve、index entry 生成など、複数の prompt builder が正しい本文断片・制約語・schema 契約を持つかを横断的に検査する入口になる。
 
 ## Read this when
-- 標準プロンプト部品、完全プロンプト生成、または Markdown rendering の出力文言が変わった影響を確認したいとき。
-- file access mode ごとの禁止・許可文言、モデルクラス、reasoning effort、structured output schema path など、builder が返す実行パラメータの契約を変更・検証したいとき。
-- apply fork、review oracle merge finding、TUI resolve parameter などの JSON schema 制約が、空配列拒否・enum・required・operation kind ごとの整合性を保つか確認したいとき。
-- oracle standard、realization standard、apply review standard、index entry standard、review oracle standard の用語や見出しを prompt に含める条件を調べたいとき。
+- プロンプト本文を組み立てる builder の変更に対して、期待される標準文書・ルーティング規則・ファイルアクセス規則が出力に含まれるか確認したいとき。
+- StructuredDoc の Markdown レンダリング、とくに通常本文の連続空行の畳み込みと code block 内の空行保持に関わる挙動を変更するとき。
+- apply fork、review oracle、session join、TUI parameter resolve、index entry 生成の model class、reasoning effort、file access mode、structured output schema の契約を変更または確認するとき。
+- index entry standard、realization standard、apply review standard、review oracle standard などの基準文書に含めるべき用語や、含めてはいけない用語の回帰を調べるとき。
 
 ## Do not read this when
-- 個別サブコマンドの実処理ロジックやファイル操作の実装を調べたいだけで、prompt builder の出力契約に関心がないとき。
-- 特定の標準文書そのものの正本内容を確認したいとき。このテストではなく、標準プロンプトを組み立てる実装または oracle 側の該当文書を読む方が直接的。
-- 単一の JSON schema ファイルの静的な定義だけを確認したいとき。builder 経由での schema 選択や validation 挙動まで見ないなら、該当 schema を直接読む方がよい。
+- 個別 CLI コマンドの実行フロー、永続状態、git 操作、ファイル探索そのものの実装を調べたいだけで、プロンプト生成や schema 契約に関心がないとき。
+- 特定の builder の内部実装を修正するだけで、既存テストの期待値を確認する必要がない場合は、まず対象 builder の実装側を読む方が直接的なとき。
+- oracle file の正本仕様断片そのものを確認したいとき。この対象は realization test であり、仕様判断の根拠にはならない。
 
 ## hash
-- f5eb0f8090723c4046f086bf83b90fb9bf81e4e1d60225b49bb3c8648bff82ce
+- 8cfe3ab2ea4784cb4c2a1a7939a05f7610aafb8626f37042d87f0f91f902360f
 
 # `test_review_oracle_cli.py`
 
