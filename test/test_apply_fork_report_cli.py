@@ -374,7 +374,6 @@ def test_apply_fork_rolling_uses_previous_apply_join_commit(
     assert (
         runner.invoke(app, ["apply", "join"], catch_exceptions=False).exit_code == 0
     )
-    join_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     (root / "oracle" / "spec.md").write_text("# changed after join\n")
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "change oracle after apply join")
@@ -413,4 +412,3 @@ def test_apply_fork_rolling_uses_previous_apply_join_commit(
     assert target_rels == ["oracle/spec.md"]
     state = json.loads(state_path.read_text())["session"]
     assert state["last_joined_apply_oracle_snapshot_commit"] == oracle_snapshot_commit
-    assert state["last_joined_apply_join_commit"] == join_commit

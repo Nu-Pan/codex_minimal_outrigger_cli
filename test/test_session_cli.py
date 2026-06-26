@@ -47,7 +47,6 @@ def test_session_fork_creates_session_branch_and_state(
     assert state["session"]["state"] == "active"
     assert state["session"]["session_home_branch"] == home_branch
     assert state["session"]["last_joined_apply_oracle_snapshot_commit"] is None
-    assert state["session"]["last_joined_apply_join_commit"] is None
     assert state["apply"]["state"] == "ready"
 
 

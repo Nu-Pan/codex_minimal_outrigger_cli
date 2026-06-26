@@ -400,14 +400,9 @@ def enumerate_apply_targets(
         )
         changed = run_git(["diff", "--name-only", base, "HEAD"], root).stdout.splitlines()
         candidates = [root / path for path in changed]
-    elif state and state.session.last_joined_apply_join_commit:
+    elif state and (base := previous_apply_join_commit(root, state)):
         changed = run_git(
-            [
-                "diff",
-                "--name-only",
-                state.session.last_joined_apply_join_commit,
-                "HEAD",
-            ],
+            ["diff", "--name-only", base, "HEAD"],
             root,
         ).stdout.splitlines()
         candidates = [root / path for path in changed]
@@ -421,3 +416,28 @@ def enumerate_apply_targets(
             path for path in root.rglob("*") if path.is_file() and path.suffix == ".py"
         ]
     return normalize_apply_targets(root, set(candidates))
+
+
+def previous_apply_join_commit(root: Path, state: SessionState) -> str | None:
+    """最後に join した apply の merge commit を永続 state ではなく git 履歴から解決する。"""
+    snapshot = state.session.last_joined_apply_oracle_snapshot_commit
+    if not snapshot:
+        return None
+    merges = run_git(
+        ["rev-list", "--first-parent", "--merges", "--reverse", f"{snapshot}..HEAD"],
+        root,
+    ).stdout.splitlines()
+    joined: str | None = None
+    for merge_commit in merges:
+        parents = run_git(["show", "-s", "--format=%P", merge_commit], root).stdout.split()
+        if any(
+            run_git(
+                ["merge-base", "--is-ancestor", snapshot, parent],
+                root,
+                check=False,
+            ).returncode
+            == 0
+            for parent in parents[1:]
+        ):
+            joined = merge_commit
+    return joined

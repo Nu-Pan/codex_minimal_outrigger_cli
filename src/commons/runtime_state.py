@@ -15,7 +15,6 @@ class SessionPart:
     session_home_branch: str | None = None
     session_start_commit: str | None = None
     last_joined_apply_oracle_snapshot_commit: str | None = None
-    last_joined_apply_join_commit: str | None = None
 
 
 @dataclass
