@@ -193,6 +193,54 @@ def test_apply_fork_rechecks_dirty_files_until_converged(
     assert "result: converged" in report_path.read_text()
 
 
+def test_apply_fork_converges_when_last_allowed_target_has_no_findings(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """最後の調査対象が空所見なら上限回でも収束として扱う。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    (root / "README.md").write_text("# changed\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "change readme")
+    config_path = root / ".cmoc" / "config.json"
+    config = json.loads(config_path.read_text())
+    config["apply_fork"]["num_apply_files"] = 1
+    config_path.write_text(json.dumps(config, indent=2) + "\n")
+    enumerate_calls = 0
+
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> FakeCodexResult:
+        """上限 1 回の唯一の調査対象に空所見を返す。"""
+        nonlocal enumerate_calls
+        purpose = str(kwargs["purpose"])
+        if purpose.startswith("apply fork enumerate findings"):
+            enumerate_calls += 1
+            return FakeCodexResult({"findings": []})
+        if purpose == "apply fork change summary":
+            return FakeCodexResult({"changes": []})
+        raise AssertionError(purpose)
+
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(
+        app, ["apply", "fork", "--scope", "session"], catch_exceptions=False
+    )
+
+    assert result.exit_code == 0
+    assert enumerate_calls == 1
+    report_line = [
+        line for line in result.output.splitlines() if line.startswith("- report:")
+    ][-1]
+    report_path = Path(report_line.split("`")[1])
+    assert "result: converged" in report_path.read_text()
+    assert "- result_label: `converged`" in result.output
+
+
 def test_apply_fork_rejects_forbidden_agents_diff(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:

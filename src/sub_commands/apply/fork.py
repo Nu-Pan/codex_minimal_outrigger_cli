@@ -142,7 +142,8 @@ def cmoc_apply_fork_impl(
                     run_git(["add", "."], apply_worktree)
                     run_git(["commit", "-m", commit_message], apply_worktree)
             else:
-                result_label = "unconverged"
+                dirty_targets = dedupe_apply_targets(dirty_targets)
+                result_label = "unconverged" if dirty_targets else "converged"
             report_path = write_apply_fork_report(
                 root,
                 apply_worktree,
