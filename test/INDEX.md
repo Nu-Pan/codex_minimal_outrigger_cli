@@ -269,24 +269,25 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- agent prompt と structured output schema の生成結果を横断的に検証する realization test。prompt parts の標準文書、routing/file access ルール、complete prompt の組み立て、ACP builder の実行パラメータ、生成 schema の制約を、最終 prompt の読み取り文脈としてまとめて確認する入口になる。
-- 16,000 文字を超えるが、標準 prompt、routing、file access、builder parameter が同じ render/schema 期待値で結びつくため、prompt 構築の回帰観点を一箇所に保つ責務を持つ。
+- prompt part と ACP builder が生成する StructDoc、markdown render、complete prompt、file access rule、各種 builder parameter、structured output schema の期待値を横断的に検証する realization test。
+- 標準 prompt、routing、file access、review/index/realization standard、TUI parameter、apply fork、review oracle、session join など、最終 prompt と schema の組み合わせに関する回帰観点を一箇所に集約している。
+- 16,000 文字を超えるが、共通の render/schema 期待値を同じ読み取り文脈で追うために凝集させていることが冒頭で説明されている。
 
 ## Read this when
-- prompt parts が出力する StructDoc や markdown rendering の期待値を確認・変更したいとき。
-- complete prompt に routing rule、各種 standard、aux prompt、用語置換、path token 解決がどう組み込まれるかをテスト観点から確認したいとき。
-- file access mode ごとの prompt 文言、TUI resolve parameter、apply fork、review oracle、session join などの ACP builder parameter のモデル種別・reasoning effort・file access mode・prompt 内容を確認したいとき。
-- change summary、TUI resolve parameter、review oracle merge finding などの structured output schema の検証制約や oracle schema との一致を確認したいとき。
-- prompt 構築や schema 生成の変更で、複数の builder と prompt standard にまたがる回帰影響を調べたいとき。
+- prompt part の markdown 出力、空行の畳み込み、code block rendering、standard 文書の必須文言に関するテスト期待値を確認したいとき。
+- complete prompt が routing rule や各 standard をどの条件で含むか、aux prompt の文面をどう保持するかを確認したいとき。
+- file access mode ごとの prompt 文言、builder parameter の model class、reasoning effort、file access mode、schema path の期待値を調べたいとき。
+- apply fork、review oracle merge finding、session join conflict resolution、TUI resolve parameter、indexing index entry の parameter builder と structured output schema の回帰テストを確認したいとき。
+- 大きなテストファイルを分割すべきか判断する際に、このテストが単一責務としてまとまっている理由を確認したいとき。
 
 ## Do not read this when
-- 個別の prompt part や builder の実装詳細だけを変更する場合で、期待される横断的な出力挙動を確認する必要がないとき。
-- StructDoc や markdown rendering の内部実装そのものを読むだけで足り、prompt standard や ACP builder の回帰テスト観点が不要なとき。
-- 特定の JSON schema ファイルの定義内容だけを確認したい場合で、テスト上の検証例や builder との接続を確認しなくてよいとき。
-- routing 文書のエントリー生成規則や INDEX.md 自体の編集方針を確認したい場合。
+- 個別 builder や prompt part の実装そのものを変更したいだけで、テスト期待値や回帰観点を確認する必要がないとき。
+- oracle 側の正本 schema や仕様文書の内容を確認したいとき。
+- CLI 実行フロー、永続状態、git 操作、worktree 操作など、prompt/schema builder 以外の挙動を調べたいとき。
+- 単一の小さな helper の内部実装だけを追えば十分で、最終 prompt や schema の組み合わせに影響しないとき。
 
 ## hash
-- 198105db7c0f51fca1362b042629030b27369b4cb599b2f7d7d302604ba500c4
+- b9c225c1b152f1b190bcc9dad4c9733a87d86c0dff35bc4eba57d121dcb57f1a
 
 # `test_review_oracle_cli.py`
 

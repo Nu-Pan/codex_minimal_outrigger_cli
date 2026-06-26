@@ -23,24 +23,24 @@
 # `complete_prompt.py`
 
 ## Summary
-- agent call に渡す完全なプロンプトを、基本プロンプト、ファイルアクセス規則、ルーティング規則、任意追加文書、必要に応じた標準プロンプト群から組み立てる処理を定義している。
-- oracle・realization・review・index entry などの標準プロンプト指定に応じて依存する基本情報を自動的に含め、最終的に agent 向け表現へ置換・無害化した構造化文書列を返す。
-- root token の実パス展開や呼び出し元表現の言い換えなど、生成済みプロンプト本文を agent に直接渡せる形へ整える補助処理も含む。
+- agent call に渡す完全なプロンプトを、基本プロンプト、ファイルアクセス規則、ルーティング規則、任意追加プロンプト、各種標準プロンプトから組み立てる実装。
+- oracle と realization の基本情報を前提として必要に応じて有効化し、oracle standard、realization standard、review/apply review standard、INDEX エントリー標準などの依存関係を解決したうえで、構造化文書のリストを返す。
+- 個別の標準プロンプト本文そのものではなく、どの標準プロンプトを含めるかを制御する入口として位置づけられる。
 
 ## Read this when
-- agent に渡す最終プロンプト全体がどの順序・構成で作られるかを確認したいとき。
-- role、summary、goal、file access rule、routing rule、aux prompt、各種 standard prompt がどのように結合されるかを調べるとき。
-- oracle standard、realization standard、review standard、apply review standard、index entry standard を有効化した際に、どの依存プロンプトが追加されるかを確認したいとき。
-- prompt 内の root token や `cmoc から呼び出された` という表現が agent 向けにどう変換されるかを確認・変更したいとき。
+- agent に渡すプロンプト全体の構成順、必ず含まれる基本要素、任意追加要素の挿入位置を確認したいとき。
+- 標準プロンプトの有効化フラグ同士の依存関係、たとえば特定の標準を要求した時に前提となる基本情報や別標準も自動的に含まれるかを確認したいとき。
+- 新しい標準プロンプト種別を追加し、完全なプロンプトへ注入する条件や順序を既存の制御に合わせたいとき。
+- agent call 用のプロンプト生成で、role、summary、goal、ファイルアクセス制限、ルーティング規則、補助プロンプトがどのように一つの構造化文書列へ統合されるかを追いたいとき。
 
 ## Do not read this when
-- 個別の file access rule、routing rule、oracle standard、realization standard などの本文内容そのものを確認したいだけのときは、それぞれの構築元を直接読む。
-- StructDoc や StructCodeBlock のデータ構造そのものを調べたいときは、構造化文書を定義する基盤側を読む。
-- path token の定義や実パス解決の仕様を確認したいときは、path model 側を読む。
-- agent 実行、サブプロセス起動、LLM 呼び出しの制御を調べたいときは、この構築済みプロンプトを利用する呼び出し側を読む。
+- 個別の標準プロンプトに書かれる自然言語の本文内容を確認したいだけの場合は、その標準を構築する対象を直接読む。
+- ファイルアクセス規則やルーティング規則の具体的な文面・モード別の詳細を確認したい場合は、それぞれの規則を構築する対象を直接読む。
+- 構造化文書クラス自体の表現、保持データ、出力形式を調べたい場合は、構造化文書の定義を読む。
+- 生成済みプロンプトを受け取った後の agent 呼び出し処理や CLI 実行フローを調べたい場合は、呼び出し側の実装を読む。
 
 ## hash
-- 58c697960b06d3b3a80c6d0ec4c03fa40667dd5b5d8d6760048999d141d25f47
+- 4ef4cf1eb1c3e35bc79da3ea62130616f441048603de51c70addf5a6c9271d4e
 
 # `file_access_rule.py`
 

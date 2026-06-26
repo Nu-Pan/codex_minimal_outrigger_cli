@@ -1,23 +1,27 @@
 # `acp`
 
 ## Summary
-- AI エージェント呼び出しに渡す ACP を構築する実装領域。用途別の呼び出しパラメータ組み立てと、プロンプト部品・標準文書・ファイルアクセス規則などを agent に提示するための文書構成を扱う。
-- 下位要素は、apply、oracle review、session join、TUI 実行前判定、INDEX.md エントリー生成などの具体的な AgentCallParameter 構築を追う入口と、そこに組み込まれる汎用 prompt part や標準規範の生成を追う入口に分かれる。
+- AI エージェント呼び出しに渡すパラメータとプロンプト本文を構築する実装領域。用途別の role、goal、補助入力、ファイルアクセス制約、モデル種別、reasoning effort、Structured Output schema への接続と、共通の標準プロンプト部品の組み立てを扱う。
+- 差分要約、所見列挙・修正依頼、oracle review、merge conflict marker 解消、TUI 実行前のパラメータ選定、INDEX.md エントリー生成など、各機能が AI agent に何を読ませ、どの制約で何を返させるかを追う入口になる。
 
 ## Read this when
-- cmoc の機能が AI agent を呼び出す際に、role、goal、補助 prompt、対象パス、差分、ファイルアクセス条件、モデル設定、Structured Output schema などがどのように組み立てられるかを確認・変更したいとき。
-- apply、oracle review、session join、TUI 実行前判定、INDEX.md エントリー生成など、特定用途の agent 呼び出し条件や出力契約を調べたいとき。
-- agent に渡す prompt が、ファイルアクセス規則、INDEX.md ルーティング規則、oracle/realization の基本説明、各種標準規範、追加文書からどのように構成されるかを確認したいとき。
-- 対象本文や標準文書を agent へ渡す際の読み取り専用条件、既存目次を根拠にしない方針、root token や呼び出し元表現の変換、StructDoc としての prompt 部品構成を確認したいとき。
+- cmoc の機能が AI agent を呼び出す際の role、summary、goal、補助 prompt、対象パス・差分・所見などの埋め込み内容を確認または変更したいとき。
+- AI agent に適用するファイルアクセスモード、標準プロンプト部品の注入条件、モデル種別、reasoning effort、Structured Output schema の対応付けを調べたいとき。
+- apply 系の差分要約、ファイル単位の所見列挙、検出済み所見への修正依頼など、実装レビュー後段の agent call 条件と出力契約を追いたいとき。
+- oracle review で新規所見列挙、所見の根拠補強、採否判定、所見統合を生成させる prompt と、oracle standard や review standard の提示方法を確認したいとき。
+- session join の conflict marker 解消、TUI 実行前のファイルアクセスモード判定、INDEX.md エントリー生成など、特定用途の事前判断や生成を AI agent に依頼する prompt を実装・検証したいとき。
+- oracle file と realization file の基本概念、ファイルアクセス規則、ルーティング規則、oracle standard、realization standard、review standard、apply review standard、index entry standard を AI に渡す文書部品としてどう構成しているか確認したいとき。
 
 ## Do not read this when
-- CLI 引数解析、サブコマンド全体の実行順序、git 操作、フォーク作成・統合、merge conflict marker 検出、生成結果の保存など、agent 呼び出しパラメータ構築の外側の制御を調べたいとき。
-- oracle file、realization file、review standard、apply review standard、realization standard など、prompt に含められる標準文書の正本仕様本文そのものを読みたいとき。
-- 構造化文書、標準、要求項目、コードブロック、パスモデル、AgentCallParameter の基盤型や helper だけを確認したいとき。
-- 個別の対象ファイル探索、git diff 生成、変更ファイル抽出、レビュー判断基準、生成済み INDEX.md の内容評価など、呼び出しに渡す材料を作る側または生成後の利用側の詳細を調べたいとき。
+- CLI サブコマンド全体の実行順序、引数解析、状態保存、git 操作、フォーク作成・統合、merge conflict marker の検出など、AI agent 呼び出しパラメータ構築の外側を調べたいとき。
+- AgentCallParameter、FileAccessMode、ModelClass、ReasoningEffort、StructDoc、Standard、Requirement などの基本データ型そのものの定義や変換処理を変更したいとき。
+- oracle file や realization file の個別本文、実際の仕様断片、実装対象コード、テスト対象コードを読みたいだけで、AI に渡す prompt の構成を扱わないとき。
+- path model の解決規則、実パス変換、ルート概念の定義、Markdown rendering の一般処理を調べたいとき。
+- agent call の実行、返却結果の保存、Structured Output のパース後処理、生成された所見や要約の利用側フローを追いたいとき。
+- 生成済み INDEX.md の内容評価や、対象本文を読むべきかというルーティング判断だけを行いたいとき。
 
 ## hash
-- 369d52e886c4f7bce1d7b939d67c49eaeb7df10a4251a9ec6fcc88c1d6fe4e05
+- ba701ba2f3da5c9a0e9ed951f5fcaf40996fffcf3e63cf202458c25f1088eba2
 
 # `basic`
 
