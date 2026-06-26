@@ -44,13 +44,13 @@ def cmoc_apply_abandon_impl() -> None:
     if branch.startswith("cmoc/apply/"):
         session_id = apply_branch_session_id(branch)
         session_branch = f"cmoc/session/{session_id}"
-        root = worktree_for_branch(repo, session_branch)
+        session_worktree = worktree_for_branch(repo, session_branch)
     else:
-        root = repo
-    session_id, path, state = load_state_for_branch(root, branch)
+        session_worktree = current_root
+    session_id, path, state = load_state_for_branch(repo, branch)
     if state.session.state != "active" or state.apply.state == "ready":
         raise CmocError("破棄対象の active apply run がありません。", [], str(path))
-    require_clean_worktree(root)
+    require_clean_worktree(session_worktree)
     previous = state.apply.state
     apply_branch = state.apply.apply_branch
     if not apply_branch:
@@ -65,10 +65,10 @@ def cmoc_apply_abandon_impl() -> None:
             ["session state file が指す apply branch 上、または session branch 上から再実行してください。"],
             f"current_branch: {branch}\napply_branch: {apply_branch}",
         )
-    apply_worktree = expected_apply_worktree(root, apply_branch)
+    apply_worktree = expected_apply_worktree(repo, apply_branch)
     warnings: list[str] = []
     if previous == "running":
-        process_id = read_apply_process_id(root, session_id)
+        process_id = read_apply_process_id(repo, session_id)
         if process_id is None:
             raise CmocError(
                 "実行中 apply process を特定できません。",
@@ -79,19 +79,19 @@ def cmoc_apply_abandon_impl() -> None:
         if stopped_warning:
             warnings.append(stopped_warning)
     if branch == apply_branch:
-        os.chdir(root)
+        os.chdir(session_worktree)
     if not apply_worktree.exists():
         warnings.append(f"apply worktree already missing: {apply_worktree}")
-    remove_worktree(root, apply_worktree)
-    if not branch_exists(root, apply_branch):
+    remove_worktree(repo, apply_worktree)
+    if not branch_exists(repo, apply_branch):
         warnings.append(f"apply branch already missing: {apply_branch}")
     else:
-        delete_branch(root, apply_branch, force=True)
+        delete_branch(repo, apply_branch, force=True)
     if apply_worktree and apply_worktree.exists():
         warnings.append(f"orphan apply worktree remains: {apply_worktree}")
-    if branch_exists(root, apply_branch):
+    if branch_exists(repo, apply_branch):
         warnings.append(f"orphan apply branch remains: {apply_branch}")
-    delete_apply_process_id(root, session_id)
+    delete_apply_process_id(repo, session_id)
     state.apply = ApplyPart()
     write_state(path, state)
     warning_lines = [f"  - {warning}" for warning in warnings] if warnings else ["  - none"]
