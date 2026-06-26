@@ -18,6 +18,17 @@ _PRE_LOG_GITIGNORE_STATES: dict[Path, tuple[bool, str | None]] = {}
 
 
 def cmoc_init_impl() -> None:
+    """CLI runtime を通して init を実行する。"""
+    run_cli_subcommand(
+        _cmoc_init_body,
+        pre_log_check=ensure_cmoc_ignored_before_init_log,
+        command_name="init",
+        command_argv=["cmoc", "init"],
+        use_work_root_runtime=True,
+    )
+
+
+def _cmoc_init_body() -> None:
     """work root を cmoc が扱える初期状態へ同期する。"""
     root = work_root()
     config_root = repo_root()
@@ -68,17 +79,6 @@ def cmoc_init_impl() -> None:
             worktree_gitignore,
         )
     typer.echo(render_cmoc_init_result(root))
-
-
-def cmoc_init_command_impl() -> None:
-    run_cli_subcommand(
-        cmoc_init_impl,
-        pre_log_check=ensure_cmoc_ignored_before_init_log,
-        command_name="init",
-        command_argv=["cmoc", "init"],
-        use_work_root_runtime=True,
-    )
-
 
 def ensure_cmoc_ignored_before_init_log(root: Path) -> None:
     gitignore = root / ".gitignore"

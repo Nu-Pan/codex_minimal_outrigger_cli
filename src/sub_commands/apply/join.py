@@ -27,9 +27,10 @@ from cmoc_runtime import (
 from sub_commands.apply._runtime import worktree_for_branch, worktree_for_branch_optional
 
 
-def cmoc_apply_join_command_impl(force_resolve: bool) -> None:
+def cmoc_apply_join_impl(force_resolve: bool) -> None:
+    """CLI runtime を通して apply join を実行する。"""
     run_cli_subcommand(
-        cmoc_apply_join_impl,
+        _cmoc_apply_join_body,
         force_resolve,
         command_name="apply join",
         command_argv=[
@@ -41,7 +42,7 @@ def cmoc_apply_join_command_impl(force_resolve: bool) -> None:
     )
 
 
-def cmoc_apply_join_impl(force_resolve: bool) -> None:
+def _cmoc_apply_join_body(force_resolve: bool) -> None:
     """apply branch を session branch へ merge し、apply state を ready に戻す。"""
     repo = repo_root()
     current_root = work_root()

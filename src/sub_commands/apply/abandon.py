@@ -26,15 +26,16 @@ from sub_commands.apply._runtime import (
 )
 
 
-def cmoc_apply_abandon_command_impl() -> None:
+def cmoc_apply_abandon_impl() -> None:
+    """CLI runtime を通して apply abandon を実行する。"""
     run_cli_subcommand(
-        cmoc_apply_abandon_impl,
+        _cmoc_apply_abandon_body,
         command_name="apply abandon",
         command_argv=["cmoc", "apply", "abandon"],
     )
 
 
-def cmoc_apply_abandon_impl() -> None:
+def _cmoc_apply_abandon_body() -> None:
     """未 join の apply run を破棄して apply state を ready に戻す。"""
     repo = repo_root()
     current_root = work_root()

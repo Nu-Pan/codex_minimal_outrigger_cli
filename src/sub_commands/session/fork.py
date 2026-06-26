@@ -21,6 +21,17 @@ from cmoc_runtime import (
 
 
 def cmoc_session_fork_impl() -> None:
+    """CLI runtime を通して session fork を実行する。"""
+    run_cli_subcommand(
+        _cmoc_session_fork_body,
+        pre_log_check=ensure_cmoc_ignored_for_session_fork,
+        command_name="session fork",
+        command_argv=["cmoc", "session", "fork"],
+        use_work_root_runtime=True,
+    )
+
+
+def _cmoc_session_fork_body() -> None:
     """現在の local branch から cmoc session branch を作成する。"""
     root = repo_root()
     work = work_root()
@@ -58,17 +69,6 @@ def cmoc_session_fork_impl() -> None:
             ]
         )
     )
-
-
-def cmoc_session_fork_command_impl() -> None:
-    run_cli_subcommand(
-        cmoc_session_fork_impl,
-        pre_log_check=ensure_cmoc_ignored_for_session_fork,
-        command_name="session fork",
-        command_argv=["cmoc", "session", "fork"],
-        use_work_root_runtime=True,
-    )
-
 
 def ensure_cmoc_ignored_for_session_fork(root: Path) -> None:
     # session fork は clean worktree を保ったまま、ログ作成前に .cmoc を ignore する必要がある。

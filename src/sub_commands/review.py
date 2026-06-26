@@ -65,10 +65,11 @@ __all__ = [
 ]
 
 
-def cmoc_review_oracle_command_impl(scope: str) -> None:
+def cmoc_review_oracle_impl(scope: str) -> None:
+    """CLI runtime を通して review oracle を実行する。"""
     enable_indexing_preflight()
     run_cli_subcommand(
-        cmoc_review_oracle_impl,
+        _cmoc_review_oracle_body,
         scope,
         run_codex_exec,
         command_name="review oracle",
@@ -76,7 +77,7 @@ def cmoc_review_oracle_command_impl(scope: str) -> None:
     )
 
 
-def cmoc_review_oracle_impl(
+def _cmoc_review_oracle_body(
     scope: str,
     codex_exec: CodexExec,
 ) -> None:

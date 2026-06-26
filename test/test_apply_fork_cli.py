@@ -167,7 +167,7 @@ def test_apply_fork_rejects_tracked_cmoc_without_dirtying_session(
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
     with pytest.raises(apply_fork_module.CmocError) as exc_info:
-        apply_fork_module.cmoc_apply_fork_impl("full", lambda *args, **kwargs: None)
+        apply_fork_module._cmoc_apply_fork_body("full", lambda *args, **kwargs: None)
 
     assert ".cmoc が git 追跡対象外に初期化されていません。" in str(exc_info.value)
     assert run_git(root, "status", "--short").stdout.strip() == ""

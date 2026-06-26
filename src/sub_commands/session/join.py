@@ -27,7 +27,20 @@ CodexExec = Callable[..., object]
 GitRun = Callable[..., object]
 
 
-def cmoc_session_join_impl(codex_exec: CodexExec, git: GitRun = run_git) -> None:
+def cmoc_session_join_impl() -> None:
+    """CLI runtime を通して session join を実行する。"""
+    enable_indexing_preflight()
+    run_cli_subcommand(
+        _cmoc_session_join_body,
+        run_codex_exec,
+        run_git,
+        command_name="session join",
+        command_argv=["cmoc", "session", "join"],
+        error_to_stderr=True,
+    )
+
+
+def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> None:
     """active session branch を session home branch へ merge する。"""
     root = repo_root()
     work = work_root()
@@ -69,19 +82,6 @@ def cmoc_session_join_impl(codex_exec: CodexExec, git: GitRun = run_git) -> None
             ]
         )
     )
-
-
-def cmoc_session_join_command_impl() -> None:
-    enable_indexing_preflight()
-    run_cli_subcommand(
-        cmoc_session_join_impl,
-        run_codex_exec,
-        run_git,
-        command_name="session join",
-        command_argv=["cmoc", "session", "join"],
-        error_to_stderr=True,
-    )
-
 
 def resolve_session_join_conflict(root: Path, codex_exec: CodexExec, git: GitRun = run_git) -> None:
     """session join の merge conflict を Codex CLI へ依頼して解消する。"""

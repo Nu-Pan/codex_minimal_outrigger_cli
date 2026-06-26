@@ -8,18 +8,18 @@ from cmoc_runtime import (
     CmocError,
     render_error,
 )
-from sub_commands.apply.abandon import cmoc_apply_abandon_command_impl
-from sub_commands.apply.fork import cmoc_apply_fork_command_impl
-from sub_commands.apply.join import cmoc_apply_join_command_impl
-from sub_commands.indexing import cmoc_indexing_command_impl
-from sub_commands.init import cmoc_init_command_impl
+from sub_commands.apply.abandon import cmoc_apply_abandon_impl
+from sub_commands.apply.fork import cmoc_apply_fork_impl
+from sub_commands.apply.join import cmoc_apply_join_impl
+from sub_commands.indexing import cmoc_indexing_impl
+from sub_commands.init import cmoc_init_impl
 from sub_commands.review import (
-    cmoc_review_oracle_command_impl,
+    cmoc_review_oracle_impl,
 )
-from sub_commands.session.abandon import cmoc_session_abandon_command_impl
-from sub_commands.session.fork import cmoc_session_fork_command_impl
-from sub_commands.session.join import cmoc_session_join_command_impl
-from sub_commands.tui import cmoc_tui_command_impl
+from sub_commands.session.abandon import cmoc_session_abandon_impl
+from sub_commands.session.fork import cmoc_session_fork_impl
+from sub_commands.session.join import cmoc_session_join_impl
+from sub_commands.tui import cmoc_tui_impl
 
 
 class _CmocTyperGroup(typer.core.TyperGroup):
@@ -76,61 +76,61 @@ app.add_typer(review_app, name="review")
 @app.command()
 def init() -> None:
     """work root を cmoc 管理状態へ同期する CLI 入口。"""
-    cmoc_init_command_impl()
+    cmoc_init_impl()
 
 
 @app.command()
 def tui() -> None:
     """Codex TUI を cmoc の依頼文と設定で起動する CLI 入口。"""
-    cmoc_tui_command_impl()
+    cmoc_tui_impl()
 
 
 @session_app.command("fork")
 def session_fork() -> None:
     """現在 branch から session branch を作る CLI 入口。"""
-    cmoc_session_fork_command_impl()
+    cmoc_session_fork_impl()
 
 
 @session_app.command("join")
 def session_join() -> None:
     """session branch の成果を home branch へ取り込む CLI 入口。"""
-    cmoc_session_join_command_impl()
+    cmoc_session_join_impl()
 
 
 @session_app.command("abandon")
 def session_abandon() -> None:
     """session branch を取り込まず破棄する CLI 入口。"""
-    cmoc_session_abandon_command_impl()
+    cmoc_session_abandon_impl()
 
 
 @apply_app.command("fork")
 def apply_fork(scope: str = typer.Option("rolling", "--scope", "-s")) -> None:
     """finding 適用用の apply run を開始する CLI 入口。"""
-    cmoc_apply_fork_command_impl(scope)
+    cmoc_apply_fork_impl(scope)
 
 
 @apply_app.command("join")
 def apply_join(force_resolve: bool = typer.Option(False, "--force-resolve")) -> None:
     """apply run の成果を session branch へ取り込む CLI 入口。"""
-    cmoc_apply_join_command_impl(force_resolve)
+    cmoc_apply_join_impl(force_resolve)
 
 
 @apply_app.command("abandon")
 def apply_abandon() -> None:
     """apply run を取り込まず破棄する CLI 入口。"""
-    cmoc_apply_abandon_command_impl()
+    cmoc_apply_abandon_impl()
 
 
 @review_app.command("oracle")
 def review_oracle(scope: str = typer.Option("session", "--scope", "-s")) -> None:
     """oracle review を隔離 worktree で実行する CLI 入口。"""
-    cmoc_review_oracle_command_impl(scope)
+    cmoc_review_oracle_impl(scope)
 
 
 @app.command()
 def indexing() -> None:
     """work root の INDEX.md を更新する CLI 入口。"""
-    cmoc_indexing_command_impl()
+    cmoc_indexing_impl()
 
 
 def main() -> None:

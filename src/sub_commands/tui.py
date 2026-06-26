@@ -39,7 +39,17 @@ CodexExec = Callable[..., CodexExecResult]
 CodexTui = Callable[..., None]
 
 
-def cmoc_tui_impl(
+def cmoc_tui_impl() -> None:
+    """CLI runtime を通して tui を実行する。"""
+    enable_indexing_preflight()
+    run_cli_subcommand(
+        _cmoc_tui_from_current_context,
+        command_name="tui",
+        command_argv=["cmoc", "tui"],
+    )
+
+
+def _cmoc_tui_body(
     run_codex_exec: CodexExec,
     run_codex_tui: CodexTui,
     *,
@@ -76,21 +86,11 @@ def cmoc_tui_impl(
         extra_read_paths=[complete_prompt_path],
     )
 
-
-def cmoc_tui_command_impl() -> None:
-    enable_indexing_preflight()
-    run_cli_subcommand(
-        _cmoc_tui_command_body,
-        command_name="tui",
-        command_argv=["cmoc", "tui"],
-    )
-
-
-def _cmoc_tui_command_body() -> None:
+def _cmoc_tui_from_current_context() -> None:
     """現在の repository 状態から `cmoc tui` の本体処理を起動する。"""
     root = repo_root()
     current_root = work_root()
-    cmoc_tui_impl(
+    _cmoc_tui_body(
         run_codex_exec,
         run_codex_tui,
         root=root,

@@ -53,10 +53,11 @@ from sub_commands.indexing import enable_indexing_preflight
 CodexExec = Callable[..., object]
 
 
-def cmoc_apply_fork_command_impl(scope: str) -> None:
+def cmoc_apply_fork_impl(scope: str) -> None:
+    """CLI runtime を通して apply fork を実行する。"""
     enable_indexing_preflight()
     run_cli_subcommand(
-        cmoc_apply_fork_impl,
+        _cmoc_apply_fork_body,
         scope,
         run_codex_exec,
         command_name="apply fork",
@@ -64,7 +65,7 @@ def cmoc_apply_fork_command_impl(scope: str) -> None:
     )
 
 
-def cmoc_apply_fork_impl(
+def _cmoc_apply_fork_body(
     scope: str,
     codex_exec: CodexExec,
 ) -> int:

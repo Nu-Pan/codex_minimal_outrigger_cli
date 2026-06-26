@@ -16,6 +16,15 @@ from cmoc_runtime import (
 
 
 def cmoc_session_abandon_impl() -> None:
+    """CLI runtime を通して session abandon を実行する。"""
+    run_cli_subcommand(
+        _cmoc_session_abandon_body,
+        command_name="session abandon",
+        command_argv=["cmoc", "session", "abandon"],
+    )
+
+
+def _cmoc_session_abandon_body() -> None:
     """active session を home branch へ merge せず破棄する。"""
     repo = repo_root()
     work = work_root()
@@ -81,12 +90,4 @@ def cmoc_session_abandon_impl() -> None:
                 "- session_state: `abandoned`",
             ]
         )
-    )
-
-
-def cmoc_session_abandon_command_impl() -> None:
-    run_cli_subcommand(
-        cmoc_session_abandon_impl,
-        command_name="session abandon",
-        command_argv=["cmoc", "session", "abandon"],
     )
