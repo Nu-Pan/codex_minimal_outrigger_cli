@@ -276,22 +276,24 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- `review oracle` コマンドの realization test。oracle レビューのレポート生成、対象 oracle file の選別、findings の列挙・統合・検証・判定フロー、レビュー用 worktree からの `INDEX.md` 反映、処理失敗時のエラーレポート、想定外差分の拒否を検証する。
+- レビュー用サブコマンドの oracle 検査フローに対する realization test。レポート生成、対象 oracle の選定、finding の列挙・検証・判定・マージ、レビュー用 worktree で生成されたルーティング文書の取り込み、失敗時レポート、想定外差分の拒否を検証する。
+- CLI 呼び出しと内部レビュー処理の両方を扱い、Codex 実行は fake に差し替えて、外部モデル出力ではなく制御ロジックと副作用を確認する。
 
 ## Read this when
-- `review oracle` の CLI 挙動、レポート内容、終了コード、scope 指定、対象 oracle file の集計・除外条件を確認または変更するとき。
-- oracle レビュー中に Codex へ渡す prompt や structured output schema ごとの処理順、findings の merge/delete/replace 操作、validate/judge 周辺の制御ロジックを変更するとき。
-- レビュー用 worktree で生成された `INDEX.md` を session 側へ取り込む処理、index conflict 解決、レビュー worktree の配置や後始末を変更するとき。
-- レビュー処理の途中失敗時に生成される error report、fatal finding の扱い、標準出力と標準エラーへの出し分けを確認するとき。
-- レビュー実行中に `INDEX.md` 以外の差分が発生した場合の拒否・復元挙動を確認するとき。
+- レビュー用 oracle 検査コマンドの挙動、出力レポート、対象スコープ、短縮オプション、エラー時表示を変更する。
+- oracle 対象ファイルの選定で、全体スコープ、セッションスコープ、gitignore 対象の除外、対象なしの場合の扱いを確認する。
+- finding の列挙結果を次ループへ渡す条件、別 oracle への混入防止、merge operation の契約や不正操作の拒否を変更する。
+- レビュー用 worktree で生成されたルーティング文書の取り込み、merge conflict 解決、レビュー後の worktree 配置や清掃条件を変更する。
+- レビュー処理中の失敗時に部分結果をどうレポートするか、またレビュー処理が許可されない非ルーティング文書差分を作った場合の拒否を確認する。
 
 ## Do not read this when
-- oracle file や realization file の概念定義、正本仕様としての要求を確認したいだけの場合は、oracle 側の仕様文書を読む。
-- `review oracle` 以外の CLI サブコマンド、セッション操作、設定読み込み一般の挙動だけを調べる場合は、それぞれの実装または専用テストへ進む。
-- Codex CLI や LLM 出力そのものの品質評価を調べる場合は、このテストは fake runner で制御フローを検証しているだけなので読まなくてよい。
+- 通常の初期化、セッション作成、git helper、設定読み込みなど、レビュー用 oracle 検査フローに直接関係しない CLI 挙動だけを調べる。
+- oracle 正本仕様そのものの内容や書き方を確認したい場合。
+- Codex CLI や LLM の実出力品質、prompt 文面の妥当性そのものを評価したい場合。
+- 一般的なテスト支援 fixture やリポジトリ作成 helper の実装詳細だけを調べる場合。
 
 ## hash
-- ae2abbc7cc7938507597b2a7aaacf3c96591da25ea1f73a246d20c3f9ee3cb91
+- 36dee3fd11c51a58a7b6599fd34fe951ae9616f85bd5aa19fbdc3f37af0604f0
 
 # `test_session_cli.py`
 
