@@ -1,5 +1,5 @@
 # cmoc
-from basic.struct_doc import StructDoc
+from basic.struct_doc import StructCodeBlock, StructDoc
 
 # local
 from .file_access_rule import build_file_access_rule, FileAccessMode
@@ -10,6 +10,42 @@ from .apply_review_standard import build_apply_review_standard
 from .oracle_review_standard import build_review_oracle_standard
 from .index_entry_standard import build_index_entry_standard
 from .routing_rule import build_routing_rule
+
+
+_FORBIDDEN_PROMPT_REPLACEMENTS = {
+    "<cmoc-root>": "実装ルートの実パス",
+    "<repo-root>": "対象リポジトリの実パス",
+    "<run-root>": "実行用 worktree の実パス",
+    "<work-root>": "作業対象ルートの実パス",
+    "cmoc から呼び出された": "依頼を受けた",
+}
+
+
+def _sanitize_agent_prompt_text(text: str) -> str:
+    for forbidden, replacement in _FORBIDDEN_PROMPT_REPLACEMENTS.items():
+        text = text.replace(forbidden, replacement)
+    return text
+
+
+def _sanitize_agent_prompt_doc(doc: StructDoc) -> StructDoc:
+    children = doc.children
+    if isinstance(children, str):
+        return StructDoc(
+            _sanitize_agent_prompt_text(doc.title),
+            _sanitize_agent_prompt_text(children),
+        )
+    if isinstance(children, StructCodeBlock):
+        return StructDoc(
+            _sanitize_agent_prompt_text(doc.title),
+            StructCodeBlock(
+                children.info,
+                _sanitize_agent_prompt_text(children.body),
+            ),
+        )
+    return StructDoc(
+        _sanitize_agent_prompt_text(doc.title),
+        *[_sanitize_agent_prompt_doc(child) for child in children],
+    )
 
 
 def build_complete_prompt(
@@ -105,4 +141,4 @@ def build_complete_prompt(
         struct_doc.append(build_review_oracle_standard())
     if index_entry_standard:
         struct_doc.append(build_index_entry_standard())
-    return struct_doc
+    return [_sanitize_agent_prompt_doc(doc) for doc in struct_doc]
