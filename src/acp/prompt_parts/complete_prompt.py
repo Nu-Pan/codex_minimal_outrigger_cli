@@ -1,5 +1,4 @@
 # std
-from collections.abc import Callable
 from pathlib import Path
 
 # cmoc
@@ -45,14 +44,6 @@ def _safe_resolve_prompt_root_token(root_token: RootToken) -> Path:
 def _agent_text_replacements() -> list[tuple[str, str]]:
     work_root = resolve_work_root()
     replacements = [
-        (
-            "`oracle file` を検索語にした時に関連箇所が見つかるよう、同じ概念を `oracle spec` や `仕様ファイル` に言い換えない",
-            "`仕様ファイル（基準用語）` を検索語にした時に関連箇所が見つかるよう、同じ概念を `仕様説明（別名）` や `仕様ファイル（和訳表記）` に言い換えない",
-        ),
-        (
-            "`oracles file` のような typo が別概念に見える場合は、検索性を壊す表記として修正する",
-            "`仕様ファイルズ` のような typo が別概念に見える場合は、検索性を壊す表記として修正する",
-        ),
         ("`cmoc review oracle`", "仕様レビュー作業"),
         ("`cmoc apply join`", "`apply join`"),
         ("cmoc-managed branch", "管理対象ブランチ"),
@@ -161,13 +152,6 @@ def _for_codex_cli(struct_doc: StructDoc) -> StructDoc:
     )
 
 
-def _append_for_codex_cli(
-    struct_doc: list[StructDoc],
-    builder: Callable[[], StructDoc],
-) -> None:
-    struct_doc.append(_for_codex_cli(builder()))
-
-
 def build_complete_prompt(
     *,
     role: str,
@@ -250,15 +234,15 @@ def build_complete_prompt(
         realization_standard = True
     # パターンプロンプトの注入
     if oracle_and_realization_basic:
-        _append_for_codex_cli(struct_doc, build_oracle_and_realization_basic)
+        struct_doc.append(build_oracle_and_realization_basic())
     if oracle_standard:
-        _append_for_codex_cli(struct_doc, build_oracle_standard)
+        struct_doc.append(build_oracle_standard())
     if realization_standard:
-        _append_for_codex_cli(struct_doc, build_realization_standard)
+        struct_doc.append(build_realization_standard())
     if apply_review_standard:
-        _append_for_codex_cli(struct_doc, build_apply_review_standard)
+        struct_doc.append(build_apply_review_standard())
     if review_oracle_standard:
-        _append_for_codex_cli(struct_doc, build_review_oracle_standard)
+        struct_doc.append(build_review_oracle_standard())
     if index_entry_standard:
-        _append_for_codex_cli(struct_doc, build_index_entry_standard)
+        struct_doc.append(build_index_entry_standard())
     return struct_doc

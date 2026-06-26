@@ -156,11 +156,11 @@ def test_complete_prompt_can_include_apply_review_standard() -> None:
     )
 
     rendered = render_as_markdown(prompt)
-    assert "# 仕様ファイルと編集対象の扱い" in rendered
-    assert "# 仕様と実装の照合基準" in rendered
+    assert "# oracle and realization basic" in rendered
+    assert "# apply review standard" in rendered
 
 
-def test_complete_prompt_rewrites_injected_standards_for_codex_cli() -> None:
+def test_complete_prompt_preserves_injected_standard_terms() -> None:
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",
@@ -175,15 +175,11 @@ def test_complete_prompt_rewrites_injected_standards_for_codex_cli() -> None:
     )
 
     rendered = render_as_markdown(prompt)
-    assert "`仕様ファイル（基準用語）` を検索語" in rendered
-    assert "`仕様説明（別名）`" in rendered
-    assert "`仕様ファイル（和訳表記）`" in rendered
-    assert "`仕様ファイルズ` のような typo" in rendered
-    for forbidden in [
-        "<cmoc-root>",
-        "<repo-root>",
-        "<run-root>",
-        "<work-root>",
+    assert "`oracle file` を検索語" in rendered
+    assert "`oracle spec`" in rendered
+    assert "`仕様ファイル`" in rendered
+    assert "`oracles file` のような typo" in rendered
+    for expected in [
         "oracle and realization basic",
         "oracle standard",
         "realization standard",
@@ -194,8 +190,13 @@ def test_complete_prompt_rewrites_injected_standards_for_codex_cli() -> None:
         "oracles file",
         "oracle spec",
         "realization file",
-        "realization",
-        "cmoc ",
+    ]:
+        assert expected in rendered
+    for forbidden in [
+        "仕様ファイル（基準用語）",
+        "仕様説明（別名）",
+        "仕様ファイル（和訳表記）",
+        "仕様ファイルズ",
     ]:
         assert forbidden not in rendered
 
@@ -282,7 +283,7 @@ def test_complete_prompt_can_include_realization_standard() -> None:
     )
 
     rendered = render_as_markdown(prompt)
-    assert "# 編集対象ファイルの保守基準" in rendered
+    assert "# realization standard" in rendered
     assert "意味上のまとまりと適度なサイズ" in rendered
     assert "16,000" in rendered
 
@@ -316,7 +317,7 @@ def test_complete_prompt_can_include_index_entry_standard() -> None:
     )
 
     rendered = render_as_markdown(prompt)
-    assert "# INDEX.md エントリー基準" in rendered
+    assert "# index entry standard" in rendered
 
 
 def test_complete_prompt_omits_index_entry_standard_by_default() -> None:
@@ -347,12 +348,12 @@ def test_tui_resolve_parameter_builder_embeds_original_prompt() -> None:
     assert "作業担当者 CLI/TUI" not in parameter.prompt
     assert "パラメータ選択結果" in parameter.prompt
     assert original_prompt in parameter.prompt
-    assert "# 仕様ファイルと編集対象の扱い" in parameter.prompt
-    assert "# 仕様文書の記述基準" in parameter.prompt
-    assert "# 編集対象ファイルの保守基準" in parameter.prompt
-    assert "# 仕様文書レビュー基準" in parameter.prompt
-    assert "# 仕様と実装の照合基準" in parameter.prompt
-    assert "# INDEX.md エントリー基準" in parameter.prompt
+    assert "# oracle and realization basic" in parameter.prompt
+    assert "# oracle standard" in parameter.prompt
+    assert "# realization standard" in parameter.prompt
+    assert "# review oracle standard" in parameter.prompt
+    assert "# apply review standard" in parameter.prompt
+    assert "# index entry standard" in parameter.prompt
 
 
 def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
@@ -446,8 +447,8 @@ def test_complete_prompt_can_include_review_oracle_standard() -> None:
     )
 
     rendered = render_as_markdown(prompt)
-    assert "# 仕様ファイルと編集対象の扱い" in rendered
-    assert "# 仕様文書レビュー基準" in rendered
+    assert "# oracle and realization basic" in rendered
+    assert "# review oracle standard" in rendered
 
 
 def test_complete_prompt_omits_review_oracle_standard_by_default() -> None:
