@@ -65,22 +65,25 @@
 # `session`
 
 ## Summary
-- `cmoc session join` の conflict marker 解消を AI に依頼するための呼び出し設定を組み立てる領域。対象ファイルの実パス化、解消作業に閉じた role/summary/goal/prompt、モデル・推論努力、realization 書き込み権限と oracle/realization 標準指示の付与を扱う。
+- `cmoc session join` で検出済みの merge conflict marker を解消するため、AI エージェントへ渡す呼び出しパラメータを構築する領域。
+- conflict 対象パスの work root 基準実パスへの解決、解消対象ファイル一覧、作業制限、oracle file の例外的な最小編集許可、git add・git commit 禁止を含む complete prompt と AgentCallParameter の組み立てを扱う。
 
 ## Read this when
-- `cmoc session join` で検出済みの conflict marker を AI に解消させるための呼び出しパラメータを確認または変更したいとき。
-- conflict 対象パスをどの時点で実パスへ解決し、AI prompt にどう列挙するかを確認したいとき。
-- conflict 解消時のファイルアクセス権限、realization 書き込み許可、oracle file の最小編集許可、oracle/realization 標準指示の付与範囲を確認したいとき。
-- AI に git add や git commit をさせず、conflict marker が残らない状態だけを目標にさせる prompt を確認したいとき。
+- `cmoc session join` 中の conflict marker 解消を担当するエージェント呼び出し内容を確認または変更したいとき。
+- conflict 解消担当へ渡す role、summary、goal、補助 prompt、対象ファイル一覧の文面や構成を調整したいとき。
+- conflicted paths を実パスへ解決し、編集対象パスとして AgentCallParameter に渡す流れを確認したいとき。
+- merge conflict marker 解消時に限って oracle file の必要最小限の編集を許可する例外ルールや、git add・git commit を禁止する制御を確認したいとき。
+- conflict 解消タスクで使うモデル種別、推論強度、ファイルアクセスモード、complete prompt rendering の設定箇所を確認したいとき。
 
 ## Do not read this when
-- `cmoc session join` 全体の制御、merge 実行、conflict marker 検出、join 後の状態更新を調べたいとき。
-- AI 呼び出しパラメータの共通型、モデル種別、推論努力、ファイルアクセスモード自体の定義を調べたいとき。
-- prompt 部品の markdown レンダリング、共通 prompt 構築、oracle/realization 標準指示本文を変更したいとき。
-- conflict marker 解消以外の session 処理、または対象外ファイルの編集方針を調べたいとき。
+- `cmoc session join` 全体の orchestration、branch 操作、merge 実行、conflict 検出の流れだけを調べたいとき。
+- merge conflict marker の有無を検出する処理や、marker の内容を解析して選択・削除するアルゴリズムを探しているとき。
+- AgentCallParameter、ModelClass、ReasoningEffort、FileAccessMode の定義や共通仕様を確認したいとき。
+- complete prompt の共通構築規則、oracle/realization 標準 prompt、StructDoc の markdown rendering を調べたいとき。
+- 通常の realization write 権限や oracle file 編集禁止ルールそのものの基本定義を確認したいとき。
 
 ## hash
-- 9a2f6d3958ca7a062f831b72e14760fc17a7b00c304e271bb519ccae350825a1
+- 6db380564eacbecaf7b8408e8d043936111d3713b708311986248c9f0734f837
 
 # `tui`
 

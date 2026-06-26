@@ -1,24 +1,25 @@
 # `builder`
 
 ## Summary
-- AI エージェント呼び出し用のパラメータ構築を扱う領域。`apply`、`indexing`、`review`、`session`、`tui` などの各処理について、prompt、role、goal、補助文脈、ファイルアクセス条件、モデル設定、推論量、Structured Output schema の対応を定義する。
-- cmoc の各サブコマンドや TUI 実行前処理で、AI に何を読ませ、何を出力させ、どの権限で作業させるかを確認する入口になる。
+- AI エージェント呼び出しに渡す prompt、補助文脈、ファイルアクセス条件、モデル設定、推論量、Structured Output schema の組み立てを、用途別に扱う実装領域。レビュー、適用、競合解消、TUI 実行前解決、ルーティング文書用エントリー生成など、cmoc の各工程で AI に何を読ませ、何を返させ、どの制約で作業させるかを確認する入口になる。
+- 工程ごとの制御フローそのものではなく、AI 呼び出しパラメータと機械処理用の出力契約を追うための領域。oracle file、realization file、review standard、git diff、既知所見、conflict 対象、元プロンプトなどを、各エージェントへどの意味の文脈として渡すかを把握できる。
 
 ## Read this when
-- AI エージェントへ渡す呼び出しパラメータの組み立てを、処理ごとに確認または変更したいとき。
-- prompt に含める role、summary、goal、補助文脈、対象本文、標準指示、既知所見、差分などの渡し方を追いたいとき。
-- Structured Output schema が、レビュー所見、理由、採否、差分要約、INDEX.md エントリー、TUI パラメータ判定などでどの責務を持つか確認したいとき。
-- AI 呼び出しにおける model class、reasoning effort、file access mode、realization 書き込み可否、git 操作禁止条件などの組み合わせを調べたいとき。
-- `cmoc apply fork`、`cmoc indexing`、`cmoc review oracle`、`cmoc session join`、TUI 実行前パラメータ解決のいずれかで、AI 呼び出し前の入力契約や出力契約を実装・テストしたいとき。
+- cmoc の各サブコマンドや TUI で、AI エージェントへ渡す role、goal、補助 prompt、参照コンテキスト、ファイルアクセスモード、モデル種別、推論量を確認または変更したいとき。
+- AI の Structured Output schema が、レビュー所見、理由、採否、所見整理操作、差分要約、ルーティング文書用エントリー、TUI 実行前の判定結果などとしてどの責務を持つか確認したいとき。
+- oracle file だけを根拠にする、realization file への書き込みを許可する、git add・git commit を禁止する、conflict 解消時だけ oracle file の最小編集を例外的に許すなど、AI 作業制限の組み立てを追いたいとき。
+- 既知の所見や理由、検出済み conflict、対象本文、作業後差分、元プロンプトなどの入力情報が、AI 呼び出しの補助文脈へどう反映されるかを調べたいとき。
+- INDEX.md エントリー生成や TUI 実行前パラメータ解決のように、AI に判断させる内容とその返却契約を実装・テストしたいとき。
 
 ## Do not read this when
-- 各サブコマンド全体の CLI 引数解析、実行順序、状態更新、git コマンド実行、保存処理など、AI 呼び出しパラメータ構築より外側の制御フローを調べたいとき。
-- oracle file、realization file、review standard、apply review standard、INDEX.md 運用規則などの標準本文そのものを確認したいとき。
-- Markdown レンダリング、構造化文書表現、パス解決、AgentCallParameter 型、モデル種別やファイルアクセスモードの共通定義など、呼び出し構築を支える共通基盤を調べたいとき。
-- 個別の変更対象ファイル、実際の差分検出、分類アルゴリズム、conflict marker 検出、TUI 表示や入力取得など、AI に渡すパラメータ以外の具体処理を確認したいとき。
+- CLI 引数解析、サブコマンド全体の実行順序、fork 作成、branch 操作、merge 実行、差分適用、保存、表示、集計など、AI 呼び出しパラメータ構築の外側にある orchestration を調べたいとき。
+- oracle file、realization file、review standard、apply review standard、INDEX.md 運用規則などの正本仕様や基準本文そのものを確認したいとき。
+- AgentCallParameter、ModelClass、ReasoningEffort、FileAccessMode、markdown rendering、構造化ドキュメント表現、パス解決などの共通基盤の定義や汎用実装を調べたいとき。
+- 実際の変更対象ファイルの中身、個別差分の検出処理、変更カテゴリ分類、conflict marker 検出や解消アルゴリズム、TUI の表示・対話・入力取得を調べたいとき。
+- 個別の INDEX.md エントリー本文を作成・評価したいだけで、エントリー生成に使う schema やエージェント呼び出しパラメータの実装を確認する必要がないとき。
 
 ## hash
-- d2a1ff13e7c9eb45eaef45de557128432770d36ed0e1a612ae6904d022892c93
+- 3d80b6cf3c308bdfa53ab5b527a5ec024582d37bf2d5271809fd0cb5fab6a8cf
 
 # `prompt_parts`
 

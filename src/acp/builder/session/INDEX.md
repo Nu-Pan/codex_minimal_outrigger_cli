@@ -1,19 +1,22 @@
 # `join`
 
 ## Summary
-- `cmoc session join` の merge conflict marker 解消フェーズで、AI エージェント呼び出しパラメータを組み立てる領域。conflict 対象パスの実パス解決、解消作業だけに範囲を絞る prompt、realization 書き込み権限、oracle/realization 標準指示の付与を扱う。
+- `cmoc session join` の merge conflict marker 解消タスクを AI エージェントへ依頼するための呼び出しパラメータ構築を担う領域。
+- conflict 対象パスを work root 基準の実パスへ解決し、解消対象ファイル一覧、作業制限、oracle file 例外編集ルール、git add・git commit 禁止を含む complete prompt と AgentCallParameter を組み立てる。
 
 ## Read this when
-- `cmoc session join` で検出済みの merge conflict marker を AI に解消させるための role、summary、goal、補助 prompt、モデル種別、推論努力、ファイルアクセス権限を確認または変更したいとき。
-- conflict 対象ファイル一覧を AI prompt にどう渡すか、また対象パスをどの時点で実パスへ解決するかを確認したいとき。
-- 通常は realization 書き込み権限で動く join 用 AI 呼び出しに対して、conflict 解消に限り oracle file の最小編集を許可する境界を確認したいとき。
-- merge conflict 解消作業で git add や git commit を禁止し、conflict marker が残らない状態を goal とする prompt の内容を確認したいとき。
+- `cmoc session join` 中に検出済みの merge conflict marker を解消するエージェント呼び出し内容を確認・変更したいとき。
+- conflict marker 解消担当へ渡す role、summary、goal、補助 prompt、対象ファイル一覧の文面や構成を調整したいとき。
+- conflicted paths を実パスへ解決し、編集対象パスとして AgentCallParameter に渡す流れを確認したいとき。
+- merge conflict marker 解消時だけ oracle file の必要最小限の編集を許可する例外ルールや、git add・git commit を禁止する制御を確認したいとき。
+- conflict 解消タスクで使うモデル種別、推論強度、ファイルアクセスモード、complete prompt rendering の設定箇所を確認したいとき。
 
 ## Do not read this when
-- `cmoc session join` 全体の制御、merge 実行、conflict marker の検出、join 後の状態更新を調べたいとき。
-- AI 呼び出しパラメータの共通型、モデル種別、推論努力、ファイルアクセスモードそのものの定義を調べたいとき。
-- prompt 部品の markdown レンダリング、共通 prompt 構築、oracle/realization 標準指示の中身を変更したいとき。
-- conflict marker 解消以外の通常の session 処理や、対象外ファイルの編集方針を調べたいとき。
+- `cmoc session join` 全体の orchestration、branch 操作、merge 実行、conflict 検出の流れを調べたいだけのとき。
+- merge conflict marker の有無を検出する処理や、実際に marker を解析して内容を選択・削除するアルゴリズムを探しているとき。
+- AgentCallParameter、ModelClass、ReasoningEffort、FileAccessMode の定義や共通仕様を確認したいとき。
+- complete prompt の共通構築規則、oracle/realization 標準 prompt の詳細、StructDoc の markdown rendering を調べたいとき。
+- 通常の realization write 権限や oracle file 編集禁止ルールそのものの基本定義を確認したいとき。
 
 ## hash
-- f3ebc8b4e31d2f112ede8674c70afa589034013385cad2d636477271686f8c18
+- ed515ca206fe710cabb674682f420631db8fcba97058c5dfc68d14acef9149a6
