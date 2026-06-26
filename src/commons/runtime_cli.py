@@ -19,6 +19,7 @@ def run_cli_subcommand(
     pre_log_check: Callable[[Path], None] | None = None,
     command_name: str | None = None,
     command_argv: Sequence[str] | None = None,
+    error_to_stderr: bool = False,
     use_work_root_runtime: bool = False,
     **kwargs: Any,
 ) -> None:
@@ -72,7 +73,7 @@ def run_cli_subcommand(
                 error=str(exc),
             )
             _emit_completion_summary(logger, name, 1, total_steps)
-        typer.echo(render_error(exc))
+        typer.echo(render_error(exc), err=error_to_stderr)
         raise typer.Exit(1) from exc
     finally:
         if logger_token is not None:

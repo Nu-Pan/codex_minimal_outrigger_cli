@@ -79,6 +79,7 @@ def cmoc_session_join_command_impl() -> None:
         run_git,
         command_name="session join",
         command_argv=["cmoc", "session", "join"],
+        error_to_stderr=True,
     )
 
 

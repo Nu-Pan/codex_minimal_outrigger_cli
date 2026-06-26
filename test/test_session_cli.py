@@ -391,3 +391,24 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
     )
     assert "- deleted_session_branch: `False`" in result.output
     assert f"session branch was not deleted: {session_branch}" in result.output
+
+
+def test_session_join_error_report_is_written_to_stderr(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    (root / "README.md").write_text("dirty\n")
+
+    result = runner.invoke(app, ["session", "join"])
+
+    assert result.exit_code != 0
+    assert "completed session join" in result.stdout
+    assert "# ERROR" not in result.stdout
+    assert "git 未コミット差分が存在します。" not in result.stdout
+    assert "# ERROR" in result.stderr
+    assert "git 未コミット差分が存在します。" in result.stderr
