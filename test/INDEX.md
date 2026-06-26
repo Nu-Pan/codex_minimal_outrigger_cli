@@ -276,24 +276,23 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- レビュー用サブコマンドの oracle 検査フローに対する realization test。レポート生成、対象 oracle の選定、finding の列挙・検証・判定・マージ、レビュー用 worktree で生成されたルーティング文書の取り込み、失敗時レポート、想定外差分の拒否を検証する。
-- CLI 呼び出しと内部レビュー処理の両方を扱い、Codex 実行は fake に差し替えて、外部モデル出力ではなく制御ロジックと副作用を確認する。
+- `review oracle` コマンドと oracle レビュー制御ロジックの realization test。レポート生成、対象 oracle の選別、Codex 実行ループへの入力、finding merge 操作、レビュー用 worktree からの INDEX.md 反映、競合解決、失敗時レポート、予期しない非 INDEX.md 差分の拒否を検証する。
+- CLI 経由の外部挙動と、review モジュール内の merge・conflict 解決 helper の制御契約を同じ観点で扱うテスト群であり、oracle レビュー機能の回帰確認の入口になる。
 
 ## Read this when
-- レビュー用 oracle 検査コマンドの挙動、出力レポート、対象スコープ、短縮オプション、エラー時表示を変更する。
-- oracle 対象ファイルの選定で、全体スコープ、セッションスコープ、gitignore 対象の除外、対象なしの場合の扱いを確認する。
-- finding の列挙結果を次ループへ渡す条件、別 oracle への混入防止、merge operation の契約や不正操作の拒否を変更する。
-- レビュー用 worktree で生成されたルーティング文書の取り込み、merge conflict 解決、レビュー後の worktree 配置や清掃条件を変更する。
-- レビュー処理中の失敗時に部分結果をどうレポートするか、またレビュー処理が許可されない非ルーティング文書差分を作った場合の拒否を確認する。
+- `review oracle` のスコープ指定、短縮オプション、レポート内容、no_targets/error 結果、対象件数表示を変更・確認する。
+- oracle レビュー対象の列挙条件、gitignore 対象の oracle 除外、binary oracle の扱い、session scope と full scope の差を変更・確認する。
+- finding の列挙・検証・判定・merge 操作の呼び出し順、prompt に渡す既存 finding の範囲、merge operation の kind ごとの契約を変更・確認する。
+- レビュー用 worktree で生成された INDEX.md の取り込み、レビュー join commit の記録、worktree 配置、.git ディレクトリを残さない制御を変更・確認する。
+- レビュー中の INDEX.md 競合解決、処理失敗時のエラーレポート、レビューが INDEX.md 以外の差分を作った場合の拒否・巻き戻しを変更・確認する。
 
 ## Do not read this when
-- 通常の初期化、セッション作成、git helper、設定読み込みなど、レビュー用 oracle 検査フローに直接関係しない CLI 挙動だけを調べる。
-- oracle 正本仕様そのものの内容や書き方を確認したい場合。
-- Codex CLI や LLM の実出力品質、prompt 文面の妥当性そのものを評価したい場合。
-- 一般的なテスト支援 fixture やリポジトリ作成 helper の実装詳細だけを調べる場合。
+- oracle レビュー以外の CLI サブコマンド、session 作成、init、一般的な git helper の挙動だけを確認したい場合。
+- Codex CLI の実出力品質や LLM の判断内容そのものを検証したい場合。このテストは Codex 実行を fake に置き換え、cmoc 側の制御と入出力を検証する。
+- oracle 正本仕様の内容そのものを理解・編集したい場合。正本仕様は oracle file を読むべきで、この対象は realization test として実装挙動の検証を扱う。
 
 ## hash
-- 36dee3fd11c51a58a7b6599fd34fe951ae9616f85bd5aa19fbdc3f37af0604f0
+- f09b0e68a76e490ada53b1060892239537b932bc2df4cec9c166b6962775c089
 
 # `test_session_cli.py`
 

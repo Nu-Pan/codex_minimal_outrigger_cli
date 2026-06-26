@@ -148,19 +148,23 @@
 # `review_targets.py`
 
 ## Summary
-- oracle review の対象 oracle file を scope 別に列挙する処理を扱う。
-- full scope では全 oracle file、session scope では session 開始 commit から変更された oracle file のうち、INDEX.md、git ignored、binary file を除外した対象を返す。
+- review oracle の対象となる oracle file を列挙するための実装。scope が full の場合は全 oracle file、差分対象の場合は session_start_commit から HEAD までに oracle 配下で変更された oracle file だけを返す。
+- oracle 配下を再帰的に探索し、ファイルであり、INDEX.md ではなく、git ignore 対象でもないものを review 対象候補として扱う。
 
 ## Read this when
-- review 対象となる oracle file の列挙条件、session scope と full scope の違い、または INDEX.md・binary・git ignored file の除外条件を確認・変更したいとき。
-- session 開始 commit から oracle 配下の変更 path を取得し、列挙済み oracle file と照合する処理を調べたいとき。
+- review oracle の対象ファイル選定ロジックを確認・変更したいとき。
+- full scope と差分 scope で review 対象がどう変わるかを確認したいとき。
+- oracle file の列挙条件、特に INDEX.md 除外や git ignore 除外の扱いを確認したいとき。
+- session_start_commit がない場合の差分 review 対象の扱いを確認したいとき。
 
 ## Do not read this when
-- review oracle 全体の実行順序、一時 worktree、finding loop、INDEX.md merge、report rendering を確認したいときは、それぞれ該当する review 系 module を読む。
-- binary 判定、git ignored 判定、git diff wrapper 自体の実装を調べたいときは、runtime 側を読む。
+- review の出力形式、診断内容、表示文言、または実際の review 実行処理を確認したいだけのとき。
+- oracle file の概念定義や正本仕様としての扱いを確認したいとき。
+- oracle 以外の realization file やテストファイルの列挙条件を探しているとき。
+- git command 実行 helper や git ignore 判定 helper の内部挙動を確認したいとき。
 
 ## hash
-- f42029951fa3338498710cca446b7ee6dbf8f87039fc10726d2cecc385a0c05c
+- e4fe225944db001b5a92abe25348f5974e8b0f165bb69cba1f701a019706deaa
 
 # `session`
 
