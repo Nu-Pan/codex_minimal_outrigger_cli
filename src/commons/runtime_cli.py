@@ -26,8 +26,8 @@ def run_cli_subcommand(
 
     ログ生成前に work root と任意の事前検査を済ませ、サブコマンド単位の
     logger 設定、開始・完了表示、戻り値の終了コード化、例外のエラー表示を
-    一箇所で扱う。通常は repo root に runtime state を置き、init だけは
-    初期化対象である work root に置く。
+    一箇所で扱う。runtime state は通常 repo root に置き、init だけは
+    初期化対象である work root に置く。サブコマンドログは常に repo root に置く。
     """
     logger = None
     logger_token = None
@@ -35,10 +35,11 @@ def run_cli_subcommand(
     try:
         current_root = work_root()
         require_current_directory_is_work_root(current_root)
-        root = current_root if use_work_root_runtime else repo_root()
+        log_root = repo_root()
+        runtime_root = current_root if use_work_root_runtime else log_root
         if pre_log_check is not None:
-            pre_log_check(root)
-        logger = SubcommandLogger(root, name)
+            pre_log_check(runtime_root)
+        logger = SubcommandLogger(log_root, name)
         logger_token = set_current_subcommand_logger(logger)
         logger.event("command_invoked", argv=list(command_argv or [name]))
         typer.echo(f"# {console_timestamp()} (1/3) start {name}")

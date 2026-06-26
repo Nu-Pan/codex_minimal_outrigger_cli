@@ -157,7 +157,8 @@ def test_init_initializes_linked_worktree_root(
     )
     assert (linked / ".cmoc" / "config.json").is_file()
     assert not (root / ".cmoc" / "config.json").exists()
-    assert len(list((linked / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))) == 1
+    assert len(list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))) == 1
+    assert not (linked / ".cmoc" / "log" / "sub_command").exists()
     assert (
         run_git(
             linked,
