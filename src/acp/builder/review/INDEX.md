@@ -1,20 +1,25 @@
 # `oracle`
 
 ## Summary
-- oracle review 向け AI 呼び出しパラメータ構築と、その Structured Output 契約をまとめる領域。正本仕様断片からの新規所見列挙、所見の擁護・反証理由の追加調査、採否判定、重複・矛盾を含む所見群の整理について、プロンプト構成・ファイルアクセス制約・モデル設定・出力契約への接続を扱う。
-- レビュー対象の oracle file を読む処理そのものではなく、レビュー結果として扱う所見や理由を AI に生成・検証・整理させるための境界を確認する入口になる。
+- oracle file レビューに関する AI 呼び出しパラメータ構築と、それに対応する Structured Output schema をまとめる領域。
+- 新規所見の列挙、所見を支持・否定する理由の追加調査、所見採否の判定、所見群の重複・矛盾整理という、review oracle の主要なエージェント呼び出し単位への入口になる。
+- 各処理は、対象所見や既知理由・既知所見を prompt に渡し、oracle file を根拠にした結果だけを返させるための role、goal、標準 prompt、file access mode、model class、reasoning effort、出力契約の対応を担う。
 
 ## Read this when
-- oracle review で、新規所見を列挙する、既知理由と重複しない擁護・反証理由を追加する、所見を採用するか判定する、または複数所見を整理する各 AI 呼び出しの役割・目的・補助入力・制約を確認したいとき。
-- oracle file を根拠にしたレビュー出力について、所見・妥当理由・不当理由・採否判定・整理方針の Structured Output 契約を実装、検証、調整したいとき。
-- レビュー所見に既知情報を渡して重複を避ける方法や、oracle 標準・review oracle 標準をプロンプトへ組み込む経路を追いたいとき。
-- 所見の重大度、根拠となる正本仕様断片、妥当性または不当性の理由、削除・置換・統合などの後処理方針を、レビュー出力としてどの粒度で扱うか確認したいとき。
+- `cmoc review oracle` で、oracle file レビュー用の agent 呼び出し内容や prompt 構築を確認・変更したいとき。
+- oracle file から新規所見を列挙する処理、既知所見との重複回避、所見なしの場合の扱いを確認したいとき。
+- レビュー所見について、妥当である理由と妥当ではない理由を oracle file に基づいて追加調査する呼び出しを追いたいとき。
+- 擁護理由・反対理由を踏まえて、単一所見を人間へ提示するかどうか判定する処理を確認したいとき。
+- 複数の oracle review 所見について、重複・矛盾・過剰な細分化を削除・置換・統合で整理する処理を確認したいとき。
+- review oracle 標準や oracle 標準を組み込んだ complete prompt、oracle 読み取り専用のアクセス条件、モデル種別、推論量、対応する Structured Output schema の選択関係を確認したいとき。
 
 ## Do not read this when
-- oracle file や realization file の基本定義、編集責任、配置ルールを確認したいだけのとき。
-- 個々の正本仕様断片の内容そのものや、oracle review で実際にどの oracle file を調査するかを探しているだけのとき。
-- review oracle 全体の CLI 引数解析、サブコマンド実行順序、所見の保存・表示・集計・通知など、AI 呼び出しパラメータ構築や出力契約より上位または後段の処理を調べたいとき。
-- 一般的な INDEX.md エントリーの記述方針、ルーティング文書の基準、汎用 JSON Schema 構文、またはレビュー以外の ACP 呼び出し構築を確認したいとき。
+- oracle file そのものの正本仕様内容や、レビューで実際に調査すべき仕様断片を探しているだけのとき。
+- oracle file と realization file の基本定義、編集責任、配置ルール、または oracle 標準そのものを確認したいとき。
+- レビュー所見の保存、CLI 表示、通知、集計、実行フロー全体、サブコマンド入口処理を確認したいとき。
+- oracle file 以外の実装レビューや、通常の realization file レビューの prompt 構築を調べたいとき。
+- 汎用的な AgentCallParameter、path 解決、Markdown レンダリング、構造化ドキュメント描画などの共通 helper の詳細を調べたいとき。
+- Structured Output schema の項目名・型・JSON 形式だけを機械的に確認したいとき。
 
 ## hash
-- 60c734c61fb2de02025f0c3052a5d13961fb75dd1bc1ef7a1135ebeb53edb94c
+- 185a64c41d2cd90d0360720f548178b70f83b13227135db9ca5ac2dec73d6d76

@@ -1,43 +1,43 @@
 # `builder`
 
 ## Summary
-- AI エージェント呼び出しパラメータを組み立てる実装群の入口。apply、oracle review、session join、TUI 実行前判定、INDEX.md エントリー生成など、各用途の prompt 内容、補助入力、ファイルアクセス条件、モデル設定、Structured Output 契約への接続を扱う。
-- 実際の CLI 実行制御や git 操作、標準文書本文、汎用 prompt 部品そのものではなく、用途別にエージェントへ何を渡し、どの制約で何を返させるかを確認するための領域。
+- AI エージェント呼び出し用のパラメータ構築を扱う領域。各処理で渡す role、summary、goal、補助プロンプト、参照する標準文書、ファイルアクセスモード、モデル種別、推論量、Structured Output schema の接続を組み立てる入口である。
+- フォーク適用、目次エントリー生成、oracle review、session の conflict 解消、TUI 実行パラメータ解決など、上位コマンドが実際の処理を AI に委ねる直前の呼び出し条件を、用途別の下位領域へ分けて収める。
+- 実際の差分解析、レビュー所見の保存、merge 実行、CLI/TUI の起動制御、共通 prompt 部品そのものを担う領域ではなく、それらを使って個別の agent 呼び出し契約を作る builder 群である。
 
 ## Read this when
-- cmoc の各サブ機能が AI エージェントを呼び出す際の role、goal、補助 prompt、対象パスや差分などの入力埋め込み、読み書き権限、モデルや reasoning effort の指定を確認・変更したいとき。
-- apply fork 後の差分要約、realization file の所見列挙、検出済み所見への修正依頼など、apply 系の後段エージェント呼び出し条件と出力契約を追いたいとき。
-- oracle review で、新規所見、理由追加、採否判定、所見整理を生成させる prompt と、正本仕様断片を根拠にした Structured Output schema を確認したいとき。
-- session join の merge conflict marker 解消や、TUI 実行前のファイルアクセスモード・標準参照要否判定など、特定用途の事前解決エージェント呼び出しを調べたいとき。
-- INDEX.md エントリー生成で、対象本文の渡し方、既存目次を根拠にしない方針、読み取り専用条件、出力 schema 指定を実装・検証したいとき。
+- AI エージェントに渡す complete prompt の内容、補助プロンプトへの入力データ埋め込み、参照標準、ファイルアクセス権限、モデル種別、推論量、出力 schema の対応を確認または変更したいとき。
+- 上位コマンドのどのフェーズが、読み取り専用の調査、oracle file のレビュー、realization file の修正、conflict marker 解消、実行パラメータ選定のどの agent 呼び出しへつながるかを追いたいとき。
+- raw diff、対象パス、所見リスト、元プロンプト、conflict 対象ファイル一覧などの入力が、AI への作業指示や Structured Output の契約としてどう渡されるかを確認したいとき。
+- 下位領域のうち、フォーク適用用、目次生成用、oracle review 用、session conflict 解消用、TUI パラメータ解決用のどれを読むべきか判断したいとき。
 
 ## Do not read this when
-- サブコマンド全体の実行順序、CLI 引数解析、git 操作、フォーク作成・統合、merge conflict marker 検出、生成結果の保存など、エージェント呼び出しパラメータ構築の外側を調べたいとき。
-- oracle file、realization file、review standard、apply review standard、realization standard など、prompt に含められる標準文書や仕様本文そのものを読みたいとき。
-- 汎用的な prompt 部品、Markdown rendering、構造化ドキュメント表現、パス解決 helper、AgentCallParameter の基本定義だけを確認したいとき。
-- 個別の所見カテゴリやレビュー判断基準、実際の対象ファイル探索、git diff 生成、変更ファイル抽出アルゴリズムなど、呼び出しに渡す材料を作る側の詳細を調べたいとき。
-- 生成済み INDEX.md の内容評価や、ルーティング文書一般の書き方だけを確認したいとき。
+- コマンド全体の実行フロー、サブコマンド入口、状態管理、ファイル走査、保存、通知、CLI/TUI 入出力の外側の制御を調べたいとき。
+- git 操作、ブランチ操作、merge 実行、conflict 検出、差分取得、作業ツリーへの反映など、実際のリポジトリ操作を調べたいとき。
+- AI 呼び出し後の結果検証、所見の統合実行、修正結果の確認、テスト実行など、builder が返したパラメータを使った後段処理を調べたいとき。
+- complete prompt の共通構築、構造化 Markdown 描画、パス解決、ファイルアクセスモード定義、AgentCallParameter 型などの汎用部品そのものを確認したいとき。
+- Structured Output schema の項目名・型・JSON 形式だけを機械的に確認したいときは、該当する schema 本文へ直接進めばよい。
 
 ## hash
-- 841d3789d8ef7a945918bcbf8698e7b6ef089bc26fc78778ab6c055169f75648
+- 04335ab886dd86f56ee356ae141d2429baf25c7dacb7cf5975382521c0b241b0
 
 # `prompt_parts`
 
 ## Summary
-- ACP の agent call 用プロンプトを構成する prompt part 群を扱うディレクトリ。ファイルアクセス規則、ルーティング規則、oracle/realization の基本概念、各種 standard、レビュー基準、INDEX エントリー規範、完全プロンプト組み立てをそれぞれ構造化文書として生成する実装への入口になる。
-- 個別ファイルは自然言語の標準や規則そのものを定義するものと、それらを条件に応じて完全なプロンプトへ統合するものに分かれるため、ACP に渡すプロンプト本文の内容や注入順序を調べる際の起点となる。
+- ACP の agent call 向けプロンプトを構成する個別部品を収める領域。ファイルアクセス規則、ルーティング規則、oracle・realization の基本概念、各種標準、レビュー基準、INDEX.md エントリー基準などを StructDoc として組み立てる実装がまとまっている。
+- 完全なプロンプトを作る処理から参照される標準プロンプト断片の実体を確認する入口であり、各部品は特定の規則や品質基準を AI に提示するための文書断片生成を担う。
 
 ## Read this when
-- ACP が agent に渡すプロンプト本文をどの部品から作るか、または標準プロンプト群の責務分担を把握したいとき。
-- oracle file、realization file、ファイルアクセス制約、INDEX.md ルーティング、レビュー所見基準、INDEX エントリー生成規範などをプロンプトとしてどう表現しているか確認したいとき。
-- 新しい標準プロンプト種別を追加する、既存 standard の文面を変更する、または完全プロンプトへの組み込み条件や順序を調整したいとき。
-- ACP のプロンプト生成で、作業目的・制約・規範・追加プロンプトがどのように構造化文書列へ分解されるかを追いたいとき。
+- ACP で agent に渡すプロンプト本文へ含める規則・標準・基礎説明の生成箇所を探したいとき。
+- ファイルアクセス規則、INDEX.md を使ったルーティング規則、oracle file と realization file の概念説明など、プロンプト部品ごとの責務を切り分けて確認したいとき。
+- oracle standard、realization standard、oracle review standard、apply review standard、index entry standard など、AI の判断基準として注入される規範文書の内容や組み立てを変更したいとき。
+- 完全な agent call 用プロンプトが、どの標準プロンプト断片と前提情報を連鎖的に含めるかを追いたいとき。
 
 ## Do not read this when
-- ACP の通信処理、外部 agent 呼び出し、CLI サブコマンド実行、状態管理など、生成済みプロンプトを使う側の実装を調べたいとき。
-- oracle file や realization file の個別仕様本文そのものを読みたいだけで、プロンプト部品としての標準文面や組み立て処理を確認する必要がないとき。
-- 構造化文書、Standard、Requirement などの共通データ型や整形処理そのものを調べたいとき。
-- テストや個別機能の実装挙動を確認したいときで、ACP 向けプロンプト本文の生成に関係しないとき。
+- ACP の通信処理、CLI サブコマンド、状態管理、ファイル入出力など、プロンプト本文の生成以外の制御フローを調べたいとき。
+- StructDoc、Standard、Requirement などの文書表現やデータ構造そのものの実装を確認したいとき。
+- 実際のファイルシステムアクセス制御やサンドボックスの強制処理を探しているとき。
+- 特定の oracle file や realization file の本文内容、または個別機能の仕様そのものを確認したいとき。
 
 ## hash
-- 1eebf6d29025aed961d2c7757adc689643c660039b80c1ab7ff60cabf31b07d8
+- e45db61782d2b00f497dbd5c18f39c0751c879d4eaac52d71f9f0580f4ec9d3b
