@@ -1,23 +1,27 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンド群の実装ディレクトリ。apply run の開始、結果取り込み、破棄、実行時 process 管理、fork report 生成を扱う各実装への入口になる。
-- apply branch/worktree、session state、apply process id、Codex 実行、git merge/cleanup、report 出力など、apply run のライフサイクルに沿った上位フローと低レベル補助処理を切り分けている。
+- apply 系サブコマンドの実行ロジックをまとめる領域。apply run の開始、隔離 worktree 上での Codex apply loop、完了・エラー後の session branch への取り込み、未 join run の破棄、実行中 process の管理、fork/join report 生成を扱う。
+- session branch、apply branch、apply worktree、session state、process id file、git merge・branch・worktree 操作をまたいで apply のライフサイクルを追うための入口になる。
+- 主要な関心は、apply fork による finding 列挙と適用、apply join による成果取り込み、apply abandon による破棄、実行時補助処理、レポート生成に分かれている。
 
 ## Read this when
-- apply fork、join、abandon のどの実装へ進むべきかを選びたいとき。
-- apply run の状態遷移、branch/worktree 操作、process 停止、report 生成のうち、apply 固有の責務境界を把握したいとき。
-- apply branch または session branch 上での実行条件、apply worktree の作成・削除、apply process id の保存・削除、join/abandon 後の cleanup に関係する調査を始めるとき。
-- apply fork の所見列挙、適用、commit、変更要約、エラー時 report など、Codex を使った apply loop 周辺の実装対象を探すとき。
+- apply fork、apply join、apply abandon の実行条件、状態遷移、CLI 出力、終了コード、失敗時の扱いを調べたいとき。
+- apply run が session state の ready、running、completed、error をどのタイミングで更新し、apply branch や apply worktree をどのように作成・削除するかを確認したいとき。
+- Codex を使った finding 列挙、finding 適用、commit subject 生成、差分要約生成の呼び出し順や、scope ごとの対象 file 選定を追いたいとき。
+- apply 中に oracle、memo、.agents、INDEX.md、git ignored file などがどのように対象外・許可・ロールバック・自動解決されるかを確認したいとき。
+- apply process id file、pidfd、process start time、SIGTERM/SIGKILL など、running apply run の安全な停止や stale pid 判定を調べたいとき。
+- apply fork report や apply join report の保存、frontmatter、結果表示、finding count、変更要約、merge conflict・想定外差分の記録を確認または変更したいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド、共通 CLI 起動処理、全体の argument parser 登録だけを調べたいとき。
-- session state file 全体の schema、汎用 git/worktree helper、設定読み込み、path model など、apply 固有でない共通 runtime の詳細を直接確認したいとき。
-- Codex に渡す prompt や structured output schema の本文だけを変更したいときは、prompt や parameter builder の対象へ直接進む。
-- INDEX.md の生成規則、oracle/realization の基本方針、ルーティング文書全体の仕様を調べたいとき。
+- apply 以外のサブコマンド、session 作成、設定読み込み、汎用 git wrapper、worktree 作成・削除 helper、state file schema 全体などの共通 runtime 実装だけを調べたいとき。
+- Codex に渡すプロンプトや構造化出力パラメータの本文だけを確認したいときは、ACP parameter builder 側を直接読む。
+- 生成済み report の内容を読むだけで、report 生成ロジックや fallback 挙動を変更しないとき。
+- INDEX.md エントリー生成規則、oracle file と realization file の一般方針、ルーティング文書全体の仕様を確認したいとき。
+- 単に apply 実装パッケージの docstring だけを確認したい場合を除き、パッケージ初期化処理や再 export の調査目的で深い実行ロジックを読む必要がないとき。
 
 ## hash
-- 3c45e15007f93d7327d7f3778d35bd8ca69ea33ee9b5e2fe9b914134751c8f19
+- c56096d50da06ca5c1c61af64cd1da8bb7a8d04524c1a970739a126b68aa88be
 
 # `indexing.py`
 

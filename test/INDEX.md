@@ -63,23 +63,23 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork CLI の制御フローを pytest で検証する realization test。Codex 実行を fake に差し替え、所見列挙、適用、commit message 生成、変更要約生成、report 出力、session state 更新、git branch/commit の副作用を統合的に確認する。
-- 未収束時の report と exit code、dirty file 再検査と INDEX.md 除外、最後の許可対象が空所見だった場合の収束判定、編集禁止対象差分の error 化、rolling 実行で前回 apply join 後の変更だけを対象にする挙動を扱う。
+- apply fork コマンドの report 生成と収束判定に関する realization test。Codex 応答を fake 化し、変更要約、commit message、dirty file 再検査、調査対象なし、編集禁止対象の差分検出、rolling 対象の基準 commit を CLI 経由の外部挙動と永続状態で検証する。
 
 ## Read this when
-- apply fork の CLI 挙動、終了コード、標準出力に出る report path や result_label、生成 report の内容を変更または調査するとき。
-- apply fork が Codex 応答をどの purpose で呼び分けるか、所見適用後に commit message や change summary を使って apply branch/report を更新する流れを確認するとき。
-- apply fork 後の dirty file 再検査、INDEX.md の再検査除外、収束/未収束判定、num_apply_files 上限時の扱いを変更するとき。
-- apply fork が編集禁止対象の差分を検出した際のエラー出力、report、session state の error 記録を確認するとき。
-- rolling apply fork の対象範囲を、前回 apply join の oracle snapshot commit 以降の変更に限定する挙動を確認するとき。
+- apply fork の report 内容、終了コード、result_label、収束・未収束・error の扱いを変更または確認したいとき。
+- apply 後に発生した dirty file の再検査ロジック、特にルーティング生成物を再検査対象から外す挙動を確認したいとき。
+- apply fork が commit message や変更要約を Codex 応答から取り込み、apply branch に commit する流れを確認したいとき。
+- 編集禁止対象に差分が出た場合の error state、report 出力、エラー前変更の扱いを確認したいとき。
+- rolling apply fork が前回 apply join 後の oracle 変更だけを調査対象にする挙動を確認したいとき。
 
 ## Do not read this when
-- apply fork の内部 helper 単体の細部だけを調べたい場合。まず実装側の対象 module を読む方が直接的。
-- apply join、session fork、init などの各サブコマンド自体の仕様や実装を調べたい場合。ただし apply fork との統合副作用を確認する目的なら読む価値がある。
-- Codex CLI や LLM 出力品質そのものを検証したい場合。このテストは Codex 応答を fake 化して、cmoc 側の制御ロジックと副作用を検証している。
+- apply fork の内部実装構造や helper の責務分割を知りたいだけで、CLI の観測可能な挙動や永続状態の期待値を確認しないとき。
+- apply join、session fork、init などの各コマンド単体の仕様やテストを確認したいとき。
+- Codex 実行基盤そのもの、structured output schema の定義、または fake ではない実 Codex 呼び出しの挙動を確認したいとき。
+- report 以外の一般的なルーティング文書生成や INDEX.md エントリー生成のテストを探しているとき。
 
 ## hash
-- b6df3c3799f989f788cd8e9347e8b049e465027d0b04dddbbf0ca4f8345b7f2c
+- 7b2f893b993a49fe73d482cd781feb788fd50ef17c427c52b4944306e88032d5
 
 # `test_apply_join_cli.py`
 
