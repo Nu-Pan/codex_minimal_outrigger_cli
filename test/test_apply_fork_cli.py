@@ -194,7 +194,7 @@ def test_apply_fork_config_load_error_does_not_start_apply_run(
     result = runner.invoke(app, ["apply", "fork", "--scope", "full"])
 
     assert result.exit_code != 0
-    assert "cmoc config" in result.stderr
+    assert "cmoc config" in result.stdout
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
     assert "apply_process_id" not in state["apply"]

@@ -97,7 +97,7 @@ def test_indexing_uninitialized_clean_repo_fails_without_non_index_diff(
     result = runner.invoke(app, ["indexing"], catch_exceptions=False)
 
     assert result.exit_code != 0
-    assert "cmoc init を実行してから再実行してください。" in result.stderr
+    assert "cmoc init を実行してから再実行してください。" in result.stdout
     assert not (root / ".gitignore").exists()
     assert not (root / "INDEX.md").exists()
     log_paths = list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))
@@ -215,7 +215,7 @@ def test_indexing_rejects_existing_non_index_diff_without_index_commit(
     result = runner.invoke(app, ["indexing"], catch_exceptions=False)
 
     assert result.exit_code != 0
-    assert "git 未コミット差分が存在します。" in result.stderr
+    assert "git 未コミット差分が存在します。" in result.stdout
     assert calls == []
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == head_before
     assert not (root / "INDEX.md").exists()

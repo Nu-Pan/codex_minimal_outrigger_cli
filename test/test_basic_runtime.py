@@ -127,7 +127,7 @@ def test_load_state_for_branch_rejects_apply_branch_with_extra_parts(tmp_path: P
         load_state_for_branch(tmp_path, "cmoc/apply/session/run/extra")
 
 
-def test_cli_error_report_is_written_to_stderr(tmp_path: Path, monkeypatch) -> None:
+def test_cli_error_report_is_written_to_stdout(tmp_path: Path, monkeypatch) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     run_git(root, "switch", "--detach", "HEAD")
@@ -135,22 +135,22 @@ def test_cli_error_report_is_written_to_stderr(tmp_path: Path, monkeypatch) -> N
     result = runner.invoke(app, ["session", "fork"])
 
     assert result.exit_code != 0
-    assert "# ERROR" in result.stderr
-    assert "detached HEAD 上では実行できません。" in result.stderr
-    assert "# ERROR" not in result.stdout
-    assert "detached HEAD 上では実行できません。" not in result.stdout
+    assert "# ERROR" in result.stdout
+    assert "detached HEAD 上では実行できません。" in result.stdout
+    assert "# ERROR" not in result.stderr
+    assert "detached HEAD 上では実行できません。" not in result.stderr
 
 
-def test_cli_parse_error_report_is_written_to_stderr() -> None:
+def test_cli_parse_error_report_is_written_to_stdout() -> None:
     result = runner.invoke(app, ["--bad-option"])
 
     assert result.exit_code != 0
-    assert "# ERROR" in result.stderr
-    assert "CLI 引数解析に失敗しました。" in result.stderr
-    assert "No such option: --bad-option" in result.stderr
-    assert "# ERROR" not in result.stdout
-    assert "CLI 引数解析に失敗しました。" not in result.stdout
-    assert "No such option: --bad-option" not in result.stdout
+    assert "# ERROR" in result.stdout
+    assert "CLI 引数解析に失敗しました。" in result.stdout
+    assert "No such option: --bad-option" in result.stdout
+    assert "# ERROR" not in result.stderr
+    assert "CLI 引数解析に失敗しました。" not in result.stderr
+    assert "No such option: --bad-option" not in result.stderr
 
 
 def test_cli_requires_current_directory_to_be_work_root(
@@ -162,12 +162,12 @@ def test_cli_requires_current_directory_to_be_work_root(
     result = runner.invoke(app, ["init"])
 
     assert result.exit_code != 0
-    assert "# ERROR" in result.stderr
-    assert "cmoc は work root で実行してください。" in result.stderr
-    assert f"cwd: {(root / 'oracle').resolve()}" in result.stderr
-    assert f"work_root: {root.resolve()}" in result.stderr
-    assert "# ERROR" not in result.stdout
-    assert "cmoc は work root で実行してください。" not in result.stdout
+    assert "# ERROR" in result.stdout
+    assert "cmoc は work root で実行してください。" in result.stdout
+    assert f"cwd: {(root / 'oracle').resolve()}" in result.stdout
+    assert f"work_root: {root.resolve()}" in result.stdout
+    assert "# ERROR" not in result.stderr
+    assert "cmoc は work root で実行してください。" not in result.stderr
     assert not (root / ".gitignore").exists()
 
 

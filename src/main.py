@@ -53,8 +53,7 @@ class _CmocTyperGroup(typer.core.TyperGroup):
                         ["コマンド名、サブコマンド名、option、引数を確認して再実行してください。"],
                         exc.format_message(),
                     )
-                ),
-                err=True,
+                )
             )
             if standalone_mode:
                 raise SystemExit(exc.exit_code) from exc
