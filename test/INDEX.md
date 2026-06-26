@@ -278,21 +278,25 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- プロンプト構成部品と関連する実行パラメータ builder のテストをまとめた realization test。構造化ドキュメントの Markdown レンダリング、routing rule や各種 standard の挿入条件、file access rule の mode 別文言、apply fork・TUI parameter・review oracle・session join 向け parameter の model/reasoning/file access/schema 連携を検証する。
+- prompt parts と builder parameter のテスト群。StructDoc の Markdown 描画、complete prompt への標準文書注入、file access rule、routing rule、各種 builder が期待する実行パラメータ・schema・root 表現を検証する。
+- プロンプト生成まわりの標準文書、ファイルアクセス制約、INDEX エントリー基準、TUI パラメータ解決、apply fork / review oracle / session join の builder 挙動を横断的に確認する realization test。
 
 ## Read this when
-- プロンプト本文に routing rule、oracle/realization/review/apply/index standard、補助プロンプト、コードブロックが期待通り含まれるかを変更・確認する時。
-- StructDoc や StructCodeBlock の Markdown 出力、連続空行の畳み込み、コードブロック内空行の扱いを変更・確認する時。
-- FileAccessMode ごとの file access rule 文言や、apply fork・TUI resolve parameter・review oracle merge finding・session join conflict resolution の parameter 属性や schema 参照を変更・確認する時。
-- index entry 生成用 parameter の model class、reasoning effort、readonly mode、または index entry standard の出力文言を変更・確認する時。
+- プロンプト部品が期待する見出し・用語・本文断片を Markdown として出力しているか確認したいとき。
+- complete prompt に routing rule や各種 standard が含まれる条件、または既定で省略される条件を変更・検証するとき。
+- file access mode ごとのプロンプト文言、READONLY / PURE_ORACLE_READ / REALIZATION_WRITE / ORACLE_WRITE / REPO_WRITE の制約表現を確認するとき。
+- apply fork、review oracle、session join、TUI resolve parameter、indexing index entry の builder が設定する model class、reasoning effort、file access mode、schema path、prompt 内容を変更するとき。
+- StructDoc や StructCodeBlock の Markdown rendering、特に連続空行の折りたたみ挙動を変更するとき。
+- builder が参照する JSON schema の制約や oracle 側 schema との一致性を確認するとき。
 
 ## Do not read this when
-- 個別 CLI コマンドの実行挙動、永続状態操作、git 操作そのものの仕様や実装を調べたいだけの場合。
-- プロンプト部品 builder の期待出力ではなく、アプリケーション本体の business logic や UI 表示を調べたい場合。
-- oracle 側 schema の正本内容そのものを確認したい場合は、schema を複製利用しているテストではなく、対応する oracle source を直接読む。
+- 個別 CLI コマンドの実行フローやユーザー向け入出力だけを確認したいとき。
+- prompt parts や builder parameter ではなく、実際の index entry 生成ロジック本体を調べたいとき。
+- oracle file の正本仕様そのものを確認したいとき。該当する oracle doc または oracle src を直接読む方が適切。
+- 特定の実装関数の内部アルゴリズムだけを追うとき。対象の実装ファイルを直接読む方が適切。
 
 ## hash
-- 57e3e687f4af40dd694ca83b3b3730794006e91f78cb93112920a999da73754a
+- f7645913978ff0cd612281d1e272ef352a2d6ae82aa032ecd84bf5969f9f1f97
 
 # `test_review_oracle_cli.py`
 
