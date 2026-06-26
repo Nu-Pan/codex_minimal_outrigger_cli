@@ -33,8 +33,34 @@ def _toml_array(values: list[Path]) -> str:
     return "[" + ", ".join(_toml_str(value) for value in values) + "]"
 
 
+def _oracle_read_only_paths(root: Path, writable_paths: tuple[Path, ...]) -> list[Path]:
+    oracle_root = root / "oracle"
+    writable_oracle_paths: set[Path] = set()
+    for path in writable_paths:
+        resolved_path = path.resolve()
+        if resolved_path.is_relative_to(oracle_root):
+            writable_oracle_paths.add(resolved_path)
+    if not writable_oracle_paths or not oracle_root.exists():
+        return [oracle_root]
+    return [
+        path.resolve()
+        for path in sorted(oracle_root.rglob("*"))
+        if path.resolve() not in writable_oracle_paths
+        and not (
+            path.is_dir()
+            and any(
+                writable_path.is_relative_to(path.resolve())
+                for writable_path in writable_oracle_paths
+            )
+        )
+    ]
+
+
 def _permission_profile_lines(
-    mode: FileAccessMode, root: Path, extra_read_paths: list[Path] | None = None
+    mode: FileAccessMode,
+    root: Path,
+    extra_read_paths: list[Path] | None = None,
+    writable_file_paths: tuple[Path, ...] = (),
 ) -> list[str]:
     root = root.resolve()
     match mode:
@@ -52,7 +78,11 @@ def _permission_profile_lines(
             read_paths = [root]
             write_paths = [root]
             deny_read_paths = [root / "memo"]
-            read_only_paths = [root / "oracle", root / "memo", root / ".agents"]
+            read_only_paths = [
+                *_oracle_read_only_paths(root, writable_file_paths),
+                root / "memo",
+                root / ".agents",
+            ]
         case FileAccessMode.ORACLE_WRITE:
             read_paths = [root]
             write_paths = [root / "oracle"]
@@ -100,7 +130,12 @@ def build_codex_profile(
     ]
     if root is not None:
         lines.extend(
-            _permission_profile_lines(parameter.file_access_mode, root, extra_read_paths)
+            _permission_profile_lines(
+                parameter.file_access_mode,
+                root,
+                extra_read_paths,
+                parameter.writable_file_paths,
+            )
         )
     else:
         sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
