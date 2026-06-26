@@ -273,9 +273,12 @@ def test_session_join_resolves_oracle_conflict_with_realization_write_profile(
             )
         )
         fs = profile["permissions"]["cmoc"]["file_system"]
+        workspace = profile["sandbox_workspace_write"]
         assert str(root) in fs["write"]
         assert str(target) in fs["write"]
-        assert str(root / "oracle") in fs["read_only"]
+        assert str(root / "oracle") not in fs["read_only"]
+        assert str(target) not in fs["read_only"]
+        assert str(root / "oracle") not in workspace["read_only_paths"]
         assert str(root / "memo") in fs["read_only"]
         assert str(root / ".agents") in fs["read_only"]
         target.write_text("resolved change\nTitle\n=======\n")
