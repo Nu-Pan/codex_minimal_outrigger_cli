@@ -20,22 +20,26 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- cmoc が Codex CLI を呼び出す際の実行規約を定める正本仕様断片。`codex exec` を前提に、`CODEX_HOME` の引き継ぎと補完、事前検証、動的 profile 生成、ファイルアクセス制限や model 設定の渡し方、プロンプトを stdin で渡す制約、ログ・stdout・stderr・最終出力・Structured Output schema の保存と検証、並列実行上限、失敗時の retry・quota 待機・resume 方針、編集禁止領域の扱いをまとめている。
-- 個別の呼び出し引数の詳細は AgentCallParameter builder を正本とし、この文書は cmoc 全体として守るべき Codex CLI 呼び出しの横断ルールを確認する入口になる。
+- cmoc が Codex CLI を呼び出す際の実行規約を定める正本仕様断片。`codex exec` の使い方、動的 profile、`CODEX_HOME` の扱い、preflight validation、ファイルアクセス制限、ログ保存、標準出力・標準エラー、Structured Output、並列実行、失敗時のリトライ・待機・再開、編集禁止領域の扱いを扱う。
+- 個別呼び出しパラメータの詳細は builder 側を正本としつつ、cmoc 側が Codex CLI 呼び出しの前後で満たすべき入出力・保存・検証・エラー処理の境界を確認する入口になる。
 
 ## Read this when
-- cmoc から Codex CLI を起動する処理、呼び出し引数、profile 生成、環境変数、preflight validation、ログ保存、stdout/stderr の扱い、Structured Output、並列実行、失敗時の retry・resume・quota 待機を実装または変更するとき。
-- Codex CLI 呼び出しでどの情報を argv、stdin、profile、プロンプト、ログ、出力ファイルのどこへ渡すべきか判断したいとき。
-- Codex CLI のレスポンスが仕様不一致、quota 枯渇、レートリミット、サーバー一時不調、その他想定外エラーになった場合の cmoc 側制御フローを確認したいとき。
-- `.agents` 配下を cmoc 経由で扱えるか、または Codex CLI のファイルアクセス制限をどの層で指定・通知するかを確認したいとき。
+- cmoc から Codex CLI を起動する処理、またはその呼び出しコマンドの組み立て・実行・再開・並列化を実装または変更するとき。
+- `CODEX_HOME` の決定、認証ファイル確認、動的 codex profile 生成、profile 指定、ファイルアクセス制限や model/reasoning effort の渡し方を確認するとき。
+- Codex CLI に渡すプロンプト、stdout、stderr、last message output、呼び出し情報、schema などをどこへどの形式で保存するかを確認するとき。
+- Structured Output を Codex CLI に要求する実装や、その結果を cmoc 側で検証する実装を扱うとき。
+- Codex CLI 呼び出し失敗時の扱いを実装または調査するとき。特にレスポンスの意味的失敗、quota 枯渇・レートリミット、サーバー一時不調、想定外エラーの分岐を確認するとき。
+- quota 枯渇後のポーリング待機、代表スレッド制御、セッション ID の取得、`resume` による再開、ユーザー向け進捗表示を扱うとき。
+- Codex CLI 実行時に編集できない領域や、cmoc として編集禁止にする領域の根拠を確認するとき。
 
 ## Do not read this when
-- 個別の `codex exec` 呼び出しごとの具体的な AgentCallParameters、引数組み立て、profile 内容の正本を確認したいだけなら、AgentCallParameter builder 側を直接読む。
-- Codex CLI 呼び出しとは無関係な cmoc のサブコマンド仕様、通常の path model、oracle/realization の一般原則、またはテスト配置だけを調べたい場合。
-- Structured Output のスキーマ自体の項目定義や、特定ログファイルの具体的な JSON 内容を調べたい場合は、その schema や生成・検証実装を読む。
+- 個別の AgentCallParameter builder が生成する具体的なパラメータ内容だけを確認したいとき。この文書は builder の詳細そのものではなく、呼び出し規約側の境界を扱う。
+- path keyword の定義や `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` の意味だけを確認したいとき。
+- Codex CLI 呼び出しとは直接関係しない cmoc の通常 CLI コマンド仕様、ユーザー向け出力仕様、内部データ構造、またはテスト配置だけを調べるとき。
+- oracle file と realization file の所有関係、編集責任、正本仕様断片としての基本原則だけを確認したいとき。
 
 ## hash
-- c0880a02e4612e985aa861f5ff60db0d8831e61275481b897e84a1f6feca8f4b
+- cd04ed9919c2c6bf11db9b527728180881c912aa17cbebcfa95d8d0bb789c7db
 
 # `console_and_file_log.md`
 
