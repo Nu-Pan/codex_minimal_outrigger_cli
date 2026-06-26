@@ -254,10 +254,10 @@ def test_apply_fork_converges_when_last_allowed_target_has_no_findings(
     assert "- result_label: `converged`" in result.output
 
 
-def test_apply_fork_converges_when_finding_application_makes_no_diff(
+def test_apply_fork_is_unconverged_when_finding_application_makes_no_diff(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
-    """所見対応で差分が出ない対象を再投入せず、修正 commit も作らない。"""
+    """所見対応で差分が出なくても、所見ありの起点対象は再調査待ちに戻す。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -308,14 +308,14 @@ def test_apply_fork_converges_when_finding_application_makes_no_diff(
         app, ["apply", "fork", "--scope", "session"], catch_exceptions=False
     )
 
-    assert result.exit_code == 0
+    assert result.exit_code == 2
     assert "apply fork commit message" not in calls
     report_line = [
         line for line in result.output.splitlines() if line.startswith("- report:")
     ][-1]
     report_path = Path(report_line.split("`")[1])
-    assert "result: converged" in report_path.read_text()
-    assert "- result_label: `converged`" in result.output
+    assert "result: unconverged" in report_path.read_text()
+    assert "- result_label: `unconverged`" in result.output
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
     state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
@@ -323,6 +323,83 @@ def test_apply_fork_converges_when_finding_application_makes_no_diff(
         run_git(root, "rev-parse", state["apply"]["apply_branch"]).stdout.strip()
         == run_git(root, "rev-parse", "HEAD").stdout.strip()
     )
+
+
+def test_apply_fork_error_report_summarizes_uncommitted_diff(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """エラー report の変更要約は commit 前の working tree 差分も対象にする。"""
+    root = make_repo(tmp_path)
+    (root / ".agents").mkdir()
+    (root / ".agents" / "skill.md").write_text("original\n")
+    run_git(root, "add", ".agents/skill.md")
+    run_git(root, "commit", "-m", "add agents")
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    finding = {
+        "title": "Update README before error",
+        "evidences": [
+            {
+                "path": str(root / "README.md"),
+                "line_start": 1,
+                "line_end": 1,
+                "summary": "readme",
+            }
+        ],
+        "oracle_requirement": "test requirement",
+        "observed_implementation": "old",
+        "reason": "needs update",
+        "suggested_fix": "update readme",
+    }
+    applications = 0
+    summary_prompt = ""
+
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> FakeCodexResult:
+        """未 commit 差分を残したまま編集禁止対象エラーへ進める。"""
+        nonlocal applications, summary_prompt
+        purpose = str(kwargs["purpose"])
+        if purpose.startswith("apply fork enumerate findings"):
+            return FakeCodexResult({"findings": [finding]})
+        if purpose == "apply fork finding application":
+            applications += 1
+            (Path.cwd() / "README.md").write_text("# updated before error\n")
+            (Path.cwd() / ".agents" / "skill.md").write_text("forbidden\n")
+            return FakeCodexResult()
+        if purpose == "apply fork change summary":
+            summary_prompt = parameter.prompt
+            return FakeCodexResult(
+                {
+                    "changes": [
+                        {
+                            "category": "実装",
+                            "summary": "commit 前に README を更新した",
+                            "changed_paths": ["README.md"],
+                        }
+                    ]
+                }
+            )
+        raise AssertionError(purpose)
+
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["apply", "fork", "--scope", "full"])
+
+    assert result.exit_code != 0
+    assert applications == 2
+    assert "README.md" in summary_prompt
+    assert "+# updated before error" in summary_prompt
+    report_lines = [
+        line for line in result.output.splitlines() if line.startswith("- report:")
+    ]
+    assert report_lines
+    rendered = Path(report_lines[-1].split("`")[1]).read_text()
+    assert "result: error" in rendered
+    assert "実装: commit 前に README を更新した (README.md)" in rendered
 
 
 def test_apply_fork_report_does_not_invent_loop_when_no_targets(

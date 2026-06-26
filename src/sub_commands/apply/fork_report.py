@@ -87,11 +87,7 @@ def build_change_summary(
     config: CmocConfig,
     codex_exec: CodexExec,
 ) -> list[dict]:
-    raw_diff = (
-        run_git(["diff", f"{fork_commit}..HEAD"], apply_worktree).stdout
-        if fork_commit
-        else run_git(["diff", "HEAD"], apply_worktree).stdout
-    )
+    raw_diff = changed_diff_since_fork(apply_worktree, fork_commit)
     if not raw_diff.strip():
         return [
             {
@@ -117,6 +113,23 @@ def build_change_summary(
             "changed_paths": [],
         }
     ]
+
+
+def changed_diff_since_fork(apply_worktree: Path, fork_commit: str) -> str:
+    commands = (
+        [
+            ["diff", f"{fork_commit}..HEAD"],
+            ["diff"],
+            ["diff", "--cached"],
+        ]
+        if fork_commit
+        else [
+            ["diff", "HEAD"],
+        ]
+    )
+    return "\n".join(
+        diff for command in commands if (diff := run_git(command, apply_worktree).stdout)
+    )
 
 
 def fallback_change_summary(

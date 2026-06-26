@@ -118,6 +118,7 @@ def _cmoc_apply_fork_body(
                 finding_counts.append(len(findings))
                 if not findings:
                     continue
+                dirty_targets.append(target)
                 run_finding_application_with_forbidden_rollback(
                     root,
                     apply_worktree,
@@ -128,7 +129,6 @@ def _cmoc_apply_fork_body(
                 changed = changed_worktree_paths(apply_worktree)
                 if not changed:
                     continue
-                dirty_targets.append(target)
                 dirty_targets.extend(
                     normalize_apply_targets(
                         apply_worktree,
