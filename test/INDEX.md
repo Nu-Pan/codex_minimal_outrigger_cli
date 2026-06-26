@@ -106,24 +106,25 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基本ランタイム挙動を広く検証する realization test。パスモデル、実行 root 判定、設定既定値、エラー表示、session/apply branch 形状、CLI preflight、補完プローブ、.cmoc ignore、file access mode、binary 判定、Codex profile のファイルアクセス制御を扱う。
-- 単一機能の詳細テストというより、runtime・state・config・CLI・profile など横断的な基礎挙動の回帰検出入口として位置づけられる。
+- 基本的なランタイム挙動を横断的に検証する realization test。パス表記の解決、時間表示、work root 判定、設定既定値、構造化エラー出力、branch/session 状態の不正形状、CLI エラー出力先、補完プローブ時の副作用抑止、.cmoc の ignore 設定、file access mode と sandbox mode の対応、binary 判定、Codex profile のファイルアクセス権限生成を扱う。
+- 単一機能の詳細テストというより、cmoc の基礎ランタイム契約が複数モジュール間で崩れていないかを確認する入口になる。
 
 ## Read this when
-- cmoc の基本 runtime API、CLI 起動前後のエラー処理、work root 判定、linked worktree 判定、または .cmoc の gitignore 管理を変更する。
-- file access mode、sandbox mode、Codex profile における read/write/read_only/deny_read の組み立てや、memo・oracle・.agents のアクセス制御を変更する。
-- branch 名から session id を解釈する処理、apply branch の形状検証、branch ごとの state 読み込みを変更する。
-- 設定既定値、model class、reasoning effort、duration 表示、binary 判定など、複数箇所から使われる小さな基礎 helper の互換性を確認する。
-- CLI のエラー出力先、Typer の引数解析失敗時の表示、shell completion probe 時の副作用抑制を確認する。
+- パスモデル、repo root と work root の判定、linked worktree 上の挙動を変更・確認する。
+- CmocError の markdown レンダリング、CLI 例外処理、引数解析エラー、stdout/stderr の出し分けを変更・確認する。
+- session/apply branch 名から session id を取り出す処理、または branch に対応する状態読み込みの不正入力処理を変更・確認する。
+- init や session fork など、CLI 実行前提条件、補完プローブ、.cmoc 関連の副作用、.gitignore 更新処理を変更・確認する。
+- FileAccessMode、sandbox mode 変換、Codex profile の permission profile、read/write/read_only/deny_read/writable_roots の生成規則を変更・確認する。
+- binary 判定や設定既定値など、共通ランタイム helper の外部挙動を変更した後に、基礎的な回帰範囲を確認する。
 
 ## Do not read this when
-- 特定サブコマンドの正常系 workflow や入出力詳細だけを確認したい場合は、そのサブコマンド専用のテストまたは実装を先に読む。
-- oracle file の正本仕様そのものを確認・編集したい場合は、realization test ではなく該当する oracle doc または oracle src を読む。
-- UI 表示、LLM 出力品質、外部サービス連携など、このテストが扱っていない領域の挙動を調べる場合は読まなくてよい。
-- 単純に import 先の関数やクラスの実装責務を理解したい場合は、この横断テストではなく該当する実装モジュールを直接読む。
+- 特定サブコマンドの正常系フロー、出力 schema、プロンプト生成など、このテストで直接扱わない機能別挙動だけを調べたい場合。
+- oracle file の正本仕様そのものを確認したい場合。ここは realization test なので、仕様判断の根拠には対応する oracle file を読む。
+- 個別モジュールの実装構造や内部 helper の分割方針を詳しく追いたい場合。まず対象の実装ファイルを直接読む。
+- INDEX.md エントリー作成やルーティング文書の方針を調べたい場合。ここはランタイム挙動のテストであり、ルーティング規約は扱わない。
 
 ## hash
-- 8641df930920543899d0ca81ae78735b56b33d38a118f2cfa677b54e40cb4a51
+- 8dc8c4e76aaee3fbf6f911d7e36281451d54c962873602a793500d2e964dc653
 
 # `test_cli_init_tui.py`
 

@@ -44,20 +44,23 @@
 # `init.py`
 
 ## Summary
-- 作業ツリーを cmoc が扱える初期状態へ同期するサブコマンド実装を扱う。実行前の利用者差分を init commit に混ぜないよう staged 差分と .gitignore 状態を退避・復元し、cmoc 用 ignore と設定同期、必要な初期化 commit、成功時の Markdown 出力をまとめて担う。
+- work root を cmoc 利用可能な初期状態へ同期する init サブコマンドの実装。実行前の利用者差分を init commit に混ぜないよう staged patch と .gitignore 状態を退避・復元し、.cmoc ignore と設定同期を行って結果 Markdown を出力する。
+- ログ作成前に .cmoc ignore を保証するための pre-log 処理と、その副作用を通常の .gitignore 復元処理から区別する一時状態管理を担う。
 
 ## Read this when
-- 初期化サブコマンドの実行順序、ログ作成前の ignore 保証、設定同期、初期化 commit の条件を確認・変更したいとき。
-- 利用者の既存 staged 差分や .gitignore の作業ツリー・index・HEAD 状態を、初期化処理後にどう復元するかを調べたいとき。
-- 初期化成功時に標準出力へ出す Markdown 形式の結果表示を確認・変更したいとき。
+- init サブコマンドの実行フロー、出力、commit 条件、または .cmoc ignore の初期化挙動を変更する。
+- init 実行時に、既存の staged 差分、HEAD/index/worktree の .gitignore 内容、または利用者の .gitignore 変更がどう保護・復元されるかを調べる。
+- ログ作成前に .cmoc ignore を保証する処理、または run_cli_subcommand へ渡す init 固有の pre_log_check を確認する。
+- sync_config、ensure_cmoc_ignored、git add/commit/restore/apply/update-index など、init が呼び出す副作用の順序を検証する。
 
 ## Do not read this when
-- 初期化以外のサブコマンドの CLI 制御や出力を調べたいとき。
-- cmoc 用 ignore の具体的な追記規則そのものや、設定同期処理の中身を調べたいとき。
-- git 実行ラッパー、work root・repo root の解決、共通のサブコマンド実行基盤を調べたいとき。
+- init 以外のサブコマンド固有挙動を調べたい場合。
+- cmoc runtime の work root/repo root 解決、git 実行 wrapper、設定同期、ignore pattern 生成そのものの実装を調べたい場合。
+- CLI 全体のコマンド登録や Typer app 構成だけを確認したい場合。
+- init の成功メッセージを呼び出し元でどう表示・検証するかではなく、Markdown 文字列の利用先だけを調べたい場合。
 
 ## hash
-- d458d8f2867e4dcf14fa58d8f2b16b6ca84c25b5cadf47172131cd16b9070d32
+- 1fdffe362c2ff7a551759490bb2574d759b8581b3be4a37a9ba145adc683c324
 
 # `review.py`
 
