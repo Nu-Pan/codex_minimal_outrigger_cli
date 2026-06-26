@@ -39,6 +39,13 @@
 
 ## プロンプトの渡し方
 
+- AgentCallParameter builder が生成した `AgentCallParameter.prompt` は、Codex CLI に渡すプ
+  ロンプト本文の正本とする
+- cmoc は `AgentCallParameter.prompt` を、可能な限りそのまま Codex CLI に渡すこと
+- cmoc は Codex CLI へ渡す直前の段階で、`AgentCallParameter.prompt` に指示文、注意書き、説
+明、整形、要約、翻訳、補助文脈、モデル・reasoning effort 情報を追加してはならない
+- Codex CLI の実行形式に必要な保存、stdin 入力、末尾改行などの機械的処理は、プロンプトの意
+味内容を変更しない範囲に限って許可する
 - プロンプト本文を argv に載せてはならない
 - `codex exec` にわたすプロンプト全文は一度 `<repo-root>/.cmoc/log/codex/<time-stamp>_prompt.jsonl` に出力すること
 - プロンプト本文は stdin 経由 (コマンド末尾に `-` を付ける) で `<time-stamp>_prompt.jsonl` をリダイレクト入力すること
