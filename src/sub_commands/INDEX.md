@@ -24,21 +24,22 @@
 # `indexing.py`
 
 ## Summary
-- 現在の作業ルートに対するルーティング文書の保守を実行するサブコマンド実装。排他ロック、対象ディレクトリ・子要素の列挙、既存エントリーの再利用判定、Codex 呼び出しによる不足エントリー生成、Markdown 描画、更新差分の commit までを扱う。
-- 本文抽出、鮮度判定用 hash 計算、必須セクションと hash の検証など、ルーティング文書生成処理の一連の制御フローへの入口になる。
+- 現在の work root に対する INDEX.md maintenance サブコマンドと、その preflight 連携を実装する。
+- INDEX.md 更新対象のディレクトリ・子要素の列挙、既存エントリーの再利用判定、Codex によるエントリー生成、Markdown へのレンダリング、更新差分の commit までを扱う。
+- repository ごとの排他 lock、git ignored・binary・memo 除外、対象 hash による鮮度判定など、indexing 処理全体の制御ロジックの入口になる。
 
 ## Read this when
-- ルーティング文書をいつ・どの順序で再生成するか、どの対象を目次化から除外するか、既存エントリーを再利用する条件を確認したいとき。
-- ルーティング文書更新の排他制御、更新差分だけの git add・commit、事前処理としてのルーティング文書最新化を変更したいとき。
-- Codex に渡す対象内容、Structured Output から Markdown エントリーを組み立てる処理、生成結果の検証エラーを調査したいとき。
+- cmoc indexing の CLI 実行、preflight での INDEX.md 最新化、または indexing commit の作成挙動を確認・変更したいとき。
+- INDEX.md の生成対象に含めるファイルやディレクトリ、除外条件、対象 hash の計算、既存エントリー再利用の条件を調べたいとき。
+- Structured Output から INDEX.md entry Markdown を作る処理、または Codex CLI に単一 entry 生成を依頼する経路を追いたいとき。
 
 ## Do not read this when
-- 個別のサブコマンド登録や CLI 全体のコマンド構成だけを確認したいとき。
-- Codex 実行関数や git 実行関数など、ランタイム共通処理そのものの実装を調べたいとき。
-- 生成されるエントリー本文のプロンプト構築や Structured Output schema の定義だけを確認したいとき。
+- INDEX.md entry のプロンプト内容や AgentCallParameter の構築仕様だけを調べたい場合は、builder 側の entry parameter 実装を読む。
+- git コマンド実行、設定読み込み、binary 判定、git ignore 判定などの共通 runtime helper 自体の詳細を調べたい場合は、runtime 側の実装を読む。
+- 生成済み INDEX.md の個別エントリー内容を確認したいだけの場合は、対象ディレクトリの INDEX.md を読む。
 
 ## hash
-- b9e0139c4bd69e2fffbee174c5782e962c1c3e0aef671e689e430020c0f1f1d7
+- 918f714139bfeb33ae4e0dfce726b7ad58062f9b91c4ff10b66c20dafd482715
 
 # `init.py`
 

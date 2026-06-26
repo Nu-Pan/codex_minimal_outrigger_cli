@@ -23,23 +23,23 @@
 # `indexing`
 
 ## Summary
-- cmoc indexing におけるルーティング文書用エントリー生成の入力契約と agent call パラメータ構築を扱う領域。生成 AI に渡すプロンプト、読み取り専用の実行条件、効率モデルや reasoning effort、構造化出力 schema の指定、および生成結果に求める意味情報の境界を確認する入口になる。
-- 対象本文から INDEX.md エントリー用の意味情報を生成し、それを後続の Markdown 目次情報へ渡す前段を理解するための実装と schema がまとまっている。
+- ルーティング文書用エントリー生成に関する実装と出力 schema をまとめた領域。対象本文からエントリー生成用のエージェント呼び出しパラメータを組み立てる処理と、生成結果が満たすべき構造化出力の外形を扱う。
+- 既存の目次情報を根拠にせず対象本文を主根拠にする方針、関連文書参照の許可、読み取り専用の実行条件、効率モデル・低 reasoning effort・構造化出力 schema の指定を確認する入口になる。
 
 ## Read this when
-- cmoc indexing がルーティング文書用エントリーを生成する際に、AI へどの role・goal・補助プロンプト・対象本文・関連参照条件を渡すか確認または変更したいとき。
-- 生成結果として必要な意味情報、余分な項目を許さない出力契約、不正な生成結果として扱われる境界を確認したいとき。
-- 対象パスや対象本文が agent call のプロンプトへどのように埋め込まれ、読み取り専用・効率モデル・低 reasoning effort・構造化出力 schema と結び付くかを追いたいとき。
-- 対象がディレクトリの場合に、直下の目次本文を入力内容として扱う前提を確認したいとき。
+- ルーティング文書用エントリー生成で、AI に渡すプロンプト、補助指示、対象本文の埋め込み方、出力 schema の指定を確認または変更したいとき。
+- エントリー生成結果を検証する実装やテストで、必須項目、文字列配列、追加項目禁止といった structured output の外形を確認したいとき。
+- 対象がファイルまたはディレクトリの場合に、生成対象パスや直下内容がどのようにエージェント呼び出しへ渡るかを追いたいとき。
+- インデックスエントリー生成時のファイルアクセスモード、モデルクラス、reasoning effort、schema 連携を確認したいとき。
 
 ## Do not read this when
-- cmoc indexing の CLI 引数解析、対象列挙、ハッシュ判定、並列実行、生成結果の保存、コミット処理、またはサブコマンド全体の実行フローを確認したいとき。
-- 生成済み INDEX.md の Markdown 表示形式、レンダリング処理、構造化文書表現、共通プロンプト部品、パス解決、または agent call 型そのものを調べたいとき。
-- 既存の目次情報の内容、各ディレクトリのルーティング方針、生成済みエントリーの品質評価、または INDEX.md を読む利用側の挙動だけを確認したいとき。
-- Codex CLI や LLM の出力品質そのもの、または indexing 以外のサブコマンド仕様を確認したいとき。
+- 生成済みの目次情報そのものや、各ディレクトリのルーティング内容の良し悪しを確認したいだけのとき。
+- 特定の対象について実際に読むべきかどうか、またはエントリーに書く意味内容の判断基準を確認したいとき。
+- プロンプト部品の共通構築、Markdown レンダリング、構造化文書表現、パス解決、エージェント呼び出し型の定義そのものを調べたいとき。
+- CLI 引数解析、対象ファイル探索、生成結果の保存、コマンド実行フロー、または INDEX.md を利用して作業対象を選ぶ側の挙動を調べたいとき。
 
 ## hash
-- 1c86ce9a89b73fdca13f36e355c37fadb75ce2701c89527a52928027d36d403d
+- d2279f0da7c6e9f6fb967482165c38fdf8c28afaf6c1ff93dfef1a184fcf09f7
 
 # `review`
 
@@ -65,25 +65,24 @@
 # `session`
 
 ## Summary
-- `cmoc session join` で検出済みの merge conflict marker を解消するため、AI エージェントへ渡す呼び出しパラメータを構築する領域。
-- conflict 対象パスの work root 基準実パスへの解決、解消対象ファイル一覧、作業制限、oracle file の例外的な最小編集許可、git add・git commit 禁止を含む complete prompt と AgentCallParameter の組み立てを扱う。
+- `cmoc session join` で merge conflict marker 解消を AI エージェントへ依頼するための呼び出しパラメータ構築を扱う領域。
+- conflict 対象パスの実パス化、対象ファイル一覧の提示、作業範囲・編集禁止事項・oracle file への限定的な例外許可を含む complete prompt の組み立てを確認する入口。
+- 利用モデル、reasoning effort、ファイルアクセスモード、生成済み markdown prompt を agent 実行パラメータへ渡す処理を扱う。
 
 ## Read this when
-- `cmoc session join` 中の conflict marker 解消を担当するエージェント呼び出し内容を確認または変更したいとき。
-- conflict 解消担当へ渡す role、summary、goal、補助 prompt、対象ファイル一覧の文面や構成を調整したいとき。
-- conflicted paths を実パスへ解決し、編集対象パスとして AgentCallParameter に渡す流れを確認したいとき。
-- merge conflict marker 解消時に限って oracle file の必要最小限の編集を許可する例外ルールや、git add・git commit を禁止する制御を確認したいとき。
-- conflict 解消タスクで使うモデル種別、推論強度、ファイルアクセスモード、complete prompt rendering の設定箇所を確認したいとき。
+- `cmoc session join` の conflict marker 解消を AI エージェントへ委譲するための prompt 内容や実行パラメータを確認・変更したいとき。
+- conflict 対象ファイルの実パス解決、対象一覧の提示、作業範囲の説明が agent 向け文書へどう埋め込まれるかを確認したいとき。
+- conflict 解消時の編集可能範囲、仕様改訂や対象外ファイル編集の禁止、git add/commit 禁止、conflict marker 残存禁止などの制約を確認したいとき。
+- oracle file に conflict marker がある場合だけ、conflict 解消に必要な最小限の編集を許可する方針を確認したいとき。
 
 ## Do not read this when
-- `cmoc session join` 全体の orchestration、branch 操作、merge 実行、conflict 検出の流れだけを調べたいとき。
-- merge conflict marker の有無を検出する処理や、marker の内容を解析して選択・削除するアルゴリズムを探しているとき。
-- AgentCallParameter、ModelClass、ReasoningEffort、FileAccessMode の定義や共通仕様を確認したいとき。
-- complete prompt の共通構築規則、oracle/realization 標準 prompt、StructDoc の markdown rendering を調べたいとき。
-- 通常の realization write 権限や oracle file 編集禁止ルールそのものの基本定義を確認したいとき。
+- `cmoc session join` 全体の制御フロー、merge 実行、conflict marker 検出そのものを調べたいとき。
+- complete prompt の共通構造、markdown レンダリング、構造化ドキュメント部品の汎用仕様を調べたいとき。
+- path model の語彙定義、作業ルート解決、実パス解決の共通仕様や共通実装を調べたいとき。
+- conflict 解消後の検証、保存、コミット、ブランチ操作など、agent 呼び出しパラメータ構築の外側にある処理を調べたいとき。
 
 ## hash
-- 6db380564eacbecaf7b8408e8d043936111d3713b708311986248c9f0734f837
+- 9a2f6d3958ca7a062f831b72e14760fc17a7b00c304e271bb519ccae350825a1
 
 # `tui`
 

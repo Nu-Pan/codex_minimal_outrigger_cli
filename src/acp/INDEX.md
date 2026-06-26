@@ -1,25 +1,25 @@
 # `builder`
 
 ## Summary
-- cmoc の各サブコマンドや TUI 実行前処理で、AI エージェントへ渡す AgentCallParameter を組み立てる領域。role、summary、goal、補助コンテキスト、file access mode、model class、reasoning effort、Structured Output schema の対応を、用途別の prompt 構築実装として扱う。
-- 下位領域は、適用レビュー、oracle レビュー、session join の conflict 解消、indexing のルーティング文書エントリー生成、TUI の実行パラメータ解決に分かれる。各 AI 呼び出しが、どの標準文書や対象本文を読み取り専用または書き込み可能コンテキストとして渡すかを確認する入口になる。
+- サブコマンドや TUI 実行前処理から AI エージェントを呼び出すためのパラメータ構築をまとめる領域。工程ごとの role・goal・補助コンテキスト・file access mode・model class・reasoning effort・Structured Output schema の組み合わせを定義する。
+- レビュー所見列挙、所見修正依頼、差分要約、oracle レビュー、merge conflict 解消、ルーティング文書エントリー生成、TUI パラメータ解決など、用途別の prompt builder と出力契約への入口になる。
 
 ## Read this when
-- cmoc 内で AI エージェント呼び出しの prompt や AgentCallParameter を構築する実装を探しているとき。
-- サブコマンドごとに、AI へ渡す役割、目的、補助プロンプト、参照標準、file access mode、model class、reasoning effort、出力 schema の組み合わせを確認または変更したいとき。
-- apply fork の所見列挙、所見対応、変更要約、review oracle の所見列挙・理由検証・採否判定・所見整理、session join の conflict 解消、indexing のエントリー生成、TUI の実行パラメータ解決のいずれかの AI 呼び出し仕様を追いたいとき。
-- Structured Output schema を持つ AI 呼び出しについて、後続処理が受け取る機械処理用結果の意味上の責務を確認したいとき。
-- oracle file、realization file、git diff、conflict 対象ファイル、ユーザー入力 prompt、既知所見や理由などを、AI 呼び出しの補助文脈としてどのように渡すかを調べたいとき。
+- 特定の cmoc サブコマンドが AI エージェントへ渡す complete prompt、補助文脈、標準文書参照、アクセス権限、モデル設定、出力 schema を確認または変更したいとき。
+- AI 呼び出しの入力として、対象パス、git diff、所見リスト、既知理由、conflict 対象一覧、元プロンプトなどがどのように埋め込まれるかを追いたいとき。
+- Structured Output schema が、レビュー所見、所見理由、採否判定、所見整理操作、変更要約、INDEX.md エントリー、TUI パラメータ選択結果としてどの機械処理契約を持つか確認したいとき。
+- file access mode、model class、reasoning effort、schema ファイル有無の組み合わせを、用途別のエージェント呼び出しパラメータとして調べたいとき。
+- 共通 prompt 部品を使う側の実装として、サブコマンド固有の role・summary・goal・aux prompt がどう組み立てられるか確認したいとき。
 
 ## Do not read this when
-- 各サブコマンド全体の制御フロー、CLI 引数解析、ブランチ操作、git コマンド実行、対象列挙、保存、表示、並列実行など、AI 呼び出しパラメータ構築の外側を調べたいとき。
-- oracle standard、realization standard、review oracle standard、apply review standard、index entry standard そのものの本文や定義を確認したいとき。
-- AgentCallParameter、ModelClass、ReasoningEffort、FileAccessMode、StructDoc、complete prompt rendering、path 解決などの共通基盤の型定義や汎用実装を調べたいとき。
-- 実際の oracle file や realization file の内容、個別差分、conflict marker の解析、所見の保存形式、または変更カテゴリ分類の具体処理を確認したいとき。
-- AI 呼び出しではなく、人間向けのコマンド出力、TUI 表示、エディタ入力処理、テスト実行手順、補助スクリプト、生成物キャッシュを調べたいとき。
+- サブコマンド全体の制御フロー、CLI 引数解析、ファイル探索、git コマンド実行、保存、表示、ブランチ操作など、AI 呼び出しパラメータ構築の外側を調べたいとき。
+- complete prompt の共通構造、Markdown レンダリング、構造化ドキュメント部品、AgentCallParameter 型、file access rule、パス解決の汎用実装そのものを調べたいとき。
+- oracle standard、realization standard、review standard、apply review standard、index entry standard の本文や判断基準そのものを確認したいとき。
+- 実際の oracle file や realization file の仕様・実装内容、個別差分の検出処理、変更カテゴリ分類、conflict marker 検出などの具体的な処理ロジックを調べたいとき。
+- 生成済み INDEX.md の内容や、ルーティング文書として各エントリーが妥当かどうかを確認したいだけのとき。
 
 ## hash
-- af100ef39b8d4727bf0cba76688ff7d498dda8a447d312825bf724fb088b7140
+- d2a1ff13e7c9eb45eaef45de557128432770d36ed0e1a612ae6904d022892c93
 
 # `prompt_parts`
 

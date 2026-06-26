@@ -99,24 +99,26 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI 呼び出し用の実行時プロファイルを組み立てる補助モジュール。FileAccessMode から sandbox_mode や permission profile 設定を生成し、Codex home の解決・検証、profile/schema のハッシュ付き保存、Codex JSONL 出力からのエラー・resume token 抽出を扱う。
+- Codex CLI 起動用の実行時設定を組み立てる共通処理を扱う。モデル・reasoning effort・sandbox/permission profile・Codex home・認証情報・schema 一時配置・JSONL 出力解析など、Codex サブプロセスを呼ぶ前後の環境準備とエラー判定をまとめる入口である。
+- file access mode から Codex 側の sandbox mode や permission profile へ変換し、作業ルート、oracle、memo、.agents、追加 read path の読み書き制約を profile text として表現する責務を持つ。
+- Codex CLI の stdout/stderr からエラー本文、resume token、capacity/quota 系エラーを取り出す補助処理も含むため、Codex 呼び出し失敗時の分類や再実行制御を追う際の参照先になる。
 
 ## Read this when
-- AgentCallParameter と CmocConfig から Codex CLI に渡す profile 設定文字列または config.toml ファイルを生成する処理を確認・変更したいとき。
-- FileAccessMode ごとの read/write/deny_read/read_only/writable_roots の割り当て、memo・oracle・.agents のアクセス制御、extra_read_paths や writable_file_paths の扱いを確認したいとき。
-- CODEX_HOME の解決、Codex home の存在・ディレクトリ・auth.json 検証、Codex subprocess に渡す環境変数を扱う処理を確認したいとき。
-- Codex CLI の stdout/stderr や JSONL からエラーメッセージ、capacity/quota 判定、thread resume token、出力 JSON を読み取る処理を確認したいとき。
-- Structured Output schema を一時保存する処理や、runtime 用生成ファイルをハッシュ名で保存する流れを追いたいとき。
+- AgentCallParameter と設定から Codex CLI 用 profile text または profile file を生成する処理を変更・確認したいとき。
+- FileAccessMode ごとの read/write/deny_read/read_only/writable_roots の対応、または root と extra read path が permission profile にどう反映されるかを確認したいとき。
+- CODEX_HOME の解決、Codex home の存在・ディレクトリ・auth.json 検証、Codex サブプロセスへ渡す環境変数を扱うとき。
+- Codex 呼び出し用に schema source を hashed file として配置する処理、または Codex の出力 JSON を寛容に読み取る処理を扱うとき。
+- Codex CLI の JSONL stdout と stderr から利用者向けエラー文、thread id、capacity error、quota error を抽出する制御を調べるとき。
 
 ## Do not read this when
-- AgentCallParameter や FileAccessMode 自体の定義、モデル種別・reasoning effort の型定義を確認したいだけなら、それらを定義する基本モデル側を読む。
-- 設定ファイル全体の読み込みや CmocConfig の定義・既定値を確認したいだけなら、設定モデル側を読む。
-- ハッシュ付きファイル保存の具体的な命名規則や書き込み実装を確認したいだけなら、runtime content 側を読む。
-- schema 保存先ディレクトリなど、runtime パスの定義そのものを確認したいだけなら、runtime paths 側を読む。
-- Codex CLI プロセスの起動手順、コマンドライン引数、サブコマンド制御全体を確認したい場合は、呼び出し元の実行制御モジュールから読む。
+- Codex profile の材料になるモデル名・reasoning effort の設定定義そのものを調べたいだけのときは、設定オブジェクト側を直接読む。
+- FileAccessMode や AgentCallParameter の列挙値・データ構造そのものを確認したいだけのときは、基本型定義側を直接読む。
+- hashed file の保存方式、schema store のディレクトリ決定、または path model の定義を調べたいときは、それぞれの保存処理・runtime path 処理側を読む。
+- Codex サブプロセスを実際に起動するコマンド構築やプロセス実行の流れを追いたいときは、この共通補助ではなく呼び出し元の実行制御を読む。
+- oracle/realization の仕様判断や INDEX.md 生成方針そのものを確認したいときは、仕様文書側を読む。
 
 ## hash
-- 4e0ca8f82b940749559f4d4a72e9f8a70821dd311ce199b30414c5dd7124e56e
+- b810d07a9cfa54d653563506bbea37d97de8ad10928b4599a9ad00865c3de3d6
 
 # `runtime_config.py`
 
