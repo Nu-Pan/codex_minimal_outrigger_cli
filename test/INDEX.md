@@ -99,23 +99,22 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基本ランタイム挙動を横断的に検証する realization test。パス token 解決、時間表示、repo root と work root の判定、設定既定値、構造化エラー表示、branch 形状検証、CLI preflight と補完 probe、.cmoc ignore、file access mode、binary 判定、Codex profile のファイルアクセス制御を扱う。
-- 単一機能の詳細テストというより、runtime・CLI・設定・権限 profile まわりの基礎契約が崩れていないかを確認する入口になる。
+- cmoc の基本的な runtime 挙動を横断的に検証する realization test。パスモデル、時間表示、worktree 判定、設定既定値、構造化エラー出力、session/apply branch 形状、CLI preflight と補完 probe、.cmoc の ignore 設定、file access mode、binary 判定、Codex profile の権限生成を扱う。
+- 個別機能ごとの詳細な単体テストというより、runtime の公開挙動と制御ロジックが既存の期待から外れていないかを確認する入口として位置づけられる。
 
 ## Read this when
-- cmoc の runtime 共通部品、CLI 起動前検証、エラー出力、file access mode、Codex profile の sandbox/permission 設定に関する既存テスト観点を確認したいとき。
-- パス token、repo root/work root、session/apply branch 名、状態 load、.gitignore 更新、binary 判定など、複数の基礎機能にまたがる挙動変更の影響範囲を確認するとき。
-- CLI のエラーが stdout に出ること、completion probe が通常 preflight や副作用を避けること、work root 以外で init を拒否することを検証したいとき。
-- memo の deny_read、oracle や .agents の read_only、PURE_ORACLE_READ と REPO_WRITE など、権限 profile の生成内容を変更・調査するとき。
+- runtime の基礎挙動を変更し、パス token 解決、repo root と work root の区別、duration 表示、設定既定値、または状態 branch 名の解釈に影響する可能性があるとき。
+- CLI のエラー表示先、構造化エラー markdown、引数解析失敗時の扱い、work root preflight、shell completion probe 時の副作用抑制を確認したいとき。
+- .cmoc を git ignore へ反映する処理、file access mode と sandbox mode の対応、memo や oracle などの読み書き権限を含む Codex profile 生成を変更するとき。
+- runtime_content の binary 判定が読む byte 数やファイル open mode を変える変更を行うとき。
 
 ## Do not read this when
-- 個別サブコマンドの正常系ワークフローや Codex 実行内容そのものを確認したいだけのときは、より対象機能に近いテストや実装を読む。
-- oracle file の正本仕様を確認したいときは、この realization test ではなく oracle 配下の該当本文を読む。
-- INDEX.md 生成規則やルーティング文書の仕様を確認したいときは、このテストではなく、その仕様本文を読む。
-- 特定 helper の内部実装だけを追いたい場合は、この横断テストを入口にせず、該当する src 側 module を直接読む。
+- 特定サブコマンドの通常成功フロー、対話 UI、agent 呼び出し本体など、ここで検証している runtime 横断の境界条件に触れない変更だけを調べるとき。
+- oracle file の正本仕様を確認したいとき。この対象は realization test であり、仕様の根拠としてではなく実装挙動の検証対象として読む。
+- 単一 helper の内部実装だけを確認すれば十分で、外部挙動や CLI 出力、権限 profile、git worktree 状態に影響しないことが明らかなとき。
 
 ## hash
-- 103208560e045edacc503cd7265322ccbd9754c4c96be33e177e87f9f7f41290
+- ff7d26f26cc822e6a0d7b96400e63cee6568464ad8f8547fd47d4afce9db38c5
 
 # `test_cli_init_tui.py`
 
@@ -257,22 +256,23 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- プロンプト部品と実行パラメータ生成のテスト群。構造化ドキュメントの Markdown 描画、routing rule や各種 standard の挿入条件、file access rule のモード別文言、apply fork・review oracle・session join・TUI resolve・indexing 向けパラメータのモデル設定や schema 制約を検証する。
-- プロンプト組み立てが、oracle/realization の基準用語、INDEX ルーティング、補助プロンプト、コードブロック、空行正規化、標準文書の既定オン/オフを期待どおり扱うかを確認する入口になる。
+- prompt 部品とパラメータ builder の振る舞いを検証する realization test。StructDoc の Markdown 描画、routing rule や各 standard の注入有無、file access rule のモード別文言、各 builder が設定する model class・reasoning effort・file access mode・schema 制約を扱う。
+- apply fork、review oracle、session join、TUI resolve、indexing index entry など、複数領域の prompt 生成・Structured Output schema・実行パラメータ選定が期待通り連携しているかを横断的に確認する入口になる。
 
 ## Read this when
-- プロンプト部品を生成する関数、標準文書を組み込む complete prompt、または StructDoc の Markdown 描画仕様を変更する。
-- file access mode ごとの読み書き制約文言や、apply fork・review oracle・session join・TUI resolve・indexing の実行パラメータを変更する。
-- structured output schema の制約、特に変更要約、TUI パラメータ選定、review oracle finding merge の妥当性検証を確認・更新する。
-- oracle file、realization file、INDEX.md、標準用語など、プロンプト内に保持すべき基準語句が欠落・混入していないか調べる。
+- prompt_parts や builder が生成する prompt に、routing rule、oracle/realization/apply/review/index entry standard、base prompt、aux prompt が正しく含まれるかを変更・確認したいとき。
+- StructDoc と StructCodeBlock の Markdown レンダリングで、通常本文の連続空行を畳みつつ code block 内の空行を保持する挙動を確認したいとき。
+- file access mode ごとの file access rule 文言、または builder が選ぶ FileAccessMode・ModelClass・ReasoningEffort を変更する影響を確認したいとき。
+- apply fork の file finding、finding application、change summary が repo root と apply worktree をどう扱うかを確認したいとき。
+- change summary、TUI resolve parameter、review oracle merge finding などの Structured Output schema の必須項目・enum・kind ごとの契約を変更したいとき。
 
 ## Do not read this when
-- 個別 CLI コマンドの実行挙動やファイルシステム操作の実装だけを調べたい場合。
-- プロンプト本文やパラメータ builder ではなく、アプリケーション本体の業務ロジック、永続状態、Git 操作の詳細を追う場合。
-- 特定の schema ファイルそのものの定義内容を確認したいだけで、テストが期待する検証観点を知る必要がない場合。
+- 個別の prompt 文言や schema 制約ではなく、CLI 実行フロー、永続状態、git 操作、worktree 管理そのものの実装を調べたいとき。
+- oracle file の正本仕様や routing/index entry/realization standard の本文を確認したいだけのときは、このテストではなく該当する仕様本文または生成元を読む方が直接的。
+- 単一 builder の内部実装だけを追いたい場合で、期待される外部挙動や既存テスト観点を確認する必要がないとき。
 
 ## hash
-- df8011452d8944ac440ad78a94a0f5644bd671fd2575545cea11f94673651bd2
+- 46972d996ce91d07ad54b8ef125fa935fee611dafd80956aed7d9bae9745c8ef
 
 # `test_review_oracle_cli.py`
 
@@ -298,20 +298,20 @@
 # `test_session_cli.py`
 
 ## Summary
-- session サブコマンドの CLI 挙動を検証する realization test。session fork による session branch と状態ファイル作成、linked worktree 上での branch/head の扱い、session abandon の正常系・失敗時 rollback・出力、session join の merge/conflict 解決・状態更新・branch 削除失敗時 warning を扱う。
-- Git 操作、状態 JSON、Typer runner、Codex 実行の monkeypatch を組み合わせ、session 操作が現在の worktree と home branch を正しく保つかを外部挙動として確認する入口になる。
+- session サブコマンドの CLI 挙動を検証する realization test。session fork による session branch と state 生成、linked worktree 上での branch/head 扱い、session abandon の home branch 復帰・branch 削除・state 更新・失敗時 rollback、session join の merge/conflict 解決・linked worktree 対応・削除競合 staging・session branch 削除失敗時 warning を確認する。
 
 ## Read this when
-- session fork、session abandon、session join の CLI 挙動や退避・合流フローを変更する時。
-- session state JSON の session_home_branch、session_start_commit、state、apply state、joined 後の状態更新に関わる実装を確認・変更する時。
-- linked worktree 上で session 操作した場合に、root worktree と linked worktree の branch がどう保たれるべきかを確認する時。
-- session join の conflict resolution で Codex 実行を呼ぶ条件、file access mode、解決後の staging、削除 conflict の扱いを確認する時。
-- session branch の削除失敗、home branch 不在、cleanup 失敗など、session 操作の失敗時出力・rollback・branch 保持を検証する時。
+- session fork、session abandon、session join の外部挙動や state 更新条件を変更する。
+- session branch、session home branch、session_start_commit、active/abandoned/joined などの session state の扱いを確認する。
+- linked worktree 上で session 操作した場合に、root 側と linked 側の current branch や commit がどう保たれるかを確認する。
+- session join の conflict resolution で Codex 実行 profile の file access mode や oracle 書き込み権限を確認する。
+- session abandon や session join の失敗・警告出力、cleanup 失敗時 rollback、branch 削除失敗時の出力を変更する。
 
 ## Do not read this when
-- session 以外の CLI サブコマンド、設定、path model、oracle/realization の概念そのものを調べたい時。
-- session 実装の内部構造や helper の責務を先に把握したいだけで、CLI 外部挙動や既存回帰テストの期待値を確認する段階ではない時。
-- Codex CLI や LLM の出力品質そのものを検証したい時。この対象は Codex 実行を monkeypatch し、session join の制御ロジックだけを確認する。
+- session 以外の CLI サブコマンドの正常系・異常系を確認したい。
+- CLI 実装の内部構造や helper の責務を先に把握したいだけで、session コマンドの期待挙動を確認する段階ではない。
+- oracle 正本仕様断片そのものを確認・編集したい。
+- Codex profile 生成の一般仕様だけを確認したい場合で、session join の conflict resolution 経由の権限設定に関心がない。
 
 ## hash
-- e7f31fb54c72e347bfe0b5bcc69678d976a54ef73a149b92a1b2f24a31da91c8
+- 42e199142831d2c016f892371fcaf13d0e7ded87a006cd87f9f39fa13c011d98

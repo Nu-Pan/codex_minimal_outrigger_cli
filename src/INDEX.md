@@ -1,20 +1,24 @@
 # `acp`
 
 ## Summary
-- `src/acp` は、AI agent call parameter と agent prompt の構築を担う実装領域。用途別の builder と、共通 prompt 部品を生成する prompt_parts を下位に持ち、role、goal、補助文脈、ファイルアクセス規則、ルーティング規則、標準文書、Structured Output schema を agent 呼び出しへ渡す形にまとめる入口になる。
+- cmoc が AI agent に渡す依頼内容を組み立てる領域。処理別の呼び出しパラメータ、Structured Output 契約、プロンプト部品、標準文書、ファイルアクセス規則、oracle/realization 関連説明を agent 用文脈へ構成する実装への入口となる。
+- CLI/TUI の実行制御そのものではなく、apply、indexing、review、session、tui などの各処理が AI に何を依頼し、どの補助文脈や出力 schema を使うかを確認するための下位領域を束ねる。
 
 ## Read this when
-- cmoc が Codex/AI agent へ渡す prompt、モデル種別、推論強度、ファイルアクセスモード、Structured Output schema の組み立てを追いたいとき。
-- indexing、apply 後レビュー、oracle review、session join、TUI parameter 解決など、サブコマンドや処理段階ごとの agent 呼び出し内容を確認または変更したいとき。
-- oracle/realization の基本説明、ファイルアクセス規則、ルーティング規則、各種 standard 文書がどのように complete prompt に注入されるか確認したいとき。
+- AI agent 呼び出しに渡す役割、目的、追加文脈、標準文書、ファイルアクセス権限、モデル設定、reasoning effort、Structured Output schema の構成を確認または変更したいとき。
+- 差分要約、apply review、INDEX.md エントリー生成、oracle review、merge conflict marker 解消、TUI 実行前パラメータ解決など、処理別の AI サブタスクがどの契約で呼び出されるかを調べたいとき。
+- agent 用プロンプトに、ファイル読み書き制約、INDEX.md ルーティング規則、oracle file と realization file の責務境界、各種 standard がどの文面・順序・有効化条件で組み込まれるかを追いたいとき。
+- AI に渡す入力文脈を組み立てる責務と、AI から返させる構造化結果の意味単位を、処理種別ごとの入口から切り分けたいとき。
 
 ## Do not read this when
-- CLI サブコマンド全体の実行順序、引数解析、git 操作、状態保存、画面表示など、agent 呼び出し前後の制御フローを調べたいとき。
-- path model、構造化文書型、AgentCallParameter や FileAccessMode などの基礎データ型そのものを調べたいとき。
-- oracle file や realization file の正本仕様本文、レビュー判断基準の詳細、生成済み INDEX.md の内容そのものを読みたいとき。
+- CLI サブコマンド全体の引数解析、実行制御、git 操作、ファイル探索、結果保存、画面表示、統合フローそのものを調べたいとき。
+- prompt に埋め込まれる oracle file、realization file、個別 standard の正本本文そのものを読みたいとき。
+- AgentCallParameter 型、モデル enum、ファイルアクセス権限 enum、構造化文書の markdown 化、パス解決 helper など、共通部品そのものの定義を確認したいとき。
+- AI が返した所見、理由、変更要約、判定結果の中身を評価したいだけで、呼び出しパラメータや出力契約を確認・変更しないとき。
+- 実装やテストの一般的な品質基準、oracle/realization の設計原則、INDEX.md エントリーの書き方だけを確認したいとき。
 
 ## hash
-- bbf2ca64724028b0dd80c27ac0bd07269d2efdd1c0c45d84bffbdf28ff756dd0
+- efe5db809767769f3d163ae1e9f517fff608baa8f41467797353f629beb26d1d
 
 # `basic`
 
