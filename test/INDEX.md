@@ -205,22 +205,21 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- プロンプト部品とパラメータビルダーのテスト群。構造化ドキュメントの Markdown 描画、ルーティング規則、ファイルアクセス規則、各種標準文書の挿入有無、Codex CLI 向けの語彙置換、TUI パラメータ選定、apply fork・review oracle・session join 用プロンプト生成の基本契約を検証する。
-- 実装側のプロンプト生成・標準文書生成・実行パラメータ生成が、期待するタイトル、本文断片、モデル種別、reasoning effort、file access mode、schema 内容を保っているかを確認する入口となる。
+- プロンプト部品と実行パラメータ生成の挙動を検証する realization test。レビュー基準、ルーティング規則、ファイルアクセス規則、各種 standard の Markdown 描画、complete prompt への標準文書の注入・省略、TUI resolve parameter の schema、各 builder の model class・reasoning effort・file access mode を扱う。
 
 ## Read this when
-- プロンプト生成処理、標準文書生成処理、構造化ドキュメントの Markdown 描画、またはベースプロンプトの語彙置換を変更する時。
-- ファイルアクセスモードごとの生成文面、apply review・routing・realization・index entry・review oracle などの標準文書の出力条件や本文断片を確認したい時。
-- apply fork、indexing、review oracle、session join、TUI resolve parameter の各ビルダーが選ぶモデル種別・reasoning effort・file access mode・schema 内容を変更または検証する時。
-- プロンプト内のコードブロックを置換対象から除外する挙動や、連続空行を折りたたむ Markdown 描画挙動のテスト根拠を確認したい時。
+- プロンプトを構成する標準文書や complete prompt の出力内容が期待語句を含むか確認したいとき。
+- ファイルアクセスモードごとのプロンプト文言、routing rule、realization standard、index entry standard、review/apply review standard の描画テストを確認したいとき。
+- apply fork、indexing、review oracle、session join、TUI resolve parameter などの builder が選ぶ model class、reasoning effort、file access mode、schema 内容を変更・検証するとき。
+- StructDoc と render_as_markdown の基本的な Markdown 出力、空行の正規化、コードブロック保持を変更するとき。
 
 ## Do not read this when
-- CLI 実行フロー、Git 操作、作業ツリー管理、永続状態管理など、プロンプト部品やパラメータビルダーと直接関係しない挙動を調べる時。
-- 標準文書やプロンプトの本文そのものの設計意図を詳しく確認したい時は、テストの期待断片だけでなく対応する実装または仕様文書を直接読む方がよい。
-- 個別ビルダーの内部実装を修正するだけで、期待される外部契約ではなく処理手順や helper 構造を知りたい時は、対応する実装側を直接読む方がよい。
+- 実際のプロンプト文書を生成する実装本体だけを確認したい場合は、対応する prompt_parts や builder の実装へ進む。
+- CLI コマンドの実行フロー、永続状態、git 操作など、プロンプト生成以外の挙動を調べたい場合は対象機能の実装・テストを読む。
+- oracle file の正本仕様そのものを確認したい場合は、このテストではなく oracle 配下の該当文書を読む。
 
 ## hash
-- e7bacbc71a7447ed09efc0b9414014ae69e74250d5106d702ec4047f16715521
+- d6700f30c83b0221cd43b5c88b06215d5d9255a6512926705ac6007000fc95ee
 
 # `test_review_oracle_cli.py`
 

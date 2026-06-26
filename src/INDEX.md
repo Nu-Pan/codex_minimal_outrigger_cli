@@ -1,26 +1,23 @@
 # `acp`
 
 ## Summary
-- AI エージェント呼び出しに渡す完全な依頼文と実行条件を組み立てる実装領域。役割、作業概要、完了条件、補助文脈、ファイルアクセス制約、利用モデル種別、推論強度、機械処理用の出力 schema を、用途ごとの呼び出しパラメータとしてまとめる。
-- 下位には、所見列挙・所見対応・変更要約、仕様文書レビュー、merge conflict 解消、ルーティング文書エントリー生成、TUI 実行パラメータ選定などの個別 AI 呼び出し仕様と、各呼び出しへ差し込む標準文書・規則文書・概念説明の prompt 部品が含まれる。
-- 個別サブコマンドの外側の制御ではなく、AI にどの文脈を読ませ、どの権限で作業させ、どの基準文書と出力形式を与えるかを確認する入口になる。
+- AI agent に渡す prompt と AgentCallParameter を構成する実装領域。用途別の呼び出しパラメータ組み立てと、共通プロンプト部品・標準文書生成を扱う。
+- サブコマンドや TUI から AI を呼ぶ際に、role、goal、補助文脈、file access mode、model class、reasoning effort、Structured Output schema、標準プロンプトをどう組み合わせるかを確認する入口になる。
 
 ## Read this when
-- cmoc から AI エージェントへ渡す prompt、AgentCallParameter、file access mode、model class、reasoning effort、Structured Output schema の組み合わせを確認または変更したいとき。
-- 所見列挙、所見対応、変更要約、仕様文書レビュー、所見理由の検証、所見採否判定、所見整理、merge conflict 解消、ルーティング文書エントリー生成、TUI 実行パラメータ選定のいずれかで、AI 呼び出し前に構築される依頼文と補助文脈を追いたいとき。
-- oracle file、realization file、git diff、conflict 対象ファイル、ユーザー入力 prompt、既知所見、理由リストなどを、AI 呼び出しの補助文脈としてどのように埋め込むか調べたいとき。
-- AI に提示するファイルアクセス規則、ルーティング規則、oracle file と realization file の概念説明、oracle・realization・review・apply review・INDEX.md エントリーの各基準文書を、構造化ドキュメントとして組み立てる実装を確認したいとき。
-- 標準文書を完全な prompt へ合成する順序、標準同士の依存関係、Codex CLI 向けの用語置換や root token 置換を確認したいとき。
+- AI agent 呼び出しの prompt、AgentCallParameter、または Structured Output schema 付きの入出力契約を確認・変更したいとき。
+- apply review、review oracle、session join、indexing、TUI 実行など、用途別に AI へ渡す役割・目的・参照文書・対象本文・補助文脈の組み立てを追いたいとき。
+- oracle、realization、review、file access、routing、INDEX.md entry などの共通標準が、agent prompt 内の構造化文書としてどう生成・注入されるかを調べたいとき。
+- ユーザー入力、git diff、conflict 対象、oracle file、realization file、既知所見、理由などを AI 呼び出しのコンテキストとして渡す実装を探しているとき。
 
 ## Do not read this when
-- CLI 引数解析、サブコマンド全体の制御フロー、対象ファイル列挙、git 操作、ブランチ操作、永続状態の保存、表示、並列実行など、AI 呼び出しパラメータ構築の外側を調べたいとき。
-- AgentCallParameter、FileAccessMode、ModelClass、ReasoningEffort、StructDoc、標準文書型、path model、root token 解決などの共通型や汎用 helper の定義そのものを調べたいとき。
-- 正本仕様としての oracle file 本文を確認したいとき、または標準文書の人間管理仕様を変更・レビューしたいとき。実装された prompt 部品ではなく、対応する oracle 側の本文を直接読むべきである。
-- 実際の oracle file や realization file の内容、個別差分、conflict marker の具体的な解析、所見データの保存形式、変更カテゴリ分類、またはテスト期待値を確認したいとき。
-- AI 呼び出し実行処理、サンドボックスや権限適用の実体、外部コマンド実行、エディタ入力、TUI 表示、人間向け出力、補助スクリプト、生成キャッシュを調べたいとき。
+- CLI 引数解析、サブコマンド全体の制御フロー、git 操作、状態保存、並列実行、TUI 表示など、AI 呼び出しパラメータ構築の外側を調べたいとき。
+- AgentCallParameter、ModelClass、ReasoningEffort、FileAccessMode、StructDoc、path model などの共通基盤型や汎用レンダリング処理そのものを調べたいとき。
+- oracle file や realization file の本文、個別差分、conflict marker 解析、所見保存形式、変更カテゴリ分類など、AI に渡される対象データ側の具体処理を確認したいとき。
+- 標準文書の内容だけを読みたい場合で、すでに読むべき個別プロンプト部品や正本仕様断片が分かっているとき。
 
 ## hash
-- a9ef1ea3401b413710c88ab882df3bb7be98b2246855f867866af6ae8eda4786
+- ca6071480c073715c8e0254d12d531b00ad684da6e52288f225350a2ee84e48b
 
 # `basic`
 
