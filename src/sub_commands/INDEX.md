@@ -1,23 +1,23 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実装まとまりで、apply run の開始、破棄、join、実行時 process 管理、fork report 生成への入口になる。
-- session branch と apply branch/worktree、apply state、apply process、git worktree/branch 操作、Codex CLI 呼び出し、結果 report のような apply 固有の制御を扱う下位実装を選ぶためのディレクトリ。
+- apply 系サブコマンドの実装群をまとめる領域。apply run の開始、破棄、join、実行状態管理、実行結果 report 生成までの入口になる。
+- apply 用 worktree と branch、session state、process id、実行中 process の停止、差分適用 loop、merge・cleanup・report 出力など、apply run のライフサイクルに関わる実装へ進むための案内対象。
 
 ## Read this when
-- apply run の lifecycle、つまり fork での開始、running apply process の扱い、abandon による破棄、join による session branch への取り込み、state 初期化までの流れを調べたいとき。
-- apply branch/worktree の探索・作成・削除、apply process id の永続化・停止、apply state の検証・更新など、apply サブコマンド固有の実行時状態を扱う実装へ進みたいとき。
-- apply fork の対象ファイル選択、finding 列挙・適用、commit 作成、編集禁止対象差分の検出・復元、fork report 生成のどこを読むべきか切り分けたいとき。
-- apply join や apply abandon の実行条件、clean worktree 検証、merge conflict や warning 出力、後片付けの責務分担を確認したいとき。
+- apply run の開始から完了・破棄までの状態遷移、実行条件、cleanup、利用者向け出力のどの実装を読むべきか切り分けたいとき。
+- apply branch や apply worktree の作成・探索・削除、session branch への join、running process の停止、process id の永続化など、apply 実行時状態に関係する処理を調べる入口が必要なとき。
+- apply fork の調査対象列挙、finding 適用 loop、commit 作成、編集禁止対象の差分検出、通常終了・エラー終了 report の生成経路を追いたいとき。
+- apply abandon、apply join、apply fork のどれに関係する変更か未確定で、同階層の具体的な実装対象へ進む前に責務境界を確認したいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンドの CLI 定義、dispatch、実行フローを調べたいとき。
-- session state schema、path model、git command wrapper、config 読み込み、report 保存先など、複数サブコマンドで使う共通 runtime の基盤挙動だけを確認したいとき。
-- Codex に渡す AgentCallParameter の詳細プロンプトや structured output schema だけを変更したいとき。
-- oracle file、realization file、INDEX.md 生成規則など、apply サブコマンド実装ではなく cmoc 全体の仕様・ルーティング方針を確認したいとき。
+- apply 以外のサブコマンド、CLI 共通実行ラッパー、git 実行 helper、worktree 操作 helper、状態ファイル I/O の共通処理だけを調べたいとき。
+- session state file 全体の schema、path model、oracle や routing 文書の一般仕様など、apply 固有ではない定義を確認したいとき。
+- finding 列挙や finding 適用の parameter 構築、変更要約 prompt、indexing preflight など、apply から呼ばれる別責務の詳細だけを調べたいとき。
+- 特定の apply サブコマンドや低レベル runtime helper が読む対象として既に分かっており、この領域全体の責務境界を確認する必要がないとき。
 
 ## hash
-- e0801aa8795fea1b0f5ccc090b4aee28a3c90e70951c5d4eaee59b4d543bd850
+- 859759017c6fd0dddf84700124302cab37fd3f8e5e6db1bae1acfef65c421b54
 
 # `indexing.py`
 

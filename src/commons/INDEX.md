@@ -314,20 +314,20 @@
 # `runtime_state.py`
 
 ## Summary
-- session branch と apply branch に紐づく永続 state のデータ構造、JSON 復元・保存、branch 名からの session_id 抽出、現在 branch に対応する state file の読み込みを扱う。
-- home branch に紐づく active session state file を探索する入口も持ち、session state file の保存先と内容を扱う共通処理の集約点になっている。
+- session と apply run の永続状態を表す dataclass 群、状態 JSON の読み書き、cmoc 管理 branch 名から session_id を復元する検証ロジックを扱う。
+- active な session state file を home branch から探す処理も担い、session state file の構造・保存形式・branch 名との対応関係を確認する入口になる。
 
 ## Read this when
-- session state file の schema、既定値、未知 field の扱い、JSON への保存形式を確認したいとき。
-- cmoc 管理 branch 名から session_id を取り出す処理、または session branch と apply branch の branch 名検証を変更・確認したいとき。
-- 現在 branch に対応する session state file を読み込む処理や、state file が存在しない場合のエラーを確認したいとき。
-- home branch に対して active な session が既に存在するかを判定する処理を調べたいとき。
+- session state file に保存する session/apply の field、既定値、未知 field の扱いを変更・確認したいとき。
+- cmoc 管理 branch 名から session_id を取り出す条件や、session branch と apply branch の branch 名検証を変更・確認したいとき。
+- 現在 branch に対応する session state file の読み込み、存在しない state file のエラー、canonical JSON での書き戻しを扱うとき。
+- home branch に紐づく active session の探索条件を変更・確認したいとき。
 
 ## Do not read this when
-- 実際の git branch 作成・切替・commit 操作そのものを調べたいとき。
-- session state file の配置先を決める path model や sessions directory の定義だけを確認したいとき。
-- CLI 引数定義、コマンド dispatch、利用者向け出力の組み立てを調べたいとき。
-- CmocError の表示形式やエラー出力共通処理そのものを変更したいとき。
+- sessions directory の場所や root からのパス規則そのものを確認したいだけのときは、path 定義を扱う対象を読む。
+- CmocError の表示形式やエラーオブジェクト全体の設計を確認したいだけのときは、runtime error を扱う対象を読む。
+- git command の実行、branch の作成・切替・削除など、状態ファイルの読み書きや branch 名からの session_id 復元に触れない処理だけを扱うとき。
+- CLI 引数やサブコマンドのユーザー向け入出力だけを変更し、session/apply の永続状態構造に触れないとき。
 
 ## hash
-- 6210da600bbbe647a5df4d5a14ac143209c4ebd6dfbc83a1ef6b359ba006b31c
+- b16d6da13a18033f1063e5debd0365425c451d5b3b4543af3683c2c81b901ce7
