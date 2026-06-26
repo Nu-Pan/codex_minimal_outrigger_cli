@@ -151,25 +151,19 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 呼び出しの runtime テスト。exec 経路が prompt を標準入力で渡し、schema・profile・CODEX_HOME・stdout/stderr/call log・subcommand log を期待どおり扱うことを検証する。
-- Codex TUI 経路が exec サブコマンドを使わず prompt 引数で起動し、workspace write profile の writable/read-only 設定、call log、console 表示、戻り値を記録することを検証する。
-- repo 側 config が Codex profile の model と reasoning_effort に反映されること、worktree cwd 実行時に schema 保存先が cwd 側の work root になることを確認する。
+- Codex CLI 呼び出し runtime の realization test。`codex exec` が prompt を stdin で渡し、構造化出力 schema、profile、CODEX_HOME、stdout/stderr/call log、subcommand log、console 表示を正しく扱うことを検証する。
+- worktree 配下で実行する `codex exec` の cwd と schema 保存先、`codex` TUI 呼び出しの argv・sandbox profile・read_only_paths・call log、repo config による model/reasoning_effort 反映も確認する。
 
 ## Read this when
-- Codex CLI を起動する runtime 実装、特に exec と TUI の argv・cwd・環境変数・profile 生成・ログ出力を変更する時。
-- AgentCallParameter の model class、reasoning effort、file access mode、output schema が Codex profile や CLI 引数へどう反映されるかをテスト観点から確認したい時。
-- Codex 呼び出しログ、stdout/stderr ログ、subcommand logger の codex_call event、console 表示の期待値を変更または調査する時。
-- worktree 上で Codex exec を実行する場合の schema 保存先、root 側と cwd 側の .cmoc state/log の使い分けを確認する時。
-- repo config の codex model や reasoning_effort 設定が実行時 profile に反映されない不具合を調べる時。
+- Codex CLI 実行 wrapper、profile 生成、CODEX_HOME、prompt 受け渡し、構造化出力 schema、call log、subcommand log、console 表示に関する挙動を変更・確認する。
+- `run_codex_exec` または `run_codex_tui` の cwd、worktree 対応、sandbox workspace 設定、extra read path、repo config 読み込みのテスト観点を確認する。
 
 ## Do not read this when
-- Codex runtime ではなく、git 操作、oracle 生成、INDEX 生成、path model など別領域の挙動だけを調べる時。
-- Codex CLI の実物の出力品質や LLM 応答内容を検証したい時。このテストは fake codex と subprocess 差し替えで runtime の制御と副作用を検証する。
-- Codex profile 生成の実装詳細そのものを変更する場合で、まず実装の責務や helper 境界を知りたい時は、対応する runtime 実装を先に読む。
-- config schema や既定値の定義そのものを調べる時は、設定定義や同期処理の実装を先に読む。
+- Codex CLI 呼び出し runtime ではなく、一般的な git 操作、oracle/realization の分類、INDEX.md 生成規則、設定 schema 全体を調べたいだけの場合。
+- テスト helper や fixture の実装自体を変更する場合は、まず該当 helper 定義を読む方が直接的である。
 
 ## hash
-- be5c7105c0d916cd3989f402ac9d4c72e7c29fb82414c1641a19b58e7239da84
+- b6dee4fcfd59b2a4259d4aac95789bb5ff7bbf2b2a81f29a49d477740d3500f5
 
 # `test_codex_runtime_home.py`
 

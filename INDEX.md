@@ -171,24 +171,24 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 全体への入口であり、CLI サブコマンド、Codex runtime、INDEX 生成、prompt/schema、session/apply/review などの外部挙動と制御ロジックを pytest で検証する領域。
-- 一時 Git リポジトリや fake Codex 実行ファイルなどの共有 fixture を使い、oracle 由来の意図が実装上どのようなユーザー可視の出力、状態更新、Git 副作用、ログ、report として成立しているかを確認するためのテスト群を収める。
-- 実装仕様の正本ではなく realization test の集合なので、正本判断は oracle 側を優先しつつ、既存実装の回帰確認や外部挙動の期待値確認の入口として使う。
+- cmoc の realization test 群への入口。CLI サブコマンド、Codex 実行 runtime、INDEX 更新、prompt/schema 生成、session/apply/review の外部挙動と制御ロジックを、pytest と一時 Git リポジトリ・fake Codex 実行で検証する領域である。
+- 共通 fixture と helper も含み、テスト用 Git リポジトリ、Codex home、fake 外部コマンド、session/apply worktree の状態確認を支える。実装本文ではなく、oracle file で述べられた意図が現在の realization としてどのように観測されるかを確認するための読み口になる。
+- 大きなテストファイルが複数あり、apply fork/join/abandon、review oracle、prompt 構築などは、それぞれ同じ状態 fixture・fake 応答・report 文脈を共有する外部挙動確認として凝集している。
 
 ## Read this when
-- CLI サブコマンドの終了コード、標準出力・標準エラー、Git branch/worktree 操作、state cleanup、report 生成など、ユーザーから見える挙動を変更または確認したいとき。
-- apply fork/join/abandon、session fork/join/abandon、review oracle、init、tui、indexing などのコマンド変更に対して、既存の realization test がどの外部契約を守っているかを探したいとき。
-- Codex exec/TUI 呼び出し、CODEX_HOME、profile、retry、quota probe、call log、subcommand log、file access mode など、Codex runtime 周辺の制御と副作用を検証するテストを探すとき。
-- INDEX.md 生成・preflight・conflict 解決、root 直下 memo 除外、semantic fields、prompt parts、structured output schema など、ルーティング文書や prompt/schema 生成に関する回帰テストを探すとき。
-- 一時 Git リポジトリ、認証済み Codex home、fake external command、apply worktree path 解決など、テスト用 fixture や helper の使い方・変更箇所を確認したいとき。
-- 新しい realization test を追加する前に、同じ観点の既存テストへケース追加できるか、または既存 fixture を再利用できるかを確認するとき。
+- cmoc の CLI サブコマンドや runtime の変更後に、利用者から見える終了コード、標準出力、report、Git 状態、永続 state、cleanup、エラー表示の期待値を確認したいとき。
+- Codex 実行 wrapper、quota/capacity retry、Codex home、profile、call log、subcommand log、TUI 起動、prompt/schema 生成の回帰観点を調べるとき。
+- INDEX 更新、indexing preflight、INDEX.md conflict 解決、hash freshness、root 直下 memo 除外と nested memo 対象化など、ルーティング文書生成周辺の実装を変更・検証するとき。
+- session や apply の fork/join/abandon、linked worktree、branch/state cleanup、dirty worktree 拒否、merge conflict、running process 停止など、Git worktree と状態遷移を伴う CLI 挙動を確認するとき。
+- review oracle の対象列挙、所見 loop、merge operation、INDEX.md 取り込み、error report、許可されない差分の拒否など、oracle review の外部挙動を確認するとき。
+- 既存テストへ観点を追加できるか、または共通 helper/fixture を使えるかを確認してから、新しい realization test を追加したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片そのものを確認したいとき。ここにあるのは realization test であり、仕様判断の根拠は oracle 側の本文から読む。
-- プロダクト本体の実装責務、内部 helper の分割、型・状態モデル・path model の詳細を先に理解したいとき。まず対応する実装本文を読む方が直接的。
-- Codex CLI や LLM の実際の応答品質を検証したいとき。ここでは多くのテストが fake 実行ファイルや monkeypatch で cmoc 側の制御と副作用を確認している。
-- 個別コマンドや runtime 領域に関係しない補助ファイル、開発手順、正本文書の編集方針だけを調べたいとき。
-- すでに変更対象の実装ファイルと単体 helper が明確で、外部挙動や回帰観点を確認する必要がない小さな内部修正だけを行うとき。
+- oracle file の正本仕様断片そのものを確認したいとき。ここは realization test であり、仕様判断の根拠は oracle 配下の本文を優先する。
+- プロダクト本体の実装責務、内部 helper の純粋な入出力、schema 定義、path model、設定 loader などを直接変更したいだけで、外部挙動の回帰確認がまだ不要なとき。
+- Codex CLI や LLM の出力品質そのものを評価したいとき。ここでは多くのケースで fake 実行や monkeypatch により cmoc 側の制御と副作用を検証している。
+- 個別サブコマンドに関係しない一般的な Python、pytest、Typer の使い方だけを調べたいとき。
+- 共通 fixture や helper を変更しないまま、特定テストケースの期待値だけが必要な場合は、対象機能に対応する個別テストへ直接進む。
 
 ## hash
-- 5d777c5b389395d4df5063c9a701d1d762f2cce1abdb49bbc2d861cd306b032b
+- 4a12dc06df5edf1c7cd485c1389f3ea6772cd9f3aa7c664a0fa8d55878ce5d4a
