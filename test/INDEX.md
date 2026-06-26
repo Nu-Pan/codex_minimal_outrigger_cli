@@ -42,23 +42,24 @@
 # `test_apply_fork_cli.py`
 
 ## Summary
-- apply fork コマンドの realization test。Codex 実行を fake に差し替え、apply run の開始・完了、session state 更新、apply branch と worktree 作成、linked worktree からの開始、設定読み込み失敗時の未開始保証、`.cmoc` 追跡時の拒否、`.gitignore` の保持と apply branch 側での編集、root 直下 memo 除外と入れ子 memo 対象維持を検証する。
+- apply fork の CLI 経路を対象にした realization test。Codex 実行を fake に差し替え、apply run の開始・完了、session state、apply branch、worktree 配置、pid/state cleanup、所見列挙ループなどの外部挙動を検証する。
+- linked worktree 上での session branch/HEAD の扱い、session 側 .gitignore の保持、追跡済み .cmoc に対する拒否、config 読み込み失敗時に apply run を開始しないこと、所見対象としての .gitignore 編集、apply target 正規化で root 直下 memo だけを除外することを扱う。
 
 ## Read this when
-- apply fork の外部挙動、状態遷移、branch/worktree 作成規則、session 側 worktree を汚さない制御を変更・確認したいとき。
-- apply fork が linked worktree の HEAD を oracle snapshot と apply branch の起点にする挙動を確認したいとき。
-- apply fork の設定読み込み失敗、`.cmoc` が git 追跡対象になっている場合の拒否、pid/state/branch を作らない失敗時挙動を扱うとき。
-- apply fork の対象列挙や所見適用で `.gitignore`、root 直下 memo、入れ子 memo directory の扱いを変更・確認したいとき。
-- Codex CLI 実行そのものではなく、apply fork から Codex 呼び出しを行う制御ロジックを fake で検証したいとき。
+- apply fork コマンドの実行フロー、Codex 呼び出し、所見適用ループ、commit summary/message 周辺の挙動を変更または検証するとき。
+- apply fork が session state の apply 欄、apply branch、oracle snapshot commit、apply worktree path、pid file cleanup をどう更新するべきか確認したいとき。
+- linked worktree から apply fork を実行した場合の開始 commit、branch、worktree 配置に関するテスト期待値を確認するとき。
+- apply fork と .gitignore/.cmoc の関係、特に session 側 .gitignore を書き換えない制約や、追跡済み .cmoc を拒否する挙動を確認するとき。
+- apply fork の target 正規化で root 直下 memo を除外し、入れ子の memo directory を対象に残す境界を確認するとき。
 
 ## Do not read this when
-- apply fork 以外のサブコマンド、または apply fork の実装詳細だけを先に確認したいときは、該当する実装側を読む。
-- Codex や LLM の出力品質そのものを検証したいとき。この対象は fake 結果で制御ロジックと副作用を検証する。
-- oracle 正本仕様断片を確認したいとき。この対象は realization test であり、正本仕様ではない。
-- 一般的な test fixture、git helper、CLI runner の定義だけを確認したいときは、共通 test support 側を読む。
+- apply fork 以外の apply サブコマンド、review、session fork、init などの個別 CLI 挙動だけを調べるとき。
+- Codex CLI や LLM 出力品質そのものを検証したいとき。このテストは Codex 実行を fake にして apply fork 側の制御と副作用を検証する。
+- oracle file の正本仕様を確認したいとき。このファイルは realization test であり、仕様判断の根拠は対応する oracle file を優先する。
+- root 直下 memo の読み書き禁止そのものや、INDEX.md 生成ルールを調べるとき。ここで扱うのは apply target 正規化の境界だけである。
 
 ## hash
-- fa29df4c08243b05552d03556a31e16af13367194b97793bed0fc9b86a7b0abe
+- a811a856ca06368967ed5065ac684a9014ef2778cf20b285943ed2ef08bee58b
 
 # `test_apply_fork_report_cli.py`
 

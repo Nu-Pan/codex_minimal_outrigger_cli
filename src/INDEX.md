@@ -111,40 +111,43 @@
 # `main.py`
 
 ## Summary
-- Typer で cmoc の最上位 CLI アプリケーションと `session`、`apply`、`review` のサブアプリケーションを組み立て、各 CLI コマンドを対応する実装関数へ委譲する入口。
-- 補完時を除く Click の引数解析例外を cmoc 共通のエラーレポート形式へ変換する TyperGroup を定義し、console script から `cmoc` として起動する処理を持つ。
+- Typer による cmoc の最上位 CLI 入口を定義し、`session`、`apply`、`review` などのサブコマンド階層と各 command から実装関数への委譲を束ねる。
+- 補完時を除く通常の Click 引数解析エラーを cmoc 共通のエラーレポート形式へ変換する Typer group を含む。
+- console script 実行時に cmoc のコマンド名で Typer app を起動する薄いエントリーポイントである。
 
 ## Read this when
-- cmoc の利用者向け CLI コマンド名、サブコマンド構成、CLI option の定義、または各コマンドがどの実装関数へ委譲されるかを確認したいとき。
-- 通常の引数解析エラーが cmoc のエラー表示に変換される入口処理や、shell completion 時だけ通常の Typer/Click 処理に任せる分岐を確認したいとき。
-- console script から Typer アプリケーションがどの `prog_name` で起動されるかを確認したいとき。
+- cmoc の公開 CLI コマンド構成、サブコマンド名、option 名、または command から呼ばれる実装関数の対応を確認したいとき。
+- CLI 引数解析失敗時のエラー表示、終了コード、補完時の例外扱いを調べるとき。
+- 新しい top-level command、サブコマンド階層、または Typer command 入口を追加・削除・改名するとき。
+- console script から cmoc がどの Typer app を起動するかを確認するとき。
 
 ## Do not read this when
-- 各サブコマンドの具体的な業務処理、git 操作、worktree 操作、状態更新、Codex 起動内容を調べたいときは、ここではなく委譲先のサブコマンド実装を読む。
-- cmoc 共通エラー型やエラー表示の詳細仕様を調べたいときは、ここではなく共通 runtime 側の定義を読む。
-- INDEX.md 更新処理そのものの実装やルーティング文書生成の詳細を調べたいときは、CLI 入口ではなく indexing コマンドの実装を読む。
+- 個別コマンドの実際の処理内容、状態更新、git 操作、worktree 操作、review 実行内容を知りたいだけなら、ここではなく各 command の委譲先実装を読む。
+- cmoc の共通エラー型やエラー描画の詳細を変更したいだけなら、ここではなく runtime 側の定義を読む。
+- INDEX.md 生成処理そのもの、oracle review の実行ロジック、session/apply の join/fork/abandon の内部仕様を調べたいだけなら、対応する下位実装を直接読む。
 
 ## hash
-- d006d1da926e4a93665361add1951df6f42340ee39221dbf66c068cb9e5b620e
+- 1ae81e8854b36901ae139d89729fd33b79be4d1d5836d0a7f352c4e8c307c293
 
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドごとの実行ロジックを集約する領域。初期化、対話起動、ルーティング文書更新、oracle レビュー、apply 実行、session 操作など、利用者が起動する主要操作の入口と orchestration を扱う。
-- 各サブコマンドは共通 runtime、git 操作、state 管理、worktree・branch 操作、Codex 呼び出し、レポート生成などの下位機能を組み合わせ、コマンド単位の事前条件、状態遷移、出力、失敗時処理を定義する。
-- 下位要素は、apply 系、session 系、review 系、indexing、init、TUI 起動に分かれており、どのサブコマンド実装へ進むかを選ぶための入口になる。
+- cmoc の各サブコマンド実行本体をまとめる領域。初期化、TUI 起動、INDEX 保守、review oracle、apply、session の実行フローを扱い、CLI runtime から呼ばれる本体処理、事前条件検査、状態更新、branch/worktree 操作、Codex 呼び出し、report 生成、利用者向け出力を下位要素へ振り分ける入口になる。
+- 直下には単独サブコマンドや review oracle の分割実装があり、下位ディレクトリには apply 系と session 系の複数コマンド実装がまとまっている。共通 runtime や prompt builder そのものではなく、サブコマンドとしてそれらをどう接続して実行するかを追う場所である。
 
 ## Read this when
-- 利用者向けサブコマンドの実行フロー、事前条件、終了時の状態更新、CLI 出力、失敗時の扱いを調べたいとき。
-- サブコマンドが session branch、apply/review 用 branch・worktree、session state、report、INDEX 変更、git 操作とどう接続されるかを追いたいとき。
-- apply fork/join/abandon、session fork/join/abandon、oracle review、indexing、init、TUI 起動のうち、どの実装へ進むべきかを判断したいとき。
-- Codex 呼び出しを含むサブコマンドの orchestration、対象列挙、実行 loop への委譲、結果の commit・merge・report 化を確認または変更したいとき。
+- cmoc のサブコマンド実行本体を探し、init、tui、indexing、review oracle、apply、session のどの処理へ進むべきか判断したいとき。
+- サブコマンドごとの事前条件、clean worktree 要求、cmoc ignore 確認、session/apply state の更新、branch や isolated worktree の作成・削除、成功時または失敗時の利用者向け出力を確認したいとき。
+- Codex をサブコマンド内でどう呼び出すか、実行前の indexing preflight、finding 列挙・適用・検証、merge conflict 解決依頼、report 保存などの上位制御を追いたいとき。
+- review oracle の対象列挙、finding loop、INDEX 差分 commit、review report 生成の接続順を確認したいとき。
+- apply fork/join/abandon や session fork/join/abandon のライフサイクル、状態遷移、cleanup、rollback、warning や error の扱いを確認したいとき。
 
 ## Do not read this when
-- CLI 全体の command 登録、共通 runtime wrapper、設定モデル、path model、git wrapper、state file schema など、サブコマンド横断の基盤そのものを調べたいとき。
-- Codex に渡す prompt や Structured Output parameter の本文だけを確認したいときは、各 parameter builder 側を直接読む。
-- oracle file と realization file の概念、ルーティング文書仕様、INDEX.md エントリー生成規則など、正本仕様や文書方針を確認したいとき。
-- 特定サブコマンド内の対象列挙、実行 loop、report 描画、merge conflict 解決など、詳細担当モジュールが既に分かっているときは、その下位要素へ直接進む。
+- Typer app へのサブコマンド登録や CLI option 宣言だけを確認したい場合は、登録側の実装へ直接進む。
+- git 実行 wrapper、repo root/work root 解決、state file schema、config model、report directory、worktree 作成・削除 helper などの共通 runtime 基盤そのものを変更したい場合は、runtime や model 側を読む。
+- Codex に渡す prompt や Structured Output schema の本文だけを変更したい場合は、acp builder 側の対象 parameter 実装を読む。
+- oracle file の正本仕様、INDEX.md エントリー生成規則、path keyword の概念定義、またはテスト観点だけを確認したい場合は、oracle や test 側へ進む。
+- 個別サブコマンドの詳細に読む対象が決まっている場合は、この階層全体ではなく、該当する直下ファイルまたは apply/session 下位実装へ直接進む。
 
 ## hash
-- ea3bac407fc3621d62bdcdfd467c679e8a3613a9e713d62b3bf547540daf55b4
+- 68cc6fa438d0f18e57eaab63d0afe00da597bf10755df9d7791a8cd2238b55fa
