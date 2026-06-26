@@ -13,42 +13,32 @@ from .index_entry_standard import build_index_entry_standard
 from .routing_rule import build_routing_rule
 
 
-def _agent_prompt_replacements() -> dict[str, str]:
-    return {
-        **{
-            root_token.value: str(resolve_real_path(root_token))
-            for root_token in RootToken
-        },
-        "cmoc から呼び出された": "依頼を受けた",
-    }
-
-
-def _sanitize_agent_prompt_text(text: str, replacements: dict[str, str]) -> str:
-    for forbidden, replacement in replacements.items():
-        text = text.replace(forbidden, replacement)
+def _sanitize_agent_prompt_text(text: str) -> str:
+    for root_token in RootToken:
+        if root_token.value in text:
+            text = text.replace(root_token.value, str(resolve_real_path(root_token)))
+    text = text.replace("cmoc から呼び出された", "依頼を受けた")
     return text
 
 
-def _sanitize_agent_prompt_doc(
-    doc: StructDoc, replacements: dict[str, str]
-) -> StructDoc:
+def _sanitize_agent_prompt_doc(doc: StructDoc) -> StructDoc:
     children = doc.children
     if isinstance(children, str):
         return StructDoc(
-            _sanitize_agent_prompt_text(doc.title, replacements),
-            _sanitize_agent_prompt_text(children, replacements),
+            _sanitize_agent_prompt_text(doc.title),
+            _sanitize_agent_prompt_text(children),
         )
     if isinstance(children, StructCodeBlock):
         return StructDoc(
-            _sanitize_agent_prompt_text(doc.title, replacements),
+            _sanitize_agent_prompt_text(doc.title),
             StructCodeBlock(
                 children.info,
-                _sanitize_agent_prompt_text(children.body, replacements),
+                _sanitize_agent_prompt_text(children.body),
             ),
         )
     return StructDoc(
-        _sanitize_agent_prompt_text(doc.title, replacements),
-        *[_sanitize_agent_prompt_doc(child, replacements) for child in children],
+        _sanitize_agent_prompt_text(doc.title),
+        *[_sanitize_agent_prompt_doc(child) for child in children],
     )
 
 
@@ -145,5 +135,4 @@ def build_complete_prompt(
         struct_doc.append(build_review_oracle_standard())
     if index_entry_standard:
         struct_doc.append(build_index_entry_standard())
-    replacements = _agent_prompt_replacements()
-    return [_sanitize_agent_prompt_doc(doc, replacements) for doc in struct_doc]
+    return [_sanitize_agent_prompt_doc(doc) for doc in struct_doc]

@@ -223,6 +223,10 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
         "apply review standard",
         "index entry standard",
         "cmoc 側",
+        "cmoc は",
+        "cmoc でも",
+        "cmoc により",
+        "cmoc review oracle",
         "oracle file",
         "oracles file",
         "oracle spec",
@@ -234,12 +238,6 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
         "仕様説明（別名）",
         "仕様ファイル（和訳表記）",
         "仕様ファイルズ",
-    ]:
-        assert forbidden not in rendered
-    for forbidden in [
-        "cmoc は",
-        "cmoc でも",
-        "cmoc により",
     ]:
         assert forbidden not in rendered
 
