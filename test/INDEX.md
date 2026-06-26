@@ -220,22 +220,21 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- indexing コマンド本体と INDEX.md entry 生成・更新の realization test。INDEX.md 生成・更新・commit 対象、fresh hash による再生成スキップ、既存差分との共存、worktree 選択を検証する。
-- INDEX.md エントリー生成結果の schema 検証、semantic field の欠落・型不正拒否、空リスト受理、malformed entry の再生成、sibling entry の並列生成、root 直下 memo 除外と nested memo 対象化も扱う。
-- merge conflict 解決時に INDEX.md の conflict を削除して merge commit へ進める挙動、および commit_index_updates が INDEX.md 系の更新だけを commit し非 INDEX 差分を残す挙動を確認する。
+- cmoc の indexing サブコマンドとインデックス生成処理に関する realization test。INDEX.md の生成・再生成・コミット、未初期化や未コミット差分での失敗、linked worktree 上での実行、fresh hash による Codex 呼び出し省略、衝突解消、semantic field の検証、兄弟エントリーの並列生成、root 直下 memo 除外と nested memo 対象化を検証する。
 
 ## Read this when
-- indexing コマンド、update_indexes、build/render index entry、fresh hash 判定、INDEX.md の commit 範囲や malformed entry 再生成の挙動を変更・調査するとき。
-- INDEX.md merge conflict の自動解決、root 直下 memo の索引除外、nested memo の索引対象化、sibling entry 生成の並列性に関する回帰を確認するとき。
+- indexing サブコマンドの外部挙動、git commit 対象、dirty worktree の扱い、linked worktree での実行先を変更・確認するとき。
+- INDEX.md エントリー生成の Codex structured output 呼び出し、fresh hash 判定、 malformed entry の再生成、semantic field validation を変更・確認するとき。
+- インデックス更新対象の探索、兄弟要素の並列処理、root 直下 memo と nested memo の扱いを変更・確認するとき。
+- INDEX.md の merge conflict を自動解消する処理や、index path だけを commit する制御を変更・確認するとき。
 
 ## Do not read this when
-- Codex exec/TUI 呼び出し前に indexing preflight を走らせる制御、purpose による preflight skip、worktree 上での indexing 対象解決、repository lock 待機を扱うときは `test_indexing_preflight.py` を読む。
-- 個別 CLI コマンドの通常実行フロー、session 管理、apply 処理、Codex runtime 呼び出しそのものを調べたいだけで、indexing preflight や INDEX.md 更新の副作用が関係しないとき。
-- oracle file の正本仕様、path model、INDEX.md エントリー文面の設計方針を確認したいとき。対応する oracle doc や oracle src を読む方が直接的。
-- テスト支援 fixture、runner、git helper、mock 用 import の定義を調べたいとき。共通 test support 側を読む方が直接的。
+- init コマンド自体の設定生成や .cmoc 初期状態の詳細だけを調べるときは、初期化処理側の実装・テストを読む。
+- Codex 実行ラッパーの低レベルな subprocess 呼び出しやプロンプト構築の詳細だけを調べるときは、Codex 実行処理側を読む。
+- oracle file の正本仕様や INDEX.md ルーティング文書の書き方自体を確認するときは、oracle 配下の該当文書を読む。
 
 ## hash
-- eb69c7f5dd360f83c95535d52f0e9c6e934e38ac05d4307356aaf57c300897e0
+- e8a9a38b800797553edc3096b3d6fd9b97b901ff49eecb5e050169093ff1e986
 
 # `test_indexing_preflight.py`
 

@@ -133,23 +133,24 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド本体と、そのコマンド固有の制御フローをまとめる実装領域。初期化、対話 TUI 起動、ルーティング文書更新、session の作成・取り込み・破棄、apply run の開始・取り込み・破棄、oracle review の実行を扱う。
-- 各コマンドは共通 runtime、設定、Codex 呼び出し、git 操作、状態ファイル、report 生成などを組み合わせ、利用者向け CLI 操作として成立させる orchestration 層に位置づけられる。
-- 下位には apply、session、review 関連の補助処理も含まれ、branch/worktree のライフサイクル、clean worktree 検証、preflight、merge conflict 処理、禁止対象差分の扱い、process id 管理、Markdown report 出力など、サブコマンド固有の副作用を追う入口になる。
+- apply/session/review の実行管理、init/indexing/tui の単体サブコマンドを含む CLI サブコマンド実装層。各サブコマンドは実行前条件、worktree や branch/state の更新、Codex CLI 呼び出し、report や利用者向け Markdown 出力を共通 runtime へ接続する。
+- 下位には apply run の fork/join/abandon と実行時 process 管理、session の fork/join/abandon、oracle review の対象列挙・finding loop・INDEX merge・report、INDEX.md 更新、初期化、TUI 起動が分かれている。
+- CLI から見える業務フローを追う入口であり、低レベルの git wrapper、state schema、設定モデル、prompt parameter builder そのものは外部の共通実装へ委譲される。
 
 ## Read this when
-- cmoc の特定サブコマンドが、共通 runtime や Codex 呼び出し、git 操作、状態更新、利用者向け出力をどの順に組み合わせているかを確認または変更したいとき。
-- 初期化、TUI 起動、INDEX 更新、session 操作、apply 操作、oracle review のうち、どの実装領域へ進むべきかを選びたいとき。
-- session branch、apply branch、review branch、linked worktree、session state、apply state、report file など、サブコマンド実行に伴う状態遷移や副作用の入口を探すとき。
-- サブコマンド実行前の前提条件、clean worktree 検証、cmoc ignore 確保、indexing preflight、merge conflict 処理、cleanup、warning 出力の関係を追いたいとき。
-- Codex CLI を用いた apply finding 適用、oracle review loop、TUI parameter 解決、INDEX entry 生成など、利用者操作から AI 実行へ接続される制御フローを確認したいとき。
+- cmoc の各サブコマンドが、実行前条件、branch/worktree 操作、session/apply state 更新、Codex 実行、report 生成、stdout 出力をどの順で結び付けるか確認したいとき。
+- apply、session、review oracle、indexing、init、tui のうち、どの実装本文または下位 helper へ進むべきかを選びたいとき。
+- apply run の isolated worktree 実行、finding 適用、禁止対象差分の rollback、join 時の想定外差分検査、running process 停止、report 生成を調べたいとき。
+- session branch の作成、home branch への merge、破棄、join conflict の Codex 解消依頼、session state 更新を調べたいとき。
+- oracle review の scope 検証、対象 oracle file 列挙、finding の enumerate/merge/validate/judge loop、INDEX.md 差分 commit/merge、review report 出力を調べたいとき。
+- INDEX.md 更新サブコマンド、work root 初期化、利用者 prompt 編集から Codex TUI 起動までのサブコマンド固有フローを確認したいとき。
 
 ## Do not read this when
-- Typer app へのコマンド登録、サブコマンド名の公開構造、CLI 全体のエントリポイントだけを確認したいときは、上位の CLI 定義を読む方が直接的。
-- git 実行 wrapper、work root や repo root の解決、branch/worktree 共通操作、state schema、report directory 算出、timestamp、config 読み込みなど、複数領域で共有される runtime の内部実装だけを調べたいとき。
-- Codex に渡す prompt や Structured Output schema の詳細、AgentCallParameter の構築規則そのものを確認したいときは、各 builder や prompt 構築側を読む方が適切。
-- oracle file の正本仕様、realization file の方針、INDEX.md エントリー生成規則そのものを確認したいとき。
-- 生成済み report、生成済み INDEX.md、ログ、状態ファイルなど、サブコマンドが作った成果物の個別内容だけを読みたいとき。
+- Typer app へのコマンド登録全体、CLI entrypoint、パッケージ構成だけを調べたいときは、上位の CLI 構成を読む。
+- git command 実行 wrapper、work root/repo root 解決、worktree 作成削除、state file path、設定 schema、report directory 算出など、複数サブコマンドで共有される runtime helper の内部だけを調べたいときは共通 runtime 側を読む。
+- Codex に渡す prompt や Structured Output schema の具体的な設計だけを確認したいときは、parameter builder や prompt 構築側を読む。
+- oracle file、realization file、INDEX.md エントリー生成方針など、正本仕様やルーティング文書の規則そのものを確認したいとき。
+- 特定サブコマンドの対象 helper がすでに分かっており、apply、session、review、indexing、init、tui の該当本文へ直接進めるとき。
 
 ## hash
-- 0cc496644ce696923b7a98f657fc54808d3b550d59a2284e7ad7547a6657ee71
+- be3f5f4f7d6967f72d1a175cbf6a4504c63edc7c79dfe41e38cb84a00858ccd3
