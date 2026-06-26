@@ -1,26 +1,26 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実行本体をまとめる領域。apply run の開始、isolated worktree 上での Codex による finding 列挙・適用、結果 commit、join による session branch への merge、abandon による破棄、report 生成、apply process id や apply worktree 解決などの実行時補助を扱う。
-- apply state の ready/running/completed/error 遷移、apply branch と session branch の関係、apply worktree の作成・削除、想定外差分や編集禁止対象差分への対処など、apply run のライフサイクルを追う入口になる。
+- apply 系サブコマンドの実装群をまとめる領域。未 join の apply run を作成して findings を適用する処理、成果を session branch へ取り込む処理、未完了 run を破棄する処理、実行時 process・worktree・branch・state の管理、fork 結果レポート生成への入口になる。
+- apply run の lifecycle 全体に関わる高レベルな CLI 制御と、branch/worktree/process/report などの apply 専用 runtime 補助処理が分かれているため、apply の開始・完了・破棄・停止・レポートのどこを調べるかを選ぶための起点として使う。
 
 ## Read this when
-- apply fork、apply join、apply abandon の実行条件、状態遷移、終了時 cleanup、利用者向け出力を確認または変更したいとき。
-- apply scope ごとの調査対象列挙、Codex 呼び出し境界、finding 適用後の commit 作成、編集禁止対象差分の検出・rollback を調べたいとき。
-- apply branch を session branch へ取り込む merge、想定外差分の検出、force resolve、merge conflict report、INDEX.md conflict の機械解決を確認したいとき。
-- 未 join の apply run を破棄して ready 状態へ戻す処理、実行中 apply process の停止、apply worktree・apply branch・pid file の cleanup を追いたいとき。
-- apply fork や apply join の report 内容、生成タイミング、差分要約、fallback、保存処理を確認または変更したいとき。
-- apply branch から worktree を特定する処理、apply process id file の読み書き、pidfd と process start time による apply process 同一性確認を調べたいとき。
+- apply run の開始、join、abandon、process 停止、worktree/branch cleanup、state 更新、report 生成のどの実装へ進むべきかを判断したいとき。
+- apply fork が対象 file を列挙し、Codex に finding 列挙・適用を行わせ、commit や report を作成する一連の制御を確認・変更したいとき。
+- apply join で apply branch の成果を session branch へ merge し、想定外差分や merge conflict を扱い、apply state を ready 相当に戻す処理を調べたいとき。
+- 未 join の apply run を破棄し、実行中 process の停止、apply worktree・branch・pid file の削除、state 初期化を行う処理を調べたいとき。
+- apply 専用の pid file、pidfd、process start time、linked worktree 探索、branch から worktree path を導く処理など、実行時状態の低レベル操作を確認したいとき。
+- apply fork 後に保存される Markdown/frontmatter 付き report、差分要約、要約失敗時 fallback、changed path 収集を確認・変更したいとき。
 
 ## Do not read this when
-- apply サブコマンドの Typer 登録、CLI option 宣言、上位 command tree だけを確認したいとき。
-- git 実行 wrapper、state file schema、repo/work root 解決、worktree 作成・削除、report directory 規約などの共通 runtime 基盤そのものを変更したいとき。
-- Codex に渡す AgentCallParameter や prompt builder の定義だけを確認したいとき。
-- apply 以外のサブコマンドの挙動、または session や index など別領域の処理を調べたいとき。
-- oracle file の正本仕様、INDEX.md 生成規則、テスト観点を確認したいだけで、apply 実装の制御フローを読む必要がないとき。
+- apply 以外のサブコマンドの CLI 登録、共通 runtime、git 実行 wrapper、state file の汎用 schema、path keyword の定義だけを調べたいとき。
+- oracle の正本仕様、INDEX.md 生成規則、path model、文書ルーティング方針そのものを確認したいとき。
+- 個別の apply サブコマンドや helper の責務がすでに分かっており、その本文へ直接進めるとき。
+- 生成済み report の内容を読むだけで、report 生成ロジックや fallback 挙動を変更しないとき。
+- process 停止、pid file、worktree 探索、report 生成、fork/join/abandon のいずれにも関係しない差分適用外の実装を調べたいとき。
 
 ## hash
-- 3487dd4b0a691f8fe2e77abed5dd8dc54e2b800651b2e81de407109bf41078d4
+- a34cf8411c3efec99e4047ded56c40f46eef0b3d207ed5641664e560a731c196
 
 # `indexing.py`
 

@@ -61,25 +61,26 @@
 # `fork.py`
 
 ## Summary
-- apply fork サブコマンドの実行本体を担う実装。session branch 上で isolated apply worktree を作成し、scope に応じた対象ファイルの列挙、Codex による finding 列挙と適用、禁止対象差分のロールバック、apply commit 作成、report 出力、state 更新までの apply loop を制御する。
-- apply fork 中に扱える調査対象の正規化、変更パスの抽出、直近 join 済み apply merge commit の解決、Codex 出力から commit subject を作る補助処理もこの実装内にまとまっている。
+- apply fork サブコマンドの実行本体を担う実装。session branch 上で isolated apply worktree を作成し、scope に応じた対象列挙、Codex による finding 列挙と適用、変更の commit、report 作成、state と process id の更新・後始末までの制御フローを扱う。
+- apply 中に編集禁止対象へ差分が出た場合の検出、ロールバック、再実行、失敗時エラー化を含み、apply fork の安全制約と収束判定に関わる helper もこの対象にまとまっている。
+- finding 適用後の commit subject 生成、Codex 出力の commit message 正規化、変更 path や apply 対象 file の正規化、rolling/session/full scope ごとの対象抽出、直近 join 済み apply merge commit の解決を扱う。
 
 ## Read this when
-- apply fork の事前条件、実行フロー、終了コード、state 遷移、apply worktree や apply branch の生成処理を確認または変更したいとき。
-- apply scope の rolling・session・full がどのファイルを finding 列挙対象にするか、また対象から oracle・INDEX.md・binary・git ignored file などをどう除外するかを確認したいとき。
-- apply fork で Codex に finding 列挙、finding 適用、commit message 生成を依頼する呼び出し境界や prompt 構成を変更したいとき。
-- apply fork 中に oracle・.agents・memo など編集禁止対象へ差分が出た場合の検出、ロールバック、再実行、エラー化の挙動を確認または変更したいとき。
-- apply fork report の生成タイミング、成功時・例外時の report 出力、process id の作成削除、apply state の completed/error 更新を追いたいとき。
+- apply fork の起動条件、session state の遷移、apply branch/worktree の作成、process id の記録・削除、成功・失敗時の report 出力を確認または変更したいとき。
+- apply fork がどの file を調査対象にするか、scope ごとの対象範囲、oracle・INDEX.md・binary・git ignored file・編集禁止領域の除外条件を確認したいとき。
+- Codex による finding 列挙、finding 適用、編集禁止差分の rollback と再試行、適用後 commit の作成という apply loop の制御を追いたいとき。
+- apply fork の収束・未収束判定、未収束時の終了コード、finding count、result_label、CLI 表示内容に関わる挙動を調べるとき。
+- apply finding から git commit subject を生成する prompt、Codex 出力を 1 行 commit message に丸める fallback 挙動を確認したいとき。
 
 ## Do not read this when
-- apply fork の Typer コマンド宣言や CLI option 定義だけを確認したいときは、コマンド登録側を読む。
-- apply fork report の本文形式や report ファイルの具体的な書き込み内容だけを変更したいときは、report 生成側を読む。
-- Codex に渡す finding 列挙用または finding 適用用の AgentCallParameter の詳細だけを確認したいときは、acp builder 側を読む。
-- apply 以外のサブコマンド、または apply fork ではない apply join・abandon などの挙動を調べたいときは、それぞれのサブコマンド実装を読む。
-- git worktree 作成、state の永続化、repo/work root 解決、git 実行 wrapper など cmoc runtime 共通処理の詳細を確認したいときは、runtime 側を読む。
+- apply fork のレポート本文の書式や保存内容だけを確認したい場合は、report 生成を担当する対象へ進む方がよい。
+- Codex に渡す finding 列挙用または finding 適用用 parameter の詳細だけを確認したい場合は、builder 側の対象へ進む方がよい。
+- apply fork 以外の apply サブコマンド、CLI command 登録、または一般的な runtime helper の実装を調べたいだけなら、より直接の対象へ進む方がよい。
+- oracle の正本仕様そのものや path keyword の定義を確認したい場合は、実装ではなく該当する oracle 側の対象を読むべき。
+- INDEX.md 生成・更新の一般規則やルーティング文書の方針を確認したいだけなら、この apply fork 実行制御ではなく仕様・文書生成側の対象を読む方がよい。
 
 ## hash
-- 01295aea992451c90286bebf140624c688052a0c605f21b0328f95e55e70cf4a
+- e4de887c4b01a0187891e7fae1fc79fde0f656f664bc4060550dcd45e112cdf1
 
 # `fork_report.py`
 

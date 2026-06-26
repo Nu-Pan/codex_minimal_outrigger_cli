@@ -64,23 +64,25 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork コマンドの report 生成と収束判定に関する realization test。Codex 応答を fake 化し、変更要約、commit message、dirty file 再検査、調査対象なし、編集禁止対象の差分検出、rolling 対象の基準 commit を CLI 経由の外部挙動と永続状態で検証する。
+- apply fork の CLI 挙動を、実リポジトリ操作と Codex 実行結果の fake を組み合わせて検証する realization test。所見列挙、所見適用、commit message 生成、変更要約、report 出力、session 状態更新、収束・未収束・error の判定を扱う。
+- apply fork が dirty file を再検査する制御、生成されたルーティング文書を再検査対象から外す制御、差分なし適用時に commit を作らない制御、調査対象なしの場合に未実行 loop を report しない制御を確認する入口になる。
+- 編集禁止対象への差分検出や、rolling apply fork が前回 apply join 後の変更だけを対象にすることも検証しており、apply fork と apply join 後続実行の境界挙動を読む入口になる。
 
 ## Read this when
-- apply fork の report 内容、終了コード、result_label、収束・未収束・error の扱いを変更または確認したいとき。
-- apply 後に発生した dirty file の再検査ロジック、特にルーティング生成物を再検査対象から外す挙動を確認したいとき。
-- apply fork が commit message や変更要約を Codex 応答から取り込み、apply branch に commit する流れを確認したいとき。
-- 編集禁止対象に差分が出た場合の error state、report 出力、エラー前変更の扱いを確認したいとき。
-- rolling apply fork が前回 apply join 後の oracle 変更だけを調査対象にする挙動を確認したいとき。
+- apply fork の終了コード、result_label、report 本文、CLI 出力、session 状態の整合を変更・確認したいとき。
+- apply fork の所見列挙から適用、commit、変更要約、再検査、収束判定までの制御ロジックをテスト観点から確認したいとき。
+- apply fork が差分なしの所見適用、調査対象なし、回数上限、dirty file 再投入、ルーティング文書除外をどう扱うべきか確認したいとき。
+- apply fork が編集禁止対象への変更を検出して error state と report に反映する挙動を変更・確認したいとき。
+- rolling apply fork と前回 apply join の関係、特に前回 join 後に変わった対象だけを列挙する挙動を確認したいとき。
 
 ## Do not read this when
-- apply fork の内部実装構造や helper の責務分割を知りたいだけで、CLI の観測可能な挙動や永続状態の期待値を確認しないとき。
-- apply join、session fork、init などの各コマンド単体の仕様やテストを確認したいとき。
-- Codex 実行基盤そのもの、structured output schema の定義、または fake ではない実 Codex 呼び出しの挙動を確認したいとき。
-- report 以外の一般的なルーティング文書生成や INDEX.md エントリー生成のテストを探しているとき。
+- apply fork の正本仕様断片そのものを確認したいとき。この対象は realization test なので、仕様判断の根拠としては oracle file を優先する。
+- apply fork 以外の CLI サブコマンド、または fork した session の作成そのものの挙動だけを調べたいとき。
+- Codex 実行 wrapper や AgentCallParameter の低レベル仕様を調べたいとき。この対象ではテスト用 fake と呼び出し結果の観測に限って扱う。
+- report の markdown レンダリング一般、設定読み書き一般、git helper 一般の実装詳細を調べたいとき。ここでは apply fork 経由で観測される外部挙動だけを扱う。
 
 ## hash
-- 7b2f893b993a49fe73d482cd781feb788fd50ef17c427c52b4944306e88032d5
+- 7ad9da26f78fe2c5d93a9a2e2b424803b827840defa0909eca99744bd931ffcc
 
 # `test_apply_join_cli.py`
 

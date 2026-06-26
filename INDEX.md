@@ -147,46 +147,49 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体を収める実装領域。公開 CLI 入口、サブコマンド本体、共通 runtime、Codex/Git/config/state/path/logging/error などの実行基盤、AI agent 呼び出しパラメータと prompt 部品、基礎データ構造を扱う。
-- 仕様断片やテストではなく、cmoc が実際にどのコマンドを受け、どの状態・worktree・外部プロセス・Structured Output・設定を使って処理を進めるかを追う入口である。
-- 下位要素へ進む前に、変更対象が CLI 登録、共通 runtime、agent prompt 構築、設定 model、サブコマンド workflow、基礎型のどれに属するかを切り分けるための領域である。
+- cmoc の realization implementation を収める実装本体領域。公開 CLI 入口、サブコマンド実行フロー、Codex CLI 呼び出し、Git・path・設定・状態・ログ・エラー処理などの共通 runtime、AI エージェント向け prompt/Structured Output schema の組み立て、基礎データ構造を扱う。
+- oracle file で述べられた仕様断片を実際の Python 実装として具体化する入口であり、コマンドの外部挙動、実行時の副作用、永続状態、agent 呼び出し条件、INDEX.md 保守処理などを調べる際に、下位の責務別実装へ進むための起点になる。
 
 ## Read this when
-- cmoc の実行挙動そのものを確認・変更したいとき。特に CLI command から実装関数への委譲、サブコマンドの事前条件、状態遷移、worktree/branch 操作、report 生成、利用者向け出力を追いたいとき。
-- Codex CLI の exec/TUI 呼び出し、profile/config/schema 準備、Structured Output 検証、quota/capacity retry、resume、call log など、AI agent 実行基盤の実装を確認・変更したいとき。
-- AI agent に渡す prompt、role/goal/補助入力、ファイルアクセス規則、モデル区分、reasoning effort、Structured Output schema との接続を、用途別に確認・変更したいとき。
-- session、apply、review oracle、indexing、init、TUI などの上位 workflow が、Git、永続状態、設定、共通 runtime、agent 呼び出しをどう接続しているか調べたいとき。
-- cmoc 内で共有される root token 付き path、AgentCallParameter、構造化文書、標準要求データ、config dataclass、runtime result、session/apply state などの基礎 model を確認・変更したいとき。
-- 新しい CLI 公開面、永続設定、状態ファイル、出力項目、共通 helper、公開 import 境界を追加・削除・移動する必要があるとき。
+- cmoc の CLI コマンド、サブコマンド、実行フロー、引数から実装関数への委譲、利用者向けエラー表示や終了処理を確認・変更したいとき。
+- session、apply、review oracle、TUI、初期化、INDEX.md 保守など、cmoc の各機能が worktree、branch、state、report、Codex 呼び出し、git 操作をどう接続しているか調べたいとき。
+- Codex CLI exec/TUI の profile、sandbox、permission、schema、subprocess、call log、quota/capacity retry、resume token、出力 JSON 読み取りなど、外部 AI 実行の runtime 処理を確認したいとき。
+- cmoc 設定、リポジトリ・worktree・run 用 path、session/apply state、content hash、binary 判定、共通 command result、runtime error、logging など、複数機能で共有される実装 helper を探すとき。
+- AI エージェントへ渡す role、goal、標準文書、ファイルアクセス規則、対象内容、diff、Structured Output schema、モデル区分、reasoning effort を組み立てる処理を確認・変更したいとき。
+- ルートトークン付き path、AgentCallParameter、標準文書データ、Markdown レンダリング、リポジトリ別設定 dataclass など、上位実装が共有する基本データ構造を確認したいとき。
+- oracle file の仕様断片や realization test を読んだあと、それを満たす実装側の変更箇所を探したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片そのもの、仕様上の用語定義、標準文書だけを確認したいとき。実装ではなく正本仕様側へ進む方が直接的である。
-- realization test の期待値、fixture、テスト観点、テスト helper だけを確認・変更したいとき。実装本体の挙動確認が不要ならテスト領域へ進む方が直接的である。
-- 生成済みの INDEX.md エントリー文面を評価・作成するだけで、indexing 実装や agent 呼び出し parameter を調べる必要がないとき。
-- README、利用者向け説明、配布設定、補助スクリプト、ログ、report、state など、実装ソース以外のファイル配置や成果物だけを確認したいとき。
-- Codex CLI、Git、Typer、Click、JSON、Markdown など外部ツールや一般形式の仕様だけを知りたいとき。cmoc 固有の実装接続を確認しないなら外部仕様を直接参照する方が適切である。
-- 下位の読む先がすでに明確で、特定のサブコマンド本体、prompt builder、runtime helper、設定 model、基礎型だけを局所的に読むべきと分かっているとき。
+- 正本仕様断片そのもの、人間意図、oracle/realization の概念定義、path keyword の正本説明、INDEX.md エントリーの規範だけを確認したいときは、oracle 側の文書を読む。
+- 実装の外部挙動を検証するテストケース、fixture、期待値、回帰確認の観点だけを調べたいときは、realization test 側へ進む。
+- README、配布設定、開発補助ファイル、gitignore など、実装本体ではない補助的な repository metadata だけを確認したいとき。
+- 生成済み log、report、state、cache、package metadata、bytecode などの実行結果や生成物を読みたいだけで、生成・更新ロジックを変更しないとき。
+- 対象の下位責務がすでに特定できており、CLI 入口、共通 runtime、agent prompt builder、個別サブコマンド、基礎モデルのいずれかへ直接進めるとき。
 
 ## hash
-- efc7e6ee5b8ef7ede0182ec24336ac6e1e4b2973e13503ba25b6a6473f90b83f
+- f9cfc2b0705f773c65e5fa2cb792a89a6d0a217ae9ec3a0aa903118dff97d541
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群を集約する領域で、CLI サブコマンド、Codex runtime、session/apply workflow、INDEX 生成、prompt 生成、基礎ランタイム契約などの観測可能な挙動と制御ロジックを検証する入口になる。
-- 一時 Git リポジトリや fake Codex 実行環境などの共有テスト補助も含み、実装変更後にどの外部挙動・永続状態・ログ・worktree 副作用が回帰対象になるかを探すためのルーティング起点として位置づけられる。
+- realization test 全体の入口。CLI サブコマンド、Codex runtime、INDEX 生成、prompt builder、session/apply workflow、基礎 runtime 契約を、実リポジトリ操作と fake Codex/外部コマンドを組み合わせて外部挙動として検証する。
+- 共有 fixture と helper も含み、一時 Git リポジトリ、Codex home、fake executable、apply worktree 解決など、各テストが前提にするテスト基盤への入口を提供する。
+- 正本仕様ではなく realization test の集合であり、oracle file や実装を変更する前後に、既存挙動・副作用・エラー境界・状態遷移の回帰範囲を確認するために読む対象である。
 
 ## Read this when
-- realization implementation を変更した後、対応する CLI 挙動、状態遷移、Git 副作用、ログ出力、Codex 呼び出し条件、Structured Output schema、または prompt 生成の既存期待値を確認したいとき。
-- session、apply、review、indexing、init、tui、Codex runtime など、利用者から見えるサブコマンド挙動や複数モジュールにまたがる制御ロジックの回帰範囲を絞り込みたいとき。
-- テスト用の一時リポジトリ、Codex home、fake external command、worktree 解決など、複数テストで共有される fixture や helper の責務を確認したいとき。
-- INDEX 更新や prompt builder、file access mode、sandbox/profile 生成、path model、エラー表示など、仕様断片を実装した結果としての realization test の期待値を確認したいとき。
+- CLI サブコマンドの利用者向け挙動、終了コード、stdout/stderr、report、永続状態、Git branch/worktree 副作用を変更または確認したいとき。
+- apply fork/join/abandon、session fork/join/abandon、review oracle、indexing、init、tui などの workflow が既存テストでどう観測されているかを調べたいとき。
+- Codex CLI 呼び出し wrapper の argv、cwd、CODEX_HOME、profile、schema、ログ、retry、quota probe、TUI 起動条件を変更または確認したいとき。
+- prompt 生成、Structured Output schema、ファイルアクセス規則、ルーティング規則、INDEX エントリー生成基準など、Codex へ渡す標準文書や builder parameter の期待値を確認したいとき。
+- path model、work root 判定、sandbox/file access mode 変換、CmocError 表示、補完プローブ時の副作用抑止など、複数モジュールにまたがる基礎 runtime 契約の回帰範囲を確認したいとき。
+- 新しい realization test を追加する前に、同じ観点を既存テストへ統合できるか、既存 fixture/helper を再利用できるかを確認したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様本文や人間意図そのものを確認したいとき。realization test は仕様判断の入口ではなく、正本仕様に対する実装結果の検証である。
-- プロダクト本体の内部構造、helper の責務分割、低レベルアルゴリズムを最初に調べたいとき。まず対応する realization implementation を読む方が直接的である。
-- Codex CLI や LLM の実出力品質そのものを評価したいとき。この領域の多くは fake 実行や monkeypatch により cmoc 側の制御と副作用を検証する。
-- INDEX.md エントリー文章やルーティング規約そのものを作成・確認したいだけで、indexing CLI や preflight の実行挙動を検証しないとき。
+- oracle file の正本仕様断片そのものを確認したいとき。仕様判断の根拠は oracle 配下の本文を優先する。
+- プロダクト本体の実装責務、内部 helper の分割、低レベルアルゴリズムを先に理解したいとき。まず対応する src 側の実装を読む。
+- Codex CLI や LLM の実出力品質を評価したいとき。ここでは fake 実行や monkeypatch によって cmoc 側の制御と副作用を検証している。
+- INDEX.md の文章品質やルーティング文書の正本方針だけを調べたいとき。対象は realization test であり、ルーティング規約そのものではない。
+- 単に pytest 設定、依存関係、パッケージ構成、開発コマンドを確認したいだけのとき。テストケース本文ではなく設定ファイルやプロジェクト定義を読む。
 
 ## hash
-- 90bea82ec1a05c54923eb91a68428b35835d153eec395556061b56c099bc16ed
+- 6d17d4b8cfa5867f4cd0a2d4a9b78efe9bd3fe28a4b7f8a492d2a1a8c9aa6805
