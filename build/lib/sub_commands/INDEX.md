@@ -1,26 +1,25 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実行処理をまとめる実装領域。apply run の開始、破棄、取り込み、実行時補助、結果レポート生成までを扱い、session branch と apply branch/worktree の間で状態・差分・後片付けを制御する入口になる。
-- ユーザー操作単位の処理だけでなく、linked worktree の特定、apply process の PID 管理、実行中 process の停止、差分要約や report 保存など、apply の lifecycle を支える補助処理も含む。
+- apply 系サブコマンドの実行制御をまとめる実装群。apply run の開始、破棄、取り込み、report 生成、process id 管理、worktree・branch 解決など、apply の状態遷移と後片付けに関わる入口になる。
+- この階層では、利用者操作単位の処理と、apply branch・apply worktree・PID file・report・session state をつなぐ実行時 helper が分かれている。apply の全体フローを追る場合は、操作種別ごとの実装から入り、低レベルな PID・worktree 解決だけを確認する場合は runtime helper へ進む。
 
 ## Read this when
-- apply fork、apply join、apply abandon の実行条件、状態遷移、branch/worktree 操作、cleanup の流れを調べたいとき。
-- apply run が session state、apply branch、apply worktree、process ID file、report をどの順序で作成・更新・削除するかを追いたいとき。
-- apply fork の finding 列挙・適用 loop、編集禁止対象への差分検出、未収束時や失敗時の扱い、commit subject 生成との接続を確認したいとき。
-- apply join で許容される差分、想定外差分の検出、force resolve、merge conflict report、INDEX.md だけの conflict 自動解決を確認したいとき。
-- apply abandon で active run を破棄する条件、実行中 process の停止、欠落した branch/worktree を warning として扱う境界を確認したいとき。
-- apply fork の成功・失敗 report の内容、差分要約、要約失敗時の fallback、保存タイミングを確認したいとき。
+- apply fork、apply join、apply abandon の実行条件、状態遷移、終了時の cleanup、report 出力を調査・変更したいとき。
+- apply branch と apply worktree の作成・特定・削除、session branch との関係、active apply run の PID 管理を追いたいとき。
+- apply fork 中の finding 列挙、差分 commit、編集禁止対象差分の扱い、失敗時 report 生成を確認したいとき。
+- apply join での merge、想定外差分検出、force resolve、INDEX.md だけの conflict 解決、last joined oracle snapshot commit 更新を確認したいとき。
+- apply abandon で running process を止め、worktree・branch・PID file・state をどの順序で処理するか確認したいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンドや CLI 全体の dispatch、共通の引数 parser だけを調べたいとき。
-- session state の schema、branch 名規則、root path 定義、git wrapper、設定読み込みなどの共通基盤だけを確認したいとき。
-- Codex CLI に渡す prompt や structured parameter の内容だけを変更したいとき。
-- oracle routing、INDEX.md エントリー生成、正本仕様文書そのものを確認したいだけのとき。
-- apply の個別操作ではなく、全体のユーザー向け仕様や上位ドキュメントから読むべきか判断したいとき。
+- apply 以外の session 管理、config schema、git wrapper の一般挙動、state file schema そのものを調べたいとき。
+- oracle の正本仕様、INDEX.md エントリー生成仕様、ユーザー向け routing 文書の設計を確認したいとき。
+- Codex に渡す prompt や AgentCallParameter の詳細だけを確認したいときは、parameter 構築側を読む方が直接的。
+- git worktree や branch の低レベル操作 API、report directory 算出、state 永続化などの共通 runtime 実装だけを調べたいときは、それぞれの共通実装を読む方が直接的。
+- apply サブコマンド群のパッケージ境界だけを確認したい場合を除き、初期化モジュールから読む必要はない。
 
 ## hash
-- 3e086db1dc85eabf28fee26b66a668d8f9677e31afc8d29c0ac765c3679b8093
+- 6d6bdacf06093667f60e7b1839eb2cbf0ff4e3329212c55c4fdff6f5f972c845
 
 # `indexing.py`
 

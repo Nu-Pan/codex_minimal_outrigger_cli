@@ -61,24 +61,23 @@
 # `fork.py`
 
 ## Summary
-- apply fork サブコマンドの実行本体を定義し、session branch 上で isolated apply worktree を作成して、対象ファイルの finding 列挙、finding 適用、変更コミット、レポート生成、状態更新までの apply loop を制御する。
-- apply 対象の scope 解決、対象ファイルの正規化、重複除去、worktree の変更検出、Codex CLI による commit subject 生成など、apply fork の制御ロジックに必要な補助処理も同じ入口から確認できる。
-- 編集禁止対象に差分が出た場合の検出、未コミット差分のロールバック、再実行、最終的なエラー化を扱い、apply fork 中に保護領域を変更させないためのガードを実装している。
+- isolated apply worktree 上で apply fork loop を実行するサブコマンド実装。scope 検証、session branch と state の事前条件確認、apply branch/worktree 作成、process id と state 更新、finding 列挙、finding 適用、差分 commit、成功・失敗 report 出力までの制御フローを担う。
+- apply fork 中に編集禁止対象へ差分が出た場合の検出・ロールバック・再実行、および commit subject 生成、調査対象ファイルの正規化・重複排除・scope 別列挙もこのファイルにまとまっている。
 
 ## Read this when
-- apply fork サブコマンドの事前条件、session state から running/completed/error へ遷移する流れ、apply branch と apply worktree の作成、プロセス ID 管理、レポート出力の制御を確認したいとき。
-- apply loop がどの scope でどのファイルを finding 列挙対象にするか、変更後のファイルを次の調査対象へ戻す条件、unconverged と converged の判定を追いたいとき。
-- finding 適用時に編集禁止対象の差分をどう検出し、どの差分を restore または削除し、再試行後も残る場合にどう失敗させるかを確認したいとき。
-- apply fork が Codex CLI に渡す finding 列挙、finding 適用、commit message 生成の呼び出し境界や、Codex 出力を commit subject として丸める処理を変更したいとき。
+- apply fork サブコマンドの実行条件、状態遷移、終了コード、report 出力、apply worktree/branch 作成の流れを確認したいとき。
+- apply fork の scope が finding 列挙対象へどう変換されるか、変更済みファイルが次の調査対象へどう戻されるかを追いたいとき。
+- apply fork が oracle、.agents、memo、INDEX.md、binary、git ignored file をどう除外し、編集禁止対象差分をどう戻すかを確認したいとき。
+- Codex CLI へ渡す apply fork の finding 列挙、finding 適用、commit message 生成の呼び出し境界を調べたいとき。
 
 ## Do not read this when
-- apply fork 用の Codex 呼び出しプロンプトそのものや structured parameter の内容だけを確認したいときは、builder 側の該当処理を直接読む。
-- apply fork の成功・失敗レポート本文の構成や出力ファイルの詳細だけを変更したいときは、レポート生成側を直接読む。
-- apply process ID の保存・削除処理そのものの永続化形式だけを確認したいときは、apply runtime 側を直接読む。
-- git 実行、worktree 作成、state 読み書き、設定読み込みなどの共通 runtime API の実装詳細を確認したいだけなら、runtime 側を直接読む。
+- apply fork の report 本文の生成内容だけを確認したいときは、report 生成側を読む方が直接的。
+- Codex に渡す prompt や AgentCallParameter の詳細だけを確認したいときは、builder 側の parameter 生成処理を読む方が直接的。
+- apply process id の保存形式や削除処理そのものだけを確認したいときは、apply runtime 側を読む方が直接的。
+- apply fork ではない apply 系サブコマンド、session 管理、config schema、git wrapper の一般挙動を調べたいだけなら、それぞれの実装を読む方が直接的。
 
 ## hash
-- 571226ee0c7d1c40ee03cb77e7a3b672e1ff784d6ebd8ec67a09353207ea2b02
+- 742e5c8edd54c03f22570feddd7e23bea9f2440eb03da0c3d0faf478c8c88c97
 
 # `fork_report.py`
 

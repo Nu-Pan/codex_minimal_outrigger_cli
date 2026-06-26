@@ -131,23 +131,23 @@
 # `sub_commands`
 
 ## Summary
-- 利用者向けサブコマンドの実行処理を集めた実装領域。初期化、対話 TUI、目次保守、session 操作、apply 操作、oracle review など、CLI から呼ばれる主要 workflow の入口になる。
-- 各サブコマンドは、共通 runtime helper や設定・状態モデルを使いながら、実行前条件の検証、git branch/worktree 操作、Codex 呼び出し、レポート生成、INDEX.md 更新 commit、後片付けなどの上位 orchestration を担う。
-- session、apply、review は下位 module に処理が分割されており、この階層は目的のサブコマンド実装または下位領域へ進むための入口として位置づく。
+- 利用者向けサブコマンド実装の集約領域。初期化、索引保守、対話的 TUI 起動、apply 操作、session 操作、oracle review など、CLI 操作単位の実行制御へ進む入口になる。
+- 各サブコマンドは、実行前条件の検証、git branch/worktree や状態ファイルとの接続、Codex 呼び出し、report 生成、後片付け、成功時出力などを扱う。共通 helper そのものではなく、利用者操作をどの順序で組み立てるかを確認する階層である。
+- apply や session のように下位ディレクトリを持つ操作群と、索引更新・初期化・TUI・review oracle のような単独または分割済みモジュールへの接続点が並ぶため、サブコマンドの責務境界を選ぶための上位入口になる。
 
 ## Read this when
-- 利用者が実行するサブコマンドの制御フロー、前提条件、副作用、成功時出力、失敗時エラー化を確認・変更したいとき。
-- init、tui、indexing、session、apply、review oracle のどの実装領域へ進むべきかを判断したいとき。
-- サブコマンドが session state、apply state、git branch/worktree、report、INDEX.md 更新、Codex 実行 parameter とどう接続されるかを追いたいとき。
-- review oracle や apply のように、複数 module に分割された workflow の上位入口と下位 helper の責務境界を確認したいとき。
-- CLI の preflight として目次更新が実行される位置や、サブコマンド実行後に専用 commit・merge・cleanup が行われる流れを調べたいとき。
+- 特定の CLI サブコマンドが、設定読み込み、preflight、git 操作、状態更新、Codex 実行、report 出力をどの順序で呼び出すか調べたいとき。
+- init、indexing、TUI、apply、session、review oracle のいずれかの利用者操作単位の前提条件、失敗処理、cleanup、成功時出力を確認・変更したいとき。
+- apply run、session branch、oracle review worktree など、サブコマンド固有の branch/worktree/state のライフサイクルを追いたいとき。
+- INDEX.md 更新、oracle review による INDEX 変更 commit、apply/review report 生成など、サブコマンド本体から下位処理や共通 runtime へどう接続されるかを確認したいとき。
+- CLI 登録より内側で、各コマンドの orchestration や分割済み helper への入口を探したいとき。
 
 ## Do not read this when
-- Typer アプリ全体のサブコマンド登録、ルート CLI dispatch、共通引数 parser だけを確認したいとき。
-- git 実行 wrapper、設定読み込み、path keyword、session/apply state schema、report 保存先、timestamp 生成などの低レベル共通基盤だけを調べたいとき。
-- Codex に渡す prompt や Structured Output schema の本文定義だけを変更したいとき。
-- oracle 正本仕様、INDEX.md エントリー生成基準、realization 標準そのものを確認したいとき。
-- 特定の下位責務がすでに分かっており、apply、session、review loop、review report、review targets、review index などの個別 module を直接読む方が狭く済むとき。
+- Typer アプリ全体のコマンド登録、ルート CLI 構造、引数宣言だけを調べたい場合は、CLI 登録側を読む方が直接的。
+- git 実行 wrapper、worktree 判定、branch 判定、state file schema、report directory 算出、timestamp、CmocError などの共通 runtime 実装だけを調べたい場合は、それぞれの共通実装を読む。
+- Codex に渡す prompt、Structured Output schema、AgentCallParameter の詳細だけを確認したい場合は、パラメータ構築側や prompt 部品を読む。
+- oracle の正本仕様、INDEX.md エントリー生成方針、oracle file と realization file の関係を確認したい場合は、実装ではなく oracle 文書を読む。
+- 個別の review 対象列挙、review loop、review report、review index merge など分割済み処理の詳細だけを確認したい場合は、該当する下位モジュールへ直接進む。
 
 ## hash
-- a9ee3d32f70c81cd3ad409616f5fff722881dbd962ca1692819f69e98b1815ae
+- 8ddbe31cc93ec40cfb3c81c0854ac06bf04341132c36e8902e98613b4900c5ff

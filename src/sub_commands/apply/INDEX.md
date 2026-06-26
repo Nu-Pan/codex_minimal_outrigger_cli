@@ -62,21 +62,23 @@
 # `fork.py`
 
 ## Summary
-- isolated apply worktree 上で apply loop を実行し、scope に応じた調査対象の列挙、finding 列挙、finding 適用、変更コミット、レポート作成、session state 更新までを統括する実装。
-- apply 実行中に編集禁止対象へ差分が出た場合の検出・ロールバック・再試行、apply 対象として扱える通常テキストファイルへの正規化、Codex CLI による commit subject 生成もここで扱う。
+- isolated apply worktree 上で Codex CLI による apply loop を実行する実装。session branch と apply state の事前条件確認、apply branch/worktree 作成、対象 file の列挙、finding 列挙と適用、禁止対象差分の rollback、commit message 生成、report 出力、state/process id 更新までを扱う。
+- apply scope に応じた調査対象の正規化、重複排除、worktree 変更 path の検出など、apply fork の反復制御に必要な helper も含む。
 
 ## Read this when
-- apply fork サブコマンドの実行条件、session/apply state 遷移、apply branch/worktree 作成、process id 管理、成功・失敗時のレポート出力を確認または変更したいとき。
-- apply scope ごとの finding 列挙対象、変更済み path の再投入、重複排除、oracle・memo・INDEX・binary・git ignored file の除外条件を確認したいとき。
-- finding 適用時に編集禁止対象の差分を戻す制御、再試行後も差分が残る場合のエラー処理、適用後 commit message 生成と commit 作成の流れを確認したいとき。
+- apply fork サブコマンドの実行条件、終了コード、状態遷移、apply branch/worktree 作成、report 出力の流れを確認したいとき。
+- apply scope が rolling、session、full の場合に、どの file を finding 列挙対象にするかを確認・変更したいとき。
+- apply fork 中に oracle、.agents、memo などの編集禁止対象へ差分が出た場合の rollback と再実行の挙動を確認・変更したいとき。
+- finding 適用後の変更検出、commit 作成、Codex CLI による commit subject 生成、apply loop の converged/unconverged 判定を扱うとき。
 
 ## Do not read this when
-- apply fork の Codex 呼び出し用 prompt や AgentCallParameter の詳細だけを確認したい場合は、その builder 側を読む。
-- apply fork のレポート本文やエラーレポートの構成だけを確認したい場合は、レポート生成側を読む。
-- apply process id の保存形式や共通 runtime helper の実装だけを確認したい場合は、apply runtime または cmoc runtime 側を読む。
+- apply fork の report 本文生成や error report の markdown 内容だけを確認したい場合は、report 生成側の実装を読む。
+- Codex CLI に渡す finding 列挙・finding 適用用 parameter の prompt 構築だけを確認したい場合は、builder 側の実装を読む。
+- apply process id の保存・削除の永続化形式だけを確認したい場合は、apply runtime 側の実装を読む。
+- apply fork 以外の apply サブコマンド、session 管理、config schema、git wrapper の一般挙動を確認したいだけの場合は、それぞれの担当 module を読む。
 
 ## hash
-- 571226ee0c7d1c40ee03cb77e7a3b672e1ff784d6ebd8ec67a09353207ea2b02
+- 742e5c8edd54c03f22570feddd7e23bea9f2440eb03da0c3d0faf478c8c88c97
 
 # `fork_report.py`
 

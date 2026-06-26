@@ -1,23 +1,27 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実装群への入口となるディレクトリ。apply run の開始、実行時 runtime helper、破棄、join、report 生成など、apply state と apply branch/worktree/process を扱う処理がまとまっている。
-- apply 実行中 process の pid 管理、linked worktree 探索、apply branch の作成・削除、session branch への merge、実行結果 report など、apply のライフサイクルを追うための下位実装へ進む起点になる。
+- apply 系サブコマンド群の実装をまとめる領域。apply run の開始、破棄、取り込み、report 生成、実行中 process 管理、apply worktree と branch の解決・削除などを扱う。
+- session branch と apply branch/worktree をまたぐ状態検証、差分適用、commit、merge、rollback、process 停止、warning/report 出力の入口として、apply 関連処理の読む先を選ぶためのまとまり。
 
 ## Read this when
-- apply サブコマンド群のどの実装を読むべきかを、開始・破棄・join・report・runtime helper の責務境界から選びたいとき。
-- apply run の状態遷移、apply branch/worktree/process id、session branch への取り込み、後片付けの流れに関係する実装を調べたいとき。
-- apply fork、apply abandon、apply join の実行条件、失敗条件、副作用、利用者向け出力や report の入口を探したいとき。
-- apply process 停止、pid file、pidfd、git worktree 探索など、apply 実行時状態の低レベル helper へ進む必要があるとき。
+- apply run の開始、実行、破棄、取り込み、状態遷移、終了コード、CLI 出力など、apply 系サブコマンド全体の担当箇所を探したいとき。
+- apply branch や apply worktree の作成・探索・削除、session branch への merge、clean worktree 検証、想定外差分の扱いなど、apply が branch/worktree をどう操作するか確認したいとき。
+- apply process の pid 永続化、実行中 process の同一性確認、停止、stale pid や権限不足の扱いなど、apply 実行時状態の低レベル処理を調べたいとき。
+- apply fork の finding 列挙、対象 file scope、禁止対象差分の rollback、commit 作成、converged 判定、report 出力の流れを追いたいとき。
+- apply abandon や apply join のように、active apply run の後片付け、state 初期化、worktree/branch/process id の削除、warning 出力を扱う変更をしたいとき。
+- apply fork や apply join の Markdown report、変更要約、frontmatter、結果ラベル、エラー時 report の生成内容を確認・変更したいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド実装、共通 CLI dispatch、または上位のサブコマンド登録だけを調べたいとき。
-- session state file 全体の schema、git wrapper、worktree 操作、report 保存先など、apply 固有ではない共通 runtime の詳細だけを調べたいとき。
-- oracle file、realization file、INDEX.md 生成規則など、apply サブコマンド実装ではなく仕様・ルーティング文書の方針を確認したいとき。
-- 個別の apply 処理対象がすでに分かっており、fork、abandon、join、report、runtime helper の該当実装へ直接進めるとき。
+- apply 以外のサブコマンド、session 管理、config schema、git wrapper の一般挙動だけを調べたいとき。
+- oracle file や realization file の定義、INDEX.md 生成規則、ルーティング文書の方針そのものを確認したいとき。
+- Codex CLI に渡す prompt や structured output parameter の構築だけを確認したいときは、builder 側の実装へ直接進む。
+- session state file 全体の schema、永続化形式、branch からの state 読み込み規則だけを確認したいときは、state や共通 runtime の担当箇所へ進む。
+- report 保存先の基礎ルール、timestamp 生成、git command 実行 wrapper、cmoc ignore 判定などの共通 helper の詳細だけを調べたいとき。
+- パッケージ import 時の副作用や再 export の有無だけを確認したい場合を除き、単なるパッケージ説明ではなく具体的な apply 実装対象へ進めばよいとき。
 
 ## hash
-- f3a3d3edb88b887b917e154fe269e945453f7d9454f4aedaf9bdb647721b1f9e
+- e12db227a122f5da5f80c37db2a819f8a5e3690ce5559019bb5b8b9e5c21e1b7
 
 # `indexing.py`
 

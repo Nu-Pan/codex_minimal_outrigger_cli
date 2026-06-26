@@ -60,23 +60,23 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 挙動のうち、report 生成、dirty file 再検査、編集禁止対象への差分拒否、rolling apply fork の対象選択を検証する realization test。
-- 未収束 report の変更要約・commit message、収束までの再検査、forbidden diff 時の error state/report、前回 apply の oracle snapshot commit を基準にした rolling apply を扱う。
+- apply fork CLI の挙動を pytest で検証する realization test。未収束・収束・error report、変更要約、commit message、dirty file 再検査、編集禁止対象の差分検出、rolling apply fork の対象選択と session state 更新を扱う。
+- Codex 実行を fake に差し替え、実リポジトリ操作と CLI 実行結果、生成 report、git commit、session state の外部挙動を確認する。
 
 ## Read this when
-- apply fork が Codex の所見列挙、所見適用、commit message 生成、変更要約生成をどの目的で呼び分けるかを検証したいとき。
-- 未収束・収束・error の apply report に、結果、終了理由、変更要約、commit message、return code がどう反映されるかを確認したいとき。
-- apply 後の dirty file を再検査し、生成された routing document を再検査対象から外す制御を確認したいとき。
-- 編集禁止対象への差分を検出した場合に、error state と report へ落とし込み、変更要約生成を行わない挙動を確認したいとき。
-- rolling apply fork が前回 apply の oracle snapshot commit を基準に対象を選び、join 済み snapshot 情報を session state に反映する挙動を確認したいとき。
+- apply fork の report 生成、result label、終了コード、変更要約、commit message 反映に関するテストを確認・変更する時。
+- apply 後の dirty file 再検査や、INDEX.md を再検査対象から除外する制御を確認・変更する時。
+- 編集禁止対象への差分を error state と report に落とし込む挙動を確認・変更する時。
+- rolling apply fork が前回 apply の oracle snapshot commit と join 後の差分から対象を選ぶ挙動を確認・変更する時。
 
 ## Do not read this when
-- apply fork の基本的な state/worktree/branch 更新、設定読み込み失敗、`.gitignore` 保持、target 正規化だけを確認したいときは `test_apply_fork_cli.py` を読む。
-- apply fork 以外の apply/join/session/init コマンド全般の仕様や実装入口を探しているだけのとき。
-- report renderer、state model、path model、git helper などの個別実装を直接変更したいとき。
+- apply fork 以外の apply CLI、session CLI、init CLI の一般挙動を調べたい時。
+- Codex 実行 wrapper や structured output schema の実装詳細そのものを調べたい時。
+- oracle file の正本仕様や INDEX.md 生成規則を確認したい時。
+- 単にテスト共通 fixture や helper の定義を調べたい時。
 
 ## hash
-- 125ad7f741a18e3f064566dab600e1301290dd82ed60ea1f5ca0bc2a6538253a
+- 590469078a7276ad86ffb10c463d0b1a8eccb13673f4df6d4011658ee065b7d3
 
 # `test_apply_join_cli.py`
 
