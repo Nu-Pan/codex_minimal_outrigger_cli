@@ -69,23 +69,30 @@
 # `commons`
 
 ## Summary
-- cmoc の実行時共通 helper 群を収める領域。CLI サブコマンド共通ライフサイクル、Codex exec/TUI 呼び出し、profile・設定・content hash・エラー・Git・logging・path・result・state など、複数機能から共有される runtime 基盤を扱う。
-- 個別責務の実装に加えて、runtime 系 API を呼び出し側へまとめて再公開する集約入口や、互換 import path を保つ薄い橋渡しも含む。
+- cmoc の実行時共通処理を集めた implementation 領域で、CLI サブコマンド共通ライフサイクル、Codex exec/TUI 呼び出し、profile/config、content hash、error、git、logging、path、result、session state などの runtime helper を扱う。
+- 複数の runtime helper を集約して再公開する入口と、責務別の実装モジュールが同居しており、上位のサブコマンド実装から共通実行基盤の挙動を確認・変更する際の入口になる。
 
 ## Read this when
-- サブコマンド実行、Codex 呼び出し、設定永続化、Git 操作、実行ログ、path 解決、状態ファイル、共通エラー表示など、複数の上位機能から使われる runtime helper の責務境界を確認したいとき。
-- runtime 系の共通 API をどこから import できるか、または集約入口の再公開範囲を変更すべきか判断したいとき。
-- Codex CLI 実行に関する profile 準備、exec retry、Structured Output 検証、quota/capacity 制御、TUI 起動、call log 保存、preflight 実行前フックのいずれかを確認・変更したいとき。
-- cmoc の設定ファイル、content hash 保存、利用者向けエラー整形、Git repository/worktree 状態、サブコマンド JSON Lines log、runtime path、共有結果型、session/apply 永続状態の共通実装へ進む入口を探しているとき。
+- CLI サブコマンド共通の開始・完了表示、終了コード化、例外処理、サブコマンドログ、work root 実行前提を確認または変更したいとき。
+- Codex CLI の exec/TUI 呼び出しについて、profile/schema 準備、argv、cwd/env、call log、Structured Output 検証、retry、quota/capacity 制御、resume 継続、失敗時例外化を追いたいとき。
+- cmoc 設定ファイルの読み書き、既定値補完、永続化 JSON との相互変換、不正設定の利用者向けエラー化を扱うとき。
+- 内容ハッシュ付きファイル保存、SHA-256 digest 計算、binary file の粗い判定など、runtime 生成物やキャッシュの共通 content helper を探すとき。
+- CmocError の構造、利用者向けエラー表示、Git repository/worktree/branch 状態確認、Git command 失敗時の共通エラー変換を確認または変更したいとき。
+- サブコマンド実行ログ、Codex call 完了サマリー、quota 待機時間集計、context-local logger、ログ record の基本項目を扱うとき。
+- repo root、work root、cmoc root、.cmoc 配下の各保存先、timestamp、duration 表示、一時的な cwd 変更など runtime path helper を確認したいとき。
+- 外部コマンド結果や Codex exec 結果の共有データ型、session/apply の永続状態 JSON、cmoc 管理 branch 名と session_id の対応を確認または変更したいとき。
+- runtime 系 helper の公開 import 面を確認し、複数領域をまたぐ共通 API を集約入口から利用または整理する必要があるとき。
 
 ## Do not read this when
-- 個別 CLI サブコマンドの業務ロジック、引数定義、dispatch、利用者向け入出力だけを調べたいとき。その場合は各サブコマンド本体へ進む。
-- path keyword の正本定義、oracle file、INDEX.md 生成仕様など、runtime helper ではなく仕様断片や概念定義そのものを確認したいとき。
-- 特定機能の高レベルな処理順序や domain logic を追いたいだけで、共通 runtime helper の入出力・副作用・失敗時挙動に触れないとき。
-- テスト期待値や fixture から挙動を確認する方が直接的な変更で、共有 runtime 実装の責務や API を変更しないとき。
+- 個別サブコマンドの業務ロジック、引数定義、利用者向け入出力だけを調べたいときは、そのサブコマンド本体へ進む。
+- path キーワードそのものの意味や oracle 上の root 概念定義を確認したいだけのときは、path model の仕様または定義側へ進む。
+- INDEX.md 生成ロジック、ルーティング文書の内容生成、エントリープロンプト、ファイル探索ルールそのものを調べたいときは、indexing 側の実装へ進む。
+- 設定データクラス、AgentCallParameter、FileAccessMode、CmocConfig などのモデル定義そのものを確認したいだけのときは、モデル定義側へ進む。
+- ログや状態ファイルを読む側、集計する側、表示する側の機能仕様を調べたいときは、それらの利用側へ進む。
+- oracle file の正本仕様、自然言語仕様、oracle src/test の内容を確認したいときは、この realization implementation 領域ではなく oracle 配下の該当本文へ進む。
 
 ## hash
-- 8d6164347a52ae3d229e894b8a90a85aa3299a731dd99d3df002efa40b017dc7
+- 7c2517fff8c070c1421cc25217677a2e53087be1e6bc85cdf9114dd545ba1d69
 
 # `config`
 

@@ -194,23 +194,24 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex CLI 実行ラッパーが quota exceeded を受けた後に、quota availability probe を挟んで再実行または resume し、最終結果・呼び出しログ・サブコマンドイベントを整合させる挙動を検証する realization test。
-- 偽の codex 実行ファイルを使い、CODEX_HOME、argv、stdin、stdout/stderr/output のログ、resume token の有無、並列実行時の probe 代表化を外部副作用として確認する。
+- Codex 実行が quota exceeded で失敗した後、quota availability probe を挟んで再実行または resume する制御を検証する realization test。
+- quota 待機時の呼び出し順、標準入力、CODEX_HOME 伝播、resume token 利用、call log と subcommand log の記録内容、コンソール出力をまとめて確認する。
+- 並行実行時に quota probe が代表 1 回に集約され、各実行が resume して成功することも検証する。
 
 ## Read this when
-- Codex CLI 呼び出しの quota exceeded 検出後の待機・probe・resume・再実行制御を変更する時。
-- quota availability probe の argv、stdin、profile、出力保存、ログ記録、コンソール表示の期待値を確認したい時。
-- thread.started の thread_id を使った resume と、resume token が得られない場合の通常再実行の分岐を確認したい時。
-- 複数の run_codex_exec 呼び出しが同時に quota exceeded になった時、probe が 1 回に集約され各呼び出しが復帰する制御を確認したい時。
+- Codex 実行の quota exceeded 検出後に、probe、retry、resume を行う制御ロジックを変更する。
+- Codex 実行ログ、call_log_path、stdout/stderr/output の保存、subcommand logger の codex_call event を変更する。
+- quota probe の argv、profile、標準入力、出力ファイル、CODEX_HOME など、Codex CLI 呼び出し条件を確認したい。
+- 複数スレッドから同時に quota exceeded が発生した場合の probe 集約や resume 挙動を変更・調査する。
 
 ## Do not read this when
-- Codex CLI の通常成功時、通常失敗時、設定変換、または quota 以外のエラー処理だけを確認したい時。
-- AgentCallParameter、CmocConfig、SubcommandLogger の基本構造や生成規則そのものを調べたい時。
-- 実際の Codex CLI や LLM の応答品質を検証したい時。
-- リポジトリ作成、CODEX_HOME 準備、偽実行ファイル作成のテスト支援関数そのものを変更したい時。
+- Codex CLI の通常成功時や一般的な失敗時だけを扱い、quota exceeded 後の待機・probe・resume 制御に触れない。
+- oracle file の正本仕様を確認したい。これは実装挙動を検証する realization test であり、仕様本文ではない。
+- Codex 実行とは無関係なサブコマンド、設定読み込み、path model、INDEX.md 生成処理だけを調査する。
+- LLM 出力品質や Codex CLI 自体の内部挙動を確認したい。ここでは fake codex を使って cmoc 側の制御とログだけを検証している。
 
 ## hash
-- 41648e73004d1e8cd44eab18f909248b78cd18783acd796920a90c6c2454f754
+- 8a391a1b2ae8c80eee70ffea050c1797c06ea15953441d15f80ed91e0f83c2a3
 
 # `test_codex_runtime_retry.py`
 

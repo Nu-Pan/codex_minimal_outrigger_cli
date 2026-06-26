@@ -73,23 +73,27 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex CLI の exec 呼び出しを 1 回の状態機械として制御する実行基盤。profile/schema の準備、subprocess 実行、call log/stdout/stderr/output の保存、subcommand event 発行、Structured Output 検証、capacity retry、quota wait/probe、resume 継続をまとめて扱う。
-- TUI 起動や profile 解析ではなく、exec 分岐と再試行・待機・検証・記録の整合性を保つための中核処理を担う。
+- Codex CLI の exec 呼び出しを 1 回の状態機械として制御し、profile/schema 準備、subprocess 実行、stdout/stderr/output/call log 保存、Structured Output 検証、capacity retry、quota wait/probe、resume 継続、subcommand event 記録、成功時の結果生成をまとめて扱う実行制御モジュール。
+- quota 処理や resume token、log/event、retry counter が同じ subprocess 結果を共有するため、exec 実行中の再試行・待機・検証・記録の流れを追う入口になる。
+- 同一プロセス内で Codex call log 名の timestamp を単調増加させ、壁時計の後退や同時生成による log path 衝突を避ける補助処理も含む。
 
 ## Read this when
-- Codex CLI の exec 実行条件、argv、cwd、環境変数、profile、schema、追加 read/write path の渡し方を確認・変更したいとき。
-- Structured Output の schema 検証失敗時の retry、capacity error 時の指数 backoff、quota error 時の代表 probe と待機共有、resume token による継続挙動を確認・変更したいとき。
-- Codex 呼び出しごとの call log、stdout/stderr/output 保存、console 出力、subcommand log event、quota wait 集計の内容やタイミングを追う必要があるとき。
-- Codex exec の戻り値として返す実行結果、log path、profile/schema path、elapsed/quota 時間、poll 回数の由来を調べるとき。
+- Codex CLI の `exec` 実行時にどの argv、profile、schema、cwd、環境変数、入力 prompt が使われるかを確認したいとき。
+- Structured Output schema の準備、検証、semantic retry、検証失敗時の error/log の扱いを調べるとき。
+- capacity error の指数 backoff retry、quota error の代表 probe、他スレッドの quota wait 共有、quota wait 秒数・poll 回数の記録を変更または確認するとき。
+- Codex CLI 失敗時に保存される stdout/stderr/output/call log と、console/subcommand log へ出る `codex_call` event の内容や status を追うとき。
+- quota 回復後や quota 待機後に resume token を使って同じ作業を継続する制御を調べるとき。
+- Codex exec の戻り値として result object に入る path、profile、schema、elapsed、quota wait 情報を確認するとき。
 
 ## Do not read this when
-- Codex profile 名、Codex home、schema ファイル準備、エラー文字列抽出、quota/capacity 判定、resume token 抽出、output JSON 読み取りの個別 helper 実装だけを調べたいときは、それらを提供する runtime profile 系の対象を読む。
-- Codex call の console 表示形式だけを変更したいときは、console 出力 helper 側を読む。
-- subcommand logger の構造や event 保存先そのものを調べたいときは、runtime logging 側を読む。
-- TUI 起動や exec 以外の Codex 実行経路を調べたいときは、この対象ではなく該当する起動・実行制御の対象へ進む。
+- Codex profile 名、Codex home、schema file の具体的な生成・解決・検証 helper の内部だけを調べたいときは、それらを提供する profile/config 系の共通処理を直接読む。
+- TUI 起動や対話 UI の制御を調べたいときは、この対象ではなく TUI 側の実行制御を読む。
+- subcommand logger 自体の保存形式、event writer、quota wait 集計の実装を調べたいだけなら logging 系の共通処理を読む。
+- path model、repo/work/log directory、timestamp 生成の一般ルールを調べたいときは path 系の共通処理を読む。
+- Codex exec 成功後の result object の型定義や利用側だけを確認したいときは、結果型または呼び出し元を読む。
 
 ## hash
-- 6a408d1d77afba0b05a7599853e840777970ffdf840a0b2d2379eed58224b48d
+- 416908caa21d6d09e16717099112ef44e519f787d81cf214b68a1f8543a3a22a
 
 # `runtime_codex_logging.py`
 
