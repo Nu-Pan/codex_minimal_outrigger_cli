@@ -20,21 +20,23 @@
 # `test_apply_abandon_cli.py`
 
 ## Summary
-- `apply abandon` コマンドの realization test。apply run 破棄時に apply worktree と apply branch を掃除し、状態を `ready` に戻す外部挙動を CLI 経由で検証する。
-- cleanup 対象が既に消えている場合の warning、running 状態の process 停止、process id 不在時の拒否、apply worktree を導出できない状態の拒否、apply worktree 内からの実行、stale apply branch からの誤破棄拒否を扱う。
+- apply run を破棄する CLI 挙動の realization test。apply 用 worktree と branch の削除、状態の ready への復帰、欠損した cleanup 対象の warning、running 状態の process 停止、apply worktree からの実行、stale apply branch の拒否を検証する。
+- apply process 停止まわりの制御ロジックも扱い、既に終了した process、PID 再利用、process id 欠落時の失敗をテストする。
 
 ## Read this when
-- `apply abandon` の CLI 挙動、出力文言、終了コード、session state の更新、apply worktree・apply branch の削除条件を変更または確認するとき。
-- apply run の running/completed/ready 状態遷移、apply process id の扱い、cleanup 失敗や対象欠落時の warning/error 境界を確認するとき。
-- 現在位置が apply worktree や stale apply branch の場合に、破棄対象をどう判定するかを調べるとき。
+- apply abandon の外部挙動、出力、状態更新、git worktree/branch cleanup を変更または確認したいとき。
+- apply run が running の場合に、cleanup 前に process を停止する処理や process id 管理を変更または確認したいとき。
+- apply worktree 内から abandon を実行する場合や、現在 branch が破棄対象の active apply run ではない場合の安全確認を扱うとき。
+- apply abandon の失敗時に worktree、branch、session state を保持する境界を確認したいとき。
 
 ## Do not read this when
-- `apply fork` の生成処理そのもの、Codex 実行結果の品質、review findings の内容を調べたいだけのとき。
-- session fork、init、git worktree helper など、apply abandon 以外の CLI 基盤挙動を直接確認したいとき。
-- oracle file の正本仕様を確認したいとき、または実装ファイル側の内部関数分割や helper 実装を読むべきとき。
+- apply abandon 以外の apply サブコマンドの通常生成・実行フローだけを確認したいとき。
+- Codex 実行結果の品質や findings の内容そのものを検証したいとき。
+- session fork、init、path model などの基礎機能の仕様や実装を単独で調べたいとき。
+- INDEX.md 生成規則やルーティング文書の書き方を確認したいとき。
 
 ## hash
-- d9e1345db5eb3885badbb85781e46d4b37406d7a34cec2b8daeecf11b6b48904
+- daf4b003f841e7fa9c662933847bc232048858ac8b3e98a808cfebf16d477133
 
 # `test_apply_fork_cli.py`
 
