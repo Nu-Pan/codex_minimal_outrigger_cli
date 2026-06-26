@@ -42,7 +42,7 @@ def build_session_join_conflict_resolution_parameter(
         - git add と git commit は実行しないこと
         - 作業後に conflict marker が残らない状態にすること
         """,
-        file_access_mode=FileAccessMode.REALIZATION_WRITE,
+        file_access_mode=FileAccessMode.REPO_WRITE,
         aux_prompt=[
             StructDoc(
                 "conflict 対象ファイル",
@@ -66,7 +66,7 @@ def build_session_join_conflict_resolution_parameter(
     return AgentCallParameter(
         ModelClass.MAINSTREAM,
         ReasoningEffort.MEDIUM,
-        FileAccessMode.REALIZATION_WRITE,
+        FileAccessMode.REPO_WRITE,
         render_as_markdown(prompt),
         None,
     )

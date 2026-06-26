@@ -1,4 +1,7 @@
+import tomllib
+
 from _support import (
+    CmocConfig,
     CmocError,
     FileAccessMode,
     Path,
@@ -13,6 +16,7 @@ from _support import (
     session_module,
     subprocess,
 )
+from commons.runtime_codex_profile import build_codex_profile
 
 
 def session_state_path(root: Path, session_branch: str) -> Path:
@@ -206,8 +210,11 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     assert state["session"]["state"] == "active"
 
 
-def test_session_join_resolves_conflict_with_codex(tmp_path: Path, monkeypatch) -> None:
+def test_session_join_resolves_oracle_conflict_with_writable_profile(
+    tmp_path: Path, monkeypatch
+) -> None:
     root = make_repo(tmp_path)
+    target = root / "oracle" / "spec.md"
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
     assert (
@@ -215,12 +222,12 @@ def test_session_join_resolves_conflict_with_codex(tmp_path: Path, monkeypatch) 
     )
     session_branch = current_branch(root)
     home_branch = session_home_branch(root, session_branch)
-    (root / "README.md").write_text("session change\n")
-    run_git(root, "add", "README.md")
+    target.write_text("session change\n")
+    run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "session change")
     run_git(root, "switch", home_branch)
-    (root / "README.md").write_text("home change\n")
-    run_git(root, "add", "README.md")
+    target.write_text("home change\n")
+    run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "home change")
     run_git(root, "switch", session_branch)
     calls: list[str] = []
@@ -232,7 +239,11 @@ def test_session_join_resolves_conflict_with_codex(tmp_path: Path, monkeypatch) 
     def fake_run_codex_exec(parameter, **kwargs):
         calls.append(kwargs["purpose"])
         modes.append(parameter.file_access_mode)
-        (root / "README.md").write_text("resolved change\n")
+        profile = tomllib.loads(build_codex_profile(parameter, CmocConfig(), root))
+        fs = profile["permissions"]["cmoc"]["file_system"]
+        assert str(root) in fs["write"]
+        assert str(root / "oracle") not in fs["read_only"]
+        target.write_text("resolved change\n")
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
@@ -241,9 +252,9 @@ def test_session_join_resolves_conflict_with_codex(tmp_path: Path, monkeypatch) 
 
     assert result.exit_code == 0
     assert current_branch(root) == home_branch
-    assert (root / "README.md").read_text() == "resolved change\n"
+    assert target.read_text() == "resolved change\n"
     assert calls == ["session join conflict resolution"]
-    assert modes == [FileAccessMode.REALIZATION_WRITE]
+    assert modes == [FileAccessMode.REPO_WRITE]
 
 
 def test_session_join_uses_linked_worktree_branch(tmp_path: Path, monkeypatch) -> None:

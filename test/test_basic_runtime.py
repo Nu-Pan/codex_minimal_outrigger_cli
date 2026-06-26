@@ -342,3 +342,4 @@ def test_codex_profile_contains_file_access_enforcement(tmp_path: Path) -> None:
     assert repo_fs["read"] == [str(root)]
     assert repo_fs["write"] == [str(root)]
     assert repo_fs["deny_read"] == [str(root / "memo")]
+    assert repo_fs["read_only"] == [str(root / "memo"), str(root / ".agents")]
