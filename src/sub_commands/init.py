@@ -5,6 +5,7 @@ import typer
 
 from cmoc_runtime import (
     ensure_cmoc_ignored,
+    repo_root,
     run_cli_subcommand,
     run_git,
     sync_config,
@@ -19,6 +20,7 @@ _PRE_LOG_GITIGNORE_STATES: dict[Path, tuple[bool, str | None]] = {}
 def cmoc_init_impl() -> None:
     """work root を cmoc が扱える初期状態へ同期する。"""
     root = work_root()
+    config_root = repo_root()
     gitignore = root / ".gitignore"
     pre_log_gitignore = _PRE_LOG_GITIGNORE_STATES.pop(root.resolve(), None)
     head_gitignore = _git_show(root, "HEAD:.gitignore")
@@ -46,7 +48,7 @@ def cmoc_init_impl() -> None:
         run_git(["restore", "--staged", "--", "."], root)
     try:
         ensure_cmoc_ignored(root)
-        sync_config(root)
+        sync_config(config_root)
         run_git(["add", ".gitignore"], root)
         diff = run_git(
             ["diff", "--cached", "--quiet", "--", ".gitignore", ".cmoc"],
