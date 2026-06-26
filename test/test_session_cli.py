@@ -210,7 +210,7 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     assert state["session"]["state"] == "active"
 
 
-def test_session_join_resolves_oracle_conflict_with_writable_profile(
+def test_session_join_resolves_oracle_conflict_with_realization_write_profile(
     tmp_path: Path, monkeypatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -242,7 +242,7 @@ def test_session_join_resolves_oracle_conflict_with_writable_profile(
         profile = tomllib.loads(build_codex_profile(parameter, CmocConfig(), root))
         fs = profile["permissions"]["cmoc"]["file_system"]
         assert str(root) in fs["write"]
-        assert str(root / "oracle") not in fs["read_only"]
+        assert str(root / "oracle") in fs["read_only"]
         target.write_text("resolved change\n")
         return FakeCodexResult()
 
@@ -254,7 +254,7 @@ def test_session_join_resolves_oracle_conflict_with_writable_profile(
     assert current_branch(root) == home_branch
     assert target.read_text() == "resolved change\n"
     assert calls == ["session join conflict resolution"]
-    assert modes == [FileAccessMode.REPO_WRITE]
+    assert modes == [FileAccessMode.REALIZATION_WRITE]
 
 
 def test_session_join_uses_linked_worktree_branch(tmp_path: Path, monkeypatch) -> None:
