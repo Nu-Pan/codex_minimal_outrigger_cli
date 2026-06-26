@@ -69,4 +69,5 @@ def build_session_join_conflict_resolution_parameter(
         FileAccessMode.REALIZATION_WRITE,
         render_as_markdown(prompt),
         None,
+        tuple(resolved_paths),
     )

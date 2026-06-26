@@ -192,6 +192,7 @@ def test_session_join_resolves_conflict_with_codex(tmp_path: Path, monkeypatch) 
     run_git(root, "switch", session_branch)
     calls: list[str] = []
     modes: list[FileAccessMode] = []
+    writable_paths: list[tuple[Path, ...]] = []
 
     class FakeCodexResult:
         output_json = None
@@ -199,6 +200,7 @@ def test_session_join_resolves_conflict_with_codex(tmp_path: Path, monkeypatch) 
     def fake_run_codex_exec(parameter, **kwargs):
         calls.append(kwargs["purpose"])
         modes.append(parameter.file_access_mode)
+        writable_paths.append(parameter.writable_paths)
         (root / "README.md").write_text("resolved change\n")
         return FakeCodexResult()
 
@@ -211,6 +213,7 @@ def test_session_join_resolves_conflict_with_codex(tmp_path: Path, monkeypatch) 
     assert (root / "README.md").read_text() == "resolved change\n"
     assert calls == ["session join conflict resolution"]
     assert modes == [FileAccessMode.REALIZATION_WRITE]
+    assert writable_paths == [(root / "README.md",)]
 
 
 def test_session_join_uses_linked_worktree_branch(tmp_path: Path, monkeypatch) -> None:

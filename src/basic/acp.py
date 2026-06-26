@@ -80,3 +80,6 @@ class AgentCallParameter:
     # Structured Output schema ファイルパス
     # Structured Output を要求しない呼び出しでは None。
     structured_output_schema_path: Path | None
+
+    # 通常モードの禁止範囲内で、この呼び出しに限って書き込みを許す実パス。
+    writable_paths: tuple[Path, ...] = ()
