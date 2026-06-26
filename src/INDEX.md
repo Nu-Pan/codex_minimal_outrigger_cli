@@ -1,24 +1,24 @@
 # `acp`
 
 ## Summary
-- AI エージェント呼び出しに渡す prompt 構成を扱う実装領域。用途別の呼び出しパラメータ構築と、共通 prompt 部品の生成を下位要素として持つ。
-- フォーク適用後レビュー、ルーティング文書用エントリー生成、oracle レビュー、session join、TUI 実行前判定などで、エージェントへ渡す role・goal・補助文脈・ファイルアクセス規則・モデル設定・Structured Output schema を追うための入口になる。
-- 個別工程ごとの呼び出し内容を確認する領域と、oracle / realization / レビュー / INDEX.md / ファイルアクセス / ルーティングなどの共通規範を prompt 部品として生成する領域へ進むための分岐点になる。
+- AI エージェント呼び出しに関わる実装領域。各工程の AgentCallParameter と Structured Output schema を組み立てる処理と、プロンプトを構成する標準部品の生成処理を扱う。
+- サブコマンドや工程ごとの role、summary、goal、補助文脈、標準文書、ファイルアクセス規則、model class、reasoning effort、返却 schema を追う入口になる。
+- 差分要約、レビュー所見、所見対応、正本仕様断片レビュー、merge conflict marker 解消、TUI 実行前のパラメータ解決、ルーティング文書エントリー生成など、AI 呼び出し境界と共通プロンプト規範を確認するためのまとまり。
 
 ## Read this when
-- AI エージェントに提示される作業指示や制約が、どの prompt 部品または呼び出しパラメータとして構成されるかを確認・変更したいとき。
-- フォーク適用後レビュー、ルーティング文書用エントリー生成、oracle レビュー、session join の conflict marker 解消、TUI 実行前の権限・参照要否判定など、工程別のエージェント呼び出し内容を調べたいとき。
-- role、summary、goal、補助入力、ファイルアクセスモード、モデル種別、reasoning effort、Structured Output schema といった、AI 呼び出しの入力契約を追いたいとき。
-- oracle / realization の基本概念、標準文書、レビュー基準、INDEX.md エントリー規範、ファイルアクセス規則、ルーティング規則が agent prompt にどう組み込まれるかを調べたいとき。
+- AI エージェントへ渡す prompt、実行条件、Structured Output schema の対応を、機能領域別に探し始めたいとき。
+- apply fork、review oracle、session join、tui、indexing などの工程で AgentCallParameter がどのように構築されるか確認または変更したいとき。
+- oracle、realization、レビュー、INDEX.md、ファイルアクセス、ルーティングに関する標準文書や規則文書が、agent prompt にどう含まれるかを調べたいとき。
+- AI 呼び出しごとのファイルアクセス権限、モデル種別、推論強度、標準文書断片、補助入力の埋め込み方を比較したいとき。
 
 ## Do not read this when
-- CLI 引数解析、サブコマンド全体の制御フロー、git 操作、差分取得、状態保存、表示、生成結果の書き込みなど、AI 呼び出し構築の外側を調べたいとき。
-- oracle file や realization file の仕様本文、各種 standard の本文そのもの、レビュー対象ファイルの具体的内容を確認したいとき。
-- Markdown rendering、構造化文書表現、パス解決、AgentCallParameter や FileAccessMode の型定義など、prompt 構築を支える汎用基盤だけを調べたいとき。
-- 生成済みルーティング文書の内容確認、対象を実際に読むべきかの意味判断、merge conflict 検出や TUI 表示・入力処理など、prompt 構成ではない成果物・UI・制御側の挙動を調べたいとき。
+- AI 呼び出しより上位の CLI 引数解析、サブコマンド実行順序、状態保存、git 操作、対象ファイル探索などの実行制御を調べたいとき。
+- StructDoc、Markdown rendering、AgentCallParameter、FileAccessMode、path 解決、complete prompt 生成など、複数領域で使われる共通基盤の型や helper を調べたいとき。
+- 生成済みのレビュー所見、差分要約、INDEX.md エントリーなど、AI 呼び出し結果の保存・表示・利用側の挙動を確認したいとき。
+- 個別サブコマンドの CLI 挙動、状態ファイル、path model、入出力 schema など、プロンプト部品や AI 呼び出し境界ではない機能仕様・実装を探しているとき。
 
 ## hash
-- 1ce9a2460391841675590e79359f3812c31a0c5641a49b92190e56a06d68865e
+- 0e7d135f26551118a732c2882542545038d7374f0be00db8e84bf9aa1a8506bc
 
 # `basic`
 

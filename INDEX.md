@@ -147,26 +147,26 @@
 # `src`
 
 ## Summary
-- `src` は cmoc の realization implementation を置く実装ルートであり、CLI の公開入口、サブコマンド orchestration、AI エージェント呼び出し用 prompt/parameter 構築、共通 runtime helper、設定値、基礎的な値オブジェクトや文書生成部品を下位要素として持つ。
-- 利用者操作から実行される cmoc 本体の挙動を追う入口で、上位では CLI 配線と互換 import、下位では init、indexing、tui、session、apply、review、Codex/Git/state/config/path/error/logging などの実行時処理へ分岐する。
-- oracle file による正本仕様断片を具体化した実装側の領域であり、テストや正本仕様本文ではなく、現行仕様を満たすためのプロダクト実装を確認・変更する対象になる。
+- cmoc の実装本体を置く realization implementation 領域。Typer による CLI 入口、利用者向けサブコマンド実装、Codex/Git/設定/状態/ログ/path などの実行時共通処理、AI エージェント呼び出し用の AgentCallParameter・prompt・Structured Output schema builder、基礎値オブジェクト、リポジトリ別設定 dataclass を含む。
+- CLI 公開面から workflow orchestration、外部コマンド実行、永続状態、INDEX.md 更新、oracle review、apply/session 操作、TUI 起動まで、cmoc のプロダクト挙動を実装コードとして追うための最上位入口になる。
+- 下位は責務別に分かれており、CLI 配線、サブコマンド処理、共通 runtime、AI 呼び出し境界、基礎型、設定値のどれを調べるかをここで切り分けてから進む。
 
 ## Read this when
-- cmoc の CLI コマンドがどの実装入口、サブコマンド、共通 runtime、prompt builder へ接続されるかを全体から確認したいとき。
-- init、indexing、tui、session、apply、review oracle など、利用者が起動する機能の実装フロー、状態更新、外部コマンド呼び出し、レポート生成、失敗時処理を調べたいとき。
-- Codex CLI や AI エージェントに渡す model、reasoning effort、file access mode、prompt、Structured Output schema、preflight、profile、exec/TUI 起動、call log などの実装上の扱いを追いたいとき。
-- リポジトリ別設定、パスモデル、構造化文書の Markdown レンダリング、規範データ構造、Git 操作、実行ログ、永続 state など、複数機能で共有される実装基盤の所在を切り分けたいとき。
-- oracle の正本仕様断片や既存テストを踏まえて、cmoc 本体の realization implementation を変更する必要があるとき。
+- cmoc の実装コード全体のどこから読み始めるべきかを判断したいとき。
+- CLI コマンドの公開面、サブコマンドの実行順序、Codex 呼び出し、Git/worktree 操作、状態保存、レポート生成、INDEX.md 更新など、利用者操作から実装処理への流れを追いたいとき。
+- AgentCallParameter、Structured Output schema、prompt 部品、model/reasoning/file access 指定など、AI エージェント呼び出し境界の実装を確認または変更したいとき。
+- cmoc 全体で共有される path 解決、設定入出力、共通エラー、実行ログ、Codex profile/preflight、外部コマンド結果型、session/apply state などの runtime helper を探したいとき。
+- oracle file で述べられた仕様断片を満たすために、realization implementation 側の実装・設定・補助的な実行制御を変更したいとき。
 
 ## Do not read this when
-- 正本仕様断片そのもの、oracle doc、oracle src、oracle test の内容を確認したいとき。その場合は oracle 側の対象を読む。
-- 外部挙動の期待値、fixture、回帰テスト、テスト用 helper を確認・変更したいだけのとき。その場合は test 側を読む。
-- README、パッケージ設定、補助スクリプト、gitignore など、実装ルート外の補助ファイルやプロジェクトメタデータだけを調べたいとき。
-- 生成済みのルーティング文書や INDEX.md エントリーの現在内容を確認したいだけで、実装本文の責務や読む先を判断する必要がないとき。
-- 特定の下位実装ファイルや下位ディレクトリがすでに分かっている場合は、この階層を経由せず、その対象を直接読む。
+- 正本仕様断片そのもの、oracle file と realization file の定義、path keyword の概念定義、oracle review の規範文書など、人間が所有する仕様を確認したいときは oracle 側を読む。
+- 外部挙動の期待値、fixture、回帰テスト、テスト観点だけを確認したいときは test 側を読む。
+- README、プロジェクト説明、利用者向けの概要、包装設定、開発補助ファイルなど、実装本体ではない補助情報を探しているときは該当する上位ファイルや補助ディレクトリへ進む。
+- 生成済みログ、実行中 state、作業メモ、キャッシュ、pycache など、実装本文ではない実行時生成物を確認したいとき。
+- 調べたい責務がすでに CLI 配線、特定サブコマンド、共通 runtime、AI 呼び出し builder、基礎型、設定定義のいずれかに絞れている場合は、この階層の概観ではなく該当する下位対象へ直接進む。
 
 ## hash
-- 983e3f69c3b05f313d78f964fd37e8ee3330b7651aa9edb037f2e4a920259616
+- 183cf4fe6211a41b1a4f2746c4b0b525ec9c9a893c049c49781c1cc4f15f1bfb
 
 # `test`
 

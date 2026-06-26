@@ -1,26 +1,25 @@
 # `builder`
 
 ## Summary
-- AI エージェントへ渡す呼び出しパラメータを、用途別に組み立てる実装群への入口。役割・目標・補助入力・ファイルアクセス権限・モデル種別・reasoning effort・Structured Output schema の接続を扱う。
-- フォーク適用後レビュー、ルーティング文書用エントリー生成、oracle レビュー、session join の conflict marker 解消、TUI 実行前のパラメータ解決について、各工程がどの prompt と schema でエージェントを呼ぶかを確認するための領域。
-- 実際のサブコマンド実行制御や共通 prompt 部品そのものではなく、個別工程ごとのエージェント呼び出し内容を追うための下位領域へ進む入口になる。
+- AI エージェントを呼び出す前段で、各サブコマンドや工程ごとの AgentCallParameter と Structured Output schema の対応を組み立てる実装群への入口。
+- 差分要約、実装所見の列挙と修正依頼、正本仕様断片レビューの所見列挙・検証・採否・整理、merge conflict marker 解消、TUI 実行前のパラメータ解決、ルーティング文書エントリー生成を扱う。
+- 各工程でエージェントへ渡す role、summary、goal、補助文脈、標準文書参照、ファイルアクセスモード、model class、reasoning effort、返却 schema を確認するための領域。
 
 ## Read this when
-- AI エージェント呼び出しで使う role、summary、goal、補助文脈、ファイルアクセスモード、モデルクラス、reasoning effort、Structured Output schema の対応を確認または変更したいとき。
-- フォーク適用後の差分要約、ファイル単位の所見列挙、検出済み所見への修正依頼など、適用レビュー工程の呼び出しパラメータ構築を追いたいとき。
-- ルーティング文書用エントリー生成で、対象本文や補助指示をどう prompt に埋め込み、どの schema で返させるかを確認したいとき。
-- oracle レビューで、新規所見列挙、所見の擁護理由・反証理由の列挙、採否判定、所見リスト整理の各エージェント呼び出し内容を調べたいとき。
-- session join 中の merge conflict marker 解消や、TUI 実行前のファイルアクセス権限・標準参照要否判定について、エージェントに渡す prompt と制約を確認したいとき。
+- サブコマンドや工程が AI エージェントへどのような prompt と実行条件を渡すかを、機能領域別に探し始めたいとき。
+- AgentCallParameter の構築内容と Structured Output schema の接続を、apply fork、review oracle、session join、tui、indexing のいずれかについて確認または変更したいとき。
+- 差分要約、レビュー所見、所見対応作業、conflict 解消、TUI パラメータ選定、INDEX.md エントリー生成などの AI 呼び出し境界を追いたいとき。
+- 各 AI 呼び出しで使うファイルアクセス権限、モデル種別、推論強度、標準文書断片、補助入力の埋め込み方を比較しながら確認したいとき。
 
 ## Do not read this when
-- CLI 引数解析、サブコマンド全体の実行順序、git 操作、差分取得、状態保存、表示、生成結果の書き込みなど、エージェント呼び出し構築の外側の処理を調べたいとき。
-- oracle file や realization file の仕様本文、各種 standard の本文そのもの、レビュー対象ファイルの具体的な内容を確認したいとき。
-- 共通 prompt 構築部品、Markdown rendering、構造化文書表現、パス解決、AgentCallParameter や FileAccessMode の型定義そのものを調べたいとき。
-- 生成済みのルーティング文書内容や、特定の対象について実際に読むべきかどうかの意味判断だけを確認したいとき。
-- merge conflict の検出処理、解消後の統合フロー、TUI の表示・入力取得・コメント除去など、個別 prompt 構築ではない UI/制御側の挙動を調べたいとき。
+- AI 呼び出しより上位の CLI 引数解析、サブコマンドの実行順序、状態保存、git 操作、対象ファイル探索などの実行制御を調べたいとき。
+- prompt に含められる oracle standard、realization standard、review standard、apply review standard、index entry standard などの標準文書本文そのものを確認したいとき。
+- StructDoc、Markdown rendering、AgentCallParameter、FileAccessMode、path 解決、complete prompt 生成など、複数領域で使われる共通基盤の型や helper を調べたいとき。
+- 生成済みのレビュー所見、差分要約、INDEX.md エントリーなど、AI 呼び出し結果の保存・表示・利用側の挙動を確認したいとき。
+- 特定工程の対象ファイルが既に分かっており、その工程固有の prompt 構築や schema だけを直接読めば足りるとき。
 
 ## hash
-- 03556af01c218af1d6e79f02279bb422b1f210f14e49a809208e594689d9bcf9
+- f72a68ff48e10f4bbb4c1f88d877d3fb606c64fc9d46f223b9c3e49d987adcb2
 
 # `prompt_parts`
 
