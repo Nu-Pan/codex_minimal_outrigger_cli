@@ -36,6 +36,7 @@ def test_run_codex_exec_uses_stdin_and_writes_logs(
             "output.write_text(json.dumps({'ok': True, 'stdin': stdin}))",
             "record.write_text(json.dumps({'args': args, 'stdin': stdin, 'codex_home': os.environ.get('CODEX_HOME')}))",
             "print(json.dumps({'type': 'turn.completed'}))",
+            "print('stderr-only', file=sys.stderr)",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
@@ -80,7 +81,8 @@ def test_run_codex_exec_uses_stdin_and_writes_logs(
     assert result.output_json == {"ok": True, "stdin": "SECRET PROMPT BODY"}
     assert result.call_log_path.is_file()
     assert result.stdout_log_path.read_text().strip() == '{"type": "turn.completed"}'
-    assert result.stderr_log_path.read_text() == ""
+    assert "stderr-only" not in result.stdout_log_path.read_text()
+    assert result.stderr_log_path.read_text().strip() == "stderr-only"
     assert result.codex_home == codex_home
     assert result.profile_name == recorded["args"][2]
     assert result.profile_path.name.startswith("cmoc_")
