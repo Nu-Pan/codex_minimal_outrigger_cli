@@ -20,23 +20,22 @@
 # `test_apply_abandon_cli.py`
 
 ## Summary
-- apply run を破棄する CLI 挙動の realization test。apply 用 worktree と branch の削除、状態の ready への復帰、欠損した cleanup 対象の warning、running 状態の process 停止、apply worktree からの実行、stale apply branch の拒否を検証する。
-- apply process 停止まわりの制御ロジックも扱い、既に終了した process、PID 再利用、process id 欠落時の失敗をテストする。
+- apply abandon CLI の realization test。active apply run の破棄で apply worktree と apply branch を削除し、session state を ready に戻す外部挙動を検証する。
+- cleanup 対象が既に無い場合の warning、running apply process の停止、PID 再利用や既終了 process の扱い、異常 state で破棄を拒否して状態を保つ制御を扱う。
+- 通常 repo、session worktree、apply worktree、linked session worktree から実行した場合の cwd 復帰、dirty check、stale apply branch 拒否を確認する。
 
 ## Read this when
-- apply abandon の外部挙動、出力、状態更新、git worktree/branch cleanup を変更または確認したいとき。
-- apply run が running の場合に、cleanup 前に process を停止する処理や process id 管理を変更または確認したいとき。
-- apply worktree 内から abandon を実行する場合や、現在 branch が破棄対象の active apply run ではない場合の安全確認を扱うとき。
-- apply abandon の失敗時に worktree、branch、session state を保持する境界を確認したいとき。
+- apply abandon の CLI 挙動、出力、終了コード、state 遷移、apply worktree・apply branch の削除条件を変更する時。
+- running apply process の停止処理、process id 保存ファイルの削除、PID 再利用・既終了 process の race 対応を変更する時。
+- linked session worktree や apply worktree 内からの abandon 実行、dirty worktree 検出、active apply branch 判定に関わる挙動を確認する時。
 
 ## Do not read this when
-- apply abandon 以外の apply サブコマンドの通常生成・実行フローだけを確認したいとき。
-- Codex 実行結果の品質や findings の内容そのものを検証したいとき。
-- session fork、init、path model などの基礎機能の仕様や実装を単独で調べたいとき。
-- INDEX.md 生成規則やルーティング文書の書き方を確認したいとき。
+- apply fork や session fork の生成処理そのものを確認したいだけの時。
+- apply abandon 以外の apply subcommand、review、init などの CLI 挙動を調べる時。
+- 正本仕様断片を確認したい時。この対象は realization test であり、仕様判断の入口ではない。
 
 ## hash
-- daf4b003f841e7fa9c662933847bc232048858ac8b3e98a808cfebf16d477133
+- 18d63c61d6acdb7bab1a8298e26152d0942d65c9b8a6f8e9260c5d2c146ff9a9
 
 # `test_apply_fork_cli.py`
 

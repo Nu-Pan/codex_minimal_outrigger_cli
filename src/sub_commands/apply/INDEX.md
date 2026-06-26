@@ -40,24 +40,24 @@
 # `abandon.py`
 
 ## Summary
-- 未 join の apply run を破棄し、apply state を ready に戻す apply abandon の実処理を担う実装。
-- session branch または apply branch 上で実行されていることを確認し、対象 apply branch と worktree、apply process id、session state を照合しながら破棄処理を行う。
-- running 状態なら apply process の停止を試み、apply worktree の削除、apply branch の強制削除、process id file の削除、state.apply の初期化と結果表示までを扱う。
+- 未 join の apply run を破棄し、apply state を ready に戻すための apply abandon サブコマンド実装を扱う。
+- 実行場所が session branch または apply branch であること、active apply run が存在すること、対象 worktree が clean であることを検証し、必要に応じて実行中 apply process の停止、apply worktree と apply branch の削除、process id の削除、state の初期化を行う。
+- 処理結果として対象 apply branch、apply worktree、破棄前後の状態、警告一覧を CLI 出力する。
 
 ## Read this when
-- apply abandon の実行条件、破棄対象の判定、active apply run がない場合のエラー条件を確認したいとき。
-- apply branch 上または session branch 上から abandon した場合に、どの root、session branch、apply worktree を使うかを追いたいとき。
-- running apply の停止、apply process id file の読み取り・削除、apply worktree と apply branch の削除順序や warning 出力を確認したいとき。
-- apply state を ready に戻す処理や、ApplyPart の再初期化、write_state による session state 更新を変更・調査したいとき。
+- apply abandon の実行条件、失敗条件、破棄対象 apply run の特定方法を確認したいとき。
+- running 状態の apply run を abandon する際の process id 読み取り、process 停止、停止警告の扱いを確認したいとき。
+- apply worktree、apply branch、apply process id、session state の削除または初期化順序と、欠落・残存時の warning 出力を確認したいとき。
+- session branch 上と apply branch 上で abandon を実行した場合の current working directory 移動や対象 worktree 解決を確認したいとき。
 
 ## Do not read this when
-- apply run の生成、開始、join、通常完了の挙動を調べたいだけで、破棄処理の詳細が不要なとき。
-- apply process id file や apply worktree path の低レベル helper 自体の仕様を調べたいときは、apply runtime helper 側を直接読む。
-- branch 操作、worktree 削除、state 読み書き、clean worktree 判定の共通実装を調べたいときは、cmoc_runtime 側を直接読む。
-- Typer のコマンド登録や CLI 全体のサブコマンド配線だけを確認したいとき。
+- apply run の開始、join、status など、破棄以外の apply サブコマンドの挙動を確認したいとき。
+- apply process id file の読み書きや process 停止 helper の低レベル実装だけを確認したいときは、apply runtime 側を直接読む。
+- branch 操作、worktree 削除、state 読み書き、clean worktree 検証などの共通 runtime 処理そのものを確認したいときは、共通 runtime 側を読む。
+- INDEX.md の生成規則やルーティング文書の方針を確認したいとき。
 
 ## hash
-- c244472d3c7aab7bfbdafb0b800c434a34ed297fbd8116a6861c168385636c51
+- 6cce3ca85362df7858aed3d594cf712cb341066c5d0e52b8d31220f5d4316adf
 
 # `fork.py`
 

@@ -1,25 +1,23 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンド群の実装をまとめる領域。apply run の開始、破棄、join、report 生成、実行中 process 管理、apply 用 worktree/branch/state の扱いへの入口になる。
-- 上位の CLI 配線だけでなく、apply branch と session branch の関係、apply worktree 上での所見適用、成果の merge、失敗時や abandon 時の後片付けまで、apply lifecycle 全体の実処理を調べる起点になる。
+- apply 系サブコマンドの実装群への入口となるディレクトリ。apply run の開始、実行時 runtime helper、破棄、join、report 生成など、apply state と apply branch/worktree/process を扱う処理がまとまっている。
+- apply 実行中 process の pid 管理、linked worktree 探索、apply branch の作成・削除、session branch への merge、実行結果 report など、apply のライフサイクルを追うための下位実装へ進む起点になる。
 
 ## Read this when
-- apply fork、apply join、apply abandon の実行条件、状態遷移、副作用、利用者向け出力や report 生成を確認・変更したいとき。
-- apply branch、session branch、apply worktree、process id file、session state をまたいだ apply run のライフサイクルを追いたいとき。
-- apply 実行中 process の停止、pid file の読み書き、stale pid や同一性確認など、apply 固有の runtime 状態管理を調べたいとき。
-- apply 対象の列挙、finding 適用、編集禁止対象の差分検出とロールバック、commit 作成、変更要約 report の流れを確認したいとき。
-- apply run 完了後の merge、想定外差分の扱い、force-resolve、merge conflict、apply worktree と branch の後片付けを確認したいとき。
+- apply サブコマンド群のどの実装を読むべきかを、開始・破棄・join・report・runtime helper の責務境界から選びたいとき。
+- apply run の状態遷移、apply branch/worktree/process id、session branch への取り込み、後片付けの流れに関係する実装を調べたいとき。
+- apply fork、apply abandon、apply join の実行条件、失敗条件、副作用、利用者向け出力や report の入口を探したいとき。
+- apply process 停止、pid file、pidfd、git worktree 探索など、apply 実行時状態の低レベル helper へ進む必要があるとき。
 
 ## Do not read this when
-- apply 以外のサブコマンドや CLI 全体の Typer 配線だけを調べたいとき。
-- session state file の schema 全体、branch 操作、git wrapper、worktree 探索、ignore 判定などの共通 runtime 実装だけを確認したいとき。
-- Codex 呼び出し用 prompt、AgentCallParameter、structured output など apply fork から呼ばれる builder 側の詳細だけを調べたいとき。
-- oracle file、realization file、INDEX.md 生成ルールそのものの仕様を確認したいとき。
-- apply process、apply worktree、apply branch、report、state 遷移に関係しない通常の差分適用やテスト実装を探しているとき。
+- apply 以外のサブコマンド実装、共通 CLI dispatch、または上位のサブコマンド登録だけを調べたいとき。
+- session state file 全体の schema、git wrapper、worktree 操作、report 保存先など、apply 固有ではない共通 runtime の詳細だけを調べたいとき。
+- oracle file、realization file、INDEX.md 生成規則など、apply サブコマンド実装ではなく仕様・ルーティング文書の方針を確認したいとき。
+- 個別の apply 処理対象がすでに分かっており、fork、abandon、join、report、runtime helper の該当実装へ直接進めるとき。
 
 ## hash
-- acf9aa2ec235423fe547ab8b0bed3842685c6dd7c5e0b43ec64ad09932bcd55f
+- f3a3d3edb88b887b917e154fe269e945453f7d9454f4aedaf9bdb647721b1f9e
 
 # `indexing.py`
 
