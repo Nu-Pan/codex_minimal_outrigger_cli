@@ -426,6 +426,77 @@ def test_review_oracle_merge_finding_uses_efficiency_model() -> None:
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
 
 
+@pytest.mark.parametrize(
+    "operation",
+    [
+        {
+            "kind": "delete",
+            "target_ids": ["finding-0001"],
+            "finding": {"severity": "minor"},
+        },
+        {
+            "kind": "replace",
+            "target_ids": ["finding-0001", "finding-0002"],
+            "finding": {
+                "severity": "minor",
+                "title": "t",
+                "oracle_path": "oracle/spec.md",
+                "reason": "r",
+            },
+        },
+        {"kind": "replace", "target_ids": ["finding-0001"], "finding": None},
+        {
+            "kind": "merge",
+            "target_ids": ["finding-0001"],
+            "finding": {
+                "severity": "minor",
+                "title": "t",
+                "oracle_path": "oracle/spec.md",
+                "reason": "r",
+            },
+        },
+        {
+            "kind": "merge",
+            "target_ids": ["finding-0001", "finding-0002"],
+            "finding": None,
+        },
+    ],
+)
+def test_review_oracle_merge_finding_schema_enforces_kind_contract(
+    operation: dict,
+) -> None:
+    parameter = build_review_oracle_merge_finding_parameter("[]")
+    assert parameter.structured_output_schema_path is not None
+    schema = json.loads(parameter.structured_output_schema_path.read_text())
+    finding = {
+        "severity": "fatal",
+        "title": "merged",
+        "oracle_path": "oracle/spec.md",
+        "reason": "merged reason",
+    }
+
+    with pytest.raises(ValidationError):
+        validate({"operations": [operation]}, schema)
+    validate(
+        {
+            "operations": [
+                {"kind": "delete", "target_ids": ["finding-0001"], "finding": None},
+                {
+                    "kind": "replace",
+                    "target_ids": ["finding-0002"],
+                    "finding": finding,
+                },
+                {
+                    "kind": "merge",
+                    "target_ids": ["finding-0003", "finding-0004"],
+                    "finding": finding,
+                },
+            ]
+        },
+        schema,
+    )
+
+
 def test_session_join_conflict_resolution_uses_realization_write_mode() -> None:
     parameter = build_session_join_conflict_resolution_parameter([__file__])
 

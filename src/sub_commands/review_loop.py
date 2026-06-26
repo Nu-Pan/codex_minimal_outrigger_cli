@@ -80,10 +80,10 @@ def run_review_oracle_loop(
             edits = list((operations or {}).get("operations", []))
             if not edits:
                 break
-            findings = apply_finding_merge_operations(findings, edits, next_id)
-            next_id += len(
-                [edit for edit in edits if edit.get("kind") in {"replace", "merge"}]
+            findings, added_count = apply_finding_merge_operations(
+                findings, edits, next_id
             )
+            next_id += added_count
     return _validate_and_judge_findings(log_root, worktree, findings, config, codex_exec)
 
 
@@ -176,17 +176,17 @@ def _validate_and_judge_findings(
 
 def apply_finding_merge_operations(
     findings: list[dict], operations: list[dict], next_id: int
-) -> list[dict]:
+) -> tuple[list[dict], int]:
     """merge finding Structured Output の edit operation を finding list に適用する。"""
     by_id = {finding["finding_id"]: finding for finding in findings}
     deleted: set[str] = set()
     additions: list[dict] = []
     for operation in operations:
-        target_ids = set(operation.get("target_ids", []))
+        target_ids = _validate_finding_merge_operation(operation, set(by_id))
         kind = operation.get("kind")
         if kind == "delete":
             deleted.update(target_ids)
-        elif kind in {"replace", "merge"} and operation.get("finding"):
+        else:
             deleted.update(target_ids)
             finding = dict(operation["finding"])
             finding["finding_id"] = f"finding-{next_id:04d}"
@@ -200,4 +200,43 @@ def apply_finding_merge_operations(
         finding
         for finding in findings
         if finding["finding_id"] not in deleted and finding["finding_id"] in by_id
-    ] + additions
+    ] + additions, len(additions)
+
+
+def _validate_finding_merge_operation(
+    operation: dict, existing_ids: set[str]
+) -> set[str]:
+    kind = operation.get("kind")
+    target_ids = operation.get("target_ids")
+    if not isinstance(target_ids, list) or not all(
+        isinstance(target_id, str) for target_id in target_ids
+    ):
+        raise ValueError("merge finding operation target_ids must be a string list")
+    if len(set(target_ids)) != len(target_ids):
+        raise ValueError(
+            "merge finding operation target_ids must not contain duplicates"
+        )
+    target_id_set = set(target_ids)
+    unknown_ids = target_id_set - existing_ids
+    if unknown_ids:
+        raise ValueError(
+            "merge finding operation target_ids include unknown finding_id: "
+            + ", ".join(sorted(unknown_ids))
+        )
+    finding = operation.get("finding")
+    if kind == "delete":
+        if not target_ids or finding is not None:
+            raise ValueError("delete operation requires targets and finding null")
+    elif kind == "replace":
+        if len(target_ids) != 1 or not isinstance(finding, dict):
+            raise ValueError(
+                "replace operation requires exactly one target and a finding object"
+            )
+    elif kind == "merge":
+        if len(target_ids) < 2 or not isinstance(finding, dict):
+            raise ValueError(
+                "merge operation requires at least two targets and a finding object"
+            )
+    else:
+        raise ValueError(f"unknown merge finding operation kind: {kind!r}")
+    return target_id_set

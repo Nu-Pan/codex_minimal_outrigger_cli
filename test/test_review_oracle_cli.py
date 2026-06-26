@@ -124,6 +124,86 @@ def test_review_oracle_enumerate_receives_only_related_findings(
     assert "a finding" in prompts_by_target["a.md"][1]
 
 
+def test_apply_finding_merge_operations_enforces_kind_contract() -> None:
+    findings = [
+        {"finding_id": "finding-0001", "title": "delete"},
+        {"finding_id": "finding-0002", "title": "replace"},
+        {"finding_id": "finding-0003", "title": "merge a"},
+        {"finding_id": "finding-0004", "title": "merge b"},
+    ]
+    merged, added_count = review_module.apply_finding_merge_operations(
+        findings,
+        [
+            {"kind": "delete", "target_ids": ["finding-0001"], "finding": None},
+            {
+                "kind": "replace",
+                "target_ids": ["finding-0002"],
+                "finding": {"title": "replacement"},
+            },
+            {
+                "kind": "merge",
+                "target_ids": ["finding-0003", "finding-0004"],
+                "finding": {"title": "merged"},
+            },
+        ],
+        5,
+    )
+
+    assert added_count == 2
+    assert merged == [
+        {
+            "title": "replacement",
+            "finding_id": "finding-0005",
+            "advocate_reasons": [],
+            "challenger_reasons": [],
+            "verdict": None,
+            "judge_reason": None,
+        },
+        {
+            "title": "merged",
+            "finding_id": "finding-0006",
+            "advocate_reasons": [],
+            "challenger_reasons": [],
+            "verdict": None,
+            "judge_reason": None,
+        },
+    ]
+
+
+@pytest.mark.parametrize(
+    "operation",
+    [
+        {"kind": "delete", "target_ids": ["finding-0001"], "finding": {}},
+        {
+            "kind": "replace",
+            "target_ids": ["finding-0001", "finding-0002"],
+            "finding": {},
+        },
+        {"kind": "replace", "target_ids": ["finding-0001"], "finding": None},
+        {"kind": "merge", "target_ids": ["finding-0001"], "finding": {}},
+        {
+            "kind": "merge",
+            "target_ids": ["finding-0001", "finding-9999"],
+            "finding": {},
+        },
+        {
+            "kind": "delete",
+            "target_ids": ["finding-0001", "finding-0001"],
+            "finding": None,
+        },
+    ],
+)
+def test_apply_finding_merge_operations_rejects_invalid_operations(
+    operation: dict,
+) -> None:
+    with pytest.raises(ValueError):
+        review_module.apply_finding_merge_operations(
+            [{"finding_id": "finding-0001"}, {"finding_id": "finding-0002"}],
+            [operation],
+            3,
+        )
+
+
 def test_review_oracle_full_scope_excludes_gitignored_oracle_files(
     tmp_path: Path,
     monkeypatch,
