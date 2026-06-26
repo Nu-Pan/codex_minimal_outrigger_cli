@@ -21,6 +21,12 @@ def run_cli_subcommand(
     command_argv: Sequence[str] | None = None,
     **kwargs: Any,
 ) -> None:
+    """CLI サブコマンドの共通実行ライフサイクルを管理する。
+
+    ログ生成前に work root と任意の事前検査を済ませ、サブコマンド単位の
+    logger 設定、開始・完了表示、戻り値の終了コード化、例外のエラー表示を
+    一箇所で扱う。
+    """
     logger = None
     logger_token = None
     name = command_name or impl.__name__
@@ -68,6 +74,7 @@ def run_cli_subcommand(
 
 
 def require_current_directory_is_work_root(root: Path) -> None:
+    """cmoc が work root で実行されている前提を検査する。"""
     if Path.cwd().resolve() == root.resolve():
         return
     raise CmocError(
@@ -80,6 +87,7 @@ def require_current_directory_is_work_root(root: Path) -> None:
 def _emit_completion_summary(
     logger: SubcommandLogger, command_name: str, returncode: int
 ) -> None:
+    """サブコマンド完了時に標準の stdout サマリーを出力する。"""
     elapsed = logger.elapsed()
     typer.echo(f"# {console_timestamp()} (3/3) completed {command_name}")
     typer.echo(f"- sub_command_log: `{logger.path}`")
