@@ -1,26 +1,26 @@
 # `acp`
 
 ## Summary
-- AI agent 呼び出しに必要なパラメータ、プロンプト部品、補助文脈、ファイルアクセス制約、モデル設定、推論量、Structured Output schema を構築する実装領域。
-- レビュー、適用、競合解消、TUI 実行前解決、ルーティング文書用エントリー生成などで、AI に何を読ませ、どの制約で作業させ、どの形式で返答させるかを確認する入口になる。
-- 正本仕様や実装本文そのものではなく、標準文書や対象差分、既知所見、競合情報、元プロンプトなどを AI 呼び出し向けの文脈へ組み立てる責務を扱う。
+- AI エージェント呼び出しのためのパラメータ構築と、AI 向けプロンプト部品の生成を扱う実装領域。各工程で AI に渡す role、goal、補助文脈、ファイルアクセス条件、モデル設定、推論量、Structured Output schema、標準規範や制約文の組み立てを追う入口になる。
+- レビュー、適用、競合解消、TUI 実行前解決、INDEX.md エントリー生成などで、oracle file、realization file、review standard、git diff、既知所見、conflict 対象、元プロンプトなどをどの意味の文脈として AI に提示するかを確認できる。
+- サブコマンド全体の実行制御や共通基盤そのものではなく、AI に何を読ませ、何を返させ、どの制約で作業させるかという呼び出し前の構成責務に集中する。
 
 ## Read this when
-- AI agent へ渡す role、goal、補助 prompt、参照コンテキスト、ファイルアクセスモード、モデル種別、推論量を確認または変更したいとき。
-- レビュー所見、理由、採否、所見整理操作、差分要約、ルーティング文書用エントリー、TUI 実行前判定などの Structured Output schema の責務を確認したいとき。
-- oracle file だけを根拠にする、realization file への書き込みを許可する、git 操作を禁止する、競合解消時の例外的編集を許すなど、AI 作業制限の組み立てを追いたいとき。
-- oracle file、realization file、review standard、git diff、既知所見、検出済み conflict、対象本文、作業後差分、元プロンプトなどが、AI 呼び出しの補助文脈へどう渡るか調べたいとき。
-- INDEX.md エントリー生成や TUI 実行前パラメータ解決のように、AI に判断させる内容と返却契約を実装・テストしたいとき。
+- cmoc の各サブコマンドや TUI で、AI エージェントへ渡す prompt、補助文脈、ファイルアクセスモード、モデル種別、推論量、Structured Output schema を確認または変更したいとき。
+- oracle file、realization file、review standard、apply review standard、INDEX.md エントリー標準、ルーティング規則などの規範や制約が、AI 向けプロンプトにどう組み込まれるかを追いたいとき。
+- レビュー所見、理由、採否、所見整理操作、差分要約、ルーティング文書用エントリー、TUI 実行前判定など、AI から返す構造化出力の責務を確認したいとき。
+- oracle file だけを根拠にする、realization file への書き込みを許可する、git 操作を禁止する、conflict 解消時だけ例外的な編集を許すなど、AI 作業制限の組み立てを調べたいとき。
+- 既知の所見や理由、検出済み conflict、対象本文、作業後差分、元プロンプトなどが、AI 呼び出しの補助文脈としてどう渡されるかを確認したいとき。
 
 ## Do not read this when
 - CLI 引数解析、サブコマンド全体の実行順序、fork 作成、branch 操作、merge 実行、差分適用、保存、表示、集計など、AI 呼び出しパラメータ構築の外側にある orchestration を調べたいとき。
-- oracle file、realization file、review standard、apply review standard、INDEX.md 運用規則などの正本仕様や基準本文そのものを確認したいとき。
-- AgentCallParameter、ModelClass、ReasoningEffort、FileAccessMode、構造化文書、markdown rendering、パス解決などの共通基盤の定義や汎用実装を調べたいとき。
+- oracle file、realization file、review standard、apply review standard、INDEX.md 運用規則などの正本仕様や基準本文そのものを確認したいだけのとき。
+- AgentCallParameter、ModelClass、ReasoningEffort、FileAccessMode、markdown rendering、構造化ドキュメント表現、パス解決などの共通基盤の定義や汎用実装を調べたいとき。
 - 実際の変更対象ファイルの中身、個別差分の検出処理、変更カテゴリ分類、conflict marker 検出や解消アルゴリズム、TUI の表示・対話・入力取得を調べたいとき。
-- 個別の INDEX.md エントリー本文を作成・評価したいだけで、エントリー生成に使う schema や AI 呼び出しパラメータ実装を確認する必要がないとき。
+- 個別の INDEX.md エントリー本文を作成・評価したいだけで、エントリー生成に使う schema や AI 呼び出しパラメータの実装を確認する必要がないとき。
 
 ## hash
-- a2ca58b1f81ce1b2f760ef7161c07e53397a1d5dbf240b5315cd16c9e5b6c2b7
+- 1de5a3a2252416daba7861a303ca993a214602e804aea1583d280d258089f449
 
 # `basic`
 
