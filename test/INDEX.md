@@ -257,45 +257,46 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- プロンプト構成部品と実行パラメータビルダーの回帰テストをまとめた realization test。構造化 Markdown の描画、ルーティング規則、ファイルアクセス規則、各種 standard 文書の注入有無、apply/review/session/tui/indexing 用パラメータのモデル・推論量・アクセスモード・schema 制約を検証する入口になる。
+- プロンプト部品とビルダーが、標準文書、ルーティング規則、ファイルアクセス規則、Structured Output schema、実行パラメータを期待どおり構成・描画することを検証する realization test。
+- Markdown 描画の空行正規化、標準文書の挿入有無、基準用語の保持、repo root 参照、schema 制約、model class・reasoning effort・file access mode の選定を横断的に確認する。
+- prompt_parts 系の関数だけでなく、apply fork、indexing、review oracle、session join、TUI resolve parameter の各 builder が生成する prompt と parameter の契約をテストする入口になる。
 
 ## Read this when
-- プロンプト本文に routing rule や各種 standard が含まれる条件、または既定では含まれない条件を確認したいとき。
-- file access mode ごとに生成される読み書き制約文言をテストで確認したいとき。
-- apply fork、review oracle、session join、TUI resolve、indexing index entry のパラメータビルダーが選ぶ model class、reasoning effort、file access mode、schema path、prompt 断片を確認したいとき。
-- StructDoc や StructCodeBlock から Markdown を描画する際の見出し、コードブロック保持、連続空行の折りたたみ挙動を確認したいとき。
-- 変更要約 schema や TUI resolve parameter schema の必須項目、追加プロパティ禁止、enum、boolean flag などの検証条件を確認したいとき。
+- 標準文書や routing rule、file access rule、complete prompt の出力文言や挿入条件を変更する。
+- StructDoc や Markdown レンダリングの挙動、特に連続空行の扱いを変更する。
+- apply fork、indexing、review oracle、session join、TUI resolve parameter の builder が返す model class、reasoning effort、file access mode、prompt 内容、schema パスを変更する。
+- Structured Output schema の必須項目、enum、additionalProperties、kind ごとの契約、空配列拒否などの検証制約を変更する。
+- oracle standard、realization standard、review oracle standard、apply review standard、index entry standard の文言が prompt にどう含まれるかを確認したい。
 
 ## Do not read this when
-- プロンプト部品やビルダーパラメータではなく、CLI コマンド実行、worktree 操作、永続状態、git 操作そのものの挙動を調べたいとき。
-- standard 文書や prompt part の実装ロジックを変更したいだけで、期待される外部挙動をテストから確認する必要がないときは、対応する実装側を先に読む。
-- oracle の正本仕様断片そのものを確認したいときは、このテストではなく oracle 側の文書を読む。
-- 個別の JSON schema ファイル本文や builder 実装の詳細を確認したいときは、このテストで期待値の入口を押さえた後、対象の schema または builder 実装を直接読む。
+- 個別 CLI コマンドの実行フローや入出力処理だけを調べたい場合。
+- prompt や parameter builder に関係しない通常のビジネスロジック実装を変更する場合。
+- テストランナー設定、依存関係管理、fixture ファイル配置など、テスト基盤そのものを調べたい場合。
+- 特定 schema の定義本文だけを確認したい場合は、このテストより該当する schema 生成元または schema ファイルを直接読む方がよい。
 
 ## hash
-- ff4ec989ebe1469b8805fe33f49df0ee08603180b49c461146dce8c5794802a5
+- 98b07c8ec30638e69ef5def218cbbeaf8ec8d54f606504225baefb17dd754367
 
 # `test_review_oracle_cli.py`
 
 ## Summary
-- `review oracle` の CLI 挙動を検証する realization test。レビュー対象 oracle の選定、レポート出力、Codex 呼び出し制御、レビュー用 worktree からの `INDEX.md` 反映、失敗時レポート、`INDEX.md` 以外の差分拒否を扱う。
+- `review oracle` コマンドと review oracle ループ周辺の realization test。レポート生成、対象 oracle の選別、finding の merge 操作、失敗時レポート、review 用 worktree からの `INDEX.md` 反映、想定外差分の拒否を検証する。
+- Codex 実行を fake に差し替え、CLI 実行結果・生成レポート本文・gitignored oracle の除外・finding merge contract の例外条件など、外部挙動と制御ロジックを確認する入口。
 
 ## Read this when
-- `review oracle` コマンドの外部挙動、終了コード、標準出力、生成レポート内容を変更・確認するとき。
-- レビュー範囲の既定値、`full` 指定、短い scope option、session scope で対象がない場合の扱いを確認するとき。
-- gitignored な oracle file を full scope や session scope のレビュー対象から除外する制御を変更するとき。
-- oracle ごとの発見事項列挙ループで、別 oracle の発見事項をプロンプトへ混ぜない制御を確認するとき。
-- レビュー用 worktree で生成された `INDEX.md` だけを元 worktree に反映し、その他の差分を拒否する処理を変更するとき。
-- レビュー処理中の例外で error report を残し、未判定 finding を通常の却下結果として扱わない挙動を確認するとき。
+- `review oracle` の CLI 挙動、scope option、レポート内容、エラー時出力、対象 oracle 数の扱いを変更・調査するとき。
+- review oracle が gitignored oracle を full/session scope で除外する挙動、または session scope で対象がない場合に Codex 呼び出しを省略する挙動を確認するとき。
+- finding の列挙・validate・judge・merge の制御、特に列挙 loop が対象ごとの既存 finding だけを prompt に渡すことや merge operation の kind contract を確認するとき。
+- review 用 worktree で生成された `INDEX.md` だけを元 worktree に反映し、それ以外の差分を拒否・破棄する安全性を変更または検証するとき。
 
 ## Do not read this when
-- `review oracle` 以外の CLI コマンド、session 作成、init 処理そのものの仕様を調べたいとき。
-- oracle 本文の正本仕様や、oracle file と realization file の定義を確認したいとき。
-- Codex 実行 wrapper の低レベルな引数組み立て、外部プロセス実行、設定読み込みの実装だけを調べたいとき。
-- レビュー finding の判定基準や LLM 出力品質そのものを確認したいとき。
+- review oracle 以外の CLI サブコマンド、session fork/init そのもの、または一般的な設定読み込みだけを調べるとき。
+- oracle 正本仕様の内容や oracle file の編集方針を確認したいとき。この対象は realization test であり、正本仕様の根拠にはしない。
+- Codex CLI や LLM の実出力品質を検証したいとき。この対象は Codex 実行を fake に差し替え、cmoc 側の制御と副作用を検証している。
+- review oracle の実装詳細を直接修正する場所を探しているとき。まず実装側の review oracle 関連モジュールを読む方が直接的。
 
 ## hash
-- cdfbee61f9eb8ba6aef5748350f8b40b1a426e6836a8d9eb2bf9acf872581815
+- 89b8d6fa3fcf79a4223723ad0951331c1b1fee32cdfa223ca324f98bba735bbb
 
 # `test_session_cli.py`
 
