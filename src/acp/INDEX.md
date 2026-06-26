@@ -1,25 +1,24 @@
 # `builder`
 
 ## Summary
-- サブコマンドや TUI 実行前処理から AI エージェントを呼び出すためのパラメータ構築をまとめる領域。工程ごとの role・goal・補助コンテキスト・file access mode・model class・reasoning effort・Structured Output schema の組み合わせを定義する。
-- レビュー所見列挙、所見修正依頼、差分要約、oracle レビュー、merge conflict 解消、ルーティング文書エントリー生成、TUI パラメータ解決など、用途別の prompt builder と出力契約への入口になる。
+- AI エージェントへ渡す呼び出しパラメータ、prompt、権限、model class、reasoning effort、Structured Output schema の組み立てを扱う領域。
+- fork 適用後レビュー、ルーティング文書用エントリー生成、oracle レビュー、conflict marker 解消、TUI 実行前パラメータ解決など、複数の機能でエージェント呼び出し内容を定義する下位領域への入口になる。
+- 各工程で対象文書・既知情報・補助標準・作業制約をどのように prompt に埋め込み、後続処理が扱える構造化出力契約へ結び付けるかを確認するためのまとまり。
 
 ## Read this when
-- 特定の cmoc サブコマンドが AI エージェントへ渡す complete prompt、補助文脈、標準文書参照、アクセス権限、モデル設定、出力 schema を確認または変更したいとき。
-- AI 呼び出しの入力として、対象パス、git diff、所見リスト、既知理由、conflict 対象一覧、元プロンプトなどがどのように埋め込まれるかを追いたいとき。
-- Structured Output schema が、レビュー所見、所見理由、採否判定、所見整理操作、変更要約、INDEX.md エントリー、TUI パラメータ選択結果としてどの機械処理契約を持つか確認したいとき。
-- file access mode、model class、reasoning effort、schema ファイル有無の組み合わせを、用途別のエージェント呼び出しパラメータとして調べたいとき。
-- 共通 prompt 部品を使う側の実装として、サブコマンド固有の role・summary・goal・aux prompt がどう組み立てられるか確認したいとき。
+- AI エージェントへ渡す prompt、補助文脈、ファイルアクセス権限、利用モデル、reasoning effort、Structured Output schema の指定を確認または変更したいとき。
+- fork 適用後の差分要約・レビュー所見・所見対応、oracle レビューの所見列挙・理由検証・採否判定・整理、ルーティング文書用エントリー生成、conflict marker 解消、TUI 実行前のパラメータ解決のいずれかの呼び出し内容を追いたいとき。
+- AI 呼び出しの入力文脈と、機械処理用の出力契約との対応を実装またはテストしたいとき。
+- 対象ファイルや対象文書、既知所見、既知理由、標準文書、元プロンプトなどが agent 向け文書へどう組み込まれるかを調べたいとき。
 
 ## Do not read this when
-- サブコマンド全体の制御フロー、CLI 引数解析、ファイル探索、git コマンド実行、保存、表示、ブランチ操作など、AI 呼び出しパラメータ構築の外側を調べたいとき。
-- complete prompt の共通構造、Markdown レンダリング、構造化ドキュメント部品、AgentCallParameter 型、file access rule、パス解決の汎用実装そのものを調べたいとき。
-- oracle standard、realization standard、review standard、apply review standard、index entry standard の本文や判断基準そのものを確認したいとき。
-- 実際の oracle file や realization file の仕様・実装内容、個別差分の検出処理、変更カテゴリ分類、conflict marker 検出などの具体的な処理ロジックを調べたいとき。
-- 生成済み INDEX.md の内容や、ルーティング文書として各エントリーが妥当かどうかを確認したいだけのとき。
+- 各サブコマンドの CLI 引数解析、実行順序、保存、表示、git 操作、merge 実行、conflict marker 検出など、AI 呼び出しパラメータ構築の外側にある制御フローを調べたいとき。
+- oracle file や realization file の正本仕様本文、レビュー基準、標準文書そのもの、または個々の対象文書の意味内容を確認したいとき。
+- 共通の prompt 部品、markdown rendering、構造化文書表現、パス解決、AgentCallParameter 型など、特定工程に閉じない共通基盤の定義そのものを調べたいとき。
+- 生成済みのルーティング文書や、各ディレクトリのエントリー内容の妥当性だけを確認したいとき。
 
 ## hash
-- d2a1ff13e7c9eb45eaef45de557128432770d36ed0e1a612ae6904d022892c93
+- 841d3789d8ef7a945918bcbf8698e7b6ef089bc26fc78778ab6c055169f75648
 
 # `prompt_parts`
 

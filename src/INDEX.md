@@ -1,23 +1,23 @@
 # `acp`
 
 ## Summary
-- AI agent 呼び出しに渡すプロンプトと実行パラメータを組み立てる実装領域。用途別の role、goal、補助文脈、file access mode、model class、reasoning effort、Structured Output schema を定義する処理と、それらに注入される共通標準プロンプト部品を扱う。
-- レビュー、差分要約、oracle レビュー、merge conflict 解消、ルーティング文書エントリー生成、TUI パラメータ解決など、cmoc の各機能が AI agent に何をどの条件で依頼するかを追う入口になる。
+- AI agent 呼び出しに関わる実装領域。呼び出しパラメータの組み立てと、prompt を構成する共通部品の生成を扱う下位領域への入口になる。
+- 工程別の agent prompt、権限、モデル設定、reasoning effort、Structured Output schema と、oracle / realization / routing / file access などの標準文書を agent 向け文書へ組み込む処理を確認するためのまとまり。
 
 ## Read this when
-- cmoc の機能が AI agent へ渡す complete prompt、補助文脈、標準文書、アクセス権限、モデル設定、Structured Output schema を確認または変更したいとき。
-- レビュー所見、所見修正依頼、差分要約、oracle レビュー、conflict 解消、INDEX.md エントリー生成、TUI パラメータ解決などの AI 呼び出し契約を調べたいとき。
-- oracle file、realization file、レビュー、ファイルアクセス、ルーティング、INDEX.md エントリー規範など、agent prompt に含める共通規則の文面や注入関係を確認したいとき。
-- 対象パス、git diff、所見リスト、既知理由、conflict 対象一覧、元プロンプトなどが AI 入力へどう埋め込まれるかを追いたいとき。
+- AI agent に渡す prompt、補助文脈、ファイルアクセス権限、モデル指定、reasoning effort、Structured Output schema の生成や変更箇所を探したいとき。
+- fork 適用後レビュー、oracle レビュー、ルーティング文書用エントリー生成、conflict marker 解消、TUI 実行前パラメータ解決など、個別工程の agent 呼び出し内容を追いたいとき。
+- oracle / realization の基本概念、レビュー基準、ファイルアクセス規則、ルーティング規則、INDEX.md エントリー規範など、agent prompt に含める共通標準部品の生成処理を確認したいとき。
+- 対象文書、既知所見、標準文書、作業制約などが、agent 向けの構造化文書や機械処理用の出力契約へどう接続されるかを調べたいとき。
 
 ## Do not read this when
-- CLI 引数解析、サブコマンド全体の制御フロー、git コマンド実行、ファイル探索、保存、表示、ブランチ操作など、AI 呼び出しパラメータ構築の外側を調べたいとき。
-- 構造化文書の基盤型、Markdown レンダリング、AgentCallParameter 型、file access rule、パス解決など、プロンプトやパラメータ部品を利用する汎用基盤そのものを調べたいとき。
-- oracle file や realization file の本文、個別仕様、個別実装、テスト内容を直接確認したいとき。
-- 生成済みルーティング文書の内容や各エントリーの妥当性だけを確認したいとき。
+- CLI 引数解析、サブコマンドの実行順序、保存、表示、git 操作、merge 実行、conflict marker 検出など、agent 呼び出し内容の構築より外側の制御フローを調べたいとき。
+- oracle file や realization file の正本仕様本文、レビュー対象文書、標準文書そのものの意味内容を確認したいとき。
+- 構造化文書表現、markdown rendering、パス解決、AgentCallParameter 型など、prompt 部品や工程別 builder を支える共通基盤そのものを調べたいとき。
+- 生成済みのルーティング文書や、個別ディレクトリの INDEX.md エントリー内容の妥当性だけを確認したいとき。
 
 ## hash
-- 3e420b7b21f9254be4f947ebc029debfbca25f96c8b8450711d93ea24bb645c5
+- 01a33bb4400c45839620d3d009170df74cefe85afebe774f1659f9fffc104ed8
 
 # `basic`
 

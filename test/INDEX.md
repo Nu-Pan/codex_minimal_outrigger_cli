@@ -257,21 +257,23 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- プロンプト部品と実行パラメータ生成の挙動を検証する realization test。レビュー基準、ルーティング規則、ファイルアクセス規則、各種 standard の Markdown 描画、complete prompt への標準文書の注入・省略、TUI resolve parameter の schema、各 builder の model class・reasoning effort・file access mode を扱う。
+- プロンプト構成部品と実行パラメータビルダーの回帰テストをまとめた realization test。構造化 Markdown の描画、ルーティング規則、ファイルアクセス規則、各種 standard 文書の注入有無、apply/review/session/tui/indexing 用パラメータのモデル・推論量・アクセスモード・schema 制約を検証する入口になる。
 
 ## Read this when
-- プロンプトを構成する標準文書や complete prompt の出力内容が期待語句を含むか確認したいとき。
-- ファイルアクセスモードごとのプロンプト文言、routing rule、realization standard、index entry standard、review/apply review standard の描画テストを確認したいとき。
-- apply fork、indexing、review oracle、session join、TUI resolve parameter などの builder が選ぶ model class、reasoning effort、file access mode、schema 内容を変更・検証するとき。
-- StructDoc と render_as_markdown の基本的な Markdown 出力、空行の正規化、コードブロック保持を変更するとき。
+- プロンプト本文に routing rule や各種 standard が含まれる条件、または既定では含まれない条件を確認したいとき。
+- file access mode ごとに生成される読み書き制約文言をテストで確認したいとき。
+- apply fork、review oracle、session join、TUI resolve、indexing index entry のパラメータビルダーが選ぶ model class、reasoning effort、file access mode、schema path、prompt 断片を確認したいとき。
+- StructDoc や StructCodeBlock から Markdown を描画する際の見出し、コードブロック保持、連続空行の折りたたみ挙動を確認したいとき。
+- 変更要約 schema や TUI resolve parameter schema の必須項目、追加プロパティ禁止、enum、boolean flag などの検証条件を確認したいとき。
 
 ## Do not read this when
-- 実際のプロンプト文書を生成する実装本体だけを確認したい場合は、対応する prompt_parts や builder の実装へ進む。
-- CLI コマンドの実行フロー、永続状態、git 操作など、プロンプト生成以外の挙動を調べたい場合は対象機能の実装・テストを読む。
-- oracle file の正本仕様そのものを確認したい場合は、このテストではなく oracle 配下の該当文書を読む。
+- プロンプト部品やビルダーパラメータではなく、CLI コマンド実行、worktree 操作、永続状態、git 操作そのものの挙動を調べたいとき。
+- standard 文書や prompt part の実装ロジックを変更したいだけで、期待される外部挙動をテストから確認する必要がないときは、対応する実装側を先に読む。
+- oracle の正本仕様断片そのものを確認したいときは、このテストではなく oracle 側の文書を読む。
+- 個別の JSON schema ファイル本文や builder 実装の詳細を確認したいときは、このテストで期待値の入口を押さえた後、対象の schema または builder 実装を直接読む。
 
 ## hash
-- d6700f30c83b0221cd43b5c88b06215d5d9255a6512926705ac6007000fc95ee
+- ff4ec989ebe1469b8805fe33f49df0ee08603180b49c461146dce8c5794802a5
 
 # `test_review_oracle_cli.py`
 
