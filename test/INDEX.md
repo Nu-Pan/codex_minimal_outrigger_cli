@@ -235,20 +235,24 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- indexing サブコマンドと INDEX.md 生成処理まわりの realization test。競合した INDEX.md の解決、Codex によるエントリー生成、未初期化・未コミット差分の preflight、linked worktree 対象化、fresh hash による再生成スキップ、INDEX.md だけをコミットする制御、エントリー検証、兄弟要素の並列生成、root 直下 memo 除外と入れ子 memo の扱いを検証する。
+- cmoc の indexing と INDEX.md 更新処理に関する realization test。CLI 実行時の初期化前エラー、未コミット差分の拒否、生成済みエントリーの再利用、linked worktree 対象化、INDEX.md だけをコミットする制御、競合解消時の INDEX.md 削除コミット、エントリー描画時の semantic field 検証を扱う。
+- indexing 実装が Codex によるエントリー生成、hash freshness 判定、malformed entry の再生成、兄弟要素の並列生成、ルート直下 memo 除外とネストした memo の扱いを満たすか確認する入口となる。
 
 ## Read this when
-- indexing サブコマンドの外部挙動、git commit 副作用、dirty worktree 拒否、linked worktree 上での生成対象、または INDEX.md 生成・更新条件を変更する。
-- INDEX.md エントリーの schema 検証、fresh hash 判定、malformed entry の再生成、並列インデックス生成、memo ディレクトリの対象/除外ルールを実装または修正する。
-- apply join 側で INDEX.md の merge conflict 解決挙動を変更し、削除・unmerged 解消・merge commit の結果を確認したい。
+- indexing サブコマンド、INDEX.md の生成・更新・コミット、または既存 INDEX.md の freshness 判定を変更する。
+- 未初期化リポジトリ、dirty worktree、linked worktree、merge conflict など、indexing 周辺の git 状態制御を変更する。
+- render_index_entry や build_index_entry の structured output 受け入れ条件、空リスト・非文字列・欠落 field のエラー処理を変更する。
+- ルート直下の memo を indexing 対象から外す処理、または下位階層にある同名ディレクトリを通常対象として扱う処理を確認する。
+- INDEX.md 更新処理の並列化や、同階層要素のエントリー生成順序・実行制御に関わる実装を触る。
 
 ## Do not read this when
-- indexing 以外のサブコマンド、通常の CLI 引数定義、ログ基盤、path model などの仕様や実装を調べたいだけの場合。
-- Codex CLI や LLM 実行結果そのものの品質を確認したい場合。このファイルは Codex 呼び出しを fake に差し替え、cmoc 側の制御と副作用を検証する。
-- INDEX.md の自然言語エントリー本文を個別に理解したい場合。このファイルは生成物の詳細文面ではなく、生成・検証・コミットの制御を扱う。
+- 個別サブコマンドの通常動作だけを調べたい場合は、そのサブコマンドの実装または対応する専用テストを先に読む。
+- INDEX.md エントリー本文の正本仕様や人間向けルーティング文書の書き方を確認したい場合は、oracle 側の仕様断片を読む。
+- Codex 実行基盤そのもの、CLI runner の共通 fixture、git test helper の詳細を調べるだけなら、支援モジュールや実装側の該当箇所を読む。
+- 生成された INDEX.md の内容を人間がどう解釈するかだけが関心で、indexing の制御フローや副作用を検証しない場合は、このテストを読む優先度は低い。
 
 ## hash
-- a5dcebe6a6c05159cebca0d7bba526bffade6cd2c5774c785ad1f7ef18d27deb
+- 68a9ca8e65c3b1750cfffb92daa8a88aaff50a543981bc16fade83083575dbd1
 
 # `test_indexing_preflight.py`
 

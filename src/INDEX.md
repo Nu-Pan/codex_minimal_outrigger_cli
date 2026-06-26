@@ -136,20 +136,21 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装を集める領域で、初期化、TUI 起動、ルーティング目次更新、review oracle、session 操作、apply 系実行ライフサイクルなど、利用者が直接呼び出す機能の入口になる。
-- 各サブコマンドは共通 CLI 実行ラッパー、indexing preflight、git/worktree/session state 操作、Codex 実行、利用者向け Markdown 出力や report 生成などを接続する orchestration を担い、詳細な共通処理や helper 実装へ進む前の切り分け点になる。
+- CLI の各サブコマンド実装を集約する領域。初期化、ルーティング文書更新、対話実行、セッション操作、apply 実行、oracle review など、利用者が直接起動する処理の入口を探すためのルーティング対象。
+- 各実装は共通 CLI 実行基盤、preflight、git 操作、状態管理、worktree 操作、report 出力、Codex 呼び出しなどを組み合わせる orchestration を担い、低レベル helper ではなくサブコマンド単位の制御順序を確認する入口になる。
+- 配下には、個別サブコマンドの入口モジュールと、複数ファイルに分かれたサブコマンド領域が並び、対象コマンドが未確定な場合に責務境界を切り分けるための階層として位置づく。
 
 ## Read this when
-- どのサブコマンド実装を読むべきか未確定で、初期化、目次更新、TUI、review oracle、session fork/join/abandon、apply 系操作の責務境界を比較したいとき。
-- 利用者向け CLI コマンドの入口、実行前提、共通 runner との接続、サブコマンド固有の状態遷移、出力や report 生成までの高レベルな制御順序を追いたいとき。
-- review oracle の対象列挙・実行 loop・INDEX 差分 commit・report、または apply run の開始・破棄・join・process 管理・結果 report など、複数 helper を束ねる実行フローを調べる入口が必要なとき。
-- session branch の作成・取り込み・破棄、作業ツリー初期化、ルーティング目次生成、Codex TUI 起動など、サブコマンド単位の外部挙動や失敗時挙動を確認または変更したいとき。
+- CLI から起動されるサブコマンドの実行入口、前提条件、利用者向け出力、エラー時挙動、または共通 CLI runner との接続を調べたいとき。
+- 初期化、ルーティング文書更新、対話実行、session 操作、apply 操作、oracle review のどの実装へ進むべきかを選びたいとき。
+- サブコマンドが worktree、branch、session state、git 操作、Codex 実行、report 作成、cleanup をどの高レベル順序で組み合わせるか確認したいとき。
+- 複数のサブコマンドにまたがる変更で、個別実装へ進む前に同階層の責務分担と読む順序を判断したいとき。
 
 ## Do not read this when
-- git 実行 wrapper、path model、設定読み込み、状態ファイル I/O、worktree 操作、ignore 判定、timestamp 生成など、サブコマンドから呼ばれる共通 runtime 実装そのものを調べたいとき。
-- oracle file、realization file、ルーティング文書、session state schema、prompt 構築、Structured Output schema など、CLI サブコマンド入口ではない仕様・データ構造・生成パラメータを確認したいとき。
-- 特定のサブコマンドや下位 helper が読む対象として既に分かっており、この階層で責務境界を比較する必要がないとき。
-- 自動テストや oracle 側の正本仕様断片を調べたいだけで、実装側のサブコマンド orchestration を追う必要がないとき。
+- サブコマンドから呼ばれる低レベル runtime helper、git 実行 wrapper、path model、状態ファイル schema、設定モデルなどの共通部品だけを調べたいとき。
+- Codex に渡す prompt、Structured Output parameter、entry 生成 parameter、review 用 parameter など、サブコマンドから呼ばれる builder 側の詳細だけを変更したいとき。
+- oracle file の正本仕様、realization/oracle の概念定義、ルーティング文書そのものの一般仕様を確認したいとき。
+- 対象サブコマンドや下位 helper が既に明確で、この階層全体の責務境界を確認する必要がないとき。
 
 ## hash
-- e88a96512118de2d78ef961a780a081abb2f3cd2ee0b2c1e83d26b4f3d170cf6
+- fc36668888fe7bead4c615a2f10e7b3f1febcf524baeed44956fa86680f927be
