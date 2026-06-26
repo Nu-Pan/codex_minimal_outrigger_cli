@@ -135,26 +135,24 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI 呼び出し用の実行プロファイルと周辺ランタイム値を組み立てる共通処理を扱う。file access mode から sandbox/permission profile 設定へ変換し、読み書き可能範囲、読み取り禁止範囲、追加 read-only パスを TOML 断片として生成する。
-- Codex home の解決・検証、認証情報の存在確認、hashed profile/schema ファイルの準備、子プロセス環境変数、出力 JSON・JSONL エラー・resume token・capacity/quota 判定など、Codex CLI 実行前後の補助処理への入口になる。
+- Codex CLI 実行用の設定 profile と実行補助情報を組み立てる共通処理を担う。file access mode から sandbox/permission profile を生成し、Codex home の解決・検証、profile/schema の一時生成、Codex subprocess 用環境、JSONL 出力からの error/resume token/容量・quota 判定を扱う。
 
 ## Read this when
-- Agent call parameter と設定値から Codex CLI に渡す model、reasoning_effort、sandbox_mode、permission profile をどう生成するか確認したいとき。
-- readonly、oracle read、realization write、oracle write、repo write の各 file access mode が、読み取り・書き込み・deny_read・read_only・writable_roots にどう反映されるか確認したいとき。
-- realization write で oracle 配下の一部だけを書き込み許可する場合に、他の oracle パス、memo、.agents をどう read-only 扱いにするか確認したいとき。
-- CODEX_HOME の解決規則、Codex home の妥当性検査、認証ファイル欠落時のエラー、Codex 子プロセスへ渡す環境変数を扱う変更をするとき。
-- Codex profile や schema を hashed file として配置する処理、またはその失敗時に利用者へ返す CmocError を確認・変更するとき。
-- Codex CLI の stdout/stderr から JSON 出力、エラーメッセージ、thread id、capacity error、quota error を読み取る処理を確認・変更するとき。
+- AgentCallParameter と CmocConfig から Codex CLI に渡す model、reasoning effort、sandbox、permission profile の内容を確認・変更したいとき。
+- FileAccessMode ごとの read/write/deny_read/read_only/writable_roots の扱い、特に oracle・memo・.agents・追加 read path・writable_paths の反映規則を追うとき。
+- CODEX_HOME の解決、認証情報の存在確認、profile ファイル生成、Codex subprocess に渡す環境変数の組み立てを確認するとき。
+- Codex 実行結果の stdout/stderr から error message、resume token、capacity error、quota error を抽出する挙動を確認・変更するとき。
+- structured output schema を Codex 実行用に保存する処理や、出力 JSON ファイルの読み取り失敗時の扱いを確認するとき。
 
 ## Do not read this when
-- cmoc のパス語彙や root/work/run の概念定義そのものを確認したいだけの場合は、パスモデル側の仕様・実装を直接読む。
-- hashed file の書き込み方式、保存先ディレクトリ作成、内容ハッシュ化の詳細を確認したい場合は、ランタイム content 管理側を読む。
-- FileAccessMode や AgentCallParameter の型定義、モデルクラス・reasoning effort の列挙を確認したい場合は、basic 側の agent call parameter 定義を読む。
-- CmocConfig の読み込み元、既定値、設定 schema を確認したい場合は、config 側を読む。
-- Codex CLI を実際に起動する制御フロー、subprocess の呼び出し順、リトライや上位 command の振る舞いを確認したい場合は、この補助処理の呼び出し元を読む。
+- Codex を呼び出す上位フロー、subprocess の起動方法、retry や task orchestration 全体を知りたいだけのとき。
+- FileAccessMode や AgentCallParameter の型定義そのもの、または CmocConfig の設定 schema を確認したいとき。
+- runtime directory や schema store の場所の定義だけを知りたいとき。
+- hash 付きファイルの書き込み方式や保存先ディレクトリ作成の詳細を確認したいとき。
+- Codex CLI の仕様そのもの、認証ファイルの内部形式、または LLM 出力品質を調べたいとき。
 
 ## hash
-- 94d548b8af6d5efb6fa6b87d39cad6a716b7d1457a3519e867f41a0ae486e076
+- fab6b85ee96c7a66017972b494731a4c6f9b3c265ee116c790ffe0191c31c808
 
 # `runtime_codex_tui.py`
 

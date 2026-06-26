@@ -65,33 +65,32 @@
 # `commons`
 
 ## Summary
-- cmoc の実行時共通 helper 群をまとめる領域。CLI サブコマンド共通ライフサイクル、Codex exec/TUI 呼び出し、profile・設定・content・error・git・logging・path・結果型・永続 state など、複数機能から参照される runtime 支援実装を扱う。
-- 個別機能の業務処理ではなく、外部コマンド実行、Codex 呼び出し、実行ログ、設定永続化、root/path 解決、例外整形、session state などの横断的な下支えへ進むための入口になる。
+- cmoc の実行時共通処理を集めた共有 helper 群の領域。Codex CLI 呼び出し、CLI サブコマンド共通ライフサイクル、設定読み書き、エラー整形、Git 操作、ログ記録、path 解決、結果型、永続 state、内容 hash など、複数の実行経路から使われる runtime 支援を扱う。
+- 個別実装の多くは責務別に分かれており、この階層はサブコマンドや workflow から共通利用される低レベル実行時機能へ進む入口になる。集約用の import 面も含むが、具体的な挙動変更は該当責務の実装本文を読む必要がある。
 
 ## Read this when
-- CLI サブコマンドに共通する開始・完了表示、事前検査、例外から終了コードへの変換、実行ログ記録の流れを確認・変更したいとき。
-- Codex CLI の exec または対話起動について、profile/schema/log path の準備、subprocess 呼び出し、call log、Structured Output 検証、capacity/quota retry、resume 継続、preflight などの runtime 制御を追いたいとき。
-- Codex 呼び出し用の sandbox/permission profile、Codex home、認証確認、子プロセス環境変数、出力 JSON・JSONL エラー・resume token・quota/capacity 判定を確認したいとき。
-- cmoc 設定ファイルの読み書き、既定値補完、不正 JSON や型不一致のエラー化、永続化形式の変更を扱うとき。
-- file/text hash、内容 hash 付きファイル生成、binary 判定など、内容管理の共通処理を確認・変更したいとき。
-- cmoc 共通の実行時エラー構造や、例外を利用者向けのエラー文面へ整形する処理を確認・変更したいとき。
-- Git コマンドの共通実行、repository 状態検査、一時 worktree・managed branch の作成削除、Git ignore 判定を確認・変更したいとき。
-- サブコマンド実行ログ、Codex 呼び出し完了サマリー、quota 待機時間、context-local logger、ログ record の生成と保存を確認・変更したいとき。
-- 実行時の root path 解決、cmoc 管理ディレクトリや設定・ログ・state・worktree path の組み立て、timestamp や duration 表示を確認・変更したいとき。
-- 外部コマンド結果や Codex exec 結果の共有データ型、session/apply branch に紐づく永続 state の schema・読み書き・探索を確認・変更したいとき。
-- 実行時共通 API の集約 import 面を確認し、新しい helper の公開や不要な公開 import の削除を行いたいとき。
+- CLI サブコマンド全体に共通する開始・完了表示、終了コード化、例外時の利用者向けエラー表示、サブコマンド logger 設定を確認または変更したいとき。
+- Codex CLI の exec 実行や TUI 起動について、profile/schema/log path 準備、subprocess 呼び出し、Structured Output 検証、retry、quota/capacity 制御、call log、preflight のいずれかを追いたいとき。
+- cmoc 設定ファイルの読み書き、既定値補完、不正 JSON や型不正のエラー化、永続化形式を確認または変更したいとき。
+- cmoc 共通の CmocError、利用者向けエラー文面、外部コマンド結果や Codex 実行結果の共有データ型を確認したいとき。
+- Git repository 状態検査、一時 worktree や managed branch の作成・削除、Git ignore 判定、Git コマンド失敗時の共通エラー化を調べたいとき。
+- 実行ログの JSON Lines 記録、quota 待機時間や実行時間の計測、現在のサブコマンド logger の受け渡しを確認または変更したいとき。
+- 実行時の root path 解決、cmoc 管理ディレクトリや設定・ログ・state・worktree 保存先、timestamp や duration 表示、作業ディレクトリ一時変更を扱う共通処理を探すとき。
+- session/apply branch に紐づく永続 state の読み書き、branch 名からの session-id 抽出、active session 探索、state file schema を確認または変更したいとき。
+- file/text hash、hash 付き生成ファイル名、binary 判定など、内容 hash ベースの共通処理を確認または変更したいとき。
+- サブコマンド周辺の実装から利用できる実行時共通 API の公開 import 面を確認または整理したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務処理、入力引数、dispatch、利用者向け出力だけを確認したいとき。該当する command 実装へ直接進む。
-- path keyword や root 種別の概念定義そのものを確認したいとき。仕様側または path model 側を読む。
-- 設定データクラス、Agent call parameter、FileAccessMode、モデル名などの型定義そのものだけを確認したいとき。定義元の model 実装へ進む。
-- INDEX.md の内容生成ロジック、エントリー生成プロンプト、ファイル探索ルールそのものを調べたいとき。indexing の実装や仕様へ進む。
-- Codex CLI や Git の実行結果を利用する上位 workflow の制御順序だけを追いたいとき。各 workflow や command 実装を読む。
-- ログや state を読む側、集計する側、表示する側の仕様を調べたいとき。保存する runtime helper ではなく、消費側の実装へ進む。
-- テスト観点や fixture から期待挙動を確認する方が直接的なとき。対応する test 領域へ進む。
+- 個別サブコマンドの業務処理、引数定義、dispatch、利用者向け出力だけを確認したいとき。その場合は該当する command 実装へ直接進む。
+- path キーワードそのものの概念定義や root 種別の正本仕様を確認したいだけのとき。その場合は path model の仕様や実装を読む。
+- 設定データクラスのフィールド定義や既定値そのものを確認したいだけのとき。その場合は設定モデル定義を読む。
+- INDEX.md の内容生成ロジック、エントリー生成プロンプト、ファイル探索ルールそのものを調べたいとき。この階層の preflight は実行前フックであり、indexing 本体ではない。
+- ログ内容を読む側、集計する側、表示する側の仕様を探しているとき。この階層は主に記録や共通表示補助を扱う。
+- Codex profile 名、resume token 抽出、quota/capacity 判定などの低レベル helper だけを確認したい場合を除き、上位の workflow 全体を把握したいなら呼び出し側の orchestration 実装から読む。
+- テスト観点や期待される外部挙動を確認したいだけで、共通 runtime helper の責務や副作用を変更しないとき。その場合は該当するテストや利用側を読む。
 
 ## hash
-- bd5b250822cc01baa6193daacbb6307067628462396afe73004d56166d53e6eb
+- a1689f685a961e8723586e90385db978c493f2e5dc7c5c04feccf4ed3822305e
 
 # `config`
 

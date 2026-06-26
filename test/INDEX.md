@@ -98,22 +98,25 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- 基本的なランタイム挙動を横断的に検証する realization test。パス表記の解決、時間表示、linked worktree と repo root の区別、設定既定値、エラー表示、CLI preflight、補完 probe、.cmoc の gitignore 反映、file access mode と Codex profile の権限設定を扱う。
-- 複数の小さな基盤機能が、利用者に見える CLI 出力や sandbox 権限、作業ツリー判定として期待どおり振る舞うことを確認する入口になっている。
+- cmoc の基本的な runtime 挙動を横断的に検証する realization test。パス token 解決、時間表示、repo root/work root 判定、設定既定値、構造化エラー表示、CLI エラー出力、補完 probe、.cmoc ignore、file access mode、Codex profile の権限制御を扱う。
+- 単一機能の詳細テストというより、CLI 実行前後の前提条件、権限 profile、エラー報告、git worktree 周辺の基礎契約が崩れていないかを確認する入口になる。
 
 ## Read this when
-- ランタイム基盤、パスモデル、work root 判定、linked worktree 判定、設定既定値、エラー markdown、CLI エラー出力先、shell completion 時の副作用抑制を変更・確認するとき。
-- file access mode、sandbox mode、Codex profile の read/write/read_only/deny_read 設定、memo や oracle へのアクセス制約を変更・確認するとき。
-- .cmoc を git 管理対象外にする処理や、既存の有効な ignore pattern を保つ挙動を変更・確認するとき。
-- 基盤 helper の変更が CLI の外部挙動や権限 profile へ波及していないかを、広く浅く確認したいとき。
+- path model、repo root と work root の区別、linked worktree 上の実行判定を変更する。
+- CmocConfig の既定値、model class、reasoning effort、file access mode の値や sandbox mode 変換を変更する。
+- CmocError、render_error、CLI 引数解析エラー、preflight エラーの stdout/stderr 出力方針を変更する。
+- init や session fork の実行前検査、補完 probe 時の副作用抑制、work root 必須条件を変更する。
+- .cmoc を .gitignore に追加する処理や、既存 ignore pattern を尊重する挙動を変更する。
+- build_codex_profile が生成する permission profile、read/write/deny_read/read_only、workspace-write の writable roots を変更する。
 
 ## Do not read this when
-- 個別サブコマンドの正常系ワークフロー、セッション生成、ログ保存、oracle 文書処理など、より具体的な機能の詳細テストを探しているとき。
-- Codex profile 文字列の組み立て実装、パス解決 helper、エラー描画 helper などの実装本文そのものを変更するために、まず実装側の責務や呼び出し構造を確認したいとき。
-- 単一の CLI オプションや出力 schema の網羅的仕様を確認したいとき。この対象は基盤挙動の代表的な回帰確認であり、各機能の完全な仕様一覧ではない。
+- 個別サブコマンドの正常系フローや永続状態の詳細だけを調べたい場合は、そのサブコマンドや状態管理を扱うより直接の実装・テストを読む。
+- oracle file の正本仕様を確認したい場合は、realization test ではなく該当する oracle doc、oracle src、oracle test を読む。
+- Codex CLI や LLM 出力品質そのものの検証方針を調べたい場合は、この対象ではなくテスト追加基準や関連する仕様文書を読む。
+- 単一 helper の内部実装だけを変更する場合で、外部挙動、CLI 出力、権限制御、worktree 判定に影響しないことが明確なら読む優先度は低い。
 
 ## hash
-- 5bd6cc116c0d12f9d74e07dc2b564b3a6547117b6fac0de68599b384250df72b
+- 9725c381580cfac7b4edcc1a3db8912f4fceea899388f6c81a860a1a6fd61454
 
 # `test_cli_init_tui.py`
 
