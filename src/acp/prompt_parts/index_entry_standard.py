@@ -61,7 +61,7 @@ def build_index_entry_standard() -> StructDoc:
         Standard(
             title="機械的に補える情報を INDEX.md エントリーの意味情報に混ぜない",
             backgrounds=[
-                "ファイル・ディレクトリの識別子、ハッシュ、出力形式は呼び出し側または Structured Output schema 側で扱われる",
+                "ファイル・ディレクトリの識別子、ハッシュ、出力形式は cmoc 側または Structured Output schema 側で扱われる",
                 "機械的に分かる情報を自然言語へ混ぜるほど、ルーティング判断に必要な意味情報が薄まる",
             ],
             requirements=[

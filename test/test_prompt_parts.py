@@ -222,6 +222,7 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
         "review oracle standard",
         "apply review standard",
         "index entry standard",
+        "cmoc 側",
         "oracle file",
         "oracles file",
         "oracle spec",
@@ -239,7 +240,6 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
         "cmoc は",
         "cmoc でも",
         "cmoc により",
-        "cmoc 側",
         "`cmoc ",
         "cmoc review oracle",
         "cmoc apply join",
@@ -343,9 +343,11 @@ def test_build_index_entry_standard_renders_core_output_rules() -> None:
     assert "読むべき対象へのルーティング情報" in rendered
     assert "対象内容に根拠" in rendered
     assert "機械的に補える情報" in rendered
+    assert "ファイル・ディレクトリの識別子、ハッシュ、出力形式は cmoc 側" in rendered
     assert "ファイル名・ディレクトリ名・ハッシュ値" in rendered
     assert "Structured Output schema を読めば分かる出力項目名・型・形式" in rendered
     assert "関連しそうという理由だけ" in rendered
+    assert "呼び出し側または Structured Output schema 側" not in rendered
     assert "summary" not in rendered
     assert "read_this_when" not in rendered
     assert "do_not_read_this_when" not in rendered
