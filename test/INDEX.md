@@ -98,20 +98,22 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基本ランタイム挙動を広く検証する realization test。パス token 解決、時間表示、repo root/work root 判定、設定 default、エラー markdown、CLI エラー出力、補完 probe、.cmoc ignore、file access mode、Codex profile の権限設定を扱う。
+- 基本的なランタイム挙動を横断的に検証する realization test。パス表記の解決、時間表示、linked worktree と repo root の区別、設定既定値、エラー表示、CLI preflight、補完 probe、.cmoc の gitignore 反映、file access mode と Codex profile の権限設定を扱う。
+- 複数の小さな基盤機能が、利用者に見える CLI 出力や sandbox 権限、作業ツリー判定として期待どおり振る舞うことを確認する入口になっている。
 
 ## Read this when
-- 基本的な runtime helper、設定 default、エラー表示、CLI preflight、gitignore 更新、file access mode から sandbox mode への変換、または Codex profile の permission 設定に関する既存テストを確認・更新したいとき。
-- work root と repo root の区別、linked worktree 上の root 解決、session branch 名の形の拒否、stdout/stderr へのエラー出力先など、cmoc の基礎的な外部挙動の回帰を確認したいとき。
-- 権限 profile が read/write/deny_read/read_only/writable_roots をどう出すべきかを、実装変更に対する realization test として確認したいとき。
+- ランタイム基盤、パスモデル、work root 判定、linked worktree 判定、設定既定値、エラー markdown、CLI エラー出力先、shell completion 時の副作用抑制を変更・確認するとき。
+- file access mode、sandbox mode、Codex profile の read/write/read_only/deny_read 設定、memo や oracle へのアクセス制約を変更・確認するとき。
+- .cmoc を git 管理対象外にする処理や、既存の有効な ignore pattern を保つ挙動を変更・確認するとき。
+- 基盤 helper の変更が CLI の外部挙動や権限 profile へ波及していないかを、広く浅く確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの通常成功フロー、セッション状態の詳細、oracle 文書の正本仕様、または実装本体の責務を調べたいだけの場合。
-- Codex CLI や LLM の出力品質そのもの、外部サービス連携、UI 表示、永続ログ内容の詳細を調べる場合。
-- 対象となる helper や CLI 挙動の実装場所を直接読みたい場合は、該当する src 配下の実装を読む方が適切なとき。
+- 個別サブコマンドの正常系ワークフロー、セッション生成、ログ保存、oracle 文書処理など、より具体的な機能の詳細テストを探しているとき。
+- Codex profile 文字列の組み立て実装、パス解決 helper、エラー描画 helper などの実装本文そのものを変更するために、まず実装側の責務や呼び出し構造を確認したいとき。
+- 単一の CLI オプションや出力 schema の網羅的仕様を確認したいとき。この対象は基盤挙動の代表的な回帰確認であり、各機能の完全な仕様一覧ではない。
 
 ## hash
-- e2a9c702735fb2b3e209b419ff7e7cc558d2c4161951d3bb4262319072940066
+- 5bd6cc116c0d12f9d74e07dc2b564b3a6547117b6fac0de68599b384250df72b
 
 # `test_cli_init_tui.py`
 
@@ -301,21 +303,20 @@
 # `test_session_cli.py`
 
 ## Summary
-- session サブコマンドの CLI 挙動を検証する realization test。session fork による session branch と session state の作成、linked worktree 上での fork、session abandon の正常終了・home branch 不在・cleanup 失敗時 rollback、session join の conflict resolution・linked worktree・delete conflict・session branch 削除失敗時 warning を扱う。
-- Git branch、worktree、`.cmoc/sessions` の状態 JSON、Typer runner の CLI 出力、Codex conflict resolution 呼び出し、git branch 削除失敗時の制御をまたぐ session 系の外部挙動を確認する入口になる。
+- session サブコマンドの CLI 結合テストをまとめた realization test。session fork による session branch と状態ファイル作成、linked worktree からの fork、session abandon の正常系・home branch 不在・cleanup 失敗時 rollback、session join の merge/conflict 解決・linked worktree・削除競合・session branch 削除失敗 warning を検証する。
+- Git 操作、状態 JSON、Typer runner 経由の CLI 出力、Codex conflict resolution 呼び出し条件を同時に確認するため、session 系 CLI の外部挙動を変更する際の入口になる。
 
 ## Read this when
-- session fork、session abandon、session join の CLI 挙動やテスト期待値を変更する。
-- session state JSON の `state`、`session_home_branch`、`session_start_commit`、`last_joined_apply_oracle_snapshot_commit`、`apply.state` など、session 操作で保存・更新される状態を確認する。
-- session 操作が通常 worktree と linked worktree でどの branch を home として扱い、どの worktree の current branch を切り替えるかを確認する。
-- session abandon の失敗時に、home branch 不在、session branch 削除失敗、状態 rollback、利用者向け出力をどう扱うかを確認する。
-- session join の merge conflict 解決で Codex 実行を呼ぶ条件、file access mode、解決後の staging、home branch への切り替え、session branch 削除 warning を確認する。
+- session fork、session abandon、session join の CLI 挙動や状態遷移を変更・調査するとき。
+- session branch、session home branch、session_start_commit、apply state、joined/abandoned/active などの session 状態 JSON の期待値を確認したいとき。
+- linked worktree 上で session コマンドを実行した場合に、元 worktree と現在 worktree の branch/head がどう扱われるかを確認するとき。
+- session join の merge conflict 解決で Codex 実行に渡す目的、file access mode、writable paths、削除競合の staging 処理を確認するとき。
+- session abandon や session join の失敗・警告時に、branch が残るか、状態が rollback されるか、利用者向け出力に何を含めるかを確認するとき。
 
 ## Do not read this when
-- session 系ではない CLI サブコマンド、path model、oracle review、INDEX 生成などの挙動だけを確認したい。
-- session 実装内部の関数分割、git helper の詳細、Codex 実行 wrapper の実装そのものを調べたい場合で、まず実装ファイルを読む方が直接的である。
-- session state schema 全体の正本仕様や、利用者向け文書としての session 概念を確認したい場合で、oracle doc または関連仕様断片を読む必要がある。
-- テスト支援 fixture、`make_repo`、`runner`、`run_git`、`CmocError`、`FileAccessMode` の定義や共通テスト基盤だけを確認したい。
+- session 以外の CLI サブコマンド、oracle 操作、path model、設定読み込みなどを調査しており、session branch や session 状態の外部挙動に関係しないとき。
+- session コマンドの実装詳細だけを追いたい場合。まず対応する実装モジュールを読み、外部挙動の期待値確認が必要になった段階で読む。
+- 単体 helper の純粋な入出力や低レベルな Git wrapper の挙動だけを確認したい場合。CLI 経由の session workflow を検証するこの対象より、該当 helper のテストや実装を優先する。
 
 ## hash
-- fa29ae5f52aef12140f003927bf2db689352b51ef2c8ef0cc84aa3458fdfdf31
+- 37fc26f35b53b9ff5482d9cb716da99ce3bc41bbc20c5844e11fb2dbfd68cc71

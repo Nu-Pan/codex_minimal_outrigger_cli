@@ -132,26 +132,25 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI 起動用の実行時設定を組み立てる共通処理を扱う。モデル・reasoning effort・sandbox/permission profile・Codex home・認証情報・schema 一時配置・JSONL 出力解析など、Codex サブプロセスを呼ぶ前後の環境準備とエラー判定をまとめる入口である。
-- file access mode から Codex 側の sandbox mode や permission profile へ変換し、作業ルート、oracle、memo、.agents、追加 read path の読み書き制約を profile text として表現する責務を持つ。
-- Codex CLI の stdout/stderr からエラー本文、resume token、capacity/quota 系エラーを取り出す補助処理も含むため、Codex 呼び出し失敗時の分類や再実行制御を追う際の参照先になる。
+- Codex CLI 呼び出し用の実行時設定を組み立てる共通実装。モデル・reasoning effort・sandbox mode・cmoc 権限プロファイルを TOML 文字列として生成し、Codex home の解決と検証、profile/schema のハッシュ保存、Codex subprocess 用環境変数の組み立てを扱う。
+- Codex CLI の stdout/stderr や JSONL 出力から、エラー本文、resume token、capacity/quota 系エラーを抽出・判定する補助処理も持つ。
 
 ## Read this when
-- AgentCallParameter と設定から Codex CLI 用 profile text または profile file を生成する処理を変更・確認したいとき。
-- FileAccessMode ごとの read/write/deny_read/read_only/writable_roots の対応、または root と extra read path が permission profile にどう反映されるかを確認したいとき。
-- CODEX_HOME の解決、Codex home の存在・ディレクトリ・auth.json 検証、Codex サブプロセスへ渡す環境変数を扱うとき。
-- Codex 呼び出し用に schema source を hashed file として配置する処理、または Codex の出力 JSON を寛容に読み取る処理を扱うとき。
-- Codex CLI の JSONL stdout と stderr から利用者向けエラー文、thread id、capacity error、quota error を抽出する制御を調べるとき。
+- AgentCallParameter と CmocConfig から Codex CLI に渡す profile 内容、sandbox mode、permission profile、writable/read-only/deny-read の対応を確認・変更したいとき。
+- FileAccessMode ごとの読み書き権限、oracle・memo・.agents・追加 read path の扱い、または realization write 時に oracle 配下の一部だけを書き込み許可する挙動を調べるとき。
+- CODEX_HOME の解決規則、Codex home の存在・ディレクトリ・認証ファイル検証、Codex subprocess へ渡す環境変数の扱いを確認したいとき。
+- Codex profile や structured output schema を実行時にどこへどのように保存するか、保存失敗時にどの CmocError を返すかを確認・変更したいとき。
+- Codex CLI の JSONL 出力から thread id を resume token として取り出す処理、stderr/stdout から利用者向けエラーテキストを合成する処理、capacity/quota エラー判定を調べるとき。
 
 ## Do not read this when
-- Codex profile の材料になるモデル名・reasoning effort の設定定義そのものを調べたいだけのときは、設定オブジェクト側を直接読む。
-- FileAccessMode や AgentCallParameter の列挙値・データ構造そのものを確認したいだけのときは、基本型定義側を直接読む。
-- hashed file の保存方式、schema store のディレクトリ決定、または path model の定義を調べたいときは、それぞれの保存処理・runtime path 処理側を読む。
-- Codex サブプロセスを実際に起動するコマンド構築やプロセス実行の流れを追いたいときは、この共通補助ではなく呼び出し元の実行制御を読む。
-- oracle/realization の仕様判断や INDEX.md 生成方針そのものを確認したいときは、仕様文書側を読む。
+- Codex 以外の LLM 実行基盤、プロンプト本文、タスク指示文、または agent 呼び出し全体の制御フローを探しているだけのとき。
+- cmoc のパス語彙や root/work/run の定義そのものを確認したいとき。
+- 設定ファイル全体の読み込み・デフォルト定義・設定 schema を確認したいとき。
+- ハッシュ付きファイル保存の具体的なファイル名生成、ディレクトリ作成、書き込み実装そのものを確認したいとき。
+- Codex CLI の出力品質や LLM 応答内容を検証したいとき。
 
 ## hash
-- b810d07a9cfa54d653563506bbea37d97de8ad10928b4599a9ad00865c3de3d6
+- 27faaf17756dd9ca84f1a7ec180aa51089b10353bef667d8f637185942fba50e
 
 # `runtime_codex_tui.py`
 
