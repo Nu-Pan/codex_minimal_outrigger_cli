@@ -107,23 +107,19 @@
 # `join.py`
 
 ## Summary
-- apply run 完了後または error 後に、apply branch を session branch へ取り込み、apply state を初期化して join report と後片付けを行う実装。
-- join 前の状態検証、想定外差分の検出と force resolve、merge conflict の扱い、apply worktree と apply branch の cleanup をまとめて扱う。
-- INDEX.md だけの merge conflict を削除 commit で機械解決する例外処理や、想定外差分・conflict を利用者向け report に残す処理も含む。
+- 完了済みまたはエラー状態の apply run を session branch に取り込む処理を担う。実行位置の補正、状態検証、想定外差分の検出と force-resolve 時の復元、merge と INDEX.md だけの conflict 自動解決、join report 作成、apply worktree と apply branch の後片付けまでを扱う。
 
 ## Read this when
-- apply join の実行条件、対象 branch の判定、session branch と apply branch の切り替え挙動を確認したいとき。
-- completed または error 状態の apply run を session branch に merge する処理、join 後に apply state を戻す処理、last joined oracle snapshot commit の更新を調べるとき。
-- apply join 時の想定外差分の分類、force resolve による差分復元、許可される apply/session 側差分の境界を変更・確認するとき。
-- apply branch merge の失敗、merge conflict report、INDEX.md conflict の自動解決、apply worktree と apply branch の削除条件を調べるとき。
-- apply join report の生成内容、保存先カテゴリ、標準出力に出す summary と warnings を変更・確認するとき。
+- apply run の成果を session branch へ取り込むサブコマンドの挙動を確認・変更したいとき。
+- join 可能条件、session/apply branch 上での実行位置、clean worktree 要件、apply state の ready への復帰を調べたいとき。
+- apply/session branch の想定外差分判定、--force-resolve による差分復元、merge conflict 時の停止条件や report 内容を確認したいとき。
+- apply join 後の apply worktree 削除、apply branch 削除、警告出力、last_joined_apply_oracle_snapshot_commit 更新を追うとき。
 
 ## Do not read this when
-- apply run の開始、apply branch の作成、作業用 worktree の生成そのものを調べたいだけのとき。
-- session state のデータ構造、branch 名規則、git wrapper、report directory、path model などの共通 runtime API の定義を調べたいとき。
-- apply join 以外の apply サブコマンド、または session lifecycle 全体の仕様を確認したいとき。
-- oracle file や memo の内容そのもの、INDEX.md エントリー生成規則そのものを確認したいとき。
-- join report を読むだけで、実装上の検証順序や cleanup 条件を追う必要がないとき。
+- apply run の開始、apply branch や worktree の作成、session state を completed/error にする処理を調べたいだけのとき。
+- 汎用の git 実行、branch 削除、worktree 削除、状態ファイル読み書き、report directory 解決の共通実装を確認したいとき。
+- INDEX.md エントリーの一般的な生成規則や routing 文書全体の仕様を調べたいとき。
+- merge conflict のうち INDEX.md 以外を自動解決する実装を探しているとき。この対象はそれらを自動解決せず手動解決へ誘導する。
 
 ## hash
-- db531dc6c7d8aed77c5678dc687dbaa7f52d1681cacaf8da526854a53562291f
+- be6749da572fb3434fe94e29aade1751789a07d52cf995f78d3c8e638dbb846a

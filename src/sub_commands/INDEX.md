@@ -1,24 +1,23 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンド群の実装をまとめるディレクトリ。apply run の開始、破棄、取り込み、実行時 process 管理、fork report 生成まで、apply lifecycle の主要な制御へ進む入口になる。
-- session branch と apply branch/worktree の関係、apply state の更新、実行中 process の pid 管理、Codex による finding 適用、join/abandon 時の cleanup など、apply 専用の実行フローを調べる起点として使う。
+- apply 系サブコマンド群の実装ディレクトリ。apply run の開始、結果取り込み、破棄、実行時 process 管理、fork report 生成を扱う各実装への入口になる。
+- apply branch/worktree、session state、apply process id、Codex 実行、git merge/cleanup、report 出力など、apply run のライフサイクルに沿った上位フローと低レベル補助処理を切り分けている。
 
 ## Read this when
-- apply fork、apply join、apply abandon のどの実装へ進むべきかを切り分けたいとき。
-- apply run の開始から完了後の取り込みまたは破棄まで、apply lifecycle 全体に関係する実装の所在を確認したいとき。
-- apply branch、apply worktree、session branch、apply state、apply process id が apply 系処理でどう扱われるかを調べる入口が必要なとき。
-- apply fork のレポート生成、変更要約、通常終了・エラー終了時の保存内容を扱う実装へ進みたいとき。
-- 実行中 apply process の pid file、pidfd、process start time、停止処理など、apply 専用 runtime helper の所在を確認したいとき。
+- apply fork、join、abandon のどの実装へ進むべきかを選びたいとき。
+- apply run の状態遷移、branch/worktree 操作、process 停止、report 生成のうち、apply 固有の責務境界を把握したいとき。
+- apply branch または session branch 上での実行条件、apply worktree の作成・削除、apply process id の保存・削除、join/abandon 後の cleanup に関係する調査を始めるとき。
+- apply fork の所見列挙、適用、commit、変更要約、エラー時 report など、Codex を使った apply loop 周辺の実装対象を探すとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド、session lifecycle 全体、共通 runtime、git wrapper、path model、設定読み込みなどを調べたいとき。
-- oracle file、memo、INDEX.md 生成規則、ルーティング文書の方針そのものを確認したいとき。
-- apply 系の低レベルではなく、利用者向け CLI 全体のコマンド登録やトップレベル引数構造だけを確認したいとき。
-- 特定の apply サブコマンドの責務がすでに分かっており、fork、join、abandon、runtime、report のいずれかへ直接進めるとき。
+- apply 以外のサブコマンド、共通 CLI 起動処理、全体の argument parser 登録だけを調べたいとき。
+- session state file 全体の schema、汎用 git/worktree helper、設定読み込み、path model など、apply 固有でない共通 runtime の詳細を直接確認したいとき。
+- Codex に渡す prompt や structured output schema の本文だけを変更したいときは、prompt や parameter builder の対象へ直接進む。
+- INDEX.md の生成規則、oracle/realization の基本方針、ルーティング文書全体の仕様を調べたいとき。
 
 ## hash
-- 14778c6bd015ce373b1bd0f397dae1ea72a15ad14909a52f741a0cd7cbaa9367
+- 3c45e15007f93d7327d7f3778d35bd8ca69ea33ee9b5e2fe9b914134751c8f19
 
 # `indexing.py`
 

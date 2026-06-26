@@ -84,22 +84,24 @@
 # `test_apply_join_cli.py`
 
 ## Summary
-- apply join CLI の挙動を、実際の一時 Git リポジトリと Typer runner 経由で検証する realization test。apply worktree と apply branch の削除、session state の ready 復帰、join report 生成、apply oracle snapshot commit の記録を確認する。
-- apply worktree 内から join した場合の cwd 復帰、clean 判定、root 側ログ出力、未コミット差分がある場合の中止挙動を扱う。
-- 想定外の apply diff、許容される .gitignore 変更、通常モードと force-resolve での扱い、merge conflict の報告、INDEX.md conflict の解決継続と cleanup を検証する。
+- apply join サブコマンドの結合・後片付け・状態更新・異常検出を、CLI 経由の外部挙動として検証する realization test。
+- apply fork で作成された apply worktree と apply branch を join が削除し、session state を ready に戻し、join report を生成することを確認する。
+- apply worktree から実行した場合の作業ディレクトリ復帰、古い apply branch からの join 拒否、dirty な apply worktree での停止とログ出力先を扱う。
+- 想定外の apply 差分、force resolve、許可される .gitignore 差分、通常ファイルの未解決 merge conflict、INDEX.md conflict の通常モード解決を検証する。
 
 ## Read this when
-- apply join サブコマンドの外部挙動、状態更新、worktree/branch cleanup、report 出力を変更または調査する時。
-- apply worktree から apply join を実行する経路、dirty apply worktree のエラー表示、ログ保存先、cwd 復帰の仕様を確認したい時。
-- apply join の想定外差分検出、force-resolve、merge conflict 報告、INDEX.md conflict の特別扱いに関わる実装を変更する時。
+- apply join の成功時に apply worktree・apply branch・session state・last_joined_apply_oracle_snapshot_commit・report がどう変わるべきかを確認したいとき。
+- apply join を session worktree から実行する場合と apply worktree から実行する場合の違いを確認したいとき。
+- 古い apply branch、未コミット差分、想定外差分、merge conflict に対する apply join の終了コード・出力・後片付け可否を変更または調査するとき。
+- apply join の force resolve、.gitignore 変更の扱い、INDEX.md conflict の自動解決に関わる実装や仕様断片を読む前後で、既存の realization test の期待値を確認したいとき。
 
 ## Do not read this when
-- apply fork の Codex 実行内容そのものや LLM 出力品質を調べたいだけの時。ここでは run_codex_exec は fake 化され、join 前提状態を作るためだけに使われる。
-- apply join 以外の session lifecycle、init、path model、oracle routing の仕様を調べたい時。より直接の実装または該当テストを読む方がよい。
-- 内部 helper の単体的な入力出力だけを確認したい時。この対象は CLI 経由の統合的な副作用と出力を検証する。
+- apply fork の Codex 実行内容そのもの、LLM 出力品質、または apply worktree 作成処理だけを調べたいとき。
+- session fork、init、git helper、runner fixture など、apply join の外部挙動ではなくテスト基盤や別サブコマンドの詳細を確認したいとき。
+- apply join の内部 helper 単体のアルゴリズムだけを調べたいとき。ただし CLI 出力、状態ファイル、worktree/branch 削除、report 生成の期待値を確認する場合は読む。
 
 ## hash
-- b1e6ed2337638d1b1f2c43e259c58740f40b6e5f57ba07313dda49260c1ae7fc
+- 5210ebc91b591cdf1aa681f4e31fa063302930a7fe42255760e1f9b509938f38
 
 # `test_basic_runtime.py`
 
