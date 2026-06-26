@@ -5,20 +5,20 @@ import typer
 
 from cmoc_runtime import (
     ensure_cmoc_ignored,
-    repo_root,
     run_cli_subcommand,
     run_git,
     sync_config,
+    work_root,
 )
 
-# init だけはログ作成前に repo root の .cmoc ignore を保証する。
+# init だけはログ作成前に work root の .cmoc ignore を保証する。
 # その副作用を利用者の .gitignore 復元ロジックから見分けるため、元状態を一時保持する。
 _PRE_LOG_GITIGNORE_STATES: dict[Path, tuple[bool, str | None]] = {}
 
 
 def cmoc_init_impl() -> None:
-    """repo root を cmoc が扱える初期状態へ同期する。"""
-    root = repo_root()
+    """work root を cmoc が扱える初期状態へ同期する。"""
+    root = work_root()
     gitignore = root / ".gitignore"
     pre_log_gitignore = _PRE_LOG_GITIGNORE_STATES.pop(root.resolve(), None)
     head_gitignore = _git_show(root, "HEAD:.gitignore")
@@ -74,6 +74,7 @@ def cmoc_init_command_impl() -> None:
         pre_log_check=ensure_cmoc_ignored_before_init_log,
         command_name="init",
         command_argv=["cmoc", "init"],
+        use_work_root_runtime=True,
     )
 
 

@@ -19,13 +19,15 @@ def run_cli_subcommand(
     pre_log_check: Callable[[Path], None] | None = None,
     command_name: str | None = None,
     command_argv: Sequence[str] | None = None,
+    use_work_root_runtime: bool = False,
     **kwargs: Any,
 ) -> None:
     """CLI サブコマンドの共通実行ライフサイクルを管理する。
 
     ログ生成前に work root と任意の事前検査を済ませ、サブコマンド単位の
     logger 設定、開始・完了表示、戻り値の終了コード化、例外のエラー表示を
-    一箇所で扱う。
+    一箇所で扱う。通常は repo root に runtime state を置き、init だけは
+    初期化対象である work root に置く。
     """
     logger = None
     logger_token = None
@@ -33,7 +35,7 @@ def run_cli_subcommand(
     try:
         current_root = work_root()
         require_current_directory_is_work_root(current_root)
-        root = repo_root()
+        root = current_root if use_work_root_runtime else repo_root()
         if pre_log_check is not None:
             pre_log_check(root)
         logger = SubcommandLogger(root, name)
