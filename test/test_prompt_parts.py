@@ -87,6 +87,14 @@ def test_render_as_markdown_collapses_consecutive_blank_lines() -> None:
     assert rendered == "# root\n\nfirst\n\nsecond\n"
 
 
+def test_render_as_markdown_preserves_code_block_blank_lines() -> None:
+    doc = StructDoc("root", StructCodeBlock("text", "first\n\n\nsecond"))
+
+    rendered = render_as_markdown(doc)
+
+    assert rendered == "# root\n\n```text\nfirst\n\n\nsecond\n```\n"
+
+
 def test_apply_fork_prompts_use_expected_roots(
     tmp_path: Path, monkeypatch
 ) -> None:

@@ -141,10 +141,21 @@ def _collapse_blank_lines(text: str) -> str:
     """
     2 行以上連続する空行を 1 行にまとめる。
     空白文字だけの行も空行として扱う。
+    コードフェンス内の行構造は本体テキストなので変更しない。
     """
     lines: list[str] = []
     previous_blank = False
+    in_code_block = False
     for line in text.splitlines():
+        if line.startswith("```"):
+            lines.append(line)
+            previous_blank = False
+            in_code_block = not in_code_block
+            continue
+        if in_code_block:
+            lines.append(line)
+            previous_blank = False
+            continue
         blank = not line.strip()
         if blank:
             if previous_blank:
