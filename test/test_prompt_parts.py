@@ -3,6 +3,7 @@ from pathlib import Path
 
 from basic.acp import FileAccessMode
 from basic.acp import ModelClass, ReasoningEffort
+from basic.path_model import resolve_repo_root
 from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
 from acp.builder.apply.fork.file_finding_enumeration import (
     build_apply_fork_file_finding_enumeration_parameter,
@@ -172,6 +173,10 @@ def test_complete_prompt_rewrites_injected_standards_for_codex_cli() -> None:
     )
 
     rendered = render_as_markdown(prompt)
+    assert "`仕様ファイル（基準用語）` を検索語" in rendered
+    assert "`仕様説明（別名）`" in rendered
+    assert "`仕様ファイル（和訳表記）`" in rendered
+    assert "`仕様ファイルズ` のような typo" in rendered
     for forbidden in [
         "<cmoc-root>",
         "<repo-root>",
@@ -217,7 +222,7 @@ def test_complete_prompt_rewrites_base_prompt_for_codex_cli() -> None:
     rendered = render_as_markdown(prompt)
     code_block = (
         '```json\n'
-        '{"summary": "realization file and <repo-root> stay in code block"}\n'
+        f'{{"summary": "realization file and {resolve_repo_root()} stay in code block"}}\n'
         '```'
     )
     rewritten_text = rendered.replace(code_block, "")
@@ -229,6 +234,7 @@ def test_complete_prompt_rewrites_base_prompt_for_codex_cli() -> None:
     assert "# aux 編集対象ファイル" in rendered
     assert "<repo-root>" not in rewritten_text
     assert "<work-root>" not in rewritten_text
+    assert "<repo-root>" not in rendered
     assert "realization standard" not in rewritten_text
     assert "oracle standard" not in rewritten_text
     assert "oracle file" not in rewritten_text

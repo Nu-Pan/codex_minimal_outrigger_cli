@@ -45,6 +45,14 @@ def _safe_resolve_prompt_root_token(root_token: RootToken) -> Path:
 def _agent_text_replacements() -> list[tuple[str, str]]:
     work_root = resolve_work_root()
     replacements = [
+        (
+            "`oracle file` を検索語にした時に関連箇所が見つかるよう、同じ概念を `oracle spec` や `仕様ファイル` に言い換えない",
+            "`仕様ファイル（基準用語）` を検索語にした時に関連箇所が見つかるよう、同じ概念を `仕様説明（別名）` や `仕様ファイル（和訳表記）` に言い換えない",
+        ),
+        (
+            "`oracles file` のような typo が別概念に見える場合は、検索性を壊す表記として修正する",
+            "`仕様ファイルズ` のような typo が別概念に見える場合は、検索性を壊す表記として修正する",
+        ),
         ("`cmoc review oracle`", "仕様レビュー作業"),
         ("`cmoc apply join`", "`apply join`"),
         ("cmoc-managed branch", "管理対象ブランチ"),
@@ -83,11 +91,7 @@ def _agent_text_replacements() -> list[tuple[str, str]]:
         ("実装者である AI agent", "作業担当者"),
         ("実装者である AI", "作業担当者"),
     ]
-    for root_token in RootToken:
-        replacements.append(
-            (root_token.value, str(_safe_resolve_prompt_root_token(root_token)))
-        )
-    return replacements
+    return replacements + _root_token_replacements()
 
 
 def _agent_title_replacements() -> list[tuple[str, str]]:
@@ -114,6 +118,13 @@ def _replace_text(text: str, replacements: list[tuple[str, str]]) -> str:
     return text
 
 
+def _root_token_replacements() -> list[tuple[str, str]]:
+    return [
+        (root_token.value, str(_safe_resolve_prompt_root_token(root_token)))
+        for root_token in RootToken
+    ]
+
+
 def _rewrite_agent_doc(
     struct_doc: StructDoc,
     title_replacements: list[tuple[str, str]],
@@ -132,7 +143,13 @@ def _rewrite_agent_doc(
     if isinstance(children, str):
         return StructDoc(title, _replace_text(children, text_replacements))
     if isinstance(children, StructCodeBlock):
-        return StructDoc(title, children)
+        return StructDoc(
+            title,
+            StructCodeBlock(
+                children.info,
+                _replace_text(children.body, _root_token_replacements()),
+            ),
+        )
     raise TypeError(f"Invalid type of struct_doc.children (type={type(children)})")
 
 
