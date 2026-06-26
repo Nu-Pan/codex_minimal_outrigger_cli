@@ -12,6 +12,7 @@ import json
 import subprocess
 import threading
 import time
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -49,6 +50,24 @@ from commons.runtime_results import CodexExecResult
 
 _QUOTA_CONDITION = threading.Condition()
 _QUOTA_POLLING = False
+_CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
+_LAST_CODEX_LOG_TIMESTAMP: str | None = None
+
+
+def _next_codex_log_timestamp() -> str:
+    """壁時計後退時も同一プロセス内の Codex exec log 名を単調増加させる。"""
+    global _LAST_CODEX_LOG_TIMESTAMP
+    with _CODEX_LOG_TIMESTAMP_LOCK:
+        current = timestamp()
+        if _LAST_CODEX_LOG_TIMESTAMP is not None and current <= _LAST_CODEX_LOG_TIMESTAMP:
+            current_dt = datetime.strptime(
+                _LAST_CODEX_LOG_TIMESTAMP[:-3], "%Y-%m-%d_%H-%M_%S_%f"
+            )
+            current = (current_dt + timedelta(microseconds=1)).strftime(
+                "%Y-%m-%d_%H-%M_%S_%f000"
+            )
+        _LAST_CODEX_LOG_TIMESTAMP = current
+        return current
 
 
 def run_codex_exec(
@@ -100,9 +119,9 @@ def run_codex_exec(
     }
 
     def new_log_paths() -> tuple[str, Path, Path, Path, Path]:
-        """同一 timestamp 衝突を避けた Codex call 用 log path 群を確保する。"""
+        """Codex call 用 log path 群を時刻順に追える名前で確保する。"""
         while True:
-            run_ts = timestamp()
+            run_ts = _next_codex_log_timestamp()
             run_call_path = log_dir / f"{run_ts}_call.json"
             if not run_call_path.exists():
                 return (

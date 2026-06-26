@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import cmoc_runtime
+import commons.runtime_codex_exec as runtime_codex_exec
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from cmoc_runtime import SubcommandLogger
 from config.cmoc_config import CmocConfig
@@ -20,6 +21,14 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     root = make_repo(tmp_path)
     codex_home = setup_codex_home(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
+    timestamps = iter(
+        [
+            "2099-01-01_00-00_30_000000000",
+            "2099-01-01_00-00_20_000000000",
+            "2099-01-01_00-00_10_000000000",
+        ]
+    )
+    monkeypatch.setattr(runtime_codex_exec, "timestamp", lambda: next(timestamps))
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "calls.jsonl"
@@ -84,6 +93,11 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
         for path in sorted((root / ".cmoc" / "log" / "codex").glob("*_call.json"))
     ]
     call_logs = [log for _path, log in call_entries]
+    assert [log["purpose"] for log in call_logs] == [
+        "codex exec",
+        "quota availability probe",
+        "codex exec",
+    ]
     probe_logs = [
         log for log in call_logs if log["purpose"] == "quota availability probe"
     ]
@@ -105,6 +119,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     ]
     main_logs = [log for _path, log in main_entries]
     assert len(main_logs) == 2
+    assert [log["argv"][1:] for log in main_logs] == [argv_calls[0], argv_calls[2]]
     initial_log = next(log for log in main_logs if "resume" not in log["argv"])
     resume_log = next(log for log in main_logs if "resume" in log["argv"])
     resume_entry = next((path, log) for path, log in main_entries if log is resume_log)
