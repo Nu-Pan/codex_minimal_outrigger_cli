@@ -420,8 +420,20 @@ def test_review_oracle_full_scope_includes_binary_and_excludes_gitignored_oracle
     root = make_repo(tmp_path)
     add_tracked_ignored_oracle_file(root)
     (root / "oracle" / "asset.bin").write_bytes(b"\x00\x01binary\n")
-    run_git(root, "add", "oracle/asset.bin")
-    run_git(root, "commit", "-m", "add binary oracle")
+    (root / "memo" / "oracle").mkdir(parents=True)
+    (root / "memo" / "oracle" / "draft.md").write_text("# memo draft\n")
+    (root / "oracle" / "memo").mkdir()
+    (root / "oracle" / "memo" / "kept.md").write_text("# oracle memo dir\n")
+    (root / "oracle" / "memo-link.md").symlink_to("../memo/oracle/draft.md")
+    run_git(
+        root,
+        "add",
+        "oracle/asset.bin",
+        "memo/oracle/draft.md",
+        "oracle/memo/kept.md",
+        "oracle/memo-link.md",
+    )
+    run_git(root, "commit", "-m", "add binary and memo-shaped oracle")
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
     assert (
@@ -450,15 +462,18 @@ def test_review_oracle_full_scope_includes_binary_and_excludes_gitignored_oracle
     rendered = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
-    assert "oracle_count_total: 2" in rendered
-    assert "oracle_count_evaluated: 2" in rendered
+    assert "oracle_count_total: 3" in rendered
+    assert "oracle_count_evaluated: 3" in rendered
     assert "`oracle/asset.bin`" in rendered
+    assert "`oracle/memo/kept.md`" in rendered
     assert "`oracle/spec.md`" in rendered
     assert "oracle/ignored.md" not in rendered
+    assert "oracle/memo-link.md" not in rendered
+    assert "memo/oracle/draft.md" not in rendered
     enumerate_calls = [
         call for call in calls if call.startswith("review oracle enumerate findings")
     ]
-    assert len(enumerate_calls) == 2
+    assert len(enumerate_calls) == 3
 
 
 def test_review_oracle_accepts_short_scope_option(tmp_path: Path, monkeypatch) -> None:

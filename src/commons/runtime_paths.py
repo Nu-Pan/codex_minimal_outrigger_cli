@@ -77,6 +77,13 @@ def config_path(root: Path) -> Path:
     return root / ".cmoc" / "config.json"
 
 
+def is_root_memo(root: Path, path: Path) -> bool:
+    """`<work-root>/memo` 自体またはその配下か判定する。"""
+    memo = (root / "memo").resolve()
+    resolved = path.resolve()
+    return resolved == memo or memo in resolved.parents
+
+
 @contextmanager
 def pushd(path: Path) -> Iterator[None]:
     previous = Path.cwd()
