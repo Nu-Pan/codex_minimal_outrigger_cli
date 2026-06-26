@@ -62,21 +62,18 @@
 # `join.py`
 
 ## Summary
-- active session branch を session home branch へ取り込む session join サブコマンドの実行処理を担う。
-- indexing preflight、CLI runtime 経由の実行、session/apply state の事前条件確認、clean worktree 確認、home branch への switch と merge、状態更新、session branch 削除、結果表示までを扱う。
-- merge conflict が発生した場合は、unmerged path を特定し、Codex CLI に conflict 解消を依頼した後、marker と unmerged path の残存確認、add、merge commit まで進める。
+- active な session branch を session home branch へ join するサブコマンド実装。indexing preflight と CLI runtime 経由で本体を実行し、事前条件確認、home branch への切り替え、merge、状態更新、session branch 削除、結果表示までを扱う。
+- merge conflict が発生した場合に、conflict 対象ファイルを検出して Codex CLI に解消を依頼し、marker 残存と unmerged path を検査したうえで merge commit を完了する補助処理も含む。
 
 ## Read this when
-- session join の実行順序、事前条件、成功時の状態更新や出力内容を確認・変更したいとき。
-- active session branch を session home branch へ merge する処理、session branch 削除、削除失敗時 warning の扱いを調べたいとき。
-- session join 中の merge conflict を Codex CLI に解決させる流れ、conflict marker 検出、unmerged path 検出、commit までの制御を確認したいとき。
-- session.state、apply.state、session_home_branch、clean worktree、cmoc ignore 設定など、session join 前提条件に関わる挙動を追うとき。
+- session join の実行条件、状態遷移、git 操作順、成功時の表示内容を確認または変更したいとき。
+- session branch から session home branch へ merge する処理、merge 失敗時の自動 conflict resolution 呼び出し、または join 後の branch 削除警告を扱うとき。
+- conflict marker の検出条件、conflict 対象ファイルの add、unmerged path 検査、merge commit 完了までの制御を確認したいとき。
 
 ## Do not read this when
-- session join 以外の session サブコマンドの入口や制御を調べたいとき。
-- session/apply state のデータ構造、永続化形式、branch からの state 読み込み実装そのものを確認したいとき。
-- Codex CLI へ渡す conflict resolution parameter の具体的な構築内容だけを調べたいとき。
-- git コマンド実行、worktree 検査、repo/work root 解決、CmocError の共通実装を調べたいとき。
+- session join 以外の session サブコマンドの起動条件、状態遷移、出力を調べたいとき。
+- Codex CLI に渡す conflict resolution prompt や parameter の内容そのものを変更したいとき。
+- runtime 共通の repository root、work root、state 読み書き、git 実行、clean worktree 確認の低レベル挙動を調べたいとき。
 
 ## hash
-- d5c1454f235f4a5020626adc29ba518d6299d297f6c46c32b2c451a2f0da4c0a
+- 729f422874ec48203091e6b09374767cb97c49c95a8a52eb43a0f50900319336

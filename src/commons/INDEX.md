@@ -138,21 +138,23 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI 実行時に使う profile/config 文字列、permission profile、Codex home、schema 複製、JSON 出力・JSONL エラー解析を扱う共通実装。
-- AgentCallParameter と CmocConfig から model/reasoning_effort/sandbox または権限設定を組み立て、Codex CLI 呼び出し前後の環境・補助ファイル・失敗判定を支える。
+- Codex CLI を起動するための実行時プロファイルと周辺入出力を組み立てる実装。モデル・reasoning effort・sandbox/permission profile の TOML 断片を生成し、Codex home の解決と検証、hashed profile/schema の保存、subprocess 環境、JSON 出力や JSONL エラー情報の解釈を扱う。
+- ファイルアクセスモードを Codex 側の read-only/workspace-write または詳細な permission profile へ変換する境界を担い、memo・oracle・.agents などの読み書き制限を実行時設定へ反映する入口になる。
 
 ## Read this when
-- FileAccessMode と Codex sandbox/permission profile の対応、read/write/deny_read/read_only の生成規則を確認・変更したいとき。
-- Codex profile の TOML 生成、hashed config file の作成先、profile 名の解釈、CODEX_HOME の解決・検証・サブプロセス環境を扱うとき。
-- Codex 実行に渡す schema ファイルの準備、出力 JSON の読み取り、stdout/stderr からのエラーテキスト抽出、resume token 抽出、capacity/quota error 判定を調べるとき。
+- Agent 呼び出しパラメータから Codex CLI 用の profile 設定文字列や profile ファイルを生成する処理を確認・変更したいとき。
+- ファイルアクセスモードごとの sandbox_mode、permission profile、read/write/deny_read/read_only/writable_roots の対応を確認・変更したいとき。
+- CODEX_HOME の解決、存在・ディレクトリ・auth.json 検証、Codex subprocess に渡す環境変数の扱いを確認したいとき。
+- Structured Output schema を hashed file として保存する処理や、Codex 実行後の JSON 出力、stderr/stdout 由来のエラーテキスト、resume token、capacity/quota error 判定を確認・変更したいとき。
 
 ## Do not read this when
-- cmoc のパス語彙や root/work/run の意味そのものを確認したいだけなら、パスモデルや runtime path 側を読む。
-- AgentCallParameter、FileAccessMode、CmocConfig の型定義や設定 schema 自体を変更したい場合は、それらを定義する basic/config 側を直接読む。
-- hashed file 書き込みの実装や schema store directory の配置規則そのものを変更したい場合は、runtime content または runtime paths 側を読む。
+- AgentCallParameter や FileAccessMode 自体のデータ構造・列挙値定義を確認したいだけなら、それらを定義する基本モデルを読む。
+- モデル名や reasoning effort の設定値そのもの、設定ファイルの読み込み規則を確認したいだけなら、設定モデル側を読む。
+- hashed file の保存先作成や内容ハッシュ化の実装詳細を確認したいだけなら、runtime content や runtime paths 側を読む。
+- Codex CLI の呼び出し手順全体、プロセス起動、プロンプト構築、実行ループの制御を追いたい場合は、呼び出し元の実行制御側を読む。
 
 ## hash
-- ad405245d67f40e3cf691a364e1ab3b270b61498464ecf515c47681119078638
+- 56f3e469158ae02cefcd5567248bf2b870b192e7c96ab046b8a0a8e532a03d5b
 
 # `runtime_codex_tui.py`
 
