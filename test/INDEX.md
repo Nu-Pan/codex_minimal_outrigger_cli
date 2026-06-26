@@ -117,24 +117,24 @@
 # `test_cli_init_tui.py`
 
 ## Summary
-- CLI の初期化と TUI 起動フローに関する realization test。初期化時の .cmoc 管理対象外化、.gitignore 更新、初期コミット、既存 staged/unstaged 変更の保持、linked worktree での初期化先、既定 config 生成と既存 config への defaults 同期を検証する。
-- TUI について、エディタで作成された依頼文からパラメータ解決用プロンプトと完了プロンプトを作り、Codex TUI 実行へ渡す制御、ログ保存先、schema 生成先、sub command ログ配置、markdown prompt parser の見出し抽出境界を検証する。
+- CLI の初期化処理と TUI 起動処理の実現テストをまとめた対象。init が .cmoc の追跡解除、.gitignore 更新、既存 staged/unstaged 変更の保全、linked worktree での初期化、既定 config 生成と既存値を保った defaults 同期を行うことを検証する。
+- TUI について、エディタで作成された依頼文からパラメータ解決用 prompt と実行用 prompt を生成し、Codex 呼び出しへ適切な model、reasoning effort、file access mode、extra read path、root/cwd を渡すことを検証する。
+- Markdown prompt parser について、fenced code block 内の見出し記法を見出し扱いしないことと、先頭見出し前の本文を通常本文として保持することを検証する。
 
 ## Read this when
-- `init` サブコマンドの Git 操作、.cmoc ignore、.gitignore 更新、初期 commit、既存 index/worktree 状態の保全を変更・調査する。
-- 初期設定ファイルの既定値、既存の人間設定を保持した defaults 同期、設定項目の追加・変更に伴う初期化テストを確認する。
-- linked worktree 上での初期化、ログ・config・schema・完了プロンプトの保存先、root と cwd の扱いを変更・調査する。
-- `tui` サブコマンドのエディタ起動、依頼文の整形、パラメータ解決、Codex TUI 呼び出し、extra read path の受け渡しを変更・調査する。
-- markdown prompt parser が fenced code block 内の見出しを無視すること、見出し前の preamble を本文として保持することを確認する。
+- init サブコマンドの git 操作、.cmoc の ignore 状態、初期コミット、既存 index/worktree 変更の保全、linked worktree 対応を変更または確認するとき。
+- 初期 config の既定値、既存 config への default 補完、ユーザー指定値を上書きしない挙動を変更または確認するとき。
+- TUI のエディタ起動、依頼文の整形、パラメータ解決用 Codex 実行、TUI 用 Codex 実行、prompt ログ保存先、linked worktree での root/cwd/schema 配置を変更または確認するとき。
+- Markdown prompt を section 化する処理で、見出し検出、fenced code block、見出し前本文の扱いを変更または確認するとき。
 
 ## Do not read this when
-- CLI コマンド本体や TUI 実装の詳細を読みたいだけで、期待される外部挙動ではなく実装構造を確認したい場合。
-- `init` や `tui` に関係しないサブコマンド、状態遷移、レビュー、apply fork、oracle 検証などの挙動を調査する場合。
-- Codex CLI やエディタ実行の実物の品質・出力内容を検証したい場合。この対象は外部実行を fake して制御ロジックと引数を確認する。
-- path model、設定 schema、markdown parser の実装仕様そのものを読む必要がある場合。該当する実装またはより局所的な parser テストを優先する。
+- CLI の init や TUI 起動に関係しないサブコマンドの挙動だけを調べるとき。
+- Codex 呼び出し wrapper や preflight の低レベル実装だけを調べるときは、まず該当する実装または専用テストへ進めばよい。
+- 設定 schema の全体構造や全設定項目の意味を確認したいだけのときは、設定定義や config 生成実装を直接読む方が適切。
+- Markdown prompt parser 以外の Markdown 変換、表示、ドキュメント生成を調べるとき。
 
 ## hash
-- 4e0fcf5425a58e662e4b6188b181c0e5a3df787a337cc04ee689765fa96f78bb
+- 583100d94f6dc4d56c9feef455ebb1503feabd959eb2c2308a76daf90315f8da
 
 # `test_codex_runtime_exec.py`
 
