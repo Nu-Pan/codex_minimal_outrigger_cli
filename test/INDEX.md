@@ -118,27 +118,24 @@
 # `test_cli_init_tui.py`
 
 ## Summary
-- CLI の初期化処理と対話型起動処理を、実リポジトリ・Git・作業ツリー・疑似エディタ/疑似 Codex 実行を使って検証する realization test。
-- .cmoc の ignore/追跡解除、初期化時コミットの対象制御、設定ファイル既定値の生成・同期、sub_command ログ、linked worktree 上の初期化と TUI プロンプト保存先を扱う。
-- Markdown プロンプト解析について、コードフェンス内の見出しを無視することと、見出し前の本文を保持することも検証する。
+- CLI の初期化と TUI 起動フローに関する realization test。初期化時の .cmoc 管理対象外化、.gitignore 更新、初期コミット、既存 staged/unstaged 変更の保持、linked worktree での初期化先、既定 config 生成と既存 config への defaults 同期を検証する。
+- TUI について、エディタで作成された依頼文からパラメータ解決用プロンプトと完了プロンプトを作り、Codex TUI 実行へ渡す制御、ログ保存先、schema 生成先、sub command ログ配置、markdown prompt parser の見出し抽出境界を検証する。
 
 ## Read this when
-- init サブコマンドが .cmoc を ignore し、既存の .cmoc 追跡ファイルを untrack し、必要な cleanup commit だけを作る挙動を確認・変更する時。
-- 初期化時に利用者の既存 staged change や .gitignore の staged/unstaged 変更を壊さない Git 操作を確認・変更する時。
-- linked worktree 上で init や tui を実行した時の root/cwd、.gitignore、config、ログ、schema、commit 対象の扱いを確認・変更する時。
-- config の既定値生成、既存の人間設定を保持した defaults 同期、モデル名・reasoning effort・apply/review 設定の補完を確認・変更する時。
-- tui サブコマンドがエディタで作成された依頼文を整形し、不要なコメントを除去し、parameter resolve 用 Codex 実行と本体 TUI 実行へ正しい parameter・purpose・extra_read_paths を渡すか確認・変更する時。
-- sub_command ログに command_invoked イベント、実行 command、argv が記録される挙動を確認・変更する時。
-- Markdown プロンプト parser の見出し抽出、コードフェンス内見出しの扱い、見出し前 preamble の扱いを確認・変更する時。
+- `init` サブコマンドの Git 操作、.cmoc ignore、.gitignore 更新、初期 commit、既存 index/worktree 状態の保全を変更・調査する。
+- 初期設定ファイルの既定値、既存の人間設定を保持した defaults 同期、設定項目の追加・変更に伴う初期化テストを確認する。
+- linked worktree 上での初期化、ログ・config・schema・完了プロンプトの保存先、root と cwd の扱いを変更・調査する。
+- `tui` サブコマンドのエディタ起動、依頼文の整形、パラメータ解決、Codex TUI 呼び出し、extra read path の受け渡しを変更・調査する。
+- markdown prompt parser が fenced code block 内の見出しを無視すること、見出し前の preamble を本文として保持することを確認する。
 
 ## Do not read this when
-- init や tui の外部挙動ではなく、低レベルな path model、schema 定義、設定 dataclass だけを局所的に確認したい時は、それらの実装または単体テストへ直接進む。
-- Codex CLI や外部 LLM の実際の出力品質を確認したい時。この対象は疑似実行・呼び出し parameter・保存副作用を検証しており、LLM 品質自体は扱わない。
-- 一般的な CLI command 登録や Typer の配線だけを確認したい時は、CLI 実装やより小さい command 単位のテストを優先する。
-- Markdown parser 以外の文書処理、INDEX.md 生成、oracle/realization ルーティング仕様を確認したい時は、それぞれの専用実装・テストへ進む。
+- CLI コマンド本体や TUI 実装の詳細を読みたいだけで、期待される外部挙動ではなく実装構造を確認したい場合。
+- `init` や `tui` に関係しないサブコマンド、状態遷移、レビュー、apply fork、oracle 検証などの挙動を調査する場合。
+- Codex CLI やエディタ実行の実物の品質・出力内容を検証したい場合。この対象は外部実行を fake して制御ロジックと引数を確認する。
+- path model、設定 schema、markdown parser の実装仕様そのものを読む必要がある場合。該当する実装またはより局所的な parser テストを優先する。
 
 ## hash
-- 5419f2b7f51994350b24a8b5fd73f3b673f998f764a0b7fd12411688e1b46444
+- 4e0fcf5425a58e662e4b6188b181c0e5a3df787a337cc04ee689765fa96f78bb
 
 # `test_codex_runtime_exec.py`
 
