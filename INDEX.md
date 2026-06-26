@@ -147,25 +147,25 @@
 # `src`
 
 ## Summary
-- cmoc の利用者向け CLI と、その背後で動く実装本体を収める realization implementation 領域。コマンド登録、サブコマンドの実行制御、Codex exec/TUI 呼び出し、Git・設定・状態・ログなどの runtime helper、AI agent 向けプロンプトと構造化応答 schema、パス・標準文書・設定値の基本型を扱う。
-- 仕様断片を直接述べる場所ではなく、oracle file で定義された人間意図を具体的な実行処理へ落とし込むコードの入口である。外部から見える CLI 挙動を変える場合も、内部の共通 helper や agent 呼び出し条件を変える場合も、まずここで責務領域を切り分けて下位実装へ進む。
+- cmoc の realization implementation 全体を収める実装領域。AI agent 呼び出しプロンプト構築、基礎値オブジェクト、実行時共通 helper、設定 dataclass、CLI 配線、各サブコマンドの orchestration など、プロダクト挙動を具体化する主要な実装へ進む入口になる。
+- 正本仕様断片ではなく、それを具体化した実装コードを読むための階層であり、CLI の公開面、Codex 呼び出し、Git・state・logging・path・config などの横断基盤、個別 workflow の処理順序を調べるときに、下位対象を選ぶための起点になる。
 
 ## Read this when
-- cmoc の CLI コマンドがどの処理へ接続され、各サブコマンドがどの順序で Git 操作、状態更新、Codex 呼び出し、report 生成、利用者向け出力を行うか確認・変更したいとき。
-- Codex CLI の exec/TUI 起動、profile 生成、sandbox/file access 設定、Structured Output 検証、capacity retry、quota polling、resume 継続、call log、preflight などの実行時制御を調べたいとき。
-- AI agent に渡すプロンプト、標準文書の注入、補助文脈、モデルクラス、reasoning effort、構造化応答 schema、差分要約・所見列挙・INDEX エントリー生成など用途別の呼び出しパラメータを確認・変更したいとき。
-- リポジトリ別設定、session/apply 状態、runtime path、Git wrapper、content hash、共通エラー、サブコマンド共通ラッパーなど、複数の実行機能から共有される実装部品を探したいとき。
-- oracle file の仕様断片に基づいて realization implementation を追加・修正し、実際の cmoc 挙動や内部制御を変える作業を始めるとき。
+- cmoc の実装側で、CLI 起動経路、サブコマンドの実行順序、AI agent 呼び出し条件、共通 runtime helper、設定値、基礎データ型のどこを読むべきか切り分けたいとき。
+- oracle file で述べられた人間意図が、実際の realization implementation としてどの責務領域に具体化されているかを確認したいとき。
+- 新しい実装変更を行う前に、同じ責務または近い責務を持つ既存コードの位置を探し、既存実装の修正・置換・統合で対応できるか判断したいとき。
+- CLI サブコマンド、Codex exec/TUI 呼び出し、profile・設定・状態・ログ・Git・path 解決、Structured Output schema、prompt builder など、複数領域にまたがる実装調査の出発点が必要なとき。
+- トップレベルの import 入口や CLI 配線から、実体の実装モジュール、共通基盤、または個別サブコマンド実装へ進む経路を確認したいとき。
 
 ## Do not read this when
-- 正本仕様断片としての人間意図、path keyword の概念定義、oracle file と realization file の所有関係や編集権限を確認したいだけのとき。その場合は oracle 側の本文を読む。
-- テストケース、fixture、期待される外部挙動の検証観点、既存テストへの追加先を探しているとき。その場合は realization test 側へ進む。
-- 利用者向け説明文、プロジェクト概要、パッケージ設定、依存関係定義、補助スクリプトなど、実行コード本体ではない ancillary な情報だけを確認したいとき。
-- INDEX.md の既存エントリー内容を確認したいだけ、またはルーティング文書そのものを更新対象として扱いたいだけで、cmoc の実装挙動を読む必要がないとき。
-- 生成済み bytecode、実行ログ、一時ファイル、管理対象外の作業成果物を確認したいとき。実装判断の根拠として読む対象ではない。
+- 正本仕様断片、oracle file の定義、path keyword の仕様上の説明、または人間が所有する仕様文書そのものを確認したいとき。
+- realization test の期待挙動、fixture、テストケース追加先だけを探しているとき。
+- ルーティング文書の生成結果だけを確認したいときで、実装コード上の生成条件や prompt 構築を調べる必要がないとき。
+- 特定の下位責務がすでに分かっている場合は、この階層全体を読むのではなく、対応する下位対象へ直接進む。
+- README、AGENTS、補助ファイル、ビルド・設定メタデータなど、実装コード以外の repository 補助情報を確認したいだけのとき。
 
 ## hash
-- b98f25f6b6c041ad51b4254fb06719fd50c041501c5e8844506787d05fdeb93b
+- 02e837f3ebb4b02890102a1af1444c37f2f41d2a52a4a6062ec67e7cd103c7b3
 
 # `test`
 
