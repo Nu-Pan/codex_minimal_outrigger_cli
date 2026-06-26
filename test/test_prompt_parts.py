@@ -240,9 +240,6 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
         "cmoc は",
         "cmoc でも",
         "cmoc により",
-        "`cmoc ",
-        "cmoc review oracle",
-        "cmoc apply join",
     ]:
         assert forbidden not in rendered
 
@@ -525,6 +522,8 @@ def test_build_review_oracle_standard_renders_core_review_rules() -> None:
     assert "用語の不統一" in rendered
     assert "oracle file だけからは問題だとは言い切れない" in rendered
     assert "仕様からは実装が一意に定まらない" in rendered
+    assert "cmoc review oracle" in rendered
+    assert "cmoc apply join" in rendered
 
 
 def test_complete_prompt_can_include_review_oracle_standard() -> None:
