@@ -334,17 +334,24 @@ def test_render_index_entry_rejects_missing_or_non_string_semantic_fields(
         indexing_module.render_index_entry(root, readme, entry)
 
 
-def test_render_index_entry_accepts_empty_semantic_lists(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "entry",
+    [
+        {"summary": [], "read_this_when": ["read"], "do_not_read_this_when": ["skip"]},
+        {"summary": [""], "read_this_when": ["read"], "do_not_read_this_when": ["skip"]},
+        {"summary": ["   "], "read_this_when": ["read"], "do_not_read_this_when": ["skip"]},
+        {"summary": ["summary"], "read_this_when": [], "do_not_read_this_when": ["skip"]},
+        {"summary": ["summary"], "read_this_when": [""], "do_not_read_this_when": ["skip"]},
+        {"summary": ["summary"], "read_this_when": ["read"], "do_not_read_this_when": []},
+        {"summary": ["summary"], "read_this_when": ["read"], "do_not_read_this_when": ["\t"]},
+    ],
+)
+def test_render_index_entry_rejects_empty_semantic_lists(tmp_path: Path, entry) -> None:
     root = make_repo(tmp_path)
     readme = root / "README.md"
 
-    rendered = indexing_module.render_index_entry(
-        root,
-        readme,
-        {"summary": [], "read_this_when": [""], "do_not_read_this_when": []},
-    )
-
-    assert "## Summary\n\n## Read this when\n- \n\n## Do not read this when" in rendered
+    with pytest.raises(cmoc_runtime.CmocError):
+        indexing_module.render_index_entry(root, readme, entry)
 
 
 def test_update_indexes_generates_sibling_entries_in_parallel(
