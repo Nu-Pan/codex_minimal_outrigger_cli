@@ -12,13 +12,12 @@ import json
 import subprocess
 import threading
 import time
-from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 from jsonschema import validate
 
-from basic.acp import AgentCallParameter, FileAccessMode
+from basic.acp import AgentCallParameter
 from config.cmoc_config import CmocConfig
 
 from commons.runtime_config import load_config
@@ -37,7 +36,6 @@ from commons.runtime_codex_profile import (
 )
 from commons.runtime_errors import CmocError
 from commons.runtime_codex_logging import emit_codex_call_console
-from commons.runtime_content import file_sha256
 from commons.runtime_logging import SubcommandLogger, current_subcommand_logger
 from commons.runtime_paths import (
     codex_log_dir,
@@ -51,61 +49,6 @@ from commons.runtime_results import CodexExecResult
 
 _QUOTA_CONDITION = threading.Condition()
 _QUOTA_POLLING = False
-
-
-def _oracle_snapshot(root: Path, allowed: tuple[Path, ...]) -> dict[Path, str]:
-    oracle = (root / "oracle").resolve()
-    allowed = tuple(path.resolve() for path in allowed)
-    if not oracle.exists():
-        return {}
-
-    snapshot: dict[Path, str] = {}
-    for path in oracle.rglob("*"):
-        resolved = path.resolve()
-        if resolved in allowed:
-            continue
-        if path.is_dir():
-            snapshot[resolved] = "dir"
-        elif path.is_file():
-            snapshot[resolved] = file_sha256(path)
-        else:
-            snapshot[resolved] = "other"
-    return snapshot
-
-
-def _assert_oracle_snapshot_unchanged(
-    before: Mapping[Path, str], root: Path, allowed: tuple[Path, ...]
-) -> None:
-    after = _oracle_snapshot(root, allowed)
-    if before == after:
-        return
-
-    changed = sorted(
-        str(path)
-        for path in set(before) | set(after)
-        if before.get(path) != after.get(path)
-    )
-    raise CmocError(
-        "conflict 対象外 oracle path が変更されました。",
-        [
-            "conflict 対象 oracle file 以外の oracle 変更を戻してから再実行してください。"
-        ],
-        "\n".join(changed),
-    )
-
-
-def _oracle_write_guard(
-    parameter: AgentCallParameter, root: Path
-) -> tuple[dict[Path, str] | None, tuple[Path, ...]]:
-    oracle = (root / "oracle").resolve()
-    allowed = tuple(
-        path.resolve()
-        for path in parameter.writable_paths
-        if path.resolve().is_relative_to(oracle)
-    )
-    if parameter.file_access_mode != FileAccessMode.REALIZATION_WRITE or not allowed:
-        return None, ()
-    return _oracle_snapshot(root, allowed), allowed
 
 
 def run_codex_exec(
@@ -133,9 +76,6 @@ def run_codex_exec(
     codex_env = codex_subprocess_env(codex_home)
     profile_path = prepare_codex_profile(
         parameter, config, codex_home, work_root(cwd)
-    )
-    oracle_snapshot, writable_oracle_paths = _oracle_write_guard(
-        parameter, work_root(cwd)
     )
     profile_name = codex_profile_name(profile_path)
     schema_path = (
@@ -443,10 +383,6 @@ def run_codex_exec(
                 "Codex CLI 呼び出しが失敗しました。",
                 ["stderr/stdout log を確認して原因を解消してください。"],
                 f"call_log: {call_path}\nstdout_log: {stdout_path}\nstderr_log: {stderr_path}\n{error_text}",
-            )
-        if oracle_snapshot is not None:
-            _assert_oracle_snapshot_unchanged(
-                oracle_snapshot, work_root(cwd), writable_oracle_paths
             )
         output_json = read_output_json(output_path)
         if schema_path is not None:

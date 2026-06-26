@@ -102,6 +102,39 @@ def test_session_abandon_switches_home_and_marks_state(
     assert "- session_state: `abandoned`" in result.output
 
 
+def test_session_abandon_uses_linked_worktree_branch(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    root_branch = current_branch(root)
+    linked = root / ".cmoc" / "worktrees" / "linked"
+    run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
+    monkeypatch.chdir(linked)
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(linked)
+    state_path = session_state_path(root, session_branch)
+    home_branch = session_home_branch(root, session_branch)
+
+    result = runner.invoke(app, ["session", "abandon"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert current_branch(root) == root_branch
+    assert current_branch(linked) == home_branch
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", session_branch], cwd=root
+        ).returncode
+        != 0
+    )
+    state = json.loads(state_path.read_text())
+    assert state["session"]["state"] == "abandoned"
+    assert f"- abandoned_branch: `{session_branch}`" in result.output
+
+
 def test_session_abandon_requires_existing_home_branch(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -192,7 +225,6 @@ def test_session_join_resolves_conflict_with_codex(tmp_path: Path, monkeypatch) 
     run_git(root, "switch", session_branch)
     calls: list[str] = []
     modes: list[FileAccessMode] = []
-    writable_paths: list[tuple[Path, ...]] = []
 
     class FakeCodexResult:
         output_json = None
@@ -200,7 +232,6 @@ def test_session_join_resolves_conflict_with_codex(tmp_path: Path, monkeypatch) 
     def fake_run_codex_exec(parameter, **kwargs):
         calls.append(kwargs["purpose"])
         modes.append(parameter.file_access_mode)
-        writable_paths.append(parameter.writable_paths)
         (root / "README.md").write_text("resolved change\n")
         return FakeCodexResult()
 
@@ -213,7 +244,6 @@ def test_session_join_resolves_conflict_with_codex(tmp_path: Path, monkeypatch) 
     assert (root / "README.md").read_text() == "resolved change\n"
     assert calls == ["session join conflict resolution"]
     assert modes == [FileAccessMode.REALIZATION_WRITE]
-    assert writable_paths == [(root / "README.md",)]
 
 
 def test_session_join_uses_linked_worktree_branch(tmp_path: Path, monkeypatch) -> None:

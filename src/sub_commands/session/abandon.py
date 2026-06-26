@@ -10,35 +10,37 @@ from cmoc_runtime import (
     require_clean_worktree,
     run_cli_subcommand,
     run_git,
+    work_root,
     write_state,
 )
 
 
 def cmoc_session_abandon_impl() -> None:
     """active session を home branch へ merge せず破棄する。"""
-    root = repo_root()
-    branch = current_branch(root)
-    _session_id, path, state = load_state_for_branch(root, branch)
+    repo = repo_root()
+    work = work_root()
+    branch = current_branch(work)
+    _session_id, path, state = load_state_for_branch(repo, branch)
     if not branch.startswith("cmoc/session/"):
         raise CmocError("session abandon は session branch 上で実行してください。", [], branch)
     if state.session.state != "active" or state.apply.state != "ready":
         raise CmocError("session abandon の事前条件を満たしていません。", [], str(path))
-    require_clean_worktree(root)
-    ensure_cmoc_ignored(root)
+    require_clean_worktree(work)
+    ensure_cmoc_ignored(work)
     home = state.session.session_home_branch
     if not home:
         raise CmocError("session home branch を特定できません。", [], str(path))
-    if not branch_exists(root, home):
+    if not branch_exists(repo, home):
         raise CmocError(
             "session home branch が存在しません。",
             ["session state file と git branch の状態を確認してください。"],
             f"session_home_branch: {home}",
         )
     try:
-        run_git(["switch", home], root)
+        run_git(["switch", home], work)
         state.session.state = "abandoned"
         write_state(path, state)
-        run_git(["branch", "-D", branch], root)
+        run_git(["branch", "-D", branch], work)
     except Exception as error:
         cleanup_detail = error.detail if isinstance(error, CmocError) else repr(error)
         rollback_errors: list[str] = []
@@ -48,8 +50,8 @@ def cmoc_session_abandon_impl() -> None:
         except Exception as rollback_error:
             rollback_errors.append(f"state rollback failed: {rollback_error!r}")
         try:
-            if branch_exists(root, branch):
-                run_git(["switch", branch], root)
+            if branch_exists(repo, branch):
+                run_git(["switch", branch], work)
         except Exception as rollback_error:
             rollback_errors.append(f"branch rollback failed: {rollback_error!r}")
         details = [
@@ -57,7 +59,7 @@ def cmoc_session_abandon_impl() -> None:
             cleanup_detail,
             "rollback errors:",
             *(rollback_errors or ["none"]),
-            f"current_branch: {current_branch(root)}",
+            f"current_branch: {current_branch(work)}",
             f"session_branch: {branch}",
             f"session_home_branch: {home}",
             f"session_state_file: {path}",

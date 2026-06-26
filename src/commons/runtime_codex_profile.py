@@ -33,53 +33,9 @@ def _toml_array(values: list[Path]) -> str:
     return "[" + ", ".join(_toml_str(value) for value in values) + "]"
 
 
-def _is_relative_to(path: Path, parent: Path) -> bool:
-    try:
-        path.relative_to(parent)
-        return True
-    except ValueError:
-        return False
-
-
-def _writable_oracle_paths(
-    root: Path, writable_paths: tuple[Path, ...]
-) -> tuple[Path, ...]:
-    oracle = root / "oracle"
-    return tuple(
-        path.resolve()
-        for path in writable_paths
-        if _is_relative_to(path.resolve(), oracle)
-    )
-
-
-def _realization_write_paths(root: Path, writable_paths: tuple[Path, ...]) -> list[Path]:
-    writable = tuple(dict.fromkeys(path.resolve() for path in writable_paths))
-    return list(writable) if _writable_oracle_paths(root, writable_paths) else [root]
-
-
-def _realization_read_only_paths(root: Path, writable_paths: tuple[Path, ...]) -> list[Path]:
-    oracle = root / "oracle"
-    writable_oracle = _writable_oracle_paths(root, writable_paths)
-    if not writable_oracle:
-        return [oracle, root / "memo", root / ".agents"]
-
-    read_only = [root / "memo", root / ".agents"]
-    if oracle.exists():
-        for path in oracle.rglob("*"):
-            resolved = path.resolve()
-            if any(
-                resolved == allowed or _is_relative_to(allowed, resolved)
-                for allowed in writable_oracle
-            ):
-                continue
-            read_only.append(resolved)
-    return read_only
-
-
 def _permission_profile_lines(
     mode: FileAccessMode,
     root: Path,
-    writable_paths: tuple[Path, ...] = (),
     extra_read_paths: list[Path] | None = None,
 ) -> list[str]:
     root = root.resolve()
@@ -96,9 +52,9 @@ def _permission_profile_lines(
             read_only_paths = [root / "oracle"]
         case FileAccessMode.REALIZATION_WRITE:
             read_paths = [root]
-            write_paths = _realization_write_paths(root, writable_paths)
+            write_paths = [root]
             deny_read_paths = [root / "memo"]
-            read_only_paths = _realization_read_only_paths(root, writable_paths)
+            read_only_paths = [root / "oracle", root / "memo", root / ".agents"]
         case FileAccessMode.ORACLE_WRITE:
             read_paths = [root]
             write_paths = [root / "oracle"]
@@ -149,7 +105,6 @@ def build_codex_profile(
             _permission_profile_lines(
                 parameter.file_access_mode,
                 root,
-                parameter.writable_paths,
                 extra_read_paths,
             )
         )
