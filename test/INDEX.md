@@ -235,24 +235,23 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- cmoc の indexing と INDEX.md 更新処理に関する realization test。CLI 実行時の初期化前エラー、未コミット差分の拒否、生成済みエントリーの再利用、linked worktree 対象化、INDEX.md だけをコミットする制御、競合解消時の INDEX.md 削除コミット、エントリー描画時の semantic field 検証を扱う。
-- indexing 実装が Codex によるエントリー生成、hash freshness 判定、malformed entry の再生成、兄弟要素の並列生成、ルート直下 memo 除外とネストした memo の扱いを満たすか確認する入口となる。
+- indexing サブコマンドと INDEX.md 生成系の realization test。merge 中の INDEX.md conflict 解決、未初期化・dirty worktree・linked worktree での実行、Codex によるエントリー生成の呼び出し条件、fresh hash 時の再生成スキップ、INDEX.md だけを commit する制御、semantic fields の検証、兄弟エントリーの並列生成、root 配下 memo 除外と nested memo 対象化を検証する。
 
 ## Read this when
-- indexing サブコマンド、INDEX.md の生成・更新・コミット、または既存 INDEX.md の freshness 判定を変更する。
-- 未初期化リポジトリ、dirty worktree、linked worktree、merge conflict など、indexing 周辺の git 状態制御を変更する。
-- render_index_entry や build_index_entry の structured output 受け入れ条件、空リスト・非文字列・欠落 field のエラー処理を変更する。
-- ルート直下の memo を indexing 対象から外す処理、または下位階層にある同名ディレクトリを通常対象として扱う処理を確認する。
-- INDEX.md 更新処理の並列化や、同階層要素のエントリー生成順序・実行制御に関わる実装を触る。
+- indexing サブコマンドの外部挙動、git commit 対象、dirty state の preflight、linked worktree 上での更新先を変更・確認したいとき。
+- INDEX.md エントリー生成・再生成判定・hash freshness・malformed entry の扱い・render_index_entry の入力検証に関わる実装を変更するとき。
+- root 直下 memo を除外しつつ nested memo を通常対象として扱う indexing traversal の挙動を確認したいとき。
+- INDEX.md conflict 解決処理や apply/join 側の merge 後処理が INDEX.md を削除して merge commit する制御に影響するとき。
+- build_index_entry や update_indexes の呼び出しを並列化・直列化・差し替えする変更で、Codex exec の呼び出し有無や対象 path を確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの通常動作だけを調べたい場合は、そのサブコマンドの実装または対応する専用テストを先に読む。
-- INDEX.md エントリー本文の正本仕様や人間向けルーティング文書の書き方を確認したい場合は、oracle 側の仕様断片を読む。
-- Codex 実行基盤そのもの、CLI runner の共通 fixture、git test helper の詳細を調べるだけなら、支援モジュールや実装側の該当箇所を読む。
-- 生成された INDEX.md の内容を人間がどう解釈するかだけが関心で、indexing の制御フローや副作用を検証しない場合は、このテストを読む優先度は低い。
+- init サブコマンド単体の仕様や設定同期の詳細だけを確認したい場合は、より直接の init/config 関連テストや実装を読む。
+- INDEX.md の markdown 表示仕様だけを確認したい場合は、rendering 実装や出力フォーマットを直接扱う対象を読む。
+- oracle file の正本仕様やルーティング文書の方針を確認したい場合は、test 配下の realization test ではなく oracle 配下の該当文書を読む。
+- 一般的な Git helper、test support fixture、runner の実装を調べたいだけの場合は、このファイルではなく support 側を読む。
 
 ## hash
-- 68a9ca8e65c3b1750cfffb92daa8a88aaff50a543981bc16fade83083575dbd1
+- d3538fd06cb13d5ac19dd42f56fe76fd3db94e2ffaff621da7e3df51d4463376
 
 # `test_indexing_preflight.py`
 
@@ -325,20 +324,22 @@
 # `test_session_cli.py`
 
 ## Summary
-- session サブコマンドの realization test。session fork/abandon/join が Git branch、linked worktree、session state JSON、CLI 出力、競合解決時の Codex 実行権限をどう扱うかを、実リポジトリ操作に近い形で検証する。
+- cmoc の session 系 CLI の外部挙動を検証する realization test。session fork による session branch と state 生成、cmoc ignore 初期化、linked worktree 上での branch/head の扱いを確認する。
+- session abandon が home branch へ戻ること、session branch を削除して state を abandoned にすること、home branch 不在時や cleanup 失敗時のエラー出力・rollback を検証する。
+- session join が session branch の変更を home branch へ取り込むこと、linked worktree 上で正しい branch を扱うこと、oracle conflict 解決時に REALIZATION_WRITE profile と適切な書き込み権限を使うこと、delete conflict 解決や session branch 削除失敗時の挙動を検証する。
 
 ## Read this when
-- session fork が session branch と session state を作成し、home branch や start commit を記録する挙動を確認・変更するとき。
-- session abandon が home branch へ戻ること、session branch を削除すること、state を abandoned にすること、失敗時に状態と branch を保つことを確認・変更するとき。
-- session join が session branch の変更を home branch に取り込み、linked worktree 上の branch を維持し、state を joined にする挙動を確認・変更するとき。
-- session join の oracle 競合解決で Codex を REALIZATION_WRITE profile で呼び、競合対象を writable、memo や .agents を read-only として扱う権限設定を確認・変更するとき。
-- session join の削除競合の staging や、session branch 削除失敗時の警告出力を確認・変更するとき。
+- session fork、session abandon、session join の CLI 挙動、終了コード、標準出力、git branch 操作、session state JSON の更新を変更または調査するとき。
+- session branch と session home branch の関係、session_start_commit、active・abandoned・joined などの session state、apply state の期待値を確認したいとき。
+- linked worktree 内で session サブコマンドを実行する場合の branch 選択、root worktree への副作用有無、HEAD の扱いを確認したいとき。
+- session join の conflict resolution で Codex 実行 profile、FileAccessMode.REALIZATION_WRITE、oracle ファイルへの追加 write permission、memo や .agents の read_only 扱いを確認したいとき。
+- session abandon や session join の失敗・警告系で、cleanup 失敗時の rollback、home branch 不在時の出力、session branch を削除できない場合の表示を確認したいとき。
 
 ## Do not read this when
-- session 以外のサブコマンドや、CLI 全体の引数構造だけを確認したいとき。
-- session の内部 helper の細かな実装だけを調べたい場合で、外部挙動・state・Git 副作用のテスト観点が不要なとき。
-- oracle file の正本仕様そのものを確認・変更したいとき。
-- Codex profile 生成の一般仕様だけを確認したいとき。ただし session join の競合解決で使われる権限境界を調べる場合は読む。
+- session サブコマンド以外の CLI、設定読み込み、path model、oracle review など、session branch の lifecycle に関係しない挙動だけを調べるとき。
+- session の内部 helper 分割や実装詳細だけを調べたい場合で、外部 CLI 挙動や state・git 副作用の期待値を確認する必要がないとき。
+- Codex profile 生成全般を調べたいだけで、session join の oracle conflict resolution に渡される file access mode や権限境界に関係しないとき。
+- 通常の git 操作 helper や test fixture の作り方だけを調べたい場合で、session fork・abandon・join のシナリオ検証が不要なとき。
 
 ## hash
-- 03bb5087d2618a43993a67fc03372042272e6029a1f96236764b114c811dd04b
+- f0685a69145c1e4049dca667fd4fedce51df0b324c5beb4b7f9812cc8ca9386b

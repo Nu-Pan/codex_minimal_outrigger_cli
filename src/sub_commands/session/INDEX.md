@@ -38,22 +38,23 @@
 # `fork.py`
 
 ## Summary
-- 現在の通常 local branch から cmoc session branch を作成する session fork サブコマンドの実処理を定義する。
-- 作業ツリーと branch 状態を検証し、managed branch 上での実行、dirty worktree、同一 home branch の active session 重複を拒否したうえで、新しい session branch への切り替えと session state の初期保存を行う。
-- CLI ラッパーは共通のサブコマンド実行ヘルパーに session fork の実処理とコマンド名・argv を渡す入口になっている。
+- 現在の通常 local branch から cmoc session branch を作成する session fork サブコマンドの実装。managed branch 上での実行禁止、.cmoc の git ignore 化、clean worktree 確認、同一 home branch の active session 重複確認、session state 作成、実行結果表示を扱う。
+- CLI ラッパーとして runtime のサブコマンド実行基盤へ session fork 本体を渡し、ログ作成前にも .cmoc ignore 確認を走らせる。
 
 ## Read this when
-- session fork の実行条件、拒否条件、作成される session branch 名、保存される session state の初期値を確認または変更したいとき。
-- 通常 branch から session branch を作る処理で、worktree clean 判定、cmoc ignore 設定、active session 検出、git switch、state 書き込みの呼び出し順や責務を追いたいとき。
-- session fork コマンドの利用者向け出力内容、または共通 CLI サブコマンド実行ラッパーへの接続を確認したいとき。
+- session fork の開始条件、拒否条件、作成される session branch 名や session state の初期値を確認したいとき。
+- session fork 実行時に .cmoc が git 管理対象外であることをどう保証しているか、またそれに失敗したときのエラーを調べたいとき。
+- active session の重複判定、clean worktree 要求、managed branch 禁止といった session fork 固有の制御フローを変更・検証するとき。
+- session fork コマンドを runtime の共通サブコマンド実行処理へどう接続しているかを確認したいとき。
 
 ## Do not read this when
-- 既存 session への参加、破棄、終了など、session fork 以外の session 操作を調べたいとき。
-- branch 判定、worktree clean 判定、state path 算出、session state のデータ構造、git 実行、timestamp 生成そのものの実装を調べたいとき。
-- Typer アプリへのサブコマンド登録構造や、session コマンド群全体のルーティングを確認したいとき。
+- session fork 以外の session join、abandon、finish などの挙動を調べたいとき。
+- SessionState の構造、state file の読み書き形式、active session 探索の詳細など runtime 側の共通データモデルや永続化処理を調べたいとき。
+- git コマンド実行、branch 名取得、work root や repo root 解決などの低レベル runtime helper の実装を確認したいとき。
+- CLI 全体の Typer コマンド登録や session サブコマンド群の一覧を確認したいとき。
 
 ## hash
-- 119c105879fb2c3d9e2bb0eeea188d149e246debf489e16da7ec32b384a192fd
+- 615b534e93691ca235e253a0744731b65c7d957abc147448c7f4d126b88de7b7
 
 # `join.py`
 

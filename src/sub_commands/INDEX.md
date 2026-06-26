@@ -44,23 +44,23 @@
 # `init.py`
 
 ## Summary
-- work root を cmoc 利用可能な初期状態へ同期する init サブコマンドの実装。実行前の利用者差分を init commit に混ぜないよう staged patch と .gitignore 状態を退避・復元し、.cmoc ignore と設定同期を行って結果 Markdown を出力する。
-- ログ作成前に .cmoc ignore を保証するための pre-log 処理と、その副作用を通常の .gitignore 復元処理から区別する一時状態管理を担う。
+- work root を cmoc 管理の初期状態へ同期する init サブコマンドの実装。`.cmoc` ignore と設定同期を行い、必要なら初期化コミットを作成しつつ、実行前の利用者の staged 差分と `.gitignore` の worktree/index 状態を復元する。
+- CLI ランタイム経由で `cmoc init` を実行する入口、ログ作成前に `.cmoc` ignore を保証する前処理、git blob/index 操作を含む復元 helper、成功時の Markdown 出力生成をまとめて扱う。
 
 ## Read this when
-- init サブコマンドの実行フロー、出力、commit 条件、または .cmoc ignore の初期化挙動を変更する。
-- init 実行時に、既存の staged 差分、HEAD/index/worktree の .gitignore 内容、または利用者の .gitignore 変更がどう保護・復元されるかを調べる。
-- ログ作成前に .cmoc ignore を保証する処理、または run_cli_subcommand へ渡す init 固有の pre_log_check を確認する。
-- sync_config、ensure_cmoc_ignored、git add/commit/restore/apply/update-index など、init が呼び出す副作用の順序を検証する。
+- `cmoc init` の挙動、初期化コミット作成条件、`.cmoc` ignore の追加、設定同期、成功時 stdout の内容を確認・変更したいとき。
+- init 実行前に staged だった利用者差分を初期化コミットへ混ぜない制御や、実行後に staged patch を復元する処理を調べるとき。
+- `.gitignore` の HEAD/index/worktree 状態を一時的に退避し、cmoc ignore pattern を含めて復元する処理を確認・修正するとき。
+- サブコマンドを共通 CLI ランタイムへ渡す実装や、init 専用の pre-log check の副作用管理を確認するとき。
 
 ## Do not read this when
-- init 以外のサブコマンド固有挙動を調べたい場合。
-- cmoc runtime の work root/repo root 解決、git 実行 wrapper、設定同期、ignore pattern 生成そのものの実装を調べたい場合。
-- CLI 全体のコマンド登録や Typer app 構成だけを確認したい場合。
-- init の成功メッセージを呼び出し元でどう表示・検証するかではなく、Markdown 文字列の利用先だけを調べたい場合。
+- init 以外のサブコマンドの引数、出力、実行フローを調べたいとき。
+- `.cmoc` ignore pattern の具体的な生成規則、work root/repo root の解決規則、設定同期の中身そのものを調べたいとき。
+- git コマンド実行 wrapper や CLI ランタイム wrapper の汎用的な仕様を調べたいとき。
+- init の外部挙動をテストで確認したいだけで、実装内部の状態退避・復元ロジックを読む必要がないとき。
 
 ## hash
-- 1fdffe362c2ff7a551759490bb2574d759b8581b3be4a37a9ba145adc683c324
+- 586b69dd9d3a71e00758c605c7b1ff18bc05ba64f59e49ebe4e1c10f0ea21598
 
 # `review.py`
 
@@ -170,23 +170,24 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドを実装するパッケージで、通常 branch から session branch を作る処理、active session を home branch へ取り込む処理、merge せず破棄する処理を入口ごとに分けて収める。
-- 各サブコマンドは、branch/state/worktree の事前条件確認、git 操作、状態更新、利用者向け出力、共通 CLI 実行ラッパーへの接続を担い、個別の session 操作を調べる起点になる。
+- session 系サブコマンドの実装群を収める領域。通常 branch から session branch を開始し、active session を home branch へ取り込む、または取り込まず破棄する各 CLI 処理への入口になる。
+- 各処理は session state と apply state の事前条件、clean worktree、.cmoc ignore、branch 切り替え、状態更新、session branch 削除、利用者向け出力や失敗時エラーを扱う。
+- 取り込み処理では no-ff merge と conflict 解消依頼、残存 conflict marker・unmerged path の検査、merge commit 完了までの制御も扱う。
 
 ## Read this when
-- session fork、join、abandon のどれを読むべきかを選びたいとき。
-- session branch の作成、home branch への merge、merge しない破棄など、session 系サブコマンドの実行条件や状態遷移を確認または変更したいとき。
-- session 系サブコマンドが共通 CLI runner、indexing preflight、git 操作、session state 更新とどう接続されているかを追いたいとき。
-- session 操作の失敗時挙動、rollback、merge conflict 解消、利用者向け出力、CmocError の発生条件を調べる入口を探しているとき。
+- session fork、session join、session abandon のどの実装を読むべきか判断したいとき。
+- session の開始、home branch への取り込み、取り込まない破棄に関する CLI の事前条件、状態遷移、branch 操作、出力、エラー処理を確認または変更したいとき。
+- session join の merge conflict を Codex CLI に渡して解消し、検査して commit する流れを確認または変更したいとき。
+- session 系サブコマンドが共通の CLI 実行 wrapper、indexing preflight、ログ前チェックなどへどう接続されているかを調べたいとき。
 
 ## Do not read this when
-- session state の schema、state path 算出、branch 判定、worktree clean 判定、git 実行 wrapper、timestamp 生成などの共通 runtime 実装そのものを確認または変更したいとき。
-- Typer アプリへのサブコマンド登録、session 以外のサブコマンド、または CLI 全体のルーティングを調べたいとき。
-- merge conflict 解消依頼に渡す Codex CLI parameter や indexing preflight の内部挙動を確認または変更したいとき。
-- 個別の処理対象が session fork、join、abandon のいずれかに明確に決まっているときは、この階層ではなく該当する実装モジュールへ直接進む。
+- session state のデータ構造、状態ファイルの永続化形式、active session 探索、branch 判定、git 実行 wrapper、worktree 検査などの共通 runtime 実装そのものを調べたいとき。
+- CLI 全体のコマンド登録、session 以外のサブコマンド、または共通ルーティングを確認したいとき。
+- merge conflict 解消依頼に渡す parameter builder の内部内容、または indexing preflight の内部挙動を調べたいとき。
+- 実装のないパッケージ境界だけを確認したい場合を除き、個別サブコマンドの処理を調べる目的でパッケージ初期化だけを読もうとしているとき。
 
 ## hash
-- 2c94229e6bf4e07f89b80f8307aedabd1e6dbb7912b2d12d0ad472bef5b69bdf
+- 8f730bc939d6fe1b94b7411603bf25a1cf9443ae83c88ca0ba25ed0c12382c69
 
 # `tui.py`
 
