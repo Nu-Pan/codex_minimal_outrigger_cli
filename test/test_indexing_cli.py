@@ -322,6 +322,26 @@ def test_update_indexes_regenerates_malformed_fresh_hash_entry(
     assert "## Do not read this when" in rendered
 
 
+@pytest.mark.parametrize(
+    "entry",
+    [
+        None,
+        {},
+        {"summary": [], "read_this_when": ["read"], "do_not_read_this_when": ["skip"]},
+        {"summary": ["summary"], "read_this_when": [""], "do_not_read_this_when": ["skip"]},
+        {"summary": ["summary"], "read_this_when": ["read"], "do_not_read_this_when": [1]},
+    ],
+)
+def test_render_index_entry_rejects_missing_or_empty_semantic_fields(
+    tmp_path: Path, entry
+) -> None:
+    root = make_repo(tmp_path)
+    readme = root / "README.md"
+
+    with pytest.raises(cmoc_runtime.CmocError):
+        indexing_module.render_index_entry(root, readme, entry)
+
+
 def test_update_indexes_generates_sibling_entries_in_parallel(
     tmp_path: Path, monkeypatch
 ) -> None:

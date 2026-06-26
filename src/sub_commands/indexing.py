@@ -282,12 +282,10 @@ def index_target_hash(root: Path, path: Path) -> str:
 
 def render_index_entry(root: Path, path: Path, entry: dict | None = None, digest: str | None = None) -> str:
     """Structured Output から INDEX.md entry Markdown を生成する。"""
-    entry = entry or {}
     digest = digest or index_target_hash(root, path)
-    rel = path.relative_to(root)
-    summary = entry_list(entry, "summary", [f"`{rel}` の INDEX.md エントリーです。"])
-    read_this_when = entry_list(entry, "read_this_when", [f"`{rel}` の内容を確認する必要があるとき。"])
-    do_not_read_this_when = entry_list(entry, "do_not_read_this_when", ["より具体的な下位ファイルを直接読むべき対象が分かっているとき。"])
+    summary = entry_list(root, path, entry, "summary")
+    read_this_when = entry_list(root, path, entry, "read_this_when")
+    do_not_read_this_when = entry_list(root, path, entry, "do_not_read_this_when")
     return "\n".join(
         [
             f"# `{path.name}`",
@@ -308,9 +306,17 @@ def render_index_entry(root: Path, path: Path, entry: dict | None = None, digest
     )
 
 
-def entry_list(entry: dict, key: str, fallback: list[str]) -> list[str]:
-    """Structured Output の list[str] 項目を fallback 付きで取り出す。"""
-    value = entry.get(key)
-    if isinstance(value, list) and all(isinstance(item, str) for item in value) and value:
+def entry_list(root: Path, path: Path, entry: dict | None, key: str) -> list[str]:
+    """Structured Output の必須 list[str] 項目を検証して取り出す。"""
+    value = entry.get(key) if isinstance(entry, dict) else None
+    if (
+        isinstance(value, list)
+        and value
+        and all(isinstance(item, str) and item.strip() for item in value)
+    ):
         return value
-    return fallback
+    raise CmocError(
+        "INDEX.md entry 生成結果が不正です。",
+        ["cmoc indexing を再実行してください。"],
+        f"{path.relative_to(root)}: `{key}` は非空の文字列配列である必要があります。",
+    )
