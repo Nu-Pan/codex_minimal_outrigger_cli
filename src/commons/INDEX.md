@@ -54,25 +54,58 @@
 # `runtime_codex.py`
 
 ## Summary
-- Codex CLI 呼び出しを実行する runtime 層で、exec と TUI の起動準備、profile/schema/log path の生成、subprocess 実行、call log と console/subcommand log への記録、結果オブジェクト化を担う。
-- exec 実行では Structured Output の読み取りと jsonschema 検証、semantic retry、capacity error の指数 backoff、quota error 時の代表 probe による待機共有と resume token 継続を一括して扱う。
-- TUI 実行では profile と call log を準備して対話型 Codex を起動し、終了結果を記録して失敗時に cmoc 用例外へ変換する。
+- Codex CLI 呼び出し runtime の互換 import 入口。exec 実行本体と TUI 起動本体を責務別 module から再 export し、既存の `commons.runtime_codex` import path を維持する。
+- この file 自体は実行制御を持たず、分割後の公開面を小さく保つための橋渡しだけを担う。
 
 ## Read this when
-- Codex CLI の exec/TUI 呼び出し方法、argv、cwd/env、profile/schema 準備、Codex home 検証の流れを確認または変更したいとき。
-- Codex 呼び出しごとの stdout/stderr/output/call log の保存場所、保存内容、console 表示、subcommand log event の内容を確認または変更したいとき。
-- Structured Output の検証失敗時 retry、capacity error retry、quota 枯渇時の polling・待機共有・resume 継続の制御を調査または変更したいとき。
-- Codex CLI 呼び出し失敗を cmoc の例外や結果型へ変換する境界を追いたいとき。
+- 旧来の `commons.runtime_codex` import path がどの実装 module へ接続されるか確認したいとき。
+- Codex runtime の責務分割後も、公開 import 面として `run_codex_exec` と `run_codex_tui` を維持する必要があるか判断したいとき。
 
 ## Do not read this when
+- Codex exec の retry、Structured Output 検証、quota/capacity 制御、call log 記録を調べたいときは `runtime_codex_exec.py` を読む。
+- Codex TUI の起動準備、call log、subcommand event、失敗時例外化を調べたいときは `runtime_codex_tui.py` を読む。
 - Codex profile 名、Codex home、schema file、resume token、quota/capacity error 判定、output JSON 読み取りなどの個別 helper 実装だけを確認したいときは、それらを定義する profile 周辺の runtime helper を直接読む。
-- cmoc 設定の読み込み規則そのものを確認したいときは、設定読み込み側を読む。
-- repo/work/log path や timestamp/duration 表示の定義そのものを確認したいときは、path runtime 側を読む。
-- Codex 呼び出し結果や通常 command 結果のデータ構造だけを確認したいときは、結果型定義を読む。
-- サブコマンド単位の logger の実装やイベント保存形式そのものを確認したいときは、logging 側を読む。
 
 ## hash
-- c607785317cf43eeaa4368a33db8a5db35146b9b1203b630a3993bffa3dc0d75
+- bce418fcd1f6bffaed81f3724333817408657aed46183fa20819ffc1b40a7993
+
+# `runtime_codex_exec.py`
+
+## Summary
+- Codex CLI の `exec` 呼び出し本体を扱う runtime 層。profile/schema/log path の生成、subprocess 実行、stdout/stderr/output/call log の保存、console/subcommand log event、結果オブジェクト化を担う。
+- Structured Output の読み取りと jsonschema 検証、semantic retry、capacity error の backoff、quota error 時の代表 probe による待機共有と resume token 継続を同じ exec 状態機械として扱う。
+- 16,000 文字超を維持する理由は module docstring に明記されており、TUI 起動は別 module に分離済みである。
+
+## Read this when
+- Codex exec の argv、cwd/env、profile/schema 準備、Codex home 検証、Structured Output 検証、retry、quota/capacity 制御を確認または変更したいとき。
+- Codex exec 呼び出しごとの stdout/stderr/output/call log の保存場所、保存内容、console 表示、subcommand log event の内容を確認または変更したいとき。
+- Codex exec 失敗を cmoc の例外や `CodexExecResult` へ変換する境界を追いたいとき。
+
+## Do not read this when
+- Codex TUI の起動制御を調べたいときは `runtime_codex_tui.py` を読む。
+- Codex runtime の公開 import path だけを確認したいときは `runtime_codex.py` を読む。
+- Codex profile 名、Codex home、schema file、resume token、quota/capacity error 判定、output JSON 読み取りなどの個別 helper 実装だけを確認したいときは profile 周辺の runtime helper を読む。
+
+## hash
+- 05bb62ba5ade89f1bcfa5592678c4da07925ad5cf6b303f175e2ad8bc97aed22
+
+# `runtime_codex_logging.py`
+
+## Summary
+- Codex exec/TUI 呼び出し単位の完了サマリーを利用者の console へ出力する小さな共有 helper を扱う。
+- Codex call log path、purpose、elapsed、returncode を同じ表示形式にそろえるための補助であり、exec/TUI の起動制御や retry は持たない。
+
+## Read this when
+- Codex exec/TUI 共通の console 表示形式、表示項目、timestamp や duration の出し方を変更・確認したいとき。
+- Codex runtime の呼び出し完了サマリーだけを調べたいとき。
+
+## Do not read this when
+- Codex exec の retry、Structured Output 検証、quota/capacity 制御を調べたいときは `runtime_codex_exec.py` を読む。
+- Codex TUI の起動準備や失敗時例外化を調べたいときは `runtime_codex_tui.py` を読む。
+- サブコマンド単位の JSON Lines event 保存や quota 待機時間の集計を調べたいときは logging 側の runtime helper を読む。
+
+## hash
+- 65cfde582382659dd394662fe73f4e8796945c7ad06a7f2d2240181e63abaab8
 
 # `runtime_codex_preflight.py`
 
@@ -119,6 +152,23 @@
 
 ## hash
 - b810d07a9cfa54d653563506bbea37d97de8ad10928b4599a9ad00865c3de3d6
+
+# `runtime_codex_tui.py`
+
+## Summary
+- Codex CLI の対話型 TUI 起動を扱う runtime 層。profile と call log を準備して `codex` を起動し、console/subcommand log へ結果を記録して、失敗時は cmoc 用例外へ変換する。
+- exec retry や Structured Output 検証は持たず、対話起動に必要な profile、argv、call log、戻り値変換だけを担う。
+
+## Read this when
+- Codex TUI の argv、cwd/env、profile 準備、extra read path、call log、subcommand event、失敗時例外化を確認または変更したいとき。
+- 対話起動の runtime 制御を exec の retry 制御から切り離して調べたいとき。
+
+## Do not read this when
+- Codex exec の retry、Structured Output 検証、quota/capacity 制御を調べたいときは `runtime_codex_exec.py` を読む。
+- Codex profile 生成や Codex home 検証の低レベル helper だけを調べたいときは profile 周辺の runtime helper を読む。
+
+## hash
+- 3ed236afcdeaea95975325e2dab8c6d80a050e4201c18805ba9d8dbf3f875a99
 
 # `runtime_config.py`
 

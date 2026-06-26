@@ -39,20 +39,17 @@
 # `test_apply_fork_cli.py`
 
 ## Summary
-- apply fork の CLI 挙動を検証する realization test。Codex 呼び出しループ、apply 用 worktree/state/branch の更新、report 生成、dirty file 再検査、編集禁止対象の検出、rolling apply fork の対象選択など、apply fork の外部挙動と制御ロジックを扱う。
+- apply fork の CLI 挙動のうち、apply run の基本状態更新、session 側 `.gitignore` 保持、設定読み込み失敗時の未開始保証、所見対象としての `.gitignore` 編集、target 正規化を検証する realization test。
+- Codex 呼び出し loop と apply 用 worktree/state/branch の基本更新を中心に扱い、report、dirty 再検査、編集禁止対象、rolling apply fork は別 test module に分けている。
 
 ## Read this when
 - apply fork の成功時に session state、apply branch、worktree、pid 管理がどう更新・削除されるべきかを確認したいとき。
-- apply fork が Codex の所見列挙、所見適用、commit message 生成、変更要約生成をどの目的で呼び分けるかを検証したいとき。
 - apply fork が既存の ignore 表現を session 側で書き換えないこと、または所見対象としての ignore file を apply branch 側で編集できることを確認したいとき。
 - 設定読み込み失敗時に apply run を開始せず、ready state と branch 未作成を保つ挙動を確認したいとき。
 - apply 対象の正規化で root 直下の private memo を除外し、入れ子の memo directory を対象に残す挙動を確認したいとき。
-- 未収束・収束・error の apply report に、結果、終了理由、変更要約、commit message、return code がどう反映されるかを確認したいとき。
-- apply 後の dirty file を再検査し、生成された routing document を再検査対象から外す制御を確認したいとき。
-- 編集禁止対象への差分を検出した場合に、error state と report へ落とし込み、変更要約生成を行わない挙動を確認したいとき。
-- rolling apply fork が前回 apply の oracle snapshot commit を基準に対象を選び、join 済み snapshot 情報を session state に反映する挙動を確認したいとき。
 
 ## Do not read this when
+- 未収束・収束・error の apply report、dirty file 再検査、編集禁止対象への差分拒否、rolling apply fork を調べたいときは `test_apply_fork_report_cli.py` を読む。
 - apply fork 以外の apply/join/session/init コマンド全般の仕様や実装入口を探しているだけのとき。
 - Codex 実行 wrapper や structured output schema の詳細実装を確認したいとき。
 - report renderer、state model、path model、git helper などの個別実装を直接変更したいとき。
@@ -60,7 +57,28 @@
 - 単体 helper の内部アルゴリズムだけを調べたい場合で、apply fork CLI の end-to-end な外部挙動や state/report 副作用を確認する必要がないとき。
 
 ## hash
-- 8885974189de0d9ca5a841eb1c60cdf3bfc24cc1eef0dfce3aae8a71a23cf457
+- 93afd8c4cd4c099bf339261159f65582727e32fc9a0befce12a1801ab9adfa59
+
+# `test_apply_fork_report_cli.py`
+
+## Summary
+- apply fork の CLI 挙動のうち、report 生成、dirty file 再検査、編集禁止対象への差分拒否、rolling apply fork の対象選択を検証する realization test。
+- 未収束 report の変更要約・commit message、収束までの再検査、forbidden diff 時の error state/report、前回 apply の oracle snapshot commit を基準にした rolling apply を扱う。
+
+## Read this when
+- apply fork が Codex の所見列挙、所見適用、commit message 生成、変更要約生成をどの目的で呼び分けるかを検証したいとき。
+- 未収束・収束・error の apply report に、結果、終了理由、変更要約、commit message、return code がどう反映されるかを確認したいとき。
+- apply 後の dirty file を再検査し、生成された routing document を再検査対象から外す制御を確認したいとき。
+- 編集禁止対象への差分を検出した場合に、error state と report へ落とし込み、変更要約生成を行わない挙動を確認したいとき。
+- rolling apply fork が前回 apply の oracle snapshot commit を基準に対象を選び、join 済み snapshot 情報を session state に反映する挙動を確認したいとき。
+
+## Do not read this when
+- apply fork の基本的な state/worktree/branch 更新、設定読み込み失敗、`.gitignore` 保持、target 正規化だけを確認したいときは `test_apply_fork_cli.py` を読む。
+- apply fork 以外の apply/join/session/init コマンド全般の仕様や実装入口を探しているだけのとき。
+- report renderer、state model、path model、git helper などの個別実装を直接変更したいとき。
+
+## hash
+- 125ad7f741a18e3f064566dab600e1301290dd82ed60ea1f5ca0bc2a6538253a
 
 # `test_apply_join_cli.py`
 
@@ -159,45 +177,80 @@
 ## hash
 - 0b5e6b71990de6210a442b8915b2bf18394492d336d14f0bd7ec248f7f8736de
 
+# `test_codex_runtime_quota_retry.py`
+
+## Summary
+- Codex CLI 実行ラッパーの quota retry 制御を検証する realization test。quota 超過時の availability probe、thread resume、resume token がない場合の rerun、並列呼び出し時の代表 probe 集約を扱う。
+- 偽の Codex 実行ファイルを一時 PATH に置き、JSONL error event、probe 成功、resume/rerun の argv、call log、subcommand event を外部 Codex CLI に依存せず確認する。
+
+## Read this when
+- quota polling、quota availability probe、thread resume、resume token がない場合の rerun の挙動を確認したい場合。
+- 複数の同時 Codex 呼び出しが quota 超過したとき、代表 probe を 1 回だけ実行し各呼び出しが復帰する制御を変更・検証する場合。
+- quota retry 中の call log、stdout/stderr/output log、subcommand event、console 表示を確認したい場合。
+
+## Do not read this when
+- schema validation retry、capacity retry、stderr や通常 stdout 上の error marker 境界だけを確認したい場合は `test_codex_runtime_retry.py` を読む。
+- Codex CLI 呼び出しの retry と無関係なサブコマンド、path 処理、oracle/realization 分類、通常の CLI 引数解析だけを調べる場合。
+- 実際の Codex CLI や LLM の品質、ネットワーク越しの実サービス挙動を検証したい場合。
+
+## hash
+- aaf4cc9b992f12a63882c50b120f30509fa95e6bceccb49136d17d9327dae2aa
+
 # `test_codex_runtime_retry.py`
 
 ## Summary
-- Codex CLI 実行ラッパーのリトライ制御を検証する realization test。構造化出力の schema validation 失敗後の再試行、capacity エラー時の再試行、quota 超過時の probe と resume/rerun、並列呼び出し時の quota probe 集約、各呼び出しログと subcommand event の記録を扱う。
+- Codex CLI 実行ラッパーの retry 制御のうち、構造化出力の schema validation 失敗後の再試行、capacity エラー時の再試行、stderr や通常 stdout 上の error marker を直接 quota/capacity retry と扱わない境界を検証する realization test。
 - 偽の Codex 実行ファイルを一時 PATH に置き、出力 JSONL、終了コード、標準出力・標準エラー、last message ファイル、呼び出し回数を制御して、外部 Codex CLI に依存せず retry と logging の外部挙動を確認する。
 
 ## Read this when
-- Codex CLI 呼び出しの retry 条件、retry 後の最終結果、または call log/subcommand log の記録内容を変更・調査する場合。
-- schema validation retry、capacity retry、quota polling、quota availability probe、thread resume、resume token がない場合の rerun の挙動を確認したい場合。
+- Codex CLI 呼び出しの schema validation retry、capacity retry、retry 後の最終結果、または call log/subcommand log の記録内容を変更・調査する場合。
 - quota 超過検出を JSONL の error event に限定する境界や、stderr・通常 stdout に出た同じ文言を直接失敗として扱う挙動を確認したい場合。
-- 複数の同時 Codex 呼び出しが quota 超過したとき、代表 probe を 1 回だけ実行し各呼び出しが復帰する制御を変更・検証する場合。
 
 ## Do not read this when
+- quota polling、quota availability probe、thread resume、resume token がない場合の rerun、並列 quota probe 集約を確認したい場合は `test_codex_runtime_quota_retry.py` を読む。
 - Codex CLI 呼び出しの retry や quota/capacity/schema validation と無関係なサブコマンド、path 処理、oracle/realization 分類、通常の CLI 引数解析だけを調べる場合。
 - 実際の retry 実装やログ出力処理そのものを読みたい場合は、先に実装側の Codex runtime を読む方が直接的である。
 - Codex CLI や LLM の品質、実モデルの応答内容、ネットワーク越しの実サービス挙動を検証したい場合。この対象は偽実行ファイルで制御ロジックを検証する。
 
 ## hash
-- e6c82b09811e6c3fa97a95d467f4eb4b9d09e49ed9ecc511defeb025a0ffd5e1
+- 11ae5760ec7e48f02aa1cb0afb676b466252903fb885e3b2dbb08480ffabbf16
 
 # `test_indexing_cli.py`
 
 ## Summary
-- indexing コマンドと indexing preflight の realization test。INDEX.md 生成・更新・commit 対象、fresh hash による再生成スキップ、既存差分との共存、worktree 選択、repository lock、Codex 呼び出し前の indexing 実行または除外条件を検証する。
+- indexing コマンド本体と INDEX.md entry 生成・更新の realization test。INDEX.md 生成・更新・commit 対象、fresh hash による再生成スキップ、既存差分との共存、worktree 選択を検証する。
 - INDEX.md エントリー生成結果の schema 検証、semantic field の欠落・型不正拒否、空リスト受理、malformed entry の再生成、sibling entry の並列生成、root 直下 memo 除外と nested memo 対象化も扱う。
 - merge conflict 解決時に INDEX.md の conflict を削除して merge commit へ進める挙動、および commit_index_updates が INDEX.md 系の更新だけを commit し非 INDEX 差分を残す挙動を確認する。
 
 ## Read this when
 - indexing コマンド、update_indexes、build/render index entry、fresh hash 判定、INDEX.md の commit 範囲や malformed entry 再生成の挙動を変更・調査するとき。
-- Codex exec/TUI 呼び出し前に indexing preflight を走らせる制御、purpose による preflight skip、worktree 上での indexing 対象解決、repository lock 待機を扱うとき。
 - INDEX.md merge conflict の自動解決、root 直下 memo の索引除外、nested memo の索引対象化、sibling entry 生成の並列性に関する回帰を確認するとき。
 
 ## Do not read this when
+- Codex exec/TUI 呼び出し前に indexing preflight を走らせる制御、purpose による preflight skip、worktree 上での indexing 対象解決、repository lock 待機を扱うときは `test_indexing_preflight.py` を読む。
 - 個別 CLI コマンドの通常実行フロー、session 管理、apply 処理、Codex runtime 呼び出しそのものを調べたいだけで、indexing preflight や INDEX.md 更新の副作用が関係しないとき。
 - oracle file の正本仕様、path model、INDEX.md エントリー文面の設計方針を確認したいとき。対応する oracle doc や oracle src を読む方が直接的。
 - テスト支援 fixture、runner、git helper、mock 用 import の定義を調べたいとき。共通 test support 側を読む方が直接的。
 
 ## hash
-- a5a511584394d4a698247d69bb5612aa6e0e763aaf7c28b8fd775ee956187e86
+- eb69c7f5dd360f83c95535d52f0e9c6e934e38ac05d4307356aaf57c300897e0
+
+# `test_indexing_preflight.py`
+
+## Summary
+- Codex exec/TUI 呼び出し前の indexing preflight を検証する realization test。preflight が Codex 呼び出し前に走ること、cwd linked worktree を優先すること、TUI でも走ること、repository lock 待機、purpose による skip を扱う。
+- indexing コマンド本体の entry 生成や commit 範囲ではなく、Codex runtime preflight wrapper と indexing hook の接続を検証する。
+
+## Read this when
+- Codex exec/TUI 呼び出し前に indexing preflight を走らせる制御、purpose による preflight skip、worktree 上での indexing 対象解決、repository lock 待機を扱うとき。
+- indexing preflight の登録、無効化、再入防止、skip 条件のテストを変更・調査するとき。
+
+## Do not read this when
+- indexing コマンド、update_indexes、build/render index entry、fresh hash 判定、INDEX.md の commit 範囲や malformed entry 再生成の挙動を変更・調査するときは `test_indexing_cli.py` を読む。
+- Codex runtime の exec/TUI 起動そのもの、profile/schema/log path 生成、retry 制御を調べたいときは Codex runtime 側のテストを読む。
+
+## hash
+- 007e02d6231d12c34829caf2fb8da0ba7d10aab11b2aef15d8fe8cfe7dad6933
 
 # `test_prompt_parts.py`
 
