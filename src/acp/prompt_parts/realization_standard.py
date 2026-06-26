@@ -54,7 +54,7 @@ def build_realization_standard() -> StructDoc:
         Standard(
             title="realization file の高品質化は望ましいことである",
             backgrounds=[
-                "realization file は cmoc により継続的にメンテナンスされる",
+                "realization file は継続的にメンテナンスされる",
                 "メンテナンスにかかるコストは、AI が読む文脈量や判断すべき分岐量の影響を受ける",
                 "realization file の品質には、変更容易性・責務の明確さ・不要部分の少なさが含まれる",
             ],
@@ -113,7 +113,7 @@ def build_realization_standard() -> StructDoc:
         Standard(
             title="realization file は意味上のまとまりと適度なサイズに保つ",
             backgrounds=[
-                "cmoc は INDEX.md を手がかりに必要な file だけを読みに行くことで、AI のトークン消費を節約する",
+                "INDEX.md を手がかりに必要な file だけを読みに行くことで、AI のトークン消費を節約する",
                 "このルーティングが有効に働くためには、各 realization file のサイズ感がある程度揃っている必要がある",
                 "巨大な realization file は、INDEX.md で読む先を絞れても局所的に読むべき文脈を増やす",
             ],

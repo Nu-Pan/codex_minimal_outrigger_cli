@@ -238,6 +238,16 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
         "仕様ファイルズ",
     ]:
         assert forbidden not in rendered
+    for forbidden in [
+        "cmoc は",
+        "cmoc でも",
+        "cmoc により",
+        "cmoc 側",
+        "`cmoc ",
+        "cmoc review oracle",
+        "cmoc apply join",
+    ]:
+        assert forbidden not in rendered
 
 
 def test_complete_prompt_removes_forbidden_agent_prompt_terms() -> None:

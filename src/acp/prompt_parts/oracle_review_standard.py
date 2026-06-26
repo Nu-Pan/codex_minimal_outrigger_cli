@@ -9,7 +9,7 @@ from basic.standard import (
 
 def build_review_oracle_standard() -> StructDoc:
     """
-    `cmoc review oracle` における「所見を列挙する作業」の規範文章を構築する
+    oracle file のレビューで所見を列挙する作業の規範文章を構築する
     """
     standards = [
         Standard(
@@ -46,7 +46,7 @@ def build_review_oracle_standard() -> StructDoc:
                 ),
             ],
             examples=[
-                "同じ状態の `cmoc apply join` について、一方が必ず続行、他方が必ず中止と定めており例外関係も読めないなら fatal 所見にする",
+                "同じ状態の結合処理について、一方が必ず続行、他方が必ず中止と定めており例外関係も読めないなら fatal 所見にする",
                 "必須の出力 JSON schema と必須の保存 schema が同じ field に両立しない型を要求しているなら fatal 所見にする",
                 "内部 helper の分割方法が未指定でも、既存仕様と実装から自然に選べるなら fatal 所見にしない",
             ],
@@ -99,7 +99,7 @@ def build_review_oracle_standard() -> StructDoc:
             backgrounds=[
                 "oracle file は正本仕様断片であり、仕様全体を網羅するものではない",
                 "oracle file に書かれていない仕様の隙間は、実装者である AI の裁量で補われる",
-                "`cmoc review oracle` は、リポジトリ固有の事情に依存しない汎用的なレビュー観点で oracle file を評価する",
+                "oracle file のレビューでは、リポジトリ固有の事情に依存しない汎用的な観点で oracle file を評価する",
             ],
             requirements=[
                 Requirement(
