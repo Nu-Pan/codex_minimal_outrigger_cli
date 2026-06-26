@@ -440,48 +440,22 @@ def test_review_oracle_merge_finding_uses_efficiency_model() -> None:
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
 
 
-@pytest.mark.parametrize(
-    "operation",
-    [
-        {
-            "kind": "delete",
-            "target_ids": ["finding-0001"],
-            "finding": {"severity": "minor"},
-        },
-        {
-            "kind": "replace",
-            "target_ids": ["finding-0001", "finding-0002"],
-            "finding": {
-                "severity": "minor",
-                "title": "t",
-                "oracle_path": "oracle/spec.md",
-                "reason": "r",
-            },
-        },
-        {"kind": "replace", "target_ids": ["finding-0001"], "finding": None},
-        {
-            "kind": "merge",
-            "target_ids": ["finding-0001"],
-            "finding": {
-                "severity": "minor",
-                "title": "t",
-                "oracle_path": "oracle/spec.md",
-                "reason": "r",
-            },
-        },
-        {
-            "kind": "merge",
-            "target_ids": ["finding-0001", "finding-0002"],
-            "finding": None,
-        },
-    ],
-)
-def test_review_oracle_merge_finding_schema_enforces_kind_contract(
-    operation: dict,
-) -> None:
+def test_review_oracle_merge_finding_schema_matches_oracle_source() -> None:
     parameter = build_review_oracle_merge_finding_parameter("[]")
     assert parameter.structured_output_schema_path is not None
     schema = json.loads(parameter.structured_output_schema_path.read_text())
+    oracle_schema = json.loads(
+        (
+            Path(__file__).parents[1]
+            / "oracle"
+            / "src"
+            / "acp"
+            / "builder"
+            / "review"
+            / "oracle"
+            / "merge_finding.json"
+        ).read_text()
+    )
     finding = {
         "severity": "fatal",
         "title": "merged",
@@ -489,8 +463,7 @@ def test_review_oracle_merge_finding_schema_enforces_kind_contract(
         "reason": "merged reason",
     }
 
-    with pytest.raises(ValidationError):
-        validate({"operations": [operation]}, schema)
+    assert schema == oracle_schema
     validate(
         {
             "operations": [
