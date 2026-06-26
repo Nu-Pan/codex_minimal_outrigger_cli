@@ -1,6 +1,8 @@
 """
 # cmoc config
 
+対応 oracle file: `<work-root>/oracle/src/config/cmoc_config.py`。
+
 - cmoc の挙動設定のうち、開発対象リポジトリごとに変わりうる事柄は `CmocConfig` に集約する
 - `CmocConfig` は `<repo-root>/.cmoc/config.json` として永続化される
 - Enum 系を継承したクラスのインスタンスは value 化して json に保存する

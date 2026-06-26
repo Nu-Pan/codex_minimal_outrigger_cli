@@ -1,3 +1,8 @@
+"""agent call 用 prompt part を統合する realization。
+
+対応 oracle file: `<work-root>/oracle/src/acp/prompt_parts/complete_prompt.py`。
+"""
+
 # cmoc
 from basic.struct_doc import StructDoc
 

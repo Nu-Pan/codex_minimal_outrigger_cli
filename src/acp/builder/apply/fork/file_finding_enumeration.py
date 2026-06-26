@@ -1,4 +1,7 @@
-"""`cmoc apply fork` のファイル単位の所見リストアップ prompt 構築実装。"""
+"""`cmoc apply fork` のファイル単位の所見リストアップ prompt 構築実装。
+
+対応 oracle file: `<work-root>/oracle/src/acp/builder/apply/fork/file_finding_enumeration.py`。
+"""
 
 # std
 from pathlib import Path

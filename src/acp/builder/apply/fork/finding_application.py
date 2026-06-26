@@ -1,4 +1,7 @@
-"""`cmoc apply fork` の所見対応作業 prompt 構築実装。"""
+"""`cmoc apply fork` の所見対応作業 prompt 構築実装。
+
+対応 oracle file: `<work-root>/oracle/src/acp/builder/apply/fork/finding_application.py`。
+"""
 
 # std
 from typing import Any

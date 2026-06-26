@@ -1,4 +1,7 @@
-"""`cmoc review oracle` の所見採否判定 prompt 構築実装。"""
+"""`cmoc review oracle` の所見採否判定 prompt 構築実装。
+
+対応 oracle file: `<work-root>/oracle/src/acp/builder/review/oracle/judge_finding.py`。
+"""
 
 # std
 from pathlib import Path

@@ -1,4 +1,7 @@
-"""`cmoc review oracle` の所見擁護理由列挙 prompt 構築実装。"""
+"""`cmoc review oracle` の所見擁護理由列挙 prompt 構築実装。
+
+対応 oracle file: `<work-root>/oracle/src/acp/builder/review/oracle/validate_finding_advocate.py`。
+"""
 
 # std
 from pathlib import Path

@@ -1,3 +1,8 @@
+"""規範文書モデルの realization。
+
+対応 oracle file: `<work-root>/oracle/src/basic/standard.py`。
+"""
+
 from dataclasses import dataclass
 from typing import Literal
 from basic.struct_doc import StructDoc

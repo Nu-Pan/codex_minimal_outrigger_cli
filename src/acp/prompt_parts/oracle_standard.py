@@ -1,10 +1,11 @@
 """oracle standard 全体の prompt 本文を単一責務として構築する。
 
-このファイルは 16,000 文字を超えるが、責務境界は oracle file の記述規範を
-StructDoc 化する prompt part に閉じている。各 Standard は、人間の認知負荷、
-正本仕様断片、未定義部分、文字数、矛盾、用語、goal/non-goal を一体で読むことで
-判断基準になるため、分割すると oracle standard の相互文脈を追う module が増える。
-現状は同じ prompt 本文として単一ファイルに置く方が凝集性と読み取り文脈を保てる。
+対応 oracle file: `<work-root>/oracle/src/acp/prompt_parts/oracle_standard.py`。
+8,000 文字を超えるが、責務境界は oracle file の記述規範を StructDoc 化する
+prompt part に閉じている。各 Standard は、人間の認知負荷、正本仕様断片、
+未定義部分、文字数、矛盾、用語、goal/non-goal を一体で読むことで判断基準に
+なるため、現状は同じ prompt 本文として単一ファイルに置く方が凝集性と
+読み取り文脈を保てる。
 """
 
 # cmoc

@@ -1,6 +1,8 @@
 """
 # path model
 
+対応 oracle file: `<work-root>/oracle/src/basic/path_model.py`。
+
 ## パス表記の基本ルール
 
 - cmoc 上では、ファイル・ディレクトリパスを絶対パス・相対パスどちらで書いても良い
