@@ -304,6 +304,9 @@ def test_build_realization_standard_renders_file_split_and_merge_rules() -> None
     assert doc.title == "realization standard"
 
     rendered = render_as_markdown(doc)
+    assert "コメントや docstring は実装意図と根拠を補う" in rendered
+    assert "対応する oracle file" in rendered
+    assert "前後のコードを読むだけでは分からない情報" in rendered
     assert "INDEX.md" in rendered
     assert "8,000" in rendered
     assert "16,000" in rendered
