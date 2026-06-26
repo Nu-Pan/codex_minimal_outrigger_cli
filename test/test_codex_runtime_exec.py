@@ -1,7 +1,10 @@
 import tomllib
 
+import pytest
+
 from _support import (
     AgentCallParameter,
+    CmocError,
     CmocConfig,
     FileAccessMode,
     ModelClass,
@@ -17,6 +20,7 @@ from _support import (
     write_python_executable,
 )
 from commons.runtime_codex import run_codex_exec, run_codex_tui
+
 
 def test_run_codex_exec_uses_stdin_and_writes_logs(
     tmp_path: Path, monkeypatch, capsys
@@ -110,6 +114,59 @@ def test_run_codex_exec_uses_stdin_and_writes_logs(
     assert "- purpose: `codex exec`" in console
     assert f"- call_log: `{result.call_log_path}`" in console
     assert "- returncode: `0`" in console
+
+
+def test_run_codex_exec_rejects_non_target_oracle_changes(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    allowed = root / "oracle" / "conflicted.md"
+    allowed.write_text("before\n")
+    run_git(root, "add", "oracle/conflicted.md")
+    run_git(root, "commit", "-m", "add conflict target")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fake_codex = bin_dir / "codex"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            f"pathlib.Path({str(allowed)!r}).write_text('resolved\\n')",
+            "pathlib.Path("
+            f"{str(root / 'oracle' / 'spec.md')!r}"
+            ").write_text('forbidden\\n')",
+            "pathlib.Path("
+            f"{str(root / 'oracle' / 'new.md')!r}"
+            ").write_text('new\\n')",
+            "output.write_text(json.dumps({'ok': True}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.REALIZATION_WRITE,
+        "prompt",
+        None,
+        (allowed,),
+    )
+
+    with pytest.raises(CmocError) as excinfo:
+        run_codex_exec(
+            parameter,
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
+
+    assert "conflict 対象外 oracle path が変更されました。" in str(excinfo.value)
+    assert str(root / "oracle" / "spec.md") in excinfo.value.detail
+    assert str(root / "oracle" / "new.md") in excinfo.value.detail
+    assert str(allowed) not in excinfo.value.detail
 
 
 def test_run_codex_exec_stores_schema_in_cwd_work_root(

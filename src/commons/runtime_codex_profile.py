@@ -52,6 +52,10 @@ def _realization_read_only_paths(root: Path, writable_paths: tuple[Path, ...]) -
     if oracle.exists():
         for path in oracle.rglob("*"):
             resolved = path.resolve()
+            # Ancestors of an allowed oracle conflict file cannot be listed here
+            # without also blocking that file in workspace-write sandboxes. The
+            # exec runtime validates after the agent call that no other oracle
+            # path was changed or created.
             if any(
                 resolved == allowed or _is_relative_to(allowed, resolved)
                 for allowed in writable_oracle
