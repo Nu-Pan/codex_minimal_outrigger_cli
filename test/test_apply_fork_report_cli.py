@@ -47,11 +47,13 @@ def test_apply_fork_writes_report_with_change_summary(
         "suggested_fix": "update readme",
     }
     calls: list[str] = []
+    application_count = 0
 
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
         """所見、適用、commit message、変更要約の各 Codex 応答を返す。"""
+        nonlocal application_count
         purpose = str(kwargs["purpose"])
         calls.append(purpose)
         schema = (
@@ -62,7 +64,8 @@ def test_apply_fork_writes_report_with_change_summary(
         if purpose.startswith("apply fork enumerate findings"):
             return FakeCodexResult({"findings": [finding]})
         if purpose == "apply fork finding application":
-            (Path.cwd() / "README.md").write_text("# updated\n")
+            application_count += 1
+            (Path.cwd() / "README.md").write_text(f"# updated {application_count}\n")
             return FakeCodexResult(None)
         if purpose == "apply fork commit message":
             return FakeCodexResult(output_text="Update README from apply finding\n")
@@ -240,6 +243,77 @@ def test_apply_fork_converges_when_last_allowed_target_has_no_findings(
     report_path = Path(report_line.split("`")[1])
     assert "result: converged" in report_path.read_text()
     assert "- result_label: `converged`" in result.output
+
+
+def test_apply_fork_converges_when_finding_application_makes_no_diff(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """所見対応で差分が出ない対象を再投入せず、修正 commit も作らない。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    (root / "README.md").write_text("# changed\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "change readme")
+    config_path = root / ".cmoc" / "config.json"
+    config = json.loads(config_path.read_text())
+    config["apply_fork"]["num_apply_files"] = 1
+    config_path.write_text(json.dumps(config, indent=2) + "\n")
+    finding = {
+        "title": "No-op finding",
+        "evidences": [
+            {
+                "path": str(root / "README.md"),
+                "line_start": 1,
+                "line_end": 1,
+                "summary": "readme",
+            }
+        ],
+        "oracle_requirement": "test requirement",
+        "observed_implementation": "old",
+        "reason": "needs update",
+        "suggested_fix": "update readme",
+    }
+    calls: list[str] = []
+
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> FakeCodexResult:
+        """所見は返すが適用では差分を作らない。"""
+        purpose = str(kwargs["purpose"])
+        calls.append(purpose)
+        if purpose.startswith("apply fork enumerate findings"):
+            return FakeCodexResult({"findings": [finding]})
+        if purpose == "apply fork finding application":
+            return FakeCodexResult()
+        if purpose == "apply fork change summary":
+            return FakeCodexResult({"changes": []})
+        raise AssertionError(purpose)
+
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(
+        app, ["apply", "fork", "--scope", "session"], catch_exceptions=False
+    )
+
+    assert result.exit_code == 0
+    assert "apply fork commit message" not in calls
+    report_line = [
+        line for line in result.output.splitlines() if line.startswith("- report:")
+    ][-1]
+    report_path = Path(report_line.split("`")[1])
+    assert "result: converged" in report_path.read_text()
+    assert "- result_label: `converged`" in result.output
+    branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = branch.removeprefix("cmoc/session/")
+    state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
+    assert (
+        run_git(root, "rev-parse", state["apply"]["apply_branch"]).stdout.strip()
+        == run_git(root, "rev-parse", "HEAD").stdout.strip()
+    )
 
 
 def test_apply_fork_report_does_not_invent_loop_when_no_targets(
