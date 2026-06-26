@@ -1,56 +1,26 @@
-import json
 import subprocess
 import sys
-import threading
-import time
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from typer.testing import CliRunner
-
-import cmoc_runtime
-import commons.runtime_codex_preflight as codex_preflight_module
-import main as main_module
-import sub_commands.apply.abandon as apply_abandon_module
-import sub_commands.apply.fork as apply_fork_module
-import sub_commands.apply.join as apply_module
-import sub_commands.indexing as indexing_module
-import sub_commands.review as review_module
-import sub_commands.session.abandon as session_module
-import sub_commands.session.join as session_join_module
-import sub_commands.tui as tui_module
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from basic.path_model import RootToken, resolve_real_path, resolve_token_path
-from config.cmoc_config import CmocConfig
-from cmoc_runtime import (
-    CmocError,
-    SubcommandLogger,
-    ensure_cmoc_ignored,
-    file_access_to_sandbox_mode,
-    format_duration,
-    render_error,
-    repo_root,
-    run_codex_exec,
-    run_codex_tui,
-    work_root,
-)
-from main import app
-from sub_commands.tui import parse_markdown_prompt
 
 runner = CliRunner()
 
 
 def run_git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    """Run a git command in the test repository and fail on command errors."""
     return subprocess.run(
         ["git", *args], cwd=root, text=True, capture_output=True, check=True
     )
 
 
 def current_branch(root: Path) -> str:
+    """Return the checked-out branch name for git-state assertions."""
     return run_git(root, "branch", "--show-current").stdout.strip()
 
 
 def make_repo(tmp_path: Path) -> Path:
+    """Create the smallest committed repository that cmoc CLI tests can target."""
     root = tmp_path / "repo"
     root.mkdir()
     run_git(root, "init")
@@ -65,6 +35,7 @@ def make_repo(tmp_path: Path) -> Path:
 
 
 def add_tracked_ignored_oracle_file(root: Path) -> None:
+    """Create a tracked oracle file that is also ignored by repository rules."""
     (root / ".gitignore").write_text("oracle/ignored.md\n")
     (root / "oracle" / "ignored.md").write_text("# ignored\n")
     run_git(root, "add", "-f", ".gitignore", "oracle/ignored.md")
@@ -72,6 +43,7 @@ def add_tracked_ignored_oracle_file(root: Path) -> None:
 
 
 def setup_codex_home(tmp_path: Path, monkeypatch) -> Path:
+    """Prepare a minimal authenticated Codex home for fake CLI execution."""
     codex_home = tmp_path / "codex_home"
     codex_home.mkdir()
     (codex_home / "auth.json").write_text("{}\n")
@@ -80,9 +52,13 @@ def setup_codex_home(tmp_path: Path, monkeypatch) -> Path:
 
 
 def write_python_executable(path: Path, lines: list[str]) -> None:
+    """Write an executable Python script used as a fake external command."""
     path.write_text("\n".join([f"#!{sys.executable}", *lines]) + "\n")
     path.chmod(0o755)
 
 
 def apply_worktree_from_state(root: Path, state: dict) -> Path:
+    """Resolve the apply worktree path encoded by a session state snapshot."""
+    from sub_commands.apply import join as apply_module
+
     return apply_module.worktree_for_branch(root, state["apply"]["apply_branch"])

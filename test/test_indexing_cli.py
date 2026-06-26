@@ -1,19 +1,20 @@
+import subprocess
+import threading
+import time
+from pathlib import Path
+
 import pytest
+import cmoc_runtime
 
 from _support import (
-    Path,
-    app,
-    apply_module,
-    cmoc_runtime,
     current_branch,
-    indexing_module,
     make_repo,
     run_git,
     runner,
-    subprocess,
-    threading,
-    time,
 )
+from main import app
+import sub_commands.apply.join as apply_module
+import sub_commands.indexing as indexing_module
 
 
 def test_resolve_index_conflicts_deletes_index_and_commits(tmp_path: Path) -> None:

@@ -1,26 +1,23 @@
 import multiprocessing
+import subprocess
+import threading
+import time
+from pathlib import Path
 
 import pytest
+import cmoc_runtime
+import commons.runtime_codex_preflight as codex_preflight_module
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 
 from _support import (
-    AgentCallParameter,
-    FileAccessMode,
-    ModelClass,
-    Path,
-    ReasoningEffort,
-    app,
-    apply_module,
-    cmoc_runtime,
-    codex_preflight_module,
     current_branch,
-    indexing_module,
     make_repo,
     run_git,
     runner,
-    subprocess,
-    threading,
-    time,
 )
+from main import app
+import sub_commands.apply.join as apply_module
+import sub_commands.indexing as indexing_module
 
 
 def hold_indexing_lock(lock_path: Path, ready, release) -> None:

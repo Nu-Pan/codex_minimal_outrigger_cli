@@ -1,20 +1,19 @@
+import json
+import subprocess
+from pathlib import Path
+
+import commons.runtime_codex_preflight as codex_preflight_module
+from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
 from _support import (
-    FileAccessMode,
-    ModelClass,
-    Path,
-    ReasoningEffort,
-    app,
-    codex_preflight_module,
-    json,
     make_repo,
-    parse_markdown_prompt,
     run_git,
     runner,
     setup_codex_home,
-    subprocess,
-    tui_module,
     write_python_executable,
 )
+from main import app
+from sub_commands.tui import parse_markdown_prompt
+import sub_commands.tui as tui_module
 
 def test_init_untracks_existing_cmoc_files_and_commits_cleanup(
     tmp_path: Path, monkeypatch

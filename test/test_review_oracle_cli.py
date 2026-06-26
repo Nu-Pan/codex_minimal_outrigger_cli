@@ -1,16 +1,17 @@
+import subprocess
+from pathlib import Path
+
 import pytest
 
 from _support import (
-    Path,
     add_tracked_ignored_oracle_file,
-    app,
     make_repo,
-    review_module,
     run_git,
     runner,
-    subprocess,
 )
 from config.cmoc_config import CmocConfig, CmocConfigReviewOracle
+from main import app
+import sub_commands.review as review_module
 
 
 def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:

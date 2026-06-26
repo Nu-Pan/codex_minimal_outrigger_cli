@@ -1,15 +1,16 @@
+import json
+import subprocess
+from pathlib import Path
+
 from _support import (
-    Path,
-    app,
-    apply_fork_module,
-    apply_module,
     apply_worktree_from_state,
-    json,
     make_repo,
     run_git,
     runner,
-    subprocess,
 )
+from main import app
+import sub_commands.apply.fork as apply_fork_module
+import sub_commands.apply.join as apply_module
 
 def test_apply_join_removes_apply_worktree_and_resets_state(
     tmp_path: Path, monkeypatch
