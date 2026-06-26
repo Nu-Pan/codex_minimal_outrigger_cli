@@ -64,25 +64,25 @@
 # `commons`
 
 ## Summary
-- cmoc の実行時共通処理を集めた共有 helper 群。CLI サブコマンド実行の共通ラッパー、Codex exec/TUI 呼び出し、Codex profile・preflight・call log 表示、設定ファイル入出力、内容 hash、共通エラー、Git 操作、実行ログ、root/path 解決、外部コマンド結果型、session/apply state 永続化など、複数の上位機能から利用される runtime 基盤への入口になる。
-- 個別の業務フローを実装する場所ではなく、サブコマンドや workflow 実装が共通利用する低レベルから中間層の runtime 部品を責務別に分けている。公開 import 面だけを束ねる入口と、実際の副作用や状態遷移を持つ実装が混在するため、まず扱いたい共通責務を絞って下位要素へ進むための階層である。
+- cmoc の共有 runtime helper 群をまとめる実装ディレクトリ。CLI サブコマンド実行ラッパー、Codex exec/TUI 呼び出し、Codex profile・preflight・logging、設定ファイル入出力、content hash、共通エラー、Git 操作、runtime path、結果型、session state など、複数の上位機能から使われる実行時支援を責務別に収める。
+- 上位の command や workflow から共通 runtime 機能の入口を探すための階層であり、集約 import 面と個別実装の両方を含む。具体的な挙動を調べる場合は、CLI 実行制御、Codex 実行制御、profile/config/content/error/git/logging/path/result/state のうち該当する責務の本文へ進む。
 
 ## Read this when
-- cmoc の実行時共通 helper がどの責務領域に分かれているかを把握し、CLI、Codex、設定、Git、logging、path、state、結果型、エラー処理のどこへ進むべきか判断したいとき。
-- サブコマンド実装や workflow 実装から利用する runtime 共通 API の公開面、または共有 helper の追加・削除・移動先を検討したいとき。
-- Codex CLI 呼び出しに関わる exec/TUI 起動、profile 生成、Structured Output 検証、retry、quota/capacity 制御、preflight、call log 表示のうち、どの責務の実装を読むべきか切り分けたいとき。
-- cmoc 全体で共通化されている設定ファイル処理、ファイル内容 hash、利用者向けエラー整形、Git repository/worktree 操作、実行ログ、root/path 解決、永続 state 読み書きの入口を探すとき。
-- 複数のサブコマンドや上位 module から使われる処理を共有 module に置くべきか、既存の共通 helper で足りるかを確認したいとき。
+- cmoc の実行時共通処理がどの責務単位に分かれているかを把握し、読むべき helper 実装を選びたいとき。
+- サブコマンド実行前後の共通ラッパー、ログ設定、終了コード化、例外表示、完了サマリーなど、個別 command の外側にある runtime lifecycle を確認・変更したいとき。
+- Codex CLI の exec または TUI 呼び出しについて、profile/schema/log/call log、subprocess 起動、Structured Output 検証、capacity retry、quota polling、resume 継続、preflight、完了表示のどこを読むべきか切り分けたいとき。
+- cmoc 設定の永続化、内容 hash、共通エラー整形、Git repository/worktree 操作、runtime path 解決、外部コマンド結果型、session state 永続化など、複数機能から共有される低レベル runtime helper を探しているとき。
+- 共有 runtime API の import 面に helper を公開する、または既存の公開 import を整理する必要があるとき。
 
 ## Do not read this when
-- 個別サブコマンドの引数定義、利用者向けコマンド構成、業務処理の詳細、workflow 全体の高レベルな制御順序だけを調べたいとき。その場合は各 command や workflow の実装へ進む。
-- path keyword や root/work/run の概念定義そのものを確認したいとき。その場合は path model の正本仕様または path model 実装を読む。
-- INDEX.md の内容生成ロジック、エントリー生成プロンプト、ファイル探索ルールそのものを調べたいとき。
-- ログや状態ファイルを読む側、集計する側、表示する側の仕様を調べたいだけで、実行時にログや state を生成・保存する共通処理を扱わないとき。
-- Codex や Git など外部コマンドの利用者向け挙動をテスト観点から確認したいだけで、runtime wrapper の入力・出力・副作用・失敗時変換を変更しないとき。
+- 個別サブコマンドの業務処理、CLI 引数定義、利用者向け command 構成だけを調べたいとき。その場合は command 側の実装へ進む。
+- path keyword の概念定義や oracle 上の正本仕様を確認したいだけのとき。その場合は path model や oracle 側の本文を読む。
+- 設定データクラス、agent call parameter、FileAccessMode などの型定義そのものを確認したいだけのとき。その場合はそれらを定義する basic/model 側へ進む。
+- INDEX.md 生成ロジック、エントリー生成プロンプト、ファイル探索ルール、routing 文書の仕様そのものを調べたいとき。この階層は runtime helper 群であり、indexing 本体の責務ではない。
+- テスト観点から期待挙動を確認したいだけで、runtime helper の実装や公開面を変更しないとき。その場合は対応する test 側を読む。
 
 ## hash
-- a22a33676d346ce8dab919b744536ceb9f7ab84b0ed4843f97c635b699652da8
+- fc5b459496d70b1428ba7629ca91a11abd4f62cc696b2937e0875b62af953618
 
 # `config`
 

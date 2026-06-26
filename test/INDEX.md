@@ -141,24 +141,24 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 呼び出しを包む実行系の realization test。exec 経路ではプロンプトを stdin で渡すこと、CLI 引数へプロンプト本文を露出しないこと、JSON 出力 schema と最終メッセージを扱うこと、CODEX_HOME・profile・call log・stdout/stderr log・subcommand log・console 表示を記録することを検証する。
-- worktree を cwd にした exec 呼び出しで、schema 保存先が root 側ではなく cwd 側の `.cmoc/state/schema` になることを検証する。
-- TUI 経路では `codex` コマンドを直接起動し、`exec` サブコマンドを使わず、プロンプトを最後の argv として渡すこと、sandbox profile の writable/read-only 設定、call log、subcommand log、console 表示、戻り値を検証する。
-- リポジトリ設定から Codex model と reasoning effort を読み込み、生成 profile に反映されることを検証する。
+- Codex CLI 呼び出しの実行系に対する realization test。exec 経路ではプロンプトを標準入力で渡すこと、構造化出力 schema の配置、CODEX_HOME と一時 profile、呼び出しログ・stdout/stderr ログ・subcommand log・コンソール表示、repository config の model/reasoning_effort 反映を検証する。
+- TUI 経路では codex コマンドの引数形式、prompt 引数渡し、workspace write profile の writable/read-only 設定、call log と logger イベント、戻り値を検証する。
+- realization write の exec 実行が、許可された conflict 対象以外の oracle path 変更を検出して CmocError にすることも検証する。
 
 ## Read this when
-- Codex CLI を実行する runtime 層、特に exec/TUI の argv・stdin・cwd・環境変数・profile 生成・sandbox 設定を変更する時。
-- Codex 呼び出しのログ出力、call log、stdout/stderr log、subcommand log、console 表示の仕様や実装を確認する時。
-- Structured Output schema の保存場所、worktree 配下での schema パス、`.cmoc/state/schema` の扱いを変更する時。
-- `.cmoc/config.json` から Codex model や reasoning effort を読み込む処理を変更する時。
+- Codex CLI を起動する runtime wrapper、特に exec/TUI の argv、cwd、環境変数、profile 生成、出力 schema、ログ出力を変更する時。
+- AgentCallParameter の model class、reasoning effort、file access mode、extra read paths、target oracle paths が Codex profile や実行制御へ反映される挙動を確認する時。
+- Codex 実行後の oracle 変更検査、特に conflict 対象外の oracle file 変更を拒否する制御を変更・調査する時。
+- repository config の codex model や reasoning_effort が exec 用 profile に反映される挙動を確認する時。
 
 ## Do not read this when
-- Codex CLI 呼び出しではない通常の git 操作、path model、oracle/realization 分類、INDEX.md 生成だけを調べる時。
-- runtime 実装の細部ではなく、CLI サブコマンド全体の入口や引数 parsing の一覧を探している時。
-- LLM の応答品質や Codex CLI 本体の挙動そのものを検証したい時。このテストは cmoc 側が Codex CLI をどう起動し記録するかを対象にしている。
+- Codex CLI 呼び出しではなく、通常の cmoc サブコマンド引数解析や Git 操作だけを調べる時。
+- oracle file の正本仕様本文を確認したい時。ここは realization test であり、仕様判断の根拠としては oracle 側を先に読む。
+- INDEX.md 生成・ルーティング文書そのものの形式や schema を調べたい時。
+- Codex 実行 wrapper と関係しない parser、path model、または一般的な補助関数の単体挙動だけを調べる時。
 
 ## hash
-- 2aba772e50cf05962d67261550ecb2211862c10f1d234cbee723ae523119a1ed
+- 18d917636c9a31eaa429fff390bf86a56ef5a3a6930c5b807c0c210ea97ce549
 
 # `test_codex_runtime_home.py`
 
