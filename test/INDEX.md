@@ -277,24 +277,24 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- プロンプト部品と実行パラメータ builder の realization test。構造化ドキュメントの Markdown 描画、routing/file access/index entry/review/realization などの標準文面、complete prompt への標準注入・用語置換・禁止語除去、各 builder の model class・reasoning effort・file access mode・schema 内容を検証する。
-- apply fork、review oracle、session join、TUI resolve、indexing index entry など、プロンプト生成系が期待する root path、schema、標準セクション、アクセスモードを保っているかを横断的に確認する入口になる。
+- プロンプト部品と実行パラメータ生成まわりの回帰テストをまとめた realization test。構造化 Markdown の描画、routing rule や各種 standard の挿入条件、file access rule、パス token の実パス展開、builder が返す model・reasoning・file access mode・schema の整合性を検証する。
+- apply fork、review oracle、session join、TUI resolve、indexing など複数の prompt builder が、期待する文言・禁止語除去・構造化出力 schema・実行モードを満たすかを横断的に確認する入口となる。
 
 ## Read this when
-- プロンプト生成・標準文書生成・complete prompt 合成の挙動を変更し、その出力文面や含まれる標準セクションが既存期待と合うか確認したいとき。
-- file access rule、routing rule、realization standard、index entry standard、apply/review oracle standard の文面断片やタイトルを変更する影響を確認したいとき。
-- apply fork、review oracle merge finding、session join conflict resolution、TUI resolve parameter、indexing index entry の builder が選ぶ model class、reasoning effort、file access mode、structured output schema を検証したいとき。
-- RootToken の実 path 解決や agent prompt 内の root placeholder 置換、禁止された agent prompt 用語の除去に関する回帰を調べるとき。
-- StructDoc、StructCodeBlock、render_as_markdown の空行折りたたみやコードブロック描画の基本挙動を確認したいとき。
+- プロンプト生成ロジック、prompt_parts、StructDoc/StructCodeBlock の Markdown 描画、または complete prompt の構成を変更する。
+- routing rule、apply review standard、realization standard、review oracle standard、index entry standard、file access rule の文言や挿入条件を変更する。
+- root token の実パス展開、agent 向け prompt からの禁止語除去、コードブロック内外での置換挙動を確認したい。
+- apply fork、review oracle、session join、TUI resolve、indexing の builder が返す model class、reasoning effort、file access mode、structured output schema の期待値を確認したい。
+- change summary、review oracle merge finding、TUI resolve parameter などの JSON schema 制約に関するテスト観点を確認したい。
 
 ## Do not read this when
-- 個別 CLI コマンドの実行挙動、永続状態、Git 操作、worktree 操作そのものを調べたいだけで、プロンプト生成や builder parameter の期待値に関係しないとき。
-- 対象 builder の実装責務や標準文書本文を修正したい段階で、テスト期待ではなく実装本文や oracle 側の schema・仕様断片を直接読むべきとき。
-- 特定の JSON schema の完全な仕様内容だけを確認したい場合で、対応する schema ファイルを直接読む方が適切なとき。
-- INDEX.md エントリー生成の規則そのものを確認したいだけで、このテストが検証するプロンプト部品の回帰条件に関係しないとき。
+- 個別 CLI コマンドの実処理、Git 操作、ファイルシステム操作など、プロンプト生成以外の実装詳細だけを調べたい。
+- 単一の prompt builder の実装責務や本文生成ロジックを直接確認したい場合で、対応する実装ファイルや oracle file を読む方が早い。
+- pytest の共通設定、テスト実行環境、fixture 定義そのものを調べたい。
+- INDEX.md エントリー生成の出力規則や routing 文書の正本仕様を確認したいだけで、テスト上の期待文言や回帰条件を参照する必要がない。
 
 ## hash
-- 58f200b061ea66a89f0473d7a820574f1f255fb8cc79c6f082fdb443b41a0206
+- ea3c16deb7bdb641d5e66ed5fea48d7fa9f5bf269980bc9ee83a384317773843
 
 # `test_review_oracle_cli.py`
 
