@@ -34,6 +34,7 @@ from cmoc_runtime import (
     run_codex_exec,
     run_git,
     timestamp,
+    work_root,
     worktrees_dir,
     write_state,
 )
@@ -71,20 +72,21 @@ def cmoc_apply_fork_impl(
     if scope not in {"rolling", "session", "full"}:
         raise CmocError("scope が不正です。", ["rolling, session, full のいずれかを指定してください。"], scope)
     root = repo_root()
-    branch = current_branch(root)
+    current_root = work_root()
+    branch = current_branch(current_root)
     session_id, path, state = load_state_for_branch(root, branch)
     if not branch.startswith("cmoc/session/"):
         raise CmocError("apply fork は session branch 上で実行してください。", [], branch)
     if state.session.state != "active" or state.apply.state != "ready":
         raise CmocError("apply fork の事前条件を満たしていません。", [], str(path))
-    require_clean_worktree(root)
-    require_cmoc_ignored(root)
+    require_clean_worktree(current_root)
+    require_cmoc_ignored(current_root)
     config = load_config(root)
     run_id = timestamp()
     apply_branch = f"cmoc/apply/{session_id}/{run_id}"
-    oracle_snapshot_commit = head_commit(root)
-    apply_worktree = worktrees_dir(root) / session_id / run_id
-    create_run_worktree(root, apply_branch, apply_worktree, "HEAD")
+    oracle_snapshot_commit = head_commit(current_root)
+    apply_worktree = worktrees_dir(current_root) / session_id / run_id
+    create_run_worktree(current_root, apply_branch, apply_worktree, "HEAD")
     write_apply_process_id(root, session_id, os.getpid())
     state.apply = ApplyPart(
         state="running",

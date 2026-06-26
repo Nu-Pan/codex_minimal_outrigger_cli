@@ -71,6 +71,48 @@ def test_apply_fork_runs_codex_loop_and_updates_state(
     assert any(call.startswith("apply fork enumerate findings") for call in calls)
 
 
+def test_apply_fork_uses_linked_worktree_branch_and_head(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """linked worktree 上の session branch と HEAD から apply run を開始する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    linked = root / ".cmoc" / "worktrees" / "linked-apply"
+    run_git(root, "worktree", "add", "-b", "linked-apply-home", str(linked), "HEAD")
+    (linked / "README.md").write_text("# linked apply\n")
+    run_git(linked, "add", "README.md")
+    run_git(linked, "commit", "-m", "linked apply change")
+    linked_commit = run_git(linked, "rev-parse", "HEAD").stdout.strip()
+    monkeypatch.chdir(linked)
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> FakeCodexResult:
+        """apply fork を最小ループで完了させる。"""
+        return FakeCodexResult({"findings": []})
+
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(
+        app, ["apply", "fork", "--scope", "full"], catch_exceptions=False
+    )
+
+    assert result.exit_code == 0
+    branch = run_git(linked, "branch", "--show-current").stdout.strip()
+    session_id = branch.removeprefix("cmoc/session/")
+    state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
+    assert state["apply"]["oracle_snapshot_commit"] == linked_commit
+    assert (
+        run_git(root, "rev-parse", state["apply"]["apply_branch"]).stdout.strip()
+        == linked_commit
+    )
+    assert apply_worktree_from_state(root, state).is_relative_to(linked)
+
+
 def test_apply_fork_does_not_rewrite_session_gitignore(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:

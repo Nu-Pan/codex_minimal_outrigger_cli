@@ -64,6 +64,55 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
     assert "review oracle merge findings" not in calls
 
 
+def test_review_oracle_uses_linked_worktree_branch_and_oracle(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """linked worktree 上の session branch と oracle を review 対象にする。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    linked = root / ".cmoc" / "worktrees" / "linked-review"
+    run_git(root, "worktree", "add", "-b", "linked-review-home", str(linked), "HEAD")
+    (linked / "oracle" / "linked.md").write_text("# linked oracle\n")
+    run_git(linked, "add", "oracle/linked.md")
+    run_git(linked, "commit", "-m", "linked oracle change")
+    linked_commit = run_git(linked, "rev-parse", "HEAD").stdout.strip()
+    monkeypatch.chdir(linked)
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    calls: list[str] = []
+
+    class FakeCodexResult:
+        def __init__(self, output_json):
+            self.output_json = output_json
+
+    def fake_run_codex_exec(parameter, **kwargs):
+        calls.append(kwargs["purpose"])
+        schema_name = parameter.structured_output_schema_path.name
+        if schema_name == "enumerate_finding.json":
+            return FakeCodexResult({"findings": []})
+        raise AssertionError(schema_name)
+
+    monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(
+        app, ["review", "oracle", "--scope", "full"], catch_exceptions=False
+    )
+
+    assert result.exit_code == 0
+    report_path = Path(
+        [line for line in result.output.splitlines() if line.startswith("/")][-1]
+    )
+    rendered = report_path.read_text()
+    assert f"review_fork_commit: {linked_commit}" in rendered
+    assert "`oracle/linked.md`" in rendered
+    assert run_git(linked, "branch", "--show-current").stdout.strip().startswith(
+        "cmoc/session/"
+    )
+    assert any("linked.md" in call for call in calls)
+
+
 def test_review_oracle_enumerate_receives_only_related_findings(
     tmp_path: Path, monkeypatch
 ) -> None:
