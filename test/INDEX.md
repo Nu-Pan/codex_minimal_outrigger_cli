@@ -277,24 +277,24 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- プロンプト部品とビルダーパラメータのテスト群。レビュー基準、ルーティング規則、ファイルアクセス規則、各種標準文書、完全プロンプトへの注入・除外、パス置換、Structured Output schema、モデル選択やアクセスモードの期待値を検証する。
-- StructDoc の Markdown 描画や空行圧縮、apply fork・review oracle・session join・TUI resolve・indexing などのプロンプト生成系が、正しい文言・schema・実行パラメータを持つことを確認する入口になる。
+- プロンプト部品と実行パラメータ builder の realization test。構造化ドキュメントの Markdown 描画、routing/file access/index entry/review/realization などの標準文面、complete prompt への標準注入・用語置換・禁止語除去、各 builder の model class・reasoning effort・file access mode・schema 内容を検証する。
+- apply fork、review oracle、session join、TUI resolve、indexing index entry など、プロンプト生成系が期待する root path、schema、標準セクション、アクセスモードを保っているかを横断的に確認する入口になる。
 
 ## Read this when
-- プロンプト生成、標準文書生成、ファイルアクセス規則、ルーティング規則、INDEX エントリー生成基準、レビュー基準の表示内容を変更する。
-- 完全プロンプトに含める補助標準の有無、禁止語の置換、root token の実パス展開、コードブロック内外の文言処理を確認したい。
-- apply fork、review oracle、session join、TUI resolve、indexing の builder が返す model class、reasoning effort、file access mode、Structured Output schema の期待値を確認したい。
-- Markdown レンダリングで連続空行やコードブロック内空行の扱いを変更する。
-- プロンプトや schema の変更後に、既存テストのどの観点が失敗し得るかを把握したい。
+- プロンプト生成・標準文書生成・complete prompt 合成の挙動を変更し、その出力文面や含まれる標準セクションが既存期待と合うか確認したいとき。
+- file access rule、routing rule、realization standard、index entry standard、apply/review oracle standard の文面断片やタイトルを変更する影響を確認したいとき。
+- apply fork、review oracle merge finding、session join conflict resolution、TUI resolve parameter、indexing index entry の builder が選ぶ model class、reasoning effort、file access mode、structured output schema を検証したいとき。
+- RootToken の実 path 解決や agent prompt 内の root placeholder 置換、禁止された agent prompt 用語の除去に関する回帰を調べるとき。
+- StructDoc、StructCodeBlock、render_as_markdown の空行折りたたみやコードブロック描画の基本挙動を確認したいとき。
 
 ## Do not read this when
-- 個別のプロンプト部品や builder の実装詳細だけを追う場合は、対応する実装側を直接読む。
-- 正本仕様断片そのものの内容や要求を確認したい場合は、oracle 側の該当文書を読む。
-- CLI の実行フロー、永続状態、ワークツリー操作など、プロンプト生成と直接関係しない挙動を調べる場合は対象外。
-- 単にテスト環境や pytest 設定、依存関係の設定を確認したい場合は、設定ファイルやテスト基盤を直接読む。
+- 個別 CLI コマンドの実行挙動、永続状態、Git 操作、worktree 操作そのものを調べたいだけで、プロンプト生成や builder parameter の期待値に関係しないとき。
+- 対象 builder の実装責務や標準文書本文を修正したい段階で、テスト期待ではなく実装本文や oracle 側の schema・仕様断片を直接読むべきとき。
+- 特定の JSON schema の完全な仕様内容だけを確認したい場合で、対応する schema ファイルを直接読む方が適切なとき。
+- INDEX.md エントリー生成の規則そのものを確認したいだけで、このテストが検証するプロンプト部品の回帰条件に関係しないとき。
 
 ## hash
-- dfff1f0a8d3de5544259dde11a7675485431fc39f786f0526956849cc86cad75
+- 58f200b061ea66a89f0473d7a820574f1f255fb8cc79c6f082fdb443b41a0206
 
 # `test_review_oracle_cli.py`
 

@@ -1,26 +1,23 @@
 # `acp`
 
 ## Summary
-- AI エージェント呼び出しに渡すパラメータと標準プロンプト部品を構築する実装領域。用途別の role、goal、補助入力、読み書き制約、モデル設定、reasoning effort、Structured Output schema への接続と、oracle・realization・review・ルーティング文書などの標準文書を agent 向け prompt に組み立てる処理を扱う。
-- apply、oracle review、session join、TUI 実行前判定、INDEX.md エントリー生成など、各機能が agent に何を読ませ、何を返させ、どの権限で動かすかを確認する入口である。
+- AI エージェントに渡す呼び出しパラメータと、そこへ組み込む標準プロンプト文書を構築する実装領域。用途別の role、goal、補助入力、ファイルアクセス条件、モデル設定、出力契約の指定と、oracle・realization・review・ルーティング文書などの規範文書生成を扱う。
+- サブコマンド本体の実行制御ではなく、各機能がエージェントへ何を読ませ、どの制約で、どの形式の応答を求めるかを確認する入口になる。
 
 ## Read this when
-- cmoc の機能が AI エージェントを呼び出す際の prompt 構成、補助入力、対象パスや差分の埋め込み、ファイルアクセスモード、モデル種別、reasoning effort、出力 schema の対応を確認・変更したいとき。
-- oracle file、realization file、oracle standard、realization standard、review standard、apply review standard、INDEX.md エントリー標準などを、agent prompt としてどの順序・依存関係で注入しているか調べたいとき。
-- apply 系で、差分要約、ファイル単位の所見列挙、所見対応作業の agent 呼び出し条件や出力契約を追いたいとき。
-- oracle review 系で、新規所見列挙、所見の擁護・反証理由列挙、採否判定、所見リスト整理の prompt と Structured Output schema を確認したいとき。
-- session join の merge conflict marker 解消、TUI 実行前の権限・標準参照要否判定、INDEX.md エントリー生成など、特定用途の事前解決 agent 呼び出しを調べたいとき。
-- agent に提示されるファイルアクセス規則、INDEX.md を使う読み進め方、oracle file と realization file の基本概念、レビューや実装品質に関する標準文言を変更したいとき。
+- エージェント呼び出し時のプロンプト構成、標準文書の注入条件、補助プロンプトの差し込み方、内部表現の置換処理を確認・変更したいとき。
+- apply、oracle review、session join、TUI 実行前判定、ルーティング文書エントリー生成など、特定用途のエージェント呼び出しパラメータや出力契約を追いたいとき。
+- ファイル読み書き権限、oracle と realization の基本説明、review や INDEX.md エントリーに関する規範を、エージェント向け文面としてどう生成しているか確認したいとき。
+- 新しいエージェント呼び出し用途を追加するために、既存のモデル選択、reasoning effort、読み取り権限、標準 prompt 依存関係の組み方を参照したいとき。
 
 ## Do not read this when
-- CLI サブコマンド全体の実行順序、引数解析、永続状態、git 操作、フォーク作成・統合、merge conflict marker の検出、生成結果の保存など、agent 呼び出しパラメータ構築の外側を調べたいとき。
-- AgentCallParameter、FileAccessMode、ModelClass、ReasoningEffort、構造化ドキュメント、標準項目、パス解決などの基本データ構造や共通 helper だけを確認したいとき。
-- oracle file や realization file の個別本文、または正本仕様断片そのものを読みたいだけで、agent prompt への注入方法を変更しないとき。
-- 実際の対象ファイル探索、git diff 生成、変更ファイル抽出、レビュー所見の永続化、所見適用後の作業制御など、prompt に渡す材料を作る側または結果を処理する側の詳細を調べたいとき。
-- 生成済み INDEX.md の内容評価や、ルーティング文書の文面作成だけが目的で、標準文書生成処理や agent 呼び出しパラメータの実装を確認する必要がないとき。
+- CLI 引数解析、サブコマンド全体の実行順序、git 操作、fork の作成・統合、生成結果の保存など、エージェント呼び出しパラメータ構築の外側を調べたいとき。
+- path model、構造化文書、標準文書データ構造、AgentCallParameter の型定義など、この領域が利用する基盤型や helper そのものを確認したいとき。
+- oracle file や realization file の本文、レビュー対象の仕様断片、実際の差分生成や対象ファイル探索など、プロンプトに渡される材料の生成元を調べたいとき。
+- 生成済みのルーティング文書内容を評価したいだけ、または個別の標準文書や用途別 builder の所在がすでに分かっていて、下位対象へ直接進めるとき。
 
 ## hash
-- b449f59beb7b6e0bb094015d8ef2ed93b760fb3b5e08e1b6b462f7328354f46a
+- ff14355591c1ee1e15ab424a4e39d993668944f84d64f238b3bfd9cb59242562
 
 # `basic`
 
