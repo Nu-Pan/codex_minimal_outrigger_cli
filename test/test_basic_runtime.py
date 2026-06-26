@@ -3,6 +3,7 @@ import tomllib
 import pytest
 from basic.acp import AgentCallParameter
 from commons.runtime_codex_profile import build_codex_profile
+from commons.runtime_content import is_binary
 from commons.runtime_state import branch_session_id
 
 from _support import (
@@ -205,6 +206,35 @@ def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
     assert file_access_to_sandbox_mode(FileAccessMode.REALIZATION_WRITE) == "workspace-write"
     assert file_access_to_sandbox_mode(FileAccessMode.ORACLE_WRITE) == "workspace-write"
     assert file_access_to_sandbox_mode(FileAccessMode.REPO_WRITE) == "workspace-write"
+
+
+def test_is_binary_reads_only_initial_chunk() -> None:
+    class Reader:
+        def __init__(self) -> None:
+            self.size: int | None = None
+
+        def __enter__(self) -> "Reader":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            pass
+
+        def read(self, size: int) -> bytes:
+            self.size = size
+            return b"text"
+
+    class FakePath:
+        def __init__(self) -> None:
+            self.reader = Reader()
+
+        def open(self, mode: str) -> Reader:
+            assert mode == "rb"
+            return self.reader
+
+    path = FakePath()
+
+    assert is_binary(path) is False
+    assert path.reader.size == 4096
 
 
 def test_codex_profile_contains_file_access_enforcement(tmp_path: Path) -> None:

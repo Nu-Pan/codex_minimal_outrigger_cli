@@ -31,7 +31,8 @@ def write_hashed_file_in_existing_dir(
 
 def is_binary(path: Path) -> bool:
     try:
-        chunk = path.read_bytes()[:4096]
+        with path.open("rb") as file:
+            chunk = file.read(4096)
     except OSError:
         return True
     return b"\0" in chunk
