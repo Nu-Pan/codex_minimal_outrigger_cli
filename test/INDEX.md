@@ -277,22 +277,24 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- プロンプト構成部品と実行パラメータ生成のテスト群。構造化ドキュメントの Markdown 描画、ルーティング規則、ファイルアクセス規則、各種標準文書の注入有無、apply/review/session/indexing/tui 向けパラメータのモデル・reasoning・アクセスモード・schema 制約を検証する。
-- プロンプト本文に含めるべき基準語、除外すべき表記揺れ、空行の正規化、コードブロック保持、worktree と repository root の扱いなど、プロンプト生成系の外部挙動を横断的に確認する入口になる。
+- プロンプト部品とパラメータ生成器のテスト群。レビュー基準、ルーティング規則、ファイルアクセス規則、各種 standard の Markdown 描画、完全プロンプトへの標準文書の注入・省略、Structured Output schema、モデル種別・推論量・アクセスモードの選定を検証する。
+- realization test として、プロンプト生成まわりの仕様語彙、空行正規化、apply fork・review oracle・session join・TUI resolve・indexing のビルダーが期待する文書断片や設定を返すかを確認する入口になる。
 
 ## Read this when
-- プロンプト部品生成、完全プロンプト組み立て、標準文書の挿入フラグ、または Markdown レンダリングの挙動を変更する。
-- ファイルアクセスモードごとの禁止・許可文言、routing rule、realization standard、review oracle standard、apply review standard、index entry standard の出力内容を変更する。
-- apply fork、review oracle merge finding、session join conflict resolution、indexing index entry、tui resolve parameter の実行パラメータや structured output schema の契約を確認・変更する。
-- repository root と apply worktree の使い分け、プロンプト内で保持されるパス語や基準用語、schema enum・required・additionalProperties の期待値を確認したい。
+- プロンプト部品、standard 文書、または complete prompt の構成・描画・含有条件を変更する。
+- file access mode ごとの読書き制約文、routing rule、apply review standard、realization standard、review oracle standard、index entry standard の出力語句を確認・更新する。
+- apply fork、review oracle、session join、TUI resolve、indexing の各パラメータ生成器について、モデル種別、reasoning effort、file access mode、schema path、埋め込まれるプロンプト断片の期待値を調べる。
+- Structured Output schema の制約や oracle 側 schema との一致、空配列拒否、enum・required・additionalProperties などの検証観点を確認する。
+- StructDoc、StructCodeBlock、render_as_markdown の Markdown 出力、とくに連続空行やコードブロック内空行の扱いを調べる。
 
 ## Do not read this when
-- 個別 CLI コマンドの実処理、永続状態、Git 操作、またはユーザー向け画面挙動を調べたいだけで、プロンプト生成や実行パラメータ契約に触れない。
-- 構造化ドキュメントやプロンプト本文の期待文言ではなく、対象 builder 関数の実装詳細を直接変更する場合は、まず対応する実装側を読む方が適切である。
-- 特定の schema ファイル自体の全定義や JSON Schema の詳細を確認したい場合は、このテストではなく該当 schema 定義を直接読む方が適切である。
+- CLI 実行フロー、永続状態、Git 操作、ワークツリー作成など、プロンプト部品やパラメータ生成器に直接関係しない挙動を調べる。
+- 個別の standard 文書本文や builder 実装そのものを修正したいだけで、テスト期待値や既存の検証観点を確認する必要がない。
+- oracle file の正本仕様断片そのものをレビュー・編集提案する作業であり、realization test 側の期待値確認が不要である。
+- 一般的な pytest 設定、テスト実行環境、共通 fixture の仕組みだけを調べたい。
 
 ## hash
-- cc0caf4266dfddfb683ebfa6380fccf793c95d9ceb5a2a8bcef82739f703fc11
+- 02e84c11cf877184c9eb1d2121f57234164a39f1283fad3a421e4c5d3d73108c
 
 # `test_review_oracle_cli.py`
 

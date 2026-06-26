@@ -1,22 +1,23 @@
 # `acp`
 
 ## Summary
-- 補助 AI エージェント呼び出しに関する実装をまとめる領域。用途別の呼び出しパラメータ構築と、agent prompt を構成する標準文書・制約文・補助文面の組み立てが下位要素に分かれている。
-- cmoc の機能が AI agent に何を依頼し、どのモデル設定・reasoning effort・Structured Output schema・ファイルアクセス制約・標準文書を渡すかを追う入口になる。
+- AI エージェント呼び出しに渡す内容を組み立てる領域。用途別の role、goal、補助 prompt、対象パスや差分などの埋め込み、読み書き制約、モデル設定、Structured Output schema への接続を扱う。
+- agent prompt を構成する標準文書・ファイルアクセス規則・ルーティング規則などの部品と、それらを apply、oracle review、session join、TUI 実行前判定、INDEX.md エントリー生成などの個別用途へ接続する実装への入口になる。
 
 ## Read this when
-- apply、review、session、indexing、TUI などの処理から補助 AI エージェントを呼び出す条件や、渡される role・summary・goal・schema・モデル設定を確認または変更したいとき。
-- AI agent に提示される最終 prompt の構成、標準文書の注入、ファイルアクセス規則やルーティング規則の文面を確認または変更したいとき。
-- oracle review、realization review、INDEX.md エントリー生成、merge conflict marker 解消など、AI に委譲するサブタスクの依頼内容と構造化出力契約を調べたいとき。
+- cmoc が Codex などの AI agent に渡す prompt、補助入力、読み書き制約、Structured Output schema、モデル指定などの組み立て方を確認・変更したいとき。
+- apply、oracle review、session join、TUI 実行前判定、INDEX.md エントリー生成など、サブ機能別の agent 呼び出し条件と出力契約を追いたいとき。
+- agent prompt に含めるファイルアクセス規則、ルーティング規則、oracle・realization・review・INDEX.md エントリー標準文書の構成や注入順序を確認したいとき。
+- CLI 本体から agent を呼ぶ前に、どの用途でどの role・goal・標準文書・追加 prompt・対象パス情報を渡しているかを調べたいとき。
 
 ## Do not read this when
-- CLI サブコマンドの引数解析、実行順序、git 操作、状態保存、表示処理など、AI 呼び出しパラメータ構築より外側の制御フローを調べたいとき。
-- oracle file、realization file、レビュー基準、INDEX.md エントリー基準など、prompt に組み込まれる標準本文そのものを正本として読みたいとき。
-- AgentCallParameter、構造化ドキュメント、パス解決、Markdown レンダリング、JSON Schema 読み込みなど、複数領域で共有される基盤型や helper の実装を調べたいとき。
-- 個別サブタスクのドメインロジック本体、実際のレビュー判定、git diff 生成、merge conflict marker 検出、TUI 表示や対話処理を調べたいとき。
+- CLI 引数解析、サブコマンド全体の実行順序、git 操作、fork 作成・統合、状態ファイル保存など、agent 呼び出しパラメータ構築の外側を調べたいとき。
+- oracle file、realization file、各種 review standard などの正本仕様本文そのものを読みたいとき。
+- path model、構造化ドキュメント表現、AgentCallParameter の基本定義、Markdown rendering など、prompt 構築で使われる汎用基盤だけを確認したいとき。
+- 実際の対象ファイル探索、git diff 生成、変更ファイル抽出、変更ファイル列挙、merge conflict marker 検出など、agent に渡す材料を作る側の処理詳細を調べたいとき。
 
 ## hash
-- bbf2ca64724028b0dd80c27ac0bd07269d2efdd1c0c45d84bffbdf28ff756dd0
+- a3c2f582d1d6ef6cf53aa5fbaa9aa6142a721b7d8d2844aa6bc9f8d086d34a02
 
 # `basic`
 
