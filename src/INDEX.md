@@ -1,46 +1,40 @@
 # `acp`
 
 ## Summary
-- AI agent に渡す呼び出しパラメータと prompt 構成を扱う実装領域。用途別の role、goal、補助入力、ファイルアクセス条件、モデル設定、Structured Output 契約への接続と、ファイルアクセス規則・ルーティング規則・oracle/realization/review/INDEX エントリー標準などの prompt 部品生成をまとめて確認する入口になる。
-- CLI サブコマンド本体の実行制御や git 操作ではなく、cmoc が AI agent に何をどの制約で渡し、どの標準文書を prompt に含めるかを調べるための領域。
+- ACP 領域のエージェント呼び出しパラメータ構築と、呼び出し時に注入するプロンプト部品を扱う入口。用途別の role、goal、補助入力、読み書き制約、モデル設定、Structured Output 契約と、標準文書・ルーティング規則・レビュー規範などの prompt part 生成へ分岐する。
+- apply、oracle review、session join、TUI 実行前判定、INDEX.md エントリー生成などで、エージェントに何を渡し、どの制約で、どの形式の出力を求めるかを確認するための領域。
 
 ## Read this when
-- cmoc の各機能が AI agent を呼び出す際に渡す role、summary、goal、対象本文、差分、補助入力、ファイルアクセス条件、モデル、reasoning effort、Structured Output schema の対応を確認・変更したいとき。
-- apply 後段処理、oracle review、session join、TUI 実行前判定、INDEX.md エントリー生成など、特定用途ごとの agent call parameter 構築と出力契約を追いたいとき。
-- AI agent 用 prompt に含めるファイルアクセス規則、INDEX.md ルーティング規則、oracle/realization の基本概念、oracle/review/apply/INDEX エントリー向け標準文書の生成内容や注入条件を確認・変更したいとき。
-- 新しい agent 呼び出し用途や新しい標準 prompt 部品を追加する際に、既存の完全 prompt 組み立て、標準文書の依存関係、読み書き制約の渡し方に合わせたいとき。
+- cmoc の機能が AI エージェントを呼び出す際の入力埋め込み、プロンプト構成、ファイルアクセス条件、モデル・reasoning effort、Structured Output schema への接続を確認・変更したいとき。
+- apply 後段処理、oracle review、session join の conflict 解消、TUI 実行前判定、INDEX.md エントリー生成など、用途別の agent call parameter を追いたいとき。
+- oracle file、realization file、ファイルアクセス規則、INDEX.md ルーティング、レビュー基準、INDEX エントリー規範などが、ACP 向けプロンプト本文としてどう生成・統合されるかを調べたいとき。
 
 ## Do not read this when
-- CLI 引数解析、サブコマンド全体の実行順序、外部プロセス起動、git 操作、fork 作成・統合、生成結果の保存など、agent 呼び出しパラメータ構築の外側を調べたいとき。
-- StructDoc、Standard、Requirement、AgentCallParameter、path 解決などの共通データ構造や基盤 helper そのものの定義を確認したいだけのとき。
-- oracle file や realization file の正本仕様・実装本文を読みたいとき、またはレビュー判断基準の内容を利用して対象ファイルを直接評価したいとき。
-- 実際の差分生成、変更ファイル抽出、merge conflict marker 検出、CLI 状態管理、テスト fixture など、prompt に渡す材料を作る側の詳細を調べたいとき。
+- CLI サブコマンド全体の実行順序、引数解析、git 操作、フォーク作成・統合、merge conflict marker 検出、生成結果の保存など、エージェント呼び出しパラメータ構築の外側を調べたいとき。
+- oracle file や realization file の標準文書本文そのもの、レビュー判断基準そのもの、汎用データ型、パス解決 helper、構造化ドキュメント表現だけを確認したいとき。
+- 外部エージェントとの通信処理、状態管理、テスト、または生成済みプロンプトを使う側の実装を調べたいとき。
 
 ## hash
-- 932f36ce16d4c74fca3ff02e70d929a7b2b8749c54ba7b14b5dceb088e3a701e
+- 8ef3ba634d84776ae73dce485dc46aa80129cf11198400c6364399870331d591
 
 # `basic`
 
 ## Summary
-- cmoc の実装全体から共有される基礎データ型と小さな変換処理を集めた領域。エージェント呼び出しの論理パラメータ、root token 付きパス表記と実パス解決、規範文書を表す構造、階層化された自然言語文書の Markdown 生成部品を扱う。
-- 外部コマンド実行、CLI サブコマンドの制御、具体的なバックエンド向け変換、個別仕様本文ではなく、それらの上位処理から参照される共通モデルと文書組み立て部品への入口になる。
+- cmoc の realization implementation のうち、複数の上位処理から共有される基礎データ構造と変換部品を集めた領域。エージェント呼び出しパラメータ、root token 付きパス解決、規範文書モデル、構造化 Markdown 生成といった、CLI 個別処理より下位の共通概念を扱う。
+- ここにある各実装は、具体的なサブコマンドや外部バックエンド呼び出しそのものではなく、それらが参照する論理入力、パス表記、文書表現、レンダリングの基盤として読む入口になる。
 
 ## Read this when
-- cmoc 内部で共有する論理的なエージェント呼び出しパラメータ、モデル区分、reasoning effort、ファイルアクセス区分の保持形式を確認または変更したいとき。
-- `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` の意味、探索条件、root token 表記と絶対パスの相互変換、相対パス拒否などのパス解決境界を確認したいとき。
-- oracle standard や realization standard のような規範を、背景・要求・判断例を持つ構造として保持し、構造化文書へ変換する処理を確認したいとき。
-- 見出し階層、本文文字列、コードブロックから Markdown を生成する基本部品や、三重引用文字列の正規化、空行圧縮の挙動を確認したいとき。
-- 上位機能の実装で、まず共有プリミティブ側の型・例外条件・責務境界を確認する必要があるとき。
+- cmoc 内部で共有される基本型、列挙、データ構造、または Markdown 文書生成部品の責務境界を確認・変更したいとき。
+- エージェント呼び出しの論理パラメータ、root token 表記の実パス解決、規範文書の構造化、階層文書の Markdown 化のいずれかに関わる実装を探すとき。
+- CLI 個別コマンドや realization 側の上位処理を読む前に、それらが前提にしている共通モデルや入力仕様を確認したいとき。
 
 ## Do not read this when
-- CLI サブコマンドごとの引数処理、実行フロー、入出力 schema、永続状態操作を調べたいとき。
-- バックエンドが受理する具体的なモデル名、権限指定、外部コマンド呼び出し形式への変換ロジックを調べたいとき。
-- プロンプト本文のテンプレート、タスク種別ごとの文章生成、Structured Output schema ファイル自体の内容を確認したいとき。
-- 個別の正本仕様断片や規範本文そのものを読みたいとき。ここでは規範を表す実装部品だけを扱う。
-- 既存 Markdown の解析、ファイル探索、INDEX.md 生成、oracle file と realization file の分類など、共有モデルを使う側の具体的な機能を調べたいとき。
+- 個別サブコマンドの実行フロー、CLI 引数、出力 schema、外部コマンド呼び出し、永続状態管理を直接調べたいとき。
+- oracle file の正本仕様断片そのもの、各規範の具体的な要求文、または既存 Markdown 文書の本文内容を確認・変更したいとき。
+- ファイル内容の読み書き、INDEX.md 生成、oracle file と realization file の分類など、基礎モデルを利用する上位処理だけを調べたいとき。
 
 ## hash
-- 69cdd9fa789cc919411103bc3418deb681bfe2f40a7a138b0cf78eff94af9798
+- 7f1c5fac1be83faa722d59f44307c9adbd03556e3e2cee68a70a6dc612da77c9
 
 # `cmoc_runtime.py`
 

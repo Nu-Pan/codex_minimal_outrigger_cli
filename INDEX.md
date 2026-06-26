@@ -148,26 +148,23 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体を収める領域。公開 CLI 入口、サブコマンド実行、session/apply/review/indexing/TUI の workflow、Codex 呼び出し runtime、Git・設定・状態・ログ・path・エラー処理の共通 helper、AI agent に渡す prompt と Structured Output 契約、共有データ型とリポジトリ別設定を扱う。
-- 正本仕様ではなく、oracle file で述べられた意図を具体化する実装本文への入口であり、上位コマンドの挙動、共通 runtime 基盤、agent call parameter 構築、基礎モデルのどれを読むべきか切り分けるための分岐点になる。
+- cmoc の realization implementation 全体の入口。Typer 製 CLI 入口、サブコマンド実装、共有 runtime helper、設定モデル、基礎データ構造、ACP 向けエージェント呼び出しパラメータ構築など、実行可能な本体コードを責務別に分けて扱う。
+- 利用者が実行する init、tui、indexing、review、apply、session 系の上位 workflow と、それを支える Git・設定・path・state・Codex 呼び出し・Structured Output・Markdown 文書生成などの共通実装へ進むための分岐点になる。
 
 ## Read this when
-- cmoc の CLI コマンド構成、サブコマンドの実行順序、利用者向け出力、終了条件、branch・worktree・state・report・cleanup の扱いを確認または変更したいとき。
-- Codex CLI/TUI を cmoc から呼び出す経路、profile・schema 準備、Structured Output 検証、quota/capacity 処理、resume、call log、indexing preflight などの runtime 制御を追いたいとき。
-- AI agent に渡す role、goal、補助入力、対象本文、差分、ファイルアクセス条件、モデル、reasoning effort、標準 prompt 部品、出力 schema の対応を確認または変更したいとき。
-- cmoc 全体で共有される AgentCallParameter、ModelClass、FileAccessMode、root token 付き path 表現、StructDoc、Standard、Requirement、リポジトリ別設定 dataclass などの実装上の型・変換処理を調べたいとき。
-- Git 操作、設定ファイル入出力、内容 hash、共通エラー表示、JSON Lines ログ、永続 session state、外部コマンド結果など、複数の上位機能から使われる共通 helper の責務境界を確認したいとき。
-- INDEX.md 生成、oracle review、apply fork/join/abandon、session fork/join/abandon、初期化、TUI 起動など、利用者が実行する機能の実装本文へ進む入口を探したいとき。
+- cmoc の実装側で、CLI コマンド構成、サブコマンドの実行フロー、runtime 共通基盤、設定項目、基本モデル、またはエージェント呼び出し用 prompt/schema 構築のどこを読むべきか切り分けたいとき。
+- 公開 CLI 入口から個別 command への委譲、apply・session・review oracle・INDEX 生成・TUI 起動・init などの実装責務を追いたいとき。
+- Codex CLI 呼び出し、Git/worktree/state/log/config/path/hash/error report など、複数機能から共有される runtime helper と上位処理の接続を確認または変更したいとき。
+- oracle file や realization file の概念、root token 付き path 解決、規範文書モデル、階層 Markdown 生成、AgentCallParameter など、複数領域が前提にする共通データ構造や変換部品を探すとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片、oracle standard、realization standard、review 判断基準そのものを読みたいとき。この領域は仕様本文ではなく、それを具体化する実装を扱う。
-- テストケース、fixture、期待される外部挙動の検証観点を確認したいだけのとき。実装の制御フローや責務分担を読む必要がなければ、realization test 側を読む方が直接的である。
-- 生成済みの実行ログ、report、session state、worktree 内成果物、設定ファイルの実データなど、実行時に作られた個別の保存物を確認したいとき。ここではそれらを生成・読み書きする実装だけを扱う。
-- 既に対象のサブコマンド、runtime helper、agent prompt builder、基礎モデル、設定モデルが特定できているときは、この領域全体ではなく該当する下位対象を直接読む方が適切である。
-- INDEX.md エントリーだけを更新するために既存ルーティング文書を参照したいとき。エントリー生成では対象本文を根拠にし、既存 INDEX.md を本文代替として扱わない。
+- 正本仕様断片そのもの、oracle 標準文書、path keyword の仕様本文、INDEX.md 生成規則やレビュー基準の原文を確認したいとき。その場合は oracle 側の該当文書を読む。
+- 実装ではなくテスト観点、fixture、期待される外部挙動の検証だけを確認したいとき。その場合は test 側を読む。
+- リポジトリ設定ファイル、README、補助スクリプト、生成物、または realization ancillary を調べたいだけで、実装本体の責務分担を読む必要がないとき。
+- 対象の下位領域やファイルが既に特定できており、CLI 入口、共通 runtime、設定モデル、基本モデル、ACP、または個別サブコマンドのいずれかへ直接進めば足りるとき。
 
 ## hash
-- d1cdfb6f124e8716838c21b36fec802120cfc12693aa013dc00685102f2599c5
+- 78829aebae8b890ce6c6aca555bf9dbc996330363551c5ca50221dfed88eab64
 
 # `test`
 

@@ -144,23 +144,21 @@
 # `realization_standard.py`
 
 ## Summary
-- realization file の品質基準を StructDoc として組み立てる prompt part。実装・テスト・依存・公開面・コメント・責務分割・完了時点検を、realization file の肥大化抑制と保守性向上という観点から一つの規範集合にまとめている。
-- 各基準は相互参照される前提で同時に読む構成になっており、単独の細目ではなく realization file 全体を最小で明確に保つための判断材料を提供する。
+- realization file の品質基準を StructDoc として組み立てる prompt part。規模最小化、責務分割、コメント、抽象化、公開面、テスト、依存関係、完了時点検をまたぐ一連の Standard をまとめ、実装担当 AI に realization code を最小で保守しやすく保つための規範集合を渡す。
+- 対応する oracle file を根拠にした realization standard 全体の本文生成を担い、各 Standard が相互参照されるため単一の prompt 本文として読む前提になっている。
 
 ## Read this when
-- realization file や realization code の品質基準を prompt として生成・変更・確認したいとき。
-- 実装追加時の重複削減、旧仕様削除、抽象化の可否、公開面や永続状態の増加抑制、テスト肥大化抑制に関する基準を確認したいとき。
-- コメントや docstring に何を書くべきか、または冗長なコメントを避ける基準を確認したいとき。
-- 大きな realization file を分割すべきか、凝集性を理由に一体で保つべきかを判断する prompt 側の規範を確認したいとき。
+- realization file や realization test を追加・変更・整理する際に、文字数削減、重複排除、旧仕様削除、責務境界、コメントの要否、抽象化の妥当性、公開面や依存関係の増加抑制を判断したいとき。
+- ACP の prompt parts のうち、実装成果物に求める品質基準や完了前チェックを生成する箇所を確認・変更したいとき。
+- realization standard の StructDoc に含める要求、背景、判断例の内容や順序を確認したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様としての扱い、人間責任、仕様断片の書き方を確認したいだけのとき。
-- 実際の CLI コマンド挙動、入出力 schema、状態ファイル形式など、個別機能の実装詳細を調べたいとき。
-- StructDoc や Standard のデータ構造そのもの、または standard 変換処理の実装を調べたいとき。
-- INDEX.md エントリー生成規則やルーティング文書の記述基準を確認したいだけのとき。
+- oracle file 一般の責務、人間と AI の編集責任、正本仕様断片の扱いを確認したいだけのとき。
+- realization standard 以外の prompt part、ACP 通信処理、CLI コマンド、状態管理、または個別機能の実装挙動を調べたいとき。
+- Standard や Requirement のデータ構造、StructDoc への変換処理そのものを確認したいとき。
 
 ## hash
-- 33750997924b6fd92999352125680450d9eeb680d6ddd2bb9ccb3874935ed98a
+- 95b76e4c75574d6c0dd870cd2bd0dfd1bb385d137af3edd1e8db8ea91f07899d
 
 # `routing_rule.py`
 
