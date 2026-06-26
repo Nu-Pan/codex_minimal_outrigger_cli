@@ -50,6 +50,31 @@ def test_session_fork_creates_session_branch_and_state(
     assert state["apply"]["state"] == "ready"
 
 
+def test_session_fork_initializes_cmoc_ignore_before_logging(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    home_branch = current_branch(root)
+
+    result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    branch = current_branch(root)
+    assert branch.startswith("cmoc/session/")
+    assert session_home_branch(root, branch) == home_branch
+    assert not (root / ".gitignore").exists()
+    assert (
+        subprocess.run(
+            ["git", "check-ignore", "-q", ".cmoc/.__cmoc_ignore_probe__"],
+            cwd=root,
+        ).returncode
+        == 0
+    )
+    assert len(list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))) == 1
+    assert run_git(root, "status", "--short").stdout.strip() == ""
+
+
 def test_session_fork_uses_linked_worktree_branch_and_head(
     tmp_path: Path, monkeypatch
 ) -> None:

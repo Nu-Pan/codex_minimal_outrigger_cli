@@ -13,8 +13,7 @@ from cmoc_runtime import (
     work_root,
 )
 
-# init だけはログ作成前に work root の .cmoc ignore を保証する。
-# その副作用を利用者の .gitignore 復元ロジックから見分けるため、元状態を一時保持する。
+# ログ作成前の .cmoc ignore 保証による副作用を、利用者の .gitignore 復元ロジックから見分ける。
 _PRE_LOG_GITIGNORE_STATES: dict[Path, tuple[bool, str | None]] = {}
 
 

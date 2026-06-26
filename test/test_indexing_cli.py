@@ -1,4 +1,3 @@
-import json
 import subprocess
 import threading
 import time
@@ -100,17 +99,8 @@ def test_indexing_uninitialized_clean_repo_fails_without_non_index_diff(
     assert "cmoc init を実行してから再実行してください。" in result.stdout
     assert not (root / ".gitignore").exists()
     assert not (root / "INDEX.md").exists()
-    log_paths = list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))
-    assert len(log_paths) == 1
-    events = [json.loads(line) for line in log_paths[0].read_text().splitlines()]
-    assert [event["event"] for event in events] == [
-        "command_invoked",
-        "step_started",
-        "command_finished",
-    ]
-    assert events[1]["step"] == "pre_log_check"
-    assert events[-1]["returncode"] == 1
-    assert run_git(root, "status", "--short").stdout.strip() == "?? .cmoc/"
+    assert not (root / ".cmoc").exists()
+    assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
 def test_indexing_targets_current_linked_worktree(

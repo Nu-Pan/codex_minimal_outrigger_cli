@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import typer
 
 from cmoc_runtime import (
@@ -5,7 +7,6 @@ from cmoc_runtime import (
     SessionState,
     active_session_for_home,
     current_branch,
-    ensure_cmoc_ignored,
     head_commit,
     is_managed_branch,
     repo_root,
@@ -30,8 +31,8 @@ def cmoc_session_fork_impl() -> None:
             ["通常の local branch に checkout してから再実行してください。"],
             f"current branch: {branch}",
         )
+    ensure_cmoc_ignored_for_session_fork(work)
     require_clean_worktree(work)
-    ensure_cmoc_ignored(work)
     existing = active_session_for_home(root, branch)
     if existing:
         raise CmocError(
@@ -62,6 +63,32 @@ def cmoc_session_fork_impl() -> None:
 def cmoc_session_fork_command_impl() -> None:
     run_cli_subcommand(
         cmoc_session_fork_impl,
+        pre_log_check=ensure_cmoc_ignored_for_session_fork,
         command_name="session fork",
         command_argv=["cmoc", "session", "fork"],
+        use_work_root_runtime=True,
     )
+
+
+def ensure_cmoc_ignored_for_session_fork(root: Path) -> None:
+    # session fork は clean worktree を保ったまま、ログ作成前に .cmoc を ignore する必要がある。
+    exclude_path = root / run_git(
+        ["rev-parse", "--git-path", "info/exclude"], root
+    ).stdout.strip()
+    content = exclude_path.read_text() if exclude_path.exists() else ""
+    if "/.cmoc/" not in content.splitlines():
+        exclude_path.parent.mkdir(parents=True, exist_ok=True)
+        newline = "" if content == "" or content.endswith("\n") else "\n"
+        exclude_path.write_text(f"{content}{newline}/.cmoc/\n")
+    tracked = run_git(["ls-files", "--", ".cmoc"], root).stdout.strip()
+    ignored = run_git(
+        ["check-ignore", "-q", ".cmoc/.__cmoc_ignore_probe__"],
+        root,
+        check=False,
+    )
+    if tracked or ignored.returncode != 0:
+        raise CmocError(
+            ".cmoc を git 追跡対象外にできませんでした。",
+            [".gitignore と git index の状態を確認してください。"],
+            f"tracked:\n{tracked}\ncheck-ignore returncode: {ignored.returncode}",
+        )
