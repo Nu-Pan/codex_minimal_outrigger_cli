@@ -148,26 +148,23 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体への入口。AI agent 呼び出しパラメータ構築、基礎モデル、共通 runtime helper、リポジトリ設定、Typer CLI 入口、利用者向けサブコマンド実行本体など、プロダクト挙動を具体化する実装領域を束ねる。
-- 下位には、プロンプト部品と AgentCallParameter を組み立てる領域、ModelClass・FileAccessMode・path model・StructDoc などの基礎抽象、Codex 実行・Git・config・logging・state などの共通 runtime、設定値定義、最上位 CLI 登録、session/apply/review/index/TUI の各サブコマンド実装がある。
-- oracle file で述べられた人間意図を実装として追うときの出発点であり、CLI 入口から個別コマンド、共通 helper、agent call parameter builder、基礎データ構造へ読む先を切り分けるための階層である。
+- `src` は cmoc の realization implementation を配置する実装本体の入口であり、CLI 入口、利用者向けサブコマンド、AI agent 呼び出しパラメータ構築、共通 runtime helper、リポジトリ設定、基礎モデルを下位に分けて扱う。
+- 下位対象は、Typer による公開コマンド登録、session/apply/review/indexing/TUI の実行制御、Codex CLI 実行・Git・path・state・logging などの共通処理、prompt 生成、設定値、構造化文書やパス語彙のモデルへ進むための分岐点になる。
 
 ## Read this when
-- cmoc の実装側で、公開 CLI、サブコマンド実行、Codex 呼び出し、設定、状態、Git 操作、path 解決、ログ、エラー、Structured Output schema、prompt 構築のどこを読むべきか切り分けたいとき。
-- oracle file の要求が realization implementation のどの領域で具体化されているかを調査し、実装変更や不具合修正の入口を探すとき。
-- 新しい機能や挙動変更が、CLI 登録、個別サブコマンド本体、共通 runtime helper、agent call parameter builder、基礎モデル、設定定義のどこに属するか判断したいとき。
-- session、apply、review、INDEX maintenance、Codex TUI 起動など、利用者向け操作の実行フローと、それを支える共通処理や agent 呼び出し条件の関係を追いたいとき。
-- realization implementation 内の責務境界を確認し、同じ責務の既存実装を探してから修正・追加・削除・統合を行いたいとき。
+- cmoc の実装側で、どのサブディレクトリまたは入口ファイルから読み始めるべきか判断したいとき。
+- CLI コマンド構成、サブコマンド実行本体、AI agent call parameter、共通 runtime helper、設定モデル、基礎データ構造のどの領域に責務があるか切り分けたいとき。
+- oracle file で述べられた正本仕様断片に対して、realization implementation がどこで具体化されているかを探したいとき。
+- 新しい実装を追加または既存実装を変更する前に、同じ責務や近い責務を持つ既存コードの所在を確認したいとき。
 
 ## Do not read this when
-- 正本仕様断片としての要求、oracle/realization の概念定義、path キーワードの仕様、INDEX.md エントリー品質基準などを確認したいだけのときは、実装ではなく oracle 側の本文を読む。
-- テスト期待値や外部挙動の検証観点だけを確認したいときは、対応する realization test を読む方が直接的である。
-- README、補助スクリプト、パッケージ設定、gitignore など、実装ソース以外の補助ファイルや配布・開発環境の設定を調べたいとき。
-- 既に読むべき下位領域が明確で、CLI 入口、特定サブコマンド、共通 runtime、agent parameter builder、基礎モデル、設定定義のいずれかを直接読めば足りるとき。
-- oracle file の編集提案や正本仕様の妥当性確認を行うときに、実装だけを根拠として仕様を導きたい場合。この階層は realization implementation であり、正本仕様そのものではない。
+- 正本仕様断片そのもの、oracle/realization の概念定義、INDEX.md 品質基準、path キーワードの仕様説明を確認したいときは、実装ではなく oracle 側の本文を読む。
+- テスト期待値、fixture、外部挙動の検証観点だけを調べたいときは、対応する test 側を読む。
+- リポジトリ全体の補助ファイル、配布設定、開発用設定、生成物やキャッシュの所在を探しているだけなら、実装本体ではなく該当する同階層の対象へ進む。
+- 既に読むべき下位領域が CLI 入口、サブコマンド、共通 runtime、agent parameter builder、基礎モデル、設定のいずれかに絞れている場合は、この階層に留まらず該当する下位対象へ直接進む。
 
 ## hash
-- 9f828f3f88dba4916169e9e0cfd5c617e78ef4987088a15c5e2fa59bc6bb4d4d
+- efac085cfedb7eb1235fb75a15d442af1cd60621d1907dbbf1ce04f024b98955
 
 # `test`
 
