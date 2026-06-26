@@ -24,24 +24,26 @@
 # `indexing.py`
 
 ## Summary
-- 作業ツリー内のルーティング目次を保守するサブコマンド実装。実行前条件の検査、排他 lock、目次対象の列挙、既存エントリーの再利用判定、Codex による不足エントリー生成、更新差分の commit までを扱う。
-- 目次生成の対象から memo、git ignore、隠し項目、binary、既存の目次ファイルを除外し、対象内容の hash によって再生成要否を決める。
-- Structured Output から目次エントリー Markdown を組み立て、必須セクションと hash 形式を満たす既存エントリーだけを鮮度判定に利用する。
+- CLI 実行前後および Codex 呼び出し前の preflight として、INDEX.md の生成・更新・commit を行う indexing サブコマンドの実装を担う。
+- 対象ディレクトリと子要素の列挙、既存エントリーの鮮度判定、Codex による不足エントリー生成、Markdown への描画、排他 lock、git commit までの一連の保守フローを扱う。
+- バイナリ、git ignore 対象、ルート直下の memo を除外しながら、深い階層から順にルーティング文書を再構築する処理の入口になる。
 
 ## Read this when
-- 目次保守サブコマンドの実行フロー、preflight 登録、clean worktree などの実行前条件を確認したいとき。
-- どのディレクトリやファイルが目次生成対象になるか、対象除外条件、hash 計算、深い階層からの更新順を調べたいとき。
-- 既存目次エントリーの parse、必須セクション検証、Structured Output からの Markdown 生成、Codex 呼び出し失敗時の扱いを変更したいとき。
-- 目次更新差分を git add/commit する条件や、同時実行を防ぐ lock file の扱いを確認したいとき。
+- INDEX.md の自動生成・再生成・commit の流れを変更したいとき。
+- indexing サブコマンドの CLI 実行条件、preflight 登録、worktree clean 要件、排他制御を確認したいとき。
+- INDEX.md の対象に含めるファイルやディレクトリの判定、除外条件、ハッシュによる鮮度判定を調べたいとき。
+- 既存エントリーのパース、必須セクション検証、Structured Output から Markdown エントリーを作る処理を変更したいとき。
+- Codex にエントリー生成を依頼する入力内容、並列生成数、設定読み込みとの関係を追いたいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジックや CLI 引数全体の定義を探しているだけなら、該当するサブコマンド実装や CLI 登録側を読む。
-- Codex 呼び出し用 parameter の具体的な prompt 構築を変更したい場合は、builder 側のエントリー生成 parameter 実装を読む。
-- path keyword の意味、work root や repo root の定義そのものを確認したい場合は、path model や runtime 側の path 解決実装を読む。
-- 目次エントリー本文の望ましい書き方や仕様判断を確認したいだけなら、正本仕様文書を読む。
+- 個別のサブコマンド実装や CLI ルーティング全体だけを調べたい場合は、より上位のサブコマンド登録箇所や対象サブコマンドを読む。
+- INDEX.md エントリー生成プロンプトや AgentCallParameter の詳細を変更したい場合は、エントリー生成パラメータを組み立てる builder 側を読む。
+- git 実行、設定読み込み、work root 解決、ignore 判定、ハッシュ計算などの共通 runtime helper 自体の仕様を確認したい場合は、それぞれの共通実装を読む。
+- Codex 実行前 preflight の共通登録機構や呼び出しタイミングを変更したい場合は、preflight 管理側を読む。
+- 生成された INDEX.md の内容そのものを確認したいだけの場合は、対象階層のルーティング文書を読む。
 
 ## hash
-- cc5fcceee8b98c869e9abc5472d39f82e218ab00c62e7999912c4bee7105176f
+- 793c684c28c491b20cb24fabbab9c11fcf0f4ce7ff0099d6ab1866397cdc0980
 
 # `init.py`
 
