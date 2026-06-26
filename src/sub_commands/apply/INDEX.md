@@ -61,44 +61,47 @@
 # `fork.py`
 
 ## Summary
-- apply fork サブコマンドの実行本体を担う実装。session branch 上で isolated apply worktree を作成し、scope に応じた対象列挙、Codex による finding 列挙と適用、変更の commit、report 作成、state と process id の更新・後始末までの制御フローを扱う。
-- apply 中に編集禁止対象へ差分が出た場合の検出、ロールバック、再実行、失敗時エラー化を含み、apply fork の安全制約と収束判定に関わる helper もこの対象にまとまっている。
-- finding 適用後の commit subject 生成、Codex 出力の commit message 正規化、変更 path や apply 対象 file の正規化、rolling/session/full scope ごとの対象抽出、直近 join 済み apply merge commit の解決を扱う。
+- apply fork サブコマンドの実行本体を担う実装。session branch 上で isolated apply worktree を作成し、scope に応じた対象列挙、Codex による finding 列挙と適用、禁止対象差分のロールバック、apply commit 作成、レポート作成、状態更新、終了コード決定までの apply loop を扱う。
+- apply 対象の正規化、変更 path の収集、直近 join commit の推定、commit subject 生成など、apply fork の制御フローに密接な helper も同じ単位にまとまっている。
 
 ## Read this when
-- apply fork の起動条件、session state の遷移、apply branch/worktree の作成、process id の記録・削除、成功・失敗時の report 出力を確認または変更したいとき。
-- apply fork がどの file を調査対象にするか、scope ごとの対象範囲、oracle・INDEX.md・binary・git ignored file・編集禁止領域の除外条件を確認したいとき。
-- Codex による finding 列挙、finding 適用、編集禁止差分の rollback と再試行、適用後 commit の作成という apply loop の制御を追いたいとき。
-- apply fork の収束・未収束判定、未収束時の終了コード、finding count、result_label、CLI 表示内容に関わる挙動を調べるとき。
-- apply finding から git commit subject を生成する prompt、Codex 出力を 1 行 commit message に丸める fallback 挙動を確認したいとき。
+- apply fork の開始条件、session state の検証、apply 用 worktree・branch・process id・state のライフサイクルを確認したいとき。
+- apply fork の scope が rolling、session、full の各場合にどのファイルを finding 列挙対象にするかを確認したいとき。
+- Codex による finding 列挙、finding 適用、変更検出、commit message 生成、commit 作成、収束判定、unconverged 終了の流れを変更・調査したいとき。
+- apply fork 中に oracle、.agents、memo などの編集禁止対象へ差分が出た場合の検出、ロールバック、再実行、エラー化の挙動を調べたいとき。
+- apply fork の成功・失敗時に report、apply state、process id、CLI 出力、戻り値がどう扱われるかを確認したいとき。
 
 ## Do not read this when
-- apply fork のレポート本文の書式や保存内容だけを確認したい場合は、report 生成を担当する対象へ進む方がよい。
-- Codex に渡す finding 列挙用または finding 適用用 parameter の詳細だけを確認したい場合は、builder 側の対象へ進む方がよい。
-- apply fork 以外の apply サブコマンド、CLI command 登録、または一般的な runtime helper の実装を調べたいだけなら、より直接の対象へ進む方がよい。
-- oracle の正本仕様そのものや path keyword の定義を確認したい場合は、実装ではなく該当する oracle 側の対象を読むべき。
-- INDEX.md 生成・更新の一般規則やルーティング文書の方針を確認したいだけなら、この apply fork 実行制御ではなく仕様・文書生成側の対象を読む方がよい。
+- apply fork のレポート本文の生成内容や Markdown 出力の詳細だけを調べたいときは、レポート生成側を読む。
+- Codex に渡す finding 列挙用または finding 適用用の prompt・AgentCallParameter の詳細だけを調べたいときは、builder 側を読む。
+- apply join、apply abandon など apply fork 以外の apply サブコマンドの制御フローを調べたいときは、それぞれのサブコマンド実装を読む。
+- worktree 作成、git 実行、状態ファイル読み書き、config 読み込みなど runtime 共通処理の低レベル挙動だけを調べたいときは、runtime 側を読む。
+- INDEX.md 生成、oracle 文書の仕様、または一般的な realization 品質基準を調べたいだけなら、この実装ではなく正本仕様や対象の文書を読む。
 
 ## hash
-- e4de887c4b01a0187891e7fae1fc79fde0f656f664bc4060550dcd45e112cdf1
+- 9ad76bf357eac65e10409281458d6090bc174bb4651d5dfa1ceb674c4fdb66f1
 
 # `fork_report.py`
 
 ## Summary
-- apply fork の実行結果レポートを生成する実装。通常終了・エラー終了のレポート作成、実装差分の要約生成、要約生成失敗時の changed path fallback、Markdown と YAML frontmatter の描画を担当する。
+- apply fork の実行結果または失敗結果を、YAML frontmatter 付き Markdown report として保存する処理を扱う。
+- fork 起点からの git diff を集め、Codex による変更要約を試み、失敗時や空差分時は変更 path ベースの fallback 要約を生成する。
+- report には session/apply branch、fork commit、apply worktree、結果ラベル、所見数推移、変更要約を含める。
 
 ## Read this when
-- apply fork 後に保存されるレポートの内容、保存先、frontmatter、Result・Finding Count・Change Summary の出力を確認または変更したいとき。
-- apply fork の差分要約を Codex 実行結果から組み立てる処理、差分がない場合の文言、要約生成に失敗した場合の fallback 挙動を確認したいとき。
-- fork commit からの変更 path 収集や、staged/unstaged diff をレポート用に扱う制御を確認したいとき。
+- apply fork の完了時・失敗時に生成される report の内容、保存先、生成タイミングを確認したいとき。
+- apply fork の差分取得範囲、未コミット差分、staged 差分、fork commit が無い場合の扱いを確認したいとき。
+- apply fork の変更要約生成で Codex 実行を呼ぶ箇所、構造化要約が空または例外になった場合の fallback 挙動を変更したいとき。
+- report の result 表示文、finding count の列挙、change summary の Markdown 描画を変更したいとき。
 
 ## Do not read this when
-- apply fork のループ実行、worktree 作成、branch 操作、状態更新そのものを確認したいだけのとき。
-- 差分要約プロンプトや構造化出力パラメータの定義を確認したいとき。
-- 生成済みレポートを読むだけで、レポート生成ロジックや fallback 挙動を変更しないとき。
+- apply fork のループ制御、所見検出、収束判定そのものを確認したいだけのとき。
+- apply fork 用の変更要約プロンプトや structured output parameter の詳細を確認したいとき。
+- git 実行 helper、timestamp、reports directory の共通 runtime 実装を確認したいとき。
+- apply 以外のサブコマンド report 生成や、一般的な report 保存規約を確認したいとき。
 
 ## hash
-- fac29034274e0665667ef6dcc6dd9f738abcdb3e77d2b6f5a34924f00b7fd3aa
+- 31f7ed1870c8087c24f1b489b1a8bbe1d4458668e1ba212d6a0441870c257427
 
 # `join.py`
 

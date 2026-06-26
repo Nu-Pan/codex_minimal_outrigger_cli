@@ -147,48 +147,45 @@
 # `src`
 
 ## Summary
-- cmoc の実行実装を収める realization implementation 領域。Typer による CLI 入口、init・tui・indexing・review oracle・apply・session などのサブコマンド制御、Codex CLI 呼び出し、Git/worktree/state/config/log/path/error などの共有 runtime、AI agent 呼び出し用パラメータと prompt 構築、共通データ型を扱う。
-- 下位要素は、公開 CLI の配線、サブコマンド単位の業務フロー、共有 runtime helper、設定 dataclass、root token/path や AgentCallParameter などの基礎モデル、用途別 ACP builder と標準 prompt part へ分かれるため、cmoc の実装変更で読む先を選ぶ入口になる。
+- cmoc の realization implementation 全体を収める実装ルート。最上位 CLI 入口、サブコマンド実行本体、共通 runtime helper、設定 dataclass、エージェント呼び出しパラメータ構築、共有基礎モデルなど、利用者向け挙動を具体化する Python 実装を扱う。
+- 下位要素は、CLI 登録と dispatch、サブコマンド単位の実行フロー、Codex/Git/config/path/state/log などの共通ランタイム、AgentCallParameter と prompt 構築、root token や構造化文書などの基礎部品、リポジトリ別設定定義、互換 import 入口に分かれる。
 
 ## Read this when
-- cmoc の CLI コマンド、サブコマンド実行順序、引数から実装関数への委譲、利用者向け通常出力やエラー出力を確認・変更したいとき。
-- session fork/join/abandon、apply fork/join/abandon、review oracle、indexing、tui、init の実装フロー、事前条件、Git 操作、worktree 操作、state 更新、report 生成、cleanup を調べたいとき。
-- Codex exec/TUI の起動、profile/schema 準備、Structured Output 検証、capacity/quota retry、resume、call log、subprocess 実行など、AI agent 呼び出しの runtime 制御を確認したいとき。
-- AgentCallParameter、モデル区分、reasoning effort、ファイルアクセスモード、root token 付きパス解決、構造化 Markdown 生成、cmoc 設定 dataclass など、複数機能から参照される実装上の共通モデルを確認したいとき。
-- 用途別の AI agent prompt と Structured Output schema、oracle/realization の標準説明、file access rule、routing rule、INDEX.md エントリー生成 rule などが agent 呼び出しにどう組み込まれるかを調べたいとき。
-- 設定ファイル入出力、session state の JSON 永続化、`.cmoc` 配下のログ・レポート・worktree・config の配置、Git ignore 条件や clean worktree 条件を実装側から追いたいとき。
+- cmoc の実装コードを調査・変更する必要があり、CLI 入口、サブコマンド本体、共通 runtime、agent 呼び出し構築、設定定義、基礎モデルのどこへ進むべきかを切り分けたいとき。
+- 利用者が実行する command から、実装関数、共通 helper、Codex 呼び出し、Git 操作、state/config/log/path 処理、review/apply/session/indexing などの処理へどう接続されるかを追いたいとき。
+- oracle file で述べられた人間意図が、実際の CLI 挙動、永続状態、外部コマンド実行、Structured Output 検証、prompt 構成、設定既定値としてどのように具体化されているか確認したいとき。
+- 新しい実装を追加する前に、既存の同種責務が CLI 層、サブコマンド層、共通 runtime、agent parameter builder、基礎モデル、設定定義のどこにあるかを探したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様本文、標準規範、path model などの人間所有仕様断片そのものを読みたいとき。実装ではなく仕様根拠を確認する場合は oracle 側へ進む。
-- realization test の期待挙動、fixture、テスト観点、回帰確認の具体例だけを調べたいとき。実装本文ではなくテスト側へ進む。
-- README、AGENTS、パッケージ設定、補助スクリプト、`.gitignore` など、CLI 実装本体ではない補助ファイルやリポジトリ運用面を確認したいとき。
-- 生成済みログ、session state、report、worktree、Codex call log など、実行時に作られる成果物や一時状態の内容を確認したいだけのとき。
-- 既に対象サブコマンド、runtime helper、ACP builder、基礎モデルなど読むべき下位要素が分かっているとき。この階層全体ではなく該当する下位対象へ直接進む方がよい。
+- 正本仕様断片、標準、path keyword の概念定義、oracle/realization の基本説明そのものを確認したいときは、実装ではなく oracle 側の本文を読む。
+- realization test の期待挙動、テスト fixture、回帰確認の観点だけを調べたいときは、テスト領域へ直接進む。
+- README、AGENTS、補助スクリプト、パッケージ設定、gitignore など、実装ソース以外の補助ファイルやプロジェクト設定だけを確認したいときは、この領域ではなく該当する補助対象へ進む。
+- 既に必要な下位責務が分かっており、CLI 登録、特定サブコマンド、共通 runtime、agent prompt 構築、設定 dataclass、基礎モデルなどの個別領域を直接読めば足りるとき。
 
 ## hash
-- f1add2871000bd16ad979ed731c8e3fb8fd28b37c47d96a6ab1a648bc3cba22b
+- b9a400ed14ad66154ac1a079f4c4d60e5b0347823c661856b0f516d1896962f4
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群への入口。CLI サブコマンド、Codex 実行 runtime、INDEX 更新、prompt/schema 生成、session/apply/review の外部挙動と制御ロジックを、pytest と一時 Git リポジトリ・fake Codex 実行で検証する領域である。
-- 共通 fixture と helper も含み、テスト用 Git リポジトリ、Codex home、fake 外部コマンド、session/apply worktree の状態確認を支える。実装本文ではなく、oracle file で述べられた意図が現在の realization としてどのように観測されるかを確認するための読み口になる。
-- 大きなテストファイルが複数あり、apply fork/join/abandon、review oracle、prompt 構築などは、それぞれ同じ状態 fixture・fake 応答・report 文脈を共有する外部挙動確認として凝集している。
+- cmoc の realization test 群を収める領域であり、CLI サブコマンド、Codex 実行 runtime、INDEX 更新、prompt/schema 生成、path・設定・sandbox などの利用者可視の挙動と制御ロジックを pytest で検証する。
+- 一時 Git リポジトリや fake Codex 実行ファイルを使う共有 fixture と、apply/session/review/indexing/init/tui などの領域別 realization test への入口として位置づけられる。
+- 正本仕様そのものではなく、oracle file と実装から具体化された外部挙動の回帰確認を担うため、仕様判断ではなく既存挙動・期待値・副作用の確認に使う。
 
 ## Read this when
-- cmoc の CLI サブコマンドや runtime の変更後に、利用者から見える終了コード、標準出力、report、Git 状態、永続 state、cleanup、エラー表示の期待値を確認したいとき。
-- Codex 実行 wrapper、quota/capacity retry、Codex home、profile、call log、subcommand log、TUI 起動、prompt/schema 生成の回帰観点を調べるとき。
-- INDEX 更新、indexing preflight、INDEX.md conflict 解決、hash freshness、root 直下 memo 除外と nested memo 対象化など、ルーティング文書生成周辺の実装を変更・検証するとき。
-- session や apply の fork/join/abandon、linked worktree、branch/state cleanup、dirty worktree 拒否、merge conflict、running process 停止など、Git worktree と状態遷移を伴う CLI 挙動を確認するとき。
-- review oracle の対象列挙、所見 loop、merge operation、INDEX.md 取り込み、error report、許可されない差分の拒否など、oracle review の外部挙動を確認するとき。
-- 既存テストへ観点を追加できるか、または共通 helper/fixture を使えるかを確認してから、新しい realization test を追加したいとき。
+- cmoc の実装変更に対して、対応する realization test の所在、対象サブコマンド、期待される終了コード・出力・状態更新・Git 副作用・ログ生成を確認したいとき。
+- apply fork/join/abandon、session fork/join/abandon、review oracle、indexing、init、tui、Codex runtime、prompt/schema 生成など、CLI 経由の外部挙動を変更または検証するとき。
+- Codex CLI 呼び出しの fake 化、quota/capacity retry、Codex home、profile、call log、subcommand log、structured output schema validation など、Codex runtime 周辺の回帰観点を探すとき。
+- INDEX.md 生成・preflight・hash freshness・conflict 解決・root 直下 memo 除外など、ルーティング文書更新に関する実装挙動のテスト観点を確認したいとき。
+- テスト用の最小 Git リポジトリ、認証済み Codex home、fake external command、worktree path 解決など、複数テストで共有される fixture や helper の利用・変更箇所を探すとき。
+- realization test が大きい場合に、同じ状態 fixture や外部挙動の文脈を共有するため一箇所に凝集している理由を確認したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片そのものを確認したいとき。ここは realization test であり、仕様判断の根拠は oracle 配下の本文を優先する。
-- プロダクト本体の実装責務、内部 helper の純粋な入出力、schema 定義、path model、設定 loader などを直接変更したいだけで、外部挙動の回帰確認がまだ不要なとき。
-- Codex CLI や LLM の出力品質そのものを評価したいとき。ここでは多くのケースで fake 実行や monkeypatch により cmoc 側の制御と副作用を検証している。
-- 個別サブコマンドに関係しない一般的な Python、pytest、Typer の使い方だけを調べたいとき。
-- 共通 fixture や helper を変更しないまま、特定テストケースの期待値だけが必要な場合は、対象機能に対応する個別テストへ直接進む。
+- oracle file の正本仕様断片そのもの、人間意図、仕様変更の根拠を確認したいときは、oracle 配下の該当文書を読む。
+- プロダクト本体の実装責務、内部 helper の詳細、状態モデル、path model、Git 操作実装を先に理解したいときは、src 配下の該当実装へ進む。
+- Codex CLI や LLM の出力品質そのものを評価したいとき。この領域のテストは fake 応答を使い、cmoc 側の制御と副作用を検証する。
+- 特定サブコマンドの外部挙動ではなく、一般的な pytest runner、Typer、標準ライブラリ、依存パッケージの使い方だけを調べたいとき。
+- INDEX.md エントリー生成の方針やルーティング文書の意味設計を確認したいだけで、実装済み indexing/preflight の回帰挙動を見ないとき。
 
 ## hash
-- 4a12dc06df5edf1c7cd485c1389f3ea6772cd9f3aa7c664a0fa8d55878ce5d4a
+- 5081618994776da8a1887fc8ec298d5214f42aaee12e92c34789355e824cb61b

@@ -64,25 +64,22 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 実行を通じて、所見列挙から適用、commit、変更要約、report 生成、session state 更新までの制御を検証する realization test。
-- 未収束・収束・error・dirty file 再検査・差分なし適用・調査対象なし・rolling apply fork を、同じ loop と report schema の観測結果としてまとめて扱う。
-- 16,000 文字を超えるが、apply fork report の読み取り文脈を一箇所に保つため、責務境界と期待値の凝集性を優先している。
+- apply fork の CLI 実行を通じて、所見列挙から適用、commit、変更要約、report 生成、session state 更新までの制御を検証する realization test。収束、未収束、error、dirty file 再検査、編集禁止対象の検出、rolling fork の対象選定を、同じ loop と report schema の観測結果として扱う。
+- 16,000 文字を超えるが、責務は apply fork report と再検査制御の検証に閉じており、期待値の文脈を一箇所に保つために分割しない意図が docstring に明示されている。
 
 ## Read this when
-- apply fork の CLI 終了コード、標準出力の report 参照、report 本文の result label や finding count 表示を変更・調査するとき。
-- apply fork が Codex に依頼する所見列挙、所見適用、commit message 生成、change summary 生成の呼び出し順や目的名を確認するとき。
-- apply 後に dirty file を再検査する制御、INDEX.md を再検査対象から外す制御、差分が出ない所見対応を再投入しない制御を扱うとき。
-- apply fork の成功・未収束・error の session state 更新、apply branch の commit 作成、禁止対象差分検出時の report と error state を確認するとき。
-- rolling apply fork が前回 apply join 後の oracle 変更だけを対象にする挙動を変更・調査するとき。
+- apply fork の CLI 終了コード、result label、report の内容、変更要約、commit message、session state 更新の期待挙動を確認・変更するとき。
+- apply fork が dirty file を再検査する条件、再検査対象から除外される対象、最後の調査対象が空所見だった場合の収束判定を確認するとき。
+- apply fork 中の no-op 適用、編集禁止対象への差分、未 commit 差分を含む error report の扱いを確認するとき。
+- apply join 後の rolling apply fork がどの差分だけを調査対象にするかを確認するとき。
 
 ## Do not read this when
-- apply fork の内部 helper 単体の純粋な入出力だけを確認したい場合は、対応する実装またはより小さな単体テストを直接読む。
-- apply join、session fork、init などの個別コマンド自体の仕様や一般的な挙動を調べるだけなら、それぞれの実装・テストを読む。
-- report の Markdown レンダリング一般や schema 定義そのものを調べる場合は、report 生成実装または schema 定義を読む。
-- Codex 実行基盤、AgentCallParameter、テスト用 repo 作成 helper の詳細を調べるだけなら、それぞれの支援モジュールを読む。
+- apply fork の内部 helper の純粋な単体ロジックだけを確認したいとき。CLI 実行後の外部挙動や report 観測を伴わないなら、実装側またはより小さい単位のテストを読む方が直接的。
+- apply fork 以外の subcommand、一般的な session fork/join、初期化処理そのものの挙動を調べたいとき。
+- Codex 実行結果の品質や LLM 出力内容そのものを評価したいとき。この対象は fake 応答を使って apply fork 側の制御と出力を検証している。
 
 ## hash
-- 0047dc626fd268651167b8eed7847236fbd36973838e08a577198688fbf45ee0
+- 088e836a2c195117587b48262890c4fb5deec723a260090ccbb7fcc9fdcb1aca
 
 # `test_apply_join_cli.py`
 
