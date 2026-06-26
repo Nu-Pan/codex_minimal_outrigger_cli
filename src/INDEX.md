@@ -131,24 +131,22 @@
 # `sub_commands`
 
 ## Summary
-- CLI の各サブコマンド実装へ進むための入口。session、apply、review、indexing、init、tui など、利用者向け command の実行条件、状態遷移、git/worktree 操作、出力、共通実行基盤との接続先を切り分ける。
-- 単一コマンド内で完結する処理だけでなく、review の対象列挙・loop・report・INDEX merge、apply の開始・破棄・取り込み、session の fork/join/abandon など、段階別 helper へ進む前のルーティング対象。
-- サブコマンド層は CLI から runtime helper、state helper、Codex 呼び出し parameter builder、report/index 操作へ値を渡す orchestration を担うため、外部挙動と内部 helper の接続関係を確認する起点になる。
+- CLI のサブコマンド実装を集約する領域で、初期化、INDEX 更新、TUI 起動、oracle review、session 操作、apply 操作などの利用者向け command lifecycle への入口になる。
+- 各サブコマンドは共通 runtime helper や下位 helper module を呼び出し、実行前条件の検査、branch/worktree/state の操作、Codex 呼び出し、report や stdout の生成を CLI 層として接続する。
+- apply・session のような下位ディレクトリに分かれた大きな業務領域と、review 系 helper のような段階別 module が同階層に並ぶため、どのサブコマンドまたは処理段階へ進むかを選ぶための入口になる。
 
 ## Read this when
-- 利用者が実行するサブコマンドの実行順序、前提条件、状態更新、branch/worktree 操作、stdout/report 出力をどの実装が担当するか探したいとき。
-- session fork/join/abandon、apply fork/join/abandon、oracle review、indexing、init、tui 起動のいずれかの CLI 層の責務分担を確認・変更したいとき。
-- active session、apply state、review worktree、INDEX.md 更新、merge conflict 解決、編集禁止対象の復元など、サブコマンド実行全体にまたがる制御の入口を選びたいとき。
-- Codex CLI 呼び出し、git helper、state 読み書き、report 生成、indexing preflight などの共通処理が、各サブコマンドからどの順で呼ばれるかを追いたいとき。
-- 特定サブコマンドの詳細 helper に進む前に、開始処理・後始末・失敗条件・利用者向け出力の責務境界を把握したいとき。
+- cmoc の利用者向けサブコマンドがどの実装領域に分かれているかを把握し、調査対象の command lifecycle へ進みたいとき。
+- init、indexing、TUI、oracle review、session fork/join/abandon、apply fork/join/abandon など、CLI から起動される処理の責務分担や入口 module を探したいとき。
+- サブコマンド実装が git branch/worktree、session/apply state、Codex 実行、INDEX 更新、report 生成、stdout 表示をどこで orchestration しているか切り分けたいとき。
+- oracle review の対象列挙、finding loop、INDEX merge、report rendering のように、ひとつのサブコマンド内で分割された処理段階の読む先を選びたいとき。
 
 ## Do not read this when
-- CLI 全体の Typer app 構成、サブコマンド登録、共通 command dispatch だけを調べたいときは、より上位の CLI 実装へ進む。
-- git wrapper、worktree root、path model、設定読み込み、CmocError、timestamp、report directory、binary 判定、git ignored 判定などの共通基盤そのものを変更したいときは、runtime や utility 側へ進む。
-- session state や apply state の schema、state file path、session_id 生成、状態モデル自体を確認したいときは、状態定義や session 管理側へ進む。
-- Codex に渡す prompt 文面、Structured Output schema、AgentCallParameter builder の詳細だけを確認したいときは、acp builder 側へ進む。
+- CLI 全体の Typer app 構成、コマンド登録、共通 dispatch やログ保存ラッパーだけを調べたいときは、より上位の CLI 実装へ進む。
+- git wrapper、path model、設定同期、ignore 判定、timestamp、report directory、Codex 低レベル実行など、複数サブコマンドから使われる共通基盤の内部だけを調べたいときは runtime や utility 側へ進む。
+- session state や apply state の schema、状態ファイル path、branch 判定など状態モデルそのものを確認したいときは、状態定義や管理 helper 側へ進む。
+- Codex に渡す prompt、Structured Output schema、AgentCallParameter builder の定義自体を変更したいときは、サブコマンドではなく prompt/acp builder 側へ進む。
 - サブコマンドの外部挙動を検証するテスト、fixture、期待出力だけを調べたいときは、対応する test 領域へ進む。
-- 生成済み INDEX.md や report の個別内容を読むべきか判断したいだけのときは、対象 directory や report 出力先の routing 情報へ進む。
 
 ## hash
-- f66337ac7d651591a6b1c4ba99b0b922ebeee9faec62d83f756c6f09518aa64f
+- dd13266f4f175cb871047a15c15c1c699dd5c2a11111605856852944195bd4e2

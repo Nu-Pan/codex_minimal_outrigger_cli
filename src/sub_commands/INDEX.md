@@ -24,25 +24,26 @@
 # `indexing.py`
 
 ## Summary
-- 現在の work root に対する INDEX.md maintenance サブコマンドと preflight 連携を実装する。
-- repository 単位の排他 lock、indexable children/directories の列挙、既存 entry の hash 検証、Codex CLI による不足 entry 生成、INDEX.md 更新差分の commit までを扱う。
-- INDEX.md entry の Markdown rendering、対象 hash 計算、memo・git ignored・binary file の除外判定など、indexing 処理全体の制御がまとまっている。
+- INDEX.md の自動メンテナンスを実行するサブコマンド実装で、作業ルート内の対象ディレクトリを深い階層から走査し、各階層のエントリーを再利用または生成して更新する責務を持つ。
+- 既存エントリーの hash 検証、対象外パスの除外、Codex 呼び出しによるエントリー生成、Markdown への描画、更新された INDEX.md だけの git commit、repository 単位の排他 lock を扱う。
+- 通常実行用のコマンド経路と、Codex 実行前に INDEX.md を最新化する preflight 経路の入口になっている。
 
 ## Read this when
-- INDEX.md の自動生成・再生成・鮮度判定・commit 作成の挙動を変更するとき。
-- indexing サブコマンドまたは Codex 実行前 preflight で INDEX.md を更新する流れを確認するとき。
-- INDEX.md entry の必須 section、hash 抽出、Structured Output から Markdown への変換規則を確認するとき。
-- indexing 対象から除外される directory/file、memo 配下、git ignored、binary file の扱いを確認するとき。
-- INDEX.md 更新処理の並列生成数、排他 lock、git add/commit の制御に関わる不具合を調査するとき。
+- INDEX.md の生成・更新・再利用・commit の流れを確認または変更するとき。
+- INDEX.md 対象に含めるファイルやディレクトリ、除外する memo・git ignore 対象・binary file の判定を確認または変更するとき。
+- 既存 INDEX.md エントリーの必須セクション、hash 抽出、鮮度判定、再生成条件を確認または変更するとき。
+- Codex CLI に渡す INDEX.md エントリー生成入力、Structured Output からの Markdown 描画、fallback 文言を確認または変更するとき。
+- indexing 実行の排他制御、preflight 連携、更新差分だけを commit する挙動を確認または変更するとき。
 
 ## Do not read this when
-- 個別の INDEX.md entry 生成 prompt や Structured Output parameter の内容だけを確認したいときは、entry parameter builder 側を読む。
-- CLI 共通実行 wrapper、git 実行、config 読み込み、hash 計算、work root 解決などの runtime helper 自体を変更するときは、それぞれの runtime 実装を読む。
-- indexing 以外のサブコマンドの CLI 挙動や preflight 挙動を調べるときは、対象サブコマンドまたは共通 preflight 実装を読む。
-- 生成済み INDEX.md の個別 entry 内容を読むべきか判断したいだけのときは、対象 directory の routing 情報を読む。
+- 個々のサブコマンドの業務処理や CLI 全体の登録構造だけを確認したいとき。
+- INDEX.md エントリー生成用プロンプトや Structured Output schema の定義自体を変更したいとき。
+- git・Codex・設定読み込み・path・hash・ignore 判定などの共通 runtime helper の内部実装だけを確認したいとき。
+- 生成済み INDEX.md の内容を読んでルーティング判断をしたいだけのとき。
+- oracle file の正本仕様を確認または修正提案したいとき。
 
 ## hash
-- 0caf28ab06e6e86498b05c35bfeadc9c9df90eab947f5936cac13c86cc9f9d8f
+- 2787c4bea6f26510e2ffbaea188bbc20aebcc9de523b3db7c304c87519f83fe8
 
 # `init.py`
 

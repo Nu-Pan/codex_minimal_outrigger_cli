@@ -187,21 +187,21 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- indexing コマンドと indexing preflight の realization test。INDEX.md 生成・更新・コミット、既存差分や未初期化 repository の扱い、linked worktree 対象化、fresh hash による再生成スキップ、INDEX.md conflict 解消、preflight lock 待機、Codex 呼び出し前の indexing 実行条件を検証する。
+- indexing コマンドと indexing preflight の realization test。INDEX.md 生成・再生成、fresh hash による Codex 呼び出し省略、index entry builder の structured output 利用、index path だけを commit する制御、既存の非 index 差分の保持、merge conflict 解消時の index 削除、linked worktree と cwd worktree の選択、repository lock 待機、Codex exec/TUI 呼び出し前の preflight 実行・スキップ条件を検証する。
 
 ## Read this when
-- indexing コマンドの CLI 挙動、INDEX.md の生成・更新・コミット条件、または dirty repository での失敗条件を確認・変更するとき。
-- indexing preflight が Codex exec/TUI 呼び出し前に走る条件、skip される purpose、repository lock、linked worktree 選択を確認・変更するとき。
-- 既存 INDEX.md の hash が fresh な場合の再生成スキップ、malformed entry の再生成、兄弟 entry の並列生成、memo directory の index 対象境界を確認・変更するとき。
-- INDEX.md merge conflict の自動解消や、index path だけを commit して非 index 差分を残す制御を確認・変更するとき。
+- indexing コマンドの外部挙動、commit 対象、未初期化 repo での失敗、既存差分を残す挙動を変更・確認する。
+- INDEX.md の entry 生成、hash freshness 判定、malformed entry の再生成、 sibling entry の並列生成、root の memo 除外と nested memo indexing の扱いを変更・確認する。
+- Codex exec/TUI 実行前に indexing preflight が走る条件、index entry 生成や conflict resolution で preflight をスキップする条件、worktree 選択、repository lock 待機を変更・確認する。
+- indexing が git commit、worktree、merge conflict、status clean/dirty 状態へ与える副作用の regression test を探す。
 
 ## Do not read this when
-- indexing の実装詳細だけを追う場合は、対応する実装 module を先に読む。
-- Codex 実行 parameter、runtime 呼び出し、git helper、test fixture の一般的な定義だけを確認したい場合は、共通 test support や対象 module を読む。
-- INDEX.md エントリー本文の品質や routing 文書の一般規則だけを確認したい場合は、oracle の index entry 仕様を読む。
+- indexing の実装詳細や helper の実装を直接変更したいだけで、期待される外部挙動や回帰条件を確認する必要がない。
+- Codex runtime、path model、git wrapper、CLI framework そのものの責務を調べたい場合。
+- INDEX.md 以外の機能テスト、または apply/review/session など indexing preflight と関係しないコマンド挙動を確認する場合。
 
 ## hash
-- 7b6f4d0473be3be54e2aadc0cadb8f3addfe8631d5f0f04d2bf05512eaadab35
+- 990fe9155576e38efbd6bce4b7f47265d6c1865605145dd990955cc7ef311377
 
 # `test_prompt_parts.py`
 
