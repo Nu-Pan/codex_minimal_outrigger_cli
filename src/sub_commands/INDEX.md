@@ -134,23 +134,23 @@
 # `review_report.py`
 
 ## Summary
-- review oracle の実行結果を、人間が読む Markdown レポートとして生成する処理を扱う実装。レビュー対象 oracle、findings、ブランチ・コミット情報、セッション情報を集計し、YAML frontmatter と判定本文を含む report を組み立てて保存する。
-- レポート全体の結果判定、finding の fatal/minor・accept/reject 別集計、oracle path の表示用正規化、finding セクションの表示形式を確認する入口になる。
+- review oracle の実行結果を Markdown レポートとして生成・保存する処理を担う実装。YAML frontmatter、判定結果、評価対象 oracle file 一覧、accepted/rejected の fatal/minor findings セクションを組み立てる。
+- レポート保存先の作成、タイムスタンプ付きレポートパスの生成、findings の分類、レビュー結果ステータスの決定、oracle path の表示用正規化を扱う。
 
 ## Read this when
-- review oracle のレポートファイルの生成先、ファイル名、本文構成、frontmatter の項目、または Markdown 表示内容を変更したいとき。
-- review oracle の結果が error、no_targets、fatal、minor、ok のどれになるかという判定条件を確認・変更したいとき。
-- finding の verdict や severity に基づく集計、accepted/rejected findings の表示、finding セクションの文言を扱うとき。
-- oracle file のパスをレポート上でどのように相対表示するか、特に oracle 配下の path 表示を確認したいとき。
+- review oracle のレポート本文、frontmatter、見出し、findings 表示、結果判定文言を変更したいとき。
+- review oracle のエラー時、対象 oracle が 0 件のとき、fatal/minor finding が accepted されたとき、問題なしのときのレポート結果分類を確認したいとき。
+- oracle file の表示パスを、repo root 相対または oracle 起点の表示へ変換する挙動を確認・変更したいとき。
+- review oracle の findings を verdict と severity によって accepted/rejected、fatal/minor に分けて出力する処理を追いたいとき。
 
 ## Do not read this when
-- review oracle の対象 oracle をどう収集するか、findings をどう作るか、レビュー処理をどう実行するかを調べたいだけのとき。
-- cmoc 全体の CLI 引数定義、サブコマンド登録、セッション状態の永続化、reports directory や timestamp の基本仕様を調べたいとき。
-- review oracle 以外の report 形式や、oracle ではない対象のレビュー結果出力を扱うとき。
-- INDEX.md 生成、oracle file の正本仕様そのもの、または realization/oracle の概念定義を調べたいとき。
+- review oracle の対象 oracle file を収集・選択する処理を知りたいだけのとき。
+- review oracle が findings を生成・評価するプロンプト、LLM 呼び出し、レビュー実行制御を調べたいとき。
+- cmoc 全体のレポート保存ディレクトリや timestamp の共通仕様だけを確認したいとき。
+- review oracle 以外のサブコマンドのレポート形式や出力処理を調べたいとき。
 
 ## hash
-- a5221d79c1395efd3e3b7f959854e3d8eedebdc33cbfc97660b2e8cead1f8bb9
+- 5d210c16250ad0fa31dc9a522fc78bcc3e2c00fd185ab84c69579b75ab2cd7c3
 
 # `review_targets.py`
 

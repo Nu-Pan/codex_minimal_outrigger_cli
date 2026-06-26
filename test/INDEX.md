@@ -287,24 +287,26 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle の CLI 経由の外部挙動を検証する realization test。report 生成、対象 oracle の選択、scope、所見の列挙・検証・judge・merge、エラー report、review 用 worktree と join commit、INDEX.md 差分の取り込みや衝突解決、想定外差分の拒否を扱う。
-- 16,000 文字を超えるが、同じ review run の状態、fake Codex 応答、report 文脈を共有するため、oracle review の読み取り文脈を一箇所に保つ目的でまとまっている。
+- review oracle の CLI 外部挙動と所見評価 loop の制御を検証する realization test。report 生成、対象 oracle の選択、所見の列挙・検証・judge・merge、判定順、上限到達時の扱い、join commit と review 用 worktree の扱い、失敗時 report、INDEX.md 以外の差分拒否を同じ review run の文脈で確認する。
+- 16,000 文字を超えるが、fake Codex 応答、report 文脈、review run の状態を共有する検証群として凝集させている。分割判断をする場合は、oracle review の外部挙動と所見評価 loop の責務境界を崩さないかを確認する入口になる。
 
 ## Read this when
-- review oracle コマンドの report 内容、終了コード、標準出力上の report path、エラー時 report の表示を変更・確認したいとき。
-- review oracle の対象選択を変更・確認したいとき。特に full scope、session scope、linked worktree、binary oracle、gitignored oracle の扱いを確認したいとき。
-- 所見評価 loop の制御を変更・確認したいとき。特に enumerate の反復、対象ごとの既存所見の渡し方、validate、judge、merge operation の契約と不正操作拒否を確認したいとき。
-- review oracle が生成・変更した INDEX.md だけを session 側へ取り込む挙動、join commit の記録、review worktree の配置や後始末、INDEX.md 衝突解決を確認したいとき。
-- review oracle 実行中に Codex 側が INDEX.md 以外の差分を作った場合の拒否と、利用者 worktree を汚さない挙動を確認したいとき。
+- review oracle コマンドの report 内容、終了コード、標準出力、エラー時 report の仕様を実装・変更・調査するとき。
+- review oracle の対象選択を変更するとき。特に full scope、session scope、linked worktree、binary oracle、gitignored oracle、対象 0 件の扱いを確認したいとき。
+- 所見評価 loop の enumerate、validate、judge、merge の呼び出し条件、prompt へ渡る既存所見の範囲、所見の並び順や verdict・severity 集計を変更するとき。
+- 所見 merge operation の delete、replace、merge の契約、invalid operation、target 再利用拒否、採番と初期値の扱いを確認するとき。
+- review 実行中に生成された INDEX.md の取り込み、review worktree の配置、join commit、INDEX.md conflict 解決、INDEX.md 以外の差分拒否を調べるとき。
+- review oracle 関連のテストが大きい理由や、同じ fake Codex 応答と report 文脈を共有するテストをどこへ追加すべきか判断するとき。
 
 ## Do not read this when
-- review oracle 以外の CLI サブコマンドの基本挙動や一般的な runner fixture を調べたいだけのとき。
-- oracle の正本仕様そのもの、oracle file の意味、仕様記述方針を確認したいとき。
-- review oracle の内部実装を読む必要があり、テストで固定された外部挙動や制御ロジックではなく実装関数の処理詳細を追いたいとき。
-- INDEX.md ルーティング文書の一般規約や、エントリー生成の仕様を調べたいとき。
+- review oracle 以外のサブコマンド、通常の session 操作、init 処理だけを調べるとき。
+- oracle file の正本仕様そのものを確認したいとき。この対象は realization test であり、仕様判断の一次根拠にはしない。
+- run_codex_exec の低レベル実装、Codex CLI 呼び出し一般、structured output schema の詳細だけを調べるとき。
+- review oracle の実装本体を修正する入口を探しているだけで、期待される外部挙動や回帰テストをまだ確認しない段階のとき。
+- INDEX.md ルーティング文書の形式や生成規則そのものを確認したいとき。
 
 ## hash
-- 89b591e7ca0ac43671c145ac00353550840080d9a5b51ea6d66a7aff3eba73b5
+- 58aed5c9d67271d3a3a69b8fb45bc397231259c3b3a05b222278dbd49df4f0e2
 
 # `test_session_cli.py`
 
