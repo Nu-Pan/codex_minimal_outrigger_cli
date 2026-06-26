@@ -109,21 +109,22 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基本ランタイム挙動を横断的に検証する realization test。パスモデル、作業ツリー判定、設定デフォルト、エラー表示、セッション branch 形状、CLI preflight、補完 probe、.cmoc の ignore 設定、file access から sandbox/profile への変換、binary 判定など、実行基盤の外部挙動と制御ロジックを扱う。
-- runtime helper、CLI entrypoint、設定、状態管理、Codex profile 生成の変更が、既存の基本動作や権限境界を壊していないか確認するための入口になる。
+- cmoc の基本的な実行時挙動を横断的に検証する realization test。パスモデル、run/work/repo root 判定、設定初期値、構造化エラー出力、セッション branch 形状、CLI エラー出力、補完プローブ時の副作用抑止、.cmoc の gitignore 反映、file access mode と sandbox mode の対応、バイナリ判定、Codex profile の file access 制約を扱う。
+- 単一機能の詳細テストというより、runtime 周辺の公開挙動と制御ロジックが基本契約を満たすかを確認する入口になる。
 
 ## Read this when
-- cmoc の runtime 層、CLI 共通エラー処理、preflight、completion probe、repo/work root 判定、.gitignore 更新、file access mode、Codex profile の permission 設定を変更または調査する場合。
-- `CmocError` の markdown 表示、エラーの stdout/stderr 振り分け、branch session id の受理条件、binary 判定の読み取り範囲など、基本挙動の回帰テストを探す場合。
-- 設定デフォルトや `FileAccessMode` の値、sandbox mode 変換、`memo`・`oracle`・`.agents` まわりの読み書き制約がテストでどう固定されているか確認する場合。
+- runtime、path model、worktree/root 判定、構造化エラー表示、CLI preflight/parse error、gitignore 更新、file access mode、sandbox 権限、Codex profile 生成の基本挙動を変更・調査する。
+- CLI エラーが stdout に出ること、補完プローブで preflight や .cmoc/.gitignore 生成が走らないこと、work root 以外での実行拒否など、利用者から見える失敗時挙動を確認したい。
+- memo/oracle/.agents などの read/write/read_only/deny_read 制約や、FileAccessMode ごとの profile・sandbox_workspace_write の期待値を確認したい。
+- セッション branch 名や apply branch 名の不正形状を拒否する状態管理ロジックの基本テストを探している。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジックや詳細なユーザーフローだけを調べたい場合は、そのサブコマンド専用の実装またはテストを先に読む。
-- oracle file の正本仕様そのものを確認したい場合は、この realization test ではなく該当する oracle doc または oracle src/test を読む。
-- 特定 helper の内部実装だけを変更する場合で、公開挙動・CLI 出力・権限 profile・状態管理に影響しないことが明確なら、対象実装の局所テストを優先する。
+- 個別サブコマンドの正常系ワークフロー、プロンプト生成、ログ生成、GitHub 連携など、このファイルに現れない機能領域の詳細テストを探している。
+- oracle の正本仕様断片そのものを確認したい場合。このファイルは realization test であり、仕様の根拠としてではなく実装挙動の検証として読む。
+- 特定の helper や module の実装責務を理解したいだけで、既に対象実装ファイルが分かっている場合。まずその実装本文を読む方が直接的。
 
 ## hash
-- dc951219ec0807b61597973ef540c320cf8e28b512667f5e2d25267b4d555774
+- cf7cb1f76caa4fbd874fb65541d7bac601d27afad075e9b970bfcce67bdb2bbc
 
 # `test_cli_init_tui.py`
 
