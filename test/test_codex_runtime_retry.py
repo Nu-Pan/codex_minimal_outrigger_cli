@@ -72,7 +72,12 @@ def test_run_codex_exec_retries_semantic_output(tmp_path: Path, monkeypatch) -> 
         '{"bad": true}',
         '{"ok": true}',
     ]
+    assert [Path(log["prompt_log_path"]).read_text() for log in call_logs] == [
+        "prompt",
+        "prompt",
+    ]
     assert len({log["stdout_log_path"] for log in call_logs}) == 2
+    assert len({log["prompt_log_path"] for log in call_logs}) == 2
     assert result.call_log_path == call_paths[1]
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]

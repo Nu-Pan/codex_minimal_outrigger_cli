@@ -80,6 +80,7 @@ def test_run_codex_exec_uses_stdin_and_writes_logs(
     assert recorded["args"][-1] == "-"
     assert result.output_json == {"ok": True, "stdin": "SECRET PROMPT BODY"}
     assert result.call_log_path.is_file()
+    assert result.prompt_log_path.read_text() == "SECRET PROMPT BODY"
     assert result.stdout_log_path.read_text().strip() == '{"type": "turn.completed"}'
     assert "stderr-only" not in result.stdout_log_path.read_text()
     assert result.stderr_log_path.read_text().strip() == "stderr-only"
@@ -93,6 +94,8 @@ def test_run_codex_exec_uses_stdin_and_writes_logs(
     call_log = json.loads(result.call_log_path.read_text())
     assert call_log["codex_home"] == str(codex_home)
     assert call_log["profile_name"] == result.profile_name
+    assert call_log["prompt_log_path"] == str(result.prompt_log_path)
+    assert result.prompt_log_path.name.endswith("_prompt.jsonl")
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
     assert len(codex_events) == 1
@@ -100,6 +103,7 @@ def test_run_codex_exec_uses_stdin_and_writes_logs(
     assert codex_events[0]["status"] == "succeeded"
     assert codex_events[0]["returncode"] == 0
     assert codex_events[0]["call_log_path"] == str(result.call_log_path)
+    assert codex_events[0]["prompt_log_path"] == str(result.prompt_log_path)
     assert codex_events[0]["stdout_log_path"] == str(result.stdout_log_path)
     assert codex_events[0]["codex_home"] == str(codex_home)
     assert codex_events[0]["profile_name"] == result.profile_name

@@ -112,6 +112,9 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert Path(probe_logs[0]["stdout_log_path"]).read_text().strip() == (
         '{"type": "turn.completed"}'
     )
+    assert Path(probe_logs[0]["prompt_log_path"]).read_text() == (
+        "quota availability probe"
+    )
     assert Path(probe_logs[0]["stderr_log_path"]).read_text() == ""
     assert Path(probe_logs[0]["output_path"]).read_text() == '{"probe": true}'
     main_entries = [
@@ -126,6 +129,11 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert initial_log["argv"][1:] == argv_calls[0]
     assert resume_log["argv"][1:] == argv_calls[2]
     assert len({log["stdout_log_path"] for log in main_logs}) == 2
+    assert [Path(log["prompt_log_path"]).read_text() for log in main_logs] == [
+        "prompt",
+        "prompt",
+    ]
+    assert len({log["prompt_log_path"] for log in main_logs}) == 2
     assert Path(initial_log["stdout_log_path"]).read_text().strip() == (
         '{"type": "thread.started", "thread_id": "sess-1"}\n'
         '{"type": "error", "message": "Quota exceeded"}'
@@ -148,9 +156,11 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     ]
     assert codex_events[0]["returncode"] == 1
     assert codex_events[0]["stdout_log_path"] == main_logs[0]["stdout_log_path"]
+    assert codex_events[0]["prompt_log_path"] == main_logs[0]["prompt_log_path"]
     assert codex_events[0]["output_path"] == main_logs[0]["output_path"]
     assert codex_events[1]["returncode"] == 0
     assert codex_events[1]["stdout_log_path"] == probe_logs[0]["stdout_log_path"]
+    assert codex_events[1]["prompt_log_path"] == probe_logs[0]["prompt_log_path"]
     assert codex_events[1]["output_path"] == probe_logs[0]["output_path"]
     console = capsys.readouterr().out
     assert "- purpose: `codex exec`" in console

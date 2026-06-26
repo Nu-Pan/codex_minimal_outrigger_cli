@@ -118,7 +118,7 @@ def run_codex_exec(
         "file_access_mode": parameter.file_access_mode.value,
     }
 
-    def new_log_paths() -> tuple[str, Path, Path, Path, Path]:
+    def new_log_paths() -> tuple[str, Path, Path, Path, Path, Path]:
         """Codex call 用 log path 群を時刻順に追える名前で確保する。"""
         while True:
             run_ts = _next_codex_log_timestamp()
@@ -126,6 +126,7 @@ def run_codex_exec(
             if not run_call_path.exists():
                 return (
                     run_ts,
+                    log_dir / f"{run_ts}_prompt.jsonl",
                     log_dir / f"{run_ts}_stdout.jsonl",
                     log_dir / f"{run_ts}_stderr.log",
                     log_dir / f"{run_ts}_output.json",
@@ -156,6 +157,7 @@ def run_codex_exec(
         run_purpose: str,
         run_ts: str,
         run_argv: list[str],
+        run_prompt_path: Path,
         run_stdout_path: Path,
         run_stderr_path: Path,
         run_output_path: Path,
@@ -170,6 +172,7 @@ def run_codex_exec(
                     "argv": run_argv,
                     **base_call_data,
                     "schema_path": str(run_schema_path) if run_schema_path else None,
+                    "prompt_log_path": str(run_prompt_path),
                     "stdout_log_path": str(run_stdout_path),
                     "stderr_log_path": str(run_stderr_path),
                     "output_path": str(run_output_path),
@@ -188,6 +191,7 @@ def run_codex_exec(
         *,
         run_purpose: str,
         run_call_path: Path,
+        run_prompt_path: Path,
         run_stdout_path: Path,
         run_stderr_path: Path,
         run_output_path: Path,
@@ -210,6 +214,7 @@ def run_codex_exec(
             "quota_wait_sec": quota_wait_sec,
             "quota_polls": quota_polls,
             "call_log_path": str(run_call_path),
+            "prompt_log_path": str(run_prompt_path),
             "stdout_log_path": str(run_stdout_path),
             "stderr_log_path": str(run_stderr_path),
             "output_path": str(run_output_path),
@@ -230,27 +235,30 @@ def run_codex_exec(
     resume_token: str | None = None
 
     while True:
-        ts, stdout_path, stderr_path, output_path, call_path = new_log_paths()
+        ts, prompt_path, stdout_path, stderr_path, output_path, call_path = new_log_paths()
         current_argv = build_argv(output_path, resume_token)
+        prompt_path.write_text(parameter.prompt)
         write_call_log(
             call_path,
             run_purpose=purpose,
             run_ts=ts,
             run_argv=current_argv,
+            run_prompt_path=prompt_path,
             run_stdout_path=stdout_path,
             run_stderr_path=stderr_path,
             run_output_path=output_path,
             run_schema_path=schema_path,
         )
         attempt_started_at = time.perf_counter()
-        result = subprocess.run(
-            current_argv,
-            cwd=cwd,
-            input=parameter.prompt,
-            text=True,
-            capture_output=True,
-            env=codex_env,
-        )
+        with prompt_path.open() as prompt_stdin:
+            result = subprocess.run(
+                current_argv,
+                cwd=cwd,
+                stdin=prompt_stdin,
+                text=True,
+                capture_output=True,
+                env=codex_env,
+            )
         last_result = result
         stdout_path.write_text(result.stdout)
         stderr_path.write_text(result.stderr)
@@ -264,6 +272,7 @@ def run_codex_exec(
                 emit_codex_call_event(
                     run_purpose=purpose,
                     run_call_path=call_path,
+                    run_prompt_path=prompt_path,
                     run_stdout_path=stdout_path,
                     run_stderr_path=stderr_path,
                     run_output_path=output_path,
@@ -281,6 +290,7 @@ def run_codex_exec(
                 emit_codex_call_event(
                     run_purpose=purpose,
                     run_call_path=call_path,
+                    run_prompt_path=prompt_path,
                     run_stdout_path=stdout_path,
                     run_stderr_path=stderr_path,
                     run_output_path=output_path,
@@ -329,6 +339,7 @@ def run_codex_exec(
                         time.sleep(quota_poll_interval_sec)
                         (
                             probe_ts,
+                            probe_prompt_path,
                             probe_stdout_path,
                             probe_stderr_path,
                             probe_output_path,
@@ -344,25 +355,28 @@ def run_codex_exec(
                             str(probe_output_path),
                             "-",
                         ]
+                        probe_prompt_path.write_text("quota availability probe")
                         write_call_log(
                             probe_call_path,
                             run_purpose="quota availability probe",
                             run_ts=probe_ts,
                             run_argv=probe_argv,
+                            run_prompt_path=probe_prompt_path,
                             run_stdout_path=probe_stdout_path,
                             run_stderr_path=probe_stderr_path,
                             run_output_path=probe_output_path,
                             run_schema_path=None,
                         )
                         probe_started_at = time.perf_counter()
-                        poll = subprocess.run(
-                            probe_argv,
-                            cwd=cwd,
-                            input="quota availability probe",
-                            text=True,
-                            capture_output=True,
-                            env=codex_env,
-                        )
+                        with probe_prompt_path.open() as probe_stdin:
+                            poll = subprocess.run(
+                                probe_argv,
+                                cwd=cwd,
+                                stdin=probe_stdin,
+                                text=True,
+                                capture_output=True,
+                                env=codex_env,
+                            )
                         probe_stdout_path.write_text(poll.stdout)
                         probe_stderr_path.write_text(poll.stderr)
                         probe_error_text = codex_error_text(poll.stdout, poll.stderr)
@@ -372,6 +386,7 @@ def run_codex_exec(
                         emit_codex_call_event(
                             run_purpose="quota availability probe",
                             run_call_path=probe_call_path,
+                            run_prompt_path=probe_prompt_path,
                             run_stdout_path=probe_stdout_path,
                             run_stderr_path=probe_stderr_path,
                             run_output_path=probe_output_path,
@@ -396,6 +411,7 @@ def run_codex_exec(
             emit_codex_call_event(
                 run_purpose=purpose,
                 run_call_path=call_path,
+                run_prompt_path=prompt_path,
                 run_stdout_path=stdout_path,
                 run_stderr_path=stderr_path,
                 run_output_path=output_path,
@@ -422,6 +438,7 @@ def run_codex_exec(
                     emit_codex_call_event(
                         run_purpose=purpose,
                         run_call_path=call_path,
+                        run_prompt_path=prompt_path,
                         run_stdout_path=stdout_path,
                         run_stderr_path=stderr_path,
                         run_output_path=output_path,
@@ -435,6 +452,7 @@ def run_codex_exec(
                 emit_codex_call_event(
                     run_purpose=purpose,
                     run_call_path=call_path,
+                    run_prompt_path=prompt_path,
                     run_stdout_path=stdout_path,
                     run_stderr_path=stderr_path,
                     run_output_path=output_path,
@@ -454,6 +472,7 @@ def run_codex_exec(
         emit_codex_call_event(
             run_purpose=purpose,
             run_call_path=call_path,
+            run_prompt_path=prompt_path,
             run_stdout_path=stdout_path,
             run_stderr_path=stderr_path,
             run_output_path=output_path,
@@ -467,6 +486,7 @@ def run_codex_exec(
             output_text=output_text,
             output_json=output_json,
             call_log_path=call_path,
+            prompt_log_path=prompt_path,
             stdout_log_path=stdout_path,
             stderr_log_path=stderr_path,
             output_path=output_path,
