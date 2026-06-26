@@ -67,31 +67,24 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation のうち、CLI 実行ライフサイクル、Codex 呼び出し、設定入出力、content hashing、エラー整形、Git 操作、実行ログ、path 解決、結果型、永続状態などを支える共通 runtime helper 群を収める領域。
-- 複数の上位機能から共有される低レベル寄りの実行時処理と、それらをまとめて利用するための集約入口を扱う。個別サブコマンドの業務ロジックではなく、サブコマンドや Codex 実行を支える共通基盤を探す入口になる。
+- cmoc の実行時共通処理を集める共有 helper 領域。Codex CLI 実行、TUI 起動、profile/schema 準備、設定入出力、content hash、CLI 実行ラッパー、error 表示、Git 操作、logging、runtime path、外部コマンド結果、session state 永続化などを扱う。
+- 責務別 runtime 実装に加えて、既存 import path を維持する互換入口や、複数領域の API を再公開する集約入口も含むため、呼び出し側が共通 runtime API の利用先を選ぶための入口になる。
 
 ## Read this when
-- CLI サブコマンドを共通ラッパーで実行する流れ、開始・完了・失敗時の標準出力、終了コード化、サブコマンドログ設定、例外の利用者向け表示を確認したいとき。
-- Codex CLI の exec または対話起動について、profile/schema 準備、argv・cwd・環境変数、call log、Structured Output 検証、capacity retry、quota wait、resume 継続、preflight 実行前フックなどの runtime 制御を調べたいとき。
-- cmoc 設定ファイルの読み書き、既定値補完、永続化 JSON との相互変換、不正設定のエラー化を確認または変更したいとき。
-- 文字列やファイル内容の SHA-256 digest、内容アドレス型ファイルの書き込み、binary file 判定など、内容ハッシュに関する共通 helper を探すとき。
-- cmoc 共通の実行時エラー表現、利用者向けエラー文面、通常例外の整形、または Git コマンド失敗時の共通エラー化を確認したいとき。
-- Git repository 状態の検査、一時 worktree や managed branch の作成・削除、Git ignore 判定、`.cmoc` の追跡除外保証などの共通 Git helper を調べたいとき。
-- サブコマンド実行ログの JSON Lines 追記、current logger の context-local 管理、quota 待機時間や実行時間の計測を確認したいとき。
-- 実行時 root path、cmoc 管理ディレクトリ、sessions・reports・logs・worktrees・state・config の保存先、timestamp や duration 表示、作業ディレクトリ一時変更を扱う共通処理を確認したいとき。
-- 外部コマンド結果や Codex exec 結果の共有データ型、session/apply の永続状態 JSON、管理 branch 名と session_id の対応、active session 探索を確認または変更したいとき。
-- runtime 系 helper の公開 API をどの集約入口から import できるか、または再公開範囲を整理する必要があるとき。
+- CLI サブコマンド、Codex exec/TUI、設定、Git、ログ、path、state、error、hash など、複数機能から使われる runtime 共通処理の実装先を探したいとき。
+- Codex CLI 呼び出しの profile 準備、schema 配置、subprocess 実行、retry、quota/capacity 処理、call log、Structured Output 検証、TUI 起動のどこを読むべきか切り分けたいとき。
+- サブコマンド実行の共通ライフサイクル、標準出力、終了コード、例外変換、subcommand log、quota wait 集計を確認または変更したいとき。
+- cmoc 管理ディレクトリ、repo/work/root 解決、timestamp、設定ファイル、session state file、Git worktree/branch 操作など、runtime が共有する保存先や外部状態の扱いを調べたいとき。
+- 共通 API の再公開範囲、互換 import 入口、または責務別 runtime module への依存関係を整理したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務フロー、引数定義、ユーザー向けコマンド仕様、機能固有の状態更新だけを調べたいときは、そのサブコマンド実装へ進む。
-- path キーワードそのものの概念定義や `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` の意味を確認したいだけのときは、path model の正本仕様または定義実装へ進む。
-- INDEX.md 生成の内容ロジック、エントリー生成プロンプト、ファイル探索ルールそのものを調べたいときは、indexing や oracle 周辺の実装へ進む。
-- 設定モデル、AgentCallParameter、FileAccessMode、CmocConfig などのデータ構造そのものを確認したいだけのときは、それぞれのモデル定義へ進む。
-- ログや状態ファイルを読む側、集計する側、表示する側の仕様を調べたいときは、この共通書き込み・保持層ではなく利用側の実装へ進む。
-- Codex や Git を使う上位機能の高レベルな制御順序だけを知りたいときは、共通 helper ではなく呼び出し元の feature 実装へ進む。
+- 個別 CLI サブコマンドの業務ロジック、引数定義、dispatch、利用者向け機能仕様だけを調べる場合は、そのサブコマンド実装へ直接進む。
+- path keyword や oracle/realization の概念定義など、正本仕様上の用語・モデルを確認したい場合は、仕様文書または path model の定義へ進む。
+- INDEX.md 生成ロジック、エントリー生成プロンプト、oracle 文書の内容、テストケースの期待値そのものを調べたい場合は、それぞれの専用領域へ進む。
+- 特定の runtime helper の公開名だけではなく、呼び出し元の高レベルな作業フローや利用画面を理解したい場合は、この共有 helper 群ではなく上位の機能実装から読む。
 
 ## hash
-- 4cb37e74d7da93f9c292b1c8cd6a9e0d0e17ae48fa38dae59c8428ce1289e041
+- 683b0a1342cf2553176d67cd20a2095212e86e8d6349b425856771bc983c2119
 
 # `config`
 
@@ -135,23 +128,23 @@
 # `sub_commands`
 
 ## Summary
-- src/sub_commands は、cmoc の利用者向けサブコマンド実装を集める領域で、初期化、index 更新、TUI 起動、review oracle、apply lifecycle、session lifecycle などの CLI 入口と orchestration を扱う。
-- 各対象は、共通 runtime や parameter builder の低レベル詳細ではなく、サブコマンド固有の事前条件確認、状態遷移、git/worktree 操作、レポート・標準出力、cleanup の制御フローを追うための入口になる。
-- review と apply では、上位サブコマンドの実行順序に加えて、対象列挙、Codex 実行 loop、INDEX 変更の commit/merge、report 生成などの補助モジュールも同階層に分かれている。
+- cmoc の各サブコマンド実装を集めるディレクトリ。初期化、ルーティング文書更新、対話的 TUI 起動、session lifecycle、apply lifecycle、oracle review の CLI 起点と実行制御へ進む入口になる。
+- 各サブコマンドは、共通 CLI runner への接続、事前条件確認、git 操作、state 更新、Codex 実行呼び出し、利用者向け出力や report 生成を組み合わせている。サブコマンド単位の制御フローを追う起点として使う。
+- review oracle や apply では、対象列挙、反復 loop、branch/worktree 作成・merge・cleanup、INDEX 差分処理、report 描画などの補助処理もこの階層に含まれる。
 
 ## Read this when
-- cmoc のサブコマンド単位で、CLI から内部処理へ入る実行順序、事前条件、状態更新、git/worktree 操作、利用者向け出力、失敗時 cleanup を確認・変更したいとき。
-- init、indexing、tui、review oracle、apply、session のどのサブコマンド実装を読むべきかを選びたいとき。
-- review oracle の対象列挙、実行 loop、INDEX 変更の取り込み、Markdown report 生成など、review 系処理の責務分担をたどりたいとき。
-- apply fork/join/abandon や session fork/join/abandon の lifecycle、branch・worktree・状態ファイルの関係、merge や破棄の制御フローを追いたいとき。
-- ルーティング文書の再生成、既存エントリー再利用、Structured Output から Markdown への描画、または index 更新 commit の作成処理を調べたいとき。
+- cmoc の特定サブコマンドが、どの事前条件で実行され、どの runtime helper、git 操作、state 更新、Codex 呼び出しへ接続されるかを確認したいとき。
+- init、indexing、tui、session、apply、review oracle のいずれかの利用者向け CLI 動作、出力、エラー条件、branch/worktree lifecycle を調べる入口が必要なとき。
+- session fork/join/abandon や apply fork/join/abandon の状態遷移、merge、cleanup、rollback、report 生成の実装へ進みたいとき。
+- oracle review の対象選定、finding 生成・統合・検証・判定 loop、review 用 worktree、INDEX 変更 commit/merge、Markdown report 出力の実装所在を切り分けたいとき。
+- ルーティング文書の再生成、entry 鮮度判定、除外条件、排他 lock、INDEX 更新 commit など、indexing サブコマンドの実行制御を確認したいとき。
 
 ## Do not read this when
-- サブコマンド固有の制御フローではなく、path model、session state schema、設定モデル、git command wrapper、worktree helper、timestamp、reports directory などの共通 runtime 定義を確認したいとき。
-- Codex 呼び出し用 prompt、Structured Output schema、AgentCallParameter の組み立て内容そのものを確認・変更したいときは、parameter builder 側を読む。
-- Typer アプリ全体の登録、共通 CLI runner、preflight 登録、ログ基盤など、サブコマンド横断の起動基盤だけを調べたいとき。
-- oracle file、realization file、INDEX.md 生成規則、path keyword の意味など、正本仕様やルーティング文書の一般方針を確認したいとき。
-- 個別の対象がすでに apply、session、review_targets、review_loop、review_report、review_index などに明確に決まっているときは、この階層全体ではなく該当する下位対象へ直接進む。
+- Typer アプリ全体へのコマンド登録、トップレベル CLI 構造、共通 runner、ログ基盤そのものを確認したいだけのとき。
+- work root や repo root の解決、session state schema、git wrapper、設定読み込み、timestamp、reports directory など、複数サブコマンドで使われる低レベル runtime helper の仕様を調べたいとき。
+- Codex に渡す prompt や Structured Output schema の詳細、AgentCallParameter の builder 本体を確認したいとき。
+- oracle file の正本仕様、path model、INDEX.md 生成規則、oracle/realization の概念定義そのものを確認したいとき。
+- テストの期待挙動や fixture を確認したいとき、またはサブコマンド実装ではなく利用者向け README・補助スクリプト・設定ファイルを調べたいとき。
 
 ## hash
-- b1ee312b37751b078530709dba046f9c80b2a9bb9c9d99f0a5da62cbd8e2674e
+- 94ed93aa6fb53a23c3ee9fd67cb6c86fa034ca273be370f74fc0dfd3e5f0d2ce

@@ -1,27 +1,24 @@
 # `apply`
 
 ## Summary
-- apply run の開始、完了取り込み、破棄を担うサブコマンド実装と、それらに付随する実行時 helper、process id 管理、worktree・branch 解決、実行結果 report 生成をまとめる領域。
-- session branch と apply branch の状態検証、isolated worktree 上での所見列挙・適用・commit、join 時の想定外差分検出・force resolve・merge、abandon 時の cleanup など、apply lifecycle の制御フローへの入口になる。
-- apply 中の編集禁止対象差分の rollback、INDEX.md conflict の限定的な自動解決、Linux pidfd と /proc による apply process 同一性確認など、apply 固有の安全制御も扱う。
+- apply 系サブコマンド群の実装をまとめるディレクトリ。apply run の開始、破棄、取り込み、実行時 process 管理、fork report 生成まで、apply lifecycle の主要な制御へ進む入口になる。
+- session branch と apply branch/worktree の関係、apply state の更新、実行中 process の pid 管理、Codex による finding 適用、join/abandon 時の cleanup など、apply 専用の実行フローを調べる起点として使う。
 
 ## Read this when
-- apply fork、apply join、apply abandon の実行条件、状態遷移、終了時 cleanup、CLI 出力、report 出力を確認・変更したいとき。
-- apply worktree、apply branch、oracle snapshot commit、session state の関係や、apply run が ready・running・completed・error の間をどう遷移するかを追いたいとき。
-- apply scope から調査対象ファイルを選ぶ処理、所見列挙・所見適用・変更 path 検出・commit 生成を含む apply loop を調べたいとき。
-- apply join の想定外差分判定、force resolve、merge conflict 処理、INDEX.md だけの conflict 自動解決を確認したいとき。
-- apply abandon で実行中 process を停止し、apply worktree・branch・process id・state を破棄する順序や警告出力を確認したいとき。
-- apply process id file、pidfd、process start time、linked worktree 探索など、apply 専用の低レベル実行時状態を確認したいとき。
+- apply fork、apply join、apply abandon のどの実装へ進むべきかを切り分けたいとき。
+- apply run の開始から完了後の取り込みまたは破棄まで、apply lifecycle 全体に関係する実装の所在を確認したいとき。
+- apply branch、apply worktree、session branch、apply state、apply process id が apply 系処理でどう扱われるかを調べる入口が必要なとき。
+- apply fork のレポート生成、変更要約、通常終了・エラー終了時の保存内容を扱う実装へ進みたいとき。
+- 実行中 apply process の pid file、pidfd、process start time、停止処理など、apply 専用 runtime helper の所在を確認したいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンドの CLI 実装、状態遷移、report 形式を調べたいとき。
-- session state file の schema、path model、branch 名規則、git・worktree 操作 helper、設定読み込みなどの共通定義そのものを確認したいとき。
-- Codex 呼び出し用 prompt や structured output schema の詳細だけを変更したいときは、apply 用 builder 側を直接読む。
-- oracle file、realization file、INDEX.md 生成規則など、仕様文書やルーティング文書の一般方針を調べたいとき。
-- apply fork report や join report の保存先管理、timestamp 生成、git command wrapper の低レベル挙動だけが目的で、apply 固有の制御フローを読む必要がないとき。
+- apply 以外のサブコマンド、session lifecycle 全体、共通 runtime、git wrapper、path model、設定読み込みなどを調べたいとき。
+- oracle file、memo、INDEX.md 生成規則、ルーティング文書の方針そのものを確認したいとき。
+- apply 系の低レベルではなく、利用者向け CLI 全体のコマンド登録やトップレベル引数構造だけを確認したいとき。
+- 特定の apply サブコマンドの責務がすでに分かっており、fork、join、abandon、runtime、report のいずれかへ直接進めるとき。
 
 ## hash
-- 8cbd022e6a31da6350e456a9c9ef78cc48bab129c306012a8146431f11de510f
+- 14778c6bd015ce373b1bd0f397dae1ea72a15ad14909a52f741a0cd7cbaa9367
 
 # `indexing.py`
 
