@@ -256,22 +256,22 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- プロンプト部品と実行パラメータ生成の振る舞いを検証する realization test。レビュー基準、ルーティング規則、ファイルアクセス規則、各種 standard の挿入制御、Markdown レンダリング、構造化出力 schema、モデルクラス・reasoning effort・アクセスモードの選定が期待どおりかを確認する。
-- apply fork、review oracle、session join、TUI parameter resolve、index entry 生成など、複数の prompt builder が正しい本文断片・制約語・schema 契約を持つかを横断的に検査する入口になる。
+- プロンプト部品と実行パラメータ生成のテスト群。構造化ドキュメントの Markdown 描画、routing rule や各種 standard の挿入条件、file access rule のモード別文言、apply fork・review oracle・session join・TUI resolve・indexing 向けパラメータのモデル設定や schema 制約を検証する。
+- プロンプト組み立てが、oracle/realization の基準用語、INDEX ルーティング、補助プロンプト、コードブロック、空行正規化、標準文書の既定オン/オフを期待どおり扱うかを確認する入口になる。
 
 ## Read this when
-- プロンプト本文を組み立てる builder の変更に対して、期待される標準文書・ルーティング規則・ファイルアクセス規則が出力に含まれるか確認したいとき。
-- StructuredDoc の Markdown レンダリング、とくに通常本文の連続空行の畳み込みと code block 内の空行保持に関わる挙動を変更するとき。
-- apply fork、review oracle、session join、TUI parameter resolve、index entry 生成の model class、reasoning effort、file access mode、structured output schema の契約を変更または確認するとき。
-- index entry standard、realization standard、apply review standard、review oracle standard などの基準文書に含めるべき用語や、含めてはいけない用語の回帰を調べるとき。
+- プロンプト部品を生成する関数、標準文書を組み込む complete prompt、または StructDoc の Markdown 描画仕様を変更する。
+- file access mode ごとの読み書き制約文言や、apply fork・review oracle・session join・TUI resolve・indexing の実行パラメータを変更する。
+- structured output schema の制約、特に変更要約、TUI パラメータ選定、review oracle finding merge の妥当性検証を確認・更新する。
+- oracle file、realization file、INDEX.md、標準用語など、プロンプト内に保持すべき基準語句が欠落・混入していないか調べる。
 
 ## Do not read this when
-- 個別 CLI コマンドの実行フロー、永続状態、git 操作、ファイル探索そのものの実装を調べたいだけで、プロンプト生成や schema 契約に関心がないとき。
-- 特定の builder の内部実装を修正するだけで、既存テストの期待値を確認する必要がない場合は、まず対象 builder の実装側を読む方が直接的なとき。
-- oracle file の正本仕様断片そのものを確認したいとき。この対象は realization test であり、仕様判断の根拠にはならない。
+- 個別 CLI コマンドの実行挙動やファイルシステム操作の実装だけを調べたい場合。
+- プロンプト本文やパラメータ builder ではなく、アプリケーション本体の業務ロジック、永続状態、Git 操作の詳細を追う場合。
+- 特定の schema ファイルそのものの定義内容を確認したいだけで、テストが期待する検証観点を知る必要がない場合。
 
 ## hash
-- 8cfe3ab2ea4784cb4c2a1a7939a05f7610aafb8626f37042d87f0f91f902360f
+- df8011452d8944ac440ad78a94a0f5644bd671fd2575545cea11f94673651bd2
 
 # `test_review_oracle_cli.py`
 

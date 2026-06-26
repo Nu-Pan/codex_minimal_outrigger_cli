@@ -1,22 +1,25 @@
 # `apply`
 
 ## Summary
-- フォーク適用後の補助作業で使う AI エージェント呼び出しをまとめた領域。差分から人間向け変更要約を作る呼び出し、対象ファイル起点で realization file の要修正所見を列挙する呼び出し、列挙済み所見をもとに realization file を修正する呼び出しと、それらの構造化出力 schema を扱う。
+- `cmoc apply fork` の補助エージェント呼び出しを構築する領域。フォーク適用後の変更差分要約、ファイル単位の所見列挙、検出済み所見への修正対応について、prompt に渡す役割・目的・標準文書・読み書き権限・モデル設定・構造化出力契約を扱う。
+- 作業レポート用の差分要約、apply review standard に基づく realization file の要修正点調査、所見 JSON を入力にした realization file 修正依頼の入口として読む対象。
 
 ## Read this when
-- フォーク適用処理の後段で、差分要約、ファイル単位の所見列挙、所見対応修正を AI エージェントへ依頼する条件や prompt 内容を確認・変更したいとき。
-- git diff、対象パス、work tree、所見 JSON が、フォーク適用関連の AI 呼び出し prompt にどのように埋め込まれるかを追いたいとき。
-- 変更要約や所見リストを、構造化出力としてどの粒度の項目で受け渡すかを確認したいとき。
-- フォーク適用後レビューで検出された所見を、修正担当エージェントへ渡す際の注意事項や書き込み権限の扱いを確認したいとき。
+- `cmoc apply fork` の後段で AI エージェントに差分要約、所見列挙、所見対応を依頼する prompt 内容や呼び出し条件を確認・変更したいとき。
+- ファイルを起点に oracle file と realization file を読ませ、apply review standard に従った所見リストを構造化出力させる条件を追いたいとき。
+- 検出済み所見を修正担当エージェントへ渡す際の所見 JSON の埋め込み方、作業上の注意、realization file への書き込み権限、参照する標準文書を確認したいとき。
+- 作業レポート向けに git 差分をそのまま渡し、人間向けのカテゴリ別変更要約を生成させる呼び出しと出力契約を確認したいとき。
+- 所見リストや変更要約の Structured Output schema が、根拠情報、仕様要求、観測された実装、修正方針、主要な変更パスなどをどう要求しているか確認したいとき。
 
 ## Do not read this when
-- フォークの作成、ブランチ操作、差分取得、適用処理全体の制御、git コマンド実行そのものを調べたいとき。
-- oracle file、realization file、apply review standard など、prompt に取り込まれる標準文書や正本仕様の本文を確認したいとき。
-- 汎用 prompt 組み立て、markdown rendering、パス解決、AgentCallParameter や model class など、AI 呼び出し基盤の共通部品を調べたいとき。
-- 個別の所見内容や実際の修正対象コードを調査したいだけで、フォーク適用向けの AI 呼び出し定義を変更しないとき。
+- `cmoc apply fork` 全体の実行制御、フォークの作成・適用・統合、ブランチ操作、git コマンド実行そのものを調べたいとき。
+- oracle file、realization file、apply review standard、realization standard など、prompt に組み込まれる標準本文そのものを読みたいとき。
+- 汎用的なエージェント呼び出しパラメータ、完全 prompt の共通構築、構造化ドキュメントの markdown rendering、repo root や実パス解決 helper の詳細を調べたいとき。
+- カテゴリ分けや所見抽出の実際の判断基準、個別カテゴリ名の網羅、git diff の生成方法、変更ファイル抽出アルゴリズムを調べたいとき。
+- INDEX.md エントリーの書き方や一般的なルーティング文書生成の規則だけを確認したいとき。
 
 ## hash
-- 3fd44ed89e7ed1df0f6f3077340368ab1a1898476a27c6fd9e07d9c18e7fabe1
+- 784dc2822745537568d9cd1813a3eaaf38eec8de4cb7640b52b89c4dc31784ec
 
 # `indexing`
 
