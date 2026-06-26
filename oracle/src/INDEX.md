@@ -1,24 +1,24 @@
 # `acp`
 
 ## Summary
-- AI エージェント呼び出しに関わる oracle src をまとめる階層。呼び出しパラメータ構築と、呼び出し時に組み込む標準プロンプト部品の正本仕様断片へ進む入口になる。
-- サブコマンドや処理ごとに、どの補助文脈・role・goal・制約・モデル設定・reasoning effort・ファイルアクセス範囲・Structured Output 契約を AI に渡すか、またはそれらの前提となる標準文面を確認するための領域。
-- CLI 制御フロー、git 操作、ファイル修正、TUI 描画、永続状態更新そのものではなく、それらの処理から呼び出される AI への入力境界と応答境界を読むための階層。
+- AI エージェント呼び出しに渡す prompt と実行条件の正本仕様断片を扱う領域。role・summary・goal・ファイルアクセス規則・ルーティング規則・各種標準文書を組み合わせた完全な prompt 構築と、用途別の呼び出しパラメータ構築を確認する入口になる。
+- 下位には、サブコマンドや処理段階ごとの agent call parameter を定める領域と、agent prompt に注入される共通規則・標準断片を生成する領域がある。変更要約、所見列挙、所見対応修正、oracle review、INDEX.md エントリー生成、conflict marker 解消、TUI 実行パラメータ選定など、AI に何を読ませ、どの権限とモデル設定で呼び、どの応答契約を期待するかを追うために読む。
+- 実際の CLI 制御、git 操作、差分取得、ファイル編集処理、永続状態更新、端末 UI 描画そのものではなく、それらの処理から呼び出される AI エージェントとの入出力境界と prompt 構成を扱う階層。
 
 ## Read this when
-- cmoc の処理が AI エージェントを呼び出す場面で、prompt 構成、補助文脈、読み取り・編集権限、モデル種別、reasoning effort、Structured Output schema の対応を確認したいとき。
-- AI に渡す標準プロンプト部品、ファイルアクセス規則、ルーティング規則、oracle / realization の基本概念、各種標準文書がどのように呼び出し prompt に組み込まれるかを確認したいとき。
-- fork 適用後レビュー、INDEX.md エントリー生成、oracle review、セッション合流時の conflict 解消、TUI 実行パラメータ選定などで、AI 呼び出しへ渡す入力情報と期待する応答契約を調べたいとき。
-- AI 呼び出しの実装やテストで、補助情報の組み込み条件、空配列や重複除外の境界、修正用と読み取り専用のアクセス条件を確認したいとき。
+- cmoc の処理が AI エージェントを呼び出す場面について、渡す role・summary・goal・補助文脈・ファイルアクセスモード・モデル種別・reasoning effort・Structured Output 契約を確認したいとき。
+- agent prompt に必ず入る共通規則、任意で注入される oracle / realization / review / apply review / INDEX.md エントリー標準、標準断片間の依存関係を確認したいとき。
+- fork 適用後の差分要約や所見処理、oracle file レビュー、INDEX.md エントリー生成、セッション合流時の conflict marker 解消、TUI 実行前のパラメータ選定について、AI 呼び出しの入力と期待出力を調べたいとき。
+- AI 呼び出し結果の実装やテストで、読み取り専用・oracle 読み取り・realization 編集などの権限境界、空配列を返す条件、既知情報と重複しない情報だけを返す条件、標準文書の注入条件を確認したいとき。
 
 ## Do not read this when
-- CLI 引数解析、サブコマンド登録、branch 作成、merge 実行、git 操作、差分取得、patch 適用、永続状態更新、端末 UI 描画など、AI 呼び出しパラメータ以外の実行フロー本体を調べたいとき。
-- 個別ファイルの patch 内容、merge conflict の具体的な統合判断、realization file の修正ロジック、oracle file 本文からの具体的な所見材料など、対象本文そのものを読んで判断する作業をしたいとき。
-- StructDoc、AgentCallParameter、file access mode、path 語彙など、プロンプト部品や呼び出しパラメータを支える下位データ構造や共通型そのものを確認したいとき。
-- INDEX.md 全体のルーティング方針、エントリー記述品質基準、生成結果の内容評価、または一般的なルーティング文書の書き方を確認したいとき。
+- CLI 引数解析、サブコマンド登録、branch 作成、merge 実行、git コマンド実行、patch 適用、状態ファイル更新、TUI の描画や入力制御など、AI 呼び出しパラメータ以外の実行フロー本体を調べたいとき。
+- oracle file や realization file の個別本文から、具体的な仕様内容・実装差・merge conflict の統合内容・修正方針そのものを判断したいとき。
+- StructDoc、Standard、Requirement、AgentCallParameter、FileAccessMode、path model など、prompt やパラメータ構築で使われる基盤データ構造や共通型そのものを確認したいとき。
+- INDEX.md エントリーや各種レビューの一般的な品質基準本文だけを確認したい場合で、agent call 用 prompt への組み込み条件や呼び出しパラメータには関心がないとき。
 
 ## hash
-- aa401737bc1147ec5bea7986acc266986eb158c60d5a46144fdab697546b0a28
+- cb7722b023ffe0cee9df102a0ca38a8efd00c80b049769621bd8e96ec5e9459e
 
 # `basic`
 

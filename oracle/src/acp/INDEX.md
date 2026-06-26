@@ -23,21 +23,21 @@
 # `prompt_parts`
 
 ## Summary
-- agent call に渡す各種プロンプト部品を構築する oracle src 群への入口である。
-- ファイルアクセス規則、ルーティング規則、oracle / realization の基本概念、oracle / realization / review / INDEX エントリーの標準、完全なプロンプトへの組み立て方を扱う。
-- 個別機能仕様そのものではなく、AI に渡す作業規範や標準断片の文面と、それらを完全なプロンプトへ含める条件を確認するための階層である。
+- AI エージェントへ渡すプロンプト本文を構築する oracle src 群であり、基本プロンプトに加えてファイルアクセス規則、ルーティング規則、oracle / realization の基本概念、oracle / realization の標準、レビュー標準、INDEX.md エントリー標準を StructDoc として生成する入口をまとめている。
+- 完全な agent call 用プロンプトを組み立てる処理と、各標準断片の本文生成処理が同じ階層に置かれており、標準フラグ間の依存関係や、個々の標準プロンプトの要求・禁止・許容事項を確認するための起点になる。
 
 ## Read this when
-- agent に渡す標準プロンプト部品の本文、責務、組み立て順序、依存関係を確認したいとき。
-- ファイルアクセス規則、INDEX.md を使ったルーティング規則、oracle file / realization file の基本概念をプロンプトとしてどう提示しているか確認したいとき。
-- oracle file、realization file、oracle review、oracle と realization の比較レビュー、INDEX.md エントリー生成の各標準を確認または変更したいとき。
-- 新しい標準プロンプト断片を追加する前に、既存の標準断片の範囲、重複、完全プロンプトへの注入条件を把握したいとき。
+- agent に渡す標準プロンプトの構成順序、必ず含まれる規則、任意に追加される標準断片、標準フラグ間の依存関係を確認したいとき。
+- ファイルアクセス制約、INDEX.md を使った読み進め方、oracle file と realization file の基本概念、oracle file の書き方、realization file の実装規範を agent 向けプロンプトとしてどう表現しているか確認したいとき。
+- oracle file レビューや oracle file と realization file の適用レビューで、どの問題を所見として扱うか、どの問題を所見にしないかの規範本文を確認したいとき。
+- INDEX.md エントリー生成・レビュー時に、読む先を選ぶためのルーティング情報として何を書くべきか、何を混ぜるべきでないかの標準本文を確認したいとき。
+- 既存の標準プロンプト断片を追加・変更・整理し、agent call 用プロンプトへ注入される条件や本文内容を調整したいとき。
 
 ## Do not read this when
-- 特定の CLI サブコマンド、出力 schema、状態ファイル、パスモデルなど、cmoc の個別機能仕様を探しているとき。
-- 実際の realization implementation や realization test の現在のコード挙動を調査したいだけのとき。
-- StructDoc など、プロンプト部品を表現する下位データ構造そのものの実装を確認したいとき。
-- 生成されたプロンプトをどの agent 実行経路へ渡すか、または実際のファイル操作・権限チェック・サンドボックス制御の実装を確認したいとき。
+- 特定の CLI サブコマンド、出力 schema、状態ファイル、パスモデル、個別機能の正本仕様本文を探しているとき。
+- StructDoc や Standard / Requirement のデータ構造、整形、表示、連結の基盤実装そのものを確認したいとき。
+- 実際のファイル権限チェック、サンドボックス制御、エージェント実行経路、外部プロセス呼び出しの挙動を調べたいとき。
+- oracle file と realization file の概念や標準本文ではなく、具体的な realization implementation や realization test の現在の実装箇所を探しているとき。
 
 ## hash
-- f505b8893bffe7a604ba8388cedb63a259644b7e827b79d0884cfc6b0e98c8c9
+- ae5f6662284ea4d2966aed850a5513f855bd22edc5190c5b4d972d5c1c292a8d
