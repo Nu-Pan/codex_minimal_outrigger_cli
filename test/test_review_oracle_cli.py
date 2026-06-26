@@ -73,6 +73,74 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
     assert "review oracle merge findings" not in calls
 
 
+def test_review_oracle_report_orders_findings_by_verdict_then_severity(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    enumerated = False
+
+    class FakeCodexResult:
+        def __init__(self, output_json):
+            self.output_json = output_json
+
+    def fake_run_codex_exec(parameter, **kwargs):
+        nonlocal enumerated
+        schema_name = parameter.structured_output_schema_path.name
+        if schema_name == "enumerate_finding.json":
+            if enumerated:
+                return FakeCodexResult({"findings": []})
+            enumerated = True
+            return FakeCodexResult(
+                {
+                    "findings": [
+                        {
+                            "oracle_path": "oracle/spec.md",
+                            "severity": "fatal",
+                            "title": "rejected fatal",
+                            "reason": "fatal reason",
+                        },
+                        {
+                            "oracle_path": "oracle/spec.md",
+                            "severity": "minor",
+                            "title": "accepted minor",
+                            "reason": "minor reason",
+                        },
+                    ]
+                }
+            )
+        if schema_name in {
+            "validate_finding_challenger.json",
+            "validate_finding_advocate.json",
+        }:
+            return FakeCodexResult({"reasons": []})
+        if schema_name == "merge_finding.json":
+            return FakeCodexResult({"operations": []})
+        if schema_name == "judge_finding.json":
+            if kwargs["purpose"].endswith("finding-0002"):
+                return FakeCodexResult({"verdict": "accept", "reason": "accepted"})
+            return FakeCodexResult({"verdict": "reject", "reason": "rejected"})
+        raise AssertionError(schema_name)
+
+    monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(
+        app, ["review", "oracle", "--scope", "full"], catch_exceptions=False
+    )
+
+    assert result.exit_code == 0
+    rendered = Path(
+        [line for line in result.output.splitlines() if line.startswith("/")][-1]
+    ).read_text()
+    assert rendered.index("accepted minor") < rendered.index("rejected fatal")
+    assert "fatal_findings_rejected_count: 1" in rendered
+    assert "minor_findings_accepted_count: 1" in rendered
+
+
 def test_review_oracle_uses_linked_worktree_branch_and_oracle(
     tmp_path: Path, monkeypatch
 ) -> None:

@@ -117,9 +117,13 @@ def render_review_oracle_report(
             "|---:|---|---:|",
             rows,
             "## Fatal findings",
-            render_finding_section(fatal_accepted + fatal_rejected),
+            render_finding_section(fatal_accepted),
             "## Minor findings",
-            render_finding_section(minor_accepted + minor_rejected),
+            render_finding_section(minor_accepted),
+            "## Rejected fatal findings",
+            render_finding_section(fatal_rejected),
+            "## Rejected minor findings",
+            render_finding_section(minor_rejected),
             "",
         ]
     )
