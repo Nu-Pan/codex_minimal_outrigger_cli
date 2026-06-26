@@ -207,12 +207,15 @@ def test_apply_finding_merge_operations_rejects_invalid_operations(
         )
 
 
-def test_review_oracle_full_scope_excludes_gitignored_oracle_files(
+def test_review_oracle_full_scope_includes_binary_and_excludes_gitignored_oracle_files(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
     root = make_repo(tmp_path)
     add_tracked_ignored_oracle_file(root)
+    (root / "oracle" / "asset.bin").write_bytes(b"\x00\x01binary\n")
+    run_git(root, "add", "oracle/asset.bin")
+    run_git(root, "commit", "-m", "add binary oracle")
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
     assert (
@@ -241,14 +244,15 @@ def test_review_oracle_full_scope_excludes_gitignored_oracle_files(
     rendered = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
-    assert "oracle_count_total: 1" in rendered
-    assert "oracle_count_evaluated: 1" in rendered
+    assert "oracle_count_total: 2" in rendered
+    assert "oracle_count_evaluated: 2" in rendered
+    assert "`oracle/asset.bin`" in rendered
     assert "`oracle/spec.md`" in rendered
     assert "oracle/ignored.md" not in rendered
     enumerate_calls = [
         call for call in calls if call.startswith("review oracle enumerate findings")
     ]
-    assert len(enumerate_calls) == 1
+    assert len(enumerate_calls) == 2
 
 
 def test_review_oracle_accepts_short_scope_option(tmp_path: Path, monkeypatch) -> None:
