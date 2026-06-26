@@ -278,23 +278,26 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- プロンプト部品とプロンプト生成パラメータの realization test。ルーティング規則、ファイルアクセス規則、各種 standard 文書、complete prompt の注入・省略・禁止語除去、builder が返す model/reasoning/file access/schema の契約を検証する。
-- StructDoc の Markdown 描画、空行正規化、コードブロック保持、schema 検証、root token の実パス展開、apply/review/session/tui/indexing 系 builder の主要な統合契約を横断的に確認する入口になる。
+- プロンプト部品、標準文書、ファイルアクセス規則、ルーティング規則、Markdown レンダリング、各種 ACP パラメータビルダーの挙動を検証する realization test。
+- complete prompt が標準文書を既定で含むか、必要な標準を明示的に含むか、禁止語や root token を実パスへ置換するかを確認する。
+- apply fork、review oracle、session join、tui resolve、indexing index entry などのビルダーが、期待されるモデル種別、reasoning effort、file access mode、schema、prompt 断片を返すことを検証する。
+- StructDoc と code block の Markdown 出力で、連続空行の扱いが通常本文と code block 内で期待通り異なることを確認する。
 
 ## Read this when
-- プロンプトに含める standard 文書、ルーティング規則、ファイルアクセス規則、禁止語置換、root path 展開の期待挙動を変更・確認したいとき。
-- apply fork、review oracle、session join、tui resolve、indexing index entry の builder が選ぶ model class、reasoning effort、file access mode、structured output schema の契約を確認したいとき。
-- StructDoc や Markdown レンダリングの空行処理、コードブロック処理、complete prompt への補助文書注入に関する回帰テストを探すとき。
-- プロンプト関連の realization implementation を変更した後、既存の利用者向け文言・標準用語・禁止語の扱いが壊れていないか確認したいとき。
+- プロンプト生成、標準文書の組み込み、禁止語の置換、root path 解決、または complete prompt の構成を変更する。
+- file access mode ごとの prompt 文言、routing rule、apply review standard、realization standard、review oracle standard、index entry standard の出力内容を変更する。
+- ACP パラメータビルダーの model class、reasoning effort、file access mode、structured output schema、または prompt に埋め込む文言を変更する。
+- apply fork の対象 root 判定、change summary schema、review oracle merge finding schema、session join conflict resolution、TUI resolve parameter の schema enum や boolean flag を変更する。
+- StructDoc や StructCodeBlock の Markdown レンダリングで空行の正規化挙動を変更する。
 
 ## Do not read this when
-- 個別のプロンプト文書や standard 文書の本文そのものを理解したいだけの場合。まず対応する生成関数や仕様断片を読む方が直接的。
-- CLI 実行、Git 操作、worktree 管理など、プロンプト生成以外の外部挙動を調べたい場合。
-- 特定の structured output schema の詳細定義だけを確認したい場合。schema 本体またはその builder を読む方が直接的。
-- テスト基盤全体の構成、fixture 共通化、pytest 設定を調べたい場合。より上位または共通設定を読む方が適切。
+- 個別 CLI コマンドの実行挙動や永続状態の処理だけを調べたい場合。
+- prompt 部品、標準文書、ACP パラメータ、schema 検証、Markdown レンダリングに関係しない実装変更を行う場合。
+- oracle file の正本仕様そのものを確認したい場合。この対象は realization test であり、仕様本文の代替ではない。
+- 単一の標準文書やビルダーの実装詳細だけを読みたい場合は、まず対応する実装や schema を直接読む方が適切。
 
 ## hash
-- 5efc21c46beeae18e3031964175fee1b69fd08d06d251242a238329f1f2a9de4
+- a2c147f12b93f4f80df098300166926c4ee4c75324e7f4f41581467762aee26e
 
 # `test_review_oracle_cli.py`
 

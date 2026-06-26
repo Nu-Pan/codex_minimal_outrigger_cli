@@ -24,21 +24,20 @@
 # `prompt_parts`
 
 ## Summary
-- ACP 向けに agent prompt の部品を構築する実装群を収める領域。ファイルアクセス規則、ルーティング規則、oracle/realization の基本概念、各種 standard、レビュー規範、INDEX.md エントリー生成規範などを StructDoc として組み立てる。
-- 完全プロンプトの組み立てでは、基本情報・アクセス制約・ルーティング規則・追加プロンプト・標準プロンプト群を依存関係込みで注入し、agent に渡す前の表現サニタイズも扱う。
-- 個々のプロンプト部品の文言や、標準プロンプトを有効化したときに agent へ渡される前提規則を確認・変更するための入口となる。
+- `src/acp/prompt_parts` は、ACP agent に渡す構造化プロンプトの標準部品を組み立てる実装群です。ファイルアクセス規則、ルーティング規則、oracle/realization の基本概念、各種 standard、レビュー基準、INDEX.md エントリー基準を `StructDoc` として生成し、完全な agent prompt に依存関係込みで注入する入口も含みます。
+- このディレクトリは、agent に提示されるプロンプト本文の内容や構成、標準プロンプト同士の依存関係、root token の実パス置換などを確認・変更するための入口です。
 
 ## Read this when
-- ACP が agent に渡す prompt の構成要素として、どの規則文・標準文・レビュー規範が生成されるかを確認したいとき。
-- ファイルアクセス規則、INDEX.md を使った読み進め方、oracle file と realization file の責務境界、oracle/realization の品質基準を prompt 部品として変更したいとき。
-- oracle review、oracle と realization の照合レビュー、INDEX.md エントリー生成など、agent に渡す判断基準の文面や StructDoc 生成処理を確認・変更したいとき。
-- 標準プロンプト群を完全プロンプトへ組み込む際の依存関係、追加位置、root token や内部表現の置換処理を追いたいとき。
+- ACP agent に渡す標準プロンプト部品の文言、構成、生成処理を確認・変更したいとき。
+- ファイルアクセス規則、INDEX.md ルーティング規則、oracle/realization の基本説明、oracle/realization/review/index-entry 向け standard のどれがどの条件でプロンプトに含まれるか確認したいとき。
+- agent call に渡す完全なプロンプトの組み立て順、追加プロンプトの差し込み位置、標準プロンプト間の依存関係、内部 root token や呼び出し元表現のサニタイズ処理を追いたいとき。
+- cmoc が AI に渡す作業規範やレビュー規範を、自然言語の正本仕様ではなく Python 実装としてどこで構築しているか探したいとき。
 
 ## Do not read this when
-- 個別の CLI サブコマンド、path model、状態ファイル、実行フローなど、prompt 文面ではなく cmoc の具体機能仕様や実装を調べたいとき。
-- StructDoc、StructCodeBlock、Standard、Requirement、FileAccessMode、RootToken などの基盤データ構造や列挙値そのものを確認したいとき。
-- oracle file や realization file の本文そのものを編集・レビューしたいだけで、agent prompt に載せる標準文の生成元を確認する必要がないとき。
-- 生成済み prompt をどの agent プロセスへ渡すか、実際の ACP 呼び出し制御や外部プロセス管理を追いたいとき。
+- 個別 CLI サブコマンド、path model、状態ファイル、Git 操作、実行制御など、プロンプト部品ではない具体機能の仕様や実装を調べたいとき。
+- 生成済みプロンプトを受け取った agent が実際にどう実行されるか、プロセス起動や ACP 通信の制御を追いたいとき。
+- StructDoc、StructCodeBlock、Standard、Requirement、FileAccessMode、RootToken など、プロンプト部品が利用する基盤データ型や列挙値そのものの定義を確認したいとき。
+- INDEX.md エントリーの対象本文がすでに個別ファイルまで特定できており、そのファイル単体の責務や文言だけを確認すればよいとき。
 
 ## hash
-- d77f48d02eff94645635cd416a450121013ca3798b191787a253b0f8efab7fcf
+- 939c132501d123684bd14a51aed9662bd793ae0159b3b739fdb046968f542763

@@ -103,23 +103,21 @@
 # `oracle_review_standard.py`
 
 ## Summary
-- oracle file のレビューで所見を列挙する際の判定規範を構築する実装。fatal 所見、minor 所見、所見にしない対象の境界を StructDoc としてまとめ、正本仕様断片の矛盾、実装者裁量で補える隙間、表記上の単純誤りをどう扱うかを定義する。
-- oracle file レビュー用プロンプト部品のうち、所見の重大度分類と、oracle file の記述だけを根拠に問題と言えるかどうかの基準を確認する入口になる。
+- `cmoc review oracle` で oracle file をレビューする際に、列挙すべき所見の種類と根拠条件を構築する prompt part。fatal 所見、minor 所見、所見にしてはいけない判断を `Standard` と `Requirement` からなる構造化文書として定義する。
+- oracle file 同士の明確な矛盾や実装者裁量では解消不能な問題を fatal とし、日本語上の誤り・typo・表記揺れなど表記上の単純問題を minor とし、oracle file の具体的記述だけから問題と言えない推測・好み・一般論を所見から除外する基準を扱う。
 
 ## Read this when
-- oracle file レビューで、仕様断片同士の明確な矛盾や実装不能な要求を fatal 所見にすべきか判断したいとき。
-- 日本語の誤り、typo、用語不統一、表記揺れを minor 所見として扱う基準を確認したいとき。
-- oracle file に未定義部分や複数の実装方針が残っているだけの状態を、所見にしてよいか切り分けたいとき。
-- oracle file レビュー用の規範文章を生成する処理や、その StructDoc 構造を変更・確認したいとき。
+- `cmoc review oracle` の所見列挙プロンプトで、どの問題を fatal または minor として扱うかを確認したいとき。
+- oracle file の矛盾、実装者裁量で補えない仕様問題、typo・表記揺れ・日本語上の誤りをレビュー結果に含める条件を変更または検証するとき。
+- oracle file だけでは問題と言い切れない仕様の隙間、一般的なベストプラクティス、実装方針の複数性を所見にしない境界を確認したいとき。
 
 ## Do not read this when
-- oracle file そのものの定義、realization file との関係、正本仕様断片の一般原則を確認したいだけのとき。
-- oracle file レビュー結果の出力形式、CLI コマンド、保存先、実行フローを確認したいとき。
-- 通常の realization code レビューやテスト品質の基準を確認したいとき。
-- fatal/minor/対象外という所見判定ではなく、個別の oracle file 本文の内容そのものを調べたいとき。
+- oracle review 以外のサブコマンドや一般的な CLI 動作の仕様・実装を確認したいとき。
+- 所見の分類基準ではなく、レビュー対象となる oracle file の定義、配置、正本仕様としての扱いそのものを確認したいとき。
+- 構造化文書を組み立てる共通データ型や `Standard` から `StructDoc` への変換処理の実装詳細を確認したいとき。
 
 ## hash
-- 7fddf3e4f4aee293b48f8539fc6273c5ecfd02007a44c78ba1450ac5557712fe
+- 1404f2566c5a97fa55822658a9003371e37b786d40ea67b3c81e64c0d013c436
 
 # `oracle_standard.py`
 
