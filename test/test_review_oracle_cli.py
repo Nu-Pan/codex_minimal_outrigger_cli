@@ -8,6 +8,7 @@ from _support import (
     review_module,
     run_git,
     runner,
+    subprocess,
 )
 from config.cmoc_config import CmocConfig, CmocConfigReviewOracle
 
@@ -409,6 +410,40 @@ def test_review_oracle_merges_review_index_changes(tmp_path: Path, monkeypatch) 
         path.name == ".git" for path in (root / ".cmoc" / "worktrees").rglob(".git")
     )
     assert not (root / ".cmoc" / "worktrees" / "review").exists()
+
+
+def test_review_oracle_resolves_index_conflict_when_session_deleted_index(
+    tmp_path: Path,
+) -> None:
+    root = make_repo(tmp_path)
+    home_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    (root / "INDEX.md").write_text("base\n")
+    run_git(root, "add", "INDEX.md")
+    run_git(root, "commit", "-m", "add index")
+    run_git(root, "switch", "-c", "review")
+    (root / "INDEX.md").write_text("review\n")
+    run_git(root, "add", "INDEX.md")
+    run_git(root, "commit", "-m", "review index")
+    run_git(root, "switch", home_branch)
+    (root / "INDEX.md").unlink()
+    run_git(root, "add", "INDEX.md")
+    run_git(root, "commit", "-m", "delete index")
+    merge = subprocess.run(
+        ["git", "merge", "--no-ff", "review"],
+        cwd=root,
+        text=True,
+        capture_output=True,
+    )
+    assert merge.returncode != 0
+
+    resolved = review_module.resolve_review_index_conflicts(root)
+
+    assert resolved is True
+    assert not (root / "INDEX.md").exists()
+    assert (
+        run_git(root, "diff", "--name-only", "--diff-filter=U").stdout.strip() == ""
+    )
+    assert "Merge branch 'review'" in run_git(root, "log", "-1", "--pretty=%B").stdout
 
 
 def test_review_oracle_writes_error_report_on_processing_failure(

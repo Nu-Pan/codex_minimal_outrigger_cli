@@ -67,7 +67,15 @@ def resolve_review_index_conflicts(root: Path) -> bool:
     if any(Path(path).name != "INDEX.md" for path in conflicted):
         return False
     for path in conflicted:
-        run_git(["checkout", "--ours", "--", path], root)
-        run_git(["add", path], root)
+        if _has_ours_stage(root, path):
+            run_git(["checkout", "--ours", "--", path], root)
+            run_git(["add", "--", path], root)
+        else:
+            run_git(["rm", "-f", "--", path], root)
     run_git(["commit", "--no-edit"], root)
     return True
+
+
+def _has_ours_stage(root: Path, path: str) -> bool:
+    unmerged = run_git(["ls-files", "-u", "--", path], root).stdout.splitlines()
+    return any(line.split(maxsplit=3)[2] == "2" for line in unmerged)
