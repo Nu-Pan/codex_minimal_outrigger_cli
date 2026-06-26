@@ -1,26 +1,23 @@
 # `apply`
 
 ## Summary
-- apply run の開始、進行、破棄、取り込み、実行時状態管理、実行結果 report 生成を扱うサブコマンド実装群への入口。
-- session branch と apply branch/worktree をまたぐ状態検証、isolated worktree 上での Codex CLI 実行、process id 管理、成果の merge、後片付け、警告・report 出力など、apply 系操作の制御フローを調べる起点になる。
-- 個別の責務は、破棄、fork 実行、fork report、join、process/worktree runtime helper に分かれており、apply の利用者向け挙動と低レベル実行時状態の両方へ分岐する階層。
+- apply 系サブコマンドの実装群を収める領域。apply run の開始、破棄、join、実行時 process 管理、fork 結果 report 生成など、apply branch と apply worktree を使う一連の制御へ進む入口になる。
+- session branch と apply branch の検証、apply worktree の探索・削除、apply process の停止、state 初期化、merge や conflict 処理、実行結果 report など、apply 固有の状態遷移と副作用を扱う。
 
 ## Read this when
-- apply 系サブコマンド全体のどの実装へ進むべきかを選びたいとき。
-- apply run の開始から join または abandon までの状態遷移、branch/worktree 操作、process id 管理、report 出力の関係を把握したいとき。
-- apply branch/worktree の作成・探索・削除、session state の更新、clean worktree 検証、merge conflict、warning 出力など、apply 操作の副作用を調べたいとき。
-- apply fork の反復制御、finding 適用、禁止対象差分の rollback、commit 作成、converged 判定、通常・エラー report の生成経路を確認したいとき。
-- running 状態の apply process を停止する処理、pid file、pidfd、process start time、stale pid の扱いなど、apply 実行時状態の低レベル処理へ進みたいとき。
+- apply run の開始から成果取り込み、破棄、実行中 process 管理まで、apply サブコマンド群の責務分担を把握して読む先を選びたいとき。
+- apply branch、apply worktree、session state、apply process id の関係や、apply 固有の状態遷移・後片付け・警告出力を確認したいとき。
+- apply fork の loop 制御、finding 適用、変更 commit、編集禁止対象の差分検出、結果 report 生成のどこを読むべきか切り分けたいとき。
+- apply join や apply abandon の実行条件、失敗条件、merge・破棄・cleanup の流れを調べたいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド、session 管理、config schema、git wrapper の一般挙動だけを調べたいとき。
-- oracle file、realization file、INDEX.md 生成規則など、仕様文書やルーティング文書の方針そのものを確認したいとき。
-- Codex CLI に渡す prompt や parameter 構築だけを調べたいときは、それを組み立てる実装へ直接進む。
-- 共通 runtime の branch 操作、state 読み書き、report 保存先、git command 実行など、apply 固有でない helper の詳細だけを確認したいときは共通実装へ直接進む。
-- 特定の apply 操作に読む対象がすでに決まっており、破棄、fork、join、report、process 管理のいずれかの本文へ直接進めるとき。
+- CLI 全体の command 登録や apply 以外のサブコマンド dispatch を確認したいだけのとき。
+- git wrapper、session state schema、report 保存先、path model、cmoc ignore 判定など、apply 以外からも使われる共通 runtime の詳細だけを調べたいとき。
+- oracle file、realization file、INDEX.md 生成規則など、仕様文書やルーティング文書の基準を確認したいとき。
+- apply に関係しない通常の実装変更、テスト追加、または他サブコマンドの挙動を調べたいとき。
 
 ## hash
-- 24780d44ae972d7a71c690bc14fd580e3fc7af0149192836ce6395259484cda7
+- 9cdfa9c43e0e68f2e25f9873791a4e5d2ec5e92772db4451df4f7ede0e5a07f3
 
 # `indexing.py`
 

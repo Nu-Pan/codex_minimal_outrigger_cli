@@ -128,23 +128,21 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装を集約する階層で、初期化、目次更新、対話 TUI、session 操作、apply 実行、oracle review などの利用者向け操作から各実処理へ進む入口になる。
-- 各サブコマンドは、共通の実行前検証、設定・状態読み込み、git branch/worktree 操作、Codex 実行、report 生成、利用者向け出力を組み合わせて、cmoc の主要ワークフローを制御する。
-- 処理全体を接続する CLI orchestration と、review 対象列挙・review loop・review report・routing document 差分 merge などの補助実装へ分岐する階層でもある。
+- サブコマンド実装群をまとめる領域で、初期化、目次更新、TUI 起動、oracle review、session 操作、apply 操作など、利用者が直接呼び出す CLI 機能の実処理へ進む入口になる。
+- 各対象は共通 runtime や低レベル helper ではなく、サブコマンドとしての実行前条件確認、状態遷移、git 操作、Codex 呼び出し、利用者向け出力、失敗時エラー化を組み合わせる orchestration を担う。
+- apply と session は下位パッケージに分かれ、review は対象列挙、実行 loop、INDEX 差分処理、report 生成などの helper module に分割されているため、CLI から各処理責務へ読む先を選ぶための階層である。
 
 ## Read this when
-- 利用者が実行するサブコマンドの処理入口を探し、どの実装へ進むべきかを選びたいとき。
-- init、indexing、tui、session、apply、review などの上位 CLI 操作について、実行順序、事前条件、状態更新、branch/worktree 操作、出力や report 生成の接続を把握したいとき。
-- oracle review の対象列挙、Codex review loop、INDEX 変更 commit/merge、review report 生成など、review サブコマンド配下の責務分担を調べたいとき。
-- apply run の開始・進行・停止・破棄・取り込みや、session branch の作成・取り込み・破棄など、複数の git 状態と cmoc state をまたぐサブコマンド制御を追いたいとき。
-- 目次更新や TUI 起動のように、Codex 呼び出しパラメータ、Structured Output、prompt 生成、対象走査、既存内容の再利用がサブコマンドからどう起動されるかを確認したいとき。
+- cmoc の各サブコマンドの実装入口を探し、どのファイルまたは下位パッケージが目的の CLI 操作を担当するか切り分けたいとき。
+- 初期化、目次更新、TUI 起動、oracle review、session branch 操作、apply run/join/abandon など、利用者操作に対応する上位フローを確認したいとき。
+- サブコマンド実行時の preflight、session state、branch/worktree 操作、Codex 実行、commit/merge、report 出力がどのコマンド層で接続されるかを追いたいとき。
+- review oracle のように複数 helper に分割された処理について、対象列挙、実行 loop、INDEX 差分処理、report 生成のどこへ進むべきか判断したいとき。
 
 ## Do not read this when
-- CLI サブコマンドから呼ばれる共通 runtime、git command wrapper、path model、state schema、設定モデルなどの低レベル共通部品そのものを調べたいとき。
-- oracle file、realization file、INDEX.md 生成規則、正本仕様断片の記述方針など、仕様文書やルーティング文書の概念を確認したいとき。
-- 特定の helper の責務がすでに分かっており、review 対象列挙、review loop、review report、review index 操作、apply の各個別操作などへ直接進めるとき。
-- Codex CLI に渡す prompt や parameter builder の内容だけ、または Markdown/Structured Output の共通レンダリング仕様だけを確認したいとき。
-- サブコマンドの利用者向け orchestration ではなく、ignore 判定、repo/work root 解決、report 保存先、lock、timestamp、外部コマンド実行の共通実装だけを変更したいとき。
+- Typer アプリ全体のサブコマンド登録、共通 CLI ラッパー、引数 dispatch の構造だけを確認したいとき。
+- git 実行 wrapper、path model、config schema、session state schema、cmoc ignore 判定、Codex 実行基盤など、複数サブコマンドから使われる共通 runtime の内部だけを調べたいとき。
+- oracle file、realization file、INDEX.md 生成規則、review 観点など、正本仕様やルーティング文書の基準そのものを確認したいとき。
+- 個別サブコマンドの詳細責務がすでに分かっており、apply 配下、session 配下、review helper、または特定の単一実装ファイルへ直接進めるとき。
 
 ## hash
-- 25181e36763a74aeb9002115c378d2db0b68ff63049e533f349c7b2bf961f6d8
+- 2024a11aabddd72a5dc039f0c0b46e89d945f5ccb6c30e82ae7612c148f1f82a

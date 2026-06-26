@@ -42,24 +42,23 @@
 # `test_apply_fork_cli.py`
 
 ## Summary
-- apply fork サブコマンドの realization test。Codex 呼び出しを fake 化し、apply fork が session から apply run を作成して state・apply branch・worktree を完了状態へ進める制御、session 側の .gitignore を不要に書き換えないこと、設定読み込み失敗時に apply run を開始しないことを検証する。
-- .gitignore が所見対象になった場合は apply branch 側で編集できることと、apply 対象正規化で root 直下の memo を除外しつつ入れ子の memo directory は対象に残すことも扱う。
+- apply fork コマンドの realization test。Codex 実行を fake に差し替え、apply run の開始から完了までの状態更新、apply worktree 作成、apply branch 名、旧 apply_worktree/apply_process_id/pid の非保持、所見列挙呼び出しを検証する。
+- session 側の .gitignore を書き換えないこと、.cmoc が git 追跡対象の場合に session を dirty にせず拒否すること、設定読み込み失敗時に apply run の branch/state/pid を開始しないことを検証する。
+- 所見対象として .gitignore を扱う場合は apply branch 側で編集できること、apply 対象正規化では root 直下の memo を除外しつつ入れ子の memo directory を対象に残すことを検証する。
 
 ## Read this when
-- apply fork の正常完了時に作られる branch、session state、worktree 配置、旧 apply_worktree や pid state の残存有無を確認・変更したいとき。
-- apply fork が Codex execution、所見列挙、commit message、change summary をどのように呼び分ける前提でテストされているかを確認したいとき。
-- apply fork 実行時の .gitignore の扱いを変更する、または session 側の既存表現保持と apply branch 側での編集可否を確認したいとき。
-- cmoc config の欠落・不正 JSON など、設定読み込み失敗時に apply run の branch/state/pid を作らない挙動を確認したいとき。
-- apply 対象正規化で memo を除外する境界、特に root 直下 memo と入れ子の memo directory の扱いを確認したいとき。
+- apply fork の CLI 挙動、状態遷移、apply worktree の配置、apply branch の作成、完了時の state cleanup を変更・確認するとき。
+- apply fork が session 側の .gitignore や .cmoc 追跡状態をどう扱うか、失敗時に session worktree を汚さないことを確認するとき。
+- apply fork の設定読み込み失敗時の早期終了、pid/state/branch を開始しない制御を変更・確認するとき。
+- apply 対象の列挙・正規化、特に .gitignore を所見対象として扱う挙動や root 直下 memo 除外の境界を変更・確認するとき。
 
 ## Do not read this when
-- apply fork 以外の apply サブコマンドや session 操作単体の仕様・実装を調べたいだけのとき。
-- Codex CLI や LLM 出力品質そのものの検証、または実際の Codex 実行内容を調べたいとき。
-- apply fork の実装詳細を変更する作業で、まず対象の本体ロジックや state helper を読む方が直接的なとき。
-- oracle file の正本仕様断片を確認したいとき。このファイルは realization test であり、正本仕様ではない。
+- Codex CLI や LLM 出力品質そのものを検証したいとき。この対象は Codex 実行結果を fake にし、apply fork 側の制御と副作用を検証する。
+- apply fork 以外のサブコマンド、session fork 自体の詳細、または init の単独挙動を調べるとき。該当コマンドの実装または専用テストへ進む方が直接的。
+- oracle file の正本仕様を確認したいとき。この対象は realization test であり、仕様判断の根拠としては oracle 側を読む。
 
 ## hash
-- 1155486af4e2cff9b8af408174ac27e7ed6186f3c1f403699c62fd597e7d00c9
+- 072a67d3843e4d3f96868eefadcf9da9ea3da971ca1760673b37713b59acafe3
 
 # `test_apply_fork_report_cli.py`
 
