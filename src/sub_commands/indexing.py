@@ -16,6 +16,7 @@ from cmoc_runtime import (
     is_git_ignored,
     load_config,
     repo_root,
+    require_clean_worktree,
     require_cmoc_ignored,
     run_cli_subcommand,
     run_codex_exec,
@@ -51,10 +52,15 @@ def cmoc_indexing_command_impl() -> None:
     run_cli_subcommand(
         cmoc_indexing_impl,
         codex_exec=run_codex_exec,
-        pre_log_check=require_cmoc_ignored,
+        pre_log_check=require_indexing_cli_preconditions,
         command_name="indexing",
         command_argv=["cmoc", "indexing"],
     )
+
+
+def require_indexing_cli_preconditions(root: Path) -> None:
+    require_cmoc_ignored(root)
+    require_clean_worktree(root)
 
 
 def run_indexing_preflight(root: Path, codex_exec: CodexExec) -> None:
