@@ -242,6 +242,41 @@ def test_apply_fork_converges_when_last_allowed_target_has_no_findings(
     assert "- result_label: `converged`" in result.output
 
 
+def test_apply_fork_report_does_not_invent_loop_when_no_targets(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """調査対象がない場合、未実行の loop 1 を report しない。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    monkeypatch.setattr(apply_fork_module, "enumerate_apply_targets", lambda *args: [])
+
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> FakeCodexResult:
+        """変更要約だけを返し、所見列挙が呼ばれたら失敗させる。"""
+        purpose = str(kwargs["purpose"])
+        if purpose == "apply fork change summary":
+            return FakeCodexResult({"changes": []})
+        raise AssertionError(purpose)
+
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["apply", "fork"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    report_line = [
+        line for line in result.output.splitlines() if line.startswith("- report:")
+    ][-1]
+    rendered = Path(report_line.split("`")[1]).read_text()
+    assert "result: converged" in rendered
+    assert "- no finding enumeration loops were executed" in rendered
+    assert "- loop 1: 0" not in rendered
+
+
 def test_apply_fork_rejects_forbidden_agents_diff(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:

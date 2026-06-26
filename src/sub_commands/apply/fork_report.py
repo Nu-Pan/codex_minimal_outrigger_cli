@@ -181,7 +181,7 @@ def render_apply_fork_report(
     }.get(result_label, result_label)
     count_lines = "\n".join(
         f"- loop {idx}: {count}" for idx, count in enumerate(finding_counts, 1)
-    ) or "- loop 1: 0"
+    ) or "- no finding enumeration loops were executed"
     change_lines = "\n".join(
         f"- {change.get('category')}: {change.get('summary')} ({', '.join(change.get('changed_paths', [])) or 'no paths'})"
         for change in changes
