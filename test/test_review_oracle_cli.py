@@ -9,6 +9,7 @@ from _support import (
     run_git,
     runner,
 )
+from config.cmoc_config import CmocConfig, CmocConfigReviewOracle
 
 
 def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
@@ -57,6 +58,70 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
     assert "review_join_commit: null" in rendered
     assert any(call.startswith("review oracle enumerate findings") for call in calls)
     assert "review oracle merge findings" not in calls
+
+
+def test_review_oracle_enumerate_receives_only_related_findings(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    (root / "oracle" / "a.md").write_text("# a\n")
+    (root / "oracle" / "b.md").write_text("# b\n")
+    monkeypatch.chdir(root)
+    prompts_by_target: dict[str, list[str]] = {}
+    config = CmocConfig(
+        review_oracle=CmocConfigReviewOracle(
+            num_enumerate_findings_loop=2,
+            num_merge_findings_loop=0,
+            num_validate_findings_loop=1,
+        ),
+    )
+
+    class FakeCodexResult:
+        def __init__(self, output_json):
+            self.output_json = output_json
+
+    def fake_run_codex_exec(parameter, **kwargs):
+        schema_name = parameter.structured_output_schema_path.name
+        if schema_name == "enumerate_finding.json":
+            target = Path(
+                kwargs["purpose"].removeprefix(
+                    "review oracle enumerate findings for "
+                )
+            ).name
+            prompts_by_target.setdefault(target, []).append(parameter.prompt)
+            if target == "a.md" and len(prompts_by_target[target]) == 1:
+                return FakeCodexResult(
+                    {
+                        "findings": [
+                            {
+                                "oracle_path": "oracle/a.md",
+                                "severity": "fatal",
+                                "title": "a finding",
+                                "reason": "a reason",
+                            }
+                        ]
+                    }
+                )
+            return FakeCodexResult({"findings": []})
+        if schema_name in {
+            "validate_finding_challenger.json",
+            "validate_finding_advocate.json",
+        }:
+            return FakeCodexResult({"reasons": []})
+        if schema_name == "judge_finding.json":
+            return FakeCodexResult({"verdict": "reject", "reason": "no finding"})
+        raise AssertionError(schema_name)
+
+    review_module.run_review_oracle_loop(
+        root,
+        root,
+        [root / "oracle" / "a.md", root / "oracle" / "b.md"],
+        config,
+        fake_run_codex_exec,
+    )
+
+    assert "a finding" not in prompts_by_target["b.md"][0]
+    assert "a finding" in prompts_by_target["a.md"][1]
 
 
 def test_review_oracle_full_scope_excludes_gitignored_oracle_files(

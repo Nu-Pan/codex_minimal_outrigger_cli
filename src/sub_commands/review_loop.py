@@ -17,6 +17,7 @@ from acp.builder.review.oracle.validate_finding_advocate import (
 from acp.builder.review.oracle.validate_finding_challenger import (
     build_review_oracle_validate_finding_challenger_parameter,
 )
+from basic.path_model import resolve_real_path
 from config.cmoc_config import CmocConfig
 
 CodexExec = Callable[..., object]
@@ -40,7 +41,13 @@ def run_review_oracle_loop(
             result = codex_exec(
                 build_review_oracle_enumerate_finding_parameter(
                     oracle_path,
-                    json.dumps(findings, ensure_ascii=False, indent=2),
+                    json.dumps(
+                        _findings_related_to_oracle_path(
+                            findings, oracle_path, worktree
+                        ),
+                        ensure_ascii=False,
+                        indent=2,
+                    ),
                 ),
                 root=log_root,
                 cwd=worktree,
@@ -78,6 +85,31 @@ def run_review_oracle_loop(
                 [edit for edit in edits if edit.get("kind") in {"replace", "merge"}]
             )
     return _validate_and_judge_findings(log_root, worktree, findings, config, codex_exec)
+
+
+def _findings_related_to_oracle_path(
+    findings: list[dict], oracle_path: Path, worktree: Path
+) -> list[dict]:
+    return [
+        finding
+        for finding in findings
+        if _finding_oracle_path(finding, worktree) == oracle_path.resolve()
+    ]
+
+
+def _finding_oracle_path(finding: dict, worktree: Path) -> Path | None:
+    raw_path = finding.get("oracle_path")
+    if not isinstance(raw_path, str) or not raw_path:
+        return None
+    path = Path(raw_path)
+    if path.is_absolute():
+        return path.resolve()
+    if path.parts and path.parts[0].startswith("<"):
+        try:
+            return resolve_real_path(path)
+        except (TypeError, ValueError):
+            return None
+    return (worktree / path).resolve()
 
 
 def _validate_and_judge_findings(
