@@ -39,25 +39,22 @@
 # `test_apply_fork_cli.py`
 
 ## Summary
-- apply fork の CLI 挙動のうち、apply run の基本状態更新、session 側 `.gitignore` 保持、設定読み込み失敗時の未開始保証、所見対象としての `.gitignore` 編集、target 正規化を検証する realization test。
-- Codex 呼び出し loop と apply 用 worktree/state/branch の基本更新を中心に扱い、report、dirty 再検査、編集禁止対象、rolling apply fork は別 test module に分けている。
+- apply fork コマンドの realization test。Codex 実行を fake に差し替え、apply fork が session から apply branch/worktree を作って完了状態へ進めること、設定読み込み失敗時に apply run を開始しないこと、.gitignore と memo 対象の扱いが期待どおりであることを検証する。
 
 ## Read this when
-- apply fork の成功時に session state、apply branch、worktree、pid 管理がどう更新・削除されるべきかを確認したいとき。
-- apply fork が既存の ignore 表現を session 側で書き換えないこと、または所見対象としての ignore file を apply branch 側で編集できることを確認したいとき。
-- 設定読み込み失敗時に apply run を開始せず、ready state と branch 未作成を保つ挙動を確認したいとき。
-- apply 対象の正規化で root 直下の private memo を除外し、入れ子の memo directory を対象に残す挙動を確認したいとき。
+- apply fork の CLI 挙動、状態更新、apply branch/worktree 作成、apply_process pid の削除、完了後 state の内容に関するテストを確認・変更するとき。
+- apply fork が Codex loop や findings 列挙・適用・commit message・change summary 生成をどのように呼ぶ前提でテストされているか確認するとき。
+- apply fork の設定ファイル読み込み失敗時に、branch/state/pid などの apply run 副作用を発生させない挙動を検証するとき。
+- apply fork 実行時の .gitignore 保持、apply branch 側での .gitignore 編集、root 直下 memo 除外と入れ子 memo 対象維持のテスト観点を確認するとき。
 
 ## Do not read this when
-- 未収束・収束・error の apply report、dirty file 再検査、編集禁止対象への差分拒否、rolling apply fork を調べたいときは `test_apply_fork_report_cli.py` を読む。
-- apply fork 以外の apply/join/session/init コマンド全般の仕様や実装入口を探しているだけのとき。
-- Codex 実行 wrapper や structured output schema の詳細実装を確認したいとき。
-- report renderer、state model、path model、git helper などの個別実装を直接変更したいとき。
-- oracle file や routing document の正本仕様を確認したいとき。
-- 単体 helper の内部アルゴリズムだけを調べたい場合で、apply fork CLI の end-to-end な外部挙動や state/report 副作用を確認する必要がないとき。
+- apply fork 以外の CLI サブコマンド、session fork や init そのものの仕様・実装を調べたいとき。
+- Codex 実行結果の品質、LLM 出力内容、実際の Codex CLI 呼び出し統合を検証したいとき。
+- apply fork の実装詳細を変更したいが、テスト上の期待ではなく本体処理の責務・分岐・helper を先に確認すべきとき。
+- oracle の正本仕様断片を確認したいとき。
 
 ## hash
-- 93afd8c4cd4c099bf339261159f65582727e32fc9a0befce12a1801ab9adfa59
+- 96334821599926930ec6a5ce4705019aba251f4e40f3d480201b275906dfa39b
 
 # `test_apply_fork_report_cli.py`
 
@@ -142,78 +139,83 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 呼び出しを包む runtime 層のテストで、exec 実行と TUI 実行が生成する引数、標準入力、環境変数、プロファイル、schema 保存先、ログ、コンソール表示を検証する。
-- fake の codex コマンドや monkeypatch を使い、外部 Codex 自体ではなく cmoc 側の起動制御、記録、設定反映、作業ディレクトリ別の状態保存を確認する。
+- Codex CLI 呼び出しを包む実行系の realization test。exec 経路ではプロンプトを stdin で渡すこと、CLI 引数へプロンプト本文を露出しないこと、JSON 出力 schema と最終メッセージを扱うこと、CODEX_HOME・profile・call log・stdout/stderr log・subcommand log・console 表示を記録することを検証する。
+- worktree を cwd にした exec 呼び出しで、schema 保存先が root 側ではなく cwd 側の `.cmoc/state/schema` になることを検証する。
+- TUI 経路では `codex` コマンドを直接起動し、`exec` サブコマンドを使わず、プロンプトを最後の argv として渡すこと、sandbox profile の writable/read-only 設定、call log、subcommand log、console 表示、戻り値を検証する。
+- リポジトリ設定から Codex model と reasoning effort を読み込み、生成 profile に反映されることを検証する。
 
 ## Read this when
-- run_codex_exec または run_codex_tui の挙動を変更する時。
-- Codex CLI へ渡すプロンプト、引数、CODEX_HOME、profile、output schema、cwd の扱いを確認したい時。
-- Codex 呼び出しログ、stdout/stderr ログ、SubcommandLogger の codex_call イベント、コンソール表示の仕様をテストで確認したい時。
-- repo config の codex model や reasoning_effort が生成 profile に反映される挙動を変更または調査する時。
+- Codex CLI を実行する runtime 層、特に exec/TUI の argv・stdin・cwd・環境変数・profile 生成・sandbox 設定を変更する時。
+- Codex 呼び出しのログ出力、call log、stdout/stderr log、subcommand log、console 表示の仕様や実装を確認する時。
+- Structured Output schema の保存場所、worktree 配下での schema パス、`.cmoc/state/schema` の扱いを変更する時。
+- `.cmoc/config.json` から Codex model や reasoning effort を読み込む処理を変更する時。
 
 ## Do not read this when
-- Codex CLI 実行以外のサブコマンド、git 操作、path model、oracle 文書処理のテストを探している時。
-- 実際の Codex CLI や LLM の出力品質、対話内容そのものを検証したい時。
-- runtime 層の実装詳細を先に読みたい場合は、対応する実装ファイルを直接読む方がよい。
+- Codex CLI 呼び出しではない通常の git 操作、path model、oracle/realization 分類、INDEX.md 生成だけを調べる時。
+- runtime 実装の細部ではなく、CLI サブコマンド全体の入口や引数 parsing の一覧を探している時。
+- LLM の応答品質や Codex CLI 本体の挙動そのものを検証したい時。このテストは cmoc 側が Codex CLI をどう起動し記録するかを対象にしている。
 
 ## hash
-- 601b59c25b65ba1977e77d29c378ac64039b201e02ab969eeb5b66d9875c018c
+- 2aba772e50cf05962d67261550ecb2211862c10f1d234cbee723ae523119a1ed
 
 # `test_codex_runtime_home.py`
 
 ## Summary
-- Codex CLI 実行ラッパーが使用する Codex home の解決と事前検証を扱う realization test。環境変数が未設定の場合は通常の home 配下を使うこと、環境変数で指定された値を CLI 呼び出し環境には保持しつつ内部では root 基準で解決すること、存在しない・ディレクトリでない・認証情報がない Codex home を Codex CLI 起動前に CmocError として失敗させることを検証する。
+- Codex CLI 実行時に使う Codex home の決定、環境変数の引き継ぎ、認証情報の事前検証を扱う realization test。`CODEX_HOME` 未設定時は通常の home 配下を使い、設定済みの場合はその値を実行環境へ保持しつつ内部では実体パスとして扱うことを確認する。
+- Codex home が存在しない、ディレクトリでない、または認証情報を欠く場合に、Codex CLI を起動する前に cmoc のエラーとして失敗する境界を検証する。
 
 ## Read this when
-- Codex CLI 呼び出し時の CODEX_HOME の既定値、相対パス解決、子プロセスへ渡す環境変数、実行結果に記録される codex_home や profile_path の挙動を確認・変更する時。
-- Codex home や auth.json の事前検証、またはそれらが不正な場合の CmocError の summary・detail・next_actions を変更する時。
-- run_codex_exec が Codex CLI を呼ぶ前に認証環境を検査する制御をテストしたい時。
+- Codex CLI 呼び出し前の `CODEX_HOME` 解決、既定の Codex home、相対指定された Codex home、または実行ログに記録される Codex home の扱いを変更・確認したいとき。
+- Codex home や認証情報の存在確認に関する失敗条件、エラーメッセージ、next actions、または Codex CLI を起動する前に止める制御を変更・確認したいとき。
+- Codex CLI を fake executable に差し替えて、渡される環境変数・引数・profile path・call log を検証する既存テストの書き方を確認したいとき。
 
 ## Do not read this when
-- Codex CLI の出力イベント解析、容量待ち、プロンプト作成、モデルや reasoning effort の選択など、Codex home の解決・検証と無関係な run_codex_exec の挙動を調べる時。
-- cmoc 全体の oracle/realization 境界、INDEX.md 生成規則、またはルーティング文書の仕様を確認したい時。
-- 実際の Codex CLI や LLM の出力品質そのものを検証したい時。
+- Codex CLI 実行そのものではなく、oracle file と realization file の分類、INDEX.md 生成、パスモデル定義などリポジトリ構造の仕様を調べたいだけのとき。
+- Codex home や認証情報に関係しない model class、reasoning effort、file access mode、prompt 内容、または LLM 出力品質のテストを探しているとき。
+- 実装側の Codex home 解決ロジックやエラー生成処理を変更する目的で、テストではなく本体コードから読み始めるべきとき。
 
 ## hash
-- 0b5e6b71990de6210a442b8915b2bf18394492d336d14f0bd7ec248f7f8736de
+- 00c1dba79050b8c04fb4dcf91e3b68e7d21dd4f7e532d774775356d9e0d59d24
 
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex CLI 実行ラッパーの quota retry 制御を検証する realization test。quota 超過時の availability probe、thread resume、resume token がない場合の rerun、並列呼び出し時の代表 probe 集約を扱う。
-- 偽の Codex 実行ファイルを一時 PATH に置き、JSONL error event、probe 成功、resume/rerun の argv、call log、subcommand event を外部 Codex CLI に依存せず確認する。
+- Codex CLI 実行が quota exceeded で失敗した後の待機、空き確認用 probe、resume または再実行、ログ記録を検証する realization test。
+- 偽の codex 実行ファイルを使い、quota 復旧後に最後の出力 JSON、call log、subcommand log、コンソール表示が期待通りになることを確認する。
+- 並列に quota が発生した場合、代表 1 件だけが quota availability probe を実行し、各呼び出しが resume して成功する制御も扱う。
 
 ## Read this when
-- quota polling、quota availability probe、thread resume、resume token がない場合の rerun の挙動を確認したい場合。
-- 複数の同時 Codex 呼び出しが quota 超過したとき、代表 probe を 1 回だけ実行し各呼び出しが復帰する制御を変更・検証する場合。
-- quota retry 中の call log、stdout/stderr/output log、subcommand event、console 表示を確認したい場合。
+- run_codex_exec の quota exceeded 検出、quota polling、resume token 利用、resume token が無い場合の再実行挙動を変更する時。
+- Codex 呼び出し時の CODEX_HOME、PATH 上の codex、標準入力、--json、--output-last-message、profile 引数の渡し方に関するテストを確認する時。
+- quota availability probe の call log、stdout/stderr/output 保存、SubcommandLogger の codex_call event、コンソール出力の期待値を変更・調査する時。
+- 複数スレッドで同じ quota 状態に入った時、probe を重複させず各実行を復旧させる同期制御を確認する時。
 
 ## Do not read this when
-- schema validation retry、capacity retry、stderr や通常 stdout 上の error marker 境界だけを確認したい場合は `test_codex_runtime_retry.py` を読む。
-- Codex CLI 呼び出しの retry と無関係なサブコマンド、path 処理、oracle/realization 分類、通常の CLI 引数解析だけを調べる場合。
-- 実際の Codex CLI や LLM の品質、ネットワーク越しの実サービス挙動を検証したい場合。
+- quota retry と無関係な通常成功時の Codex 実行、引数組み立て、出力解析だけを調べる場合。
+- Codex CLI 以外のサブコマンド、oracle 処理、path model、リポジトリ生成などの仕様や実装を調べる場合。
+- 実際の Codex CLI や LLM の応答品質、ネットワーク越しの quota 状態そのものを検証したい場合。
 
 ## hash
-- aaf4cc9b992f12a63882c50b120f30509fa95e6bceccb49136d17d9327dae2aa
+- a50db850f7382abc5a63081ab517215d310b587d63021d848ec6a01928539917
 
 # `test_codex_runtime_retry.py`
 
 ## Summary
-- Codex CLI 実行ラッパーの retry 制御のうち、構造化出力の schema validation 失敗後の再試行、capacity エラー時の再試行、stderr や通常 stdout 上の error marker を直接 quota/capacity retry と扱わない境界を検証する realization test。
-- 偽の Codex 実行ファイルを一時 PATH に置き、出力 JSONL、終了コード、標準出力・標準エラー、last message ファイル、呼び出し回数を制御して、外部 Codex CLI に依存せず retry と logging の外部挙動を確認する。
+- Codex CLI 実行ラッパーの retry 挙動を検証する realization test。構造化出力の schema validation 失敗後の再試行、capacity エラー検出後の再試行、JSONL ではない stdout/stderr 上の error marker を retry 条件として扱わない境界を、fake codex 実行ファイルとログ副作用で確認する。
+- retry 結果の output_json、call log、stdout log path、subcommand log の codex_call event status と returncode を合わせて検証し、外部コマンド呼び出しの制御ロジックと観測可能なログ契約の入口になる。
 
 ## Read this when
-- Codex CLI 呼び出しの schema validation retry、capacity retry、retry 後の最終結果、または call log/subcommand log の記録内容を変更・調査する場合。
-- quota 超過検出を JSONL の error event に限定する境界や、stderr・通常 stdout に出た同じ文言を直接失敗として扱う挙動を確認したい場合。
+- Codex CLI 呼び出しの再試行条件、特に schema validation retry、capacity retry、quota/capacity marker の検出範囲を変更する。
+- Codex CLI 呼び出しログ、call log path、stdout log path、subcommand log の codex_call event status や returncode の記録仕様を確認・変更する。
+- fake codex executable を使った runtime 系テストの書き方や、AgentCallParameter、CmocConfig、SubcommandLogger を組み合わせた実行テストの既存例を確認する。
 
 ## Do not read this when
-- quota polling、quota availability probe、thread resume、resume token がない場合の rerun、並列 quota probe 集約を確認したい場合は `test_codex_runtime_quota_retry.py` を読む。
-- Codex CLI 呼び出しの retry や quota/capacity/schema validation と無関係なサブコマンド、path 処理、oracle/realization 分類、通常の CLI 引数解析だけを調べる場合。
-- 実際の retry 実装やログ出力処理そのものを読みたい場合は、先に実装側の Codex runtime を読む方が直接的である。
-- Codex CLI や LLM の品質、実モデルの応答内容、ネットワーク越しの実サービス挙動を検証したい場合。この対象は偽実行ファイルで制御ロジックを検証する。
+- Codex CLI のコマンドライン引数組み立て、作業ツリー権限、モデル・reasoning effort の選択など、retry 判定やログ副作用に直接関係しない実装を調べたい。
+- oracle file の正本仕様や、人間が管理する仕様断片そのものを確認したい。
+- 一般的なテスト補助関数、repository fixture、Codex home setup、fake executable 作成 helper の実装詳細だけを調べたい。
 
 ## hash
-- 11ae5760ec7e48f02aa1cb0afb676b466252903fb885e3b2dbb08480ffabbf16
+- 0b731069e42e2fa6943b0f7076412ffc3f955e5888b3c433f026e9da9bbf1856
 
 # `test_indexing_cli.py`
 

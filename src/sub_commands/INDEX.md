@@ -24,22 +24,25 @@
 # `indexing.py`
 
 ## Summary
-- 現在の work root に対する INDEX.md maintenance サブコマンドと、その preflight 連携を実装する。
-- INDEX.md 更新対象のディレクトリ・子要素の列挙、既存エントリーの再利用判定、Codex によるエントリー生成、Markdown へのレンダリング、更新差分の commit までを扱う。
-- repository ごとの排他 lock、git ignored・binary・memo 除外、対象 hash による鮮度判定など、indexing 処理全体の制御ロジックの入口になる。
+- 現在の作業ツリーに対するルーティング文書の更新処理を実装するサブコマンド本体。対象ディレクトリと子要素の列挙、既存エントリーの再利用判定、Codex 呼び出しによるエントリー生成、Markdown への描画、更新差分の git commit、並列生成、排他 lock をまとめて扱う。
+- Codex 実行前 preflight から同じ更新処理を呼べるようにし、CLI 実行時には cmoc 管理対象チェックを経由して更新件数を表示する入口も持つ。
+- ルーティング文書の鮮度判定に使う hash、対象内容の取り出し、root 直下の memo や git ignored/binary 対象の除外といった、indexing 全体の制御ロジックを読む入口になる。
 
 ## Read this when
-- cmoc indexing の CLI 実行、preflight での INDEX.md 最新化、または indexing commit の作成挙動を確認・変更したいとき。
-- INDEX.md の生成対象に含めるファイルやディレクトリ、除外条件、対象 hash の計算、既存エントリー再利用の条件を調べたいとき。
-- Structured Output から INDEX.md entry Markdown を作る処理、または Codex CLI に単一 entry 生成を依頼する経路を追いたいとき。
+- ルーティング文書を生成・更新するサブコマンドの挙動、実行順序、commit 条件、排他制御を確認または変更したいとき。
+- どのファイルやディレクトリがルーティング文書の対象になるか、memo・git ignored・binary・隠し要素の除外条件を確認または変更したいとき。
+- 既存エントリーを再利用する条件、hash の計算方法、エントリー形式の検証、Structured Output から Markdown へ変換する処理を調べたいとき。
+- Codex CLI に個別エントリー生成を依頼する引数、対象本文の渡し方、生成結果が不正な場合のエラー経路を確認したいとき。
+- indexing preflight と通常サブコマンド実行で共有される更新処理の関係を追いたいとき。
 
 ## Do not read this when
-- INDEX.md entry のプロンプト内容や AgentCallParameter の構築仕様だけを調べたい場合は、builder 側の entry parameter 実装を読む。
-- git コマンド実行、設定読み込み、binary 判定、git ignore 判定などの共通 runtime helper 自体の詳細を調べたい場合は、runtime 側の実装を読む。
-- 生成済み INDEX.md の個別エントリー内容を確認したいだけの場合は、対象ディレクトリの INDEX.md を読む。
+- ルーティング文書に書くエントリー本文のプロンプトや Structured Output パラメータの詳細だけを確認したい場合は、builder 側のエントリー生成パラメータを読む方が直接的。
+- cmoc の path 概念、git 実行 wrapper、config 読み込み、hash 計算、binary 判定、git ignore 判定の実装詳細だけを調べたい場合は、runtime や path/model 系の定義を読む方が直接的。
+- 特定ディレクトリのルーティング文書の内容や、個別ファイルの読むべき条件を確認したいだけなら、対象階層のルーティング文書または対象本文を読む方が適切。
+- CLI 全体のコマンド登録や Typer app 構成を調べたい場合は、サブコマンドを束ねる上位の CLI 定義を読む方がよい。
 
 ## hash
-- 918f714139bfeb33ae4e0dfce726b7ad58062f9b91c4ff10b66c20dafd482715
+- 5caec3c108af017e4f099f3725503817a9313d74c0bfd0de22795909a98b29d8
 
 # `init.py`
 
