@@ -62,23 +62,25 @@
 # `fork.py`
 
 ## Summary
-- isolated apply worktree 上で apply loop を実行し、scope に応じた対象列挙、Codex による finding 列挙・適用、変更コミット、結果レポート作成、状態更新までを統括する実装。
-- apply 中に編集禁止対象へ差分が出た場合の検出・ロールバック・再試行、finding 適用後の変更対象再列挙、commit subject 生成など、apply fork 実行時の制御ロジックと補助処理をまとめている。
+- isolated apply worktree 上で Codex CLI による apply loop を実行するサブコマンド実装。session branch と apply state の事前条件確認、apply 用 branch/worktree 作成、対象ファイル列挙、finding 列挙、finding 適用、変更 commit、結果 report 作成、apply 状態更新までの制御フローを扱う。
+- apply 対象の正規化、scope ごとの対象選択、重複除去、変更 path 抽出、編集禁止対象差分の検出・ロールバック、Codex 生成 commit subject の整形など、apply fork 実行中に必要な補助処理も同じまとまりで持つ。
 
 ## Read this when
-- apply fork の実行条件、scope ごとの調査対象選択、apply 用 worktree・branch・状態遷移・レポート出力の流れを確認したいとき。
-- Codex による finding 列挙、finding 適用、commit message 生成がどのパラメータと作業ディレクトリで呼び出されるかを追いたいとき。
-- apply 実行中に oracle、.agents、memo など編集禁止対象へ差分が出た場合の検出、ロールバック、エラー化の挙動を確認または変更したいとき。
-- apply 対象候補から通常テキストファイルだけを残す条件、INDEX.md・binary・git ignored・oracle 除外の扱いを確認したいとき。
+- apply fork の実行条件、終了コード、状態遷移、作成される apply branch/worktree、report 出力、apply process id の扱いを確認または変更したいとき。
+- scope に応じてどのファイルを finding 列挙対象にするか、oracle・memo・INDEX・binary・git ignored file をどう除外するかを確認または変更したいとき。
+- Codex CLI を使った finding 列挙、finding 適用、commit message 生成の呼び出し方や、config.apply_fork.num_apply_files による apply loop の上限処理を確認したいとき。
+- apply fork 中に編集禁止対象へ差分が出た場合の検出、ロールバック、再試行、エラー化の挙動を確認または変更したいとき。
+- apply fork が作る commit の単位、commit message の生成・sanitize、dirty target の再投入や変更ファイルの再調査ロジックを追いたいとき。
 
 ## Do not read this when
-- apply fork のレポート本文生成やエラーレポートの markdown 構成だけを確認したいときは、レポート生成側を読む。
-- Codex 呼び出し用プロンプトや structured parameter の詳細だけを確認したいときは、apply fork 用 builder 側を読む。
-- apply process id の保存形式や削除処理そのものだけを確認したいときは、apply runtime 側を読む。
-- CLI 全体のエントリーポイント、Typer command 登録、他 apply サブコマンドとの対応だけを確認したいときは、上位のサブコマンド定義を読む。
+- apply fork の最終 report の本文フォーマットやエラー report の具体的な書き出し内容だけを変更したいときは、report 作成を担当する実装を直接読む。
+- Codex に渡す finding 列挙用または finding 適用用の AgentCallParameter の詳細プロンプトだけを変更したいときは、builder 側の該当実装を読む。
+- apply process id の保存形式や削除対象 path の詳細だけを確認したいときは、apply runtime 側の補助実装を読む。
+- git worktree 作成、state 読み書き、config 読み込み、path model、git command wrapper など共通 runtime の基盤挙動だけを調べたいときは、runtime 側を読む。
+- CLI コマンド定義や Typer への登録位置だけを確認したいときは、サブコマンド登録側の実装を読む。
 
 ## hash
-- 3cdd345d13fd8742f1e2587e67ae034049e46aaf3638f289877d8c699bb8e8e3
+- 02f60e1a87e5a0df9b0de15ce69f3db6b3b065336a9ab1944925cbe55bfea9c0
 
 # `fork_report.py`
 
