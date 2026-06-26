@@ -24,7 +24,9 @@ def write_apply_fork_report(
     """apply fork の実行結果 report を生成する。"""
     apply_branch = state.apply.apply_branch or ""
     fork_commit = state.apply.oracle_snapshot_commit or ""
-    changes = build_change_summary(root, apply_worktree, fork_commit, config, codex_exec)
+    changes = build_change_summary(
+        root, apply_worktree, fork_commit, config, codex_exec
+    )
     report_dir = reports_dir(root, "apply/fork")
     report_dir.mkdir(parents=True, exist_ok=True)
     path = report_dir / f"{timestamp()}.md"
@@ -56,6 +58,9 @@ def write_apply_fork_error_report(
     """apply fork 失敗時の report を生成する。"""
     apply_branch = state.apply.apply_branch or ""
     fork_commit = state.apply.oracle_snapshot_commit or ""
+    changes = build_change_summary(
+        root, apply_worktree, fork_commit, config, codex_exec
+    )
     report_dir = reports_dir(root, "apply/fork")
     report_dir.mkdir(parents=True, exist_ok=True)
     path = report_dir / f"{timestamp()}.md"
@@ -69,7 +74,7 @@ def write_apply_fork_error_report(
             apply_worktree,
             "error",
             finding_counts,
-            fallback_change_summary(apply_worktree, fork_commit, "変更要約生成なし"),
+            changes,
         )
     )
     return path

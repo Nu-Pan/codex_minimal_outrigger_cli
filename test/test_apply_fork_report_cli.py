@@ -307,7 +307,17 @@ def test_apply_fork_rejects_forbidden_agents_diff(
         if purpose == "apply fork commit message":
             return FakeCodexResult(output_text="Update README before error\n")
         if purpose == "apply fork change summary":
-            raise AssertionError("error report must not call change summary")
+            return FakeCodexResult(
+                {
+                    "changes": [
+                        {
+                            "category": "実装",
+                            "summary": "エラー前に README を更新した",
+                            "changed_paths": ["README.md"],
+                        }
+                    ]
+                }
+            )
         raise AssertionError(purpose)
 
     monkeypatch.setattr(apply_fork_module, "run_codex_exec", fake_run_codex_exec)
@@ -324,8 +334,8 @@ def test_apply_fork_rejects_forbidden_agents_diff(
     assert report_path.is_file()
     rendered = report_path.read_text()
     assert "result: error" in rendered
-    assert "変更要約生成なし: 変更 path のみを機械的に記録しました。 (README.md)" in rendered
-    assert "apply fork change summary" not in calls
+    assert "実装: エラー前に README を更新した (README.md)" in rendered
+    assert "apply fork change summary" in calls
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
     state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
