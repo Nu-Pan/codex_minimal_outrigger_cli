@@ -24,21 +24,21 @@
 # `prompt_parts`
 
 ## Summary
-- AI agent 呼び出しに渡す構造化プロンプトを、基本プロンプト、ファイルアクセス規則、ルーティング規則、任意追加文書、各種標準文書から組み立てる実装群を扱う。
-- oracle file と realization file の基本概念、oracle file の記述標準、realization file の保守標準、oracle レビュー基準、oracle と realization の照合レビュー基準、INDEX.md エントリー基準、INDEX.md を使った読み進め方を、それぞれ StructDoc として生成する入口になっている。
-- Codex CLI 向けに root token や用語を実パス・作業者向け表現へ置換し、要求された基準プロンプトに必要な前提基準を自動的に含める層でもある。
+- AI agent に渡すプロンプトを構成する標準文書・規則文書・概念説明を、構造化ドキュメントとして組み立てる prompt parts 群を収める領域である。
+- ファイルアクセス規則、ルーティング規則、oracle file / realization file の基本概念、oracle・realization・review・INDEX.md エントリーの各標準、完全なプロンプト構成を扱う。
+- agent 呼び出し時に組み込む規範本文や標準プロンプトの生成処理を確認するための入口であり、個別機能の CLI 挙動や永続状態そのものではなく、作業者へ提示する文章部品の責務境界を示す。
 
 ## Read this when
-- AI agent に渡す完全なプロンプトが、どの規則・基準文書をどの順序で含めるか確認または変更したいとき。
-- ファイルアクセス規則、INDEX.md ルーティング規則、oracle/realization の基本説明、oracle/realization の品質基準、レビュー所見基準、INDEX.md エントリー基準の本文生成を調整したいとき。
-- 基準プロンプトの有効化フラグ、依存関係、注入順序、または Codex CLI 向けの用語・root token 置換を変更したいとき。
-- agent に提示される規範文書の内容が、構造化文書としてどこで作られているかを探したいとき。
+- agent に渡す標準プロンプトの本文、構成順、組み込み条件、または Codex CLI 向けの表現・パストークン置換を確認・変更したいとき。
+- ファイルアクセス制約、INDEX.md を使った読み進め方、oracle file と realization file の責務境界を、プロンプトとしてどう提示しているか確認したいとき。
+- oracle file、realization file、oracle review、oracle 適用レビュー、INDEX.md エントリー生成に関する共通規範の文面や判断基準を確認・変更したいとき。
+- AI agent の作業前プロンプトに含める規範文書を追加・整理する際、既存の prompt parts がどの標準文書を担っているか把握したいとき。
 
 ## Do not read this when
-- 実際の CLI サブコマンド実行、永続状態操作、入出力 schema、作業ディレクトリ管理など、プロンプト生成ではない実行時挙動を調べたいとき。
-- 構造化文書、標準項目、要求項目、パスモデル、ファイルアクセスモードの型定義や共通データ構造そのものを確認したいとき。
-- 個別の oracle file が定めるプロダクト仕様や、特定機能の実装・テスト詳細を探しているとき。
-- INDEX.md エントリー作成のために対象本文がすでに個別ファイルへ絞れており、プロンプト部品全体の構成を確認する必要がないとき。
+- 特定サブコマンドの引数、入出力 schema、永続状態、path model、実行フローなど、プロンプト本文ではなくプロダクト機能そのものの仕様や実装を探しているとき。
+- 構造化ドキュメントの共通型、Standard・Requirement の定義、文字列整形 helper、ルート解決関数など、prompt parts が利用する基礎部品の詳細を確認したいとき。
+- 個別の oracle file や realization file の内容をレビュー・実装するために、対象本文そのものを読むべき段階に入っているとき。
+- 実際のファイルアクセスを強制するサンドボックス、権限機構、Git 操作、agent 呼び出し処理そのものを調べたいとき。
 
 ## hash
-- 40fcbd0059bc3f3d6b77da462b3ea48a0406fb0caac37ebd87aaa4e7154b201a
+- 130ccf2f94c0dd1662a60bd117aa56edb877cd830552ff866391ee1d46236e6f
