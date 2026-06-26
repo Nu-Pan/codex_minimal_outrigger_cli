@@ -37,6 +37,7 @@ def test_apply_join_removes_apply_worktree_and_resets_state(
     apply_worktree = apply_worktree_from_state(root, state)
 
     result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+    join_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
 
     assert result.exit_code == 0
     assert not apply_worktree.exists()
@@ -52,6 +53,7 @@ def test_apply_join_removes_apply_worktree_and_resets_state(
         state["session"]["last_joined_apply_oracle_snapshot_commit"]
         == apply_oracle_snapshot_commit
     )
+    assert state["session"]["last_joined_apply_join_commit"] == join_commit
     report_line = [
         line for line in result.output.splitlines() if line.startswith("- report:")
     ][-1]
@@ -84,6 +86,7 @@ def test_apply_join_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> 
     monkeypatch.chdir(apply_worktree)
 
     result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+    join_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
 
     assert result.exit_code == 0
     assert Path.cwd() == root
@@ -100,6 +103,7 @@ def test_apply_join_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> 
         state["session"]["last_joined_apply_oracle_snapshot_commit"]
         == apply_oracle_snapshot_commit
     )
+    assert state["session"]["last_joined_apply_join_commit"] == join_commit
     assert "- cleanup_reachable: `True`" in result.output
     assert "  - none" in result.output
 
@@ -361,6 +365,7 @@ def test_apply_join_continues_after_resolving_index_conflict_in_normal_mode(
     run_git(root, "commit", "-m", "session index")
 
     result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+    join_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
 
     assert result.exit_code == 0
     assert not (root / "INDEX.md").exists()
@@ -371,6 +376,7 @@ def test_apply_join_continues_after_resolving_index_conflict_in_normal_mode(
         state["session"]["last_joined_apply_oracle_snapshot_commit"]
         == apply_oracle_snapshot_commit
     )
+    assert state["session"]["last_joined_apply_join_commit"] == join_commit
     assert not apply_worktree.exists()
     assert (
         subprocess.run(

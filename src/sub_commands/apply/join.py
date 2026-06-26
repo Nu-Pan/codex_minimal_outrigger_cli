@@ -130,7 +130,9 @@ def cmoc_apply_join_impl(force_resolve: bool) -> None:
                 ["必要なら手動で解決するか、--force-resolve を検討してください。"],
                 merge.stderr,
             )
+    join_commit = run_git(["rev-parse", "HEAD"], root).stdout.strip()
     state.session.last_joined_apply_oracle_snapshot_commit = apply_oracle_snapshot_commit
+    state.session.last_joined_apply_join_commit = join_commit
     state.apply = ApplyPart()
     write_state(path, state)
     warnings: list[str] = []

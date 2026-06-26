@@ -343,10 +343,10 @@ def test_apply_fork_rejects_forbidden_agents_diff(
     assert state["apply"]["state"] == "error"
 
 
-def test_apply_fork_rolling_uses_previous_apply_oracle_snapshot_commit(
+def test_apply_fork_rolling_uses_previous_apply_join_commit(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
-    """rolling apply fork が前回 apply の oracle snapshot から対象を選ぶ。"""
+    """rolling apply fork が前回 apply join 後の変更だけを対象にする。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -374,6 +374,7 @@ def test_apply_fork_rolling_uses_previous_apply_oracle_snapshot_commit(
     assert (
         runner.invoke(app, ["apply", "join"], catch_exceptions=False).exit_code == 0
     )
+    join_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     (root / "oracle" / "spec.md").write_text("# changed after join\n")
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "change oracle after apply join")
@@ -409,10 +410,7 @@ def test_apply_fork_rolling_uses_previous_apply_oracle_snapshot_commit(
     result = runner.invoke(app, ["apply", "fork"], catch_exceptions=False)
 
     assert result.exit_code == 0
-    assert target_rels == ["README.md", "oracle/spec.md"]
-    assert (
-        json.loads(state_path.read_text())["session"][
-            "last_joined_apply_oracle_snapshot_commit"
-        ]
-        == oracle_snapshot_commit
-    )
+    assert target_rels == ["oracle/spec.md"]
+    state = json.loads(state_path.read_text())["session"]
+    assert state["last_joined_apply_oracle_snapshot_commit"] == oracle_snapshot_commit
+    assert state["last_joined_apply_join_commit"] == join_commit
