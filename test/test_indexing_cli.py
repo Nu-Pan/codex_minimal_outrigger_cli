@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 import cmoc_runtime
+from basic.acp import ModelClass
 
 from _support import (
     current_branch,
@@ -132,6 +133,47 @@ def test_indexing_targets_current_linked_worktree(
     assert run_git(linked, "log", "-1", "--pretty=%s").stdout.strip() == "cmoc indexing"
     assert run_git(root, "rev-parse", "HEAD").stdout.strip() == main_head
     assert run_git(linked, "status", "--short").stdout.strip() == ""
+
+
+def test_indexing_preflight_in_apply_worktree_uses_repo_config(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    config = cmoc_runtime.sync_config(root)
+    config.codex.model[ModelClass.EFFICIENCY] = "CUSTOM-INDEXING-EFFICIENCY"
+    cmoc_runtime.write_config(root / ".cmoc" / "config.json", config)
+    apply_worktree = root / ".cmoc" / "worktrees" / "session" / "run"
+    run_git(
+        root,
+        "worktree",
+        "add",
+        "-b",
+        "apply-indexing-config",
+        str(apply_worktree),
+        "HEAD",
+    )
+    seen_models: list[str] = []
+
+    class FakeCodexResult:
+        output_json = {
+            "summary": ["summary"],
+            "read_this_when": ["read"],
+            "do_not_read_this_when": ["skip"],
+        }
+
+    def fake_codex_exec(parameter, **kwargs):
+        seen_models.append(kwargs["config"].codex.model[ModelClass.EFFICIENCY])
+        assert kwargs["root"] == apply_worktree
+        return FakeCodexResult()
+
+    indexing_module.run_indexing_preflight(apply_worktree, fake_codex_exec)
+
+    assert seen_models
+    assert set(seen_models) == {"CUSTOM-INDEXING-EFFICIENCY"}
+    assert (apply_worktree / "INDEX.md").is_file()
+    assert not (apply_worktree / ".cmoc" / "config.json").exists()
 
 
 def test_indexing_skips_codex_when_existing_hashes_are_fresh(

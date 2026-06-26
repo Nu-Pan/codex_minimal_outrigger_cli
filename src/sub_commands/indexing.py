@@ -265,6 +265,7 @@ def build_index_entry(
     result = codex_exec(
         build_indexing_index_entry_parameter(path, content),
         root=root,
+        config=load_config(repo_root(root)),
         purpose=f"indexing index entry for {path}",
     ).output_json
     return render_index_entry(root, path, result or {}, digest=digest).rstrip()
