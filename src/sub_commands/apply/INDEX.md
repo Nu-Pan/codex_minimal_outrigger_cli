@@ -62,25 +62,23 @@
 # `fork.py`
 
 ## Summary
-- session branch 上で apply loop を isolated apply worktree に分岐して実行する処理を担う実装。scope に応じた調査対象の列挙、Codex による finding 列挙と適用、変更の commit、状態更新、レポート出力までの制御フローを扱う。
-- apply fork 中に編集禁止対象へ差分が出た場合の検出・ロールバック・再実行制御、commit subject 生成、変更 path の正規化、対象候補の重複排除など、apply fork 実行時の補助処理も同じ責務内に含む。
+- isolated apply worktree 上で apply loop を実行するサブコマンド実装を扱う。session branch と apply ready 状態の検証、apply worktree と apply branch の作成、所見列挙、所見適用、コミット生成、report 作成、状態更新までの制御フローを持つ。
+- apply scope から調査対象ファイルを決める処理、対象正規化、変更 path 検出、重複排除、編集禁止対象差分の検出とロールバック、Codex CLI による commit subject 生成を含む。
 
 ## Read this when
-- apply fork の事前条件、状態遷移、apply branch/worktree の作成、process id の書き込み・削除、成功・失敗時のレポート出力を確認したいとき。
-- scope が rolling、session、full のときに、どのファイルを finding 列挙対象にするかを確認または変更したいとき。
-- apply finding の列挙、適用、再調査、変更検出、commit 作成までの apply loop の制御を追いたいとき。
-- apply fork 中に oracle、.agents、memo など編集禁止対象へ生じた差分をどう扱うかを確認または変更したいとき。
-- Codex CLI に渡す apply fork 用パラメータ、commit message 生成プロンプト、Codex 出力の commit subject 正規化を扱うとき。
+- apply fork の実行条件、状態遷移、終了コード、report 出力、apply worktree 作成や apply branch 命名の挙動を確認・変更したいとき。
+- apply scope によって finding 列挙対象がどう選ばれるか、oracle・memo・.agents・INDEX.md・binary・git ignored file がどう除外されるかを確認したいとき。
+- apply fork 中に編集禁止対象へ差分が出た場合の rollback と再実行、または rollback 後のエラー化を確認・変更したいとき。
+- 所見列挙、所見適用、変更検出、commit message 生成、git add/commit の apply loop 制御を追いたいとき。
 
 ## Do not read this when
-- apply fork の最終レポート本文やエラーレポート本文の構成だけを確認したいときは、レポート生成側を読む。
-- finding 列挙や finding 適用の AgentCallParameter の詳細な構築内容だけを確認したいときは、builder 側を読む。
-- apply process id の保存形式や低レベルな読み書き処理だけを確認したいときは、apply 用 runtime 側を読む。
-- CLI 共通実行ラッパー、git 実行、worktree 作成、状態ファイル I/O などの共通 runtime 挙動だけを確認したいときは、runtime 側を読む。
-- indexing preflight の条件や処理内容だけを確認したいときは、indexing preflight 側を読む。
+- apply fork の report markdown の具体的な生成内容だけを確認したいときは、report 書き出し側を読む。
+- Codex 呼び出し用 parameter の prompt や JSON schema の詳細だけを確認したいときは、apply fork 用 builder 側を読む。
+- apply process id の保存・削除形式だけを確認したいときは、apply runtime 側を読む。
+- apply 以外のサブコマンド、一般的な git wrapper、worktree 作成 helper、設定読み込み、状態ファイルの構造そのものを確認したいときは、それぞれの runtime や config 定義を読む。
 
 ## hash
-- 7e992c877c47e473dfaecd3dd0d6c106a14f65da1c8e527a4e75c025d80385fe
+- fd38b3e78f105f88ffdf2d93977f7c53b69ada9adb4bb9eed2704ce1be830e7b
 
 # `fork_report.py`
 

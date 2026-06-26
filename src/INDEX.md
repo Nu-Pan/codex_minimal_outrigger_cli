@@ -135,21 +135,23 @@
 # `sub_commands`
 
 ## Summary
-- CLI の各サブコマンド実装を集約する領域。初期化、ルーティング文書更新、対話実行、セッション操作、apply 実行、oracle review など、利用者が直接起動する処理の入口を探すためのルーティング対象。
-- 各実装は共通 CLI 実行基盤、preflight、git 操作、状態管理、worktree 操作、report 出力、Codex 呼び出しなどを組み合わせる orchestration を担い、低レベル helper ではなくサブコマンド単位の制御順序を確認する入口になる。
-- 配下には、個別サブコマンドの入口モジュールと、複数ファイルに分かれたサブコマンド領域が並び、対象コマンドが未確定な場合に責務境界を切り分けるための階層として位置づく。
+- src/sub_commands は、cmoc の利用者向けサブコマンド実装を集める領域で、初期化、index 更新、TUI 起動、review oracle、apply lifecycle、session lifecycle などの CLI 入口と orchestration を扱う。
+- 各対象は、共通 runtime や parameter builder の低レベル詳細ではなく、サブコマンド固有の事前条件確認、状態遷移、git/worktree 操作、レポート・標準出力、cleanup の制御フローを追うための入口になる。
+- review と apply では、上位サブコマンドの実行順序に加えて、対象列挙、Codex 実行 loop、INDEX 変更の commit/merge、report 生成などの補助モジュールも同階層に分かれている。
 
 ## Read this when
-- CLI から起動されるサブコマンドの実行入口、前提条件、利用者向け出力、エラー時挙動、または共通 CLI runner との接続を調べたいとき。
-- 初期化、ルーティング文書更新、対話実行、session 操作、apply 操作、oracle review のどの実装へ進むべきかを選びたいとき。
-- サブコマンドが worktree、branch、session state、git 操作、Codex 実行、report 作成、cleanup をどの高レベル順序で組み合わせるか確認したいとき。
-- 複数のサブコマンドにまたがる変更で、個別実装へ進む前に同階層の責務分担と読む順序を判断したいとき。
+- cmoc のサブコマンド単位で、CLI から内部処理へ入る実行順序、事前条件、状態更新、git/worktree 操作、利用者向け出力、失敗時 cleanup を確認・変更したいとき。
+- init、indexing、tui、review oracle、apply、session のどのサブコマンド実装を読むべきかを選びたいとき。
+- review oracle の対象列挙、実行 loop、INDEX 変更の取り込み、Markdown report 生成など、review 系処理の責務分担をたどりたいとき。
+- apply fork/join/abandon や session fork/join/abandon の lifecycle、branch・worktree・状態ファイルの関係、merge や破棄の制御フローを追いたいとき。
+- ルーティング文書の再生成、既存エントリー再利用、Structured Output から Markdown への描画、または index 更新 commit の作成処理を調べたいとき。
 
 ## Do not read this when
-- サブコマンドから呼ばれる低レベル runtime helper、git 実行 wrapper、path model、状態ファイル schema、設定モデルなどの共通部品だけを調べたいとき。
-- Codex に渡す prompt、Structured Output parameter、entry 生成 parameter、review 用 parameter など、サブコマンドから呼ばれる builder 側の詳細だけを変更したいとき。
-- oracle file の正本仕様、realization/oracle の概念定義、ルーティング文書そのものの一般仕様を確認したいとき。
-- 対象サブコマンドや下位 helper が既に明確で、この階層全体の責務境界を確認する必要がないとき。
+- サブコマンド固有の制御フローではなく、path model、session state schema、設定モデル、git command wrapper、worktree helper、timestamp、reports directory などの共通 runtime 定義を確認したいとき。
+- Codex 呼び出し用 prompt、Structured Output schema、AgentCallParameter の組み立て内容そのものを確認・変更したいときは、parameter builder 側を読む。
+- Typer アプリ全体の登録、共通 CLI runner、preflight 登録、ログ基盤など、サブコマンド横断の起動基盤だけを調べたいとき。
+- oracle file、realization file、INDEX.md 生成規則、path keyword の意味など、正本仕様やルーティング文書の一般方針を確認したいとき。
+- 個別の対象がすでに apply、session、review_targets、review_loop、review_report、review_index などに明確に決まっているときは、この階層全体ではなく該当する下位対象へ直接進む。
 
 ## hash
-- fc36668888fe7bead4c615a2f10e7b3f1febcf524baeed44956fa86680f927be
+- b1ee312b37751b078530709dba046f9c80b2a9bb9c9d99f0a5da62cbd8e2674e
