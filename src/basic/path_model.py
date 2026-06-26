@@ -19,6 +19,7 @@
 - `cmoc apply fork` は `<repo-root>` を pwd として呼び出されて、 run の作業隔離のために `<run-root>` を git linked worktree として作成する
 - run の作業隔離のための linked worktree は `<repo-root>` 内に作成されるから、「`<repo-root>` のフルパス」は「`<run-root>` のフルパス」の部分文字列となる
 - `<run-root>` 内で cmoc を起動した場合 `<run-root>` と同値
+- `<run-root>` 外の `<repo-root>` 内で cmoc を起動した場合 `<repo-root>` と同値
 """
 
 from pathlib import Path
