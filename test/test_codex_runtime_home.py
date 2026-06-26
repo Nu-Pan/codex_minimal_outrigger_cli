@@ -1,5 +1,6 @@
 from _support import (
     AgentCallParameter,
+    CmocConfig,
     CmocError,
     FileAccessMode,
     ModelClass,
@@ -46,7 +47,9 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
         None,
     )
 
-    result = run_codex_exec(parameter, root=root, capacity_initial_sleep_sec=0)
+    result = run_codex_exec(
+        parameter, root=root, capacity_initial_sleep_sec=0, config=CmocConfig()
+    )
 
     recorded = json.loads(recorder.read_text())
     assert recorded["codex_home"] == str(codex_home)
@@ -88,7 +91,9 @@ def test_run_codex_exec_preserves_configured_codex_home_env_value(
         None,
     )
 
-    result = run_codex_exec(parameter, root=root, capacity_initial_sleep_sec=0)
+    result = run_codex_exec(
+        parameter, root=root, capacity_initial_sleep_sec=0, config=CmocConfig()
+    )
 
     recorded = json.loads(recorder.read_text())
     assert recorded["codex_home"] == "relative_codex_home"
@@ -113,7 +118,9 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
     )
 
     try:
-        run_codex_exec(parameter, root=root, capacity_initial_sleep_sec=0)
+        run_codex_exec(
+            parameter, root=root, capacity_initial_sleep_sec=0, config=CmocConfig()
+        )
     except CmocError as exc:
         error = exc
     else:
@@ -140,7 +147,9 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
     )
 
     try:
-        run_codex_exec(parameter, root=root, capacity_initial_sleep_sec=0)
+        run_codex_exec(
+            parameter, root=root, capacity_initial_sleep_sec=0, config=CmocConfig()
+        )
     except CmocError as exc:
         error = exc
     else:
@@ -167,7 +176,9 @@ def test_run_codex_exec_fails_before_codex_when_auth_json_missing(
     )
 
     try:
-        run_codex_exec(parameter, root=root, capacity_initial_sleep_sec=0)
+        run_codex_exec(
+            parameter, root=root, capacity_initial_sleep_sec=0, config=CmocConfig()
+        )
     except CmocError as exc:
         error = exc
     else:

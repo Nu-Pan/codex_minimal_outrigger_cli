@@ -1,5 +1,6 @@
 from _support import (
     AgentCallParameter,
+    CmocConfig,
     FileAccessMode,
     ModelClass,
     Path,
@@ -63,6 +64,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
         root=root,
         quota_poll_interval_sec=0,
         max_quota_polls=1,
+        config=CmocConfig(),
         subcommand_logger=logger,
     )
 
@@ -192,6 +194,7 @@ def test_run_codex_exec_reruns_after_quota_without_resume_token(
         root=root,
         quota_poll_interval_sec=0,
         max_quota_polls=1,
+        config=CmocConfig(),
     )
 
     call_records = [json.loads(line) for line in calls.read_text().splitlines()]
@@ -258,6 +261,7 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
             root=root,
             quota_poll_interval_sec=0.05,
             max_quota_polls=1,
+            config=CmocConfig(),
         )
 
     with ThreadPoolExecutor(max_workers=2) as executor:

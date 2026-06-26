@@ -15,6 +15,7 @@ from cmoc_runtime import (
     is_binary,
     is_git_ignored,
     load_config,
+    repo_root,
     require_cmoc_ignored,
     run_cli_subcommand,
     run_codex_exec,
@@ -97,6 +98,7 @@ def commit_index_updates(root: Path, updated: list[Path]) -> None:
 
 def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path]:
     """INDEX.md を深い directory から順に検査・再生成する。"""
+    config_root = repo_root(root)
     dirs = indexable_directories(root)
     dirs.append(root)
     dirs.sort(key=lambda p: len(p.relative_to(root).parts), reverse=True)
@@ -114,7 +116,7 @@ def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path
                 entries.append(None)
                 missing_children.append((child, digest))
         if missing_children:
-            config = load_config(root)
+            config = load_config(config_root)
             with ThreadPoolExecutor(max_workers=max(1, config.num_parallel)) as executor:
                 generated_entries = list(
                     executor.map(

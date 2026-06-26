@@ -2,6 +2,7 @@ import tomllib
 
 from _support import (
     AgentCallParameter,
+    CmocConfig,
     FileAccessMode,
     ModelClass,
     Path,
@@ -64,6 +65,7 @@ def test_run_codex_exec_uses_stdin_and_writes_logs(
         parameter,
         root=root,
         capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
         subcommand_logger=logger,
     )
 
@@ -155,7 +157,11 @@ def test_run_codex_exec_stores_schema_in_cwd_work_root(
     )
 
     result = run_codex_exec(
-        parameter, root=root, cwd=linked, capacity_initial_sleep_sec=0
+        parameter,
+        root=root,
+        cwd=linked,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
     )
 
     recorded = json.loads(recorder.read_text())
@@ -206,6 +212,7 @@ def test_run_codex_tui_uses_codex_command_and_prompt_argument(
             root=root,
             purpose="tui codex",
             extra_read_paths=[prompt_file],
+            config=CmocConfig(),
         )
     finally:
         cmoc_runtime.reset_current_subcommand_logger(token)

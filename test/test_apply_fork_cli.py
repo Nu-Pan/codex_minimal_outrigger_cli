@@ -1,3 +1,4 @@
+import pytest
 from _support import (
     AgentCallParameter,
     Path,
@@ -104,8 +105,9 @@ def test_apply_fork_does_not_rewrite_session_gitignore(
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
-def test_apply_fork_config_error_does_not_start_apply_run(
-    tmp_path: Path, monkeypatch: MonkeyPatch
+@pytest.mark.parametrize("config_case", ["invalid_json", "missing"])
+def test_apply_fork_config_load_error_does_not_start_apply_run(
+    tmp_path: Path, monkeypatch: MonkeyPatch, config_case: str
 ) -> None:
     """設定読み込み失敗時に apply run の branch/state を開始しないことを確認する。"""
     root = make_repo(tmp_path)
@@ -117,11 +119,16 @@ def test_apply_fork_config_error_does_not_start_apply_run(
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
     state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
-    (root / ".cmoc" / "config.json").write_text("{invalid\n")
+    config_path = root / ".cmoc" / "config.json"
+    if config_case == "invalid_json":
+        config_path.write_text("{invalid\n")
+    else:
+        config_path.unlink()
 
     result = runner.invoke(app, ["apply", "fork", "--scope", "full"])
 
     assert result.exit_code != 0
+    assert "cmoc config" in result.stdout
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
     assert "apply_process_id" not in state["apply"]
@@ -129,6 +136,8 @@ def test_apply_fork_config_error_does_not_start_apply_run(
         root / ".cmoc" / "state" / "apply_processes" / f"{session_id}.pid"
     ).exists()
     assert run_git(root, "branch", "--list", f"cmoc/apply/{session_id}/*").stdout == ""
+    if config_case == "missing":
+        assert not config_path.exists()
 
 
 def test_apply_fork_can_target_and_edit_gitignore(

@@ -1,5 +1,6 @@
 from _support import (
     AgentCallParameter,
+    CmocConfig,
     CmocError,
     FileAccessMode,
     ModelClass,
@@ -61,6 +62,7 @@ def test_run_codex_exec_retries_semantic_output(tmp_path: Path, monkeypatch) -> 
         parameter,
         root=root,
         capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
         subcommand_logger=logger,
     )
 
@@ -128,6 +130,7 @@ def test_run_codex_exec_logs_capacity_retrying_call(
         parameter,
         root=root,
         capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
         subcommand_logger=logger,
     )
 
@@ -189,7 +192,7 @@ def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
             ],
         )
         try:
-            run_codex_exec(parameter, root=root, **kwargs)
+            run_codex_exec(parameter, root=root, config=CmocConfig(), **kwargs)
         except CmocError as exc:
             assert exc.summary == "Codex CLI 呼び出しが失敗しました。"
             assert expected_detail in exc.detail
