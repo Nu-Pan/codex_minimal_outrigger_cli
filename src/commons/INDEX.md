@@ -134,23 +134,26 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI を起動するための実行時プロファイルと周辺入出力を組み立てる実装。モデル・reasoning effort・sandbox/permission profile の TOML 断片を生成し、Codex home の解決と検証、hashed profile/schema の保存、subprocess 環境、JSON 出力や JSONL エラー情報の解釈を扱う。
-- ファイルアクセスモードを Codex 側の read-only/workspace-write または詳細な permission profile へ変換する境界を担い、memo・oracle・.agents などの読み書き制限を実行時設定へ反映する入口になる。
+- Codex CLI 呼び出し用の実行時プロファイル、権限プロファイル、Codex home、schema 配置、出力 JSON、エラー判定を扱う共通処理。AgentCallParameter と設定値からモデル・推論努力・サンドボックス/権限設定を TOML 文字列として組み立て、ハッシュ付き設定ファイルとして Codex home 配下へ生成する入口を提供する。
+- FileAccessMode を Codex の sandbox_mode または permission profile に変換し、読み取り・書き込み・deny_read・read_only・writable_roots の扱いを集中して定義する。追加 read/write パスの反映や保護対象の除外もここで行う。
+- Codex home の解決・検証、subprocess 用環境変数、schema のハッシュ保存、Codex JSONL/stdout/stderr からのエラー文・resume token・capacity/quota 判定をまとめる、Codex 実行周辺の低レベルな補助モジュール。
 
 ## Read this when
-- Agent 呼び出しパラメータから Codex CLI 用の profile 設定文字列や profile ファイルを生成する処理を確認・変更したいとき。
-- ファイルアクセスモードごとの sandbox_mode、permission profile、read/write/deny_read/read_only/writable_roots の対応を確認・変更したいとき。
-- CODEX_HOME の解決、存在・ディレクトリ・auth.json 検証、Codex subprocess に渡す環境変数の扱いを確認したいとき。
-- Structured Output schema を hashed file として保存する処理や、Codex 実行後の JSON 出力、stderr/stdout 由来のエラーテキスト、resume token、capacity/quota error 判定を確認・変更したいとき。
+- Codex CLI に渡す profile/config TOML の内容、model/reasoning_effort の反映、sandbox_mode、permission_profile、writable_roots、read_only_paths の生成ロジックを確認・変更したいとき。
+- FileAccessMode ごとの read/write/deny_read/read_only の境界、memo・oracle・.agents の保護、追加 read/write パスの扱いを調べるとき。
+- CODEX_HOME の解決方法、Codex home の存在・ディレクトリ・auth.json 検証、Codex subprocess に渡す環境変数を扱うとき。
+- Codex profile や schema をハッシュ付きファイルとして生成する処理、生成失敗時の CmocError の内容を確認・変更したいとき。
+- Codex 実行結果の JSON 出力、JSONL エラー行、stderr/stdout からのエラーテキスト抽出、thread.started からの resume token 抽出、capacity/quota エラー判定を扱うとき。
 
 ## Do not read this when
-- AgentCallParameter や FileAccessMode 自体のデータ構造・列挙値定義を確認したいだけなら、それらを定義する基本モデルを読む。
-- モデル名や reasoning effort の設定値そのもの、設定ファイルの読み込み規則を確認したいだけなら、設定モデル側を読む。
-- hashed file の保存先作成や内容ハッシュ化の実装詳細を確認したいだけなら、runtime content や runtime paths 側を読む。
-- Codex CLI の呼び出し手順全体、プロセス起動、プロンプト構築、実行ループの制御を追いたい場合は、呼び出し元の実行制御側を読む。
+- AgentCallParameter や FileAccessMode 自体のデータ構造・列挙値定義を確認したいだけの場合は、その定義元を読む。
+- Codex のモデル名や reasoning_effort の設定値そのもの、設定ファイルの読み込み・既定値を調べたい場合は、設定定義側を読む。
+- ハッシュ付きファイルの保存方式、コンテンツ書き込み、schema 保存先ディレクトリの具体的な path 構築を調べたい場合は、それぞれの共通保存処理または runtime path 処理を読む。
+- Codex subprocess の起動手順、コマンドライン引数、リトライ、呼び出し全体の制御を調べたい場合は、実際に Codex を起動する上位処理を読む。
+- 個別 CLI コマンドの入出力仕様やユーザー向け挙動を確認したいだけの場合は、そのコマンド実装や対応する仕様断片を読む。
 
 ## hash
-- 56f3e469158ae02cefcd5567248bf2b870b192e7c96ab046b8a0a8e532a03d5b
+- 788c89ad43af978d954faa0e2d9bdf34f8acdcfe470f37b81b9996fd308adab4
 
 # `runtime_codex_tui.py`
 
