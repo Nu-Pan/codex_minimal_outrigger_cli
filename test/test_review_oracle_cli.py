@@ -82,12 +82,14 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
     calls: list[str] = []
+    review_worktrees: list[Path] = []
 
     class FakeCodexResult:
         def __init__(self, output_json):
             self.output_json = output_json
 
     def fake_run_codex_exec(parameter, **kwargs):
+        review_worktrees.append(Path.cwd())
         calls.append(kwargs["purpose"])
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
@@ -107,9 +109,13 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
     rendered = report_path.read_text()
     assert f"review_fork_commit: {linked_commit}" in rendered
     assert "`oracle/linked.md`" in rendered
-    assert run_git(linked, "branch", "--show-current").stdout.strip().startswith(
-        "cmoc/session/"
-    )
+    branch = run_git(linked, "branch", "--show-current").stdout.strip()
+    assert branch.startswith("cmoc/session/")
+    session_id = branch.removeprefix("cmoc/session/")
+    assert review_worktrees
+    for review_worktree in review_worktrees:
+        assert review_worktree.parent == root / ".cmoc" / "worktrees" / session_id
+        assert not review_worktree.is_relative_to(linked)
     assert any("linked.md" in call for call in calls)
 
 

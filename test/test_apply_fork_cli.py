@@ -110,7 +110,10 @@ def test_apply_fork_uses_linked_worktree_branch_and_head(
         run_git(root, "rev-parse", state["apply"]["apply_branch"]).stdout.strip()
         == linked_commit
     )
-    assert apply_worktree_from_state(root, state).is_relative_to(linked)
+    run_id = state["apply"]["apply_branch"].removeprefix(f"cmoc/apply/{session_id}/")
+    apply_worktree = apply_worktree_from_state(root, state)
+    assert apply_worktree == root / ".cmoc" / "worktrees" / session_id / run_id
+    assert not apply_worktree.is_relative_to(linked)
 
 
 def test_apply_fork_does_not_rewrite_session_gitignore(

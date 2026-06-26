@@ -94,7 +94,7 @@ def cmoc_review_oracle_impl(
     config = load_config(root)
     run_id = timestamp()
     review_branch = f"cmoc/run/{session_id}/{run_id}"
-    review_worktree = worktrees_dir(current_root) / session_id / run_id
+    review_worktree = worktrees_dir(root) / session_id / run_id
     review_fork_commit = head_commit(current_root)
     review_join_commit = None
     all_oracle_files: list[Path] = []
