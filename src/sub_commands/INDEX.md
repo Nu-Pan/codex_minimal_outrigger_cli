@@ -68,24 +68,22 @@
 # `review.py`
 
 ## Summary
-- review oracle サブコマンドの実行入口と実行順序を担う実装。active session branch 上で clean worktree を要求し、isolated review worktree と一時 review branch を作成して oracle 対象列挙、Codex によるレビュー、INDEX 変更 commit、必要時の merge、worktree/branch cleanup、review report 出力までを統括する。
-- 対象列挙、レビュー loop、INDEX 変更処理、report 描画・書き込みなどの詳細処理は専用モジュールへ委譲し、この実装は CLI runtime 連携、事前条件検証、実行ライフサイクル、例外時 report 出力を結合する上位制御として位置づけられる。
+- review oracle サブコマンドの実行入口と実行全体の制御を担う実装。indexing preflight を通したうえで CLI 共通実行枠に処理を渡し、active session branch・clean worktree などの前提確認、isolated review worktree と一時 review branch の作成、oracle 対象列挙、レビュー実行、INDEX 変更の commit/merge、レポート出力、失敗時レポート出力と後片付けをまとめて orchestration する。
+- レビュー対象の列挙、review loop、INDEX 変更の commit/merge、レポート描画・書き込みなどの具体処理は下位モジュールへ委譲し、この対象はそれらを現在の session state と worktree 操作に接続する入口として位置づく。
 
 ## Read this when
-- review oracle コマンドの全体フロー、実行前条件、scope の扱い、一時 worktree と review branch の作成・削除、review 結果の merge 条件、成功時または失敗時の report 出力タイミングを確認したいとき。
-- review oracle 実行時にどの下位モジュールが呼ばれるか、対象列挙・レビュー実行・INDEX 変更 commit・report 書き込みがどの順序で接続されるかを追いたいとき。
-- active session branch 以外、dirty worktree、不正 scope などで review oracle が拒否される条件を調べたいとき。
-- review oracle の例外処理で、途中まで収集した oracle file、findings、review branch 情報を report に残してから再送出する挙動を確認したいとき。
+- review oracle サブコマンドがどの前提条件で実行を拒否するか、どの順序で一時 worktree・branch・review loop・merge・report 生成を進めるかを確認したいとき。
+- review oracle の scope 指定、active session branch 判定、clean worktree 要求、cmoc ignore 確保、失敗時にも report path を出力して例外を再送出する制御を変更したいとき。
+- review oracle の処理全体に新しい段階を差し込む、または既存の対象列挙・review loop・INDEX 変更 commit/merge・レポート生成 helper の接続関係を追いたいとき。
 
 ## Do not read this when
-- oracle file の列挙規則、scope ごとの対象選択、session state からの対象抽出の詳細だけを確認したいときは、対象列挙を担う下位実装を読む。
-- Codex に渡す review prompt、finding の解釈、finding からの merge operation 適用など、レビュー loop 内部の詳細だけを確認したいときは、レビュー loop を担う下位実装を読む。
-- INDEX 変更の conflict 解決、review worktree の status 判定、review branch の merge 手順だけを調べたいときは、review index 操作を担う下位実装を読む。
-- review report の本文構成、finding section の描画、path 表示、report ファイルの保存内容だけを確認したいときは、report 生成を担う下位実装を読む。
-- CLI 全体の subcommand 登録や Typer app のコマンド宣言だけを確認したいときは、サブコマンド登録側の実装を読む。
+- oracle file の列挙条件そのものを調べる場合は、対象列挙を担当する下位モジュールを直接読む。
+- review loop 内で Codex 実行結果から finding を作る処理や finding merge operation の適用内容を調べる場合は、loop を担当する下位モジュールを直接読む。
+- review report の表示形式、finding section の描画、report file の内容や path 表示を調べる場合は、report を担当する下位モジュールを直接読む。
+- review branch の merge conflict 解決、INDEX 変更 commit、worktree status path の扱いを単独で調べる場合は、index 変更処理を担当する下位モジュールを直接読む。
 
 ## hash
-- 811bc3705ec0a8a9aebfe4af0e926474c1ffbee713bdf047fb94d2b067e99064
+- 2ef95be3d2d0fe22ecac96e4882f71d98eb321210eb481f04634db39f969a994
 
 # `review_index.py`
 
@@ -134,23 +132,21 @@
 # `review_report.py`
 
 ## Summary
-- review oracle の実行結果を Markdown レポートとして生成・保存する処理を担う実装。YAML frontmatter、判定結果、評価対象 oracle file 一覧、accepted/rejected の fatal/minor findings セクションを組み立てる。
-- レポート保存先の作成、タイムスタンプ付きレポートパスの生成、findings の分類、レビュー結果ステータスの決定、oracle path の表示用正規化を扱う。
+- review oracle の実行結果を Markdown レポートとして生成・保存する処理を担う。評価対象 oracle、採択・棄却された fatal/minor finding、レビュー用ブランチやコミット、処理失敗時の結果を frontmatter と本文にまとめる入口である。
+- finding の verdict と severity からレポート上の件数・分類・最終 result/verdict 文を組み立て、対象 oracle ごとの finding 数、finding セクション、oracle 起点の表示用パスを整形する。
 
 ## Read this when
-- review oracle のレポート本文、frontmatter、見出し、findings 表示、結果判定文言を変更したいとき。
-- review oracle のエラー時、対象 oracle が 0 件のとき、fatal/minor finding が accepted されたとき、問題なしのときのレポート結果分類を確認したいとき。
-- oracle file の表示パスを、repo root 相対または oracle 起点の表示へ変換する挙動を確認・変更したいとき。
-- review oracle の findings を verdict と severity によって accepted/rejected、fatal/minor に分けて出力する処理を追いたいとき。
+- review oracle のレポート保存先、ファイル生成、Markdown 構成、frontmatter 項目、result 判定、verdict 文言を確認・変更したいとき。
+- fatal/minor finding の採択・棄却分類、finding セクションの表示、対象 oracle ごとの finding 数の集計、error/no target/ok 判定の扱いを確認したいとき。
+- レポート内で oracle 配下のパスをどのように短縮表示するか、root 外や相対化できないパスをどう表示するかを確認したいとき。
 
 ## Do not read this when
-- review oracle の対象 oracle file を収集・選択する処理を知りたいだけのとき。
-- review oracle が findings を生成・評価するプロンプト、LLM 呼び出し、レビュー実行制御を調べたいとき。
-- cmoc 全体のレポート保存ディレクトリや timestamp の共通仕様だけを確認したいとき。
-- review oracle 以外のサブコマンドのレポート形式や出力処理を調べたいとき。
+- review oracle がどの oracle を評価対象に選ぶか、finding をどのように検出・判定するか、レビュー処理全体の制御フローを知りたいだけのとき。
+- レポート以外のサブコマンド出力、永続状態の読み書き、ブランチ作成・マージなどの Git 操作を確認したいとき。
+- oracle file の正本仕様そのもの、または realization test 側で期待される外部挙動を確認したいとき。
 
 ## hash
-- 5d210c16250ad0fa31dc9a522fc78bcc3e2c00fd185ab84c69579b75ab2cd7c3
+- e0f9b69759675ba648836d88bed5ccbe89301d8af6b47963209fac1620479907
 
 # `review_targets.py`
 
