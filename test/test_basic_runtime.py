@@ -6,7 +6,12 @@ import tomllib
 import pytest
 import main as main_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from basic.path_model import RootToken, resolve_real_path, resolve_token_path
+from basic.path_model import (
+    RootToken,
+    resolve_real_path,
+    resolve_run_root,
+    resolve_token_path,
+)
 from cmoc_runtime import (
     CmocError,
     ensure_cmoc_ignored,
@@ -56,7 +61,15 @@ def test_runtime_distinguishes_repo_root_from_linked_worktree(
     run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
 
     assert repo_root(linked) == root.resolve()
+    assert resolve_run_root(linked) == linked.resolve()
     assert work_root(linked) == linked.resolve()
+
+
+def test_resolve_run_root_rejects_main_worktree(tmp_path: Path) -> None:
+    root = make_repo(tmp_path)
+
+    with pytest.raises(ValueError, match="`<run-root>` was not found"):
+        resolve_run_root(root)
 
 
 def test_config_defaults_match_logical_model_classes() -> None:

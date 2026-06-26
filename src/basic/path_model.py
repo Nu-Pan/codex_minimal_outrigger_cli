@@ -17,7 +17,6 @@
 - `cmoc apply fork` は `<repo-root>` を pwd として呼び出されて、 run の作業隔離のために `<run-root>` を git linked worktree として作成する
 - run の作業隔離のための linked worktree は `<repo-root>` 内に作成されるから、「`<repo-root>` のフルパス」は「`<run-root>` のフルパス」の部分文字列となる
 - `<run-root>` 内で cmoc を起動した場合 `<run-root>` と同値
-- `<run-root>` 外の `<repo-root>` 内で cmoc を起動した場合 `<repo-root>` と同値
 """
 
 from pathlib import Path
@@ -157,14 +156,13 @@ def resolve_run_root(
     `<run-root>` を返す。
     これは内部実装であり、`resolve_real_path` からのみ呼び出される想定。
     cwd を起点として「`.git` ファイルを直下に持つディレクトリ」を探索する。
-    run 外の repo 内では `<repo-root>` と同値として扱う。
     """
     # .git ファイルを探索
     for candidate in _enumerate_candidates(start_path, Path.cwd()):
         if (candidate / ".git").is_file():
             return candidate
     else:
-        return resolve_repo_root(start_path)
+        raise ValueError("`<run-root>` was not found")
 
 
 def resolve_work_root(
