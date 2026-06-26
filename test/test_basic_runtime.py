@@ -296,9 +296,15 @@ def test_codex_profile_contains_file_access_enforcement(tmp_path: Path) -> None:
     conflict_read_only = conflict_profile["permissions"]["cmoc"]["file_system"][
         "read_only"
     ]
+    conflict_write = conflict_profile["permissions"]["cmoc"]["file_system"]["write"]
+    assert conflict_write == [str(allowed_oracle.resolve())]
     assert str(root / "oracle") not in conflict_read_only
     assert str(allowed_oracle.resolve()) not in conflict_read_only
     assert str(other_oracle.resolve()) in conflict_read_only
+    assert str(root) not in conflict_write
+    assert str(root / "oracle" / "new.md") not in conflict_write
+    conflict_workspace = conflict_profile["sandbox_workspace_write"]
+    assert conflict_workspace["writable_roots"] == conflict_write
 
     oracle_fs = profile(FileAccessMode.ORACLE_WRITE)["permissions"]["cmoc"][
         "file_system"

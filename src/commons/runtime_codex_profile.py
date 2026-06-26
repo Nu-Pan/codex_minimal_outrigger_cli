@@ -41,10 +41,25 @@ def _is_relative_to(path: Path, parent: Path) -> bool:
         return False
 
 
+def _writable_oracle_paths(
+    root: Path, writable_paths: tuple[Path, ...]
+) -> tuple[Path, ...]:
+    oracle = root / "oracle"
+    return tuple(
+        path.resolve()
+        for path in writable_paths
+        if _is_relative_to(path.resolve(), oracle)
+    )
+
+
+def _realization_write_paths(root: Path, writable_paths: tuple[Path, ...]) -> list[Path]:
+    writable = tuple(dict.fromkeys(path.resolve() for path in writable_paths))
+    return list(writable) if _writable_oracle_paths(root, writable_paths) else [root]
+
+
 def _realization_read_only_paths(root: Path, writable_paths: tuple[Path, ...]) -> list[Path]:
     oracle = root / "oracle"
-    writable = tuple(path.resolve() for path in writable_paths)
-    writable_oracle = tuple(path for path in writable if _is_relative_to(path, oracle))
+    writable_oracle = _writable_oracle_paths(root, writable_paths)
     if not writable_oracle:
         return [oracle, root / "memo", root / ".agents"]
 
@@ -52,10 +67,6 @@ def _realization_read_only_paths(root: Path, writable_paths: tuple[Path, ...]) -
     if oracle.exists():
         for path in oracle.rglob("*"):
             resolved = path.resolve()
-            # Ancestors of an allowed oracle conflict file cannot be listed here
-            # without also blocking that file in workspace-write sandboxes. The
-            # exec runtime validates after the agent call that no other oracle
-            # path was changed or created.
             if any(
                 resolved == allowed or _is_relative_to(allowed, resolved)
                 for allowed in writable_oracle
@@ -85,7 +96,7 @@ def _permission_profile_lines(
             read_only_paths = [root / "oracle"]
         case FileAccessMode.REALIZATION_WRITE:
             read_paths = [root]
-            write_paths = [root]
+            write_paths = _realization_write_paths(root, writable_paths)
             deny_read_paths = [root / "memo"]
             read_only_paths = _realization_read_only_paths(root, writable_paths)
         case FileAccessMode.ORACLE_WRITE:
