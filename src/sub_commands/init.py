@@ -9,6 +9,7 @@ from cmoc_runtime import (
     run_cli_subcommand,
     run_git,
     sync_config,
+    with_cmoc_ignore_pattern,
     work_root,
 )
 
@@ -106,15 +107,6 @@ def _write_or_remove(path: Path, content: str | None) -> None:
     path.write_text(content)
 
 
-def _with_cmoc_ignore(content: str) -> str:
-    lines = content.splitlines()
-    if "/.cmoc/" in lines:
-        return content
-    separator = "\n" if lines and lines[-1] != "" else ""
-    newline = "" if content == "" or content.endswith("\n") else "\n"
-    return f"{content}{newline}{separator}/.cmoc/\n"
-
-
 def _restore_gitignore_state(
     root: Path,
     path: Path,
@@ -127,7 +119,7 @@ def _restore_gitignore_state(
     if index_content is None and head_content is not None:
         run_git(["rm", "--cached", "--ignore-unmatch", ".gitignore"], root)
     elif index_content is not None:
-        restored_index = _with_cmoc_ignore(index_content)
+        restored_index = with_cmoc_ignore_pattern(index_content)
         if restored_index != current_head:
             with NamedTemporaryFile("w", delete=False) as f:
                 f.write(restored_index)
@@ -150,10 +142,10 @@ def _restore_gitignore_state(
             finally:
                 temp_path.unlink(missing_ok=True)
     if had_worktree_content and worktree_content is not None:
-        path.write_text(_with_cmoc_ignore(worktree_content))
+        path.write_text(with_cmoc_ignore_pattern(worktree_content))
     elif head_content is not None or index_content is not None:
         restored_content = current_head or index_content or head_content or ""
-        path.write_text(_with_cmoc_ignore(restored_content))
+        path.write_text(with_cmoc_ignore_pattern(restored_content))
 
 
 def _restore_staged_patch(root: Path, patch: str) -> None:

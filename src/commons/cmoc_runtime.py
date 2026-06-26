@@ -53,6 +53,7 @@ from commons.runtime_git import (
     require_cmoc_ignored,
     require_clean_worktree,
     run_git,
+    with_cmoc_ignore_pattern,
 )
 from commons.runtime_logging import (
     SubcommandLogger,

@@ -205,7 +205,7 @@ def test_ensure_cmoc_ignored_updates_gitignore(tmp_path: Path) -> None:
     assert ignored.returncode == 0
 
 
-def test_ensure_cmoc_ignored_keeps_existing_effective_pattern(
+def test_ensure_cmoc_ignored_adds_literal_pattern_after_existing_effective_pattern(
     tmp_path: Path,
 ) -> None:
     root = make_repo(tmp_path)
@@ -215,8 +215,8 @@ def test_ensure_cmoc_ignored_keeps_existing_effective_pattern(
 
     ensure_cmoc_ignored(root)
 
-    assert (root / ".gitignore").read_text() == ".cmoc/\n"
-    assert run_git(root, "status", "--short").stdout.strip() == ""
+    assert (root / ".gitignore").read_text() == ".cmoc/\n\n/.cmoc/\n"
+    assert run_git(root, "status", "--short").stdout.strip() == "M .gitignore"
 
 
 def test_file_access_mode_values_are_json_ready() -> None:
