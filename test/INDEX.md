@@ -227,22 +227,24 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- `cmoc review oracle` の CLI 挙動を検証する realization test。oracle レビューのレポート生成、scope 指定、gitignore 対象の除外、レビュー用 worktree で生成されたルーティング文書変更の取り込み、処理失敗時のエラーレポート、許可外差分の拒否を扱う。
-- Codex 実行を fake に差し替え、実際の LLM 出力ではなく review oracle コマンドの制御フロー、出力レポート、git/worktree 副作用を確認するための入口になる。
+- `review oracle` の CLI 挙動を検証する realization test。レビュー対象 oracle の選定、レポート出力、Codex 呼び出し制御、レビュー用 worktree からの `INDEX.md` 反映、失敗時レポート、`INDEX.md` 以外の差分拒否を扱う。
 
 ## Read this when
-- `cmoc review oracle` の外部挙動、レポート内容、終了コード、scope の扱いを変更または調査する場合。
-- oracle file の列挙対象から gitignore 対象を除外する制御、session scope と full scope の対象数・no targets 判定を確認する場合。
-- review oracle が Codex 実行用 worktree で生成した `INDEX.md` 変更だけを本体へ反映し、それ以外の差分を拒否する挙動を確認する場合。
-- review oracle の処理途中失敗時に、未判定 finding を採用せずエラーレポートを出す挙動を確認する場合。
+- `review oracle` コマンドの外部挙動、終了コード、標準出力、生成レポート内容を変更・確認するとき。
+- レビュー範囲の既定値、`full` 指定、短い scope option、session scope で対象がない場合の扱いを確認するとき。
+- gitignored な oracle file を full scope や session scope のレビュー対象から除外する制御を変更するとき。
+- oracle ごとの発見事項列挙ループで、別 oracle の発見事項をプロンプトへ混ぜない制御を確認するとき。
+- レビュー用 worktree で生成された `INDEX.md` だけを元 worktree に反映し、その他の差分を拒否する処理を変更するとき。
+- レビュー処理中の例外で error report を残し、未判定 finding を通常の却下結果として扱わない挙動を確認するとき。
 
 ## Do not read this when
-- oracle file や realization file の概念定義、正本仕様としての要求を確認したい場合は、仕様側の本文を読む。
-- review oracle 以外の CLI サブコマンド、通常の session 操作、init 処理だけを調査する場合は、より直接対応するテストまたは実装を読む。
-- Codex CLI や LLM の出力品質そのもの、finding の文章生成品質を調査する場合。この対象は Codex 実行を fake 化して制御ロジックだけを検証している。
+- `review oracle` 以外の CLI コマンド、session 作成、init 処理そのものの仕様を調べたいとき。
+- oracle 本文の正本仕様や、oracle file と realization file の定義を確認したいとき。
+- Codex 実行 wrapper の低レベルな引数組み立て、外部プロセス実行、設定読み込みの実装だけを調べたいとき。
+- レビュー finding の判定基準や LLM 出力品質そのものを確認したいとき。
 
 ## hash
-- 337e9d9093302123e389539d0757df9c21ed3d1e7344e8bccc0739c7fb85e4cc
+- cdfbee61f9eb8ba6aef5748350f8b40b1a426e6836a8d9eb2bf9acf872581815
 
 # `test_session_cli.py`
 

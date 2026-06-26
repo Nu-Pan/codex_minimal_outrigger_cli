@@ -112,20 +112,24 @@
 # `review_loop.py`
 
 ## Summary
-- oracle review の finding enumerate/merge/validate/judge loop を実行する実装。
-- Codex に渡す review oracle 用 AgentCallParameter builder を呼び分け、finding id、advocate/challenger reasons、verdict、judge reason を Structured Output から更新する。
+- review oracle の finding 収集、重複整理、検証、判定を Codex 実行ループとして組み立てるサブコマンド内部処理を扱う。
+- oracle 断片ごとの finding 列挙結果を既存 finding と突き合わせ、merge operation を適用し、advocate/challenger による検証理由を蓄積したうえで judge 結果を finding に反映する。
+- finding 内の oracle_path を実パスへ解決し、特定 oracle 断片に関連する finding だけを抽出する補助処理も担う。
 
 ## Read this when
-- finding の列挙、統合、反証/擁護検証、判定のループ回数や停止条件を確認・変更したいとき。
-- merge finding operation の delete/replace/merge 適用、finding id の採番、finding list の更新規則を調べたいとき。
-- review oracle 用 Codex 呼び出し purpose、作業 cwd、既存 finding JSON の渡し方を変更したいとき。
+- review oracle の列挙、merge、validate、judge の実行順序や反復終了条件を確認・変更したいとき。
+- Codex に渡す review oracle 用 parameter builder の呼び出し方、purpose、cwd、root、config の受け渡しを追いたいとき。
+- finding の初期フィールド、finding_id の採番、merge/delete/replace 操作の適用結果を確認・変更したいとき。
+- finding の oracle_path が絶対パス、worktree 相対パス、パスキーワード付き表記からどう解決されるかを調べたいとき。
 
 ## Do not read this when
-- oracle review の active session 制約、一時 worktree 作成、INDEX.md commit/merge、report rendering を確認したいときは、それぞれ該当する review 系 module を読む。
-- prompt parameter の文面や Structured Output schema の定義そのものを確認したいときは、acp.builder.review.oracle 側を読む。
+- review oracle のプロンプトや Structured Output parameter の内容そのものを確認したいだけなら、builder 側を読む。
+- review oracle の反復回数など設定値の定義や読み込みを確認したいだけなら、config 側を読む。
+- 通常のレビュー対象ファイル探索、作業ツリー作成、CLI 引数処理など、review oracle loop の外側のサブコマンド制御を調べたい場合は、呼び出し元を読む。
+- oracle file や realization file の正本上の意味・編集責務を確認したい場合は、仕様側を読む。
 
 ## hash
-- 56a9c39c86337277ad4be649704deccd9415f64ce48f6e2194b06b95ca3d9fd5
+- fc53ad61245cfefd472c00b98d52710dbb36a95e94af1044426cce8da5006269
 
 # `review_report.py`
 
