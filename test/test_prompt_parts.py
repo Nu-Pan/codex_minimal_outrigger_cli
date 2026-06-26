@@ -1,6 +1,9 @@
 import json
 from pathlib import Path
 
+import pytest
+from jsonschema import ValidationError, validate
+
 from basic.acp import FileAccessMode
 from basic.acp import ModelClass, ReasoningEffort
 from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
@@ -104,6 +107,30 @@ def test_apply_fork_prompts_use_repo_root(
     assert f"`{repo_root}` ツリー内の realization file" in finding_application.prompt
     assert f"`{repo_root}` ツリー内の所見" in finding_enumeration.prompt
     assert f"`{repo_root}` ツリー内の差分" in change_summary.prompt
+
+
+def test_apply_fork_change_summary_schema_rejects_empty_changes() -> None:
+    parameter = build_apply_fork_change_summary_parameter("diff")
+    assert parameter.structured_output_schema_path is not None
+
+    schema = json.loads(parameter.structured_output_schema_path.read_text())
+
+    with pytest.raises(ValidationError):
+        validate({"changes": []}, schema)
+    validate(
+        {
+            "changes": [
+                {
+                    "category": "実装",
+                    "summary": "変更要約 schema の検証制約を追加した。",
+                    "changed_paths": [
+                        "src/acp/builder/apply/fork/change_summary.json"
+                    ],
+                }
+            ]
+        },
+        schema,
+    )
 
 
 def test_file_access_rule_titles_and_bodies_match_modes() -> None:
