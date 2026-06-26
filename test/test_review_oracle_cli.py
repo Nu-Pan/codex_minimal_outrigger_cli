@@ -18,6 +18,7 @@ from _support import (
     run_git,
     runner,
 )
+from cmoc_runtime import SessionState
 from config.cmoc_config import CmocConfig, CmocConfigReviewOracle
 from main import app
 import sub_commands.review as review_module
@@ -69,6 +70,7 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
     assert "## Evaluated oracle file" in rendered
     assert "`oracle/spec.md`" in rendered
     assert "review_join_commit: null" in rendered
+    assert "session_id:" not in rendered
     assert any(call.startswith("review oracle enumerate findings") for call in calls)
     assert "review oracle merge findings" not in calls
 
@@ -137,8 +139,43 @@ def test_review_oracle_report_orders_findings_by_verdict_then_severity(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
     assert rendered.index("accepted minor") < rendered.index("rejected fatal")
+    assert "result: fatal" in rendered
     assert "fatal_findings_rejected_count: 1" in rendered
     assert "minor_findings_accepted_count: 1" in rendered
+
+
+@pytest.mark.parametrize(
+    ("severity", "result"),
+    [("fatal", "fatal"), ("minor", "minor")],
+)
+def test_review_oracle_report_result_counts_rejected_findings(
+    tmp_path: Path, severity: str, result: str
+) -> None:
+    root = tmp_path
+    rendered = review_module.render_review_oracle_report(
+        root,
+        "full",
+        "cmoc/session/session-1",
+        SessionState(),
+        1,
+        [root / "oracle" / "spec.md"],
+        [
+            {
+                "finding_id": "finding-0001",
+                "oracle_path": "oracle/spec.md",
+                "severity": severity,
+                "verdict": "reject",
+                "title": "rejected finding",
+                "reason": "rejected reason",
+            }
+        ],
+        "cmoc/run/session-1/run-1",
+        "fork",
+        None,
+    )
+
+    assert f"result: {result}" in rendered
+    assert "session_id:" not in rendered
 
 
 def test_review_oracle_uses_linked_worktree_branch_and_oracle(

@@ -7,7 +7,6 @@ def write_review_oracle_report(
     root: Path,
     scope: str,
     session_branch: str,
-    session_id: str,
     state: SessionState,
     oracle_count_total: int,
     oracle_files: list[Path],
@@ -25,7 +24,6 @@ def write_review_oracle_report(
             root,
             scope,
             session_branch,
-            session_id,
             state,
             oracle_count_total,
             oracle_files,
@@ -43,7 +41,6 @@ def render_review_oracle_report(
     root: Path,
     scope: str,
     session_branch: str,
-    session_id: str,
     state: SessionState,
     oracle_count_total: int,
     oracle_files: list[Path],
@@ -74,7 +71,10 @@ def render_review_oracle_report(
     if error_message is not None:
         error_message = error_message.replace("`", "'")
     result, verdict = _review_report_verdict(
-        error_message, oracle_files, fatal_accepted, minor_accepted
+        error_message,
+        oracle_files,
+        fatal_accepted + fatal_rejected,
+        minor_accepted + minor_rejected,
     )
     findings_by_path: dict[str, int] = {}
     for finding in findings:
@@ -102,7 +102,6 @@ def render_review_oracle_report(
         ("fatal_findings_rejected_count", len(fatal_rejected)),
         ("minor_findings_rejected_count", len(minor_rejected)),
         ("result", result),
-        ("session_id", session_id),
     ]
     return "\n".join(
         [
