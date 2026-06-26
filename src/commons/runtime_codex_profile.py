@@ -37,6 +37,7 @@ def _permission_profile_lines(
     mode: FileAccessMode,
     root: Path,
     extra_read_paths: list[Path] | None = None,
+    extra_writable_paths: list[Path] | None = None,
 ) -> list[str]:
     root = root.resolve()
     match mode:
@@ -70,6 +71,20 @@ def _permission_profile_lines(
     if extra_read_paths:
         read_paths.extend(path.resolve() for path in extra_read_paths)
         read_only_paths.extend(path.resolve() for path in extra_read_paths)
+    if extra_writable_paths:
+        protected = [root / "memo", root / ".agents"]
+        writable = [path.resolve() for path in extra_writable_paths]
+        writable = [
+            path
+            for path in writable
+            if not any(path.is_relative_to(base) for base in protected)
+        ]
+        write_paths.extend(writable)
+        read_only_paths = [
+            path
+            for path in read_only_paths
+            if not any(target.is_relative_to(path) for target in writable)
+        ]
     # Codex permission profiles carry read restrictions; read_only remains for
     # write exclusions that the legacy workspace profile represented.
     return [
@@ -93,6 +108,7 @@ def build_codex_profile(
     config: CmocConfig,
     root: Path | None = None,
     extra_read_paths: list[Path] | None = None,
+    extra_writable_paths: list[Path] | None = None,
 ) -> str:
     model = config.codex.model[parameter.model_class]
     reasoning_effort = config.codex.reasoning_effort[parameter.reasoning_effort]
@@ -106,6 +122,7 @@ def build_codex_profile(
                 parameter.file_access_mode,
                 root,
                 extra_read_paths,
+                extra_writable_paths,
             )
         )
     else:
@@ -167,9 +184,14 @@ def prepare_codex_profile(
     codex_home: Path | None = None,
     root: Path | None = None,
     extra_read_paths: list[Path] | None = None,
+    extra_writable_paths: list[Path] | None = None,
 ) -> Path:
     profile = build_codex_profile(
-        parameter, config or CmocConfig(), root, extra_read_paths
+        parameter,
+        config or CmocConfig(),
+        root,
+        extra_read_paths,
+        extra_writable_paths,
     )
     target_home = codex_home or resolve_codex_home()
     try:

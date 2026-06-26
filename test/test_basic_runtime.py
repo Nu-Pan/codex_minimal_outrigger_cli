@@ -328,6 +328,30 @@ def test_codex_profile_contains_file_access_enforcement(tmp_path: Path) -> None:
     assert realization_workspace["writable_roots"] == [str(root)]
     assert realization_workspace["read_only_paths"] == realization_fs["read_only"]
 
+    oracle_conflict = root / "oracle" / "spec.md"
+    conflict_profile = tomllib.loads(
+        build_codex_profile(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                FileAccessMode.REALIZATION_WRITE,
+                "prompt",
+                None,
+            ),
+            CmocConfig(),
+            root,
+            extra_writable_paths=[oracle_conflict, root / "memo" / "blocked.md"],
+        )
+    )
+    conflict_fs = conflict_profile["permissions"]["cmoc"]["file_system"]
+    conflict_workspace = conflict_profile["sandbox_workspace_write"]
+    assert str(oracle_conflict) in conflict_fs["write"]
+    assert str(root / "oracle") not in conflict_fs["read_only"]
+    assert str(oracle_conflict) in conflict_workspace["writable_roots"]
+    assert str(root / "oracle") not in conflict_workspace["read_only_paths"]
+    assert str(root / "memo") in conflict_fs["read_only"]
+    assert str(root / "memo" / "blocked.md") not in conflict_fs["write"]
+
     oracle_fs = profile(FileAccessMode.ORACLE_WRITE)["permissions"]["cmoc"][
         "file_system"
     ]

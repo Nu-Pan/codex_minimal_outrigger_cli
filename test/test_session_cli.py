@@ -239,10 +239,22 @@ def test_session_join_resolves_oracle_conflict_with_realization_write_profile(
     def fake_run_codex_exec(parameter, **kwargs):
         calls.append(kwargs["purpose"])
         modes.append(parameter.file_access_mode)
-        profile = tomllib.loads(build_codex_profile(parameter, CmocConfig(), root))
+        profile = tomllib.loads(
+            build_codex_profile(
+                parameter,
+                CmocConfig(),
+                root,
+                extra_writable_paths=kwargs["extra_writable_paths"],
+            )
+        )
         fs = profile["permissions"]["cmoc"]["file_system"]
         assert str(root) in fs["write"]
-        assert str(root / "oracle") in fs["read_only"]
+        assert str(target) in fs["write"]
+        assert str(root / "memo") in fs["read_only"]
+        assert str(root / ".agents") in fs["read_only"]
+        assert not any(
+            target.is_relative_to(Path(path)) for path in fs["read_only"]
+        )
         target.write_text("resolved change\n")
         return FakeCodexResult()
 

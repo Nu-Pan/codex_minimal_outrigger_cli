@@ -64,6 +64,8 @@ def run_codex_exec(
     quota_poll_interval_sec: float = 1800.0,
     max_quota_polls: int | None = None,
     subcommand_logger: SubcommandLogger | None = None,
+    extra_read_paths: list[Path] | None = None,
+    extra_writable_paths: list[Path] | None = None,
 ) -> CodexExecResult:
     """Codex exec の再試行、Structured Output 検証、実行記録を一括制御する。"""
     root = root or repo_root()
@@ -75,7 +77,12 @@ def run_codex_exec(
     validate_codex_home(codex_home)
     codex_env = codex_subprocess_env(codex_home)
     profile_path = prepare_codex_profile(
-        parameter, config, codex_home, work_root(cwd)
+        parameter,
+        config,
+        codex_home,
+        work_root(cwd),
+        extra_read_paths,
+        extra_writable_paths,
     )
     profile_name = codex_profile_name(profile_path)
     schema_path = (

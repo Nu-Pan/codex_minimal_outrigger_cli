@@ -98,6 +98,7 @@ def resolve_session_join_conflict(root: Path, codex_exec: CodexExec, git: GitRun
         build_session_join_conflict_resolution_parameter(conflicted_paths),
         root=root,
         purpose="session join conflict resolution",
+        extra_writable_paths=conflicted_paths,
     )
     remaining_markers = [
         path
