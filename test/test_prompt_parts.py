@@ -113,8 +113,8 @@ def test_apply_fork_prompts_use_expected_roots(
     change_summary = build_apply_fork_change_summary_parameter("diff")
 
     assert f"`{repo_root}` ツリー内の realization file" in finding_application.prompt
-    assert f"`{apply_worktree}` ツリー内の所見" in finding_enumeration.prompt
-    assert f"`{repo_root}` ツリー内の所見" not in finding_enumeration.prompt
+    assert f"`{repo_root}` ツリー内の所見" in finding_enumeration.prompt
+    assert f"`{apply_worktree}` ツリー内の所見" not in finding_enumeration.prompt
     assert f"`{repo_root}` ツリー内の差分" in change_summary.prompt
 
 
