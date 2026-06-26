@@ -3,7 +3,6 @@ from pathlib import Path
 
 from basic.acp import FileAccessMode
 from basic.acp import ModelClass, ReasoningEffort
-from basic.path_model import resolve_repo_root
 from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
 from acp.builder.apply.fork.file_finding_enumeration import (
     build_apply_fork_file_finding_enumeration_parameter,
@@ -102,7 +101,7 @@ def test_apply_fork_prompts_use_repo_root(
     finding_enumeration = build_apply_fork_file_finding_enumeration_parameter(target)
     change_summary = build_apply_fork_change_summary_parameter("diff")
 
-    assert f"`{repo_root}` ツリー内の 編集対象ファイル" in finding_application.prompt
+    assert f"`{repo_root}` ツリー内の realization file" in finding_application.prompt
     assert f"`{repo_root}` ツリー内の所見" in finding_enumeration.prompt
     assert f"`{repo_root}` ツリー内の差分" in change_summary.prompt
 
@@ -122,7 +121,6 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
         FileAccessMode.REALIZATION_WRITE: [
             "ツリー外は読み書き禁止",
             "/oracle` ツリー内は書き込み禁止",
-            "/.agents` ツリー内は書き込み禁止",
             "/memo` は読み書き禁止",
         ],
         FileAccessMode.ORACLE_WRITE: [
@@ -132,7 +130,6 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
         ],
         FileAccessMode.REPO_WRITE: [
             "ツリー外は読み書き禁止",
-            "/.agents` ツリー内は書き込み禁止",
             "/memo` は読み書き禁止",
         ],
     }
@@ -201,7 +198,7 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
         assert forbidden not in rendered
 
 
-def test_complete_prompt_rewrites_base_prompt_for_codex_cli() -> None:
+def test_complete_prompt_preserves_base_prompt_parts() -> None:
     prompt = build_complete_prompt(
         role="- cmoc から呼び出された AI Agent です",
         summary="- <repo-root> ツリー内の realization file を修正すること",
@@ -223,25 +220,17 @@ def test_complete_prompt_rewrites_base_prompt_for_codex_cli() -> None:
     )
 
     rendered = render_as_markdown(prompt)
-    code_block = (
-        '```json\n'
-        f'{{"summary": "realization file and {resolve_repo_root()} stay in code block"}}\n'
-        '```'
-    )
-    rewritten_text = rendered.replace(code_block, "")
 
-    assert "呼び出し元から呼び出された AI Agent" in rendered
-    assert "編集対象ファイル" in rendered
-    assert "編集対象ファイルの保守基準" in rendered
-    assert "仕様文書の記述基準" in rendered
-    assert "# aux 編集対象ファイル" in rendered
-    assert "<repo-root>" not in rewritten_text
-    assert "<work-root>" not in rewritten_text
-    assert "<repo-root>" not in rendered
-    assert "realization standard" not in rewritten_text
-    assert "oracle standard" not in rewritten_text
-    assert "oracle file" not in rewritten_text
-    assert code_block in rendered
+    assert "- cmoc から呼び出された AI Agent です" in rendered
+    assert "- <repo-root> ツリー内の realization file を修正すること" in rendered
+    assert "- realization standard と oracle standard に従うこと" in rendered
+    assert "# aux realization file" in rendered
+    assert "- <work-root> 配下の oracle file と realization file を確認すること" in rendered
+    assert (
+        '```json\n'
+        '{"summary": "realization file and <repo-root> stay in code block"}\n'
+        '```'
+    ) in rendered
 
 
 def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
@@ -416,7 +405,7 @@ def test_session_join_conflict_resolution_uses_realization_write_mode() -> None:
     assert parameter.model_class == ModelClass.MAINSTREAM
     assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
     assert parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE
-    assert "conflict 対象 仕様ファイル" in parameter.prompt
+    assert "conflict 対象ファイル" in parameter.prompt
 
 
 def test_build_review_oracle_standard_renders_core_review_rules() -> None:
