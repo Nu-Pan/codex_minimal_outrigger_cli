@@ -14,7 +14,9 @@ from config.cmoc_config import CmocConfig, CmocConfigReviewOracle
 
 
 def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
-    root = make_repo(tmp_path)
+    ancestor = tmp_path / "oracle"
+    ancestor.mkdir()
+    root = make_repo(ancestor)
     monkeypatch.chdir(root)
     init_result = runner.invoke(app, ["init"], catch_exceptions=False)
     assert init_result.exit_code == 0
