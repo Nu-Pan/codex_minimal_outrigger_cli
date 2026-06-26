@@ -98,25 +98,22 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基本的な runtime 挙動を横断的に検証する realization test。パス token 解決、時間表示、repo root/work root 判定、設定既定値、構造化エラー表示、CLI エラー出力、補完 probe、.cmoc ignore、file access mode、Codex profile の権限制御を扱う。
-- 単一機能の詳細テストというより、CLI 実行前後の前提条件、権限 profile、エラー報告、git worktree 周辺の基礎契約が崩れていないかを確認する入口になる。
+- cmoc の基礎的な runtime 挙動を横断的に検証する realization test。パス token 解決、duration 表示、repo root と work root の判別、設定 default、エラー Markdown 出力、CLI preflight と parse error、.cmoc ignore、file access mode、binary 判定、Codex profile の filesystem 権限生成を扱う。
+- 個別機能の単体テストというより、runtime helper・CLI entrypoint・permission profile の基本契約が実装全体で崩れていないかを確認する入口になる。
 
 ## Read this when
-- path model、repo root と work root の区別、linked worktree 上の実行判定を変更する。
-- CmocConfig の既定値、model class、reasoning effort、file access mode の値や sandbox mode 変換を変更する。
-- CmocError、render_error、CLI 引数解析エラー、preflight エラーの stdout/stderr 出力方針を変更する。
-- init や session fork の実行前検査、補完 probe 時の副作用抑制、work root 必須条件を変更する。
-- .cmoc を .gitignore に追加する処理や、既存 ignore pattern を尊重する挙動を変更する。
-- build_codex_profile が生成する permission profile、read/write/deny_read/read_only、workspace-write の writable roots を変更する。
+- cmoc の実行場所判定、worktree 判定、path token 表記、または `<cmoc-root>` などの path model に関わる挙動を変更する時。
+- CLI エラー表示、引数解析失敗、completion probe、preflight、stdout/stderr の使い分けを変更する時。
+- file access mode、sandbox mode、Codex profile、oracle・memo・.agents の read/write/read_only/deny_read 権限生成を変更する時。
+- 設定 default、reasoning effort、model class、.cmoc の gitignore 登録、binary 判定など、runtime の基本 helper の外部挙動を確認したい時。
 
 ## Do not read this when
-- 個別サブコマンドの正常系フローや永続状態の詳細だけを調べたい場合は、そのサブコマンドや状態管理を扱うより直接の実装・テストを読む。
-- oracle file の正本仕様を確認したい場合は、realization test ではなく該当する oracle doc、oracle src、oracle test を読む。
-- Codex CLI や LLM 出力品質そのものの検証方針を調べたい場合は、この対象ではなくテスト追加基準や関連する仕様文書を読む。
-- 単一 helper の内部実装だけを変更する場合で、外部挙動、CLI 出力、権限制御、worktree 判定に影響しないことが明確なら読む優先度は低い。
+- 特定サブコマンドの詳細な業務フロー、永続状態の個別 schema、または UI/TUI の表示内容を調べたいだけの時は、その責務を持つ実装・テストへ直接進む。
+- oracle file の正本仕様そのものを確認したい時は、実装テストではなく該当する oracle doc または oracle src/test を読む。
+- 単一 helper の内部実装方針だけを調べたい時は、まず該当する runtime module や support fixture を読む。
 
 ## hash
-- 9725c381580cfac7b4edcc1a3db8912f4fceea899388f6c81a860a1a6fd61454
+- 8961b01452ba7a8c3079c02808be3acf6a26714966b7da9ca6b19e64e94f9bc8
 
 # `test_cli_init_tui.py`
 
