@@ -83,7 +83,7 @@ def _permission_profile_lines(
         read_only_paths = [
             path
             for path in read_only_paths
-            if not any(target.is_relative_to(path) for target in writable)
+            if path not in writable
         ]
     # Codex permission profile は read 制限を持つ。legacy workspace profile が表していた
     # write 除外は read_only として残す。

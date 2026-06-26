@@ -104,7 +104,7 @@ def resolve_session_join_conflict(root: Path, codex_exec: CodexExec, git: GitRun
     remaining_markers = [
         path
         for path in conflicted_paths
-        if path.exists() and any(marker in path.read_text(errors="ignore") for marker in ("<<<<<<<", "=======", ">>>>>>>"))
+        if path.exists() and _has_conflict_marker_block(path.read_text(errors="ignore"))
     ]
     if remaining_markers:
         raise CmocError(
@@ -122,3 +122,15 @@ def resolve_session_join_conflict(root: Path, codex_exec: CodexExec, git: GitRun
             unmerged,
         )
     git(["commit", "--no-edit"], root)
+
+
+def _has_conflict_marker_block(text: str) -> bool:
+    state = 0
+    for line in text.splitlines():
+        if state == 0 and line.startswith("<<<<<<<"):
+            state = 1
+        elif state == 1 and line == "=======":
+            state = 2
+        elif state == 2 and line.startswith(">>>>>>>"):
+            return True
+    return False
