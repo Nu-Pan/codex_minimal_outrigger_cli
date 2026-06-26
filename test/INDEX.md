@@ -324,22 +324,21 @@
 # `test_session_cli.py`
 
 ## Summary
-- cmoc の session 系 CLI の外部挙動を検証する realization test。session fork による session branch と state 生成、cmoc ignore 初期化、linked worktree 上での branch/head の扱いを確認する。
-- session abandon が home branch へ戻ること、session branch を削除して state を abandoned にすること、home branch 不在時や cleanup 失敗時のエラー出力・rollback を検証する。
-- session join が session branch の変更を home branch へ取り込むこと、linked worktree 上で正しい branch を扱うこと、oracle conflict 解決時に REALIZATION_WRITE profile と適切な書き込み権限を使うこと、delete conflict 解決や session branch 削除失敗時の挙動を検証する。
+- session 系 CLI の外部挙動を検証する realization test。fork による session branch と状態ファイル生成、abandon による home branch 復帰・branch 削除・状態更新、join による home への統合・競合解決・状態更新を扱う。
+- 通常 worktree と linked worktree の両方で、現在の branch、開始 commit、session home branch、未コミット差分、branch 削除失敗時の警告、エラー出力先が期待どおりかを確認する。
+- join の競合解決では Codex 実行の purpose、REALIZATION_WRITE profile、追加 writable path、memo や .agents の read-only 扱い、delete conflict 解決後の staging 状態も検証対象にしている。
 
 ## Read this when
-- session fork、session abandon、session join の CLI 挙動、終了コード、標準出力、git branch 操作、session state JSON の更新を変更または調査するとき。
-- session branch と session home branch の関係、session_start_commit、active・abandoned・joined などの session state、apply state の期待値を確認したいとき。
-- linked worktree 内で session サブコマンドを実行する場合の branch 選択、root worktree への副作用有無、HEAD の扱いを確認したいとき。
-- session join の conflict resolution で Codex 実行 profile、FileAccessMode.REALIZATION_WRITE、oracle ファイルへの追加 write permission、memo や .agents の read_only 扱いを確認したいとき。
-- session abandon や session join の失敗・警告系で、cleanup 失敗時の rollback、home branch 不在時の出力、session branch を削除できない場合の表示を確認したいとき。
+- session の fork、abandon、join サブコマンドの利用者向け挙動を変更・確認する。
+- session state の生成内容、state 遷移、session_home_branch、session_start_commit、apply state、joined/abandoned の扱いを確認する。
+- session branch の作成・削除、home branch への切り替え、linked worktree 上での branch/head の扱いを変更する。
+- session join の競合解決フロー、Codex 実行 profile、oracle 配下の競合解決時の writable/read-only 権限、delete conflict の解決後処理を確認する。
+- session 系コマンドの成功時 summary、失敗時 error report、stdout/stderr の出し分け、cleanup 失敗時の rollback 挙動を変更する。
 
 ## Do not read this when
-- session サブコマンド以外の CLI、設定読み込み、path model、oracle review など、session branch の lifecycle に関係しない挙動だけを調べるとき。
-- session の内部 helper 分割や実装詳細だけを調べたい場合で、外部 CLI 挙動や state・git 副作用の期待値を確認する必要がないとき。
-- Codex profile 生成全般を調べたいだけで、session join の oracle conflict resolution に渡される file access mode や権限境界に関係しないとき。
-- 通常の git 操作 helper や test fixture の作り方だけを調べたい場合で、session fork・abandon・join のシナリオ検証が不要なとき。
+- session 系 CLI の外部挙動、git branch/worktree 操作、session state、join 競合解決に関係しない実装だけを扱う。
+- init、設定読み込み、path model、Codex profile 生成そのものなどを単体で確認したいだけで、session join からの呼び出し条件を確認する必要がない。
+- 低レベル helper の純粋な単体挙動を確認したいだけで、CLI 実行結果や repository 副作用を伴う session workflow を追う必要がない。
 
 ## hash
-- f0685a69145c1e4049dca667fd4fedce51df0b324c5beb4b7f9812cc8ca9386b
+- b7282f9c153550e7c048e605ea0a285c7dc9719812c6bde4f47aaf63ea94da15

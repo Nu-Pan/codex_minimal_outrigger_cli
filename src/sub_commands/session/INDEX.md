@@ -59,21 +59,20 @@
 # `join.py`
 
 ## Summary
-- active な session branch を session home branch へ join するサブコマンド実装を扱う。現在 branch と保存状態の事前条件確認、clean worktree と ignore 設定確認、home branch への切り替え、no-ff merge、状態更新、session branch 削除、結果表示までの制御を担う。
-- merge conflict 発生時は conflict 対象ファイルを検出し、Codex CLI に解消を依頼した後、残存 conflict marker と unmerged path を検査して add と merge commit を進める。
-- CLI entrypoint では indexing preflight を有効化し、共通の subcommand runner 経由で join 処理を実行する。
+- active な session branch を session home branch へ取り込むサブコマンドの実行処理を扱う。
+- 実行前条件の検証、worktree の清潔性確認、home branch への切り替え、no-ff merge、session state の joined 更新、session branch 削除結果を含む利用者向け出力をまとめて担う。
+- merge conflict 発生時は未解決 path を抽出し、Codex CLI に解決を依頼したうえで conflict marker と unmerged path の残存を検証し、問題なければ merge commit を完了する。
 
 ## Read this when
-- session join の事前条件、対象 branch、状態遷移、home branch への merge、session branch 削除の挙動を確認または変更したいとき。
-- session join 中の merge conflict を Codex CLI へ渡す流れ、conflict marker 検査、unmerged path 検査、merge commit の完了処理を確認または変更したいとき。
-- session join サブコマンドが indexing preflight や共通 CLI 実行 wrapper とどう接続されているかを確認したいとき。
-- session join の利用者向け出力、warning 表示、CmocError の発生条件を確認したいとき。
+- session を home branch へ join する処理の制御順序、事前条件、状態更新、branch 削除、利用者向け出力を確認または変更したいとき。
+- session join 中の merge conflict 解決フロー、Codex CLI への依頼内容の渡し方、conflict marker や unmerged path の検出後のエラー処理を確認したいとき。
+- session join サブコマンドの entry point が indexing preflight や共通 CLI 実行ラッパーへどう接続されるかを確認したいとき。
 
 ## Do not read this when
-- session join 以外の session サブコマンドの挙動を確認したいだけのとき。
-- 保存状態の schema、branch からの状態読み込み、git 実行 wrapper、worktree 検査などの共通 runtime 処理そのものを変更したいとき。
-- merge conflict 解消依頼に渡す Codex CLI parameter の内容を変更したいとき。
-- indexing preflight の内部挙動を確認または変更したいとき。
+- session の作成、開始、apply など、join 以外の session 操作を調べたいとき。
+- 状態ファイルの schema、branch から state を読み込む仕組み、work root や repo root の定義そのものを調べたいとき。
+- Codex CLI に渡す conflict resolution parameter の文面や構築仕様だけを変更したいとき。
+- indexing preflight の具体的な検査内容や共通 CLI error handling の一般仕様を調べたいとき。
 
 ## hash
-- bd673ffaf918b1736dfabac70797b66f32cc052776ae1df514af40ec5ad733bf
+- 9811b76e97740139185fc397ce71763a86530e3f1b5e66ea320e7af7e3f3868b
