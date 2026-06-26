@@ -118,25 +118,27 @@
 # `test_cli_init_tui.py`
 
 ## Summary
-- CLI の初期化と対話起動まわりの外部挙動を検証する realization test。初期化時の `.cmoc` 管理対象外化、`.gitignore` 更新、既存 staged/unstaged 変更の保全、linked worktree での root/cwd/state/log の扱い、既定設定ファイルの生成と既存設定値の保持、サブコマンドログ、対話起動時のプロンプト編集・パラメータ解決・Codex 起動条件を扱う。
-- Markdown プロンプト解析について、 fenced code block 内の見出し記法を見出し扱いしないこと、見出し前の本文を本文セクションとして保持することも検証する。
+- CLI の初期化処理と対話型起動処理を、実リポジトリ・Git・作業ツリー・疑似エディタ/疑似 Codex 実行を使って検証する realization test。
+- .cmoc の ignore/追跡解除、初期化時コミットの対象制御、設定ファイル既定値の生成・同期、sub_command ログ、linked worktree 上の初期化と TUI プロンプト保存先を扱う。
+- Markdown プロンプト解析について、コードフェンス内の見出しを無視することと、見出し前の本文を保持することも検証する。
 
 ## Read this when
-- `init` コマンドの git 操作、`.cmoc` の ignore/untrack、初期コミット、`.gitignore` への追記、既存 index/worktree 変更を壊さない挙動を変更または確認するとき。
-- 初期設定ファイルの既定値、既存設定との同期、既存の人間設定値を上書きしない挙動を変更または確認するとき。
-- linked worktree 上での `init` や対話起動が、main worktree 側と linked worktree 側のどちらに config・log・state・schema・complete prompt を置くかを確認するとき。
-- 対話起動でエディタを開き、コメント除去済みの依頼文から実行パラメータを解決し、その結果に応じて Codex TUI を起動する流れを変更または確認するとき。
-- サブコマンド起動ログの event、command、argv など、起動した CLI コマンドを識別するログ挙動を確認するとき。
-- Markdown プロンプトを見出し単位に分解する処理で、コードブロック内の `#` や見出し前本文の扱いを確認するとき。
+- init サブコマンドが .cmoc を ignore し、既存の .cmoc 追跡ファイルを untrack し、必要な cleanup commit だけを作る挙動を確認・変更する時。
+- 初期化時に利用者の既存 staged change や .gitignore の staged/unstaged 変更を壊さない Git 操作を確認・変更する時。
+- linked worktree 上で init や tui を実行した時の root/cwd、.gitignore、config、ログ、schema、commit 対象の扱いを確認・変更する時。
+- config の既定値生成、既存の人間設定を保持した defaults 同期、モデル名・reasoning effort・apply/review 設定の補完を確認・変更する時。
+- tui サブコマンドがエディタで作成された依頼文を整形し、不要なコメントを除去し、parameter resolve 用 Codex 実行と本体 TUI 実行へ正しい parameter・purpose・extra_read_paths を渡すか確認・変更する時。
+- sub_command ログに command_invoked イベント、実行 command、argv が記録される挙動を確認・変更する時。
+- Markdown プロンプト parser の見出し抽出、コードフェンス内見出しの扱い、見出し前 preamble の扱いを確認・変更する時。
 
 ## Do not read this when
-- 個別の `init` 実装内部 helper の責務やアルゴリズムだけを調べたい場合は、対応する実装ファイルを直接読む方がよい。
-- 設定 schema の全項目や正本仕様上の既定値そのものを確認したい場合は、設定定義や oracle 側の該当文書を読む方がよい。
-- 対話起動後の Codex/LLM の出力品質や実際の対話 UI 表示を検証したい場合は、この対象は制御ロジックのテストであり直接の入口ではない。
-- Markdown 一般仕様や parser 全体の網羅的な挙動を調べたい場合は、ここで扱うのは見出し分解の限定的なケースだけなので、parser 実装またはより直接のテストを読む方がよい。
+- init や tui の外部挙動ではなく、低レベルな path model、schema 定義、設定 dataclass だけを局所的に確認したい時は、それらの実装または単体テストへ直接進む。
+- Codex CLI や外部 LLM の実際の出力品質を確認したい時。この対象は疑似実行・呼び出し parameter・保存副作用を検証しており、LLM 品質自体は扱わない。
+- 一般的な CLI command 登録や Typer の配線だけを確認したい時は、CLI 実装やより小さい command 単位のテストを優先する。
+- Markdown parser 以外の文書処理、INDEX.md 生成、oracle/realization ルーティング仕様を確認したい時は、それぞれの専用実装・テストへ進む。
 
 ## hash
-- e6b4d44cacfedc87208e49827c66651cfb7cdbeb8976627d0aa935b87643e165
+- 5419f2b7f51994350b24a8b5fd73f3b673f998f764a0b7fd12411688e1b46444
 
 # `test_codex_runtime_exec.py`
 
