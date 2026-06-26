@@ -16,7 +16,6 @@ from cmoc_runtime import (
     is_git_ignored,
     load_config,
     require_cmoc_ignored,
-    require_clean_worktree,
     run_cli_subcommand,
     run_codex_exec,
     run_git,
@@ -36,12 +35,10 @@ def enable_indexing_preflight() -> None:
 
 
 def cmoc_indexing_impl(
-    initial_status: str | None = None,
     codex_exec: CodexExec | None = None,
 ) -> None:
     """現在の work root に対して INDEX.md の maintenance を実行する。"""
     root = work_root()
-    require_clean_worktree(root, initial_status)
     with indexing_lock(root):
         updated = update_indexes(root, codex_exec)
         commit_index_updates(root, updated)
