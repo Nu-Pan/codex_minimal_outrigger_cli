@@ -103,6 +103,58 @@ def test_apply_join_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> 
     assert "- cleanup_reachable: `True`" in result.output
     assert "  - none" in result.output
 
+
+def test_apply_join_rejects_stale_apply_branch_for_same_session(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    class FakeCodexResult:
+        output_json = {"findings": []}
+
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    )
+    assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
+    session_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = session_branch.removeprefix("cmoc/session/")
+    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state = json.loads(state_path.read_text())
+    active_apply_branch = state["apply"]["apply_branch"]
+    active_apply_worktree = apply_worktree_from_state(root, state)
+    stale_apply_branch = f"cmoc/apply/{session_id}/stale"
+    stale_apply_worktree = root / ".cmoc" / "worktrees" / session_id / "stale"
+    run_git(
+        root,
+        "worktree",
+        "add",
+        "-b",
+        stale_apply_branch,
+        str(stale_apply_worktree),
+        session_branch,
+    )
+    monkeypatch.chdir(stale_apply_worktree)
+
+    result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 1
+    assert "現在の apply branch は join 対象" in result.output
+    assert f"current_branch: {stale_apply_branch}" in result.output
+    assert f"apply_branch: {active_apply_branch}" in result.output
+    assert active_apply_worktree.exists()
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", active_apply_branch], cwd=root
+        ).returncode
+        == 0
+    )
+    assert json.loads(state_path.read_text())["apply"]["state"] == "completed"
+
+
 def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(
     tmp_path: Path, monkeypatch
 ) -> None:
