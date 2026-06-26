@@ -24,26 +24,21 @@
 # `indexing.py`
 
 ## Summary
-- INDEX.md の自動メンテナンスを実行するサブコマンド実装で、作業ルート内の対象ディレクトリを深い階層から走査し、各階層のエントリーを再利用または生成して更新する責務を持つ。
-- 既存エントリーの hash 検証、対象外パスの除外、Codex 呼び出しによるエントリー生成、Markdown への描画、更新された INDEX.md だけの git commit、repository 単位の排他 lock を扱う。
-- 通常実行用のコマンド経路と、Codex 実行前に INDEX.md を最新化する preflight 経路の入口になっている。
+- 現在の作業ルートに対するルーティング文書の保守を実行するサブコマンド実装。排他ロック、対象ディレクトリ・子要素の列挙、既存エントリーの再利用判定、Codex 呼び出しによる不足エントリー生成、Markdown 描画、更新差分の commit までを扱う。
+- 本文抽出、鮮度判定用 hash 計算、必須セクションと hash の検証など、ルーティング文書生成処理の一連の制御フローへの入口になる。
 
 ## Read this when
-- INDEX.md の生成・更新・再利用・commit の流れを確認または変更するとき。
-- INDEX.md 対象に含めるファイルやディレクトリ、除外する memo・git ignore 対象・binary file の判定を確認または変更するとき。
-- 既存 INDEX.md エントリーの必須セクション、hash 抽出、鮮度判定、再生成条件を確認または変更するとき。
-- Codex CLI に渡す INDEX.md エントリー生成入力、Structured Output からの Markdown 描画、fallback 文言を確認または変更するとき。
-- indexing 実行の排他制御、preflight 連携、更新差分だけを commit する挙動を確認または変更するとき。
+- ルーティング文書をいつ・どの順序で再生成するか、どの対象を目次化から除外するか、既存エントリーを再利用する条件を確認したいとき。
+- ルーティング文書更新の排他制御、更新差分だけの git add・commit、事前処理としてのルーティング文書最新化を変更したいとき。
+- Codex に渡す対象内容、Structured Output から Markdown エントリーを組み立てる処理、生成結果の検証エラーを調査したいとき。
 
 ## Do not read this when
-- 個々のサブコマンドの業務処理や CLI 全体の登録構造だけを確認したいとき。
-- INDEX.md エントリー生成用プロンプトや Structured Output schema の定義自体を変更したいとき。
-- git・Codex・設定読み込み・path・hash・ignore 判定などの共通 runtime helper の内部実装だけを確認したいとき。
-- 生成済み INDEX.md の内容を読んでルーティング判断をしたいだけのとき。
-- oracle file の正本仕様を確認または修正提案したいとき。
+- 個別のサブコマンド登録や CLI 全体のコマンド構成だけを確認したいとき。
+- Codex 実行関数や git 実行関数など、ランタイム共通処理そのものの実装を調べたいとき。
+- 生成されるエントリー本文のプロンプト構築や Structured Output schema の定義だけを確認したいとき。
 
 ## hash
-- 2787c4bea6f26510e2ffbaea188bbc20aebcc9de523b3db7c304c87519f83fe8
+- b9e0139c4bd69e2fffbee174c5782e962c1c3e0aef671e689e430020c0f1f1d7
 
 # `init.py`
 

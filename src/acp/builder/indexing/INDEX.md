@@ -1,21 +1,21 @@
 # `index_entry.json`
 
 ## Summary
-- `index_entry` 生成用の Structured Output schema を定義する JSON Schema。INDEX.md エントリーに必要な要約、読む条件、読まない条件の3要素と、それぞれが文字列配列であることを固定する。
-- ルーティング文書生成処理が、生成結果の形を検証したり、エントリーに含める意味情報の最小単位を確認したりする入口になる。
+- cmoc indexing の目次情報生成 agent call が返す、INDEX.md エントリー用の意味情報を定義する Structured Output schema。
+- 生成結果を、対象の役割、読むべき条件、読まなくてよい境界を表す自然言語配列に限定し、余分な項目を受け付けない出力契約として使われる。
 
 ## Read this when
-- INDEX.md エントリー生成の出力 schema を確認する必要があるとき。
-- 生成結果に含めるべきトップレベル項目や必須項目を確認するとき。
-- summary、read_this_when、do_not_read_this_when がどのような役割の文章を持つべきかを確認するとき。
+- INDEX.md エントリー生成 agent call の返却値として、どの意味情報が必須かを確認したいとき。
+- cmoc indexing が生成結果を Markdown の目次情報へ変換する前提となる Structured Output schema を確認したいとき。
+- エントリー生成結果が不正として扱われる原因を、出力契約の側から確認したいとき。
 
 ## Do not read this when
-- 個別ファイルやディレクトリのルーティング文そのものを作成するだけで、schema の形を確認する必要がないとき。
-- INDEX.md の探索順、読み進め方、oracle file と realization file の関係など、ルーティング運用や仕様体系の規則を確認したいとき。
-- 生成されたエントリーをどこに保存するか、どのコマンドで生成するかなど、schema 以外の実装や運用手順を調べたいとき。
+- INDEX.md エントリー生成 prompt の文面や agent call パラメータ構築を確認したいときは、対応するビルダー実装を読む。
+- cmoc indexing の対象列挙、ハッシュ判定、並列実行、コミット処理を確認したいときは、indexing サブコマンドの実装または正本仕様を読む。
+- 生成済み INDEX.md の Markdown 表示形式やレンダリング処理だけを確認したいときは、Structured Output を消費するレンダリング実装を読む。
 
 ## hash
-- ae0ec45ebc0afcd5c1e83a5a01655b75075b0d0da3ce141b4e0913339ba56494
+- 47e9c5375a67b63817553f33e25546c4b56567bafc5641fd01f65f2502442bc8
 
 # `index_entry.py`
 
