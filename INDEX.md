@@ -103,26 +103,30 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様断片を置く領域で、自然言語で書かれた仕様断片、プログラミング言語や設定として書かれた仕様実装、テスト形式の仕様を下位に持つ。oracle file は人間が所有し、AI が編集する realization file の根拠になるものとして扱われる。
-- CLI の公開挙動、AI エージェント呼び出しパラメータ、標準プロンプト部品、パス語彙、設定構造、構造化文書生成、開発・テスト規則など、cmoc の実装へ反映すべき正本仕様断片へ進む入口になる。
-- oracle file と realization file の責務境界、正本仕様断片を小さく保つ方針、未定義部分を AI 裁量で補う原則、用語・命名・矛盾回避・INDEX.md ルーティング品質など、cmoc 全体の仕様記述と実装判断の前提を確認する場所でもある。
+- cmoc の正本仕様断片を集約する領域。利用者に見える CLI 挙動、session/run の git branch・commit・linked worktree モデル、開発規則、採用しなかった設計案、AI agent 呼び出し用の prompt・Structured Output・共通型・設定構造を扱う。
+- 自然言語で読む仕様と、プログラミング言語・設定ファイルとして記述された仕様実装の入口になる。realization file はここにある人間意図を具体化する側であり、この領域は実装詳細そのものではなく、実装が従うべき正本仕様断片を確認するために読む。
 
 ## Read this when
-- cmoc の正本仕様断片を探し始めるとき、または自然言語仕様、仕様実装、テスト仕様のどこへ進むべきかを切り分けたいとき。
-- oracle file を根拠に realization implementation や realization test を追加・修正する前に、人間意図として固定されている挙動や AI 裁量で補ってよい範囲を確認したいとき。
-- CLI サブコマンド、session fork / join、apply fork / join / abandon、review oracle、init、tui、indexing、Codex CLI 呼び出し、Structured Output、ログ、エラー処理、run 隔離、session state、branch / worktree モデルなどの仕様断片へ進みたいとき。
-- AI エージェント呼び出しの role、summary、goal、補助文脈、ファイルアクセス権限、モデル種別、reasoning effort、Structured Output schema、標準文面、リポジトリ設定などを確認したいとき。
-- oracle / realization の基本概念、正本仕様断片としての記述方針、実装から仕様へ逆流させない原則、用語統一、命名、non-goal、INDEX.md エントリーの品質基準を確認したいとき。
+- cmoc のサブコマンド、利用者向け出力、実行前提、状態遷移、ログ、エラー処理、インデクシング、Codex CLI 呼び出し、TUI 起動など、外部仕様や共通挙動を正本仕様から確認したいとき。
+- session branch、run branch、cmoc-managed branch、fork/join commit、linked worktree、run 隔離など、cmoc が扱う git branch・commit・worktree の概念と関係を確認したいとき。
+- oracle file、realization file、oracle doc/src/test、realization implementation/test/ancillary の分類や、oracle から realization へ仕様が流れるという基本関係を確認したいとき。
+- path keyword、root token、repo root、run root、work root、cmoc root と実パスの相互変換など、cmoc 内で使うパス語彙の仕様を確認したいとき。
+- AI agent 呼び出しの model class、reasoning effort、file access mode、AgentCallParameter、prompt 部品、Structured Output schema、応答契約、サブコマンド別 builder の正本仕様を確認したいとき。
+- 開発対象リポジトリごとの設定構造、Codex CLI 向け設定、apply fork や review oracle の処理上限など、永続化される cmoc 設定の仕様を確認したいとき。
+- oracle standard、realization standard、index entry standard、review/apply 向け standard など、仕様文書・実装・テスト・ルーティング文書が従う規範を確認したいとき。
+- Python 実装、CLI 構成、共通処理の配置、開発環境、依存追加、pytest テスト方針など、realization code を追加・修正・検証する前提となる横断規則を確認したいとき。
+- AI の記憶、自動改善反映、作業計画レビュー、apply orchestration など、採用しなかった設計案と non-goal の背景を確認したいとき。
 
 ## Do not read this when
-- 特定の realization implementation や realization test の現在の関数、クラス、既存 helper、テスト期待値だけを調べたいとき。
-- CLI 引数解析、プロセス制御、git 操作、永続状態の読み書き、端末 UI 描画など、実行フロー本体の実装コードだけを直接確認したいとき。
-- 対象ファイルや差分そのものを読んで、個別の patch 内容、merge conflict、所見の妥当性、実装修正方針を判断したいとき。
-- Codex CLI や LLM の一般的な使い方、実際の応答品質、生成結果の妥当性だけを評価したいとき。
-- 既に読むべき下位の正本仕様断片が特定できており、この階層で oracle file の種類や責務境界を確認する必要がないとき。
+- 特定の realization implementation や realization test の現在の内部構造、関数、クラス、既存 helper、実装済みの git 操作やプロセス制御だけを調べたいとき。
+- 正本仕様ではなく、実際に動いている CLI 引数解析、ファイル I/O、JSON ロード・保存、端末描画、merge・diff・patch 処理の実装詳細を確認したいとき。
+- 対象の個別仕様本文がすでに分かっており、その本文だけを読めば作業できるとき。
+- 作業対象が README、AGENTS、補助スクリプト、realization ancillary などの正本仕様断片ではないファイルで、oracle との対応確認が不要なとき。
+- 対象ファイルや差分そのものを読んで、個別の修正内容、merge conflict の意味的統合、レビュー所見の妥当性、実装修正方針を判断する段階に入っているとき。
+- 生成済みファイル、実行ログ、一時ファイル、環境固有の成果物、gitignore 対象の有無など、正本仕様断片ではなく作業環境の現在状態だけを確認したいとき。
 
 ## hash
-- b61e5e15a1545f039bef99c512c1f7f4e1a07d69121ad857359ddc6aaae0699a
+- 87a608fd519829f6fa6217883579508447a5a7f599c9f1a68ed5adfd09da9a8d
 
 # `pyproject.toml`
 
