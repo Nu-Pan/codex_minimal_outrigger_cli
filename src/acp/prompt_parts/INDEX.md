@@ -23,23 +23,24 @@
 # `complete_prompt.py`
 
 ## Summary
-- agent call に渡す完全な prompt part 群を組み立てる実装。role、summary、goal、file access rule、routing rule、追加 prompt を基本要素として並べ、指定された標準 prompt フラグに応じて依存する標準文書を追加する。
-- oracle / realization / review / index entry などの標準 prompt 間の依存関係を解決し、最後に各文書から呼び出し先へ不要な内部呼称と root token を除去する入口になっている。
+- agent call に渡す基本プロンプトと任意の標準プロンプト群を統合し、依存する標準文書が必要に応じて含まれるようにする realization。
+- role・summary・goal・ファイルアクセス規則・ルーティング規則・追加プロンプトを共通の土台として組み立て、指定された boolean option に応じて oracle / realization / review / apply / index entry 関連の標準文書を追加する。
+- 呼び出し先 agent 向けに、内部呼称や root token を具体的な作業対象向け表現へ置換する sanitization も担う。
 
 ## Read this when
-- agent call 用の最終 prompt をどの順序で構成するか、または標準 prompt フラグ同士の依存関係を確認・変更したいとき。
-- file access rule、routing rule、oracle / realization 系 standard、review 系 standard、index entry standard が complete prompt にどう注入されるかを追いたいとき。
-- prompt に含める文書から内部呼称や root token を呼び出し先向けに置換する処理を確認・変更したいとき。
-- run root が未確定な通常呼び出しで、root token を具体 path に解決する fallback 挙動を確認したいとき。
+- agent call に渡す完全なプロンプト全体の構成、標準文書の注入順序、または標準文書同士の依存関係を確認・変更したいとき。
+- oracle standard、realization standard、review oracle standard、apply review standard、index entry standard のいずれかを有効にした時に、どの基本情報が自動的に含まれるかを確認したいとき。
+- 呼び出し先 agent に渡る文面から内部呼称や root token を除去する置換処理、または run root 未確定時の root path 解決挙動を確認・変更したいとき。
+- 新しい標準プロンプト部品を完全プロンプトへ追加する入口や、既存の標準プロンプト部品をどの条件で組み込むかを変更したいとき。
 
 ## Do not read this when
-- 個別の file access rule、routing rule、oracle standard、realization standard、review standard、index entry standard の本文内容だけを確認したいときは、それぞれの builder 実装を直接読む。
-- StructDoc や StructCodeBlock のデータ構造そのものを確認したいときは、構造化文書を定義する基礎モジュールを読む。
-- path token の定義や root 解決の基本仕様を確認したいときは、path model 側を読む。
-- agent call の prompt 構成ではなく、CLI コマンドや外部プロセス実行の制御を調べたいときは、この対象から読み始めなくてよい。
+- 個別のファイルアクセス規則、ルーティング規則、oracle standard、realization standard など、各標準プロンプト本文そのものの内容を確認・変更したいだけのとき。
+- StructDoc や StructCodeBlock のデータ構造そのもの、または構造化文書の低レベル表現を確認したいとき。
+- root token や work root の定義・解決規則そのものを確認したいとき。
+- agent call の実行、サブプロセス起動、CLI コマンド処理など、完成したプロンプトを使う側の制御を確認したいとき。
 
 ## hash
-- b2ecf5a426a96c18315d05c17c0bdbe3b4948bfee702543919a3e04fef6ec639
+- 9cdac5e7c1149ac8e49c76370f1a34d5cf7d965172584a1c7a289162ebb94762
 
 # `file_access_rule.py`
 

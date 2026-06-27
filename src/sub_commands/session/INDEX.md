@@ -58,20 +58,18 @@
 # `join.py`
 
 ## Summary
-- active な session branch を session home branch へ取り込む CLI 処理を実装する。事前条件確認、worktree 清潔性確認、home branch への切り替え、no-ff merge、状態更新、session branch 削除、利用者向け結果出力までを扱う。
-- merge conflict 発生時は Codex CLI に解決を依頼し、conflict marker と unmerged path の残存を検査したうえで add と merge commit を行う補助処理を持つ。
-- conflict 解決依頼用パラメータの構築、状態ファイルの読み書き、git 実行、CLI 実行ラッパーなどは外部の既存モジュールに委譲し、この対象は session join の制御フローを担う。
+- active session branch を session home branch に取り込む `session join` サブコマンドの実行本体を扱う。事前条件検証、worktree 清潔性確認、home branch への switch と merge、状態更新、session branch 削除、結果表示までの制御をまとめている。
+- merge conflict が発生した場合に Codex CLI へ解消を依頼し、conflict marker や unmerged path の残存確認、add と commit まで行う補助処理も含む。
 
 ## Read this when
-- session join の実行条件、状態遷移、merge 後の出力、session branch 削除失敗時の warning を確認または変更したいとき。
-- session branch から session home branch へ取り込む際の git 操作順序、失敗時の扱い、post-precondition failure の stderr 報告方針を確認したいとき。
-- session join の merge conflict を Codex CLI に解決させる流れ、conflict marker 検出、unmerged path 検査、merge commit 完了条件を確認または変更したいとき。
+- `cmoc session join` の実行条件、merge 手順、状態遷移、成功時出力、session branch 削除失敗時 warning を確認または変更したいとき。
+- session join 中の merge conflict 解消フロー、Codex CLI に渡す対象 path、解消後の conflict marker 検出、git add/commit の扱いを確認または変更したいとき。
+- session join の失敗時に `CmocError` がどの条件で発生するか、post-precondition failure を stderr 扱いにする理由を追いたいとき。
 
 ## Do not read this when
-- session join conflict 解決プロンプトや Codex CLI へ渡す依頼内容そのものを変更したいだけなら、conflict resolution parameter を構築する側を読む。
-- session 状態モデル、state ファイルの schema、branch から state を読み出す仕組みを調べたいだけなら、runtime や状態定義側を読む。
-- indexing preflight の内容や有効化条件を調べたいだけなら、indexing preflight を実装する側を読む。
-- 他の session サブコマンドの挙動や CLI 登録全体を調べたいだけなら、それぞれのサブコマンド実装または上位の CLI 構成を読む。
+- session join 以外の session サブコマンドの挙動を調べたいとき。
+- merge conflict 解消依頼用の Codex CLI parameter の具体的な構築内容だけを調べたいとき。
+- 状態ファイルの schema、branch からの state 読み込み、git wrapper、worktree root の定義など、runtime 共通処理そのものを調べたいとき。
 
 ## hash
-- dd5a463723234bca742077372e23fcf5b5153e5ac3625849a9a36428aed1b83f
+- 865718edd0972f5bffaf1b915250d8d9130d92c49c2147cdb7f3352456d11a54

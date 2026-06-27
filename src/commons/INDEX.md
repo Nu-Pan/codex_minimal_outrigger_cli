@@ -30,6 +30,27 @@
 ## hash
 - 4d7b5f772aa040e806c9cb9341fa0ba3457dc3d2229a4646c298217a24affbb8
 
+# `indexing.py`
+
+## Summary
+- Codex 呼び出し前に目次を最新化する preflight の登録、排他制御、更新対象の列挙、エントリー再生成、差分 commit までを扱う実装。
+- 既存エントリーの必須セクションと hash を検証し、対象本文または配下構造の hash で鮮度を判定して、必要な対象だけ Codex にエントリー生成を依頼する。
+- memo、git ignore、隠しディレクトリ、バイナリなどを除外しながら、深い階層から順に目次を再構築するための入口になる。
+
+## Read this when
+- 目次更新 preflight の登録、実行順、排他 lock、または自動 commit の挙動を確認・変更したいとき。
+- 目次作成対象に含めるファイルやディレクトリの条件、除外条件、探索順、hash による鮮度判定を調べたいとき。
+- 既存エントリーの parse、必須セクション検証、Structured Output から Markdown へ描画する処理を変更したいとき。
+- エントリー生成で Codex 実行関数へ渡す対象内容、設定読み込み、並列生成数、エラー時の扱いを追うとき。
+
+## Do not read this when
+- 目次エントリーのプロンプトや Structured Output の入力パラメータ定義だけを確認したいときは、エントリー生成パラメータを組み立てる別モジュールを読む方が直接的。
+- git 実行、hash 計算、git ignore 判定、memo 判定、設定読み込みなどの低レベル runtime helper 自体を変更したいときは、それぞれの runtime 実装を読む方が直接的。
+- Codex preflight の登録先や呼び出し機構そのものを調べたいだけなら、preflight を管理する runtime 側の実装を読む方が直接的。
+
+## hash
+- d9fe900129ad6062e7051cec993cd019b2c0538d65777f0c9ae9871ad2b2374a
+
 # `runtime_cli.py`
 
 ## Summary

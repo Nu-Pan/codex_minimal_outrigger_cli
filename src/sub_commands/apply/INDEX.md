@@ -61,26 +61,27 @@
 # `fork.py`
 
 ## Summary
-- apply fork サブコマンドの実行本体を担う実装。session branch 上で事前条件を検証し、isolated apply worktree と apply branch を作成して、対象ファイル列挙、所見列挙、所見適用、差分コミット、report 生成、state 更新までの apply loop を制御する。
-- apply fork 中に編集禁止対象へ差分が出た場合の検出、ロールバック、再実行、エラー化を扱う。
-- scope と session state から調査対象ファイルを決める処理、変更 path の正規化、重複除去、前回 join 済み apply merge commit の解決、Codex CLI による commit subject 生成を含む。
+- apply fork サブコマンドの実行本体を担い、session branch 上で isolated apply worktree を作成して、対象ファイルの所見列挙、所見適用、差分 commit、report 生成、状態更新を一連の apply loop として制御する実装。
+- apply scope から調査対象ファイルを列挙・正規化し、編集禁止対象への差分を検出してロールバックし、Codex CLI 呼び出しによる所見適用と commit subject 生成を扱う。
+- apply fork の正常終了、未収束終了、例外時 report、process id、apply state の遷移、直近 join 済み apply merge commit の解決に関する制御ロジックの入口になる。
 
 ## Read this when
-- apply fork の CLI 実行フロー、事前条件、終了コード、stdout report path、state 遷移、apply worktree/branch 作成を確認または変更したいとき。
-- apply scope ごとの調査対象ファイル列挙、INDEX.md・memo・.git・.agents・oracle 除外、git ignored path の扱いを確認または変更したいとき。
-- apply fork が Codex CLI に依頼する所見列挙、所見適用、commit message 生成の呼び出し条件や入力を追いたいとき。
-- apply fork 中の編集禁止対象差分をロールバックする挙動、再試行回数、失敗時エラー、未追跡ファイル削除の扱いを確認または変更したいとき。
-- apply fork report 生成前後の例外処理、process id の作成・削除、完了/エラー時の state 更新を追いたいとき。
+- apply fork サブコマンドの事前条件、worktree 作成、apply branch、process id、state 更新、終了コード、stdout report path の挙動を確認・変更したいとき。
+- rolling、session、full の各 scope で apply finding 列挙対象がどの差分やファイル集合から決まるかを調べたいとき。
+- apply loop における所見列挙、所見適用、変更検出、commit 作成、収束・未収束判定の流れを追いたいとき。
+- apply fork 中に oracle、.agents、memo など編集禁止対象へ差分が出た場合の検出、ロールバック、再実行、エラー化の挙動を確認したいとき。
+- apply fork が生成する report、エラー report、commit subject、finding count、result label と Codex CLI 呼び出しの関係を調べたいとき。
+- last joined apply の oracle snapshot commit から、rolling scope の基準になる merge commit を git 履歴で解決する処理を確認したいとき。
 
 ## Do not read this when
-- apply fork の report markdown 内容や error report の具体的な構成だけを変更したいときは、report 生成側を読む。
-- Codex CLI に渡す所見列挙・所見適用プロンプトの詳細だけを確認したいときは、apply fork 用 builder 側を読む。
-- apply fork 以外の apply サブコマンドや join/abandon 系の挙動を確認したいときは、それぞれのサブコマンド実装を読む。
-- CLI 共通ランタイム、git wrapper、worktree 作成、state 読み書き、config 読み込みの汎用挙動だけを確認したいときは、共通ランタイム側を読む。
-- indexing preflight の詳細や有効化条件だけを確認したいときは、indexing サブコマンド側を読む。
+- apply fork report の markdown 内容や出力文面だけを変更したい場合は、report 生成を担当する別実装を直接読む。
+- Codex に渡す所見列挙用または所見適用用の prompt parameter の中身だけを調べたい場合は、builder 側の該当実装を直接読む。
+- apply join、apply abandon、review など apply fork 以外のサブコマンド固有の制御を調べたい場合は、それぞれのサブコマンド実装へ進む。
+- CLI runtime、git wrapper、state のデータ構造、path model、config schema など共有基盤の詳細だけを確認したい場合は、共通 runtime や config の実装を読む。
+- INDEX.md 生成や indexing preflight の詳細を調べたい場合は、このファイルではなく indexing 関連の実装を読む。
 
 ## hash
-- 4aae96c520e42607b909a73b4e545215df41add0c9c4ddb482b231b2991919d2
+- 1ce692008db87eccdf624d7153c93a75be785c5d35a948ffad2672872210c6fa
 
 # `fork_report.py`
 
