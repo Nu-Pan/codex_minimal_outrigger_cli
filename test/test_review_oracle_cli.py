@@ -65,9 +65,15 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyP
     )
     assert report_path.is_file()
     rendered = report_path.read_text()
-    assert "# cmoc review oracle report" in rendered
-    assert "## Verdict" in rendered
-    assert "## Evaluated oracle file" in rendered
+    required_sections = [
+        "# cmoc review oracle report",
+        "## Verdict",
+        "## Evaluated oracle file",
+        "## Fatal findings",
+        "## Minor findings",
+    ]
+    section_offsets = [rendered.index(section) for section in required_sections]
+    assert section_offsets == sorted(section_offsets)
     assert "`oracle/spec.md`" in rendered
     assert "review_join_commit: null" in rendered
     assert "session_id:" not in rendered
@@ -187,8 +193,10 @@ def test_review_oracle_report_includes_rejected_findings(
     assert "レビュー対象の oracle file に、問題は何ら見つかりませんでした。" in rendered
     assert f"fatal_findings_rejected_count: {expected_fatal_count}" in rendered
     assert f"minor_findings_rejected_count: {expected_minor_count}" in rendered
-    assert "## Rejected fatal findings" in rendered
-    assert "## Rejected minor findings" in rendered
+    assert "## Fatal findings" in rendered
+    assert "## Minor findings" in rendered
+    assert "## Rejected fatal findings" not in rendered
+    assert "## Rejected minor findings" not in rendered
     assert "rejected finding" in rendered
     assert "rejected reason" in rendered
     assert "session_id:" not in rendered
