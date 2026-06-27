@@ -344,7 +344,7 @@ def test_build_index_entry_standard_renders_core_output_rules() -> None:
     assert "読むべき対象へのルーティング情報" in rendered
     assert "対象内容に根拠" in rendered
     assert "機械的に補える情報" in rendered
-    assert "ファイル・ディレクトリの識別子、ハッシュ、出力形式は呼び出し側" in rendered
+    assert "ファイル・ディレクトリの識別子、ハッシュ、出力形式は cmoc 側" in rendered
     assert "ファイル名・ディレクトリ名・ハッシュ値" in rendered
     assert "Structured Output schema を読めば分かる出力項目名・型・形式" in rendered
     assert "関連しそうという理由だけ" in rendered
