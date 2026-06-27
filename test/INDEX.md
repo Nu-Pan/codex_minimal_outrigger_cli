@@ -326,21 +326,24 @@
 # `test_session_cli.py`
 
 ## Summary
-- session サブコマンドの CLI 挙動を検証する realization test。session fork / abandon / join について、Git branch・worktree・session state JSON・標準出力/標準エラー・conflict 解決時の Codex 実行条件を、実リポジトリ操作に近い形で確認する。
-- session state の生成・更新、session branch と home branch の遷移、linked worktree 上での操作、cleanup 失敗時の rollback、join 時の conflict marker 判定や削除 conflict 解決など、session lifecycle の外部挙動を読む入口になる。
+- session サブコマンドの CLI レベルの挙動を検証する realization test。session fork が session branch と state を作成し、session-id 衝突時に既存 state や元 branch を壊さず retry または失敗することを扱う。
+- session abandon が home branch へ戻り session branch を削除して state を abandoned にする正常系と、home branch 欠落や cleanup 失敗時の rollback・エラー出力を扱う。
+- session join が session branch の変更を home branch へ取り込み、oracle conflict 解決時の Codex 実行条件、conflict marker 判定、削除 conflict の staging、session branch 削除失敗時の警告、stdout/stderr のエラー出力境界を扱う。
+- 通常 worktree と linked worktree の両方で、session 操作が現在作業中の worktree branch と head を基準にし、root worktree の branch を不要に切り替えないことを検証する。
 
 ## Read this when
-- session fork が session branch と state をどのように作り、session-id 衝突時に既存 state を壊さず retry または失敗するかを確認したいとき。
-- session abandon が home branch へ戻る条件、session branch 削除、state の abandoned 化、home branch 不在時や cleanup 失敗時のエラー出力・rollback を確認したいとき。
-- session join が session branch の変更を home branch に統合し、linked worktree、branch 削除失敗 warning、未コミット差分エラー、merge 後の予期しない conflict marker 残存エラーをどう扱うかを確認したいとき。
-- oracle 配下の conflict 解決で Codex 実行に REALIZATION_WRITE profile と対象ファイルの extra writable path が渡ること、また解決後の conflict marker 検出条件を確認したいとき。
-- session サブコマンドの利用者向け出力が stdout と stderr のどちらに出るべきか、成功・失敗時の report 項目がどう検証されているかを確認したいとき。
+- session fork、session abandon、session join の CLI 外部挙動、出力、終了コード、git branch/state file の副作用を変更する時。
+- session state の state 値、session_home_branch、session_start_commit、last_joined_apply_oracle_snapshot_commit、apply state など、session 操作で保存・更新される永続状態を変更する時。
+- session-id 生成の衝突処理、retry 回数、既存 session state を上書きしない保証、失敗時に元 branch へ戻す挙動を確認する時。
+- linked worktree 上で session 操作を実行した場合の branch 判定、head commit、root worktree への副作用を確認する時。
+- session join の merge conflict 解決、oracle file への REALIZATION_WRITE profile 適用、conflict marker 検出、削除 conflict 解決後の staging を変更する時。
+- session subcommand のエラー報告を stdout に出すべき既知エラーと、merge 後の予期しないエラーを stderr に出す境界を確認する時。
 
 ## Do not read this when
-- session 以外のサブコマンドや、CLI 全体の option parsing・command 登録だけを確認したいとき。
-- session state の schema や path モデルの正本仕様を確認したいときは、対応する oracle file または実装側の state/path 定義を直接読む。
-- Git helper、test fixture、runner、temporary repository 作成方法そのものを調べたいときは、共通 test support を読む。
-- Codex 実行 wrapper の一般仕様や file access mode 全体の意味を確認したいだけのときは、runtime や basic.acp 側を読む。
+- session 以外のサブコマンド、または CLI を通さない低レベル helper の単体仕様だけを確認したい時。
+- session 操作の実装構造や内部 helper の詳細を調べたいだけで、CLI から見える挙動・出力・git 副作用を確認する必要がない時。
+- oracle file の正本仕様そのものを確認・変更したい時。realization test は正本仕様ではないため、対応する oracle file を優先する。
+- Codex 実行結果の品質や LLM 出力内容そのものを検証したい時。この対象は session join が Codex を呼ぶ条件や file access mode を検証するだけで、生成品質は扱わない。
 
 ## hash
-- ae141d375590381560fd4e95d8616f4ed3ce06bd3b0199ca58742db2f87d7c87
+- ff6ce6aa3615ede4afa7cdbf715cb862dbb6d34521356ec5884fbcb7dc359ce5

@@ -184,25 +184,23 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドの実装群をまとめる領域。session branch の作成、home branch への取り込み、merge せず破棄する処理を中心に、CLI runtime 経由の実行、事前条件検証、branch 遷移、state 更新、cleanup と失敗時 rollback の入口になる。
-- 各実装は個別の利用者操作ごとに責務が分かれており、session state、apply state、clean worktree、managed branch 判定、home branch 存在確認、session branch 削除、merge conflict 解消など、session 操作に伴う制御を扱う。
+- session 系サブコマンドの実装をまとめるディレクトリ。session branch の作成、home branch への join、merge せず破棄する abandon など、session のライフサイクル操作に関する CLI 実行本体へ進む入口になる。
+- 各サブコマンドは CLI runtime 経由で実行され、branch/state/worktree の事前条件確認、git 操作、session state 更新、利用者向け出力、失敗時の扱いなどをそれぞれの責務範囲で扱う。
 
 ## Read this when
-- session 系サブコマンドのどの実装へ進むべきかを判断したいとき。
-- 新しい session branch を現在の local branch から開始する処理、session-id 生成、active session の重複検出、branch/state file の衝突回避を調べたいとき。
-- active session branch を home branch に取り込み、merge、conflict 解消依頼、状態更新、session branch 削除、成功時出力までの流れを調べたいとき。
-- active session branch を home branch へ merge せず破棄し、state を abandoned に更新し、session branch を削除する流れや rollback を調べたいとき。
-- session 操作に共通して現れる事前条件違反、clean worktree 要求、home branch への切り替え、利用者向けエラーや出力の境界を把握したいとき。
+- session 系サブコマンド全体の実装候補を探し、作成・合流・破棄のどの処理へ進むべきかを判断したいとき。
+- session branch と home branch の関係、active session の状態遷移、session state file の更新、session branch の削除など、session 操作に関わる制御を調べたいとき。
+- session fork、join、abandon の実行条件、失敗条件、git 操作順序、利用者向け出力のいずれかを確認・変更したいとき。
+- merge conflict を Codex CLI に解消させる join 経路や、abandon 失敗時の state/branch rollback など、session 操作固有の復旧処理を調べたいとき。
 
 ## Do not read this when
-- session 以外のサブコマンド実装、共通 CLI ルーティング、サブコマンド登録だけを調べたいとき。
-- git 実行 wrapper、CLI runtime、worktree root、branch 判定、clean worktree 判定、state file 読み書きなどの共通 helper 自体の実装を調べたいとき。
-- session state schema、apply state schema、path model など、状態やパスのデータ構造定義そのものを確認したいとき。
-- merge conflict 解消依頼用の Codex CLI parameter 構築だけを確認したいとき。
-- session 系パッケージに初期化処理があるかだけを確認したいときは、パッケージ初期化の最小モジュールを直接読めばよい。
+- session 以外のサブコマンド実装、共通 CLI ルーティング、またはサブコマンド登録の仕組みを調べたいとき。
+- git 実行 wrapper、CLI runtime、worktree clean 判定、branch 判定、path model、state file 読み書き helper などの共通 runtime 実装そのものを調べたいとき。
+- session state schema や apply state schema の定義そのものを確認したいとき。
+- Codex CLI に渡す conflict resolution parameter の具体的な組み立てや、INDEX.md 生成・indexing preflight の共通仕様を調べたいとき。
 
 ## hash
-- 225d0765a07a101fee4e56b031ae231881a4499e5bb8fcbfc8aabb1164bf8c66
+- c8787fb01d40933b2ced05ca16287fe12372650e2375d9becad599e8156e4c40
 
 # `tui.py`
 
