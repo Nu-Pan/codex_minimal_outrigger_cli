@@ -346,6 +346,56 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     assert (root / "oracle" / "spec.md").read_text() == "# spec\n"
 
 
+def test_apply_join_excludes_deleted_apply_paths_from_unexpected_changes(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    class FakeCodexResult:
+        output_json = {"findings": []}
+
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    )
+    assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
+    state_path = (
+        root
+        / ".cmoc"
+        / "sessions"
+        / f"{run_git(root, 'branch', '--show-current').stdout.strip().removeprefix('cmoc/session/')}.json"
+    )
+    state = json.loads(state_path.read_text())
+    apply_worktree = apply_worktree_from_state(root, state)
+    run_git(apply_worktree, "rm", "oracle/spec.md")
+    run_git(apply_worktree, "commit", "-m", "delete oracle spec")
+
+    result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert "想定外差分" not in result.output
+    assert not (root / "oracle" / "spec.md").exists()
+
+
+def test_apply_join_managed_branch_paths_exclude_deletes_and_use_rename_target(
+    tmp_path: Path,
+) -> None:
+    root = make_repo(tmp_path)
+    base = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    run_git(root, "checkout", "-b", "changed")
+    (root / "docs").mkdir()
+    run_git(root, "mv", "README.md", "docs/README.md")
+    run_git(root, "rm", "oracle/spec.md")
+    run_git(root, "commit", "-m", "rename and delete")
+
+    paths = apply_module.changed_paths_on_managed_branch(root, base, "HEAD")
+
+    assert paths == ["docs/README.md"]
+
+
 def test_apply_join_allows_gitignore_change_as_apply_diff(
     tmp_path: Path,
     monkeypatch,

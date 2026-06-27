@@ -258,8 +258,8 @@ def render_apply_join_report(
 def collect_apply_join_unexpected_changes(root: Path, state: SessionState, apply_branch: str, session_branch: str) -> dict[str, list[str]]:
     """apply/session branch 上の想定外差分を分類して返す。"""
     base = state.apply.oracle_snapshot_commit or state.session.session_start_commit or "HEAD"
-    apply_paths = run_git(["diff", "--name-only", base, apply_branch], root).stdout.splitlines()
-    session_paths = run_git(["diff", "--name-only", base, session_branch], root).stdout.splitlines()
+    apply_paths = changed_paths_on_managed_branch(root, base, apply_branch)
+    session_paths = changed_paths_on_managed_branch(root, base, session_branch)
     unexpected_apply = [path for path in apply_paths if not is_expected_apply_change(root, path)]
     unexpected_session = [path for path in session_paths if not is_expected_session_change(path)]
     result: dict[str, list[str]] = {}
@@ -268,6 +268,23 @@ def collect_apply_join_unexpected_changes(root: Path, state: SessionState, apply
     if unexpected_session:
         result["session"] = unexpected_session
     return result
+
+
+def changed_paths_on_managed_branch(root: Path, base: str, branch: str) -> list[str]:
+    # <work-root>/oracle/doc/app_spec/misc_spec.md requires deleted paths to be
+    # outside managed-branch change scope, and renames to be classified by new path.
+    lines = run_git(
+        ["diff", "--name-status", "--find-renames", "--diff-filter=ACMRT", base, branch],
+        root,
+    ).stdout.splitlines()
+    paths: list[str] = []
+    for line in lines:
+        columns = line.split("\t")
+        if columns[0].startswith(("C", "R")):
+            paths.append(columns[2])
+        else:
+            paths.append(columns[1])
+    return paths
 
 
 def is_expected_apply_change(root: Path, path: str) -> bool:
