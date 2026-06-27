@@ -266,23 +266,25 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- prompt 構築関連の回帰テストを横断的に集めた realization test。agent prompt に含める routing、file access、各種 standard、aux prompt の markdown render 結果と、ACP builder が選ぶ model class・reasoning effort・file access mode・structured output schema の整合を検証する。
-- 標準文書の描画内容、完全 prompt への標準注入・省略条件、空行畳み込み、apply fork・review oracle・session join・TUI resolve・indexing 用 builder parameter の期待値を、同じ prompt 読み取り文脈で確認する入口になる。
+- prompt part と ACP builder の生成結果を横断的に検証する realization test。標準 prompt、routing rule、file access rule、各種 standard 文書、Structured Output schema、builder parameter の期待値を、最終 prompt の同じ読み取り文脈に基づく回帰観点としてまとめて扱う。
+- StructDoc の markdown rendering、complete prompt への補助文書・標準文書の注入、apply fork・review oracle・session join・TUI resolve・indexing 各 builder の model class、reasoning effort、file access mode、schema path、prompt 断片、oracle schema との一致を検証する。
+- 16,000 文字を超えるが、agent prompt と structured output schema の構築結果を一箇所で追う凝集性を優先しており、prompt 構築の横断的な回帰確認の入口になる。
 
 ## Read this when
-- prompt part の生成結果、markdown rendering、complete prompt への標準文書の組み込み条件に関する realization test を確認・変更する。
-- file access rule、routing rule、realization standard、review oracle standard、apply review standard、index entry standard の文言が prompt に含まれるかを検証するテストを探している。
-- ACP builder が返す model class、reasoning effort、file access mode、structured output schema path、prompt 本文の期待値を横断的に確認する。
-- oracle 配下の structured output schema と builder が参照する schema の一致を検証するテストを確認する。
-- TUI resolve parameter、apply fork、review oracle merge finding、session join conflict resolution、indexing index entry の parameter 生成テストに関係する変更を行う。
+- prompt_parts が生成する標準文書、routing rule、file access rule、review standard、realization standard、index entry standard の markdown 内容や title の期待値を確認・変更する。
+- build_complete_prompt が routing rule を常に含むこと、各 standard を指定時だけ含むこと、aux prompt や code block 内の文言を保持することを検証したい。
+- ACP builder parameter の model class、reasoning effort、file access mode、prompt に埋め込まれる root path 文脈、structured output schema path の期待値を確認・変更する。
+- apply fork change summary、review oracle merge finding、TUI resolve parameter などの Structured Output schema が oracle source や論理 enum 値と一致しているかを確認する。
+- render_as_markdown の連続空行圧縮や code block 内空行の扱いに関する回帰を調べる。
 
 ## Do not read this when
-- 個別の prompt part や builder の実装そのものを理解したいだけで、テスト期待値を確認する必要がない場合は、対応する実装側を直接読む。
-- CLI コマンドの外部挙動、作業ツリー操作、git 操作、永続状態など、prompt 構築以外の realization test を探している場合。
-- 単一の standard 文書や schema の正本仕様を確認したい場合は、テストではなく対応する oracle file または生成元の本文を読む。
+- 個別 builder や prompt_parts の実装詳細そのものを変更したいだけで、まず対象実装ファイルを直接読めばよい。
+- 特定の oracle schema の正本内容だけを確認したい場合で、schema 一致を検証する realization test の期待値までは不要。
+- CLI コマンド、永続状態、path model など prompt 構築以外の挙動を調べている。
+- テスト基盤全体の設定、pytest の実行方法、fixture 共通化など、このファイル内の横断的な prompt/schema 回帰観点に直接関係しない作業をしている。
 
 ## hash
-- b3be605ea7978078827bb0de4e74df123048e920a886888049e3bb5b7ab2b190
+- b70ed5805cd92d801c03140af155bf73be53aac1b63b1b7f27174e3227613a31
 
 # `test_review_oracle_cli.py`
 

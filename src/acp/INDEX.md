@@ -25,20 +25,21 @@
 # `prompt_parts`
 
 ## Summary
-- AI agent に渡すプロンプト断片を構築する実装群をまとめる領域。oracle・realization の基本概念、ファイルアクセス制限、INDEX.md ルーティング規則、各種レビュー規範、oracle/realization/INDEX エントリー作成規範、完全プロンプトの組み立てを扱う。
-- 個々の標準や規則は StructDoc 化され、agent call 用の完全なプロンプトへ注入される前提で分かれているため、prompt 全体の構成確認と、特定の標準プロンプト本文の確認・変更への入口になる。
+- AI agent に渡す prompt part 群を置くディレクトリであり、oracle/realization の基本概念、ファイルアクセス規則、ルーティング規則、各種 standard、review 判定基準、完全プロンプト組み立てを扱う。
+- 各対象は StructDoc として渡すための標準文書または基本文書を構築し、agent call 用プロンプトへ注入される規範・制約・前提知識の入口になる。
+- 個別の標準文言を確認する場合は該当する構築対象へ、複数の prompt part をどう組み合わせるか確認する場合は完全プロンプト構築側へ進むための階層である。
 
 ## Read this when
-- agent call 用プロンプトに含める基本情報、アクセス制限、ルーティング規則、標準規範、追加プロンプトの構成や結合順序を確認・変更したいとき。
-- oracle file、realization file、review、INDEX.md エントリーなどに関する標準プロンプト本文をどのように生成しているか調べたいとき。
-- 標準プロンプト片の注入条件や依存関係を変更し、必要な前提情報が完全プロンプトへ含まれるようにしたいとき。
-- AI に提示する規範文書として、所見列挙基準、oracle 記述基準、realization 品質基準、INDEX.md ルーティング基準、ファイルアクセス制約のいずれかを確認したいとき。
+- AI agent に渡す基本情報、制約、ルーティング規則、standard、review 判定基準などの prompt part がどこで構築されているか探したいとき。
+- oracle file、realization file、INDEX エントリー、レビュー所見、ファイルアクセス規則など、複数種類の標準プロンプトの責務分担を比較して読む先を選びたいとき。
+- agent call 用の完全なプロンプトへ、どの標準プロンプト片が含まれ、どの条件で注入されるかを調べたいとき。
+- 標準文書の本文を変更する前に、対象が oracle standard、realization standard、review standard、routing rule、file access rule のどれに属するか切り分けたいとき。
 
 ## Do not read this when
-- 個別 CLI 機能、状態ファイル、パス解決、コマンド実行、入出力 schema など、プロンプト断片以外のプロダクト挙動を調べたいとき。
-- StructDoc、Standard、Requirement などのデータ構造や、構造化文書変換の共通実装そのものを確認・変更したいとき。
-- 特定の oracle file や realization file の本文内容をレビューしたいだけで、レビューや標準プロンプトの判断基準はすでに分かっているとき。
-- 実装テストや補助ファイルの保守、外部依存、公開 CLI 面の変更など、realization code 全般の作業方針だけを調べたいとき。
+- 個別 CLI コマンド、状態ファイル、パス解決、入出力 schema など、プロンプト本文ではなくプロダクト挙動の実装詳細を調べたいとき。
+- StructDoc、Standard、Requirement などの基礎データ構造や、文書変換の汎用処理そのものを確認・変更したいとき。
+- 特定の oracle file や realization file の内容、または実際のレビュー対象ファイルの差分を確認したいだけのとき。
+- ファイルアクセスモードやパスキーワードの定義など、prompt part が参照する基礎概念の型・モデルを確認したいとき。
 
 ## hash
-- 81d010c7aba08e3a0a04d0d38602eb90b2e781db9d7454a215d81f7d8ef49bae
+- 603edd63c65145eec68ee83c1d99ae5ad3eb13be6df4a826f8921e393973768f
