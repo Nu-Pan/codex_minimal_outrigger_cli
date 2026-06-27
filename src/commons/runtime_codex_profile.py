@@ -176,7 +176,7 @@ def build_codex_profile(
 
 
 def resolve_codex_home(cwd: Path | None = None) -> Path:
-    """CODEX_HOME の相対指定を呼び出し側 cwd 基準で解決する。"""
+    """CODEX_HOME の相対指定を Codex subprocess の cwd 基準で解決する。"""
     value = os.environ.get("CODEX_HOME")
     if value is not None:
         raw_path = Path(value)

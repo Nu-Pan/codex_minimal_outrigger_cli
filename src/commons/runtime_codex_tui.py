@@ -40,13 +40,17 @@ def run_codex_tui(
     log_dir.mkdir(parents=True, exist_ok=True)
     ts = timestamp()
     call_path = log_dir / f"{ts}_tui_call.json"
-    codex_home = resolve_codex_home(cwd)
+    codex_work_root = work_root(cwd)
+    codex_cwd = file_access_to_codex_cwd(parameter.file_access_mode, codex_work_root)
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # Match validation/profile placement to where Codex resolves a relative
+    # CODEX_HOME while keeping the user-provided env value unchanged.
+    codex_home = resolve_codex_home(codex_cwd)
     validate_codex_home(codex_home)
     profile_path = prepare_codex_profile(
-        parameter, config, codex_home, work_root(cwd), extra_read_paths
+        parameter, config, codex_home, codex_work_root, extra_read_paths
     )
     profile_name = codex_profile_name(profile_path)
-    codex_cwd = file_access_to_codex_cwd(parameter.file_access_mode, work_root(cwd))
     argv = [
         "codex",
         "--profile",

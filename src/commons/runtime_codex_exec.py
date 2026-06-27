@@ -127,10 +127,14 @@ def run_codex_exec(
     config = config or load_config(root)
     log_dir = codex_log_dir(root)
     log_dir.mkdir(parents=True, exist_ok=True)
-    codex_home = resolve_codex_home(cwd)
+    codex_work_root = work_root(cwd)
+    codex_cwd = file_access_to_codex_cwd(parameter.file_access_mode, codex_work_root)
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # Relative CODEX_HOME is still passed through unchanged, so preflight and
+    # profile generation must target the path Codex resolves from its real cwd.
+    codex_home = resolve_codex_home(codex_cwd)
     validate_codex_home(codex_home)
     codex_env = codex_subprocess_env(codex_home)
-    codex_work_root = work_root(cwd)
     profile_path = prepare_codex_profile(
         parameter,
         config,
@@ -140,7 +144,6 @@ def run_codex_exec(
         extra_writable_paths,
     )
     profile_name = codex_profile_name(profile_path)
-    codex_cwd = file_access_to_codex_cwd(parameter.file_access_mode, codex_work_root)
     agents_status_before = _agents_status(codex_work_root)
     schema_path = (
         prepare_schema(codex_work_root, parameter.structured_output_schema_path)
