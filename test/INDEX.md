@@ -288,26 +288,26 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle の CLI 経由の外部挙動と、所見の列挙・検証・判定・merge を含む評価 loop の制御を検証する realization test。
-- report 生成、scope 指定、対象 oracle の選択、gitignored oracle の除外、linked worktree 上の review、INDEX.md 変更の join commit 取り込み、処理失敗時の error report、review 中に発生した想定外差分の拒否を同じ review run の文脈で扱う。
-- 所見 merge operation の契約違反や target 再利用を拒否する helper 挙動も、review oracle の所見 lifecycle と同じ責務範囲として検証する。
+- review oracle の CLI 経由の外部挙動と、所見列挙・検証・判定・merge の制御を検証する realization test。report 生成、受理済み所見だけの出力、対象 oracle の選択、scope、linked worktree、INDEX 変更の取り込み、conflict 解決、処理失敗時 report、review 中に許されない差分の拒否を扱う。
+- 所見 merge 操作の契約違反や target 再利用の拒否も同じ review run の所見状態として検証し、review oracle の状態遷移と出力文脈を一箇所に集約している。
 
 ## Read this when
-- review oracle サブコマンドの report 内容、終了結果、出力される verdict・count・対象 oracle 一覧を変更または確認するとき。
-- review oracle の enumerate / validate / judge / merge の呼び出し順、loop 上限、所見の verdict・severity による report 表示順を変更または確認するとき。
-- session scope と full scope で review 対象 oracle をどう選ぶか、gitignored oracle、binary、symlink、memo 配下に見える path、linked worktree の扱いを確認するとき。
-- review oracle が生成した INDEX.md 差分を session worktree へ取り込む処理、INDEX.md conflict 解決、join commit の report 記録を変更または調査するとき。
-- review oracle 実行中の Codex 処理失敗時に error report を残す挙動や、INDEX.md 以外の想定外差分を拒否して元 worktree を汚さない挙動を確認するとき。
-- 所見 merge operation の delete・replace・merge の契約、finding_id の再採番、invalid operation や target 再利用の拒否条件を確認するとき。
+- review oracle の CLI 実行結果、report 内容、終了コード、標準出力への report path 表示を変更または確認するとき。
+- review oracle がどの oracle を review 対象に含めるか、full scope と session scope の対象数・除外条件・no targets 結果を確認するとき。
+- review oracle の所見列挙 loop、検証、judge、merge、accepted/rejected の扱い、所見 ID 付与、関連所見だけを次回 prompt に渡す挙動を変更するとき。
+- linked worktree 上の session branch を review する挙動、review 用 worktree の配置、fork commit や join commit の report 反映を確認するとき。
+- review oracle が生成した INDEX 変更だけを session 側へ反映する挙動、INDEX conflict 解決、INDEX 以外の差分を拒否して元 worktree を汚さない挙動を変更するとき。
+- review oracle の処理途中失敗時に error report を残し、未判定所見を通常所見として出さない挙動を確認するとき。
 
 ## Do not read this when
-- review oracle 以外の review サブコマンドや、oracle review に関係しない CLI の基本動作だけを調べるとき。
-- Codex CLI の実出力品質や LLM が生成する所見本文の妥当性そのものを評価したいとき。
-- 設定値の読み込み一般、session 管理一般、git helper 一般の実装詳細を調べるだけで、review oracle の外部挙動や所見 loop に触れないとき。
-- oracle file の正本仕様そのものを確認・編集したいとき。realization test ではなく対応する oracle 側の文書を読むべき。
+- 通常の session fork、git worktree 作成、run path、設定読み込みなど review oracle 以外の基盤挙動だけを確認したいとき。
+- oracle file の正本仕様そのものや、review で検出すべき仕様品質基準を確認したいとき。
+- 個別の CLI command 定義や option parser の実装だけを確認したいとき。
+- review oracle 以外の review command、通常実装生成、または INDEX ルーティング文書生成の挙動を確認したいとき。
+- 単体 helper の内部実装だけを局所的に直す作業で、report 出力、review 対象選択、所見 loop、worktree 差分管理への影響がないと判断できるとき。
 
 ## hash
-- 7ce3950c4c3dcdc4edc6e4b41d8a91596bd10ba15c7f236f1573b36c4d0fbbd0
+- de0118b452e4ff61ce9676c7d6fbba72550f75af3882c2bfca244df88a0081ed
 
 # `test_session_cli.py`
 
