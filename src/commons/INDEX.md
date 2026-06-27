@@ -159,26 +159,25 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI 実行時に使う profile、CODEX_HOME、subprocess、Structured Output schema、JSONL 出力解析の runtime helper をまとめる実装。
-- cmoc の FileAccessMode を Codex CLI の sandbox 設定へ変換し、workspace-write 時の writable_roots を含む profile 本文を生成して、Codex home 内の内容 hash ファイルとして準備する。
-- Codex home と auth.json の事前検査、Codex subprocess 起動時の環境変数引き継ぎ、Codex CLI 不在時の CmocError 化、出力 JSON 読み取り、capacity・quota retry 判定に使う JSONL error 抽出を扱う。
+- Codex CLI を cmoc から起動するための実行時 profile と周辺入出力を組み立てる実装。file access policy から sandbox mode と writable_roots を生成し、Codex home、認証情報、hashed profile、Structured Output schema、subprocess 環境、JSONL エラー判定を扱う。
+- Codex CLI との境界で発生する実行時エラーを cmoc の利用者向けエラーへそろえる入口でもあり、profile 生成、schema 配置、出力 JSON 読み取り、capacity/quota retry 判定に関する制御ロジックがまとまっている。
 
 ## Read this when
-- AgentCallParameter や CmocConfig から Codex CLI profile を生成・保存する処理を確認または変更したいとき。
-- FileAccessMode と Codex CLI sandbox_mode、workspace-write の writable_roots、追加読み取り許可 path の保護領域検査の対応を確認したいとき。
-- CODEX_HOME の解決、存在検査、auth.json 検査、Codex subprocess に渡す環境変数の扱いを確認したいとき。
-- Codex CLI 起動失敗、出力 JSON の不正・空内容、JSONL event 由来の error detail、capacity error、quota error、resume token 抽出の扱いを変更したいとき。
-- Structured Output schema を work root 側の内容 hash store へ配置する処理を追いたいとき。
+- AgentCallParameter や repo config から Codex CLI 用 profile 本文を生成する処理、sandbox mode、writable_roots、追加読み取り・書き込み path の検証を確認・変更したいとき。
+- FileAccessMode と Codex CLI の sandbox 表現の対応、memo・.agents・oracle などの保護領域を profile にどう反映するかを調べるとき。
+- CODEX_HOME の解決、Codex home と auth.json の事前検査、hashed profile の作成・再利用、Codex subprocess に渡す環境変数を扱うとき。
+- Codex CLI 不在時のエラー変換、Codex stdout/stderr から利用者向け detail を作る処理、JSONL event から resume token や capacity/quota error を判定する処理を確認したいとき。
+- Structured Output schema を work root 側の hash store に配置する処理や、Codex output file の空・不正 JSON を retry 判定へ渡す挙動を変更したいとき。
 
 ## Do not read this when
-- Codex へ渡す prompt 本文、agent 実行手順、retry ループ全体の制御を確認したいだけなら、Codex 実行 orchestration 側の実装を読む。
-- cmoc の path keyword や work root、repo root、run root の意味定義を確認したいだけなら、path model の定義を読む。
-- 設定ファイルの読み込み構造や CmocConfig 自体の schema を確認したいだけなら、config 側の実装を読む。
-- 内容 hash ファイルの保存方式そのものや schema store directory の具体的な配置規則を確認したいだけなら、runtime content または runtime paths 側の実装を読む。
-- oracle file と realization file の編集責務や仕様断片の管理方針を確認したいだけなら、正本仕様文書を読む。
+- Codex CLI に渡す prompt 本文、file access rule の利用者向け説明、または oracle 側の正本仕様そのものを確認したいだけのときは、該当する prompt 構築や oracle 文書を直接読む。
+- path keyword の定義、work root や schema store のディレクトリ規約そのものを調べたいときは、path model や runtime path 管理の対象を直接読む。
+- hashed file の保存アルゴリズムや内容 hash store の低レベルな書き込み実装を変更したいときは、内容保存 helper の対象を直接読む。
+- cmoc の設定値の読み込み元、model class や reasoning effort の設定 schema 自体を変更したいときは、設定定義の対象を直接読む。
+- Codex CLI の実際の実行フロー全体、retry ループ、またはこの実装を呼び出す上位制御を追いたいときは、Codex runtime の上位モジュールを先に読む。
 
 ## hash
-- 2fadb7ddba6f4cfac293e312a8425aab418073c25691d841f15203935db4def7
+- ae732ea279da40e0e93ce912bfee18dbb306f8dc8845c7f031c69b528903f2be
 
 # `runtime_codex_tui.py`
 
