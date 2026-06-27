@@ -388,6 +388,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     (root / "README.md").write_text("# repo\n")
     (root / "oracle").mkdir()
     (root / "memo").mkdir()
+    (root / ".agents").mkdir()
 
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
@@ -467,9 +468,12 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     [
         (FileAccessMode.REALIZATION_WRITE, "oracle/blocked.md"),
         (FileAccessMode.REALIZATION_WRITE, "memo/blocked.md"),
+        (FileAccessMode.REALIZATION_WRITE, ".agents/blocked.md"),
         (FileAccessMode.ORACLE_WRITE, "src/blocked.md"),
         (FileAccessMode.ORACLE_WRITE, "memo/blocked.md"),
+        (FileAccessMode.ORACLE_WRITE, ".agents/blocked.md"),
         (FileAccessMode.REPO_WRITE, "memo/blocked.md"),
+        (FileAccessMode.REPO_WRITE, ".agents/blocked.md"),
         (FileAccessMode.REPO_WRITE, "../outside.md"),
     ],
 )
@@ -481,6 +485,7 @@ def test_codex_profile_rejects_disallowed_extra_writable_paths(
     (root / "src").mkdir()
     (root / "oracle").mkdir()
     (root / "memo").mkdir()
+    (root / ".agents").mkdir()
 
     with pytest.raises(CmocError, match="追加書き込み許可 path"):
         build_codex_profile(

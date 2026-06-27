@@ -98,9 +98,10 @@ def _is_writable_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> b
     if not path.is_relative_to(root):
         return False
     # <work-root>/oracle/src/acp/prompt_parts/file_access_rule.py
-    # Codex profile は deny を持たないため、FileAccessMode の禁止領域を
-    # writable_roots に入れない正リストとして表現する。
-    if path.is_relative_to(root / "memo"):
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # Codex profile は deny を持たないため、FileAccessMode と Codex exec の
+    # 禁止領域を writable_roots に入れない正リストとして表現する。
+    if path.is_relative_to(root / "memo") or path.is_relative_to(root / ".agents"):
         return False
     if mode == FileAccessMode.REALIZATION_WRITE:
         return not path.is_relative_to(root / "oracle")
