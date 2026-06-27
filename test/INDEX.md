@@ -107,22 +107,24 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基本実行時契約を広く固定する realization test。path token 変換、run/work/repo root 判定、既定 config、構造化 error report、session/apply branch 名と state 読み込み、CLI preflight と parse error の stdout report、completion probe、起動 wrapper の call stack 表示、`.cmoc` ignore 追記、file access mode と Codex sandbox mode の対応、binary 判定、Codex profile の読み取り制限検証を扱う。
+- cmoc の基本ランタイム契約を広く固定する realization test。path token と worktree 判定、既定 config、構造化エラー表示、session/apply branch 名と状態読み込み、CLI preflight と completion probe、起動 wrapper の call stack 表示、`.cmoc` ignore、file access mode と Codex sandbox profile、binary 判定の外部挙動を検証する。
+- 単一機能の詳細テストというより、runtime・path・state・CLI エラー処理・sandbox profile など基礎部品の統合的な回帰検知入口として位置づく。
 
 ## Read this when
-- 基本 runtime の外部挙動や回帰テストを確認・変更する。
-- root token path、linked worktree、run root、work root、repo root の扱いに関するテストを探している。
-- CmocError の Markdown 整形、CLI error の stdout 出力、Click parse error 変換、preflight、shell completion probe の挙動を確認する。
-- session branch、apply branch、SessionState 読み込みの破損 branch 拒否を変更・検証する。
-- `.cmoc` の `.gitignore` 追記、file access mode の永続化値、sandbox mode 変換、binary 判定、Codex profile の読み取り制限拒否に関するテストを確認する。
+- cmoc の root token path、repo root、run root、work root、linked worktree 判定、main worktree 拒否の挙動を変更・確認したいとき。
+- CmocError の Markdown report、CLI 想定エラー、Click 引数解析エラー、stdout/stderr の出し分け、completion probe 時の preflight skip を変更・確認したいとき。
+- session branch 名、apply branch 名、branch からの session state 読み込み、状態ファイル読み書きの異常系を扱うとき。
+- `.cmoc` の `.gitignore` 追記、file access mode の永続化値、Codex sandbox mode 変換、Codex profile の writable_roots や保護領域拒否を変更・確認したいとき。
+- binary 判定の読み取り量や、起動 wrapper の missing venv report における root token path 表示を変更・確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの正常系 workflow や詳細な CLI 操作仕様だけを確認したい場合。
-- runtime 実装の内部構造や helper の実装方法を調べたいだけで、テスト期待値を確認する必要がない場合。
-- oracle の正本仕様断片を確認したい場合。
+- 個別 CLI サブコマンドの成功系 workflow や利用者向け機能仕様だけを調べたい場合は、そのサブコマンド専用の実装・テストを優先する。
+- oracle 正本仕様断片そのものを確認・変更したい場合は、この realization test ではなく対応する oracle file を読む。
+- テスト支援 fixture、git repo 作成 helper、runner の実装詳細だけを調べたい場合は、支援モジュールを直接読む。
+- 特定 module の内部実装方針だけを調べたい場合は、ここを入口にせず対象の runtime・state・config・content・profile 実装を直接読む。
 
 ## hash
-- 159e30313a50d1d7535cd355e1f99be29cc8fefed021db07289bed6d894d34e7
+- 68478ab08cb111704caaee49b12305876b825fc0f448c58579d99277d1640ece
 
 # `test_cli_init_tui.py`
 
@@ -149,20 +151,23 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex 実行ランタイムの安全側の失敗挙動を検証する realization test。読み取り制限を強制できない mode で subprocess を開始しないこと、TUI 起動前に追加読み取り path の保護領域違反を検出すること、Codex CLI 不在時に exec/TUI 共通で利用者向けの CmocError に変換することを扱う。
+- Codex CLI 実行ランタイムの realization test。exec 起動時のプロファイル生成、標準入力と最終出力の受け渡し、TUI 起動前の追加読み取りパス保護、Codex CLI 不在時のエラー報告を検証する。
+- 一時リポジトリ、擬似 CODEX_HOME、スタブ化した codex 実行ファイル、subprocess の差し替えを使い、外部 Codex 本体に依存せずランタイム制御を確認する。
 
 ## Read this when
-- Codex CLI を起動する runtime 経路のエラー変換、起動前検証、subprocess 呼び出し抑止に関するテストを確認・変更するとき。
-- FileAccessMode と読み取り制限、保護領域、extra_read_paths の関係が Codex exec/TUI 起動前にどう検証されるべきかを調べるとき。
-- Codex CLI がインストールされていない場合の exec/TUI 共通の失敗メッセージや CmocError への変換を検証するとき。
+- Codex CLI を起動する realization implementation の引数構築、プロファイル生成、sandbox 設定、標準入力、最終メッセージ出力の扱いを変更する時。
+- TUI 実行経路で追加読み取りパスを検査する順序や、保護領域を拒否する挙動を変更する時。
+- Codex CLI が見つからない場合の CmocError、エラーメッセージ、exec と TUI の共通失敗処理を確認または変更する時。
+- Codex 実行ランタイムのテストで、一時的な codex コマンドや subprocess monkeypatch を使った検証方法を確認したい時。
 
 ## Do not read this when
-- Codex runtime の正常系の subprocess 引数、プロファイル生成、capacity 待機、入出力結果の扱いを調べたいだけのとき。
-- Codex 以外の runtime、CLI コマンド全体、設定ファイル読み込み、repository fixture の一般的な振る舞いを調べたいとき。
-- oracle の正本仕様断片を確認したいとき。
+- Codex CLI の実行制御ではなく、別の外部コマンド、別サブコマンド、または一般的な設定読み込みだけを扱う時。
+- LLM の応答品質、Codex 本体の内部挙動、または実際の対話 UI の表示内容を検証したい時。
+- リポジトリ作成、CODEX_HOME 構築、スタブ実行ファイル作成などのテスト補助関数そのものを変更する時は、補助関数の定義元を読む方が直接的。
+- AgentCallParameter や FileAccessMode などのデータ構造の定義・意味を確認するだけなら、それらの定義元を読む方が直接的。
 
 ## hash
-- 2f250a74d07f5af3523e0674dd59bae6efc74f10bf8aa77746628a429d887093
+- a02269269521528aae4f2867bcbe0fc90cde2c6346d9b6ef2036d0b0e5a8c035
 
 # `test_codex_runtime_home.py`
 
