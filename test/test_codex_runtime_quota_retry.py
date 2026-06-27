@@ -12,6 +12,7 @@ import pytest
 from _support import (
     make_repo,
     setup_codex_home,
+    stub_codex_profile,
     write_python_executable,
 )
 from commons.runtime_codex import run_codex_exec
@@ -26,6 +27,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
 ) -> None:
     root = make_repo(tmp_path)
     codex_home = setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     timestamps = iter(
         [
@@ -182,6 +184,7 @@ def test_run_codex_exec_reruns_after_quota_without_resume_token(
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -242,6 +245,7 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "parallel_calls.jsonl"

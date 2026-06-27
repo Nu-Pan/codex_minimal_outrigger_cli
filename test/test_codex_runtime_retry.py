@@ -10,6 +10,7 @@ import pytest
 from _support import (
     make_repo,
     setup_codex_home,
+    stub_codex_profile,
     write_python_executable,
 )
 from commons.runtime_codex import run_codex_exec
@@ -24,6 +25,7 @@ def test_run_codex_exec_retries_semantic_output(
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     counter = tmp_path / "counter"
@@ -102,6 +104,7 @@ def test_run_codex_exec_logs_capacity_retrying_call(
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -162,6 +165,7 @@ def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()

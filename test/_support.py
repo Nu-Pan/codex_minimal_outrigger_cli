@@ -52,6 +52,27 @@ def setup_codex_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return codex_home
 
 
+def stub_codex_profile(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Bypass profile generation in tests that target subprocess control."""
+    import commons.runtime_codex_exec as exec_module
+    import commons.runtime_codex_tui as tui_module
+
+    fallback_path = tmp_path / "cmoc_fake.config.toml"
+    fallback_path.write_text('model = "fake"\nsandbox_mode = "read-only"\n')
+
+    def fake_prepare(*args: object, **_kwargs: object) -> Path:
+        codex_home = args[2] if len(args) > 2 and isinstance(args[2], Path) else None
+        if codex_home is None:
+            return fallback_path
+        profile_path = codex_home / fallback_path.name
+        profile_path.write_text(fallback_path.read_text())
+        return profile_path
+
+    monkeypatch.setattr(exec_module, "prepare_codex_profile", fake_prepare)
+    monkeypatch.setattr(tui_module, "prepare_codex_profile", fake_prepare)
+    return fallback_path
+
+
 def write_python_executable(path: Path, lines: list[str]) -> None:
     """Write an executable Python script used as a fake external command."""
     path.write_text("\n".join([f"#!{sys.executable}", *lines]) + "\n")

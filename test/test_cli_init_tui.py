@@ -11,6 +11,7 @@ from _support import (
     run_git,
     runner,
     setup_codex_home,
+    stub_codex_profile,
     write_python_executable,
 )
 from main import app
@@ -328,6 +329,7 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
     linked = root / ".cmoc" / "worktrees" / "linked"

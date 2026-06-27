@@ -1,12 +1,10 @@
 import json
 import subprocess
 from pathlib import Path
-import tomllib
 
 import cmoc_runtime
 from basic.acp import FileAccessMode
 from cmoc_runtime import CmocError
-from config.cmoc_config import CmocConfig
 import pytest
 
 from _support import (
@@ -15,7 +13,6 @@ from _support import (
     run_git,
     runner,
 )
-from commons.runtime_codex_profile import build_codex_profile
 from main import app
 import sub_commands.session.abandon as session_module
 import sub_commands.session.fork as session_fork_module
@@ -338,20 +335,7 @@ def test_session_join_resolves_oracle_conflict_with_realization_write_profile(
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         calls.append(kwargs["purpose"])
         modes.append(parameter.file_access_mode)
-        profile = tomllib.loads(
-            build_codex_profile(
-                parameter,
-                CmocConfig(),
-                root,
-                extra_writable_paths=kwargs["extra_writable_paths"],
-            )
-        )
-        workspace = profile["sandbox_workspace_write"]
-        assert str(root) not in workspace["writable_roots"]
-        assert str(target) in workspace["writable_roots"]
-        assert str(other_oracle_file) not in workspace["writable_roots"]
-        assert "read_only_paths" not in workspace
-        assert "permissions" not in profile
+        assert kwargs["extra_writable_paths"] == [target]
         target.write_text("resolved change\nTitle\n=======\n")
         return FakeCodexResult()
 

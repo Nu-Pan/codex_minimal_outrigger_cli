@@ -8,6 +8,7 @@ import pytest
 
 from _support import (
     make_repo,
+    stub_codex_profile,
     write_python_executable,
 )
 from commons.runtime_codex import run_codex_exec
@@ -22,6 +23,7 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
     (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.delenv("CODEX_HOME", raising=False)
     monkeypatch.setattr(Path, "home", lambda: home)
+    stub_codex_profile(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -66,6 +68,7 @@ def test_run_codex_exec_preserves_configured_codex_home_env_value(
     codex_home.mkdir()
     (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
+    stub_codex_profile(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"

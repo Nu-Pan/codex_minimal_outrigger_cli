@@ -26,61 +26,39 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
             raise CmocError("不明な FileAccessMode です。", [], str(mode))
 
 
-def _toml_str(value: Path | str) -> str:
-    """Codex profile の TOML 断片で安全に使える quoted string を作る。"""
-    return json.dumps(str(value))
+def _validate_extra_read_paths(
+    root: Path,
+    extra_read_paths: list[Path] | None,
+) -> None:
+    protected = [root / "memo", root / ".agents"]
+    for path in extra_read_paths or []:
+        resolved = path.resolve()
+        if any(resolved.is_relative_to(base) for base in protected):
+            raise CmocError(
+                "追加読み取り許可 path が保護領域内にあります。",
+                ["memo または .agents 配下ではないファイルを指定してください。"],
+                f"path: {resolved}",
+            )
 
 
-def _toml_array(values: list[Path]) -> str:
-    """writable_roots 用の小さな TOML array 表現を依存追加なしで作る。"""
-    return "[" + ", ".join(_toml_str(value) for value in values) + "]"
-
-
-def _top_level_writable_paths(root: Path, excluded_names: set[str]) -> list[Path]:
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # Codex profile has no deny-list for a subtree under one writable root, so
-    # protected top-level entries must be omitted from the allow-list itself.
-    return [
-        path.resolve()
-        for path in root.iterdir()
-        if path.name not in excluded_names
-    ]
-
-
-def _sandbox_lines(
+def _reject_unrepresentable_read_limits(
     mode: FileAccessMode,
     root: Path,
-    extra_writable_paths: list[Path] | None = None,
-) -> list[str]:
-    """file access mode と追加書き込み root から Codex sandbox 設定を組む。"""
-    root = root.resolve()
-    sandbox_mode = file_access_to_sandbox_mode(mode)
-    match mode:
-        case FileAccessMode.READONLY | FileAccessMode.PURE_ORACLE_READ:
-            write_paths = []
-        case FileAccessMode.REALIZATION_WRITE:
-            write_paths = _top_level_writable_paths(root, {"oracle", "memo"})
-        case FileAccessMode.ORACLE_WRITE:
-            write_paths = [root / "oracle"]
-        case FileAccessMode.REPO_WRITE:
-            write_paths = _top_level_writable_paths(root, {"memo"})
-        case _:
-            raise CmocError("不明な FileAccessMode です。", [], str(mode))
-    if extra_writable_paths:
-        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-        # Codex CLI v0.142.2 rejects permission_profile/read_only_paths in strict
-        # config; the profile can only carry sandbox mode and extra writable roots.
-        protected = [root / "memo", root / ".agents"]
-        for path in extra_writable_paths:
-            resolved = path.resolve()
-            if not any(resolved.is_relative_to(base) for base in protected):
-                write_paths.append(resolved)
-    lines = [f'sandbox_mode = "{sandbox_mode}"']
-    if sandbox_mode == "workspace-write":
-        lines.extend(["", "[sandbox_workspace_write]"])
-        if write_paths:
-            lines.append(f"writable_roots = {_toml_array(sorted(set(write_paths)))}")
-    return lines
+    extra_read_paths: list[Path] | None,
+) -> None:
+    _validate_extra_read_paths(root, extra_read_paths)
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # Codex CLI 0.142.2 profile accepts sandbox mode and writable roots, but
+    # has no read allow/deny list. Do not emit a profile that only enforces the
+    # write half of the oracle file access rule.
+    raise CmocError(
+        "Codex profile では指定された読み取り制限を実効化できません。",
+        [
+            "読み取り deny/allow を表現できる Codex CLI profile が必要です。",
+            "安全に実行できる隔離環境を用意してから再実行してください。",
+        ],
+        f"mode: {mode.value}\nroot: {root}",
+    )
 
 
 def build_codex_profile(
@@ -98,12 +76,10 @@ def build_codex_profile(
         f'model_reasoning_effort = "{reasoning_effort}"',
     ]
     if root is not None:
-        lines.extend(
-            _sandbox_lines(
-                parameter.file_access_mode,
-                root,
-                extra_writable_paths,
-            )
+        _reject_unrepresentable_read_limits(
+            parameter.file_access_mode,
+            root.resolve(),
+            extra_read_paths,
         )
     else:
         sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)

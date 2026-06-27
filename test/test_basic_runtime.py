@@ -2,7 +2,6 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-import tomllib
 
 import pytest
 import main as main_module
@@ -330,8 +329,8 @@ def test_is_binary_reads_only_initial_chunk() -> None:
     assert path.reader.size == 4096
 
 
-def test_codex_profile_contains_supported_sandbox_settings(tmp_path: Path) -> None:
-    """Codex profile は現在の Codex CLI が受け付ける sandbox key だけを持つ。"""
+def test_codex_profile_rejects_unrepresented_read_limits(tmp_path: Path) -> None:
+    """読み取り制限を profile へ反映できない mode は実行前に止める。"""
     root = tmp_path / "repo"
     root.mkdir()
     (root / "src").mkdir()
@@ -339,102 +338,35 @@ def test_codex_profile_contains_supported_sandbox_settings(tmp_path: Path) -> No
     (root / "oracle").mkdir()
     (root / "memo").mkdir()
 
-    def profile(mode: FileAccessMode) -> dict:
-        """file access mode ごとの profile TOML を dict として読む。"""
-        return tomllib.loads(
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+    )
+    for mode in FileAccessMode:
+        with pytest.raises(CmocError, match="読み取り制限"):
             build_codex_profile(
                 AgentCallParameter(
-                    ModelClass.EFFICIENCY,
-                    ReasoningEffort.LOW,
+                    parameter.model_class,
+                    parameter.reasoning_effort,
                     mode,
-                    "prompt",
-                    None,
+                    parameter.prompt,
+                    parameter.structured_output_schema_path,
                 ),
                 CmocConfig(),
                 root,
             )
-        )
-
-    readonly = profile(FileAccessMode.READONLY)
-    assert readonly["sandbox_mode"] == "read-only"
-    assert "permissions" not in readonly
-    assert "sandbox_workspace_write" not in readonly
-
-    assert profile(FileAccessMode.PURE_ORACLE_READ)["sandbox_mode"] == "read-only"
 
     prompt_file = root / ".cmoc" / "log" / "tui" / "prompt_cmpl.md"
-    pure_oracle_tui = tomllib.loads(
+    with pytest.raises(CmocError, match="読み取り制限"):
+        build_codex_profile(parameter, CmocConfig(), root, [prompt_file])
+
+    with pytest.raises(CmocError, match="保護領域"):
         build_codex_profile(
-            AgentCallParameter(
-                ModelClass.EFFICIENCY,
-                ReasoningEffort.LOW,
-                FileAccessMode.PURE_ORACLE_READ,
-                "prompt",
-                None,
-            ),
+            parameter,
             CmocConfig(),
             root,
-            [prompt_file],
+            [root / "memo" / "blocked.md"],
         )
-    )
-    assert pure_oracle_tui["sandbox_mode"] == "read-only"
-    assert "sandbox_workspace_write" not in pure_oracle_tui
-
-    realization_profile = profile(FileAccessMode.REALIZATION_WRITE)
-    assert realization_profile["sandbox_mode"] == "workspace-write"
-    realization_workspace = realization_profile["sandbox_workspace_write"]
-    assert realization_workspace["writable_roots"] == sorted(
-        [str(root / "README.md"), str(root / "src")]
-    )
-    assert str(root) not in realization_workspace["writable_roots"]
-    assert str(root / "oracle") not in realization_workspace["writable_roots"]
-    assert str(root / "memo") not in realization_workspace["writable_roots"]
-    assert "read_only_paths" not in realization_workspace
-
-    oracle_conflict = root / "oracle" / "spec.md"
-    oracle_conflict.write_text("# spec\n")
-    other_oracle_file = root / "oracle" / "other.md"
-    other_oracle_file.write_text("# other\n")
-    conflict_profile = tomllib.loads(
-        build_codex_profile(
-            AgentCallParameter(
-                ModelClass.EFFICIENCY,
-                ReasoningEffort.LOW,
-                FileAccessMode.REALIZATION_WRITE,
-                "prompt",
-                None,
-            ),
-            CmocConfig(),
-            root,
-            extra_writable_paths=[
-                oracle_conflict,
-                root / "memo" / "blocked.md",
-                root / ".agents" / "blocked.md",
-            ],
-        )
-    )
-    conflict_workspace = conflict_profile["sandbox_workspace_write"]
-    assert conflict_workspace["writable_roots"] == sorted(
-        [str(root / "README.md"), str(root / "src"), str(oracle_conflict)]
-    )
-    assert str(root) not in conflict_workspace["writable_roots"]
-    assert (
-        str(root / "memo" / "blocked.md")
-        not in conflict_workspace["writable_roots"]
-    )
-    assert (
-        str(root / ".agents" / "blocked.md")
-        not in conflict_workspace["writable_roots"]
-    )
-    assert "read_only_paths" not in conflict_workspace
-    assert "permissions" not in conflict_profile
-
-    oracle_workspace = profile(FileAccessMode.ORACLE_WRITE)["sandbox_workspace_write"]
-    assert oracle_workspace["writable_roots"] == [str(root / "oracle")]
-
-    repo_workspace = profile(FileAccessMode.REPO_WRITE)["sandbox_workspace_write"]
-    assert repo_workspace["writable_roots"] == sorted(
-        [str(root / "README.md"), str(root / "oracle"), str(root / "src")]
-    )
-    assert str(root) not in repo_workspace["writable_roots"]
-    assert str(root / "memo") not in repo_workspace["writable_roots"]
