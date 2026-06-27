@@ -15,7 +15,6 @@ from jsonschema import validate
 
 from basic.acp import FileAccessMode
 from basic.acp import ModelClass, ReasoningEffort
-from basic.path_model import RootToken, resolve_real_path, resolve_work_root
 from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
 from acp.builder.apply.fork.file_finding_enumeration import (
     build_apply_fork_file_finding_enumeration_parameter,
@@ -42,13 +41,6 @@ from acp.prompt_parts.index_entry_standard import build_index_entry_standard
 from acp.prompt_parts.oracle_review_standard import build_review_oracle_standard
 from acp.prompt_parts.realization_standard import build_realization_standard
 from acp.prompt_parts.routing_rule import build_routing_rule
-
-
-def _prompt_root_path(token: RootToken) -> str:
-    try:
-        return str(resolve_real_path(token))
-    except ValueError:
-        return str(resolve_work_root())
 
 
 def test_build_apply_review_standard_renders_core_review_aspects() -> None:
@@ -224,7 +216,7 @@ def test_complete_prompt_can_include_apply_review_standard() -> None:
     assert "# apply review standard" in rendered
 
 
-def test_complete_prompt_sanitizes_injected_standard_terms() -> None:
+def test_complete_prompt_preserves_injected_standard_terms() -> None:
     prompt = build_complete_prompt(
         role="- role",
         summary="- summary",
@@ -250,31 +242,14 @@ def test_complete_prompt_sanitizes_injected_standard_terms() -> None:
         "review oracle standard",
         "apply review standard",
         "index entry standard",
-        "呼び出し側",
-        "この作業対象では",
-        "この作業対象でも",
-        "oracle file レビュー",
         "oracle file",
         "oracles file",
-        "oracle spec",
         "realization file",
     ]:
         assert expected in rendered
-    for forbidden in [
-        "仕様ファイル（基準用語）",
-        "仕様説明（別名）",
-        "仕様ファイル（和訳表記）",
-        "仕様ファイルズ",
-        "cmoc",
-        "<cmoc-root>",
-        "<repo-root>",
-        "<run-root>",
-        "<work-root>",
-    ]:
-        assert forbidden not in rendered
 
 
-def test_complete_prompt_sanitizes_aux_prompt_text() -> None:
+def test_complete_prompt_preserves_aux_prompt_text() -> None:
     prompt = build_complete_prompt(
         role="- cmoc から呼び出された AI Agent です",
         summary="- <repo-root> ツリー内の realization file を修正すること",
@@ -299,13 +274,11 @@ def test_complete_prompt_sanitizes_aux_prompt_text() -> None:
 
     assert "- realization standard と oracle standard に従うこと" in rendered
     assert "# aux realization file" in rendered
-    assert "依頼された AI Agent" in rendered
-    assert _prompt_root_path(RootToken.REPO) in rendered
-    assert (
-        f'"summary": "realization file and {_prompt_root_path(RootToken.REPO)} '
-        'stay in code block"'
-    ) in rendered
-    for forbidden in [
+    for expected in [
+        "cmoc から呼び出された AI Agent",
+        "<repo-root> ツリー内の realization file",
+        "- <cmoc-root> と <run-root> と <work-root> 配下を確認すること",
+        '"summary": "realization file and <repo-root> stay in code block"',
         "<cmoc-root>",
         "<repo-root>",
         "<run-root>",
@@ -313,7 +286,7 @@ def test_complete_prompt_sanitizes_aux_prompt_text() -> None:
         "cmoc",
         "cmoc から呼び出された",
     ]:
-        assert forbidden not in rendered
+        assert expected in rendered
 
 
 def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
