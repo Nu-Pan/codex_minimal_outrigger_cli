@@ -149,6 +149,9 @@ def test_init_initializes_linked_worktree_root(
 
     assert result.exit_code == 0
     assert not (root / ".gitignore").exists()
+    assert (
+        "/.cmoc/" in (root / ".git" / "info" / "exclude").read_text().splitlines()
+    )
     assert "/.cmoc/" in (linked / ".gitignore").read_text()
     assert (
         subprocess.run(
@@ -158,6 +161,14 @@ def test_init_initializes_linked_worktree_root(
         == 0
     )
     assert (root / ".cmoc" / "config.json").is_file()
+    assert (
+        subprocess.run(
+            ["git", "check-ignore", "-q", ".cmoc/config.json"],
+            cwd=root,
+        ).returncode
+        == 0
+    )
+    assert run_git(root, "status", "--short", "--", ".cmoc").stdout.strip() == ""
     assert not (linked / ".cmoc" / "config.json").exists()
     assert len(list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))) == 1
     assert not (linked / ".cmoc" / "log" / "sub_command").exists()
