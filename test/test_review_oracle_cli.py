@@ -426,6 +426,11 @@ def test_review_oracle_full_scope_includes_binary_and_excludes_gitignored_oracle
 ) -> None:
     root = make_repo(tmp_path)
     add_tracked_ignored_oracle_file(root)
+    outside_target = tmp_path / "ignored-link-target.md"
+    outside_target.write_text("# outside\n")
+    with (root / ".gitignore").open("a") as file:
+        file.write("oracle/ignored-link.md\n")
+    (root / "oracle" / "ignored-link.md").symlink_to(outside_target)
     (root / "oracle" / "asset.bin").write_bytes(b"\x00\x01binary\n")
     (root / "memo" / "oracle").mkdir(parents=True)
     (root / "memo" / "oracle" / "draft.md").write_text("# memo draft\n")
@@ -435,7 +440,10 @@ def test_review_oracle_full_scope_includes_binary_and_excludes_gitignored_oracle
     run_git(
         root,
         "add",
+        "-f",
+        ".gitignore",
         "oracle/asset.bin",
+        "oracle/ignored-link.md",
         "memo/oracle/draft.md",
         "oracle/memo/kept.md",
         "oracle/memo-link.md",
@@ -474,6 +482,7 @@ def test_review_oracle_full_scope_includes_binary_and_excludes_gitignored_oracle
     assert "`oracle/asset.bin`" in rendered
     assert "`oracle/memo/kept.md`" in rendered
     assert "`oracle/spec.md`" in rendered
+    assert "oracle/ignored-link.md" not in rendered
     assert "oracle/ignored.md" not in rendered
     assert "oracle/memo-link.md" not in rendered
     assert "memo/oracle/draft.md" not in rendered
@@ -563,13 +572,25 @@ def test_review_oracle_session_scope_excludes_changed_gitignored_oracle_files(
 ) -> None:
     root = make_repo(tmp_path)
     add_tracked_ignored_oracle_file(root)
+    outside_target = tmp_path / "ignored-link-target.md"
+    outside_target.write_text("# outside\n")
+    with (root / ".gitignore").open("a") as file:
+        file.write("oracle/ignored-link.md\n")
+    (root / "oracle" / "ignored-link.md").symlink_to(outside_target)
+    run_git(root, "add", "-f", ".gitignore", "oracle/ignored-link.md")
+    run_git(root, "commit", "-m", "add ignored oracle symlink")
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
     (root / "oracle" / "ignored.md").write_text("# ignored changed\n")
+    changed_target = tmp_path / "changed-ignored-link-target.md"
+    changed_target.write_text("# changed outside\n")
+    (root / "oracle" / "ignored-link.md").unlink()
+    (root / "oracle" / "ignored-link.md").symlink_to(changed_target)
     run_git(root, "add", "oracle/ignored.md")
+    run_git(root, "add", "-f", "oracle/ignored-link.md")
     run_git(root, "commit", "-m", "change ignored oracle")
     calls: list[str] = []
 
@@ -588,6 +609,7 @@ def test_review_oracle_session_scope_excludes_changed_gitignored_oracle_files(
     ).read_text()
     assert "oracle_count_total: 1" in rendered
     assert "oracle_count_evaluated: 0" in rendered
+    assert "oracle/ignored-link.md" not in rendered
     assert "oracle/ignored.md" not in rendered
     assert "result: no_targets" in rendered
 
