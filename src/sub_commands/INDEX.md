@@ -65,85 +65,91 @@
 # `review.py`
 
 ## Summary
-- review oracle サブコマンドの実行入口と実行全体の制御を担う実装。indexing preflight を通したうえで CLI 共通実行枠に処理を渡し、active session branch・clean worktree などの前提確認、isolated review worktree と一時 review branch の作成、oracle 対象列挙、レビュー実行、INDEX 変更の commit/merge、レポート出力、失敗時レポート出力と後片付けをまとめて orchestration する。
-- レビュー対象の列挙、review loop、INDEX 変更の commit/merge、レポート描画・書き込みなどの具体処理は下位モジュールへ委譲し、この対象はそれらを現在の session state と worktree 操作に接続する入口として位置づく。
+- eval-oracle サブコマンドの実行入口として、indexing preflight、CLI runtime 経由の実行、active session branch 検証、isolated review worktree 作成、oracle target 列挙、レビュー loop 実行、INDEX 変更 commit と merge、report 出力までの全体制御を担う。
+- レビュー対象列挙、レビュー loop、report rendering、review branch merge や conflict 解決などの詳細処理は別モジュールから再公開し、このモジュール自体はそれらを組み合わせる orchestration 層として位置づく。
 
 ## Read this when
-- review oracle サブコマンドがどの前提条件で実行を拒否するか、どの順序で一時 worktree・branch・review loop・merge・report 生成を進めるかを確認したいとき。
-- review oracle の scope 指定、active session branch 判定、clean worktree 要求、cmoc ignore 確保、失敗時にも report path を出力して例外を再送出する制御を変更したいとき。
-- review oracle の処理全体に新しい段階を差し込む、または既存の対象列挙・review loop・INDEX 変更 commit/merge・レポート生成 helper の接続関係を追いたいとき。
+- eval-oracle の起動条件、scope validation、active session branch や clean worktree の前提条件、run worktree と review branch のライフサイクルを確認したいとき。
+- oracle review の一連の流れで、対象列挙、Codex 実行、INDEX 変更 commit、session branch への merge、report 書き出しがどの順序で接続されるかを追いたいとき。
+- eval-oracle 実行失敗時にも report を書き出して path を表示する制御や、作成した worktree と branch の後始末を確認したいとき。
+- 他の review 系 helper がサブコマンド公開面からどの名前で再公開されているかを確認したいとき。
 
 ## Do not read this when
-- oracle file の列挙条件そのものを調べる場合は、対象列挙を担当する下位モジュールを直接読む。
-- review loop 内で Codex 実行結果から finding を作る処理や finding merge operation の適用内容を調べる場合は、loop を担当する下位モジュールを直接読む。
-- review report の表示形式、finding section の描画、report file の内容や path 表示を調べる場合は、report を担当する下位モジュールを直接読む。
-- review branch の merge conflict 解決、INDEX 変更 commit、worktree status path の扱いを単独で調べる場合は、index 変更処理を担当する下位モジュールを直接読む。
+- oracle target の列挙条件そのものを変更したい場合は、対象列挙を担当するモジュールを直接読む。
+- Codex を使った review loop の prompt、反復制御、finding の merge operation を調べたい場合は、review loop を担当するモジュールを直接読む。
+- review report の表示形式、section rendering、report file 書き出し内容を変更したい場合は、report 生成を担当するモジュールを直接読む。
+- review branch の merge、INDEX 変更 commit、conflict 解決、worktree status path の詳細だけを調べたい場合は、review index 操作を担当するモジュールを直接読む。
 
 ## hash
-- 2ef95be3d2d0fe22ecac96e4882f71d98eb321210eb481f04634db39f969a994
+- 3ef6d1bc545ad76b9bbd90750ee81f80b445e4d1ddb926c3a5e83f370594ccb0
 
 # `review_index.py`
 
 ## Summary
-- review 用 worktree で生成されたルーティング文書の差分を検査し、許可された変更だけを commit する処理を担う。
-- review branch を session branch へ merge し、競合がルーティング文書だけに限定される場合は現在側を採用または削除して自動解決する。
-- git の status、diff、merge、checkout、rm、commit などを呼び出す制御と、想定外差分や merge 失敗時の cmoc 向けエラー化をまとめている。
+- review worktree で生成された索引変更の扱いと、review branch を session branch へ取り込む際の索引競合処理を担う実装。
+- 変更対象が索引文書だけであることを検査し、必要な場合だけ git add/commit を行い、merge 時に索引文書だけの競合なら ours 側または削除で自動解決する。
+- git status の porcelain 出力から変更 path を抽出する補助処理と、未マージ stage に ours が存在するかを判定する補助処理も含む。
 
 ## Read this when
-- review oracle が作成したルーティング文書差分だけを commit する条件や、ルーティング文書以外の差分を拒否する挙動を確認したいとき。
-- review branch の merge 後 HEAD 取得、merge 失敗時の扱い、未解決競合の自動解決条件を確認したいとき。
-- git status の porcelain 出力から変更パスを抽出する処理、rename/copy の扱い、unmerged stage の確認方法を調べたいとき。
+- eval-oracle や review worktree が生成した索引変更を、どの条件で commit するか確認・変更したいとき。
+- review branch の merge 失敗時に、索引文書の競合だけを自動解決する挙動を確認・変更したいとき。
+- review worktree の差分に索引文書以外が混ざった場合のエラー条件やメッセージを確認・変更したいとき。
+- git status、git diff、git merge、git checkout、git rm、git commit、git ls-files を使った review indexing 周辺の制御を追いたいとき。
 
 ## Do not read this when
-- 通常のサブコマンド引数定義、CLI 出力形式、ユーザー入力の parsing を調べたいだけのとき。
-- ルーティング文書の内容生成、要約文作成、Structured Output の schema 定義を調べたいとき。
-- oracle file と realization file の概念やルーティング文書そのものの仕様を確認したいとき。
+- 索引文書の本文生成ルールやエントリー内容の仕様を知りたいだけのとき。
+- 通常のサブコマンド引数定義、CLI ルーティング、ユーザー向け出力形式を調べたいとき。
+- review worktree や review branch に関係しない一般的な git helper の実装を探しているとき。
+- oracle file や realization file の概念定義そのものを確認したいとき。
 
 ## hash
-- fd46086c773e71294be6c9b8ed3da758d0729bfa1dc795d5f35336f661efd447
+- 5ceecd964dac04fabef32a48030cd482c962333599d7ac5e6c395fb5ac83e7ea
 
 # `review_loop.py`
 
 ## Summary
-- review oracle による finding の列挙、統合、検証、判定を一連のループとして実行する制御ロジックを扱う。
-- oracle path と finding の対応付け、finding_id や検証理由・判定結果の初期値付与、merge operation の適用と妥当性検証を担う。
-- Codex 実行関数に渡す review oracle 用パラメータを組み立て、設定値で定められた反復回数に従って finding list を更新する入口になる。
+- review oracle の finding を、列挙、重複整理、検証、判定の順に反復処理する実行ロジックを扱う。
+- oracle 由来の指摘候補を保持し、finding_id や検証理由、判定結果などの内部状態を補完しながら、Codex 実行関数へ各段階のパラメータを渡す入口である。
+- finding の oracle path 解決、対象 oracle ごとの既存 finding 抽出、merge operation の検証と適用も同じ責務内に含む。
 
 ## Read this when
-- review oracle の finding enumerate/merge/validate/judge の実行順序、反復条件、停止条件を確認または変更したいとき。
-- finding の `oracle_path` を実パスへ解決し、既存 finding を対象 oracle file ごとに絞り込む挙動を確認したいとき。
-- merge finding の `delete`、`replace`、`merge` operation が既存 finding list にどう適用されるか、また不正な target や重複利用をどう拒否するかを確認したいとき。
-- finding に `finding_id`、`advocate_reasons`、`challenger_reasons`、`verdict`、`judge_reason` の初期値が付与される箇所を追いたいとき。
-- review oracle の各段階で Codex 実行関数へ渡す目的文字列、作業ディレクトリ、ログルート、設定の受け渡しを確認したいとき。
+- review oracle の finding enumerate/merge/validate/judge の制御順序、反復回数、終了条件を確認または変更したいとき。
+- finding の初期フィールド、finding_id 採番、advocate/challenger 理由、verdict、judge_reason の扱いを確認したいとき。
+- merge finding の delete、replace、merge operation の入力検証、target_ids の重複・未知 ID 検出、置換後 finding の追加処理を確認したいとき。
+- finding に含まれる oracle_path を実パスへ解決し、特定 oracle に関連する finding を絞り込む挙動を調べたいとき。
+- review oracle 用 builder 関数と codex 実行関数のつなぎ込み、log root、worktree、config の渡し方を追いたいとき。
 
 ## Do not read this when
-- review oracle 用プロンプトや Structured Output parameter の具体的な構築内容を確認したいだけなら、builder 側の対象を読む。
-- 設定ファイル上の review oracle 反復回数や設定 schema の定義を確認したいだけなら、設定モデル側の対象を読む。
-- path keyword の定義や `<...>` 形式の path 解決規則そのものを確認したいだけなら、path model 側の対象を読む。
-- CLI サブコマンドの引数定義、コマンド登録、利用者向け入出力を確認したいだけなら、サブコマンド入口や CLI 定義側の対象を読む。
-- review finding の品質基準や oracle file と realization file の仕様上の関係を確認したいだけなら、正本仕様断片側の対象を読む。
+- 個々の review oracle プロンプトや Structured Output パラメータの文章そのものを確認したいだけなら、builder 側を直接読む。
+- review oracle の反復回数など設定値の定義や読み込みを確認したいだけなら、設定モデル側を読む。
+- 通常の CLI サブコマンド登録、引数解析、ユーザー向け出力の入口を確認したいだけなら、サブコマンドの上位実装を読む。
+- oracle path トークン全般の定義や `<work-root>` などの解決規則そのものを確認したいだけなら、path model 側を読む。
+- テストで期待される外部挙動や回帰条件を探したいだけなら、対応する realization test を読む。
 
 ## hash
-- 86cde0b2e0151ed2d36309831353b40d7525abae13ac516f2e8f44bbd517cffb
+- ea2d43547d6cb573c0381fe20ab8ef39eac09ed6c30d2ccf19303787816c740f
 
 # `review_report.py`
 
 ## Summary
-- review oracle の結果レポートを生成する実装。評価対象の oracle、finding の採否・重大度別集計、レビュー用 branch/commit 情報、エラー状態を Markdown と YAML frontmatter に整形し、レポート保存先へ書き出す責務を持つ。
-- finding の表示、総合 verdict の決定、oracle 配下として見せるための path 表示整形など、review oracle レポート本文の組み立てに必要な小さな helper も同じまとまりで扱う。
+- eval-oracle のレビュー結果レポートを Markdown と YAML frontmatter の文字列として組み立て、review_oracle レポート保存先へ書き出す処理を担う。
+- レビュー対象 oracle file、finding の severity/verdict、実行中エラー、review 用 branch/commit 情報、session 情報から、集計値・判定文・finding セクション・oracle path 表示を生成する。
+- oracle path を利用者向け表示に整える補助処理と、frontmatter field、finding section、最終 verdict の描画 helper を同じ責務内に持つ。
 
 ## Read this when
-- review oracle のレポート出力内容、frontmatter の項目、見出し構成、finding の分類・表示、または result/verdict の判定条件を確認・変更したいとき。
-- review oracle 実行時に生成されるレポートファイルの保存処理、保存ディレクトリ、タイムスタンプ付きレポート生成の流れを追いたいとき。
-- oracle file の表示パスが、repo root 相対または oracle 起点としてどのように整形されるかを確認したいとき。
+- eval-oracle のレポート本文、frontmatter、見出し、判定文、finding の表示内容を変更したいとき。
+- fatal/minor finding、accept/reject、エラー発生、レビュー対象 0 件などの条件がレポート結果にどう反映されるかを確認したいとき。
+- review_oracle レポートの保存先作成、ファイル名生成、Markdown 書き込みの流れを確認したいとき。
+- oracle file の表示パスを、repo root 相対または oracle 起点の表記へ整える処理を調べたいとき。
 
 ## Do not read this when
-- review oracle がどの oracle を収集・評価するか、外部レビュー処理をどう起動するか、finding の元データをどう作るかを知りたいだけのとき。
-- review oracle 以外のサブコマンドの CLI 引数、状態更新、レポート形式を調べたいとき。
-- reports directory や timestamp など、レポート生成共通の低レベル runtime helper 自体の仕様を確認したいとき。
+- CLI 引数の定義、サブコマンド登録、eval-oracle 実行フローそのものを調べたいだけのとき。
+- oracle file の検出、finding の生成、LLM レビュー、accept/reject 判定ロジックを調べたいとき。
+- reports directory や timestamp の共通仕様を変更したいとき。
+- 生成済みレポートを読む、またはレポート内容を利用する側の処理を探しているとき。
 
 ## hash
-- c735d523554a1f2fc90ccdc9d92499da36540150b1ce2795cb72602f2930bc62
+- adbeaff12d3e31ebe81492b8ebc4dc04c0110085a5987f1a4ad86833c0d6da0a
 
 # `review_targets.py`
 

@@ -44,25 +44,28 @@
 # `review`
 
 ## Summary
-- `cmoc review oracle` 向けの agent 呼び出しパラメータ構築を担う領域。oracle file からレビュー所見を列挙し、支持理由・反証理由を検証し、採否判定し、重複や矛盾を整理する各段階の prompt と Structured Output schema を扱う。
-- レビュー対象を oracle file に限定し、既存所見や既知理由との重複を避けつつ、review oracle 標準を反映した入力文脈と出力契約を組み立てるための入口になる。
+- `cmoc eval-oracle` の oracle review に使う AI 呼び出しパラメータと Structured Output 契約をまとめる領域。正本仕様断片を根拠にした新規所見の列挙、所見を支持・否定する理由の収集、所見を人間へ提示するかの採否判定、複数所見の重複・矛盾整理を扱う。
+- レビュー対象の oracle file、既知所見、既知の支持理由・反対理由、所見リストを prompt に渡し、推測ではなく oracle file の具体的根拠に基づく結果だけを返させる制御を確認するための入口である。
+- review oracle の各段階について、prompt の役割、読み取り権限、モデル・推論設定、対応する出力契約の関係を追うためのルーティング単位である。
 
 ## Read this when
-- `cmoc review oracle` の AI 呼び出しで、oracle file から所見候補を出し、理由を追加検証し、採否を判定し、既存所見との重複・矛盾を整理する流れを確認したいとき。
-- レビュー所見、既知の関連所見、既知の肯定理由、既知の否定理由を prompt にどう渡し、新規情報だけを返させるかを実装・調整したいとき。
-- oracle file レビュー用の Structured Output schema と AgentCallParameter の対応を確認したいとき。
-- 所見の重大度、根拠、支持理由、反証理由、採否、削除・置換・統合といったレビュー結果の受け渡し境界を確認したいとき。
-- oracle file を根拠にした所見の妥当性支持と反証を分けて扱う検証フローを追いたいとき。
+- `cmoc eval-oracle` の oracle review で、所見の列挙、検証、採否判定、整理に使う AI 呼び出しパラメータを確認したいとき。
+- oracle file を根拠にしたレビュー所見について、既知情報と重複しない新規所見や新規理由だけを返させる prompt 制御を確認したいとき。
+- 所見が妥当である理由と妥当ではない理由を、それぞれ oracle file の具体的根拠から収集する処理を確認したいとき。
+- 収集済みの支持理由・反対理由を踏まえて、所見を人間へ提示すべきか判定する AI 呼び出しと出力契約を確認したいとき。
+- 複数の review oracle 所見について、削除・置換・統合により重複や矛盾を整理する編集操作の出力契約を確認したいとき。
+- review oracle 系の Structured Output schema と、それを参照するエージェント呼び出しパラメータの対応関係を確認したいとき。
 
 ## Do not read this when
-- oracle file や realization file の基本定義、編集責任、配置ルールだけを確認したいとき。
-- 個別の正本仕様断片そのものや、レビュー対象としてどの oracle file を探索するかを調べたいとき。
-- `cmoc review oracle` の CLI 入口、実行制御、保存、表示、集約、通知など、agent 呼び出しパラメータ構築より外側の処理を確認したいとき。
-- oracle file 以外の realization file レビューや、通常の実装レビュー用 prompt 構築を探しているとき。
-- 汎用的な AgentCallParameter、markdown rendering、path 解決、complete prompt 組み立て helper の共通処理だけを調べたいとき。
+- oracle file や realization file の基本定義、所有責任、配置ルールを確認したいだけのとき。
+- レビュー対象となる正本仕様断片そのものや、個別の oracle file 本文を読みたいとき。
+- `cmoc eval-oracle` 以外のサブコマンドに関する prompt 構築、AI 呼び出しパラメータ、Structured Output 契約を探しているとき。
+- prompt 部品の共通組み立て、markdown rendering、パス解決、基本データ型など、review oracle 固有ではない基盤処理を確認したいとき。
+- 生成済みの所見や編集操作を保存・表示・通知・適用する後段処理を探しているとき。
+- INDEX.md エントリーの一般的な記述方針や、ルーティング文書そのものの標準を確認したいとき。
 
 ## hash
-- e26067e72d898d32b326c708729c24c0cb480da17a4084bf89f9288d93eb0374
+- 1ca7defc433c0f33006a395b0b69cc3a1eb2f479fc3b2f6045a293fb5949a16c
 
 # `session`
 

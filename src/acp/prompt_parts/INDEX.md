@@ -23,21 +23,24 @@
 # `complete_prompt.py`
 
 ## Summary
-- agent call に渡す完全な prompt part 群を構築する realization。基本 prompt に file access rule、routing rule、任意追加 prompt を含め、指定された標準 prompt 群を依存関係に従って追加する責務を持つ。
-- root token を具体 path に置換し、呼び出し先 agent へ渡す文面からこのツール固有の呼称を作業対象寄りの表現へ置換する sanitization も扱う。
+- agent call に渡す完全なプロンプトを、基本プロンプト、ファイルアクセス規則、ルーティング規則、任意追加プロンプト、各種標準プロンプト断片から組み立てる realization。
+- 指定された標準プロンプト断片の有効化に応じて、依存する基本情報や oracle/realization 関連標準を自動的に含める責務を持つ。
+- 構築したプロンプト内の root token を実パスへ置換し、呼び出し先に渡す文面からこのツール固有の呼称を作業対象向けの表現へ置換する。
 
 ## Read this when
-- agent call 用 prompt の全体構成、標準 prompt の注入順、または標準 prompt flag 間の依存関係を確認・変更したいとき。
-- role、summary、goal、file access rule、routing rule、追加 prompt、oracle/realization/review/index entry 系標準 prompt がどのように 1 つの prompt list に統合されるかを追いたいとき。
-- prompt 内の root token 置換や、このツール固有語を呼び出し先向け表現へ言い換える処理を確認・変更したいとき。
+- agent call に渡す最終プロンプト全体の構成順、含める prompt part、または標準プロンプト断片間の依存関係を確認・変更したいとき。
+- oracle standard、realization standard、review/apply/index entry などの標準プロンプトを、どのフラグで注入するか確認したいとき。
+- プロンプト中の root token が具体パスへ解決される挙動、またはツール固有用語が呼び出し先向け表現へ置換される挙動を確認・変更したいとき。
+- agent call 用 prompt part の統合結果に、ファイルアクセス規則、ルーティング規則、補助プロンプトがどのように含まれるかを追いたいとき。
 
 ## Do not read this when
-- 個別の file access rule、routing rule、oracle standard、realization standard、review standard、index entry standard の本文内容だけを確認したいときは、それぞれの標準 prompt を生成する対象を直接読む。
-- root token の定義や real path 解決規則そのものを確認したいときは、path model 側を読む。
-- 構造化ドキュメントや code block のデータ構造そのものを確認したいときは、構造化ドキュメント定義側を読む。
+- 個別のファイルアクセス規則、ルーティング規則、oracle standard、realization standard など、各 prompt part の本文内容だけを確認・変更したいとき。
+- root token の定義、実パス解決、作業ルート解決そのものを確認・変更したいとき。
+- StructDoc や StructCodeBlock のデータ構造、文書表現の基本仕様を確認・変更したいとき。
+- agent call の実行処理、外部プロセス呼び出し、または CLI サブコマンドの制御フローを確認したいとき。
 
 ## hash
-- 24d09388c6d70cd1bc6bd29815d1890602d53edfb5c74f41a024a56ea7f2c0f3
+- 56a38f6e7b510df1565289623e6343b89ed530f7d0f87115b95cd769222bff0c
 
 # `file_access_rule.py`
 

@@ -251,24 +251,26 @@
 # `test_indexing_preflight.py`
 
 ## Summary
-- Codex 実行・TUI 起動の直前に INDEX 更新を走らせる preflight 制御を検証する realization test。
-- preflight が対象 worktree を選ぶこと、生成された INDEX 更新を cmoc indexing コミットとして残し作業ツリーを清潔に戻すこと、既存のリポジトリ単位ロックを待つこと、INDEX エントリー生成や競合解決の目的では preflight をスキップすることを扱う。
-- 実際の Codex 呼び出しや INDEX 生成は monkeypatch で差し替え、git worktree、lock file、呼び出し順、コミット履歴、副作用を観察して制御ロジックを確認する。
+- Codex 呼び出し前に自動実行される indexing preflight の realization test。exec/TUI 経由の Codex 実行時に indexing が先に走り、生成された INDEX.md が `cmoc indexing` としてコミットされ、作業ツリーが clean に戻ることを検証する。
+- Codex 実行の `cwd` が別 worktree 内にある場合は、指定 root ではなくその worktree を indexing 対象にする制御を検証する。
+- repository 単位の indexing lock により、同時実行中の preflight が待機してから update を行うことを検証する。
+- INDEX.md エントリー生成や join conflict resolution など、preflight を再帰・競合させるべきでない purpose では indexing を skip することを検証する。
 
 ## Read this when
-- Codex 実行前に INDEX 更新を自動実行する制御を変更・調査するとき。
-- preflight が root と cwd のどちらの worktree を更新対象にするかを確認するとき。
-- INDEX 更新のコミット作成、作業ツリー清掃、またはリポジトリロック待機の挙動を変更するとき。
-- Codex 呼び出しの purpose に応じて indexing preflight を実行またはスキップする条件を変更するとき。
+- Codex 実行前に `update_indexes` を呼ぶ条件、呼び出し順、commit 副作用、clean 状態の保証を変更する。
+- Codex 実行時の `root` と `cwd` から indexing 対象 worktree を決めるロジックを変更する。
+- indexing preflight の repository lock、待機、同時実行制御を変更する。
+- purpose による indexing preflight の有効化・skip 条件を変更する。
+- Codex exec/TUI ラッパーと indexing preflight の接続部分を変更した後、外部挙動の回帰確認をしたい。
 
 ## Do not read this when
-- INDEX の本文生成内容、エントリー文章、差分解析そのものを確認したいとき。
-- apply join の通常の競合解決処理や fork refine の詳細挙動を調べたいだけのとき。
-- Codex CLI や TUI の実プロセス起動方法、モデル指定、ランタイム統合の一般仕様を調べたいとき。
-- ロックの低レベル実装だけを調べたい場合で、preflight からの待機制御に関心がないとき。
+- INDEX.md の本文生成形式、エントリー文面、Structured Output schema の内容だけを確認したい。
+- 個別ファイルのルーティング文書エントリー生成ロジックそのものを調べたい。
+- Codex CLI や TUI の実プロセス起動、LLM 出力品質、プロンプト内容の検証を調べたい。
+- git worktree や commit 操作の汎用 helper の実装だけを調べたい場合は、より直接その helper や実装側を読む。
 
 ## hash
-- 1e43cf0d39575b2dffeea90d89f05e0c252de3a1a50fe6eb29891fc5fe95558d
+- 75a92efed96acaa1d9cd68b846db3e96dda8a42e059fbf7a844234e514f635d9
 
 # `test_prompt_parts.py`
 
@@ -296,24 +298,25 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle の CLI 経由の外部挙動を検証する realization test。report 生成、scope 指定、対象 oracle の選択、所見列挙・検証・judge・merge、結果集計、エラー report、review 用 worktree と join commit、INDEX.md 差分の取り込みや競合解決、review 実行中の許容外差分拒否を扱う。
-- 16,000 文字を超えるが、review oracle run の状態、fake Codex 応答、report 文脈を共有する挙動群を一箇所で検証するための凝集したテスト群として位置づけられている。
+- eval-oracle の外部挙動を CLI 経由で検証する realization test。report 生成、review 対象 oracle の選択、所見の列挙・検証・judge・merge、結果集計、error report、review 用 worktree と INDEX.md 変更の取り込み、作業ツリー汚染の拒否をまとめて扱う。
+- 所見 loop と report 文脈を共有するため、16,000 文字を超えていても同一 review run の状態確認を一箇所に保つ構成になっている。
 
 ## Read this when
-- review oracle コマンドの report 内容、終了コード、scope の扱い、対象 oracle の選定条件を変更または確認する時。
-- 所見の列挙・検証・judge・merge loop、finding の verdict や severity による並び順・集計・表示を変更または確認する時。
-- review 実行用 worktree、session branch、fork commit、join commit、INDEX.md 変更の取り込み、INDEX.md 競合解決に関わる挙動を変更または確認する時。
-- review oracle が gitignored oracle、binary、symlink、memo 配下に見える path、session scope の変更対象をどう扱うか確認する時。
-- review oracle 実行中の Codex 処理失敗時の error report、または INDEX.md 以外の worktree 差分を拒否する制御を変更または確認する時。
+- eval-oracle の CLI 実行結果、report の見出し・集計値・verdict 表示・エラー表示を変更または確認したいとき。
+- review 対象 oracle の選択条件を確認したいとき。特に full scope と session scope、gitignored oracle、binary、symlink、memo 配下に見えるパス、linked worktree 上の oracle の扱いを追うとき。
+- 所見の列挙 loop、既出所見の prompt への渡し方、validate・judge・merge の呼び出し条件や結果順序を変更または検証するとき。
+- apply_finding_merge_operations の delete・replace・merge operation の契約、invalid operation、target の再利用拒否を確認するとき。
+- eval-oracle が review 用 worktree で生成した INDEX.md だけを session 側へ反映する挙動、INDEX.md conflict 解決、非 INDEX.md 差分の拒否を扱うとき。
+- eval-oracle 失敗時にも途中結果を report として残し、標準出力へ error 情報を出す挙動を確認するとき。
 
 ## Do not read this when
-- review oracle 以外の CLI サブコマンドや一般的な session 操作だけを確認したい時。
-- oracle review の仕様本文や人間意図そのものを確認したい時。この対象は realization test であり、正本仕様ではない。
-- report rendering や merge operation の内部実装だけを局所的に読みたい時は、まず実装側の該当関数を直接確認すればよい。
-- INDEX.md 生成一般、routing entry の書式、またはテスト基盤全般を確認したいだけの時。
+- oracle 正本仕様そのものの内容や編集方針を確認したいとき。この対象は realization test であり、正本仕様の入口ではない。
+- eval-oracle 以外の CLI command、session 管理一般、設定 loader 一般、path model 一般の挙動を調べたいとき。
+- run_codex_exec の実装詳細や Codex CLI との低レベル連携を調べたいとき。この対象は fake 応答を使って eval-oracle 側の制御と出力を検証している。
+- 単体の helper 実装の内部構造だけを追いたいとき。外部挙動や review run 全体の状態共有に関係しない場合は、対応する実装側を直接読む方が適切。
 
 ## hash
-- ea7d3f24f774abdb135ebb656a95428d110ed907232765d5023af12e591d0c1f
+- 592e83bfd5d2b68042e46eabd9fb1cc290859dc9c1c73f3de71e595d4ea94c31
 
 # `test_session_cli.py`
 
