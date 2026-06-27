@@ -358,7 +358,7 @@ def test_apply_abandon_checks_linked_session_worktree_dirty(
     result = runner.invoke(app, ["apply", "abandon"])
 
     assert result.exit_code != 0
-    assert "git 未コミット差分が存在します。" in result.output
+    assert "git 未コミット差分が存在します。" in result.stderr
     assert apply_worktree.is_dir()
     assert run_git(root, "rev-parse", "--verify", apply_branch).returncode == 0
     state = json.loads(state_path.read_text())

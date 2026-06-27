@@ -19,7 +19,7 @@ def run_cli_subcommand(
     pre_log_check: Callable[[Path], None] | None = None,
     command_name: str | None = None,
     command_argv: Sequence[str] | None = None,
-    error_to_stderr: bool = False,
+    error_to_stderr: bool = True,
     use_work_root_runtime: bool = False,
     **kwargs: Any,
 ) -> None:
@@ -29,6 +29,7 @@ def run_cli_subcommand(
     開始・完了表示、戻り値の終了コード化、例外のエラー表示を一箇所で扱う。
     runtime state は通常 repo root に置き、init だけは初期化対象である work root に置く。
     サブコマンドログは常に repo root に置く。
+    エラーレポートは `<work-root>/oracle/doc/app_spec/console_and_file_log.md` に従い stderr へ出す。
     """
     logger = None
     logger_token = None
