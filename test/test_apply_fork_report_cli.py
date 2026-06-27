@@ -19,6 +19,11 @@ from _support import (
 from main import app
 from pytest import MonkeyPatch
 import sub_commands.apply.fork as apply_fork_module
+from sub_commands.apply.fork_report import (
+    changed_diff_since_fork,
+    changed_paths_since_fork,
+    fallback_change_summary,
+)
 
 
 class FakeCodexResult:
@@ -387,6 +392,28 @@ def test_apply_fork_error_report_summarizes_uncommitted_diff(
     rendered = report_path_from_stdout(result.stdout).read_text()
     assert "result: error" in rendered
     assert "実装: commit 前に README を更新した (README.md)" in rendered
+
+
+def test_apply_fork_change_summary_includes_untracked_files(tmp_path: Path) -> None:
+    """report 用変更要約は未追跡 file だけの作業 tree も差分として扱う。"""
+    root = make_repo(tmp_path)
+    fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    (root / "new_realization.py").write_text("print('new')\n")
+
+    raw_diff = changed_diff_since_fork(root, fork_commit)
+    paths = changed_paths_since_fork(root, fork_commit)
+    fallback = fallback_change_summary(root, fork_commit, "fallback")
+
+    assert "new_realization.py" in raw_diff
+    assert "+print('new')" in raw_diff
+    assert paths == ["new_realization.py"]
+    assert fallback == [
+        {
+            "category": "fallback",
+            "summary": "変更 path のみを機械的に記録しました。",
+            "changed_paths": ["new_realization.py"],
+        }
+    ]
 
 
 def test_apply_fork_report_does_not_invent_loop_when_no_targets(

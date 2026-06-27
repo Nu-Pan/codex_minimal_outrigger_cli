@@ -127,9 +127,33 @@ def changed_diff_since_fork(apply_worktree: Path, fork_commit: str) -> str:
             ["diff", "HEAD"],
         ]
     )
-    return "\n".join(
+    diffs = [
         diff for command in commands if (diff := run_git(command, apply_worktree).stdout)
-    )
+    ]
+    diffs.extend(untracked_file_diffs(apply_worktree))
+    return "\n".join(diffs)
+
+
+def untracked_paths(apply_worktree: Path) -> list[str]:
+    return run_git(
+        ["ls-files", "--others", "--exclude-standard"], apply_worktree
+    ).stdout.splitlines()
+
+
+def untracked_file_diffs(apply_worktree: Path) -> list[str]:
+    # `<work-root>/oracle/doc/app_spec/sub_command/apply_fork.md` requires all
+    # apply-branch changes; `<work-root>/oracle/doc/app_spec/misc_spec.md` makes
+    # untracked worktree files part of that.
+    diffs: list[str] = []
+    for path in untracked_paths(apply_worktree):
+        result = run_git(
+            ["diff", "--no-index", "--", "/dev/null", path],
+            apply_worktree,
+            check=False,
+        )
+        if result.stdout:
+            diffs.append(result.stdout)
+    return diffs
 
 
 def fallback_change_summary(
@@ -168,10 +192,13 @@ def changed_paths_since_fork(apply_worktree: Path, fork_commit: str) -> list[str
         ]
     )
     paths: list[str] = []
-    for command in commands:
-        for path in run_git(command, apply_worktree).stdout.splitlines():
-            if path not in paths:
-                paths.append(path)
+    for path in [
+        path
+        for command in commands
+        for path in run_git(command, apply_worktree).stdout.splitlines()
+    ] + untracked_paths(apply_worktree):
+        if path not in paths:
+            paths.append(path)
     return paths
 
 
