@@ -16,6 +16,7 @@ from _support import (
 from commons.runtime_codex_profile import build_codex_profile
 from main import app
 import sub_commands.session.abandon as session_module
+import sub_commands.session.fork as session_fork_module
 import sub_commands.session.join as session_join_module
 
 
@@ -27,6 +28,20 @@ def session_state_path(root: Path, session_branch: str) -> Path:
 def session_home_branch(root: Path, session_branch: str) -> str:
     state = json.loads(session_state_path(root, session_branch).read_text())
     return state["session"]["session_home_branch"]
+
+
+def write_abandoned_state(root: Path, session_id: str) -> Path:
+    path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {"session": {"state": "abandoned", "session_home_branch": "old-home"}},
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n"
+    )
+    return path
 
 
 def test_session_fork_creates_session_branch_and_state(
@@ -48,6 +63,54 @@ def test_session_fork_creates_session_branch_and_state(
     assert state["session"]["session_home_branch"] == home_branch
     assert state["session"]["last_joined_apply_oracle_snapshot_commit"] is None
     assert state["apply"]["state"] == "ready"
+
+
+def test_session_fork_does_not_overwrite_existing_state_on_session_id_collision(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    session_id = "2026-06-27_01-02_03_000000000"
+    path = write_abandoned_state(root, session_id)
+    original = path.read_text()
+    home_branch = current_branch(root)
+    monkeypatch.setattr(session_fork_module, "timestamp", lambda: session_id)
+    monkeypatch.setattr(session_fork_module, "MAX_SESSION_ID_ATTEMPTS", 2)
+
+    result = runner.invoke(app, ["session", "fork"])
+
+    assert result.exit_code != 0
+    assert "一意な session-id を生成できませんでした。" in result.stdout
+    assert path.read_text() == original
+    assert current_branch(root) == home_branch
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", f"cmoc/session/{session_id}"],
+            cwd=root,
+        ).returncode
+        != 0
+    )
+
+
+def test_session_fork_retries_session_id_collision(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    collision_id = "2026-06-27_01-02_03_000000000"
+    next_id = "2026-06-27_01-02_03_000000001"
+    old_path = write_abandoned_state(root, collision_id)
+    original = old_path.read_text()
+    ids = iter([collision_id, next_id])
+    monkeypatch.setattr(session_fork_module, "timestamp", lambda: next(ids))
+
+    result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert current_branch(root) == f"cmoc/session/{next_id}"
+    assert old_path.read_text() == original
+    assert (root / ".cmoc" / "sessions" / f"{next_id}.json").is_file()
+    assert f"- session_branch: `cmoc/session/{next_id}`" in result.output
 
 
 def test_session_fork_initializes_cmoc_ignore_before_logging(
