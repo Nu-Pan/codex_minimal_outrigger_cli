@@ -19,23 +19,25 @@
 # `_runtime.py`
 
 ## Summary
-- apply 系処理で使う runtime helper をまとめる実装。session branch や apply branch から linked worktree を特定し、apply process の pid file を読み書きし、pidfd と process start time で同一性を確認しながら実行中 apply process を停止する責務を持つ。
-- git worktree の porcelain 出力、`.cmoc/state/apply_processes` 配下の永続 pid、Linux の `/proc` と pidfd をまたぐ、apply 実行時状態の低レベル操作の入口になる。
+- apply 実行時に使う worktree 特定、apply process の pid file 管理、process tracking 用環境変数の一時設定、実行中 apply process と Codex subprocess group の停止処理をまとめる実行時補助モジュール。
+- session branch や apply branch から対象 worktree を解決し、apply 中断・放棄時に stale pid や process identity を確認しながら安全に停止する責務を持つ。
 
 ## Read this when
-- apply branch 名から期待される worktree path を導く処理、または branch が checkout されている linked worktree の探索処理を確認・変更したいとき。
-- apply 実行中 process の pid file の生成、読み取り、削除、破損値や stale pid の扱いを確認・変更したいとき。
-- apply abandon などで既存 apply process を安全に停止する制御、SIGTERM/SIGKILL の順序、pidfd、process start time、権限不足時のエラーを確認・変更したいとき。
-- apply process の同一性確認に関係する Linux 依存の `/proc/<pid>/stat` 読み取り、pidfd open、pidfd signal、終了待機の挙動を調べたいとき。
+- apply の実行・中断・abandon 周辺で、session branch または apply branch から linked worktree を特定する処理を確認・変更したいとき。
+- apply process の pid file の保存場所、書き込み、読み取り、削除、child process 記録形式の扱いを確認・変更したいとき。
+- APPLY_PROCESS_TRACKING_ENV を使った process tracking の環境変数設定範囲や復元処理を確認・変更したいとき。
+- apply abandon などで実行中の apply process や Codex subprocess group に SIGTERM/SIGKILL を送り、停止確認や stale pid 判定を行う制御を確認・変更したいとき。
+- pidfd、process start time、process group id、権限不足、process 消滅時の扱いなど、process identity を保った停止安全性に関わる不具合を調査するとき。
 
 ## Do not read this when
-- apply サブコマンドの CLI 引数、利用者向け出力、上位の実行フローだけを確認したいとき。
-- session state file 全体の schema や apply 状態遷移の高レベル仕様を確認したいとき。
-- git worktree 作成・削除そのものの処理や、apply 用 branch の作成手順を確認したいとき。
-- process 停止や pid file に関係しない apply の差分適用、commit、merge、検証処理を調べたいとき。
+- apply の CLI 引数定義、サブコマンドの dispatch、ユーザー向け出力全体の流れだけを確認したいとき。
+- session state file の schema や apply branch 値そのものの生成・保存ルールを調べたいとき。
+- Codex CLI を起動するための command 組み立てやプロンプト生成を調べたいとき。
+- git worktree の一般的な作成・削除処理を調べたいだけで、branch から既存 linked worktree を解決する処理に関心がないとき。
+- process 停止に関係しない apply の差分適用、検証、結果保存、テスト観点を調べたいとき。
 
 ## hash
-- a921a309f8c677277658a3382f49adbccec6bb581f6e74b9946773ccd4bebe85
+- dc0dbe336dc11df7f60f91e714c78c01e3de2d2acf5ffc0e005d42dbdb9a718b
 
 # `abandon.py`
 
@@ -61,27 +63,26 @@
 # `fork.py`
 
 ## Summary
-- apply fork サブコマンドの実行本体を担い、session branch 上で isolated apply worktree を作成して、対象ファイルの所見列挙、所見適用、差分 commit、report 生成、状態更新を一連の apply loop として制御する実装。
-- apply scope から調査対象ファイルを列挙・正規化し、編集禁止対象への差分を検出してロールバックし、Codex CLI 呼び出しによる所見適用と commit subject 生成を扱う。
-- apply fork の正常終了、未収束終了、例外時 report、process id、apply state の遷移、直近 join 済み apply merge commit の解決に関する制御ロジックの入口になる。
+- apply fork サブコマンドの実行本体を担う実装。session branch 上の事前条件確認、isolated apply worktree の作成、対象ファイル列挙、Codex による finding 列挙と適用、禁止対象差分のロールバック、変更コミット、レポート出力、apply 状態更新までの制御フローをまとめて扱う。
+- apply scope から調査対象を決める処理、変更済み path の正規化、重複排除、直近 join 済み apply merge commit の解決など、apply fork loop の対象選定に必要な補助処理も含む。
+- Codex が生成した commit subject を 1 行に整形し、生成失敗時には適用済み finding から代替 subject を作る処理を持つ。
 
 ## Read this when
-- apply fork サブコマンドの事前条件、worktree 作成、apply branch、process id、state 更新、終了コード、stdout report path の挙動を確認・変更したいとき。
-- rolling、session、full の各 scope で apply finding 列挙対象がどの差分やファイル集合から決まるかを調べたいとき。
-- apply loop における所見列挙、所見適用、変更検出、commit 作成、収束・未収束判定の流れを追いたいとき。
-- apply fork 中に oracle、.agents、memo など編集禁止対象へ差分が出た場合の検出、ロールバック、再実行、エラー化の挙動を確認したいとき。
-- apply fork が生成する report、エラー report、commit subject、finding count、result label と Codex CLI 呼び出しの関係を調べたいとき。
-- last joined apply の oracle snapshot commit から、rolling scope の基準になる merge commit を git 履歴で解決する処理を確認したいとき。
+- apply fork の実行条件、状態遷移、worktree 作成、apply branch 名、process id 管理、成功・失敗時のレポート出力や終了コードを確認したいとき。
+- apply fork がどのファイルを finding 列挙対象にするかを、scope、session state、git diff、ignore、oracle 除外条件、INDEX 除外条件との関係で確認したいとき。
+- finding 適用中に oracle、.agents、memo へ差分が出た場合の検出、ロールバック、再実行、エラー化の挙動を確認したいとき。
+- apply fork loop が findings の有無、変更の有無、pending target、設定された処理回数に応じて converged、unconverged、error を決める流れを追いたいとき。
+- apply fork が Codex CLI に渡す役割を、finding 列挙、finding 適用、commit message 生成の各用途に分けて確認したいとき。
 
 ## Do not read this when
-- apply fork report の markdown 内容や出力文面だけを変更したい場合は、report 生成を担当する別実装を直接読む。
-- Codex に渡す所見列挙用または所見適用用の prompt parameter の中身だけを調べたい場合は、builder 側の該当実装を直接読む。
-- apply join、apply abandon、review など apply fork 以外のサブコマンド固有の制御を調べたい場合は、それぞれのサブコマンド実装へ進む。
-- CLI runtime、git wrapper、state のデータ構造、path model、config schema など共有基盤の詳細だけを確認したい場合は、共通 runtime や config の実装を読む。
-- INDEX.md 生成や indexing preflight の詳細を調べたい場合は、このファイルではなく indexing 関連の実装を読む。
+- apply fork の最終レポート本文やエラーレポートの markdown 構成だけを変更・確認したいときは、レポート生成側を直接読む。
+- Codex に渡す finding 列挙用または finding 適用用プロンプトの詳細を変更・確認したいときは、パラメータ生成側を直接読む。
+- apply process id の保存形式や追跡用 context manager の低レベル実装だけを確認したいときは、apply runtime 側を直接読む。
+- CLI 全体の dispatch、引数定義、または run_cli_subcommand の共通実行仕様を確認したいだけなら、CLI 共通実行基盤やサブコマンド登録側を読む。
+- repo root、work root、worktree 作成、git 実行、状態ファイル読み書きなどの共通 runtime primitive の実装詳細だけを確認したいときは、runtime 側を直接読む。
 
 ## hash
-- 1ce692008db87eccdf624d7153c93a75be785c5d35a948ffad2672872210c6fa
+- 8f1537401b0f931ed228c6a4402202bf3ba18f9a1129982ca4d5b5cac72cf8d2
 
 # `fork_report.py`
 

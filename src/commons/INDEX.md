@@ -15,20 +15,21 @@
 # `cmoc_runtime.py`
 
 ## Summary
-- 実行時共通機能を一箇所から参照できるようにする集約モジュール。Codex 実行、プロファイル、設定、ファイル内容、CLI 実行、エラー、Git、ログ、パス、結果、状態管理に関する既存の共通部品をまとめて取り込む入口になっている。
+- cmoc の実行時共通機能を直接実装せず、Codex 実行、設定、内容ハッシュ、CLI 呼び出し、エラー描画、git 操作、ログ、パス、結果型、状態管理などの下位 runtime API をまとめて公開する集約入口。
+- この対象自体の責務は、各 runtime 領域の具体処理を置くことではなく、呼び出し側が複数の共通機能へ一つの import 面から到達できるようにすることにある。
 
 ## Read this when
-- 複数の実行時共通部品をまとめて利用している呼び出し側の依存関係を確認したいとき。
-- Codex 実行、設定同期、Git worktree 操作、状態ファイル、ログ、パス解決などにまたがる runtime 層の公開入口を把握したいとき。
-- runtime 系モジュールの分割済み責務を横断して、どの部品が共通入口から利用可能かを確認したいとき。
+- runtime 系の共通 API がどの機能群から集約されているかを確認したいとき。
+- 呼び出し側の import 面を整理する変更で、既存の共通 runtime API が集約入口から公開されているかを確認したいとき。
+- Codex 実行、設定、git、パス、状態など複数領域をまたぐ処理を読む前に、利用可能な共通 API の入口を把握したいとき。
 
 ## Do not read this when
-- 個別機能の実装詳細を確認したいとき。この対象は集約入口なので、Codex 実行、Git 操作、設定、状態管理などの各責務を持つ個別モジュールを直接読む方がよい。
-- 新しい処理の実装場所を探しているとき。ここに処理を追加するのではなく、該当責務の個別 runtime モジュールを読む方がよい。
-- CLI サブコマンド固有の振る舞いやテストを確認したいとき。共通実行時部品ではなく、サブコマンド実装またはテストを読む方がよい。
+- 各 API の具体的な挙動、入出力、副作用、例外処理を知りたいとき。その場合は該当する責務を実装している下位の runtime 本体を読む。
+- 新しい runtime 処理の実装場所を探しているとき。この対象は集約入口であり、処理本体を追加する場所ではない。
+- 設定、内容ハッシュ、git 操作、パス解決、状態ファイル操作など単一領域だけを変更する場合。その領域を担当する下位対象へ直接進む。
 
 ## hash
-- 4d7b5f772aa040e806c9cb9341fa0ba3457dc3d2229a4646c298217a24affbb8
+- 2685ce534f01e5ce3f6f5191a1baeff4bd5e26e471f8610d4dc55ad3d2401846
 
 # `indexing.py`
 
@@ -160,25 +161,26 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI を cmoc から起動するための実行時 profile と周辺入出力を組み立てる実装。file access policy から sandbox mode と writable_roots を生成し、Codex home、認証情報、hashed profile、Structured Output schema、subprocess 環境、JSONL エラー判定を扱う。
-- Codex CLI との境界で発生する実行時エラーを cmoc の利用者向けエラーへそろえる入口でもあり、profile 生成、schema 配置、出力 JSON 読み取り、capacity/quota retry 判定に関する制御ロジックがまとまっている。
+- Codex CLI 実行用 profile と subprocess 周辺の実行時処理を扱う実装。file access policy から sandbox 設定と writable roots を組み立て、Codex home や auth.json の検査、内容 hash profile の生成、Codex subprocess 実行時の環境・エラー・追跡情報を処理する。
+- Structured Output schema の配置、Codex JSONL stdout からのエラー文面・resume token・capacity/quota 判定、output JSON の読み取り失敗時の扱いもここで担う。
 
 ## Read this when
-- AgentCallParameter や repo config から Codex CLI 用 profile 本文を生成する処理、sandbox mode、writable_roots、追加読み取り・書き込み path の検証を確認・変更したいとき。
-- FileAccessMode と Codex CLI の sandbox 表現の対応、memo・.agents・oracle などの保護領域を profile にどう反映するかを調べるとき。
-- CODEX_HOME の解決、Codex home と auth.json の事前検査、hashed profile の作成・再利用、Codex subprocess に渡す環境変数を扱うとき。
-- Codex CLI 不在時のエラー変換、Codex stdout/stderr から利用者向け detail を作る処理、JSONL event から resume token や capacity/quota error を判定する処理を確認したいとき。
-- Structured Output schema を work root 側の hash store に配置する処理や、Codex output file の空・不正 JSON を retry 判定へ渡す挙動を変更したいとき。
+- AgentCallParameter や CmocConfig から Codex CLI profile の TOML 本文を作る処理を確認・変更したいとき。
+- FileAccessMode と Codex sandbox_mode、workspace-write の writable_roots、memo や .agents など保護領域の扱いを確認したいとき。
+- CODEX_HOME の解決、Codex home と auth.json の事前検査、hash 名 profile の作成・再利用に関わる挙動を調べたいとき。
+- Codex subprocess の起動、Codex CLI 不在時の CmocError 変換、子プロセス追跡ファイルへの記録・削除を確認したいとき。
+- Codex 実行結果の output JSON、stderr と JSONL event のエラー集約、quota/capacity retry 判定、resume token 抽出を扱うとき。
+- Structured Output schema を work root 側の hash store に配置する処理を確認したいとき。
 
 ## Do not read this when
-- Codex CLI に渡す prompt 本文、file access rule の利用者向け説明、または oracle 側の正本仕様そのものを確認したいだけのときは、該当する prompt 構築や oracle 文書を直接読む。
-- path keyword の定義、work root や schema store のディレクトリ規約そのものを調べたいときは、path model や runtime path 管理の対象を直接読む。
-- hashed file の保存アルゴリズムや内容 hash store の低レベルな書き込み実装を変更したいときは、内容保存 helper の対象を直接読む。
-- cmoc の設定値の読み込み元、model class や reasoning effort の設定 schema 自体を変更したいときは、設定定義の対象を直接読む。
-- Codex CLI の実際の実行フロー全体、retry ループ、またはこの実装を呼び出す上位制御を追いたいときは、Codex runtime の上位モジュールを先に読む。
+- Codex CLI に渡す prompt 本文や file access rule の利用者向け説明文を調べたいだけのとき。
+- cmoc の path 概念や schema store のディレクトリ定義そのものを確認したいとき。
+- config ファイルの読み込み、model class や reasoning effort の設定値定義を調べたいとき。
+- hash 名ファイルを書き込む低レベルな内容保存処理そのものを変更したいとき。
+- Codex 実行フロー全体の orchestration や CLI command 層の入口を探しているとき。
 
 ## hash
-- ae732ea279da40e0e93ce912bfee18dbb306f8dc8845c7f031c69b528903f2be
+- 0d6b71395cd613c7bc653eb515e6ce4b3a9d03a935817acfd7df25f6d08f126a
 
 # `runtime_codex_tui.py`
 

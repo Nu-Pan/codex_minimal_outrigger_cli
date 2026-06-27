@@ -68,25 +68,25 @@
 # `commons`
 
 ## Summary
-- cmoc の実行時共通 helper 群を集めた実装ディレクトリ。CLI サブコマンドの実行 wrapper、Codex exec/TUI 呼び出し、設定、内容 hash 保存、エラー表示、Git 操作、runtime event log、path 解決、実行結果モデル、session state、INDEX.md 自動更新 preflight など、複数の上位コマンドから再利用される基盤処理を扱う。
-- 個別責務の実装モジュールに加えて、旧 import path を維持する互換入口や、複数 runtime 部品をまとめて参照する集約入口も含むため、runtime 層の公開面と責務分割の入口になる。
+- cmoc の realization implementation のうち、複数のサブコマンドや上位処理から使われる共通 runtime helper 群を収める領域。Codex 呼び出し、設定、内容 hash、CLI 実行 wrapper、エラー表示、Git 操作、runtime log、path、結果型、session state、indexing preflight など、実行基盤の横断機能への入口になる。
+- この階層は個別機能の業務ロジックではなく、サブコマンド実装や indexing、Codex 実行経路などが共有する低レベルから中レベルの実行時支援を責務別に分けて扱う。
 
 ## Read this when
-- CLI サブコマンド共通の実行ライフサイクル、標準 stdout サマリー、例外表示、サブコマンド log、終了コード化の共通処理を調べたいとき。
-- Codex CLI の exec/TUI 呼び出し、profile/schema/CODEX_HOME の準備、Structured Output 検証、quota/capacity retry、resume、call log、preflight 実行との接続を確認または変更したいとき。
-- 設定ファイルの読み書き、内容 hash 保存、binary 判定、Git worktree/branch/ignore 操作、runtime path、timestamp、session state、実行結果データ構造など、複数コマンドにまたがる共通 runtime helper を探しているとき。
-- INDEX.md の自動生成・更新 preflight、対象候補の列挙、既存エントリー hash 検証、Codex によるエントリー生成、更新 commit 作成の実装経路を追いたいとき。
-- 上位コマンドから共通 runtime 層のどの部品を利用できるか、または互換 import 入口が分割後のどの実装へ接続されるかを把握したいとき。
+- サブコマンドや上位 workflow から共通利用される runtime API、結果型、例外表示、ログ、path、Git、設定、状態管理の実装先を探すとき。
+- Codex CLI の exec/TUI 呼び出し、profile/schema 準備、quota/capacity retry、resume、Structured Output 検証、call log、preflight の制御を調査または変更するとき。
+- INDEX.md 生成 preflight、対象列挙、entry hash 検証、Codex によるエントリー生成、Markdown 描画、更新 commit 条件など indexing の実行経路を確認するとき。
+- CLI サブコマンド共通 wrapper の stdout/stderr 契約、終了コード化、work root 検査、サブコマンド event log、開始・完了サマリー、例外の利用者向け表示を確認するとき。
+- cmoc が参照する repo/work/cmoc root、.cmoc 配下の標準保存先、timestamp、duration、memo 判定、session state file、run worktree や branch 操作などの共有 runtime 挙動を追うとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジック、CLI 引数定義、Typer のコマンド登録、利用者向け出力内容そのものを調べたいとき。その場合はサブコマンド実装側を読む。
-- path keyword の正本定義、oracle file や realization file の仕様、INDEX.md の品質基準など、正本仕様断片だけを確認したいとき。その場合は oracle 側の該当文書を読む。
-- 特定の設定モデル、基本層の path model、CLI 出力 schema、保存 JSON の外部仕様など、共通 helper が参照する型や仕様の定義そのものを変更したいとき。
-- 生成済みのルーティング文書やログ、状態ファイルの内容を読むだけで、生成・保存・更新の runtime 実装を追う必要がないとき。
-- 単一モジュール内で完結する機能の詳細だけが目的で、Codex、Git、設定、ログ、path、状態管理などの共通 runtime 境界に関心がないとき。
+- 個別サブコマンドの業務ロジック、入力解析、出力内容、永続データ更新、ファイル生成内容だけを調べたいとき。その場合はコマンド本体や該当する上位実装へ進む。
+- oracle file の正本仕様、path 概念そのもの、INDEX.md の品質基準、ログや CLI 出力の外部仕様だけを確認したいとき。その場合は対応する oracle 側の本文を読む。
+- 特定の runtime helper の具体的な入出力、副作用、例外条件だけが目的で、読む対象がすでに分かっているとき。その場合はこの階層全体ではなく責務に対応する本文へ直接進む。
+- Typer のコマンド登録、CLI option 宣言、利用者向けサブコマンド構成だけを探しているとき。
+- Codex や Git や path を使わない、単一機能内に閉じた realization implementation または realization test の変更を行うとき。
 
 ## hash
-- 0b203992fd7df02e0fa8d67a312b3e0ac6512b1557ea5f295b915ab461db7fe1
+- e7948d48260fda4076f0e95ae89ea6227e16cb9a73ca398704db6af26dcbc27e
 
 # `config`
 
@@ -132,25 +132,23 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドごとの実行入口と、各サブコマンド固有の制御フローをまとめる実装領域。共通 CLI runtime に処理を接続し、事前条件検査、worktree/branch/state の操作、Codex 呼び出し、レポート生成、標準出力や終了コードの組み立てをサブコマンド単位で扱う。
-- 扱う範囲は、session の開始・取り込み・破棄、apply の実行・取り込み・破棄、oracle review、INDEX.md maintenance、初期化、対話的 TUI 起動である。共通 runtime や schema そのものではなく、それらを利用者操作としてどう組み合わせるかを確認する入口になる。
-- apply、session、review のように複数ファイルへ分かれたサブコマンド群では、個別操作の実装へ進むための上位入口にもなる。単体のサブコマンド実装では、runtime wrapper への接続、preflight、実行順序、利用者向け出力を確認する対象になる。
+- CLI の個別サブコマンド実装を集める領域であり、init、indexing、tui、session、apply、review などの利用者操作を runtime へ接続する入口になる。
+- 各サブコマンドは、実行前提の検査、worktree や branch/state の扱い、Codex 呼び出し、report 出力、cleanup などを操作単位に分けて担い、詳細処理は apply・session・review の下位 package や共通 runtime/indexing 実装へ委譲される。
+- サブコマンド単位でどの実装へ進むべきかを選ぶための階層であり、apply run、session lifecycle、review oracle、INDEX maintenance、初期化、対話 TUI の入口を切り分ける。
 
 ## Read this when
-- 利用者が実行するサブコマンドの挙動、実行可能条件、実行順序、標準出力、終了コード、状態遷移、cleanup、rollback を確認・変更したいとき。
-- session branch の作成、home branch への merge、merge せず破棄する流れ、または session state と apply state の事前条件をサブコマンド境界から追いたいとき。
-- apply run の isolated worktree 作成、finding 適用、commit/report 生成、join 時の想定外差分検出、force-resolve、merge conflict、running process 停止、pid file 管理を調べたいとき。
-- review oracle の active session branch 前提、scope 検証、review worktree 作成、対象 oracle 列挙、finding loop、INDEX.md 変更 commit/merge、review report 出力、後片付けの大きな流れを確認したいとき。
-- INDEX.md maintenance、cmoc 初期化、または TUI 起動について、共通実装へ渡す前後の preflight、lock、commit、設定同期、prompt 保存、パラメータ解決、Codex CLI/TUI 呼び出しの接続を確認したいとき。
-- 各サブコマンドが共通 runtime、git helper、state file、config、Codex parameter builder、report helper をどの地点で呼び出しているかをたどりたいとき。
+- 利用者が実行する CLI サブコマンドから、どの実装ファイルまたは下位 package に進むべきかを選びたいとき。
+- init、indexing、tui、apply、session、review oracle の実行順序、preflight、runtime wrapper、利用者向け出力、失敗時処理の入口を調べ始めるとき。
+- session branch、apply worktree、review worktree、一時 branch、state 更新、merge、cleanup、report 生成など、サブコマンド操作に紐づく制御の所在を切り分けたいとき。
+- Codex exec callback や TUI 起動、review loop、INDEX 更新など、AI 呼び出しを伴うサブコマンドがどこから共通処理へ接続されるかを確認したいとき。
+- CLI の外部挙動を変更する前に、対象サブコマンド固有の orchestration と、共通 runtime・git helper・設定・path model 側へ委譲される責務の境界を把握したいとき。
 
 ## Do not read this when
-- 共通 CLI runtime、git command wrapper、repo/work root 解決、path model、config schema、state schema、timestamp、report root など、サブコマンドに依存しない基盤の詳細だけを調べたいとき。
-- Codex に渡す prompt parameter や Structured Output parameter の本文、AgentCallParameter の汎用構築規則、StructDoc の Markdown レンダリング仕様だけを確認したいとき。
-- oracle file の正本仕様、oracle/realization の一般ルール、INDEX.md エントリー生成基準、または review finding の仕様そのものを確認したいとき。
-- サブコマンドの外部挙動をテスト観点だけで確認したいときは、対応するテストを読む方が直接的である。
-- INDEX.md の内容生成、差分検出、lock、commit、個別ファイル走査など、共通 indexing 実装そのものを調べたいとき。
-- パッケージ初期化時の副作用や公開シンボルの有無だけを確認したい場合を除き、具体的なサブコマンド処理を読まずにこの領域全体を読む必要はない。
+- CLI 全体の parser 構成、command dispatch の共通基盤、repo/work root 解決、git 実行 wrapper、設定読み込みなど、サブコマンド固有でない runtime primitive だけを調べたいとき。
+- state schema、path token、branch 名規則、Codex parameter builder、StructDoc、report 保存先 helper など、データ構造や共通 helper の定義そのものを確認したいとき。
+- INDEX.md の本文生成、差分検出、lock、commit といった indexing の内部処理だけを調べたいときは、共通 indexing 実装を直接読む。
+- apply、session、review の詳細な lifecycle 実装をすでに特定している場合は、それぞれの下位 package または該当モジュールへ直接進む。
+- 実装ではなく正本仕様断片、oracle/realization の一般ルール、INDEX.md エントリー生成基準を確認したいときは、oracle 側の文書を読む。
 
 ## hash
-- f2dbe99c012cf0e1462ca0a0dd88110776b19a07c6de9e8ad827d5c1438f6160
+- 1baefa039ff2bb40c69bbdff29922b754095d4a05ad141cd5851dc157277ca5a

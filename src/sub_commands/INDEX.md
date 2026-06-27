@@ -1,27 +1,25 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実行制御をまとめる実装領域。apply run の開始、破棄、取り込み、実行結果 report 生成、実行中 process 管理までを扱う。
-- session branch と apply branch、linked worktree、apply state、pid file、git diff/merge/commit、Codex CLI 呼び出しが関係する apply 固有の処理へ進む入口になる。
-- 上位の CLI runtime や state schema そのものではなく、apply 操作としてそれらをどう組み合わせるかを確認するための対象。
+- apply 系サブコマンドの実行開始、結果取り込み、未 join run の破棄、および実行時補助を扱う実装群への入口。
+- 対象 worktree の特定、apply process の追跡と停止、isolated worktree 上での finding 適用、report 生成、session branch への merge と cleanup など、apply run のライフサイクルに沿って読む先を選ぶための階層。
+- 具体的な処理は、開始処理、join 処理、abandon 処理、実行時 process/worktree 補助、report 生成の責務ごとに分かれている。
 
 ## Read this when
-- apply run を開始して isolated worktree 上で所見適用、差分 commit、report 生成、状態更新を行う流れを確認・変更したいとき。
-- 未 join の apply run を破棄して ready 状態へ戻す cleanup、または実行中 apply process の停止と pid file 管理を追いたいとき。
-- apply 実行結果を session branch へ取り込む join 条件、想定外差分の検出、force-resolve、merge conflict 処理、後片付けを調べたいとき。
-- apply branch や session branch から linked worktree を特定する処理、apply worktree path、process 同一性確認、Linux 依存の process 停止処理を扱うとき。
-- apply fork や join が生成する利用者向け report の内容、保存先、変更要約、warning 表示を確認・変更したいとき。
-- apply 固有の CLI 挙動、標準出力、終了コード、状態遷移、作業ツリーや branch の cleanup をサブコマンド単位で調べたいとき。
+- apply run の開始から成果取り込みまたは破棄までの全体像を把握し、どの実装対象へ進むべきかを選びたいとき。
+- apply branch、apply worktree、session branch、apply state、process id file、report の関係を、apply 系サブコマンド単位で調べ始めるとき。
+- apply 実行中の process tracking、停止、cleanup、状態遷移、merge、想定外差分検出、report 出力のどれがどの責務に属するかを切り分けたいとき。
+- apply 系サブコマンドの利用者向け挙動や失敗時処理を変更する前に、開始・join・abandon・runtime helper・report 生成の読む順序を決めたいとき。
 
 ## Do not read this when
-- apply 以外の session 作成・終了、review、indexing など別サブコマンド固有の挙動を調べたいとき。
-- git command 実行 wrapper、state file の基本 schema、path model、config schema、timestamp や report root など共有 runtime の詳細だけが必要なとき。
-- Codex に渡す prompt parameter の本文や structured output parameter の詳細だけを調べたいとき。
-- apply に関係しない oracle/realization の一般ルール、INDEX.md 生成規則、indexing preflight の仕様を確認したいとき。
-- パッケージ説明や import 時副作用の有無だけを確認したい場合を除き、具体的な実行処理を読まずに済ませたいとき。
+- CLI 全体の dispatch、引数登録、共通 subcommand 実行基盤だけを調べたいとき。
+- repo root、work root、git 実行、worktree 作成・削除、state file 読み書きなど、apply 固有でない runtime primitive の低レベル実装だけを調べたいとき。
+- session state の一般 schema、session の作成・終了、branch 名規則そのものを調べたいとき。
+- Codex に渡す prompt や structured output parameter の詳細だけを確認したいとき。
+- INDEX.md エントリー生成、oracle/realization の一般ルール、または apply 以外の report 保存規約を調べたいとき。
 
 ## hash
-- 9b3f4b44a2cbf2347fa903080a1c8658ab9455316152a5da2c17842ea2e09af5
+- 7ce9b9aff0b6f76b4c0ba178cae7d5850aaa6503a3aac60b6dea27e634c3e106
 
 # `indexing.py`
 

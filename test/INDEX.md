@@ -22,23 +22,24 @@
 # `test_apply_abandon_cli.py`
 
 ## Summary
-- active apply run を破棄する CLI 操作の外部挙動を検証する realization test。completed/running apply の worktree・branch・state cleanup、cleanup 対象欠落時の警告、running process 停止、process identity 異常時の拒否を扱う。
-- apply worktree 内、linked session worktree、linked apply worktree、同一 session の stale apply branch など、実行位置によって abandon 対象を誤らないことを固定する。
-- 16,000 文字を超えるが、active apply run の abandon に伴う state fixture、cleanup、process 停止、実行位置判定の境界条件を一箇所で読むための凝集したテストファイルとして位置づけられている。
+- apply abandon を CLI 経由で実行したときの active apply run 破棄の外部挙動を検証する realization test。
+- completed/running apply run の worktree・branch・session state cleanup、cleanup 対象欠落時の警告、running process と記録済み child process の停止順、PID reuse や raced exit の扱いを固定する。
+- repo root、apply worktree、linked session/apply worktree、stale apply branch など実行位置ごとの abandon 境界条件を扱う。
 
 ## Read this when
-- apply abandon の CLI 出力、終了コード、state 遷移、apply worktree 削除、apply branch 削除の期待挙動を確認または変更するとき。
-- running apply process の停止順序、PID reuse、終了済み process、process identity 欠落時の扱いを確認または変更するとき。
-- apply abandon を repo root 以外の worktree から実行する場合の対象 session 判定、linked session の dirty check、stale apply branch 拒否を調べるとき。
-- apply fork が作る active apply run の状態を前提に、abandon 側の cleanup 境界条件をテストで再現したいとき。
+- apply abandon の成功時に apply worktree・apply branch・state・process id 記録がどう削除または ready 化されるかを確認したいとき。
+- running apply process の停止、child process group の停止順、pidfd signal、PID reuse、終了済み process の許容に関する制御ロジックを変更するとき。
+- apply abandon をどの worktree から実行できるか、linked session の state をどう正として扱うか、stale apply branch をどう拒否するかを確認するとき。
+- cleanup 対象が先に消えている場合の warning 出力や、破損 state・process identity 欠落・dirty linked session worktree の拒否条件を変更するとき。
 
 ## Do not read this when
-- apply abandon 以外の apply サブコマンドの通常動作や生成物を調べたいだけのとき。
-- session fork、init、git helper、runner fixture の基本的な作りを確認したいだけで、abandon の境界条件に関心がないとき。
-- oracle file の正本仕様や設計意図を確認したいとき。このファイルは realization test であり、正本仕様ではない。
+- apply fork の生成処理そのもの、Codex 実行結果の解釈、findings の扱いを調べたいだけのとき。
+- apply abandon 以外の session fork、init、merge などの CLI 挙動を確認したいとき。
+- oracle の正本仕様断片を確認したいとき。この対象は realization test であり、正本仕様ではない。
+- process 停止や worktree cleanup を伴わない単純な path model、INDEX 生成、補助 fixture の責務を調べたいとき。
 
 ## hash
-- 1db3b4e4890f7a53b80955f8c6f6e24062a948b6905b638417f421c4b02ae69e
+- f7e3591b4969ab79a729de5928c6ee1e9d8461e0eacdbfe6f0afb89f877c50a7
 
 # `test_apply_fork_cli.py`
 
@@ -158,21 +159,23 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 呼び出しランタイムのテストであり、exec/TUI 起動時のプロファイル生成、標準入力引き渡し、出力取得、呼び出しログ、保護領域変更検出、追加 read path 検証、非ゼロ終了、CLI 不在時エラーを検証する。
-- 実際の Codex 実行は一時ディレクトリ上のスタブ実行ファイルや subprocess 差し替えで置き換え、ランタイム関数の外部副作用と失敗時挙動を確認する入口になっている。
+- Codex CLI 実行経路の realization test。tracked subprocess のプロセスグループ分離、exec/tui 起動時のプロファイル生成・呼び出しログ・終了コード処理・CLI 不在時エラー・保護領域や .agents 変更の拒否を、スタブ codex 実行ファイルと一時リポジトリで検証する。
+- commons.runtime_codex、commons.runtime_codex_profile、cmoc_runtime の Codex 呼び出し制御が、外部プロセス起動前後の副作用、sandbox 設定、ログ出力、エラー変換を正しく扱うかを見る入口になる。
 
 ## Read this when
-- Codex exec または TUI を起動するランタイム処理、生成される Codex profile、sandbox/workspace-write 設定、標準入力や output-last-message の扱いを変更する時。
-- Codex 呼び出しのログ出力、call log ファイル、SubcommandLogger 連携、非ゼロ終了や CLI 未検出時のエラーメッセージを変更する時。
-- Codex 実行後の保護対象変更検出、特に .agents 配下の変更拒否や追加 read path が memo などの保護領域を指す場合の事前拒否を確認する時。
+- Codex CLI の exec または tui 呼び出し処理、生成される Codex profile、sandbox_workspace_write の writable_roots、CODEX_HOME、PATH 上の codex 解決に関する挙動を変更する。
+- run_tracked_codex_subprocess のプロセスグループ管理、tracking file の扱い、子プロセス起動方式を変更する。
+- Codex 呼び出しログ、call_log、SubcommandLogger、コンソールに出る purpose・returncode・失敗情報の形式やタイミングを変更する。
+- Codex 実行前の extra_read_paths 検査、memo などの保護領域拒否、実行後の .agents 配下変更検出を変更する。
+- Codex CLI が見つからない場合、または非 0 終了した場合に CmocError へ変換する制御を確認・変更する。
 
 ## Do not read this when
-- Codex ランタイム以外のサブコマンド、設定読み込み一般、リポジトリ生成 fixture 自体の詳細を調べたいだけの場合。
-- Codex CLI や LLM の出力品質そのもの、または実際の対話 UI の表示内容を検証したい場合。
-- oracle file の正本仕様やパス用語の定義を確認したい場合。
+- Codex CLI 呼び出しとは無関係な通常のサブコマンド引数解析、oracle/realization の文書仕様、または INDEX.md 生成ルールだけを調べる。
+- LLM 出力品質や Codex 本体の応答内容を評価したいだけで、cmoc 側の subprocess 起動・ログ・保護領域検査の制御を扱わない。
+- Git 操作、作業ツリー生成、path model などの基盤処理だけを調べる場合は、それらを直接扱う実装またはテストへ進む。
 
 ## hash
-- 11eb10b8aa1434c1ffcd86ab6691cd56d4fb6e3dacd9f4b5d714fea196881624
+- d33083880a03f45c2afdae14d74215c1914fb8c6746baf9458f6628923207ad3
 
 # `test_codex_runtime_home.py`
 
