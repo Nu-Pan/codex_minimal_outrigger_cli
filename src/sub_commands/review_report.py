@@ -51,6 +51,8 @@ def render_review_oracle_report(
     error_message: str | None = None,
 ) -> str:
     """review oracle report を Markdown + YAML frontmatter で描画する。"""
+    # <work-root>/oracle/src/acp/builder/review/oracle/judge_finding.json:
+    # reject は人間へ提示しない判定なので、公開レポートの finding 対象から外す。
     accepted = [finding for finding in findings if finding.get("verdict") == "accept"]
     fatal_accepted = [
         finding for finding in accepted if finding.get("severity") == "fatal"
@@ -58,32 +60,16 @@ def render_review_oracle_report(
     minor_accepted = [
         finding for finding in accepted if finding.get("severity") == "minor"
     ]
-    fatal_findings = [
-        finding for finding in findings if finding.get("severity") == "fatal"
-    ]
-    minor_findings = [
-        finding for finding in findings if finding.get("severity") == "minor"
-    ]
-    fatal_rejected = [
-        finding
-        for finding in findings
-        if finding.get("severity") == "fatal" and finding.get("verdict") == "reject"
-    ]
-    minor_rejected = [
-        finding
-        for finding in findings
-        if finding.get("severity") == "minor" and finding.get("verdict") == "reject"
-    ]
     if error_message is not None:
         error_message = error_message.replace("`", "'")
     result, verdict = _review_report_verdict(
         error_message,
         oracle_files,
-        fatal_findings,
-        minor_findings,
+        fatal_accepted,
+        minor_accepted,
     )
     findings_by_path: dict[str, int] = {}
-    for finding in findings:
+    for finding in accepted:
         oracle_path = finding.get("oracle_path", "")
         findings_by_path[oracle_path] = findings_by_path.get(oracle_path, 0) + 1
     rows = "\n".join(
@@ -105,8 +91,6 @@ def render_review_oracle_report(
         ("oracle_count_evaluated", len(oracle_files)),
         ("fatal_findings_accepted_count", len(fatal_accepted)),
         ("minor_findings_accepted_count", len(minor_accepted)),
-        ("fatal_findings_rejected_count", len(fatal_rejected)),
-        ("minor_findings_rejected_count", len(minor_rejected)),
         ("result", result),
     ]
     return "\n".join(
@@ -125,10 +109,6 @@ def render_review_oracle_report(
             render_finding_section(fatal_accepted),
             "## Minor findings",
             render_finding_section(minor_accepted),
-            "## Rejected fatal findings",
-            render_finding_section(fatal_rejected),
-            "## Rejected minor findings",
-            render_finding_section(minor_rejected),
             "",
         ]
     )

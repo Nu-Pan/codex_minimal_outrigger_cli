@@ -75,7 +75,7 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyP
     assert "review oracle merge findings" not in calls
 
 
-def test_review_oracle_report_orders_findings_by_verdict_then_severity(
+def test_review_oracle_report_outputs_only_accepted_findings(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -138,44 +138,25 @@ def test_review_oracle_report_orders_findings_by_verdict_then_severity(
     rendered = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
-    assert rendered.index("accepted minor") < rendered.index("rejected fatal")
-    assert "result: fatal" in rendered
-    assert "fatal_findings_rejected_count: 1" in rendered
+    assert "accepted minor" in rendered
+    assert "rejected fatal" not in rendered
+    assert "result: minor" in rendered
+    assert "fatal_findings_rejected_count" not in rendered
     assert "minor_findings_accepted_count: 1" in rendered
 
 
 @pytest.mark.parametrize(
     (
         "severity",
-        "expected_result",
-        "expected_verdict",
-        "rejected_count_field",
-        "rejected_heading",
     ),
     [
-        (
-            "fatal",
-            "result: fatal",
-            "oracle ファイルに、直ちに修正するべき問題が存在します。",
-            "fatal_findings_rejected_count: 1",
-            "## Rejected fatal findings",
-        ),
-        (
-            "minor",
-            "result: minor",
-            "oracle file に、致命的ではない、細かい問題があります。",
-            "minor_findings_rejected_count: 1",
-            "## Rejected minor findings",
-        ),
+        ("fatal",),
+        ("minor",),
     ],
 )
-def test_review_oracle_report_result_includes_rejected_findings(
+def test_review_oracle_report_omits_rejected_findings(
     tmp_path: Path,
     severity: str,
-    expected_result: str,
-    expected_verdict: str,
-    rejected_count_field: str,
-    rejected_heading: str,
 ) -> None:
     root = tmp_path
     rendered = review_module.render_review_oracle_report(
@@ -200,11 +181,14 @@ def test_review_oracle_report_result_includes_rejected_findings(
         None,
     )
 
-    assert expected_result in rendered
-    assert expected_verdict in rendered
-    assert rejected_count_field in rendered
-    assert rejected_heading in rendered
-    assert "- `finding-0001` [reject] rejected finding: rejected reason" in rendered
+    assert "result: ok" in rendered
+    assert "レビュー対象の oracle file に、問題は何ら見つかりませんでした。" in rendered
+    assert "fatal_findings_rejected_count" not in rendered
+    assert "minor_findings_rejected_count" not in rendered
+    assert "## Rejected fatal findings" not in rendered
+    assert "## Rejected minor findings" not in rendered
+    assert "rejected finding" not in rendered
+    assert "rejected reason" not in rendered
     assert "session_id:" not in rendered
 
 
@@ -775,7 +759,7 @@ def test_review_oracle_writes_error_report_on_processing_failure(
     )
     rendered = report_path.read_text()
     assert "result: error" in rendered
-    assert "fatal_findings_rejected_count: 0" in rendered
+    assert "fatal_findings_rejected_count" not in rendered
     assert "[unjudged] unjudged fatal" not in rendered
     assert "レビュー処理が途中で失敗しました。" in rendered
     assert "Error: `judge failed`" in rendered
