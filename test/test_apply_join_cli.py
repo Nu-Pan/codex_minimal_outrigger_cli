@@ -209,8 +209,8 @@ def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(
         == root_log_count + 1
     )
     assert not (apply_worktree / ".cmoc" / "log" / "sub_command").exists()
-    assert "git 未コミット差分が存在します。" not in result.stdout
-    assert "git 未コミット差分が存在します。" in result.stderr
+    assert "git 未コミット差分が存在します。" in result.stdout
+    assert "git 未コミット差分が存在します。" not in result.stderr
 
 
 def test_apply_join_from_session_requires_clean_apply_worktree(
@@ -248,7 +248,8 @@ def test_apply_join_from_session_requires_clean_apply_worktree(
         == 0
     )
     assert json.loads(state_path.read_text())["apply"]["state"] == "completed"
-    assert "git 未コミット差分が存在します。" in result.stderr
+    assert "git 未コミット差分が存在します。" in result.stdout
+    assert "git 未コミット差分が存在します。" not in result.stderr
 
 
 def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(

@@ -189,8 +189,8 @@ def test_session_abandon_requires_existing_home_branch(
     assert "- quota_wait: `" in result.output
     assert "- returncode: `1`" in result.output
     assert current_branch(root) == session_branch
-    assert "session home branch が存在しません。" not in result.stdout
-    assert "session home branch が存在しません。" in result.stderr
+    assert "session home branch が存在しません。" in result.stdout
+    assert "session home branch が存在しません。" not in result.stderr
     assert (
         subprocess.run(
             ["git", "rev-parse", "--verify", session_branch], cwd=root
@@ -222,8 +222,9 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     result = runner.invoke(app, ["session", "abandon"])
 
     assert result.exit_code != 0
-    assert "session abandon の cleanup に失敗しました。" in result.stderr
-    assert "`cmoc session abandon` を再実行してください。" in result.stderr
+    assert "session abandon の cleanup に失敗しました。" in result.stdout
+    assert "`cmoc session abandon` を再実行してください。" in result.stdout
+    assert "session abandon の cleanup に失敗しました。" not in result.stderr
     assert current_branch(root) == session_branch
     assert (
         subprocess.run(
@@ -401,7 +402,7 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
     assert f"session branch was not deleted: {session_branch}" in result.output
 
 
-def test_session_join_error_report_is_written_to_stderr(
+def test_session_join_error_report_is_written_to_stdout(
     tmp_path: Path, monkeypatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -416,7 +417,7 @@ def test_session_join_error_report_is_written_to_stderr(
 
     assert result.exit_code != 0
     assert "completed session join" in result.stdout
-    assert "# ERROR" not in result.stdout
-    assert "git 未コミット差分が存在します。" not in result.stdout
-    assert "# ERROR" in result.stderr
-    assert "git 未コミット差分が存在します。" in result.stderr
+    assert "# ERROR" in result.stdout
+    assert "git 未コミット差分が存在します。" in result.stdout
+    assert "# ERROR" not in result.stderr
+    assert "git 未コミット差分が存在します。" not in result.stderr
