@@ -110,7 +110,6 @@ def run_cli_subcommand(
             err=(
                 error_to_stderr
                 or bool(getattr(exc, "cmoc_error_to_stderr", False))
-                or not console_output
             ),
         )
         raise typer.Exit(1) from exc
