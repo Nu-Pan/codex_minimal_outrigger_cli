@@ -123,24 +123,24 @@
 # `test_cli_init_tui.py`
 
 ## Summary
-- CLI の初期化処理と対話型起動処理に関する realization test。初期化時の `.cmoc` 管理対象外化、`.gitignore` 更新、既存 staging の保全、既定設定の生成・同期、linked worktree での保存先や git 状態の扱いを検証する。
-- 対話型起動では、エディタで編集された markdown prompt から不要コメントを除去し、解決された実行パラメータに基づいて Codex 呼び出しを組み立て、orig/cmpl prompt log や schema の配置が repository root と linked worktree の文脈で正しく分かれることを検証する。
-- markdown prompt parser について、fenced code block 内の見出し風行を見出しとして扱わないこと、および見出し前の本文を独立した本文セクションとして保持することを検証する。
+- CLI の初期化と TUI サブコマンドに関する realization test。初期化時の `.cmoc` 管理除外、`.gitignore` 更新、既存 staged/unstaged 変更の保持、linked worktree での保存先・commit 対象、既定設定 JSON の生成と既存設定値の保持を検証する。
+- TUI について、エディタ起動後の markdown prompt 整形、parameter 解決、Codex 呼び出しパラメータ、prompt ログ保存先、linked worktree での root/cwd/schema/log の扱い、subcommand log の記録先を検証する。
+- markdown prompt parser について、fenced code block 内の heading 風行を見出し扱いしないことと、見出し前の本文を保持することを検証する。
 
 ## Read this when
-- `init` サブコマンドの git 操作、`.cmoc` の ignore 化、cleanup commit、既存 staged/unstaged 変更の保全、または linked worktree 初期化の挙動を変更・確認したいとき。
-- 初期化で作成・同期される設定 JSON の既定値、既存利用者設定を上書きしない merge 挙動、または `.cmoc/config.json` の管理対象外化を確認したいとき。
-- `tui` サブコマンドで editor 起動後の prompt 整形、parameter resolve 用 Codex 呼び出し、実行用 Codex 呼び出し、log 保存先、extra read path、linked worktree での cwd/root/schema 配置を変更・確認したいとき。
-- markdown prompt を heading 単位に分解する parser の境界条件、特に fenced code block 内の `#` 行や heading 前 preamble の扱いを確認したいとき。
+- `init` サブコマンドの git 操作、`.cmoc` の ignore、cleanup commit、既存 index/worktree の変更を壊さない挙動を変更・調査する。
+- 初期設定ファイルの default 値追加、既存ユーザー設定との merge、設定ファイルを git 管理対象にしない挙動を変更・調査する。
+- `tui` サブコマンドのエディタ連携、prompt 補完ファイル生成、parameter 解決、Codex exec/TUI 呼び出し、ログ保存先、linked worktree 対応を変更・調査する。
+- markdown prompt の heading 分割や fenced code block の扱いを変更・調査する。
 
 ## Do not read this when
-- CLI 全体のコマンド定義や共通 runner の基本構造だけを調べたい場合は、実装側の該当サブコマンドやテスト支援 fixture を先に読む。
-- `tui` 以外のサブコマンド、または Codex 実行 wrapper そのものの低レベルな引数変換・プロセス実行を調べたいだけなら、より直接の実装ファイルや専用テストを読む。
-- oracle file の正本仕様を確認したい場合は、この realization test ではなく対応する oracle doc または oracle test を読む。
-- markdown parser の一般仕様ではなく、特定の CLI 入出力や git 状態変更だけを確認したい場合は、parser 関連の末尾テストまで読む必要はない。
+- CLI 全体のルーティングやコマンド定義だけを確認したい場合は、実装側の CLI entrypoint や該当サブコマンド実装を先に読む。
+- `init` や `tui` に関係しないサブコマンド、oracle 文書生成、review/apply 系の挙動を調査する場合は、該当するテストまたは実装へ直接進む。
+- Codex 実行基盤そのもの、model class、reasoning effort、file access mode の一般的な変換規則だけを確認したい場合は、共通 parameter 実装やその専用テストを読む。
+- markdown parser 以外の markdown 文書処理や INDEX.md 生成規則を調査する場合は、その責務を持つ実装・テストを読む。
 
 ## hash
-- aa489f15c8b1bb7e134ca5194658d666d2e1c8f2e6e1fdd06e098a8f15e60227
+- c285f00e235fcf9c365be0c766e2410bbc968e7fcbfea409619185808c3c6d0d
 
 # `test_codex_runtime_exec.py`
 

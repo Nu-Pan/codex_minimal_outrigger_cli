@@ -201,23 +201,23 @@
 # `tui.py`
 
 ## Summary
-- 利用者が編集する依頼文を作成し、解決用の Codex 実行で TUI 起動パラメータを決め、完全 prompt を保存して Codex TUI を起動する一連の処理を担う。
-- TUI 実行前の ignore 設定保証、元 prompt と完全 prompt のログ保存、利用可能なエディタ選択、エディタ実行失敗時のエラー化、Markdown 見出しの構造化、解決済み JSON からの AgentCallParameter 構築を扱う。
+- 利用者が対話的に依頼文を編集して Codex TUI を起動するサブコマンド本体を扱う。元 prompt の作成、エディタ起動、実行パラメータ解決、完全 prompt の保存、TUI 用 AgentCallParameter 構築までの一連の制御がまとまっている。
+- TUI で許可する file access mode の検証、Markdown 見出しを StructDoc 階層へ変換する処理、解決済み JSON から `{value: ...}` 形式の値や真偽値を取り出す補助処理も含む。
+- TUI ログ領域へ prompt ファイルを書き出すため、TUI 実行前に `.cmoc` ignore を保証する処理と、利用可能なエディタを PATH から選ぶ処理への入口でもある。
 
 ## Read this when
-- 対話的な依頼文編集から Codex TUI 起動までの実行フローを確認・変更したいとき。
-- TUI で許可する file access mode、reasoning effort、model class、structured output schema path、完全 prompt の組み立て方を確認したいとき。
-- 利用者が編集する元 prompt のテンプレート、HTML comment 除去、Markdown 見出しの StructDoc 変換、完全 prompt の保存場所に関わる挙動を変更したいとき。
-- TUI 起動前に `.cmoc` を ignore 対象へ入れる処理や、root と work root の両方を扱う条件を確認したいとき。
-- `code`, `nano`, `vim`, `vi` からエディタを選ぶ順序、エディタ起動コマンド、エディタ異常終了時の利用者向けエラーを変更したいとき。
-- TUI parameter 解決結果の `{value: ...}` 形式を読む helper や、未指定時の既定値の扱いを確認したいとき。
+- 対話的な `tui` サブコマンドの起動順序、prompt 編集、パラメータ解決、Codex TUI 呼び出しの制御を確認・変更したいとき。
+- TUI で使用できる file access mode の扱い、解決済みパラメータから AgentCallParameter を作る処理、完全 prompt の組み立て条件を確認したいとき。
+- 利用者が編集する元 prompt や解決後の完全 prompt をどこへ保存するか、TUI 実行時にどの root の `.cmoc` ignore を保証するかを調べたいとき。
+- TUI 用 prompt の Markdown 見出しを構造化文書へ変換する挙動、またはコードフェンス内の見出しを無視する解析処理を確認したいとき。
+- `cmoc tui` が使うエディタ選択順、エディタ終了失敗時のエラー、HTML comment を除去した prompt 読み取りを確認したいとき。
 
 ## Do not read this when
-- 通常の非対話 CLI 実行、Codex exec の低レベル実行、または TUI 以外のサブコマンド処理だけを調べたいとき。
-- TUI parameter を解決するための prompt 定義や schema そのものを変更したいときは、解決パラメータ構築側を直接読む。
-- 完全 prompt の共通構築ルールや prompt part 全般を変更したいときは、prompt 構築の共通実装を直接読む。
-- CLI runtime の共通的なログ、設定読み込み、root 解決、Codex 実行 wrapper の挙動だけを確認したいときは、runtime 側を直接読む。
-- INDEX 生成や preflight の詳細だけを調べたいときは、preflight 実装を直接読む。
+- 通常の CLI サブコマンド共通実行基盤、設定読み込み、repo root や work root の算出そのものを調べたいだけなら、runtime 側の対象を読む。
+- TUI パラメータ解決用に Codex exec へ渡す schema やプロンプト定義そのものを調べたいだけなら、TUI resolve parameter builder 側を読む。
+- 完全 prompt の汎用的な構築ルールや StructDoc の Markdown レンダリング仕様を調べたいだけなら、prompt_parts や struct_doc 側を読む。
+- TUI 以外のサブコマンドの挙動、ログ保存、review や indexing などの各機能を調べたい場合は、それぞれのサブコマンドまたは共通モジュールへ進む。
+- エディタや subprocess の一般的な使い方だけを確認したい場合、または Codex TUI 実行後の対話内容を調べたい場合は、この対象を読む必要はない。
 
 ## hash
-- 034a10d810f3d7817287889468a6df514a4b69570a46b9315aec8e257c9d98d1
+- 3ae76b0057081bf6c6c1b52da9770d39cee78fb9ace94eff6132b444abd4862a
