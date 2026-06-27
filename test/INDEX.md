@@ -43,44 +43,45 @@
 # `test_apply_fork_cli.py`
 
 ## Summary
-- apply fork の CLI 挙動を検証する realization test。Codex 実行を fake に差し替え、apply run の完了状態、apply branch と worktree の作成位置、linked worktree からの開始、設定読み込み失敗時の非開始、.gitignore の保持・ignore 付与・apply branch 側編集、target normalization の memo 除外と binary file 保持を確認する。
+- apply fork コマンドのテスト群。Codex 実行を fake に差し替え、apply run の完了状態、apply branch と worktree の作成先、session state の更新、pid など旧状態項目の不在、所見列挙呼び出しを検証する。
+- linked worktree 上で開始した session branch と HEAD を apply run の起点にすること、session 側の既存 ignore 表現を壊さず必要時は git exclude で `.cmoc` を ignore して clean に保つこと、設定読み込み失敗時に apply run を開始しないことを確認する。
+- 所見対象として `.gitignore` を apply branch 側で編集できること、apply 対象正規化で root 直下の private な memo を除外しつつ入れ子の memo directory と binary file を残すことを検証する。
 
 ## Read this when
-- apply fork の外部挙動、状態更新、branch/worktree ライフサイクルを変更・確認する必要があるとき。
-- apply fork が Codex loop をどう呼び出し、所見列挙・適用・commit message・change summary の結果をどう扱うかをテスト上で確認したいとき。
-- linked worktree 上で session を fork した場合の apply branch 起点 commit や worktree 配置を確認する必要があるとき。
-- apply fork 実行時の .gitignore と .git/info/exclude の扱い、または .gitignore 自体を所見対象として編集できるかを変更・検証するとき。
-- apply fork の設定ファイル読み込み失敗時に、apply run の branch、state、pid file を開始しない挙動を確認するとき。
-- apply 対象 path の正規化で、root 直下 memo の除外、入れ子の memo directory の保持、binary file の保持を確認するとき。
+- apply fork の CLI 挙動、state 遷移、apply branch/worktree の配置、完了時の後始末に関するテストを確認・変更したいとき。
+- linked worktree からの apply fork、session 側 `.gitignore` の保持、`.cmoc` ignore の付与方法、設定ファイル読み込み失敗時の rollback 境界を扱うとき。
+- apply 対象の列挙・正規化、`.gitignore` を所見対象に含める挙動、root 直下 memo の除外と入れ子 memo/binary file の扱いを検証したいとき。
 
 ## Do not read this when
-- apply fork 以外の CLI サブコマンドや session fork 単体の挙動だけを調べるとき。
-- Codex 実行 wrapper の実装詳細や AgentCallParameter の構造そのものを調べるとき。
-- target normalization の仕様ではなく、個別ファイルの所見生成アルゴリズムや oracle/realization 比較ロジックを調べるとき。
-- git helper、test runner、fixture 作成などテスト基盤の共通処理を調べるとき。
+- apply fork 以外の apply サブコマンド、review、session fork、init などの CLI 挙動を調べたいだけのとき。
+- Codex CLI や LLM 出力品質そのもの、実際の Codex 実行内容、所見 schema の詳細を確認したいとき。
+- 実装本体の制御フローや helper の責務を変更するために読む場合で、まず対応する実装モジュールや正本仕様断片から確認すべきとき。
 
 ## hash
-- 8576119ad53dc9046aee7dbcdaf1de22375f91281c86a9781eabc0addd29f804
+- 8f80ee95c01fc38152054a76eeb0c86ea80176eb50ca170fdabd61c01aa18bed
 
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 実行を通じて、所見列挙から適用、commit、変更要約、report 生成、session state 更新までの制御を検証する realization test。収束、未収束、error、dirty file 再検査、編集禁止対象の検出、rolling fork の対象選定を、同じ loop と report schema の観測結果として扱う。
-- 16,000 文字を超えるが、責務は apply fork report と再検査制御の検証に閉じており、期待値の文脈を一箇所に保つために分割しない意図が docstring に明示されている。
+- apply fork の CLI 実行を通じて、所見列挙から適用、commit、変更要約、report 生成、session state 更新までの制御を検証する realization test。
+- 収束、未収束、error、dirty file 再検査、調査対象なし、編集禁止対象差分、rolling apply fork を、同じ loop 制御と report schema の観測結果としてまとめて扱う。
+- 16,000 文字を超えるが、apply fork report の期待値と再検査制御の文脈を一箇所に保つため、責務境界上は単一ファイルとして凝集している。
 
 ## Read this when
-- apply fork の CLI 終了コード、result label、report の内容、変更要約、commit message、session state 更新の期待挙動を確認・変更するとき。
-- apply fork が dirty file を再検査する条件、再検査対象から除外される対象、最後の調査対象が空所見だった場合の収束判定を確認するとき。
-- apply fork 中の no-op 適用、編集禁止対象への差分、未 commit 差分を含む error report の扱いを確認するとき。
-- apply join 後の rolling apply fork がどの差分だけを調査対象にするかを確認するとき。
+- apply fork の report 内容、終了コード、収束・未収束・error 判定を CLI 経由で確認したいとき。
+- apply fork が Codex の所見列挙、所見適用、commit message 生成、変更要約生成をどの順序・条件で呼ぶかをテストから確認したいとき。
+- 所見適用後の dirty file 再検査、INDEX.md の再検査除外、差分なし適用時の扱い、調査対象がない場合の report 表示を確認したいとき。
+- 編集禁止対象に差分が出た場合の error state、stderr、未 commit 差分を含む変更要約、report 出力を確認したいとき。
+- rolling apply fork が前回 apply join 後の変更だけを調査対象にし、session state の apply join 基準 commit を更新する挙動を確認したいとき。
 
 ## Do not read this when
-- apply fork の内部 helper の純粋な単体ロジックだけを確認したいとき。CLI 実行後の外部挙動や report 観測を伴わないなら、実装側またはより小さい単位のテストを読む方が直接的。
-- apply fork 以外の subcommand、一般的な session fork/join、初期化処理そのものの挙動を調べたいとき。
-- Codex 実行結果の品質や LLM 出力内容そのものを評価したいとき。この対象は fake 応答を使って apply fork 側の制御と出力を検証している。
+- apply fork の内部 helper の純粋な実装詳細だけを変更したいときは、実装側の該当モジュールを先に読む。
+- apply fork 以外の CLI サブコマンド、session fork や apply join 単体の仕様・実装を調べたいときは、それぞれの専用テストや実装を読む。
+- Codex 実行結果の fake や pytest monkeypatch の一般的な使い方だけを知りたいときは、より小さい関連テストや共通 test support を読む。
+- oracle の正本仕様断片を確認したいときは、この realization test ではなく oracle 配下の本文を読む。
 
 ## hash
-- 088e836a2c195117587b48262890c4fb5deec723a260090ccbb7fcc9fdcb1aca
+- 8d0a0358611abd7f1bbed0af434635261e33a4b849b7acd8dadc9e99f55d5219
 
 # `test_apply_join_cli.py`
 

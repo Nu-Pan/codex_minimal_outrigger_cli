@@ -1,26 +1,21 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実行処理をまとめる領域。apply run の開始、破棄、取り込み、実行時 process 管理、fork 結果 report 生成までを扱う。
-- session branch と apply branch/worktree の関係、apply state の ready/running/completed/error などの遷移、未 join run の cleanup、join 時の merge・conflict 処理、利用者向け出力や report 作成へ進む入口になる。
-- 上位の CLI 登録や option 定義ではなく、apply 操作ごとの実行条件、状態更新、git/worktree/process/report への具体的な副作用を追うためのまとまり。
+- apply サブコマンド群の実装入口で、apply run の開始、破棄、join、report 生成、実行中 process と worktree の runtime 操作を扱う。
+- 利用者向けの apply 操作フローはサブコマンド実装へ、process id・linked worktree・pidfd などの低レベル実行状態管理は runtime helper へ進むためのまとまり。
 
 ## Read this when
-- apply run を開始して isolated worktree で調査・変更・commit する流れ、scope ごとの調査対象列挙、収束・失敗時の状態反映を確認したいとき。
-- 未 join の apply run を破棄して ready 状態へ戻す処理、実行中 process 停止、apply worktree・branch・pid file cleanup を確認したいとき。
-- apply 実行結果を session 側へ取り込む join 処理、想定外差分の検出、force resolve、merge、INDEX.md conflict の自動解決、join 後 cleanup を確認したいとき。
-- apply process の pid file 管理、linked worktree 探索、pidfd や process start time による同一性確認、安全な停止処理を確認したいとき。
-- apply fork の完了・失敗 report の保存先、frontmatter、差分取得、変更要約生成、fallback 要約を確認したいとき。
+- apply fork、apply abandon、apply join のいずれかの実行フロー、状態遷移、branch/worktree cleanup、利用者向け出力や report 生成の読む先を選びたいとき。
+- apply 実行中 process の pid file、停止制御、apply branch から linked worktree を見つける処理など、apply 固有の runtime helper を確認したいとき。
+- apply サブコマンド間で、worktree、branch、state、report、process 管理のどの実装へ進むべきかを切り分けたいとき。
 
 ## Do not read this when
-- apply サブコマンドを Typer に登録する箇所、CLI option 定義、上位 command tree だけを確認したいとき。
-- repo root 探索、git 実行 helper、worktree helper、state file 読み書き、timestamp、report directory など、apply に限らない共通 runtime API の定義だけを確認したいとき。
-- Codex に渡す prompt や structured output schema の詳細だけを確認したいとき。
-- session state 全体の schema、oracle/realization の一般仕様、INDEX.md 生成規則を確認したいとき。
-- apply 以外のサブコマンドの実行処理や report 生成を調べたいとき。
+- apply 以外のサブコマンド、CLI 共通ランナー、git helper、状態ファイル schema、config 読み込みなどの共通基盤だけを調べたいとき。
+- oracle の正本仕様、INDEX.md 生成規則、または apply サブコマンドの仕様文書そのものを確認したいとき。
+- apply fork のプロンプト builder、Codex 呼び出しの共通実装、git worktree 操作の汎用 helper など、より直接の実装対象が別階層にあると分かっているとき。
 
 ## hash
-- 04636b6ffc0f47db1dcebe5ac53ea6716ef05c6588b62dfc09e6506b432aee2a
+- 1d1c3f6706dc350290de144fea78a92c2b4cb2fc0f07fc5a92f81fc9fc242879
 
 # `indexing.py`
 

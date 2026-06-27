@@ -61,25 +61,26 @@
 # `fork.py`
 
 ## Summary
-- apply fork サブコマンドの実行本体と、その実行中に使う対象列挙、finding 列挙、finding 適用、禁止対象差分の巻き戻し、commit subject 生成、完了・失敗レポート連携をまとめて扱う。
-- session branch 上で ready 状態の apply を isolated worktree に分岐し、scope に応じた調査対象を巡回して Codex に所見列挙と適用を行わせ、変更を commit しながら収束・未収束・エラーを状態とレポートへ反映する処理の入口になる。
+- apply fork サブコマンドの実行本体を担い、session branch 上で isolated apply worktree を作成して、対象ファイルの finding 列挙、finding 適用、差分 commit、report 作成、状態更新までの apply loop を制御する。
+- scope に応じた apply 対象の列挙、禁止編集対象の差分検出と rollback、commit subject 生成、前回 join commit の解決など、apply fork 実行中の制御ロジックと補助処理をまとめている。
 
 ## Read this when
-- apply fork の CLI 実行条件、状態遷移、apply branch/worktree 作成、process id 管理、完了時や失敗時の出力・戻り値を確認したいとき。
-- apply scope が full・session・rolling のとき、どの変更ファイルや oracle/python ファイルを finding 列挙対象にするかを確認したいとき。
-- apply fork 中に Codex が編集禁止対象へ差分を出した場合の検出、rollback、再実行、最終エラー化の挙動を確認したいとき。
-- finding 適用後の変更検出、追加調査対象の正規化、commit message 生成、git add/commit の流れを追いたいとき。
-- 最後に join された apply の merge commit を git 履歴から推定し、rolling scope の差分基点にする処理を確認したいとき。
+- apply fork の事前条件、状態遷移、worktree 作成、apply branch 名、report 出力、終了コードなど、サブコマンド全体の実行フローを確認・変更したいとき。
+- apply scope が full、session、rolling のときに、どのファイルを finding 列挙対象にするかを確認・変更したいとき。
+- apply fork 中に oracle、.agents、memo などの編集禁止対象へ差分が出た場合の rollback と再実行・エラー化の挙動を確認・変更したいとき。
+- finding 列挙や finding 適用のために Codex CLI へ渡す parameter、cwd、root、purpose、logger の扱いを追いたいとき。
+- apply fork が生成する commit message のプロンプト、sanitize、fallback 件名を確認・変更したいとき。
+- apply fork 後の dirty target 更新、重複排除、git status からの変更 path 正規化、git ignored や INDEX.md 除外の扱いを確認したいとき。
 
 ## Do not read this when
-- apply fork の人間向けレポート本文の構成や書き込み形式だけを確認したいときは、レポート生成側を読む。
-- Codex に渡す finding 列挙用または finding 適用用の prompt/schema の詳細だけを確認したいときは、対応する builder 側を読む。
-- apply process id の保存先や削除処理そのものの詳細だけを確認したいときは、apply runtime 側を読む。
-- repo root、worktree 作成、git 実行、状態ファイル読み書きなど共通 runtime helper の実装詳細だけを確認したいときは、runtime 側を読む。
-- apply fork を起動する CLI option 定義や Typer command 登録だけを確認したいときは、上位のサブコマンド定義側を読む。
+- apply fork の report 本文やエラー report の markdown 生成内容だけを確認したいときは、report 生成側を直接読む。
+- apply fork の finding 列挙用プロンプトや finding 適用用プロンプトの詳細だけを確認したいときは、builder 側の該当処理を直接読む。
+- apply process id の保存・削除のファイル形式や配置だけを確認したいときは、apply runtime の process id 処理を直接読む。
+- CLI 共通ランナー、git 実行、worktree 作成、状態ファイル読み書き、config 読み込みなどの基盤挙動だけを確認したいときは、runtime 側を直接読む。
+- apply fork の仕様文書そのものや出力互換性の正本を確認したいときは、oracle の該当仕様を読む。
 
 ## hash
-- 340771a79766e49748f23e36b859798f893ef2a3a4944aa43a34329ff50d21af
+- 0c1af0a506e9efab498770062f57126926caa17c5ad3d0b642dd2fe8c93723a9
 
 # `fork_report.py`
 
