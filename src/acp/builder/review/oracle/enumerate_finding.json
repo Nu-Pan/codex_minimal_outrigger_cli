@@ -20,7 +20,7 @@
         "properties": {
           "severity": {
             "type": "string",
-            "description": "所見の重大度。仕様断片として致命的な矛盾・欠落は fatal、軽微な曖昧さ・改善余地は minor。",
+            "description": "所見の重大度。fatal は明確な仕様矛盾または実装者裁量で解消不能な問題、minor は日本語的な誤り・誤字脱字・助詞抜け・用語不統一・表記揺れ・typo・その他ケアレスミスの疑いが濃厚な単純な表記問題。",
             "enum": [
               "fatal",
               "minor"
