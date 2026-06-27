@@ -25,21 +25,23 @@
 # `prompt_parts`
 
 ## Summary
-- AI agent に渡す構造化プロンプト部品を構築する実装群をまとめるディレクトリ。基本概念、ファイルアクセス制限、ルーティング規則、oracle・realization・review・INDEX エントリーの各種標準、完全プロンプトの組み立てを扱う。
-- 個別の prompt part 本文を生成する関数と、それらを agent call 用プロンプトへ順序付きに合成する処理への入口になる。
+- ACP agent call に渡すプロンプト断片を構築する realization implementation 群であり、完全プロンプトの組み立て、ファイルアクセス制約、ルーティング規則、oracle/realization の基本概念、各種レビュー・品質規範、INDEX エントリー規範を扱う。
+- 各ファイルは `StructDoc` と標準・要求事項の構造を使って、AI に提示する規範文書や基本文書を生成する責務を持つ。
+- agent call 用プロンプトに含める標準セクションの内容や注入条件、レビュー所見の分類基準、oracle/realization/INDEX エントリーに関する判断基準を調べる入口になる。
 
 ## Read this when
-- agent call に含める標準プロンプト片の種類、注入条件、依存関係、結合順序を確認・変更したいとき。
-- oracle file と realization file の基本説明、ファイルアクセス制約、INDEX.md を使う読み進め規則など、AI に提示する共通前提プロンプトの生成箇所を探すとき。
-- oracle file、realization file、oracle review、apply review、INDEX.md エントリーについて、AI が従うべき標準・所見基準・品質基準の文書生成処理を確認したいとき。
-- 構造化文書として標準や要求事項を agent 向けに渡す prompt part の責務分担を把握し、どの個別構築処理を読むべきか選びたいとき。
+- agent call 用の完全なプロンプトに、基本情報・アクセス制限・ルーティング規則・追加プロンプト・標準プロンプト片をどう組み込むか確認したいとき。
+- AI に提示するファイル読み書き制約や、INDEX.md を使った本文探索ルールの文面・構造を確認または変更したいとき。
+- oracle file と realization file の役割分担、編集責任、生成方向、下位分類をプロンプトへ含める処理を調べたいとき。
+- oracle file、realization file、INDEX.md エントリーが従うべき品質規範や記述規範を生成する処理を確認したいとき。
+- oracle review や oracle-to-realization review で、どの問題を所見にするか、fatal/minor や対象外条件をどう定義するか調べたいとき。
 
 ## Do not read this when
-- StructDoc、Standard、Requirement などの基礎データ構造やレンダリング処理そのものを調べたいとき。
-- CLI 引数、状態ファイル、入出力 schema、実際のレビュー実行フローなど、生成されたプロンプトを使う側の具体処理を確認したいとき。
-- パスキーワード、作業ルート、oracle・memo の場所解決など、パスモデル自体の定義を確認したいとき。
-- 特定の oracle file や realization file の本文を実際にレビュー・実装したいだけで、プロンプト部品や標準文書の生成処理を変更しないとき。
-- 個別の標準本文だけを確認したい場合は、このディレクトリ全体ではなく該当する標準や規則を構築する対象へ直接進む。
+- 個別機能の CLI 挙動、状態ファイル形式、パス解決、入出力 schema など、生成されるプロンプト本文ではなくプロダクト実装の詳細を調べたいとき。
+- `StructDoc`、`Standard`、`Requirement` などの基礎データ構造や、構造化文書の汎用レンダリング処理そのものを調べたいとき。
+- 特定の oracle file や realization file の本文内容をレビュー・実装したいだけで、レビュー基準や品質規範のプロンプト生成処理を変更しないとき。
+- 生成済みの INDEX.md エントリー文面やルーティング文書の保存・更新フローだけを確認したいとき。
+- 特定の標準プロンプト片だけを変更することが分かっているときは、このディレクトリ全体ではなく該当する個別構築ファイルへ直接進む。
 
 ## hash
-- e45db61782d2b00f497dbd5c18f39c0751c879d4eaac52d71f9f0580f4ec9d3b
+- 1ea0aaba9f797fdcfc41f1e16260d01c9f975e500f6195af2abc58d6c80016a7
