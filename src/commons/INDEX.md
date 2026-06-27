@@ -159,25 +159,25 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI 実行に必要な profile・sandbox 設定・CODEX_HOME 検証・subprocess 環境・Structured Output schema 配置・Codex 実行結果の JSON/JSONL 解釈を扱う runtime 補助実装。
-- cmoc の file access mode を Codex CLI の sandbox mode と writable roots に変換し、hash 名の profile と schema store を準備する処理への入口になる。
-- Codex stdout/stderr から利用者向け error detail、resume token、capacity/quota retry 判定に使う error message を抽出する。
+- Codex CLI を呼び出すための runtime 補助をまとめる実装。cmoc の file access policy から Codex profile の sandbox 設定を組み立て、表現できない読み取り制限を検出して実行前に失敗させる。
+- Codex home の解決と認証情報の事前検査、内容 hash による profile と Structured Output schema の配置、subprocess へ渡す環境変数の組み立てを扱う。
+- Codex 実行後の output JSON 読み取り、stderr と JSONL event からのエラー文面抽出、resume token 抽出、capacity error と quota error の retry 判定を扱う。
 
 ## Read this when
-- AgentCallParameter や CmocConfig から Codex profile 本文を生成・保存する挙動を確認または変更したいとき。
-- FileAccessMode ごとの Codex sandbox mode、writable roots、memo や .agents など保護対象の扱いを追いたいとき。
-- CODEX_HOME の解決、auth.json を含む事前検証、Codex subprocess に渡す環境変数の扱いを確認したいとき。
-- Structured Output schema を work root 側へ配置する処理や、Codex output JSON の読み取り失敗時挙動を確認したいとき。
-- Codex JSONL stdout から capacity error、quota error、resume token、利用者向け error 文面を判定する処理を変更したいとき。
+- AgentCallParameter や repo config から Codex CLI profile をどう生成・再利用するか確認したいとき。
+- file access mode が Codex CLI の sandbox mode にどう対応するか、また読み取り deny/allow を profile で表現できない場合の失敗条件を確認したいとき。
+- CODEX_HOME の解決、auth.json の存在確認、Codex subprocess に渡す環境変数の扱いを変更・調査するとき。
+- Structured Output schema を work root 側の hash store へ配置する処理、または Codex output file の JSON 読み取り失敗時の扱いを確認するとき。
+- Codex JSONL stdout から利用者向けエラー詳細、resume 用 thread id、capacity/quota retry 判定を抽出する処理を変更・調査するとき。
 
 ## Do not read this when
-- Codex CLI を実際に起動する subprocess 制御、retry loop、turn 全体の orchestration を探しているとき。
-- cmoc の file access policy 自体の定義や AgentCallParameter の schema を確認したいとき。
-- hash 付きファイル書き込みや schema store directory の低レベルな path 生成だけを変更したいとき。
-- Codex model 名や reasoning effort の設定値そのものを編集したいとき。
+- Codex を実際に起動する subprocess 制御や retry ループ全体の流れだけを確認したいときは、呼び出し元の実行制御を扱う実装を先に読む。
+- cmoc 固有の file access policy そのものの定義や AgentCallParameter の構造を確認したいときは、基本型を定義する実装を読む。
+- repo config の読み込み規則や model/reasoning_effort の設定元を確認したいときは、設定定義を扱う実装を読む。
+- hash store のディレクトリ規則や内容 hash ファイル書き込みの詳細を確認したいときは、path 計算または runtime content 書き込みを扱う実装を読む。
 
 ## hash
-- dcdb888155437d89ef8972e09effd36f03ff30d3c19e78bb46a8e4750b3eef41
+- a522dd5448c24c82af9d40809aa85f99dfa565489966db1cce7c885a036ccfaf
 
 # `runtime_codex_tui.py`
 

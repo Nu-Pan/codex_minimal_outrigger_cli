@@ -68,30 +68,26 @@
 # `commons`
 
 ## Summary
-- cmoc の実行時共通 helper 群を収める realization implementation 領域。CLI サブコマンド実行の共通ライフサイクル、Codex exec/TUI 呼び出し、preflight indexing、設定、Git、ログ、パス、状態、エラー、内容 hash、結果モデルなど、複数機能から共有される runtime 基盤への入口になる。
-- 個別機能の業務処理ではなく、サブコマンドや上位 workflow が依存する横断的な実行支援、永続化支援、外部コマンド支援、Codex 呼び出し支援を責務別に分けている。
+- cmoc の realization implementation のうち、CLI 実行時に複数機能から共有される runtime helper 群をまとめる領域。Codex 呼び出し、indexing preflight、設定、内容 hash、共通エラー、Git 操作、ログ、runtime path、結果モデル、session state、サブコマンド実行ライフサイクルなど、上位サブコマンドが横断的に使う基盤処理への入口になる。
+- 共有入口として再 export だけを担う薄い対象と、個別責務の実装を持つ対象が混在しているため、まずここで関心領域を絞り、実装詳細は Codex exec/TUI、profile、preflight、config、content、errors、git、logging、paths、results、state、CLI lifecycle などの責務別本文へ進むための階層である。
 
 ## Read this when
-- CLI サブコマンドを共通の開始・完了表示、ログ、例外処理、終了コード化の流れで実行する仕組みを確認または変更したいとき。
-- Codex CLI の exec または対話起動について、profile 準備、sandbox 設定、schema 配置、retry、quota/capacity 対応、resume、call log、subcommand event のいずれかを追いたいとき。
-- Codex 呼び出し前に INDEX.md 更新 preflight を走らせる経路、または実際の indexing 対象列挙・鮮度判定・エントリー再生成・自動 commit の挙動を確認したいとき。
-- cmoc 設定ファイルの読み書き、既定値補完、不正 JSON や不正値の利用者向けエラー化を確認または変更したいとき。
-- Git command の共通実行、branch・HEAD・clean worktree 判定、cmoc 管理 branch や run worktree 操作、ignore 判定や .cmoc 除外処理を扱うとき。
-- repo root、work root、cmoc root、.cmoc 配下の各 runtime directory、memo 判定、timestamp や経過時間表示など、実行時 path と時刻 helper を調べたいとき。
-- サブコマンド実行ログ、Codex call 完了サマリー、quota 待機時間の集計、現在 logger の context 管理を確認または変更したいとき。
-- session/apply に紐づく永続 state の schema、読み書き、branch 名からの session-id 抽出、active session 探索を調べたいとき。
-- cmoc 共通例外や利用者向け Markdown エラーレポート、外部コマンド結果や Codex exec 結果の共有データ構造、内容 hash 保存や binary 判定などの低レベル runtime helper を探すとき。
+- サブコマンド固有ではなく、cmoc 全体で共有される実行時支援の実装場所を探しているとき。
+- Codex CLI の exec/TUI 起動、profile/schema 準備、Structured Output 検証、quota/capacity retry、call log、preflight 実行など Codex runtime 周辺の読む先を選びたいとき。
+- INDEX.md 自動更新の preflight、対象探索、鮮度判定、エントリー生成、差分 commit の実装を調べたいとき。
+- 設定 JSON の読み書き、内容 hash 保存、binary 判定、共通エラー表示、Git worktree/branch/ignore 操作、サブコマンド JSON Lines log、runtime path、実行結果モデル、session state のいずれかを確認・変更したいとき。
+- CLI サブコマンドを共通ライフサイクルで実行する仕組み、標準 stdout、終了コード化、例外表示、current subcommand logger の扱いを調べたいとき。
+- 複数の runtime helper がどの共有入口から利用可能か、または旧 import path の互換入口がどの責務別実装へ接続されるかを確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務処理、引数定義、利用者向け出力内容そのものを確認したいだけのとき。その場合はサブコマンド実装側へ進む。
-- cmoc の正本仕様断片、oracle file と realization file の概念、パスキーワードの定義そのものを確認したいとき。その場合は oracle 側の仕様本文を読む。
-- テスト期待値、fixture、外部挙動の検証観点を変更したいとき。まず対応する realization test を読む。
-- INDEX.md エントリー生成のプロンプトや入力パラメータ定義だけを確認したいとき。preflight や探索実行ではなく、エントリー生成パラメータを組み立てる対象へ進む方が直接的。
-- 特定の上位 workflow が、どのタイミングで runtime helper を呼ぶかだけを知りたいとき。まずその workflow またはサブコマンドの実装を読み、必要になった helper だけこの領域で確認する。
-- 外部依存、パッケージ設定、CLI アプリケーション全体のコマンド登録、プロジェクト補助ファイルの配置を確認したいとき。この領域は共有 runtime 実装であり、プロジェクト全体の設定入口ではない。
+- 個別サブコマンドの業務処理、引数定義、利用者向け出力、サブコマンド固有の状態遷移を調べたいだけのとき。その場合は該当サブコマンド実装へ進む。
+- cmoc の正本仕様断片、oracle/realization の概念定義、パス概念そのもの、INDEX.md のルーティング標準を確認したいとき。この領域は realization implementation の共有 runtime 実装であり、仕様本文ではない。
+- テスト期待値や fixture を確認したいとき。共有 helper の外部挙動を検証する対象はテスト側を読む方が直接的。
+- 特定機能の低レベル詳細だけが目的で、読むべき責務が既に分かっているとき。集約入口ではなく、設定、Git、ログ、path、state、Codex profile、Codex exec/TUI など対応する責務別本文へ直接進む。
+- Typer アプリケーション全体のコマンド登録、CLI ルーティング、または上位 workflow の制御を確認したいとき。共有 runtime helper ではなく、CLI 本体やサブコマンド層を読む方がよい。
 
 ## hash
-- 7472d9f9588048e336ee981920440e53fc397a32cd292b4cba495bc24ca8c170
+- 3772bce5374ce747b5e0c2f4f02736050390a533b5babd72b91c3df8fbb60293
 
 # `config`
 
