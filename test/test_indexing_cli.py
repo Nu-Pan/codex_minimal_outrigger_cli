@@ -143,6 +143,35 @@ def test_indexing_targets_current_linked_worktree(
     assert run_git(linked, "status", "--short").stdout.strip() == ""
 
 
+def test_indexing_rejects_dirty_current_linked_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    linked = root / ".cmoc" / "worktrees" / "dirty-indexing"
+    run_git(root, "worktree", "add", "-b", "dirty-indexing", str(linked), "HEAD")
+    (linked / "README.md").write_text("# repo\n\nlinked change\n")
+    head_before = run_git(linked, "rev-parse", "HEAD").stdout.strip()
+
+    def fail_update_indexes(
+        update_root: Path, codex_exec: Callable[..., object] | None = None
+    ) -> list[Path]:
+        raise AssertionError("dirty linked worktree must stop before indexing")
+
+    monkeypatch.setattr(indexing_module, "update_indexes", fail_update_indexes)
+    monkeypatch.chdir(linked)
+
+    result = runner.invoke(app, ["indexing"], catch_exceptions=False)
+
+    assert result.exit_code != 0
+    assert "git 未コミット差分が存在します。" in result.stdout
+    assert run_git(root, "status", "--short").stdout.strip() == ""
+    assert run_git(linked, "rev-parse", "HEAD").stdout.strip() == head_before
+    assert not (linked / "INDEX.md").exists()
+    assert run_git(linked, "status", "--short").stdout == " M README.md\n"
+
+
 def test_indexing_preflight_in_apply_worktree_uses_repo_config(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

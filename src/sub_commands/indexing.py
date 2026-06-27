@@ -27,6 +27,9 @@ def cmoc_indexing_impl() -> None:
         pre_log_check=require_indexing_cli_preconditions,
         command_name="indexing",
         command_argv=["cmoc", "indexing"],
+        # `<work-root>/oracle/doc/app_spec/sub_command/indexing.md`
+        # requires the current worktree, not the main worktree, to be clean.
+        use_work_root_runtime=True,
     )
 
 
