@@ -1,25 +1,28 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実行開始、結果取り込み、未 join run の破棄、および実行時補助を扱う実装群への入口。
-- 対象 worktree の特定、apply process の追跡と停止、isolated worktree 上での finding 適用、report 生成、session branch への merge と cleanup など、apply run のライフサイクルに沿って読む先を選ぶための階層。
-- 具体的な処理は、開始処理、join 処理、abandon 処理、実行時 process/worktree 補助、report 生成の責務ごとに分かれている。
+- 実行結果を別 worktree で作成し、必要に応じて破棄または session 側へ取り込む一連のサブコマンド実装を扱う領域。
+- 実行開始時の対象選定、process 追跡、branch/worktree 管理、差分検証、report 生成、cleanup、状態遷移の入口になる。
+- 実行中の process 停止や pid 管理、fork 結果 report、join 時の想定外差分分類や merge conflict 処理など、apply 系操作固有の実行時責務を下位要素に分けて持つ。
 
 ## Read this when
-- apply run の開始から成果取り込みまたは破棄までの全体像を把握し、どの実装対象へ進むべきかを選びたいとき。
-- apply branch、apply worktree、session branch、apply state、process id file、report の関係を、apply 系サブコマンド単位で調べ始めるとき。
-- apply 実行中の process tracking、停止、cleanup、状態遷移、merge、想定外差分検出、report 出力のどれがどの責務に属するかを切り分けたいとき。
-- apply 系サブコマンドの利用者向け挙動や失敗時処理を変更する前に、開始・join・abandon・runtime helper・report 生成の読む順序を決めたいとき。
+- apply 系サブコマンドの開始、破棄、取り込み、report 生成、process 管理のどこを読むべきかを選びたいとき。
+- session branch や apply branch を前提に、isolated worktree を作成・削除しながら apply run の状態を進める流れを調べたいとき。
+- apply run の成果を session 側へ merge する条件、想定外差分の検出、force resolve、merge conflict 時の扱い、cleanup の責務境界を確認したいとき。
+- 未 join の実行を破棄して ready 状態へ戻す操作、実行中 process の停止、apply worktree や branch の削除に関わる実装へ進みたいとき。
+- apply fork の対象ファイル選定、finding 列挙・適用、禁止対象差分のロールバック、commit 作成、converged/unconverged/error 判定を追いたいとき。
+- apply fork や join の利用者向け report に含まれる結果、warning、変更要約、保存先を確認・変更したいとき。
 
 ## Do not read this when
-- CLI 全体の dispatch、引数登録、共通 subcommand 実行基盤だけを調べたいとき。
-- repo root、work root、git 実行、worktree 作成・削除、state file 読み書きなど、apply 固有でない runtime primitive の低レベル実装だけを調べたいとき。
-- session state の一般 schema、session の作成・終了、branch 名規則そのものを調べたいとき。
-- Codex に渡す prompt や structured output parameter の詳細だけを確認したいとき。
-- INDEX.md エントリー生成、oracle/realization の一般ルール、または apply 以外の report 保存規約を調べたいとき。
+- CLI 全体のサブコマンド登録、dispatch、共通引数処理だけを調べたいとき。
+- repo root、work root、git command 実行、状態ファイル読み書き、report root など、複数サブコマンドにまたがる runtime primitive の詳細だけが必要なとき。
+- session state schema、session の作成・終了、branch 名規則そのものを調べたいとき。
+- Codex に渡す prompt や parameter の詳細だけを変更・確認したいとき。
+- oracle file、realization file、INDEX.md エントリー生成などの一般ルールを確認したいだけで、apply 系操作の実行時挙動に関心がないとき。
+- 具体的な apply 系処理ではなく、パッケージ import 時の副作用や再 export の有無だけを確認したいとき。
 
 ## hash
-- 7ce9b9aff0b6f76b4c0ba178cae7d5850aaa6503a3aac60b6dea27e634c3e106
+- d2cc97b9294c96440affb0699a62fff04cbeb3f3280f49ff27a892411887dc84
 
 # `indexing.py`
 

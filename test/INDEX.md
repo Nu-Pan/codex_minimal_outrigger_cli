@@ -70,25 +70,26 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 実行を通じて、所見列挙から適用、commit、変更要約、report 生成、session state 更新までの制御を検証する realization test。
-- 収束、未収束、error、変更ファイル再調査、編集禁止対象の差分検出、rolling apply fork の対象選定を、同じ loop と report schema の観測結果としてまとめて扱う。
-- 16,000 文字を超えるが、apply fork report の期待値文脈を一箇所に保つため、分割せず凝集性を優先している。
+- apply fork の CLI 実行を通じて、所見列挙、所見適用、commit message 生成、変更要約、report 出力、session state 更新までの制御を検証する realization test。
+- 収束、未収束、error、変更ファイル再調査、未追跡ファイルの変更要約、編集禁止対象差分の拒否、rolling apply fork の対象選定を、同じ loop と report schema の観測結果として扱う。
+- 16,000 文字を超えるが、apply fork report の読み取り文脈を一箇所に保つため、分割より凝集性を優先している。
 
 ## Read this when
-- apply fork の report 内容、終了コード、収束判定、未収束判定、error report の挙動を確認・変更したいとき。
-- apply fork が Codex 応答から所見を列挙し、所見適用後に commit message と変更要約を生成し、apply branch と session state を更新する流れを検証したいとき。
-- apply 後の変更ファイル再調査、INDEX.md の再調査除外、差分なし適用時の扱い、調査対象なしの場合の report 表示を確認したいとき。
-- 編集禁止対象への差分が検出された場合に、error state、stderr、report、未 commit 差分を含む変更要約がどう扱われるかを確認したいとき。
-- rolling apply fork が前回 apply join 後の変更だけを対象にする制御を確認したいとき。
+- apply fork の CLI 終了コード、stdout に返す report path、report 本文の result・finding count・変更要約の期待値を確認する時。
+- apply fork が所見適用後に変更ファイルを再調査し、特定のルーティング文書を再調査対象から外す制御を確認する時。
+- apply fork が回数上限、空所見、差分なし適用、調査対象なしをそれぞれ収束または未収束として扱う条件を確認する時。
+- apply fork の error report が commit 前の working tree 差分や未追跡ファイルを変更要約に含める挙動を確認する時。
+- apply fork が編集禁止対象への差分を検出して error state と report に反映する挙動を確認する時。
+- apply join 後の rolling apply fork が、前回 apply join の oracle snapshot 以後の変更だけを調査対象にする挙動を確認する時。
 
 ## Do not read this when
-- apply fork 以外の apply join、session fork、init などの個別コマンド実装そのものを調べたいとき。
-- report renderer や session state 永続化の内部 helper 単体の詳細だけを確認したいとき。
-- Codex CLI や LLM の実出力品質を検証したいとき。ここでは fake 応答を使って cmoc 側の制御と観測結果を検証している。
-- 一般的な test fixture、repository 作成 helper、git wrapper、CLI runner の使い方だけを調べたいとき。
+- apply fork の実装手順、内部 helper の詳細、Codex 実行 wrapper の本体を確認したいだけの場合。
+- apply join、session fork、init などの各サブコマンド単体の仕様や実装を確認したい場合。
+- report schema の生成規則そのものや、変更要約 helper の内部実装だけを確認したい場合。
+- apply fork と関係しない CLI、一般的な repository 初期化、path model、oracle/realization の基本概念を調べる場合。
 
 ## hash
-- 931332ad9a54f022bfb36dfbc9c3724c8948a76d18f73b1dd4efba82900895cc
+- 89a5b080919691a165d01283c9923d3262aaeaf5fe32f85eddab16dae1e412bb
 
 # `test_apply_join_cli.py`
 
