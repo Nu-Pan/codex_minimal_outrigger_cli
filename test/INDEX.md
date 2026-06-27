@@ -267,25 +267,24 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- agent prompt の構成部品、complete prompt、file access/routing/review/index 標準文書、各種 AgentCallParameter builder の生成結果を横断的に検証する realization test。
-- prompt の markdown rendering、標準文書の主要語句、補助 prompt の保持、builder の model/reasoning/file access mode、structured output schema と oracle source の一致を同じ文脈で確認する。
-- 大きいテストだが、prompt 構築の回帰観点を一箇所に集約し、共通の render/schema 期待値を追えるようにしている。
+- agent prompt と structured output schema の組み立て結果を横断的に検証する realization test。prompt parts の markdown 描画、routing/file access/各種 standard の注入、ACP builder の model・reasoning・file access mode・schema path・schema 内容の期待値をまとめて扱う。
+- 標準 prompt、routing、file access、builder parameter が最終 prompt の同じ読解文脈で結合されることを回帰確認するための入口であり、複数 builder や prompt part にまたがる期待値を一箇所で追う。
 
 ## Read this when
-- agent prompt、routing rule、file access rule、review/index/realization/apply 標準文書の出力内容を変更し、その回帰テスト期待値を確認または更新したいとき。
-- AgentCallParameter builder が返す model class、reasoning effort、file access mode、prompt 本文、structured output schema path を変更するとき。
-- oracle 配下の structured output schema と builder が参照する schema の一致検証を調べたいとき。
-- markdown rendering の空行畳み込みや code block 内空行の扱いに関するテストを確認したいとき。
-- prompt 構築まわりの複数要素が complete prompt 内でどう組み合わさるかを、横断的なテスト観点から把握したいとき。
+- prompt parts の文言、markdown render、blank line 折り畳み、standard doc の注入有無に関するテスト期待値を確認・更新したいとき。
+- ACP builder が返す model class、reasoning effort、file access mode、structured output schema path、prompt 内の必須文言を横断的に確認したいとき。
+- builder が生成する JSON schema と oracle 側 schema の一致、または jsonschema validate の代表入力を確認したいとき。
+- file access rule、routing rule、index entry standard、review oracle standard、realization standard、apply review standard の回帰テストを探すとき。
+- apply fork、review oracle、session join、TUI resolve parameter、indexing index entry など複数領域の builder 変更が共通 prompt/schema 期待値へ影響するか確認したいとき。
 
 ## Do not read this when
-- 個別 builder の実装詳細や prompt 文面の生成ロジックを変更したいだけで、テスト期待値ではなく実装側を先に読むべきとき。
-- oracle source schema 自体の正本仕様を確認したいとき。
-- prompt や AgentCallParameter と関係しない CLI 挙動、永続状態、git 操作、path model のテストを探しているとき。
-- 単一の小さな helper や低レベル構造体の仕様だけを確認したいとき。
+- 単一 builder の実装詳細や prompt 生成ロジック自体を修正したいだけで、まず該当する実装ファイルを直接読む方がよいとき。
+- oracle schema の正本内容そのものを確認したいとき。このテストは schema 一致を検証する側であり、正本 schema の本文ではない。
+- 個別機能の外部挙動テストだけを探しており、prompt 構築や structured output schema の期待値に関係しないとき。
+- INDEX.md エントリー生成の仕様や routing 文書の書き方そのものを確認したいとき。このファイルはそれらの一部文言を回帰検証するテストであり、標準本文ではない。
 
 ## hash
-- e7fd403fdc17c917974de10e325944c7da10db2cdcd1887e738c0692450fa136
+- 9e850d504d13ee4e76b707fbbf54800d4a0a4902e306e692c0fd69b706f5a356
 
 # `test_review_oracle_cli.py`
 
