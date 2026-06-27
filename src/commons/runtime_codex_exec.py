@@ -437,6 +437,8 @@ def run_codex_exec(
                             "exec",
                             "--profile",
                             profile_name,
+                            "--cd",
+                            str(codex_cwd),
                             "--json",
                             "--output-last-message",
                             str(probe_output_path),
@@ -459,7 +461,7 @@ def run_codex_exec(
                         probe_started_at = time.perf_counter()
                         poll = run_codex_subprocess(
                             probe_argv,
-                            cwd=cwd,
+                            cwd=codex_cwd,
                             input=_read_prompt_log(probe_prompt_path),
                             text=True,
                             capture_output=True,

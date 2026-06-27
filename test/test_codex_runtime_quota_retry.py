@@ -1,4 +1,5 @@
 import json
+import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -177,6 +178,68 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert f"- call_log: `{probe_call_path}`" in console
     assert "- elapsed: `" in console
     assert "- returncode: `0`" in console
+
+
+def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    codex_home = root / "oracle" / "relative_codex_home"
+    codex_home.mkdir()
+    (codex_home / "auth.json").write_text("{}\n")
+    monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
+    stub_codex_profile(tmp_path, monkeypatch)
+    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
+    records = []
+
+    def fake_run(argv, **kwargs):
+        stdin = str(kwargs["input"])
+        cwd = Path(kwargs["cwd"])
+        kind = (
+            "resume"
+            if "resume" in argv
+            else "probe"
+            if stdin == "quota availability probe"
+            else "initial"
+        )
+        home = Path(kwargs["env"]["CODEX_HOME"])
+        records.append((kind, cwd, home, cwd / home, Path(argv[argv.index("--cd") + 1])))
+        if kind == "initial":
+            return subprocess.CompletedProcess(
+                argv,
+                1,
+                '{"type":"thread.started","thread_id":"sess-1"}\n'
+                '{"type":"error","message":"Quota exceeded"}\n',
+                "",
+            )
+        output = Path(argv[argv.index("--output-last-message") + 1])
+        output.write_text(json.dumps({"ok": kind}))
+        return subprocess.CompletedProcess(
+            argv, 0, '{"type": "turn.completed"}\n', ""
+        )
+
+    monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.PURE_ORACLE_READ,
+        "prompt",
+        None,
+    )
+
+    run_codex_exec(
+        parameter,
+        root=root,
+        quota_poll_interval_sec=0,
+        max_quota_polls=1,
+        config=CmocConfig(),
+    )
+
+    oracle_root = root / "oracle"
+    assert records == [
+        (kind, oracle_root, Path("relative_codex_home"), codex_home, oracle_root)
+        for kind in ["initial", "probe", "resume"]
+    ]
 
 
 def test_run_codex_exec_reruns_after_quota_without_resume_token(
