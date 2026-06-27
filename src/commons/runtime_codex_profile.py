@@ -36,6 +36,17 @@ def _toml_array(values: list[Path]) -> str:
     return "[" + ", ".join(_toml_str(value) for value in values) + "]"
 
 
+def _top_level_writable_paths(root: Path, excluded_names: set[str]) -> list[Path]:
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # Codex profile has no deny-list for a subtree under one writable root, so
+    # protected top-level entries must be omitted from the allow-list itself.
+    return [
+        path.resolve()
+        for path in root.iterdir()
+        if path.name not in excluded_names
+    ]
+
+
 def _sandbox_lines(
     mode: FileAccessMode,
     root: Path,
@@ -48,11 +59,11 @@ def _sandbox_lines(
         case FileAccessMode.READONLY | FileAccessMode.PURE_ORACLE_READ:
             write_paths = []
         case FileAccessMode.REALIZATION_WRITE:
-            write_paths = [root]
+            write_paths = _top_level_writable_paths(root, {"oracle", "memo"})
         case FileAccessMode.ORACLE_WRITE:
             write_paths = [root / "oracle"]
         case FileAccessMode.REPO_WRITE:
-            write_paths = [root]
+            write_paths = _top_level_writable_paths(root, {"memo"})
         case _:
             raise CmocError("不明な FileAccessMode です。", [], str(mode))
     if extra_writable_paths:

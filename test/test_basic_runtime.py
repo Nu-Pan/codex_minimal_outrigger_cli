@@ -334,6 +334,10 @@ def test_codex_profile_contains_supported_sandbox_settings(tmp_path: Path) -> No
     """Codex profile は現在の Codex CLI が受け付ける sandbox key だけを持つ。"""
     root = tmp_path / "repo"
     root.mkdir()
+    (root / "src").mkdir()
+    (root / "README.md").write_text("# repo\n")
+    (root / "oracle").mkdir()
+    (root / "memo").mkdir()
 
     def profile(mode: FileAccessMode) -> dict:
         """file access mode ごとの profile TOML を dict として読む。"""
@@ -379,10 +383,14 @@ def test_codex_profile_contains_supported_sandbox_settings(tmp_path: Path) -> No
     realization_profile = profile(FileAccessMode.REALIZATION_WRITE)
     assert realization_profile["sandbox_mode"] == "workspace-write"
     realization_workspace = realization_profile["sandbox_workspace_write"]
-    assert realization_workspace["writable_roots"] == [str(root)]
+    assert realization_workspace["writable_roots"] == sorted(
+        [str(root / "README.md"), str(root / "src")]
+    )
+    assert str(root) not in realization_workspace["writable_roots"]
+    assert str(root / "oracle") not in realization_workspace["writable_roots"]
+    assert str(root / "memo") not in realization_workspace["writable_roots"]
     assert "read_only_paths" not in realization_workspace
 
-    (root / "oracle").mkdir()
     oracle_conflict = root / "oracle" / "spec.md"
     oracle_conflict.write_text("# spec\n")
     other_oracle_file = root / "oracle" / "other.md"
@@ -407,7 +415,16 @@ def test_codex_profile_contains_supported_sandbox_settings(tmp_path: Path) -> No
     )
     conflict_workspace = conflict_profile["sandbox_workspace_write"]
     assert conflict_workspace["writable_roots"] == sorted(
-        [str(root), str(oracle_conflict)]
+        [str(root / "README.md"), str(root / "src"), str(oracle_conflict)]
+    )
+    assert str(root) not in conflict_workspace["writable_roots"]
+    assert (
+        str(root / "memo" / "blocked.md")
+        not in conflict_workspace["writable_roots"]
+    )
+    assert (
+        str(root / ".agents" / "blocked.md")
+        not in conflict_workspace["writable_roots"]
     )
     assert "read_only_paths" not in conflict_workspace
     assert "permissions" not in conflict_profile
@@ -416,4 +433,8 @@ def test_codex_profile_contains_supported_sandbox_settings(tmp_path: Path) -> No
     assert oracle_workspace["writable_roots"] == [str(root / "oracle")]
 
     repo_workspace = profile(FileAccessMode.REPO_WRITE)["sandbox_workspace_write"]
-    assert repo_workspace["writable_roots"] == [str(root)]
+    assert repo_workspace["writable_roots"] == sorted(
+        [str(root / "README.md"), str(root / "oracle"), str(root / "src")]
+    )
+    assert str(root) not in repo_workspace["writable_roots"]
+    assert str(root / "memo") not in repo_workspace["writable_roots"]

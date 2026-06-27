@@ -347,8 +347,9 @@ def test_session_join_resolves_oracle_conflict_with_realization_write_profile(
             )
         )
         workspace = profile["sandbox_workspace_write"]
-        assert str(root) in workspace["writable_roots"]
+        assert str(root) not in workspace["writable_roots"]
         assert str(target) in workspace["writable_roots"]
+        assert str(other_oracle_file) not in workspace["writable_roots"]
         assert "read_only_paths" not in workspace
         assert "permissions" not in profile
         target.write_text("resolved change\nTitle\n=======\n")

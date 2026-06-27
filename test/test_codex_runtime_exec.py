@@ -278,7 +278,10 @@ def test_run_codex_tui_uses_codex_command_and_prompt_argument(
     profile = tomllib.loads(profiles[0].read_text())
     workspace = profile["sandbox_workspace_write"]
     assert profile["sandbox_mode"] == "workspace-write"
-    assert workspace["writable_roots"] == [str(root)]
+    assert workspace["writable_roots"] == sorted(
+        str(path.resolve()) for path in root.iterdir() if path.name != "memo"
+    )
+    assert str(root) not in workspace["writable_roots"]
     assert "read_only_paths" not in workspace
     call_logs = list((root / ".cmoc" / "log" / "codex").glob("*_tui_call.json"))
     assert len(call_logs) == 1
