@@ -15,6 +15,7 @@ from basic.path_model import (
 )
 from cmoc_runtime import (
     CmocError,
+    config_from_dict,
     ensure_cmoc_ignored,
     file_access_to_sandbox_mode,
     format_duration,
@@ -90,6 +91,25 @@ def test_config_defaults_match_logical_model_classes() -> None:
     assert config.num_parallel == 8
     assert config.codex.model[ModelClass.MAINSTREAM] == "GPT-5.5"
     assert config.codex.reasoning_effort[ReasoningEffort.HIGH] == "high"
+
+
+@pytest.mark.parametrize("value", [False, None, [], {}])
+@pytest.mark.parametrize(
+    ("field", "key"),
+    [
+        ("model", "mainstream"),
+        ("reasoning_effort", "low"),
+    ],
+)
+def test_config_rejects_non_string_codex_names(
+    field: str,
+    key: str,
+    value: object,
+) -> None:
+    with pytest.raises(CmocError) as exc_info:
+        config_from_dict({"codex": {field: {key: value}}})
+
+    assert exc_info.value.summary == "cmoc config が不正です。"
 
 
 def test_render_error_uses_structured_markdown() -> None:
