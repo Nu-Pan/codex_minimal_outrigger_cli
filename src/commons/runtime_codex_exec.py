@@ -33,6 +33,7 @@ from commons.runtime_codex_profile import (
     prepare_schema,
     read_output_json,
     resolve_codex_home,
+    run_codex_subprocess,
     validate_codex_home,
 )
 from commons.runtime_errors import CmocError
@@ -285,7 +286,7 @@ def run_codex_exec(
             run_schema_path=schema_path,
         )
         attempt_started_at = time.perf_counter()
-        result = subprocess.run(
+        result = run_codex_subprocess(
             current_argv,
             cwd=cwd,
             input=_read_prompt_log(prompt_path),
@@ -405,7 +406,7 @@ def run_codex_exec(
                             run_schema_path=None,
                         )
                         probe_started_at = time.perf_counter()
-                        poll = subprocess.run(
+                        poll = run_codex_subprocess(
                             probe_argv,
                             cwd=cwd,
                             input=_read_prompt_log(probe_prompt_path),

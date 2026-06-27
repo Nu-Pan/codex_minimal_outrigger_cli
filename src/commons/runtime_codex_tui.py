@@ -13,6 +13,7 @@ from commons.runtime_codex_profile import (
     codex_subprocess_env,
     prepare_codex_profile,
     resolve_codex_home,
+    run_codex_subprocess,
     validate_codex_home,
 )
 from commons.runtime_errors import CmocError
@@ -69,7 +70,7 @@ def run_codex_tui(
         + "\n"
     )
     started_at = time.perf_counter()
-    result = subprocess.run(
+    result = run_codex_subprocess(
         argv,
         cwd=cwd,
         env=codex_subprocess_env(codex_home),

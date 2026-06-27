@@ -1,5 +1,6 @@
 import json
 import os
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -175,6 +176,24 @@ def codex_subprocess_env(codex_home: Path) -> dict[str, str]:
     if value is None:
         value = str(codex_home)
     return {**os.environ, "CODEX_HOME": value}
+
+
+def run_codex_subprocess(
+    argv: list[str], **kwargs: Any
+) -> subprocess.CompletedProcess[Any]:
+    """Codex CLI 不在を Python の生例外ではなく cmoc の実行時エラーにそろえる。"""
+    try:
+        return subprocess.run(argv, **kwargs)
+    except FileNotFoundError as exc:
+        if argv[:1] != ["codex"]:
+            raise
+        # <work-root>/oracle/src/commons/runtime_codex.py
+        # oracle 断片では Codex CLI missing を専用 fallback で利用者向け失敗にする。
+        raise CmocError(
+            "Codex CLI が見つかりません。",
+            ["Codex CLI をインストールし、PATH に codex を含めてください。"],
+            f"argv: {argv}\nerror: {exc}",
+        ) from exc
 
 
 def prepare_schema(root: Path, schema_source_path: Path | None) -> Path | None:
