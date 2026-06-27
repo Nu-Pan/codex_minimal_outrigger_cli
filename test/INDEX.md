@@ -43,23 +43,24 @@
 # `test_apply_fork_cli.py`
 
 ## Summary
-- apply fork サブコマンドの realization test。Codex 実行を fake に差し替え、apply run の完了状態、apply branch/worktree/state の更新、linked worktree 起点の HEAD 利用、session 側の .gitignore 保持、.cmoc 追跡時の拒否、config 読み込み失敗時の副作用抑止、所見対象としての .gitignore 編集、apply target 正規化の境界を検証する。
+- apply fork の CLI 挙動を検証する realization test。Codex 実行を fake に差し替え、apply run の完了状態、apply branch と worktree の作成位置、linked worktree からの開始、設定読み込み失敗時の非開始、.gitignore の保持・ignore 付与・apply branch 側編集、target normalization の memo 除外と binary file 保持を確認する。
 
 ## Read this when
-- apply fork の CLI 挙動、状態遷移、apply branch/worktree 生成、Codex loop 呼び出し、または apply run の後始末を変更する。
-- linked worktree 上で開始した session から apply fork する場合の基準 commit や worktree 配置を確認する。
-- apply fork が session 側の .gitignore や .cmoc 追跡状態をどう扱うべきかを確認する。
-- apply fork 開始前の config 読み込み失敗で、branch/state/pid などの apply run 副作用を発生させない挙動を確認する。
-- apply 対象の正規化で、root 直下の memo 除外、入れ子の memo directory の扱い、binary file の保持を確認する。
+- apply fork の外部挙動、状態更新、branch/worktree ライフサイクルを変更・確認する必要があるとき。
+- apply fork が Codex loop をどう呼び出し、所見列挙・適用・commit message・change summary の結果をどう扱うかをテスト上で確認したいとき。
+- linked worktree 上で session を fork した場合の apply branch 起点 commit や worktree 配置を確認する必要があるとき。
+- apply fork 実行時の .gitignore と .git/info/exclude の扱い、または .gitignore 自体を所見対象として編集できるかを変更・検証するとき。
+- apply fork の設定ファイル読み込み失敗時に、apply run の branch、state、pid file を開始しない挙動を確認するとき。
+- apply 対象 path の正規化で、root 直下 memo の除外、入れ子の memo directory の保持、binary file の保持を確認するとき。
 
 ## Do not read this when
-- apply fork 以外の apply 系サブコマンド、review、session fork、init などの個別 CLI 挙動だけを確認したい。
-- Codex CLI や LLM 出力品質そのものを検証したい。ここでは Codex 実行結果は fake 化され、cmoc 側の制御と副作用だけを検証している。
-- apply fork の実装詳細を変更せず、仕様断片や利用者向け説明だけを確認したい。
-- root 直下 memo の閲覧・編集を目的としている。この対象は memo を除外対象として扱うテストであり、memo 本文を読む入口ではない。
+- apply fork 以外の CLI サブコマンドや session fork 単体の挙動だけを調べるとき。
+- Codex 実行 wrapper の実装詳細や AgentCallParameter の構造そのものを調べるとき。
+- target normalization の仕様ではなく、個別ファイルの所見生成アルゴリズムや oracle/realization 比較ロジックを調べるとき。
+- git helper、test runner、fixture 作成などテスト基盤の共通処理を調べるとき。
 
 ## hash
-- d83fd6720f2b63478de5fdf301f10f5f7e8d71be6b2ac2107dfb5cac90d17b69
+- 8576119ad53dc9046aee7dbcdaf1de22375f91281c86a9781eabc0addd29f804
 
 # `test_apply_fork_report_cli.py`
 
@@ -84,21 +85,22 @@
 # `test_apply_join_cli.py`
 
 ## Summary
-- apply run を session へ join する CLI 外部挙動を検証する realization test。join 成功時の apply worktree・apply branch cleanup、state 更新、report 生成に加え、apply worktree から実行した場合の復帰先と cleanup 到達性も扱う。
-- 同じ join 操作の境界条件として、stale apply branch、dirty apply worktree、想定外差分、許容される gitignore 差分、merge conflict、index conflict 解決後の継続を一箇所で検証する。
+- apply run を session へ join する CLI 外部挙動を検証する realization test。成功時の worktree と branch の後片付け、state 更新、report 生成、session worktree への merge 先、dirty worktree や stale apply branch や想定外差分や merge conflict の拒否条件を、実際の git 状態と CLI 出力を通して確認する。
+- 16,000 文字を超えるが、同じ join 操作の成功条件と拒否条件を同じ fixture と git 状態の文脈で読む必要があるため、apply join の境界条件を一箇所に集約している。
 
 ## Read this when
-- apply join の成功条件、拒否条件、cleanup、副作用、state 更新、report 出力を CLI 経由の外部挙動として確認・変更したいとき。
-- apply join が session worktree と apply worktree のどちらから実行されても正しく動くか、失敗時に worktree・branch・state・log がどう残るかを確認したいとき。
-- 想定外差分、force resolve、merge conflict、INDEX.md の conflict 解決など、apply join の差分判定や merge 失敗処理に関わるテストを探すとき。
+- apply join の CLI 挙動、成功時 cleanup、state の ready 復帰、last joined oracle snapshot の記録、join report の生成を変更または確認したいとき。
+- apply worktree 上、session worktree 上、linked session worktree 上のどこから join した場合に、どの worktree と branch が対象になるかを確認したいとき。
+- stale apply branch、dirty apply worktree、想定外の oracle 差分、未解決 merge conflict、INDEX conflict の自動処理、--force-resolve の挙動に関わるテスト期待を確認したいとき。
+- apply fork で生成された state や apply worktree を使う CLI 結合テストの fixture 利用例を確認したいとき。
 
 ## Do not read this when
-- apply fork の Codex 実行内容や LLM 出力品質そのものを確認したいとき。この対象では fake result を使い、join 前提の apply run 作成だけを扱う。
-- join の内部 helper の詳細実装だけを追いたいとき。まず実装側の join 処理を読む方が直接的で、この対象は CLI から見える結果の期待値を確認する入口である。
-- session fork、init、path model など apply join の前提コマンド単体の仕様やテストを確認したいとき。
+- apply join の内部 helper 分割や実装詳細だけを局所的に確認したい場合は、実装側の join 処理を直接読む方が適切。
+- apply fork 単体の生成挙動、session fork 単体の挙動、または init の初期化挙動だけを確認したい場合は、それぞれの専用テストを読む方が適切。
+- Codex 実行結果そのものの品質や LLM 出力内容を検証したい場合は対象外であり、このテストでは fake result に置き換えた後の apply join 境界だけを扱う。
 
 ## hash
-- 8d8344f01b53d4a8315b46deb8e84269e041d137a2c4de52d4835f977dbef44b
+- 8e922bc9e79e1c41d995cb8e449eb7937aab2f92840d8f3e889476a38f5a3d21
 
 # `test_basic_runtime.py`
 

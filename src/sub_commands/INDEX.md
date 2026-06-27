@@ -1,25 +1,26 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンド実装をまとめるディレクトリ。apply run の開始、join、abandon、report 生成、process/worktree/branch cleanup など、session branch と isolated apply worktree をまたぐ制御の入口になる。
-- 上位 CLI から apply fork/join/abandon の実行本体へ進むためのまとまりであり、apply process の永続 pid、apply branch/worktree 探索、差分検出、merge、cleanup、利用者向け report 出力に関係する下位実装へ分岐する。
+- apply 系サブコマンドの実行処理をまとめる領域。apply run の開始、破棄、取り込み、実行時 process 管理、fork 結果 report 生成までを扱う。
+- session branch と apply branch/worktree の関係、apply state の ready/running/completed/error などの遷移、未 join run の cleanup、join 時の merge・conflict 処理、利用者向け出力や report 作成へ進む入口になる。
+- 上位の CLI 登録や option 定義ではなく、apply 操作ごとの実行条件、状態更新、git/worktree/process/report への具体的な副作用を追うためのまとまり。
 
 ## Read this when
-- apply fork、apply join、apply abandon のいずれかの実行条件、状態遷移、worktree/branch 操作、cleanup、終了時 report を調べる起点が必要なとき。
-- 未 join の apply run を開始・収束・破棄・取り込みする流れ、または running/completed/error/ready 相当の apply state 更新に関わる実装へ進みたいとき。
-- apply process の pid file、実行中 process 停止、linked worktree 探索、apply branch から worktree path を導く低レベル runtime helper を探したいとき。
-- apply fork 中の対象 file 列挙、編集禁止対象差分の検出と復旧、Codex 呼び出し、commit、変更要約 report 生成の接続を確認したいとき。
-- apply join 中の merge、想定外差分の検出、force resolve、INDEX.md conflict の機械解決、apply worktree/branch 後始末を確認したいとき。
+- apply run を開始して isolated worktree で調査・変更・commit する流れ、scope ごとの調査対象列挙、収束・失敗時の状態反映を確認したいとき。
+- 未 join の apply run を破棄して ready 状態へ戻す処理、実行中 process 停止、apply worktree・branch・pid file cleanup を確認したいとき。
+- apply 実行結果を session 側へ取り込む join 処理、想定外差分の検出、force resolve、merge、INDEX.md conflict の自動解決、join 後 cleanup を確認したいとき。
+- apply process の pid file 管理、linked worktree 探索、pidfd や process start time による同一性確認、安全な停止処理を確認したいとき。
+- apply fork の完了・失敗 report の保存先、frontmatter、差分取得、変更要約生成、fallback 要約を確認したいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド、CLI 全体の登録構造、共通 option 定義だけを調べたいとき。
-- git 実行、state file 読み書き、worktree 作成・削除、config 読み込みなど、複数サブコマンドで使う共通 runtime primitive そのものを変更したいとき。
-- Codex に渡す prompt builder の詳細、structured output parameter、finding 列挙・適用プロンプトの文面だけを確認したいとき。
-- oracle file、INDEX.md、編集禁止対象、path model などの正本仕様そのものを確認したいとき。
-- apply サブコマンドの外部挙動ではなく、テスト fixture やテストケースの期待値を確認したいとき。
+- apply サブコマンドを Typer に登録する箇所、CLI option 定義、上位 command tree だけを確認したいとき。
+- repo root 探索、git 実行 helper、worktree helper、state file 読み書き、timestamp、report directory など、apply に限らない共通 runtime API の定義だけを確認したいとき。
+- Codex に渡す prompt や structured output schema の詳細だけを確認したいとき。
+- session state 全体の schema、oracle/realization の一般仕様、INDEX.md 生成規則を確認したいとき。
+- apply 以外のサブコマンドの実行処理や report 生成を調べたいとき。
 
 ## hash
-- 1d87505f2c3f7c869ac4c6f7fad9d5c56eab43475594b9417ef4f2442fbf79ba
+- 04636b6ffc0f47db1dcebe5ac53ea6716ef05c6588b62dfc09e6506b432aee2a
 
 # `indexing.py`
 
@@ -170,23 +171,25 @@
 # `session`
 
 ## Summary
-- session 操作に関するサブコマンド実装をまとめる領域。active session の作成、home branch への取り込み、merge しない破棄など、session branch と session state をまたぐ CLI 処理への入口になる。
-- 各サブコマンドは runtime wrapper 経由の実行、事前条件確認、git branch 操作、state 更新、利用者向け出力、失敗時のエラー情報や復旧処理を扱う。
+- session 系サブコマンドの実行本体をまとめる領域。通常 branch から session branch を作成する処理、active session を home branch へ merge して完了する処理、merge せず破棄する処理を扱う。
+- 各操作は CLI runtime wrapper から呼ばれ、branch 種別、session state、apply state、clean worktree、home branch の存在などの事前条件確認と、成功時の状態更新・branch 操作・利用者向け出力を担う。
+- join では merge conflict 発生時に Codex CLI へ解決を依頼し、conflict marker と unmerged path の残存確認を経て merge commit を完了する補助処理も含む。
 
 ## Read this when
-- session 操作のうち、branch 作成、home branch への統合、merge しない破棄といった CLI 実行フローの実装を探したいとき。
-- session branch、home branch、active state、clean worktree などの条件が、各 session サブコマンドでどのように検査・更新されるかを調べたいとき。
-- session サブコマンド実行時の git 操作、session state 保存、成功時の利用者向け出力、失敗時の CmocError や rollback 方針を確認したいとき。
-- merge conflict 解決依頼、conflict marker 検出、unmerged path 検査など、session の取り込み処理に固有の補助フローを調べたいとき。
+- session の開始、完了、破棄に対応するサブコマンドの実行条件、失敗条件、状態遷移、branch 操作、CLI 出力を確認または変更したいとき。
+- session branch と home branch の関係、session 作成時の start commit や state file 生成、active session の重複禁止など、session lifecycle の具体的な制御を追いたいとき。
+- active session を home branch へ取り込む merge 処理、merge conflict 解決依頼、conflict marker 検出、unmerged path 検査、merge commit 完了処理を調べたいとき。
+- active session を merge せず破棄する際の home branch 切り替え、state 更新、session branch 削除、cleanup 失敗時の rollback とエラー詳細を確認したいとき。
 
 ## Do not read this when
-- session 以外のサブコマンド実装、CLI 全体のコマンド登録、共通ルーティングだけを調べたいとき。
-- session state の schema、永続化形式、path 解決、branch から state を読み込む共通処理そのものを調べたいとき。
-- git 実行 wrapper、worktree clean 判定、managed branch 判定、cmoc ignore 設定など、複数領域で使われる runtime helper の内部実装を調べたいとき。
-- 正本仕様断片や oracle 側の設計意図だけを確認したいとき。
+- session 以外のサブコマンド実装、CLI 全体のコマンド登録、Typer のルート構成だけを調べたいとき。
+- session state の schema、永続化形式、state file path 解決、branch から state を読み込む共通処理そのものを調べたいとき。
+- git 実行 wrapper、worktree clean 判定、cmoc ignore 設定、CLI runtime wrapper、Codex exec wrapper などの共通 runtime helper の実装詳細を調べたいとき。
+- join conflict 解決で Codex CLI に渡す parameter builder の詳細や、indexing preflight の実装そのものを変更したいとき。
+- oracle 上の正本仕様断片や、実装全体の設計標準・ルーティング規則を確認したいだけのとき。
 
 ## hash
-- 0168fd9c1f57c25b7fecc403018b8360a799c3075e8ab95d94f25be8ba81a7b5
+- ca8ebd7f6fc6c75d5c85eab474e439f84468c804ed2b07f74aed441507b8ca9a
 
 # `tui.py`
 

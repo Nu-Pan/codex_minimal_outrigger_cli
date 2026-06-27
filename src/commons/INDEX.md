@@ -15,20 +15,21 @@
 # `cmoc_runtime.py`
 
 ## Summary
-- cmoc の実行時共通 API をまとめて公開する集約モジュール。Codex 実行、プロファイル、設定、ファイル内容、CLI、エラー、Git、ログ、パス、結果、状態管理に関する下位 runtime モジュールの主要な関数・クラス・定数を、利用側が一か所から import できる入口として扱う。
+- CLI 実行基盤の共通 API を一箇所から取り込めるように束ねる再エクスポート用の入口。設定、ファイル内容、CLI 補助、エラー、Git、ログ、パス、結果型、状態、Codex 実行・プロファイル関連の機能を、サブコマンドやテストが横断的に参照するための薄い集約層である。
+- この対象自体は処理ロジックを持たず、実体は分割された各 runtime 系実装にある。公開される共通 runtime API の入口を確認したい場合の案内点として位置づく。
 
 ## Read this when
-- cmoc の実装から共通 runtime 機能をどの名前で import できるか確認したいとき。
-- 複数の runtime_* モジュールに分かれている実行時 helper の公開入口を確認したいとき。
-- 新しい共通 runtime 機能を既存の集約 import 面へ加える必要があるか判断するとき。
+- サブコマンドやテストが共通 runtime API をどの入口から import しているかを確認したいとき。
+- 複数領域にまたがる runtime helper の公開面を見渡し、どの機能群が共通入口に集約されているかを確認したいとき。
+- 共通 runtime API の再配置や import 経路の整理により、既存呼び出し側への影響範囲を把握したいとき。
 
 ## Do not read this when
-- 個々の関数・クラス・定数の挙動、引数、副作用、エラー処理を調べたいとき。その場合は対応する下位 runtime モジュールを直接読む。
-- Codex 実行、Git 操作、設定、状態、パス処理など特定領域の実装を変更したいとき。その場合はこの集約入口ではなく、責務を持つ下位実装を読む。
-- cmoc の正本仕様断片を確認したいとき。このファイルは realization implementation の import 集約であり、仕様本文ではない。
+- 設定の読み書き、Git 操作、パス計算、状態保存、Codex 実行、ログ、ファイル内容処理などの具体的な挙動を調べたいときは、それぞれの実装本体を直接読む。
+- 関数やクラスの処理内容、失敗時挙動、副作用、保存形式を変更したいときは、この集約入口ではなく定義元を読む。
+- 特定サブコマンドの制御フローやユーザー向け挙動を調べたいときは、呼び出し側のサブコマンド実装を読む。
 
 ## hash
-- e5d4066344eb6e9174bca7f06b7aba9734d0ef516610c1300c7544a7e89a6c44
+- a714a70a5303ab3902b4de00ed1a0ff32e6643c5cea420f05f1a167198908725
 
 # `runtime_cli.py`
 
@@ -239,24 +240,25 @@
 # `runtime_git.py`
 
 ## Summary
-- Git コマンド実行を共通化し、失敗時の cmoc 向けエラー化、現在 branch・HEAD commit・worktree cleanliness の確認、branch 存在確認、run 用 worktree の作成・削除、branch 削除を扱う実装。
-- .cmoc を Git 追跡対象外に保つための .gitignore 更新、index からの除外、ignore 状態の検証、および任意 path が Git ignore 対象かどうかの判定も担う。
+- Git コマンド実行を共通化し、失敗時の CmocError 変換、現在 branch・HEAD commit・clean worktree 判定など、Git 状態を読むための低レベル helper を提供する。
+- cmoc 管理 branch の判定、run worktree の作成・削除、branch 削除など、session/apply/run 系処理が利用する Git worktree と branch 操作を扱う。
+- `.cmoc` を Git 追跡対象外に保つための `.gitignore` または Git exclude 更新、index からの除外確認、任意 path の ignore 判定を担う。
 
 ## Read this when
-- Git コマンド呼び出しの失敗処理、stdout/stderr/returncode の扱い、または CmocError への変換を確認・変更したいとき。
-- cmoc が管理する branch prefix、現在 branch の取得、detached HEAD の拒否、HEAD commit 取得、未コミット差分の拒否に関わる挙動を確認・変更したいとき。
-- run 用 worktree の作成・強制削除・prune、または branch の存在確認・削除に関わる処理を追うとき。
-- .cmoc を .gitignore に追加する処理、Git index から除外する処理、追跡対象外として初期化済みか要求する処理を確認・変更したいとき。
-- 特定 path が Git ignore 対象かどうかを、リポジトリ root 基準の相対 path として判定する処理を確認・変更したいとき。
+- Git コマンド呼び出しの失敗時メッセージ、戻り値、標準出力・標準エラーの扱いを確認または変更したいとき。
+- 現在 branch、HEAD commit、未コミット差分の有無など、cmoc 実行前提となる Git 状態チェックを追うとき。
+- cmoc が作る管理 branch、run worktree の作成・削除、worktree prune、branch 削除の挙動を確認または変更したいとき。
+- `.cmoc` を Git 管理対象から外す処理、clean worktree を保つための exclude 利用、`.gitignore` への ignore pattern 追加、Git index からの除外処理を調べるとき。
+- Git ignore 判定を cmoc 内で再利用したい、または `check-ignore` の呼び出し条件を確認したいとき。
 
 ## Do not read this when
-- Git 以外の外部コマンド実行、プロセス起動全般、または CLI 出力整形だけを調べたいとき。
-- cmoc の path keyword や root 種別の定義を調べたいとき。
-- run の高レベルな状態管理、セッション記録、プロンプト生成、またはサブコマンドのユーザー向け制御フローだけを調べたいとき。
-- Git ignore の個別判定ではなく、INDEX.md や oracle/realization の分類規則を調べたいとき。
+- CLI 引数定義、サブコマンドの入出力、ユーザー向け表示だけを調べたいとき。
+- Git 操作を伴わない path model、設定読み込み、ファイル永続化、構造化データの処理だけを調べたいとき。
+- oracle file の正本仕様を確認したいとき。この対象は実装 helper であり、仕様判断の根拠そのものではない。
+- 個別サブコマンドの高レベルな制御フローを知りたいだけで、Git 状態確認や worktree/branch/ignore 操作の詳細まで追う必要がないとき。
 
 ## hash
-- dcc541d48e81f8c1b468b3a21221d90007082bbe88e14bdf008308b9648a8622
+- 94f45d788ecf056c0e13e7d98ded1cf5803c827b1d9632210d7b63ff64aa7a3e
 
 # `runtime_logging.py`
 
