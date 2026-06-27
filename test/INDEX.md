@@ -149,21 +149,20 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex 実行ラッパーの事前検証を確認する realization test。読み取り制限を実行時に強制できないモードや、保護領域への追加読み取りパスが指定された場合に、Codex subprocess を起動せず CmocError で拒否することを検証する。
-- テスト用リポジトリと Codex home を組み立て、subprocess 起動を失敗化したうえで、exec 経路と tui 経路の起動前ガードが働くことを確認する入口である。
+- Codex 実行ランタイムの安全側の失敗挙動を検証する realization test。読み取り制限を強制できない mode で subprocess を開始しないこと、TUI 起動前に追加読み取り path の保護領域違反を検出すること、Codex CLI 不在時に exec/TUI 共通で利用者向けの CmocError に変換することを扱う。
 
 ## Read this when
-- Codex exec/tui 起動前のファイルアクセス制限、読み取り制限、保護領域チェックの挙動を変更または確認するとき。
-- FileAccessMode と Codex subprocess 起動可否の関係、CmocError の発生条件、起動前に失敗すべき制御ロジックをテストしたいとき。
-- Codex runtime のテストで、実際の Codex CLI を起動せずに preflight rejection を検証する方法を確認したいとき。
+- Codex CLI を起動する runtime 経路のエラー変換、起動前検証、subprocess 呼び出し抑止に関するテストを確認・変更するとき。
+- FileAccessMode と読み取り制限、保護領域、extra_read_paths の関係が Codex exec/TUI 起動前にどう検証されるべきかを調べるとき。
+- Codex CLI がインストールされていない場合の exec/TUI 共通の失敗メッセージや CmocError への変換を検証するとき。
 
 ## Do not read this when
-- Codex subprocess の正常起動時の引数、標準入出力、終了コード、実行結果の解釈を確認したいだけのとき。
-- テスト用リポジトリ作成や Codex home 設定 helper の詳細を調べたいとき。
-- 保護領域や読み取り制限の仕様本文、または実装側の判定ロジックそのものを確認したいとき。
+- Codex runtime の正常系の subprocess 引数、プロファイル生成、capacity 待機、入出力結果の扱いを調べたいだけのとき。
+- Codex 以外の runtime、CLI コマンド全体、設定ファイル読み込み、repository fixture の一般的な振る舞いを調べたいとき。
+- oracle の正本仕様断片を確認したいとき。
 
 ## hash
-- 88a90630ca93701d998e5433cbb407c6701586bbeba8d09a8e9034e99fffda1f
+- 2f250a74d07f5af3523e0674dd59bae6efc74f10bf8aa77746628a429d887093
 
 # `test_codex_runtime_home.py`
 

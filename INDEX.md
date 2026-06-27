@@ -149,47 +149,48 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を置く実装ルート。公開 CLI の構成、リポジトリ別設定、AI エージェント呼び出しパラメータ生成、共通 runtime helper、基礎モデル、各サブコマンドの実行制御がここから分岐する。
-- 人間意図を述べる正本仕様ではなく、oracle file に基づく実際の CLI 挙動、Codex 呼び出し、Git/worktree/state/config/log/report/INDEX maintenance などを実装する領域である。
-- 実装調査では、利用者向け CLI 入口、サブコマンド固有フロー、共有 runtime、AI prompt/Structured Output schema 構築、基礎型・文書変換、設定データ構造のどれへ進むべきかを選ぶための上位入口になる。
+- cmoc の realization implementation 全体を置く実装ルート。最上位 CLI、サブコマンド実行入口、共通 runtime helper、設定、基礎モデル、AI エージェント呼び出しパラメータ構築、互換 import 入口へ進むための上位ルーティング対象である。
+- 公開 CLI から業務処理、Codex 呼び出し、INDEX.md maintenance、oracle review、session/apply state、Git/worktree 操作、設定、path model、文書レンダリングまで、実装側の責務を大きな領域単位で切り分けて読む入口になる。
+- 正本仕様断片そのものではなく、oracle file で述べられた意図を具体化した realization implementation を確認・変更するための階層であり、外部挙動の検証だけを目的とする場合は realization test 側へ進む前の実装側入口として位置づけられる。
 
 ## Read this when
-- cmoc の CLI 実装、サブコマンド実行、共有 runtime、AI 呼び出し、設定、基礎モデルのいずれかを調査または変更したいとき。
-- 利用者が実行する操作が、どの公開 CLI 入口からどのサブコマンド本体、共通 helper、Codex 呼び出し、Git/state/config 処理へ接続されるかを追いたいとき。
-- oracle file の要求が realization implementation としてどこに具体化されているかを確認したいとき。
-- INDEX.md maintenance、oracle review、apply/session workflow、TUI 起動、初期化、互換 import path、構造化 prompt 生成など、実装側の責務分担をまず大きく把握したいとき。
-- テストではなく実装本文を根拠に、cmoc の内部制御フロー、データ構造、外部コマンド実行、永続状態、ユーザー向け出力の実装場所を探したいとき。
+- cmoc の実装本体について、どの領域が CLI 定義、サブコマンド処理、共通 runtime、設定、基礎型、AI 呼び出し条件を担うかを把握したいとき。
+- 利用者が実行するコマンドから、session、apply、review、INDEX.md maintenance、init、TUI 起動などの実装入口へ進みたいとき。
+- Codex exec/TUI 呼び出し、Structured Output 検証、call log、preflight、Git helper、state file、config、path helper、error rendering など、複数機能から共有される runtime 実装を探したいとき。
+- AgentCallParameter、FileAccessMode、モデル種別、reasoning effort、ルートトークン付きパス、規範文書モデル、Markdown レンダリングなど、上位処理が使う共通概念や基礎モデルを確認したいとき。
+- AI エージェントへ渡す role、summary、goal、補助入力、ファイルアクセス制約、Structured Output schema、標準プロンプト片の組み立てを調べたいとき。
+- リポジトリごとの設定値、Codex CLI に渡すモデル名・reasoning effort 名、並列数、apply fork や review oracle の処理上限など、永続設定に対応する実装を確認したいとき。
+- 古い公開 import path と実体モジュールの対応、互換レイヤーの残存理由や削除条件を確認したいとき。
 
 ## Do not read this when
-- cmoc の正本仕様断片、oracle/realization の概念定義、標準文書、個別仕様の人間意図そのものを読みたいとき。この領域は仕様本文ではなく実装である。
-- 実装の外部挙動をテスト期待値や fixture から確認したいだけのとき。対応する realization test を読む方が直接的である。
-- パッケージ設定、補助スクリプト、gitignore など、実装ソース以外の ancillary file だけを確認したいとき。
-- 生成済みまたは更新対象のルーティング文書そのものを本文として読みたいとき。実装ルートは INDEX.md の内容そのものではなく、INDEX.md を扱うコードを含む。
-- 特定の正本仕様ファイルまたはレビュー対象ファイルの内容を直接確認したいとき。対象本文へ進み、実装側は必要になってから読む。
+- 正本仕様断片、oracle file、oracle doc、oracle src、oracle test の本文を確認したいとき。この領域は正本仕様ではなく realization implementation を扱う。
+- 外部挙動の期待値、fixture、テスト観点、回帰検証だけを確認したいときは、対応する realization test 側を読む方が直接的である。
+- README、AGENTS、パッケージ設定、補助スクリプト、gitignore など、実装ソース以外の補助ファイルやリポジトリ運用情報だけを調べたいとき。
+- 生成済み INDEX.md の内容そのものを確認したいだけのとき。この階層は INDEX.md を読むための本文側実装であり、ルーティング文書自体の代替ではない。
+- 個別の自然言語仕様や標準文書の意味を確認したいときは、実装から逆算せず、対応する oracle 側の本文を読む必要がある。
+- 特定の小さな責務の所在がすでに分かっている場合は、この実装ルート全体ではなく、該当する下位領域またはファイルへ直接進む方がよい。
 
 ## hash
-- c0a6bd3da2a55ac528ceb371cb2ce3e8a799bab2bcd2bf145cc82dcf14d98b32
+- 82a0e1fae62bcb1d04ff701d12b4e81075b61232944d7a59bf8769a05c209888
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。CLI サブコマンド、Codex 実行ラッパー、indexing、prompt/schema、runtime 契約、Git worktree・branch・state 操作など、実装の外部挙動と制御ロジックを pytest で固定する。
-- 個別テストは、実リポジトリ操作に近い fixture、fake Codex 実行、構造化出力、report、state file、cleanup、preflight、retry、merge/conflict 処理を扱う。共通補助は、一時 Git repository、Codex home、profile 差し替え、fake executable、branch/worktree 検証などを提供する。
-- 正本仕様ではなく realization 側の回帰確認入口であり、oracle file で述べられた人間意図が実装としてどう観測されるべきかを、利用者向け出力・終了コード・永続状態・Git 副作用・Codex 呼び出し条件として確認するための場所である。
+- realization test 全体の入口。CLI サブコマンド、Codex 実行ランタイム、indexing preflight、prompt/schema 構築、session/apply/review の外部挙動を、実リポジトリ操作や fake Codex 実行を使って検証するテスト群を収める。
+- 共通補助関数で一時 Git リポジトリ、Codex home/profile、fake executable、branch/worktree 検証を用意し、各テストファイルは利用者向け出力、終了コード、状態ファイル、Git 副作用、error/report 生成など realization implementation の観測可能な契約を固定する。
+- 巨大な apply fork report、apply abandon、review oracle なども含むが、それぞれ単一 workflow の状態・report・fake 応答文脈を共有する realization test として凝集しており、対象コマンドや runtime 領域ごとに読む先を選ぶための上位入口になる。
 
 ## Read this when
-- cmoc の CLI 外部挙動、終了コード、stdout/stderr、Markdown report、state 遷移、Git branch/worktree の副作用に関する既存回帰テストを探すとき。
-- session lifecycle、apply fork/join/abandon、review oracle、indexing、init/TUI、Codex runtime、prompt/schema、基本 runtime のいずれかについて、実装変更に対応するテスト期待値や追加先を選びたいとき。
-- Codex CLI を fake executable や monkeypatch で差し替え、CODEX_HOME、profile、call log、subcommand log、structured output、retry/quota/preflight rejection を検証する既存パターンを確認したいとき。
-- realization test を追加・修正する前に、既存テストへケース追加できるか、同じ外部挙動や制御ロジックをすでに検証している場所があるかを絞り込みたいとき。
-- Git repository fixture、linked worktree、apply/review/session worktree、dirty check、merge conflict、cleanup rollback、INDEX 更新 commit などを伴うテストの入口を探すとき。
+- cmoc の既存テストから、特定 CLI サブコマンドや Codex runtime、indexing、prompt/schema、session/apply/review の期待される外部挙動を探し始めるとき。
+- realization implementation を変更する前後に、対応する回帰テスト、fixture、fake Codex 実行、Git worktree/branch/state の期待値がどこで検証されているかを特定したいとき。
+- 新しい realization test を追加する前に、既存テストへケース追加できるか、共通補助関数で使える repo/Codex/Git fixture があるか、同じ観点のテストが既に存在するかを確認したいとき。
+- apply fork/join/abandon、session fork/join/abandon、review oracle、indexing preflight、Codex quota/retry/home/error など、外部コマンド・Git 副作用・状態遷移が絡む workflow の境界条件を調べるとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片、用語定義、人間意図そのものを確認したいときは、oracle 側の文書やコードを読む。
-- 実装本体の責務分割、内部 helper の制御フロー、データ構造の定義を変更したいだけなら、対応する実装側の対象を先に読む。
-- 単にテスト支援 helper の使い方ではなく、CLI 利用者向け仕様や設計判断を確定したい場合は、この realization test 群だけを根拠にしない。
-- Codex CLI や LLM の実出力品質、外部サービスとの実通信、生成される自然文の妥当性そのものを検証したいときは対象外である。
-- INDEX.md エントリー生成規則や routing 文書の書き方そのものを確認したい場合は、標準本文を読む。
+- 正本仕様断片、用語定義、設計意図、oracle file の標準を確認したい場合は、この realization test 群ではなく oracle 側の該当文書を読む。
+- 実装本体の責務分割、内部 helper の制御フロー、状態 model、path model、Git wrapper、Codex wrapper の詳細を変更する場合は、まず対応する実装ファイルを読む。
+- 特定の単体機能や helper の期待値だけが必要で、該当テストファイル名や実装箇所が既に分かっている場合は、このディレクトリ全体ではなく直接その対象へ進む。
+- Codex CLI や LLM の実出力品質、外部サービスとの実通信挙動を評価したい場合は読まなくてよい。このテスト群は fake 応答や stub 実行で cmoc 側の制御と観測結果を検証する。
 
 ## hash
-- b7923d40eb0946e4e846871563c5cd300cc4b55fc6c0bddc80a4f513dcc3533f
+- 0552a1e140dc490268a66ed5a10954fc638780800149ba733699feaab501a950
