@@ -136,21 +136,23 @@
 # `sub_commands`
 
 ## Summary
-- CLI の各サブコマンド実装を集めるディレクトリ。初期化、TUI 起動、INDEX.md 自動保守、review oracle、session 操作、apply 操作など、利用者向けコマンドの実行入口と上位 orchestration へ進むための起点になる。
-- 各サブコマンド本体は CLI runtime や git/state/path/config などの共通基盤を呼び出し、引数で選ばれた処理の前提確認、状態遷移、worktree/branch 操作、Codex 実行、利用者向け出力を接続する役割を持つ。
-- review oracle や apply/session のように下位モジュールへ分割された領域では、対象列挙、loop、report、merge、process 管理などの詳細実装へ読み進むための入口として機能する。
+- cmoc の CLI サブコマンド実装を集約する領域。初期化、INDEX.md 自動保守、TUI 起動、session lifecycle、apply lifecycle、review oracle の実行制御など、利用者が直接起動する主要コマンドの入口を収める。
+- 各サブコマンドは共通 runtime や git/path/config/state などの下位基盤に処理を接続し、事前条件検証、作業ツリー・branch 操作、状態更新、Codex 呼び出し、利用者向け出力、レポート生成などの上位 orchestration を担う。
+- review oracle については、対象列挙、finding loop、INDEX 変更 commit/merge、レポート生成といった補助モジュールも同階層にあり、review サブコマンド本体から委譲される処理の読む先を選ぶ入口になる。
 
 ## Read this when
-- 特定の CLI サブコマンドがどの実装へ対応しているか、またはサブコマンド単位の実行順序・前提条件・状態更新・出力を確認したいとき。
-- `cmoc init`、`cmoc tui`、INDEX.md 自動保守、review oracle、session 系、apply 系の上位フローを調査または変更したいとき。
-- CLI runtime、git 操作、state 永続化、Codex 実行、report 生成などの共通 helper が、利用者向けサブコマンドからどのように呼び出されるかを追いたいとき。
-- review oracle の対象列挙・finding loop・INDEX 変更 commit/merge・report 出力、または session/apply の branch/worktree/process 制御について、まず読むべき下位実装を切り分けたいとき。
+- 特定の CLI サブコマンドがどの実行順序・前提条件・副作用・出力で動くかを確認し、読むべき実装を選びたいとき。
+- init、tui、session、apply、indexing、review oracle のいずれかに関する CLI 挙動、branch/worktree/state 操作、Codex 呼び出し、レポート生成、または cleanup の責務境界を俯瞰したいとき。
+- review oracle の全体制御と、対象列挙・finding 反復・INDEX 変更処理・レポート生成のどの下位モジュールへ進むべきかを切り分けたいとき。
+- INDEX.md の自動更新処理、indexable 対象の選別、既存エントリー再利用、生成結果の検証・描画・commit 条件を調べたいとき。
+- session や apply の lifecycle にまたがる変更で、開始・完了・破棄・join・process 管理・状態更新などの上位フロー上の入口を探したいとき。
 
 ## Do not read this when
-- Typer の最上位コマンド登録、設定 schema、path model、git wrapper、state file schema など、サブコマンド本体ではなく共通基盤だけを調べたいとき。
-- oracle の正本仕様、realization 全体の設計方針、INDEX.md エントリー生成規則そのものを確認したいとき。
-- 個別 helper の責務がすでに明確で、review の対象列挙・loop・report・INDEX merge、apply runtime helper、session state 操作などへ直接進めるとき。
-- 自動テストの期待挙動だけを確認したいときは、対応するテスト側を読む方が直接的。
+- CLI サブコマンドではなく、git 実行 wrapper、path model、config/state schema、Codex process 実行、StructDoc 描画などの共通基盤だけを調べたいとき。
+- oracle の正本仕様、realization 全体の設計方針、INDEX.md エントリー生成規則そのものを確認したいだけのとき。
+- 対象サブコマンドや補助処理がすでに明確で、該当する個別実装へ直接進めるとき。
+- テスト観点から外部挙動を確認したいだけで、実装上の orchestration や責務境界を読む必要がないとき。
+- review finding の品質基準、oracle file と realization file の概念定義、またはプロンプト・Structured Output parameter の詳細だけを調べたいとき。
 
 ## hash
-- df5b100a442dd209fdbf3944294a1e8045923c3207e6b69c1b57f2913165394a
+- 0a2caaf244a2640f45b8489727bd81aeb30ccc0def441eb1ed6c5b0acc44f51f

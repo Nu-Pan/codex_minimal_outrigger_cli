@@ -38,21 +38,22 @@
 # `fork.py`
 
 ## Summary
-- 通常の local branch から新しい cmoc session branch を作成する `session fork` サブコマンドの実行本体を扱う。
-- managed branch 上での実行禁止、clean worktree 要求、同一 home branch の active session 重複禁止を確認したうえで、session state を初期化して作成結果を CLI に表示する処理への入口になる。
+- 現在の local branch から cmoc managed branch ではない新しい session branch を作成し、session home branch と開始 commit を記録した session state file を生成する `session fork` サブコマンド実装。
+- CLI runtime 経由で実行し、`.cmoc` ignore 設定、clean worktree、既存 active session の不在、session-id と branch/state file の衝突回避を確認してから `git switch -c` と状態書き込みを行う。
+- session-id 生成は timestamp を使い、既存 session branch または state file と衝突した場合に一定回数 retry し、失敗時は `CmocError` で利用者向け対処を返す。
 
 ## Read this when
-- `session fork` の実行条件、失敗条件、branch 作成、session state 初期値、CLI 表示内容を確認または変更したいとき。
-- session 開始時に home branch、start commit、state file がどのように決まるかを追いたいとき。
-- cmoc 管理 branch、dirty worktree、既存 active session に対する `session fork` のエラー挙動を調べたいとき。
+- `cmoc session fork` の実行条件、失敗条件、作成される branch/state、または利用者向け出力を確認・変更したいとき。
+- 通常の local branch から session branch を開始する処理、active session の重複検出、managed branch 上での禁止判定、clean worktree 要求を調べるとき。
+- session-id の一意性判定、timestamp 衝突時の retry、既存 state file が残る joined/abandoned session との衝突扱いを確認したいとき。
 
 ## Do not read this when
-- session branch への参加、破棄、終了など、fork 以外の session 操作を調べたいとき。
-- session state のデータ構造、保存形式、path 解決、git 実行 helper そのものを調べたいとき。
-- CLI アプリ全体のコマンド登録や Typer のルート構成だけを確認したいとき。
+- session fork 以外の session 操作、たとえば join、abandon、status などの挙動を調べたいとき。
+- session state のデータ構造そのもの、state file の schema、または path model の定義を確認したいとき。
+- git 実行 wrapper、CLI runtime、worktree clean 判定、branch 判定などの共通 helper の詳細実装を調べたいとき。
 
 ## hash
-- ad0dedaa08ce69725b9f9cb7774c11d70a12ac2092d3348e9a0ff785ba36cbf6
+- 5e18dd55b0b201249fadfa3b37594b06e52030b37c4d27622f18755fac7b2096
 
 # `join.py`
 
