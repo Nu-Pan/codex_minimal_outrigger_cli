@@ -107,18 +107,22 @@
 # `join.py`
 
 ## Summary
-- apply 実行結果を session 側へ取り込むサブコマンド実装。session/apply branch の状態確認、想定外差分の検出と必要時の force resolve、apply branch の merge、状態更新、report 作成、apply worktree と branch の cleanup を扱う。
-- 想定外差分の分類、許可される apply/session 側差分の判定、指定 commit への path 復元、INDEX.md だけの merge conflict の機械解決も同じ実行経路内の補助処理として持つ。
+- apply 実行結果を session 側へ取り込む処理を担う。session branch または apply branch 上で実行され、状態確認、想定外差分の検出または force-resolve、apply branch の merge、状態更新、report 生成、apply worktree と branch の後片付けまでを扱う。
+- 想定外差分の判定では、apply 側と session 側の変更範囲を oracle snapshot などの基準 commit から比較し、許可される変更種別を分けて分類する。merge conflict では INDEX.md だけの conflict を機械解決し、それ以外は report とともに手動解決へ委ねる。
 
 ## Read this when
-- apply 実行完了後またはエラー後に、結果を session branch へ join する挙動を確認・変更したいとき。
-- join 実行前の branch/state/clean worktree 検証、apply branch の特定、oracle snapshot commit を基準にした差分確認、--force-resolve 時の revert 動作を調べるとき。
-- apply join の report 内容、merge conflict 時の中断条件、INDEX.md conflict の自動解決、join 後の apply state 初期化や apply worktree/branch cleanup を追うとき。
+- apply run の完了後または error 後に、変更を session branch へ join する制御を確認・変更したいとき。
+- join 可能条件、session/apply branch 上での実行条件、clean worktree 要求、apply state を ready 相当に戻す流れを調べたいとき。
+- 想定外差分の検出条件、--force-resolve による session/apply 側変更の復元と commit、許可される変更 path の境界を確認したいとき。
+- apply branch merge の失敗時処理、INDEX.md conflict の自動削除 commit、未解決 merge conflict report の生成を扱うとき。
+- join report の内容、保存先種別、cleanup_reachable や warnings の出力内容を変更・検証したいとき。
+- join 成功後の apply worktree 削除、apply branch 削除、削除できない場合の警告処理を確認したいとき。
 
 ## Do not read this when
-- apply run の開始、apply branch/worktree の作成、または apply 作業そのものの実行経路を調べたいだけのとき。
-- session state のデータ構造、git helper、worktree helper、report 保存先などの共通 runtime API の定義だけを確認したいとき。
-- join 以外の apply サブコマンドや、oracle/realization の一般仕様、INDEX.md 生成規則を調べたいとき。
+- apply run の開始、apply branch や worktree の作成、apply state を実行中にする処理だけを調べたいとき。
+- session の作成・終了、通常の session state モデル、branch 名規則や runtime 共通処理そのものを調べたいとき。
+- git command 実行、状態ファイルの読み書き、report root、worktree root などの共通 helper の実装詳細だけが必要なとき。
+- INDEX.md エントリー生成や oracle/realization の一般ルールを確認したいだけで、apply join の実行時挙動に関心がないとき。
 
 ## hash
-- e0da755eb6e4e81bd8624d90cd195156d3656dd3adcd27f189216b593a54fbf8
+- 6e36810b25961e75aa685a289870b06e37aaec6b5a107337b70c63690b863d83

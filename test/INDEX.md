@@ -86,22 +86,24 @@
 # `test_apply_join_cli.py`
 
 ## Summary
-- apply run を session へ join する CLI 外部挙動を検証する realization test。成功時の worktree と branch の後片付け、state 更新、report 生成、session worktree への merge 先、dirty worktree や stale apply branch や想定外差分や merge conflict の拒否条件を、実際の git 状態と CLI 出力を通して確認する。
-- 16,000 文字を超えるが、同じ join 操作の成功条件と拒否条件を同じ fixture と git 状態の文脈で読む必要があるため、apply join の境界条件を一箇所に集約している。
+- apply run を session へ join する CLI 経由の外部挙動を検証する realization test。成功時の apply worktree と branch の削除、state 更新、report 生成、apply worktree や linked session worktree からの実行、dirty worktree・stale branch・想定外差分・merge conflict での拒否や継続条件を扱う。
+- 16,000 文字を超えるが、apply join の成功条件と拒否条件を同じ fixture と git 状態の文脈で読む必要があるため、単一の join 操作に関する境界条件としてまとまっている。
 
 ## Read this when
-- apply join の CLI 挙動、成功時 cleanup、state の ready 復帰、last joined oracle snapshot の記録、join report の生成を変更または確認したいとき。
-- apply worktree 上、session worktree 上、linked session worktree 上のどこから join した場合に、どの worktree と branch が対象になるかを確認したいとき。
-- stale apply branch、dirty apply worktree、想定外の oracle 差分、未解決 merge conflict、INDEX conflict の自動処理、--force-resolve の挙動に関わるテスト期待を確認したいとき。
-- apply fork で生成された state や apply worktree を使う CLI 結合テストの fixture 利用例を確認したいとき。
+- apply join の CLI 挙動、終了コード、標準出力、report 内容、state の apply/session 更新を変更または確認したいとき。
+- apply join 成功時の apply worktree cleanup、apply branch 削除、last joined oracle snapshot commit の記録を確認したいとき。
+- apply worktree、session worktree、linked session worktree のどこから join を実行するかによる merge 先や cwd 復帰の挙動を確認したいとき。
+- dirty な apply worktree、現在 branch と state 上の apply branch の不一致、想定外の apply diff、削除・rename・gitignore 変更、merge conflict の扱いを確認したいとき。
+- apply join の unexpected changes 検出や managed branch 上の変更 path 抽出に関するテストを探しているとき。
 
 ## Do not read this when
-- apply join の内部 helper 分割や実装詳細だけを局所的に確認したい場合は、実装側の join 処理を直接読む方が適切。
-- apply fork 単体の生成挙動、session fork 単体の挙動、または init の初期化挙動だけを確認したい場合は、それぞれの専用テストを読む方が適切。
-- Codex 実行結果そのものの品質や LLM 出力内容を検証したい場合は対象外であり、このテストでは fake result に置き換えた後の apply join 境界だけを扱う。
+- apply fork が Codex 実行結果から apply worktree や state を作るまでの挙動だけを確認したいとき。
+- session fork、init、path model、ログ基盤など apply join の成否判定に直接関係しない CLI 挙動を確認したいとき。
+- 実装側の join 処理、unexpected changes の収集ロジック、git 操作 helper の詳細を変更したいだけで、外部 CLI テストの期待値をまだ確認する必要がないとき。
+- oracle file の正本仕様を確認したいとき。この対象は realization test であり、正本仕様ではない。
 
 ## hash
-- 8e922bc9e79e1c41d995cb8e449eb7937aab2f92840d8f3e889476a38f5a3d21
+- dc6edf08dc6b464905021255fc0873e24a0f1a9c443a2f49deb2016657a08334
 
 # `test_basic_runtime.py`
 

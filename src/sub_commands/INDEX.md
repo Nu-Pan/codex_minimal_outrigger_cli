@@ -1,21 +1,21 @@
 # `apply`
 
 ## Summary
-- apply サブコマンド群の実装入口で、apply run の開始、破棄、join、report 生成、実行中 process と worktree の runtime 操作を扱う。
-- 利用者向けの apply 操作フローはサブコマンド実装へ、process id・linked worktree・pidfd などの低レベル実行状態管理は runtime helper へ進むためのまとまり。
+- apply サブコマンド群の実装をまとめるディレクトリ。apply run の開始、破棄、session branch への取り込み、実行中 process 管理、fork report 生成など、apply 系 CLI の主要な制御入口を収める。
+- apply branch・apply worktree・apply process・apply state をまたぐ上位フローは各サブコマンド実装へ、pid file や linked worktree 探索などの低レベル実行時補助は runtime helper へ進むための入口になる。
 
 ## Read this when
-- apply fork、apply abandon、apply join のいずれかの実行フロー、状態遷移、branch/worktree cleanup、利用者向け出力や report 生成の読む先を選びたいとき。
-- apply 実行中 process の pid file、停止制御、apply branch から linked worktree を見つける処理など、apply 固有の runtime helper を確認したいとき。
-- apply サブコマンド間で、worktree、branch、state、report、process 管理のどの実装へ進むべきかを切り分けたいとき。
+- apply 系サブコマンドのどの実装を読むべきか、開始・破棄・join・report・process 管理の責務境界から選びたいとき。
+- apply run のライフサイクル全体に関わる変更で、apply branch、apply worktree、apply state、process cleanup、report 生成の関係を俯瞰したいとき。
+- apply fork、apply abandon、apply join のいずれかの CLI 挙動や、それらに共通する runtime helper の読む先を切り分けたいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド、CLI 共通ランナー、git helper、状態ファイル schema、config 読み込みなどの共通基盤だけを調べたいとき。
-- oracle の正本仕様、INDEX.md 生成規則、または apply サブコマンドの仕様文書そのものを確認したいとき。
-- apply fork のプロンプト builder、Codex 呼び出しの共通実装、git worktree 操作の汎用 helper など、より直接の実装対象が別階層にあると分かっているとき。
+- apply 以外のサブコマンド、session 全体、config、git 実行基盤、状態ファイル schema などの共通実装だけを調べたいとき。
+- oracle の正本仕様、INDEX.md 生成規則、または realization 全体の設計方針を確認したいだけのとき。
+- 特定のファイルに責務が明確に絞れており、fork の実行ループ、join、abandon、report 生成、process 管理の該当実装へ直接進めるとき。
 
 ## hash
-- 1d1c3f6706dc350290de144fea78a92c2b4cb2fc0f07fc5a92f81fc9fc242879
+- edfe2494b172bb19f038961a0fc44c4538235b2a0ee84f1faba90bd694c8f509
 
 # `indexing.py`
 

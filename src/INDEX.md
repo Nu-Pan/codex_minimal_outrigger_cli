@@ -136,21 +136,22 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装をまとめる領域で、初期化、対話起動、ルーティング文書保守、session lifecycle、apply workflow、review oracle workflow の実行入口と周辺 helper へ進むための案内になる。
-- 各サブコマンドは CLI runtime や git/runtime 共通 helper に接続し、事前条件確認、状態更新、branch/worktree 操作、利用者向け出力、report 生成、失敗時処理などのサブコマンド固有 orchestration を担う。
-- review oracle については、入口 orchestration だけでなく、対象列挙、finding loop、INDEX 変更 commit/merge、report 生成など、review 処理を構成する下位責務もこの領域から辿れる。
+- cmoc の各サブコマンド実行本体を集約する実装領域。初期化、INDEX.md 保守、TUI 起動、review oracle、session ライフサイクル、apply ライフサイクルの CLI 入口と上位 orchestration を扱う。
+- 各実装は共通 runtime wrapper、git/worktree 操作、state 更新、Codex 実行、レポート生成、preflight 登録などを接続し、サブコマンド固有の事前条件・失敗条件・利用者向け出力を定義する。
+- session と apply は下位ディレクトリに開始・取り込み・破棄などのまとまりを持ち、review oracle は対象列挙、finding loop、INDEX 差分処理、report 生成の補助モジュールへ分かれている。
 
 ## Read this when
-- CLI サブコマンドの実行順序、事前条件、状態遷移、branch/worktree 操作、利用者向け出力、または失敗時処理の読む先を選びたいとき。
-- 初期化、対話起動、ルーティング文書更新、session 開始・完了・破棄、apply の開始・破棄・join、review oracle 実行のどの実装へ進むべきかを切り分けたいとき。
-- サブコマンド固有の orchestration と、共通 runtime・git helper・設定・状態 schema・prompt builder など別階層の責務との境界を確認したいとき。
-- review oracle の対象列挙、finding の反復処理、review 用 branch の merge、ルーティング文書差分の commit、Markdown/YAML report 生成など、review workflow 内の担当箇所を探したいとき。
+- cmoc のサブコマンド実行フロー、CLI 入口、事前条件、状態遷移、git/worktree 操作、または利用者向け出力を調べたいとき。
+- init、indexing、tui、review oracle、session fork/join/abandon、apply fork/join/abandon のどの実装へ進むべきかを、責務境界から選びたいとき。
+- Codex 実行を伴うサブコマンドが、preflight、parameter builder、report 生成、state file、branch/worktree 操作とどう接続されているかを追いたいとき。
+- INDEX.md 自動保守、review oracle の finding 処理、apply の実行・取り込み・破棄、session の作成・完了・破棄など、サブコマンド単位の orchestration を変更または調査するとき。
 
 ## Do not read this when
-- CLI 共通ランナー、Typer のルート構成、git コマンド wrapper、config 読み込み、path model、状態ファイル schema など、サブコマンド横断の共通基盤だけを調べたいとき。
-- oracle の正本仕様断片、realization standard、INDEX.md 生成規則、またはサブコマンドの仕様文書そのものを確認したいとき。
-- Codex 呼び出しの低レベル実装、prompt/Structured Output parameter builder、StructDoc の描画規則、git worktree 操作の汎用 helper など、より直接の実装対象が別階層にあると分かっているとき。
-- 外部挙動をテスト観点だけで確認したい場合や、特定サブコマンドの期待結果を fixture・assertion から確認したい場合は、対応するテスト側を読む。
+- Typer のルートコマンド登録や CLI 全体の構造だけを確認したいときは、コマンド定義側を読む方が直接的。
+- git コマンド wrapper、path 解決、設定読み込み、state schema、Codex 外部プロセス起動などの共通 runtime 基盤そのものを調べたいときは、共通 runtime や basic/config 側を読む。
+- Codex に渡す prompt や Structured Output parameter の具体的な構築内容だけを確認したいときは、builder 側の対象を読む。
+- oracle の正本仕様断片、realization 標準、INDEX.md 生成規則など、仕様文書上の意図だけを確認したいとき。
+- テスト観点から外部挙動を確認したいだけで、実装の制御フローを読む必要がないときは、対応するテストへ進む。
 
 ## hash
-- d9337b526e8a543156ecdf3b814bbf66bcc786e034475e159ae0e028779c97b9
+- 00b215d97f82b1380410b6f32c711d6679eeee6a90b6cbab6681c8a8d92414f3
