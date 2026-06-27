@@ -24,7 +24,7 @@ from cmoc_runtime import (
     work_root,
 )
 from config.cmoc_config import CmocConfig
-from sub_commands.indexing import enable_indexing_preflight
+from commons.indexing import enable_indexing_preflight
 
 ORIGINAL_PROMPT_TEMPLATE = """<!--
     AI Agent CLI/TUI に与えるプロンプトを書いて下さい。

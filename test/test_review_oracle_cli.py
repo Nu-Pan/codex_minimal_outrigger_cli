@@ -1,10 +1,10 @@
-"""eval-oracle の report 生成と所見 loop を CLI 経由で検証する。
+"""review oracle の report 生成と所見 loop を CLI 経由で検証する。
 
 このファイルは 16,000 文字を超えるが、責務境界は oracle review の外部挙動と
 所見評価 loop の制御を検証することに閉じている。対象 oracle の選択、report 生成、
 列挙・検証・judge・merge、上限到達、join commit の扱いは同じ review run の状態と
 出力を共有するため、分割すると同じ fake Codex 応答と report 文脈が分散する。
-現状は eval-oracle の読み取り文脈を一箇所に保つ方が凝集性が高い。
+現状は review oracle の読み取り文脈を一箇所に保つ方が凝集性が高い。
 """
 
 import subprocess
@@ -21,7 +21,7 @@ from _support import (
 from cmoc_runtime import SessionState
 from config.cmoc_config import CmocConfig, CmocConfigReviewOracle
 from main import app
-import sub_commands.review as review_module
+import sub_commands.review.oracle as review_module
 
 
 def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -56,7 +56,7 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyP
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(
-        app, ["eval-oracle", "--scope", "full"], catch_exceptions=False
+        app, ["review", "oracle", "--scope", "full"], catch_exceptions=False
     )
 
     assert result.exit_code == 0
@@ -65,14 +65,14 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyP
     )
     assert report_path.is_file()
     rendered = report_path.read_text()
-    assert "# cmoc eval-oracle report" in rendered
+    assert "# cmoc review oracle report" in rendered
     assert "## Verdict" in rendered
     assert "## Evaluated oracle file" in rendered
     assert "`oracle/spec.md`" in rendered
     assert "review_join_commit: null" in rendered
     assert "session_id:" not in rendered
-    assert any(call.startswith("eval-oracle enumerate findings") for call in calls)
-    assert "eval-oracle merge findings" not in calls
+    assert any(call.startswith("review oracle enumerate findings") for call in calls)
+    assert "review oracle merge findings" not in calls
 
 
 def test_review_oracle_report_orders_findings_by_verdict_then_severity(
@@ -131,7 +131,7 @@ def test_review_oracle_report_orders_findings_by_verdict_then_severity(
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(
-        app, ["eval-oracle", "--scope", "full"], catch_exceptions=False
+        app, ["review", "oracle", "--scope", "full"], catch_exceptions=False
     )
 
     assert result.exit_code == 0
@@ -243,7 +243,7 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(
-        app, ["eval-oracle", "--scope", "full"], catch_exceptions=False
+        app, ["review", "oracle", "--scope", "full"], catch_exceptions=False
     )
 
     assert result.exit_code == 0
@@ -288,7 +288,7 @@ def test_review_oracle_enumerate_receives_only_related_findings(
         if schema_name == "enumerate_finding.json":
             target = Path(
                 kwargs["purpose"].removeprefix(
-                    "eval-oracle enumerate findings for "
+                    "review oracle enumerate findings for "
                 )
             ).name
             prompts_by_target.setdefault(target, []).append(parameter.prompt)
@@ -493,7 +493,7 @@ def test_review_oracle_full_scope_includes_binary_and_excludes_gitignored_oracle
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(
-        app, ["eval-oracle", "--scope", "full"], catch_exceptions=False
+        app, ["review", "oracle", "--scope", "full"], catch_exceptions=False
     )
 
     assert result.exit_code == 0
@@ -510,7 +510,7 @@ def test_review_oracle_full_scope_includes_binary_and_excludes_gitignored_oracle
     assert "oracle/memo-link.md" not in rendered
     assert "memo/oracle/draft.md" not in rendered
     enumerate_calls = [
-        call for call in calls if call.startswith("eval-oracle enumerate findings")
+        call for call in calls if call.startswith("review oracle enumerate findings")
     ]
     assert len(enumerate_calls) == 3
 
@@ -545,7 +545,7 @@ def test_review_oracle_accepts_short_scope_option(
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(
-        app, ["eval-oracle", "-s", "full"], catch_exceptions=False
+        app, ["review", "oracle", "-s", "full"], catch_exceptions=False
     )
 
     assert result.exit_code == 0
@@ -576,7 +576,7 @@ def test_review_oracle_session_scope_reports_total_and_no_targets(
 
     monkeypatch.setattr(review_module, "run_codex_exec", fail_run_codex_exec)
 
-    result = runner.invoke(app, ["eval-oracle"], catch_exceptions=False)
+    result = runner.invoke(app, ["review", "oracle"], catch_exceptions=False)
 
     assert result.exit_code == 0
     assert calls == []
@@ -625,7 +625,7 @@ def test_review_oracle_session_scope_excludes_changed_gitignored_oracle_files(
 
     monkeypatch.setattr(review_module, "run_codex_exec", fail_run_codex_exec)
 
-    result = runner.invoke(app, ["eval-oracle"], catch_exceptions=False)
+    result = runner.invoke(app, ["review", "oracle"], catch_exceptions=False)
 
     assert result.exit_code == 0
     assert calls == []
@@ -677,7 +677,7 @@ def test_review_oracle_merges_review_index_changes(
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(
-        app, ["eval-oracle", "--scope", "full"], catch_exceptions=False
+        app, ["review", "oracle", "--scope", "full"], catch_exceptions=False
     )
 
     assert result.exit_code == 0
@@ -767,7 +767,7 @@ def test_review_oracle_writes_error_report_on_processing_failure(
 
     monkeypatch.setattr(review_module, "run_codex_exec", fail_run_codex_exec)
 
-    result = runner.invoke(app, ["eval-oracle", "--scope", "full"])
+    result = runner.invoke(app, ["review", "oracle", "--scope", "full"])
 
     assert result.exit_code != 0
     report_path = Path(
@@ -814,9 +814,9 @@ def test_review_oracle_rejects_non_index_worktree_changes(
 
     monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
-    result = runner.invoke(app, ["eval-oracle", "--scope", "full"])
+    result = runner.invoke(app, ["review", "oracle", "--scope", "full"])
 
     assert result.exit_code != 0
-    assert "eval-oracle が INDEX.md 以外の差分を作成しました。" in result.output
+    assert "review oracle が INDEX.md 以外の差分を作成しました。" in result.output
     assert (root / "README.md").read_text() == "# repo\n"
     assert not (root / "generated.txt").exists()

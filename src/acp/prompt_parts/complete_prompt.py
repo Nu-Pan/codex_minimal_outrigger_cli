@@ -22,9 +22,9 @@ from .routing_rule import build_routing_rule
 
 _CMOC_TERM_REPLACEMENTS = (
     ("cmoc から呼び出された", "依頼された"),
-    ("`cmoc eval-oracle`", "oracle file レビュー"),
+    ("`cmoc review oracle`", "oracle file レビュー"),
     ("`cmoc apply join`", "apply join 操作"),
-    ("cmoc eval-oracle", "oracle file レビュー"),
+    ("cmoc review oracle", "oracle file レビュー"),
     ("cmoc apply join", "apply join 操作"),
     ("cmoc 側", "呼び出し側"),
     ("cmoc により", "継続的に"),

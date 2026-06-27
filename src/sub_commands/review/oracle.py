@@ -42,7 +42,7 @@ from sub_commands.review_targets import (
     enumerate_review_all_oracle_files,
     enumerate_review_oracle_targets,
 )
-from sub_commands.indexing import enable_indexing_preflight
+from commons.indexing import enable_indexing_preflight
 
 
 CodexExec = Callable[..., object]
@@ -50,7 +50,7 @@ CodexExec = Callable[..., object]
 __all__ = [
     "CodexExec",
     "apply_finding_merge_operations",
-    "cmoc_eval_oracle_impl",
+    "cmoc_review_oracle_impl",
     "commit_review_index_changes",
     "enumerate_review_all_oracle_files",
     "enumerate_review_oracle_targets",
@@ -65,19 +65,19 @@ __all__ = [
 ]
 
 
-def cmoc_eval_oracle_impl(scope: str) -> None:
-    """CLI runtime を通して eval-oracle を実行する。"""
+def cmoc_review_oracle_impl(scope: str) -> None:
+    """CLI runtime を通して review oracle を実行する。"""
     enable_indexing_preflight()
     run_cli_subcommand(
-        _cmoc_eval_oracle_body,
+        _cmoc_review_oracle_body,
         scope,
         run_codex_exec,
-        command_name="eval-oracle",
-        command_argv=["cmoc", "eval-oracle", "--scope", scope],
+        command_name="review oracle",
+        command_argv=["cmoc", "review", "oracle", "--scope", scope],
     )
 
 
-def _cmoc_eval_oracle_body(
+def _cmoc_review_oracle_body(
     scope: str,
     codex_exec: CodexExec,
 ) -> None:
@@ -89,7 +89,7 @@ def _cmoc_eval_oracle_body(
     branch = current_branch(current_root)
     session_id, _state_path, state = load_state_for_branch(root, branch)
     if not branch.startswith("cmoc/session/") or state.session.state != "active":
-        raise CmocError("eval-oracle は active session branch 上で実行してください。", [], branch)
+        raise CmocError("review oracle は active session branch 上で実行してください。", [], branch)
     require_clean_worktree(current_root)
     ensure_cmoc_ignored(current_root)
     config = load_config(root)

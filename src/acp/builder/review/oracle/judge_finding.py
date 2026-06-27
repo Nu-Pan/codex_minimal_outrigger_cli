@@ -1,4 +1,4 @@
-"""`cmoc eval-oracle` の所見採否判定 prompt 構築実装。
+"""`cmoc review oracle` の所見採否判定 prompt 構築実装。
 
 対応 oracle file: `<work-root>/oracle/src/acp/builder/review/oracle/judge_finding.py`。
 """
@@ -23,7 +23,7 @@ def build_review_oracle_judge_finding_parameter(
     challenger_reasons: str,
 ) -> AgentCallParameter:
     """
-    `cmoc eval-oracle` サブコマンド、所見採否判定用。
+    `cmoc review oracle` サブコマンド、所見採否判定用。
     AI エージェント呼び出しパラメータを構築する。
 
     finding: str

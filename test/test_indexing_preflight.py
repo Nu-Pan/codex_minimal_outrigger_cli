@@ -19,7 +19,7 @@ from _support import (
 )
 from main import app
 import sub_commands.apply.join as apply_module
-import sub_commands.indexing as indexing_module
+import commons.indexing as indexing_module
 
 
 def hold_indexing_lock(lock_path: Path, ready: Connection, release: Connection) -> None:
@@ -127,7 +127,7 @@ def test_command_codex_call_indexes_cwd_worktree_before_root(
         parameter,
         root=root,
         cwd=codex_cwd,
-        purpose="eval-oracle enumerate findings",
+        purpose="review oracle enumerate findings",
     )
 
     assert isinstance(result, FakeCodexResult)

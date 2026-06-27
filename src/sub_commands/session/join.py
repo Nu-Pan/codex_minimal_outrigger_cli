@@ -7,7 +7,7 @@ import typer
 from acp.builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter,
 )
-from sub_commands.indexing import enable_indexing_preflight
+from commons.indexing import enable_indexing_preflight
 from cmoc_runtime import (
     CmocError,
     current_branch,

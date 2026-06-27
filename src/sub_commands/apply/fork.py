@@ -45,7 +45,7 @@ from sub_commands.apply._runtime import (
     delete_apply_process_id,
     write_apply_process_id,
 )
-from sub_commands.indexing import enable_indexing_preflight
+from commons.indexing import enable_indexing_preflight
 
 
 CodexExec = Callable[..., object]

@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 import cmoc_runtime
+import commons.indexing as indexing_common
 from basic.acp import AgentCallParameter, ModelClass
 
 from _support import (
@@ -177,7 +178,7 @@ def test_indexing_preflight_in_apply_worktree_uses_repo_config(
         assert kwargs["root"] == apply_worktree
         return FakeCodexResult()
 
-    indexing_module.run_indexing_preflight(apply_worktree, fake_codex_exec)
+    indexing_common.run_indexing_preflight(apply_worktree, fake_codex_exec)
 
     assert seen_models
     assert set(seen_models) == {"CUSTOM-INDEXING-EFFICIENCY"}
@@ -231,7 +232,7 @@ def test_commit_index_updates_commits_only_index_paths(tmp_path: Path) -> None:
     index_path.write_text("# generated\n")
     (root / ".gitignore").write_text("/.cmoc/\n")
 
-    indexing_module.commit_index_updates(root, [index_path])
+    indexing_common.commit_index_updates(root, [index_path])
 
     committed_paths = run_git(
         root, "show", "--name-only", "--pretty=", "HEAD"
@@ -256,7 +257,7 @@ def test_indexing_rejects_existing_non_index_diff_without_index_commit(
         calls.append(update_root)
         raise AssertionError("dirty cmoc indexing must stop before updating INDEX.md")
 
-    monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
+    monkeypatch.setattr(indexing_common, "update_indexes", fake_update_indexes)
 
     result = runner.invoke(app, ["indexing"], catch_exceptions=False)
 
@@ -283,9 +284,9 @@ def test_indexing_preflight_allows_existing_non_index_diff_and_commits_only_inde
         index_path.write_text("# generated\n")
         return [index_path]
 
-    monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
+    monkeypatch.setattr(indexing_common, "update_indexes", fake_update_indexes)
 
-    indexing_module.run_indexing_preflight(root, lambda *args, **kwargs: None)
+    indexing_common.run_indexing_preflight(root, lambda *args, **kwargs: None)
 
     committed_paths = run_git(
         root, "show", "--name-only", "--pretty=", "HEAD"
@@ -327,7 +328,7 @@ def test_update_indexes_regenerates_malformed_fresh_hash_entry(
     root = make_repo(tmp_path)
     cmoc_runtime.sync_config(root)
     readme = root / "README.md"
-    digest = indexing_module.index_target_hash(root, readme)
+    digest = indexing_common.index_target_hash(root, readme)
     (root / "INDEX.md").write_text(
         "\n".join(line.format(digest=digest) for line in entry_lines)
     )
@@ -341,7 +342,7 @@ def test_update_indexes_regenerates_malformed_fresh_hash_entry(
         codex_exec: Callable[..., object] | None = None,
     ) -> str:
         calls.append(path)
-        return indexing_module.render_index_entry(
+        return indexing_common.render_index_entry(
             update_root,
             path,
             {
@@ -352,9 +353,9 @@ def test_update_indexes_regenerates_malformed_fresh_hash_entry(
             digest=digest,
         ).rstrip()
 
-    monkeypatch.setattr(indexing_module, "build_index_entry", fake_build_index_entry)
+    monkeypatch.setattr(indexing_common, "build_index_entry", fake_build_index_entry)
 
-    updated = indexing_module.update_indexes(root)
+    updated = indexing_common.update_indexes(root)
 
     assert root / "INDEX.md" in updated
     assert readme in calls
@@ -380,7 +381,7 @@ def test_render_index_entry_rejects_missing_or_non_string_semantic_fields(
     readme = root / "README.md"
 
     with pytest.raises(cmoc_runtime.CmocError):
-        indexing_module.render_index_entry(root, readme, entry)
+        indexing_common.render_index_entry(root, readme, entry)
 
 
 @pytest.mark.parametrize(
@@ -402,7 +403,7 @@ def test_render_index_entry_rejects_empty_semantic_lists(
     readme = root / "README.md"
 
     with pytest.raises(cmoc_runtime.CmocError):
-        indexing_module.render_index_entry(root, readme, entry)
+        indexing_common.render_index_entry(root, readme, entry)
 
 
 def test_update_indexes_generates_sibling_entries_in_parallel(
@@ -432,7 +433,7 @@ def test_update_indexes_generates_sibling_entries_in_parallel(
             time.sleep(0.05)
             with lock:
                 active -= 1
-        return indexing_module.render_index_entry(
+        return indexing_common.render_index_entry(
             update_root,
             path,
             {
@@ -443,9 +444,9 @@ def test_update_indexes_generates_sibling_entries_in_parallel(
             digest=digest,
         ).rstrip()
 
-    monkeypatch.setattr(indexing_module, "build_index_entry", fake_build_index_entry)
+    monkeypatch.setattr(indexing_common, "build_index_entry", fake_build_index_entry)
 
-    updated = indexing_module.update_indexes(root)
+    updated = indexing_common.update_indexes(root)
 
     assert docs / "INDEX.md" in updated
     assert max_active >= 2
@@ -471,7 +472,7 @@ def test_update_indexes_indexes_nested_memo_directory(
         digest: str | None = None,
         codex_exec: Callable[..., object] | None = None,
     ) -> str:
-        return indexing_module.render_index_entry(
+        return indexing_common.render_index_entry(
             update_root,
             path,
             {
@@ -482,9 +483,9 @@ def test_update_indexes_indexes_nested_memo_directory(
             digest=digest,
         ).rstrip()
 
-    monkeypatch.setattr(indexing_module, "build_index_entry", fake_build_index_entry)
+    monkeypatch.setattr(indexing_common, "build_index_entry", fake_build_index_entry)
 
-    updated = indexing_module.update_indexes(root)
+    updated = indexing_common.update_indexes(root)
 
     assert root_memo / "INDEX.md" not in updated
     assert not (root_memo / "INDEX.md").exists()
