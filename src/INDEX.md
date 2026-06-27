@@ -66,26 +66,25 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation 全体で共有される実行時 helper 群のディレクトリ。Codex CLI 呼び出し、CLI サブコマンド共通処理、設定、内容 hash 保存、エラー表示、Git 操作、サブコマンドログ、実行時パス、実行結果モデル、session state など、複数の上位機能から使われる横断的な runtime 基盤を扱う。
-- 利用側が共通 runtime 機能を一か所から import するための集約入口と、責務別に分割された下位 runtime 実装群への入口を持つ。
+- cmoc の realization implementation における共通 runtime helper 群をまとめる領域。Codex CLI 実行、CLI サブコマンド共通制御、設定入出力、内容 hash 保存、エラー表示、Git 操作、実行ログ、runtime path、結果モデル、session state など、複数の上位機能から共有される実行時支援を扱う。
+- 利用側が共通機能を一括 import する入口と、責務別に分かれた runtime 実装本文への入口を含むため、個別サブコマンド実装へ進む前に共有 runtime の責務境界を確認するための案内点になる。
 
 ## Read this when
-- cmoc の複数サブコマンドや上位機能から共有される runtime helper の所在を探したいとき。
-- Codex exec/TUI 呼び出し、profile/schema 準備、quota/capacity 処理、Structured Output 検証、call log、preflight など Codex 実行基盤を調査または変更したいとき。
-- CLI サブコマンド共通の開始・完了表示、終了コード化、例外表示、サブコマンドログ、current logger 管理を確認または変更したいとき。
-- 設定ファイルの JSON 入出力、既定値補完、不正設定の利用者向けエラー化、または内容 hash 保存や binary 判定などの共通処理を扱うとき。
-- cmoc 共通例外、利用者向け Markdown エラーレポート、Git 操作、実行ログ、runtime path、実行結果 dataclass、session state の読み書きなど、横断的な基盤実装の読む先を選びたいとき。
-- 新しい共通 runtime 機能を追加する前に、既存の共有 helper、集約 import 面、責務境界、重複実装の有無を確認したいとき。
+- cmoc の複数サブコマンドや上位機能から使われる共通 runtime API、実行結果モデル、状態・設定・ログ・path・Git・Codex 呼び出しの共有処理を探すとき。
+- CLI サブコマンドの共通ライフサイクル、開始・完了表示、終了コード化、例外表示、サブコマンドログ、現在 logger の扱いを確認または変更したいとき。
+- Codex CLI の exec/TUI 呼び出し、profile/schema 準備、call log、Structured Output 検証、quota/capacity retry、resume token、indexing preflight など、Codex runtime 周辺の実装へ進みたいとき。
+- cmoc 設定ファイルの JSON 入出力、既定値補完、不正設定のエラー化、または設定永続化の共通処理を確認したいとき。
+- 内容 hash に基づくファイル保存、binary 判定、共通エラー report、Git worktree/branch/.gitignore 操作、JSON Lines 実行ログ、runtime directory path、session state JSON などの共有 helper を調べたいとき。
+- 新しい共通 runtime 機能を追加する場所、既存の集約 import 面へ載せるべきか、または責務別 runtime module に置くべきかを判断したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジック、引数定義、ユーザー向け制御フロー、永続データの具体的な内容だけを調べたいとき。その場合は該当サブコマンドや機能実装へ進む。
-- cmoc の正本仕様断片、oracle doc/source/test、INDEX.md 生成規則やルーティング文書仕様を確認したいとき。このディレクトリは realization implementation の共通 runtime 基盤であり、仕様本文ではない。
-- パス語彙そのものの定義や `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` の正本説明だけを確認したいときは、パスモデルを扱う仕様または定義元を読む。
-- Codex profile、設定モデル、AgentCallParameter、FileAccessMode、CmocConfig などのデータ構造そのものを確認したいだけのときは、それぞれの定義元へ進む。
-- ログや状態や出力を読む側・集計する側・表示する側の機能を調べたいときは、この共通保存基盤ではなく、その処理を持つ上位実装へ進む。
+- 個別サブコマンドの業務ロジック、CLI 引数定義、ユーザー向けワークフロー、永続データの具体的な意味を調べたいだけのとき。その場合は該当サブコマンドや機能実装へ進む。
+- cmoc の正本仕様断片、path keyword の概念定義、oracle/realization の分類、INDEX.md 生成規則を確認したいとき。その場合は oracle 側の本文を読む。
+- テストの期待挙動や fixture を確認したいとき。その場合は test 側の対象へ進む。
+- 特定の共有処理をすでに特定できているときは、この領域全体ではなく、Codex 実行、設定、Git、ログ、path、状態など責務に対応する下位 runtime 実装本文を直接読む。
 
 ## hash
-- 7587c3116f2546fc0a52c4d6289da8af723875378beb0c1a102a11f2cf7508e4
+- 67e27cda2f00c4f13f13ecaf3aaa7bcf2726bd1d599ea4889d93c6cd190f000a
 
 # `config`
 
