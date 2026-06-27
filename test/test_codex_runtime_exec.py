@@ -4,8 +4,9 @@ from pathlib import Path
 import tomllib
 
 import cmoc_runtime
+import pytest
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from cmoc_runtime import SubcommandLogger
+from cmoc_runtime import CmocError, SubcommandLogger
 from config.cmoc_config import CmocConfig
 from _support import (
     make_repo,
@@ -80,7 +81,9 @@ def test_run_codex_exec_uses_stdin_and_writes_logs(
     assert recorded["args"][-1] == "-"
     assert result.output_json == {"ok": True, "stdin": "SECRET PROMPT BODY"}
     assert result.call_log_path.is_file()
-    assert result.prompt_log_path.read_text() == "SECRET PROMPT BODY"
+    assert json.loads(result.prompt_log_path.read_text()) == {
+        "prompt": "SECRET PROMPT BODY"
+    }
     assert result.stdout_log_path.read_text().strip() == '{"type": "turn.completed"}'
     assert "stderr-only" not in result.stdout_log_path.read_text()
     assert result.stderr_log_path.read_text().strip() == "stderr-only"
@@ -177,6 +180,42 @@ def test_run_codex_exec_stores_schema_in_cwd_work_root(
     assert result.schema_path.parent == linked / ".cmoc" / "state" / "schema"
     assert schema_arg == str(result.schema_path)
     assert not (root / ".cmoc" / "state" / "schema").exists()
+
+
+def test_run_codex_exec_rejects_agents_edits(tmp_path: Path, monkeypatch) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fake_codex = bin_dir / "codex"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, pathlib, sys",
+            "pathlib.Path('.agents').mkdir(exist_ok=True)",
+            "pathlib.Path('.agents/skill.md').write_text('forbidden\\n')",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text(json.dumps({'ok': True}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.REPO_WRITE,
+        "prompt",
+        None,
+    )
+
+    with pytest.raises(CmocError, match=r"\.agents 配下を変更"):
+        run_codex_exec(
+            parameter,
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
 
 
 def test_run_codex_tui_uses_codex_command_and_prompt_argument(

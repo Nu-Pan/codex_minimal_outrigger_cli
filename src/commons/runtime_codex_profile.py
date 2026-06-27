@@ -56,11 +56,10 @@ def _sandbox_lines(
         # Codex CLI v0.142.2 rejects permission_profile/read_only_paths in strict
         # config; the profile can only carry sandbox mode and extra writable roots.
         protected = [root / "memo", root / ".agents"]
-        write_paths.extend(
-            path.resolve()
-            for path in extra_writable_paths
-            if not any(path.is_relative_to(base) for base in protected)
-        )
+        for path in extra_writable_paths:
+            resolved = path.resolve()
+            if not any(resolved.is_relative_to(base) for base in protected):
+                write_paths.append(resolved)
     lines = [f'sandbox_mode = "{sandbox_mode}"']
     if sandbox_mode == "workspace-write":
         lines.extend(["", "[sandbox_workspace_write]"])

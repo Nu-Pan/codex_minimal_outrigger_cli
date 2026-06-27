@@ -54,6 +54,39 @@ _CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
 _LAST_CODEX_LOG_TIMESTAMP: str | None = None
 
 
+def _agents_status(root: Path) -> str:
+    return subprocess.run(
+        ["git", "status", "--short", "--", ".agents"],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        check=False,
+    ).stdout
+
+
+def _reject_agents_edit(root: Path, before: str, call_path: Path) -> None:
+    after = _agents_status(root)
+    if after != before:
+        raise CmocError(
+            "Codex CLI 呼び出しが .agents 配下を変更しました。",
+            [
+                ".agents 配下を変更しない形で作業をやり直してください。",
+                "必要な変更がある場合は、人間が別途 .agents 配下を編集してください。",
+            ],
+            f"call_log: {call_path}\nbefore:\n{before or '(clean)'}\nafter:\n{after or '(clean)'}",
+        )
+
+
+def _write_prompt_log(path: Path, prompt: str) -> None:
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md requires a
+    # `_prompt.jsonl` log; stdin must still receive the original prompt text.
+    path.write_text(json.dumps({"prompt": prompt}, ensure_ascii=False) + "\n")
+
+
+def _read_prompt_log(path: Path) -> str:
+    return json.loads(path.read_text())["prompt"]
+
+
 def _next_codex_log_timestamp() -> str:
     """壁時計後退時も同一プロセス内の Codex exec log 名を単調増加させる。"""
     global _LAST_CODEX_LOG_TIMESTAMP
@@ -95,17 +128,19 @@ def run_codex_exec(
     codex_home = resolve_codex_home(cwd)
     validate_codex_home(codex_home)
     codex_env = codex_subprocess_env(codex_home)
+    codex_work_root = work_root(cwd)
     profile_path = prepare_codex_profile(
         parameter,
         config,
         codex_home,
-        work_root(cwd),
+        codex_work_root,
         extra_read_paths,
         extra_writable_paths,
     )
     profile_name = codex_profile_name(profile_path)
+    agents_status_before = _agents_status(codex_work_root)
     schema_path = (
-        prepare_schema(work_root(cwd), parameter.structured_output_schema_path)
+        prepare_schema(codex_work_root, parameter.structured_output_schema_path)
         if parameter.structured_output_schema_path
         else None
     )
@@ -237,7 +272,7 @@ def run_codex_exec(
     while True:
         ts, prompt_path, stdout_path, stderr_path, output_path, call_path = new_log_paths()
         current_argv = build_argv(output_path, resume_token)
-        prompt_path.write_text(parameter.prompt)
+        _write_prompt_log(prompt_path, parameter.prompt)
         write_call_log(
             call_path,
             run_purpose=purpose,
@@ -250,18 +285,18 @@ def run_codex_exec(
             run_schema_path=schema_path,
         )
         attempt_started_at = time.perf_counter()
-        with prompt_path.open() as prompt_stdin:
-            result = subprocess.run(
-                current_argv,
-                cwd=cwd,
-                stdin=prompt_stdin,
-                text=True,
-                capture_output=True,
-                env=codex_env,
-            )
+        result = subprocess.run(
+            current_argv,
+            cwd=cwd,
+            input=_read_prompt_log(prompt_path),
+            text=True,
+            capture_output=True,
+            env=codex_env,
+        )
         last_result = result
         stdout_path.write_text(result.stdout)
         stderr_path.write_text(result.stderr)
+        _reject_agents_edit(codex_work_root, agents_status_before, call_path)
         error_text = codex_error_text(result.stdout, result.stderr)
         if result.returncode != 0:
             if (
@@ -355,7 +390,9 @@ def run_codex_exec(
                             str(probe_output_path),
                             "-",
                         ]
-                        probe_prompt_path.write_text("quota availability probe")
+                        _write_prompt_log(
+                            probe_prompt_path, "quota availability probe"
+                        )
                         write_call_log(
                             probe_call_path,
                             run_purpose="quota availability probe",
@@ -368,17 +405,19 @@ def run_codex_exec(
                             run_schema_path=None,
                         )
                         probe_started_at = time.perf_counter()
-                        with probe_prompt_path.open() as probe_stdin:
-                            poll = subprocess.run(
-                                probe_argv,
-                                cwd=cwd,
-                                stdin=probe_stdin,
-                                text=True,
-                                capture_output=True,
-                                env=codex_env,
-                            )
+                        poll = subprocess.run(
+                            probe_argv,
+                            cwd=cwd,
+                            input=_read_prompt_log(probe_prompt_path),
+                            text=True,
+                            capture_output=True,
+                            env=codex_env,
+                        )
                         probe_stdout_path.write_text(poll.stdout)
                         probe_stderr_path.write_text(poll.stderr)
+                        _reject_agents_edit(
+                            codex_work_root, agents_status_before, probe_call_path
+                        )
                         probe_error_text = codex_error_text(poll.stdout, poll.stderr)
                         probe_available = poll.returncode == 0 and not is_quota_error(
                             poll.stdout

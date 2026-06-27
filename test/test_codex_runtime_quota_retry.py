@@ -15,6 +15,10 @@ from _support import (
 from commons.runtime_codex import run_codex_exec
 
 
+def prompt_log_text(path: str) -> str:
+    return json.loads(Path(path).read_text())["prompt"]
+
+
 def test_run_codex_exec_polls_and_resumes_after_quota(
     tmp_path: Path, monkeypatch, capsys
 ) -> None:
@@ -112,8 +116,9 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert Path(probe_logs[0]["stdout_log_path"]).read_text().strip() == (
         '{"type": "turn.completed"}'
     )
-    assert Path(probe_logs[0]["prompt_log_path"]).read_text() == (
-        "quota availability probe"
+    assert (
+        prompt_log_text(probe_logs[0]["prompt_log_path"])
+        == "quota availability probe"
     )
     assert Path(probe_logs[0]["stderr_log_path"]).read_text() == ""
     assert Path(probe_logs[0]["output_path"]).read_text() == '{"probe": true}'
@@ -129,7 +134,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert initial_log["argv"][1:] == argv_calls[0]
     assert resume_log["argv"][1:] == argv_calls[2]
     assert len({log["stdout_log_path"] for log in main_logs}) == 2
-    assert [Path(log["prompt_log_path"]).read_text() for log in main_logs] == [
+    assert [prompt_log_text(log["prompt_log_path"]) for log in main_logs] == [
         "prompt",
         "prompt",
     ]

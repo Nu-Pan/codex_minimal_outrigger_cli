@@ -166,6 +166,7 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
         FileAccessMode.REALIZATION_WRITE: [
             "ツリー外は読み書き禁止",
             "/oracle` ツリー内は書き込み禁止",
+            "/.agents` ツリー内は書き込み禁止",
             "/memo` は読み書き禁止",
         ],
         FileAccessMode.ORACLE_WRITE: [
@@ -175,6 +176,7 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
         ],
         FileAccessMode.REPO_WRITE: [
             "ツリー外は読み書き共に禁止",
+            "/.agents` ツリー内は書き込み禁止",
             "/memo` は読み書き禁止",
         ],
     }

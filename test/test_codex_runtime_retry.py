@@ -13,6 +13,10 @@ from _support import (
 from commons.runtime_codex import run_codex_exec
 
 
+def prompt_log_text(path: str) -> str:
+    return json.loads(Path(path).read_text())["prompt"]
+
+
 def test_run_codex_exec_retries_semantic_output(tmp_path: Path, monkeypatch) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
@@ -72,7 +76,7 @@ def test_run_codex_exec_retries_semantic_output(tmp_path: Path, monkeypatch) -> 
         '{"bad": true}',
         '{"ok": true}',
     ]
-    assert [Path(log["prompt_log_path"]).read_text() for log in call_logs] == [
+    assert [prompt_log_text(log["prompt_log_path"]) for log in call_logs] == [
         "prompt",
         "prompt",
     ]

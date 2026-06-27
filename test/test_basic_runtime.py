@@ -363,7 +363,11 @@ def test_codex_profile_contains_supported_sandbox_settings(tmp_path: Path) -> No
             ),
             CmocConfig(),
             root,
-            extra_writable_paths=[oracle_conflict, root / "memo" / "blocked.md"],
+            extra_writable_paths=[
+                oracle_conflict,
+                root / "memo" / "blocked.md",
+                root / ".agents" / "blocked.md",
+            ],
         )
     )
     conflict_workspace = conflict_profile["sandbox_workspace_write"]
