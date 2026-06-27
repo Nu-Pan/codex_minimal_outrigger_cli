@@ -106,23 +106,24 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基本 runtime 挙動を横断的に検証する realization test。path token 解決、run/work/repo root 判定、設定既定値、エラー表示、session/apply branch state、CLI preflight と補完 probe、.cmoc ignore、file access と sandbox profile、binary 判定を扱う。
-- 単一機能の詳細テストというより、複数の runtime helper と CLI 境界が現行の外部挙動を保っているかを確認する入口になる。
+- cmoc の基礎的な runtime 挙動を横断的に検証する realization test。パストークン解決、run/work/repo root 判定、設定既定値、構造化エラー表示、session/apply branch の状態 ID 検証、CLI preflight と補完プローブ、gitignore 更新、sandbox mode 変換、binary 判定、Codex profile の sandbox 設定を扱う。
+- 単一機能の詳細テストというより、basic・runtime・config・main・commons にまたがる公開挙動と制御ロジックの回帰検出入口として位置づけられる。
 
 ## Read this when
-- runtime 基盤の挙動変更に伴い、root 解決、path token 表現、duration 表示、エラー markdown、stdout/stderr の出力先、gitignore 更新、sandbox profile 生成の期待値を確認したいとき。
-- file access mode、model class、reasoning effort、Codex profile、session/apply branch state の既定値や拒否条件が、テスト上どの外部挙動として固定されているかを調べるとき。
-- CLI の `init`、`session fork`、引数解析エラー、shell completion probe が preflight や副作用をどう扱うべきか確認するとき。
-- runtime helper の変更後に、基本的な回帰テストの範囲と追加・統合先を判断したいとき。
+- runtime の基礎挙動、root path 解決、`<cmoc-root>` などの token path 表示、linked worktree と main worktree の扱いを変更する。
+- `CmocError` の markdown 表示、CLI エラーの stdout/stderr 出力先、preflight 実行条件、completion probe の副作用抑制を変更する。
+- session branch または apply branch の名前形式、状態ファイル読み込み、branch から session id を取り出す制御を変更する。
+- `.cmoc` の gitignore 登録、file access mode から Codex sandbox mode/profile への変換、binary 判定の読み取り範囲を変更する。
+- 設定既定値、model class、reasoning effort、sandbox writable roots など、複数モジュールにまたがる基本契約の回帰を確認したい。
 
 ## Do not read this when
-- 個別サブコマンドの詳細な成功フロー、生成物の中身、LLM 呼び出し制御など、このテストに現れない高水準機能の仕様を調べたいとき。
-- oracle file の正本仕様を確認したいとき。この対象は realization test であり、仕様判断の根拠そのものではない。
-- 特定モジュールの内部実装手順や helper の責務分割を知りたいだけのときは、対応する実装本文を直接読む方が適切。
-- テスト支援関数や fixture の実装詳細を確認したいときは、支援コード側を直接読む方が適切。
+- 個別 CLI サブコマンドの正常系フローや user-facing 出力の詳細だけを確認したい場合は、そのサブコマンド専用の実装またはテストへ進む。
+- oracle の正本仕様断片そのものを確認・変更したい場合は、oracle 配下の該当文書を読む。このテストは realization test であり正本仕様ではない。
+- テスト共通 fixture、repo 作成 helper、runner の実装だけを確認したい場合は、support 側のテスト補助コードを直接読む。
+- 単一モジュール内の内部 helper 実装だけを変更し、ここで検証される外部挙動や制御ロジックに影響しないことが明確な場合は読まなくてよい。
 
 ## hash
-- 739ab5c8080c5e8cee80fe0732c5a05eae4e23b6b70b20fa0fdb452a28406c12
+- dd32024d5f5822b1e2fcc02614d47d6b43f00328bfad4c7775c22c343a2bd9b7
 
 # `test_cli_init_tui.py`
 
