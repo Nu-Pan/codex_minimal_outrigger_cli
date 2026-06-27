@@ -151,23 +151,22 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行ランタイムの realization test。exec 起動時のプロファイル生成、標準入力と最終出力の受け渡し、TUI 起動前の追加読み取りパス保護、Codex CLI 不在時のエラー報告を検証する。
-- 一時リポジトリ、擬似 CODEX_HOME、スタブ化した codex 実行ファイル、subprocess の差し替えを使い、外部 Codex 本体に依存せずランタイム制御を確認する。
+- Codex CLI 実行経路の realization test。exec 実行時の profile 生成、標準入力、sandbox 設定、出力取得、呼び出しログ、保護領域変更の拒否、TUI 起動前の追加読み取りパス検査、Codex CLI 欠落時のエラー化を検証する。
+- テスト用リポジトリ、CODEX_HOME、stub 化した codex 実行ファイルを組み合わせ、実際の外部 Codex CLI ではなく制御された subprocess 挙動を通して runtime 層の制御ロジックを確認する。
 
 ## Read this when
-- Codex CLI を起動する realization implementation の引数構築、プロファイル生成、sandbox 設定、標準入力、最終メッセージ出力の扱いを変更する時。
-- TUI 実行経路で追加読み取りパスを検査する順序や、保護領域を拒否する挙動を変更する時。
-- Codex CLI が見つからない場合の CmocError、エラーメッセージ、exec と TUI の共通失敗処理を確認または変更する時。
-- Codex 実行ランタイムのテストで、一時的な codex コマンドや subprocess monkeypatch を使った検証方法を確認したい時。
+- Codex CLI を起動する runtime 実装、profile 生成、sandbox_mode や writable_roots の組み立て、exec/TUI の起動前検査を変更するとき。
+- Codex 呼び出しログ、失敗時 status、returncode、call_log_path、console 出力など、subcommand logger 連携の挙動を確認または変更するとき。
+- 保護領域への書き込み検出、追加読み取りパスの拒否条件、Codex CLI が見つからない場合の CmocError を扱う実装を変更するとき。
+- Codex subprocess をテストで stub する方法や、runtime 層の外部コマンド依存を切り離した検証例を探すとき。
 
 ## Do not read this when
-- Codex CLI の実行制御ではなく、別の外部コマンド、別サブコマンド、または一般的な設定読み込みだけを扱う時。
-- LLM の応答品質、Codex 本体の内部挙動、または実際の対話 UI の表示内容を検証したい時。
-- リポジトリ作成、CODEX_HOME 構築、スタブ実行ファイル作成などのテスト補助関数そのものを変更する時は、補助関数の定義元を読む方が直接的。
-- AgentCallParameter や FileAccessMode などのデータ構造の定義・意味を確認するだけなら、それらの定義元を読む方が直接的。
+- Codex CLI の実行経路ではなく、別サブコマンドの入出力、oracle 文書処理、path model などの仕様や実装を調べたいとき。
+- 実際の Codex CLI や LLM の出力品質そのものを検証したいとき。この対象は stub された subprocess と runtime 制御のテストであり、モデル応答の品質評価は扱わない。
+- profile 内容や保護領域の期待値ではなく、テスト fixture の基本的な作成 helper 自体を変更したいときは、support 側の定義を直接確認する。
 
 ## hash
-- a02269269521528aae4f2867bcbe0fc90cde2c6346d9b6ef2036d0b0e5a8c035
+- a9f1f66261226cc3e58aeafcffd3b71369baf30d7b2fd02cee4f6ce932a1ae1e
 
 # `test_codex_runtime_home.py`
 
@@ -190,22 +189,23 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex 実行が quota exceeded で失敗した後の待機・probe・再実行制御を検証する realization test。
-- 初回実行で得た thread id を使って resume する経路、resume token が無い場合に通常再実行する経路、並行実行時に quota availability probe を代表 1 回に集約する経路を扱う。
-- fake codex 実行ファイル、CODEX_HOME、profile、subcommand log、call log、stdout/stderr/prompt/output log を組み合わせて、quota retry 周辺の外部副作用と戻り値を確認する。
+- Codex 実行ラッパーが quota 超過を検出した後、quota availability probe を挟んで再実行または resume する制御を検証する realization test。
+- 疑似 codex 実行ファイルを使い、呼び出し引数、標準入力、CODEX_HOME、出力 JSON、call log、SubcommandLogger イベント、コンソール表示まで含めて quota retry 周辺の外部挙動を固定する。
+- 並列に quota 超過した複数呼び出しで、代表となる probe が 1 回だけ実行され、それぞれの呼び出しが resume で完了することも検証する。
 
 ## Read this when
-- Codex CLI 呼び出しの quota exceeded 検出後に、probe、resume、再実行、待機回数をどう扱うかを変更する時。
-- quota availability probe の argv、stdin、profile、CODEX_HOME、出力保存、call log、console 表示、subcommand log の期待値を確認したい時。
-- 複数の Codex 実行が同時に quota exceeded になった場合、probe を重複させず各呼び出しが成功へ進む制御を確認したい時。
+- Codex 実行中の quota 超過検出、quota availability probe、再実行、resume token 利用の挙動を変更または調査するとき。
+- quota retry 時に生成される call log、stdout/stderr/prompt/output のログパス、SubcommandLogger の codex_call イベント、コンソール出力の形式や status を確認するとき。
+- quota availability probe が readonly 実行中に .agents 配下を変更した場合の拒否処理と、その失敗ログの扱いを確認するとき。
+- 複数スレッドから同時に quota retry が発生した場合の probe 集約と、各呼び出しの再開挙動を確認するとき。
 
 ## Do not read this when
-- 通常の Codex 実行成功時、一般的なコマンド組み立て、設定読み込みだけを確認したい時。
-- quota retry 以外の SubcommandLogger や call log 形式の全体仕様を調べたい時。
-- Codex CLI や LLM の出力品質そのもの、または実際の外部 Codex サービスとの通信挙動を検証したい時。
+- 通常の Codex 実行成功、quota 以外の失敗、または基本的なコマンドライン組み立てだけを確認したいときは、より直接それを扱う実装やテストを読む。
+- 設定ファイルの読み込み、プロファイル生成、リポジトリ作成 fixture そのものの仕様を調べたいときは、それらを定義する補助コードを読む。
+- oracle file の正本仕様や quota retry 以外のサブコマンド仕様を確認したいときは、対応する oracle doc または対象サブコマンドのテストへ進む。
 
 ## hash
-- 61ba4d73ee6aa72c52330c635ee337ea49f0cdd8a395dd9da3f8da706872a647
+- 0da8839aa5bc911c9380a39020b6feaadf6bab589dfbea0e41923aa494287b86
 
 # `test_codex_runtime_retry.py`
 
