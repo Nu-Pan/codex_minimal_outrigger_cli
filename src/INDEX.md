@@ -1,26 +1,26 @@
 # `acp`
 
 ## Summary
-- AI agent 呼び出しに渡す入力条件と応答契約を組み立てる実装領域。処理種別ごとの呼び出しパラメータ構築と、そこへ注入する共通プロンプト断片の生成を束ねる入口になる。
-- 扱う内容は、変更要約、実装所見の列挙と対応、目次エントリー生成、仕様断片レビューの所見列挙・理由調査・採否判定・整理、merge conflict marker 解消、TUI 実行パラメータ選定で使う role、summary、goal、補助入力、file access mode、model/reasoning、Structured Output schema の指定である。
-- 実際の CLI 引数解析、状態保存、git 操作、作業ツリー変更、レビュー結果や目次の永続化ではなく、それらの作業を AI agent に依頼するための complete prompt と標準文書注入を定義する層である。
+- AI agent 呼び出しに渡す complete prompt、補助入力、file access mode、model/reasoning、Structured Output schema などの構築実装を扱う領域。処理別の呼び出しパラメータ構築と、それらに組み込まれる標準プロンプト片の本文生成が主な責務である。
+- 対象となる処理範囲は、変更要約・所見列挙・所見対応、目次エントリー生成、oracle review の所見列挙・理由調査・採否判定・整理、merge conflict marker 解消、TUI 実行パラメータ選定である。
+- 下位要素は、個別機能ごとの AI 呼び出し条件と応答契約を組み立てる実装群と、oracle/realization の基本説明、ファイルアクセス規則、ルーティング規則、各種標準などをプロンプト本文として生成する実装群に分かれる。
 
 ## Read this when
-- cmoc の各機能が AI agent を呼び出すとき、どの role、summary、goal、補助入力、標準文書、ファイルアクセス権限、model/reasoning、応答 schema を渡すか確認したいとき。
-- 変更適用、目次生成、仕様断片レビュー、session join、TUI 実行パラメータ解決などの処理で、AI 呼び出しパラメータ構築の既存パターンを探したいとき。
-- oracle/realization の基本説明、ファイルアクセス規則、ルーティング規則、oracle standard、realization standard、review standard、apply review standard、INDEX エントリー標準が prompt part としてどう構築・注入されるか確認したいとき。
-- 新しい AI 呼び出しフェーズを追加する、または既存フェーズの prompt、補助入力、権限、応答契約を変更する前に、同種の構成方法と共通 prompt part の依存関係を確認したいとき。
-- AI agent に読ませる文脈と返却形を設計する作業で、処理固有の prompt 構築と共通標準文書のどちらを読めばよいか判断したいとき。
+- cmoc の機能が AI agent に何を読ませ、どの権限で呼び出し、どの model class・reasoning effort・応答 schema を使うかを調べたいとき。
+- apply fork、indexing、review oracle、session join、TUI parameter resolve の AI 呼び出しパラメータ構築へ進む入口を選びたいとき。
+- AI agent に渡す標準プロンプト片の本文、注入条件、依存関係、結合順序を確認または変更したいとき。
+- 新しい AI 呼び出しフェーズを追加する前に、既存の role、summary、goal、補助文脈、標準文書参照、file access mode、Structured Output schema 指定の組み立て方を確認したいとき。
+- 実装・レビュー・目次生成・衝突解消そのものではなく、それらを AI に依頼するための入力条件と出力制約を確認したいとき。
 
 ## Do not read this when
-- CLI サブコマンドの登録、引数解析、実行順序、状態ファイルの生成・更新・削除、画面表示、保存処理、git branch 操作など、AI 呼び出し前後の制御フローを調べたいとき。
-- 差分取得、対象ファイル列挙、レビュー対象選定、既存所見の読み書き、conflict marker 検出、エディタ入力処理など、AI に渡すパラメータを作る前段または後段のロジックを調べたいとき。
-- StructDoc、Standard、Requirement、AgentCallParameter、FileAccessMode、path model など、prompt 構築で利用される基盤型や共通データ構造そのものの仕様・実装を確認したいとき。
-- 特定の oracle file や realization file の本文、実際の仕様内容、実装修正箇所、テスト内容を直接調べたいとき。
-- AI agent から返った変更要約、レビュー所見、理由、採否判定、整理操作、目次エントリー、TUI パラメータ選定結果を保存・集約・描画・適用する処理を確認したいとき。
+- CLI 引数解析、サブコマンド登録、実行順序、状態管理、保存、表示、git branch 操作など、AI 呼び出し前後の制御フローを調べたいとき。
+- AgentCallParameter、FileAccessMode、StructDoc、Markdown rendering、path model などの基盤型や共通データ構造そのものを確認したいとき。
+- 特定の oracle file や realization file の本文、具体的な仕様内容、実装修正箇所、テスト内容を直接調べたいとき。
+- 生成された所見、変更要約、目次エントリー、TUI パラメータ選定結果を保存・集約・描画・適用する処理を確認したいとき。
+- AI 呼び出しパラメータや標準プロンプト本文ではなく、差分検出、対象ファイル列挙、レビュー対象選定、conflict 検出、エディタ入力処理などの前段ロジックを調べたいとき。
 
 ## hash
-- 444b9e4132881deecc1afb8df74b9380005d949af37ae9bf124617f352271059
+- caa1e2ffd0d6894e406f5f54c02489827f72c941fc4696c901a353cd0a87f8df
 
 # `basic`
 
