@@ -151,24 +151,21 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行ラッパーの実現テスト。exec/tui 起動前後の制御、生成プロファイル、サンドボックス設定、標準入力への prompt 受け渡し、最後の出力取得、サブコマンドログ、保護領域変更検出、CLI 未検出時のエラー化を検証する。
-- 外部の Codex CLI 本体を実行せず、テスト内でスタブ実行ファイルや subprocess 差し替えを使って、ランタイム層が Codex に渡す引数・環境・設定と失敗時の扱いを確認する。
+- Codex CLI 呼び出しランタイムのテストであり、exec/TUI 起動時のプロファイル生成、標準入力引き渡し、出力取得、呼び出しログ、保護領域変更検出、追加 read path 検証、非ゼロ終了、CLI 不在時エラーを検証する。
+- 実際の Codex 実行は一時ディレクトリ上のスタブ実行ファイルや subprocess 差し替えで置き換え、ランタイム関数の外部副作用と失敗時挙動を確認する入口になっている。
 
 ## Read this when
-- Codex CLI を起動する実行経路、特に exec/tui の引数構築、profile 生成、CODEX_HOME 利用、prompt の渡し方、出力ファイルの読み取りを変更する。
-- ファイルアクセスモードからサンドボックス設定や writable roots を組み立てる処理を変更し、repo write 時にどのパスを書き込み可能にするかを確認したい。
-- Codex 実行後の禁止領域変更検出、サブコマンドログの codex_call 記録、失敗表示、call log 出力の扱いを変更する。
-- 追加 read path の保護領域チェックや、Codex subprocess を開始する前に拒否すべき条件を変更する。
-- Codex CLI が存在しない場合の exec/tui 共通エラー処理を変更・確認する。
+- Codex exec または TUI を起動するランタイム処理、生成される Codex profile、sandbox/workspace-write 設定、標準入力や output-last-message の扱いを変更する時。
+- Codex 呼び出しのログ出力、call log ファイル、SubcommandLogger 連携、非ゼロ終了や CLI 未検出時のエラーメッセージを変更する時。
+- Codex 実行後の保護対象変更検出、特に .agents 配下の変更拒否や追加 read path が memo などの保護領域を指す場合の事前拒否を確認する時。
 
 ## Do not read this when
-- Codex ランタイムではなく、リポジトリ作成 fixture、テスト用 Codex home、スタブ実行ファイル生成 helper の実装だけを調べたい。
-- LLM の応答品質、Codex CLI 本体の内部挙動、または実際の Codex サービスとの通信結果を検証したい。
-- Codex 起動とは無関係な CLI サブコマンド、oracle 仕様文書、INDEX 生成、通常の設定読み込み全般を変更する。
-- ファイルアクセスモードや保護領域の正本仕様そのものを確認したい場合。まず対応する oracle 文書や実装側の定義を読む。
+- Codex ランタイム以外のサブコマンド、設定読み込み一般、リポジトリ生成 fixture 自体の詳細を調べたいだけの場合。
+- Codex CLI や LLM の出力品質そのもの、または実際の対話 UI の表示内容を検証したい場合。
+- oracle file の正本仕様やパス用語の定義を確認したい場合。
 
 ## hash
-- 7e67c5c863a917c311affafe17d68df51d2e1c965abcd6373fd45a20f2c3ed41
+- 11eb10b8aa1434c1ffcd86ab6691cd56d4fb6e3dacd9f4b5d714fea196881624
 
 # `test_codex_runtime_home.py`
 

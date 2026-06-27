@@ -182,21 +182,23 @@
 # `runtime_codex_tui.py`
 
 ## Summary
-- Codex TUI 呼び出しを、設定読み込み、Codex home 検証、profile 準備、call log 記録、subprocess 実行、コンソール通知、subcommand logger 記録、失敗時エラー化まで含めて一連で扱う実行入口。
-- 対話型 Codex 起動時に、実行前にどの profile と環境で起動したかを保存し、実行後に経過時間と戻り値を通知・記録する責務を持つ。
+- Codex CLI を TUI 用に起動する実行経路を扱う。設定読み込み、Codex profile 準備、call log の保存、サブプロセス実行、実行結果のコンソール通知・サブコマンドログ記録、失敗時の cmoc エラー化までをまとめる入口である。
+- Agent call parameter から Codex profile を選び、prompt を渡して対話的な Codex 呼び出しを行う処理の責務を持つ。TUI 呼び出しの前後で必要な作業ディレクトリ、Codex home、追加 read path、ログ出力を接続する位置づけである。
 
 ## Read this when
-- Codex TUI を起動する処理の引数、作業ディレクトリ、設定、追加 read path、profile 準備、Codex home 検証の流れを確認・変更したいとき。
-- TUI 呼び出しの call log に保存される情報、保存先、タイムスタンプ、実行 argv、profile 関連情報、model/reasoning/file access 情報を扱うとき。
-- Codex subprocess の戻り値に応じたコンソール通知、subcommand logger へのイベント記録、失敗時の CmocError 生成を確認・変更したいとき。
+- Codex TUI 起動時の argv、profile 名、Codex home、cwd、環境変数の組み立てを確認・変更したいとき。
+- Codex TUI 呼び出しの call log に保存される内容、保存先、purpose や model_class などの記録項目を確認・変更したいとき。
+- Codex TUI サブプロセスの成功・失敗の扱い、実行時間計測、コンソール通知、subcommand logger へのイベント記録、失敗時に利用者へ返す cmoc エラーを確認・変更したいとき。
+- AgentCallParameter、CmocConfig、追加 read path を Codex TUI 実行へ渡す流れを追いたいとき。
 
 ## Do not read this when
-- Codex profile の内容生成、profile 名の決定、Codex home の解決・検証、subprocess 実行の低レベル処理そのものを変更したいだけのときは、それらを提供する profile 実行支援側を読む。
-- 通常の設定ファイル読み込み、runtime path の定義、ログディレクトリや work root の算出規則を確認したいだけのときは、それぞれの設定・path 管理側を読む。
-- Codex 呼び出し結果の表示形式、subcommand logger の実装、共通エラー型、CommandResult の構造だけを扱うときは、それぞれの共通 runtime 部品を直接読む。
+- Codex profile の生成内容、profile 名の決定、Codex home の検証、Codex サブプロセス実行の低レベル処理そのものを変更したいだけのときは、それらを担当する profile 実行系を直接読む。
+- 設定ファイルの読み込み規則、runtime path の定義、timestamp や log directory の決定規則だけを調べたいときは、それぞれの設定・パス処理を直接読む。
+- Codex call log のコンソール表示フォーマットだけを変更したいときは、表示を担当する logging 処理を直接読む。
+- 非 TUI の Codex 呼び出し、通常の CLI サブコマンド処理、または CommandResult 型の一般仕様を調べたいだけのときは、この対象から読み始めなくてよい。
 
 ## hash
-- 9b4362abe7ccac33e672bdafd94f779b50daf1e8750872491cc22fba550714bc
+- 5af52ba7e492dcea4c7af67ee852870c4093bc6e4cfe6601d8adc4fbc2a62cb6
 
 # `runtime_config.py`
 
