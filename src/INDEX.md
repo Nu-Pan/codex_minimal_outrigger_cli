@@ -1,26 +1,24 @@
 # `acp`
 
 ## Summary
-- AI agent 呼び出しに渡す complete prompt、補助入力、file access mode、model/reasoning、Structured Output schema などの構築実装を扱う領域。処理別の呼び出しパラメータ構築と、それらに組み込まれる標準プロンプト片の本文生成が主な責務である。
-- 対象となる処理範囲は、変更要約・所見列挙・所見対応、目次エントリー生成、oracle review の所見列挙・理由調査・採否判定・整理、merge conflict marker 解消、TUI 実行パラメータ選定である。
-- 下位要素は、個別機能ごとの AI 呼び出し条件と応答契約を組み立てる実装群と、oracle/realization の基本説明、ファイルアクセス規則、ルーティング規則、各種標準などをプロンプト本文として生成する実装群に分かれる。
+- AI agent 呼び出しに渡すプロンプトと実行パラメータを構築する実装領域。role、summary、goal、file access mode、標準文書、補助入力、model/reasoning、Structured Output schema を、用途別の AgentCallParameter として組み立てる処理を扱う。
+- 下位には、個別機能ごとの AI 呼び出し条件を作る領域と、完全プロンプトに注入される標準プロンプト片を生成する領域がある。変更要約、apply fork 所見、oracle review、INDEX エントリー生成、merge conflict marker 解消、TUI 実行パラメータ選定などの AI 依頼の入口になる。
 
 ## Read this when
-- cmoc の機能が AI agent に何を読ませ、どの権限で呼び出し、どの model class・reasoning effort・応答 schema を使うかを調べたいとき。
-- apply fork、indexing、review oracle、session join、TUI parameter resolve の AI 呼び出しパラメータ構築へ進む入口を選びたいとき。
-- AI agent に渡す標準プロンプト片の本文、注入条件、依存関係、結合順序を確認または変更したいとき。
-- 新しい AI 呼び出しフェーズを追加する前に、既存の role、summary、goal、補助文脈、標準文書参照、file access mode、Structured Output schema 指定の組み立て方を確認したいとき。
-- 実装・レビュー・目次生成・衝突解消そのものではなく、それらを AI に依頼するための入力条件と出力制約を確認したいとき。
+- cmoc の機能が AI agent に何を依頼し、どの file access mode、model class、reasoning effort、Structured Output schema で呼び出しているかを確認または変更したいとき。
+- AI agent に渡す complete prompt の構成、標準プロンプト片の注入条件、aux_prompt の内容、oracle/realization/basic/routing/file access などの共通説明の組み立てを調べたいとき。
+- 変更差分の要約、ファイル単位の所見列挙、所見に基づく realization file 修正、oracle file レビュー所見の列挙・検証・判定・整理、INDEX.md 用エントリー生成、TUI 用パラメータ選択、session join の conflict marker 解消など、AI に依頼する作業単位のプロンプト設計へ進みたいとき。
+- Structured Output schema がどの AI 呼び出しに対応し、AI 応答をどの段階で機械処理可能な形に固定しているかを追いたいとき。
 
 ## Do not read this when
-- CLI 引数解析、サブコマンド登録、実行順序、状態管理、保存、表示、git branch 操作など、AI 呼び出し前後の制御フローを調べたいとき。
-- AgentCallParameter、FileAccessMode、StructDoc、Markdown rendering、path model などの基盤型や共通データ構造そのものを確認したいとき。
-- 特定の oracle file や realization file の本文、具体的な仕様内容、実装修正箇所、テスト内容を直接調べたいとき。
-- 生成された所見、変更要約、目次エントリー、TUI パラメータ選定結果を保存・集約・描画・適用する処理を確認したいとき。
-- AI 呼び出しパラメータや標準プロンプト本文ではなく、差分検出、対象ファイル列挙、レビュー対象選定、conflict 検出、エディタ入力処理などの前段ロジックを調べたいとき。
+- CLI サブコマンド登録、引数解析、実行順序、状態管理、git 操作、ファイル保存、結果表示、テスト実行など、AI 呼び出しの前後にある制御フローだけを調べたいとき。
+- oracle file や realization file の本文そのもの、または実際にレビュー・修正される対象ファイルの仕様や実装を読みたいとき。
+- AgentCallParameter、FileAccessMode、StructDoc、path model、standard 変換などの基礎型・共通データ構造そのものを確認したいとき。
+- AI 応答を受け取った後の集約、採否判断、保存、適用、通知などの後続処理を調べたいとき。
+- 生成済み INDEX.md の管理、描画、更新、保存といったルーティング文書全体の運用だけを確認したいとき。
 
 ## hash
-- caa1e2ffd0d6894e406f5f54c02489827f72c941fc4696c901a353cd0a87f8df
+- c605c7cedc52d0d373be9d463427b7d48c5302dc42af3e536c87aed5ab6788df
 
 # `basic`
 

@@ -1,26 +1,26 @@
 # `builder`
 
 ## Summary
-- AI エージェント呼び出し用のパラメータ構築を集約する領域。各コマンドや処理フェーズごとに、complete prompt、補助入力、file access mode、model/reasoning、応答契約をどう組み立てるかを確認する入口になる。
-- 扱う範囲は、apply fork の変更要約・所見列挙・所見対応、indexing の目次エントリー生成、review oracle の所見列挙・理由調査・採否判定・整理、session join の conflict marker 解消、TUI の実行パラメータ選定である。
-- 実際の CLI 制御、git 操作、作業ツリー変更、所見や目次の保存・描画ではなく、AI に何を読ませ、どの権限で呼び出し、どの返却形を期待するかを定義する層である。
+- AI エージェント呼び出し用のパラメータ構築実装を集めた領域。各サブコマンドや処理段階ごとに、complete prompt、補助入力、ファイルアクセス権限、モデル・reasoning、Structured Output schema の指定を組み立てる入口になる。
+- 対象は、変更要約・実装所見調査・所見対応、目次エントリー生成、oracle レビュー、merge conflict marker 解消、TUI 実行パラメータ選定など、AI に依頼する作業の呼び出し条件と応答契約である。
+- 実際の CLI 制御、git 操作、ファイル更新処理、レビュー結果の保存や表示ではなく、それらの処理から AI を呼び出す直前に渡すプロンプトと構造化出力 schema の対応関係を扱う。
 
 ## Read this when
-- cmoc の各機能が AI エージェントへ渡す role、summary、goal、補助文脈、標準文書参照、ファイルアクセス権限をどのように構成しているかを全体から探したいとき。
-- apply fork、indexing、review oracle、session join、TUI parameter resolve のうち、どの AI 呼び出しパラメータ構築へ進むべきかを判断したいとき。
-- AI 呼び出しで使う model class、reasoning effort、file access mode、complete prompt、structured output の対応関係を処理種別ごとに追いたいとき。
-- 新しい AI 呼び出しフェーズを追加または既存フェーズを変更する前に、同種の prompt 構築・補助入力埋め込み・応答契約指定の既存パターンを確認したいとき。
-- 実装やレビューや目次生成そのものではなく、それらを AI に依頼するための入力条件と出力制約の設計を確認したいとき。
+- cmoc の各機能が AI エージェントへ渡す AgentCallParameter をどのように構築しているか、処理領域ごとに入口を探したいとき。
+- AI 呼び出しで使う role、summary、goal、aux_prompt、標準文書の参照有無、file access mode、model class、reasoning effort、Structured Output schema の対応を確認または変更したいとき。
+- 変更差分の要約、ファイル単位の所見列挙、所見に基づく realization file 修正依頼のような apply fork 向け AI 呼び出し設定を追いたいとき。
+- INDEX.md 用エントリー生成、oracle file レビュー所見の列挙・検証・採否・整理、merge conflict marker 解消、TUI の権限・標準参照選定など、個別の AI 作業依頼のプロンプト設計へ進みたいとき。
+- Structured Output schema がどの AI 呼び出しビルダーから参照され、その schema がどの段階の応答を機械処理可能に固定しているかを確認したいとき。
 
 ## Do not read this when
-- CLI 引数解析、サブコマンド登録、実行順序、状態管理、保存、表示、git branch 操作など、AI 呼び出し前後の制御フローを調べたいとき。
-- complete prompt の共通構築、Markdown rendering、StructDoc、path model、AgentCallParameter、file access mode などの基盤型や共通部品そのものを確認したいとき。
-- 特定の oracle file や realization file の本文、具体的な仕様内容、実装修正箇所、テスト内容を直接調べたいとき。
-- 生成された所見、変更要約、目次エントリー、TUI パラメータ選定結果を保存・集約・描画・適用する処理を確認したいとき。
-- AI 呼び出しパラメータではなく、差分検出、対象ファイル列挙、レビュー対象選定、conflict 検出、エディタ入力処理などの前段ロジックを調べたいとき。
+- サブコマンド登録、CLI 引数解析、実行順序、状態管理、git branch 操作、merge 実行、ファイルシステム走査や保存など、AI 呼び出し前後の制御フローだけを調べたいとき。
+- complete prompt の共通構築規則、StructDoc や Markdown rendering、path model、AgentCallParameter や FileAccessMode などの基礎型そのものを確認したいとき。
+- oracle file や realization file の本文、標準文書の内容、または実際に修正・レビューされる対象ファイルの仕様や実装を直接読みたいとき。
+- AI 応答を受け取った後の結果集約、保存、表示、適用可否判断、テスト実行、ユーザー通知などの後続処理を調べたいとき。
+- 生成済み INDEX.md の描画・更新・保存や、リポジトリ全体のルーティング文書管理だけを確認したいとき。
 
 ## hash
-- e4c670091bf23bb726f4c7bd4f6e921828358f97f583b3527e0ad90c057a2196
+- 2fa7d3217c15a26c90e074c17bfdf5257f83b909cb8438de8523b0f8a4d778ee
 
 # `prompt_parts`
 
