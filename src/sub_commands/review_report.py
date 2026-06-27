@@ -73,8 +73,8 @@ def render_review_oracle_report(
     result, verdict = _review_report_verdict(
         error_message,
         oracle_files,
-        fatal_accepted + fatal_rejected,
-        minor_accepted + minor_rejected,
+        fatal_accepted,
+        minor_accepted,
     )
     findings_by_path: dict[str, int] = {}
     for finding in findings:

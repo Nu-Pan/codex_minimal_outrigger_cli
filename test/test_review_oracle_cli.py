@@ -139,17 +139,20 @@ def test_review_oracle_report_orders_findings_by_verdict_then_severity(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
     assert rendered.index("accepted minor") < rendered.index("rejected fatal")
-    assert "result: fatal" in rendered
+    assert "result: minor" in rendered
     assert "fatal_findings_rejected_count: 1" in rendered
     assert "minor_findings_accepted_count: 1" in rendered
 
 
 @pytest.mark.parametrize(
-    ("severity", "result"),
-    [("fatal", "fatal"), ("minor", "minor")],
+    ("severity", "rejected_count_field", "rejected_heading"),
+    [
+        ("fatal", "fatal_findings_rejected_count: 1", "## Rejected fatal findings"),
+        ("minor", "minor_findings_rejected_count: 1", "## Rejected minor findings"),
+    ],
 )
-def test_review_oracle_report_result_counts_rejected_findings(
-    tmp_path: Path, severity: str, result: str
+def test_review_oracle_report_result_ignores_rejected_findings(
+    tmp_path: Path, severity: str, rejected_count_field: str, rejected_heading: str
 ) -> None:
     root = tmp_path
     rendered = review_module.render_review_oracle_report(
@@ -174,7 +177,11 @@ def test_review_oracle_report_result_counts_rejected_findings(
         None,
     )
 
-    assert f"result: {result}" in rendered
+    assert "result: ok" in rendered
+    assert "レビュー対象の oracle file に、問題は何ら見つかりませんでした。" in rendered
+    assert rejected_count_field in rendered
+    assert rejected_heading in rendered
+    assert "- `finding-0001` [reject] rejected finding: rejected reason" in rendered
     assert "session_id:" not in rendered
 
 
