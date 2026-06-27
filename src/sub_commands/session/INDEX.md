@@ -58,19 +58,20 @@
 # `join.py`
 
 ## Summary
-- active な session branch を session home branch へ取り込む CLI 処理を実装する。事前条件確認、clean worktree 確認、home branch への切替、no-ff merge、状態更新、session branch 削除、利用者向け結果出力を扱う。
-- merge conflict 発生時は Codex CLI に解決依頼し、conflict marker と unmerged path が残っていないことを確認して merge commit を完了する補助処理も含む。
+- active な session branch を session home branch へ取り込む CLI 処理を実装する。事前条件確認、worktree 清潔性確認、home branch への切り替え、no-ff merge、状態更新、session branch 削除、利用者向け結果出力までを扱う。
+- merge conflict 発生時は Codex CLI に解決を依頼し、conflict marker と unmerged path の残存を検査したうえで add と merge commit を行う補助処理を持つ。
+- conflict 解決依頼用パラメータの構築、状態ファイルの読み書き、git 実行、CLI 実行ラッパーなどは外部の既存モジュールに委譲し、この対象は session join の制御フローを担う。
 
 ## Read this when
-- session join の実行条件、状態遷移、git merge・branch 削除・結果出力の挙動を確認または変更したいとき。
-- session join 中の merge conflict 解決フロー、Codex CLI への依頼内容の呼び出し、conflict marker 検出、unmerged path 検査、merge commit 完了処理を確認したいとき。
-- session branch 上でない場合、session/apply state が条件を満たさない場合、session home branch が無い場合などのエラー条件を調べたいとき。
+- session join の実行条件、状態遷移、merge 後の出力、session branch 削除失敗時の warning を確認または変更したいとき。
+- session branch から session home branch へ取り込む際の git 操作順序、失敗時の扱い、post-precondition failure の stderr 報告方針を確認したいとき。
+- session join の merge conflict を Codex CLI に解決させる流れ、conflict marker 検出、unmerged path 検査、merge commit 完了条件を確認または変更したいとき。
 
 ## Do not read this when
-- session join 以外の session サブコマンドの責務、CLI 登録、引数定義、ルーティングを調べたいとき。
-- session state のデータ構造、永続化形式、branch から state を探す処理そのものを調べたいとき。
-- Codex CLI に渡す conflict resolution parameter の具体的な構築内容を変更したいとき。
-- indexing preflight、worktree clean 判定、cmoc ignore 設定、git 実行 wrapper などの共通 runtime 処理そのものを調べたいとき。
+- session join conflict 解決プロンプトや Codex CLI へ渡す依頼内容そのものを変更したいだけなら、conflict resolution parameter を構築する側を読む。
+- session 状態モデル、state ファイルの schema、branch から state を読み出す仕組みを調べたいだけなら、runtime や状態定義側を読む。
+- indexing preflight の内容や有効化条件を調べたいだけなら、indexing preflight を実装する側を読む。
+- 他の session サブコマンドの挙動や CLI 登録全体を調べたいだけなら、それぞれのサブコマンド実装または上位の CLI 構成を読む。
 
 ## hash
-- db05d0d0b26eae836e9cebc0d748a9ba72a80face9758fbe68c181b25f41d029
+- dd5a463723234bca742077372e23fcf5b5153e5ac3625849a9a36428aed1b83f

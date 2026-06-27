@@ -166,24 +166,23 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドの実装をまとめる領域。通常 branch から session branch を開始する処理、active session を home branch へ merge して完了する処理、merge せず破棄する処理を扱う。
-- 各処理は CLI runtime 経由で実行され、事前条件検証、clean worktree 確認、branch 切り替え、session state 更新、session branch の削除、利用者向け出力を担う。
-- merge 完了系では conflict 発生時に Codex CLI へ解決を依頼し、conflict marker や unmerged path の残存確認を行う補助処理も含む。
+- session 系サブコマンドの実装群を収める領域。通常 branch から session branch を開始する処理、active session branch を home branch へ取り込む処理、merge せず破棄する処理、およびパッケージ境界だけを担う初期化要素への入口になる。
+- 各サブコマンドは CLI runtime を通じた制御フローを中心に持ち、事前条件検証、clean worktree 確認、branch 切り替え、state file 更新、session branch の削除、失敗時の扱いなど、session 操作単位の実行順序を確認するための読む先を分けている。
 
 ## Read this when
-- session branch の作成、完了、破棄に関する CLI 挙動、実行条件、失敗条件、state 遷移、branch 操作、利用者向け出力を確認または変更したいとき。
-- 通常 branch 上で active session を開始する条件、managed branch 上での禁止、既存 active session の検出、session-id の衝突回避を調べたいとき。
-- active session を home branch へ取り込む merge 処理、merge conflict 解決依頼、conflict marker 検査、unmerged path 検査、merge commit 完了処理を調べたいとき。
-- active session を merge せず破棄する処理、home branch への切り替え、abandoned state への更新、session branch 強制削除、cleanup 失敗時の rollback を調べたいとき。
+- session branch の開始、home branch への取り込み、merge しない破棄など、session 系サブコマンドごとの実行条件・状態遷移・branch 操作・利用者向け出力の読む先を選びたいとき。
+- active session の重複検出、managed branch 上での禁止判定、home branch の存在確認、session/apply state の事前条件など、session 操作固有の precondition を調べる入口が必要なとき。
+- session branch の cleanup、削除失敗時の warning、rollback、merge conflict 解決依頼など、session 操作中の失敗時挙動をどの実装で確認すべきか切り分けたいとき。
+- session 系実装のパッケージ境界だけを確認し、具体的なサブコマンド処理へ進む前にこの領域の役割を把握したいとき。
 
 ## Do not read this when
-- session 以外のサブコマンド実装、共通 CLI 登録、トップレベルの command routing を調べたいとき。
-- git 実行 wrapper、worktree clean 判定、branch 存在確認、cmoc ignore 設定、CLI runtime などの共通 helper 自体の実装を調べたいとき。
-- session state や apply state の schema、永続化形式、path model の定義そのものを確認したいとき。
-- Codex CLI に渡す conflict resolution parameter の構築内容そのものを変更したいとき。
+- session state schema、apply state schema、state file の読み書き helper、path model、git 実行 wrapper、CLI runtime など、複数サブコマンドから使われる共通基盤そのものを調べたいとき。
+- 共通 CLI ルーティング、サブコマンド登録全体、または session 以外のサブコマンド実装を調べたいとき。
+- merge conflict 解決で Codex CLI に渡す依頼内容や indexing preflight の詳細など、session join から委譲される外部処理の中身だけを変更したいとき。
+- oracle file や realization file の定義、INDEX.md の生成方針、コード品質基準など、リポジトリ全体の仕様・標準を確認したいとき。
 
 ## hash
-- 668e77473cdd266a0971c359246b0eb6469b0daf3809b9478c645be598fd41dd
+- 3769518a6a8e814afc5886bed254fbc836767dcaf493698140751fa01d112050
 
 # `tui.py`
 

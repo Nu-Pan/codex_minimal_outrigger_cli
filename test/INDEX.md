@@ -318,19 +318,21 @@
 # `test_session_cli.py`
 
 ## Summary
-- session サブコマンドの realization test。fork、abandon、join が git branch、worktree、session state、標準出力のエラー報告、cleanup 失敗時の rollback、oracle conflict resolution 用 Codex 実行 profile をどう扱うかを検証する。
-- 一時 git repo と CLI runner を使い、session branch/state の生成・更新・削除、linked worktree 上での home branch 判定、join 時の conflict 解消後 staging と branch cleanup の外部挙動を確認する入口。
+- session サブコマンドの CLI 挙動を検証する realization test。session fork による session branch と状態ファイル作成、session-id 衝突時の retry/失敗、cmoc ignore 初期化、linked worktree 上での fork/abandon/join の branch・HEAD 扱いを確認する。
+- session abandon の正常終了、home branch 欠落時の失敗報告、cleanup 失敗時の状態と branch の rollback を検証する。
+- session join の merge・conflict resolution・状態更新・branch 削除警告・エラー出力先を検証する。oracle file の conflict 解決では REALIZATION_WRITE profile と writable roots が使われること、削除 conflict 解決が stage されること、conflict marker block 検出が markdown 見出しと衝突しないことも扱う。
 
 ## Read this when
-- session fork の挙動を変更し、session-id 衝突時の retry、既存 state 非上書き、session branch 作成、session start commit、.cmoc ignore 初期化、sub_command log との関係を確認したいとき。
-- session abandon の挙動を変更し、home branch への復帰、session branch 削除、state の abandoned 化、home branch 不在時の失敗報告、cleanup 失敗時の rollback を確認したいとき。
-- session join の挙動を変更し、session 変更の home への取り込み、oracle conflict resolution の Codex profile、conflict marker 判定、delete conflict 解消の staging、session branch 削除失敗時の warning、dirty worktree 時の stdout エラー報告を確認したいとき。
-- session サブコマンドが linked worktree から実行された場合に、main worktree と linked worktree の branch 状態を取り違えないことを検証したいとき。
+- session fork、session abandon、session join の CLI 外部挙動、終了コード、標準出力/標準エラー、git branch 操作、session 状態ファイルの更新を変更または確認したいとき。
+- session サブコマンドが linked worktree 上で現在 worktree の branch と commit を基準に動くかを確認したいとき。
+- session-id の衝突処理、session branch 削除失敗時の警告、abandon cleanup 失敗時の rollback など、session 操作の失敗時挙動を確認したいとき。
+- session join の conflict resolution で Codex 実行 profile、FileAccessMode、writable roots、conflict marker 残存検出、delete conflict の stage 処理を確認したいとき。
 
 ## Do not read this when
-- session 以外の CLI サブコマンド、config 読み込み、path model、runtime の低レベル処理だけを調べたいとき。
-- session サブコマンドの実装詳細を直接変更したいだけで、既存の外部挙動テストや regression 条件を確認する必要がないときは、まず対応する session 実装を読む。
-- oracle file の正本仕様や INDEX.md 生成規則を調べたいとき。この対象は realization test であり、正本仕様の入口ではない。
+- session サブコマンド以外の CLI や、session 状態に関係しない実装・テストを調べたいとき。
+- session の内部 helper の細かな実装だけを確認したい場合で、該当する実装モジュールを直接読めるとき。
+- Codex CLI や LLM の出力品質そのもの、または一般的な git 操作 helper の単体挙動を調べたいとき。
+- oracle file の正本仕様断片を確認したいとき。この対象は realization test であり、正本仕様の代替として読まない。
 
 ## hash
-- a378de2149dbea0924aec652c6aff1cb6fbe6c55e6f71fd49460d5202a5b3b2e
+- cd0f997fa91f4a14380c5ed1facc2972b6cfcd34a6fce63ef6f536b233af3ce3
