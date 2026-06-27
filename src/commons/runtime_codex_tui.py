@@ -70,30 +70,37 @@ def run_codex_tui(
         + "\n"
     )
     started_at = time.perf_counter()
-    result = run_codex_subprocess(
-        argv,
-        cwd=cwd,
-        env=codex_subprocess_env(codex_home),
-    )
+    failure: subprocess.CalledProcessError | None = None
+    try:
+        result = run_codex_subprocess(
+            argv,
+            cwd=cwd,
+            env=codex_subprocess_env(codex_home),
+            check=True,
+        )
+        returncode = result.returncode
+    except subprocess.CalledProcessError as exc:
+        failure = exc
+        returncode = exc.returncode
     elapsed_sec = time.perf_counter() - started_at
-    emit_codex_call_console(purpose, call_path, elapsed_sec, result.returncode)
+    emit_codex_call_console(purpose, call_path, elapsed_sec, returncode)
     logger = current_subcommand_logger()
     if logger is not None:
         logger.event(
             "codex_call",
             purpose=purpose,
-            status="succeeded" if result.returncode == 0 else "failed",
-            returncode=result.returncode,
+            status="succeeded" if returncode == 0 else "failed",
+            returncode=returncode,
             elapsed_sec=elapsed_sec,
             call_log_path=str(call_path),
             codex_home=str(codex_home),
             profile_name=profile_name,
             profile_path=str(profile_path),
         )
-    if result.returncode != 0:
+    if failure is not None:
         raise CmocError(
             "Codex CLI/TUI 呼び出しが失敗しました。",
             ["Codex CLI/TUI の出力と call log を確認してください。"],
-            f"returncode: {result.returncode}\ncall_log: {call_path}",
-        )
-    return CommandResult(result.returncode, "", "")
+            f"returncode: {returncode}\ncall_log: {call_path}",
+        ) from failure
+    return CommandResult(returncode, "", "")

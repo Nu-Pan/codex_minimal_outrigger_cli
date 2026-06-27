@@ -146,6 +146,29 @@ def test_run_codex_tui_checks_extra_read_path_before_starting_codex(
         )
 
 
+def test_run_codex_tui_fails_when_codex_exits_nonzero(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(bin_dir / "codex", ["import sys", "sys.exit(7)"])
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    with pytest.raises(CmocError, match="Codex CLI/TUI 呼び出しが失敗"):
+        run_codex_tui(_parameter(), root=root, config=CmocConfig())
+
+    console = capsys.readouterr().out
+    assert "- purpose: `codex tui`" in console
+    assert "- returncode: `7`" in console
+    call_logs = list((root / ".cmoc" / "log" / "codex").glob("*_tui_call.json"))
+    assert len(call_logs) == 1
+    call_log = json.loads(call_logs[0].read_text())
+    assert call_log["argv"][:3] == ["codex", "--profile", call_log["profile_name"]]
+
+
 @pytest.mark.parametrize("runner", ["exec", "tui"])
 def test_codex_runtime_reports_missing_codex_cli(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, runner: str
