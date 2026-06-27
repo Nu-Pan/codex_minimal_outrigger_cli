@@ -236,24 +236,24 @@
 # `runtime_git.py`
 
 ## Summary
-- Git コマンド実行を共通化し、失敗時に cmoc の実行時エラーへ変換するための低レベル helper 群を扱う。
-- 現在 branch、HEAD commit、worktree 清潔性、管理対象 branch 判定、branch 存在確認、run worktree 作成・削除、branch 削除など、Git 状態と worktree 操作の共通処理を提供する。
-- cmoc の内部ディレクトリを Git 追跡対象外にする初期化・検証と、任意 path が Git ignore 対象かを判定する処理もここにまとまっている。
+- Git コマンド実行を共通化し、失敗時の cmoc 向けエラー化、現在 branch・HEAD commit・worktree cleanliness の確認、branch 存在確認、run 用 worktree の作成・削除、branch 削除を扱う実装。
+- .cmoc を Git 追跡対象外に保つための .gitignore 更新、index からの除外、ignore 状態の検証、および任意 path が Git ignore 対象かどうかの判定も担う。
 
 ## Read this when
-- cmoc の各コマンドから Git を実行する共通方法、戻り値の扱い、失敗時の CmocError 化を確認・変更したいとき。
-- 実行用 worktree の作成・削除、管理 branch の判定、branch の存在確認や削除に関する実装を追うとき。
-- 未コミット差分がある場合の拒否、detached HEAD の拒否、現在 branch や HEAD commit の取得など、Git 状態の前提条件を扱う処理を確認するとき。
-- cmoc の内部ディレクトリを .gitignore と git index 上で追跡対象外にする処理、または ignore 判定の挙動を確認・変更したいとき。
+- Git コマンド呼び出しの失敗処理、stdout/stderr/returncode の扱い、または CmocError への変換を確認・変更したいとき。
+- cmoc が管理する branch prefix、現在 branch の取得、detached HEAD の拒否、HEAD commit 取得、未コミット差分の拒否に関わる挙動を確認・変更したいとき。
+- run 用 worktree の作成・強制削除・prune、または branch の存在確認・削除に関わる処理を追うとき。
+- .cmoc を .gitignore に追加する処理、Git index から除外する処理、追跡対象外として初期化済みか要求する処理を確認・変更したいとき。
+- 特定 path が Git ignore 対象かどうかを、リポジトリ root 基準の相対 path として判定する処理を確認・変更したいとき。
 
 ## Do not read this when
-- CLI 引数の解析、サブコマンドの組み立て、ユーザー向け出力形式だけを確認したいとき。
-- Git 以外の path モデル、設定読み込み、構造化結果の定義、または Codex 実行制御の詳細を調べたいとき。
-- 個別コマンドがどのタイミングで Git helper を呼ぶかという上位フローを知りたいだけの場合は、先にそのコマンド実装を読む。
-- Git 操作のテストケースや期待される外部挙動を確認したい場合は、対応するテストを読む。
+- Git 以外の外部コマンド実行、プロセス起動全般、または CLI 出力整形だけを調べたいとき。
+- cmoc の path keyword や root 種別の定義を調べたいとき。
+- run の高レベルな状態管理、セッション記録、プロンプト生成、またはサブコマンドのユーザー向け制御フローだけを調べたいとき。
+- Git ignore の個別判定ではなく、INDEX.md や oracle/realization の分類規則を調べたいとき。
 
 ## hash
-- 31172a71170d0136db6767dbc6b344927cc2fa5c6abf5a9046f156013e5bb090
+- dcc541d48e81f8c1b468b3a21221d90007082bbe88e14bdf008308b9648a8622
 
 # `runtime_logging.py`
 

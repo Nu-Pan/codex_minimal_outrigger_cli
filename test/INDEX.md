@@ -293,25 +293,25 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle の CLI 経由の外部挙動と、所見列挙・検証・judge・merge を含む評価 loop の制御を検証する realization test。report の生成内容、所見の並び順と集計、scope 指定、対象 oracle file の選別、linked worktree 上での review、review 用 worktree からの INDEX.md 変更の取り込み、conflict 解決、処理失敗時 report、review が INDEX.md 以外の差分を作った場合の拒否を扱う。
-- 所見 merge operation の kind ごとの契約、無効 operation、同一 finding target の再利用拒否など、review oracle loop 内で使われる所見統合ロジックの単体的な検証も含む。
-- ファイル先頭の docstring は、16,000 文字を超える test file を分割しない理由として、oracle review の外部挙動と所見評価 loop が同じ fake Codex 応答・report 文脈を共有するため、読み取り文脈を一箇所に保つ方が凝集性が高いことを説明している。
+- review oracle サブコマンドの CLI 経由の外部挙動と、所見の列挙・検証・判定・merge loop の制御を検証する realization test。
+- report 生成、scope ごとの対象 oracle 選択、gitignored oracle file の除外、linked worktree 上の review、INDEX.md 差分の取り込みと conflict 解決、処理失敗時の error report、review 実行中に許可されない非 INDEX.md 差分の拒否を扱う。
+- 所見 merge 操作の kind ごとの契約、無効操作や target 再利用の拒否、report 上の verdict・severity 順序と rejected finding の集計扱いも、この review run の状態と出力文脈に閉じて確認する。
 
 ## Read this when
-- review oracle コマンドの report 出力、exit code、scope の扱い、対象 oracle file の数え方や列挙条件を変更・確認するとき。
-- review oracle の所見評価 loop、fake Codex 応答に対する enumerate・validate・judge・merge の制御、所見 verdict と severity に基づく report 集計・並び順を確認するとき。
-- review oracle が linked worktree、session branch、review 用 worktree、join commit、INDEX.md 変更の merge、INDEX.md conflict 解決をどう扱うべきかをテストから確認するとき。
-- review oracle の失敗時 report、途中失敗時の未判定所見の扱い、review が INDEX.md 以外の作業ツリー差分を作った場合の拒否挙動を確認するとき。
-- 所見 merge operation の delete・replace・merge の契約や、不正 operation を ValueError として拒否する条件を確認するとき。
+- review oracle の CLI 出力、report 内容、終了コード、error report、または scope の挙動を変更・調査するとき。
+- oracle file の列挙条件、gitignored ファイルや symlink、binary、memo 配下に見える path の扱い、session scope と full scope の差を確認するとき。
+- review oracle が作成した INDEX.md 差分の merge、join commit、worktree の作成位置、linked worktree からの実行挙動、または conflict 解決を変更するとき。
+- 所見の enumerate・validate・judge・merge loop、finding の verdict/severity による report 表示順、accepted/rejected 集計、merge operation の入力契約を変更するとき。
+- review oracle 実行中に Codex 側が作った差分の許可範囲を調整し、INDEX.md 以外の変更を拒否する制御を確認するとき。
 
 ## Do not read this when
-- review oracle の仕様意図そのものを確認したいだけの場合。正本仕様断片を先に読むべきで、このファイルは realization test として実装挙動の検証内容を確認する入口に留める。
-- review 以外の CLI サブコマンド、session 管理一般、config 読み込み一般、path model などの挙動を調べる場合。
-- Codex CLI や LLM の出力品質そのものを調べる場合。このファイルは fake Codex 応答を使い、review oracle 側の制御と出力を検証している。
-- oracle file 本文の内容や INDEX.md エントリー生成規則を調べる場合。このファイルは review oracle が oracle file をどう評価対象にするかのテストであり、ルーティング文書の仕様本文ではない。
+- review oracle 以外のサブコマンド、汎用的な CLI 初期化、session fork そのもの、または git helper の基本動作だけを調べるとき。
+- oracle の正本仕様本文や oracle file の記述規約を確認したいとき。
+- 個別 helper の純粋な単体仕様だけを確認したく、review oracle の CLI 実行状態や report 文脈を必要としないとき。
+- LLM の出力品質や prompt 文面そのものを評価したいとき。
 
 ## hash
-- 3a8f01ef238f7a36dbd0d8435568d1bf96a8c9eb89da6bf0cf43ebc0fd6f175a
+- 894800b12a9feaac5008d5e10bef4804e9fd97d3737c96a76b3091956d28b23a
 
 # `test_session_cli.py`
 
