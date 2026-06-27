@@ -9,11 +9,13 @@ builder parameter は最終 prompt の同じ読み取り文脈で組み合わさ
 
 import json
 from pathlib import Path
+from typing import Callable
 
 import pytest
 from jsonschema import validate
 
 from basic.acp import FileAccessMode
+from basic.acp import AgentCallParameter
 from basic.acp import ModelClass, ReasoningEffort
 from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
 from acp.builder.apply.fork.file_finding_enumeration import (
@@ -31,6 +33,12 @@ from acp.builder.review.oracle.enumerate_finding import (
 )
 from acp.builder.review.oracle.merge_finding import (
     build_review_oracle_merge_finding_parameter,
+)
+from acp.builder.review.oracle.validate_finding_advocate import (
+    build_review_oracle_validate_finding_advocate_parameter,
+)
+from acp.builder.review.oracle.validate_finding_challenger import (
+    build_review_oracle_validate_finding_challenger_parameter,
 )
 from acp.builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter,
@@ -545,6 +553,50 @@ def test_review_oracle_merge_finding_schema_matches_oracle_source() -> None:
         },
         schema,
     )
+
+
+@pytest.mark.parametrize(
+    ("builder", "schema_name"),
+    [
+        (
+            build_review_oracle_validate_finding_advocate_parameter,
+            "validate_finding_advocate.json",
+        ),
+        (
+            build_review_oracle_validate_finding_challenger_parameter,
+            "validate_finding_challenger.json",
+        ),
+    ],
+)
+def test_review_oracle_validate_finding_schema_matches_oracle_source(
+    builder: Callable[[str, str, str], AgentCallParameter], schema_name: str
+) -> None:
+    parameter = builder("finding", "known advocate", "known challenger")
+    assert parameter.model_class == ModelClass.EFFICIENCY
+    assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
+    assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
+    assert "finding" in parameter.prompt
+    assert "known advocate" in parameter.prompt
+    assert "known challenger" in parameter.prompt
+    assert parameter.structured_output_schema_path is not None
+    schema = json.loads(parameter.structured_output_schema_path.read_text())
+    oracle_schema = json.loads(
+        (
+            Path(__file__).parents[1]
+            / "oracle"
+            / "src"
+            / "acp"
+            / "builder"
+            / "review"
+            / "oracle"
+            / schema_name
+        ).read_text()
+    )
+
+    assert parameter.structured_output_schema_path.name == schema_name
+    assert schema == oracle_schema
+    validate({"reasons": []}, schema)
+    validate({"reasons": ["oracle file の記述に基づく理由"]}, schema)
 
 
 def test_session_join_conflict_resolution_uses_realization_write_mode() -> None:
