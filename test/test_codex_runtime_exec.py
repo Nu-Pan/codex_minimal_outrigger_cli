@@ -1,5 +1,6 @@
 import json
 import subprocess
+import tomllib
 from pathlib import Path
 
 import cmoc_runtime
@@ -70,7 +71,12 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
     ]
     assert record["stdin"] == "prompt"
     assert 'sandbox_mode = "workspace-write"' in record["profile"]
-    assert f'writable_roots = ["{root.resolve()}"]' in record["profile"]
+    writable_roots = set(
+        tomllib.loads(record["profile"])["sandbox_workspace_write"]["writable_roots"]
+    )
+    assert str(root.resolve()) not in writable_roots
+    assert str((root / "README.md").resolve()) in writable_roots
+    assert str((root / "oracle").resolve()) in writable_roots
     assert result.output_text == "done\n"
 
 

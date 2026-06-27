@@ -1,6 +1,7 @@
 import shutil
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -39,6 +40,11 @@ from _support import (
     run_git,
     runner,
 )
+
+
+def _profile_writable_roots(profile: str) -> set[str]:
+    parsed = tomllib.loads(profile)
+    return set(parsed.get("sandbox_workspace_write", {}).get("writable_roots", []))
 
 
 def test_path_model_resolves_token_path_inside_repo() -> None:
@@ -370,7 +376,18 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     ):
         assert 'sandbox_mode = "workspace-write"' in profiles[mode]
         assert "[sandbox_workspace_write]" in profiles[mode]
-        assert f'writable_roots = ["{root.resolve()}"]' in profiles[mode]
+    assert _profile_writable_roots(profiles[FileAccessMode.REALIZATION_WRITE]) == {
+        str((root / "README.md").resolve()),
+        str((root / "src").resolve()),
+    }
+    assert _profile_writable_roots(profiles[FileAccessMode.ORACLE_WRITE]) == {
+        str((root / "oracle").resolve())
+    }
+    assert _profile_writable_roots(profiles[FileAccessMode.REPO_WRITE]) == {
+        str((root / "README.md").resolve()),
+        str((root / "oracle").resolve()),
+        str((root / "src").resolve()),
+    }
 
     extra = root / "src" / "extra"
     profile = build_codex_profile(
@@ -385,7 +402,11 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         root,
         extra_writable_paths=[extra],
     )
-    assert f'writable_roots = ["{root.resolve()}", "{extra.resolve()}"]' in profile
+    assert _profile_writable_roots(profile) == {
+        str((root / "README.md").resolve()),
+        str((root / "src").resolve()),
+        str(extra.resolve()),
+    }
 
     with pytest.raises(CmocError, match="保護領域"):
         build_codex_profile(
@@ -393,4 +414,39 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
             CmocConfig(),
             root,
             [root / "memo" / "blocked.md"],
+        )
+
+
+@pytest.mark.parametrize(
+    ("mode", "extra"),
+    [
+        (FileAccessMode.REALIZATION_WRITE, "oracle/blocked.md"),
+        (FileAccessMode.REALIZATION_WRITE, "memo/blocked.md"),
+        (FileAccessMode.ORACLE_WRITE, "src/blocked.md"),
+        (FileAccessMode.ORACLE_WRITE, "memo/blocked.md"),
+        (FileAccessMode.REPO_WRITE, "memo/blocked.md"),
+        (FileAccessMode.REPO_WRITE, "../outside.md"),
+    ],
+)
+def test_codex_profile_rejects_disallowed_extra_writable_paths(
+    tmp_path: Path, mode: FileAccessMode, extra: str
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "src").mkdir()
+    (root / "oracle").mkdir()
+    (root / "memo").mkdir()
+
+    with pytest.raises(CmocError, match="追加書き込み許可 path"):
+        build_codex_profile(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                mode,
+                "prompt",
+                None,
+            ),
+            CmocConfig(),
+            root,
+            extra_writable_paths=[root / extra],
         )

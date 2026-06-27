@@ -53,7 +53,24 @@ def _writable_roots(
 ) -> list[Path]:
     if file_access_to_sandbox_mode(mode) == "read-only":
         return []
-    paths = [root, *(extra_writable_paths or [])]
+    root = root.resolve()
+    match mode:
+        case FileAccessMode.REALIZATION_WRITE:
+            paths = [
+                path
+                for path in root.iterdir()
+                if _is_writable_path_allowed(mode, root, path.resolve())
+            ]
+        case FileAccessMode.ORACLE_WRITE:
+            paths = [root / "oracle"]
+        case FileAccessMode.REPO_WRITE:
+            paths = [
+                path
+                for path in root.iterdir()
+                if _is_writable_path_allowed(mode, root, path.resolve())
+            ]
+        case _:
+            paths = []
     result: list[Path] = []
     seen: set[Path] = set()
     for path in paths:
@@ -61,7 +78,33 @@ def _writable_roots(
         if resolved not in seen:
             seen.add(resolved)
             result.append(resolved)
+    for path in extra_writable_paths or []:
+        resolved = path.resolve()
+        if not _is_writable_path_allowed(mode, root, resolved):
+            raise CmocError(
+                "追加書き込み許可 path が FileAccessMode の許可領域外にあります。",
+                ["file access mode で書き込み可能な work root 配下の path を指定してください。"],
+                f"mode: {mode.value}\npath: {resolved}",
+            )
+        if resolved not in seen:
+            seen.add(resolved)
+            result.append(resolved)
     return result
+
+
+def _is_writable_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
+    if not path.is_relative_to(root):
+        return False
+    # <work-root>/oracle/src/acp/prompt_parts/file_access_rule.py
+    # Codex profile は deny を持たないため、FileAccessMode の禁止領域を
+    # writable_roots に入れない正リストとして表現する。
+    if path.is_relative_to(root / "memo"):
+        return False
+    if mode == FileAccessMode.REALIZATION_WRITE:
+        return not path.is_relative_to(root / "oracle")
+    if mode == FileAccessMode.ORACLE_WRITE:
+        return path.is_relative_to(root / "oracle")
+    return mode == FileAccessMode.REPO_WRITE
 
 
 def _append_workspace_write_section(lines: list[str], writable_roots: list[Path]) -> None:
