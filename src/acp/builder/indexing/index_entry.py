@@ -1,4 +1,7 @@
-"""`cmoc indexing` の目次情報生成 prompt 構築実装。"""
+"""`cmoc indexing` の目次情報生成 prompt 構築実装。
+
+対応 oracle file: `<work-root>/oracle/src/acp/builder/indexing/index_entry.py`。
+"""
 
 # std
 from pathlib import Path

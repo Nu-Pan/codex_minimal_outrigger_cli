@@ -1,4 +1,7 @@
-"""`cmoc apply fork` の変更要約生成 prompt 構築実装。"""
+"""`cmoc apply fork` の変更要約生成 prompt 構築実装。
+
+対応 oracle file: `<work-root>/oracle/src/acp/builder/apply/fork/change_summary.py`。
+"""
 
 # std
 from pathlib import Path

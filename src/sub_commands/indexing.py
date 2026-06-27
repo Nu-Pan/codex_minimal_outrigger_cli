@@ -14,6 +14,7 @@ from cmoc_runtime import (
     file_sha256,
     is_binary,
     is_git_ignored,
+    is_root_memo,
     load_config,
     repo_root,
     require_clean_worktree,
@@ -239,13 +240,6 @@ def indexable_children(root: Path, directory: Path) -> list[Path]:
             continue
         children.append(child)
     return children
-
-
-def is_root_memo(root: Path, path: Path) -> bool:
-    """INDEX.md 対象から除外する `<work-root>/memo` 配下か判定する。"""
-    memo = (root / "memo").resolve()
-    resolved = path.resolve()
-    return resolved == memo or memo in resolved.parents
 
 
 def build_index_entry(

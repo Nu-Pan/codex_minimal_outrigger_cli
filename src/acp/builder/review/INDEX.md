@@ -1,20 +1,23 @@
 # `oracle`
 
 ## Summary
-- oracle review 向け AI 呼び出しパラメータ構築と、その Structured Output 契約をまとめる領域。正本仕様断片からの新規所見列挙、所見の擁護・反証理由の追加調査、採否判定、重複・矛盾を含む所見群の整理について、プロンプト構成・ファイルアクセス制約・モデル設定・出力契約への接続を扱う。
-- レビュー対象の oracle file を読む処理そのものではなく、レビュー結果として扱う所見や理由を AI に生成・検証・整理させるための境界を確認する入口になる。
+- `cmoc review oracle` の AI 呼び出しパラメータ構築と Structured Output schema をまとめる領域。
+- oracle file のレビュー所見について、新規列挙、擁護理由・反証理由の追加検証、採否判定、重複・矛盾の整理を行う各段階の出力契約と prompt 構築を扱う。
+- レビュー対象を oracle file に限定した読み取り条件、既知理由や既存所見との重複回避、review oracle 標準を適用した agent 呼び出し設定を確認する入口になる。
 
 ## Read this when
-- oracle review で、新規所見を列挙する、既知理由と重複しない擁護・反証理由を追加する、所見を採用するか判定する、または複数所見を整理する各 AI 呼び出しの役割・目的・補助入力・制約を確認したいとき。
-- oracle file を根拠にしたレビュー出力について、所見・妥当理由・不当理由・採否判定・整理方針の Structured Output 契約を実装、検証、調整したいとき。
-- レビュー所見に既知情報を渡して重複を避ける方法や、oracle 標準・review oracle 標準をプロンプトへ組み込む経路を追いたいとき。
-- 所見の重大度、根拠となる正本仕様断片、妥当性または不当性の理由、削除・置換・統合などの後処理方針を、レビュー出力としてどの粒度で扱うか確認したいとき。
+- `cmoc review oracle` で、oracle file から所見候補を列挙し、検証し、採否判定し、整理する一連の agent 呼び出し仕様を追いたいとき。
+- レビュー所見、既知の関連所見、既知の肯定理由・否定理由を prompt にどう渡し、重複しない新規情報だけを返させるか確認したいとき。
+- oracle file レビュー向けの Structured Output schema と、それに対応する AgentCallParameter の紐付けを実装・テスト・調整したいとき。
+- 所見の重大度、根拠、理由、採否、削除・置換・統合といったレビュー結果の構造化された受け渡し境界を確認したいとき。
+- oracle file を根拠にした所見の妥当性支持と反証を分けて扱う検証フローを確認したいとき。
 
 ## Do not read this when
-- oracle file や realization file の基本定義、編集責任、配置ルールを確認したいだけのとき。
-- 個々の正本仕様断片の内容そのものや、oracle review で実際にどの oracle file を調査するかを探しているだけのとき。
-- review oracle 全体の CLI 引数解析、サブコマンド実行順序、所見の保存・表示・集計・通知など、AI 呼び出しパラメータ構築や出力契約より上位または後段の処理を調べたいとき。
-- 一般的な INDEX.md エントリーの記述方針、ルーティング文書の基準、汎用 JSON Schema 構文、またはレビュー以外の ACP 呼び出し構築を確認したいとき。
+- oracle file や realization file の基本定義、編集責任、配置ルールだけを確認したいとき。
+- 個別の正本仕様断片そのものや、レビュー対象としてどの oracle file を探索するかを調べたいとき。
+- `cmoc review oracle` の CLI 入口、実行制御、保存、表示、集約、通知など、agent 呼び出しパラメータ構築より外側の処理を確認したいとき。
+- oracle file 以外の realization file レビューや、通常の実装レビュー用 prompt 構築を探しているとき。
+- 汎用的な AgentCallParameter、markdown rendering、path 解決、complete prompt 組み立て helper の共通処理だけを調べたいとき。
 
 ## hash
-- 60c734c61fb2de02025f0c3052a5d13961fb75dd1bc1ef7a1135ebeb53edb94c
+- 73e1b62f0387f4c1ad7bf7435affddf77d7905a178c57b525215fa4c2694cf01

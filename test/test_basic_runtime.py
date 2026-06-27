@@ -341,7 +341,11 @@ def test_codex_profile_contains_file_access_enforcement(tmp_path: Path) -> None:
     assert realization_workspace["writable_roots"] == [str(root)]
     assert realization_workspace["read_only_paths"] == realization_fs["read_only"]
 
+    (root / "oracle").mkdir()
     oracle_conflict = root / "oracle" / "spec.md"
+    oracle_conflict.write_text("# spec\n")
+    other_oracle_file = root / "oracle" / "other.md"
+    other_oracle_file.write_text("# other\n")
     conflict_profile = tomllib.loads(
         build_codex_profile(
             AgentCallParameter(
@@ -359,9 +363,13 @@ def test_codex_profile_contains_file_access_enforcement(tmp_path: Path) -> None:
     conflict_fs = conflict_profile["permissions"]["cmoc"]["file_system"]
     conflict_workspace = conflict_profile["sandbox_workspace_write"]
     assert str(oracle_conflict) in conflict_fs["write"]
-    assert str(root / "oracle") in conflict_fs["read_only"]
+    assert str(root / "oracle") not in conflict_fs["read_only"]
+    assert str(oracle_conflict) not in conflict_fs["read_only"]
+    assert str(other_oracle_file) in conflict_fs["read_only"]
     assert str(oracle_conflict) in conflict_workspace["writable_roots"]
-    assert str(root / "oracle") in conflict_workspace["read_only_paths"]
+    assert str(root / "oracle") not in conflict_workspace["read_only_paths"]
+    assert str(oracle_conflict) not in conflict_workspace["read_only_paths"]
+    assert str(other_oracle_file) in conflict_workspace["read_only_paths"]
     assert str(root / "memo") in conflict_fs["read_only"]
     assert str(root / "memo" / "blocked.md") not in conflict_fs["write"]
 

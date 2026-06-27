@@ -1,4 +1,7 @@
-"""`cmoc tui` の実行パラメータ解決 prompt 構築実装。"""
+"""`cmoc tui` の実行パラメータ解決 prompt 構築実装。
+
+対応 oracle file: `<work-root>/oracle/src/acp/builder/tui/resolve_parameter.py`。
+"""
 
 # std
 from pathlib import Path

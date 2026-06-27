@@ -144,5 +144,6 @@ def require_cmoc_ignored(root: Path) -> None:
 
 
 def is_git_ignored(root: Path, path: Path) -> bool:
-    rel = path.resolve().relative_to(root)
+    candidate = path if path.is_absolute() else root / path
+    rel = candidate.absolute().relative_to(root.absolute())
     return run_git(["check-ignore", "--no-index", "-q", str(rel)], root, check=False).returncode == 0

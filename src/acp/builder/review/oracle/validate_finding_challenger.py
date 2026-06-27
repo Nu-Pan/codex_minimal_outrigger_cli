@@ -1,4 +1,7 @@
-"""`cmoc review oracle` の所見否定理由列挙 prompt 構築実装。"""
+"""`cmoc review oracle` の所見否定理由列挙 prompt 構築実装。
+
+対応 oracle file: `<work-root>/oracle/src/acp/builder/review/oracle/validate_finding_challenger.py`。
+"""
 
 # std
 from pathlib import Path

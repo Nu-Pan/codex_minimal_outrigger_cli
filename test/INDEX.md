@@ -106,22 +106,26 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基本的な実行時挙動を横断的に検証する realization test。パスモデル、run/work/repo root 判定、設定初期値、構造化エラー出力、セッション branch 形状、CLI エラー出力、補完プローブ時の副作用抑止、.cmoc の gitignore 反映、file access mode と sandbox mode の対応、バイナリ判定、Codex profile の file access 制約を扱う。
-- 単一機能の詳細テストというより、runtime 周辺の公開挙動と制御ロジックが基本契約を満たすかを確認する入口になる。
+- cmoc の基本ランタイム挙動を横断的に検証する realization test。パスモデル、worktree 判定、設定既定値、エラー表示、セッション branch 形状、CLI preflight、`.cmoc` ignore、file access と sandbox 変換、binary 判定、Codex profile の権限制御を扱う。
+- 単一機能の詳細テストというより、実装全体の基礎契約が崩れていないかを確認する入口であり、ランタイム共通部品・CLI 起動時制御・権限 profile 生成の変更影響を読むためのテスト群。
 
 ## Read this when
-- runtime、path model、worktree/root 判定、構造化エラー表示、CLI preflight/parse error、gitignore 更新、file access mode、sandbox 権限、Codex profile 生成の基本挙動を変更・調査する。
-- CLI エラーが stdout に出ること、補完プローブで preflight や .cmoc/.gitignore 生成が走らないこと、work root 以外での実行拒否など、利用者から見える失敗時挙動を確認したい。
-- memo/oracle/.agents などの read/write/read_only/deny_read 制約や、FileAccessMode ごとの profile・sandbox_workspace_write の期待値を確認したい。
-- セッション branch 名や apply branch 名の不正形状を拒否する状態管理ロジックの基本テストを探している。
+- path token 解決、run root と repo/work root の区別、linked worktree 前提の挙動を変更または確認したいとき。
+- CmocConfig の既定 model class、reasoning effort、parallel 数など、基本設定の初期値に関わる変更を行うとき。
+- CmocError の markdown 表示、next actions の補完、CLI エラーや引数解析エラーを stdout に出す挙動を変更または確認したいとき。
+- session/apply branch 名から session id を解釈する処理、または branch に対応する runtime state の読み込み拒否条件を扱うとき。
+- CLI 実行前の work root 検査、completion probe 時の preflight/副作用抑制、`.cmoc` を `.gitignore` に追加する処理を確認するとき。
+- FileAccessMode の外部表現、sandbox mode への変換、Codex profile の read/write/read_only/deny_read/writable_roots 設定を変更または検証するとき。
+- binary 判定がファイル全体ではなく先頭 chunk だけを読む制御を確認するとき。
 
 ## Do not read this when
-- 個別サブコマンドの正常系ワークフロー、プロンプト生成、ログ生成、GitHub 連携など、このファイルに現れない機能領域の詳細テストを探している。
-- oracle の正本仕様断片そのものを確認したい場合。このファイルは realization test であり、仕様の根拠としてではなく実装挙動の検証として読む。
-- 特定の helper や module の実装責務を理解したいだけで、既に対象実装ファイルが分かっている場合。まずその実装本文を読む方が直接的。
+- 個別 CLI command の正常系フローや表示内容だけを詳しく確認したい場合は、対象 command の実装や専用テストを直接読む方がよい。
+- oracle の正本仕様断片そのものを確認・変更したい場合は、realization test ではなく oracle 配下の本文を読むべき。
+- テスト補助の repository 作成、git 実行、runner fixture の実装を調べたいだけなら、テスト本文ではなく補助モジュールを直接読む方がよい。
+- 特定の runtime helper の内部実装を修正する場合で、このテストが期待する外部挙動をすでに把握しているなら、対応する実装ファイルを優先してよい。
 
 ## hash
-- cf7cb1f76caa4fbd874fb65541d7bac601d27afad075e9b970bfcce67bdb2bbc
+- 6f64b55720acd40a69a45b84a3f92c6ce81d631ab39d87e26b2c88a0e0784c9e
 
 # `test_cli_init_tui.py`
 
@@ -224,23 +228,24 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- indexing サブコマンドと INDEX.md 生成系の realization test。merge 中の INDEX.md conflict 解決、未初期化・dirty worktree・linked worktree での実行、Codex によるエントリー生成の呼び出し条件、fresh hash 時の再生成スキップ、INDEX.md だけを commit する制御、semantic fields の検証、兄弟エントリーの並列生成、root 配下 memo 除外と nested memo 対象化を検証する。
+- indexing サブコマンドとその周辺処理の realization test。生成エントリーの構造化出力利用、コミット対象の限定、既存 hash による再生成スキップ、未初期化・未コミット差分・worktree・repo config の扱い、競合解消、エントリー描画時の入力検証、階層更新時の並列生成と memo 除外境界を検証する。
 
 ## Read this when
-- indexing サブコマンドの外部挙動、git commit 対象、dirty state の preflight、linked worktree 上での更新先を変更・確認したいとき。
-- INDEX.md エントリー生成・再生成判定・hash freshness・malformed entry の扱い・render_index_entry の入力検証に関わる実装を変更するとき。
-- root 直下 memo を除外しつつ nested memo を通常対象として扱う indexing traversal の挙動を確認したいとき。
-- INDEX.md conflict 解決処理や apply/join 側の merge 後処理が INDEX.md を削除して merge commit する制御に影響するとき。
-- build_index_entry や update_indexes の呼び出しを並列化・直列化・差し替えする変更で、Codex exec の呼び出し有無や対象 path を確認したいとき。
+- indexing サブコマンドの起動条件、失敗時メッセージ、作業ツリーの清潔性チェック、生成後コミットの挙動を変更する。
+- Codex によるエントリー生成、構造化出力 schema の利用、生成済み hash に基づく再生成判定、壊れた既存エントリーの再生成を変更する。
+- linked worktree や apply 用 worktree での indexing 実行、repo 側 config の参照、生成先 root の決定を変更する。
+- INDEX 系の競合解消、コミット対象を index path のみに限定する処理、非 index 差分を残したまま preflight で index だけを commit する処理を変更する。
+- エントリー描画で必須 semantic field を検証する条件、空文字・非文字列・欠落をエラーにする条件を変更する。
+- 階層内の sibling entry 生成を並列化する処理、root 直下 memo を除外しつつ nested memo を indexing 対象にする境界を変更する。
 
 ## Do not read this when
-- init サブコマンド単体の仕様や設定同期の詳細だけを確認したい場合は、より直接の init/config 関連テストや実装を読む。
-- INDEX.md の markdown 表示仕様だけを確認したい場合は、rendering 実装や出力フォーマットを直接扱う対象を読む。
-- oracle file の正本仕様やルーティング文書の方針を確認したい場合は、test 配下の realization test ではなく oracle 配下の該当文書を読む。
-- 一般的な Git helper、test support fixture、runner の実装を調べたいだけの場合は、このファイルではなく support 側を読む。
+- indexing とは無関係なサブコマンド、設定読み書き、git helper、CLI runner の一般的な挙動だけを調べる場合。
+- Codex 実行 wrapper や構造化出力 schema の実体を確認したい場合は、対応する実装または schema 定義を直接読む。
+- path 用語、oracle/realization の正本仕様、ルーティング文書の作成規則を確認したい場合は、仕様文書側を読む。
+- 個別の indexing 実装詳細を追う場合は、このテストで期待される外部挙動を確認した後に実装ファイルを読む。
 
 ## hash
-- d3538fd06cb13d5ac19dd42f56fe76fd3db94e2ffaff621da7e3df51d4463376
+- 5638f4b29738202c15f91e148bfdb9355d74671c6a5c6b46ea9788892bf0d089
 
 # `test_indexing_preflight.py`
 
@@ -267,65 +272,64 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- prompt part と ACP builder が生成する StructDoc、markdown render、complete prompt、file access rule、各種 builder parameter、structured output schema の期待値を横断的に検証する realization test。
-- 標準 prompt、routing、file access、review/index/realization standard、TUI parameter、apply fork、review oracle、session join など、最終 prompt と schema の組み合わせに関する回帰観点を一箇所に集約している。
-- 16,000 文字を超えるが、共通の render/schema 期待値を同じ読み取り文脈で追うために凝集させていることが冒頭で説明されている。
+- prompt part と ACP builder が生成する prompt、routing rule、file access rule、standard 文書、structured output schema、実行パラメータの期待値を横断的に検証する realization test。
+- 標準文書の markdown render 結果、complete prompt への標準注入有無、apply fork/review/session/tui/indexing builder の model・reasoning・file access mode・schema 制約を一箇所で確認する。
+- 対象は長いが、agent prompt と structured output schema の構築結果を同じ読み取り文脈で検証するため、共通の render/schema 期待値を追う入口としてまとまっている。
 
 ## Read this when
-- prompt part の markdown 出力、空行の畳み込み、code block rendering、standard 文書の必須文言に関するテスト期待値を確認したいとき。
-- complete prompt が routing rule や各 standard をどの条件で含むか、aux prompt の文面をどう保持するかを確認したいとき。
-- file access mode ごとの prompt 文言、builder parameter の model class、reasoning effort、file access mode、schema path の期待値を調べたいとき。
-- apply fork、review oracle merge finding、session join conflict resolution、TUI resolve parameter、indexing index entry の parameter builder と structured output schema の回帰テストを確認したいとき。
-- 大きなテストファイルを分割すべきか判断する際に、このテストが単一責務としてまとまっている理由を確認したいとき。
+- prompt_parts や builder が生成する最終 prompt の構成、標準文書の挿入条件、routing/file access 文言の回帰を確認したいとき。
+- StructDoc、StructCodeBlock、render_as_markdown の markdown 出力や空行折り畳みの期待挙動を確認したいとき。
+- apply fork、review oracle merge、session join conflict resolution、TUI resolve parameter、indexing index entry の builder parameter や structured output schema のテスト観点を確認したいとき。
+- standard 文書に含めるべき用語、含めてはいけない表記、schema enum や required property の期待値を変更に合わせて更新する必要があるとき。
 
 ## Do not read this when
-- 個別 builder や prompt part の実装そのものを変更したいだけで、テスト期待値や回帰観点を確認する必要がないとき。
-- oracle 側の正本 schema や仕様文書の内容を確認したいとき。
-- CLI 実行フロー、永続状態、git 操作、worktree 操作など、prompt/schema builder 以外の挙動を調べたいとき。
-- 単一の小さな helper の内部実装だけを追えば十分で、最終 prompt や schema の組み合わせに影響しないとき。
+- 個別 builder の実装詳細や prompt 文面の生成ロジックそのものを調べたいだけなら、対応する実装側を直接読む。
+- oracle の正本仕様断片そのものを確認したい場合は、テスト期待値ではなく対応する oracle 本文を読む。
+- 特定の CLI 実行フロー、永続状態、git 操作など prompt/schema builder 以外の挙動を調べている場合は、より直接のテストや実装を読む。
 
 ## hash
-- b9c225c1b152f1b190bcc9dad4c9733a87d86c0dff35bc4eba57d121dcb57f1a
+- a4089fd9752c0138da485de49821061d8d08e9e405cdac69b54d7ab1036ab940
 
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle の CLI 経由の外部挙動と、所見列挙・検証・judge・merge の制御を検証する realization test。report 生成、対象 oracle の選択、scope 指定、gitignored oracle file の除外、linked worktree 上の review、review 用 worktree の join commit、INDEX.md 変更の取り込みと衝突解決、処理失敗時の error report、review 中に許可されない差分の拒否を扱う。
-- 16,000 文字を超えるが、同じ review run の状態、fake Codex 応答、report 文脈を共有する oracle review の外部挙動確認として一箇所に集約されている。
+- review oracle の CLI 経由の外部挙動を検証する realization test。report 生成、対象 oracle の選択、所見列挙・検証・judge・merge、結果分類、エラー report、review 用 worktree と join commit、INDEX.md 差分の取り込みや競合解決、想定外差分の拒否を同じ review run 文脈で確認する。
+- 所見 merge 操作の kind ごとの契約、無効操作、target 再利用拒否も検証し、review oracle loop が対象 oracle ごとの関連所見だけを次回 prompt に渡す制御を押さえる。
+- 16,000 文字を超えるが、fake Codex 応答、report 文脈、review run の状態を一箇所に保つ方が凝集性が高いという責務境界を docstring で明示している。
 
 ## Read this when
-- cmoc review oracle の CLI 挙動、report の内容、終了コード、scope full/session の対象選択を確認・変更する時。
-- review oracle が oracle file を列挙する条件、binary oracle の扱い、gitignored oracle file の除外、session scope で対象なしになる挙動を確認する時。
-- review oracle の所見 loop で、enumerate finding に渡る文脈、validate/judge の呼び出し、merge operation の契約、invalid operation の拒否を確認する時。
-- linked worktree や session branch 上で review oracle がどの worktree と oracle を対象にするかを確認する時。
-- review oracle が生成・変更した INDEX.md を本体 worktree に取り込む処理、join commit の report 表示、INDEX.md 削除との merge conflict 解決を確認する時。
-- review oracle の途中失敗時に error report を書く挙動や、review 中に INDEX.md 以外の差分が作られた場合の拒否・復元を確認する時。
+- review oracle コマンドの出力 report、終了コード、scope 指定、対象 oracle の数え方や除外条件を変更・確認するとき。
+- review oracle の所見 loop、finding の verdict・severity 集計、merge 操作、validate・judge の呼び出し制御を変更・確認するとき。
+- review oracle が linked worktree、session branch、review 用 worktree、join commit、INDEX.md の生成差分や競合解決をどう扱うべきかを確認するとき。
+- review oracle 実行中の失敗時 report、標準出力へのエラー表示、INDEX.md 以外の予期しない差分の拒否と復元挙動を検証するとき。
 
 ## Do not read this when
-- review oracle 以外の review サブコマンド、または oracle review と関係しない CLI の挙動だけを確認する時。
-- Codex 実行 wrapper、設定読み込み、git helper、repo fixture などの下位 helper の詳細実装を調べたいだけの時は、それぞれの実装または support test を直接読む。
-- oracle file の正本仕様そのものや、oracle/review の仕様文書を確認したい時は、実装テストではなく oracle 側の該当文書を読む。
-- INDEX.md ルーティング生成そのものの仕様や一般的な INDEX.md エントリー形式を調べたいだけの時。
+- review oracle 以外の subcommand の CLI 挙動を調べるだけなら、対象 subcommand のテストへ進む。
+- review oracle の実装詳細を直す必要があり、期待される外部挙動ではなく関数本体や git 操作の実装を読みたい場合は、実装側の review command へ進む。
+- oracle file の正本仕様そのものや INDEX.md ルーティング規則を確認したい場合は、oracle 側の本文を読む。
+- テスト共通 fixture、runner、repo 作成 helper の使い方だけを確認したい場合は、test support 側を読む。
 
 ## hash
-- 54f6f8ccbf8b69e45a94557a2883c79ab801aaceec911640c101a08ba5199c58
+- ea7d3f24f774abdb135ebb656a95428d110ed907232765d5023af12e591d0c1f
 
 # `test_session_cli.py`
 
 ## Summary
-- cmoc の session 系 CLI の realization test。session fork/abandon/join が Git branch・linked worktree・session state・cleanup・conflict resolution・出力先をどう扱うかを、Typer runner と一時 Git repo で検証する。
-- session state JSON の読み取り helper と branch helper を使い、通常 worktree と linked worktree の両方で、session branch の作成・削除・home branch 復帰・状態遷移を確認する入口になる。
+- session サブコマンドの realization test。fork、abandon、join の外部挙動を、Git branch/worktree、session state、CLI 出力、エラー出力、conflict 解決時の Codex 実行権限プロファイルとの関係で検証する。
+- 通常 worktree と linked worktree の両方で、session branch の生成・削除、home branch への復帰、state の active/abandoned/joined 遷移、未コミット差分や cleanup 失敗時の扱いを確認する入口になる。
 
 ## Read this when
-- session fork が session branch と state file を作成する挙動、`.cmoc` ignore 初期化、開始 commit、linked worktree 上での branch/head 扱いを確認または変更するとき。
-- session abandon の正常系、home branch 不在時の失敗、cleanup 失敗時の rollback、出力される完了レポートやエラーメッセージを確認または変更するとき。
-- session join の正常系、linked worktree での join、session branch 削除失敗時の warning、未コミット差分エラーの stdout/stderr 分離を確認または変更するとき。
-- session join の conflict resolution で Codex 実行 profile の file access mode や writable/read-only path、delete conflict の stage 解消、conflict marker 検出を確認または変更するとき。
+- session fork の branch 作成、session state 作成、session_home_branch、session_start_commit、.cmoc ignore 初期化、sub command log 作成順を変更・調査するとき。
+- session abandon の成功時挙動、home branch 存在確認、session branch 削除、失敗時の rollback、ユーザー向け出力や stderr/stdout の出し分けを変更・調査するとき。
+- session join の merge/checkout 後挙動、conflict 解決、delete conflict の stage、session branch 削除失敗時 warning、linked worktree 上の join 挙動を変更・調査するとき。
+- session join conflict 解決で Codex を呼ぶ際の file access mode、oracle ファイル単位の write/read-only 境界、memo や .agents の read-only 扱いを確認するとき。
+- session サブコマンド周辺のテストを追加する前に、既存の外部挙動テストへケース追加できるか判断するとき。
 
 ## Do not read this when
-- session 以外のサブコマンド、設定読み込み、path model、oracle 文書生成など、session CLI の外部挙動に関係しない実装だけを調べるとき。
-- Git 操作 helper や test runner fixture そのものの定義を調べたいときは、共通 test support や該当 helper の本文へ直接進む。
-- session command の内部実装を先に修正したいときは、該当する session サブコマンド実装を読んでから、外部挙動の回帰確認としてこの対象を読む。
+- session 以外のサブコマンド、設定読み込み、path model、oracle 文書生成など、session branch/worktree/state に関係しない挙動だけを扱うとき。
+- CLI の一般的な runner fixture、Git helper、repository fixture の実装だけを調査したいときは、テスト支援側の本文を直接読む。
+- session join の内部 merge 実装や conflict 解決手順そのものを修正したいだけで、期待される外部挙動を既に把握しているときは、対象の実装モジュールを直接読む。
+- Codex profile builder の汎用仕様や FileAccessMode 全体の意味を調べたいときは、profile 生成や basic/acp 側の本文を直接読む。
 
 ## hash
-- 2e4a7600edcb887fcc6652452894813210a435f7ad0ec483b3faf3140f38cd14
+- 48a7fe06997043e26630c03fc819c65dd1be62acc57381d6e7f75b7d3bbb879e

@@ -1,11 +1,13 @@
-"""`cmoc review oracle` の所見採否判定 prompt 構築実装。"""
+"""`cmoc review oracle` の所見採否判定 prompt 構築実装。
+
+対応 oracle file: `<work-root>/oracle/src/acp/builder/review/oracle/judge_finding.py`。
+"""
 
 # std
 from pathlib import Path
 
 # cmoc
 from basic.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
-from basic.path_model import resolve_real_path
 from basic.acp import (
     AgentCallParameter,
     ModelClass,
@@ -31,8 +33,6 @@ def build_review_oracle_judge_finding_parameter(
     challenger_reasons: str
         所見が妥当ではない理由。
     """
-    # パス
-    oracle_root = resolve_real_path(Path("<work-root>/oracle"))
     # プロンプト
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア仕様断片レビュー所見の採否判定担当です",

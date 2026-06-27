@@ -33,6 +33,23 @@ def _toml_array(values: list[Path]) -> str:
     return "[" + ", ".join(_toml_str(value) for value in values) + "]"
 
 
+def _read_only_files_except(read_only_path: Path, writable: list[Path]) -> list[Path]:
+    if read_only_path.is_file():
+        paths = [read_only_path]
+    elif read_only_path.is_dir():
+        paths = [path for path in read_only_path.rglob("*") if path.is_file()]
+    else:
+        return []
+    return [
+        path
+        for path in sorted(paths)
+        if not any(
+            path == writable_path or path.is_relative_to(writable_path)
+            for writable_path in writable
+        )
+    ]
+
+
 def _permission_profile_lines(
     mode: FileAccessMode,
     root: Path,
@@ -80,11 +97,13 @@ def _permission_profile_lines(
             if not any(path.is_relative_to(base) for base in protected)
         ]
         write_paths.extend(writable)
-        read_only_paths = [
-            path
-            for path in read_only_paths
-            if path not in writable
-        ]
+        narrowed_read_only_paths: list[Path] = []
+        for path in read_only_paths:
+            if any(writable_path.is_relative_to(path) for writable_path in writable):
+                narrowed_read_only_paths.extend(_read_only_files_except(path, writable))
+            else:
+                narrowed_read_only_paths.append(path)
+        read_only_paths = narrowed_read_only_paths
     # Codex permission profile は read 制限を持つ。legacy workspace profile が表していた
     # write 除外は read_only として残す。
     return [

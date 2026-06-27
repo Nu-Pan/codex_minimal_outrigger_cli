@@ -240,6 +240,10 @@ def test_session_join_resolves_oracle_conflict_with_realization_write_profile(
 ) -> None:
     root = make_repo(tmp_path)
     target = root / "oracle" / "spec.md"
+    other_oracle_file = root / "oracle" / "other.md"
+    other_oracle_file.write_text("# other\n")
+    run_git(root, "add", "oracle/other.md")
+    run_git(root, "commit", "-m", "add other oracle")
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
     assert (
@@ -273,9 +277,14 @@ def test_session_join_resolves_oracle_conflict_with_realization_write_profile(
             )
         )
         fs = profile["permissions"]["cmoc"]["file_system"]
+        workspace = profile["sandbox_workspace_write"]
         assert str(root) in fs["write"]
         assert str(target) in fs["write"]
-        assert str(root / "oracle") in fs["read_only"]
+        assert str(root / "oracle") not in fs["read_only"]
+        assert str(target) not in fs["read_only"]
+        assert str(other_oracle_file) in fs["read_only"]
+        assert str(root / "oracle") not in workspace["read_only_paths"]
+        assert str(other_oracle_file) in workspace["read_only_paths"]
         assert str(root / "memo") in fs["read_only"]
         assert str(root / ".agents") in fs["read_only"]
         target.write_text("resolved change\nTitle\n=======\n")

@@ -1,3 +1,8 @@
+"""apply review standard prompt part の realization。
+
+対応 oracle file: `<work-root>/oracle/src/acp/prompt_parts/apply_review_standard.py`。
+"""
+
 # cmoc
 from basic.struct_doc import StructDoc
 from basic.standard import (

@@ -1,3 +1,8 @@
+"""INDEX.md routing rule prompt part の realization。
+
+対応 oracle file: `<work-root>/oracle/src/acp/prompt_parts/routing_rule.py`。
+"""
+
 # cmoc
 from basic.struct_doc import StructDoc
 from basic.path_model import resolve_work_root

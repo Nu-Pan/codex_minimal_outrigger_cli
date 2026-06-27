@@ -15,21 +15,20 @@
 # `cmoc_runtime.py`
 
 ## Summary
-- 共通ランタイム機能への単一入口として、Codex 実行、プロファイル、設定、内容ハッシュ、CLI 前提条件、エラー、Git、ログ、パス、結果型、状態管理の公開要素をまとめて再公開する集約モジュール。
-- 個別の処理実装は各 runtime 系モジュール側にあり、この対象自体は呼び出し側がまとめて import できる境界を担う。
+- cmoc の実行時共通 API をまとめて公開する集約モジュール。Codex 実行、プロファイル、設定、ファイル内容、CLI、エラー、Git、ログ、パス、結果、状態管理に関する下位 runtime モジュールの主要な関数・クラス・定数を、利用側が一か所から import できる入口として扱う。
 
 ## Read this when
-- 複数の共通ランタイム機能をまとめて利用する呼び出し側の import 経路を確認したいとき。
-- 共通ランタイム API として外部へ露出している関数、型、定数の一覧を把握したいとき。
-- runtime 系モジュール間の公開入口を整理し、集約 import の追加・削除・移動を判断するとき。
+- cmoc の実装から共通 runtime 機能をどの名前で import できるか確認したいとき。
+- 複数の runtime_* モジュールに分かれている実行時 helper の公開入口を確認したいとき。
+- 新しい共通 runtime 機能を既存の集約 import 面へ加える必要があるか判断するとき。
 
 ## Do not read this when
-- Codex 実行、設定、Git 操作、パス解決、状態保存など個別機能の具体的な処理内容や失敗時挙動を確認したいときは、それぞれの実装モジュールを直接読む。
-- 新しい共通処理の実装場所を探しているだけで、公開入口への追加要否をまだ判断しないとき。
-- CLI サブコマンドの制御フローや利用者向け挙動を確認したいときは、呼び出し側または該当 runtime 実装を優先する。
+- 個々の関数・クラス・定数の挙動、引数、副作用、エラー処理を調べたいとき。その場合は対応する下位 runtime モジュールを直接読む。
+- Codex 実行、Git 操作、設定、状態、パス処理など特定領域の実装を変更したいとき。その場合はこの集約入口ではなく、責務を持つ下位実装を読む。
+- cmoc の正本仕様断片を確認したいとき。このファイルは realization implementation の import 集約であり、仕様本文ではない。
 
 ## hash
-- 553825cc815dfaed7496bdf6134689343ec5e2274a6502bbfc4709462f0e8002
+- e5d4066344eb6e9174bca7f06b7aba9734d0ef516610c1300c7544a7e89a6c44
 
 # `runtime_cli.py`
 
@@ -134,23 +133,25 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI を起動するための実行時プロファイルと周辺入出力を組み立てる実装。モデル・reasoning effort・sandbox/permission profile の TOML 断片を生成し、Codex home の解決と検証、hashed profile/schema の保存、subprocess 環境、JSON 出力や JSONL エラー情報の解釈を扱う。
-- ファイルアクセスモードを Codex 側の read-only/workspace-write または詳細な permission profile へ変換する境界を担い、memo・oracle・.agents などの読み書き制限を実行時設定へ反映する入口になる。
+- Codex CLI 呼び出し用の実行時 profile を組み立て、Codex home の解決・検証、profile/schema のハッシュ保存、サブプロセス環境、Codex JSONL 出力からの結果・エラー・resume token 判定を扱う共通実装。
+- AgentCallParameter と CmocConfig から model、reasoning_effort、sandbox/permission profile を TOML 文字列として生成し、FileAccessMode ごとの read/write/deny/read_only 境界を Codex の設定形式へ変換する入口になる。
+- Codex CLI 実行後の標準出力・標準エラーを解析し、エラーテキスト抽出、capacity/quota 判定、空または壊れた JSON 出力の扱いを確認するための入口になる。
 
 ## Read this when
-- Agent 呼び出しパラメータから Codex CLI 用の profile 設定文字列や profile ファイルを生成する処理を確認・変更したいとき。
-- ファイルアクセスモードごとの sandbox_mode、permission profile、read/write/deny_read/read_only/writable_roots の対応を確認・変更したいとき。
-- CODEX_HOME の解決、存在・ディレクトリ・auth.json 検証、Codex subprocess に渡す環境変数の扱いを確認したいとき。
-- Structured Output schema を hashed file として保存する処理や、Codex 実行後の JSON 出力、stderr/stdout 由来のエラーテキスト、resume token、capacity/quota error 判定を確認・変更したいとき。
+- Codex CLI に渡す profile 内容、sandbox_mode、permission_profile、writable_roots、read_only_paths、deny_read の生成規則を確認・変更したいとき。
+- FileAccessMode と Codex 側の読み書き権限の対応、追加 read/write path による read_only 範囲の絞り込み、memo や .agents や oracle の保護扱いを調べたいとき。
+- CODEX_HOME の解決、存在検証、auth.json 検証、Codex サブプロセスへ渡す環境変数の扱いを確認したいとき。
+- Codex profile や JSON schema をハッシュ付きファイルとして保存する流れ、または保存失敗時の CmocError を確認したいとき。
+- Codex CLI の JSONL 出力から resume token、利用制限エラー、capacity エラー、利用者向けエラー文面を取り出す処理を変更・調査したいとき。
 
 ## Do not read this when
-- AgentCallParameter や FileAccessMode 自体のデータ構造・列挙値定義を確認したいだけなら、それらを定義する基本モデルを読む。
-- モデル名や reasoning effort の設定値そのもの、設定ファイルの読み込み規則を確認したいだけなら、設定モデル側を読む。
-- hashed file の保存先作成や内容ハッシュ化の実装詳細を確認したいだけなら、runtime content や runtime paths 側を読む。
-- Codex CLI の呼び出し手順全体、プロセス起動、プロンプト構築、実行ループの制御を追いたい場合は、呼び出し元の実行制御側を読む。
+- cmoc 全体のパス語彙や <cmoc-root>、<work-root> などの定義だけを確認したいときは、パスモデルを扱う仕様・実装を読む方が直接的。
+- AgentCallParameter、FileAccessMode、CmocConfig のデータ構造や設定値の定義そのものを確認したいときは、それぞれの定義元を読む方が直接的。
+- ハッシュ付きファイル保存の具体的な命名・書き込み実装や schema store directory の配置規則だけを確認したいときは、コンテンツ保存や実行時パスを扱う共通実装を読む方が直接的。
+- Codex CLI を実際に起動するコマンド組み立て、プロセス実行、入出力ファイルのライフサイクル全体を追いたいときは、この対象だけでなく呼び出し側の実行制御を読む必要がある。
 
 ## hash
-- 56f3e469158ae02cefcd5567248bf2b870b192e7c96ab046b8a0a8e532a03d5b
+- fe6f07cf0d561bb501d32d8a726672004cf4ba1f0e635c5744fd03abafaa60e2
 
 # `runtime_codex_tui.py`
 
@@ -235,24 +236,24 @@
 # `runtime_git.py`
 
 ## Summary
-- Git コマンド実行を共通化し、失敗時に cmoc の実行時エラーへ変換するための低レベル helper 群を扱う。
-- 現在 branch、HEAD commit、worktree 清潔性、管理対象 branch 判定、branch 存在確認、run worktree 作成・削除、branch 削除など、Git 状態と worktree 操作の共通処理を提供する。
-- cmoc の内部ディレクトリを Git 追跡対象外にする初期化・検証と、任意 path が Git ignore 対象かを判定する処理もここにまとまっている。
+- Git コマンド実行を共通化し、失敗時の cmoc 向けエラー化、現在 branch・HEAD commit・worktree cleanliness の確認、branch 存在確認、run 用 worktree の作成・削除、branch 削除を扱う実装。
+- .cmoc を Git 追跡対象外に保つための .gitignore 更新、index からの除外、ignore 状態の検証、および任意 path が Git ignore 対象かどうかの判定も担う。
 
 ## Read this when
-- cmoc の各コマンドから Git を実行する共通方法、戻り値の扱い、失敗時の CmocError 化を確認・変更したいとき。
-- 実行用 worktree の作成・削除、管理 branch の判定、branch の存在確認や削除に関する実装を追うとき。
-- 未コミット差分がある場合の拒否、detached HEAD の拒否、現在 branch や HEAD commit の取得など、Git 状態の前提条件を扱う処理を確認するとき。
-- cmoc の内部ディレクトリを .gitignore と git index 上で追跡対象外にする処理、または ignore 判定の挙動を確認・変更したいとき。
+- Git コマンド呼び出しの失敗処理、stdout/stderr/returncode の扱い、または CmocError への変換を確認・変更したいとき。
+- cmoc が管理する branch prefix、現在 branch の取得、detached HEAD の拒否、HEAD commit 取得、未コミット差分の拒否に関わる挙動を確認・変更したいとき。
+- run 用 worktree の作成・強制削除・prune、または branch の存在確認・削除に関わる処理を追うとき。
+- .cmoc を .gitignore に追加する処理、Git index から除外する処理、追跡対象外として初期化済みか要求する処理を確認・変更したいとき。
+- 特定 path が Git ignore 対象かどうかを、リポジトリ root 基準の相対 path として判定する処理を確認・変更したいとき。
 
 ## Do not read this when
-- CLI 引数の解析、サブコマンドの組み立て、ユーザー向け出力形式だけを確認したいとき。
-- Git 以外の path モデル、設定読み込み、構造化結果の定義、または Codex 実行制御の詳細を調べたいとき。
-- 個別コマンドがどのタイミングで Git helper を呼ぶかという上位フローを知りたいだけの場合は、先にそのコマンド実装を読む。
-- Git 操作のテストケースや期待される外部挙動を確認したい場合は、対応するテストを読む。
+- Git 以外の外部コマンド実行、プロセス起動全般、または CLI 出力整形だけを調べたいとき。
+- cmoc の path keyword や root 種別の定義を調べたいとき。
+- run の高レベルな状態管理、セッション記録、プロンプト生成、またはサブコマンドのユーザー向け制御フローだけを調べたいとき。
+- Git ignore の個別判定ではなく、INDEX.md や oracle/realization の分類規則を調べたいとき。
 
 ## hash
-- 31172a71170d0136db6767dbc6b344927cc2fa5c6abf5a9046f156013e5bb090
+- dcc541d48e81f8c1b468b3a21221d90007082bbe88e14bdf008308b9648a8622
 
 # `runtime_logging.py`
 
@@ -279,24 +280,24 @@
 # `runtime_paths.py`
 
 ## Summary
-- 実行時に必要な root path の解決、cmoc 管理ディレクトリや設定ファイルの path 組み立て、時刻文字列、作業ディレクトリ一時変更を扱う共通 helper 群。
-- <repo-root>、<work-root>、<cmoc-root> の特定に失敗した場合は利用者向けの CmocError に変換し、呼び出し側が path 解決失敗を共通のエラー形式で扱える入口になる。
-- `.cmoc` 配下の sessions、reports、log、worktrees、state、config の保存先を、渡された root から一貫して導出する責務を持つ。
+- 実行時に必要なルートパス、時刻文字列、cmoc 管理ディレクトリ、設定ファイル位置を組み立てる共通 helper 群を定義する。
+- `<repo-root>`・`<work-root>`・`<cmoc-root>` の解決失敗を cmoc 用エラーへ変換し、呼び出し側が利用者向けの失敗理由を扱える入口になる。
+- 作業ディレクトリの一時変更、`<work-root>/memo` 配下判定、`.cmoc` 配下の sessions・reports・log・worktrees・state・config へのパス生成を扱う。
 
 ## Read this when
-- 実行時に <repo-root>、<work-root>、<cmoc-root> をどのように特定し、失敗時にどの CmocError を出すかを確認・変更したいとき。
-- `.cmoc` 配下の sessions、reports、sub command log、codex log、worktrees、schema state、config の配置規則を確認・変更したいとき。
-- レポート名、ログ名、表示用時刻などに使う timestamp 文字列や duration 表示の形式を確認・変更したいとき。
-- 処理中だけ作業ディレクトリを変更し、終了時に元のディレクトリへ戻す共通処理を使う箇所を調べたいとき。
+- 実行時のルート解決、特に `<repo-root>`・`<work-root>`・`<cmoc-root>` の取得や失敗時エラー文言を変更する。
+- `.cmoc` 配下に作成・参照する sessions、reports、log、worktrees、schema state、config の配置規則を確認または変更する。
+- サブコマンドや状態管理処理から使うタイムスタンプ形式、コンソール表示用時刻、経過時間表示の形式を確認または変更する。
+- `<work-root>/memo` 自体またはその配下を判定する制御や、処理中だけカレントディレクトリを切り替える処理を扱う。
 
 ## Do not read this when
-- path キーワードそのものの意味や <cmoc-root>、<repo-root>、<run-root>、<work-root> の概念定義を確認したいだけのときは、path model の定義を直接読む。
-- CmocError の表示形式、属性、レンダリング、終了処理を確認したいときは、runtime error を扱う対象を直接読む。
-- 個別サブコマンドが sessions、reports、logs、worktrees をどのタイミングで作成・更新・削除するかを調べたいときは、そのサブコマンド実装や状態管理の対象を読む。
-- git repository や git worktree の探索アルゴリズム自体を変更したいときは、root 解決を実装している path model 側を読む。
+- `<repo-root>` や `<work-root>` というパス概念そのものの定義・探索規則を確認したいだけなら、パスモデル側の定義を直接読む。
+- cmoc 用例外クラスの表示形式、終了処理、エラー集約の責務を調べたいだけなら、エラー定義側を読む。
+- 個別サブコマンドが各ディレクトリへ何を書き込むか、状態ファイルの内容やレポート内容を調べたい場合は、そのサブコマンドまたは状態管理の実装を読む。
+- oracle や realization の分類、INDEX 生成規則、ルーティング文書の仕様を調べたい場合は、この共通 runtime helper ではなく該当する仕様・生成処理を読む。
 
 ## hash
-- ba602d99cbeee08c3659843f561c7cd76d53a274fcf996e15f9945ef32ede11f
+- 90f70eda32a0954890b23bea22629dc2a18dce740fb3e55c206f05feb8551820
 
 # `runtime_results.py`
 

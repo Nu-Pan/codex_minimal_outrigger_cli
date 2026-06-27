@@ -67,6 +67,7 @@ from commons.runtime_paths import (
     config_path,
     console_timestamp,
     format_duration,
+    is_root_memo,
     logs_dir,
     pushd,
     repo_root,

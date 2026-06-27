@@ -1,5 +1,7 @@
 """
 acp = Agent Call Parameter
+
+対応 oracle file: `<work-root>/oracle/src/basic/acp.py`。
 """
 
 # std
