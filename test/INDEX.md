@@ -268,24 +268,25 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- prompt 構築と ACP builder の生成結果を横断的に検証する realization test。標準 prompt、routing、file access、各種 standard の注入、structured output schema、builder parameter の model/reasoning/file access mode など、最終 prompt と schema の回帰観点を一箇所で扱う。
-- agent prompt と structured output schema は同じ読み取り文脈で組み合わさるため、分割せず凝集した検証対象として維持していることが冒頭 docstring に明示されている。
+- prompt 構成部品、file access/routing/review/index entry/realization などの標準文書、complete prompt の組み立て、各種 ACP builder の実行パラメータと structured output schema を横断的に検証する realization test。
+- 標準 prompt、routing、file access、builder parameter が最終 prompt の同じ読み取り文脈で組み合わさることを前提に、render 結果、schema 制約、モデル種別、reasoning effort、file access mode、root path の扱い、用語 sanitization の回帰観点を一箇所に集約している。
 
 ## Read this when
-- prompt parts の markdown rendering、空行の畳み込み、補助 prompt の保持、standard 文書の注入有無や用語保持を変更・確認する。
-- routing rule、file access rule、apply/review/oracle/realization/index entry standard の生成内容に期待する主要文言を確認する。
-- ACP builder が返す実行 parameter の model class、reasoning effort、file access mode、prompt 内容、structured output schema path を変更・検証する。
-- change summary、TUI resolve parameter、review oracle merge finding などの JSON schema の required、enum、validation 制約、oracle source との一致を確認する。
-- apply fork、session join、indexing、review oracle 系 builder の prompt root 表現や conflict 対象表現に関する回帰を調べる。
+- prompt part の markdown render 結果や complete prompt への標準文書の含まれ方を変更・確認したいとき。
+- file access rule、routing rule、apply/review/index/realization standard の文言やタイトルが期待どおり prompt に現れるかを確認したいとき。
+- ACP builder が返す model class、reasoning effort、file access mode、structured output schema path、prompt 本文の主要断片を検証したいとき。
+- structured output schema の required、enum、additionalProperties、空配列拒否、oracle 側 schema との一致などの回帰を調べたいとき。
+- root token や worktree/repo root の解決が apply fork 系 prompt にどう反映されるかを確認したいとき。
+- complete prompt の入力文や標準文書から、禁止されたプロジェクト固有語・path token・用語表記が sanitization される挙動を調べたいとき。
 
 ## Do not read this when
-- 個別 builder や prompt part の実装詳細だけを調べたい場合は、対応する実装側の本文へ直接進めばよい。
-- 単一の standard 文書の仕様文そのものを確認したいだけなら、その standard を生成する prompt part または正本仕様断片を読む方が直接的である。
-- テスト基盤全体、fixture 配置、または他領域の CLI 挙動を調べる場合は、この横断 prompt/schema 回帰テストから読み始める必要はない。
-- INDEX.md エントリー生成の出力形式だけを確認したい場合は、schema や呼び出し側の定義を読む方が適切である。
+- 個別 builder や prompt part の実装詳細だけを変更したい場合で、期待される外部挙動ではなく内部処理の構造を読みたいとき。
+- CLI コマンド、永続状態、git 操作、セッション管理など prompt 生成以外の機能領域を調べたいとき。
+- 特定の structured output schema の正本定義そのものを確認したい場合で、テスト期待値ではなく schema 本文を直接読むべきとき。
+- 単一の小さな render helper や path helper の実装だけを追えば足りる場合で、prompt 構築全体の回帰観点が不要なとき。
 
 ## hash
-- bb67d485ed7b785f5db46a62bc309dd6bb4c96042e783aa6215cbc39f195f665
+- 671da574c121bfb135f6da3ca5439ef943442f74f6e4b5d23875be79eacda8e0
 
 # `test_review_oracle_cli.py`
 

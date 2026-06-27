@@ -22,20 +22,23 @@
 # `prompt_parts`
 
 ## Summary
-- ACP の agent call 向けプロンプトを構成する prompt part 群を収める領域。ファイルアクセス規則、ルーティング規則、oracle と realization の基本概念、各種レビュー規範、INDEX.md エントリー規範、完全プロンプト合成など、AI に渡す構造化された標準文書の生成処理を扱う。
-- 各 prompt part は、規範本文や判断基準を Standard・Requirement・StructDoc などの構造化文書として組み立て、個別の作業種別に応じて agent prompt へ注入される前提情報の入口になる。
+- AI agent に渡す各種 prompt part を構築する実装群を収める領域。ファイルアクセス規則、INDEX.md ルーティング規則、oracle/realization の基本概念、oracle・realization・review・index entry の各標準、agent call 用の完全な prompt 組み立てを扱う。
+- 各 prompt part は、標準文書や作業規則を StructDoc などの構造化文書として生成し、上位の agent 呼び出し処理へ渡すための入口になる。
+- 個別の規範本文を確認する対象と、複数の規範を統合して agent 向け prompt list を作る対象が同じ階層に並ぶため、prompt に含めたい規則の種類から読む先を選ぶための入口になる。
 
 ## Read this when
-- ACP の agent call に渡すプロンプト本文が、どの標準規範や基本情報から構成されるかを確認したいとき。
-- ファイルアクセス規則、INDEX.md を使ったルーティング規則、oracle file と realization file の関係、oracle 記述規範、realization 品質規範、レビュー所見基準、INDEX.md エントリー作成基準など、AI 向け標準プロンプト断片の生成箇所を探すとき。
-- 新しい標準プロンプト断片を追加したり、既存の規範文書の内容・順序・依存関係・注入条件を変更したいとき。
-- レビュー、apply review、index entry 生成などの作業で、agent にどの判断基準を渡しているかを実装側から確認したいとき。
+- AI agent に渡す prompt part の種類、責務分担、または生成箇所を調べたいとき。
+- file access rule、routing rule、oracle/realization の基本説明、oracle standard、realization standard、review standard、index entry standard など、標準 prompt の本文を確認または変更したいとき。
+- agent call 用 prompt の全体構成、標準 prompt の注入順、標準 prompt flag 間の依存関係、root token 置換や呼び出し先向けの文面 sanitization を追いたいとき。
+- oracle file や realization file のレビュー、実装、案内文作成で、AI にどの判断基準を提示しているかを確認したいとき。
+- 新しい標準 prompt part を追加する前に、既存の prompt part が担う規範領域や共通の構造化文書生成方針を把握したいとき。
 
 ## Do not read this when
-- ACP の通信処理、CLI サブコマンド、永続状態、ファイル入出力、外部コマンド実行など、プロンプト断片生成以外の実装挙動を調べたいとき。
-- StructDoc、Standard、Requirement などのデータ構造そのものや、構造化文書の汎用変換・レンダリング処理を調べたいとき。
-- 特定の oracle file や realization file の本文内容、または個別機能の正本仕様を確認したいだけのとき。
-- 実際のレビュー結果、差分内容、INDEX.md エントリー文面など、生成された成果物そのものを確認したいとき。
+- 個別 CLI コマンドの実行処理、状態ファイル、入出力 schema、パス解決、サンドボックス enforcement など、prompt 文面生成以外のプロダクト挙動を調べたいとき。
+- Standard、Requirement、StructDoc、code block などの汎用データ構造やレンダリング helper そのものを変更したいとき。
+- oracle file や realization file の特定本文、または実際の差分レビュー対象を読みたいだけで、AI に渡す標準 prompt の生成処理は関係しないとき。
+- ファイルアクセスやルーティングの実際の実行制御を調べたいとき。ここでは agent に提示する規則文の構築だけを扱う。
+- path token の定義、実 path 解決規則、work/root 概念の基礎実装を確認したいとき。
 
 ## hash
-- 7de84f6753d646d11135ae048728a39ad7700881686b272bc6f21514c30eff14
+- c59d029bfba0ae4cba28d81ecd3ea35719efa92e8e5738c3f733bfb5bf5355d0

@@ -23,21 +23,21 @@
 # `complete_prompt.py`
 
 ## Summary
-- agent call に渡す完全なプロンプトを、基本プロンプト、ファイルアクセス規則、ルーティング規則、任意の補助プロンプト、必要に応じて注入する標準プロンプト群から組み立てる realization。
-- oracle、realization、review、apply review、index entry などの標準プロンプト指定に応じて、依存する基礎情報も自動的に有効化し、最終的な StructDoc の列として返す。
+- agent call に渡す完全な prompt part 群を構築する realization。基本 prompt に file access rule、routing rule、任意追加 prompt を含め、指定された標準 prompt 群を依存関係に従って追加する責務を持つ。
+- root token を具体 path に置換し、呼び出し先 agent へ渡す文面からこのツール固有の呼称を作業対象寄りの表現へ置換する sanitization も扱う。
 
 ## Read this when
-- agent に渡すプロンプト全体の構成順、必ず含まれる基本要素、任意に追加される標準要素の条件を確認したいとき。
-- oracle_standard、realization_standard、review_oracle_standard、apply_review_standard、index_entry_standard の指定が、どの前提プロンプトを連鎖的に含めるかを調べたいとき。
-- agent call 用プロンプト生成に、新しい標準プロンプト断片や依存関係のある注入条件を追加・変更したいとき。
+- agent call 用 prompt の全体構成、標準 prompt の注入順、または標準 prompt flag 間の依存関係を確認・変更したいとき。
+- role、summary、goal、file access rule、routing rule、追加 prompt、oracle/realization/review/index entry 系標準 prompt がどのように 1 つの prompt list に統合されるかを追いたいとき。
+- prompt 内の root token 置換や、このツール固有語を呼び出し先向け表現へ言い換える処理を確認・変更したいとき。
 
 ## Do not read this when
-- 個別の標準プロンプト断片そのものの文面や内容を確認したいだけのとき。
-- ファイルアクセス規則やルーティング規則の本文、またはそれらの生成ロジックを確認したいとき。
-- StructDoc のデータ構造や文書表現の基礎実装を調べたいとき。
+- 個別の file access rule、routing rule、oracle standard、realization standard、review standard、index entry standard の本文内容だけを確認したいときは、それぞれの標準 prompt を生成する対象を直接読む。
+- root token の定義や real path 解決規則そのものを確認したいときは、path model 側を読む。
+- 構造化ドキュメントや code block のデータ構造そのものを確認したいときは、構造化ドキュメント定義側を読む。
 
 ## hash
-- a75d0bc93639f37242cb338330a8ecfabfac107542c7ddf559d1cb5af09ee098
+- 24d09388c6d70cd1bc6bd29815d1890602d53edfb5c74f41a024a56ea7f2c0f3
 
 # `file_access_rule.py`
 
@@ -64,21 +64,21 @@
 # `index_entry_standard.py`
 
 ## Summary
-- 読む対象を選ぶためのエントリーに含めるべき意味情報と、含めてはいけない機械的・過剰な情報の境界を定める規範文章を生成する。
-- エントリーは本文の代替ではなく、対象の責務、読む条件、読まなくてよい条件を本文に根拠のある範囲で示すためのものとして位置づける。
+- 読むべき対象を選ぶための案内文に求める規範を構築する。対象の責務、読む条件、読まなくてよい境界を、本文内容に根拠を持つ意味情報として書くことを中心に扱う。
+- 機械的に補える識別情報や出力形式の説明を避け、同階層の他対象ではなくその対象へ進む理由が分かる案内にするための基準を提供する。
 
 ## Read this when
-- 読む対象を選ぶためのエントリーに、どの程度の説明や条件を書くべきかを確認したいとき。
-- エントリーが対象本文の詳細説明になっていないか、対象外の責務まで広げていないかを判断したいとき。
-- 機械的に補える識別情報や出力形式の説明を、ルーティング用の意味情報から除外すべきか確認したいとき。
+- 読むべきファイルやディレクトリを選ぶための案内文の品質基準を確認したいとき。
+- 案内文に、対象の責務、読む条件、読まなくてよい境界をどの程度書くべきか判断したいとき。
+- 案内文へ本文詳細、推測した用途、機械的な識別情報を混ぜてよいか迷うとき。
 
 ## Do not read this when
-- 個別の対象について実際のエントリー文面だけを作る場合で、従うべき規範がすでに分かっているとき。
-- エントリー生成の全体手順、入出力制御、ファイル探索、保存処理などの実装を確認したいとき。
-- 対象本文そのものの仕様や実装内容を理解したいとき。
+- 対象本文そのものの実装仕様や業務仕様を確認したいとき。
+- 構造化された出力の項目や型など、出力形式そのものを確認したいとき。
+- 案内文ではなく、正本仕様断片や実装ファイル全般の保守方針を確認したいとき。
 
 ## hash
-- 6bd02c846be1c449991613bbb0c157e301247a3eca7dbdd185daee6a8ed291af
+- b54587eb91f7806813f5f74538810d9eb38e85afe29266102e7914efd92457a1
 
 # `oracle_and_realization_basic.py`
 
@@ -105,64 +105,63 @@
 # `oracle_review_standard.py`
 
 ## Summary
-- `cmoc review oracle` で oracle file をレビューする際に、検出した問題をどの severity の所見として扱うか、または所見にしないかを判定するための規範文章を組み立てる実装。
-- fatal 所見、minor 所見、所見対象外の境界を `Standard` と `Requirement` の構造で定義し、レビュー用プロンプト部品として利用できる `StructDoc` を返す。
-- 正本仕様断片の矛盾や実装者裁量では解消不能な問題は fatal、表記揺れや typo など単純な表記問題は minor、oracle file の記述だけでは問題と言い切れない推測・好み・一般論は所見にしない、という判断基準を集約している。
+- oracle file レビューで所見を列挙するときの判定基準を構築する実装。fatal 所見、minor 所見、所見にしない対象の境界を、標準文書として返す役割を持つ。
+- oracle file が正本仕様断片であることを前提に、明確な仕様矛盾や実装者裁量では解消不能な問題だけを fatal とし、表記上の単純誤りを minor とし、仕様の隙間や好みだけに基づく指摘を除外するための判断入口になる。
 
 ## Read this when
-- `cmoc review oracle` のレビュー観点、severity 分類、所見を出す条件や出さない条件を確認したいとき。
-- oracle file 間の矛盾、実装不能な仕様、typo・表記揺れ・助詞抜けなどをどの種類の所見として扱うかを実装側で調整するとき。
-- レビュー用プロンプトに渡す規範文章の構造、タイトル、背景、要求、判断例を変更したいとき。
-- oracle file の記述だけを根拠に所見を作るべきか、実装者裁量で自然に補える隙間として扱うべきかの境界を確認したいとき。
+- oracle file レビュー用プロンプトで、どの問題を fatal 所見・minor 所見・対象外として扱うかを確認したいとき。
+- 仕様断片同士の矛盾、実装者裁量では解けない問題、typo や表記揺れをレビュー所見として分類する処理を変更するとき。
+- oracle file だけを根拠にできない推測、一般的なベストプラクティス、仕様の未定義部分を所見から除外する境界を確認したいとき。
 
 ## Do not read this when
-- oracle file そのものの正本仕様を確認したいとき。この対象は正本仕様ではなく、正本仕様断片を具体化した実装である。
-- レビュー結果の出力 schema、保存形式、CLI 引数、サブコマンド処理など、レビュー実行全体の入出力や制御フローを確認したいとき。
-- `Standard`、`Requirement`、`StructDoc` のデータ構造や変換処理そのものを確認したいとき。
-- oracle file 以外の realization code に対する一般的な品質基準やテスト方針を確認したいとき。
+- oracle file レビューの出力形式、コマンド実行、入出力データ構造を確認したいだけのとき。
+- oracle file そのものの正本仕様や、特定の oracle file の内容を確認したいとき。
+- 一般的な realization code の品質基準、テスト方針、ファイル分割方針を確認したいとき。
 
 ## hash
-- ab3eb5c2538a06817a434195965c0149789258fb6673c9b0d337f1356b2a2246
+- 42b4af4f840656900d48442980fdf6a31093b0c28f75027968f7c1e3ffed6db7
 
 # `oracle_standard.py`
 
 ## Summary
-- oracle file が従うべき記述規範を StructDoc として構築する prompt part。人間の認知負荷を節約しながら、正本仕様断片としての疎さ、未定義部分の扱い、文字数最小化、矛盾禁止、実装から仕様への逆流禁止、用語・命名の統一、oracle file 優先、goal と non-goal の境界をまとめて扱う。
-- 各規範は背景・要求・判断例を持つ Standard 群として定義され、oracle file の記述品質や仕様断片の扱いを AI に判断させるための標準文書へ変換される。
+- oracle file が従うべき記述規範を、prompt 用の StructDoc として構築する実装。人間の認知負荷削減、正本仕様断片としての扱い、未定義部分の許容、文字数最小化、矛盾禁止、実装から仕様への逆流禁止、用語統一、命名、ベストプラクティスより oracle file 優先、goal と non-goal の境界といった Standard 群をまとめて返す。
+- 各規範は背景・要求・判断例を持つ Standard として定義され、oracle file の記述方針を AI に渡すための prompt 本文へ変換される。
 
 ## Read this when
-- oracle file の書き方、分量、責務境界、正本仕様断片としての扱いに関する prompt 本文を確認・変更したいとき。
-- oracle file と実装の優先関係、未定義部分の許容範囲、既存実装から仕様へ逆流させてよいかどうかの判断基準を確認したいとき。
-- oracle file の用語統一、命名、論理矛盾、goal と non-goal の書き分けに関する基準を prompt に含める必要があるとき。
-- oracle standard の StructDoc 生成内容や、Standard/Requirement を使った規範文書の構成を確認したいとき。
+- oracle file の書き方、分量、責務境界、正本仕様断片としての扱いを AI prompt にどう含めるか確認したいとき。
+- oracle file レビューや生成で、人間が判断すべき事項と AI 裁量で補ってよい事項の境界規範を調べたいとき。
+- oracle file の未定義部分、実装差、仕様間矛盾、用語統一、命名、goal/non-goal の扱いに関する prompt part を変更・確認したいとき。
+- oracle standard 全体を StructDoc として組み立てる実装や、Standard から StructDoc への変換呼び出しを確認したいとき。
 
 ## Do not read this when
-- realization file の品質、分割、抽象化、依存関係、テスト肥大化など、実装側の規範だけを確認したいとき。
-- 特定の CLI 挙動、設定、状態ファイル、出力 schema などの個別仕様を探しているとき。
-- StructDoc、Standard、Requirement そのもののデータ構造や変換処理の実装を確認したいとき。
-- oracle file の本文そのものを編集・確認したいとき。正本仕様断片の内容確認は対応する oracle 側の本文を直接読む。
+- oracle file ではなく realization file の品質、分割、抽象化、テスト、依存関係に関する規範だけを確認したいとき。
+- 個別 CLI 機能の仕様、入出力形式、状態ファイルのライフサイクルなど、具体的なプロダクト挙動を調べたいとき。
+- Standard、Requirement、StructDoc のデータ構造や変換関数そのものの実装を確認したいとき。
+- prompt part を呼び出す側の結合順序、CLI への組み込み、最終 prompt 全体の構成を確認したいとき。
 
 ## hash
-- 38fa4254d5bced70a5687d3dd439ed3fe9333af980e02dfdf27f38cc7ac692d5
+- 3cb87c0f690a0b702207cfcea1449cf09f9316cde3224a4974090c1664748792
 
 # `realization_standard.py`
 
 ## Summary
-- realization file の品質基準を StructDoc として組み立てる prompt part。規模最小化、責務分割、コメント、抽象化、公開面、テスト、依存関係、完了時点検をまたぐ一連の Standard をまとめ、実装担当 AI に realization code を最小で保守しやすく保つための規範集合を渡す。
-- 対応する oracle file を根拠にした realization standard 全体の本文生成を担い、各 Standard が相互参照されるため単一の prompt 本文として読む前提になっている。
+- realization file の品質基準を StructDoc として構築する prompt part。realization file の最小化、高品質化、コメントと docstring、意味上のまとまり、既存実装整理、抽象化、公開面・状態、テスト、依存関係・補助ファイル・生成物、変更完了時点検に関する Standard 群を 1 つの規範集合として返す。
+- 各基準は相互参照される前提で同じ prompt 本文にまとめられており、実装担当 AI に realization code/test/ancillary を肥大化させず、現行仕様に必要な最小構成へ保つ判断基準を渡す入口になる。
 
 ## Read this when
-- realization file や realization test を追加・変更・整理する際に、文字数削減、重複排除、旧仕様削除、責務境界、コメントの要否、抽象化の妥当性、公開面や依存関係の増加抑制を判断したいとき。
-- ACP の prompt parts のうち、実装成果物に求める品質基準や完了前チェックを生成する箇所を確認・変更したいとき。
-- realization standard の StructDoc に含める要求、背景、判断例の内容や順序を確認したいとき。
+- realization file の品質・肥大化抑制・削除統合・責務分割に関する prompt 本文を確認または変更したいとき。
+- 実装担当 AI に渡す realization standard の生成内容、Standard の並び、要求レベル、判断例を確認したいとき。
+- realization code、test、ancillary の追加時に、重複排除、コメント方針、抽象化、公開面、依存追加、完了時点検をどう指示しているか確認したいとき。
+- 16,000 文字を超える単一 prompt part として保持している理由を、責務境界・凝集性・読み取り文脈の観点から確認したいとき。
 
 ## Do not read this when
-- oracle file 一般の責務、人間と AI の編集責任、正本仕様断片の扱いを確認したいだけのとき。
-- realization standard 以外の prompt part、ACP 通信処理、CLI コマンド、状態管理、または個別機能の実装挙動を調べたいとき。
-- Standard や Requirement のデータ構造、StructDoc への変換処理そのものを確認したいとき。
+- oracle file の基本原則や oracle standard の正本仕様そのものを確認したいとき。
+- 特定の CLI 挙動、状態ファイル、パスモデル、コマンド実装など、プロダクト機能の実装詳細を調べたいとき。
+- StructDoc、Standard、Requirement のデータ構造や変換処理そのものを変更したいとき。
+- realization standard 以外の prompt part、または prompt 全体の組み立て順序や上位の呼び出し側だけを確認したいとき。
 
 ## hash
-- 95b76e4c75574d6c0dd870cd2bd0dfd1bb385d137af3edd1e8db8ea91f07899d
+- 1d5dc5166879d84c847123e9bed648a85433dcac69d0448d4157bd04db2b959d
 
 # `routing_rule.py`
 
