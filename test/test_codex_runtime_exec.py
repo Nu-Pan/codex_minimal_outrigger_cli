@@ -5,7 +5,7 @@ from pathlib import Path
 import cmoc_runtime
 import pytest
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from cmoc_runtime import CmocError
+from cmoc_runtime import CmocError, SubcommandLogger
 from config.cmoc_config import CmocConfig
 from _support import (
     make_repo,
@@ -72,6 +72,52 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
     assert 'sandbox_mode = "workspace-write"' in record["profile"]
     assert f'writable_roots = ["{root.resolve()}"]' in record["profile"]
     assert result.output_text == "done\n"
+
+
+def test_run_codex_exec_logs_call_before_rejecting_agents_edit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text(json.dumps({'ok': True}))",
+            "agents = pathlib.Path('.agents')",
+            "agents.mkdir(exist_ok=True)",
+            "(agents / 'generated.md').write_text('changed\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    logger = SubcommandLogger(root, "test")
+
+    with pytest.raises(CmocError, match=r"\.agents 配下を変更"):
+        run_codex_exec(
+            _parameter(),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+            subcommand_logger=logger,
+        )
+
+    events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_event = next(event for event in events if event["event"] == "codex_call")
+    assert codex_event["purpose"] == "codex exec"
+    assert codex_event["status"] == "failed"
+    assert codex_event["returncode"] == 0
+    assert ".agents" in codex_event["error"]
+    assert Path(codex_event["call_log_path"]).exists()
+    console = capsys.readouterr().out
+    assert "- purpose: `codex exec`" in console
+    assert f"- call_log: `{codex_event['call_log_path']}`" in console
+    assert "- returncode: `0`" in console
 
 
 def test_run_codex_tui_checks_extra_read_path_before_starting_codex(

@@ -240,6 +240,72 @@ def test_run_codex_exec_reruns_after_quota_without_resume_token(
     assert result.output_json == {"ok": True}
 
 
+def test_run_codex_exec_logs_probe_before_rejecting_agents_edit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
+    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            "stdin = sys.stdin.read()",
+            "if stdin == 'quota availability probe':",
+            "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "    output.write_text(json.dumps({'probe': True}))",
+            "    agents = pathlib.Path('.agents')",
+            "    agents.mkdir(exist_ok=True)",
+            "    (agents / 'probe.md').write_text('changed\\n')",
+            "    print(json.dumps({'type': 'turn.completed'}))",
+            "    sys.exit(0)",
+            "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
+            "sys.exit(1)",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+    )
+    logger = SubcommandLogger(root, "test")
+
+    with pytest.raises(cmoc_runtime.CmocError, match=r"\.agents 配下を変更"):
+        run_codex_exec(
+            parameter,
+            root=root,
+            quota_poll_interval_sec=0,
+            max_quota_polls=1,
+            config=CmocConfig(),
+            subcommand_logger=logger,
+        )
+
+    events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_events = [event for event in events if event["event"] == "codex_call"]
+    assert [event["purpose"] for event in codex_events] == [
+        "codex exec",
+        "quota availability probe",
+    ]
+    assert [event["status"] for event in codex_events] == [
+        "quota_waiting",
+        "failed",
+    ]
+    assert codex_events[1]["returncode"] == 0
+    assert ".agents" in codex_events[1]["error"]
+    assert Path(codex_events[1]["call_log_path"]).exists()
+    console = capsys.readouterr().out
+    assert "- purpose: `quota availability probe`" in console
+    assert f"- call_log: `{codex_events[1]['call_log_path']}`" in console
+    assert "- returncode: `0`" in console
+
+
 def test_run_codex_exec_uses_single_representative_quota_probe(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

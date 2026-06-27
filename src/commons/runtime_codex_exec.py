@@ -270,6 +270,40 @@ def run_codex_exec(
     last_result: subprocess.CompletedProcess[str] | None = None
     resume_token: str | None = None
 
+    def reject_agents_edit_after_event(
+        *,
+        run_purpose: str,
+        run_call_path: Path,
+        run_prompt_path: Path,
+        run_stdout_path: Path,
+        run_stderr_path: Path,
+        run_output_path: Path,
+        run_schema_path: Path | None,
+        started_at: float,
+        returncode: int,
+    ) -> None:
+        try:
+            _reject_agents_edit(codex_work_root, agents_status_before, run_call_path)
+        except CmocError as exc:
+            # <work-root>/oracle/doc/app_spec/console_and_file_log.md requires
+            # every completed Codex CLI call to be logged, even when
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md then rejects
+            # the call because `.agents` changed.
+            emit_codex_call_event(
+                run_purpose=run_purpose,
+                run_call_path=run_call_path,
+                run_prompt_path=run_prompt_path,
+                run_stdout_path=run_stdout_path,
+                run_stderr_path=run_stderr_path,
+                run_output_path=run_output_path,
+                run_schema_path=run_schema_path,
+                started_at=started_at,
+                returncode=returncode,
+                status="failed",
+                error=exc.detail,
+            )
+            raise
+
     while True:
         ts, prompt_path, stdout_path, stderr_path, output_path, call_path = new_log_paths()
         current_argv = build_argv(output_path, resume_token)
@@ -297,7 +331,17 @@ def run_codex_exec(
         last_result = result
         stdout_path.write_text(result.stdout)
         stderr_path.write_text(result.stderr)
-        _reject_agents_edit(codex_work_root, agents_status_before, call_path)
+        reject_agents_edit_after_event(
+            run_purpose=purpose,
+            run_call_path=call_path,
+            run_prompt_path=prompt_path,
+            run_stdout_path=stdout_path,
+            run_stderr_path=stderr_path,
+            run_output_path=output_path,
+            run_schema_path=schema_path,
+            started_at=attempt_started_at,
+            returncode=result.returncode,
+        )
         error_text = codex_error_text(result.stdout, result.stderr)
         if result.returncode != 0:
             if (
@@ -416,8 +460,16 @@ def run_codex_exec(
                         )
                         probe_stdout_path.write_text(poll.stdout)
                         probe_stderr_path.write_text(poll.stderr)
-                        _reject_agents_edit(
-                            codex_work_root, agents_status_before, probe_call_path
+                        reject_agents_edit_after_event(
+                            run_purpose="quota availability probe",
+                            run_call_path=probe_call_path,
+                            run_prompt_path=probe_prompt_path,
+                            run_stdout_path=probe_stdout_path,
+                            run_stderr_path=probe_stderr_path,
+                            run_output_path=probe_output_path,
+                            run_schema_path=None,
+                            started_at=probe_started_at,
+                            returncode=poll.returncode,
                         )
                         probe_error_text = codex_error_text(poll.stdout, poll.stderr)
                         probe_available = poll.returncode == 0 and not is_quota_error(
