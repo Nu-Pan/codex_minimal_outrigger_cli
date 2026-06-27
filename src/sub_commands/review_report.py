@@ -58,6 +58,12 @@ def render_review_oracle_report(
     minor_accepted = [
         finding for finding in accepted if finding.get("severity") == "minor"
     ]
+    fatal_findings = [
+        finding for finding in findings if finding.get("severity") == "fatal"
+    ]
+    minor_findings = [
+        finding for finding in findings if finding.get("severity") == "minor"
+    ]
     fatal_rejected = [
         finding
         for finding in findings
@@ -73,8 +79,8 @@ def render_review_oracle_report(
     result, verdict = _review_report_verdict(
         error_message,
         oracle_files,
-        fatal_accepted,
-        minor_accepted,
+        fatal_findings,
+        minor_findings,
     )
     findings_by_path: dict[str, int] = {}
     for finding in findings:

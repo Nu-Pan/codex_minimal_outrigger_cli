@@ -139,20 +139,43 @@ def test_review_oracle_report_orders_findings_by_verdict_then_severity(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
     assert rendered.index("accepted minor") < rendered.index("rejected fatal")
-    assert "result: minor" in rendered
+    assert "result: fatal" in rendered
     assert "fatal_findings_rejected_count: 1" in rendered
     assert "minor_findings_accepted_count: 1" in rendered
 
 
 @pytest.mark.parametrize(
-    ("severity", "rejected_count_field", "rejected_heading"),
+    (
+        "severity",
+        "expected_result",
+        "expected_verdict",
+        "rejected_count_field",
+        "rejected_heading",
+    ),
     [
-        ("fatal", "fatal_findings_rejected_count: 1", "## Rejected fatal findings"),
-        ("minor", "minor_findings_rejected_count: 1", "## Rejected minor findings"),
+        (
+            "fatal",
+            "result: fatal",
+            "oracle ファイルに、直ちに修正するべき問題が存在します。",
+            "fatal_findings_rejected_count: 1",
+            "## Rejected fatal findings",
+        ),
+        (
+            "minor",
+            "result: minor",
+            "oracle file に、致命的ではない、細かい問題があります。",
+            "minor_findings_rejected_count: 1",
+            "## Rejected minor findings",
+        ),
     ],
 )
-def test_review_oracle_report_result_ignores_rejected_findings(
-    tmp_path: Path, severity: str, rejected_count_field: str, rejected_heading: str
+def test_review_oracle_report_result_includes_rejected_findings(
+    tmp_path: Path,
+    severity: str,
+    expected_result: str,
+    expected_verdict: str,
+    rejected_count_field: str,
+    rejected_heading: str,
 ) -> None:
     root = tmp_path
     rendered = review_module.render_review_oracle_report(
@@ -177,8 +200,8 @@ def test_review_oracle_report_result_ignores_rejected_findings(
         None,
     )
 
-    assert "result: ok" in rendered
-    assert "レビュー対象の oracle file に、問題は何ら見つかりませんでした。" in rendered
+    assert expected_result in rendered
+    assert expected_verdict in rendered
     assert rejected_count_field in rendered
     assert rejected_heading in rendered
     assert "- `finding-0001` [reject] rejected finding: rejected reason" in rendered
