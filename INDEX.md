@@ -149,27 +149,27 @@
 # `src`
 
 ## Summary
-- cmoc の実装本体を置く realization implementation 領域。最上位 CLI、サブコマンド実行入口、共通 runtime helper、AI エージェント呼び出しパラメータ、基礎モデル、設定データ構造など、利用者操作を実際の処理へ接続するコードへの入口になる。
-- 公開 CLI の構成、session・apply・review・INDEX maintenance・初期化・TUI 起動などのサブコマンド制御、Codex CLI/AI 呼び出し、Git・state・config・ログ・preflight・Structured Output 検証といった実装上の責務を、下位ディレクトリやモジュールへ分けて扱う。
-- 正本仕様断片そのものではなく、oracle file で述べられた人間意図を具体化する実装コード群であるため、仕様確認よりも実装箇所の探索、既存挙動の調査、変更対象の切り分けを始めるための階層である。
+- cmoc の realization implementation 全体の入口であり、公開 CLI、サブコマンド実行、共通 runtime helper、AI エージェント呼び出しパラメータ、設定、基礎モデル、互換 import 入口を含む実装領域である。
+- 利用者が実行する CLI から、session・apply・review・INDEX maintenance・初期化・TUI 起動などの制御フロー、Codex CLI との境界、設定値、パス・文書・規範モデル、構造化応答契約へ進むための上位ルーティング対象である。
+- 実装本体を調べる際に、まず公開 CLI 層、サブコマンド固有処理、共通 runtime、AI 呼び出し条件、基礎型・文書変換、設定定義のどこへ進むべきかを切り分ける階層である。
 
 ## Read this when
-- cmoc の実装を変更するために、CLI 入口、サブコマンド固有処理、共通 runtime、AI 呼び出し、設定、基礎モデルのどこへ進むべきかを切り分けたいとき。
-- 公開 CLI コマンドや option から実装関数への委譲、サブコマンドの実行順序、標準出力、終了コード、状態遷移、Git 操作、Codex 呼び出しの接続を追いたいとき。
-- 複数機能から共有される runtime helper、Codex exec/TUI 呼び出し、preflight、設定読み書き、ログ、session state、INDEX.md 更新処理などの実装場所を探しているとき。
-- AI エージェントへ渡す role、summary、goal、補助入力、権限制約、モデル・reasoning、Structured Output schema、標準文書片の組み立てを確認または変更したいとき。
-- path model、AgentCallParameter、FileAccessMode、規範文書モデル、Markdown レンダリングなど、サブコマンドより下位の共通型や変換処理を確認したいとき。
-- リポジトリごとの設定項目、既定値、モデル名・reasoning effort 対応、並列数や処理上限など、実装側の設定データ構造を確認または変更したいとき。
+- cmoc の実装側で、CLI から内部処理、共通 runtime、AI 呼び出し、設定、基礎モデルのどこを読むべきかを判断したいとき。
+- 公開 CLI コマンド構成、サブコマンドの実行順序、状態遷移、worktree・branch 操作、Codex 呼び出し、レポート出力など、利用者操作に対応する realization implementation を調べたいとき。
+- Codex CLI exec/TUI 起動、profile・schema・resume・quota retry・call log、INDEX.md 更新 preflight、Git helper、設定読み書き、session/apply state など、複数機能で共有される runtime 処理を探したいとき。
+- AI エージェントへ渡す role、summary、goal、補助入力、ファイルアクセス制約、model/reasoning、Structured Output schema、標準プロンプト片の組み立てを確認したいとき。
+- cmoc 固有の基礎概念として、AgentCallParameter、FileAccessMode、path model、規範文書モデル、Markdown レンダリング、設定データ構造や既定値を確認したいとき。
+- 古い公開 import path が実体モジュールへどう委譲されているか、互換レイヤーの残存理由や削除条件を確認したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片、path keyword の定義、標準文書、レビュー対象仕様そのものを確認したいときは、実装ではなく oracle 側の本文を読む。
-- 実装の外部挙動をテスト観点だけで確認したいときは、対応する realization test を読む方が直接的である。
-- 生成済みルーティング文書の内容だけを確認したいときや、対象本文を読む必要がない単なるハッシュ・ファイル一覧確認をしたいとき。
-- 個別の業務ロジック、共通 runtime、AI 呼び出し条件、基礎モデル、設定など、読むべき下位対象がすでに明確なときは、この階層全体ではなく該当する下位対象へ直接進む。
-- cmoc 外の一般的な Typer、Click、Git、Codex CLI、Markdown 処理の使い方だけを調べたいとき。
+- cmoc の正本仕様断片、oracle file の本文、path keyword の仕様、INDEX.md エントリー生成基準そのものを読みたいときは、oracle 側の該当文書を読む。
+- 実装ではなく realization test の期待値、fixture、外部挙動の検証観点だけを確認したいときは、テスト領域を読む。
+- リポジトリ補助ファイル、パッケージ設定、開発用スクリプト、生成物管理など、プロダクト実装以外の ancillary file を調べたいとき。
+- 対象がすでに個別のサブコマンド、共通 runtime helper、AI 呼び出しパラメータ、基礎モデル、設定定義のいずれかに絞れているときは、この階層全体ではなく該当する下位対象へ直接進む。
+- AI が実際にレビュー・修正する対象ファイルの仕様や本文、または標準文書の内容を確認したいだけのときは、呼び出しパラメータではなく対象本文や oracle 文書を読む。
 
 ## hash
-- 1c39503ce40aa98f3a695d4d18c71aa2178e6549759daf8110bf207d12205c6f
+- 7a5dd407d4972aecd27c8db05f39c90bc5b1f334f93e8f25fb72850bb64cb6b2
 
 # `test`
 
