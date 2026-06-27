@@ -1,3 +1,4 @@
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -203,6 +204,27 @@ def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
     assert "sub_command_log" not in result.stdout + result.stderr
     assert not (root / ".gitignore").exists()
     assert not (root / ".cmoc").exists()
+
+
+def test_bin_cmoc_missing_venv_call_stack_uses_root_token_path(tmp_path: Path) -> None:
+    fake_cmoc_root = tmp_path / "cmoc"
+    fake_bin = fake_cmoc_root / "bin"
+    fake_bin.mkdir(parents=True)
+    shutil.copy2(Path(__file__).parents[1] / "bin" / "cmoc", fake_bin / "cmoc")
+
+    result = subprocess.run(
+        ["./bin/cmoc"],
+        cwd=fake_cmoc_root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 1
+    assert "## Call stack" in result.stdout
+    assert "(<cmoc-root>/bin/cmoc:" in result.stdout
+    assert "(./bin/cmoc:" not in result.stdout
+    assert "(bin/cmoc:" not in result.stdout
 
 
 def test_ensure_cmoc_ignored_updates_gitignore(tmp_path: Path) -> None:
