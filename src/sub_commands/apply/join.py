@@ -54,9 +54,9 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
         root = worktree_for_branch(repo, session_branch)
         os.chdir(root)
     else:
-        root = repo
+        root = current_root
         session_branch = branch
-    _session_id, path, state = load_state_for_branch(root, branch)
+    _session_id, path, state = load_state_for_branch(repo, branch)
     if not (branch.startswith("cmoc/session/") or branch.startswith("cmoc/apply/")):
         raise CmocError("apply join は session branch または apply branch 上で実行してください。", [], branch)
     if state.session.state != "active" or state.apply.state not in {"completed", "error"}:
@@ -85,7 +85,7 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
     unexpected = collect_apply_join_unexpected_changes(root, state, apply_branch, session_branch)
     if unexpected and not force_resolve:
         report_path = write_apply_join_report(
-            root,
+            repo,
             session_branch,
             state,
             apply_branch,
@@ -113,7 +113,7 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
         ).stdout.splitlines()
         if merge_conflicts:
             report_path = write_apply_join_report(
-                root,
+                repo,
                 session_branch,
                 state,
                 apply_branch,
@@ -143,7 +143,7 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
     warnings: list[str] = []
     merged_reachable = run_git(["merge-base", "--is-ancestor", apply_branch, "HEAD"], root, check=False).returncode == 0
     report_path = write_apply_join_report(
-        root,
+        repo,
         session_branch,
         state,
         apply_branch,
@@ -155,8 +155,8 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
     )
     if merged_reachable:
         if apply_worktree:
-            remove_worktree(root, apply_worktree)
-        delete_result = delete_branch(root, apply_branch, force=False)
+            remove_worktree(repo, apply_worktree)
+        delete_result = delete_branch(repo, apply_branch, force=False)
         if delete_result.returncode != 0:
             warnings.append(f"apply branch was not deleted: {apply_branch}")
     else:

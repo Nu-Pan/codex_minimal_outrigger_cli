@@ -34,7 +34,10 @@ def test_apply_join_removes_apply_worktree_and_resets_state(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -80,7 +83,10 @@ def test_apply_join_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> 
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -111,6 +117,48 @@ def test_apply_join_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> 
     )
     assert "- cleanup_reachable: `True`" in result.output
     assert "  - none" in result.output
+
+
+def test_apply_join_from_linked_session_worktree_merges_into_current_session(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    linked = root / ".cmoc" / "worktrees" / "linked-session"
+    run_git(root, "worktree", "add", "-b", "linked-session-home", str(linked), "HEAD")
+    monkeypatch.chdir(linked)
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    class FakeCodexResult:
+        output_json = {"findings": []}
+
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
+    )
+    assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
+    session_branch = run_git(linked, "branch", "--show-current").stdout.strip()
+    session_id = session_branch.removeprefix("cmoc/session/")
+    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state = json.loads(state_path.read_text())
+    apply_worktree = apply_worktree_from_state(root, state)
+    (apply_worktree / "JOINED.md").write_text("joined from apply\n")
+    run_git(apply_worktree, "add", "JOINED.md")
+    run_git(apply_worktree, "commit", "-m", "apply linked session change")
+    assert run_git(root, "branch", "--show-current").stdout.strip() == "master"
+
+    result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert (linked / "JOINED.md").read_text() == "joined from apply\n"
+    assert not (root / "JOINED.md").exists()
+    assert json.loads(state_path.read_text())["apply"]["state"] == "ready"
+    assert run_git(linked, "branch", "--show-current").stdout.strip() == session_branch
+    assert run_git(root, "branch", "--show-current").stdout.strip() == "master"
 
 
 def test_apply_join_rejects_stale_apply_branch_for_same_session(

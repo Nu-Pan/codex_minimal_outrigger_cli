@@ -133,6 +133,30 @@ def ensure_cmoc_ignored(root: Path) -> None:
         )
 
 
+def ensure_cmoc_ignored_in_exclude(root: Path) -> None:
+    """clean worktree を保つ必要がある caller 用に git exclude で .cmoc ignore を保証する。
+
+    根拠:
+    - <work-root>/oracle/doc/app_spec/sub_command/session_fork.md
+    - <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
+    """
+    exclude_path = root / run_git(
+        ["rev-parse", "--git-path", "info/exclude"], root
+    ).stdout.strip()
+    content = exclude_path.read_text() if exclude_path.exists() else ""
+    if CMOC_IGNORE_PATTERN not in content.splitlines():
+        exclude_path.parent.mkdir(parents=True, exist_ok=True)
+        newline = "" if content == "" or content.endswith("\n") else "\n"
+        exclude_path.write_text(f"{content}{newline}{CMOC_IGNORE_PATTERN}\n")
+    tracked, ignored_returncode = _cmoc_ignore_status(root)
+    if tracked or ignored_returncode != 0:
+        raise CmocError(
+            ".cmoc を git 追跡対象外にできませんでした。",
+            [".gitignore と git index の状態を確認してください。"],
+            f"tracked:\n{tracked}\ncheck-ignore returncode: {ignored_returncode}",
+        )
+
+
 def require_cmoc_ignored(root: Path) -> None:
     tracked, ignored_returncode = _cmoc_ignore_status(root)
     if tracked or ignored_returncode != 0:

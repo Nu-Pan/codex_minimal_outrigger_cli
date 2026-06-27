@@ -46,6 +46,7 @@ from commons.runtime_git import (
     current_branch,
     delete_branch,
     ensure_cmoc_ignored,
+    ensure_cmoc_ignored_in_exclude,
     head_commit,
     is_git_ignored,
     is_managed_branch,

@@ -21,13 +21,13 @@ from cmoc_runtime import (
     create_run_worktree,
     current_branch,
     current_subcommand_logger,
+    ensure_cmoc_ignored_in_exclude,
     head_commit,
     is_git_ignored,
     load_config,
     load_state_for_branch,
     pushd,
     repo_root,
-    require_cmoc_ignored,
     require_clean_worktree,
     run_cli_subcommand,
     run_codex_exec,
@@ -79,8 +79,8 @@ def _cmoc_apply_fork_body(
         raise CmocError("apply fork は session branch 上で実行してください。", [], branch)
     if state.session.state != "active" or state.apply.state != "ready":
         raise CmocError("apply fork の事前条件を満たしていません。", [], str(path))
+    ensure_cmoc_ignored_in_exclude(current_root)
     require_clean_worktree(current_root)
-    require_cmoc_ignored(current_root)
     config = load_config(root)
     run_id = timestamp()
     apply_branch = f"cmoc/apply/{session_id}/{run_id}"
