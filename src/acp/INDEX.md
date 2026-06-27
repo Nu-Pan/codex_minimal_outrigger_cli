@@ -22,20 +22,20 @@
 # `prompt_parts`
 
 ## Summary
-- ACP の agent call 向けプロンプトを構成する個別部品を収める領域。ファイルアクセス規則、ルーティング規則、oracle・realization の基本概念、各種標準、レビュー基準、INDEX.md エントリー基準などを StructDoc として組み立てる実装がまとまっている。
-- 完全なプロンプトを作る処理から参照される標準プロンプト断片の実体を確認する入口であり、各部品は特定の規則や品質基準を AI に提示するための文書断片生成を担う。
+- ACP の agent call 向けプロンプトを構成する prompt part 群を収める領域。ファイルアクセス規則、ルーティング規則、oracle と realization の基本概念、各種レビュー規範、INDEX.md エントリー規範、完全プロンプト合成など、AI に渡す構造化された標準文書の生成処理を扱う。
+- 各 prompt part は、規範本文や判断基準を Standard・Requirement・StructDoc などの構造化文書として組み立て、個別の作業種別に応じて agent prompt へ注入される前提情報の入口になる。
 
 ## Read this when
-- ACP で agent に渡すプロンプト本文へ含める規則・標準・基礎説明の生成箇所を探したいとき。
-- ファイルアクセス規則、INDEX.md を使ったルーティング規則、oracle file と realization file の概念説明など、プロンプト部品ごとの責務を切り分けて確認したいとき。
-- oracle standard、realization standard、oracle review standard、apply review standard、index entry standard など、AI の判断基準として注入される規範文書の内容や組み立てを変更したいとき。
-- 完全な agent call 用プロンプトが、どの標準プロンプト断片と前提情報を連鎖的に含めるかを追いたいとき。
+- ACP の agent call に渡すプロンプト本文が、どの標準規範や基本情報から構成されるかを確認したいとき。
+- ファイルアクセス規則、INDEX.md を使ったルーティング規則、oracle file と realization file の関係、oracle 記述規範、realization 品質規範、レビュー所見基準、INDEX.md エントリー作成基準など、AI 向け標準プロンプト断片の生成箇所を探すとき。
+- 新しい標準プロンプト断片を追加したり、既存の規範文書の内容・順序・依存関係・注入条件を変更したいとき。
+- レビュー、apply review、index entry 生成などの作業で、agent にどの判断基準を渡しているかを実装側から確認したいとき。
 
 ## Do not read this when
-- ACP の通信処理、CLI サブコマンド、状態管理、ファイル入出力など、プロンプト本文の生成以外の制御フローを調べたいとき。
-- StructDoc、Standard、Requirement などの文書表現やデータ構造そのものの実装を確認したいとき。
-- 実際のファイルシステムアクセス制御やサンドボックスの強制処理を探しているとき。
-- 特定の oracle file や realization file の本文内容、または個別機能の仕様そのものを確認したいとき。
+- ACP の通信処理、CLI サブコマンド、永続状態、ファイル入出力、外部コマンド実行など、プロンプト断片生成以外の実装挙動を調べたいとき。
+- StructDoc、Standard、Requirement などのデータ構造そのものや、構造化文書の汎用変換・レンダリング処理を調べたいとき。
+- 特定の oracle file や realization file の本文内容、または個別機能の正本仕様を確認したいだけのとき。
+- 実際のレビュー結果、差分内容、INDEX.md エントリー文面など、生成された成果物そのものを確認したいとき。
 
 ## hash
-- e45db61782d2b00f497dbd5c18f39c0751c879d4eaac52d71f9f0580f4ec9d3b
+- 7de84f6753d646d11135ae048728a39ad7700881686b272bc6f21514c30eff14

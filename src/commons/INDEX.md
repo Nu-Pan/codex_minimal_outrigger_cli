@@ -72,23 +72,25 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex CLI の exec 呼び出しを 1 回の状態機械として制御する実行基盤。profile/schema 準備、`codex exec` argv 構築、prompt/stdout/stderr/output/call log の保存、Structured Output 検証、capacity retry、quota 待機と代表 probe、resume token による継続、subcommand event への記録をまとめて扱う。
-- TUI 起動ではなく exec 分岐の実行制御に責務を限定しており、quota 処理も resume token と log/event の文脈を共有するため同じ流れの中で読む対象として位置づけられている。
+- Codex CLI の exec 呼び出しを 1 回の状態機械として制御する実装。profile/schema 準備、prompt/call/stdout/stderr/output log の保存、subprocess 実行、Structured Output 検証、capacity retry、quota 待機と代表 probe、resume 継続、subcommand event 記録、`.agents` 変更拒否を同じ実行文脈で扱う。
+- TUI 起動ではなく exec 分岐の実行制御に責務を限定しており、quota 処理も resume token と log/event の文脈を共有するため同一箇所で読む前提の凝集した処理として置かれている。
 
 ## Read this when
-- Codex CLI を subprocess として呼び出す実行ループ、retry、resume、Structured Output 検証、quota 待機の挙動を確認・変更したいとき。
-- Codex 呼び出しごとの prompt/stdout/stderr/output/call log の生成内容、命名順序、保存先、subcommand event payload、console 表示の関係を追いたいとき。
-- capacity error と quota error の扱い、代表 probe による quota 回復確認、同一プロセス内での quota polling 共有、待機時間・poll 回数の集計を調べたいとき。
-- Codex 実行結果として返す値と、profile、schema、log path、経過時間、quota wait 情報がどこで組み立てられるかを確認したいとき。
+- Codex CLI の exec 実行条件、profile 名、schema 指定、resume token、標準入出力、実行結果の扱いを確認または変更したいとき。
+- Structured Output 検証失敗時の semantic retry、capacity error 時の指数 backoff、quota error 時の polling/probe/resume の制御を調べるとき。
+- Codex 呼び出しごとの prompt/call/stdout/stderr/output log、console 出力、subcommand event、quota 待機時間や poll 回数の記録内容を確認したいとき。
+- Codex 呼び出し中に `.agents` 配下が変更された場合の検出と拒否の挙動を確認したいとき。
+- Codex exec の実行結果として返す path、profile、schema、経過時間、quota 待機情報、output JSON/text の組み立てを追うとき。
 
 ## Do not read this when
-- Codex profile の具体的な作成、Codex home の解決・検証、error 判定、resume token 抽出、output JSON 読み取りなどの個別 helper の詳細だけを調べたいときは、それらを定義する profile/runtime helper 側を読む。
-- TUI 起動や exec 以外の Codex 実行形態を調べたいときは、この対象ではなく起動形態ごとの実行制御を読む。
-- subcommand log の基盤、path model、設定読み込み、実行結果 dataclass の定義そのものを確認したいだけなら、それぞれの共通 module を読む。
-- CLI 利用者向けの公開仕様や oracle file の正本仕様断片を確認したいときは、この realization implementation ではなく該当する oracle doc/source を読む。
+- Codex profile の具体的な生成、Codex home の解決、error text や resume token の抽出、output JSON 読み取りなどの低レベル helper だけを調べたいときは、それらを提供する profile/runtime helper を直接読む。
+- TUI 起動や exec 以外の Codex 実行経路を調べたいときは、この対象ではなく該当する起動制御の実装を読む。
+- subcommand log の保存形式や logger 自体の実装を変更したいだけのときは、logging 側の実装を読む。
+- repository/work/codex log directory など runtime path の解決規則を調べたいだけのときは、path 解決側の実装を読む。
+- Codex exec の戻り値データ構造そのものを変更したいだけのときは、実行結果型の定義を読む。
 
 ## hash
-- 22c246354d733f9d51dc5d8d941cc56f8c8c99d8f8bdafa2d8ca284219906125
+- 68db4ed0ce2485bfe53e92ca8edd95bc5b93a2185f6f157900b66d9f5a5f87df
 
 # `runtime_codex_logging.py`
 
@@ -133,25 +135,26 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI 呼び出しに使う実行時プロファイルと周辺入出力を組み立てる共通処理。モデル・reasoning effort・sandbox 設定を config と agent 呼び出し条件から TOML 文字列へ変換し、Codex home 配下への hashed profile 保存、schema 保存、subprocess 用環境変数、JSONL 出力からのエラー・resume token・capacity/quota 判定を扱う。
-- Codex home の解決と検証、profile 名の抽出、Codex CLI 出力 JSON の読み取り失敗時の許容など、Codex CLI 実行前後の小さな runtime helper がまとまっている。
+- Codex CLI を呼び出すための実行時プロファイルと周辺入出力を扱う実装。モデル設定、reasoning effort、sandbox mode、書き込み可能 root を TOML 断片として組み立て、Codex home への hashed profile 生成につなげる。
+- Codex home の解決・検証、Codex subprocess 用環境変数、schema JSON の hashed 保存、出力 JSON 読み取り、Codex JSONL/stdout/stderr からのエラー文・resume token・capacity/quota 判定もここで扱う。
+- FileAccessMode を Codex CLI の sandbox mode と writable_roots に変換する境界に位置し、AgentCallParameter と CmocConfig から実際の Codex 実行設定を作る入口になる。
 
 ## Read this when
-- AgentCallParameter や CmocConfig から Codex CLI 用の model、reasoning effort、sandbox_mode、writable_roots を生成する処理を確認・変更したいとき。
-- FileAccessMode と Codex CLI の sandbox mode、workspace-write 時の writable roots、memo や .agents を extra writable path から除外する条件を確認したいとき。
-- CODEX_HOME の解決、Codex home の存在・ディレクトリ・auth.json 検証、Codex subprocess に渡す環境変数を扱う処理を確認したいとき。
-- Codex profile や schema を hashed file として保存する処理、または保存失敗時に利用者へ返す CmocError を確認したいとき。
-- Codex CLI の stdout/stderr や JSONL から error message、thread resume token、capacity error、quota error を抽出・判定する処理を確認したいとき。
+- Codex CLI に渡す profile 内容、sandbox_mode、writable_roots、extra writable paths の扱いを確認・変更したいとき。
+- FileAccessMode ごとの read-only/workspace-write 変換、oracle/repo/realization 向け書き込み範囲、保護対象 path を書き込み可能 root から除外する条件を確認したいとき。
+- CODEX_HOME の解決、auth.json を含む Codex home 検証、profile ファイル生成失敗時の CmocError を確認・変更したいとき。
+- Codex 実行時の環境変数、schema source の保存先、Codex 出力 JSON の読み取り、stdout/stderr や JSONL からのエラーメッセージ抽出を扱うとき。
+- Codex JSONL から thread resume token、capacity error、quota/usage-limit/spend-cap 系 error を判定する処理を確認・変更したいとき。
 
 ## Do not read this when
-- Codex CLI へ渡す agent prompt、作業指示、ファイルアクセス方針そのものの仕様を確認したいだけなら、呼び出し条件を作る側や oracle の実行規則を先に読む。
-- CmocConfig の設定 schema、既定 model、reasoning effort の定義を確認したいだけなら、config 定義側を読む。
-- hashed file の保存アルゴリズムや runtime directory の場所を変更したい場合は、content 保存 helper や runtime path 定義を直接読む。
-- CmocError の構造や表示形式を確認したいだけなら、runtime error 定義側を読む。
-- Codex CLI の実プロセス起動、再試行、結果集約の全体制御を追いたい場合は、この helper の呼び出し元を読む。
+- AgentCallParameter、FileAccessMode、モデルクラス、reasoning effort など入力データ構造そのものの定義を確認したいだけなら、それらの定義元を読む。
+- Codex の model 名や reasoning effort の設定値を変更したいだけなら、設定を保持する側を読む。
+- hashed file の書き込み方式、schema store directory の具体的な配置規則、CmocError 型そのものを確認したいだけなら、それぞれの共通 helper や error 定義を読む。
+- Codex CLI を起動する subprocess 制御全体、コマンドライン引数構築、retry や呼び出しフローを追いたいときは、実際の呼び出し側を読む。
+- oracle/realization の正本仕様やファイルアクセス方針を確認したいだけなら、仕様文書を読む。
 
 ## hash
-- 7758bd321ff5a8fa072883362bc22cea282b24fea89726a3328e5aa651a3f6eb
+- 0ba7cb1819d2f9da9037f9501f96d1daca13d2e9db00867c54852a49c59194de
 
 # `runtime_codex_tui.py`
 
