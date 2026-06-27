@@ -23,24 +23,23 @@
 # `complete_prompt.py`
 
 ## Summary
-- agent call に渡す完全なプロンプトを、基本プロンプト、ファイルアクセス規則、ルーティング規則、任意追加プロンプト、各種標準プロンプト断片から組み立てる realization。
-- 指定された標準プロンプト断片の有効化に応じて、依存する基本情報や oracle/realization 関連標準を自動的に含める責務を持つ。
-- 構築したプロンプト内の root token を実パスへ置換し、呼び出し先に渡す文面からこのツール固有の呼称を作業対象向けの表現へ置換する。
+- agent call に渡す完全な prompt part 群を組み立てる実装。role、summary、goal、file access rule、routing rule、追加 prompt を基本要素として並べ、指定された標準 prompt フラグに応じて依存する標準文書を追加する。
+- oracle / realization / review / index entry などの標準 prompt 間の依存関係を解決し、最後に各文書から呼び出し先へ不要な内部呼称と root token を除去する入口になっている。
 
 ## Read this when
-- agent call に渡す最終プロンプト全体の構成順、含める prompt part、または標準プロンプト断片間の依存関係を確認・変更したいとき。
-- oracle standard、realization standard、review/apply/index entry などの標準プロンプトを、どのフラグで注入するか確認したいとき。
-- プロンプト中の root token が具体パスへ解決される挙動、またはツール固有用語が呼び出し先向け表現へ置換される挙動を確認・変更したいとき。
-- agent call 用 prompt part の統合結果に、ファイルアクセス規則、ルーティング規則、補助プロンプトがどのように含まれるかを追いたいとき。
+- agent call 用の最終 prompt をどの順序で構成するか、または標準 prompt フラグ同士の依存関係を確認・変更したいとき。
+- file access rule、routing rule、oracle / realization 系 standard、review 系 standard、index entry standard が complete prompt にどう注入されるかを追いたいとき。
+- prompt に含める文書から内部呼称や root token を呼び出し先向けに置換する処理を確認・変更したいとき。
+- run root が未確定な通常呼び出しで、root token を具体 path に解決する fallback 挙動を確認したいとき。
 
 ## Do not read this when
-- 個別のファイルアクセス規則、ルーティング規則、oracle standard、realization standard など、各 prompt part の本文内容だけを確認・変更したいとき。
-- root token の定義、実パス解決、作業ルート解決そのものを確認・変更したいとき。
-- StructDoc や StructCodeBlock のデータ構造、文書表現の基本仕様を確認・変更したいとき。
-- agent call の実行処理、外部プロセス呼び出し、または CLI サブコマンドの制御フローを確認したいとき。
+- 個別の file access rule、routing rule、oracle standard、realization standard、review standard、index entry standard の本文内容だけを確認したいときは、それぞれの builder 実装を直接読む。
+- StructDoc や StructCodeBlock のデータ構造そのものを確認したいときは、構造化文書を定義する基礎モジュールを読む。
+- path token の定義や root 解決の基本仕様を確認したいときは、path model 側を読む。
+- agent call の prompt 構成ではなく、CLI コマンドや外部プロセス実行の制御を調べたいときは、この対象から読み始めなくてよい。
 
 ## hash
-- 56a38f6e7b510df1565289623e6343b89ed530f7d0f87115b95cd769222bff0c
+- b2ecf5a426a96c18315d05c17c0bdbe3b4948bfee702543919a3e04fef6ec639
 
 # `file_access_rule.py`
 

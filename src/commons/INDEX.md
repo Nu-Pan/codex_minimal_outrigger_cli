@@ -138,26 +138,26 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI を呼び出すための実行時プロファイルと周辺入出力を扱う実装。モデル設定、reasoning effort、sandbox mode、書き込み可能 root を TOML 断片として組み立て、Codex home への hashed profile 生成につなげる。
-- Codex home の解決・検証、Codex subprocess 用環境変数、schema JSON の hashed 保存、出力 JSON 読み取り、Codex JSONL/stdout/stderr からのエラー文・resume token・capacity/quota 判定もここで扱う。
-- FileAccessMode を Codex CLI の sandbox mode と writable_roots に変換する境界に位置し、AgentCallParameter と CmocConfig から実際の Codex 実行設定を作る入口になる。
+- Codex CLI 起動時に使う profile 本文、sandbox 設定、CODEX_HOME 検証、schema 配置、Codex JSONL 出力からのエラー・resume 情報抽出を扱う実装。
+- cmoc の file access policy を Codex CLI の sandbox mode と writable_roots に変換し、AgentCallParameter と設定から再利用可能な Codex profile を生成する責務を持つ。
+- Codex subprocess 周辺の実行準備と失敗判定をまとめる入口であり、認証 home、Structured Output schema、出力 JSON、capacity/quota retry 判定を確認するときの読む先になる。
 
 ## Read this when
-- Codex CLI に渡す profile 内容、sandbox_mode、writable_roots、extra writable paths の扱いを確認・変更したいとき。
-- FileAccessMode ごとの read-only/workspace-write 変換、oracle/repo/realization 向け書き込み範囲、保護対象 path を書き込み可能 root から除外する条件を確認したいとき。
-- CODEX_HOME の解決、auth.json を含む Codex home 検証、profile ファイル生成失敗時の CmocError を確認・変更したいとき。
-- Codex 実行時の環境変数、schema source の保存先、Codex 出力 JSON の読み取り、stdout/stderr や JSONL からのエラーメッセージ抽出を扱うとき。
-- Codex JSONL から thread resume token、capacity error、quota/usage-limit/spend-cap 系 error を判定する処理を確認・変更したいとき。
+- cmoc から Codex CLI を起動するための profile 内容、model/reasoning effort、sandbox mode、writable_roots の組み立てを変更・確認したいとき。
+- FileAccessMode と Codex CLI の read-only/workspace-write sandbox の対応、追加 writable path の扱い、保護対象 path の除外条件を調べるとき。
+- CODEX_HOME の解決、auth.json の存在検査、Codex subprocess に渡す環境変数の扱いを確認するとき。
+- Structured Output schema を実行用 work root 側へ配置する処理、Codex output JSON の読み取り失敗時の扱いを確認するとき。
+- Codex JSONL stdout/stderr から利用者向け error detail、resume 用 thread id、capacity error、quota error を判定する処理を調べるとき。
 
 ## Do not read this when
-- AgentCallParameter、FileAccessMode、モデルクラス、reasoning effort など入力データ構造そのものの定義を確認したいだけなら、それらの定義元を読む。
-- Codex の model 名や reasoning effort の設定値を変更したいだけなら、設定を保持する側を読む。
-- hashed file の書き込み方式、schema store directory の具体的な配置規則、CmocError 型そのものを確認したいだけなら、それぞれの共通 helper や error 定義を読む。
-- Codex CLI を起動する subprocess 制御全体、コマンドライン引数構築、retry や呼び出しフローを追いたいときは、実際の呼び出し側を読む。
-- oracle/realization の正本仕様やファイルアクセス方針を確認したいだけなら、仕様文書を読む。
+- AgentCallParameter や FileAccessMode の型定義・意味そのものを確認したいだけなら、basic 側の定義を読む。
+- cmoc config の model 名や reasoning effort の設定値そのものを確認したいだけなら、config 側の設定定義を読む。
+- hashed file の保存方式や schema store directory の実体を調べたいだけなら、runtime content や runtime paths の担当実装を読む。
+- Codex CLI を実際に呼び出す subprocess 制御全体、retry ループ、待機方針を確認したい場合は、この補助処理の呼び出し元を読む。
+- oracle file や realization file の正本上の file access policy を確認したい場合は、実装ではなく対応する oracle 文書を読む。
 
 ## hash
-- 0ba7cb1819d2f9da9037f9501f96d1daca13d2e9db00867c54852a49c59194de
+- b3e879e3ccc9ec9b9d932837d86dea576841e50aa8eeb74dd326ba87ffb6755b
 
 # `runtime_codex_tui.py`
 
@@ -265,24 +265,21 @@
 # `runtime_logging.py`
 
 ## Summary
-- サブコマンド実行中のイベントを JSON Lines 形式で実行ログへ追記するための共有実装。
-- サブコマンド名、発生時刻、任意 payload を含むログ record を作り、実行開始からの経過時間と quota 待機時間を保持する。
-- 現在のサブコマンド用 logger を context-local に設定・解除・取得する入口を提供する。
+- サブコマンド実行中に発生した検査用 event を JSON Lines として記録し、サブコマンド単位の経過時間と Codex quota 待機時間を集約する runtime logger を定義している。
+- 現在の制御文脈から logger を参照できるようにする context variable と、logger の設定・復元・取得 helper を提供する。
 
 ## Read this when
-- サブコマンド単位の実行ログの生成場所、record に含まれる基本項目、追記タイミングを確認したいとき。
-- ログ保存先ディレクトリの作成、ログファイル名の作り方、JSON Lines 書き込みの副作用を追う必要があるとき。
-- quota 待機時間の累積や、サブコマンド実行時間の計測を変更・確認したいとき。
-- 現在のサブコマンド logger を contextvars 経由で受け渡す処理を確認したいとき。
+- サブコマンド実行ログの生成先、JSON record の内容、追記タイミング、flush の挙動を確認または変更したいとき。
+- サブコマンド完了表示や集計で使う経過秒、quota 待機時間の加算方法を確認または変更したいとき。
+- 深い runtime helper から現在のサブコマンド logger を任意に利用する仕組み、または context variable による logger の差し替えと復元を扱うとき。
 
 ## Do not read this when
-- ログ保存先パスや timestamp 文字列そのものの定義を確認したいだけのときは、runtime path を扱う対象へ進む。
-- ログ内容を読む側、集計する側、表示する側の仕様や実装を探しているときは、それらの処理を持つ対象へ進む。
-- CLI サブコマンドの引数定義、dispatch、終了コード、利用者向け出力を確認したいときは、CLI 実行制御を扱う対象へ進む。
-- 通常の path model や root 種別の概念定義を確認したいときは、path model を扱う対象へ進む。
+- ログディレクトリの位置や timestamp 文字列の生成規則だけを確認したいときは、runtime path を扱う対象を読む。
+- 個別サブコマンドの処理内容や CLI 引数の意味を確認したいだけなら、そのサブコマンド実装を読む。
+- JSON Lines に残された実行ログを解析・表示する利用側の処理を探しているときは、ログを読み取る側の対象を読む。
 
 ## hash
-- e2e4d1e5000c03dde22b8c79c07e036859d091813787c5b6d8a7efb15fe08d44
+- 3714c924c277c9b4bc72263497f6db15cd64518cf63712f4cc0730d2e2b11319
 
 # `runtime_paths.py`
 

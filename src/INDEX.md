@@ -1,23 +1,24 @@
 # `acp`
 
 ## Summary
-- AI agent 呼び出しに関する実装をまとめる領域。呼び出しパラメータを機能別に組み立てる層と、agent に渡す構造化プロンプト部品・標準文書を組み立てる層を扱う。
-- フォーク適用、INDEX.md エントリー生成、oracle review、session conflict marker 解消、TUI 実行パラメータ解決などの機能が、下流 agent に何をどの条件で依頼するかを確認する入口になる。
+- AI エージェントへ作業を依頼するための呼び出しパラメータ構築と、呼び出し時に渡す標準 prompt 文書生成を扱う領域。role、summary、goal、補助入力、ファイルアクセス権限、モデル・推論設定、Structured Output 契約、標準文書の注入条件を接続する。
+- フォーク適用、目次情報生成、oracle review、session join の conflict marker 解消、TUI 実行パラメータ解決など、機能別に AI へ何をどの条件で依頼するかを定義する入口になる。実際のコマンド制御や後段処理ではなく、下流エージェントに渡す prompt と実行条件を組み立てる層である。
+- ファイルアクセス規則、ルーティング規則、oracle / realization の基本概念と品質規範、review 基準、INDEX.md エントリー作成規範などを、AI 呼び出し用の構造化文書として生成する実装も含む。
 
 ## Read this when
-- AI agent 呼び出しに渡す role、summary、goal、補助入力、標準文書、ファイルアクセス規則、モデル種別、推論量、Structured Output 契約を機能別に確認または変更したいとき。
-- agent call 用の完全なプロンプトが、どの標準部品をどの順序・依存関係で含め、追加プロンプトや入力データとどう結合されるかを追いたいとき。
-- INDEX.md エントリー生成、oracle review、apply review、session join の conflict marker 解消、TUI の実行パラメータ解決などで、AI へ渡す依頼条件やプロンプト本文を調べたいとき。
-- プロンプト中の root token 置換、ツール固有用語の呼び出し先向け置換、oracle file・realization file・review 系標準文書の agent 向け文面を確認したいとき。
+- AI エージェント呼び出しに渡す prompt 本文、補助入力、標準文書の参照有無、ファイルアクセスモード、モデル種別、推論量、Structured Output 契約を確認または変更したいとき。
+- 特定機能が AI に依頼する作業内容や制約を追いたいとき。対象にはフォーク適用の変更要約・所見列挙・修正依頼、INDEX.md 用エントリー生成、oracle review の所見列挙・理由収集・採否判定・整理、session join の conflict marker 解消、TUI の実行パラメータ解決が含まれる。
+- 標準 prompt part の本文、complete prompt への注入順序、標準文書間の依存関係、補助 prompt の埋め込み方、呼び出し先向けの用語置換や root token 置換を確認したいとき。
+- ファイルアクセス制限、INDEX.md によるルーティング、oracle file と realization file の基本定義、oracle / realization の品質規範、review 所見基準、INDEX.md エントリー作成規範を AI 向け prompt としてどう表現しているか調べたいとき。
 
 ## Do not read this when
-- 各サブコマンドの実行制御、状態管理、git 操作、ファイル走査、保存、merge 実行など、AI 呼び出し前後の処理本体を調べたいとき。
-- StructDoc、Standard、Requirement、AgentCallParameter、FileAccessMode、パスモデルなど、プロンプトや呼び出し条件を支える基礎型そのものを調べたいとき。
-- oracle review や apply review の生成結果を実際に評価・統合・適用する後段処理、または結果の表示・通知・永続化を探しているとき。
-- 個別の Structured Output schema の項目構造だけを確認したいときは、該当する schema 定義へ直接進めばよい。
+- 各サブコマンドの実行制御、状態管理、git 操作、ファイル走査、保存、merge 実行、生成結果の表示・通知・永続化など、AI 呼び出し前後の処理本体を調べたいとき。
+- レビュー所見を実際に評価・統合・適用する後段処理や、realization file の具体的な修正ロジックを探しているとき。
+- AgentCallParameter、FileAccessMode、構造化文書、path token、root 解決などの基礎型や共通基盤そのものを確認したいとき。
+- CLI コマンド、永続状態、外部プロセス実行、入出力 schema の定義、個別 oracle file・realization file・テストの内容を確認したいだけで、AI 呼び出し用 prompt や呼び出し条件を変更しないとき。
 
 ## hash
-- 73c9dd8d91278c07320911af8656b93045afba2178a99ce2ffdcf695a78f2ecb
+- 4ccfcb82ac8bbefa988a871a78098c27162f684df65d9a852f960aff3197c1ca
 
 # `basic`
 
@@ -66,33 +67,30 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation のうち、複数のサブコマンドや runtime 層から共有される実行時 helper 群をまとめる領域。CLI 実行ライフサイクル、Codex 呼び出し、設定入出力、内容 hash 保存、共通エラー、Git 操作、実行ログ、runtime path、結果モデル、永続 session state など、横断的な基盤処理への入口になる。
-- 責務別の小さな module と、既存 import path を維持する集約入口が混在しており、個別サブコマンドの業務処理ではなく、サブコマンド群が共通利用する runtime 境界を確認するための階層である。
+- cmoc の実行時共通機能を集めた実装領域。CLI サブコマンドの共通実行ライフサイクル、Codex CLI exec/TUI 呼び出し、設定入出力、内容 hash 保存、共通エラー表示、Git 操作、ログ、runtime path、結果モデル、session state など、複数の上位機能から再利用される runtime helper 群への入口になる。
+- 共通入口用の集約・互換 import と、責務別に分割された実装の両方を含むため、横断的にどの runtime 部品が存在するかを把握する起点として使える。個別の振る舞いを変更する場合は、この階層で該当責務の本文へ進む。
 
 ## Read this when
-- CLI サブコマンドの開始・完了表示、終了コード化、例外表示、サブコマンド logger の設定範囲など、共通実行ライフサイクルを調べるとき。
-- Codex exec/TUI の profile 準備、呼び出し、Structured Output 検証、retry、quota/capacity 制御、resume、call log、subcommand event、preflight など、Codex runtime 全体または責務別入口を探すとき。
-- 設定ファイルの読み書き、既定値補完、不正 JSON や型不正の利用者向けエラー化を確認または変更するとき。
-- 内容 hash、hashed file 保存、binary 判定、生成物や cache 的な出力の内容ベース保存処理を調べるとき。
-- cmoc 共通例外、利用者向け Markdown エラーレポート、Next actions、detail、call stack の出力構造を確認または変更するとき。
-- Git コマンド実行、branch・HEAD・clean worktree 判定、cmoc 管理 branch、run worktree、ignore/exclude 制御など、Git 状態や Git 操作の共通 helper を調べるとき。
-- サブコマンド実行ログ、JSON Lines event、quota 待機時間、実行時間計測、context-local logger を確認または変更するとき。
-- 実行時の repo/work/cmoc root 解決、cmoc 管理ディレクトリ、config/state/log/worktree/schema path、timestamp、memo 配下判定、作業ディレクトリ一時変更を扱うとき。
-- 外部コマンド結果や Codex exec 結果として、終了コード、標準入出力、生成 text/JSON、profile/schema、log path、elapsed、quota 情報を運ぶ共有データ構造を確認するとき。
-- session branch や apply branch に紐づく永続 session state、state file の JSON 入出力、branch 名からの session-id 抽出、active session 探索を調べるとき。
-- 複数の runtime 共通部品をまとめて import している呼び出し側の依存関係や、公開入口から利用可能な共通部品の範囲を把握したいとき。
+- CLI サブコマンドに共通する開始・完了表示、終了コード化、例外表示、subcommand logger の設定範囲を確認または変更したいとき。
+- Codex CLI の exec 実行、TUI 起動、profile 生成、Structured Output schema、resume token、quota/capacity retry、call log、console 表示、indexing preflight のどれかに関わる runtime 実装を探したいとき。
+- cmoc 設定ファイルの読み書き、既定値補完、不正 JSON や不正値の利用者向けエラー化を扱う共通処理を確認したいとき。
+- 内容 hash による保存、ファイルや文字列の SHA-256 digest、binary 判定など、runtime 生成物やキャッシュ的な出力の共通保存 helper を確認したいとき。
+- cmoc 共通例外、利用者向け Markdown エラーレポート、Next actions、detail、Call stack の組み立てを確認または変更したいとき。
+- Git コマンド実行、branch・HEAD・clean worktree 判定、run worktree 作成削除、cmoc 管理 branch、ignore/exclude 更新などの低レベル Git helper を調べたいとき。
+- サブコマンド実行ログの JSON Lines event、経過時間、Codex quota 待機時間の集約、現在 logger を runtime helper から参照する仕組みを確認したいとき。
+- 実行時の root 解決、cmoc 管理ディレクトリ、設定・状態・ログ・worktree・schema などの配置、timestamp や経過時間表示、memo 配下判定を確認したいとき。
+- 外部コマンド結果や Codex exec 結果として、stdout/stderr、生成物、ログ path、profile/schema、経過時間、quota 待機情報を運ぶ共有データ構造を確認したいとき。
+- session branch と apply branch に紐づく永続 session state の JSON 入出力、保存先、branch 名からの session-id 抽出、active session 探索を調べたいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務処理、引数定義、dispatch、利用者向け出力内容そのものを調べたいとき。その場合はサブコマンド実装や CLI ルーティング側へ進む。
-- oracle file の正本仕様、path 概念そのもの、oracle/realization の分類、INDEX.md 生成規則やルーティング文書の仕様を確認したいとき。この階層は realization implementation の共通 runtime helper であり、正本仕様の置き場ではない。
-- 特定機能の高レベルな workflow、状態遷移、レポート内容、出力 schema の意味を調べたいだけのとき。その機能を持つ上位実装または仕様文書を読む方がよい。
-- Codex profile 名、設定値、AgentCallParameter、FileAccessMode、モデルや reasoning effort などの入力データ構造そのものを確認したいだけのとき。データモデルや設定定義側へ進む。
-- ログや状態ファイルを読む側、集計する側、表示する側の仕様や実装を探しているとき。ここは主に生成・保存・受け渡しの共通 helper を扱う。
-- 外部コマンドや Git 操作を伴わない純粋なドメイン処理、構造化テキスト解析、Markdown 処理、テスト固有 fixture の期待値だけを調べるとき。
-- 既存 import path の互換入口ではなく、個別機能の実装詳細を直接変更したいとき。集約入口ではなく該当責務の module へ進む。
+- 個別サブコマンドの業務処理、引数定義、利用者向け出力内容そのものを調べたいとき。その場合はサブコマンド実装側へ進む。
+- 正本仕様断片、パス概念そのもの、oracle file と realization file の定義、INDEX.md 生成規則を確認したいとき。この領域は実装 helper であり、仕様判断の根拠は対応する仕様文書を読む。
+- テスト期待値や fixture、特定の外部挙動の検証内容だけを確認したいとき。その場合はテスト領域の該当本文へ進む。
+- 個別機能の高レベル workflow だけを把握したいとき。共通 helper の詳細に入る前に、その workflow を所有する上位実装から読む方がよい。
+- ファイル名や配置だけを一覧したいとき。ここで読むべき対象は、runtime 共通責務の変更・調査がある場合に絞る。
 
 ## hash
-- 2a2e2ff001b9a9d23ae8262b2ee304a713549dd29cd4138c3bd9462b84aa58ff
+- 4a52c7ef3508834fb9ac90a2aa260d98f0e00efee430c34bde4dca5b2f9d081e
 
 # `config`
 

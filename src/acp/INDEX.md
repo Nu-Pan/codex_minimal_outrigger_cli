@@ -22,23 +22,21 @@
 # `prompt_parts`
 
 ## Summary
-- AI agent に渡す構造化プロンプト部品を構築する実装群。ファイルアクセス規則、INDEX.md によるルーティング規則、oracle file と realization file の基本説明、oracle/realization/index entry/review/apply review の各種標準文書を扱う。
-- 個別の標準文書を StructDoc 化する部品と、それらを agent call 用の完全なプロンプトへ組み立てる処理を含む。標準部品間の依存関係に応じた自動注入や、プロンプト中の root token とツール固有用語の呼び出し先向け置換もこの領域で扱う。
-- プロンプト本文として agent に何を指示するか、どの標準をどの条件で含めるか、標準文書の責務境界をどう保つかを確認するための入口になる。
+- AI agent に渡す prompt part 群を構築する実装をまとめた領域。ファイルアクセス規則、ルーティング規則、oracle / realization の基本概念と品質規範、レビュー所見の判断基準、INDEX.md エントリー作成規範、agent call 用の完全 prompt 合成を扱う。
+- 各 prompt part は構造化文書として標準文書や規則本文を返し、complete prompt 側では role、summary、goal、アクセス規則、ルーティング規則、追加 prompt、標準 prompt 間の依存関係、呼び出し先向けの内部呼称・root token 除去をまとめて扱う。
+- cmoc のプロダクト挙動そのものではなく、AI に作業方針・レビュー基準・正本仕様と実装の責務境界を伝えるための prompt 文書生成箇所への入口になる。
 
 ## Read this when
-- agent call に渡す最終プロンプトの構成順、含める標準部品、標準部品間の依存関係、または追加プロンプトとの結合方法を確認・変更したいとき。
-- AI 向けに提示するファイル読み書き制限、INDEX.md の読み進め方、oracle file と realization file の基本概念を、プロンプト本文としてどう生成しているか確認したいとき。
-- oracle file の記述規範、realization file の品質規範、INDEX.md エントリー作成規範、oracle file レビュー規範、oracle 内容を realization へ適用するレビュー規範の本文を確認・変更したいとき。
-- 標準プロンプトを StructDoc として組み立てる責務境界や、長い標準文書を単一の prompt part として保持している理由を確認したいとき。
-- プロンプト中の root token を実パスへ置換する処理や、呼び出し先に渡す文面からツール固有の呼称を作業対象向け表現へ置換する処理を追いたいとき。
+- agent call に渡す prompt の構成順序、標準 prompt の依存関係、または各標準文書がどのように complete prompt に注入されるかを確認・変更したいとき。
+- ファイルアクセス制限、INDEX.md によるルーティング、oracle file と realization file の基本定義、oracle / realization の品質規範を AI 向け prompt としてどう表現しているか調べたいとき。
+- oracle file レビュー、oracle file を realization file に適用するレビュー、または INDEX.md エントリー作成で、どの基準を所見・規範・案内として扱うか確認したいとき。
+- 標準 prompt part の本文、Standard 群の並び、構造化文書への変換呼び出し、または呼び出し先へ渡す前の root token や内部呼称の置換処理を変更したいとき。
 
 ## Do not read this when
-- StructDoc、StructCodeBlock、Standard、Requirement など、構造化文書や標準項目そのもののデータ構造・レンダリング基盤を調べたいとき。
-- root token の定義、作業ルートや実パスの解決規則そのもの、またはパスモデルの基本仕様を確認したいとき。
-- agent call の実行、外部プロセス起動、CLI サブコマンドの制御フロー、永続状態、入出力 schema など、プロンプト部品生成以外の処理を調べたいとき。
-- 特定の oracle file や realization file の本文内容、または実際の差分レビュー結果を確認したいだけで、レビュー基準や標準プロンプト本文を変更する必要がないとき。
-- 実際のファイルアクセス制御を OS 権限、サンドボックス、実行環境で enforcement する仕組みを探しているとき。
+- CLI コマンド、永続状態、外部プロセス実行、入出力 schema など、prompt 文書生成ではないプロダクト機能の実装詳細を調べたいとき。
+- StructDoc、StructCodeBlock、Standard、Requirement などの構造化文書データ構造や変換基盤そのものを確認したいとき。
+- path token、作業ルート、run root、各 root の定義や解決規則そのものを調べたいとき。
+- 特定の oracle file、realization file、テスト、または実際の差分内容をレビューしたいだけで、AI に渡す標準 prompt の本文や判断基準を変更しないとき。
 
 ## hash
-- 94f20b380c1fa30ace1d0202ad855fb4456c93f9977a6544b50cd8752ffa1b57
+- ccba95c007c9a5146ae93517fe4e58e99db1ac3ec9b654caa88907d2f3beb6fa
