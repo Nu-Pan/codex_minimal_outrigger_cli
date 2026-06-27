@@ -1,23 +1,26 @@
 # `builder`
 
 ## Summary
-- cmoc の各機能が AI エージェントへ処理を依頼する際の呼び出しパラメータ構築領域への入口。complete prompt に渡す role、summary、goal、補助文脈、標準文書参照、ファイルアクセス権限、モデル区分、推論量、Structured Output 契約の接続を、用途別の下位領域に分けて扱う。
-- 対象となる処理は、フォーク適用時の変更要約・所見列挙・所見対応、目次エントリー生成、oracle review の所見処理、session join の conflict marker 解消、TUI 実行パラメータ解決である。実際の業務ロジックやファイル更新そのものではなく、下流 AI に渡す作業指示と出力契約を構成するための builder 群を収める。
+- AI エージェント呼び出しに渡す AgentCallParameter を、用途別の complete prompt、補助入力、file access mode、model/reasoning、Structured Output schema 参照として組み立てる builder 群をまとめる領域。
+- 対象は、apply fork の変更要約・所見列挙・所見対応、indexing の目次エントリー生成、review oracle の所見列挙・検証・採否・整理、session join の conflict marker 解消、TUI の実行パラメータ解決など、AI に何を依頼し、どの制約と出力契約で呼び出すかを定義する処理である。
+- 実際の CLI 制御、git 操作、ファイル更新、レビュー結果の保存、目次ファイルの描画や永続化ではなく、各機能が AI 呼び出しへ渡すプロンプトと呼び出し条件を確認するための入口になる。
 
 ## Read this when
-- AI エージェント呼び出しで使う prompt 本文、補助文脈、参照標準、ファイルアクセスモード、モデル選択、推論量、Structured Output schema の対応を確認または変更したいとき。
-- フォーク適用、目次生成、oracle review、session join、TUI パラメータ解決のうち、どの処理向けの AI 呼び出し設定へ進むべきかを判断したいとき。
-- 差分、対象ファイル、所見リスト、レビュー理由、conflict 対象ファイル、ユーザープロンプトなどの入力が、下流 AI への補助プロンプトとしてどう埋め込まれるかを追いたいとき。
-- AI 呼び出し結果に Structured Output schema が必要な処理で、呼び出しパラメータと返却形の接続を確認したいとき。
+- cmoc の各機能が AI エージェントを呼び出す際の prompt、補助文脈、アクセス権限、モデル区分、推論量、Structured Output schema の対応関係を調べたいとき。
+- apply fork、indexing、review oracle、session join、TUI parameter resolve のいずれかで、AI に渡す作業目的・禁止事項・標準文脈・入力データがどう complete prompt に組み込まれるか確認したいとき。
+- 特定フェーズの出力 schema と、その schema を参照する AgentCallParameter 構築処理を対応づけて確認したいとき。
+- AI 呼び出しの file access mode が readonly、pure oracle read、realization write などのどれに設定されるか、またその権限が prompt 上の作業範囲とどう対応するかを追いたいとき。
+- 新しい AI 呼び出し builder を追加または既存 builder を変更する前に、同種の呼び出し定義の責務分割や schema 参照の置き方を確認したいとき。
 
 ## Do not read this when
-- CLI サブコマンドの引数解析、実行順序、状態管理、git 操作、ファイル走査、保存、表示など、AI 呼び出し前後の制御フローを調べたいとき。
-- complete prompt の共通構築規則、構造化 Markdown レンダリング、パス解決、ファイルアクセスモード定義、AgentCallParameter 型そのものを調べたいとき。
-- 差分解析、所見の統合・重複排除、conflict marker の実際の解消、TUI 入力の前処理、修正結果の検証など、AI に依頼される作業の中身や呼び出し後の処理を調べたいとき。
-- 個別の Structured Output 項目の意味だけを確認したい場合は、該当する schema 本文へ直接進めばよい。
+- CLI サブコマンドの引数解析、実行順序、状態管理、git branch 操作、merge 実行、ファイル列挙、保存、表示など、AI 呼び出し前後の制御フローだけを調べたいとき。
+- AI が返した構造化結果を実際に適用する処理、レビュー結果や目次情報を永続化する処理、または markdown として描画する処理を調べたいとき。
+- complete prompt の共通構築規則、StructDoc や render 処理、path model、AgentCallParameter、FileAccessMode などの基礎型そのものを調べたいとき。
+- oracle file、realization file、review standard、apply review standard、index entry standard など、builder が参照する標準文脈の本文や一般規約を読みたいだけのとき。
+- 個別の AI 呼び出しではなく、対象コマンドの利用者向け仕様、実際の実装修正箇所、またはテストだけを直接確認したいとき。
 
 ## hash
-- db3debc81c0ddff3d09773cf623d66c945face4a1e7eafc5954e8b9fea4f9953
+- 2fa7d3217c15a26c90e074c17bfdf5257f83b909cb8438de8523b0f8a4d778ee
 
 # `prompt_parts`
 

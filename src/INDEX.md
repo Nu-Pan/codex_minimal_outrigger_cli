@@ -1,26 +1,26 @@
 # `acp`
 
 ## Summary
-- AI エージェント呼び出しに渡す完全プロンプトと呼び出しパラメータを構築する realization implementation の領域。role、summary、goal、補助文脈、ファイルアクセス規則、標準文書、モデル区分、推論量、Structured Output schema を組み合わせる処理を扱う。
-- 用途別の呼び出しパラメータ構築と、再利用される prompt part 構築の入口である。対象用途は、差分要約、実装所見列挙、所見対応、目次エントリー生成、oracle file レビュー所見の列挙・検証・採否判定・整理、merge conflict marker 解消、TUI 実行パラメータ選定である。
-- 実際の CLI 実行制御、git 操作、ファイル更新、レビューや conflict 解消の業務ロジック本体ではなく、下流 AI にどの作業指示と出力契約を渡すかを決める層として位置づけられる。
+- AI エージェント呼び出し用のパラメータ構築とプロンプト部品構築を扱う領域。用途別の依頼文、補助文脈、ファイルアクセス権限、モデル・推論設定、Structured Output schema 参照を組み立てる処理への入口になる。
+- apply fork、indexing、review oracle、session join、TUI parameter resolve などの各機能が、AI にどの目的・制約・標準文脈・出力契約を渡すかを確認するために読む対象である。
+- 共通のファイルアクセス規則、ルーティング規則、oracle / realization / review / apply / index entry 各標準、oracle と realization の基本概念を、AI 向け complete prompt へ統合する prompt 構築層も含む。
 
 ## Read this when
-- AI エージェント呼び出しで使うプロンプト本文、補助文脈、標準文書、ファイルアクセスモード、モデル区分、推論量、Structured Output schema の対応を確認または変更したいとき。
-- 差分、対象ファイル、所見リスト、既知理由、conflict 対象ファイル、ユーザー入力プロンプトなどの入力が、下流 AI 向けの補助プロンプトへどう埋め込まれるかを追いたいとき。
-- どの用途の AI 呼び出しが、どの標準文書や読み書き権限を付けて実行されるかを判断したいとき。
-- ファイルアクセス規則、INDEX.md ルーティング規則、oracle / realization の基本説明、oracle standard、realization standard、review standard、apply review standard、index entry standard を AI 向け文書としてどう構築・統合しているか確認したいとき。
-- AI 呼び出し結果に Structured Output schema を要求する処理で、呼び出しパラメータと返却形の接続を確認したいとき。
+- cmoc の各機能が AI エージェントを呼び出す際の prompt、補助入力、file access mode、model、reasoning、Structured Output schema の対応関係を調べたいとき。
+- apply fork、indexing、review oracle、session join、TUI parameter resolve のいずれかで、AI に渡す作業目的、禁止事項、標準文脈、入力データが complete prompt にどう組み込まれるか確認したいとき。
+- AI agent に渡すファイルアクセス規則、INDEX.md ルーティング規則、oracle / realization / review / apply / index entry 各標準などの prompt part を確認または変更したいとき。
+- 複数の標準 prompt part が complete prompt へどの条件、順序、依存関係で組み込まれるか確認したいとき。
+- 新しい AI 呼び出し builder や標準 prompt 部品を追加する前に、既存の責務分割、schema 参照、root token 置換、標準文脈の組み込み方を確認したいとき。
 
 ## Do not read this when
-- CLI サブコマンドの引数解析、実行順序、状態管理、git 操作、ファイル走査、保存、表示など、AI 呼び出し前後の制御フローを調べたいとき。
-- AgentCallParameter、FileAccessMode、ModelClass、ReasoningEffort、StructDoc、Standard、Requirement などの基礎データ型や構造化文書 helper の低レベル定義だけを確認したいとき。
-- パス token、work root、repo root、run root などのパスモデル定義や実パス解決規則そのものを調べたいとき。
-- 差分解析、所見の統合・重複排除、レビュー対象の選定、conflict marker の実際の解消、TUI 入力の前処理、修正結果の検証など、AI に依頼される作業の中身や呼び出し後の処理を調べたいとき。
-- 個別の Structured Output 項目の意味だけを確認したい場合は、該当する schema 本文へ直接進めばよい。
+- CLI サブコマンドの引数解析、実行順序、状態管理、git 操作、merge、ファイル列挙、保存、表示など、AI 呼び出し前後の制御フローだけを調べたいとき。
+- AI が返した構造化結果を実際に適用する処理、レビュー結果や目次情報を永続化する処理、または markdown として描画する処理を調べたいとき。
+- StructDoc、StructCodeBlock、Standard、Requirement、AgentCallParameter、FileAccessMode、path model などの基礎型や低レベル helper そのものを調べたいとき。
+- oracle file、realization file、review standard、apply review standard、index entry standard など、プロンプトに組み込まれる標準文脈の本文だけを読みたいとき。
+- 特定コマンドの利用者向け仕様、実際の実装修正箇所、テスト、または OS 権限やサンドボックスによる実ファイルアクセス制御を直接確認したいとき。
 
 ## hash
-- af0368ea3f72d0300086797211273231f72e6cc2b5ddbd2b809d4bd489c01ed5
+- d1dfe5ac97e5a7c938a5da86ef53957b643561e6cfc5ad1f608cb5a976f6c47e
 
 # `basic`
 
