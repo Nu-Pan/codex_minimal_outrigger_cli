@@ -61,25 +61,25 @@
 # `fork.py`
 
 ## Summary
-- apply fork サブコマンドの実行本体を担う実装。session branch 上で isolated apply worktree を作成し、scope に応じた対象列挙、Codex による finding 列挙と適用、禁止対象差分のロールバック、apply commit 作成、レポート作成、状態更新、終了コード決定までの apply loop を扱う。
-- apply 対象の正規化、変更 path の収集、直近 join commit の推定、commit subject 生成など、apply fork の制御フローに密接な helper も同じ単位にまとまっている。
+- apply fork サブコマンドの実行本体を担い、session branch 上で isolated apply worktree を作成して Codex による finding 列挙、適用、commit、report 作成、state 更新を一連の apply loop として制御する。
+- apply 対象 file の scope 別列挙、変更 path の正規化、重複除去、編集禁止対象差分の検出とロールバック、Codex 生成 commit subject の整形など、apply fork の実行中制御に必要な helper 群も含む。
 
 ## Read this when
-- apply fork の開始条件、session state の検証、apply 用 worktree・branch・process id・state のライフサイクルを確認したいとき。
-- apply fork の scope が rolling、session、full の各場合にどのファイルを finding 列挙対象にするかを確認したいとき。
-- Codex による finding 列挙、finding 適用、変更検出、commit message 生成、commit 作成、収束判定、unconverged 終了の流れを変更・調査したいとき。
-- apply fork 中に oracle、.agents、memo などの編集禁止対象へ差分が出た場合の検出、ロールバック、再実行、エラー化の挙動を調べたいとき。
-- apply fork の成功・失敗時に report、apply state、process id、CLI 出力、戻り値がどう扱われるかを確認したいとき。
+- apply fork の事前条件、scope ごとの対象選択、apply worktree 作成、apply branch 命名、session state の running/completed/error 更新、終了コードを確認または変更したいとき。
+- finding 列挙と finding 適用を Codex CLI に渡す流れ、適用後の変更検出、commit message 生成、apply report/error report 作成の接続を追いたいとき。
+- apply fork 中に oracle、.agents、memo など編集禁止対象へ差分が出た場合の検出、復旧、再実行、エラー化の挙動を調べるとき。
+- apply 対象から INDEX.md、git ignored file、memo、.git、.agents、必要に応じて oracle を除外する正規化規則を確認したいとき。
+- rolling、session、full の apply scope が、git 履歴や session state からどの候補 file 集合へ展開されるかを調べるとき。
 
 ## Do not read this when
-- apply fork のレポート本文の生成内容や Markdown 出力の詳細だけを調べたいときは、レポート生成側を読む。
-- Codex に渡す finding 列挙用または finding 適用用の prompt・AgentCallParameter の詳細だけを調べたいときは、builder 側を読む。
-- apply join、apply abandon など apply fork 以外の apply サブコマンドの制御フローを調べたいときは、それぞれのサブコマンド実装を読む。
-- worktree 作成、git 実行、状態ファイル読み書き、config 読み込みなど runtime 共通処理の低レベル挙動だけを調べたいときは、runtime 側を読む。
-- INDEX.md 生成、oracle 文書の仕様、または一般的な realization 品質基準を調べたいだけなら、この実装ではなく正本仕様や対象の文書を読む。
+- apply fork の利用者向け report markdown の内容や書式だけを確認したい場合は、report 作成側を直接読む。
+- Codex へ渡す finding 列挙用または finding 適用用プロンプトの詳細だけを確認したい場合は、builder 側の該当モジュールを読む。
+- apply process id の保存・削除処理そのものの実装だけを確認したい場合は、apply runtime 側を読む。
+- CLI app へのサブコマンド登録、typer command 定義、他 apply サブコマンドとの一覧上の関係だけを確認したい場合は、上位の command 定義を読む。
+- session state、worktree 作成、git 実行、config 読み込みなど cmoc runtime の共通 primitive の実装詳細だけが目的の場合は、runtime 側を読む。
 
 ## hash
-- 9ad76bf357eac65e10409281458d6090bc174bb4651d5dfa1ceb674c4fdb66f1
+- 9b83624d4d8d8fa8611e2f4fefb4b679a964510a2df7290f3fb377cb7ee44756
 
 # `fork_report.py`
 

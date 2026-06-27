@@ -43,23 +43,23 @@
 # `test_apply_fork_cli.py`
 
 ## Summary
-- apply fork サブコマンドの統合テスト。Codex 実行を fake に差し替え、apply run の開始から完了までの state 更新、apply branch/worktree 作成、所見列挙・適用ループ、commit message/summary 経路を検証する。
-- linked worktree からの実行、session 側の .gitignore 保持、追跡済み .cmoc の拒否、設定読み込み失敗時の未開始保証、.gitignore を所見対象として apply branch 側で編集できること、root 直下 memo 除外と入れ子 memo 維持の target 正規化を扱う。
+- apply fork サブコマンドの realization test。Codex 実行を fake に差し替え、apply run の完了状態、apply branch/worktree/state の更新、linked worktree 起点の HEAD 利用、session 側の .gitignore 保持、.cmoc 追跡時の拒否、config 読み込み失敗時の副作用抑止、所見対象としての .gitignore 編集、apply target 正規化の境界を検証する。
 
 ## Read this when
-- apply fork の CLI 挙動、state の apply フィールド、apply branch/worktree の命名・配置・後片付けを変更または確認するとき。
-- apply fork がどの commit/branch を起点にするか、特に linked worktree 上の session branch と HEAD の扱いを確認するとき。
-- apply fork 実行時の .gitignore、.cmoc、config.json、apply_process pid の失敗時・成功時の副作用境界を変更するとき。
-- apply findings の対象 path、.gitignore 編集、root 直下 memo 除外、入れ子 memo directory の扱いを変更するとき。
+- apply fork の CLI 挙動、状態遷移、apply branch/worktree 生成、Codex loop 呼び出し、または apply run の後始末を変更する。
+- linked worktree 上で開始した session から apply fork する場合の基準 commit や worktree 配置を確認する。
+- apply fork が session 側の .gitignore や .cmoc 追跡状態をどう扱うべきかを確認する。
+- apply fork 開始前の config 読み込み失敗で、branch/state/pid などの apply run 副作用を発生させない挙動を確認する。
+- apply 対象の正規化で、root 直下の memo 除外、入れ子の memo directory の扱い、binary file の保持を確認する。
 
 ## Do not read this when
-- apply fork 以外のサブコマンドの通常系や、session fork/init そのものの詳細を調べたいとき。
-- Codex 実行結果 fake ではなく、実際の Codex CLI 呼び出し実装や AgentCallParameter の構築詳細を調べたいとき。
-- git 操作 helper、repo fixture、runner fixture の実装詳細を調べたいとき。
-- oracle 正本仕様やルーティング文書の方針を確認したいとき。
+- apply fork 以外の apply 系サブコマンド、review、session fork、init などの個別 CLI 挙動だけを確認したい。
+- Codex CLI や LLM 出力品質そのものを検証したい。ここでは Codex 実行結果は fake 化され、cmoc 側の制御と副作用だけを検証している。
+- apply fork の実装詳細を変更せず、仕様断片や利用者向け説明だけを確認したい。
+- root 直下 memo の閲覧・編集を目的としている。この対象は memo を除外対象として扱うテストであり、memo 本文を読む入口ではない。
 
 ## hash
-- 3ba91d77fcb61a3820db466e557a3ea071ee77fdc3f6a36eea35830fec6ec55a
+- d83fd6720f2b63478de5fdf301f10f5f7e8d71be6b2ac2107dfb5cac90d17b69
 
 # `test_apply_fork_report_cli.py`
 

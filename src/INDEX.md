@@ -140,22 +140,24 @@
 # `sub_commands`
 
 ## Summary
-- CLI の各サブコマンド実装を束ねる領域。初期化、TUI 起動、INDEX.md 保守、review oracle、apply、session 操作など、利用者が実行するコマンドの上位 orchestration への入口になる。
-- 各対象は、CLI runtime への接続、事前条件確認、git branch/worktree/state/report などの共通基盤との接続、利用者向け出力、失敗時処理を扱い、詳細な共通 helper や prompt/schema 構築へ進む前の分岐点として使う。
+- CLI の各サブコマンド実行本体をまとめるディレクトリ。初期化、TUI 起動、INDEX.md 自動保守、review oracle、apply、session 操作など、上位 CLI 定義から具体的な実行フローへ進む入口になる。
+- 各実装は runtime wrapper や共通 helper を使いながら、サブコマンド固有の前提条件確認、git/worktree/branch/state 操作、Codex 呼び出しとの接続、レポートや利用者向け出力、失敗時の後始末を扱う。
+- review oracle や apply、session のように複数ファイルへ分かれた領域では、この階層から orchestration、対象列挙、loop、merge/commit、report 生成などの下位実装へ分岐する。
 
 ## Read this when
-- 特定サブコマンドの実行順序、前提条件、状態遷移、git 操作、利用者向け出力、失敗時の後片付けや report 生成の入口を探したいとき。
-- 初期化、TUI、INDEX.md 自動保守、review oracle、apply run、session 作成・取り込み・破棄のどの実装へ進むべきかを切り分けたいとき。
-- review oracle の対象列挙、finding loop、INDEX 変更の commit/merge、report 生成など、review 処理全体の中で読むべき責務単位を選びたいとき。
-- apply fork/join/abandon、apply branch と session branch、isolated worktree、pid file、process 停止、report、cleanup など apply ライフサイクル関連の読む先を選びたいとき。
-- session branch と active state をまたぐ branch 作成、home branch への統合、merge しない破棄、conflict 処理など session 操作固有の CLI 制御を調べたいとき。
+- 特定のサブコマンドがどの順序で前提確認、状態更新、git 操作、Codex 実行、出力生成、cleanup を進めるかを調べる起点が必要なとき。
+- 初期化、TUI 起動、INDEX.md 自動保守、review oracle、apply、session 操作のいずれかの CLI 実行本体や orchestration へ進みたいとき。
+- review oracle の対象列挙、finding loop、INDEX 変更の commit/merge、report 生成など、review 系処理の接続関係や個別責務を切り分けたいとき。
+- apply run の開始、join、abandon、report、process/worktree/branch cleanup など、apply 系処理の入口や下位 runtime helper を探したいとき。
+- session branch の作成、home branch への取り込み、破棄、merge conflict 補助、session state 更新など、session 操作固有の CLI フローを確認したいとき。
+- サブコマンド固有の利用者向け Markdown 出力、レポート保存、失敗時エラー化、実行後の branch/worktree 後始末を確認・変更したいとき。
 
 ## Do not read this when
-- git 実行 wrapper、state file 永続化、config 読み込み、path model、timestamp、reports directory など、複数サブコマンドで使われる runtime 共通基盤そのものを調べたいとき。
-- Codex に渡す prompt、AgentCallParameter、Structured Output parameter、complete prompt、StructDoc 描画などの具体的な構築規則だけを確認したいとき。
-- oracle file、realization file、INDEX.md、review finding 品質基準などの正本仕様断片やルーティング文書生成規則を確認したいだけのとき。
-- サブコマンドの外部挙動をテスト観点から確認したいだけのときは、対応するテストへ進む方が直接的。
-- 個別サブコマンドに関係しない一般的なパッケージ構成や、低レベル helper の内部実装だけを調べたいとき。
+- CLI 全体のコマンド登録、引数 parser、共通 option 定義だけを調べたいときは、上位の CLI 定義側を読む方が直接的。
+- git コマンド wrapper、worktree 作成・削除、state file 読み書き、config 読み込み、path 解決など、複数サブコマンドで共有される低レベル runtime primitive 自体を変更したいとき。
+- Codex に渡す prompt builder、Structured Output parameter、review finding や INDEX entry 生成用 prompt の文面だけを確認したいときは、builder 側を読む方が直接的。
+- oracle file、realization file、path model、編集禁止対象、INDEX.md 仕様などの正本仕様断片そのものを確認したいとき。
+- 外部挙動の期待値や fixture をテスト観点で確認したいだけのときは、対応するテストを読む方が直接的。
 
 ## hash
-- 44bc81f9148394d4eb336251ac628a3a0fbb8b4260df5ce566c177418b019f60
+- 9671dfdd5efd25e23abb0291d45cd9bf89ca530ff06a0b5b3481cdc13c7b48e9

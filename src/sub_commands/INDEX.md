@@ -1,25 +1,25 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実装をまとめる領域。apply run の開始、実行ループ、結果 report、join、abandon、実行中 process と pid file の管理まで、apply 状態遷移に関わる CLI 制御と低レベル runtime helper への入口になる。
-- session branch と apply branch、isolated worktree、apply state、report、cleanup、merge、process 停止など、apply run のライフサイクル全体を調べるときに、目的別の実装へ進むための分岐点として使う。
+- apply 系サブコマンド実装をまとめるディレクトリ。apply run の開始、join、abandon、report 生成、process/worktree/branch cleanup など、session branch と isolated apply worktree をまたぐ制御の入口になる。
+- 上位 CLI から apply fork/join/abandon の実行本体へ進むためのまとまりであり、apply process の永続 pid、apply branch/worktree 探索、差分検出、merge、cleanup、利用者向け report 出力に関係する下位実装へ分岐する。
 
 ## Read this when
-- apply fork、join、abandon のいずれかの CLI 実行条件、状態遷移、worktree・branch・process id・report の扱いを調査または変更したいとき。
-- apply branch と session branch の関係、apply worktree の探索や削除、apply process の停止、pid file の読み書きなど、apply 実行時状態に関わる処理の読む先を選びたいとき。
-- apply fork の scope 列挙、finding 適用、commit 作成、禁止対象差分のロールバック、収束判定、失敗時 report 生成までの流れを追いたいとき。
-- 未 join の apply run を破棄する処理、または apply branch の成果を session branch へ取り込む処理のどちらを読むべきか判断したいとき。
-- apply の利用者向け出力、warning、report 内容、cleanup 対象、merge conflict 処理のうち、どの責務の実装が入口になるかを切り分けたいとき。
+- apply fork、apply join、apply abandon のいずれかの実行条件、状態遷移、worktree/branch 操作、cleanup、終了時 report を調べる起点が必要なとき。
+- 未 join の apply run を開始・収束・破棄・取り込みする流れ、または running/completed/error/ready 相当の apply state 更新に関わる実装へ進みたいとき。
+- apply process の pid file、実行中 process 停止、linked worktree 探索、apply branch から worktree path を導く低レベル runtime helper を探したいとき。
+- apply fork 中の対象 file 列挙、編集禁止対象差分の検出と復旧、Codex 呼び出し、commit、変更要約 report 生成の接続を確認したいとき。
+- apply join 中の merge、想定外差分の検出、force resolve、INDEX.md conflict の機械解決、apply worktree/branch 後始末を確認したいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンドの実行フロー、引数定義、出力、状態遷移を調べたいとき。
-- git 実行、state file 読み書き、config 読み込み、timestamp、reports directory などの共通 runtime 基盤そのものを変更したいとき。
-- Codex に渡す prompt、AgentCallParameter、structured output parameter の詳細だけを調べたいとき。
-- oracle file や INDEX.md の正本仕様、realization 品質基準、ルーティング文書生成規則を確認したいだけのとき。
-- apply の具体的な開始・破棄・取り込み・report・process 管理に関係しない一般的な CLI パッケージ構成だけを確認したいとき。
+- apply 以外のサブコマンド、CLI 全体の登録構造、共通 option 定義だけを調べたいとき。
+- git 実行、state file 読み書き、worktree 作成・削除、config 読み込みなど、複数サブコマンドで使う共通 runtime primitive そのものを変更したいとき。
+- Codex に渡す prompt builder の詳細、structured output parameter、finding 列挙・適用プロンプトの文面だけを確認したいとき。
+- oracle file、INDEX.md、編集禁止対象、path model などの正本仕様そのものを確認したいとき。
+- apply サブコマンドの外部挙動ではなく、テスト fixture やテストケースの期待値を確認したいとき。
 
 ## hash
-- 6c7e22ea17777452e513ac55d1f70c1cfb69e5a998dbe71b85d2cfc464d78903
+- 1d87505f2c3f7c869ac4c6f7fad9d5c56eab43475594b9417ef4f2442fbf79ba
 
 # `indexing.py`
 
