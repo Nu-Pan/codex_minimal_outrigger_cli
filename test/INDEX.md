@@ -131,24 +131,24 @@
 # `test_cli_init_tui.py`
 
 ## Summary
-- CLI の初期化処理と対話起動処理に関する realization test。初期化時の `.cmoc` 配下の追跡解除、`.gitignore` への無視設定、既存 staged/unstaged 変更の保全、linked worktree での保存先や commit 対象、既定設定 JSON の生成・同期を検証する。
-- 対話起動では、エディタで編集された依頼文から解決用パラメータを作り、HTML コメント除去後の完了プロンプトを保存し、Codex TUI 起動へ model class・reasoning effort・file access mode・追加 read path を渡す制御を検証する。
-- Markdown 依頼文 parser について、fenced code block 内の見出し風テキストを見出し扱いしないことと、見出し前の preamble を本文として保持することを検証する。
+- CLI の初期化処理と対話型依頼入力の外部挙動を検証する realization test。Git 管理下の既存状態を壊さず `.cmoc` を無視対象化すること、初期設定を作成・同期すること、サブコマンド実行ログを残すこと、linked worktree ではリポジトリ実体と作業ツリー側の保存先を使い分けることを扱う。
+- 対話型入力ではエディタで作成された Markdown 依頼を補完済みプロンプトへ変換し、parameter 解決用の Codex 実行と本処理用 Codex TUI 実行へ適切な引数・権限・追加 read path を渡す挙動を検証する。
+- Markdown prompt parser について、fenced code block 内の見出し風行を見出し扱いしないことと、最初の見出しより前の本文を保持することも検証する。
 
 ## Read this when
-- `init` サブコマンドの Git 操作、`.cmoc` 無視設定、初期 commit、既存 index/worktree 状態の保全、linked worktree 対応を変更・調査する。
-- `.cmoc/config.json` の既定値生成、既存設定との同期、手動設定値を上書きしない挙動を変更・調査する。
-- `tui` サブコマンドのエディタ起動、依頼文整形、パラメータ解決用 Codex 呼び出し、Codex TUI 呼び出し、ログ保存先、linked worktree での root/cwd/schema/log の扱いを変更・調査する。
-- Markdown プロンプトを見出し単位に分解する parser の挙動、特に fenced code block と見出し前本文の扱いを変更・調査する。
+- 初期化サブコマンドが `.cmoc` 配下の追跡解除、`.gitignore` 更新、cleanup commit、既存 staged/unstaged 変更の保護、既定設定 JSON の作成・同期をどう扱うべきか確認したいとき。
+- linked worktree 上で初期化または対話型入力を実行した場合に、設定・ログ・schema・補完済みプロンプトの保存先や git status への影響を確認したいとき。
+- 対話型入力サブコマンドがエディタ起動後の Markdown 依頼から不要コメントを除去し、解決済み parameter に基づいて Codex TUI を起動する制御ロジックを変更・検証するとき。
+- Markdown prompt parser の見出し分割、fenced code block、preamble の扱いに関する期待挙動を確認するとき。
 
 ## Do not read this when
-- 個別サブコマンドに依存しない CLI 登録や Typer の一般的な entrypoint だけを確認したい。
-- Git 操作や `.cmoc` 状態に関係しない純粋な設定 loader、schema 定義、モデル enum の詳細だけを確認したい。
-- Codex CLI やエディタ実行そのものの外部品質、LLM 出力内容の妥当性を検証したい。
-- Markdown parser 全般の網羅仕様を探しており、fenced code block 内見出しと preamble 保持以外の構文を扱うテストが必要である。
+- 初期化や対話型入力ではないサブコマンドの CLI 挙動を調べたいだけのとき。
+- 設定値の型定義や path model など、実装側のデータ構造そのものを確認したいとき。
+- Codex 実行 wrapper の汎用的な引数構築や preflight の詳細を調べたいとき。
+- Markdown parser の実装方式そのものを読みたいとき。
 
 ## hash
-- c1265830784b4cbbcfcbda1b16f91cedf1e5c9880f77122e02d39be58637340f
+- 64e6ca7a1377ad17cdf2861ae884a6815a0239a6e99e63bc08b9fe51dbfa28b5
 
 # `test_codex_runtime_exec.py`
 

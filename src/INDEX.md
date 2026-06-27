@@ -138,23 +138,21 @@
 # `sub_commands`
 
 ## Summary
-- cmoc のサブコマンド実行本体をまとめる領域。初期化、INDEX.md 保守、TUI 起動、review oracle、session 操作、apply 操作など、利用者向け CLI から runtime や下位 helper へ処理をつなぐ入口を収める。
-- 各サブコマンドは共通 runtime を通じた実行枠、事前条件検証、git/worktree/state 操作、Codex 実行の呼び出し、レポート生成や利用者向け出力を担当し、より低レベルな path model、設定、git wrapper、状態 schema そのものは共通実装側へ委譲している。
-- review oracle と apply/session 系は、上位の orchestration と下位 helper がこの領域内で分かれており、対象列挙、finding loop、merge/cleanup、report 生成などの読む先をサブコマンド単位の責務から選ぶための入口になる。
+- cmoc の利用者向けサブコマンド実装をまとめる領域。初期化、ルーティング文書保守、対話実行、review oracle、session branch 操作、apply run 操作など、CLI runtime から各処理本体へ入る制御入口と、そのサブコマンド固有 helper を収める。
+- 複数サブコマンドにまたがる共通基盤そのものではなく、各コマンドの事前条件検査、worktree/branch/state 操作、Codex 実行への接続、レポート出力、成功時 stdout など、利用者操作単位の orchestration を追うための入口になる。
+- review oracle と apply/session には下位モジュール群があり、対象列挙、ループ、merge、report、process 管理などの詳細責務へ進む前に、どのサブコマンド領域を読むべきかを切り分ける位置づけを持つ。
 
 ## Read this when
-- cmoc の利用者向けサブコマンドが、どの事前条件で実行され、どの順序で runtime、git、state file、worktree、Codex 実行、レポート出力へ処理を渡すかを確認したいとき。
-- init、indexing、tui、review oracle、session fork/join/abandon、apply fork/join/abandon のどの実装へ進むべきか、サブコマンド単位の責務境界から切り分けたいとき。
-- session branch や apply branch の作成・取り込み・破棄、active state の更新、clean worktree 要求、managed branch の cleanup、merge conflict 処理など、CLI 操作に伴う状態遷移と git 操作を追いたいとき。
-- INDEX.md の自動保守、review oracle の対象列挙・finding loop・INDEX 差分 merge・report 生成、apply fork の finding 適用 loop・禁止差分 rollback・join 時の想定外差分処理など、サブコマンドから下位 helper へ委譲される制御を調べたいとき。
-- cmoc tui が依頼文編集、パラメータ解決、complete prompt 保存、Codex TUI 起動をどう接続するか、または cmoc init が ignore 保証・設定同期・初期 commit・利用者差分復元をどう扱うかを確認したいとき。
+- cmoc のサブコマンド単位で、どの実装が CLI 呼び出し、事前条件、状態遷移、branch/worktree 操作、Codex 実行、出力生成を担うかを選びたいとき。
+- 初期化、INDEX.md 保守、対話実行、review oracle、session fork/join/abandon、apply fork/join/abandon/process/report など、利用者が直接起動する CLI 挙動の入口を調査・変更したいとき。
+- サブコマンド固有の orchestration と、runtime、設定、git wrapper、path model、状態ファイル schema、prompt builder などの共通実装との接続点を確認したいとき。
+- review oracle や apply/session のように複数 helper へ分かれた処理で、対象列挙、実行ループ、merge、レポート、cleanup のどこへ進むべきかを上位から切り分けたいとき。
 
 ## Do not read this when
-- CLI 入口ではなく、repo/work root 解決、git コマンド wrapper、設定 schema、状態ファイル model、path keyword 解決、Codex 実行 wrapper などの共通基盤だけを調べたいとき。
-- oracle file や realization file の定義、正本仕様断片、INDEX.md エントリー生成規則、コード品質基準など、仕様文書側の内容を確認したいだけのとき。
-- サブコマンド登録全体、typer のトップレベル command wiring、package 配布設定、テストケースの期待値を調べたいとき。
-- review oracle 用、apply 用、session join conflict 解決用、tui parameter 解決用などの prompt/Structured Output parameter builder の具体的な構築内容だけを確認したいとき。
-- 特定の低レベル helper の責務が既に明確で、process id file、reports directory、git ignore 判定、binary 判定、state 読み書きなどの共通 runtime 実装へ直接進めるとき。
+- CLI runtime、git コマンド wrapper、設定読み込み、path keyword 解決、状態ファイル model、Codex 実行 wrapper など、複数領域から使われる共通基盤だけを調べたいとき。
+- サブコマンド登録全体、トップレベルの command dispatch、パッケージ公開 API だけを確認したいときは、より上位の CLI entrypoint や集約実装を読む方が直接的。
+- プロンプトや Structured Output parameter の具体的な構築、oracle/realization の正本仕様、ルーティング文書の標準そのものを調べたいだけのとき。
+- 個別 helper の責務がすでに明確で、review の対象列挙・finding loop・report、apply の実行ループ・join・report、session の fork/join/abandon などへ直接進めるとき。
 
 ## hash
-- b7acd7326e23c993a222732ce01f13ddc3a47f1d8dbe59eebaa2cda524186fa9
+- 321db7a6dad1e20c9f258d80bb47165ecc8592d0bfffb2aa20c32dd7e4324a7b

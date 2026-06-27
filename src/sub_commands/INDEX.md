@@ -187,22 +187,24 @@
 # `tui.py`
 
 ## Summary
-- `cmoc tui` の実行フローを実装するサブコマンド本体。利用者が編集する依頼文の作成、エディタ起動、依頼文の読み取り、TUI 用パラメータ解決、完全 prompt の保存、Codex TUI 起動までを扱う。
-- TUI 起動時の AgentCallParameter 構築、TUI で許容する file access mode の検証、Markdown 依頼文の見出し構造化、解決済み JSON からの値取り出しを担う。
+- 対話的な依頼文編集から実行条件の解決、完全なプロンプトの保存、Codex TUI 起動までをつなぐサブコマンド実装。
+- TUI 用の元プロンプト作成、利用可能なエディタ選択、編集結果の読み取り、解決済みパラメータからの呼び出し条件構築を扱う。
+- Markdown 見出しを構造化文書へ変換する処理や、TUI parameter JSON の入れ子形式から値を取り出す補助処理もここにまとまっている。
 
 ## Read this when
-- `cmoc tui` の起動手順、依頼文編集から Codex TUI 実行までの制御フローを確認・変更したいとき。
-- TUI 実行時に作成される元 prompt と完全 prompt の保存場所・命名・読み取り処理を確認したいとき。
-- TUI で利用するエディタ選択、エディタ異常終了時のエラー、利用可能な editor command の優先順を確認・変更したいとき。
-- TUI 用の file access mode 制限、解決済みパラメータから AgentCallParameter を作る処理、complete prompt に含める標準指示フラグの扱いを確認したいとき。
-- Markdown の見出しと fenced code block を考慮して、利用者 prompt を StructDoc 階層へ変換する挙動を確認・変更したいとき。
+- 対話的にユーザーの依頼文を編集してから Codex TUI を起動する処理を変更したいとき。
+- TUI 実行前のパラメータ解決、許可する file access mode、完全プロンプト生成、構造化出力 schema path の扱いを確認したいとき。
+- 元プロンプトと完全プロンプトを TUI log 領域へ保存する条件やパス生成を調べたいとき。
+- TUI 起動前に `.cmoc` ignore を保証する処理や、現在の repository/work root context から TUI 本体へ渡す値を確認したいとき。
+- エディタ選択順、エディタ異常終了時のエラー、HTML comment を除去した元プロンプト読み取りの挙動を変更したいとき。
+- ユーザー入力の Markdown 見出しを StructDoc 階層へ変換する fence 対応の parser 挙動を確認したいとき。
 
 ## Do not read this when
-- TUI 以外のサブコマンドの CLI 制御や実行フローを調べたいだけのとき。
-- Codex CLI/TUI の実際の外部プロセス実行、config 読み込み、repository root や work root の解決など、runtime 共通処理を調べたいとき。
-- TUI パラメータ解決用の prompt/schema そのものや、許容される file access mode の定義元を調べたいとき。
-- complete prompt 全体の組み立て規則や StructDoc の markdown 描画規則を調べたいとき。
-- indexing preflight の詳細な条件や、INDEX 生成・更新の実装を調べたいとき。
+- 通常の非対話 CLI 実行、Codex exec 呼び出しの低レベル実装、runtime 共通処理そのものを調べたいだけのとき。
+- TUI 用パラメータを解決する prompt builder の内容だけを変更したいときは、その builder 側を読む。
+- 完全プロンプトの具体的な構成部品やレンダリング規則だけを調べたいときは、prompt/struct document 側を読む。
+- 設定ファイルの読み込み、repo root/work root の定義、timestamp 生成、`.cmoc` ignore の共通仕様だけを確認したいときは runtime や basic path 関連を読む。
+- サブコマンド登録や CLI 全体の dispatch を調べたいだけなら、上位の CLI entrypoint や sub command 集約側を読む。
 
 ## hash
-- 10df8d618f0de7d5b9f8e1b914e10a117d9388932d95cedb196ef89fd330681b
+- 326ae555cfcdc3e522e8c3c69415e18cb555817e18476f9b9fd534d9914af102
