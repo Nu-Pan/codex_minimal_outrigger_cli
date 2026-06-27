@@ -175,7 +175,8 @@ def test_indexing_preflight_in_apply_worktree_uses_repo_config(
         parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
         seen_models.append(kwargs["config"].codex.model[ModelClass.EFFICIENCY])
-        assert kwargs["root"] == apply_worktree
+        assert kwargs["root"] == root
+        assert kwargs["cwd"] == apply_worktree
         return FakeCodexResult()
 
     indexing_common.run_indexing_preflight(apply_worktree, fake_codex_exec)

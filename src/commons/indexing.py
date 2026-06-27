@@ -219,10 +219,16 @@ def build_index_entry(
             str(path),
         )
     content = target_content_for_indexing(path)
+    log_root = repo_root(root)
     result = codex_exec(
         build_indexing_index_entry_parameter(path, content),
-        root=root,
-        config=load_config(repo_root(root)),
+        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+        # <work-root>/oracle/doc/app_spec/run_isolation.md
+        # INDEX 更新対象は worktree root のまま、Codex のログ/state 保存先は
+        # run worktree 側へ流れないよう repo root に固定する。
+        root=log_root,
+        cwd=root,
+        config=load_config(log_root),
         purpose=f"indexing index entry for {path}",
     ).output_json
     return render_index_entry(root, path, result or {}, digest=digest).rstrip()
