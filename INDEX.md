@@ -149,27 +149,28 @@
 # `src`
 
 ## Summary
-- `src` は cmoc の realization implementation 全体を置く領域で、公開 CLI 入口、サブコマンド実行フロー、共通 runtime helper、設定データ構造、基礎モデル、AI エージェント呼び出し用 parameter・prompt 構築を扱う。
-- CLI 操作としての初期化、INDEX maintenance、TUI 起動、session/apply/review の lifecycle と、それらを支える git・state・config・Codex exec/TUI・error/report/logging・path 解決の実装へ進むための最上位入口である。
-- 正本仕様断片そのものではなく、oracle file の意図を具体化した実装側を確認・変更するために読む対象であり、テスト期待値だけを確認する入口ではない。
+- cmoc の realization implementation 全体を収める実装ルート。公開 CLI 入口、サブコマンド実行フロー、AI agent 呼び出しパラメータ構築、共通 runtime helper、設定モデル、基礎データ構造・文書変換を下位領域へ分けて保持する。
+- 扱う内容は、Typer による CLI command 接続、session/apply/review/indexing/TUI/init の処理制御、Codex exec/TUI 実行、git/worktree/state/config/log/report/INDEX 更新、path model、standard/struct doc、AgentCallParameter、prompt part と Structured Output schema の構築である。
+- 正本仕様断片やテスト本文ではなく、oracle file の意図を具体化する実装コードの入口であり、作業対象に応じて CLI 入口、サブコマンド、共通 runtime、AI 呼び出し構築、基礎モデル、設定のどこへ進むかを選ぶための階層である。
 
 ## Read this when
-- cmoc の CLI コマンド構成、各サブコマンドの実行フロー、または実装関数への委譲関係を確認・変更したいとき。
-- 初期化、INDEX.md 更新、対話的 TUI、session の開始・取り込み・破棄、apply の開始・取り込み・破棄、review oracle の実行など、利用者操作に対応する realization implementation を探したいとき。
-- Codex exec/TUI 呼び出し、AI に渡す AgentCallParameter・complete prompt・Structured Output schema、file access mode、モデル・reasoning 設定の構築箇所を追いたいとき。
-- cmoc 共通の runtime helper として、設定 JSON、session state、git worktree/branch 操作、content hash、エラー表示、ログ、report 出力、runtime path、preflight、INDEX 生成処理の実装場所を切り分けたいとき。
-- RootToken 付き path model、StructDoc/Standard/Requirement、Markdown rendering、AgentCallParameter など、複数領域から参照される基礎モデルや文書変換の実装を確認したいとき。
-- oracle file で述べられた仕様断片が、Python 実装・設定・CLI 配線・共通 helper としてどのように具体化されているかを調べたいとき。
+- cmoc の実装を変更・調査するために、CLI 入口、サブコマンド実行、共通 runtime、AI 呼び出し構築、基礎モデル、設定のどこを読むべきか切り分けたいとき。
+- 利用者が実行する command から実装関数への委譲、引数解析エラーの扱い、session/apply/review/indexing/TUI/init の開始点を確認したいとき。
+- サブコマンドが worktree、branch、state、config、preflight、Codex exec/TUI、report、commit、merge、cleanup をどう組み合わせているか追いたいとき。
+- AI agent に渡す role、summary、goal、file access mode、標準文書、補助入力、model/reasoning、Structured Output schema を構築する実装を探したいとき。
+- 複数の処理から共有される runtime helper、git wrapper、Codex 実行、config 読み書き、error rendering、runtime path、logging、session state、INDEX 更新を確認・変更したいとき。
+- cmoc 固有の path token 解決、AgentCallParameter、Standard、Requirement、StructDoc、Markdown rendering など、上位実装が参照する基礎型や小さな変換処理を確認したいとき。
+- リポジトリごとの挙動設定、既定値、Codex model/reasoning 対応、apply/review の処理上限など、Python 側の設定データ構造を確認したいとき。
 
 ## Do not read this when
-- 正本仕様断片、oracle standard、path 概念、file access rule、review 判定基準など、人間が所有する仕様本文を確認したいときは oracle 側を読む。
-- realization test の期待値、fixture、テスト上の外部挙動だけを確認したいときはテスト側へ進む。
-- リポジトリ設定、パッケージメタデータ、補助スクリプト、gitignore など、実装ソース以外の ancillary file を確認したいだけのとき。
-- 対象の下位責務がすでに特定できており、CLI 入口、共通 runtime、AI 呼び出し builder、基礎モデル、個別サブコマンドのいずれかへ直接進めるとき。
-- 生成済みキャッシュ、bytecode、実行ログ、一時 worktree、report 出力物を確認したいとき。
+- 正本仕様断片そのもの、人間が所有する要求、oracle standard、review standard、INDEX エントリー生成規則の根拠を確認したいときは、oracle 側の本文を読む。
+- 実装の外部挙動をテスト観点で確認したいだけのとき、または fixture や期待値を調べたいときは、realization test 側を読む。
+- README、パッケージ設定、開発補助ファイル、ignore 設定など、実装コード以外の ancillary を確認したいときは、この実装ルートではなく該当する補助ファイルへ進む。
+- 実行ログ、生成物、一時 worktree、保存済み report など、runtime が作る成果物や状態の現在値だけを確認したいとき。
+- 特定の下位責務がすでに分かっているときは、この階層全体を読むのではなく、該当する CLI 入口、サブコマンド、共通 runtime、AI 呼び出し構築、基礎モデル、設定領域へ直接進む。
 
 ## hash
-- 71227bc27d36bb2f143faf9b49d1abe9c07599e6aba15422a7f8f59727c0bb7c
+- 5011e0756d27954e686f38dffb8e59239f5a466bb6d2ca7dfac5a11da55b20ff
 
 # `test`
 

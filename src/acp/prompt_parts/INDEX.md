@@ -123,23 +123,21 @@
 # `oracle_standard.py`
 
 ## Summary
-- oracle file が従うべき記述規範を、prompt 用の StructDoc として構築する実装。人間の認知負荷削減、正本仕様断片としての扱い、未定義部分の許容、文字数最小化、矛盾禁止、実装から仕様への逆流禁止、用語統一、命名、ベストプラクティスより oracle file 優先、goal と non-goal の境界といった Standard 群をまとめて返す。
-- 各規範は背景・要求・判断例を持つ Standard として定義され、oracle file の記述方針を AI に渡すための prompt 本文へ変換される。
+- oracle file が従うべき記述規範を、単一の構造化文書として構築する prompt part。人間の認知負荷削減、正本仕様断片としての扱い、未定義部分の許容、総文字数最小化、矛盾禁止、実装から仕様への逆流禁止、用語統一、命名、oracle 優先、goal/non-goal の境界をまとめて扱う。
+- 各規範は背景・要求・判断例を持つ Standard として定義され、oracle file の記述品質や仕様判断の基準を生成する入口になる。
 
 ## Read this when
-- oracle file の書き方、分量、責務境界、正本仕様断片としての扱いを AI prompt にどう含めるか確認したいとき。
-- oracle file レビューや生成で、人間が判断すべき事項と AI 裁量で補ってよい事項の境界規範を調べたいとき。
-- oracle file の未定義部分、実装差、仕様間矛盾、用語統一、命名、goal/non-goal の扱いに関する prompt part を変更・確認したいとき。
-- oracle standard 全体を StructDoc として組み立てる実装や、Standard から StructDoc への変換呼び出しを確認したいとき。
+- oracle file の書き方、量、責務境界、正本仕様断片としての扱いに関する prompt 本文を確認したいとき。
+- oracle file に何を書くべきか、何を AI 裁量や既存実装・既存テストへ委ねるべきかの判断基準を確認したいとき。
+- oracle file 間の矛盾、用語・命名の統一、ベストプラクティスより oracle file を優先する判断、goal/non-goal の書き分けを扱う変更をするとき。
 
 ## Do not read this when
-- oracle file ではなく realization file の品質、分割、抽象化、テスト、依存関係に関する規範だけを確認したいとき。
-- 個別 CLI 機能の仕様、入出力形式、状態ファイルのライフサイクルなど、具体的なプロダクト挙動を調べたいとき。
-- Standard、Requirement、StructDoc のデータ構造や変換関数そのものの実装を確認したいとき。
-- prompt part を呼び出す側の結合順序、CLI への組み込み、最終 prompt 全体の構成を確認したいとき。
+- realization file 自体の品質、分割、抽象化、テスト、依存関係、公開面の増減に関する規範だけを確認したいとき。
+- 特定の oracle file が述べる個別機能仕様や CLI 挙動の詳細を知りたいとき。
+- 構造化文書、Standard、Requirement のデータ構造や変換処理そのものを調べたいとき。
 
 ## hash
-- 3cb87c0f690a0b702207cfcea1449cf09f9316cde3224a4974090c1664748792
+- 38fa4254d5bced70a5687d3dd439ed3fe9333af980e02dfdf27f38cc7ac692d5
 
 # `realization_standard.py`
 
