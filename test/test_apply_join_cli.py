@@ -415,6 +415,17 @@ def test_apply_join_managed_branch_paths_exclude_deletes_and_use_rename_target(
     assert paths == ["docs/README.md"]
 
 
+@pytest.mark.parametrize("path", ["memo", "memo/note.md"])
+def test_apply_join_classifies_root_memo_as_session_change(
+    tmp_path: Path,
+    path: str,
+) -> None:
+    root = make_repo(tmp_path)
+
+    assert apply_module.is_expected_apply_change(root, path) is False
+    assert apply_module.is_expected_session_change(path) is True
+
+
 def test_apply_join_allows_gitignore_change_as_apply_diff(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

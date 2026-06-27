@@ -294,7 +294,7 @@ def is_expected_apply_change(root: Path, path: str) -> bool:
         return True
     if path.startswith(".git/"):
         return False
-    if path.startswith(("oracle/", "memo/", ".agents/")):
+    if path.startswith(("oracle/", ".agents/")) or is_root_memo_path(path):
         return False
     return not is_git_ignored(root, root / path)
 
@@ -302,7 +302,13 @@ def is_expected_apply_change(root: Path, path: str) -> bool:
 def is_expected_session_change(path: str) -> bool:
     """session branch 上で apply 実行中に許可される差分かどうかを判定する。"""
     p = Path(path)
-    return p.name == "INDEX.md" or path.startswith("oracle/") or path.startswith("memo/")
+    return p.name == "INDEX.md" or path.startswith("oracle/") or is_root_memo_path(path)
+
+
+def is_root_memo_path(path: str) -> bool:
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md treats root memo
+    # and paths below it as session-side changes, not apply-side products.
+    return path == "memo" or path.startswith("memo/")
 
 
 def revert_unexpected_changes(root: Path, unexpected: dict[str, list[str]], state: SessionState) -> None:
