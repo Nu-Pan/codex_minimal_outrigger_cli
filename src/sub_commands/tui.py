@@ -247,7 +247,11 @@ def parse_markdown_prompt(markdown: str) -> list[StructDoc] | list[str]:
 def nested_value(data: dict, name: str, default: str) -> str:
     """TUI parameter JSON で `{value: ...}` 形式の項目から文字列値を取り出す。"""
     value = data.get(name)
-    if isinstance(value, dict) and isinstance(value.get("value"), str):
+    if (
+        isinstance(value, dict)
+        and isinstance(value.get("value"), str)
+        and value["value"]
+    ):
         return value["value"]
     return default
 

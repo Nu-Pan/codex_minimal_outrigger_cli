@@ -313,6 +313,15 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     assert not (root / ".cmoc" / "logs" / "sub_commands").exists()
 
 
+def test_tui_uses_default_file_access_mode_for_empty_resolved_value() -> None:
+    parameter = tui_module.build_tui_codex_parameter(
+        "確認して下さい。",
+        {"file_access_mode": {"value": "", "reason": "default accepted"}},
+    )
+
+    assert parameter.file_access_mode == FileAccessMode.READONLY
+
+
 def test_tui_saves_complete_prompt_in_linked_worktree(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
