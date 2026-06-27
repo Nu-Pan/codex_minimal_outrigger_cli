@@ -23,8 +23,17 @@ class SubcommandLogger:
         self.command = command
         self.started_at = time.perf_counter()
         self.quota_wait_sec = 0.0
-        self.path = logs_dir(root) / f"{timestamp()}.jsonl"
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        log_dir = logs_dir(root)
+        log_dir.mkdir(parents=True, exist_ok=True)
+        while True:
+            self.path = log_dir / f"{timestamp()}.jsonl"
+            try:
+                # <work-root>/oracle/doc/app_spec/console_and_file_log.md requires
+                # one <time-stamp>.jsonl per subcommand; reserve it atomically.
+                self.path.open("x").close()
+                break
+            except FileExistsError:
+                time.sleep(0.000001)
 
     def event(self, kind: str, **payload: Any) -> None:
         """実行時に後から検査したい event を安定した JSON record として残す。"""

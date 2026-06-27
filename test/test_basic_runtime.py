@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 import main as main_module
+import commons.runtime_logging as runtime_logging
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from basic.path_model import (
     RootToken,
@@ -15,6 +16,7 @@ from basic.path_model import (
 )
 from cmoc_runtime import (
     CmocError,
+    SubcommandLogger,
     config_from_dict,
     ensure_cmoc_ignored,
     file_access_to_sandbox_mode,
@@ -61,6 +63,29 @@ def test_format_duration_truncates_msec_digit_and_space_pads_time_parts() -> Non
     assert format_duration(0.19) == " 0h  0m  0.1s"
     assert format_duration(3.19) == " 0h  0m  3.1s"
     assert format_duration(59.99) == " 0h  0m 59.9s"
+
+
+def test_subcommand_logger_keeps_one_file_per_command_on_timestamp_collision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    timestamps = iter(
+        [
+            "2026-06-27_10-00_00_000001000",
+            "2026-06-27_10-00_00_000001000",
+            "2026-06-27_10-00_00_000002000",
+        ]
+    )
+    monkeypatch.setattr(runtime_logging, "timestamp", lambda: next(timestamps))
+
+    first = SubcommandLogger(tmp_path, "first")
+    second = SubcommandLogger(tmp_path, "second")
+    first.event("marker")
+    second.event("marker")
+
+    assert first.path.name == "2026-06-27_10-00_00_000001000.jsonl"
+    assert second.path.name == "2026-06-27_10-00_00_000002000.jsonl"
+    assert [line for line in first.path.read_text().splitlines() if line]
+    assert [line for line in second.path.read_text().splitlines() if line]
 
 
 def test_runtime_distinguishes_repo_root_from_linked_worktree(
