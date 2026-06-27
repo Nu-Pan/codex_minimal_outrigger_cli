@@ -1,28 +1,28 @@
 # `apply`
 
 ## Summary
-- 実行結果を別 worktree で作成し、必要に応じて破棄または session 側へ取り込む一連のサブコマンド実装を扱う領域。
-- 実行開始時の対象選定、process 追跡、branch/worktree 管理、差分検証、report 生成、cleanup、状態遷移の入口になる。
-- 実行中の process 停止や pid 管理、fork 結果 report、join 時の想定外差分分類や merge conflict 処理など、apply 系操作固有の実行時責務を下位要素に分けて持つ。
+- 実行結果を別 worktree と branch で作成し、状態管理、実行中 process 管理、破棄、取り込み、report 生成までを扱うサブコマンド群の実装領域。
+- 開始側では対象 file の列挙、Codex 呼び出し、変更の再キュー、commit、編集禁止対象の rollback を制御し、終了側では session 側への merge、想定外差分の検出、conflict 処理、cleanup を扱う。
+- 実行時補助として、session branch や実行用 branch から linked worktree を解決し、pid file と process tracking 環境変数を管理し、破棄時に stale pid や process identity を確認しながら実行中 process を停止する処理も含む。
 
 ## Read this when
-- apply 系サブコマンドの開始、破棄、取り込み、report 生成、process 管理のどこを読むべきかを選びたいとき。
-- session branch や apply branch を前提に、isolated worktree を作成・削除しながら apply run の状態を進める流れを調べたいとき。
-- apply run の成果を session 側へ merge する条件、想定外差分の検出、force resolve、merge conflict 時の扱い、cleanup の責務境界を確認したいとき。
-- 未 join の実行を破棄して ready 状態へ戻す操作、実行中 process の停止、apply worktree や branch の削除に関わる実装へ進みたいとき。
-- apply fork の対象ファイル選定、finding 列挙・適用、禁止対象差分のロールバック、commit 作成、converged/unconverged/error 判定を追いたいとき。
-- apply fork や join の利用者向け report に含まれる結果、warning、変更要約、保存先を確認・変更したいとき。
+- 実行結果を隔離された worktree と branch で作り、後から session 側へ取り込む一連の利用者操作を確認・変更したいとき。
+- 開始、破棄、取り込み、report 生成、状態遷移、worktree・branch・pid file cleanup のどこへ進むべきかをこの領域内で切り分けたいとき。
+- 対象 file の列挙、変更後 file の再キュー、未収束終了、編集禁止対象差分の rollback、Codex 呼び出し後の commit など、実行 loop 固有の制御を調べたいとき。
+- 未 join の実行を破棄して ready 状態へ戻す処理、または実行中 process を停止して worktree・branch・pid file を片付ける処理を調べたいとき。
+- 実行結果を session branch へ merge する条件、想定外差分の分類、force resolve、INDEX.md conflict の機械解決、未解決 conflict report、成功後 cleanup を調べたいとき。
+- 実行結果や失敗結果の Markdown report、frontmatter、変更要約、差分収集、要約生成失敗時 fallback を調べたいとき。
 
 ## Do not read this when
-- CLI 全体のサブコマンド登録、dispatch、共通引数処理だけを調べたいとき。
-- repo root、work root、git command 実行、状態ファイル読み書き、report root など、複数サブコマンドにまたがる runtime primitive の詳細だけが必要なとき。
-- session state schema、session の作成・終了、branch 名規則そのものを調べたいとき。
-- Codex に渡す prompt や parameter の詳細だけを変更・確認したいとき。
-- oracle file、realization file、INDEX.md エントリー生成などの一般ルールを確認したいだけで、apply 系操作の実行時挙動に関心がないとき。
-- 具体的な apply 系処理ではなく、パッケージ import 時の副作用や再 export の有無だけを確認したいとき。
+- サブコマンド一覧への登録、CLI parser の全体構造、dispatch の入口だけを確認したいときは、上位の command 定義側へ進む。
+- session state file の schema、branch 名規則、path model、git command wrapper、report root、worktree root などの共通基盤そのものを調べたいときは、共通 runtime や basic model 側へ進む。
+- Codex CLI に渡す prompt や parameter の内容そのものを確認したいときは、ACP parameter builder 側へ進む。
+- oracle file と realization file の一般ルール、INDEX.md エントリー生成規則、編集禁止対象の正本仕様を確認したいだけで、実行時挙動に関心がないときは oracle 側へ進む。
+- 通常の session 作成・終了や、実行結果取り込み以外の session 操作を調べたいときは session 系の実装へ進む。
+- git worktree の一般的な作成・削除、状態ファイル読み書き、clean worktree 検証などの低レベル helper だけが必要なときは、それらを提供する共通実装へ直接進む。
 
 ## hash
-- d2cc97b9294c96440affb0699a62fff04cbeb3f3280f49ff27a892411887dc84
+- d83a5102a61543b83a203ba30937f4a398e9ad2dc475e71aab9dc1c290ca0239
 
 # `indexing.py`
 

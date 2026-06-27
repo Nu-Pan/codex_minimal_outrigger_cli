@@ -70,26 +70,25 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 実行を通じて、所見列挙、所見適用、commit message 生成、変更要約、report 出力、session state 更新までの制御を検証する realization test。
-- 収束、未収束、error、変更ファイル再調査、未追跡ファイルの変更要約、編集禁止対象差分の拒否、rolling apply fork の対象選定を、同じ loop と report schema の観測結果として扱う。
-- 16,000 文字を超えるが、apply fork report の読み取り文脈を一箇所に保つため、分割より凝集性を優先している。
+- apply fork を CLI から実行したときの report 生成、収束判定、再検査対象の制御、error report、session state 更新をまとめて検証する realization test。所見列挙、所見適用、commit message、変更要約、report schema の観測が同じ制御 loop に閉じるため、apply fork report 周辺の期待値を一箇所で読む入口になる。
+- 未追跡 file を含む fork 後差分の抽出、fallback 変更要約、編集禁止対象差分の error 化、rolling apply fork が前回 apply join 後の変更だけを対象にすることも、この report 制御の一部として扱う。
 
 ## Read this when
-- apply fork の CLI 終了コード、stdout に返す report path、report 本文の result・finding count・変更要約の期待値を確認する時。
-- apply fork が所見適用後に変更ファイルを再調査し、特定のルーティング文書を再調査対象から外す制御を確認する時。
-- apply fork が回数上限、空所見、差分なし適用、調査対象なしをそれぞれ収束または未収束として扱う条件を確認する時。
-- apply fork の error report が commit 前の working tree 差分や未追跡ファイルを変更要約に含める挙動を確認する時。
-- apply fork が編集禁止対象への差分を検出して error state と report に反映する挙動を確認する時。
-- apply join 後の rolling apply fork が、前回 apply join の oracle snapshot 以後の変更だけを調査対象にする挙動を確認する時。
+- apply fork の CLI 実行結果、exit code、stdout に出る report path、report 本文の result や Finding Count、変更要約表示を確認したいとき。
+- apply fork が所見適用後に変更 file を再調査する条件、INDEX.md を再調査対象から外す条件、上限到達時の converged/unconverged 判定を変更・検証するとき。
+- apply fork の所見適用が差分を作らない場合、commit message 生成を行わないことや apply branch が進まないことを確認したいとき。
+- apply fork 中に編集禁止対象の差分が発生した場合の stderr、error state、error report、未 commit 差分を含む変更要約を扱うとき。
+- apply fork report 用の fork 後差分検出が未追跡 file を含むか、変更 path fallback summary がどう作られるかを確認したいとき。
+- rolling apply fork の調査対象が前回 apply join 後の変更に限定されることや、session state の apply join snapshot 更新との関係を確認したいとき。
 
 ## Do not read this when
-- apply fork の実装手順、内部 helper の詳細、Codex 実行 wrapper の本体を確認したいだけの場合。
-- apply join、session fork、init などの各サブコマンド単体の仕様や実装を確認したい場合。
-- report schema の生成規則そのものや、変更要約 helper の内部実装だけを確認したい場合。
-- apply fork と関係しない CLI、一般的な repository 初期化、path model、oracle/realization の基本概念を調べる場合。
+- apply fork の内部実装だけを局所的に変更したく、CLI 経由の report・session state・git commit まで含む外部挙動を確認する必要がないとき。
+- apply join、session fork、init などの個別 command 自体の仕様や挙動を調べたいだけで、apply fork report 制御との結合を扱わないとき。
+- Codex 実行 wrapper、AgentCallParameter、structured output schema の一般的な仕組みを調べたいだけで、この test が fake している apply fork 用応答の期待値に関心がないとき。
+- INDEX.md 生成やルーティング文書そのものの挙動を調べたいとき。ただし apply fork の再調査対象から INDEX.md を除外する挙動を扱う場合は読む。
 
 ## hash
-- 89a5b080919691a165d01283c9923d3262aaeaf5fe32f85eddab16dae1e412bb
+- 3d2195a4f9374476ac5893c8dae8c254ce0881d062e97b288c12587a508518fc
 
 # `test_apply_join_cli.py`
 

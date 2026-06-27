@@ -63,26 +63,24 @@
 # `fork.py`
 
 ## Summary
-- apply fork サブコマンドの実行本体を担う実装。session branch 上の事前条件確認、isolated apply worktree の作成、対象ファイル列挙、Codex による finding 列挙と適用、禁止対象差分のロールバック、変更コミット、レポート出力、apply 状態更新までの制御フローをまとめて扱う。
-- apply scope から調査対象を決める処理、変更済み path の正規化、重複排除、直近 join 済み apply merge commit の解決など、apply fork loop の対象選定に必要な補助処理も含む。
-- Codex が生成した commit subject を 1 行に整形し、生成失敗時には適用済み finding から代替 subject を作る処理を持つ。
+- apply fork サブコマンドの実行本体を担い、session branch 上で isolated apply worktree を作成して Codex による finding 列挙、適用、commit、report 作成、state 更新を制御する。
+- apply scope から調査対象 file を列挙・正規化し、変更された realization file を再キューしながら収束判定または未収束終了を行う apply loop の入口になる。
+- apply 中に編集禁止対象へ差分が出た場合の rollback と再実行、commit subject 生成、直前 join commit の git 履歴解決など、apply fork 固有の制御 helper を含む。
 
 ## Read this when
-- apply fork の実行条件、状態遷移、worktree 作成、apply branch 名、process id 管理、成功・失敗時のレポート出力や終了コードを確認したいとき。
-- apply fork がどのファイルを finding 列挙対象にするかを、scope、session state、git diff、ignore、oracle 除外条件、INDEX 除外条件との関係で確認したいとき。
-- finding 適用中に oracle、.agents、memo へ差分が出た場合の検出、ロールバック、再実行、エラー化の挙動を確認したいとき。
-- apply fork loop が findings の有無、変更の有無、pending target、設定された処理回数に応じて converged、unconverged、error を決める流れを追いたいとき。
-- apply fork が Codex CLI に渡す役割を、finding 列挙、finding 適用、commit message 生成の各用途に分けて確認したいとき。
+- apply fork の事前条件、branch・worktree・state・process id・report のライフサイクルを確認または変更したいとき。
+- apply scope ごとの対象 file 列挙、INDEX.md や ignored file や oracle file の除外条件、変更後 target の再キュー挙動を確認または変更したいとき。
+- finding 列挙と finding 適用の Codex 呼び出し、適用後 commit、未収束時 return code、stdout に report path だけを返す挙動を確認または変更したいとき。
+- apply fork 中の編集禁止対象差分を検出・rollback・再試行する挙動や、その失敗時エラーを確認または変更したいとき。
 
 ## Do not read this when
-- apply fork の最終レポート本文やエラーレポートの markdown 構成だけを変更・確認したいときは、レポート生成側を直接読む。
-- Codex に渡す finding 列挙用または finding 適用用プロンプトの詳細を変更・確認したいときは、パラメータ生成側を直接読む。
-- apply process id の保存形式や追跡用 context manager の低レベル実装だけを確認したいときは、apply runtime 側を直接読む。
-- CLI 全体の dispatch、引数定義、または run_cli_subcommand の共通実行仕様を確認したいだけなら、CLI 共通実行基盤やサブコマンド登録側を読む。
-- repo root、work root、worktree 作成、git 実行、状態ファイル読み書きなどの共通 runtime primitive の実装詳細だけを確認したいときは、runtime 側を直接読む。
+- apply fork report の markdown 内容や error report の構成だけを確認したいときは、report 生成側を直接読む。
+- finding 列挙や finding 適用の prompt 内容そのものを確認したいときは、ACP parameter builder 側を直接読む。
+- CLI 引数の parser 登録やサブコマンド一覧だけを確認したいときは、CLI command 定義側を直接読む。
+- apply fork 以外の apply join、abandon、status などの利用者操作を確認したいときは、それぞれのサブコマンド実装を直接読む。
 
 ## hash
-- 8f1537401b0f931ed228c6a4402202bf3ba18f9a1129982ca4d5b5cac72cf8d2
+- 409c5c180654eafb666b90cee4f627c6a7b1cedc68c7890596c7f56c81246bd9
 
 # `fork_report.py`
 

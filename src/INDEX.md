@@ -129,27 +129,31 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の CLI サブコマンド実装群へ進むための領域で、初期化、indexing、TUI、session、apply、review など利用者操作ごとの実行入口と orchestration を束ねる。
-- 各サブコマンドは CLI runtime を通じて実行され、work root や session branch の前提確認、git 操作、状態更新、report 生成、利用者向け出力、失敗時処理などを担当範囲に応じて扱う。
-- 共通 runtime や正本仕様そのものではなく、個別 CLI 操作がどの実装へ接続され、どの下位処理へ委譲されるかを選ぶための入口になる。
+- cmoc の利用者向けサブコマンド実行本体を集める実装領域で、CLI runtime を介した preflight、状態確認、git 操作、Codex 呼び出し、利用者向け出力や report 生成への接続を扱う。
+- 初期化、INDEX maintenance、TUI 起動、session の作成・合流・破棄、apply の隔離実行・破棄・取り込み、review oracle の対象列挙・所見 loop・INDEX 反映・報告書出力へ進む入口になる。
+- 各サブコマンド固有の worktree・branch・state・cleanup・merge conflict・process tracking などの制御を持つ一方、path model、状態 schema、git wrapper、prompt builder、設定読み込みなどの共通基盤そのものは外部モジュールへ委譲する。
 
 ## Read this when
-- cmoc のサブコマンド実行本体を探し、初期化、indexing、TUI、session 操作、apply 操作、review 操作のどこへ進むべきかを判断したいとき。
-- CLI runtime へ渡す command name、argv、preflight、work root runtime、Codex exec callback など、サブコマンド入口側の配線を確認・変更したいとき。
-- 初期化時の ignore 保証、設定同期、初期 commit、利用者差分や git 状態の復元、成功時出力に関わる実装へ進みたいとき。
-- INDEX.md maintenance をサブコマンドとして起動し、実行前検査、lock 付き更新、更新後 commit、更新件数出力までの流れを追いたいとき。
-- 利用者編集 prompt から Codex TUI 起動までの流れ、TUI 用ログ保存、完全 prompt 生成、エディタ選択、TUI 実行パラメータ解決を確認したいとき。
-- session branch の作成、home branch への join、merge せず破棄する操作など、session lifecycle に関わる CLI 実行条件、状態遷移、git 操作、復旧処理を調べたいとき。
-- apply run の開始、破棄、取り込み、process 追跡、isolated worktree や branch の管理、差分検証、report、cleanup の実装入口を探したいとき。
-- review oracle の実行条件、対象列挙、finding 収集・統合・判定、INDEX.md 差分の commit/merge、conflict 処理、report 出力までの制御経路を追いたいとき。
+- 利用者が実行する cmoc サブコマンドの実装入口、実行順序、preflight、CLI runtime への渡し方、標準出力や report 出力を確認・変更したいとき。
+- work root を初期化する処理、`.cmoc` ignore の保証、初期化 commit、既存 staged 差分や `.gitignore` 状態の退避・復元を調べたいとき。
+- INDEX maintenance をサブコマンドとして起動する流れ、clean worktree 条件、lock 付き更新、更新後 commit、更新件数出力を確認したいとき。
+- 利用者編集 prompt から TUI 用実行 parameter の解決、完全 prompt の保存、Codex TUI 起動、エディタ選択、Markdown 見出しの構造化を追いたいとき。
+- session branch の作成、home branch への merge、merge せず破棄する操作など、session lifecycle の事前条件、state 更新、branch 操作、cleanup、利用者向け出力を調べたいとき。
+- Codex による実装適用を隔離 worktree と apply branch で実行し、対象列挙、finding 適用、変更 file の再キュー、編集禁止対象 rollback、commit、report 生成、process tracking を確認・変更したいとき。
+- 未 join の apply run を破棄する処理、実行中 apply process の停止、pid file の扱い、apply worktree・branch の cleanup、apply state を ready に戻す制御を調べたいとき。
+- apply branch を session branch へ取り込む条件、想定外差分の分類、force resolve、INDEX.md conflict の機械解決、未解決 conflict report、成功後 cleanup を調べたいとき。
+- review oracle の active session 前提、scope 検証、review worktree 作成、oracle 対象列挙、finding の enumerate・merge・validate・judge、INDEX.md 変更だけの commit と merge、review report 出力を追いたいとき。
+- サブコマンド層から、apply、session、review、TUI、初期化、indexing のどの下位実装へ進むべきかを切り分けたいとき。
 
 ## Do not read this when
-- CLI 全体のトップレベル登録、Typer app への配線、共通 dispatch の仕組みだけを確認したいときは、より上位の CLI entrypoint や登録側を読む。
-- repo root、work root、path token、git command wrapper、状態ファイル読み書き、report root、clean worktree 判定など、複数サブコマンドで共有される runtime primitive の詳細だけが必要なとき。
-- session state schema、apply state schema、設定モデル、Codex 実行 parameter builder、StructDoc rendering などの共通データ構造や生成ロジックそのものを確認したいとき。
-- oracle file、realization file、INDEX.md エントリー生成基準、review/indexing の正本仕様断片など、実装入口ではなく仕様文書を確認したいとき。
-- INDEX.md の本文生成、差分検出、更新対象探索、lock 実装、commit 処理など indexing 共通処理の内部詳細だけを調べたいとき。
-- 個別の apply、review、session の詳細処理を読む対象がすでに分かっており、下位モジュールや下位ディレクトリへ直接進む方が適切なとき。
+- Typer app への登録、トップレベル CLI parser、dispatch の全体入口だけを確認したいときは、上位の CLI entrypoint や command 定義側を読む。
+- path token、repo root・work root、branch 名規則、state file schema、report root、worktree root、git command wrapper、clean worktree 判定などの共通基盤そのものを調べたいときは、runtime や basic model 側を直接読む。
+- Codex CLI に渡す prompt や Structured Output parameter の具体的な内容だけを確認したいときは、ACP builder 側を読む。
+- INDEX.md の本文生成、差分検出、更新対象探索、lock 実装、commit helper など、indexing 共通処理の詳細ロジックだけを調べたいときは、共通 indexing 実装へ進む。
+- oracle file と realization file の概念、編集禁止対象、INDEX.md エントリー生成規則、各サブコマンドの正本仕様断片を確認したいだけのときは、oracle 側を読む。
+- サブコマンドの外部挙動を検証するテストケース、fixture、期待出力の確認が目的のときは、対応する test 側を読む。
+- 低レベルな git worktree 作成・削除、state 読み書き、設定同期、cmoc ignore pattern 生成、timestamp、process start time 取得などの helper だけが必要なときは、それらを提供する共通実装へ直接進む。
+- review や apply の LLM 出力品質そのもの、生成された所見や実行ログの内容を調べたいときは、この実装領域ではなく保存済み log や report を確認する。
 
 ## hash
-- def8fc72877659f289aed2f1212f50782af0d7d049f21b69e4a7c4a31ed4e8eb
+- e0cffa69cdfa09b29af311deae33b73c685b5d3464f0386d7c1ec96b1a2c4408
