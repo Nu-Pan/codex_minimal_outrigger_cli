@@ -137,24 +137,25 @@
 # `test_cli_init_tui.py`
 
 ## Summary
-- CLI の初期化処理と対話型起動処理に関する realization test。初期化時の .cmoc 管理、.gitignore 追記、既存 staged/unstaged 変更の保護、linked worktree での保存先、既定設定の生成・同期、サブコマンドログ、TUI のプロンプト編集・パラメータ解決・Codex 起動、Markdown プロンプト解析の挙動を検証する。
+- CLI の初期化処理と対話型起動処理を、実際の一時 Git リポジトリ上で検証するテスト群。初期化時の管理ディレクトリ除外、既存ステージ状態の保持、設定ファイルの既定値同期、サブコマンドログ、通常 worktree と linked worktree の保存先・無視設定の違いを扱う。
+- 対話型起動では、エディタで作成された依頼文の整形、パラメータ解決用 Codex 呼び出し、最終 Codex TUI 呼び出しへの引数伝播、完了プロンプトの保存先、空の file access mode の既定値を検証する。
+- Markdown 依頼文の解析について、 fenced code block 内の見出し風文字列を見出し扱いしないことと、見出し前の前文を本文として保持することを検証する。
 
 ## Read this when
-- 初期化コマンドが既存の .cmoc 配下ファイルを git 管理から外し、.cmoc を ignore し、必要な cleanup commit を作る挙動を確認・変更したいとき。
-- 初期化コマンドが利用者の既存 staged 変更や .gitignore の staged/unstaged 変更を勝手に commit しないことを確認・変更したいとき。
-- linked worktree 上で初期化や TUI を実行した場合の、repository root と作業 tree 側それぞれの .cmoc、.gitignore、ログ、schema、commit 対象の扱いを確認・変更したいとき。
-- 既定設定ファイルの生成内容や、既存の人間設定を残したまま不足する既定値を補う同期挙動を確認・変更したいとき。
-- TUI が editor で編集された Markdown からコメントを除去し、パラメータ解決用 Codex 呼び出しと TUI 用 Codex 呼び出しへ適切な AgentCallParameter を渡す流れを確認・変更したいとき。
-- TUI の file access mode 解決結果が空の場合の既定値、または fenced code block や見出し前本文を含む Markdown プロンプト解析を確認・変更したいとき。
+- init サブコマンドが管理ディレクトリを Git 管理から外し、無視設定とコミットをどのように作るかを確認したいとき。
+- init サブコマンドが既存の staged 変更や .gitignore の staged/unstaged 変更を壊さないことを確認・変更したいとき。
+- 通常リポジトリと linked worktree で、設定ファイル、ログ、schema、.gitignore、exclude の保存先や無視状態を検証する必要があるとき。
+- tui サブコマンドで、エディタ起動後の依頼文から解決用パラメータを作り、Codex TUI 呼び出しへ file access mode や extra read path を渡す流れを確認したいとき。
+- 対話型依頼文の Markdown 解析で、見出し、前文、コードブロック内の見出し風行の扱いを変更・確認したいとき。
 
 ## Do not read this when
-- 初期化や TUI の利用者向け外部挙動ではなく、個別 helper の内部実装だけを確認したいときは、該当する実装側の対象を先に読む。
-- CLI 全体のコマンド登録、共通 runner、fixture、git 操作 helper の一般的な仕組みを調べたいだけのときは、共通サポートや実装エントリの対象を先に読む。
-- oracle file の正本仕様断片を確認・変更したいときは、この realization test ではなく対応する oracle 側の対象を読む。
-- TUI 以外のサブコマンド、または初期化処理と無関係な設定・ログ・worktree 処理のテストを探しているときは、より直接その挙動を検証するテストへ進む。
+- 個別のサブコマンド実装そのものを読みたいだけの場合は、実装側の該当サブコマンドに直接進めばよい。
+- Codex 呼び出し共通処理、Git helper、テスト用 fixture の詳細だけを調べたい場合は、それらを定義する支援モジュールや実装モジュールを読む方が直接的。
+- 対話型起動ではない CLI コマンドの一般的なオプション解析や Typer アプリ構成を確認したい場合は、CLI エントリポイントや対象コマンドの実装を読む方がよい。
+- Markdown 文書全般の仕様や汎用 parser の設計を調べたいだけの場合は、このテストで扱う依頼文解析の境界に関係しない限り読む必要はない。
 
 ## hash
-- 7648b5e7f2fca5395ad3a389129ffeda859b8b54fe7cf234ad970de5379333e4
+- 7cad7a21835585ff3afbd64d7f33dd72d87b877c95a94660c8d869ddab872c5a
 
 # `test_codex_runtime_exec.py`
 
