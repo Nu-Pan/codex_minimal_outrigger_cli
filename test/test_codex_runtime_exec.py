@@ -1,3 +1,4 @@
+import json
 import subprocess
 from pathlib import Path
 
@@ -6,7 +7,12 @@ import pytest
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from cmoc_runtime import CmocError
 from config.cmoc_config import CmocConfig
-from _support import make_repo, setup_codex_home, stub_codex_profile
+from _support import (
+    make_repo,
+    setup_codex_home,
+    stub_codex_profile,
+    write_python_executable,
+)
 from commons.runtime_codex import run_codex_exec, run_codex_tui
 
 
@@ -20,24 +26,52 @@ def _parameter(mode: FileAccessMode = FileAccessMode.READONLY) -> AgentCallParam
     )
 
 
-def test_run_codex_exec_rejects_unenforced_read_limits(
+def test_run_codex_exec_generates_profile_and_starts_codex(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    recorder = tmp_path / "record.json"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, os, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "profile = args[args.index('--profile') + 1]",
+            "home = pathlib.Path(os.environ['CODEX_HOME'])",
+            "profile_path = home / f'{profile}.config.toml'",
+            "output.write_text('done\\n')",
+            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
+            "    'args': args,",
+            "    'stdin': sys.stdin.read(),",
+            "    'profile': profile_path.read_text(),",
+            "}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
-    def fail_run(*_args: object, **_kwargs: object) -> subprocess.CompletedProcess[str]:
-        raise AssertionError("Codex subprocess must not start")
+    result = run_codex_exec(
+        _parameter(FileAccessMode.REPO_WRITE),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
 
-    monkeypatch.setattr(cmoc_runtime.subprocess, "run", fail_run)
-
-    with pytest.raises(CmocError, match="読み取り制限"):
-        run_codex_exec(
-            _parameter(FileAccessMode.REPO_WRITE),
-            root=root,
-            capacity_initial_sleep_sec=0,
-            config=CmocConfig(),
-        )
+    record = json.loads(recorder.read_text())
+    assert record["args"][:4] == [
+        "exec",
+        "--profile",
+        result.profile_name,
+        "--json",
+    ]
+    assert record["stdin"] == "prompt"
+    assert 'sandbox_mode = "workspace-write"' in record["profile"]
+    assert f'writable_roots = ["{root.resolve()}"]' in record["profile"]
+    assert result.output_text == "done\n"
 
 
 def test_run_codex_tui_checks_extra_read_path_before_starting_codex(

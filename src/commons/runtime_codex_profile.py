@@ -42,24 +42,36 @@ def _validate_extra_read_paths(
             )
 
 
-def _reject_unrepresentable_read_limits(
+def _toml_string(value: str) -> str:
+    return json.dumps(value, ensure_ascii=False)
+
+
+def _writable_roots(
     mode: FileAccessMode,
     root: Path,
-    extra_read_paths: list[Path] | None,
-) -> None:
-    _validate_extra_read_paths(root, extra_read_paths)
+    extra_writable_paths: list[Path] | None,
+) -> list[Path]:
+    if file_access_to_sandbox_mode(mode) == "read-only":
+        return []
+    paths = [root, *(extra_writable_paths or [])]
+    result: list[Path] = []
+    seen: set[Path] = set()
+    for path in paths:
+        resolved = path.resolve()
+        if resolved not in seen:
+            seen.add(resolved)
+            result.append(resolved)
+    return result
+
+
+def _append_workspace_write_section(lines: list[str], writable_roots: list[Path]) -> None:
+    if not writable_roots:
+        return
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # Codex CLI 0.142.2 profile accepts sandbox mode and writable roots, but
-    # has no read allow/deny list. Do not emit a profile that only enforces the
-    # write half of the oracle file access rule.
-    raise CmocError(
-        "Codex profile では指定された読み取り制限を実効化できません。",
-        [
-            "読み取り deny/allow を表現できる Codex CLI profile が必要です。",
-            "安全に実行できる隔離環境を用意してから再実行してください。",
-        ],
-        f"mode: {mode.value}\nroot: {root}",
-    )
+    # FileAccessMode の細かい deny は prompt 側にも載せるが、Codex profile
+    # で表現できる sandbox 境界はここで必ず渡してから起動する。
+    roots = ", ".join(_toml_string(str(path)) for path in writable_roots)
+    lines.extend(["[sandbox_workspace_write]", f"writable_roots = [{roots}]"])
 
 
 def build_codex_profile(
@@ -77,14 +89,19 @@ def build_codex_profile(
         f'model_reasoning_effort = "{reasoning_effort}"',
     ]
     if root is not None:
-        _reject_unrepresentable_read_limits(
-            parameter.file_access_mode,
-            root.resolve(),
-            extra_read_paths,
+        root = root.resolve()
+        _validate_extra_read_paths(root, extra_read_paths)
+    sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
+    lines.append(f'sandbox_mode = "{sandbox_mode}"')
+    if root is not None:
+        _append_workspace_write_section(
+            lines,
+            _writable_roots(
+                parameter.file_access_mode,
+                root,
+                extra_writable_paths,
+            ),
         )
-    else:
-        sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
-        lines.append(f'sandbox_mode = "{sandbox_mode}"')
     lines.append("")
     return "\n".join(lines)
 

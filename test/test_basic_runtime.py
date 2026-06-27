@@ -329,8 +329,8 @@ def test_is_binary_reads_only_initial_chunk() -> None:
     assert path.reader.size == 4096
 
 
-def test_codex_profile_rejects_unrepresented_read_limits(tmp_path: Path) -> None:
-    """読み取り制限を profile へ反映できない mode は実行前に止める。"""
+def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
+    """root 付き通常経路でも FileAccessMode ごとの profile を生成する。"""
     root = tmp_path / "repo"
     root.mkdir()
     (root / "src").mkdir()
@@ -345,23 +345,47 @@ def test_codex_profile_rejects_unrepresented_read_limits(tmp_path: Path) -> None
         "prompt",
         None,
     )
-    for mode in FileAccessMode:
-        with pytest.raises(CmocError, match="読み取り制限"):
-            build_codex_profile(
-                AgentCallParameter(
-                    parameter.model_class,
-                    parameter.reasoning_effort,
-                    mode,
-                    parameter.prompt,
-                    parameter.structured_output_schema_path,
-                ),
-                CmocConfig(),
-                root,
-            )
+    profiles = {
+        mode: build_codex_profile(
+            AgentCallParameter(
+                parameter.model_class,
+                parameter.reasoning_effort,
+                mode,
+                parameter.prompt,
+                parameter.structured_output_schema_path,
+            ),
+            CmocConfig(),
+            root,
+        )
+        for mode in FileAccessMode
+    }
 
-    prompt_file = root / ".cmoc" / "log" / "tui" / "prompt_cmpl.md"
-    with pytest.raises(CmocError, match="読み取り制限"):
-        build_codex_profile(parameter, CmocConfig(), root, [prompt_file])
+    assert 'sandbox_mode = "read-only"' in profiles[FileAccessMode.READONLY]
+    assert 'sandbox_mode = "read-only"' in profiles[FileAccessMode.PURE_ORACLE_READ]
+    assert "[sandbox_workspace_write]" not in profiles[FileAccessMode.READONLY]
+    for mode in (
+        FileAccessMode.REALIZATION_WRITE,
+        FileAccessMode.ORACLE_WRITE,
+        FileAccessMode.REPO_WRITE,
+    ):
+        assert 'sandbox_mode = "workspace-write"' in profiles[mode]
+        assert "[sandbox_workspace_write]" in profiles[mode]
+        assert f'writable_roots = ["{root.resolve()}"]' in profiles[mode]
+
+    extra = root / "src" / "extra"
+    profile = build_codex_profile(
+        AgentCallParameter(
+            parameter.model_class,
+            parameter.reasoning_effort,
+            FileAccessMode.REALIZATION_WRITE,
+            parameter.prompt,
+            parameter.structured_output_schema_path,
+        ),
+        CmocConfig(),
+        root,
+        extra_writable_paths=[extra],
+    )
+    assert f'writable_roots = ["{root.resolve()}", "{extra.resolve()}"]' in profile
 
     with pytest.raises(CmocError, match="保護領域"):
         build_codex_profile(
