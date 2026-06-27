@@ -266,25 +266,23 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- prompt 構築まわりの realization test であり、標準 prompt 断片、routing rule、file access rule、structured output schema、各種 ACP builder parameter の生成結果を横断的に検証する。
-- agent prompt と schema の最終レンダリング結果が、標準文言、アクセスモード、モデル種別、reasoning effort、正本 schema との一致を保っているかを確認するテスト群である。
-- prompt 構築の回帰観点を一箇所に集約し、複数の builder と prompt part が同じ読み取り文脈で組み合わさることを検証する入口として位置づく。
+- prompt 構築関連の回帰テストを横断的に集めた realization test。agent prompt に含める routing、file access、各種 standard、aux prompt の markdown render 結果と、ACP builder が選ぶ model class・reasoning effort・file access mode・structured output schema の整合を検証する。
+- 標準文書の描画内容、完全 prompt への標準注入・省略条件、空行畳み込み、apply fork・review oracle・session join・TUI resolve・indexing 用 builder parameter の期待値を、同じ prompt 読み取り文脈で確認する入口になる。
 
 ## Read this when
-- 標準 prompt 断片の文言、見出し、Markdown レンダリング、空行の畳み込みに関するテストを確認したいとき。
-- routing rule、file access rule、apply review standard、realization standard、review oracle standard、index entry standard が complete prompt に含まれる条件を確認したいとき。
-- ACP builder parameter が期待する model class、reasoning effort、file access mode、prompt 内容、structured output schema path を返すか調べたいとき。
-- apply fork、review oracle merge finding、session join conflict resolution、TUI resolve parameter、indexing index entry など複数 builder の生成結果を横断的に検証するテストを探しているとき。
-- 実装側 schema が oracle 側 schema と一致しているか、jsonschema validate を使った回帰テストの観点を確認したいとき。
+- prompt part の生成結果、markdown rendering、complete prompt への標準文書の組み込み条件に関する realization test を確認・変更する。
+- file access rule、routing rule、realization standard、review oracle standard、apply review standard、index entry standard の文言が prompt に含まれるかを検証するテストを探している。
+- ACP builder が返す model class、reasoning effort、file access mode、structured output schema path、prompt 本文の期待値を横断的に確認する。
+- oracle 配下の structured output schema と builder が参照する schema の一致を検証するテストを確認する。
+- TUI resolve parameter、apply fork、review oracle merge finding、session join conflict resolution、indexing index entry の parameter 生成テストに関係する変更を行う。
 
 ## Do not read this when
-- 個別 builder の実装ロジックそのものを変更したいだけで、生成結果の期待値や回帰テストを確認する必要がないとき。
-- 単一の prompt part の本文定義だけを確認したい場合で、対応する実装ファイルを直接読む方が適切なとき。
-- CLI の外部挙動や実行フローのテストを探しており、prompt 断片や ACP parameter 生成の検証が目的ではないとき。
-- oracle 側の正本 schema や正本仕様断片そのものを確認したい場合で、テストからではなく oracle 配下の該当本文を直接読むべきとき。
+- 個別の prompt part や builder の実装そのものを理解したいだけで、テスト期待値を確認する必要がない場合は、対応する実装側を直接読む。
+- CLI コマンドの外部挙動、作業ツリー操作、git 操作、永続状態など、prompt 構築以外の realization test を探している場合。
+- 単一の standard 文書や schema の正本仕様を確認したい場合は、テストではなく対応する oracle file または生成元の本文を読む。
 
 ## hash
-- 72cc8142bdc199604c85572ab0c3f4553809ea81285283dbbd26e18a50d2709d
+- b3be605ea7978078827bb0de4e74df123048e920a886888049e3bb5b7ab2b190
 
 # `test_review_oracle_cli.py`
 
