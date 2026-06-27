@@ -293,24 +293,25 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle の CLI 外部挙動と所見評価 loop を検証する realization test。report 生成、所見の列挙・検証・judge・merge、verdict と severity による report 集計・並び順、処理失敗時の error report、対象 oracle の選択、review 用 worktree と join commit、INDEX.md 差分の取り込み・衝突解決を扱う。
-- 16,000 文字を超えるが、同じ review run の fake Codex 応答、report 文脈、状態遷移を共有するため、oracle review の読み取り文脈を一箇所に保つことを意図したテスト群である。
+- review oracle の CLI 経由の外部挙動と、所見列挙・検証・judge・merge を含む評価 loop の制御を検証する realization test。report の生成内容、所見の並び順と集計、scope 指定、対象 oracle file の選別、linked worktree 上での review、review 用 worktree からの INDEX.md 変更の取り込み、conflict 解決、処理失敗時 report、review が INDEX.md 以外の差分を作った場合の拒否を扱う。
+- 所見 merge operation の kind ごとの契約、無効 operation、同一 finding target の再利用拒否など、review oracle loop 内で使われる所見統合ロジックの単体的な検証も含む。
+- ファイル先頭の docstring は、16,000 文字を超える test file を分割しない理由として、oracle review の外部挙動と所見評価 loop が同じ fake Codex 応答・report 文脈を共有するため、読み取り文脈を一箇所に保つ方が凝集性が高いことを説明している。
 
 ## Read this when
-- review oracle サブコマンドの report 内容、終了コード、標準出力、対象 oracle 数、scope 指定、短縮 option の挙動を変更・確認する。
-- review oracle の所見評価 loop における enumerate、validate、judge、merge の呼び出し条件、schema 別 fake 応答、所見 ID、rejected/accepted 集計、severity ごとの結果判定を確認する。
-- review oracle が full scope と session scope で評価対象をどう選ぶか、gitignored oracle、binary、memo 配下、symlink、linked worktree 上の oracle をどう扱うかを確認する。
-- review oracle が review 用 worktree 上で Codex を実行し、生成された INDEX.md だけを session 側へ取り込み、join commit や merge conflict をどう扱うかを確認する。
-- review oracle 実行中に Codex が INDEX.md 以外の差分を作成した場合の拒否挙動や、処理途中の失敗時に error report を残す挙動を確認する。
+- review oracle コマンドの report 出力、exit code、scope の扱い、対象 oracle file の数え方や列挙条件を変更・確認するとき。
+- review oracle の所見評価 loop、fake Codex 応答に対する enumerate・validate・judge・merge の制御、所見 verdict と severity に基づく report 集計・並び順を確認するとき。
+- review oracle が linked worktree、session branch、review 用 worktree、join commit、INDEX.md 変更の merge、INDEX.md conflict 解決をどう扱うべきかをテストから確認するとき。
+- review oracle の失敗時 report、途中失敗時の未判定所見の扱い、review が INDEX.md 以外の作業ツリー差分を作った場合の拒否挙動を確認するとき。
+- 所見 merge operation の delete・replace・merge の契約や、不正 operation を ValueError として拒否する条件を確認するとき。
 
 ## Do not read this when
-- review oracle 以外の CLI サブコマンド、session 操作、init 処理、設定読み込みそのものの仕様や実装を調べたいだけで、oracle review の外部挙動に関心がない。
-- report renderer や review loop の実装詳細を修正したい段階で、まず実装側の関数定義・制御フローを直接読む方が必要な文脈に近い。
-- oracle file の正本仕様や routing 文書の内容そのものを確認したい場合で、realization test の期待値ではなく oracle 配下の本文を根拠にすべきである。
-- 汎用の git helper、worktree helper、test fixture の詳細だけを確認したい場合で、このテストが検証している review oracle のシナリオを追う必要がない。
+- review oracle の仕様意図そのものを確認したいだけの場合。正本仕様断片を先に読むべきで、このファイルは realization test として実装挙動の検証内容を確認する入口に留める。
+- review 以外の CLI サブコマンド、session 管理一般、config 読み込み一般、path model などの挙動を調べる場合。
+- Codex CLI や LLM の出力品質そのものを調べる場合。このファイルは fake Codex 応答を使い、review oracle 側の制御と出力を検証している。
+- oracle file 本文の内容や INDEX.md エントリー生成規則を調べる場合。このファイルは review oracle が oracle file をどう評価対象にするかのテストであり、ルーティング文書の仕様本文ではない。
 
 ## hash
-- 0696baf19d9fb4ad20071a3699aac7ed6d08753c7a5e4b3b3cfe771427b3dea2
+- 3a8f01ef238f7a36dbd0d8435568d1bf96a8c9eb89da6bf0cf43ebc0fd6f175a
 
 # `test_session_cli.py`
 
