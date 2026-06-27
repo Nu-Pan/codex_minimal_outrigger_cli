@@ -1,6 +1,7 @@
 import json
 import subprocess
 from pathlib import Path
+from typing import Any
 import tomllib
 
 import cmoc_runtime
@@ -18,7 +19,7 @@ from commons.runtime_codex import run_codex_exec, run_codex_tui
 
 
 def test_run_codex_exec_uses_stdin_and_writes_logs(
-    tmp_path: Path, monkeypatch, capsys
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     root = make_repo(tmp_path)
     codex_home = setup_codex_home(tmp_path, monkeypatch)
@@ -120,7 +121,7 @@ def test_run_codex_exec_uses_stdin_and_writes_logs(
 
 
 def test_run_codex_exec_stores_schema_in_cwd_work_root(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
@@ -182,7 +183,9 @@ def test_run_codex_exec_stores_schema_in_cwd_work_root(
     assert not (root / ".cmoc" / "state" / "schema").exists()
 
 
-def test_run_codex_exec_rejects_agents_edits(tmp_path: Path, monkeypatch) -> None:
+def test_run_codex_exec_rejects_agents_edits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
@@ -220,8 +223,8 @@ def test_run_codex_exec_rejects_agents_edits(tmp_path: Path, monkeypatch) -> Non
 
 def test_run_codex_tui_uses_codex_command_and_prompt_argument(
     tmp_path: Path,
-    monkeypatch,
-    capsys,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     root = make_repo(tmp_path)
     codex_home = setup_codex_home(tmp_path, monkeypatch)
@@ -233,7 +236,7 @@ def test_run_codex_tui_uses_codex_command_and_prompt_argument(
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     recorded = {}
 
-    def fake_run(argv, **kwargs):
+    def fake_run(argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         recorded.update({"argv": argv, "kwargs": kwargs})
         return subprocess.CompletedProcess(argv, 0)
 
@@ -301,7 +304,9 @@ def test_run_codex_tui_uses_codex_command_and_prompt_argument(
     assert result.stdout == ""
     assert result.stderr == ""
 
-def test_run_codex_exec_loads_repo_config_json(tmp_path: Path, monkeypatch) -> None:
+def test_run_codex_exec_loads_repo_config_json(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     config = cmoc_runtime.config_to_dict(cmoc_runtime.sync_config(root))

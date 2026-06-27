@@ -24,7 +24,7 @@ from main import app
 import sub_commands.review as review_module
 
 
-def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
+def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     ancestor = tmp_path / "oracle"
     ancestor.mkdir()
     root = make_repo(ancestor)
@@ -36,10 +36,10 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
     calls: list[str] = []
 
     class FakeCodexResult:
-        def __init__(self, output_json):
+        def __init__(self, output_json: dict[str, object]) -> None:
             self.output_json = output_json
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         calls.append(kwargs["purpose"])
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
@@ -76,7 +76,7 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
 
 
 def test_review_oracle_report_orders_findings_by_verdict_then_severity(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -87,10 +87,10 @@ def test_review_oracle_report_orders_findings_by_verdict_then_severity(
     enumerated = False
 
     class FakeCodexResult:
-        def __init__(self, output_json):
+        def __init__(self, output_json: dict[str, object]) -> None:
             self.output_json = output_json
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         nonlocal enumerated
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
@@ -209,7 +209,7 @@ def test_review_oracle_report_result_includes_rejected_findings(
 
 
 def test_review_oracle_uses_linked_worktree_branch_and_oracle(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """linked worktree 上の session branch と oracle を review 対象にする。"""
     root = make_repo(tmp_path)
@@ -229,10 +229,10 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
     review_worktrees: list[Path] = []
 
     class FakeCodexResult:
-        def __init__(self, output_json):
+        def __init__(self, output_json: dict[str, object]) -> None:
             self.output_json = output_json
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         review_worktrees.append(Path.cwd())
         calls.append(kwargs["purpose"])
         schema_name = parameter.structured_output_schema_path.name
@@ -264,7 +264,7 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
 
 
 def test_review_oracle_enumerate_receives_only_related_findings(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     (root / "oracle" / "a.md").write_text("# a\n")
@@ -280,10 +280,10 @@ def test_review_oracle_enumerate_receives_only_related_findings(
     )
 
     class FakeCodexResult:
-        def __init__(self, output_json):
+        def __init__(self, output_json: dict[str, object]) -> None:
             self.output_json = output_json
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
             target = Path(
@@ -445,7 +445,7 @@ def test_apply_finding_merge_operations_rejects_reused_targets(
 
 def test_review_oracle_full_scope_includes_binary_and_excludes_gitignored_oracle_files(
     tmp_path: Path,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = make_repo(tmp_path)
     add_tracked_ignored_oracle_file(root)
@@ -480,10 +480,10 @@ def test_review_oracle_full_scope_includes_binary_and_excludes_gitignored_oracle
     calls: list[str] = []
 
     class FakeCodexResult:
-        def __init__(self, output_json):
+        def __init__(self, output_json: dict[str, object]) -> None:
             self.output_json = output_json
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         calls.append(kwargs["purpose"])
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
@@ -515,7 +515,9 @@ def test_review_oracle_full_scope_includes_binary_and_excludes_gitignored_oracle
     assert len(enumerate_calls) == 3
 
 
-def test_review_oracle_accepts_short_scope_option(tmp_path: Path, monkeypatch) -> None:
+def test_review_oracle_accepts_short_scope_option(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -524,10 +526,10 @@ def test_review_oracle_accepts_short_scope_option(tmp_path: Path, monkeypatch) -
     )
 
     class FakeCodexResult:
-        def __init__(self, output_json):
+        def __init__(self, output_json: dict[str, object]) -> None:
             self.output_json = output_json
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
             return FakeCodexResult({"findings": []})
@@ -556,7 +558,7 @@ def test_review_oracle_accepts_short_scope_option(tmp_path: Path, monkeypatch) -
 
 def test_review_oracle_session_scope_reports_total_and_no_targets(
     tmp_path: Path,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -566,7 +568,7 @@ def test_review_oracle_session_scope_reports_total_and_no_targets(
     )
     calls: list[str] = []
 
-    def fail_run_codex_exec(parameter, **kwargs):
+    def fail_run_codex_exec(parameter: object, **kwargs: object) -> None:
         calls.append(kwargs["purpose"])
         raise AssertionError(
             "no session-scope oracle targets should skip review Codex calls"
@@ -591,7 +593,7 @@ def test_review_oracle_session_scope_reports_total_and_no_targets(
 
 def test_review_oracle_session_scope_excludes_changed_gitignored_oracle_files(
     tmp_path: Path,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = make_repo(tmp_path)
     add_tracked_ignored_oracle_file(root)
@@ -617,7 +619,7 @@ def test_review_oracle_session_scope_excludes_changed_gitignored_oracle_files(
     run_git(root, "commit", "-m", "change ignored oracle")
     calls: list[str] = []
 
-    def fail_run_codex_exec(parameter, **kwargs):
+    def fail_run_codex_exec(parameter: object, **kwargs: object) -> None:
         calls.append(kwargs["purpose"])
         raise AssertionError("gitignored oracle files should not be reviewed")
 
@@ -637,7 +639,9 @@ def test_review_oracle_session_scope_excludes_changed_gitignored_oracle_files(
     assert "result: no_targets" in rendered
 
 
-def test_review_oracle_merges_review_index_changes(tmp_path: Path, monkeypatch) -> None:
+def test_review_oracle_merges_review_index_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -652,10 +656,10 @@ def test_review_oracle_merges_review_index_changes(tmp_path: Path, monkeypatch) 
     review_worktrees: list[Path] = []
 
     class FakeCodexResult:
-        def __init__(self, output_json):
+        def __init__(self, output_json: dict[str, object]) -> None:
             self.output_json = output_json
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         review_worktrees.append(Path.cwd())
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
@@ -726,7 +730,7 @@ def test_review_oracle_resolves_index_conflict_when_session_deleted_index(
 
 
 def test_review_oracle_writes_error_report_on_processing_failure(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -736,10 +740,10 @@ def test_review_oracle_writes_error_report_on_processing_failure(
     )
 
     class FakeCodexResult:
-        def __init__(self, output_json):
+        def __init__(self, output_json: dict[str, object]) -> None:
             self.output_json = output_json
 
-    def fail_run_codex_exec(parameter, **kwargs):
+    def fail_run_codex_exec(parameter: object, **kwargs: object) -> None:
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
             return FakeCodexResult(
@@ -782,7 +786,7 @@ def test_review_oracle_writes_error_report_on_processing_failure(
 @pytest.mark.parametrize("change_kind", ["unstaged", "staged", "untracked"])
 def test_review_oracle_rejects_non_index_worktree_changes(
     tmp_path: Path,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
     change_kind: str,
 ) -> None:
     root = make_repo(tmp_path)
@@ -793,10 +797,10 @@ def test_review_oracle_rejects_non_index_worktree_changes(
     )
 
     class FakeCodexResult:
-        def __init__(self, output_json):
+        def __init__(self, output_json: dict[str, object]) -> None:
             self.output_json = output_json
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
             if change_kind == "untracked":

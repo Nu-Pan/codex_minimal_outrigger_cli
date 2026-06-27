@@ -5,6 +5,8 @@ import cmoc_runtime
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from cmoc_runtime import CmocError, SubcommandLogger
 from config.cmoc_config import CmocConfig
+import pytest
+
 from _support import (
     make_repo,
     setup_codex_home,
@@ -17,7 +19,9 @@ def prompt_log_text(path: str) -> str:
     return json.loads(Path(path).read_text())["prompt"]
 
 
-def test_run_codex_exec_retries_semantic_output(tmp_path: Path, monkeypatch) -> None:
+def test_run_codex_exec_retries_semantic_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
@@ -94,7 +98,7 @@ def test_run_codex_exec_retries_semantic_output(tmp_path: Path, monkeypatch) -> 
 
 
 def test_run_codex_exec_logs_capacity_retrying_call(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
@@ -154,7 +158,7 @@ def test_run_codex_exec_logs_capacity_retrying_call(
 
 
 def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)

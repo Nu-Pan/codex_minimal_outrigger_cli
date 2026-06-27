@@ -41,7 +41,9 @@ from _support import (
     runner,
 )
 
+
 def test_path_model_resolves_token_path_inside_repo() -> None:
+    """root token path が repo 内の実 path から復元できる契約を固定する。"""
     cmoc_root = resolve_real_path(RootToken.CMOC)
     token_path = resolve_token_path(cmoc_root / "src", RootToken.CMOC)
 
@@ -49,6 +51,7 @@ def test_path_model_resolves_token_path_inside_repo() -> None:
 
 
 def test_format_duration_truncates_msec_digit_and_space_pads_time_parts() -> None:
+    """duration 表示は丸めず切り捨て、時分秒の幅を揃える。"""
     assert format_duration(0.19) == " 0h  0m  0.1s"
     assert format_duration(3.19) == " 0h  0m  3.1s"
     assert format_duration(59.99) == " 0h  0m 59.9s"
@@ -57,6 +60,7 @@ def test_format_duration_truncates_msec_digit_and_space_pads_time_parts() -> Non
 def test_runtime_distinguishes_repo_root_from_linked_worktree(
     tmp_path: Path,
 ) -> None:
+    """linked worktree では repo root と run/work root を分けて扱う。"""
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "worktrees" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
@@ -67,6 +71,7 @@ def test_runtime_distinguishes_repo_root_from_linked_worktree(
 
 
 def test_resolve_run_root_rejects_main_worktree(tmp_path: Path) -> None:
+    """main worktree は run root として扱わない。"""
     root = make_repo(tmp_path)
 
     with pytest.raises(ValueError, match="`<run-root>` was not found"):
@@ -74,6 +79,7 @@ def test_resolve_run_root_rejects_main_worktree(tmp_path: Path) -> None:
 
 
 def test_config_defaults_match_logical_model_classes() -> None:
+    """既定 config が論理 model class と reasoning effort を埋める。"""
     config = CmocConfig()
 
     assert config.num_parallel == 8
@@ -82,6 +88,7 @@ def test_config_defaults_match_logical_model_classes() -> None:
 
 
 def test_render_error_uses_structured_markdown() -> None:
+    """CmocError は利用者が読む Markdown report として整形される。"""
     try:
         raise CmocError("summary", ["next"], "detail")
     except CmocError as exc:
@@ -97,6 +104,7 @@ def test_render_error_uses_structured_markdown() -> None:
 
 
 def test_render_error_fills_empty_next_actions() -> None:
+    """next actions 未指定でも回復行動の既定文を出す。"""
     try:
         raise CmocError("summary", [], "detail")
     except CmocError as exc:
@@ -116,6 +124,7 @@ def test_render_error_fills_empty_next_actions() -> None:
     ],
 )
 def test_branch_session_id_rejects_invalid_session_branch_shape(branch: str) -> None:
+    """session branch 名の余分な区切りや空 session id を拒否する。"""
     with pytest.raises(CmocError):
         branch_session_id(branch)
 
@@ -129,11 +138,13 @@ def test_branch_session_id_rejects_invalid_session_branch_shape(branch: str) -> 
     ],
 )
 def test_apply_branch_session_id_rejects_invalid_apply_branch_shape(branch: str) -> None:
+    """apply branch 名は session id と run id の 2 要素だけを受け付ける。"""
     with pytest.raises(CmocError):
         apply_branch_session_id(branch)
 
 
 def test_load_state_for_branch_rejects_apply_branch_with_extra_parts(tmp_path: Path) -> None:
+    """破損した apply branch 名から session state を誤って読まない。"""
     path = state_path(tmp_path, "session")
     write_state(path, SessionState())
 
@@ -141,7 +152,10 @@ def test_load_state_for_branch_rejects_apply_branch_with_extra_parts(tmp_path: P
         load_state_for_branch(tmp_path, "cmoc/apply/session/run/extra")
 
 
-def test_cli_error_report_is_written_to_stdout(tmp_path: Path, monkeypatch) -> None:
+def test_cli_error_report_is_written_to_stdout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """想定済み CLI error は stderr ではなく stdout report として返す。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     run_git(root, "switch", "--detach", "HEAD")
@@ -156,6 +170,7 @@ def test_cli_error_report_is_written_to_stdout(tmp_path: Path, monkeypatch) -> N
 
 
 def test_cli_parse_error_report_is_written_to_stdout() -> None:
+    """Click の引数解析 error も cmoc 形式の stdout report に変換する。"""
     result = runner.invoke(app, ["--bad-option"])
 
     assert result.exit_code != 0
@@ -168,8 +183,9 @@ def test_cli_parse_error_report_is_written_to_stdout() -> None:
 
 
 def test_cli_requires_current_directory_to_be_work_root(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """work root 以外からの CLI 実行では副作用を出す前に拒否する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root / "oracle")
 
@@ -188,6 +204,7 @@ def test_cli_requires_current_directory_to_be_work_root(
 def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
     tmp_path: Path,
 ) -> None:
+    """shell completion probe は cmoc preflight と初期化副作用を起こさない。"""
     root = make_repo(tmp_path)
     main_path = Path(main_module.__file__).resolve()
     result = subprocess.run(
@@ -207,6 +224,7 @@ def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
 
 
 def test_bin_cmoc_missing_venv_call_stack_uses_root_token_path(tmp_path: Path) -> None:
+    """起動 wrapper の missing venv report は root token path で位置を出す。"""
     fake_cmoc_root = tmp_path / "cmoc"
     fake_bin = fake_cmoc_root / "bin"
     fake_bin.mkdir(parents=True)
@@ -228,6 +246,7 @@ def test_bin_cmoc_missing_venv_call_stack_uses_root_token_path(tmp_path: Path) -
 
 
 def test_ensure_cmoc_ignored_updates_gitignore(tmp_path: Path) -> None:
+    """`.cmoc` が未 ignore の repo では literal ignore pattern を追加する。"""
     root = make_repo(tmp_path)
 
     ensure_cmoc_ignored(root)
@@ -243,6 +262,7 @@ def test_ensure_cmoc_ignored_updates_gitignore(tmp_path: Path) -> None:
 def test_ensure_cmoc_ignored_adds_literal_pattern_after_existing_effective_pattern(
     tmp_path: Path,
 ) -> None:
+    """既存 pattern が有効でも root 固定 pattern を追記して表現を安定させる。"""
     root = make_repo(tmp_path)
     (root / ".gitignore").write_text(".cmoc/\n")
     run_git(root, "add", ".gitignore")
@@ -255,12 +275,14 @@ def test_ensure_cmoc_ignored_adds_literal_pattern_after_existing_effective_patte
 
 
 def test_file_access_mode_values_are_json_ready() -> None:
+    """FileAccessMode の永続化値は JSON schema 側と共有できる文字列にする。"""
     assert FileAccessMode.READONLY.value == "readonly"
     assert FileAccessMode.REALIZATION_WRITE.value == "realization_write"
     assert FileAccessMode.REPO_WRITE.value == "repo_write"
 
 
 def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
+    """repo write mode まで Codex sandbox mode へ欠落なく変換する。"""
     assert file_access_to_sandbox_mode(FileAccessMode.READONLY) == "read-only"
     assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_READ) == "read-only"
     assert file_access_to_sandbox_mode(FileAccessMode.REALIZATION_WRITE) == "workspace-write"
@@ -269,25 +291,36 @@ def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
 
 
 def test_is_binary_reads_only_initial_chunk() -> None:
+    """binary 判定は大きい file 全体を読まず先頭 chunk だけを見る。"""
     class Reader:
+        """読み取り size を記録する fake binary reader。"""
+
         def __init__(self) -> None:
+            """未読み取り状態で fake reader を初期化する。"""
             self.size: int | None = None
 
         def __enter__(self) -> "Reader":
+            """context manager として fake reader 自身を返す。"""
             return self
 
         def __exit__(self, *args: object) -> None:
+            """fake reader では close 副作用を観測しない。"""
             pass
 
         def read(self, size: int) -> bytes:
+            """binary 判定が要求した read size を記録する。"""
             self.size = size
             return b"text"
 
     class FakePath:
+        """open 呼び出しを fake reader へ接続する path 代替。"""
+
         def __init__(self) -> None:
+            """assertion から参照する fake reader を保持する。"""
             self.reader = Reader()
 
         def open(self, mode: str) -> Reader:
+            """binary 判定が binary mode で開くことを確認する。"""
             assert mode == "rb"
             return self.reader
 
@@ -298,10 +331,12 @@ def test_is_binary_reads_only_initial_chunk() -> None:
 
 
 def test_codex_profile_contains_supported_sandbox_settings(tmp_path: Path) -> None:
+    """Codex profile は現在の Codex CLI が受け付ける sandbox key だけを持つ。"""
     root = tmp_path / "repo"
     root.mkdir()
 
     def profile(mode: FileAccessMode) -> dict:
+        """file access mode ごとの profile TOML を dict として読む。"""
         return tomllib.loads(
             build_codex_profile(
                 AgentCallParameter(

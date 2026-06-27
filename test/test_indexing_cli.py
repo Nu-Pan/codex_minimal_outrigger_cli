@@ -1,11 +1,12 @@
 import subprocess
 import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 import cmoc_runtime
-from basic.acp import ModelClass
+from basic.acp import AgentCallParameter, ModelClass
 
 from _support import (
     current_branch,
@@ -53,7 +54,7 @@ def test_resolve_index_conflicts_deletes_index_and_commits(tmp_path: Path) -> No
     assert "Merge branch 'side'" in run_git(root, "log", "-1", "--pretty=%B").stdout
 
 def test_indexing_uses_codex_index_entry_builder_and_commits(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -67,7 +68,9 @@ def test_indexing_uses_codex_index_entry_builder_and_commits(
             "do_not_read_this_when": ["generated skip condition"],
         }
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> FakeCodexResult:
         calls.append(kwargs["purpose"])
         assert parameter.structured_output_schema_path.name == "index_entry.json"
         return FakeCodexResult()
@@ -89,7 +92,7 @@ def test_indexing_uses_codex_index_entry_builder_and_commits(
 
 
 def test_indexing_uninitialized_clean_repo_fails_without_non_index_diff(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -106,7 +109,7 @@ def test_indexing_uninitialized_clean_repo_fails_without_non_index_diff(
 
 
 def test_indexing_targets_current_linked_worktree(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -122,7 +125,10 @@ def test_indexing_targets_current_linked_worktree(
             "do_not_read_this_when": ["linked skip condition"],
         }
 
-    monkeypatch.setattr(indexing_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(
+        indexing_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
     )
     monkeypatch.chdir(linked)
 
@@ -137,7 +143,7 @@ def test_indexing_targets_current_linked_worktree(
 
 
 def test_indexing_preflight_in_apply_worktree_uses_repo_config(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -164,7 +170,9 @@ def test_indexing_preflight_in_apply_worktree_uses_repo_config(
             "do_not_read_this_when": ["skip"],
         }
 
-    def fake_codex_exec(parameter, **kwargs):
+    def fake_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> FakeCodexResult:
         seen_models.append(kwargs["config"].codex.model[ModelClass.EFFICIENCY])
         assert kwargs["root"] == apply_worktree
         return FakeCodexResult()
@@ -178,7 +186,7 @@ def test_indexing_preflight_in_apply_worktree_uses_repo_config(
 
 
 def test_indexing_skips_codex_when_existing_hashes_are_fresh(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -191,7 +199,10 @@ def test_indexing_skips_codex_when_existing_hashes_are_fresh(
             "do_not_read_this_when": ["generated skip condition"],
         }
 
-    monkeypatch.setattr(indexing_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(
+        indexing_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
     )
     first = runner.invoke(app, ["indexing"], catch_exceptions=False)
     assert first.exit_code == 0
@@ -200,7 +211,7 @@ def test_indexing_skips_codex_when_existing_hashes_are_fresh(
 
     calls: list[str] = []
 
-    def fail_if_called(parameter, **kwargs):
+    def fail_if_called(parameter: AgentCallParameter, **kwargs: object) -> None:
         calls.append(kwargs["purpose"])
         raise AssertionError("fresh INDEX.md should not require Codex")
 
@@ -230,7 +241,7 @@ def test_commit_index_updates_commits_only_index_paths(tmp_path: Path) -> None:
 
 
 def test_indexing_rejects_existing_non_index_diff_without_index_commit(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -239,7 +250,9 @@ def test_indexing_rejects_existing_non_index_diff_without_index_commit(
     head_before = run_git(root, "rev-parse", "HEAD").stdout.strip()
     calls: list[Path] = []
 
-    def fake_update_indexes(update_root: Path, codex_exec=None) -> list[Path]:
+    def fake_update_indexes(
+        update_root: Path, codex_exec: Callable[..., object] | None = None
+    ) -> list[Path]:
         calls.append(update_root)
         raise AssertionError("dirty cmoc indexing must stop before updating INDEX.md")
 
@@ -257,13 +270,15 @@ def test_indexing_rejects_existing_non_index_diff_without_index_commit(
 
 
 def test_indexing_preflight_allows_existing_non_index_diff_and_commits_only_index(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     index_path = root / "INDEX.md"
     (root / "README.md").write_text("# repo\n\nchanged\n")
 
-    def fake_update_indexes(update_root: Path, codex_exec=None) -> list[Path]:
+    def fake_update_indexes(
+        update_root: Path, codex_exec: Callable[..., object] | None = None
+    ) -> list[Path]:
         assert update_root == root
         index_path.write_text("# generated\n")
         return [index_path]
@@ -307,7 +322,7 @@ def test_indexing_preflight_allows_existing_non_index_diff_and_commits_only_inde
     ],
 )
 def test_update_indexes_regenerates_malformed_fresh_hash_entry(
-    tmp_path: Path, monkeypatch, entry_lines: list[str]
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, entry_lines: list[str]
 ) -> None:
     root = make_repo(tmp_path)
     cmoc_runtime.sync_config(root)
@@ -323,7 +338,7 @@ def test_update_indexes_regenerates_malformed_fresh_hash_entry(
         update_root: Path,
         path: Path,
         digest: str | None = None,
-        codex_exec=None,
+        codex_exec: Callable[..., object] | None = None,
     ) -> str:
         calls.append(path)
         return indexing_module.render_index_entry(
@@ -359,7 +374,7 @@ def test_update_indexes_regenerates_malformed_fresh_hash_entry(
     ],
 )
 def test_render_index_entry_rejects_missing_or_non_string_semantic_fields(
-    tmp_path: Path, entry
+    tmp_path: Path, entry: dict[str, object] | None
 ) -> None:
     root = make_repo(tmp_path)
     readme = root / "README.md"
@@ -380,7 +395,9 @@ def test_render_index_entry_rejects_missing_or_non_string_semantic_fields(
         {"summary": ["summary"], "read_this_when": ["read"], "do_not_read_this_when": ["\t"]},
     ],
 )
-def test_render_index_entry_rejects_empty_semantic_lists(tmp_path: Path, entry) -> None:
+def test_render_index_entry_rejects_empty_semantic_lists(
+    tmp_path: Path, entry: dict[str, object]
+) -> None:
     root = make_repo(tmp_path)
     readme = root / "README.md"
 
@@ -389,7 +406,7 @@ def test_render_index_entry_rejects_empty_semantic_lists(tmp_path: Path, entry) 
 
 
 def test_update_indexes_generates_sibling_entries_in_parallel(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     docs = root / "docs"
@@ -405,7 +422,7 @@ def test_update_indexes_generates_sibling_entries_in_parallel(
         update_root: Path,
         path: Path,
         digest: str | None = None,
-        codex_exec=None,
+        codex_exec: Callable[..., object] | None = None,
     ) -> str:
         nonlocal active, max_active
         if path.parent == docs:
@@ -434,7 +451,9 @@ def test_update_indexes_generates_sibling_entries_in_parallel(
     assert max_active >= 2
 
 
-def test_update_indexes_indexes_nested_memo_directory(tmp_path: Path, monkeypatch) -> None:
+def test_update_indexes_indexes_nested_memo_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = make_repo(tmp_path)
     root_memo = root / "memo"
     root_memo_child = root_memo / "child"
@@ -450,7 +469,7 @@ def test_update_indexes_indexes_nested_memo_directory(tmp_path: Path, monkeypatc
         update_root: Path,
         path: Path,
         digest: str | None = None,
-        codex_exec=None,
+        codex_exec: Callable[..., object] | None = None,
     ) -> str:
         return indexing_module.render_index_entry(
             update_root,

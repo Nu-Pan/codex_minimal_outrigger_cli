@@ -11,6 +11,8 @@ import json
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from _support import (
     apply_worktree_from_state,
     make_repo,
@@ -22,7 +24,7 @@ import sub_commands.apply.fork as apply_fork_module
 import sub_commands.apply.join as apply_module
 
 def test_apply_join_removes_apply_worktree_and_resets_state(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -72,7 +74,9 @@ def test_apply_join_removes_apply_worktree_and_resets_state(
     assert "# cmoc apply join report" in report_path.read_text()
 
 
-def test_apply_join_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> None:
+def test_apply_join_can_run_from_apply_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -120,7 +124,7 @@ def test_apply_join_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> 
 
 
 def test_apply_join_from_linked_session_worktree_merges_into_current_session(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -162,7 +166,7 @@ def test_apply_join_from_linked_session_worktree_merges_into_current_session(
 
 
 def test_apply_join_rejects_stale_apply_branch_for_same_session(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -174,7 +178,10 @@ def test_apply_join_rejects_stale_apply_branch_for_same_session(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -213,7 +220,7 @@ def test_apply_join_rejects_stale_apply_branch_for_same_session(
 
 
 def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -225,7 +232,10 @@ def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -262,7 +272,7 @@ def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(
 
 
 def test_apply_join_from_session_requires_clean_apply_worktree(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -274,7 +284,10 @@ def test_apply_join_from_session_requires_clean_apply_worktree(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -301,7 +314,7 @@ def test_apply_join_from_session_requires_clean_apply_worktree(
 
 
 def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -313,7 +326,10 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -347,7 +363,7 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
 
 
 def test_apply_join_excludes_deleted_apply_paths_from_unexpected_changes(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -359,7 +375,10 @@ def test_apply_join_excludes_deleted_apply_paths_from_unexpected_changes(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     state_path = (
@@ -398,7 +417,7 @@ def test_apply_join_managed_branch_paths_exclude_deletes_and_use_rename_target(
 
 def test_apply_join_allows_gitignore_change_as_apply_diff(
     tmp_path: Path,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -410,7 +429,10 @@ def test_apply_join_allows_gitignore_change_as_apply_diff(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     state_path = (
@@ -434,7 +456,7 @@ def test_apply_join_allows_gitignore_change_as_apply_diff(
 
 
 def test_apply_join_reports_unresolved_non_index_conflict(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -446,7 +468,10 @@ def test_apply_join_reports_unresolved_non_index_conflict(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     state_path = (
@@ -484,7 +509,7 @@ def test_apply_join_reports_unresolved_non_index_conflict(
 
 
 def test_apply_join_continues_after_resolving_index_conflict_in_normal_mode(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -499,7 +524,10 @@ def test_apply_join_continues_after_resolving_index_conflict_in_normal_mode(
     class FakeCodexResult:
         output_json = {"findings": []}
 
-    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()

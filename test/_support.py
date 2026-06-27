@@ -2,6 +2,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 runner = CliRunner()
@@ -42,7 +43,7 @@ def add_tracked_ignored_oracle_file(root: Path) -> None:
     run_git(root, "commit", "-m", "add ignored oracle")
 
 
-def setup_codex_home(tmp_path: Path, monkeypatch) -> Path:
+def setup_codex_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Prepare a minimal authenticated Codex home for fake CLI execution."""
     codex_home = tmp_path / "codex_home"
     codex_home.mkdir()

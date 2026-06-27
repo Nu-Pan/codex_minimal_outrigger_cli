@@ -113,7 +113,7 @@ def test_render_as_markdown_collapses_code_block_blank_lines() -> None:
 
 
 def test_apply_fork_prompts_use_expected_roots(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     repo_root = tmp_path / "repo"
     apply_worktree = repo_root / ".cmoc" / "worktrees" / "session" / "run"

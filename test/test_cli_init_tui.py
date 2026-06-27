@@ -3,7 +3,9 @@ import subprocess
 from pathlib import Path
 
 import commons.runtime_codex_preflight as codex_preflight_module
-from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+import pytest
+
 from _support import (
     make_repo,
     run_git,
@@ -16,7 +18,7 @@ from sub_commands.tui import parse_markdown_prompt
 import sub_commands.tui as tui_module
 
 def test_init_untracks_existing_cmoc_files_and_commits_cleanup(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     tracked_cmoc_file = root / ".cmoc" / "tracked.txt"
@@ -41,7 +43,7 @@ def test_init_untracks_existing_cmoc_files_and_commits_cleanup(
 
 
 def test_subcommand_log_identifies_invoked_cli_command(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -59,7 +61,7 @@ def test_subcommand_log_identifies_invoked_cli_command(
 
 
 def test_init_does_not_commit_preexisting_staged_changes(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     user_file = root / "user.txt"
@@ -80,7 +82,7 @@ def test_init_does_not_commit_preexisting_staged_changes(
 
 
 def test_init_does_not_commit_preexisting_gitignore_changes(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     gitignore = root / ".gitignore"
@@ -104,7 +106,7 @@ def test_init_does_not_commit_preexisting_gitignore_changes(
 
 
 def test_init_keeps_cmoc_ignored_after_preexisting_gitignore_unstaged_delete(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     gitignore = root / ".gitignore"
@@ -134,7 +136,7 @@ def test_init_keeps_cmoc_ignored_after_preexisting_gitignore_unstaged_delete(
 
 
 def test_init_initializes_linked_worktree_root(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "worktrees" / "linked"
@@ -176,7 +178,7 @@ def test_init_initializes_linked_worktree_root(
     assert ".gitignore" in committed_paths
 
 
-def test_init_writes_default_config_json(tmp_path: Path, monkeypatch) -> None:
+def test_init_writes_default_config_json(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
 
@@ -204,7 +206,7 @@ def test_init_writes_default_config_json(tmp_path: Path, monkeypatch) -> None:
 
 def test_init_syncs_config_defaults_without_overwriting_human_values(
     tmp_path: Path,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = make_repo(tmp_path)
     config_path = root / ".cmoc" / "config.json"
@@ -234,7 +236,7 @@ def test_init_syncs_config_defaults_without_overwriting_human_values(
 
 def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     tmp_path: Path,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -266,7 +268,9 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
             "index_entry_standard": {"value": False, "reason": "not needed"},
         }
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> FakeResolveResult:
         exec_calls.append((parameter, kwargs))
         assert kwargs["purpose"] == "tui resolve parameter"
         assert parameter.structured_output_schema_path.name == "resolve_parameter.json"
@@ -274,7 +278,7 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         assert "src を確認して必要なら直す" in parameter.prompt
         return FakeResolveResult()
 
-    def fake_run_codex_tui(parameter, **kwargs):
+    def fake_run_codex_tui(parameter: AgentCallParameter, **kwargs: object) -> None:
         tui_calls.append((parameter, kwargs))
         assert kwargs["purpose"] == "tui codex"
         assert parameter.model_class == ModelClass.MAINSTREAM
@@ -311,7 +315,7 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
 
 def test_tui_saves_complete_prompt_in_linked_worktree(
     tmp_path: Path,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
@@ -357,7 +361,7 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     tui_calls = []
 
-    def fake_run_codex_tui(parameter, **kwargs):
+    def fake_run_codex_tui(parameter: AgentCallParameter, **kwargs: object) -> None:
         tui_calls.append((parameter, kwargs))
 
     monkeypatch.setattr(tui_module, "enable_indexing_preflight", lambda: None)
@@ -385,7 +389,7 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
 
 def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
     tmp_path: Path,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = make_repo(tmp_path)
     config_path = root / ".cmoc" / "config.json"

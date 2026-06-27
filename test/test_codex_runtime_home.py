@@ -4,6 +4,8 @@ from pathlib import Path
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from cmoc_runtime import CmocError
 from config.cmoc_config import CmocConfig
+import pytest
+
 from _support import (
     make_repo,
     write_python_executable,
@@ -11,7 +13,7 @@ from _support import (
 from commons.runtime_codex import run_codex_exec
 
 def test_run_codex_exec_uses_default_codex_home_when_env_unset(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     home = tmp_path / "home"
@@ -57,7 +59,7 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
 
 
 def test_run_codex_exec_preserves_configured_codex_home_env_value(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     codex_home = root / "relative_codex_home"
@@ -102,7 +104,7 @@ def test_run_codex_exec_preserves_configured_codex_home_env_value(
 
 
 def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     missing_home = tmp_path / "missing_codex_home"
@@ -130,7 +132,7 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
 
 
 def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     codex_home = tmp_path / "codex_home_file"
@@ -159,7 +161,7 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
 
 
 def test_run_codex_exec_fails_before_codex_when_auth_json_missing(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     codex_home = tmp_path / "codex_home"

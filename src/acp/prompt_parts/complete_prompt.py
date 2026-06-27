@@ -4,6 +4,8 @@
 """
 
 # cmoc
+from pathlib import Path
+
 from basic.path_model import RootToken, resolve_real_path, resolve_work_root
 from basic.struct_doc import StructCodeBlock, StructDoc
 
@@ -132,6 +134,7 @@ def build_complete_prompt(
 
 
 def _sanitize_prompt_doc(doc: StructDoc) -> StructDoc:
+    """agent に渡す標準文書から cmoc 固有語と root token を除去する。"""
     children = doc.children
     title = _sanitize_prompt_text(doc.title)
     if isinstance(children, list):
@@ -145,6 +148,7 @@ def _sanitize_prompt_doc(doc: StructDoc) -> StructDoc:
 
 
 def _sanitize_prompt_text(text: str) -> str:
+    """prompt text 内の作業対象に不要な内部呼称を呼び出し先向けに置換する。"""
     for token in RootToken:
         text = text.replace(token.value, str(_prompt_root_path(token)))
     for before, after in _CMOC_TERM_REPLACEMENTS:
@@ -152,7 +156,8 @@ def _sanitize_prompt_text(text: str) -> str:
     return text
 
 
-def _prompt_root_path(token: RootToken):
+def _prompt_root_path(token: RootToken) -> Path:
+    """run root が未確定な通常呼び出しでは work root を代替 root として使う。"""
     try:
         return resolve_real_path(token)
     except ValueError:

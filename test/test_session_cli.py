@@ -7,6 +7,8 @@ import cmoc_runtime
 from basic.acp import FileAccessMode
 from cmoc_runtime import CmocError
 from config.cmoc_config import CmocConfig
+import pytest
+
 from _support import (
     current_branch,
     make_repo,
@@ -45,7 +47,7 @@ def write_abandoned_state(root: Path, session_id: str) -> Path:
 
 
 def test_session_fork_creates_session_branch_and_state(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -66,7 +68,7 @@ def test_session_fork_creates_session_branch_and_state(
 
 
 def test_session_fork_does_not_overwrite_existing_state_on_session_id_collision(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -93,7 +95,7 @@ def test_session_fork_does_not_overwrite_existing_state_on_session_id_collision(
 
 
 def test_session_fork_retries_session_id_collision(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -114,7 +116,7 @@ def test_session_fork_retries_session_id_collision(
 
 
 def test_session_fork_initializes_cmoc_ignore_before_logging(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -139,7 +141,7 @@ def test_session_fork_initializes_cmoc_ignore_before_logging(
 
 
 def test_session_fork_uses_linked_worktree_branch_and_head(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -166,7 +168,7 @@ def test_session_fork_uses_linked_worktree_branch_and_head(
 
 
 def test_session_abandon_switches_home_and_marks_state(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -197,7 +199,7 @@ def test_session_abandon_switches_home_and_marks_state(
 
 
 def test_session_abandon_uses_linked_worktree_branch(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -232,7 +234,7 @@ def test_session_abandon_uses_linked_worktree_branch(
 
 
 def test_session_abandon_requires_existing_home_branch(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -267,7 +269,7 @@ def test_session_abandon_requires_existing_home_branch(
 
 
 def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -279,7 +281,7 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     state_path = session_state_path(root, session_branch)
     original_delete_branch = session_module.delete_branch
 
-    def fake_delete_branch(root, branch, force=False):
+    def fake_delete_branch(root: Path, branch: str, force: bool = False) -> None:
         if branch == session_branch:
             raise CmocError("delete failed", ["next"], "branch delete failed")
         return original_delete_branch(root, branch, force)
@@ -304,7 +306,7 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
 
 
 def test_session_join_resolves_oracle_conflict_with_realization_write_profile(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     target = root / "oracle" / "spec.md"
@@ -333,7 +335,7 @@ def test_session_join_resolves_oracle_conflict_with_realization_write_profile(
     class FakeCodexResult:
         output_json = None
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         calls.append(kwargs["purpose"])
         modes.append(parameter.file_access_mode)
         profile = tomllib.loads(
@@ -370,7 +372,9 @@ def test_session_join_conflict_marker_detection_uses_marker_block() -> None:
     )
 
 
-def test_session_join_uses_linked_worktree_branch(tmp_path: Path, monkeypatch) -> None:
+def test_session_join_uses_linked_worktree_branch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -399,7 +403,7 @@ def test_session_join_uses_linked_worktree_branch(tmp_path: Path, monkeypatch) -
 
 
 def test_session_join_stages_delete_conflict_resolution(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -421,7 +425,7 @@ def test_session_join_stages_delete_conflict_resolution(
     class FakeCodexResult:
         output_json = None
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         (root / "README.md").unlink()
         return FakeCodexResult()
 
@@ -436,7 +440,7 @@ def test_session_join_stages_delete_conflict_resolution(
 
 
 def test_session_join_warns_when_session_branch_cannot_be_deleted(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -448,7 +452,7 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
     home_branch = session_home_branch(root, session_branch)
     original_run_git = session_join_module.run_git
 
-    def fake_run_git(args, cwd, check=True):
+    def fake_run_git(args: list[str], cwd: Path, check: bool = True) -> object:
         if args == ["branch", "-d", session_branch]:
             return cmoc_runtime.CommandResult(1, "", "branch is checked out elsewhere")
         return original_run_git(args, cwd, check=check)
@@ -470,7 +474,7 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
 
 
 def test_session_join_error_report_is_written_to_stdout(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -491,7 +495,7 @@ def test_session_join_error_report_is_written_to_stdout(
 
 
 def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     target = root / "README.md"
@@ -514,7 +518,7 @@ def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
     class FakeCodexResult:
         output_json = None
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)

@@ -7,6 +7,8 @@ import commons.runtime_codex_exec as runtime_codex_exec
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from cmoc_runtime import SubcommandLogger
 from config.cmoc_config import CmocConfig
+import pytest
+
 from _support import (
     make_repo,
     setup_codex_home,
@@ -20,7 +22,7 @@ def prompt_log_text(path: str) -> str:
 
 
 def test_run_codex_exec_polls_and_resumes_after_quota(
-    tmp_path: Path, monkeypatch, capsys
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     root = make_repo(tmp_path)
     codex_home = setup_codex_home(tmp_path, monkeypatch)
@@ -176,7 +178,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
 
 
 def test_run_codex_exec_reruns_after_quota_without_resume_token(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
@@ -236,7 +238,7 @@ def test_run_codex_exec_reruns_after_quota_without_resume_token(
 
 
 def test_run_codex_exec_uses_single_representative_quota_probe(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
@@ -283,7 +285,7 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
         None,
     )
 
-    def call_codex():
+    def call_codex() -> object:
         return run_codex_exec(
             parameter,
             root=root,

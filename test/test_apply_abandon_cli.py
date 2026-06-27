@@ -11,6 +11,8 @@ import json
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from _support import (
     apply_worktree_from_state,
     make_repo,
@@ -23,7 +25,10 @@ import sub_commands.apply.fork as apply_fork_module
 from sub_commands.apply import _runtime as apply_runtime
 
 
-def setup_linked_session_apply(root: Path, monkeypatch) -> tuple[Path, Path, str, Path]:
+def setup_linked_session_apply(
+    root: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, Path, str, Path]:
+    """linked session 上の active apply run を abandon 境界条件用に作る。"""
     linked = root / ".cmoc" / "worktrees" / "linked-session-abandon"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
     monkeypatch.chdir(linked)
@@ -55,8 +60,9 @@ def setup_linked_session_apply(root: Path, monkeypatch) -> tuple[Path, Path, str
 
 
 def test_apply_abandon_removes_apply_worktree_and_branch(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """completed apply run の worktree、branch、state cleanup を固定する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -65,9 +71,14 @@ def test_apply_abandon_removes_apply_worktree_and_branch(
     )
 
     class FakeCodexResult:
+        """apply fork を findings なしで完了させる fake 結果。"""
+
         output_json = {"findings": []}
 
-    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -100,8 +111,9 @@ def test_apply_abandon_removes_apply_worktree_and_branch(
 
 
 def test_apply_abandon_reports_missing_cleanup_targets_as_warnings(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """cleanup 対象が先に消えていても警告として成功扱いにする。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -110,9 +122,14 @@ def test_apply_abandon_reports_missing_cleanup_targets_as_warnings(
     )
 
     class FakeCodexResult:
+        """cleanup 警告経路へ進むための findings なし fake 結果。"""
+
         output_json = {"findings": []}
 
-    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -137,8 +154,9 @@ def test_apply_abandon_reports_missing_cleanup_targets_as_warnings(
 
 
 def test_apply_abandon_stops_running_apply_process_before_cleanup(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """running apply process を停止してから git cleanup へ進む順序を固定する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -147,9 +165,14 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
     )
 
     class FakeCodexResult:
+        """running state へ差し替える前提の apply run を作る fake 結果。"""
+
         output_json = {"findings": []}
 
-    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -168,6 +191,7 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
     stopped: list[int] = []
 
     def fake_stop_apply_process(process: apply_runtime.ApplyProcessIdentity) -> None:
+        """cleanup 前の worktree と branch がまだ残っていることを観測する。"""
         assert apply_worktree.is_dir()
         assert run_git(root, "rev-parse", "--verify", apply_branch).returncode == 0
         stopped.append(process.process_id)
@@ -189,10 +213,14 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
     assert not process_id_path.exists()
 
 
-def test_stop_apply_process_treats_raced_exit_as_stopped(monkeypatch) -> None:
+def test_stop_apply_process_treats_raced_exit_as_stopped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """SIGTERM 後に先に終了した process を正常停止として扱う。"""
     sent: list[int] = []
 
-    def fake_send_signal(process_fd: int, process_id: int, sig) -> None:
+    def fake_send_signal(process_fd: int, process_id: int, sig: int) -> None:
+        """送信した signal だけを観測し、process 実体には触れない。"""
         sent.append(sig)
 
     monkeypatch.setattr(apply_runtime, "open_process_fd", lambda process_id: 10)
@@ -211,8 +239,13 @@ def test_stop_apply_process_treats_raced_exit_as_stopped(monkeypatch) -> None:
     assert sent == [apply_runtime.signal.SIGTERM]
 
 
-def test_send_process_signal_ignores_already_exited_process(monkeypatch) -> None:
-    def fake_pidfd_send_signal(process_fd: int, sig) -> None:
+def test_send_process_signal_ignores_already_exited_process(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """pidfd signal 時点で終了済みの process を cleanup 失敗にしない。"""
+
+    def fake_pidfd_send_signal(process_fd: int, sig: int) -> None:
+        """Linux pidfd API が返す終了済み process の例外だけを再現する。"""
         raise ProcessLookupError
 
     monkeypatch.setattr(
@@ -222,7 +255,10 @@ def test_send_process_signal_ignores_already_exited_process(monkeypatch) -> None
     apply_runtime.send_process_signal(10, 12345, apply_runtime.signal.SIGTERM)
 
 
-def test_stop_apply_process_does_not_signal_reused_pid(monkeypatch) -> None:
+def test_stop_apply_process_does_not_signal_reused_pid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """保存時と開始時刻が異なる PID reuse では signal を送らない。"""
     sent: list[int] = []
 
     monkeypatch.setattr(apply_runtime, "open_process_fd", lambda process_id: 10)
@@ -243,8 +279,9 @@ def test_stop_apply_process_does_not_signal_reused_pid(monkeypatch) -> None:
 
 
 def test_apply_abandon_rejects_running_state_without_process_id(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """running state で process identity が無い場合は cleanup 前に拒否する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -253,9 +290,14 @@ def test_apply_abandon_rejects_running_state_without_process_id(
     )
 
     class FakeCodexResult:
+        """process identity 欠落を作る前提の apply run を作る fake 結果。"""
+
         output_json = {"findings": []}
 
-    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -282,8 +324,9 @@ def test_apply_abandon_rejects_running_state_without_process_id(
 
 
 def test_apply_abandon_rejects_apply_branch_without_derivable_worktree(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """state 上の apply branch から worktree が導けない破損状態を拒否する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -307,7 +350,10 @@ def test_apply_abandon_rejects_apply_branch_without_derivable_worktree(
     assert state["apply"]["apply_branch"] == "cmoc/apply/malformed"
 
 
-def test_apply_abandon_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) -> None:
+def test_apply_abandon_can_run_from_apply_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """apply worktree 内からの abandon は repo root へ戻して cleanup する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -316,9 +362,14 @@ def test_apply_abandon_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) 
     )
 
     class FakeCodexResult:
+        """apply worktree から abandon する前提の apply run を作る fake 結果。"""
+
         output_json = {"findings": []}
 
-    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
@@ -345,8 +396,9 @@ def test_apply_abandon_can_run_from_apply_worktree(tmp_path: Path, monkeypatch) 
 
 
 def test_apply_abandon_checks_linked_session_worktree_dirty(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """linked session worktree の未コミット差分がある abandon を拒否する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -368,8 +420,9 @@ def test_apply_abandon_checks_linked_session_worktree_dirty(
 
 
 def test_apply_abandon_from_linked_apply_worktree_uses_repo_state(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """linked apply worktree からでも repo 側 state を正として cleanup する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -394,7 +447,10 @@ def test_apply_abandon_from_linked_apply_worktree_uses_repo_state(
     assert state["apply"]["apply_branch"] is None
 
 
-def test_apply_abandon_rejects_stale_apply_branch(tmp_path: Path, monkeypatch) -> None:
+def test_apply_abandon_rejects_stale_apply_branch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """同じ session の古い apply branch から active run 破棄を拒否する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -403,9 +459,14 @@ def test_apply_abandon_rejects_stale_apply_branch(tmp_path: Path, monkeypatch) -
     )
 
     class FakeCodexResult:
+        """stale apply branch を追加する前提の active run を作る fake 結果。"""
+
         output_json = {"findings": []}
 
-    monkeypatch.setattr(apply_fork_module, "run_codex_exec", lambda parameter, **kwargs: FakeCodexResult()
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
     )
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
