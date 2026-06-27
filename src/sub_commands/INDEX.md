@@ -118,24 +118,26 @@
 # `review_loop.py`
 
 ## Summary
-- review oracle による finding の列挙、統合、検証、判定を一連のループとして実行する処理を担う。Codex 呼び出しの結果を finding 一覧へ反映し、finding_id や検証理由、判定結果の既定値を補いながら最終結果を返す。
-- finding の oracle_path を実パスへ解決して対象 oracle file ごとの既存 finding を絞り込む補助処理と、merge finding の edit operation を検証して finding 一覧へ適用する処理を含む。
+- review oracle の finding 収集から統合、検証、判定までの反復制御を担う実装。
+- oracle file ごとに既存 finding との関連を渡して列挙を行い、merge operation を検証して finding list に適用し、advocate/challenger の検証理由を蓄積したうえで最終 verdict と judge reason を設定する。
+- finding 内の oracle_path を絶対 path、worktree 相対 path、または path token 付き表記から解決し、対象 oracle file に紐づく finding を絞り込む処理も含む。
 
 ## Read this when
-- review oracle の enumerate、merge、validate、judge の実行順序や反復条件を確認・変更したいとき。
-- review oracle が Codex 実行へ渡す builder parameter、root、cwd、config、purpose の扱いを確認したいとき。
-- finding の採番、既定フィールド、advocate_reasons、challenger_reasons、verdict、judge_reason の更新ロジックを確認したいとき。
-- finding の oracle_path と worktree、絶対パス、パストークン表記の対応付けを確認したいとき。
-- merge finding operation の delete、replace、merge の妥当性検証や、target_ids の重複・未知 ID エラーを扱う実装を確認したいとき。
+- review oracle の enumerate、merge、validate、judge の実行順序や反復停止条件を確認したいとき。
+- review oracle が生成・更新する finding の初期値、finding_id の採番、advocate_reasons/challenger_reasons/verdict/judge_reason の扱いを変更または確認したいとき。
+- merge finding の delete、replace、merge operation の検証条件、target_ids の重複・未知 ID の扱い、置換後 finding の作り方を調べたいとき。
+- finding の oracle_path がどのように実 path に解決され、特定の oracle file に関連する finding と判定されるかを確認したいとき。
+- Codex 実行関数へ渡す review oracle 用 builder parameter、cwd、root、purpose の組み立てを追いたいとき。
 
 ## Do not read this when
-- review oracle に渡すプロンプトや Structured Output parameter の詳細を確認したいだけなら、builder 側の各 review oracle parameter 生成処理を読む。
-- CmocConfig の review_oracle 設定値そのものの定義や読み込みを確認したいだけなら、設定モデル側を読む。
-- パストークンの一般的な定義や resolve_real_path の仕様を確認したいだけなら、path model 側を読む。
-- 通常のサブコマンド登録、CLI 引数、コマンド dispatch の構造を確認したいだけなら、このループ処理ではなくサブコマンド入口や CLI 構成を読む。
+- 個々の review oracle prompt や Structured Output parameter の内容を確認したいだけなら、builder 側の該当実装を読む。
+- review_oracle のループ回数など設定値の定義や読み込みを確認したいだけなら、設定モデル側を読む。
+- path token の仕様や resolve_real_path の詳細な解決規則を確認したいだけなら、path model 側を読む。
+- CLI サブコマンドとして review oracle loop がどこから呼ばれるか、引数や利用者向け入出力を確認したいだけなら、呼び出し元の sub command 実装を読む。
+- finding の内容品質や LLM 判定結果そのものを調べたい場合は、この制御実装ではなく実行ログや生成結果を確認する。
 
 ## hash
-- 86cde0b2e0151ed2d36309831353b40d7525abae13ac516f2e8f44bbd517cffb
+- b19cd10eb6d96e1d94ba9b04991f574bba4c0ba9898fd7f44625b5cdb29ecc0b
 
 # `review_report.py`
 

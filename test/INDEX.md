@@ -304,25 +304,27 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle の CLI 経由の外部挙動を検証する realization test。report 生成、所見の列挙・検証・judge・merge、accepted/rejected 所見の集計と表示、scope 指定、対象 oracle の選択、linked worktree 上の review 実行、review 用 worktree からの INDEX 変更の取り込み、失敗時 report、想定外差分の拒否を扱う。
-- 16,000 文字を超えるが、同じ review run の状態、fake Codex 応答、report 文脈を共有する一連の挙動を一箇所で検証するためのテスト群としてまとまっている。
+- review oracle の CLI 経由の外部挙動と、所見評価 loop の制御を検証する realization test。report 生成、対象 oracle の選択、所見の列挙・検証・judge・merge、上限到達、join commit、review 用 worktree の扱い、INDEX.md だけの差分許可、処理失敗時 report を同じ review run の文脈で確認する。
+- 16,000 文字を超えるが、fake Codex 応答、report 文脈、review run の状態を共有する検証群として凝集しており、oracle review の読み取り文脈を一箇所に保つためのテストである。
 
 ## Read this when
-- review oracle サブコマンドの利用者向け出力、report 内容、終了コード、scope 別の対象選択、所見 loop の制御を変更・確認する。
-- review oracle が Codex structured output schema を使って所見を列挙、検証、judge、merge する流れや、その呼び出し条件を変更・確認する。
-- oracle file の列挙条件、gitignored oracle file や symlink、binary、memo 形状の path、session scope と full scope の扱いを変更・確認する。
-- linked worktree や session branch 上で review oracle がどの worktree と commit を対象にするか、review worktree の差分をどう扱うかを変更・確認する。
-- review oracle が生成した INDEX 変更の merge、INDEX conflict 解消、INDEX 以外の差分拒否、処理失敗時の error report 生成を変更・確認する。
-- apply_finding_merge_operations の delete・replace・merge 操作の契約、invalid operation や target 再利用の拒否を変更・確認する。
+- review oracle コマンドの report 内容、終了コード、標準出力、エラー report、scope option の外部挙動を変更・確認する。
+- review oracle が対象にする oracle file の選択条件を確認する。特に full scope、session scope、gitignored file、binary file、symlink、memo 配下や memo への link の扱いを確認する。
+- review oracle の所見 loop で、enumerate、challenger/advocate validate、judge、merge の呼び出し順や prompt に渡す既存所見・理由の範囲を変更・確認する。
+- accepted/rejected finding の report 表示、fatal/minor count、rejected finding を問題なし結果に含める扱いを変更・確認する。
+- review oracle 用 worktree、linked worktree 上の session branch、review fork commit、review join commit、INDEX.md 差分の取り込みや conflict 解消を変更・確認する。
+- review oracle 実行中に Codex が INDEX.md 以外の差分を作った場合の拒否と、元 worktree へ不要な差分を残さない挙動を確認する。
+- finding merge operation の delete、replace、merge の契約、ID 採番、invalid operation や target 再利用の拒否を変更・確認する。
 
 ## Do not read this when
-- review oracle 以外のサブコマンド、session fork や init の通常挙動だけを確認したい。
-- oracle の正本仕様そのものを編集・確認したい場合で、CLI 実装や realization test の現行挙動を根拠にする必要がない。
-- Codex CLI の出力品質や LLM の内容評価そのものを検証したい。ここでは fake 応答を使い、review oracle の制御と外部挙動だけを検証する。
-- review oracle の個別 helper の内部実装だけを局所的に確認したい場合で、CLI report、worktree、対象選択、所見 loop の結合挙動を追う必要がない。
+- review oracle 以外の review サブコマンド、通常の session 操作、init の基本挙動だけを確認したい場合。
+- oracle file の正本仕様そのものを編集・評価したい場合。この対象は realization test であり、仕様判断の入口ではない。
+- Codex CLI や LLM の出力品質そのものを検証したい場合。この対象は fake 応答を使って cmoc 側の制御と出力を検証する。
+- 個別 helper の内部実装だけを局所的に変更し、review oracle の CLI 出力、対象選択、所見 loop、worktree/merge 制御に影響しないことが明らかな場合。
+- INDEX.md 生成全般や他ディレクトリのルーティングだけを扱う場合。ただし review oracle が生成した INDEX.md 差分の取り込み挙動を扱うなら読む。
 
 ## hash
-- 253285615ce91d7df53bf7bc80df16d1c946d001d2dd0d03ae5677e3652e1f65
+- 9c4d439cf31f2fa7d49531f59d45f438a8a27900b4efa4330ff20c8aaa747c82
 
 # `test_session_cli.py`
 
