@@ -205,23 +205,22 @@
 # `tui.py`
 
 ## Summary
-- 利用者が対話的に依頼文を編集して Codex TUI を起動するサブコマンド本体を扱う。元 prompt の作成、エディタ起動、実行パラメータ解決、完全 prompt の保存、TUI 用 AgentCallParameter 構築までの一連の制御がまとまっている。
-- TUI で許可する file access mode の検証、Markdown 見出しを StructDoc 階層へ変換する処理、解決済み JSON から `{value: ...}` 形式の値や真偽値を取り出す補助処理も含む。
-- TUI ログ領域へ prompt ファイルを書き出すため、TUI 実行前に `.cmoc` ignore を保証する処理と、利用可能なエディタを PATH から選ぶ処理への入口でもある。
+- 利用者が入力した依頼文を編集させ、解決用 Agent 呼び出しで TUI 実行パラメータを決め、完全な prompt を保存して Codex TUI を起動するサブコマンド実装を扱う。
+- TUI 実行前の indexing preflight、ログ領域の `.cmoc` ignore 保証、元 prompt と完全 prompt の保存、利用可能エディタ選択、Markdown 見出しの構造化、解決済み JSON からの AgentCallParameter 構築を一つの流れとして担う。
 
 ## Read this when
-- 対話的な `tui` サブコマンドの起動順序、prompt 編集、パラメータ解決、Codex TUI 呼び出しの制御を確認・変更したいとき。
-- TUI で使用できる file access mode の扱い、解決済みパラメータから AgentCallParameter を作る処理、完全 prompt の組み立て条件を確認したいとき。
-- 利用者が編集する元 prompt や解決後の完全 prompt をどこへ保存するか、TUI 実行時にどの root の `.cmoc` ignore を保証するかを調べたいとき。
-- TUI 用 prompt の Markdown 見出しを構造化文書へ変換する挙動、またはコードフェンス内の見出しを無視する解析処理を確認したいとき。
-- `cmoc tui` が使うエディタ選択順、エディタ終了失敗時のエラー、HTML comment を除去した prompt 読み取りを確認したいとき。
+- 利用者編集用 prompt から Codex TUI 起動までの制御フローを確認または変更したいとき。
+- TUI で許可する file access mode、resolve parameter の結果の読み取り、完全 prompt に含める oracle/review/indexing 系フラグの扱いを確認したいとき。
+- TUI 用ログ領域への元 prompt・完全 prompt の保存先、保存名、`.cmoc` ignore の事前保証に関わる挙動を確認したいとき。
+- TUI 起動前に使うエディタの選択順、エディタ異常終了時のエラー、prompt テンプレート中の HTML comment 除去を扱うとき。
+- Markdown の見出し・本文・コードフェンスを StructDoc 階層へ変換する処理を確認または変更したいとき。
 
 ## Do not read this when
-- 通常の CLI サブコマンド共通実行基盤、設定読み込み、repo root や work root の算出そのものを調べたいだけなら、runtime 側の対象を読む。
-- TUI パラメータ解決用に Codex exec へ渡す schema やプロンプト定義そのものを調べたいだけなら、TUI resolve parameter builder 側を読む。
-- 完全 prompt の汎用的な構築ルールや StructDoc の Markdown レンダリング仕様を調べたいだけなら、prompt_parts や struct_doc 側を読む。
-- TUI 以外のサブコマンドの挙動、ログ保存、review や indexing などの各機能を調べたい場合は、それぞれのサブコマンドまたは共通モジュールへ進む。
-- エディタや subprocess の一般的な使い方だけを確認したい場合、または Codex TUI 実行後の対話内容を調べたい場合は、この対象を読む必要はない。
+- TUI ではなく exec など別サブコマンドの CLI 制御や入出力を確認したいだけのとき。
+- Codex 実行ランタイム、設定読み込み、repository/work root 判定、ログ実行基盤そのものの実装を確認したいとき。
+- resolve parameter の prompt 生成内容や TUI で選べる file access mode の定義自体を確認したいとき。
+- 完全 prompt の共通生成ロジックや StructDoc のレンダリング仕様そのものを確認したいとき。
+- エディタ起動や Markdown 構造化ではなく、TUI セッション内で Codex が行う作業内容を調べたいとき。
 
 ## hash
-- 3ae76b0057081bf6c6c1b52da9770d39cee78fb9ace94eff6132b444abd4862a
+- 374ac7e1a3e18a4b8a01c23ab501cd5769d6c0792add919a64687852a17d1984
