@@ -25,7 +25,7 @@ from cmoc_runtime import (
     repo_root,
     work_root,
 )
-from commons.runtime_codex_profile import build_codex_profile
+from commons.runtime_codex_profile import build_codex_profile, file_access_to_codex_cwd
 from commons.runtime_content import is_binary
 from commons.runtime_state import (
     SessionState,
@@ -340,6 +340,17 @@ def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
     assert file_access_to_sandbox_mode(FileAccessMode.REPO_WRITE) == "workspace-write"
 
 
+def test_file_access_to_codex_cwd_limits_pure_oracle_read(tmp_path: Path) -> None:
+    """PURE_ORACLE_READ は Codex の作業 root も oracle tree に閉じる。"""
+    root = tmp_path / "repo"
+    root.mkdir()
+
+    assert file_access_to_codex_cwd(FileAccessMode.READONLY, root) == root.resolve()
+    assert file_access_to_codex_cwd(FileAccessMode.PURE_ORACLE_READ, root) == (
+        root / "oracle"
+    ).resolve()
+
+
 def test_is_binary_reads_only_initial_chunk() -> None:
     """binary 判定は大きい file 全体を読まず先頭 chunk だけを見る。"""
     class Reader:
@@ -454,12 +465,26 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         str(extra.resolve()),
     }
 
-    with pytest.raises(CmocError, match="保護領域"):
+    with pytest.raises(CmocError, match="許可領域外"):
         build_codex_profile(
             parameter,
             CmocConfig(),
             root,
             [root / "memo" / "blocked.md"],
+        )
+
+    with pytest.raises(CmocError, match="許可領域外"):
+        build_codex_profile(
+            AgentCallParameter(
+                parameter.model_class,
+                parameter.reasoning_effort,
+                FileAccessMode.PURE_ORACLE_READ,
+                parameter.prompt,
+                parameter.structured_output_schema_path,
+            ),
+            CmocConfig(),
+            root,
+            [root / "src" / "blocked.md"],
         )
 
 

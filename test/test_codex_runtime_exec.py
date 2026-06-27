@@ -82,6 +82,7 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
             "output.write_text('done\\n')",
             f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
             "    'args': args,",
+            "    'cwd': os.getcwd(),",
             "    'stdin': sys.stdin.read(),",
             "    'profile': profile_path.read_text(),",
             "}))",
@@ -98,12 +99,15 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
     )
 
     record = json.loads(recorder.read_text())
-    assert record["args"][:4] == [
+    assert record["args"][:6] == [
         "exec",
         "--profile",
         result.profile_name,
+        "--cd",
+        str(root.resolve()),
         "--json",
     ]
+    assert record["cwd"] == str(root.resolve())
     assert record["stdin"] == "prompt"
     assert 'sandbox_mode = "workspace-write"' in record["profile"]
     writable_roots = set(
@@ -113,6 +117,49 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
     assert str((root / "README.md").resolve()) in writable_roots
     assert str((root / "oracle").resolve()) in writable_roots
     assert result.output_text == "done\n"
+
+
+def test_run_codex_exec_limits_pure_oracle_read_to_oracle_cwd(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    recorder = tmp_path / "record.json"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, os, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "profile = args[args.index('--profile') + 1]",
+            "home = pathlib.Path(os.environ['CODEX_HOME'])",
+            "profile_path = home / f'{profile}.config.toml'",
+            "output.write_text('done\\n')",
+            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
+            "    'args': args,",
+            "    'cwd': os.getcwd(),",
+            "    'profile': profile_path.read_text(),",
+            "}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_exec(
+        _parameter(FileAccessMode.PURE_ORACLE_READ),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    record = json.loads(recorder.read_text())
+    oracle_root = str((root / "oracle").resolve())
+    assert record["args"][record["args"].index("--cd") + 1] == oracle_root
+    assert record["cwd"] == oracle_root
+    assert 'sandbox_mode = "read-only"' in record["profile"]
+    assert "sandbox_workspace_write" not in tomllib.loads(record["profile"])
 
 
 def test_run_codex_exec_logs_call_before_rejecting_agents_edit(
@@ -172,7 +219,7 @@ def test_run_codex_tui_checks_extra_read_path_before_starting_codex(
 
     monkeypatch.setattr(cmoc_runtime.subprocess, "run", fail_run)
 
-    with pytest.raises(CmocError, match="保護領域"):
+    with pytest.raises(CmocError, match="許可領域外"):
         run_codex_tui(
             _parameter(FileAccessMode.REPO_WRITE),
             root=root,

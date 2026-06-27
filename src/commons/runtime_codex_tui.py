@@ -11,6 +11,7 @@ from commons.runtime_codex_logging import emit_codex_call_console
 from commons.runtime_codex_profile import (
     codex_profile_name,
     codex_subprocess_env,
+    file_access_to_codex_cwd,
     prepare_codex_profile,
     resolve_codex_home,
     run_codex_subprocess,
@@ -45,10 +46,13 @@ def run_codex_tui(
         parameter, config, codex_home, work_root(cwd), extra_read_paths
     )
     profile_name = codex_profile_name(profile_path)
+    codex_cwd = file_access_to_codex_cwd(parameter.file_access_mode, work_root(cwd))
     argv = [
         "codex",
         "--profile",
         profile_name,
+        "--cd",
+        str(codex_cwd),
         parameter.prompt,
     ]
     call_path.write_text(
@@ -74,7 +78,7 @@ def run_codex_tui(
     try:
         result = run_codex_subprocess(
             argv,
-            cwd=cwd,
+            cwd=codex_cwd,
             env=codex_subprocess_env(codex_home),
             check=True,
         )

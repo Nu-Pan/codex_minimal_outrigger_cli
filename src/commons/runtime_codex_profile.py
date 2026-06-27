@@ -29,18 +29,39 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
             raise CmocError("不明な FileAccessMode です。", [], str(mode))
 
 
+def file_access_to_codex_cwd(mode: FileAccessMode, root: Path) -> Path:
+    """FileAccessMode の読み取り境界に合わせた Codex 作業 root を返す。"""
+    root = root.resolve()
+    if mode == FileAccessMode.PURE_ORACLE_READ:
+        # <work-root>/oracle/src/acp/prompt_parts/file_access_rule.py
+        # Codex profile は read-only の読み取り root を分けられないため、
+        # 公開済みの --cd/cwd で oracle tree だけを作業 root にする。
+        return root / "oracle"
+    return root
+
+
+def _is_read_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
+    if not path.is_relative_to(root):
+        return False
+    if path.is_relative_to(root / "memo") or path.is_relative_to(root / ".agents"):
+        return False
+    return mode != FileAccessMode.PURE_ORACLE_READ or path.is_relative_to(
+        root / "oracle"
+    )
+
+
 def _validate_extra_read_paths(
+    mode: FileAccessMode,
     root: Path,
     extra_read_paths: list[Path] | None,
 ) -> None:
-    protected = [root / "memo", root / ".agents"]
     for path in extra_read_paths or []:
         resolved = path.resolve()
-        if any(resolved.is_relative_to(base) for base in protected):
+        if not _is_read_path_allowed(mode, root, resolved):
             raise CmocError(
-                "追加読み取り許可 path が保護領域内にあります。",
-                ["memo または .agents 配下ではないファイルを指定してください。"],
-                f"path: {resolved}",
+                "追加読み取り許可 path が FileAccessMode の許可領域外にあります。",
+                ["file access mode で読み取り可能な work root 配下の path を指定してください。"],
+                f"mode: {mode.value}\npath: {resolved}",
             )
 
 
@@ -136,7 +157,9 @@ def build_codex_profile(
     ]
     if root is not None:
         root = root.resolve()
-        _validate_extra_read_paths(root, extra_read_paths)
+        _validate_extra_read_paths(
+            parameter.file_access_mode, root, extra_read_paths
+        )
     sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
     lines.append(f'sandbox_mode = "{sandbox_mode}"')
     if root is not None:

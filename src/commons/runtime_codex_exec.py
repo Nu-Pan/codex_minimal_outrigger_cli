@@ -27,6 +27,7 @@ from commons.runtime_codex_profile import (
     codex_profile_name,
     codex_subprocess_env,
     extract_resume_token,
+    file_access_to_codex_cwd,
     is_capacity_error,
     is_quota_error,
     prepare_codex_profile,
@@ -139,6 +140,7 @@ def run_codex_exec(
         extra_writable_paths,
     )
     profile_name = codex_profile_name(profile_path)
+    codex_cwd = file_access_to_codex_cwd(parameter.file_access_mode, codex_work_root)
     agents_status_before = _agents_status(codex_work_root)
     schema_path = (
         prepare_schema(codex_work_root, parameter.structured_output_schema_path)
@@ -176,6 +178,8 @@ def run_codex_exec(
             "exec",
             "--profile",
             profile_name,
+            "--cd",
+            str(codex_cwd),
             "--json",
             "--output-last-message",
             str(output_path),
@@ -322,7 +326,7 @@ def run_codex_exec(
         attempt_started_at = time.perf_counter()
         result = run_codex_subprocess(
             current_argv,
-            cwd=cwd,
+            cwd=codex_cwd,
             input=_read_prompt_log(prompt_path),
             text=True,
             capture_output=True,
