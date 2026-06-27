@@ -33,24 +33,23 @@
 # `runtime_cli.py`
 
 ## Summary
-- CLI サブコマンドの共通実行ライフサイクルを扱う実装。work root 実行前提の検査、事前検査、サブコマンドログの作成と current logger の設定、開始・実行・完了の標準出力、戻り値から終了コードへの変換、例外時のエラー表示と終了処理を一箇所にまとめている。
-- runtime state の配置先を通常は repo root、初期化対象を扱う場合は work root に切り替える入口もここにあり、サブコマンドログは repo root に置く方針で処理する。
+- CLI サブコマンド実行時の共通ライフサイクルを扱う実装。work root で実行されていることの検査、事前検査、サブコマンドログの作成と current logger の設定、開始・実行・完了の標準出力、戻り値の終了コード化、例外のエラー表示と終了コード化を一箇所にまとめている。
+- 通常の runtime state は repo root、初期化対象を扱う場合は work root に置き、サブコマンドログは常に repo root に置くという実行時 root の使い分けを担う。
 
 ## Read this when
-- CLI サブコマンド実行時の共通ラッパー、開始・完了表示、終了コード化、例外処理、typer.Exit への変換を確認または変更するとき。
-- サブコマンドログの作成、command_invoked・step_started・command_finished の記録、current subcommand logger の設定解除に関わる挙動を追うとき。
-- cmoc を work root 以外で実行した場合のエラー、または work root 検査と pre log check の実行順序を確認するとき。
-- runtime state を repo root と work root のどちらに置くか、または init など初期化対象側の runtime を使う処理を確認するとき。
-- CLI 完了時に stdout へ出る elapsed、quota_wait、returncode、sub command log path のサマリー形式を確認するとき。
+- CLI サブコマンド全体に共通する開始表示、完了サマリー、戻り値から終了コードへの変換、例外時のエラー表示や終了処理を確認・変更したいとき。
+- サブコマンドログの生成場所、ログイベント、current subcommand logger の設定・解除、quota wait や elapsed の出力を追いたいとき。
+- cmoc が work root で実行されているかの検査や、work root 以外で実行された場合の利用者向けエラーを確認したいとき。
+- init のように初期化対象側の runtime state を使うサブコマンドと、通常サブコマンドの repo root 側 runtime state の切り替えを調べたいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務処理本体、引数定義、typer command 登録だけを確認したいとき。
-- ログイベントの保存形式、ログファイルの内部構造、current logger の実装そのものを確認したいとき。
-- repo root、work root、時刻表示、duration format の算出方法そのものを確認したいとき。
-- CmocError の表現、render_error の整形規則、エラーメッセージ全般の仕様を確認したいとき。
+- 個別サブコマンドの業務処理、引数定義、永続データの内容を調べたいだけの場合。
+- path token や repo root、work root の算出規則そのものを確認したい場合。
+- エラー型やエラーメッセージの描画形式そのものを変更したい場合。
+- サブコマンドログのファイル形式、保存処理、logger の内部状態管理を詳しく調べたい場合。
 
 ## hash
-- 55f193985ae31cb201eeca62f0e91b33a5ccd90ae2e85001a2524001462694b2
+- e7751f870aca9cf42abe0cc3ec175d0686b9c18f7b9615c3fe4a0a4b82b3b7a6
 
 # `runtime_codex.py`
 
