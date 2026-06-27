@@ -22,7 +22,6 @@ from cmoc_runtime import (
     current_branch,
     current_subcommand_logger,
     head_commit,
-    is_binary,
     is_git_ignored,
     load_config,
     load_state_for_branch,
@@ -366,7 +365,7 @@ def changed_worktree_paths(root: Path) -> list[Path]:
 def normalize_apply_targets(
     root: Path, candidates: set[Path], include_oracle: bool = True
 ) -> list[Path]:
-    """apply finding 列挙対象として扱える通常テキスト file だけに正規化する。"""
+    """apply finding 列挙対象として扱える file だけに正規化する。"""
     targets: list[Path] = []
     for path in sorted({candidate.resolve() for candidate in candidates}):
         if not path.exists() or not path.is_file():
@@ -381,7 +380,9 @@ def normalize_apply_targets(
             continue
         if not include_oracle and rel_parts[0] == "oracle":
             continue
-        if path.name == "INDEX.md" or is_binary(path):
+        # `<work-root>/oracle/doc/app_spec/misc_spec.md` は実装ファイル列挙に
+        # binary 除外を置かないため、file 種別だけでは対象から落とさない。
+        if path.name == "INDEX.md":
             continue
         if is_git_ignored(root, path):
             continue

@@ -303,3 +303,21 @@ def test_apply_fork_target_normalization_keeps_nested_memo_directory(
     )
 
     assert targets == [nested.resolve()]
+
+
+def test_apply_fork_target_normalization_keeps_binary_files(
+    tmp_path: Path,
+) -> None:
+    """full scope の候補になり得る binary file を file 種別だけで除外しない。"""
+    root = make_repo(tmp_path)
+    realization_binary = root / "asset.bin"
+    oracle_binary = root / "oracle" / "asset.bin"
+    realization_binary.write_bytes(b"\x00realization\n")
+    oracle_binary.write_bytes(b"\x00oracle\n")
+
+    targets = apply_fork_module.normalize_apply_targets(
+        root,
+        {realization_binary, oracle_binary},
+    )
+
+    assert targets == [realization_binary.resolve(), oracle_binary.resolve()]
