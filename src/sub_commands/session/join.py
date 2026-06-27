@@ -58,13 +58,20 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
     home = state.session.session_home_branch
     if not home:
         raise CmocError("session home branch を特定できません。", [], str(path))
-    run_git(["switch", home], work)
-    merge = git(["merge", "--no-ff", branch], work, check=False)
-    if merge.returncode != 0:
-        resolve_session_join_conflict(work, codex_exec, git)
-    state.session.state = "joined"
-    write_state(path, state)
-    delete_result = git(["branch", "-d", branch], work, check=False)
+    try:
+        run_git(["switch", home], work)
+        merge = git(["merge", "--no-ff", branch], work, check=False)
+        if merge.returncode != 0:
+            resolve_session_join_conflict(work, codex_exec, git)
+        state.session.state = "joined"
+        write_state(path, state)
+        delete_result = git(["branch", "-d", branch], work, check=False)
+    except BaseException as exc:
+        # <work-root>/oracle/doc/app_spec/sub_command/session_join.md:
+        # post-precondition failures can require manual git resolution, so their
+        # error report must go to stderr instead of the default stdout path.
+        setattr(exc, "cmoc_error_to_stderr", True)
+        raise
     warnings: list[str] = []
     if delete_result.returncode != 0:
         warnings.append(f"session branch was not deleted: {branch}")

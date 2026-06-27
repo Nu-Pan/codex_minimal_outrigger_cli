@@ -488,3 +488,42 @@ def test_session_join_error_report_is_written_to_stdout(
     assert "git 未コミット差分が存在します。" in result.stdout
     assert "# ERROR" not in result.stderr
     assert "git 未コミット差分が存在します。" not in result.stderr
+
+
+def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    target = root / "README.md"
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    home_branch = session_home_branch(root, session_branch)
+    target.write_text("session change\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "session change")
+    run_git(root, "switch", home_branch)
+    target.write_text("home change\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "home change")
+    run_git(root, "switch", session_branch)
+
+    class FakeCodexResult:
+        output_json = None
+
+    def fake_run_codex_exec(parameter, **kwargs):
+        return FakeCodexResult()
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["session", "join"])
+
+    assert result.exit_code != 0
+    assert current_branch(root) == home_branch
+    assert "# ERROR" not in result.stdout
+    assert "conflict marker が残っています。" not in result.stdout
+    assert "# ERROR" in result.stderr
+    assert "conflict marker が残っています。" in result.stderr

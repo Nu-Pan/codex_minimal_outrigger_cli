@@ -103,7 +103,16 @@ def run_cli_subcommand(
         result_stdout = getattr(exc, "cmoc_stdout", None)
         if result_stdout is not None:
             typer.echo(str(result_stdout))
-        typer.echo(render_error(exc), err=(error_to_stderr or not console_output))
+        # <work-root>/oracle/doc/app_spec/error_handling.md leaves stdout as
+        # the default; command-specific oracle rules may mark exceptions for stderr.
+        typer.echo(
+            render_error(exc),
+            err=(
+                error_to_stderr
+                or bool(getattr(exc, "cmoc_error_to_stderr", False))
+                or not console_output
+            ),
+        )
         raise typer.Exit(1) from exc
     finally:
         if logger_token is not None:
