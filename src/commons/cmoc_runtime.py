@@ -6,6 +6,7 @@ from commons.runtime_codex_preflight import (
     run_codex_tui,
 )
 from commons.runtime_codex_profile import (
+    APPLY_PROCESS_TRACKING_ENV,
     build_codex_profile,
     codex_error_text,
     codex_profile_name,
@@ -16,6 +17,7 @@ from commons.runtime_codex_profile import (
     is_quota_error,
     prepare_codex_profile,
     prepare_schema,
+    process_start_time,
     read_output_json,
     resolve_codex_home,
     validate_codex_home,

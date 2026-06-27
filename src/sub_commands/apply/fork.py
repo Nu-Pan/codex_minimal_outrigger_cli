@@ -42,6 +42,7 @@ from sub_commands.apply.fork_report import (
     write_apply_fork_report,
 )
 from sub_commands.apply._runtime import (
+    apply_process_tracking,
     delete_apply_process_id,
     write_apply_process_id,
 )
@@ -98,7 +99,7 @@ def _cmoc_apply_fork_body(
     result_label = "error"
     report_path: Path | None = None
     try:
-        with pushd(apply_worktree):
+        with apply_process_tracking(root, session_id), pushd(apply_worktree):
             findings: list[dict] = []
             pending_targets = enumerate_apply_targets(apply_worktree, scope, state)
             for _apply_loop in range(config.apply_fork.num_apply_files):
@@ -170,6 +171,7 @@ def _cmoc_apply_fork_body(
                 root, branch, state, finding_counts, apply_worktree, config, codex_exec
             )
         setattr(exc, "cmoc_stdout", str(report_path.resolve()))
+        setattr(exc, "cmoc_error_to_stderr", True)
         raise
     # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md は stdout を
     # 作成した report の full path だけに限定している。

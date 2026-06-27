@@ -213,6 +213,51 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
     assert not process_id_path.exists()
 
 
+def test_stop_apply_process_stops_tracked_child_group_before_parent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Codex subprocess は親 apply process より先に専用 process group ごと止める。"""
+    order: list[str] = []
+
+    def fake_stop_child(process: apply_runtime.ProcessIdentity) -> None:
+        order.append(f"child:{process.process_id}")
+
+    def fake_send_signal(process_fd: int, process_id: int, sig: int) -> None:
+        order.append(f"parent:{process_id}:{sig}")
+
+    monkeypatch.setattr(apply_runtime, "stop_child_process_group", fake_stop_child)
+    monkeypatch.setattr(apply_runtime, "open_process_fd", lambda process_id: 10)
+    monkeypatch.setattr(apply_runtime, "process_start_time", lambda process_id: 20)
+    monkeypatch.setattr(apply_runtime, "send_process_signal", fake_send_signal)
+    monkeypatch.setattr(
+        apply_runtime, "wait_process_fd_exit", lambda process_fd, timeout: True
+    )
+    monkeypatch.setattr(apply_runtime.os, "close", lambda process_fd: None)
+
+    warning = apply_runtime.stop_apply_process(
+        apply_runtime.ApplyProcessIdentity(
+            12345, 20, (apply_runtime.ProcessIdentity(23456, 30),)
+        )
+    )
+
+    assert warning is None
+    assert order == [f"child:23456", f"parent:12345:{apply_runtime.signal.SIGTERM}"]
+
+
+def test_apply_process_id_reads_tracked_child_processes(tmp_path: Path) -> None:
+    """running abandon が親 PID と同時に記録済み Codex child PID を読める。"""
+    root = tmp_path
+    path = root / ".cmoc" / "state" / "apply_processes" / "session.pid"
+    path.parent.mkdir(parents=True)
+    path.write_text("12345 20\nchild 23456 30\n")
+
+    process = apply_runtime.read_apply_process_id(root, "session")
+
+    assert process == apply_runtime.ApplyProcessIdentity(
+        12345, 20, (apply_runtime.ProcessIdentity(23456, 30),)
+    )
+
+
 def test_stop_apply_process_treats_raced_exit_as_stopped(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

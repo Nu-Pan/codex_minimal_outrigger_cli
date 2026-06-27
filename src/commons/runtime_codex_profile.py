@@ -11,6 +11,8 @@ from commons.runtime_content import write_hashed_file, write_hashed_file_in_exis
 from commons.runtime_errors import CmocError
 from commons.runtime_paths import schema_store_dir
 
+APPLY_PROCESS_TRACKING_ENV = "CMOC_APPLY_PROCESS_ID_PATH"
+
 
 def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
     """cmoc の file access policy を Codex CLI が理解する sandbox 名へ落とす。"""
@@ -242,7 +244,10 @@ def run_codex_subprocess(
     argv: list[str], **kwargs: Any
 ) -> subprocess.CompletedProcess[Any]:
     """Codex CLI 不在を Python の生例外ではなく cmoc の実行時エラーにそろえる。"""
+    tracking_path = os.environ.get(APPLY_PROCESS_TRACKING_ENV)
     try:
+        if tracking_path and argv[:1] == ["codex"]:
+            return run_tracked_codex_subprocess(argv, Path(tracking_path), **kwargs)
         return subprocess.run(argv, **kwargs)
     except FileNotFoundError as exc:
         if argv[:1] != ["codex"]:
@@ -254,6 +259,67 @@ def run_codex_subprocess(
             ["Codex CLI をインストールし、PATH に codex を含めてください。"],
             f"argv: {argv}\nerror: {exc}",
         ) from exc
+
+
+def run_tracked_codex_subprocess(
+    argv: list[str], tracking_path: Path, **kwargs: Any
+) -> subprocess.CompletedProcess[Any]:
+    input_data = kwargs.pop("input", None)
+    capture_output = kwargs.pop("capture_output", False)
+    check = kwargs.pop("check", False)
+    if capture_output:
+        kwargs.setdefault("stdout", subprocess.PIPE)
+        kwargs.setdefault("stderr", subprocess.PIPE)
+    process = subprocess.Popen(argv, start_new_session=True, **kwargs)
+    record_tracked_child_process(tracking_path, process.pid)
+    try:
+        stdout, stderr = process.communicate(input_data)
+        result = subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
+        if check and result.returncode:
+            raise subprocess.CalledProcessError(
+                result.returncode,
+                argv,
+                output=stdout,
+                stderr=stderr,
+            )
+        return result
+    finally:
+        remove_tracked_child_process(tracking_path, process.pid)
+
+
+def record_tracked_child_process(path: Path, process_id: int) -> None:
+    start_time = process_start_time(process_id)
+    if start_time is None:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    current = path.read_text() if path.exists() else ""
+    lines = [line for line in current.splitlines() if line.strip()]
+    child_line = f"child {process_id} {start_time}"
+    lines = [line for line in lines if not line.startswith(f"child {process_id} ")]
+    lines.append(child_line)
+    path.write_text("\n".join(lines) + "\n")
+
+
+def remove_tracked_child_process(path: Path, process_id: int) -> None:
+    if not path.exists():
+        return
+    lines = [
+        line
+        for line in path.read_text().splitlines()
+        if not line.startswith(f"child {process_id} ")
+    ]
+    path.write_text(("\n".join(lines) + "\n") if lines else "")
+
+
+def process_start_time(process_id: int) -> int | None:
+    try:
+        stat = Path(f"/proc/{process_id}/stat").read_text()
+    except OSError:
+        return None
+    try:
+        return int(stat.rsplit(") ", 1)[1].split()[19])
+    except (IndexError, ValueError):
+        return None
 
 
 def prepare_schema(root: Path, schema_source_path: Path | None) -> Path | None:
