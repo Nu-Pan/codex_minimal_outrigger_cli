@@ -26,6 +26,9 @@ from acp.builder.apply.fork.finding_application import (
     build_apply_fork_finding_application_parameter,
 )
 from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
+from acp.builder.review.oracle.enumerate_finding import (
+    build_review_oracle_enumerate_finding_parameter,
+)
 from acp.builder.review.oracle.merge_finding import (
     build_review_oracle_merge_finding_parameter,
 )
@@ -455,6 +458,49 @@ def test_review_oracle_merge_finding_uses_efficiency_model() -> None:
     assert parameter.model_class == ModelClass.EFFICIENCY
     assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
+
+
+def test_review_oracle_enumerate_finding_schema_matches_oracle_source() -> None:
+    parameter = build_review_oracle_enumerate_finding_parameter(
+        Path("<work-root>/oracle/spec.md"),
+        "[]",
+    )
+    assert parameter.structured_output_schema_path is not None
+    schema = json.loads(parameter.structured_output_schema_path.read_text())
+    oracle_schema = json.loads(
+        (
+            Path(__file__).parents[1]
+            / "oracle"
+            / "src"
+            / "acp"
+            / "builder"
+            / "review"
+            / "oracle"
+            / "enumerate_finding.json"
+        ).read_text()
+    )
+
+    assert schema == oracle_schema
+    validate({"findings": []}, schema)
+    validate(
+        {
+            "findings": [
+                {
+                    "severity": "fatal",
+                    "title": "missing requirement",
+                    "oracle_path": "oracle/spec.md",
+                    "reason": "仕様断片として致命的な欠落がある。",
+                },
+                {
+                    "severity": "minor",
+                    "title": "ambiguous wording",
+                    "oracle_path": "oracle/spec.md",
+                    "reason": "軽微な曖昧さとして改善余地がある。",
+                },
+            ]
+        },
+        schema,
+    )
 
 
 def test_review_oracle_merge_finding_schema_matches_oracle_source() -> None:
