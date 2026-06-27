@@ -1,21 +1,24 @@
 # `apply`
 
 ## Summary
-- apply サブコマンド群の実装をまとめるディレクトリ。apply run の開始、破棄、session branch への取り込み、実行中 process 管理、fork report 生成など、apply 系 CLI の主要な制御入口を収める。
-- apply branch・apply worktree・apply process・apply state をまたぐ上位フローは各サブコマンド実装へ、pid file や linked worktree 探索などの低レベル実行時補助は runtime helper へ進むための入口になる。
+- apply 系サブコマンドの実装をまとめるディレクトリ。apply run の開始、join、abandon、実行時 process 管理、worktree・branch 操作、report 生成までの入口になる。
+- session branch と apply branch の間で変更を隔離・適用・取り込み・破棄する一連の制御を扱い、apply 固有の状態遷移、cleanup、想定外差分検出、実行結果 report の責務を下位モジュールへ分けている。
 
 ## Read this when
-- apply 系サブコマンドのどの実装を読むべきか、開始・破棄・join・report・process 管理の責務境界から選びたいとき。
-- apply run のライフサイクル全体に関わる変更で、apply branch、apply worktree、apply state、process cleanup、report 生成の関係を俯瞰したいとき。
-- apply fork、apply abandon、apply join のいずれかの CLI 挙動や、それらに共通する runtime helper の読む先を切り分けたいとき。
+- apply fork、join、abandon のいずれかの CLI 実行フロー、状態遷移、worktree・branch の作成や後片付けを調べ始めるとき。
+- apply 実行中 process の pid 管理、停止、stale process 判定など、apply 固有の runtime 状態操作を確認したいとき。
+- apply fork の対象ファイル列挙、所見適用 loop、編集禁止対象差分の rollback、commit、report 生成を追いたいとき。
+- apply 結果を session branch へ取り込む merge、想定外差分の検出や force-resolve、merge conflict report、join 後 cleanup を確認したいとき。
+- 未 join の apply run を破棄して ready 状態へ戻す cleanup と利用者向け出力を確認したいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド、session 全体、config、git 実行基盤、状態ファイル schema などの共通実装だけを調べたいとき。
-- oracle の正本仕様、INDEX.md 生成規則、または realization 全体の設計方針を確認したいだけのとき。
-- 特定のファイルに責務が明確に絞れており、fork の実行ループ、join、abandon、report 生成、process 管理の該当実装へ直接進めるとき。
+- apply 以外のサブコマンド、session 作成・終了、一般的な state model、branch 名規則の共通仕様を調べたいとき。
+- git command 実行 wrapper、state file 読み書き、worktree root、report root、config 読み込みなどの汎用 runtime だけを確認したいとき。
+- Codex CLI に渡す prompt の詳細、INDEX.md エントリー生成、oracle/realization の一般ルールだけを調べたいとき。
+- apply fork の report 表示だけ、process 停止だけ、join だけ、abandon だけのように関心対象が明確な場合は、このディレクトリ全体ではなく該当する下位実装へ直接進めるとき。
 
 ## hash
-- edfe2494b172bb19f038961a0fc44c4538235b2a0ee84f1faba90bd694c8f509
+- c04d60ab8bfa7134bc1314c6a9855c6a8431568ae612a5b807f00312a1002884
 
 # `indexing.py`
 
