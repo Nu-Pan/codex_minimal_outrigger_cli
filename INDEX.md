@@ -149,50 +149,46 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体を収める上位領域。公開 CLI 入口、利用者向けサブコマンド本体、AI エージェント呼び出しパラメータと標準プロンプト断片、共通 runtime helper、設定データ構造、基礎モデルや文書変換 utilities を扱う。
-- oracle file で述べられた人間意図を具体化する Python 実装の入口であり、CLI から実行される制御フロー、Git/worktree/state/config/log/report/Codex 呼び出しなどの runtime 処理、サブコマンド別の業務処理へ進む起点になる。
-- 実装層は、最上位 CLI dispatch、責務別の共通 runtime、AI 呼び出し用 builder/prompt parts、サブコマンド実装、設定 model、基礎型に分かれているため、cmoc の挙動をコード上で追うときの最初の分岐点になる。
+- cmoc の realization implementation 全体の上位入口であり、AI 呼び出し、基礎モデル、共通 runtime、設定、CLI entrypoint、個別サブコマンド実装へ分岐するための実装コードを収める領域。
+- この階層は正本仕様断片そのものではなく、oracle file で述べられた意図を具体化する実装側の主要配置であり、CLI 公開面から runtime helper、サブコマンド orchestration、AI prompt 構築までの読む先を選ぶ起点になる。
+- 下位要素は責務別に分かれており、トップレベル CLI、設定データ、共通 helper、基礎型、AI agent 呼び出し条件、各サブコマンド本体など、実装調査・変更の入口をここから選べる。
 
 ## Read this when
-- cmoc の CLI コマンドがどの実装関数へ委譲され、どのサブコマンド処理・runtime helper・AI 呼び出しへ進むかを調べたいとき。
-- session lifecycle、apply run、oracle review、INDEX maintenance、初期化、対話 TUI など、利用者向けコマンドの実行順序、前提条件、Git/worktree 操作、状態更新、report 出力、cleanup を確認または変更したいとき。
-- Codex CLI などの AI エージェント呼び出しについて、モデル・reasoning・ファイルアクセス権限・Structured Output schema・complete prompt・標準プロンプト断片の組み立てを確認または変更したいとき。
-- repo root/work root 解決、cmoc runtime path、設定 JSON の読み書き、内容 hash、共通エラー表示、Git wrapper、subcommand logging、Codex exec/TUI 実行、preflight indexing、session state といった横断 runtime 機能を調査するとき。
-- path token、AgentCallParameter、FileAccessMode、ModelClass、ReasoningEffort、StructDoc、規範文書 model、Markdown rendering など、実装全体で共有される基礎型や変換処理を確認したいとき。
-- oracle file の正本仕様断片に対して、現在の realization implementation がどこで具体化されているか、または既存実装・既存テストに合わせて変更すべき実装箇所を探したいとき。
+- cmoc の実装側で、どの領域に CLI、設定、共通 runtime、AI 呼び出し、基礎モデル、サブコマンド処理が置かれているかを把握したいとき。
+- CLI からサブコマンド実装、共通 helper、Codex/AI 呼び出し、git/worktree/session state、INDEX 更新や review/apply/session 処理へ進むための実装上の入口を選びたいとき。
+- oracle file の要求を realization implementation 側でどのように具体化しているか、実装コードを基準に調査・修正する必要があるとき。
+- 新しい実装変更を入れる前に、同じ責務または近い責務を持つ既存コードが src 配下のどこにあるかを切り分けたいとき。
 
 ## Do not read this when
-- 正本仕様断片そのもの、人間が責任を持つ要求、oracle doc/src/test の本文を読みたいとき。この領域は正本仕様ではなく実装であるため、oracle 側を読む。
-- realization test の期待挙動、pytest fixture、テストケース、回帰検証の観点だけを確認したいときは、テスト領域を読む。
-- README、パッケージ設定、開発補助ファイル、ignore 設定など、実装本体以外の ancillary 情報だけを確認したいときは、該当する上位の補助ファイルへ進む。
-- 生成済みのルーティング文書の内容だけを参照したいときは、この実装領域ではなく該当するルーティング文書を読む。ただし、ルーティング文書を生成・更新する処理を変更する場合はこの領域が対象になる。
-- oracle file と realization file の概念定義や INDEX.md エントリー品質基準だけを確認したいときは、実装ではなく正本仕様側の文書を読む。
-- 実装変更を伴わず、利用者として cmoc コマンドの使い方や現在の出力結果だけを知りたいときは、CLI 実行結果や利用者向け文書を優先する。
+- 正本仕様断片そのもの、oracle file の要求、path token や oracle/realization の概念定義を確認したいだけのときは、oracle 側の本文を読む。
+- テスト上の期待挙動、fixture、pytest による検証内容だけを確認したいときは、realization test 側を読む。
+- README、AGENTS、補助スクリプト、パッケージ設定、生成物など、実装本体ではない realization ancillary を調べたいときは、該当する上位または別ディレクトリへ進む。
+- 特定の下位責務がすでに分かっている場合は、この階層全体ではなく、AI 呼び出し、共通 runtime、CLI entrypoint、設定、個別サブコマンドなどの該当下位要素へ直接進む。
 
 ## hash
-- 1eb1120ae5cb0dc25c96ea411a7235fc4e543c79b068776b513029252c9327cf
+- f08c466dc55eb72023e1686ca569d0da710ee77e5312d5337e3e0ca880d1fc77
 
 # `test`
 
 ## Summary
-- CLI と runtime の realization test 群を収める領域。session/apply/review/indexing/init/TUI/Codex 実行など、cmoc の外部挙動、永続状態、Git worktree・branch 操作、report 出力、sandbox/profile、preflight と retry 制御を実リポジトリ操作や fake Codex 実行で検証する。
-- 共通補助関数も含み、一時 Git リポジトリ、Codex home/profile、fake executable、branch/state/worktree 検証など、複数テストで共有する準備処理への入口になる。
-- oracle で述べられた正本仕様そのものではなく、実装された挙動が壊れていないかを確認する realization test の集合として読む対象である。
+- cmoc の realization test 群を集約する領域。CLI サブコマンド、Codex 実行 wrapper、indexing preflight、prompt 構築、runtime 基盤、session/apply/review lifecycle などについて、外部挙動・永続副作用・ログ・状態更新・エラー出力を検証するテストへの入口になる。
+- 一時 Git リポジトリや fake Codex 実行ファイルなどの共通補助も含み、実装変更が既存の利用者向け挙動や制御ロジックを壊していないかを確認するための読み始めに位置づけられる。
+- 正本仕様そのものではなく、oracle file で述べられた意図を実装がどう具体化しているかを固定する realization test の集合である。
 
 ## Read this when
-- CLI サブコマンドの利用者向け出力、終了コード、report、state 更新、Git branch/worktree の副作用が既存テストでどう固定されているかを確認したいとき。
-- session lifecycle、apply fork/join/abandon、review oracle、indexing、init、TUI、Codex 実行 wrapper などの外部挙動を変更し、対応する回帰テストや期待値を探すとき。
-- Codex CLI 呼び出しの fake 化、quota/capacity retry、profile 生成、CODEX_HOME、sandbox writable roots、subprocess tracking、call log などの runtime 制御をテスト上で確認したいとき。
-- INDEX.md 生成・適用、indexing preflight、fresh hash、競合解決、対象除外など、ルーティング文書まわりの実装挙動をテストから確認したいとき。
-- 一時リポジトリや認証済み Codex home、fake executable、apply worktree path など、CLI テスト用 fixture や helper の既存パターンを使うまたは変更したいとき。
-- realization code の変更後に、該当機能を検証する既存テストの位置や、追加すべきテストケースの近い文脈を探すとき。
+- CLI サブコマンドの成功条件、拒否条件、終了コード、stdout/stderr、report、state、branch、worktree cleanup などの外部挙動を確認または変更するとき。
+- Codex CLI 呼び出し、profile 生成、CODEX_HOME、sandbox、retry、quota retry、subprocess tracking、呼び出しログ、保護領域検査などの runtime 制御に関する回帰テストを探すとき。
+- session、apply、review、indexing、init、TUI、prompt builder のいずれかについて、実装変更に対応する既存テスト観点や fixture 利用パターンを確認したいとき。
+- INDEX.md 生成・hash freshness・malformed entry 判定・indexing preflight・merge conflict 解消など、routing 文書生成まわりの実現挙動を確認するとき。
+- 一時リポジトリ、Codex home、fake executable、monkeypatch、Git helper など、外部コマンドを伴うテスト準備の既存補助を使うまたは変更するとき。
+- realization code の変更後に、対象機能の外部契約・永続副作用・ログ・状態ファイル・保護領域拒否が既存期待値と合うかを検証したいとき。
 
 ## Do not read this when
-- 正本仕様断片そのもの、人間意図、oracle file の定義や標準を確認したい場合は、oracle 側の本文を読む。
-- 個別実装 helper の内部構造、永続 state の読み書き、Git 操作、prompt builder、Codex wrapper の実装を直接変更したいだけなら、まず実装側の該当モジュールを読む。
-- テスト期待値ではなく、利用者向け仕様として何を固定すべきかを判断したい場合は、この realization test だけから仕様を逆算しない。
-- Codex CLI や LLM の出力品質そのものを評価したい場合は対象外であり、ここでは fake 応答を使った cmoc 側制御と副作用を扱う。
-- INDEX.md エントリー生成規則やルーティング文書の人間向け記述方針だけを確認したい場合は、関連する standard または oracle 側の文書を読む。
+- oracle file の正本仕様断片、人間が責任を持つ要求、用語定義、標準そのものを確認したい場合は、ここではなく oracle 側の本文を読む。
+- 実装本体の責務分割、内部 helper、状態読み書き、Git 操作、Codex 呼び出し wrapper の具体的な実装を変更したいだけで、テスト期待値を確認する段階でない場合は、まず実装側を読む。
+- Codex CLI や LLM の出力品質そのものを評価したい場合は、この領域を読む必要は薄い。ここでは fake 応答や stub executable により cmoc 側の制御と副作用を検証する。
+- 単にファイル配置やルーティング文書の生成規則だけを確認したい場合は、関連する標準または indexing の実装・仕様へ直接進む。
+- 個別機能に関係しない一般的な Python テスト技法や pytest の使い方だけを調べたい場合は、この領域全体を読む必要はない。
 
 ## hash
-- 1da6b4e0a772dbe0a1849ce8006216a29af0c39c951070b3be819f5897f76430
+- 75e1039d28c6b823741bbd54682475e9fba81e7546774002d8b6300d8244f49c

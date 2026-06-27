@@ -27,24 +27,24 @@
 # `indexing.py`
 
 ## Summary
-- indexing サブコマンドの実行入口を定義し、CLI runtime 経由で INDEX.md maintenance を起動する実装。
-- 実行前に indexing 用 preflight を有効化し、worktree の安全条件を検査したうえで、現在の work root に対する index 更新・commit・更新件数表示までを統括する。
-- 実際の index 更新処理、lock、commit、Codex exec 型は共通 indexing 実装へ委譲し、この対象はサブコマンドとしての接続と実行順序を担う。
+- cmoc の indexing サブコマンド実行入口を定義し、CLI runtime 経由で現在の work root に対する INDEX.md maintenance を起動する実装を扱う。
+- indexing 実行前の preflight、安全条件の検査、index 更新の排他実行、更新結果の commit、CLI 向けの更新件数出力までを結びつける薄い orchestration 層である。
+- INDEX.md の生成・更新ロジックそのものではなく、既存の indexing 共通処理をサブコマンドとして呼び出すための接続点として読む。
 
 ## Read this when
-- indexing サブコマンドの CLI 実行経路、runtime wrapper への渡し方、command 名や argv の扱いを確認したいとき。
-- INDEX.md maintenance 実行時に、work root の lock、index 更新、commit、更新件数出力がどの順序で呼ばれるかを確認したいとき。
-- indexing 実行前に clean worktree や cmoc ignored 条件を要求する precondition の接続先を確認したいとき。
-- run_codex_exec を CodexExec として index 更新へ渡す流れや、テストなどで codex_exec を差し替える入口を確認したいとき。
+- cmoc indexing サブコマンドの実行フロー、CLI runtime への渡し方、command 名や argv、work root runtime の指定を確認・変更したいとき。
+- indexing 実行前に clean worktree や cmoc ignore 条件をどこで検査しているかを確認したいとき。
+- INDEX.md maintenance がどの root に対して lock 付きで実行され、更新後にどのように commit と件数出力へ進むかを追いたいとき。
+- indexing サブコマンドが Codex exec 実行関数や indexing 共通処理へどのように依存しているかを確認したいとき。
 
 ## Do not read this when
-- INDEX.md の内容生成、差分検出、個別ファイル走査、lock 実装、index 更新結果の commit 実装そのものを調べたいときは、共通 indexing 実装を直接読む。
-- work root の決定方法、CLI runtime の共通実行制御、Codex exec の実行方法を調べたいときは、runtime 側の実装を直接読む。
-- 他サブコマンドの CLI 接続や出力形式を調べたいときは、そのサブコマンドの実装を読む。
-- indexing の高水準な正本仕様や oracle と realization の関係を確認したいだけなら、対応する oracle 文書を読む。
+- INDEX.md の内容生成、差分検出、更新対象探索、commit 処理、lock 実装などの詳細ロジックを調べたいときは、ここではなく indexing 共通処理側を読む。
+- work root の定義、CLI runtime の一般的な実行規約、clean worktree 判定、cmoc ignore 判定の詳細を調べたいときは、それぞれの runtime helper 側を読む。
+- Typer app へのサブコマンド登録やトップレベル CLI 配線を確認したいだけなら、CLI entrypoint や subcommand 登録側を読む。
+- oracle 上の indexing サブコマンド仕様そのものを確認したいときは、実装ではなく対応する oracle doc を読む。
 
 ## hash
-- cc7f1d7ba65fd8dd216ba1c42b817d8af6f63eecceef84fabbc96b7793ac1a37
+- 300dd7538efb7a60cb06753149ee3b7f779bd687acbf6cc8a567083f8e6fa0a8
 
 # `init.py`
 

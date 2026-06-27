@@ -241,20 +241,22 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- インデックス生成と適用時の INDEX.md 扱いを検証する realization test。indexing サブコマンド、事前実行処理、インデックス更新・描画・コミット、競合解決、対象除外、fresh hash 判定などの外部挙動と制御ロジックをまとめて扱う。
+- indexing コマンドと indexing preflight の実現テスト。INDEX.md 生成、Codex によるエントリー生成、fresh hash による再生成スキップ、 malformed entry の再生成、index commit の範囲、worktree 上での実行対象、dirty worktree の拒否、apply worktree での repo config 利用、root 直下 memo 除外と nested memo 対象化を検証する。
+- apply 側の INDEX.md merge conflict 解消処理について、競合した INDEX.md を削除して merge commit を成立させる挙動も検証する。
 
 ## Read this when
-- indexing サブコマンドの成功・失敗条件、コミット対象、dirty worktree での停止条件、linked worktree や apply worktree での実行先を変更または確認するとき。
-- INDEX.md エントリーの生成・再生成、fresh hash による Codex 呼び出し省略、壊れた既存エントリーの扱い、semantic fields の検証を変更または確認するとき。
-- INDEX.md の git merge 競合解決、root memo の除外と nested memo の索引化、同階層エントリー生成の並列化を変更または確認するとき。
+- indexing コマンド、run_indexing_preflight、update_indexes、render_index_entry、commit_index_updates の外部挙動や回帰テストを確認・変更する。
+- INDEX.md の生成・再生成・hash freshness・malformed entry 判定・semantic fields の validation に関するテスト観点を確認する。
+- cmoc indexing が clean/dirty な通常 worktree・linked worktree・apply worktree でどの root/cwd/config を使い、何を commit するかを確認する。
+- INDEX.md の merge conflict を apply 側でどう処理するか、または memo ディレクトリを indexing 対象からどう扱うかのテストを探す。
 
 ## Do not read this when
-- 個別 CLI コマンドの実装詳細や設定ファイルの読み書き処理そのものを調べるだけなら、対応する実装モジュールを直接読む。
-- INDEX.md の人間向け記述方針や oracle 上の正本仕様を確認したいだけなら、oracle 側の該当文書を読む。
-- テスト支援関数、fixture、git helper、Typer runner の共通挙動だけを調べるなら、テストサポート用モジュールを直接読む。
+- CLI 全体のコマンド定義、設定モデル、path model、Codex 実行 wrapper の実装詳細だけを確認したい場合は、対応する実装ファイルを直接読む。
+- oracle file の正本仕様を確認したい場合は、この realization test ではなく oracle 配下の該当本文を読む。
+- indexing 以外のサブコマンドや、INDEX.md 生成と無関係な git 操作の挙動を調べたい場合は、より直接のテストまたは実装へ進む。
 
 ## hash
-- df47bb39579e912a75c7b28cdf05091538a48b2ef4d98a90fa8778ea4cdc90b8
+- 5116be4af0a7ffa3f454bb5ebcfc8b31571db6b4d1c6a4f43ecc57b9d47514e8
 
 # `test_indexing_preflight.py`
 
