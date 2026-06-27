@@ -1,26 +1,24 @@
 # `acp`
 
 ## Summary
-- AI エージェント呼び出しに関わる実装を集約する領域であり、呼び出し条件を組み立てる処理と、そこへ注入される標準文書・制約文書の構築処理への入口になる。
-- 用途別の prompt、補助入力、file access mode、model/reasoning、Structured Output schema 参照を組み立てる処理と、oracle/realization の基本概念、ファイルアクセス規則、ルーティング規則、各種 standard、review 判定基準などの prompt part を扱う。
-- AI に何を依頼し、どの制約・標準文脈・出力契約で呼び出すかを確認するための階層であり、実際の CLI 制御、git 操作、ファイル更新、永続化、表示処理そのものではなく、AI 呼び出し前に渡される文脈と呼び出しパラメータを読むための入口である。
+- AI エージェント呼び出し用の部品を扱う領域で、呼び出しパラメータを組み立てる側と、プロンプト本文に注入する標準文書片を構築する側への入口になる。
+- AI に渡す役割、制約、補助入力、モデル・reasoning、file access mode、Structured Output schema、complete prompt などを確認するための階層である。
+- 実際のワークフロー実行や状態更新ではなく、各機能が AI にどのような条件と出力契約で応答を求めるかを追うために読む。
 
 ## Read this when
-- cmoc の各機能が AI エージェントを呼び出す際に、prompt、補助文脈、アクセス権限、モデル区分、推論量、Structured Output schema がどのように対応づくか調べたいとき。
-- apply fork、indexing、review oracle、session join、TUI parameter resolve などで、AI に渡す作業目的・禁止事項・標準文脈・入力データが complete prompt や AgentCallParameter にどう組み込まれるか確認したいとき。
-- oracle file、realization file、INDEX エントリー、レビュー所見、ファイルアクセス規則など、AI agent に渡す標準文書や基本文書の構築場所を探したいとき。
-- AI 呼び出しの file access mode が readonly、pure oracle read、realization write などのどれに設定されるか、また prompt 上の作業範囲とどう対応するかを追いたいとき。
-- 新しい AI 呼び出し builder や標準 prompt part を追加・変更する前に、既存の責務分割、標準文脈の注入方法、schema 参照の置き方を確認したいとき。
+- AI エージェント呼び出しに渡す parameter、complete prompt、モデル・reasoning、file access mode、Structured Output schema の構築箇所を探したいとき。
+- apply fork、indexing、oracle review、session conflict 解消、TUI parameter resolve などで、呼び出し側が AI に渡す役割・制約・補助入力・出力契約を確認したいとき。
+- oracle/realization の基本概念、ファイルアクセス規則、ルーティング規則、各種 standard、review 判定基準など、プロンプトへ注入される標準文書片の責務分担を確認したいとき。
+- 個別ワークフローの処理本体ではなく、そのワークフロー内の AI 呼び出し条件やプロンプト設計を変更・検証したいとき。
 
 ## Do not read this when
-- CLI サブコマンドの引数解析、実行順序、状態管理、git branch 操作、merge 実行、ファイル列挙、保存、表示など、AI 呼び出し前後の制御フローだけを調べたいとき。
-- AI が返した構造化結果を実際に適用する処理、レビュー結果や目次情報を永続化する処理、または markdown として描画する処理を調べたいとき。
-- StructDoc、Standard、Requirement、path model、AgentCallParameter、FileAccessMode などの基礎型や汎用文書変換処理そのものを確認・変更したいとき。
-- builder や prompt part が参照する oracle file、realization file、review standard、apply review standard、index entry standard などの標準文脈の正本本文だけを読みたいとき。
-- 個別の AI 呼び出しではなく、対象コマンドの利用者向け仕様、実際の実装修正箇所、またはテストを直接確認したいとき。
+- AI 呼び出し後の実処理、CLI サブコマンドの配線、git 操作、ファイルシステム更新、状態管理、結果の保存・表示・適用制御を調べたいとき。
+- StructDoc、Standard、Requirement、path model、file access mode、AgentCallParameter など、プロンプト構築が参照する共通基盤そのものを確認・変更したいとき。
+- 個別の oracle file、realization file、レビュー対象ファイルの本文や差分を確認したいだけのとき。
+- INDEX.md 全体の走査・更新・保存、生成済みエントリーの markdown 描画、またはルーティング文書一般の規約を確認したいとき。
 
 ## hash
-- c0e885d1d5f7e937e2304e1bb043555373a125e4274c5e34a4356b244426915b
+- 5fb41909e6a30e0fa2be5b1334cb0125abf46a493c87269337445cc1610d9ce0
 
 # `basic`
 

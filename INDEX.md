@@ -149,26 +149,27 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を集約する領域であり、公開 CLI 入口、サブコマンド実行フロー、共有 runtime helper、AI agent 呼び出し条件、設定データ構造、基礎モデルを扱う。
-- 利用者が実行する CLI 操作を、設定読み込み、path 解決、git/worktree 操作、session/apply/review 状態、Codex exec/TUI 呼び出し、INDEX maintenance、report 生成などの実処理へ接続する実装への入口になる。
-- 正本仕様断片そのものではなく、oracle file で述べられた意図を Python 実装・JSON schema・prompt builder・runtime helper として具体化した realization code を読むための階層である。
+- `src` は cmoc の realization implementation 全体を置く領域で、公開 CLI 入口、サブコマンド実行フロー、共通 runtime helper、設定データ構造、基礎モデル、AI エージェント呼び出し用 parameter・prompt 構築を扱う。
+- CLI 操作としての初期化、INDEX maintenance、TUI 起動、session/apply/review の lifecycle と、それらを支える git・state・config・Codex exec/TUI・error/report/logging・path 解決の実装へ進むための最上位入口である。
+- 正本仕様断片そのものではなく、oracle file の意図を具体化した実装側を確認・変更するために読む対象であり、テスト期待値だけを確認する入口ではない。
 
 ## Read this when
-- cmoc の CLI コマンド構成、サブコマンドの委譲先、実行時の preflight、stdout、終了コード、利用者向けエラー表示を確認または変更したいとき。
-- session lifecycle、apply lifecycle、review oracle、INDEX maintenance、対話的 TUI、初期化処理など、利用者操作がどの実装フローで git、状態ファイル、Codex 呼び出し、report 生成へつながるか追いたいとき。
-- Codex exec/TUI 呼び出し、Structured Output schema、prompt part、file access mode、model/reasoning、quota/capacity retry、profile 準備、call log など AI agent 実行基盤の実装場所を探したいとき。
-- cmoc 固有の root/path 解決、AgentCallParameter、FileAccessMode、Standard、StructDoc、設定データ構造、runtime 結果型、session state など、複数領域で共有される基礎型や helper を確認したいとき。
-- 実装修正にあたり、対象が CLI 入口、サブコマンド本体、共有 runtime、AI prompt builder、基礎モデル、設定モデルのどこに属するかを切り分けたいとき。
+- cmoc の CLI コマンド構成、各サブコマンドの実行フロー、または実装関数への委譲関係を確認・変更したいとき。
+- 初期化、INDEX.md 更新、対話的 TUI、session の開始・取り込み・破棄、apply の開始・取り込み・破棄、review oracle の実行など、利用者操作に対応する realization implementation を探したいとき。
+- Codex exec/TUI 呼び出し、AI に渡す AgentCallParameter・complete prompt・Structured Output schema、file access mode、モデル・reasoning 設定の構築箇所を追いたいとき。
+- cmoc 共通の runtime helper として、設定 JSON、session state、git worktree/branch 操作、content hash、エラー表示、ログ、report 出力、runtime path、preflight、INDEX 生成処理の実装場所を切り分けたいとき。
+- RootToken 付き path model、StructDoc/Standard/Requirement、Markdown rendering、AgentCallParameter など、複数領域から参照される基礎モデルや文書変換の実装を確認したいとき。
+- oracle file で述べられた仕様断片が、Python 実装・設定・CLI 配線・共通 helper としてどのように具体化されているかを調べたいとき。
 
 ## Do not read this when
-- 正本仕様断片、用語定義、oracle file と realization file の関係、review oracle の基準、INDEX.md エントリー生成規則など、人間が所有する仕様本文だけを確認したいとき。
-- 自動テストの期待値、fixture、外部挙動の検証方法だけを確認したいときは、realization test 側を読む。
-- README、配布設定、補助スクリプト、gitignore など、実装ソース以外の補助ファイルや利用者向け文書だけを確認したいとき。
-- 既存のルーティング情報だけを使って読む先を選べる場合は、この階層全体を広く読むのではなく、該当する下位の実装領域へ直接進む。
-- 生成物、cache、実行ログ、一時ファイルの内容を確認したいだけのときは、この realization implementation の本文ではなく、実行時に作られる対象を直接確認する。
+- 正本仕様断片、oracle standard、path 概念、file access rule、review 判定基準など、人間が所有する仕様本文を確認したいときは oracle 側を読む。
+- realization test の期待値、fixture、テスト上の外部挙動だけを確認したいときはテスト側へ進む。
+- リポジトリ設定、パッケージメタデータ、補助スクリプト、gitignore など、実装ソース以外の ancillary file を確認したいだけのとき。
+- 対象の下位責務がすでに特定できており、CLI 入口、共通 runtime、AI 呼び出し builder、基礎モデル、個別サブコマンドのいずれかへ直接進めるとき。
+- 生成済みキャッシュ、bytecode、実行ログ、一時 worktree、report 出力物を確認したいとき。
 
 ## hash
-- 8f70ad70756e87125d3616c6e377f698d3d0034688425c4ffebb05bf96f68488
+- 71227bc27d36bb2f143faf9b49d1abe9c07599e6aba15422a7f8f59727c0bb7c
 
 # `test`
 
