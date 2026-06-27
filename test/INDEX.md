@@ -304,24 +304,25 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle の CLI 経由の外部挙動と、所見列挙・検証・judge・merge の制御 loop を検証する realization test。report の生成内容、accepted/rejected finding の集計、scope ごとの対象選択、linked worktree 上の review、INDEX 変更の取り込み、処理失敗時の error report、review 実行中に許可される差分境界を扱う。
-- 16,000 文字超のテストファイルだが、同じ review run の状態、fake Codex 応答、report 文脈を共有する oracle review の挙動確認として凝集している。
+- review oracle の CLI 経由の外部挙動を検証する realization test。report 生成、所見の列挙・検証・judge・merge、accepted/rejected 所見の集計と表示、scope 指定、対象 oracle の選択、linked worktree 上の review 実行、review 用 worktree からの INDEX 変更の取り込み、失敗時 report、想定外差分の拒否を扱う。
+- 16,000 文字を超えるが、同じ review run の状態、fake Codex 応答、report 文脈を共有する一連の挙動を一箇所で検証するためのテスト群としてまとまっている。
 
 ## Read this when
-- review oracle コマンドの report 出力、result 判定、finding の採否集計、error report の挙動を変更・確認するとき。
-- review oracle の full scope/session scope における oracle 対象選択、gitignored oracle file の除外、binary file や oracle 配下の memo 形状ディレクトリの扱いを確認するとき。
-- review oracle が linked worktree、session branch、review worktree、review_fork_commit、review_join_commit をどう扱うべきかを確認するとき。
-- 所見の列挙 loop が対象 oracle ごとに関連 finding だけを prompt 文脈へ渡すこと、または merge operation の delete/replace/merge 契約と不正操作拒否を変更するとき。
-- review oracle 実行中に生成された INDEX 変更だけを session 側へ取り込み、INDEX 以外の差分を拒否・巻き戻す挙動を確認するとき。
+- review oracle サブコマンドの利用者向け出力、report 内容、終了コード、scope 別の対象選択、所見 loop の制御を変更・確認する。
+- review oracle が Codex structured output schema を使って所見を列挙、検証、judge、merge する流れや、その呼び出し条件を変更・確認する。
+- oracle file の列挙条件、gitignored oracle file や symlink、binary、memo 形状の path、session scope と full scope の扱いを変更・確認する。
+- linked worktree や session branch 上で review oracle がどの worktree と commit を対象にするか、review worktree の差分をどう扱うかを変更・確認する。
+- review oracle が生成した INDEX 変更の merge、INDEX conflict 解消、INDEX 以外の差分拒否、処理失敗時の error report 生成を変更・確認する。
+- apply_finding_merge_operations の delete・replace・merge 操作の契約、invalid operation や target 再利用の拒否を変更・確認する。
 
 ## Do not read this when
-- review oracle 以外の review サブコマンド、または一般的な session/init/git helper の仕様だけを確認したいとき。
-- Codex CLI の実出力品質や LLM の推論内容そのものを検証したいとき。このテストは fake Codex 応答で制御 flow と外部挙動を確認する。
-- oracle file の正本仕様や oracle review の人間向け要求を調べたいとき。まず oracle 側の正本仕様断片を読むべきで、この realization test だけから仕様を逆算しない。
-- 単体の merge helper 実装詳細だけを読む場合で、期待する契約が既に明確なときは対象実装を直接読む方が早い。
+- review oracle 以外のサブコマンド、session fork や init の通常挙動だけを確認したい。
+- oracle の正本仕様そのものを編集・確認したい場合で、CLI 実装や realization test の現行挙動を根拠にする必要がない。
+- Codex CLI の出力品質や LLM の内容評価そのものを検証したい。ここでは fake 応答を使い、review oracle の制御と外部挙動だけを検証する。
+- review oracle の個別 helper の内部実装だけを局所的に確認したい場合で、CLI report、worktree、対象選択、所見 loop の結合挙動を追う必要がない。
 
 ## hash
-- 257e87798cdeb89c1d51d8923c92d5475e3ee4ee3e08f6e9fe69ce0e5738a579
+- 253285615ce91d7df53bf7bc80df16d1c946d001d2dd0d03ae5677e3652e1f65
 
 # `test_session_cli.py`
 
