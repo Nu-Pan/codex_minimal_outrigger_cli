@@ -114,11 +114,13 @@ def test_session_abandon_switches_home_and_marks_state(
     session_branch = current_branch(root)
     state_path = session_state_path(root, session_branch)
     home_branch = session_home_branch(root, session_branch)
+    home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
 
     result = runner.invoke(app, ["session", "abandon"], catch_exceptions=False)
 
     assert result.exit_code == 0
     assert current_branch(root) == home_branch
+    assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
     assert (
         subprocess.run(
             ["git", "rev-parse", "--verify", session_branch], cwd=root
@@ -147,12 +149,14 @@ def test_session_abandon_uses_linked_worktree_branch(
     session_branch = current_branch(linked)
     state_path = session_state_path(root, session_branch)
     home_branch = session_home_branch(root, session_branch)
+    home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
 
     result = runner.invoke(app, ["session", "abandon"], catch_exceptions=False)
 
     assert result.exit_code == 0
     assert current_branch(root) == root_branch
     assert current_branch(linked) == home_branch
+    assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
     assert (
         subprocess.run(
             ["git", "rev-parse", "--verify", session_branch], cwd=root
@@ -210,14 +214,14 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     )
     session_branch = current_branch(root)
     state_path = session_state_path(root, session_branch)
-    original_run_git = session_module.run_git
+    original_delete_branch = session_module.delete_branch
 
-    def fake_run_git(args, cwd, check=True):
-        if args == ["branch", "-D", session_branch]:
+    def fake_delete_branch(root, branch, force=False):
+        if branch == session_branch:
             raise CmocError("delete failed", ["next"], "branch delete failed")
-        return original_run_git(args, cwd, check)
+        return original_delete_branch(root, branch, force)
 
-    monkeypatch.setattr(session_module, "run_git", fake_run_git)
+    monkeypatch.setattr(session_module, "delete_branch", fake_delete_branch)
 
     result = runner.invoke(app, ["session", "abandon"])
 

@@ -4,6 +4,7 @@ from cmoc_runtime import (
     CmocError,
     branch_exists,
     current_branch,
+    delete_branch,
     ensure_cmoc_ignored,
     load_state_for_branch,
     repo_root,
@@ -49,7 +50,15 @@ def _cmoc_session_abandon_body() -> None:
         run_git(["switch", home], work)
         state.session.state = "abandoned"
         write_state(path, state)
-        run_git(["branch", "-D", branch], work)
+        # <work-root>/oracle/doc/app_spec/sub_command/session_abandon.md
+        # requires preserving the home branch while deleting only the session branch.
+        delete_result = delete_branch(repo, branch, force=True)
+        if delete_result.returncode != 0:
+            raise CmocError(
+                "session branch の削除に失敗しました。",
+                ["git branch の状態を確認してください。"],
+                delete_result.stderr,
+            )
     except Exception as error:
         cleanup_detail = error.detail if isinstance(error, CmocError) else repr(error)
         rollback_errors: list[str] = []
