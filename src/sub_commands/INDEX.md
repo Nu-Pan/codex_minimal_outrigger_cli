@@ -166,25 +166,23 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドの実行本体をまとめる領域。通常 branch から session branch を作成する処理、active session を home branch へ merge して完了する処理、merge せず破棄する処理を扱う。
-- 各操作は CLI runtime wrapper から呼ばれ、branch 種別、session state、apply state、clean worktree、home branch の存在などの事前条件確認と、成功時の状態更新・branch 操作・利用者向け出力を担う。
-- join では merge conflict 発生時に Codex CLI へ解決を依頼し、conflict marker と unmerged path の残存確認を経て merge commit を完了する補助処理も含む。
+- session 系サブコマンドの実行本体をまとめる実装領域。session branch の作成、home branch への取り込み、merge せず破棄する処理への入口になる。
+- 各処理は CLI runtime を介した事前条件確認、clean worktree 確認、branch 遷移、session/apply state の検査・更新、利用者向け出力を扱う。取り込み処理では merge conflict 発生時の Codex CLI による解決支援と merge commit 完了確認も扱う。
 
 ## Read this when
-- session の開始、完了、破棄に対応するサブコマンドの実行条件、失敗条件、状態遷移、branch 操作、CLI 出力を確認または変更したいとき。
-- session branch と home branch の関係、session 作成時の start commit や state file 生成、active session の重複禁止など、session lifecycle の具体的な制御を追いたいとき。
-- active session を home branch へ取り込む merge 処理、merge conflict 解決依頼、conflict marker 検出、unmerged path 検査、merge commit 完了処理を調べたいとき。
-- active session を merge せず破棄する際の home branch 切り替え、state 更新、session branch 削除、cleanup 失敗時の rollback とエラー詳細を確認したいとき。
+- session branch の作成、取り込み、破棄のいずれかの実行条件、失敗条件、状態遷移、branch 操作、CLI 表示内容を確認または変更したいとき。
+- 通常の local branch から session branch を開始する際の home branch、start commit、state 初期値、active session 重複禁止、managed branch 上での実行禁止を追いたいとき。
+- active な session branch を home branch へ merge する処理、merge conflict 解決フロー、conflict marker や unmerged path の検査、session branch 削除を確認したいとき。
+- active な session branch を home branch へ merge せず破棄する処理、abandoned への state 更新、session branch 強制削除、失敗時 rollback を確認したいとき。
 
 ## Do not read this when
 - session 以外のサブコマンド実装、CLI 全体のコマンド登録、Typer のルート構成だけを調べたいとき。
-- session state の schema、永続化形式、state file path 解決、branch から state を読み込む共通処理そのものを調べたいとき。
-- git 実行 wrapper、worktree clean 判定、cmoc ignore 設定、CLI runtime wrapper、Codex exec wrapper などの共通 runtime helper の実装詳細を調べたいとき。
-- join conflict 解決で Codex CLI に渡す parameter builder の詳細や、indexing preflight の実装そのものを変更したいとき。
-- oracle 上の正本仕様断片や、実装全体の設計標準・ルーティング規則を確認したいだけのとき。
+- git 実行 wrapper、branch 存在確認、clean worktree 判定、indexing preflight、cmoc ignore 設定など、共通 runtime helper 自体の実装を調べたいとき。
+- session state や apply state の schema、永続化形式、path 解決、branch から state を探す処理そのものを調べたいとき。
+- Codex CLI に渡す conflict resolution parameter の具体的な構築ロジックや、session 操作以外の apply 系処理を調べたいとき。
 
 ## hash
-- ca8ebd7f6fc6c75d5c85eab474e439f84468c804ed2b07f74aed441507b8ca9a
+- 80c9f60fb44d848f6655fc8189cda390dc6d5404eb88687f1db358530d2f9769
 
 # `tui.py`
 

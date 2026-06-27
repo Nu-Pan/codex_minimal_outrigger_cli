@@ -18,24 +18,22 @@
 # `abandon.py`
 
 ## Summary
-- active な session branch を home branch へ merge せず破棄する CLI サブコマンド実装を扱う。
-- 実行時 wrapper 経由で本体処理を呼び、session branch・状態値・clean worktree・home branch 存在を確認したうえで、home branch へ切り替え、session state を abandoned に更新し、session branch を削除する。
-- cleanup 失敗時は state と branch の rollback を試み、失敗内容・rollback 結果・branch/state file 情報を含む CmocError を返す。
+- active な session branch を home branch へ merge せず破棄するサブコマンド実装。CLI runtime 経由で処理本体を実行し、事前条件検証、worktree clean 確認、home branch への切り替え、session state の abandoned 更新、session branch の強制削除、失敗時の state と branch の rollback を扱う。
 
 ## Read this when
-- session abandon の事前条件、実行順序、成功時の branch 切り替え・state 更新・branch 削除の挙動を確認したいとき。
-- active session を merge せず破棄する処理のエラー条件や、home branch が無い場合の扱いを変更・調査するとき。
-- cleanup 失敗時の rollback 方針、CmocError の詳細情報、利用者向け再実行案内を確認したいとき。
-- session abandon 成功時に表示される abandoned branch、切り替え先、session state の出力内容を確認したいとき。
+- session abandon の実行条件、成功時の branch 遷移、state 更新、session branch 削除の挙動を確認したいとき。
+- session branch 上でない場合、session/apply state が事前条件を満たさない場合、home branch が無い場合や存在しない場合のエラー処理を確認したいとき。
+- abandon 処理中の cleanup 失敗時に、state を active に戻し session branch へ戻る rollback と診断情報の組み立てを確認したいとき。
+- session abandon 成功時に利用者へ表示する出力内容を確認したいとき。
 
 ## Do not read this when
-- session abandon 以外の session サブコマンドの開始・一覧・適用・完了などを調べたいとき。
-- session state の schema、永続化形式、branch から state を読み込む共通処理そのものを調べたいとき。
-- git 操作 wrapper、worktree clean 判定、cmoc ignore 設定などの共通 runtime helper の実装詳細を調べたいとき。
-- oracle 上の正本仕様や CLI 全体のコマンド登録構造を確認したいだけのとき。
+- session abandon 以外の session サブコマンドの挙動を確認したいとき。
+- git 操作、branch 存在確認、state file の読み書き、clean worktree 確認などの共通 runtime helper 自体の実装を調べたいとき。
+- session state schema や apply state schema の定義そのものを確認したいとき。
+- home branch へ merge する apply 系の処理や、session 作成・開始・一覧表示の処理を調べたいとき。
 
 ## hash
-- a116268c186c80736e9e3a46acdbb740ff0b890b55dcf846e15fa2d7245e4545
+- 23d6f74860f9fcc56fc69ec0652b7b89128ecc7a0825164bc853dca21e8c220f
 
 # `fork.py`
 

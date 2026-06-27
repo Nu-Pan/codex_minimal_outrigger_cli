@@ -136,22 +136,21 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実行本体を集約する実装領域。初期化、INDEX.md 保守、TUI 起動、review oracle、session ライフサイクル、apply ライフサイクルの CLI 入口と上位 orchestration を扱う。
-- 各実装は共通 runtime wrapper、git/worktree 操作、state 更新、Codex 実行、レポート生成、preflight 登録などを接続し、サブコマンド固有の事前条件・失敗条件・利用者向け出力を定義する。
-- session と apply は下位ディレクトリに開始・取り込み・破棄などのまとまりを持ち、review oracle は対象列挙、finding loop、INDEX 差分処理、report 生成の補助モジュールへ分かれている。
+- CLI の各サブコマンド実装を集めるディレクトリ。初期化、TUI 起動、INDEX.md 自動保守、review oracle、session 操作、apply 操作など、利用者向けコマンドの実行入口と上位 orchestration へ進むための起点になる。
+- 各サブコマンド本体は CLI runtime や git/state/path/config などの共通基盤を呼び出し、引数で選ばれた処理の前提確認、状態遷移、worktree/branch 操作、Codex 実行、利用者向け出力を接続する役割を持つ。
+- review oracle や apply/session のように下位モジュールへ分割された領域では、対象列挙、loop、report、merge、process 管理などの詳細実装へ読み進むための入口として機能する。
 
 ## Read this when
-- cmoc のサブコマンド実行フロー、CLI 入口、事前条件、状態遷移、git/worktree 操作、または利用者向け出力を調べたいとき。
-- init、indexing、tui、review oracle、session fork/join/abandon、apply fork/join/abandon のどの実装へ進むべきかを、責務境界から選びたいとき。
-- Codex 実行を伴うサブコマンドが、preflight、parameter builder、report 生成、state file、branch/worktree 操作とどう接続されているかを追いたいとき。
-- INDEX.md 自動保守、review oracle の finding 処理、apply の実行・取り込み・破棄、session の作成・完了・破棄など、サブコマンド単位の orchestration を変更または調査するとき。
+- 特定の CLI サブコマンドがどの実装へ対応しているか、またはサブコマンド単位の実行順序・前提条件・状態更新・出力を確認したいとき。
+- `cmoc init`、`cmoc tui`、INDEX.md 自動保守、review oracle、session 系、apply 系の上位フローを調査または変更したいとき。
+- CLI runtime、git 操作、state 永続化、Codex 実行、report 生成などの共通 helper が、利用者向けサブコマンドからどのように呼び出されるかを追いたいとき。
+- review oracle の対象列挙・finding loop・INDEX 変更 commit/merge・report 出力、または session/apply の branch/worktree/process 制御について、まず読むべき下位実装を切り分けたいとき。
 
 ## Do not read this when
-- Typer のルートコマンド登録や CLI 全体の構造だけを確認したいときは、コマンド定義側を読む方が直接的。
-- git コマンド wrapper、path 解決、設定読み込み、state schema、Codex 外部プロセス起動などの共通 runtime 基盤そのものを調べたいときは、共通 runtime や basic/config 側を読む。
-- Codex に渡す prompt や Structured Output parameter の具体的な構築内容だけを確認したいときは、builder 側の対象を読む。
-- oracle の正本仕様断片、realization 標準、INDEX.md 生成規則など、仕様文書上の意図だけを確認したいとき。
-- テスト観点から外部挙動を確認したいだけで、実装の制御フローを読む必要がないときは、対応するテストへ進む。
+- Typer の最上位コマンド登録、設定 schema、path model、git wrapper、state file schema など、サブコマンド本体ではなく共通基盤だけを調べたいとき。
+- oracle の正本仕様、realization 全体の設計方針、INDEX.md エントリー生成規則そのものを確認したいとき。
+- 個別 helper の責務がすでに明確で、review の対象列挙・loop・report・INDEX merge、apply runtime helper、session state 操作などへ直接進めるとき。
+- 自動テストの期待挙動だけを確認したいときは、対応するテスト側を読む方が直接的。
 
 ## hash
-- 00b215d97f82b1380410b6f32c711d6679eeee6a90b6cbab6681c8a8d92414f3
+- df5b100a442dd209fdbf3944294a1e8045923c3207e6b69c1b57f2913165394a
