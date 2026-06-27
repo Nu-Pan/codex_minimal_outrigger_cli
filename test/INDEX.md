@@ -105,20 +105,23 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- runtime の基礎契約を固定する realization test。path token 解決、run/work root 判定、既定 config、error report 整形、session/apply branch 名の検証、CLI preflight と completion probe、`.cmoc` ignore、file access mode と Codex sandbox profile、binary 判定など、cmoc の実行基盤を横断的に検証する。
+- cmoc の基礎 runtime 契約を固定する realization test。path token 解決、linked worktree と run/work root の扱い、config 既定値、構造化 error report、session/apply branch 形状、CLI preflight と completion probe、`.cmoc` ignore、file access mode と Codex sandbox profile、binary 判定を横断的に検証する。
+- runtime の利用者向け出力、sandbox 設定、worktree 判定、永続 state の branch 解釈など、複数の基礎 module にまたがる外部挙動の回帰確認入口として位置づく。
 
 ## Read this when
-- runtime 基盤の外部挙動を変更・確認するとき。特に path model、root 判定、error report、CLI 起動前検査、session state branch 解釈、`.gitignore` 更新、file access mode から sandbox 設定への変換を扱うとき。
-- Codex profile 生成や sandbox 設定の互換性、completion probe 時の副作用抑制、起動 wrapper の call stack 表示など、利用者に見える CLI 実行時挙動の回帰を確認したいとき。
-- runtime 関連の実装変更後に、既存テストへ観点を追加できるか、または同じ制御ロジックを重複検証していないか判断するとき。
+- path token、repo root、run root、work root の解決契約を変更または確認するとき。
+- CmocError の Markdown report、CLI error の stdout/stderr 振り分け、Click parse error の変換、completion probe 時の副作用抑制を扱うとき。
+- session branch または apply branch から session id/run id/state を解釈する処理を変更するとき。
+- `.cmoc` の gitignore 追加、file access mode の永続化値、Codex sandbox mode/profile の writable roots を変更するとき。
+- binary 判定の読み取り量や config の model class/reasoning effort 既定値に関わる基礎挙動を確認するとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の正常系 workflow、prompt 内容、oracle 文書生成、Git 操作の高水準仕様だけを確認したいときは、より直接その機能を検証する対象へ進む。
-- UI 表示、ドキュメント本文、設定ファイルの網羅的な schema 定義、または runtime に依存しない純粋な helper の詳細だけを扱うときは、この横断的 runtime 回帰テストから読み始める必要はない。
-- テスト対象ではなく正本仕様断片を確認したいときは、realization test ではなく対応する oracle file を読む。
+- 個別サブコマンドの通常フローや詳細 UI 文言だけを調べたいときは、そのサブコマンド固有の実装またはテストを先に読む。
+- oracle 正本仕様そのもの、INDEX.md 生成規則、ドキュメント構成を確認したいときは、対応する oracle file または文書系テストを読む。
+- 単一 helper の内部実装だけを変更し、このファイルが検証する外部契約や制御境界に影響しないことが明らかなとき。
 
 ## hash
-- 9ab75d9226e98bb58fc9c0619f38ab8d412fc55f09c3ae156bc0559aae37c423
+- 639e0c7946768daf52f03097b36d3dd704b9fac144390b5df04766d331e82e92
 
 # `test_cli_init_tui.py`
 
@@ -145,24 +148,22 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 呼び出し実行層の realization test。exec 実行でプロンプトを stdin に渡すこと、出力 schema と last message の扱い、ログ保存、profile 生成、CODEX_HOME、subcommand logger への記録、console 表示、TUI 起動時の引数・sandbox 設定、repo config の反映、禁止領域変更検出を検証する。
-- 外部の本物の Codex CLI ではなく fake executable や subprocess の差し替えを使い、cmoc が Codex CLI をどう起動し、どこへログ・schema・profile を配置し、結果をどう返すかという制御ロジックを確認する入口になる。
+- Codex CLI 呼び出しの runtime wrapper に対する realization test。exec 呼び出しでは prompt を標準入力で渡すこと、schema と出力 JSON の扱い、CODEX_HOME/profile/log 生成、stdout/stderr 分離、subcommand logger とコンソール表示を検証する。
+- worktree を cwd にした exec 呼び出しで schema が作業 cwd 側の状態領域へ保存され、call log は repo 側に残ることを検証する。
+- repo write 権限の exec 呼び出し後に `.agents` 配下が変更された場合の拒否、TUI 呼び出しの argv/env/profile/sandbox/log、repo config による Codex model/reasoning effort 反映を検証する。
 
 ## Read this when
-- Codex CLI の exec/TUI 呼び出し引数、stdin 渡し、prompt の秘匿、`--output-schema`、`--output-last-message`、profile 名や profile ファイル配置の挙動を変更・確認したいとき。
-- Codex 呼び出しログ、prompt/stdout/stderr/call log、subcommand logger の `codex_call` event、console に表示される呼び出し要約の仕様に関わる実装を変更するとき。
-- Codex 実行時の `CODEX_HOME`、sandbox workspace、read/write mode、extra read paths、repo config 由来の model/reasoning effort 反映に関わる処理を確認するとき。
-- worktree を cwd にした exec 実行で、schema 保存先が root 側ではなく cwd 側の作業状態配下になることを確認したいとき。
-- Codex 実行後に保護された agent 関連領域への変更を検出してエラーにする挙動を変更・確認したいとき。
+- `run_codex_exec` の argv、標準入力、`--output-schema`、`--output-last-message`、output JSON 読み取り、stdout/stderr ログ、call log、prompt log、subcommand logger、コンソール表示の期待挙動を確認または変更するとき。
+- Codex 実行時の `CODEX_HOME`、一時 profile 名・profile file、repo config からの model/reasoning effort 読み込み、sandbox profile 生成を変更するとき。
+- worktree cwd での schema 保存場所、repo 側 log 保存場所、`.agents` 配下変更検出、TUI 呼び出しで prompt を引数として渡す挙動を変更するとき。
 
 ## Do not read this when
-- Codex CLI 以外のサブコマンド、Git 操作、oracle/INDEX 生成、一般的な設定読み書きだけを調べたいときは、より対象に近い実装またはテストを読む。
-- 実際の Codex CLI や LLM の出力品質、対話内容の妥当性、モデル性能そのものを検証したいとき。この対象は外部 CLI 呼び出しの制御と副作用を fake/stub で検証する。
-- path model、oracle file、realization file などの概念定義や正本仕様を確認したいときは、oracle 側の該当文書を読む。
-- Codex 呼び出しの利用側 API ではなく、低レベルの subprocess 実装詳細そのものを修正する場合は、まず対応する runtime 実装を読む。
+- Codex CLI wrapper ではなく、一般的な git 操作、path model、設定 schema 自体、または他サブコマンドの入出力だけを調べるとき。
+- LLM の応答品質、Codex CLI 本体の内部仕様、または実際の Codex 実行結果の内容を検証したいとき。ここでは fake executable と monkeypatch による wrapper の制御ロジックだけを扱う。
+- runtime の外部挙動ではなく、support fixture の実装詳細や repository 作成 helper の挙動を調べるときは、対応する test support 側を直接読む。
 
 ## hash
-- 7ff3c69f7d98647a5cef786bbca1a24fcb27687a9fa053a150c1c871c9e37038
+- 183a101ddafe11c9f38d6506c26571eaed2f5fede8855814e521600ffa420d9d
 
 # `test_codex_runtime_home.py`
 
@@ -311,21 +312,21 @@
 # `test_session_cli.py`
 
 ## Summary
-- session サブコマンドの CLI 挙動を検証する realization test。session fork による session branch と session state 生成、session id 衝突時の retry/失敗、cmoc ignore 初期化、linked worktree 上での branch/head 扱いを確認する。
-- session abandon の成功時 cleanup、home branch 不在時のエラー出力、cleanup 失敗時の rollback、linked worktree 上での復帰先 branch を検証する。
-- session join の merge・conflict resolution・delete conflict staging・session state 更新・session branch 削除失敗時警告・stdout/stderr へのエラー出力先を、実リポジトリ操作と Codex 実行の差し替えで確認する。
+- session サブコマンドの realization test。session fork / abandon / join が Git branch、worktree、session state、エラー出力、競合解決時の Codex 実行 profile をどう扱うかを、CLI 経由の外部挙動として検証する。
+- 一時 repository を作り、実際の git 操作と CLI runner を組み合わせて、session branch の生成・削除、home branch への復帰、linked worktree 上の挙動、状態 JSON の更新、stdout / stderr の出力先を確認する。
 
 ## Read this when
-- session fork/abandon/join の CLI 外部挙動、git branch/worktree 操作、session state JSON のライフサイクルを変更または確認するとき。
-- session id 衝突、home branch 不在、cleanup 失敗、未コミット差分、merge conflict、conflict marker 残存など、session サブコマンドの異常系出力や rollback を調べるとき。
-- session join の conflict resolution で Codex に渡す file access mode、writable roots、oracle conflict 解決後の staging 処理を変更または確認するとき。
-- linked worktree から session サブコマンドを実行した場合に、root worktree と linked worktree の現在 branch がどう保たれるべきか確認するとき。
+- session fork が session branch と状態ファイルを作る条件、session-id 衝突時の retry / 失敗時 rollback、cmoc ignore 初期化とログ生成の関係を確認したいとき。
+- session abandon が home branch へ戻ること、session branch を削除すること、home branch 不在や cleanup 失敗時に状態と branch をどう保つかを確認したいとき。
+- session join が session branch の変更を home branch へ取り込むこと、linked worktree で作業 branch をどう扱うか、join 後の状態更新や session branch 削除失敗時の warning を確認したいとき。
+- join の merge conflict 解決で Codex に渡す file access mode、writable roots、oracle file だけを書き込み対象にする制御、delete conflict 解決後の staging を確認したいとき。
+- session 系コマンドのエラー報告が stdout と stderr のどちらへ出るべきか、想定内エラーと merge 後の予期しないエラーの違いを確認したいとき。
 
 ## Do not read this when
-- session サブコマンド以外の CLI command、設定読み込み、path model、一般的な runtime 処理だけを調べたいとき。
-- unit test helper や repository fixture の実装そのものを変更したいときは、支援コード側を直接読む方が適切。
-- session サブコマンドの内部 helper の細かな実装構造だけを確認したいときは、対応する実装モジュールを直接読む方が適切。
-- oracle file の正本仕様を確認したいときは、test ではなく oracle 側の該当文書を読む方が適切。
+- session 以外のサブコマンド、設定読み込み、path model、または一般的な runtime helper の挙動だけを調べたいとき。
+- session の正本仕様断片そのものを確認したいとき。この対象は realization test であり、仕様判断の起点には oracle file を読む。
+- session 実装の内部関数分割や helper の責務を詳しく追いたいとき。まず対応する implementation を読む。
+- 単に CLI の登録構造や Typer app 全体の command wiring を確認したいとき。
 
 ## hash
-- 196c0353a7d236aff1a8c4e3e0746533b38216766c6e6ff87770060e869558a0
+- 0788461ab94b4159f1e650765b0d78c8db53d8d0d9899edb52ee3a0a8f7c52cc

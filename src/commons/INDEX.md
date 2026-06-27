@@ -159,26 +159,25 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI 起動時に使う profile 本文、sandbox 設定、CODEX_HOME 検証、schema 配置、Codex JSONL 出力からのエラー・resume 情報抽出を扱う実装。
-- cmoc の file access policy を Codex CLI の sandbox mode と writable_roots に変換し、AgentCallParameter と設定から再利用可能な Codex profile を生成する責務を持つ。
-- Codex subprocess 周辺の実行準備と失敗判定をまとめる入口であり、認証 home、Structured Output schema、出力 JSON、capacity/quota retry 判定を確認するときの読む先になる。
+- Codex CLI 実行に必要な profile・sandbox 設定・CODEX_HOME 検証・subprocess 環境・Structured Output schema 配置・Codex 実行結果の JSON/JSONL 解釈を扱う runtime 補助実装。
+- cmoc の file access mode を Codex CLI の sandbox mode と writable roots に変換し、hash 名の profile と schema store を準備する処理への入口になる。
+- Codex stdout/stderr から利用者向け error detail、resume token、capacity/quota retry 判定に使う error message を抽出する。
 
 ## Read this when
-- cmoc から Codex CLI を起動するための profile 内容、model/reasoning effort、sandbox mode、writable_roots の組み立てを変更・確認したいとき。
-- FileAccessMode と Codex CLI の read-only/workspace-write sandbox の対応、追加 writable path の扱い、保護対象 path の除外条件を調べるとき。
-- CODEX_HOME の解決、auth.json の存在検査、Codex subprocess に渡す環境変数の扱いを確認するとき。
-- Structured Output schema を実行用 work root 側へ配置する処理、Codex output JSON の読み取り失敗時の扱いを確認するとき。
-- Codex JSONL stdout/stderr から利用者向け error detail、resume 用 thread id、capacity error、quota error を判定する処理を調べるとき。
+- AgentCallParameter や CmocConfig から Codex profile 本文を生成・保存する挙動を確認または変更したいとき。
+- FileAccessMode ごとの Codex sandbox mode、writable roots、memo や .agents など保護対象の扱いを追いたいとき。
+- CODEX_HOME の解決、auth.json を含む事前検証、Codex subprocess に渡す環境変数の扱いを確認したいとき。
+- Structured Output schema を work root 側へ配置する処理や、Codex output JSON の読み取り失敗時挙動を確認したいとき。
+- Codex JSONL stdout から capacity error、quota error、resume token、利用者向け error 文面を判定する処理を変更したいとき。
 
 ## Do not read this when
-- AgentCallParameter や FileAccessMode の型定義・意味そのものを確認したいだけなら、basic 側の定義を読む。
-- cmoc config の model 名や reasoning effort の設定値そのものを確認したいだけなら、config 側の設定定義を読む。
-- hashed file の保存方式や schema store directory の実体を調べたいだけなら、runtime content や runtime paths の担当実装を読む。
-- Codex CLI を実際に呼び出す subprocess 制御全体、retry ループ、待機方針を確認したい場合は、この補助処理の呼び出し元を読む。
-- oracle file や realization file の正本上の file access policy を確認したい場合は、実装ではなく対応する oracle 文書を読む。
+- Codex CLI を実際に起動する subprocess 制御、retry loop、turn 全体の orchestration を探しているとき。
+- cmoc の file access policy 自体の定義や AgentCallParameter の schema を確認したいとき。
+- hash 付きファイル書き込みや schema store directory の低レベルな path 生成だけを変更したいとき。
+- Codex model 名や reasoning effort の設定値そのものを編集したいとき。
 
 ## hash
-- b3e879e3ccc9ec9b9d932837d86dea576841e50aa8eeb74dd326ba87ffb6755b
+- dcdb888155437d89ef8972e09effd36f03ff30d3c19e78bb46a8e4750b3eef41
 
 # `runtime_codex_tui.py`
 
