@@ -93,23 +93,21 @@
 # `test_apply_join_cli.py`
 
 ## Summary
-- apply run を session へ join する CLI 外部挙動を検証する realization test。成功時の apply worktree と apply branch の後片付け、session state 更新、report 生成、apply worktree からの実行、linked session worktree への merge を扱う。
-- join を拒否または中止する境界条件として、古い apply branch、dirty apply worktree、想定外差分、削除・rename を含む managed branch 差分判定、gitignore 変更、merge conflict と index conflict 解決後の継続を同じ操作文脈で確認する。
+- apply run を session へ join する CLI 外部挙動を検証する realization test。成功時の apply worktree と branch の後片付け、session state 更新、report 生成、linked session worktree への merge 先、join 実行位置の扱いを確認する。
+- dirty な apply worktree、同一 session の stale apply branch、想定外差分、merge conflict、force resolve、削除パスや rename target の分類、memo と .gitignore の変更分類など、apply join の受理・拒否境界を一箇所で扱う。
 
 ## Read this when
-- apply join の CLI 成功条件、後片付け、state 更新、report 出力を変更または確認したいとき。
-- apply join を session worktree、apply worktree、linked session worktree のどこから実行できるかを確認したいとき。
-- apply join が dirty worktree、古い apply branch、想定外差分、merge conflict をどう検出し、どの状態を残すかを確認したいとき。
-- apply join の差分判定で、削除パス、rename 先、gitignore 変更、oracle 配下の想定外変更をどう扱うかを確認したいとき。
+- apply join の CLI 挙動、後片付け、state 遷移、report 出力、または join 実行元 worktree の違いに関するテストを確認・変更する時。
+- apply join が dirty worktree、stale apply branch、想定外の oracle 差分、merge conflict をどのように拒否または解決するかを確認する時。
+- apply join の変更パス分類、削除パス除外、rename target 採用、memo や .gitignore の expected change 判定に関する回帰テストを探す時。
 
 ## Do not read this when
-- apply fork の Codex 実行、apply worktree 作成、apply state 初期化だけを確認したいとき。
-- session fork や init の基本挙動だけを確認したいとき。
-- join の CLI 経由の外部挙動ではなく、内部 helper の小さな単体仕様だけを確認したいとき。ただし managed branch の変更パス判定に関する確認は対象に含まれる。
-- oracle file の正本仕様そのものや、INDEX.md 生成ルールを確認したいとき。
+- apply fork 単体、session fork 単体、または join を伴わない通常の session 操作だけを確認したい時。
+- CLI 経由の apply join 外部挙動ではなく、内部 helper の実装詳細だけを調べたい時は、対応する実装モジュールを先に読む。
+- oracle file の正本仕様や文書上の要求を確認したい時は、test 配下の realization test ではなく oracle 配下の該当本文を読む。
 
 ## hash
-- e233fb4e7319fc4c0ddc648b190cce2111bb5fc24a37dff2e43fab24a68eee66
+- 2f5012fcfe4825679d269a9326f2725db6c44ea11ea1a2d5100efc94a786b9df
 
 # `test_basic_runtime.py`
 

@@ -104,22 +104,20 @@
 # `join.py`
 
 ## Summary
-- apply 実行結果を session 側へ取り込む処理を担う。session branch または apply branch 上で実行され、状態確認、想定外差分の検出または force-resolve、apply branch の merge、状態更新、report 生成、apply worktree と branch の後片付けまでを扱う。
-- 想定外差分の判定では、apply 側と session 側の変更範囲を oracle snapshot などの基準 commit から比較し、許可される変更種別を分けて分類する。merge conflict では INDEX.md だけの conflict を機械解決し、それ以外は report とともに手動解決へ委ねる。
+- apply run の完了またはエラー状態を session branch へ join する処理を実装する。apply branch/session branch の状態検証、想定外差分の検出と force-resolve による復元、merge conflict の扱い、report 生成、成功後の apply state リセットと apply worktree/branch cleanup を担う。
+- apply join 中に許可される apply 側・session 側の差分範囲、削除・rename を含む managed branch 差分分類、INDEX.md だけの merge conflict 自動解決の判断もここにまとまっている。
 
 ## Read this when
-- apply run の完了後または error 後に、変更を session branch へ join する制御を確認・変更したいとき。
-- join 可能条件、session/apply branch 上での実行条件、clean worktree 要求、apply state を ready 相当に戻す流れを調べたいとき。
-- 想定外差分の検出条件、--force-resolve による session/apply 側変更の復元と commit、許可される変更 path の境界を確認したいとき。
-- apply branch merge の失敗時処理、INDEX.md conflict の自動削除 commit、未解決 merge conflict report の生成を扱うとき。
-- join report の内容、保存先種別、cleanup_reachable や warnings の出力内容を変更・検証したいとき。
-- join 成功後の apply worktree 削除、apply branch 削除、削除できない場合の警告処理を確認したいとき。
+- apply join の実行条件、成功時の state 更新、apply branch の merge と削除、apply worktree の除去について確認・変更したいとき。
+- apply join が想定外差分をどう検出し、--force-resolve でどの branch/worktree の path をどの commit へ戻すかを確認・変更したいとき。
+- apply join report の内容、出力される warnings、merge conflict 発生時のエラーと report 保存挙動を確認・変更したいとき。
+- apply branch/session branch 上で許可される変更範囲、root memo や oracle/.agents/INDEX.md/git ignored path の扱いを確認・変更したいとき。
 
 ## Do not read this when
-- apply run の開始、apply branch や worktree の作成、apply state を実行中にする処理だけを調べたいとき。
-- session の作成・終了、通常の session state モデル、branch 名規則や runtime 共通処理そのものを調べたいとき。
-- git command 実行、状態ファイルの読み書き、report root、worktree root などの共通 helper の実装詳細だけが必要なとき。
-- INDEX.md エントリー生成や oracle/realization の一般ルールを確認したいだけで、apply join の実行時挙動に関心がないとき。
+- apply run の開始、apply branch/worktree の作成、apply state を completed/error にする処理だけを調べたいとき。
+- apply join 以外の subcommand の CLI 定義や option 宣言だけを調べたいとき。
+- git 実行、session state の読み書き、branch/worktree 検索、report directory の基本 helper の実装そのものを調べたいとき。
+- oracle や INDEX.md の正本仕様を調べたいとき。
 
 ## hash
-- 6e36810b25961e75aa685a289870b06e37aaec6b5a107337b70c63690b863d83
+- b7e76b43057c1047a7d3097dc49065074b11e01dc5b5086217077087fd1f0a2d
