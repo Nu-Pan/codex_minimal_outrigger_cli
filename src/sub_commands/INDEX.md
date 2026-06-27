@@ -130,22 +130,21 @@
 # `review_report.py`
 
 ## Summary
-- review oracle の実行結果を、YAML frontmatter 付き Markdown レポートとして生成・保存する処理を担う。
-- 評価対象 oracle、採択・棄却された finding、実行中エラー、ブランチ・コミット情報を集計し、レポート全体の result と本文セクションへ整形する。
-- oracle パスをレポート上で読みやすい表示に変換する補助処理と、finding 一覧・frontmatter 項目の描画処理を含む。
+- review oracle の結果レポートを生成する実装。評価対象の oracle、finding の採否・重大度別集計、レビュー用 branch/commit 情報、エラー状態を Markdown と YAML frontmatter に整形し、レポート保存先へ書き出す責務を持つ。
+- finding の表示、総合 verdict の決定、oracle 配下として見せるための path 表示整形など、review oracle レポート本文の組み立てに必要な小さな helper も同じまとまりで扱う。
 
 ## Read this when
-- review oracle のレポート保存先、生成タイミング、Markdown 構成、frontmatter に出す値を確認・変更したいとき。
-- accepted/rejected finding の分類、fatal/minor 件数、error/no_targets/fatal/minor/ok の result 判定条件を確認・変更したいとき。
-- レポート内で oracle ファイルパスをどのように相対表示するか、または oracle ツリー外のパス表示をどう扱うかを確認・変更したいとき。
+- review oracle のレポート出力内容、frontmatter の項目、見出し構成、finding の分類・表示、または result/verdict の判定条件を確認・変更したいとき。
+- review oracle 実行時に生成されるレポートファイルの保存処理、保存ディレクトリ、タイムスタンプ付きレポート生成の流れを追いたいとき。
+- oracle file の表示パスが、repo root 相対または oracle 起点としてどのように整形されるかを確認したいとき。
 
 ## Do not read this when
-- review oracle がどの oracle を収集・評価するか、finding をどう生成するかを知りたいだけのとき。
-- CLI 引数の定義、サブコマンド登録、セッション状態の生成・更新、git ブランチ操作の詳細を調べたいとき。
-- 生成済みレポートの内容を読むだけで、レポート描画ロジックや判定条件を変更しないとき。
+- review oracle がどの oracle を収集・評価するか、外部レビュー処理をどう起動するか、finding の元データをどう作るかを知りたいだけのとき。
+- review oracle 以外のサブコマンドの CLI 引数、状態更新、レポート形式を調べたいとき。
+- reports directory や timestamp など、レポート生成共通の低レベル runtime helper 自体の仕様を確認したいとき。
 
 ## hash
-- 2fbc344b8b86ae4b1da1c963eabef9d6a2ef658e6fdeda3ff15196af1f021166
+- c735d523554a1f2fc90ccdc9d92499da36540150b1ce2795cb72602f2930bc62
 
 # `review_targets.py`
 

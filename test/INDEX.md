@@ -293,25 +293,24 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle サブコマンドの CLI 経由の外部挙動と、所見の列挙・検証・判定・merge loop の制御を検証する realization test。
-- report 生成、scope ごとの対象 oracle 選択、gitignored oracle file の除外、linked worktree 上の review、INDEX.md 差分の取り込みと conflict 解決、処理失敗時の error report、review 実行中に許可されない非 INDEX.md 差分の拒否を扱う。
-- 所見 merge 操作の kind ごとの契約、無効操作や target 再利用の拒否、report 上の verdict・severity 順序と rejected finding の集計扱いも、この review run の状態と出力文脈に閉じて確認する。
+- review oracle の CLI 経由の外部挙動を検証する realization test。report 生成、対象 oracle の選択、所見列挙・検証・judge・merge、結果分類、エラー report、review 用 worktree と join commit、INDEX.md 差分の取り込みや競合解決、想定外差分の拒否を同じ review run 文脈で確認する。
+- 所見 merge 操作の kind ごとの契約、無効操作、target 再利用拒否も検証し、review oracle loop が対象 oracle ごとの関連所見だけを次回 prompt に渡す制御を押さえる。
+- 16,000 文字を超えるが、fake Codex 応答、report 文脈、review run の状態を一箇所に保つ方が凝集性が高いという責務境界を docstring で明示している。
 
 ## Read this when
-- review oracle の CLI 出力、report 内容、終了コード、error report、または scope の挙動を変更・調査するとき。
-- oracle file の列挙条件、gitignored ファイルや symlink、binary、memo 配下に見える path の扱い、session scope と full scope の差を確認するとき。
-- review oracle が作成した INDEX.md 差分の merge、join commit、worktree の作成位置、linked worktree からの実行挙動、または conflict 解決を変更するとき。
-- 所見の enumerate・validate・judge・merge loop、finding の verdict/severity による report 表示順、accepted/rejected 集計、merge operation の入力契約を変更するとき。
-- review oracle 実行中に Codex 側が作った差分の許可範囲を調整し、INDEX.md 以外の変更を拒否する制御を確認するとき。
+- review oracle コマンドの出力 report、終了コード、scope 指定、対象 oracle の数え方や除外条件を変更・確認するとき。
+- review oracle の所見 loop、finding の verdict・severity 集計、merge 操作、validate・judge の呼び出し制御を変更・確認するとき。
+- review oracle が linked worktree、session branch、review 用 worktree、join commit、INDEX.md の生成差分や競合解決をどう扱うべきかを確認するとき。
+- review oracle 実行中の失敗時 report、標準出力へのエラー表示、INDEX.md 以外の予期しない差分の拒否と復元挙動を検証するとき。
 
 ## Do not read this when
-- review oracle 以外のサブコマンド、汎用的な CLI 初期化、session fork そのもの、または git helper の基本動作だけを調べるとき。
-- oracle の正本仕様本文や oracle file の記述規約を確認したいとき。
-- 個別 helper の純粋な単体仕様だけを確認したく、review oracle の CLI 実行状態や report 文脈を必要としないとき。
-- LLM の出力品質や prompt 文面そのものを評価したいとき。
+- review oracle 以外の subcommand の CLI 挙動を調べるだけなら、対象 subcommand のテストへ進む。
+- review oracle の実装詳細を直す必要があり、期待される外部挙動ではなく関数本体や git 操作の実装を読みたい場合は、実装側の review command へ進む。
+- oracle file の正本仕様そのものや INDEX.md ルーティング規則を確認したい場合は、oracle 側の本文を読む。
+- テスト共通 fixture、runner、repo 作成 helper の使い方だけを確認したい場合は、test support 側を読む。
 
 ## hash
-- 894800b12a9feaac5008d5e10bef4804e9fd97d3737c96a76b3091956d28b23a
+- ea7d3f24f774abdb135ebb656a95428d110ed907232765d5023af12e591d0c1f
 
 # `test_session_cli.py`
 

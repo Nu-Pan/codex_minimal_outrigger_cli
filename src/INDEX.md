@@ -131,23 +131,23 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装を集約する領域。初期化、TUI 起動、INDEX.md 自動保守、review oracle、apply、session など、利用者が実行する上位操作の入口と orchestration を扱う。
-- 各サブコマンド本体は CLI runtime、git 操作、状態ファイル、Codex 実行パラメータ、report、worktree・branch 制御などの共通基盤へ処理を接続する位置づけで、具体的な低レベル helper の実装そのものではなく、コマンド単位の実行順序と責務分岐を調べる入口になる。
-- apply と session は下位パッケージに具体処理が分かれ、review oracle は対象列挙、review loop、INDEX 変更 commit/merge、report 生成などの補助モジュールを同階層に持つため、サブコマンドごとの処理全体像から読む先を選ぶための分岐点として使う。
+- CLI サブコマンド実装を集約する領域。初期化、TUI 起動、INDEX.md 保守、review oracle、apply、session 操作など、利用者が呼び出す上位コマンドの実行入口と orchestration を扱う。
+- 各対象は共通 runtime や低レベル helper を直接実装する場ではなく、branch・worktree・state・report・Codex 実行・git 操作などの共通基盤をサブコマンド固有の制御フローへ接続する入口として位置づく。
+- apply と session は下位パッケージに具体的なサブコマンド実装を持ち、review oracle は対象列挙、反復処理、INDEX 変更処理、レポート生成などの役割ごとに分割されたモジュールへ進むための分岐点になる。
 
 ## Read this when
-- cmoc のサブコマンドがどの実装へ対応しているか、または利用者操作からどの CLI 実行本体へ進むべきかを切り分けたいとき。
-- 初期化、TUI、INDEX.md 自動更新、review oracle、apply、session の実行順序、事前条件、状態遷移、利用者向け出力、report、branch・worktree 操作を調査または変更したいとき。
-- review oracle の処理を、サブコマンド入口、対象列挙、finding loop、INDEX 変更の commit/merge、report 生成のどこから読むべきか判断したいとき。
-- apply run や session 操作の開始・取り込み・破棄、実行中 process、pid file、cleanup、merge conflict など、CLI 操作単位のライフサイクルを追いたいとき。
-- INDEX.md 自動保守や TUI 起動のように、Codex 実行パラメータ構築、preflight、生成物保存、commit 作成がサブコマンド実行フローへどう接続されるか確認したいとき。
+- cmoc の個別サブコマンドが、どの前提条件、実行順序、状態遷移、git/worktree 操作、利用者向け出力で動くかを調査または変更したいとき。
+- init、tui、indexing、review oracle、apply、session のうち、どの実装へ進むべきかをサブコマンド単位で切り分けたいとき。
+- review oracle の scope 対象列挙、review loop、INDEX 変更 commit/merge、report 生成、または apply run や session lifecycle の上位制御を追いたいとき。
+- INDEX.md 自動保守の preflight、対象選別、既存エントリー再利用、Codex によるエントリー生成、Markdown 描画、更新差分 commit の流れを確認したいとき。
+- Codex TUI 起動前の依頼文編集、TUI 用パラメータ解決、complete prompt 保存、AgentCallParameter 構築など、TUI サブコマンド固有の制御を確認したいとき。
 
 ## Do not read this when
-- CLI サブコマンドではなく、git wrapper、config 読み込み、path model、state file schema、runtime wrapper、Codex 外部プロセス実行などの共通基盤そのものを調べたいとき。
-- oracle file、realization file、INDEX.md エントリー品質基準などの正本仕様断片を確認したいだけのとき。
-- サブコマンドの実行入口や orchestration ではなく、Codex に渡す prompt、Structured Output parameter、AgentCallParameter の具体的な構築内容だけを調べたいとき。
-- 生成済み INDEX.md や report の内容を読むだけで、生成・描画・保存・commit の実装を変更しないとき。
-- 対象サブコマンドや補助処理が既に特定できており、その個別ファイルまたは下位パッケージを直接読めば足りるとき。
+- git wrapper、config 読み込み、path model、state file 永続化、timestamp、reports directory、Codex 外部プロセス実行など、複数サブコマンドで使う共通 runtime 基盤そのものを調べたいとき。
+- oracle file や realization file の概念、正本仕様断片、ルーティング文書の品質基準、INDEX.md エントリー生成規則など、仕様文書側の内容を確認したいだけのとき。
+- Codex に渡す prompt や Structured Output parameter の具体的な構築だけを調べたいときは、各 parameter builder 側を読む方が直接的。
+- テスト観点から外部挙動を確認したいだけなら、対応する test 配下の対象を読む方が直接的。
+- apply や session の具体的な下位操作、review oracle の対象列挙・loop・report・INDEX merge など、読むべき個別モジュールが既に分かっているときは、その対象へ直接進めばよい。
 
 ## hash
-- 589e630a53456597b9fba3983201dd55295a3cb820ded1afa4fd17d52ceeebdc
+- 591d77ed2e2258b8fe5d6047f410f0de15126e404c43f03dea5c2c3ae97bbf62
