@@ -4,7 +4,8 @@
 """
 
 # cmoc
-from basic.struct_doc import StructDoc
+from basic.path_model import RootToken, resolve_real_path, resolve_work_root
+from basic.struct_doc import StructCodeBlock, StructDoc
 
 # local
 from .file_access_rule import build_file_access_rule, FileAccessMode
@@ -15,6 +16,23 @@ from .apply_review_standard import build_apply_review_standard
 from .oracle_review_standard import build_review_oracle_standard
 from .index_entry_standard import build_index_entry_standard
 from .routing_rule import build_routing_rule
+
+
+_CMOC_TERM_REPLACEMENTS = (
+    ("cmoc から呼び出された", "依頼された"),
+    ("`cmoc review oracle`", "oracle file レビュー"),
+    ("`cmoc apply join`", "apply join 操作"),
+    ("cmoc review oracle", "oracle file レビュー"),
+    ("cmoc apply join", "apply join 操作"),
+    ("cmoc 側", "呼び出し側"),
+    ("cmoc により", "継続的に"),
+    ("cmoc でも", "この作業対象でも"),
+    ("cmoc は", "この作業対象では"),
+    ("cmoc が", "呼び出し側が"),
+    ("cmoc の", "この作業対象の"),
+    ("cmoc を", "このツールを"),
+    ("cmoc", "このツール"),
+)
 
 
 def build_complete_prompt(
@@ -110,4 +128,34 @@ def build_complete_prompt(
         struct_doc.append(build_review_oracle_standard())
     if index_entry_standard:
         struct_doc.append(build_index_entry_standard())
-    return struct_doc
+    return [_sanitize_prompt_doc(doc) for doc in struct_doc]
+
+
+def _sanitize_prompt_doc(doc: StructDoc) -> StructDoc:
+    children = doc.children
+    title = _sanitize_prompt_text(doc.title)
+    if isinstance(children, list):
+        return StructDoc(title, *[_sanitize_prompt_doc(child) for child in children])
+    if isinstance(children, StructCodeBlock):
+        return StructDoc(
+            title,
+            StructCodeBlock(children.info, _sanitize_prompt_text(children.body)),
+        )
+    return StructDoc(title, _sanitize_prompt_text(children))
+
+
+def _sanitize_prompt_text(text: str) -> str:
+    for token in RootToken:
+        text = text.replace(token.value, str(_prompt_root_path(token)))
+    for before, after in _CMOC_TERM_REPLACEMENTS:
+        text = text.replace(before, after)
+    return text
+
+
+def _prompt_root_path(token: RootToken):
+    try:
+        return resolve_real_path(token)
+    except ValueError:
+        # Codex CLI に渡す prompt では root token を残さない。run worktree が無い
+        # 通常 worktree 上の呼び出しでは、現在の作業ルートを具体パスとして使う。
+        return resolve_work_root()
