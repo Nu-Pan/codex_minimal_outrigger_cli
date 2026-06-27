@@ -68,25 +68,25 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation のうち、複数の CLI サブコマンドや runtime 層から共有される実行時 helper 群をまとめる領域。Codex 呼び出し、preflight、設定、ファイル内容保存、エラー表示、Git 操作、ログ、パス解決、結果モデル、session state など、上位機能が横断的に利用する基盤処理への入口になる。
-- 責務別の runtime 実装に分かれており、集約入口だけでなく、Codex exec/TUI の起動制御、profile 生成、Structured Output 検証、quota/capacity retry、INDEX 更新 preflight、サブコマンド共通 wrapper、JSON Lines event log、永続 state の読み書きなどを個別に追える。
+- cmoc の実行時共通 helper 群を集めた実装ディレクトリ。CLI サブコマンドの実行 wrapper、Codex exec/TUI 呼び出し、設定、内容 hash 保存、エラー表示、Git 操作、runtime event log、path 解決、実行結果モデル、session state、INDEX.md 自動更新 preflight など、複数の上位コマンドから再利用される基盤処理を扱う。
+- 個別責務の実装モジュールに加えて、旧 import path を維持する互換入口や、複数 runtime 部品をまとめて参照する集約入口も含むため、runtime 層の公開面と責務分割の入口になる。
 
 ## Read this when
-- CLI サブコマンドから共通利用される runtime 処理の実装場所を探すとき。
-- Codex CLI 呼び出し、profile・schema・出力 JSON・resume・quota/capacity retry・call log など、cmoc と Codex CLI の境界処理を調査または変更したいとき。
-- INDEX.md 更新 preflight、対象探索、既存エントリー検証、hash による鮮度判定、Codex によるエントリー再生成、自動 commit の流れを追いたいとき。
-- サブコマンド実行時の共通ライフサイクル、stdout/stderr の扱い、終了コード化、例外表示、runtime event log、quota wait 集計を確認または変更したいとき。
-- 設定ファイルの読み書き、内容 hash 保存、binary 判定、Git worktree・branch・ignore 操作、標準 runtime path、session state の JSON 入出力など、複数機能から共有される低レベル helper を確認したいとき。
+- CLI サブコマンド共通の実行ライフサイクル、標準 stdout サマリー、例外表示、サブコマンド log、終了コード化の共通処理を調べたいとき。
+- Codex CLI の exec/TUI 呼び出し、profile/schema/CODEX_HOME の準備、Structured Output 検証、quota/capacity retry、resume、call log、preflight 実行との接続を確認または変更したいとき。
+- 設定ファイルの読み書き、内容 hash 保存、binary 判定、Git worktree/branch/ignore 操作、runtime path、timestamp、session state、実行結果データ構造など、複数コマンドにまたがる共通 runtime helper を探しているとき。
+- INDEX.md の自動生成・更新 preflight、対象候補の列挙、既存エントリー hash 検証、Codex によるエントリー生成、更新 commit 作成の実装経路を追いたいとき。
+- 上位コマンドから共通 runtime 層のどの部品を利用できるか、または互換 import 入口が分割後のどの実装へ接続されるかを把握したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジック、引数定義、画面表示、永続データ更新、ファイル生成内容を知りたいだけのとき。その場合はコマンド層や該当機能の実装を読む。
-- cmoc の正本仕様断片、path keyword の定義、ログや出力形式の仕様判断を確認したいとき。その場合は oracle 側の該当文書を読む。
-- テスト期待値や fixture を確認したいとき。その場合は realization test 側を読む。
-- 共有 runtime helper の利用箇所だけを見たいとき。呼び出し元のサブコマンドや上位 module から読み始める方が直接的。
-- 特定責務がすでに絞れており、設定、Git、Codex exec、Codex TUI、ログ、パス、state などの個別 module に直接進めるとき。この階層全体を読む必要はない。
+- 個別サブコマンドの業務ロジック、CLI 引数定義、Typer のコマンド登録、利用者向け出力内容そのものを調べたいとき。その場合はサブコマンド実装側を読む。
+- path keyword の正本定義、oracle file や realization file の仕様、INDEX.md の品質基準など、正本仕様断片だけを確認したいとき。その場合は oracle 側の該当文書を読む。
+- 特定の設定モデル、基本層の path model、CLI 出力 schema、保存 JSON の外部仕様など、共通 helper が参照する型や仕様の定義そのものを変更したいとき。
+- 生成済みのルーティング文書やログ、状態ファイルの内容を読むだけで、生成・保存・更新の runtime 実装を追う必要がないとき。
+- 単一モジュール内で完結する機能の詳細だけが目的で、Codex、Git、設定、ログ、path、状態管理などの共通 runtime 境界に関心がないとき。
 
 ## hash
-- 87e6998dcb5e2dcd083302138af227655e1516c35390c9e57b7c71a3ff2e8882
+- 0b203992fd7df02e0fa8d67a312b3e0ac6512b1557ea5f295b915ab461db7fe1
 
 # `config`
 

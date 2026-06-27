@@ -238,23 +238,20 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- indexing サブコマンドと indexing 共通処理の realization test。INDEX 生成・更新・コミット、未初期化/dirty repo の拒否、linked worktree/apply worktree での対象 root と設定参照、既存 hash による再生成スキップ、semantic entry の検証、兄弟エントリー並列生成、root 直下 memo 除外と nested memo 対象化を外部挙動として検証する。
-- apply 側の index conflict 解消が、衝突した INDEX を削除して merge commit を成立させる挙動も扱う。
+- インデックス生成と適用時の INDEX.md 扱いを検証する realization test。indexing サブコマンド、事前実行処理、インデックス更新・描画・コミット、競合解決、対象除外、fresh hash 判定などの外部挙動と制御ロジックをまとめて扱う。
 
 ## Read this when
-- indexing の CLI 挙動、preflight、INDEX 更新、INDEX commit の対象制御、dirty repo 判定、worktree 上での indexing 対象 root、repo config の参照元を変更・調査する時。
-- index entry の render/update ロジックで、必須 semantic field、空リスト/空文字の拒否、hash が fresh でも malformed な entry を再生成する条件を確認する時。
-- INDEX 生成対象の走査で、兄弟要素の並列処理や memo ディレクトリの除外/対象化境界を変更・確認する時。
-- apply/join の merge conflict 処理のうち、INDEX 衝突を自動解消して commit する挙動を確認する時。
+- indexing サブコマンドの成功・失敗条件、コミット対象、dirty worktree での停止条件、linked worktree や apply worktree での実行先を変更または確認するとき。
+- INDEX.md エントリーの生成・再生成、fresh hash による Codex 呼び出し省略、壊れた既存エントリーの扱い、semantic fields の検証を変更または確認するとき。
+- INDEX.md の git merge 競合解決、root memo の除外と nested memo の索引化、同階層エントリー生成の並列化を変更または確認するとき。
 
 ## Do not read this when
-- indexing の正本仕様断片や用語定義だけを確認したい時。oracle 側の該当文書を先に読む。
-- indexing の実装詳細、Codex 呼び出しの組み立て、git 操作 helper の本体を変更する時。対応する実装ファイルを直接読む。
-- indexing 以外のサブコマンド、通常の apply フロー全体、または CLI エントリポイント全般の挙動を調べる時。より対象範囲の近いテストまたは実装へ進む。
-- LLM 出力品質そのものや生成される自然文の妥当性を検証したい時。このテストは structured output の受け渡しと制御ロジックを fake で検証している。
+- 個別 CLI コマンドの実装詳細や設定ファイルの読み書き処理そのものを調べるだけなら、対応する実装モジュールを直接読む。
+- INDEX.md の人間向け記述方針や oracle 上の正本仕様を確認したいだけなら、oracle 側の該当文書を読む。
+- テスト支援関数、fixture、git helper、Typer runner の共通挙動だけを調べるなら、テストサポート用モジュールを直接読む。
 
 ## hash
-- 8b7c456348c35f9982daf2f75ae72d3a400cd7fead91f7dc6ef6ebc656ab1c02
+- df47bb39579e912a75c7b28cdf05091538a48b2ef4d98a90fa8778ea4cdc90b8
 
 # `test_indexing_preflight.py`
 
