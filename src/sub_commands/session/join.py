@@ -135,7 +135,9 @@ def _has_conflict_marker_block(text: str) -> bool:
     for line in text.splitlines():
         if state == 0 and line.startswith("<<<<<<<"):
             state = 1
-        elif state == 1 and line == "=======":
+        # <work-root>/oracle/doc/app_spec/sub_command/session_join.md:
+        # Git allows conflict-marker-size to exceed the default seven chars.
+        elif state == 1 and len(line) >= 7 and set(line) == {"="}:
             state = 2
         elif state == 2 and line.startswith(">>>>>>>"):
             return True

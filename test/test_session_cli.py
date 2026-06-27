@@ -355,6 +355,9 @@ def test_session_join_conflict_marker_detection_uses_marker_block() -> None:
     assert session_join_module._has_conflict_marker_block(
         "<<<<<<< HEAD\nhome\n=======\nsession\n>>>>>>> branch\n"
     )
+    assert session_join_module._has_conflict_marker_block(
+        "<<<<<<< HEAD\nhome\n========\nsession\n>>>>>>> branch\n"
+    )
 
 
 def test_session_join_uses_linked_worktree_branch(
@@ -504,6 +507,7 @@ def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
         output_json = None
 
     def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        target.write_text("<<<<<<< HEAD\nhome\n========\nsession\n>>>>>>> branch\n")
         return FakeCodexResult()
 
     monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
