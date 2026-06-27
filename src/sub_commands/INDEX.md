@@ -170,24 +170,23 @@
 # `session`
 
 ## Summary
-- active session の作成、home branch への join、merge せず破棄する操作など、session 系サブコマンドの実行本体をまとめる実装領域。
-- 各サブコマンドは CLI runtime 経由で実行され、branch 条件、clean worktree、session state の読み書き、git 操作、利用者向け出力などを扱う。
-- session パッケージ自体は最小限の入口であり、具体的な挙動は個別サブコマンド実装へ進んで確認する。
+- session 操作に関するサブコマンド実装をまとめる領域。active session の作成、home branch への取り込み、merge しない破棄など、session branch と session state をまたぐ CLI 処理への入口になる。
+- 各サブコマンドは runtime wrapper 経由の実行、事前条件確認、git branch 操作、state 更新、利用者向け出力、失敗時のエラー情報や復旧処理を扱う。
 
 ## Read this when
-- session 系サブコマンドのどの実装へ進むべきかを切り分けたいとき。
-- session の開始、join、破棄に関する事前条件、状態遷移、branch 操作、成功時出力、失敗時の扱いを調査・変更したいとき。
-- active session、home branch、session branch、session state と CLI 実行処理の接続を確認したいとき。
-- merge conflict 解消、cleanup 失敗時 rollback、`.cmoc` の git ignore 準備など、session 操作に付随する個別制御の読む先を選びたいとき。
+- session 操作のうち、branch 作成、home branch への統合、merge しない破棄といった CLI 実行フローの実装を探したいとき。
+- session branch、home branch、active state、clean worktree などの条件が、各 session サブコマンドでどのように検査・更新されるかを調べたいとき。
+- session サブコマンド実行時の git 操作、session state 保存、成功時の利用者向け出力、失敗時の CmocError や rollback 方針を確認したいとき。
+- merge conflict 解決依頼、conflict marker 検出、unmerged path 検査など、session の取り込み処理に固有の補助フローを調べたいとき。
 
 ## Do not read this when
-- session state の schema、永続化形式、path 解決、git wrapper、runtime wrapper などの共通 helper 自体を調べたいとき。
-- CLI 全体のサブコマンド登録、session 以外のサブコマンド、または oracle 上の正本仕様を確認したいとき。
-- Codex CLI に渡す conflict resolution prompt や parameter の内容そのものを調べたいとき。
-- 個別の session 操作が既に分かっており、その実装だけを直接読めば足りるとき。
+- session 以外のサブコマンド実装、CLI 全体のコマンド登録、共通ルーティングだけを調べたいとき。
+- session state の schema、永続化形式、path 解決、branch から state を読み込む共通処理そのものを調べたいとき。
+- git 実行 wrapper、worktree clean 判定、managed branch 判定、cmoc ignore 設定など、複数領域で使われる runtime helper の内部実装を調べたいとき。
+- 正本仕様断片や oracle 側の設計意図だけを確認したいとき。
 
 ## hash
-- 7a208fb387ccca5bbc6dd80daabf1c32ac77edd8203c109ad8c9f34f42c26f0d
+- 0168fd9c1f57c25b7fecc403018b8360a799c3075e8ab95d94f25be8ba81a7b5
 
 # `tui.py`
 

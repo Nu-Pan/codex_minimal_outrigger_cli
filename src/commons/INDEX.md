@@ -33,23 +33,24 @@
 # `runtime_cli.py`
 
 ## Summary
-- CLI サブコマンド共通の実行ライフサイクルを扱う実装。work root 検査、pre log check、サブコマンドログ作成、開始・実行・完了の標準出力、戻り値の終了コード化、例外時のエラー表示とログ記録、現在サブコマンド logger の設定解除を一括で管理する。
-- cmoc を work root で実行していることを検査する helper と、完了時に elapsed・quota wait・returncode などの標準サマリーを出力する helper を含む。
+- CLI サブコマンドの共通実行ライフサイクルを扱う実装。work root 実行前提の検査、事前検査、サブコマンドログの作成と current logger の設定、開始・実行・完了の標準出力、戻り値から終了コードへの変換、例外時のエラー表示と終了処理を一箇所にまとめている。
+- runtime state の配置先を通常は repo root、初期化対象を扱う場合は work root に切り替える入口もここにあり、サブコマンドログは repo root に置く方針で処理する。
 
 ## Read this when
-- CLI サブコマンド実行時の共通処理、特に開始・完了表示、サブコマンドログ、終了コード、例外表示、logger の runtime state 管理を確認または変更したいとき。
-- サブコマンド実装関数の戻り値を CLI の終了コードとしてどう扱うか、または例外をどのように表示して `typer.Exit` へ変換するかを調べたいとき。
-- repo root と work root の使い分け、init など一部コマンドで runtime state を work root 側に置く制御、またはサブコマンドログを置く root の扱いを追いたいとき。
-- cmoc 実行時に現在ディレクトリが work root であることを要求する検査と、その失敗時の利用者向けエラー内容を確認したいとき。
+- CLI サブコマンド実行時の共通ラッパー、開始・完了表示、終了コード化、例外処理、typer.Exit への変換を確認または変更するとき。
+- サブコマンドログの作成、command_invoked・step_started・command_finished の記録、current subcommand logger の設定解除に関わる挙動を追うとき。
+- cmoc を work root 以外で実行した場合のエラー、または work root 検査と pre log check の実行順序を確認するとき。
+- runtime state を repo root と work root のどちらに置くか、または init など初期化対象側の runtime を使う処理を確認するとき。
+- CLI 完了時に stdout へ出る elapsed、quota_wait、returncode、sub command log path のサマリー形式を確認するとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジック、引数定義、永続データの具体的な読み書き内容を調べたいだけのとき。
-- ログイベントの保存形式や current logger の内部実装そのものを変更したいときは、logging 側の共通実装を直接読む方が適切。
-- repo root・work root の検出方法、タイムスタンプや経過時間文字列の生成規則を変更したいときは、path/runtime utility 側を直接読む方が適切。
-- エラー型やエラーメッセージの描画規則そのものを変更したいときは、runtime error 側の実装を読む方が適切。
+- 個別サブコマンドの業務処理本体、引数定義、typer command 登録だけを確認したいとき。
+- ログイベントの保存形式、ログファイルの内部構造、current logger の実装そのものを確認したいとき。
+- repo root、work root、時刻表示、duration format の算出方法そのものを確認したいとき。
+- CmocError の表現、render_error の整形規則、エラーメッセージ全般の仕様を確認したいとき。
 
 ## hash
-- ee0d71f61a971465f9e5e88c65e0ddf311be9a83609004cd2560a241a8715f40
+- 55f193985ae31cb201eeca62f0e91b33a5ccd90ae2e85001a2524001462694b2
 
 # `runtime_codex.py`
 

@@ -69,30 +69,25 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation で共有される実行時 helper 群をまとめる領域。CLI サブコマンド共通ライフサイクル、Codex exec/TUI 呼び出し、profile・preflight・call log、設定入出力、内容 hash 保存、共通エラー表示、Git 操作、runtime path、実行結果モデル、session state、サブコマンドログなど、複数の上位機能から使われる基盤処理への入口になる。
-- 利用側が共通 runtime 機能を一か所から import するための集約面と、責務別の下位 runtime 実装が同居している。特定の共有機能を変更する場合は、まずこの領域で該当責務の実装を選び、個別サブコマンドや仕様断片ではなく共通基盤として扱うべき処理かを確認する。
+- cmoc の realization implementation における共有 runtime helper 群を集めた領域。CLI サブコマンド共通実行、Codex 呼び出し、設定入出力、内容 hash 保存、エラー表示、Git 操作、ログ、runtime path、実行結果モデル、session state など、複数の上位機能から使われる横断的な実行時支援を扱う。
+- 下位要素は責務別に分かれており、集約 import 面、Codex exec/TUI/profile/preflight/logging、CLI ライフサイクル、設定永続化、ファイル内容 helper、共通例外、Git wrapper、サブコマンドログ、runtime path、結果データ、永続 state へ進む入口になる。
 
 ## Read this when
-- CLI サブコマンドに共通する開始・完了表示、終了コード化、例外表示、サブコマンドログ、現在 logger の設定解除などの実行ライフサイクルを確認または変更したいとき。
-- Codex CLI の exec 実行、TUI 起動、profile 生成、schema 保存、resume token、quota/capacity 制御、Structured Output 検証、call log、preflight 実行など、Codex 呼び出し runtime の共通処理を調べたいとき。
-- cmoc 設定ファイルの読み書き、既定値補完、不正 JSON や型不一致の利用者向けエラー化など、設定永続化の共通処理を確認または変更したいとき。
-- ファイル内容や文字列内容の SHA-256 digest、内容 hash を使った保存、binary 判定など、内容ベースの小さな共有 helper を調べたいとき。
-- 利用者向け Markdown エラーレポート、共通実行時例外、復旧案・詳細・Call stack の表示形式を確認または変更したいとき。
-- Git コマンド実行、branch・HEAD・worktree cleanliness、run 用 worktree、branch 削除、Git ignore 判定、cmoc 管理領域を追跡対象外にする処理を調べたいとき。
-- 実行時 root 解決、cmoc 管理ディレクトリ、設定・state・log・worktree・schema 保存先、timestamp、経過時間表示、memo 配下判定などの runtime path helper を確認したいとき。
-- 外部コマンド結果や Codex exec 結果を運ぶ共有データ構造、または session branch/apply branch に紐づく永続 session state の JSON 入出力を確認したいとき。
-- 複数の runtime helper に分かれた共通機能について、実装側からどの公開名で import できるか、または新しい共有 runtime 機能を集約 import 面へ載せるべきか判断したいとき。
+- cmoc 実装から共通 runtime 機能を使う、変更する、または公開 import 面へ追加する必要があるとき。
+- CLI サブコマンドの共通ラッパー、終了コード化、エラー表示、ログ記録、runtime state の配置など、個別コマンドをまたぐ実行時制御を調べるとき。
+- Codex CLI の exec または TUI 呼び出し、profile 生成、Structured Output 検証、quota/capacity retry、resume、preflight、call log、console 表示に関わる実装を探すとき。
+- cmoc 設定ファイルの読み書き、既定値補完、不正 JSON や型変換失敗のエラー化を扱う処理を確認または変更するとき。
+- ファイル内容 digest、内容 hash に基づく保存、binary 判定、runtime path、Git 操作、サブコマンドログ、実行結果データ、session state などの共有 helper の所在を判断したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジック、引数定義、ユーザー操作ごとの具体的な永続データ内容を調べたいだけのとき。その場合は各サブコマンドや機能実装へ直接進む。
-- oracle file の正本仕様断片、path keyword の概念定義、oracle/realization の分類規則、INDEX.md 生成規則を確認したいとき。この領域は仕様本文ではなく realization implementation の共有 runtime 基盤である。
-- 設定データクラス、AgentCallParameter、FileAccessMode、モデル設定など、入力データ構造そのものの定義だけを確認したいとき。その場合はモデル定義側を読む。
-- ログや状態を読む側・集計する側・表示する側の高レベル仕様を探しているとき。ここは主に保存・受け渡し・runtime 管理の共通処理を扱う。
-- 特定機能がどの prefix・suffix・content・path・設定値を渡すかという上位の呼び出し判断だけを調べたいとき。その場合はその機能の呼び出し側を読む。
-- Codex や Git 以外の個別外部ツール連携、または上位 workflow のプロンプト生成・状態遷移・レポート生成だけを追いたいとき。
+- 個別サブコマンドの業務処理本体、引数定義、typer 登録、ユーザー向け workflow を調べたいとき。その場合は各サブコマンド側の実装へ進む。
+- oracle file による正本仕様断片、path keyword の概念定義、INDEX.md 生成規則、oracle/realization の分類規則を確認したいとき。その場合は仕様側の本文へ進む。
+- 共有 helper の利用箇所だけを調べたいとき。その場合は呼び出し元の機能実装やテストから確認する。
+- ログ、状態、設定、出力 schema の利用者向け仕様や集計・表示側を調べたいだけのとき。その場合はそれらを読む側または上位機能側へ進む。
+- テスト期待値、fixture、外部挙動の検証観点を探しているとき。その場合は realization test 側へ進む。
 
 ## hash
-- 62a1441903c60bfa0e9f34d06e8f35512bf7d32f67a574c0b93564495fda77ce
+- 02dcec053828268ec2ab5dd9befc25d5b4a40a296084f9d27d29e692d365c1a8
 
 # `config`
 
@@ -138,23 +133,22 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装を集約する領域。初期化、TUI 起動、INDEX.md 保守、review oracle、apply、session 操作など、利用者が呼び出す上位コマンドの実行入口と orchestration を扱う。
-- 各対象は共通 runtime や低レベル helper を直接実装する場ではなく、branch・worktree・state・report・Codex 実行・git 操作などの共通基盤をサブコマンド固有の制御フローへ接続する入口として位置づく。
-- apply と session は下位パッケージに具体的なサブコマンド実装を持ち、review oracle は対象列挙、反復処理、INDEX 変更処理、レポート生成などの役割ごとに分割されたモジュールへ進むための分岐点になる。
+- CLI の各サブコマンド実装を束ねる領域。初期化、TUI 起動、INDEX.md 保守、review oracle、apply、session 操作など、利用者が実行するコマンドの上位 orchestration への入口になる。
+- 各対象は、CLI runtime への接続、事前条件確認、git branch/worktree/state/report などの共通基盤との接続、利用者向け出力、失敗時処理を扱い、詳細な共通 helper や prompt/schema 構築へ進む前の分岐点として使う。
 
 ## Read this when
-- cmoc の個別サブコマンドが、どの前提条件、実行順序、状態遷移、git/worktree 操作、利用者向け出力で動くかを調査または変更したいとき。
-- init、tui、indexing、review oracle、apply、session のうち、どの実装へ進むべきかをサブコマンド単位で切り分けたいとき。
-- review oracle の scope 対象列挙、review loop、INDEX 変更 commit/merge、report 生成、または apply run や session lifecycle の上位制御を追いたいとき。
-- INDEX.md 自動保守の preflight、対象選別、既存エントリー再利用、Codex によるエントリー生成、Markdown 描画、更新差分 commit の流れを確認したいとき。
-- Codex TUI 起動前の依頼文編集、TUI 用パラメータ解決、complete prompt 保存、AgentCallParameter 構築など、TUI サブコマンド固有の制御を確認したいとき。
+- 特定サブコマンドの実行順序、前提条件、状態遷移、git 操作、利用者向け出力、失敗時の後片付けや report 生成の入口を探したいとき。
+- 初期化、TUI、INDEX.md 自動保守、review oracle、apply run、session 作成・取り込み・破棄のどの実装へ進むべきかを切り分けたいとき。
+- review oracle の対象列挙、finding loop、INDEX 変更の commit/merge、report 生成など、review 処理全体の中で読むべき責務単位を選びたいとき。
+- apply fork/join/abandon、apply branch と session branch、isolated worktree、pid file、process 停止、report、cleanup など apply ライフサイクル関連の読む先を選びたいとき。
+- session branch と active state をまたぐ branch 作成、home branch への統合、merge しない破棄、conflict 処理など session 操作固有の CLI 制御を調べたいとき。
 
 ## Do not read this when
-- git wrapper、config 読み込み、path model、state file 永続化、timestamp、reports directory、Codex 外部プロセス実行など、複数サブコマンドで使う共通 runtime 基盤そのものを調べたいとき。
-- oracle file や realization file の概念、正本仕様断片、ルーティング文書の品質基準、INDEX.md エントリー生成規則など、仕様文書側の内容を確認したいだけのとき。
-- Codex に渡す prompt や Structured Output parameter の具体的な構築だけを調べたいときは、各 parameter builder 側を読む方が直接的。
-- テスト観点から外部挙動を確認したいだけなら、対応する test 配下の対象を読む方が直接的。
-- apply や session の具体的な下位操作、review oracle の対象列挙・loop・report・INDEX merge など、読むべき個別モジュールが既に分かっているときは、その対象へ直接進めばよい。
+- git 実行 wrapper、state file 永続化、config 読み込み、path model、timestamp、reports directory など、複数サブコマンドで使われる runtime 共通基盤そのものを調べたいとき。
+- Codex に渡す prompt、AgentCallParameter、Structured Output parameter、complete prompt、StructDoc 描画などの具体的な構築規則だけを確認したいとき。
+- oracle file、realization file、INDEX.md、review finding 品質基準などの正本仕様断片やルーティング文書生成規則を確認したいだけのとき。
+- サブコマンドの外部挙動をテスト観点から確認したいだけのときは、対応するテストへ進む方が直接的。
+- 個別サブコマンドに関係しない一般的なパッケージ構成や、低レベル helper の内部実装だけを調べたいとき。
 
 ## hash
-- 591d77ed2e2258b8fe5d6047f410f0de15126e404c43f03dea5c2c3ae97bbf62
+- 44bc81f9148394d4eb336251ac628a3a0fbb8b4260df5ce566c177418b019f60
