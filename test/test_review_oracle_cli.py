@@ -109,6 +109,12 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
                         {
                             "oracle_path": "oracle/spec.md",
                             "severity": "fatal",
+                            "title": "accepted fatal",
+                            "reason": "fatal accepted reason",
+                        },
+                        {
+                            "oracle_path": "oracle/spec.md",
+                            "severity": "fatal",
                             "title": "rejected fatal",
                             "reason": "fatal reason",
                         },
@@ -117,6 +123,12 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
                             "severity": "minor",
                             "title": "accepted minor",
                             "reason": "minor reason",
+                        },
+                        {
+                            "oracle_path": "oracle/spec.md",
+                            "severity": "minor",
+                            "title": "rejected minor",
+                            "reason": "minor rejected reason",
                         },
                     ]
                 }
@@ -129,7 +141,7 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
         if schema_name == "merge_finding.json":
             return FakeCodexResult({"operations": []})
         if schema_name == "judge_finding.json":
-            if kwargs["purpose"].endswith("finding-0002"):
+            if kwargs["purpose"].endswith(("finding-0001", "finding-0003")):
                 return FakeCodexResult({"verdict": "accept", "reason": "accepted"})
             return FakeCodexResult({"verdict": "reject", "reason": "rejected"})
         raise AssertionError(schema_name)
@@ -144,13 +156,21 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
     rendered = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
-    assert "accepted minor" in rendered
-    assert "rejected fatal" in rendered
-    assert "result: minor" in rendered
-    assert "fatal_findings_accepted_count: 0" in rendered
+    finding_offsets = [
+        rendered.index(title)
+        for title in [
+            "accepted fatal",
+            "accepted minor",
+            "rejected fatal",
+            "rejected minor",
+        ]
+    ]
+    assert finding_offsets == sorted(finding_offsets)
+    assert "result: fatal" in rendered
+    assert "fatal_findings_accepted_count: 1" in rendered
     assert "minor_findings_accepted_count: 1" in rendered
     assert "fatal_findings_rejected_count: 1" in rendered
-    assert "minor_findings_rejected_count: 0" in rendered
+    assert "minor_findings_rejected_count: 1" in rendered
 
 
 @pytest.mark.parametrize(
