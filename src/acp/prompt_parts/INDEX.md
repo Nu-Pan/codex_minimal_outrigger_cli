@@ -23,24 +23,21 @@
 # `complete_prompt.py`
 
 ## Summary
-- agent call に渡す基本プロンプトと任意の標準プロンプト群を統合し、依存する標準文書が必要に応じて含まれるようにする realization。
-- role・summary・goal・ファイルアクセス規則・ルーティング規則・追加プロンプトを共通の土台として組み立て、指定された boolean option に応じて oracle / realization / review / apply / index entry 関連の標準文書を追加する。
-- 呼び出し先 agent 向けに、内部呼称や root token を具体的な作業対象向け表現へ置換する sanitization も担う。
+- agent call に渡す完全なプロンプトを、基本情報、ファイルアクセス制限、ルーティング規則、任意追加プロンプト、各種標準プロンプト片から組み立てる realization。
+- 標準プロンプト片の注入フラグ間の依存関係を補正し、要求された標準に必要な前提情報も含まれるようにしてから、順序付きの構造化文書リストとして返す。
 
 ## Read this when
-- agent call に渡す完全なプロンプト全体の構成、標準文書の注入順序、または標準文書同士の依存関係を確認・変更したいとき。
-- oracle standard、realization standard、review oracle standard、apply review standard、index entry standard のいずれかを有効にした時に、どの基本情報が自動的に含まれるかを確認したいとき。
-- 呼び出し先 agent に渡る文面から内部呼称や root token を除去する置換処理、または run root 未確定時の root path 解決挙動を確認・変更したいとき。
-- 新しい標準プロンプト部品を完全プロンプトへ追加する入口や、既存の標準プロンプト部品をどの条件で組み込むかを変更したいとき。
+- agent call 用の完全なプロンプト全体に、どの基本セクションや標準セクションが含まれるかを確認・変更したいとき。
+- oracle、realization、review、INDEX エントリーなどの標準プロンプトを注入する条件や、フラグ間の依存関係を変更したいとき。
+- 補助プロンプトを完全プロンプト内のどの位置へ差し込むか、または基本プロンプトとパターンプロンプトの結合順序を確認したいとき。
 
 ## Do not read this when
-- 個別のファイルアクセス規則、ルーティング規則、oracle standard、realization standard など、各標準プロンプト本文そのものの内容を確認・変更したいだけのとき。
-- StructDoc や StructCodeBlock のデータ構造そのもの、または構造化文書の低レベル表現を確認したいとき。
-- root token や work root の定義・解決規則そのものを確認したいとき。
-- agent call の実行、サブプロセス起動、CLI コマンド処理など、完成したプロンプトを使う側の制御を確認したいとき。
+- 個々の標準プロンプト片の本文内容を確認・変更したいだけのときは、それぞれの構築関数を定義している対象へ直接進む。
+- ファイルアクセス制限やルーティング規則そのものの文言・構造を確認・変更したいだけのときは、それぞれの専用構築対象へ直接進む。
+- 構造化文書のデータ構造や表現方法を確認・変更したいだけのときは、その型を定義している基盤側へ進む。
 
 ## hash
-- 9cdac5e7c1149ac8e49c76370f1a34d5cf7d965172584a1c7a289162ebb94762
+- a75d0bc93639f37242cb338330a8ecfabfac107542c7ddf559d1cb5af09ee098
 
 # `file_access_rule.py`
 

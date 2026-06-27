@@ -25,23 +25,20 @@
 # `prompt_parts`
 
 ## Summary
-- AI agent に渡す prompt part 群を構築する realization implementation のまとまり。ファイルアクセス規則、ルーティング規則、oracle / realization / review / apply / index entry 各標準、oracle と realization の基本概念、完全プロンプトへの統合を扱う。
-- 個別の規範本文を StructDoc や Standard 群として組み立てる部品と、それらを agent call 用の完全なプロンプトへ条件付きで合成する入口を含む。
-- cmoc が AI に作業前提、読み書き制限、仕様断片と実装の責務境界、レビュー所見の判断基準、INDEX.md エントリー品質基準を提示するための prompt 構築層として読む対象になる。
+- AI agent に渡すプロンプトを構成する標準部品群を扱う領域。基本概念、ファイルアクセス制限、ルーティング規則、oracle/realization/review/INDEX エントリーの各標準を、構造化文書として組み立てる実装への入口になる。
+- 個別の標準部品だけでなく、それらを完全な agent call 用プロンプトへ結合する処理も含むため、prompt 全体にどの規範や前提情報が注入されるかを追う起点になる。
 
 ## Read this when
-- AI agent に渡すプロンプト本文の部品を確認・変更したいとき。
-- ファイルアクセス規則、INDEX.md ルーティング規則、oracle file / realization file の基本説明、oracle standard、realization standard、review standard、apply review standard、index entry standard のいずれかを prompt としてどう構築しているか調べたいとき。
-- 複数の標準 prompt part が完全プロンプトへどの条件・順序・依存関係で組み込まれるか確認したいとき。
-- AI に渡す文面で、内部呼称や root token を作業対象向け表現へ置換する処理を確認・変更したいとき。
-- 新しい標準プロンプト部品を追加する場所や、既存の標準プロンプト部品の責務境界を見極めたいとき。
+- AI agent に提示する標準プロンプト片の種類、責務、生成箇所を俯瞰して、どの部品を読むべきか選びたいとき。
+- oracle file、realization file、review、INDEX エントリー、ファイルアクセス制限、ルーティング規則などの規範文書が、prompt part としてどこで構築されるか探したいとき。
+- agent call 用の完全なプロンプトに標準部品を追加・削除・並べ替えしたい、または標準部品の注入条件や依存関係を確認したいとき。
+- 個々の標準文書の本文内容を変更する前に、対象となる prompt part を同階層の中から選びたいとき。
 
 ## Do not read this when
-- 個別 CLI コマンドの実行制御、サブプロセス起動、状態ファイル操作、入出力 schema など、生成されたプロンプトを使う側の実装を調べたいとき。
-- StructDoc、StructCodeBlock、Standard、Requirement などの構造化文書データ型や変換 helper の低レベル実装だけを確認したいとき。
-- path token、work root、run root などのパスモデル定義や解決規則そのものを調べたいとき。
-- 特定の oracle file や realization file の仕様本文・実装本文をレビューしたいだけで、AI 向け標準文書の構築処理を確認する必要がないとき。
-- OS 権限やサンドボックスなど、実際のファイルアクセス制御 enforcement を調べたいとき。
+- StructDoc、Standard、Requirement など、構造化文書や規範オブジェクトそのものの型・変換処理を調べたいとき。
+- CLI コマンド、状態ファイル、パス解決、入出力 schema など、プロンプト標準部品以外のプロダクト挙動を調べたいとき。
+- 特定の oracle file や realization file の本文内容をレビュー・実装したいだけで、AI に渡す標準プロンプトの生成処理を確認する必要がないとき。
+- 実際のサンドボックス enforcement、OS 権限、外部プロセス実行など、プロンプト上の規則文ではなく実行環境側の制御を調べたいとき。
 
 ## hash
-- 3dc7eddb00b95bd55c4a14f6240d0875654efbd91c6d58002807cb691bbf70cd
+- 9ec459022b577d6bbc9dbc5638a2f59b1b6b5ce27dda098f7f9659bb4b90d1f4
