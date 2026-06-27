@@ -179,20 +179,20 @@
 # `test_codex_runtime_home.py`
 
 ## Summary
-- Codex CLI 呼び出し時の Codex home 解決と事前検証を扱う realization test。環境変数未設定時に通常のホーム配下を使うこと、環境変数で指定された相対パスを保持して実行しつつ記録上はリポジトリ基準で解決すること、Codex home や認証情報が不正な場合に CLI 実行前に利用者向けエラーになることを検証する。
+- Codex CLI 実行時の Codex home 解決と事前検証を対象にした realization test。環境変数が未設定の場合の既定 home、環境変数で指定された home の保持、Codex 実行 cwd に対する相対 home の解決、home や認証情報が不正な場合に Codex CLI 起動前に失敗することを検証する。
 
 ## Read this when
-- Codex CLI 実行処理で CODEX_HOME、既定の Codex home、auth.json、プロファイル配置先、呼び出しログに関する挙動を変更または確認するとき。
-- Codex home が存在しない、ディレクトリでない、認証情報がない場合の CmocError の summary、detail、next_actions を確認するとき。
-- Codex CLI を実際に起動せず、fake executable と monkeypatch で実行環境を組み立てるテスト例を探すとき。
+- Codex CLI 呼び出しで使用する CODEX_HOME の決定、相対パス解決、実行結果へ記録される codex_home や profile_path の挙動を確認・変更するとき。
+- Codex home が存在しない、ディレクトリではない、auth.json がない場合の CmocError の summary・detail・next_actions を確認・変更するとき。
+- ファイルアクセスモードによって Codex CLI の作業ディレクトリが変わる状況で、相対 CODEX_HOME がどこから解決されるかを検証するとき。
 
 ## Do not read this when
-- Codex CLI の出力 JSON、ターン完了判定、容量待機、モデルや推論努力の引数変換だけを確認したいとき。
-- Codex home 以外のリポジトリ作成 helper、プロファイル stub、Python 実行ファイル生成 helper の実装詳細を確認したいとき。
-- oracle file に書くべき正本仕様や設計方針を探しているとき。このファイルは realization test であり、正本仕様そのものではない。
+- Codex CLI の容量待機、標準出力イベント処理、プロンプト生成など、Codex home の解決や検証に直接関係しない実行制御を調べるとき。
+- 実際の Codex CLI や LLM の出力品質を検証したいとき。ここでは fake executable を使い、home 解決と事前検証の制御ロジックだけを扱う。
+- oracle file 側の正本仕様を確認・変更したいとき。この対象は realization test であり、正本仕様そのものではない。
 
 ## hash
-- 93e187f3d5ae928a9accdef37c14910cf4c9d9da4dbf4762954d601b4e8b4606
+- f113426a3f92145e9b5bff3bfd809dd949834c6dbb9c2471815903cec09de7fe
 
 # `test_codex_runtime_quota_retry.py`
 

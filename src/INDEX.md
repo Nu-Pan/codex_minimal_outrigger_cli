@@ -67,23 +67,23 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation のうち、複数サブコマンドや上位処理から使われる共通 runtime helper 群を収める領域。Codex CLI 呼び出し、indexing preflight、CLI 実行 wrapper、設定、内容 hash、エラー表示、Git 操作、ログ、runtime path、実行結果、session state など、実行時横断の支援機能への入口になる。
-- 個別処理の多くは責務別の実装本文に分かれており、集約 import 入口、互換 import 入口、exec/TUI それぞれの Codex 実行経路、preflight、ログや状態の低レベル helper などを、この階層から選んで読む構成になっている。
+- cmoc の realization implementation のうち、複数サブコマンドや runtime 領域から共有される実行時 helper 群をまとめる領域。Codex 呼び出し、preflight indexing、CLI wrapper、設定、内容 hash、エラー表示、Git 操作、ログ、パス、結果型、session state などの共通処理への入口になる。
+- 各責務は小さな runtime module に分かれており、集約 import 面、Codex exec/TUI 制御、profile 準備、設定 JSON 入出力、保存先 path、Git worktree/branch 操作、JSON Lines event log、永続 state などを目的別に読むための分岐点として使う。
 
 ## Read this when
-- サブコマンド実装や上位 workflow が共通 runtime 機能へどう接続されるかを調べるため、Codex 実行、設定、Git、ログ、path、state、error、result などの読む先を選びたいとき。
-- Codex CLI exec/TUI 呼び出し、Structured Output、quota/capacity retry、indexing preflight、call log、subcommand event log など、実行時横断の制御やログ記録に関わる変更を始めるとき。
-- cmoc の共通 helper を追加・整理する前に、同じ責務または近い責務を持つ既存 runtime 実装がこの階層にあるか確認したいとき。
-- 設定ファイル、内容 hash 保存、Git worktree/branch 操作、runtime path、session state、CLI wrapper、共通エラー表示など、特定の runtime 支援領域の実装本文へ進むための入口を探しているとき。
+- cmoc のサブコマンド実装から共通 runtime API、共通エラー、共通ログ、共通 path、Git helper、Codex 呼び出し helper を利用または変更したいとき。
+- Codex 実行前の INDEX.md 更新 preflight、Codex exec/TUI の呼び出し制御、Structured Output 検証、quota/capacity retry、profile/schema 準備など Codex runtime 周辺の実装入口を探すとき。
+- 設定ファイルの読み書き、内容 hash 保存、binary 判定、runtime 保存先、session state JSON、外部コマンド結果や Codex exec 結果の共有データ構造を確認したいとき。
+- 複数の上位機能から使われる低レベル処理を追加・整理する前に、既存の共有 helper と責務境界を確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジック、引数定義、ユーザー向け command 登録、永続データ更新の高レベル workflow だけを調べたいとき。その場合は該当サブコマンドや command 層へ直接進む。
-- oracle file にある正本仕様そのもの、path model の基本定義、ログや INDEX.md の外部仕様だけを確認したいとき。その場合は対応する oracle 側の本文を読む。
-- テスト期待値、fixture、外部挙動の検証内容を調べたいだけのとき。その場合は test 側の対象へ進む。
-- 生成済みのルーティング文書や個別 INDEX.md エントリーの内容を読むだけで、生成・更新・実行時 helper の実装を追う必要がないとき。
+- 個別サブコマンドの業務ロジック、CLI option 宣言、入力解析、ユーザー向け通常出力の詳細だけを確認したいとき。その場合はコマンド層や該当サブコマンド実装へ進む。
+- cmoc の正本仕様断片や oracle file の要求そのものを確認したいとき。この領域は realization implementation であり、仕様判断の根拠としては oracle 側を読む。
+- テスト期待値や検証観点を調べたいだけのとき。その場合は realization test 側へ進む。
+- 単一 module の責務が既に分かっており、設定、Git、path、logging、Codex exec など特定の実装だけを変更する場合。この階層全体ではなく該当 runtime module を直接読む。
 
 ## hash
-- 983d51d7e0e5447c7d466768ca42063be3d2b05405685ee3a33932685b217f85
+- 65876d65d43e7babbe9ef9c1dc0533ddf41b1699b590155635ce53f7d9095af0
 
 # `config`
 
