@@ -139,18 +139,18 @@ def _validate_and_judge_findings(
                 config=config,
                 purpose=f"review oracle validate challenger {finding['finding_id']}",
             ).output_json
+            challenger_reasons = list((challenger or {}).get("reasons", []))
             advocate = codex_exec(
                 build_review_oracle_validate_finding_advocate_parameter(
                     finding_text,
                     "\n".join(finding["advocate_reasons"]),
-                    "\n".join(finding["challenger_reasons"]),
+                    "\n".join(finding["challenger_reasons"] + challenger_reasons),
                 ),
                 root=log_root,
                 cwd=worktree,
                 config=config,
                 purpose=f"review oracle validate advocate {finding['finding_id']}",
             ).output_json
-            challenger_reasons = list((challenger or {}).get("reasons", []))
             advocate_reasons = list((advocate or {}).get("reasons", []))
             finding["challenger_reasons"].extend(challenger_reasons)
             finding["advocate_reasons"].extend(advocate_reasons)

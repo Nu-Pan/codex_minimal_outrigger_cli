@@ -321,6 +321,61 @@ def test_review_oracle_enumerate_receives_only_related_findings(
     assert "a finding" in prompts_by_target["a.md"][1]
 
 
+def test_review_oracle_advocate_receives_same_round_challenger_reasons(
+    tmp_path: Path,
+) -> None:
+    root = make_repo(tmp_path)
+    advocate_prompts: list[str] = []
+    config = CmocConfig(
+        review_oracle=CmocConfigReviewOracle(
+            num_enumerate_findings_loop=1,
+            num_merge_findings_loop=0,
+            num_validate_findings_loop=1,
+        ),
+    )
+
+    class FakeCodexResult:
+        def __init__(self, output_json: dict[str, object]) -> None:
+            self.output_json = output_json
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        schema_name = parameter.structured_output_schema_path.name
+        if schema_name == "enumerate_finding.json":
+            return FakeCodexResult(
+                {
+                    "findings": [
+                        {
+                            "oracle_path": "oracle/spec.md",
+                            "severity": "fatal",
+                            "title": "finding",
+                            "reason": "reason",
+                            "challenger_reasons": ["old challenger reason"],
+                        }
+                    ]
+                }
+            )
+        if schema_name == "validate_finding_challenger.json":
+            return FakeCodexResult({"reasons": ["same-round challenger reason"]})
+        if schema_name == "validate_finding_advocate.json":
+            advocate_prompts.append(parameter.prompt)
+            return FakeCodexResult({"reasons": []})
+        if schema_name == "judge_finding.json":
+            return FakeCodexResult({"verdict": "reject", "reason": "rejected"})
+        raise AssertionError(schema_name)
+
+    review_module.run_review_oracle_loop(
+        root,
+        root,
+        [root / "oracle" / "spec.md"],
+        config,
+        fake_run_codex_exec,
+    )
+
+    assert advocate_prompts
+    assert "old challenger reason" in advocate_prompts[0]
+    assert "same-round challenger reason" in advocate_prompts[0]
+
+
 def test_apply_finding_merge_operations_enforces_kind_contract() -> None:
     findings = [
         {"finding_id": "finding-0001", "title": "delete"},
