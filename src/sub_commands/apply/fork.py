@@ -350,7 +350,10 @@ def dedupe_apply_targets(targets: list[Path]) -> list[Path]:
 def changed_worktree_paths(root: Path) -> list[Path]:
     """worktree 上の変更 path を absolute path として返す。"""
     paths: list[Path] = []
-    for line in run_git(["status", "--short"], root).stdout.splitlines():
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md requires changed
+    # realization files to be requeued; default status can collapse untracked
+    # directories into one non-file path.
+    for line in run_git(["status", "--short", "-uall"], root).stdout.splitlines():
         path_text = line[3:]
         if " -> " in path_text:
             path_text = path_text.split(" -> ", 1)[1]

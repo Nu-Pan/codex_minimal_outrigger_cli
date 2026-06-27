@@ -173,6 +173,8 @@ def test_apply_fork_rechecks_changed_files_until_converged(
         if purpose == "apply fork finding application":
             (Path.cwd() / "README.md").write_text("# updated\n")
             (Path.cwd() / "INDEX.md").write_text("generated index\n")
+            (Path.cwd() / "newdir").mkdir()
+            (Path.cwd() / "newdir" / "new.py").write_text("print('new')\n")
             return FakeCodexResult(None)
         if purpose == "apply fork commit message":
             return FakeCodexResult(output_text="Update README from apply finding\n")
@@ -205,6 +207,7 @@ def test_apply_fork_rechecks_changed_files_until_converged(
     assert result.exit_code == 0
     assert enumerate_calls >= 2
     assert "README.md" in target_rels
+    assert "newdir/new.py" in target_rels
     assert "INDEX.md" not in target_rels
     report_path = report_path_from_stdout(result.stdout)
     assert "result: converged" in report_path.read_text()
