@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 
 import pytest
-from jsonschema import ValidationError, validate
+from jsonschema import validate
 
 from basic.acp import FileAccessMode
 from basic.acp import ModelClass, ReasoningEffort
@@ -135,20 +135,32 @@ def test_apply_fork_prompts_use_expected_roots(
     assert f"`{repo_root}` ツリー内の差分" in change_summary.prompt
 
 
-def test_apply_fork_change_summary_schema_rejects_empty_changes() -> None:
+def test_apply_fork_change_summary_schema_matches_oracle_source() -> None:
     parameter = build_apply_fork_change_summary_parameter("diff")
     assert parameter.structured_output_schema_path is not None
 
     schema = json.loads(parameter.structured_output_schema_path.read_text())
+    oracle_schema = json.loads(
+        (
+            Path(__file__).parents[1]
+            / "oracle"
+            / "src"
+            / "acp"
+            / "builder"
+            / "apply"
+            / "fork"
+            / "change_summary.json"
+        ).read_text()
+    )
 
-    with pytest.raises(ValidationError):
-        validate({"changes": []}, schema)
+    assert schema == oracle_schema
+    validate({"changes": []}, schema)
     validate(
         {
             "changes": [
                 {
                     "category": "実装",
-                    "summary": "変更要約 schema の検証制約を追加した。",
+                    "summary": "変更要約 schema を正本仕様に合わせた。",
                     "changed_paths": [
                         "src/acp/builder/apply/fork/change_summary.json"
                     ],
