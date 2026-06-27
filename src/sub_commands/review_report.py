@@ -51,15 +51,14 @@ def render_review_oracle_report(
     error_message: str | None = None,
 ) -> str:
     """review oracle report を Markdown + YAML frontmatter で描画する。"""
-    # <work-root>/oracle/src/acp/builder/review/oracle/judge_finding.json:
-    # reject は人間へ提示しない判定なので、公開レポートの finding 対象から外す。
+    # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md:
+    # 最終レポートは採用/不採用の fatal/minor を所見単位で集計・表示する。
     accepted = [finding for finding in findings if finding.get("verdict") == "accept"]
-    fatal_accepted = [
-        finding for finding in accepted if finding.get("severity") == "fatal"
-    ]
-    minor_accepted = [
-        finding for finding in accepted if finding.get("severity") == "minor"
-    ]
+    rejected = [finding for finding in findings if finding.get("verdict") == "reject"]
+    fatal_accepted = _findings_with(accepted, "fatal")
+    minor_accepted = _findings_with(accepted, "minor")
+    fatal_rejected = _findings_with(rejected, "fatal")
+    minor_rejected = _findings_with(rejected, "minor")
     if error_message is not None:
         error_message = error_message.replace("`", "'")
     result, verdict = _review_report_verdict(
@@ -69,7 +68,7 @@ def render_review_oracle_report(
         minor_accepted,
     )
     findings_by_path: dict[str, int] = {}
-    for finding in accepted:
+    for finding in [*accepted, *rejected]:
         oracle_path = finding.get("oracle_path", "")
         findings_by_path[oracle_path] = findings_by_path.get(oracle_path, 0) + 1
     rows = "\n".join(
@@ -91,6 +90,8 @@ def render_review_oracle_report(
         ("oracle_count_evaluated", len(oracle_files)),
         ("fatal_findings_accepted_count", len(fatal_accepted)),
         ("minor_findings_accepted_count", len(minor_accepted)),
+        ("fatal_findings_rejected_count", len(fatal_rejected)),
+        ("minor_findings_rejected_count", len(minor_rejected)),
         ("result", result),
     ]
     return "\n".join(
@@ -105,13 +106,21 @@ def render_review_oracle_report(
             "| No. | Oracle file | Findings |",
             "|---:|---|---:|",
             rows,
-            "## Fatal findings",
+            "## Accepted fatal findings",
             render_finding_section(fatal_accepted),
-            "## Minor findings",
+            "## Accepted minor findings",
             render_finding_section(minor_accepted),
+            "## Rejected fatal findings",
+            render_finding_section(fatal_rejected),
+            "## Rejected minor findings",
+            render_finding_section(minor_rejected),
             "",
         ]
     )
+
+
+def _findings_with(findings: list[dict], severity: str) -> list[dict]:
+    return [finding for finding in findings if finding.get("severity") == severity]
 
 
 def _review_report_verdict(

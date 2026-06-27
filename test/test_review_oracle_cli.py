@@ -75,7 +75,7 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyP
     assert "review oracle merge findings" not in calls
 
 
-def test_review_oracle_report_outputs_only_accepted_findings(
+def test_review_oracle_report_outputs_accepted_and_rejected_findings(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -139,24 +139,26 @@ def test_review_oracle_report_outputs_only_accepted_findings(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
     assert "accepted minor" in rendered
-    assert "rejected fatal" not in rendered
+    assert "rejected fatal" in rendered
     assert "result: minor" in rendered
-    assert "fatal_findings_rejected_count" not in rendered
+    assert "fatal_findings_accepted_count: 0" in rendered
     assert "minor_findings_accepted_count: 1" in rendered
+    assert "fatal_findings_rejected_count: 1" in rendered
+    assert "minor_findings_rejected_count: 0" in rendered
 
 
 @pytest.mark.parametrize(
-    (
-        "severity",
-    ),
+    ("severity", "expected_fatal_count", "expected_minor_count"),
     [
-        ("fatal",),
-        ("minor",),
+        ("fatal", 1, 0),
+        ("minor", 0, 1),
     ],
 )
-def test_review_oracle_report_omits_rejected_findings(
+def test_review_oracle_report_includes_rejected_findings(
     tmp_path: Path,
     severity: str,
+    expected_fatal_count: int,
+    expected_minor_count: int,
 ) -> None:
     root = tmp_path
     rendered = review_module.render_review_oracle_report(
@@ -183,12 +185,12 @@ def test_review_oracle_report_omits_rejected_findings(
 
     assert "result: ok" in rendered
     assert "レビュー対象の oracle file に、問題は何ら見つかりませんでした。" in rendered
-    assert "fatal_findings_rejected_count" not in rendered
-    assert "minor_findings_rejected_count" not in rendered
-    assert "## Rejected fatal findings" not in rendered
-    assert "## Rejected minor findings" not in rendered
-    assert "rejected finding" not in rendered
-    assert "rejected reason" not in rendered
+    assert f"fatal_findings_rejected_count: {expected_fatal_count}" in rendered
+    assert f"minor_findings_rejected_count: {expected_minor_count}" in rendered
+    assert "## Rejected fatal findings" in rendered
+    assert "## Rejected minor findings" in rendered
+    assert "rejected finding" in rendered
+    assert "rejected reason" in rendered
     assert "session_id:" not in rendered
 
 
@@ -759,7 +761,8 @@ def test_review_oracle_writes_error_report_on_processing_failure(
     )
     rendered = report_path.read_text()
     assert "result: error" in rendered
-    assert "fatal_findings_rejected_count" not in rendered
+    assert "fatal_findings_rejected_count: 0" in rendered
+    assert "minor_findings_rejected_count: 0" in rendered
     assert "[unjudged] unjudged fatal" not in rendered
     assert "レビュー処理が途中で失敗しました。" in rendered
     assert "Error: `judge failed`" in rendered
