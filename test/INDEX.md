@@ -113,20 +113,25 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎的な実行時契約を広く固定する realization test。path token と run/work root の解決、既定設定と config 検証、構造化 error report、session/apply branch 状態、CLI preflight と completion probe、`.cmoc` ignore、file access mode と Codex sandbox profile、binary 判定など、複数の中核 runtime 境界をまとめて検証する。
+- 基本 runtime の横断的な契約を固定する realization test。path token 解決、run/work root 判定、既定 config、構造化 error report、CLI preflight、`.cmoc` ignore、file access sandbox 変換、binary 判定、Codex profile の writable roots と保護領域拒否を扱う。
+- runtime 層・CLI 起動前処理・sandbox/profile 生成・状態 branch 名検証のように、複数 module にまたがる基礎挙動の回帰確認入口になる。
 
 ## Read this when
-- runtime の基本契約が壊れていないかを確認したいとき。特に path model、worktree 判定、config default、CmocError の表示、CLI error 出力、session state branch 名、`.gitignore` 更新、sandbox profile 生成、binary 判定に関わる変更を行うとき。
-- realization implementation のうち、実行場所の検証、利用者向け error report、Codex profile の writable roots、FileAccessMode の永続化値や sandbox 変換を変更するとき。
-- CLI の preflight、Click parse error の扱い、shell completion probe、起動 wrapper の error 表示など、利用者が直接観測する stdout/stderr や副作用の境界を確認するとき。
+- path model の root token 表現、linked worktree と main worktree の扱い、または `<run-root>` / `<work-root>` 解決の挙動を変更・確認したいとき。
+- CmocError の Markdown report、Click parse error、想定済み CLI error、completion probe、起動 wrapper の missing venv report など、利用者向け error 出力の経路を変更・確認したいとき。
+- CmocConfig の既定値や config_from_dict の入力検証、model class / reasoning effort 名の扱いを変更・確認したいとき。
+- session/apply branch 名から session id を取り出す処理、branch 形状の拒否、branch から state を読む処理を変更・確認したいとき。
+- `.cmoc` の `.gitignore` 追加、FileAccessMode から Codex sandbox mode への変換、Codex profile の writable roots、memo/oracle/src などの書き込み許可境界を変更・確認したいとき。
+- binary 判定の読み取り量や、subcommand log file 名の timestamp collision 回避を変更・確認したいとき。
 
 ## Do not read this when
-- 特定サブコマンド固有の正常系 workflow や詳細な入出力だけを確認したいときは、そのサブコマンドの専用テストへ進む。
-- oracle file の正本仕様断片そのものを確認したいときは、この realization test ではなく対応する oracle doc または oracle src を読む。
-- 単体の helper 実装の内部アルゴリズムだけを調べたい場合で、このファイルが検証している外部挙動や制御境界に関係しないとき。
+- 個別サブコマンドの正常系 workflow や具体的な command 実装だけを調べたいときは、対象 subcommand の実装・テストを先に読む。
+- oracle 正本仕様の意味や path token の概念定義を確認したいだけなら、対応する oracle doc/source を先に読む。
+- 単一 module の内部 helper 実装だけを変更し、その外部契約がここで列挙された runtime 横断挙動に触れないと分かっているときは、その module の近くのテストを優先する。
+- Codex CLI や LLM の出力品質そのものを検証したいときは、このテストは対象外。
 
 ## hash
-- 6dabfcf69fc51d116b8153b96356b687e67f39b0d655a583320693ec6e4c436b
+- 73c12a33041e9390318c1c4bc6dbfe043765d470701f3ea63b12a70cf59060d5
 
 # `test_cli_init_tui.py`
 

@@ -289,21 +289,24 @@
 # `runtime_logging.py`
 
 ## Summary
-- サブコマンド実行中に発生した検査用 event を JSON Lines として記録し、サブコマンド単位の経過時間と Codex quota 待機時間を集約する runtime logger を定義している。
-- 現在の制御文脈から logger を参照できるようにする context variable と、logger の設定・復元・取得 helper を提供する。
+- サブコマンド実行中に追記される JSON Lines event log を作成し、command・timestamp・任意 payload を安定した record として保存する runtime logging の実装。
+- サブコマンド開始からの経過時間と Codex quota 待機時間を集約し、現在の制御文脈から参照できる logger を ContextVar で差し替え・復元・取得できる入口を提供する。
+- log 保存先の作成と、サブコマンドごとに一意な timestamp 付き log file を原子的に予約する責務を持つ。
 
 ## Read this when
-- サブコマンド実行ログの生成先、JSON record の内容、追記タイミング、flush の挙動を確認または変更したいとき。
-- サブコマンド完了表示や集計で使う経過秒、quota 待機時間の加算方法を確認または変更したいとき。
-- 深い runtime helper から現在のサブコマンド logger を任意に利用する仕組み、または context variable による logger の差し替えと復元を扱うとき。
+- サブコマンド単位の runtime event を JSON Lines として保存する処理を確認・変更したいとき。
+- 完了表示や集計に使うサブコマンド経過時間、または Codex quota 待機時間の加算方法を確認・変更したいとき。
+- 深い runtime helper から現在のサブコマンド logger を任意利用するための context 管理を確認・変更したいとき。
+- log directory の作成、timestamp 付き log file 名の衝突回避、またはサブコマンドごとの log file 生成単位を確認したいとき。
 
 ## Do not read this when
-- ログディレクトリの位置や timestamp 文字列の生成規則だけを確認したいときは、runtime path を扱う対象を読む。
-- 個別サブコマンドの処理内容や CLI 引数の意味を確認したいだけなら、そのサブコマンド実装を読む。
-- JSON Lines に残された実行ログを解析・表示する利用側の処理を探しているときは、ログを読み取る側の対象を読む。
+- CLI のサブコマンド定義、引数解析、利用者向け出力そのものを確認したいだけのとき。
+- log directory や timestamp のパス規則そのものを確認・変更したいときは、runtime path を扱う対象を読む。
+- 保存された JSON Lines の外部仕様や console/file log 全体の正本仕様を確認したいときは、対応する oracle doc を読む。
+- 個別の業務処理や git 操作の挙動を確認したいだけで、runtime event log への記録方法に関心がないとき。
 
 ## hash
-- 3714c924c277c9b4bc72263497f6db15cd64518cf63712f4cc0730d2e2b11319
+- 61f0584ed72e5b6b43ec405f2d45cc39e3fe9813859ae3d45d8034727ca30b93
 
 # `runtime_paths.py`
 
