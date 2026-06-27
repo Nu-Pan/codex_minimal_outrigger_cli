@@ -100,13 +100,13 @@ def _cmoc_apply_fork_body(
     try:
         with pushd(apply_worktree):
             findings: list[dict] = []
-            dirty_targets = enumerate_apply_targets(apply_worktree, scope, state)
+            pending_targets = enumerate_apply_targets(apply_worktree, scope, state)
             for _apply_loop in range(config.apply_fork.num_apply_files):
-                dirty_targets = dedupe_apply_targets(dirty_targets)
-                if not dirty_targets:
+                pending_targets = dedupe_apply_targets(pending_targets)
+                if not pending_targets:
                     result_label = "converged"
                     break
-                target = dirty_targets.pop(0)
+                target = pending_targets.pop(0)
                 findings = enumerate_apply_findings_for_target(
                     apply_worktree,
                     target,
@@ -117,7 +117,7 @@ def _cmoc_apply_fork_body(
                 finding_counts.append(len(findings))
                 if not findings:
                     continue
-                dirty_targets.append(target)
+                pending_targets.append(target)
                 run_finding_application_with_forbidden_rollback(
                     root,
                     apply_worktree,
@@ -128,7 +128,7 @@ def _cmoc_apply_fork_body(
                 changed = changed_worktree_paths(apply_worktree)
                 if not changed:
                     continue
-                dirty_targets.extend(
+                pending_targets.extend(
                     normalize_apply_targets(
                         apply_worktree,
                         set(changed),
@@ -146,8 +146,8 @@ def _cmoc_apply_fork_body(
                     run_git(["add", "."], apply_worktree)
                     run_git(["commit", "-m", commit_message], apply_worktree)
             else:
-                dirty_targets = dedupe_apply_targets(dirty_targets)
-                result_label = "unconverged" if dirty_targets else "converged"
+                pending_targets = dedupe_apply_targets(pending_targets)
+                result_label = "unconverged" if pending_targets else "converged"
             report_path = write_apply_fork_report(
                 root,
                 apply_worktree,
@@ -254,25 +254,25 @@ def run_finding_application_with_forbidden_rollback(
 def generate_apply_commit_message(
     root: Path,
     apply_worktree: Path,
-    finding: dict,
+    applied_findings: dict,
     config: CmocConfig,
     codex_exec: CodexExec,
 ) -> str:
-    """適用した finding ごとの commit subject を Codex CLI で生成する。"""
+    """所見リスト適用後の差分に対する commit subject を Codex CLI で生成する。"""
     raw_diff = run_git(["diff"], apply_worktree).stdout
-    finding_text = json.dumps(finding, ensure_ascii=False, indent=2)
+    findings_text = json.dumps(applied_findings, ensure_ascii=False, indent=2)
     prompt = [
         StructDoc("Role", "- あなたは git commit message の作成担当です"),
         StructDoc(
             "Goal",
             """
-            - 以下の所見と git diff から、git commit subject を 1 行だけ生成すること
+            - 以下の所見リストと git diff から、git commit subject を 1 行だけ生成すること
             - 出力は commit subject 本文だけにすること
             - 先頭に箇条書き記号、引用符、Markdown、コードブロックを付けないこと
             - 72 文字程度を目安に、人間が変更内容を理解できる具体的な文にすること
             """,
         ),
-        StructDoc("Finding", StructCodeBlock("json", finding_text)),
+        StructDoc("Applied findings", StructCodeBlock("json", findings_text)),
         StructDoc("Git diff", StructCodeBlock("diff", raw_diff)),
     ]
     result = codex_exec(
@@ -288,10 +288,10 @@ def generate_apply_commit_message(
         config=config,
         purpose="apply fork commit message",
     )
-    return sanitize_commit_message(result.output_text, finding)
+    return sanitize_commit_message(result.output_text, applied_findings)
 
 
-def sanitize_commit_message(message: str, finding: dict) -> str:
+def sanitize_commit_message(message: str, applied_findings: dict) -> str:
     """Codex 出力を commit subject として使える 1 行へ丸める。"""
     for line in message.splitlines():
         subject = line.strip().strip("`").strip("\"'")
@@ -302,9 +302,13 @@ def sanitize_commit_message(message: str, finding: dict) -> str:
                 subject = subject.removeprefix(prefix).strip()
         if subject:
             return subject[:120]
-    title = finding.get("title")
-    if isinstance(title, str) and title.strip():
-        return f"Apply finding: {title.strip()}"[:120]
+    findings = applied_findings.get("findings")
+    if isinstance(findings, list):
+        for finding in findings:
+            if isinstance(finding, dict):
+                title = finding.get("title")
+                if isinstance(title, str) and title.strip():
+                    return f"Apply findings: {title.strip()}"[:120]
     return "Apply cmoc finding"
 
 

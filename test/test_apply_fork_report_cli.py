@@ -2,7 +2,7 @@
 
 このファイルは 16,000 文字を超えるが、責務境界は apply fork が所見列挙から
 適用、commit、変更要約、report、session state 更新へ至る制御を検証することに
-閉じている。収束、未収束、error、dirty file 再検査、rolling fork は同じ loop と
+閉じている。収束、未収束、error、変更ファイル再調査、rolling fork は同じ loop と
 report schema の観測結果として読まれるため、分割すると期待値の文脈が分散する。
 現状は apply fork report の読み取り文脈を一箇所に保つ方が凝集性が高い。
 """
@@ -126,10 +126,10 @@ def test_apply_fork_writes_report_with_change_summary(
     )
 
 
-def test_apply_fork_rechecks_dirty_files_until_converged(
+def test_apply_fork_rechecks_changed_files_until_converged(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
-    """apply 後の dirty file を再検査し、INDEX.md だけは再検査対象から外す。"""
+    """apply 後の変更ファイルを再調査し、INDEX.md だけは再調査対象から外す。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -157,7 +157,7 @@ def test_apply_fork_rechecks_dirty_files_until_converged(
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
-        """dirty file 再検査が収束するまでの Codex 応答を返す。"""
+        """変更ファイル再調査が収束するまでの Codex 応答を返す。"""
         nonlocal enumerate_calls
         purpose = str(kwargs["purpose"])
         if purpose.startswith("apply fork enumerate findings"):
