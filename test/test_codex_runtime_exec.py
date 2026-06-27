@@ -233,13 +233,11 @@ def test_run_codex_tui_uses_codex_command_and_prompt_argument(
     assert recorded["argv"][-1] == "TUI PROMPT BODY"
     profiles = list(codex_home.glob("cmoc_*.config.toml"))
     assert len(profiles) == 1
-    workspace = tomllib.loads(profiles[0].read_text())["sandbox_workspace_write"]
+    profile = tomllib.loads(profiles[0].read_text())
+    workspace = profile["sandbox_workspace_write"]
+    assert profile["sandbox_mode"] == "workspace-write"
     assert workspace["writable_roots"] == [str(root)]
-    assert workspace["read_only_paths"] == [
-        str(root / "memo"),
-        str(root / ".agents"),
-        str(prompt_file),
-    ]
+    assert "read_only_paths" not in workspace
     call_logs = list((root / ".cmoc" / "log" / "codex").glob("*_tui_call.json"))
     assert len(call_logs) == 1
     assert json.loads(call_logs[0].read_text())["argv"] == [
@@ -297,4 +295,4 @@ def test_run_codex_exec_loads_repo_config_json(tmp_path: Path, monkeypatch) -> N
 
     profile = result.profile_path.read_text()
     assert 'model = "CUSTOM-EFFICIENCY"' in profile
-    assert 'reasoning_effort = "minimal"' in profile
+    assert 'model_reasoning_effort = "minimal"' in profile

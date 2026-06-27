@@ -275,7 +275,7 @@ def test_is_binary_reads_only_initial_chunk() -> None:
     assert path.reader.size == 4096
 
 
-def test_codex_profile_contains_file_access_enforcement(tmp_path: Path) -> None:
+def test_codex_profile_contains_supported_sandbox_settings(tmp_path: Path) -> None:
     root = tmp_path / "repo"
     root.mkdir()
 
@@ -295,18 +295,11 @@ def test_codex_profile_contains_file_access_enforcement(tmp_path: Path) -> None:
         )
 
     readonly = profile(FileAccessMode.READONLY)
-    assert readonly["permission_profile"] == "cmoc"
-    assert readonly["default_permissions"] == "cmoc"
-    readonly_fs = readonly["permissions"]["cmoc"]["file_system"]
-    assert readonly_fs["read"] == [str(root)]
-    assert readonly_fs["write"] == []
-    assert readonly_fs["deny_read"] == [str(root / "memo")]
+    assert readonly["sandbox_mode"] == "read-only"
+    assert "permissions" not in readonly
+    assert "sandbox_workspace_write" not in readonly
 
-    pure_oracle_fs = profile(FileAccessMode.PURE_ORACLE_READ)["permissions"]["cmoc"][
-        "file_system"
-    ]
-    assert pure_oracle_fs["read"] == [str(root / "oracle")]
-    assert pure_oracle_fs["write"] == []
+    assert profile(FileAccessMode.PURE_ORACLE_READ)["sandbox_mode"] == "read-only"
 
     prompt_file = root / ".cmoc" / "log" / "tui" / "prompt_cmpl.md"
     pure_oracle_tui = tomllib.loads(
@@ -323,23 +316,14 @@ def test_codex_profile_contains_file_access_enforcement(tmp_path: Path) -> None:
             [prompt_file],
         )
     )
-    pure_oracle_tui_fs = pure_oracle_tui["permissions"]["cmoc"]["file_system"]
-    assert pure_oracle_tui_fs["read"] == [str(root / "oracle"), str(prompt_file)]
-    assert pure_oracle_tui_fs["read_only"] == [str(root / "oracle"), str(prompt_file)]
+    assert pure_oracle_tui["sandbox_mode"] == "read-only"
+    assert "sandbox_workspace_write" not in pure_oracle_tui
 
     realization_profile = profile(FileAccessMode.REALIZATION_WRITE)
-    realization_fs = realization_profile["permissions"]["cmoc"]["file_system"]
-    assert realization_fs["read"] == [str(root)]
-    assert realization_fs["write"] == [str(root)]
-    assert realization_fs["deny_read"] == [str(root / "memo")]
-    assert realization_fs["read_only"] == [
-        str(root / "oracle"),
-        str(root / "memo"),
-        str(root / ".agents"),
-    ]
+    assert realization_profile["sandbox_mode"] == "workspace-write"
     realization_workspace = realization_profile["sandbox_workspace_write"]
     assert realization_workspace["writable_roots"] == [str(root)]
-    assert realization_workspace["read_only_paths"] == realization_fs["read_only"]
+    assert "read_only_paths" not in realization_workspace
 
     (root / "oracle").mkdir()
     oracle_conflict = root / "oracle" / "spec.md"
@@ -360,28 +344,15 @@ def test_codex_profile_contains_file_access_enforcement(tmp_path: Path) -> None:
             extra_writable_paths=[oracle_conflict, root / "memo" / "blocked.md"],
         )
     )
-    conflict_fs = conflict_profile["permissions"]["cmoc"]["file_system"]
     conflict_workspace = conflict_profile["sandbox_workspace_write"]
-    assert str(oracle_conflict) in conflict_fs["write"]
-    assert str(root / "oracle") not in conflict_fs["read_only"]
-    assert str(oracle_conflict) not in conflict_fs["read_only"]
-    assert str(other_oracle_file) in conflict_fs["read_only"]
-    assert str(oracle_conflict) in conflict_workspace["writable_roots"]
-    assert str(root / "oracle") not in conflict_workspace["read_only_paths"]
-    assert str(oracle_conflict) not in conflict_workspace["read_only_paths"]
-    assert str(other_oracle_file) in conflict_workspace["read_only_paths"]
-    assert str(root / "memo") in conflict_fs["read_only"]
-    assert str(root / "memo" / "blocked.md") not in conflict_fs["write"]
+    assert conflict_workspace["writable_roots"] == sorted(
+        [str(root), str(oracle_conflict)]
+    )
+    assert "read_only_paths" not in conflict_workspace
+    assert "permissions" not in conflict_profile
 
-    oracle_fs = profile(FileAccessMode.ORACLE_WRITE)["permissions"]["cmoc"][
-        "file_system"
-    ]
-    assert oracle_fs["read"] == [str(root)]
-    assert oracle_fs["write"] == [str(root / "oracle")]
-    assert oracle_fs["deny_read"] == [str(root / "memo")]
+    oracle_workspace = profile(FileAccessMode.ORACLE_WRITE)["sandbox_workspace_write"]
+    assert oracle_workspace["writable_roots"] == [str(root / "oracle")]
 
-    repo_fs = profile(FileAccessMode.REPO_WRITE)["permissions"]["cmoc"]["file_system"]
-    assert repo_fs["read"] == [str(root)]
-    assert repo_fs["write"] == [str(root)]
-    assert repo_fs["deny_read"] == [str(root / "memo")]
-    assert repo_fs["read_only"] == [str(root / "memo"), str(root / ".agents")]
+    repo_workspace = profile(FileAccessMode.REPO_WRITE)["sandbox_workspace_write"]
+    assert repo_workspace["writable_roots"] == [str(root)]

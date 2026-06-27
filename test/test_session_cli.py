@@ -276,17 +276,11 @@ def test_session_join_resolves_oracle_conflict_with_realization_write_profile(
                 extra_writable_paths=kwargs["extra_writable_paths"],
             )
         )
-        fs = profile["permissions"]["cmoc"]["file_system"]
         workspace = profile["sandbox_workspace_write"]
-        assert str(root) in fs["write"]
-        assert str(target) in fs["write"]
-        assert str(root / "oracle") not in fs["read_only"]
-        assert str(target) not in fs["read_only"]
-        assert str(other_oracle_file) in fs["read_only"]
-        assert str(root / "oracle") not in workspace["read_only_paths"]
-        assert str(other_oracle_file) in workspace["read_only_paths"]
-        assert str(root / "memo") in fs["read_only"]
-        assert str(root / ".agents") in fs["read_only"]
+        assert str(root) in workspace["writable_roots"]
+        assert str(target) in workspace["writable_roots"]
+        assert "read_only_paths" not in workspace
+        assert "permissions" not in profile
         target.write_text("resolved change\nTitle\n=======\n")
         return FakeCodexResult()
 

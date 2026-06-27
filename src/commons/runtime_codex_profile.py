@@ -33,93 +33,40 @@ def _toml_array(values: list[Path]) -> str:
     return "[" + ", ".join(_toml_str(value) for value in values) + "]"
 
 
-def _read_only_files_except(read_only_path: Path, writable: list[Path]) -> list[Path]:
-    if read_only_path.is_file():
-        paths = [read_only_path]
-    elif read_only_path.is_dir():
-        paths = [path for path in read_only_path.rglob("*") if path.is_file()]
-    else:
-        return []
-    return [
-        path
-        for path in sorted(paths)
-        if not any(
-            path == writable_path or path.is_relative_to(writable_path)
-            for writable_path in writable
-        )
-    ]
-
-
-def _permission_profile_lines(
+def _sandbox_lines(
     mode: FileAccessMode,
     root: Path,
-    extra_read_paths: list[Path] | None = None,
     extra_writable_paths: list[Path] | None = None,
 ) -> list[str]:
     root = root.resolve()
+    sandbox_mode = file_access_to_sandbox_mode(mode)
     match mode:
-        case FileAccessMode.READONLY:
-            read_paths = [root]
-            write_paths: list[Path] = []
-            deny_read_paths = [root / "memo"]
-            read_only_paths = [root, root / "memo"]
-        case FileAccessMode.PURE_ORACLE_READ:
-            read_paths = [root / "oracle"]
+        case FileAccessMode.READONLY | FileAccessMode.PURE_ORACLE_READ:
             write_paths = []
-            deny_read_paths = []
-            read_only_paths = [root / "oracle"]
         case FileAccessMode.REALIZATION_WRITE:
-            read_paths = [root]
             write_paths = [root]
-            deny_read_paths = [root / "memo"]
-            read_only_paths = [root / "oracle", root / "memo", root / ".agents"]
         case FileAccessMode.ORACLE_WRITE:
-            read_paths = [root]
             write_paths = [root / "oracle"]
-            deny_read_paths = [root / "memo"]
-            read_only_paths = [root / "memo", root / ".agents"]
         case FileAccessMode.REPO_WRITE:
-            read_paths = [root]
             write_paths = [root]
-            deny_read_paths = [root / "memo"]
-            read_only_paths = [root / "memo", root / ".agents"]
         case _:
             raise CmocError("不明な FileAccessMode です。", [], str(mode))
-    if extra_read_paths:
-        read_paths.extend(path.resolve() for path in extra_read_paths)
-        read_only_paths.extend(path.resolve() for path in extra_read_paths)
     if extra_writable_paths:
+        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+        # Codex CLI v0.142.2 rejects permission_profile/read_only_paths in strict
+        # config; the profile can only carry sandbox mode and extra writable roots.
         protected = [root / "memo", root / ".agents"]
-        writable = [path.resolve() for path in extra_writable_paths]
-        writable = [
-            path
-            for path in writable
+        write_paths.extend(
+            path.resolve()
+            for path in extra_writable_paths
             if not any(path.is_relative_to(base) for base in protected)
-        ]
-        write_paths.extend(writable)
-        narrowed_read_only_paths: list[Path] = []
-        for path in read_only_paths:
-            if any(writable_path.is_relative_to(path) for writable_path in writable):
-                narrowed_read_only_paths.extend(_read_only_files_except(path, writable))
-            else:
-                narrowed_read_only_paths.append(path)
-        read_only_paths = narrowed_read_only_paths
-    # Codex permission profile は read 制限を持つ。legacy workspace profile が表していた
-    # write 除外は read_only として残す。
-    return [
-        'permission_profile = "cmoc"',
-        'default_permissions = "cmoc"',
-        "",
-        "[permissions.cmoc.file_system]",
-        f"read = {_toml_array(read_paths)}",
-        f"write = {_toml_array(write_paths)}",
-        f"deny_read = {_toml_array(deny_read_paths)}",
-        f"read_only = {_toml_array(read_only_paths)}",
-        "",
-        "[sandbox_workspace_write]",
-        f"writable_roots = {_toml_array(write_paths)}",
-        f"read_only_paths = {_toml_array(read_only_paths)}",
-    ]
+        )
+    lines = [f'sandbox_mode = "{sandbox_mode}"']
+    if sandbox_mode == "workspace-write":
+        lines.extend(["", "[sandbox_workspace_write]"])
+        if write_paths:
+            lines.append(f"writable_roots = {_toml_array(sorted(set(write_paths)))}")
+    return lines
 
 
 def build_codex_profile(
@@ -133,14 +80,13 @@ def build_codex_profile(
     reasoning_effort = config.codex.reasoning_effort[parameter.reasoning_effort]
     lines = [
         f'model = "{model}"',
-        f'reasoning_effort = "{reasoning_effort}"',
+        f'model_reasoning_effort = "{reasoning_effort}"',
     ]
     if root is not None:
         lines.extend(
-            _permission_profile_lines(
+            _sandbox_lines(
                 parameter.file_access_mode,
                 root,
-                extra_read_paths,
                 extra_writable_paths,
             )
         )
