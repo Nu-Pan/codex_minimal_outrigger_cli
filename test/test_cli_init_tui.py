@@ -469,9 +469,10 @@ def test_parse_markdown_prompt_ignores_headings_inside_fenced_code_blocks() -> N
         )
     )
 
-    assert [doc.title for doc in parsed] == ["依頼", "補足"]
-    assert isinstance(parsed[0].children, str)
-    assert "# 見出しではない" in parsed[0].children
+    assert [doc.title for doc in parsed] == ["依頼"]
+    assert isinstance(parsed[0].children, list)
+    assert [doc.title for doc in parsed[0].children] == ["本文", "補足"]
+    assert "# 見出しではない" in parsed[0].children[0].children
 
 
 def test_parse_markdown_prompt_preserves_preamble_before_headings() -> None:
@@ -480,3 +481,33 @@ def test_parse_markdown_prompt_preserves_preamble_before_headings() -> None:
     assert [doc.title for doc in parsed] == ["本文", "詳細"]
     assert parsed[0].children == "最初の依頼"
     assert parsed[1].children == "見出し下の依頼"
+
+
+def test_parse_markdown_prompt_preserves_heading_hierarchy() -> None:
+    parsed = parse_markdown_prompt(
+        "\n".join(
+            [
+                "# 親",
+                "",
+                "親本文",
+                "",
+                "## 子",
+                "子本文",
+                "### 孫",
+                "孫本文",
+                "# 次",
+                "次本文",
+            ]
+        )
+    )
+
+    assert [doc.title for doc in parsed] == ["親", "次"]
+    assert isinstance(parsed[0].children, list)
+    assert [doc.title for doc in parsed[0].children] == ["本文", "子"]
+    assert parsed[0].children[0].children == "親本文"
+    child = parsed[0].children[1]
+    assert isinstance(child.children, list)
+    assert [doc.title for doc in child.children] == ["本文", "孫"]
+    assert child.children[0].children == "子本文"
+    assert child.children[1].children == "孫本文"
+    assert parsed[1].children == "次本文"

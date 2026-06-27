@@ -39,6 +39,23 @@ CodexExec = Callable[..., CodexExecResult]
 CodexTui = Callable[..., None]
 
 
+class _MarkdownSection:
+    def __init__(self, level: int, title: str) -> None:
+        self.level = level
+        self.title = title
+        self.body: list[str] = []
+        self.children: list[_MarkdownSection] = []
+
+    def to_struct_doc(self) -> StructDoc:
+        body = "\n".join(self.body).strip()
+        children = [child.to_struct_doc() for child in self.children]
+        if body and children:
+            return StructDoc(self.title, StructDoc("本文", body), *children)
+        if children:
+            return StructDoc(self.title, *children)
+        return StructDoc(self.title, body)
+
+
 def cmoc_tui_impl() -> None:
     """CLI runtime を通して tui を実行する。"""
     enable_indexing_preflight()
@@ -203,11 +220,13 @@ def build_tui_codex_parameter(
 
 def parse_markdown_prompt(markdown: str) -> list[StructDoc] | list[str]:
     """Markdown 見出しを StructDoc 階層へ変換し、見出しなし本文は文字列で保つ。"""
-    sections: list[StructDoc] = []
-    current_title: str | None = None
-    current_body: list[str] = []
+    # <work-root>/oracle/doc/app_spec/sub_command/tui.md
+    top_sections: list[_MarkdownSection] = []
+    stack: list[_MarkdownSection] = []
+    preamble: list[str] = []
     fence: tuple[str, int] | None = None
     for line in markdown.splitlines():
+        current_body = stack[-1].body if stack else preamble
         fence_pattern = (
             r"^[ \t]{0,3}(`{3,}|~{3,}).*$"
             if fence is None
@@ -228,19 +247,23 @@ def parse_markdown_prompt(markdown: str) -> list[StructDoc] | list[str]:
             else re.match(r"^(#{1,6})\s+(.+?)\s*$", line)
         )
         if match:
-            if current_title is not None:
-                sections.append(StructDoc(current_title, "\n".join(current_body).strip()))
+            section = _MarkdownSection(len(match.group(1)), match.group(2))
+            while stack and stack[-1].level >= section.level:
+                stack.pop()
+            if stack:
+                stack[-1].children.append(section)
             else:
-                preamble = "\n".join(current_body).strip()
-                if preamble:
-                    sections.append(StructDoc("本文", preamble))
-            current_title = match.group(2)
-            current_body = []
+                top_sections.append(section)
+            stack.append(section)
             continue
         current_body.append(line)
-    if current_title is None:
+    if not top_sections:
         return [markdown]
-    sections.append(StructDoc(current_title, "\n".join(current_body).strip()))
+    sections: list[StructDoc] = []
+    preamble_body = "\n".join(preamble).strip()
+    if preamble_body:
+        sections.append(StructDoc("本文", preamble_body))
+    sections.extend(section.to_struct_doc() for section in top_sections)
     return sections
 
 
