@@ -9,7 +9,7 @@ def commit_review_index_changes(review_worktree: Path) -> bool:
     non_index = [path for path in changed_paths if Path(path).name != "INDEX.md"]
     if non_index:
         raise CmocError(
-            "review oracle が INDEX.md 以外の差分を作成しました。",
+            "eval-oracle が INDEX.md 以外の差分を作成しました。",
             ["review worktree の差分を確認してください。"],
             "\n".join(non_index),
         )
@@ -23,7 +23,7 @@ def commit_review_index_changes(review_worktree: Path) -> bool:
         ["diff", "--cached", "--name-only"], review_worktree
     ).stdout.splitlines()
     if staged:
-        run_git(["commit", "-m", "cmoc review oracle indexing"], review_worktree)
+        run_git(["commit", "-m", "cmoc eval-oracle indexing"], review_worktree)
         return True
     return False
 

@@ -14,7 +14,7 @@ from sub_commands.apply.join import cmoc_apply_join_impl
 from sub_commands.indexing import cmoc_indexing_impl
 from sub_commands.init import cmoc_init_impl
 from sub_commands.review import (
-    cmoc_review_oracle_impl,
+    cmoc_eval_oracle_impl,
 )
 from sub_commands.session.abandon import cmoc_session_abandon_impl
 from sub_commands.session.fork import cmoc_session_fork_impl
@@ -67,10 +67,8 @@ class _CmocTyperGroup(typer.core.TyperGroup):
 app = typer.Typer(cls=_CmocTyperGroup, no_args_is_help=True)
 session_app = typer.Typer(no_args_is_help=True)
 apply_app = typer.Typer(no_args_is_help=True)
-review_app = typer.Typer(no_args_is_help=True)
 app.add_typer(session_app, name="session")
 app.add_typer(apply_app, name="apply")
-app.add_typer(review_app, name="review")
 
 
 @app.command()
@@ -121,10 +119,13 @@ def apply_abandon() -> None:
     cmoc_apply_abandon_impl()
 
 
-@review_app.command("oracle")
-def review_oracle(scope: str = typer.Option("session", "--scope", "-s")) -> None:
-    """oracle review を隔離 worktree で実行する CLI 入口。"""
-    cmoc_review_oracle_impl(scope)
+@app.command("eval-oracle")
+def eval_oracle(scope: str = typer.Option("session", "--scope", "-s")) -> None:
+    """oracle review を隔離 worktree で実行する CLI 入口。
+
+    正本: `<work-root>/oracle/doc/considered_alternative/working_plan_review.md`。
+    """
+    cmoc_eval_oracle_impl(scope)
 
 
 @app.command()

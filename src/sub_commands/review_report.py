@@ -50,7 +50,7 @@ def render_review_oracle_report(
     review_join_commit: str | None,
     error_message: str | None = None,
 ) -> str:
-    """review oracle report を Markdown + YAML frontmatter で描画する。"""
+    """eval-oracle report を Markdown + YAML frontmatter で描画する。"""
     accepted = [finding for finding in findings if finding.get("verdict") == "accept"]
     fatal_accepted = [
         finding for finding in accepted if finding.get("severity") == "fatal"
@@ -92,7 +92,7 @@ def render_review_oracle_report(
         for idx, path in enumerate(oracle_files, 1)
     )
     frontmatter = [
-        ("command", "review oracle"),
+        ("command", "eval-oracle"),
         ("generated_at", timestamp()),
         ("repo_root", root),
         ("scope", scope),
@@ -114,7 +114,7 @@ def render_review_oracle_report(
             "---",
             *(_render_frontmatter_field(name, value) for name, value in frontmatter),
             "---",
-            "# cmoc review oracle report",
+            "# cmoc eval-oracle report",
             "## Verdict",
             verdict,
             "## Evaluated oracle file",

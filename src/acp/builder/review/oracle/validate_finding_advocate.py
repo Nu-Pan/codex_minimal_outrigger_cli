@@ -1,4 +1,4 @@
-"""`cmoc review oracle` の所見擁護理由列挙 prompt 構築実装。
+"""`cmoc eval-oracle` の所見擁護理由列挙 prompt 構築実装。
 
 対応 oracle file: `<work-root>/oracle/src/acp/builder/review/oracle/validate_finding_advocate.py`。
 """
@@ -24,7 +24,7 @@ def build_review_oracle_validate_finding_advocate_parameter(
     known_challenger_reasons: str,
 ) -> AgentCallParameter:
     """
-    `cmoc review oracle` サブコマンド、所見が妥当である理由の列挙用。
+    `cmoc eval-oracle` サブコマンド、所見が妥当である理由の列挙用。
     AI エージェント呼び出しパラメータを構築する。
 
     finding: str

@@ -1,4 +1,4 @@
-"""`cmoc review oracle` の所見リストマージ prompt 構築実装。
+"""`cmoc eval-oracle` の所見リストマージ prompt 構築実装。
 
 対応 oracle file: `<work-root>/oracle/src/acp/builder/review/oracle/merge_finding.py`。
 """
@@ -22,7 +22,7 @@ def build_review_oracle_merge_finding_parameter(
     findings: str,
 ) -> AgentCallParameter:
     """
-    `cmoc review oracle` サブコマンド、所見リストマージ用。
+    `cmoc eval-oracle` サブコマンド、所見リストマージ用。
     AI エージェント呼び出しパラメータを構築する。
 
     findings: str

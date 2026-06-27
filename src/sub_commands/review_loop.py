@@ -52,7 +52,7 @@ def run_review_oracle_loop(
                 root=log_root,
                 cwd=worktree,
                 config=config,
-                purpose=f"review oracle enumerate findings for {oracle_path}",
+                purpose=f"eval-oracle enumerate findings for {oracle_path}",
             )
             new_findings = list((result.output_json or {}).get("findings", []))
             if not new_findings:
@@ -75,7 +75,7 @@ def run_review_oracle_loop(
                 root=log_root,
                 cwd=worktree,
                 config=config,
-                purpose="review oracle merge findings",
+                purpose="eval-oracle merge findings",
             ).output_json
             edits = list((operations or {}).get("operations", []))
             if not edits:
@@ -137,7 +137,7 @@ def _validate_and_judge_findings(
                 root=log_root,
                 cwd=worktree,
                 config=config,
-                purpose=f"review oracle validate challenger {finding['finding_id']}",
+                purpose=f"eval-oracle validate challenger {finding['finding_id']}",
             ).output_json
             advocate = codex_exec(
                 build_review_oracle_validate_finding_advocate_parameter(
@@ -148,7 +148,7 @@ def _validate_and_judge_findings(
                 root=log_root,
                 cwd=worktree,
                 config=config,
-                purpose=f"review oracle validate advocate {finding['finding_id']}",
+                purpose=f"eval-oracle validate advocate {finding['finding_id']}",
             ).output_json
             challenger_reasons = list((challenger or {}).get("reasons", []))
             advocate_reasons = list((advocate or {}).get("reasons", []))
@@ -167,7 +167,7 @@ def _validate_and_judge_findings(
             root=log_root,
             cwd=worktree,
             config=config,
-            purpose=f"review oracle judge finding {finding['finding_id']}",
+            purpose=f"eval-oracle judge finding {finding['finding_id']}",
         ).output_json
         finding["verdict"] = (judge or {}).get("verdict", "reject")
         finding["judge_reason"] = (judge or {}).get("reason", "")

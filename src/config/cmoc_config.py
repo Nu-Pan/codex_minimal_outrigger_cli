@@ -35,7 +35,7 @@ class CmocConfig:
         default_factory=lambda: CmocConfigApplyFork()
     )
 
-    # `cmoc review oracle` サブコマンドの挙動設定
+    # `cmoc eval-oracle` サブコマンドの挙動設定
     review_oracle: "CmocConfigReviewOracle" = field(
         default_factory=lambda: CmocConfigReviewOracle()
     )
@@ -54,7 +54,7 @@ class CmocConfigApplyFork:
 @dataclass(frozen=True)
 class CmocConfigReviewOracle:
     """
-    `cmoc review oracle` サブコマンドの挙動に関する設定を集約したクラス
+    `cmoc eval-oracle` サブコマンドの挙動に関する設定を集約したクラス
     """
 
     # 所見リスト列挙ループの上限回数
