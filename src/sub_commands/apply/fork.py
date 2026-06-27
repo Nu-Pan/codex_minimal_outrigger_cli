@@ -4,8 +4,6 @@ import shutil
 from pathlib import Path
 from typing import Callable
 
-import typer
-
 from acp.builder.apply.fork.file_finding_enumeration import (
     build_apply_fork_file_finding_enumeration_parameter,
 )
@@ -16,6 +14,7 @@ from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningE
 from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
 from cmoc_runtime import (
     ApplyPart,
+    CliRunResult,
     CmocError,
     SessionState,
     create_run_worktree,
@@ -61,13 +60,14 @@ def cmoc_apply_fork_impl(scope: str) -> None:
         run_codex_exec,
         command_name="apply fork",
         command_argv=["cmoc", "apply", "fork", "--scope", scope],
+        console_output=False,
     )
 
 
 def _cmoc_apply_fork_body(
     scope: str,
     codex_exec: CodexExec,
-) -> int:
+) -> CliRunResult:
     """Codex CLI による apply loop を isolated apply worktree 上で実行する。"""
     if scope not in {"rolling", "session", "full"}:
         raise CmocError("scope が不正です。", ["rolling, session, full のいずれかを指定してください。"], scope)
@@ -161,7 +161,7 @@ def _cmoc_apply_fork_body(
         delete_apply_process_id(root, session_id)
         state.apply.state = "completed"
         write_state(path, state)
-    except BaseException:
+    except BaseException as exc:
         delete_apply_process_id(root, session_id)
         state.apply.state = "error"
         write_state(path, state)
@@ -169,24 +169,14 @@ def _cmoc_apply_fork_body(
             report_path = write_apply_fork_error_report(
                 root, branch, state, finding_counts, apply_worktree, config, codex_exec
             )
-        typer.echo(f"- report: `{report_path}`")
+        setattr(exc, "cmoc_stdout", str(report_path.resolve()))
         raise
-    typer.echo(
-        "\n".join(
-            [
-                "# cmoc apply fork",
-                f"- scope: `{scope}`",
-                f"- apply_branch: `{apply_branch}`",
-                f"- apply_worktree: `{apply_worktree}`",
-                f"- oracle_snapshot_commit: `{oracle_snapshot_commit}`",
-                f"- findings: `{len(findings)}`",
-                f"- result: `{state.apply.state}`",
-                f"- result_label: `{result_label}`",
-                f"- report: `{report_path}`",
-            ]
-        )
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md は stdout を
+    # 作成した report の full path だけに限定している。
+    return CliRunResult(
+        returncode=2 if result_label == "unconverged" else 0,
+        stdout=str(report_path.resolve()),
     )
-    return 2 if result_label == "unconverged" else 0
 
 
 def forbidden_apply_diff(worktree: Path) -> str:

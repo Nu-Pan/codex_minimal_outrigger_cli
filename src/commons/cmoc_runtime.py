@@ -35,6 +35,7 @@ from commons.runtime_content import (
     write_hashed_file_in_existing_dir,
 )
 from commons.runtime_cli import (
+    CliRunResult,
     require_current_directory_is_work_root,
     run_cli_subcommand,
 )

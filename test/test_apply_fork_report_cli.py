@@ -30,6 +30,13 @@ class FakeCodexResult:
         self.output_text = output_text
 
 
+def report_path_from_stdout(stdout: str) -> Path:
+    """apply fork stdout は report の full path だけを返す。"""
+    lines = stdout.splitlines()
+    assert len(lines) == 1
+    return Path(lines[0])
+
+
 def test_apply_fork_writes_report_with_change_summary(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
@@ -99,11 +106,7 @@ def test_apply_fork_writes_report_with_change_summary(
     )
 
     assert result.exit_code == 2
-    report_lines = [
-        line for line in result.output.splitlines() if line.startswith("- report:")
-    ]
-    assert report_lines
-    report_path = Path(report_lines[-1].split("`")[1])
+    report_path = report_path_from_stdout(result.stdout)
     assert report_path.is_file()
     rendered = report_path.read_text()
     assert "result: unconverged" in rendered
@@ -113,7 +116,6 @@ def test_apply_fork_writes_report_with_change_summary(
     assert "ドキュメント: README を更新した (README.md)" in rendered
     assert "apply fork change summary" in calls
     assert "apply fork commit message" in calls
-    assert "- returncode: `2`" in result.output
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
     state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
@@ -199,10 +201,7 @@ def test_apply_fork_rechecks_dirty_files_until_converged(
     assert enumerate_calls >= 2
     assert "README.md" in target_rels
     assert "INDEX.md" not in target_rels
-    report_line = [
-        line for line in result.output.splitlines() if line.startswith("- report:")
-    ][-1]
-    report_path = Path(report_line.split("`")[1])
+    report_path = report_path_from_stdout(result.stdout)
     assert "result: converged" in report_path.read_text()
 
 
@@ -246,12 +245,8 @@ def test_apply_fork_converges_when_last_allowed_target_has_no_findings(
 
     assert result.exit_code == 0
     assert enumerate_calls == 1
-    report_line = [
-        line for line in result.output.splitlines() if line.startswith("- report:")
-    ][-1]
-    report_path = Path(report_line.split("`")[1])
+    report_path = report_path_from_stdout(result.stdout)
     assert "result: converged" in report_path.read_text()
-    assert "- result_label: `converged`" in result.output
 
 
 def test_apply_fork_is_unconverged_when_finding_application_makes_no_diff(
@@ -310,12 +305,8 @@ def test_apply_fork_is_unconverged_when_finding_application_makes_no_diff(
 
     assert result.exit_code == 2
     assert "apply fork commit message" not in calls
-    report_line = [
-        line for line in result.output.splitlines() if line.startswith("- report:")
-    ][-1]
-    report_path = Path(report_line.split("`")[1])
+    report_path = report_path_from_stdout(result.stdout)
     assert "result: unconverged" in report_path.read_text()
-    assert "- result_label: `unconverged`" in result.output
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
     state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
@@ -393,11 +384,7 @@ def test_apply_fork_error_report_summarizes_uncommitted_diff(
     assert applications == 2
     assert "README.md" in summary_prompt
     assert "+# updated before error" in summary_prompt
-    report_lines = [
-        line for line in result.output.splitlines() if line.startswith("- report:")
-    ]
-    assert report_lines
-    rendered = Path(report_lines[-1].split("`")[1]).read_text()
+    rendered = report_path_from_stdout(result.stdout).read_text()
     assert "result: error" in rendered
     assert "実装: commit 前に README を更新した (README.md)" in rendered
 
@@ -428,10 +415,7 @@ def test_apply_fork_report_does_not_invent_loop_when_no_targets(
     result = runner.invoke(app, ["apply", "fork"], catch_exceptions=False)
 
     assert result.exit_code == 0
-    report_line = [
-        line for line in result.output.splitlines() if line.startswith("- report:")
-    ][-1]
-    rendered = Path(report_line.split("`")[1]).read_text()
+    rendered = report_path_from_stdout(result.stdout).read_text()
     assert "result: converged" in rendered
     assert "- no finding enumeration loops were executed" in rendered
     assert "- loop 1: 0" not in rendered
@@ -521,12 +505,8 @@ def test_apply_fork_rejects_forbidden_agents_diff(
     result = runner.invoke(app, ["apply", "fork", "--scope", "full"])
 
     assert result.exit_code != 0
-    assert "編集禁止対象" in result.output
-    report_lines = [
-        line for line in result.output.splitlines() if line.startswith("- report:")
-    ]
-    assert report_lines
-    report_path = Path(report_lines[-1].split("`")[1])
+    assert "編集禁止対象" in result.stderr
+    report_path = report_path_from_stdout(result.stdout)
     assert report_path.is_file()
     rendered = report_path.read_text()
     assert "result: error" in rendered

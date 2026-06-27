@@ -178,7 +178,8 @@ def test_apply_fork_ensures_cmoc_ignore_without_dirtying_session(
         "full", lambda *args, **kwargs: FakeCodexResult()
     )
 
-    assert result == 0
+    assert result.returncode == 0
+    assert Path(result.stdout).is_file()
     assert run_git(root, "status", "--short").stdout.strip() == ""
     assert "/.cmoc/" in exclude.read_text().splitlines()
 
@@ -206,8 +207,8 @@ def test_apply_fork_config_load_error_does_not_start_apply_run(
     result = runner.invoke(app, ["apply", "fork", "--scope", "full"])
 
     assert result.exit_code != 0
-    assert "cmoc config" in result.stdout
-    assert "cmoc config" not in result.stderr
+    assert result.stdout == ""
+    assert "cmoc config" in result.stderr
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
     assert "apply_process_id" not in state["apply"]
