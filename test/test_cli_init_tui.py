@@ -383,6 +383,49 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     assert not (root / ".cmoc" / "state" / "schema").exists()
 
 
+def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    root = make_repo(tmp_path)
+    config_path = root / ".cmoc" / "config.json"
+    config_path.parent.mkdir()
+    config_path.write_text("{}\n")
+    linked = root / ".cmoc" / "worktrees" / "linked"
+    run_git(root, "worktree", "add", "-b", "linked-tui-ignore", str(linked), "HEAD")
+    monkeypatch.chdir(linked)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fake_code = bin_dir / "code"
+    write_python_executable(
+        fake_code,
+        [
+            "import pathlib, sys",
+            "path = pathlib.Path(sys.argv[-1])",
+            "path.write_text(path.read_text() + '\\nlinked ignore task\\n')",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    class FakeResolveResult:
+        output_json = {"file_access_mode": {"value": "readonly", "reason": "test"}}
+
+    monkeypatch.setattr(tui_module, "enable_indexing_preflight", lambda: None)
+    monkeypatch.setattr(tui_module, "run_codex_exec", lambda *_, **__: FakeResolveResult())
+    monkeypatch.setattr(tui_module, "run_codex_tui", lambda *_, **__: None)
+
+    result = runner.invoke(app, ["tui"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert "/.cmoc/" in (root / ".gitignore").read_text()
+    assert "/.cmoc/" in (linked / ".gitignore").read_text()
+    assert len(list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))) == 1
+    assert len(list((root / ".cmoc" / "log" / "tui").glob("*_orig.md"))) == 1
+    assert len(list((linked / ".cmoc" / "log" / "tui").glob("*_cmpl.md"))) == 1
+    assert run_git(root, "status", "--short", "--", ".cmoc").stdout.strip() == ""
+    assert run_git(linked, "status", "--short", "--", ".cmoc").stdout.strip() == ""
+
+
 def test_parse_markdown_prompt_ignores_headings_inside_fenced_code_blocks() -> None:
     parsed = parse_markdown_prompt(
         "\n".join(
