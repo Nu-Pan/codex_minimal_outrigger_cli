@@ -162,25 +162,24 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 呼び出し層の realization test。`codex exec` と TUI 起動時の profile 生成、作業ディレクトリ、sandbox 設定、出力 schema の保存先、call log、エラー変換、`.agents` 変更拒否、Codex CLI 不在時の失敗を、stub 実行ファイルと一時 repo で検証する。
-- 外部の Codex 実体や LLM 出力品質ではなく、cmoc が Codex subprocess をどう起動し、どの制御・ログ・許可領域チェックを行うかを確認する入口である。
+- Codex CLI 呼び出しランタイムの realization test。exec/tui 実行時のプロファイル生成、作業ディレクトリ選択、sandbox 設定、schema 状態保存先、呼び出しログ、プロセスグループ追跡、終了失敗や CLI 不在時のエラー化を検証する。
+- ファイルアクセスモードごとの禁止領域保護を、oracle・memo・.agents への変更拒否、extra read path の事前検査、失敗時ログ出力として確認するテスト群への入口になる。
 
 ## Read this when
-- Codex CLI の `exec` または TUI 呼び出し引数、`--profile`、`--cd`、`--json`、`--output-last-message`、`--output-schema` の扱いを変更する時。
-- file access mode ごとの sandbox profile、特に repo write と pure oracle read の cwd・読み書き権限設定を確認または変更する時。
-- run worktree から呼び出した場合の schema state 保存先を、worktree 配下ではなく repo root 配下に置く挙動を確認する時。
-- Codex subprocess の process group、pid tracking、call log、subcommand logger、console 出力、returncode 記録、失敗時の `CmocError` 化を変更する時。
-- Codex 実行後に `.agents` 配下の変更を検出して拒否する挙動、または TUI 起動前の extra read path 許可領域チェックを変更する時。
-- Codex CLI が見つからない場合や TUI が非ゼロ終了した場合のエラー文言・ログ生成を確認する時。
+- Codex CLI を起動する exec/tui ランタイムの引数、標準入力、作業ディレクトリ、CODEX_HOME 配下のプロファイル内容を変更する。
+- FileAccessMode による sandbox_mode、writable_roots、PURE_ORACLE_READ 時の oracle 作業ディレクトリ化、REPO_WRITE/REALIZATION_WRITE 時の保護領域拒否を確認・変更する。
+- 構造化出力 schema の一時保存先、run worktree から実行した場合の repo root 配下状態保存、または output schema 引数の扱いを変更する。
+- Codex subprocess の process group 管理、tracking path の扱い、呼び出しログ、subcommand logger の codex_call イベント、console への失敗情報表示を変更する。
+- Codex CLI の非ゼロ終了、CLI 不在、起動前の許可領域外 extra read path など、Codex ランタイムの失敗時挙動を確認する。
 
 ## Do not read this when
-- Codex 実行層ではなく、通常の git 操作、repo 作成 fixture、設定ファイル読み込み一般、または path model の正本仕様だけを調べたい時。
-- Codex CLI や LLM の応答内容そのものの品質・意味を検証したい時。この対象は stub subprocess を使い、cmoc 側の起動制御と副作用だけを扱う。
-- CLI サブコマンド全体の利用者向け出力や argparse 定義を調べたい時。ここで扱うのは Codex runtime 呼び出し周辺の制御ロジックに限られる。
-- oracle file の正本仕様を編集・確認したい時。この対象は realization test であり、正本仕様の代替ではない。
+- Codex ランタイムではなく、通常の CLI サブコマンドの引数解析や出力 schema だけを調べたい。
+- oracle file の正本仕様そのもの、または INDEX.md 生成規則を確認したい。
+- Codex CLI 呼び出しを伴わない git helper、repository fixture、path model、設定読み込みの単体挙動だけを調べたい。
+- LLM 応答品質や Codex 本体の機能を検証したい。ここでは cmoc 側が Codex CLI をどう起動し、失敗や禁止編集をどう扱うかだけを検証している。
 
 ## hash
-- 46625cac601c4315bb9a33806ff07085cc05cdfa6f0fcb2122adc43bcc68c7c0
+- f68ede88cd5c2dc417517f58f19e7c20f557241ea2eba07ea345a2e08c4733ea
 
 # `test_codex_runtime_home.py`
 
