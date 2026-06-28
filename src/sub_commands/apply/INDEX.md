@@ -63,24 +63,25 @@
 # `fork.py`
 
 ## Summary
-- apply fork サブコマンドの実行本体を扱う実装。session branch 上で isolated apply worktree を作成し、scope に応じた対象列挙、Codex による finding 列挙と適用、変更の再キュー、commit 生成、完了・失敗時の state 更新と report 出力を統括する。
-- apply fork 中に編集禁止対象へ差分が出た場合の検出、ロールバック、再実行、エラー化の制御も含む。
-- finding 列挙対象の正規化、変更 path の取得、重複排除、前回 join 済み apply merge commit の推定など、apply fork loop を支える局所 helper 群への入口になる。
+- apply fork サブコマンドの実行本体を担う realization implementation。session branch 上で isolated apply worktree を作成し、scope に応じて調査対象を列挙し、Codex による finding 列挙・適用・commit・report 生成までの apply loop を制御する。
+- apply 中の編集禁止対象差分の検出・ロールバック、変更ファイルの再キュー、commit subject 生成、前回 join 済み apply merge commit の解決など、apply fork 固有の制御ロジックと補助処理をまとめている。
 
 ## Read this when
-- apply fork の CLI 実行条件、scope 別の対象ファイル選定、apply worktree・apply branch・session state の更新順を確認または変更したいとき。
-- Codex による finding 列挙、finding 適用、適用後 diff からの commit subject 生成、report 出力までの apply fork loop 全体を追いたいとき。
-- apply fork 中に oracle、.agents、memo など編集禁止対象へ差分が発生した場合の検出・復元・再試行・エラー処理を確認したいとき。
-- 変更済みファイルを再度 finding 列挙対象へ戻す処理、INDEX.md や git ignored path の除外、oracle を含めるかどうかの対象正規化条件を確認したいとき。
+- apply fork の事前条件、状態遷移、worktree・branch 作成、process id 管理、report path 出力、終了コードを確認または変更したいとき。
+- apply scope が rolling、session、full の各場合にどのファイルを finding 列挙対象へ入れるかを確認または変更したいとき。
+- Codex による finding 列挙、finding 適用、commit message 生成の呼び出し条件や retry・失敗時挙動を確認または変更したいとき。
+- apply fork 中に oracle、.agents、memo など編集禁止対象へ差分が出た場合の検出、復元、エラー化の挙動を確認または変更したいとき。
+- apply 適用後の変更ファイルを再調査対象へ戻す条件、INDEX.md や git ignore 対象を除外する正規化条件を確認または変更したいとき。
 
 ## Do not read this when
-- apply fork report の具体的な markdown 内容や error report の生成内容だけを確認したい場合は、report 書き出し側の実装を直接読む。
-- Codex に渡す finding 列挙用または finding 適用用 prompt parameter の内容だけを確認したい場合は、acp builder 側の apply fork 用実装を読む。
-- apply process id の保存・削除・tracking context の細部だけを確認したい場合は、apply runtime 側の実装を読む。
-- apply fork 以外の apply サブコマンド、join・abandon などの挙動を調べたい場合は、それぞれのサブコマンド実装へ進む。
+- apply fork の実行結果 report の本文構成や書き出し形式だけを確認したい場合は、report 生成を担当する別対象へ進む。
+- Codex に渡す finding 列挙用または finding 適用用 prompt parameter の詳細だけを確認したい場合は、parameter builder 側へ進む。
+- apply process id の保存形式や tracking の低レベル実装だけを確認したい場合は、apply runtime 側へ進む。
+- 共通 CLI 実行ラッパー、git command wrapper、worktree 作成、config/state 読み書きの汎用挙動だけを確認したい場合は、cmoc runtime 側へ進む。
+- apply fork 以外の apply サブコマンド、または session 管理・join・abandon など別サブコマンドの挙動を調べたい場合は、それぞれの実装へ進む。
 
 ## hash
-- 97643a5463e0147f03c62061105d5315d729f1546b84624e00edfab14b458df8
+- b3440025483d8608abc341f8ef2e36e8cbd0e6aeff970ad8044b057b0ff8ef32
 
 # `fork_report.py`
 

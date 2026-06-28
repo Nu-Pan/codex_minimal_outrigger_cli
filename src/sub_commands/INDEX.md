@@ -1,26 +1,26 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実行本体をまとめる領域。run の開始、join、abandon、report 生成、実行時 process/worktree 管理まで、apply branch と apply worktree を使った隔離実行と session branch への取り込みに関する実装へ進む入口になる。
-- 対象 worktree の解決、pid file と process tracking、実行中 process の停止、編集禁止対象の検出と復元、state 更新、cleanup、利用者向け report 出力など、apply run のライフサイクル全体に関わる処理が下位に分かれている。
+- 未 join の実行破棄、分離 worktree 上での調査・適用ループ、完了結果の session branch への取り込み、実行時 process 管理、結果 report 生成を含む apply 系サブコマンド実装をまとめる領域。
+- 状態遷移、branch/worktree cleanup、process tracking、差分検証、編集禁止対象の扱い、merge conflict や force-resolve の判断など、apply 実行ライフサイクル固有の制御へ進む入口になる。
 
 ## Read this when
-- apply run の開始、破棄、join、report 生成、実行時補助のどれを読むべきかを選びたいとき。
-- apply branch、apply worktree、session branch、apply state の関係や、apply run の状態遷移に関わる実装の入口を探しているとき。
-- apply の実行中断、abandon、cleanup、process 停止、pid file 管理、worktree/branch 削除に関係する不具合を調査するとき。
-- apply fork の対象列挙、Codex による finding 列挙と適用、変更の再キュー、commit/report/state 更新の流れを追いたいとき。
-- apply join での merge、想定外差分検出、force-resolve、merge conflict、成功後 cleanup、report 出力を確認したいとき。
-- apply fork report の保存内容、frontmatter、変更要約、差分収集、要約生成失敗時の fallback を調べたいとき。
+- apply run の開始、破棄、完了取り込み、失敗時処理、cleanup、状態リセットのどこを読むべきか切り分けたいとき。
+- session branch と apply 用 branch/worktree の関係、実行場所の制約、対象 worktree の解決、branch/worktree 削除の流れを確認したいとき。
+- apply 実行中の pid file、process tracking 用環境変数、実行中 process や subprocess group の停止安全性を調べたいとき。
+- apply 中の Codex 呼び出し、finding 列挙・適用、commit subject 生成、変更ファイルの再キュー、編集禁止対象差分の検出と復元を確認したいとき。
+- apply 結果 report の保存先、frontmatter、結果表示、変更要約、失敗時 fallback、join 時 report や warning の内容を確認したいとき。
+- apply branch と session branch の許可差分、想定外差分の検出、force-resolve、merge conflict、INDEX.md だけの conflict 自動解決を調べたいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド実装、共通 CLI dispatch、共通 runtime helper、git command wrapper、state file の一般的な読み書きだけを調べたいとき。
-- 正本仕様、oracle の文書、path model、または実装全体の設計原則を確認したいとき。
-- Codex に渡す prompt parameter や acp builder 側の詳細だけを調べたいとき。
-- branch/worktree 操作の低レベル共通処理や report directory の共通 path 解決だけが目的で、apply 固有の制御に関心がないとき。
-- テスト追加先や apply 挙動の外部仕様だけを探しており、実装本体へ進む前にテスト領域または oracle 領域を確認すべきとき。
+- apply 以外の session 管理、review、oracle、基本 path model など別サブコマンドや正本仕様そのものを調べたいとき。
+- CLI 全体の共通 dispatch、git command wrapper、config/state 読み書き、report directory path 解決など、apply 固有ではない低レベル共通処理だけが目的のとき。
+- Codex に渡す prompt parameter の詳細だけを調べたいときは、parameter builder 側へ直接進む。
+- テスト観点や期待挙動を確認したいだけで、実装の制御フローを読む必要がないときは、対応するテスト領域へ進む。
+- パッケージに初期化処理や再 export があるかだけを確認したい場合を除き、具体的な実行ロジックではない入口説明だけを読む必要はない。
 
 ## hash
-- d35e1a8eece6bbffeeef4a13fb3b9f53a811a53d4932b5a34a9a2accf2dd5db5
+- 22cb9956f57736c49702f4e94d84ab3f4ee83f60bd0bee2e2e1336a4fc7bce05
 
 # `indexing.py`
 

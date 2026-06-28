@@ -70,25 +70,27 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 実行が、所見列挙から適用、commit、変更要約、report 生成、session state 更新へ進む一連の制御を検証する realization test。
-- 未収束・収束・error・変更ファイル再調査・未追跡ファイル差分・編集禁止対象差分・rolling apply fork の起点 commit など、apply fork report と再検査制御に関する観測結果をまとめて扱う。
-- 大きめのテストファイルだが、apply fork report schema と loop 制御の期待値を一箇所で読むための凝集した入口になっている。
+- apply fork の CLI 実行を通じて、所見列挙、適用、commit、変更要約、report 生成、session state 更新までの一連の制御を検証する realization test。
+- 収束、未収束、error、変更ファイル再調査、未追跡ファイルの変更要約、編集禁止対象差分、rolling fork の対象選定を、同じ apply fork loop と report schema の観測結果として扱う。
+- ファイル自体が大きい理由は、apply fork report の期待値と loop 制御の読み取り文脈を一箇所に保つためであり、分割すると期待値の文脈が分散するという責務境界にある。
 
 ## Read this when
-- apply fork の report 内容、終了コード、収束判定、未収束判定、error report の期待挙動を確認したいとき。
-- apply fork が Codex 応答を使って所見を適用し、commit message や変更要約を生成し、apply branch や session state を更新する制御を変更するとき。
-- apply 後に変更されたファイルを再調査対象へ戻す制御、INDEX.md を再調査対象から除外する制御、未追跡ファイルを変更要約へ含める制御を確認したいとき。
-- 編集禁止対象への差分を検出した場合の error state、stderr、report、変更要約の扱いを変更または調査するとき。
-- rolling apply fork が前回 apply join 後の変更だけを対象にする挙動を確認したいとき。
+- apply fork の report 出力、終了コード、収束・未収束・error 判定を変更または調査するとき。
+- apply fork が Codex の所見列挙、所見適用、commit message 生成、変更要約生成をどの順に呼び、どの観測結果を report に反映するか確認したいとき。
+- apply 後に変更された file を再調査する制御、特に INDEX.md を再調査対象から外す挙動を確認するとき。
+- finding application が差分を作らない場合の再調査待ち、commit 抑制、apply branch の扱いを確認するとき。
+- error report が commit 前の working tree 差分や未追跡 file を変更要約に含めるかを確認するとき。
+- 編集禁止対象への差分を検出した場合の stdout、report、session state の error 反映を確認するとき。
+- rolling apply fork が前回 apply join 後の変更だけを対象にするか確認するとき。
 
 ## Do not read this when
-- apply fork の内部実装そのもの、report rendering helper、差分抽出 helper の実装を変更したいだけで、期待される外部挙動や CLI 経由の統合観点を確認する必要がないとき。
-- apply join、session fork、init などの個別コマンドの基本挙動だけを調べたいとき。
-- Codex 実行 wrapper や AgentCallParameter の汎用仕様を調べたいとき。
-- apply fork 以外のサブコマンドや、report と再検査制御に関係しないテストを探しているとき。
+- apply fork の内部 helper 単体の純粋な実装詳細だけを確認したいときは、該当する実装 module を直接読む方がよい。
+- apply fork 以外の apply join、session fork、init などの CLI 挙動そのものを調査するときは、それぞれの専用テストや実装を読む方がよい。
+- Codex 実行結果 fake やテスト用 repository fixture の共通的な作り方だけを確認したいときは、共通 support 側を読む方がよい。
+- report markdown の整形関数や差分収集 helper の局所的な仕様だけを確認したいときは、対象 helper の実装またはより小さい単位のテストを優先する。
 
 ## hash
-- f9ac48ae50f31a73d1e0aa3275de4ef7c5f851671e697cc02ab7d858c8c014cf
+- 2876ba06713f97e07fd4138dd41dd55d00dcb4501e016c9c42450671c6121b2f
 
 # `test_apply_join_cli.py`
 
