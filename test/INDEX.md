@@ -44,53 +44,46 @@
 # `test_apply_fork_cli.py`
 
 ## Summary
-- apply fork の CLI 経路と内部 body が、Codex 実行ループ、apply run の branch/state/worktree 更新、linked worktree 起点、設定読み込み失敗時の中断、.cmoc ignore 処理、.gitignore 編集対象化、target 正規化を期待どおり扱うことを検証する realization test。
-- session fork 後に apply fork を実行したとき、apply state が completed になり、apply branch と run_id 別 worktree が作られ、旧 apply_worktree/apply_process_id/pid が残らず、所見列挙が呼ばれることを確認する。
-- linked worktree 上で開始した session branch と HEAD commit を apply run の起点にし、apply worktree は linked worktree 配下ではなく cmoc 管理 worktree 配下へ作ることを確認する。
-- apply fork が session 側の既存 .gitignore 表現を書き換えないこと、未 ignore の .cmoc は git info exclude で clean にすること、所見対象としての .gitignore は apply branch 側で編集できることを確認する。
-- target 正規化について、root 直下 memo は除外しつつ入れ子の memo directory は残し、binary file も file 種別だけでは除外しないことを確認する。
+- apply fork サブコマンドの realization test。Codex 実行を fake に差し替え、apply run の開始・完了、session state 更新、apply branch/worktree 作成、linked worktree 上の HEAD 起点、設定読み込み失敗時の中断、.gitignore の扱い、target 正規化を検証する。
+- CLI 経由の統合的な挙動確認と、apply fork module の一部関数を直接呼ぶ境界条件確認の両方を含むため、apply fork の外部副作用や state/worktree/branch のライフサイクルを調べる入口になる。
 
 ## Read this when
-- apply fork の外部挙動、state 遷移、apply branch 名、apply worktree 配置、apply_process pid の後始末に関するテスト期待値を確認したいとき。
-- linked worktree から apply fork を走らせる場合の oracle snapshot commit、apply branch の開始 commit、worktree 配置の期待値を確認したいとき。
-- apply fork 実行時の .cmoc ignore 処理、session 側 .gitignore の保持、git info exclude への追加、.gitignore 自体を所見対象として編集する挙動を確認したいとき。
-- cmoc config が壊れている、または存在しない場合に、apply run の branch/state/pid を開始せず stdout にエラーを出す挙動を確認したいとき。
-- apply fork の target 正規化で root 直下 memo、入れ子の memo directory、binary file、oracle 配下 file の扱いを確認したいとき。
-- Codex 実行を fake に差し替えて apply fork の制御フローや副作用をテストする既存パターンを参照したいとき。
+- apply fork の実装変更により、session state の apply 状態、apply branch 名、apply worktree 配置、PID file 削除、完了判定が変わる可能性があるとき。
+- linked worktree 上で apply fork を実行した場合の起点 commit、session branch、apply branch、worktree 配置の期待挙動を確認したいとき。
+- apply fork 実行前の cmoc config 読み込み失敗時に、apply run を開始しないことやエラー出力先を確認したいとき。
+- apply fork が .cmoc ignore を確保する処理、session 側の .gitignore を dirty にしない処理、または apply branch 側で .gitignore を編集対象にできる処理を変更するとき。
+- apply fork の対象 path 正規化で、root 直下の memo 除外、入れ子の memo directory の保持、binary file の保持を確認したいとき。
+- Codex 呼び出しを伴う apply fork loop の呼び出し目的、所見列挙、所見適用、変更要約の制御をテスト上で追いたいとき。
 
 ## Do not read this when
-- apply fork の実装本体、永続 state の読み書き helper、git worktree 作成処理、Codex 呼び出し処理を変更したいだけで、テスト期待値ではなく実装詳細を確認したいとき。
-- session fork、init、git helper、runner fixture など apply fork 以外の CLI テスト基盤そのものを調べたいとき。
-- apply fork 以外の apply サブコマンド、review、oracle、path model などの仕様やテストを探しているとき。
-- Codex CLI や LLM 出力品質そのものの検証方針を知りたいとき。この対象は Codex 実行結果を fake 化し、apply fork 側の制御と副作用だけを検証する。
+- apply fork 以外の apply 系サブコマンドや session fork 単体の仕様を調べたいだけのとき。
+- Codex CLI や LLM 出力内容そのものの品質を検証したいとき。この対象は Codex 実行結果を fake にして制御フローと副作用を検証する。
+- path model、oracle/realization の概念定義、INDEX routing の規約を確認したいとき。
+- apply fork の内部 helper 実装そのものを読みたいとき。この対象は期待される外部挙動と重要な境界条件を示すテストであり、実装詳細の入口ではない。
 
 ## hash
-- afa9543f71fb61a087b92aa30f464282ad3d4815a4d75b7a289e83836f07ff5d
+- 299d8a600d3ab3b419a47ee298117556c499bfbbc77d3d80778aeade1dded333
 
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 実行を通じて、所見列挙、適用、commit、変更要約、report 生成、session state 更新までの一連の制御を検証する realization test。
-- 収束、未収束、error、変更ファイル再調査、未追跡ファイルの変更要約、編集禁止対象差分、rolling fork の対象選定を、同じ apply fork loop と report schema の観測結果として扱う。
-- ファイル自体が大きい理由は、apply fork report の期待値と loop 制御の読み取り文脈を一箇所に保つためであり、分割すると期待値の文脈が分散するという責務境界にある。
+- apply fork を CLI 経由で実行したときの所見列挙、適用、commit、変更要約、report 出力、session state 更新の制御を検証する realization test。未収束・収束・error・変更ファイル再調査・rolling apply fork を、同じ loop と report schema の観測結果としてまとめて扱う。
+- report 用の差分収集 helper が未追跡ファイルを変更要約対象に含めること、調査対象がない場合に未実行 loop を report しないこと、編集禁止対象への差分を error state と report に反映することも確認する。
 
 ## Read this when
-- apply fork の report 出力、終了コード、収束・未収束・error 判定を変更または調査するとき。
-- apply fork が Codex の所見列挙、所見適用、commit message 生成、変更要約生成をどの順に呼び、どの観測結果を report に反映するか確認したいとき。
-- apply 後に変更された file を再調査する制御、特に INDEX.md を再調査対象から外す挙動を確認するとき。
-- finding application が差分を作らない場合の再調査待ち、commit 抑制、apply branch の扱いを確認するとき。
-- error report が commit 前の working tree 差分や未追跡 file を変更要約に含めるかを確認するとき。
-- 編集禁止対象への差分を検出した場合の stdout、report、session state の error 反映を確認するとき。
-- rolling apply fork が前回 apply join 後の変更だけを対象にするか確認するとき。
+- apply fork の CLI 終了コード、report の result 表示、Finding Count、変更要約、未収束メッセージ、error report の内容を変更または調査するとき。
+- apply fork が所見適用後に変更ファイルを再調査する制御、再調査対象から routing 文書を除外する制御、上限回到達時の収束判定を確認するとき。
+- apply fork の commit 作成条件、機械生成 commit message を使わない場合、差分なし適用時の apply branch と session state の扱いを変更するとき。
+- 編集禁止対象の差分検出、未 commit 差分を含む変更要約、error state への遷移を検証するとき。
+- apply join 後の rolling apply fork が前回 join 済み apply の oracle snapshot 以後の変更だけを対象にする挙動を確認するとき。
 
 ## Do not read this when
-- apply fork の内部 helper 単体の純粋な実装詳細だけを確認したいときは、該当する実装 module を直接読む方がよい。
-- apply fork 以外の apply join、session fork、init などの CLI 挙動そのものを調査するときは、それぞれの専用テストや実装を読む方がよい。
-- Codex 実行結果 fake やテスト用 repository fixture の共通的な作り方だけを確認したいときは、共通 support 側を読む方がよい。
-- report markdown の整形関数や差分収集 helper の局所的な仕様だけを確認したいときは、対象 helper の実装またはより小さい単位のテストを優先する。
+- apply fork の実装構造だけを追いたい場合は、先に apply fork 本体や report helper の実装へ進めばよい。
+- apply fork 以外の session fork、apply join、設定読み込み、git helper の一般挙動を調べるだけなら、より直接の実装または専用テストを読む方がよい。
+- Codex 実行結果の品質や LLM の文章生成そのものを評価したい場合は対象外であり、このテストは fake 応答を使った制御ロジックの検証に閉じている。
 
 ## hash
-- 2876ba06713f97e07fd4138dd41dd55d00dcb4501e016c9c42450671c6121b2f
+- f50ae672a278df2e7af566bfe59a474dd35ce5e06078ba4d28793fa90428fa95
 
 # `test_apply_join_cli.py`
 
@@ -141,27 +134,25 @@
 # `test_cli_init_tui.py`
 
 ## Summary
-- cmoc の `init` と TUI 起動直前の CLI 前処理について、利用開始直後に共有される外部挙動を検証する realization test。`.cmoc` の ignore 設定、既存 staged/unstaged 差分の保護、既定設定の作成と既存設定への同期、linked worktree での repository/runtime 準備、TUI の prompt 保存と Codex 起動 parameter 構築、Markdown prompt 解析の見出し構造を扱う。
-- 16,000 文字を超えるが、初期化済み状態を読む文脈が分散しないよう、cmoc 初期化と対話起動前の repository/runtime 準備という同じ CLI 境界の回帰検証を一箇所にまとめている。
+- init と対話起動前処理の CLI 境界を検証する realization test。cmoc 初期化時の .cmoc ignore、既存の staged/unstaged 差分保護、既定設定生成と人間設定の保持、linked worktree での repository/runtime 準備、sub command log、Markdown prompt 補完、TUI 起動用 AgentCallParameter 構築を外部挙動としてまとめて扱う。
+- 16,000 文字を超えるが、利用開始直後の init/TUI 前処理で共有される初期化済み状態の読み取り文脈を一箇所に保つための回帰テスト群として位置づけられている。
 
 ## Read this when
-- `init` の外部挙動、特に `.cmoc` 配下を追跡対象から外す処理、`.cmoc` ignore の維持、初期化 commit の対象、sub command log の記録を確認または変更するとき。
-- 既存の staged 変更や `.gitignore` の staged/unstaged 変更を、`init` が壊したり勝手に commit したりしないことを確認したいとき。
-- 既定の設定ファイル生成、既存設定に対する default key の補完、人間が書いた設定値の保持を確認または変更するとき。
-- linked worktree からの `init` または TUI 起動で、repository root と作業 worktree の `.cmoc`、`.gitignore`、log、schema、commit 対象がどこに作られるべきかを確認するとき。
-- TUI が editor で作成した Markdown prompt から HTML comment を除去し、parameter 解決用 Codex 呼び出しと本体 TUI 用 Codex 呼び出しをどう組み立てるかを確認または変更するとき。
-- TUI の resolved parameter から file access mode、model class、reasoning effort、structured output schema、extra read paths を構築する挙動を検証するとき。
-- Markdown prompt parser が fenced code block 内の見出しを無視し、見出し前本文と階層構造を保持する挙動を確認または変更するとき。
+- init の外部挙動、特に .cmoc 配下の追跡解除、.gitignore または exclude への ignore 反映、cleanup commit、既存ユーザー差分を commit しない保証を確認・変更するとき。
+- 初期設定ファイルの既定値、既存設定への defaults 同期、人間が設定した値を上書きしない挙動を確認・変更するとき。
+- linked worktree 上で init や tui を実行した場合の root/cwd、ログ保存先、schema 保存先、ignore 状態、worktree 側に不要な .cmoc 状態を残さない保証を確認・変更するとき。
+- tui 起動で editor が更新した Markdown prompt から HTML comment を除去し、補完済み prompt を保存し、parameter 解決用 Codex exec と TUI 用 Codex 起動へ渡す値を確認・変更するとき。
+- file_access_mode の解決結果、空の解決値の既定値、model class、reasoning effort、structured output schema、extra read paths など TUI 用 AgentCallParameter の組み立てを確認・変更するとき。
+- sub command log の command_invoked event、argv、ログディレクトリ構成など、init/tui の起動直後に残るログ形式を確認・変更するとき。
 
 ## Do not read this when
-- CLI 全体のコマンド定義や option 一覧を把握したいだけで、`init` と TUI 起動前処理の外部挙動を検証しないとき。
-- Codex 実行 wrapper や AgentCallParameter の一般的な仕様だけを調べたいとき。
-- `.cmoc` の path model や repository/worktree root 判定そのものの実装詳細を調べるときは、該当する実装または仕様を直接読む方がよい。
-- TUI の画面描画、継続的な対話 UI、または Codex CLI の出力品質そのものを検証したいとき。
-- Markdown 全般の parser 仕様を網羅的に調べたいとき。この対象は TUI prompt 分割に必要な見出し・本文・fenced code block の回帰だけを扱う。
+- 個別の CLI 実装内部だけを調べたい場合。外部挙動の期待値ではなく処理本体を追うなら、対応する実装側へ進む方が直接的。
+- init や TUI 前処理と無関係なサブコマンド、review、apply、oracle 操作、通常の Codex 実行フローを扱う場合。
+- Codex CLI や LLM の出力品質そのものを検証したい場合。この対象は fake/stub を使って cmoc 側の制御と渡し値を検証している。
+- 単純な path model、設定 schema の全体定義、または git helper の単体仕様だけを確認したい場合。ここではそれらを init/TUI 境界の副作用としてしか扱わない。
 
 ## hash
-- 84ead6e56fa7c20ea13f689db248fffa248f0b896e22402a301d2b00cf882174
+- 79e2e340673bef7b1e014fb8f82b247ea4be8687bc1cf5674efc68f6332ea792
 
 # `test_codex_runtime_exec.py`
 

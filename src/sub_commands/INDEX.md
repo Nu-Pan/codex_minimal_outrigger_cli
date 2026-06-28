@@ -1,25 +1,26 @@
 # `apply`
 
 ## Summary
-- 未 join の適用作業を開始・破棄・取り込みするサブコマンド群と、その実行中 process 追跡、作業用 worktree/branch の cleanup、実行結果 report 生成を扱う実装領域。
-- 状態遷移、branch/worktree 作成と削除、実行中 process の停止、finding 適用後の commit/report 化、merge conflict や想定外差分の復旧補助など、適用作業ライフサイクル全体への入口になる。
+- apply run の開始、完了取り込み、未 join run の破棄、および実行中 process の追跡・停止を扱うサブコマンド実装群への入口。
+- isolated worktree と branch を使った finding 適用 loop、report 生成、state 遷移、cleanup、merge conflict 対応、禁止対象差分の rollback など、apply 系操作の制御フローを切り分けて調べるための階層。
+- ユーザー操作としての fork・join・abandon と、それらを支える runtime 補助や report 作成を同じ責務領域として扱う。
 
 ## Read this when
-- 適用作業の開始から完了・エラー・破棄・取り込みまでの状態遷移や実行条件を確認・変更したいとき。
-- 作業用 branch/worktree の作成、削除、cleanup、または session 側への merge と conflict 処理を追いたいとき。
-- 実行中の適用 process や Codex subprocess の記録、停止、pid file 管理、異常な pid 内容の扱いを確認したいとき。
-- finding の列挙・適用・再キュー、禁止対象に出た差分の rollback、適用後 diff からの commit subject 生成に関わる制御を確認したいとき。
-- 適用作業の実行結果や失敗結果を report として保存し、変更差分や要約、状態情報を出力する処理を確認・変更したいとき。
+- apply run を開始して対象列挙、Codex による finding 適用、再キュー、commit、report 出力、state 更新まで進める流れを確認・変更したいとき。
+- 完了またはエラー状態の apply run を session 側へ join し、merge conflict、想定外差分、force-resolve、worktree・branch cleanup を扱う挙動を調べたいとき。
+- 未 join の apply run を破棄し、実行中 process 停止、worktree・branch・pid file 削除、state 初期化、warning 出力を確認・変更したいとき。
+- apply 実行中 process や Codex subprocess の追跡、pid file lifecycle、branch から worktree を復元する処理、SIGTERM/SIGKILL を含む停止処理を調べたいとき。
+- apply fork の Markdown report 生成、変更差分収集、構造化変更要約、frontmatter や本文表示を確認・変更したいとき。
 
 ## Do not read this when
-- 個別の適用作業ではなく、CLI 全体の共通実行ラッパー、git command 実行規約、path model、設定読み込み、状態ファイルの低レベル読み書きを調べたいとき。
-- Codex に渡す prompt や構造化出力設計そのもの、finding enumeration や finding application の詳細だけを調べたいとき。
-- report directory、timestamp、汎用 report 表示仕様など、適用作業固有でない report 共通機能だけを確認したいとき。
-- ルーティング文書や INDEX.md エントリー生成規約だけを確認したいとき。
-- パッケージ説明や import 副作用の有無だけを確認したいときは、具体的な制御実装へ進む必要はない。
+- apply 以外のサブコマンド、共通 CLI 実行ラッパー、git command wrapper、path model、config/state model の一般仕様だけを調べたいとき。
+- session state の schema や保存形式そのもの、state file の低レベルな読み書き責務を確認したいだけのとき。
+- Codex CLI 呼び出し parameter の構築、finding 列挙・適用用 prompt や構造化出力の設計だけを調べたいとき。
+- report directory、timestamp、git diff 実行 helper など、apply report 固有ではない共通処理を調べたいとき。
+- パッケージ説明や import 時副作用の有無だけを確認したいときは、実装ロジックではなく package 入口の本文だけで足りる。
 
 ## hash
-- 66b4c02abc252fdfbad427064bfe9e5a3bc235901db0a4ee33f208e122fbe9eb
+- 86f06e5545d60c452300ad65aeeab7c0526e5e37cb2cccf1788b2f4e3ef5f382
 
 # `indexing.py`
 
@@ -201,22 +202,20 @@
 # `tui.py`
 
 ## Summary
-- 利用者が入力した依頼文を編集させ、解決用 Agent 呼び出しで TUI 実行パラメータを決め、完全な prompt を保存して Codex TUI を起動するサブコマンド実装を扱う。
-- TUI 実行前の indexing preflight、ログ領域の `.cmoc` ignore 保証、元 prompt と完全 prompt の保存、利用可能エディタ選択、Markdown 見出しの構造化、解決済み JSON からの AgentCallParameter 構築を一つの流れとして担う。
+- `cmoc tui` の実行本体を担う realization implementation。利用者が編集する元 prompt の作成、エディタ起動、prompt からの TUI 起動パラメータ解決、Codex TUI 起動までの一連の制御を扱う。
+- TUI 実行前に `.cmoc` ignore を保証し、TUI で許可される file access mode の検証、解決済み JSON から `AgentCallParameter` への変換、ネストされた `{value: ...}` 形式の値取得を行う。
 
 ## Read this when
-- 利用者編集用 prompt から Codex TUI 起動までの制御フローを確認または変更したいとき。
-- TUI で許可する file access mode、resolve parameter の結果の読み取り、完全 prompt に含める oracle/review/indexing 系フラグの扱いを確認したいとき。
-- TUI 用ログ領域への元 prompt・完全 prompt の保存先、保存名、`.cmoc` ignore の事前保証に関わる挙動を確認したいとき。
-- TUI 起動前に使うエディタの選択順、エディタ異常終了時のエラー、prompt テンプレート中の HTML comment 除去を扱うとき。
-- Markdown の見出し・本文・コードフェンスを StructDoc 階層へ変換する処理を確認または変更したいとき。
+- `cmoc tui` の起動フロー、prompt 編集から Codex TUI 起動までの制御順序を確認・変更したいとき。
+- TUI 用の元 prompt テンプレート、保存先、HTML comment 除去、エディタ選択、エディタ異常終了時の扱いを確認したいとき。
+- TUI の file access mode 制限、解決済みパラメータの既定値、`role`・`summary`・`goal`・各 standard flag から TUI 起動用パラメータを組み立てる処理を確認したいとき。
+- TUI 実行時に `.cmoc` ignore をどの root に対して保証するか、repository root と work root の扱いを確認したいとき。
 
 ## Do not read this when
-- TUI ではなく exec など別サブコマンドの CLI 制御や入出力を確認したいだけのとき。
-- Codex 実行ランタイム、設定読み込み、repository/work root 判定、ログ実行基盤そのものの実装を確認したいとき。
-- resolve parameter の prompt 生成内容や TUI で選べる file access mode の定義自体を確認したいとき。
-- 完全 prompt の共通生成ロジックや StructDoc のレンダリング仕様そのものを確認したいとき。
-- エディタ起動や Markdown 構造化ではなく、TUI セッション内で Codex が行う作業内容を調べたいとき。
+- TUI 向け prompt からパラメータを推定する LLM 呼び出し用入力の schema や builder 自体を確認したいだけなら、resolve parameter 側を読む。
+- Codex TUI 起動用 prompt 全体の文面・構成・標準指示の内容を確認したいだけなら、launch TUI parameter builder 側を読む。
+- CLI runtime 全般、repository root や work root の解決、Codex 実行 wrapper、設定読み込みの共通挙動を確認したいだけなら runtime 側を読む。
+- TUI 以外の sub command の実行フローや引数処理を確認したい場合は、対象 sub command の実装を読む。
 
 ## hash
-- 374ac7e1a3e18a4b8a01c23ab501cd5769d6c0792add919a64687852a17d1984
+- 5fd4f89ffaa5bd36df37c3140cac01b525bd4d460c1d94bdea8dd4925d644cd2

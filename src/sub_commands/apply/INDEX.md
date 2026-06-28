@@ -61,24 +61,24 @@
 # `fork.py`
 
 ## Summary
-- apply run を fork 側で開始し、isolated worktree 上で対象列挙、finding 列挙、finding 適用、禁止対象差分の rollback、commit subject 生成、commit、report 出力、state 更新までを進める orchestration を担う。
-- apply scope ごとの対象決定、変更ファイルの再キュー、最後に join した apply merge commit の解決など、apply loop の進行条件と復旧条件を一箇所で扱う。
+- apply run を isolated worktree 上で開始し、scope に応じた対象列挙、Codex による finding 列挙・適用、禁止対象差分の rollback、commit、report 出力、apply state 更新までを一つの制御 loop として扱う。
+- apply fork の事前条件確認、run 用 branch/worktree 作成、process id 管理、converged/unconverged/error の結果処理、finding 適用後の変更 file 再キュー、commit subject 生成をまとめて読む入口になる。
+- 16,000 文字を超えるが、apply state、worktree、禁止差分 rollback、再キュー、commit subject が同じ失敗時復旧条件を共有するため、apply fork orchestration として一箇所に保持されている。
 
 ## Read this when
-- apply fork の実行条件、session/apply state の遷移、apply branch/worktree 作成、process id 管理、report path の stdout 返却を確認・変更したいとき。
-- apply scope に応じた finding 列挙対象の選び方、変更後ファイルの再キュー、INDEX や ignored file や oracle を対象から外す条件を確認したいとき。
-- Codex による finding 適用、編集禁止対象へ差分が出た場合の rollback と retry、失敗時の error state/report 生成を確認・変更したいとき。
-- apply finding 適用後の diff から commit subject を生成し、Codex 出力を commit message として安全な 1 行へ丸める処理を確認したいとき。
-- rolling scope で基準にする直近 apply join merge commit を git 履歴から解決する制御を確認したいとき。
+- apply fork の実行条件、scope ごとの対象 file 選定、apply worktree/branch の作成、apply state の running/completed/error 遷移を確認したいとき。
+- Codex による finding 列挙・適用 loop、finding がない場合や変更がない場合の扱い、変更 file の再キュー、converged/unconverged の判定を追いたいとき。
+- apply fork 中に oracle、.agents、memo へ発生した禁止差分を検出・rollback し、再実行または CmocError にする挙動を確認・変更したいとき。
+- apply fork の report path を stdout に返す挙動、error report 生成、process id の削除、commit message の生成規則、最後に join した apply merge commit の解決を扱うとき。
 
 ## Do not read this when
-- apply fork で呼び出す Codex prompt の具体的な組み立てだけを確認したい場合は、file finding enumeration や finding application の parameter builder を直接読む方が適切。
-- apply fork report の本文構成や error report の出力内容だけを確認したい場合は、report 生成側を直接読む方が適切。
-- apply process id の保存形式や tracking context の詳細だけを確認したい場合は、apply runtime 側を直接読む方が適切。
-- git worktree 作成、state 永続化、config 読み込み、CLI subcommand 共通実行など runtime 共通機能の詳細を確認したい場合は、共通 runtime 側を読む方が適切。
+- apply fork report の本文生成や error report の書式だけを確認したい場合は、report 作成側を直接読む。
+- Codex に渡す finding 列挙・finding 適用用 parameter の詳細だけを確認したい場合は、builder 側を直接読む。
+- apply process id の保存形式や tracking context manager の内部だけを確認したい場合は、apply runtime 側を直接読む。
+- apply 以外の subcommand、共通 CLI runtime、git wrapper、config/state model の一般仕様だけを調べたい場合は、それぞれの共通実装や仕様へ進む。
 
 ## hash
-- acc9a53ca3208fbf786162f53aae04258562e248bc575de3389b9cb1de098f0d
+- 4d678c7a36b51a5d92f17e6cc1328c1648e901296bd2733201588e8c8b5f9713
 
 # `fork_report.py`
 

@@ -1,3 +1,44 @@
+# `acp`
+
+## Summary
+- oracle src 側の ACP 実装を、realization implementation 側の import 経路から参照できるようにする互換パッケージ領域。
+- この領域自体は ACP の処理本体や正本仕様断片ではなく、acp 名前空間の成立と builder 配下の互換入口へ進むための上位入口として位置づけられる。
+- 下位には builder 領域があり、適用、indexing、review、session、TUI などの正本側 builder 実装へ src 側から到達するための接続点を束ねる。
+
+## Read this when
+- src 側の acp パッケージが oracle src 側の ACP 実装とどのような import 互換経路を持つか確認したいとき。
+- ACP 関連の実処理を読む前に、realization implementation 側ではどの階層が単なる互換入口で、どこから下位領域へ進むべきか切り分けたいとき。
+- ACP builder 配下の適用、indexing、review、session、TUI などの領域へ進む前に、acp 名前空間全体の入口と下位接続を確認したいとき。
+
+## Do not read this when
+- ACP の具体的な処理内容、データ構造、関数、クラス、入出力仕様、アルゴリズムを調べたいとき。その場合は正本側の対応実装、または builder 配下のより直接の対象を読む。
+- oracle file としての正本仕様断片を確認したいとき。この領域は realization implementation 側の互換入口であり、正本仕様本文ではない。
+- ACP 以外の import 互換入口や、cmoc 全体の path model、oracle file、realization file の定義を調べたいとき。
+
+## hash
+- c41aed1061b3fbcd4d835d9ce74914d79dddca143b31ee93117b75b1396c1c88
+
+# `basic`
+
+## Summary
+- realization implementation 側の basic パッケージ領域であり、正本側 basic 実装への互換 import 入口をまとめる。
+- この領域自体は独自の機能実装を持つより、ACP、path model、構造化ドキュメントなどの公開名を正本側から再公開する薄い接続層として位置づけられる。
+
+## Read this when
+- realization implementation 側で basic 関連 API がどこから公開されるかを確認したいとき。
+- 正本側 basic 実装と realization implementation 側 basic パッケージの import 構造上の対応を確認したいとき。
+- ACP、path model、構造化ドキュメント関連の公開入口が、独自実装ではなく正本側の再公開であるかを切り分けたいとき。
+- basic 配下の個別領域へ進む前に、この階層が担う役割が互換 import 入口と再公開層であることを把握したいとき。
+
+## Do not read this when
+- ACP、path model、構造化ドキュメントの具体的な型、関数、変換規則、検証ロジック、生成ロジックを調べたいとき。その場合は再公開元の正本側実装を読む。
+- path model の概念定義や root token の意味など、正本仕様断片としての説明を確認したいとき。その場合は正本側の該当本文を読む。
+- realization implementation 側で独自に実装された basic 処理を探しているとき。この領域の本文は主に正本側への中継を示す。
+- cmoc 全体の oracle file と realization file の責務分担、INDEX.md エントリー生成規則、ルーティング文書の書き方を調べたいとき。その場合はそれらを定義する正本仕様断片を読む。
+
+## hash
+- 4b2b1d9eae2fa6fa3d4011887739b3a417de79c6b3d1066763f21b5d6bc39d9d
+
 # `cmoc_runtime.py`
 
 ## Summary
@@ -41,6 +82,24 @@
 ## hash
 - 546ccc8be91d8ec63fedc0188bed189db4fa8004cfba12bd782008d9872a7864
 
+# `config`
+
+## Summary
+- 実装側の設定パッケージであり、正本側の設定定義へ互換的に到達するための import 入口を提供する。設定値の実体や読み込み・検証などの処理は持たず、正本側定義の再公開境界を扱う。
+
+## Read this when
+- 実装側から設定定義へ到達する import 経路を確認したいとき。
+- 設定パッケージが正本側の設定定義を実体として委譲し、互換入口として機能しているか確認したいとき。
+- 設定モジュールの公開名、再エクスポート範囲、設定パッケージ入口の責務を確認したいとき。
+
+## Do not read this when
+- 個々の設定項目の意味、既定値、制約を確認したいとき。ここは設定定義の実体ではなく、正本側定義への入口だけを扱う。
+- 設定値の読み込み、解決、検証、変換、永続化などの処理ロジックを調べたいとき。
+- 正本仕様として設定内容そのものを確認したいとき。実体を持つ正本側の定義を直接読む方が適切である。
+
+## hash
+- 7a2dcace2fd029ab73ce6de095eae0152577f065ea99bdef28edd0f27aa94095
+
 # `main.py`
 
 ## Summary
@@ -64,23 +123,23 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各利用者向けサブコマンドを CLI runtime 上で実行するための実装領域であり、初期化、indexing、TUI 起動、session 操作、apply 操作、review oracle 実行の入口をまとめる。
-- 各サブコマンドで必要な実行前条件の検査、work root/repository root の選択、session state の確認・更新、branch/worktree 操作、Codex exec/TUI 呼び出し、利用者向け出力や report 生成への接続を扱う。
-- 個別コマンド固有の大きな制御は下位 package または補助モジュールに分かれており、この階層はサブコマンド単位で読む先を選ぶための入口になる。
+- CLI サブコマンドごとの realization implementation をまとめる階層で、初期化、INDEX maintenance、TUI 起動、session 操作、review oracle、apply run などの利用者操作の入口になる。
+- 各対象は共通 CLI runtime、work root runtime、git 操作、state 更新、report 生成、worktree・branch 制御などをサブコマンド単位で結びつける orchestration 層またはその補助処理を担う。
+- 具体的な対象列挙、finding 適用・統合、report rendering、merge conflict 解決、process 停止、ignore 保証などは操作ごとに下位へ分かれており、サブコマンドから実装責務へ進むための入口として読む。
 
 ## Read this when
-- cmoc のサブコマンド実装がどこから起動され、CLI runtime、preflight、command name、command argv、Codex 実行 callback へどう接続されるかを確認・変更したいとき。
-- 初期化、indexing、TUI、session、apply、review oracle のいずれかの利用者向けコマンドについて、実行条件、状態遷移、branch/worktree 操作、成功時出力、失敗時処理の入口を探したいとき。
-- session branch の作成・破棄・join、apply 用 worktree での finding 適用と取り込み、review 用 worktree での oracle review と INDEX.md 反映など、サブコマンド横断で CLI 操作の流れを比較したいとき。
-- サブコマンドが共通 runtime、indexing 共通処理、prompt builder、report renderer、git helper、設定読み込み、状態ファイル操作へどこから依存しているかをたどりたいとき。
-- 利用者が実行するコマンドの外側の配線ではなく、コマンド本体に近い orchestration と、その下位処理への分岐点を確認したいとき。
+- CLI から起動されるサブコマンドの実行入口、command 名、argv、runtime への渡し方、preflight、利用者向け出力の大きな流れを確認・変更したいとき。
+- 初期化、INDEX maintenance、TUI 起動、session branch lifecycle、review oracle、apply run のいずれかについて、利用者操作から内部処理へどの対象を読めばよいかを選びたいとき。
+- サブコマンド単位で clean worktree 要求、cmoc ignore 保証、worktree・branch 作成や cleanup、state 更新、commit、merge、report 出力などの制御順序を追いたいとき。
+- review oracle や apply run のように、下位モジュールへ分割された処理群の入口と、対象列挙・loop・report・conflict handling・cleanup へ進む分岐を確認したいとき。
+- session 操作や apply 操作のように、実行中 process、pid file、worktree、branch、state file など複数の副作用を伴うサブコマンドの責務境界を調べたいとき。
 
 ## Do not read this when
-- Typer app へのトップレベル登録、CLI 全体のコマンドツリー構成、entrypoint の import 配線だけを確認したいとき。
-- git command wrapper、path model、設定モデル、state file の低レベル読み書き、共通 logging、report directory、timestamp など、サブコマンド固有でない runtime helper の詳細だけを調べたいとき。
-- Codex に渡す prompt builder、Structured Output schema、AgentCallParameter の共通仕様、complete prompt 生成など、ACP 構築そのものの詳細だけを確認したいとき。
-- oracle file の正本仕様断片、CLI 外部仕様、INDEX.md エントリー生成規約、review や apply の判断基準そのものを確認したいとき。
-- 特定の session/apply/review 操作の内部処理だけを調べたいことが既に分かっている場合は、この階層全体ではなく該当する下位 package または補助モジュールへ直接進む。
+- CLI アプリ全体の Typer 登録、トップレベル entrypoint、共通 runtime、path model、git command wrapper、config/state model の一般仕様だけを調べたいとき。
+- Codex CLI 呼び出し parameter builder、prompt、Structured Output schema、finding 生成用入力など、LLM 呼び出し内容そのものを確認したいとき。
+- INDEX.md の本文生成ロジック、差分検出、lock、commit、ルーティング文書の文章品質など、INDEX maintenance 共通処理の詳細だけを調べたいとき。
+- session state の schema や保存形式、reports directory、timestamp、git diff helper、ignore 判定など、サブコマンド固有ではない低レベル共通部品を確認したいとき。
+- oracle 側の正本仕様断片、テスト、fixture、または利用者向け仕様だけを探しており、realization implementation の制御フローを追う必要がないとき。
 
 ## hash
-- 461f2545a1c9e9286cae4c76c0282f103dabdb4b09dcf066ef46b70df5e8a7b5
+- 47379c2c18e244536bef8345b0d0501ea7ad80249e07486b3a5860d3b02603da
