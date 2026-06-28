@@ -149,26 +149,27 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体を置く最上位領域であり、公開 CLI、サブコマンド本体、AI エージェント呼び出し、共通 runtime helper、設定、基礎モデルなど、プロダクト挙動を具体化する実装への入口になる。
-- 下位には、Typer ベースの CLI 入口、個別サブコマンド実装、Codex/AI 呼び出しパラメータと prompt 構築、path model や文書モデルなどの基礎型、設定データ構造、Git・state・log・preflight indexing などの共有 runtime 処理が分かれている。
-- oracle file が述べる人間意図を実装として追う場合に、どの責務領域へ進むかを選ぶための上位ルーティング地点になる。
+- cmoc の realization implementation 全体を置く実装ルート。利用者が起動する CLI 入口、サブコマンド本体、共通 runtime helper、設定モデル、基礎モデル、AI エージェント呼び出し用 prompt/parameter builder と Structured Output schema を含む。
+- CLI から呼ばれる処理が、worktree・branch・state・git・Codex 呼び出し・INDEX 更新・oracle review・apply/session 操作へどのように接続されるかを追うための上位入口になる。
+- oracle file が述べる正本仕様断片を具体化した実装側の領域であり、個別の仕様本文ではなく、実際の挙動、入出力、副作用、例外処理、実行時補助処理を確認するための起点として位置づけられる。
 
 ## Read this when
-- cmoc の実装本体のうち、CLI 入口、サブコマンド、AI 呼び出し、共通 runtime、設定、基礎モデルのどこから調査すべきかを切り分けたいとき。
-- 利用者が実行する cmoc コマンドの挙動が、引数解析からサブコマンド本体、共通 helper、Codex 呼び出し、状態更新へどの領域を通って実装されているかをたどり始めたいとき。
-- oracle file の正本仕様断片に対応する realization implementation を探し、実装変更やテスト調査の入口を決めたいとき。
-- INDEX.md 生成、review oracle、apply、session、TUI、init、indexing など、複数の下位領域にまたがる機能について、まず実装上の責務分担を把握したいとき。
-- AI エージェント呼び出しの prompt・Structured Output schema・モデル設定と、その前後の CLI 制御・Git 操作・state 操作を分けて読み進めたいとき。
+- cmoc の CLI コマンド構成、サブコマンド実行本体、共通実行ライフサイクル、利用者向け出力、終了コード、エラー表示の実装を確認または変更したいとき。
+- session、apply、review oracle、indexing、init、TUI などの利用者操作が、git worktree、branch、state file、report、Codex subprocess、cleanup、merge conflict 処理へどうつながるかを調べ始めるとき。
+- Codex exec/TUI 呼び出し、profile 準備、Structured Output 検証、quota/capacity retry、call log、preflight indexing など、AI エージェント実行周辺の実装を追いたいとき。
+- AI 呼び出しに渡す role、summary、goal、補助入力、ファイルアクセス制約、標準 prompt 断片、モデル・reasoning、Structured Output schema の組み立てを確認または変更したいとき。
+- cmoc 固有の path token 解決、設定データ構造、構造化文書から Markdown への変換、runtime path、内容 hash、session state、git helper など、複数機能から共有される実装部品を探したいとき。
+- oracle file に対応する realization implementation として、正本仕様断片が現在のコード上でどのように実行可能な挙動へ落とされているかを確認したいとき。
 
 ## Do not read this when
-- 正本仕様断片そのもの、oracle file の記述基準、path token の仕様意図、realization/oracle の概念定義だけを確認したいとき。
-- 自動テストの期待挙動、fixture、テストケースだけを調べたいとき。
-- 生成済みの INDEX.md の内容を読むだけで、実装上の生成・更新・描画処理を追う必要がないとき。
-- README、配布設定、補助スクリプト、gitignore など、実装ソース以外の補助ファイルやプロジェクト外形だけを確認したいとき。
-- 下位の読むべき実装領域がすでに明確で、CLI 入口、サブコマンド本体、共通 runtime、AI prompt 構築、基礎モデル、設定のいずれかへ直接進めるとき。
+- 正本仕様断片そのもの、設計意図、用語定義、oracle/realization の原則、サブコマンド仕様の人間管理文書を読みたいとき。この領域ではなく oracle 側の本文を読む。
+- 自動テストの期待挙動、fixture、回帰確認の観点だけを調べたいとき。この領域ではなく test 側を読む。
+- 生成済みのログ、report、state file、INDEX.md、Codex call の出力内容など、実行結果として作られたファイルの中身だけを確認したいとき。
+- リポジトリの packaging、依存関係定義、開発ツール設定、補助 script、README など、実装ソース以外の補助ファイルを確認したいとき。
+- 特定の下位責務がすでに分かっており、CLI 入口、共通 helper、prompt builder、基礎モデルのいずれかへ直接進めるときは、この上位領域全体を広く読む必要はない。
 
 ## hash
-- 507cd4e5a26a5d601d3d48463a5a1134a6ebcc98310abd989d450c129d0a0768
+- 45bc8feadb4faf26d7a3e87ec95384bf1af038738b1b3584b019e789263802dc
 
 # `test`
 

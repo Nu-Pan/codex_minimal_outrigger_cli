@@ -160,25 +160,24 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI 実行時に使う profile 本文の組み立て、CODEX_HOME の解決・検証、profile 名の抽出、hash 化した profile/schema の配置を扱う。
-- FileAccessMode を Codex の sandbox mode、cwd、writable_roots に変換し、memo や .agents、oracle 専用読み取りなどのアクセス境界を Codex profile 上で表現する。
-- Codex subprocess の起動ラッパーとして、Codex CLI 不在時の cmoc error 化、子プロセス tracking、JSONL stdout からの error・quota・capacity・resume token 抽出を担う。
+- AgentCallParameter と設定から Codex CLI 用 profile 本文を生成し、CODEX_HOME 内の内容 hash ファイルとして準備する runtime helper。
+- FileAccessMode を Codex の sandbox 設定、作業 root、writable_roots に変換し、追加読み取り・書き込み許可 path が cmoc の file access policy から外れないことを検証する。
+- Codex subprocess の実行、CODEX_HOME 検証、apply 用 child process tracking、Structured Output schema の hash store 配置、Codex JSONL 出力からの error・resume token・capacity/quota 判定を扱う。
 
 ## Read this when
-- AgentCallParameter や repo config から Codex CLI 用 profile を生成・再利用する処理を確認または変更したいとき。
-- FileAccessMode ごとの sandbox mode、Codex cwd、読み取り追加 path、書き込み root の許可判定を確認したいとき。
-- CODEX_HOME の解決、auth.json 存在検査、Codex subprocess に渡す環境変数の扱いを調べたいとき。
-- Codex CLI 呼び出し失敗、子プロセス追跡、Codex JSONL stdout/stderr からの利用者向け error text・retry 判定・resume token 抽出を調べたいとき。
-- Structured Output schema を work root 側の hash store に配置する処理や、Codex output JSON の読み取り失敗時挙動を確認したいとき。
+- Codex CLI 起動時に渡す profile、sandbox_mode、writable_roots、CODEX_HOME、profile 名の生成・再利用を確認または変更したいとき。
+- FileAccessMode と Codex CLI の read-only/workspace-write 境界、memo・.agents・oracle への読み書き許可判定の対応を追いたいとき。
+- Codex subprocess の起動失敗、stderr/stdout JSONL error の利用者向け整形、capacity/quota retry 判定、resume token 抽出、apply 中の子プロセス追跡に関わる挙動を調べるとき。
+- Structured Output schema を work root 側の hash store へ配置する処理、または Codex output JSON の読み取り失敗時の扱いを確認したいとき。
 
 ## Do not read this when
-- FileAccessMode や AgentCallParameter そのものの定義を確認したいだけなら、それらを定義する基本モデルを読む。
-- CmocConfig の設定 schema や model/reasoning_effort の読み込み規則を確認したいだけなら、設定側の実装を読む。
-- hash 付きファイルの書き込み方式や schema store の実体 path を確認したいだけなら、content 書き込み helper や runtime path helper を読む。
-- Codex 実行プロンプト本文、prompt parts、またはユーザー向け file access rule の文章を調べたい場合は、対応する oracle または prompt 生成側を読む。
+- プロンプト本文、file access rule の文言、Codex 実行ルールそのものの正本仕様を確認したいだけのときは、対応する oracle doc/source を読む。
+- cmoc の path keyword や work/root/oracle/repo の定義だけを確認したいときは、path model 側を読む。
+- hash ファイル書き込みの具体的な保存処理や schema store directory の場所だけを調べたいときは、runtime content または runtime paths の担当箇所を読む。
+- Codex 以外の外部コマンド実行一般、CLI サブコマンド定義、設定ファイルの読み込み構造を調べたいときは、それぞれの担当 module を直接読む。
 
 ## hash
-- 1f5503345407e67c8db297eabfadc3d15d634ced1005fb1809da856bdc29734b
+- cdc01e156c9153dd643df420c79db3205fec69a592cc1dcf133102abcc64bfed
 
 # `runtime_codex_tui.py`
 

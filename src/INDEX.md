@@ -67,26 +67,24 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation のうち、複数のサブコマンドや上位処理から使われる共有 runtime helper 群をまとめる領域。
-- Codex CLI 呼び出し、preflight indexing、CLI 共通ライフサイクル、設定、内容 hash、エラー表示、Git 操作、runtime log、path 解決、結果モデル、session state など、実行時の横断的な基盤処理への入口になる。
-- 一部は互換 import や集約 import のための薄い入口であり、具体的な挙動は責務別の runtime 実装に分かれている。
+- cmoc の共有 runtime helper 群をまとめる実装領域。Codex CLI 呼び出し、preflight indexing、設定読み書き、内容 hash、CLI 共通 wrapper、エラー表示、Git 操作、runtime logging、path 解決、結果モデル、session state 永続化など、複数の上位処理から再利用される低レベル実行支援を扱う。
+- この階層は、個別サブコマンドの業務ロジックではなく、サブコマンドや上位 workflow が共通して使う実行時 API と、その互換 import 面・集約 import 面への入口として位置づけられる。
 
 ## Read this when
-- サブコマンド本体から利用する共通 runtime API、実行前 hook、ログ、エラー、Git、path、設定、状態永続化などの実装先を探したいとき。
-- Codex exec/TUI の起動制御、profile 準備、Structured Output 検証、quota/capacity retry、call log、preflight indexing との接続を確認または変更したいとき。
-- CLI サブコマンド共通 wrapper の stdout/stderr、終了コード化、例外表示、実行サマリー、logger context の扱いを追いたいとき。
-- INDEX.md 生成 preflight の対象列挙、hash 検証、エントリー生成、Markdown 描画、更新 commit 作成条件を調べたいとき。
-- 複数領域から共有される低レベル helper を追加・整理する前に、既存の共通責務や公開 import 面を確認したいとき。
+- cmoc の上位コマンドから共通利用される runtime API の所在を探したいとき。
+- Codex exec/TUI 呼び出し、profile 準備、Structured Output 検証、quota/capacity retry、preflight indexing、call log 記録など Codex 実行周辺の共通処理を確認または変更したいとき。
+- CLI サブコマンドの共通 wrapper、stdout/stderr の扱い、終了コード化、実行ログ、例外表示、work root 検査など、サブコマンド共通ライフサイクルを追いたいとき。
+- 設定ファイル、内容 hash、runtime path、Git 状態・worktree 操作、JSON Lines event log、外部コマンド結果、session state file など、複数機能から共有される実行時 helper の責務境界を確認したいとき。
+- ルーティング文書の自動生成 preflight、対象列挙、hash 検証、既存エントリー再利用、Codex 生成、更新 commit 作成の実装経路を調べたいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジック、引数定義、永続データ更新、利用者向け出力だけを調べたいとき。その場合はコマンド層や該当サブコマンド本体へ進む。
-- path model、FileAccessMode、AgentCallParameter、設定モデルなどの基本データ定義そのものを確認したいとき。その場合は基本モデルを扱う領域へ進む。
-- oracle file の正本仕様、ルーティング文書の品質基準、ログや状態ファイルの外部仕様意図だけを確認したいとき。その場合は oracle 側の該当文書を読む。
-- 特定の generated INDEX.md の内容を読むだけで、生成・更新・preflight の実装を追う必要がないとき。
-- 共有 runtime ではなく、単一機能の呼び出し元がどの値を渡すか、どのタイミングで処理するかだけを知りたいとき。その上位実装を直接読む。
+- 個別サブコマンドの入力解析、業務ロジック、状態遷移、ファイル生成内容だけを知りたいとき。その場合はコマンド層や各機能本体へ進む。
+- path keyword、oracle file、realization file、ルーティング文書、状態ファイル、ログ形式などの正本仕様断片だけを確認したいとき。その場合は対応する oracle 側の本文を読む。
+- 共有 helper の利用結果として生成されたログ、レポート、設定、状態ファイル、ルーティング文書の内容だけを読みたいとき。生成・更新ロジックを追う必要がなければ、この階層を読む必要はない。
+- 特定の単一責務の詳細だけを変更する場合に、集約 import 面や互換 import 面だけを読むこと。具体的な挙動、入出力、副作用、例外条件は、その責務を直接実装する下位対象へ進む。
 
 ## hash
-- b90f770d494184da9c34a24dfd1cc75da14890dc925e34c96959f75ae2cb1f47
+- ce60d6ff5de12a22f3501966bc348a9221538c63aed6bb1bbccf106791201b09
 
 # `config`
 
