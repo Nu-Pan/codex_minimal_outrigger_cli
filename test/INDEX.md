@@ -244,21 +244,22 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- indexing preflight と indexing サブコマンドが routing document を生成・更新・commit する外部挙動を検証する realization test。対象列挙、既存 hash の再利用、Codex によるエントリー生成、commit 対象の限定、linked worktree、dirty worktree の拒否、未初期化 repo の失敗、INDEX.md conflict 解決、semantic field validation、並列生成、root 直下 memo 除外と nested memo index 化を同じ routing 更新ワークフローの観測点として扱う。
+- indexing preflight と indexing サブコマンドが routing document を生成・更新・commit する外部挙動を検証する realization test。Codex によるエントリー生成、既存 hash の再利用、dirty worktree の拒否、linked worktree 対象化、conflict 解決、semantic field の検証、並列生成、root 直下 memo 除外と nested memo 対象化を同じ routing 更新ワークフローの観測点として扱う。
 
 ## Read this when
-- indexing CLI または indexing preflight の回帰テストを確認・変更したいとき。
-- INDEX.md の生成・更新・commit 条件、既存 hash が fresh な場合の Codex 呼び出し抑制、malformed entry の再生成、entry semantic field の validation を調べたいとき。
-- linked worktree や apply worktree 上で indexing がどの root・cwd・config を使うか、dirty worktree をどう拒否するかを検証したいとき。
-- routing document 更新時の git 状態、commit 対象、INDEX.md conflict 解決、memo ディレクトリの index 対象境界をテストから確認したいとき。
+- indexing CLI の成功・失敗条件、commit 対象、未初期化 repo や dirty repo での停止挙動を確認・変更したいとき。
+- indexing preflight が通常の indexing サブコマンドと異なり、既存の非 INDEX 差分を許容しつつ routing document だけを commit する挙動を確認したいとき。
+- routing document エントリーの hash freshness、malformed entry 再生成、semantic field の妥当性検証、Codex 呼び出し省略条件を変更したいとき。
+- linked worktree や apply worktree 上で、対象 root、cwd、repo config、commit 先がどう扱われるかを検証したいとき。
+- root 直下 memo を indexing 対象から除外し、通常ディレクトリ配下の memo は indexing 対象にする境界を確認したいとき。
 
 ## Do not read this when
-- indexing の実装本体や helper の処理順を直接変更したいだけなら、対応する implementation を先に読む。
-- Codex 実行基盤、ACP parameter、model config の一般挙動を調べたいだけなら、この CLI 境界テストではなくそれぞれの実装・設定定義を読む。
-- routing document 以外のサブコマンド挙動、または indexing と無関係な git worktree 操作の仕様を調べたいだけなら、より直接のテストや実装へ進む。
+- routing document の生成・更新ワークフローではなく、個別サブコマンドの UI や一般的な CLI 起動構造だけを調べたいとき。
+- Codex 実行 wrapper、config model、path model などの実装詳細そのものを変更したいだけで、このテストが観測する indexing 外部挙動に触れないとき。
+- 単一の小さな helper の純粋な内部処理を確認したいだけで、git 状態、commit、worktree、routing document 更新の副作用を伴わないとき。
 
 ## hash
-- 91aa0b22dbcff027edeab27830f436ab0565b4956bc7153ba8565434389d94b6
+- b577ba759f1311d8f153cc859e5dbf03d375f4e57944016a55663e2d1738be93
 
 # `test_indexing_preflight.py`
 

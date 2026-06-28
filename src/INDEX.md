@@ -64,26 +64,27 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation のうち、複数の CLI サブコマンドや workflow から共有される実行時 helper 群を収める領域。CLI サブコマンド共通ライフサイクル、Codex CLI exec/TUI 呼び出し、indexing preflight、設定読み書き、内容 hash、共通エラー表示、git 操作、実行ログ、root/path 解決、実行結果型、session state 永続化を扱う。
-- 個別サブコマンドの業務処理ではなく、サブコマンド層や上位 workflow が依存する runtime 境界、外部プロセス境界、永続状態・ログ・設定・path の共通 API へ進むための入口になる。
-- 一部の対象は互換 import や集約入口として、下位 runtime API をまとめて公開するだけの役割も持つため、具体挙動を読む場合はこの階層内の責務別実装へ進む。
+- cmoc の realization implementation のうち、複数のサブコマンドや上位処理から使われる共通 runtime helper 群をまとめる領域。Codex CLI 呼び出し、preflight indexing、設定、内容ハッシュ、CLI 実行ライフサイクル、エラー表示、git 操作、ログ、パス解決、実行結果モデル、session state 永続化など、実行時の横断的な支援機能への入口になる。
+- この階層は業務ロジック本体ではなく、上位 command や workflow が共有して使う低位から中位の runtime 境界を扱う。読む際は、集約 import 面を確認する対象と、実際の挙動を持つ責務別 runtime 実装を切り分けて進む。
+- ルーティング文書の自動更新処理も含み、Codex 呼び出し前の preflight、対象列挙、既存エントリーの鮮度判定、欠落エントリー生成、Markdown 描画、専用 commit 作成までの indexing 制御を確認する入口にもなる。
 
 ## Read this when
-- CLI サブコマンドの開始から完了までの共通出力、終了コード化、例外表示、サブコマンドログ設定など、コマンド横断の実行ライフサイクルを確認または変更したいとき。
-- Codex CLI の exec/TUI 呼び出しに関する profile、sandbox、CODEX_HOME、schema、call log、Structured Output 検証、quota/capacity retry、resume、preflight の制御を追いたいとき。
-- INDEX.md 自動更新の preflight、対象列挙、hash による鮮度判定、Codex による entry 生成、更新 commit の挙動を確認または変更したいとき。
-- 設定ファイル、内容 hash 保存、git 実行・worktree・ignore 判定、root/path 解決、実行ログ、共通エラー、実行結果データ、session state file など、複数機能から再利用される runtime helper の責務境界を探すとき。
-- 上位の command や workflow から利用できる共通 runtime API の import 面を確認し、既存 helper を使えるか判断したいとき。
+- cmoc 全体で共有される runtime API、実行時 helper、横断的な結果型やエラー型の置き場所を探すとき。
+- Codex CLI exec/TUI 呼び出し、profile・sandbox・CODEX_HOME・schema・retry・quota/capacity・resume・call log など、Codex subprocess 境界の実装を確認または変更したいとき。
+- CLI サブコマンド共通の実行フロー、work root 検査、ログ設定、標準サマリー出力、例外から終了コードへの変換を調べたいとき。
+- 設定ファイルの読み書き、内容ハッシュ保存、binary 判定、git worktree/branch 操作、ignore 判定、runtime path、timestamp、ログ、結果モデル、session state file のいずれかを扱う変更を行うとき。
+- INDEX.md 生成・更新の preflight、ルーティング文書対象の選別、エントリー再利用判定、Structured Output からの Markdown 生成、indexing 用 Codex 呼び出しを調べたいとき。
+- 上位 command や workflow の変更中に、共通 runtime helper の既存責務を使えるか、またはどの責務別実装へ進むべきかを判断したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの引数定義、業務ロジック、利用者向けレポート内容、状態遷移の上位 workflow だけを知りたいとき。その場合はコマンド層や該当 workflow の実装へ直接進む。
-- AgentCallParameter、FileAccessMode、設定モデル、path model などの基本データ型や正本仕様上の意味を確認したいだけのとき。その場合は基本層や oracle 側の定義を読む。
-- 生成済みログ、state JSON、config JSON、schema store などの実データ内容を調査したいだけのとき。この領域はそれらの保存・読み書き helper であり、個別生成物そのものではない。
-- 特定の runtime helper の具体的な入出力、副作用、失敗条件が分かっており、対象の責務別実装へ直接進めるとき。集約入口や隣接 helper を広く読む必要はない。
-- テスト期待値や fixture の調整だけを行うとき。まず該当する test 側を読み、共通 runtime の挙動変更が必要だと分かった場合にこの領域へ戻る。
+- 個別サブコマンドの引数定義、業務ロジック、利用者向けレポート生成、状態遷移の上位 workflow だけを調べたいとき。その場合は command や workflow 側の実装へ進む。
+- oracle file に書かれた正本仕様断片、path keyword の定義、session state の仕様意図などを確認したいとき。その場合は対応する oracle 側の本文を読む。
+- realization test の期待値や fixture、テスト観点を調べたいとき。その場合は test 配下の対象へ進む。
+- 特定ディレクトリ配下の実際のルーティング先を選びたいだけのとき。この階層の自動生成・runtime helper ではなく、その対象階層のルーティング文書または本文を読む方が直接的である。
+- 外部コマンドや Codex 実行の上位呼び出し元がどの入力を組み立て、結果をどう利用するかだけを知りたいとき。共通 runtime 境界ではなく呼び出し元の実装へ進む。
 
 ## hash
-- 66141b09c68540d151cddaf806ad63f81a7e9118a29621c4298da0d1f039bcd3
+- 1cc073801f18b9771783a729478c7eb930331c294f63a9b014f30d9190be7d1f
 
 # `config`
 

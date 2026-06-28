@@ -34,22 +34,24 @@
 # `indexing.py`
 
 ## Summary
-- Codex 呼び出し前の preflight として各階層の目次を再生成し、変更された目次だけを専用 commit にまとめる処理を担う。
-- 目次更新の排他制御、対象ディレクトリ・子要素の列挙、既存エントリーの鮮度判定、Codex によるエントリー生成、Markdown への描画までを一つの流れとして扱う。
-- ルーティング文書の自動更新に関わる git 操作、hash 計算、除外対象判定、Structured Output 検証の入口になる。
+- Codex 呼び出し前の preflight として、各ディレクトリのルーティング文書を最新化し、必要な差分を専用 commit にまとめる処理を担う。
+- 対象の列挙、既存エントリーの鮮度判定、欠落エントリー生成の Codex 実行、Markdown への描画、対象ハッシュ計算までの一連の indexing 制御を扱う。
+- ルート直下の除外対象、git ignore、binary、memo を避けながら、深い階層から順にルーティング文書を再生成する実装の入口になる。
 
 ## Read this when
-- Codex 実行前に目次更新を走らせる preflight の登録・実行順序・排他 lock を確認したいとき。
-- どのディレクトリや子要素が目次作成対象になり、memo・git ignored・binary・隠し要素がどう除外されるかを調べるとき。
-- 既存エントリーの hash 検証、再生成要否の判定、Codex 呼び出し、生成結果の Markdown 化、目次更新 commit の挙動を変更するとき。
+- Codex 実行前にルーティング文書を自動更新する preflight の登録、排他制御、commit 作成の流れを確認したいとき。
+- ルーティング文書の更新対象となるディレクトリや子要素の選別条件、除外条件、走査順を変更したいとき。
+- 既存エントリーの再利用判定、必須セクション検証、対象内容のハッシュ計算、Structured Output からの Markdown 生成を調べたいとき。
+- ルーティング文書エントリー生成のために Codex CLI をどの root、cwd、config、purpose で呼び出すかを確認したいとき。
 
 ## Do not read this when
-- 個々のエントリー生成 prompt や Structured Output parameter の中身だけを確認したい場合は、その builder 側を読む方が直接的である。
-- Codex 実行前の一般的な preflight 登録機構だけを確認したい場合は、runtime preflight 側を読む方が直接的である。
-- path token の定義、git ignored 判定、hash 計算、設定読み込み、git 実行 helper の詳細を調べたい場合は、runtime 側や対応する仕様・helper を読む方が直接的である。
+- 個別のルーティング文書エントリー本文の意味内容や書き方だけを確認したい場合は、対象エントリー生成プロンプトや仕様文書を読む方が直接的である。
+- git command 実行、設定読み込み、バイナリ判定、git ignore 判定、ハッシュ計算そのものの低レベル実装を調べたい場合は、runtime 側の該当実装を読む方が直接的である。
+- Codex 呼び出し前 preflight の登録先や他機能の preflight 全体を調べたい場合は、preflight を束ねる runtime 側の実装を読む方が直接的である。
+- 特定ディレクトリ配下の実際のルーティング先を選びたいだけの場合は、この自動生成処理ではなく、その階層のルーティング文書または対象本文を読む方が適切である。
 
 ## hash
-- 9e99aca5414510a3b0eff4c29a82b8141b54ba19aa1fae98f5aca9b9775ab98d
+- 9abde5cd57af6a716beee213ea08a64fb015d72cb9301a61fe4afa9dbd4b38d3
 
 # `runtime_cli.py`
 
