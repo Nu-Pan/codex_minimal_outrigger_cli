@@ -67,25 +67,25 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork を CLI 経由で実行したときの report 生成、変更要約、収束・未収束・error の判定、session state 更新、commit 作成、変更ファイル再調査、rolling apply fork の対象選択を検証する realization test。
-- Codex 実行を fake に差し替え、実リポジトリと git 操作を使って、apply fork の外部挙動と制御ループの観測結果をまとめて確認する。
-- 16,000 文字を超えるが、所見列挙から適用、commit、report、再検査、rolling fork までを同じ loop と report schema の文脈で読む必要があるため、一つの凝集したテストとして置かれている。
+- apply fork の CLI 経由テスト群で、所見列挙から適用、commit、変更要約、report 生成、session state 更新までの制御を一体で検証する。
+- 未収束・収束・error report、変更ファイル再調査、未追跡 file の差分要約、調査対象なし、rolling apply fork の対象選定を、同じ loop と report schema の観測結果として扱う。
+- apply fork report 周辺の期待値を読む入口であり、Codex 実行を fake に差し替えた CLI 挙動と Git 状態の副作用を確認する。
 
 ## Read this when
-- apply fork の CLI 実行結果、終了コード、report 本文、変更要約、commit message、session state の更新を確認または変更するとき。
-- apply fork の所見適用後に、変更された通常ファイルや新規ファイルを再調査し、INDEX.md を再調査対象から外す制御を確認するとき。
-- apply fork の収束判定、未収束判定、適用しても差分が出ない場合、調査対象がない場合、エラー時 report の挙動を確認するとき。
-- 未追跡ファイルを含む fork 以降の差分抽出、変更 path 抽出、fallback の変更要約生成を確認するとき。
-- rolling apply fork が前回 apply join 後の oracle 側変更だけを対象にする挙動や、関連する session state の記録を確認するとき。
+- apply fork の report 内容、終了 code、収束判定、未収束時メッセージ、error 時の変更要約を確認したいとき。
+- apply fork が変更後 file を再調査する条件や、再調査対象から除外される path の扱いを確認したいとき。
+- apply fork の commit 作成、commit message、apply branch、session state 更新、rolling 実行時の基準 commit を CLI 観点で確認したいとき。
+- apply fork 用 ACP builder の import 可能性や structured output schema path が、src のみの Python path や oracle schema と整合するか確認したいとき。
+- report 用変更要約が未追跡 file や commit 前の working tree 差分をどう扱うかを確認したいとき。
 
 ## Do not read this when
-- apply fork の実装本体、report renderer、差分抽出 helper の処理内容そのものを変更したいだけで、期待される外部挙動の確認が不要なとき。
-- Codex CLI や LLM 応答品質そのものを検証したいとき。この対象は fake 応答を使って cmoc 側の制御と出力を検証する。
-- apply fork 以外のサブコマンド、session fork や apply join 単体の仕様を確認したいとき。ただし apply fork の前提状態作成や rolling 判定に関わる範囲では入口になる。
-- 単純なテスト支援関数、fixture、runner、リポジトリ生成 helper の定義を探しているとき。
+- apply fork の内部実装そのもの、対象列挙や report rendering の関数定義を変更したいだけなら、対応する実装側を先に読む。
+- apply 以外の session 操作、init、join の一般的な CLI 仕様を確認したいだけなら、それぞれの専用テストや実装を読む。
+- Codex CLI や LLM 出力品質そのものを検証したい場合は、この対象ではなく外部実行境界や fake の扱いを確認する。
+- 単一 helper の純粋な差分計算だけを確認したい場合は、report 補助関数の実装またはより小さい単体テストを優先する。
 
 ## hash
-- c49f2e9adc0cd7473933473286ca9230cf648d79c86ce2957cb4c2e5520b69b3
+- 2ee8da39dced6af2c0de9a619d598eabe7b7387fbacc8cbd644883f2bf5c6f26
 
 # `test_apply_join_cli.py`
 

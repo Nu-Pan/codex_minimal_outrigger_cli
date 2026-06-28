@@ -17,20 +17,22 @@
 # `fork`
 
 ## Summary
-- fork 適用領域のうち、作業レポート向け変更要約の出力契約と agent call parameter builder、および oracle 側実装へ委譲する互換入口をまとめる実装パッケージ。
-- 差分適用後の変更要約生成では、隣接 schema と builder が主な入口になり、file finding enumeration や finding application の実体確認では oracle 側へ進むための再エクスポート接続点になる。
+- apply fork 周辺で使う agent call parameter builder と、その出力契約、共有 helper をまとめる領域。差分要約、所見列挙、所見適用など、fork 適用作業を agent に委譲するための prompt・model 指定・file access 制約・schema 参照を扱う。
+- 正本仕様断片に追従する realization 実装として、通常実行時に oracle 側を runtime import しない前提や、作業リポジトリ範囲、INDEX.md ルーティング指示、readonly または書き込み可能範囲などを agent prompt に埋め込む処理への入口になる。
 
 ## Read this when
-- fork 適用後の作業レポートに含める変更要約を、どの schema と agent 呼び出し設定で生成するか確認したいとき。
-- 変更要約担当 agent に渡す raw git diff、プロンプト、読み取り専用アクセス、reasoning、モデル設定の組み立て箇所を探したいとき。
-- realization 側の fork 適用関連 import 経路が、oracle 側の file finding enumeration や finding application 定義へどう接続しているか確認したいとき。
-- このパッケージ自体が互換入口なのか、具体的な処理本体を持つ実装なのかを切り分けたいとき。
+- apply fork の中で、差分要約・所見列挙・所見適用を担当する agent をどの条件、prompt、schema、file access mode で呼び出すかを調べたいとき。
+- raw git diff、対象 realization file、所見一覧などの入力が、agent call parameter や prompt にどう組み込まれるかを確認・変更したいとき。
+- apply fork 系 builder が共有する repo root 解決 helper や、git 管理ディレクトリ探索と git コマンド fallback の境界を確認したいとき。
+- apply fork 関連の Structured Output schema のうち、変更要約やファイル単位の所見列挙の契約を確認したいとき。
+- oracle 側の正本仕様断片と realization 側 builder の関係、特に runtime import を避ける理由を確認したいとき。
 
 ## Do not read this when
-- fork 作成、差分適用、git 操作、作業レポート保存など、適用処理全体の制御フローを追いたいときは、より上位の apply/fork 実装へ進む。
-- file finding enumeration や finding application の具体的な仕様、型、関数、挙動を確認したいときは、再エクスポート先の oracle 側本文を読む。
-- agent call parameter の共通データ構造、モデル種別、reasoning、ファイルアクセスモードそのものを確認したいときは、共通 ACP 定義を読む。
-- 変更要約の表示文面や CLI 出力全体の整形だけを調べたいときは、出力やレポート表示を担う領域を読む。
+- fork の作成、branch 操作、commit 操作、作業ディレクトリ管理、レポート保存など、apply fork 全体の実行制御や git 副作用を追いたいとき。
+- agent が実際に編集する個別 realization file の修正内容や、各対象ファイル固有の実装ロジックを調べたいとき。
+- oracle file と realization file の基本定義、path model、work-root や run-root などの概念定義そのものを確認したいとき。
+- 変更要約や所見列挙の結果を表示する CLI 出力整形だけを確認したいとき。
+- 正本仕様断片そのものを確認したいとき、または oracle 側の実装・文書・テストを読むべき作業をしているとき。
 
 ## hash
-- 735609bdf382ea49e7774085a08a124842a12b175667f11e967216de3b1b0a7d
+- e8d48ed6fa3b3037c6a1a09e7068d48d25d28ace653bf47f679ee573d080ab1b

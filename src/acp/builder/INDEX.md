@@ -17,23 +17,25 @@
 # `apply`
 
 ## Summary
-- apply builder 領域の実装入口であり、oracle 側の package 構造に対応する互換 package と、fork 適用後の変更要約生成に関わる下位領域をまとめる。
-- この階層自体は具体的な適用処理全体を担うのではなく、package としての入口、および fork 適用後のレポート向け agent call parameter builder や oracle 側実装への接続点へ進むための分岐点として位置づけられる。
+- apply 作業に関わる agent call parameter builder 群への入口となる領域。差分要約、所見列挙、所見適用などを agent に委譲するための prompt、model 指定、file access 制約、Structured Output schema 参照、共有 helper のまとまりを下位に持つ。
+- oracle 側の package 構造に対応する realization 側の互換領域であり、通常実行時に oracle 側を runtime import しない前提で、正本仕様断片に沿った builder 実装を置く場所として位置づけられる。
 
 ## Read this when
-- apply builder 領域が oracle 側の構造とどう対応しているかを確認したいとき。
-- fork 適用後の作業レポートに含める変更要約を生成するための schema、agent 呼び出し設定、raw git diff やプロンプトの渡し方を探し始めるとき。
-- realization 側の fork 適用関連 import 経路が、oracle 側の file finding enumeration や finding application 定義へどう接続するかを確認したいとき。
-- この階層に実処理本体があるのか、互換入口や下位 package へのルーティングが主な役割なのかを切り分けたいとき。
+- apply 作業で agent を呼び出すための条件、prompt、schema、file access mode、model 指定の入口を探したいとき。
+- raw git diff、対象 realization file、所見一覧などの入力が、apply 系 agent call parameter にどう渡されるかを調べたいとき。
+- apply 作業の中で、差分要約・所見列挙・所見適用を agent に委譲する builder 群の所在を確認したいとき。
+- apply 系 builder が oracle 側の package 構造とどう対応しているか、また runtime import を避ける realization 実装上の境界を確認したいとき。
+- apply 系 builder で共有される repo root 解決や git 管理ディレクトリ探索など、agent 呼び出し前の補助処理への入口を探したいとき。
 
 ## Do not read this when
-- fork 作成、差分適用、git 操作、作業レポート保存など、適用処理全体の制御フローを追いたいときは、より上位の apply/fork 実装を読む。
-- file finding enumeration や finding application の具体的な型、関数、挙動を確認したいときは、再エクスポート先の oracle 側本文を読む。
-- agent call parameter の共通データ構造、モデル種別、reasoning、ファイルアクセスモードそのものを調べたいときは、共通 ACP 定義を読む。
-- 変更要約の表示文面や CLI 出力全体の整形だけを調べたいときは、出力やレポート表示を担う領域を読む。
+- fork の作成、branch 操作、commit 操作、作業ディレクトリ管理、レポート保存など、apply 処理全体の実行制御や git 副作用を追いたいとき。
+- agent が実際に編集する個別 realization file の修正内容や、対象ファイル固有の実装ロジックを調べたいとき。
+- oracle file、realization file、path model、work-root、run-root などの基本概念そのものを確認したいとき。
+- 変更要約や所見列挙の結果を表示する CLI 出力整形だけを確認したいとき。
+- 正本仕様断片そのもの、または oracle 側の実装・文書・テストを読むべき作業をしているとき。
 
 ## hash
-- 0472238c2451d79fda96e05588720ab8b0752d05b95adfce0abc611725248351
+- a7c515c71133df675c1cc44855b1d1edd45b60d4e8a8eb798e23028dc38db15c
 
 # `indexing`
 

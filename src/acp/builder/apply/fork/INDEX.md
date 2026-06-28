@@ -15,6 +15,24 @@
 ## hash
 - c5707d270af058dc9b548e1d49ffefdd38c20a0785a67a293523f2be83ebc266
 
+# `_common.py`
+
+## Summary
+- apply fork 系の builder で共通利用する、リポジトリルート解決の補助処理を収める。現在の作業ディレクトリから親方向に git 管理ディレクトリを探し、見つからない場合は git コマンドの結果からルートを導く。
+
+## Read this when
+- apply fork の builder 実装で、実行位置に依存せずリポジトリルートを得る処理を確認・変更したいとき。
+- 作業ディレクトリ配下の git 管理ディレクトリ探索と、git コマンドによるフォールバックの失敗時挙動を確認したいとき。
+- apply fork 配下の複数処理から共有される、ルートパス解決 helper の責務境界を確認したいとき。
+
+## Do not read this when
+- apply fork の個別生成内容、ACP 文字列、ファイル更新手順、または分岐ごとの builder 本体を確認したいとき。
+- リポジトリルート以外のパスモデル、work-root や run-root などの概念定義を確認したいとき。
+- git 操作全般の実行ロジック、branch 操作、commit 操作、または fork 適用後の副作用を確認したいとき。
+
+## hash
+- ea60e209134538d8c4711567f78dbca18c863787a438a901a5684682003188d2
+
 # `change_summary.json`
 
 ## Summary
@@ -37,52 +55,76 @@
 # `change_summary.py`
 
 ## Summary
-- `cmoc apply fork` が作業レポート用に使う変更要約 agent call parameter を組み立てる builder。対象リポジトリの raw git diff をプロンプトへ埋め込み、効率向けモデル・中程度 reasoning・読み取り専用アクセス・隣接する JSON schema を指定した呼び出し設定を返す。
-- 通常起動時に oracle 側を import できない制約を踏まえ、正本仕様断片への対応関係をコメントで残しつつ、実行時は realization 側だけで repo root 解決とプロンプト生成を行う。
+- `cmoc apply fork` の作業レポート向けに、git diff の生文字列から変更要約生成用の agent call parameter を組み立てる realization 実装。効率重視モデル、中程度 reasoning、読み取り専用アクセス、隣接 JSON schema を使い、prompt には対象リポジトリ範囲・INDEX.md ルーティング・差分本文・パス置換定義を埋め込む。
+- 対応する oracle src を正本仕様断片として参照しつつ、通常起動時は realization 側の `src` だけが公開される制約により oracle 実装を runtime import しないことを明示している。
 
 ## Read this when
-- `cmoc apply fork` の作業レポートに含める変更要約を、どのモデル設定・reasoning・ファイルアクセスモード・schema で生成するかを確認または変更したいとき。
-- 差分要約担当 agent に渡すプロンプト本文、読み取り専用ルール、ルーティング指示、raw git diff の埋め込み方を確認したいとき。
-- 実行時にカレントディレクトリまたは git command から repo root を解決する挙動を確認したいとき。
-- oracle 側の正本仕様断片を実行時 import せずに realization 実装へ反映している箇所を確認したいとき。
+- `cmoc apply fork` で作業レポート用の変更要約 agent を呼ぶための parameter 構築処理を確認・変更したいとき。
+- 変更要約 agent に渡す prompt の role、goal、読み書き制約、INDEX.md 利用指示、raw git diff の埋め込み方法、パス置換定義を確認したいとき。
+- apply fork 系 builder が oracle src を直接 import せず realization 実装として正本仕様断片に追従する理由を確認したいとき。
 
 ## Do not read this when
-- 差分要約の Structured Output schema の項目や型そのものを確認したいだけのときは、隣接する schema 定義を直接読む。
-- `cmoc apply fork` 全体の fork 作成、適用、git 操作、作業レポート保存などの制御フローを追いたいときは、より上位の apply/fork 実装へ進む。
-- agent call parameter の共通データ構造、モデル種別、reasoning、ファイルアクセスモードの定義を確認したいときは、共通 ACP 定義を読む。
-- oracle file と realization file の一般的な関係や編集ルールを確認したいだけのときは、正本仕様側の基本文書を読む。
+- 差分要約そのものの JSON schema や出力項目の定義だけを確認したいときは、隣接する schema 定義を直接読む。
+- repo root の解決方法や apply fork builder 共通処理を変更したいときは、共通 helper 側を読む。
+- `cmoc apply fork` 全体の fork 作成、git 操作、作業ディレクトリ管理、またはレポート保存処理を追いたいだけなら、それぞれの責務を持つ apply fork 実装へ進む。
 
 ## hash
-- bfc8d4d052a2b8f867aed1b924fc5b6fedee20c80bca51821518bd659703b85c
+- 9b11c45d41ca497ff81a8efe314d74590500e9cb49f01f1871d53e5834615d30
+
+# `file_finding_enumeration.json`
+
+## Summary
+- 実装調査で見つかった問題点を、根拠位置・要求仕様・観測された実装・修正方針とともに列挙するための JSON Schema。
+- apply fork 周辺の実装レビュー結果を機械的に検証できる形で返すための出力契約を定める。
+
+## Read this when
+- 実装に対する所見を出力する処理の契約を確認したいとき。
+- 仕様・実装ファイル上の根拠位置を含むレビュー結果を生成または検証するとき。
+- 所見ごとに要求、現状、問題理由、修正方針を揃えて扱う必要があるとき。
+
+## Do not read this when
+- 実装差分そのものや修正対象のコードを調べたいだけのとき。
+- ファイル探索や fork apply の制御フローを理解したいとき。
+- INDEX.md 用のルーティング文書の一般規約を確認したいとき。
+
+## hash
+- 0bed168a2a89c47730cdc914c08c08f2a3ad4022595c4b910c5d8ff9ca335524
 
 # `file_finding_enumeration.py`
 
 ## Summary
-- 対象は、実装側の同名モジュールを正本側の実装へ委譲する薄い再公開ファイルである。本文自体は独自ロジックを持たず、fork 適用時の file finding enumeration に関する実体は正本側モジュールに置かれている。
+- `cmoc apply fork` で、指定された実現ファイルを起点に oracle file と realization file の不整合を調査し、ファイル単位の所見列挙用 agent call parameter を組み立てる builder。
+- 主流モデル・中程度 reasoning・readonly file access を指定し、対象 path と repo root を埋め込んだ所見列挙プロンプトと、同名 JSON schema path を返す。
 
 ## Read this when
-- 実装側の import 経路から、fork 適用時の file finding enumeration の定義がどこへ委譲されているかを確認したいとき。
-- 同階層の実装ファイル群のうち、この概念の realization 側エントリーポイントだけを確認したいとき。
+- `cmoc apply fork` の所見列挙 agent に渡す role、goal、readonly 制約、routing rule、apply review standard のプロンプト内容を確認または変更したいとき。
+- apply fork 系 builder のうち、対象 realization file を起点に修正必須の不整合だけを列挙させる呼び出しパラメータ生成を追うとき。
+- 所見列挙で `INDEX.md` を本文扱いしないこと、oracle file と realization file の定義、placeholder 表記が agent prompt にどう渡るかを確認したいとき。
 
 ## Do not read this when
-- file finding enumeration の具体的な仕様、関数、型、挙動を調べたいときは、委譲先の正本側モジュールを読む。
-- fork 適用処理全体の流れや他の責務を調べたいときは、該当する上位または隣接モジュールを読む。
+- `cmoc apply fork` の共通 repo root 解決だけを確認したいときは、共通 helper を直接読む。
+- 所見列挙結果の Structured Output schema 自体を確認したいときは、対応する JSON schema を直接読む。
+- 実際の不整合検出ロジックやレビュー基準そのものの実装を探しているときは、この builder ではなく、agent の出力を処理する箇所または正本仕様側を読む。
 
 ## hash
-- b64c3193ab0469318fecebabc0c2e2ac9d2164d2bcbef9dd8d11362a205ab599
+- 6606a4eefd59f188e3906ae437e13cb5f8754878e12bef1cf693e20394445ef5
 
 # `finding_application.py`
 
 ## Summary
-- fork 適用処理で検出された finding の適用仕様を公開する薄い再エクスポート実装。実体は oracle 側の同名モジュールにあり、この realization 側ファイルは src ツリーからその定義を参照可能にする入口として位置づく。
+- `cmoc apply fork` で、所見本文を realization file 修正担当 agent へ渡すための agent call parameter を構築する実装。
+- 所見一覧を JSON としてプロンプトへ埋め込み、読み書き範囲、ルーティング方針、作業上の禁止事項、place holder definition を含む修正依頼文を生成する。
 
 ## Read this when
-- src ツリー側から fork finding application 関連の公開名がどこへ委譲されているか確認したいとき。
-- 実装本体ではなく、realization implementation が oracle 側の正本実装断片を再利用している接続点を確認したいとき。
+- `cmoc apply fork` が所見を適用する agent をどの model class、reasoning effort、file access mode、prompt で呼び出すかを確認したいとき。
+- 所見本文が修正担当 agent のプロンプトへどのように渡されるか、また修正担当 agent にどの作業制約が与えられるかを確認したいとき。
+- realization file 修正担当 agent 向けの読み書き規則、`INDEX.md` 利用方針、git add・git commit 禁止の指示を調整したいとき。
 
 ## Do not read this when
-- fork finding application の具体的な関数・型・処理内容を確認したいとき。その場合は再エクスポート先の oracle 側本文を読む。
-- fork 適用処理全体の設計や他の適用段階を調べたいとき。その場合は同じ責務領域のより上位または隣接する本文を読む。
+- 所見の検出、分類、生成、妥当性評価そのものを確認したいとき。
+- `cmoc apply fork` 以外の apply 系処理や、所見適用以外の agent call parameter 構築を確認したいとき。
+- repository root の解決方法そのものを確認したいとき。
+- 修正担当 agent が実際に編集する個別 realization file や、その修正ロジックを確認したいとき。
 
 ## hash
-- 055ee85cc2fab78164f4ef81a97d605ec0bc25162c4e7c098fffa72bb1e0eb84
+- 43c0b963de149d2a846c5bb0ff27d28af87db8042e59363963439c793d625c6c
