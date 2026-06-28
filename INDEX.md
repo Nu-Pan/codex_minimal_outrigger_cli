@@ -169,21 +169,23 @@
 # `test`
 
 ## Summary
-- test 配下の realization test と共通テスト補助の入口。CLI サブコマンド、Codex runtime、prompt 構築、indexing preflight、基礎 runtime の外部挙動を pytest で固定する。
-- 個別テストは apply/session/review/init/indexing/runtime などの実行副作用、Git worktree・branch・state・report・ログ・Codex 呼び出し制御を検証し、共通補助は一時 Git repository や fake Codex 実行環境を組み立てる。
-- cmoc の実装変更が既存の CLI 契約や runtime 境界を壊していないかを確認するため、対象機能ごとのテスト本文へ進む上位入口になる。
+- realization test 群の入口。CLI サブコマンド、Codex 実行ラッパー、runtime 共通契約、prompt/schema builder、indexing preflight など、実装が外部に見せる挙動と主要な制御ロジックを pytest で固定する。
+- 共通 test support も含み、一時 Git repository、Codex home、fake executable、profile 差し替えなど、外部コマンドや worktree/state 副作用を伴うテストの前提準備を集約する。
+- 巨大なテストは、apply、session、review、init/TUI、prompt 構築など同じ fixture と状態遷移の文脈を共有する領域ごとに凝集されており、対象機能の回帰条件を探すための起点になる。
 
 ## Read this when
-- cmoc の realization test 全体から、変更対象機能に対応する pytest ファイルを選びたいとき。
-- CLI サブコマンド、Codex runtime、prompt/indexing preflight、基礎 runtime の外部挙動や回帰条件をテストで確認・変更したいとき。
-- Git worktree、branch、session/apply state、report、ログ、fake Codex 実行などを伴う統合的なテストの配置を探すとき。
-- 新しい realization test を追加する前に、既存テストへケース追加・統合できる場所や共通補助の入口を確認したいとき。
+- CLI サブコマンドの終了コード、標準出力・標準エラー、report、commit、branch、worktree、state file cleanup などの外部挙動を確認・変更したいとき。
+- apply fork/join/abandon、session fork/join/abandon、review oracle、init、TUI、indexing、Codex runtime の retry/quota/home/profile/sandbox など、ユーザー操作や Codex 呼び出しをまたぐ回帰条件を探すとき。
+- 実装変更に対応する realization test を追加・修正する前に、既存テストへケース追加できるか、同じ fixture や fake Codex 制御を再利用できるかを確認したいとき。
+- 一時 Git repository、linked worktree、apply worktree、認証済み CODEX_HOME、fake Codex executable、Codex profile 生成差し替えなど、テスト用の共通準備や helper を使う必要があるとき。
+- prompt part、AgentCallParameter builder、Structured Output schema、routing document 更新、preflight indexing など、実装が生成する prompt/schema/routing 関連の期待値を横断的に確認したいとき。
 
 ## Do not read this when
-- 正本仕様断片を確認したい場合は、この realization test 群ではなく oracle 配下の本文を読む。
-- 実装本体の責務分割、内部 helper、状態 schema、CLI 関数の処理詳細だけを変更したい場合は、対応する src 配下の実装を先に読む。
-- 個別機能に対応するテストファイルが既に分かっている場合は、このディレクトリ入口ではなくそのテスト本文へ直接進む。
-- Codex CLI や LLM の実出力品質を検証したい場合は読まない。ここでは fake/stub を使い、cmoc 側の制御と外部副作用を検証する。
+- oracle file の正本仕様断片そのものを確認・変更したい場合。この配下は realization test であり、仕様本文の代替ではない。
+- 個別機能の実装本体、helper の内部処理、schema 定義そのものを変更したいだけなら、対応する実装または oracle source を先に読む。
+- Codex CLI や LLM の出力品質そのものを評価したい場合。ここでは fake/stub を使い、cmoc 側の制御、渡し値、ログ、副作用を検証する。
+- 特定の小さな純粋関数や設定モデルだけを調べたい場合で、CLI 経由の外部挙動、Git 状態、worktree、state、report、Codex subprocess 制御に触れないなら、より局所的な実装やテストへ進む。
+- routing 文書の生成規則や oracle/realization の概念定義を知りたいだけなら、標準や oracle 側の文書を読む。
 
 ## hash
-- 116389f7bfe908d8ccc0e67106b0e25818267b5ab319b5a36f92cb3ea73617f8
+- 61ee77b27980a6c186e1c339fad9e06745841e1a7061a5bff83c9cabd56599b1
