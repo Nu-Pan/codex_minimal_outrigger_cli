@@ -1,24 +1,24 @@
 # `acp`
 
 ## Summary
-- AI エージェント呼び出しに関わる realization implementation の上位領域であり、呼び出しパラメータを組み立てる処理と、その complete prompt に差し込む標準プロンプト断片の構築処理を収める。
-- 各機能が AI に渡す role、summary、goal、補助入力、ファイルアクセス制約、標準参照、モデル・reasoning、Structured Output schema をどのように定めるかを追うための入口になる。
-- 変更要約、実装所見調査、INDEX エントリー生成、oracle review、merge conflict marker 解消、TUI 実行パラメータ選定など、AI に依頼する作業の呼び出し条件と応答契約へ進む起点になる。
+- AI agent 呼び出しに関わる実装をまとめた領域。呼び出し直前に渡すパラメータ構築と、プロンプトを構成する標準文書・規則部品の生成が主な入口になる。
+- 対象は、各機能の role、goal、補助入力、ファイルアクセス権限、モデル・reasoning、Structured Output schema の選定と、oracle・realization・review・INDEX.md エントリーなどの標準プロンプト部品である。
+- CLI の実行制御や git 操作、ファイル更新、結果の保存・表示そのものではなく、それらの処理が AI agent に依頼する内容と応答契約を組み立てる層を扱う。
 
 ## Read this when
-- cmoc の処理が AI エージェントを呼び出す直前に、どの入力・権限・モデル設定・Structured Output schema を渡しているかを確認または変更したいとき。
-- AI 呼び出し用 complete prompt に含まれる基本情報、ファイルアクセス制約、ルーティング規則、oracle/realization の概念、レビュー基準、INDEX エントリー規範の生成箇所を探したいとき。
-- 変更差分要約、レビュー所見列挙、所見対応、INDEX エントリー生成、oracle 関連レビュー、merge conflict marker 解消など、個別の AI 作業依頼のプロンプト設計や応答 schema を調べたいとき。
-- AI 呼び出しの入口と、そこから利用される標準プロンプト断片の関係を同じ領域で把握したいとき。
+- cmoc の機能が AI agent へ何を依頼し、どの制約・標準文書・Structured Output schema を付けて呼び出すかを確認または変更したいとき。
+- 変更要約、実装所見調査、所見対応、INDEX.md エントリー生成、oracle レビュー、merge conflict marker 解消、TUI 実行条件選定など、個別の AI 作業依頼のプロンプト設計へ進みたいとき。
+- ファイル読み書き制約、INDEX.md ルーティング規則、oracle と realization の基本概念、各種レビュー基準など、AI agent に渡す標準プロンプト部品の生成処理を探したいとき。
+- AgentCallParameter に渡る role、summary、goal、aux_prompt、標準参照、file access mode、model class、reasoning effort の対応関係を、処理領域ごとに追いたいとき。
 
 ## Do not read this when
-- サブコマンド登録、CLI 引数解析、実行順序、状態管理、git 操作、ファイル更新、結果保存・表示など、AI 呼び出し前後の制御フローだけを調べたいとき。
-- path model、StructDoc、Markdown rendering、AgentCallParameter、FileAccessMode などの基礎型や汎用構造化文書処理そのものを確認したいとき。
-- oracle file や realization file の本文仕様、または実際にレビュー・修正される対象ファイルの内容を直接読みたいとき。
-- 生成済みの INDEX.md の保存・更新・描画や、リポジトリ全体のルーティング文書管理だけを調べたいとき。
+- サブコマンド登録、CLI 引数解析、実行順序、状態管理、git branch 操作、merge 実行、ファイルシステム走査や保存など、AI 呼び出し前後の制御フローだけを調べたいとき。
+- StructDoc、Markdown rendering、path model、root token、AgentCallParameter、FileAccessMode など、プロンプトや呼び出し条件に埋め込まれる基礎型そのものを確認したいとき。
+- oracle file、realization file、テスト、または実際に修正・レビューされる対象ファイルの本文を直接読みたいとき。
+- AI 応答後の結果集約、保存、表示、適用可否判断、テスト実行、ユーザー通知、生成済み INDEX.md の描画・更新・保存だけを調べたいとき。
 
 ## hash
-- 63862674c39d794f60eebc7f8c42cce2cd8120e1cca897c9bea5d72afcc91b6b
+- c62355f2df833e43f5c3e8ed4d436cc9a0905e98f8227289a5443454bb3bf4bf
 
 # `basic`
 
