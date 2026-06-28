@@ -1,5 +1,4 @@
 import multiprocessing
-import subprocess
 import threading
 import time
 from collections.abc import Callable
@@ -7,18 +6,13 @@ from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
-import cmoc_runtime
 import commons.runtime_codex_preflight as codex_preflight_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 
 from _support import (
-    current_branch,
     make_repo,
     run_git,
-    runner,
 )
-from main import app
-import sub_commands.apply.join as apply_module
 import commons.indexing as indexing_module
 
 
