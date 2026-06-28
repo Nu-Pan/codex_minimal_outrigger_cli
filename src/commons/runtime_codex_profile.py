@@ -7,7 +7,6 @@ subprocess 境界の不変条件を共有するため、分割すると呼び出
 失敗時文脈が増える。現状は Codex profile 境界として一箇所に保つ方が凝集性が高い。
 """
 
-import hashlib
 import json
 import os
 import subprocess
@@ -152,8 +151,7 @@ def _is_writable_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> b
         return False
     # <work-root>/oracle/src/acp/prompt_parts/file_access_rule.py
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # Codex profile は deny を持たないため、FileAccessMode と Codex exec の
-    # 禁止領域を writable_roots に入れない正リストとして表現する。
+    # 追加 writable path は、prompt で伝える禁止領域を広げない範囲だけ許可する。
     if path.is_relative_to(root / "memo") or path.is_relative_to(root / ".agents"):
         return False
     if mode == FileAccessMode.REALIZATION_WRITE:
@@ -161,124 +159,6 @@ def _is_writable_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> b
     if mode == FileAccessMode.ORACLE_WRITE:
         return path.is_relative_to(root / "oracle")
     return mode == FileAccessMode.REPO_WRITE
-
-
-def protected_write_paths(mode: FileAccessMode) -> tuple[str, ...]:
-    # <work-root>/oracle/src/acp/prompt_parts/file_access_rule.py
-    # Codex profile lacks deny rules, so root-wide writable modes need a
-    # post-call git guard for the deny areas that the profile cannot express.
-    if mode == FileAccessMode.REALIZATION_WRITE:
-        return ("oracle", "memo", ".agents")
-    if mode == FileAccessMode.REPO_WRITE:
-        return ("memo", ".agents")
-    return (".agents",)
-
-
-def _git_stdout(root: Path, args: list[str]) -> str:
-    return subprocess.run(
-        ["git", *args],
-        cwd=root,
-        text=True,
-        capture_output=True,
-        check=False,
-    ).stdout
-
-
-def _git_paths(root: Path, args: list[str]) -> list[str]:
-    stdout = subprocess.run(
-        ["git", *args],
-        cwd=root,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-    ).stdout
-    return sorted(path.decode() for path in stdout.split(b"\0") if path)
-
-
-def _worktree_file_hash(root: Path, relative_path: str) -> str:
-    path = root / relative_path
-    if path.is_symlink():
-        return "symlink:" + hashlib.sha256(os.readlink(path).encode()).hexdigest()
-    if path.is_file():
-        return "file:" + hashlib.sha256(path.read_bytes()).hexdigest()
-    if path.exists():
-        return "other"
-    return "missing"
-
-
-def protected_write_status(mode: FileAccessMode, root: Path) -> str:
-    paths = protected_write_paths(mode)
-    if not paths:
-        return ""
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # `git status --short` alone cannot detect content changes when a deny
-    # path is already dirty before Codex runs, so the guard snapshots content.
-    tracked_paths = _git_paths(root, ["ls-files", "-z", "--", *paths])
-    other_paths = _git_paths(
-        root, ["ls-files", "--others", "--exclude-standard", "-z", "--", *paths]
-    )
-    ignored_paths = _git_paths(
-        root,
-        ["ls-files", "--others", "--ignored", "--exclude-standard", "-z", "--", *paths],
-    )
-    file_paths = sorted(set(tracked_paths + other_paths + ignored_paths))
-    return json.dumps(
-        {
-            "status": _git_stdout(
-                root,
-                [
-                    "status",
-                    "--short",
-                    "--ignored",
-                    "--untracked-files=all",
-                    "--",
-                    *paths,
-                ],
-            ),
-            "diff": _git_stdout(root, ["diff", "--binary", "--", *paths]),
-            "cached_diff": _git_stdout(
-                root, ["diff", "--cached", "--binary", "--", *paths]
-            ),
-            "files": [
-                [relative_path, _worktree_file_hash(root, relative_path)]
-                for relative_path in file_paths
-            ],
-        },
-        ensure_ascii=False,
-        sort_keys=True,
-    )
-
-
-def reject_protected_write(
-    mode: FileAccessMode, root: Path, before: str, call_path: Path
-) -> None:
-    after = protected_write_status(mode, root)
-    if after == before:
-        return
-    paths = ", ".join(protected_write_paths(mode))
-    if paths == ".agents":
-        summary = "Codex CLI 呼び出しが .agents 配下を変更しました。"
-        next_actions = [
-            ".agents 配下を変更しない形で作業をやり直してください。",
-            "必要な変更がある場合は、人間が別途 .agents 配下を編集してください。",
-        ]
-    else:
-        summary = "Codex CLI 呼び出しが FileAccessMode の禁止領域を変更しました。"
-        next_actions = [
-            "file access mode の禁止領域を変更しない形で作業をやり直してください。",
-            "必要な変更がある場合は、許可された別手順で人間が編集してください。",
-        ]
-    raise CmocError(
-        summary,
-        next_actions,
-        (
-            f"mode: {mode.value}\n"
-            f"protected_paths: {paths}\n"
-            f"call_log: {call_path}\n"
-            f"before:\n{before or '(clean)'}\n"
-            f"after:\n{after or '(clean)'}"
-        ),
-    )
 
 
 def _append_workspace_write_section(

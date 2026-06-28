@@ -13,8 +13,6 @@ from commons.runtime_codex_profile import (
     codex_subprocess_env,
     file_access_to_codex_cwd,
     prepare_codex_profile,
-    protected_write_status,
-    reject_protected_write,
     resolve_codex_home,
     run_codex_subprocess,
     validate_codex_home,
@@ -53,9 +51,6 @@ def run_codex_tui(
         parameter, config, codex_home, codex_work_root, extra_read_paths
     )
     profile_name = codex_profile_name(profile_path)
-    protected_status_before = protected_write_status(
-        parameter.file_access_mode, codex_work_root
-    )
     argv = [
         "codex",
         "--profile",
@@ -120,16 +115,6 @@ def run_codex_tui(
             **payload,
         )
 
-    try:
-        reject_protected_write(
-            parameter.file_access_mode,
-            codex_work_root,
-            protected_status_before,
-            call_path,
-        )
-    except CmocError as exc:
-        emit_event(exc.detail)
-        raise
     emit_event()
     if failure is not None:
         raise CmocError(
