@@ -5,6 +5,7 @@
 
 # cmoc
 from pathlib import Path
+import re
 
 from basic.path_model import RootToken, resolve_real_path, resolve_work_root
 from basic.struct_doc import StructCodeBlock, StructDoc
@@ -132,10 +133,23 @@ def _sanitize_prompt_doc(doc: StructDoc) -> StructDoc:
 
 def _sanitize_prompt_text(text: str) -> str:
     """標準 prompt 内の cmoc 固有表記を実行時の Codex 向け表記へ寄せる。"""
-    # `<work-root>/oracle/doc/app_spec/prompt_standard.md` requires concrete paths
-    # before text is passed to Codex CLI.
+    protected: dict[str, str] = {}
+    token_pattern = "|".join(re.escape(token.value) for token in RootToken)
+
+    # <work-root>/oracle/src/acp/prompt_parts/realization_standard.py
+    # requires literal root-token comments, so those requirements must not be
+    # rewritten into absolute-path requirements while concrete paths still are.
+    def protect(match: re.Match[str]) -> str:
+        key = f"\0{len(protected)}\0"
+        protected[key] = match.group(0)
+        return key
+
+    text = re.sub(rf"`(?:{token_pattern})(?:/[^`]*)?`(?=\s*トークン)", protect, text)
+    text = re.sub(rf"`(?:{token_pattern})/[^`]*\.\.\.[^`]*`", protect, text)
     for root_token in RootToken:
         text = text.replace(root_token.value, str(_resolve_prompt_root(root_token)))
+    for key, value in protected.items():
+        text = text.replace(key, value)
     return text.replace("cmoc から呼び出された AI Agent", "AI Agent")
 
 

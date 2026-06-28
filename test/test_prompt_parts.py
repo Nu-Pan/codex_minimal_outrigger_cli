@@ -247,8 +247,10 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
     assert "`oracle spec`" in rendered
     assert "`仕様ファイル`" in rendered
     assert "`oracles file` のような typo" in rendered
-    for forbidden in ["<cmoc-root>", "<repo-root>", "<run-root>", "<work-root>"]:
+    for forbidden in ["<cmoc-root>", "<repo-root>", "<run-root>"]:
         assert forbidden not in rendered
+    assert "コメントに `<work-root>` トークン起点の oracle file path を書く" in rendered
+    assert "`<work-root>/oracle/doc/...` のように根拠 path" in rendered
     for expected in [
         "oracle and realization basic",
         "oracle standard",
@@ -301,6 +303,31 @@ def test_complete_prompt_resolves_root_tokens_and_removes_cmoc_call_metadata(
     assert f"{repo_root} ツリー内の realization file" in rendered
     assert f"{repo_root} 配下を確認すること" in rendered
     assert f'"summary": "realization file and {repo_root} stay in code block"' in rendered
+
+
+def test_complete_prompt_keeps_literal_root_token_comment_requirement(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    monkeypatch.chdir(repo_root)
+
+    prompt = build_complete_prompt(
+        role="- role",
+        summary="- <work-root>/src/app.py を確認すること",
+        goal="- goal",
+        file_access_mode=FileAccessMode.READONLY,
+        aux_prompt=[],
+        realization_standard=True,
+    )
+
+    rendered = render_as_markdown(prompt)
+
+    assert f"- {repo_root}/src/app.py を確認すること" in rendered
+    assert "コメントに `<work-root>` トークン起点の oracle file path を書く" in rendered
+    assert "`<work-root>/oracle/doc/...` のように根拠 path" in rendered
+    assert f"コメントに `{repo_root}` トークン起点" not in rendered
 
 
 def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
