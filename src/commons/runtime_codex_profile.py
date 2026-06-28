@@ -358,7 +358,7 @@ def process_start_time(process_id: int) -> int | None:
 
 
 def prepare_schema(root: Path, schema_source_path: Path | None) -> Path | None:
-    """Structured Output schema を work root 側の内容 hash store へ配置する。"""
+    """Structured Output schema を指定 root の内容 hash store へ配置する。"""
     if schema_source_path is None:
         return None
     schema_text = schema_source_path.read_text()

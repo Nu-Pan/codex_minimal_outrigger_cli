@@ -141,8 +141,11 @@ def run_codex_exec(
     )
     profile_name = codex_profile_name(profile_path)
     agents_status_before = _agents_status(codex_work_root)
+    # <work-root>/oracle/doc/app_spec/run_isolation.md
+    # Structured Output schema is cmoc state; run worktrees keep Codex cwd and
+    # sandbox roots, but state files belong under the repo-side `root`.
     schema_path = (
-        prepare_schema(codex_work_root, parameter.structured_output_schema_path)
+        prepare_schema(root, parameter.structured_output_schema_path)
         if parameter.structured_output_schema_path
         else None
     )

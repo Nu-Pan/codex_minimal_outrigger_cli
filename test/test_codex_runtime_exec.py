@@ -10,6 +10,7 @@ from cmoc_runtime import CmocError, SubcommandLogger
 from config.cmoc_config import CmocConfig
 from _support import (
     make_repo,
+    run_git,
     setup_codex_home,
     stub_codex_profile,
     write_python_executable,
@@ -158,6 +159,66 @@ def test_run_codex_exec_limits_pure_oracle_read_to_oracle_cwd(
     assert record["cwd"] == oracle_root
     assert 'sandbox_mode = "read-only"' in record["profile"]
     assert "sandbox_workspace_write" not in tomllib.loads(record["profile"])
+
+
+def test_run_codex_exec_stores_schema_state_under_repo_root_for_run_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    linked = root / ".cmoc" / "worktrees" / "linked"
+    linked.parent.mkdir(parents=True)
+    run_git(root, "worktree", "add", "-b", "linked-exec", str(linked), "HEAD")
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    recorder = tmp_path / "record.json"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, os, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text(json.dumps({'ok': True}))",
+            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
+            "    'args': args,",
+            "    'cwd': os.getcwd(),",
+            "}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    schema_source = tmp_path / "schema.json"
+    schema_source.write_text(
+        json.dumps(
+            {
+                "type": "object",
+                "required": ["ok"],
+                "properties": {"ok": {"type": "boolean"}},
+            }
+        )
+    )
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.REPO_WRITE,
+        "prompt",
+        schema_source,
+    )
+
+    result = run_codex_exec(
+        parameter,
+        root=root,
+        cwd=linked,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    record = json.loads(recorder.read_text())
+    schema_arg = Path(record["args"][record["args"].index("--output-schema") + 1])
+    assert record["cwd"] == str(linked.resolve())
+    assert result.schema_path == schema_arg
+    assert schema_arg.parent == root / ".cmoc" / "state" / "schema"
+    assert not (linked / ".cmoc" / "state" / "schema").exists()
 
 
 def test_run_codex_exec_logs_call_before_rejecting_agents_edit(
