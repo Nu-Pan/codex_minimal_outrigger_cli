@@ -6,7 +6,9 @@ from cmoc_runtime import (
     CmocError,
     SessionState,
     active_session_for_home,
+    branch_exists,
     current_branch,
+    ensure_cmoc_ignored_in_exclude,
     head_commit,
     is_managed_branch,
     repo_root,
@@ -20,11 +22,14 @@ from cmoc_runtime import (
 )
 
 
+MAX_SESSION_ID_ATTEMPTS = 32
+
+
 def cmoc_session_fork_impl() -> None:
     """CLI runtime を通して session fork を実行する。"""
     run_cli_subcommand(
         _cmoc_session_fork_body,
-        pre_log_check=ensure_cmoc_ignored_for_session_fork,
+        pre_log_check=ensure_cmoc_ignored_in_exclude,
         command_name="session fork",
         command_argv=["cmoc", "session", "fork"],
         use_work_root_runtime=True,
@@ -42,7 +47,7 @@ def _cmoc_session_fork_body() -> None:
             ["通常の local branch に checkout してから再実行してください。"],
             f"current branch: {branch}",
         )
-    ensure_cmoc_ignored_for_session_fork(work)
+    ensure_cmoc_ignored_in_exclude(work)
     require_clean_worktree(work)
     existing = active_session_for_home(root, branch)
     if existing:
@@ -51,7 +56,7 @@ def _cmoc_session_fork_body() -> None:
             ["既存 session を join または abandon してから再実行してください。"],
             str(existing),
         )
-    session_id = timestamp()
+    session_id = _new_session_id(root)
     session_branch = f"cmoc/session/{session_id}"
     start_commit = head_commit(work)
     run_git(["switch", "-c", session_branch], work)
@@ -70,25 +75,19 @@ def _cmoc_session_fork_body() -> None:
         )
     )
 
-def ensure_cmoc_ignored_for_session_fork(root: Path) -> None:
-    # session fork は clean worktree を保ったまま、ログ作成前に .cmoc を ignore する必要がある。
-    exclude_path = root / run_git(
-        ["rev-parse", "--git-path", "info/exclude"], root
-    ).stdout.strip()
-    content = exclude_path.read_text() if exclude_path.exists() else ""
-    if "/.cmoc/" not in content.splitlines():
-        exclude_path.parent.mkdir(parents=True, exist_ok=True)
-        newline = "" if content == "" or content.endswith("\n") else "\n"
-        exclude_path.write_text(f"{content}{newline}/.cmoc/\n")
-    tracked = run_git(["ls-files", "--", ".cmoc"], root).stdout.strip()
-    ignored = run_git(
-        ["check-ignore", "-q", ".cmoc/.__cmoc_ignore_probe__"],
-        root,
-        check=False,
+
+def _new_session_id(root: Path) -> str:
+    # 根拠: <work-root>/oracle/doc/app_spec/sub_command/session_fork.md
+    # 根拠: <work-root>/oracle/doc/app_spec/session_state.md
+    # state file が残った joined/abandoned session との衝突も session-id 衝突として扱う。
+    for _ in range(MAX_SESSION_ID_ATTEMPTS):
+        session_id = timestamp()
+        if not branch_exists(root, f"cmoc/session/{session_id}") and not state_path(
+            root, session_id
+        ).exists():
+            return session_id
+    raise CmocError(
+        "一意な session-id を生成できませんでした。",
+        ["時間を置いてから `cmoc session fork` を再実行してください。"],
+        f"attempts: {MAX_SESSION_ID_ATTEMPTS}",
     )
-    if tracked or ignored.returncode != 0:
-        raise CmocError(
-            ".cmoc を git 追跡対象外にできませんでした。",
-            [".gitignore と git index の状態を確認してください。"],
-            f"tracked:\n{tracked}\ncheck-ignore returncode: {ignored.returncode}",
-        )

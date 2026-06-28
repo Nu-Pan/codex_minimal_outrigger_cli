@@ -1,21 +1,31 @@
+"""session fork/join/abandon の CLI 外部挙動をまとめて検証する。
+
+このファイルは 16,000 文字を超えるが、責務境界は session branch と session state の
+ライフサイクルに閉じている。fork、join、abandon、linked worktree、state cleanup、
+dirty worktree 拒否は同じ session 状態遷移の観測点であり、分割すると同じ branch/state
+fixture を追う文脈が分散する。現状は session CLI 回帰として一箇所に保つ方が凝集性が高い。
+"""
+
 import json
 import subprocess
 from pathlib import Path
-import tomllib
 
 import cmoc_runtime
-from basic.acp import FileAccessMode
+from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError
+from commons.runtime_codex_profile import build_codex_profile
 from config.cmoc_config import CmocConfig
+import pytest
+
 from _support import (
     current_branch,
     make_repo,
     run_git,
     runner,
 )
-from commons.runtime_codex_profile import build_codex_profile
 from main import app
 import sub_commands.session.abandon as session_module
+import sub_commands.session.fork as session_fork_module
 import sub_commands.session.join as session_join_module
 
 
@@ -29,8 +39,34 @@ def session_home_branch(root: Path, session_branch: str) -> str:
     return state["session"]["session_home_branch"]
 
 
+def write_abandoned_state(root: Path, session_id: str) -> Path:
+    path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "session": {
+                    "state": "abandoned",
+                    "session_home_branch": "old-home",
+                    "session_start_commit": "old-commit",
+                    "last_joined_apply_oracle_snapshot_commit": None,
+                },
+                "apply": {
+                    "state": "ready",
+                    "apply_branch": None,
+                    "oracle_snapshot_commit": None,
+                },
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n"
+    )
+    return path
+
+
 def test_session_fork_creates_session_branch_and_state(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -50,8 +86,77 @@ def test_session_fork_creates_session_branch_and_state(
     assert state["apply"]["state"] == "ready"
 
 
+def test_session_fork_does_not_overwrite_existing_state_on_session_id_collision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    session_id = "2026-06-27_01-02_03_000000000"
+    path = write_abandoned_state(root, session_id)
+    original = path.read_text()
+    home_branch = current_branch(root)
+    monkeypatch.setattr(session_fork_module, "timestamp", lambda: session_id)
+    monkeypatch.setattr(session_fork_module, "MAX_SESSION_ID_ATTEMPTS", 2)
+
+    result = runner.invoke(app, ["session", "fork"])
+
+    assert result.exit_code != 0
+    assert "一意な session-id を生成できませんでした。" in result.stdout
+    assert path.read_text() == original
+    assert current_branch(root) == home_branch
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", f"cmoc/session/{session_id}"],
+            cwd=root,
+        ).returncode
+        != 0
+    )
+
+
+def test_session_fork_retries_session_id_collision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    collision_id = "2026-06-27_01-02_03_000000000"
+    next_id = "2026-06-27_01-02_03_000000001"
+    old_path = write_abandoned_state(root, collision_id)
+    original = old_path.read_text()
+    ids = iter([collision_id, next_id])
+    monkeypatch.setattr(session_fork_module, "timestamp", lambda: next(ids))
+
+    result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert current_branch(root) == f"cmoc/session/{next_id}"
+    assert old_path.read_text() == original
+    assert (root / ".cmoc" / "sessions" / f"{next_id}.json").is_file()
+    assert f"- session_branch: `cmoc/session/{next_id}`" in result.output
+
+
+def test_session_fork_rejects_corrupt_state_without_active_session_message(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    home_branch = current_branch(root)
+    path = root / ".cmoc" / "sessions" / "broken.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps({"session": {"session_home_branch": home_branch}, "apply": {}})
+        + "\n"
+    )
+
+    result = runner.invoke(app, ["session", "fork"])
+
+    assert result.exit_code != 0
+    assert "session state file が不正です。" in result.stdout
+    assert "active session が既に存在します。" not in result.stdout
+    assert current_branch(root) == home_branch
+
+
 def test_session_fork_initializes_cmoc_ignore_before_logging(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -76,7 +181,7 @@ def test_session_fork_initializes_cmoc_ignore_before_logging(
 
 
 def test_session_fork_uses_linked_worktree_branch_and_head(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -103,7 +208,7 @@ def test_session_fork_uses_linked_worktree_branch_and_head(
 
 
 def test_session_abandon_switches_home_and_marks_state(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -114,11 +219,13 @@ def test_session_abandon_switches_home_and_marks_state(
     session_branch = current_branch(root)
     state_path = session_state_path(root, session_branch)
     home_branch = session_home_branch(root, session_branch)
+    home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
 
     result = runner.invoke(app, ["session", "abandon"], catch_exceptions=False)
 
     assert result.exit_code == 0
     assert current_branch(root) == home_branch
+    assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
     assert (
         subprocess.run(
             ["git", "rev-parse", "--verify", session_branch], cwd=root
@@ -132,7 +239,7 @@ def test_session_abandon_switches_home_and_marks_state(
 
 
 def test_session_abandon_uses_linked_worktree_branch(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -147,12 +254,14 @@ def test_session_abandon_uses_linked_worktree_branch(
     session_branch = current_branch(linked)
     state_path = session_state_path(root, session_branch)
     home_branch = session_home_branch(root, session_branch)
+    home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
 
     result = runner.invoke(app, ["session", "abandon"], catch_exceptions=False)
 
     assert result.exit_code == 0
     assert current_branch(root) == root_branch
     assert current_branch(linked) == home_branch
+    assert run_git(root, "rev-parse", home_branch).stdout.strip() == home_commit
     assert (
         subprocess.run(
             ["git", "rev-parse", "--verify", session_branch], cwd=root
@@ -165,7 +274,7 @@ def test_session_abandon_uses_linked_worktree_branch(
 
 
 def test_session_abandon_requires_existing_home_branch(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -176,6 +285,19 @@ def test_session_abandon_requires_existing_home_branch(
     session_branch = current_branch(root)
     home_branch = session_home_branch(root, session_branch)
     home_commit = run_git(root, "rev-parse", home_branch).stdout.strip()
+    gitignore = root / ".gitignore"
+    gitignore.write_text(
+        "\n".join(
+            line for line in gitignore.read_text().splitlines() if line != "/.cmoc/"
+        )
+        + "\n"
+    )
+    tracked_probe = root / ".cmoc" / "tracked-probe"
+    tracked_probe.write_text("tracked\n")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "add", "-f", ".cmoc/tracked-probe")
+    run_git(root, "commit", "-m", "track cmoc probe on session")
+    tracked_cmoc = run_git(root, "ls-files", "--", ".cmoc").stdout
     run_git(root, "branch", "-D", home_branch)
     run_git(root, "tag", home_branch, home_commit)
 
@@ -184,7 +306,7 @@ def test_session_abandon_requires_existing_home_branch(
     assert result.exit_code != 0
     assert "completed session abandon" in result.output
     assert "- sub_command_log: `" in result.output
-    assert "- step_execute_elapsed: `" in result.output
+    assert "- step_elapsed[2/3 execute session abandon]: `" in result.output
     assert "- elapsed: `" in result.output
     assert "- quota_wait: `" in result.output
     assert "- returncode: `1`" in result.output
@@ -197,10 +319,12 @@ def test_session_abandon_requires_existing_home_branch(
         ).returncode
         == 0
     )
+    assert "/.cmoc/" not in gitignore.read_text().splitlines()
+    assert run_git(root, "ls-files", "--", ".cmoc").stdout == tracked_cmoc
 
 
 def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -210,20 +334,21 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     )
     session_branch = current_branch(root)
     state_path = session_state_path(root, session_branch)
-    original_run_git = session_module.run_git
+    original_delete_branch = session_module.delete_branch
 
-    def fake_run_git(args, cwd, check=True):
-        if args == ["branch", "-D", session_branch]:
+    def fake_delete_branch(root: Path, branch: str, force: bool = False) -> None:
+        if branch == session_branch:
             raise CmocError("delete failed", ["next"], "branch delete failed")
-        return original_run_git(args, cwd, check)
+        return original_delete_branch(root, branch, force)
 
-    monkeypatch.setattr(session_module, "run_git", fake_run_git)
+    monkeypatch.setattr(session_module, "delete_branch", fake_delete_branch)
 
     result = runner.invoke(app, ["session", "abandon"])
 
     assert result.exit_code != 0
-    assert "session abandon の cleanup に失敗しました。" in result.output
-    assert "`cmoc session abandon` を再実行してください。" in result.output
+    assert "session abandon の cleanup に失敗しました。" in result.stdout
+    assert "`cmoc session abandon` を再実行してください。" in result.stdout
+    assert "session abandon の cleanup に失敗しました。" not in result.stderr
     assert current_branch(root) == session_branch
     assert (
         subprocess.run(
@@ -235,8 +360,33 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     assert state["session"]["state"] == "active"
 
 
+@pytest.mark.parametrize("command", ["abandon", "join"])
+def test_session_completion_rejects_missing_state_fields(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, command: str
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    path = session_state_path(root, session_branch)
+    broken_state = {
+        "session": {"session_home_branch": session_home_branch(root, session_branch)}
+    }
+    path.write_text(json.dumps(broken_state) + "\n")
+
+    result = runner.invoke(app, ["session", command])
+
+    assert result.exit_code != 0
+    assert "session state file が不正です。" in result.stdout
+    assert "必須 field" in result.stdout
+    assert current_branch(root) == session_branch
+
+
 def test_session_join_resolves_oracle_conflict_with_realization_write_profile(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     target = root / "oracle" / "spec.md"
@@ -265,28 +415,11 @@ def test_session_join_resolves_oracle_conflict_with_realization_write_profile(
     class FakeCodexResult:
         output_json = None
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(parameter: AgentCallParameter, **kwargs: object) -> object:
         calls.append(kwargs["purpose"])
         modes.append(parameter.file_access_mode)
-        profile = tomllib.loads(
-            build_codex_profile(
-                parameter,
-                CmocConfig(),
-                root,
-                extra_writable_paths=kwargs["extra_writable_paths"],
-            )
-        )
-        fs = profile["permissions"]["cmoc"]["file_system"]
-        workspace = profile["sandbox_workspace_write"]
-        assert str(root) in fs["write"]
-        assert str(target) in fs["write"]
-        assert str(root / "oracle") not in fs["read_only"]
-        assert str(target) not in fs["read_only"]
-        assert str(other_oracle_file) in fs["read_only"]
-        assert str(root / "oracle") not in workspace["read_only_paths"]
-        assert str(other_oracle_file) in workspace["read_only_paths"]
-        assert str(root / "memo") in fs["read_only"]
-        assert str(root / ".agents") in fs["read_only"]
+        assert "extra_writable_paths" not in kwargs
+        build_codex_profile(parameter, CmocConfig(), root)
         target.write_text("resolved change\nTitle\n=======\n")
         return FakeCodexResult()
 
@@ -306,9 +439,14 @@ def test_session_join_conflict_marker_detection_uses_marker_block() -> None:
     assert session_join_module._has_conflict_marker_block(
         "<<<<<<< HEAD\nhome\n=======\nsession\n>>>>>>> branch\n"
     )
+    assert session_join_module._has_conflict_marker_block(
+        "<<<<<<< HEAD\nhome\n========\nsession\n>>>>>>> branch\n"
+    )
 
 
-def test_session_join_uses_linked_worktree_branch(tmp_path: Path, monkeypatch) -> None:
+def test_session_join_uses_linked_worktree_branch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -337,7 +475,7 @@ def test_session_join_uses_linked_worktree_branch(tmp_path: Path, monkeypatch) -
 
 
 def test_session_join_stages_delete_conflict_resolution(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -359,7 +497,7 @@ def test_session_join_stages_delete_conflict_resolution(
     class FakeCodexResult:
         output_json = None
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         (root / "README.md").unlink()
         return FakeCodexResult()
 
@@ -374,7 +512,7 @@ def test_session_join_stages_delete_conflict_resolution(
 
 
 def test_session_join_warns_when_session_branch_cannot_be_deleted(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -386,7 +524,7 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
     home_branch = session_home_branch(root, session_branch)
     original_run_git = session_join_module.run_git
 
-    def fake_run_git(args, cwd, check=True):
+    def fake_run_git(args: list[str], cwd: Path, check: bool = True) -> object:
         if args == ["branch", "-d", session_branch]:
             return cmoc_runtime.CommandResult(1, "", "branch is checked out elsewhere")
         return original_run_git(args, cwd, check=check)
@@ -407,8 +545,8 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
     assert f"session branch was not deleted: {session_branch}" in result.output
 
 
-def test_session_join_error_report_is_written_to_stderr(
-    tmp_path: Path, monkeypatch
+def test_session_join_error_report_is_written_to_stdout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -422,7 +560,47 @@ def test_session_join_error_report_is_written_to_stderr(
 
     assert result.exit_code != 0
     assert "completed session join" in result.stdout
+    assert "# ERROR" in result.stdout
+    assert "git 未コミット差分が存在します。" in result.stdout
+    assert "# ERROR" not in result.stderr
+    assert "git 未コミット差分が存在します。" not in result.stderr
+
+
+def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    target = root / "README.md"
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    home_branch = session_home_branch(root, session_branch)
+    target.write_text("session change\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "session change")
+    run_git(root, "switch", home_branch)
+    target.write_text("home change\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "home change")
+    run_git(root, "switch", session_branch)
+
+    class FakeCodexResult:
+        output_json = None
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        target.write_text("<<<<<<< HEAD\nhome\n========\nsession\n>>>>>>> branch\n")
+        return FakeCodexResult()
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["session", "join"])
+
+    assert result.exit_code != 0
+    assert current_branch(root) == home_branch
     assert "# ERROR" not in result.stdout
-    assert "git 未コミット差分が存在します。" not in result.stdout
+    assert "conflict marker が残っています。" not in result.stdout
     assert "# ERROR" in result.stderr
-    assert "git 未コミット差分が存在します。" in result.stderr
+    assert "conflict marker が残っています。" in result.stderr

@@ -1,10 +1,17 @@
+"""apply fork の branch/worktree 作成から Codex 適用 loop までを扱う。
+
+このファイルは 16,000 文字を超えるが、責務境界は一つの apply run を開始し、
+対象列挙、Codex による finding 適用、commit、state 更新まで進める制御に閉じている。
+apply state、worktree、禁止差分 rollback、再キュー、commit subject は同じ loop の
+失敗時復旧条件を共有するため、分割すると fork 中の読み取り文脈がかえって分散する。
+現状は apply fork の orchestration として一箇所に保つ方が凝集性が高い。
+"""
+
 import json
 import os
 import shutil
 from pathlib import Path
 from typing import Callable
-
-import typer
 
 from acp.builder.apply.fork.file_finding_enumeration import (
     build_apply_fork_file_finding_enumeration_parameter,
@@ -16,19 +23,19 @@ from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningE
 from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
 from cmoc_runtime import (
     ApplyPart,
+    CliRunResult,
     CmocError,
     SessionState,
     create_run_worktree,
     current_branch,
     current_subcommand_logger,
+    ensure_cmoc_ignored_in_exclude,
     head_commit,
-    is_binary,
     is_git_ignored,
     load_config,
     load_state_for_branch,
     pushd,
     repo_root,
-    require_cmoc_ignored,
     require_clean_worktree,
     run_cli_subcommand,
     run_codex_exec,
@@ -44,10 +51,11 @@ from sub_commands.apply.fork_report import (
     write_apply_fork_report,
 )
 from sub_commands.apply._runtime import (
+    apply_process_tracking,
     delete_apply_process_id,
     write_apply_process_id,
 )
-from sub_commands.indexing import enable_indexing_preflight
+from commons.indexing import enable_indexing_preflight
 
 
 CodexExec = Callable[..., object]
@@ -68,7 +76,7 @@ def cmoc_apply_fork_impl(scope: str) -> None:
 def _cmoc_apply_fork_body(
     scope: str,
     codex_exec: CodexExec,
-) -> int:
+) -> CliRunResult:
     """Codex CLI による apply loop を isolated apply worktree 上で実行する。"""
     if scope not in {"rolling", "session", "full"}:
         raise CmocError("scope が不正です。", ["rolling, session, full のいずれかを指定してください。"], scope)
@@ -80,8 +88,8 @@ def _cmoc_apply_fork_body(
         raise CmocError("apply fork は session branch 上で実行してください。", [], branch)
     if state.session.state != "active" or state.apply.state != "ready":
         raise CmocError("apply fork の事前条件を満たしていません。", [], str(path))
+    ensure_cmoc_ignored_in_exclude(current_root)
     require_clean_worktree(current_root)
-    require_cmoc_ignored(current_root)
     config = load_config(root)
     run_id = timestamp()
     apply_branch = f"cmoc/apply/{session_id}/{run_id}"
@@ -99,15 +107,15 @@ def _cmoc_apply_fork_body(
     result_label = "error"
     report_path: Path | None = None
     try:
-        with pushd(apply_worktree):
+        with apply_process_tracking(root, session_id), pushd(apply_worktree):
             findings: list[dict] = []
-            dirty_targets = enumerate_apply_targets(apply_worktree, scope, state)
+            pending_targets = enumerate_apply_targets(apply_worktree, scope, state)
             for _apply_loop in range(config.apply_fork.num_apply_files):
-                dirty_targets = dedupe_apply_targets(dirty_targets)
-                if not dirty_targets:
+                pending_targets = dedupe_apply_targets(pending_targets)
+                if not pending_targets:
                     result_label = "converged"
                     break
-                target = dirty_targets.pop(0)
+                target = pending_targets.pop(0)
                 findings = enumerate_apply_findings_for_target(
                     apply_worktree,
                     target,
@@ -118,7 +126,7 @@ def _cmoc_apply_fork_body(
                 finding_counts.append(len(findings))
                 if not findings:
                     continue
-                dirty_targets.append(target)
+                pending_targets.append(target)
                 run_finding_application_with_forbidden_rollback(
                     root,
                     apply_worktree,
@@ -129,7 +137,7 @@ def _cmoc_apply_fork_body(
                 changed = changed_worktree_paths(apply_worktree)
                 if not changed:
                     continue
-                dirty_targets.extend(
+                pending_targets.extend(
                     normalize_apply_targets(
                         apply_worktree,
                         set(changed),
@@ -147,8 +155,8 @@ def _cmoc_apply_fork_body(
                     run_git(["add", "."], apply_worktree)
                     run_git(["commit", "-m", commit_message], apply_worktree)
             else:
-                dirty_targets = dedupe_apply_targets(dirty_targets)
-                result_label = "unconverged" if dirty_targets else "converged"
+                pending_targets = dedupe_apply_targets(pending_targets)
+                result_label = "unconverged" if pending_targets else "converged"
             report_path = write_apply_fork_report(
                 root,
                 apply_worktree,
@@ -162,7 +170,7 @@ def _cmoc_apply_fork_body(
         delete_apply_process_id(root, session_id)
         state.apply.state = "completed"
         write_state(path, state)
-    except BaseException:
+    except BaseException as exc:
         delete_apply_process_id(root, session_id)
         state.apply.state = "error"
         write_state(path, state)
@@ -170,24 +178,14 @@ def _cmoc_apply_fork_body(
             report_path = write_apply_fork_error_report(
                 root, branch, state, finding_counts, apply_worktree, config, codex_exec
             )
-        typer.echo(f"- report: `{report_path}`")
+        setattr(exc, "cmoc_stdout", str(report_path.resolve()))
         raise
-    typer.echo(
-        "\n".join(
-            [
-                "# cmoc apply fork",
-                f"- scope: `{scope}`",
-                f"- apply_branch: `{apply_branch}`",
-                f"- apply_worktree: `{apply_worktree}`",
-                f"- oracle_snapshot_commit: `{oracle_snapshot_commit}`",
-                f"- findings: `{len(findings)}`",
-                f"- result: `{state.apply.state}`",
-                f"- result_label: `{result_label}`",
-                f"- report: `{report_path}`",
-            ]
-        )
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md requires the
+    # generated report path on stdout; common runtime logs are emitted around it.
+    return CliRunResult(
+        returncode=2 if result_label == "unconverged" else 0,
+        stdout=str(report_path.resolve()),
     )
-    return 2 if result_label == "unconverged" else 0
 
 
 def forbidden_apply_diff(worktree: Path) -> str:
@@ -265,25 +263,25 @@ def run_finding_application_with_forbidden_rollback(
 def generate_apply_commit_message(
     root: Path,
     apply_worktree: Path,
-    finding: dict,
+    applied_findings: dict,
     config: CmocConfig,
     codex_exec: CodexExec,
 ) -> str:
-    """適用した finding ごとの commit subject を Codex CLI で生成する。"""
+    """所見リスト適用後の差分に対する commit subject を Codex CLI で生成する。"""
     raw_diff = run_git(["diff"], apply_worktree).stdout
-    finding_text = json.dumps(finding, ensure_ascii=False, indent=2)
+    findings_text = json.dumps(applied_findings, ensure_ascii=False, indent=2)
     prompt = [
         StructDoc("Role", "- あなたは git commit message の作成担当です"),
         StructDoc(
             "Goal",
             """
-            - 以下の所見と git diff から、git commit subject を 1 行だけ生成すること
+            - 以下の所見リストと git diff から、git commit subject を 1 行だけ生成すること
             - 出力は commit subject 本文だけにすること
             - 先頭に箇条書き記号、引用符、Markdown、コードブロックを付けないこと
             - 72 文字程度を目安に、人間が変更内容を理解できる具体的な文にすること
             """,
         ),
-        StructDoc("Finding", StructCodeBlock("json", finding_text)),
+        StructDoc("Applied findings", StructCodeBlock("json", findings_text)),
         StructDoc("Git diff", StructCodeBlock("diff", raw_diff)),
     ]
     result = codex_exec(
@@ -299,10 +297,10 @@ def generate_apply_commit_message(
         config=config,
         purpose="apply fork commit message",
     )
-    return sanitize_commit_message(result.output_text, finding)
+    return sanitize_commit_message(result.output_text, applied_findings)
 
 
-def sanitize_commit_message(message: str, finding: dict) -> str:
+def sanitize_commit_message(message: str, applied_findings: dict) -> str:
     """Codex 出力を commit subject として使える 1 行へ丸める。"""
     for line in message.splitlines():
         subject = line.strip().strip("`").strip("\"'")
@@ -313,9 +311,13 @@ def sanitize_commit_message(message: str, finding: dict) -> str:
                 subject = subject.removeprefix(prefix).strip()
         if subject:
             return subject[:120]
-    title = finding.get("title")
-    if isinstance(title, str) and title.strip():
-        return f"Apply finding: {title.strip()}"[:120]
+    findings = applied_findings.get("findings")
+    if isinstance(findings, list):
+        for finding in findings:
+            if isinstance(finding, dict):
+                title = finding.get("title")
+                if isinstance(title, str) and title.strip():
+                    return f"Apply findings: {title.strip()}"[:120]
     return "Apply cmoc finding"
 
 
@@ -355,7 +357,10 @@ def dedupe_apply_targets(targets: list[Path]) -> list[Path]:
 def changed_worktree_paths(root: Path) -> list[Path]:
     """worktree 上の変更 path を absolute path として返す。"""
     paths: list[Path] = []
-    for line in run_git(["status", "--short"], root).stdout.splitlines():
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md requires changed
+    # realization files to be requeued; default status can collapse untracked
+    # directories into one non-file path.
+    for line in run_git(["status", "--short", "-uall"], root).stdout.splitlines():
         path_text = line[3:]
         if " -> " in path_text:
             path_text = path_text.split(" -> ", 1)[1]
@@ -366,7 +371,7 @@ def changed_worktree_paths(root: Path) -> list[Path]:
 def normalize_apply_targets(
     root: Path, candidates: set[Path], include_oracle: bool = True
 ) -> list[Path]:
-    """apply finding 列挙対象として扱える通常テキスト file だけに正規化する。"""
+    """apply finding 列挙対象として扱える file だけに正規化する。"""
     targets: list[Path] = []
     for path in sorted({candidate.resolve() for candidate in candidates}):
         if not path.exists() or not path.is_file():
@@ -381,7 +386,9 @@ def normalize_apply_targets(
             continue
         if not include_oracle and rel_parts[0] == "oracle":
             continue
-        if path.name == "INDEX.md" or is_binary(path):
+        # `<work-root>/oracle/doc/app_spec/misc_spec.md` は実装ファイル列挙に
+        # binary 除外を置かないため、file 種別だけでは対象から落とさない。
+        if path.name == "INDEX.md":
             continue
         if is_git_ignored(root, path):
             continue

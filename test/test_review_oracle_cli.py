@@ -21,10 +21,10 @@ from _support import (
 from cmoc_runtime import SessionState
 from config.cmoc_config import CmocConfig, CmocConfigReviewOracle
 from main import app
-import sub_commands.review as review_module
+import sub_commands.review.oracle as review_module
 
 
-def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
+def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     ancestor = tmp_path / "oracle"
     ancestor.mkdir()
     root = make_repo(ancestor)
@@ -36,10 +36,10 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
     calls: list[str] = []
 
     class FakeCodexResult:
-        def __init__(self, output_json):
+        def __init__(self, output_json: dict[str, object]) -> None:
             self.output_json = output_json
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         calls.append(kwargs["purpose"])
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
@@ -65,9 +65,15 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
     )
     assert report_path.is_file()
     rendered = report_path.read_text()
-    assert "# cmoc review oracle report" in rendered
-    assert "## Verdict" in rendered
-    assert "## Evaluated oracle file" in rendered
+    required_sections = [
+        "# cmoc review oracle report",
+        "## Verdict",
+        "## Evaluated oracle file",
+        "## Fatal findings",
+        "## Minor findings",
+    ]
+    section_offsets = [rendered.index(section) for section in required_sections]
+    assert section_offsets == sorted(section_offsets)
     assert "`oracle/spec.md`" in rendered
     assert "review_join_commit: null" in rendered
     assert "session_id:" not in rendered
@@ -75,8 +81,8 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch) -> None:
     assert "review oracle merge findings" not in calls
 
 
-def test_review_oracle_report_orders_findings_by_verdict_then_severity(
-    tmp_path: Path, monkeypatch
+def test_review_oracle_report_outputs_accepted_and_rejected_findings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -87,10 +93,10 @@ def test_review_oracle_report_orders_findings_by_verdict_then_severity(
     enumerated = False
 
     class FakeCodexResult:
-        def __init__(self, output_json):
+        def __init__(self, output_json: dict[str, object]) -> None:
             self.output_json = output_json
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         nonlocal enumerated
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
@@ -103,6 +109,12 @@ def test_review_oracle_report_orders_findings_by_verdict_then_severity(
                         {
                             "oracle_path": "oracle/spec.md",
                             "severity": "fatal",
+                            "title": "accepted fatal",
+                            "reason": "fatal accepted reason",
+                        },
+                        {
+                            "oracle_path": "oracle/spec.md",
+                            "severity": "fatal",
                             "title": "rejected fatal",
                             "reason": "fatal reason",
                         },
@@ -111,6 +123,12 @@ def test_review_oracle_report_orders_findings_by_verdict_then_severity(
                             "severity": "minor",
                             "title": "accepted minor",
                             "reason": "minor reason",
+                        },
+                        {
+                            "oracle_path": "oracle/spec.md",
+                            "severity": "minor",
+                            "title": "rejected minor",
+                            "reason": "minor rejected reason",
                         },
                     ]
                 }
@@ -123,7 +141,7 @@ def test_review_oracle_report_orders_findings_by_verdict_then_severity(
         if schema_name == "merge_finding.json":
             return FakeCodexResult({"operations": []})
         if schema_name == "judge_finding.json":
-            if kwargs["purpose"].endswith("finding-0002"):
+            if kwargs["purpose"].endswith(("finding-0001", "finding-0003")):
                 return FakeCodexResult({"verdict": "accept", "reason": "accepted"})
             return FakeCodexResult({"verdict": "reject", "reason": "rejected"})
         raise AssertionError(schema_name)
@@ -138,44 +156,35 @@ def test_review_oracle_report_orders_findings_by_verdict_then_severity(
     rendered = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
-    assert rendered.index("accepted minor") < rendered.index("rejected fatal")
+    finding_offsets = [
+        rendered.index(title)
+        for title in [
+            "accepted fatal",
+            "accepted minor",
+            "rejected fatal",
+            "rejected minor",
+        ]
+    ]
+    assert finding_offsets == sorted(finding_offsets)
     assert "result: fatal" in rendered
-    assert "fatal_findings_rejected_count: 1" in rendered
+    assert "fatal_findings_accepted_count: 1" in rendered
     assert "minor_findings_accepted_count: 1" in rendered
+    assert "fatal_findings_rejected_count: 1" in rendered
+    assert "minor_findings_rejected_count: 1" in rendered
 
 
 @pytest.mark.parametrize(
-    (
-        "severity",
-        "expected_result",
-        "expected_verdict",
-        "rejected_count_field",
-        "rejected_heading",
-    ),
+    ("severity", "expected_fatal_count", "expected_minor_count"),
     [
-        (
-            "fatal",
-            "result: fatal",
-            "oracle ファイルに、直ちに修正するべき問題が存在します。",
-            "fatal_findings_rejected_count: 1",
-            "## Rejected fatal findings",
-        ),
-        (
-            "minor",
-            "result: minor",
-            "oracle file に、致命的ではない、細かい問題があります。",
-            "minor_findings_rejected_count: 1",
-            "## Rejected minor findings",
-        ),
+        ("fatal", 1, 0),
+        ("minor", 0, 1),
     ],
 )
-def test_review_oracle_report_result_includes_rejected_findings(
+def test_review_oracle_report_includes_rejected_findings(
     tmp_path: Path,
     severity: str,
-    expected_result: str,
-    expected_verdict: str,
-    rejected_count_field: str,
-    rejected_heading: str,
+    expected_fatal_count: int,
+    expected_minor_count: int,
 ) -> None:
     root = tmp_path
     rendered = review_module.render_review_oracle_report(
@@ -200,16 +209,21 @@ def test_review_oracle_report_result_includes_rejected_findings(
         None,
     )
 
-    assert expected_result in rendered
-    assert expected_verdict in rendered
-    assert rejected_count_field in rendered
-    assert rejected_heading in rendered
-    assert "- `finding-0001` [reject] rejected finding: rejected reason" in rendered
+    assert "result: ok" in rendered
+    assert "レビュー対象の oracle file に、問題は何ら見つかりませんでした。" in rendered
+    assert f"fatal_findings_rejected_count: {expected_fatal_count}" in rendered
+    assert f"minor_findings_rejected_count: {expected_minor_count}" in rendered
+    assert "## Fatal findings" in rendered
+    assert "## Minor findings" in rendered
+    assert "## Rejected fatal findings" not in rendered
+    assert "## Rejected minor findings" not in rendered
+    assert "rejected finding" in rendered
+    assert "rejected reason" in rendered
     assert "session_id:" not in rendered
 
 
 def test_review_oracle_uses_linked_worktree_branch_and_oracle(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """linked worktree 上の session branch と oracle を review 対象にする。"""
     root = make_repo(tmp_path)
@@ -229,10 +243,10 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
     review_worktrees: list[Path] = []
 
     class FakeCodexResult:
-        def __init__(self, output_json):
+        def __init__(self, output_json: dict[str, object]) -> None:
             self.output_json = output_json
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         review_worktrees.append(Path.cwd())
         calls.append(kwargs["purpose"])
         schema_name = parameter.structured_output_schema_path.name
@@ -264,7 +278,7 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
 
 
 def test_review_oracle_enumerate_receives_only_related_findings(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     (root / "oracle" / "a.md").write_text("# a\n")
@@ -280,10 +294,10 @@ def test_review_oracle_enumerate_receives_only_related_findings(
     )
 
     class FakeCodexResult:
-        def __init__(self, output_json):
+        def __init__(self, output_json: dict[str, object]) -> None:
             self.output_json = output_json
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
             target = Path(
@@ -325,6 +339,61 @@ def test_review_oracle_enumerate_receives_only_related_findings(
 
     assert "a finding" not in prompts_by_target["b.md"][0]
     assert "a finding" in prompts_by_target["a.md"][1]
+
+
+def test_review_oracle_advocate_receives_same_round_challenger_reasons(
+    tmp_path: Path,
+) -> None:
+    root = make_repo(tmp_path)
+    advocate_prompts: list[str] = []
+    config = CmocConfig(
+        review_oracle=CmocConfigReviewOracle(
+            num_enumerate_findings_loop=1,
+            num_merge_findings_loop=0,
+            num_validate_findings_loop=1,
+        ),
+    )
+
+    class FakeCodexResult:
+        def __init__(self, output_json: dict[str, object]) -> None:
+            self.output_json = output_json
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        schema_name = parameter.structured_output_schema_path.name
+        if schema_name == "enumerate_finding.json":
+            return FakeCodexResult(
+                {
+                    "findings": [
+                        {
+                            "oracle_path": "oracle/spec.md",
+                            "severity": "fatal",
+                            "title": "finding",
+                            "reason": "reason",
+                            "challenger_reasons": ["old challenger reason"],
+                        }
+                    ]
+                }
+            )
+        if schema_name == "validate_finding_challenger.json":
+            return FakeCodexResult({"reasons": ["same-round challenger reason"]})
+        if schema_name == "validate_finding_advocate.json":
+            advocate_prompts.append(parameter.prompt)
+            return FakeCodexResult({"reasons": []})
+        if schema_name == "judge_finding.json":
+            return FakeCodexResult({"verdict": "reject", "reason": "rejected"})
+        raise AssertionError(schema_name)
+
+    review_module.run_review_oracle_loop(
+        root,
+        root,
+        [root / "oracle" / "spec.md"],
+        config,
+        fake_run_codex_exec,
+    )
+
+    assert advocate_prompts
+    assert "old challenger reason" in advocate_prompts[0]
+    assert "same-round challenger reason" in advocate_prompts[0]
 
 
 def test_apply_finding_merge_operations_enforces_kind_contract() -> None:
@@ -445,7 +514,7 @@ def test_apply_finding_merge_operations_rejects_reused_targets(
 
 def test_review_oracle_full_scope_includes_binary_and_excludes_gitignored_oracle_files(
     tmp_path: Path,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = make_repo(tmp_path)
     add_tracked_ignored_oracle_file(root)
@@ -480,10 +549,10 @@ def test_review_oracle_full_scope_includes_binary_and_excludes_gitignored_oracle
     calls: list[str] = []
 
     class FakeCodexResult:
-        def __init__(self, output_json):
+        def __init__(self, output_json: dict[str, object]) -> None:
             self.output_json = output_json
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         calls.append(kwargs["purpose"])
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
@@ -515,7 +584,9 @@ def test_review_oracle_full_scope_includes_binary_and_excludes_gitignored_oracle
     assert len(enumerate_calls) == 3
 
 
-def test_review_oracle_accepts_short_scope_option(tmp_path: Path, monkeypatch) -> None:
+def test_review_oracle_accepts_short_scope_option(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -524,10 +595,10 @@ def test_review_oracle_accepts_short_scope_option(tmp_path: Path, monkeypatch) -
     )
 
     class FakeCodexResult:
-        def __init__(self, output_json):
+        def __init__(self, output_json: dict[str, object]) -> None:
             self.output_json = output_json
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
             return FakeCodexResult({"findings": []})
@@ -556,7 +627,7 @@ def test_review_oracle_accepts_short_scope_option(tmp_path: Path, monkeypatch) -
 
 def test_review_oracle_session_scope_reports_total_and_no_targets(
     tmp_path: Path,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -566,7 +637,7 @@ def test_review_oracle_session_scope_reports_total_and_no_targets(
     )
     calls: list[str] = []
 
-    def fail_run_codex_exec(parameter, **kwargs):
+    def fail_run_codex_exec(parameter: object, **kwargs: object) -> None:
         calls.append(kwargs["purpose"])
         raise AssertionError(
             "no session-scope oracle targets should skip review Codex calls"
@@ -591,7 +662,7 @@ def test_review_oracle_session_scope_reports_total_and_no_targets(
 
 def test_review_oracle_session_scope_excludes_changed_gitignored_oracle_files(
     tmp_path: Path,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = make_repo(tmp_path)
     add_tracked_ignored_oracle_file(root)
@@ -617,7 +688,7 @@ def test_review_oracle_session_scope_excludes_changed_gitignored_oracle_files(
     run_git(root, "commit", "-m", "change ignored oracle")
     calls: list[str] = []
 
-    def fail_run_codex_exec(parameter, **kwargs):
+    def fail_run_codex_exec(parameter: object, **kwargs: object) -> None:
         calls.append(kwargs["purpose"])
         raise AssertionError("gitignored oracle files should not be reviewed")
 
@@ -637,7 +708,9 @@ def test_review_oracle_session_scope_excludes_changed_gitignored_oracle_files(
     assert "result: no_targets" in rendered
 
 
-def test_review_oracle_merges_review_index_changes(tmp_path: Path, monkeypatch) -> None:
+def test_review_oracle_merges_review_index_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -652,10 +725,10 @@ def test_review_oracle_merges_review_index_changes(tmp_path: Path, monkeypatch) 
     review_worktrees: list[Path] = []
 
     class FakeCodexResult:
-        def __init__(self, output_json):
+        def __init__(self, output_json: dict[str, object]) -> None:
             self.output_json = output_json
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         review_worktrees.append(Path.cwd())
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
@@ -726,7 +799,7 @@ def test_review_oracle_resolves_index_conflict_when_session_deleted_index(
 
 
 def test_review_oracle_writes_error_report_on_processing_failure(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -736,10 +809,10 @@ def test_review_oracle_writes_error_report_on_processing_failure(
     )
 
     class FakeCodexResult:
-        def __init__(self, output_json):
+        def __init__(self, output_json: dict[str, object]) -> None:
             self.output_json = output_json
 
-    def fail_run_codex_exec(parameter, **kwargs):
+    def fail_run_codex_exec(parameter: object, **kwargs: object) -> None:
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
             return FakeCodexResult(
@@ -772,6 +845,7 @@ def test_review_oracle_writes_error_report_on_processing_failure(
     rendered = report_path.read_text()
     assert "result: error" in rendered
     assert "fatal_findings_rejected_count: 0" in rendered
+    assert "minor_findings_rejected_count: 0" in rendered
     assert "[unjudged] unjudged fatal" not in rendered
     assert "レビュー処理が途中で失敗しました。" in rendered
     assert "Error: `judge failed`" in rendered
@@ -782,7 +856,7 @@ def test_review_oracle_writes_error_report_on_processing_failure(
 @pytest.mark.parametrize("change_kind", ["unstaged", "staged", "untracked"])
 def test_review_oracle_rejects_non_index_worktree_changes(
     tmp_path: Path,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
     change_kind: str,
 ) -> None:
     root = make_repo(tmp_path)
@@ -793,10 +867,10 @@ def test_review_oracle_rejects_non_index_worktree_changes(
     )
 
     class FakeCodexResult:
-        def __init__(self, output_json):
+        def __init__(self, output_json: dict[str, object]) -> None:
             self.output_json = output_json
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
         schema_name = parameter.structured_output_schema_path.name
         if schema_name == "enumerate_finding.json":
             if change_kind == "untracked":

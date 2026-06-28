@@ -11,6 +11,7 @@ CMOC_IGNORE_PATTERN = "/.cmoc/"
 
 
 def run_git(args: list[str], cwd: Path, check: bool = True) -> CommandResult:
+    """git subprocess の失敗を cmoc の利用者向けエラーへそろえる境界。"""
     result = subprocess.run(
         ["git", *args],
         cwd=cwd,
@@ -28,6 +29,7 @@ def run_git(args: list[str], cwd: Path, check: bool = True) -> CommandResult:
 
 
 def current_branch(root: Path) -> str:
+    """detached HEAD を cmoc の実行前提違反として扱う branch 取得 helper。"""
     result = run_git(["branch", "--show-current"], root)
     branch = result.stdout.strip()
     if not branch:
@@ -40,10 +42,12 @@ def current_branch(root: Path) -> str:
 
 
 def head_commit(root: Path) -> str:
+    """cmoc state や report に記録する現在 HEAD commit を取得する。"""
     return run_git(["rev-parse", "HEAD"], root).stdout.strip()
 
 
 def require_clean_worktree(root: Path, status: str | None = None) -> None:
+    """未コミット差分を許容しない操作の事前条件を共通化する。"""
     if status is None:
         status = run_git(["status", "--short"], root).stdout.strip()
     if status:
@@ -55,10 +59,12 @@ def require_clean_worktree(root: Path, status: str | None = None) -> None:
 
 
 def is_managed_branch(branch: str) -> bool:
+    """cmoc が作る branch namespace に入っているかを判定する。"""
     return branch.startswith(MANAGED_BRANCH_PREFIXES)
 
 
 def branch_exists(root: Path, branch: str) -> bool:
+    """git の quiet command を cmoc の boolean 判定へ変換する。"""
     return (
         run_git(
             ["show-ref", "--verify", "--quiet", f"refs/heads/{branch}"],
@@ -72,6 +78,7 @@ def branch_exists(root: Path, branch: str) -> bool:
 def create_run_worktree(
     root: Path, branch: str, worktree: Path, start_point: str = "HEAD"
 ) -> Path:
+    """既存 path を除去してから run/apply 用 linked worktree を作る。"""
     worktree.parent.mkdir(parents=True, exist_ok=True)
     if worktree.exists():
         shutil.rmtree(worktree)
@@ -80,6 +87,7 @@ def create_run_worktree(
 
 
 def remove_worktree(root: Path, worktree: Path) -> CommandResult:
+    """git worktree remove 失敗時も実体 directory の削除まで試みる。"""
     result = run_git(
         ["worktree", "remove", "--force", str(worktree)], root, check=False
     )
@@ -90,10 +98,12 @@ def remove_worktree(root: Path, worktree: Path) -> CommandResult:
 
 
 def delete_branch(root: Path, branch: str, force: bool = False) -> CommandResult:
+    """削除失敗を caller が warning 化できる branch 削除 helper。"""
     return run_git(["branch", "-D" if force else "-d", branch], root, check=False)
 
 
 def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
+    """.cmoc の追跡有無と ignore 判定を同じ probe で取得する。"""
     tracked = run_git(["ls-files", "--", ".cmoc"], root).stdout.strip()
     ignored = run_git(
         ["check-ignore", "-q", ".cmoc/.__cmoc_ignore_probe__"],
@@ -104,6 +114,7 @@ def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
 
 
 def with_cmoc_ignore_pattern(content: str) -> str:
+    """既存の末尾改行を崩さず .cmoc ignore pattern を追加する。"""
     lines = content.splitlines()
     if CMOC_IGNORE_PATTERN in lines:
         return content
@@ -113,6 +124,7 @@ def with_cmoc_ignore_pattern(content: str) -> str:
 
 
 def ensure_cmoc_ignored(root: Path) -> None:
+    """.gitignore と index を更新できる場面で .cmoc を追跡対象外にする。"""
     tracked, ignored_returncode = _cmoc_ignore_status(root)
     gitignore = root / ".gitignore"
     content = gitignore.read_text() if gitignore.exists() else ""
@@ -133,7 +145,32 @@ def ensure_cmoc_ignored(root: Path) -> None:
         )
 
 
+def ensure_cmoc_ignored_in_exclude(root: Path) -> None:
+    """clean worktree を保つ必要がある caller 用に git exclude で .cmoc ignore を保証する。
+
+    根拠:
+    - <work-root>/oracle/doc/app_spec/sub_command/session_fork.md
+    - <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
+    """
+    exclude_path = root / run_git(
+        ["rev-parse", "--git-path", "info/exclude"], root
+    ).stdout.strip()
+    content = exclude_path.read_text() if exclude_path.exists() else ""
+    if CMOC_IGNORE_PATTERN not in content.splitlines():
+        exclude_path.parent.mkdir(parents=True, exist_ok=True)
+        newline = "" if content == "" or content.endswith("\n") else "\n"
+        exclude_path.write_text(f"{content}{newline}{CMOC_IGNORE_PATTERN}\n")
+    tracked, ignored_returncode = _cmoc_ignore_status(root)
+    if tracked or ignored_returncode != 0:
+        raise CmocError(
+            ".cmoc を git 追跡対象外にできませんでした。",
+            [".gitignore と git index の状態を確認してください。"],
+            f"tracked:\n{tracked}\ncheck-ignore returncode: {ignored_returncode}",
+        )
+
+
 def require_cmoc_ignored(root: Path) -> None:
+    """初期化済み repository として .cmoc ignore 状態を検査する。"""
     tracked, ignored_returncode = _cmoc_ignore_status(root)
     if tracked or ignored_returncode != 0:
         raise CmocError(
@@ -144,6 +181,14 @@ def require_cmoc_ignored(root: Path) -> None:
 
 
 def is_git_ignored(root: Path, path: Path) -> bool:
+    """対象 path が git ignore されるかを work root 基準で判定する。"""
     candidate = path if path.is_absolute() else root / path
     rel = candidate.absolute().relative_to(root.absolute())
-    return run_git(["check-ignore", "--no-index", "-q", str(rel)], root, check=False).returncode == 0
+    return (
+        run_git(
+            ["check-ignore", "--no-index", "-q", str(rel)],
+            root,
+            check=False,
+        ).returncode
+        == 0
+    )

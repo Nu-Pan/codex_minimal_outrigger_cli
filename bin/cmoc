@@ -4,6 +4,8 @@ set -eu
 
 cmoc_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 venv_python="$cmoc_root/.venv/bin/python"
+# User-facing path reports follow <work-root>/oracle/src/basic/path_model.py.
+display_script_path="<cmoc-root>/bin/cmoc"
 
 line_number_of() {
     pattern=$1
@@ -25,9 +27,9 @@ print_missing_venv_error() {
         printf '%s\n' "  /usr/bin/python3 -m venv .venv"
         printf '%s\n' "  ./.venv/bin/python -m pip install -e ."
         printf '%s\n' "## Call stack"
-        printf '%s\n' "  at print_missing_venv_error ($0:$(line_number_of "^print_missing_venv_error[(][)] [{]$"))"
-        printf '%s\n' "  at require_venv_python ($0:$(line_number_of "^    print_missing_venv_error$"))"
-        printf '%s\n' "  at main ($0:$(line_number_of "^require_venv_python$"))"
+        printf '%s\n' "  at print_missing_venv_error ($display_script_path:$(line_number_of "^print_missing_venv_error[(][)] [{]$"))"
+        printf '%s\n' "  at require_venv_python ($display_script_path:$(line_number_of "^    print_missing_venv_error$"))"
+        printf '%s\n' "  at main ($display_script_path:$(line_number_of "^require_venv_python$"))"
     }
 }
 

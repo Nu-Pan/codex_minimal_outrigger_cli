@@ -9,11 +9,13 @@ builder parameter は最終 prompt の同じ読み取り文脈で組み合わさ
 
 import json
 from pathlib import Path
+from typing import Callable
 
 import pytest
-from jsonschema import ValidationError, validate
+from jsonschema import validate
 
 from basic.acp import FileAccessMode
+from basic.acp import AgentCallParameter
 from basic.acp import ModelClass, ReasoningEffort
 from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
 from acp.builder.apply.fork.file_finding_enumeration import (
@@ -26,8 +28,17 @@ from acp.builder.apply.fork.finding_application import (
     build_apply_fork_finding_application_parameter,
 )
 from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
+from acp.builder.review.oracle.enumerate_finding import (
+    build_review_oracle_enumerate_finding_parameter,
+)
 from acp.builder.review.oracle.merge_finding import (
     build_review_oracle_merge_finding_parameter,
+)
+from acp.builder.review.oracle.validate_finding_advocate import (
+    build_review_oracle_validate_finding_advocate_parameter,
+)
+from acp.builder.review.oracle.validate_finding_challenger import (
+    build_review_oracle_validate_finding_challenger_parameter,
 )
 from acp.builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter,
@@ -105,7 +116,7 @@ def test_render_as_markdown_collapses_code_block_blank_lines() -> None:
 
 
 def test_apply_fork_prompts_use_expected_roots(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     repo_root = tmp_path / "repo"
     apply_worktree = repo_root / ".cmoc" / "worktrees" / "session" / "run"
@@ -127,20 +138,32 @@ def test_apply_fork_prompts_use_expected_roots(
     assert f"`{repo_root}` ツリー内の差分" in change_summary.prompt
 
 
-def test_apply_fork_change_summary_schema_rejects_empty_changes() -> None:
+def test_apply_fork_change_summary_schema_matches_oracle_source() -> None:
     parameter = build_apply_fork_change_summary_parameter("diff")
     assert parameter.structured_output_schema_path is not None
 
     schema = json.loads(parameter.structured_output_schema_path.read_text())
+    oracle_schema = json.loads(
+        (
+            Path(__file__).parents[1]
+            / "oracle"
+            / "src"
+            / "acp"
+            / "builder"
+            / "apply"
+            / "fork"
+            / "change_summary.json"
+        ).read_text()
+    )
 
-    with pytest.raises(ValidationError):
-        validate({"changes": []}, schema)
+    assert schema == oracle_schema
+    validate({"changes": []}, schema)
     validate(
         {
             "changes": [
                 {
                     "category": "実装",
-                    "summary": "変更要約 schema の検証制約を追加した。",
+                    "summary": "変更要約 schema を正本仕様に合わせた。",
                     "changed_paths": [
                         "src/acp/builder/apply/fork/change_summary.json"
                     ],
@@ -166,15 +189,18 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
         FileAccessMode.REALIZATION_WRITE: [
             "ツリー外は読み書き禁止",
             "/oracle` ツリー内は書き込み禁止",
+            "/.agents` ツリー内は書き込み禁止",
             "/memo` は読み書き禁止",
         ],
         FileAccessMode.ORACLE_WRITE: [
             "ツリー外は読み書き禁止",
             "/oracle` ツリー外は書き込み禁止",
+            "/.agents` ツリー内は書き込み禁止",
             "/memo` は読み書き禁止",
         ],
         FileAccessMode.REPO_WRITE: [
             "ツリー外は読み書き共に禁止",
+            "/.agents` ツリー内は書き込み禁止",
             "/memo` は読み書き禁止",
         ],
     }
@@ -221,6 +247,10 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
     assert "`oracle spec`" in rendered
     assert "`仕様ファイル`" in rendered
     assert "`oracles file` のような typo" in rendered
+    for forbidden in ["<cmoc-root>", "<repo-root>", "<run-root>"]:
+        assert forbidden not in rendered
+    assert "コメントに `<work-root>` トークン起点の oracle file path を書く" in rendered
+    assert "`<work-root>/oracle/doc/...` のように根拠 path" in rendered
     for expected in [
         "oracle and realization basic",
         "oracle standard",
@@ -228,27 +258,21 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
         "review oracle standard",
         "apply review standard",
         "index entry standard",
-        "cmoc 側",
-        "cmoc は",
-        "cmoc でも",
-        "cmoc により",
-        "cmoc review oracle",
         "oracle file",
         "oracles file",
-        "oracle spec",
         "realization file",
     ]:
         assert expected in rendered
-    for forbidden in [
-        "仕様ファイル（基準用語）",
-        "仕様説明（別名）",
-        "仕様ファイル（和訳表記）",
-        "仕様ファイルズ",
-    ]:
-        assert forbidden not in rendered
 
 
-def test_complete_prompt_preserves_aux_prompt_text() -> None:
+def test_complete_prompt_resolves_root_tokens_and_removes_cmoc_call_metadata(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    monkeypatch.chdir(repo_root)
+
     prompt = build_complete_prompt(
         role="- cmoc から呼び出された AI Agent です",
         summary="- <repo-root> ツリー内の realization file を修正すること",
@@ -273,15 +297,37 @@ def test_complete_prompt_preserves_aux_prompt_text() -> None:
 
     assert "- realization standard と oracle standard に従うこと" in rendered
     assert "# aux realization file" in rendered
-    for expected in [
-        "<cmoc-root>",
-        "<repo-root>",
-        "<run-root>",
-        "<work-root>",
-        "cmoc から呼び出された",
-        '"summary": "realization file and <repo-root> stay in code block"',
-    ]:
-        assert expected in rendered
+    assert "cmoc から呼び出された" not in rendered
+    for forbidden in ["<cmoc-root>", "<repo-root>", "<run-root>", "<work-root>"]:
+        assert forbidden not in rendered
+    assert f"{repo_root} ツリー内の realization file" in rendered
+    assert f"{repo_root} 配下を確認すること" in rendered
+    assert f'"summary": "realization file and {repo_root} stay in code block"' in rendered
+
+
+def test_complete_prompt_keeps_literal_root_token_comment_requirement(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    monkeypatch.chdir(repo_root)
+
+    prompt = build_complete_prompt(
+        role="- role",
+        summary="- <work-root>/src/app.py を確認すること",
+        goal="- goal",
+        file_access_mode=FileAccessMode.READONLY,
+        aux_prompt=[],
+        realization_standard=True,
+    )
+
+    rendered = render_as_markdown(prompt)
+
+    assert f"- {repo_root}/src/app.py を確認すること" in rendered
+    assert "コメントに `<work-root>` トークン起点の oracle file path を書く" in rendered
+    assert "`<work-root>/oracle/doc/...` のように根拠 path" in rendered
+    assert f"コメントに `{repo_root}` トークン起点" not in rendered
 
 
 def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
@@ -345,7 +391,6 @@ def test_build_index_entry_standard_renders_core_output_rules() -> None:
     assert "ファイル名・ディレクトリ名・ハッシュ値" in rendered
     assert "Structured Output schema を読めば分かる出力項目名・型・形式" in rendered
     assert "関連しそうという理由だけ" in rendered
-    assert "呼び出し側または Structured Output schema 側" not in rendered
     assert "summary" not in rendered
     assert "read_this_when" not in rendered
     assert "do_not_read_this_when" not in rendered
@@ -455,6 +500,49 @@ def test_review_oracle_merge_finding_uses_efficiency_model() -> None:
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
 
 
+def test_review_oracle_enumerate_finding_schema_matches_oracle_source() -> None:
+    parameter = build_review_oracle_enumerate_finding_parameter(
+        Path("<work-root>/oracle/spec.md"),
+        "[]",
+    )
+    assert parameter.structured_output_schema_path is not None
+    schema = json.loads(parameter.structured_output_schema_path.read_text())
+    oracle_schema = json.loads(
+        (
+            Path(__file__).parents[1]
+            / "oracle"
+            / "src"
+            / "acp"
+            / "builder"
+            / "review"
+            / "oracle"
+            / "enumerate_finding.json"
+        ).read_text()
+    )
+
+    assert schema == oracle_schema
+    validate({"findings": []}, schema)
+    validate(
+        {
+            "findings": [
+                {
+                    "severity": "fatal",
+                    "title": "missing requirement",
+                    "oracle_path": "oracle/spec.md",
+                    "reason": "仕様断片として致命的な欠落がある。",
+                },
+                {
+                    "severity": "minor",
+                    "title": "ambiguous wording",
+                    "oracle_path": "oracle/spec.md",
+                    "reason": "軽微な曖昧さとして改善余地がある。",
+                },
+            ]
+        },
+        schema,
+    )
+
+
 def test_review_oracle_merge_finding_schema_matches_oracle_source() -> None:
     parameter = build_review_oracle_merge_finding_parameter("[]")
     assert parameter.structured_output_schema_path is not None
@@ -499,6 +587,50 @@ def test_review_oracle_merge_finding_schema_matches_oracle_source() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("builder", "schema_name"),
+    [
+        (
+            build_review_oracle_validate_finding_advocate_parameter,
+            "validate_finding_advocate.json",
+        ),
+        (
+            build_review_oracle_validate_finding_challenger_parameter,
+            "validate_finding_challenger.json",
+        ),
+    ],
+)
+def test_review_oracle_validate_finding_schema_matches_oracle_source(
+    builder: Callable[[str, str, str], AgentCallParameter], schema_name: str
+) -> None:
+    parameter = builder("finding", "known advocate", "known challenger")
+    assert parameter.model_class == ModelClass.EFFICIENCY
+    assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
+    assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
+    assert "finding" in parameter.prompt
+    assert "known advocate" in parameter.prompt
+    assert "known challenger" in parameter.prompt
+    assert parameter.structured_output_schema_path is not None
+    schema = json.loads(parameter.structured_output_schema_path.read_text())
+    oracle_schema = json.loads(
+        (
+            Path(__file__).parents[1]
+            / "oracle"
+            / "src"
+            / "acp"
+            / "builder"
+            / "review"
+            / "oracle"
+            / schema_name
+        ).read_text()
+    )
+
+    assert parameter.structured_output_schema_path.name == schema_name
+    assert schema == oracle_schema
+    validate({"reasons": []}, schema)
+    validate({"reasons": ["oracle file の記述に基づく理由"]}, schema)
+
+
 def test_session_join_conflict_resolution_uses_realization_write_mode() -> None:
     parameter = build_session_join_conflict_resolution_parameter([__file__])
 
@@ -523,8 +655,8 @@ def test_build_review_oracle_standard_renders_core_review_rules() -> None:
     assert "用語の不統一" in rendered
     assert "oracle file だけからは問題だとは言い切れない" in rendered
     assert "仕様からは実装が一意に定まらない" in rendered
-    assert "cmoc review oracle" in rendered
-    assert "cmoc apply join" in rendered
+    assert "`cmoc review oracle`" in rendered
+    assert "`cmoc apply join`" in rendered
 
 
 def test_complete_prompt_can_include_review_oracle_standard() -> None:

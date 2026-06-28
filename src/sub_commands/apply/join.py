@@ -1,5 +1,4 @@
 import json
-import os
 from pathlib import Path
 
 import typer
@@ -52,11 +51,10 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
         session_id = apply_branch_session_id(branch)
         session_branch = f"cmoc/session/{session_id}"
         root = worktree_for_branch(repo, session_branch)
-        os.chdir(root)
     else:
-        root = repo
+        root = current_root
         session_branch = branch
-    _session_id, path, state = load_state_for_branch(root, branch)
+    _session_id, path, state = load_state_for_branch(repo, branch)
     if not (branch.startswith("cmoc/session/") or branch.startswith("cmoc/apply/")):
         raise CmocError("apply join は session branch または apply branch 上で実行してください。", [], branch)
     if state.session.state != "active" or state.apply.state not in {"completed", "error"}:
@@ -85,7 +83,7 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
     unexpected = collect_apply_join_unexpected_changes(root, state, apply_branch, session_branch)
     if unexpected and not force_resolve:
         report_path = write_apply_join_report(
-            root,
+            repo,
             session_branch,
             state,
             apply_branch,
@@ -113,7 +111,7 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
         ).stdout.splitlines()
         if merge_conflicts:
             report_path = write_apply_join_report(
-                root,
+                repo,
                 session_branch,
                 state,
                 apply_branch,
@@ -141,9 +139,16 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
     state.apply = ApplyPart()
     write_state(path, state)
     warnings: list[str] = []
-    merged_reachable = run_git(["merge-base", "--is-ancestor", apply_branch, "HEAD"], root, check=False).returncode == 0
+    merged_reachable = (
+        run_git(
+            ["merge-base", "--is-ancestor", apply_branch, "HEAD"],
+            root,
+            check=False,
+        ).returncode
+        == 0
+    )
     report_path = write_apply_join_report(
-        root,
+        repo,
         session_branch,
         state,
         apply_branch,
@@ -153,15 +158,25 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
         merged_reachable,
         [],
     )
+    kept_current_worktree = False
     if merged_reachable:
         if apply_worktree:
-            remove_worktree(root, apply_worktree)
-        delete_result = delete_branch(root, apply_branch, force=False)
-        if delete_result.returncode != 0:
-            warnings.append(f"apply branch was not deleted: {apply_branch}")
+            if apply_worktree == current_root:
+                # <work-root>/oracle/doc/app_spec/misc_spec.md keeps cmoc pwd fixed
+                # to the caller's worktree, so join must not chdir away to delete it.
+                kept_current_worktree = True
+                warnings.append(
+                    f"apply worktree remains because it is current cwd: {apply_worktree}"
+                )
+            else:
+                remove_worktree(repo, apply_worktree)
+        if not (apply_worktree and apply_worktree.exists()):
+            delete_result = delete_branch(repo, apply_branch, force=False)
+            if delete_result.returncode != 0:
+                warnings.append(f"apply branch was not deleted: {apply_branch}")
     else:
         warnings.append(f"apply branch is not reachable from session HEAD: {apply_branch}")
-    if apply_worktree and apply_worktree.exists():
+    if apply_worktree and apply_worktree.exists() and not kept_current_worktree:
         warnings.append(f"apply worktree remains: {apply_worktree}")
     warning_lines = [f"  - {warning}" for warning in warnings] if warnings else ["  - none"]
     typer.echo(
@@ -255,19 +270,56 @@ def render_apply_join_report(
     )
 
 
-def collect_apply_join_unexpected_changes(root: Path, state: SessionState, apply_branch: str, session_branch: str) -> dict[str, list[str]]:
+def collect_apply_join_unexpected_changes(
+    root: Path,
+    state: SessionState,
+    apply_branch: str,
+    session_branch: str,
+) -> dict[str, list[str]]:
     """apply/session branch 上の想定外差分を分類して返す。"""
-    base = state.apply.oracle_snapshot_commit or state.session.session_start_commit or "HEAD"
-    apply_paths = run_git(["diff", "--name-only", base, apply_branch], root).stdout.splitlines()
-    session_paths = run_git(["diff", "--name-only", base, session_branch], root).stdout.splitlines()
-    unexpected_apply = [path for path in apply_paths if not is_expected_apply_change(root, path)]
-    unexpected_session = [path for path in session_paths if not is_expected_session_change(path)]
+    base = (
+        state.apply.oracle_snapshot_commit
+        or state.session.session_start_commit
+        or "HEAD"
+    )
+    apply_paths = changed_paths_on_managed_branch(root, base, apply_branch)
+    session_paths = changed_paths_on_managed_branch(root, base, session_branch)
+    unexpected_apply = [
+        path for path in apply_paths if not is_expected_apply_change(root, path)
+    ]
+    unexpected_session = [
+        path for path in session_paths if not is_expected_session_change(path)
+    ]
     result: dict[str, list[str]] = {}
     if unexpected_apply:
         result["apply"] = unexpected_apply
     if unexpected_session:
         result["session"] = unexpected_session
     return result
+
+
+def changed_paths_on_managed_branch(root: Path, base: str, branch: str) -> list[str]:
+    # <work-root>/oracle/doc/app_spec/misc_spec.md requires deleted paths to be
+    # outside managed-branch change scope, and renames to be classified by new path.
+    lines = run_git(
+        [
+            "diff",
+            "--name-status",
+            "--find-renames",
+            "--diff-filter=ACMRT",
+            base,
+            branch,
+        ],
+        root,
+    ).stdout.splitlines()
+    paths: list[str] = []
+    for line in lines:
+        columns = line.split("\t")
+        if columns[0].startswith(("C", "R")):
+            paths.append(columns[2])
+        else:
+            paths.append(columns[1])
+    return paths
 
 
 def is_expected_apply_change(root: Path, path: str) -> bool:
@@ -277,7 +329,7 @@ def is_expected_apply_change(root: Path, path: str) -> bool:
         return True
     if path.startswith(".git/"):
         return False
-    if path.startswith(("oracle/", "memo/", ".agents/")):
+    if path.startswith(("oracle/", ".agents/")) or is_root_memo_path(path):
         return False
     return not is_git_ignored(root, root / path)
 
@@ -285,10 +337,20 @@ def is_expected_apply_change(root: Path, path: str) -> bool:
 def is_expected_session_change(path: str) -> bool:
     """session branch 上で apply 実行中に許可される差分かどうかを判定する。"""
     p = Path(path)
-    return p.name == "INDEX.md" or path.startswith("oracle/") or path.startswith("memo/")
+    return p.name == "INDEX.md" or path.startswith("oracle/") or is_root_memo_path(path)
 
 
-def revert_unexpected_changes(root: Path, unexpected: dict[str, list[str]], state: SessionState) -> None:
+def is_root_memo_path(path: str) -> bool:
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md treats root memo
+    # and paths below it as session-side changes, not apply-side products.
+    return path == "memo" or path.startswith("memo/")
+
+
+def revert_unexpected_changes(
+    root: Path,
+    unexpected: dict[str, list[str]],
+    state: SessionState,
+) -> None:
     """force-resolve 時に想定外差分を apply fork 基準へ戻す。"""
     base = state.apply.oracle_snapshot_commit or state.session.session_start_commit
     if not base:

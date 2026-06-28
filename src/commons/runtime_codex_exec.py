@@ -27,12 +27,16 @@ from commons.runtime_codex_profile import (
     codex_profile_name,
     codex_subprocess_env,
     extract_resume_token,
+    file_access_to_codex_cwd,
     is_capacity_error,
     is_quota_error,
     prepare_codex_profile,
     prepare_schema,
     read_output_json,
+    protected_write_status,
+    reject_protected_write,
     resolve_codex_home,
+    run_codex_subprocess,
     validate_codex_home,
 )
 from commons.runtime_errors import CmocError
@@ -52,6 +56,28 @@ _QUOTA_CONDITION = threading.Condition()
 _QUOTA_POLLING = False
 _CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
 _LAST_CODEX_LOG_TIMESTAMP: str | None = None
+
+
+def _write_prompt_log(path: Path, prompt: str) -> None:
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # The prompt log is the replayable stdin source itself, not metadata.
+    path.write_text(prompt)
+
+
+def _read_required_output_json(path: Path) -> Any:
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # Structured Output parse failure is semantic failure; schema permissiveness
+    # must not turn missing, empty, or malformed output into success.
+    try:
+        text = path.read_text()
+    except FileNotFoundError as exc:
+        raise ValueError(f"output file does not exist: {path}") from exc
+    if not text.strip():
+        raise ValueError(f"output file is empty: {path}")
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"output file is not valid JSON: {exc}") from exc
 
 
 def _next_codex_log_timestamp() -> str:
@@ -92,20 +118,31 @@ def run_codex_exec(
     config = config or load_config(root)
     log_dir = codex_log_dir(root)
     log_dir.mkdir(parents=True, exist_ok=True)
-    codex_home = resolve_codex_home(cwd)
+    codex_work_root = work_root(cwd)
+    codex_cwd = file_access_to_codex_cwd(parameter.file_access_mode, codex_work_root)
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # Relative CODEX_HOME is still passed through unchanged, so preflight and
+    # profile generation must target the path Codex resolves from its real cwd.
+    codex_home = resolve_codex_home(codex_cwd)
     validate_codex_home(codex_home)
     codex_env = codex_subprocess_env(codex_home)
     profile_path = prepare_codex_profile(
         parameter,
         config,
         codex_home,
-        work_root(cwd),
+        codex_work_root,
         extra_read_paths,
         extra_writable_paths,
     )
     profile_name = codex_profile_name(profile_path)
+    protected_status_before = protected_write_status(
+        parameter.file_access_mode, codex_work_root
+    )
+    # <work-root>/oracle/doc/app_spec/run_isolation.md
+    # Structured Output schema is cmoc state; run worktrees keep Codex cwd and
+    # sandbox roots, but state files belong under the repo-side `root`.
     schema_path = (
-        prepare_schema(work_root(cwd), parameter.structured_output_schema_path)
+        prepare_schema(root, parameter.structured_output_schema_path)
         if parameter.structured_output_schema_path
         else None
     )
@@ -140,6 +177,8 @@ def run_codex_exec(
             "exec",
             "--profile",
             profile_name,
+            "--cd",
+            str(codex_cwd),
             "--json",
             "--output-last-message",
             str(output_path),
@@ -234,10 +273,49 @@ def run_codex_exec(
     last_result: subprocess.CompletedProcess[str] | None = None
     resume_token: str | None = None
 
+    def reject_protected_write_after_event(
+        *,
+        run_purpose: str,
+        run_call_path: Path,
+        run_prompt_path: Path,
+        run_stdout_path: Path,
+        run_stderr_path: Path,
+        run_output_path: Path,
+        run_schema_path: Path | None,
+        started_at: float,
+        returncode: int,
+    ) -> None:
+        try:
+            reject_protected_write(
+                parameter.file_access_mode,
+                codex_work_root,
+                protected_status_before,
+                run_call_path,
+            )
+        except CmocError as exc:
+            # <work-root>/oracle/doc/app_spec/console_and_file_log.md requires
+            # every completed Codex CLI call to be logged, even when
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md then rejects
+            # the call because a profile-inexpressible deny area changed.
+            emit_codex_call_event(
+                run_purpose=run_purpose,
+                run_call_path=run_call_path,
+                run_prompt_path=run_prompt_path,
+                run_stdout_path=run_stdout_path,
+                run_stderr_path=run_stderr_path,
+                run_output_path=run_output_path,
+                run_schema_path=run_schema_path,
+                started_at=started_at,
+                returncode=returncode,
+                status="failed",
+                error=exc.detail,
+            )
+            raise
+
     while True:
         ts, prompt_path, stdout_path, stderr_path, output_path, call_path = new_log_paths()
         current_argv = build_argv(output_path, resume_token)
-        prompt_path.write_text(parameter.prompt)
+        _write_prompt_log(prompt_path, parameter.prompt)
         write_call_log(
             call_path,
             run_purpose=purpose,
@@ -250,18 +328,28 @@ def run_codex_exec(
             run_schema_path=schema_path,
         )
         attempt_started_at = time.perf_counter()
-        with prompt_path.open() as prompt_stdin:
-            result = subprocess.run(
-                current_argv,
-                cwd=cwd,
-                stdin=prompt_stdin,
-                text=True,
-                capture_output=True,
-                env=codex_env,
-            )
+        result = run_codex_subprocess(
+            current_argv,
+            cwd=codex_cwd,
+            input=prompt_path.read_text(),
+            text=True,
+            capture_output=True,
+            env=codex_env,
+        )
         last_result = result
         stdout_path.write_text(result.stdout)
         stderr_path.write_text(result.stderr)
+        reject_protected_write_after_event(
+            run_purpose=purpose,
+            run_call_path=call_path,
+            run_prompt_path=prompt_path,
+            run_stdout_path=stdout_path,
+            run_stderr_path=stderr_path,
+            run_output_path=output_path,
+            run_schema_path=schema_path,
+            started_at=attempt_started_at,
+            returncode=result.returncode,
+        )
         error_text = codex_error_text(result.stdout, result.stderr)
         if result.returncode != 0:
             if (
@@ -304,7 +392,9 @@ def run_codex_exec(
                     if _QUOTA_POLLING:
                         wait_started_at = time.perf_counter()
                         print(
-                            f"# {console_timestamp()} Codex CLI quota wait: waiting for representative probe",
+                            "# "
+                            f"{console_timestamp()} "
+                            "Codex CLI quota wait: waiting for representative probe",
                             flush=True,
                         )
                         _QUOTA_CONDITION.wait_for(lambda: not _QUOTA_POLLING)
@@ -350,12 +440,16 @@ def run_codex_exec(
                             "exec",
                             "--profile",
                             profile_name,
+                            "--cd",
+                            str(codex_cwd),
                             "--json",
                             "--output-last-message",
                             str(probe_output_path),
                             "-",
                         ]
-                        probe_prompt_path.write_text("quota availability probe")
+                        _write_prompt_log(
+                            probe_prompt_path, "quota availability probe"
+                        )
                         write_call_log(
                             probe_call_path,
                             run_purpose="quota availability probe",
@@ -368,17 +462,27 @@ def run_codex_exec(
                             run_schema_path=None,
                         )
                         probe_started_at = time.perf_counter()
-                        with probe_prompt_path.open() as probe_stdin:
-                            poll = subprocess.run(
-                                probe_argv,
-                                cwd=cwd,
-                                stdin=probe_stdin,
-                                text=True,
-                                capture_output=True,
-                                env=codex_env,
-                            )
+                        poll = run_codex_subprocess(
+                            probe_argv,
+                            cwd=codex_cwd,
+                            input=probe_prompt_path.read_text(),
+                            text=True,
+                            capture_output=True,
+                            env=codex_env,
+                        )
                         probe_stdout_path.write_text(poll.stdout)
                         probe_stderr_path.write_text(poll.stderr)
+                        reject_protected_write_after_event(
+                            run_purpose="quota availability probe",
+                            run_call_path=probe_call_path,
+                            run_prompt_path=probe_prompt_path,
+                            run_stdout_path=probe_stdout_path,
+                            run_stderr_path=probe_stderr_path,
+                            run_output_path=probe_output_path,
+                            run_schema_path=None,
+                            started_at=probe_started_at,
+                            returncode=poll.returncode,
+                        )
                         probe_error_text = codex_error_text(poll.stdout, poll.stderr)
                         probe_available = poll.returncode == 0 and not is_quota_error(
                             poll.stdout
@@ -424,11 +528,16 @@ def run_codex_exec(
             raise CmocError(
                 "Codex CLI 呼び出しが失敗しました。",
                 ["stderr/stdout log を確認して原因を解消してください。"],
-                f"call_log: {call_path}\nstdout_log: {stdout_path}\nstderr_log: {stderr_path}\n{error_text}",
+                (
+                    f"call_log: {call_path}\n"
+                    f"stdout_log: {stdout_path}\n"
+                    f"stderr_log: {stderr_path}\n"
+                    f"{error_text}"
+                ),
             )
-        output_json = read_output_json(output_path)
         if schema_path is not None:
             try:
+                output_json = _read_required_output_json(output_path)
                 validate(
                     instance=output_json, schema=json.loads(schema_path.read_text())
                 )
@@ -467,6 +576,8 @@ def run_codex_exec(
                     ["schema と output を確認してください。"],
                     f"schema: {schema_path}\noutput: {output_path}\nerror: {exc}",
                 ) from exc
+        else:
+            output_json = read_output_json(output_path)
         output_text = output_path.read_text() if output_path.exists() else ""
         elapsed_sec = time.perf_counter() - call_started_at
         emit_codex_call_event(

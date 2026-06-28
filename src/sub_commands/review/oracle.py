@@ -42,7 +42,7 @@ from sub_commands.review_targets import (
     enumerate_review_all_oracle_files,
     enumerate_review_oracle_targets,
 )
-from sub_commands.indexing import enable_indexing_preflight
+from commons.indexing import enable_indexing_preflight
 
 
 CodexExec = Callable[..., object]

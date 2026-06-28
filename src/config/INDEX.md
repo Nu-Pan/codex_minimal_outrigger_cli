@@ -1,20 +1,21 @@
 # `cmoc_config.py`
 
 ## Summary
-- cmoc のリポジトリ単位設定を表す dataclass 群を定義し、AI 呼び出し並列数、Codex CLI 向けモデル・reasoning effort 対応、apply fork と review oracle のループ上限などを集約する。
-- 設定は開発対象リポジトリごとに変わりうる値として扱われ、永続化時には Enum 系の値を JSON 向けの value に変換する前提を持つ。
+- 開発対象リポジトリごとに変わりうる cmoc の挙動設定を集約するデータ構造を定義している。
+- 設定は永続化される JSON の内容に対応し、Enum 系の値化、初期化時の生成・同期、人間による編集を前提にした設定項目の入口になる。
+- AI エージェント呼び出しの並列数、Codex CLI 向けのモデル名・reasoning effort 名の対応、apply fork と review oracle のループ上限などの既定値を扱う。
 
 ## Read this when
-- リポジトリごとに永続化される cmoc 設定の項目、既定値、責務境界を確認したいとき。
-- Codex CLI に渡すモデル名や reasoning effort 名と、内部の ModelClass・ReasoningEffort との対応を確認または変更したいとき。
-- AI エージェント呼び出しの最大並列数、apply fork の処理ファイル数上限、review oracle の所見列挙・マージ・検証ループ上限を確認または変更したいとき。
-- 設定 JSON の生成・同期・人間編集を前提に、どの値が利用者調整可能な設定として集約されているかを把握したいとき。
+- リポジトリごとの cmoc 設定項目、既定値、設定データ構造を確認または変更したいとき。
+- Codex CLI に渡すモデル種別や reasoning effort の対応表を確認または変更したいとき。
+- apply fork や review oracle の処理件数・ループ回数など、サブコマンドの挙動調整値を確認または変更したいとき。
+- 永続化される設定 JSON と Python 側の設定クラスとの対応を追う必要があるとき。
 
 ## Do not read this when
-- 設定ファイルを実際に読み書きする処理、JSON 変換処理、init 時の生成・同期手順を確認したいとき。
-- ModelClass や ReasoningEffort そのものの定義、意味、列挙値を確認したいとき。
-- 各サブコマンドの実行ロジック、ループ処理の実装、所見生成や apply fork の詳細挙動を追いたいとき。
-- cmoc 全体のパス語彙や repo-root・work-root などの定義を確認したいとき。
+- 設定ファイルの読み書き、JSON 変換、同期処理そのものの実装を探しているとき。
+- モデル種別や reasoning effort の概念定義そのものを確認したいとき。
+- 各サブコマンドの実行ロジックやレビュー所見の生成・マージ・検証処理を確認したいとき。
+- cmoc のパス語彙、oracle file、realization file などの基本概念を調べたいとき。
 
 ## hash
 - d102ed1e07a4c9a7241b4e731ec3783b392d8dfb274e702c452dbf9c6b387dc6

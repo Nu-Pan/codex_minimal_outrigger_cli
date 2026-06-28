@@ -1,152 +1,197 @@
 import json
 import subprocess
-from pathlib import Path
 import tomllib
+from pathlib import Path
 
 import cmoc_runtime
+import pytest
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from cmoc_runtime import SubcommandLogger
+from cmoc_runtime import CmocError, SubcommandLogger
 from config.cmoc_config import CmocConfig
 from _support import (
     make_repo,
     run_git,
     setup_codex_home,
+    stub_codex_profile,
     write_python_executable,
 )
 from commons.runtime_codex import run_codex_exec, run_codex_tui
+from commons.runtime_codex_profile import run_tracked_codex_subprocess
 
 
-def test_run_codex_exec_uses_stdin_and_writes_logs(
-    tmp_path: Path, monkeypatch, capsys
-) -> None:
-    root = make_repo(tmp_path)
-    codex_home = setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    recorder = tmp_path / "record.json"
-    fake_codex = bin_dir / "codex"
-    write_python_executable(
-        fake_codex,
-        [
-            "import json, os, pathlib, sys",
-            f"record = pathlib.Path({str(recorder)!r})",
-            "stdin = sys.stdin.read()",
-            "args = sys.argv[1:]",
-            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text(json.dumps({'ok': True, 'stdin': stdin}))",
-            "record.write_text(json.dumps({'args': args, 'stdin': stdin, 'codex_home': os.environ.get('CODEX_HOME')}))",
-            "print(json.dumps({'type': 'turn.completed'}))",
-            "print('stderr-only', file=sys.stderr)",
-        ],
-    )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    schema = tmp_path / "schema.json"
-    schema.write_text(
-        json.dumps(
-            {
-                "type": "object",
-                "additionalProperties": False,
-                "required": ["ok", "stdin"],
-                "properties": {"ok": {"type": "boolean"}, "stdin": {"type": "string"}},
-            }
-        )
-    )
-    parameter = AgentCallParameter(
+def _parameter(mode: FileAccessMode = FileAccessMode.READONLY) -> AgentCallParameter:
+    return AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        "SECRET PROMPT BODY",
-        schema,
-    )
-    logger = SubcommandLogger(root, "test")
-
-    result = run_codex_exec(
-        parameter,
-        root=root,
-        capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
-        subcommand_logger=logger,
+        mode,
+        "prompt",
+        None,
     )
 
-    recorded = json.loads(recorder.read_text())
-    assert recorded["stdin"] == "SECRET PROMPT BODY"
-    assert recorded["codex_home"] == str(codex_home)
-    assert "SECRET PROMPT BODY" not in " ".join(recorded["args"])
-    assert recorded["args"][:2] == ["exec", "--profile"]
-    assert recorded["args"][2].startswith("cmoc_")
-    assert "/" not in recorded["args"][2]
-    assert "--json" in recorded["args"]
-    assert "--output-schema" in recorded["args"]
-    assert recorded["args"][-1] == "-"
-    assert result.output_json == {"ok": True, "stdin": "SECRET PROMPT BODY"}
-    assert result.call_log_path.is_file()
-    assert result.prompt_log_path.read_text() == "SECRET PROMPT BODY"
-    assert result.stdout_log_path.read_text().strip() == '{"type": "turn.completed"}'
-    assert "stderr-only" not in result.stdout_log_path.read_text()
-    assert result.stderr_log_path.read_text().strip() == "stderr-only"
-    assert result.codex_home == codex_home
-    assert result.profile_name == recorded["args"][2]
-    assert result.profile_path.name.startswith("cmoc_")
-    assert result.profile_path.suffixes == [".config", ".toml"]
-    assert result.profile_path.parent == codex_home
-    assert result.schema_path is not None
-    assert result.schema_path.parent == root / ".cmoc" / "state" / "schema"
-    call_log = json.loads(result.call_log_path.read_text())
-    assert call_log["codex_home"] == str(codex_home)
-    assert call_log["profile_name"] == result.profile_name
-    assert call_log["prompt_log_path"] == str(result.prompt_log_path)
-    assert result.prompt_log_path.name.endswith("_prompt.jsonl")
-    log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
-    codex_events = [event for event in log_events if event["event"] == "codex_call"]
-    assert len(codex_events) == 1
-    assert codex_events[0]["purpose"] == "codex exec"
-    assert codex_events[0]["status"] == "succeeded"
-    assert codex_events[0]["returncode"] == 0
-    assert codex_events[0]["call_log_path"] == str(result.call_log_path)
-    assert codex_events[0]["prompt_log_path"] == str(result.prompt_log_path)
-    assert codex_events[0]["stdout_log_path"] == str(result.stdout_log_path)
-    assert codex_events[0]["codex_home"] == str(codex_home)
-    assert codex_events[0]["profile_name"] == result.profile_name
-    assert codex_events[0]["elapsed_sec"] >= 0
-    console = capsys.readouterr().out
-    assert "# " in console
-    assert "Codex CLI call" in console
-    assert "- purpose: `codex exec`" in console
-    assert f"- call_log: `{result.call_log_path}`" in console
-    assert "- returncode: `0`" in console
+
+def test_tracked_codex_subprocess_records_dedicated_process_group(
+    tmp_path: Path,
+) -> None:
+    tracking_path = tmp_path / "apply.pid"
+    tracking_path.write_text("111 222\n")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    script = bin_dir / "codex"
+    write_python_executable(
+        script,
+        [
+            "import os, pathlib, sys, time",
+            "time.sleep(0.2)",
+            "print(os.getpid())",
+            "print(os.getpgrp())",
+            "print(pathlib.Path(sys.argv[1]).read_text(), end='')",
+        ],
+    )
+
+    result = run_tracked_codex_subprocess(
+        [str(script), str(tracking_path)],
+        tracking_path,
+        text=True,
+        capture_output=True,
+    )
+
+    stdout_lines = result.stdout.splitlines()
+    process_id = stdout_lines[0]
+    assert stdout_lines[1] == process_id
+    assert stdout_lines[2] == "111 222"
+    assert stdout_lines[3].startswith(f"child {process_id} ")
+    assert tracking_path.read_text() == "111 222\n"
 
 
-def test_run_codex_exec_stores_schema_in_cwd_work_root(
-    tmp_path: Path, monkeypatch
+def test_run_codex_exec_generates_profile_and_starts_codex(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    linked = root / ".cmoc" / "worktrees" / "apply"
-    linked.parent.mkdir(parents=True)
-    run_git(root, "worktree", "add", "-b", "apply-test", str(linked), "HEAD")
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
-    fake_codex = bin_dir / "codex"
     write_python_executable(
-        fake_codex,
+        bin_dir / "codex",
         [
             "import json, os, pathlib, sys",
-            f"record = pathlib.Path({str(recorder)!r})",
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text(json.dumps({'ok': True}))",
-            "record.write_text(json.dumps({'args': args, 'cwd': os.getcwd()}))",
+            "profile = args[args.index('--profile') + 1]",
+            "home = pathlib.Path(os.environ['CODEX_HOME'])",
+            "profile_path = home / f'{profile}.config.toml'",
+            "output.write_text('done\\n')",
+            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
+            "    'args': args,",
+            "    'cwd': os.getcwd(),",
+            "    'stdin': sys.stdin.read(),",
+            "    'profile': profile_path.read_text(),",
+            "}))",
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    schema = tmp_path / "schema.json"
-    schema.write_text(
+
+    result = run_codex_exec(
+        _parameter(FileAccessMode.REPO_WRITE),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    record = json.loads(recorder.read_text())
+    assert record["args"][:6] == [
+        "exec",
+        "--profile",
+        result.profile_name,
+        "--cd",
+        str(root.resolve()),
+        "--json",
+    ]
+    assert record["cwd"] == str(root.resolve())
+    assert record["stdin"] == "prompt"
+    assert 'sandbox_mode = "workspace-write"' in record["profile"]
+    writable_roots = set(
+        tomllib.loads(record["profile"])["sandbox_workspace_write"]["writable_roots"]
+    )
+    assert writable_roots == {str(root.resolve())}
+    assert result.output_text == "done\n"
+
+
+def test_run_codex_exec_limits_pure_oracle_read_to_oracle_cwd(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    recorder = tmp_path / "record.json"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, os, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "profile = args[args.index('--profile') + 1]",
+            "home = pathlib.Path(os.environ['CODEX_HOME'])",
+            "profile_path = home / f'{profile}.config.toml'",
+            "output.write_text('done\\n')",
+            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
+            "    'args': args,",
+            "    'cwd': os.getcwd(),",
+            "    'profile': profile_path.read_text(),",
+            "}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_exec(
+        _parameter(FileAccessMode.PURE_ORACLE_READ),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    record = json.loads(recorder.read_text())
+    oracle_root = str((root / "oracle").resolve())
+    assert record["args"][record["args"].index("--cd") + 1] == oracle_root
+    assert record["cwd"] == oracle_root
+    assert 'sandbox_mode = "read-only"' in record["profile"]
+    assert "sandbox_workspace_write" not in tomllib.loads(record["profile"])
+
+
+def test_run_codex_exec_stores_schema_state_under_repo_root_for_run_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    linked = root / ".cmoc" / "worktrees" / "linked"
+    linked.parent.mkdir(parents=True)
+    run_git(root, "worktree", "add", "-b", "linked-exec", str(linked), "HEAD")
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    recorder = tmp_path / "record.json"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, os, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text(json.dumps({'ok': True}))",
+            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
+            "    'args': args,",
+            "    'cwd': os.getcwd(),",
+            "}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    schema_source = tmp_path / "schema.json"
+    schema_source.write_text(
         json.dumps(
             {
                 "type": "object",
-                "additionalProperties": False,
                 "required": ["ok"],
                 "properties": {"ok": {"type": "boolean"}},
             }
@@ -155,9 +200,9 @@ def test_run_codex_exec_stores_schema_in_cwd_work_root(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
+        FileAccessMode.REPO_WRITE,
         "prompt",
-        schema,
+        schema_source,
     )
 
     result = run_codex_exec(
@@ -168,133 +213,297 @@ def test_run_codex_exec_stores_schema_in_cwd_work_root(
         config=CmocConfig(),
     )
 
-    recorded = json.loads(recorder.read_text())
-    schema_arg = recorded["args"][recorded["args"].index("--output-schema") + 1]
-    assert recorded["cwd"] == str(linked)
-    assert result.output_json == {"ok": True}
-    assert result.call_log_path.parent == root / ".cmoc" / "log" / "codex"
-    assert result.schema_path is not None
-    assert result.schema_path.parent == linked / ".cmoc" / "state" / "schema"
-    assert schema_arg == str(result.schema_path)
-    assert not (root / ".cmoc" / "state" / "schema").exists()
+    record = json.loads(recorder.read_text())
+    schema_arg = Path(record["args"][record["args"].index("--output-schema") + 1])
+    assert record["cwd"] == str(linked.resolve())
+    assert result.schema_path == schema_arg
+    assert schema_arg.parent == root / ".cmoc" / "state" / "schema"
+    assert not (linked / ".cmoc" / "state" / "schema").exists()
 
 
-def test_run_codex_tui_uses_codex_command_and_prompt_argument(
-    tmp_path: Path,
-    monkeypatch,
-    capsys,
+def test_run_codex_exec_logs_call_before_rejecting_agents_edit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     root = make_repo(tmp_path)
-    codex_home = setup_codex_home(tmp_path, monkeypatch)
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    fake_codex = bin_dir / "codex"
-    fake_codex.write_text("#!/bin/sh\nexit 0\n")
-    fake_codex.chmod(0o755)
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    recorded = {}
-
-    def fake_run(argv, **kwargs):
-        recorded.update({"argv": argv, "kwargs": kwargs})
-        return subprocess.CompletedProcess(argv, 0)
-
-    monkeypatch.setattr(cmoc_runtime.subprocess, "run", fake_run)
-    parameter = AgentCallParameter(
-        ModelClass.MAINSTREAM,
-        ReasoningEffort.MEDIUM,
-        FileAccessMode.REPO_WRITE,
-        "TUI PROMPT BODY",
-        None,
-    )
-    logger = SubcommandLogger(root, "test")
-    token = cmoc_runtime.set_current_subcommand_logger(logger)
-
-    try:
-        prompt_file = root / ".cmoc" / "log" / "tui" / "prompt_cmpl.md"
-        result = run_codex_tui(
-            parameter,
-            root=root,
-            purpose="tui codex",
-            extra_read_paths=[prompt_file],
-            config=CmocConfig(),
-        )
-    finally:
-        cmoc_runtime.reset_current_subcommand_logger(token)
-
-    assert recorded["kwargs"]["cwd"] == root
-    assert recorded["kwargs"]["env"]["CODEX_HOME"] == str(codex_home)
-    assert "capture_output" not in recorded["kwargs"]
-    assert "stdout" not in recorded["kwargs"]
-    assert "stderr" not in recorded["kwargs"]
-    assert recorded["argv"][0] == "codex"
-    assert recorded["argv"][1] == "--profile"
-    assert recorded["argv"][2].startswith("cmoc_")
-    assert "exec" not in recorded["argv"]
-    assert recorded["argv"][-1] == "TUI PROMPT BODY"
-    profiles = list(codex_home.glob("cmoc_*.config.toml"))
-    assert len(profiles) == 1
-    workspace = tomllib.loads(profiles[0].read_text())["sandbox_workspace_write"]
-    assert workspace["writable_roots"] == [str(root)]
-    assert workspace["read_only_paths"] == [
-        str(root / "memo"),
-        str(root / ".agents"),
-        str(prompt_file),
-    ]
-    call_logs = list((root / ".cmoc" / "log" / "codex").glob("*_tui_call.json"))
-    assert len(call_logs) == 1
-    assert json.loads(call_logs[0].read_text())["argv"] == [
-        "codex",
-        "--profile",
-        recorded["argv"][2],
-        "TUI PROMPT BODY",
-    ]
-    log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
-    codex_events = [event for event in log_events if event["event"] == "codex_call"]
-    assert len(codex_events) == 1
-    assert codex_events[0]["purpose"] == "tui codex"
-    assert codex_events[0]["status"] == "succeeded"
-    assert codex_events[0]["returncode"] == 0
-    assert codex_events[0]["call_log_path"] == str(call_logs[0])
-    console = capsys.readouterr().out
-    assert "Codex CLI call" in console
-    assert "- purpose: `tui codex`" in console
-    assert f"- call_log: `{call_logs[0]}`" in console
-    assert "- returncode: `0`" in console
-    assert result.returncode == 0
-    assert result.stdout == ""
-    assert result.stderr == ""
-
-def test_run_codex_exec_loads_repo_config_json(tmp_path: Path, monkeypatch) -> None:
-    root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    config = cmoc_runtime.config_to_dict(cmoc_runtime.sync_config(root))
-    config["codex"]["model"]["efficiency"] = "CUSTOM-EFFICIENCY"
-    config["codex"]["reasoning_effort"]["low"] = "minimal"
-    (root / ".cmoc" / "config.json").write_text(json.dumps(config, indent=2) + "\n")
+    stub_codex_profile(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    fake_codex = bin_dir / "codex"
     write_python_executable(
-        fake_codex,
+        bin_dir / "codex",
         [
             "import json, pathlib, sys",
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "output.write_text('done\\n')",
+            "output.write_text(json.dumps({'ok': True}))",
+            "agents = pathlib.Path('.agents')",
+            "agents.mkdir(exist_ok=True)",
+            "(agents / 'generated.md').write_text('changed\\n')",
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
-    parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
+    logger = SubcommandLogger(root, "test")
+
+    with pytest.raises(CmocError, match=r"\.agents 配下を変更"):
+        run_codex_exec(
+            _parameter(),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+            subcommand_logger=logger,
+        )
+
+    events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_event = next(event for event in events if event["event"] == "codex_call")
+    assert codex_event["purpose"] == "codex exec"
+    assert codex_event["status"] == "failed"
+    assert codex_event["returncode"] == 0
+    assert ".agents" in codex_event["error"]
+    assert Path(codex_event["call_log_path"]).exists()
+    console = capsys.readouterr().out
+    assert "- purpose: `codex exec`" in console
+    assert f"- call_log: `{codex_event['call_log_path']}`" in console
+    assert "- returncode: `0`" in console
+
+
+@pytest.mark.parametrize("initial_state", ["untracked", "tracked_dirty"])
+def test_run_codex_exec_rejects_dirty_agents_content_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, initial_state: str
+) -> None:
+    root = make_repo(tmp_path)
+    agents_file = root / ".agents" / "generated.md"
+    agents_file.parent.mkdir()
+    agents_file.write_text("original\n")
+    if initial_state == "tracked_dirty":
+        run_git(root, "add", ".agents/generated.md")
+        run_git(root, "commit", "-m", "track agents file")
+    agents_file.write_text("dirty before codex\n")
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text(json.dumps({'ok': True}))",
+            "(pathlib.Path('.agents') / 'generated.md').write_text('changed by codex\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    with pytest.raises(CmocError, match=r"\.agents 配下を変更") as exc_info:
+        run_codex_exec(
+            _parameter(),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
+
+    assert ".agents/generated.md" in exc_info.value.detail
+
+
+@pytest.mark.parametrize(
+    ("mode", "script_lines", "expected"),
+    [
+        (
+            FileAccessMode.REALIZATION_WRITE,
+            ["(pathlib.Path('oracle') / 'spec.md').write_text('# changed\\n')"],
+            "oracle",
+        ),
+        (
+            FileAccessMode.REALIZATION_WRITE,
+            [
+                "memo = pathlib.Path('memo')",
+                "memo.mkdir(exist_ok=True)",
+                "(memo / 'generated.md').write_text('changed\\n')",
+            ],
+            "memo",
+        ),
+        (
+            FileAccessMode.REPO_WRITE,
+            [
+                "memo = pathlib.Path('memo')",
+                "memo.mkdir(exist_ok=True)",
+                "(memo / 'generated.md').write_text('changed\\n')",
+            ],
+            "memo",
+        ),
+    ],
+)
+def test_run_codex_exec_rejects_file_access_mode_protected_edits(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    mode: FileAccessMode,
+    script_lines: list[str],
+    expected: str,
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text(json.dumps({'ok': True}))",
+            *script_lines,
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    with pytest.raises(CmocError, match="禁止領域") as exc_info:
+        run_codex_exec(
+            _parameter(mode),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
+
+    assert expected in exc_info.value.detail
+
+
+def test_run_codex_tui_rejects_file_access_mode_protected_edits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import pathlib",
+            "memo = pathlib.Path('memo')",
+            "memo.mkdir(exist_ok=True)",
+            "(memo / 'generated.md').write_text('changed\\n')",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    with pytest.raises(CmocError, match="禁止領域") as exc_info:
+        run_codex_tui(
+            _parameter(FileAccessMode.REPO_WRITE),
+            root=root,
+            config=CmocConfig(),
+        )
+
+    assert "memo" in exc_info.value.detail
+
+
+def test_run_codex_tui_checks_extra_read_path_before_starting_codex(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+
+    def fail_run(*_args: object, **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        raise AssertionError("Codex subprocess must not start")
+
+    monkeypatch.setattr(cmoc_runtime.subprocess, "run", fail_run)
+
+    with pytest.raises(CmocError, match="許可領域外"):
+        run_codex_tui(
+            _parameter(FileAccessMode.REPO_WRITE),
+            root=root,
+            extra_read_paths=[root / "memo" / "prompt_cmpl.md"],
+            config=CmocConfig(),
+        )
+
+
+def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    prompt_path = root / ".cmoc" / "log" / "tui" / "20260101_cmpl.md"
+    prompt_path.parent.mkdir(parents=True)
+    prompt_path.write_text("complete prompt\n")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    recorder = tmp_path / "record.json"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, os, pathlib, sys",
+            "args = sys.argv[1:]",
+            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
+            "    'args': args,",
+            "    'cwd': os.getcwd(),",
+            "}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_tui(
+        _parameter(FileAccessMode.PURE_ORACLE_READ),
+        root=root,
+        extra_read_paths=[prompt_path],
+        config=CmocConfig(),
     )
 
-    result = run_codex_exec(parameter, root=root, capacity_initial_sleep_sec=0)
+    record = json.loads(recorder.read_text())
+    assert record["cwd"] == str((root / "oracle").resolve())
+    assert record["args"][record["args"].index("--cd") + 1] == str(
+        (root / "oracle").resolve()
+    )
 
-    profile = result.profile_path.read_text()
-    assert 'model = "CUSTOM-EFFICIENCY"' in profile
-    assert 'reasoning_effort = "minimal"' in profile
+
+def test_run_codex_tui_fails_when_codex_exits_nonzero(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(bin_dir / "codex", ["import sys", "sys.exit(7)"])
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    with pytest.raises(CmocError, match="Codex CLI/TUI 呼び出しが失敗"):
+        run_codex_tui(_parameter(), root=root, config=CmocConfig())
+
+    console = capsys.readouterr().out
+    assert "- purpose: `codex tui`" in console
+    assert "- returncode: `7`" in console
+    call_logs = list((root / ".cmoc" / "log" / "codex").glob("*_tui_call.json"))
+    assert len(call_logs) == 1
+    call_log = json.loads(call_logs[0].read_text())
+    assert call_log["argv"][:3] == ["codex", "--profile", call_log["profile_name"]]
+
+
+@pytest.mark.parametrize("runner", ["exec", "tui"])
+def test_codex_runtime_reports_missing_codex_cli(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, runner: str
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
+    real_run = subprocess.run
+
+    def fake_run(args: list[str], *pos: object, **kwargs: object) -> object:
+        if args[:1] == ["codex"]:
+            raise FileNotFoundError("codex")
+        return real_run(args, *pos, **kwargs)
+
+    monkeypatch.setattr(cmoc_runtime.subprocess, "run", fake_run)
+
+    with pytest.raises(CmocError, match="Codex CLI が見つかりません"):
+        if runner == "exec":
+            run_codex_exec(
+                _parameter(),
+                root=root,
+                capacity_initial_sleep_sec=0,
+                config=CmocConfig(),
+            )
+        else:
+            run_codex_tui(_parameter(), root=root, config=CmocConfig())

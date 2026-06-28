@@ -4,7 +4,11 @@
 """
 
 # cmoc
-from basic.struct_doc import StructDoc
+from pathlib import Path
+import re
+
+from basic.path_model import RootToken, resolve_real_path, resolve_work_root
+from basic.struct_doc import StructCodeBlock, StructDoc
 
 # local
 from .file_access_rule import build_file_access_rule, FileAccessMode
@@ -110,4 +114,50 @@ def build_complete_prompt(
         struct_doc.append(build_review_oracle_standard())
     if index_entry_standard:
         struct_doc.append(build_index_entry_standard())
-    return struct_doc
+    return [_sanitize_prompt_doc(doc) for doc in struct_doc]
+
+
+def _sanitize_prompt_doc(doc: StructDoc) -> StructDoc:
+    """Codex CLI に渡す直前の root token 置換を文書木全体へ適用する。"""
+    children = doc.children
+    title = _sanitize_prompt_text(doc.title)
+    if isinstance(children, str):
+        return StructDoc(title, _sanitize_prompt_text(children))
+    if isinstance(children, StructCodeBlock):
+        return StructDoc(
+            title,
+            StructCodeBlock(children.info, _sanitize_prompt_text(children.body)),
+        )
+    return StructDoc(title, *[_sanitize_prompt_doc(child) for child in children])
+
+
+def _sanitize_prompt_text(text: str) -> str:
+    """標準 prompt 内の cmoc 固有表記を実行時の Codex 向け表記へ寄せる。"""
+    protected: dict[str, str] = {}
+    token_pattern = "|".join(re.escape(token.value) for token in RootToken)
+
+    # <work-root>/oracle/src/acp/prompt_parts/realization_standard.py
+    # requires literal root-token comments, so those requirements must not be
+    # rewritten into absolute-path requirements while concrete paths still are.
+    def protect(match: re.Match[str]) -> str:
+        key = f"\0{len(protected)}\0"
+        protected[key] = match.group(0)
+        return key
+
+    text = re.sub(rf"`(?:{token_pattern})(?:/[^`]*)?`(?=\s*トークン)", protect, text)
+    text = re.sub(rf"`(?:{token_pattern})/[^`]*\.\.\.[^`]*`", protect, text)
+    for root_token in RootToken:
+        text = text.replace(root_token.value, str(_resolve_prompt_root(root_token)))
+    for key, value in protected.items():
+        text = text.replace(key, value)
+    return text.replace("cmoc から呼び出された AI Agent", "AI Agent")
+
+
+def _resolve_prompt_root(root_token: RootToken) -> Path:
+    """prompt 用 root token を Codex から見える実 path へ解決する。"""
+    try:
+        return resolve_real_path(root_token)
+    except ValueError:
+        if root_token is RootToken.RUN:
+            return resolve_work_root()
+        raise

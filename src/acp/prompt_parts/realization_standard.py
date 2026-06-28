@@ -4,8 +4,9 @@
 `<work-root>/oracle/src/acp/prompt_parts/realization_standard.py`。
 このファイルは 16,000 文字を超えるが、責務境界は realization file の品質基準を
 StructDoc 化する prompt part に閉じている。各 Standard は、サイズ、コメント、
-責務分割、抽象化、公開面、テスト、依存関係、完了時点検をまたいで相互参照される 1 つの
-規範集合であり、分割すると生成順序と文脈の確認に複数 module を読む必要が生じる。
+責務分割、抽象化、公開面、テスト、依存関係、完了時点検をまたいで
+相互参照される 1 つの規範集合であり、分割すると生成順序と文脈の確認に
+複数 module を読む必要が生じる。
 現状は同じ prompt 本文として同時に読む方が凝集性と読み取り文脈を保てる。
 """
 
@@ -29,7 +30,9 @@ def build_realization_standard() -> StructDoc:
             requirements=[
                 Req(
                     "推奨",
-                    "必ず守らなければならない要件を満たしている範囲内（解空間内）で、realization file 全体で見た時の総文字数が最小となること（文字数最小解）を目指す",
+                    "必ず守らなければならない要件を満たしている範囲内（解空間内）で、"
+                    "realization file 全体で見た時の総文字数が最小となること"
+                    "（文字数最小解）を目指す",
                 ),
                 Req(
                     "推奨",
@@ -162,7 +165,8 @@ def build_realization_standard() -> StructDoc:
                 ),
             ],
             examples=[
-                "oracle file の明示要求に対応する処理には、必要に応じて `<work-root>/oracle/doc/...` のように根拠 path を近くに残す",
+                "oracle file の明示要求に対応する処理には、必要に応じて "
+                "`<work-root>/oracle/doc/...` のように根拠 path を近くに残す",
                 "単純な代入や関数呼び出しには `値を代入する` のようなコメントを書かない",
                 "一見自然なライブラリ利用を避けている場合は、依存増加や失敗時挙動の違いなど、避けた理由を短く書く",
             ],
@@ -189,7 +193,9 @@ def build_realization_standard() -> StructDoc:
                 ),
                 Req(
                     "必須",
-                    "1 つの realization file が 16,000 文字を超える場合は、分割しない理由を責務境界・凝集性・読み取り文脈の観点で説明できなければならない",
+                    "1 つの realization file が 16,000 文字を超える場合は、"
+                    "分割しない理由を責務境界・凝集性・読み取り文脈の観点で"
+                    "説明できなければならない",
                 ),
                 Req(
                     "必須",

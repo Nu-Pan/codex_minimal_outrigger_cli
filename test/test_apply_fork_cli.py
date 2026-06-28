@@ -151,10 +151,10 @@ def test_apply_fork_does_not_rewrite_session_gitignore(
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
-def test_apply_fork_rejects_tracked_cmoc_without_dirtying_session(
+def test_apply_fork_ensures_cmoc_ignore_without_dirtying_session(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
-    """apply fork は .cmoc の追跡解除を session 側で実行しない。"""
+    """apply fork は未 ignore の .cmoc を clean worktree のまま ignore する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -162,16 +162,26 @@ def test_apply_fork_rejects_tracked_cmoc_without_dirtying_session(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
     (root / ".gitignore").write_text("")
-    run_git(root, "add", "-f", ".gitignore", ".cmoc")
-    run_git(root, "commit", "-m", "track cmoc state")
-    assert run_git(root, "status", "--short").stdout.strip() == ""
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "stop ignoring cmoc in gitignore")
+    exclude = root / ".git" / "info" / "exclude"
+    exclude.write_text(
+        "\n".join(line for line in exclude.read_text().splitlines() if line != "/.cmoc/")
+        + "\n"
+    )
+    assert run_git(root, "status", "--short").stdout.strip() == "?? .cmoc/"
 
-    with pytest.raises(apply_fork_module.CmocError) as exc_info:
-        apply_fork_module._cmoc_apply_fork_body("full", lambda *args, **kwargs: None)
+    class FakeCodexResult:
+        output_json = {"findings": []}
 
-    assert ".cmoc が git 追跡対象外に初期化されていません。" in str(exc_info.value)
+    result = apply_fork_module._cmoc_apply_fork_body(
+        "full", lambda *args, **kwargs: FakeCodexResult()
+    )
+
+    assert result.returncode == 0
+    assert Path(result.stdout).is_file()
     assert run_git(root, "status", "--short").stdout.strip() == ""
-    assert run_git(root, "ls-files", "--", ".cmoc").stdout.strip()
+    assert "/.cmoc/" in exclude.read_text().splitlines()
 
 
 @pytest.mark.parametrize("config_case", ["invalid_json", "missing"])
@@ -197,7 +207,10 @@ def test_apply_fork_config_load_error_does_not_start_apply_run(
     result = runner.invoke(app, ["apply", "fork", "--scope", "full"])
 
     assert result.exit_code != 0
+    assert "# ERROR" in result.stdout
     assert "cmoc config" in result.stdout
+    assert "# ERROR" not in result.stderr
+    assert "cmoc config" not in result.stderr
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
     assert "apply_process_id" not in state["apply"]
@@ -302,3 +315,21 @@ def test_apply_fork_target_normalization_keeps_nested_memo_directory(
     )
 
     assert targets == [nested.resolve()]
+
+
+def test_apply_fork_target_normalization_keeps_binary_files(
+    tmp_path: Path,
+) -> None:
+    """full scope の候補になり得る binary file を file 種別だけで除外しない。"""
+    root = make_repo(tmp_path)
+    realization_binary = root / "asset.bin"
+    oracle_binary = root / "oracle" / "asset.bin"
+    realization_binary.write_bytes(b"\x00realization\n")
+    oracle_binary.write_bytes(b"\x00oracle\n")
+
+    targets = apply_fork_module.normalize_apply_targets(
+        root,
+        {realization_binary, oracle_binary},
+    )
+
+    assert targets == [realization_binary.resolve(), oracle_binary.resolve()]

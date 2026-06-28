@@ -1,335 +1,349 @@
 # `_support.py`
 
 ## Summary
-- CLI テストで使う最小 Git リポジトリ、認証済み Codex home、偽の Python 実行ファイル、apply 用 worktree パス解決などを用意するテスト補助関数をまとめる。
-- Git コマンド実行や現在ブランチ取得を通じて、テスト内の Git 状態確認と fixture 構築を支える共有入口として位置づけられる。
+- CLI テストで使う共通補助関数群。最小構成の Git リポジトリ作成、ブランチ状態確認、Codex ホームのテスト用設定、Codex profile 生成の差し替え、偽の Python 実行ファイル作成、apply 用 worktree path 解決をまとめて提供する。
+- 外部コマンドとしての Git と Codex 実行制御を伴うテストの前提準備を集約し、個別テストが fixture 作成や monkeypatch の詳細を重複して持たないための入口になる。
 
 ## Read this when
-- CLI テストで一時 Git リポジトリを作成し、初期 commit 済みの状態や oracle 配下の tracked/ignored ファイルを準備する方法を確認したいとき。
-- テストから Git コマンドを実行する helper、現在ブランチ名の取得、または apply の session state から worktree パスを導く処理を使う・変更するとき。
-- Codex home の環境変数設定や fake external command 用の実行可能 Python スクリプトを、テスト fixture として用意する箇所を探すとき。
+- CLI テストで一時 Git リポジトリ、初期 commit、oracle 配下の最小ファイル、追跡済みかつ ignore 対象の oracle ファイルを用意する方法を確認したいとき。
+- Codex CLI 実行を伴うテストで、認証済みの最小 CODEX_HOME や profile 生成差し替えの仕組みを使う、または変更するとき。
+- テスト内で現在の Git ブランチ名、Git コマンド実行結果、apply 状態から導かれる worktree path を検証する補助処理を探すとき。
+- 外部コマンドの代替として実行可能な Python スクリプトをテスト中に生成する必要があるとき。
 
 ## Do not read this when
-- 個別サブコマンドの期待挙動や assertion 内容を確認したいだけで、共有 fixture や helper の実装を変更しないとき。
-- プロダクト本体の CLI 実装、状態管理、path model、oracle 仕様を調べたいとき。
-- pytest や Typer のテスト runner の利用箇所そのものではなく、特定テストケースの入力・出力・失敗条件を確認したいとき。
+- 個別サブコマンドの期待挙動、CLI 出力、終了コード、状態ファイルの仕様を確認したいだけなら、該当するテスト本文または実装を直接読む。
+- pytest の個別ケースやアサーション内容を探しているだけなら、この共通補助関数群ではなく対象機能のテストを読む。
+- Codex profile 生成や apply worktree 解決の本体実装を変更する場合は、ここではなく実装側の該当モジュールを読む。
+- oracle file や realization file の正本上の定義・標準を確認したい場合は、このテスト補助ではなく oracle 側の文書を読む。
 
 ## hash
-- 8c09c548f4da0311169d9185be843e85179ae5fd86b54b1709052e34000c6938
+- 54cf181de55105f9065ad7f515d614e2705529029548b38b874d2326362e0b59
 
 # `test_apply_abandon_cli.py`
 
 ## Summary
-- active apply run を破棄する CLI 操作について、cleanup、状態更新、実行位置の扱い、running process 停止を外部挙動として検証する realization test。
-- apply worktree と apply branch の削除、欠損時 warning、running 状態の process 停止、pid 再利用や終了済み process の扱い、linked worktree からの abandon 境界を同じ state fixture 文脈で扱う。
-- 16,000 文字を超えるが、active apply run の abandon 成功・警告・失敗条件を一箇所で確認するための凝集したテスト群として位置づけられている。
+- apply abandon を CLI 経由で実行したときの active apply run 破棄の外部挙動を検証する realization test。
+- completed/running apply run の worktree・branch・session state cleanup、cleanup 対象欠落時の警告、running process と記録済み child process の停止順、PID reuse や raced exit の扱いを固定する。
+- repo root、apply worktree、linked session/apply worktree、stale apply branch など実行位置ごとの abandon 境界条件を扱う。
 
 ## Read this when
-- apply abandon の CLI 挙動、出力、終了コード、state cleanup、worktree/branch 削除条件を変更または確認したいとき。
-- running 状態の apply process を abandon 前に停止する制御、process id ファイル削除、stale pid や終了済み process の扱いを確認したいとき。
-- apply worktree 上または linked session worktree 上から abandon を実行した場合の cwd 復帰、repo state 参照、stale apply branch 拒否の挙動を確認したいとき。
-- apply abandon に関するテスト分割・統合を検討しており、この大きなテストファイルが一つの責務に閉じている理由を確認したいとき。
+- apply abandon の成功時に apply worktree・apply branch・state・process id 記録がどう削除または ready 化されるかを確認したいとき。
+- running apply process の停止、child process group の停止順、pidfd signal、PID reuse、終了済み process の許容に関する制御ロジックを変更するとき。
+- apply abandon をどの worktree から実行できるか、linked session の state をどう正として扱うか、stale apply branch をどう拒否するかを確認するとき。
+- cleanup 対象が先に消えている場合の warning 出力や、破損 state・process identity 欠落・dirty linked session worktree の拒否条件を変更するとき。
 
 ## Do not read this when
-- apply run の作成、Codex 実行、fork 成功時の生成物そのものを確認したいだけのときは、apply fork 側のテストや実装を直接読む。
-- session fork、repository 初期化、git helper fixture の一般的な挙動を調べたいだけのときは、対応する session/init/support 領域を読む。
-- apply abandon の内部実装だけを局所的に変更したいが、CLI 外部挙動や process 停止境界の確認が不要なときは、実装モジュールから読み始める。
-- oracle の正本仕様断片を確認したいときは、この realization test ではなく oracle 配下の該当文書を読む。
+- apply fork の生成処理そのもの、Codex 実行結果の解釈、findings の扱いを調べたいだけのとき。
+- apply abandon 以外の session fork、init、merge などの CLI 挙動を確認したいとき。
+- oracle の正本仕様断片を確認したいとき。この対象は realization test であり、正本仕様ではない。
+- process 停止や worktree cleanup を伴わない単純な path model、INDEX 生成、補助 fixture の責務を調べたいとき。
 
 ## hash
-- f5be2a8d0509ec4c2691f238b6b586666419300c2717b5f00384891207deee49
+- f7e3591b4969ab79a729de5928c6ee1e9d8461e0eacdbfe6f0afb89f877c50a7
 
 # `test_apply_fork_cli.py`
 
 ## Summary
-- apply fork の CLI 経路を対象にした realization test。Codex 実行を fake に差し替え、apply run の開始・完了、session state、apply branch、worktree 配置、pid/state cleanup、所見列挙ループなどの外部挙動を検証する。
-- linked worktree 上での session branch/HEAD の扱い、session 側 .gitignore の保持、追跡済み .cmoc に対する拒否、config 読み込み失敗時に apply run を開始しないこと、所見対象としての .gitignore 編集、apply target 正規化で root 直下 memo だけを除外することを扱う。
+- apply fork の CLI 経路と内部 body が、Codex 実行ループ、apply run の branch/state/worktree 更新、linked worktree 起点、設定読み込み失敗時の中断、.cmoc ignore 処理、.gitignore 編集対象化、target 正規化を期待どおり扱うことを検証する realization test。
+- session fork 後に apply fork を実行したとき、apply state が completed になり、apply branch と run_id 別 worktree が作られ、旧 apply_worktree/apply_process_id/pid が残らず、所見列挙が呼ばれることを確認する。
+- linked worktree 上で開始した session branch と HEAD commit を apply run の起点にし、apply worktree は linked worktree 配下ではなく cmoc 管理 worktree 配下へ作ることを確認する。
+- apply fork が session 側の既存 .gitignore 表現を書き換えないこと、未 ignore の .cmoc は git info exclude で clean にすること、所見対象としての .gitignore は apply branch 側で編集できることを確認する。
+- target 正規化について、root 直下 memo は除外しつつ入れ子の memo directory は残し、binary file も file 種別だけでは除外しないことを確認する。
 
 ## Read this when
-- apply fork コマンドの実行フロー、Codex 呼び出し、所見適用ループ、commit summary/message 周辺の挙動を変更または検証するとき。
-- apply fork が session state の apply 欄、apply branch、oracle snapshot commit、apply worktree path、pid file cleanup をどう更新するべきか確認したいとき。
-- linked worktree から apply fork を実行した場合の開始 commit、branch、worktree 配置に関するテスト期待値を確認するとき。
-- apply fork と .gitignore/.cmoc の関係、特に session 側 .gitignore を書き換えない制約や、追跡済み .cmoc を拒否する挙動を確認するとき。
-- apply fork の target 正規化で root 直下 memo を除外し、入れ子の memo directory を対象に残す境界を確認するとき。
+- apply fork の外部挙動、state 遷移、apply branch 名、apply worktree 配置、apply_process pid の後始末に関するテスト期待値を確認したいとき。
+- linked worktree から apply fork を走らせる場合の oracle snapshot commit、apply branch の開始 commit、worktree 配置の期待値を確認したいとき。
+- apply fork 実行時の .cmoc ignore 処理、session 側 .gitignore の保持、git info exclude への追加、.gitignore 自体を所見対象として編集する挙動を確認したいとき。
+- cmoc config が壊れている、または存在しない場合に、apply run の branch/state/pid を開始せず stdout にエラーを出す挙動を確認したいとき。
+- apply fork の target 正規化で root 直下 memo、入れ子の memo directory、binary file、oracle 配下 file の扱いを確認したいとき。
+- Codex 実行を fake に差し替えて apply fork の制御フローや副作用をテストする既存パターンを参照したいとき。
 
 ## Do not read this when
-- apply fork 以外の apply サブコマンド、review、session fork、init などの個別 CLI 挙動だけを調べるとき。
-- Codex CLI や LLM 出力品質そのものを検証したいとき。このテストは Codex 実行を fake にして apply fork 側の制御と副作用を検証する。
-- oracle file の正本仕様を確認したいとき。このファイルは realization test であり、仕様判断の根拠は対応する oracle file を優先する。
-- root 直下 memo の読み書き禁止そのものや、INDEX.md 生成ルールを調べるとき。ここで扱うのは apply target 正規化の境界だけである。
+- apply fork の実装本体、永続 state の読み書き helper、git worktree 作成処理、Codex 呼び出し処理を変更したいだけで、テスト期待値ではなく実装詳細を確認したいとき。
+- session fork、init、git helper、runner fixture など apply fork 以外の CLI テスト基盤そのものを調べたいとき。
+- apply fork 以外の apply サブコマンド、review、oracle、path model などの仕様やテストを探しているとき。
+- Codex CLI や LLM 出力品質そのものの検証方針を知りたいとき。この対象は Codex 実行結果を fake 化し、apply fork 側の制御と副作用だけを検証する。
 
 ## hash
-- a811a856ca06368967ed5065ac684a9014ef2778cf20b285943ed2ef08bee58b
+- afa9543f71fb61a087b92aa30f464282ad3d4815a4d75b7a289e83836f07ff5d
 
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 実行を通じて、所見列挙から適用、commit、変更要約、report 生成、session state 更新までの制御を検証する realization test。収束、未収束、error、dirty file 再検査、編集禁止対象の検出、rolling fork の対象選定を、同じ loop と report schema の観測結果として扱う。
-- 16,000 文字を超えるが、責務は apply fork report と再検査制御の検証に閉じており、期待値の文脈を一箇所に保つために分割しない意図が docstring に明示されている。
+- apply fork の CLI 実行を通じて、所見列挙、適用、commit、変更要約、report 生成、session state 更新までの一連の制御を検証する realization test。
+- 収束、未収束、error、変更ファイル再調査、未追跡ファイルの変更要約、編集禁止対象差分、rolling fork の対象選定を、同じ apply fork loop と report schema の観測結果として扱う。
+- ファイル自体が大きい理由は、apply fork report の期待値と loop 制御の読み取り文脈を一箇所に保つためであり、分割すると期待値の文脈が分散するという責務境界にある。
 
 ## Read this when
-- apply fork の CLI 終了コード、result label、report の内容、変更要約、commit message、session state 更新の期待挙動を確認・変更するとき。
-- apply fork が dirty file を再検査する条件、再検査対象から除外される対象、最後の調査対象が空所見だった場合の収束判定を確認するとき。
-- apply fork 中の no-op 適用、編集禁止対象への差分、未 commit 差分を含む error report の扱いを確認するとき。
-- apply join 後の rolling apply fork がどの差分だけを調査対象にするかを確認するとき。
+- apply fork の report 出力、終了コード、収束・未収束・error 判定を変更または調査するとき。
+- apply fork が Codex の所見列挙、所見適用、commit message 生成、変更要約生成をどの順に呼び、どの観測結果を report に反映するか確認したいとき。
+- apply 後に変更された file を再調査する制御、特に INDEX.md を再調査対象から外す挙動を確認するとき。
+- finding application が差分を作らない場合の再調査待ち、commit 抑制、apply branch の扱いを確認するとき。
+- error report が commit 前の working tree 差分や未追跡 file を変更要約に含めるかを確認するとき。
+- 編集禁止対象への差分を検出した場合の stdout、report、session state の error 反映を確認するとき。
+- rolling apply fork が前回 apply join 後の変更だけを対象にするか確認するとき。
 
 ## Do not read this when
-- apply fork の内部 helper の純粋な単体ロジックだけを確認したいとき。CLI 実行後の外部挙動や report 観測を伴わないなら、実装側またはより小さい単位のテストを読む方が直接的。
-- apply fork 以外の subcommand、一般的な session fork/join、初期化処理そのものの挙動を調べたいとき。
-- Codex 実行結果の品質や LLM 出力内容そのものを評価したいとき。この対象は fake 応答を使って apply fork 側の制御と出力を検証している。
+- apply fork の内部 helper 単体の純粋な実装詳細だけを確認したいときは、該当する実装 module を直接読む方がよい。
+- apply fork 以外の apply join、session fork、init などの CLI 挙動そのものを調査するときは、それぞれの専用テストや実装を読む方がよい。
+- Codex 実行結果 fake やテスト用 repository fixture の共通的な作り方だけを確認したいときは、共通 support 側を読む方がよい。
+- report markdown の整形関数や差分収集 helper の局所的な仕様だけを確認したいときは、対象 helper の実装またはより小さい単位のテストを優先する。
 
 ## hash
-- 088e836a2c195117587b48262890c4fb5deec723a260090ccbb7fcc9fdcb1aca
+- 2876ba06713f97e07fd4138dd41dd55d00dcb4501e016c9c42450671c6121b2f
 
 # `test_apply_join_cli.py`
 
 ## Summary
-- apply run を session へ join する CLI 外部挙動を検証する realization test。成功時の apply worktree と branch の cleanup、session state 更新、report 生成を扱う。
-- apply join を session 側または apply worktree 側から実行した場合の挙動、stale apply branch の拒否、dirty worktree の拒否、想定外差分や merge conflict の検出と report 内容をまとめて確認する。
-- 16,000 文字を超えるが、apply join の成功条件と拒否条件を同じ fixture と git 状態の文脈で読む必要があるため、一箇所に凝集している。
+- apply run を session へ join する CLI 外部挙動を検証する realization test。成功時の merge、state 更新、report 生成、apply worktree/branch cleanup と、dirty worktree・stale apply branch・想定外差分・merge conflict など join 可否の境界条件を同じ文脈で扱う。
+- 16,000 文字超のテストだが、apply join の成功条件と拒否条件を一箇所で読む方が fixture、git 状態、session/apply worktree の文脈が分散しないという責務境界を docstring で説明している。
 
 ## Read this when
-- apply join の CLI 挙動、終了コード、標準出力、report 生成、state 更新、apply worktree と branch の後片付けを変更または確認するとき。
-- apply join が dirty apply worktree、stale apply branch、想定外の apply 差分、未解決 merge conflict をどう拒否するかを確認するとき。
-- apply worktree 内から apply join を実行した場合の cwd 復帰、ログ保存先、cleanup 可否を調べるとき。
-- INDEX.md の競合解決や .gitignore 変更のように、apply join が許容または自動解決する差分境界を確認するとき。
+- apply join の CLI 挙動、終了コード、標準出力、report 生成、state の ready/completed 更新を確認・変更する。
+- apply join 後に apply worktree や apply branch が削除される条件、または current cwd が apply worktree の場合に cleanup を残す条件を確認する。
+- linked session worktree からの join が、root ではなく現在の session worktree へ merge する挙動を扱う。
+- stale apply branch、dirty apply worktree、想定外差分、削除パス、rename target、root memo、.gitignore 変更、merge conflict、force-resolve の境界条件を検証・変更する。
+- apply join の差分分類 helper や managed branch の changed path 判定に関するテストを確認する。
 
 ## Do not read this when
-- apply fork 単体、session fork 単体、init 単体の基本挙動だけを確認したいとき。
-- join 後の report 文面や state 副作用ではなく、内部 helper の純粋な単体ロジックだけを調べたいとき。
-- Codex 実行結果の品質や LLM 出力内容そのものを検証したいとき。
-- apply join 以外のサブコマンドや、oracle file の正本仕様本文を探しているとき。
+- apply fork の Codex 実行、apply worktree 作成、Codex 出力処理そのものを調べたい場合。ここではそれらを fake 化して join 前提を作るだけである。
+- session fork や init の一般挙動を調べたい場合。ここでは apply join の前提状態を作るために呼ぶだけである。
+- apply join 以外の CLI サブコマンド、設定、path model、oracle/realization の一般仕様を確認したい場合。
+- 単体 helper の内部実装だけを読みたい場合。外部挙動ではなく実装詳細が主目的なら、対応する実装モジュールを直接読む方が適切である。
 
 ## hash
-- a00146402c5b62a4c89e13ef4e5f95b5d6859651f0f141f368983cf8063f2f78
+- df328efd98cf220f4ec46636ab835300ce6203fc215042383d7795aa62e87097
 
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基本ランタイム挙動を横断的に検証する realization test。パスモデル、worktree 判定、設定既定値、エラー表示、セッション branch 形状、CLI preflight、`.cmoc` ignore、file access と sandbox 変換、binary 判定、Codex profile の権限制御を扱う。
-- 単一機能の詳細テストというより、実装全体の基礎契約が崩れていないかを確認する入口であり、ランタイム共通部品・CLI 起動時制御・権限 profile 生成の変更影響を読むためのテスト群。
+- 基礎 runtime の共通契約を横断的に固定する pytest 群。root token/path 解決、linked worktree と run/work root、設定既定値と不正値、CmocError の Markdown report、CLI error の stdout 出力、subcommand log、`.cmoc` ignore、FileAccessMode 変換、Codex sandbox profile、binary 判定など、個別サブコマンドより下位の実行前提をまとめて検証する。
+- 大きめのテストファイルだが、分割すると共通 fixture と root 状態の文脈が散るため、basic runtime 回帰として一箇所に集約されている。
 
 ## Read this when
-- path token 解決、run root と repo/work root の区別、linked worktree 前提の挙動を変更または確認したいとき。
-- CmocConfig の既定 model class、reasoning effort、parallel 数など、基本設定の初期値に関わる変更を行うとき。
-- CmocError の markdown 表示、next actions の補完、CLI エラーや引数解析エラーを stdout に出す挙動を変更または確認したいとき。
-- session/apply branch 名から session id を解釈する処理、または branch に対応する runtime state の読み込み拒否条件を扱うとき。
-- CLI 実行前の work root 検査、completion probe 時の preflight/副作用抑制、`.cmoc` を `.gitignore` に追加する処理を確認するとき。
-- FileAccessMode の外部表現、sandbox mode への変換、Codex profile の read/write/read_only/deny_read/writable_roots 設定を変更または検証するとき。
-- binary 判定がファイル全体ではなく先頭 chunk だけを読む制御を確認するとき。
+- 基礎 runtime の回帰テストを確認・変更する。
+- root token、repo root、run root、work root、linked worktree の扱いを変更する。
+- CmocConfig、config_from_dict、model class、reasoning effort、FileAccessMode の既定値・検証・変換を変更する。
+- CmocError、render_error、Click parse error、CLI preflight error、stdout/stderr のエラー表示契約を変更する。
+- subcommand log、pre-log check failure、起動 wrapper の missing venv report、`.cmoc` の gitignore 追加を変更する。
+- Codex profile の sandbox mode、writable_roots、extra writable paths、memo・oracle・.agents へのアクセス制限を変更する。
+- binary 判定の読み取り範囲や先頭 chunk 判定を変更する。
 
 ## Do not read this when
-- 個別 CLI command の正常系フローや表示内容だけを詳しく確認したい場合は、対象 command の実装や専用テストを直接読む方がよい。
-- oracle の正本仕様断片そのものを確認・変更したい場合は、realization test ではなく oracle 配下の本文を読むべき。
-- テスト補助の repository 作成、git 実行、runner fixture の実装を調べたいだけなら、テスト本文ではなく補助モジュールを直接読む方がよい。
-- 特定の runtime helper の内部実装を修正する場合で、このテストが期待する外部挙動をすでに把握しているなら、対応する実装ファイルを優先してよい。
+- 個別サブコマンド固有の業務ロジックや出力だけを調べたい場合。
+- oracle 正本仕様そのものを確認したい場合。
+- runtime の共通境界に触れない UI、文書、補助ファイル、または特定機能の局所テストだけを扱う場合。
+- テスト補助の make_repo、run_git、runner 自体の実装を調べたい場合は、先にテスト support 側を読む。
 
 ## hash
-- 6f64b55720acd40a69a45b84a3f92c6ce81d631ab39d87e26b2c88a0e0784c9e
+- de4d6c5eb4a1d893a3c688a328dd6eb334e0c387998d5efbd1fd1eb24043b8a9
 
 # `test_cli_init_tui.py`
 
 ## Summary
-- CLI の初期化処理と対話起動処理に関する realization test。初期化時の `.cmoc` 配下の追跡解除、`.gitignore` への無視設定、既存 staged/unstaged 変更の保全、linked worktree での保存先や commit 対象、既定設定 JSON の生成・同期を検証する。
-- 対話起動では、エディタで編集された依頼文から解決用パラメータを作り、HTML コメント除去後の完了プロンプトを保存し、Codex TUI 起動へ model class・reasoning effort・file access mode・追加 read path を渡す制御を検証する。
-- Markdown 依頼文 parser について、fenced code block 内の見出し風テキストを見出し扱いしないことと、見出し前の preamble を本文として保持することを検証する。
+- cmoc の `init` と TUI 起動直前の CLI 前処理について、利用開始直後に共有される外部挙動を検証する realization test。`.cmoc` の ignore 設定、既存 staged/unstaged 差分の保護、既定設定の作成と既存設定への同期、linked worktree での repository/runtime 準備、TUI の prompt 保存と Codex 起動 parameter 構築、Markdown prompt 解析の見出し構造を扱う。
+- 16,000 文字を超えるが、初期化済み状態を読む文脈が分散しないよう、cmoc 初期化と対話起動前の repository/runtime 準備という同じ CLI 境界の回帰検証を一箇所にまとめている。
 
 ## Read this when
-- `init` サブコマンドの Git 操作、`.cmoc` 無視設定、初期 commit、既存 index/worktree 状態の保全、linked worktree 対応を変更・調査する。
-- `.cmoc/config.json` の既定値生成、既存設定との同期、手動設定値を上書きしない挙動を変更・調査する。
-- `tui` サブコマンドのエディタ起動、依頼文整形、パラメータ解決用 Codex 呼び出し、Codex TUI 呼び出し、ログ保存先、linked worktree での root/cwd/schema/log の扱いを変更・調査する。
-- Markdown プロンプトを見出し単位に分解する parser の挙動、特に fenced code block と見出し前本文の扱いを変更・調査する。
+- `init` の外部挙動、特に `.cmoc` 配下を追跡対象から外す処理、`.cmoc` ignore の維持、初期化 commit の対象、sub command log の記録を確認または変更するとき。
+- 既存の staged 変更や `.gitignore` の staged/unstaged 変更を、`init` が壊したり勝手に commit したりしないことを確認したいとき。
+- 既定の設定ファイル生成、既存設定に対する default key の補完、人間が書いた設定値の保持を確認または変更するとき。
+- linked worktree からの `init` または TUI 起動で、repository root と作業 worktree の `.cmoc`、`.gitignore`、log、schema、commit 対象がどこに作られるべきかを確認するとき。
+- TUI が editor で作成した Markdown prompt から HTML comment を除去し、parameter 解決用 Codex 呼び出しと本体 TUI 用 Codex 呼び出しをどう組み立てるかを確認または変更するとき。
+- TUI の resolved parameter から file access mode、model class、reasoning effort、structured output schema、extra read paths を構築する挙動を検証するとき。
+- Markdown prompt parser が fenced code block 内の見出しを無視し、見出し前本文と階層構造を保持する挙動を確認または変更するとき。
 
 ## Do not read this when
-- 個別サブコマンドに依存しない CLI 登録や Typer の一般的な entrypoint だけを確認したい。
-- Git 操作や `.cmoc` 状態に関係しない純粋な設定 loader、schema 定義、モデル enum の詳細だけを確認したい。
-- Codex CLI やエディタ実行そのものの外部品質、LLM 出力内容の妥当性を検証したい。
-- Markdown parser 全般の網羅仕様を探しており、fenced code block 内見出しと preamble 保持以外の構文を扱うテストが必要である。
+- CLI 全体のコマンド定義や option 一覧を把握したいだけで、`init` と TUI 起動前処理の外部挙動を検証しないとき。
+- Codex 実行 wrapper や AgentCallParameter の一般的な仕様だけを調べたいとき。
+- `.cmoc` の path model や repository/worktree root 判定そのものの実装詳細を調べるときは、該当する実装または仕様を直接読む方がよい。
+- TUI の画面描画、継続的な対話 UI、または Codex CLI の出力品質そのものを検証したいとき。
+- Markdown 全般の parser 仕様を網羅的に調べたいとき。この対象は TUI prompt 分割に必要な見出し・本文・fenced code block の回帰だけを扱う。
 
 ## hash
-- c1265830784b4cbbcfcbda1b16f91cedf1e5c9880f77122e02d39be58637340f
+- 84ead6e56fa7c20ea13f689db248fffa248f0b896e22402a301d2b00cf882174
 
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 呼び出しを包む実行系の realization test。`codex exec` と TUI 起動が、プロンプト受け渡し、生成 profile、`CODEX_HOME`、sandbox 設定、schema 保存先、実行 cwd、標準出力・標準エラーのログ分離、call log、subcommand logger、コンソール表示、repository config の反映を期待どおり扱うことを検証する。
+- Codex CLI 実行系の realization test。`codex exec` と `codex tui` の起動引数、作業ディレクトリ、生成される Codex profile、構造化出力 schema の保存場所、呼び出しログ、終了コード異常、Codex CLI 不在時のエラーを検証する。
+- ファイルアクセスモードごとの保護領域制御を、`.agents`、`oracle`、`memo`、追加 read path、pure oracle read の complete prompt 例外を含めて確認する。
+- Codex subprocess を専用 process group で追跡し、追跡用 pid ファイルの既存内容を壊さず子プロセス情報を記録する制御も扱う。
 
 ## Read this when
-- Codex CLI を起動する runtime 実装、特に exec 呼び出し、TUI 呼び出し、profile 生成、sandbox workspace 設定、`CODEX_HOME` 引き継ぎ、ログ保存、schema 保存先、repository config 読み込みを変更する時。
-- 外部 `codex` コマンドを fake executable や monkeypatch で置き換え、引数・stdin・cwd・環境変数・副作用を確認する realization test の書き方を確認したい時。
-- `.cmoc` 配下の Codex call log、prompt/stdout/stderr log、schema state、subcommand logger event、コンソール要約表示の期待値を確認したい時。
+- Codex CLI 呼び出し処理、Codex profile 生成、`--cd`、`--json`、`--output-last-message`、`--output-schema` などの実行引数を変更する。
+- `FileAccessMode` と Codex 実行時 sandbox、writable roots、pure oracle read の作業ディレクトリ、repo worktree 配下での状態保存先を確認または変更する。
+- Codex 実行後に `.agents`、`oracle`、`memo` などの保護領域変更を検出して拒否する処理や、そのエラー詳細・ログ出力を変更する。
+- `run_codex_exec`、`run_codex_tui`、`run_tracked_codex_subprocess`、Codex subprocess の失敗処理、Codex CLI 不在時のエラー処理を変更する。
+- Codex 呼び出しログや `SubcommandLogger` に記録される `codex_call` の status、returncode、call log path、console 表示を確認する。
 
 ## Do not read this when
-- Codex runtime の実装仕様ではなく、oracle file に書かれた正本仕様断片を確認したい時。
-- Codex CLI 呼び出し以外のサブコマンド、Git 操作、path model、設定 schema 全体、または一般的な test fixture の責務を調べたい時。
-- LLM の応答品質や実際の Codex CLI の実行結果そのものを検証したい時。
+- Codex 実行ではなく、通常の Git 操作、設定ファイル読み込み、path model、oracle 文書そのものの仕様だけを調べる。
+- LLM の応答品質、prompt 内容の妥当性、または Codex CLI 自体の内部挙動を検証したいだけで、cmoc 側の呼び出し制御や保護領域検査を扱わない。
+- 実装ファイルの責務や API 仕様を先に把握したい場合は、対応する runtime 実装や profile 生成実装を直接読む。
 
 ## hash
-- 3af4dab0d27fed1143fe0c79c404a6ec0d70fc44bfaad74d9acc706faff0a7b4
+- c05b0118945c085da5cedbb414da2b2279334c007118e2388e78fda23022ae2d
 
 # `test_codex_runtime_home.py`
 
 ## Summary
-- Codex CLI 実行ラッパーが利用する Codex home の決定・検証を確認する realization test。環境変数未設定時の既定 home、相対パス指定の保持と解決、存在しない home・ファイルである home・認証情報欠落を Codex CLI 起動前にエラーにする挙動を扱う。
-- fake の Codex 実行ファイルで呼び出し時の環境変数と引数を記録し、実行結果に含まれる Codex home、profile 配置、call log の内容が期待どおりかを検証する。
+- Codex CLI 実行時の Codex home 解決と事前検証を対象にした realization test。環境変数が未設定の場合の既定 home、環境変数で指定された home の保持、Codex 実行 cwd に対する相対 home の解決、home や認証情報が不正な場合に Codex CLI 起動前に失敗することを検証する。
 
 ## Read this when
-- Codex CLI 呼び出し前に CODEX_HOME をどの値へ設定するか、未設定時にどの home を使うかを変更・確認する時。
-- Codex home の存在確認、ディレクトリ種別確認、auth.json 必須チェック、またはそれらの CmocError の summary・detail・next_actions を変更する時。
-- run_codex_exec の戻り値に含まれる codex_home、profile_path、call_log_path と Codex CLI へ渡す profile 引数の関係を確認する時。
+- Codex CLI 呼び出しで使用する CODEX_HOME の決定、相対パス解決、実行結果へ記録される codex_home や profile_path の挙動を確認・変更するとき。
+- Codex home が存在しない、ディレクトリではない、auth.json がない場合の CmocError の summary・detail・next_actions を確認・変更するとき。
+- ファイルアクセスモードによって Codex CLI の作業ディレクトリが変わる状況で、相対 CODEX_HOME がどこから解決されるかを検証するとき。
 
 ## Do not read this when
-- Codex CLI の標準入出力プロトコル、turn.completed 以外のイベント処理、または LLM 応答品質の検証を調べたい時。
-- Codex home とは無関係な AgentCallParameter のモデル種別、reasoning effort、ファイルアクセスモードの変換だけを調べたい時。
-- リポジトリ作成 helper や fake 実行ファイル生成 helper の実装詳細を調べたい時。
+- Codex CLI の容量待機、標準出力イベント処理、プロンプト生成など、Codex home の解決や検証に直接関係しない実行制御を調べるとき。
+- 実際の Codex CLI や LLM の出力品質を検証したいとき。ここでは fake executable を使い、home 解決と事前検証の制御ロジックだけを扱う。
+- oracle file 側の正本仕様を確認・変更したいとき。この対象は realization test であり、正本仕様そのものではない。
 
 ## hash
-- b4c26ae1f025d3687713c3ca03063e1f18042933100f15eeadb4bd2979c04b1d
+- f113426a3f92145e9b5bff3bfd809dd949834c6dbb9c2471815903cec09de7fe
 
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex 実行がクォータ超過で失敗した後、クォータ availability probe を挟んで再試行または resume し、最終結果・呼び出しログ・サブコマンドログ・コンソール表示を正しく扱うことを検証する realization test。
-- 偽の Codex 実行ファイルを用いて、初回失敗、probe 成功、resume 成功、resume token 不在時の通常再実行、並列実行時の代表 probe 共有という制御フローを外部挙動として確認する。
+- Codex exec が quota exceeded になった後の待機、quota availability probe、resume token による再開、token 不在時の再実行を外部挙動として検証する realization test。
+- fake Codex 呼び出し列、call log、subcommand log、CODEX_HOME と cwd、並行実行時の代表 probe 共有、probe による .agents 変更検出を同じ retry 状態機械の観測点として扱う。
 
 ## Read this when
-- Codex CLI 呼び出しで quota exceeded を検出した後の待機、probe、resume、再実行の挙動を変更または調査するとき。
-- Codex 実行ログの purpose、status、argv、profile、標準出力ログ、prompt ログ、output path、call_log_path の記録仕様を確認したいとき。
-- 複数スレッドから同時に Codex 実行が quota exceeded になった場合、probe が重複せず代表 1 回だけ実行される制御を確認したいとき。
-- CODEX_HOME や PATH 上の codex 実行ファイルを差し替えたテスト fixture の使い方を参考にしたいとき。
+- quota exceeded 後の Codex exec retry 制御、probe 実行、resume と再実行の分岐を変更または調査するとき。
+- Codex 呼び出しログ、subcommand log、stdout/stderr/prompt/output の記録内容、quota 待機中や復帰後の status を確認するとき。
+- CODEX_HOME が相対パスの場合の実行 cwd、file access mode による codex --cd の向き先、probe 後の .agents 変更拒否を確認するとき。
+- 複数の Codex exec が同時に quota exceeded になった場合に、quota availability probe を共有しつつ各呼び出しが resume される挙動を確認するとき。
 
 ## Do not read this when
-- 通常の Codex 実行成功パス、プロンプト組み立て、モデル・sandbox・承認設定など、quota retry 以外の引数生成を調べたいとき。
-- 実際の Codex CLI や LLM の出力品質そのものを検証したいとき。
-- oracle file の正本仕様を確認したいとき。この対象は実装側のテストであり、正本仕様ではない。
+- quota retry ではない通常成功時の Codex exec 引数構築、出力 JSON 読み取り、一般的な subprocess 実行だけを確認したいとき。
+- Codex CLI や LLM 自体の出力品質、実際の quota 状態、外部サービスとの通信を検証したいとき。
+- oracle file の正本仕様や設計意図を確認したいとき。
+- retry 状態機械ではなく、個別 helper の単体的な実装詳細だけを調べたいとき。
 
 ## hash
-- 52577c161c22ef63a8d344b843647b0ed4fed140933e00a37c90413103f61047
+- 384ace0d6b6e8dd3c53494b005fb7c0314bf2a87c2eef952c1a5ace3a2244bb0
 
 # `test_codex_runtime_retry.py`
 
 ## Summary
-- Codex CLI 実行ラッパーのリトライ制御を検証する realization test。スキーマ検証失敗後の再試行、capacity エラー時の再試行、JSONL 外に出た capacity/quota 文字列をリトライ条件として扱わない境界を、偽の実行ファイルとログ副作用で確認する。
-- 成功時の出力 JSON、呼び出し回数、call log の保存内容、subcommand log の codex_call status と error 情報が、リトライ経路ごとに期待どおり記録されることを担う。
+- Codex CLI 実行ラッパーの retry 制御を検証する realization test。構造化出力の schema 不一致、出力ファイル欠落・空・不正 JSON、容量エラー JSONL に対して再試行し、成功時の結果・呼び出しログ・イベント状態が期待どおり記録されることを確認する。
+- stderr や通常 stdout に出た容量・quota 風メッセージを retry 判定に使わず、Codex CLI 失敗として扱う境界も検証する。
 
 ## Read this when
-- Codex CLI 呼び出し処理のリトライ条件、再試行回数、capacity/quota 判定、またはスキーマ検証失敗時の再実行を変更する。
-- Codex CLI 呼び出しログ、stdout/prompt/output の個別ログ、call log path、subcommand log の codex_call status を変更する。
-- Codex CLI の stdout JSONL イベントからエラーを判定する範囲と、stderr や通常 stdout の文字列をどう扱うかを確認する。
+- Codex CLI 呼び出しの再試行条件、schema validation retry、capacity retry、quota/capacity marker の解釈境界を変更する。
+- 呼び出しごとの call log、prompt log、stdout log、subcommand logger の codex_call event に含める status・returncode・error・call_log_path の期待値を確認したい。
+- 構造化出力の読み取り失敗や JSON Schema 検証失敗から成功に回復する挙動をテストで確認・修正したい。
 
 ## Do not read this when
-- Codex CLI 呼び出し以外のサブコマンド、設定読み込み、パスモデル、または oracle 文書の仕様整理だけを扱う。
-- リトライ制御やログ副作用に関係しない純粋なプロンプト生成、ファイルアクセスモード、モデル選択の実装だけを変更する。
-- 実際の Codex CLI や LLM の出力品質そのものを検証したい場合。
+- Codex CLI に渡す引数構築、profile 設定、sandbox 設定など、再試行後のログ・出力検証に関係しない通常呼び出し経路だけを調べたい。
+- repository 作成、Codex home 設定、fake executable 作成などの test fixture 自体の実装を調べたい場合は、support 側の helper を直接読む。
+- INDEX 生成、oracle/realization の分類、またはルーティング文書の仕様を調べたいだけで、Codex runtime の retry 挙動を扱わない。
 
 ## hash
-- 2ce4974d0be685b2ff0a359481e956fab34aebe39c7e4bcae12e7ce4dc5bcfc8
+- 4756b71f801ab3d2753b1ac5ab73749a3bb338f0e6f7a177a3daa1c7451cab3b
 
 # `test_indexing_cli.py`
 
 ## Summary
-- indexing サブコマンドとその周辺処理の realization test。生成エントリーの構造化出力利用、コミット対象の限定、既存 hash による再生成スキップ、未初期化・未コミット差分・worktree・repo config の扱い、競合解消、エントリー描画時の入力検証、階層更新時の並列生成と memo 除外境界を検証する。
+- indexing preflight と indexing サブコマンドが routing document を生成・更新・commit する外部挙動を検証する realization test。Codex によるエントリー生成、既存 hash の再利用、dirty worktree の拒否、linked worktree 対象化、conflict 解決、semantic field の検証、並列生成、root 直下 memo 除外と nested memo 対象化を同じ routing 更新ワークフローの観測点として扱う。
 
 ## Read this when
-- indexing サブコマンドの起動条件、失敗時メッセージ、作業ツリーの清潔性チェック、生成後コミットの挙動を変更する。
-- Codex によるエントリー生成、構造化出力 schema の利用、生成済み hash に基づく再生成判定、壊れた既存エントリーの再生成を変更する。
-- linked worktree や apply 用 worktree での indexing 実行、repo 側 config の参照、生成先 root の決定を変更する。
-- INDEX 系の競合解消、コミット対象を index path のみに限定する処理、非 index 差分を残したまま preflight で index だけを commit する処理を変更する。
-- エントリー描画で必須 semantic field を検証する条件、空文字・非文字列・欠落をエラーにする条件を変更する。
-- 階層内の sibling entry 生成を並列化する処理、root 直下 memo を除外しつつ nested memo を indexing 対象にする境界を変更する。
+- indexing CLI の成功・失敗条件、commit 対象、未初期化 repo や dirty repo での停止挙動を確認・変更したいとき。
+- indexing preflight が通常の indexing サブコマンドと異なり、既存の非 INDEX 差分を許容しつつ routing document だけを commit する挙動を確認したいとき。
+- routing document エントリーの hash freshness、malformed entry 再生成、semantic field の妥当性検証、Codex 呼び出し省略条件を変更したいとき。
+- linked worktree や apply worktree 上で、対象 root、cwd、repo config、commit 先がどう扱われるかを検証したいとき。
+- root 直下 memo を indexing 対象から除外し、通常ディレクトリ配下の memo は indexing 対象にする境界を確認したいとき。
 
 ## Do not read this when
-- indexing とは無関係なサブコマンド、設定読み書き、git helper、CLI runner の一般的な挙動だけを調べる場合。
-- Codex 実行 wrapper や構造化出力 schema の実体を確認したい場合は、対応する実装または schema 定義を直接読む。
-- path 用語、oracle/realization の正本仕様、ルーティング文書の作成規則を確認したい場合は、仕様文書側を読む。
-- 個別の indexing 実装詳細を追う場合は、このテストで期待される外部挙動を確認した後に実装ファイルを読む。
+- routing document の生成・更新ワークフローではなく、個別サブコマンドの UI や一般的な CLI 起動構造だけを調べたいとき。
+- Codex 実行 wrapper、config model、path model などの実装詳細そのものを変更したいだけで、このテストが観測する indexing 外部挙動に触れないとき。
+- 単一の小さな helper の純粋な内部処理を確認したいだけで、git 状態、commit、worktree、routing document 更新の副作用を伴わないとき。
 
 ## hash
-- 5638f4b29738202c15f91e148bfdb9355d74671c6a5c6b46ea9788892bf0d089
+- b577ba759f1311d8f153cc859e5dbf03d375f4e57944016a55663e2d1738be93
 
 # `test_indexing_preflight.py`
 
 ## Summary
-- Codex 実行・TUI 起動の直前に INDEX 更新を走らせる preflight 制御を検証する realization test。
-- preflight が対象 worktree を選ぶこと、生成された INDEX 更新を cmoc indexing コミットとして残し作業ツリーを清潔に戻すこと、既存のリポジトリ単位ロックを待つこと、INDEX エントリー生成や競合解決の目的では preflight をスキップすることを扱う。
-- 実際の Codex 呼び出しや INDEX 生成は monkeypatch で差し替え、git worktree、lock file、呼び出し順、コミット履歴、副作用を観察して制御ロジックを確認する。
+- Codex 呼び出し前に索引更新を走らせる preflight 制御の realization test。exec/TUI 経由の実行順、更新後コミット、作業ツリー選択、リポジトリロック待機、特定 purpose での索引更新スキップを検証する。
 
 ## Read this when
-- Codex 実行前に INDEX 更新を自動実行する制御を変更・調査するとき。
-- preflight が root と cwd のどちらの worktree を更新対象にするかを確認するとき。
-- INDEX 更新のコミット作成、作業ツリー清掃、またはリポジトリロック待機の挙動を変更するとき。
-- Codex 呼び出しの purpose に応じて indexing preflight を実行またはスキップする条件を変更するとき。
+- Codex 実行ラッパーが索引更新を先に行うか、更新後に専用コミットを作って作業ツリーを clean に戻すかを確認・変更したいとき。
+- root と cwd が異なる場合に、どの worktree を索引更新対象にするかを確認・変更したいとき。
+- 索引更新の排他ロック取得待ち、または索引エントリー生成・衝突解決の purpose で preflight をスキップする条件を扱うとき。
 
 ## Do not read this when
-- INDEX の本文生成内容、エントリー文章、差分解析そのものを確認したいとき。
-- apply join の通常の競合解決処理や fork refine の詳細挙動を調べたいだけのとき。
-- Codex CLI や TUI の実プロセス起動方法、モデル指定、ランタイム統合の一般仕様を調べたいとき。
-- ロックの低レベル実装だけを調べたい場合で、preflight からの待機制御に関心がないとき。
+- 索引本文の生成内容、ディレクトリ走査、エントリー構造化出力そのものを確認したいだけのとき。
+- Codex 実行パラメータの定義や runtime 実行関数の通常動作だけを調べたいとき。
+- Git worktree やロックを伴わない一般的なテスト補助関数だけを探しているとき。
 
 ## hash
-- 1e43cf0d39575b2dffeea90d89f05e0c252de3a1a50fe6eb29891fc5fe95558d
+- 5549e75d6493464e59f5f4cb68232c1fbd9fc7d03b85ee5f6cb6ea3ad4e04099
 
 # `test_prompt_parts.py`
 
 ## Summary
-- prompt part と ACP builder が生成する prompt、routing rule、file access rule、standard 文書、structured output schema、実行パラメータの期待値を横断的に検証する realization test。
-- 標準文書の markdown render 結果、complete prompt への標準注入有無、apply fork/review/session/tui/indexing builder の model・reasoning・file access mode・schema 制約を一箇所で確認する。
-- 対象は長いが、agent prompt と structured output schema の構築結果を同じ読み取り文脈で検証するため、共通の render/schema 期待値を追う入口としてまとまっている。
+- prompt part と AgentCallParameter builder の生成結果を横断的に検証する realization test。標準 prompt、routing、file access、各種 standard 文書、root token 解決、structured output schema、builder の model/reasoning/file access 設定が期待どおりに組み合わさることを確認する。
+- prompt 構築の回帰観点を一箇所に集約し、render_as_markdown の整形、complete prompt への標準文書注入、apply fork・review oracle・session join・TUI resolve・indexing 用 builder の schema や実行パラメータを検証する入口になっている。
 
 ## Read this when
-- prompt_parts や builder が生成する最終 prompt の構成、標準文書の挿入条件、routing/file access 文言の回帰を確認したいとき。
-- StructDoc、StructCodeBlock、render_as_markdown の markdown 出力や空行折り畳みの期待挙動を確認したいとき。
-- apply fork、review oracle merge、session join conflict resolution、TUI resolve parameter、indexing index entry の builder parameter や structured output schema のテスト観点を確認したいとき。
-- standard 文書に含めるべき用語、含めてはいけない表記、schema enum や required property の期待値を変更に合わせて更新する必要があるとき。
+- prompt part の文言、StructDoc/StructCodeBlock の markdown render、または complete prompt の構成を変更し、その回帰テスト観点を確認したいとき。
+- file access rule、routing rule、realization/review/apply/index entry standard の生成内容や、complete prompt にそれらを含める条件を変更するとき。
+- apply fork、review oracle、session join、TUI resolve、indexing の AgentCallParameter builder が返す model class、reasoning effort、file access mode、prompt、structured output schema の期待値を確認するとき。
+- oracle 側 JSON schema と realization 側 builder が参照する schema の一致を検証するテストを探しているとき。
+- root token の実パス解決、cmoc 呼び出しメタデータ除去、code block 内外での置換挙動など、complete prompt の文字列変換仕様に関わる変更を行うとき。
 
 ## Do not read this when
-- 個別 builder の実装詳細や prompt 文面の生成ロジックそのものを調べたいだけなら、対応する実装側を直接読む。
-- oracle の正本仕様断片そのものを確認したい場合は、テスト期待値ではなく対応する oracle 本文を読む。
-- 特定の CLI 実行フロー、永続状態、git 操作など prompt/schema builder 以外の挙動を調べている場合は、より直接のテストや実装を読む。
+- 個別 CLI コマンドの外部挙動や実行結果だけを確認したいとき。
+- prompt 生成や ACP builder ではなく、低レベルの path model、git 操作、ファイルシステム操作そのものの実装を調べたいとき。
+- 単一の schema ファイルの正本仕様内容だけを確認したい場合で、builder 経由の一致検証や prompt への組み込み条件を追う必要がないとき。
+- テスト基盤全体の設定、pytest の起動方法、fixture 共有設計を調べたいだけのとき。
 
 ## hash
-- a4089fd9752c0138da485de49821061d8d08e9e405cdac69b54d7ab1036ab940
+- bd173fa0a6e9294f9a11097899e9ba8a8894eaf2a2dcae635fcb15147acf421b
 
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle の CLI 経由の外部挙動を検証する realization test。report 生成、対象 oracle の選択、所見列挙・検証・judge・merge、結果分類、エラー report、review 用 worktree と join commit、INDEX.md 差分の取り込みや競合解決、想定外差分の拒否を同じ review run 文脈で確認する。
-- 所見 merge 操作の kind ごとの契約、無効操作、target 再利用拒否も検証し、review oracle loop が対象 oracle ごとの関連所見だけを次回 prompt に渡す制御を押さえる。
-- 16,000 文字を超えるが、fake Codex 応答、report 文脈、review run の状態を一箇所に保つ方が凝集性が高いという責務境界を docstring で明示している。
+- review oracle の CLI 経由の report 生成、所見列挙・検証・judge・merge の loop 制御、対象 oracle 選択、review worktree での実行と INDEX.md 変更の取り込み、失敗時 report、想定外差分の拒否をまとめて検証する realization test。
+- 16,000 文字を超えるが、同じ review run の状態、fake Codex 応答、report 文脈を共有する外部挙動群を一箇所で扱うため、oracle review の読み取り文脈を保つ凝集したテスト群として位置づけられている。
 
 ## Read this when
-- review oracle コマンドの出力 report、終了コード、scope 指定、対象 oracle の数え方や除外条件を変更・確認するとき。
-- review oracle の所見 loop、finding の verdict・severity 集計、merge 操作、validate・judge の呼び出し制御を変更・確認するとき。
-- review oracle が linked worktree、session branch、review 用 worktree、join commit、INDEX.md の生成差分や競合解決をどう扱うべきかを確認するとき。
-- review oracle 実行中の失敗時 report、標準出力へのエラー表示、INDEX.md 以外の予期しない差分の拒否と復元挙動を検証するとき。
+- review oracle の report に含める verdict、評価対象、accepted/rejected findings、件数、no_targets、error 表示などの外部出力仕様を確認・変更する。
+- review oracle の対象選択で full/session scope、短縮 option、gitignored oracle、binary、memo 形状の path、linked worktree 上の oracle をどう扱うかを確認・変更する。
+- 所見評価 loop で enumerate の再実行文脈、challenger/advocate reason の受け渡し、judge 結果、merge operation の契約と不正 operation 拒否を確認・変更する。
+- review oracle 実行用 worktree、review が生成した INDEX.md の merge、INDEX.md 削除 conflict 解決、INDEX.md 以外の想定外差分の拒否を扱う実装を変更する。
+- review oracle の途中失敗時に error report を残し、CLI がどこへ何を出力するかを確認・変更する。
 
 ## Do not read this when
-- review oracle 以外の subcommand の CLI 挙動を調べるだけなら、対象 subcommand のテストへ進む。
-- review oracle の実装詳細を直す必要があり、期待される外部挙動ではなく関数本体や git 操作の実装を読みたい場合は、実装側の review command へ進む。
-- oracle file の正本仕様そのものや INDEX.md ルーティング規則を確認したい場合は、oracle 側の本文を読む。
-- テスト共通 fixture、runner、repo 作成 helper の使い方だけを確認したい場合は、test support 側を読む。
+- review oracle 以外のサブコマンド、session 管理、設定読み込み、git helper の一般挙動だけを調べたい場合。
+- oracle file や realization file の概念定義、正本仕様断片そのもの、または人間が編集する oracle 文書の内容を確認したい場合。
+- review oracle の内部 helper の細かな実装だけを局所的に読む必要があり、外部挙動や CLI report との対応を確認しない場合。
+- 通常の INDEX.md ルーティング文書の生成規則や schema だけを確認したい場合。
 
 ## hash
-- ea7d3f24f774abdb135ebb656a95428d110ed907232765d5023af12e591d0c1f
+- fb1bcbdd95446c0d256449bfb602a0ddb48d543d23892e05de28e4c8fc41cc3a
 
 # `test_session_cli.py`
 
 ## Summary
-- session サブコマンドの realization test。fork、abandon、join の外部挙動を、Git branch/worktree、session state、CLI 出力、エラー出力、conflict 解決時の Codex 実行権限プロファイルとの関係で検証する。
-- 通常 worktree と linked worktree の両方で、session branch の生成・削除、home branch への復帰、state の active/abandoned/joined 遷移、未コミット差分や cleanup 失敗時の扱いを確認する入口になる。
+- session 系 CLI の fork、join、abandon に関する外部挙動回帰をまとめて検証する realization test。session branch と session state のライフサイクルを中心に、linked worktree、state cleanup、dirty worktree 拒否、join conflict resolution、エラー出力先を一連の状態遷移として扱う。
+- 16,000 文字超の大きなテストファイルだが、分割すると同じ branch/state fixture と session 状態遷移の文脈が散るため、session CLI 回帰として凝集させる意図が docstring に明記されている。
 
 ## Read this when
-- session fork の branch 作成、session state 作成、session_home_branch、session_start_commit、.cmoc ignore 初期化、sub command log 作成順を変更・調査するとき。
-- session abandon の成功時挙動、home branch 存在確認、session branch 削除、失敗時の rollback、ユーザー向け出力や stderr/stdout の出し分けを変更・調査するとき。
-- session join の merge/checkout 後挙動、conflict 解決、delete conflict の stage、session branch 削除失敗時 warning、linked worktree 上の join 挙動を変更・調査するとき。
-- session join conflict 解決で Codex を呼ぶ際の file access mode、oracle ファイル単位の write/read-only 境界、memo や .agents の read-only 扱いを確認するとき。
-- session サブコマンド周辺のテストを追加する前に、既存の外部挙動テストへケース追加できるか判断するとき。
+- session fork が session branch と state file を作る挙動、session-id 衝突時の retry や既存 state 非破壊、壊れた state file の拒否を確認・変更したいとき。
+- session abandon が home branch へ戻る、session branch を削除する、state を abandoned に更新する、cleanup 失敗時に state と branch を巻き戻す挙動を確認・変更したいとき。
+- session join が home branch へ統合する、join 後 state を joined にする、session branch 削除失敗を warning として扱う、delete conflict resolution を staging する挙動を確認・変更したいとき。
+- linked worktree 上で fork、join、abandon が root worktree ではなく現在の linked worktree branch/head を基準に動くかを確認したいとき。
+- oracle conflict resolution で Codex 呼び出しの file access mode、conflict marker 検出、解決後に marker が残った場合の stderr 報告を確認・変更したいとき。
+- session join/abandon のエラー報告が stdout と stderr のどちらへ出るべきか、sub command log や elapsed などの完了レポートを含めて確認したいとき。
 
 ## Do not read this when
-- session 以外のサブコマンド、設定読み込み、path model、oracle 文書生成など、session branch/worktree/state に関係しない挙動だけを扱うとき。
-- CLI の一般的な runner fixture、Git helper、repository fixture の実装だけを調査したいときは、テスト支援側の本文を直接読む。
-- session join の内部 merge 実装や conflict 解決手順そのものを修正したいだけで、期待される外部挙動を既に把握しているときは、対象の実装モジュールを直接読む。
-- Codex profile builder の汎用仕様や FileAccessMode 全体の意味を調べたいときは、profile 生成や basic/acp 側の本文を直接読む。
+- session 以外の CLI サブコマンド、init や apply など独立した外部挙動だけを確認したいとき。
+- session state の JSON schema や branch 操作 helper の実装詳細だけを確認したいときは、対応する実装モジュールやより局所的なテストを先に読む。
+- Codex 実行そのものの品質や LLM 出力内容を検証したいとき。この対象は fake_run_codex_exec による制御ロジックと外部副作用の確認に限られる。
+- 個別 helper の純粋関数的な単体挙動だけを調べたいとき。ただし conflict marker block 検出については、この対象に直接の小さな回帰テストがある。
 
 ## hash
-- 48a7fe06997043e26630c03fc819c65dd1be62acc57381d6e7f75b7d3bbb879e
+- e1b97a78183f137330182536dd41ca271a393d493f2b3b5f6d8aef66b9a81609

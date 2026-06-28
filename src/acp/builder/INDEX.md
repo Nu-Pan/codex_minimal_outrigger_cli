@@ -1,23 +1,25 @@
 # `apply`
 
 ## Summary
-- フォーク適用処理で使う AI エージェント呼び出しパラメータ群への入口。変更差分の要約、起点ファイルごとの所見列挙、列挙済み所見に基づく修正依頼について、プロンプト本文、モデル選択、推論量、ファイルアクセス権限、Structured Output schema の接続を組み立てる領域である。
-- 差分解析、git 操作、実際のファイル修正を直接担う領域ではなく、下流エージェントへ渡す作業指示と出力契約を構成するための builder 群を収める。
+- `cmoc apply fork` 向けの AI 呼び出しパラメータ構築を扱う領域。変更差分の人間向け要約、起点ファイルごとの所見列挙、列挙済み所見をもとにした realization file 修正依頼という各段階で、prompt、補助入力、file access mode、model/reasoning、Structured Output schema をどう組み立てるかへの入口になる。
+- 実際の fork 適用処理や git・作業ツリー操作ではなく、apply fork の各フェーズで AI に何を読ませ、どの権限で呼び出し、どの構造化出力を期待するかを定義する。
 
 ## Read this when
-- フォーク適用の各フェーズで、AI エージェントに渡す role、summary、goal、補助プロンプト、標準適用条件、ファイルアクセスモードを確認または変更したいとき。
-- 変更差分を人間向けに要約する呼び出し、realization file の要修正点をファイル起点で列挙する呼び出し、列挙済み所見に基づいて修正作業を依頼する呼び出しのどれに進むべきかを判断したいとき。
-- フォーク適用の作業レポートやレビュー・修正フェーズで使う Structured Output schema と、エージェント呼び出しパラメータとの対応を確認したいとき。
-- raw diff、起点ファイル、所見リストなどの入力データが、どのような補助プロンプトとして埋め込まれ、どの権限でエージェントに渡されるかを追いたいとき。
+- `cmoc apply fork` の作業レポート用に、raw git diff をカテゴリ別の変更要約へ変換する AI 呼び出しや出力契約を確認したいとき。
+- 起点となる oracle file または realization file から関連ファイルを読ませ、realization file の要修正所見を列挙させる調査フェーズの prompt、モデル指定、権限、出力形式を確認または変更したいとき。
+- 検出済み所見を AI への修正作業指示へ変換する際の prompt 内容、realization file 書き込み権限、git add/commit 禁止、realization standard 適用条件を確認したいとき。
+- apply fork 系で、raw diff、起点パス、所見 JSON などの補助入力が complete prompt と AgentCallParameter にどう接続されるかを追いたいとき。
+- apply fork の要約・所見列挙フェーズにおける Structured Output schema の意味的な責務と、その schema を使う呼び出し側の対応関係を確認したいとき。
 
 ## Do not read this when
-- フォーク適用そのものの git 操作、ブランチ作成・削除、作業ツリーへの反映、複数ファイル処理の制御フローを調べたいとき。
-- 実際に差分内容を解析するアルゴリズム、所見を統合・重複排除する処理、修正結果を検証する処理を探しているとき。
-- complete prompt の共通構築規則、Markdown レンダリング、パスモデル、ACP の基礎型など、汎用部品の仕様や実装だけを確認したいとき。
-- 個別の Structured Output 項目の詳細だけを確認したいときは、該当する schema 本文へ直接進めばよい。
+- `cmoc apply fork` の CLI 引数解析、サブコマンド登録、実行フロー全体、git branch 操作、実際の fork 適用処理、作業ツリー変更処理を調べたいだけのとき。
+- 個々の差分検出、差分分類アルゴリズム、ファイル列挙、複数ファイル分の呼び出し集約、結果の適用制御を確認したいとき。
+- complete prompt の共通構築規則、Markdown rendering、StructDoc、path model、file access mode、AgentCallParameter などの基礎型や共通定義そのものを調べたいとき。
+- 単一ファイルの本文内容、具体的な変更後コード、または realization file の実装修正箇所を直接調べたいだけのとき。
+- 一般的な INDEX.md 用エントリーの書き方やルーティング文書全体の規約を確認したいとき。
 
 ## hash
-- 4501a514ca3bce497bd7fa3e18fa6be68d3195b344f93832cb1ac6472b80d71e
+- d0ed97b71e987d094ce82f137529135272604cffd96cb0c787bf7cccb0bbd82f
 
 # `indexing`
 
@@ -44,22 +46,21 @@
 # `review`
 
 ## Summary
-- `cmoc review oracle` 向けの agent 呼び出しパラメータ構築を担う領域。oracle file からレビュー所見を列挙し、支持理由・反証理由を検証し、採否判定し、重複や矛盾を整理する各段階の prompt と Structured Output schema を扱う。
-- レビュー対象を oracle file に限定し、既存所見や既知理由との重複を避けつつ、review oracle 標準を反映した入力文脈と出力契約を組み立てるための入口になる。
+- `cmoc review oracle` の AI 呼び出しビルダーと Structured Output 契約をまとめる領域。oracle file から新規所見を列挙し、所見の擁護・反証理由を追加調査し、採否判定し、重複・矛盾する所見群を整理する各段階への入口になる。
+- 各 Python 実装は、対象所見や既知理由・既知所見を補助文脈として渡し、oracle 読み取り前提のプロンプト、モデル設定、推論量、ファイルアクセス方針、対応する JSON schema 参照を組み立てる責務を持つ。
+- 各 JSON schema は、所見列挙、妥当性支持理由、妥当性否定理由、採否判定、所見マージ編集操作について、AI 応答を機械処理できる構造へ固定する責務を持つ。
 
 ## Read this when
-- `cmoc review oracle` の AI 呼び出しで、oracle file から所見候補を出し、理由を追加検証し、採否を判定し、既存所見との重複・矛盾を整理する流れを確認したいとき。
-- レビュー所見、既知の関連所見、既知の肯定理由、既知の否定理由を prompt にどう渡し、新規情報だけを返させるかを実装・調整したいとき。
-- oracle file レビュー用の Structured Output schema と AgentCallParameter の対応を確認したいとき。
-- 所見の重大度、根拠、支持理由、反証理由、採否、削除・置換・統合といったレビュー結果の受け渡し境界を確認したいとき。
-- oracle file を根拠にした所見の妥当性支持と反証を分けて扱う検証フローを追いたいとき。
+- `cmoc review oracle` のレビュー AI に渡すプロンプトや呼び出しパラメータを、所見列挙・検証・採否判定・マージの段階別に確認または変更したいとき。
+- oracle file を根拠にしたレビュー所見について、新規所見、既知理由との重複除外、擁護理由、反証理由、人間提示可否、所見群の重複・矛盾整理をどう扱うか確認したいとき。
+- レビュー結果の Structured Output schema と、その schema を参照するビルダー実装の対応関係を確認・実装・テストしたいとき。
+- oracle レビュー用 AI 呼び出しで使うモデル区分、推論強度、oracle 読み取り専用のファイルアクセス制約、標準プロンプト部品の有効化箇所を追いたいとき。
 
 ## Do not read this when
-- oracle file や realization file の基本定義、編集責任、配置ルールだけを確認したいとき。
-- 個別の正本仕様断片そのものや、レビュー対象としてどの oracle file を探索するかを調べたいとき。
-- `cmoc review oracle` の CLI 入口、実行制御、保存、表示、集約、通知など、agent 呼び出しパラメータ構築より外側の処理を確認したいとき。
-- oracle file 以外の realization file レビューや、通常の実装レビュー用 prompt 構築を探しているとき。
-- 汎用的な AgentCallParameter、markdown rendering、path 解決、complete prompt 組み立て helper の共通処理だけを調べたいとき。
+- CLI サブコマンドの引数解析、実行順序、入出力管理、所見の保存・表示・適用処理を確認したいとき。
+- レビュー対象となる oracle file の正本仕様本文、oracle 標準、レビュー標準そのものの妥当性や内容を調べたいとき。
+- 共通プロンプト部品、構造化文書の描画、パス解決、AI 呼び出しパラメータ型など、この領域のビルダーから利用される汎用基盤を確認したいとき。
+- レビュー後に人間へ提示された所見の UI、通知、集計、永続化など、AI 応答生成後の処理だけを扱うとき。
 
 ## hash
 - e26067e72d898d32b326c708729c24c0cb480da17a4084bf89f9288d93eb0374

@@ -10,7 +10,7 @@
 
 - ファイル・ディレクトリパスの表記に `<cmoc-root>`, `<repo-root>`, `<run-root>`, `<work-root>` を用いる
 - 特に `<cmoc-root>` は、このリポジトリのルートディレクトリパスを表す
-- これらパスキーワードの説明は `<cmoc-root>/oracle/src/utils/path_model.py` を参照すること
+- これらパスキーワードの説明は `<cmoc-root>/oracle/src/basic/path_model.py` を参照すること
 
 ## ルーティング
 
