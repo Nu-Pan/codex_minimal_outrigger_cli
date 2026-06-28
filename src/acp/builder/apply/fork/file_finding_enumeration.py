@@ -1,5 +1,6 @@
 """`cmoc apply fork` のファイル単位所見列挙 builder。"""
 
+import sys
 from pathlib import Path
 
 from acp.builder.apply.fork._common import resolve_repo_root
@@ -16,7 +17,8 @@ def build_apply_fork_file_finding_enumeration_parameter(
 ) -> AgentCallParameter:
     """所見列挙用 agent call parameter を構築する。"""
     # `<work-root>/oracle/src/oracle/acp_builder/apply/fork/file_finding_enumeration.py`
-    # is the canonical fragment. Runtime imports must stay inside `src`.
+    # is the canonical fragment. Prompt standards are owned by oracle/src, so
+    # this builder loads that source of truth only at construction time.
     return AgentCallParameter(
         ModelClass.MAINSTREAM,
         ReasoningEffort.MEDIUM,
@@ -28,46 +30,44 @@ def build_apply_fork_file_finding_enumeration_parameter(
 
 def _prompt(target_path: Path) -> str:
     repo_root = resolve_repo_root()
-    target = target_path.resolve()
-    return f"""# role
+    _ensure_oracle_src_importable(repo_root)
 
-- あなたはソフトウェア実装の所見リストアップ担当です
+    from oracle.acp_builder.basic import FileAccessMode as OracleFileAccessMode
+    from oracle.other.path_model import resolve_real_path
+    from oracle.other.struct_doc import render_as_markdown
+    from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
-# summary
+    prompt = build_complete_prompt(
+        role="- あなたはソフトウェア実装の所見リストアップ担当です",
+        summary="""
+        - `<target-path>` を起点に `<repo-root>` ツリー内の所見 (realization file の要修正点) を調査すること
+        """,
+        goal="""
+        - `<target-path>` 以外の必要な oracle file, realization file も読んでいること
+        - 指定された Structured Output schema に従って所見リストを返すこと
+        - 列挙した所見リストが apply review standard を満たしている事
+        """,
+        file_access_mode=OracleFileAccessMode.READONLY,
+        aux_placeholder_def={
+            "repo-root": repo_root,
+            "target-path": resolve_real_path(target_path),
+        },
+        oracle_standard=True,
+        realization_standard=True,
+        apply_review_standard=True,
+    )
+    return render_as_markdown(prompt)
 
-- `{target}` を起点に `{repo_root}` ツリー内の所見 (realization file の要修正点) を調査すること
 
-# goal
-
-- `{target}` 以外の必要な oracle file, realization file も読んでいること
-- 指定された Structured Output schema に従って所見リストを返すこと
-- 列挙した所見リストが apply review standard を満たしている事
-
-# file read write rule - readonly
-
-- `{repo_root}` ツリー外は読み書き禁止
-- `{repo_root}` ツリー内は書き込み禁止
-
-# routing rule
-
-- `INDEX.md` を手がかりに必要な本文を読むこと
-- 関連しそうなファイルを総当たりで読む前に、まず `INDEX.md` で候補を絞ること
-
-# oracle and realization basic
-
-- oracle file は `{repo_root}/oracle` ツリー内の正本仕様断片である
-- realization file は `{repo_root}` ツリー内かつ `{repo_root}/oracle` ツリー外の実現物である
-- INDEX.md はルーティング情報であり、所見対象の本文としては扱わない
-
-# apply review standard
-
-- 明確に修正が必要な oracle file と realization file の不整合だけを所見にすること
-- 仕様断片の隙間で実装者裁量として成立する差分を所見にしないこと
-- クオリティアップだけを目的にした指摘ではなく、実行不能・仕様不一致・安全性問題など修正根拠が明確な問題だけを列挙すること
-- 各所見には、根拠位置、oracle requirement、observed implementation、reason、suggested fix を含めること
-
-# place holder definition
-
-- <repo-root> = {repo_root}
-- <target-path> = {target}
-"""
+def _ensure_oracle_src_importable(repo_root: Path) -> None:
+    candidates = [
+        repo_root / "oracle" / "src",
+        Path(__file__).resolve().parents[5] / "oracle" / "src",
+    ]
+    for candidate in candidates:
+        if (candidate / "oracle").is_dir():
+            candidate_text = str(candidate)
+            if candidate_text not in sys.path:
+                sys.path.insert(0, candidate_text)
+            return
+    raise ValueError("`oracle/src` was not found")

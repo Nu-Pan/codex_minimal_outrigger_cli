@@ -13,6 +13,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
 from basic.acp import AgentCallParameter
 from _support import (
     make_repo,
@@ -71,7 +72,7 @@ def test_file_finding_enumeration_builder_imports_with_src_pythonpath_only() -> 
                 "from pathlib import Path; "
                 "from acp.builder.apply.fork.file_finding_enumeration import "
                 "build_apply_fork_file_finding_enumeration_parameter as build; "
-                "p = build(Path('src/main.py')); "
+                "p = build(Path('<repo-root>') / 'src' / 'main.py'); "
                 "assert p.structured_output_schema_path.name == "
                 "'file_finding_enumeration.json'"
             ),
@@ -139,6 +140,49 @@ def test_file_finding_enumeration_schema_matches_oracle_source() -> None:
     assert json.loads(src_schema_path.read_text()) == json.loads(
         oracle_schema_path.read_text()
     )
+
+
+def test_file_finding_enumeration_prompt_uses_complete_standard_prompt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from acp.builder.apply.fork.file_finding_enumeration import (
+        build_apply_fork_file_finding_enumeration_parameter,
+    )
+
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    target = repo_root / "src" / "app.py"
+    target.parent.mkdir()
+    target.write_text("print('ok')\n")
+    monkeypatch.chdir(repo_root)
+
+    parameter = build_apply_fork_file_finding_enumeration_parameter(
+        Path("<repo-root>") / "src" / "app.py"
+    )
+
+    assert "# oracle standard" in parameter.prompt
+    assert "# realization standard" in parameter.prompt
+    assert "# apply review standard" in parameter.prompt
+    assert "- `<work-root>/memo` は読み書き禁止" in parameter.prompt
+    assert f"- <target-path> = {target}" in parameter.prompt
+    assert f"- <work-root> = {repo_root}" in parameter.prompt
+
+
+def test_file_finding_enumeration_rejects_relative_target_without_root_token(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from acp.builder.apply.fork.file_finding_enumeration import (
+        build_apply_fork_file_finding_enumeration_parameter,
+    )
+
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    monkeypatch.chdir(repo_root)
+
+    with pytest.raises(ValueError, match="relative path without root path place holder"):
+        build_apply_fork_file_finding_enumeration_parameter(Path("src/app.py"))
 
 
 def report_path_from_stdout(stdout: str) -> Path:
