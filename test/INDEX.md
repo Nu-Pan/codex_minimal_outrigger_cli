@@ -323,19 +323,21 @@
 # `test_session_cli.py`
 
 ## Summary
-- session の fork、join、abandon に関する CLI 外部挙動をまとめて検証する realization test。session branch と session state のライフサイクルを中心に、状態ファイル作成・更新、home branch への復帰、session branch 削除、linked worktree 上の挙動、dirty worktree 拒否、エラー出力先、join 時の conflict 解決と cleanup 失敗時の扱いを確認する。
-- 大きめのテストファイルだが、fork、join、abandon、linked worktree、state cleanup は同じ session 状態遷移を観測する回帰テストとして同一文脈に置かれている。
+- session fork/join/abandon の CLI 回帰テストをまとめた realization test。session branch と session state のライフサイクルを軸に、状態ファイル生成・衝突時の保護、linked worktree 上の home branch/head、abandon/join 後の branch/state 更新、cleanup 失敗時の rollback、dirty worktree や不正 state の拒否、join conflict resolution とエラー出力先を外部挙動として検証する。
+- 16,000 文字を超えるが、fork、join、abandon、linked worktree、state cleanup、dirty worktree 拒否が同じ branch/state fixture と状態遷移を共有するため、session CLI 回帰として一箇所に保つ意図を docstring で明示している。
 
 ## Read this when
-- session fork/join/abandon の CLI 挙動、出力、終了コード、git branch 操作、session state file のライフサイクルを変更または調査するとき。
-- session コマンドが linked worktree 上で現在 worktree の branch と HEAD を基準に動くかを確認するとき。
-- session state file の破損、必須 field 欠落、session-id collision、cleanup 失敗、dirty worktree、conflict marker 残存などの異常系を扱うとき。
-- join の merge conflict 解決で Codex 実行の file access mode、extra writable path、削除 conflict の staging、stdout/stderr へのエラー報告を確認するとき。
+- session fork が session branch と state file を作る条件、session-id 衝突時の retry/失敗、既存 state を上書きしないこと、corrupt state の扱いを確認・変更する時。
+- session abandon が home branch へ戻ること、session branch を削除すること、state を abandoned にすること、home branch 欠落や cleanup 失敗時の復旧・出力を確認・変更する時。
+- session join が session branch の変更を home branch に統合すること、join 後の state、session branch 削除失敗 warning、delete conflict resolution、oracle conflict resolution の Codex 実行 profile を確認・変更する時。
+- session CLI が linked worktree で実行された場合に、main worktree ではなく実行中 worktree の branch/head を基準にする挙動を確認・変更する時。
+- session CLI の失敗報告が stdout と stderr のどちらへ出るべきか、特に事前拒否と merge 後の unexpected error の境界を確認・変更する時。
 
 ## Do not read this when
-- session 以外のサブコマンド、または CLI 全体の起動・引数定義だけを確認したいとき。
-- session コマンドの内部 helper 実装や状態 schema の定義そのものを変更するだけで、外部 CLI 回帰テストの期待値を確認する必要がないとき。
-- oracle file の正本仕様断片を確認したいとき。この対象は realization test であり、正本仕様ではない。
+- session 以外の CLI サブコマンド、または init/apply/review など別領域の外部挙動だけを調べる時。
+- session の内部 helper の純粋な単体仕様だけを調べたい時。ただしその helper が CLI の fork/join/abandon 外部挙動に影響する場合は読む。
+- session state schema の一般定義や path model の正本仕様を調べたい時は、まず対応する oracle file または実装本文を読む。
+- Codex CLI や LLM の出力品質そのものを検証したい時。このテストは join conflict resolution の制御と副作用を stub で観測しており、生成品質は対象にしていない。
 
 ## hash
-- 6dda47deb0c3c1edd018a96dafb7b2fcfb92bd6cb3db44becb060ab4eb7f1fa4
+- 64e50fe8a7d228e149ac77ed9be6c668e1f4ae94a387dbf6736009b8c8e12a22

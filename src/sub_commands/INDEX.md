@@ -184,23 +184,26 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドの実装をまとめるディレクトリ。session branch の作成、home branch への join、merge せず破棄する abandon など、session のライフサイクル操作に関する CLI 実行本体へ進む入口になる。
-- 各サブコマンドは CLI runtime 経由で実行され、branch/state/worktree の事前条件確認、git 操作、session state 更新、利用者向け出力、失敗時の扱いなどをそれぞれの責務範囲で扱う。
+- session 系サブコマンドの実装群で、active session の作成、home branch への合流、merge せず破棄する操作を扱う入口となる領域。
+- 各コマンドは CLI runtime から呼ばれ、git branch 操作、session state file の生成・更新、clean worktree や active session の事前条件確認、利用者向け結果表示をそれぞれの責務に応じて担う。
+- merge conflict を Codex CLI に解消させる経路や、cleanup 失敗時の rollback など、session lifecycle の失敗時挙動を追うための実装もこの領域に含まれる。
 
 ## Read this when
-- session 系サブコマンド全体の実装候補を探し、作成・合流・破棄のどの処理へ進むべきかを判断したいとき。
-- session branch と home branch の関係、active session の状態遷移、session state file の更新、session branch の削除など、session 操作に関わる制御を調べたいとき。
-- session fork、join、abandon の実行条件、失敗条件、git 操作順序、利用者向け出力のいずれかを確認・変更したいとき。
-- merge conflict を Codex CLI に解消させる join 経路や、abandon 失敗時の state/branch rollback など、session 操作固有の復旧処理を調べたいとき。
+- session 系サブコマンド全体の実装入口を探し、作成、join、abandon のどの処理へ進むべきかを判断したいとき。
+- 通常の local branch から session branch を開始する条件、active session の重複検出、managed branch 上での禁止、session-id 衝突時の retry を調べたいとき。
+- active な session branch を home branch へ merge して合流する処理、merge conflict の Codex CLI 解消、merge 後の状態保存や session branch 削除を確認したいとき。
+- active な session branch を home branch へ merge せず破棄する処理、abandoned への状態遷移、session branch の強制削除、cleanup 失敗時の rollback を確認したいとき。
+- session 操作の git branch 切替、状態ファイル更新、利用者向け出力、失敗時のエラーや warning の順序を確認・変更したいとき。
 
 ## Do not read this when
-- session 以外のサブコマンド実装、共通 CLI ルーティング、またはサブコマンド登録の仕組みを調べたいとき。
-- git 実行 wrapper、CLI runtime、worktree clean 判定、branch 判定、path model、state file 読み書き helper などの共通 runtime 実装そのものを調べたいとき。
-- session state schema や apply state schema の定義そのものを確認したいとき。
-- Codex CLI に渡す conflict resolution parameter の具体的な組み立てや、INDEX.md 生成・indexing preflight の共通仕様を調べたいとき。
+- session state のデータ構造、永続化形式、schema、path model の定義そのものを確認したいとき。
+- git 実行 wrapper、CLI runtime、worktree clean 判定、branch 判定など、複数サブコマンドで使う共通 helper の詳細実装を調べたいとき。
+- CLI 全体のサブコマンド登録、Typer アプリ構成、または session 以外のサブコマンド実装を調べたいとき。
+- Codex CLI に渡す conflict resolution parameter の具体的な組み立てだけを調べたいとき。
+- INDEX.md 生成や indexing preflight の共通仕様・実装を調べたいとき。
 
 ## hash
-- c8787fb01d40933b2ced05ca16287fe12372650e2375d9becad599e8156e4c40
+- 8a2f9aaa038f5021b74aa14898037155534237670222f0765bf8d41e6ce6e1e0
 
 # `tui.py`
 
