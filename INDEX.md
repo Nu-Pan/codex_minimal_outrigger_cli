@@ -145,46 +145,50 @@
 # `src`
 
 ## Summary
-- `src` は cmoc の realization implementation を収める実装ルートであり、console script から起動される CLI 定義、利用者向けサブコマンドの orchestration、複数コマンドで共有される runtime helper、互換 import path の入口をまとめる。
-- この階層は、CLI の公開面から実装本体へ入る起点であり、上位の仕様断片やテストではなく、実際に動作するコマンド配線・状態操作・Codex 呼び出し・git/worktree 操作・INDEX.md 更新処理の実装先を選ぶための入口になる。
+- cmoc の realization implementation 全体の入口であり、公開 CLI の構成、利用者向けサブコマンドの orchestration、複数機能で共有される runtime helper、互換 import 入口を含む実装領域。
+- 上位の CLI 配線から、初期化・indexing・TUI・session・apply・review oracle の各コマンド本体、さらに Codex 呼び出し、preflight indexing、設定・状態・path・git・log などの共通実行基盤へ進むための起点になる。
+- この階層には実処理を持つモジュールと移行用の互換入口が混在するため、読む目的が CLI 配線、個別サブコマンド、共通 runtime helper、互換 import path のどれかを切り分けて下位対象へ進む。
 
 ## Read this when
-- cmoc の実装本体を調べ、CLI コマンド定義、サブコマンド実行フロー、共有 runtime helper、または互換 import path のどこへ進むべきかを判断したいとき。
-- 公開 CLI のコマンド構成、Typer app から各実装関数への委譲、通常の引数解析エラー表示、console script 起動の入口を確認または変更したいとき。
-- 初期化、indexing、TUI、session、apply、review oracle など、利用者が実行するサブコマンドの orchestration、状態遷移、branch/worktree 操作、Codex 呼び出し、利用者向け出力への接続を追いたいとき。
-- 設定読み込み、path 解決、git wrapper、session state、ログ、結果型、エラー表示、Codex exec/TUI profile、preflight indexing、内容 hash、INDEX.md 更新のような複数コマンドで共有される実行時基盤を探したいとき。
-- 古い公開 import path がどの実体 runtime module に委譲されるか、互換入口を残す理由や削除条件を確認したいとき。
+- cmoc の実装本体で、公開 CLI コマンド構成、サブコマンドの実行入口、または各 CLI コマンドがどの処理へ委譲されるかを確認・変更したいとき。
+- 初期化、indexing、TUI 起動、session 操作、apply 操作、review oracle 実行など、利用者向けサブコマンドの実行条件、状態遷移、worktree や branch 操作、成功時出力、失敗時処理への入口を探すとき。
+- Codex exec/TUI 呼び出し、Structured Output 検証、quota/capacity retry、preflight indexing、設定読み書き、session state 永続化、共通 path、git 操作、log、共通エラー表示など、複数機能で共有される runtime helper の実装場所を探すとき。
+- CLI 引数解析エラーを cmoc 形式で表示する処理、shell completion 時の分岐、console script 起動時のトップレベルアプリケーション接続を調べるとき。
+- 既存の古い import path と実体モジュールの対応、互換入口を残す理由、削除条件、または移行状況を確認したいとき。
+- oracle file の正本仕様断片を realization implementation に反映する変更を行うため、実装側の責務分割や既存処理の配置を確認したいとき。
 
 ## Do not read this when
-- oracle file が述べる正本仕様断片、path keyword の概念定義、oracle/realization の所有関係、または CLI 外部仕様の人間意図そのものを確認したいとき。実装ではなく oracle 側の本文を読む。
-- realization test の期待値、fixture、テスト観点だけを確認したいとき。実装入口ではなくテスト領域へ進む。
-- 個別コマンドや特定 runtime helper の対象がすでに分かっているとき。この階層全体ではなく、該当する下位モジュールまたは下位ディレクトリへ直接進む。
-- 生成済みログ、レポート、作業中の session/apply 状態、または実行結果ファイルの内容を調べたいとき。ここはそれらを生成・操作する実装であり、生成物そのものの置き場ではない。
-- Codex CLI 自体、外部 LLM の出力品質、Typer/Click/git/jsonschema など外部ライブラリ一般の仕様を知りたいだけのとき。ここは cmoc からそれらを使う境界実装を扱う。
+- 正本仕様、path keyword の概念定義、oracle file と realization file の関係、CLI 出力やレビュー判断の仕様意図を確認したいだけのとき。その場合は oracle 側の本文を読む。
+- 自動テストの期待値、fixture、外部挙動の検証内容を確認したいとき。その場合は realization test 側を読む。
+- パッケージ設定、補助スクリプト、gitignore など、実装ソース以外の ancillary file だけを調べたいとき。
+- 個別サブコマンドの内部処理を読む対象が既に分かっているとき。この階層全体ではなく、該当する下位のコマンド実装または補助モジュールへ直接進む。
+- 共通 helper の具体的な入出力や副作用だけを調べたい対象が既に分かっているとき。この階層全体ではなく、設定、git、path、logging、state、Codex 呼び出し境界など該当責務の本文へ直接進む。
+- 互換 import path の対応確認と無関係に、新しい実行時機能を追加・修正したいとき。移行用の互換入口ではなく、責務が一致する実処理側へ進む。
 
 ## hash
-- f72ef21c2746e9203d6fef59b203fe3f4e0e1ad471de42e1a03dcf4e3a89ad3a
+- 102178211dce152281249bf5609980aa466f23893bab8b94f6f1c86cd2bc1a3f
 
 # `test`
 
 ## Summary
-- realization test 全体の入口。CLI サブコマンド、Codex 実行 wrapper、runtime 基盤、prompt 構築、indexing、review、session/apply の外部挙動と制御ロジックを pytest で固定する領域である。
-- 共通補助関数は fixture、Git repository 構築、Codex home/profile 差し替え、fake executable、worktree path 解決を集約し、個別テストは各機能の状態遷移、標準出力、終了コード、report、永続 state、worktree/branch cleanup、保護領域検査などの観測結果を扱う。
-- 大きなテストファイルの一部は、同じ CLI 境界や run 状態、fake Codex 応答、Git 状態、report 文脈を一箇所に保つために凝集されており、実装詳細よりも現行仕様上意味のある外部挙動と回帰観点を読むための階層である。
+- realization test 全体の入口となるディレクトリ。CLI サブコマンド、Codex runtime、indexing、prompt 生成、basic runtime の外部挙動と回帰条件を pytest で固定し、共通 fixture と fake Codex/Git 操作の補助も含む。
+- テスト群は正本仕様ではなく、oracle file で述べられた意図を既存実装の観測可能な挙動として具体化する realization test である。機能別のテストファイルへ進むための上位ルーティング対象として位置づく。
+- 大きなテストファイルの一部は、session、apply、review、init など同じ状態遷移や fixture 文脈を分散させないために一箇所へ集約されている。
 
 ## Read this when
-- realization implementation を変更する前後に、対応する CLI 外部挙動、runtime 契約、prompt 生成、Codex 呼び出し制御、Git/worktree/state 副作用の既存期待値を確認したいとき。
-- apply、session、review、indexing、init/TUI、Codex runtime、basic runtime などのサブシステムについて、成功条件、拒否条件、error report、stdout/stderr、commit、cleanup、retry、保護領域検査の回帰テストを探すとき。
-- Codex 実行を fake に差し替えたテスト、最小 Git repository fixture、認証済み Codex home、profile 生成差し替え、branch/state/worktree 準備など、CLI テストの既存パターンを確認したいとき。
-- routing document 更新、INDEX 生成 preflight、hash freshness、semantic field validation、root 直下 memo 除外と nested memo 対象化など、indexing workflow の観測点を確認したいとき。
-- prompt part、standard 文書注入、structured output schema、AgentCallParameter builder、file access mode、model/reasoning 設定がどのように組み合わさるかをテスト側から確認したいとき。
+- どの realization test が対象機能の外部挙動、終了コード、stdout/stderr、状態ファイル、worktree/branch 副作用、report 生成を検証しているかを選びたいとき。
+- CLI サブコマンドの回帰を調べるために、session、apply fork/join/abandon、review oracle、init/TUI、indexing のどのテスト本文へ進むべきか判断したいとき。
+- Codex CLI 実行ラッパー、Codex home、retry、quota retry、sandbox profile、process group 追跡など runtime 系の期待値を確認するテストを探すとき。
+- root token、path model、config、error rendering、file access mode、binary 判定、prompt part、AgentCallParameter builder など、個別サブコマンドより下位の共通契約を検証する入口を探すとき。
+- CLI テスト用の一時 Git リポジトリ、Codex home、fake executable、branch/state 検証、apply worktree path 解決などの共通補助関数を使う、または変更する前に位置づけを確認したいとき。
+- 新しい realization test を追加する前に、既存テストへケース追加できるか、近い責務のテストがどこにあるかを確認したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片そのものを確認したいとき。この階層は realization test であり、仕様の正本ではない。
-- 実装 helper、state persistence、Git 操作、Codex subprocess wrapper、path model、profile 生成などの本体コードを局所的に変更したいだけなら、対応する実装領域を直接読む方がよい。
-- 個別サブコマンドのテスト期待値ではなく、CLI コマンド定義や API の一般構造だけを把握したいとき。
-- Codex CLI や LLM の出力品質そのものを検証したいとき。この階層の多くは fake executable や fake response を使い、cmoc 側の制御と副作用を固定する。
-- テスト共通 fixture の使い方ではなく、特定機能のアサーションだけを確認したい場合は、共通補助ではなく該当機能のテスト本文へ直接進む方がよい。
+- 正本仕様断片を確認・変更したい場合は、この realization test ディレクトリではなく oracle 側の本文を読む。
+- 実装本体の関数、クラス、永続 state helper、git helper、Codex wrapper の内部構造だけを変更したい場合は、対応する実装モジュールを直接読む。
+- 個別機能の期待挙動をすでに特定している場合は、この上位ディレクトリではなく該当するテストファイルへ直接進む。
+- 通常の routing document 生成規則や INDEX entry schema だけを確認したい場合は、indexing の外部挙動テストではなく、仕様または prompt/schema 側の対象を読む。
+- Codex CLI や LLM の出力品質そのものを評価したい場合は読まなくてよい。このテスト群は fake 実行結果を使い、cmoc 側の制御ロジックと副作用を検証する。
 
 ## hash
-- 2daf900dd7f11bdc8d279d83ecb3c38b14eed26358914df0954165d8672caeb1
+- 6d7ca7dd5fdae497115206dd68254b0420da1721ba3170e42d0f4e2774e3c21d
