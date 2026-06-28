@@ -83,7 +83,9 @@ def _validate_extra_read_paths(
         if not _is_read_path_allowed(mode, root, resolved):
             raise CmocError(
                 "追加読み取り許可 path が FileAccessMode の許可領域外にあります。",
-                ["file access mode で読み取り可能な work root 配下の path を指定してください。"],
+                [
+                    "file access mode で読み取り可能な work root 配下の path を指定してください。"
+                ],
                 f"mode: {mode.value}\npath: {resolved}",
             )
 
@@ -131,7 +133,9 @@ def _writable_roots(
         if not _is_writable_path_allowed(mode, root, resolved):
             raise CmocError(
                 "追加書き込み許可 path が FileAccessMode の許可領域外にあります。",
-                ["file access mode で書き込み可能な work root 配下の path を指定してください。"],
+                [
+                    "file access mode で書き込み可能な work root 配下の path を指定してください。"
+                ],
                 f"mode: {mode.value}\npath: {resolved}",
             )
         if resolved not in seen and not any(
@@ -306,9 +310,7 @@ def build_codex_profile(
     ]
     if root is not None:
         root = root.resolve()
-        _validate_extra_read_paths(
-            parameter.file_access_mode, root, extra_read_paths
-        )
+        _validate_extra_read_paths(parameter.file_access_mode, root, extra_read_paths)
     sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
     lines.append(f'sandbox_mode = "{sandbox_mode}"')
     if root is not None:
@@ -441,6 +443,10 @@ def run_tracked_codex_subprocess(
     input_data = kwargs.pop("input", None)
     capture_output = kwargs.pop("capture_output", False)
     check = kwargs.pop("check", False)
+    if input_data is not None:
+        if kwargs.get("stdin") is not None:
+            raise ValueError("stdin and input arguments may not both be used.")
+        kwargs["stdin"] = subprocess.PIPE
     if capture_output:
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
