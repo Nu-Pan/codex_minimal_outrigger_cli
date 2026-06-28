@@ -159,24 +159,26 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI を呼び出す subprocess 境界で必要になる profile 生成、sandbox/cwd 判定、CODEX_HOME 検証、schema 配置、child process tracking、JSONL エラー分類をまとめる実装。
-- cmoc の FileAccessMode を Codex CLI が扱える sandbox profile と writable roots に変換し、Codex profile では表現できない禁止領域変更を呼び出し後に検出する。
-- Codex CLI の起動失敗、capacity/quota 判定、resume token 抽出、schema なし出力 JSON の読み取りなど、Codex 実行結果を cmoc の実行時エラーや再試行判断へ寄せる境界を担う。
+- Codex CLI subprocess 境界で使う実行 profile、sandbox/cwd、CODEX_HOME、schema 配置、child process tracking、JSONL error 判定をまとめる実装。
+- FileAccessMode を Codex CLI の sandbox 設定と writable root 正リストへ変換し、profile だけで表現できない禁止領域変更を git snapshot で検出して cmoc error に変換する。
+- Codex CLI 起動前後に必要な環境解決、認証 home 検査、hashed profile/schema 生成、subprocess 実行、出力 JSON 読み取り、capacity/quota/resume 判定の入口になる。
 
 ## Read this when
-- Codex CLI 起動時の model、reasoning effort、sandbox_mode、writable_roots、cwd、CODEX_HOME の決まり方を確認または変更したいとき。
-- FileAccessMode ごとの読み書き許可範囲、追加 read/write path の検証、oracle・memo・.agents などの保護領域変更検出を扱うとき。
-- Codex subprocess の実行、Codex CLI 不在時のエラー変換、apply abandon 用の child process tracking、pid file 更新を調べるとき。
-- Structured Output schema の hash store 配置、Codex JSONL stdout/stderr からのエラー詳細生成、capacity/quota retry 判定、resume token 抽出を変更するとき。
+- Codex CLI 呼び出し時の sandbox mode、作業 root、writable roots、追加 read/write path の許可判定を変更または確認したいとき。
+- FileAccessMode の禁止領域を Codex CLI 実行後に検出する guard、protected path の snapshot、違反時の CmocError を扱うとき。
+- CODEX_HOME の解決・検証、Codex profile の生成・再利用、subprocess に渡す環境変数、Codex CLI 不在時のエラー化を扱うとき。
+- apply abandon などで Codex child process を追跡する pid file、process group 起動、pid 再利用検出に関わる処理を確認したいとき。
+- Structured Output schema の配置、schema なし出力 JSON の読み取り、Codex JSONL stdout/stderr から error detail・resume token・capacity/quota retry 条件を解釈する処理を扱うとき。
 
 ## Do not read this when
-- prompt 本文や file access rule の利用者向け文言そのものを変更したいだけのとき。
-- hash 付きファイルの書き込み処理や schema store のディレクトリ規約そのものを調べたいとき。
-- Codex 以外の外部コマンド実行、一般的な subprocess 呼び出し、または CLI サブコマンドの引数解析を調べたいとき。
-- cmoc の設定ファイル全体の読み込み、model_class や reasoning_effort の設定値定義そのものを確認したいとき。
+- Codex CLI に渡す prompt 本文、ユーザー向け file access rule の文章、または AgentCallParameter 自体の定義を調べたいだけのときは、それぞれの定義元を読む。
+- hashed file の書き込み方式や schema store のディレクトリ構造そのものを変更したいときは、内容書き込み helper や runtime path helper を直接読む。
+- cmoc の設定値の読み込み、model 名や reasoning effort の設定 schema を変更したいときは、設定定義側を読む。
+- Codex CLI の実行結果を受けた上位 workflow、call log、retry loop、apply/review などの制御全体を追うときは、この subprocess 境界を呼び出している上位実装を読む。
+- 一般的な subprocess 呼び出しや git helper を探しているだけで、Codex profile・sandbox・JSONL error 判定と関係しないときは読まなくてよい。
 
 ## hash
-- 051c396525bb98a1b997598cd2c06ac52462e1fa7123e9aee23a3c842b8f371b
+- a36bc4f62c6af3b7009845c7f092125afda2603a93b17f23aaf90b43bcbbc812
 
 # `runtime_codex_tui.py`
 

@@ -162,24 +162,23 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 呼び出しランタイムの realization test。exec/tui 実行時のプロファイル生成、作業ディレクトリ選択、sandbox 設定、schema 状態保存先、呼び出しログ、プロセスグループ追跡、終了失敗や CLI 不在時のエラー化を検証する。
-- ファイルアクセスモードごとの禁止領域保護を、oracle・memo・.agents への変更拒否、extra read path の事前検査、失敗時ログ出力として確認するテスト群への入口になる。
+- Codex CLI 呼び出しの実行経路に関する realization test。exec/TUI 起動時の profile 生成、cwd と sandbox 設定、schema 状態の保存先、subprocess の process group、呼び出しログ、CLI 不在や非ゼロ終了のエラー化を検証する。
+- file access mode に応じた保護領域の変更拒否も扱い、.agents、oracle、memo への不正な編集や、TUI 起動前の extra read path 検査が正しく失敗することを確認する。
 
 ## Read this when
-- Codex CLI を起動する exec/tui ランタイムの引数、標準入力、作業ディレクトリ、CODEX_HOME 配下のプロファイル内容を変更する。
-- FileAccessMode による sandbox_mode、writable_roots、PURE_ORACLE_READ 時の oracle 作業ディレクトリ化、REPO_WRITE/REALIZATION_WRITE 時の保護領域拒否を確認・変更する。
-- 構造化出力 schema の一時保存先、run worktree から実行した場合の repo root 配下状態保存、または output schema 引数の扱いを変更する。
-- Codex subprocess の process group 管理、tracking path の扱い、呼び出しログ、subcommand logger の codex_call イベント、console への失敗情報表示を変更する。
-- Codex CLI の非ゼロ終了、CLI 不在、起動前の許可領域外 extra read path など、Codex ランタイムの失敗時挙動を確認する。
+- Codex CLI を exec または TUI として起動する runtime 処理、profile 生成、CODEX_HOME 配下の設定、sandbox の read-only/workspace-write 切り替えを変更する時。
+- FileAccessMode ごとの許可領域・禁止領域判定、特に .agents、oracle、memo、extra_read_paths の検査や、保護領域変更時のエラー詳細を確認する時。
+- Codex 呼び出しログ、SubcommandLogger の codex_call event、call log path、returncode、console 出力の仕様に関わるテストを確認する時。
+- run worktree からの exec 実行で output schema の一時保存先を repo root 側の状態領域へ置く挙動を確認する時。
+- Codex CLI が見つからない場合、TUI が非ゼロ終了した場合、または tracked subprocess の process group と tracking file 処理に関わる失敗制御を変更する時。
 
 ## Do not read this when
-- Codex ランタイムではなく、通常の CLI サブコマンドの引数解析や出力 schema だけを調べたい。
-- oracle file の正本仕様そのもの、または INDEX.md 生成規則を確認したい。
-- Codex CLI 呼び出しを伴わない git helper、repository fixture、path model、設定読み込みの単体挙動だけを調べたい。
-- LLM 応答品質や Codex 本体の機能を検証したい。ここでは cmoc 側が Codex CLI をどう起動し、失敗や禁止編集をどう扱うかだけを検証している。
+- Codex runtime 以外のサブコマンド、設定読み込み一般、Git 操作一般、または oracle 文書そのものの仕様確認だけが目的の時。
+- LLM 出力内容の品質、prompt 文面、モデル選択、reasoning effort の意味を調べたい時。
+- 保護領域判定ではなく、通常のリポジトリ作成 fixture、git helper、テスト用実行ファイル生成 helper の実装だけを調べたい時。
 
 ## hash
-- f68ede88cd5c2dc417517f58f19e7c20f557241ea2eba07ea345a2e08c4733ea
+- de5e2a8600774e5b478db1f6ae65c25514caf3cccf222380829feaca1bd78257
 
 # `test_codex_runtime_home.py`
 

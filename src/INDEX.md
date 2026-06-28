@@ -66,25 +66,26 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation における共有 runtime helper 群の入口となる領域。CLI サブコマンド実行、Codex exec/TUI 呼び出し、preflight indexing、設定、内容 hash、エラー表示、git 操作、ログ、path、結果型、session state 永続化など、複数の上位機能から再利用される共通実行時処理を扱う。
-- この階層は個別サブコマンドの業務ロジックではなく、上位処理が共通して使う外部プロセス境界、保存先解決、例外変換、実行結果モデル、監査ログ、状態読み書きなどの基盤を確認するための入口である。
+- cmoc の realization implementation のうち、複数のコマンドや上位 workflow から共有される runtime helper 群を集めた領域。Codex CLI 呼び出し、preflight indexing、設定、内容 hash、git 操作、ログ、path、結果型、状態ファイル、共通エラー表示など、実行時の横断的な基盤処理への入口になる。
+- この階層は、個別コマンド固有の業務ロジックではなく、サブコマンド実行ライフサイクル、外部プロセス境界、永続状態、標準保存先、共通エラー・ログ・結果表現といった共有責務を扱う。複数領域をまとめて公開する互換 import 入口と、責務別の実装本文が並ぶ。
+- Codex 実行前のルーティング文書更新 preflight もこの領域で制御され、対象列挙、既存エントリー再利用、欠落エントリー生成、Markdown 描画、専用 commit 作成までの indexing 制御を含む。
 
 ## Read this when
-- CLI サブコマンドに共通する実行ライフサイクル、終了コード化、標準出力サマリー、例外時のエラー表示、サブコマンドログ設定を確認または変更したいとき。
-- Codex CLI の exec または TUI 呼び出しについて、profile・sandbox・CODEX_HOME・cwd・schema・retry・quota/capacity 制御・call log・保護領域書き込み検出などの runtime 境界を追いたいとき。
-- Codex 呼び出し前にルーティング文書を自動更新する preflight、対象列挙、エントリー鮮度判定、欠落エントリー生成、専用 commit 作成の流れを調べたいとき。
-- 設定ファイル、内容 hash、binary 判定、git worktree/branch 操作、git ignore 保証、runtime path、timestamp、ログ、結果型、session state file など、複数機能から共有される低層 helper の責務分担を探したいとき。
-- 上位のコマンド実装やテストから、共通 runtime API の公開面、互換 import 入口、または既存 helper の再利用先を確認したいとき。
+- cmoc の実行時共通基盤がどの責務に分かれているか、または上位 workflow が共有 runtime API へどう到達するかを確認したいとき。
+- Codex CLI の exec/TUI 呼び出し、profile、sandbox、CODEX_HOME、Structured Output、quota/capacity retry、call log、保護領域書き込み検出などの実行境界を調べるとき。
+- CLI サブコマンド共通の開始・完了処理、work root 検査、標準サマリー、終了コード化、例外表示、サブコマンド logger の設定を確認または変更したいとき。
+- 設定ファイル、内容 hash、binary 判定、git/worktree 操作、runtime path、ログ、結果データ型、session state file など、複数機能から共有される低レベル runtime helper を探しているとき。
+- Codex 実行前に INDEX.md 生成などの indexing preflight がいつ・どの条件で走るか、または routing 文書の自動更新対象や生成制御を確認したいとき。
 
 ## Do not read this when
-- 特定サブコマンドの引数定義、画面出力、業務ロジック、状態遷移全体を調べたいだけのとき。その場合はコマンド層や該当機能の実装へ直接進む。
-- path keyword の正本定義、session state などの仕様意図、INDEX.md 生成方針そのものを確認したいとき。その場合は対応する oracle 側の正本仕様断片を読む。
-- 個別のルーティング文書エントリー本文を作成・理解したいだけのとき。この階層は自動生成や preflight の実装を含むが、各エントリーの意味内容の正本ではない。
-- 外部の Codex CLI 自体の仕様、モデル挙動、出力品質、一般的な subprocess や git の使い方を知りたいだけのとき。ここで扱うのは cmoc runtime へ寄せた境界処理である。
-- 単一の上位機能に閉じた保存条件、レポート生成、表示文言、テスト期待値だけを変更したいとき。まずその機能の本文を読み、共通 helper の変更が必要になった場合にこの階層へ戻る。
+- 個別サブコマンドの引数定義、ユーザー向け出力、業務ロジック、状態更新の具体的な workflow だけを調べたいとき。その場合はコマンド層や該当 workflow の実装へ直接進む。
+- oracle file の正本仕様、path keyword の概念定義、session state file の仕様意図など、人間が所有する仕様断片を確認したいとき。その場合は oracle 側の該当文書を読む。
+- テスト期待値やテスト fixture を変更したいだけのとき。その場合は realization test 側を読む。
+- 特定階層の実際のルーティング先を選びたいだけのとき。この領域の indexing 実装ではなく、その階層のルーティング文書または対象本文を読む。
+- Codex CLI 自体の外部仕様、LLM の出力品質、一般的な subprocess や git の使い方を知りたいだけで、cmoc の runtime 境界や共有 helper に関係しないとき。
 
 ## hash
-- 4ec3262ed9d9f8465a6fddd1543aa2a3208caa74176113adfb148dc94b2bac38
+- 069ca241e647a0bd0453bcfee8cb29d5c2627b54fae1b3309c378a0c1480b93d
 
 # `config`
 
