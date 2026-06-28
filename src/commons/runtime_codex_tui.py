@@ -13,6 +13,8 @@ from commons.runtime_codex_profile import (
     codex_subprocess_env,
     file_access_to_codex_cwd,
     prepare_codex_profile,
+    protected_write_status,
+    reject_protected_write,
     resolve_codex_home,
     run_codex_subprocess,
     validate_codex_home,
@@ -51,6 +53,9 @@ def run_codex_tui(
         parameter, config, codex_home, codex_work_root, extra_read_paths
     )
     profile_name = codex_profile_name(profile_path)
+    protected_status_before = protected_write_status(
+        parameter.file_access_mode, codex_work_root
+    )
     argv = [
         "codex",
         "--profile",
@@ -93,18 +98,39 @@ def run_codex_tui(
     elapsed_sec = time.perf_counter() - started_at
     emit_codex_call_console(purpose, call_path, elapsed_sec, returncode)
     logger = current_subcommand_logger()
-    if logger is not None:
+    status = "succeeded" if returncode == 0 else "failed"
+
+    def emit_event(error: str | None = None) -> None:
+        if logger is None:
+            return
+        payload = {
+            "purpose": purpose,
+            "status": status if error is None else "failed",
+            "returncode": returncode,
+            "elapsed_sec": elapsed_sec,
+            "call_log_path": str(call_path),
+            "codex_home": str(codex_home),
+            "profile_name": profile_name,
+            "profile_path": str(profile_path),
+        }
+        if error is not None:
+            payload["error"] = error
         logger.event(
             "codex_call",
-            purpose=purpose,
-            status="succeeded" if returncode == 0 else "failed",
-            returncode=returncode,
-            elapsed_sec=elapsed_sec,
-            call_log_path=str(call_path),
-            codex_home=str(codex_home),
-            profile_name=profile_name,
-            profile_path=str(profile_path),
+            **payload,
         )
+
+    try:
+        reject_protected_write(
+            parameter.file_access_mode,
+            codex_work_root,
+            protected_status_before,
+            call_path,
+        )
+    except CmocError as exc:
+        emit_event(exc.detail)
+        raise
+    emit_event()
     if failure is not None:
         raise CmocError(
             "Codex CLI/TUI 呼び出しが失敗しました。",

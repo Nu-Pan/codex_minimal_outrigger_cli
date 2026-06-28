@@ -33,6 +33,8 @@ from commons.runtime_codex_profile import (
     prepare_codex_profile,
     prepare_schema,
     read_output_json,
+    protected_write_status,
+    reject_protected_write,
     resolve_codex_home,
     run_codex_subprocess,
     validate_codex_home,
@@ -54,29 +56,6 @@ _QUOTA_CONDITION = threading.Condition()
 _QUOTA_POLLING = False
 _CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
 _LAST_CODEX_LOG_TIMESTAMP: str | None = None
-
-
-def _agents_status(root: Path) -> str:
-    return subprocess.run(
-        ["git", "status", "--short", "--", ".agents"],
-        cwd=root,
-        text=True,
-        capture_output=True,
-        check=False,
-    ).stdout
-
-
-def _reject_agents_edit(root: Path, before: str, call_path: Path) -> None:
-    after = _agents_status(root)
-    if after != before:
-        raise CmocError(
-            "Codex CLI 呼び出しが .agents 配下を変更しました。",
-            [
-                ".agents 配下を変更しない形で作業をやり直してください。",
-                "必要な変更がある場合は、人間が別途 .agents 配下を編集してください。",
-            ],
-            f"call_log: {call_path}\nbefore:\n{before or '(clean)'}\nafter:\n{after or '(clean)'}",
-        )
 
 
 def _write_prompt_log(path: Path, prompt: str) -> None:
@@ -140,7 +119,9 @@ def run_codex_exec(
         extra_writable_paths,
     )
     profile_name = codex_profile_name(profile_path)
-    agents_status_before = _agents_status(codex_work_root)
+    protected_status_before = protected_write_status(
+        parameter.file_access_mode, codex_work_root
+    )
     # <work-root>/oracle/doc/app_spec/run_isolation.md
     # Structured Output schema is cmoc state; run worktrees keep Codex cwd and
     # sandbox roots, but state files belong under the repo-side `root`.
@@ -276,7 +257,7 @@ def run_codex_exec(
     last_result: subprocess.CompletedProcess[str] | None = None
     resume_token: str | None = None
 
-    def reject_agents_edit_after_event(
+    def reject_protected_write_after_event(
         *,
         run_purpose: str,
         run_call_path: Path,
@@ -289,12 +270,17 @@ def run_codex_exec(
         returncode: int,
     ) -> None:
         try:
-            _reject_agents_edit(codex_work_root, agents_status_before, run_call_path)
+            reject_protected_write(
+                parameter.file_access_mode,
+                codex_work_root,
+                protected_status_before,
+                run_call_path,
+            )
         except CmocError as exc:
             # <work-root>/oracle/doc/app_spec/console_and_file_log.md requires
             # every completed Codex CLI call to be logged, even when
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md then rejects
-            # the call because `.agents` changed.
+            # the call because a profile-inexpressible deny area changed.
             emit_codex_call_event(
                 run_purpose=run_purpose,
                 run_call_path=run_call_path,
@@ -337,7 +323,7 @@ def run_codex_exec(
         last_result = result
         stdout_path.write_text(result.stdout)
         stderr_path.write_text(result.stderr)
-        reject_agents_edit_after_event(
+        reject_protected_write_after_event(
             run_purpose=purpose,
             run_call_path=call_path,
             run_prompt_path=prompt_path,
@@ -470,7 +456,7 @@ def run_codex_exec(
                         )
                         probe_stdout_path.write_text(poll.stdout)
                         probe_stderr_path.write_text(poll.stderr)
-                        reject_agents_edit_after_event(
+                        reject_protected_write_after_event(
                             run_purpose="quota availability probe",
                             run_call_path=probe_call_path,
                             run_prompt_path=probe_prompt_path,

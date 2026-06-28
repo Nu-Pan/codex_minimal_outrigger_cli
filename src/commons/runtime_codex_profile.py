@@ -147,6 +147,70 @@ def _is_writable_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> b
     return mode == FileAccessMode.REPO_WRITE
 
 
+def protected_write_paths(mode: FileAccessMode) -> tuple[str, ...]:
+    # <work-root>/oracle/src/acp/prompt_parts/file_access_rule.py
+    # Codex profile lacks deny rules, so root-wide writable modes need a
+    # post-call git guard for the deny areas that the profile cannot express.
+    if mode == FileAccessMode.REALIZATION_WRITE:
+        return ("oracle", "memo", ".agents")
+    if mode == FileAccessMode.REPO_WRITE:
+        return ("memo", ".agents")
+    return (".agents",)
+
+
+def protected_write_status(mode: FileAccessMode, root: Path) -> str:
+    paths = protected_write_paths(mode)
+    if not paths:
+        return ""
+    return subprocess.run(
+        [
+            "git",
+            "status",
+            "--short",
+            "--ignored",
+            "--untracked-files=all",
+            "--",
+            *paths,
+        ],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        check=False,
+    ).stdout
+
+
+def reject_protected_write(
+    mode: FileAccessMode, root: Path, before: str, call_path: Path
+) -> None:
+    after = protected_write_status(mode, root)
+    if after == before:
+        return
+    paths = ", ".join(protected_write_paths(mode))
+    if paths == ".agents":
+        summary = "Codex CLI 呼び出しが .agents 配下を変更しました。"
+        next_actions = [
+            ".agents 配下を変更しない形で作業をやり直してください。",
+            "必要な変更がある場合は、人間が別途 .agents 配下を編集してください。",
+        ]
+    else:
+        summary = "Codex CLI 呼び出しが FileAccessMode の禁止領域を変更しました。"
+        next_actions = [
+            "file access mode の禁止領域を変更しない形で作業をやり直してください。",
+            "必要な変更がある場合は、許可された別手順で人間が編集してください。",
+        ]
+    raise CmocError(
+        summary,
+        next_actions,
+        (
+            f"mode: {mode.value}\n"
+            f"protected_paths: {paths}\n"
+            f"call_log: {call_path}\n"
+            f"before:\n{before or '(clean)'}\n"
+            f"after:\n{after or '(clean)'}"
+        ),
+    )
+
+
 def _append_workspace_write_section(
     lines: list[str], writable_roots: list[Path]
 ) -> None:

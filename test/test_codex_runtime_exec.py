@@ -267,6 +267,99 @@ def test_run_codex_exec_logs_call_before_rejecting_agents_edit(
     assert "- returncode: `0`" in console
 
 
+@pytest.mark.parametrize(
+    ("mode", "script_lines", "expected"),
+    [
+        (
+            FileAccessMode.REALIZATION_WRITE,
+            ["(pathlib.Path('oracle') / 'spec.md').write_text('# changed\\n')"],
+            "oracle",
+        ),
+        (
+            FileAccessMode.REALIZATION_WRITE,
+            [
+                "memo = pathlib.Path('memo')",
+                "memo.mkdir(exist_ok=True)",
+                "(memo / 'generated.md').write_text('changed\\n')",
+            ],
+            "memo",
+        ),
+        (
+            FileAccessMode.REPO_WRITE,
+            [
+                "memo = pathlib.Path('memo')",
+                "memo.mkdir(exist_ok=True)",
+                "(memo / 'generated.md').write_text('changed\\n')",
+            ],
+            "memo",
+        ),
+    ],
+)
+def test_run_codex_exec_rejects_file_access_mode_protected_edits(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    mode: FileAccessMode,
+    script_lines: list[str],
+    expected: str,
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text(json.dumps({'ok': True}))",
+            *script_lines,
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    with pytest.raises(CmocError, match="禁止領域") as exc_info:
+        run_codex_exec(
+            _parameter(mode),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
+
+    assert expected in exc_info.value.detail
+
+
+def test_run_codex_tui_rejects_file_access_mode_protected_edits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import pathlib",
+            "memo = pathlib.Path('memo')",
+            "memo.mkdir(exist_ok=True)",
+            "(memo / 'generated.md').write_text('changed\\n')",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    with pytest.raises(CmocError, match="禁止領域") as exc_info:
+        run_codex_tui(
+            _parameter(FileAccessMode.REPO_WRITE),
+            root=root,
+            config=CmocConfig(),
+        )
+
+    assert "memo" in exc_info.value.detail
+
+
 def test_run_codex_tui_checks_extra_read_path_before_starting_codex(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
