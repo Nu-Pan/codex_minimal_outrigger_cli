@@ -174,14 +174,17 @@ def extract_valid_index_entry_hash(entry_text: str, entry_name: str) -> str:
     ):
         return ""
     for start, end in zip(section_positions[:3], section_positions[1:]):
-        if not any(line.strip().startswith("- ") for line in lines[start + 1 : end]):
+        section_lines = [line.strip() for line in lines[start + 1 : end] if line.strip()]
+        # <work-root>/oracle/doc/app_spec/indexing.md requires each entry
+        # section to be bullet-only.
+        if not section_lines or any(not line.startswith("- ") for line in section_lines):
             return ""
     for idx, line in enumerate(lines):
         if line == "## hash":
             hash_lines = [
                 candidate.strip() for candidate in lines[idx + 1 :] if candidate.strip()
             ]
-            if not hash_lines:
+            if len(hash_lines) != 1:
                 return ""
             hash_line = hash_lines[0]
             if hash_line.startswith("- "):
@@ -293,11 +296,15 @@ def entry_list(root: Path, path: Path, entry: dict | None, key: str) -> list[str
     """Structured Output の必須 list[str] 項目を検証して取り出す。"""
     value = entry.get(key) if isinstance(entry, dict) else None
     if isinstance(value, list) and value and all(
-        isinstance(item, str) and item.strip() for item in value
+        isinstance(item, str)
+        and item.strip()
+        and "\n" not in item
+        and "\r" not in item
+        for item in value
     ):
-        return value
+        return [item.strip() for item in value]
     raise CmocError(
         "INDEX.md entry 生成結果が不正です。",
         ["cmoc indexing を再実行してください。"],
-        f"{path.relative_to(root)}: `{key}` は非空文字列配列である必要があります。",
+        f"{path.relative_to(root)}: `{key}` は改行を含まない非空文字列配列である必要があります。",
     )
