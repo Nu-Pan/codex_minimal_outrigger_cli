@@ -1,21 +1,20 @@
 # `fork`
 
 ## Summary
-- `cmoc apply fork` の fork 適用工程で使う、AI エージェント呼び出しパラメータと Structured Output schema の正本断片をまとめる領域。
-- 適用後差分の人間向け変更要約、realization file の要修正所見列挙、検出済み所見への修正依頼という、fork 適用時のレビュー・報告・修正支援に関わる入出力契約と prompt 構成を扱う。
-- 実際の branch 操作や patch 適用そのものではなく、fork 適用フロー内で AI に何を読ませ、どの role・goal・制約・出力 schema で呼び出すかを確認する入口となる。
+- `cmoc apply fork` における AI エージェント呼び出し用の正本断片をまとめる領域。差分要約、ファイル単位の所見列挙、所見適用依頼など、fork 適用フローのうち AI に渡す prompt・Structured Output schema・モデル選択・ファイルアクセス制約の契約を扱う。
+- 実際の git 操作や fork 適用アルゴリズムそのものではなく、適用後の差分や仕様乖離を AI に調査・要約・修正させるための入力契約と出力契約を確認する入口となる。
 
 ## Read this when
-- `cmoc apply fork` で、適用後差分の変更要約、実装調査の所見列挙、所見対応修正依頼に使う AI 呼び出しの構成を確認したいとき。
-- fork 適用後のレビューや作業レポートで、差分要約や所見リストの Structured Output schema と prompt 側の対応を確認したいとき。
-- oracle file、realization file、起点パス、差分テキスト、検出済み所見を、AI エージェント呼び出しへどう渡すかを調べたいとき。
-- apply review standard や realization standard を含む読み取り専用調査、または修正作業用のファイルアクセス権・モデル種別・推論努力量の指定を確認したいとき。
+- `cmoc apply fork` で、差分要約、実装所見の列挙、所見に基づく修正依頼を AI エージェントへどう渡すか確認したいとき。
+- apply fork 系の prompt に含める role、summary、goal、補助入力、standard 群、placeholder、ファイルアクセスモードを確認または変更したいとき。
+- apply fork 系の AI 呼び出しで使うモデルクラス、reasoning effort、Structured Output schema の選択根拠や境界を確認したいとき。
+- fork 適用後の作業レポートやレビュー結果として、人間向け差分要約または修正所見リストの出力契約を確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` の CLI 引数解析、サブコマンド登録、branch 作成、git 操作、差分取得、patch 適用などの実行フロー本体を調べたいとき。
-- 個別ファイルの patch 内容そのものや、実際に realization file をどう修正するかという修正ロジックを探しているとき。
-- oracle standard、realization standard、apply review standard、path 語彙、共通 prompt 部品、AgentCallParameter 型定義そのものを確認したいとき。
-- INDEX.md 用エントリーや一般的なルーティング文書の書き方を確認したいとき。
+- `cmoc apply fork` のブランチ作成、git diff 取得、実際のパッチ適用、commit 操作などの実行フローそのものを調べたいとき。
+- oracle file、realization file、path keyword、AgentCallParameter、model class、file access mode などの共通概念の定義を確認したいとき。
+- complete prompt の共通構築規則、markdown rendering、パス解決、構造化文書の汎用仕様を調べたいとき。
+- apply fork 以外のサブコマンド用 prompt、一般的なルーティング文書、または実装・テスト変更種別ごとの個別判定ロジックを探しているとき。
 
 ## hash
-- 6d2ed36f7a330d8c896d29c4da21078be177d47dca877ac73064e3f8d2d1fae9
+- 28f66aa79cf3c48a0d66f247642a2aa7007c67983766b6344a9e0c304d6fd2ff

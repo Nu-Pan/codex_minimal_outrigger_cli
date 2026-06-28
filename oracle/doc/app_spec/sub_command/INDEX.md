@@ -199,21 +199,20 @@
 # `tui.md`
 
 ## Summary
-- ユーザー入力プロンプトと自動生成プロンプトを組み合わせ、AI Agent CLI/TUI を起動するサブコマンドの正本仕様断片。
-- エディタによるオリジナルプロンプト入力、agent call によるパラメータ解決、完全プロンプト生成、Codex CLI 起動時に持ち込む実行規則とプロンプト渡しの境界を扱う。
+- ユーザーがエディタで入力したオリジナルプロンプトと cmoc 側の自動生成プロンプトを用いて、AI Agent CLI/TUI を起動するサブコマンドの正本仕様断片。
+- 引数なしで実行され、git 追跡除外の保証、プロンプト入力用ファイルの作成と読み出し、agent call による起動パラメータ決定、バックエンド別の TUI 起動条件を扱う。
 
 ## Read this when
-- AI Agent CLI/TUI を、cmoc の規則・規範を注入した状態で起動するサブコマンドの挙動を確認・実装・テストする。
-- ユーザーが入力するオリジナルプロンプトの編集方法、保存先、初期文面、コメント除去、空白除去の仕様を確認する。
-- agent call で決定するパラメータと、agent call に委ねず固定するモデル種別・推論強度の境界を確認する。
-- オリジナルプロンプトを完全プロンプトへ注入する方法や、Markdown 見出しの有無による変換規則を確認する。
-- Codex CLI を起動する際のコマンド種別、完全プロンプトの保存、初期プロンプトの渡し方、codex exec rule から持ち込む要素を確認する。
+- 任意のユーザープロンプトを cmoc の規則・規範の上で実行するサブコマンドの挙動を確認・実装・テストする。
+- エディタ起動順、`code --wait`、プロンプト初期文面、コメント除去と `strip` によるオリジナルプロンプト読み出しを確認する。
+- TUI 起動前に agent call で決定するパラメータと、agent call に委ねない固定パラメータを確認する。
+- AI Agent CLI/TUI 起動パラメータ、または Codex CLI バックエンドで持ち込む `$CODEX_HOME`、preflight validation、codex profile の扱いを確認する。
 
 ## Do not read this when
-- AI Agent CLI/TUI 起動ではないサブコマンドの引数・実行手順・外部挙動を確認したい。
-- Codex CLI 全般の実行規則、環境変数、preflight validation、profile、ファイルアクセス制限そのものを確認したいだけで、このサブコマンドからの利用方法には関心がない。
-- agent call の詳細な入力 schema やパラメータ構築関数の正本仕様だけを確認したい。
-- パスキーワードや work-root、repo-root、cmoc-root の定義を確認したいだけで、このサブコマンド固有のログ保存・起動処理には関心がない。
+- TUI 起動ではなく、非対話実行や別サブコマンド固有の CLI 挙動だけを確認したい。
+- agent call の詳細な parameter schema そのものを確認したい場合は、参照先の parameter builder 仕様を直接読む方が適切である。
+- Codex CLI の preflight validation や codex profile の詳細仕様だけを確認したい場合は、それらを定義する参照元仕様を直接読む方が適切である。
+- oracle file や realization file の一般原則、INDEX.md エントリー作成規則、またはパスモデルの定義だけを確認したい。
 
 ## hash
-- 969da73489da8d7eec6d14430542ac1a20aeefe412cddc35137e4f963f68d08c
+- 32f5c6ae5e38803d7063ee32abe5978afa645f09fcb982a528d04ffe63d1f987
