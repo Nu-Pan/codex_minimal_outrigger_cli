@@ -260,23 +260,20 @@
 # `test_indexing_preflight.py`
 
 ## Summary
-- Codex 実行・TUI 呼び出しの直前に indexing preflight が実行される制御を検証する realization test。preflight が対象 worktree を選ぶ順序、生成された index 変更の commit と clean 状態、repository lock 待機、特定 purpose での preflight skip を扱う。
-- 実際の index 本文生成品質ではなく、Codex 呼び出しラッパーと indexing preflight の実行順序・副作用・抑止条件の入口として位置づけられる。
+- Codex 呼び出し前に索引更新を走らせる preflight 制御の realization test。exec/TUI 経由の実行順、更新後コミット、作業ツリー選択、リポジトリロック待機、特定 purpose での索引更新スキップを検証する。
 
 ## Read this when
-- Codex exec または TUI 呼び出し前に indexing preflight を走らせる制御を変更する時。
-- root と cwd が異なる場合に、どの worktree を indexing 対象にするかを確認・変更する時。
-- indexing preflight が作った変更を `cmoc indexing` として commit し、作業ツリーを clean に戻す挙動を確認する時。
-- 複数処理の同時実行に対する indexing lock の待機挙動を変更する時。
-- index entry 生成や conflict resolution のように indexing preflight を skip する purpose 判定を変更する時。
+- Codex 実行ラッパーが索引更新を先に行うか、更新後に専用コミットを作って作業ツリーを clean に戻すかを確認・変更したいとき。
+- root と cwd が異なる場合に、どの worktree を索引更新対象にするかを確認・変更したいとき。
+- 索引更新の排他ロック取得待ち、または索引エントリー生成・衝突解決の purpose で preflight をスキップする条件を扱うとき。
 
 ## Do not read this when
-- INDEX.md の本文生成アルゴリズム、要約文の品質、ディレクトリ走査規則そのものを調べたい時。
-- Codex 実行ラッパーを通らない純粋な indexing API の入力・出力だけを確認したい時。
-- git worktree、commit、lock、purpose-based skip のいずれにも関係しない通常の CLI サブコマンド挙動を調べたい時。
+- 索引本文の生成内容、ディレクトリ走査、エントリー構造化出力そのものを確認したいだけのとき。
+- Codex 実行パラメータの定義や runtime 実行関数の通常動作だけを調べたいとき。
+- Git worktree やロックを伴わない一般的なテスト補助関数だけを探しているとき。
 
 ## hash
-- 001ef8bbaefb02a24c6e94426c4a65388bb8db8a8c91af26d0c0624eb1f5af8d
+- 5549e75d6493464e59f5f4cb68232c1fbd9fc7d03b85ee5f6cb6ea3ad4e04099
 
 # `test_prompt_parts.py`
 
