@@ -223,22 +223,21 @@
 # `test_codex_runtime_retry.py`
 
 ## Summary
-- Codex CLI 実行ラッパーの retry 制御を検証する realization test。schema validation 失敗時の再実行、capacity エラー時の再実行、stdout JSONL 外に出た capacity/quota 文字列を retry 判定に使わないことを、偽の codex 実行ファイルとログ出力で確認する。
-- 実行結果の JSON、呼び出し回数、call log、prompt/stdout log path、subcommand log の codex_call status・returncode・error detail を観測し、retry の外部挙動とログ記録の境界を確認する入口になる。
+- Codex CLI 実行ラッパーの retry 制御を検証する realization test。構造化出力の schema 不一致、出力ファイル欠落・空・不正 JSON、容量エラー JSONL に対して再試行し、成功時の結果・呼び出しログ・イベント状態が期待どおり記録されることを確認する。
+- stderr や通常 stdout に出た容量・quota 風メッセージを retry 判定に使わず、Codex CLI 失敗として扱う境界も検証する。
 
 ## Read this when
-- Codex CLI 呼び出しの retry 条件、retry 後の成功扱い、または CmocError への失敗変換を変更する。
-- schema validation retry、capacity retry、quota/capacity marker の判定元、または stdout JSONL の解釈を変更する。
-- codex call log、prompt log、stdout log、subcommand log の記録内容や、retry ごとの log path の扱いを変更する。
-- run_codex_exec の外部コマンド呼び出しをテスト上で置き換える fixture や helper の使われ方を確認したい。
+- Codex CLI 呼び出しの再試行条件、schema validation retry、capacity retry、quota/capacity marker の解釈境界を変更する。
+- 呼び出しごとの call log、prompt log、stdout log、subcommand logger の codex_call event に含める status・returncode・error・call_log_path の期待値を確認したい。
+- 構造化出力の読み取り失敗や JSON Schema 検証失敗から成功に回復する挙動をテストで確認・修正したい。
 
 ## Do not read this when
-- Codex CLI 実行と無関係な CLI サブコマンド、設定読み込み、path model、oracle/realization 分類の仕様を調べたい。
-- retry ではない通常成功・通常失敗の基本挙動だけを確認したい場合で、より直接その観点を扱うテストがある。
-- Codex CLI や LLM の出力品質そのものを評価したい。ここではラッパーの制御ロジックとログ副作用だけを検証している。
+- Codex CLI に渡す引数構築、profile 設定、sandbox 設定など、再試行後のログ・出力検証に関係しない通常呼び出し経路だけを調べたい。
+- repository 作成、Codex home 設定、fake executable 作成などの test fixture 自体の実装を調べたい場合は、support 側の helper を直接読む。
+- INDEX 生成、oracle/realization の分類、またはルーティング文書の仕様を調べたいだけで、Codex runtime の retry 挙動を扱わない。
 
 ## hash
-- ee15da0887d4878f996c9352e878cabccda604558cc4e7f34ecaae2df5879d20
+- 4756b71f801ab3d2753b1ac5ab73749a3bb338f0e6f7a177a3daa1c7451cab3b
 
 # `test_indexing_cli.py`
 
