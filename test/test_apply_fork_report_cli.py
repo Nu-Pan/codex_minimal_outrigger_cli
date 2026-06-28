@@ -61,6 +61,86 @@ def test_change_summary_builder_imports_with_src_pythonpath_only() -> None:
     assert result.returncode == 0, result.stderr
 
 
+def test_file_finding_enumeration_builder_imports_with_src_pythonpath_only() -> None:
+    root = Path(__file__).parents[1]
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "from pathlib import Path; "
+                "from acp.builder.apply.fork.file_finding_enumeration import "
+                "build_apply_fork_file_finding_enumeration_parameter as build; "
+                "p = build(Path('src/main.py')); "
+                "assert p.structured_output_schema_path.name == "
+                "'file_finding_enumeration.json'"
+            ),
+        ],
+        cwd=root,
+        env={**os.environ, "PYTHONPATH": str(root / "src")},
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_finding_application_builder_imports_with_src_pythonpath_only() -> None:
+    root = Path(__file__).parents[1]
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "from acp.builder.apply.fork.finding_application import "
+                "build_apply_fork_finding_application_parameter as build; "
+                "p = build([{'title': 't'}]); "
+                "assert p.structured_output_schema_path is None; "
+                "assert 'realization file' in p.prompt"
+            ),
+        ],
+        cwd=root,
+        env={**os.environ, "PYTHONPATH": str(root / "src")},
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_file_finding_enumeration_schema_matches_oracle_source() -> None:
+    from acp.builder.apply.fork.file_finding_enumeration import (
+        build_apply_fork_file_finding_enumeration_parameter,
+    )
+
+    root = Path(__file__).parents[1]
+    parameter = build_apply_fork_file_finding_enumeration_parameter(Path(__file__))
+    src_schema_path = (
+        root
+        / "src"
+        / "acp"
+        / "builder"
+        / "apply"
+        / "fork"
+        / "file_finding_enumeration.json"
+    )
+    oracle_schema_path = (
+        root
+        / "oracle"
+        / "src"
+        / "oracle"
+        / "acp_builder"
+        / "apply"
+        / "fork"
+        / "file_finding_enumeration.json"
+    )
+
+    assert parameter.structured_output_schema_path == src_schema_path
+    assert json.loads(src_schema_path.read_text()) == json.loads(
+        oracle_schema_path.read_text()
+    )
+
+
 def report_path_from_stdout(stdout: str) -> Path:
     """apply fork stdout の共通ログ後に出る report full path を返す。"""
     lines = [line for line in stdout.splitlines() if line.startswith("/")]

@@ -1,8 +1,8 @@
 """`cmoc apply fork` の変更要約生成 builder。"""
 
-import subprocess
 from pathlib import Path
 
+from acp.builder.apply.fork._common import resolve_repo_root
 from basic.acp import (
     AgentCallParameter,
     FileAccessMode,
@@ -26,7 +26,7 @@ def build_apply_fork_change_summary_parameter(raw_git_diff: str) -> AgentCallPar
 
 
 def _prompt(raw_git_diff: str) -> str:
-    repo_root = _resolve_repo_root()
+    repo_root = resolve_repo_root()
     return f"""# role
 
 - あなたはソフトウェア変更内容の要約担当です
@@ -58,17 +58,3 @@ def _prompt(raw_git_diff: str) -> str:
 
 - <repo-root> = {repo_root}
 """
-
-
-def _resolve_repo_root() -> Path:
-    for candidate in (Path.cwd(), *Path.cwd().parents):
-        if (candidate / ".git").is_dir():
-            return candidate
-    git_result = subprocess.run(
-        ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
-        text=True,
-        capture_output=True,
-    )
-    if git_result.returncode == 0 and git_result.stdout.strip():
-        return Path(git_result.stdout.strip()).parent
-    raise ValueError("`<repo-root>` was not found")
