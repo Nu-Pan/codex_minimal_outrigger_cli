@@ -43,10 +43,6 @@
 4. `<cmoc-session-state-file>` の状態を更新
 5. 作業結果をレポートする
 
-- TODO 適切な詳細へ送る
-    - 適用作業完了後、全ての未コミット差分を git にコミット
-    - `<work-root>/oracle` などの編集禁止ディレクトリに未コミット差分が有る場合はエラー終了
-
 ## `cmoc apply fork` の責務境界
 
 - `cmoc apply fork` の責務は、指定された最大回数の範囲で apply ループを実行し、その結果を人間が判断できる形でレポートすることである
@@ -108,7 +104,6 @@
 
 - 所見リストを元に、それと対応する修正作業を行う
 - agent call の仕様は `build_apply_fork_finding_application_parameter` を正本とする
-- agent call 後に、編集禁止ファイル・ディレクトリに差分が発生している場合、編集禁止ファイルだけをロールバックして、 同一の agent call を再実行する
 - agent call によって差分が発生した realization file を調査待ちファイルリストの末尾に追加する
 - agent call によって発生した差分は自動的に git commit する
 
