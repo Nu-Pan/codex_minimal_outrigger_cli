@@ -101,11 +101,13 @@ def resolve_session_join_conflict(root: Path, codex_exec: CodexExec, git: GitRun
             ["git status を確認し、手動解決後に再実行してください。"],
             git(["status", "--short"], root).stdout,
         )
+    # <work-root>/oracle/doc/app_spec/sub_command/session_join.md:
+    # oracle conflict は prompt 上の例外規則で限定し、profile の
+    # REALIZATION_WRITE 追加 writable path 検証には渡さない。
     codex_exec(
         build_session_join_conflict_resolution_parameter(conflicted_paths),
         root=root,
         purpose="session join conflict resolution",
-        extra_writable_paths=conflicted_paths,
     )
     remaining_markers = [
         path

@@ -11,8 +11,10 @@ import subprocess
 from pathlib import Path
 
 import cmoc_runtime
-from basic.acp import FileAccessMode
+from basic.acp import AgentCallParameter, FileAccessMode
 from cmoc_runtime import CmocError
+from commons.runtime_codex_profile import build_codex_profile
+from config.cmoc_config import CmocConfig
 import pytest
 
 from _support import (
@@ -413,10 +415,11 @@ def test_session_join_resolves_oracle_conflict_with_realization_write_profile(
     class FakeCodexResult:
         output_json = None
 
-    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+    def fake_run_codex_exec(parameter: AgentCallParameter, **kwargs: object) -> object:
         calls.append(kwargs["purpose"])
         modes.append(parameter.file_access_mode)
-        assert kwargs["extra_writable_paths"] == [target]
+        assert "extra_writable_paths" not in kwargs
+        build_codex_profile(parameter, CmocConfig(), root)
         target.write_text("resolved change\nTitle\n=======\n")
         return FakeCodexResult()
 
