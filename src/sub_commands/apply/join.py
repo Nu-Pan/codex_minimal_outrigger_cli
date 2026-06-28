@@ -139,7 +139,14 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
     state.apply = ApplyPart()
     write_state(path, state)
     warnings: list[str] = []
-    merged_reachable = run_git(["merge-base", "--is-ancestor", apply_branch, "HEAD"], root, check=False).returncode == 0
+    merged_reachable = (
+        run_git(
+            ["merge-base", "--is-ancestor", apply_branch, "HEAD"],
+            root,
+            check=False,
+        ).returncode
+        == 0
+    )
     report_path = write_apply_join_report(
         repo,
         session_branch,
@@ -158,7 +165,9 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
                 # <work-root>/oracle/doc/app_spec/misc_spec.md keeps cmoc pwd fixed
                 # to the caller's worktree, so join must not chdir away to delete it.
                 kept_current_worktree = True
-                warnings.append(f"apply worktree remains because it is current cwd: {apply_worktree}")
+                warnings.append(
+                    f"apply worktree remains because it is current cwd: {apply_worktree}"
+                )
             else:
                 remove_worktree(repo, apply_worktree)
         if not (apply_worktree and apply_worktree.exists()):
@@ -261,13 +270,26 @@ def render_apply_join_report(
     )
 
 
-def collect_apply_join_unexpected_changes(root: Path, state: SessionState, apply_branch: str, session_branch: str) -> dict[str, list[str]]:
+def collect_apply_join_unexpected_changes(
+    root: Path,
+    state: SessionState,
+    apply_branch: str,
+    session_branch: str,
+) -> dict[str, list[str]]:
     """apply/session branch 上の想定外差分を分類して返す。"""
-    base = state.apply.oracle_snapshot_commit or state.session.session_start_commit or "HEAD"
+    base = (
+        state.apply.oracle_snapshot_commit
+        or state.session.session_start_commit
+        or "HEAD"
+    )
     apply_paths = changed_paths_on_managed_branch(root, base, apply_branch)
     session_paths = changed_paths_on_managed_branch(root, base, session_branch)
-    unexpected_apply = [path for path in apply_paths if not is_expected_apply_change(root, path)]
-    unexpected_session = [path for path in session_paths if not is_expected_session_change(path)]
+    unexpected_apply = [
+        path for path in apply_paths if not is_expected_apply_change(root, path)
+    ]
+    unexpected_session = [
+        path for path in session_paths if not is_expected_session_change(path)
+    ]
     result: dict[str, list[str]] = {}
     if unexpected_apply:
         result["apply"] = unexpected_apply
@@ -280,7 +302,14 @@ def changed_paths_on_managed_branch(root: Path, base: str, branch: str) -> list[
     # <work-root>/oracle/doc/app_spec/misc_spec.md requires deleted paths to be
     # outside managed-branch change scope, and renames to be classified by new path.
     lines = run_git(
-        ["diff", "--name-status", "--find-renames", "--diff-filter=ACMRT", base, branch],
+        [
+            "diff",
+            "--name-status",
+            "--find-renames",
+            "--diff-filter=ACMRT",
+            base,
+            branch,
+        ],
         root,
     ).stdout.splitlines()
     paths: list[str] = []
@@ -317,7 +346,11 @@ def is_root_memo_path(path: str) -> bool:
     return path == "memo" or path.startswith("memo/")
 
 
-def revert_unexpected_changes(root: Path, unexpected: dict[str, list[str]], state: SessionState) -> None:
+def revert_unexpected_changes(
+    root: Path,
+    unexpected: dict[str, list[str]],
+    state: SessionState,
+) -> None:
     """force-resolve 時に想定外差分を apply fork 基準へ戻す。"""
     base = state.apply.oracle_snapshot_commit or state.session.session_start_commit
     if not base:

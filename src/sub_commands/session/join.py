@@ -89,7 +89,11 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
         )
     )
 
-def resolve_session_join_conflict(root: Path, codex_exec: CodexExec, git: GitRun = run_git) -> None:
+def resolve_session_join_conflict(
+    root: Path,
+    codex_exec: CodexExec,
+    git: GitRun = run_git,
+) -> None:
     """session join の merge conflict を Codex CLI へ依頼して解消する。"""
     conflicted_paths = [
         root / line

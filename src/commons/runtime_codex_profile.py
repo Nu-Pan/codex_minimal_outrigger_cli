@@ -50,6 +50,7 @@ def file_access_to_codex_cwd(mode: FileAccessMode, root: Path) -> Path:
 
 
 def _is_read_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
+    """prompt 上の読み取り禁止領域を追加 read path にも適用する。"""
     if not path.is_relative_to(root):
         return False
     if path.is_relative_to(root / "memo") or path.is_relative_to(root / ".agents"):
@@ -64,6 +65,7 @@ def _validate_extra_read_paths(
     root: Path,
     extra_read_paths: list[Path] | None,
 ) -> None:
+    """Codex profile に足す read path が cmoc の許可境界内か検査する。"""
     for path in extra_read_paths or []:
         resolved = path.resolve()
         if not _is_read_path_allowed(mode, root, resolved):
@@ -75,6 +77,7 @@ def _validate_extra_read_paths(
 
 
 def _toml_string(value: str) -> str:
+    """TOML string として安全な JSON 互換 quote へ寄せる。"""
     return json.dumps(value, ensure_ascii=False)
 
 
@@ -83,6 +86,7 @@ def _writable_roots(
     root: Path,
     extra_writable_paths: list[Path] | None,
 ) -> list[Path]:
+    """Codex sandbox に渡せる正リストとして書き込み root を最小化する。"""
     if file_access_to_sandbox_mode(mode) == "read-only":
         return []
     root = root.resolve()
@@ -127,6 +131,7 @@ def _writable_roots(
 
 
 def _is_writable_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
+    """FileAccessMode の禁止領域を追加 writable path にも適用する。"""
     if not path.is_relative_to(root):
         return False
     # <work-root>/oracle/src/acp/prompt_parts/file_access_rule.py
@@ -142,7 +147,10 @@ def _is_writable_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> b
     return mode == FileAccessMode.REPO_WRITE
 
 
-def _append_workspace_write_section(lines: list[str], writable_roots: list[Path]) -> None:
+def _append_workspace_write_section(
+    lines: list[str], writable_roots: list[Path]
+) -> None:
+    """Codex sandbox が理解できる workspace-write section を追加する。"""
     if not writable_roots:
         return
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
@@ -299,6 +307,7 @@ def run_codex_subprocess(
 def run_tracked_codex_subprocess(
     argv: list[str], tracking_path: Path, **kwargs: Any
 ) -> subprocess.CompletedProcess[Any]:
+    """apply abandon が止められるよう Codex subprocess group を pid file に記録する。"""
     input_data = kwargs.pop("input", None)
     capture_output = kwargs.pop("capture_output", False)
     check = kwargs.pop("check", False)
@@ -323,6 +332,7 @@ def run_tracked_codex_subprocess(
 
 
 def record_tracked_child_process(path: Path, process_id: int) -> None:
+    """apply process pid file へ Codex child process の同一性情報を追記する。"""
     start_time = process_start_time(process_id)
     if start_time is None:
         return
@@ -336,6 +346,7 @@ def record_tracked_child_process(path: Path, process_id: int) -> None:
 
 
 def remove_tracked_child_process(path: Path, process_id: int) -> None:
+    """終了した Codex child process を apply process pid file から除く。"""
     if not path.exists():
         return
     lines = [
@@ -347,6 +358,7 @@ def remove_tracked_child_process(path: Path, process_id: int) -> None:
 
 
 def process_start_time(process_id: int) -> int | None:
+    """pid 再利用を検出するため Linux proc stat の starttime を読む。"""
     try:
         stat = Path(f"/proc/{process_id}/stat").read_text()
     except OSError:

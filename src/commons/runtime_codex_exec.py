@@ -390,7 +390,9 @@ def run_codex_exec(
                     if _QUOTA_POLLING:
                         wait_started_at = time.perf_counter()
                         print(
-                            f"# {console_timestamp()} Codex CLI quota wait: waiting for representative probe",
+                            "# "
+                            f"{console_timestamp()} "
+                            "Codex CLI quota wait: waiting for representative probe",
                             flush=True,
                         )
                         _QUOTA_CONDITION.wait_for(lambda: not _QUOTA_POLLING)
@@ -524,7 +526,12 @@ def run_codex_exec(
             raise CmocError(
                 "Codex CLI 呼び出しが失敗しました。",
                 ["stderr/stdout log を確認して原因を解消してください。"],
-                f"call_log: {call_path}\nstdout_log: {stdout_path}\nstderr_log: {stderr_path}\n{error_text}",
+                (
+                    f"call_log: {call_path}\n"
+                    f"stdout_log: {stdout_path}\n"
+                    f"stderr_log: {stderr_path}\n"
+                    f"{error_text}"
+                ),
             )
         output_json = read_output_json(output_path)
         if schema_path is not None:

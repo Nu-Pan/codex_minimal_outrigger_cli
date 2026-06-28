@@ -4,6 +4,8 @@
 """
 
 # cmoc
+from pathlib import Path
+
 from basic.path_model import RootToken, resolve_real_path, resolve_work_root
 from basic.struct_doc import StructCodeBlock, StructDoc
 
@@ -115,6 +117,7 @@ def build_complete_prompt(
 
 
 def _sanitize_prompt_doc(doc: StructDoc) -> StructDoc:
+    """Codex CLI に渡す直前の root token 置換を文書木全体へ適用する。"""
     children = doc.children
     title = _sanitize_prompt_text(doc.title)
     if isinstance(children, str):
@@ -128,6 +131,7 @@ def _sanitize_prompt_doc(doc: StructDoc) -> StructDoc:
 
 
 def _sanitize_prompt_text(text: str) -> str:
+    """標準 prompt 内の cmoc 固有表記を実行時の Codex 向け表記へ寄せる。"""
     # `<work-root>/oracle/doc/app_spec/prompt_standard.md` requires concrete paths
     # before text is passed to Codex CLI.
     for root_token in RootToken:
@@ -135,7 +139,8 @@ def _sanitize_prompt_text(text: str) -> str:
     return text.replace("cmoc から呼び出された AI Agent", "AI Agent")
 
 
-def _resolve_prompt_root(root_token: RootToken):
+def _resolve_prompt_root(root_token: RootToken) -> Path:
+    """prompt 用 root token を Codex から見える実 path へ解決する。"""
     try:
         return resolve_real_path(root_token)
     except ValueError:

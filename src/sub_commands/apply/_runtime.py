@@ -17,11 +17,15 @@ from cmoc_runtime import (
 
 
 class ProcessIdentity(NamedTuple):
+    """pid 再利用を避けて process 同一性を確認するための識別子。"""
+
     process_id: int
     start_time: int | None
 
 
 class ApplyProcessIdentity(NamedTuple):
+    """apply 本体 process と停止対象の Codex child groups を束ねる識別子。"""
+
     process_id: int
     start_time: int | None
     child_processes: tuple[ProcessIdentity, ...] = ()
@@ -40,6 +44,7 @@ def worktree_for_branch(root: Path, branch: str) -> Path:
 
 
 def expected_apply_worktree(root: Path, apply_branch: str) -> Path:
+    """apply branch 命名から対応する managed worktree path を復元する。"""
     parts = apply_branch.split("/")
     if (
         len(parts) != 4
@@ -68,10 +73,12 @@ def worktree_for_branch_optional(root: Path, branch: str) -> Path | None:
 
 
 def apply_process_id_path(root: Path, session_id: str) -> Path:
+    """session ごとの apply process pid file path を一箇所で決める。"""
     return root / ".cmoc" / "state" / "apply_processes" / f"{session_id}.pid"
 
 
 def write_apply_process_id(root: Path, session_id: str, process_id: int) -> None:
+    """apply abandon が同一 process だけを止められる形で pid file を保存する。"""
     path = apply_process_id_path(root, session_id)
     path.parent.mkdir(parents=True, exist_ok=True)
     start_time = process_start_time(process_id)
@@ -85,6 +92,7 @@ def write_apply_process_id(root: Path, session_id: str, process_id: int) -> None
 
 @contextmanager
 def apply_process_tracking(root: Path, session_id: str) -> Iterator[None]:
+    """Codex subprocess 追跡先を apply 実行中だけ環境変数で渡す。"""
     path = apply_process_id_path(root, session_id)
     old_value = os.environ.get(APPLY_PROCESS_TRACKING_ENV)
     os.environ[APPLY_PROCESS_TRACKING_ENV] = str(path)
@@ -98,6 +106,7 @@ def apply_process_tracking(root: Path, session_id: str) -> Iterator[None]:
 
 
 def read_apply_process_id(root: Path, session_id: str) -> ApplyProcessIdentity | None:
+    """壊れた pid file を停止対象にせず、読める場合だけ識別子を返す。"""
     path = apply_process_id_path(root, session_id)
     if not path.is_file():
         return None
@@ -126,6 +135,7 @@ def read_apply_process_id(root: Path, session_id: str) -> ApplyProcessIdentity |
 
 
 def delete_apply_process_id(root: Path, session_id: str) -> None:
+    """apply cleanup 後に stale な停止対象を残さないよう pid file を消す。"""
     apply_process_id_path(root, session_id).unlink(missing_ok=True)
 
 
@@ -174,6 +184,7 @@ def stop_apply_process(process: ApplyProcessIdentity) -> str | None:
 
 
 def stop_child_process_group(process: ProcessIdentity) -> str | None:
+    """Codex subprocess を専用 process group 単位で停止する。"""
     process_id = process.process_id
     current_start_time = process_start_time(process_id)
     if current_start_time is None:
@@ -212,6 +223,7 @@ def stop_child_process_group(process: ProcessIdentity) -> str | None:
 
 
 def open_process_fd(process_id: int) -> int | None:
+    """pidfd 対応環境でだけ race を避けた process 参照を開く。"""
     if not (hasattr(os, "pidfd_open") and hasattr(signal, "pidfd_send_signal")):
         raise CmocError(
             "apply process の同一性を安全に確認できません。",
@@ -231,6 +243,7 @@ def open_process_fd(process_id: int) -> int | None:
 
 
 def send_process_signal(process_fd: int, process_id: int, sig: signal.Signals) -> None:
+    """pidfd 経由で apply process へ signal を送り、権限失敗を cmoc 化する。"""
     try:
         signal.pidfd_send_signal(process_fd, sig)
     except ProcessLookupError:
@@ -244,11 +257,13 @@ def send_process_signal(process_fd: int, process_id: int, sig: signal.Signals) -
 
 
 def wait_process_fd_exit(process_fd: int, timeout_sec: float) -> bool:
+    """pidfd の readable 化を process 終了として待つ。"""
     readable, _, _ = select.select([process_fd], [], [], timeout_sec)
     return bool(readable)
 
 
 def send_process_group_signal(process_group_id: int, sig: signal.Signals) -> None:
+    """Codex subprocess group へ signal を送り、権限失敗を cmoc 化する。"""
     try:
         os.killpg(process_group_id, sig)
     except ProcessLookupError:
@@ -262,6 +277,7 @@ def send_process_group_signal(process_group_id: int, sig: signal.Signals) -> Non
 
 
 def wait_process_group_exit(process_group_id: int, timeout_sec: float) -> bool:
+    """process group が消えるまで短い polling で待つ。"""
     deadline = time.monotonic() + timeout_sec
     while True:
         try:

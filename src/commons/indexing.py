@@ -251,11 +251,19 @@ def index_target_hash(root: Path, path: Path) -> str:
     parts = []
     for child in indexable_children(root, path):
         child_hash = index_target_hash(root, child)
-        parts.append(f"{'dir' if child.is_dir() else 'file'}\0{child.relative_to(root)}\0{child_hash}\n")
+        kind = "dir" if child.is_dir() else "file"
+        parts.append(
+            f"{kind}\0{child.relative_to(root)}\0{child_hash}\n"
+        )
     return text_sha256("".join(parts))
 
 
-def render_index_entry(root: Path, path: Path, entry: dict | None = None, digest: str | None = None) -> str:
+def render_index_entry(
+    root: Path,
+    path: Path,
+    entry: dict | None = None,
+    digest: str | None = None,
+) -> str:
     """Structured Output から INDEX.md entry Markdown を生成する。"""
     digest = digest or index_target_hash(root, path)
     summary = entry_list(root, path, entry, "summary")
