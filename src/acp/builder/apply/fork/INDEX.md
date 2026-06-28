@@ -93,21 +93,21 @@
 # `file_finding_enumeration.py`
 
 ## Summary
-- `cmoc apply fork` で、指定された実現ファイルを起点に oracle file と realization file の不整合を調査し、ファイル単位の所見列挙用 agent call parameter を組み立てる builder。
-- 主流モデル・中程度 reasoning・readonly file access を指定し、対象 path と repo root を埋め込んだ所見列挙プロンプトと、同名 JSON schema path を返す。
+- `cmoc apply fork` で特定ファイルを起点に realization file の要修正点を列挙するための agent call parameter を組み立てる builder。
+- 実行時に oracle 側の正本 prompt builder を import 可能にし、対象 path と repo root を埋め込んだ read-only の所見列挙プロンプトを生成する入口を担う。
 
 ## Read this when
-- `cmoc apply fork` の所見列挙 agent に渡す role、goal、readonly 制約、routing rule、apply review standard のプロンプト内容を確認または変更したいとき。
-- apply fork 系 builder のうち、対象 realization file を起点に修正必須の不整合だけを列挙させる呼び出しパラメータ生成を追うとき。
-- 所見列挙で `INDEX.md` を本文扱いしないこと、oracle file と realization file の定義、placeholder 表記が agent prompt にどう渡るかを確認したいとき。
+- apply fork のファイル単位レビューや所見列挙用 agent call parameter の model、reasoning effort、file access mode、schema 対応を確認・変更したいとき。
+- 所見列挙プロンプトに渡す target path、repo root、oracle standard、realization standard、apply review standard の組み込み方を確認したいとき。
+- oracle src を実行時に import できるようにする探索経路や、見つからない場合の失敗挙動を確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` の共通 repo root 解決だけを確認したいときは、共通 helper を直接読む。
-- 所見列挙結果の Structured Output schema 自体を確認したいときは、対応する JSON schema を直接読む。
-- 実際の不整合検出ロジックやレビュー基準そのものの実装を探しているときは、この builder ではなく、agent の出力を処理する箇所または正本仕様側を読む。
+- apply fork 全体の制御フロー、サブコマンド実行、または fork 作成・適用処理そのものを調べたいとき。
+- 所見列挙の正本プロンプト内容やレビュー基準自体を確認したいとき。この実装ではなく oracle 側の該当正本断片を読む方が直接的。
+- 生成された所見リストの JSON schema の詳細だけを確認したいとき。schema 対応ファイルを読む方が直接的。
 
 ## hash
-- 6606a4eefd59f188e3906ae437e13cb5f8754878e12bef1cf693e20394445ef5
+- 9342009ed7211ac290eb3e764f5e9e81d6a0894a71e40a3f82250590953e825a
 
 # `finding_application.py`
 

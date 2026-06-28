@@ -17,25 +17,23 @@
 # `apply`
 
 ## Summary
-- apply 作業に関わる agent call parameter builder 群への入口となる領域。差分要約、所見列挙、所見適用などを agent に委譲するための prompt、model 指定、file access 制約、Structured Output schema 参照、共有 helper のまとまりを下位に持つ。
-- oracle 側の package 構造に対応する realization 側の互換領域であり、通常実行時に oracle 側を runtime import しない前提で、正本仕様断片に沿った builder 実装を置く場所として位置づけられる。
+- apply builder 領域の realization package。oracle 側の package 構造に対応する入口と、apply fork 用 agent call parameter builder、隣接 JSON schema、共通 helper への入口をまとめる。
+- 主な対象は、レビュー所見列挙・所見適用・変更要約のために agent へ渡す prompt、出力契約、読み書き制約、INDEX.md 利用方針、リポジトリルート解決などの構築処理である。
 
 ## Read this when
-- apply 作業で agent を呼び出すための条件、prompt、schema、file access mode、model 指定の入口を探したいとき。
-- raw git diff、対象 realization file、所見一覧などの入力が、apply 系 agent call parameter にどう渡されるかを調べたいとき。
-- apply 作業の中で、差分要約・所見列挙・所見適用を agent に委譲する builder 群の所在を確認したいとき。
-- apply 系 builder が oracle 側の package 構造とどう対応しているか、また runtime import を避ける realization 実装上の境界を確認したいとき。
-- apply 系 builder で共有される repo root 解決や git 管理ディレクトリ探索など、agent 呼び出し前の補助処理への入口を探したいとき。
+- apply 系 builder のうち、apply fork が agent を呼び出すための parameter 構築処理を探すとき。
+- レビュー所見列挙、修正担当、変更要約に渡す prompt の組み立て方や、差分・所見本文・作業制約の埋め込み方を確認したいとき。
+- apply fork 周辺で使う JSON schema や、機械可読な出力契約を確認したいとき。
+- oracle 側の apply builder package との互換構造、runtime import 境界、共通 helper の配置を確認したいとき。
 
 ## Do not read this when
-- fork の作成、branch 操作、commit 操作、作業ディレクトリ管理、レポート保存など、apply 処理全体の実行制御や git 副作用を追いたいとき。
-- agent が実際に編集する個別 realization file の修正内容や、対象ファイル固有の実装ロジックを調べたいとき。
-- oracle file、realization file、path model、work-root、run-root などの基本概念そのものを確認したいとき。
-- 変更要約や所見列挙の結果を表示する CLI 出力整形だけを確認したいとき。
-- 正本仕様断片そのもの、または oracle 側の実装・文書・テストを読むべき作業をしているとき。
+- apply fork 全体の制御フロー、fork 作成、git branch 操作、commit、作業ディレクトリ管理、レポート保存を追いたいとき。
+- 修正担当 agent が実際に編集する realization file の内容や、個別実装の変更内容を調べたいとき。
+- 正本 prompt、レビュー基準、path model など oracle 側の仕様断片そのものを確認したいとき。
+- apply fork 以外の apply 系処理、CLI 表示整形、または git 操作一般の実行ロジックを確認したいとき。
 
 ## hash
-- a7c515c71133df675c1cc44855b1d1edd45b60d4e8a8eb798e23028dc38db15c
+- 26cf9cfa2b0f953af201c292be9e3bce0a96f391906969217e521457861cee2b
 
 # `indexing`
 

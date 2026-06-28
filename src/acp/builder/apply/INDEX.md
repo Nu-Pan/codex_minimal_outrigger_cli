@@ -17,22 +17,20 @@
 # `fork`
 
 ## Summary
-- apply fork 周辺で使う agent call parameter builder と、その出力契約、共有 helper をまとめる領域。差分要約、所見列挙、所見適用など、fork 適用作業を agent に委譲するための prompt・model 指定・file access 制約・schema 参照を扱う。
-- 正本仕様断片に追従する realization 実装として、通常実行時に oracle 側を runtime import しない前提や、作業リポジトリ範囲、INDEX.md ルーティング指示、readonly または書き込み可能範囲などを agent prompt に埋め込む処理への入口になる。
+- apply fork 系の agent call parameter builder と、その隣接 JSON schema、共通 helper をまとめる領域。`cmoc apply fork` の所見列挙、所見適用、変更要約に関するプロンプト構築、出力契約、リポジトリルート解決を確認する入口になる。
+- oracle 側の正本仕様断片に追従しつつ realization 側で runtime import する場合としない場合の境界、読み書き制約や INDEX.md ルーティング指示を各 agent へ渡す実装が含まれる。
 
 ## Read this when
-- apply fork の中で、差分要約・所見列挙・所見適用を担当する agent をどの条件、prompt、schema、file access mode で呼び出すかを調べたいとき。
-- raw git diff、対象 realization file、所見一覧などの入力が、agent call parameter や prompt にどう組み込まれるかを確認・変更したいとき。
-- apply fork 系 builder が共有する repo root 解決 helper や、git 管理ディレクトリ探索と git コマンド fallback の境界を確認したいとき。
-- apply fork 関連の Structured Output schema のうち、変更要約やファイル単位の所見列挙の契約を確認したいとき。
-- oracle 側の正本仕様断片と realization 側 builder の関係、特に runtime import を避ける理由を確認したいとき。
+- `cmoc apply fork` がレビュー・修正・変更要約用 agent を呼ぶための parameter 構築処理を探すとき。
+- apply fork 周辺で使う所見列挙や変更要約の JSON schema を確認し、生成結果の機械可読な契約を検証したいとき。
+- apply fork 配下の builder が共有するリポジトリルート解決 helper や、oracle src との互換 import 経路の扱いを確認したいとき。
+- 修正担当 agent に渡す読み書き範囲、作業禁止事項、INDEX.md 利用方針、差分や所見本文の prompt への埋め込み方を確認したいとき。
 
 ## Do not read this when
-- fork の作成、branch 操作、commit 操作、作業ディレクトリ管理、レポート保存など、apply fork 全体の実行制御や git 副作用を追いたいとき。
-- agent が実際に編集する個別 realization file の修正内容や、各対象ファイル固有の実装ロジックを調べたいとき。
-- oracle file と realization file の基本定義、path model、work-root や run-root などの概念定義そのものを確認したいとき。
-- 変更要約や所見列挙の結果を表示する CLI 出力整形だけを確認したいとき。
-- 正本仕様断片そのものを確認したいとき、または oracle 側の実装・文書・テストを読むべき作業をしているとき。
+- `cmoc apply fork` 全体の fork 作成、git branch 操作、commit 操作、作業ディレクトリ管理、レポート保存などの制御フローを追いたいとき。
+- 個別 realization file の実装修正内容や、修正担当 agent が実際に編集するコードを調べたいとき。
+- oracle file にある正本 prompt、レビュー基準、path model などの仕様断片そのものを確認したいとき。
+- apply fork 以外の apply 系処理、CLI 出力全体の表示整形、または git 操作一般の実行ロジックを確認したいとき。
 
 ## hash
-- e8d48ed6fa3b3037c6a1a09e7068d48d25d28ace653bf47f679ee573d080ab1b
+- d28dce9fa0aa69f7a2e715a0e4d1cacdbc61dbacfe853d6acce78a96a8a2b852

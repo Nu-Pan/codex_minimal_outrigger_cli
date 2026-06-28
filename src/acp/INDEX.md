@@ -18,20 +18,20 @@
 # `builder`
 
 ## Summary
-- ACP builder 全体の realization 側入口をまとめる領域。apply、indexing、review、session、tui などの下位 builder 領域へ進むための分岐点であり、正本側 package 構造との import 経路互換や再エクスポート境界を扱う。
-- この階層自体は多くの具体的な生成処理を直接持つ場所ではなく、正本側実装または下位領域へ到達するための薄い公開入口として位置づけられる。
+- ACP builder realization implementation の上位入口で、正本側 builder 実装への互換 import 境界と、apply、indexing、review、session、TUI など下位 builder 領域へのルーティングを束ねる。
+- この階層の多くは実処理本体ではなく、正本側 package 構造に対応する src 側の公開経路や shim を提供するが、apply 領域には agent call parameter、prompt、JSON schema、共通 helper など実際の構築処理へ進む入口も含まれる。
 
 ## Read this when
-- ACP builder のどの下位領域を読むべきか、apply、indexing、review、session、tui の入口を切り分けたいとき。
-- src 側の ACP builder package が、正本側 builder package とどのように対応し、互換 import 経路を保っているか確認したいとき。
-- agent call parameter builder 群のうち、apply 作業、indexing、review、session join、TUI のどこへ進むべきかを判断したいとき。
-- 正本側実装を runtime import しない realization 実装境界と、正本側実装を再公開する互換 shim の境界を見分けたいとき。
+- ACP builder 全体で、src 側の package 構成が正本側 builder package とどう対応しているかを確認したいとき。
+- apply fork、indexing、review、session join、TUI など、builder のどの下位領域へ進むべきかを切り分けたいとき。
+- 正本側実装を src 側 import 経路から再公開している互換境界や、処理実体を持つ下位領域の入口を確認したいとき。
+- agent に渡す parameter builder、prompt 組み立て、出力 schema、TUI パラメータ解決入口など、ACP builder 配下の公開入口を探し始めるとき。
 
 ## Do not read this when
-- apply、indexing、review、session、tui の具体的な処理、関数、クラス、prompt、schema、制御フローを調べたいとき。その場合は該当する下位領域または正本側実装を読む。
-- fork 作成、branch 操作、commit 操作、作業ディレクトリ管理、レポート保存など、ACP builder の外側にある実行制御や git 副作用を追いたいとき。
-- oracle file、realization file、path model、work-root、run-root などの基本概念そのものを確認したいとき。
-- 正本仕様断片そのもの、または oracle 側の文書・実装・テストを根拠として読むべき作業をしているとき。
+- 個別 builder の具体的な関数、クラス、生成ロジック、バリデーション、制御フローを直接調べたいときは、該当する下位領域または正本側実装を読む。
+- apply fork 全体の作成、git 操作、commit、作業ディレクトリ管理、レポート保存など builder 外の実行制御を追いたいとき。
+- 正本 prompt、レビュー基準、path model、index entry 定義など oracle 側の仕様断片そのものを確認したいとき。
+- CLI 表示整形、git 操作一般、実際の realization file 編集内容、または builder 以外の ACP 処理を調べたいとき。
 
 ## hash
-- 402c8a7da54531c900ba821494c18280060733c22b702b9b244b7fe10de0e6a2
+- 024b61aec0f67974cd0c29bd73fc4bfe439e3f59253dc61bebea262718c285dc

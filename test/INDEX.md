@@ -67,25 +67,25 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 経由テスト群で、所見列挙から適用、commit、変更要約、report 生成、session state 更新までの制御を一体で検証する。
-- 未収束・収束・error report、変更ファイル再調査、未追跡 file の差分要約、調査対象なし、rolling apply fork の対象選定を、同じ loop と report schema の観測結果として扱う。
-- apply fork report 周辺の期待値を読む入口であり、Codex 実行を fake に差し替えた CLI 挙動と Git 状態の副作用を確認する。
+- apply fork の CLI 経由テスト群。所見列挙、所見適用、commit、変更要約、report 生成、session state 更新までの制御を、収束・未収束・error・変更ファイル再調査・rolling fork の観測結果としてまとめて検証する。
+- apply fork report に出る結果種別、finding count、変更要約、未実行 loop 表示、未追跡 file の差分扱い、commit message 生成有無など、利用者から見える副作用と内部制御の境界を確認する入口になる。
+- apply fork 用 ACP builder の import 可能性、schema 参照、標準 prompt 内容も同じ文脈で検証し、report と再検査制御に必要な Codex 呼び出し契約を押さえる。
 
 ## Read this when
-- apply fork の report 内容、終了 code、収束判定、未収束時メッセージ、error 時の変更要約を確認したいとき。
-- apply fork が変更後 file を再調査する条件や、再調査対象から除外される path の扱いを確認したいとき。
-- apply fork の commit 作成、commit message、apply branch、session state 更新、rolling 実行時の基準 commit を CLI 観点で確認したいとき。
-- apply fork 用 ACP builder の import 可能性や structured output schema path が、src のみの Python path や oracle schema と整合するか確認したいとき。
-- report 用変更要約が未追跡 file や commit 前の working tree 差分をどう扱うかを確認したいとき。
+- apply fork の report 内容、終了コード、収束判定、未収束判定、error report の変更要約を変更または調査するとき。
+- 所見適用後に変更された file を再調査する制御、再調査対象から除外されるもの、差分が出ない所見適用時の扱いを確認するとき。
+- rolling apply fork が前回 apply join 後の変更だけを対象にするか、session state の apply 関連情報をどう更新するかを確認するとき。
+- apply fork の change summary、file finding enumeration、finding application の ACP builder や schema/prompt 参照を変更するとき。
+- apply fork report 用に git diff、未追跡 file、fallback 変更要約を扱う helper の期待挙動を確認するとき。
 
 ## Do not read this when
-- apply fork の内部実装そのもの、対象列挙や report rendering の関数定義を変更したいだけなら、対応する実装側を先に読む。
-- apply 以外の session 操作、init、join の一般的な CLI 仕様を確認したいだけなら、それぞれの専用テストや実装を読む。
-- Codex CLI や LLM 出力品質そのものを検証したい場合は、この対象ではなく外部実行境界や fake の扱いを確認する。
-- 単一 helper の純粋な差分計算だけを確認したい場合は、report 補助関数の実装またはより小さい単体テストを優先する。
+- apply fork 以外の apply サブコマンド、session fork/join 単体、または一般的な CLI 初期化だけを調べたいとき。
+- report や再検査制御に関係しない ACP builder、prompt、structured output schema の詳細だけを調べたいとき。
+- 実装の内部 helper 分割や低レベルな git command wrapper の仕様を直接確認したいとき。
+- INDEX.md 生成・ルーティング文書の形式や、テストディレクトリ全体の構成だけを知りたいとき。
 
 ## hash
-- 2ee8da39dced6af2c0de9a619d598eabe7b7387fbacc8cbd644883f2bf5c6f26
+- 5269cc7e3288ba2e8762aa14ad04cea5a00c7cfbabb9858fe1dffcdaa64349ff
 
 # `test_apply_join_cli.py`
 
