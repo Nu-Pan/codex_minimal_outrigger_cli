@@ -50,7 +50,8 @@ def test_change_summary_builder_imports_with_src_pythonpath_only() -> None:
                 "from acp.builder.apply.fork.change_summary import "
                 "build_apply_fork_change_summary_parameter as build; "
                 "p = build('diff'); "
-                "assert p.structured_output_schema_path.name == 'change_summary.json'"
+                "assert p.structured_output_schema_path.name == 'change_summary.json'; "
+                "assert '# oracle and realization basic' in p.prompt"
             ),
         ],
         cwd=root,

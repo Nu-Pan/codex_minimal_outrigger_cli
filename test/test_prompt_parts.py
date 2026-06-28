@@ -138,6 +138,7 @@ def test_apply_fork_prompts_use_expected_roots(
     assert f"`{repo_root}` ツリー内の所見" in finding_enumeration.prompt
     assert f"`{apply_worktree}` ツリー内の所見" not in finding_enumeration.prompt
     assert f"`{repo_root}` ツリー内の差分" in change_summary.prompt
+    assert "# oracle and realization basic" in change_summary.prompt
 
 
 def test_apply_fork_change_summary_schema_matches_oracle_source() -> None:

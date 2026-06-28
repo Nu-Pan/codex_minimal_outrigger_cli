@@ -57,12 +57,12 @@
 
 ## Summary
 - `cmoc apply fork` の作業レポート向けに、git diff の生文字列から変更要約生成用の agent call parameter を組み立てる realization 実装。効率重視モデル、中程度 reasoning、読み取り専用アクセス、隣接 JSON schema を使い、prompt には対象リポジトリ範囲・INDEX.md ルーティング・差分本文・パス置換定義を埋め込む。
-- 対応する oracle src を正本仕様断片として参照しつつ、通常起動時は realization 側の `src` だけが公開される制約により oracle 実装を runtime import しないことを明示している。
+- 対応する oracle src を正本仕様断片として参照し、構築時に oracle prompt builder と struct doc renderer を使って標準 prompt 部品を含む markdown prompt を生成する。
 
 ## Read this when
 - `cmoc apply fork` で作業レポート用の変更要約 agent を呼ぶための parameter 構築処理を確認・変更したいとき。
 - 変更要約 agent に渡す prompt の role、goal、読み書き制約、INDEX.md 利用指示、raw git diff の埋め込み方法、パス置換定義を確認したいとき。
-- apply fork 系 builder が oracle src を直接 import せず realization 実装として正本仕様断片に追従する理由を確認したいとき。
+- apply fork 系 builder が oracle src の正本 prompt 断片をどのタイミングで import し、render しているかを確認したいとき。
 
 ## Do not read this when
 - 差分要約そのものの JSON schema や出力項目の定義だけを確認したいときは、隣接する schema 定義を直接読む。
@@ -70,7 +70,7 @@
 - `cmoc apply fork` 全体の fork 作成、git 操作、作業ディレクトリ管理、またはレポート保存処理を追いたいだけなら、それぞれの責務を持つ apply fork 実装へ進む。
 
 ## hash
-- 9b11c45d41ca497ff81a8efe314d74590500e9cb49f01f1871d53e5834615d30
+- 364cbb56abf11c57f296e9f624138b93b71b72aa268daeb343e337a2e9072a09
 
 # `file_finding_enumeration.json`
 
