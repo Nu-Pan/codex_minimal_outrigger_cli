@@ -17,21 +17,23 @@
 # `apply`
 
 ## Summary
-- apply builder 領域の realization 側入口をまとめる package。package としての互換初期化と、fork 適用領域へ進むための接続層を含み、処理本体ではなく oracle 側実装へ到達するための上位入口として位置づく。
-- この階層は、apply builder 全体の実装詳細を直接持つ場所ではなく、realization 側 import 経路と oracle 側 package 構造との対応を確認するための案内点である。
+- apply builder 領域の実装入口であり、oracle 側の package 構造に対応する互換 package と、fork 適用後の変更要約生成に関わる下位領域をまとめる。
+- この階層自体は具体的な適用処理全体を担うのではなく、package としての入口、および fork 適用後のレポート向け agent call parameter builder や oracle 側実装への接続点へ進むための分岐点として位置づけられる。
 
 ## Read this when
-- realization 側の apply builder 領域が oracle 側 package 構造とどう対応しているかを確認したいとき。
-- apply builder 配下で、実装本体へ進む前に package 初期化や下位の fork 適用領域への入口を把握したいとき。
-- fork 適用関連の公開 API が realization 側から oracle 側へ委譲される接続層に進むべきか判断したいとき。
+- apply builder 領域が oracle 側の構造とどう対応しているかを確認したいとき。
+- fork 適用後の作業レポートに含める変更要約を生成するための schema、agent 呼び出し設定、raw git diff やプロンプトの渡し方を探し始めるとき。
+- realization 側の fork 適用関連 import 経路が、oracle 側の file finding enumeration や finding application 定義へどう接続するかを確認したいとき。
+- この階層に実処理本体があるのか、互換入口や下位 package へのルーティングが主な役割なのかを切り分けたいとき。
 
 ## Do not read this when
-- apply builder の具体的な変換、適用、列挙、変更要約などの処理本文を調べたいとき。その場合は委譲先の oracle 側本文、または下位のより直接の対象を読む。
-- 公開関数やクラスの詳細な入出力、分岐条件、エラー処理を確認したいとき。この階層自体はそれらの実装本体を担わない。
-- oracle 側の正本仕様断片そのものを確認したいとき。この対象は realization 側の互換 package と接続経路を扱う。
+- fork 作成、差分適用、git 操作、作業レポート保存など、適用処理全体の制御フローを追いたいときは、より上位の apply/fork 実装を読む。
+- file finding enumeration や finding application の具体的な型、関数、挙動を確認したいときは、再エクスポート先の oracle 側本文を読む。
+- agent call parameter の共通データ構造、モデル種別、reasoning、ファイルアクセスモードそのものを調べたいときは、共通 ACP 定義を読む。
+- 変更要約の表示文面や CLI 出力全体の整形だけを調べたいときは、出力やレポート表示を担う領域を読む。
 
 ## hash
-- a5536241c2d0949b06fe7d1e410227b482845ffa294252e04a5227116139eadd
+- 0472238c2451d79fda96e05588720ab8b0752d05b95adfce0abc611725248351
 
 # `indexing`
 

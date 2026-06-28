@@ -18,21 +18,20 @@
 # `builder`
 
 ## Summary
-- ACP builder 領域の realization 側 package で、正本側実装を src 側の import 経路から参照するための互換境界をまとめる。
-- この領域自体は生成・適用・レビュー・セッション・TUI などの処理本体ではなく、正本側 package への再公開入口と下位領域への接続点を束ねる位置づけである。
-- 下位には、適用、indexing、review、session、TUI などの互換入口が分かれており、具体的な処理を読む前に realization 側の公開経路を確認するための案内点になる。
+- ACP builder 配下の realization 側パッケージを束ねる領域。正本側 builder 実装への互換 import 境界を中心に、apply、indexing、review、session、TUI などの下位 builder 領域へ進むための入口として機能する。
+- この階層自体は builder の主要な生成ロジック本体ではなく、src 側の公開経路から oracle 側実装や下位領域へ到達できるようにするための薄い接続層を扱う。
 
 ## Read this when
-- ACP builder の src 側 package が、正本側 builder 実装とどのような import 互換境界を持つか確認したいとき。
-- ACP builder 配下で、処理本体へ進む前に、適用、indexing、review、session、TUI などの下位領域の入口を選びたいとき。
-- 正本側実装を src 側から再公開しているだけの薄い package か、独自処理を持つ対象かを切り分けたいとき。
-- 既存の import 経路を保つための公開入口や package 初期化の有無を確認したいとき。
+- ACP builder 全体の src 側入口が、正本側 builder package とどう対応しているかを確認したいとき。
+- apply、indexing、review、session、TUI など、どの下位 builder 領域へ進むべきかを切り分けたいとき。
+- realization implementation 側で、builder 関連の import 互換 package や再公開境界の有無を確認したいとき。
+- builder の実処理本体ではなく、src 側から oracle 側実装へ接続する公開入口の構成を把握したいとき。
 
 ## Do not read this when
-- ACP builder の具体的な生成処理、変換処理、適用処理、判定条件、データ構造、入出力仕様を調べたいとき。その場合は正本側の対応実装、または下位のより直接の対象を読む。
-- TUI の画面構成、入力フロー、パラメータ解決の詳細など、実際の挙動を確認したいとき。正本側の TUI 実装を読む。
-- review や session join などの個別アルゴリズム、検証、競合解決、finding 処理の詳細を調べたいとき。対応する下位領域または正本側本文を読む。
-- oracle file としての正本仕様断片を確認したいとき。この領域は realization 側の互換 package であり、正本仕様本文ではない。
+- builder の具体的な生成処理、データ構造、バリデーション、prompt 構成、制御フローを調べたいとき。その場合は対応する下位領域または正本側実装を読む。
+- fork 適用、review finding、session join、TUI 起動など個別機能の挙動を直接確認したいとき。その場合は該当する下位領域へ進む。
+- agent call parameter の共通定義、モデル種別、reasoning、ファイルアクセスモードそのものを調べたいとき。共通 ACP 定義や基本定義を読む。
+- 正本仕様断片としての要求を確認したいとき。この領域は realization 側の互換入口であり、正本仕様本文ではない。
 
 ## hash
-- 08eba39d7abc0aadadf3fbdb8076d7994dba10954fbad2aa6ffc25d78ac95d8a
+- 8cb34547ccd64e02d650c3533c16f9b9c874dd23139a0dc6d18e87bf6f73354a

@@ -17,18 +17,23 @@
 # `acp.py`
 
 ## Summary
-- ACP 関連の basic 実装を、正本側の実装からそのまま公開する薄い中継モジュール。実体の責務や挙動はこの対象内では定義せず、正本側の basic 実装に委ねる。
+- ACP 実行時に共有される呼び出しパラメータ型を定義する realization implementation。
+- 正本側の builder 定義を通常起動時の import path から利用できるよう、モデル区分・推論努力・ファイルアクセスモード・プロンプト・structured output schema path をひとまとまりの型として置く。
 
 ## Read this when
-- realization 側で ACP basic API がどこから公開されているかを確認したいとき。
-- この階層の ACP 関連実装が独自実装を持つのか、正本側実装の再公開なのかを切り分けたいとき。
+- ACP の呼び出し条件を realization 側で受け渡す実行時型を確認・変更したいとき。
+- モデルクラス、reasoning effort、ファイルアクセスモードの列挙値を参照する実装を読むとき。
+- agent 呼び出しに渡す prompt や structured output schema path を含むパラメータ構造を確認したいとき。
+- 正本側の ACP builder 型と realization 側の実行時 import 可能な型の対応を確認したいとき。
 
 ## Do not read this when
-- ACP の具体的な型、関数、挙動、生成ロジックを確認したいとき。この対象は中継だけなので、正本側の対応実装を読む方が直接的である。
-- realization 側で独自に実装された ACP 処理を探しているとき。この対象には独自ロジックはない。
+- ACP のパラメータ値を組み立てるロジックや選択規則を確認したいだけのとき。
+- 実際のファイルアクセス制御、権限判定、書き込み可否の実装を確認したいとき。
+- structured output schema の内容や検証処理そのものを確認したいとき。
+- oracle file と realization file の一般定義や編集責任の境界を確認したいとき。
 
 ## hash
-- 4420dd500ac5254358305547d9e45cdc143f1ab0ffcc641e909f2ce7fa04ad92
+- 7faad563d70da8867020797c54707e25a1f4426775c8397f395eef92a2a6c16b
 
 # `path_model.py`
 

@@ -17,18 +17,20 @@
 # `fork`
 
 ## Summary
-- fork 適用領域の realization 側入口をまとめる package。内容は互換 package 初期化と、change summary、file finding enumeration、finding application などの公開 API を oracle 側実装へ接続する薄い再エクスポートで構成される。
-- この階層自体は処理本体や正本仕様ではなく、src 側の import 経路から oracle 側の実体へ到達するための接続点として位置づく。
+- fork 適用領域のうち、作業レポート向け変更要約の出力契約と agent call parameter builder、および oracle 側実装へ委譲する互換入口をまとめる実装パッケージ。
+- 差分適用後の変更要約生成では、隣接 schema と builder が主な入口になり、file finding enumeration や finding application の実体確認では oracle 側へ進むための再エクスポート接続点になる。
 
 ## Read this when
-- realization 側から fork 適用関連の公開名がどの oracle 側実装へ委譲されているか確認したいとき。
-- fork 適用領域で、src 側 import 経路の互換 package や再エクスポートの入口だけを確認したいとき。
-- 具体的な処理本文を読む前に、この階層が実装本体ではなく oracle 側実装への接続層であることを確認したいとき。
+- fork 適用後の作業レポートに含める変更要約を、どの schema と agent 呼び出し設定で生成するか確認したいとき。
+- 変更要約担当 agent に渡す raw git diff、プロンプト、読み取り専用アクセス、reasoning、モデル設定の組み立て箇所を探したいとき。
+- realization 側の fork 適用関連 import 経路が、oracle 側の file finding enumeration や finding application 定義へどう接続しているか確認したいとき。
+- このパッケージ自体が互換入口なのか、具体的な処理本体を持つ実装なのかを切り分けたいとき。
 
 ## Do not read this when
-- fork 適用処理の具体的な関数、型、データ構造、分岐条件、入出力を調べたいとき。その場合は委譲先の oracle 側本文を読む。
-- fork 適用処理全体の流れや、change summary、file finding enumeration、finding application 以外の責務を調べたいとき。その場合はより上位または隣接する対象を読む。
-- oracle 側の正本仕様断片そのものを確認したいとき。この階層は realization 側の接続層であり、正本仕様ではない。
+- fork 作成、差分適用、git 操作、作業レポート保存など、適用処理全体の制御フローを追いたいときは、より上位の apply/fork 実装へ進む。
+- file finding enumeration や finding application の具体的な仕様、型、関数、挙動を確認したいときは、再エクスポート先の oracle 側本文を読む。
+- agent call parameter の共通データ構造、モデル種別、reasoning、ファイルアクセスモードそのものを確認したいときは、共通 ACP 定義を読む。
+- 変更要約の表示文面や CLI 出力全体の整形だけを調べたいときは、出力やレポート表示を担う領域を読む。
 
 ## hash
-- b5b20a45eea2923fef6770bf0e47c4657670c7b5696373c788cfe7c265ac3e59
+- 735609bdf382ea49e7774085a08a124842a12b175667f11e967216de3b1b0a7d

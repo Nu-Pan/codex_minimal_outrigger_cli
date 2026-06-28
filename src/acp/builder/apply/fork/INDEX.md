@@ -15,21 +15,45 @@
 ## hash
 - c5707d270af058dc9b548e1d49ffefdd38c20a0785a67a293523f2be83ebc266
 
+# `change_summary.json`
+
+## Summary
+- 変更内容を意味上のカテゴリごとにまとめ、各カテゴリで何を変えたかと根拠となる主要な変更箇所を記録するための出力契約を定義する。
+- 差分適用や派生作業の結果を、人間がレビューしやすい変更要約として構造化する場面への入口になる。
+
+## Read this when
+- 差分適用後の変更要約をどの粒度でカテゴリ分けするか確認したいとき。
+- 変更カテゴリ、変更内容の説明、主要な変更箇所をまとめた機械可読なレポートを生成・検証するとき。
+- 空ではない変更要約を前提に、レビュー用の結果データを組み立てる処理を確認するとき。
+
+## Do not read this when
+- 個々の差分の検出方法、パッチ適用手順、fork 作成や実行制御の挙動を確認したいとき。
+- 変更要約の表示文面や CLI 出力全体の整形だけを確認したいとき。
+- 特定カテゴリに含めるべき具体的な変更ファイルを調べたいだけのとき。
+
+## hash
+- 51ffe6e61588c7c347494a36267c02b8d48f69f6e264fcaf396096938cdd672d
+
 # `change_summary.py`
 
 ## Summary
-- ACP builder の fork 適用処理における change summary 実装を、正本側実装から公開する薄い realization 実装。実体は正本側の同名モジュールにあり、このファイル自体はその API を realization 側の import 経路へ接続する入口である。
+- `cmoc apply fork` が作業レポート用に使う変更要約 agent call parameter を組み立てる builder。対象リポジトリの raw git diff をプロンプトへ埋め込み、効率向けモデル・中程度 reasoning・読み取り専用アクセス・隣接する JSON schema を指定した呼び出し設定を返す。
+- 通常起動時に oracle 側を import できない制約を踏まえ、正本仕様断片への対応関係をコメントで残しつつ、実行時は realization 側だけで repo root 解決とプロンプト生成を行う。
 
 ## Read this when
-- realization 側から fork 適用処理の change summary API がどの正本実装へ委譲されているか確認したいとき。
-- src 配下の import 経路で change summary 関連の名前解決や再エクスポートを確認したいとき。
+- `cmoc apply fork` の作業レポートに含める変更要約を、どのモデル設定・reasoning・ファイルアクセスモード・schema で生成するかを確認または変更したいとき。
+- 差分要約担当 agent に渡すプロンプト本文、読み取り専用ルール、ルーティング指示、raw git diff の埋め込み方を確認したいとき。
+- 実行時にカレントディレクトリまたは git command から repo root を解決する挙動を確認したいとき。
+- oracle 側の正本仕様断片を実行時 import せずに realization 実装へ反映している箇所を確認したいとき。
 
 ## Do not read this when
-- change summary の具体的な処理内容、データ構造、分岐条件を確認したいとき。その場合は委譲先の正本側実装を読む。
-- fork 適用処理全体の流れや、change summary 以外の apply/builder 責務を調べたいとき。より上位または該当する別モジュールを読む。
+- 差分要約の Structured Output schema の項目や型そのものを確認したいだけのときは、隣接する schema 定義を直接読む。
+- `cmoc apply fork` 全体の fork 作成、適用、git 操作、作業レポート保存などの制御フローを追いたいときは、より上位の apply/fork 実装へ進む。
+- agent call parameter の共通データ構造、モデル種別、reasoning、ファイルアクセスモードの定義を確認したいときは、共通 ACP 定義を読む。
+- oracle file と realization file の一般的な関係や編集ルールを確認したいだけのときは、正本仕様側の基本文書を読む。
 
 ## hash
-- cbb76ca448c88775e7c984af9a60a2bbad476918df7c66b7a30ce457f934ea0f
+- bfc8d4d052a2b8f867aed1b924fc5b6fedee20c80bca51821518bd659703b85c
 
 # `file_finding_enumeration.py`
 

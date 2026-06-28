@@ -1,43 +1,42 @@
 # `acp`
 
 ## Summary
-- oracle src 側の ACP 実装を、realization implementation 側の import 経路から参照できるようにする互換パッケージ領域。
-- この領域自体は ACP の処理本体や正本仕様断片ではなく、acp 名前空間の成立と builder 配下の互換入口へ進むための上位入口として位置づけられる。
-- 下位には builder 領域があり、適用、indexing、review、session、TUI などの正本側 builder 実装へ src 側から到達するための接続点を束ねる。
+- `src` 側の ACP 名前空間入口を扱う realization implementation 領域。実体は正本側実装への互換 import 経路を成立させるための薄いパッケージ境界で、下位の builder 領域へ進む入口にもなる。
+- ACP の実処理や仕様本文を持つ場所ではなく、公開 import 経路から oracle 側実装または下位領域へ到達できるようにする接続層として位置づけられる。
 
 ## Read this when
-- src 側の acp パッケージが oracle src 側の ACP 実装とどのような import 互換経路を持つか確認したいとき。
-- ACP 関連の実処理を読む前に、realization implementation 側ではどの階層が単なる互換入口で、どこから下位領域へ進むべきか切り分けたいとき。
-- ACP builder 配下の適用、indexing、review、session、TUI などの領域へ進む前に、acp 名前空間全体の入口と下位接続を確認したいとき。
+- ACP パッケージ全体の `src` 側 import 入口が存在するか、または oracle src 側との互換経路がどう置かれているかを確認したいとき。
+- ACP 配下で builder 関連の realization implementation へ進むべきか、パッケージ直下の入口だけを確認すべきかを切り分けたいとき。
+- ACP 名前空間そのものの責務が実処理ではなく互換 import の提供に限られていることを確認したいとき。
 
 ## Do not read this when
-- ACP の具体的な処理内容、データ構造、関数、クラス、入出力仕様、アルゴリズムを調べたいとき。その場合は正本側の対応実装、または builder 配下のより直接の対象を読む。
-- oracle file としての正本仕様断片を確認したいとき。この領域は realization implementation 側の互換入口であり、正本仕様本文ではない。
-- ACP 以外の import 互換入口や、cmoc 全体の path model、oracle file、realization file の定義を調べたいとき。
+- ACP の具体的なデータ構造、関数、クラス、処理フロー、agent call parameter の定義を調べたいとき。その場合は正本側実装または該当する下位領域を読む。
+- builder の生成処理、apply、indexing、review、session、TUI など個別機能の挙動を調べたいとき。その場合は builder 配下の該当領域へ進む。
+- 正本仕様断片そのものを確認したいとき。この領域は realization 側の互換入口であり、oracle file ではない。
 
 ## hash
-- c41aed1061b3fbcd4d835d9ce74914d79dddca143b31ee93117b75b1396c1c88
+- 1d46be8772ba21b1f816edc0d91d62647e01c9b05b79b36f5b165e7dbea61e81
 
 # `basic`
 
 ## Summary
-- realization implementation 側の basic パッケージ領域であり、正本側 basic 実装への互換 import 入口をまとめる。
-- この領域自体は独自の機能実装を持つより、ACP、path model、構造化ドキュメントなどの公開名を正本側から再公開する薄い接続層として位置づけられる。
+- realization implementation 側の basic 領域で、正本側 basic との import 互換入口、正本側定義の再公開口、ACP 実行時に共有する呼び出しパラメータ型をまとめる場所。
+- この領域自体の多くは独自ロジックではなく正本側実装への薄い接続を担い、例外的に ACP 呼び出し条件を実行時に受け渡すための型定義を持つ。
 
 ## Read this when
-- realization implementation 側で basic 関連 API がどこから公開されるかを確認したいとき。
-- 正本側 basic 実装と realization implementation 側 basic パッケージの import 構造上の対応を確認したいとき。
-- ACP、path model、構造化ドキュメント関連の公開入口が、独自実装ではなく正本側の再公開であるかを切り分けたいとき。
-- basic 配下の個別領域へ進む前に、この階層が担う役割が互換 import 入口と再公開層であることを把握したいとき。
+- realization implementation 側から basic 概念を import する経路や、正本側 basic との対応関係を確認したいとき。
+- path model や構造化ドキュメント関連の公開名が、realization 側で独自実装されているのか正本側から再公開されているのかを切り分けたいとき。
+- ACP のモデル区分、推論努力、ファイルアクセスモード、プロンプト、structured output schema path をまとめて渡す実行時パラメータ型を確認・変更したいとき。
+- basic パッケージ全体の入口としての意図を確認し、個別の実装本文へ進むか正本側へ進むかを判断したいとき。
 
 ## Do not read this when
-- ACP、path model、構造化ドキュメントの具体的な型、関数、変換規則、検証ロジック、生成ロジックを調べたいとき。その場合は再公開元の正本側実装を読む。
-- path model の概念定義や root token の意味など、正本仕様断片としての説明を確認したいとき。その場合は正本側の該当本文を読む。
-- realization implementation 側で独自に実装された basic 処理を探しているとき。この領域の本文は主に正本側への中継を示す。
-- cmoc 全体の oracle file と realization file の責務分担、INDEX.md エントリー生成規則、ルーティング文書の書き方を調べたいとき。その場合はそれらを定義する正本仕様断片を読む。
+- path model の root token の意味、path 変換仕様、構造化ドキュメントの型・関数・検証規則など、再公開元の具体的な仕様や実装を確認したいとき。その場合は正本側の該当本文を読む。
+- ACP パラメータ値を組み立てるロジック、モデル選択規則、実際のファイルアクセス制御や権限判定を調べたいだけのとき。その場合はそれらの処理を持つ対象へ進む。
+- oracle file と realization file の一般定義、編集責任、正本仕様断片としての扱いを確認したいとき。その場合は基本概念を定義する正本仕様断片を読む。
+- CLI 挙動、サブコマンド処理、永続状態、テスト観点など basic の import 入口や共有型と直接関係しない実装を調べたいとき。
 
 ## hash
-- 4b2b1d9eae2fa6fa3d4011887739b3a417de79c6b3d1066763f21b5d6bc39d9d
+- f1bb0596c35f80d43d7d62b5bccab057c120fc799ccda52f6c1e6b8fb0b8b870
 
 # `cmoc_runtime.py`
 
