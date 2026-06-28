@@ -184,26 +184,24 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドの実装群で、active session の作成、home branch への合流、merge せず破棄する操作を扱う入口となる領域。
-- 各コマンドは CLI runtime から呼ばれ、git branch 操作、session state file の生成・更新、clean worktree や active session の事前条件確認、利用者向け結果表示をそれぞれの責務に応じて担う。
-- merge conflict を Codex CLI に解消させる経路や、cleanup 失敗時の rollback など、session lifecycle の失敗時挙動を追うための実装もこの領域に含まれる。
+- session 系サブコマンドの実装群をまとめる領域。active session の作成、home branch への取り込み、merge せず破棄する操作など、session branch と session state を中心にした CLI 処理への入口になる。
+- 各サブコマンドは CLI runtime 経由で実行され、clean worktree、branch 条件、state file、cmoc ignore、衝突回避や失敗時 rollback など、操作ごとの事前条件と利用者向け出力を扱う。
+- session package 自体には初期化処理や公開 API はほぼなく、具体的な挙動は個別のサブコマンド実装へ進んで確認する。
 
 ## Read this when
-- session 系サブコマンド全体の実装入口を探し、作成、join、abandon のどの処理へ進むべきかを判断したいとき。
-- 通常の local branch から session branch を開始する条件、active session の重複検出、managed branch 上での禁止、session-id 衝突時の retry を調べたいとき。
-- active な session branch を home branch へ merge して合流する処理、merge conflict の Codex CLI 解消、merge 後の状態保存や session branch 削除を確認したいとき。
-- active な session branch を home branch へ merge せず破棄する処理、abandoned への状態遷移、session branch の強制削除、cleanup 失敗時の rollback を確認したいとき。
-- session 操作の git branch 切替、状態ファイル更新、利用者向け出力、失敗時のエラーや warning の順序を確認・変更したいとき。
+- session branch の開始、home branch への merge、merge しない破棄など、session 系 CLI 操作の実行条件・状態遷移・git branch 操作・利用者向け出力を調べたいとき。
+- active session の重複検出、managed branch 上での禁止、clean worktree 要求、session-id の一意性、state file の作成・更新・abandoned/joined 化などを扱う実装へ進みたいとき。
+- merge conflict 解消、Codex CLI への解消依頼、conflict marker や unmerged path の検査、merge commit 完了など、session を home branch に取り込む処理固有の制御を確認したいとき。
+- session 操作の cleanup 失敗時 rollback、post-precondition failure、oracle 根拠コメントなど、session 系サブコマンド固有の失敗時挙動を確認したいとき。
 
 ## Do not read this when
-- session state のデータ構造、永続化形式、schema、path model の定義そのものを確認したいとき。
-- git 実行 wrapper、CLI runtime、worktree clean 判定、branch 判定など、複数サブコマンドで使う共通 helper の詳細実装を調べたいとき。
-- CLI 全体のサブコマンド登録、Typer アプリ構成、または session 以外のサブコマンド実装を調べたいとき。
-- Codex CLI に渡す conflict resolution parameter の具体的な組み立てだけを調べたいとき。
-- INDEX.md 生成や indexing preflight の共通仕様・実装を調べたいとき。
+- session state や apply state のデータ構造、永続化 schema、branch から state を探す仕組みそのものを調べたいとき。より直接の state 関連実装を読む。
+- git 実行 wrapper、CLI runtime、worktree clean 判定、cmoc ignore、branch 判定、path model などの共通 helper の詳細を調べたいとき。共通実装側を読む。
+- CLI 全体のサブコマンド登録、Typer アプリ構成、session 以外のサブコマンド実装を調べたいとき。上位の CLI ルーティングまたは対象サブコマンドの領域へ進む。
+- INDEX 生成や indexing preflight の内部仕様、Codex CLI に渡す conflict resolution parameter の具体的な構築内容だけを調べたいとき。該当する専用実装を読む。
 
 ## hash
-- 8a2f9aaa038f5021b74aa14898037155534237670222f0765bf8d41e6ce6e1e0
+- a8dd6da51414e6474f7ab266f08449bc1e3b976afca68a42a8065ed1f626f355
 
 # `tui.py`
 

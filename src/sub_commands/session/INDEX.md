@@ -58,19 +58,21 @@
 # `join.py`
 
 ## Summary
-- active な session branch を session home branch へ join する CLI 実行本体を扱う実装。事前条件確認、home branch への切替、merge、状態更新、session branch 削除、結果出力までの制御を担う。
-- merge conflict 発生時に Codex CLI へ解消を依頼し、conflict marker や unmerged path の残存確認、add、merge commit までを行う conflict resolution 経路を含む。
+- `session join` サブコマンドの実行本体を扱う。active な session branch を session home branch へ切り替えて merge し、成功時に session state を joined へ更新し、元の session branch 削除結果と警告を利用者向けに出力する。
+- 実行前に indexing preflight、CLI runtime 経由の実行、session/apply state、clean worktree、cmoc ignore、session home branch の確認を行う。merge conflict が発生した場合は Codex CLI に解消を依頼し、marker や unmerged path の残存を検査して merge commit を完了させる。
+- post-precondition failure のエラー出力先、oracle conflict の扱い、Git の conflict marker size への対応など、`session join` 固有の失敗時挙動と制約が近接コメントで示されている。
 
 ## Read this when
-- session join の実行条件、状態遷移、git 操作順序、出力内容、失敗時の扱いを確認・変更したいとき。
-- session join 中の merge conflict を Codex CLI に解消させる処理、conflict marker 検出、unmerged path 検査、merge commit 作成の挙動を確認・変更したいとき。
-- session branch から home branch へ合流した後の状態保存や session branch 削除失敗時 warning の扱いを調べたいとき。
+- `session join` の実行条件、branch 切り替え、merge、state 更新、session branch 削除、利用者向け完了出力を確認または変更するとき。
+- `session join` 中の merge conflict 解消フロー、Codex CLI へ渡す conflict resolution parameter、conflict marker 検出、unmerged path 検査、merge commit の扱いを確認または変更するとき。
+- session branch 上でない場合、session/apply state が条件を満たさない場合、session home branch を特定できない場合、merge 後の手動解決が必要な場合など、`session join` 固有のエラー処理を確認するとき。
+- `run_cli_subcommand`、git 実行関数、Codex exec 関数を差し替えた `session join` の制御ロジックをテスト・調査するとき。
 
 ## Do not read this when
-- session join 以外の session サブコマンドの通常処理を調べたいとき。
-- Codex CLI に渡す conflict resolution parameter の具体的な組み立てを調べたいとき。
-- state schema、branch 名の管理、repo/work root 解決、git 実行 wrapper など、共通 runtime の詳細を調べたいとき。
-- INDEX.md 生成や indexing preflight の共通仕様・実装を調べたいとき。
+- `session join` 以外の session サブコマンドの通常処理を調べたいとき。
+- session state や apply state のデータ構造、永続化形式、branch から state を探す仕組みそのものを調べたいとき。
+- Codex CLI に渡す conflict resolution parameter の具体的な構築内容だけを調べたいとき。
+- INDEX 生成、indexing preflight の内部仕様、cmoc ignore の詳細、git wrapper や CLI runtime の共通実装を調べたいとき。
 
 ## hash
-- c265941188148d6e1c5f9b536ccc09d3f3872b1706107b5666ba668c41374a35
+- 698be6c9d11e0bda3e5e26d260a49e63785c878d1e7db93d4845b7c46fe5fd45
