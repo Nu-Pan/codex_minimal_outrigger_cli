@@ -67,25 +67,25 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 経由テスト群。所見列挙、所見適用、commit、変更要約、report 生成、session state 更新までの制御を、収束・未収束・error・変更ファイル再調査・rolling fork の観測結果としてまとめて検証する。
-- apply fork report に出る結果種別、finding count、変更要約、未実行 loop 表示、未追跡 file の差分扱い、commit message 生成有無など、利用者から見える副作用と内部制御の境界を確認する入口になる。
-- apply fork 用 ACP builder の import 可能性、schema 参照、標準 prompt 内容も同じ文脈で検証し、report と再検査制御に必要な Codex 呼び出し契約を押さえる。
+- apply fork の CLI 経由の挙動を、所見列挙、所見適用、commit、変更要約、report 生成、session state 更新まで一連の制御として検証する realization test。
+- apply fork report の収束、未収束、error、変更ファイル再調査、rolling fork を、同じ loop と report schema の観測結果としてまとめて扱う。
+- apply fork 用 ACP builder の import 可能性、標準 prompt への必須文脈の反映、所見列挙 schema と oracle source の一致、相対 target 拒否も確認する。
 
 ## Read this when
-- apply fork の report 内容、終了コード、収束判定、未収束判定、error report の変更要約を変更または調査するとき。
-- 所見適用後に変更された file を再調査する制御、再調査対象から除外されるもの、差分が出ない所見適用時の扱いを確認するとき。
-- rolling apply fork が前回 apply join 後の変更だけを対象にするか、session state の apply 関連情報をどう更新するかを確認するとき。
-- apply fork の change summary、file finding enumeration、finding application の ACP builder や schema/prompt 参照を変更するとき。
-- apply fork report 用に git diff、未追跡 file、fallback 変更要約を扱う helper の期待挙動を確認するとき。
+- apply fork の report 内容、exit code、収束判定、未収束メッセージ、error report、変更要約、commit message、session state 更新の期待挙動を確認したいとき。
+- apply fork が所見適用後に変更 file を再調査する制御、再調査対象から INDEX.md を外す制御、差分なし適用時の扱いを調べたいとき。
+- rolling apply fork が前回 apply join 後の oracle 側変更だけを対象にするか、join 後状態がどのように次回 fork 対象へ影響するかを確認したいとき。
+- apply fork 関連の ACP builder が src の PYTHONPATH だけで import できるか、prompt に oracle、realization、apply review の標準文脈や path 対応が含まれるかを確認したいとき。
+- report 用変更要約が未 commit 差分や未追跡 file を扱うか、fallback の機械的な変更 path 記録を確認したいとき。
 
 ## Do not read this when
-- apply fork 以外の apply サブコマンド、session fork/join 単体、または一般的な CLI 初期化だけを調べたいとき。
-- report や再検査制御に関係しない ACP builder、prompt、structured output schema の詳細だけを調べたいとき。
-- 実装の内部 helper 分割や低レベルな git command wrapper の仕様を直接確認したいとき。
-- INDEX.md 生成・ルーティング文書の形式や、テストディレクトリ全体の構成だけを知りたいとき。
+- apply fork の実装そのもの、CLI command 定義、git 操作 helper、report renderer の内部構造を変更したいだけで、期待される外部挙動や制御ロジックを確認する必要がないとき。
+- apply join、session fork、init などの各 command 単体の仕様やテストを調べたいとき。ただし apply fork の前後状態としての関係を確認する場合は読む。
+- ACP builder 全般の設計や標準 prompt 生成の共通実装を調べたいとき。apply fork 固有の import、schema、prompt 期待値を確認しないなら、より直接の builder 実装や共通 prompt 側を読む。
+- 未追跡 file や git diff の一般的な helper 挙動だけを調べたいとき。apply fork report の変更要約に関係しないなら、差分取得 helper の実装や専用テストを読む。
 
 ## hash
-- 5269cc7e3288ba2e8762aa14ad04cea5a00c7cfbabb9858fe1dffcdaa64349ff
+- 47044914183596b06deab76deca2be44af60d055c2265376fa59236281022072
 
 # `test_apply_join_cli.py`
 
@@ -273,25 +273,22 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- prompt part と ACP builder が生成する prompt、file access rule、routing rule、各種 standard、structured output schema、builder parameter の回帰を横断的に検証する realization test。
-- 標準 prompt の組み立て、root path の解決、schema と oracle source の一致、builder ごとの model class・reasoning effort・file access mode の期待値を同じ読み取り文脈で確認する。
-- 16,000 文字を超えるが、agent prompt と structured output schema の構築結果を一箇所で追うための凝集性を優先している。
+- prompt part と AgentCallParameter builder の生成結果を横断的に検証する realization test。標準 prompt、routing rule、file access rule、各種 standard の render 結果、root token 解決、builder の model/reasoning/file access 設定、structured output schema と oracle source の一致をまとめて確認する。
+- prompt 構築の回帰観点を一箇所に保つため、16,000 文字を超える理由を冒頭 docstring で説明しており、agent prompt と structured output schema の共通期待値を同じ読み取り文脈で扱う。
 
 ## Read this when
-- prompt part の render 結果や complete prompt に含まれる standard・routing・file access の期待値を変更または確認したいとき。
-- ACP builder が返す AgentCallParameter の model class、reasoning effort、file access mode、prompt 本文、structured output schema path を検証したいとき。
-- apply fork、review oracle、session join、TUI resolve parameter、indexing index entry の builder 出力に関する回帰テストを探すとき。
-- schema JSON が対応する oracle source と一致することや、jsonschema validate 可能な最小例を確認したいとき。
-- path token の解決、絶対 path の置換、cmoc call metadata の除去、code block 内文字列の扱いに関する complete prompt の期待挙動を確認したいとき。
+- prompt_parts の markdown render 結果、blank line 正規化、routing rule や file access rule の文言、complete prompt に含める standard 群の有無を確認・変更する。
+- acp builder が生成する AgentCallParameter の model_class、reasoning_effort、file_access_mode、prompt 内容、structured_output_schema_path を変更する。
+- apply fork、review oracle、session join、TUI parameter resolution、indexing index entry の builder と schema 同期に関するテスト期待値を確認する。
+- root token や worktree/repo root のパス置換、cmoc 呼び出しメタデータ除去、code block 内外の path rendering 挙動を変更する。
 
 ## Do not read this when
-- 個別 builder や prompt part の実装そのものを確認したいだけなら、対応する implementation を直接読む。
-- oracle 側の正本 schema 内容を確認したいだけなら、対応する oracle source の JSON を直接読む。
-- テスト全体の構成や別領域のテストを探しているだけなら、このファイルではなくテスト階層の他の対象へ進む。
-- LLM 出力品質や Codex CLI 自体の挙動を検証するテストを探している場合は、この対象ではない。
+- 個別機能の実装詳細だけを追う場合は、対応する src 側の prompt_parts または builder 実装を先に読む。
+- oracle source schema の正本内容そのものを確認したい場合は、対応する oracle 配下の json を直接読む。
+- CLI コマンド実行やファイルシステム操作など prompt/builder 生成と無関係な挙動を調べる場合は、該当する別のテストまたは実装へ進む。
 
 ## hash
-- 775b91a331e3e4052d1e93c307317268d1b32516327cca655dd75370165a6c13
+- 73e658240a98a03882136ca7f1ce90da420194dae71649a3eae89aa1c410f159
 
 # `test_review_oracle_cli.py`
 

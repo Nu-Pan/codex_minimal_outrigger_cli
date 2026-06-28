@@ -17,20 +17,23 @@
 # `fork`
 
 ## Summary
-- apply fork 系の agent call parameter builder と、その隣接 JSON schema、共通 helper をまとめる領域。`cmoc apply fork` の所見列挙、所見適用、変更要約に関するプロンプト構築、出力契約、リポジトリルート解決を確認する入口になる。
-- oracle 側の正本仕様断片に追従しつつ realization 側で runtime import する場合としない場合の境界、読み書き制約や INDEX.md ルーティング指示を各 agent へ渡す実装が含まれる。
+- apply fork フェーズで使う agent call parameter builder 群と、その agent 出力を検証するための契約、複数 builder で共有する実行環境解決 helper をまとめる領域。
+- 変更要約、file 単位の所見列挙、所見適用という apply fork 作業レポート・レビュー・修正の各 agent 呼び出しを組み立てる入口として位置づけられる。
+- builder は repo root 解決、必要に応じた oracle src import 設定、model class、reasoning effort、file access mode、prompt、出力契約の対応付けを扱う。
 
 ## Read this when
-- `cmoc apply fork` がレビュー・修正・変更要約用 agent を呼ぶための parameter 構築処理を探すとき。
-- apply fork 周辺で使う所見列挙や変更要約の JSON schema を確認し、生成結果の機械可読な契約を検証したいとき。
-- apply fork 配下の builder が共有するリポジトリルート解決 helper や、oracle src との互換 import 経路の扱いを確認したいとき。
-- 修正担当 agent に渡す読み書き範囲、作業禁止事項、INDEX.md 利用方針、差分や所見本文の prompt への埋め込み方を確認したいとき。
+- apply fork フェーズで agent に渡す呼び出し parameter の組み立て方を確認または変更したいとき。
+- apply fork の変更要約、所見列挙、所見適用の各フェーズで、prompt に含める作業指示・読み書き制約・対象差分・所見本文・補助 standard の扱いを調べたいとき。
+- apply fork 系 builder が repo root をどのように解決し、oracle 側の prompt builder や補助 API を import 可能にしているかを確認したいとき。
+- apply fork 関連 agent の出力契約を、変更要約または所見列挙の用途ごとに確認・検証したいとき。
+- oracle 側の正本仕様断片に追従する realization 実装として、通常起動時に oracle src を runtime import しない builder と、prompt 構築時に oracle src を読む builder の境界を確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` 全体の fork 作成、git branch 操作、commit 操作、作業ディレクトリ管理、レポート保存などの制御フローを追いたいとき。
-- 個別 realization file の実装修正内容や、修正担当 agent が実際に編集するコードを調べたいとき。
-- oracle file にある正本 prompt、レビュー基準、path model などの仕様断片そのものを確認したいとき。
-- apply fork 以外の apply 系処理、CLI 出力全体の表示整形、または git 操作一般の実行ロジックを確認したいとき。
+- apply fork 全体の fork 作成、git 操作、作業ディレクトリ管理、レポート保存などの実行制御そのものを追いたいとき。
+- 所見検出の判断基準、apply review standard、oracle standard、realization standard の本文を確認したいとき。
+- oracle 側の正本 prompt 断片や prompt builder 本体を変更したいとき。
+- apply fork 以外の builder、CLI コマンドルーティング、または package 全体の公開 API を調べたいとき。
+- agent 出力を人間向けに表示する CLI 文面や整形処理だけを確認したいとき。
 
 ## hash
-- d28dce9fa0aa69f7a2e715a0e4d1cacdbc61dbacfe853d6acce78a96a8a2b852
+- a6be384ee55c9996879980470424bcd6c1ebdb0bfa8309a99da12fea2a7fa1d7

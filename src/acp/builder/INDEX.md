@@ -17,23 +17,25 @@
 # `apply`
 
 ## Summary
-- apply builder 領域の realization package。oracle 側の package 構造に対応する入口と、apply fork 用 agent call parameter builder、隣接 JSON schema、共通 helper への入口をまとめる。
-- 主な対象は、レビュー所見列挙・所見適用・変更要約のために agent へ渡す prompt、出力契約、読み書き制約、INDEX.md 利用方針、リポジトリルート解決などの構築処理である。
+- agent 呼び出し parameter のうち、変更適用系の fork フェーズに関わる builder 群へ進むための領域。package 初期化要素と、変更要約・file 単位の所見列挙・所見適用に使う呼び出し構築および出力契約の入口を含む。
+- 主な実体は fork フェーズ向けの builder 群であり、repo root 解決、必要に応じた正本側 prompt builder の参照、model class、reasoning effort、file access mode、prompt、出力契約の対応付けを扱う。
 
 ## Read this when
-- apply 系 builder のうち、apply fork が agent を呼び出すための parameter 構築処理を探すとき。
-- レビュー所見列挙、修正担当、変更要約に渡す prompt の組み立て方や、差分・所見本文・作業制約の埋め込み方を確認したいとき。
-- apply fork 周辺で使う JSON schema や、機械可読な出力契約を確認したいとき。
-- oracle 側の apply builder package との互換構造、runtime import 境界、共通 helper の配置を確認したいとき。
+- 変更適用系の fork フェーズで agent に渡す呼び出し parameter の組み立て方を確認または変更したいとき。
+- 変更要約、file 単位の所見列挙、所見適用の各 agent 呼び出しで、作業指示・読み書き制約・対象差分・所見本文・補助 standard が prompt にどう渡るかを調べたいとき。
+- 変更要約または所見列挙に関する agent 出力契約を確認したいとき。
+- 実装側の builder が、通常起動時には正本側実装を runtime import せず、prompt 構築時には正本側 prompt builder や補助 API を参照する境界を確認したいとき。
+- この領域が正本側 package 構造と対応する互換 package として置かれているかを確認したいとき。
 
 ## Do not read this when
-- apply fork 全体の制御フロー、fork 作成、git branch 操作、commit、作業ディレクトリ管理、レポート保存を追いたいとき。
-- 修正担当 agent が実際に編集する realization file の内容や、個別実装の変更内容を調べたいとき。
-- 正本 prompt、レビュー基準、path model など oracle 側の仕様断片そのものを確認したいとき。
-- apply fork 以外の apply 系処理、CLI 表示整形、または git 操作一般の実行ロジックを確認したいとき。
+- fork 作成、git 操作、作業ディレクトリ管理、レポート保存など、変更適用系 fork 全体の実行制御を追いたいとき。
+- 所見検出の判断基準、apply review standard、oracle standard、realization standard の本文を確認したいとき。
+- 正本側の prompt 断片や prompt builder 本体を変更したいとき。
+- 変更適用系 fork 以外の builder、CLI コマンドルーティング、package 全体の公開 API を調べたいとき。
+- agent 出力を人間向けに表示する CLI 文面や整形処理だけを確認したいとき。
 
 ## hash
-- 26cf9cfa2b0f953af201c292be9e3bce0a96f391906969217e521457861cee2b
+- fb83c1bdfe76898f6e311280114ba5a861df8c4f5710d7f90ff1d559e43fed4c
 
 # `indexing`
 

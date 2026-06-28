@@ -1,24 +1,22 @@
 # `acp`
 
 ## Summary
-- oracle src 側と互換の acp import 名前空間を成立させる上位入口で、実処理本体ではなく package 境界としての役割を持つ。
-- 下位には builder realization implementation への入口があり、正本側 builder package との互換 import 境界と、apply、indexing、review、session、TUI などの builder 下位領域へのルーティングを束ねる。
-- agent parameter builder、prompt、JSON schema、TUI パラメータ解決など、ACP builder 配下の公開入口を探す際の起点になる。
+- ACP realization package の入口で、oracle src 側の ACP 実装と互換の import 経路を提供する領域。
+- この階層ではパッケージ入口そのものは最小の互換 import 境界にとどまり、実処理や builder 関連の具体的な入口は下位領域へ分岐する。
+- 下位には ACP builder 領域があり、変更適用系 fork、indexing、review、session、TUI、agent 呼び出し parameter builder、出力契約入口などの builder 系実装・互換境界へ進む起点になる。
 
 ## Read this when
-- acp パッケージ自体が import 対象として成立しているか、または oracle src 互換の import 経路があるかを確認したいとき。
-- ACP builder 全体で、src 側 package 構成が正本側 builder package とどう対応しているかを確認したいとき。
-- apply fork、indexing、review、session join、TUI など、builder のどの下位領域へ進むべきかを切り分けたいとき。
-- 正本側実装を src 側 import 経路から再公開している互換境界と、処理実体を持つ下位領域の入口を確認したいとき。
+- ACP realization 側で、oracle src 側 ACP 実装と互換の import 経路がどこにあるかを確認したいとき。
+- ACP 配下の実処理を読む前に、この階層の入口が実処理ではなく互換 import の成立を主に担うことを確認したいとき。
+- ACP builder 配下で、変更適用、indexing、review、session、TUI、agent 呼び出し parameter builder、出力契約入口のどの領域へ進むべきかを切り分けたいとき。
 
 ## Do not read this when
-- acp の具体的な処理内容、データ構造、関数、クラスの挙動を調べたいときは、該当する下位領域または正本側実装を読む。
-- apply fork 全体の作成、git 操作、commit、作業ディレクトリ管理、レポート保存など builder 外の実行制御を追いたいとき。
-- 正本 prompt、レビュー基準、path model、index entry 定義など oracle 側の仕様断片そのものを確認したいとき。
-- CLI 表示整形、git 操作一般、実際の realization file 編集内容、または builder 以外の ACP 処理を調べたいとき。
+- ACP の個別関数、class、prompt 構成、データ構造、制御フローなどの詳細を直接調べたいとき。その場合は該当する下位領域または対応する実装本文を読む。
+- oracle 側の正本仕様断片そのもの、または ACP 以外の import 互換入口を調べたいとき。
+- fork 作成、git 操作、作業ディレクトリ管理、CLI 表示、レポート保存など、builder ではない実行制御や表示処理を追いたいとき。
 
 ## hash
-- 601013cec8a81c80c75dc50011d0573f0348f51ea6a2dfdb3522e6fbd83e5720
+- 665e7d09847f8dafa6a833302ee2a0b05ac924eb010ba9bdf29566b8eeb9d9e7
 
 # `basic`
 

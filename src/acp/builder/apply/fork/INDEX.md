@@ -18,20 +18,21 @@
 # `_common.py`
 
 ## Summary
-- apply fork 系の builder で共通利用する、リポジトリルート解決の補助処理を収める。現在の作業ディレクトリから親方向に git 管理ディレクトリを探し、見つからない場合は git コマンドの結果からルートを導く。
+- apply fork ACP builder 群で共有する、実行位置からリポジトリルートを解決し、oracle 側の Python 実装を import 可能にするための補助処理を置く。
+- カレントディレクトリの親探索、git コマンドによるフォールバック、oracle/src の sys.path 追加という、各 builder 本体の前提環境を整える責務を持つ。
 
 ## Read this when
-- apply fork の builder 実装で、実行位置に依存せずリポジトリルートを得る処理を確認・変更したいとき。
-- 作業ディレクトリ配下の git 管理ディレクトリ探索と、git コマンドによるフォールバックの失敗時挙動を確認したいとき。
-- apply fork 配下の複数処理から共有される、ルートパス解決 helper の責務境界を確認したいとき。
+- apply fork ACP builder の起動前提として、リポジトリルートの解決方法や失敗時の扱いを確認したいとき。
+- apply fork ACP builder から oracle 側の Python package を import できるようにする経路を確認・変更したいとき。
+- builder 本体ではなく、複数の apply fork builder で共通に使う環境解決 helper の挙動を調べたいとき。
 
 ## Do not read this when
-- apply fork の個別生成内容、ACP 文字列、ファイル更新手順、または分岐ごとの builder 本体を確認したいとき。
-- リポジトリルート以外のパスモデル、work-root や run-root などの概念定義を確認したいとき。
-- git 操作全般の実行ロジック、branch 操作、commit 操作、または fork 適用後の副作用を確認したいとき。
+- apply fork ACP builder が生成する ACP の内容や、個別 builder の出力仕様を確認したいだけのとき。
+- oracle 側 package の中身、正本仕様断片、path model の定義そのものを確認したいとき。
+- apply fork 以外の builder や、CLI 全体のコマンドルーティングを調べたいとき。
 
 ## hash
-- ea60e209134538d8c4711567f78dbca18c863787a438a901a5684682003188d2
+- f75e51370608a6ad649e421173d55eaea5862beb70d5078f73b49b2ef8978dcf
 
 # `change_summary.json`
 
@@ -93,38 +94,41 @@
 # `file_finding_enumeration.py`
 
 ## Summary
-- `cmoc apply fork` で特定ファイルを起点に realization file の要修正点を列挙するための agent call parameter を組み立てる builder。
-- 実行時に oracle 側の正本 prompt builder を import 可能にし、対象 path と repo root を埋め込んだ read-only の所見列挙プロンプトを生成する入口を担う。
+- `cmoc apply fork` で、指定された対象を起点に realization file の要修正点を列挙するための agent call parameter を構築する builder。
+- 実行時に repo root 解決、oracle src import 設定、target path の実パス化を行い、oracle 側の prompt builder と struct doc renderer から read-only の所見列挙プロンプトを生成する。
+- モデル種別、reasoning effort、file access mode、対応する JSON schema path を含む agent 呼び出し設定を返す入口として位置づけられる。
 
 ## Read this when
-- apply fork のファイル単位レビューや所見列挙用 agent call parameter の model、reasoning effort、file access mode、schema 対応を確認・変更したいとき。
-- 所見列挙プロンプトに渡す target path、repo root、oracle standard、realization standard、apply review standard の組み込み方を確認したいとき。
-- oracle src を実行時に import できるようにする探索経路や、見つからない場合の失敗挙動を確認したいとき。
+- `cmoc apply fork` のファイル単位所見列挙 agent に渡す prompt や agent call parameter の組み立てを確認・変更したいとき。
+- 対象 path を起点に oracle file と realization file を読ませ、apply review standard に従う所見リストを返させる指示内容を調べたいとき。
+- apply fork 系 builder が oracle src の正本 prompt 断片をどのタイミングで import し、render しているかを確認したいとき。
+- 所見列挙用 agent の file access mode、model class、reasoning effort、structured output schema の対応付けを確認したいとき。
 
 ## Do not read this when
-- apply fork 全体の制御フロー、サブコマンド実行、または fork 作成・適用処理そのものを調べたいとき。
-- 所見列挙の正本プロンプト内容やレビュー基準自体を確認したいとき。この実装ではなく oracle 側の該当正本断片を読む方が直接的。
-- 生成された所見リストの JSON schema の詳細だけを確認したいとき。schema 対応ファイルを読む方が直接的。
+- `cmoc apply fork` の所見列挙結果そのものの schema 定義だけを確認したいときは、対応する JSON schema を直接読む。
+- prompt の正本仕様断片そのものを確認・変更したいときは、oracle src 側の対応する prompt builder を読む。
+- apply fork 全体の共通 repo root 解決や oracle import 設定の実装を確認したいだけなら、共通 helper 側を読む。
+- 実際の所見検出ロジックや review standard の内容を調べたいときは、この builder ではなく oracle standard、realization standard、apply review standard の本文を読む。
 
 ## hash
-- 9342009ed7211ac290eb3e764f5e9e81d6a0894a71e40a3f82250590953e825a
+- 721d2ea1fb9ff072680dc0b1433665dae203581ebc43e6407aefdffa8317bd3a
 
 # `finding_application.py`
 
 ## Summary
-- `cmoc apply fork` で、所見本文を realization file 修正担当 agent へ渡すための agent call parameter を構築する実装。
-- 所見一覧を JSON としてプロンプトへ埋め込み、読み書き範囲、ルーティング方針、作業上の禁止事項、place holder definition を含む修正依頼文を生成する。
+- `cmoc apply fork` で検出済みの所見を修正担当 agent に渡すための agent call parameter を構築する realization implementation。
+- 所見適用用の model class、reasoning effort、file access mode を固定し、所見リストを JSON code block として含む完全 prompt を oracle 側の prompt builder から組み立てる。
+- prompt には作業上の注意、所見本文、repo root placeholder、oracle/realization の基本説明、realization standard を含める入口として機能する。
 
 ## Read this when
-- `cmoc apply fork` が所見を適用する agent をどの model class、reasoning effort、file access mode、prompt で呼び出すかを確認したいとき。
-- 所見本文が修正担当 agent のプロンプトへどのように渡されるか、また修正担当 agent にどの作業制約が与えられるかを確認したいとき。
-- realization file 修正担当 agent 向けの読み書き規則、`INDEX.md` 利用方針、git add・git commit 禁止の指示を調整したいとき。
+- `cmoc apply fork` の所見適用フェーズで呼び出す agent の model、reasoning effort、file access mode を確認または変更したいとき。
+- 所見リストがどのように prompt へ埋め込まれ、修正担当 agent に渡されるかを確認したいとき。
+- 所見適用 prompt に含める補助文書、作業上の禁止事項、placeholder、oracle/realization standard の組み込み方を変更したいとき。
 
 ## Do not read this when
-- 所見の検出、分類、生成、妥当性評価そのものを確認したいとき。
-- `cmoc apply fork` 以外の apply 系処理や、所見適用以外の agent call parameter 構築を確認したいとき。
-- repository root の解決方法そのものを確認したいとき。
-- 修正担当 agent が実際に編集する個別 realization file や、その修正ロジックを確認したいとき。
+- 所見の検出、分類、生成そのもののロジックを調べたいとき。
+- repo root 解決や oracle src import の共通処理だけを調べたいとき。
+- oracle 側で定義される prompt builder、構造化 markdown rendering、または正本 prompt 断片そのものを変更したいとき。
 
 ## hash
-- 43c0b963de149d2a846c5bb0ff27d28af87db8042e59363963439c793d625c6c
+- add413689c4a9fe189eead9e6ab3e2fcfd524475672367a5fd86d896b3318aad

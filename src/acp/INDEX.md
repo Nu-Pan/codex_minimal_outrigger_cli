@@ -18,20 +18,20 @@
 # `builder`
 
 ## Summary
-- ACP builder realization implementation の上位入口で、正本側 builder 実装への互換 import 境界と、apply、indexing、review、session、TUI など下位 builder 領域へのルーティングを束ねる。
-- この階層の多くは実処理本体ではなく、正本側 package 構造に対応する src 側の公開経路や shim を提供するが、apply 領域には agent call parameter、prompt、JSON schema、共通 helper など実際の構築処理へ進む入口も含まれる。
+- ACP builder 領域の realization 側入口で、正本側 builder 実装への互換 import 境界と、変更適用系 fork、indexing、review、session、TUI などの下位 builder 領域へ進むための分岐点をまとめる。
+- この階層では、実処理を持つ実装本体よりも、src 側から正本側実装や下位領域へ到達する公開経路、互換 package、呼び出し parameter builder、出力契約入口の位置づけを扱う。
 
 ## Read this when
-- ACP builder 全体で、src 側の package 構成が正本側 builder package とどう対応しているかを確認したいとき。
-- apply fork、indexing、review、session join、TUI など、builder のどの下位領域へ進むべきかを切り分けたいとき。
-- 正本側実装を src 側 import 経路から再公開している互換境界や、処理実体を持つ下位領域の入口を確認したいとき。
-- agent に渡す parameter builder、prompt 組み立て、出力 schema、TUI パラメータ解決入口など、ACP builder 配下の公開入口を探し始めるとき。
+- ACP builder 配下で、どの下位領域が変更適用、indexing、review、session、TUI、互換公開入口のどれを担うかを切り分けたいとき。
+- src 側の ACP builder package が、正本側の builder package 構造や実装へどのように対応しているかを確認したいとき。
+- agent 呼び出し parameter の builder 群や出力契約の入口を探しており、まず変更適用系 fork など対象領域を選びたいとき。
+- 実処理本体を読む前に、この階層が主に互換 import 境界なのか、下位に具体的な builder 実装入口を持つのかを判断したいとき。
 
 ## Do not read this when
-- 個別 builder の具体的な関数、クラス、生成ロジック、バリデーション、制御フローを直接調べたいときは、該当する下位領域または正本側実装を読む。
-- apply fork 全体の作成、git 操作、commit、作業ディレクトリ管理、レポート保存など builder 外の実行制御を追いたいとき。
-- 正本 prompt、レビュー基準、path model、index entry 定義など oracle 側の仕様断片そのものを確認したいとき。
-- CLI 表示整形、git 操作一般、実際の realization file 編集内容、または builder 以外の ACP 処理を調べたいとき。
+- 個別の builder 関数、class、prompt 構成、データ構造、制御フローの詳細を直接調べたいとき。その場合は該当する下位領域または正本側実装を読む。
+- fork 作成、git 操作、作業ディレクトリ管理、CLI 表示、レポート保存など、builder ではない実行制御や表示処理を追いたいとき。
+- oracle standard、apply review standard、realization standard など、判断基準や正本仕様本文そのものを確認したいとき。
+- 正本側の仕様断片や prompt builder 本体を編集・確認したいとき。この階層は realization 側の入口や互換境界を扱う。
 
 ## hash
-- 024b61aec0f67974cd0c29bd73fc4bfe439e3f59253dc61bebea262718c285dc
+- 27b38c69c6df43297ac780fae8faed3e2b07b50aae5a758899b8d81f530cfbc9
