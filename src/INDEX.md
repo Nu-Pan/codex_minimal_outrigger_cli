@@ -1,23 +1,25 @@
 # `acp`
 
 ## Summary
-- `src/acp` は、cmoc が AI エージェントを呼び出す直前に使うプロンプト部品、完全プロンプト、AgentCallParameter、Structured Output schema の構築実装をまとめる領域。標準文書の注入、ファイルアクセス規則、oracle/realization/review/index entry 規範、個別サブコマンド用の role・summary・goal・補助入力・モデル設定の対応関係を扱う。
-- 下位には、標準 prompt 断片を生成・統合する領域と、apply fork、review oracle、indexing、session join、tui などの処理ごとに AI 呼び出しパラメータを組み立てる領域がある。実際のサブコマンド実行、git 操作、ファイル編集、レビュー結果の永続化ではなく、それらの前段で AI に渡す依頼文と応答契約を決める入口になる。
+- AI エージェント呼び出しに関わる実装領域への入口。呼び出しパラメータを組み立てる処理と、その呼び出しで使う標準プロンプト部品の生成処理を下位に持つ。
+- 各機能が AI に何を依頼し、どの role、goal、補助入力、ファイルアクセス権限、モデル設定、Structured Output schema、標準文書を渡すかを追うための上位ルーティングになる。
+- 変更要約、レビュー、INDEX.md エントリー生成、merge conflict marker 解消、TUI 実行条件など、AI 作業依頼の呼び出し条件とプロンプト規範の対応を調べる起点になる。
 
 ## Read this when
-- AI エージェントへ渡す complete prompt、標準 prompt 断片、補助入力、file access mode、model class、reasoning effort、Structured Output schema の組み合わせを確認または変更したいとき。
-- cmoc の apply fork、review oracle、indexing、session join、tui などが、どのような役割・目的・制約・標準文書を付けて AI 呼び出しを行うかを処理別に追いたいとき。
-- oracle/realization の基本説明、ファイルアクセス制約、INDEX.md ルーティング規則、oracle review・apply review・index entry の標準を、prompt としてどの文面・順序で構築しているか調べたいとき。
-- Structured Output schema を伴う AI 応答が、どの呼び出しビルダーから参照され、どの段階の機械処理可能な結果として期待されているかを確認したいとき。
+- cmoc の機能が AI エージェントを呼び出す直前に、どのようなパラメータやプロンプト部品を構築しているかを調べたいとき。
+- AI 呼び出しの complete prompt、標準プロンプト、aux_prompt、file access mode、model class、reasoning effort、Structured Output schema の関係を追いたいとき。
+- 個別の AI 作業依頼そのものの設定を調べるべきか、標準プロンプトや規範文書の生成処理を調べるべきかを切り分けたいとき。
+- INDEX.md エントリー生成、oracle review、apply review、merge conflict marker 解消、TUI 向け権限選定など、AI に渡す依頼内容や判断基準の入口を探したいとき。
 
 ## Do not read this when
-- CLI サブコマンドの登録、引数解析、実行順序、状態管理、git branch や merge の実処理、ファイル保存、レビュー結果の集約・表示など、AI 呼び出し前後の制御フローだけを調べたいとき。
-- AgentCallParameter、FileAccessMode、ModelClass、ReasoningEffort、StructDoc、path model などの基礎型そのものの定義や汎用ユーティリティを確認したいとき。
-- oracle file や realization file の本文仕様、または実際にレビュー・修正・要約される対象ファイルの内容を直接調べたいとき。
-- 生成済み INDEX.md の管理、リポジトリ全体の目次更新処理、または標準 prompt ではなく個別機能の実行結果を保存・適用する処理を確認したいとき。
+- CLI サブコマンドの登録、引数解析、実行順序、git 操作、ファイル保存、状態管理など、AI 呼び出しの前後にある制御フローだけを調べたいとき。
+- oracle file や realization file の本文、実際にレビュー・修正される対象ファイルの仕様や実装を直接確認したいとき。
+- AgentCallParameter、FileAccessMode、path model、StructDoc、Markdown rendering など、基礎型や共通文書構築の低レベル実装そのものを確認したいとき。
+- AI 応答を受け取った後の結果集約、保存、表示、適用可否判断、テスト実行、ユーザー通知を調べたいとき。
+- 生成済みの INDEX.md の保存・描画・更新や、リポジトリ全体のルーティング文書管理だけを確認したいとき。
 
 ## hash
-- c7812cd460ab17a414b2e88c47216169b1a1b581995ff92b6e025dd4af49de31
+- 6e72f37e10d76d7b2eec6a715e92138c2a2c312459c4c0de9f8c81648ceedebc
 
 # `basic`
 

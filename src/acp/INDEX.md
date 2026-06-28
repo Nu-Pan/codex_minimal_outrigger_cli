@@ -25,21 +25,22 @@
 # `prompt_parts`
 
 ## Summary
-- AI agent に渡す標準 prompt 断片と、その断片群を統合して完全な prompt 文書列を構築する実装をまとめた領域。
-- ファイルアクセス制約、INDEX.md ルーティング規則、oracle/realization の基本概念、oracle・realization・review・index entry の各規範など、agent call の前提文書として注入される文章を構造化文書として生成する。
-- 個別の規範本文を変更する入口と、複数の標準 prompt の有効化依存・挿入順序・root token 置換を確認する入口の両方を含む。
+- AI agent に渡す各種標準プロンプト部品を構築する realization implementation 群を収めるディレクトリ。ファイルアクセス規則、ルーティング規則、oracle / realization の基本概念、oracle 記述規範、realization 品質規範、oracle review / apply review / INDEX.md エントリー生成の判定基準などを、構造化文書として生成する責務を持つ。
+- 完全な agent call 用プロンプトを組み立てる統合処理と、その構成要素になる個別の規範文書生成処理の入口になる。標準プロンプトの有効化、注入順序、root token 置換、各 prompt part の本文や責務境界を調べる際に参照する。
 
 ## Read this when
-- agent call に含める標準 prompt の文面、構成順序、依存関係、または Codex CLI に渡す直前の文書列生成を確認・変更したいとき。
-- ファイル読み書き制約、INDEX.md の読み進め方、oracle と realization の責務境界、oracle file の記述規範、realization file の品質規範を prompt としてどう生成しているか調べたいとき。
-- oracle review や apply review で、所見に含めるべき問題と対象外にすべき推測・未定義部分・品質改善案の境界を prompt 文面として確認したいとき。
-- INDEX.md エントリー作成時に従うべき標準や、エントリーをルーティング情報として機能させるための要求事項を実装側で確認・変更したいとき。
+- AI agent に渡す標準プロンプトや規範文書が、どの prompt part から生成されるか確認したいとき。
+- ファイルアクセス規則、ルーティング規則、oracle / realization の基本概念、oracle 標準、realization 標準、review 標準、apply review 標準、INDEX.md エントリー標準のいずれかの本文を変更したいとき。
+- agent call 用の完全なプロンプトに、基本プロンプト、追加文書、各種標準プロンプト、root token 置換処理がどの順序で組み込まれるか追いたいとき。
+- oracle file や realization file を扱う AI の判断基準、編集境界、品質基準、レビュー所見の分類基準をプロンプトとしてどう提示しているか調べたいとき。
+- INDEX.md を使った読む先の選び方や、INDEX.md エントリー自体の生成品質基準をプロンプト部品として確認・調整したいとき。
 
 ## Do not read this when
-- 特定の CLI コマンド、状態ファイル、path model、入出力 schema など、個別機能の仕様や実装を調べたいとき。
-- 生成された prompt を使う上位の agent 実行フロー、保存処理、レビュー実行処理、または CLI 引数処理そのものを調べたいとき。
-- 構造化文書の基礎データ型、標準・要求事項の汎用変換処理、root token や work root の定義そのものを変更したいとき。
-- 特定の oracle file や realization file の本文内容を調査したいだけで、agent に渡す標準 prompt の文面や統合順序に関心がないとき。
+- 個別 CLI コマンド、入出力 schema、状態ファイル、path model など、プロンプト規範ではない機能仕様や実装を調べたいとき。
+- 構造化文書の基礎型、Standard / Requirement のデータ構造、レンダリング処理そのものを確認したいとき。
+- 特定の oracle file 本文や realization implementation 本文を調査したいだけで、AI に渡す規範プロンプトの生成処理を変更しないとき。
+- 生成済みの実際の INDEX.md エントリー内容や、特定ディレクトリのルーティング結果だけを確認したいとき。
+- 作業ルートや root token の基礎的な定義・解決規則だけを調べたいとき。
 
 ## hash
-- 7d3376e91a5e0de3f0c927fac38d9133fa6ec1d7c781fde26a5cf52e26d901a5
+- 960324e0ce9ec8e2a1297f6414f95e079a12203206e6046dc59e8981ee6404bd

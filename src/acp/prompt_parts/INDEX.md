@@ -22,23 +22,26 @@
 # `complete_prompt.py`
 
 ## Summary
-- agent call に渡す完全な prompt 文書列を構築する realization。role・summary・goal・file access rule・routing rule・任意追加文書を基礎にし、指定された標準 prompt 群を依存関係込みで追加してから、Codex CLI 向けに root token 表記を実 path 表記へ置換する。
-- 個別の prompt part を生成する場所ではなく、複数の prompt part を統合し、標準 prompt の有効化フラグ間の依存を解決し、最終的な StructDoc 一覧として返す入口である。
+- agent call に渡す完全なプロンプト文書列を、基本プロンプト、ファイルアクセス規則、ルーティング規則、任意追加文書、各種標準プロンプトの組み合わせとして構築する realization。
+- 各種標準プロンプトの有効化フラグ間の依存関係をここで補正し、必要な基本情報や標準文書が欠けないように注入順序を決める。
+- Codex CLI に渡す直前の文書木全体に対して、root token を実行時に見える実 path へ置換し、一部の literal root-token 表記だけを保護する sanitize 処理も担う。
 
 ## Read this when
-- agent call に渡す prompt 全体の構成順序、含める基礎文書、または標準 prompt 群の注入条件を変更したいとき。
-- oracle・realization・review・index entry などの標準 prompt を有効化した際に、どの前提標準も同時に含めるべきかを確認または変更したいとき。
-- prompt を Codex CLI に渡す直前の root token 置換、StructDoc/StructCodeBlock を再帰的に処理する sanitization、または RUN root の fallback 解決を調べるとき。
-- 追加 prompt を基礎 prompt と標準 prompt のどの位置に挿入するか、最終的な prompt 文書列の並びを確認したいとき。
+- agent call 用の完全なプロンプトがどの構成要素から作られるか、または構成要素の順序を確認・変更したいとき。
+- oracle、realization、review、apply review、index entry などの標準プロンプトを有効化するフラグ間の依存関係を確認・変更したいとき。
+- 追加プロンプトを基本プロンプトや標準プロンプトとどの位置関係で混ぜるかを確認したいとき。
+- プロンプト内の root token が Codex 実行時の絶対 path へどう置換されるか、または置換から保護される literal 表記の条件を確認・変更したいとき。
+- agent に渡す StructDoc / StructCodeBlock の文書木を再帰的に変換する処理を追いたいとき。
 
 ## Do not read this when
-- 個別の file access rule、routing rule、oracle standard、realization standard、review standard、index entry standard の本文生成内容だけを変更したいときは、それぞれの builder を読む方が直接的である。
-- RootToken の定義、real path 解決、work root 解決の仕様や実装を調べたいだけのときは、path model 側を読む方が直接的である。
-- StructDoc や StructCodeBlock のデータ構造そのものを変更したいときは、構造化文書の定義側を読む方が直接的である。
-- prompt に含める各標準の文章内容をレビューしたいだけで、統合順序や依存フラグや root token 置換に関心がないとき。
+- 個々の標準プロンプト本文そのものの文言や仕様を確認・変更したいだけのときは、その標準プロンプトを構築する各対象を直接読む。
+- ファイルアクセス規則やルーティング規則の本文を確認・変更したいだけのときは、それぞれの規則を構築する対象を直接読む。
+- root token の定義、実 path 解決、work root 解決の基礎仕様を確認したいだけのときは、path model 側を読む。
+- StructDoc や StructCodeBlock のデータ構造そのものを確認・変更したいだけのときは、構造化文書を定義する対象を読む。
+- 特定の oracle / realization 標準に従うべきかという仕様判断だけをしたいときは、この統合処理ではなく該当する標準本文を読む。
 
 ## hash
-- fd85d6560af0c72196331c68a3e01f9e62ad8c00c2fa9b097aabc0883531a88f
+- ffd0e83b35fd022139dfb63fc6617dc847f0719358bd0fe5626e1f5867fa6a28
 
 # `file_access_rule.py`
 
