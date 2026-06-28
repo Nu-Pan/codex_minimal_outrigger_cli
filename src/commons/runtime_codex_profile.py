@@ -7,6 +7,7 @@ subprocess 境界の不変条件を共有するため、分割すると呼び出
 失敗時文脈が増える。現状は Codex profile 境界として一箇所に保つ方が凝集性が高い。
 """
 
+import hashlib
 import json
 import os
 import subprocess
@@ -158,25 +159,79 @@ def protected_write_paths(mode: FileAccessMode) -> tuple[str, ...]:
     return (".agents",)
 
 
-def protected_write_status(mode: FileAccessMode, root: Path) -> str:
-    paths = protected_write_paths(mode)
-    if not paths:
-        return ""
+def _git_stdout(root: Path, args: list[str]) -> str:
     return subprocess.run(
-        [
-            "git",
-            "status",
-            "--short",
-            "--ignored",
-            "--untracked-files=all",
-            "--",
-            *paths,
-        ],
+        ["git", *args],
         cwd=root,
         text=True,
         capture_output=True,
         check=False,
     ).stdout
+
+
+def _git_paths(root: Path, args: list[str]) -> list[str]:
+    stdout = subprocess.run(
+        ["git", *args],
+        cwd=root,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    ).stdout
+    return sorted(path.decode() for path in stdout.split(b"\0") if path)
+
+
+def _worktree_file_hash(root: Path, relative_path: str) -> str:
+    path = root / relative_path
+    if path.is_symlink():
+        return "symlink:" + hashlib.sha256(os.readlink(path).encode()).hexdigest()
+    if path.is_file():
+        return "file:" + hashlib.sha256(path.read_bytes()).hexdigest()
+    if path.exists():
+        return "other"
+    return "missing"
+
+
+def protected_write_status(mode: FileAccessMode, root: Path) -> str:
+    paths = protected_write_paths(mode)
+    if not paths:
+        return ""
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # `git status --short` alone cannot detect content changes when a deny
+    # path is already dirty before Codex runs, so the guard snapshots content.
+    tracked_paths = _git_paths(root, ["ls-files", "-z", "--", *paths])
+    other_paths = _git_paths(
+        root, ["ls-files", "--others", "--exclude-standard", "-z", "--", *paths]
+    )
+    ignored_paths = _git_paths(
+        root,
+        ["ls-files", "--others", "--ignored", "--exclude-standard", "-z", "--", *paths],
+    )
+    file_paths = sorted(set(tracked_paths + other_paths + ignored_paths))
+    return json.dumps(
+        {
+            "status": _git_stdout(
+                root,
+                [
+                    "status",
+                    "--short",
+                    "--ignored",
+                    "--untracked-files=all",
+                    "--",
+                    *paths,
+                ],
+            ),
+            "diff": _git_stdout(root, ["diff", "--binary", "--", *paths]),
+            "cached_diff": _git_stdout(
+                root, ["diff", "--cached", "--binary", "--", *paths]
+            ),
+            "files": [
+                [relative_path, _worktree_file_hash(root, relative_path)]
+                for relative_path in file_paths
+            ],
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+    )
 
 
 def reject_protected_write(

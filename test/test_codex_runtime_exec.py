@@ -267,6 +267,46 @@ def test_run_codex_exec_logs_call_before_rejecting_agents_edit(
     assert "- returncode: `0`" in console
 
 
+@pytest.mark.parametrize("initial_state", ["untracked", "tracked_dirty"])
+def test_run_codex_exec_rejects_dirty_agents_content_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, initial_state: str
+) -> None:
+    root = make_repo(tmp_path)
+    agents_file = root / ".agents" / "generated.md"
+    agents_file.parent.mkdir()
+    agents_file.write_text("original\n")
+    if initial_state == "tracked_dirty":
+        run_git(root, "add", ".agents/generated.md")
+        run_git(root, "commit", "-m", "track agents file")
+    agents_file.write_text("dirty before codex\n")
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text(json.dumps({'ok': True}))",
+            "(pathlib.Path('.agents') / 'generated.md').write_text('changed by codex\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    with pytest.raises(CmocError, match=r"\.agents 配下を変更") as exc_info:
+        run_codex_exec(
+            _parameter(),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
+
+    assert ".agents/generated.md" in exc_info.value.detail
+
+
 @pytest.mark.parametrize(
     ("mode", "script_lines", "expected"),
     [
