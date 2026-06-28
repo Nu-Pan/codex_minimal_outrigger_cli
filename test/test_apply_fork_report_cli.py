@@ -8,6 +8,9 @@ report schema の観測結果として読まれるため、分割すると期待
 """
 
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 from basic.acp import AgentCallParameter
@@ -34,6 +37,28 @@ class FakeCodexResult:
         """必要な結果 field をテストごとに差し替えられるように保持する。"""
         self.output_json = output_json
         self.output_text = output_text
+
+
+def test_change_summary_builder_imports_with_src_pythonpath_only() -> None:
+    root = Path(__file__).parents[1]
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "from acp.builder.apply.fork.change_summary import "
+                "build_apply_fork_change_summary_parameter as build; "
+                "p = build('diff'); "
+                "assert p.structured_output_schema_path.name == 'change_summary.json'"
+            ),
+        ],
+        cwd=root,
+        env={**os.environ, "PYTHONPATH": str(root / "src")},
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 def report_path_from_stdout(stdout: str) -> Path:
