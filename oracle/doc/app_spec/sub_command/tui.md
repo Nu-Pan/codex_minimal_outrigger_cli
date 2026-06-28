@@ -76,5 +76,5 @@
         ```text
         `<work-root>/.cmoc/log/tui/<time-stamp>_cmpl.md` の指示に従って下さい。
         ```
-    - 実際に `codex` に渡す文字列では `<work-root>`, `<time-stamp>` トークンを実際の値で置き換えること
+    - 実際に `codex` に渡す文字列では `<work-root>`, `<time-stamp>` を実際の値で置き換えること
     
