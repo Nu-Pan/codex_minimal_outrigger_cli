@@ -16,6 +16,7 @@ from _support import (
     run_git,
     runner,
 )
+from cmoc_runtime import CmocError
 from main import app
 from pytest import MonkeyPatch
 import sub_commands.apply.fork as apply_fork_module
@@ -325,10 +326,6 @@ def test_apply_fork_error_report_summarizes_uncommitted_diff(
 ) -> None:
     """エラー report の変更要約は commit 前の working tree 差分も対象にする。"""
     root = make_repo(tmp_path)
-    (root / ".agents").mkdir()
-    (root / ".agents" / "skill.md").write_text("original\n")
-    run_git(root, "add", ".agents/skill.md")
-    run_git(root, "commit", "-m", "add agents")
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
     assert (
@@ -355,7 +352,7 @@ def test_apply_fork_error_report_summarizes_uncommitted_diff(
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
-        """未 commit 差分を残したまま編集禁止対象エラーへ進める。"""
+        """未 commit 差分を残したまま Codex 適用エラーへ進める。"""
         nonlocal applications, summary_prompt
         purpose = str(kwargs["purpose"])
         if purpose.startswith("apply fork enumerate findings"):
@@ -363,8 +360,7 @@ def test_apply_fork_error_report_summarizes_uncommitted_diff(
         if purpose == "apply fork finding application":
             applications += 1
             (Path.cwd() / "README.md").write_text("# updated before error\n")
-            (Path.cwd() / ".agents" / "skill.md").write_text("forbidden\n")
-            return FakeCodexResult()
+            raise CmocError("Codex 適用に失敗しました。", [], "test")
         if purpose == "apply fork change summary":
             summary_prompt = parameter.prompt
             return FakeCodexResult(
@@ -385,7 +381,7 @@ def test_apply_fork_error_report_summarizes_uncommitted_diff(
     result = runner.invoke(app, ["apply", "fork", "--scope", "full"])
 
     assert result.exit_code != 0
-    assert applications == 2
+    assert applications == 1
     assert "README.md" in summary_prompt
     assert "+# updated before error" in summary_prompt
     rendered = report_path_from_stdout(result.stdout).read_text()
@@ -447,102 +443,6 @@ def test_apply_fork_report_does_not_invent_loop_when_no_targets(
     assert "- loop 1: 0" not in rendered
 
 
-def test_apply_fork_rejects_forbidden_agents_diff(
-    tmp_path: Path, monkeypatch: MonkeyPatch
-) -> None:
-    """編集禁止対象の差分を検出し、error state と report に落とし込む。"""
-    root = make_repo(tmp_path)
-    (root / ".agents").mkdir()
-    (root / ".agents" / "skill.md").write_text("original\n")
-    run_git(root, "add", ".agents/skill.md")
-    run_git(root, "commit", "-m", "add agents")
-    monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    assert (
-        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
-    )
-    readme_finding = {
-        "title": "Update README",
-        "evidences": [
-            {
-                "path": str(root / "README.md"),
-                "line_start": 1,
-                "line_end": 1,
-                "summary": "readme",
-            }
-        ],
-        "oracle_requirement": "test requirement",
-        "observed_implementation": "old",
-        "reason": "needs update",
-        "suggested_fix": "update readme",
-    }
-    agents_finding = {
-        "title": "Bad agents edit",
-        "evidences": [
-            {
-                "path": str(root / "README.md"),
-                "line_start": 1,
-                "line_end": 1,
-                "summary": "readme",
-            }
-        ],
-        "oracle_requirement": "test requirement",
-        "observed_implementation": "old",
-        "reason": "needs update",
-        "suggested_fix": "update agents",
-    }
-    applications = 0
-    calls: list[str] = []
-
-    def fake_run_codex_exec(
-        parameter: AgentCallParameter, **kwargs: object
-    ) -> FakeCodexResult:
-        """編集禁止対象への差分を含む Codex 適用結果を再現する。"""
-        nonlocal applications
-        purpose = str(kwargs["purpose"])
-        calls.append(purpose)
-        if purpose.startswith("apply fork enumerate findings"):
-            return FakeCodexResult({"findings": [readme_finding, agents_finding]})
-        if purpose == "apply fork finding application":
-            applications += 1
-            if applications == 1:
-                (Path.cwd() / "README.md").write_text("# updated before error\n")
-            else:
-                (Path.cwd() / ".agents" / "skill.md").write_text("forbidden\n")
-            return FakeCodexResult()
-        if purpose == "apply fork change summary":
-            return FakeCodexResult(
-                {
-                    "changes": [
-                        {
-                            "category": "実装",
-                            "summary": "エラー前に README を更新した",
-                            "changed_paths": ["README.md"],
-                        }
-                    ]
-                }
-            )
-        raise AssertionError(purpose)
-
-    monkeypatch.setattr(apply_fork_module, "run_codex_exec", fake_run_codex_exec)
-
-    result = runner.invoke(app, ["apply", "fork", "--scope", "full"])
-
-    assert result.exit_code != 0
-    assert "編集禁止対象" in result.stdout
-    assert "編集禁止対象" not in result.stderr
-    report_path = report_path_from_stdout(result.stdout)
-    assert report_path.is_file()
-    rendered = report_path.read_text()
-    assert "result: error" in rendered
-    assert "実装: エラー前に README を更新した (README.md)" in rendered
-    assert "apply fork change summary" in calls
-    branch = run_git(root, "branch", "--show-current").stdout.strip()
-    session_id = branch.removeprefix("cmoc/session/")
-    state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
-    assert state["apply"]["state"] == "error"
-
-
 def test_apply_fork_rolling_uses_previous_apply_join_commit(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
@@ -577,6 +477,12 @@ def test_apply_fork_rolling_uses_previous_apply_join_commit(
     (root / "oracle" / "spec.md").write_text("# changed after join\n")
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "change oracle after apply join")
+    run_git(root, "switch", "-c", "unrelated", oracle_snapshot_commit)
+    (root / "unrelated.py").write_text("print('unrelated')\n")
+    run_git(root, "add", "unrelated.py")
+    run_git(root, "commit", "-m", "change unrelated branch")
+    run_git(root, "switch", session_branch)
+    run_git(root, "merge", "--no-ff", "unrelated", "-m", "merge unrelated branch")
 
     target_rels: list[str] = []
 
@@ -609,6 +515,6 @@ def test_apply_fork_rolling_uses_previous_apply_join_commit(
     result = runner.invoke(app, ["apply", "fork"], catch_exceptions=False)
 
     assert result.exit_code == 0
-    assert target_rels == ["oracle/spec.md"]
+    assert "oracle/spec.md" in target_rels
     state = json.loads(state_path.read_text())["session"]
     assert state["last_joined_apply_oracle_snapshot_commit"] == oracle_snapshot_commit

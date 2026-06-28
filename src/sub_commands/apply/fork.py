@@ -2,13 +2,12 @@
 
 このファイルは 16,000 文字を超えるが、責務境界は一つの apply run を開始し、
 対象列挙、Codex による finding 適用、commit、state 更新まで進める制御に閉じている。
-apply state、worktree、禁止差分 rollback、再キュー、commit subject は同じ loop の
-失敗時復旧条件を共有するため、分割すると fork 中の読み取り文脈がかえって分散する。
+apply state、worktree、再キュー、commit subject は同じ loop の失敗時復旧条件を
+共有するため、分割すると fork 中の読み取り文脈がかえって分散する。
 現状は apply fork の orchestration として一箇所に保つ方が凝集性が高い。
 """
 
 import os
-import shutil
 from pathlib import Path
 from typing import Callable
 
@@ -23,6 +22,7 @@ from cmoc_runtime import (
     CliRunResult,
     CmocError,
     SessionState,
+    apply_branch_session_id,
     create_run_worktree,
     current_branch,
     current_subcommand_logger,
@@ -124,7 +124,7 @@ def _cmoc_apply_fork_body(
                 if not findings:
                     continue
                 pending_targets.append(target)
-                run_finding_application_with_forbidden_rollback(
+                run_finding_application(
                     root,
                     apply_worktree,
                     findings,
@@ -182,76 +182,25 @@ def _cmoc_apply_fork_body(
     )
 
 
-def forbidden_apply_diff(worktree: Path) -> str:
-    """apply fork 中の編集禁止対象差分を porcelain status で返す。"""
-    return run_git(
-        ["status", "--short", "--", "oracle", ".agents", "memo"],
-        worktree,
-    ).stdout.strip()
-
-
-def rollback_forbidden_apply_diff(worktree: Path) -> None:
-    """編集禁止対象に発生した未コミット差分だけを HEAD へ戻す。"""
-    tracked_paths: list[str] = []
-    untracked_paths: list[str] = []
-    for line in forbidden_apply_diff(worktree).splitlines():
-        status = line[:2]
-        path_text = line[3:]
-        if " -> " in path_text:
-            path_text = path_text.split(" -> ", 1)[1]
-        if path_text.startswith("agents/") and (worktree / f".{path_text}").exists():
-            path_text = f".{path_text}"
-        if status == "??":
-            untracked_paths.append(path_text)
-        else:
-            tracked_paths.append(path_text)
-    if tracked_paths:
-        run_git(
-            [
-                "restore",
-                "--staged",
-                "--worktree",
-                "--",
-                *[f":(literal){path}" for path in tracked_paths],
-            ],
-            worktree,
-        )
-    for path_text in untracked_paths:
-        path = worktree / path_text
-        if path.is_dir():
-            shutil.rmtree(path)
-        elif path.exists():
-            path.unlink()
-
-
-def run_finding_application_with_forbidden_rollback(
+def run_finding_application(
     root: Path,
     apply_worktree: Path,
     findings: list[dict],
     config: CmocConfig,
     codex_exec: CodexExec,
 ) -> None:
-    """所見リスト適用を行い、編集禁止対象差分が出た場合は戻して 1 回再実行する。"""
+    """所見リスト適用を Codex profile と prompt の file access 制限に委ねる。"""
     parameter = build_apply_fork_finding_application_parameter(findings)
-    for attempt in range(2):
-        codex_exec(
-            parameter,
-            root=root,
-            cwd=apply_worktree,
-            config=config,
-            purpose="apply fork finding application",
-        )
-        forbidden_diff = forbidden_apply_diff(apply_worktree)
-        if not forbidden_diff:
-            return
-        rollback_forbidden_apply_diff(apply_worktree)
-        if attempt == 0:
-            continue
-        raise CmocError(
-            "apply fork 中に編集禁止対象へ差分が発生しました。",
-            ["該当差分をロールバックしました。apply を abandon してから再実行してください。"],
-            forbidden_diff,
-        )
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md forbids post agent-call
+    # checks for disallowed file diffs; enforcement belongs to the Codex profile
+    # and the injected file access prompt built by the ACP builder.
+    codex_exec(
+        parameter,
+        root=root,
+        cwd=apply_worktree,
+        config=config,
+        purpose="apply fork finding application",
+    )
 
 
 def generate_apply_commit_message(
@@ -386,17 +335,27 @@ def enumerate_apply_targets(
 
 
 def previous_apply_join_commit(root: Path, state: SessionState) -> str | None:
-    """最後に join した apply の merge commit を永続 state ではなく git 履歴から解決する。"""
+    """最後に join した同一 session の apply merge commit を git 履歴から解決する。"""
     snapshot = state.session.last_joined_apply_oracle_snapshot_commit
     if not snapshot:
+        return None
+    try:
+        session_id = apply_branch_session_id(current_branch(root))
+    except CmocError:
         return None
     merges = run_git(
         ["rev-list", "--first-parent", "--merges", "--reverse", f"{snapshot}..HEAD"],
         root,
     ).stdout.splitlines()
-    joined: str | None = None
     for merge_commit in merges:
-        parents = run_git(["show", "-s", "--format=%P", merge_commit], root).stdout.split()
+        subject = run_git(
+            ["show", "-s", "--format=%s", merge_commit], root
+        ).stdout.strip()
+        if f"'cmoc/apply/{session_id}/" not in subject:
+            continue
+        parents = run_git(
+            ["show", "-s", "--format=%P", merge_commit], root
+        ).stdout.split()
         if any(
             run_git(
                 ["merge-base", "--is-ancestor", snapshot, parent],
@@ -406,5 +365,5 @@ def previous_apply_join_commit(root: Path, state: SessionState) -> str | None:
             == 0
             for parent in parents[1:]
         ):
-            joined = merge_commit
-    return joined
+            return merge_commit
+    return None
