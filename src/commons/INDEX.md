@@ -56,26 +56,24 @@
 # `runtime_cli.py`
 
 ## Summary
-- CLI サブコマンドの共通実行ライフサイクルを扱う実装。work root 実行検査、サブコマンドログの作成と現在 logger の設定、開始・実行・完了の標準 stdout サマリー、戻り値の終了コード化、例外の整形表示、logger state の後始末を一箇所に集約する。
-- 標準サマリー以外の stdout 契約を持つサブコマンド向けに、終了コードと任意 stdout を返す結果型も定義する。
-- runtime state を repo root に置く通常経路と、初期化対象である work root に置く経路を切り替えつつ、サブコマンドログは常に repo root 側に置く責務を持つ。
+- CLI サブコマンドの共通実行ライフサイクルを扱う実装。work root 検査、サブコマンドログの作成と現在 logger の設定、開始・実行・完了の標準出力、戻り値の終了コード化、例外時のエラー表示と終了コード化を一箇所で管理する。
+- 標準サマリー以外に追加の stdout を返すサブコマンド用の結果型、work root で実行されていることの検査、完了時の標準サマリー出力 helper も含む。
 
 ## Read this when
-- CLI サブコマンド実装を共通 wrapper 経由で実行する方法、戻り値を終了コードや stdout に変換する契約、または `console_output` の有無による stdout 挙動を確認したいとき。
-- サブコマンド実行時のログ作成、`command_invoked`・`step_started`・`command_finished` の記録、現在サブコマンド logger の設定と解除に関わる変更をするとき。
-- cmoc が work root で実行されていることの検査、cwd 不一致時の利用者向けエラー、または work root と repo root の使い分けを確認したいとき。
-- サブコマンド例外を `CmocError` 系の表示形式へ変換する処理、stdout と stderr の出し分け、例外に付与された command-specific stdout/stderr 指示の扱いを変更するとき。
-- サブコマンド完了時に出る標準サマリーの項目、時刻・経過時間・quota wait・returncode の表示を確認または変更するとき。
+- CLI サブコマンド実行時の共通フロー、標準サマリー出力、終了コード、例外表示、typer.Exit への変換を確認または変更したいとき。
+- サブコマンドログの生成場所、現在のサブコマンド logger の設定・解除、command_invoked や command_finished の記録内容を追うとき。
+- init など、runtime state を通常の root ではなく初期化対象 root に置く挙動や、その前後の pre-log check の呼び出し位置を確認したいとき。
+- サブコマンドが標準サマリーに加えて独自 stdout を返す契約を扱うとき。
+- cmoc が work root 以外で実行された場合のエラー内容や検査条件を確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジック、入力解析、永続データ更新、ファイル生成内容を知りたいだけのときは、そのサブコマンド本体を読む。
-- エラー文面のレンダリング規則そのものやエラー型の定義を変更したいときは、エラー処理を担う共通実装を読む。
-- runtime path の算出規則、work root・repo root・時刻や duration の書式定義を変更したいときは、path と runtime 表示を担う共通実装を読む。
-- サブコマンドログの保存形式、イベント JSON の具体構造、quota wait の計測方法を変更したいときは、ログ機構を担う共通実装を読む。
-- Typer のコマンド登録や CLI option の宣言を探しているときは、コマンド定義側を読む。
+- 個別サブコマンドの業務ロジック、引数定義、永続状態の具体的な読み書きを調べたいだけのとき。
+- ログファイルの内部形式、step timing の記録実装、quota wait の加算処理そのものを確認したいとき。
+- root path の検出規則、timestamp や duration の整形規則そのものを変更したいとき。
+- CmocError の構造や render_error の詳細な表示形式を確認したいとき。
 
 ## hash
-- 9516bae549aeef5b486e5c1b6f835d140d919dab46bb9eebba233228fc38d595
+- a466afe8e6879cc65200f1014b108f67cebc42f41f437a41f34fc04250e0234d
 
 # `runtime_codex.py`
 
@@ -293,24 +291,24 @@
 # `runtime_logging.py`
 
 ## Summary
-- サブコマンド実行中に追記される JSON Lines event log を作成し、command・timestamp・任意 payload を安定した record として保存する runtime logging の実装。
-- サブコマンド開始からの経過時間と Codex quota 待機時間を集約し、現在の制御文脈から参照できる logger を ContextVar で差し替え・復元・取得できる入口を提供する。
-- log 保存先の作成と、サブコマンドごとに一意な timestamp 付き log file を原子的に予約する責務を持つ。
+- サブコマンド実行中のイベント記録、step の開始・経過時間、quota 待機時間を集約する実行時 logger を定義する。
+- 実行ごとに logs 配下へ JSON Lines の log file を確保し、event record を追記する責務を持つ。
+- 深い runtime helper から現在のサブコマンド logger を参照できるよう、context ごとの current logger の設定・復元・取得を提供する。
 
 ## Read this when
-- サブコマンド単位の runtime event を JSON Lines として保存する処理を確認・変更したいとき。
-- 完了表示や集計に使うサブコマンド経過時間、または Codex quota 待機時間の加算方法を確認・変更したいとき。
-- 深い runtime helper から現在のサブコマンド logger を任意利用するための context 管理を確認・変更したいとき。
-- log directory の作成、timestamp 付き log file 名の衝突回避、またはサブコマンドごとの log file 生成単位を確認したいとき。
+- サブコマンド単位の実行 log、JSON Lines event、step_started event、完了サマリー用の step timing を調べるとき。
+- Codex quota 待機時間を実行全体の待機時間として集計する処理を確認・変更するとき。
+- 実行中の制御文脈に紐づく current logger を設定、リセット、参照する runtime helper の挙動を確認するとき。
+- log file の生成場所、timestamp 名による排他的な確保、event record の基本項目を確認するとき。
 
 ## Do not read this when
-- CLI のサブコマンド定義、引数解析、利用者向け出力そのものを確認したいだけのとき。
-- log directory や timestamp のパス規則そのものを確認・変更したいときは、runtime path を扱う対象を読む。
-- 保存された JSON Lines の外部仕様や console/file log 全体の正本仕様を確認したいときは、対応する oracle doc を読む。
-- 個別の業務処理や git 操作の挙動を確認したいだけで、runtime event log への記録方法に関心がないとき。
+- CLI の表示文言や利用者向けの console 出力仕様だけを確認したいとき。
+- logs 配下のパス解決や timestamp 文字列の生成規則そのものを確認したいとき。
+- 個別サブコマンドの業務処理、引数解析、状態更新の実装を探しているとき。
+- 生成済み log を解析・集計する読み取り側の処理を探しているとき。
 
 ## hash
-- 61f0584ed72e5b6b43ec405f2d45cc39e3fe9813859ae3d45d8034727ca30b93
+- 6c9b4a4c583c28c18afd061c8230290bf642e6b5004f5889d6039988207fbd45
 
 # `runtime_paths.py`
 
