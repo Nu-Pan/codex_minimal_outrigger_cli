@@ -276,8 +276,8 @@ def run_codex_subprocess(
     except FileNotFoundError as exc:
         if argv[:1] != ["codex"]:
             raise
-        # <work-root>/oracle/src/commons/runtime_codex.py
-        # oracle 断片では Codex CLI missing を専用 fallback で利用者向け失敗にする。
+        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+        # Codex CLI missing は想定外の exec 失敗として即時に利用者向け失敗にする。
         raise CmocError(
             "Codex CLI が見つかりません。",
             ["Codex CLI をインストールし、PATH に codex を含めてください。"],
