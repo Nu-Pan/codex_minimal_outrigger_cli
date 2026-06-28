@@ -352,18 +352,20 @@
 # `runtime_state.py`
 
 ## Summary
-- session branch と apply branch に紐づく永続 session state のデータ構造と JSON 入出力を扱う共有実装。
-- session state file の保存先解決、branch 名からの session-id 抽出、現在 branch に対応する state 読み込み、canonical JSON 書き戻し、home branch に紐づく active session 探索をまとめて担う。
+- session state file の永続化モデルと読み書き操作を扱う実装。session/apply の state 断片、JSON schema 検証、cmoc 管理 branch 名からの session_id 抽出、現在 branch に対応する state 読み込み、canonical JSON 書き戻し、home branch に紐づく active session 探索をまとめている。
+- session state file の不正構造や不正な state 値、cmoc 管理外 branch、欠落した state file を CmocError として扱う境界もここにある。
 
 ## Read this when
-- session state file の schema、既定値、未知 field の扱い、session/apply の state 断片を確認したいとき。
-- cmoc 管理 branch 名から session-id を取り出す処理や、不正な branch 名に対する CmocError の条件を確認したいとき。
-- session state file の保存場所、読み込み、書き戻し、active session 検索に関わる実装を変更・調査するとき。
+- session state file の JSON 構造、必須 field、許容される session/apply state 値を確認または変更したいとき。
+- cmoc session branch や cmoc apply branch の命名から session_id を取り出す処理、または branch 種別ごとの state file 解決を扱うとき。
+- session state file の読み込み、検証、書き戻し、保存先 path、active session 探索に関する挙動を調べるとき。
+- session/apply の進行状態を更新する上位処理から、永続 state の表現やエラー条件を確認したいとき。
 
 ## Do not read this when
-- CLI 引数定義、サブコマンドの dispatch、利用者向け出力形式だけを確認したいとき。
-- git command の実行、branch 作成・切替・削除そのものの処理を調べたいとき。
-- sessions directory を含む runtime path model 全般の定義だけを確認したいとき。
+- CLI subcommand の引数定義、画面出力、コマンド全体の制御フローを調べたいだけのとき。
+- session state file の仕様意図そのものを確認したいときは、対応する oracle doc を直接読む方がよい。
+- runtime path の基準ディレクトリ定義や sessions directory の組み立てだけを調べたいとき。
+- CmocError の表示形式や例外クラス自体の責務を調べたいとき。
 
 ## hash
-- 53330c5884ce75bb5beb6fd70ac0ba068730287d694504fcfedbcc95fa99e57f
+- 639a3107fd6c4d1ad5208798d2042e7bdaa8b70ba12f3984bd72b4432b5dab30

@@ -67,26 +67,26 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation のうち、複数のサブコマンドや上位処理から共有される runtime helper 群を収める領域。
-- Codex CLI 実行と TUI 起動、実行前 indexing、CLI サブコマンド共通 wrapper、設定入出力、内容 hash、共通エラー表示、Git 操作、event logging、runtime path、実行結果型、session state など、横断的な実行時基盤への入口になる。
-- 処理本体を直接持つ module と、互換 import や複数 runtime API の集約入口が混在しているため、共通 runtime の責務境界を把握してから下位対象へ進むための階層である。
+- cmoc の realization implementation のうち、複数のサブコマンドや上位処理から使われる共有 runtime helper 群をまとめる領域。
+- Codex CLI 呼び出し、preflight indexing、CLI 共通ライフサイクル、設定、内容 hash、エラー表示、Git 操作、runtime log、path 解決、結果モデル、session state など、実行時の横断的な基盤処理への入口になる。
+- 一部は互換 import や集約 import のための薄い入口であり、具体的な挙動は責務別の runtime 実装に分かれている。
 
 ## Read this when
-- サブコマンドや上位 workflow から再利用される共通 runtime 機能の配置を探したいとき。
-- Codex 呼び出し、preflight indexing、設定、Git、ログ、path、state、エラー表示など、複数領域にまたがる実行時処理の入口を確認したいとき。
-- 個別サブコマンドではなく、cmoc 全体で共通化されている実行ライフサイクル、永続配置、外部コマンド結果、例外変換、状態入出力を変更・調査するとき。
-- 共有 runtime API の import 面や互換入口が、どの責務別実装へ接続されているかを確認したいとき。
-- Codex 実行前の routing 文書更新、Structured Output 検証、quota/capacity retry、call log、subcommand event などの共通制御経路を追い始めるとき。
+- サブコマンド本体から利用する共通 runtime API、実行前 hook、ログ、エラー、Git、path、設定、状態永続化などの実装先を探したいとき。
+- Codex exec/TUI の起動制御、profile 準備、Structured Output 検証、quota/capacity retry、call log、preflight indexing との接続を確認または変更したいとき。
+- CLI サブコマンド共通 wrapper の stdout/stderr、終了コード化、例外表示、実行サマリー、logger context の扱いを追いたいとき。
+- INDEX.md 生成 preflight の対象列挙、hash 検証、エントリー生成、Markdown 描画、更新 commit 作成条件を調べたいとき。
+- 複数領域から共有される低レベル helper を追加・整理する前に、既存の共通責務や公開 import 面を確認したいとき。
 
 ## Do not read this when
-- 特定サブコマンドの業務ロジック、CLI option 定義、入力解析、利用者向け成功出力だけを確認したいとき。その場合はコマンド層の対象へ進む。
-- oracle file に書かれた正本仕様断片そのもの、または routing 文書のあるべき品質基準だけを確認したいとき。仕様側の対象を読む。
-- テスト期待値、fixture、検証観点だけを変更・調査したいとき。対応する test 側へ進む。
-- 単一の runtime helper の具体的な入出力、副作用、失敗条件が既に分かっているとき。その責務を持つ下位対象へ直接進む。
-- 生成済みの INDEX.md の内容を読むだけで、生成・更新ロジックや共通 runtime 基盤を追う必要がないとき。
+- 個別サブコマンドの業務ロジック、引数定義、永続データ更新、利用者向け出力だけを調べたいとき。その場合はコマンド層や該当サブコマンド本体へ進む。
+- path model、FileAccessMode、AgentCallParameter、設定モデルなどの基本データ定義そのものを確認したいとき。その場合は基本モデルを扱う領域へ進む。
+- oracle file の正本仕様、ルーティング文書の品質基準、ログや状態ファイルの外部仕様意図だけを確認したいとき。その場合は oracle 側の該当文書を読む。
+- 特定の generated INDEX.md の内容を読むだけで、生成・更新・preflight の実装を追う必要がないとき。
+- 共有 runtime ではなく、単一機能の呼び出し元がどの値を渡すか、どのタイミングで処理するかだけを知りたいとき。その上位実装を直接読む。
 
 ## hash
-- 5c5899bb76c2ca91ca9c5c7264ea0ce2091b81f00e7d5000238c220fec63a84e
+- b90f770d494184da9c34a24dfd1cc75da14890dc925e34c96959f75ae2cb1f47
 
 # `config`
 
