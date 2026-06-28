@@ -20,26 +20,25 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation のうち、CLI 実行基盤と Codex 呼び出しを支える共有 runtime helper 群をまとめる領域。設定読み書き、内容ハッシュ、エラー表示、git 操作、ログ、パス、実行結果、永続 state、Codex exec/TUI 実行制御、indexing preflight など、複数の上位コマンドから使われる共通処理への入口になる。
-- 個別の業務サブコマンドではなく、外部コマンド実行・Codex 呼び出し・状態保存・ログ記録・パス解決・設定管理といった横断的な実行時責務を扱う。集約 import 面と責務別実装の両方を含むため、共通 runtime API の公開面を確認してから下位の具体実装へ進むための起点になる。
-- ルーティング文書の自動更新 preflight とエントリー生成制御もこの領域に含まれ、対象列挙、鮮度判定、欠落エントリー生成、Markdown 描画、専用 commit 化など、Codex 実行前に INDEX.md を整える処理の実装入口にもなる。
+- cmoc の realization implementation のうち、複数の CLI サブコマンドや上位処理から共有される実行時 helper 群を収める領域。Codex 呼び出し、preflight indexing、設定、内容 hash、CLI 実行ライフサイクル、エラー表示、git 操作、ログ、path、結果型、session state など、横断的な runtime 基盤への入口になる。
+- この階層には、単一責務の runtime 実装本体に加えて、複数の runtime API を一つの import 面へ集約する入口や、互換 import path を維持する薄い橋渡しも含まれる。
 
 ## Read this when
-- CLI サブコマンドの共通ライフサイクル、work root 検査、終了コード化、標準サマリー出力、例外時の利用者向けエラー表示を確認または変更したいとき。
-- Codex exec または Codex TUI の起動環境、profile、CODEX_HOME、sandbox/cwd、file access policy、call log、retry、quota/capacity 制御、Structured Output 検証、保護領域書き込み検出を扱うとき。
-- cmoc 全体で共有される設定読み書き、内容 hash 保存、binary 判定、git subprocess 境界、linked worktree 操作、ignore 判定、runtime path、timestamp、ログ、実行結果モデル、session state 永続化を調べるとき。
-- 上位コマンドから利用する共通 runtime API の import 面を整理し、どの機能群が共有入口から公開されているかを確認したいとき。
-- Codex 実行前の indexing preflight、INDEX.md 更新対象の選別、既存エントリーの再利用判定、エントリー生成用 Codex 呼び出し、ルーティング文書更新 commit の流れを確認または変更したいとき。
+- CLI サブコマンド間で共通利用される runtime API、データ型、エラー、ログ、path、git、設定、状態管理の実装場所を探すとき。
+- Codex exec/TUI 呼び出しの起動環境、profile、sandbox、CODEX_HOME、Structured Output、retry、quota/capacity 制御、call log、保護領域書き込み検出を確認または変更したいとき。
+- Codex 実行前にルーティング文書を自動更新する preflight、indexing 対象選別、エントリー生成呼び出し、Markdown 描画、専用 commit 作成の流れを追うとき。
+- サブコマンドの共通実行フロー、work root 検査、標準サマリー、終了コード化、例外時の利用者向けエラー表示、サブコマンドログの設定を扱うとき。
+- 設定ファイル、内容 hash 保存、binary 判定、git worktree/branch 操作、JSON Lines event log、runtime path、実行結果モデル、session state file のような共有基盤の具体実装を読む必要があるとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジック、CLI 引数定義、利用者向けレポート本文、画面出力の固有仕様だけを調べたいとき。その場合はコマンド層の対象へ進む。
-- path keyword や oracle/realization の正本仕様上の定義そのものを確認したいとき。その場合は oracle 側の基本仕様を読む。
-- 設定モデル、ACP 型、入力 schema、状態仕様など、データ構造の正本または型定義だけを確認したいとき。その場合はそれぞれの定義を持つ対象へ直接進む。
-- Codex CLI 自体の外部仕様、モデル挙動、生成品質、プロンプト本文の意味内容だけを調べたいとき。この領域は cmoc から Codex を呼び出す runtime 境界を扱う。
-- 特定ディレクトリ配下で実際にどの本文を読むべきか選びたいだけのとき。この領域の indexing 実装ではなく、その階層のルーティング文書または対象本文を読む方が直接的である。
+- 個別サブコマンドの業務ロジック、CLI 引数定義、画面出力、状態更新の上位フローだけを調べたいとき。その場合はコマンド層の対象へ進む。
+- 正本仕様断片、path keyword の概念定義、session state の仕様意図、FileAccessMode の仕様文などを確認したいとき。その場合は oracle 側の該当本文を読む。
+- 特定の runtime 領域だけを変更することが分かっているときは、この階層全体ではなく、その責務を持つ下位実装へ直接進む。
+- Codex CLI 自体の外部仕様、LLM の出力品質、モデル挙動を知りたいだけのとき。ここは cmoc から Codex を呼び出す runtime 境界を扱う。
+- 生成済みログやレポートの解析、個別ルーティング文書エントリーの意味内容、テスト側の期待値だけを確認したいときは、それぞれの読み取り側、対象本文、またはテスト領域へ進む。
 
 ## hash
-- 36299c152110aca5904decd63c07ec32e7c2228ce41bc3bc24bee89a976d041f
+- 094b38c515100f62489a9a58f49375e8c0b405c038ca719f382e054fa4ce453b
 
 # `main.py`
 

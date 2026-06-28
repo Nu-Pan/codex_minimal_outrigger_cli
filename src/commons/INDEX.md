@@ -159,26 +159,26 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI を起動する直前に作る profile、sandbox/cwd/CODEX_HOME、追加 read/write path、保護領域の変更検出を扱う実行境界をまとめる。
-- Codex subprocess の起動失敗、apply abandon 用の child process tracking、Structured Output schema の配置、Codex JSONL/stdout/stderr からの error・quota・capacity・resume token 判定も同じ境界で扱う。
-- file access policy を Codex CLI の profile と実行時 guard に落とし込み、Codex へ渡す環境と Codex から返る機械的結果の解釈を接続する入口である。
+- Codex CLI 呼び出し境界で使う実行 profile、sandbox/cwd、CODEX_HOME、追加 read/write path、保護領域の変更検出、schema 配置、subprocess 実行、JSONL error 判定をまとめる実装。
+- FileAccessMode を Codex CLI の sandbox 設定と writable root に変換し、Codex profile では表現できない禁止領域を起動前後の git snapshot で検査する。
+- Codex child process の追跡、Structured Output schema の hash store 配置、Codex stdout/stderr からの利用者向け error detail・resume token・capacity/quota 判定も同じ subprocess 境界として扱う。
 
 ## Read this when
-- FileAccessMode から Codex CLI の sandbox 名、作業 root、writable_roots、追加 read/write path の許可判定を確認・変更したいとき。
-- Codex profile の生成、CODEX_HOME の解決・検証、Codex subprocess に渡す環境変数や profile 名の扱いを調べるとき。
-- Codex CLI 呼び出し後に oracle/memo/.agents などの禁止領域が変更されていないか検出する guard の挙動を確認するとき。
-- Codex subprocess の起動、Codex CLI 未導入時の cmoc error 化、apply abandon 用 pid file への child process 記録・削除を扱うとき。
-- Structured Output schema の hash store 配置、schema なし output JSON の読み取り、Codex JSONL の error・capacity・quota・resume token 判定を変更するとき。
+- Codex CLI 起動時に渡す profile 本文、sandbox mode、workspace-write の writable_roots、作業 cwd、CODEX_HOME の扱いを確認・変更したいとき。
+- FileAccessMode ごとの読み取り・書き込み許可境界、追加 read/write path の検証、memo・.agents・oracle などの禁止領域保護を調べたいとき。
+- Codex 実行後に禁止領域が変更されていないか検出する処理や、その失敗時エラー文脈を追いたいとき。
+- Codex subprocess の起動、Codex CLI 不在時のエラー化、apply abandon 用の child process tracking、pid file への記録・削除を扱うとき。
+- Structured Output schema の配置、schema なし出力 JSON の読み取り、Codex JSONL stdout/stderr から error detail・resume token・capacity/quota retry 判定を扱うとき。
 
 ## Do not read this when
-- prompt 本文の file access rule 文言や利用者向け指示文そのものを確認したいだけなら、prompt parts 側を読む。
-- FileAccessMode や AgentCallParameter の型定義・入力 schema を確認したいだけなら、ACP 定義側を読む。
-- cmoc config の model や reasoning effort の設定構造を確認したいだけなら、config 定義側を読む。
-- hash 付きファイルを書き出す低レベル処理や schema store directory の path 構築だけを確認したいなら、それぞれの content/path helper を読む。
-- Codex 実行結果を上位コマンドがどう表示・再試行・ログ化するかを確認したい場合は、この境界の呼び出し元を読む。
+- 利用者 prompt 本文や FileAccessMode の仕様文そのものを確認したいだけなら、prompt parts や oracle 側の仕様を読む。
+- path keyword、work root、run root、schema store directory などの path model や保存先定義だけを確認したいなら、path 定義を持つ別の基礎 module を読む。
+- hash 名ファイルの書き込み実装や content store への保存手順だけを変更したいなら、内容書き込み helper 側を読む。
+- Codex 実行結果を受け取る上位コマンドの CLI 入出力、ログ構造、呼び出しフローを調べたいだけなら、該当する command 実装を読む。
+- 設定ファイルの読み込み構造、model class や reasoning effort の設定値定義だけを確認したいなら、config 側を読む。
 
 ## hash
-- 9568427ec8c757ab9a31701422e3038b04792a5a2baf814a648d192d4fe80f28
+- 7ce49fd5eefdcab95a6af2ba18c490b59e10deafed3893ca8d247bb478cfce6e
 
 # `runtime_codex_tui.py`
 
