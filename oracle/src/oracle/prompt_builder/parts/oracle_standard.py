@@ -280,8 +280,8 @@ def build_oracle_standard() -> tuple[PlaceholderMap, StructDoc]:
         Standard(
             title="ベストプラクティスよりも oracle file で定義されている要求が優先される",
             backgrounds=[
-                "一般的に良しとされていることが cmoc でも良しとされるとは限らない",
-                "cmoc は oracle file を正本仕様断片として扱う",
+                "一般的に良しとされていることが、このリポジトリ上での開発においても良しとされるとは限らない",
+                "oracle file を正本仕様断片として扱う",
             ],
             requirements=[
                 Requirement(
@@ -325,7 +325,7 @@ def build_oracle_standard() -> tuple[PlaceholderMap, StructDoc]:
                 ),
             ],
             examples=[
-                "`cmoc review oracle` で typo は検出対象、設計改善提案は対象外のように、境界が誤読されやすい場合は対で書く",
+                "「typo は検出対象、設計改善提案は対象外」のように、境界が誤読されやすい場合は対で書く",
                 "新しい補助ファイルを作る目的を書くなら、生成キャッシュを正本として管理しないことも併記する",
             ],
         ),

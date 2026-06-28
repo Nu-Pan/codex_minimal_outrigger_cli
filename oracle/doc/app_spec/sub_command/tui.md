@@ -19,8 +19,7 @@
 1. `<work-root>/.cmoc` が git の追跡対象外であることを保証する
 2. オリジナルプロンプトをユーザーからエディタ入力
 3. 必要なパラメータを agent call で決定
-4. プロンプト全文を agent call で決定
-5. AI Agent CLI/TUI を起動
+4. AI Agent CLI/TUI を起動
 
 ## 「オリジナルプロンプトをユーザーからエディタ入力」の詳細
 
@@ -51,30 +50,16 @@
     - `ModelClass.MAINSTREAM`
     - `ReasoningEffort.MEDIUM`
 
-## 「プロンプト全文を agent call で決定」の詳細
-
-- AI Agent CLI/TUI に渡すプロンプト全文は `build_complete_prompt` で生成する
-- オリジナルプロンプトは `aux_prompt` に注入する
-    - オリジナルプロンプト (`str`) を Markdown としてパースし、見出しが存在する場合は `list[StructDoc]` に、見出しが存在しない場合は `str` に変換する
-    - `aux_prompt=StructDoc("詳細指示", <変換後のオリジナルプロンプト>)` とする
-
 ## 「AI Agent CLI/TUI を起動」の詳細
+
+### 全バックエンド共通
+
+- TUI 起動パラメータは `build_tui_launch_tui_parameter` を正本とする
 
 ### Codex CLI の場合
 
-- ここまでの処理で選択したパラメータを使用して Codex CLI を起動する
 - 起動コマンドは `codex` とする (`codex exec` ではない)
 - `<cmoc-root>/oracle/doc/app_spec/codex_exec_rule.md` から、以下の要素を持ち込む
     - 環境変数 `$CODEX_HOME`
     - preflight validation
     - codex profile
-    - ファイルアクセス制限
-    - Model, Reasoning Effort
-- プロンプトの渡し方
-    - 完全なプロンプトを `<work-root>/.cmoc/log/tui/<time-stamp>_cmpl.md` に保存する
-    - `codex` 引数経由で以下の初期プロンプトを与える
-        ```text
-        `<work-root>/.cmoc/log/tui/<time-stamp>_cmpl.md` の指示に従って下さい。
-        ```
-    - 実際に `codex` に渡す文字列では `<work-root>`, `<time-stamp>` を実際の値で置き換えること
-    

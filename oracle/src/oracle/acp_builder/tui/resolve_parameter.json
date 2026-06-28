@@ -2,6 +2,8 @@
     "type": "object",
     "additionalProperties": false,
     "required": [
+        "role",
+        "summary",
         "file_access_mode",
         "oracle_and_realization_basic",
         "oracle_standard",
@@ -11,6 +13,60 @@
         "index_entry_standard"
     ],
     "properties": {
+        "role": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "reason"
+            ],
+            "properties": {
+                "value": {
+                    "type": "string",
+                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行する際に AI Agent に与える役割。"
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "役割が妥当である事の説明・根拠。"
+                }
+            }
+        },
+        "summary": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "reason"
+            ],
+            "properties": {
+                "value": {
+                    "type": "string",
+                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行する際に AI Agent に与える作業の概要。"
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "作業の概要が妥当である事の説明・根拠。"
+                }
+            }
+        },
+        "goal": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "reason"
+            ],
+            "properties": {
+                "value": {
+                    "type": "string",
+                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行する際に AI Agent に与える作業のゴール。"
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "作業のゴールが妥当である事の説明・根拠。"
+                }
+            }
+        },
         "file_access_mode": {
             "type": "object",
             "additionalProperties": false,

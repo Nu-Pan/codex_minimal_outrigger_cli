@@ -47,7 +47,6 @@ def build_review_oracle_standard() -> tuple[PlaceholderMap, StructDoc]:
                 ),
             ],
             examples=[
-                "同じ状態の `cmoc apply join` について、一方が必ず続行、他方が必ず中止と定めており例外関係も読めないなら fatal 所見にする",
                 "必須の出力 JSON schema と必須の保存 schema が同じ field に両立しない型を要求しているなら fatal 所見にする",
                 "内部 helper の分割方法が未指定でも、既存仕様と実装から自然に選べるなら fatal 所見にしない",
             ],
