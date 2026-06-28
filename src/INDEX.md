@@ -1,22 +1,21 @@
 # `acp`
 
 ## Summary
-- ACP realization package の入口で、oracle src 側の ACP 実装と互換の import 経路を提供する領域。
-- この階層ではパッケージ入口そのものは最小の互換 import 境界にとどまり、実処理や builder 関連の具体的な入口は下位領域へ分岐する。
-- 下位には ACP builder 領域があり、変更適用系 fork、indexing、review、session、TUI、agent 呼び出し parameter builder、出力契約入口などの builder 系実装・互換境界へ進む起点になる。
+- ACP 名前空間の realization implementation を束ねる領域。oracle src 側の acp 実装と互換の import 経路を提供するパッケージ入口と、ACP builder 関連の下位領域へ進む入口を持つ。
+- 実処理の多くは下位の builder 領域または oracle 側実装にあり、この階層自体は acp パッケージを import 可能にする境界と builder 名前空間へのルーティング起点として位置づけられる。
 
 ## Read this when
-- ACP realization 側で、oracle src 側 ACP 実装と互換の import 経路がどこにあるかを確認したいとき。
-- ACP 配下の実処理を読む前に、この階層の入口が実処理ではなく互換 import の成立を主に担うことを確認したいとき。
-- ACP builder 配下で、変更適用、indexing、review、session、TUI、agent 呼び出し parameter builder、出力契約入口のどの領域へ進むべきかを切り分けたいとき。
+- src 側で acp 名前空間がどの入口から成立しているか、または oracle src 側 acp 実装との import 互換境界を確認したいとき。
+- ACP builder まわりの apply、indexing、review、session、TUI など用途別領域へ進む前に、src/acp 配下の全体構成を切り分けたいとき。
+- acp パッケージ直下で実処理を探すべきか、下位の builder 領域や oracle 側実装へ進むべきかを判断したいとき。
 
 ## Do not read this when
-- ACP の個別関数、class、prompt 構成、データ構造、制御フローなどの詳細を直接調べたいとき。その場合は該当する下位領域または対応する実装本文を読む。
-- oracle 側の正本仕様断片そのもの、または ACP 以外の import 互換入口を調べたいとき。
-- fork 作成、git 操作、作業ディレクトリ管理、CLI 表示、レポート保存など、builder ではない実行制御や表示処理を追いたいとき。
+- acp の具体的な処理内容、データ構造、関数、クラス、prompt 構成、入出力仕様を直接調べたいとき。その場合は下位の該当領域または oracle 側実装を読む。
+- ACP builder 以外の CLI ルーティング、公開 API、テスト、生成済み成果物、または oracle 側の正本仕様断片そのものを探しているとき。
+- apply fork の実行制御、git 操作、作業ディレクトリ管理、レポート保存など、builder 用 agent call parameter 構築や import 互換境界を超えた処理を調べたいとき。
 
 ## hash
-- 665e7d09847f8dafa6a833302ee2a0b05ac924eb010ba9bdf29566b8eeb9d9e7
+- 0850077e0e96de01434ec6c4c9afad9aae06ebd66ff9be1daa8dbc0dc41cb163
 
 # `basic`
 
@@ -119,6 +118,25 @@
 
 ## hash
 - 8e9205551785f5e63cb72c666b12049b600ee51d0e204d4198c7d568ba55a7a3
+
+# `oracle.py`
+
+## Summary
+- 通常起動時に `src` だけが import path にある場合でも、正本側 `oracle/src/oracle` package を `oracle.*` として解決するための互換 shim。
+- realization 側に残る `oracle.*` 再公開入口を個別に複製せず、正本側 package への submodule search path だけを提供する。
+
+## Read this when
+- `PYTHONPATH=src` や `bin/cmoc` からの起動直後に、`oracle.other` や `oracle.acp_builder` の import がどう成立するか確認したいとき。
+- `src/config`、`src/basic`、`src/acp/builder` の薄い再公開 module が正本側実装へ到達する import 境界を確認・変更するとき。
+- oracle src を realization 側へ複製せずに、既存互換 import path を成立させる理由を確認したいとき。
+
+## Do not read this when
+- 個別の正本仕様断片、prompt builder、設定定義、path model、ACP builder の本文を確認したいとき。その場合は `oracle/src/oracle` 配下の該当本文を読む。
+- CLI サブコマンドや runtime helper の実処理を調べたいとき。この対象は import 境界だけを扱う。
+- apply fork の個別 prompt 構築や AgentCallParameter の値を確認したいときは、該当 builder を直接読む。
+
+## hash
+- b6f4097cc1550a057bef77dda6b9e5434b394da2d2831fb96ccbf3d319c4222d
 
 # `sub_commands`
 

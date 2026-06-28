@@ -17,23 +17,20 @@
 # `fork`
 
 ## Summary
-- apply fork フェーズで使う agent call parameter builder 群と、その agent 出力を検証するための契約、複数 builder で共有する実行環境解決 helper をまとめる領域。
-- 変更要約、file 単位の所見列挙、所見適用という apply fork 作業レポート・レビュー・修正の各 agent 呼び出しを組み立てる入口として位置づけられる。
-- builder は repo root 解決、必要に応じた oracle src import 設定、model class、reasoning effort、file access mode、prompt、出力契約の対応付けを扱う。
+- apply fork 系の ACP builder をまとめる領域。共通の実行環境解決、変更要約・所見列挙・所見適用の agent call parameter 構築、各 builder が返す structured output schema への入口を持つ。
+- `cmoc apply fork` の各フェーズで、oracle 側の prompt builder と schema を使って agent 呼び出し設定を組み立てる realization implementation 群を探す起点になる。
 
 ## Read this when
-- apply fork フェーズで agent に渡す呼び出し parameter の組み立て方を確認または変更したいとき。
-- apply fork の変更要約、所見列挙、所見適用の各フェーズで、prompt に含める作業指示・読み書き制約・対象差分・所見本文・補助 standard の扱いを調べたいとき。
-- apply fork 系 builder が repo root をどのように解決し、oracle 側の prompt builder や補助 API を import 可能にしているかを確認したいとき。
-- apply fork 関連 agent の出力契約を、変更要約または所見列挙の用途ごとに確認・検証したいとき。
-- oracle 側の正本仕様断片に追従する realization 実装として、通常起動時に oracle src を runtime import しない builder と、prompt 構築時に oracle src を読む builder の境界を確認したいとき。
+- `cmoc apply fork` が変更要約、実装所見列挙、所見適用の各 agent をどの model・reasoning effort・file access mode・schema・prompt で呼ぶか確認したいとき。
+- apply fork 系 builder が repo root を解決し、oracle src を import 可能にして、oracle 側の prompt 断片を render する流れを確認したいとき。
+- 差分適用後のレビュー用出力や所見出力の structured output schema と、それを使う builder 実装の対応関係を追いたいとき。
+- apply fork builder 群に共通する helper と、個別フェーズ向け builder のどちらへ進むべきかを切り分けたいとき。
 
 ## Do not read this when
-- apply fork 全体の fork 作成、git 操作、作業ディレクトリ管理、レポート保存などの実行制御そのものを追いたいとき。
-- 所見検出の判断基準、apply review standard、oracle standard、realization standard の本文を確認したいとき。
-- oracle 側の正本 prompt 断片や prompt builder 本体を変更したいとき。
-- apply fork 以外の builder、CLI コマンドルーティング、または package 全体の公開 API を調べたいとき。
-- agent 出力を人間向けに表示する CLI 文面や整形処理だけを確認したいとき。
+- `cmoc apply fork` 全体の fork 作成、git 操作、作業ディレクトリ管理、レポート保存などの実行制御を調べたいとき。
+- oracle 側の正本 prompt 断片、review standard、realization standard、path model の定義そのものを確認・変更したいとき。
+- 生成された変更要約や所見の内容そのものを読みたいだけで、agent call parameter の構築処理や schema 契約を確認する必要がないとき。
+- apply fork 以外の builder、CLI サブコマンドルーティング、または package 初期化 docstring 以外の公開 API を探しているとき。
 
 ## hash
-- a6be384ee55c9996879980470424bcd6c1ebdb0bfa8309a99da12fea2a7fa1d7
+- d704c7b82c36af134c6e396064b91b05ec36ca83889da729c45ea94281a38749

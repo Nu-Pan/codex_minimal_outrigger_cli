@@ -17,25 +17,23 @@
 # `apply`
 
 ## Summary
-- agent 呼び出し parameter のうち、変更適用系の fork フェーズに関わる builder 群へ進むための領域。package 初期化要素と、変更要約・file 単位の所見列挙・所見適用に使う呼び出し構築および出力契約の入口を含む。
-- 主な実体は fork フェーズ向けの builder 群であり、repo root 解決、必要に応じた正本側 prompt builder の参照、model class、reasoning effort、file access mode、prompt、出力契約の対応付けを扱う。
+- apply 系の ACP builder を収める realization implementation 領域。package 互換の入口と、apply fork の変更要約、ファイル単位所見列挙、所見適用に使う agent call parameter 構築実装へ進むための起点になる。
+- apply fork の各 builder は、repo root と oracle src の import 経路を解決し、oracle 側の prompt builder を使って prompt を生成し、用途に応じた model、reasoning effort、file access mode、structured output schema を指定する。
 
 ## Read this when
-- 変更適用系の fork フェーズで agent に渡す呼び出し parameter の組み立て方を確認または変更したいとき。
-- 変更要約、file 単位の所見列挙、所見適用の各 agent 呼び出しで、作業指示・読み書き制約・対象差分・所見本文・補助 standard が prompt にどう渡るかを調べたいとき。
-- 変更要約または所見列挙に関する agent 出力契約を確認したいとき。
-- 実装側の builder が、通常起動時には正本側実装を runtime import せず、prompt 構築時には正本側 prompt builder や補助 API を参照する境界を確認したいとき。
-- この領域が正本側 package 構造と対応する互換 package として置かれているかを確認したいとき。
+- apply fork の各段階で agent をどの model、reasoning effort、file access mode、prompt、structured output schema で呼び出すか確認したいとき。
+- apply fork builder が repo root を解決し、oracle src を import 可能にして、oracle 側の正本 prompt 断片から prompt を生成する流れを確認したいとき。
+- 変更要約、ファイル単位の所見列挙、所見適用のどの builder 実装または schema へ進むべきかを切り分けたいとき。
+- apply builder 領域が oracle 側の package 構造と対応する互換 package かどうかを確認したいとき。
 
 ## Do not read this when
-- fork 作成、git 操作、作業ディレクトリ管理、レポート保存など、変更適用系 fork 全体の実行制御を追いたいとき。
-- 所見検出の判断基準、apply review standard、oracle standard、realization standard の本文を確認したいとき。
-- 正本側の prompt 断片や prompt builder 本体を変更したいとき。
-- 変更適用系 fork 以外の builder、CLI コマンドルーティング、package 全体の公開 API を調べたいとき。
-- agent 出力を人間向けに表示する CLI 文面や整形処理だけを確認したいとき。
+- apply fork 全体の fork 作成、git 操作、作業ディレクトリ管理、レポート保存などの実行制御を調べたいとき。
+- oracle 側の prompt、review standard、realization standard、path model の正本定義そのものを確認したいとき。
+- 生成済みの変更要約や所見の内容だけを読みたいとき。
+- apply fork 以外の builder、CLI サブコマンドルーティング、または agent call parameter 構築と関係しない公開 API を探しているとき。
 
 ## hash
-- fb83c1bdfe76898f6e311280114ba5a861df8c4f5710d7f90ff1d559e43fed4c
+- ec9a631e8a010e6fa589c4215de4ff8d3951d21d93d6232bef71ea31ad45901e
 
 # `indexing`
 
