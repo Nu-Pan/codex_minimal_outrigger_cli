@@ -1,28 +1,25 @@
 # `apply`
 
 ## Summary
-- apply サブコマンド群の実装領域。apply run の開始、実行用 worktree と branch の管理、finding 適用 loop、実行結果の report 生成、session 側への join、未 join run の abandon、実行中 process の追跡と停止補助を扱う。
-- apply 固有の状態遷移、cleanup、想定外差分の扱い、report 出力、process id 管理など、apply のユーザー操作と実行時制御へ進むための入口となる。
+- 未 join の適用作業を開始・破棄・取り込みするサブコマンド群と、その実行中 process 追跡、作業用 worktree/branch の cleanup、実行結果 report 生成を扱う実装領域。
+- 状態遷移、branch/worktree 作成と削除、実行中 process の停止、finding 適用後の commit/report 化、merge conflict や想定外差分の復旧補助など、適用作業ライフサイクル全体への入口になる。
 
 ## Read this when
-- apply run の開始、完了結果の取り込み、未 join run の破棄など、apply サブコマンドの主要な利用者操作を確認・変更したいとき。
-- apply branch、apply worktree、session state、apply state の遷移や cleanup の流れを apply 固有の観点で追いたいとき。
-- finding 適用対象の選定、変更後ファイルの再キュー、禁止対象差分の rollback、commit subject 生成など、apply fork の実行 loop を調べたいとき。
-- apply join における想定外差分の検出、force-resolve、merge conflict report、INDEX.md conflict の機械解決、join 後の状態復元を扱うとき。
-- apply abandon による実行中 process 停止、worktree・branch・pid file の片付け、ready 状態への復帰を確認したいとき。
-- apply fork や join の Markdown report、frontmatter、変更要約、失敗時 report の生成内容や保存処理を確認・変更したいとき。
-- apply 実行中 process の pid file、process tracking 用環境変数、stale pid 判定、process group 停止の安全性を調査するとき。
+- 適用作業の開始から完了・エラー・破棄・取り込みまでの状態遷移や実行条件を確認・変更したいとき。
+- 作業用 branch/worktree の作成、削除、cleanup、または session 側への merge と conflict 処理を追いたいとき。
+- 実行中の適用 process や Codex subprocess の記録、停止、pid file 管理、異常な pid 内容の扱いを確認したいとき。
+- finding の列挙・適用・再キュー、禁止対象に出た差分の rollback、適用後 diff からの commit subject 生成に関わる制御を確認したいとき。
+- 適用作業の実行結果や失敗結果を report として保存し、変更差分や要約、状態情報を出力する処理を確認・変更したいとき。
 
 ## Do not read this when
-- apply の外部仕様や人間が管理する正本仕様断片を確認したいだけのときは、対応する oracle doc を読む。
-- サブコマンド共通の dispatch、config 読み込み、git command wrapper、state file 永続化、worktree 一般操作など、apply に閉じない共通 runtime の詳細だけを調べたいとき。
-- finding 列挙や Codex prompt の具体的な組み立てだけを確認したいときは、対象列挙や parameter builder 側へ直接進む。
-- session state の schema、branch 名から session id を得る規則、状態ファイル形式そのものを変更したいだけのとき。
-- apply 以外のサブコマンド、INDEX.md エントリー生成規則、ルーティング文書一般、oracle と realization の基本規則を調べたいとき。
-- パッケージ説明や import 副作用の有無だけを確認する場合を除き、具体的な制御ロジックが不要なとき。
+- 個別の適用作業ではなく、CLI 全体の共通実行ラッパー、git command 実行規約、path model、設定読み込み、状態ファイルの低レベル読み書きを調べたいとき。
+- Codex に渡す prompt や構造化出力設計そのもの、finding enumeration や finding application の詳細だけを調べたいとき。
+- report directory、timestamp、汎用 report 表示仕様など、適用作業固有でない report 共通機能だけを確認したいとき。
+- ルーティング文書や INDEX.md エントリー生成規約だけを確認したいとき。
+- パッケージ説明や import 副作用の有無だけを確認したいときは、具体的な制御実装へ進む必要はない。
 
 ## hash
-- 7f7ef3852f0025d884ea84f695e7614710df87583678f92440cd84c7dcf813f3
+- 66b4c02abc252fdfbad427064bfe9e5a3bc235901db0a4ee33f208e122fbe9eb
 
 # `indexing.py`
 
@@ -184,24 +181,22 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドの実装群をまとめる領域。active session の作成、home branch への取り込み、merge せず破棄する操作など、session branch と session state を中心にした CLI 処理への入口になる。
-- 各サブコマンドは CLI runtime 経由で実行され、clean worktree、branch 条件、state file、cmoc ignore、衝突回避や失敗時 rollback など、操作ごとの事前条件と利用者向け出力を扱う。
-- session package 自体には初期化処理や公開 API はほぼなく、具体的な挙動は個別のサブコマンド実装へ進んで確認する。
+- session 系サブコマンド実装をまとめるディレクトリで、session branch の作成、破棄、home branch への merge といった利用者操作の入口になる。
+- 各モジュールは CLI runtime 経由の実行、session 状態確認、clean worktree や branch 条件の検証、git 操作、利用者向け出力や失敗時処理を扱う。
+- パッケージ自体は最小限で、具体的な挙動を調べるときは fork、abandon、join など目的の session 操作に対応する下位モジュールへ進む。
 
 ## Read this when
-- session branch の開始、home branch への merge、merge しない破棄など、session 系 CLI 操作の実行条件・状態遷移・git branch 操作・利用者向け出力を調べたいとき。
-- active session の重複検出、managed branch 上での禁止、clean worktree 要求、session-id の一意性、state file の作成・更新・abandoned/joined 化などを扱う実装へ進みたいとき。
-- merge conflict 解消、Codex CLI への解消依頼、conflict marker や unmerged path の検査、merge commit 完了など、session を home branch に取り込む処理固有の制御を確認したいとき。
-- session 操作の cleanup 失敗時 rollback、post-precondition failure、oracle 根拠コメントなど、session 系サブコマンド固有の失敗時挙動を確認したいとき。
+- session 系サブコマンドの実行条件、状態遷移、branch 操作、state file 更新、成功時出力や失敗時挙動の実装を調べたいとき。
+- active session の作成、破棄、home branch への merge、session branch 削除など、session branch のライフサイクルに関わる CLI 処理を確認・変更したいとき。
+- session 操作ごとの oracle 根拠コメント、rollback、merge conflict 解消、post-precondition failure など、個別コマンド内の制御フローを入口から探したいとき。
 
 ## Do not read this when
-- session state や apply state のデータ構造、永続化 schema、branch から state を探す仕組みそのものを調べたいとき。より直接の state 関連実装を読む。
-- git 実行 wrapper、CLI runtime、worktree clean 判定、cmoc ignore、branch 判定、path model などの共通 helper の詳細を調べたいとき。共通実装側を読む。
-- CLI 全体のサブコマンド登録、Typer アプリ構成、session 以外のサブコマンド実装を調べたいとき。上位の CLI ルーティングまたは対象サブコマンドの領域へ進む。
-- INDEX 生成や indexing preflight の内部仕様、Codex CLI に渡す conflict resolution parameter の具体的な構築内容だけを調べたいとき。該当する専用実装を読む。
+- session state のデータ構造、永続化形式、path model、branch 操作 helper、git 実行 wrapper、worktree clean 判定などの共通部品そのものを調べたいとき。
+- CLI 全体のサブコマンド登録、Typer アプリ構成、runtime の共通処理、または session 以外のサブコマンド実装を調べたいとき。
+- Codex CLI に渡す conflict resolution prompt や parameter の詳細だけを調べたいとき。
 
 ## hash
-- a8dd6da51414e6474f7ab266f08449bc1e3b976afca68a42a8065ed1f626f355
+- 676da3666e0cb3c4d4ecaf423b81ab0bc40b978bf16bfe622c4078400b827ab1
 
 # `tui.py`
 

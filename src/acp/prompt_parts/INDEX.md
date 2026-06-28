@@ -1,44 +1,44 @@
 # `apply_review_standard.py`
 
 ## Summary
-- oracle file の内容を realization file に適用してレビューする際、何を所見として列挙すべきかを定義する prompt part を構築する。
-- oracle file と realization file の明確な不整合、oracle file の仕様断片の隙間の扱い、realization file 単体で明らかな致命的問題を、所見として扱う条件と扱わない条件に分けて規範化する。
-- review 適用処理に渡す構造化文書として、所見抽出の判断基準をまとめる入口になる。
+- oracle file の内容を realization file へ適用する際のレビュー所見の扱いを定義する prompt part。oracle と realization の明確な不整合、仕様断片の隙間を根拠にした過剰な指摘の禁止、realization file 単体で明らかな致命的問題の扱いを規範文章として構築する。
+- apply review の判断基準として、所見に含めるべき不整合・致命的問題と、単なる未定義部分・品質改善案として扱うべきでないものの境界を確認する入口になる。
 
 ## Read this when
-- oracle file を realization file に適用するレビューで、どの差分や問題を所見として列挙すべきか確認したいとき。
-- oracle file に明記されていない実装差を、仕様不一致として扱うべきか、AI の裁量範囲として許容すべきか判断したいとき。
-- realization file だけを見て明らかなバグや致命的問題を、oracle file との不整合がなくても所見に含めるべきか確認したいとき。
-- apply review 系の prompt part で、所見列挙の規範文書を生成する処理を調べたいとき。
+- oracle file と realization file を比較して、どの差分をレビュー所見として列挙すべきか判断したいとき。
+- oracle file に明記されていない realization file の挙動を、不整合として扱ってよいか迷うとき。
+- realization file 単体で見つかったバグや実行不能な問題を、oracle file との不整合ではなく所見に含めるべきか確認したいとき。
+- apply review 用の prompt part が、oracle file の仕様断片・仕様の隙間・realization file の致命的問題をどう区別しているか確認したいとき。
 
 ## Do not read this when
-- oracle file や realization file の基本定義そのものを確認したいだけのとき。
-- レビュー結果の出力形式、CLI 引数、ファイル入出力、永続状態など、所見列挙の判断基準以外の実装を調べたいとき。
-- prompt part の構造化文書変換の共通実装や、Standard・Requirement・StructDoc のデータ構造を調べたいとき。
-- 特定の oracle file と realization file の実際の差分内容をレビューしたいだけで、所見として扱う基準はすでに分かっているとき。
+- oracle file や realization file の一般的な定義、所有責任、配置分類を確認したいだけのとき。
+- 特定の oracle file の仕様本文や、特定の realization file の実装内容そのものを調査したいとき。
+- レビュー所見の規範ではなく、INDEX.md エントリー作成やルーティング文書の基準を確認したいとき。
+- 単なるコード品質改善、リファクタリング方針、テスト肥大化抑制など、apply review の所見判定に限定されない realization file 全般の実装規範を確認したいとき。
 
 ## hash
-- e133daa45b3519f0636741a148c7a50932c55ddcb2268fd31b894309d8914729
+- ddb90c3767040898fe45801263e1903c6c8bcd69083cda0866eb6a63789cb55d
 
 # `complete_prompt.py`
 
 ## Summary
-- agent call に渡す完全なプロンプトを、基本プロンプト、ファイルアクセス規則、ルーティング規則、任意の追加プロンプト、指定された標準プロンプト群から組み立てる実装。
-- oracle・realization・review・index entry の各標準プロンプトを有効化するフラグ間の依存関係を解決し、必要な標準情報を漏れなく追加する入口になっている。
-- 構築後のプロンプト文書に含まれる root token や呼称を、Codex CLI に渡す前の具体的な表現へ正規化する処理も担う。
+- agent call に渡す完全な prompt 文書列を構築する realization。role・summary・goal・file access rule・routing rule・任意追加文書を基礎にし、指定された標準 prompt 群を依存関係込みで追加してから、Codex CLI 向けに root token 表記を実 path 表記へ置換する。
+- 個別の prompt part を生成する場所ではなく、複数の prompt part を統合し、標準 prompt の有効化フラグ間の依存を解決し、最終的な StructDoc 一覧として返す入口である。
 
 ## Read this when
-- agent call に渡すプロンプト全体の構成順、含める prompt part、または標準プロンプト注入フラグの依存関係を確認・変更したいとき。
-- oracle standard、realization standard、review standard、index entry standard などをどの条件で完全プロンプトに含めるかを調べたいとき。
-- プロンプト内の root token 解決や、Codex CLI に渡す前の文言正規化の挙動を確認・変更したいとき。
+- agent call に渡す prompt 全体の構成順序、含める基礎文書、または標準 prompt 群の注入条件を変更したいとき。
+- oracle・realization・review・index entry などの標準 prompt を有効化した際に、どの前提標準も同時に含めるべきかを確認または変更したいとき。
+- prompt を Codex CLI に渡す直前の root token 置換、StructDoc/StructCodeBlock を再帰的に処理する sanitization、または RUN root の fallback 解決を調べるとき。
+- 追加 prompt を基礎 prompt と標準 prompt のどの位置に挿入するか、最終的な prompt 文書列の並びを確認したいとき。
 
 ## Do not read this when
-- 個別のファイルアクセス規則、ルーティング規則、各 standard prompt の本文内容だけを確認・変更したいときは、それぞれの prompt part builder を直接読む。
-- StructDoc や StructCodeBlock のデータ構造そのものを調べたいときは、構造化ドキュメントの定義を直接読む。
-- root token の定義や実パス解決の基本仕様を調べたいときは、path model 側の実装を直接読む。
+- 個別の file access rule、routing rule、oracle standard、realization standard、review standard、index entry standard の本文生成内容だけを変更したいときは、それぞれの builder を読む方が直接的である。
+- RootToken の定義、real path 解決、work root 解決の仕様や実装を調べたいだけのときは、path model 側を読む方が直接的である。
+- StructDoc や StructCodeBlock のデータ構造そのものを変更したいときは、構造化文書の定義側を読む方が直接的である。
+- prompt に含める各標準の文章内容をレビューしたいだけで、統合順序や依存フラグや root token 置換に関心がないとき。
 
 ## hash
-- 32cebdeae134ade1952f210e3ae0826d81636e41fc69eb401acba734f10c1877
+- fd85d6560af0c72196331c68a3e01f9e62ad8c00c2fa9b097aabc0883531a88f
 
 # `file_access_rule.py`
 
@@ -147,27 +147,24 @@
 # `realization_standard.py`
 
 ## Summary
-- realization file の品質基準を StructDoc として組み立てる prompt part。総文字数の最小化、高品質化、コメント、責務分割、既存実装整理、抽象化、公開面、テスト、依存関係、完了時点検までを、相互参照される一つの規範集合として扱う。
-- 生成される文書は、実装担当 AI が realization code と test と ancillary を追加・変更・削除するときに、現行仕様に必要な最小構成、責務境界、不要な重複や旧仕様の排除を判断するための基準になる。
-- 各 Standard は独立した個別設定ではなく、realization file 全体を小さく保ちながら保守しやすくするための統合された品質規範として読む対象である。
+- realization file の品質基準を StructDoc として構築する prompt part。実装規模の最小化、不要コード削除、コメント方針、責務分割、抽象化、公開面、テスト、依存関係、完了時点検をまとめた規範集合を返す。
+- 各品質基準は相互参照される一まとまりの標準として定義されており、実装担当 AI に realization file を小さく、明確で、現行仕様に必要な範囲へ保たせるための判断基準を提供する。
 
 ## Read this when
-- realization file の実装品質、肥大化抑制、不要実装の削除、責務分割、抽象化、コメント方針、公開面や依存関係の追加可否を判断したいとき。
-- 実装・テスト・補助ファイルを追加する前後に、既存実装との重複、旧仕様向け経路、未使用要素、削除・統合余地を確認する基準が必要なとき。
-- realization file が大きい、複数責務を含む、または分割すべきか統合すべきかを、文字数だけでなく凝集性や同時に読む文脈から判断したいとき。
-- コメントや docstring に、コードから読み取りにくい意図・根拠・不採用方針・対応する oracle file path をどこまで残すべきか判断したいとき。
-- 新しい関数・クラス・モジュール・CLI 引数・設定項目・環境変数・出力項目・状態ファイル・外部依存・補助スクリプトを増やす根拠が十分か確認したいとき。
-- realization test の追加や整理について、外部挙動や制御ロジックの検証に絞れているか、重複テストや過大な fixture を避けられているか確認したいとき。
+- realization file や realization code の追加・変更・削除時に、品質、規模、責務境界、重複排除、コメント方針の判断基準を確認したいとき。
+- 新しい抽象化、共有 helper、公開 API、CLI 引数、設定項目、永続状態、外部依存、補助ファイル、生成物を追加してよいか判断したいとき。
+- realization test の追加・整理時に、テスト観点の重複、fixture の大きさ、旧仕様向けテストの削除方針を確認したいとき。
+- 大きい realization file を分割すべきか、または凝集性と読み取り文脈を理由に維持すべきか判断したいとき。
+- 実装完了前に、未使用要素、旧実装、重複実装、不要コメント、過大な補助要素を残していないか点検する基準を確認したいとき。
 
 ## Do not read this when
-- oracle file 自体の書き方、正本仕様断片の粒度、人間の認知負荷、未定義部分の扱い、実装から仕様への逆流禁止など、oracle 側の基準を確認したいとき。
-- 個別の prompt part がどのように連結されるか、StructDoc 全体のレンダリングや標準変換の仕組みを確認したいだけのとき。
-- 特定機能の CLI 挙動、状態ファイル形式、出力 schema、パスモデルなど、cmoc の個別仕様や個別実装の詳細を調べたいとき。
-- 対象が生成する品質基準を読むのではなく、基準に従って実際の realization code を修正・実装する具体箇所を探しているときは、その機能を担う実装本文へ進む。
-- INDEX.md エントリーの生成規則やルーティング文書の書き方だけを確認したいとき。
+- oracle file 自体の書き方、正本仕様断片の責務、人間と AI の判断境界を確認したいだけのとき。
+- 特定の CLI コマンド、入出力 schema、状態ファイル、path model など個別機能の仕様や実装を調べたいとき。
+- StructDoc、Standard、Requirement のデータ構造や変換処理そのものを理解・変更したいとき。
+- 対象が realization file の品質基準ではなく、INDEX.md エントリー生成基準やルーティング文書の作成規則であるとき。
 
 ## hash
-- 95b76e4c75574d6c0dd870cd2bd0dfd1bb385d137af3edd1e8db8ea91f07899d
+- 186e21dd672fd7ce21bcd0980f548fa38b48cbd4fa352e06be85293c4cf5b65b
 
 # `routing_rule.py`
 

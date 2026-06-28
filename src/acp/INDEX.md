@@ -25,21 +25,21 @@
 # `prompt_parts`
 
 ## Summary
-- AI agent に渡すプロンプトを構成する個別部品を集めた領域。ファイルアクセス規則、INDEX.md ルーティング規則、oracle・realization・review・index entry の各標準、oracle と realization の基本概念、完全プロンプトへの組み立て入口を扱う。
-- 各部品は、個別の規範や制約を構造化文書として生成する責務を持ち、上位の組み立て処理から必要な標準プロンプトとして選択・連結される。
-- プロンプト全体の構成を追う場合と、特定の標準・規則の本文生成を確認する場合の入口になる。
+- AI agent に渡す標準 prompt 断片と、その断片群を統合して完全な prompt 文書列を構築する実装をまとめた領域。
+- ファイルアクセス制約、INDEX.md ルーティング規則、oracle/realization の基本概念、oracle・realization・review・index entry の各規範など、agent call の前提文書として注入される文章を構造化文書として生成する。
+- 個別の規範本文を変更する入口と、複数の標準 prompt の有効化依存・挿入順序・root token 置換を確認する入口の両方を含む。
 
 ## Read this when
-- AI agent に渡すプロンプトへ、どの標準情報や規則文書を含めるか確認・変更したいとき。
-- ファイル読み書き制約、INDEX.md による探索規則、oracle と realization の基本概念、各種レビュー基準、oracle・realization・INDEX.md エントリーの品質基準を生成する処理を探したいとき。
-- 標準プロンプト群の依存関係、プロンプト部品の構成順、root token や呼称を実際の agent call 用文言へ正規化する流れを確認したいとき。
-- レビューや実装作業の前提として agent に渡される規範文書の内容を、個別部品単位で調整したいとき。
+- agent call に含める標準 prompt の文面、構成順序、依存関係、または Codex CLI に渡す直前の文書列生成を確認・変更したいとき。
+- ファイル読み書き制約、INDEX.md の読み進め方、oracle と realization の責務境界、oracle file の記述規範、realization file の品質規範を prompt としてどう生成しているか調べたいとき。
+- oracle review や apply review で、所見に含めるべき問題と対象外にすべき推測・未定義部分・品質改善案の境界を prompt 文面として確認したいとき。
+- INDEX.md エントリー作成時に従うべき標準や、エントリーをルーティング情報として機能させるための要求事項を実装側で確認・変更したいとき。
 
 ## Do not read this when
-- 構造化文書、標準、要求事項、コードブロックなどの基礎データ構造やレンダリング処理そのものを調べたいとき。
-- パス概念、root token の定義、作業ルート解決、FileAccessMode など、プロンプト本文に埋め込まれる値や列挙値の基本定義を確認したいだけのとき。
-- 個別 CLI コマンドの実行フロー、引数処理、入出力 schema、永続状態、保存処理など、生成されたプロンプトを使う側の実装を調べたいとき。
-- 特定の oracle file、realization file、テスト、または INDEX.md エントリー本文そのものをレビュー・修正したいだけで、プロンプト部品や標準文書の生成処理を変更しないとき。
+- 特定の CLI コマンド、状態ファイル、path model、入出力 schema など、個別機能の仕様や実装を調べたいとき。
+- 生成された prompt を使う上位の agent 実行フロー、保存処理、レビュー実行処理、または CLI 引数処理そのものを調べたいとき。
+- 構造化文書の基礎データ型、標準・要求事項の汎用変換処理、root token や work root の定義そのものを変更したいとき。
+- 特定の oracle file や realization file の本文内容を調査したいだけで、agent に渡す標準 prompt の文面や統合順序に関心がないとき。
 
 ## hash
-- 8c5c08f447065e33fb87f8bca5153543da7cb31398cf426fbe10c5477280c550
+- 7d3376e91a5e0de3f0c927fac38d9133fa6ec1d7c781fde26a5cf52e26d901a5

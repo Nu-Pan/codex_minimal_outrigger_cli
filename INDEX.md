@@ -149,26 +149,23 @@
 # `src`
 
 ## Summary
-- cmoc の実装本体を置く realization implementation 領域。公開 CLI の組み立て、サブコマンドごとの実行制御、AI agent 呼び出しパラメータと標準プロンプト部品、共通 runtime helper、設定データ構造、パス・文書・呼び出し条件などの基礎モデルを扱う。
-- 利用者操作から Typer の CLI 入口、session・apply・review・indexing・TUI・init の orchestration、Git/worktree/state/report/log/index 更新、Codex exec/TUI 実行境界まで、cmoc の実行時挙動を実装面から追うための起点になる。
-- 正本仕様断片やテストそのものではなく、oracle file で述べられた人間意図を具体的な Python 実装・設定・runtime 境界として実現する領域である。
+- cmoc の realization implementation を収める実装ルート。最上位 CLI、サブコマンド実行、共通 runtime helper、AI 呼び出し用 prompt/parameter 構築、設定モデル、基礎データ構造、互換 import 入口など、利用者向け挙動を具体化する Python 実装へ進むための入口になる。
+- 下位は、公開 CLI 配線、サブコマンド単位の orchestration、複数機能から共有される runtime 境界、Codex 呼び出し前に渡す ACP 構築、リポジトリ設定、path・文書・agent 条件などの基本モデルに分かれる。正本仕様やテスト本文ではなく、oracle file の意図を実行可能な挙動として実現する実装側を読むための領域である。
 
 ## Read this when
-- cmoc の CLI コマンド構成、サブコマンドの実行順序、状態遷移、Git/worktree 操作、利用者向け出力、report 生成、cleanup などの実装入口を探したいとき。
-- Codex exec/TUI 呼び出しの前後で、どの AgentCallParameter、file access mode、Structured Output schema、model/reasoning、prompt 部品、preflight、profile、ログ保存が使われるかを確認または変更したいとき。
-- INDEX.md 更新、対象列挙、hash 検証、エントリー生成、更新 commit、Codex 呼び出し前の indexing preflight など、ルーティング文書 maintenance の実装経路を追いたいとき。
-- リポジトリ設定、runtime path、content hash、error rendering、command result、session state、Git wrapper、Codex subprocess、process tracking など、複数の上位機能から再利用される共通 helper を探したいとき。
-- cmoc 固有の基礎型、ルートトークン付きパス解決、規範文書モデル、構造化文書の Markdown rendering、設定値のデータ構造など、上位実装に埋め込まれる共通概念を確認したいとき。
+- cmoc の CLI 挙動、サブコマンド実行、共通 runtime、AI エージェント呼び出し準備、設定値、基礎型のいずれかについて、実装本体の読む先を選びたいとき。
+- Typer によるコマンド登録から、session・apply・review・indexing・TUI などのサブコマンド本体、Codex CLI exec/TUI 呼び出し、git/worktree/state/config/log/path などの共通処理へ、実装上の依存関係をたどりたいとき。
+- AgentCallParameter、file access mode、model class、reasoning effort、Structured Output schema、標準 prompt 断片など、AI 呼び出し前に組み立てる実装上の契約を確認または変更したいとき。
+- oracle file で述べられた仕様断片に対して、realization implementation がどの Python モジュールで具体化されているかを探したいとき。
 
 ## Do not read this when
-- oracle file に書かれた正本仕様断片そのもの、仕様上の判断根拠、人間が管理する要求本文を読みたいとき。
-- realization test の期待挙動、fixture、テストケース、回帰確認の内容だけを確認したいとき。
-- README、AGENTS、補助スクリプト、パッケージ設定、ignore 設定など、実装本体以外の ancillary file を調べたいとき。
-- 既に対象のサブコマンド、共通 helper、基礎モデル、AI prompt builder など下位の読む先が分かっており、その局所本文へ直接進めるとき。
-- 生成済みの実行ログ、report、状態ファイル、worktree 内の作業成果、または実際にレビュー・修正される利用者ファイルの内容を確認したいだけのとき。
+- oracle file の正本仕様断片そのもの、仕様上の要求、判断例、INDEX.md エントリー規範を確認したいだけのとき。その場合は oracle 側の本文を読む。
+- realization test の期待値、fixture、テスト観点を確認または変更したいだけのとき。その場合は test 側を読む。
+- README、AGENTS、設定済み生成物、実行ログ、state JSON など、実装コードではない補助的なファイルや生成済みデータの内容を調べたいだけのとき。
+- 既に対象の下位領域が CLI 配線、特定サブコマンド、共通 runtime helper、ACP 構築、設定モデル、基礎型のどれかに絞れているときは、この階層全体ではなく該当する下位対象へ直接進む。
 
 ## hash
-- f6cb1f64de25487cb51e6fe527ddcc5b2b1c09bd53a9ec1c9fba53aef88cf78c
+- 7a33e7cb4914e1bb1f83c6f0597d6ab5095add78bb0ebae58a2d29f4d360b023
 
 # `test`
 
