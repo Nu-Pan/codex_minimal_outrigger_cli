@@ -115,6 +115,33 @@ def build_realization_standard() -> tuple[PlaceholderMap, StructDoc]:
             ],
         ),
         Standard(
+            title="oracle src と同一内容のコピーを realization src に作らない",
+            backgrounds=[
+                "oracle src は人間が責任を持つ正本仕様断片である",
+                "oracle src と同一内容の定義が realization src に存在すると、正本と実装の責務境界が曖昧になる",
+                "同一内容のコピーは、片方だけが更新された時に仕様と実装の乖離を生む",
+            ],
+            requirements=[
+                Requirement(
+                    "禁止",
+                    "oracle src で定義された内容と同一の定義を realization src にコピーしてはいけない",
+                ),
+                Requirement(
+                    "必須",
+                    "realization src は oracle src の意図を具体化する実装に留め、正本仕様断片そのものを重複保持してはいけない",
+                ),
+                Requirement(
+                    "必須",
+                    "oracle src の定義と同じ情報が必要な場合は、コピーではなく生成・参照・変換など、正本が一箇所に保たれる方法を選ぶ",
+                ),
+            ],
+            examples=[
+                "oracle src にある schema 定義を realization src に同じ dict として貼り付けず、必要なら oracle src から生成された成果物または変換処理を使う",
+                "oracle src の列挙値を realization src に同じ定数群として複製せず、実行時に必要な最小の実装表現へ変換する",
+                "oracle src の prompt 文面を realization src にコピーして固定せず、正本側から組み立てた結果を利用する",
+            ],
+        ),
+        Standard(
             title="コメントや docstring は実装意図と根拠を補う",
             backgrounds=[
                 "realization code は AI が継続的に変更するため、局所的なコードだけでは判断しにくい意図や制約が失われやすい",
