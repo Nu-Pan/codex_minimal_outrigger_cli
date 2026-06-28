@@ -36,7 +36,6 @@ def _cmoc_session_abandon_body() -> None:
     if state.session.state != "active" or state.apply.state != "ready":
         raise CmocError("session abandon の事前条件を満たしていません。", [], str(path))
     require_clean_worktree(work)
-    ensure_cmoc_ignored(work)
     home = state.session.session_home_branch
     if not home:
         raise CmocError("session home branch を特定できません。", [], str(path))
@@ -46,6 +45,9 @@ def _cmoc_session_abandon_body() -> None:
             ["session state file と git branch の状態を確認してください。"],
             f"session_home_branch: {home}",
         )
+    # <work-root>/oracle/doc/app_spec/sub_command/session_abandon.md
+    # requires all preconditions to pass before this mutates git ignore/index state.
+    ensure_cmoc_ignored(work)
     try:
         run_git(["switch", home], work)
         state.session.state = "abandoned"
