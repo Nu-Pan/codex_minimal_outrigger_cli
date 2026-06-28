@@ -79,26 +79,26 @@ def _writable_roots(
     root = root.resolve()
     match mode:
         case FileAccessMode.REALIZATION_WRITE:
-            paths = [
-                path
-                for path in root.iterdir()
-                if _is_writable_path_allowed(mode, root, path.resolve())
-            ]
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # Codex profile has no deny-list expression for "work root except
+            # oracle/memo", so the root itself is required to allow new
+            # top-level realization files.
+            paths = [root]
         case FileAccessMode.ORACLE_WRITE:
             paths = [root / "oracle"]
         case FileAccessMode.REPO_WRITE:
-            paths = [
-                path
-                for path in root.iterdir()
-                if _is_writable_path_allowed(mode, root, path.resolve())
-            ]
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # REPO_WRITE likewise permits creating new top-level files.
+            paths = [root]
         case _:
             paths = []
     result: list[Path] = []
     seen: set[Path] = set()
     for path in paths:
         resolved = path.resolve()
-        if resolved not in seen:
+        if resolved not in seen and not any(
+            resolved.is_relative_to(parent) for parent in seen
+        ):
             seen.add(resolved)
             result.append(resolved)
     for path in extra_writable_paths or []:
@@ -109,7 +109,9 @@ def _writable_roots(
                 ["file access mode で書き込み可能な work root 配下の path を指定してください。"],
                 f"mode: {mode.value}\npath: {resolved}",
             )
-        if resolved not in seen:
+        if resolved not in seen and not any(
+            resolved.is_relative_to(parent) for parent in seen
+        ):
             seen.add(resolved)
             result.append(resolved)
     return result

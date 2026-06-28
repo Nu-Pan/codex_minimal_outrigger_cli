@@ -80,13 +80,9 @@ def _reject_agents_edit(root: Path, before: str, call_path: Path) -> None:
 
 
 def _write_prompt_log(path: Path, prompt: str) -> None:
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md requires a
-    # `_prompt.jsonl` log; stdin must still receive the original prompt text.
-    path.write_text(json.dumps({"prompt": prompt}, ensure_ascii=False) + "\n")
-
-
-def _read_prompt_log(path: Path) -> str:
-    return json.loads(path.read_text())["prompt"]
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # The prompt log is the replayable stdin source itself, not metadata.
+    path.write_text(prompt)
 
 
 def _next_codex_log_timestamp() -> str:
@@ -330,7 +326,7 @@ def run_codex_exec(
         result = run_codex_subprocess(
             current_argv,
             cwd=codex_cwd,
-            input=_read_prompt_log(prompt_path),
+            input=prompt_path.read_text(),
             text=True,
             capture_output=True,
             env=codex_env,
@@ -462,7 +458,7 @@ def run_codex_exec(
                         poll = run_codex_subprocess(
                             probe_argv,
                             cwd=codex_cwd,
-                            input=_read_prompt_log(probe_prompt_path),
+                            input=probe_prompt_path.read_text(),
                             text=True,
                             capture_output=True,
                             env=codex_env,

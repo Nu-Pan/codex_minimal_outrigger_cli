@@ -113,9 +113,7 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
     writable_roots = set(
         tomllib.loads(record["profile"])["sandbox_workspace_write"]["writable_roots"]
     )
-    assert str(root.resolve()) not in writable_roots
-    assert str((root / "README.md").resolve()) in writable_roots
-    assert str((root / "oracle").resolve()) in writable_roots
+    assert writable_roots == {str(root.resolve())}
     assert result.output_text == "done\n"
 
 

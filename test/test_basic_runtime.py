@@ -434,16 +434,13 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         assert 'sandbox_mode = "workspace-write"' in profiles[mode]
         assert "[sandbox_workspace_write]" in profiles[mode]
     assert _profile_writable_roots(profiles[FileAccessMode.REALIZATION_WRITE]) == {
-        str((root / "README.md").resolve()),
-        str((root / "src").resolve()),
+        str(root.resolve()),
     }
     assert _profile_writable_roots(profiles[FileAccessMode.ORACLE_WRITE]) == {
         str((root / "oracle").resolve())
     }
     assert _profile_writable_roots(profiles[FileAccessMode.REPO_WRITE]) == {
-        str((root / "README.md").resolve()),
-        str((root / "oracle").resolve()),
-        str((root / "src").resolve()),
+        str(root.resolve()),
     }
 
     extra = root / "src" / "extra"
@@ -460,9 +457,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         extra_writable_paths=[extra],
     )
     assert _profile_writable_roots(profile) == {
-        str((root / "README.md").resolve()),
-        str((root / "src").resolve()),
-        str(extra.resolve()),
+        str(root.resolve()),
     }
 
     with pytest.raises(CmocError, match="許可領域外"):

@@ -17,7 +17,7 @@ from commons.runtime_codex import run_codex_exec
 
 
 def prompt_log_text(path: str) -> str:
-    return json.loads(Path(path).read_text())["prompt"]
+    return Path(path).read_text()
 
 
 def test_run_codex_exec_retries_semantic_output(
