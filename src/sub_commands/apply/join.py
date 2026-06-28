@@ -1,5 +1,4 @@
 import json
-import os
 from pathlib import Path
 
 import typer
@@ -52,7 +51,6 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
         session_id = apply_branch_session_id(branch)
         session_branch = f"cmoc/session/{session_id}"
         root = worktree_for_branch(repo, session_branch)
-        os.chdir(root)
     else:
         root = current_root
         session_branch = branch
@@ -153,15 +151,23 @@ def _cmoc_apply_join_body(force_resolve: bool) -> None:
         merged_reachable,
         [],
     )
+    kept_current_worktree = False
     if merged_reachable:
         if apply_worktree:
-            remove_worktree(repo, apply_worktree)
-        delete_result = delete_branch(repo, apply_branch, force=False)
-        if delete_result.returncode != 0:
-            warnings.append(f"apply branch was not deleted: {apply_branch}")
+            if apply_worktree == current_root:
+                # <work-root>/oracle/doc/app_spec/misc_spec.md keeps cmoc pwd fixed
+                # to the caller's worktree, so join must not chdir away to delete it.
+                kept_current_worktree = True
+                warnings.append(f"apply worktree remains because it is current cwd: {apply_worktree}")
+            else:
+                remove_worktree(repo, apply_worktree)
+        if not (apply_worktree and apply_worktree.exists()):
+            delete_result = delete_branch(repo, apply_branch, force=False)
+            if delete_result.returncode != 0:
+                warnings.append(f"apply branch was not deleted: {apply_branch}")
     else:
         warnings.append(f"apply branch is not reachable from session HEAD: {apply_branch}")
-    if apply_worktree and apply_worktree.exists():
+    if apply_worktree and apply_worktree.exists() and not kept_current_worktree:
         warnings.append(f"apply worktree remains: {apply_worktree}")
     warning_lines = [f"  - {warning}" for warning in warnings] if warnings else ["  - none"]
     typer.echo(

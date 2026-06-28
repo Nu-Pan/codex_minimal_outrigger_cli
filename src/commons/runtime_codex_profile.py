@@ -1,3 +1,12 @@
+"""Codex CLI 起動前後の profile/env/schema/error 判定をまとめる境界。
+
+このファイルは 16,000 文字を超えるが、責務境界は Codex CLI に渡す実行環境と
+Codex CLI から返る機械的な実行結果の解釈に閉じている。sandbox/profile/cwd、
+CODEX_HOME、child process tracking、schema 配置、JSONL error 判定は同じ
+subprocess 境界の不変条件を共有するため、分割すると呼び出し側が同時に読むべき
+失敗時文脈が増える。現状は Codex profile 境界として一箇所に保つ方が凝集性が高い。
+"""
+
 import json
 import os
 import subprocess

@@ -105,13 +105,13 @@ def test_apply_join_can_run_from_apply_worktree(
     result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
 
     assert result.exit_code == 0
-    assert Path.cwd() == root
-    assert not apply_worktree.exists()
+    assert Path.cwd() == apply_worktree
+    assert apply_worktree.exists()
     assert (
         subprocess.run(
             ["git", "rev-parse", "--verify", apply_branch], cwd=root
         ).returncode
-        != 0
+        == 0
     )
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "ready"
@@ -120,7 +120,7 @@ def test_apply_join_can_run_from_apply_worktree(
         == apply_oracle_snapshot_commit
     )
     assert "- cleanup_reachable: `True`" in result.output
-    assert "  - none" in result.output
+    assert "apply worktree remains because it is current cwd" in result.output
 
 
 def test_apply_join_from_linked_session_worktree_merges_into_current_session(

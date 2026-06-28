@@ -1,3 +1,11 @@
+"""session fork/join/abandon の CLI 外部挙動をまとめて検証する。
+
+このファイルは 16,000 文字を超えるが、責務境界は session branch と session state の
+ライフサイクルに閉じている。fork、join、abandon、linked worktree、state cleanup、
+dirty worktree 拒否は同じ session 状態遷移の観測点であり、分割すると同じ branch/state
+fixture を追う文脈が分散する。現状は session CLI 回帰として一箇所に保つ方が凝集性が高い。
+"""
+
 import json
 import subprocess
 from pathlib import Path

@@ -1,3 +1,12 @@
+"""cmoc の基礎 runtime 境界を横断して検証する。
+
+このファイルは 16,000 文字を超えるが、責務境界は個別サブコマンドより下の
+共通 runtime 契約に閉じている。root 解決、config、CmocError、CLI error 表示、
+subcommand log、FileAccessMode、binary 判定は実行前提として一緒に崩れやすく、
+分割すると共通 fixture と root 状態の読み取り文脈が分散する。現状は basic runtime
+回帰として一箇所に保つ方が凝集性が高い。
+"""
+
 import json
 import shutil
 import subprocess

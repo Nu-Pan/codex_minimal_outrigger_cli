@@ -1,3 +1,12 @@
+"""INDEX.md 生成・更新と conflict 解決の CLI 境界を検証する。
+
+このファイルは 16,000 文字を超えるが、責務境界は indexing preflight と
+indexing subcommand が routing document を更新する外部挙動に閉じている。
+対象列挙、hash 再利用、Codex 生成、commit 条件、linked worktree、INDEX.md conflict
+解決は同じ routing 更新ワークフローの観測点であり、分割すると fixture と git 状態の
+読み取り文脈が分散する。現状は indexing CLI 回帰として一箇所に保つ方が凝集性が高い。
+"""
+
 import json
 import subprocess
 import threading

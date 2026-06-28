@@ -1,3 +1,12 @@
+"""init と TUI 起動に近い CLI 前処理の外部挙動を検証する。
+
+このファイルは 16,000 文字を超えるが、責務境界は cmoc 初期化と対話起動前の
+repository/runtime 準備に閉じている。.cmoc ignore、既存差分保護、設定同期、
+linked worktree、Markdown prompt 解析、TUI parameter 構築は利用開始直後の同じ
+CLI 境界で共有されるため、分割すると初期化済み状態の読み取り文脈が分散する。
+現状は init/TUI 前処理回帰として一箇所に保つ方が凝集性が高い。
+"""
+
 import json
 import subprocess
 from pathlib import Path

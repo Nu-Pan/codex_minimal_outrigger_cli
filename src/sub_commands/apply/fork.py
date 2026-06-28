@@ -1,3 +1,12 @@
+"""apply fork の branch/worktree 作成から Codex 適用 loop までを扱う。
+
+このファイルは 16,000 文字を超えるが、責務境界は一つの apply run を開始し、
+対象列挙、Codex による finding 適用、commit、state 更新まで進める制御に閉じている。
+apply state、worktree、禁止差分 rollback、再キュー、commit subject は同じ loop の
+失敗時復旧条件を共有するため、分割すると fork 中の読み取り文脈がかえって分散する。
+現状は apply fork の orchestration として一箇所に保つ方が凝集性が高い。
+"""
+
 import json
 import os
 import shutil

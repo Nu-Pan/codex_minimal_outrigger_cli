@@ -1,3 +1,12 @@
+"""Codex quota exceeded 後の probe/resume/retry 制御を検証する。
+
+このファイルは 16,000 文字を超えるが、責務境界は quota 待機から復帰する
+Codex exec の外部挙動に閉じている。probe 共有、resume token、再実行、call log、
+subcommand log、CODEX_HOME/cwd は同じ retry 状態機械の観測点であり、分割すると
+同じ fake Codex 呼び出し列を追う文脈が分散する。現状は quota retry 回帰として
+一箇所に保つ方が凝集性が高い。
+"""
+
 import json
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
