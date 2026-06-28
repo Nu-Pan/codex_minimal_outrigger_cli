@@ -1,26 +1,28 @@
 # `apply`
 
 ## Summary
-- 未 join の実行破棄、分離 worktree 上での調査・適用ループ、完了結果の session branch への取り込み、実行時 process 管理、結果 report 生成を含む apply 系サブコマンド実装をまとめる領域。
-- 状態遷移、branch/worktree cleanup、process tracking、差分検証、編集禁止対象の扱い、merge conflict や force-resolve の判断など、apply 実行ライフサイクル固有の制御へ進む入口になる。
+- apply サブコマンド群の実装領域。apply run の開始、実行用 worktree と branch の管理、finding 適用 loop、実行結果の report 生成、session 側への join、未 join run の abandon、実行中 process の追跡と停止補助を扱う。
+- apply 固有の状態遷移、cleanup、想定外差分の扱い、report 出力、process id 管理など、apply のユーザー操作と実行時制御へ進むための入口となる。
 
 ## Read this when
-- apply run の開始、破棄、完了取り込み、失敗時処理、cleanup、状態リセットのどこを読むべきか切り分けたいとき。
-- session branch と apply 用 branch/worktree の関係、実行場所の制約、対象 worktree の解決、branch/worktree 削除の流れを確認したいとき。
-- apply 実行中の pid file、process tracking 用環境変数、実行中 process や subprocess group の停止安全性を調べたいとき。
-- apply 中の Codex 呼び出し、finding 列挙・適用、commit subject 生成、変更ファイルの再キュー、編集禁止対象差分の検出と復元を確認したいとき。
-- apply 結果 report の保存先、frontmatter、結果表示、変更要約、失敗時 fallback、join 時 report や warning の内容を確認したいとき。
-- apply branch と session branch の許可差分、想定外差分の検出、force-resolve、merge conflict、INDEX.md だけの conflict 自動解決を調べたいとき。
+- apply run の開始、完了結果の取り込み、未 join run の破棄など、apply サブコマンドの主要な利用者操作を確認・変更したいとき。
+- apply branch、apply worktree、session state、apply state の遷移や cleanup の流れを apply 固有の観点で追いたいとき。
+- finding 適用対象の選定、変更後ファイルの再キュー、禁止対象差分の rollback、commit subject 生成など、apply fork の実行 loop を調べたいとき。
+- apply join における想定外差分の検出、force-resolve、merge conflict report、INDEX.md conflict の機械解決、join 後の状態復元を扱うとき。
+- apply abandon による実行中 process 停止、worktree・branch・pid file の片付け、ready 状態への復帰を確認したいとき。
+- apply fork や join の Markdown report、frontmatter、変更要約、失敗時 report の生成内容や保存処理を確認・変更したいとき。
+- apply 実行中 process の pid file、process tracking 用環境変数、stale pid 判定、process group 停止の安全性を調査するとき。
 
 ## Do not read this when
-- apply 以外の session 管理、review、oracle、基本 path model など別サブコマンドや正本仕様そのものを調べたいとき。
-- CLI 全体の共通 dispatch、git command wrapper、config/state 読み書き、report directory path 解決など、apply 固有ではない低レベル共通処理だけが目的のとき。
-- Codex に渡す prompt parameter の詳細だけを調べたいときは、parameter builder 側へ直接進む。
-- テスト観点や期待挙動を確認したいだけで、実装の制御フローを読む必要がないときは、対応するテスト領域へ進む。
-- パッケージに初期化処理や再 export があるかだけを確認したい場合を除き、具体的な実行ロジックではない入口説明だけを読む必要はない。
+- apply の外部仕様や人間が管理する正本仕様断片を確認したいだけのときは、対応する oracle doc を読む。
+- サブコマンド共通の dispatch、config 読み込み、git command wrapper、state file 永続化、worktree 一般操作など、apply に閉じない共通 runtime の詳細だけを調べたいとき。
+- finding 列挙や Codex prompt の具体的な組み立てだけを確認したいときは、対象列挙や parameter builder 側へ直接進む。
+- session state の schema、branch 名から session id を得る規則、状態ファイル形式そのものを変更したいだけのとき。
+- apply 以外のサブコマンド、INDEX.md エントリー生成規則、ルーティング文書一般、oracle と realization の基本規則を調べたいとき。
+- パッケージ説明や import 副作用の有無だけを確認する場合を除き、具体的な制御ロジックが不要なとき。
 
 ## hash
-- 22cb9956f57736c49702f4e94d84ab3f4ee83f60bd0bee2e2e1336a4fc7bce05
+- 7f7ef3852f0025d884ea84f695e7614710df87583678f92440cd84c7dcf813f3
 
 # `indexing.py`
 
