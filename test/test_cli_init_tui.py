@@ -24,7 +24,6 @@ from _support import (
     write_python_executable,
 )
 from main import app
-from sub_commands.tui import parse_markdown_prompt
 import sub_commands.tui as tui_module
 
 def test_init_untracks_existing_cmoc_files_and_commits_cleanup(
@@ -305,8 +304,8 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         assert parameter.model_class == ModelClass.MAINSTREAM
         assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
         assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
-        assert parameter.structured_output_schema_path is None
-        assert parameter.prompt.endswith("_cmpl.md` の指示に従って下さい。")
+        assert parameter.structured_output_schema_path.name == "launch_tui.json"
+        assert parameter.prompt.endswith("_cmpl.md を読んで、その指示に従って下さい")
         assert len(kwargs["extra_read_paths"]) == 1
         assert str(kwargs["extra_read_paths"][0]) in parameter.prompt
 
@@ -325,7 +324,7 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     assert len(complete_files) == 1
     complete_prompt = complete_files[0].read_text()
     assert "# file read write rule - repo_write" in complete_prompt
-    assert "# 詳細指示" in complete_prompt
+    assert "# オリジナルプロンプト" in complete_prompt
     assert "src を確認して必要なら直す" in complete_prompt
     assert "remove me" not in complete_prompt
     assert str(complete_files[0]) in tui_calls[0][0].prompt
@@ -334,7 +333,13 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     assert not (root / ".cmoc" / "logs" / "sub_commands").exists()
 
 
-def test_tui_uses_default_file_access_mode_for_empty_resolved_value() -> None:
+def test_tui_uses_default_file_access_mode_for_empty_resolved_value(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    (root / ".cmoc" / "log" / "tui").mkdir(parents=True, exist_ok=True)
     parameter = tui_module.build_tui_codex_parameter(
         "確認して下さい。",
         {"file_access_mode": {"value": "", "reason": "default accepted"}},
@@ -384,6 +389,9 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
             "    'index_entry_standard',",
             "]}",
             "data['file_access_mode'] = {'value': 'repo_write', 'reason': 'test'}",
+            "data['role'] = {'value': 'role', 'reason': 'test'}",
+            "data['summary'] = {'value': 'summary', 'reason': 'test'}",
+            "data['goal'] = {'value': 'goal', 'reason': 'test'}",
             "output.write_text(json.dumps(data))",
             "record.write_text(json.dumps({'args': args, 'cwd': os.getcwd()}))",
             "print(json.dumps({'type': 'turn.completed'}))",
@@ -406,8 +414,8 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     assert tui_calls[0][1]["root"] == root.resolve()
     assert tui_calls[0][1]["cwd"] == linked.resolve()
     assert len(list((root / ".cmoc" / "log" / "tui").glob("*_orig.md"))) == 1
-    assert not list((root / ".cmoc" / "log" / "tui").glob("*_cmpl.md"))
-    complete_files = list((linked / ".cmoc" / "log" / "tui").glob("*_cmpl.md"))
+    complete_files = list((root / ".cmoc" / "log" / "tui").glob("*_cmpl.md"))
+    assert not list((linked / ".cmoc" / "log" / "tui").glob("*_cmpl.md"))
     assert len(complete_files) == 1
     assert str(complete_files[0]) in tui_calls[0][0].prompt
     assert tui_calls[0][1]["extra_read_paths"] == [complete_files[0]]
@@ -456,67 +464,7 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
     assert "/.cmoc/" in (linked / ".gitignore").read_text()
     assert len(list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))) == 1
     assert len(list((root / ".cmoc" / "log" / "tui").glob("*_orig.md"))) == 1
-    assert len(list((linked / ".cmoc" / "log" / "tui").glob("*_cmpl.md"))) == 1
+    assert len(list((root / ".cmoc" / "log" / "tui").glob("*_cmpl.md"))) == 1
+    assert not list((linked / ".cmoc" / "log" / "tui").glob("*_cmpl.md"))
     assert run_git(root, "status", "--short", "--", ".cmoc").stdout.strip() == ""
     assert run_git(linked, "status", "--short", "--", ".cmoc").stdout.strip() == ""
-
-
-def test_parse_markdown_prompt_ignores_headings_inside_fenced_code_blocks() -> None:
-    parsed = parse_markdown_prompt(
-        "\n".join(
-            [
-                "# 依頼",
-                "",
-                "```python",
-                "# 見出しではない",
-                "print('ok')",
-                "```",
-                "",
-                "## 補足",
-                "本文",
-            ]
-        )
-    )
-
-    assert [doc.title for doc in parsed] == ["依頼"]
-    assert isinstance(parsed[0].children, list)
-    assert [doc.title for doc in parsed[0].children] == ["本文", "補足"]
-    assert "# 見出しではない" in parsed[0].children[0].children
-
-
-def test_parse_markdown_prompt_preserves_preamble_before_headings() -> None:
-    parsed = parse_markdown_prompt("最初の依頼\n\n# 詳細\n\n見出し下の依頼")
-
-    assert [doc.title for doc in parsed] == ["本文", "詳細"]
-    assert parsed[0].children == "最初の依頼"
-    assert parsed[1].children == "見出し下の依頼"
-
-
-def test_parse_markdown_prompt_preserves_heading_hierarchy() -> None:
-    parsed = parse_markdown_prompt(
-        "\n".join(
-            [
-                "# 親",
-                "",
-                "親本文",
-                "",
-                "## 子",
-                "子本文",
-                "### 孫",
-                "孫本文",
-                "# 次",
-                "次本文",
-            ]
-        )
-    )
-
-    assert [doc.title for doc in parsed] == ["親", "次"]
-    assert isinstance(parsed[0].children, list)
-    assert [doc.title for doc in parsed[0].children] == ["本文", "子"]
-    assert parsed[0].children[0].children == "親本文"
-    child = parsed[0].children[1]
-    assert isinstance(child.children, list)
-    assert [doc.title for doc in child.children] == ["本文", "孫"]
-    assert child.children[0].children == "子本文"
-    assert child.children[1].children == "孫本文"
-    assert parsed[1].children == "次本文"

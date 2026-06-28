@@ -45,7 +45,7 @@ def report_path_from_stdout(stdout: str) -> Path:
 def test_apply_fork_writes_report_with_change_summary(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
-    """未収束 report に Codex 由来の変更要約と commit message が反映される。"""
+    """未収束 report に Codex 由来の変更要約と機械生成 commit message が反映される。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -73,7 +73,7 @@ def test_apply_fork_writes_report_with_change_summary(
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
-        """所見、適用、commit message、変更要約の各 Codex 応答を返す。"""
+        """所見、適用、変更要約の各 Codex 応答を返す。"""
         nonlocal application_count
         purpose = str(kwargs["purpose"])
         calls.append(purpose)
@@ -88,8 +88,6 @@ def test_apply_fork_writes_report_with_change_summary(
             application_count += 1
             (Path.cwd() / "README.md").write_text(f"# updated {application_count}\n")
             return FakeCodexResult(None)
-        if purpose == "apply fork commit message":
-            return FakeCodexResult(output_text="Update README from apply finding\n")
         if schema == "change_summary.json":
             return FakeCodexResult(
                 {
@@ -120,14 +118,14 @@ def test_apply_fork_writes_report_with_change_summary(
     assert "## Finding Count" in rendered
     assert "ドキュメント: README を更新した (README.md)" in rendered
     assert "apply fork change summary" in calls
-    assert "apply fork commit message" in calls
+    assert "apply fork commit message" not in calls
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
     state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
     apply_branch = state["apply"]["apply_branch"]
     assert (
         run_git(root, "log", "-1", "--pretty=%s", apply_branch).stdout.strip()
-        == "Update README from apply finding"
+        == "Apply finding: Update README"
     )
 
 
@@ -176,8 +174,6 @@ def test_apply_fork_rechecks_changed_files_until_converged(
             (Path.cwd() / "newdir").mkdir()
             (Path.cwd() / "newdir" / "new.py").write_text("print('new')\n")
             return FakeCodexResult(None)
-        if purpose == "apply fork commit message":
-            return FakeCodexResult(output_text="Update README from apply finding\n")
         if purpose == "apply fork change summary":
             return FakeCodexResult({"changes": []})
         raise AssertionError(purpose)
@@ -514,8 +510,6 @@ def test_apply_fork_rejects_forbidden_agents_diff(
             else:
                 (Path.cwd() / ".agents" / "skill.md").write_text("forbidden\n")
             return FakeCodexResult()
-        if purpose == "apply fork commit message":
-            return FakeCodexResult(output_text="Update README before error\n")
         if purpose == "apply fork change summary":
             return FakeCodexResult(
                 {
