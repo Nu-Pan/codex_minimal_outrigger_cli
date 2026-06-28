@@ -4,7 +4,8 @@
 """
 
 # cmoc
-from basic.struct_doc import StructDoc
+from basic.path_model import RootToken, resolve_real_path, resolve_work_root
+from basic.struct_doc import StructCodeBlock, StructDoc
 
 # local
 from .file_access_rule import build_file_access_rule, FileAccessMode
@@ -110,4 +111,34 @@ def build_complete_prompt(
         struct_doc.append(build_review_oracle_standard())
     if index_entry_standard:
         struct_doc.append(build_index_entry_standard())
-    return struct_doc
+    return [_sanitize_prompt_doc(doc) for doc in struct_doc]
+
+
+def _sanitize_prompt_doc(doc: StructDoc) -> StructDoc:
+    children = doc.children
+    title = _sanitize_prompt_text(doc.title)
+    if isinstance(children, str):
+        return StructDoc(title, _sanitize_prompt_text(children))
+    if isinstance(children, StructCodeBlock):
+        return StructDoc(
+            title,
+            StructCodeBlock(children.info, _sanitize_prompt_text(children.body)),
+        )
+    return StructDoc(title, *[_sanitize_prompt_doc(child) for child in children])
+
+
+def _sanitize_prompt_text(text: str) -> str:
+    # `<work-root>/oracle/doc/app_spec/prompt_standard.md` requires concrete paths
+    # before text is passed to Codex CLI.
+    for root_token in RootToken:
+        text = text.replace(root_token.value, str(_resolve_prompt_root(root_token)))
+    return text.replace("cmoc から呼び出された AI Agent", "AI Agent")
+
+
+def _resolve_prompt_root(root_token: RootToken):
+    try:
+        return resolve_real_path(root_token)
+    except ValueError:
+        if root_token is RootToken.RUN:
+            return resolve_work_root()
+        raise
