@@ -64,6 +64,22 @@ def _write_prompt_log(path: Path, prompt: str) -> None:
     path.write_text(prompt)
 
 
+def _read_required_output_json(path: Path) -> Any:
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # Structured Output parse failure is semantic failure; schema permissiveness
+    # must not turn missing, empty, or malformed output into success.
+    try:
+        text = path.read_text()
+    except FileNotFoundError as exc:
+        raise ValueError(f"output file does not exist: {path}") from exc
+    if not text.strip():
+        raise ValueError(f"output file is empty: {path}")
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"output file is not valid JSON: {exc}") from exc
+
+
 def _next_codex_log_timestamp() -> str:
     """壁時計後退時も同一プロセス内の Codex exec log 名を単調増加させる。"""
     global _LAST_CODEX_LOG_TIMESTAMP
@@ -519,9 +535,9 @@ def run_codex_exec(
                     f"{error_text}"
                 ),
             )
-        output_json = read_output_json(output_path)
         if schema_path is not None:
             try:
+                output_json = _read_required_output_json(output_path)
                 validate(
                     instance=output_json, schema=json.loads(schema_path.read_text())
                 )
@@ -560,6 +576,8 @@ def run_codex_exec(
                     ["schema と output を確認してください。"],
                     f"schema: {schema_path}\noutput: {output_path}\nerror: {exc}",
                 ) from exc
+        else:
+            output_json = read_output_json(output_path)
         output_text = output_path.read_text() if output_path.exists() else ""
         elapsed_sec = time.perf_counter() - call_started_at
         emit_codex_call_event(

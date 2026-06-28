@@ -442,7 +442,7 @@ def prepare_schema(root: Path, schema_source_path: Path | None) -> Path | None:
 
 
 def read_output_json(path: Path) -> Any:
-    """Codex output file が空または不正 JSON の場合は retry 判定側へ None を返す。"""
+    """schema なしの Codex output が空または不正 JSON の場合は None を返す。"""
     if not path.exists() or not path.read_text().strip():
         return None
     try:
