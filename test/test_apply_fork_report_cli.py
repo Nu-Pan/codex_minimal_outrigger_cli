@@ -109,6 +109,39 @@ def test_finding_application_builder_imports_with_src_pythonpath_only() -> None:
     assert result.returncode == 0, result.stderr
 
 
+def test_finding_application_prompt_uses_complete_standard_prompt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from acp.builder.apply.fork.finding_application import (
+        build_apply_fork_finding_application_parameter,
+    )
+
+    repo_root = tmp_path / "repo"
+    apply_worktree = repo_root / ".cmoc" / "worktrees" / "session" / "run"
+    apply_worktree.mkdir(parents=True)
+    (repo_root / ".git").mkdir()
+    (apply_worktree / ".git").write_text("gitdir: ignored\n")
+    monkeypatch.chdir(apply_worktree)
+
+    parameter = build_apply_fork_finding_application_parameter(
+        [{"title": "first"}, {"title": "second"}]
+    )
+
+    assert "# oracle and realization basic" in parameter.prompt
+    assert "# realization standard" in parameter.prompt
+    assert "# file read write rule - realization_write" in parameter.prompt
+    assert "- `<work-root>/oracle` ツリー内は書き込み禁止" in parameter.prompt
+    assert "- `<work-root>/memo` は読み書き禁止" in parameter.prompt
+    assert "/.agents` ツリー内は書き込み禁止" not in parameter.prompt
+    assert "## FINDING-00" in parameter.prompt
+    assert '"title": "first"' in parameter.prompt
+    assert "## FINDING-01" in parameter.prompt
+    assert '"title": "second"' in parameter.prompt
+    assert '"findings"' not in parameter.prompt
+    assert f"- <work-root> = {apply_worktree}" in parameter.prompt
+    assert f"- <repo-root> = {repo_root}" in parameter.prompt
+
+
 def test_file_finding_enumeration_schema_matches_oracle_source() -> None:
     from acp.builder.apply.fork.file_finding_enumeration import (
         build_apply_fork_file_finding_enumeration_parameter,

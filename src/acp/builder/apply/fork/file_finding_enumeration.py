@@ -1,9 +1,11 @@
 """`cmoc apply fork` のファイル単位所見列挙 builder。"""
 
-import sys
 from pathlib import Path
 
-from acp.builder.apply.fork._common import resolve_repo_root
+from acp.builder.apply.fork._common import (
+    ensure_oracle_src_importable,
+    resolve_repo_root,
+)
 from basic.acp import (
     AgentCallParameter,
     FileAccessMode,
@@ -30,7 +32,7 @@ def build_apply_fork_file_finding_enumeration_parameter(
 
 def _prompt(target_path: Path) -> str:
     repo_root = resolve_repo_root()
-    _ensure_oracle_src_importable(repo_root)
+    ensure_oracle_src_importable(repo_root)
 
     from oracle.acp_builder.basic import FileAccessMode as OracleFileAccessMode
     from oracle.other.path_model import resolve_real_path
@@ -57,17 +59,3 @@ def _prompt(target_path: Path) -> str:
         apply_review_standard=True,
     )
     return render_as_markdown(prompt)
-
-
-def _ensure_oracle_src_importable(repo_root: Path) -> None:
-    candidates = [
-        repo_root / "oracle" / "src",
-        Path(__file__).resolve().parents[5] / "oracle" / "src",
-    ]
-    for candidate in candidates:
-        if (candidate / "oracle").is_dir():
-            candidate_text = str(candidate)
-            if candidate_text not in sys.path:
-                sys.path.insert(0, candidate_text)
-            return
-    raise ValueError("`oracle/src` was not found")
