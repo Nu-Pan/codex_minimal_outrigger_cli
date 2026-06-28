@@ -234,22 +234,26 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- indexing preflight と indexing サブコマンドが routing document を生成・更新・commit する外部挙動を検証する realization test。Codex によるエントリー生成、既存 hash の再利用、dirty worktree の拒否、linked worktree 対象化、conflict 解決、semantic field の検証、並列生成、root 直下 memo 除外と nested memo 対象化を同じ routing 更新ワークフローの観測点として扱う。
+- indexing preflight と indexing subcommand が routing document を生成・更新・commit する外部挙動を検証する realization test。
+- 未初期化・dirty worktree・linked worktree・apply worktree 設定参照・fresh hash 再利用・malformed entry 再生成・semantic field validation・sibling 並列生成・memo 除外境界を、routing 更新ワークフローの回帰としてまとめて扱う。
+- routing document conflict 解決で対象 document を削除して merge commit を完了させる apply 側の境界も、同じ routing 更新ワークフローの観測点として含む。
 
 ## Read this when
-- indexing CLI の成功・失敗条件、commit 対象、未初期化 repo や dirty repo での停止挙動を確認・変更したいとき。
-- indexing preflight が通常の indexing サブコマンドと異なり、既存の非 INDEX 差分を許容しつつ routing document だけを commit する挙動を確認したいとき。
-- routing document エントリーの hash freshness、malformed entry 再生成、semantic field の妥当性検証、Codex 呼び出し省略条件を変更したいとき。
-- linked worktree や apply worktree 上で、対象 root、cwd、repo config、commit 先がどう扱われるかを検証したいとき。
-- root 直下 memo を indexing 対象から除外し、通常ディレクトリ配下の memo は indexing 対象にする境界を確認したいとき。
+- indexing CLI が clean repo だけで実行され、routing document 更新後に indexing commit を作る条件を確認したいとき。
+- indexing preflight が通常の indexing subcommand と異なり、既存の非 routing document 差分を許しつつ routing document だけを commit する挙動を確認したいとき。
+- linked worktree や apply worktree から indexing を実行したとき、対象 worktree・参照する repository config・commit 先が正しいかを確認したいとき。
+- 既存 hash が fresh な entry の Codex 呼び出し省略、malformed entry の再生成、semantic list の受理・拒否条件を確認したいとき。
+- routing document 生成対象の列挙、sibling entry の並列生成、root 直下の memo 除外と nested memo indexing の境界を確認したいとき。
+- routing document conflict 解決の delete-and-commit 挙動を apply workflow 側から確認したいとき。
 
 ## Do not read this when
-- routing document の生成・更新ワークフローではなく、個別サブコマンドの UI や一般的な CLI 起動構造だけを調べたいとき。
-- Codex 実行 wrapper、config model、path model などの実装詳細そのものを変更したいだけで、このテストが観測する indexing 外部挙動に触れないとき。
-- 単一の小さな helper の純粋な内部処理を確認したいだけで、git 状態、commit、worktree、routing document 更新の副作用を伴わないとき。
+- 個別の indexing 実装アルゴリズムや parser helper の内部構造を変更したいだけで、CLI・preflight・git commit 境界の回帰確認が不要なとき。
+- routing entry の文面そのものや Codex 生成結果の品質を評価したいとき。
+- init、apply、git helper、runtime config の一般的な仕様を調べたいだけで、indexing workflow との接続条件を扱わないとき。
+- 単一の小さな rendering 仕様だけを確認したい場合で、より局所的な unit test や実装本文から直接確認できるとき。
 
 ## hash
-- b577ba759f1311d8f153cc859e5dbf03d375f4e57944016a55663e2d1738be93
+- 44b3240ac87938539cea96444edb51175fc76ee5286f694be5600fa56a23dc1e
 
 # `test_indexing_preflight.py`
 

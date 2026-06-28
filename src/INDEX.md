@@ -60,26 +60,25 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation のうち、複数のサブコマンドや上位処理から共有される実行時 helper 群をまとめる領域。
-- Codex CLI 呼び出し、preflight indexing、設定読み書き、内容 hash、CLI 共通ライフサイクル、共通エラー表示、git 操作、ログ、パス、実行結果モデル、session state 永続化など、cmoc 実行基盤の横断的な処理への入口になる。
-- この階層には、実処理を持つ runtime module と、既存 import path を維持するための集約・互換 import 入口が混在しているため、具体挙動を読む場合は責務別の下位本文へ進む。
+- cmoc の realization implementation のうち、複数の上位処理から共有される実行時支援をまとめる領域。Codex 呼び出し、preflight indexing、設定、内容 hash、CLI 共通ライフサイクル、共通エラー表示、git 操作、実行ログ、標準 path、結果モデル、session state などの横断的 helper への入口になる。
+- 個別サブコマンドの業務処理ではなく、サブコマンドや orchestration 層が共通して使う runtime 境界、保存先、失敗時表現、外部プロセス呼び出し、状態受け渡しを確認するための階層。
 
 ## Read this when
-- cmoc の複数機能で共有される runtime helper、共通型、共通エラー、共通ログ、共通 path、git 操作、Codex 呼び出し境界、設定や状態の永続化に関する実装場所を探すとき。
-- Codex exec/TUI の起動前後処理、Structured Output 検証、quota/capacity retry、call log、preflight indexing など、Codex subprocess 境界の共通制御を確認または変更したいとき。
-- CLI サブコマンドの共通実行フロー、終了コード化、標準サマリー、例外表示、サブコマンド log との接続を調べたいとき。
-- INDEX.md 自動更新の preflight、対象列挙、既存エントリー鮮度判定、欠落エントリー生成、Markdown 描画、専用 commit 作成の流れを追いたいとき。
-- cmoc の標準保存先、work/root/repo path、memo 判定、session state file、config file、logs、schema store など、複数領域から参照される runtime 配置規則の実装へ進みたいとき。
+- cmoc 全体で共有される runtime helper の所在を探し、Codex 実行、設定、git、path、logging、state、error、result などの責務別実装へ進みたいとき。
+- CLI サブコマンドの共通実行フロー、標準出力サマリー、終了コード化、例外表示、サブコマンドログとの接続を確認または変更したいとき。
+- Codex exec/TUI の起動準備、profile・sandbox・CODEX_HOME・call log・Structured Output・retry・quota/capacity・preflight の挙動を追いたいとき。
+- ルーティング文書の自動検査・再生成、対象列挙、hash 判定、生成結果の検証、排他制御、専用 commit 作成の実装を確認したいとき。
+- 設定ファイル、内容 hash 保存、git worktree/branch 操作、ログ event、標準保存先、session state file など、複数箇所から使われる共通 runtime の入出力や失敗条件を調べたいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジック、CLI 引数定義、利用者向けレポート生成だけを調べたいとき。その場合はコマンド層の対象へ進む。
-- oracle file の正本仕様、path keyword の概念定義、session state や CLI 出力の仕様意図を確認したいとき。その場合は対応する oracle doc または basic 層の正本仕様を読む。
-- テストの期待値や fixture、外部挙動の検証内容を確認したいとき。その場合は realization test 側へ進む。
-- 特定の共通 helper の具体的な入出力、副作用、例外条件だけを調べたい場合は、この階層全体ではなく、設定、git、path、logging、state、Codex exec/TUI など該当責務の本文へ直接進む。
-- 既存 import 面の確認だけでなく新しい runtime 処理を追加する場所を探しているときは、集約・互換 import 入口ではなく、責務が一致する実処理 module を読む。
+- 個別サブコマンドの引数定義、業務ロジック、利用者向けレポート生成、状態更新の呼び出し順だけを調べたいとき。その場合はコマンド層や該当 workflow の実装へ進む。
+- oracle file に書かれた正本仕様、path keyword の定義、session state の仕様意図、ルーティング文書の文章規約そのものを確認したいとき。その場合は対応する oracle 文書を読む。
+- テストケース、fixture、期待値の詳細を変更したいとき。その場合は realization test 側へ進む。
+- 生成済みの log、report、session state、INDEX.md の本文内容そのものを確認したいだけのとき。この領域はそれらを扱う runtime 実装であり、生成物の閲覧入口ではない。
+- 単一の下位責務がすでに分かっており、その具体的な型・関数・副作用だけを確認したいときは、この階層全体ではなく該当する責務別本文へ直接進む。
 
 ## hash
-- 546ccc8be91d8ec63fedc0188bed189db4fa8004cfba12bd782008d9872a7864
+- c7bf8d9b94648007ce628c6c31fca3759df358f5987ab49693e960e5b24349e7
 
 # `config`
 
