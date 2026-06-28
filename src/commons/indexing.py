@@ -295,16 +295,12 @@ def render_index_entry(
 def entry_list(root: Path, path: Path, entry: dict | None, key: str) -> list[str]:
     """Structured Output の必須 list[str] 項目を検証して取り出す。"""
     value = entry.get(key) if isinstance(entry, dict) else None
-    if isinstance(value, list) and value and all(
-        isinstance(item, str)
-        and item.strip()
-        and "\n" not in item
-        and "\r" not in item
-        for item in value
-    ):
-        return [item.strip() for item in value]
+    # <work-root>/oracle/src/oracle/acp_builder/indexing/index_entry.json
+    # permits any array of strings, including empty arrays and multiline strings.
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return value
     raise CmocError(
         "INDEX.md entry 生成結果が不正です。",
         ["cmoc indexing を再実行してください。"],
-        f"{path.relative_to(root)}: `{key}` は改行を含まない非空文字列配列である必要があります。",
+        f"{path.relative_to(root)}: `{key}` は文字列配列である必要があります。",
     )
