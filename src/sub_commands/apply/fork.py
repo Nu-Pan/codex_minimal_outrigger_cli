@@ -170,7 +170,6 @@ def _cmoc_apply_fork_body(
                 root, branch, state, finding_counts, apply_worktree, config, codex_exec
             )
         setattr(exc, "cmoc_stdout", str(report_path.resolve()))
-        setattr(exc, "cmoc_error_to_stderr", True)
         raise
     # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md requires the
     # generated report path on stdout; common runtime logs are emitted around it.

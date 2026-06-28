@@ -535,7 +535,8 @@ def test_apply_fork_rejects_forbidden_agents_diff(
     result = runner.invoke(app, ["apply", "fork", "--scope", "full"])
 
     assert result.exit_code != 0
-    assert "編集禁止対象" in result.stderr
+    assert "編集禁止対象" in result.stdout
+    assert "編集禁止対象" not in result.stderr
     report_path = report_path_from_stdout(result.stdout)
     assert report_path.is_file()
     rendered = report_path.read_text()
