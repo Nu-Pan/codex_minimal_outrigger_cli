@@ -34,7 +34,19 @@ def write_abandoned_state(root: Path, session_id: str) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(
-            {"session": {"state": "abandoned", "session_home_branch": "old-home"}},
+            {
+                "session": {
+                    "state": "abandoned",
+                    "session_home_branch": "old-home",
+                    "session_start_commit": "old-commit",
+                    "last_joined_apply_oracle_snapshot_commit": None,
+                },
+                "apply": {
+                    "state": "ready",
+                    "apply_branch": None,
+                    "oracle_snapshot_commit": None,
+                },
+            },
             ensure_ascii=False,
             indent=2,
         )
@@ -110,6 +122,27 @@ def test_session_fork_retries_session_id_collision(
     assert old_path.read_text() == original
     assert (root / ".cmoc" / "sessions" / f"{next_id}.json").is_file()
     assert f"- session_branch: `cmoc/session/{next_id}`" in result.output
+
+
+def test_session_fork_rejects_corrupt_state_without_active_session_message(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    home_branch = current_branch(root)
+    path = root / ".cmoc" / "sessions" / "broken.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps({"session": {"session_home_branch": home_branch}, "apply": {}})
+        + "\n"
+    )
+
+    result = runner.invoke(app, ["session", "fork"])
+
+    assert result.exit_code != 0
+    assert "session state file が不正です。" in result.stdout
+    assert "active session が既に存在します。" not in result.stdout
+    assert current_branch(root) == home_branch
 
 
 def test_session_fork_initializes_cmoc_ignore_before_logging(
@@ -300,6 +333,31 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     )
     state = json.loads(state_path.read_text())
     assert state["session"]["state"] == "active"
+
+
+@pytest.mark.parametrize("command", ["abandon", "join"])
+def test_session_completion_rejects_missing_state_fields(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, command: str
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    path = session_state_path(root, session_branch)
+    broken_state = {
+        "session": {"session_home_branch": session_home_branch(root, session_branch)}
+    }
+    path.write_text(json.dumps(broken_state) + "\n")
+
+    result = runner.invoke(app, ["session", command])
+
+    assert result.exit_code != 0
+    assert "session state file が不正です。" in result.stdout
+    assert "必須 field" in result.stdout
+    assert current_branch(root) == session_branch
 
 
 def test_session_join_resolves_oracle_conflict_with_realization_write_profile(
