@@ -24,7 +24,7 @@ from cmoc_runtime import (
     work_root,
 )
 from config.cmoc_config import CmocConfig
-from sub_commands.indexing import enable_indexing_preflight
+from commons.indexing import enable_indexing_preflight
 
 ORIGINAL_PROMPT_TEMPLATE = """<!--
     AI Agent CLI/TUI に与えるプロンプトを書いて下さい。
@@ -39,11 +39,29 @@ CodexExec = Callable[..., CodexExecResult]
 CodexTui = Callable[..., None]
 
 
+class _MarkdownSection:
+    def __init__(self, level: int, title: str) -> None:
+        self.level = level
+        self.title = title
+        self.body: list[str] = []
+        self.children: list[_MarkdownSection] = []
+
+    def to_struct_doc(self) -> StructDoc:
+        body = "\n".join(self.body).strip()
+        children = [child.to_struct_doc() for child in self.children]
+        if body and children:
+            return StructDoc(self.title, StructDoc("本文", body), *children)
+        if children:
+            return StructDoc(self.title, *children)
+        return StructDoc(self.title, body)
+
+
 def cmoc_tui_impl() -> None:
     """CLI runtime を通して tui を実行する。"""
     enable_indexing_preflight()
     run_cli_subcommand(
         _cmoc_tui_from_current_context,
+        pre_log_check=ensure_tui_cmoc_ignored,
         command_name="tui",
         command_argv=["cmoc", "tui"],
     )
@@ -58,7 +76,6 @@ def _cmoc_tui_body(
     config: CmocConfig,
 ) -> None:
     """依頼文の編集、実行パラメータ解決、Codex TUI 起動を一連で行う。"""
-    ensure_cmoc_ignored(work_root)
     original_path = initialize_original_prompt(root)
     run_editor(original_path)
     original_prompt = read_original_prompt(original_path)
@@ -85,6 +102,17 @@ def _cmoc_tui_body(
         purpose="tui codex",
         extra_read_paths=[complete_prompt_path],
     )
+
+
+def ensure_tui_cmoc_ignored(root: Path) -> None:
+    """TUI がログを書く root の `.cmoc` ignore をログ作成前に保証する。"""
+    # <work-root>/oracle/doc/app_spec/sub_command/tui.md
+    # <work-root>/oracle/doc/app_spec/misc_spec.md
+    current_root = work_root()
+    ensure_cmoc_ignored(current_root)
+    if current_root.resolve() != root.resolve():
+        ensure_cmoc_ignored(root)
+
 
 def _cmoc_tui_from_current_context() -> None:
     """現在の repository 状態から `cmoc tui` の本体処理を起動する。"""
@@ -192,11 +220,13 @@ def build_tui_codex_parameter(
 
 def parse_markdown_prompt(markdown: str) -> list[StructDoc] | list[str]:
     """Markdown 見出しを StructDoc 階層へ変換し、見出しなし本文は文字列で保つ。"""
-    sections: list[StructDoc] = []
-    current_title: str | None = None
-    current_body: list[str] = []
+    # <work-root>/oracle/doc/app_spec/sub_command/tui.md
+    top_sections: list[_MarkdownSection] = []
+    stack: list[_MarkdownSection] = []
+    preamble: list[str] = []
     fence: tuple[str, int] | None = None
     for line in markdown.splitlines():
+        current_body = stack[-1].body if stack else preamble
         fence_pattern = (
             r"^[ \t]{0,3}(`{3,}|~{3,}).*$"
             if fence is None
@@ -217,26 +247,34 @@ def parse_markdown_prompt(markdown: str) -> list[StructDoc] | list[str]:
             else re.match(r"^(#{1,6})\s+(.+?)\s*$", line)
         )
         if match:
-            if current_title is not None:
-                sections.append(StructDoc(current_title, "\n".join(current_body).strip()))
+            section = _MarkdownSection(len(match.group(1)), match.group(2))
+            while stack and stack[-1].level >= section.level:
+                stack.pop()
+            if stack:
+                stack[-1].children.append(section)
             else:
-                preamble = "\n".join(current_body).strip()
-                if preamble:
-                    sections.append(StructDoc("本文", preamble))
-            current_title = match.group(2)
-            current_body = []
+                top_sections.append(section)
+            stack.append(section)
             continue
         current_body.append(line)
-    if current_title is None:
+    if not top_sections:
         return [markdown]
-    sections.append(StructDoc(current_title, "\n".join(current_body).strip()))
+    sections: list[StructDoc] = []
+    preamble_body = "\n".join(preamble).strip()
+    if preamble_body:
+        sections.append(StructDoc("本文", preamble_body))
+    sections.extend(section.to_struct_doc() for section in top_sections)
     return sections
 
 
 def nested_value(data: dict, name: str, default: str) -> str:
     """TUI parameter JSON で `{value: ...}` 形式の項目から文字列値を取り出す。"""
     value = data.get(name)
-    if isinstance(value, dict) and isinstance(value.get("value"), str):
+    if (
+        isinstance(value, dict)
+        and isinstance(value.get("value"), str)
+        and value["value"]
+    ):
         return value["value"]
     return default
 

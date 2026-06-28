@@ -1,6 +1,8 @@
 """
 # path model
 
+対応 oracle file: `<work-root>/oracle/src/basic/path_model.py`。
+
 ## パス表記の基本ルール
 
 - cmoc 上では、ファイル・ディレクトリパスを絶対パス・相対パスどちらで書いても良い
@@ -14,9 +16,12 @@
 ## パスの表記例
 
 - ユーザーは `<repo-root>` をカレントとして `<cmoc-root>/bin/cmoc` を呼び出す
-- `cmoc apply fork` は `<repo-root>` を pwd として呼び出されて、 run の作業隔離のために `<run-root>` を git linked worktree として作成する
-- run の作業隔離のための linked worktree は `<repo-root>` 内に作成されるから、「`<repo-root>` のフルパス」は「`<run-root>` のフルパス」の部分文字列となる
+- `cmoc apply fork` は `<repo-root>` を pwd として呼び出されて、 run の作業隔離のために
+  `<run-root>` を git linked worktree として作成する
+- run の作業隔離のための linked worktree は `<repo-root>` 内に作成されるから、
+  「`<repo-root>` のフルパス」は「`<run-root>` のフルパス」の部分文字列となる
 - `<run-root>` 内で cmoc を起動した場合 `<run-root>` と同値
+- `<run-root>` 外の `<repo-root>` 内で cmoc を起動した場合 `<repo-root>` と同値
 """
 
 from pathlib import Path
@@ -193,7 +198,8 @@ def resolve_token_path(real_path: Path, root_token: RootToken) -> Path:
         relative_path = real_path.relative_to(root_real_path)
     except ValueError:
         raise ValueError(
-            f"real_path is not matched with root_token (real_path={real_path}, root_token={root_token})"
+            "real_path is not matched with root_token "
+            f"(real_path={real_path}, root_token={root_token})"
         )
     return Path(root_token.value) / relative_path
 

@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
-from basic.path_model import resolve_repo_root, resolve_work_root
+from basic.path_model import resolve_cmoc_root, resolve_repo_root, resolve_work_root
 
 from commons.runtime_errors import CmocError
 
@@ -77,6 +77,13 @@ def config_path(root: Path) -> Path:
     return root / ".cmoc" / "config.json"
 
 
+def is_root_memo(root: Path, path: Path) -> bool:
+    """`<work-root>/memo` 自体またはその配下か判定する。"""
+    memo = (root / "memo").resolve()
+    resolved = path.resolve()
+    return resolved == memo or memo in resolved.parents
+
+
 @contextmanager
 def pushd(path: Path) -> Iterator[None]:
     previous = Path.cwd()
@@ -88,11 +95,11 @@ def pushd(path: Path) -> Iterator[None]:
 
 
 def cmoc_root() -> Path:
-    for candidate in Path(__file__).resolve().parents:
-        if (candidate / "bin" / "cmoc").is_file() or (candidate / ".git").is_dir():
-            return candidate
-    raise CmocError(
-        "<cmoc-root> を特定できません。",
-        ["cmoc repository 内から実行しているか確認してください。"],
-        str(Path(__file__).resolve()),
-    )
+    try:
+        return resolve_cmoc_root()
+    except ValueError as exc:
+        raise CmocError(
+            "<cmoc-root> を特定できません。",
+            ["cmoc repository 内から実行しているか確認してください。"],
+            str(Path(__file__).resolve()),
+        ) from exc

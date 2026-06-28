@@ -1,14 +1,26 @@
+"""init と TUI 起動に近い CLI 前処理の外部挙動を検証する。
+
+このファイルは 16,000 文字を超えるが、責務境界は cmoc 初期化と対話起動前の
+repository/runtime 準備に閉じている。.cmoc ignore、既存差分保護、設定同期、
+linked worktree、Markdown prompt 解析、TUI parameter 構築は利用開始直後の同じ
+CLI 境界で共有されるため、分割すると初期化済み状態の読み取り文脈が分散する。
+現状は init/TUI 前処理回帰として一箇所に保つ方が凝集性が高い。
+"""
+
 import json
 import subprocess
 from pathlib import Path
 
 import commons.runtime_codex_preflight as codex_preflight_module
-from basic.acp import FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+import pytest
+
 from _support import (
     make_repo,
     run_git,
     runner,
     setup_codex_home,
+    stub_codex_profile,
     write_python_executable,
 )
 from main import app
@@ -16,7 +28,7 @@ from sub_commands.tui import parse_markdown_prompt
 import sub_commands.tui as tui_module
 
 def test_init_untracks_existing_cmoc_files_and_commits_cleanup(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     tracked_cmoc_file = root / ".cmoc" / "tracked.txt"
@@ -41,7 +53,7 @@ def test_init_untracks_existing_cmoc_files_and_commits_cleanup(
 
 
 def test_subcommand_log_identifies_invoked_cli_command(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -59,7 +71,7 @@ def test_subcommand_log_identifies_invoked_cli_command(
 
 
 def test_init_does_not_commit_preexisting_staged_changes(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     user_file = root / "user.txt"
@@ -80,7 +92,7 @@ def test_init_does_not_commit_preexisting_staged_changes(
 
 
 def test_init_does_not_commit_preexisting_gitignore_changes(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     gitignore = root / ".gitignore"
@@ -104,7 +116,7 @@ def test_init_does_not_commit_preexisting_gitignore_changes(
 
 
 def test_init_keeps_cmoc_ignored_after_preexisting_gitignore_unstaged_delete(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     gitignore = root / ".gitignore"
@@ -134,7 +146,7 @@ def test_init_keeps_cmoc_ignored_after_preexisting_gitignore_unstaged_delete(
 
 
 def test_init_initializes_linked_worktree_root(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "worktrees" / "linked"
@@ -146,6 +158,9 @@ def test_init_initializes_linked_worktree_root(
 
     assert result.exit_code == 0
     assert not (root / ".gitignore").exists()
+    assert (
+        "/.cmoc/" in (root / ".git" / "info" / "exclude").read_text().splitlines()
+    )
     assert "/.cmoc/" in (linked / ".gitignore").read_text()
     assert (
         subprocess.run(
@@ -155,6 +170,14 @@ def test_init_initializes_linked_worktree_root(
         == 0
     )
     assert (root / ".cmoc" / "config.json").is_file()
+    assert (
+        subprocess.run(
+            ["git", "check-ignore", "-q", ".cmoc/config.json"],
+            cwd=root,
+        ).returncode
+        == 0
+    )
+    assert run_git(root, "status", "--short", "--", ".cmoc").stdout.strip() == ""
     assert not (linked / ".cmoc" / "config.json").exists()
     assert len(list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))) == 1
     assert not (linked / ".cmoc" / "log" / "sub_command").exists()
@@ -176,7 +199,7 @@ def test_init_initializes_linked_worktree_root(
     assert ".gitignore" in committed_paths
 
 
-def test_init_writes_default_config_json(tmp_path: Path, monkeypatch) -> None:
+def test_init_writes_default_config_json(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
 
@@ -204,7 +227,7 @@ def test_init_writes_default_config_json(tmp_path: Path, monkeypatch) -> None:
 
 def test_init_syncs_config_defaults_without_overwriting_human_values(
     tmp_path: Path,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = make_repo(tmp_path)
     config_path = root / ".cmoc" / "config.json"
@@ -234,7 +257,7 @@ def test_init_syncs_config_defaults_without_overwriting_human_values(
 
 def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     tmp_path: Path,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
@@ -266,7 +289,9 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
             "index_entry_standard": {"value": False, "reason": "not needed"},
         }
 
-    def fake_run_codex_exec(parameter, **kwargs):
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> FakeResolveResult:
         exec_calls.append((parameter, kwargs))
         assert kwargs["purpose"] == "tui resolve parameter"
         assert parameter.structured_output_schema_path.name == "resolve_parameter.json"
@@ -274,7 +299,7 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         assert "src を確認して必要なら直す" in parameter.prompt
         return FakeResolveResult()
 
-    def fake_run_codex_tui(parameter, **kwargs):
+    def fake_run_codex_tui(parameter: AgentCallParameter, **kwargs: object) -> None:
         tui_calls.append((parameter, kwargs))
         assert kwargs["purpose"] == "tui codex"
         assert parameter.model_class == ModelClass.MAINSTREAM
@@ -309,12 +334,22 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     assert not (root / ".cmoc" / "logs" / "sub_commands").exists()
 
 
+def test_tui_uses_default_file_access_mode_for_empty_resolved_value() -> None:
+    parameter = tui_module.build_tui_codex_parameter(
+        "確認して下さい。",
+        {"file_access_mode": {"value": "", "reason": "default accepted"}},
+    )
+
+    assert parameter.file_access_mode == FileAccessMode.READONLY
+
+
 def test_tui_saves_complete_prompt_in_linked_worktree(
     tmp_path: Path,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
     linked = root / ".cmoc" / "worktrees" / "linked"
@@ -357,7 +392,7 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     tui_calls = []
 
-    def fake_run_codex_tui(parameter, **kwargs):
+    def fake_run_codex_tui(parameter: AgentCallParameter, **kwargs: object) -> None:
         tui_calls.append((parameter, kwargs))
 
     monkeypatch.setattr(tui_module, "enable_indexing_preflight", lambda: None)
@@ -379,8 +414,51 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     recorded = json.loads(recorder.read_text())
     schema_arg = recorded["args"][recorded["args"].index("--output-schema") + 1]
     assert recorded["cwd"] == str(linked)
-    assert Path(schema_arg).parent == linked / ".cmoc" / "state" / "schema"
-    assert not (root / ".cmoc" / "state" / "schema").exists()
+    assert Path(schema_arg).parent == root / ".cmoc" / "state" / "schema"
+    assert not (linked / ".cmoc" / "state" / "schema").exists()
+
+
+def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = make_repo(tmp_path)
+    config_path = root / ".cmoc" / "config.json"
+    config_path.parent.mkdir()
+    config_path.write_text("{}\n")
+    linked = root / ".cmoc" / "worktrees" / "linked"
+    run_git(root, "worktree", "add", "-b", "linked-tui-ignore", str(linked), "HEAD")
+    monkeypatch.chdir(linked)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fake_code = bin_dir / "code"
+    write_python_executable(
+        fake_code,
+        [
+            "import pathlib, sys",
+            "path = pathlib.Path(sys.argv[-1])",
+            "path.write_text(path.read_text() + '\\nlinked ignore task\\n')",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    class FakeResolveResult:
+        output_json = {"file_access_mode": {"value": "readonly", "reason": "test"}}
+
+    monkeypatch.setattr(tui_module, "enable_indexing_preflight", lambda: None)
+    monkeypatch.setattr(tui_module, "run_codex_exec", lambda *_, **__: FakeResolveResult())
+    monkeypatch.setattr(tui_module, "run_codex_tui", lambda *_, **__: None)
+
+    result = runner.invoke(app, ["tui"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert "/.cmoc/" in (root / ".gitignore").read_text()
+    assert "/.cmoc/" in (linked / ".gitignore").read_text()
+    assert len(list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))) == 1
+    assert len(list((root / ".cmoc" / "log" / "tui").glob("*_orig.md"))) == 1
+    assert len(list((linked / ".cmoc" / "log" / "tui").glob("*_cmpl.md"))) == 1
+    assert run_git(root, "status", "--short", "--", ".cmoc").stdout.strip() == ""
+    assert run_git(linked, "status", "--short", "--", ".cmoc").stdout.strip() == ""
 
 
 def test_parse_markdown_prompt_ignores_headings_inside_fenced_code_blocks() -> None:
@@ -400,9 +478,10 @@ def test_parse_markdown_prompt_ignores_headings_inside_fenced_code_blocks() -> N
         )
     )
 
-    assert [doc.title for doc in parsed] == ["依頼", "補足"]
-    assert isinstance(parsed[0].children, str)
-    assert "# 見出しではない" in parsed[0].children
+    assert [doc.title for doc in parsed] == ["依頼"]
+    assert isinstance(parsed[0].children, list)
+    assert [doc.title for doc in parsed[0].children] == ["本文", "補足"]
+    assert "# 見出しではない" in parsed[0].children[0].children
 
 
 def test_parse_markdown_prompt_preserves_preamble_before_headings() -> None:
@@ -411,3 +490,33 @@ def test_parse_markdown_prompt_preserves_preamble_before_headings() -> None:
     assert [doc.title for doc in parsed] == ["本文", "詳細"]
     assert parsed[0].children == "最初の依頼"
     assert parsed[1].children == "見出し下の依頼"
+
+
+def test_parse_markdown_prompt_preserves_heading_hierarchy() -> None:
+    parsed = parse_markdown_prompt(
+        "\n".join(
+            [
+                "# 親",
+                "",
+                "親本文",
+                "",
+                "## 子",
+                "子本文",
+                "### 孫",
+                "孫本文",
+                "# 次",
+                "次本文",
+            ]
+        )
+    )
+
+    assert [doc.title for doc in parsed] == ["親", "次"]
+    assert isinstance(parsed[0].children, list)
+    assert [doc.title for doc in parsed[0].children] == ["本文", "子"]
+    assert parsed[0].children[0].children == "親本文"
+    child = parsed[0].children[1]
+    assert isinstance(child.children, list)
+    assert [doc.title for doc in child.children] == ["本文", "孫"]
+    assert child.children[0].children == "子本文"
+    assert child.children[1].children == "孫本文"
+    assert parsed[1].children == "次本文"

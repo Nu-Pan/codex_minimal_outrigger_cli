@@ -7,7 +7,6 @@ def write_review_oracle_report(
     root: Path,
     scope: str,
     session_branch: str,
-    session_id: str,
     state: SessionState,
     oracle_count_total: int,
     oracle_files: list[Path],
@@ -25,7 +24,6 @@ def write_review_oracle_report(
             root,
             scope,
             session_branch,
-            session_id,
             state,
             oracle_count_total,
             oracle_files,
@@ -43,7 +41,6 @@ def render_review_oracle_report(
     root: Path,
     scope: str,
     session_branch: str,
-    session_id: str,
     state: SessionState,
     oracle_count_total: int,
     oracle_files: list[Path],
@@ -54,30 +51,25 @@ def render_review_oracle_report(
     error_message: str | None = None,
 ) -> str:
     """review oracle report を Markdown + YAML frontmatter で描画する。"""
+    # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md:
+    # 必須 H2 と所見区分の表示順を両立するため、採用分と不採用分で
+    # severity section を分けて描画する。
     accepted = [finding for finding in findings if finding.get("verdict") == "accept"]
-    fatal_accepted = [
-        finding for finding in accepted if finding.get("severity") == "fatal"
-    ]
-    minor_accepted = [
-        finding for finding in accepted if finding.get("severity") == "minor"
-    ]
-    fatal_rejected = [
-        finding
-        for finding in findings
-        if finding.get("severity") == "fatal" and finding.get("verdict") == "reject"
-    ]
-    minor_rejected = [
-        finding
-        for finding in findings
-        if finding.get("severity") == "minor" and finding.get("verdict") == "reject"
-    ]
+    rejected = [finding for finding in findings if finding.get("verdict") == "reject"]
+    fatal_accepted = _findings_with(accepted, "fatal")
+    minor_accepted = _findings_with(accepted, "minor")
+    fatal_rejected = _findings_with(rejected, "fatal")
+    minor_rejected = _findings_with(rejected, "minor")
     if error_message is not None:
         error_message = error_message.replace("`", "'")
     result, verdict = _review_report_verdict(
-        error_message, oracle_files, fatal_accepted, minor_accepted
+        error_message,
+        oracle_files,
+        fatal_accepted,
+        minor_accepted,
     )
     findings_by_path: dict[str, int] = {}
-    for finding in findings:
+    for finding in [*accepted, *rejected]:
         oracle_path = finding.get("oracle_path", "")
         findings_by_path[oracle_path] = findings_by_path.get(oracle_path, 0) + 1
     rows = "\n".join(
@@ -102,7 +94,6 @@ def render_review_oracle_report(
         ("fatal_findings_rejected_count", len(fatal_rejected)),
         ("minor_findings_rejected_count", len(minor_rejected)),
         ("result", result),
-        ("session_id", session_id),
     ]
     return "\n".join(
         [
@@ -117,12 +108,24 @@ def render_review_oracle_report(
             "|---:|---|---:|",
             rows,
             "## Fatal findings",
-            render_finding_section(fatal_accepted + fatal_rejected),
+            "### Accepted",
+            render_finding_section(fatal_accepted),
             "## Minor findings",
-            render_finding_section(minor_accepted + minor_rejected),
+            "### Accepted",
+            render_finding_section(minor_accepted),
+            "## Fatal findings",
+            "### Rejected",
+            render_finding_section(fatal_rejected),
+            "## Minor findings",
+            "### Rejected",
+            render_finding_section(minor_rejected),
             "",
         ]
     )
+
+
+def _findings_with(findings: list[dict], severity: str) -> list[dict]:
+    return [finding for finding in findings if finding.get("severity") == severity]
 
 
 def _review_report_verdict(

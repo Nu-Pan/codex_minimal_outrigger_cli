@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from basic.acp import ModelClass, ReasoningEffort
 from config.cmoc_config import (
@@ -12,6 +12,8 @@ from config.cmoc_config import (
 
 from commons.runtime_errors import CmocError
 from commons.runtime_paths import config_path
+
+ConfigKey = TypeVar("ConfigKey", ModelClass, ReasoningEffort)
 
 
 def config_to_dict(config: CmocConfig) -> dict[str, Any]:
@@ -43,22 +45,39 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
     }
 
 
+def _enum_str_map_from_dict(
+    default: dict[ConfigKey, str],
+    data: Any,
+    key_type: type[ConfigKey],
+) -> dict[ConfigKey, str]:
+    restored = dict(default)
+    if not isinstance(data, dict):
+        return restored
+    for key, value in data.items():
+        # `<work-root>/oracle/src/config/cmoc_config.py` defines these JSON values
+        # as Codex CLI names; non-strings must be rejected, not stringified.
+        if not isinstance(value, str):
+            raise TypeError
+        restored[key_type(key)] = value
+    return restored
+
+
 def config_from_dict(data: dict[str, Any]) -> CmocConfig:
     default = CmocConfig()
     try:
         codex_data = data.get("codex", {})
         if not isinstance(codex_data, dict):
             codex_data = {}
-        model = dict(default.codex.model)
-        model_data = codex_data.get("model", {})
-        if isinstance(model_data, dict):
-            for key, value in model_data.items():
-                model[ModelClass(key)] = str(value)
-        reasoning_effort = dict(default.codex.reasoning_effort)
-        reasoning_data = codex_data.get("reasoning_effort", {})
-        if isinstance(reasoning_data, dict):
-            for key, value in reasoning_data.items():
-                reasoning_effort[ReasoningEffort(key)] = str(value)
+        model = _enum_str_map_from_dict(
+            default.codex.model,
+            codex_data.get("model", {}),
+            ModelClass,
+        )
+        reasoning_effort = _enum_str_map_from_dict(
+            default.codex.reasoning_effort,
+            codex_data.get("reasoning_effort", {}),
+            ReasoningEffort,
+        )
 
         apply_fork_data = data.get("apply_fork", {})
         if not isinstance(apply_fork_data, dict):

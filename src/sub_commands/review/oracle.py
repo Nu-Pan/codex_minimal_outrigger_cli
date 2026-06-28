@@ -42,7 +42,7 @@ from sub_commands.review_targets import (
     enumerate_review_all_oracle_files,
     enumerate_review_oracle_targets,
 )
-from sub_commands.indexing import enable_indexing_preflight
+from commons.indexing import enable_indexing_preflight
 
 
 CodexExec = Callable[..., object]
@@ -125,7 +125,6 @@ def _cmoc_review_oracle_body(
             root,
             scope,
             branch,
-            session_id,
             state,
             len(all_oracle_files),
             oracle_files,
@@ -139,7 +138,6 @@ def _cmoc_review_oracle_body(
             root,
             scope,
             branch,
-            session_id,
             state,
             len(all_oracle_files),
             oracle_files,

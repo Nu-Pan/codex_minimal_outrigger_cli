@@ -1,22 +1,22 @@
 # `fork`
 
 ## Summary
-- `cmoc apply fork` のうち、フォーク適用後の調査・所見列挙・所見対応・変更要約を AI エージェントへ依頼するための prompt と呼び出し条件、および関連する構造化出力契約をまとめる領域。
-- 差分要約、実装レビュー所見、所見対応依頼といった apply fork の補助エージェント工程について、どの標準・文脈・読み書き権限・モデル設定・出力 schema を渡すかを確認する入口になる。
+- `cmoc apply fork` の AI エージェント呼び出しに関わる prompt builder と構造化出力契約をまとめる領域。差分要約、起点ファイルごとの適合性調査、検出済み所見への修正依頼という各フェーズで、role・goal・補助入力・file access mode・model/reasoning・Structured Output schema をどう組み立てるかへの入口になる。
+- 実際の git 操作や作業ツリー操作ではなく、apply fork の各段階で AI に何を読ませ、何を出力させ、どの権限で呼び出すかを定義する責務を持つ。
 
 ## Read this when
-- `cmoc apply fork` の実行中または実行後に、AI エージェントへ渡す調査依頼、修正依頼、変更要約依頼の prompt 内容や呼び出しパラメータを確認・変更したいとき。
-- apply fork の所見列挙工程で、起点ファイルから関連する oracle file と realization file を調査させる条件、読み取り専用の扱い、標準文書の組み込み、出力 schema の対応を追いたいとき。
-- 検出済み所見を realization file 修正担当へ渡す工程で、所見 JSON の埋め込み方、作業上の注意点、書き込み権限、参照標準、モデル設定を確認したいとき。
-- apply fork の作業レポート向けに、git 差分を AI 要約担当へ渡してカテゴリ別の変更要約を生成する仕組みを確認したいとき。
-- レビュー所見や変更要約の構造化出力について、報告単位、根拠情報、主要な変更パス、カテゴリ別要約などの出力契約を確認したいとき。
+- `cmoc apply fork` の作業レポート向けに、変更差分を人間向けカテゴリ別要約へ変換する AI 呼び出しや出力契約を確認したいとき。
+- 起点ファイルから関連する oracle file と realization file を読ませ、仕様と実装の乖離や要修正所見を列挙させる調査フェーズの prompt、モデル指定、権限、出力形式を確認または変更したいとき。
+- 検出済み所見を AI への修正作業指示へ変換する際の prompt 内容、realization file 修正条件、git add/commit 禁止、realization standard 適用などの作業条件を確認したいとき。
+- apply fork 系で、AI エージェントに渡す raw diff、所見 JSON、起点パスなどの補助入力が complete prompt と AgentCallParameter にどう接続されるかを追いたいとき。
+- apply fork のレビュー・要約・所見対応フェーズにおける Structured Output schema の意味的な責務と、その schema を使う呼び出し側の対応関係を確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` 全体のコマンド実行フロー、fork の作成・適用・統合、ブランチ操作、git コマンド実行そのものを調べたいとき。
-- oracle file、realization file、apply review standard、realization standard などの標準本文そのものを確認したいとき。
-- 汎用的な AgentCallParameter 型、完全 prompt の共通構築、StructDoc の markdown rendering、repo root やパス解決 helper の詳細を調べたいとき。
-- 個別カテゴリ名の網羅的な一覧、差分生成アルゴリズム、変更パス抽出の具体的な実装規則を探しているとき。
-- INDEX.md 用エントリーや一般的なルーティング文書の書き方を確認したいだけのとき。
+- `cmoc apply fork` の CLI 引数解析、サブコマンド登録、実行フロー全体、git branch 操作、実際の fork 適用処理、作業ツリー変更処理を調べたいだけのとき。
+- 個々の差分検出、差分分類アルゴリズム、ファイル列挙、複数ファイル分の呼び出し集約、結果の適用制御を確認したいとき。
+- complete prompt の共通構築規則、Markdown rendering、StructDoc、path model、file access mode、AgentCallParameter などの基礎型や共通定義そのものを調べたいとき。
+- 単一ファイルの本文内容、具体的な変更後コード、または realization file の実装修正箇所を直接調べたいだけのとき。
+- 一般的な INDEX.md 用エントリーの書き方やルーティング文書全体の規約を確認したいとき。
 
 ## hash
-- dbd9e98ad05ec83c80ed9270504805e990b244274c969394ded93274f90a21a5
+- dfcfb1f164fc840aea194a1f73483c2ac39d2a5afcffeaea0da829f68e648827

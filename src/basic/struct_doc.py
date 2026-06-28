@@ -1,6 +1,8 @@
 """
 # Structured markdown
 
+対応 oracle file: `<work-root>/oracle/src/basic/struct_doc.py`。
+
 - 階層構造を持つ自然言語文章を markdown にレンダリングするためのヘルパークラス
 - 主に見出しの深さを自動計算してくれることに価値がある
 """

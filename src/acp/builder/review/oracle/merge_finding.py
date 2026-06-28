@@ -1,4 +1,7 @@
-"""`cmoc review oracle` の所見リストマージ prompt 構築実装。"""
+"""`cmoc review oracle` の所見リストマージ prompt 構築実装。
+
+対応 oracle file: `<work-root>/oracle/src/acp/builder/review/oracle/merge_finding.py`。
+"""
 
 # std
 from pathlib import Path

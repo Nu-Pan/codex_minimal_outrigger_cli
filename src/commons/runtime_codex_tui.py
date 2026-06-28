@@ -11,8 +11,12 @@ from commons.runtime_codex_logging import emit_codex_call_console
 from commons.runtime_codex_profile import (
     codex_profile_name,
     codex_subprocess_env,
+    file_access_to_codex_cwd,
     prepare_codex_profile,
+    protected_write_status,
+    reject_protected_write,
     resolve_codex_home,
+    run_codex_subprocess,
     validate_codex_home,
 )
 from commons.runtime_errors import CmocError
@@ -38,16 +42,26 @@ def run_codex_tui(
     log_dir.mkdir(parents=True, exist_ok=True)
     ts = timestamp()
     call_path = log_dir / f"{ts}_tui_call.json"
-    codex_home = resolve_codex_home(cwd)
+    codex_work_root = work_root(cwd)
+    codex_cwd = file_access_to_codex_cwd(parameter.file_access_mode, codex_work_root)
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # Match validation/profile placement to where Codex resolves a relative
+    # CODEX_HOME while keeping the user-provided env value unchanged.
+    codex_home = resolve_codex_home(codex_cwd)
     validate_codex_home(codex_home)
     profile_path = prepare_codex_profile(
-        parameter, config, codex_home, work_root(cwd), extra_read_paths
+        parameter, config, codex_home, codex_work_root, extra_read_paths
     )
     profile_name = codex_profile_name(profile_path)
+    protected_status_before = protected_write_status(
+        parameter.file_access_mode, codex_work_root
+    )
     argv = [
         "codex",
         "--profile",
         profile_name,
+        "--cd",
+        str(codex_cwd),
         parameter.prompt,
     ]
     call_path.write_text(
@@ -69,30 +83,58 @@ def run_codex_tui(
         + "\n"
     )
     started_at = time.perf_counter()
-    result = subprocess.run(
-        argv,
-        cwd=cwd,
-        env=codex_subprocess_env(codex_home),
-    )
+    failure: subprocess.CalledProcessError | None = None
+    try:
+        result = run_codex_subprocess(
+            argv,
+            cwd=codex_cwd,
+            env=codex_subprocess_env(codex_home),
+            check=True,
+        )
+        returncode = result.returncode
+    except subprocess.CalledProcessError as exc:
+        failure = exc
+        returncode = exc.returncode
     elapsed_sec = time.perf_counter() - started_at
-    emit_codex_call_console(purpose, call_path, elapsed_sec, result.returncode)
+    emit_codex_call_console(purpose, call_path, elapsed_sec, returncode)
     logger = current_subcommand_logger()
-    if logger is not None:
+    status = "succeeded" if returncode == 0 else "failed"
+
+    def emit_event(error: str | None = None) -> None:
+        if logger is None:
+            return
+        payload = {
+            "purpose": purpose,
+            "status": status if error is None else "failed",
+            "returncode": returncode,
+            "elapsed_sec": elapsed_sec,
+            "call_log_path": str(call_path),
+            "codex_home": str(codex_home),
+            "profile_name": profile_name,
+            "profile_path": str(profile_path),
+        }
+        if error is not None:
+            payload["error"] = error
         logger.event(
             "codex_call",
-            purpose=purpose,
-            status="succeeded" if result.returncode == 0 else "failed",
-            returncode=result.returncode,
-            elapsed_sec=elapsed_sec,
-            call_log_path=str(call_path),
-            codex_home=str(codex_home),
-            profile_name=profile_name,
-            profile_path=str(profile_path),
+            **payload,
         )
-    if result.returncode != 0:
+
+    try:
+        reject_protected_write(
+            parameter.file_access_mode,
+            codex_work_root,
+            protected_status_before,
+            call_path,
+        )
+    except CmocError as exc:
+        emit_event(exc.detail)
+        raise
+    emit_event()
+    if failure is not None:
         raise CmocError(
             "Codex CLI/TUI 呼び出しが失敗しました。",
             ["Codex CLI/TUI の出力と call log を確認してください。"],
-            f"returncode: {result.returncode}\ncall_log: {call_path}",
-        )
-    return CommandResult(result.returncode, "", "")
+            f"returncode: {returncode}\ncall_log: {call_path}",
+        ) from failure
+    return CommandResult(returncode, "", "")

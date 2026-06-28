@@ -1,3 +1,8 @@
+"""apply review standard prompt part の realization。
+
+対応 oracle file: `<work-root>/oracle/src/acp/prompt_parts/apply_review_standard.py`。
+"""
+
 # cmoc
 from basic.struct_doc import StructDoc
 from basic.standard import (
@@ -16,7 +21,8 @@ def build_apply_review_standard() -> StructDoc:
             title="oracle file と realization file の明確な不整合を所見として扱う",
             backgrounds=[
                 "realization file は oracle file で述べられた人間意図を具体化したものである",
-                "oracle file 上で記述されている仕様と realization file が矛盾している場合、その realization file は正本仕様断片を満たしていない",
+                "oracle file 上で記述されている仕様と realization file が矛盾している場合、"
+                "その realization file は正本仕様断片を満たしていない",
             ],
             requirements=[
                 Requirement(
@@ -71,13 +77,17 @@ def build_apply_review_standard() -> StructDoc:
                 ),
                 Requirement(
                     "許容",
-                    "oracle file で定義されておらず、realization file 上存在し、realization file に残す必要がないこと明確な要素は所見として扱って良い",
+                    "oracle file で定義されておらず、realization file 上存在し、"
+                    "realization file に残す必要がないこと明確な要素は所見として扱って良い",
                 ),
             ],
             examples=[
                 "一般的には設定項目化できる挙動でも、oracle file に選択可能にする要求がないなら CLI option の不足だけでは所見としない",
-                "oracle file 上の `session home branch` が realization file 上で意味的に同じ `base branch` として実装されているなら、対応関係を示してリネーム候補の所見とする",
-                "realization file 上に旧状態ファイルを読む処理が残っており、oracle file に対応仕様がなく現行実装からも必要性が読めないなら、過去仕様の残骸として所見とする",
+                "oracle file 上の `session home branch` が realization file 上で意味的に同じ "
+                "`base branch` として実装されているなら、対応関係を示してリネーム候補の所見とする",
+                "realization file 上に旧状態ファイルを読む処理が残っており、"
+                "oracle file に対応仕様がなく現行実装からも必要性が読めないなら、"
+                "過去仕様の残骸として所見とする",
             ],
         ),
         Standard(
@@ -98,7 +108,8 @@ def build_apply_review_standard() -> StructDoc:
                 ),
                 Requirement(
                     "必須",
-                    "realization file の致命的問題を修正する場合も、修正後の実装は oracle file 上で記述されている仕様を満たしていなければならない",
+                    "realization file の致命的問題を修正する場合も、"
+                    "修正後の実装は oracle file 上で記述されている仕様を満たしていなければならない",
                 ),
             ],
             examples=[

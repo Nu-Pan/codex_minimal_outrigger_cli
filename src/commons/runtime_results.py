@@ -20,6 +20,7 @@ class CodexExecResult:
     output_text: str
     output_json: Any
     call_log_path: Path
+    prompt_log_path: Path
     stdout_log_path: Path
     stderr_log_path: Path
     output_path: Path

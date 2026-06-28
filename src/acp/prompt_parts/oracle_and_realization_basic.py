@@ -1,3 +1,8 @@
+"""oracle と realization の基本説明 prompt part の realization。
+
+対応 oracle file: `<work-root>/oracle/src/acp/prompt_parts/oracle_and_realization_basic.py`。
+"""
+
 # cmoc
 from basic.struct_doc import StructDoc
 from basic.path_model import resolve_work_root

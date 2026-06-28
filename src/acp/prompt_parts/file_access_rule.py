@@ -1,3 +1,9 @@
+"""file access rule prompt part の realization。
+
+対応 oracle file: `<work-root>/oracle/src/acp/prompt_parts/file_access_rule.py`。
+`.agents` 編集禁止の根拠: `<work-root>/oracle/doc/app_spec/codex_exec_rule.md`。
+"""
+
 # cmoc
 from basic.path_model import resolve_work_root
 from basic.struct_doc import StructDoc, ntqs
@@ -32,17 +38,20 @@ def build_file_access_rule(mode: FileAccessMode) -> StructDoc:
             body = ntqs(f"""
             - `{work_root}` ツリー外は読み書き禁止
             - `{work_root}/oracle` ツリー内は書き込み禁止
+            - `{work_root}/.agents` ツリー内は書き込み禁止
             - `{work_root}/memo` は読み書き禁止
             """)
         case FileAccessMode.ORACLE_WRITE:
             body = ntqs(f"""
             - `{work_root}` ツリー外は読み書き禁止
             - `{work_root}/oracle` ツリー外は書き込み禁止
+            - `{work_root}/.agents` ツリー内は書き込み禁止
             - `{work_root}/memo` は読み書き禁止
             """)
         case FileAccessMode.REPO_WRITE:
             body = ntqs(f"""
             - `{work_root}` ツリー外は読み書き共に禁止
+            - `{work_root}/.agents` ツリー内は書き込み禁止
             - `{work_root}/memo` は読み書き禁止
             """)
         case _:

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from cmoc_runtime import SessionState, is_git_ignored, run_git
+from cmoc_runtime import SessionState, is_git_ignored, is_root_memo, run_git
 
 
 def enumerate_review_oracle_targets(
@@ -30,5 +30,6 @@ def enumerate_review_all_oracle_files(root: Path) -> list[Path]:
         for path in sorted((root / "oracle").rglob("*"))
         if path.is_file()
         and path.name != "INDEX.md"
+        and not is_root_memo(root, path)
         and not is_git_ignored(root, path)
     ]

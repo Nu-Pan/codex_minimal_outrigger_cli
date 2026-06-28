@@ -34,18 +34,21 @@ class SessionState:
     apply: ApplyPart = field(default_factory=ApplyPart)
 
     @classmethod
-    def from_dict(cls: type["SessionState"], data: dict[str, Any]) -> "SessionState":
-        """未知 field を無視し、欠けた field は既定値で補って state を復元する。"""
-        session_data = {
-            key: value
-            for key, value in data.get("session", {}).items()
-            if key in SessionPart.__dataclass_fields__
-        }
-        apply_data = {
-            key: value
-            for key, value in data.get("apply", {}).items()
-            if key in ApplyPart.__dataclass_fields__
-        }
+    def from_dict(
+        cls: type["SessionState"], data: dict[str, Any], source: Path | None = None
+    ) -> "SessionState":
+        # <work-root>/oracle/doc/app_spec/session_state.md
+        # JSON 読み込み時は、新規作成用 default で欠落 field を active/ready に補わない。
+        if not isinstance(data, dict):
+            raise _invalid_state(source, "top-level JSON は object である必要があります。")
+        session_data = _part_data(data, "session", SessionPart, source)
+        apply_data = _part_data(data, "apply", ApplyPart, source)
+        _require_state(
+            session_data, "session", {"active", "joined", "abandoned", "error"}, source
+        )
+        _require_state(
+            apply_data, "apply", {"ready", "running", "completed", "error"}, source
+        )
         return cls(
             session=SessionPart(**session_data),
             apply=ApplyPart(**apply_data),
@@ -116,7 +119,7 @@ def load_state_for_branch(root: Path, branch: str) -> tuple[str, Path, SessionSt
             ["対象 session が正しく作成されているか確認してください。"],
             str(path),
         )
-    return session_id, path, SessionState.from_dict(json.loads(path.read_text()))
+    return session_id, path, SessionState.from_dict(json.loads(path.read_text()), path)
 
 
 def write_state(path: Path, state: SessionState) -> None:
@@ -128,10 +131,48 @@ def write_state(path: Path, state: SessionState) -> None:
 def active_session_for_home(root: Path, home_branch: str) -> Path | None:
     """home branch に紐づく active session state file を探す。"""
     for path in sessions_dir(root).glob("*.json"):
-        state = SessionState.from_dict(json.loads(path.read_text()))
+        state = SessionState.from_dict(json.loads(path.read_text()), path)
         if (
             state.session.state == "active"
             and state.session.session_home_branch == home_branch
         ):
             return path
     return None
+
+
+def _part_data(
+    data: dict[str, Any],
+    key: str,
+    part_type: type[SessionPart] | type[ApplyPart],
+    source: Path | None,
+) -> dict[str, Any]:
+    part = data.get(key)
+    if not isinstance(part, dict):
+        raise _invalid_state(source, f"`{key}` は object である必要があります。")
+    fields = part_type.__dataclass_fields__
+    missing = [field for field in fields if field not in part]
+    if missing:
+        raise _invalid_state(
+            source, f"`{key}` に必須 field がありません: {', '.join(missing)}"
+        )
+    return {field: part[field] for field in fields}
+
+
+def _require_state(
+    part: dict[str, Any], key: str, allowed: set[str], source: Path | None
+) -> None:
+    state = part["state"]
+    if state not in allowed:
+        raise _invalid_state(
+            source,
+            f"`{key}.state` が不正です: {state!r}; allowed: {', '.join(sorted(allowed))}",
+        )
+
+
+def _invalid_state(source: Path | None, reason: str) -> CmocError:
+    detail = f"{source}\n{reason}" if source else reason
+    return CmocError(
+        "session state file が不正です。",
+        ["session state file を確認し、schema に従って修復してください。"],
+        detail,
+    )

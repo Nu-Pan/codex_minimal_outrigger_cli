@@ -4,6 +4,7 @@ from cmoc_runtime import (
     CmocError,
     branch_exists,
     current_branch,
+    delete_branch,
     ensure_cmoc_ignored,
     load_state_for_branch,
     repo_root,
@@ -35,7 +36,6 @@ def _cmoc_session_abandon_body() -> None:
     if state.session.state != "active" or state.apply.state != "ready":
         raise CmocError("session abandon の事前条件を満たしていません。", [], str(path))
     require_clean_worktree(work)
-    ensure_cmoc_ignored(work)
     home = state.session.session_home_branch
     if not home:
         raise CmocError("session home branch を特定できません。", [], str(path))
@@ -45,11 +45,22 @@ def _cmoc_session_abandon_body() -> None:
             ["session state file と git branch の状態を確認してください。"],
             f"session_home_branch: {home}",
         )
+    # <work-root>/oracle/doc/app_spec/sub_command/session_abandon.md
+    # requires all preconditions to pass before this mutates git ignore/index state.
+    ensure_cmoc_ignored(work)
     try:
         run_git(["switch", home], work)
         state.session.state = "abandoned"
         write_state(path, state)
-        run_git(["branch", "-D", branch], work)
+        # <work-root>/oracle/doc/app_spec/sub_command/session_abandon.md
+        # requires preserving the home branch while deleting only the session branch.
+        delete_result = delete_branch(repo, branch, force=True)
+        if delete_result.returncode != 0:
+            raise CmocError(
+                "session branch の削除に失敗しました。",
+                ["git branch の状態を確認してください。"],
+                delete_result.stderr,
+            )
     except Exception as error:
         cleanup_detail = error.detail if isinstance(error, CmocError) else repr(error)
         rollback_errors: list[str] = []

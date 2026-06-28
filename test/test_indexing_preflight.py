@@ -1,26 +1,22 @@
 import multiprocessing
-import subprocess
 import threading
 import time
+from collections.abc import Callable
+from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
-import cmoc_runtime
 import commons.runtime_codex_preflight as codex_preflight_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 
 from _support import (
-    current_branch,
     make_repo,
     run_git,
-    runner,
 )
-from main import app
-import sub_commands.apply.join as apply_module
-import sub_commands.indexing as indexing_module
+import commons.indexing as indexing_module
 
 
-def hold_indexing_lock(lock_path: Path, ready, release) -> None:
+def hold_indexing_lock(lock_path: Path, ready: Connection, release: Connection) -> None:
     import fcntl
 
     lock_path.parent.mkdir(parents=True, exist_ok=True)
@@ -32,7 +28,7 @@ def hold_indexing_lock(lock_path: Path, ready, release) -> None:
 
 
 def test_command_codex_call_runs_indexing_preflight(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     index_path = root / "INDEX.md"
@@ -45,7 +41,9 @@ def test_command_codex_call_runs_indexing_preflight(
     )
     events: list[str] = []
 
-    def fake_update_indexes(update_root: Path, codex_exec=None) -> list[Path]:
+    def fake_update_indexes(
+        update_root: Path, codex_exec: Callable[..., object] | None = None
+    ) -> list[Path]:
         events.append("indexing")
         assert update_root == root
         index_path.write_text("# generated\n")
@@ -54,7 +52,9 @@ def test_command_codex_call_runs_indexing_preflight(
     class FakeCodexResult:
         output_json = None
 
-    def fake_runtime_run_codex_exec(call_parameter, **kwargs):
+    def fake_runtime_run_codex_exec(
+        call_parameter: AgentCallParameter, **kwargs: object
+    ) -> FakeCodexResult:
         events.append("codex")
         assert call_parameter == parameter
         return FakeCodexResult()
@@ -76,7 +76,7 @@ def test_command_codex_call_runs_indexing_preflight(
 
 
 def test_command_codex_call_indexes_cwd_worktree_before_root(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     worktree = tmp_path / "codex-worktree"
@@ -91,7 +91,9 @@ def test_command_codex_call_indexes_cwd_worktree_before_root(
     )
     events: list[str] = []
 
-    def fake_update_indexes(update_root: Path, codex_exec=None) -> list[Path]:
+    def fake_update_indexes(
+        update_root: Path, codex_exec: Callable[..., object] | None = None
+    ) -> list[Path]:
         events.append("indexing")
         assert update_root == worktree
         index_path = update_root / "INDEX.md"
@@ -101,7 +103,9 @@ def test_command_codex_call_indexes_cwd_worktree_before_root(
     class FakeCodexResult:
         output_json = None
 
-    def fake_runtime_run_codex_exec(call_parameter, **kwargs):
+    def fake_runtime_run_codex_exec(
+        call_parameter: AgentCallParameter, **kwargs: object
+    ) -> FakeCodexResult:
         events.append("codex")
         assert kwargs["root"] == root
         assert kwargs["cwd"] == codex_cwd
@@ -132,7 +136,7 @@ def test_command_codex_call_indexes_cwd_worktree_before_root(
 
 
 def test_command_tui_codex_call_runs_indexing_preflight(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     index_path = root / "INDEX.md"
@@ -145,13 +149,17 @@ def test_command_tui_codex_call_runs_indexing_preflight(
     )
     events: list[str] = []
 
-    def fake_update_indexes(update_root: Path, codex_exec=None) -> list[Path]:
+    def fake_update_indexes(
+        update_root: Path, codex_exec: Callable[..., object] | None = None
+    ) -> list[Path]:
         events.append("indexing")
         assert update_root == root
         index_path.write_text("# generated\n")
         return [index_path]
 
-    def fake_runtime_run_codex_tui(call_parameter, **kwargs):
+    def fake_runtime_run_codex_tui(
+        call_parameter: AgentCallParameter, **kwargs: object
+    ) -> None:
         events.append("codex")
         assert call_parameter == parameter
 
@@ -171,7 +179,7 @@ def test_command_tui_codex_call_runs_indexing_preflight(
 
 
 def test_indexing_preflight_waits_for_repository_lock(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     lock_path = indexing_module.indexing_lock_path(root)
@@ -184,7 +192,9 @@ def test_indexing_preflight_waits_for_repository_lock(
     events: list[str] = []
     released = False
 
-    def fake_update_indexes(update_root: Path, codex_exec=None) -> list[Path]:
+    def fake_update_indexes(
+        update_root: Path, codex_exec: Callable[..., object] | None = None
+    ) -> list[Path]:
         events.append("updated")
         return []
 
@@ -216,7 +226,7 @@ def test_indexing_preflight_waits_for_repository_lock(
 
 def test_command_codex_call_skips_indexing_for_index_entry_and_conflict_resolution(
     tmp_path: Path,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = make_repo(tmp_path)
     parameter = AgentCallParameter(
@@ -231,10 +241,14 @@ def test_command_codex_call_skips_indexing_for_index_entry_and_conflict_resoluti
     class FakeCodexResult:
         output_json = None
 
-    def fail_update_indexes(update_root: Path, codex_exec=None) -> list[Path]:
+    def fail_update_indexes(
+        update_root: Path, codex_exec: Callable[..., object] | None = None
+    ) -> list[Path]:
         raise AssertionError("indexing preflight should be skipped")
 
-    def fake_runtime_run_codex_exec(call_parameter, **kwargs):
+    def fake_runtime_run_codex_exec(
+        call_parameter: AgentCallParameter, **kwargs: object
+    ) -> FakeCodexResult:
         calls.append(kwargs["purpose"])
         return FakeCodexResult()
 

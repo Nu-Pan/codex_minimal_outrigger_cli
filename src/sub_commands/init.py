@@ -5,6 +5,7 @@ import typer
 
 from cmoc_runtime import (
     ensure_cmoc_ignored,
+    ensure_cmoc_ignored_in_exclude,
     repo_root,
     run_cli_subcommand,
     run_git,
@@ -59,6 +60,8 @@ def _cmoc_init_body() -> None:
         run_git(["restore", "--staged", "--", "."], root)
     try:
         ensure_cmoc_ignored(root)
+        if config_root.resolve() != root.resolve():
+            ensure_cmoc_ignored_in_exclude(config_root)
         sync_config(config_root)
         run_git(["add", ".gitignore"], root)
         diff = run_git(
@@ -89,6 +92,11 @@ def ensure_cmoc_ignored_before_init_log(root: Path) -> None:
     )
     try:
         ensure_cmoc_ignored(root)
+        log_root = repo_root()
+        if log_root.resolve() != root.resolve():
+            # <work-root>/oracle/doc/app_spec/misc_spec.md requires
+            # <repo-root>/.cmoc to be ignored before init writes logs there.
+            ensure_cmoc_ignored_in_exclude(log_root)
     except BaseException:
         _PRE_LOG_GITIGNORE_STATES.pop(state_key, None)
         raise

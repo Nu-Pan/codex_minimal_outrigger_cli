@@ -13,9 +13,7 @@ from sub_commands.apply.fork import cmoc_apply_fork_impl
 from sub_commands.apply.join import cmoc_apply_join_impl
 from sub_commands.indexing import cmoc_indexing_impl
 from sub_commands.init import cmoc_init_impl
-from sub_commands.review import (
-    cmoc_review_oracle_impl,
-)
+from sub_commands.review.oracle import cmoc_review_oracle_impl
 from sub_commands.session.abandon import cmoc_session_abandon_impl
 from sub_commands.session.fork import cmoc_session_fork_impl
 from sub_commands.session.join import cmoc_session_join_impl
@@ -124,6 +122,7 @@ def apply_abandon() -> None:
 @review_app.command("oracle")
 def review_oracle(scope: str = typer.Option("session", "--scope", "-s")) -> None:
     """oracle review を隔離 worktree で実行する CLI 入口。"""
+    # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
     cmoc_review_oracle_impl(scope)
 
 

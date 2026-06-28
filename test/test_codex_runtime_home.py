@@ -4,14 +4,17 @@ from pathlib import Path
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from cmoc_runtime import CmocError
 from config.cmoc_config import CmocConfig
+import pytest
+
 from _support import (
     make_repo,
+    stub_codex_profile,
     write_python_executable,
 )
 from commons.runtime_codex import run_codex_exec
 
 def test_run_codex_exec_uses_default_codex_home_when_env_unset(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     home = tmp_path / "home"
@@ -20,6 +23,7 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
     (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.delenv("CODEX_HOME", raising=False)
     monkeypatch.setattr(Path, "home", lambda: home)
+    stub_codex_profile(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -57,13 +61,14 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
 
 
 def test_run_codex_exec_preserves_configured_codex_home_env_value(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     codex_home = root / "relative_codex_home"
     codex_home.mkdir()
     (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
+    stub_codex_profile(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -101,8 +106,59 @@ def test_run_codex_exec_preserves_configured_codex_home_env_value(
     assert call_log["codex_home"] == str(codex_home)
 
 
+def test_run_codex_exec_validates_relative_codex_home_from_codex_cwd(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    codex_home = root / "oracle" / "relative_codex_home"
+    codex_home.mkdir()
+    (codex_home / "auth.json").write_text("{}\n")
+    monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
+    stub_codex_profile(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    recorder = tmp_path / "record.json"
+    fake_codex = bin_dir / "codex"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, os, pathlib",
+            f"record = pathlib.Path({str(recorder)!r})",
+            "args = __import__('sys').argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text('done\\n')",
+            "home = pathlib.Path(os.environ['CODEX_HOME'])",
+            "record.write_text(json.dumps({",
+            "    'codex_home': os.environ['CODEX_HOME'],",
+            "    'resolved_home': str(home.resolve()),",
+            "    'cwd': os.getcwd(),",
+            "}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.PURE_ORACLE_READ,
+        "prompt",
+        None,
+    )
+
+    result = run_codex_exec(
+        parameter, root=root, capacity_initial_sleep_sec=0, config=CmocConfig()
+    )
+
+    recorded = json.loads(recorder.read_text())
+    assert recorded["codex_home"] == "relative_codex_home"
+    assert Path(recorded["cwd"]) == root / "oracle"
+    assert Path(recorded["resolved_home"]) == codex_home
+    assert result.codex_home == codex_home
+    assert result.profile_path.parent == codex_home
+
+
 def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     missing_home = tmp_path / "missing_codex_home"
@@ -130,7 +186,7 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
 
 
 def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     codex_home = tmp_path / "codex_home_file"
@@ -159,7 +215,7 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
 
 
 def test_run_codex_exec_fails_before_codex_when_auth_json_missing(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     codex_home = tmp_path / "codex_home"
