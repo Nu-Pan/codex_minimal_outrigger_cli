@@ -149,49 +149,45 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体を置く実装ルート。利用者が起動する CLI 入口、サブコマンド本体、共通 runtime helper、設定モデル、基礎モデル、AI エージェント呼び出し用 prompt/parameter builder と Structured Output schema を含む。
-- CLI から呼ばれる処理が、worktree・branch・state・git・Codex 呼び出し・INDEX 更新・oracle review・apply/session 操作へどのように接続されるかを追うための上位入口になる。
-- oracle file が述べる正本仕様断片を具体化した実装側の領域であり、個別の仕様本文ではなく、実際の挙動、入出力、副作用、例外処理、実行時補助処理を確認するための起点として位置づけられる。
+- cmoc の realization implementation 全体を収める実装ルートであり、公開 CLI、サブコマンド本体、AI 呼び出しパラメータ構築、共通 runtime helper、設定、基礎モデルなど、プロダクト挙動を具体化する Python 実装への入口になる。
+- 上位の CLI 定義から個別サブコマンド、Codex/AI 実行基盤、Git・path・state・INDEX maintenance などの共有処理、設定値や基礎データ構造へ読み進めるための最上位階層として位置づけられる。
+- oracle file で述べられた正本仕様断片を実際の runtime 挙動・コマンド構成・内部モデルへ落とし込む領域であり、実装変更時は必要な責務単位の下位対象へ進む起点になる。
 
 ## Read this when
-- cmoc の CLI コマンド構成、サブコマンド実行本体、共通実行ライフサイクル、利用者向け出力、終了コード、エラー表示の実装を確認または変更したいとき。
-- session、apply、review oracle、indexing、init、TUI などの利用者操作が、git worktree、branch、state file、report、Codex subprocess、cleanup、merge conflict 処理へどうつながるかを調べ始めるとき。
-- Codex exec/TUI 呼び出し、profile 準備、Structured Output 検証、quota/capacity retry、call log、preflight indexing など、AI エージェント実行周辺の実装を追いたいとき。
-- AI 呼び出しに渡す role、summary、goal、補助入力、ファイルアクセス制約、標準 prompt 断片、モデル・reasoning、Structured Output schema の組み立てを確認または変更したいとき。
-- cmoc 固有の path token 解決、設定データ構造、構造化文書から Markdown への変換、runtime path、内容 hash、session state、git helper など、複数機能から共有される実装部品を探したいとき。
-- oracle file に対応する realization implementation として、正本仕様断片が現在のコード上でどのように実行可能な挙動へ落とされているかを確認したいとき。
+- cmoc の実装本体の所在を、CLI 入口、サブコマンド、共通 runtime、AI 呼び出し、設定、基礎モデルのどこから読み始めるべきか判断したいとき。
+- 公開 CLI コマンドの登録、各サブコマンドの実行本体、Codex/AI 呼び出し条件、Git・path・state・ログ・preflight などの実行時支援処理を調査または変更したいとき。
+- oracle file の要求が realization implementation 側でどのように具体化されているかを、実装コードから追う必要があるとき。
+- INDEX.md maintenance、review、apply、session、tui、init など、利用者操作から内部 helper や AI 呼び出しへ至る実装経路をたどり始めるとき。
 
 ## Do not read this when
-- 正本仕様断片そのもの、設計意図、用語定義、oracle/realization の原則、サブコマンド仕様の人間管理文書を読みたいとき。この領域ではなく oracle 側の本文を読む。
-- 自動テストの期待挙動、fixture、回帰確認の観点だけを調べたいとき。この領域ではなく test 側を読む。
-- 生成済みのログ、report、state file、INDEX.md、Codex call の出力内容など、実行結果として作られたファイルの中身だけを確認したいとき。
-- リポジトリの packaging、依存関係定義、開発ツール設定、補助 script、README など、実装ソース以外の補助ファイルを確認したいとき。
-- 特定の下位責務がすでに分かっており、CLI 入口、共通 helper、prompt builder、基礎モデルのいずれかへ直接進めるときは、この上位領域全体を広く読む必要はない。
+- 正本仕様断片そのもの、path model や oracle/realization の人間向け定義、INDEX エントリー規範などを確認したいだけのときは、oracle 側の本文を読む。
+- 実装の外部挙動をテスト期待値や fixture から確認したいだけのときは、realization test 側を読む。
+- リポジトリ補助ファイル、開発用スクリプト、パッケージ設定、生成物管理など、実装ソース以外の ancillary を調べたいとき。
+- 読むべき下位対象が既に CLI 入口、特定サブコマンド、共通 helper、AI prompt 構築、設定、基礎モデルのいずれかに絞れているときは、この階層全体ではなく該当する下位対象へ直接進む。
 
 ## hash
-- 45bc8feadb4faf26d7a3e87ec95384bf1af038738b1b3584b019e789263802dc
+- 2c4e0585fff21d08d38ceeb6f40e3926a0eb06cd7f79eb9d28691cb883eb3ac1
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群を収める領域。CLI サブコマンド、Codex runtime、indexing、prompt 構築、session/apply/review の外部挙動と制御ロジックを、実リポジトリ操作・fake Codex 実行・pytest 補助 fixture を使って固定する。
-- 実装が oracle file の正本仕様断片をどのように具体化しているかを検証する入口であり、個別機能の期待出力、状態遷移、Git worktree/branch 副作用、error report、sandbox profile、retry/quota 制御などの回帰確認へ進むためのルーティング対象である。
-- 共通補助関数も含み、一時 Git リポジトリ、認証済み Codex home、fake 実行ファイル、profile 差し替え、apply worktree path 解決など、複数の CLI/runtime テストで共有される準備処理を確認できる。
+- cmoc の realization test 群への入口。CLI サブコマンド、Codex 実行 wrapper、runtime 基盤、indexing、prompt 構築、session/apply/review の外部挙動と回帰期待値を、実リポジトリ操作や fake Codex 実行を通じて検証する。
+- 共通 fixture と補助関数も含み、一時 Git リポジトリ、Codex home、profile 生成差し替え、process 制御、worktree 解決など、外部コマンドや状態ファイルを伴うテストの前提準備を提供する。
+- 正本仕様ではなく実現結果を固定するテスト領域であり、oracle file の意図が実装上どのような CLI 出力、終了コード、状態遷移、Git 副作用、report、ログとして観測されるかを確認するための下位テストへのルーティング入口になる。
 
 ## Read this when
-- realization implementation を変更する前後に、その変更が CLI 出力、終了コード、状態ファイル、Git branch/worktree、report、ログ、sandbox 設定など利用者に見える挙動へ与える影響を確認したいとき。
-- apply、session、review oracle、init、TUI、indexing などのサブコマンドについて、成功時・失敗時・cleanup・merge conflict・dirty worktree・linked worktree 対応の既存期待値を探すとき。
-- Codex CLI 呼び出しまわりの CODEX_HOME 解決、profile 生成、file access mode、subprocess tracking、構造化出力 retry、capacity/quota retry、call log、禁止領域変更検出を変更または検証するとき。
-- INDEX.md 生成、indexing preflight、hash freshness、malformed entry 再生成、index commit、memo 除外、apply 側の INDEX.md conflict 解消など、索引更新の realization test 観点を確認するとき。
-- prompt 部品、AgentCallParameter builder、structured output schema 連携、routing rule/file access rule/standard の prompt 反映が、実装と oracle 側 schema に合っているかを確認するとき。
-- 新しい realization test を追加する前に、既存テストへケース追加できるか、共通 fixture や fake Codex 実行パターンを再利用できるかを確認したいとき。
+- CLI サブコマンドの外部挙動、終了コード、stdout/stderr、report、状態ファイル、Git branch/worktree 操作、cleanup、merge conflict 解決などの回帰期待値を確認したいとき。
+- session lifecycle、apply fork/join/abandon、review oracle、indexing、init/TUI、runtime preflight、Codex exec/tui/retry/quota/home 解決など、利用者から見える挙動や副作用を変更・検証するとき。
+- Codex CLI 呼び出しを fake executable や monkeypatch で置き換え、起動引数、cwd、sandbox profile、CODEX_HOME、ログ、process group、失敗変換をテストする既存パターンを探すとき。
+- 一時 Git リポジトリ、最小 oracle 構成、tracked/ignored file、linked/apply worktree、branch 状態確認、テスト用 Codex home など、複数テストで共有される fixture や helper の使い方を確認したいとき。
+- 実装変更に対して、既存の realization test へ case を追加すべきか、新しいテストが必要か、またはどの既存テストが同じ外部挙動をすでに固定しているかを判断したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片そのもの、用語定義、標準、パス概念を確認したい場合は、realization test ではなく oracle 側の本文を読む。
-- CLI や runtime の実装詳細、helper の内部責務分割、永続 state の読み書き本体を直接変更したいだけで、外部挙動の期待値確認が不要な場合は、対応する実装側へ進む。
-- 個別機能に関係しない共通方針や設計意図だけを知りたい場合は、この領域全体ではなく、対象に近い oracle doc または実装モジュールのルーティングから読む。
-- Codex CLI や LLM の実出力品質、モデル選択の妥当性そのものを評価したい場合。この領域の多くは fake 実行や stub 応答で cmoc 側の制御と副作用を検証する。
-- INDEX.md エントリーの標準や生成規則だけを確認したい場合は、索引更新の realization test ではなく、正本仕様側の index entry standard を読む。
+- oracle file の正本仕様断片、人間意図、用語定義、標準そのものを確認したいときは、テストではなく oracle 側の本文を読む。
+- 実装 helper、状態永続化、Git 操作、Codex 呼び出し、path model、設定読み込みなどの内部処理だけを局所的に変更したい場合は、まず対応する実装領域を読む。
+- INDEX.md エントリーの生成規則、ルーティング文書の標準、structured output schema の正本を確認したいだけなら、標準や oracle 側の関連本文を読む。
+- Codex CLI や LLM の出力品質そのものを評価したいときは、この領域を読まなくてよい。ここでは外部コマンドを stub 化し、cmoc 側の制御と副作用を検証している。
+- 特定機能に関係しない一般的なリポジトリ構成、README、利用説明、または正本ではない補助文書を探しているだけなら、このテスト領域から始める必要はない。
 
 ## hash
-- f9d290f271068c055540adc216db472f69deb966c219e696e343741723a0af63
+- 4ed0a24ebbf8602af94699127991fd541b16ce1e2cab20185fd29299eb39859f
