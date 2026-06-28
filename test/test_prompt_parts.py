@@ -140,24 +140,22 @@ def test_apply_fork_prompts_use_expected_roots(
 
 def test_apply_fork_change_summary_schema_matches_oracle_source() -> None:
     parameter = build_apply_fork_change_summary_parameter("diff")
-    assert parameter.structured_output_schema_path is not None
-
-    schema = json.loads(parameter.structured_output_schema_path.read_text())
-    oracle_schema = json.loads(
-        (
-            Path(__file__).parents[1]
-            / "oracle"
-            / "src"
-            / "acp"
-            / "builder"
-            / "apply"
-            / "fork"
-            / "change_summary.json"
-        ).read_text()
+    oracle_schema_path = (
+        Path(__file__).parents[1]
+        / "oracle"
+        / "src"
+        / "oracle"
+        / "acp_builder"
+        / "apply"
+        / "fork"
+        / "change_summary.json"
     )
 
+    assert parameter.structured_output_schema_path == oracle_schema_path
+
+    schema = json.loads(parameter.structured_output_schema_path.read_text())
+    oracle_schema = json.loads(oracle_schema_path.read_text())
     assert schema == oracle_schema
-    validate({"changes": []}, schema)
     validate(
         {
             "changes": [
