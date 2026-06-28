@@ -45,13 +45,49 @@ from acp.builder.session.join.conflict_resolution import (
 )
 from acp.builder.tui.resolve_parameter import build_tui_resolve_parameter_parameter
 from acp.builder.tui.resolve_parameter import TUI_FILE_ACCESS_MODES
-from acp.prompt_parts.file_access_rule import build_file_access_rule
-from acp.prompt_parts.apply_review_standard import build_apply_review_standard
-from acp.prompt_parts.complete_prompt import build_complete_prompt
-from acp.prompt_parts.index_entry_standard import build_index_entry_standard
-from acp.prompt_parts.oracle_review_standard import build_review_oracle_standard
-from acp.prompt_parts.realization_standard import build_realization_standard
-from acp.prompt_parts.routing_rule import build_routing_rule
+from oracle.prompt_builder.complete_prompt import build_complete_prompt
+from oracle.prompt_builder.parts.apply_review_standard import (
+    build_apply_review_standard as _build_apply_review_standard,
+)
+from oracle.prompt_builder.parts.file_access_rule import (
+    build_file_access_rule as _build_file_access_rule,
+)
+from oracle.prompt_builder.parts.index_entry_standard import (
+    build_index_entry_standard as _build_index_entry_standard,
+)
+from oracle.prompt_builder.parts.oracle_review_standard import (
+    build_review_oracle_standard as _build_review_oracle_standard,
+)
+from oracle.prompt_builder.parts.realization_standard import (
+    build_realization_standard as _build_realization_standard,
+)
+from oracle.prompt_builder.parts.routing_rule import (
+    build_routing_rule as _build_routing_rule,
+)
+
+
+def build_apply_review_standard() -> StructDoc:
+    return _build_apply_review_standard()[1]
+
+
+def build_file_access_rule(mode: FileAccessMode) -> StructDoc:
+    return _build_file_access_rule(mode)[1]
+
+
+def build_index_entry_standard() -> StructDoc:
+    return _build_index_entry_standard()[1]
+
+
+def build_review_oracle_standard() -> StructDoc:
+    return _build_review_oracle_standard()[1]
+
+
+def build_realization_standard() -> StructDoc:
+    return _build_realization_standard()[1]
+
+
+def build_routing_rule() -> StructDoc:
+    return _build_routing_rule()[1]
 
 
 def test_build_apply_review_standard_renders_core_review_aspects() -> None:
@@ -88,7 +124,7 @@ def test_complete_prompt_always_includes_routing_rule() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
-        aux_prompt=[],
+        aux_dynamic_prompt=[],
     )
 
     rendered = render_as_markdown(prompt)
@@ -135,9 +171,11 @@ def test_apply_fork_prompts_use_expected_roots(
     assert "`<repo-root>` ツリー内の realization file" in finding_application.prompt
     assert f"- <repo-root> = {repo_root}" in finding_application.prompt
     assert f"- <work-root> = {apply_worktree}" in finding_application.prompt
-    assert f"`{repo_root}` ツリー内の所見" in finding_enumeration.prompt
+    assert "`<repo-root>` ツリー内の所見" in finding_enumeration.prompt
+    assert f"- <repo-root> = {repo_root}" in finding_enumeration.prompt
     assert f"`{apply_worktree}` ツリー内の所見" not in finding_enumeration.prompt
-    assert f"`{repo_root}` ツリー内の差分" in change_summary.prompt
+    assert "`<repo-root>` ツリー内の差分" in change_summary.prompt
+    assert f"- <repo-root> = {repo_root}" in change_summary.prompt
     assert "# oracle and realization basic" in change_summary.prompt
 
 
@@ -199,18 +237,15 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
         FileAccessMode.REALIZATION_WRITE: [
             "ツリー外は読み書き禁止",
             "/oracle` ツリー内は書き込み禁止",
-            "/.agents` ツリー内は書き込み禁止",
             "/memo` は読み書き禁止",
         ],
         FileAccessMode.ORACLE_WRITE: [
             "ツリー外は読み書き禁止",
             "/oracle` ツリー外は書き込み禁止",
-            "/.agents` ツリー内は書き込み禁止",
             "/memo` は読み書き禁止",
         ],
         FileAccessMode.REPO_WRITE: [
             "ツリー外は読み書き共に禁止",
-            "/.agents` ツリー内は書き込み禁止",
             "/memo` は読み書き禁止",
         ],
     }
@@ -229,7 +264,7 @@ def test_complete_prompt_can_include_apply_review_standard() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
-        aux_prompt=[],
+        aux_dynamic_prompt=[],
         apply_review_standard=True,
     )
 
@@ -244,7 +279,7 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
-        aux_prompt=[],
+        aux_dynamic_prompt=[],
         oracle_standard=True,
         realization_standard=True,
         review_oracle_standard=True,
@@ -259,7 +294,7 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
     assert "`oracles file` のような typo" in rendered
     for forbidden in ["<cmoc-root>", "<repo-root>", "<run-root>"]:
         assert forbidden not in rendered
-    assert "コメントに `<work-root>` トークン起点の oracle file path を書く" in rendered
+    assert "コメントにプレースホルダ `<work-root>` 起点の oracle file path を書く" in rendered
     assert "`<work-root>/oracle/doc/...` のように根拠 path" in rendered
     for expected in [
         "oracle and realization basic",
@@ -275,7 +310,7 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
         assert expected in rendered
 
 
-def test_complete_prompt_resolves_root_tokens_and_removes_cmoc_call_metadata(
+def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     repo_root = tmp_path / "repo"
@@ -288,7 +323,7 @@ def test_complete_prompt_resolves_root_tokens_and_removes_cmoc_call_metadata(
         summary="- <repo-root> ツリー内の realization file を修正すること",
         goal="- realization standard と oracle standard に従うこと",
         file_access_mode=FileAccessMode.READONLY,
-        aux_prompt=[
+        aux_dynamic_prompt=[
             StructDoc(
                 "aux realization file",
                 "- <cmoc-root> と <run-root> と <work-root> 配下を確認すること",
@@ -307,12 +342,11 @@ def test_complete_prompt_resolves_root_tokens_and_removes_cmoc_call_metadata(
 
     assert "- realization standard と oracle standard に従うこと" in rendered
     assert "# aux realization file" in rendered
-    assert "cmoc から呼び出された" not in rendered
-    for forbidden in ["<cmoc-root>", "<repo-root>", "<run-root>", "<work-root>"]:
-        assert forbidden not in rendered
-    assert f"{repo_root} ツリー内の realization file" in rendered
-    assert f"{repo_root} 配下を確認すること" in rendered
-    assert f'"summary": "realization file and {repo_root} stay in code block"' in rendered
+    assert "cmoc から呼び出された" in rendered
+    assert "<repo-root> ツリー内の realization file" in rendered
+    assert "<cmoc-root> と <run-root> と <work-root> 配下" in rendered
+    assert '"summary": "realization file and <repo-root> stay in code block"' in rendered
+    assert f"- <work-root> = {repo_root}" in rendered
 
 
 def test_complete_prompt_keeps_literal_root_token_comment_requirement(
@@ -328,16 +362,16 @@ def test_complete_prompt_keeps_literal_root_token_comment_requirement(
         summary="- <work-root>/src/app.py を確認すること",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
-        aux_prompt=[],
+        aux_dynamic_prompt=[],
         realization_standard=True,
     )
 
     rendered = render_as_markdown(prompt)
 
-    assert f"- {repo_root}/src/app.py を確認すること" in rendered
-    assert "コメントに `<work-root>` トークン起点の oracle file path を書く" in rendered
+    assert "- <work-root>/src/app.py を確認すること" in rendered
+    assert "コメントにプレースホルダ `<work-root>` 起点の oracle file path を書く" in rendered
     assert "`<work-root>/oracle/doc/...` のように根拠 path" in rendered
-    assert f"コメントに `{repo_root}` トークン起点" not in rendered
+    assert f"- <work-root> = {repo_root}" in rendered
 
 
 def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
@@ -346,7 +380,7 @@ def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
-        aux_prompt=[],
+        aux_dynamic_prompt=[],
     )
 
     rendered = render_as_markdown(prompt)
@@ -377,7 +411,7 @@ def test_complete_prompt_can_include_realization_standard() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
-        aux_prompt=[],
+        aux_dynamic_prompt=[],
         realization_standard=True,
     )
 
@@ -397,7 +431,7 @@ def test_build_index_entry_standard_renders_core_output_rules() -> None:
     assert "読むべき対象へのルーティング情報" in rendered
     assert "対象内容に根拠" in rendered
     assert "機械的に補える情報" in rendered
-    assert "ファイル・ディレクトリの識別子、ハッシュ、出力形式は cmoc 側" in rendered
+    assert "ファイル・ディレクトリの識別子、ハッシュ、出力形式は、この agent call の外側" in rendered
     assert "ファイル名・ディレクトリ名・ハッシュ値" in rendered
     assert "Structured Output schema を読めば分かる出力項目名・型・形式" in rendered
     assert "関連しそうという理由だけ" in rendered
@@ -412,7 +446,7 @@ def test_complete_prompt_can_include_index_entry_standard() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
-        aux_prompt=[],
+        aux_dynamic_prompt=[],
         index_entry_standard=True,
     )
 
@@ -426,7 +460,7 @@ def test_complete_prompt_omits_index_entry_standard_by_default() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
-        aux_prompt=[],
+        aux_dynamic_prompt=[],
     )
 
     rendered = render_as_markdown(prompt)
@@ -463,6 +497,8 @@ def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
     schema = json.loads(parameter.structured_output_schema_path.read_text())
 
     assert schema["required"] == [
+        "role",
+        "summary",
         "file_access_mode",
         "oracle_and_realization_basic",
         "oracle_standard",
@@ -522,8 +558,8 @@ def test_review_oracle_enumerate_finding_schema_matches_oracle_source() -> None:
             Path(__file__).parents[1]
             / "oracle"
             / "src"
-            / "acp"
-            / "builder"
+            / "oracle"
+            / "acp_builder"
             / "review"
             / "oracle"
             / "enumerate_finding.json"
@@ -562,8 +598,8 @@ def test_review_oracle_merge_finding_schema_matches_oracle_source() -> None:
             Path(__file__).parents[1]
             / "oracle"
             / "src"
-            / "acp"
-            / "builder"
+            / "oracle"
+            / "acp_builder"
             / "review"
             / "oracle"
             / "merge_finding.json"
@@ -627,8 +663,8 @@ def test_review_oracle_validate_finding_schema_matches_oracle_source(
             Path(__file__).parents[1]
             / "oracle"
             / "src"
-            / "acp"
-            / "builder"
+            / "oracle"
+            / "acp_builder"
             / "review"
             / "oracle"
             / schema_name
@@ -666,7 +702,6 @@ def test_build_review_oracle_standard_renders_core_review_rules() -> None:
     assert "oracle file だけからは問題だとは言い切れない" in rendered
     assert "仕様からは実装が一意に定まらない" in rendered
     assert "`cmoc review oracle`" in rendered
-    assert "`cmoc apply join`" in rendered
 
 
 def test_complete_prompt_can_include_review_oracle_standard() -> None:
@@ -675,7 +710,7 @@ def test_complete_prompt_can_include_review_oracle_standard() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
-        aux_prompt=[],
+        aux_dynamic_prompt=[],
         review_oracle_standard=True,
     )
 
@@ -690,7 +725,7 @@ def test_complete_prompt_omits_review_oracle_standard_by_default() -> None:
         summary="- summary",
         goal="- goal",
         file_access_mode=FileAccessMode.READONLY,
-        aux_prompt=[],
+        aux_dynamic_prompt=[],
     )
 
     rendered = render_as_markdown(prompt)
