@@ -126,21 +126,23 @@
 # `pyproject.toml`
 
 ## Summary
-- Python パッケージとしてのプロジェクト名・バージョン・説明・要求 Python バージョン・依存パッケージを定義する設定。
-- 実行コマンドから実装入口への対応、setuptools のソース配置・モジュール・パッケージデータ、テスト時の import 探索パスをまとめて扱う。
+- Python プロジェクトの配布・ビルド・テスト実行に関わる設定をまとめる補助的な設定ファイル。パッケージ名、Python バージョン、実行時・開発時依存、CLI エントリーポイント、setuptools の収集対象、テスト時の import path を定義する。
+- 実装本体や正本仕様ではなく、実装ファイルと oracle 側 Python パッケージをどのようにインストール・検出・テスト実行環境へ載せるかを確認する入口になる。
 
 ## Read this when
-- 配布・インストール・ビルド設定、要求 Python バージョン、外部依存、パッケージに含めるモジュールやデータの扱いを確認または変更する時。
-- 利用者が呼び出すコマンド名と実装入口の対応を確認または変更する時。
-- テスト実行時に実装側または正本仕様側のモジュールが import できない問題を調べる時。
+- 依存パッケージ、要求 Python バージョン、ビルドバックエンド、setuptools のパッケージ検出、package data の扱いを確認または変更したいとき。
+- CLI コマンド名がどの Python callable に接続されるかを確認または変更したいとき。
+- テスト実行時にどのソースツリーが import 対象へ追加されるかを確認したいとき。
+- 実装側ソースと oracle 側ソースを同じ Python プロジェクト内でどう配置・配布しているかを確認したいとき。
 
 ## Do not read this when
-- 個別コマンドの挙動、実行時ロジック、入出力形式、状態操作を調べる時は、実装ソースやテストを直接読む。
-- 正本仕様断片の内容や方針を確認する時は、正本仕様の文書またはソースを直接読む。
-- 依存追加やパッケージ設定変更を伴わない局所的な実装修正・テスト修正だけを行う時。
+- CLI の具体的な挙動、サブコマンド処理、実行時状態管理、出力内容を調べたいときは、実装ソースを直接読む。
+- 正本仕様断片や用語定義、設計意図を確認したいときは、oracle 側の本文を読む。
+- 個別テストケースの期待値や検証観点を確認したいときは、テストソースを読む。
+- リポジトリ全体のルーティングや各ディレクトリの読む順序を判断したいだけのときは、該当階層のルーティング情報を読む。
 
 ## hash
-- 731783d339cf2faeb792cb6989ecddd88a109934b3e5f1a9667ec546eb6a0182
+- d01948ab1730e2747d529d49d8c8ca10b84bd6a86e19d7b2810ee87c95ccb904
 
 # `src`
 
@@ -165,23 +167,23 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 群を集約するテストディレクトリ。CLI サブコマンド、Codex runtime、基礎 runtime、prompt/schema、indexing、review、session、apply workflow の外部挙動と主要な境界条件を pytest で固定する。
-- 共通補助関数も含み、一時 Git リポジトリ、Codex home/profile、fake Codex 実行、linked/apply worktree など、外部コマンドや状態ファイルを伴う回帰テストの前提をまとめて提供する。
-- oracle file ではなく realization test の入口であり、正本仕様ではなく、oracle file と実装から具体化された挙動が現在どのように検証されているかを確認するための対象である。
+- realization test 全体の入口。CLI サブコマンド、Codex runtime、prompt/ACP builder、indexing、session/apply/review workflow、基礎 runtime の外部挙動と回帰条件を pytest で固定する領域。
+- 共通 fixture と外部コマンド stub を使い、Git worktree、state file、report、Codex 呼び出し、routing document 更新など、実装が正本仕様断片をどう具体化しているかを検証する。
+- 個別テストは feature ごとの利用者向け挙動・制御ロジック・副作用の期待値を読む入口であり、実装本文だけでは判断しにくい終了コード、出力、永続状態、cleanup 条件、境界条件を確認するために使う。
 
 ## Read this when
-- CLI サブコマンドの終了コード、標準出力、標準エラー、状態ファイル、Git branch/worktree、report、cleanup などの外部挙動を変更し、その回帰テストを探すとき。
-- apply fork/join/abandon、session fork/join/abandon、review oracle、indexing、init、TUI 前処理など、複数の Git 状態や fake Codex 応答を伴う workflow の期待挙動を確認したいとき。
-- Codex CLI 実行ラッパーの profile 生成、CODEX_HOME 解決、sandbox 設定、retry、quota retry、subprocess 追跡、ログ副作用を変更または検証するとき。
-- root token/path model、config、CmocError、file access mode、subcommand log、prompt parts、structured output schema 同期など、個別サブコマンドより下位の共通 runtime 契約に触れるとき。
-- 新しい realization test を追加する前に、既存テストへケース追加できるか、同じ観点の回帰テストや共通 fixture がすでにあるかを確認するとき。
+- realization implementation を変更した結果、CLI の外部挙動、Git branch/worktree/state のライフサイクル、report 生成、Codex 呼び出し、routing document 更新のいずれかが変わる可能性があるとき。
+- apply、session、review、init、tui、indexing、Codex runtime、prompt/ACP builder、基礎 runtime の期待挙動や既存の回帰観点を、実装変更前後に確認したいとき。
+- 新しい realization test を追加する前に、既存テストへ同じ観点を統合できるか、共通 fixture や stub を再利用できるかを確認したいとき。
+- 外部 Codex CLI や Git を直接使うのではなく、fake executable、monkeypatch、temporary repository で制御フローと副作用を検証する既存パターンを探すとき。
+- oracle file ではなく realization test として、現在の実装が期待する境界条件、エラー出力、cleanup、retry、conflict handling、schema 同期を確認したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片そのもの、人間が管理する要求、または oracle standard を確認したい場合は、oracle 側の本文を読む。
-- 実装本体の責務分割、内部 helper、アルゴリズム、状態操作の詳細を変更したいだけで、期待される外部挙動や回帰条件を確認する段階でない場合は、対応する実装側を読む。
-- Codex CLI や LLM の出力品質そのものを評価したい場合。このディレクトリのテストは fake/stub を使い、cmoc 側の制御と副作用を検証する。
-- ルーティング文書の文面品質や INDEX.md エントリー生成規則そのものを調べたい場合は、prompt/schema や indexing のテストではなく、該当する oracle 文書や実装を読む。
-- 単純なテスト補助関数の使い方だけを知りたい場合は、ディレクトリ全体ではなく共通補助関数の対象へ直接進む。
+- 正本仕様断片そのもの、人間が責任を持つ要求、oracle file の内容を確認したい場合は、oracle 側の本文を読む。
+- 実装本体の責務分割、内部 helper、具体的な制御処理を直接変更する場合で、外部挙動の期待値確認が不要なら、対応する実装領域を先に読む。
+- routing entry の文面や INDEX.md 生成規則だけを確認したい場合で、test workflow の回帰条件を扱わないなら、indexing や prompt の該当仕様・実装へ進む。
+- pytest fixture や補助関数の使い方だけを確認したい場合は、まず共通 support を読み、個別 feature の期待値が必要になったときだけ該当テストへ進む。
+- 実際の Codex CLI や LLM 出力品質を評価したい場合。この領域のテストは fake/stub により cmoc 側の制御と副作用を検証するためのもの。
 
 ## hash
-- 313cd2e12fc13f30f2b769d82cda7484ca20286b01e5680f9c766154a3b0094d
+- a8d400436902e9a45bc4a6fcd8b586a1016453fb599a1a6271d1044c7742358e
