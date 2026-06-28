@@ -515,6 +515,33 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
             [root / "src" / "blocked.md"],
         )
 
+    build_codex_profile(
+        AgentCallParameter(
+            parameter.model_class,
+            parameter.reasoning_effort,
+            FileAccessMode.PURE_ORACLE_READ,
+            parameter.prompt,
+            parameter.structured_output_schema_path,
+        ),
+        CmocConfig(),
+        root,
+        [root / ".cmoc" / "log" / "tui" / "20260101_cmpl.md"],
+    )
+
+    with pytest.raises(CmocError, match="許可領域外"):
+        build_codex_profile(
+            AgentCallParameter(
+                parameter.model_class,
+                parameter.reasoning_effort,
+                FileAccessMode.PURE_ORACLE_READ,
+                parameter.prompt,
+                parameter.structured_output_schema_path,
+            ),
+            CmocConfig(),
+            root,
+            [root / ".cmoc" / "log" / "tui" / "20260101_orig.md"],
+        )
+
 
 @pytest.mark.parametrize(
     ("mode", "extra"),

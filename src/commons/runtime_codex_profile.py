@@ -56,8 +56,19 @@ def _is_read_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
         return False
     if path.is_relative_to(root / "memo") or path.is_relative_to(root / ".agents"):
         return False
+    if _is_tui_complete_prompt_path(root, path):
+        # <work-root>/oracle/doc/app_spec/sub_command/tui.md
+        # PURE_ORACLE_READ の Codex cwd は oracle に閉じるが、TUI の完全
+        # prompt だけは起動指示そのものなので `.cmoc` 側から読ませる。
+        return True
     return mode != FileAccessMode.PURE_ORACLE_READ or path.is_relative_to(
         root / "oracle"
+    )
+
+
+def _is_tui_complete_prompt_path(root: Path, path: Path) -> bool:
+    return path.parent == root / ".cmoc" / "log" / "tui" and path.name.endswith(
+        "_cmpl.md"
     )
 
 

@@ -420,6 +420,44 @@ def test_run_codex_tui_checks_extra_read_path_before_starting_codex(
         )
 
 
+def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    prompt_path = root / ".cmoc" / "log" / "tui" / "20260101_cmpl.md"
+    prompt_path.parent.mkdir(parents=True)
+    prompt_path.write_text("complete prompt\n")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    recorder = tmp_path / "record.json"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, os, pathlib, sys",
+            "args = sys.argv[1:]",
+            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
+            "    'args': args,",
+            "    'cwd': os.getcwd(),",
+            "}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_tui(
+        _parameter(FileAccessMode.PURE_ORACLE_READ),
+        root=root,
+        extra_read_paths=[prompt_path],
+        config=CmocConfig(),
+    )
+
+    record = json.loads(recorder.read_text())
+    assert record["cwd"] == str((root / "oracle").resolve())
+    assert record["args"][record["args"].index("--cd") + 1] == str(
+        (root / "oracle").resolve()
+    )
+
+
 def test_run_codex_tui_fails_when_codex_exits_nonzero(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
