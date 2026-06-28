@@ -283,7 +283,7 @@ def test_session_abandon_requires_existing_home_branch(
     assert result.exit_code != 0
     assert "completed session abandon" in result.output
     assert "- sub_command_log: `" in result.output
-    assert "- step_execute_elapsed: `" in result.output
+    assert "- step_elapsed[2/3 execute session abandon]: `" in result.output
     assert "- elapsed: `" in result.output
     assert "- quota_wait: `" in result.output
     assert "- returncode: `1`" in result.output

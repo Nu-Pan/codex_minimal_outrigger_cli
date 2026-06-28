@@ -36,10 +36,10 @@ class FakeCodexResult:
 
 
 def report_path_from_stdout(stdout: str) -> Path:
-    """apply fork stdout は report の full path だけを返す。"""
-    lines = stdout.splitlines()
-    assert len(lines) == 1
-    return Path(lines[0])
+    """apply fork stdout の共通ログ後に出る report full path を返す。"""
+    lines = [line for line in stdout.splitlines() if line.startswith("/")]
+    assert lines
+    return Path(lines[-1])
 
 
 def test_apply_fork_writes_report_with_change_summary(

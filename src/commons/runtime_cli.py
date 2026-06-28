@@ -1,5 +1,3 @@
-import contextlib
-import io
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -31,58 +29,53 @@ def run_cli_subcommand(
     command_name: str | None = None,
     command_argv: Sequence[str] | None = None,
     error_to_stderr: bool = False,
-    console_output: bool = True,
     use_work_root_runtime: bool = False,
     **kwargs: Any,
 ) -> None:
     """CLI サブコマンドの共通実行ライフサイクルを管理する。
 
-    work root 検査後に任意の事前検査を行ってからサブコマンドログを作成し、
+    work root 検査後にサブコマンドログを作成し、
     開始・完了表示、戻り値の終了コード化、例外のエラー表示を一箇所で扱う。
     runtime state は通常 repo root に置き、init だけは初期化対象である work root に置く。
     サブコマンドログは常に repo root に置く。
-    console_output=False の呼び出しでは、コマンド固有の stdout 契約を優先する。
     """
     logger = None
     logger_token = None
     name = command_name or impl.__name__
+    total_steps = 3
     try:
         current_root = work_root()
         require_current_directory_is_work_root(current_root)
         log_root = repo_root()
         runtime_root = current_root if use_work_root_runtime else log_root
-        if pre_log_check is not None:
-            pre_log_check(runtime_root)
-        total_steps = 3
         logger = SubcommandLogger(log_root, name)
         logger_token = set_current_subcommand_logger(logger)
         logger.event("command_invoked", argv=list(command_argv or [name]))
-        if console_output:
-            typer.echo(f"# {console_timestamp()} (1/{total_steps}) start {name}")
-            typer.echo(f"- sub_command_log: `{logger.path}`")
-        logger.event("step_started", step="execute")
-        if console_output:
-            typer.echo(
-                f"# {console_timestamp()} ({total_steps - 1}/{total_steps}) execute {name}"
-            )
-            impl_result = impl(*args, **kwargs)
-        else:
-            with contextlib.redirect_stdout(io.StringIO()):
-                impl_result = impl(*args, **kwargs)
+        logger.start_step(f"1/{total_steps}", f"start {name}")
+        typer.echo(f"# {console_timestamp()} (1/{total_steps}) start {name}")
+        typer.echo(f"- sub_command_log: `{logger.path}`")
+        if pre_log_check is not None:
+            pre_log_check(runtime_root)
+        logger.start_step(f"{total_steps - 1}/{total_steps}", f"execute {name}")
+        typer.echo(
+            f"# {console_timestamp()} ({total_steps - 1}/{total_steps}) execute {name}"
+        )
+        impl_result = impl(*args, **kwargs)
         if isinstance(impl_result, CliRunResult):
             returncode = impl_result.returncode
             result_stdout = impl_result.stdout
         else:
             returncode = impl_result if isinstance(impl_result, int) else 0
             result_stdout = None
+        logger.start_step(f"{total_steps}/{total_steps}", f"completed {name}")
+        logger.finish_current_step()
         logger.event(
             "command_finished",
             returncode=returncode,
             elapsed_sec=logger.elapsed(),
             quota_wait_sec=logger.quota_wait_sec,
         )
-        if console_output:
-            _emit_completion_summary(logger, name, returncode, total_steps)
+        _emit_completion_summary(logger, name, returncode, total_steps)
         if result_stdout is not None:
             typer.echo(result_stdout)
         if returncode:
@@ -91,6 +84,8 @@ def run_cli_subcommand(
         raise
     except BaseException as exc:
         if logger:
+            logger.start_step(f"{total_steps}/{total_steps}", f"completed {name}")
+            logger.finish_current_step()
             logger.event(
                 "command_finished",
                 returncode=1,
@@ -98,8 +93,7 @@ def run_cli_subcommand(
                 quota_wait_sec=logger.quota_wait_sec,
                 error=str(exc),
             )
-            if console_output:
-                _emit_completion_summary(logger, name, 1, total_steps)
+            _emit_completion_summary(logger, name, 1, total_steps)
         result_stdout = getattr(exc, "cmoc_stdout", None)
         if result_stdout is not None:
             typer.echo(str(result_stdout))
@@ -138,7 +132,13 @@ def _emit_completion_summary(
         f"# {console_timestamp()} ({total_steps}/{total_steps}) completed {command_name}"
     )
     typer.echo(f"- sub_command_log: `{logger.path}`")
-    typer.echo(f"- step_execute_elapsed: `{format_duration(elapsed)}`")
+    for step in logger.step_timings:
+        step_elapsed = step.elapsed_sec
+        if step_elapsed is None:
+            step_elapsed = elapsed - (step.started_at - logger.started_at)
+        typer.echo(
+            f"- step_elapsed[{step.index} {step.description}]: `{format_duration(step_elapsed)}`"
+        )
     typer.echo(f"- elapsed: `{format_duration(elapsed)}`")
     typer.echo(f"- quota_wait: `{format_duration(logger.quota_wait_sec)}`")
     typer.echo(f"- returncode: `{returncode}`")

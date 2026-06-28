@@ -1,6 +1,7 @@
 import json
 import time
 from contextvars import ContextVar, Token
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,14 @@ _CURRENT_SUBCOMMAND_LOGGER: ContextVar["SubcommandLogger | None"] = ContextVar(
 )
 
 
+@dataclass
+class StepTiming:
+    index: str
+    description: str
+    started_at: float
+    elapsed_sec: float | None = None
+
+
 class SubcommandLogger:
     """サブコマンド単位の JSON Lines event と待機時間を集約する logger。"""
 
@@ -23,6 +32,7 @@ class SubcommandLogger:
         self.command = command
         self.started_at = time.perf_counter()
         self.quota_wait_sec = 0.0
+        self.step_timings: list[StepTiming] = []
         log_dir = logs_dir(root)
         log_dir.mkdir(parents=True, exist_ok=True)
         while True:
@@ -46,6 +56,20 @@ class SubcommandLogger:
         with self.path.open("a") as f:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
             f.flush()
+
+    def start_step(self, index: str, description: str) -> None:
+        """完了サマリー用の step 実測値を開始 event と同じ単位で保持する。
+
+        根拠: <work-root>/oracle/doc/app_spec/console_and_file_log.md
+        """
+        self.finish_current_step()
+        self.step_timings.append(StepTiming(index, description, time.perf_counter()))
+        self.event("step_started", step=description, step_index=index)
+
+    def finish_current_step(self) -> None:
+        if self.step_timings and self.step_timings[-1].elapsed_sec is None:
+            step = self.step_timings[-1]
+            step.elapsed_sec = time.perf_counter() - step.started_at
 
     def elapsed(self) -> float:
         """サブコマンド開始からの経過秒を、完了表示と log 集計用に返す。"""

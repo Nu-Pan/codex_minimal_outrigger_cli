@@ -1,3 +1,4 @@
+import json
 import subprocess
 import threading
 import time
@@ -92,7 +93,7 @@ def test_indexing_uses_codex_index_entry_builder_and_commits(
     assert "cmoc indexing" in run_git(root, "log", "--oneline", "-1").stdout
 
 
-def test_indexing_uninitialized_clean_repo_fails_without_non_index_diff(
+def test_indexing_uninitialized_clean_repo_fails_with_subcommand_log(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -105,8 +106,12 @@ def test_indexing_uninitialized_clean_repo_fails_without_non_index_diff(
     assert "cmoc init を実行してから再実行してください。" not in result.stderr
     assert not (root / ".gitignore").exists()
     assert not (root / "INDEX.md").exists()
-    assert not (root / ".cmoc").exists()
-    assert run_git(root, "status", "--short").stdout.strip() == ""
+    log_path = next((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))
+    records = [json.loads(line) for line in log_path.read_text().splitlines()]
+    assert records[0]["event"] == "command_invoked"
+    assert records[-1]["event"] == "command_finished"
+    assert records[-1]["returncode"] == 1
+    assert run_git(root, "status", "--short").stdout.strip() == "?? .cmoc/"
 
 
 def test_indexing_targets_current_linked_worktree(

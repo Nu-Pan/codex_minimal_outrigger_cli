@@ -1,3 +1,4 @@
+import json
 import shutil
 import subprocess
 import sys
@@ -271,6 +272,29 @@ def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
     assert "sub_command_log" not in result.stdout + result.stderr
     assert not (root / ".gitignore").exists()
     assert not (root / ".cmoc").exists()
+
+
+def test_pre_log_check_failure_still_writes_subcommand_log(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    (root / "README.md").write_text("dirty\n")
+
+    result = runner.invoke(app, ["indexing"])
+
+    assert result.exit_code == 1
+    log_path = sorted((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))[-1]
+    records = [json.loads(line) for line in log_path.read_text().splitlines()]
+    assert records[0]["event"] == "command_invoked"
+    assert records[0]["command"] == "indexing"
+    assert any(
+        record["event"] == "command_finished"
+        and record["returncode"] == 1
+        and "error" in record
+        for record in records
+    )
 
 
 def test_bin_cmoc_missing_venv_call_stack_uses_root_token_path(tmp_path: Path) -> None:

@@ -61,7 +61,6 @@ def cmoc_apply_fork_impl(scope: str) -> None:
         run_codex_exec,
         command_name="apply fork",
         command_argv=["cmoc", "apply", "fork", "--scope", scope],
-        console_output=False,
     )
 
 
@@ -173,8 +172,8 @@ def _cmoc_apply_fork_body(
         setattr(exc, "cmoc_stdout", str(report_path.resolve()))
         setattr(exc, "cmoc_error_to_stderr", True)
         raise
-    # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md は stdout を
-    # 作成した report の full path だけに限定している。
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md requires the
+    # generated report path on stdout; common runtime logs are emitted around it.
     return CliRunResult(
         returncode=2 if result_label == "unconverged" else 0,
         stdout=str(report_path.resolve()),
