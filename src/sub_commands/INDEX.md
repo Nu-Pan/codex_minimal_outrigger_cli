@@ -1,26 +1,27 @@
 # `apply`
 
 ## Summary
-- apply run の開始、完了取り込み、未 join run の破棄、および実行中 process の追跡・停止を扱うサブコマンド実装群への入口。
-- isolated worktree と branch を使った finding 適用 loop、report 生成、state 遷移、cleanup、merge conflict 対応、禁止対象差分の rollback など、apply 系操作の制御フローを切り分けて調べるための階層。
-- ユーザー操作としての fork・join・abandon と、それらを支える runtime 補助や report 作成を同じ責務領域として扱う。
+- apply サブコマンド群の実装ディレクトリとして、apply run の開始、破棄、join、実行時 process/worktree 管理、fork report 生成を扱う入口。
+- apply branch/worktree、apply state、Codex subprocess、所見適用、差分再キュー、merge conflict、cleanup といった apply 固有の制御を、各操作単位の実装へ分岐して確認するための対象。
+- fork の orchestration、abandon の cleanup、join の session branch 取り込み、runtime helper、report writer が同階層にまとまっており、apply サブコマンドの責務境界を把握する起点になる。
 
 ## Read this when
-- apply run を開始して対象列挙、Codex による finding 適用、再キュー、commit、report 出力、state 更新まで進める流れを確認・変更したいとき。
-- 完了またはエラー状態の apply run を session 側へ join し、merge conflict、想定外差分、force-resolve、worktree・branch cleanup を扱う挙動を調べたいとき。
-- 未 join の apply run を破棄し、実行中 process 停止、worktree・branch・pid file 削除、state 初期化、warning 出力を確認・変更したいとき。
-- apply 実行中 process や Codex subprocess の追跡、pid file lifecycle、branch から worktree を復元する処理、SIGTERM/SIGKILL を含む停止処理を調べたいとき。
-- apply fork の Markdown report 生成、変更差分収集、構造化変更要約、frontmatter や本文表示を確認・変更したいとき。
+- apply fork、apply abandon、apply join のいずれかの CLI 実行条件、状態遷移、branch/worktree 操作、cleanup、利用者向け出力を確認・変更したいとき。
+- apply 実行中 process の追跡・停止、pid file、Codex subprocess group、apply worktree 解決など、apply 固有の runtime 補助処理を調べたいとき。
+- apply fork が Codex に所見列挙・適用を依頼し、変更 path を再キューし、commit と report 出力へ進む全体フローを追いたいとき。
+- apply join における apply branch の session branch への取り込み、想定外差分の扱い、force-resolve、merge conflict report、INDEX.md conflict 自動解決を確認したいとき。
+- apply run の破棄、実行中 process 停止、apply worktree・branch・pid file 削除、apply state 初期化の一連の処理を確認したいとき。
+- apply fork report の保存内容、変更差分収集、構造化変更要約、frontmatter と本文の構成を確認・変更したいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド、共通 CLI 実行ラッパー、git command wrapper、path model、config/state model の一般仕様だけを調べたいとき。
-- session state の schema や保存形式そのもの、state file の低レベルな読み書き責務を確認したいだけのとき。
-- Codex CLI 呼び出し parameter の構築、finding 列挙・適用用 prompt や構造化出力の設計だけを調べたいとき。
-- report directory、timestamp、git diff 実行 helper など、apply report 固有ではない共通処理を調べたいとき。
-- パッケージ説明や import 時副作用の有無だけを確認したいときは、実装ロジックではなく package 入口の本文だけで足りる。
+- apply 以外のサブコマンド、CLI 全体の共通実行ラッパー、git wrapper、config load、path model、state file 永続化の共通仕様だけを調べたいとき。
+- apply の正本仕様や公開仕様そのものを確認したいときは、oracle doc を読むべきであり、この実装ディレクトリだけを仕様根拠にしない。
+- session state の schema や保存形式そのもの、reports directory や timestamp の共通仕様、process start time 取得の共通実装を調べたいだけのとき。
+- Codex exec に渡す prompt parameter の具体的な構築だけ、または INDEX.md エントリー生成やルーティング文書規約だけを確認したいとき。
+- 特定操作の低レベル helper ではなく、利用者向けの大まかな CLI 引数や出力だけを確認したい場合は、より上位の command 層を先に読む。
 
 ## hash
-- 86f06e5545d60c452300ad65aeeab7c0526e5e37cb2cccf1788b2f4e3ef5f382
+- 98b03a8ae6c0388a85622ae75e341035a17fefa0b4d008a6df29a17827d5a7b2
 
 # `indexing.py`
 
