@@ -42,7 +42,7 @@ def file_access_to_codex_cwd(mode: FileAccessMode, root: Path) -> Path:
     """FileAccessMode の読み取り境界に合わせた Codex 作業 root を返す。"""
     root = root.resolve()
     if mode == FileAccessMode.PURE_ORACLE_READ:
-        # <work-root>/oracle/src/acp/prompt_parts/file_access_rule.py
+        # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
         # Codex profile は read-only の読み取り root を分けられないため、
         # 公開済みの --cd/cwd で oracle tree だけを作業 root にする。
         return root / "oracle"
@@ -149,7 +149,7 @@ def _is_writable_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> b
     """FileAccessMode の禁止領域を追加 writable path にも適用する。"""
     if not path.is_relative_to(root):
         return False
-    # <work-root>/oracle/src/acp/prompt_parts/file_access_rule.py
+    # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # 追加 writable path は、prompt で伝える禁止領域を広げない範囲だけ許可する。
     if path.is_relative_to(root / "memo") or path.is_relative_to(root / ".agents"):
