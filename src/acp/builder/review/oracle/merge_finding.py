@@ -22,9 +22,15 @@ def _fix_oracle_root_placeholder_definition(prompt: str) -> str:
     # <work-root>/oracle/doc/app_spec/prompt_standard.md permits only the
     # minimum correction needed for an oracle src bug; known findings are input.
     # Delete this helper and its tests once oracle src emits "- <oracle-root> =".
-    return "".join(
-        line.replace("- <<oracle-root>> =", "- <oracle-root> =", 1)
-        if line.startswith("- <<oracle-root>> =")
-        else line
-        for line in prompt.splitlines(keepends=True)
-    )
+    marker = "\n# place holder definition\n"
+    marker_index = prompt.rfind(marker)
+    if marker_index == -1:
+        return prompt
+    prefix_end = marker_index + len(marker)
+    prefix = prompt[:prefix_end]
+    lines = prompt[prefix_end:].splitlines(keepends=True)
+    for index, line in enumerate(lines):
+        if line.startswith("- <<oracle-root>> ="):
+            lines[index] = line.replace("- <<oracle-root>> =", "- <oracle-root> =", 1)
+            break
+    return prefix + "".join(lines)
