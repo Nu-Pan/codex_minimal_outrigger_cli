@@ -764,9 +764,9 @@ def test_review_oracle_validate_finding_schema_matches_oracle_source(
 
 
 def test_review_oracle_validate_finding_advocate_preserves_dynamic_text() -> None:
-    finding = "finding literal <oracle_root>"
-    known_advocate = "known advocate literal <oracle_root>"
-    known_challenger = "known challenger literal <oracle_root>"
+    finding = "finding literal `<oracle_root>` ツリー内 should stay"
+    known_advocate = "known advocate literal `<oracle_root>` ツリー内 should stay"
+    known_challenger = "known challenger literal `<oracle_root>` ツリー内 should stay"
 
     parameter = build_review_oracle_validate_finding_advocate_parameter(
         finding,
@@ -777,6 +777,7 @@ def test_review_oracle_validate_finding_advocate_preserves_dynamic_text() -> Non
     assert finding in parameter.prompt
     assert known_advocate in parameter.prompt
     assert known_challenger in parameter.prompt
+    assert parameter.prompt.count("`<oracle_root>` ツリー内") == 3
     assert "`<oracle-root>` ツリー内" in parameter.prompt
 
 
