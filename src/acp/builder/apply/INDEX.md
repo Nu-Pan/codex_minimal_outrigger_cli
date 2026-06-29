@@ -17,18 +17,21 @@
 # `fork`
 
 ## Summary
-- apply fork 系の realization 側 ACP builder をまとめる package。各 builder は `cmoc apply fork` の変更要約、ファイル単位所見列挙、所見適用に必要な agent call parameter 構築入口を提供し、実処理は対応する oracle 側 builder に委譲する。
-- この階層は、oracle src の import 準備、repo root 解決、oracle 側 parameter を runtime 側 `AgentCallParameter` へ渡す共通 adapter と、それを使う個別 builder への入口として位置づく。
+- apply fork 系の agent call parameter builder 実装をまとめる領域。各 builder は realization 側の入口として、repo root 解決、oracle src の import 準備、oracle 側 builder への委譲、oracle parameter から runtime 側 parameter への薄い適合を担う。
+- 変更要約、ファイル単位所見列挙、所見適用など、`cmoc apply fork` の各 agent 呼び出しで使う parameter 構築経路と、それらが共有する import 境界・型境界の補助処理への入口になる。
+- この領域自体は prompt 本文や ACP の正本仕様を所有せず、正本仕様断片を持つ oracle 側 builder と realization 側実行コードを接続する委譲層として位置づけられる。
 
 ## Read this when
-- `cmoc apply fork` で agent call parameter を作る realization 側の入口を探しているとき。
-- 変更要約、ファイル単位所見列挙、所見適用のいずれかで、oracle 側 builder への委譲経路と runtime 側 parameter への適合境界を確認したいとき。
-- apply fork 系 builder に共通する oracle src import 準備、repo root 解決、oracle parameter adapter の責務を確認したいとき。
+- `cmoc apply fork` の agent call parameter 構築が、realization 側から oracle 側 builder へどのように委譲されているかを確認したいとき。
+- apply fork 系の変更要約、ファイル単位所見列挙、所見適用のいずれかで、入力値から runtime 側 parameter へ至る薄い入口を探しているとき。
+- oracle src を import 可能にする処理、repo root 解決、oracle parameter を realization 側へ渡す adapter など、apply fork 系 builder 間で共有される境界処理を確認したいとき。
+- `oracle.acp_builder.apply.fork` と同じ import 経路を realization 側に用意する互換 package の存在理由を確認したいとき。
 
 ## Do not read this when
-- apply fork の prompt 本文、出力 schema、モデル選択、file access mode などの正本仕様を確認したいとき。対応する oracle 側 builder や JSON 定義を読む。
-- `cmoc apply fork` コマンド全体の制御フロー、fork 作成、git 操作、CLI 引数処理を調べたいとき。上位の command 実装や git 操作側を読む。
-- repo-root 解決そのものの仕様、path model、`AgentCallParameter` や enum 型の定義を確認したいとき。この階層はそれらを所有せず、別の定義へ委譲している。
+- apply fork の prompt 内容、モデル選択、file access mode、出力条件、AgentCallParameter の正本仕様そのものを確認したいとき。正本仕様断片を持つ oracle 側 builder を読む方が直接的。
+- `cmoc apply fork` 全体の CLI 制御、git 操作、fork 適用処理、作業レポート全体の生成フローを調べたいとき。この領域は agent call parameter 構築の委譲入口に限られる。
+- repo root 解決そのものの仕様、path model の定義、ACP 型や enum 型の定義を調べたいとき。この領域はそれらを所有せず、外部の定義へ委譲または依存している。
+- package 初期化 docstring 以外の実行時挙動や副作用を探しているときは、互換 package の入口だけを読む必要はない。
 
 ## hash
-- 05186d93a9adaf3e96bfc4164f8cadacbba0d61e7244520e7c98c3760a576f65
+- 8bf0c9d853176094f1a45df32c67777ceb93115bc71fcfcc3536947e4efd3b6b

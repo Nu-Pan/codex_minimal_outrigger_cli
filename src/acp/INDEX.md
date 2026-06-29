@@ -19,20 +19,22 @@
 # `builder`
 
 ## Summary
-- ACP builder の realization 側入口をまとめる階層。正本実装を oracle 側に置いたまま既存の公開 import path を維持する互換境界と、apply・review・session・TUI・indexing 各領域への委譲入口を扱う。
-- この階層の主な役割は、旧来参照から正本側 builder 実装へ到達できるようにすること、および apply fork や review oracle、session join、TUI 起動パラメータ、indexing 互換公開面の下位領域へ進むための案内である。
+- ACP builder に関する realization 側の互換入口を束ねる領域。正本側の builder 実装を既存の公開参照経路から利用できるようにし、apply、indexing、review、session、TUI などの下位領域へ進むための境界として位置づく。
+- この領域自体は ACP builder の正本仕様や主要ロジックを所有せず、oracle 側実装への委譲、再公開、薄い適合、互換 import path の維持を扱う。
 
 ## Read this when
-- ACP builder の realization 側で、公開済み参照経路と oracle 側 builder 実装の対応関係を確認したいとき。
-- apply・review・session・TUI・indexing のどの builder 領域へ進むべきかを、realization 側の入口から切り分けたいとき。
-- 既存の builder import path を残す理由、正本側への委譲境界、互換入口の削除条件を確認したいとき。
-- apply fork の agent call parameter 構築、review oracle 向け builder 再公開、session join 入口、TUI 起動パラメータ、indexing 互換公開面の所在を探しているとき。
+- realization 側の ACP builder 公開入口が、oracle 側 builder 実装へどのように接続されているかを確認したいとき。
+- acp.builder 系の既存参照経路を残す理由、互換層の役割、削除条件を確認したいとき。
+- apply、indexing、review、session、TUI の各 builder 領域のうち、どの互換入口または下位領域へ進むべきか切り分けたいとき。
+- oracle 側の AgentCallParameter 構築結果を runtime 側へ渡す薄い adapter 層や、repo root 解決、oracle src import 準備などの境界処理を探しているとき。
+- TUI 起動のように、正本側 builder へ委譲しつつ realization 側で最小限の差分や公開候補を扱う入口を確認したいとき。
 
 ## Do not read this when
-- ACP builder の prompt 本文、出力 schema、モデル選択、file access mode、判定基準などの正本仕様を確認したいとき。対応する oracle 側の builder や JSON 定義を読む。
-- apply fork、review oracle、session join、TUI、indexing の具体的な処理ロジックや入出力仕様をすでに特定しているとき。該当する下位領域または正本側実装へ直接進む。
-- CLI コマンド全体の制御フロー、fork 作成、git 操作、画面描画、キー操作、状態管理など builder 以外の挙動を調べたいとき。
-- AgentCallParameter 型、path model、model class、reasoning effort、file access mode enum など、builder 領域に限らない共通型や共通仕様そのものを調べたいとき。
+- ACP builder の正本仕様、prompt 本文、model class、file access mode、Structured Output schema、AgentCallParameter 型そのものを確認したいとき。正本仕様断片または oracle 側の実装を読む。
+- apply fork、review oracle、indexing、session join、TUI 本体などの具体的な処理ロジック、判定条件、入出力仕様を調べたいとき。該当する下位領域または正本側実装を読む。
+- CLI 制御、git 操作、fork 適用、作業レポート生成、対話 UI の画面描画やキー操作など、builder の互換入口ではない実行フローを調べているとき。
+- path model、ACP 共通型、enum 定義など、builder 領域が依存する外部定義そのものを確認したいとき。
+- 新規機能の実装場所やテスト対象を探しており、互換 import path の維持や正本側への委譲境界が主題ではないとき。
 
 ## hash
-- 919d783ca312c9e813bd57d97a75ff8b7d5410d3f184e2cbca45d466c877207d
+- 4c927c8e7730f757825f365bcda38be08832bf513367278fd9b6f08869e31cd2

@@ -147,26 +147,25 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体の入口となる領域。最上位 CLI、サブコマンド実行、runtime 共通 helper、互換 import shim、oracle 側正本実装への再公開境界をまとめて扱う。
-- 実装本体は操作別のサブコマンド領域と共通 runtime 領域に分かれ、ACP・basic・config・oracle・旧 runtime 名は既存 import path を維持するための薄い互換入口として配置されている。
-- CLI の公開面から実処理、共通基盤、正本側実装との接続点へ進むための realization 側ルーティング起点になる。
+- cmoc の realization implementation を収める実装ルート。最上位 CLI 登録、サブコマンド別 orchestration、共有 runtime helper、Codex 呼び出し・indexing・git・状態管理・設定処理、正本側 `oracle` 実装への互換 import shim がこの配下から辿れる。
+- 下位には、公開 CLI 入口、操作別サブコマンド実装、サブコマンド横断で使う runtime 基盤、正本側 ACP builder・基本型・設定定義を既存 import path に再公開する薄い互換層が分かれている。
 
 ## Read this when
-- cmoc の realization implementation で、CLI 入口、サブコマンド本体、共通 runtime helper、互換 import path のどこへ進むべきかを切り分けたいとき。
-- `cmoc` console script や Typer command から、session・apply・review・INDEX maintenance・TUI・初期化などの実装入口へ到達する流れを確認したいとき。
-- Codex CLI 呼び出し、preflight indexing、git 操作、設定、path、状態、エラー表示、ログなど、複数サブコマンドで共有される realization 側 runtime 境界を探したいとき。
-- oracle 側の ACP builder、basic 型、path model、設定定義などを realization 側の既存公開 import path から参照させる互換 shim や再公開入口の所在を確認したいとき。
-- 実装変更の前に、対象が個別サブコマンド固有処理なのか、共通 helper なのか、旧 import path 互換層なのかを判断したいとき。
+- cmoc の実装を調べ始め、CLI 入口、サブコマンド処理、共通 runtime、互換 import 層のどこへ進むべきか切り分けたいとき。
+- `cmoc` コマンドの公開サブコマンド構成、Typer から各実装関数への委譲、または CLI 引数解析エラーの共通表示入口を確認したいとき。
+- session、apply、review、indexing、init、TUI 起動など、利用者操作に対応する realization implementation の入口を探したいとき。
+- Codex CLI 実行、TUI 起動、preflight indexing、git/worktree 操作、session state、ログ、path、設定、エラー表示など、複数処理で共有される runtime 境界を探したいとき。
+- realization 側に残る `acp.*`、`basic.*`、`config.*`、`oracle.*`、`cmoc_runtime` などの既存 import path が、正本側実装または共通実装へどう接続されているか確認したいとき。
 
 ## Do not read this when
-- 正本仕様断片、利用者向け要求、path model の意味仕様、prompt 本文、出力 schema そのものを確認したいとき。その場合は oracle 側の本文を読む。
-- realization test の観点、fixture、テスト用 helper を調べたいとき。その場合は test 側へ進む。
-- リポジトリ全体の補助ファイル、bin、pyproject、README、開発設定など、実装 package 外の ancillary や packaging を確認したいとき。
-- 対象の操作や module がすでに特定できており、最上位の切り分けが不要なときは、該当する下位ファイルまたは下位ディレクトリへ直接進む。
-- 既存 import path 互換の削除可否と関係なく、oracle 側の実装本体や仕様本文だけを調べたいときは、互換入口ではなく正本側の該当対象を読む。
+- 正本仕様断片、利用者向け要求、path model や oracle file の意味仕様そのものを確認したいときは、実装ルートではなく `oracle` 配下の本文を読む。
+- realization test の期待値、fixture、テスト観点を確認したいときは、実装ではなく `test` 配下へ進む。
+- README、パッケージ設定、補助スクリプト、gitignore など implementation 以外の補助ファイルだけを調べたいときは、それぞれの配置先を直接読む。
+- 特定のサブコマンド、runtime helper、互換 shim が既に分かっているときは、この階層全体を読むより該当する下位ファイルまたは下位ディレクトリへ直接進む。
+- 生成済み cache、bytecode、実行ログ、状態ファイルなど、ソース実装ではない成果物を確認したいだけのときは、この対象の本文を読む必要はない。
 
 ## hash
-- 00adb0da65f432d367877c455af97623dc06f220e6c8fa147b756c54ee7bde7b
+- 259b276c25a64bc28ee3cdeb7ddb81bea7fcbdc29c9c6eeef0800bc14ec165de
 
 # `test`
 

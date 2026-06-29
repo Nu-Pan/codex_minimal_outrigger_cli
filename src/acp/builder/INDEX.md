@@ -20,23 +20,26 @@
 # `apply`
 
 ## Summary
-- apply builder 全体の realization 側入口をまとめる package。package 初期化要素と fork 系 builder 群への入口を持ち、oracle 側 apply builder 構造との対応、および apply fork 用 agent call parameter 構築の委譲境界を案内する。
-- この階層の実体は、apply builder 領域を package として扱うための薄い入口と、apply fork の変更要約・ファイル単位所見列挙・所見適用に関する runtime 側 builder adapter 群で構成される。
+- apply 系の agent call parameter builder 互換領域への入口。realization 側から oracle 側 builder へ処理を委譲し、repo root 解決、oracle src の import 準備、oracle parameter から runtime 側 parameter への薄い適合を行う下位領域を束ねる。
+- 変更要約、ファイル単位所見列挙、所見適用など、apply fork 系の agent 呼び出しで使う parameter 構築経路を探すための上位ルーティング対象。
+- この領域は prompt 本文や ACP 正本仕様を所有せず、oracle 側の正本仕様断片と realization 側実行コードを接続する委譲層として位置づけられる。
 
 ## Read this when
-- realization 側で apply builder のどの下位領域へ進むべきかを判断したいとき。
-- apply builder 領域が oracle 側 package 構造とどのように対応しているかを確認したいとき。
-- apply fork 系で agent call parameter を構築する入口、または oracle 側 builder への委譲境界を探しているとき。
-- 変更要約、ファイル単位所見列挙、所見適用のいずれかに関する apply fork builder の所在を確認したいとき。
+- apply 系 builder が oracle 側 package 構造とどのように対応しているかを確認したいとき。
+- apply fork 系の agent call parameter 構築について、realization 側入口から oracle 側 builder への委譲経路を確認したいとき。
+- 変更要約、ファイル単位所見列挙、所見適用のいずれかで、入力値から runtime 側 parameter へ至る薄い adapter 層を探しているとき。
+- repo root 解決、oracle src の import 準備、oracle parameter を runtime 側へ渡す境界処理など、apply fork 系 builder 間で共有される補助処理を確認したいとき。
+- package 初期化部分に、oracle 側 apply builder package との互換性を示す意図があるかだけを確認したいとき。
 
 ## Do not read this when
-- apply fork の prompt 本文、出力 schema、モデル選択、file access mode などの正本仕様を確認したいとき。対応する oracle 側の builder や JSON 定義を読む。
-- apply fork コマンド全体の制御フロー、fork 作成、git 操作、CLI 引数処理を調べたいとき。上位の command 実装や git 操作側を読む。
-- repo root 解決、path model、runtime 側 agent call parameter 型や enum 型そのものの定義を確認したいとき。この階層はそれらの定義を所有しない。
-- apply builder の具体的な下位実装をすでに特定しているとき。該当する下位 package または実装本体へ直接進む。
+- apply fork の prompt 内容、モデル選択、file access mode、出力条件、AgentCallParameter の正本仕様そのものを確認したいとき。正本仕様断片を持つ oracle 側 builder を読む方が直接的。
+- apply fork 全体の CLI 制御、git 操作、fork 適用処理、作業レポート生成フローを調べたいとき。この領域は agent call parameter 構築の委譲入口に限られる。
+- repo root 解決そのものの仕様、path model の定義、ACP 型や enum 型の定義を調べたいとき。この領域はそれらを所有せず、外部の定義へ委譲または依存している。
+- apply builder の具体的な処理、変換、適用ロジックだけを調べたいときは、package 初期化要素ではなく該当する実装本体へ進む。
+- 公開関数、クラス、入出力仕様、エラー処理を package 初期化要素に期待しているとき。この上位対象だけではそれらの定義は確認できない。
 
 ## hash
-- 76a64d34039072e53ac312248ce5182a9ac5ee9c9ab220c88de3559663a4a5ec
+- 93ade740f919f05476041f7b88f2ddf5c769b57cafd14c160aafb107ee2932e8
 
 # `indexing`
 
