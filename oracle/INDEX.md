@@ -25,22 +25,21 @@
 # `src`
 
 ## Summary
-- AI agent 呼び出しに渡す論理パラメータ、完全プロンプト、標準プロンプト部品、Structured Output schema、共有補助モデルを実装形式で定義する正本仕様断片群への入口。モデル品質区分、reasoning effort、ファイルアクセスモード、用途別の呼び出し契約、設定、パス表記、規範、構造化 Markdown の基礎型を扱う。
-- 本文は自然言語仕様そのものではなく、cmoc が AI agent に渡す契約や正本仕様断片を生成・表現するための Python 実装と JSON schema で構成される。用途別の呼び出しパラメータ、共通プロンプト構成、標準文書生成、共有データ構造のどれを確認すべきかを切り分ける起点になる。
+- AI agent 呼び出し仕様、共通基盤概念、プロンプト構築仕様を扱う oracle src 領域。AI に渡す論理パラメータ、Structured Output schema、モデル設定、file access profile、パス表記、設定、規範文書モデル、プロンプト標準部品の正本仕様断片へ進む入口になる。
+- 機能別の agent call 契約を確認する対象、cmoc 全体で共有される設定・パス・アクセス制御を確認する対象、agent call 用プロンプトの構築順序や注入される標準文書部品を確認する対象に分かれる。
 
 ## Read this when
-- AI agent 呼び出しに使う論理モデル区分、reasoning effort、ファイルアクセスモード、prompt、Structured Output schema の正本仕様断片を確認したいとき。
-- indexing、oracle review、apply fork、session join、TUI 実行など、用途別の AI 呼び出しがどの role・summary・goal・標準プロンプト・schema・権限を使うか調べるとき。
-- 完全プロンプトの構成順、静的プロンプトと動的プロンプトの分離、標準プロンプト注入フラグの依存関係、プレースホルダ定義の扱いを確認するとき。
-- oracle file と realization file の基本説明、oracle standard、realization standard、review/apply/indexing 向け standard、ルーティング規則、ファイルアクセス規則がどのようにプロンプト化されるか確認するとき。
-- cmoc 全体で共有される永続設定、root path placeholder と実パス解決、規範データ構造、階層化文書の Markdown レンダリング helper の正本仕様断片を調べるとき。
+- cmoc が AI agent を呼び出す際の role、goal、prompt、file access profile、モデル設定、reasoning effort、出力契約を確認したいとき。
+- apply fork、INDEX.md エントリー生成、oracle review、session join の conflict 解消、tui 起動など、機能別の AI 呼び出し仕様を探したいとき。
+- cmoc 全体で共有される設定、パス表記、ファイルアクセス権限、規範文書表現、構造化 Markdown レンダリングの正本仕様断片を確認したいとき。
+- agent call 用プロンプトの構築順序、静的・動的プロンプトの配置、標準文書注入フラグ、追加プロンプト、プレースホルダ置換の扱いを確認したいとき。
 
 ## Do not read this when
-- 利用者向け CLI サブコマンドの実行フロー、状態ファイルの読み書き、git 操作、外部プロセス起動、画面操作、バックエンド CLI への実パラメータ変換だけを調べたいとき。
-- 自然言語で書かれた oracle doc の要求本文や、oracle test の検証内容そのものを読みたいとき。
-- realization implementation や realization test の現在の実装・修正対象を探しており、正本仕様断片としての型・構築規則・AI 呼び出し契約を確認する必要がないとき。
-- 特定用途の prompt 構築、schema、設定モデル、パスモデル、規範モデルなど、読むべき下位対象がすでに分かっているとき。
-- AI agent への依頼文の最終レンダリング結果だけ、または実行時に解決された実パラメータだけを確認したいとき。
+- AI agent 呼び出しの実行手順、プロセス起動、結果取得、エラー処理だけを確認したいとき。
+- git 操作、branch 操作、fork 作成・適用、session join 通常処理、CLI 表示など、AI 呼び出し契約の外側にある実行フロー本体を確認したいとき。
+- 個別 CLI サブコマンドの利用者向け入出力、状態ファイル仕様、実行フローを探しているとき。
+- oracle file と realization file の管理方針そのものや、INDEX.md のルーティング規則を自然言語の規範として確認したいとき。
+- Codex CLI の外部仕様、利用可能モデル、最新のモデル情報を調べたいとき。
 
 ## hash
-- 67bc0488d3d8e9271367801fb22dcf857bbc7952d4d1b166f8b547ae74a3a68c
+- 15d6ffbef305d53c5c7ec20fc76e82a0fe72f643ce27383b73dfd64c53e74682

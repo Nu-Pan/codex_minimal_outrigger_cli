@@ -1,21 +1,21 @@
 # `oracle`
 
 ## Summary
-- `cmoc review oracle` の oracle file レビュー処理で使う AI 呼び出しと応答契約の正本群。新規所見の列挙、所見を支持する理由と否定する理由の検証、人間へ提示するかの採否判定、所見リストの重複・矛盾整理という各段階への入口になる。
-- 各段階は、レビュー対象や既知理由・既知所見などの補助入力を prompt に組み込み、oracle file を根拠にした読み取り専用の調査・判定・整理を行わせる責務を持つ。
-- 出力契約は、所見がない場合や新規理由がない場合、整理不要の場合に空の一覧を返す境界も含めて定めているため、レビュー処理の段階別の入出力境界を選ぶための案内になる。
+- `cmoc review oracle` のレビュー用 agent call parameter と Structured Output schema を集めた oracle src ディレクトリ。
+- oracle file から新規所見を列挙し、所見を擁護・反証し、人間提示の採否を判定し、重複・矛盾する所見リストを整理する各フェーズの正本仕様への入口になる。
+- 各ファイルは、レビュー対象・既知所見や既知理由・file access profile・モデル設定・出力 schema など、oracle file レビューの AI 呼び出し契約をフェーズ別に定義する。
 
 ## Read this when
-- oracle file レビューで、所見の発見から検証、採否判定、整理までのどの段階の正本へ進むべきか判断したいとき。
-- `cmoc review oracle` の AI 呼び出しで、対象所見、既知理由、既知所見、所見リストなどの入力文脈がどの段階に渡されるかを確認したいとき。
-- oracle file を根拠に、新規所見だけを列挙する処理、所見の妥当性を支持・否定する理由を列挙する処理、所見を人間に提示するか判定する処理、所見リストを整理する処理の入口を探しているとき。
-- レビュー処理の各段階が、読み取り専用アクセス、モデル種別、推論量、対応する応答契約とどう結びつくかを確認したいとき。
+- `cmoc review oracle` の所見列挙、所見検証、採否判定、所見マージに関する agent call parameter や出力 schema を確認したいとき。
+- oracle file レビューで、既知所見や既知理由との重複を避けて新規の所見・擁護理由・反証理由を返す仕様を追いたいとき。
+- レビュー用 agent に oracle と INDEX だけを読ませ、realization file を読ませないアクセス制御や placeholder の扱いを確認したいとき。
+- レビュー所見の重大度、見出し、根拠、理由、採否理由、整理理由を Structured Output 上でどう扱うか確認したいとき。
 
 ## Do not read this when
-- oracle file 全般の定義、正本仕様断片としての記述原則、またはレビュー基準の共通ルールだけを確認したいとき。
-- `cmoc review oracle` のサブコマンド実行フロー、CLI 入出力、所見の保存・表示・適用など、AI 呼び出し正本と応答契約の外側の実装を確認したいとき。
-- 対象が単一段階に絞れており、その段階の prompt 本文または応答契約だけを直接確認すればよいとき。
-- INDEX.md エントリーやルーティング文書の生成規則、またはこのディレクトリ外のレビュー標準を確認したいとき。
+- `cmoc review oracle` 以外のサブコマンドや、oracle file 以外を対象にした review 用 agent call parameter を確認したいとき。
+- CLI の実行制御、結果表示、ファイル編集、テスト追加など、レビュー用 AI 呼び出し契約の外側にある realization 側の実装だけを確認したいとき。
+- file access profile、path placeholder、complete prompt rendering、AgentCallParameter などの共通部品そのものの仕様を確認したいとき。
+- oracle file 全般の品質基準や仕様断片として何を問題扱いするかの標準を確認したいとき。
 
 ## hash
-- 0ca42e71c8d96d420ccfc746ebb73086636777932770c73e0dac3ef85aefe3d9
+- f17b777e0537e918f35232e12f9408e13b30a5288258265259ca8b2b83003cbf

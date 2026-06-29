@@ -19,20 +19,23 @@
 # `builder`
 
 ## Summary
-- ACP 用 AgentCallParameter builder の互換入口と個別 builder 領域を束ねる階層。正本実装を oracle 側に置いたまま既存の `acp.builder.*` 参照を成立させる薄い公開面が中心で、apply、indexing、review、session、TUI などの下位領域へ進むための分岐点になる。
-- 例外的に quota availability probe 用の最小 builder も含み、Codex CLI に渡す probe prompt だけを組み立てる。probe の runtime 制御、通常の apply/review/session/TUI の実処理、正本仕様本体はそれぞれ別領域が担う。
+- Agent call parameter builder 群の実装側入口。正本側 builder を既存の公開参照経路から利用できるようにする互換 package 群と、quota availability probe 用の最小 parameter builder を含む。
+- 主な責務は、旧来の import surface 維持、正本側実装への委譲、TUI resolve parameter schema など実行時入力に必要な限定的補正、apply・review・session・indexing・TUI 各 builder 領域へのルーティングである。
+- この階層自体は多くの場合、処理本体や正本仕様ではなく互換境界であり、具体的な builder 実装・prompt・schema・制御ロジックは下位領域または正本側実装へ進むための入口として扱う。
 
 ## Read this when
-- ACP builder の旧 import 経路や公開参照が oracle 側の正本実装へどう接続されているかを確認したいとき。
-- apply、indexing、review、session、TUI など、どの ACP builder 下位領域へ進むべきかを最初に見分けたいとき。
-- 互換 package や薄い再公開層を残す理由、削除条件、既存の `acp.builder.*` 参照との関係を確認したいとき。
-- quota 枯渇後の availability probe で使う最小 AgentCallParameter builder の入口を探しているとき。
+- agent call parameter builder の実装側 package 構造と、正本側 builder への委譲関係を確認したいとき。
+- 既存の公開参照経路や import surface が残っている理由、削除条件、canonical な正本側 path への移行可否を判断したいとき。
+- apply fork、review oracle、session join、indexing、TUI 起動・resolve parameter などの builder 領域のうち、どの下位領域へ進むべきか見分けたいとき。
+- Codex quota availability probe の agent call parameter が、通常設定から何を引き継ぎ、どの入力を固定するか確認・変更したいとき。
+- 正本側 prompt や実装を保持したまま、realization 側で必要な互換再公開、placeholder 補正、runtime schema 差し替えの境界を確認したいとき。
 
 ## Do not read this when
-- AgentCallParameter の基本型、model、reasoning、file access mode、structured output schema などの共通定義を調べたいとき。
-- apply fork、review oracle、session join、TUI 起動などの具体的な builder ロジックを直接調べたいときは、該当する下位領域へ進む。
-- oracle 側にある正本仕様、prompt 内容、出力条件、indexing や review の本体実装を確認したいとき。
-- Codex exec の quota error 検出、polling loop、resume token、ログ保存、profile や cwd 構築など runtime 側の制御を調べたいとき。
+- agent call parameter builder の正本 prompt、出力条件、schema、具体的な値の組み立て仕様を確認したいときは、対応する正本側実装または正本仕様断片を読む。
+- apply fork コマンド全体の制御フロー、branch 操作、diff 生成、CLI 引数処理、状態管理を調べたいときは、コマンド実装や上位の apply fork 実装を読む。
+- review finding の判定仕様、検出ロジック、統合ロジック、CLI 表示、テスト方針を調べたいときは、review の処理本体や正本側仕様を読む。
+- TUI 画面描画、イベント処理、端末 UI の挙動、sandbox profile 生成、writable roots、cwd 選択など runtime 側の詳細を調べたいときは、TUI runtime や起動処理の実装を読む。
+- indexing の生成処理、探索処理、データ構造、入出力仕様そのものを変更・確認したいときは、互換入口ではなく実体を持つ正本側実装を読む。
 
 ## hash
-- 8c0a8c3e4b5c601a729618217ed20f80faba0a561f372b10988bddcda449cb59
+- d7c75dedac85c9cdedb8e1d9196e043ca2014103f635404c660664dfb679fe48

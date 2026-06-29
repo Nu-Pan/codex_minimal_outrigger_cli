@@ -203,20 +203,19 @@
 # `tui.py`
 
 ## Summary
-- `cmoc tui` の実行本体を担う realization implementation。利用者が編集する元 prompt の作成、エディタ起動、prompt からの TUI 起動パラメータ解決、Codex TUI 起動までの一連の制御を扱う。
-- TUI 実行前に `.cmoc` ignore を保証し、TUI で許可される file access mode の検証、解決済み JSON から `AgentCallParameter` への変換、ネストされた `{value: ...}` 形式の値取得を行う。
+- `cmoc tui` の実行本体を担う。インデックス事前処理、`.cmoc` ignore 保証、元プロンプト作成、エディタ起動、パラメータ解決用 Codex exec、TUI 起動用 AgentCallParameter 構築までの一連の制御を扱う。
+- TUI 用のファイルアクセスプロファイル、role/summary/goal などの解決済み JSON 値の取り出し、利用可能エディタ選択、元プロンプトからテンプレートコメントを除去する補助処理を含む。
 
 ## Read this when
-- `cmoc tui` の起動フロー、prompt 編集から Codex TUI 起動までの制御順序を確認・変更したいとき。
-- TUI 用の元 prompt テンプレート、保存先、HTML comment 除去、エディタ選択、エディタ異常終了時の扱いを確認したいとき。
-- TUI の file access mode 制限、解決済みパラメータの既定値、`role`・`summary`・`goal`・各 standard flag から TUI 起動用パラメータを組み立てる処理を確認したいとき。
-- TUI 実行時に `.cmoc` ignore をどの root に対して保証するか、repository root と work root の扱いを確認したいとき。
+- `cmoc tui` サブコマンドの実行フロー、ログ作成、エディタ起動、Codex TUI 起動パラメータ構築を確認または変更したいとき。
+- TUI 起動前に `.cmoc` を ignore 対象として保証する処理や、root と work root が異なる場合の扱いを確認したいとき。
+- TUI resolve parameter の結果から role、summary、goal、file_access_profile、各 standard フラグを AgentCallParameter へ反映する処理を確認したいとき。
+- `code`、`nano`、`vim`、`vi` の選択順や、エディタ異常終了時・不正なファイルアクセスプロファイル時のエラーを扱うとき。
 
 ## Do not read this when
-- TUI 向け prompt からパラメータを推定する LLM 呼び出し用入力の schema や builder 自体を確認したいだけなら、resolve parameter 側を読む。
-- Codex TUI 起動用 prompt 全体の文面・構成・標準指示の内容を確認したいだけなら、launch TUI parameter builder 側を読む。
-- CLI runtime 全般、repository root や work root の解決、Codex 実行 wrapper、設定読み込みの共通挙動を確認したいだけなら runtime 側を読む。
-- TUI 以外の sub command の実行フローや引数処理を確認したい場合は、対象 sub command の実装を読む。
+- TUI プロンプト本文や AgentCallParameter の具体的な出力形式そのものを確認したいだけなら、TUI 用 builder 側を直接読む。
+- CLI 共通のサブコマンド実行、設定読込、repo/work root 解決、Codex exec/TUI 実行の低レベル挙動を確認したいだけなら、runtime 側を読む。
+- TUI 以外のサブコマンドの挙動を調べる場合は、そのサブコマンドの実装へ進む。
 
 ## hash
-- 5fd4f89ffaa5bd36df37c3140cac01b525bd4d460c1d94bdea8dd4925d644cd2
+- 9aec9cf0a9c7b4f63a35d42ce2e47c45ee2af63080df1bdc7c2c799b9e3564cc

@@ -18,21 +18,19 @@
 # `oracle`
 
 ## Summary
-- 対象階層は、review oracle builder 関連の realization 側互換 package であり、旧来 import 経路から正本側実装へ委譲する薄い module 群と、一部 prompt の oracle root 表記だけを補正する wrapper を収める。
-- review finding の列挙・判定・challenger validation は実装本体を持たない再公開層として位置づけられ、呼び出し元が正本側経路へ移行した後に削除できる互換境界を示す。
-- merge finding と finding advocate validation は、正本側 builder で生成した AgentCallParameter の他属性を維持しつつ、prompt 内の oracle root placeholder typo だけを補正する realization 側入口である。
+- レビュー oracle 関連の AgentCallParameter builder と finding 判定・列挙・検証の互換 import 層をまとめる階層。多くは旧来の realization 側 import 経路から canonical oracle 側実装へ委譲するための薄い入口であり、一部は oracle src 由来 prompt の既知 placeholder 表記だけを限定的に補正する。
+- 実処理本体や正本仕様を保持する場所ではなく、既存呼び出し元の移行中に必要な互換経路、削除条件、補正境界を確認するための入口として位置づけられる。
 
 ## Read this when
-- review oracle builder 周辺で、旧来の realization 側 import 経路が正本側実装へどう委譲されているかを確認したいとき。
-- review finding の列挙・判定・challenger validation の互換 module が残っている理由や削除条件を確認したいとき。
-- review oracle merge finding や finding advocate validation の AgentCallParameter 生成で、正本側 builder への委譲境界と prompt 内 oracle root 表記補正を確認したいとき。
-- 同名機能の実装がこの階層にあるように見えるが、実体が正本側にあるのか realization 側 wrapper にあるのかを切り分けたいとき。
+- レビュー oracle finding の列挙・判定・検証・統合 builder について、旧来の import 経路が canonical oracle 側へどう委譲されているか確認したいとき。
+- 互換 import 層を削除できるか、または呼び出し元を canonical oracle path へ移行する必要があるか判断したいとき。
+- oracle src 由来 prompt の placeholder 表記補正が、どの builder wrapper でどの範囲に限定されているか確認・変更したいとき。
+- review oracle 用 AgentCallParameter 生成で、既知 finding や検証理由などの動的入力を保持しつつ静的 prompt だけを補正する境界を調べたいとき。
 
 ## Do not read this when
-- review finding の列挙・判定・検証そのものの正本仕様、出力内容、検出ロジック、評価ロジックを調べたいとき。正本側の oracle 実装を読む。
-- AgentCallParameter の共通型、model・reasoning・file access・structured output schema などの基礎定義を調べたいとき。
-- review oracle 以外の builder、CLI 表示、テスト方針、または互換 import と prompt 表記補正に関係しない review 機能全般を調べたいとき。
-- 新しい review 判定ロジックや検証処理を追加・変更したいとき。この階層の多くは委譲または最小補正だけを担うため、実装本体の対象へ進む。
+- レビュー finding の判定仕様、検出ロジック、正本 prompt、schema そのものを調べたいとき。この階層の多くは互換・補正層なので、canonical oracle 側または対応する oracle src を直接読む。
+- AgentCallParameter の型、model、reasoning、profile、schema 指定の一般仕様を確認したいとき。基礎定義側を読む。
+- 互換 import 経路や placeholder 補正と無関係な review 機能全般、CLI 表示、テスト方針を調べたいとき。より直接その責務を持つ対象へ進む。
 
 ## hash
-- 970b5b4cebe0698ddd6ee2e13b4b8bbc5afab4ecd7fe0dc2d7d1b99292896ed7
+- 845a81fc4c46c5f38c41cf6651df63e7ba22c7cfdf1d1afb4a0d6eb9f561899d

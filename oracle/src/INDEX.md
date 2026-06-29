@@ -1,20 +1,21 @@
 # `oracle`
 
 ## Summary
-- AI 呼び出し契約、プロンプト構築、共有補助モデルを実装形式で記述する正本仕様断片群への入口。論理的なモデル区分・reasoning effort・ファイルアクセスモード、用途別の AgentCallParameter、完全プロンプトの組み立て、設定・パス・規範・構造化 Markdown の基礎モデルを扱う。
-- この領域の本文はプログラム言語や JSON schema で書かれた oracle src であり、自然言語ドキュメントの本文仕様そのものではなく、cmoc が AI agent に渡す契約や正本仕様を生成・表現するための型と構築規則を確認する起点になる。
+- AI agent 呼び出し仕様、共通基盤概念、プロンプト構築仕様を扱う oracle src 領域。AI に渡す論理パラメータ、Structured Output schema、モデル設定、file access profile、パス表記、設定、規範文書モデル、プロンプト標準部品の正本仕様断片へ進む入口になる。
+- 機能別の agent call 契約を確認する対象、cmoc 全体で共有される設定・パス・アクセス制御を確認する対象、agent call 用プロンプトの構築順序や注入される標準文書部品を確認する対象に分かれる。
 
 ## Read this when
-- AI コーディングエージェント呼び出しに渡す論理パラメータ、prompt、Structured Output schema、モデル品質区分、ファイルアクセス制約の正本仕様断片を探すとき。
-- indexing、oracle review、apply fork、session join、TUI 実行パラメータ解決など、用途別の AI 呼び出しがどの role・summary・goal・標準プロンプト・schema を使うか確認したいとき。
-- 完全プロンプトの構成順、静的・動的プロンプトの分離、標準規範プロンプト注入フラグの依存関係、プレースホルダ定義の扱いを調べるとき。
-- cmoc 全体で共有される永続設定、root path placeholder と実パス解決、oracle standard などの規範データ構造、階層化文書の Markdown レンダリング helper を確認するとき。
+- cmoc が AI agent を呼び出す際の role、goal、prompt、file access profile、モデル設定、reasoning effort、出力契約を確認したいとき。
+- apply fork、INDEX.md エントリー生成、oracle review、session join の conflict 解消、tui 起動など、機能別の AI 呼び出し仕様を探したいとき。
+- cmoc 全体で共有される設定、パス表記、ファイルアクセス権限、規範文書表現、構造化 Markdown レンダリングの正本仕様断片を確認したいとき。
+- agent call 用プロンプトの構築順序、静的・動的プロンプトの配置、標準文書注入フラグ、追加プロンプト、プレースホルダ置換の扱いを確認したいとき。
 
 ## Do not read this when
-- 利用者向け CLI サブコマンドの実行フロー、状態ファイル、git 操作、外部プロセス起動、画面操作、バックエンド CLI への実パラメータ変換だけを調べたいとき。
-- 自然言語で書かれた oracle doc の要求本文や、oracle test の検証内容そのものを読みたいとき。
-- realization implementation や realization test の現在の実装・修正対象を探しており、正本仕様断片としての型・構築規則・AI 呼び出し契約を確認する必要がないとき。
-- 特定の用途別 prompt、schema、設定モデル、パスモデル、規範モデルなど読むべき本文がすでに分かっており、その対象へ直接進めばよいとき。
+- AI agent 呼び出しの実行手順、プロセス起動、結果取得、エラー処理だけを確認したいとき。
+- git 操作、branch 操作、fork 作成・適用、session join 通常処理、CLI 表示など、AI 呼び出し契約の外側にある実行フロー本体を確認したいとき。
+- 個別 CLI サブコマンドの利用者向け入出力、状態ファイル仕様、実行フローを探しているとき。
+- oracle file と realization file の管理方針そのものや、INDEX.md のルーティング規則を自然言語の規範として確認したいとき。
+- Codex CLI の外部仕様、利用可能モデル、最新のモデル情報を調べたいとき。
 
 ## hash
-- 6454511eab80b6c2aa8494e1d85f30eae1a785411432487ff630188cfc2583e6
+- e25f63182b56162ad3be0bab05576e25e0958883dc5a421d836ef24c89f51dcf

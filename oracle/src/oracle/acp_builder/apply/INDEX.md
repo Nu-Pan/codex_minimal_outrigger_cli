@@ -1,20 +1,18 @@
 # `fork`
 
 ## Summary
-- `cmoc apply fork` における AI エージェント呼び出し用の正本断片をまとめる領域。差分要約、ファイル単位の所見列挙、所見適用依頼など、fork 適用フローのうち AI に渡す prompt・Structured Output schema・モデル選択・ファイルアクセス制約の契約を扱う。
-- 実際の git 操作や fork 適用アルゴリズムそのものではなく、適用後の差分や仕様乖離を AI に調査・要約・修正させるための入力契約と出力契約を確認する入口となる。
+- `cmoc apply fork` に関係する agent call parameter と Structured Output schema の正本仕様断片をまとめる領域。
+- 差分要約、ファイル単位の所見列挙、検出所見への対応といった apply fork 用 AI 呼び出しの prompt、file access profile、モデル設定、出力契約への入口になる。
 
 ## Read this when
-- `cmoc apply fork` で、差分要約、実装所見の列挙、所見に基づく修正依頼を AI エージェントへどう渡すか確認したいとき。
-- apply fork 系の prompt に含める role、summary、goal、補助入力、standard 群、placeholder、ファイルアクセスモードを確認または変更したいとき。
-- apply fork 系の AI 呼び出しで使うモデルクラス、reasoning effort、Structured Output schema の選択根拠や境界を確認したいとき。
-- fork 適用後の作業レポートやレビュー結果として、人間向け差分要約または修正所見リストの出力契約を確認したいとき。
+- `cmoc apply fork` で差分要約、実装レビュー所見の列挙、または所見対応を行う agent call の正本仕様断片を確認したいとき。
+- apply fork 系の prompt、role、goal、file access profile、Structured Output schema、モデル種別、reasoning effort の対応関係を調べたいとき。
+- fork 適用後の作業レポートやレビュー結果について、人間向け要約・所見リスト・修正担当 agent への入力形式を固定したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` のブランチ作成、git diff 取得、実際のパッチ適用、commit 操作などの実行フローそのものを調べたいとき。
-- oracle file、realization file、path keyword、AgentCallParameter、model class、file access mode などの共通概念の定義を確認したいとき。
-- complete prompt の共通構築規則、markdown rendering、パス解決、構造化文書の汎用仕様を調べたいとき。
-- apply fork 以外のサブコマンド用 prompt、一般的なルーティング文書、または実装・テスト変更種別ごとの個別判定ロジックを探しているとき。
+- `cmoc apply fork` の git 操作、branch 操作、fork 作成・適用・分岐制御など、実行フロー本体を確認したいとき。
+- 個別ファイルの patch 内容、diff 生成手順、または realization file を実際に修正する実装本体を探しているとき。
+- 汎用的な prompt 構築、path placeholder 解決、file access profile の共通実装、または apply fork 以外のサブコマンド用 agent call parameter を確認したいとき。
 
 ## hash
-- 28f66aa79cf3c48a0d66f247642a2aa7007c67983766b6344a9e0c304d6fd2ff
+- 0c35da1bb0e5418d2227930e1dbd0bb1f718e657874b812669f509b974ad8eb0
