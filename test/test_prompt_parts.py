@@ -19,6 +19,7 @@ from typing import Callable
 import pytest
 from jsonschema import validate
 
+import acp.builder.tui.resolve_parameter as tui_resolve_parameter_module
 from basic.acp import FileAccessMode
 from basic.acp import AgentCallParameter
 from basic.acp import ModelClass, ReasoningEffort
@@ -522,6 +523,14 @@ def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
         "index_entry_standard",
     ]:
         assert schema["properties"][flag_name]["properties"]["value"]["type"] == "boolean"
+
+
+def test_tui_resolve_parameter_module_exports_only_required_names() -> None:
+    assert tui_resolve_parameter_module.__all__ == [
+        "build_tui_resolve_parameter_parameter",
+        "TUI_FILE_ACCESS_MODES",
+    ]
+    assert not hasattr(tui_resolve_parameter_module, "render_as_markdown")
 
 
 def test_indexing_index_entry_uses_low_reasoning() -> None:
