@@ -62,24 +62,24 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation のうち、複数のサブコマンドや上位処理から共有される runtime helper 群を置く領域。Codex 呼び出し、CLI 実行ライフサイクル、設定、内容 hash、共通エラー、git 操作、logging、path、実行結果、session state、INDEX.md 更新 preflight などの横断的な実行時支援を扱う。
-- 個別機能の業務ロジックではなく、上位 command から再利用される実行時境界、永続化・ログ・外部プロセス・状態・設定の共通部品へ進むための入口になる。
+- cmoc の realization implementation における共有 runtime helper 群をまとめる領域。Codex 実行、preflight indexing、CLI 共通ライフサイクル、設定、内容 hash、エラー表示、git 操作、ログ、path、結果モデル、session state 永続化など、複数の上位コマンドから使われる横断的な実行時支援を扱う。
+- 個別機能の本体というより、上位の CLI サブコマンドや workflow 実装が依存する共通境界・facade・データ保持型・低レベル実行補助への入口として位置づく。
 
 ## Read this when
-- サブコマンド実装から共有 runtime API を呼び出す前に、どの共通 helper 領域へ進むべきかを選びたいとき。
-- Codex exec/TUI 呼び出し、preflight、retry、Structured Output 検証、profile、quota/capacity 判定、call log など Codex 実行境界の実装を探すとき。
-- CLI サブコマンド共通の開始・完了表示、終了コード化、例外表示、サブコマンド logger、JSON Lines event、step timing、quota 待機時間集計を確認・変更したいとき。
-- cmoc 設定の読み書き、内容 hash 保存、binary 判定、共通エラー表示、git/worktree 操作、標準 path 解決、実行結果モデル、session state 永続化など、複数箇所で使われる runtime 支援を調べたいとき。
-- INDEX.md 更新 preflight、索引 entry の鮮度判定、対象内容抽出、Codex への entry 生成依頼、生成 entry の保存と commit の流れを実装側から追いたいとき。
+- 複数のサブコマンドや上位 workflow から共有される runtime helper の責務分担、公開 import 面、または共通実行境界を探したいとき。
+- Codex CLI の exec/TUI 呼び出し、profile・sandbox・CODEX_HOME・Structured Output schema・retry・quota/capacity 制御・call log 記録などの実行時制御を確認または変更したいとき。
+- Codex 実行前の indexing preflight、INDEX.md entry 生成、既存 entry の鮮度判定、hash 検証、再生成順、git commit までの索引更新処理を実装側から追いたいとき。
+- CLI サブコマンドに共通する work root 検査、ログ作成、標準サマリー出力、終了コード化、例外時の利用者向けエラー表示を確認したいとき。
+- 設定ファイルの読み書き、内容 hash 保存、binary 判定、git subprocess/worktree 操作、JSON Lines event logging、runtime path、実行結果 dataclass、session state file の読み書きなど、特定ドメインに閉じない共通 helper を探すとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジック、引数定義、画面出力、状態更新フローだけを調べたいとき。その場合は呼び出し元の command 実装へ進む。
-- 正本仕様断片、path keyword の概念定義、INDEX.md の意味仕様、oracle と realization の境界を確認したいだけのとき。その場合は oracle 側の本文を読む。
-- 特定 helper の詳細な挙動、引数、失敗時処理、永続化内容がすでに分かっているとき。その場合はこの階層全体ではなく、該当責務の runtime 実装本文へ直接進む。
-- テストの期待値、fixture、外部挙動の検証内容を調べたいとき。その場合は test 側の対応する realization test を読む。
+- 個別サブコマンドの業務ロジック、CLI 引数定義、画面出力、状態遷移の上位制御だけを調べたいとき。その場合は該当する command や workflow の実装へ直接進む。
+- 正本仕様、設計意図、path keyword、oracle file と realization file の定義、INDEX.md の意味仕様そのものを確認したいとき。その場合は oracle 側の本文を読む。
+- 共通 helper の利用箇所ではなく、特定機能のユーザー向け挙動やレポート内容を確認したいだけのとき。その場合は呼び出し元または出力生成側を読む。
+- 生成済みログ、保存済み state、既存 INDEX.md のルーティング内容など、実行結果として作られたデータを読む目的のとき。この領域はそれらを作成・解釈する実装側である。
 
 ## hash
-- d2568fbd3acc65ec1f185c5856ecaf141d5828193328eb3ea00d8bd852fcb91b
+- c4ccf12ee10dd2eaa749a3cebb123ba7748d55ead4cdebfe9cba5e2b0733277f
 
 # `config`
 
