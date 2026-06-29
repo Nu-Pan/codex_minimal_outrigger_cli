@@ -19,10 +19,10 @@ import main as main_module
 import commons.runtime_logging as runtime_logging
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from basic.path_model import (
-    RootToken,
+    RootPathPlaceHolder,
     resolve_real_path,
     resolve_run_root,
-    resolve_token_path,
+    resolve_ph_path,
 )
 from cmoc_runtime import (
     CmocError,
@@ -61,9 +61,9 @@ def _profile_writable_roots(profile: str) -> set[str]:
 
 
 def test_path_model_resolves_token_path_inside_repo() -> None:
-    """root token path が repo 内の実 path から復元できる契約を固定する。"""
-    cmoc_root = resolve_real_path(RootToken.CMOC)
-    token_path = resolve_token_path(cmoc_root / "src", RootToken.CMOC)
+    """root placeholder path が repo 内の実 path から復元できる契約を固定する。"""
+    cmoc_root = resolve_real_path(RootPathPlaceHolder.CMOC)
+    token_path = resolve_ph_path(cmoc_root / "src", RootPathPlaceHolder.CMOC)
 
     assert token_path == Path("<cmoc-root>") / "src"
 
