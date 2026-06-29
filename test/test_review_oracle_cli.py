@@ -171,6 +171,8 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
     assert "minor_findings_accepted_count: 1" in rendered
     assert "fatal_findings_rejected_count: 1" in rendered
     assert "minor_findings_rejected_count: 1" in rendered
+    assert "judge reason: accepted" in rendered
+    assert "judge reason: rejected" in rendered
 
 
 @pytest.mark.parametrize(
@@ -202,6 +204,7 @@ def test_review_oracle_report_includes_rejected_findings(
                 "verdict": "reject",
                 "title": "rejected finding",
                 "reason": "rejected reason",
+                "judge_reason": "judge rejected reason",
             }
         ],
         "cmoc/run/session-1/run-1",
@@ -219,6 +222,7 @@ def test_review_oracle_report_includes_rejected_findings(
     assert "## Rejected minor findings" not in rendered
     assert "rejected finding" in rendered
     assert "rejected reason" in rendered
+    assert "judge reason: judge rejected reason" in rendered
     assert "session_id:" not in rendered
 
 

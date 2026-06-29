@@ -156,11 +156,16 @@ def _render_frontmatter_field(name: str, value: object) -> str:
 def render_finding_section(findings: list[dict]) -> str:
     if not findings:
         return "なし"
-    return "\n".join(
-        f"- `{finding.get('finding_id')}` [{finding.get('verdict') or 'unjudged'}] "
-        f"{finding.get('title')}: {finding.get('reason')}"
-        for finding in findings
-    )
+    lines = []
+    for finding in findings:
+        line = (
+            f"- `{finding.get('finding_id')}` [{finding.get('verdict') or 'unjudged'}] "
+            f"{finding.get('title')}: {finding.get('reason')}"
+        )
+        if finding.get("judge_reason"):
+            line += f" (judge reason: {finding.get('judge_reason')})"
+        lines.append(line)
+    return "\n".join(lines)
 
 
 def path_display(root: Path, path: Path) -> str:
