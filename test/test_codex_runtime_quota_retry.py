@@ -214,21 +214,32 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert "- 終了コード: `0`" in console
 
 
-def test_quota_probe_requires_oracle_builder(
+def test_quota_probe_uses_realization_builder_when_quota_recovers(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_profile(tmp_path, monkeypatch)
+    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     calls = []
 
     def fake_run(argv, **kwargs):
-        calls.append(kwargs["stdin"].read())
+        prompt = kwargs["stdin"].read()
+        calls.append(prompt)
+        if len(calls) == 1:
+            return subprocess.CompletedProcess(
+                argv,
+                1,
+                '{"type":"thread.started","thread_id":"sess-1"}\n'
+                '{"type":"error","message":"Quota exceeded"}\n',
+                "",
+            )
+        output = Path(argv[argv.index("--output-last-message") + 1])
+        output.write_text(json.dumps({"ok": len(calls)}))
         return subprocess.CompletedProcess(
             argv,
-            1,
-            '{"type":"thread.started","thread_id":"sess-1"}\n'
-            '{"type":"error","message":"Quota exceeded"}\n',
+            0,
+            '{"type":"turn.completed"}\n',
             "",
         )
 
@@ -241,16 +252,16 @@ def test_quota_probe_requires_oracle_builder(
         None,
     )
 
-    with pytest.raises(CmocError, match="正本 builder"):
-        run_codex_exec(
-            parameter,
-            root=root,
-            quota_poll_interval_sec=0,
-            max_quota_polls=1,
-            config=CmocConfig(),
-        )
+    result = run_codex_exec(
+        parameter,
+        root=root,
+        quota_poll_interval_sec=0,
+        max_quota_polls=1,
+        config=CmocConfig(),
+    )
 
-    assert calls == ["prompt"]
+    assert calls == ["prompt", "Respond with exactly: ok", "prompt"]
+    assert result.output_json == {"ok": 3}
 
 
 def test_quota_probe_uses_codex_cwd_for_relative_codex_home(

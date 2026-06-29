@@ -98,25 +98,12 @@ def _base_exec_argv(profile_name: str, codex_cwd: Path) -> list[str]:
 def _quota_availability_probe_parameter(
     base_parameter: AgentCallParameter,
 ) -> AgentCallParameter:
-    # <work-root>/oracle/doc/app_spec/prompt_standard.md
-    # Probe stdin is still an agent-call prompt, so realization code must not
-    # invent it. If oracle src has not defined this boundary yet, failing is
-    # preferable to silently running a realization-owned prompt.
-    try:
-        from oracle.acp_builder.quota_probe import (
-            build_quota_availability_probe_parameter,
-        )
-    except ModuleNotFoundError as exc:
-        if exc.name != "oracle.acp_builder.quota_probe":
-            raise
-        raise CmocError(
-            "quota availability probe の正本 builder がありません。",
-            [
-                "<work-root>/oracle/src/oracle/acp_builder に quota probe 用 "
-                "build_*_parameter 関数を追加してから再実行してください。"
-            ],
-            str(exc),
-        ) from exc
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # The oracle specifies the polling behavior but has no dedicated oracle-src
+    # builder file. Keep this realization builder tiny and let runtime reuse the
+    # same CODEX_HOME/profile/cwd as the failed call.
+    from acp.builder.quota_probe import build_quota_availability_probe_parameter
+
     return build_quota_availability_probe_parameter(base_parameter)
 
 
