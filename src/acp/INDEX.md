@@ -19,20 +19,21 @@
 # `builder`
 
 ## Summary
-- ACP の agent call parameter builder に関する realization 側の互換入口をまとめる領域。正本側 builder への委譲・再公開を中心に、既存 import 経路を保つための package 境界と、quota probe など正本側に未集約の小さな adapter を扱う。
-- apply、indexing、review、session、TUI などの用途別 builder 領域へ進むための上位入口であり、具体的な builder 本体仕様ではなく、realization 側公開面と oracle 側実装の対応関係を見分けるために読む対象である。
+- ACP の agent call parameter builder に関する realization 側の互換入口をまとめる領域。正本側に置かれた builder 実装へ既存の公開参照や import 経路から到達できるようにし、主に再公開・委譲・最小 wrapper によって公開面の互換性を保つ。
+- apply、indexing、review、session、TUI などの builder 系領域へ進むための上位入口であり、各領域が実処理本体なのか、正本側実装への互換境界なのかを切り分けるための案内点になる。
+- この領域自体は builder の正本仕様や主要ロジックを集約する場所ではなく、正本側実装との対応、旧 import 経路の維持、互換層を残す理由や削除条件を確認するための階層である。
 
 ## Read this when
-- ACP builder 周辺で、既存の公開 import path が正本側 builder 実装へどのように接続されているかを確認したいとき。
-- agent call parameter builder の用途別領域を見分け、apply、indexing、review、session、TUI、quota probe のどこへ進むべきか判断したいとき。
-- 正本側への実装集約後も realization 側に互換入口を残している理由や、削除条件を確認したいとき。
-- realization 側 builder が実処理本体なのか、正本側への薄い委譲・再公開・adapter なのかを切り分けたいとき。
+- ACP builder 関連の既存公開参照や旧 import 経路が、正本側 builder 実装へどのように接続されているかを確認したいとき。
+- agent call parameter builder のうち、apply、indexing、review、session、TUI のどの下位領域へ進むべきかを上位で切り分けたいとき。
+- realization 側に残る builder 互換層について、再公開・委譲・最小 wrapper の範囲、残す理由、削除条件を確認したいとき。
+- 正本側へ実装を集約しながら、既存利用者向けの公開 import surface を維持している境界を調べたいとき。
 
 ## Do not read this when
-- 個別 builder の prompt、parameter 変換、repo root 解決、file access mode、structured output schema などの具体的な組み立て仕様を直接確認したいときは、該当する下位領域または正本側実装へ進む。
-- ACP の共通型、model class、reasoning effort、file access mode の定義そのものを調べたいときは、基礎定義を扱う別領域へ進む。
-- apply fork、review、session join、TUI 表示など各機能の制御フローや UI 本体を調べたいときは、それぞれの機能実装へ進む。
-- 互換 import 経路や正本側 builder への委譲に関係しない新規機能の実装場所、テスト対象、CLI 挙動を探しているとき。
+- 各 builder の具体的な生成処理、prompt 構築、parameter 型変換、入出力仕様、判定ロジックを直接確認したいときは、正本側の実装または該当する下位領域へ進む。
+- ACP 全体の型定義、AgentCallParameter、file access、model、reasoning、structured output schema などの基礎定義を調べたいときは、基本モジュール側を読む。
+- CLI コマンド全体の制御フロー、branch 操作、diff 生成、TUI 画面処理など、builder 互換入口ではない機能本体を調べたいとき。
+- 新しい builder ロジックや正本仕様を追加・変更する場所を探しているときは、この互換境界ではなく正本側の本文や実体を持つ実装領域を読む。
 
 ## hash
-- 67aeed0f4ee0bc290012587352ae460eaccb7dcf9f2c6e1146aea10079ab909c
+- b2dead17d1385da16b0c86e4a9ac2a492b249f55b5896727c83b1bc956b76ad6

@@ -201,24 +201,23 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex exec が quota exceeded になった後の待機、availability probe、resume token 利用、resume 不能時の再実行、失敗伝播を外部挙動として検証する realization test。
-- fake Codex CLI と subprocess stub を使い、呼び出し順、標準入力、CODEX_HOME/cwd、call log、subcommand log、console 出力を同じ quota retry 状態機械の観測点として扱う。
-- 並列に quota 待ちになった複数呼び出しで representative probe が 1 回だけ実行され、成功時は各呼び出しが resume し、probe 失敗時は待機中呼び出しも CmocError になることを検証する。
+- Codex exec が quota exceeded で停止した後の待機、availability probe、resume token 利用、resume 不可時の再実行、失敗伝播を外部挙動として検証する realization test。
+- fake Codex 実行ファイルや subprocess stub を使い、呼び出し引数、標準入力、CODEX_HOME/cwd、call log、subcommand log、console 表示が retry 状態機械に沿って記録されることを確認する。
+- 並列に quota 待機へ入った複数呼び出しで代表 probe が 1 回だけ実行され、成功時は各呼び出しが復帰し、probe 失敗時は待機中の呼び出しも失敗することを検証する。
 
 ## Read this when
-- Codex exec の quota exceeded 検出後に、probe 待機、resume、resume token 不在時の再実行、または retry 上限まわりの挙動を変更する。
-- quota availability probe の prompt 生成、実行引数、profile、CODEX_HOME、cwd、または PURE_ORACLE_READ 時の作業ディレクトリ扱いを確認する。
-- Codex call log、stdout/stderr/prompt/output log、subcommand log、console 表示に quota retry 中の呼び出しがどう記録されるかを確認する。
-- 複数の Codex exec が同時に quota exceeded になった場合の probe 共有、代表 probe 失敗時のエラー伝播、並列 retry 制御を変更・検証する。
+- Codex exec の quota exceeded 検出後の retry、probe、resume、再実行の制御を変更・調査するとき。
+- quota availability probe の builder 必須化、probe 用パラメータ、profile、CODEX_HOME、cwd、--cd の扱いを確認するとき。
+- Codex 呼び出しログや subcommand log に記録される purpose、status、returncode、stdout/prompt/output path、console 出力の挙動を変更するとき。
+- 複数の Codex exec が同時に quota 待機へ入る場合の probe 共有、復帰、失敗伝播を確認するとき。
 
 ## Do not read this when
-- quota exceeded 後の Codex exec retry 状態機械と無関係な通常の Codex exec 成功・失敗だけを確認したい。
-- cmoc の CLI 引数、設定読み込み、リポジトリ生成 fixture など、quota retry の観測点ではない個別機能を調べたい。
-- Codex CLI や LLM の出力品質そのもの、または実際の外部 Codex サービスの可用性を検証したい。
-- oracle file の正本仕様を確認したい場合。この対象は realization test であり、正本仕様ではない。
+- 通常成功する Codex exec の基本的な引数組み立てや output JSON 解析だけを調べたいときは、quota retry 以外の Codex runtime テストや実装を先に読む。
+- Codex 以外のサブコマンド実行、リポジトリ作成、設定読み込みなどの一般挙動を調べたいときは、それぞれの専用テストや実装を読む。
+- oracle file の仕様記述や INDEX.md 生成規則を調べたいときは、test 配下の realization test ではなく oracle 側の本文を読む。
 
 ## hash
-- 99c3c73f72875b3a6aee51af659c453f9ea1dd410c2a3e77f89f4d0d0086dbb5
+- 6ec7a4b3961b187923a5e03cec26cab4501a851ab5fbe9c4742dc33824ad3007
 
 # `test_codex_runtime_retry.py`
 

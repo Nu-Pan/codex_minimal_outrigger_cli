@@ -59,25 +59,6 @@
 ## hash
 - 0ab736b2c29b4ef0eadf9408768a9f99642c5d3d95caecb6c4def825217c487a
 
-# `quota_probe.py`
-
-## Summary
-- quota availability probe のために、既存の agent call parameter から probe 用の ACP を組み立てる小さな builder。model class、reasoning effort、file access mode は元の値を引き継ぎ、自然言語 prompt を持たない空 stdin の probe に限定して stdin と追加入力を空扱いにする。
-- 現行 oracle src に同用途の builder が存在しないための adapter であり、同用途の oracle 側 builder が追加されたら削除する前提を docstring に持つ。
-
-## Read this when
-- quota availability probe 実行時に渡す agent call parameter の組み立て内容を確認または変更したいとき。
-- probe では base parameter のどの項目を引き継ぎ、どの項目を空にするかを確認したいとき。
-- 自然言語 prompt を持たない空 stdin の probe という制約、またはこの adapter の削除条件を確認したいとき。
-
-## Do not read this when
-- 通常の prompt 付き Codex 実行や、一般的な ACP builder の仕様・実装を探しているとき。
-- quota availability の判定ロジック、実行結果の解釈、または quota 不足時の制御フローを確認したいとき。
-- oracle 側の正本仕様や prompt 標準そのものを確認したいとき。
-
-## hash
-- 8c4351eae4b30619b8338cc6c2cbc0170b8f28574ca95d18c8a81cb1bbc2e49d
-
 # `review`
 
 ## Summary
