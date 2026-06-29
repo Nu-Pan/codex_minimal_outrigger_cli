@@ -48,6 +48,18 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
         ]
     )
     monkeypatch.setattr(runtime_codex_exec, "timestamp", lambda: next(timestamps))
+    probe_prompt = "probe prompt from builder"
+    monkeypatch.setattr(
+        runtime_codex_exec,
+        "build_quota_availability_probe_parameter",
+        lambda base_parameter: AgentCallParameter(
+            base_parameter.model_class,
+            base_parameter.reasoning_effort,
+            base_parameter.file_access_mode,
+            probe_prompt,
+            None,
+        ),
+    )
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "calls.jsonl"
@@ -65,7 +77,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
             "    output.write_text(json.dumps({'ok': True}))",
             "    print(json.dumps({'type': 'turn.completed'}))",
             "    sys.exit(0)",
-            "if stdin == 'quota availability probe':",
+            f"if stdin == {probe_prompt!r}:",
             "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
             "    output.write_text(json.dumps({'probe': True}))",
             "    print(json.dumps({'type': 'turn.completed'}))",
@@ -98,7 +110,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     argv_calls = [record["args"] for record in call_records]
     assert argv_calls[0][-1] == "-"
     assert all(record["codex_home"] == str(codex_home) for record in call_records)
-    assert call_records[1]["stdin"] == "quota availability probe"
+    assert call_records[1]["stdin"] == probe_prompt
     assert argv_calls[1][:2] == ["exec", "--profile"]
     assert argv_calls[1][2].startswith("cmoc_")
     assert "--json" in argv_calls[1]
@@ -133,7 +145,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     )
     assert (
         prompt_log_text(probe_logs[0]["prompt_log_path"])
-        == "quota availability probe"
+        == probe_prompt
     )
     assert Path(probe_logs[0]["stderr_log_path"]).read_text() == ""
     assert Path(probe_logs[0]["output_path"]).read_text() == '{"probe": true}'

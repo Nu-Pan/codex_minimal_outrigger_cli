@@ -18,6 +18,7 @@ from typing import Any
 
 from jsonschema import validate
 
+from acp.builder.quota_probe import build_quota_availability_probe_parameter
 from basic.acp import AgentCallParameter
 from config.cmoc_config import CmocConfig
 
@@ -137,6 +138,7 @@ def run_codex_exec(
         allow_oracle_conflict_writes=allow_oracle_conflict_writes,
     )
     profile_name = codex_profile_name(profile_path)
+    quota_probe_parameter = build_quota_availability_probe_parameter(parameter)
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # `--output-schema` must point at state under the same work root Codex uses.
     schema_path = (
@@ -418,7 +420,7 @@ def run_codex_exec(
                             "-",
                         ]
                         _write_prompt_log(
-                            probe_prompt_path, "quota availability probe"
+                            probe_prompt_path, quota_probe_parameter.prompt
                         )
                         write_call_log(
                             probe_call_path,
