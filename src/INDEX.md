@@ -65,26 +65,25 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation のうち、複数のサブコマンドや実行経路から共有される runtime helper 群をまとめる領域。
-- Codex CLI 呼び出し、preflight indexing、CLI 共通ライフサイクル、設定、content hash、エラー表示、git 操作、ログ、path 解決、実行結果モデル、session state 永続化など、上位処理が共通利用する実行時境界を扱う。
-- この階層は個別サブコマンド固有の業務処理ではなく、外部プロセス・永続ファイル・実行状態・利用者向け共通エラーなどの横断的な支援機能へ進む入口になる。
+- cmoc の実行時共通基盤を集める realization implementation 領域。Codex CLI 呼び出し、CLI サブコマンド実行、設定、content hash、エラー表示、git 操作、ログ、path 解決、結果モデル、session state、INDEX.md 更新 preflight など、複数の上位機能から共有される runtime helper を扱う。
+- 個別 helper の実装群に加えて、共有 runtime API をまとめて参照するための集約入口や、互換 import 入口も含むため、上位コマンドから共通処理へ進むための主要な入口になる。
 
 ## Read this when
-- サブコマンド間で共有される runtime helper の責務分担や、どの共通実装へ進むべきかを判断したいとき。
-- Codex CLI の exec/TUI 呼び出し、profile/sandbox/CODEX_HOME、quota/capacity retry、Structured Output 検証、call log、preflight indexing のいずれかを確認・変更したいとき。
-- CLI サブコマンド共通の開始・完了表示、終了コード化、例外表示、サブコマンド logger、実行 log、quota 待機時間集計を追いたいとき。
-- 実行時設定の読み書き、content hash 保存、binary 判定、git repository/worktree 操作、path 解決、session state file、外部コマンドや Codex 実行結果の共有モデルを扱うとき。
-- 上位の command 実装から共通 runtime API を import する経路や、共有 helper の公開面を調整する必要があるとき。
+- CLI サブコマンド、Codex 実行、git、path、config、state、logging、error など複数領域で共有される runtime 挙動の実装場所を探したいとき。
+- Codex exec/TUI の起動、profile 生成、sandbox 境界、quota/capacity retry、Structured Output 検証、call log、preflight indexing との接続を確認または変更したいとき。
+- サブコマンド共通の実行ライフサイクル、終了コード化、利用者向けエラー表示、ログ event、完了サマリー、現在 logger の扱いを追う必要があるとき。
+- 設定ファイル、content hash 保存、binary 判定、git repository 状態、linked worktree、runtime path、session state file、外部コマンド結果や Codex 実行結果の共通データ構造を確認または変更したいとき。
+- Codex 実行前に INDEX.md 更新を走らせる preflight、対象列挙、既存エントリー検証、ハッシュによる鮮度判定、Structured Output から Markdown への描画を扱う実装を読む必要があるとき。
 
 ## Do not read this when
-- 個別サブコマンドの引数定義、CLI command 登録、利用者向け操作フロー、または特定 command 固有の状態更新だけを調べたいとき。
-- cmoc の正本仕様断片、path model、INDEX.md 仕様、session state 仕様など、人間が管理する仕様意図を確認したいだけのときは oracle 側へ進む。
-- prompt 本文、エントリー生成文面、設定モデル定義、CLI 出力 schema など、共通 runtime helper の呼び出し元や別責務の定義を変更したいだけのとき。
-- 生成済みログや状態ファイルを利用者視点で読む・集計するだけで、生成側の runtime helper を変更しないとき。
-- 特定 helper の具体挙動がすでに分かっており、より直接の責務を持つ下位モジュールへ進めるとき。
+- 個別 CLI サブコマンドの引数定義、command 登録、利用者向けオプション、または各サブコマンド固有の業務処理だけを調べたいとき。その場合は CLI 層や該当コマンド実装へ進む。
+- 正本仕様断片としての path model、INDEX.md 仕様、session state 仕様、Codex 実行ルール、oracle/realization の方針を確認したいだけのとき。その場合は oracle 側の対応文書を読む。
+- テスト期待値や fixture の所在、特定挙動の検証観点を調べたいだけのとき。その場合は test 側へ進む。
+- 生成される個別 INDEX.md エントリーの文章品質や prompt 標準だけを変えたいとき。runtime の preflight や保存処理ではなく、エントリー生成パラメータや prompt builder 側を読む。
+- 特定の共通 helper の公開 import 経路を変えず、呼び出し元だけで完結する小さな利用方法を確認したいとき。まず呼び出し元の実装を読み、必要になった場合だけこの領域へ進む。
 
 ## hash
-- 024a7e0f82856bbabbe267eb21066b70afce37301ced8611719682fefb01b361
+- 15f46cae1c54fe5c239ff0e846d2827d175a4f98bd7bfeeb12b7d64f4aa26b8f
 
 # `config`
 
