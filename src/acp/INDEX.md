@@ -19,20 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP builder の realization 側公開入口を束ねる領域。正本実装を oracle 側に置いたまま、既存の acp.builder 系 import path から apply、indexing、review、session、TUI などの builder へ到達できる互換境界を提供する。
-- この階層の主な責務は、正本側 package 構造との対応維持、薄い再公開、最小限の適合処理、下位 builder 領域への入口整理であり、各 builder の本体仕様や具体的な処理ロジックは下位領域または oracle 側実装が担う。
+- ACP の agent call parameter builder 群に対する realization 側の公開入口と互換境界を束ねる領域。正本側実装を本体としつつ、既存の公開参照経路から apply、indexing、review、session、TUI 関連の builder 機能へ到達できるようにする。
+- この階層は主に package 境界、再公開、委譲、互換維持、削除条件の確認に使う入口であり、各 builder の正本仕様や具体的な構築ロジックそのものは下位領域または正本側実装に置かれる。
 
 ## Read this when
-- acp.builder 系の公開入口が oracle 側実装や下位 builder 領域へどのように接続されているかを確認したいとき。
-- 既存の acp.builder.* 参照を残す理由、互換 import path の位置づけ、削除・移動・置換してよい条件を判断したいとき。
-- apply、indexing、review、session、TUI のどの builder 領域へ進むべきかを、この階層の役割から切り分けたいとき。
-- realization 側が正本側 builder を再公開するだけなのか、repo root 由来の oracle src import path 追加、戻り値の型適合、TUI 起動時の schema 除去、typo 補正などの最小調整を行うのかを確認したいとき。
+- ACP builder 領域で、realization 側の公開 import path と正本側 builder 実装との対応関係を把握したいとき。
+- 既存の acp.builder 系参照を残す理由、互換入口の役割、削除してよい条件を確認したいとき。
+- apply、indexing、review、session、TUI のどの builder 領域へ進むべきかを、この階層の責務境界から切り分けたいとき。
+- 正本側 builder への委譲、再公開、戻り値や import path の互換調整など、realization 側に残された薄い境界処理の所在を探しているとき。
 
 ## Do not read this when
-- oracle.acp_builder 側の正本仕様、prompt 本文、structured output schema、具体的な agent call parameter 構築ロジックを理解したいとき。
-- apply fork、review oracle、indexing、session join、TUI resolve parameter など個別 builder の詳細処理や入出力仕様を直接調べたいとき。
-- ACP builder 以外の CLI 制御、fork 適用、git 操作、TUI 画面描画、状態管理、共通型定義、file access mode enum の意味を調べたいとき。
-- 新規機能の実装場所やテスト対象を探しており、互換公開面や下位領域への入口ではなく処理本体を読むべきとき。
+- ACP builder の具体的な parameter 構築処理、プロンプト本文、出力 schema、判定意味論などの正本仕様を確認したいとき。対応する正本側本文または下位実装を読む。
+- apply fork、review、session join、TUI など個別機能の詳細な制御フロー、入出力変換、git 操作、画面挙動を調べたいとき。より直接の機能実装へ進む。
+- AgentCallParameter 型、model class、reasoning effort、file access mode、repo root 解決などの共通定義や一般仕様を調べたいとき。定義元の共通領域を読む。
+- 新しい builder 機能の本体実装や仕様追加先を探しているとき。この階層は互換公開面と委譲入口が中心であり、処理本体の追加場所ではない。
 
 ## hash
-- 96826ba38afbb19521765a25eeea2eb69e690abc37f358504150320f4fef6669
+- d2e3501d55dd034c5beb16f1948eea45e75562f13e455f187bc04f958e95572b

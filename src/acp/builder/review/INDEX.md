@@ -18,20 +18,23 @@
 # `oracle`
 
 ## Summary
-- review oracle 向け builder の realization 側入口をまとめる package。finding の列挙・判定・統合・検証用パラメータ生成について、正本側実装の再公開または最小限の prompt 補正を行う薄い互換層を収める。
-- 多くの対象は正本側実装への委譲境界であり、実際の判定ロジックや oracle 仕様断片ではなく、realization 側 import path から正本由来の review oracle 機能へ到達するための入口として位置づく。
+- レビュー用 oracle 所見処理の realization 側入口をまとめる package。所見列挙、統合、判定、advocate/challenger 検証に使う agent call parameter 生成または再公開の経路を扱う。
+- 正本側 builder の返却値を基本的に維持しつつ、レビュー基準や対象 oracle file 本文の追記、静的な oracle root 表記の最小補正など、prompt まわりの互換調整を行う実装が含まれる。
+- 多くの対象は正本側実装への薄い再公開または wrapper であり、この階層自体はレビュー基準や finding 判定意味論の正本ではなく、realization 側から正本由来機能へ到達するための境界として位置づく。
 
 ## Read this when
-- realization 側から review oracle の finding 列挙・判定・統合・検証機能がどの import 経路で参照され、どこまで正本側へ委譲されているかを確認したいとき。
-- review oracle 用 AgentCallParameter の生成経路で、正本側 builder の返却値に対して realization 側が prompt の oracle root 表記 typo だけを補正している箇所を探したいとき。
-- finding、known findings、advocate 理由、challenger 理由などの動的入力を改変せず、生成済みパラメータの一部だけを維持または差し替える互換層を確認したいとき。
-- この階層のモジュールが独自の review 判定処理を持つのか、正本側実装を再公開するだけなのかを切り分けたいとき。
+- レビュー用 oracle 所見の列挙・統合・判定・検証で、realization 側の import path からどの正本側 builder や検証機能へ到達するかを確認したいとき。
+- 正本側 agent call parameter の model、reasoning、file access、structured output 指定などを保ったまま、prompt だけをどのように補正または追記しているかを調べたいとき。
+- 対象 oracle file 本文やレビュー基準が、所見列挙用 prompt にどのように付加されるかを確認したいとき。
+- oracle root 表記 typo や placeholder 表記の補正が、静的文面だけに限定され、finding や既知理由などの動的入力を改変しないことを確認したいとき。
+- レビュー用 oracle builder まわりの互換 import 境界を変更・削除してよいか判断するために、この階層が独自実装を持つのか再公開だけなのかを切り分けたいとき。
 
 ## Do not read this when
-- review oracle の finding 列挙・判定・統合・検証ロジックそのもの、入力・出力・判定基準、prompt 本文、structured output schema の内容を理解したいとき。その場合は委譲先の正本側 oracle src や該当仕様断片を読む。
-- AgentCallParameter 型、model class、reasoning effort、file access mode、アクセス設定などの一般仕様を調べたいとき。
-- oracle file と realization file の基本概念、oracle root などのパスモデル全体、または INDEX.md 生成規則を確認したいだけのとき。
-- review oracle 以外の builder、CLI 入出力、テスト観点、または finding 以外の review 処理を調べているとき。
+- レビュー基準そのもの、finding の意味判定、重複判定、advocate/challenger 検証の正本プロンプト本文を理解したいとき。委譲先の正本側本文を読む。
+- AgentCallParameter 型、model class、reasoning effort、file access mode、structured output schema の一般仕様を確認したいとき。共通定義側を読む。
+- oracle file と realization file の基本概念、oracle root などのパスモデル全体、または正本仕様断片そのものを確認したいとき。該当する基本仕様や path model 側へ進む。
+- レビュー処理全体の CLI 出力仕様、テスト観点、またはこの階層以外の builder 責務を調べたいとき。より上位のレビュー実装または該当責務の本文へ進む。
+- 互換 package の存在理由だけを確認したい場合を除き、公開 API を持たない package 境界そのものを詳細に読む必要はない。
 
 ## hash
-- d1748dae1a3c9f0d53b25cdc3c98ae8e374cd17c27acccbb65f5fe366661b397
+- 45ee102ec468e32188e0f64dd6b873272f43d0f7a28fb2f45b4c393f875a89b5
