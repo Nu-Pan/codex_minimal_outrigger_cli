@@ -33,6 +33,17 @@ def prompt_log_text(path: str) -> str:
     return Path(path).read_text()
 
 
+def quota_probe_prompt() -> str:
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+    )
+    return runtime_codex_exec.build_quota_availability_probe_parameter(parameter).prompt
+
+
 def test_run_codex_exec_polls_and_resumes_after_quota(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -48,7 +59,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
         ]
     )
     monkeypatch.setattr(runtime_codex_exec, "timestamp", lambda: next(timestamps))
-    probe_prompt = "probe prompt from builder"
+    probe_prompt = "ビルダー由来の確認入力"
     monkeypatch.setattr(
         runtime_codex_exec,
         "build_quota_availability_probe_parameter",
@@ -215,6 +226,7 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
     monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
     stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
+    probe_prompt = quota_probe_prompt()
     records = []
 
     def fake_run(argv, **kwargs):
@@ -224,7 +236,7 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
             "resume"
             if "resume" in argv
             else "probe"
-            if stdin == "quota availability probe"
+            if stdin == probe_prompt
             else "initial"
         )
         home = Path(kwargs["env"]["CODEX_HOME"])
@@ -274,6 +286,7 @@ def test_run_codex_exec_reruns_after_quota_without_resume_token(
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
+    probe_prompt = quota_probe_prompt()
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "calls.jsonl"
@@ -287,7 +300,7 @@ def test_run_codex_exec_reruns_after_quota_without_resume_token(
             "stdin = sys.stdin.read()",
             "records = calls.read_text().splitlines() if calls.exists() else []",
             "with calls.open('a') as f: f.write(json.dumps({'args': args, 'stdin': stdin}) + '\\n')",
-            "if stdin == 'quota availability probe':",
+            f"if stdin == {probe_prompt!r}:",
             "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
             "    output.write_text(json.dumps({'probe': True}))",
             "    print(json.dumps({'type': 'turn.completed'}))",
@@ -321,7 +334,7 @@ def test_run_codex_exec_reruns_after_quota_without_resume_token(
     call_records = [json.loads(line) for line in calls.read_text().splitlines()]
     assert [record["stdin"] for record in call_records] == [
         "prompt",
-        "quota availability probe",
+        probe_prompt,
         "prompt",
     ]
     assert all("resume" not in record["args"] for record in call_records)
@@ -335,6 +348,7 @@ def test_quota_probe_non_quota_failure_fails_immediately(
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
+    probe_prompt = quota_probe_prompt()
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "failed_probe_calls.jsonl"
@@ -347,7 +361,7 @@ def test_quota_probe_non_quota_failure_fails_immediately(
             "args = sys.argv[1:]",
             "stdin = sys.stdin.read()",
             "with calls.open('a') as f: f.write(json.dumps({'args': args, 'stdin': stdin}) + '\\n')",
-            "if stdin == 'quota availability probe':",
+            f"if stdin == {probe_prompt!r}:",
             "    print(json.dumps({'type':'error','message':'profile is broken'}))",
             "    sys.exit(2)",
             "print(json.dumps({'type':'thread.started','thread_id':'sess-1'}))",
@@ -378,7 +392,7 @@ def test_quota_probe_non_quota_failure_fails_immediately(
     call_records = [json.loads(line) for line in calls.read_text().splitlines()]
     assert [record["stdin"] for record in call_records] == [
         "prompt",
-        "quota availability probe",
+        probe_prompt,
     ]
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
@@ -394,6 +408,7 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_profile(tmp_path, monkeypatch)
+    probe_prompt = quota_probe_prompt()
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "parallel_calls.jsonl"
@@ -405,7 +420,7 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
             f"calls = pathlib.Path({str(calls)!r})",
             "args = sys.argv[1:]",
             "stdin = sys.stdin.read()",
-            "kind = 'resume' if 'resume' in args else 'probe' if stdin == 'quota availability probe' else 'initial'",
+            f"kind = 'resume' if 'resume' in args else 'probe' if stdin == {probe_prompt!r} else 'initial'",
             "with calls.open('a') as f: f.write(json.dumps({'kind': kind, 'args': args}) + '\\n')",
             "if kind == 'resume':",
             "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
@@ -462,6 +477,7 @@ def test_waiting_quota_calls_fail_when_representative_probe_fails(
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_profile(tmp_path, monkeypatch)
+    probe_prompt = quota_probe_prompt()
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "parallel_failed_probe_calls.jsonl"
@@ -473,7 +489,7 @@ def test_waiting_quota_calls_fail_when_representative_probe_fails(
             f"calls = pathlib.Path({str(calls)!r})",
             "args = sys.argv[1:]",
             "stdin = sys.stdin.read()",
-            "kind = 'resume' if 'resume' in args else 'probe' if stdin == 'quota availability probe' else 'initial'",
+            f"kind = 'resume' if 'resume' in args else 'probe' if stdin == {probe_prompt!r} else 'initial'",
             "with calls.open('a') as f: f.write(json.dumps({'kind': kind, 'args': args}) + '\\n')",
             "if kind == 'resume':",
             "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
