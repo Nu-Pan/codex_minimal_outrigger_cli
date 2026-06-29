@@ -1,4 +1,8 @@
-"""`cmoc apply fork` の変更要約生成 builder。"""
+"""
+`cmoc apply fork` の変更要約生成 builder。
+
+Oracle: <work-root>/oracle/src/oracle/acp_builder/apply/fork/change_summary.py
+"""
 
 from acp.builder.apply.fork._common import (
     adapt_oracle_parameter,
