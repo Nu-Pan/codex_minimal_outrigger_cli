@@ -61,25 +61,23 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation のうち、複数のサブコマンドや上位処理から共有される実行時 helper 群を収める領域。Codex CLI 呼び出し、preflight indexing、設定、内容 hash、CLI 共通実行、エラー表示、git 操作、ログ、path、結果型、session state など、runtime 横断の共通境界を扱う。
-- 個別機能の業務ロジック本体ではなく、外部コマンド・永続状態・利用者向けエラー・実行ログ・共通 import 面をそろえるための基盤実装への入口として位置づく。
+- cmoc の realization implementation のうち、複数のサブコマンドや上位処理から共有される runtime helper 群をまとめる領域。Codex CLI 呼び出し、preflight、設定、内容 hash、エラー表示、git 操作、ログ、path、実行結果、session state などの共通境界を扱う。
+- 個別機能の本体というより、上位の CLI や workflow 実装が共通して依存する実行時基盤への入口であり、公開 import 面を集約する facade と、責務別の runtime 実装が同居している。
 
 ## Read this when
-- CLI サブコマンドや上位 workflow から使う共通 runtime API、結果型、例外、ログ、path、git、設定、状態永続化の責務境界を探したいとき。
-- Codex CLI の exec または TUI 起動に関する profile 準備、sandbox/read-write root、call log、Structured Output 検証、quota/capacity retry、resume token、preflight 実行制御を確認または変更したいとき。
-- Codex 実行前の indexing preflight、索引 entry の鮮度判定、対象抽出、生成依頼、Markdown entry 描画、lock や git commit を含む索引更新の実装を追いたいとき。
-- 設定ファイルの JSON 変換、内容 hash 保存、binary 判定、利用者向けエラーレポート、外部 command 結果、session state file など、複数領域で再利用される runtime 境界の挙動を確認したいとき。
-- 共通 helper の公開 import 面を整理し、上位コードがどの runtime 名へ依存しているか、または互換 import がどの実装へ接続されるかを確認したいとき。
+- サブコマンドや workflow 実装から共有 runtime helper を利用・変更するために、共通 API、結果型、エラー型、ログ、path、設定、git、state、Codex 呼び出しの依存先を探したいとき。
+- Codex exec/TUI 起動、quota/capacity retry、profile・sandbox・CODEX_HOME、Structured Output 検証、call log、preflight 実行など、Codex CLI との実行境界を調査または変更したいとき。
+- INDEX.md 生成 preflight、対象列挙、既存エントリー再利用、hash 判定、生成結果検証、更新 commit など、目次更新の共通実装を追いたいとき。
+- cmoc の実行時設定、内容 hash 保存、binary 判定、利用者向けエラーレポート、git repository 前提条件、linked worktree、サブコマンドログ、標準保存先、session state 永続化などの共通 primitive を確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの引数定義、command 登録、業務処理、利用者向け workflow だけを調べたいときは、呼び出し側のサブコマンド実装へ直接進む。
-- path model、oracle file、realization file、INDEX.md の意味仕様など、正本仕様断片そのものを確認したいときは oracle 側の本文を読む。
-- 特定の公開出力 schema、prompt 本文、設定モデルのフィールド定義、基本パス概念、CLI 利用者仕様だけを確認したいときは、それぞれの定義元や仕様本文へ進む。
-- 生成済みログや状態ファイルを解析する読み取り側、個別機能での保存先利用、または各 feature 固有の制御フローを調べたいだけのときは、その利用元実装を読む。
-- 同階層にある個別 helper の詳細挙動ではなく、単にこの領域が共有 runtime helper 群かどうかだけを確認したい場合は、パッケージ入口以上の本文を読む必要は薄い。
+- 個別サブコマンドの引数定義、CLI アプリへの command 登録、利用者向け workflow、またはサブコマンド固有の業務処理だけを調べたいとき。その場合は呼び出し側の command 実装へ進む。
+- cmoc の正本仕様、path model、INDEX.md エントリー仕様、状態仕様、設定仕様など、人間が管理する仕様意図を確認したいとき。その場合は oracle 側の該当本文を読む。
+- 共有 helper の公開面ではなく、テスト fixture や期待値、外部挙動の検証観点を調べたいとき。その場合は対応する realization test へ進む。
+- git、path、設定、ログ、Codex 呼び出しなどのうち、特定の責務がすでに分かっているときは、この階層全体ではなく、その責務を持つ下位本文を直接読む。
 
 ## hash
-- e47c3297ad940de43d16e63e4ae14a4d842cadec4d378dc365701a7b23d88ce9
+- f6d9521b10723e1ced53a323d318ba3f264652cde5866f7964ecea9ff002ab0a
 
 # `config`
 

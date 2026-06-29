@@ -236,22 +236,24 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- indexing preflight と indexing サブコマンドが routing document を生成・更新・commit・再利用・conflict 解決する CLI 境界の回帰テストをまとめる realization test。
-- 未初期化 repo、dirty な通常 worktree / linked worktree、apply worktree の repo 設定参照、fresh hash による Codex 呼び出し省略、INDEX.md だけを commit する条件を検証する。
-- routing document エントリーの semantic field 検証、 malformed entry の再生成、兄弟 entry の並列生成、root 直下 memo 除外と nested memo indexing も同じ更新ワークフローの観測点として扱う。
+- indexing preflight と indexing サブコマンドが routing document を生成・更新・commit する外部挙動を検証する realization test。未初期化・dirty worktree・linked worktree・apply worktree などの CLI 境界、Codex 生成呼び出し、hash 再利用、malformed entry 再生成、schema 検証、並列 entry 生成、memo 配下の対象除外境界を扱う。
+- routing document 更新ワークフローの回帰観測点をまとめたテストであり、fixture と git 状態を共有しながら indexing の対象列挙、commit 対象、conflict 解決、preflight の挙動を確認する入口になる。
 
 ## Read this when
-- indexing CLI の外部挙動、preflight、commit 条件、linked worktree 対応、dirty state 拒否条件を変更・調査する時。
-- routing document 生成で Codex を呼ぶ条件、既存 hash を再利用する条件、malformed entry を再生成する条件を確認する時。
-- INDEX.md conflict 解決、semantic field validation、memo directory の indexing 対象判定、兄弟 entry の並列生成に関する回帰テストを確認する時。
+- indexing サブコマンドまたは indexing preflight の成功・失敗条件、git commit 条件、未コミット差分の扱いを変更する。
+- routing document の entry 生成、hash による再生成スキップ、malformed entry の検出、semantic list の schema 検証を変更する。
+- linked worktree や apply worktree から indexing を実行したときの対象 root、config 参照元、commit 先の挙動を確認する。
+- routing document の conflict 解決で削除・commit する挙動、または commit 対象を routing document のみに限定する制御を変更する。
+- memo 配下を indexing 対象に含めるか除外するか、または sibling entry 生成の並列性を変更する。
 
 ## Do not read this when
-- routing document の本文フォーマットや hash 計算の実装詳細だけを調べる時は、共通 indexing 実装を直接読む方が適切。
-- 個別サブコマンドの通常処理、apply join の conflict 解決全般、git helper の基本動作を調べるだけなら、それぞれの実装または専用テストへ進む方が適切。
-- Codex CLI や LLM 出力品質そのものを評価したい時は対象外であり、このテストは呼び出し境界と出力 schema 受け渡しだけを検証している。
+- indexing 以外のサブコマンドの通常 CLI 挙動だけを確認したい。
+- routing document の自然言語エントリー内容そのものを作成するだけで、生成・更新・commit・hash 検証の実装挙動を追う必要がない。
+- 個別の path model、設定 schema、AgentCallParameter の詳細だけを確認したい場合で、indexing ワークフロー上の境界挙動に関心がない。
+- oracle file の正本仕様を確認したい場合。
 
 ## hash
-- 7e162d2ea95d5518c36dbe5aeffa836aeaa085cc02249f46f7f4141adfe010c5
+- 19d9a44b1a1e5d610c9b462f3173f91c73ee15b23cb48ac45579667df4502601
 
 # `test_indexing_preflight.py`
 
