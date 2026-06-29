@@ -634,3 +634,38 @@ def test_update_indexes_indexes_nested_memo_directory(
     assert nested_memo / "INDEX.md" in updated
     assert (nested_memo / "INDEX.md").is_file()
     assert "# `memo`" in (root / "docs" / "INDEX.md").read_text()
+
+
+def test_update_indexes_skips_directory_symlink_cycle(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    (root / "loop").symlink_to(root, target_is_directory=True)
+    cmoc_runtime.sync_config(root)
+    calls: list[Path] = []
+
+    def fake_build_index_entry(
+        update_root: Path,
+        path: Path,
+        digest: str | None = None,
+        codex_exec: Callable[..., object] | None = None,
+    ) -> str:
+        calls.append(path)
+        return indexing_common.render_index_entry(
+            update_root,
+            path,
+            {
+                "summary": [path.name],
+                "read_this_when": [path.name],
+                "do_not_read_this_when": [path.name],
+            },
+            digest=digest,
+        ).rstrip()
+
+    monkeypatch.setattr(indexing_common, "build_index_entry", fake_build_index_entry)
+
+    updated = indexing_common.update_indexes(root)
+
+    assert root / "INDEX.md" in updated
+    assert root / "loop" not in calls
+    assert "# `loop`" not in (root / "INDEX.md").read_text()

@@ -119,7 +119,7 @@ def indexable_directories(root: Path) -> list[Path]:
     while stack:
         directory = stack.pop()
         for child in sorted(directory.iterdir(), key=lambda p: p.name, reverse=True):
-            if not child.is_dir() or child.name.startswith("."):
+            if not child.is_dir() or child.is_symlink() or child.name.startswith("."):
                 continue
             if is_root_memo(root, child) or is_git_ignored(root, child):
                 continue
@@ -200,6 +200,11 @@ def indexable_children(root: Path, directory: Path) -> list[Path]:
     children: list[Path] = []
     for child in sorted(directory.iterdir(), key=lambda p: p.name):
         if child.name == "INDEX.md" or child.name.startswith("."):
+            continue
+        # <work-root>/oracle/doc/app_spec/indexing.md requires indexing
+        # maintenance to finish before agent calls; symlink cycles cannot be
+        # valid traversal targets for that contract.
+        if child.is_symlink():
             continue
         if is_root_memo(root, child):
             continue
