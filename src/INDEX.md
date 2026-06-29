@@ -62,26 +62,24 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation における共有 runtime helper 群を収める領域。Codex 実行、preflight indexing、CLI 共通ライフサイクル、設定、内容 hash、エラー表示、git 操作、ログ、パス、結果モデル、永続 state など、複数の上位サブコマンドから使われる横断的な実行時支援を扱う。
-- 公開 import の集約入口、互換 import の橋渡し、実処理を持つ責務別 helper が同居しており、上位機能から共通 runtime API の依存先を探すための入口になる。
-- 索引更新の自動実行、Codex exec/TUI 呼び出し、sandbox/profile/schema 準備、subprocess 結果、quota/capacity retry、Structured Output 検証、session state、標準ログやエラー出力など、cmoc 実行基盤の挙動を追うときの中心領域である。
+- cmoc の realization implementation のうち、複数のサブコマンドや上位処理から共有される runtime helper 群を置く領域。Codex 呼び出し、CLI 実行ライフサイクル、設定、内容 hash、共通エラー、git 操作、logging、path、実行結果、session state、INDEX.md 更新 preflight などの横断的な実行時支援を扱う。
+- 個別機能の業務ロジックではなく、上位 command から再利用される実行時境界、永続化・ログ・外部プロセス・状態・設定の共通部品へ進むための入口になる。
 
 ## Read this when
-- 複数の CLI サブコマンドで共有される runtime helper の責務分担や import 経路を確認したいとき。
-- Codex exec/TUI の起動、profile・sandbox・CODEX_HOME・schema・call log・retry・quota/capacity wait・Structured Output 検証など、Codex 呼び出し基盤の実装へ進む入口を探しているとき。
-- Codex 実行前の indexing preflight、索引 entry 生成、既存 entry の鮮度判定、lock、git commit、Structured Output から Markdown entry への変換を調べたいとき。
-- CLI サブコマンド共通の実行ライフサイクル、work root 検査、標準サマリー出力、終了コード化、例外時の利用者向け表示、サブコマンドログ設定を確認したいとき。
-- 設定ファイルの読み書き、内容 hash 保存、binary 判定、共通エラー表示、git worktree/branch 操作、.cmoc ignore 保証、実行ログ、path 解決、結果データ構造、session state 永続化などの共有処理を変更または確認したいとき。
+- サブコマンド実装から共有 runtime API を呼び出す前に、どの共通 helper 領域へ進むべきかを選びたいとき。
+- Codex exec/TUI 呼び出し、preflight、retry、Structured Output 検証、profile、quota/capacity 判定、call log など Codex 実行境界の実装を探すとき。
+- CLI サブコマンド共通の開始・完了表示、終了コード化、例外表示、サブコマンド logger、JSON Lines event、step timing、quota 待機時間集計を確認・変更したいとき。
+- cmoc 設定の読み書き、内容 hash 保存、binary 判定、共通エラー表示、git/worktree 操作、標準 path 解決、実行結果モデル、session state 永続化など、複数箇所で使われる runtime 支援を調べたいとき。
+- INDEX.md 更新 preflight、索引 entry の鮮度判定、対象内容抽出、Codex への entry 生成依頼、生成 entry の保存と commit の流れを実装側から追いたいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジック、引数定義、画面出力、状態更新の全体フローだけを調べたいとき。その場合は呼び出し側のサブコマンド実装へ進む。
-- 正本仕様断片、path keyword の定義、session state や Codex 実行の仕様意図そのものを確認したいとき。その場合は oracle 側の本文へ進む。
-- 特定の helper の挙動だけが目的で、読むべき責務がすでに分かっているとき。その場合は対応する責務別 runtime 実装へ直接進む。
-- 生成済みログや状態ファイルの内容を利用者目線で読むだけのとき。この領域はそれらを生成・保存・変換する実装を扱う。
-- テスト期待値、fixture、外部挙動の検証観点を調べたいだけのとき。その場合は realization test 側へ進む。
+- 個別サブコマンドの業務ロジック、引数定義、画面出力、状態更新フローだけを調べたいとき。その場合は呼び出し元の command 実装へ進む。
+- 正本仕様断片、path keyword の概念定義、INDEX.md の意味仕様、oracle と realization の境界を確認したいだけのとき。その場合は oracle 側の本文を読む。
+- 特定 helper の詳細な挙動、引数、失敗時処理、永続化内容がすでに分かっているとき。その場合はこの階層全体ではなく、該当責務の runtime 実装本文へ直接進む。
+- テストの期待値、fixture、外部挙動の検証内容を調べたいとき。その場合は test 側の対応する realization test を読む。
 
 ## hash
-- 4442fb308c6dcb92188a8f23c1168aa6b6ea8cf61bed10015c7bb7a7ae62d26c
+- d2568fbd3acc65ec1f185c5856ecaf141d5828193328eb3ea00d8bd852fcb91b
 
 # `config`
 

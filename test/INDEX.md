@@ -160,20 +160,22 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行ランタイムの realization test。exec/TUI 呼び出し時の subprocess 起動、profile 生成、sandbox 設定、cwd 選択、schema 保存先、apply tracking 環境変数、エラー報告を、スタブした codex 実行ファイルと一時リポジトリで検証する。
+- Codex CLI 呼び出しの実行時挙動を検証する realization test。exec/TUI の起動引数、作業ディレクトリ、sandbox profile、出力 schema 配置、プロセス追跡、環境変数の遮断、失敗時エラー報告を、スタブ化した CLI と一時リポジトリで確認する。
+- file access mode ごとの Codex 実行制御、pure oracle read 時の oracle 配下への制限、linked worktree での状態保存先、保護領域外 extra read path の拒否など、runtime 層が Codex subprocess に渡す境界条件を扱う。
 
 ## Read this when
-- Codex CLI を起動する処理、またはその subprocess wrapper の挙動を変更する場合。
-- file access mode ごとの sandbox profile、writable_roots、PURE_ORACLE_READ 時の cwd、schema 出力先の制御を確認する場合。
-- codex exec/TUI の失敗時エラー、Codex CLI 未検出、extra_read_paths の許可領域チェック、apply process tracking の扱いを変更・調査する場合。
+- Codex exec/TUI 起動時の `--cd`、`--profile`、`--json`、`--output-last-message`、`--output-schema` などの引数生成や作業ディレクトリ選択を変更・確認するとき。
+- Codex 用 sandbox profile の read-only / workspace-write、writable roots、memo や .agents の扱い、pure oracle read の制限を変更・確認するとき。
+- Codex subprocess の process group 追跡、apply tracking 環境変数の遮断、missing CLI、nonzero exit のエラー処理やログ出力を変更・確認するとき。
+- linked worktree からの Codex 呼び出しで、schema state や TUI call log、complete prompt の読み込み許可がどこに紐づくべきかを調べるとき。
 
 ## Do not read this when
-- Codex CLI 呼び出しに関係しない CLI command、設定読込、path model、git 操作だけを調査する場合。
-- 実際の Codex CLI や LLM の出力品質そのものを確認したい場合。
-- pytest support helper や一時リポジトリ作成 helper の実装詳細だけを変更する場合は、先にその helper 本体を読む。
+- Codex runtime の外部挙動ではなく、汎用的な path model、設定 schema、CLI parser、または oracle 文書の正本仕様だけを確認したいとき。
+- Codex CLI や LLM の出力品質そのもの、プロンプト内容の妥当性、生成結果の文章品質を検証したいとき。
+- 実 subprocess を使わない単純なユニットロジックや、Codex 以外の外部コマンド実行制御を調べるとき。
 
 ## hash
-- e2ab7c670a1d8819f5889f84e4aca48448a5c95d4be9d88d2c9fdf3193f20f51
+- df375403644f1fb37b48b7ebe8520d92d6dd185dc10912db90a8da000974bccb
 
 # `test_codex_runtime_home.py`
 
