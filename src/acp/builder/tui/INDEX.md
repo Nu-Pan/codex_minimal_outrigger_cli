@@ -18,19 +18,20 @@
 # `launch_tui.py`
 
 ## Summary
-- ACP builder TUI 起動入口の src 側 shim であり、oracle 側の実装を同名モジュールとして再エクスポートする。
-- このファイル自体は挙動を定義せず、src 配下から oracle 側 TUI 起動実装へ到達するための薄い公開口として位置づけられる。
+- TUI 起動用の AgentCallParameter builder を公開する薄い realization 実装。oracle 側の builder 結果を再利用しつつ、TUI 起動では Structured Output を使わないため、存在しない schema path を公開しないよう `structured_output_schema_path` だけを実行時に無効化する。
 
 ## Read this when
-- src 側の ACP builder TUI 起動入口が、どの oracle 側実装に委譲されているか確認したいとき。
-- src 配下の import 経路や公開モジュール境界を確認し、実処理ではなく再エクスポートの有無だけを見たいとき。
+- TUI 起動用の AgentCallParameter の組み立て結果、とくに Structured Output schema path の扱いを確認・変更したいとき。
+- oracle 側の TUI 起動 parameter 定義と realization 側の実行時契約の差分を調べたいとき。
+- TUI 起動処理が存在しない Structured Output schema を参照しないようにする互換処理の根拠を確認したいとき。
 
 ## Do not read this when
-- ACP builder TUI の起動処理、画面構成、引数処理、終了処理などの実装詳細を調べたいときは、再エクスポート元の oracle 側実装を直接読む。
-- 新しい TUI 挙動や仕様判断の根拠を探しているときは、この shim ではなく対応する oracle file や実処理を持つモジュールを読む。
+- TUI の画面描画、入力処理、イベントループなど、起動後の TUI 本体の挙動を調べたいとき。
+- Structured Output を消費する agent call や JSON schema の内容を調べたいとき。
+- oracle 側の正本仕様断片そのものを確認したいとき。
 
 ## hash
-- 970311b93d0cd6ca26c05ba352efc06cc4da54608d29746e22cad14887aead2a
+- 4ec0ac51241993677a09a6e26d9752464337332b6f6156de3352c0203793f960
 
 # `resolve_parameter.py`
 

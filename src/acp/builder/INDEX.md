@@ -97,20 +97,21 @@
 # `tui`
 
 ## Summary
-- ACP builder の TUI 関連 realization implementation をまとめる薄い互換 package。実処理の多くは正本側実装へ再エクスポートされ、この階層自体は src 側から TUI 起動入口とパラメータ解決入口へ到達する公開境界を担う。
-- TUI で扱うファイルアクセスモード候補を基本定義の列挙値から組み立て、正本側の TUI パラメータ解決実装と realization 側の import 経路を接続する。
+- ACP builder の TUI 関連呼び出しパラメータを、正本側の定義から realization implementation 側へ接続する薄い package。
+- TUI 起動用パラメータでは正本側の構築結果を再利用しつつ、起動時に消費しない Structured Output schema path を実行時契約に合わせて無効化する。
+- TUI のパラメータ解決入口と、TUI で提示するファイルアクセスモード候補を基本定義の列挙値から参照できるようにする。
 
 ## Read this when
-- ACP builder TUI の src 側 package が、正本側 TUI package と互換の入口として存在しているか確認したいとき。
-- TUI 起動入口や TUI パラメータ解決入口が、realization implementation 側でどの正本側実装へ委譲されているか確認したいとき。
-- TUI で提示・利用するファイルアクセスモード候補が、基本定義の列挙値から作られているか確認したいとき。
-- TUI 関連の実処理ではなく、src 配下の公開 import 経路、再エクスポート境界、互換 package の有無を確認したいとき。
+- TUI 起動または TUI パラメータ解決に使う AgentCallParameter が realization implementation 側でどう公開されているか確認したいとき。
+- TUI 起動処理が存在しない Structured Output schema path を公開しないようにしている互換調整を確認・変更したいとき。
+- TUI で扱うファイルアクセスモード候補が基本定義の列挙値と同期しているか確認したいとき。
+- 正本側の ACP builder TUI 実装を、実行側 package から import できる形に接続する箇所を探しているとき。
 
 ## Do not read this when
-- ACP builder TUI の起動処理、画面構成、入力フロー、終了処理などの具体的な挙動を調べたいときは、正本側の TUI 実装を読む。
-- TUI パラメータ解決の仕様や処理内容そのものを確認したいときは、正本側のパラメータ解決実装を読む。
-- ファイルアクセスモード自体の定義や意味を確認したいときは、基本定義側の列挙値を読む。
-- 新しい TUI 挙動や仕様判断の根拠を探しているときは、この realization 側 shim ではなく対応する oracle file や実処理を持つモジュールを読む。
+- TUI の画面描画、入力処理、イベントループなど、起動後の TUI 本体の挙動を調べたいとき。
+- パラメータ構築や解決の正本仕様断片そのものを確認したいとき。
+- Structured Output を実際に消費する agent call や JSON schema の内容を調べたいとき。
+- ファイルアクセスモード自体の意味や基本定義を確認したいとき。
 
 ## hash
-- a075e25b6bbaec9bd14df8a0db60b3593007a362827b15ae00658cd56609e2c9
+- 01df73688f2bfcdab47931ac7ccc89582b5f9b15e5a365a1351fe5e278d86ad6

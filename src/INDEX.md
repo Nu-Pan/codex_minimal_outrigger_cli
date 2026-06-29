@@ -1,23 +1,25 @@
 # `acp`
 
 ## Summary
-- ACP 名前空間の realization implementation 領域。oracle src 側の acp 実装と互換の import 経路を提供する最小パッケージ入口と、agent call parameter 構築に関する builder 群への入口を束ねる。
-- 実処理本体よりも、src 側から正本側実装へ到達する公開境界、再エクスポート、互換 package の有無、変更適用・索引生成・レビュー・セッション結合・TUI 関連 builder へのルーティング起点として位置づけられる。
+- ACP realization implementation の入口領域で、正本側 ACP 実装と互換の import 経路を提供し、下位の builder 領域へ進むための分岐点になる。
+- パッケージ入口自体は実処理を持たず、下位領域では agent call parameter 構築に関わる apply fork、review、session、TUI、indexing などの builder 公開経路と実行側補正を扱う。
 
 ## Read this when
-- ACP 領域で、realization 側が oracle src 側と互換の import 経路を提供しているか確認したいとき。
-- ACP package 入口と builder 領域のどちらへ進むべきかを切り分けたいとき。
-- agent call parameter 構築に関して、変更適用、索引生成、レビュー、セッション結合、TUI 起動・パラメータ解決の builder 入口を探したいとき。
-- repo root や oracle src の解決、正本側 prompt builder の利用、model・reasoning effort・file access mode・structured output schema の指定がどの builder 領域で扱われるか確認したいとき。
+- realization 側から ACP 関連実装へ進む最初の入口を探したいとき。
+- oracle src 側の ACP 実装と互換の import 経路が、実行側 package でどのように成立しているか確認したいとき。
+- agent 呼び出し用の model、reasoning effort、file access mode、prompt、Structured Output schema などを組み立てる builder 領域へ進む必要があるとき。
+- apply fork、review、session、TUI、indexing のどの ACP builder 実装または公開入口を読むべきか切り分けたいとき。
+- 正本側 builder 実装を薄く再公開する互換入口と、realization 側で追加の接続・補正を行う箇所の境界を把握したいとき。
 
 ## Do not read this when
-- ACP ではなく、fork 作成、git 操作、作業ディレクトリ管理、レポート保存、CLI サブコマンドルーティングなどの実行制御を調べたいとき。
-- 正本側の仕様断片、prompt、review standard、realization standard、path model、schema や列挙値の定義そのものを確認したいとき。
-- 変更要約、所見、レビュー結果など、builder が生成または利用する成果物の内容だけを読みたいとき。
-- ACP の具体的なアルゴリズム、画面構成、入力フロー、状態管理、判定基準を理解したいとき。その場合は対応する正本側実装または builder 配下のより直接の対象を読む。
+- ACP の正本仕様断片、prompt 断片、review standard、realization standard、path model など、人間所有の仕様本文を確認したいとき。
+- fork 作成、git 操作、作業ディレクトリ管理、レポート保存、CLI サブコマンドルーティングなど、生成済み ACP を使う側の実行制御を調べたいとき。
+- TUI の画面描画、入力処理、イベントループなど、起動後の UI 本体の挙動を調べたいとき。
+- finding の列挙・判定・結合・検証、indexing、session join など、builder が参照または接続する正本側アルゴリズムの詳細を理解したいとき。
+- model class、reasoning effort、file access mode、Structured Output schema などの共通定義そのものを確認したいとき。
 
 ## hash
-- e53b80c19add4abdf388c0cbc45a3bf8232dfff92f9eb51d0fcab2ba83f6c4e4
+- 1b34258526b2b621465835d7824029e912bbc78c7d588409041088a46c7f1389
 
 # `basic`
 
