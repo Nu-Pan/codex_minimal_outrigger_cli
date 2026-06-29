@@ -240,23 +240,22 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- INDEX.md の生成・更新、fresh hash による再生成省略、malformed entry の再生成、commit 対象の限定、conflict 解決、linked worktree と apply worktree 上の indexing preflight など、routing document 更新ワークフローの CLI 境界と制御ロジックをまとめて検証する回帰テスト。
-- Codex によるエントリー生成結果の取り込み、schema 不一致や空白・複数行 semantic item の拒否、空ディレクトリや nested memo directory の扱い、兄弟 entry 生成の並列化も同じ indexing 更新責務の観測点として扱う。
+- indexing preflight と indexing サブコマンドが routing document を生成・更新・commit・再利用する外部挙動を検証する回帰テスト群。
+- conflict 解決、未初期化や dirty worktree の拒否、linked worktree での対象選択、repo config の参照、既存 hash による Codex 呼び出し省略、INDEX.md commit 範囲を同じワークフローの観測点として扱う。
+- entry schema の検証、壊れた既存 entry の再生成、空ディレクトリ・並列生成・memo 除外・symlink cycle 回避など、routing document 更新処理の境界条件も含む。
 
 ## Read this when
-- indexing subcommand や indexing preflight の外部挙動、git commit 条件、dirty worktree 拒否、linked worktree での更新先、apply worktree での repo config 利用を変更・確認したいとき。
-- INDEX.md entry の生成・再利用・再生成判定、hash freshness、malformed entry 検出、render_index_entry の schema validation、空ディレクトリや memo directory の indexing 対象判定を調べたいとき。
-- resolve_index_conflicts が INDEX.md の merge conflict を削除・解消して merge commit を成立させる挙動を変更・確認したいとき。
-- indexing 更新処理で Codex 呼び出しをどの条件で行うか、または sibling entry 生成を並列化する制御を変更する前に既存の期待挙動を確認したいとき。
+- indexing 実行時の git 状態チェック、commit 条件、linked worktree 上での対象 root や config 解決を変更する。
+- routing document の生成・更新・hash 再利用・schema validation・malformed entry 再生成に関わる実装を変更する。
+- INDEX.md conflict 解決、empty directory への配置、root memo 除外、nested memo の扱い、directory symlink cycle 回避、兄弟 entry の並列生成に関する回帰を確認する。
 
 ## Do not read this when
-- init、apply、join などのサブコマンド全般を調べたいだけで、INDEX.md 更新や indexing preflight の挙動に触れないとき。
-- routing document の正本仕様や設計意図を確認したいときは、この回帰テストではなく oracle 配下の該当仕様を読む。
-- indexing の内部 helper 実装だけを局所的に確認したい場合は、まず実装側の対象モジュールを読む。
-- Codex CLI や LLM 出力品質そのものを検証したい場合は、このテストは対象外であり、ここでは生成結果を fake に差し替えた制御境界だけを扱う。
+- 個別サブコマンドの business logic や UI 表示だけを調べており、routing document 更新ワークフローや git 副作用に触れない。
+- Codex 呼び出し基盤そのもの、設定ファイルの一般的な読み書き、git helper の単体挙動だけを調べる場合は、それぞれの実装・テストを直接読む方がよい。
+- INDEX.md エントリーの内容理解だけが目的で、生成・更新・commit・conflict 解決の CLI 境界を検証する必要がない。
 
 ## hash
-- 4eca837d056016a4e977f2ebde1f2e0720c68d1c851239a907fdfa66f8b6ca42
+- 7458d252675578dfd35a5bc85b855893236224457ec838835572d559e0926031
 
 # `test_indexing_preflight.py`
 

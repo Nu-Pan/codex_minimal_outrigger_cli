@@ -34,23 +34,24 @@
 # `indexing.py`
 
 ## Summary
-- Codex 呼び出し前の目次更新 preflight と、目次生成対象の列挙、鮮度判定、既存エントリー再利用、Structured Output 検証、Markdown 生成、更新 commit までをまとめて扱う実装。
-- 排他 lock、git 操作、設定読み込み、並列生成、対象本文抽出を組み合わせ、リポジトリ内の目次を現在の対象内容に同期する責務を持つ。
+- Codex 呼び出し前にルーティング文書を最新化する実装で、対象列挙、鮮度判定、エントリー生成、Markdown 描画、更新差分の commit までを扱う。
+- 対象外・無視対象・binary・symlink・memo を除外しながら、深い階層から順に目次を再生成する制御の入口になっている。
+- Structured Output の検証、既存エントリーからの hash 抽出、生成結果の bullet-only 形式への変換など、indexing の形式維持も担う。
 
 ## Read this when
-- 目次更新の実行順序、preflight 登録、更新差分の commit 条件、または repository ごとの排他制御を確認・変更したいとき。
-- 目次対象に含めるファイルやディレクトリの除外条件、hash による再生成判定、既存エントリーの再利用条件を調べたいとき。
-- 生成結果の必須構造、bullet-only section、hash section、Structured Output から Markdown への変換・検証の挙動を変更したいとき。
-- Codex 実行関数へ渡す入力内容、実行時の root/cwd/config/purpose、または目次生成用 prompt との接続箇所を追いたいとき。
+- Codex 実行前にルーティング文書を自動更新する preflight の登録・実行・排他制御を確認したいとき。
+- 目次作成対象となるディレクトリや子要素の除外条件、git ignore・memo・binary・symlink の扱いを変更したいとき。
+- 既存エントリーを再利用する鮮度判定、対象 hash の計算、更新された目次だけを commit する流れを調べたいとき。
+- エントリー生成用の Codex 呼び出し、Structured Output 検証、Markdown 出力形式、hash section の検証を修正したいとき。
 
 ## Do not read this when
-- 目次エントリー文面の正本仕様や prompt 文言そのものを確認したいだけなら、対応する oracle または prompt builder 側を読む。
-- git command の低レベル実行、hash 計算、binary 判定、git ignore 判定、config 読み込みの実装詳細を調べたいだけなら、runtime 側の各 helper を読む。
-- Codex 呼び出し前後の一般的な preflight 登録機構だけを調べたい場合は、preflight を管理する runtime 側の実装を読む。
-- 個別の目次内容を人間向けにどう書くべきか判断したいだけなら、この実装ではなく対象本文とエントリー基準を読む。
+- 個別のエントリー文面をどう書くべきかというプロンプトや文体基準だけを確認したいときは、生成プロンプトや oracle 側の基準を読む。
+- path token や root/worktree/run の概念定義を確認したいだけなら、path model の定義を読む。
+- Codex 実行そのものの設定、ログ保存先、隔離規則の正本仕様を確認したいだけなら、対応する oracle 文書を読む。
+- 特定の業務ロジックや CLI コマンドの挙動を調べたいだけなら、この indexing 更新制御ではなく該当する実装へ進む。
 
 ## hash
-- 7c7cc19c31fabb68c94e0bf6410886783f28892186b4e79eccede51d65d5d968
+- 0679f93b593a2cddb06a521249fdc89dc015331c182a3a00390238102be605bb
 
 # `runtime_cli.py`
 
