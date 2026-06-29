@@ -3,13 +3,13 @@ import shutil
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 from acp.builder.tui.resolve_parameter import (
-    TUI_FILE_ACCESS_MODES,
     build_tui_resolve_parameter_parameter,
 )
 from acp.builder.tui.launch_tui import build_tui_launch_tui_parameter
-from basic.acp import AgentCallParameter, FileAccessMode
+from basic.acp import AgentCallParameter
 from cmoc_runtime import (
     CmocError,
     CodexExecResult,
@@ -36,6 +36,12 @@ TODO ここから書き始める
 
 CodexExec = Callable[..., CodexExecResult]
 CodexTui = Callable[..., None]
+DEFAULT_FILE_ACCESS_PROFILE = {
+    "oracle": "read",
+    "realization": "read",
+    "index": "read",
+}
+FAATTR_VALUES = {"deny", "read", "write"}
 
 
 def cmoc_tui_impl() -> None:
@@ -156,14 +162,12 @@ def build_tui_codex_parameter(
     launch_timestamp: str | None = None,
 ) -> AgentCallParameter:
     """解決済み JSON から TUI 起動用 AgentCallParameter を構築する。"""
-    file_access_mode = FileAccessMode(
-        nested_value(resolved_parameter, "file_access_mode", FileAccessMode.READONLY.value)
-    )
-    if file_access_mode not in TUI_FILE_ACCESS_MODES:
+    file_access_profile = nested_faprofile(resolved_parameter)
+    if file_access_profile is None:
         raise CmocError(
-            "TUI では使用できないファイルアクセスモードです。",
+            "TUI では使用できないファイルアクセスプロファイルです。",
             ["プロンプトを保存して `cmoc tui` を再実行してください。"],
-            f"file_access_mode: {file_access_mode.value}",
+            f"file_access_profile: {resolved_parameter.get('file_access_profile')}",
         )
     # <work-root>/oracle/doc/app_spec/prompt_standard.md
     # <work-root>/oracle/doc/app_spec/sub_command/tui.md
@@ -184,7 +188,7 @@ def build_tui_codex_parameter(
             "goal",
             "- 詳細指示の要求を満たしていること",
         ),
-        file_access_mode=file_access_mode,
+        file_access_profile=file_access_profile,
         original_prompt=original_prompt,
         oracle_and_realization_basic=nested_bool(
             resolved_parameter, "oracle_and_realization_basic"
@@ -209,6 +213,25 @@ def nested_value(data: dict, name: str, default: str) -> str:
     ):
         return value["value"]
     return default
+
+
+def nested_faprofile(data: dict) -> dict[str, str] | None:
+    """TUI parameter JSON から build_faprofile 用の引数を取り出す。"""
+    value = data.get("file_access_profile")
+    if not isinstance(value, dict):
+        return dict(DEFAULT_FILE_ACCESS_PROFILE)
+    raw_profile: Any = value.get("value")
+    if raw_profile in (None, ""):
+        return dict(DEFAULT_FILE_ACCESS_PROFILE)
+    if not isinstance(raw_profile, dict):
+        return None
+    result = {}
+    for key in ["oracle", "realization", "index"]:
+        attr = raw_profile.get(key)
+        if not isinstance(attr, str) or attr not in FAATTR_VALUES:
+            return None
+        result[key] = attr
+    return result
 
 
 def nested_bool(data: dict, name: str) -> bool:

@@ -5,7 +5,7 @@ from typing import Any
 import json
 
 # cmoc
-from oracle.other.file_access_profile import FAPProfilePreset
+from oracle.other.file_access_profile import build_faprofile
 from oracle.other.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
 from oracle.other.path_model import resolve_repo_root
 from oracle.acp_builder.basic import (
@@ -27,6 +27,12 @@ def build_apply_fork_finding_application_parameter(
         対応するべき所見本文のリスト。
         1 件につき、
     """
+    # ファイルアクセスプロファイル
+    faprofile = build_faprofile(
+        oracle="read",
+        realization="write",
+        index="read",
+    )
     # プロンプト
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア実装の修正担当です",
@@ -35,7 +41,7 @@ def build_apply_fork_finding_application_parameter(
         - 所見として指摘されている問題の修正作業をベストエフォートで実施したこと
         - 修正後の realization file が realization standard に従っている事
         """,
-        file_access_mode=FAPProfilePreset.REALIZATION_WRITE,
+        faprofile=faprofile,
         aux_dynamic_prompt=[
             StructDoc(
                 "作業上の注意点",
@@ -68,7 +74,7 @@ def build_apply_fork_finding_application_parameter(
     return AgentCallParameter(
         ModelClass.MAINSTREAM,
         ReasoningEffort.MEDIUM,
-        FAPProfilePreset.REALIZATION_WRITE,
+        faprofile,
         render_as_markdown(prompt),
         None,
     )

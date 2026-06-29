@@ -13,7 +13,7 @@ from .parts.oracle_review_standard import build_review_oracle_standard
 from .parts.index_entry_standard import build_index_entry_standard
 from .parts.routing_rule import build_routing_rule
 from .basic import PlaceholderMap
-from oracle.other.file_access_profile import FAPProfilePreset
+from oracle.other.file_access_profile import FAProfile
 
 
 def build_complete_prompt(
@@ -21,7 +21,7 @@ def build_complete_prompt(
     role: str,
     summary: str,
     goal: str,
-    file_access_mode: FAPProfilePreset,
+    faprofile: FAProfile,
     aux_static_prompt: list[StructDoc] = list(),
     aux_dynamic_prompt: list[StructDoc] = list(),
     aux_placeholder_def: PlaceholderMap = dict(),
@@ -52,7 +52,7 @@ def build_complete_prompt(
     goal:
         agent が作業完了と判断する条件・基準
 
-    file_access_mode:
+    faprofile:
         agent によるファイルアクセスに対する制限設定
 
     aux_static_prompt:
@@ -138,7 +138,7 @@ def build_complete_prompt(
         _extend_static_prompt(build_index_entry_standard)
     if aux_static_prompt:
         prompt.extend(aux_static_prompt)
-    _extend_static_prompt(build_file_access_rule, file_access_mode)
+    _extend_static_prompt(build_file_access_rule, faprofile)
     _extend_static_prompt(build_routing_rule)
 
     # 動的プロンプトを構築

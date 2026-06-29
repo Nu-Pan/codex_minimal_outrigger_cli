@@ -12,7 +12,7 @@ def build_review_oracle_merge_finding_parameter(
     return type(parameter)(
         parameter.model_class,
         parameter.reasoning_effort,
-        parameter.file_access_mode,
+        parameter.file_access_profile,
         _fix_oracle_root_placeholder_definition(parameter.prompt),
         parameter.structured_output_schema_path,
     )

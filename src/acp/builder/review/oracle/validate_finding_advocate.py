@@ -18,7 +18,7 @@ def build_review_oracle_validate_finding_advocate_parameter(
     return type(parameter)(
         parameter.model_class,
         parameter.reasoning_effort,
-        parameter.file_access_mode,
+        parameter.file_access_profile,
         _fix_oracle_root_goal_typo(parameter.prompt),
         parameter.structured_output_schema_path,
     )

@@ -4,7 +4,7 @@
 from pathlib import Path
 
 # cmoc
-from oracle.other.file_access_profile import FAPProfilePreset
+from oracle.other.file_access_profile import build_faprofile
 from oracle.other.struct_doc import render_as_markdown
 from oracle.other.path_model import resolve_repo_root, resolve_real_path
 from oracle.acp_builder.basic import (
@@ -26,6 +26,12 @@ def build_apply_fork_file_finding_enumeration_parameter(
         所見リストアップの起点となるファイルのパス
         oracle file, realization file が渡される想定
     """
+    # ファイルアクセスプロファイル
+    faprofile = build_faprofile(
+        oracle="read",
+        realization="read",
+        index="read",
+    )
     # プロンプト
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア実装の所見リストアップ担当です",
@@ -37,7 +43,7 @@ def build_apply_fork_file_finding_enumeration_parameter(
         - 指定された Structured Output schema に従って所見リストを返すこと
         - 列挙した所見リストが apply review standard を満たしている事
         """,
-        file_access_mode=FAPProfilePreset.READONLY,
+        faprofile=faprofile,
         aux_placeholder_def={
             "repo-root": resolve_repo_root(),
             "target-path": resolve_real_path(target_path),
@@ -53,7 +59,7 @@ def build_apply_fork_file_finding_enumeration_parameter(
     return AgentCallParameter(
         ModelClass.MAINSTREAM,
         ReasoningEffort.MEDIUM,
-        FAPProfilePreset.READONLY,
+        faprofile,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),
     )

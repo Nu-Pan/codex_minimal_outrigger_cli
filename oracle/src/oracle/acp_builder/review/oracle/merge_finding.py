@@ -4,7 +4,7 @@
 from pathlib import Path
 
 # cmoc
-from oracle.other.file_access_profile import FAPProfilePreset
+from oracle.other.file_access_profile import build_faprofile
 from oracle.other.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
 from oracle.other.path_model import resolve_real_path
 from oracle.acp_builder.basic import (
@@ -25,6 +25,12 @@ def build_review_oracle_merge_finding_parameter(
     findings: str
         現状の所見リスト。各所見は finding_id を含む想定。
     """
+    # ファイルアクセスプロファイル
+    faprofile = build_faprofile(
+        oracle="read",
+        realization="deny",
+        index="read",
+    )
     # プロンプト
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア仕様断片レビュー結果の整理担当です",
@@ -35,7 +41,7 @@ def build_review_oracle_merge_finding_parameter(
         - 十分コンパクトで整合的なら空配列を返すこと
         - target_ids には入力所見の finding_id を指定すること
         """,
-        file_access_mode=FAPProfilePreset.PURE_ORACLE_READ,
+        faprofile=faprofile,
         aux_dynamic_prompt=[
             StructDoc(
                 "現状の所見リスト",
@@ -52,7 +58,7 @@ def build_review_oracle_merge_finding_parameter(
     return AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.MEDIUM,
-        FAPProfilePreset.PURE_ORACLE_READ,
+        faprofile,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),
     )

@@ -4,7 +4,7 @@
 from pathlib import Path
 
 # cmoc
-from oracle.other.file_access_profile import FAPProfilePreset
+from oracle.other.file_access_profile import build_faprofile
 from oracle.other.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
 from oracle.other.path_model import resolve_real_path, resolve_work_root
 from oracle.acp_builder.basic import (
@@ -28,6 +28,12 @@ def build_session_join_conflict_resolution_parameter(
     # エイリアス
     resolved_paths = [resolve_real_path(path) for path in conflicted_paths]
     path_list = "\n".join(str(path) for path in resolved_paths)
+    # ファイルアクセスプロファイル
+    faprofile = build_faprofile(
+        oracle="read",
+        realization="write",
+        index="read",
+    )
     # プロンプト
     prompt = build_complete_prompt(
         role="- あなたは git merge conflict の解消担当です",
@@ -41,7 +47,7 @@ def build_session_join_conflict_resolution_parameter(
         - git add と git commit は実行しないこと
         - 作業後に conflict marker が残らない状態にすること
         """,
-        file_access_mode=FAPProfilePreset.REALIZATION_WRITE,
+        faprofile=faprofile,
         aux_dynamic_prompt=[
             StructDoc(
                 "conflict 対象ファイル",
@@ -68,7 +74,7 @@ def build_session_join_conflict_resolution_parameter(
     return AgentCallParameter(
         ModelClass.MAINSTREAM,
         ReasoningEffort.MEDIUM,
-        FAPProfilePreset.REALIZATION_WRITE,
+        faprofile,
         render_as_markdown(prompt),
         None,
     )

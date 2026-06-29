@@ -6,10 +6,10 @@
 
 from oracle.acp_builder.basic import (
     AgentCallParameter,
-    FileAccessMode,
     ModelClass,
     ReasoningEffort,
 )
+from oracle.other.file_access_profile import FAPProfilePreset as FileAccessMode
 
 __all__ = [
     "AgentCallParameter",

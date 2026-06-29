@@ -16,17 +16,17 @@
 - TUI ではないサブコマンドのエージェント呼び出しパラメータや、実際の CLI/TUI 実行制御を調べたい場合は、その対象を扱う別の仕様断片へ進む。
 
 ## hash
-- 34dcc4c5b0222dd5e5dd23ccbd13ee575ea33d5ffb182f921ae0cc74f562fc0a
+- 390d6a06f8db7bb76dec61a29387c709f0d31413419e371c67698bd08f7f1e9b
 
 # `resolve_parameter.json`
 
 ## Summary
-- AI Agent CLI/TUI がオリジナルプロンプトを実行する前に、役割・作業概要・ゴール・論理ファイルアクセスモード・各種標準文書を読む要否を、根拠付きで解決するための入力パラメータ schema を定義する。
-- 権限設定は readonly / pure_oracle_read / realization_write / oracle_write / repo_write から選ばせ、oracle と realization の基本、oracle standard、realization standard、review oracle standard、apply review standard、index entry standard の参照要否を boolean と理由の組で表す。
+- AI Agent CLI/TUI がオリジナルプロンプトを実行する前に、役割・作業概要・ゴール・`build_faprofile` 引数・各種標準文書を読む要否を、根拠付きで解決するための入力パラメータ schema を定義する。
+- 権限設定は `oracle` / `realization` / `index` それぞれの deny / read / write として直接指定させ、oracle と realization の基本、oracle standard、realization standard、review oracle standard、apply review standard、index entry standard の参照要否を boolean と理由の組で表す。
 
 ## Read this when
 - オリジナルプロンプトから、AI Agent CLI/TUI に渡す実行前パラメータを構造化して決める処理を実装・検証する。
-- 作業の役割、概要、ゴール、必要最小限のファイルアクセス権限を、理由付きで出力する schema を確認する。
+- 作業の役割、概要、ゴール、必要最小限の `build_faprofile` 引数を、理由付きで出力する schema を確認する。
 - oracle / realization 関連の標準文書を読むべきかどうかを、各標準ごとに boolean と根拠で表す出力仕様を確認する。
 - TUI のパラメータ解決結果について、追加プロパティ禁止、必須項目、列挙値、各フィールドの意味を確認する。
 
@@ -36,7 +36,7 @@
 - INDEX.md エントリー自体の書き方を確認したい場合。ここでは index entry standard を読む要否を表す項目はあるが、標準本文の内容は定義しない。
 
 ## hash
-- ff75f059106ad9edc2b3ecda599f770b0173e67d21c17a3d4423ba9b46b0145d
+- ab8a62116997e160f4a49279b56a75b8d414286104b93da95e0b4f30c266395e
 
 # `resolve_parameter.py`
 
@@ -57,4 +57,4 @@
 - `cmoc tui` の画面操作、入力エディタ処理、または実際のサブコマンド実行フローを調べたいときは、このパラメータ解決 prompt ではなく TUI 実行側の正本を読む。
 
 ## hash
-- 8202ec643da88fee167595217c54338e0673284beb20aff300feeccf5af06224
+- e180b35e78539c69acafa754147999ae37a1145db83a252aa0f4e3717913fb3d

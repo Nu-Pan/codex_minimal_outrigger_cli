@@ -4,7 +4,7 @@
     "required": [
         "role",
         "summary",
-        "file_access_mode",
+        "file_access_profile",
         "oracle_and_realization_basic",
         "oracle_standard",
         "realization_standard",
@@ -67,7 +67,7 @@
                 }
             }
         },
-        "file_access_mode": {
+        "faattr_oracle": {
             "type": "object",
             "additionalProperties": false,
             "required": [
@@ -77,18 +77,62 @@
             "properties": {
                 "value": {
                     "type": "string",
-                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行する際の論理ファイルアクセスモード。過不足の無い権限設定が望ましい。",
+                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行する際の oracle file に対するアクセス権。読み書き不要なら deny を、読み書きが必要なら write を、読み取りのみ必要なら read を設定する。",
                     "enum": [
-                        "readonly",
-                        "pure_oracle_read",
-                        "realization_write",
-                        "oracle_write",
-                        "repo_write"
+                        "deny",
+                        "write",
+                        "read"
                     ]
                 },
                 "reason": {
                     "type": "string",
-                    "description": "選択した論理ファイルアクセスモードが妥当である事の説明・根拠。"
+                    "description": "oracle file に対するアクセス権設定が妥当である事の説明・根拠。"
+                }
+            }
+        },
+        "faattr_realization": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "reason"
+            ],
+            "properties": {
+                "value": {
+                    "type": "string",
+                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行する際の realization file に対するアクセス権。読み書き不要なら deny を、読み書きが必要なら write を、読み取りのみ必要なら read を設定する。",
+                    "enum": [
+                        "deny",
+                        "write",
+                        "read"
+                    ]
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "realization file に対するアクセス権設定が妥当である事の説明・根拠。"
+                }
+            }
+        },
+        "faattr_index": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "reason"
+            ],
+            "properties": {
+                "value": {
+                    "type": "string",
+                    "description": "オリジナルプロンプトを AI Agent CLI/TUI が実行する際の `INDEX.md` に対するアクセス権。読み書き不要なら deny を、読み書きが必要なら write を、読み取りのみ必要なら read を設定する。",
+                    "enum": [
+                        "deny",
+                        "write",
+                        "read"
+                    ]
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "`INDEX.md` に対するアクセス権設定が妥当である事の説明・根拠。"
                 }
             }
         },

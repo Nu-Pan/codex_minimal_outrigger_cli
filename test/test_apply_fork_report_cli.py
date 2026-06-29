@@ -186,9 +186,10 @@ def test_finding_application_prompt_uses_complete_standard_prompt(
 
     assert "# oracle and realization basic" in parameter.prompt
     assert "# realization standard" in parameter.prompt
-    assert "# file read write rule - realization_write" in parameter.prompt
-    assert "- `<work-root>/oracle` ツリー内は書き込み禁止" in parameter.prompt
-    assert "- `<work-root>/memo` は読み書き禁止" in parameter.prompt
+    assert "# file access profile" in parameter.prompt
+    assert "- `.` is `write`" in parameter.prompt
+    assert "- `oracle` is `read`" in parameter.prompt
+    assert "- `memo` is `deny`" in parameter.prompt
     assert "/.agents` ツリー内は書き込み禁止" not in parameter.prompt
     assert "## FINDING-00" in parameter.prompt
     assert '"title": "first"' in parameter.prompt
@@ -247,7 +248,7 @@ def test_file_finding_enumeration_prompt_uses_complete_standard_prompt(
     assert "# oracle standard" in parameter.prompt
     assert "# realization standard" in parameter.prompt
     assert "# apply review standard" in parameter.prompt
-    assert "- `<work-root>/memo` は読み書き禁止" in parameter.prompt
+    assert "- `memo` is `deny`" in parameter.prompt
     assert f"- <target-path> = {target}" in parameter.prompt
     assert f"- <work-root> = {repo_root}" in parameter.prompt
 
