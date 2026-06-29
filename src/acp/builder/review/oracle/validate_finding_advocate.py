@@ -28,6 +28,7 @@ def _fix_oracle_root_goal_typo(prompt: str) -> str:
     # <work-root>/oracle/doc/app_spec/prompt_standard.md permits only the
     # minimum correction needed for the oracle src static goal typo; findings
     # and known reasons are dynamic input and must stay byte-for-byte intact.
+    # Delete this helper and its tests once oracle src uses "`<oracle-root>`".
     return prompt.replace(
         "`<oracle_root>` ツリー内の oracle file を具体的な根拠とし",
         "`<oracle-root>` ツリー内の oracle file を具体的な根拠とし",
