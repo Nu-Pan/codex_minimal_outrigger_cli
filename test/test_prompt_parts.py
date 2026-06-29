@@ -672,6 +672,15 @@ def test_review_oracle_merge_finding_schema_matches_oracle_source() -> None:
     )
 
 
+def test_review_oracle_merge_finding_preserves_known_findings_text() -> None:
+    known_findings = (
+        '[{"finding_id":"finding-0001","reason":"literal <<oracle-root>>"}]'
+    )
+    parameter = build_review_oracle_merge_finding_parameter(known_findings)
+    assert known_findings in parameter.prompt
+    assert "- <oracle-root> =" in parameter.prompt
+
+
 @pytest.mark.parametrize(
     ("builder", "schema_name"),
     [
