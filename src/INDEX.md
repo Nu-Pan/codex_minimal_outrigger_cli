@@ -1,24 +1,24 @@
 # `acp`
 
 ## Summary
-- 既存の `acp.*` import 経路を維持するための realization 側互換入口。正本側の ACP builder 実装を複製せず、利用者向け公開面や既存実装からの参照を oracle 側実体へ接続する。
-- 下位では ACP builder 用の互換 package 群を束ね、apply fork、indexing、review oracle、session join、TUI 起動・解決などの用途別 builder 入口へ進むためのルーティング起点になる。
-- この領域自体は ACP builder の正本仕様や主要な prompt・schema・生成ロジックを持つ場所ではなく、移行期間中の import 互換性と薄い再公開・補正を扱う境界である。
+- ACP builder 系の realization implementation 入口。正本を oracle 側に置いたまま、既存の公開 import path を維持する互換 package と、一部の runtime 側 agent call parameter builder adapter を束ねる。
+- 主な責務は、apply fork の変更要約・ファイル単位所見列挙・所見適用、review oracle、session join、TUI 起動・解決、indexing などの builder 領域について、oracle 側実装への再公開・委譲境界を提供すること。
+- この領域は ACP builder の正本仕様や詳細アルゴリズムそのものではなく、realization 側から既存 import 互換を保ちながらどの builder 境界へ進むかを判断するための入口である。
 
 ## Read this when
-- `acp.*` または `acp.builder.*` の既存 import 経路をなぜ残しているか、いつ削除できるかを判断したいとき。
-- realization 側や利用者向け公開面に残る ACP builder 参照を、oracle 側実体や新しい参照経路へ移行する作業をするとき。
-- apply fork、indexing、review oracle、session join、TUI 関連のどの builder 互換領域へ進むべきかを切り分けたいとき。
-- 正本側 ACP builder を既存公開経路から利用できるようにする薄い adapter、再公開、placeholder 補正の位置づけを確認したいとき。
+- realization 側で ACP builder 関連の import path 互換、再公開、oracle 側実装への委譲境界を確認したいとき。
+- 既存の `acp.*` または `acp.builder.*` 参照を維持する理由、移行先、削除条件を判断したいとき。
+- apply fork、review oracle、session join、TUI、indexing の builder 領域のうち、どの下位入口へ進むべきかを切り分けたいとき。
+- agent call parameter 構築処理が oracle 側正本を呼ぶだけなのか、realization 側で最小限の adapter や補正を持つのかを確認したいとき。
 
 ## Do not read this when
-- ACP builder の正本仕様、prompt 本文、Structured Output schema、model 設定、file access mode の定義を確認したいとき。その場合は oracle 側の対応する正本実装・仕様へ進む。
-- builder の具体的な生成アルゴリズムや入出力仕様を詳しく理解したいとき。その場合は用途別の実装本体または oracle 側実体へ直接進む。
-- CLI 全体の制御フロー、git 操作、TUI 画面処理、review workflow など、builder import 互換境界の外側にある実行側処理を調べたいとき。
-- `acp.*` 互換参照がすでに realization 側と利用者向け公開面から消えていることだけを確認済みで、互換入口の残存理由や接続先を読む必要がないとき。
+- ACP builder の prompt 本文、Structured Output schema、model 設定、reasoning effort、file access mode などの正本仕様を確認したいとき。その場合は oracle 側の対応する仕様または実装へ進む。
+- finding 列挙・判定・統合・検証、indexing 生成、session join、TUI パラメータ解決などの具体的なアルゴリズムを理解したいとき。その場合は委譲先の oracle 側実装またはより直接の下位実装を読む。
+- CLI コマンド全体の制御フロー、fork 作成、git 操作、引数処理、画面イベント処理、基本 enum・path model・runtime 型定義を調べたいとき。
+- ACP builder 互換 import 境界ではなく、新規機能の正本仕様、利用者向け API 全体、またはテスト対象を探しているとき。
 
 ## hash
-- c6cd20cd8c1db861477a2e183df8c96a9dc2c9d891e1e261289ab3744bd6449a
+- 555483559f3e7e0a202396452ba98a91e577cf0f46319ac2decc22c1d69f27ef
 
 # `basic`
 

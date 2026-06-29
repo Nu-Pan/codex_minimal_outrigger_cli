@@ -74,17 +74,15 @@
 # `finding_application.py`
 
 ## Summary
-- `cmoc apply fork` の所見適用向けに agent call parameter を構築する realization implementation。repository root の解決と oracle src の import 可能化を共通 helper に委ね、oracle 側 builder の結果を runtime 側へ返す入口を担う。
+- `cmoc apply fork` の所見適用用 agent call parameter を構築する realization 側の薄い builder。repo root 解決と oracle src の import 準備を行い、対応する oracle builder の結果を realization 側の `AgentCallParameter` へ適合して返す入口を担う。
 
 ## Read this when
-- `cmoc apply fork` で検出済み所見を適用する agent 呼び出しパラメータの組み立て経路を確認・変更したいとき。
-- 所見リストが oracle 側 builder に渡され、runtime 側の `AgentCallParameter` として返るまでの橋渡しを確認したいとき。
-- apply fork 系 builder のうち、計画生成や判定ではなく所見適用専用のパラメータ構築を扱う箇所を探しているとき。
+- `cmoc apply fork` の所見適用で、findings から agent call parameter を得る realization 側の呼び出し入口を確認したいとき。
+- 対応する oracle builder を realization 実装からどのように呼び出し、戻り値を `AgentCallParameter` に変換しているか確認したいとき。
 
 ## Do not read this when
-- repository root の解決、oracle src の import 可能化、oracle parameter の変換規則そのものを変更したいときは、共通 helper 側を読む。
-- 所見適用の prompt・指示文・詳細なパラメータ内容を確認したいときは、oracle 側 builder を読む。
-- `cmoc apply fork` 以外の apply 系 command や、所見の検出・分類・生成ロジックを調べたいだけのとき。
+- 所見適用プロンプトや agent call parameter の正本仕様そのものを確認したいときは、対応する oracle 側の実装を読む。
+- repo root 解決、oracle src の import 可能化、oracle parameter の適合処理という共通 helper の詳細を確認したいだけのときは、共通処理側を読む。
 
 ## hash
-- 3735683d336cf4b544bf4099e4ed204ceca1cdeadd5e534523d379f0e1719ff2
+- f20f8f2dab686c194560fba1c68209b00301cb133ebd3bb06f1b4437124840f4

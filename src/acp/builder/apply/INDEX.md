@@ -17,21 +17,18 @@
 # `fork`
 
 ## Summary
-- apply fork 系の ACP builder 実装をまとめるディレクトリ。各 builder は `cmoc apply fork` の変更要約、ファイル単位所見列挙、所見適用などの agent call parameter 構築入口を担い、実処理の多くを oracle 側 builder へ委譲する。
-- この階層は、realization 側で repository root 解決、oracle src import 準備、oracle parameter から runtime 側 parameter への橋渡しを行う薄い adapter 群と、その共通 helper への入口として位置づく。
+- apply fork 系の realization 側 ACP builder をまとめる package。各 builder は `cmoc apply fork` の変更要約、ファイル単位所見列挙、所見適用に必要な agent call parameter 構築入口を提供し、実処理は対応する oracle 側 builder に委譲する。
+- この階層は、oracle src の import 準備、repo root 解決、oracle 側 parameter を runtime 側 `AgentCallParameter` へ渡す共通 adapter と、それを使う個別 builder への入口として位置づく。
 
 ## Read this when
-- `cmoc apply fork` で使う agent call parameter builder の realization 側入口を探すとき。
-- 変更要約、ファイル単位所見列挙、所見適用など、apply fork 用 agent 呼び出しの種類ごとにどの builder を読むべきか切り分けたいとき。
-- oracle 側 ACP builder と runtime 側実行コードの境界、特に oracle src import 準備や parameter adapter の責務を確認したいとき。
-- apply fork 系 builder が oracle 側実装へ委譲する構造を把握してから、個別 builder または共通 helper へ進みたいとき。
+- `cmoc apply fork` で agent call parameter を作る realization 側の入口を探しているとき。
+- 変更要約、ファイル単位所見列挙、所見適用のいずれかで、oracle 側 builder への委譲経路と runtime 側 parameter への適合境界を確認したいとき。
+- apply fork 系 builder に共通する oracle src import 準備、repo root 解決、oracle parameter adapter の責務を確認したいとき。
 
 ## Do not read this when
-- prompt 本文、出力 schema、モデル選択、file access mode などの正本仕様を確認したいときは、委譲先の oracle 側 builder や JSON 定義を読む。
-- `cmoc apply fork` 全体の制御フロー、fork 作成、git 操作、CLI 引数処理を調べたいだけのときは、上位の command 実装を読む。
-- repository root 解決そのものや path model の仕様を調べたいときは、path model 側の定義を読む。
-- AgentCallParameter や enum 型そのものの定義を確認したいときは、ACP basic 側の型定義を読む。
-- oracle 互換 package の存在確認だけで足り、個別 builder や共通 helper の挙動を読む必要がないとき。
+- apply fork の prompt 本文、出力 schema、モデル選択、file access mode などの正本仕様を確認したいとき。対応する oracle 側 builder や JSON 定義を読む。
+- `cmoc apply fork` コマンド全体の制御フロー、fork 作成、git 操作、CLI 引数処理を調べたいとき。上位の command 実装や git 操作側を読む。
+- repo-root 解決そのものの仕様、path model、`AgentCallParameter` や enum 型の定義を確認したいとき。この階層はそれらを所有せず、別の定義へ委譲している。
 
 ## hash
-- 7d1aec3d3b6469b62339576e4752f0b1d277ece9aa35137715b8779011fdbf5d
+- 05186d93a9adaf3e96bfc4164f8cadacbba0d61e7244520e7c98c3760a576f65

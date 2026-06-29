@@ -19,21 +19,21 @@
 # `builder`
 
 ## Summary
-- ACP builder 領域の realization 側入口を束ねる階層。公開済みの builder import 経路を維持しながら、正本側にある実装や定義へ薄く接続する互換境界として位置づけられる。
-- 主な下位領域は、apply fork 用 agent call parameter 構築、indexing 互換入口、review oracle への再公開・薄い補正、session join への入口、TUI 起動パラメータ生成・解決への接続を扱う。
-- この階層自体は ACP builder の正本仕様や主要アルゴリズムを持つ場所ではなく、realization 側から用途別 builder 領域へ進むためのルーティング起点である。
+- ACP builder 領域の realization 側入口を束ねる階層。正本実装を oracle 側に置いたまま既存の公開 import path を維持する互換 package 群と、apply fork 向け agent call parameter 構築など一部 runtime 側 builder adapter への入口を扱う。
+- 主な範囲は、apply、review、session、TUI、indexing などの builder 領域へのルーティングであり、多くは oracle 側実装や正本定義への薄い再公開・委譲境界として位置づけられる。
+- この階層自体は各 builder の正本仕様や詳細アルゴリズムの置き場ではなく、realization implementation 側からどの互換入口・下位領域へ進むべきかを切り分けるための起点である。
 
 ## Read this when
-- ACP builder に関する realization 側の import 経路や互換 package 境界を確認したいとき。
-- apply fork、indexing、review、session、TUI のどの builder 領域へ進むべきかを切り分けたいとき。
-- 正本側 builder や基本定義を、既存の公開参照経路から利用できるようにする薄い adapter・再公開入口の位置づけを確認したいとき。
-- 公開済みの ACP builder 参照経路を削除・移動・置換してよいか判断する前に、残す理由や接続先の種類を把握したいとき。
+- realization 側で ACP builder 関連の import path、互換 package、oracle 側実装への委譲境界を確認したいとき。
+- apply、review、session、TUI、indexing のいずれの builder 領域へ進むべきか、上位から入口を判断したいとき。
+- 正本実装が oracle 側にある機能について、既存の acp builder 系公開経路を残している理由や削除可否を確認したいとき。
+- apply fork の変更要約・ファイル単位所見列挙・所見適用、review oracle 機能、session join、TUI パラメータ生成・解決、indexing 互換入口の所在を大まかに切り分けたいとき。
 
 ## Do not read this when
-- ACP builder の prompt 本文、Structured Output schema、model 設定、file access mode などの正本仕様を確認したいとき。その場合は正本側の対応箇所へ進む。
-- builder の具体的な変換処理、入出力仕様、判定条件、アルゴリズム、エラー処理を理解したいとき。その場合は用途別の実装本体または正本側実装を読む。
-- CLI 全体の制御フロー、fork 作成、git 操作、TUI 画面処理、review workflow など、builder import 境界の外側にある実行側処理を調べたいとき。
-- AgentCallParameter、path model、列挙値などの基本定義そのものを確認したいとき。その場合は basic 側の定義へ直接進む。
+- 各 builder の prompt 本文、Structured Output schema、model 設定、reasoning effort、file access mode などの正本仕様を確認したいとき。その場合は oracle 側の対応する仕様文書または実装を読む。
+- finding 列挙・判定・統合・検証、indexing 生成、session join、TUI パラメータ解決などの具体的な処理内容やアルゴリズムを理解したいとき。委譲先の oracle 側実装またはより直接の下位実装を読む。
+- ACP builder ではなく、CLI コマンド全体の制御フロー、fork 作成、git 操作、引数処理、画面イベント処理、基本 enum・path model・runtime 型定義を調べたいとき。
+- 互換 import 境界や公開経路の確認ではなく、新規機能の本体実装場所、利用者向け API 全体、またはテスト対象を探しているとき。
 
 ## hash
-- c578835c0ab7f8f4bf14c5ad685c4b199763415246c4f8d6fe0f9b0686be08fd
+- e559e4f4130f61d45a3702620cd4db703895c40255e2611c84f1bc81bcef5f37

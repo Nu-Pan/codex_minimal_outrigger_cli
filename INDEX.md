@@ -147,24 +147,26 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体を置く実装ルート。最上位 CLI、サブコマンド実行フロー、共通 runtime helper、旧来 import path の互換入口、oracle 側正本実体への薄い再公開を束ねる。
-- 下位には、CLI 登録、サブコマンド群、runtime 共通部品、ACP/basic/config/oracle 互換境界が並び、利用者操作から実装本体または正本側実体へ進むための入口になる。
-- この領域は realization file として oracle file の人間意図を具体化する場所であり、正本仕様断片そのものは保持しない。仕様意図を確認する場合は oracle 側、実行挙動や互換 import 境界を確認する場合はこの配下へ進む。
+- cmoc の realization implementation 全体を置く入口で、最上位 CLI、サブコマンド実装、共通 runtime helper、互換 import shim、oracle 側正本実装への再公開境界をまとめる。
+- この階層は、利用者向け CLI から session・apply・review・INDEX maintenance などの実行フローへ進む入口と、Codex 呼び出し・git/worktree・設定・状態・ログ・path など複数機能で共有される runtime 処理への入口を提供する。
+- 同時に、basic・config・ACP builder・oracle package・旧 runtime module などについて、正本側や実体 module へ接続する薄い互換層も含むため、実処理を読むべきか互換境界だけを確認すべきかを切り分ける起点になる。
 
 ## Read this when
-- cmoc の実装側で、CLI 入口、サブコマンド、共通 runtime helper、互換 import path のどこへ進むべきかを切り分けたいとき。
-- `cmoc` console script から Typer app、個別サブコマンド実装、Codex 呼び出し、git/worktree 操作、INDEX maintenance、session/apply/review workflow へ到達する実装経路を追いたいとき。
-- realization 側に残る `acp.*`、basic、config、`oracle.*`、runtime module などの旧来 import 経路が、どの実体または oracle 側実装へ接続されるかを確認したいとき。
-- oracle file に書かれた正本仕様断片を実装へ反映する作業で、実装本体・共通 helper・互換入口・サブコマンド入口の責務境界を確認したいとき。
+- cmoc の realization implementation 内で、CLI 入口、サブコマンド、共通 runtime helper、互換 import 境界のどこへ進むべきかを切り分けたいとき。
+- 公開 CLI コマンド構成、session・apply・review・init・indexing・TUI 起動などの上位実行フローから、対応する実装入口を探したいとき。
+- Codex 実行、preflight indexing、設定、git/worktree 操作、runtime path、結果型、エラー表示、ログ、session state など、複数サブコマンドで共有される runtime 処理を確認・変更したいとき。
+- 既存 import path を維持するための basic・config・ACP builder・oracle・runtime 互換層が、どの正本側実装または実体 module へ委譲しているかを確認したいとき。
+- realization implementation と oracle 側正本仕様・正本実装との境界を意識しながら、実装変更の読む先を選びたいとき。
 
 ## Do not read this when
-- 正本仕様断片、path keyword の概念定義、ACP builder の prompt・schema・model 設定、設定定義そのものを確認したいとき。その場合は oracle 側の対応する本文を読む。
-- realization test の期待値、fixture、テスト観点を調べたいとき。その場合は test 側へ進む。
-- 生成済みログ、永続状態ファイル、実行 report、作業用 worktree の実データを調査したいだけのとき。その場合は対象の保存先や読み取り側を直接確認する。
-- パッケージ metadata、補助 script、開発用 ancillary file だけを調べたいとき。この領域は product implementation の実装入口であり、周辺ファイルの案内ではない。
+- 正本仕様断片、path keyword の定義、oracle file と realization file の基本概念、INDEX.md の意味仕様などを確認したいときは、oracle 側の本文を読む。
+- realization test の期待値、fixture、テスト観点を調べたいときは、test 側を読む。
+- README、package metadata、補助 script、生成物、実行ログ、永続状態ファイルの実データなど、implementation 本体以外の補助情報を探しているときは、対応する保存先や設定ファイルへ進む。
+- ACP builder の prompt 本文、Structured Output schema、model 設定、設定定義、path model などの正本内容だけを確認したいときは、src 側の互換入口ではなく oracle 側の該当箇所を読む。
+- 特定サブコマンドや特定 runtime helper の責務がすでに分かっているときは、この階層全体ではなく、対応する下位ディレクトリまたは module を直接読む。
 
 ## hash
-- c7dc2c156b9c24d82539f1492e51e3a8e70b72a4f8b602199c93e63db6ef3986
+- 9e2058e9291f3c988267a9046542fb70ec6e069ff67502764145dc2673260ced
 
 # `test`
 
