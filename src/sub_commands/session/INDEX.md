@@ -58,21 +58,18 @@
 # `join.py`
 
 ## Summary
-- active session branch を session home branch に join する CLI 実行本体を扱う。事前条件確認、worktree 検証、home branch への切替、session branch の merge、状態更新、session branch 削除、結果出力までの制御フローを持つ。
-- merge conflict 発生時に conflict 対象を特定し、Codex CLI へ解決を依頼したうえで、conflict marker と unmerged path の残存確認、add、merge commit 完了までを担う。
-- conflict marker 検出 helper を含み、Git の conflict-marker-size が既定値より長い場合も考慮して marker block の残存を判定する。
+- active な session branch を session home branch へ統合する `session join` サブコマンドの実行本体を扱う。実行前の indexing preflight、CLI runtime 経由の起動、session/apply state と clean worktree の事前条件確認、home branch への切り替え、merge、state 更新、session branch 削除可否判定、利用者向け結果出力までをまとめて担う。
+- merge conflict 発生時に Codex CLI へ conflict 解消を依頼し、conflict marker 残存確認、対象ファイルの add、unmerged path 確認、merge commit 完了までを扱う補助処理も含む。
 
 ## Read this when
-- session join の実行条件、状態遷移、merge、branch 削除、利用者向け完了出力を確認または変更したいとき。
-- session join 中の merge conflict を Codex CLI に解決させる処理、conflict 対象の writable 扱い、解決後の検証と commit の流れを確認または変更したいとき。
-- session join 失敗時のエラー出力先、clean worktree 要求、cmoc ignore 確認、state ファイル更新のタイミングを調べたいとき。
-- conflict marker の残存判定ロジック、特に separator 行の長さに依存しない検出を確認または変更したいとき。
+- `session join` の実行条件、成功時の状態更新、branch 切り替え、merge、session branch 削除、警告出力の挙動を確認または変更したいとき。
+- session join 中の merge conflict を Codex CLI に解消させる流れ、conflict 対象ファイルの検出、writable path の渡し方、解消後の marker/unmerged 検査、commit 処理を確認または変更したいとき。
+- post-precondition failure を stderr 報告にする扱い、remote-tracking ref ではなく local session branch の到達可能性だけで削除安全性を判定する扱い、Git の conflict-marker-size を考慮した marker 検出を確認したいとき。
 
 ## Do not read this when
-- session join の CLI 引数定義や Typer command 登録だけを調べたいとき。
-- session state や apply state のデータ構造、state ファイルの読み書き形式そのものを調べたいとき。
-- Codex CLI に渡す conflict resolution prompt や parameter の内容だけを調べたいとき。
-- session start、session apply、その他の session subcommand の挙動を調べたいとき。
+- session join の正本仕様断片そのものを確認したいとき。この実装ではなく対応する oracle doc を読む。
+- session state の保存形式、branch から state を読み込む共通処理、repo/work root や git 実行 wrapper の詳細を調べたいとき。ここではそれらを呼び出す側の制御だけを扱う。
+- session join conflict resolution 用に Codex CLI へ渡す prompt/parameter の組み立て内容だけを変更したいとき。ここではその builder を呼び出すだけで、parameter の詳細責務は持たない。
 
 ## hash
-- 549706c8feee86e0bcdae890bf88cc01a5912b200ff9064570056f07767ca538
+- 3954acd06c08ebdafcb234136542fc75d68aadfe0f783b4ea157641247a6016c

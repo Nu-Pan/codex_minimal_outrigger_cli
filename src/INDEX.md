@@ -146,22 +146,21 @@
 # `sub_commands`
 
 ## Summary
-- `src/sub_commands` は cmoc の CLI サブコマンド実装を集めた領域で、初期化、indexing、TUI、session、apply、review oracle など、利用者操作から runtime・git・Codex 実行へ接続する入口を扱う。
-- 単独ファイルのサブコマンド実装と、session/apply/review 系の下位 package・補助モジュールが同居し、各コマンドの事前条件確認、状態遷移、branch/worktree 操作、report 出力、INDEX.md 反映などの読む先を選ぶための階層である。
-- CLI 全体の登録や共通 runtime ではなく、個別サブコマンドの実行順序と、その実行中に呼ばれる下位処理へ進むためのルーティング対象として位置づけられる。
+- CLI サブコマンドの実装入口を集める領域であり、初期化、INDEX maintenance、対話起動、session lifecycle、apply run lifecycle、review oracle 実行など、利用者操作を runtime 上の処理へ接続する責務を持つ。
+- 各実装は、CLI runtime への受け渡し、事前条件確認、git branch・worktree・state 操作、Codex subprocess 連携、結果出力や report 生成への導線を扱い、詳細処理は下位モジュールや共通 helper へ委譲する。
+- サブコマンド単位で読む先を選ぶための入口であり、apply・session・review のような複数ファイルに分かれる領域では lifecycle 全体のどの段階を調べるべきかを切り分ける起点になる。
 
 ## Read this when
-- cmoc の個別サブコマンドについて、実行入口、preflight、runtime への渡し方、利用者向け出力、git 操作や Codex 実行の呼び出し位置を探したいとき。
-- 初期化、indexing、TUI、session、apply、review oracle のどの実装領域へ進むべきかを、サブコマンド単位で切り分けたいとき。
-- session branch、apply branch/worktree、review worktree、INDEX.md 更新 commit、report 生成など、サブコマンド実行に伴う状態・branch・worktree 操作の入口を確認したいとき。
-- CLI から呼ばれる処理と、共通 runtime、config、path model、git wrapper、Codex parameter builder などの下位・周辺実装との接続点を追いたいとき。
+- CLI サブコマンドとして公開される処理の実行入口、runtime への渡し方、事前条件確認、利用者向け出力の実装箇所を探したいとき。
+- 初期化、INDEX maintenance、対話起動、session 操作、apply run、review oracle のどの実装領域へ進むべきかを選びたいとき。
+- branch、worktree、state、clean worktree 要求、ignore 保証、merge・cleanup・rollback、report 出力などがサブコマンド実行フロー上でどこから始まるかを確認したいとき。
+- サブコマンド固有の orchestration と、共通 runtime・git wrapper・設定・path 解決・report rendering・対象列挙などの下位責務との境界を切り分けたいとき。
 
 ## Do not read this when
-- Typer app へのコマンド登録、トップレベル CLI 構成、共通 runtime の一般規約だけを確認したいときは、CLI entrypoint や runtime 側を読む。
-- path token、state schema、config model、git wrapper、ignore 判定、Codex parameter builder、INDEX.md 生成ロジックそのものなど、サブコマンド固有でない共通処理の詳細を調べたいとき。
-- oracle 上の公開仕様や設計意図を確認したいときは、実装領域ではなく対応する oracle doc を読む。
-- テストや fixture の期待挙動を確認したいときは、実装入口ではなく対応する test 領域を読む。
-- 特定の下位責務がすでに分かっており、apply、session、review loop、review target 列挙、review report、review INDEX 反映などの個別モジュールへ直接進めるとき。
+- CLI 共通 runtime、path model、git wrapper、設定読み込み、state schema、ignore 判定など、特定サブコマンドに閉じない共通処理の詳細だけを調べたいとき。
+- 正本仕様断片としてサブコマンドの公開仕様や設計意図を確認したいとき。実装入口ではなく oracle 側を読むべき。
+- 対象の下位処理がすでに分かっており、apply の実行時補助、review の対象列挙・loop・report・INDEX 反映、session の個別 lifecycle 処理などへ直接進めるとき。
+- テスト、fixture、プロジェクト全体の CLI 登録、または INDEX.md 本文生成ロジックそのものを調べたいとき。
 
 ## hash
-- e24a19b5b3c3351c89551e389f66c2621def00dd229eec357ddd48b0c82623ff
+- 8b79fd34b3e6d57acb1cec7a0b15cdd7466e08516b245a9840e8f71cb8a82847

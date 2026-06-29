@@ -321,22 +321,21 @@
 # `test_session_cli.py`
 
 ## Summary
-- session の fork、join、abandon に関する CLI 外部挙動をまとめて検証する realization test。session branch と session state のライフサイクルを中心に、状態ファイル作成・更新、home branch への復帰、branch 削除、linked worktree 上での挙動、cleanup 失敗時の rollback、dirty worktree 拒否を扱う。
-- join 時の merge conflict 解決では、oracle file 競合に対する realization write profile、conflict marker 検出、削除競合の stage、session branch 削除失敗時の警告、想定内エラーと merge 後の想定外エラーの stdout/stderr 出力境界を検証する。
-- 16,000 文字を超えるが、session branch/state fixture を共有する session CLI 回帰として凝集させる意図を docstring で明示している。
+- session の fork、join、abandon に関する CLI 外部挙動を横断的に検証する realization test。session branch と session state のライフサイクルを中心に、状態ファイル作成・更新、home branch への復帰、session branch 削除、linked worktree 上の挙動、dirty worktree 拒否、エラー出力先、cleanup 失敗時の rollback を扱う。
+- session join の競合解決について、oracle file 衝突時に realization write profile と対象ファイル限定の書き込み権限が使われること、競合 marker 検出、削除競合の stage、session branch 削除不能時の警告を検証する。
 
 ## Read this when
-- session fork が session branch と state file をどう作るか、session-id collision や壊れた state file をどう拒否するかを確認・変更するとき。
-- session abandon が home branch へ戻り、session branch を削除し、state を abandoned にする挙動や、home branch 不在・cleanup 失敗時の出力と rollback を確認・変更するとき。
-- session join が session branch の変更を home branch へ取り込み、state を joined にし、linked worktree や branch 削除失敗をどう扱うかを確認・変更するとき。
-- session join の conflict resolution 呼び出し、oracle file 競合時の writable path 制限、conflict marker 残存判定、削除競合解決の stage を確認・変更するとき。
-- session 系 CLI のエラー報告が stdout と stderr のどちらへ出るべきか、未コミット差分拒否や merge 後エラーの外部出力を確認するとき。
+- session fork が session branch と session state をどう作るか、session-id 衝突時に既存 state を上書きしないこと、衝突 retry、壊れた state の拒否を確認したいとき。
+- session abandon が home branch へ戻り session branch を削除して state を abandoned にする挙動、home branch 不在時の失敗、cleanup 失敗時の state と branch の rollback を確認したいとき。
+- session join が session branch の変更を home branch に統合し state を joined にする挙動、linked worktree で root 側 branch を変えない挙動、session branch 削除の成功・失敗境界を確認したいとき。
+- session join の競合解決で Codex 呼び出しに渡す file access mode、extra writable paths、oracle conflict write 許可、競合 marker 残存時の失敗扱いを確認したいとき。
+- session CLI のエラー報告が stdout と stderr のどちらへ出るべきか、利用者向け完了レポートに何が残るべきかを検証したいとき。
 
 ## Do not read this when
-- session サブコマンド以外の CLI 外部挙動を確認したいだけのとき。
-- session の実装詳細、helper の内部設計、永続 state schema の正本仕様を調べたいときは、対応する実装または oracle 側の仕様を先に読む。
-- 単体 helper の小さな入力出力だけを確認したいとき。ただし conflict marker block 判定はこの対象内で直接検証している。
-- Codex 実行基盤、config 読み込み、runtime profile 全般を調べたいとき。ただし session join の oracle conflict 解決で渡される file access mode と writable roots の境界を確認する場合は読む。
+- session 以外のサブコマンド、設定読み込み、path model、ログ基盤そのものの実装詳細を調べたいだけのとき。
+- fork、join、abandon の内部 helper の細かな実装方針や git wrapper の一般挙動を調べたいときは、該当する実装側を先に読む。
+- oracle file の正本仕様や仕様文言を確認したいときは、テストではなく oracle 側の本文を読む。
+- 単体 helper の小さな入力変換だけを確認したいときは、この統合的な CLI 回帰テストより、対象 helper に直接対応するテストがあればそちらを読む。
 
 ## hash
-- f68fc13ab8ba6ee106cc677e28119beb59127eb54374c963df178c941bb5ea69
+- ca133ab73b65c550d66a92536fdad58bfcf7a0fe9adae35a9e1967e7ed989d67

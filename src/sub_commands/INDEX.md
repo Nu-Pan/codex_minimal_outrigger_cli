@@ -181,24 +181,24 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドの実装群で、session branch の作成、home branch への join、merge せず破棄する abandon など、session のライフサイクル操作を扱う。
-- CLI runtime から呼ばれる各操作の事前条件確認、git branch 操作、session state file 更新、利用者向け出力、失敗時の復旧処理へ進むための入口となる。
-- merge conflict 解決を Codex CLI に依頼する join 固有の制御や、timestamp による session-id 生成、cleanup 失敗時 rollback など、個別操作ごとの詳細は下位モジュールに分かれている。
+- session 系サブコマンドの実装群を収める領域。active session の破棄、通常 branch からの session 開始、home branch への統合など、session lifecycle に関わる CLI 本体処理への入口になる。
+- 各サブコマンド実装は、CLI runtime 経由の起動、事前条件確認、git branch 操作、session state 更新、利用者向け結果出力を扱い、必要に応じて失敗時 rollback や merge conflict 解消フローも担う。
+- パッケージ自体は最小限の境界を示すだけで、具体的な挙動は個別のサブコマンド実装に分かれている。
 
 ## Read this when
-- session 系サブコマンドのうち、どの操作の実装を読むべきかを選びたいとき。
-- active session の作成、join、破棄に関する実行条件、状態遷移、branch 操作、state file 更新、利用者向け出力の実装箇所を探したいとき。
-- session branch と home branch の関係、clean worktree 要求、managed branch 禁止、既存 active session 検出、session-id 衝突回避など、session 操作に共通または近接する制御を調べ始めるとき。
-- join 時の merge conflict 解決、abandon 時の cleanup 失敗 rollback、fork 時の state file 作成など、session ライフサイクル上の個別ケースへ読む先を振り分けたいとき。
+- session 系サブコマンドのうち、作成・統合・破棄のどの実装へ進むべきかを選びたいとき。
+- session branch と home branch の関係、active session の状態遷移、session state file 更新、clean worktree 要求など、session 操作の入口となる実装を探したいとき。
+- session 操作が git branch の作成・切り替え・merge・削除や、失敗時の状態復旧をどのサブコマンドで扱っているかを切り分けたいとき。
+- session join 中の merge conflict 解消や、Codex CLI による conflict resolution 連携の実装箇所を探したいとき。
 
 ## Do not read this when
-- CLI 全体のサブコマンド登録、Typer アプリ構成、共通 runtime の仕組みだけを調べたいとき。
-- session state のデータ構造、永続化形式、path model、git 実行 wrapper、worktree clean 判定、branch 判定 helper の実装そのものを調べたいとき。
-- session 以外のサブコマンドや、apply state など別領域の状態操作を調べたいとき。
-- 個別の session 操作が既に特定できており、その処理詳細だけを読むべきときは、対応する実装モジュールへ直接進む。
+- session state のデータ構造、永続化 schema、branch 判定 helper、git 実行 wrapper、worktree clean 判定そのものを調べたいとき。これらは共通 helper や状態管理側を読む。
+- CLI 全体のサブコマンド登録、Typer アプリ構成、runtime 共通処理だけを確認したいとき。
+- session 以外のサブコマンド、または apply など別領域の状態操作を調べたいとき。
+- session 系サブコマンドの正本仕様断片そのものを確認したいとき。実装領域ではなく対応する oracle doc を読む。
 
 ## hash
-- 54af30b1ac4fd33d09edf5f94335851f9563968f677a02534c40f54facc9bff3
+- d3c422529520adf8744c5d2dd934ef794dc29ad053c4364810894109e3fd247d
 
 # `tui.py`
 
