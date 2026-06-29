@@ -81,6 +81,21 @@ def _read_required_output_json(path: Path) -> Any:
         raise ValueError(f"output file is not valid JSON: {exc}") from exc
 
 
+def _base_exec_argv(profile_name: str, codex_cwd: Path) -> list[str]:
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # cmoc may run Codex from linked worktrees or generated roots; repo
+    # validation belongs to cmoc's own preflight, not to Codex CLI startup.
+    return [
+        "codex",
+        "exec",
+        "--skip-git-repo-check",
+        "--profile",
+        profile_name,
+        "--cd",
+        str(codex_cwd),
+    ]
+
+
 def _next_codex_log_timestamp() -> str:
     """壁時計後退時も同一プロセス内の Codex exec log 名を単調増加させる。"""
     global _LAST_CODEX_LOG_TIMESTAMP
@@ -172,17 +187,8 @@ def run_codex_exec(
 
     def build_argv(output_path: Path, resume_token: str | None) -> list[str]:
         """schema と resume 状態を反映した `codex exec` の argv を組み立てる。"""
-        run_argv = [
-            "codex",
-            "exec",
-            "--profile",
-            profile_name,
-            "--cd",
-            str(codex_cwd),
-            "--json",
-            "--output-last-message",
-            str(output_path),
-        ]
+        run_argv = _base_exec_argv(profile_name, codex_cwd)
+        run_argv.extend(["--json", "--output-last-message", str(output_path)])
         if schema_path is not None:
             run_argv.extend(["--output-schema", str(schema_path)])
         if resume_token:
@@ -407,18 +413,15 @@ def run_codex_exec(
                             probe_output_path,
                             probe_call_path,
                         ) = new_log_paths()
-                        probe_argv = [
-                            "codex",
-                            "exec",
-                            "--profile",
-                            profile_name,
-                            "--cd",
-                            str(codex_cwd),
-                            "--json",
-                            "--output-last-message",
-                            str(probe_output_path),
-                            "-",
-                        ]
+                        probe_argv = _base_exec_argv(profile_name, codex_cwd)
+                        probe_argv.extend(
+                            [
+                                "--json",
+                                "--output-last-message",
+                                str(probe_output_path),
+                                "-",
+                            ]
+                        )
                         _write_prompt_log(
                             probe_prompt_path, quota_probe_parameter.prompt
                         )

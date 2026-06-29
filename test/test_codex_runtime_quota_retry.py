@@ -111,8 +111,8 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert argv_calls[0][-1] == "-"
     assert all(record["codex_home"] == str(codex_home) for record in call_records)
     assert call_records[1]["stdin"] == probe_prompt
-    assert argv_calls[1][:2] == ["exec", "--profile"]
-    assert argv_calls[1][2].startswith("cmoc_")
+    assert argv_calls[1][:3] == ["exec", "--skip-git-repo-check", "--profile"]
+    assert argv_calls[1][argv_calls[1].index("--profile") + 1].startswith("cmoc_")
     assert "--json" in argv_calls[1]
     assert "--output-last-message" in argv_calls[1]
     assert argv_calls[1][-1] == "-"
@@ -139,7 +139,10 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     )
     assert len(probe_logs) == 1
     assert probe_logs[0]["argv"][1:] == argv_calls[1]
-    assert probe_logs[0]["profile_name"] == argv_calls[1][2]
+    assert (
+        probe_logs[0]["profile_name"]
+        == argv_calls[1][argv_calls[1].index("--profile") + 1]
+    )
     assert Path(probe_logs[0]["stdout_log_path"]).read_text().strip() == (
         '{"type": "turn.completed"}'
     )

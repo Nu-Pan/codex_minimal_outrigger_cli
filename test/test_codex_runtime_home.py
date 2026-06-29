@@ -55,7 +55,10 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
 
     recorded = json.loads(recorder.read_text())
     assert recorded["codex_home"] == str(codex_home)
-    assert recorded["args"][2] == result.profile_name
+    assert (
+        recorded["args"][recorded["args"].index("--profile") + 1]
+        == result.profile_name
+    )
     assert result.codex_home == codex_home
     assert result.profile_path.parent == codex_home
 

@@ -120,8 +120,9 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
     )
 
     record = json.loads(recorder.read_text())
-    assert record["args"][:6] == [
+    assert record["args"][:7] == [
         "exec",
+        "--skip-git-repo-check",
         "--profile",
         result.profile_name,
         "--cd",
