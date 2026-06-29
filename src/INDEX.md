@@ -63,26 +63,25 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper 群をまとめる実装領域。Codex CLI 呼び出し、実行前 indexing preflight、CLI サブコマンド共通ライフサイクル、設定、content hash、エラー表示、git 操作、logging、path 解決、結果型、session state 永続化など、複数の上位機能から共有される実行時基盤を扱う。
-- 上位コードから利用する公開 import 入口、互換 import 入口、責務別 helper 実装が同じ階層に置かれており、cmoc の実行制御や永続状態、外部コマンド境界に関する共通処理へ進むための入口になる。
-- INDEX.md 生成 preflight とその実装も含み、ルーティング文書の更新対象列挙、既存エントリー検証、本文抽出、Structured Output 検証、Markdown 描画、更新 commit までの実装を扱う。
+- cmoc の共有 runtime helper 群をまとめる実装領域。Codex 呼び出し、indexing preflight、CLI サブコマンド共通処理、設定、内容 hash、エラー表示、git 操作、実行ログ、path 解決、結果型、session state など、複数の上位機能から使われる共通境界を扱う。
+- 個別 helper の本体だけでなく、既存 import path を維持する facade や、実行前フック、外部コマンド結果、永続状態、利用者向けエラー化といった横断的な runtime 契約への入口になる。
 
 ## Read this when
-- Codex CLI の exec/TUI 起動、profile・sandbox・CODEX_HOME・Structured Output schema・retry・quota/capacity 制御・call log など、Codex 呼び出しの runtime 境界を調べたいとき。
-- CLI サブコマンド共通の実行順序、標準出力、終了コード化、例外時エラー表示、サブコマンドログ、current logger、step timing、quota 待機集計を確認または変更したいとき。
-- cmoc の設定 JSON、内容 hash 保存、binary 判定、共通エラー表示、git repository/worktree 操作、path 解決、timestamp、memo 判定、外部コマンド結果型、Codex 実行結果型、session state 永続化を扱う共通実装を探すとき。
-- Codex 実行前に INDEX.md 更新を走らせる preflight、indexing 対象の列挙・除外条件、既存エントリー再利用条件、Structured Output から Markdown への描画、更新 commit の挙動を調べたいとき。
-- 複数の runtime helper を横断して使う上位実装が、どの共通 API を import できるか、または互換 import path がどの責務別実装につながるか確認したいとき。
+- Codex CLI の exec/TUI 起動、profile・sandbox・CODEX_HOME・Structured Output・quota/capacity retry・call log など、Codex 実行境界の挙動を確認または変更したいとき。
+- CLI サブコマンド共通の実行ライフサイクル、標準出力、終了コード、例外表示、サブコマンドログ、current logger の扱いを追いたいとき。
+- INDEX.md 更新 preflight、対象列挙、既存エントリー検証、ハッシュによる鮮度判定、Structured Output から Markdown への描画、更新 commit の流れを調べたいとき。
+- 設定ファイルの JSON 永続化、内容 hash 保存、binary 判定、共通エラー表示、git repository/worktree 操作、runtime path 解決、実行結果モデル、session state 永続化など、複数機能で共有される runtime 基盤を扱うとき。
+- 上位コードが共通 runtime helper をどの集約入口から import できるか、または互換 import path がどの責務別実装へ接続されるか確認したいとき。
 
 ## Do not read this when
-- 個別 CLI サブコマンドの引数定義、command 登録、利用者向け業務フロー、サブコマンド固有の状態更新や出力内容だけを調べたいときは、呼び出し側の CLI 実装へ進む。
-- 正本仕様断片、path model、INDEX.md 仕様、session/apply の仕様意図、Codex 実行ルールなど、人間管理の仕様を確認したいだけのときは oracle 側の該当本文へ進む。
-- 設定モデル、Agent 呼び出しパラメータ、FileAccessMode、出力 schema などの型定義そのものを確認したいときは、それらを定義するモデル層へ進む。
-- 生成済み log の解析、個別 report の読み取り、利用先での値の表示や保存など、共通 runtime helper が返した値をどう使うかだけを知りたいときは、その利用側の実装へ進む。
-- 特定 helper の詳細な挙動だけを変更したい場合は、この階層全体ではなく、Codex 実行、設定、content、error、git、logging、path、result、state、indexing など責務に対応する本文へ直接進む。
+- 個別 CLI サブコマンドの引数定義、command 登録、業務フロー、利用者向けオプションだけを調べたいときは、CLI 層や該当サブコマンドの実装へ進む。
+- cmoc の正本仕様断片、path model、Codex 実行ルール、INDEX.md 仕様、session state 仕様意図そのものを確認したいときは、oracle 側の文書や実装を読む。
+- prompt 文面、エントリー生成 prompt、個別の出力 schema、レビューや apply/session など上位 workflow 固有の判断を変更したいだけのときは、その呼び出し側を読む。
+- ログや状態に保存された値の利用先、個別コマンドでの設定値の使い方、生成済みログの解析処理など、共通 runtime 境界より上位の利用文脈を知りたいときは、該当する上位 module を読む。
+- 単にパッケージ境界を確認するだけなら入口の短い初期化本文で足り、個別 helper の挙動を調べる場合はこの領域内の責務別実装へ直接進む。
 
 ## hash
-- 7c2cfe2b77ae78f94e30a32ca6bff14e44fe31c746a4fa977e2d38005abfc353
+- cf0a1b1949b87b0d790bd35b19759d526966d310a258486348ec4e0ada034e13
 
 # `config`
 
