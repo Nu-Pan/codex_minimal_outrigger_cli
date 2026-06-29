@@ -19,22 +19,21 @@
 # `builder`
 
 ## Summary
-- ACP builder の realization 側互換入口を束ねる領域。正本側 builder 実装への再公開・委譲、既存 import 経路の維持、局所的な adapter や prompt 表記補正を扱い、実処理本体は多くの場合正本側または下位領域に置かれる。
-- apply fork、review oracle、session join、TUI 起動、indexing、quota availability probe など、agent call parameter 構築に関わる公開参照面と正本側実装との接続関係を確認するための入口になる。
+- AgentCallParameter builder 群の realization 側入口を束ねる領域。多くは正本側実装への委譲・再公開・互換 import path 維持を担い、既存参照を壊さずに正本側 builder を利用できる境界として位置づく。
+- apply fork、review、session、TUI、indexing、quota probe など用途別の builder 入口へ進むための上位ルーティング対象。prompt や parameter の正本仕様そのものではなく、realization 側公開面と正本側実装の接続関係を切り分けるために読む。
+- 一部には正本側 builder が未整備な用途の暫定 adapter や、正本側 builder の生成結果に対する局所的な補正 wrapper が含まれるため、互換層を残す理由、削除条件、委譲先との対応を確認する入口になる。
 
 ## Read this when
-- ACP builder に関する既存の公開 import 経路が、正本側 builder 実装または下位の realization 側 adapter へどう接続されているかを確認したいとき。
-- 正本側へ実装を集約しつつ、利用者向けまたは realization 側に残る古い参照を壊さないための互換層を調べたいとき。
-- apply fork、review oracle、TUI、session、indexing、quota probe のどの builder 領域へ進むべきかを切り分けたいとき。
-- 互換入口や暫定 adapter を残す理由、削除条件、正本側 builder への委譲関係を確認したいとき。
-- oracle 側戻り値を realization 側の AgentCallParameter として扱う適合処理、または生成済み prompt への限定的な補正の所在を探したいとき。
+- ACP builder の realization 側公開入口が、正本側 builder や既存 import path とどう対応しているかを用途別に確認したいとき。
+- apply fork、review、session、TUI、indexing、quota probe などの agent call parameter 構築入口を探し、どの下位領域へ進むべきか判断したいとき。
+- 互換再公開、薄い委譲 wrapper、暫定 adapter、prompt 表記補正など、builder 周辺の realization 側境界を残す理由や削除条件を確認したいとき。
+- 公開済み参照経路の維持・廃止、正本側 import path への移行、残存参照の整理に関わる変更を検討しているとき。
 
 ## Do not read this when
-- builder の正本仕様、prompt 内容、AgentCallParameter の組み立て規則そのものを確認したいとき。正本側の対応する実装や仕様断片を読む。
-- ACP 型、FileAccessMode、repo root 解決、oracle src import path などの共通定義や検証規則を確認したいとき。それぞれの定義元を読む。
-- CLI 制御、fork 適用処理、git 操作、quota 待機の状態機械、TUI 画面処理など、生成済み parameter の利用側挙動を追いたいとき。
-- 新しい builder ロジック、判定処理、探索処理、UI 処理を実装したいとき。互換再公開や薄い adapter ではなく、実体を持つ実装先を読む。
-- 特定領域の具体的な関数・クラス・入出力だけを調べたいとき。まず該当する下位領域または正本側本文へ直接進む。
+- AgentCallParameter の prompt 内容、出力条件、型定義、正本仕様そのものを確認したいとき。正本側の対応する仕様断片または実装を読む。
+- 各用途の処理本体、CLI 制御、git 操作、TUI 画面処理、session join の衝突解決、indexing の生成・探索処理などを調べたいとき。ここは主に builder 入口と互換境界を扱う。
+- 新しい機能の実装場所やテスト対象を探しており、既存 builder の公開面・委譲関係・互換層が関係しないとき。より直接の実装領域またはテスト領域へ進む。
+- 生成済み parameter の利用側挙動だけを追う作業で、builder の import 経路、正本側への委譲、暫定 adapter、局所補正の有無が判断材料にならないとき。
 
 ## hash
-- 509972bda8d4182bf1dcebeccf844685b6cd780d372d62eb92eb21cd66e47fb8
+- 241bdd22c5749dc57b2371dcb147636186cf73951a4aaa9628dd641c17c8afb2

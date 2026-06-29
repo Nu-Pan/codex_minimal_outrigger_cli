@@ -113,24 +113,24 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の共通 runtime 契約を横断的に固定する realization test。root/worktree 解決、config 既定値と検証、CmocError の Markdown 表示、CLI error の stdout 化、subcommand log、state branch 名、FileAccessMode から sandbox/profile への変換、binary 判定など、個別サブコマンドより下の基礎挙動をまとめて検証する。
-- 16,000 文字を超えるが、共通 fixture と root 状態の読み取り文脈を分散させないため、基礎 runtime 回帰として一箇所に保つ意図を持つ。
+- cmoc の共通 runtime 契約を横断して固定する realization test。root placeholder と worktree 境界、config 既定値と検証、CmocError の Markdown 表示、CLI error の stdout 化、subcommand log、`.cmoc` ignore、FileAccessMode から sandbox/profile への変換、binary 判定、session/apply branch state 読み取り境界をまとめて検証する。
+- 個別サブコマンド固有の挙動ではなく、実行前提として同時に崩れやすい基礎 runtime の回帰確認を一箇所に集めている。
 
 ## Read this when
-- cmoc の runtime 基盤に関わる変更で、root 解決、linked worktree、run/work root、worktree 作成・削除の安全条件を確認したいとき。
-- config の既定値、codex model class、reasoning effort、設定値検証、FileAccessMode の永続化値や sandbox/profile 変換を変更するとき。
-- CmocError、CLI 引数解析 error、stdout/stderr の使い分け、Markdown error report、起動 wrapper の call stack 表示を変更するとき。
-- subcommand log の生成条件、timestamp 衝突時の扱い、preflight 失敗時の副作用抑制、shell completion probe の副作用抑制を確認するとき。
-- session/apply branch 名から state を読む処理、branch shape の検証、binary 判定、`.cmoc` ignore pattern の維持に関わる回帰を確認するとき。
+- root 解決、`<cmoc-root>`/run root/work root、linked worktree、managed worktree path の安全性に関する runtime 挙動を確認・変更する時。
+- `CmocConfig`、codex model class、reasoning effort、config 読み込みエラーの扱いを確認・変更する時。
+- `CmocError`、CLI 引数解析 error、preflight 失敗、起動 wrapper の error report 表示や stdout/stderr 境界を確認・変更する時。
+- subcommand log の作成条件、timestamp 衝突時の log file 名、pre-log check 失敗時の副作用抑制を確認・変更する時。
+- FileAccessMode の永続化値、Codex sandbox mode、Codex cwd、profile の writable roots、追加書き込み許可 path の制限を確認・変更する時。
+- `.cmoc` の `.gitignore` 追加、binary 判定の読み取り範囲、session/apply branch 名からの state 解決を確認・変更する時。
 
 ## Do not read this when
-- 個別サブコマンド固有の入出力、ユーザーフロー、詳細な command 実装だけを調べたいとき。
-- oracle file の正本仕様そのものを確認したいとき。
-- runtime 基盤ではなく、特定 module の内部 helper 実装や純粋な単体ロジックだけを変更し、その外部契約がこの基礎 runtime 境界に触れないとき。
-- テスト支援 fixture や一時 repo 作成 helper の詳細だけを確認したいとき。
+- 特定のサブコマンドの業務ロジック、入出力 schema、個別 workflow の詳細だけを調べたい時は、そのサブコマンドや機能に対応するテストを先に読む。
+- oracle 正本仕様断片の内容や文書構成を確認したい時は、oracle 側の本文を読む。
+- 単体 helper の内部実装だけを変更し、root/worktree/config/error/profile/log/state などの共通 runtime 契約に影響しないことが明確な時は、該当する実装ファイルまたはより狭いテストを読む。
 
 ## hash
-- 4a2ea0bded984eb01b13d7397b4c7b004f63bb46416074322db7532c1f9b6056
+- 6f491c918974572010c987f4877164720a9be15f3ff2ac5996a768ca4e5181a0
 
 # `test_cli_init_tui.py`
 

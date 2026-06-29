@@ -18,22 +18,21 @@
 # `_common.py`
 
 ## Summary
-- apply fork ACP builder が oracle 側の builder 実装を呼び出すための共有補助を置く。oracle パッケージが通常 import できない実行配置でも、repo root 由来の候補から oracle src を import path に追加する境界処理を担う。
-- runtime ACP 型は basic 側の再エクスポートを使う前提で、oracle 側との parameter 適合処理をこの層に集約する。
+- apply fork の ACP builder 群で共通して使う、リポジトリルート解決、oracle 側 ACP builder パッケージの import 経路補正、ACP パラメータ型の受け渡しを担う補助モジュール。
+- oracle 側実装が実行時に import 可能であることと、実装側の ACP 型が oracle 側の実行時型を再公開している前提を、この領域の builder から共有する入口として位置づける。
 
 ## Read this when
-- apply fork ACP builder から oracle 側 builder モジュールを import できない問題を調べるとき。
-- repo root から oracle src を解決して sys.path に追加する fallback の候補順や失敗時挙動を確認・変更するとき。
-- apply fork ACP builder と oracle 側 runtime ACP 型の受け渡し境界を確認するとき。
+- apply fork の builder 実装で、リポジトリルートをどう解決して oracle 側モジュールを読み込める状態にしているか確認したいとき。
+- packaged layout と開発ツリー layout の違いにより、oracle 側 ACP builder の import が失敗する問題を調査するとき。
+- apply fork の builder が受け取る ACP パラメータを oracle 側 API へ渡す際の型境界や変換有無を確認するとき。
 
 ## Do not read this when
-- 個別の apply fork ACP builder がどの引数やプロンプトを組み立てるかを知りたいとき。
-- repo root 解決そのものの仕様や実装を確認したいとき。
-- ACP 型の定義、フィールド、検証規則を確認したいとき。
-- oracle 側 builder の本体処理を確認したいとき。
+- 個別の apply fork 用 ACP の組み立て内容、プロンプト、引数構造を確認したいだけのとき。
+- oracle 側の ACP builder の正本仕様や実装内容そのものを確認したいとき。
+- リポジトリルート解決や oracle 側 import 経路補正と関係しない、他領域の builder や CLI 挙動を調査しているとき。
 
 ## hash
-- 1ae90ad5e1cbed937a2685155956da4d46c10f73e8105b63a738be42eda4009e
+- 8f2faead7113a3f665f4405f064544614a0165f567433fa39fc0fe8e779dfbd1
 
 # `change_summary.py`
 

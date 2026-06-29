@@ -17,19 +17,18 @@
 # `fork`
 
 ## Summary
-- apply fork 向け agent call parameter builder の realization 側実装をまとめる領域。oracle 側 builder への委譲入口と、その委譲に必要な oracle src import 準備、repo root 由来の fallback、oracle parameter から realization 側型への適合処理を扱う。
-- 変更要約、ファイル単位所見列挙、所見適用など、apply fork の各 agent 呼び出し用 parameter 構築は個別 builder が担い、共通の import・型変換境界は共有 helper に集約されている。
+- `cmoc apply fork` で使う agent call parameter builder 群の realization 側パッケージ。変更要約、ファイル単位所見列挙、所見適用の各 parameter 構築入口と、それらが共有する repo root 解決、oracle 側実装の import 準備、oracle parameter の realization 側型への適合処理を収める。
+- 各 builder は prompt や parameter 内容の正本を自前で定義せず、対応する oracle 側 builder へ委譲する薄い層として位置づけられる。
 
 ## Read this when
-- apply fork の各 agent 呼び出しで、realization 側が oracle 側 builder をどの入口から呼び出しているか確認したいとき。
-- oracle 側 builder の戻り値を realization 側の agent call parameter として扱う変換境界を調べたいとき。
-- oracle パッケージを通常 import できない配置で、repo root 由来の候補から oracle src を import path に追加する fallback を確認したいとき。
-- 変更要約、ファイル単位所見列挙、所見適用のどの parameter builder を読むべきか、この領域内で入口を選びたいとき。
+- `cmoc apply fork` の agent 呼び出し用 parameter が realization 側からどの入口で構築されるかを探すとき。
+- 変更要約、ファイル単位の所見列挙、所見適用のいずれかについて、realization 側 builder が oracle 側 builder を呼び出して戻り値を扱う経路を確認したいとき。
+- apply fork 向け builder 全体で共有される repo root 解決、oracle 側 import 経路補正、ACP 型境界の扱いを確認したいとき。
 
 ## Do not read this when
-- apply fork のプロンプト内容、出力条件、agent call parameter の正本仕様そのものを確認したいとき。この領域は realization 側の薄い委譲実装なので、対応する oracle 側の本文を読む。
-- apply fork 全体の CLI 制御、fork 適用処理、git 操作、作業レポート生成フローを調べたいとき。この領域は agent call parameter 構築の入口と共通境界に限られる。
-- repo root 解決そのものの仕様、ACP 型の定義・フィールド・検証規則、または oracle 側 builder 本体の詳細を確認したいとき。それぞれの定義元や委譲先を読む。
+- agent call parameter の prompt 内容、出力条件、正本仕様そのものを確認したいとき。この領域は委譲実装なので、対応する oracle 側の本文を読む。
+- `cmoc apply fork` コマンド全体の CLI 制御、fork 適用処理、git 操作、作業レポート生成フローを調べたいとき。この領域は agent call parameter 構築入口に限られる。
+- apply fork 以外の ACP builder、CLI 挙動、path model、ACP 型定義そのものを調べたいとき。より直接の実装または正本仕様へ進む。
 
 ## hash
-- 776bf75f4f272d2e5c153e34de033989cc8d5e54f37f42e94f91dd7b307650c4
+- b61afcbe59a8921889d4655a9d05a907c43f8ec6b2d43238acc56489c3b9cb2d

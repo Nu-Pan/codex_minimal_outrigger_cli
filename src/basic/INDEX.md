@@ -39,22 +39,21 @@
 # `path_model.py`
 
 ## Summary
-- 正本側の path model 実装を realization 側の公開面として再公開する互換モジュール。
-- root placeholder と `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` 系の path 解決 API を、既存の `basic.path_model` 参照から使い続けられるようにする入口。
-- 正本実装を複製せず、利用者向け公開面と realization 側から旧参照が消えるまで残す互換層として位置づけられている。
+- 公開 path model の実体を持たず、正本側の path model API を realization 側の既存公開面として再公開する互換モジュール。
+- 既存利用者が参照する path placeholder と path 解決関数を、重複実装せず正本側実装へ委譲する入口として位置づけられている。
 
 ## Read this when
-- 既存コードや利用者が参照している path model API の import 経路を確認したいとき。
-- `basic.path_model` 参照を維持する理由、または削除できる条件を確認したいとき。
-- root placeholder や各 root path 解決関数が realization 側でどの名前として公開されているかを確認したいとき。
+- realization 側で公開されている path model API の import 経路や再公開内容を確認したいとき。
+- 正本側の path model 実装と既存の公開参照とのつながりを調べたいとき。
+- 互換用の再公開を残す理由、または削除できる条件を確認したいとき。
 
 ## Do not read this when
-- path 解決ロジック本体の挙動や仕様を確認したいとき。この対象は再公開だけを担うため、正本側の path model 実装を読む。
-- 新しい path 変換処理や root 判定処理を実装したいとき。この対象にロジックを追加するのではなく、責務を持つ実装側を確認する。
-- `basic.path_model` 互換参照と関係しない一般的な path 操作、ファイル探索、CLI 入出力を調べたいとき。
+- path placeholder や path 解決処理そのものの仕様・実装詳細を確認したいとき。その場合は再公開先の正本側実装を読む。
+- path model 以外の basic 領域の機能や責務を調べたいとき。
+- 新しい path 変換仕様を検討しているだけで、既存公開参照の互換性に関わらないとき。
 
 ## hash
-- 336e699ef40db701f66045cc46b388a698a71dc21d06348a69d87ffaf77d4458
+- 3ef925dfd0d7897d6364bb284d1591c7c6844ad7ea64df15894d9b69ecbca164
 
 # `struct_doc.py`
 
