@@ -480,21 +480,21 @@ def test_render_index_entry_rejects_missing_or_non_string_semantic_fields(
 
 
 @pytest.mark.parametrize(
-    ("key", "value", "expected"),
+    ("key", "value"),
     [
-        ("summary", [], "## Summary\n\n## Read this when"),
-        ("summary", [""], "## Summary\n- \n"),
-        ("summary", ["   "], "## Summary\n-    \n"),
-        ("summary", ["line1\nline2"], "## Summary\n- line1\nline2\n"),
-        ("summary", ["line1\rline2"], "## Summary\n- line1\rline2\n"),
-        ("read_this_when", [], "## Read this when\n\n## Do not read this when"),
-        ("read_this_when", [""], "## Read this when\n- \n"),
-        ("do_not_read_this_when", [], "## Do not read this when\n\n## hash"),
-        ("do_not_read_this_when", ["\t"], "## Do not read this when\n- \t\n"),
+        ("summary", []),
+        ("summary", [""]),
+        ("summary", ["   "]),
+        ("summary", ["line1\nline2"]),
+        ("summary", ["line1\rline2"]),
+        ("read_this_when", []),
+        ("read_this_when", [""]),
+        ("do_not_read_this_when", []),
+        ("do_not_read_this_when", ["\t"]),
     ],
 )
-def test_render_index_entry_accepts_schema_valid_semantic_lists(
-    tmp_path: Path, key: str, value: list[str], expected: str
+def test_render_index_entry_rejects_empty_or_multiline_semantic_lists(
+    tmp_path: Path, key: str, value: list[str]
 ) -> None:
     root = make_repo(tmp_path)
     readme = root / "README.md"
@@ -505,10 +505,8 @@ def test_render_index_entry_accepts_schema_valid_semantic_lists(
     }
     entry[key] = value
 
-    rendered = indexing_common.render_index_entry(root, readme, entry)
-
-    assert rendered.startswith("# `README.md`\n")
-    assert expected in rendered
+    with pytest.raises(cmoc_runtime.CmocError):
+        indexing_common.render_index_entry(root, readme, entry)
 
 
 def test_update_indexes_generates_sibling_entries_in_parallel(
