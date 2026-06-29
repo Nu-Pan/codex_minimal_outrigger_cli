@@ -55,21 +55,21 @@
 # `merge_finding.py`
 
 ## Summary
-- review oracle の finding merge 呼び出し用 AgentCallParameter を、正本側の生成処理に委譲して作る realization 側の薄いアダプタ。
-- 生成された prompt 内の oracle root プレースホルダー定義だけを最小補正し、正本側の不具合が解消されるまでの互換処理を担う。
+- review oracle の finding 統合用 agent call parameter を、正本側 builder に委譲して生成する realization 実装。
+- 正本側 prompt に含まれる oracle root placeholder 表記の既知不整合だけを、生成後に最小補正して返す薄い互換 wrapper。
 
 ## Read this when
-- review oracle の finding merge 呼び出しで渡される AgentCallParameter の生成経路を確認したいとき。
-- known findings を入力にした prompt が、実行前にどのように補正されるかを確認したいとき。
-- oracle root プレースホルダー表記の一時的な互換補正や、その削除条件を調べたいとき。
+- review oracle の finding 統合で使う agent call parameter の生成経路を確認・変更する場合。
+- 正本側 builder から返る parameter を維持したまま prompt だけを補正する処理の意図や削除条件を確認する場合。
+- oracle root placeholder 表記の補正が、known findings 入力や structured output schema path に影響しないことを確認する場合。
 
 ## Do not read this when
-- finding merge の本来の prompt 内容や structured output schema の正本定義を確認したいとき。
-- review oracle 全体の設計意図、検出対象、出力仕様を確認したいとき。
-- AgentCallParameter 型そのものの構造や共通仕様を調べたいとき。
+- 正本仕様断片そのものや正本側 builder の本来の prompt 生成仕様を確認したい場合。
+- review oracle 以外の builder、または finding 統合以外の review flow を調べたい場合。
+- 単に生成済み parameter の利用側挙動を追うだけで、prompt 補正 wrapper の有無が関係しない場合。
 
 ## hash
-- 391548e4fea16d20a1993058722af75334c480677e68a5911e83052504043623
+- 8addfc9fd89fb333e4f2f13cb17e2712431e694f2f070db859eb979463230303
 
 # `validate_finding_advocate.py`
 

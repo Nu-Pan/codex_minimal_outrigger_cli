@@ -18,21 +18,21 @@
 # `oracle`
 
 ## Summary
-- review oracle 周辺で、正本側実装への互換 import 経路と、一部の AgentCallParameter 生成結果に対する最小限の prompt 補正をまとめる realization 側の入口。
-- 多くの対象は実体ロジックを持たず、旧来の呼び出し元を正本側経路へ移行するまで残す再公開層として機能する。
-- finding merge と finding advocate validation では、正本側 builder の出力を保持しつつ、oracle root 表記に関する既知の静的 typo だけを局所補正する wrapper を持つ。
+- review oracle 用 builder 群のうち、旧来の実装側 import 経路を維持する互換層と、正本側 builder の生成結果に既知の prompt 表記補正をかける薄い wrapper を置く領域。
+- finding の列挙・判定・challenger 検証は実装本体を持たず正本側へ再公開し、finding 統合と advocate 検証は正本側 builder へ委譲したうえで oracle root placeholder 表記の局所補正だけを担う。
+- review oracle の実処理・仕様本体を読む入口ではなく、realization 側に残る互換 import path と一時的な prompt 補正経路を確認するための入口である。
 
 ## Read this when
-- review oracle の旧来 import 経路がなぜ残っているか、また削除できる条件を確認したいとき。
-- review finding enumeration、judgment、challenger validation が realization 側に実装本体を持つのか、正本側へ委譲しているだけなのかを切り分けたいとき。
-- review oracle の finding merge または finding advocate validation で渡される AgentCallParameter の生成経路を確認したいとき。
-- 生成 prompt 内の oracle root 表記に対する一時的な互換補正がどこで行われ、どの動的入力を変更しない前提なのかを確認したいとき。
+- review oracle builder 周辺で、古い realization 側 import 経路がまだ残っている理由、削除条件、正本側実装への委譲関係を確認したいとき。
+- finding 統合や advocate 検証の AgentCallParameter 生成で、正本側 builder の返す parameter を保ったまま prompt 内の oracle root placeholder 表記だけを補正する wrapper の存在を調べたいとき。
+- 同名機能の実装がこの階層にあるように見えるが、実体が正本側にあるのか、この階層で補正しているのかを切り分けたいとき。
+- 互換 module を削除できるか、または呼び出し元を canonical oracle path へ移行する必要があるかを判断したいとき。
 
 ## Do not read this when
-- review oracle の検出仕様、判定仕様、prompt 正本、structured output schema の本来の定義を確認したいときは、正本側の対応する oracle 実装や仕様文書を読む。
-- 新しい finding の列挙、判定、検証ロジックを追加・変更したいときは、この互換層ではなく委譲先の実装本体を読む。
-- AgentCallParameter 型、model class、reasoning effort、file access mode などの共通構造を調べたいときは、共通の parameter 定義へ進む。
-- review oracle と無関係な CLI 表示、テスト方針、INDEX.md 生成仕様、oracle file と realization file の一般的な責務境界を調べているときは、より直接その責務を持つ対象へ進む。
+- review finding の列挙・判定・検証ロジックそのものや、prompt の正本仕様を確認したいとき。この階層ではなく正本側 oracle 実装や対応する仕様断片を読む。
+- review oracle 以外の builder、CLI 表示、テスト方針、AgentCallParameter 型の共通仕様を調べたいとき。より直接その責務を持つ対象へ進む。
+- 新しい判定ロジックや検証処理を追加・変更したいとき。互換再公開 module は実装本体ではなく、補正 wrapper も正本側 builder への追従用の薄い処理に限られる。
+- 単に生成済み parameter の利用側挙動を追うだけで、旧 import 経路や prompt 表記補正の有無が関係しないとき。
 
 ## hash
-- 6cc02d64fda77f8230d1b6ff12f6bcfc1c44b5fc8782501b880043954d509966
+- 800f388a4635bfdb36722be843a4f34b79e7d170fcdd7b884629e83bcc21ad55

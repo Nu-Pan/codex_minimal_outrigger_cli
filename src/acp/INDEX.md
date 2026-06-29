@@ -19,21 +19,22 @@
 # `builder`
 
 ## Summary
-- ACP builder の realization 側公開面をまとめる階層。正本側にある builder 実装への薄い互換入口、再公開、委譲、暫定 adapter を配置し、既存の参照経路を維持する役割を持つ。
-- 実処理の本体や正本仕様を置く場所ではなく、apply fork、indexing、review、session、TUI、quota probe などの agent call parameter 構築経路について、realization 側から正本側または暫定実装へ進むための入口になる。
-- 多くの下位要素は、正本側実装との対応関係、既存 import path を残す理由、互換層を削除できる条件を確認するための案内点として位置づけられる。
+- ACP builder の realization 側互換入口を束ねる領域。正本側 builder 実装への再公開・委譲、既存 import 経路の維持、局所的な adapter や prompt 表記補正を扱い、実処理本体は多くの場合正本側または下位領域に置かれる。
+- apply fork、review oracle、session join、TUI 起動、indexing、quota availability probe など、agent call parameter 構築に関わる公開参照面と正本側実装との接続関係を確認するための入口になる。
 
 ## Read this when
-- ACP builder の realization 側に残る公開 import path や互換入口が、正本側 builder 実装へどのように接続されているか確認したいとき。
-- agent call parameter builder のうち、apply fork、review oracle、session join、TUI 起動・resolve、indexing 公開面、quota availability probe のどの下位領域へ進むべきか切り分けたいとき。
-- 正本側へ実装を集約した後も既存参照を壊さないために残された再公開・委譲・adapter の理由や削除条件を確認したいとき。
-- oracle package を通常 import できない配置での fallback、正本側戻り値を realization 側型として扱う適合、prompt 内表記の一時補正、probe prompt の runtime 外出しなど、互換境界に関わる処理の所在を探したいとき。
+- ACP builder に関する既存の公開 import 経路が、正本側 builder 実装または下位の realization 側 adapter へどう接続されているかを確認したいとき。
+- 正本側へ実装を集約しつつ、利用者向けまたは realization 側に残る古い参照を壊さないための互換層を調べたいとき。
+- apply fork、review oracle、TUI、session、indexing、quota probe のどの builder 領域へ進むべきかを切り分けたいとき。
+- 互換入口や暫定 adapter を残す理由、削除条件、正本側 builder への委譲関係を確認したいとき。
+- oracle 側戻り値を realization 側の AgentCallParameter として扱う適合処理、または生成済み prompt への限定的な補正の所在を探したいとき。
 
 ## Do not read this when
-- ACP builder の正本仕様、prompt 内容、structured output schema、AgentCallParameter の本来の組み立て規則を確認したいとき。正本側の対応する builder 実装や仕様文書を読む。
-- 個別の生成処理、探索処理、状態管理、UI 表示、CLI 制御、git 操作、fork 適用処理など、agent call parameter 構築入口を越えた実処理を調べたいとき。
-- AgentCallParameter、FileAccessMode、model class、reasoning effort、repo root 解決などの共通型や基本仕様を確認したいとき。定義元の基本モジュールや正本側本文を読む。
-- 新しい builder ロジックや正本仕様を追加・変更したいとき。互換層ではなく、実体を持つ正本側または該当する処理本体へ進む。
+- builder の正本仕様、prompt 内容、AgentCallParameter の組み立て規則そのものを確認したいとき。正本側の対応する実装や仕様断片を読む。
+- ACP 型、FileAccessMode、repo root 解決、oracle src import path などの共通定義や検証規則を確認したいとき。それぞれの定義元を読む。
+- CLI 制御、fork 適用処理、git 操作、quota 待機の状態機械、TUI 画面処理など、生成済み parameter の利用側挙動を追いたいとき。
+- 新しい builder ロジック、判定処理、探索処理、UI 処理を実装したいとき。互換再公開や薄い adapter ではなく、実体を持つ実装先を読む。
+- 特定領域の具体的な関数・クラス・入出力だけを調べたいとき。まず該当する下位領域または正本側本文へ直接進む。
 
 ## hash
-- 359718fc6ed3b1c1e0d43b653f151a5c07aa84acaf02274f0d176710f72b510e
+- 509972bda8d4182bf1dcebeccf844685b6cd780d372d62eb92eb21cd66e47fb8

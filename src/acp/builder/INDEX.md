@@ -79,25 +79,25 @@
 # `review`
 
 ## Summary
-- review builder 領域の realization 側入口であり、互換 package と review oracle 周辺の旧来 import 経路をまとめて扱う。
-- 多くは正本側への再公開層として機能し、一部の AgentCallParameter 生成では正本側出力を保ったまま oracle root 表記の既知 typo だけを局所補正する。
+- review builder 領域の realization 側入口であり、正本側 review builder と対応する package 名前空間、および review oracle builder 周辺の互換 import path と薄い補正 wrapper を束ねる領域。
+- 具体的な review 処理本体を持つ領域ではなく、古い実装側 import 経路を正本側へつなぐ再公開と、正本側 builder が生成した AgentCallParameter の prompt 内 oracle root placeholder 表記を局所補正する経路を確認するための入口。
+- review finding の列挙・判定・challenger 検証は正本側の実装を再公開し、finding 統合と advocate 検証は正本側 builder への委譲結果に既知の prompt 表記補正だけを加える、互換層中心のまとまり。
 
 ## Read this when
-- review builder 領域が正本側 package と対応する realization package を持つか確認したいとき。
-- review oracle の旧来 import 経路が残っている理由や、削除できる条件を確認したいとき。
-- review finding enumeration、judgment、challenger validation が realization 側に本体を持つのか、正本側へ委譲するだけなのかを切り分けたいとき。
-- review oracle の finding merge または finding advocate validation で渡される AgentCallParameter の生成経路を確認したいとき。
-- 生成 prompt 内の oracle root 表記に対する一時的な互換補正がどこで行われ、どの動的入力を変更しない前提なのかを確認したいとき。
+- review builder 領域で、正本側 package と対応する realization 側 package が存在するか、import 経路が成立するかを確認したいとき。
+- review oracle builder 周辺で、古い realization 側 import 経路が残っている理由、削除条件、正本側実装への委譲関係を切り分けたいとき。
+- finding 統合や advocate 検証の AgentCallParameter 生成について、正本側 builder の結果を保ったまま prompt 内の oracle root placeholder 表記だけを補正する wrapper の有無を確認したいとき。
+- 同名機能の実装本体がこの領域にあるのか、正本側へ再公開しているだけなのか、または局所的な prompt 補正だけを担っているのかを判断したいとき。
 
 ## Do not read this when
-- review builder の package 初期化以外の具体的な処理、関数、クラス、出力、制御フローを調べたいだけのときは、より直接の実装本体へ進む。
-- review oracle の検出仕様、判定仕様、prompt 正本、structured output schema の本来の定義を確認したいときは、正本側の対応する oracle 実装や仕様文書へ進む。
-- 新しい finding の列挙、判定、検証ロジックを追加・変更したいときは、この互換層ではなく委譲先の実装本体へ進む。
-- AgentCallParameter 型、model class、reasoning effort、file access mode などの共通構造を調べたいときは、共通の parameter 定義へ進む。
-- review oracle と無関係な CLI 表示、テスト方針、INDEX.md 生成仕様、oracle file と realization file の一般的な責務境界を調べているときは、それぞれの責務を持つ対象へ進む。
+- review finding の列挙・判定・検証ロジックそのもの、または prompt の正本仕様を確認したいとき。正本側の対応する実装や仕様断片へ進む。
+- review builder の具体的な処理本体、関数、クラス、出力、制御フローを調べたいとき。互換 package 初期化や薄い wrapper ではなく、実処理を担う対象を読む。
+- review oracle 以外の builder、CLI 表示、テスト方針、AgentCallParameter 型の共通仕様を調べたいとき。より直接その責務を持つ領域へ進む。
+- 新しい判定ロジックや検証処理を追加・変更したいとき。この領域は互換再公開と正本側 builder への追従用補正が中心であり、実装本体の変更先ではない。
+- 生成済み parameter の利用側挙動だけを追う作業で、古い import 経路や prompt 表記補正の有無が関係しないとき。
 
 ## hash
-- 874508bd5358e89af00916b9ec2276696b92acac95312d6271512bef85a014ab
+- ade3b379627f9f40fe5e7aee91f3a8511998dffd1817884418224c2f9c7c4c44
 
 # `session`
 

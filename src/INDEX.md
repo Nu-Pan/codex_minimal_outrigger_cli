@@ -1,24 +1,25 @@
 # `acp`
 
 ## Summary
-- 対象は realization 側に残る ACP builder 互換公開面の入口であり、正本側の builder 実装を複製せずに既存の `acp.*` / `acp.builder.*` import path を成立させるための薄い再公開・委譲・adapter をまとめる。
-- 下位には apply fork、review oracle、indexing、session join、TUI 起動・resolve、quota availability probe などの agent call parameter 構築経路への入口があり、多くは正本側実装への接続、既存参照維持、削除条件を示す境界として機能する。
-- 正本側に同用途の builder がない quota probe など一部の暫定境界も含むが、主目的は ACP builder の本体仕様や処理本体を置くことではなく、realization 側から正本側または暫定実装へ進むための互換層を保つことにある。
+- realization 側に残る ACP 関連の互換入口を束ね、既存の `acp.*` import 経路を正本側実装や下位 adapter へ接続する領域。実処理本体を置く場所ではなく、移行期間中の公開 import 面、再公開、委譲、限定的な適合処理を扱う。
+- ACP builder に関わる公開参照面から、apply fork、review oracle、session join、TUI 起動、indexing、quota availability probe などの各 builder 領域へ進むための上位入口として使う。
 
 ## Read this when
-- realization 側に残る `acp.*` / `acp.builder.*` import path が、正本側 ACP builder または暫定 adapter へどのようにつながっているか確認したいとき。
-- agent call parameter builder のうち、apply fork、review oracle、indexing、session join、TUI、quota availability probe のどの下位領域へ進むべきか切り分けたいとき。
-- 既存参照を壊さないために残された再公開・委譲・互換入口の理由や、削除できる条件を確認したいとき。
-- oracle package を通常 import できない配置への fallback、正本側戻り値の realization 側型への適合、runtime 側から prompt literal を外すための暫定 adapter など、互換境界に関わる処理の所在を探したいとき。
+- realization 側または利用者向け公開面に残る `acp.*` import を、正本側実装や実体 module へどうつないでいるか確認したいとき。
+- 正本側へ ACP builder 実装を集約しながら、古い公開 import 経路を壊さないための互換層や暫定 adapter の所在を切り分けたいとき。
+- apply fork、review oracle、session join、TUI 起動、indexing、quota availability probe など、agent call parameter 構築に関わるどの下位領域へ進むべきか判断したいとき。
+- oracle 側 builder の戻り値を realization 側の AgentCallParameter として扱う適合処理や、生成済み prompt への限定的な補正の入口を探したいとき。
+- 互換入口を残す理由、削除条件、正本側 builder への委譲関係を確認したいとき。
 
 ## Do not read this when
-- ACP builder の正本仕様、prompt 内容、structured output schema、AgentCallParameter の本来の組み立て規則を確認したいとき。正本側の対応する builder 実装や仕様文書へ進む。
-- 個別の生成処理、探索処理、状態管理、UI 表示、CLI 制御、git 操作、fork 適用処理など、agent call parameter 構築入口を越えた実処理を調べたいとき。
-- AgentCallParameter、FileAccessMode、model class、reasoning effort、repo root 解決などの共通型や基本仕様を確認したいとき。定義元の基本モジュールまたは正本側本文へ進む。
-- 新しい ACP builder の正本ロジックや仕様を追加・変更したいとき。互換層ではなく、実体を持つ正本側または該当する処理本体へ進む。
+- ACP builder の正本仕様、prompt 内容、AgentCallParameter の組み立て規則そのものを確認したいとき。正本側の対応する仕様断片または実装本体へ進む。
+- ACP 型、FileAccessMode、repo root 解決、oracle src import path などの共通定義や検証規則を確認したいとき。それぞれの定義元を読む。
+- CLI 制御、fork 適用処理、git 操作、quota 待機の状態機械、TUI 画面処理など、生成済み parameter の利用側挙動を追いたいとき。
+- 新しい ACP 機能、builder ロジック、判定処理、探索処理、UI 処理を実装したいとき。互換再公開や薄い adapter ではなく、実体を持つ実装先を読む。
+- 公開面と realization 側から `acp.*` 参照がすでに消えており、互換入口の残存理由や削除条件を確認する必要がないとき。
 
 ## hash
-- 93a383057d7d6b1b273257a72c20e62e04db78c11a3d6d2f85dd66efe7c212bc
+- 43b05888c926cd577617cbf2aac577446fd7f96074aed41d8d19a55a12bba437
 
 # `basic`
 
