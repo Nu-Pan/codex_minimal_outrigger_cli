@@ -37,6 +37,9 @@ from acp.builder.indexing.index_entry import build_indexing_index_entry_paramete
 from acp.builder.review.oracle.enumerate_finding import (
     build_review_oracle_enumerate_finding_parameter,
 )
+from oracle.acp_builder.review.oracle.enumerate_finding import (
+    build_review_oracle_enumerate_finding_parameter as _build_oracle_enumerate_parameter,
+)
 from acp.builder.review.oracle.merge_finding import (
     build_review_oracle_merge_finding_parameter,
 )
@@ -592,30 +595,20 @@ def test_review_oracle_enumerate_finding_schema_matches_oracle_source() -> None:
     )
 
 
-def test_review_oracle_enumerate_prompt_embeds_standard_and_target_file(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = tmp_path / "repo"
-    target = root / "oracle" / "doc" / "sample.md"
-    target.parent.mkdir(parents=True)
-    (root / ".git").mkdir()
-    target.write_text("# sample oracle\n\nsample requirement\n", encoding="utf-8")
-    monkeypatch.chdir(root)
+def test_review_oracle_enumerate_parameter_matches_oracle_builder() -> None:
+    oracle_path = Path("<work-root>/oracle/doc/sample.md")
+    related_findings = "[]"
 
     parameter = build_review_oracle_enumerate_finding_parameter(
-        Path("<work-root>/oracle/doc/sample.md"),
-        "[]",
+        oracle_path,
+        related_findings,
+    )
+    oracle_parameter = _build_oracle_enumerate_parameter(
+        oracle_path,
+        related_findings,
     )
 
-    assert "# oracle standard" in parameter.prompt
-    assert "oracle file は正本仕様断片である" in parameter.prompt
-    assert "# apply review standard" in parameter.prompt
-    assert "oracle file と realization file の明確な不整合" in parameter.prompt
-    assert "# target oracle file" in parameter.prompt
-    assert "# sample oracle" in parameter.prompt
-    assert "sample requirement" in parameter.prompt
-    assert "# output schema" in parameter.prompt
-    assert "`findings`" in parameter.prompt
+    assert parameter == oracle_parameter
 
 
 def test_review_oracle_enumerate_builder_imports_from_packaged_layout(
