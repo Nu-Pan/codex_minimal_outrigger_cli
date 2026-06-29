@@ -112,22 +112,24 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の共通 runtime 契約を横断的に固定する realization test。root placeholder と worktree 境界、config 変換、CmocError の Markdown 表示、CLI error の stdout 出力、subcommand log、FileAccessMode から sandbox/profile への変換、binary 判定、状態 branch 名の検証など、個別サブコマンドより下の実行前提をまとめて検証する。
-- 大きいテストだが、共通 fixture と root 状態の文脈を分散させないため、basic runtime 回帰として凝集させている。
+- cmoc の共通 runtime 契約を横断的に固定する realization test。root placeholder と worktree 境界、設定値検証、CmocError の Markdown 表示、CLI error の stdout 変換、subcommand log、FileAccessMode から sandbox/profile への変換、binary 判定など、複数サブコマンドの前提になる基礎挙動をまとめて検証する。
+- 個別サブコマンドの正常系ではなく、実行基盤として同時に崩れやすい root 状態、権限境界、設定、状態 branch 名、起動 wrapper、ignore 設定の回帰確認を担う。大きいテストファイルだが、共通 fixture と root 読み取り文脈を分散させないために basic runtime 回帰として凝集させている。
 
 ## Read this when
-- runtime の基礎契約、root 解決、linked worktree と main worktree の扱い、run/work/repo root の違いを確認または変更する。
-- CmocError、CLI 引数解析 error、stdout/stderr の出力先、エラー report の構造、subcommand log の生成条件を変更する。
-- config の既定値や不正値検証、FileAccessMode、Codex sandbox/profile の writable roots、追加書き込み許可 path の制御を変更する。
-- branch 名から session state を読む処理、session/apply branch 形状の検証、binary 判定、`.cmoc` の ignore 設定、起動 wrapper の call stack 表示に関わる回帰を確認する。
+- runtime 共通処理の変更により、repo root、run root、work root、root placeholder 解決、linked worktree 判定に影響する可能性があるとき。
+- CmocError、CLI 引数解析 error、stdout/stderr の error report、call stack 表示、subcommand log 生成条件を変更または調査するとき。
+- CmocConfig、論理 model class、reasoning effort、config_from_dict の検証、FileAccessMode の値や Codex sandbox/profile 変換を変更するとき。
+- session/apply branch 名からの session id 抽出、branch に紐づく state 読み取り、run worktree 作成・削除の安全境界を確認するとき。
+- `.cmoc` の gitignore 追加、binary 判定、起動 wrapper の missing venv 表示など、サブコマンド個別ではなく runtime 前提の小さな共通挙動を回帰確認するとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の業務ロジック、画面文言、入出力 schema の詳細だけを調べたい。
-- oracle 正本仕様そのもの、仕様文書の編集方針、INDEX.md 生成規則を確認したい。
-- 単一 helper の内部実装だけを追えば足り、runtime 境界や CLI 実行前提との結合を確認する必要がない。
+- 特定サブコマンド固有の入出力、prompt 生成、indexing、session fork/join などの業務ロジックだけを調査する場合は、そのサブコマンドや該当 runtime module のテストを先に読む。
+- oracle file の正本仕様や設計意図を確認したい場合は、対応する oracle doc または oracle src を読む。この対象は realization test であり、正本仕様そのものではない。
+- 単一 helper の実装詳細だけを確認したい場合は、まず対象 helper の実装ファイルを読む。ここは複数 runtime 契約を外部挙動としてまとめて検証する入口である。
+- Codex CLI や LLM 出力品質そのもの、または個別の生成内容品質を検証したい場合は読まなくてよい。
 
 ## hash
-- d600545ccdb76d3e9db394206cd0b8862217b6f555483f16a739288fa30c1ade
+- 6b6d39ca39b1eaafa8d9ea01afd378a9b3dcd6770eb9e992a4a5f718f297bd0a
 
 # `test_cli_init_tui.py`
 
