@@ -1,7 +1,5 @@
 """`cmoc apply fork` の変更要約生成 builder。"""
 
-from pathlib import Path
-
 from acp.builder.apply.fork._common import (
     adapt_oracle_parameter,
     ensure_oracle_src_importable,
@@ -19,7 +17,4 @@ def build_apply_fork_change_summary_parameter(raw_git_diff: str) -> AgentCallPar
         build_apply_fork_change_summary_parameter as build_oracle_parameter,
     )
 
-    return adapt_oracle_parameter(
-        build_oracle_parameter(raw_git_diff),
-        Path(__file__).with_suffix(".json"),
-    )
+    return adapt_oracle_parameter(build_oracle_parameter(raw_git_diff))

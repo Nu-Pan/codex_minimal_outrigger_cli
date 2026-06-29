@@ -150,15 +150,6 @@ def test_file_finding_enumeration_schema_matches_oracle_source() -> None:
 
     root = Path(__file__).parents[1]
     parameter = build_apply_fork_file_finding_enumeration_parameter(Path(__file__))
-    src_schema_path = (
-        root
-        / "src"
-        / "acp"
-        / "builder"
-        / "apply"
-        / "fork"
-        / "file_finding_enumeration.json"
-    )
     oracle_schema_path = (
         root
         / "oracle"
@@ -170,9 +161,10 @@ def test_file_finding_enumeration_schema_matches_oracle_source() -> None:
         / "file_finding_enumeration.json"
     )
 
-    assert parameter.structured_output_schema_path == src_schema_path
-    assert json.loads(src_schema_path.read_text()) == json.loads(
-        oracle_schema_path.read_text()
+    assert parameter.structured_output_schema_path == oracle_schema_path
+    assert (
+        json.loads(parameter.structured_output_schema_path.read_text())["type"]
+        == "object"
     )
 
 

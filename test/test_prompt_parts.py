@@ -186,15 +186,6 @@ def test_apply_fork_prompts_use_expected_roots(
 
 def test_apply_fork_change_summary_schema_matches_oracle_source() -> None:
     parameter = build_apply_fork_change_summary_parameter("diff")
-    src_schema_path = (
-        Path(__file__).parents[1]
-        / "src"
-        / "acp"
-        / "builder"
-        / "apply"
-        / "fork"
-        / "change_summary.json"
-    )
     oracle_schema_path = (
         Path(__file__).parents[1]
         / "oracle"
@@ -206,11 +197,9 @@ def test_apply_fork_change_summary_schema_matches_oracle_source() -> None:
         / "change_summary.json"
     )
 
-    assert parameter.structured_output_schema_path == src_schema_path
+    assert parameter.structured_output_schema_path == oracle_schema_path
 
     schema = json.loads(parameter.structured_output_schema_path.read_text())
-    oracle_schema = json.loads(oracle_schema_path.read_text())
-    assert schema == oracle_schema
     validate(
         {
             "changes": [
@@ -218,7 +207,7 @@ def test_apply_fork_change_summary_schema_matches_oracle_source() -> None:
                     "category": "実装",
                     "summary": "変更要約 schema を正本仕様に合わせた。",
                     "changed_paths": [
-                        "src/acp/builder/apply/fork/change_summary.json"
+                        "oracle/src/oracle/acp_builder/apply/fork/change_summary.json"
                     ],
                 }
             ]

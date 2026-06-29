@@ -17,23 +17,23 @@
 # `acp.py`
 
 ## Summary
-- ACP 実行時に共有される呼び出しパラメータ型を定義する realization implementation。
-- 正本側の builder 定義を通常起動時の import path から利用できるよう、モデル区分・推論努力・ファイルアクセスモード・プロンプト・structured output schema path をひとまとまりの型として置く。
+- ACP 実行時に共有される呼び出しパラメータ型を、oracle src 側の正本定義から再公開する薄い realization implementation。
+- モデル区分・推論努力・ファイルアクセスモード・AgentCallParameter の正本は oracle 側に置き、この入口は通常起動時に `basic.acp` から同じ型へ到達するための互換境界だけを持つ。
 
 ## Read this when
-- ACP の呼び出し条件を realization 側で受け渡す実行時型を確認・変更したいとき。
-- モデルクラス、reasoning effort、ファイルアクセスモードの列挙値を参照する実装を読むとき。
-- agent 呼び出しに渡す prompt や structured output schema path を含むパラメータ構造を確認したいとき。
-- 正本側の ACP builder 型と realization 側の実行時 import 可能な型の対応を確認したいとき。
+- realization implementation 側で `basic.acp` の import がどの oracle 側 ACP 型へ接続されているか確認したいとき。
+- モデルクラス、reasoning effort、ファイルアクセスモード、AgentCallParameter を参照する実装の import 境界を確認したいとき。
+- 正本側 ACP 型を realization 側にコピーせず再公開していることを確認したいとき。
 
 ## Do not read this when
+- ACP 型のフィールド、enum 値、docstring など正本定義の内容を確認したいとき。その場合は oracle 側の対応本文を読む。
 - ACP のパラメータ値を組み立てるロジックや選択規則を確認したいだけのとき。
 - 実際のファイルアクセス制御、権限判定、書き込み可否の実装を確認したいとき。
 - structured output schema の内容や検証処理そのものを確認したいとき。
 - oracle file と realization file の一般定義や編集責任の境界を確認したいとき。
 
 ## hash
-- 7faad563d70da8867020797c54707e25a1f4426775c8397f395eef92a2a6c16b
+- b84e1780d9c60db454c59e876524e339f5cc22a0c0d6c59077d2a188e92a7f97
 
 # `path_model.py`
 

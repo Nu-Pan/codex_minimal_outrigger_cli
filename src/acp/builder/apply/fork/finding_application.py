@@ -21,7 +21,4 @@ def build_apply_fork_finding_application_parameter(
         build_apply_fork_finding_application_parameter as build_oracle_parameter,
     )
 
-    return adapt_oracle_parameter(
-        build_oracle_parameter(findings),
-        None,
-    )
+    return adapt_oracle_parameter(build_oracle_parameter(findings))

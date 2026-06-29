@@ -21,7 +21,4 @@ def build_apply_fork_file_finding_enumeration_parameter(
         build_apply_fork_file_finding_enumeration_parameter as build_oracle_parameter,
     )
 
-    return adapt_oracle_parameter(
-        build_oracle_parameter(target_path),
-        Path(__file__).with_suffix(".json"),
-    )
+    return adapt_oracle_parameter(build_oracle_parameter(target_path))
