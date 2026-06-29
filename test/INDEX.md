@@ -159,64 +159,64 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行連携の realization test。exec/TUI 呼び出しで生成される profile、作業ディレクトリ、sandbox 設定、schema 保存先、prompt 入力、呼び出しログ、外部 apply tracking 環境変数の遮断、子プロセスの process group、Codex CLI 不在や非ゼロ終了時のエラー処理を検証する。
-- テスト用の擬似 codex 実行ファイルと一時 repository/worktree を使い、runtime が Codex CLI を起動する直前・直後に守るべき制御ロジックと副作用を確認する入口になる。
+- Codex CLI 実行層の realization test。追跡付き subprocess、通常 subprocess、exec 実行、TUI 実行について、プロファイル生成、sandbox 設定、cwd 選択、schema 保存先、追加 read path 検証、失敗時エラー、CLI 不在時エラーを検証する。
+- 実際の Codex CLI ではなく一時ディレクトリ上のスタブ実行ファイルと git worktree を使い、呼び出し引数・標準入力・作業ディレクトリ・生成された profile/log/schema の内容から外部挙動を確認する。
 
 ## Read this when
-- Codex CLI の exec または TUI 呼び出し処理、profile 生成、sandbox の read-only/workspace-write 切り替え、PURE_ORACLE_READ 時の oracle 配下への cwd 制限を変更する時。
-- Codex 呼び出し時の prompt 入力、output-last-message、output-schema、schema state の保存場所、linked worktree での状態保存や writable_roots を調べる時。
-- Codex subprocess の起動 wrapper、apply process tracking、process group、継承環境変数の扱い、Codex CLI 不在・非ゼロ終了のエラー表示や call log 生成を変更する時。
-- TUI 呼び出しで extra read path を開始前に検査する制御、complete prompt の許可範囲、保護領域や memo 配下の拒否挙動を確認する時。
+- Codex CLI を起動する runtime 実装、subprocess 呼び出し、process group 追跡、APPLY_PROCESS_TRACKING_ENV の扱いを変更する時。
+- exec/TUI 呼び出し時の sandbox mode、writable_roots、pure oracle read の cwd、linked worktree 上の cwd や状態保存先を確認・変更する時。
+- Codex 呼び出しの prompt 入力、output-last-message、output-schema、call log、profile 生成、extra_read_paths の許可判定に関するテスト観点を確認する時。
+- Codex CLI の異常終了や未インストール時に出す CmocError と、利用者向け console 出力の期待値を確認する時。
 
 ## Do not read this when
-- Codex CLI 連携ではなく、通常の CLI コマンド引数解析、設定ファイル読み込み一般、または repository/path model の仕様だけを確認したい時。
-- runtime の実装詳細ではなく、oracle file の正本仕様断片を確認したい時。
-- テスト支援関数そのものの実装、repository fixture 作成、擬似実行ファイル作成、git helper の詳細だけを調べたい時。
-- LLM の応答品質や Codex CLI 自体の内部挙動を検証したい時。
+- Codex runtime 以外の CLI コマンド、設定読み込み一般、path model、oracle 文書の仕様確認だけを行う時。
+- Codex CLI そのものや LLM の出力品質を検証したい時。このテストはスタブ化した外部プロセスとの制御・入出力境界を検証する。
+- プロファイル内容や sandbox/cwd/schema/log の期待値ではなく、個別 helper の内部実装だけを局所的に変更する時は、先に対象 implementation を読む方が直接的である。
 
 ## hash
-- 074f17b14b4ec18b7d63b6a87f79a26da0706fb4ef0d81ec156bfea4f78b880b
+- 6ffd77aecdc69636d068e6c1ee002f0ebf0b318fff9aa0b379bb91d78313fabb
 
 # `test_codex_runtime_home.py`
 
 ## Summary
-- Codex CLI 実行時の Codex home 解決と事前検証を対象にした realization test。環境変数が未設定の場合の既定 home、環境変数で指定された home の保持、Codex 実行 cwd に対する相対 home の解決、home や認証情報が不正な場合に Codex CLI 起動前に失敗することを検証する。
+- Codex CLI 実行時に使う Codex home の決定・検証に関する realization test。環境変数が未設定の場合の既定値、相対パス指定時の基準ディレクトリ、実行前検証で発生するエラー内容、実行結果や call log に記録される Codex home を確認する。
+- Codex CLI 本体の品質や応答内容ではなく、run_codex_exec が Codex CLI を呼び出す前後で CODEX_HOME、profile 配置先、認証ファイル存在確認をどう扱うかを検証する入口になる。
 
 ## Read this when
-- Codex CLI 呼び出しで使用する CODEX_HOME の決定、相対パス解決、実行結果へ記録される codex_home や profile_path の挙動を確認・変更するとき。
-- Codex home が存在しない、ディレクトリではない、auth.json がない場合の CmocError の summary・detail・next_actions を確認・変更するとき。
-- ファイルアクセスモードによって Codex CLI の作業ディレクトリが変わる状況で、相対 CODEX_HOME がどこから解決されるかを検証するとき。
+- run_codex_exec の CODEX_HOME 解決、既定の Codex home、相対 Codex home、Codex home 配下への profile 作成に関する挙動を確認・変更する時。
+- Codex home が存在しない、ディレクトリではない、auth.json がない場合に、Codex CLI 起動前にどの CmocError を返すべきかを確認する時。
+- Codex CLI 呼び出し環境に渡す CODEX_HOME と、実行結果や call log に保存される解決済み Codex home の関係を確認する時。
+- file access mode によって Codex CLI の cwd が変わる場合でも、相対 CODEX_HOME がその cwd 基準で検証されることを確認する時。
 
 ## Do not read this when
-- Codex CLI の容量待機、標準出力イベント処理、プロンプト生成など、Codex home の解決や検証に直接関係しない実行制御を調べるとき。
-- 実際の Codex CLI や LLM の出力品質を検証したいとき。ここでは fake executable を使い、home 解決と事前検証の制御ロジックだけを扱う。
-- oracle file 側の正本仕様を確認・変更したいとき。この対象は realization test であり、正本仕様そのものではない。
+- Codex home とは無関係な run_codex_exec の一般的な subprocess 実行、出力解析、capacity 待機、モデル・推論設定の引き渡しだけを調べる時。
+- CLI や設定全体の仕様、oracle と realization の関係、パスモデルの定義を確認したい時。
+- Codex CLI や LLM の実際の出力品質、認証フローそのもの、外部 Codex CLI の実装詳細を検証したい時。
+- test helper の実装、fake executable 作成、stub profile 作成の詳細を調べたい時。
 
 ## hash
-- f113426a3f92145e9b5bff3bfd809dd949834c6dbb9c2471815903cec09de7fe
+- b92995fbdd0a93c847ae8a31d4ea6534df7c8b4185810379c129ee1b456241d7
 
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex exec が quota exceeded になった後の待機、availability probe、resume token を使った復帰、resume 不能時の再実行を外部挙動として検証する realization test。
-- fake Codex subprocess、call log、subcommand log、標準出力、CODEX_HOME と cwd、並列実行時の代表 probe 共有を観測し、quota retry 状態機械の回帰をまとめて扱う。
-- 16,000 文字を超えるが、probe 共有、resume、retry、ログ、実行ディレクトリが同じ fake 呼び出し列に強く結び付くため、一つの quota retry 回帰テストとして凝集させている。
+- Codex exec が quota exceeded になった後の待機、probe、resume または再実行の制御を検証する realization test。
+- quota availability probe の共有、resume token の利用有無、call log と subcommand log、CODEX_HOME と cwd の扱いを、同じ retry 状態機械の外部挙動としてまとめて扱う。
+- 並列実行時に代表 probe が 1 回だけ使われること、代表 probe 失敗時に待機中の呼び出しも失敗することを確認する。
 
 ## Read this when
-- Codex exec の quota exceeded 検出後に、probe を挟んで resume または再実行する制御を変更・調査するとき。
-- quota availability probe の生成、成功・非 quota 失敗・quota 継続失敗の扱い、待機中呼び出しへの失敗伝播を確認するとき。
-- Codex 呼び出しログ、subcommand log、prompt/stdout/stderr/output の保存内容、console 表示、result の call_log_path を quota retry 文脈で確認するとき。
-- CODEX_HOME が相対パスの場合の実行 cwd、`--cd` の向き先、PURE_ORACLE_READ での oracle root 利用を quota probe と合わせて確認するとき。
-- 複数の Codex exec が同時に quota exceeded になった場合に、代表 probe を一回だけ実行し、各呼び出しが resume または失敗する挙動を確認するとき。
+- Codex exec の quota exceeded 後の retry、resume、再実行、quota availability probe の挙動を変更または確認するとき。
+- quota retry 中に作られる call log、subcommand log、prompt/stdout/stderr/output の記録内容やステータスを確認するとき。
+- CODEX_HOME が相対パスの場合の subprocess cwd、--cd、oracle root との関係を確認するとき。
+- 複数の Codex exec が同時に quota exceeded になった場合の probe 共有、resume 実行、失敗伝播を変更または調査するとき。
 
 ## Do not read this when
-- 通常成功する Codex exec の引数組み立てや出力解析だけを確認したいときは、quota retry ではない runtime 実装または該当する通常系テストを読む。
-- quota exceeded と無関係な設定読み込み、repository fixture、Codex profile stub、補助 executable 作成の詳細を調べたいときは、対応する support や config の本文を読む。
-- Codex CLI や LLM の出力品質そのものを評価したいときは、このテストは対象外であり、ここでは fake subprocess による制御ロジックだけを検証している。
-- oracle file の正本仕様を確認したいときは、この realization test ではなく oracle 配下の該当本文を読む。
+- quota exceeded 後の Codex exec retry 制御に関係しない通常の Codex exec 成功・失敗処理だけを確認したいとき。
+- Codex CLI や LLM の出力品質そのものを検証したいとき。
+- 設定読み込み、リポジトリ作成 fixture、Codex profile stub など、retry 状態機械の観測点ではない補助処理の詳細だけを確認したいとき。
 
 ## hash
-- 5c77e55551c5c963cc706fa674788efc84b6c0edd5d0671ff74dfb818cf64a05
+- 27ddbad855496a7d383ac07315bb3e72d2737cd029e5725888c781063cbd17bd
 
 # `test_codex_runtime_retry.py`
 

@@ -94,26 +94,23 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex CLI の exec 呼び出しを 1 回の状態機械として制御する実行実装。profile・schema・stdin prompt・call/stdout/stderr/output log を準備し、subprocess 実行、Structured Output 検証、capacity retry、quota wait/probe、resume 継続、subcommand event 記録、最終結果生成までを扱う。
-- quota 処理、resume token、log/event、retry counter が同じ subprocess 結果と文脈を共有するため、exec 実行制御の分岐をまとめて読む入口になる。TUI 起動や Codex profile の詳細、path 計算、結果型そのものは別の対象が担う。
+- Codex CLI の非 TUI exec 呼び出しを 1 回の状態機械として制御する実装。profile 準備、実行 argv 構築、prompt/stdout/stderr/output/call log 保存、Structured Output 検証、semantic retry、capacity retry、quota 枯渇時の代表 probe と待機中呼び出しの再開、subcommand event 記録を扱う。
+- quota 待機と resume 継続は、同じ subprocess 結果、resume token、log/event、retry counter の文脈を共有する必要があるため、この対象が exec 実行制御の中心入口になる。
 
 ## Read this when
-- Codex CLI exec の実行フロー、引数組み立て、stdin prompt の扱い、出力 JSON の読み取り、Structured Output schema 検証、成功時の結果返却を確認・変更したいとき。
-- Codex CLI の capacity error retry、quota error 検出後の待機、代表 probe、他スレッドとの quota polling 共有、quota 回復後の resume 継続に関わる挙動を確認・変更したいとき。
-- Codex call ごとの prompt/stdout/stderr/output/call log の生成、単調増加する log timestamp、console 出力、subcommand log event の payload や status を確認・変更したいとき。
-- Codex exec の失敗を CmocError として利用者に返す条件、Structured Output 検証失敗の semantic retry、probe の非 quota 失敗を待機では回復不能として扱う判断を確認したいとき。
-- AgentCallParameter、CmocConfig、Codex profile 準備、file access mode、work root、codex home、schema path が実際の exec 呼び出しへどう接続されるかを追いたいとき。
+- Codex CLI を `exec` として起動する通常実行、Structured Output schema 付き実行、または output JSON の読み取り・検証・再試行挙動を確認または変更したいとき。
+- capacity error の指数 backoff、quota error 後の代表 probe、quota 回復待ち中の他呼び出しとの同期、resume token による継続実行の制御を確認または変更したいとき。
+- Codex call log、prompt/stdout/stderr/output log、console 表示、subcommand logger の `codex_call` event に記録される実行条件や結果を追いたいとき。
+- Codex 実行用 profile、CODEX_HOME、Codex cwd、追加 read/write path、oracle conflict write 許可、output schema path が実際の `codex exec` 呼び出しへどう渡るかを追いたいとき。
 
 ## Do not read this when
-- Codex profile の生成規則、Codex home の解決・検証、file access mode から cwd を決める詳細、Codex stdout/stderr から error 種別や resume token を抽出する詳細だけを知りたいときは、それらの helper 実装を直接読む。
-- quota availability probe 用の AgentCallParameter の内容や prompt 生成だけを確認したいときは、probe parameter を組み立てる実装を読む。
-- Codex call の console 表示フォーマットだけを変更したいときは、console emission の実装を読む。
-- SubcommandLogger の保存形式、event API、quota wait 加算の内部仕様だけを確認したいときは、runtime logging 側を読む。
-- CodexExecResult のフィールド定義、結果オブジェクトの利用先、CLI 上位コマンドの呼び出し方だけを確認したいときは、結果型または呼び出し元を読む。
-- TUI 起動や exec 以外の Codex 呼び出し制御を探しているときは、この対象ではなく該当する起動制御の実装を読む。
+- TUI 起動や対話 UI 側の分岐を調べたいとき。この対象は exec 実行制御に責務を限定している。
+- Codex profile の内容生成、CODEX_HOME 解決、capacity/quota error 判定、resume token 抽出、output JSON の低レベル読み取り helper 自体を変更したいときは、それらを定義する runtime profile 側を直接読む。
+- quota availability probe の prompt 内容を変更したいときは、probe 用 AgentCallParameter を組み立てる側を直接読む。
+- 実行結果を保持する戻り値型、runtime path の算出規則、subcommand logger の実装詳細だけを確認したいときは、それぞれの型・path・logging 定義を読む。
 
 ## hash
-- 727ceca6395bce6bf931beedcc892def3cbd3b1d17e2d6d56210c63bc7a71282
+- 96a8724c9102eedbef2b304a767faa69823f995221c63b28d71a3cfeabea64b9
 
 # `runtime_codex_logging.py`
 
