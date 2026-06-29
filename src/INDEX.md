@@ -1,23 +1,24 @@
 # `acp`
 
 ## Summary
-- AgentCallParameter builder の realization 側互換入口をまとめる領域。正本側実装への委譲・再公開、既存の acp import path 維持、正本側 builder が未整備な用途の暫定 adapter や局所補正 wrapper を扱う。
-- apply fork、review、session、TUI、indexing、quota probe など用途別の builder 入口へ進むための上位入口であり、prompt や parameter の正本仕様ではなく、realization 側公開面と正本側実装の接続関係を判断するために読む。
+- ACP builder 系の realization 側互換入口をまとめる領域。oracle 側の正本実装を複製せず、既存の公開 import 経路を維持しながら実体 module や oracle 側 package へ委譲する役割を持つ。
+- 直下の互換入口は、既存の ACP 参照を残すための公開面維持に限定される。下位の builder 領域は、apply、review、session、TUI、indexing、quota probe などの agent call parameter builder 名前空間ごとに、互換再公開、委譲、局所補正、parameter 変換境界を扱う。
 
 ## Read this when
-- ACP builder の realization 側公開入口が、正本側 builder や既存 import path とどう対応しているかを用途別に確認したいとき。
-- apply fork、review、session、TUI、indexing、quota probe などの agent call parameter 構築入口を探し、どの下位領域へ進むべきか判断したいとき。
-- 互換再公開、薄い委譲 wrapper、暫定 adapter、prompt 表記補正など、builder 周辺の realization 側境界を残す理由や削除条件を確認したいとき。
-- 公開済み参照経路の維持・廃止、正本側 import path への移行、残存する acp import の整理に関わる変更を検討しているとき。
+- ACP builder に関する古い公開 import 経路が、oracle 側の canonical 実装や realization 側の実体 module へどう接続されているか確認したいとき。
+- 既存利用者や realization 側に残る ACP 系 import を維持する理由、移行状況、削除条件を判断したいとき。
+- agent call parameter 生成について、realization 側で互換層、委譲層、局所的な prompt 表記補正、parameter 変換境界のどれとして扱われているか切り分けたいとき。
+- apply fork、review、session join、TUI 起動や resolve parameter、indexing、quota availability probe などの builder 入口から、目的に合う下位領域を選びたいとき。
 
 ## Do not read this when
-- AgentCallParameter の prompt 内容、出力条件、型定義、正本仕様そのものを確認したいとき。正本側の対応する仕様断片または実装へ進む。
-- 各用途の処理本体、CLI 制御、git 操作、TUI 画面処理、session join の衝突解決、indexing の生成・探索処理などを調べたいとき。ここは主に builder 入口と互換境界を扱う。
-- 新しい機能の実装場所やテスト対象を探しており、既存 builder の公開面・委譲関係・互換層が関係しないとき。より直接の実装領域またはテスト領域へ進む。
-- 生成済み parameter の利用側挙動だけを追う作業で、builder の import 経路、正本側への委譲、暫定 adapter、局所補正の有無が判断材料にならないとき。
+- ACP builder の canonical な仕様、人間意図、prompt 正本、正本側の組み立て仕様を確認したいときは、対応する oracle 側の仕様断片または実装へ進む。
+- AgentCallParameter 型、FileAccessMode、path model、git helper などの共通型や共通処理そのものを調べたいときは、それぞれの基本実装へ進む。
+- apply fork 全体の制御フロー、branch 操作、CLI 引数処理、diff 生成、quota 待機、resume token、call log などの runtime 挙動を追いたいときは、呼び出し元の実装へ進む。
+- TUI の画面表示、イベント処理、入力操作、UI 構成など、parameter builder ではない UI 本体を調べたいとき。
+- indexing や review finding の生成、探索、判定、検証ロジックそのものを変更したいときは、互換再公開層ではなく実処理を持つ正本側または対象実装を読む。
 
 ## hash
-- d281bafb7ff8cd0b1cc17c8914d0aa99c2888950e1113ce92b9715b4855c8dda
+- b67262da8930e294bbb1e4403f7e6442154ea4817149fe4807cc6aed6ec3c85a
 
 # `basic`
 

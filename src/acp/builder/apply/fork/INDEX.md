@@ -37,21 +37,21 @@
 # `change_summary.py`
 
 ## Summary
-- `cmoc apply fork` の作業レポート向け変更要約を作る agent call parameter builder の realization 実装。
-- リポジトリルート解決、oracle src の import 準備、oracle 側 builder 呼び出し、戻り値の realization 側型への変換だけを担う薄い委譲層。
+- `cmoc apply fork` の作業レポート向け変更要約を組み立てる実装。agent call parameter の生成は対応する oracle 実装へ委譲し、生成結果を realization 側の型へ変換する。
+- ACP branch diff を読み、差分ヘッダーから変更 path を抽出して、変更がある場合とない場合の要約ペイロードを出力先へ保存する。
 
 ## Read this when
-- `cmoc apply fork` の変更要約生成で、realization 側が oracle 側 builder をどう呼び出しているか確認したいとき。
-- raw git diff を入力として作業レポート用 agent call parameter を組み立てる入口を探しているとき。
-- oracle 側 builder の戻り値を realization 側の agent call parameter として扱う変換経路を確認したいとき。
+- `cmoc apply fork` の変更要約 agent call parameter 生成、oracle builder への委譲、または oracle parameter から realization parameter への変換経路を確認・変更したいとき。
+- ACP branch diff から作業レポート用の変更 path 一覧を作る処理、変更なしの場合の要約生成、または要約ファイルの保存処理を確認・変更したいとき。
+- git diff の `diff --git` 行から path を取り出す最小限の parsing 挙動を確認・変更したいとき。
 
 ## Do not read this when
-- 変更要約プロンプトや agent call parameter の正本仕様を確認したいとき。この対象は正本仕様ではなく委譲実装なので、oracle 側の対応する本文を読む。
-- リポジトリルート解決、oracle src の import 準備、oracle parameter 変換の共通処理を変更したいとき。この対象は共通 helper を利用するだけなので、共通処理の本文を読む。
-- `cmoc apply fork` 全体の CLI 制御、fork 適用処理、git 操作、または作業レポート全体の生成フローを調べたいとき。この対象は変更要約用 parameter 構築の薄い入口に限られる。
+- `cmoc apply fork` 全体の実行フロー、fork 作成、branch 操作、または diff 生成そのものを調べたいときは、より上位の apply fork 実装へ進む。
+- 変更要約の正本仕様や agent prompt の人間意図を確認したいときは、対応する oracle 側の builder を読む。
+- 汎用的な git 操作 helper、path model、または ACP 共通型の定義を調べたいだけなら、それぞれの共通実装・基本型定義へ進む。
 
 ## hash
-- 953844150e43aae9519c0790bc24357d2ab0b3efe4e05ac9ceb1064eb2c902db
+- cc2a9e6219cee7568fdf4f24f83575f00d22129c50d3f56a842be80ccfbf1228
 
 # `file_finding_enumeration.py`
 

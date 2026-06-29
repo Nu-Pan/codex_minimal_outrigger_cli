@@ -19,21 +19,23 @@
 # `builder`
 
 ## Summary
-- AgentCallParameter builder 群の realization 側入口を束ねる領域。多くは正本側実装への委譲・再公開・互換 import path 維持を担い、既存参照を壊さずに正本側 builder を利用できる境界として位置づく。
-- apply fork、review、session、TUI、indexing、quota probe など用途別の builder 入口へ進むための上位ルーティング対象。prompt や parameter の正本仕様そのものではなく、realization 側公開面と正本側実装の接続関係を切り分けるために読む。
-- 一部には正本側 builder が未整備な用途の暫定 adapter や、正本側 builder の生成結果に対する局所的な補正 wrapper が含まれるため、互換層を残す理由、削除条件、委譲先との対応を確認する入口になる。
+- ACP の agent call parameter builder について、realization 側の公開 import 経路と oracle 側の正本実装を接続する互換・委譲層を扱う領域。多くは既存参照を壊さないための薄い再公開入口で、実装本体は oracle 側に置かれる。
+- apply、review、session、TUI、indexing などの builder 名前空間ごとに、oracle 側 package 構造との対応、既存公開面の維持、削除条件、局所的な prompt 表記補正や parameter 変換境界を確認するための入口になる。
+- quota availability probe については、現行 oracle 側に専用 builder がない制約を補う暫定 adapter を含み、runtime に prompt literal を置かず AgentCallParameter 構築境界へ揃える役割を持つ。
 
 ## Read this when
-- ACP builder の realization 側公開入口が、正本側 builder や既存 import path とどう対応しているかを用途別に確認したいとき。
-- apply fork、review、session、TUI、indexing、quota probe などの agent call parameter 構築入口を探し、どの下位領域へ進むべきか判断したいとき。
-- 互換再公開、薄い委譲 wrapper、暫定 adapter、prompt 表記補正など、builder 周辺の realization 側境界を残す理由や削除条件を確認したいとき。
-- 公開済み参照経路の維持・廃止、正本側 import path への移行、残存参照の整理に関わる変更を検討しているとき。
+- ACP builder 系の古い公開 import 経路が、oracle 側の canonical 実装や package 構造へどう接続されているか確認したいとき。
+- agent call parameter 生成について、realization 側でどこまでを互換層・委譲・変換・局所補正として扱っているか切り分けたいとき。
+- apply fork、review oracle builder、session join、TUI 起動や resolve parameter、indexing 関連の builder 入口から、目的に合う下位領域を選びたいとき。
+- 互換入口を残す理由、正本側実装への移行状況、既存参照がなくなった後の削除条件を確認したいとき。
+- quota probe 用の暫定 parameter builder が存在する理由、引き継ぐ parameter 境界、oracle 側専用 builder が追加された場合の置換対象を確認したいとき。
 
 ## Do not read this when
-- AgentCallParameter の prompt 内容、出力条件、型定義、正本仕様そのものを確認したいとき。正本側の対応する仕様断片または実装を読む。
-- 各用途の処理本体、CLI 制御、git 操作、TUI 画面処理、session join の衝突解決、indexing の生成・探索処理などを調べたいとき。ここは主に builder 入口と互換境界を扱う。
-- 新しい機能の実装場所やテスト対象を探しており、既存 builder の公開面・委譲関係・互換層が関係しないとき。より直接の実装領域またはテスト領域へ進む。
-- 生成済み parameter の利用側挙動だけを追う作業で、builder の import 経路、正本側への委譲、暫定 adapter、局所補正の有無が判断材料にならないとき。
+- AgentCallParameter 型、FileAccessMode、path model、git helper などの共通型・共通処理そのものを調べたいときは、それぞれの基本実装へ進む。
+- prompt の正本仕様、人間意図、builder の canonical な組み立て仕様を確認したいときは、対応する oracle 側の仕様断片または実装を読む。
+- apply fork 全体の制御フロー、branch 操作、CLI 引数処理、diff 生成、quota 待機状態機械、resume token、call log などの利用側 runtime 挙動を追いたいときは、呼び出し元の実装へ進む。
+- TUI の画面表示、イベント処理、入力操作、UI 構成など、parameter builder ではない UI 本体を調べたいとき。
+- indexing や review finding の生成・探索・判定・検証ロジックそのものを変更したいときは、互換再公開層ではなく実処理を持つ正本側または対象実装を読む。
 
 ## hash
-- 241bdd22c5749dc57b2371dcb147636186cf73951a4aaa9628dd641c17c8afb2
+- 21b2c425b5fa37d72873f57fd9bae15ac676a8684bd5511ce6b9341ea7aaf7ea
