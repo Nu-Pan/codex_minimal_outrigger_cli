@@ -17,36 +17,40 @@
 # `enumerate_finding.py`
 
 ## Summary
-- review oracle の finding 列挙ロジックを、正本側の実装からそのまま公開する薄い再エクスポートファイル。実際の責務や判定内容は正本側にあり、このファイル自体は realization 側の import 経路を保つ入口として位置づけられる。
+- レビュー指摘列挙機能について、旧来の実装側 import 経路を維持するための互換モジュール。実体は正本側の実装に委譲し、この経路を使う呼び出し元が残っている間だけ入口として機能する。
+- この対象自体は列挙ロジックを定義せず、互換経路の維持理由と削除条件を示す薄い再公開層として位置づけられる。
 
 ## Read this when
-- realization 側から review oracle の finding 列挙機能を import する経路を確認したいとき。
-- 正本側の review oracle 実装が、src 側のどの入口から参照されているかを追跡したいとき。
+- レビュー指摘列挙機能の import 経路を整理し、旧来の実装側経路をまだ残す必要があるか確認するとき。
+- 正本側の実装へ呼び出し元を移行する作業で、互換モジュールの削除条件や残置理由を確認するとき。
+- 互換 import 層が意図的な一時経路なのか、不要な重複実装なのかを判断するとき。
 
 ## Do not read this when
-- finding の列挙条件、出力内容、判定ロジックそのものを確認したいとき。その場合は再エクスポート先の正本側実装を読む。
-- review oracle 全体の仕様意図やルールを確認したいとき。その場合は対応する oracle file や上位の正本仕様を読む。
+- レビュー指摘列挙そのものの仕様、出力内容、検出ロジックを確認したいとき。この対象ではなく正本側の実装を読む。
+- 新しい列挙処理や判定ロジックを追加・変更したいとき。この対象は実装本体ではないため、委譲先を確認する。
+- 互換経路と無関係なレビュー機能全般、CLI 表示、テスト方針を調べたいとき。より直接その責務を持つ対象へ進む。
 
 ## hash
-- eac5a4d9395959e1b8fe4f22e02a3e127b1517fdfe317b3197f9ae19ac149a93
+- 0469200f883330879457152116ebf6fce239124db5e820f3bc7d0122adf3707b
 
 # `judge_finding.py`
 
 ## Summary
-- review oracle 領域の finding 判定実装を、正本側の実装から再公開する薄い互換モジュール。実体は別ツリーの同名責務にあり、この対象自体は判定ロジックを持たず、呼び出し側が realization 側の import path から正本由来の実装へ到達する入口になっている。
+- review finding judgment の実体を canonical oracle 側へ委譲するための互換 import module。既存 caller が旧来の realization 側 import path を使っている間だけ残され、実装本体は持たず wildcard import で canonical implementation を再公開する。
+- 互換層を削除できる条件として、全 caller が canonical oracle path を直接使う状態になることを docstring で示す。
 
 ## Read this when
-- review oracle の finding 判定を使う側で、realization 側の import path がどの実装へ委譲されているかを確認したいとき。
-- 同階層の realization モジュール群が、正本側実装を再公開するだけなのか、独自実装を持つのかを切り分けたいとき。
-- この import path を変更・削除してよいか判断するために、互換入口としての役割を確認したいとき。
+- review finding judgment の import 経路を調査していて、旧来の realization 側 path がまだ使われているか、canonical oracle 側への委譲だけをしているかを確認したいとき。
+- 互換 import module の削除可否を判断するために、残している理由と削除条件を確認したいとき。
+- 同名機能の実装が realization 側にあるように見えるが、実体がどこにあるかを切り分けたいとき。
 
 ## Do not read this when
-- finding 判定ロジックそのもの、入力・出力・判定基準を理解したいとき。この対象ではなく、委譲先の正本側実装を読む。
-- review oracle 全体の設計や他の判定処理を調べたいとき。より上位または該当責務の本文へ進む。
-- 再公開ではない実装詳細、テスト観点、CLI 出力仕様を探しているとき。この対象にはそれらの情報は含まれていない。
+- review finding judgment の判定仕様や具体的な実装内容を確認したいとき。この module は互換 import 層なので、canonical oracle 側の実装を直接読む方が適切。
+- 新しい判定ロジック、データ構造、テスト観点を探しているとき。この module にはそれらの本文はない。
+- 単に oracle file と realization file の一般的な責務境界を確認したいとき。この module 固有の情報は互換 import path の維持理由に限られる。
 
 ## hash
-- 2435689a0d7870d18e17827883aea06ae146b0db7a102b5881e4b2a8e877d524
+- 1af803594cd6409cf869f8b42cff07b9196e96439b57002bc1b935c328c1e069
 
 # `merge_finding.py`
 
@@ -92,16 +96,19 @@
 # `validate_finding_challenger.py`
 
 ## Summary
-- レビュー用 oracle 検証処理のうち、finding を challenger 観点で検証する実体を、realization 側の公開経路から再公開する薄い入口。
-- 処理本体ではなく、実装側から oracle 由来の検証機能へ到達するための互換的な import 境界として位置づく。
+- 既存呼び出し元向けに、古い import 経路から正本側の challenger finding validation 実装を再公開する互換モジュール。
+- 実体の検証ロジックは持たず、全公開名を正本側実装へ委譲する入口としてだけ機能する。
+- 呼び出し元が正本側の経路へ移行し終えた後に削除する前提の一時的な互換層である。
 
 ## Read this when
-- realization 側のレビュー検証コードから、challenger による finding 検証機能がどの公開経路で参照されるかを確認したいとき。
-- レビュー用 oracle 検証モジュールの import 境界や再公開の有無を確認したいとき。
+- 古い import 経路を使う呼び出し元が残っているか確認する。
+- challenger finding validation の import 互換性や移行完了条件を調べる。
+- 互換モジュールを削除できるか、または削除前に参照元を正本側へ移す必要があるか判断する。
 
 ## Do not read this when
-- challenger による finding 検証の具体的な判定ロジック、入出力、プロンプト構成を確認したいとき。
-- oracle file と realization file の一般的な役割分担や編集責務を確認したいだけのとき。
+- challenger finding validation の実際の判定仕様や検証ロジックを確認したい。その場合は正本側の実装を読む。
+- 新しい検証処理を実装・変更したい。この対象は委譲だけであり、挙動本体の変更先ではない。
+- 互換 import と無関係な review oracle 周辺の処理を調べている。
 
 ## hash
-- 5b902ceead10af43c7bf653959751fd8ca191352e4275fb80799a4ec71cc722c
+- 65259bcd79ca803eef7fc76ba4bbabf8267bb9b725e86300e20be0da2181ff24

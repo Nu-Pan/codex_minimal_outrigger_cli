@@ -19,18 +19,18 @@
 # `join`
 
 ## Summary
-- ACP builder における session join 領域の realization 側入口。package 階層の互換境界と、セッション join 時の競合解決機能を正本側実装へ委譲する入口をまとめて扱う。
-- この階層自体は join 処理の実体を持たず、realization 側から正本側の対応実装へ接続するための薄い境界として位置づく。
+- ACP builder の session join 領域における package 入口と、旧 import 経路を維持する互換入口を収める領域。
+- この階層自体は session join の実処理を担う場所ではなく、oracle 側の対応構成との package 互換性と、正本側実装への再 export 境界を扱う。
 
 ## Read this when
-- ACP builder の session join 領域で、realization 側の package 構成や import 経路が正本側と対応しているか確認したいとき。
-- セッション join 時の競合解決機能について、realization 側の入口がどの正本実装へ接続されているか確認したいとき。
-- join 配下の具体的な実装へ進む前に、この階層が処理実体ではなく互換境界・委譲入口として成立していることを確認したいとき。
+- ACP builder の session join 配下が package として成立している理由や、oracle 側の対応構成との互換性を確認したいとき。
+- session join conflict resolution について、旧 import 経路が残っている理由、移行用の互換入口、削除可否の前提を確認したいとき。
+- session join 配下の実体を持つ実装へ進む前に、この階層が実処理ではなく互換境界として存在しているかを見分けたいとき。
 
 ## Do not read this when
-- セッション join の具体的な判定条件、分岐、データ構造、入出力仕様を調べたいとき。この階層は実体を持たないため、正本側の対応実装を読む。
-- ACP builder 全体の設計や session join 以外の領域を調べたいとき。より上位または該当領域の対象を読む。
-- oracle 側の正本仕様そのものを確認したいとき。この階層は realization 側の入口であり、正本仕様の本文ではない。
+- session join の具体的な処理内容、関数、クラス、入出力仕様、衝突解決の判定内容を調べたいときは、実体を持つ正本側実装へ進む。
+- ACP builder 全体の設計や session join 以外の領域を調べたいときは、より上位または対象領域の入口から確認する。
+- oracle 側の正本仕様そのものを確認したいときは、この互換領域ではなく oracle 側の該当本文を読む。
 
 ## hash
-- 72d257157db7c1849431e74bb0de90b9b8d3bce2ea95c90b4dbfeb06b20730e4
+- 85933db87f4a855b5a4bdd80b5593fcd293c47c0e7c1c7fa2e11a1270fa78021

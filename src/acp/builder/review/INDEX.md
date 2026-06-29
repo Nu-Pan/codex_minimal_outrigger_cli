@@ -18,20 +18,21 @@
 # `oracle`
 
 ## Summary
-- レビュー用 oracle 機能を realization 側の互換 import 経路から参照するための薄い入口群をまとめる package。多くは正本側実装の再公開だけを担い、一部は AgentCallParameter 生成後の prompt に含まれる oracle root 表記だけを局所補正する。
-- finding の列挙・判定・検証・merge について、realization 側コードが正本側の review oracle 実装へ到達する境界を確認するための起点になる。
+- review oracle 周辺で、正本側実装への互換 import 経路と、一部の AgentCallParameter 生成結果に対する最小限の prompt 補正をまとめる realization 側の入口。
+- 多くの対象は実体ロジックを持たず、旧来の呼び出し元を正本側経路へ移行するまで残す再公開層として機能する。
+- finding merge と finding advocate validation では、正本側 builder の出力を保持しつつ、oracle root 表記に関する既知の静的 typo だけを局所補正する wrapper を持つ。
 
 ## Read this when
-- review oracle 関連処理を呼び出す realization 側 import 経路が、正本側実装へどう委譲されているかを俯瞰したいとき。
-- finding の列挙、判定、検証、merge の入口が独自実装なのか再公開なのかを切り分けたいとき。
-- review oracle 用 AgentCallParameter の生成後に、prompt 内の oracle root 表記を一時的に補正している箇所を探すとき。
-- 正本側の typo や placeholder 表記不具合が解消された後に、互換補正 wrapper を削除できるか判断したいとき。
+- review oracle の旧来 import 経路がなぜ残っているか、また削除できる条件を確認したいとき。
+- review finding enumeration、judgment、challenger validation が realization 側に実装本体を持つのか、正本側へ委譲しているだけなのかを切り分けたいとき。
+- review oracle の finding merge または finding advocate validation で渡される AgentCallParameter の生成経路を確認したいとき。
+- 生成 prompt 内の oracle root 表記に対する一時的な互換補正がどこで行われ、どの動的入力を変更しない前提なのかを確認したいとき。
 
 ## Do not read this when
-- finding の列挙条件、判定基準、検証プロンプト、merge prompt の正本内容を理解したいとき。その場合は委譲先の正本側実装や対応する oracle file を読む。
-- AgentCallParameter 型の共通構造、model_class、reasoning_effort、file_access_mode、structured output schema の一般仕様を調べたいとき。
-- review oracle 全体の設計意図、検出対象、出力仕様を確認したいとき。より上位の正本仕様または該当責務の本文へ進む。
-- 再公開や局所的な prompt 補正ではない、レビュー処理本体や CLI 出力処理の実装を探しているとき。
+- review oracle の検出仕様、判定仕様、prompt 正本、structured output schema の本来の定義を確認したいときは、正本側の対応する oracle 実装や仕様文書を読む。
+- 新しい finding の列挙、判定、検証ロジックを追加・変更したいときは、この互換層ではなく委譲先の実装本体を読む。
+- AgentCallParameter 型、model class、reasoning effort、file access mode などの共通構造を調べたいときは、共通の parameter 定義へ進む。
+- review oracle と無関係な CLI 表示、テスト方針、INDEX.md 生成仕様、oracle file と realization file の一般的な責務境界を調べているときは、より直接その責務を持つ対象へ進む。
 
 ## hash
-- 07338706edd3154067d973bcd33cdb0317183771bab40f081e1f92ad539bf3b1
+- 6cc02d64fda77f8230d1b6ff12f6bcfc1c44b5fc8782501b880043954d509966

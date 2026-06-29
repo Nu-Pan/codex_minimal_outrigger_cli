@@ -62,63 +62,62 @@
 # `review`
 
 ## Summary
-- review builder 領域の realization 側 package。正本側 review builder との互換 package 境界と、レビュー用 oracle 機能へ到達するための realization 側 import 経路を扱う。
-- 主な内容は、package としての互換名前空間の成立確認と、finding の列挙・判定・検証・merge を正本側実装へ委譲する薄い入口群である。
-- 一部では、review oracle 用 AgentCallParameter 生成後の prompt に含まれる oracle root 表記を、正本側の表記不具合に対する互換目的で局所補正する。
+- review builder 領域の realization 側入口であり、互換 package と review oracle 周辺の旧来 import 経路をまとめて扱う。
+- 多くは正本側への再公開層として機能し、一部の AgentCallParameter 生成では正本側出力を保ったまま oracle root 表記の既知 typo だけを局所補正する。
 
 ## Read this when
-- review builder 領域で、正本側 package に対応する realization 側 package や import 経路が存在するかを確認したいとき。
-- review oracle 関連処理を呼び出す realization 側コードが、正本側実装へどの境界で委譲されるかを俯瞰したいとき。
-- finding の列挙、判定、検証、merge の入口が realization 側の独自実装なのか、正本側実装の再公開なのかを切り分けたいとき。
-- review oracle 用 AgentCallParameter の prompt 内にある oracle root 表記の局所補正箇所や、その互換 wrapper を削除できる条件を確認したいとき。
+- review builder 領域が正本側 package と対応する realization package を持つか確認したいとき。
+- review oracle の旧来 import 経路が残っている理由や、削除できる条件を確認したいとき。
+- review finding enumeration、judgment、challenger validation が realization 側に本体を持つのか、正本側へ委譲するだけなのかを切り分けたいとき。
+- review oracle の finding merge または finding advocate validation で渡される AgentCallParameter の生成経路を確認したいとき。
+- 生成 prompt 内の oracle root 表記に対する一時的な互換補正がどこで行われ、どの動的入力を変更しない前提なのかを確認したいとき。
 
 ## Do not read this when
-- finding の列挙条件、判定基準、検証プロンプト、merge prompt の正本内容を理解したいとき。その場合は委譲先の正本側実装や対応する正本仕様断片を読む。
-- AgentCallParameter 型の共通構造、model_class、reasoning_effort、file_access_mode、structured output schema の一般仕様を調べたいとき。
-- review oracle 全体の設計意図、検出対象、出力仕様を確認したいとき。その場合はより上位の正本仕様または該当責務の本文へ進む。
-- レビュー処理本体、CLI 出力処理、または package 初期化と正本側実装への再公開・局所補正以外の実装変更先を探しているとき。
+- review builder の package 初期化以外の具体的な処理、関数、クラス、出力、制御フローを調べたいだけのときは、より直接の実装本体へ進む。
+- review oracle の検出仕様、判定仕様、prompt 正本、structured output schema の本来の定義を確認したいときは、正本側の対応する oracle 実装や仕様文書へ進む。
+- 新しい finding の列挙、判定、検証ロジックを追加・変更したいときは、この互換層ではなく委譲先の実装本体へ進む。
+- AgentCallParameter 型、model class、reasoning effort、file access mode などの共通構造を調べたいときは、共通の parameter 定義へ進む。
+- review oracle と無関係な CLI 表示、テスト方針、INDEX.md 生成仕様、oracle file と realization file の一般的な責務境界を調べているときは、それぞれの責務を持つ対象へ進む。
 
 ## hash
-- a9603b35ce0466237404c12bf31e6f748489b10fe2599d55508231d0d5976ad0
+- 874508bd5358e89af00916b9ec2276696b92acac95312d6271512bef85a014ab
 
 # `session`
 
 ## Summary
-- ACP builder の session 領域における realization 側の入口を扱う階層。正本側 package 構造との import 経路互換を成立させ、session join 領域への委譲入口を下位に持つ。
-- この階層自体は session builder の具体的な処理実体を持たず、package としての成立、および join 領域へ進むための境界として位置づけられる。
+- ACP builder の session 領域で、oracle 側と同じ package 構造を実装側に成立させるための互換入口を扱う階層。
+- この階層自体は session builder の実処理を担う場所ではなく、実体を持たない package 初期化と、session join 配下の互換境界へ進むための入口として位置づけられる。
 
 ## Read this when
-- ACP builder の session 領域で、realization 側の package 構成が正本側とどう対応しているか確認したいとき。
-- session join の競合解決機能へ進む前に、session 領域全体の入口と下位領域の位置づけを把握したいとき。
-- この階層が処理実体ではなく、互換 package と下位委譲入口を束ねる場所であることを確認したいとき。
+- ACP builder の session 領域が oracle 側の package 構造とどう対応しているかを確認したいとき。
+- session 領域が import 可能な package として存在する理由を確認したいとき。
+- session join 配下へ進む前に、この領域が実処理ではなく互換 package 境界を扱う場所かどうかを見分けたいとき。
 
 ## Do not read this when
-- session builder の具体的な処理、状態管理、入出力変換、判定条件を調べたいとき。より直接の実装または正本側の対応箇所を読む。
-- session join の具体的な分岐、データ構造、入出力仕様を調べたいとき。下位の対応領域または正本側実装を読む。
-- ACP builder 全体の設計や session 以外の領域を調べたいとき。より上位または該当領域の対象を読む。
-- oracle 側の正本仕様そのものを確認したいとき。この階層は realization 側の互換境界であり、正本仕様本文ではない。
+- session builder の具体的な処理、状態管理、入出力変換、関数、クラス、定数を調べたいとき。
+- session join の衝突解決ロジックや判定内容など、実体を持つ処理を確認したいとき。
+- oracle 側の正本仕様や互換対象そのものを確認したいとき。
 
 ## hash
-- 2c93bf1bba91509e81b2885c63b2b7c6cddd88d36fb0023de9e342fb0c09d71b
+- 8c4fa4ee9bc1e65c70dcc8ff005ed00bb8e4079aff3755b9674a92cfef3a0446
 
 # `tui`
 
 ## Summary
-- ACP builder の TUI 関連公開入口をまとめる互換接続層。TUI 起動用および resolve parameter 構築用の既存 import path を維持し、実際の構築処理は正本側実装へ委譲する。
-- TUI で選択できるファイルアクセスモード候補を正本 enum から導出して公開し、TUI ビルダー層から正本由来のパラメータ生成機能へ到達するための薄い中継点として位置づく。
-- この階層自体は画面制御やパラメータ組み立て本体を持たず、互換 package としての存在、公開名の再エクスポート、正本実装への接続境界を扱う。
+- ACP builder の TUI 関連公開 import path を、正本側の実装へ中継する互換層をまとめる階層。TUI 起動パラメータ生成と resolve-parameter builder の既存参照を維持し、TUI 向け file access mode tuple も公開する。
+- ここにある実装は TUI の画面処理や builder の正本ロジック本体ではなく、realization 側または利用者向け公開面に残る既存 import 経路を成立させるための再公開・委譲を担う。
 
 ## Read this when
-- ACP builder の TUI 関連で、既存の公開 import path や互換 package としての入口が維持されているか確認したいとき。
-- TUI 起動パラメータ生成や resolve parameter 構築の公開入口が、正本側実装へどのように中継されているか確認したいとき。
-- TUI で扱うファイルアクセスモード候補が正本側の定義からどのように公開されるか確認したいとき。
-- 互換接続層を削除できる条件や、realization 側・利用者向け公開面に残る参照の有無を調べたいとき。
+- ACP builder の TUI 関連 API を既存の公開 import path から使えるように保っている互換層を確認したいとき。
+- TUI 起動パラメータ生成や resolve-parameter builder が、realization 側から oracle 側の canonical 実装へどう接続されているかを確認したいとき。
+- TUI 向け import surface で公開される file access mode の選択肢や、builder 関数の再公開範囲を確認したいとき。
+- 正本側 import path への移行に伴い、この互換層を削除できる条件を調べたいとき。
 
 ## Do not read this when
-- TUI 起動パラメータや resolve parameter の実際の組み立て内容、検証処理、正本仕様を確認したいときは、委譲先の正本側実装を直接読む。
-- TUI の表示処理、イベント処理、画面構成、入力操作、対話フローを調べたいときは、TUI 本体側の実装を読む。
-- AgentCallParameter、FileAccessMode、ファイルアクセスモード enum の定義や意味を確認したいときは、それらを定義する基本モジュールを読む。
-- 互換性維持や公開入口の中継に関係しない新規の TUI 仕様設計、画面制御、CLI 動作を調べたいだけのとき。
+- TUI 起動パラメータや resolve-parameter builder の実際の組み立て仕様を確認したいとき。ここではなく oracle 側の canonical 実装を読む。
+- TUI の表示、イベント処理、画面構成、入力操作などの UI 本体実装を調べたいとき。
+- AgentCallParameter や FileAccessMode の型定義・意味を確認したいとき。ここでは型や列挙値を利用・公開するだけで、定義本体は別の基本モジュールが担う。
+- TUI 以外の ACP builder 経路、または UI 非依存の parameter 構築全般を調べたいとき。
 
 ## hash
-- 479ac061ea07bbf27bdc8ffbd4c1560a62988c7fc9d7a0292e825a9982fb184a
+- 3d3ccc7c3599265b864d6f03f95716c3677e3806db42b4c7e7371a7a4440e6f2

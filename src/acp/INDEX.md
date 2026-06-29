@@ -19,21 +19,22 @@
 # `builder`
 
 ## Summary
-- ACP builder 領域における realization 側の互換入口群を束ねる階層。正本側に置かれた builder 実装への import 経路を維持し、既存の公開参照を壊さないための薄い再公開境界として機能する。
-- 扱う対象は、apply fork 向け agent call parameter 構築入口、indexing 関連実装の互換公開、review oracle 関連 builder の委譲入口、session join 領域への境界、TUI 起動・resolve parameter 構築入口などである。
-- この階層自体は各 builder の正本仕様や処理本体ではなく、realization 側から正本側実装へ到達するための package 境界、公開名の維持、局所的な互換補正、削除条件の確認に使う入口である。
+- ACP の agent call parameter builder 群について、realization 側に残る公開 import path と oracle 側 canonical 実装への互換境界をまとめる領域。多くは正本側実装の薄い再公開・委譲入口であり、実処理本体ではなく、既存参照を壊さずに正本側へ接続する役割を持つ。
+- apply fork、review oracle、session、TUI、indexing などの builder 系入口へ進むための上位境界であり、どの系統が互換 package、再公開層、委譲層、一時補正層のどれに当たるかを切り分ける入口になる。
 
 ## Read this when
-- ACP builder 全体で、realization 側の公開 import path と正本側 builder 実装との対応関係を俯瞰したいとき。
-- 既存利用者や残存参照を壊さずに、builder 関連の公開入口を維持・廃止・移動できるか判断したいとき。
-- apply、indexing、review、session、TUI の各 builder 領域について、どの下位領域へ進むべきかを選びたいとき。
-- 正本側 builder への委譲、正本側戻り値の realization 側型への適合、oracle import path の fallback、review prompt の局所的な互換補正など、互換境界の所在を探したいとき。
+- ACP builder 系の既存公開参照が oracle 側実装へどう接続されているかを、上位から切り分けたいとき。
+- agent call parameter builder のうち、apply fork、review oracle、session join、TUI 起動・resolve、indexing 関連のどの入口へ進むべきか判断したいとき。
+- realization 側に残る互換 import path、再公開層、委譲層を残す理由や削除条件を確認したいとき。
+- oracle 側 package 構造に合わせて realization 側 package が存在している理由を確認したいとき。
+- 正本側 builder の戻り値や公開面を realization 側で扱うための適合処理、import path fallback、一時的な互換補正の所在を探し始めるとき。
 
 ## Do not read this when
-- agent call parameter の具体的な組み立て内容、プロンプト本文、出力条件、型定義、検証規則などの正本仕様を確認したいとき。その場合は委譲先の正本側本文や定義元を読む。
-- indexing の生成処理・探索処理・データ構造、review finding の判定基準、session join の具体処理、TUI の画面制御やイベント処理を調べたいとき。各処理本体の領域へ直接進む。
-- ACP builder 以外の ACP 関連モジュール、CLI 制御、git 操作、fork 適用処理、作業レポート生成フローを調べたいとき。
-- 互換 package 境界や公開入口の維持・削除条件に関係しない新規機能の実装場所やテスト対象を探しているとき。
+- builder の具体的な prompt、出力条件、structured output schema、正本仕様そのものを確認したいとき。正本側の対応する本文を読む。
+- agent call parameter の型定義、file access mode、model class、repo root 解決などの共通構造を確認したいとき。共通定義のある領域へ進む。
+- apply fork 全体の CLI 制御、fork 適用処理、git 操作、作業レポート生成フローを調べたいとき。ここは parameter 構築入口と互換境界に限られる。
+- TUI の画面表示、イベント処理、入力操作など UI 本体の実装を調べたいとき。TUI 本体の領域へ進む。
+- indexing の生成処理、探索処理、データ構造、入出力仕様を調べたいとき。互換入口ではなく実体を持つ正本側実装を読む。
 
 ## hash
-- 12275ff74918696d883a8d719eb8c1c93586105d58d269728fcb641a4cc1a686
+- a05c840cbeae069b5a217e3011efb80b6404b8ce94f28ae846fffe57203ae605
