@@ -52,6 +52,8 @@ from commons.runtime_results import CodexExecResult
 
 _QUOTA_CONDITION = threading.Condition()
 _QUOTA_POLLING = False
+_QUOTA_PROBE_AVAILABLE = False
+_QUOTA_PROBE_ERROR: BaseException | None = None
 _CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
 _LAST_CODEX_LOG_TIMESTAMP: str | None = None
 
@@ -326,7 +328,7 @@ def run_codex_exec(
                 sleep_sec *= 2
                 continue
             if is_quota_error(result.stdout):
-                global _QUOTA_POLLING
+                global _QUOTA_POLLING, _QUOTA_PROBE_AVAILABLE, _QUOTA_PROBE_ERROR
                 emit_codex_call_event(
                     run_purpose=purpose,
                     run_call_path=call_path,
@@ -354,13 +356,27 @@ def run_codex_exec(
                         quota_wait_sec += waited_sec
                         if logger is not None:
                             logger.add_quota_wait(waited_sec)
+                        if _QUOTA_PROBE_ERROR is not None:
+                            raise _QUOTA_PROBE_ERROR
+                        if not _QUOTA_PROBE_AVAILABLE:
+                            raise CmocError(
+                                "Codex CLI quota 待機の代表 probe が中断しました。",
+                                [
+                                    "quota 回復後に同じ cmoc コマンドを再実行してください。"
+                                ],
+                                error_text,
+                            )
                         resume_token = extract_resume_token(result.stdout)
                         continue
+                    _QUOTA_PROBE_AVAILABLE = False
+                    _QUOTA_PROBE_ERROR = None
                     _QUOTA_POLLING = True
                 print(
                     f"# {console_timestamp()} Codex CLI quota wait: entering polling mode",
                     flush=True,
                 )
+                probe_available = False
+                probe_error: BaseException | None = None
                 try:
                     while True:
                         if (
@@ -436,8 +452,16 @@ def run_codex_exec(
                         )
                         if probe_available:
                             break
+                except BaseException as exc:
+                    probe_error = exc
+                    raise
                 finally:
                     with _QUOTA_CONDITION:
+                        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+                        # Waiters may resume only after the representative probe
+                        # proved quota availability; probe failure is shared.
+                        _QUOTA_PROBE_AVAILABLE = probe_available
+                        _QUOTA_PROBE_ERROR = probe_error
                         _QUOTA_POLLING = False
                         _QUOTA_CONDITION.notify_all()
                 print(

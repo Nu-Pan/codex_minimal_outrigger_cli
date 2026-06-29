@@ -26,6 +26,7 @@ from _support import (
     write_python_executable,
 )
 from commons.runtime_codex import run_codex_exec
+from commons.runtime_errors import CmocError
 
 
 def prompt_log_text(path: str) -> str:
@@ -378,3 +379,70 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
     assert [event["kind"] for event in events].count("probe") == 1
     assert [event["kind"] for event in events].count("resume") == 2
     assert [result.output_json for result in results] == [{"ok": True}, {"ok": True}]
+
+
+def test_waiting_quota_calls_fail_when_representative_probe_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    calls = tmp_path / "parallel_failed_probe_calls.jsonl"
+    fake_codex = bin_dir / "codex"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, pathlib, sys, time",
+            f"calls = pathlib.Path({str(calls)!r})",
+            "args = sys.argv[1:]",
+            "stdin = sys.stdin.read()",
+            "kind = 'resume' if 'resume' in args else 'probe' if stdin == 'quota availability probe' else 'initial'",
+            "with calls.open('a') as f: f.write(json.dumps({'kind': kind, 'args': args}) + '\\n')",
+            "if kind == 'resume':",
+            "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "    output.write_text(json.dumps({'unexpected': 'resume'}))",
+            "    print(json.dumps({'type': 'turn.completed'}))",
+            "    sys.exit(0)",
+            "if kind == 'probe':",
+            "    print(json.dumps({'type':'error','message':'Quota exceeded'}))",
+            "    sys.exit(1)",
+            "deadline = time.time() + 5",
+            "while time.time() < deadline:",
+            "    lines = calls.read_text().splitlines() if calls.exists() else []",
+            "    if sum(1 for line in lines if json.loads(line)['kind'] == 'initial') >= 2:",
+            "        break",
+            "    time.sleep(0.01)",
+            "print(json.dumps({'type':'thread.started','thread_id':'sess-parallel'}))",
+            "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
+            "sys.exit(1)",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+    )
+
+    def call_codex() -> object:
+        return run_codex_exec(
+            parameter,
+            root=root,
+            quota_poll_interval_sec=0.05,
+            max_quota_polls=1,
+            config=CmocConfig(),
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [executor.submit(call_codex) for _index in range(2)]
+        errors = [future.exception() for future in futures]
+
+    events = [json.loads(line) for line in calls.read_text().splitlines()]
+    assert [event["kind"] for event in events].count("initial") == 2
+    assert [event["kind"] for event in events].count("probe") == 1
+    assert [event["kind"] for event in events].count("resume") == 0
+    assert all(isinstance(error, CmocError) for error in errors)
