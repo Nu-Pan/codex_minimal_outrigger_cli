@@ -174,6 +174,10 @@ def extract_valid_index_entry_hash(entry_text: str, entry_name: str) -> str:
         section_positions
     ):
         return ""
+    # <work-root>/oracle/doc/app_spec/indexing.md defines an entry as title plus
+    # fixed sections; preserving fresh malformed text here would skip regeneration.
+    if any(line.strip() for line in lines[1 : section_positions[0]]):
+        return ""
     for start, end in zip(section_positions[:3], section_positions[1:]):
         section_lines = [line.strip() for line in lines[start + 1 : end] if line.strip()]
         # <work-root>/oracle/doc/app_spec/indexing.md requires each entry
