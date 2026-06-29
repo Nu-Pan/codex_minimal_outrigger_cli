@@ -38,12 +38,9 @@
 
 ## Summary
 - `cmoc apply fork` の作業レポート向け変更要約を組み立てる実装。agent call parameter の生成は対応する oracle 実装へ委譲し、生成結果を realization 側の型へ変換する。
-- ACP branch diff を読み、差分ヘッダーから変更 path を抽出して、変更がある場合とない場合の要約ペイロードを出力先へ保存する。
 
 ## Read this when
 - `cmoc apply fork` の変更要約 agent call parameter 生成、oracle builder への委譲、または oracle parameter から realization parameter への変換経路を確認・変更したいとき。
-- ACP branch diff から作業レポート用の変更 path 一覧を作る処理、変更なしの場合の要約生成、または要約ファイルの保存処理を確認・変更したいとき。
-- git diff の `diff --git` 行から path を取り出す最小限の parsing 挙動を確認・変更したいとき。
 
 ## Do not read this when
 - `cmoc apply fork` 全体の実行フロー、fork 作成、branch 操作、または diff 生成そのものを調べたいときは、より上位の apply fork 実装へ進む。
@@ -51,7 +48,7 @@
 - 汎用的な git 操作 helper、path model、または ACP 共通型の定義を調べたいだけなら、それぞれの共通実装・基本型定義へ進む。
 
 ## hash
-- cc2a9e6219cee7568fdf4f24f83575f00d22129c50d3f56a842be80ccfbf1228
+- 953844150e43aae9519c0790bc24357d2ab0b3efe4e05ac9ceb1064eb2c902db
 
 # `file_finding_enumeration.py`
 
