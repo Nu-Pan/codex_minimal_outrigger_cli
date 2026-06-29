@@ -114,22 +114,26 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の共通 runtime 契約を横断的に固定する realization test。root/worktree 解決、config 既定値と検証、CmocError の Markdown 表示、CLI error の stdout 化、subcommand log、FileAccessMode から Codex sandbox/profile への変換、binary 判定など、個別サブコマンドより下位の実行前提をまとめて検証する。
-- 16,000 文字超の大きなテストだが、共通 fixture と root 状態の文脈を共有して崩れやすい basic runtime 回帰を一箇所で扱うための凝集した入口になっている。
+- cmoc の基礎 runtime 契約を横断的に固定する realization test。root 解決、worktree 安全性、設定検証、CmocError の表示、CLI preflight、subcommand log、FileAccessMode と Codex sandbox profile、binary 判定など、個別サブコマンドより下の共通 runtime 境界をまとめて検証する。
+- 16,000 文字を超えるが、共通 fixture と root 状態の読み取り文脈を共有する basic runtime 回帰として凝集しており、分割より同時確認の必要性が高いテスト群を収める。
 
 ## Read this when
-- runtime の基礎契約、特に repo root と run/work root の扱い、linked worktree、main worktree 拒否、managed worktree 外の保護を確認または変更する時。
-- config の既定値、codex model/reasoning effort 名の検証、FileAccessMode の永続化値、sandbox mode、Codex profile の writable roots 制御を変更する時。
-- CmocError の表示形式、CLI の想定済み error や Click parse error の stdout report 化、shell completion probe の preflight 回避、subcommand log の失敗記録を扱う時。
-- `.cmoc` の ignore 設定、起動 wrapper の call stack 表示、binary 判定の読み取り範囲など、個別コマンドではなく runtime 共通の副作用・安全境界を確認する時。
+- root placeholder、repo root、run root、work root、linked worktree、managed worktree の扱いを変更・確認するとき。
+- CmocError、render_error、CLI parse error、stdout/stderr の error report、preflight 失敗時の副作用抑制を変更・確認するとき。
+- config の既定値や codex model / reasoning effort 名の検証、FileAccessMode の永続化値や sandbox mode 変換を変更・確認するとき。
+- Codex profile の cwd、writable_roots、memo・.agents・oracle・src・.cmoc log への書き込み許可境界を変更・確認するとき。
+- subcommand log の生成条件、timestamp 衝突時の log file 分離、pre-log check 失敗時の log 抑制を変更・確認するとき。
+- branch 名から session id を読む処理、apply branch 形状検証、branch に対応する session state 読み込みを変更・確認するとき。
+- binary 判定の読み取り範囲、duration 表示、起動 wrapper の call stack path 表示など、共通 runtime helper の外部挙動を変更・確認するとき。
 
 ## Do not read this when
-- 特定サブコマンド固有の正常系・業務ロジック・入出力仕様だけを調べる時は、そのサブコマンドの実装または専用テストを先に読む。
-- oracle 文書そのものの正本仕様や用語定義を確認したい時は、対応する oracle file を読む。
-- 単体の小さな helper の内部実装だけを変更し、runtime 境界や CLI 表示、sandbox/profile、worktree 安全性に影響しないことが明らかな時は、対象 helper とその近接テストを優先する。
+- 個別サブコマンド固有の通常フロー、入出力 schema、ユーザー操作単位の詳細挙動だけを確認したいときは、そのサブコマンドのテストへ進む。
+- oracle file の正本仕様断片そのものを確認・更新したいときは、対応する oracle 側の文書やコードを読む。
+- runtime の外部契約ではなく、特定 helper の内部実装だけを局所的に確認したいときは、該当する実装 module を直接読む。
+- UI 表示、生成文書、補助スクリプト、依存関係など、root/config/error/sandbox/profile/state/log 以外の領域を扱うときは読まなくてよい。
 
 ## hash
-- eebacc7913c758aaa3b699815f409ac318d991034639822114fa39836ad93d68
+- 6797d132c803a34721b206a43e8e2b7567a7cec0b500834805b677f1c3a0fe28
 
 # `test_cli_init_tui.py`
 
@@ -234,22 +238,22 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- indexing の preflight と CLI サブコマンドが routing document を生成・更新し、INDEX.md conflict、hash 再利用、Codex 呼び出し、commit 対象、linked worktree、dirty worktree をどう扱うかを外部挙動として検証する realization test。
-- semantic entry の妥当性検証、 malformed entry の再生成、兄弟 entry の並列生成、root 直下 memo 除外と nested memo 対象化まで含め、indexing 更新ワークフローの回帰観測点を一箇所に集約している。
+- indexing preflight と indexing サブコマンドが routing document を生成・更新・commit・再利用・conflict 解決する CLI 境界の回帰テストをまとめる realization test。
+- 未初期化 repo、dirty な通常 worktree / linked worktree、apply worktree の repo 設定参照、fresh hash による Codex 呼び出し省略、INDEX.md だけを commit する条件を検証する。
+- routing document エントリーの semantic field 検証、 malformed entry の再生成、兄弟 entry の並列生成、root 直下 memo 除外と nested memo indexing も同じ更新ワークフローの観測点として扱う。
 
 ## Read this when
-- indexing サブコマンドや indexing preflight の成功・失敗条件、git 差分がある場合の停止条件、INDEX.md 更新後の commit 条件を確認・変更するとき。
-- INDEX.md conflict 解決、既存 hash が新鮮な場合の Codex 呼び出し省略、malformed entry の再生成、semantic field のバリデーションを確認するとき。
-- linked worktree や apply worktree 上で indexing がどの root/config/cwd を使い、どの worktree に INDEX.md を作成するかを確認するとき。
-- routing document 更新対象の列挙、兄弟 entry の並列生成、root 直下 memo と nested memo の扱いを変更するとき。
+- indexing CLI の外部挙動、preflight、commit 条件、linked worktree 対応、dirty state 拒否条件を変更・調査する時。
+- routing document 生成で Codex を呼ぶ条件、既存 hash を再利用する条件、malformed entry を再生成する条件を確認する時。
+- INDEX.md conflict 解決、semantic field validation、memo directory の indexing 対象判定、兄弟 entry の並列生成に関する回帰テストを確認する時。
 
 ## Do not read this when
-- 個別の indexing 実装ロジックや helper の責務を知りたいだけなら、対応する実装ファイルを読む。
-- init、apply、join など indexing の回帰観測点として現れる範囲を超えたサブコマンド仕様を調べるだけなら、より直接の CLI テストや実装を読む。
-- INDEX.md エントリーの文章生成規則や正本仕様断片を確認したいだけなら、oracle 側の該当文書を読む。
+- routing document の本文フォーマットや hash 計算の実装詳細だけを調べる時は、共通 indexing 実装を直接読む方が適切。
+- 個別サブコマンドの通常処理、apply join の conflict 解決全般、git helper の基本動作を調べるだけなら、それぞれの実装または専用テストへ進む方が適切。
+- Codex CLI や LLM 出力品質そのものを評価したい時は対象外であり、このテストは呼び出し境界と出力 schema 受け渡しだけを検証している。
 
 ## hash
-- f054171afce78e8df4c108ca283958c3d8bcaa6f3256b7eff69b64068e45fc9a
+- 7e162d2ea95d5518c36dbe5aeffa836aeaa085cc02249f46f7f4141adfe010c5
 
 # `test_indexing_preflight.py`
 

@@ -59,25 +59,25 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation のうち、複数の CLI サブコマンドや上位処理から共有される runtime helper 群をまとめる領域。Codex 呼び出し、設定、内容 hash、CLI 実行ライフサイクル、エラー表示、git 操作、ログ、path、結果型、session state、索引更新 preflight など、横断的な実行時基盤への入口になる。
-- 個別実装は責務ごとに分割されており、公開 import 面を集約する薄い facade、Codex exec/TUI 起動境界、profile/sandbox 境界、永続状態やログの読み書き、外部コマンド結果の共通モデルなどを必要に応じて選んで読むための階層である。
+- cmoc の realization implementation のうち、複数のサブコマンドや上位処理から共有される実行時 helper 群を収める領域。Codex CLI 呼び出し、preflight indexing、設定、内容 hash、CLI 共通実行、エラー表示、git 操作、ログ、path、結果型、session state など、runtime 横断の共通境界を扱う。
+- 個別機能の業務ロジック本体ではなく、外部コマンド・永続状態・利用者向けエラー・実行ログ・共通 import 面をそろえるための基盤実装への入口として位置づく。
 
 ## Read this when
-- CLI サブコマンド実装から共通 runtime 機能を使うための依存先や、複数領域にまたがる公開 helper の所在を確認したいとき。
-- Codex CLI 呼び出しの実行制御、profile・sandbox・CODEX_HOME・Structured Output・quota/capacity retry・call log・TUI 起動などの runtime 境界を調査または変更したいとき。
-- 設定ファイル、内容 hash、binary 判定、path 解決、timestamp、ログ、結果型、共通エラー表示、git repository 操作、session state 永続化など、サブコマンド横断の補助処理を探しているとき。
-- Codex 実行前の索引更新 preflight、INDEX.md entry の鮮度判定、生成依頼、保存、関連 commit 作成といった indexing 実装の流れを追いたいとき。
-- 新しい共有 helper を追加する前に、既存の共通 runtime 層に同じ責務または近い責務の実装があるか確認したいとき。
+- CLI サブコマンドや上位 workflow から使う共通 runtime API、結果型、例外、ログ、path、git、設定、状態永続化の責務境界を探したいとき。
+- Codex CLI の exec または TUI 起動に関する profile 準備、sandbox/read-write root、call log、Structured Output 検証、quota/capacity retry、resume token、preflight 実行制御を確認または変更したいとき。
+- Codex 実行前の indexing preflight、索引 entry の鮮度判定、対象抽出、生成依頼、Markdown entry 描画、lock や git commit を含む索引更新の実装を追いたいとき。
+- 設定ファイルの JSON 変換、内容 hash 保存、binary 判定、利用者向けエラーレポート、外部 command 結果、session state file など、複数領域で再利用される runtime 境界の挙動を確認したいとき。
+- 共通 helper の公開 import 面を整理し、上位コードがどの runtime 名へ依存しているか、または互換 import がどの実装へ接続されるかを確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務処理、引数定義、利用者向け出力、状態遷移 workflow そのものを調べたいとき。その場合は該当するサブコマンド側の実装へ進む。
-- path model、oracle file、realization file、INDEX.md 形式、CLI 仕様などの正本仕様断片を確認したいだけのとき。その場合は oracle 側の本文を読む。
-- テスト期待値や fixture の具体内容を確認したいとき。その場合は realization test 側へ進む。
-- 特定の runtime helper の詳細挙動がすでに分かっているときは、この階層全体ではなく対応する責務の本文を直接読む。
-- 生成済みログ、状態ファイル、schema store、作業 tree 内の成果物そのものを調べたいだけのとき。ここはそれらの配置や読み書きに関わる実装入口であり、実データの閲覧先ではない。
+- 個別サブコマンドの引数定義、command 登録、業務処理、利用者向け workflow だけを調べたいときは、呼び出し側のサブコマンド実装へ直接進む。
+- path model、oracle file、realization file、INDEX.md の意味仕様など、正本仕様断片そのものを確認したいときは oracle 側の本文を読む。
+- 特定の公開出力 schema、prompt 本文、設定モデルのフィールド定義、基本パス概念、CLI 利用者仕様だけを確認したいときは、それぞれの定義元や仕様本文へ進む。
+- 生成済みログや状態ファイルを解析する読み取り側、個別機能での保存先利用、または各 feature 固有の制御フローを調べたいだけのときは、その利用元実装を読む。
+- 同階層にある個別 helper の詳細挙動ではなく、単にこの領域が共有 runtime helper 群かどうかだけを確認したい場合は、パッケージ入口以上の本文を読む必要は薄い。
 
 ## hash
-- 21977af6089144637d2ffbcf2dfa10bfa80fc9aa5e697d39771c95ea7464fc25
+- e47c3297ad940de43d16e63e4ae14a4d842cadec4d378dc365701a7b23d88ce9
 
 # `config`
 
