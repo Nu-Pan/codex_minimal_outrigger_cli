@@ -241,20 +241,20 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- indexing preflight と indexing サブコマンドが routing document を生成・更新・commit する外部挙動を検証する realization test。未初期化・dirty worktree・linked worktree・apply worktree の config 利用、fresh hash による Codex 呼び出し省略、INDEX.md conflict 解決、entry schema 検証、空ディレクトリ・memo 除外・symlink cycle・並列生成などを同じ indexing 更新ワークフローの回帰として扱う。
+- indexing preflight と indexing サブコマンドが routing document を生成・更新・commit する外部挙動を検証する realization test。未初期化・dirty worktree・linked worktree・apply worktree での境界、Codex 呼び出しと hash 再利用、INDEX conflict 解決、malformed entry 再生成、空ディレクトリ・memo 除外・symlink cycle・並列生成を同じ回帰テスト群として扱う。
 
 ## Read this when
-- indexing CLI の preflight 条件、commit 対象、linked worktree 上での更新先、または git dirty 状態での拒否挙動を変更・確認するとき。
-- routing document の entry 生成、既存 hash 再利用、壊れた entry の再生成、entry schema の拒否条件、空ディレクトリへの INDEX.md 配置を変更・確認するとき。
-- INDEX.md conflict 解決、root memo 除外と nested memo indexing、ディレクトリ symlink cycle の除外、兄弟 entry の並列生成に関する回帰を確認するとき。
+- indexing コマンドや indexing preflight の CLI 境界、git commit 条件、worktree 選択、dirty 状態の拒否条件を変更・確認するとき。
+- routing document の entry 生成、fresh hash による再利用、schema 不一致や空文字・複数行 semantic item の拒否、malformed entry の再生成を変更・確認するとき。
+- INDEX conflict 解決、空ディレクトリへの INDEX 配置、root memo 除外と nested memo 対象化、directory symlink cycle の除外、同階層・非祖先対象の並列 indexing を確認するとき。
 
 ## Do not read this when
-- indexing の正本仕様断片そのものを確認したいとき。まず oracle 側の indexing 仕様を読む。
-- routing document 以外のサブコマンドの CLI 境界、または apply/join の conflict 解決全般を調べたいだけのとき。より直接の実装または対象テストを読む。
-- Codex CLI や LLM 出力の品質そのもの、あるいは実際の INDEX.md 本文の内容を評価したいとき。このテストは生成器の外部制御と schema 境界を検証する。
+- routing document 更新ワークフローの外部挙動ではなく、個別 helper の内部実装だけを局所的に確認したいとき。
+- init、apply、join、git 操作一般など、indexing の preflight・更新・commit・conflict 解決に接続しない CLI 挙動を調べるとき。
+- Codex CLI や LLM の出力品質そのもの、または routing entry の本文品質を評価したいとき。
 
 ## hash
-- f20a2be1e1c46de724ba0e71ec3f8f4d18cb6143d46ac1054d45133dd171ffaf
+- c82b2f30aa21b79d71bd6443f4662977ff0985bd5e61c60b80a394b7846e3617
 
 # `test_indexing_preflight.py`
 

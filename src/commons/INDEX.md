@@ -34,25 +34,25 @@
 # `indexing.py`
 
 ## Summary
-- Codex 実行前にルーティング用目次を最新化する preflight の登録、排他制御、更新検出、生成、保存 commit までをまとめて担う実装。
-- 対象ディレクトリと子要素の列挙、既存エントリーの形式検証、鮮度判定用ハッシュ計算、Structured Output から Markdown への描画を扱う。
-- エントリー生成そのものは外部の Codex 実行関数に委譲し、生成対象の本文抽出と実行時の root・cwd・config・purpose の組み立てを行う。
+- Codex 呼び出し前の INDEX 更新 preflight、排他制御、差分 commit、ディレクトリ走査、既存エントリー再利用、エントリー生成、hash 鮮度判定、Structured Output 検証と Markdown 描画をまとめて担う実装。
+- INDEX.md の自動最新化を、git 管理領域の lock、git ignore・memo・binary・symlink 除外、深い階層からの更新、同一深度の並列生成という制御で成立させる。
+- エントリー本文の形式検証、対象内容の取り出し、対象 hash の再帰計算、Codex 実行関数への entry 生成依頼までを一連の indexing 実行経路として読む入口になる。
 
 ## Read this when
-- Codex 呼び出し前に目次更新を走らせる preflight の流れ、排他 lock、更新 commit の挙動を確認したいとき。
-- 目次作成対象に含めるディレクトリやファイル、除外する symlink・memo・git ignored・binary の条件を変更したいとき。
-- 既存エントリーを再利用する条件、必須セクションと bullet-only 形式の検証、ハッシュ抽出の挙動を調べたいとき。
-- Structured Output の検証、エントリー本文のレンダリング、生成失敗時の CmocError を扱う実装を変更したいとき。
-- 目次更新時の並列生成数、対象本文の渡し方、Codex 実行関数への引数を追う必要があるとき。
+- Codex 実行前に INDEX.md を自動更新する preflight の登録・実行順序・commit 作成条件を確認または変更したいとき。
+- INDEX.md 作成対象に含めるファイルやディレクトリ、除外する memo・git ignored・binary・symlink・隠し要素の判定を調べたいとき。
+- 既存 INDEX.md エントリーの再利用条件、hash の抽出・検証、対象内容の hash 計算、再生成が必要になる条件を追いたいとき。
+- Codex へ単一エントリー生成を依頼する引数、実行 root・cwd・config・purpose の扱い、生成結果の schema 検証と Markdown 変換を確認したいとき。
+- INDEX.md 更新処理の並列化粒度、子孫を先に完了させる更新順序、排他 lock の配置や保持範囲を変更する必要があるとき。
 
 ## Do not read this when
-- 人間が管理する正本仕様断片としての目次仕様や Codex 実行ルールを確認したいだけなら、対応する oracle 側の文書を読む。
-- 個別エントリーの文章品質や生成 prompt の標準を変更したいだけなら、エントリー生成パラメータや prompt builder 側を読む。
-- git コマンド実行、設定読み込み、ハッシュ計算、binary 判定、git ignored 判定そのものの共通実装を調べたいだけなら、runtime 側の該当 helper を読む。
-- 通常の CLI コマンド定義や利用者向けオプションを調べたいだけなら、CLI 層の実装を読む。
+- INDEX.md エントリーのプロンプト文面や標準文言そのものを変更したいだけなら、プロンプト構築側または正本仕様側を先に読む。
+- git コマンド実行、設定読み込み、repo root 解決、hash 計算、binary 判定、git ignore 判定などの低レベル runtime helper の内部挙動を調べたいだけなら、それぞれの runtime 実装を直接読む。
+- 個別 CLI コマンドの利用者向け挙動や通常のサブコマンド処理を調べたいだけなら、CLI command 実装側を読む。
+- INDEX.md の仕様意図や oracle 上の正本要求を確認したいだけなら、対応する oracle doc を読む。
 
 ## hash
-- d0096b737f0b5da279be6b4d302ad3fcfa44218a969d349d351be94543f150d9
+- 6ba17c4c80501d669fa28fcf2b4202f71ff6a7c45240909755758c3e971c5982
 
 # `runtime_cli.py`
 
