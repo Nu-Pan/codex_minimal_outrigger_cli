@@ -1,23 +1,23 @@
 # `acp`
 
 ## Summary
-- realization 側で既存の ACP builder 系 import 参照を維持し、正本側 builder 実装へ接続するための互換入口領域。公開 import 面を保つ package 群と、apply fork・indexing・review oracle・session join・TUI などの builder adapter への導線を持つ。
-- 主な責務は、正本側の builder 実体を複製せずに既存参照を成立させること、runtime の AgentCallParameter を正本側実装から受け渡すこと、必要最小限の realization 側補正や再公開を通じて下位機能の agent call parameter 構築へ到達できるようにすること。
+- realization 側で ACP builder 互換名前空間を維持する入口領域。既存の acp 系 import path を残しつつ、実体は正本側または別 module 側の builder 実装へ委譲するための境界を担う。
+- 下位には、acp 直下の互換入口と、apply・review・session・TUI・indexing などの builder 領域へ進むための入口がある。ここ自体は ACP builder の正本仕様や処理本体を所有せず、公開参照経路の維持と下位対象選択のための案内に位置づけられる。
 
 ## Read this when
-- realization 側に残る ACP builder 系 import path の互換維持、削除条件、正本側実装への委譲境界を確認したいとき。
-- apply fork の変更要約・所見列挙・所見適用、index entry 生成、review oracle の所見列挙・判定・統合・検証、session join の conflict resolution、TUI 起動・parameter 解決の builder adapter 所在を探し始めるとき。
-- 正本側 builder を複製せずに再公開している箇所、または正本側 prompt の実行用補正を realization 側で最小限行っている箇所を調べたいとき。
-- 利用者向け公開面や realization 側から既存 import path を移行できるか判断するため、互換 package と下位 builder 領域の境界を把握したいとき。
+- realization 側に残る acp 系 import path が、正本側 builder 実装や実体 module とどう接続されているか確認したいとき。
+- 旧来の acp 系参照を互換入口として残す理由、公開 import 面での扱い、削除条件を判断したいとき。
+- ACP builder 関連で、apply・review・session・TUI・indexing などのどの下位領域へ進むべきかを大まかに切り分けたいとき。
+- builder の処理本体ではなく、realization 側から正本側実装へ委譲する名前空間や package 境界を確認したいとき。
 
 ## Do not read this when
-- ACP builder の正本仕様、prompt 本文、structured output schema、モデル選択、file access mode などを確認したいとき。正本側の対応本文へ進む。
-- CLI コマンド全体の制御、fork 作成、git 操作、引数処理、TUI 画面やイベント処理など、builder adapter 以外の実装を調べたいとき。
-- AgentCallParameter 型、path model、共通列挙値などの基礎定義そのものを確認したいとき。この領域はそれらの定義を所有しない。
-- 対象の下位 builder adapter がすでに特定できており、具体的な関数・補正処理・再公開内容だけを読むべきとき。該当する下位対象へ直接進む。
+- ACP builder の prompt 本文、structured output schema、モデル選択、file access mode、判定基準などの正本仕様を確認したいとき。対応する oracle 側の本文を読む。
+- apply・review・session join・TUI・indexing などの具体的な処理内容や入出力仕様をすでに調べる対象として特定しているとき。該当する下位領域または正本側実装へ直接進む。
+- 新しい ACP 機能や API 仕様を追加する場所を探しているとき。この領域は互換維持と委譲入口のための領域であり、機能追加の正本入口ではない。
+- CLI 全体の制御フロー、fork 作成、git 操作、ユーザー向け挙動、TUI 画面やイベント処理を調べたいとき。ACP builder 互換入口ではなく、それらを実装する対象を読む。
 
 ## hash
-- 5e0e172742bd3d205ff0087cd42a957b319ef94a55fedda13cf4aeb5d74e12b6
+- d912acf53b755082ecee4db0a27842369e3da4df2c22c3c748c5f25b30df0c56
 
 # `basic`
 

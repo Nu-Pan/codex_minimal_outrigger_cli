@@ -277,22 +277,25 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- prompt 構築部品と ACP builder の生成結果を横断的に検証する realization test。標準 prompt、routing、file access、review/apply/indexing/session/tui 各 builder の prompt 内容、structured output schema path、model/reasoning/file access mode、root token 展開、markdown render 挙動を同じ読み取り文脈で確認する。
-- 16,000 文字を超えるが、agent prompt と structured output schema の構築結果を一箇所で回帰検証するための凝集したテスト群として位置づけられている。
+- prompt part と ACP builder が生成する prompt、routing/file access 標準、各種 standard 文書、structured output schema path、model/reasoning/file access mode の期待値を横断的に検証する realization test。
+- 標準 prompt の組み立て、root token や work-root placeholder の保持、apply/review/indexing/tui/session join 系 builder parameter と oracle schema の一致を一箇所で確認する入口。
+- ファイル冒頭の docstring は、16,000 文字を超えていても agent prompt と structured output schema の構築結果という責務境界に閉じ、共通の render/schema 期待値を追うために凝集させている理由を説明している。
 
 ## Read this when
-- prompt builder の標準文書、routing rule、file access rule、realization/review/apply/index entry standard が最終 prompt にどう含まれるかを確認したいとき。
-- ACP builder が返す model class、reasoning effort、file access mode、structured output schema path、prompt 中の root 表記を変更・検証するとき。
-- render_as_markdown の空行畳み込みや code block 内空行保持など、構造化文書の markdown 出力仕様を確認するとき。
-- review oracle 系、apply fork 系、indexing、session join、tui resolve parameter の builder と oracle 側 JSON schema の対応を検証するとき。
+- prompt_builder parts が出力する標準文書の title、markdown render 結果、routing rule、file access rule、realization/index/review/apply standard の含有語を変更・確認するとき。
+- build_complete_prompt の標準文書挿入、root token の扱い、code block 内文字列の保持、work-root placeholder 記録、apply/review/index standard の既定 include/omit 挙動を確認するとき。
+- ACP builder が返す model_class、reasoning_effort、file_access_mode、prompt 文面、structured_output_schema_path、oracle schema JSON との一致を変更・検証するとき。
+- apply fork、review oracle、indexing index entry、TUI resolve parameter、session join conflict resolution の builder parameter に関する回帰テストを探すとき。
+- render_as_markdown の連続空行圧縮や code block 内空行の扱いを変更・確認するとき。
 
 ## Do not read this when
-- 個別 builder の実装詳細や prompt 文言の生成ロジックそのものを変更したいだけで、失敗しているテスト名から対象 implementation に直接進めるとき。
-- oracle 側 JSON schema の正本内容を確認したいとき。このテストは schema 一致を検証する入口であり、schema 本文の代替ではない。
-- CLI の利用者向け挙動やサブコマンド処理を調べたいとき。ここは prompt/ACP parameter 構築の回帰テストであり、通常の CLI 実行経路の入口ではない。
+- 個別 builder の実装ロジック自体を修正したいだけで、期待される外部挙動や schema との一致を確認する段階ではないとき。
+- oracle 側の正本 schema や標準文書の内容そのものを確認したいときは、対応する oracle source または prompt_builder parts を直接読む。
+- CLI command、永続状態、worktree 操作など prompt/ACP builder 生成結果と関係しない realization behavior のテストを探しているとき。
+- 単一の小さな helper の内部実装だけを調べたいときは、この横断テストではなく対象 helper または近い単体テストへ進む。
 
 ## hash
-- 88b912d2ee1d882054f3ec71803a3bd512d3f729885aa11258225082da22d41c
+- 7a8d3a2653292db38f0c3f7dff25a31e6fd8b1f20d89f8e91c6a5a9df4093de9
 
 # `test_review_oracle_cli.py`
 

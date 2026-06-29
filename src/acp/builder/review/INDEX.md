@@ -18,20 +18,20 @@
 # `oracle`
 
 ## Summary
-- レビュー oracle 領域の realization 側互換入口をまとめる package。多くの対象は正本側実装の再公開や薄い委譲であり、finding の列挙・判定・検証、merge finding や所見擁護検証の agent call parameter 生成経路へ、実装側 import path から到達するための境界として機能する。
-- 一部の builder は正本側の生成結果を保ったまま prompt 内の path token や oracle root 表記だけを最小補正するため、review oracle の実行用 parameter 生成で realization 側補正の有無と範囲を確認する入口になる。
+- review oracle 向け builder の realization 側入口をまとめる package。finding の列挙・判定・統合・検証用パラメータ生成について、正本側実装の再公開または最小限の prompt 補正を行う薄い互換層を収める。
+- 多くの対象は正本側実装への委譲境界であり、実際の判定ロジックや oracle 仕様断片ではなく、realization 側 import path から正本由来の review oracle 機能へ到達するための入口として位置づく。
 
 ## Read this when
-- realization 側から review oracle の finding 列挙・判定・検証機能がどの正本側実装または公開経路へ委譲されるかを確認したいとき。
-- review oracle 用の merge finding や所見擁護検証の AgentCallParameter 生成で、正本側 builder の戻り値に対して prompt だけを補正する箇所を探したいとき。
-- この階層の module が独自ロジックを持つのか、互換 import 境界として正本側実装を再公開するだけなのかを切り分けたいとき。
-- oracle root プレースホルダーや path token の表記差が、review oracle の実行経路でどこまで補正されるかを確認したいとき。
+- realization 側から review oracle の finding 列挙・判定・統合・検証機能がどの import 経路で参照され、どこまで正本側へ委譲されているかを確認したいとき。
+- review oracle 用 AgentCallParameter の生成経路で、正本側 builder の返却値に対して realization 側が prompt の oracle root 表記 typo だけを補正している箇所を探したいとき。
+- finding、known findings、advocate 理由、challenger 理由などの動的入力を改変せず、生成済みパラメータの一部だけを維持または差し替える互換層を確認したいとき。
+- この階層のモジュールが独自の review 判定処理を持つのか、正本側実装を再公開するだけなのかを切り分けたいとき。
 
 ## Do not read this when
-- finding の列挙・判定・検証ロジックそのもの、入力・出力・判定基準、prompt 本文、structured output schema の正本内容を理解したいとき。その場合は委譲先の正本側 oracle src や関連 doc を読む。
-- AgentCallParameter 型、モデル選択、reasoning effort、file access mode などの共通仕様を調べたいとき。その場合は共通 parameter 定義へ進む。
-- review oracle 全体の設計、CLI の入出力、oracle file と realization file の基本概念、またはパスモデル全体を確認したいとき。より上位または該当責務の本文を読む。
-- 公開 API の詳細な関数・クラス実装や、finding 以外の review 処理を探しているとき。この階層は主に互換入口と限定的な prompt 補正を扱う。
+- review oracle の finding 列挙・判定・統合・検証ロジックそのもの、入力・出力・判定基準、prompt 本文、structured output schema の内容を理解したいとき。その場合は委譲先の正本側 oracle src や該当仕様断片を読む。
+- AgentCallParameter 型、model class、reasoning effort、file access mode、アクセス設定などの一般仕様を調べたいとき。
+- oracle file と realization file の基本概念、oracle root などのパスモデル全体、または INDEX.md 生成規則を確認したいだけのとき。
+- review oracle 以外の builder、CLI 入出力、テスト観点、または finding 以外の review 処理を調べているとき。
 
 ## hash
-- 7c819a224c762eea3c1a2f9a0faa3b0f86ae1de8a9e49d79560bedbbecf0098a
+- d1748dae1a3c9f0d53b25cdc3c98ae8e374cd17c27acccbb65f5fe366661b397

@@ -19,20 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP builder に関する realization 側の入口を束ねる領域。正本側 builder 実装への薄い互換入口と、apply・indexing・review・session・TUI 各領域への導線を持つ。
-- 主な責務は、既存 import path を壊さず正本側実装へ接続すること、apply fork や review oracle などの下位 builder adapter へ進むための境界を示すこと、互換入口を残す理由と削除条件を確認できるようにすること。
+- ACP builder 領域の realization 側入口をまとめる階層。正本側実装を既存の公開参照経路から利用するための互換入口と、apply・review・session・TUI・indexing などの下位 builder 領域への案内を担う。
+- この階層は builder 本体の正本仕様や各処理の詳細を所有する場所ではなく、realization 側の import path を維持しながら oracle 側実装へ委譲する境界と、下位領域を選ぶための入口として位置づけられる。
 
 ## Read this when
-- realization 側の ACP builder から、apply・indexing・review・session・TUI のどの下位領域へ進むべきか判断したいとき。
-- 既存の acp.builder 系 import path が、正本側 builder 実装や同名 package 構造とどのように対応しているか確認したいとき。
-- 互換入口を維持・削除・移動してよいか、残存参照や正本側への委譲境界を起点に調べたいとき。
-- apply fork の agent call parameter 構築、review oracle 実行用 parameter 生成、TUI parameter 関連再公開など、builder adapter の所在を探し始めるとき。
+- realization 側で ACP builder 関連の公開参照経路や package 構成が、正本側実装とどう接続されているか確認したいとき。
+- apply、review、session、TUI、indexing のどの builder 領域へ進むべきかを大まかに切り分けたいとき。
+- 旧来の acp.builder 系参照を残す理由、正本側実装への再公開関係、互換入口の削除条件を確認したいとき。
+- builder の処理本体ではなく、realization 側から oracle 側 builder へ委譲する入口や互換名前空間を探しているとき。
 
 ## Do not read this when
-- 正本側 builder の具体的な仕様、prompt 本文、structured output schema、モデル選択、file access mode などを確認したいとき。対応する oracle 側の本文を読む。
-- apply fork や review oracle の具体的な関数・クラス・制御フローがすでに分かっているとき。該当する下位領域または実装本体へ直接進む。
-- CLI コマンド全体の制御フロー、fork 作成、git 操作、引数処理、TUI 画面やイベント処理など、builder adapter 以外の実体を調べたいとき。
-- AgentCallParameter 型、path model、基本列挙値などの共通定義そのものを確認したいとき。この領域はそれらの定義を所有しない。
+- 各 builder の prompt 本文、structured output schema、モデル選択、file access mode、判定基準などの正本仕様を確認したいとき。対応する oracle 側の本文を読む。
+- apply、review、session join、TUI、indexing の具体的な処理内容や入出力仕様をすでに調べる対象として特定しているとき。該当する下位領域または正本側実装へ直接進む。
+- CLI 全体の制御フロー、fork 作成、git 操作、ユーザー向け挙動、TUI 画面やイベント処理を調べたいとき。builder 互換入口ではなく、それらを実装する対象を読む。
+- AgentCallParameter、path model、基本 enum、共通型など、builder 領域に限らない基礎定義そのものを確認したいとき。
 
 ## hash
-- d947a0e831c8ed3bb5ad7fb5325eb27c4acbdce7c2e2fa2f3a510f139028d7f8
+- 7ddfd871aad11ab69af2fec2a0597606862fec9d41c5fa92f22802580f6525c7

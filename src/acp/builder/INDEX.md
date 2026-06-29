@@ -62,23 +62,23 @@
 # `review`
 
 ## Summary
-- ACP builder の review 領域における realization 側 package 入口。正本側と対応する互換名前空間を置き、下位の review oracle 互換入口へ進むための境界として機能する。
-- この領域の実体は主に、正本側 review oracle 実装の再公開・薄い委譲と、review oracle 実行用 AgentCallParameter 生成時の prompt 内 path token や oracle root 表記の最小補正を扱う下位領域への導線である。
+- review builder 領域の realization 側 package 入口。review oracle 向け builder について、package 初期化と、正本側実装を再公開または最小限に補正する互換層への入口をまとめる。
+- この階層自体は review 判定ロジックや正本仕様断片を持つ場所ではなく、realization 側 import path から oracle.acp_builder.review 由来の機能へ到達するための薄い境界として位置づく。
 
 ## Read this when
-- realization 側の ACP builder から review oracle 関連機能へ到達する import 境界を確認したいとき。
-- review builder 領域が正本側の同名 package と対応する互換 package として存在するかを確認したいとき。
-- review oracle の finding 列挙・判定・検証、merge finding、所見擁護検証の実行用 parameter 生成経路が、realization 側でどこへ委譲されるかを調べ始めたいとき。
-- 正本側 builder の戻り値を保ったまま、prompt 内の path token や oracle root 表記だけを補正する realization 側処理の入口を探したいとき。
+- realization 側で review builder の package や import 経路が成立しているかを確認したいとき。
+- review oracle の finding 列挙・判定・統合・検証用パラメータ生成が、realization 側からどの入口を通って正本側実装へ委譲されるかを確認したいとき。
+- 正本側 builder の返却値に対して、realization 側が oracle root 表記の typo 補正など最小限の調整だけを行う箇所を探したいとき。
+- この階層に独自の review 判定処理があるのか、互換名前空間または正本側実装の再公開に留まるのかを切り分けたいとき。
 
 ## Do not read this when
-- review builder の具体的な関数・クラス・制御フローだけを直接調べたいとき。この階層の初期化部分は package 互換性の確認に限られるため、下位の実装本文へ進む。
-- finding の列挙・判定・検証ロジック、prompt 本文、structured output schema、入力・出力・判定基準の正本内容を理解したいとき。その場合は委譲先の正本側 oracle src や関連 doc を読む。
-- AgentCallParameter 型、モデル選択、reasoning effort、file access mode などの共通仕様を調べたいとき。その場合は共通 parameter 定義へ進む。
-- review oracle 全体の設計、CLI の入出力、oracle file と realization file の基本概念、またはパスモデル全体を確認したいとき。より上位または該当責務の本文を読む。
+- review oracle の finding 列挙・判定・統合・検証ロジックそのもの、判定基準、prompt 本文、structured output schema を理解したいとき。
+- 正本仕様断片としての review builder や review oracle の要求を調べたいとき。
+- AgentCallParameter 型、model class、reasoning effort、file access mode、アクセス設定など、review builder に限らない共通仕様を調べたいとき。
+- review oracle 以外の builder、CLI 入出力、テスト観点、または review 全体のユーザー向け挙動を調べているとき。
 
 ## hash
-- 0ebd281e9c22a7d8917f54a05424abef87098c2153807344115a4c225c519e19
+- f720b3653b3fd22299182fbaf3c90acb2246003b449790e14f0dd7afc084084d
 
 # `session`
 
