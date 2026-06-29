@@ -147,24 +147,24 @@
 # `src`
 
 ## Summary
-- src は cmoc の realization implementation を収める実装ルートであり、CLI 入口、サブコマンド本体、共通 runtime helper、設定・基本型・ACP builder・oracle package への互換 import 境界を扱う。
-- 配下には、Typer による最上位 CLI、各サブコマンドの orchestration、Codex 呼び出し・git・state・path・INDEX.md 更新などの共有実行時支援、正本側実装を再公開する薄い adapter が配置されている。
-- 正本仕様やテストの置き場ではなく、oracle file の意図を具体化した runtime 実装と、既存公開 import path を正本側または実体 module へ接続するための入口を選ぶ階層である。
+- cmoc の realization implementation を収める実装入口であり、公開 CLI、サブコマンド実行本体、共通 runtime helper、Codex subprocess 境界、INDEX maintenance、git・state・config・path 操作、ACP builder 互換層、oracle 側正本実装への再公開 shim を扱う。
+- 正本仕様を置く領域ではなく、oracle file の意図を実際の CLI 挙動・実行制御・互換 import path・補助処理として具体化する realization code の集合である。
+- 下位には、CLI 登録と引数解析、個別サブコマンド orchestration、共有 runtime、設定・基本型の再公開、agent call parameter 構築入口、正本 package 解決 shim が分かれており、実装変更時は責務単位で下位対象へ進むための入口になる。
 
 ## Read this when
-- cmoc の realization implementation 全体から、CLI 入口、サブコマンド本体、共通 runtime helper、互換 import 層のどこへ進むべきかを切り分けたいとき。
-- 公開 CLI の command 構成、サブコマンド実行、Codex exec/TUI 呼び出し、git・state・path・設定読み書き・ログ・INDEX.md 更新など、実装側の実行経路を調査または変更したいとき。
-- realization 側に残る `acp.*`、`basic.*`、`config.*`、`oracle.*`、古い runtime import path が、正本側実装や実体 module へどう委譲・再公開されているか確認したいとき。
-- oracle 側の仕様断片を読んだ後、その意図が実装としてどの module 群に反映されているか追い始めたいとき。
+- cmoc の実装本体のどの領域を読むべきか、CLI 入口、サブコマンド本体、共通 runtime、ACP builder 互換層、設定・基本型の再公開、oracle import shim の間で切り分けたいとき。
+- 公開 CLI コマンドから実装関数への委譲、サブコマンド実行ライフサイクル、branch・worktree・state・report・git 操作、Codex exec/TUI 起動、INDEX.md 更新処理の実装経路を追い始めるとき。
+- oracle 側の正本型・設定・path model・prompt builder を realization 側の既存 import path からどう参照しているか、または互換入口を残す理由や削除条件を確認したいとき。
+- realization implementation を変更する前に、同じ責務を持つ既存実装、共通 helper、互換 facade、または下位サブコマンド実装の所在を確認したいとき。
 
 ## Do not read this when
-- 正本仕様断片、prompt 内容、設定定義、path model、ACP builder の本来の組み立て規則、利用者向け要求を確認したいときは、oracle 側の該当本文へ進む。
-- realization test の期待値、fixture、テスト観点を確認したいときは、test 側へ進む。
-- README、配布設定、補助スクリプト、gitignore など実装ソース以外の ancillary file を調べたいときは、この実装ルートではなく該当する上位または補助領域へ進む。
-- 対象が CLI 入口、特定サブコマンド、共通 runtime helper、互換 import 層のいずれかに既に特定できているときは、この階層全体ではなく該当する下位対象へ直接進む。
+- oracle file としての正本仕様断片、仕様意図、prompt 内容、構造化出力 schema、path model や設定定義の正本を確認したいとき。その場合は oracle 側の本文を読む。
+- テスト観点、fixture、既存テストの期待値、または実装変更後の検証対象だけを調べたいとき。realization test 側へ進む。
+- リポジトリ全体の補助ファイル、配布設定、実行スクリプト、gitignore など、実装本体ではない realization ancillary を調べたいとき。
+- 対象が特定の CLI サブコマンド、共通 runtime helper、ACP builder、互換 import 入口のどれかに既に絞れているときは、この階層全体ではなく該当する下位対象を直接読む。
 
 ## hash
-- 58e620d384af949c29ccab4a39c2e9d3c4fbb6a5852bc8a5dfcad903090ef9d4
+- e35351b81c35a2f3d60690098a1ca839e880845bc7972ff8b93ef4a555eb5ca1
 
 # `test`
 
