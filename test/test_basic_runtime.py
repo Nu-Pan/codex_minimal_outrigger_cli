@@ -439,34 +439,24 @@ def test_file_access_to_codex_cwd_limits_pure_oracle_read(tmp_path: Path) -> Non
 def test_is_binary_reads_only_initial_chunk() -> None:
     """binary 判定は大きい file 全体を読まず先頭 chunk だけを見る。"""
     class Reader:
-        """読み取り size を記録する fake binary reader。"""
-
         def __init__(self) -> None:
-            """未読み取り状態で fake reader を初期化する。"""
             self.size: int | None = None
 
         def __enter__(self) -> "Reader":
-            """context manager として fake reader 自身を返す。"""
             return self
 
         def __exit__(self, *args: object) -> None:
-            """fake reader では close 副作用を観測しない。"""
             pass
 
         def read(self, size: int) -> bytes:
-            """binary 判定が要求した read size を記録する。"""
             self.size = size
             return b"text"
 
     class FakePath:
-        """open 呼び出しを fake reader へ接続する path 代替。"""
-
         def __init__(self) -> None:
-            """assertion から参照する fake reader を保持する。"""
             self.reader = Reader()
 
         def open(self, mode: str) -> Reader:
-            """binary 判定が binary mode で開くことを確認する。"""
             assert mode == "rb"
             return self.reader
 
