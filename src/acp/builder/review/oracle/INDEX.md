@@ -17,21 +17,18 @@
 # `enumerate_finding.py`
 
 ## Summary
-- レビュー用の oracle 所見列挙プロンプトを組み立てる実装。既存の oracle 側パラメータ生成を呼び出したうえで、レビュー基準、対象 oracle file 本文、所見配列を返すための出力指示を追加する。
-- 対象 oracle file の実パス解決、本文の fenced code 化、出力指示の追記を担う補助処理を含む。
+- review oracle の finding 列挙ロジックを、正本側の実装からそのまま公開する薄い再エクスポートファイル。実際の責務や判定内容は正本側にあり、このファイル自体は realization 側の import 経路を保つ入口として位置づけられる。
 
 ## Read this when
-- oracle file をレビューして新規所見を列挙する agent call parameter の生成経路を確認・変更したいとき。
-- レビュー所見列挙プロンプトへ、レビュー基準や対象 oracle file 本文がどのように追加されるかを確認したいとき。
-- 対象 oracle path の解決失敗時の扱い、対象ファイルが存在しない場合の本文扱い、markdown code fence のエスケープ処理を確認したいとき。
+- realization 側から review oracle の finding 列挙機能を import する経路を確認したいとき。
+- 正本側の review oracle 実装が、src 側のどの入口から参照されているかを追跡したいとき。
 
 ## Do not read this when
-- レビュー所見の判定基準そのものを確認したいとき。対象はこの実装ではなくレビュー基準を構築する側である。
-- agent call parameter の基本構造やモデル選択、file access mode などの共通仕様を確認したいとき。対象はこの実装ではなく共通のパラメータ定義側である。
-- oracle file の正本仕様本文を確認したいとき。この実装は本文をプロンプトへ埋め込むだけで、仕様内容の入口ではない。
+- finding の列挙条件、出力内容、判定ロジックそのものを確認したいとき。その場合は再エクスポート先の正本側実装を読む。
+- review oracle 全体の仕様意図やルールを確認したいとき。その場合は対応する oracle file や上位の正本仕様を読む。
 
 ## hash
-- 5bbb0b5fd23d7a486c112b33307f5b4097df1bde83c443f7e24a3000ab4a1beb
+- eac5a4d9395959e1b8fe4f22e02a3e127b1517fdfe317b3197f9ae19ac149a93
 
 # `judge_finding.py`
 

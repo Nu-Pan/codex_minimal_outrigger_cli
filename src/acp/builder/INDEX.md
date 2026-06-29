@@ -62,26 +62,21 @@
 # `review`
 
 ## Summary
-- review builder 領域の realization 側入口。review builder package と、review oracle の finding 列挙・統合・検証・判定へ到達するための互換・補正層を扱う。
-- 主な読む先は、package としての互換名前空間だけを示す初期化部分と、正本側 builder への委譲・再公開、review oracle 用 prompt への対象 oracle file 本文やレビュー指示の追加、oracle root 表記の最小補正を担う下位領域である。
-- review oracle 関連の agent call parameter 生成経路を確認するための入口であり、共通の型定義、モデル設定、structured output schema、レビュー基準そのもの、正本仕様本文そのものの入口ではない。
+- レビュー用 AgentCallParameter builder 群の realization 側入口となる領域。package 互換性だけを示す初期化部分と、review oracle builder の import 経路・一部 prompt 補正を担う下位領域へ進むための分岐点になる。
+- finding の列挙・判定・統合・検証に関する builder を src 側から辿るとき、正本側実装の薄い再公開と、生成済み AgentCallParameter の oracle root 表記だけを補正する互換層を切り分ける入口になる。
 
 ## Read this when
-- review builder 領域で realization 側の package 互換性や import 経路の入口を確認したいとき。
-- review oracle の finding 列挙・統合・検証・判定に関する realization 側の公開経路、委譲先、または薄い補正層の有無を切り分けたいとき。
-- oracle file レビュー用の agent call parameter が、正本側 builder の生成結果をどう利用し、レビュー指示、対象 oracle file 本文、既知 finding、検証対象 finding を prompt にどう渡すかを確認・変更したいとき。
-- 正本側 prompt に残る oracle root 表記の不整合だけを realization 側で最小補正する範囲や、dynamic input を改変しない制約を確認したいとき。
-- 対象 oracle path の解決、対象ファイルが存在しない場合の本文扱い、markdown code fence のエスケープなど、oracle file 本文をレビュー prompt に埋め込む周辺処理を調べたいとき。
+- レビュー用 builder の realization 側で、package 互換性の確認と review oracle builder への進み先を選びたいとき。
+- finding の列挙・判定・統合・challenger 検証・advocate 検証に関する builder の import 経路を src 側から探すとき。
+- merge finding または advocate 検証で、正本側 builder の生成結果を保ったまま prompt 内の oracle root 表記補正を行う場所へ進みたいとき。
 
 ## Do not read this when
-- review builder の具体的な処理ではなく、package 初期化や import 経路の成立だけを確認したい場合を除き、初期化部分だけを読んでも実装詳細は分からない。
-- review finding の判定基準、重複判定、意味解釈、統合方針そのものを理解したいとき。この領域はそれらの基準自体ではなく、基準や本文を prompt と import 経路へ接続する realization 実装を扱う。
-- oracle file の正本仕様本文、oracle と realization の基本概念、または正本仕様断片としての要求を確認したいとき。
-- AgentCallParameter の型定義、モデル選択、reasoning effort、file access mode、structured output schema などの共通仕様を調べたいとき。
-- review oracle 以外の builder、CLI 出力仕様、テスト観点、または正本側 prompt 標準や oracle src の文言そのものを変更したいとき。
+- review oracle の finding 条件、判定基準、統合規則、検証ルール、出力 schema など正本仕様そのものを調べたいとき。
+- AgentCallParameter の共通型、モデル選択、reasoning effort、file access mode など review builder に限らない基盤を調べたいとき。
+- レビュー builder 以外の CLI 出力仕様、oracle file と realization file の一般的な役割分担、または package 初期化より先の具体処理を直接調べたいとき。
 
 ## hash
-- b017d1025b90ada1c3c97a7fa1c249227098771ec8dc775cd8765fb79944e1f3
+- 8bf13fce368aebf2f82397f5c072e2a6a13392adcccb57d8c8a55de8af9fa828
 
 # `session`
 
