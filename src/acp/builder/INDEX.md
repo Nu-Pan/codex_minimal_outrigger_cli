@@ -57,21 +57,22 @@
 # `review`
 
 ## Summary
-- review builder 領域の realization package で、主に正本側 review builder 実装への互換 import 境界を提供する。package 初期化は名前空間の存在確認に留まり、下位の oracle 領域は finding 関連処理を正本側へ委譲する入口として機能する。
+- review builder 領域の realization 側互換境界。上位 package と、その配下の review oracle builder 向け公開経路を用意し、finding の列挙・判定・結合・advocate/challenger 検証を正本側実装へ委譲する。多くは正本側 API の再公開で、advocate 検証パラメータ生成だけは正本側結果を包み直し、prompt 内の oracle root placeholder 表記を realization 側で補正する。
 
 ## Read this when
-- src 側の review builder が、正本側 review builder package とどのように対応しているかを確認したいとき。
-- review builder 領域で、package としての import 経路や互換名前空間の成立を確認したいとき。
-- review oracle の finding 関連処理が、src 側からどの境界を通じて正本側実装へ委譲されているかを確認したいとき。
+- review builder 領域で、realization 側 package が正本側 package と互換の import 経路を提供しているか確認したいとき。
+- finding の列挙・判定・結合・advocate/challenger 検証が、realization 側からどの境界を通じて正本側実装へ到達するか確認したいとき。
+- review oracle builder 関連の実装が独自アルゴリズムを持つのか、正本側実装の再公開を主責務とするのかを切り分けたいとき。
+- advocate 検証パラメータ生成で、prompt 内の oracle root placeholder 表記だけが realization 側で補正される理由と位置を確認したいとき。
 
 ## Do not read this when
-- review builder の具体的な処理、関数、クラス、出力、制御フローを調べたいとき。
-- finding の列挙・判定・結合・検証に関する具体的なアルゴリズム、入出力、判定基準、prompt 構成を理解したいとき。
-- 正本仕様断片としての review builder の要求を調べたいとき。
-- package 初期化や正本側実装への再公開境界ではなく、独自の実装変更先やテスト観点を探しているとき。
+- finding 列挙・判定・結合・検証の具体的なアルゴリズム、prompt 構成、判定基準、入出力仕様を理解したいとき。その場合は委譲先の正本側実装や仕様断片を読む。
+- review workflow 全体、CLI 入出力、builder 全体の責務分担、または finding 以外の review 処理を調べたいとき。より上位または該当責務の対象へ進む。
+- model class、reasoning effort、file access mode、Structured Output schema などの共通定義を調べたいとき。それらを定義する正本側または共通定義を読む。
+- package 初期化や互換 import 境界ではなく、実処理本体を変更したいとき。この領域の大半は再公開であり、処理本体の変更先ではない。
 
 ## hash
-- f03fd21fc013712ad91476c5c477dcd1a89d86444e0a4eb22e44662e131ed6ee
+- 08833098dee372aaeb3a86fbf77c4a289a4f16a325b3c1594eb40eb3198e498d
 
 # `session`
 

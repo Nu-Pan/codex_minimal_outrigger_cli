@@ -18,17 +18,19 @@
 # `oracle`
 
 ## Summary
-- src 側の review oracle builder から、正本側 `oracle.acp_builder.review.oracle` 配下の finding 関連処理へ到達するための薄い互換 package。finding の列挙・判定・結合・検証系モジュールを再公開する import 境界であり、この階層自体は具体的な review oracle ロジックや仕様断片を持たない。
+- realization 側の review oracle builder から、finding の列挙・判定・結合・検証処理を oracle 側実装へ到達させるための互換 import 境界。大半は正本側実装の再公開で、advocate 検証パラメータ生成だけは oracle 側結果を包み、prompt 内の oracle root placeholder 表記を補正する。
 
 ## Read this when
-- src 側の review oracle builder から、finding の列挙・判定・結合・検証系処理が正本側実装へどの import 境界で委譲されているかを確認したいとき。
-- この階層が独自の review oracle ロジックを持つ場所なのか、正本側実装を公開する互換 package なのかを切り分けたいとき。
-- review oracle の finding 関連モジュール群について、公開側パッケージから参照できる入口のまとまりを確認したいとき。
+- realization 側の review oracle builder で、finding 列挙・判定・結合・検証機能がどの公開経路から参照されるか確認したいとき。
+- この階層が独自ロジックを持つ実装なのか、oracle 側実装を再公開する互換境界なのかを切り分けたいとき。
+- finding advocate 検証パラメータ生成で、oracle 側実装と異なる prompt 文字列が返る理由や placeholder 表記補正の位置を確認したいとき。
+- 互換 import 経路を変更・削除してよいか判断するために、review oracle 関連機能の入口としての役割を確認したいとき。
 
 ## Do not read this when
-- finding の列挙・判定・結合・検証に関する具体的なアルゴリズム、入出力、判定基準、prompt 構成を理解したいとき。その場合は委譲先の正本側実装を読む。
-- review oracle builder 全体の責務分担、CLI の入出力、または finding 以外の review 処理を調べたいとき。より上位または該当責務の本文へ進む。
-- 公開 API 以外の実装詳細、テスト観点、正本仕様断片そのものを探しているとき。この階層には再公開入口以上の情報は含まれていない。
+- finding 列挙・判定・結合・検証の具体的なアルゴリズム、入出力、判定基準、prompt 構成を理解したいとき。その場合は委譲先の oracle 側実装や仕様断片を読む。
+- review workflow 全体、CLI 入出力、builder 全体の責務分担、または finding 以外の review 処理を調べたいとき。より上位または該当責務の本文へ進む。
+- Structured Output schema、model class、reasoning effort、file access mode などの共通定義を調べたいとき。この階層ではなく、それらを定義する oracle 側または共通定義を読む。
+- 公開 API の詳細や再公開先の実装内容そのものを確認したいとき。この階層は主に互換入口であり、処理本体の説明場所ではない。
 
 ## hash
-- a5963008d4dccaa5064c4de378647f2cae45e4b82ffba7844cf704f1ed1bdee7
+- 84e36a37b06c2a67a4784c4bb04f88a46eb30c6ad62175e184038a14a9a1aff1

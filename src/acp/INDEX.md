@@ -18,20 +18,20 @@
 # `builder`
 
 ## Summary
-- ACP builder の realization implementation を束ねる領域。正本側 builder 実装への互換 import 境界を中心に、apply、indexing、review、session、TUI など用途別 builder 領域へ進むための入口になる。
-- この階層の多くは処理本体ではなく oracle 側実装や正本側 package 構造を src 側の import 経路から参照できるようにする薄い公開境界であり、一部の下位領域では agent call parameter 構築や TUI 用候補値の接続も扱う。
+- ACP の agent call parameter 構築領域を束ねる realization implementation 階層。正本側実装への互換 import 境界を中心に、変更適用、索引生成、レビュー、セッション結合、TUI 起動・パラメータ解決に関する builder 入口へ進むための起点になる。
+- 多くの下位要素は正本側 package や prompt builder を src 側の公開経路から再利用する薄い境界であり、一部の変更適用系 builder は model、reasoning effort、file access mode、prompt、structured output schema を用途別に組み立てる。
 
 ## Read this when
-- ACP builder まわりで、src 側の package 構成が oracle 側 builder 名前空間や正本側実装とどう対応しているかを把握したいとき。
-- apply、indexing、review、session、TUI のどの builder 領域へ進むべきかを切り分けたいとき。
-- builder 関連の import 互換入口、再エクスポート境界、公開 package の有無を確認したいとき。
-- apply fork の agent call parameter 構築、review finding 入口、session join 入口、TUI 起動・パラメータ解決入口など、builder 用途別の入口を探したいとき。
+- ACP builder 領域で、realization 側 package が正本側 package と互換の import 経路を提供しているか確認したいとき。
+- 変更適用、索引生成、レビュー、セッション結合、TUI のどの builder 入口または下位領域へ進むべきかを切り分けたいとき。
+- agent call parameter 構築で、repo root や oracle src の解決、正本側 prompt builder の利用、model・reasoning effort・file access mode・structured output schema の指定がどこで行われるか確認したいとき。
+- 実処理本体ではなく、src 側から正本側実装へ到達する公開境界、再エクスポート、互換 package の有無を確認したいとき。
 
 ## Do not read this when
-- builder の具体的な生成処理、prompt 構成、判定ロジック、データ構造、入出力仕様を直接調べたいとき。その場合は下位の該当領域または正本側実装を読む。
-- oracle 側の正本仕様断片、prompt、review standard、realization standard、path model、基本定義そのものを確認したいとき。
-- apply fork 全体の実行制御、git 操作、作業ディレクトリ管理、レポート保存など、agent call parameter 構築以外の処理を調べたいとき。
-- ACP builder 以外の CLI ルーティング、公開 API、テスト、または生成済み成果物の内容を探しているとき。
+- ACP builder ではなく、fork 作成、git 操作、作業ディレクトリ管理、レポート保存、CLI サブコマンドルーティングなどの実行制御を調べたいとき。
+- 正本側の prompt、review standard、realization standard、path model、各種 schema や列挙値の定義そのものを確認したいとき。
+- 変更要約、所見、レビュー結果など、builder が生成または利用する成果物の内容だけを読みたいとき。
+- 各処理の具体的なアルゴリズム、画面構成、入力フロー、状態管理、判定基準を理解したいとき。その場合は対応する正本側実装またはより直接の下位領域を読む。
 
 ## hash
-- e218865cb3af55057423a53f2a3dcbb8f8a46c3ae6dde049efb5d73efec01b1a
+- 82ff32eb86a39d72ff22b63a1f3716f539e8a8ed1f88c59ed488de9e56cfca5d

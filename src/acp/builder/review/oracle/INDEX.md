@@ -67,18 +67,21 @@
 # `validate_finding_advocate.py`
 
 ## Summary
-- 公開側パッケージから、`cmoc review oracle` における所見擁護理由列挙 prompt 正本を参照できるようにする薄い再エクスポート入口。対象所見について、既知理由と重複しない新規の妥当理由を oracle file 根拠で列挙させる AI 呼び出しパラメータへ進むための窓口になる。
+- realization 側で review oracle の finding advocate 検証パラメータ生成を公開し、oracle 側実装へ委譲したうえで prompt 内の oracle root 表記 typo だけを補正する薄い adapter。
+- oracle src prompt の placeholder 表記差を、仕様で許容された realization-side patch として吸収するための入口。
 
 ## Read this when
-- 公開側の review oracle builder から、所見が妥当である理由を列挙する prompt 構築処理への import 経路を確認したいとき。
-- 所見擁護理由列挙の正本実装が、realization 側でどのように露出しているかを確認したいとき。
+- review oracle の finding advocate 検証パラメータ生成が、oracle 側実装と異なる prompt 文字列を返す理由を確認したいとき。
+- `<oracle_root>` と `<oracle-root>` の表記補正がどこで行われているかを追うとき。
+- review oracle validate finding advocate 用の realization 実装が、oracle 側パラメータ生成をどのように包んでいるか確認したいとき。
 
 ## Do not read this when
-- 所見擁護理由列挙 prompt の具体的な role、goal、参照制約、出力 schema を確認したいとき。この対象は再エクスポートだけなので、正本側の対応本文を読む。
-- 所見への反論理由列挙、所見判定、所見統合など、所見擁護理由列挙以外の review oracle builder 処理を調べたいとき。
+- finding advocate 検証 prompt の正本仕様や本来のパラメータ構成を確認したいだけなら、対応する oracle 側の実装または仕様文書を読む。
+- review oracle 全般の設計、他の検証者、または review workflow の制御を調べるときは、より上位または該当 component の本文へ進む。
+- 単に Structured Output schema、model class、reasoning effort、file access mode の定義を調べるときは、それらを定義する oracle 側または共通定義を読む。
 
 ## hash
-- 3dde2b8eaa9c1a648f04fd5bee0acf16486fb97fb2808850e29bdc215a2f1cbf
+- d64a075a6c1eec148438477316a1fedb9e53cdc8de0df390c33141b049e5ca04
 
 # `validate_finding_challenger.py`
 

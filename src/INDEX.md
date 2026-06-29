@@ -1,21 +1,23 @@
 # `acp`
 
 ## Summary
-- ACP 名前空間の realization implementation を束ねる領域。oracle src 側の acp 実装と互換の import 経路を提供するパッケージ入口と、ACP builder 関連の下位領域へ進む入口を持つ。
-- 実処理の多くは下位の builder 領域または oracle 側実装にあり、この階層自体は acp パッケージを import 可能にする境界と builder 名前空間へのルーティング起点として位置づけられる。
+- ACP 名前空間の realization implementation 領域。oracle src 側の acp 実装と互換の import 経路を提供する最小パッケージ入口と、agent call parameter 構築に関する builder 群への入口を束ねる。
+- 実処理本体よりも、src 側から正本側実装へ到達する公開境界、再エクスポート、互換 package の有無、変更適用・索引生成・レビュー・セッション結合・TUI 関連 builder へのルーティング起点として位置づけられる。
 
 ## Read this when
-- src 側で acp 名前空間がどの入口から成立しているか、または oracle src 側 acp 実装との import 互換境界を確認したいとき。
-- ACP builder まわりの apply、indexing、review、session、TUI など用途別領域へ進む前に、src/acp 配下の全体構成を切り分けたいとき。
-- acp パッケージ直下で実処理を探すべきか、下位の builder 領域や oracle 側実装へ進むべきかを判断したいとき。
+- ACP 領域で、realization 側が oracle src 側と互換の import 経路を提供しているか確認したいとき。
+- ACP package 入口と builder 領域のどちらへ進むべきかを切り分けたいとき。
+- agent call parameter 構築に関して、変更適用、索引生成、レビュー、セッション結合、TUI 起動・パラメータ解決の builder 入口を探したいとき。
+- repo root や oracle src の解決、正本側 prompt builder の利用、model・reasoning effort・file access mode・structured output schema の指定がどの builder 領域で扱われるか確認したいとき。
 
 ## Do not read this when
-- acp の具体的な処理内容、データ構造、関数、クラス、prompt 構成、入出力仕様を直接調べたいとき。その場合は下位の該当領域または oracle 側実装を読む。
-- ACP builder 以外の CLI ルーティング、公開 API、テスト、生成済み成果物、または oracle 側の正本仕様断片そのものを探しているとき。
-- apply fork の実行制御、git 操作、作業ディレクトリ管理、レポート保存など、builder 用 agent call parameter 構築や import 互換境界を超えた処理を調べたいとき。
+- ACP ではなく、fork 作成、git 操作、作業ディレクトリ管理、レポート保存、CLI サブコマンドルーティングなどの実行制御を調べたいとき。
+- 正本側の仕様断片、prompt、review standard、realization standard、path model、schema や列挙値の定義そのものを確認したいとき。
+- 変更要約、所見、レビュー結果など、builder が生成または利用する成果物の内容だけを読みたいとき。
+- ACP の具体的なアルゴリズム、画面構成、入力フロー、状態管理、判定基準を理解したいとき。その場合は対応する正本側実装または builder 配下のより直接の対象を読む。
 
 ## hash
-- 0850077e0e96de01434ec6c4c9afad9aae06ebd66ff9be1daa8dbc0dc41cb163
+- e53b80c19add4abdf388c0cbc45a3bf8232dfff92f9eb51d0fcab2ba83f6c4e4
 
 # `basic`
 
