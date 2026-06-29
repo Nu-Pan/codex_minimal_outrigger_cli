@@ -1,10 +1,11 @@
 # cmoc
+from ..other.file_access_profile import FAPProfilePreset
 from oracle.other.struct_doc import StructDoc
 from copy import deepcopy
 from typing import Callable
 
 # local
-from .parts.file_access_rule import build_file_access_rule, FileAccessMode
+from .parts.file_access_rule import build_file_access_rule
 from .parts.oracle_standard import build_oracle_standard
 from .parts.realization_standard import build_realization_standard
 from .parts.oracle_and_realization_basic import build_oracle_and_realization_basic
@@ -20,7 +21,7 @@ def build_complete_prompt(
     role: str,
     summary: str,
     goal: str,
-    file_access_mode: FileAccessMode,
+    file_access_mode: FAPProfilePreset,
     aux_static_prompt: list[StructDoc] = list(),
     aux_dynamic_prompt: list[StructDoc] = list(),
     aux_placeholder_def: PlaceholderMap = dict(),

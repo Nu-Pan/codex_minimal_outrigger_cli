@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from enum import StrEnum, auto
 
+from oracle.other.file_access_profile import FAPProfilePreset
+
 
 class ModelClass(StrEnum):
     """
@@ -46,19 +48,6 @@ class ReasoningEffort(StrEnum):
     HIGH = auto()
 
 
-class FileAccessMode(StrEnum):
-    """
-    cmoc 上の論理的なファイルアクセスモード
-    バックエンドが受理可能なモデル名への解決は realization src の責任
-    """
-
-    READONLY = auto()
-    PURE_ORACLE_READ = auto()
-    REALIZATION_WRITE = auto()
-    ORACLE_WRITE = auto()
-    REPO_WRITE = auto()
-
-
 @dataclass(frozen=True)
 class AgentCallParameter:
     """
@@ -72,7 +61,7 @@ class AgentCallParameter:
     reasoning_effort: ReasoningEffort
 
     # ファイルアクセスモード
-    file_access_mode: FileAccessMode
+    file_access_mode: FAPProfilePreset
 
     # プロンプト本文
     prompt: str

@@ -4,13 +4,13 @@
 from pathlib import Path
 
 # cmoc
+from oracle.other.file_access_profile import FAPProfilePreset
 from oracle.other.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
 from oracle.other.path_model import resolve_real_path
 from oracle.acp_builder.basic import (
     AgentCallParameter,
     ModelClass,
     ReasoningEffort,
-    FileAccessMode,
 )
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
@@ -36,7 +36,7 @@ def build_review_oracle_judge_finding_parameter(
         role="- あなたはソフトウェア仕様断片レビュー所見の採否判定担当です",
         summary="- 指定の所見を人間へ提示すべきか判定すること",
         goal="- 指定された Structured Output schema に従って判定結果を返すこと",
-        file_access_mode=FileAccessMode.PURE_ORACLE_READ,
+        file_access_mode=FAPProfilePreset.PURE_ORACLE_READ,
         aux_dynamic_prompt=[
             StructDoc(
                 "所見の内容",
@@ -70,7 +70,7 @@ def build_review_oracle_judge_finding_parameter(
     return AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.MEDIUM,
-        FileAccessMode.PURE_ORACLE_READ,
+        FAPProfilePreset.PURE_ORACLE_READ,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),
     )

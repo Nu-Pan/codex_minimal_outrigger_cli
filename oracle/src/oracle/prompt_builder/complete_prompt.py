@@ -13,7 +13,7 @@ from .parts.oracle_review_standard import build_review_oracle_standard
 from .parts.index_entry_standard import build_index_entry_standard
 from .parts.routing_rule import build_routing_rule
 from .basic import PlaceholderMap
-from oracle.acp_builder.basic import FileAccessMode
+from oracle.other.file_access_profile import FAPProfilePreset
 
 
 def build_complete_prompt(
@@ -21,7 +21,7 @@ def build_complete_prompt(
     role: str,
     summary: str,
     goal: str,
-    file_access_mode: FileAccessMode,
+    file_access_mode: FAPProfilePreset,
     aux_static_prompt: list[StructDoc] = list(),
     aux_dynamic_prompt: list[StructDoc] = list(),
     aux_placeholder_def: PlaceholderMap = dict(),

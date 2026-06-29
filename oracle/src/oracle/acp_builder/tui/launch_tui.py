@@ -4,13 +4,13 @@
 from pathlib import Path
 
 # cmoc
+from oracle.other.file_access_profile import FAPProfilePreset
 from oracle.other.struct_doc import StructDoc, render_as_markdown
 from oracle.other.path_model import resolve_repo_root
 from oracle.acp_builder.basic import (
     AgentCallParameter,
     ModelClass,
     ReasoningEffort,
-    FileAccessMode,
 )
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
@@ -20,7 +20,7 @@ def build_tui_launch_tui_parameter(
     role: str,
     summary: str,
     goal: str,
-    file_access_mode: FileAccessMode,
+    file_access_mode: FAPProfilePreset,
     original_prompt: str,
     oracle_and_realization_basic: bool,
     oracle_standard: bool,

@@ -4,13 +4,13 @@
 from pathlib import Path
 
 # cmoc
+from oracle.other.file_access_profile import FAPProfilePreset
 from oracle.other.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
 from oracle.other.path_model import resolve_repo_root
 from oracle.acp_builder.basic import (
     AgentCallParameter,
     ModelClass,
     ReasoningEffort,
-    FileAccessMode,
 )
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 
@@ -35,7 +35,7 @@ def build_apply_fork_change_summary_parameter(
         goal="""
         - `<repo-root>` ツリー内の差分を、指定の Structured Output schema に従って返却すること
         """,
-        file_access_mode=FileAccessMode.READONLY,
+        file_access_mode=FAPProfilePreset.READONLY,
         aux_dynamic_prompt=[
             StructDoc(
                 "ツリー内の差分",
@@ -54,7 +54,7 @@ def build_apply_fork_change_summary_parameter(
     return AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.MEDIUM,
-        FileAccessMode.READONLY,
+        FAPProfilePreset.READONLY,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),
     )
