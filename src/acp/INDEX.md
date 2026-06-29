@@ -19,20 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP の agent call parameter builder 群への realization 側入口をまとめる階層。多くは oracle 側にある正本 builder 実装への互換 import 境界や薄い再公開層であり、既存の公開参照経路を維持しながら apply、indexing、review、session、TUI、quota probe などの builder 領域へ分岐する。
-- この階層自体は各 builder の正本仕様や詳細な組み立てロジックを担う場所ではなく、realization 側から oracle 側 builder を利用するための互換 package 構造、委譲境界、削除条件、最小 wrapper の所在を見分けるための入口である。
+- ACP 用 AgentCallParameter builder の互換入口と個別 builder 領域を束ねる階層。正本実装を oracle 側に置いたまま既存の `acp.builder.*` 参照を成立させる薄い公開面が中心で、apply、indexing、review、session、TUI などの下位領域へ進むための分岐点になる。
+- 例外的に quota availability probe 用の最小 builder も含み、Codex CLI に渡す probe prompt だけを組み立てる。probe の runtime 制御、通常の apply/review/session/TUI の実処理、正本仕様本体はそれぞれ別領域が担う。
 
 ## Read this when
-- ACP builder の公開 import path や旧参照経路が、oracle 側の正本実装へどのように接続されているか確認したいとき。
-- apply、indexing、review、session、TUI、quota probe など、agent call parameter builder の領域分担を上位から把握し、次に読む下位領域を選びたいとき。
-- realization 側に残る互換入口、再公開層、最小 wrapper を残す理由や削除条件を確認したいとき。
-- 正本側 builder への委譲、公開面の維持、prompt 表記補正、realization 側 parameter 型への適合など、builder 周辺の互換境界を調べる入口を探しているとき。
+- ACP builder の旧 import 経路や公開参照が oracle 側の正本実装へどう接続されているかを確認したいとき。
+- apply、indexing、review、session、TUI など、どの ACP builder 下位領域へ進むべきかを最初に見分けたいとき。
+- 互換 package や薄い再公開層を残す理由、削除条件、既存の `acp.builder.*` 参照との関係を確認したいとき。
+- quota 枯渇後の availability probe で使う最小 AgentCallParameter builder の入口を探しているとき。
 
 ## Do not read this when
-- 各 agent call parameter builder の具体的な prompt、parameter 組み立て、repo root 解決、型変換、検証ロジックを直接確認したいときは、該当する下位領域または oracle 側の正本実装を読む。
-- apply fork、review、session、TUI などのコマンド全体の制御フロー、UI 処理、状態管理、branch 操作、diff 生成、CLI 引数処理を調べたいときは、それぞれの実処理を担う実装領域へ進む。
-- AgentCallParameter、FileAccessMode、model、reasoning、file access、structured output schema などの共通型や基礎定義を確認したいときは、基本モジュールを読む。
-- 互換 import 境界や builder 入口ではなく、正本仕様断片そのもの、または新規機能の実装場所やテスト対象を探しているときは、該当する oracle 側本文、実装本体、またはテスト領域を読む。
+- AgentCallParameter の基本型、model、reasoning、file access mode、structured output schema などの共通定義を調べたいとき。
+- apply fork、review oracle、session join、TUI 起動などの具体的な builder ロジックを直接調べたいときは、該当する下位領域へ進む。
+- oracle 側にある正本仕様、prompt 内容、出力条件、indexing や review の本体実装を確認したいとき。
+- Codex exec の quota error 検出、polling loop、resume token、ログ保存、profile や cwd 構築など runtime 側の制御を調べたいとき。
 
 ## hash
-- 5329091959e2c2c0b06f0ba6ec00d4d8266f84ac67cecf414e426289679c0a1d
+- 8c0a8c3e4b5c601a729618217ed20f80faba0a561f372b10988bddcda449cb59

@@ -144,24 +144,30 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体を置く実装ルート。公開 CLI 入口、サブコマンド実装、共有 runtime helper、互換 import 境界、oracle 側正本実装への shim・再公開層を含む。
-- 利用者向けコマンドの Typer 登録から、init/indexing/TUI/apply/review/session の実行本体、Codex 呼び出し、preflight INDEX.md 更新、git・path・設定・session state などの共通基盤へ進むための上位入口になる。
-- この階層には実処理を担う領域と、旧来 import path を維持するための薄い互換領域が混在するため、CLI 挙動を追う場合は command 実装へ、共通 runtime を追う場合は共有 helper へ、互換 import の移行可否を確認する場合は該当 shim・再公開領域へ進む。
+- cmoc の realization implementation 全体を収める実装ルート。最上位 CLI の構成、利用者向けサブコマンド本体、共有 runtime helper、Codex CLI 実行境界、git・path・設定・状態・ログ・エラー処理、INDEX.md 自動更新、ACP builder や基本型・設定の互換公開面を下位領域へ振り分ける入口になる。
+- この階層には、実処理を持つ CLI・runtime・サブコマンド実装と、oracle 側正本実装または既存実体 module へ到達させるための薄い互換 shim が混在する。読む対象は、公開 CLI を見たいのか、サブコマンドの業務フローを追いたいのか、共有 helper を調べたいのか、旧 import 経路の互換境界を確認したいのかで切り分ける。
+- 正本仕様断片そのものではなく、oracle file の意図を具体化した実装側の領域である。仕様根拠を確認する場合は oracle 側を先に読み、実装挙動・委譲先・互換 import・実行時副作用を確認する場合にこの階層から下位へ進む。
 
 ## Read this when
-- cmoc の実装本体のどこから読み始めるべきかを、CLI 入口、サブコマンド、共有 runtime、互換再公開層の間で切り分けたいとき。
-- 公開 CLI コマンド構成、サブコマンド実行フロー、Codex 実行、preflight indexing、git/worktree 操作、設定、logging、session state、エラー表示など、realization implementation 側の責務所在を探したいとき。
-- oracle 側にある正本実装や仕様断片を、realization 側の既存 import path からどう参照・再公開しているかを確認したいとき。
-- ACP builder、basic 型、config、runtime module などの旧来公開面が、実体実装または oracle 側へ委譲されている境界を確認し、互換層を残す理由や削除条件を判断したいとき。
+- cmoc の実装本体について、CLI 入口、サブコマンド実行、共有 runtime、互換公開面のどこへ進むべきかを最初に判断したいとき。
+- 公開 CLI のコマンド構成、引数、Typer app から実装関数への委譲、CLI 引数解析エラーの cmoc 形式表示、console script 起動境界を確認または変更したいとき。
+- init、indexing、TUI、apply、review、session など利用者向け操作の実行条件、副作用、git/worktree 操作、Codex 呼び出し、状態更新、report 出力を実装側から追いたいとき。
+- Codex exec や TUI 起動、profile・CODEX_HOME・sandbox/file access mode・schema・retry・quota/capacity・resume token・call log・stdout/stderr/output 保存などの実行時境界を調査または変更したいとき。
+- INDEX.md の preflight 自動更新、対象走査、hash 鮮度判定、既存 entry 再利用、Codex への entry 生成依頼、Structured Output 検証、Markdown 描画の実装を追いたいとき。
+- 設定 JSON、runtime path、content hash、binary 判定、git wrapper、session state、共通エラーレポート、外部コマンド結果、サブコマンド共通実行ライフサイクルなど、複数機能が共有する helper を探したいとき。
+- oracle 側正本の ACP 型・path model・構造化文書 API・設定定義・ACP builder を複製せず、既存の realization 側 import 経路へ再公開する互換境界を確認したいとき。
+- 古い公開 module 名や package 名が、現在の実体 module または oracle 側正本 package へどのように接続されているか、また削除条件が何かを確認したいとき。
 
 ## Do not read this when
-- 正本仕様断片そのもの、oracle file の設計意図、path model や ACP builder の正本定義を確認したいときは、realization implementation ではなく oracle 側の該当本文へ進む。
-- テスト観点、fixture、期待される外部挙動の検証内容を確認したいだけのときは、implementation ではなく realization test 側へ進む。
-- リポジトリ全体の補助ファイル、実行スクリプト、パッケージ設定、生成物管理など、実装ソース以外の ancillary を調べたいときは、より上位のルーティングから該当領域へ進む。
-- 個別の prompt、parameter 組み立て、CLI 制御フロー、runtime helper など読む対象がすでに特定できているときは、この上位入口ではなく該当する下位ディレクトリまたはファイルを直接読む。
+- 正本仕様断片、仕様意図、oracle file の所有境界、path model の抽象定義、CLI 出力やサブコマンド挙動の根拠文書を確認したいとき。この階層ではなく oracle 側の該当本文を読む。
+- realization test の検証観点、fixture、テストコード上の期待値を確認したいとき。この階層は実装側であり、テスト側へ直接進む。
+- 生成済みログ、状態ファイル、report 出力物、一時ファイル、作業メモそのものを解析したいだけのとき。ここで扱うのはそれらを生成・利用する実装であり、保存済み内容の入口ではない。
+- 個別の責務がすでに特定できているとき。公開 CLI、共有 runtime、サブコマンド本体、ACP builder、互換 shim など、より直接の下位領域へ進む方がよい。
+- oracle 側正本実装の本文、ACP 型や builder の正本 prompt、設定定義そのもの、path placeholder の仕様を確認したいとき。互換再公開先ではなく正本側を読む。
+- cmoc 外の一般的な Typer、Click、git、Codex CLI の使い方を調べたいだけのとき。この階層は cmoc 固有の実装境界を扱う。
 
 ## hash
-- 8e9de18a77ff5b94acdd7989fb5f79db534beb718950d8e272f3a07dba9112e9
+- 6fef5b87b5bb75129ddc13c14a7d5d7a78a819beb476dee93bbb805b00337586
 
 # `test`
 

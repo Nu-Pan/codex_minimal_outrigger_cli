@@ -1,23 +1,23 @@
 # `acp`
 
 ## Summary
-- realization 側に残る ACP builder 互換入口をまとめる領域。旧来の `acp.*` import 経路を保ちつつ、実体は oracle 側または下位 builder 実装へ委譲するための公開境界として機能する。
-- この階層は ACP builder の正本仕様や具体的な組み立て処理そのものではなく、互換 package、再公開層、最小 wrapper の所在と、下位の builder 領域へ進む入口を示す。
+- ACP builder 関連の realization implementation を束ねる入口。oracle src 側の正本実装を複製せず既存の `acp.*` / `acp.builder.*` import を維持する互換公開面が中心で、下位の個別 builder 領域へ進むための分岐点になる。
+- 通常の builder 実体は別領域に委ねる一方、quota availability probe 用の最小 AgentCallParameter builder だけはこの配下で扱い、Codex CLI に渡す probe prompt の組み立てに責務を限定する。
 
 ## Read this when
-- realization 側で残っている ACP 関連の公開 import path や互換入口を確認したいとき。
-- 旧来の `acp.*` 参照を oracle 側や実体 module へ移行する際に、どの互換境界が残っているか判断したいとき。
-- apply、indexing、review、session、TUI、quota probe などの agent call parameter builder 領域へ進む前に、上位の入口と領域分担を把握したいとき。
-- ACP builder 周辺で、正本実装への委譲、再公開、prompt 表記補正、realization 側 parameter 型への適合といった互換層の所在を探したいとき。
+- ACP builder まわりの旧 import 経路や互換 package が、oracle 側の正本実装や実体 module へどう接続されているかを確認したいとき。
+- `acp.*` または `acp.builder.*` 参照を移行・削除する作業で、互換入口を残す理由、公開面との関係、削除条件を確認したいとき。
+- apply、indexing、review、session、TUI など、どの ACP builder 下位領域へ進むべきかを最初に見分けたいとき。
+- quota 枯渇後の availability probe で使う最小 AgentCallParameter builder の入口を探しているとき。
 
 ## Do not read this when
-- ACP builder の具体的な prompt、parameter 組み立て、repo root 解決、型変換、検証ロジックを確認したいときは、該当する下位 builder 領域または oracle 側の正本実装へ進む。
-- apply fork、review、session、TUI などのコマンド全体の制御フロー、UI 処理、状態管理、branch 操作、diff 生成、CLI 引数処理を調べたいときは、それぞれの実処理を担う領域へ進む。
-- AgentCallParameter、FileAccessMode、model、reasoning、file access、structured output schema などの共通型や基礎定義を確認したいときは、基本モジュールへ進む。
-- 互換 import 経路がすでに不要かどうかではなく、新しい ACP 機能や API 仕様の追加場所を探しているときは、この互換入口ではなく正本仕様、実装本体、またはテスト対象を読む。
+- AgentCallParameter の基本型、model、reasoning、file access mode、structured output schema などの共通定義を調べたいとき。
+- apply fork、review oracle、session join、TUI 起動などの具体的な builder ロジックや正本の prompt・出力条件を直接確認したいときは、該当する下位領域または oracle 側の正本実装へ進む。
+- Codex exec の quota error 検出、polling loop、resume token、ログ保存、profile や cwd 構築など runtime 側の制御を調べたいとき。
+- 新しい ACP 機能や API 仕様を追加する場所を探しているとき。この領域は主に互換維持と probe prompt 組み立ての入口であり、仕様追加の正本ではない。
 
 ## hash
-- 44f3cc01dbe60bbdc0dbe978dbaae33bb0fd1efc48bc610b46dd9359452dbca2
+- 019351fc7abed6d4fdfa427d4b9b4e7ba2b2fe31646193a530fa79a164393daf
 
 # `basic`
 

@@ -121,20 +121,20 @@
 # `tui`
 
 ## Summary
-- ACP builder の TUI 関連公開 import path を、正本側の実装へ中継する互換層をまとめる階層。TUI 起動パラメータ生成と resolve-parameter builder の既存参照を維持し、TUI 向け file access mode tuple も公開する。
-- ここにある実装は TUI の画面処理や builder の正本ロジック本体ではなく、realization 側または利用者向け公開面に残る既存 import 経路を成立させるための再公開・委譲を担う。
+- ACP builder の TUI 互換 package。正本側の TUI 起動パラメータ生成や resolve-parameter builder を既存 import path から参照できるようにする薄い再公開層で、TUI 画面制御や builder 本体の実装は担わない。
+- TUI 関連の公開 import surface、oracle 側実装への委譲、利用者向けに公開される file access mode 選択肢を確認する入口。
 
 ## Read this when
-- ACP builder の TUI 関連 API を既存の公開 import path から使えるように保っている互換層を確認したいとき。
-- TUI 起動パラメータ生成や resolve-parameter builder が、realization 側から oracle 側の canonical 実装へどう接続されているかを確認したいとき。
-- TUI 向け import surface で公開される file access mode の選択肢や、builder 関数の再公開範囲を確認したいとき。
-- 正本側 import path への移行に伴い、この互換層を削除できる条件を調べたいとき。
+- ACP builder の TUI 関連 import path が正本側実装と互換に保たれているか確認したいとき。
+- TUI 起動パラメータ生成関数や resolve-parameter builder が、既存公開面から oracle 側の canonical 実装へどのように接続されているか確認したいとき。
+- TUI 側の互換モジュールを削除・移動・置換してよいか判断するため、残している理由や削除条件を確認したいとき。
+- TUI の import surface で公開される file access mode の選択肢を確認したいとき。
 
 ## Do not read this when
-- TUI 起動パラメータや resolve-parameter builder の実際の組み立て仕様を確認したいとき。ここではなく oracle 側の canonical 実装を読む。
-- TUI の表示、イベント処理、画面構成、入力操作などの UI 本体実装を調べたいとき。
-- AgentCallParameter や FileAccessMode の型定義・意味を確認したいとき。ここでは型や列挙値を利用・公開するだけで、定義本体は別の基本モジュールが担う。
-- TUI 以外の ACP builder 経路、または UI 非依存の parameter 構築全般を調べたいとき。
+- TUI 起動パラメータや resolve-parameter builder の具体的な仕様、値、組み立てロジックを確認したいとき。ここは再公開層なので oracle 側の実体を読む方が直接的。
+- TUI 画面の描画、イベント処理、ユーザー操作、端末 UI の挙動を調べたいとき。
+- FileAccessMode 自体の定義や意味を確認したいとき。ここは利用可能な列挙値を公開するだけで、mode 定義は別の基本モジュールが担う。
+- TUI 以外の ACP builder import 経路、UI 非依存の parameter 構築、または CLI 挙動そのものを設計・確認したいとき。
 
 ## hash
-- 3d3ccc7c3599265b864d6f03f95716c3677e3806db42b4c7e7371a7a4440e6f2
+- 0f7127854e17a6db82e7f58872ea5748010a064dad179defecf04b874bc1f572
