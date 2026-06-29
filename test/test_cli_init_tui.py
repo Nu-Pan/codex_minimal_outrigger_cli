@@ -304,7 +304,8 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         assert parameter.model_class == ModelClass.MAINSTREAM
         assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
         assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
-        assert parameter.structured_output_schema_path is None
+        assert parameter.structured_output_schema_path is not None
+        assert parameter.structured_output_schema_path.name == "launch_tui.json"
         assert parameter.prompt.endswith("_cmpl.md を読んで、その指示に従って下さい")
         assert len(kwargs["extra_read_paths"]) == 1
         assert str(kwargs["extra_read_paths"][0]) in parameter.prompt
@@ -346,7 +347,8 @@ def test_tui_uses_default_file_access_mode_for_empty_resolved_value(
     )
 
     assert parameter.file_access_mode == FileAccessMode.READONLY
-    assert parameter.structured_output_schema_path is None
+    assert parameter.structured_output_schema_path is not None
+    assert parameter.structured_output_schema_path.name == "launch_tui.json"
 
 
 def test_tui_saves_complete_prompt_in_linked_worktree(

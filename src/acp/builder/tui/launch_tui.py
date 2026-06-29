@@ -5,8 +5,6 @@ TUI 起動パラメータの正本を oracle 側に保ったまま既存の
 realization 側と利用者向け公開面からこの import path 参照がなくなること。
 """
 
-from dataclasses import replace
-
 from basic.acp import AgentCallParameter, FileAccessMode
 from oracle.acp_builder.tui.launch_tui import (
     build_tui_launch_tui_parameter as _build_tui_launch_tui_parameter,
@@ -27,7 +25,7 @@ def build_tui_launch_tui_parameter(
     apply_review_standard: bool,
     index_entry_standard: bool,
 ) -> AgentCallParameter:
-    parameter = _build_tui_launch_tui_parameter(
+    return _build_tui_launch_tui_parameter(
         time_stamp,
         role,
         summary,
@@ -41,9 +39,6 @@ def build_tui_launch_tui_parameter(
         apply_review_standard,
         index_entry_standard,
     )
-    # <work-root>/oracle/src/oracle/acp_builder/basic.py
-    # TUI 起動は Structured Output を要求しない対話起動なので schema を渡さない。
-    return replace(parameter, structured_output_schema_path=None)
 
 
 __all__ = ["build_tui_launch_tui_parameter"]
