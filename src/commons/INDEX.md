@@ -158,26 +158,26 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI 起動時に渡す profile、sandbox、cwd、CODEX_HOME、subprocess 環境を構築・検査し、cmoc の FileAccessMode を Codex CLI が扱える実行境界へ変換する実装。
-- 追加 read/write path の許可判定、workspace-write の writable_roots 生成、oracle/memo 等の禁止領域の反映、session join の oracle conflict 解消例外など、Codex sandbox では直接表現できない cmoc 側のアクセス制約を profile 生成前に検査する。
-- apply 実行中の Codex child process tracking、pid file lock、child process の記録・削除、Codex CLI 不在時の CmocError 化、Structured Output schema の hash store 配置、Codex JSONL stdout/stderr からの error・resume token・capacity/quota 判定も扱う。
+- Codex CLI subprocess 境界で共有される実行 profile、sandbox/cwd、CODEX_HOME、追加 read/write path、apply 実行時の child process tracking、Structured Output schema 配置、Codex JSONL の error/retry 判定をまとめて扱う実装。
+- FileAccessMode を Codex CLI が理解する sandbox 設定へ落とし込み、読み書き許可 root の検証と profile 本文生成を行う入口として位置づく。
+- Codex CLI 起動前後の機械的な失敗を cmoc の実行時エラーへ変換し、出力 JSON 読み取り、利用者向け error detail 生成、quota/capacity retry 判定を扱う。
 
 ## Read this when
-- Codex CLI を起動する前の profile 内容、sandbox_mode、writable_roots、cwd、CODEX_HOME、subprocess env の生成・検証ロジックを確認または変更したいとき。
-- FileAccessMode ごとの読み取り・書き込み境界、追加 read/write path の許可条件、oracle・memo・.git・INDEX.md などの禁止領域の扱いを確認したいとき。
-- apply abandon や apply 実行中の Codex child process tracking、pid file の lock、pid 再利用検出、child process の記録・削除に関わる挙動を調べるとき。
-- Codex CLI の JSONL 出力から利用者向け error detail、resume token、capacity retry、quota wait 判定を取り出す処理を確認または変更したいとき。
-- Structured Output schema を実行 root 配下の hash store に配置する処理、または schema なし出力 JSON の読み取り失敗時挙動を確認したいとき。
+- Codex CLI に渡す profile、sandbox_mode、writable_roots、cwd、CODEX_HOME の扱いを変更・確認する必要があるとき。
+- FileAccessMode ごとの読み取り境界、書き込み境界、追加 read/write path の許可判定を調べるとき。
+- apply 実行中の Codex child process を記録・解除し、abandon が止められる対象を管理する処理を変更・確認するとき。
+- Codex subprocess 呼び出しで CLI 不在、process tracking 更新失敗、認証 home 不備を cmoc のエラーへ変換する境界を調べるとき。
+- Structured Output schema の配置、schema なし output JSON の読み取り、Codex JSONL からの error message・resume token・quota/capacity 判定を扱うとき。
 
 ## Do not read this when
-- prompt 本文に FileAccessMode の説明や禁止領域をどう書くかを確認したいだけなら、prompt builder 側の file access rule を読む方が直接的。
-- Codex CLI に渡す command line 引数、上位の retry 制御、サブコマンドごとの実行フローを確認したいだけなら、呼び出し元の runtime または command 実装を読む方が直接的。
-- hash ファイルの書き込み方法そのものや schema store directory の場所だけを確認したい場合は、content 書き込み helper または runtime path helper を読む方が直接的。
-- CmocError の型・表示形式・共通エラー処理を調べたいだけなら、runtime error 定義を読む方が直接的。
-- 設定ファイルから model や reasoning effort を読み込む仕組み自体を確認したい場合は、config 定義を読む方が直接的。
+- Codex に渡す prompt 本文や file access policy の利用者向け説明文そのものを変更したいだけのとき。
+- CmocConfig の設定値定義、model class、reasoning effort の宣言元を調べたいだけのとき。
+- 内容 hash file の書き込み方式や schema store path の場所決定そのものを変更したいとき。
+- 個別サブコマンドの業務処理、CLI 引数定義、通常の入出力フォーマットを調べたいだけのとき。
+- Codex CLI の実行結果ではない一般的な JSON 処理や、subprocess 境界と関係しない runtime helper を探しているとき。
 
 ## hash
-- 710bfdfb27aaeca253d16a5f1c54da0f4b0d3c82f7fde583c04dc380032353fb
+- 862394abf26bb4f177b426f5e80d6a3b9e16b67c2b7fe2c82f1c7f37597d77d7
 
 # `runtime_codex_tui.py`
 

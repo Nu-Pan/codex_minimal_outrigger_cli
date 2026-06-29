@@ -61,25 +61,32 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation のうち、複数のサブコマンドや実行経路から共有される runtime helper 群をまとめる領域。Codex CLI 呼び出し、TUI 起動、設定、content hash、外部コマンド結果、git 操作、ログ、path 解決、永続 state、共通エラー、CLI 実行ライフサイクル、INDEX 自動更新 preflight などを扱う。
-- 個別 helper の実装だけでなく、runtime helper 群を横断して公開する集約入口や、Codex 実行前の INDEX 更新、quota/capacity retry、sandbox/profile 生成、subcommand logging など、cmoc の実行基盤に関わる処理への入口になる。
+- cmoc の realization implementation のうち、複数サブコマンドや実行経路から共有される runtime helper 群をまとめる領域。Codex CLI 実行、TUI 起動、INDEX 自動更新、CLI サブコマンド共通ライフサイクル、設定、content hash、error 表示、git 操作、logging、path 解決、実行結果、session state 永続化などを扱う。
+- 上位の業務コマンド固有処理ではなく、実行環境、外部プロセス境界、永続状態、ログ、path、git、設定、INDEX 更新といった横断的な基盤処理を調べる入口になる。
+- 一部には互換 import や集約 import だけを担う薄い入口も含まれるため、具体的な挙動を読む場合は責務別の runtime 実装へ進む必要がある。
 
 ## Read this when
-- サブコマンド共通の実行順序、終了コード化、標準出力、例外表示、実行ログ、現在 logger など、CLI 実行基盤の挙動を確認または変更したいとき。
-- Codex CLI の exec または TUI 起動について、profile・sandbox・CODEX_HOME・cwd・call log・stdout/stderr/output 保存・retry・quota/capacity 待機・Structured Output 検証・resume 継続を追いたいとき。
-- INDEX.md の自動更新 preflight、対象探索、除外判定、既存エントリー再利用、hash 鮮度判定、Codex へのエントリー生成依頼、Markdown 描画の制御を調べたいとき。
-- 実行時設定の JSON 読み書き、content hash 保存、binary 判定、git repository/worktree 操作、path 解決、timestamp、memo 判定、session state 永続化などの共通 helper を探すとき。
-- 外部コマンド結果や Codex 実行結果の共有データ構造、cmoc 共通例外と利用者向けエラーレポート、runtime helper 群の import 集約面を確認したいとき。
+- Codex CLI exec/TUI 呼び出し、profile、sandbox、CODEX_HOME、quota/capacity retry、Structured Output 検証、call log、subcommand event など、Codex 実行基盤の制御を確認または変更したいとき。
+- Codex 実行前に INDEX.md を自動更新する preflight、INDEX.md エントリー生成、hash 鮮度判定、対象走査、除外条件、排他制御、既存エントリー再利用、Markdown 描画を追いたいとき。
+- CLI サブコマンド共通の開始・完了表示、終了コード化、例外表示、work root 検査、サブコマンドログ作成、現在 logger の設定解除を確認したいとき。
+- cmoc の実行時設定 JSON、設定モデル変換、既定値補完、不正設定時の利用者向けエラー、初期同期を扱うとき。
+- content hash 計算、内容ベース保存、binary 判定、runtime 生成物やキャッシュ的出力の保存 helper を確認したいとき。
+- 共通の CmocError、利用者向け Markdown エラーレポート、Next actions、detail、call stack の表示形式を確認または変更したいとき。
+- git subprocess 実行、branch/HEAD/worktree 状態検査、cmoc 管理 branch、linked worktree、.cmoc ignore 判定や git ignore 判定を扱うとき。
+- サブコマンド実行ログ、JSON Lines event、step timing、quota 待機時間集計、context ごとの current logger を確認または変更したいとき。
+- repository root、worktree root、cmoc root、.cmoc 配下保存先、timestamp、duration、memo 配下判定、cwd 一時変更などの runtime path helper を扱うとき。
+- 外部コマンド結果や Codex exec 結果を運ぶ共有データ構造、または session/apply state file の読み書き、検証、branch 名からの session_id 抽出、active session 探索を確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの引数定義、CLI アプリへの command 登録、サブコマンド固有の業務処理や利用者向け workflow だけを調べたいとき。その場合は command 実装側へ進む。
-- 正本仕様断片、path model の概念定義、INDEX.md や session state などの仕様意図を確認したいだけのとき。その場合は対応する oracle 側を読む。
-- prompt 文面、Agent 呼び出しパラメータの構築方針、利用者向け schema の仕様、または Codex へ渡す自然言語指示そのものを変更したいときは、prompt builder や schema 定義側を先に読む。
-- テスト期待値、fixture、検証観点を変更したいだけのときは、対応する realization test 側を読む。
-- アプリ全体のパッケージ構成や上位ルーティングだけを把握したい段階では、より上位の実装ディレクトリ案内から読む先を絞る。
+- 個別サブコマンドの引数定義、CLI アプリへの command 登録、業務処理、利用者向け通常出力だけを調べたいとき。その場合は対応する command 実装へ進む。
+- oracle 上の正本仕様、path model の抽象定義、INDEX.md 仕様意図、session state 仕様意図など、人間が所有する仕様断片を確認したいとき。その場合は対応する oracle doc または oracle src を読む。
+- 設定モデルのフィールド定義や既定値そのもの、CLI 出力 schema、コマンド固有の JSON schema など、共有 runtime helper ではなくモデルや schema の宣言元だけを確認したいとき。
+- Codex に渡す prompt 本文、INDEX.md エントリー生成プロンプト、quota probe 用パラメータの文面など、プロンプト構築そのものを変更したいとき。
+- 生成済みログや状態ファイルを解析する読み取り側、レポート表示側、またはログの利用先だけを調べたいとき。
+- 特定の helper の具体的な引数、失敗時処理、副作用を確認する必要がなく、runtime 系 API の import 経路だけを見たいときは集約入口だけで足りる。
 
 ## hash
-- 967d3ce4c21996847deff95b2aea4ca3b0d7020e76b2300e81a71aacfd393d81
+- 114e6a13e45df6b8981757948c5c0b9ecc24c3fb85a85c4cd546a17bcdb38c54
 
 # `config`
 
