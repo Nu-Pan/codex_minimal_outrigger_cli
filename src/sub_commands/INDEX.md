@@ -141,23 +141,24 @@
 # `review_report.py`
 
 ## Summary
-- review oracle の実行結果を、人間が読む報告書として Markdown と YAML frontmatter に整形し、reports 配下へ書き出す処理を担う。
-- レビュー対象 oracle の一覧、採用・不採用に分けた fatal/minor 所見、処理失敗や対象なしを含む最終 verdict、報告書内での oracle path 表示を組み立てる。
+- review oracle 実行結果のレポート本文を生成し、reports 配下へ Markdown と YAML frontmatter 付きで保存する処理を担う。
+- レビュー対象数、評価済み oracle、採用・不採用の所見件数、エラー有無から結果判定を作り、fatal/minor と accepted/rejected に分けた所見一覧を描画する。
+- oracle パスの表示正規化や frontmatter 値の描画など、review oracle レポート固有の小さな整形 helper も含む。
 
 ## Read this when
-- review oracle report の保存先、生成タイミング、frontmatter、見出し、表、所見セクション、verdict 文言を変更したいとき。
-- 採用所見と不採用所見、fatal と minor の分類が報告書にどう表示されるかを確認したいとき。
-- oracle path を報告書上でどのように相対表示するか、または oracle ツリー外の path をどう表示するかを確認したいとき。
-- review oracle の失敗時、対象 oracle なし、accepted fatal あり、accepted minor あり、問題なしの場合の report result と本文を調べるとき。
+- review oracle のレポート保存先、ファイル生成、Markdown 構成、frontmatter 項目、結果判定文言を確認または変更したいとき。
+- accepted/rejected や fatal/minor の所見分類が、レポート上でどの順序・見出し・件数として表示されるかを確認したいとき。
+- oracle file のパスがレポート内でどのように相対表示または oracle 起点表示へ整形されるかを調べたいとき。
+- review oracle 処理の失敗、対象 0 件、fatal 所見あり、minor 所見あり、問題なしの場合のレポート上の verdict を確認したいとき。
 
 ## Do not read this when
-- review oracle が oracle file をどう収集・評価するか、所見をどう生成・判定するかを知りたいだけのとき。
-- CLI の引数定義、サブコマンド登録、実行フローの入口を調べたいとき。
-- reports directory や timestamp の共通仕様そのものを確認したいとき。
-- INDEX.md 生成やルーティング文書の仕様を調べたいとき。
+- review oracle の対象 oracle 探索、所見検出、所見採否判定、git branch 操作そのものを調べたいとき。
+- review oracle 以外のサブコマンドのレポート形式や出力処理を確認したいとき。
+- reports ディレクトリや timestamp の汎用的な定義・生成規則を調べたいとき。
+- oracle file の正本仕様内容や review oracle コマンドの利用者向け仕様そのものを確認したいとき。
 
 ## hash
-- 12c1a56a7dc4c31d006b2c3c0fd1b8962a519f80f003772c9f2c8c96ee20fa10
+- 3037be4342dfe983940c1941048f9fc8dda8a2a3d6b09819bc09e381fd478a77
 
 # `review_targets.py`
 
