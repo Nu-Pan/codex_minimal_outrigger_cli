@@ -638,6 +638,9 @@ def test_review_oracle_enumerate_builder_imports_from_packaged_layout(
 
 def test_review_oracle_merge_finding_schema_matches_oracle_source() -> None:
     parameter = build_review_oracle_merge_finding_parameter("[]")
+    assert "<<oracle-root>>" not in parameter.prompt
+    assert "<oracle-root>" in parameter.prompt
+    assert "- <oracle-root> =" in parameter.prompt
     assert parameter.structured_output_schema_path is not None
     schema = json.loads(parameter.structured_output_schema_path.read_text())
     oracle_schema = json.loads(
