@@ -703,6 +703,9 @@ def test_review_oracle_validate_finding_schema_matches_oracle_source(
     assert "finding" in parameter.prompt
     assert "known advocate" in parameter.prompt
     assert "known challenger" in parameter.prompt
+    assert "<oracle_root>" not in parameter.prompt
+    assert "<oracle-root>" in parameter.prompt
+    assert "- <oracle-root> =" in parameter.prompt
     assert parameter.structured_output_schema_path is not None
     schema = json.loads(parameter.structured_output_schema_path.read_text())
     oracle_schema = json.loads(
