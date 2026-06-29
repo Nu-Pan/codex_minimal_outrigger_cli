@@ -298,26 +298,24 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle の CLI 経由の外部挙動と、所見列挙・検証・judge・merge を含む review loop の制御を検証する realization test。
-- report の見出し構成、accepted/rejected finding の表示、件数メタデータ、error/no_targets/fatal などの結果表示、session_id 非表示、join commit 表示を確認する。
-- full/session scope の oracle file 選択、gitignored oracle file や memo 配下参照 symlink の除外、linked worktree 上の session branch と oracle 対象化、review 用 worktree で生成された INDEX.md の取り込みと衝突解決を扱う。
-- 所見 merge operation の kind ごとの契約、invalid operation や target 再利用の拒否、review oracle が INDEX.md 以外の差分を作った場合の拒否と元 worktree 保護も検証する。
+- review oracle の CLI 経由の外部挙動と、所見列挙・検証・judge・merge の制御を検証する realization test。report の構成、accepted/rejected 所見の表示、scope 切替、review worktree と join commit、INDEX.md 変更の merge、異常時 report、review 実行中に許されない差分の拒否を扱う。
+- 16,000 文字を超えるが、同じ fake Codex 応答、report 文脈、review run 状態を共有する一連の検証として凝集しており、oracle review の読み取り文脈を一箇所に保つためのテストファイル。
 
 ## Read this when
-- `review oracle` サブコマンドの report 生成、report 本文の構成、結果メタデータ、accepted/rejected finding の表示仕様を変更または確認したいとき。
-- oracle review loop の enumerate、validate challenger、validate advocate、judge、merge の呼び出し順・入力文脈・上限回数・所見 ID 管理に関わる実装を変更するとき。
-- full scope または session scope で review 対象となる oracle file の列挙条件、gitignore、binary file、symlink、memo との境界、linked worktree 上の挙動を確認するとき。
-- review oracle が作成した INDEX.md 変更の取り込み、join commit、INDEX.md 削除との merge conflict 解決、review 用 worktree の配置や後片付けに関わる変更を行うとき。
-- review oracle 実行中の失敗時 report、非対象時 report、INDEX.md 以外の差分作成を拒否する挙動を確認するとき。
+- review oracle コマンドの report 出力、result 判定、section 順序、count、error report の期待値を確認または変更したいとき。
+- review oracle の所見 loop で、enumerate finding、challenger/advocate validation、judge、merge finding の呼び出し条件や prompt へ渡る文脈を確認したいとき。
+- review oracle の full scope/session scope における oracle 対象選択、gitignored oracle file、binary、memo 配下や symlink の扱いを検証したいとき。
+- linked worktree 上の session branch、review 用 worktree、review_fork_commit、review_join_commit、INDEX.md 変更の取り込みや conflict 解決の挙動を確認したいとき。
+- review oracle 実行中に生成された INDEX.md 以外の unstaged/staged/untracked 差分を拒否し、元 worktree を汚さない制御を確認したいとき。
 
 ## Do not read this when
-- 通常の session fork、init、git helper、設定 loader など、review oracle の外部挙動や所見 loop と直接関係しない CLI 挙動だけを確認したいとき。
-- oracle file の正本仕様そのものを確認したいとき。このファイルは realization test であり、正本仕様の代替ではない。
-- review oracle 以外の review サブコマンド、または oracle 以外の対象を review する処理を調べたいとき。
-- 個別 helper の実装詳細だけを変更し、report 出力、対象 oracle の選択、所見評価 loop、merge operation 契約、worktree 差分制御の外部挙動に影響しないことが明らかなとき。
+- review oracle 以外の review コマンド、通常の session 操作、init などの CLI 挙動だけを調べたいとき。
+- report renderer や review loop の実装詳細を変更する目的で、まず実装本体を直接読むべき段階のとき。
+- oracle file の正本仕様そのもの、oracle doc/src/test の内容、または INDEX.md エントリー生成規則を確認したいとき。
+- 単純な path model、設定読み込み、git helper、test fixture の一般的な使い方だけを確認したいとき。
 
 ## hash
-- 833e47b2657a97bcdb8fa4549de0cca8b6c61a15d960d3c8159f2a555fe750f7
+- e338918275b95bd682d96da75bdc34736fe3d986aa43e595414fb4b428d58ff9
 
 # `test_session_cli.py`
 

@@ -138,23 +138,24 @@
 # `review_report.py`
 
 ## Summary
-- review oracle の実行結果を、人間が読む Markdown レポートとして生成・描画する実装。評価対象 oracle、採否済み finding、severity 別件数、処理結果、関連 branch/commit 情報を frontmatter と本文へまとめる。
-- レポートの保存先作成、結果判定、finding の severity 分類、finding セクション描画、oracle path の表示用整形を同じ責務範囲内で扱う。
+- review oracle の結果レポートを生成・描画する実装。評価対象 oracle file の一覧、accepted/rejected と fatal/minor に分類された所見数、全体 verdict、各所見の表示を Markdown と YAML frontmatter にまとめる。
+- レビュー処理の失敗、対象なし、accepted fatal あり、accepted minor あり、問題なしの各状態を、レポート上の result と人間向け verdict 文へ変換する責務を持つ。
+- oracle path の表示を、repo root 相対または oracle 起点の見え方に正規化し、レポート内で扱う oracle file の参照表記を安定させる補助処理も含む。
 
 ## Read this when
-- review oracle のレポート本文、frontmatter、見出し構成、severity 別の finding 表示、または verdict 文言を変更したいとき。
-- review oracle の失敗時、対象 0 件、fatal/minor accepted finding の有無に応じた result 判定を確認したいとき。
-- oracle file path をレポート上でどのように相対表示するか、特に oracle ツリー配下として見せる処理を確認したいとき。
-- review oracle のレポート保存場所やタイムスタンプ付き report path の生成を追うとき。
+- review oracle コマンドが出力する Markdown レポートの frontmatter、見出し順、所見分類、verdict 文、件数集計を確認・変更したいとき。
+- review oracle の実行結果を保存する reports 配下のレポート生成処理、ファイル名生成、保存先ディレクトリ作成の挙動を確認したいとき。
+- 所見 dict の `verdict`、`severity`、`oracle_path`、`finding_id`、`title`、`reason`、`judge_reason` がレポート表示へどう反映されるかを追いたいとき。
+- oracle file のパスをレポート上でどのように短縮・正規化して表示するかを確認したいとき。
 
 ## Do not read this when
-- review oracle が oracle file を収集・評価する流れ自体、finding を作るロジック、または review 用 branch を操作する処理を確認したいだけのとき。
-- cmoc 全体の report directory や timestamp の共通定義を変更したいとき。
-- SessionState の構造や session branch/commit の生成・更新責務を確認したいとき。
-- oracle の正本仕様そのもの、または review oracle コマンドの利用者向け仕様を確認したいとき。
+- review oracle が所見を検出・判定するロジック自体を調べたいだけのとき。この対象は受け取った所見の分類とレポート描画を扱う。
+- 通常のレビュー対象選択、git branch 操作、review fork/join の作成や統合処理を調べたいだけのとき。この対象はそれらの結果情報をレポートへ載せる側である。
+- oracle file の正本仕様本文や review oracle の検出基準を確認したいとき。仕様判断そのものではなく、生成済み判断結果の表示形式を扱う。
+- 他サブコマンドのレポート形式や汎用 runtime の timestamp・reports directory 解決を変更したいとき。
 
 ## hash
-- b4662b5122aae1318d00975519bda6939eb0b9fee58a25fa18715315399f2afb
+- dd945d0a42b5f7caa1f7e4ccf9004ed8a8a5036146abad605b62bf009d20ba09
 
 # `review_targets.py`
 

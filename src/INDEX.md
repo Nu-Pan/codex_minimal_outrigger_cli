@@ -143,23 +143,22 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各 CLI サブコマンドの実行本体を収める実装領域であり、CLI runtime から呼ばれる command body、preflight、利用者向け出力、git 操作、state 更新、report 生成への接続点を扱う。
-- 初期化、INDEX maintenance、TUI 起動、session ライフサイクル、apply ライフサイクル、review oracle 実行に関する処理がまとまっており、単独サブコマンドの薄い orchestration と、複数モジュールに分かれたサブコマンド群への入口が混在する。
-- 共通 runtime、ACP builder、設定モデル、path model、git wrapper そのものではなく、それらをサブコマンドとして組み合わせて実行条件確認、branch/worktree 操作、Codex 呼び出し、commit、cleanup、Markdown 出力へ進める層として読む。
+- `src/sub_commands` は cmoc の CLI サブコマンド実装を集めた領域で、初期化、indexing、TUI、session、apply、review oracle など、利用者操作から runtime・git・Codex 実行へ接続する入口を扱う。
+- 単独ファイルのサブコマンド実装と、session/apply/review 系の下位 package・補助モジュールが同居し、各コマンドの事前条件確認、状態遷移、branch/worktree 操作、report 出力、INDEX.md 反映などの読む先を選ぶための階層である。
+- CLI 全体の登録や共通 runtime ではなく、個別サブコマンドの実行順序と、その実行中に呼ばれる下位処理へ進むためのルーティング対象として位置づけられる。
 
 ## Read this when
-- 特定の cmoc サブコマンドが CLI runtime からどの関数・事前条件・command 名・argv で起動されるかを確認したいとき。
+- cmoc の個別サブコマンドについて、実行入口、preflight、runtime への渡し方、利用者向け出力、git 操作や Codex 実行の呼び出し位置を探したいとき。
 - 初期化、indexing、TUI、session、apply、review oracle のどの実装領域へ進むべきかを、サブコマンド単位で切り分けたいとき。
-- サブコマンド実行時の clean worktree 要求、cmoc ignore 保証、active session 判定、scope 検証、state 遷移、branch/worktree 作成・merge・削除、report 出力の流れを追い始めるとき。
-- Codex exec または Codex TUI をサブコマンドからどの目的・cwd・config・追加権限で呼び出しているかを確認したいとき。
-- session branch と apply branch/worktree、review worktree、INDEX.md 変更 commit、merge conflict 処理など、複数の下位 helper にまたがるサブコマンド上位制御を調査するとき。
+- session branch、apply branch/worktree、review worktree、INDEX.md 更新 commit、report 生成など、サブコマンド実行に伴う状態・branch・worktree 操作の入口を確認したいとき。
+- CLI から呼ばれる処理と、共通 runtime、config、path model、git wrapper、Codex parameter builder などの下位・周辺実装との接続点を追いたいとき。
 
 ## Do not read this when
-- Typer app へのトップレベルなサブコマンド登録や CLI 全体のエントリーポイントだけを確認したいとき。
-- repo root/work root 解決、共通 error 型、git 実行 wrapper、state schema、config load、timestamp、report directory など、サブコマンド固有でない runtime helper の詳細を調べたいとき。
-- Codex に渡す prompt や Structured Output parameter の本文、file access prompt、ACP builder の中身だけを確認したいとき。
-- oracle 上の公開仕様、設計意図、サブコマンド利用者向け要求を確認したいとき。実装ではなく oracle doc を読むべき。
-- 対象が初期化、indexing、TUI、session、apply、review oracle のどれかに既に特定できており、その下位モジュールまたは個別処理へ直接進めるとき。
+- Typer app へのコマンド登録、トップレベル CLI 構成、共通 runtime の一般規約だけを確認したいときは、CLI entrypoint や runtime 側を読む。
+- path token、state schema、config model、git wrapper、ignore 判定、Codex parameter builder、INDEX.md 生成ロジックそのものなど、サブコマンド固有でない共通処理の詳細を調べたいとき。
+- oracle 上の公開仕様や設計意図を確認したいときは、実装領域ではなく対応する oracle doc を読む。
+- テストや fixture の期待挙動を確認したいときは、実装入口ではなく対応する test 領域を読む。
+- 特定の下位責務がすでに分かっており、apply、session、review loop、review target 列挙、review report、review INDEX 反映などの個別モジュールへ直接進めるとき。
 
 ## hash
-- 03251406cf8d9bbba9f8fcf811f54d85be017339b47acca7a7be20f2e844e352
+- e24a19b5b3c3351c89551e389f66c2621def00dd229eec357ddd48b0c82623ff
