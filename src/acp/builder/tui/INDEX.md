@@ -18,20 +18,22 @@
 # `launch_tui.py`
 
 ## Summary
-- TUI 起動用の AgentCallParameter builder を公開する薄い realization 実装。oracle 側の builder 結果を再利用しつつ、TUI 起動では Structured Output を使わないため、存在しない schema path を公開しないよう `structured_output_schema_path` だけを実行時に無効化する。
+- oracle 側にある TUI 起動パラメータ生成関数を、既存の公開 import path から参照できるように再公開する互換用モジュール。
+- TUI 起動パラメータの正本を oracle 側に置いたまま、realization 側や利用者向け公開面に残る参照を成立させるための薄い入口である。
+- この互換入口は、realization 側と利用者向け公開面から該当 import path 参照がなくなった時点で削除できる。
 
 ## Read this when
-- TUI 起動用の AgentCallParameter の組み立て結果、とくに Structured Output schema path の扱いを確認・変更したいとき。
-- oracle 側の TUI 起動 parameter 定義と realization 側の実行時契約の差分を調べたいとき。
-- TUI 起動処理が存在しない Structured Output schema を参照しないようにする互換処理の根拠を確認したいとき。
+- TUI 起動パラメータ生成関数の公開 import path の互換性を確認・変更したいとき。
+- oracle 側の TUI 起動パラメータ生成関数を realization 側からどの名前で再公開しているかを確認したいとき。
+- 互換用 import path を削除できるかどうか、削除条件を確認したいとき。
 
 ## Do not read this when
-- TUI の画面描画、入力処理、イベントループなど、起動後の TUI 本体の挙動を調べたいとき。
-- Structured Output を消費する agent call や JSON schema の内容を調べたいとき。
-- oracle 側の正本仕様断片そのものを確認したいとき。
+- TUI 起動パラメータの正本となる生成ロジックや仕様を確認したいときは、oracle 側の実体を読む。
+- TUI の画面構成、入力処理、イベント処理などの実装を調べたいときは、TUI 本体の実装へ進む。
+- 互換 import path ではなく、新しい公開 API や CLI の利用方法を調べたいときは、公開面を定義している対象を読む。
 
 ## hash
-- 4ec0ac51241993677a09a6e26d9752464337332b6f6156de3352c0203793f960
+- a88611127f710dfc4faa014cf5a1420685ccb329009914d37c15cfa1ceb0cc28
 
 # `resolve_parameter.py`
 

@@ -1,18 +1,21 @@
 # `__init__.py`
 
 ## Summary
-- `oracle.acp_builder` を `acp.builder` として参照できるようにする互換用の公開入口。実処理を持つ実装本体ではなく、既存の import 経路を保つための薄い窓口として位置づけられる。
+- oracle.acp_builder を既存の acp.builder 参照から利用できるようにするための互換入口。正本実装を oracle 側に置いたまま、公開済み参照経路を維持する役割を持つ。
+- 互換維持のためだけに残される薄い入口であり、削除条件は realization 側と利用者向け公開面の双方から acp.builder.* 参照がなくなること。
 
 ## Read this when
-- `acp.builder` 経由の import 互換性や公開入口の有無を確認したいとき。
-- `oracle.acp_builder` 側の機能を、別名のモジュール経路から公開しているかを確認したいとき。
+- acp.builder.* 参照が残っている理由や、oracle.acp_builder との互換関係を確認したいとき。
+- acp.builder 系の公開入口を削除・移動・置換してよいか判断したいとき。
+- realization 側の互換コードについて、残す理由と削除条件を確認したいとき。
 
 ## Do not read this when
-- builder の具体的な生成処理、関数、クラス、制御ロジックを調べたいとき。その場合は実体側の実装を読む。
-- 互換入口ではなく、新しい builder 機能の仕様や挙動を確認したいとき。
+- oracle.acp_builder の具体的な実装内容や builder の本体仕様を調べたいとき。
+- acp.builder.* 以外の ACP 関連モジュールの責務や挙動を調べたいとき。
+- 互換入口ではなく、新規機能の実装場所やテスト対象を探しているとき。
 
 ## hash
-- 9e834d7b4a4868035265a9b1d6e846ff32541555482bed155e7bbf15576d4932
+- bce540ff289ae7f7f8c83e9796e27376d4c6313646e45756110fa755ab94158c
 
 # `apply`
 
@@ -99,21 +102,20 @@
 # `tui`
 
 ## Summary
-- ACP builder の TUI 関連呼び出しパラメータを、正本側の定義から realization implementation 側へ接続する薄い package。
-- TUI 起動用パラメータでは正本側の構築結果を再利用しつつ、起動時に消費しない Structured Output schema path を実行時契約に合わせて無効化する。
-- TUI のパラメータ解決入口と、TUI で提示するファイルアクセスモード候補を基本定義の列挙値から参照できるようにする。
+- ACP builder の TUI 関連 realization package で、正本側にある TUI 起動パラメータ生成と TUI パラメータ解決を既存 import path から参照できるようにする互換入口をまとめる階層。
+- この階層自体は TUI 画面やイベント処理の本体ではなく、oracle 側の実装・基本定義の列挙値を realization 側の公開面へ薄く接続する役割を持つ。
 
 ## Read this when
-- TUI 起動または TUI パラメータ解決に使う AgentCallParameter が realization implementation 側でどう公開されているか確認したいとき。
-- TUI 起動処理が存在しない Structured Output schema path を公開しないようにしている互換調整を確認・変更したいとき。
-- TUI で扱うファイルアクセスモード候補が基本定義の列挙値と同期しているか確認したいとき。
-- 正本側の ACP builder TUI 実装を、実行側 package から import できる形に接続する箇所を探しているとき。
+- ACP builder の TUI 関連 import path が、正本側の対応 package や関数と互換になるよう用意されているか確認したいとき。
+- TUI 起動パラメータ生成関数や TUI パラメータ解決関数が、realization implementation 側からどの入口で再公開されているか確認したいとき。
+- TUI で扱うファイルアクセスモード候補が、基本定義の列挙値から組み立てられている接続部分を確認したいとき。
+- TUI 関連の互換用 import path を削除・変更できるか、その接続先や削除条件を確認したいとき。
 
 ## Do not read this when
-- TUI の画面描画、入力処理、イベントループなど、起動後の TUI 本体の挙動を調べたいとき。
-- パラメータ構築や解決の正本仕様断片そのものを確認したいとき。
-- Structured Output を実際に消費する agent call や JSON schema の内容を調べたいとき。
-- ファイルアクセスモード自体の意味や基本定義を確認したいとき。
+- TUI 起動パラメータ生成や TUI パラメータ解決の具体的な正本仕様・処理内容を確認したいときは、oracle 側の実体を読む。
+- TUI の画面構成、入力処理、イベント処理、表示制御などの本体実装を調べたいときは、それらを直接実装する対象へ進む。
+- ファイルアクセスモード自体の定義や意味を確認したいときは、基本定義側の列挙値を読む。
+- 新しい公開 API、CLI の利用方法、または利用者向けの公開面全体を調べたいときは、その公開面を定義している対象を読む。
 
 ## hash
-- 01df73688f2bfcdab47931ac7ccc89582b5f9b15e5a365a1351fe5e278d86ad6
+- 93af006861378091a3c7ebdc1df93776c2cc057b1c561b96b2b60c5da4a9d167

@@ -138,25 +138,27 @@
 # `test_cli_init_tui.py`
 
 ## Summary
-- init と TUI 起動直前の CLI 前処理について、外部挙動として守るべき回帰条件をまとめて検証する realization test。
-- cmoc 初期化時の .cmoc ignore、既存 staged/unstaged 差分の保護、設定 JSON の初期生成と既存値を保った default 同期、linked worktree での repository root/runtime root の扱いを確認する。
-- TUI 起動時の editor 実行、Markdown prompt のコメント除去と完成 prompt 保存、resolve parameter の解釈、Codex TUI 呼び出し parameter、linked worktree での log/schema 保存先を一続きの CLI 境界として検証する。
+- cmoc の利用開始直後に通る CLI 境界について、初期化処理と TUI 起動前処理の外部挙動を検証する realization test。
+- .cmoc の ignore 化、既存 staged/unstaged 差分の保護、default config の生成と既存値を残した同期、sub_command log、linked worktree 上での repository/runtime 準備を扱う。
+- TUI については、エディタで編集された Markdown prompt から HTML コメントを除いた依頼文を使い、resolve_parameter schema による file access mode 等の解決、launch_tui schema を持つ AgentCallParameter 構築、完了 prompt の保存先と extra_read_paths を検証する。
+- 16,000 文字を超えるが、init と TUI 起動前の repository/runtime 準備という同じ CLI 境界で共有される初期化済み状態を一箇所で読むための回帰テストとしてまとまっている。
 
 ## Read this when
-- init の外部挙動、特に .cmoc を Git 追跡対象から外す処理、.gitignore や info/exclude への ignore 追加、既存のユーザー差分を commit に巻き込まない制御を変更・確認する時。
-- 初期設定ファイルの default 値、既存設定を上書きしない同期、sub command log の command_invoked 記録を変更・確認する時。
-- linked worktree 上で init または TUI を実行した時の保存先、ignore 状態、commit 対象、root/cwd の渡し方を変更・確認する時。
-- TUI の editor 起動、入力 Markdown の前処理、完成 prompt の構成、resolve parameter 用 Codex exec と実際の Codex TUI 呼び出し parameter の組み立てを変更・確認する時。
-- file access mode の解決値が空の場合の default 挙動や、TUI log/schema が repository root 側に保存される挙動を確認する時。
+- init の外部挙動を変更し、.cmoc 配下の untrack、ignore 設定、cleanup commit、.gitignore の既存差分保護、config.json の default 生成や同期に影響する可能性があるとき。
+- linked worktree 上で init または tui を動かす挙動を変更し、repository root と current worktree の扱い、.cmoc の保存先、schema/log/prompt の配置、git status への影響を確認したいとき。
+- tui 起動前処理を変更し、エディタ起動、Markdown prompt の正規化、resolve_parameter の実行、AgentCallParameter の model/reasoning/file access/schema/prompt/extra_read_paths 構築に関わる回帰を確認したいとき。
+- sub_command log の command_invoked event、argv、log directory の現行配置を変更または調査するとき。
+- 初期化直後の状態を前提にする CLI 前処理のテストを追加する際、既存ケースへ統合できるかを判断したいとき。
 
 ## Do not read this when
-- 個別の CLI command 実装だけを読みたい時は、まず対応する implementation を読む方が直接的である。
-- init や TUI 前処理を通らない subcommand、agent 実行、review、apply、index 生成の挙動だけを調べる時。
-- 設定 schema の全体構造や path model の定義そのものを確認したい時は、対応する仕様または実装を読む方が直接的である。
-- Codex CLI や editor 実体の品質・出力内容そのものを検証したい時。この対象は外部ツールを stub し、cmoc 側の呼び出し境界と副作用だけを扱う。
+- 個別の CLI command 実装や helper の内部アルゴリズムだけを調べたいときは、対応する実装側を先に読む。
+- init/TUI 前処理とは無関係なサブコマンド、agent 実行フロー、review/apply/index 生成の挙動を調べるとき。
+- Codex CLI や LLM の出力品質そのものを検証したいとき。この対象は外部ツールを stub し、cmoc 側の制御と副作用を検証する。
+- 設定項目の正本仕様や path token の定義を確認したいときは、仕様断片や path model の本文を読む。
+- 単に pytest fixture や test support utility の使い方を確認したいだけなら、共通 test support 側を直接読む。
 
 ## hash
-- a2d4409d80ad812d7b867eb299254b72efe3542b28662d136ba9d3b7681955af
+- 7284534d23593e2fa3b5d24bc189e48c887fd1b2d655e78d081a52bdc2aeeea8
 
 # `test_codex_runtime_exec.py`
 

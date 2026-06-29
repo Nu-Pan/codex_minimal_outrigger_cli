@@ -1,43 +1,44 @@
 # `acp`
 
 ## Summary
-- realization implementation 側の ACP 名前空間入口であり、oracle src 側の acp 実装へ到達するための互換 import 経路を提供する領域。
-- パッケージ入口そのものは最小の import 成立用で、下位の builder 領域では apply fork、review oracle、session join、TUI、indexing などの builder 関連互換入口や薄い adapter へ進むための境界を扱う。
-- ACP の正本仕様や実処理本体ではなく、正本側実装を実行側 package 構造から参照するための realization 側の入口として位置づけられる。
+- realization 側に残る ACP builder 互換入口を束ねる領域。実体を oracle 側の builder 実装へ委譲・再公開し、既存の `acp.*` import 経路を移行期間中も維持するための package 境界として機能する。
+- この領域は ACP builder の正本仕様や主要ロジックの置き場ではなく、互換 import 面と builder 関連下位領域への入口を扱う。
 
 ## Read this when
-- realization implementation 側から acp 名前空間または ACP builder 関連機能をどの import 経路で参照できるか確認したいとき。
-- oracle src 側の acp 実装と realization 側 package 構造の対応関係、互換入口、薄い adapter の有無を切り分けたいとき。
-- apply fork、review oracle、session join、TUI、indexing など、ACP builder 配下のどの領域へ進むべきか判断したいとき。
-- repository root 解決、oracle src import 準備、runtime 側 AgentCallParameter への橋渡し、実行時契約に合わせた小さな補正が ACP builder 境界で扱われるか探しているとき。
+- ACP builder に関する既存の `acp.*` import が、realization 側でどの互換入口を通って oracle 側実装へ接続されているか確認したいとき。
+- `acp.*` 参照を oracle 側または実体 module へ移行する作業で、互換入口を残す理由、残されている範囲、削除条件を判断したいとき。
+- apply fork、review oracle、session join、TUI 起動パラメータ、indexing など、ACP builder 関連の下位領域へ進む入口を探しているとき。
+- realization 側が ACP builder の主要ロジックを独自に持つのか、oracle 側実装への委譲・再公開・薄い adapter に留まるのかを切り分けたいとき。
 
 ## Do not read this when
-- ACP の正本仕様断片、builder prompt 本文、Structured Output schema、model 設定、reasoning effort、file access mode などを確認したいとき。その場合は対応する oracle 側の仕様文書または実装を読む。
-- ACP や builder の具体的な処理内容、生成処理、変換ロジック、判定基準、データ構造、公開関数・クラスの詳細を理解したいとき。その場合は該当する下位の実装本体または委譲先を読む。
-- apply fork 全体、review workflow、TUI 起動後の画面処理、session join の制御など、ACP builder 境界より外側の orchestration や UI 本体を調べたいとき。
-- path model、AgentCallParameter、基本 enum、repository root 解決そのものなど、ACP builder から参照される基礎定義の意味を確認したいとき。
+- ACP builder の正本仕様、prompt 本文、Structured Output schema、モデル設定、file access mode、具体的な生成・判定ロジックを確認したいとき。その場合は oracle 側の対応箇所へ進む。
+- apply fork 全体の制御フロー、fork 作成、git 操作、実行 orchestration、CLI 入出力、TUI 画面やイベント処理など、builder 互換境界ではない実行本体を調べたいとき。
+- repository root 解決、path model、AgentCallParameter、列挙値などの基本定義そのものを調べたいとき。
+- ACP builder 以外の ACP 関連モジュール、または互換入口ではない新規機能の実装場所やテスト対象を探しているとき。
 
 ## hash
-- 56927e3e786f0d74a811d77c19fc18cce0355bfe5a2e6a928be857f383432498
+- f7207b0bad7b979db2f1f9b34a848febceb53a3b368d0082039040f8f0775144
 
 # `basic`
 
 ## Summary
-- realization implementation 側で、正本側の basic 領域にある基礎概念や共有型へ到達するための薄い互換入口をまとめるパッケージ。
-- ACP 呼び出しパラメータ、path model、構造化ドキュメントなどの実体は正本側に置き、この領域は独自仕様や主要ロジックを持たず、通常の実装側 import 経路から同じ公開要素を参照できるようにする位置づけを持つ。
+- realization implementation の basic 領域で、既存の basic 系 import 経路を保つための互換・再公開層をまとめる場所。ACP 関連型、path model、構造化ドキュメント関連の公開名を正本側の実体へ接続し、この層自体には独自の定義・変換・検証ロジックをほぼ持たない。
+- 正本側の基本概念を複製せず、realization 側や利用者向け公開面に残る既存参照を維持する入口として位置づけられる。互換層を残す理由や削除条件は、既存参照が残っているか、正本側または実体 module への移行が済んでいるかで判断する。
 
 ## Read this when
-- realization implementation 側の基礎パッケージが、正本側の basic 領域と import 構造上どのように対応しているかを確認したいとき。
-- ACP 型、path model、構造化ドキュメント関連の公開要素について、実装側から正本側へ接続する入口を探したいとき。
-- basic 領域に独自実装があるのか、正本側の再公開だけなのかを切り分けたいとき。
+- realization implementation から正本側の basic 系公開要素へどの import 経路で接続しているかを確認したいとき。
+- ACP 関連型、path model、構造化ドキュメント関連の公開名について、独自実装ではなく正本側の再公開になっている互換境界を確認したいとき。
+- 既存の basic 系参照を維持する必要があるか、または互換入口を削除できるかを判断したいとき。
+- 正本側の基本型や基本概念を realization 側で複製せずに公開している理由を確認したいとき。
 
 ## Do not read this when
-- ACP 型のフィールド、enum 値、path token の意味、構造化ドキュメントの変換規則など、正本定義や詳細仕様そのものを確認したいとき。その場合は正本側の対応本文を読む。
-- ACP パラメータ値の組み立て、ファイルアクセス制御、権限判定、structured output schema 検証など、再公開入口ではなく実際の処理ロジックを調べたいとき。
-- oracle file と realization file の一般定義、編集責任、標準方針、ルーティング文書の生成規則を確認したいとき。その場合はそれらを定義する正本仕様断片を読む。
+- ACP 関連型、path model、構造化ドキュメントの具体的な定義、列挙値、変換規則、検証ロジック、挙動を調べたいとき。その場合は再公開元の正本側実装を読む。
+- CLI 挙動、生成処理、テスト観点、または basic 領域以外の realization implementation の責務を調べたいとき。
+- 正本仕様断片そのもの、oracle file と realization file の基本概念、またはルーティング文書の生成規則を確認したいとき。
+- 新しい基本型や新しい挙動を追加する場所を探しているとき。この対象は互換用の公開入口であり、正本側の定義追加場所ではない。
 
 ## hash
-- c4d76a0cbbb4df80f82c4d01d5bdb0499d90084134f17dd15ffafde1f759d161
+- ef20b14eaabf3dde66ce344012d9e8b0114678a8dded41acd4e70edb4a06622d
 
 # `cmoc_runtime.py`
 
@@ -85,20 +86,21 @@
 # `config`
 
 ## Summary
-- 実装側の設定パッケージであり、正本側の設定定義へ互換的に到達するための import 入口を提供する。設定値の実体や読み込み・検証などの処理は持たず、正本側定義の再公開境界を扱う。
+- oracle 側の設定実装・設定定義を正本に保ったまま、realization 側や公開面に残る旧来の設定参照を受けるための互換入口をまとめる領域。
+- 設定ロジック本体や正本仕様を持つ場所ではなく、既存 import 経路を維持するための再公開・橋渡しだけを担う。
 
 ## Read this when
-- 実装側から設定定義へ到達する import 経路を確認したいとき。
-- 設定パッケージが正本側の設定定義を実体として委譲し、互換入口として機能しているか確認したいとき。
-- 設定モジュールの公開名、再エクスポート範囲、設定パッケージ入口の責務を確認したいとき。
+- realization 側で旧来の設定参照がどこで受け止められているかを確認したいとき。
+- 設定定義を複製せずに oracle 側の正本へ寄せたまま、既存参照名を維持している境界を調べたいとき。
+- 旧来の設定 import や再公開を削除・置換する作業で、互換入口を残す理由や削除できる条件を確認したいとき。
 
 ## Do not read this when
-- 個々の設定項目の意味、既定値、制約を確認したいとき。ここは設定定義の実体ではなく、正本側定義への入口だけを扱う。
-- 設定値の読み込み、解決、検証、変換、永続化などの処理ロジックを調べたいとき。
-- 正本仕様として設定内容そのものを確認したいとき。実体を持つ正本側の定義を直接読む方が適切である。
+- 設定項目の内容、型、読み込み、検証など、設定挙動の本体を確認したいとき。
+- oracle 側の正本仕様断片または正本となる設定実装そのものを確認・変更したいとき。
+- 新しい設定項目や公開面を追加する設計判断をしたいだけで、旧来参照との互換維持が論点ではないとき。
 
 ## hash
-- 7a2dcace2fd029ab73ce6de095eae0152577f065ea99bdef28edd0f27aa94095
+- 17a599971aa7a7a73a6a5499580e2f5660f4a85618ca80119352eb9cd8185b91
 
 # `main.py`
 
