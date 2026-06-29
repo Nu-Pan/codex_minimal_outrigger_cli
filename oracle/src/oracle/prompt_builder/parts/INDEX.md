@@ -22,25 +22,6 @@
 ## hash
 - 65d7fa95504cb9bc06a0d024ca7d982b73ca5f845e6611f760e0fa13c4ed7433
 
-# `file_access_rule.py`
-
-## Summary
-- AI エージェントに提示するファイル読み書き規則のプロンプト断片を、読み書きモードプリセットごとに構築する。
-- 各モードで許可・禁止されるリポジトリツリー、oracle ツリー、memo の扱いを StructDoc と placeholder map として返す。
-
-## Read this when
-- ファイルアクセス制限を表すプロンプト本文がどの読み書きモードでどう変わるかを確認したいとき。
-- FileAccessMode の各プリセットが、リポジトリ外、oracle 配下、memo、リポジトリ内書き込みをどう制限するかを追うとき。
-- AI エージェントへ渡すファイル読み書き規則の StructDoc 生成処理を変更・検証するとき。
-
-## Do not read this when
-- 読み書きモードの列挙値そのものや FileAccessMode の定義を確認したいだけのとき。
-- パスモデルの用語定義や work-root の解決規則を確認したいとき。
-- ファイルアクセス規則以外のプロンプト部品の構築処理を探しているとき。
-
-## hash
-- b64ab340a1366ef07293cd188240e23777c28dc6b8a38c5a4ca524f08193d728
-
 # `index_entry_standard.py`
 
 ## Summary

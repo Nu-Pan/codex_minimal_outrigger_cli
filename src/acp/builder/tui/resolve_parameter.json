@@ -1,0 +1,120 @@
+{
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "role",
+        "summary",
+        "goal",
+        "file_access_profile",
+        "oracle_and_realization_basic",
+        "oracle_standard",
+        "realization_standard",
+        "review_oracle_standard",
+        "apply_review_standard",
+        "index_entry_standard"
+    ],
+    "properties": {
+        "role": {
+            "$ref": "#/$defs/reasoned_string"
+        },
+        "summary": {
+            "$ref": "#/$defs/reasoned_string"
+        },
+        "goal": {
+            "$ref": "#/$defs/reasoned_string"
+        },
+        "file_access_profile": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "reason"
+            ],
+            "properties": {
+                "value": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "oracle",
+                        "realization",
+                        "index"
+                    ],
+                    "properties": {
+                        "oracle": {
+                            "$ref": "#/$defs/faattr"
+                        },
+                        "realization": {
+                            "$ref": "#/$defs/faattr"
+                        },
+                        "index": {
+                            "$ref": "#/$defs/faattr"
+                        }
+                    }
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "oracle_and_realization_basic": {
+            "$ref": "#/$defs/reasoned_bool"
+        },
+        "oracle_standard": {
+            "$ref": "#/$defs/reasoned_bool"
+        },
+        "realization_standard": {
+            "$ref": "#/$defs/reasoned_bool"
+        },
+        "review_oracle_standard": {
+            "$ref": "#/$defs/reasoned_bool"
+        },
+        "apply_review_standard": {
+            "$ref": "#/$defs/reasoned_bool"
+        },
+        "index_entry_standard": {
+            "$ref": "#/$defs/reasoned_bool"
+        }
+    },
+    "$defs": {
+        "faattr": {
+            "type": "string",
+            "enum": [
+                "deny",
+                "read",
+                "write"
+            ]
+        },
+        "reasoned_bool": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "reason"
+            ],
+            "properties": {
+                "value": {
+                    "type": "boolean"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "reasoned_string": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "value",
+                "reason"
+            ],
+            "properties": {
+                "value": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

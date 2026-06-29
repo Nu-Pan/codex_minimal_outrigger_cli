@@ -15,7 +15,7 @@ def build_quota_availability_probe_parameter(
     return AgentCallParameter(
         base_parameter.model_class,
         base_parameter.reasoning_effort,
-        base_parameter.file_access_mode,
+        base_parameter.faprofile,
         "Respond with exactly: ok",
         None,
     )

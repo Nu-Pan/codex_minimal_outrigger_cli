@@ -111,13 +111,13 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の共通 runtime 契約を横断して固定する realization test。root placeholder と worktree root 判定、config 既定値と検証、CmocError の Markdown 表示、CLI error の stdout 変換、subcommand log、state branch 名検証、`.cmoc` ignore、FileAccessMode と Codex sandbox/profile、binary 判定など、個別サブコマンドより下の実行前提をまとめて検証する。
+- cmoc の共通 runtime 契約を横断して固定する realization test。root placeholder と worktree root 判定、config 既定値と検証、CmocError の Markdown 表示、CLI error の stdout 変換、subcommand log、state branch 名検証、`.cmoc` ignore、ファイルアクセスプロファイル と Codex sandbox/profile、binary 判定など、個別サブコマンドより下の実行前提をまとめて検証する。
 - 大きいテストファイルだが、共通 fixture と root 状態の読み取り文脈を共有する runtime 回帰として凝集させる意図を docstring に持つ。
 
 ## Read this when
 - runtime の基礎契約、root 解決、linked worktree と main worktree の扱い、run/work/repo root の違いに関わる変更をする時。
 - CmocError、render_error、CLI preflight、Click parse error、stdout/stderr のエラー表示方針、subcommand log の生成条件を変更または確認する時。
-- CmocConfig、codex model/reasoning effort、FileAccessMode、Codex sandbox profile、追加書き込み許可 path、session join conflict 時の書き込み許可境界を変更する時。
+- CmocConfig、codex model/reasoning effort、ファイルアクセスプロファイル、Codex sandbox profile、追加書き込み許可 path、session join conflict 時の書き込み許可境界を変更する時。
 - branch 名から session id を読む処理、session state 読み込み、apply/session branch 形状の検証を触る時。
 - `.cmoc` の gitignore 反映、起動 wrapper の missing venv report、binary 判定の読み取り範囲など、個別コマンドに閉じない runtime 補助動作の回帰を確認する時。
 
@@ -161,7 +161,7 @@
 
 ## Read this when
 - Codex CLI を起動する runtime 処理、exec/TUI の引数構築、profile TOML、CODEX_HOME、sandbox mode、writable roots、cwd の選択を変更する時。
-- FileAccessMode ごとの Codex 実行挙動、特に repo write と pure oracle read の作業ディレクトリ・許可領域・prompt 読み取り条件を確認したい時。
+- ファイルアクセスプロファイル ごとの Codex 実行挙動、特に repo write と pure oracle read の作業ディレクトリ・許可領域・prompt 読み取り条件を確認したい時。
 - Codex 実行結果の出力取得、JSON/schema 出力、linked worktree 配下での状態保存先、call log、非ゼロ終了や CLI 未検出時の CmocError を扱う変更をする時。
 - Codex subprocess の起動 wrapper、process group、apply tracking ファイル、継承環境変数の扱いを変更する時。
 

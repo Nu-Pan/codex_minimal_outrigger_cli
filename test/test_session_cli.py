@@ -13,11 +13,18 @@ import tomllib
 from pathlib import Path
 
 import cmoc_runtime
-from basic.acp import AgentCallParameter, FileAccessMode
+from basic.acp import AgentCallParameter
 from cmoc_runtime import CmocError
 from commons.runtime_codex_profile import build_codex_profile
 from config.cmoc_config import CmocConfig
 import pytest
+from _profiles import (
+    ORACLE_ONLY_READ_PROFILE,
+    ORACLE_WRITE_PROFILE,
+    READONLY_PROFILE,
+    REALIZATION_WRITE_PROFILE,
+    REPO_WRITE_PROFILE,
+)
 
 from _support import (
     current_branch,
@@ -408,14 +415,14 @@ def test_session_join_resolves_oracle_conflict_with_realization_write_profile(
     run_git(root, "commit", "-m", "home change")
     run_git(root, "switch", session_branch)
     calls: list[str] = []
-    modes: list[FileAccessMode] = []
+    profiles = []
 
     class FakeCodexResult:
         output_json = None
 
     def fake_run_codex_exec(parameter: AgentCallParameter, **kwargs: object) -> object:
         calls.append(kwargs["purpose"])
-        modes.append(parameter.file_access_mode)
+        profiles.append(parameter.faprofile)
         assert kwargs["extra_writable_paths"] == [target]
         assert kwargs["allow_oracle_conflict_writes"] is True
         profile = build_codex_profile(
@@ -445,7 +452,7 @@ def test_session_join_resolves_oracle_conflict_with_realization_write_profile(
     assert current_branch(root) == home_branch
     assert target.read_text() == "resolved change\nTitle\n=======\n"
     assert calls == ["session join conflict resolution"]
-    assert modes == [FileAccessMode.REALIZATION_WRITE]
+    assert profiles == [REALIZATION_WRITE_PROFILE]
 
 
 def test_session_join_conflict_marker_detection_uses_marker_block() -> None:

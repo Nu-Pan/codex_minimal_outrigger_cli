@@ -18,10 +18,16 @@ from pathlib import Path
 from typing import Callable
 
 import pytest
+from _profiles import (
+    ORACLE_ONLY_READ_PROFILE,
+    ORACLE_WRITE_PROFILE,
+    READONLY_PROFILE,
+    REALIZATION_WRITE_PROFILE,
+    REPO_WRITE_PROFILE,
+)
 from jsonschema import validate
 
 import acp.builder.tui.resolve_parameter as tui_resolve_parameter_module
-from basic.acp import FileAccessMode
 from basic.acp import AgentCallParameter
 from basic.acp import ModelClass, ReasoningEffort
 from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
@@ -79,7 +85,7 @@ def build_apply_review_standard() -> StructDoc:
     return _build_apply_review_standard()[1]
 
 
-def build_file_access_rule(mode: FileAccessMode) -> StructDoc:
+def build_file_access_rule(mode) -> StructDoc:
     return _build_file_access_rule(mode)[1]
 
 
@@ -132,7 +138,7 @@ def test_complete_prompt_always_includes_routing_rule() -> None:
         role="- role",
         summary="- summary",
         goal="- goal",
-        file_access_mode=FileAccessMode.READONLY,
+        faprofile=READONLY_PROFILE,
         aux_dynamic_prompt=[],
     )
 
@@ -221,41 +227,56 @@ def test_apply_fork_change_summary_schema_matches_oracle_source() -> None:
 
 
 def test_file_access_rule_titles_and_bodies_match_modes() -> None:
-    expected = {
-        FileAccessMode.READONLY: [
-            "- `.` is `read`",
-            "- `oracle` is `read`",
-            "- `**/INDEX.md` is `read`",
-            "- `memo` is `deny`",
-        ],
-        FileAccessMode.PURE_ORACLE_READ: [
-            "- `.` is `deny`",
-            "- `oracle` is `read`",
-            "- `**/INDEX.md` is `read`",
-            "- `memo` is `deny`",
-        ],
-        FileAccessMode.REALIZATION_WRITE: [
-            "- `.` is `write`",
-            "- `oracle` is `read`",
-            "- `**/INDEX.md` is `read`",
-            "- `memo` is `deny`",
-        ],
-        FileAccessMode.ORACLE_WRITE: [
-            "- `.` is `read`",
-            "- `oracle` is `write`",
-            "- `**/INDEX.md` is `write`",
-            "- `memo` is `deny`",
-        ],
-        FileAccessMode.REPO_WRITE: [
-            "- `.` is `write`",
-            "- `oracle` is `write`",
-            "- `**/INDEX.md` is `write`",
-            "- `memo` is `deny`",
-        ],
-    }
+    expected = [
+        (
+            READONLY_PROFILE,
+            [
+                "- `.` is `read`",
+                "- `oracle` is `read`",
+                "- `**/INDEX.md` is `read`",
+                "- `memo` is `deny`",
+            ],
+        ),
+        (
+            ORACLE_ONLY_READ_PROFILE,
+            [
+                "- `.` is `deny`",
+                "- `oracle` is `read`",
+                "- `**/INDEX.md` is `read`",
+                "- `memo` is `deny`",
+            ],
+        ),
+        (
+            REALIZATION_WRITE_PROFILE,
+            [
+                "- `.` is `write`",
+                "- `oracle` is `read`",
+                "- `**/INDEX.md` is `read`",
+                "- `memo` is `deny`",
+            ],
+        ),
+        (
+            ORACLE_WRITE_PROFILE,
+            [
+                "- `.` is `read`",
+                "- `oracle` is `write`",
+                "- `**/INDEX.md` is `write`",
+                "- `memo` is `deny`",
+            ],
+        ),
+        (
+            REPO_WRITE_PROFILE,
+            [
+                "- `.` is `write`",
+                "- `oracle` is `write`",
+                "- `**/INDEX.md` is `write`",
+                "- `memo` is `deny`",
+            ],
+        ),
+    ]
 
-    for mode, fragments in expected.items():
-        doc = build_file_access_rule(mode)
+    for faprofile, fragments in expected:
+        doc = build_file_access_rule(faprofile)
         rendered = render_as_markdown(doc)
         assert doc.title == "file access profile"
         for fragment in fragments:
@@ -267,7 +288,7 @@ def test_complete_prompt_can_include_apply_review_standard() -> None:
         role="- role",
         summary="- summary",
         goal="- goal",
-        file_access_mode=FileAccessMode.READONLY,
+        faprofile=READONLY_PROFILE,
         aux_dynamic_prompt=[],
         apply_review_standard=True,
     )
@@ -282,7 +303,7 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
         role="- role",
         summary="- summary",
         goal="- goal",
-        file_access_mode=FileAccessMode.READONLY,
+        faprofile=READONLY_PROFILE,
         aux_dynamic_prompt=[],
         oracle_standard=True,
         realization_standard=True,
@@ -326,7 +347,7 @@ def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
         role="- cmoc から呼び出された AI Agent です",
         summary="- <repo-root> ツリー内の realization file を修正すること",
         goal="- realization standard と oracle standard に従うこと",
-        file_access_mode=FileAccessMode.READONLY,
+        faprofile=READONLY_PROFILE,
         aux_dynamic_prompt=[
             StructDoc(
                 "aux realization file",
@@ -365,7 +386,7 @@ def test_complete_prompt_keeps_literal_root_token_comment_requirement(
         role="- role",
         summary="- <work-root>/src/app.py を確認すること",
         goal="- goal",
-        file_access_mode=FileAccessMode.READONLY,
+        faprofile=READONLY_PROFILE,
         aux_dynamic_prompt=[],
         realization_standard=True,
     )
@@ -383,7 +404,7 @@ def test_complete_prompt_omits_apply_review_standard_by_default() -> None:
         role="- role",
         summary="- summary",
         goal="- goal",
-        file_access_mode=FileAccessMode.READONLY,
+        faprofile=READONLY_PROFILE,
         aux_dynamic_prompt=[],
     )
 
@@ -414,7 +435,7 @@ def test_complete_prompt_can_include_realization_standard() -> None:
         role="- role",
         summary="- summary",
         goal="- goal",
-        file_access_mode=FileAccessMode.READONLY,
+        faprofile=READONLY_PROFILE,
         aux_dynamic_prompt=[],
         realization_standard=True,
     )
@@ -449,7 +470,7 @@ def test_complete_prompt_can_include_index_entry_standard() -> None:
         role="- role",
         summary="- summary",
         goal="- goal",
-        file_access_mode=FileAccessMode.READONLY,
+        faprofile=READONLY_PROFILE,
         aux_dynamic_prompt=[],
         index_entry_standard=True,
     )
@@ -463,7 +484,7 @@ def test_complete_prompt_omits_index_entry_standard_by_default() -> None:
         role="- role",
         summary="- summary",
         goal="- goal",
-        file_access_mode=FileAccessMode.READONLY,
+        faprofile=READONLY_PROFILE,
         aux_dynamic_prompt=[],
     )
 
@@ -478,7 +499,7 @@ def test_tui_resolve_parameter_builder_embeds_original_prompt() -> None:
 
     assert parameter.model_class == ModelClass.EFFICIENCY
     assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
-    assert parameter.file_access_profile
+    assert parameter.faprofile == READONLY_PROFILE
     assert parameter.structured_output_schema_path is not None
     assert parameter.structured_output_schema_path.name == "resolve_parameter.json"
     assert parameter.structured_output_schema_path.exists()
@@ -503,6 +524,7 @@ def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
     assert schema["required"] == [
         "role",
         "summary",
+        "goal",
         "file_access_profile",
         "oracle_and_realization_basic",
         "oracle_standard",
@@ -512,21 +534,9 @@ def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
         "index_entry_standard",
     ]
     assert schema["additionalProperties"] is False
-    for parameter_name in schema["required"]:
-        parameter_schema = schema["properties"][parameter_name]
-        assert parameter_schema["type"] == "object"
-        assert parameter_schema["additionalProperties"] is False
-        assert parameter_schema["required"] == ["value", "reason"]
-        assert parameter_schema["properties"]["reason"]["type"] == "string"
-        assert parameter_schema["properties"]["reason"]["description"]
-    profile_schema = schema["properties"]["file_access_profile"]["properties"]["value"]
-    assert profile_schema["required"] == ["oracle", "realization", "index"]
-    for attr_name in profile_schema["required"]:
-        assert profile_schema["properties"][attr_name]["enum"] == [
-            "deny",
-            "read",
-            "write",
-        ]
+    assert schema["properties"]["role"]["$ref"] == "#/$defs/reasoned_string"
+    assert schema["properties"]["summary"]["$ref"] == "#/$defs/reasoned_string"
+    assert schema["properties"]["goal"]["$ref"] == "#/$defs/reasoned_string"
     for flag_name in [
         "oracle_and_realization_basic",
         "oracle_standard",
@@ -535,7 +545,24 @@ def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
         "apply_review_standard",
         "index_entry_standard",
     ]:
-        assert schema["properties"][flag_name]["properties"]["value"]["type"] == "boolean"
+        assert schema["properties"][flag_name]["$ref"] == "#/$defs/reasoned_bool"
+    profile_schema = schema["properties"]["file_access_profile"]
+    assert profile_schema["additionalProperties"] is False
+    assert profile_schema["required"] == ["value", "reason"]
+    profile_value_schema = profile_schema["properties"]["value"]
+    assert profile_value_schema["required"] == ["oracle", "realization", "index"]
+    for attr_name in profile_value_schema["required"]:
+        assert profile_value_schema["properties"][attr_name]["$ref"] == "#/$defs/faattr"
+    assert schema["$defs"]["faattr"]["enum"] == ["deny", "read", "write"]
+    for flag_name in [
+        "oracle_and_realization_basic",
+        "oracle_standard",
+        "realization_standard",
+        "review_oracle_standard",
+        "apply_review_standard",
+        "index_entry_standard",
+    ]:
+        assert schema["$defs"]["reasoned_bool"]["properties"]["value"]["type"] == "boolean"
 
 
 def test_tui_resolve_parameter_module_exports_only_required_names() -> None:
@@ -550,7 +577,7 @@ def test_indexing_index_entry_uses_low_reasoning() -> None:
 
     assert parameter.model_class == ModelClass.EFFICIENCY
     assert parameter.reasoning_effort == ReasoningEffort.LOW
-    assert parameter.file_access_mode == FileAccessMode.READONLY
+    assert parameter.faprofile == READONLY_PROFILE
 
 
 def test_review_oracle_merge_finding_uses_efficiency_model() -> None:
@@ -558,7 +585,7 @@ def test_review_oracle_merge_finding_uses_efficiency_model() -> None:
 
     assert parameter.model_class == ModelClass.EFFICIENCY
     assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
-    assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
+    assert parameter.faprofile == ORACLE_ONLY_READ_PROFILE
 
 
 def test_review_oracle_enumerate_finding_schema_matches_oracle_source() -> None:
@@ -738,7 +765,7 @@ def test_review_oracle_validate_finding_schema_matches_oracle_source(
     parameter = builder("finding", "known advocate", "known challenger")
     assert parameter.model_class == ModelClass.EFFICIENCY
     assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
-    assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
+    assert parameter.faprofile == ORACLE_ONLY_READ_PROFILE
     assert "finding" in parameter.prompt
     assert "known advocate" in parameter.prompt
     assert "known challenger" in parameter.prompt
@@ -789,7 +816,7 @@ def test_session_join_conflict_resolution_uses_realization_write_mode() -> None:
 
     assert parameter.model_class == ModelClass.MAINSTREAM
     assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
-    assert parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE
+    assert parameter.faprofile == REALIZATION_WRITE_PROFILE
     assert "conflict 対象ファイル" in parameter.prompt
 
 
@@ -816,7 +843,7 @@ def test_complete_prompt_can_include_review_oracle_standard() -> None:
         role="- role",
         summary="- summary",
         goal="- goal",
-        file_access_mode=FileAccessMode.READONLY,
+        faprofile=READONLY_PROFILE,
         aux_dynamic_prompt=[],
         review_oracle_standard=True,
     )
@@ -831,7 +858,7 @@ def test_complete_prompt_omits_review_oracle_standard_by_default() -> None:
         role="- role",
         summary="- summary",
         goal="- goal",
-        file_access_mode=FileAccessMode.READONLY,
+        faprofile=READONLY_PROFILE,
         aux_dynamic_prompt=[],
     )
 

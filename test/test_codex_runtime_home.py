@@ -1,10 +1,17 @@
 import json
 from pathlib import Path
 
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, ModelClass, ReasoningEffort
 from cmoc_runtime import CmocError
 from config.cmoc_config import CmocConfig
 import pytest
+from _profiles import (
+    ORACLE_ONLY_READ_PROFILE,
+    ORACLE_WRITE_PROFILE,
+    READONLY_PROFILE,
+    REALIZATION_WRITE_PROFILE,
+    REPO_WRITE_PROFILE,
+)
 
 from _support import (
     make_repo,
@@ -44,7 +51,7 @@ def test_run_codex_exec_uses_default_codex_home_when_env_unset(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
+        READONLY_PROFILE,
         "prompt",
         None,
     )
@@ -92,7 +99,7 @@ def test_run_codex_exec_preserves_configured_codex_home_env_value(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
+        READONLY_PROFILE,
         "prompt",
         None,
     )
@@ -143,7 +150,7 @@ def test_run_codex_exec_validates_relative_codex_home_from_codex_cwd(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        FileAccessMode.PURE_ORACLE_READ,
+        ORACLE_ONLY_READ_PROFILE,
         "prompt",
         None,
     )
@@ -169,7 +176,7 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_missing(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
+        READONLY_PROFILE,
         "prompt",
         None,
     )
@@ -198,7 +205,7 @@ def test_run_codex_exec_fails_before_codex_when_codex_home_is_file(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
+        READONLY_PROFILE,
         "prompt",
         None,
     )
@@ -227,7 +234,7 @@ def test_run_codex_exec_fails_before_codex_when_auth_json_missing(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
+        READONLY_PROFILE,
         "prompt",
         None,
     )

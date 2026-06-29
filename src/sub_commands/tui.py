@@ -162,8 +162,8 @@ def build_tui_codex_parameter(
     launch_timestamp: str | None = None,
 ) -> AgentCallParameter:
     """解決済み JSON から TUI 起動用 AgentCallParameter を構築する。"""
-    file_access_profile = nested_faprofile(resolved_parameter)
-    if file_access_profile is None:
+    file_access_attrs = nested_faprofile(resolved_parameter)
+    if file_access_attrs is None:
         raise CmocError(
             "TUI では使用できないファイルアクセスプロファイルです。",
             ["プロンプトを保存して `cmoc tui` を再実行してください。"],
@@ -188,7 +188,9 @@ def build_tui_codex_parameter(
             "goal",
             "- 詳細指示の要求を満たしていること",
         ),
-        file_access_profile=file_access_profile,
+        faattr_oracle=file_access_attrs["oracle"],
+        faattr_realization=file_access_attrs["realization"],
+        faattr_index=file_access_attrs["index"],
         original_prompt=original_prompt,
         oracle_and_realization_basic=nested_bool(
             resolved_parameter, "oracle_and_realization_basic"
