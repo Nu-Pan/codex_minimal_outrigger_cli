@@ -135,17 +135,10 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
     writable_roots = set(
         tomllib.loads(record["profile"])["sandbox_workspace_write"]["writable_roots"]
     )
-    assert writable_roots == {
-        str((root / ".cmoc").resolve()),
-        str((root / ".git").resolve()),
-        str((root / "README.md").resolve()),
-        str((root / "oracle").resolve()),
-    }
-    for blocked in (root / "memo" / "blocked.md", root / ".agents" / "blocked.md"):
-        assert not any(
-            blocked.resolve().is_relative_to(Path(writable_root))
-            for writable_root in writable_roots
-        )
+    assert writable_roots == {str(root.resolve())}
+    assert (root / "new_top_level.md").resolve().is_relative_to(
+        Path(next(iter(writable_roots)))
+    )
     assert result.output_text == "done\n"
 
 
@@ -379,8 +372,8 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
     profile = tomllib.loads(
         Path(json.loads(call_log.read_text())["profile_path"]).read_text()
     )
-    assert str((linked / "oracle").resolve()) in profile["sandbox_workspace_write"][
-        "writable_roots"
+    assert profile["sandbox_workspace_write"]["writable_roots"] == [
+        str(linked.resolve())
     ]
 
 

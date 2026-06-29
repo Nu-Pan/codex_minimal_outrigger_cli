@@ -113,23 +113,22 @@ def _writable_roots(
     extra_writable_paths: list[Path] | None,
     allow_oracle_conflict_writes: bool = False,
 ) -> list[Path]:
-    """Codex sandbox に渡せる正リストとして書き込み root を最小化する。"""
+    """Codex sandbox に渡せる書き込み root を作る。"""
     if file_access_to_sandbox_mode(mode) == "read-only":
         return []
     root = root.resolve()
     match mode:
-        case FileAccessMode.REALIZATION_WRITE:
+        case FileAccessMode.REALIZATION_WRITE | FileAccessMode.REPO_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-            # Codex profile has no deny-list expression. Do not grant root itself:
-            # forbidden oracle/memo/.agents changes must be impossible at sandbox level.
-            paths = _default_writable_paths(mode, root)
+            # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+            # Codex profile has no deny-list expression. The oracle contract still
+            # requires profile-based access setup, but allowing new top-level paths
+            # needs <work-root> itself as the writable root; fine-grained bans are
+            # carried in the injected prompt, not approximated by enumerating
+            # currently existing children.
+            paths = [root]
         case FileAccessMode.ORACLE_WRITE:
             paths = [root / "oracle"]
-        case FileAccessMode.REPO_WRITE:
-            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-            # Codex profile has no deny-list, so enumerate every root child except
-            # memo from the prompt rule and .agents from Codex's own constraint.
-            paths = _default_writable_paths(mode, root)
         case _:
             paths = []
     result: list[Path] = []
@@ -159,14 +158,6 @@ def _writable_roots(
             seen.add(resolved)
             result.append(resolved)
     return result
-
-
-def _default_writable_paths(mode: FileAccessMode, root: Path) -> list[Path]:
-    return [
-        path
-        for path in sorted(root.iterdir(), key=lambda item: item.name)
-        if _is_writable_path_allowed(mode, root, path.resolve())
-    ]
 
 
 def _is_writable_path_allowed(
