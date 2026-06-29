@@ -63,25 +63,24 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation のうち、複数の CLI サブコマンドや上位処理から共有される runtime helper 群を収める領域。Codex 呼び出し、preflight indexing、設定読み書き、content hash 保存、共通エラー表示、git 操作、サブコマンド logging、runtime path、結果型、session state など、実行時の横断的な支援機能への入口になる。
-- 公開名をまとめる薄い facade と、責務別の runtime 実装が同居しており、個別サブコマンド固有の業務処理ではなく、サブコマンド間で共通化された実行境界・永続化・外部プロセス・状態管理を確認するための階層である。
+- cmoc の realization implementation のうち、複数の CLI サブコマンドや上位処理から共有される runtime helper 群をまとめる領域。Codex 呼び出し、設定読み書き、内容 hash、共通エラー、git 操作、実行ログ、path 解決、結果型、session state、indexing preflight などの実行時支援を扱う。
+- この階層は、共通 runtime API の集約入口と、責務別に分割された実装本文への入口である。個別の挙動を調べる場合は、対象領域に対応する下位本文へ進む。
 
 ## Read this when
-- CLI サブコマンド共通の実行ライフサイクル、進捗表示、終了コード化、例外表示、サブコマンドログの扱いを確認または変更したいとき。
-- Codex CLI の exec/TUI 起動、profile・sandbox・CODEX_HOME・schema・call log・quota/capacity retry・Structured Output 検証など、Codex subprocess 境界の実装を追いたいとき。
-- Codex 実行前に routing document を自動更新する preflight、indexing 対象列挙、鮮度判定、entry 生成、Markdown 描画、更新 commit の制御を確認したいとき。
-- 実行時設定、content hash 保存、binary 判定、共通エラー report、git repository/worktree 操作、runtime path、timestamp、結果モデル、session state file の読み書きなど、複数機能から使われる runtime helper を探すとき。
-- 上位コードが共有 runtime API としてどの名前を import できるか、または横断的 helper の公開面を整理したいとき。
+- CLI サブコマンドや上位ワークフローから共通利用される runtime helper の責務分担を確認したいとき。
+- Codex exec/TUI 呼び出し、profile・sandbox・CODEX_HOME、Structured Output、quota/capacity retry、call log、preflight のいずれかに関わる実行境界を調べたいとき。
+- 設定ファイル、内容 hash 保存、binary 判定、共通エラー表示、git repository/worktree 操作、実行ログ、root/path 解決、結果モデル、session state の読み書きを扱う実装へ進みたいとき。
+- INDEX.md 更新 preflight、対象探索、既存エントリー検証、本文 hash、Structured Output から Markdown への描画、更新 commit の制御を確認したいとき。
+- 複数の runtime 領域を横断して使う呼び出し側で、どの共通 API を集約入口から import できるか確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの引数定義、command 登録、業務ロジック、利用者向け出力 schema の詳細だけを調べたいときは、該当する CLI 実装へ直接進む。
-- path token、oracle/realization、root/worktree/run などの正本仕様や概念定義を確認したいだけのときは、oracle 側の本文へ進む。
-- 設定モデル、FileAccessMode、AgentCallParameter などのデータモデル自体の定義だけを確認したいときは、モデル定義側へ進む。
-- 生成される routing entry の文体基準や仕様断片の書き方を確認したいだけのときは、indexing 実装ではなく oracle 側の基準を読む。
-- 特定機能の上位 workflow、状態値の利用先、report 作成、test 選択、review/apply/session の具体的な制御を調べたいときは、この共有 runtime 層ではなく呼び出し元の実装へ進む。
+- 個別 CLI サブコマンドの引数定義、command 登録、利用者向けオプション、サブコマンド固有の業務処理だけを調べたいときは、CLI 層や各呼び出し元へ進む。
+- cmoc の正本仕様断片、path model、INDEX.md 仕様、Codex 実行ルール、session state の仕様意図などを確認したいだけのときは、oracle 側の本文へ進む。
+- 設定モデルそのもののフィールド定義、FileAccessMode などの基本モデル定義、または出力 schema の仕様だけを確認したいときは、対応する basic/model/schema 側へ進む。
+- 生成済みログや状態を解析する読み取り側、個別レポート生成、oracle/realization 生成、テスト選択など、runtime helper の利用先の具体的な処理を調べたいときは、その上位実装へ進む。
 
 ## hash
-- cc853a6f30778ccf4ce0bf46821d47bd4a45e620c0f7b648626a58d678336310
+- 3ad365ccb6639264c87da284ef08f053a0de5d6d50c3d5c758fd5d25a794b1de
 
 # `config`
 
