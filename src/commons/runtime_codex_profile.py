@@ -22,7 +22,7 @@ from commons.runtime_paths import schema_store_dir
 
 APPLY_PROCESS_TRACKING_ENV = "CMOC_APPLY_PROCESS_ID_PATH"
 _active_apply_process_tracking_path: Path | None = None
-_NEVER_WRITABLE_ROOT_NAMES = {
+_REALIZATION_WRITE_BLOCKED_ROOT_NAMES = {
     ".agents",
     ".cmoc",
     ".codex",
@@ -33,6 +33,7 @@ _NEVER_WRITABLE_ROOT_NAMES = {
     "README.md",
     "memo",
 }
+_REPO_WRITE_BLOCKED_ROOT_NAMES = {".agents", "memo"}
 
 
 def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
@@ -126,7 +127,8 @@ def _writable_roots(
             paths = [root / "oracle"]
         case FileAccessMode.REPO_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-            # REPO_WRITE still excludes memo/.agents and runtime-owned metadata.
+            # Codex profile has no deny-list, so enumerate every root child except
+            # memo from the prompt rule and .agents from Codex's own constraint.
             paths = _default_writable_paths(mode, root)
         case _:
             paths = []
@@ -180,7 +182,12 @@ def _is_writable_path_allowed(
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # 追加 writable path は、prompt で伝える禁止領域を広げない範囲だけ許可する。
     relative = path.relative_to(root)
-    if relative.parts and relative.parts[0] in _NEVER_WRITABLE_ROOT_NAMES:
+    blocked_root_names = (
+        _REPO_WRITE_BLOCKED_ROOT_NAMES
+        if mode == FileAccessMode.REPO_WRITE
+        else _REALIZATION_WRITE_BLOCKED_ROOT_NAMES
+    )
+    if relative.parts and relative.parts[0] in blocked_root_names:
         return False
     if mode == FileAccessMode.REALIZATION_WRITE:
         if allow_oracle_conflict_writes:

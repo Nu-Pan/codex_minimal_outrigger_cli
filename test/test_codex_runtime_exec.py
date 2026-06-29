@@ -135,7 +135,12 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
     writable_roots = set(
         tomllib.loads(record["profile"])["sandbox_workspace_write"]["writable_roots"]
     )
-    assert writable_roots == {str((root / "oracle").resolve())}
+    assert writable_roots == {
+        str((root / ".cmoc").resolve()),
+        str((root / ".git").resolve()),
+        str((root / "README.md").resolve()),
+        str((root / "oracle").resolve()),
+    }
     for blocked in (root / "memo" / "blocked.md", root / ".agents" / "blocked.md"):
         assert not any(
             blocked.resolve().is_relative_to(Path(writable_root))

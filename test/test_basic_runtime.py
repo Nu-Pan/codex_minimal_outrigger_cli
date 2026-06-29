@@ -469,6 +469,11 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     """root 付き通常経路でも FileAccessMode ごとの profile を生成する。"""
     root = tmp_path / "repo"
     root.mkdir()
+    (root / ".cmoc").mkdir()
+    (root / ".codex").mkdir()
+    (root / ".pytest_cache").mkdir()
+    (root / "AGENTS.md").write_text("agents\n")
+    (root / "INDEX.md").write_text("index\n")
     (root / "src").mkdir()
     (root / "README.md").write_text("# repo\n")
     (root / "oracle").mkdir()
@@ -514,6 +519,12 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         str((root / "oracle").resolve())
     }
     assert _profile_writable_roots(profiles[FileAccessMode.REPO_WRITE]) == {
+        str((root / ".cmoc").resolve()),
+        str((root / ".codex").resolve()),
+        str((root / ".pytest_cache").resolve()),
+        str((root / "AGENTS.md").resolve()),
+        str((root / "INDEX.md").resolve()),
+        str((root / "README.md").resolve()),
         str((root / "oracle").resolve()),
         str((root / "src").resolve()),
     }
@@ -608,8 +619,6 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         (FileAccessMode.ORACLE_WRITE, ".agents/blocked.md"),
         (FileAccessMode.REPO_WRITE, "memo/blocked.md"),
         (FileAccessMode.REPO_WRITE, ".agents/blocked.md"),
-        (FileAccessMode.REPO_WRITE, "AGENTS.md"),
-        (FileAccessMode.REPO_WRITE, "INDEX.md"),
         (FileAccessMode.REPO_WRITE, "../outside.md"),
     ],
 )
