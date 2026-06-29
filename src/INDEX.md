@@ -1,25 +1,23 @@
 # `acp`
 
 ## Summary
-- ACP realization implementation の入口領域で、正本側 ACP 実装と互換の import 経路を提供し、下位の builder 領域へ進むための分岐点になる。
-- パッケージ入口自体は実処理を持たず、下位領域では agent call parameter 構築に関わる apply fork、review、session、TUI、indexing などの builder 公開経路と実行側補正を扱う。
+- ACP 関連の realization implementation をまとめる領域。oracle 側 ACP 実装と互換の import 経路を実行側から成立させる入口であり、実処理の多くは oracle 側実装の再公開または薄い実行時補正として提供される。
+- ACP builder 系の agent 呼び出しパラメータ構築、Structured Output schema 参照、prompt 構築、review・apply・session・indexing・TUI 向けの下位構成へ進むための起点になる。
 
 ## Read this when
-- realization 側から ACP 関連実装へ進む最初の入口を探したいとき。
-- oracle src 側の ACP 実装と互換の import 経路が、実行側 package でどのように成立しているか確認したいとき。
-- agent 呼び出し用の model、reasoning effort、file access mode、prompt、Structured Output schema などを組み立てる builder 領域へ進む必要があるとき。
-- apply fork、review、session、TUI、indexing のどの ACP builder 実装または公開入口を読むべきか切り分けたいとき。
-- 正本側 builder 実装を薄く再公開する互換入口と、realization 側で追加の接続・補正を行う箇所の境界を把握したいとき。
+- ACP 名前空間または ACP builder 系を realization implementation 側から import する経路を確認したいとき。
+- review、apply、session、indexing、TUI などの ACP builder 領域のうち、どの下位実装へ進むべきかを切り分けたいとき。
+- oracle 側 ACP 実装を実行側で再公開している箇所と、実行時契約に合わせて薄く補正している箇所の境界を確認したいとき。
+- agent 呼び出しパラメータ、prompt、Structured Output schema、file access mode、model class など、ACP builder 呼び出し前の構築責務を追いたいとき。
 
 ## Do not read this when
-- ACP の正本仕様断片、prompt 断片、review standard、realization standard、path model など、人間所有の仕様本文を確認したいとき。
-- fork 作成、git 操作、作業ディレクトリ管理、レポート保存、CLI サブコマンドルーティングなど、生成済み ACP を使う側の実行制御を調べたいとき。
-- TUI の画面描画、入力処理、イベントループなど、起動後の UI 本体の挙動を調べたいとき。
-- finding の列挙・判定・結合・検証、indexing、session join など、builder が参照または接続する正本側アルゴリズムの詳細を理解したいとき。
-- model class、reasoning effort、file access mode、Structured Output schema などの共通定義そのものを確認したいとき。
+- CLI コマンドの制御、fork 作成、作業ディレクトリ管理、git 操作、レポート保存など、ACP builder 呼び出し後の実行制御を調べたいとき。
+- oracle file の正本仕様断片、path model、review standard など、人間が所有する仕様本文を確認したいとき。
+- ACP と無関係な realization implementation、realization test、または補助ファイルの責務を調べたいとき。
+- 個別の builder 処理内容や prompt・schema・判定ロジックを直接確認したいときは、この領域全体ではなく目的に対応する下位領域へ進む。
 
 ## hash
-- 1b34258526b2b621465835d7824029e912bbc78c7d588409041088a46c7f1389
+- 85c334b11f5598d0d753a16cb449a0a2e6a8c759368681151ea848ed0fbfd533
 
 # `basic`
 

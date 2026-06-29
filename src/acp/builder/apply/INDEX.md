@@ -17,20 +17,20 @@
 # `fork`
 
 ## Summary
-- apply fork 系の ACP builder をまとめる領域。共通の実行環境解決、変更要約・所見列挙・所見適用の agent call parameter 構築、各 builder が返す structured output schema への入口を持つ。
-- `cmoc apply fork` の各フェーズで、oracle 側の prompt builder と schema を使って agent 呼び出し設定を組み立てる realization implementation 群を探す起点になる。
+- `cmoc apply fork` の各 agent 呼び出しに渡す parameter と prompt を組み立てる realization builder 群への入口。所見列挙、所見適用、変更要約の各フェーズについて、model class、reasoning effort、file access mode、構造化出力 schema、oracle prompt 断片の取り込み方を扱う。
+- apply fork 系 builder が oracle src を import するための共通補助処理と、レビュー結果・変更要約を機械可読に返すための出力契約も同じ責務範囲に含む。
 
 ## Read this when
-- `cmoc apply fork` が変更要約、実装所見列挙、所見適用の各 agent をどの model・reasoning effort・file access mode・schema・prompt で呼ぶか確認したいとき。
-- apply fork 系 builder が repo root を解決し、oracle src を import 可能にして、oracle 側の prompt 断片を render する流れを確認したいとき。
-- 差分適用後のレビュー用出力や所見出力の structured output schema と、それを使う builder 実装の対応関係を追いたいとき。
-- apply fork builder 群に共通する helper と、個別フェーズ向け builder のどちらへ進むべきかを切り分けたいとき。
+- `cmoc apply fork` で、所見列挙・所見適用・変更要約 agent の呼び出し設定や prompt 構築を確認または変更したいとき。
+- apply fork 系 builder が repo root を解決し、oracle src の正本 prompt 断片や構造化 markdown renderer を import して利用する流れを追いたいとき。
+- 差分適用後の変更要約や実装レビュー所見を、どの schema 契約で agent に返させるか確認したいとき。
+- apply fork の builder 層が読み取り専用・書き込み可などの file access mode、model class、reasoning effort を各フェーズへどう割り当てるか調べたいとき。
 
 ## Do not read this when
-- `cmoc apply fork` 全体の fork 作成、git 操作、作業ディレクトリ管理、レポート保存などの実行制御を調べたいとき。
-- oracle 側の正本 prompt 断片、review standard、realization standard、path model の定義そのものを確認・変更したいとき。
-- 生成された変更要約や所見の内容そのものを読みたいだけで、agent call parameter の構築処理や schema 契約を確認する必要がないとき。
-- apply fork 以外の builder、CLI サブコマンドルーティング、または package 初期化 docstring 以外の公開 API を探しているとき。
+- fork 作成、作業ディレクトリ管理、git 操作、レポート保存など、`cmoc apply fork` 全体の実行制御を調べたいとき。
+- oracle 側の正本仕様断片、prompt builder、review standard、path model の内容そのものを確認または変更したいとき。
+- agent が返した所見や変更要約を実際に解釈・表示・永続化する処理を追いたいとき。
+- 個別の差分検出アルゴリズム、パッチ適用手順、CLI 入出力全体の整形だけを確認したいとき。
 
 ## hash
-- d704c7b82c36af134c6e396064b91b05ec36ca83889da729c45ea94281a38749
+- 6cb3fb94bf71ec735bd4c699bc64114ff883e9c9f0d781e49a27e3b2e814cdb4

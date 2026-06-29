@@ -111,26 +111,27 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- 基礎 runtime の共通契約を横断的に固定する pytest 群。root token/path 解決、linked worktree と run/work root、設定既定値と不正値、CmocError の Markdown report、CLI error の stdout 出力、subcommand log、`.cmoc` ignore、FileAccessMode 変換、Codex sandbox profile、binary 判定など、個別サブコマンドより下位の実行前提をまとめて検証する。
-- 大きめのテストファイルだが、分割すると共通 fixture と root 状態の文脈が散るため、basic runtime 回帰として一箇所に集約されている。
+- cmoc の基礎 runtime 契約を横断的に固定する realization test。root placeholder と linked worktree の解決、config 既定値と検証、CmocError の Markdown report、CLI error の stdout 表示、subcommand log、`.cmoc` ignore、FileAccessMode から Codex sandbox/profile への変換、binary 判定、branch session state の境界をまとめて検証する。
+- 個別サブコマンドの機能テストではなく、複数の実行経路の前提になる runtime 境界が一緒に崩れないことを確認する入口として位置づけられる。
 
 ## Read this when
-- 基礎 runtime の回帰テストを確認・変更する。
-- root token、repo root、run root、work root、linked worktree の扱いを変更する。
-- CmocConfig、config_from_dict、model class、reasoning effort、FileAccessMode の既定値・検証・変換を変更する。
-- CmocError、render_error、Click parse error、CLI preflight error、stdout/stderr のエラー表示契約を変更する。
-- subcommand log、pre-log check failure、起動 wrapper の missing venv report、`.cmoc` の gitignore 追加を変更する。
-- Codex profile の sandbox mode、writable_roots、extra writable paths、memo・oracle・.agents へのアクセス制限を変更する。
-- binary 判定の読み取り範囲や先頭 chunk 判定を変更する。
+- root、run root、work root、root placeholder path、linked worktree の扱いを変更・調査する。
+- CmocConfig、codex model class、reasoning effort、config_from_dict の検証エラーを変更・調査する。
+- CmocError、render_error、Click parse error、CLI 実行前 preflight、stdout/stderr の error report 表示を変更・調査する。
+- subcommand log の生成、timestamp collision、pre-log check 失敗時の command_finished 記録を変更・調査する。
+- `.cmoc` の gitignore 追加、起動 wrapper の missing venv report、call stack の root token path 表示を変更・調査する。
+- FileAccessMode の永続化値、sandbox mode 変換、Codex cwd、build_codex_profile の writable roots と追加書き込み許可 path の境界を変更・調査する。
+- session/apply branch 名から session id や state を読む境界、破損 branch 名の拒否を変更・調査する。
+- binary 判定が読み込む範囲や file open mode を変更・調査する。
 
 ## Do not read this when
-- 個別サブコマンド固有の業務ロジックや出力だけを調べたい場合。
-- oracle 正本仕様そのものを確認したい場合。
-- runtime の共通境界に触れない UI、文書、補助ファイル、または特定機能の局所テストだけを扱う場合。
-- テスト補助の make_repo、run_git、runner 自体の実装を調べたい場合は、先にテスト support 側を読む。
+- 特定サブコマンド固有の成功フロー、入出力、ドメイン処理だけを確認したい場合は、そのサブコマンドのテストや実装を直接読む。
+- oracle file の正本仕様そのものを確認したい場合は、対応する oracle doc または oracle src/test を読む。
+- 個別の helper 実装だけの詳細を追いたい場合は、検証対象の実装 module を直接読む。
+- routing 文書や INDEX.md の生成規則だけを確認したい場合は、この runtime 回帰テストではなく index 関連の仕様・実装を読む。
 
 ## hash
-- de4d6c5eb4a1d893a3c688a328dd6eb334e0c387998d5efbd1fd1eb24043b8a9
+- 0f9c8c40018ed3b10780e59cc4a5674f452132690be3b17e536eed2c39e928e7
 
 # `test_cli_init_tui.py`
 

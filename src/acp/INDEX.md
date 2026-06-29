@@ -18,23 +18,21 @@
 # `builder`
 
 ## Summary
-- ACP builder の realization implementation 領域で、agent call parameter 構築に関わる下位領域への入口になる。正本側実装を実行側 import 経路へ接続する互換境界を中心に、apply fork 用の呼び出しパラメータ構築、review 系 builder の再公開と一部補正、session join への入口、TUI 起動用パラメータ調整、indexing 関連の互換入口を束ねる。
-- この領域では、正本側の prompt builder や builder 実装を再利用しながら、実行側 package から参照できる公開経路を用意する。実処理を持つ箇所と、正本側 API を薄く再公開するだけの箇所が混在するため、下位領域を選ぶための分岐点として扱う。
+- ACP builder 領域の realization implementation 側入口。正本側の ACP builder 実装や package 構造を、実行側の import 経路から利用できるようにする互換境界を中心に扱う。
+- apply、review、session、indexing、TUI などの下位 builder 領域へ進むための入口であり、多くは正本側実装の再公開または薄い調整を担う。
+- 実処理本体を持つ領域と、互換 package として正本側へ委譲するだけの領域が混在するため、どの builder 領域へ進むべきかを切り分ける案内点として位置づけられる。
 
 ## Read this when
-- agent を呼び出すための model、reasoning effort、file access mode、prompt、Structured Output schema などの ACP builder 実装または公開入口を探したいとき。
-- apply fork、review、session、TUI、indexing のどの builder 領域へ進むべきかを切り分けたいとき。
-- realization 側の package が、正本側 builder 実装や定義をどの import 経路で公開しているか確認したいとき。
-- 正本側実装を再公開するだけの互換入口と、realization 側で追加の調整を行う builder 実装との境界を把握したいとき。
-- TUI 起動時の ACP 調整、review advocate 検証時の prompt 表記補正、apply fork の各段階の呼び出しパラメータ構築など、実行側での接続・補正箇所を探したいとき。
+- ACP builder 全体の realization 側 package 構成と、正本側 builder 実装への import 互換境界を把握したいとき。
+- apply、review、session、indexing、TUI の各 builder 領域のうち、どの下位領域が目的に近いかを選びたいとき。
+- agent 呼び出しパラメータ、prompt 構築、Structured Output schema、file access mode、model class などがどの builder 領域で扱われるかを大まかに切り分けたいとき。
+- 正本側実装を realization implementation 側から再公開しているだけの領域と、実行時契約に合わせた薄い補正を行う領域の境界を確認したいとき。
 
 ## Do not read this when
-- builder の正本仕様断片、prompt 断片、review standard、realization standard、path model など、人間所有の仕様本文そのものを確認したいとき。
-- fork 作成、git 操作、作業ディレクトリ管理、レポート保存、CLI サブコマンドルーティングなど、builder が生成した ACP を使う側の実行制御を調べたいとき。
-- TUI の画面描画、入力処理、イベントループなど、起動後の UI 本体の挙動を調べたいとき。
-- finding の列挙・判定・結合・検証、indexing、session join などの具体的なアルゴリズムや正本側の入出力仕様を理解したいとき。
-- 生成済みの変更要約、所見、レポートなど、agent call parameter 構築結果ではなく実行後データの内容だけを読みたいとき。
-- model class、reasoning effort、file access mode、Structured Output schema などの共通定義自体を確認したいとき。
+- 個別 builder の具体的な生成処理、prompt 内容、判定ロジック、入出力仕様を調べたいとき。その場合は該当する下位領域または委譲先の正本側実装を読む。
+- fork 作成、作業ディレクトリ管理、git 操作、CLI 入出力、レポート保存など、builder 呼び出し後の実行制御を調べたいとき。
+- oracle file の正本仕様断片そのもの、review standard、path model、基本定義の意味を確認したいとき。該当する oracle 側の本文を読む。
+- TUI の画面描画、入力処理、イベントループ、agent 応答の解釈・表示・永続化など、builder 以外の実処理を調べたいとき。
 
 ## hash
-- 3994b17896fc58db5fd68a715ae543e6b446d39030d573991c3b52834a1f3dce
+- f414b92a0ccc847f573423fdb890da9419132a336cf92c49efced08fc9185710

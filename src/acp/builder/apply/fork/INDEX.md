@@ -18,21 +18,20 @@
 # `_common.py`
 
 ## Summary
-- apply fork ACP builder 群で共有する、実行位置からリポジトリルートを解決し、oracle 側の Python 実装を import 可能にするための補助処理を置く。
-- カレントディレクトリの親探索、git コマンドによるフォールバック、oracle/src の sys.path 追加という、各 builder 本体の前提環境を整える責務を持つ。
+- apply fork 系の builder で共通利用する補助処理を置く小さなモジュール。repo-root 解決は既存の path model に委ねつつ、builder 側の import 境界を保ったまま oracle src を import 可能にする責務を持つ。
 
 ## Read this when
-- apply fork ACP builder の起動前提として、リポジトリルートの解決方法や失敗時の扱いを確認したいとき。
-- apply fork ACP builder から oracle 側の Python package を import できるようにする経路を確認・変更したいとき。
-- builder 本体ではなく、複数の apply fork builder で共通に使う環境解決 helper の挙動を調べたいとき。
+- apply fork 系の builder から oracle src 配下のモジュールを import できるようにする処理を確認・変更したいとき。
+- repo-root を起点にした oracle src 探索、または現在ファイル位置を基準にした fallback 探索の挙動を確認したいとき。
+- oracle src が見つからない場合の失敗条件や、sys.path へ追加する条件を確認したいとき。
 
 ## Do not read this when
-- apply fork ACP builder が生成する ACP の内容や、個別 builder の出力仕様を確認したいだけのとき。
-- oracle 側 package の中身、正本仕様断片、path model の定義そのものを確認したいとき。
-- apply fork 以外の builder や、CLI 全体のコマンドルーティングを調べたいとき。
+- apply fork の個別 builder ロジックや適用手順そのものを確認したいとき。
+- repo-root 解決の正本側の仕様や実装を確認したいとき。
+- oracle src 以外の import 経路、CLI 入出力、永続状態、Git 操作の挙動を調べたいとき。
 
 ## hash
-- f75e51370608a6ad649e421173d55eaea5862beb70d5078f73b49b2ef8978dcf
+- be2995b7b83971bc25728a7e28e0677af2b43d153a20d4816f3e046b584c7b8a
 
 # `change_summary.json`
 

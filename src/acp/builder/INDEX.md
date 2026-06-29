@@ -17,23 +17,25 @@
 # `apply`
 
 ## Summary
-- apply 系の ACP builder を収める realization implementation 領域。package 互換の入口と、apply fork の変更要約、ファイル単位所見列挙、所見適用に使う agent call parameter 構築実装へ進むための起点になる。
-- apply fork の各 builder は、repo root と oracle src の import 経路を解決し、oracle 側の prompt builder を使って prompt を生成し、用途に応じた model、reasoning effort、file access mode、structured output schema を指定する。
+- apply builder 領域の package 入口と、apply fork の agent 呼び出し設定を組み立てる builder 群を含む領域。主に所見列挙、所見適用、変更要約の各フェーズについて、prompt、model class、reasoning effort、file access mode、構造化出力契約、oracle 由来の prompt 断片の取り込みを扱う。
+- package 初期化要素は互換 package としての位置づけを示すだけで、実処理は fork 系 builder 側に集約される。
 
 ## Read this when
-- apply fork の各段階で agent をどの model、reasoning effort、file access mode、prompt、structured output schema で呼び出すか確認したいとき。
-- apply fork builder が repo root を解決し、oracle src を import 可能にして、oracle 側の正本 prompt 断片から prompt を生成する流れを確認したいとき。
-- 変更要約、ファイル単位の所見列挙、所見適用のどの builder 実装または schema へ進むべきかを切り分けたいとき。
-- apply builder 領域が oracle 側の package 構造と対応する互換 package かどうかを確認したいとき。
+- apply fork で起動する agent ごとの parameter や prompt 構築を確認または変更したいとき。
+- 所見列挙、所見適用、変更要約の各フェーズに割り当てられる model class、reasoning effort、file access mode、構造化出力 schema を調べたいとき。
+- builder 層が repo root を解決し、oracle src の正本 prompt 断片や構造化 markdown renderer を import して使う流れを追いたいとき。
+- 差分適用後の変更要約や実装レビュー所見を、agent にどの機械可読な契約で返させるか確認したいとき。
+- apply builder 領域が oracle 側 package 構造と対応する互換 package として存在しているかを確認したいとき。
 
 ## Do not read this when
-- apply fork 全体の fork 作成、git 操作、作業ディレクトリ管理、レポート保存などの実行制御を調べたいとき。
-- oracle 側の prompt、review standard、realization standard、path model の正本定義そのものを確認したいとき。
-- 生成済みの変更要約や所見の内容だけを読みたいとき。
-- apply fork 以外の builder、CLI サブコマンドルーティング、または agent call parameter 構築と関係しない公開 API を探しているとき。
+- fork 作成、作業ディレクトリ管理、git 操作、レポート保存など、apply fork 全体の実行制御を調べたいとき。
+- oracle 側の正本仕様断片、prompt builder、review standard、path model の内容そのものを確認または変更したいとき。
+- agent が返した所見や変更要約を実際に解釈、表示、永続化する処理を追いたいとき。
+- 個別の差分検出アルゴリズム、パッチ適用手順、CLI 入出力全体の整形だけを確認したいとき。
+- 公開関数、クラス、入出力仕様、エラー処理の定義だけを探しているとき。package 初期化要素にはそれらの実体は含まれない。
 
 ## hash
-- ec9a631e8a010e6fa589c4215de4ff8d3951d21d93d6232bef71ea31ad45901e
+- 5559036b5467c9fd253db18ab87f1db9aa7bdecb4f844eec4f0befca029cfc73
 
 # `indexing`
 
