@@ -157,26 +157,28 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI を subprocess として起動する境界で使う profile、sandbox、cwd、CODEX_HOME、schema 配置、child process tracking、JSONL error 判定をまとめる実装。
-- cmoc の FileAccessMode と Codex CLI が理解する sandbox/profile 設定の対応、追加 read/write path の許可検査、hashed profile 生成、Codex subprocess 実行時の失敗変換を扱う。
-- apply abandon 用の child process 記録、Structured Output schema の hash store 配置、Codex JSONL stdout/stderr からの error detail・resume token・capacity/quota retry 判定も同じ実行境界として担う。
+- Codex CLI を起動する subprocess 境界で共有される実行 profile、sandbox/cwd/read-write root、CODEX_HOME、schema 配置、child process tracking、JSONL error 判定をまとめる実装。
+- FileAccessMode を Codex CLI の sandbox profile と作業 root に変換し、追加 read/write path が cmoc の許可境界を広げないことを検査する。
+- Codex home の解決・検証、hash 名 profile の生成、Codex subprocess 実行時の環境引き継ぎ、Codex CLI 不在時の cmoc error 化を扱う。
+- apply abandon 用に Codex child process の pid と starttime を tracking file へ記録・削除し、apply 実行中だけ process-local に tracking を有効化する。
+- Structured Output schema の hash store 配置、schema なし出力 JSON の読み取り、Codex JSONL stdout/stderr から利用者向け error detail、resume token、capacity/quota retry 条件を抽出する。
 
 ## Read this when
-- FileAccessMode から Codex CLI の sandbox_mode、cwd、writable_roots、追加 read/write path の扱いを確認または変更したいとき。
-- Codex profile の本文生成、CODEX_HOME の解決・検証、profile ファイルの生成・再利用、Codex subprocess に渡す環境変数を追うとき。
-- Codex CLI の起動失敗、JSONL error event、capacity error、quota error、resume token、schema なし output JSON の解釈を調べるとき。
-- apply 実行中の Codex child process tracking、pid file への記録・削除、pid 再利用検出、abandon 可能性に関わる subprocess 実行を確認するとき。
-- Structured Output schema を実行 root 配下の hash store に配置する処理を確認するとき。
+- FileAccessMode と Codex CLI sandbox/profile/cwd の対応、read-only・workspace-write・PURE_ORACLE_READ・ORACLE_WRITE・REALIZATION_WRITE・REPO_WRITE の実効境界を確認または変更したいとき。
+- 追加 read path や追加 writable path の許可判定、禁止 root、oracle conflict 解消時だけの oracle 個別書き込み許可を調べたいとき。
+- Codex profile の TOML 生成、hash 名での profile 保存、profile 名抽出、CODEX_HOME の解決・検証・subprocess env 引き継ぎに関わる変更をするとき。
+- Codex CLI を subprocess として呼ぶ箇所で、CLI 不在時のエラー、apply 実行中の child process tracking、pid file 更新失敗時の扱いを確認したいとき。
+- Structured Output schema を実行 root の store へ配置する処理、Codex output JSON の読み取り、JSONL error message・thread resume token・capacity/quota retry 判定を扱うとき。
 
 ## Do not read this when
-- CLI subcommand のユーザー向け仕様、prompt 文面、FileAccessMode 自体の定義を確認したいだけのときは、対応する oracle または basic/config 側を読む。
-- Codex CLI へ渡す prompt の組み立て、会話ログ、通常の入出力ファイル管理を調べたいときは、runtime content や呼び出し元の実行フローを直接読む。
-- cmoc 固有のエラー型やエラーメッセージ表現そのものを変更したいときは、共通エラー定義側を読む。
-- hash store のディレクトリ規約や path model の定義だけを確認したいときは、runtime path や path model 側を読む。
-- Codex subprocess 境界に関係しない repository 操作、oracle/realization 生成、テスト選択、設定読み込みの一般処理を探しているとき。
+- AgentCallParameter や FileAccessMode の型定義そのもの、file access policy の prompt 文面を確認したいだけなら、それらを定義する入力モデルまたは prompt builder 側を読む。
+- Codex 実行用 profile ではなく、cmoc 設定ファイルの読み込み・既定値・設定 schema を調べたいだけなら、設定モデル側を読む。
+- hash file 書き込みや schema store directory の低レベルな保存先計算だけを変更したいなら、内容保存 helper または runtime path helper 側を読む。
+- 個別サブコマンドの制御フロー、Codex 呼び出し前後の利用者向け業務ロジック、apply/session/tui の仕様全体を追うときは、該当サブコマンド実装や仕様断片を先に読む。
+- Codex JSONL の意味解釈ではなく、通常の JSON parse や汎用 error class の定義だけを確認したい場合は、JSON 利用箇所または runtime error 定義へ直接進む。
 
 ## hash
-- abd575b45ad1c9f19003e380a78e246d9d8bd41cd2d47c6e39321bcadb4d5fe0
+- 987aa2050cde55ed2ee8937fb95734515514fbef40cdfb8eb1e50f6dd8e61228
 
 # `runtime_codex_tui.py`
 
