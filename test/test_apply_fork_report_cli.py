@@ -167,7 +167,20 @@ def test_finding_application_prompt_uses_complete_standard_prompt(
     monkeypatch.chdir(apply_worktree)
 
     parameter = build_apply_fork_finding_application_parameter(
-        [{"title": "first"}, {"title": "second"}]
+        [
+            {
+                "title": "first",
+                "evidences": [
+                    {
+                        "path": str(repo_root / "review" / "_comment.md"),
+                        "line_start": 1,
+                        "line_end": 2,
+                        "summary": "comment evidence",
+                    }
+                ],
+            },
+            {"title": "second"},
+        ]
     )
 
     assert "# oracle and realization basic" in parameter.prompt
@@ -178,6 +191,7 @@ def test_finding_application_prompt_uses_complete_standard_prompt(
     assert "/.agents` ツリー内は書き込み禁止" not in parameter.prompt
     assert "## FINDING-00" in parameter.prompt
     assert '"title": "first"' in parameter.prompt
+    assert "_comment.md" in parameter.prompt
     assert "## FINDING-01" in parameter.prompt
     assert '"title": "second"' in parameter.prompt
     assert '"findings"' not in parameter.prompt
