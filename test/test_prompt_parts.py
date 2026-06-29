@@ -728,6 +728,23 @@ def test_review_oracle_validate_finding_schema_matches_oracle_source(
     validate({"reasons": ["oracle file の記述に基づく理由"]}, schema)
 
 
+def test_review_oracle_validate_finding_advocate_preserves_dynamic_text() -> None:
+    finding = "finding literal <oracle_root>"
+    known_advocate = "known advocate literal <oracle_root>"
+    known_challenger = "known challenger literal <oracle_root>"
+
+    parameter = build_review_oracle_validate_finding_advocate_parameter(
+        finding,
+        known_advocate,
+        known_challenger,
+    )
+
+    assert finding in parameter.prompt
+    assert known_advocate in parameter.prompt
+    assert known_challenger in parameter.prompt
+    assert "`<oracle-root>` ツリー内" in parameter.prompt
+
+
 def test_session_join_conflict_resolution_uses_realization_write_mode() -> None:
     parameter = build_session_join_conflict_resolution_parameter([__file__])
 
