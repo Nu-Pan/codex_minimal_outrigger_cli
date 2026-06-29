@@ -55,22 +55,23 @@
 # `review`
 
 ## Summary
-- review builder 領域の realization 側互換境界。上位 package と、その配下の review oracle builder 向け公開経路を用意し、finding の列挙・判定・結合・advocate/challenger 検証を正本側実装へ委譲する。多くは正本側 API の再公開で、advocate 検証パラメータ生成だけは正本側結果を包み直し、prompt 内の oracle root placeholder 表記を realization 側で補正する。
+- review builder 領域の realization 側 package。上位からこの領域を package として扱うための入口と、review oracle 機能へ到達する互換 import 境界をまとめる。
+- 主な内容は、oracle 側の finding 列挙・判定・統合・advocate/challenger 検証実装の再公開または薄い adapter であり、一部で oracle 側 prompt placeholder 表記を実行側で許容される範囲に補正する。
 
 ## Read this when
-- review builder 領域で、realization 側 package が正本側 package と互換の import 経路を提供しているか確認したいとき。
-- finding の列挙・判定・結合・advocate/challenger 検証が、realization 側からどの境界を通じて正本側実装へ到達するか確認したいとき。
-- review oracle builder 関連の実装が独自アルゴリズムを持つのか、正本側実装の再公開を主責務とするのかを切り分けたいとき。
-- advocate 検証パラメータ生成で、prompt 内の oracle root placeholder 表記だけが realization 側で補正される理由と位置を確認したいとき。
+- realization 側の review builder から review oracle の finding 列挙・判定・統合・検証機能へ到達する import 経路を確認したいとき。
+- review builder 領域が独自の主要ロジックを持つのか、oracle 側実装への互換入口や薄い adapter に留まるのかを切り分けたいとき。
+- merge finding や finding advocate 検証に関する prompt placeholder typo 補正が、realization 側のどの境界で行われるかを確認したいとき。
+- review oracle 関連の互換 import path や package 境界を変更・削除してよいか判断したいとき。
 
 ## Do not read this when
-- finding 列挙・判定・結合・検証の具体的なアルゴリズム、prompt 構成、判定基準、入出力仕様を理解したいとき。その場合は委譲先の正本側実装や仕様断片を読む。
-- review workflow 全体、CLI 入出力、builder 全体の責務分担、または finding 以外の review 処理を調べたいとき。より上位または該当責務の対象へ進む。
-- model class、reasoning effort、file access mode、Structured Output schema などの共通定義を調べたいとき。それらを定義する正本側または共通定義を読む。
-- package 初期化や互換 import 境界ではなく、実処理本体を変更したいとき。この領域の大半は再公開であり、処理本体の変更先ではない。
+- review oracle の正本仕様、prompt 本文、Structured Output schema、model 設定、reasoning effort、file access mode を確認したいとき。その場合は oracle 側の仕様文書または実装へ進む。
+- finding 列挙・判定・統合・検証の具体的なアルゴリズム、入出力、判定基準を理解したいとき。その場合は委譲先の oracle 側実装へ進む。
+- review workflow 全体の制御、CLI 入出力、レビュー結果の検証観点、または review oracle 以外の builder 処理を調べたいとき。
+- package 初期化や互換 import 境界ではなく、公開 API の詳細実装、関数・クラス・定数の新規定義、または再公開ではない処理本体を探しているとき。
 
 ## hash
-- 08833098dee372aaeb3a86fbf77c4a289a4f16a325b3c1594eb40eb3198e498d
+- 06dfadc2e53290eb8b873bc7cfd7da1313017e9edda7d7f26300d12a5fa1339d
 
 # `session`
 

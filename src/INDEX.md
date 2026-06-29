@@ -1,21 +1,24 @@
 # `acp`
 
 ## Summary
-- ACP realization implementation の最上位 package。oracle src 側の acp 名前空間と builder 領域への import 互換入口を提供し、実処理本体よりも正本側実装・生成結果・schema 連携へ到達するための薄い接続層として位置づけられる。
-- 直下には、package import を成立させる最小入口と、apply、indexing、review、session、TUI など用途別の builder 下位領域へ進む入口がある。
+- realization implementation 側の ACP 名前空間の入口であり、oracle src 側の ACP 実装を `acp` 配下から参照できるようにする互換 import 経路を束ねる領域。
+- この階層自体は実処理や正本仕様を持つ場所ではなく、パッケージ入口と builder 領域への分岐点として、oracle 側定義の再公開や実行側契約に合わせた薄い補正へ案内する。
+- ACP builder の apply、indexing、review、session、tui などの具体的な生成・変換・検証処理を調べる場合は、下位の builder 領域へ進む入口になる。
 
 ## Read this when
-- realization 側の acp 名前空間が oracle src 側とどのように import 互換を保っているかを確認したいとき。
-- ACP builder 関連の実装を探し始めるうえで、apply fork、indexing、review finding、session join、TUI 起動パラメータのどの下位領域へ進むべきかを切り分けたいとき。
-- acp 配下が独自の処理本体を持つ領域なのか、正本側定義や生成物を再公開・包み直し・実行側契約へ接続する領域なのかを確認したいとき。
+- realization implementation 側で `acp` 名前空間がどのように成立し、oracle src 側 ACP 実装と互換 import 経路がどう接続されているかを確認したいとき。
+- ACP 関連の実装を読む前に、この階層が実処理ではなく import 入口と下位 builder 領域への分岐を担うことを確認したいとき。
+- AgentCallParameter 生成、Structured Output schema 連携、review finding 検証、session join、TUI パラメータ解決など、ACP builder のどの下位領域へ進むべきかを切り分けたいとき。
+- oracle 側 ACP 定義を realization 側から再公開する窓口や、実行時契約に合わせた薄い adapter の位置を探しているとき。
 
 ## Do not read this when
-- ACP の具体的なデータ構造、生成アルゴリズム、prompt 構成、判定基準、入出力仕様を詳しく調べたいとき。その場合は対応する下位領域または正本側実装・仕様断片を読む。
-- CLI 全体の制御フロー、git 操作、差分適用、画面描画、イベントループなど、acp の import 互換境界や builder 接続層の外側の処理を調べたいとき。
-- repo root 解決、path model、AgentCallParameter、enum、Structured Output schema など、acp 以外の共通基礎定義を確認したいとき。
+- ACP の正本仕様断片、prompt 本文、Structured Output schema の詳細、model 設定を確認したいとき。その場合は oracle 側の対応箇所を読む。
+- AgentCallParameter、path model、enum などの基礎定義そのものを調べたいとき。その場合は基本定義の領域を読む。
+- fork 作成、git 操作、差分適用、CLI 入出力、TUI 画面描画など、ACP import 入口や builder 分岐の外側にある workflow 制御を調べたいとき。
+- ACP builder 各領域の具体的な生成ロジック、判定基準、入出力変換を直接確認したいとき。その場合は該当する下位領域または委譲先の oracle 側実装を読む。
 
 ## hash
-- 5a83242ce3f06e1205c92cd19ee1c7201581e8c931116d455f4fb14e53d04914
+- 69a21e967529ba2adb197864cb3e457cd281ef0e158955f5e00f7f080a4bf20f
 
 # `basic`
 

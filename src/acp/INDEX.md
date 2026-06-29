@@ -18,21 +18,21 @@
 # `builder`
 
 ## Summary
-- ACP builder 領域の realization 側入口。正本側 builder 実装への import 互換経路を提供する薄い公開境界を中心に、apply、indexing、review、session、TUI など用途別の下位領域へ分岐する。
-- この階層は多くの場合、builder の実処理本体ではなく、正本側定義・生成結果・schema 連携を realization implementation 側から参照できる形に接続する場所である。
-- 下位領域には、apply fork 用パラメータ生成と structured output schema 連携、indexing の互換入口、review finding 系 builder の再公開と一部 prompt 補正、session join への入口、TUI 起動パラメータの互換調整が含まれる。
+- ACP builder の realization 側入口であり、oracle 側 builder 実装を `acp.builder` 配下の import 経路から参照できるようにする互換 package 群を束ねる。
+- apply、indexing、review、session、tui などの builder 領域へ進む分岐点で、主な実体は oracle 側に置かれ、この階層では公開経路、薄い adapter、実行側契約に合わせた小さな補正を扱う。
+- 具体的な AgentCallParameter 生成、Structured Output schema 連携、review finding 系の検証、session join、TUI パラメータ解決などは下位領域へ進んで確認する。
 
 ## Read this when
-- ACP builder 全体のうち、どの下位領域へ進むべきかを最初に切り分けたいとき。
-- realization 側の builder package が正本側 builder 構造とどのように import 互換を保っているか確認したいとき。
-- apply fork、indexing、review finding、session join、TUI 起動パラメータのいずれかに関わる builder の所在を探したいとき。
-- builder 実装が独自処理を持つのか、正本側実装の再公開・包み直し・実行側契約への小さな補正なのかを見分けたいとき。
+- realization implementation 側で ACP builder の各領域がどの package 境界から公開されているかを把握したいとき。
+- oracle 側 builder 実装と `acp.builder` 配下の互換 import 経路の対応関係を確認したいとき。
+- apply、indexing、review、session、tui のどの builder 領域へ進むべきかを、この階層を入口に切り分けたいとき。
+- builder 本体ではなく、realization 側で oracle 側定義を再公開する窓口や、実行時契約に合わせた薄い補正箇所を探しているとき。
 
 ## Do not read this when
-- 各 builder の具体的な生成アルゴリズム、prompt 構成、判定基準、入出力仕様を詳しく理解したいとき。その場合は対応する正本側実装や仕様断片を読む。
-- CLI コマンド全体の制御フロー、git 操作、差分適用、TUI の画面描画やイベントループなど、builder 境界の外側の処理を調べたいとき。
-- repo root 解決、path model、AgentCallParameter、enum、Structured Output schema そのものなど、共通基礎定義を確認したいとき。
-- 互換 import 経路や realization 側 adapter の確認が不要で、実処理本体だけを変更したいとき。
+- ACP builder の正本仕様、prompt 本文、Structured Output schema の詳細、model 設定などを確認したいとき。その場合は oracle 側の対応箇所を読む。
+- AgentCallParameter、path model、enum などの基礎定義そのものを調べたいとき。その場合は基本定義の領域を読む。
+- fork 作成、git 操作、差分適用、CLI 入出力、TUI 画面描画など、builder 呼び出し後または周辺 workflow の制御を調べたいとき。
+- 各 builder 領域の具体的な生成ロジック、判定基準、入出力変換を直接確認したいとき。その場合は該当する下位領域または委譲先の oracle 側実装を読む。
 
 ## hash
-- dd39ba0533c427921d57f5f568ac20d6d52c281f17eeee5a94d7757f84d08e6a
+- 22fd3d5f0a6676777f1fffa33d6fb2164a39cd35890923b4d97ece2c15b43c8c
