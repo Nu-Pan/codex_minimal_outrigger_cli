@@ -2,6 +2,7 @@ import fcntl
 from collections.abc import Iterator
 from contextlib import contextmanager
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
@@ -22,6 +23,13 @@ from commons.runtime_codex_preflight import configure_indexing_preflight
 
 CodexExec = Callable[..., object]
 INDEX_ENTRY_KEYS = {"summary", "read_this_when", "do_not_read_this_when"}
+
+
+@dataclass
+class _IndexDirectoryPlan:
+    directory: Path
+    entries: list[str | None]
+    missing_children: list[tuple[int, Path, str]]
 
 
 def enable_indexing_preflight() -> None:
@@ -75,41 +83,61 @@ def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path
     config_root = repo_root(root)
     dirs = indexable_directories(root)
     dirs.append(root)
-    dirs.sort(key=lambda p: len(p.relative_to(root).parts), reverse=True)
     updated: list[Path] = []
+    dirs_by_depth: dict[int, list[Path]] = {}
     for directory in dirs:
-        existing_entries = parse_index_entries(directory / "INDEX.md")
-        entries = []
-        missing_children: list[tuple[Path, str]] = []
-        for child in indexable_children(root, directory):
-            digest = index_target_hash(root, child)
-            existing_entry = existing_entries.get(child.name)
-            if existing_entry and existing_entry["hash"] == digest:
-                entries.append(existing_entry["text"])
-            else:
-                entries.append(None)
-                missing_children.append((child, digest))
-        if missing_children:
+        depth = len(directory.relative_to(root).parts)
+        dirs_by_depth.setdefault(depth, []).append(directory)
+    # <work-root>/oracle/doc/app_spec/indexing.md requires descendants to
+    # finish first, while allowing non-ancestor INDEX.md entries to run in
+    # parallel. A depth batch is the smallest scheduling boundary for that.
+    for depth in sorted(dirs_by_depth, reverse=True):
+        plans = [
+            _plan_index_directory(root, directory)
+            for directory in dirs_by_depth[depth]
+        ]
+        missing = [(plan, item) for plan in plans for item in plan.missing_children]
+        if missing:
             config = load_config(config_root)
             with ThreadPoolExecutor(max_workers=max(1, config.num_parallel)) as executor:
-                generated_entries = list(
-                    executor.map(
-                        lambda item: build_index_entry(
-                            root, item[0], digest=item[1], codex_exec=codex_exec
-                        ),
-                        missing_children,
+                futures = [
+                    executor.submit(
+                        build_index_entry,
+                        root,
+                        child,
+                        digest=digest,
+                        codex_exec=codex_exec,
                     )
-                )
-            generated_iter = iter(generated_entries)
-            entries = [entry if entry is not None else next(generated_iter) for entry in entries]
-        content = "\n\n".join(entries)
-        if content:
-            content += "\n"
-        index_path = directory / "INDEX.md"
-        if not index_path.exists() or index_path.read_text() != content:
-            index_path.write_text(content)
-            updated.append(index_path)
+                    for plan, (_index, child, digest) in missing
+                ]
+                for (plan, (index, _child, _digest)), future in zip(missing, futures):
+                    plan.entries[index] = future.result()
+        for plan in plans:
+            entries = [entry for entry in plan.entries if entry is not None]
+            content = "\n\n".join(entries)
+            if content:
+                content += "\n"
+            index_path = plan.directory / "INDEX.md"
+            if not index_path.exists() or index_path.read_text() != content:
+                index_path.write_text(content)
+                updated.append(index_path)
     return updated
+
+
+def _plan_index_directory(root: Path, directory: Path) -> _IndexDirectoryPlan:
+    """既存 entry の再利用可否と生成対象を判定する。"""
+    existing_entries = parse_index_entries(directory / "INDEX.md")
+    entries: list[str | None] = []
+    missing_children: list[tuple[int, Path, str]] = []
+    for child in indexable_children(root, directory):
+        digest = index_target_hash(root, child)
+        existing_entry = existing_entries.get(child.name)
+        if existing_entry and existing_entry["hash"] == digest:
+            entries.append(existing_entry["text"])
+        else:
+            entries.append(None)
+            missing_children.append((len(entries) - 1, child, digest))
+    return _IndexDirectoryPlan(directory, entries, missing_children)
 
 
 def indexable_directories(root: Path) -> list[Path]:

@@ -609,6 +609,55 @@ def test_update_indexes_generates_sibling_entries_in_parallel(
     assert max_active >= 2
 
 
+def test_update_indexes_generates_non_ancestor_indexes_in_parallel(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    first = root / "first"
+    second = root / "second"
+    first.mkdir()
+    second.mkdir()
+    (first / "a.txt").write_text("a\n")
+    (second / "b.txt").write_text("b\n")
+    cmoc_runtime.sync_config(root)
+    active = 0
+    max_active = 0
+    lock = threading.Lock()
+
+    def fake_build_index_entry(
+        update_root: Path,
+        path: Path,
+        digest: str | None = None,
+        codex_exec: Callable[..., object] | None = None,
+    ) -> str:
+        nonlocal active, max_active
+        if path.parent in {first, second}:
+            with lock:
+                active += 1
+                max_active = max(max_active, active)
+            time.sleep(0.05)
+            with lock:
+                active -= 1
+        return indexing_common.render_index_entry(
+            update_root,
+            path,
+            {
+                "summary": [path.name],
+                "read_this_when": [path.name],
+                "do_not_read_this_when": [path.name],
+            },
+            digest=digest,
+        ).rstrip()
+
+    monkeypatch.setattr(indexing_common, "build_index_entry", fake_build_index_entry)
+
+    updated = indexing_common.update_indexes(root)
+
+    assert first / "INDEX.md" in updated
+    assert second / "INDEX.md" in updated
+    assert max_active >= 2
+
+
 def test_update_indexes_indexes_nested_memo_directory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
