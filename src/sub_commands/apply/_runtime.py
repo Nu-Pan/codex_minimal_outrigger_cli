@@ -213,27 +213,39 @@ def stop_child_process_group(process: ProcessIdentity) -> str | None:
             ["Codex subprocess を手動で停止してから再実行してください。"],
             f"pid: {process_id}\npgid: {process_group_id}",
         )
+    process_fd = open_process_fd(process_id, "Codex subprocess")
+    if process_fd is None:
+        return f"apply child process already stopped: {process_id}"
     # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
     # Codex CLI は apply の実作業なので、親 cmoc process より先に専用 group ごと止める。
-    send_process_group_signal(process_group_id, signal.SIGTERM)
-    if wait_process_group_exit(process_group_id, 5.0):
-        return None
-    send_process_group_signal(process_group_id, signal.SIGKILL)
-    if wait_process_group_exit(process_group_id, 5.0):
-        return None
-    raise CmocError(
-        "実行中 Codex subprocess を停止できません。",
-        ["Codex subprocess を確認して停止後に再実行してください。"],
-        f"pid: {process_id}\npgid: {process_group_id}",
-    )
+    try:
+        send_process_group_signal(process_group_id, signal.SIGTERM)
+        if (
+            wait_process_group_exit(process_group_id, 5.0)
+            or process_group_has_no_running_members(process_fd, process_group_id)
+        ):
+            return None
+        send_process_group_signal(process_group_id, signal.SIGKILL)
+        if (
+            wait_process_group_exit(process_group_id, 5.0)
+            or process_group_has_no_running_members(process_fd, process_group_id)
+        ):
+            return None
+        raise CmocError(
+            "実行中 Codex subprocess を停止できません。",
+            ["Codex subprocess を確認して停止後に再実行してください。"],
+            f"pid: {process_id}\npgid: {process_group_id}",
+        )
+    finally:
+        os.close(process_fd)
 
 
-def open_process_fd(process_id: int) -> int | None:
+def open_process_fd(process_id: int, process_name: str = "apply process") -> int | None:
     """pidfd 対応環境でだけ race を避けた process 参照を開く。"""
     if not (hasattr(os, "pidfd_open") and hasattr(signal, "pidfd_send_signal")):
         raise CmocError(
-            "apply process の同一性を安全に確認できません。",
-            ["apply process を手動で停止してから再実行してください。"],
+            f"{process_name} の同一性を安全に確認できません。",
+            [f"{process_name} を手動で停止してから再実行してください。"],
             f"pid: {process_id}",
         )
     try:
@@ -242,8 +254,8 @@ def open_process_fd(process_id: int) -> int | None:
         return None
     except PermissionError as exc:
         raise CmocError(
-            "実行中 apply process の確認権限がありません。",
-            ["apply process を手動で確認し、停止後に再実行してください。"],
+            f"実行中 {process_name} の確認権限がありません。",
+            [f"{process_name} を手動で確認し、停止後に再実行してください。"],
             f"pid: {process_id}",
         ) from exc
 
@@ -266,6 +278,38 @@ def wait_process_fd_exit(process_fd: int, timeout_sec: float) -> bool:
     """pidfd の readable 化を process 終了として待つ。"""
     readable, _, _ = select.select([process_fd], [], [], timeout_sec)
     return bool(readable)
+
+
+def process_group_has_no_running_members(
+    leader_process_fd: int, process_group_id: int
+) -> bool:
+    """leader 終了済みで、同じ group に非 zombie が残っていないことを確認する。"""
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # child は親 apply process が reap するまで zombie として group に残り得る。
+    # killpg(pgid, 0) だけで待つと、その正常な停止過程で親停止へ進めなくなる。
+    return (
+        wait_process_fd_exit(leader_process_fd, 0)
+        and not process_group_has_running_member(process_group_id)
+    )
+
+
+def process_group_has_running_member(process_group_id: int) -> bool:
+    """Linux /proc から process group 内の非 zombie process を探す。"""
+    proc = Path("/proc")
+    if not proc.is_dir():
+        return True
+    for path in proc.iterdir():
+        if not path.name.isdigit():
+            continue
+        try:
+            after_name = (path / "stat").read_text().rsplit(") ", 1)[1].split()
+            state = after_name[0]
+            member_group_id = int(after_name[2])
+        except (FileNotFoundError, IndexError, PermissionError, ValueError):
+            continue
+        if member_group_id == process_group_id and state != "Z":
+            return True
+    return False
 
 
 def send_process_group_signal(process_group_id: int, sig: signal.Signals) -> None:

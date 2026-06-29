@@ -258,6 +258,40 @@ def test_apply_process_id_reads_tracked_child_processes(tmp_path: Path) -> None:
     )
 
 
+def test_stop_child_process_group_accepts_exited_zombie_leader(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """終了済み child が親の reap 待ちで group に残っても親停止へ進める。"""
+    sent: list[int] = []
+
+    monkeypatch.setattr(apply_runtime, "process_start_time", lambda process_id: 30)
+    monkeypatch.setattr(apply_runtime.os, "getpgid", lambda process_id: process_id)
+    monkeypatch.setattr(apply_runtime, "open_process_fd", lambda process_id, name: 10)
+    monkeypatch.setattr(
+        apply_runtime,
+        "send_process_group_signal",
+        lambda process_group_id, sig: sent.append(sig),
+    )
+    monkeypatch.setattr(
+        apply_runtime,
+        "wait_process_group_exit",
+        lambda process_group_id, timeout: False,
+    )
+    monkeypatch.setattr(
+        apply_runtime,
+        "process_group_has_no_running_members",
+        lambda process_fd, pgid: True,
+    )
+    monkeypatch.setattr(apply_runtime.os, "close", lambda process_fd: None)
+
+    warning = apply_runtime.stop_child_process_group(
+        apply_runtime.ProcessIdentity(23456, 30)
+    )
+
+    assert warning is None
+    assert sent == [apply_runtime.signal.SIGTERM]
+
+
 def test_stop_apply_process_treats_raced_exit_as_stopped(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
