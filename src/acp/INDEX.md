@@ -19,21 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP の agent call parameter builder に関する realization 側の互換入口をまとめる領域。正本側に置かれた builder 実装へ既存の公開参照や import 経路から到達できるようにし、主に再公開・委譲・最小 wrapper によって公開面の互換性を保つ。
-- apply、indexing、review、session、TUI などの builder 系領域へ進むための上位入口であり、各領域が実処理本体なのか、正本側実装への互換境界なのかを切り分けるための案内点になる。
-- この領域自体は builder の正本仕様や主要ロジックを集約する場所ではなく、正本側実装との対応、旧 import 経路の維持、互換層を残す理由や削除条件を確認するための階層である。
+- ACP の agent call parameter builder 群への realization 側入口をまとめる階層。多くは oracle 側にある正本 builder 実装への互換 import 境界や薄い再公開層であり、既存の公開参照経路を維持しながら apply、indexing、review、session、TUI、quota probe などの builder 領域へ分岐する。
+- この階層自体は各 builder の正本仕様や詳細な組み立てロジックを担う場所ではなく、realization 側から oracle 側 builder を利用するための互換 package 構造、委譲境界、削除条件、最小 wrapper の所在を見分けるための入口である。
 
 ## Read this when
-- ACP builder 関連の既存公開参照や旧 import 経路が、正本側 builder 実装へどのように接続されているかを確認したいとき。
-- agent call parameter builder のうち、apply、indexing、review、session、TUI のどの下位領域へ進むべきかを上位で切り分けたいとき。
-- realization 側に残る builder 互換層について、再公開・委譲・最小 wrapper の範囲、残す理由、削除条件を確認したいとき。
-- 正本側へ実装を集約しながら、既存利用者向けの公開 import surface を維持している境界を調べたいとき。
+- ACP builder の公開 import path や旧参照経路が、oracle 側の正本実装へどのように接続されているか確認したいとき。
+- apply、indexing、review、session、TUI、quota probe など、agent call parameter builder の領域分担を上位から把握し、次に読む下位領域を選びたいとき。
+- realization 側に残る互換入口、再公開層、最小 wrapper を残す理由や削除条件を確認したいとき。
+- 正本側 builder への委譲、公開面の維持、prompt 表記補正、realization 側 parameter 型への適合など、builder 周辺の互換境界を調べる入口を探しているとき。
 
 ## Do not read this when
-- 各 builder の具体的な生成処理、prompt 構築、parameter 型変換、入出力仕様、判定ロジックを直接確認したいときは、正本側の実装または該当する下位領域へ進む。
-- ACP 全体の型定義、AgentCallParameter、file access、model、reasoning、structured output schema などの基礎定義を調べたいときは、基本モジュール側を読む。
-- CLI コマンド全体の制御フロー、branch 操作、diff 生成、TUI 画面処理など、builder 互換入口ではない機能本体を調べたいとき。
-- 新しい builder ロジックや正本仕様を追加・変更する場所を探しているときは、この互換境界ではなく正本側の本文や実体を持つ実装領域を読む。
+- 各 agent call parameter builder の具体的な prompt、parameter 組み立て、repo root 解決、型変換、検証ロジックを直接確認したいときは、該当する下位領域または oracle 側の正本実装を読む。
+- apply fork、review、session、TUI などのコマンド全体の制御フロー、UI 処理、状態管理、branch 操作、diff 生成、CLI 引数処理を調べたいときは、それぞれの実処理を担う実装領域へ進む。
+- AgentCallParameter、FileAccessMode、model、reasoning、file access、structured output schema などの共通型や基礎定義を確認したいときは、基本モジュールを読む。
+- 互換 import 境界や builder 入口ではなく、正本仕様断片そのもの、または新規機能の実装場所やテスト対象を探しているときは、該当する oracle 側本文、実装本体、またはテスト領域を読む。
 
 ## hash
-- b2dead17d1385da16b0c86e4a9ac2a492b249f55b5896727c83b1bc956b76ad6
+- 5329091959e2c2c0b06f0ba6ec00d4d8266f84ac67cecf414e426289679c0a1d

@@ -59,6 +59,25 @@
 ## hash
 - 0ab736b2c29b4ef0eadf9408768a9f99642c5d3d95caecb6c4def825217c487a
 
+# `quota_probe.py`
+
+## Summary
+- Codex quota 枯渇後の availability probe で使う最小 AgentCallParameter builder。通常作業ではなく quota 回復確認だけを目的に、意味のある編集や調査を依頼しない prompt を返す。
+- probe 実行時の CODEX_HOME、profile、cwd、ログ保存、代表 polling 制御は runtime 側が担い、この builder は stdin に渡す probe prompt の境界だけを持つ。
+
+## Read this when
+- quota 枯渇後の polling probe がどの prompt を Codex CLI に渡すか確認または変更したいとき。
+- oracle 側に専用 builder file がない quota probe 境界について、realization 側の最小 builder と runtime の責務分担を確認したいとき。
+- Codex exec retry のテストで、quota availability probe の prompt 由来を追いたいとき。
+
+## Do not read this when
+- quota error 検出、polling loop、resume token、代表 probe 共有、call log/subcommand log の制御を調べたいときは、Codex exec runtime を読む。
+- Codex profile、CODEX_HOME、sandbox、cwd、schema 保存の構築を調べたいときは、Codex profile/runtime helper を読む。
+- apply/review/session/TUI 用の AgentCallParameter builder を確認したいときは、それぞれの下位 builder 領域を読む。
+
+## hash
+- 4a4a7eebc4ed7184af908b6f5e4a7e4a93d853c29603dd8e2c73d85ce792dcac
+
 # `review`
 
 ## Summary
