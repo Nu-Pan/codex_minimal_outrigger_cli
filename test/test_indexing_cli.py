@@ -511,6 +511,41 @@ def test_render_index_entry_rejects_empty_blank_or_multiline_semantic_items(
         indexing_common.render_index_entry(root, readme, entry)
 
 
+def test_update_indexes_creates_empty_index_for_empty_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    empty_dir = root / "empty"
+    empty_dir.mkdir()
+    cmoc_runtime.sync_config(root)
+
+    def fake_build_index_entry(
+        update_root: Path,
+        path: Path,
+        digest: str | None = None,
+        codex_exec: Callable[..., object] | None = None,
+    ) -> str:
+        return indexing_common.render_index_entry(
+            update_root,
+            path,
+            {
+                "summary": [path.name],
+                "read_this_when": [path.name],
+                "do_not_read_this_when": [path.name],
+            },
+            digest=digest,
+        ).rstrip()
+
+    monkeypatch.setattr(indexing_common, "build_index_entry", fake_build_index_entry)
+
+    updated = indexing_common.update_indexes(root)
+
+    # <work-root>/oracle/doc/app_spec/indexing.md requires INDEX.md placement
+    # per target directory, even when there are no indexable children.
+    assert empty_dir / "INDEX.md" in updated
+    assert (empty_dir / "INDEX.md").read_text() == ""
+
+
 def test_update_indexes_generates_sibling_entries_in_parallel(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
