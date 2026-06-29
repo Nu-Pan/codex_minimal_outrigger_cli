@@ -60,6 +60,12 @@ def _profile_writable_roots(profile: str) -> set[str]:
     return set(parsed.get("sandbox_workspace_write", {}).get("writable_roots", []))
 
 
+def _assert_not_writable(profile: str, path: Path) -> None:
+    target = path.resolve()
+    for root in _profile_writable_roots(profile):
+        assert not target.is_relative_to(Path(root))
+
+
 def test_path_model_resolves_token_path_inside_repo() -> None:
     """root placeholder path が repo 内の実 path から復元できる契約を固定する。"""
     cmoc_root = resolve_real_path(RootPathPlaceHolder.CMOC)
@@ -467,14 +473,24 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         assert 'sandbox_mode = "workspace-write"' in profiles[mode]
         assert "[sandbox_workspace_write]" in profiles[mode]
     assert _profile_writable_roots(profiles[FileAccessMode.REALIZATION_WRITE]) == {
-        str(root.resolve()),
+        str((root / "src").resolve()),
     }
     assert _profile_writable_roots(profiles[FileAccessMode.ORACLE_WRITE]) == {
         str((root / "oracle").resolve())
     }
     assert _profile_writable_roots(profiles[FileAccessMode.REPO_WRITE]) == {
-        str(root.resolve()),
+        str((root / "oracle").resolve()),
+        str((root / "src").resolve()),
     }
+    for profile in (
+        profiles[FileAccessMode.REALIZATION_WRITE],
+        profiles[FileAccessMode.REPO_WRITE],
+    ):
+        _assert_not_writable(profile, root / "memo" / "blocked.md")
+        _assert_not_writable(profile, root / ".agents" / "blocked.md")
+    _assert_not_writable(
+        profiles[FileAccessMode.REALIZATION_WRITE], root / "oracle" / "blocked.md"
+    )
 
     extra = root / "src" / "extra"
     profile = build_codex_profile(
@@ -490,7 +506,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         extra_writable_paths=[extra],
     )
     assert _profile_writable_roots(profile) == {
-        str(root.resolve()),
+        str((root / "src").resolve()),
     }
 
     with pytest.raises(CmocError, match="許可領域外"):
@@ -549,11 +565,16 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         (FileAccessMode.REALIZATION_WRITE, "oracle/blocked.md"),
         (FileAccessMode.REALIZATION_WRITE, "memo/blocked.md"),
         (FileAccessMode.REALIZATION_WRITE, ".agents/blocked.md"),
+        (FileAccessMode.REALIZATION_WRITE, ".cmoc/state.json"),
+        (FileAccessMode.REALIZATION_WRITE, ".codex/config.toml"),
+        (FileAccessMode.REALIZATION_WRITE, "README.md"),
         (FileAccessMode.ORACLE_WRITE, "src/blocked.md"),
         (FileAccessMode.ORACLE_WRITE, "memo/blocked.md"),
         (FileAccessMode.ORACLE_WRITE, ".agents/blocked.md"),
         (FileAccessMode.REPO_WRITE, "memo/blocked.md"),
         (FileAccessMode.REPO_WRITE, ".agents/blocked.md"),
+        (FileAccessMode.REPO_WRITE, "AGENTS.md"),
+        (FileAccessMode.REPO_WRITE, "INDEX.md"),
         (FileAccessMode.REPO_WRITE, "../outside.md"),
     ],
 )

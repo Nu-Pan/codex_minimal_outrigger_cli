@@ -21,6 +21,17 @@ from commons.runtime_errors import CmocError
 from commons.runtime_paths import schema_store_dir
 
 APPLY_PROCESS_TRACKING_ENV = "CMOC_APPLY_PROCESS_ID_PATH"
+_NEVER_WRITABLE_ROOT_NAMES = {
+    ".agents",
+    ".cmoc",
+    ".codex",
+    ".git",
+    ".pytest_cache",
+    "AGENTS.md",
+    "INDEX.md",
+    "README.md",
+    "memo",
+}
 
 
 def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
@@ -106,16 +117,15 @@ def _writable_roots(
     match mode:
         case FileAccessMode.REALIZATION_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-            # Codex profile has no deny-list expression for "work root except
-            # oracle/memo", so the root itself is required to allow new
-            # top-level realization files.
-            paths = [root]
+            # Codex profile has no deny-list expression. Do not grant root itself:
+            # forbidden oracle/memo/.agents changes must be impossible at sandbox level.
+            paths = _default_writable_paths(mode, root)
         case FileAccessMode.ORACLE_WRITE:
             paths = [root / "oracle"]
         case FileAccessMode.REPO_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-            # REPO_WRITE likewise permits creating new top-level files.
-            paths = [root]
+            # REPO_WRITE still excludes memo/.agents and runtime-owned metadata.
+            paths = _default_writable_paths(mode, root)
         case _:
             paths = []
     result: list[Path] = []
@@ -145,6 +155,14 @@ def _writable_roots(
     return result
 
 
+def _default_writable_paths(mode: FileAccessMode, root: Path) -> list[Path]:
+    return [
+        path
+        for path in sorted(root.iterdir(), key=lambda item: item.name)
+        if _is_writable_path_allowed(mode, root, path.resolve())
+    ]
+
+
 def _is_writable_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
     """FileAccessMode の禁止領域を追加 writable path にも適用する。"""
     if not path.is_relative_to(root):
@@ -152,7 +170,8 @@ def _is_writable_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> b
     # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # 追加 writable path は、prompt で伝える禁止領域を広げない範囲だけ許可する。
-    if path.is_relative_to(root / "memo") or path.is_relative_to(root / ".agents"):
+    relative = path.relative_to(root)
+    if relative.parts and relative.parts[0] in _NEVER_WRITABLE_ROOT_NAMES:
         return False
     if mode == FileAccessMode.REALIZATION_WRITE:
         return not path.is_relative_to(root / "oracle")
