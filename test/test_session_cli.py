@@ -558,6 +558,45 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
     assert f"session branch was not deleted: {session_branch}" in result.output
 
 
+def test_session_join_does_not_delete_when_local_branch_reachability_check_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    home_branch = session_home_branch(root, session_branch)
+    original_run_git = session_join_module.run_git
+    delete_calls = 0
+
+    def fake_run_git(args: list[str], cwd: Path, check: bool = True) -> object:
+        nonlocal delete_calls
+        if args == ["merge-base", "--is-ancestor", session_branch, "HEAD"]:
+            return cmoc_runtime.CommandResult(1, "", "")
+        if args == ["branch", "-d", session_branch]:
+            delete_calls += 1
+        return original_run_git(args, cwd, check=check)
+
+    monkeypatch.setattr(session_join_module, "run_git", fake_run_git)
+
+    result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert current_branch(root) == home_branch
+    assert delete_calls == 0
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", session_branch], cwd=root
+        ).returncode
+        == 0
+    )
+    assert "- deleted_session_branch: `False`" in result.output
+    assert f"session branch was not deleted: {session_branch}" in result.output
+
+
 def test_session_join_error_report_is_written_to_stdout(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -10,6 +10,7 @@ from acp.builder.session.join.conflict_resolution import (
 from commons.indexing import enable_indexing_preflight
 from cmoc_runtime import (
     CmocError,
+    CommandResult,
     current_branch,
     ensure_cmoc_ignored,
     load_state_for_branch,
@@ -65,7 +66,20 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
             resolve_session_join_conflict(work, codex_exec, git)
         state.session.state = "joined"
         write_state(path, state)
-        delete_result = git(["branch", "-d", branch], work, check=False)
+        # <work-root>/oracle/doc/app_spec/sub_command/session_join.md:
+        # delete only when the local session branch itself is reachable from
+        # the merge target HEAD; remote-tracking refs must not prove safety.
+        reachable = git(
+            ["merge-base", "--is-ancestor", branch, "HEAD"],
+            work,
+            check=False,
+        ).returncode == 0
+        if reachable:
+            delete_result = git(["branch", "-d", branch], work, check=False)
+        else:
+            delete_result = CommandResult(
+                1, "", f"session branch is not merged: {branch}"
+            )
     except BaseException as exc:
         # <work-root>/oracle/doc/app_spec/sub_command/session_join.md:
         # post-precondition failures can require manual git resolution, so their
