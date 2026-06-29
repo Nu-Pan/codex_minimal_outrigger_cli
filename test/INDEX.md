@@ -114,27 +114,21 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の共通 runtime 契約を横断的に固定する realization test。root/worktree 判定、設定値検証、構造化エラー表示、CLI preflight と parse error、subcommand log、`.cmoc` ignore、FileAccessMode から sandbox/profile への変換、binary 判定、session/apply branch state 読み取り境界を同じ基礎 runtime 回帰として扱う。
-- 個別サブコマンド固有の正常系ではなく、複数機能の実行前提になる runtime 境界が同時に崩れないことを確認する入口に位置づく。
+- cmoc の共通 runtime 契約を横断的に固定する realization test。root placeholder と run/work/repo root 解決、設定値検証、CmocError の Markdown report、CLI error の stdout 変換、subcommand log、session/apply branch state、`.cmoc` ignore、FileAccessMode と Codex sandbox profile、binary 判定など、個別サブコマンドより下位の基礎挙動をまとめて検証する。
+- 16,000 文字を超えるが、対象は共通 fixture と root 状態の文脈を共有する basic runtime 回帰に閉じており、分割すると検証文脈が散る領域として扱われている。
 
 ## Read this when
-- root placeholder、repo root、run root、work root、linked worktree、main worktree 拒否などの path/root 解決挙動を変更・調査する時。
-- CmocConfig、config_from_dict、ModelClass、ReasoningEffort など、基礎 config の既定値や型検証を変更・調査する時。
-- CmocError、render_error、CLI 引数解析 error、stdout/stderr の error report 出力方針を変更・調査する時。
-- CLI preflight、shell completion probe、subcommand log の生成・失敗記録・副作用抑制を変更・調査する時。
-- `.cmoc` の gitignore 追加、literal ignore pattern、既存 ignore pattern との関係を変更・調査する時。
-- FileAccessMode、Codex sandbox mode、Codex cwd、writable_roots、追加書き込み許可 path の許可・拒否境界を変更・調査する時。
-- session branch、apply branch、SessionState の読み取り対象 branch 形状を変更・調査する時。
-- binary 判定の読み取り量や file open mode を変更・調査する時。
+- cmoc の基礎 runtime 挙動、root 解決、worktree 判定、設定既定値や設定エラー、構造化 error 表示、CLI preflight、subcommand log、state branch 名、`.cmoc` ignore、FileAccessMode と Codex profile、binary 判定の回帰テストを確認・変更する時。
+- 複数の runtime helper をまたぐ変更で、個別サブコマンドのテストより先に共通契約が壊れていないか確認したい時。
+- sandbox profile の writable roots、追加書き込み許可 path、oracle conflict write、memo・`.agents`・管理ファイルへの書き込み禁止境界をテスト観点から確認する時。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジック、入出力 schema、成功時ワークフローだけを調べたい時は、対象サブコマンドの実装や専用テストを先に読む。
-- oracle の正本仕様断片そのものを確認したい時は、対応する oracle doc/src/test を読む。このテストは realization test であり、正本仕様ではない。
-- runtime と関係しない UI、ドキュメント、補助スクリプト、生成物管理だけを調べたい時は、該当する同階層または下位領域へ直接進む。
-- 単一 helper の内部実装だけを局所的に確認したい時は、その helper が定義されている実装ファイルを先に読む。
+- 特定サブコマンド固有の正常系・業務フロー・利用者操作の詳細を確認したいだけの時。
+- runtime 契約ではなく、oracle 文書、実装方針、CLI コマンド本体、個別 helper の内部実装だけを読みたい時。
+- テスト fixture や支援関数そのものの実装を調べたい時は、先にその支援コードを直接読む方が適切。
 
 ## hash
-- dce2d9010d1ec93248de42380fd1b05cd21885d948c6719f63e4c34b1cba2c62
+- 9503682d9012f67ddd2820f598454796b6c227d625ebe2e58ff1278085f82f8b
 
 # `test_cli_init_tui.py`
 
@@ -322,21 +316,19 @@
 # `test_session_cli.py`
 
 ## Summary
-- session fork、join、abandon の CLI 外部挙動をまとめて検証する realization test。session branch と session state のライフサイクルを中心に、状態ファイル生成・更新、home branch への復帰、branch 削除、linked worktree 上の動作、dirty worktree 拒否、cleanup 失敗時のロールバック、エラー出力先を扱う。
-- 16,000 文字を超えるが、fork、join、abandon、linked worktree、state cleanup、dirty worktree 拒否が同じ session 状態遷移の観測点として強く結びついているため、session CLI 回帰のまとまりとして配置されている。
+- session の fork・join・abandon に関する CLI 外部挙動をまとめて検証する realization test。session branch と session state のライフサイクルを軸に、状態ファイル生成・更新・破損検出、home branch への復帰、branch 削除、linked worktree 上での操作、dirty worktree 拒否、join 時の conflict resolution とエラー出力先を扱う。
+- 大きなテストファイルだが、session branch/state fixture を共有する回帰テスト群として凝集しており、分割せず同一文脈で読むべき理由が冒頭 docstring に明示されている。
 
 ## Read this when
-- session fork が session branch と session state を作成する外部挙動、session-id 衝突時の retry と既存 state 保護、壊れた state file の拒否を確認したいとき。
-- session abandon が home branch へ戻り、session branch を削除し、state を abandoned に更新する挙動を確認したいとき。
-- session join が home branch へ統合し、競合解決、delete conflict の staging、session branch 削除失敗時の警告、state の joined 更新をどう扱うか確認したいとき。
-- linked worktree 上で session fork、join、abandon が現在作業中の worktree branch と root worktree branch を取り違えないことを確認したいとき。
-- session 系サブコマンドの失敗時に、利用者向けエラーが stdout に出る場合と、merge 後の予期しないエラーが stderr に出る場合の境界を確認したいとき。
+- session fork が session branch と state file を作成する挙動、session-id 衝突時の retry・失敗・既存 state 保護、初期 ignore 設定や linked worktree の branch/head 扱いを確認・変更する時。
+- session abandon が home branch へ戻り session branch を削除して state を abandoned にする挙動、home branch 欠落時や cleanup 失敗時の rollback・エラー報告を確認・変更する時。
+- session join が home branch へ変更を取り込み state を joined にする挙動、oracle conflict resolution の Codex 呼び出し権限、delete conflict の staging、session branch 削除失敗時の警告、dirty worktree や merge 後の予期しないエラー出力先を確認・変更する時。
+- session completion 系コマンドが不正な session state file を拒否する共通挙動や、conflict marker block 検出ロジックの期待値を確認する時。
 
 ## Do not read this when
-- session 以外の CLI サブコマンド、設定読み込み、path model、oracle/realization の一般規約を調べたいとき。
-- session の内部 helper やデータ構造だけを局所的に変更したい場合で、対象の実装ファイルやより小さい単体テストを読めば足りるとき。
-- Codex 実行結果の品質そのもの、LLM 出力内容そのもの、または oracle 文書の正本仕様を確認したいとき。
-- git helper、runner fixture、repository 作成 fixture などテスト基盤の使い方だけを確認したいとき。
+- session 以外の CLI サブコマンド、設定読み込み、runtime profile 生成、git helper 単体の挙動だけを調べる時。
+- session コマンドの内部実装構造や関数分割を確認したいだけで、CLI 実行結果・branch/state 副作用・エラー出力の回帰観点を必要としない時。
+- Codex CLI や LLM の出力品質そのものを検証したい時。このテストは join conflict resolution 呼び出しの権限・副作用を fake で観測するだけで、生成品質は対象にしない。
 
 ## hash
-- 899d056d7ce6e44cce7042ada65da90d1588de47856e9be5b1023d87deb1f4af
+- 4c336e5cd265ec18d7aec7006ea53cd2b83a40be57438e6e92ff26b6291f0726

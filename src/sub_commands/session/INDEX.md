@@ -58,19 +58,21 @@
 # `join.py`
 
 ## Summary
-- `session join` の実行本体を担い、active な session branch を session home branch へ merge し、状態を joined に更新して session branch の削除結果と警告を CLI 出力する。
-- 実行前に indexing preflight、session/apply 状態、clean worktree、cmoc ignore の条件を確認し、merge conflict が発生した場合は Codex CLI へ解消を依頼して残存 marker や unmerged path を検査して commit する。
-- merge 後の失敗は手動 git 解決が必要になり得るため stderr 報告へ切り替える制約や、Git の conflict-marker-size を考慮した conflict marker 検出を含む。
+- active session branch を session home branch に join する CLI 実行本体を扱う。事前条件確認、worktree 検証、home branch への切替、session branch の merge、状態更新、session branch 削除、結果出力までの制御フローを持つ。
+- merge conflict 発生時に conflict 対象を特定し、Codex CLI へ解決を依頼したうえで、conflict marker と unmerged path の残存確認、add、merge commit 完了までを担う。
+- conflict marker 検出 helper を含み、Git の conflict-marker-size が既定値より長い場合も考慮して marker block の残存を判定する。
 
 ## Read this when
-- `session join` の事前条件、branch 切り替え、merge、状態更新、session branch 削除、CLI 出力の実装を確認・変更したいとき。
-- session join 中の merge conflict を Codex CLI に解消させる流れ、conflicted path の収集、marker 検査、git add/commit の制御を確認・変更したいとき。
-- post-precondition failure のエラー出力先、または conflict marker 判定の仕様根拠付きコメントに関わる挙動を確認したいとき。
+- session join の実行条件、状態遷移、merge、branch 削除、利用者向け完了出力を確認または変更したいとき。
+- session join 中の merge conflict を Codex CLI に解決させる処理、conflict 対象の writable 扱い、解決後の検証と commit の流れを確認または変更したいとき。
+- session join 失敗時のエラー出力先、clean worktree 要求、cmoc ignore 確認、state ファイル更新のタイミングを調べたいとき。
+- conflict marker の残存判定ロジック、特に separator 行の長さに依存しない検出を確認または変更したいとき。
 
 ## Do not read this when
-- session join 以外の session サブコマンドの通常処理を調べたいとき。
-- session 状態モデル、branch state の永続化形式、repo/work root の解決、git 実行 wrapper そのものを調べたいとき。
-- Codex CLI に渡す conflict resolution prompt や parameter の詳細だけを調べたいとき。
+- session join の CLI 引数定義や Typer command 登録だけを調べたいとき。
+- session state や apply state のデータ構造、state ファイルの読み書き形式そのものを調べたいとき。
+- Codex CLI に渡す conflict resolution prompt や parameter の内容だけを調べたいとき。
+- session start、session apply、その他の session subcommand の挙動を調べたいとき。
 
 ## hash
-- f786533c016baa4ed67a100ea11e345fdc163f64e5b8b20ed0dd5d6962954cbf
+- 549706c8feee86e0bcdae890bf88cc01a5912b200ff9064570056f07767ca538
