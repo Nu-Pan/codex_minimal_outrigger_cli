@@ -19,20 +19,21 @@
 # `builder`
 
 ## Summary
-- ACP builder の realization 側互換境界を束ねる領域。正本実装を持つ oracle 側 builder 群を、既存の利用経路から参照できるようにする入口として機能する。
-- この領域自体は builder 本体仕様や主要ロジックの置き場ではなく、apply fork、review oracle、session join、TUI パラメータ、indexing などの builder 関連下位領域へ進むための package 境界と再公開・薄い adapter を扱う。
+- ACP builder 領域の realization 側入口を束ねる階層。公開済みの builder import 経路を維持しながら、正本側にある実装や定義へ薄く接続する互換境界として位置づけられる。
+- 主な下位領域は、apply fork 用 agent call parameter 構築、indexing 互換入口、review oracle への再公開・薄い補正、session join への入口、TUI 起動パラメータ生成・解決への接続を扱う。
+- この階層自体は ACP builder の正本仕様や主要アルゴリズムを持つ場所ではなく、realization 側から用途別 builder 領域へ進むためのルーティング起点である。
 
 ## Read this when
-- ACP builder に関する realization 側の import 経路が oracle 側実装とどう接続されているか確認したいとき。
-- 既存の builder 参照経路を削除・移動・置換してよいか判断するため、互換入口として残されている範囲と削除条件を確認したいとき。
-- apply fork の agent 呼び出しパラメータ生成、review oracle の finding 列挙・判定・統合・検証、session join、TUI 起動パラメータ、indexing など、builder 関連の下位領域へ進む入口を探しているとき。
-- realization 側が独自の主要ロジックを持つのか、oracle 側実装への委譲・再公開・薄い補正に留まるのかを切り分けたいとき。
+- ACP builder に関する realization 側の import 経路や互換 package 境界を確認したいとき。
+- apply fork、indexing、review、session、TUI のどの builder 領域へ進むべきかを切り分けたいとき。
+- 正本側 builder や基本定義を、既存の公開参照経路から利用できるようにする薄い adapter・再公開入口の位置づけを確認したいとき。
+- 公開済みの ACP builder 参照経路を削除・移動・置換してよいか判断する前に、残す理由や接続先の種類を把握したいとき。
 
 ## Do not read this when
-- builder の正本仕様、prompt 本文、Structured Output schema、モデル設定、file access mode、具体的な変換・判定・生成ロジックを確認したいとき。その場合は oracle 側の対応箇所へ進む。
-- apply fork 全体の制御フロー、fork 作成、git 操作、実行 orchestration、CLI 入出力、TUI 画面やイベント処理など、builder 互換境界ではない実行本体を調べたいとき。
-- repository root 解決、path model、AgentCallParameter、列挙値などの基本定義そのものを調べたいとき。
-- ACP builder 以外の ACP 関連モジュール、または互換入口ではない新規機能の実装場所やテスト対象を探しているとき。
+- ACP builder の prompt 本文、Structured Output schema、model 設定、file access mode などの正本仕様を確認したいとき。その場合は正本側の対応箇所へ進む。
+- builder の具体的な変換処理、入出力仕様、判定条件、アルゴリズム、エラー処理を理解したいとき。その場合は用途別の実装本体または正本側実装を読む。
+- CLI 全体の制御フロー、fork 作成、git 操作、TUI 画面処理、review workflow など、builder import 境界の外側にある実行側処理を調べたいとき。
+- AgentCallParameter、path model、列挙値などの基本定義そのものを確認したいとき。その場合は basic 側の定義へ直接進む。
 
 ## hash
-- 4d4500d717d7c2690d59a43a877d9b6e074e66edecef09b77203bc4b706505e9
+- c578835c0ab7f8f4bf14c5ad685c4b199763415246c4f8d6fe0f9b0686be08fd

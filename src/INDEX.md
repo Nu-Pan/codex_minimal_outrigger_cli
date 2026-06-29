@@ -1,23 +1,24 @@
 # `acp`
 
 ## Summary
-- realization 側に残る ACP builder 互換入口を束ねる領域。実体を oracle 側の builder 実装へ委譲・再公開し、既存の `acp.*` import 経路を移行期間中も維持するための package 境界として機能する。
-- この領域は ACP builder の正本仕様や主要ロジックの置き場ではなく、互換 import 面と builder 関連下位領域への入口を扱う。
+- 既存の `acp.*` import 経路を維持するための realization 側互換入口。正本側の ACP builder 実装を複製せず、利用者向け公開面や既存実装からの参照を oracle 側実体へ接続する。
+- 下位では ACP builder 用の互換 package 群を束ね、apply fork、indexing、review oracle、session join、TUI 起動・解決などの用途別 builder 入口へ進むためのルーティング起点になる。
+- この領域自体は ACP builder の正本仕様や主要な prompt・schema・生成ロジックを持つ場所ではなく、移行期間中の import 互換性と薄い再公開・補正を扱う境界である。
 
 ## Read this when
-- ACP builder に関する既存の `acp.*` import が、realization 側でどの互換入口を通って oracle 側実装へ接続されているか確認したいとき。
-- `acp.*` 参照を oracle 側または実体 module へ移行する作業で、互換入口を残す理由、残されている範囲、削除条件を判断したいとき。
-- apply fork、review oracle、session join、TUI 起動パラメータ、indexing など、ACP builder 関連の下位領域へ進む入口を探しているとき。
-- realization 側が ACP builder の主要ロジックを独自に持つのか、oracle 側実装への委譲・再公開・薄い adapter に留まるのかを切り分けたいとき。
+- `acp.*` または `acp.builder.*` の既存 import 経路をなぜ残しているか、いつ削除できるかを判断したいとき。
+- realization 側や利用者向け公開面に残る ACP builder 参照を、oracle 側実体や新しい参照経路へ移行する作業をするとき。
+- apply fork、indexing、review oracle、session join、TUI 関連のどの builder 互換領域へ進むべきかを切り分けたいとき。
+- 正本側 ACP builder を既存公開経路から利用できるようにする薄い adapter、再公開、placeholder 補正の位置づけを確認したいとき。
 
 ## Do not read this when
-- ACP builder の正本仕様、prompt 本文、Structured Output schema、モデル設定、file access mode、具体的な生成・判定ロジックを確認したいとき。その場合は oracle 側の対応箇所へ進む。
-- apply fork 全体の制御フロー、fork 作成、git 操作、実行 orchestration、CLI 入出力、TUI 画面やイベント処理など、builder 互換境界ではない実行本体を調べたいとき。
-- repository root 解決、path model、AgentCallParameter、列挙値などの基本定義そのものを調べたいとき。
-- ACP builder 以外の ACP 関連モジュール、または互換入口ではない新規機能の実装場所やテスト対象を探しているとき。
+- ACP builder の正本仕様、prompt 本文、Structured Output schema、model 設定、file access mode の定義を確認したいとき。その場合は oracle 側の対応する正本実装・仕様へ進む。
+- builder の具体的な生成アルゴリズムや入出力仕様を詳しく理解したいとき。その場合は用途別の実装本体または oracle 側実体へ直接進む。
+- CLI 全体の制御フロー、git 操作、TUI 画面処理、review workflow など、builder import 互換境界の外側にある実行側処理を調べたいとき。
+- `acp.*` 互換参照がすでに realization 側と利用者向け公開面から消えていることだけを確認済みで、互換入口の残存理由や接続先を読む必要がないとき。
 
 ## hash
-- f7207b0bad7b979db2f1f9b34a848febceb53a3b368d0082039040f8f0775144
+- c6cd20cd8c1db861477a2e183df8c96a9dc2c9d891e1e261289ab3744bd6449a
 
 # `basic`
 

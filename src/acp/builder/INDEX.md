@@ -20,24 +20,22 @@
 # `apply`
 
 ## Summary
-- apply builder 領域の realization 側 package。oracle 側の apply builder package と対応する互換 package として成立し、下位に apply fork 系の agent call parameter builder 群への入口を持つ。
-- この領域では、apply fork の各段階で使う agent 呼び出しパラメータ生成について、realization 側から oracle 側 builder へ委譲し、repository root 解決、oracle src import 準備、runtime 側 parameter への橋渡しを扱う。
+- ACP apply builder 領域の package 入口と、apply fork 系 agent call parameter builder 群へのルーティングを担う階層。package 初期化要素は互換 package としての存在確認に限られ、具体的な builder 実装は下位の apply fork 系領域にまとまる。
+- apply fork 系では、変更要約、ファイル単位所見列挙、所見適用などの agent call parameter 構築入口を扱い、realization 側から oracle 側 builder へ委譲する adapter 群と共通 helper へ進むための入口になる。
 
 ## Read this when
-- apply builder 領域が oracle 側 package 構造とどう対応しているかを確認したいとき。
-- apply fork 系の agent call parameter builder へ進む入口を探しているとき。
-- apply fork 系 builder で、realization 側から oracle 側 builder へどう委譲されるか、repository root 解決や oracle src import 準備をどこから確認するか判断したいとき。
-- 変更要約、ファイル単位の所見列挙、検出済み所見の適用に対応する agent 呼び出しパラメータ生成箇所を探しているとき。
+- ACP apply builder 領域で、package 初期化要素だけを確認すればよいのか、apply fork 系 builder 群へ進むべきかを切り分けたいとき。
+- `cmoc apply fork` 用の agent call parameter builder について、変更要約、ファイル単位所見列挙、所見適用などの用途別入口を探したいとき。
+- oracle 側 ACP builder と runtime 側実行コードの境界、特に oracle src import 準備や parameter adapter の責務を確認する入口を探しているとき。
 
 ## Do not read this when
-- apply builder の具体的な変換・適用ロジックや公開関数・クラスの詳細だけを調べたいときは、該当する実装本体へ直接進む。
-- apply fork の prompt 本文、JSON schema、モデル選択、file access mode などの正本仕様を確認したいときは、対応する oracle 側 builder や schema を読む。
-- apply fork 全体の制御フロー、fork 作成、git 操作、実行 orchestration を調べたいときは、上位の apply fork 実装へ進む。
-- repository root 解決そのものの仕様、path model、AgentCallParameter や enum 型の定義を調べたいときは、それぞれの基本定義側を読む。
-- apply fork 以外の apply 系 command や、所見の検出・分類・生成ロジックを調べたいだけのとき。
+- apply builder の具体的な処理、変換、適用ロジック、公開関数、クラス、入出力仕様、エラー処理を直接確認したいとき。その場合は下位の実装本体へ進む。
+- prompt 本文、出力 schema、モデル選択、file access mode などの正本仕様を確認したいとき。その場合は委譲先の oracle 側 builder や JSON 定義を読む。
+- `cmoc apply fork` 全体の制御フロー、fork 作成、git 操作、CLI 引数処理だけを調べたいとき。その場合は上位の command 実装を読む。
+- repository root 解決や path model の仕様、AgentCallParameter や enum 型そのものの定義を確認したいとき。その場合は対応する basic 側の定義へ直接進む。
 
 ## hash
-- 30a141b5c106ba2f0181deead440ccdfb91d81c9dfc10a1ba0ae9f295bfeb9d5
+- 0f6d505f49ddf8483c37dd4b68ef451cbc88dfd2e5caca055afa5ce79fc71936
 
 # `indexing`
 

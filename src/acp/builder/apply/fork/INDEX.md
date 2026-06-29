@@ -55,20 +55,21 @@
 # `file_finding_enumeration.py`
 
 ## Summary
-- `cmoc apply fork` のファイル単位の所見列挙用 agent call parameter を組み立てる realization 側 builder。repo root 解決と oracle src import 準備を行い、対応する oracle builder の結果を runtime 側へ返す入口である。
+- `cmoc apply fork` でファイル単位の所見列挙を行うための agent call parameter を構築する薄い realization 側 builder。
+- 実処理は oracle 側の同目的 builder に委譲し、repo root 解決、oracle src の import 準備、oracle parameter から realization 側 `AgentCallParameter` への変換だけを担う。
 
 ## Read this when
-- `cmoc apply fork` でファイル単位の所見列挙を行う agent call parameter の生成経路を確認・変更したいとき。
-- apply fork 系 builder が oracle builder を呼び出し、oracle 側 schema path を保持した parameter を返す委譲パターンを確認したいとき。
-- 対象 path を受け取る所見列挙 builder の呼び出し境界、repo root 解決、oracle src import 準備の流れを確認したいとき。
+- `cmoc apply fork` のファイル単位所見列挙 agent を呼ぶための parameter 構築経路を確認したいとき。
+- realization 側 builder が oracle 側 builder をどのように呼び出し、戻り値を `AgentCallParameter` に適合させるかを確認したいとき。
+- `target_path` がファイル単位所見列挙用 parameter 構築に渡される境界だけを確認したいとき。
 
 ## Do not read this when
-- 所見列挙プロンプトや parameter の正本仕様そのものを確認したいとき。この対象は oracle builder へ委譲する薄い adapter であり、仕様本文は対応する oracle 側を読む。
-- agent call parameter の共通変換処理、repo root 解決、oracle src import 準備の実装詳細を変更したいとき。この対象ではなく共通 helper 側を読む。
-- `cmoc apply fork` の他の段階や、ファイル単位ではない builder の生成経路を確認したいとき。
+- 所見列挙のプロンプト内容、出力条件、正本仕様を確認したいときは、委譲先の oracle 側 builder を読む。
+- repo root 解決、oracle src import 準備、oracle parameter 変換の共通挙動を確認したいときは、共通 helper の定義を読む。
+- `cmoc apply fork` コマンド全体の制御フロー、CLI 引数処理、またはテスト観点を調べたいときは、それぞれの呼び出し元やテストを読む。
 
 ## hash
-- 0cb95281e7418c254671c39353d9171e0f4cd088f215255c0f2c2ef3d6be1e79
+- 7f348f0ca54f4b074d5e43be005498ea92f45db03c66c9725e905c528f9bba40
 
 # `finding_application.py`
 
