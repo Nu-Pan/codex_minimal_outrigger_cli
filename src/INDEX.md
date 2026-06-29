@@ -62,25 +62,24 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation のうち、複数サブコマンドや上位 workflow から共有される runtime helper 群をまとめる領域。Codex CLI 呼び出し、設定、path、git、ログ、状態、結果型、エラー表示、内容 hash、CLI 実行ライフサイクル、INDEX.md 更新 preflight など、横断的な実行時基盤への入口になる。
-- 単一の機能実装だけでなく、下位の責務別 helper と、それらをまとめて再公開する facade を含むため、共通 runtime API の依存関係や境界を確認する起点として使う。
+- cmoc の realization implementation における共有 runtime helper 群をまとめる領域。Codex CLI 呼び出し、CLI サブコマンド共通ライフサイクル、設定、content hash、共通エラー、git 操作、ログ、path、結果型、session state、INDEX.md 更新 preflight など、複数の上位機能から使われる実行時支援を扱う。
+- 個別 helper 実装へ進む前の入口として、公開 API の再 export、互換 import 境界、実行前 hook、外部プロセス境界、永続状態やログの共通モデルなど、共通 runtime 層の責務別 module が並ぶ。
 
 ## Read this when
-- サブコマンドや workflow から共通利用される runtime helper の責務分担、公開 import 面、または横断的な実行時処理の入口を探したいとき。
-- Codex CLI の exec/TUI 起動、profile・sandbox・CODEX_HOME・Structured Output・quota/capacity retry・call log など、Codex 呼び出し境界の実装を追いたいとき。
-- 設定ファイル、runtime path、状態ファイル、ログ、外部コマンド結果、利用者向けエラー表示、git 操作、内容 hash 保存など、複数機能から共有される基盤処理を確認または変更したいとき。
-- INDEX.md 更新の preflight、対象列挙、鮮度判定、既存エントリー再利用、生成結果検証、Markdown 化、更新 commit など、目次同期処理の実装を追いたいとき。
-- CLI サブコマンド共通の開始・完了表示、終了コード化、例外表示、サブコマンド logger の設定や解除など、個別コマンドの外側にある共通ライフサイクルを調べたいとき。
+- 上位の CLI サブコマンドや workflow 実装から、設定読み込み、path 解決、git 操作、Codex 実行、ログ記録、状態永続化、エラー表示などの共通 runtime helper を探したいとき。
+- Codex exec/TUI 呼び出しの profile 準備、sandbox/cwd/CODEX_HOME、Structured Output 検証、quota/capacity retry、call log、resume token、subcommand event の実装経路を追いたいとき。
+- INDEX.md 更新の preflight、対象列挙、hash による鮮度判定、既存エントリー再利用、Structured Output 検証、Markdown 生成、更新 commit までの runtime 実装を確認したいとき。
+- CLI サブコマンド共通の開始・完了表示、終了コード化、例外時エラー表示、サブコマンド log、current logger、step timing、quota 待機時間集計を確認または変更したいとき。
+- cmoc の共有結果型、共通例外、実行時設定、content hash 保存、binary 判定、session state file、標準保存先、memo 判定、git worktree/branch 操作など、複数機能にまたがる実行時基盤を扱うとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の引数定義、業務処理、画面出力、状態更新フローだけを調べたいときは、そのサブコマンド実装へ直接進む。
-- 正本仕様、設計意図、path model の概念定義、INDEX.md エントリー文面の基準や prompt 文言そのものを確認したいときは、対応する oracle 側の本文を読む。
-- テスト期待値や fixture の確認だけが目的のときは、対応する realization test を読む。
-- 共有 helper の利用先でどの値を渡すか、どのタイミングで呼ぶかという上位 workflow 固有の判断だけを知りたいときは、呼び出し側の実装を読む。
-- 単に package 境界だけを確認したい場合を除き、個別 helper の具体的な挙動はこの階層の責務別本文へ進んで確認する。
+- 個別 CLI サブコマンドの引数定義、command 登録、利用者向け仕様、業務処理だけを調べたいときは、呼び出し側のサブコマンド実装へ進む。
+- 正本仕様断片、設計意図、path model、設定モデル、FileAccessMode、session state の仕様意図、INDEX.md エントリー文面や prompt の仕様を確認したいときは、対応する oracle または基本モデル側を読む。
+- 共通 runtime helper を使うだけで、特定の利用箇所がどの値を渡すか、どの保存先をいつ更新するか、どの上位 workflow でどう分岐するかを知りたいときは、その上位実装を読む。
+- 生成済み log、report、state、config などの実データ内容を調査したいだけのときは、この領域ではなく対象となる保存物または読み取り側の実装へ進む。
 
 ## hash
-- b7765ef7355812d2ca2542009ee72a4db28e8820344d72e12a8df46d287aa503
+- 42d18b5517ff00229679f07311d83fc30474f21ccfc39290789450a1de9ead48
 
 # `config`
 
