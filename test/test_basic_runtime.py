@@ -535,10 +535,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         str((root / "oracle").resolve())
     }
     assert _profile_writable_roots(profiles[FileAccessMode.REPO_WRITE]) == {
-        str((root / ".gitignore").resolve()),
-        str((root / "oracle").resolve()),
-        str((root / "src").resolve()),
-        str((root / "test").resolve()),
+        str(root.resolve()),
     }
     for blocked in (
         "oracle/spec.md",
@@ -547,19 +544,17 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         ".cmoc/log",
     ):
         _assert_not_writable(profiles[FileAccessMode.REALIZATION_WRITE], root / blocked)
-    for blocked in ("memo/note.md", ".agents/state.json", ".git/config"):
-        _assert_not_writable(profiles[FileAccessMode.REPO_WRITE], root / blocked)
     _assert_writable(
         profiles[FileAccessMode.REALIZATION_WRITE], root / "src" / "created.py"
     )
     _assert_writable(
         profiles[FileAccessMode.REPO_WRITE], root / "oracle" / "created.md"
     )
-    _assert_not_writable(
-        profiles[FileAccessMode.REALIZATION_WRITE], root / "new_top_level.md"
+    _assert_writable(
+        profiles[FileAccessMode.REPO_WRITE], root / "new_dir" / "created.md"
     )
     _assert_not_writable(
-        profiles[FileAccessMode.REPO_WRITE], root / "new_dir" / "created.md"
+        profiles[FileAccessMode.REALIZATION_WRITE], root / "new_top_level.md"
     )
 
     extra = root / "src" / "extra"
