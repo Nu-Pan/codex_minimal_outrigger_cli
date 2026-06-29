@@ -106,20 +106,21 @@
 # `tui`
 
 ## Summary
-- ACP builder の TUI 起動・resolve parameter 構築に関する realization 側の互換入口をまとめる階層。正本側の TUI builder 実装へ処理を委譲しつつ、既存の公開 import path を維持する。
-- 対話的な TUI 起動では AgentCallParameter から Structured Output schema 指定を外す差分を扱い、resolve parameter 構築関数と TUI で選べるファイルアクセスモード候補を正本側定義から公開する。
+- ACP builder の TUI 関連公開入口をまとめる互換接続層。TUI 起動用および resolve parameter 構築用の既存 import path を維持し、実際の構築処理は正本側実装へ委譲する。
+- TUI で選択できるファイルアクセスモード候補を正本 enum から導出して公開し、TUI ビルダー層から正本由来のパラメータ生成機能へ到達するための薄い中継点として位置づく。
+- この階層自体は画面制御やパラメータ組み立て本体を持たず、互換 package としての存在、公開名の再エクスポート、正本実装への接続境界を扱う。
 
 ## Read this when
-- ACP builder の TUI 関連公開入口が、正本側実装へどのように接続されているかを確認したいとき。
-- TUI 起動用 AgentCallParameter の生成経路、または対話的な TUI 起動で Structured Output schema を渡さない理由を確認したいとき。
-- TUI ビルダー層から resolve parameter 構築関数やファイルアクセスモード候補へ到達する import 境界を確認したいとき。
-- 正本側との互換 import path を維持する理由や削除条件が、TUI 起動パラメータの公開面にどう関係するかを調べるとき。
+- ACP builder の TUI 関連で、既存の公開 import path や互換 package としての入口が維持されているか確認したいとき。
+- TUI 起動パラメータ生成や resolve parameter 構築の公開入口が、正本側実装へどのように中継されているか確認したいとき。
+- TUI で扱うファイルアクセスモード候補が正本側の定義からどのように公開されるか確認したいとき。
+- 互換接続層を削除できる条件や、realization 側・利用者向け公開面に残る参照の有無を調べたいとき。
 
 ## Do not read this when
-- TUI の画面描画、キー操作、入力処理、対話フローなど、対話 UI 本体の挙動を調べたいとき。
-- TUI 起動パラメータや resolve parameter の正本仕様、具体的な引数組み立て、検証処理を確認したいだけのとき。この階層ではなく委譲先の正本側実装を読む。
-- Structured Output schema を要求する非 TUI 起動や index entry 生成など、schema 付き AgentCallParameter の挙動を調べたいとき。
-- ファイルアクセスモード enum 自体の定義や各モードの意味を確認したいとき。この階層は正本側定義から候補集合を公開するだけを扱う。
+- TUI 起動パラメータや resolve parameter の実際の組み立て内容、検証処理、正本仕様を確認したいときは、委譲先の正本側実装を直接読む。
+- TUI の表示処理、イベント処理、画面構成、入力操作、対話フローを調べたいときは、TUI 本体側の実装を読む。
+- AgentCallParameter、FileAccessMode、ファイルアクセスモード enum の定義や意味を確認したいときは、それらを定義する基本モジュールを読む。
+- 互換性維持や公開入口の中継に関係しない新規の TUI 仕様設計、画面制御、CLI 動作を調べたいだけのとき。
 
 ## hash
-- cc9d5fc6cfc2286f721f05a6da86a2b65c56b0789f704e9478e76083f84da07d
+- 479ac061ea07bbf27bdc8ffbd4c1560a62988c7fc9d7a0292e825a9982fb184a

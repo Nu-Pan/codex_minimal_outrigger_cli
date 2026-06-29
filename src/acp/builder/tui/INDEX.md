@@ -18,22 +18,24 @@
 # `launch_tui.py`
 
 ## Summary
-- TUI 起動用の AgentCallParameter 生成を oracle 側の正本実装へ委譲しつつ、既存の公開 import path を維持する互換入口。
-- oracle 側で組み立てたパラメータから Structured Output schema 指定だけを外し、対話的な TUI 起動では schema を渡さないという実装上の差分を担う。
-- 削除条件は、realization 側と利用者向け公開面の両方から、この互換 import path への参照がなくなること。
+- TUI 起動用の AgentCallParameter 生成処理を oracle 側の正本実装へ委譲し、既存の公開 import path から同じ関数を参照できるようにする互換接続層。
+- TUI 起動パラメータの定義本体は持たず、oracle 側の生成関数を呼び出して戻すことと、公開名として再エクスポートすることだけを担う。
+- realization 側または利用者向け公開面に残る既存参照を維持するためのファイルであり、その参照がなくなった時点で削除可能になる。
 
 ## Read this when
-- TUI 起動時に渡す AgentCallParameter の生成経路や、Structured Output schema を無効化している理由を確認したいとき。
-- oracle 側の TUI 起動パラメータ生成と、realization 側の既存公開 import path との接続を調べるとき。
-- 互換 import path の維持・削除条件、または TUI 起動パラメータの公開面への影響を変更・確認するとき。
+- TUI 起動パラメータ生成関数の既存 import path を維持する必要があるか確認したいとき。
+- oracle 側に置かれた TUI 起動パラメータ生成処理が realization 側からどう接続されているか確認したいとき。
+- この互換接続層を削除できる条件、または公開面からの参照残存を調べたいとき。
+- TUI 起動パラメータ生成関数の引数一覧や戻り値型が、既存参照に対してどのように中継されているか確認したいとき。
 
 ## Do not read this when
-- TUI 起動パラメータそのものの正本仕様や引数全体の組み立てを確認したいだけなら、委譲先の oracle 側実装を読む。
-- Structured Output schema を要求する非 TUI 起動や index entry 生成など、schema 付き AgentCallParameter の挙動を調べたい場合は、その起動種別の builder を読む。
-- TUI 表示、キー操作、画面描画などの対話 UI 本体の挙動を調べたい場合は、起動パラメータ生成ではなく TUI 実行側の実装を読む。
+- TUI 起動パラメータの実際の組み立て内容や正本仕様を確認したいときは、委譲先の oracle 側実装を直接読む。
+- TUI の表示処理、イベント処理、画面構成、入力操作を調べたいときは、この互換接続層ではなく TUI 本体側の実装を読む。
+- AgentCallParameter や FileAccessMode の型定義・意味を確認したいときは、それらを定義する基本モジュールを読む。
+- 既存 import path の互換性や削除条件に関係しない、新規の TUI 起動仕様を設計したいだけのときは、この接続層を入口にしない。
 
 ## hash
-- 4b32161e90fc11b826340f1f17158acbeae5f46b75ec0a538f1d381aac45f932
+- 43ea47b576cd6aaee74b0810690d5e2479c1d0377243b6c03dd36005d18b42a2
 
 # `resolve_parameter.py`
 

@@ -1,24 +1,23 @@
 # `acp`
 
 ## Summary
-- ACP 関連の realization 側入口を置く領域。公開 import 面の互換維持と、agent call parameter builder 群への導線を担う。
-- 実体の多くは正本側実装や下位 builder への薄い委譲・再公開・補正であり、ACP 構築ロジック本体を読むための起点として使う。
+- realization 側で残る ACP 互換公開面の上位入口。既存の `acp.*` 参照を壊さず、実体を持つ oracle 側または下位 builder 領域へつなぐ役割を持つ。
+- この領域自体は ACP builder の処理本体ではなく、移行期間中の import 互換、再公開、委譲境界を確認して、必要な下位対象へ進むための案内地点である。
 
 ## Read this when
-- 既存の `acp.*` import や `acp.builder.*` import が realization 側でどの互換入口により維持されているか確認したいとき。
-- ACP の AgentCallParameter builder 群について、apply、review、session、TUI、indexing など用途別の下位領域へ進む入口を選びたいとき。
-- 正本側に実装を集約しつつ realization 側に互換入口を残している理由、公開 import 面の扱い、削除条件を判断したいとき。
-- ACP builder の実装本体ではなく、realization 側公開境界、委譲層、補正層の所在を切り分けたいとき。
+- realization 側や利用者向け公開面に残る `acp.*` 参照の扱い、互換入口を残す理由、削除条件を確認したいとき。
+- ACP builder 関連で、apply、indexing、review、session、TUI などのどの下位領域へ進むべきかを切り分けたいとき。
+- oracle 側に集約された ACP builder 実装と、realization 側の既存 import path 互換がどう対応しているかを確認したいとき。
+- 既存の `acp.builder` 系公開参照、再エクスポート、委譲境界、互換維持に関わる変更を検討しているとき。
 
 ## Do not read this when
-- AgentCallParameter の型定義、モデル設定、reasoning effort、file access mode、structured output schema など共通仕様そのものを調べたいとき。
-- ACP builder の正本仕様、プロンプト内容、具体的な引数組み立て、検証処理の本体を直接確認したいとき。
-- apply fork 全体の CLI 制御、git 操作、作業レポート生成、TUI 画面描画、キー操作など builder 境界外の挙動を調べたいとき。
-- 新しい ACP 機能や API 仕様を追加する場所を探しているとき。ここは主に互換入口と下位 builder への導線であり、機能追加の本体ではない。
-- 既に用途別 builder、正本側実装、または互換入口の具体的な読み先が分かっているとき。
+- ACP builder の具体的な構築ロジック、prompt 内容、structured output schema、型定義、モデル設定、生成処理本体を調べたいとき。実体を持つ下位実装または oracle 側実装へ進む。
+- ACP builder 以外の CLI 制御、git 操作、TUI 画面制御、レビュー基準、indexing の生成・探索処理、session 状態管理を調べたいとき。該当する責務の対象へ直接進む。
+- 新しい ACP 機能や API 仕様の本体実装場所を探しているとき。この領域は互換公開面の入口であり、機能追加の実装本体ではない。
+- `acp.*` 参照がすでに全公開面と realization 側から消えていることを確認済みで、互換入口の維持理由や削除条件を読む必要がないとき。
 
 ## hash
-- bf27fdc982be31f42cd30f740d05d08e4f34e6041a1dbe849df0c23a35134b5b
+- 6b1a6ad4a8d35acbc7a8eaf4bd5636fd9562835c642589a4387b8473b5c8f6aa
 
 # `basic`
 

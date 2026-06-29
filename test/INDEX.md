@@ -136,24 +136,26 @@
 # `test_cli_init_tui.py`
 
 ## Summary
-- init と対話起動前処理の外部挙動を検証する realization test。cmoc 管理領域の ignore 化、既存 staged/unstaged 差分の保護、初期設定生成と同期、linked worktree での初期化・ログ保存・schema 配置、Markdown prompt からの TUI parameter 解決と Codex 起動引数構築を扱う。
-- 利用開始直後の CLI 境界で共有される repository/runtime 準備を一続きの回帰として確認するための入口であり、初期化済み状態を前提に TUI 起動へ進む挙動まで同じ文脈で読む対象。
+- init 実行と TUI 起動直前の CLI 境界で発生する外部挙動を検証する realization test。`.cmoc` の ignore 化、既存 staged/unstaged 差分の保護、初期設定 JSON の作成・同期、linked worktree での repository/runtime 準備、Markdown prompt の整形、TUI 用 Codex parameter 構築とログ保存先を扱う。
+- 16,000 文字を超えるが、初期化済み状態を前提に共有される init/TUI 前処理回帰を一箇所で確認するためのテスト群であり、CLI 利用開始直後の repository/runtime 準備の挙動をまとめて見る入口になる。
 
 ## Read this when
-- init の外部挙動、特に cmoc 管理領域を git tracking から外す処理、ignore 設定、cleanup commit、サブコマンドログ記録を確認・変更する時。
-- init が利用者の既存 staged 変更や unstaged 変更、既存の ignore ファイル変更を壊さないことを確認・変更する時。
-- 初期設定ファイルの default 値、既存の人間設定を保持した defaults 同期、設定項目追加時の初期化回帰を確認する時。
-- linked worktree 上で init または TUI を実行した時の repository root と worktree cwd の扱い、ignore 設定、ログ保存先、schema 配置、git status の汚れ防止を確認する時。
-- TUI 起動前のエディタ実行、HTML comment 除去を含む prompt 整形、parameter 解決用 Codex 呼び出し、file access mode の default、最終 prompt 保存、TUI 用 Codex parameter 構築を確認・変更する時。
+- init が `.cmoc` 配下を git 管理から外し、ignore 設定を追加し、必要な cleanup commit を作る挙動を確認・変更する時。
+- init が利用者の既存 staged 変更や `.gitignore` の staged/unstaged 変更を commit に巻き込まないことを確認する時。
+- default config の内容、既存 config への default key 同期、人間が書いた値を上書きしない挙動を変更・確認する時。
+- linked worktree 上で init または TUI を実行した時の root/cwd、ignore 設定、config/log/schema の保存先、git status の扱いを確認する時。
+- TUI 起動前に editor で作成された Markdown prompt から HTML comment を除去し、complete prompt を保存し、resolve parameter と launch parameter を組み立てる流れを確認する時。
+- TUI の resolved file access mode が空文字の場合に readonly default へ戻る挙動や、launch 用 structured output schema の選択を確認する時。
+- sub command log に呼び出された CLI command と argv が記録される挙動を確認する時。
 
 ## Do not read this when
-- 個別サブコマンドの business logic や内部 helper の詳細だけを調べたい時。この対象は init/TUI 起動境界の外部挙動回帰に絞られている。
-- Codex CLI や LLM の出力品質そのものを検証したい時。この対象は呼び出し引数・保存先・制御境界を stub で確認する。
-- 一般的な test support、repository fixture、fake executable 作成 helper の実装を調べたい時。ここではそれらを利用する側の回帰だけを扱う。
-- TUI 実行後の対話 UI 内部挙動を調べたい時。この対象は対話起動前の parameter 構築と起動呼び出しまでを扱う。
+- CLI command の実装本体や helper の内部設計を調べたい時は、対応する実装側を直接読む方がよい。
+- init/TUI 以外のサブコマンドの外部挙動やテストを探している時は、対象サブコマンドのテストへ進む方がよい。
+- Codex 実行 wrapper、preflight、AgentCallParameter などの共通部品単体の仕様を確認したい時は、その部品の実装・専用テストを読む方がよい。
+- INDEX.md 生成、oracle/realization の概念、またはルーティング文書そのものの仕様を確認したい時は、このテストではなく該当する正本仕様や専用テストを読む方がよい。
 
 ## hash
-- 52aa8bc9dca127f656fd33da495d4ea1e1e7ffe9c5666c332a30912fc5b3584f
+- 22b776e499758bb0e3492591d94fbbd0f540373a274df1e4d5598ef4e939fd36
 
 # `test_codex_runtime_exec.py`
 
