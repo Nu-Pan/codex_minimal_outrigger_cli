@@ -79,25 +79,23 @@
 # `review`
 
 ## Summary
-- review builder 領域の realization 側入口であり、正本側 review builder と対応する package 名前空間、および review oracle builder 周辺の互換 import path と薄い補正 wrapper を束ねる領域。
-- 具体的な review 処理本体を持つ領域ではなく、古い実装側 import 経路を正本側へつなぐ再公開と、正本側 builder が生成した AgentCallParameter の prompt 内 oracle root placeholder 表記を局所補正する経路を確認するための入口。
-- review finding の列挙・判定・challenger 検証は正本側の実装を再公開し、finding 統合と advocate 検証は正本側 builder への委譲結果に既知の prompt 表記補正だけを加える、互換層中心のまとまり。
+- review builder 領域の realization 側 package で、正本側 review oracle builder との互換 import 境界と、旧経路から正本側実装へ委譲する薄い入口を扱う。
+- review finding の列挙・判定・challenger validation は実装本体ではなく再公開層として置かれ、merge finding と finding advocate validation では正本側 builder の生成結果を保ちながら prompt 内の oracle root 表記だけを補正する。
 
 ## Read this when
-- review builder 領域で、正本側 package と対応する realization 側 package が存在するか、import 経路が成立するかを確認したいとき。
-- review oracle builder 周辺で、古い realization 側 import 経路が残っている理由、削除条件、正本側実装への委譲関係を切り分けたいとき。
-- finding 統合や advocate 検証の AgentCallParameter 生成について、正本側 builder の結果を保ったまま prompt 内の oracle root placeholder 表記だけを補正する wrapper の有無を確認したいとき。
-- 同名機能の実装本体がこの領域にあるのか、正本側へ再公開しているだけなのか、または局所的な prompt 補正だけを担っているのかを判断したいとき。
+- review builder 領域で、正本側 review oracle builder に対応する realization 側 package や旧 import 経路の互換境界を確認したいとき。
+- review oracle builder 周辺の処理が、この領域の実装本体なのか、正本側実装への委譲または最小 wrapper なのかを切り分けたいとき。
+- review oracle merge finding や finding advocate validation の AgentCallParameter 生成で、正本側 builder への委譲と prompt 内 oracle root 表記補正の有無を確認したいとき。
+- package としての互換性や import 経路の成立だけを確認したいとき。
 
 ## Do not read this when
-- review finding の列挙・判定・検証ロジックそのもの、または prompt の正本仕様を確認したいとき。正本側の対応する実装や仕様断片へ進む。
-- review builder の具体的な処理本体、関数、クラス、出力、制御フローを調べたいとき。互換 package 初期化や薄い wrapper ではなく、実処理を担う対象を読む。
-- review oracle 以外の builder、CLI 表示、テスト方針、AgentCallParameter 型の共通仕様を調べたいとき。より直接その責務を持つ領域へ進む。
-- 新しい判定ロジックや検証処理を追加・変更したいとき。この領域は互換再公開と正本側 builder への追従用補正が中心であり、実装本体の変更先ではない。
-- 生成済み parameter の利用側挙動だけを追う作業で、古い import 経路や prompt 表記補正の有無が関係しないとき。
+- review finding の列挙・判定・検証そのものの正本仕様、出力内容、検出ロジック、評価ロジックを調べたいとき。
+- AgentCallParameter の共通型、model、reasoning、file access、structured output schema などの基礎定義を調べたいとき。
+- review oracle 以外の builder、CLI 表示、テスト方針、または互換 import と prompt 表記補正に関係しない review 機能全般を調べたいとき。
+- review builder の新しい判定ロジックや検証処理を追加・変更する実装本体を探しているとき。
 
 ## hash
-- ade3b379627f9f40fe5e7aee91f3a8511998dffd1817884418224c2f9c7c4c44
+- b5982b09e4ce2166f96a96ee67c2e95418af42cdfc1006f94bbe53b9ce6eef84
 
 # `session`
 

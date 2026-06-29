@@ -18,21 +18,21 @@
 # `oracle`
 
 ## Summary
-- review oracle 用 builder 群のうち、旧来の実装側 import 経路を維持する互換層と、正本側 builder の生成結果に既知の prompt 表記補正をかける薄い wrapper を置く領域。
-- finding の列挙・判定・challenger 検証は実装本体を持たず正本側へ再公開し、finding 統合と advocate 検証は正本側 builder へ委譲したうえで oracle root placeholder 表記の局所補正だけを担う。
-- review oracle の実処理・仕様本体を読む入口ではなく、realization 側に残る互換 import path と一時的な prompt 補正経路を確認するための入口である。
+- 対象階層は、review oracle builder 関連の realization 側互換 package であり、旧来 import 経路から正本側実装へ委譲する薄い module 群と、一部 prompt の oracle root 表記だけを補正する wrapper を収める。
+- review finding の列挙・判定・challenger validation は実装本体を持たない再公開層として位置づけられ、呼び出し元が正本側経路へ移行した後に削除できる互換境界を示す。
+- merge finding と finding advocate validation は、正本側 builder で生成した AgentCallParameter の他属性を維持しつつ、prompt 内の oracle root placeholder typo だけを補正する realization 側入口である。
 
 ## Read this when
-- review oracle builder 周辺で、古い realization 側 import 経路がまだ残っている理由、削除条件、正本側実装への委譲関係を確認したいとき。
-- finding 統合や advocate 検証の AgentCallParameter 生成で、正本側 builder の返す parameter を保ったまま prompt 内の oracle root placeholder 表記だけを補正する wrapper の存在を調べたいとき。
-- 同名機能の実装がこの階層にあるように見えるが、実体が正本側にあるのか、この階層で補正しているのかを切り分けたいとき。
-- 互換 module を削除できるか、または呼び出し元を canonical oracle path へ移行する必要があるかを判断したいとき。
+- review oracle builder 周辺で、旧来の realization 側 import 経路が正本側実装へどう委譲されているかを確認したいとき。
+- review finding の列挙・判定・challenger validation の互換 module が残っている理由や削除条件を確認したいとき。
+- review oracle merge finding や finding advocate validation の AgentCallParameter 生成で、正本側 builder への委譲境界と prompt 内 oracle root 表記補正を確認したいとき。
+- 同名機能の実装がこの階層にあるように見えるが、実体が正本側にあるのか realization 側 wrapper にあるのかを切り分けたいとき。
 
 ## Do not read this when
-- review finding の列挙・判定・検証ロジックそのものや、prompt の正本仕様を確認したいとき。この階層ではなく正本側 oracle 実装や対応する仕様断片を読む。
-- review oracle 以外の builder、CLI 表示、テスト方針、AgentCallParameter 型の共通仕様を調べたいとき。より直接その責務を持つ対象へ進む。
-- 新しい判定ロジックや検証処理を追加・変更したいとき。互換再公開 module は実装本体ではなく、補正 wrapper も正本側 builder への追従用の薄い処理に限られる。
-- 単に生成済み parameter の利用側挙動を追うだけで、旧 import 経路や prompt 表記補正の有無が関係しないとき。
+- review finding の列挙・判定・検証そのものの正本仕様、出力内容、検出ロジック、評価ロジックを調べたいとき。正本側の oracle 実装を読む。
+- AgentCallParameter の共通型、model・reasoning・file access・structured output schema などの基礎定義を調べたいとき。
+- review oracle 以外の builder、CLI 表示、テスト方針、または互換 import と prompt 表記補正に関係しない review 機能全般を調べたいとき。
+- 新しい review 判定ロジックや検証処理を追加・変更したいとき。この階層の多くは委譲または最小補正だけを担うため、実装本体の対象へ進む。
 
 ## hash
-- 800f388a4635bfdb36722be843a4f34b79e7d170fcdd7b884629e83bcc21ad55
+- 970b5b4cebe0698ddd6ee2e13b4b8bbc5afab4ecd7fe0dc2d7d1b99292896ed7
