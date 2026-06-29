@@ -269,8 +269,6 @@ def render_index_entry(
     digest: str | None = None,
 ) -> str:
     """Structured Output から INDEX.md entry Markdown を生成する。"""
-    # <work-root>/oracle/src/oracle/acp_builder/indexing/index_entry.json
-    # fixes the object shape; list emptiness is intentionally left to the schema.
     if not isinstance(entry, dict) or set(entry) != INDEX_ENTRY_KEYS:
         raise CmocError(
             "INDEX.md entry 生成結果が不正です。",
@@ -309,6 +307,7 @@ def entry_list(root: Path, path: Path, entry: dict | None, key: str) -> list[str
     # require bullet-only semantic entries that are useful before reading the target.
     if (
         isinstance(value, list)
+        and value
         and all(
             isinstance(item, str)
             and item.strip()
@@ -321,5 +320,5 @@ def entry_list(root: Path, path: Path, entry: dict | None, key: str) -> list[str
     raise CmocError(
         "INDEX.md entry 生成結果が不正です。",
         ["cmoc indexing を再実行してください。"],
-        f"{path.relative_to(root)}: `{key}` は 1 行文字列配列である必要があります。",
+        f"{path.relative_to(root)}: `{key}` は 1 件以上の 1 行文字列配列である必要があります。",
     )
