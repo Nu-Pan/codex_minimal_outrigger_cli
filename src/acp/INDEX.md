@@ -19,20 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP builder 領域の realization 側公開入口を束ねる階層。正本側実装を既存の import 経路から利用できるようにする互換境界を中心に、apply fork、review oracle、session join、TUI パラメータ、indexing 関連の下位入口へ進むための案内を担う。
-- この階層の主な役割は builder 本体仕様や処理本体を所有することではなく、oracle 側に置かれた正本実装との対応関係、既存参照経路の維持、互換入口の削除可否、下位領域への委譲境界を確認するための入口になること。
+- ACP builder に関する realization 側の入口を束ねる領域。正本側 builder 実装への薄い互換入口と、apply・indexing・review・session・TUI 各領域への導線を持つ。
+- 主な責務は、既存 import path を壊さず正本側実装へ接続すること、apply fork や review oracle などの下位 builder adapter へ進むための境界を示すこと、互換入口を残す理由と削除条件を確認できるようにすること。
 
 ## Read this when
-- ACP builder の realization 側 import path が、oracle 側の builder 実装や正本 package 構造へどのように接続されているか確認したいとき。
-- 既存の ACP builder 公開入口や互換 package を削除・移動・置換してよいか判断するために、残す理由や削除条件を確認したいとき。
-- apply fork、review oracle、session join、TUI パラメータ、indexing のいずれかに関する builder 入口の所在を、この階層から切り分けたいとき。
-- realization 側が独自処理を持つ箇所と、oracle 側 builder へ薄く委譲または再公開しているだけの箇所を区別したいとき。
+- realization 側の ACP builder から、apply・indexing・review・session・TUI のどの下位領域へ進むべきか判断したいとき。
+- 既存の acp.builder 系 import path が、正本側 builder 実装や同名 package 構造とどのように対応しているか確認したいとき。
+- 互換入口を維持・削除・移動してよいか、残存参照や正本側への委譲境界を起点に調べたいとき。
+- apply fork の agent call parameter 構築、review oracle 実行用 parameter 生成、TUI parameter 関連再公開など、builder adapter の所在を探し始めるとき。
 
 ## Do not read this when
-- ACP builder の prompt 本文、structured output schema、モデル選択、file access mode などの正本仕様を確認したいとき。対応する oracle 側の本文を読む。
-- apply、review、session、TUI、indexing の具体的な処理内容や判定基準、入出力仕様を調べたいとき。互換入口ではなく、委譲先の正本実装またはより直接の下位実装へ進む。
-- CLI 全体の制御フロー、fork 作成、git 操作、状態管理、共通型定義、path model などを調べたいとき。この階層はそれらの責務を所有しない。
-- 新規機能の実装場所やテスト対象を探しており、既存 import path 互換や oracle 側への接続関係が主題ではないとき。
+- 正本側 builder の具体的な仕様、prompt 本文、structured output schema、モデル選択、file access mode などを確認したいとき。対応する oracle 側の本文を読む。
+- apply fork や review oracle の具体的な関数・クラス・制御フローがすでに分かっているとき。該当する下位領域または実装本体へ直接進む。
+- CLI コマンド全体の制御フロー、fork 作成、git 操作、引数処理、TUI 画面やイベント処理など、builder adapter 以外の実体を調べたいとき。
+- AgentCallParameter 型、path model、基本列挙値などの共通定義そのものを確認したいとき。この領域はそれらの定義を所有しない。
 
 ## hash
-- d76a837643de314a4b49b67f51757cdd04b9b17494549d139181bc2de376475f
+- d947a0e831c8ed3bb5ad7fb5325eb27c4acbdce7c2e2fa2f3a510f139028d7f8

@@ -1,24 +1,23 @@
 # `acp`
 
 ## Summary
-- realization 側で、oracle 側にある ACP builder 正本実装を既存の公開 import 経路から利用できるようにする互換入口のまとまり。実装本体を複製する領域ではなく、既存参照を維持しながら oracle 側へ再公開または薄く委譲する境界を担う。
-- 下位には apply fork、review oracle、session join、TUI、indexing に対応する builder 入口があり、多くは oracle 側実装の再公開で、一部は実行時 import 経路の確保や oracle src 側 prompt typo の最小補正を行う。
+- realization 側で既存の ACP builder 系 import 参照を維持し、正本側 builder 実装へ接続するための互換入口領域。公開 import 面を保つ package 群と、apply fork・indexing・review oracle・session join・TUI などの builder adapter への導線を持つ。
+- 主な責務は、正本側の builder 実体を複製せずに既存参照を成立させること、runtime の AgentCallParameter を正本側実装から受け渡すこと、必要最小限の realization 側補正や再公開を通じて下位機能の agent call parameter 構築へ到達できるようにすること。
 
 ## Read this when
-- 既存の ACP builder 系 import 参照を oracle 側実装または別の実体 module へ移行する作業で、互換入口を残す理由や削除条件を確認したいとき。
-- realization 側または利用者向け公開面に残る ACP builder 系 import 経路が、oracle 側の正本実装へどのように接続されているか確認したいとき。
-- apply fork、review oracle、session join、TUI、indexing の builder 入口がこの互換層で再公開されているのか、実行時に薄い補正や import 経路調整を持つのかを切り分けたいとき。
-- oracle 側 ACP builder の正本実装を直接読む前に、既存公開面との互換境界や realization 側に残された最小処理の有無を把握したいとき。
+- realization 側に残る ACP builder 系 import path の互換維持、削除条件、正本側実装への委譲境界を確認したいとき。
+- apply fork の変更要約・所見列挙・所見適用、index entry 生成、review oracle の所見列挙・判定・統合・検証、session join の conflict resolution、TUI 起動・parameter 解決の builder adapter 所在を探し始めるとき。
+- 正本側 builder を複製せずに再公開している箇所、または正本側 prompt の実行用補正を realization 側で最小限行っている箇所を調べたいとき。
+- 利用者向け公開面や realization 側から既存 import path を移行できるか判断するため、互換 package と下位 builder 領域の境界を把握したいとき。
 
 ## Do not read this when
-- ACP builder の prompt 本文、structured output schema、モデル選択、file access mode などの正本仕様そのものを確認したいとき。互換入口ではなく oracle 側の正本実装へ進む。
-- apply、review、session、TUI、indexing の具体的な判定基準や生成内容を調べたいとき。この領域は多くが再公開または薄い委譲なので、対応する oracle 側本文を読む。
-- 新しい ACP 機能や API 仕様を追加する場所を探しているとき。既存 import 経路の互換維持が主題でないなら、正本仕様または実体実装の責務を持つ領域へ進む。
-- CLI 全体の制御フロー、git 操作、状態管理、path model、バックエンドへのモデル名解決などを調べたいとき。この領域はそれらの責務を所有しない。
-- 生成キャッシュやバイトコード成果物の内容を確認したいだけのとき。ルーティング上の本文根拠にはならない。
+- ACP builder の正本仕様、prompt 本文、structured output schema、モデル選択、file access mode などを確認したいとき。正本側の対応本文へ進む。
+- CLI コマンド全体の制御、fork 作成、git 操作、引数処理、TUI 画面やイベント処理など、builder adapter 以外の実装を調べたいとき。
+- AgentCallParameter 型、path model、共通列挙値などの基礎定義そのものを確認したいとき。この領域はそれらの定義を所有しない。
+- 対象の下位 builder adapter がすでに特定できており、具体的な関数・補正処理・再公開内容だけを読むべきとき。該当する下位対象へ直接進む。
 
 ## hash
-- 5d79511241eb37a4cddcd342c27a8dffcb44d37ea8dd9733d714530535853313
+- 5e0e172742bd3d205ff0087cd42a957b319ef94a55fedda13cf4aeb5d74e12b6
 
 # `basic`
 

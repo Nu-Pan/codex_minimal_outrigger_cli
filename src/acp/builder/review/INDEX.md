@@ -18,21 +18,20 @@
 # `oracle`
 
 ## Summary
-- review oracle に関する realization 側の互換入口をまとめた階層。多くは正本側実装を再公開するだけで、finding の列挙・判定・challenger 検証の実体は持たない。
-- 所見マージと所見擁護検証の agent call parameter 生成では、正本側 builder の戻り値を使い、実行前に prompt 内の oracle root token 表記だけを最小補正する。
-- review oracle の処理本体や正本仕様ではなく、realization 側の import path から正本由来の review oracle 機能へ到達するための境界を扱う。
+- レビュー oracle 領域の realization 側互換入口をまとめる package。多くの対象は正本側実装の再公開や薄い委譲であり、finding の列挙・判定・検証、merge finding や所見擁護検証の agent call parameter 生成経路へ、実装側 import path から到達するための境界として機能する。
+- 一部の builder は正本側の生成結果を保ったまま prompt 内の path token や oracle root 表記だけを最小補正するため、review oracle の実行用 parameter 生成で realization 側補正の有無と範囲を確認する入口になる。
 
 ## Read this when
-- realization 側から review oracle の finding 列挙・判定・検証・所見マージ機能が、どの正本側実装へ委譲されるか確認したいとき。
-- review oracle 関連の import path を変更・削除してよいか判断するために、互換入口としての役割を確認したいとき。
-- 所見マージまたは所見擁護検証の実行用 parameter 生成で、正本側 builder の戻り値に対してどの prompt token 補正が加わるか確認したいとき。
-- この階層の module が独自の review ロジックを持つのか、正本側実装の再公開または最小補正に留まるのかを切り分けたいとき。
+- realization 側から review oracle の finding 列挙・判定・検証機能がどの正本側実装または公開経路へ委譲されるかを確認したいとき。
+- review oracle 用の merge finding や所見擁護検証の AgentCallParameter 生成で、正本側 builder の戻り値に対して prompt だけを補正する箇所を探したいとき。
+- この階層の module が独自ロジックを持つのか、互換 import 境界として正本側実装を再公開するだけなのかを切り分けたいとき。
+- oracle root プレースホルダーや path token の表記差が、review oracle の実行経路でどこまで補正されるかを確認したいとき。
 
 ## Do not read this when
-- finding 列挙・finding 判定・challenger 検証の具体的な処理内容、入出力、判定基準を理解したいとき。その場合は委譲先の正本側実装を読む。
-- 所見マージや所見擁護検証の prompt 正本内容、structured output schema、review oracle の仕様断片を確認したいとき。正本側の対応する oracle src や関連 doc を読む。
-- review 実行全体の制御フロー、CLI の入出力、agent call parameter の共通型定義や属性の意味を調べたいとき。より上位または共通定義の本文へ進む。
-- oracle file の typo 修正提案や正本仕様の変更可否を判断したいとき。この階層は実行側の最小補正境界を示すだけで、正本変更の根拠を扱わない。
+- finding の列挙・判定・検証ロジックそのもの、入力・出力・判定基準、prompt 本文、structured output schema の正本内容を理解したいとき。その場合は委譲先の正本側 oracle src や関連 doc を読む。
+- AgentCallParameter 型、モデル選択、reasoning effort、file access mode などの共通仕様を調べたいとき。その場合は共通 parameter 定義へ進む。
+- review oracle 全体の設計、CLI の入出力、oracle file と realization file の基本概念、またはパスモデル全体を確認したいとき。より上位または該当責務の本文を読む。
+- 公開 API の詳細な関数・クラス実装や、finding 以外の review 処理を探しているとき。この階層は主に互換入口と限定的な prompt 補正を扱う。
 
 ## hash
-- 25f48ce6091efed3854a9d49eda78cc592ee9447656c567adaf9de8201bbf5ec
+- 7c819a224c762eea3c1a2f9a0faa3b0f86ae1de8a9e49d79560bedbbecf0098a

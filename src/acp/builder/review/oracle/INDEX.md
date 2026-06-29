@@ -51,20 +51,21 @@
 # `merge_finding.py`
 
 ## Summary
-- 所見マージ用の agent call parameter を oracle src 実装から取り込み、実行側で必要な最小限の prompt 補正を加える realization implementation。oracle src 側の既存ビルダーを正としつつ、生成された parameter の prompt 内に残る oracle root トークン表記の typo だけを実行前に置換して返す入口である。
+- レビュー用 oracle merge finding パラメータ生成を、正本側の既存生成処理へ委譲しつつ、既知 finding 入力を含む prompt 内の oracle root プレースホルダー表記だけを最小修正する realization 実装。
+- 正本仕様側の一時的な表記不整合に対して、生成済み AgentCallParameter の型・モデル・推論設定・アクセス設定・structured output schema 指定を保ったまま prompt だけを差し替える薄い互換層として機能する。
 
 ## Read this when
-- 所見マージ prompt の実行用 parameter がどの oracle src 実装を呼び出しているか確認したいとき。
-- 所見マージ prompt に含まれる oracle root トークン表記の補正理由や補正範囲を確認したいとき。
-- oracle src 由来の parameter を realization 側でどこまで変更してよいか、最小補正の実装境界を確認したいとき。
+- レビュー oracle の merge finding 用 AgentCallParameter がどのように作られるか、または known findings が prompt へ渡った後にどの補正を受けるかを確認したいとき。
+- oracle root プレースホルダー表記の `<<...>>` から `<...>` への補正が、どこで、どの範囲に限定して行われているかを調べるとき。
+- 正本側の builder 実装を realization 側でラップしている箇所や、生成パラメータの一部だけを変更して他の設定を維持する実装を確認したいとき。
 
 ## Do not read this when
-- 所見マージ prompt の正本内容そのもの、structured output schema、または review oracle の仕様断片を確認したいとき。
-- 所見マージ以外の review builder parameter 生成や、review 実行全体の制御フローを調べたいとき。
-- oracle file の typo を修正する提案や正本仕様の変更可否を判断したいとき。
+- レビュー finding の統合ロジックそのもの、finding の意味判定、重複判定、出力 schema の内容を調べたいとき。
+- AgentCallParameter 型の定義、モデル選択、reasoning effort、file access mode の一般仕様を調べたいとき。
+- oracle file と realization file の基本概念、または oracle root などのパスモデル全体を確認したいとき。
 
 ## hash
-- 9480575f8b473f6392c067c70449375146ec969882cb148940af310af578751a
+- c31535b2daad9099a12ca97622a917e1bbb7f3b5c1579039578d3e3753a3c8de
 
 # `validate_finding_advocate.py`
 

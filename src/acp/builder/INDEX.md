@@ -62,23 +62,23 @@
 # `review`
 
 ## Summary
-- review builder 領域の realization 側互換入口をまとめる階層。package 初期化は oracle 側同名 package との対応だけを示し、下位の oracle 互換入口は正本側 review oracle 実装の再公開や、所見マージ・所見擁護検証用 parameter 生成時の最小 prompt token 補正を扱う。
-- review oracle の処理本体や正本仕様ではなく、realization 側 import path から正本由来の review builder / review oracle 機能へ到達する境界を確認するための入口になる。
+- ACP builder の review 領域における realization 側 package 入口。正本側と対応する互換名前空間を置き、下位の review oracle 互換入口へ進むための境界として機能する。
+- この領域の実体は主に、正本側 review oracle 実装の再公開・薄い委譲と、review oracle 実行用 AgentCallParameter 生成時の prompt 内 path token や oracle root 表記の最小補正を扱う下位領域への導線である。
 
 ## Read this when
-- realization 側の review builder 領域が、oracle 側の同名 package や review oracle 関連実装へどのように接続しているかを確認したいとき。
-- review builder / review oracle 関連の import path、互換 package、再公開 module を変更・削除してよいか判断したいとき。
-- 所見マージまたは所見擁護検証の agent call parameter 生成で、正本側 builder の戻り値に対して realization 側が加える最小補正の有無を切り分けたいとき。
-- この領域が独自の review ロジックを持つのか、正本側実装への互換入口または最小補正に留まるのかを確認したいとき。
+- realization 側の ACP builder から review oracle 関連機能へ到達する import 境界を確認したいとき。
+- review builder 領域が正本側の同名 package と対応する互換 package として存在するかを確認したいとき。
+- review oracle の finding 列挙・判定・検証、merge finding、所見擁護検証の実行用 parameter 生成経路が、realization 側でどこへ委譲されるかを調べ始めたいとき。
+- 正本側 builder の戻り値を保ったまま、prompt 内の path token や oracle root 表記だけを補正する realization 側処理の入口を探したいとき。
 
 ## Do not read this when
-- review builder や review oracle の具体的な処理内容、finding 列挙・判定・challenger 検証の判定基準を理解したいとき。その場合は委譲先の正本側実装を読む。
-- review oracle の正本仕様断片、prompt 正本内容、structured output schema を確認したいとき。正本側の対応する oracle src や関連 doc を読む。
-- review 実行全体の制御フロー、CLI 入出力、agent call parameter の共通型定義や属性の意味を調べたいとき。より上位または共通定義の本文へ進む。
-- package 初期化や realization 側互換入口以外の実装変更先を探しているとき。
+- review builder の具体的な関数・クラス・制御フローだけを直接調べたいとき。この階層の初期化部分は package 互換性の確認に限られるため、下位の実装本文へ進む。
+- finding の列挙・判定・検証ロジック、prompt 本文、structured output schema、入力・出力・判定基準の正本内容を理解したいとき。その場合は委譲先の正本側 oracle src や関連 doc を読む。
+- AgentCallParameter 型、モデル選択、reasoning effort、file access mode などの共通仕様を調べたいとき。その場合は共通 parameter 定義へ進む。
+- review oracle 全体の設計、CLI の入出力、oracle file と realization file の基本概念、またはパスモデル全体を確認したいとき。より上位または該当責務の本文を読む。
 
 ## hash
-- 1eb450d3deaa53fc967a123aa4ab996b1839968991ac259f1661ad0809dd9a82
+- 0ebd281e9c22a7d8917f54a05424abef87098c2153807344115a4c225c519e19
 
 # `session`
 
