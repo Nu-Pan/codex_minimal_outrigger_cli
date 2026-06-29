@@ -10,11 +10,11 @@ def emit_codex_call_console(
     print(
         "\n".join(
             [
-                f"# {console_timestamp()} Codex CLI call",
-                f"- purpose: `{purpose}`",
-                f"- call_log: `{call_path}`",
-                f"- elapsed: `{format_duration(elapsed_sec)}`",
-                f"- returncode: `{returncode}`",
+                f"# {console_timestamp()} Codex CLI 呼び出し",
+                f"- 目的: `{purpose}`",
+                f"- 呼び出しログ: `{call_path}`",
+                f"- 経過時間: `{format_duration(elapsed_sec)}`",
+                f"- 終了コード: `{returncode}`",
             ]
         ),
         flush=True,

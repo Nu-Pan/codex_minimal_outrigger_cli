@@ -304,12 +304,12 @@ def test_session_abandon_requires_existing_home_branch(
     result = runner.invoke(app, ["session", "abandon"])
 
     assert result.exit_code != 0
-    assert "completed session abandon" in result.output
-    assert "- sub_command_log: `" in result.output
-    assert "- step_elapsed[2/3 execute session abandon]: `" in result.output
-    assert "- elapsed: `" in result.output
-    assert "- quota_wait: `" in result.output
-    assert "- returncode: `1`" in result.output
+    assert "完了 session abandon" in result.output
+    assert "- サブコマンドログ: `" in result.output
+    assert "- ステップ経過時間[2/3 実行 session abandon]: `" in result.output
+    assert "- 経過時間: `" in result.output
+    assert "- quota 待機時間: `" in result.output
+    assert "- 終了コード: `1`" in result.output
     assert current_branch(root) == session_branch
     assert "session home branch が存在しません。" in result.stdout
     assert "session home branch が存在しません。" not in result.stderr
@@ -559,7 +559,7 @@ def test_session_join_error_report_is_written_to_stdout(
     result = runner.invoke(app, ["session", "join"])
 
     assert result.exit_code != 0
-    assert "completed session join" in result.stdout
+    assert "完了 session join" in result.stdout
     assert "# ERROR" in result.stdout
     assert "git 未コミット差分が存在します。" in result.stdout
     assert "# ERROR" not in result.stderr

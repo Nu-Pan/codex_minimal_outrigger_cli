@@ -290,8 +290,8 @@ def test_apply_fork_writes_report_with_change_summary(
     rendered = report_path.read_text()
     assert "result: unconverged" in rendered
     assert "未収束: 回数上限に達したためループを終了しました。まだ所見が残っている可能性があります。" in rendered
-    assert "# cmoc apply fork report" in rendered
-    assert "## Finding Count" in rendered
+    assert "# cmoc apply fork 作業レポート" in rendered
+    assert "## 所見数の推移" in rendered
     assert "ドキュメント: README を更新した (README.md)" in rendered
     assert "apply fork change summary" in calls
     assert "apply fork commit message" not in calls
@@ -614,8 +614,8 @@ def test_apply_fork_report_does_not_invent_loop_when_no_targets(
     assert result.exit_code == 0
     rendered = report_path_from_stdout(result.stdout).read_text()
     assert "result: converged" in rendered
-    assert "- no finding enumeration loops were executed" in rendered
-    assert "- loop 1: 0" not in rendered
+    assert "- 所見列挙ループは実行されませんでした" in rendered
+    assert "- ループ 1: 0" not in rendered
 
 
 def test_apply_fork_rolling_uses_previous_apply_join_commit(

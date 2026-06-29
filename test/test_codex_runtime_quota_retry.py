@@ -183,11 +183,11 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert codex_events[1]["prompt_log_path"] == probe_logs[0]["prompt_log_path"]
     assert codex_events[1]["output_path"] == probe_logs[0]["output_path"]
     console = capsys.readouterr().out
-    assert "- purpose: `codex exec`" in console
-    assert "- purpose: `quota availability probe`" in console
-    assert f"- call_log: `{probe_call_path}`" in console
-    assert "- elapsed: `" in console
-    assert "- returncode: `0`" in console
+    assert "- 目的: `codex exec`" in console
+    assert "- 目的: `quota availability probe`" in console
+    assert f"- 呼び出しログ: `{probe_call_path}`" in console
+    assert "- 経過時間: `" in console
+    assert "- 終了コード: `0`" in console
 
 
 def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
