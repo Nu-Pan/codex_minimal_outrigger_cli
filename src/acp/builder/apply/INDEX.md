@@ -17,20 +17,17 @@
 # `fork`
 
 ## Summary
-- `cmoc apply fork` の各 agent 呼び出しに渡す parameter と prompt を組み立てる realization builder 群への入口。所見列挙、所見適用、変更要約の各フェーズについて、model class、reasoning effort、file access mode、構造化出力 schema、oracle prompt 断片の取り込み方を扱う。
-- apply fork 系 builder が oracle src を import するための共通補助処理と、レビュー結果・変更要約を機械可読に返すための出力契約も同じ責務範囲に含む。
+- apply fork 系の ACP builder 実装と、その agent 呼び出しに使う structured output schema をまとめるディレクトリ。oracle 側 builder への委譲、repo root 解決、oracle src import 準備、realization 側 AgentCallParameter への変換、および変更要約・所見列挙の出力契約への入口になる。
 
 ## Read this when
-- `cmoc apply fork` で、所見列挙・所見適用・変更要約 agent の呼び出し設定や prompt 構築を確認または変更したいとき。
-- apply fork 系 builder が repo root を解決し、oracle src の正本 prompt 断片や構造化 markdown renderer を import して利用する流れを追いたいとき。
-- 差分適用後の変更要約や実装レビュー所見を、どの schema 契約で agent に返させるか確認したいとき。
-- apply fork の builder 層が読み取り専用・書き込み可などの file access mode、model class、reasoning effort を各フェーズへどう割り当てるか調べたいとき。
+- `cmoc apply fork` の agent call parameter 生成経路を、変更要約・ファイル単位の所見列挙・所見適用などの段階別に探したいとき。
+- apply fork 系 builder が oracle 側の parameter を realization 側の AgentCallParameter や JSON schema path に橋渡しする構造を確認したいとき。
+- apply fork の作業レポートやレビュー結果に使う structured output schema の責務を確認したいとき。
 
 ## Do not read this when
-- fork 作成、作業ディレクトリ管理、git 操作、レポート保存など、`cmoc apply fork` 全体の実行制御を調べたいとき。
-- oracle 側の正本仕様断片、prompt builder、review standard、path model の内容そのものを確認または変更したいとき。
-- agent が返した所見や変更要約を実際に解釈・表示・永続化する処理を追いたいとき。
-- 個別の差分検出アルゴリズム、パッチ適用手順、CLI 入出力全体の整形だけを確認したいとき。
+- fork 作成、git 操作、差分適用、実行制御など `cmoc apply fork` 全体の制御フローを調べたいとき。
+- prompt 本文や正本仕様断片としての builder 挙動を確認したいとき。このディレクトリの実装は oracle 側 builder へ委譲する adapter が中心である。
+- repo root 解決、path model、AgentCallParameter、enum 型そのものの定義を調べたいとき。ここではそれらを利用するだけで、定義は別の基礎領域にある。
 
 ## hash
-- 6cb3fb94bf71ec735bd4c699bc64114ff883e9c9f0d781e49a27e3b2e814cdb4
+- 36155a900b41206d9c74b82a4f148cd7731f60c331831dbd922e880b0c44cec8

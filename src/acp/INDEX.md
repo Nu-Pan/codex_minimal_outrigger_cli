@@ -18,21 +18,21 @@
 # `builder`
 
 ## Summary
-- ACP builder 領域の realization implementation 側入口。正本側の ACP builder 実装や package 構造を、実行側の import 経路から利用できるようにする互換境界を中心に扱う。
-- apply、review、session、indexing、TUI などの下位 builder 領域へ進むための入口であり、多くは正本側実装の再公開または薄い調整を担う。
-- 実処理本体を持つ領域と、互換 package として正本側へ委譲するだけの領域が混在するため、どの builder 領域へ進むべきかを切り分ける案内点として位置づけられる。
+- ACP builder 領域の realization 側入口。正本側 builder 実装への import 互換経路を提供する薄い公開境界を中心に、apply、indexing、review、session、TUI など用途別の下位領域へ分岐する。
+- この階層は多くの場合、builder の実処理本体ではなく、正本側定義・生成結果・schema 連携を realization implementation 側から参照できる形に接続する場所である。
+- 下位領域には、apply fork 用パラメータ生成と structured output schema 連携、indexing の互換入口、review finding 系 builder の再公開と一部 prompt 補正、session join への入口、TUI 起動パラメータの互換調整が含まれる。
 
 ## Read this when
-- ACP builder 全体の realization 側 package 構成と、正本側 builder 実装への import 互換境界を把握したいとき。
-- apply、review、session、indexing、TUI の各 builder 領域のうち、どの下位領域が目的に近いかを選びたいとき。
-- agent 呼び出しパラメータ、prompt 構築、Structured Output schema、file access mode、model class などがどの builder 領域で扱われるかを大まかに切り分けたいとき。
-- 正本側実装を realization implementation 側から再公開しているだけの領域と、実行時契約に合わせた薄い補正を行う領域の境界を確認したいとき。
+- ACP builder 全体のうち、どの下位領域へ進むべきかを最初に切り分けたいとき。
+- realization 側の builder package が正本側 builder 構造とどのように import 互換を保っているか確認したいとき。
+- apply fork、indexing、review finding、session join、TUI 起動パラメータのいずれかに関わる builder の所在を探したいとき。
+- builder 実装が独自処理を持つのか、正本側実装の再公開・包み直し・実行側契約への小さな補正なのかを見分けたいとき。
 
 ## Do not read this when
-- 個別 builder の具体的な生成処理、prompt 内容、判定ロジック、入出力仕様を調べたいとき。その場合は該当する下位領域または委譲先の正本側実装を読む。
-- fork 作成、作業ディレクトリ管理、git 操作、CLI 入出力、レポート保存など、builder 呼び出し後の実行制御を調べたいとき。
-- oracle file の正本仕様断片そのもの、review standard、path model、基本定義の意味を確認したいとき。該当する oracle 側の本文を読む。
-- TUI の画面描画、入力処理、イベントループ、agent 応答の解釈・表示・永続化など、builder 以外の実処理を調べたいとき。
+- 各 builder の具体的な生成アルゴリズム、prompt 構成、判定基準、入出力仕様を詳しく理解したいとき。その場合は対応する正本側実装や仕様断片を読む。
+- CLI コマンド全体の制御フロー、git 操作、差分適用、TUI の画面描画やイベントループなど、builder 境界の外側の処理を調べたいとき。
+- repo root 解決、path model、AgentCallParameter、enum、Structured Output schema そのものなど、共通基礎定義を確認したいとき。
+- 互換 import 経路や realization 側 adapter の確認が不要で、実処理本体だけを変更したいとき。
 
 ## hash
-- f414b92a0ccc847f573423fdb890da9419132a336cf92c49efced08fc9185710
+- dd39ba0533c427921d57f5f568ac20d6d52c281f17eeee5a94d7757f84d08e6a

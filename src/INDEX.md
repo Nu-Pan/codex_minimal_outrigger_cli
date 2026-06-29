@@ -1,23 +1,21 @@
 # `acp`
 
 ## Summary
-- ACP 関連の realization implementation をまとめる領域。oracle 側 ACP 実装と互換の import 経路を実行側から成立させる入口であり、実処理の多くは oracle 側実装の再公開または薄い実行時補正として提供される。
-- ACP builder 系の agent 呼び出しパラメータ構築、Structured Output schema 参照、prompt 構築、review・apply・session・indexing・TUI 向けの下位構成へ進むための起点になる。
+- ACP realization implementation の最上位 package。oracle src 側の acp 名前空間と builder 領域への import 互換入口を提供し、実処理本体よりも正本側実装・生成結果・schema 連携へ到達するための薄い接続層として位置づけられる。
+- 直下には、package import を成立させる最小入口と、apply、indexing、review、session、TUI など用途別の builder 下位領域へ進む入口がある。
 
 ## Read this when
-- ACP 名前空間または ACP builder 系を realization implementation 側から import する経路を確認したいとき。
-- review、apply、session、indexing、TUI などの ACP builder 領域のうち、どの下位実装へ進むべきかを切り分けたいとき。
-- oracle 側 ACP 実装を実行側で再公開している箇所と、実行時契約に合わせて薄く補正している箇所の境界を確認したいとき。
-- agent 呼び出しパラメータ、prompt、Structured Output schema、file access mode、model class など、ACP builder 呼び出し前の構築責務を追いたいとき。
+- realization 側の acp 名前空間が oracle src 側とどのように import 互換を保っているかを確認したいとき。
+- ACP builder 関連の実装を探し始めるうえで、apply fork、indexing、review finding、session join、TUI 起動パラメータのどの下位領域へ進むべきかを切り分けたいとき。
+- acp 配下が独自の処理本体を持つ領域なのか、正本側定義や生成物を再公開・包み直し・実行側契約へ接続する領域なのかを確認したいとき。
 
 ## Do not read this when
-- CLI コマンドの制御、fork 作成、作業ディレクトリ管理、git 操作、レポート保存など、ACP builder 呼び出し後の実行制御を調べたいとき。
-- oracle file の正本仕様断片、path model、review standard など、人間が所有する仕様本文を確認したいとき。
-- ACP と無関係な realization implementation、realization test、または補助ファイルの責務を調べたいとき。
-- 個別の builder 処理内容や prompt・schema・判定ロジックを直接確認したいときは、この領域全体ではなく目的に対応する下位領域へ進む。
+- ACP の具体的なデータ構造、生成アルゴリズム、prompt 構成、判定基準、入出力仕様を詳しく調べたいとき。その場合は対応する下位領域または正本側実装・仕様断片を読む。
+- CLI 全体の制御フロー、git 操作、差分適用、画面描画、イベントループなど、acp の import 互換境界や builder 接続層の外側の処理を調べたいとき。
+- repo root 解決、path model、AgentCallParameter、enum、Structured Output schema など、acp 以外の共通基礎定義を確認したいとき。
 
 ## hash
-- 85c334b11f5598d0d753a16cb449a0a2e6a8c759368681151ea848ed0fbfd533
+- 5a83242ce3f06e1205c92cd19ee1c7201581e8c931116d455f4fb14e53d04914
 
 # `basic`
 

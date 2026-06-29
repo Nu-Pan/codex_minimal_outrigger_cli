@@ -17,25 +17,21 @@
 # `apply`
 
 ## Summary
-- apply builder 領域の package 入口と、apply fork の agent 呼び出し設定を組み立てる builder 群を含む領域。主に所見列挙、所見適用、変更要約の各フェーズについて、prompt、model class、reasoning effort、file access mode、構造化出力契約、oracle 由来の prompt 断片の取り込みを扱う。
-- package 初期化要素は互換 package としての位置づけを示すだけで、実処理は fork 系 builder 側に集約される。
+- apply 系の ACP builder 領域への入口となる package。apply builder 全体の実体は下位要素に分かれており、package 初期化の互換要素と、apply fork 用の AgentCallParameter 生成・structured output schema 連携を扱う下位ディレクトリを束ねる。
+- oracle 側の apply builder 構造に対応する realization 側 adapter 群を探すための分岐点であり、具体的な apply fork の builder 実装や出力契約へ進む入口になる。
 
 ## Read this when
-- apply fork で起動する agent ごとの parameter や prompt 構築を確認または変更したいとき。
-- 所見列挙、所見適用、変更要約の各フェーズに割り当てられる model class、reasoning effort、file access mode、構造化出力 schema を調べたいとき。
-- builder 層が repo root を解決し、oracle src の正本 prompt 断片や構造化 markdown renderer を import して使う流れを追いたいとき。
-- 差分適用後の変更要約や実装レビュー所見を、agent にどの機械可読な契約で返させるか確認したいとき。
-- apply builder 領域が oracle 側 package 構造と対応する互換 package として存在しているかを確認したいとき。
+- apply 系 ACP builder の中で、package 初期化だけを見るべきか、apply fork 系の builder・schema へ進むべきかを判断したいとき。
+- oracle 側 apply builder と realization 側 AgentCallParameter 生成の対応関係を、apply 領域の入口から辿りたいとき。
+- `cmoc apply fork` の変更要約、ファイル単位の所見列挙、所見適用などに関わる builder や structured output schema の所在を探したいとき。
 
 ## Do not read this when
-- fork 作成、作業ディレクトリ管理、git 操作、レポート保存など、apply fork 全体の実行制御を調べたいとき。
-- oracle 側の正本仕様断片、prompt builder、review standard、path model の内容そのものを確認または変更したいとき。
-- agent が返した所見や変更要約を実際に解釈、表示、永続化する処理を追いたいとき。
-- 個別の差分検出アルゴリズム、パッチ適用手順、CLI 入出力全体の整形だけを確認したいとき。
-- 公開関数、クラス、入出力仕様、エラー処理の定義だけを探しているとき。package 初期化要素にはそれらの実体は含まれない。
+- fork 作成、git 操作、差分適用、実行制御など apply fork コマンド全体の制御フローを調べたいとき。
+- prompt 本文や正本仕様断片としての builder 挙動を確認したいとき。この領域は oracle 側 builder へ橋渡しする realization 側要素が中心である。
+- repo root 解決、path model、AgentCallParameter、enum 型そのものの定義を調べたいとき。この領域ではそれらを利用するが、基礎定義は別領域にある。
 
 ## hash
-- 5559036b5467c9fd253db18ab87f1db9aa7bdecb4f844eec4f0befca029cfc73
+- f3bb50f5ae4050a0f30926694c2f0db98c2c8b33a240bf8fd27c0ccbc04848bf
 
 # `indexing`
 
