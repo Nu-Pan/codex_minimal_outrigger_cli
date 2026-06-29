@@ -20,23 +20,23 @@
 # `apply`
 
 ## Summary
-- apply 系の agent call parameter builder への入口となる領域。package 初期化要素と fork 向け builder 群を含み、oracle 側 builder との対応や realization 側 parameter 型への適合境界を辿るための場所である。
-- apply fork については、変更要約、ファイル単位所見列挙、所見適用などの個別 agent 呼び出しパラメータ構築に進むための下位領域を持つ。
+- apply 系の agent call parameter builder への入口となる領域。package 初期化要素と、fork 適用で使う builder 群への下位入口を含み、実処理は主に下位の個別 builder 領域に委ねる。
+- realization 側から oracle 側 builder を利用するための互換 package として位置づけられ、apply 系の処理準備を調べる際に、まず package 構造と下位領域の分担を見分けるための階層である。
 
 ## Read this when
-- apply builder 領域が oracle 側の package 構造とどう対応しているかを確認したいとき。
-- apply fork で呼び出す agent call parameter の realization 側 builder 群から、目的に合う実装本文を選びたいとき。
-- oracle 側 builder への委譲、oracle src の import 準備、oracle parameter から realization 側 AgentCallParameter への変換に関わる apply fork 用実装を調べたいとき。
-- 変更要約、ファイル単位所見列挙、所見適用のいずれかについて、呼び出し入口や保存・変換の境界を確認したいとき。
+- apply 系の agent call parameter builder がどの下位領域に分かれているかを確認したいとき。
+- apply builder 領域が oracle 側の package 構造に対応する互換 packageとして置かれているか確認したいとき。
+- fork 適用に関する agent 呼び出し準備、oracle builder への委譲、realization 側 parameter 型への適合を調べる入口を探しているとき。
+- 変更要約、ファイル単位所見列挙、所見適用など、apply fork の個別 agent 呼び出し準備へ進む前に上位の配置を確認したいとき。
 
 ## Do not read this when
-- apply fork 全体の制御フロー、fork 作成、branch 操作、CLI 引数処理、diff 生成そのものを調べたいときは、上位の apply fork 実装へ進む。
-- agent prompt、正本仕様、人間意図、出力条件そのものを確認したいときは、対応する oracle 側 builder や oracle 文書へ進む。
-- apply fork に限らない汎用 git helper、path model、ACP 共通型、または他領域の builder を調べたいときは、それぞれの共通実装や対象領域へ進む。
-- 公開関数、クラス、入出力仕様、エラー処理ではなく、package として扱うための最小初期化だけを確認したい場合を除き、初期化要素だけを読んでも具体的な処理は分からない。
+- apply fork の具体的な builder 実装や repo root 解決、oracle import 経路補正、parameter 型変換を直接調べたいときは、下位の fork 用 builder 領域へ進む。
+- apply fork コマンド全体の制御フロー、fork 作成、branch 操作、diff 生成、CLI 引数処理を調べたいときは、コマンド実装や上位の apply fork 実装へ進む。
+- agent prompt、出力条件、変更要約や所見処理の正本仕様を確認したいときは、委譲先の oracle 側 builder または正本仕様断片を読む。
+- package 初期化の互換性メモだけで十分な場合を除き、この階層自体には公開 API や具体的な適用ロジックの定義を期待しない。
 
 ## hash
-- 496dbe5dd219a074ee3901785ae6c20ccdf6e6a176e813982e3ed6d846d8068e
+- 701ec977b0f06fbfb6f6a79d4e93b731b69f1160c2dc4895c4de00ac87f32c96
 
 # `indexing`
 

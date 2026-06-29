@@ -1,24 +1,25 @@
 # `acp`
 
 ## Summary
-- ACP builder 系の realization 側互換入口をまとめる領域。oracle 側の正本実装を複製せず、既存の公開 import 経路を維持しながら実体 module や oracle 側 package へ委譲する役割を持つ。
-- 直下の互換入口は、既存の ACP 参照を残すための公開面維持に限定される。下位の builder 領域は、apply、review、session、TUI、indexing、quota probe などの agent call parameter builder 名前空間ごとに、互換再公開、委譲、局所補正、parameter 変換境界を扱う。
+- realization 側に残る ACP builder 互換 import 面の入口。正本側 builder 実装を複製せず、既存の `acp.*` / `acp.builder.*` 参照を成立させるための package と薄い adapter 群を置く。
+- apply fork、review oracle、indexing、session join、TUI 起動・parameter 解決などの AgentCallParameter 生成経路を正本側実装へ接続し、必要な範囲で repo root 解決、oracle src import 経路補正、生成 prompt の局所補正、TUI 用 file access mode 公開を担う。
+- quota availability probe は、現行の正本側に専用 builder がないため、runtime 側へ prompt literal を置かないための暫定 adapter として扱われる。
 
 ## Read this when
-- ACP builder に関する古い公開 import 経路が、oracle 側の canonical 実装や realization 側の実体 module へどう接続されているか確認したいとき。
-- 既存利用者や realization 側に残る ACP 系 import を維持する理由、移行状況、削除条件を判断したいとき。
-- agent call parameter 生成について、realization 側で互換層、委譲層、局所的な prompt 表記補正、parameter 変換境界のどれとして扱われているか切り分けたいとき。
-- apply fork、review、session join、TUI 起動や resolve parameter、indexing、quota availability probe などの builder 入口から、目的に合う下位領域を選びたいとき。
+- 既存の `acp.*` または `acp.builder.*` import 経路が、正本側の ACP builder 実装へどう接続されているか確認したいとき。
+- apply fork、review oracle、indexing、session join、TUI 関連、quota availability probe の AgentCallParameter 生成入口や互換公開面を探しているとき。
+- 正本側 builder へ委譲する前後で、repo root 解決、oracle src import 経路補正、parameter 型の適合、prompt 内 placeholder や typo の最小補正、TUI 用 mode tuple 公開があるか確認したいとき。
+- 互換入口や暫定 adapter を残す理由、または削除できる条件を判断したいとき。
 
 ## Do not read this when
-- ACP builder の canonical な仕様、人間意図、prompt 正本、正本側の組み立て仕様を確認したいときは、対応する oracle 側の仕様断片または実装へ進む。
-- AgentCallParameter 型、FileAccessMode、path model、git helper などの共通型や共通処理そのものを調べたいときは、それぞれの基本実装へ進む。
-- apply fork 全体の制御フロー、branch 操作、CLI 引数処理、diff 生成、quota 待機、resume token、call log などの runtime 挙動を追いたいときは、呼び出し元の実装へ進む。
-- TUI の画面表示、イベント処理、入力操作、UI 構成など、parameter builder ではない UI 本体を調べたいとき。
-- indexing や review finding の生成、探索、判定、検証ロジックそのものを変更したいときは、互換再公開層ではなく実処理を持つ正本側または対象実装を読む。
+- ACP builder の prompt 仕様、出力 schema、判定基準、所見処理などの正本内容を確認したいときは、委譲先の正本側実装または正本仕様断片を読む。
+- apply fork、review、session join、TUI、indexing の処理本体や制御フローを変更したいときは、この互換層ではなく実体を持つ実装側を読む。
+- Codex exec の quota 待機状態機械、resume token、call log、subcommand event など runtime 側の制御を調べたいときは、runtime 実装を読む。
+- TUI の画面表示、イベント処理、入力操作など UI 本体を調べたいときは、TUI 実装側を読む。
+- AgentCallParameter、FileAccessMode、path placeholder などの共通型や基礎概念そのものを確認したいときは、基本モジュールや path model を読む。
 
 ## hash
-- b67262da8930e294bbb1e4403f7e6442154ea4817149fe4807cc6aed6ec3c85a
+- d281bafb7ff8cd0b1cc17c8914d0aa99c2888950e1113ce92b9715b4855c8dda
 
 # `basic`
 

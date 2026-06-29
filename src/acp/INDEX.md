@@ -19,23 +19,23 @@
 # `builder`
 
 ## Summary
-- ACP の agent call parameter builder について、realization 側の公開 import 経路と oracle 側の正本実装を接続する互換・委譲層を扱う領域。多くは既存参照を壊さないための薄い再公開入口で、実装本体は oracle 側に置かれる。
-- apply、review、session、TUI、indexing などの builder 名前空間ごとに、oracle 側 package 構造との対応、既存公開面の維持、削除条件、局所的な prompt 表記補正や parameter 変換境界を確認するための入口になる。
-- quota availability probe については、現行 oracle 側に専用 builder がない制約を補う暫定 adapter を含み、runtime に prompt literal を置かず AgentCallParameter 構築境界へ揃える役割を持つ。
+- realization 側の ACP builder 公開面を扱う領域。主な責務は、正本側に置かれた builder 実装を既存の公開 import 経路から利用できるようにする互換入口と、AgentCallParameter 生成の薄い委譲 wrapper を置くことである。
+- apply fork、review oracle、indexing、session join、TUI 起動・parameter 解決などの builder 経路を正本側実装へ接続し、一部では repo root 解決、oracle src import 経路補正、生成済み prompt の最小補正、TUI 用 file access mode tuple の公開を担う。
+- quota availability probe だけは、現行の正本側に専用 builder がないため、runtime 側に prompt literal を置かないための暫定 adapter として AgentCallParameter を組み立てる。
 
 ## Read this when
-- ACP builder 系の古い公開 import 経路が、oracle 側の canonical 実装や package 構造へどう接続されているか確認したいとき。
-- agent call parameter 生成について、realization 側でどこまでを互換層・委譲・変換・局所補正として扱っているか切り分けたいとき。
-- apply fork、review oracle builder、session join、TUI 起動や resolve parameter、indexing 関連の builder 入口から、目的に合う下位領域を選びたいとき。
-- 互換入口を残す理由、正本側実装への移行状況、既存参照がなくなった後の削除条件を確認したいとき。
-- quota probe 用の暫定 parameter builder が存在する理由、引き継ぐ parameter 境界、oracle 側専用 builder が追加された場合の置換対象を確認したいとき。
+- 既存の ACP builder import 経路が正本側 builder へどのように接続されているか確認したいとき。
+- apply fork、review oracle、indexing、session join、TUI 関連の AgentCallParameter 生成入口や互換公開面を探しているとき。
+- 正本側 builder への委譲前後で、repo root 解決、oracle src import 経路補正、parameter 型の適合、prompt 内 placeholder 表記の局所補正があるか確認したいとき。
+- quota availability probe の prompt と、元の parameter から引き継ぐ model、reasoning、file access の境界を確認したいとき。
+- 互換入口や暫定 adapter を残す理由、または削除できる条件を判断したいとき。
 
 ## Do not read this when
-- AgentCallParameter 型、FileAccessMode、path model、git helper などの共通型・共通処理そのものを調べたいときは、それぞれの基本実装へ進む。
-- prompt の正本仕様、人間意図、builder の canonical な組み立て仕様を確認したいときは、対応する oracle 側の仕様断片または実装を読む。
-- apply fork 全体の制御フロー、branch 操作、CLI 引数処理、diff 生成、quota 待機状態機械、resume token、call log などの利用側 runtime 挙動を追いたいときは、呼び出し元の実装へ進む。
-- TUI の画面表示、イベント処理、入力操作、UI 構成など、parameter builder ではない UI 本体を調べたいとき。
-- indexing や review finding の生成・探索・判定・検証ロジックそのものを変更したいときは、互換再公開層ではなく実処理を持つ正本側または対象実装を読む。
+- builder の prompt 仕様、出力 schema、判定基準、所見処理などの正本内容を確認したいときは、委譲先の正本側実装または正本仕様断片を読む。
+- apply fork、review、session join、TUI、indexing の処理本体や制御フローを変更したいときは、この互換層ではなく実体を持つ実装側を読む。
+- Codex exec の quota 待機状態機械、resume token、call log、subcommand event など runtime 側の制御を調べたいときは、runtime 実装を読む。
+- TUI の画面表示、イベント処理、入力操作など UI 本体を調べたいときは、TUI 実装側を読む。
+- AgentCallParameter、FileAccessMode、path placeholder などの共通型や基礎概念そのものを確認したいときは、基本モジュールや path model を読む。
 
 ## hash
-- 21b2c425b5fa37d72873f57fd9bae15ac676a8684bd5511ce6b9341ea7aaf7ea
+- 241bdd22c5749dc57b2371dcb147636186cf73951a4aaa9628dd641c17c8afb2
