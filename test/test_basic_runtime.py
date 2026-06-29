@@ -5,6 +5,7 @@
 subcommand log、FileAccessMode、binary 判定は実行前提として一緒に崩れやすく、
 分割すると共通 fixture と root 状態の読み取り文脈が分散する。現状は basic runtime
 回帰として一箇所に保つ方が凝集性が高い。
+根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import shutil

@@ -5,6 +5,7 @@
 dirty worktree、想定外差分、merge conflict は同じ join 操作の可否を判断する
 境界条件であり、分割すると同じ fixture と git 状態の読み取り文脈が分散する。
 現状は apply join の成功条件と拒否条件を一箇所で読む方が凝集性が高い。
+根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import json

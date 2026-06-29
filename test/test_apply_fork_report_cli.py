@@ -5,6 +5,7 @@
 閉じている。収束、未収束、error、変更ファイル再調査、rolling fork は同じ loop と
 report schema の観測結果として読まれるため、分割すると期待値の文脈が分散する。
 現状は apply fork report の読み取り文脈を一箇所に保つ方が凝集性が高い。
+根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import json

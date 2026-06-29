@@ -5,6 +5,7 @@ Codex CLI から返る機械的な実行結果の解釈に閉じている。sand
 CODEX_HOME、child process tracking、schema 配置、JSONL error 判定は同じ
 subprocess 境界の不変条件を共有するため、分割すると呼び出し側が同時に読むべき
 失敗時文脈が増える。現状は Codex profile 境界として一箇所に保つ方が凝集性が高い。
+根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import fcntl

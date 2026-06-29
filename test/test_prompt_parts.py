@@ -5,6 +5,7 @@ schema の構築結果を検証することに閉じている。標準 prompt、
 builder parameter は最終 prompt の同じ読み取り文脈で組み合わさるため、分割すると
 共通の render/schema 期待値を追うために複数ファイルを読む必要が生じる。
 現状は prompt 構築の回帰観点を一箇所に保つ方が凝集性が高い。
+根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import json

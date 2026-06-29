@@ -5,6 +5,7 @@
 running process の停止は同じ abandon 操作の成功・警告・失敗条件を共有するため、
 分割すると同じ state fixture と境界条件を複数ファイルで読み直すことになる。
 現状は apply abandon の読み取り文脈を一箇所に保つ方が凝集性が高い。
+根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import json

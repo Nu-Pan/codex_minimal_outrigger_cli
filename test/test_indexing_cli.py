@@ -5,6 +5,7 @@ indexing subcommand が routing document を更新する外部挙動に閉じて
 対象列挙、hash 再利用、Codex 生成、commit 条件、linked worktree、INDEX.md conflict
 解決は同じ routing 更新ワークフローの観測点であり、分割すると fixture と git 状態の
 読み取り文脈が分散する。現状は indexing CLI 回帰として一箇所に保つ方が凝集性が高い。
+根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import json

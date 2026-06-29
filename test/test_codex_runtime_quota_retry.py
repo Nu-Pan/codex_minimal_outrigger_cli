@@ -5,6 +5,7 @@ Codex exec の外部挙動に閉じている。probe 共有、resume token、再
 subcommand log、CODEX_HOME/cwd は同じ retry 状態機械の観測点であり、分割すると
 同じ fake Codex 呼び出し列を追う文脈が分散する。現状は quota retry 回帰として
 一箇所に保つ方が凝集性が高い。
+根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import json
