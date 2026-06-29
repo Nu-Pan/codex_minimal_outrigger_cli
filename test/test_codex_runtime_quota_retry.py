@@ -5,6 +5,7 @@ Codex exec の外部挙動に閉じている。probe 共有、resume token、再
 subcommand log、CODEX_HOME/cwd は同じ retry 状態機械の観測点であり、分割すると
 同じ fake Codex 呼び出し列を追う文脈が分散する。現状は quota retry 回帰として
 一箇所に保つ方が凝集性が高い。
+根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import json
@@ -26,10 +27,31 @@ from _support import (
     write_python_executable,
 )
 from commons.runtime_codex import run_codex_exec
+from commons.runtime_errors import CmocError
+
+
+PROBE_PROMPT = "ビルダー由来の確認入力"
 
 
 def prompt_log_text(path: str) -> str:
     return Path(path).read_text()
+
+
+def stub_quota_probe_builder(
+    monkeypatch: pytest.MonkeyPatch, probe_prompt: str = PROBE_PROMPT
+) -> str:
+    monkeypatch.setattr(
+        runtime_codex_exec,
+        "_quota_availability_probe_parameter",
+        lambda base_parameter: AgentCallParameter(
+            base_parameter.model_class,
+            base_parameter.reasoning_effort,
+            base_parameter.file_access_mode,
+            probe_prompt,
+            None,
+        ),
+    )
+    return probe_prompt
 
 
 def test_run_codex_exec_polls_and_resumes_after_quota(
@@ -47,6 +69,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
         ]
     )
     monkeypatch.setattr(runtime_codex_exec, "timestamp", lambda: next(timestamps))
+    probe_prompt = stub_quota_probe_builder(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "calls.jsonl"
@@ -64,7 +87,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
             "    output.write_text(json.dumps({'ok': True}))",
             "    print(json.dumps({'type': 'turn.completed'}))",
             "    sys.exit(0)",
-            "if stdin == 'quota availability probe':",
+            f"if stdin == {probe_prompt!r}:",
             "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
             "    output.write_text(json.dumps({'probe': True}))",
             "    print(json.dumps({'type': 'turn.completed'}))",
@@ -97,9 +120,9 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     argv_calls = [record["args"] for record in call_records]
     assert argv_calls[0][-1] == "-"
     assert all(record["codex_home"] == str(codex_home) for record in call_records)
-    assert call_records[1]["stdin"] == "quota availability probe"
-    assert argv_calls[1][:2] == ["exec", "--profile"]
-    assert argv_calls[1][2].startswith("cmoc_")
+    assert call_records[1]["stdin"] == probe_prompt
+    assert argv_calls[1][:3] == ["exec", "--skip-git-repo-check", "--profile"]
+    assert argv_calls[1][argv_calls[1].index("--profile") + 1].startswith("cmoc_")
     assert "--json" in argv_calls[1]
     assert "--output-last-message" in argv_calls[1]
     assert argv_calls[1][-1] == "-"
@@ -126,13 +149,16 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     )
     assert len(probe_logs) == 1
     assert probe_logs[0]["argv"][1:] == argv_calls[1]
-    assert probe_logs[0]["profile_name"] == argv_calls[1][2]
+    assert (
+        probe_logs[0]["profile_name"]
+        == argv_calls[1][argv_calls[1].index("--profile") + 1]
+    )
     assert Path(probe_logs[0]["stdout_log_path"]).read_text().strip() == (
         '{"type": "turn.completed"}'
     )
     assert (
         prompt_log_text(probe_logs[0]["prompt_log_path"])
-        == "quota availability probe"
+        == probe_prompt
     )
     assert Path(probe_logs[0]["stderr_log_path"]).read_text() == ""
     assert Path(probe_logs[0]["output_path"]).read_text() == '{"probe": true}'
@@ -182,11 +208,61 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert codex_events[1]["prompt_log_path"] == probe_logs[0]["prompt_log_path"]
     assert codex_events[1]["output_path"] == probe_logs[0]["output_path"]
     console = capsys.readouterr().out
-    assert "- purpose: `codex exec`" in console
-    assert "- purpose: `quota availability probe`" in console
-    assert f"- call_log: `{probe_call_path}`" in console
-    assert "- elapsed: `" in console
-    assert "- returncode: `0`" in console
+    assert "- 目的: `codex exec`" in console
+    assert "- 目的: `quota availability probe`" in console
+    assert f"- 呼び出しログ: `{probe_call_path}`" in console
+    assert "- 経過時間: `" in console
+    assert "- 終了コード: `0`" in console
+
+
+def test_quota_probe_uses_realization_builder_when_quota_recovers(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
+    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
+    calls = []
+
+    def fake_run(argv, **kwargs):
+        prompt = kwargs["stdin"].read()
+        calls.append(prompt)
+        if len(calls) == 1:
+            return subprocess.CompletedProcess(
+                argv,
+                1,
+                '{"type":"thread.started","thread_id":"sess-1"}\n'
+                '{"type":"error","message":"Quota exceeded"}\n',
+                "",
+            )
+        output = Path(argv[argv.index("--output-last-message") + 1])
+        output.write_text(json.dumps({"ok": len(calls)}))
+        return subprocess.CompletedProcess(
+            argv,
+            0,
+            '{"type":"turn.completed"}\n',
+            "",
+        )
+
+    monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+    )
+
+    result = run_codex_exec(
+        parameter,
+        root=root,
+        quota_poll_interval_sec=0,
+        max_quota_polls=1,
+        config=CmocConfig(),
+    )
+
+    assert calls == ["prompt", "Respond with exactly: ok", "prompt"]
+    assert result.output_json == {"ok": 3}
 
 
 def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
@@ -199,16 +275,17 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
     monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
     stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
+    probe_prompt = stub_quota_probe_builder(monkeypatch)
     records = []
 
     def fake_run(argv, **kwargs):
-        stdin = str(kwargs["input"])
+        stdin = kwargs["stdin"].read()
         cwd = Path(kwargs["cwd"])
         kind = (
             "resume"
             if "resume" in argv
             else "probe"
-            if stdin == "quota availability probe"
+            if stdin == probe_prompt
             else "initial"
         )
         home = Path(kwargs["env"]["CODEX_HOME"])
@@ -258,6 +335,7 @@ def test_run_codex_exec_reruns_after_quota_without_resume_token(
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
+    probe_prompt = stub_quota_probe_builder(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "calls.jsonl"
@@ -271,7 +349,7 @@ def test_run_codex_exec_reruns_after_quota_without_resume_token(
             "stdin = sys.stdin.read()",
             "records = calls.read_text().splitlines() if calls.exists() else []",
             "with calls.open('a') as f: f.write(json.dumps({'args': args, 'stdin': stdin}) + '\\n')",
-            "if stdin == 'quota availability probe':",
+            f"if stdin == {probe_prompt!r}:",
             "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
             "    output.write_text(json.dumps({'probe': True}))",
             "    print(json.dumps({'type': 'turn.completed'}))",
@@ -305,36 +383,37 @@ def test_run_codex_exec_reruns_after_quota_without_resume_token(
     call_records = [json.loads(line) for line in calls.read_text().splitlines()]
     assert [record["stdin"] for record in call_records] == [
         "prompt",
-        "quota availability probe",
+        probe_prompt,
         "prompt",
     ]
     assert all("resume" not in record["args"] for record in call_records)
     assert result.output_json == {"ok": True}
 
 
-def test_run_codex_exec_logs_probe_before_rejecting_agents_edit(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+def test_quota_probe_non_quota_failure_fails_immediately(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
+    probe_prompt = stub_quota_probe_builder(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
+    calls = tmp_path / "failed_probe_calls.jsonl"
+    fake_codex = bin_dir / "codex"
     write_python_executable(
-        bin_dir / "codex",
+        fake_codex,
         [
             "import json, pathlib, sys",
+            f"calls = pathlib.Path({str(calls)!r})",
             "args = sys.argv[1:]",
             "stdin = sys.stdin.read()",
-            "if stdin == 'quota availability probe':",
-            "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "    output.write_text(json.dumps({'probe': True}))",
-            "    agents = pathlib.Path('.agents')",
-            "    agents.mkdir(exist_ok=True)",
-            "    (agents / 'probe.md').write_text('changed\\n')",
-            "    print(json.dumps({'type': 'turn.completed'}))",
-            "    sys.exit(0)",
+            "with calls.open('a') as f: f.write(json.dumps({'args': args, 'stdin': stdin}) + '\\n')",
+            f"if stdin == {probe_prompt!r}:",
+            "    print(json.dumps({'type':'error','message':'profile is broken'}))",
+            "    sys.exit(2)",
+            "print(json.dumps({'type':'thread.started','thread_id':'sess-1'}))",
             "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
             "sys.exit(1)",
         ],
@@ -349,33 +428,27 @@ def test_run_codex_exec_logs_probe_before_rejecting_agents_edit(
     )
     logger = SubcommandLogger(root, "test")
 
-    with pytest.raises(cmoc_runtime.CmocError, match=r"\.agents 配下を変更"):
+    with pytest.raises(CmocError, match="quota availability probe"):
         run_codex_exec(
             parameter,
             root=root,
             quota_poll_interval_sec=0,
-            max_quota_polls=1,
+            max_quota_polls=3,
             config=CmocConfig(),
             subcommand_logger=logger,
         )
 
-    events = [json.loads(line) for line in logger.path.read_text().splitlines()]
-    codex_events = [event for event in events if event["event"] == "codex_call"]
-    assert [event["purpose"] for event in codex_events] == [
-        "codex exec",
-        "quota availability probe",
+    call_records = [json.loads(line) for line in calls.read_text().splitlines()]
+    assert [record["stdin"] for record in call_records] == [
+        "prompt",
+        probe_prompt,
     ]
-    assert [event["status"] for event in codex_events] == [
-        "quota_waiting",
-        "failed",
-    ]
-    assert codex_events[1]["returncode"] == 0
-    assert ".agents" in codex_events[1]["error"]
-    assert Path(codex_events[1]["call_log_path"]).exists()
-    console = capsys.readouterr().out
-    assert "- purpose: `quota availability probe`" in console
-    assert f"- call_log: `{codex_events[1]['call_log_path']}`" in console
-    assert "- returncode: `0`" in console
+    log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_events = [event for event in log_events if event["event"] == "codex_call"]
+    assert [event["status"] for event in codex_events] == ["quota_waiting", "failed"]
+    assert codex_events[1]["purpose"] == "quota availability probe"
+    assert codex_events[1]["returncode"] == 2
+    assert "profile is broken" in codex_events[1]["error"]
 
 
 def test_run_codex_exec_uses_single_representative_quota_probe(
@@ -384,6 +457,7 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_profile(tmp_path, monkeypatch)
+    probe_prompt = stub_quota_probe_builder(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "parallel_calls.jsonl"
@@ -395,7 +469,7 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
             f"calls = pathlib.Path({str(calls)!r})",
             "args = sys.argv[1:]",
             "stdin = sys.stdin.read()",
-            "kind = 'resume' if 'resume' in args else 'probe' if stdin == 'quota availability probe' else 'initial'",
+            f"kind = 'resume' if 'resume' in args else 'probe' if stdin == {probe_prompt!r} else 'initial'",
             "with calls.open('a') as f: f.write(json.dumps({'kind': kind, 'args': args}) + '\\n')",
             "if kind == 'resume':",
             "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
@@ -444,3 +518,71 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
     assert [event["kind"] for event in events].count("probe") == 1
     assert [event["kind"] for event in events].count("resume") == 2
     assert [result.output_json for result in results] == [{"ok": True}, {"ok": True}]
+
+
+def test_waiting_quota_calls_fail_when_representative_probe_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
+    probe_prompt = stub_quota_probe_builder(monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    calls = tmp_path / "parallel_failed_probe_calls.jsonl"
+    fake_codex = bin_dir / "codex"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, pathlib, sys, time",
+            f"calls = pathlib.Path({str(calls)!r})",
+            "args = sys.argv[1:]",
+            "stdin = sys.stdin.read()",
+            f"kind = 'resume' if 'resume' in args else 'probe' if stdin == {probe_prompt!r} else 'initial'",
+            "with calls.open('a') as f: f.write(json.dumps({'kind': kind, 'args': args}) + '\\n')",
+            "if kind == 'resume':",
+            "    output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "    output.write_text(json.dumps({'unexpected': 'resume'}))",
+            "    print(json.dumps({'type': 'turn.completed'}))",
+            "    sys.exit(0)",
+            "if kind == 'probe':",
+            "    print(json.dumps({'type':'error','message':'Quota exceeded'}))",
+            "    sys.exit(1)",
+            "deadline = time.time() + 5",
+            "while time.time() < deadline:",
+            "    lines = calls.read_text().splitlines() if calls.exists() else []",
+            "    if sum(1 for line in lines if json.loads(line)['kind'] == 'initial') >= 2:",
+            "        break",
+            "    time.sleep(0.01)",
+            "print(json.dumps({'type':'thread.started','thread_id':'sess-parallel'}))",
+            "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
+            "sys.exit(1)",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+    )
+
+    def call_codex() -> object:
+        return run_codex_exec(
+            parameter,
+            root=root,
+            quota_poll_interval_sec=0.05,
+            max_quota_polls=1,
+            config=CmocConfig(),
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [executor.submit(call_codex) for _index in range(2)]
+        errors = [future.exception() for future in futures]
+
+    events = [json.loads(line) for line in calls.read_text().splitlines()]
+    assert [event["kind"] for event in events].count("initial") == 2
+    assert [event["kind"] for event in events].count("probe") == 1
+    assert [event["kind"] for event in events].count("resume") == 0
+    assert all(isinstance(error, CmocError) for error in errors)

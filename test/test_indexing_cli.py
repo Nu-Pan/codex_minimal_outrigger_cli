@@ -5,6 +5,7 @@ indexing subcommand が routing document を更新する外部挙動に閉じて
 対象列挙、hash 再利用、Codex 生成、commit 条件、linked worktree、INDEX.md conflict
 解決は同じ routing 更新ワークフローの観測点であり、分割すると fixture と git 状態の
 読み取り文脈が分散する。現状は indexing CLI 回帰として一箇所に保つ方が凝集性が高い。
+根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import json
@@ -102,7 +103,7 @@ def test_indexing_uses_codex_index_entry_builder_and_commits(
     assert "cmoc indexing" in run_git(root, "log", "--oneline", "-1").stdout
 
 
-def test_indexing_uninitialized_clean_repo_fails_with_subcommand_log(
+def test_indexing_uninitialized_clean_repo_fails_before_subcommand_log(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -115,12 +116,8 @@ def test_indexing_uninitialized_clean_repo_fails_with_subcommand_log(
     assert "cmoc init を実行してから再実行してください。" not in result.stderr
     assert not (root / ".gitignore").exists()
     assert not (root / "INDEX.md").exists()
-    log_path = next((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))
-    records = [json.loads(line) for line in log_path.read_text().splitlines()]
-    assert records[0]["event"] == "command_invoked"
-    assert records[-1]["event"] == "command_finished"
-    assert records[-1]["returncode"] == 1
-    assert run_git(root, "status", "--short").stdout.strip() == "?? .cmoc/"
+    assert not (root / ".cmoc" / "log" / "sub_command").exists()
+    assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
 def test_indexing_targets_current_linked_worktree(
@@ -352,6 +349,23 @@ def test_indexing_preflight_allows_existing_non_index_diff_and_commits_only_inde
         [
             "# `README.md`",
             "",
+            "unexpected text",
+            "## Summary",
+            "- valid summary",
+            "",
+            "## Read this when",
+            "- read README.md",
+            "",
+            "## Do not read this when",
+            "- skip README.md",
+            "",
+            "## hash",
+            "- {digest}",
+            "",
+        ],
+        [
+            "# `README.md`",
+            "",
             "## Summary",
             "",
             "## Read this when",
@@ -467,9 +481,15 @@ def test_update_indexes_regenerates_malformed_fresh_hash_entry(
         None,
         {},
         {"summary": ["summary"], "read_this_when": ["read"], "do_not_read_this_when": [1]},
+        {
+            "summary": ["summary"],
+            "read_this_when": ["read"],
+            "do_not_read_this_when": ["skip"],
+            "extra": ["ignored"],
+        },
     ],
 )
-def test_render_index_entry_rejects_missing_or_non_string_semantic_fields(
+def test_render_index_entry_rejects_schema_mismatched_entries(
     tmp_path: Path, entry: dict[str, object] | None
 ) -> None:
     root = make_repo(tmp_path)
@@ -480,35 +500,68 @@ def test_render_index_entry_rejects_missing_or_non_string_semantic_fields(
 
 
 @pytest.mark.parametrize(
-    "entry",
+    ("key", "value"),
     [
-        {"summary": [], "read_this_when": ["read"], "do_not_read_this_when": ["skip"]},
-        {"summary": [""], "read_this_when": ["read"], "do_not_read_this_when": ["skip"]},
-        {"summary": ["   "], "read_this_when": ["read"], "do_not_read_this_when": ["skip"]},
-        {
-            "summary": ["line1\nline2"],
-            "read_this_when": ["read"],
-            "do_not_read_this_when": ["skip"],
-        },
-        {
-            "summary": ["line1\rline2"],
-            "read_this_when": ["read"],
-            "do_not_read_this_when": ["skip"],
-        },
-        {"summary": ["summary"], "read_this_when": [], "do_not_read_this_when": ["skip"]},
-        {"summary": ["summary"], "read_this_when": [""], "do_not_read_this_when": ["skip"]},
-        {"summary": ["summary"], "read_this_when": ["read"], "do_not_read_this_when": []},
-        {"summary": ["summary"], "read_this_when": ["read"], "do_not_read_this_when": ["\t"]},
+        ("summary", []),
+        ("summary", [""]),
+        ("summary", ["   "]),
+        ("summary", ["line1\nline2"]),
+        ("summary", ["line1\rline2"]),
+        ("read_this_when", []),
+        ("read_this_when", [""]),
+        ("do_not_read_this_when", []),
+        ("do_not_read_this_when", ["\t"]),
     ],
 )
-def test_render_index_entry_rejects_empty_semantic_lists(
-    tmp_path: Path, entry: dict[str, object]
+def test_render_index_entry_rejects_empty_blank_or_multiline_semantic_items(
+    tmp_path: Path, key: str, value: list[str]
 ) -> None:
     root = make_repo(tmp_path)
     readme = root / "README.md"
+    entry = {
+        "summary": ["summary"],
+        "read_this_when": ["read"],
+        "do_not_read_this_when": ["skip"],
+    }
+    entry[key] = value
 
     with pytest.raises(cmoc_runtime.CmocError):
         indexing_common.render_index_entry(root, readme, entry)
+
+
+def test_update_indexes_creates_empty_index_for_empty_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    empty_dir = root / "empty"
+    empty_dir.mkdir()
+    cmoc_runtime.sync_config(root)
+
+    def fake_build_index_entry(
+        update_root: Path,
+        path: Path,
+        digest: str | None = None,
+        codex_exec: Callable[..., object] | None = None,
+    ) -> str:
+        return indexing_common.render_index_entry(
+            update_root,
+            path,
+            {
+                "summary": [path.name],
+                "read_this_when": [path.name],
+                "do_not_read_this_when": [path.name],
+            },
+            digest=digest,
+        ).rstrip()
+
+    monkeypatch.setattr(indexing_common, "build_index_entry", fake_build_index_entry)
+
+    updated = indexing_common.update_indexes(root)
+
+    # <work-root>/oracle/doc/app_spec/indexing.md requires INDEX.md placement
+    # per target directory, even when there are no indexable children.
+    assert empty_dir / "INDEX.md" in updated
+    assert (empty_dir / "INDEX.md").read_text() == ""
 
 
 def test_update_indexes_generates_sibling_entries_in_parallel(
@@ -557,6 +610,55 @@ def test_update_indexes_generates_sibling_entries_in_parallel(
     assert max_active >= 2
 
 
+def test_update_indexes_generates_non_ancestor_indexes_in_parallel(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    first = root / "first"
+    second = root / "second"
+    first.mkdir()
+    second.mkdir()
+    (first / "a.txt").write_text("a\n")
+    (second / "b.txt").write_text("b\n")
+    cmoc_runtime.sync_config(root)
+    active = 0
+    max_active = 0
+    lock = threading.Lock()
+
+    def fake_build_index_entry(
+        update_root: Path,
+        path: Path,
+        digest: str | None = None,
+        codex_exec: Callable[..., object] | None = None,
+    ) -> str:
+        nonlocal active, max_active
+        if path.parent in {first, second}:
+            with lock:
+                active += 1
+                max_active = max(max_active, active)
+            time.sleep(0.05)
+            with lock:
+                active -= 1
+        return indexing_common.render_index_entry(
+            update_root,
+            path,
+            {
+                "summary": [path.name],
+                "read_this_when": [path.name],
+                "do_not_read_this_when": [path.name],
+            },
+            digest=digest,
+        ).rstrip()
+
+    monkeypatch.setattr(indexing_common, "build_index_entry", fake_build_index_entry)
+
+    updated = indexing_common.update_indexes(root)
+
+    assert first / "INDEX.md" in updated
+    assert second / "INDEX.md" in updated
+    assert max_active >= 2
+
+
 def test_update_indexes_indexes_nested_memo_directory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -599,3 +701,38 @@ def test_update_indexes_indexes_nested_memo_directory(
     assert nested_memo / "INDEX.md" in updated
     assert (nested_memo / "INDEX.md").is_file()
     assert "# `memo`" in (root / "docs" / "INDEX.md").read_text()
+
+
+def test_update_indexes_skips_directory_symlink_cycle(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    (root / "loop").symlink_to(root, target_is_directory=True)
+    cmoc_runtime.sync_config(root)
+    calls: list[Path] = []
+
+    def fake_build_index_entry(
+        update_root: Path,
+        path: Path,
+        digest: str | None = None,
+        codex_exec: Callable[..., object] | None = None,
+    ) -> str:
+        calls.append(path)
+        return indexing_common.render_index_entry(
+            update_root,
+            path,
+            {
+                "summary": [path.name],
+                "read_this_when": [path.name],
+                "do_not_read_this_when": [path.name],
+            },
+            digest=digest,
+        ).rstrip()
+
+    monkeypatch.setattr(indexing_common, "build_index_entry", fake_build_index_entry)
+
+    updated = indexing_common.update_indexes(root)
+
+    assert root / "INDEX.md" in updated
+    assert root / "loop" not in calls
+    assert "# `loop`" not in (root / "INDEX.md").read_text()

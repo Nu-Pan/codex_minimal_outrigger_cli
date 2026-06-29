@@ -4,10 +4,12 @@
 ライフサイクルに閉じている。fork、join、abandon、linked worktree、state cleanup、
 dirty worktree 拒否は同じ session 状態遷移の観測点であり、分割すると同じ branch/state
 fixture を追う文脈が分散する。現状は session CLI 回帰として一箇所に保つ方が凝集性が高い。
+根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import json
 import subprocess
+import tomllib
 from pathlib import Path
 
 import cmoc_runtime
@@ -304,12 +306,12 @@ def test_session_abandon_requires_existing_home_branch(
     result = runner.invoke(app, ["session", "abandon"])
 
     assert result.exit_code != 0
-    assert "completed session abandon" in result.output
-    assert "- sub_command_log: `" in result.output
-    assert "- step_elapsed[2/3 execute session abandon]: `" in result.output
-    assert "- elapsed: `" in result.output
-    assert "- quota_wait: `" in result.output
-    assert "- returncode: `1`" in result.output
+    assert "完了 session abandon" in result.output
+    assert "- サブコマンドログ: `" in result.output
+    assert "- ステップ経過時間[2/3 実行 session abandon]: `" in result.output
+    assert "- 経過時間: `" in result.output
+    assert "- quota 待機時間: `" in result.output
+    assert "- 終了コード: `1`" in result.output
     assert current_branch(root) == session_branch
     assert "session home branch が存在しません。" in result.stdout
     assert "session home branch が存在しません。" not in result.stderr
@@ -390,10 +392,6 @@ def test_session_join_resolves_oracle_conflict_with_realization_write_profile(
 ) -> None:
     root = make_repo(tmp_path)
     target = root / "oracle" / "spec.md"
-    other_oracle_file = root / "oracle" / "other.md"
-    other_oracle_file.write_text("# other\n")
-    run_git(root, "add", "oracle/other.md")
-    run_git(root, "commit", "-m", "add other oracle")
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
     assert (
@@ -418,8 +416,24 @@ def test_session_join_resolves_oracle_conflict_with_realization_write_profile(
     def fake_run_codex_exec(parameter: AgentCallParameter, **kwargs: object) -> object:
         calls.append(kwargs["purpose"])
         modes.append(parameter.file_access_mode)
-        assert "extra_writable_paths" not in kwargs
-        build_codex_profile(parameter, CmocConfig(), root)
+        assert kwargs["extra_writable_paths"] == [target]
+        assert kwargs["allow_oracle_conflict_writes"] is True
+        profile = build_codex_profile(
+            parameter,
+            CmocConfig(),
+            root,
+            extra_writable_paths=kwargs["extra_writable_paths"],
+            allow_oracle_conflict_writes=kwargs["allow_oracle_conflict_writes"],
+        )
+        writable_roots = set(
+            tomllib.loads(profile)["sandbox_workspace_write"]["writable_roots"]
+        )
+        assert str(root.resolve()) not in writable_roots
+        assert str(target.resolve()) in writable_roots
+        other_oracle_file = (root / "oracle" / "other.md").resolve()
+        assert not any(
+            other_oracle_file.is_relative_to(Path(path)) for path in writable_roots
+        )
         target.write_text("resolved change\nTitle\n=======\n")
         return FakeCodexResult()
 
@@ -545,6 +559,45 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
     assert f"session branch was not deleted: {session_branch}" in result.output
 
 
+def test_session_join_does_not_delete_when_local_branch_reachability_check_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    home_branch = session_home_branch(root, session_branch)
+    original_run_git = session_join_module.run_git
+    delete_calls = 0
+
+    def fake_run_git(args: list[str], cwd: Path, check: bool = True) -> object:
+        nonlocal delete_calls
+        if args == ["merge-base", "--is-ancestor", session_branch, "HEAD"]:
+            return cmoc_runtime.CommandResult(1, "", "")
+        if args == ["branch", "-d", session_branch]:
+            delete_calls += 1
+        return original_run_git(args, cwd, check=check)
+
+    monkeypatch.setattr(session_join_module, "run_git", fake_run_git)
+
+    result = runner.invoke(app, ["session", "join"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert current_branch(root) == home_branch
+    assert delete_calls == 0
+    assert (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", session_branch], cwd=root
+        ).returncode
+        == 0
+    )
+    assert "- deleted_session_branch: `False`" in result.output
+    assert f"session branch was not deleted: {session_branch}" in result.output
+
+
 def test_session_join_error_report_is_written_to_stdout(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -559,7 +612,7 @@ def test_session_join_error_report_is_written_to_stdout(
     result = runner.invoke(app, ["session", "join"])
 
     assert result.exit_code != 0
-    assert "completed session join" in result.stdout
+    assert "完了 session join" in result.stdout
     assert "# ERROR" in result.stdout
     assert "git 未コミット差分が存在します。" in result.stdout
     assert "# ERROR" not in result.stderr

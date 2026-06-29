@@ -4,7 +4,7 @@ set -eu
 
 cmoc_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 venv_python="$cmoc_root/.venv/bin/python"
-# User-facing path reports follow <work-root>/oracle/src/basic/path_model.py.
+# User-facing path reports follow <work-root>/oracle/src/oracle/other/path_model.py.
 display_script_path="<cmoc-root>/bin/cmoc"
 
 line_number_of() {

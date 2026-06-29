@@ -10,6 +10,7 @@ from acp.builder.session.join.conflict_resolution import (
 from commons.indexing import enable_indexing_preflight
 from cmoc_runtime import (
     CmocError,
+    CommandResult,
     current_branch,
     ensure_cmoc_ignored,
     load_state_for_branch,
@@ -65,7 +66,20 @@ def _cmoc_session_join_body(codex_exec: CodexExec, git: GitRun = run_git) -> Non
             resolve_session_join_conflict(work, codex_exec, git)
         state.session.state = "joined"
         write_state(path, state)
-        delete_result = git(["branch", "-d", branch], work, check=False)
+        # <work-root>/oracle/doc/app_spec/sub_command/session_join.md:
+        # delete only when the local session branch itself is reachable from
+        # the merge target HEAD; remote-tracking refs must not prove safety.
+        reachable = git(
+            ["merge-base", "--is-ancestor", branch, "HEAD"],
+            work,
+            check=False,
+        ).returncode == 0
+        if reachable:
+            delete_result = git(["branch", "-d", branch], work, check=False)
+        else:
+            delete_result = CommandResult(
+                1, "", f"session branch is not merged: {branch}"
+            )
     except BaseException as exc:
         # <work-root>/oracle/doc/app_spec/sub_command/session_join.md:
         # post-precondition failures can require manual git resolution, so their
@@ -105,13 +119,15 @@ def resolve_session_join_conflict(
             ["git status を確認し、手動解決後に再実行してください。"],
             git(["status", "--short"], root).stdout,
         )
-    # <work-root>/oracle/doc/app_spec/sub_command/session_join.md:
-    # oracle conflict は prompt 上の例外規則で限定し、profile の
-    # REALIZATION_WRITE 追加 writable path 検証には渡さない。
     codex_exec(
         build_session_join_conflict_resolution_parameter(conflicted_paths),
         root=root,
         purpose="session join conflict resolution",
+        # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
+        # oracle conflict の例外は prompt だけでは sandbox に効かないため、
+        # conflict 対象だけを profile の writable root にも反映する。
+        extra_writable_paths=conflicted_paths,
+        allow_oracle_conflict_writes=True,
     )
     remaining_markers = [
         path

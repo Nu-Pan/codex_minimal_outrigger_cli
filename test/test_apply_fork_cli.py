@@ -271,8 +271,6 @@ def test_apply_fork_can_target_and_edit_gitignore(
         if purpose == "apply fork finding application":
             (Path.cwd() / ".gitignore").write_text("/.cmoc/\n# editable\n")
             return FakeCodexResult()
-        if purpose == "apply fork commit message":
-            return FakeCodexResult(output_text="Update gitignore\n")
         if purpose == "apply fork change summary":
             return FakeCodexResult({"changes": []})
         raise AssertionError(purpose)

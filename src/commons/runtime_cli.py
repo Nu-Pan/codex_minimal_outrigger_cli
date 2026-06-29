@@ -34,7 +34,7 @@ def run_cli_subcommand(
 ) -> None:
     """CLI サブコマンドの共通実行ライフサイクルを管理する。
 
-    work root 検査後にサブコマンドログを作成し、
+    work root 検査後、必要な pre-log 処理を済ませてからサブコマンドログを作成し、
     開始・完了表示、戻り値の終了コード化、例外のエラー表示を一箇所で扱う。
     runtime state は通常 repo root に置き、init だけは初期化対象である work root に置く。
     サブコマンドログは常に repo root に置く。
@@ -48,17 +48,20 @@ def run_cli_subcommand(
         require_current_directory_is_work_root(current_root)
         log_root = repo_root()
         runtime_root = current_root if use_work_root_runtime else log_root
+        if pre_log_check is not None:
+            # <work-root>/oracle/doc/app_spec/sub_command/init.md
+            # <work-root>/oracle/doc/app_spec/sub_command/tui.md
+            # require .cmoc ignore guarantees before any .cmoc log file is created.
+            pre_log_check(runtime_root)
         logger = SubcommandLogger(log_root, name)
         logger_token = set_current_subcommand_logger(logger)
         logger.event("command_invoked", argv=list(command_argv or [name]))
-        logger.start_step(f"1/{total_steps}", f"start {name}")
-        typer.echo(f"# {console_timestamp()} (1/{total_steps}) start {name}")
-        typer.echo(f"- sub_command_log: `{logger.path}`")
-        if pre_log_check is not None:
-            pre_log_check(runtime_root)
-        logger.start_step(f"{total_steps - 1}/{total_steps}", f"execute {name}")
+        logger.start_step(f"1/{total_steps}", f"開始 {name}")
+        typer.echo(f"# {console_timestamp()} (1/{total_steps}) 開始 {name}")
+        typer.echo(f"- サブコマンドログ: `{logger.path}`")
+        logger.start_step(f"{total_steps - 1}/{total_steps}", f"実行 {name}")
         typer.echo(
-            f"# {console_timestamp()} ({total_steps - 1}/{total_steps}) execute {name}"
+            f"# {console_timestamp()} ({total_steps - 1}/{total_steps}) 実行 {name}"
         )
         impl_result = impl(*args, **kwargs)
         if isinstance(impl_result, CliRunResult):
@@ -67,7 +70,7 @@ def run_cli_subcommand(
         else:
             returncode = impl_result if isinstance(impl_result, int) else 0
             result_stdout = None
-        logger.start_step(f"{total_steps}/{total_steps}", f"completed {name}")
+        logger.start_step(f"{total_steps}/{total_steps}", f"完了 {name}")
         logger.finish_current_step()
         logger.event(
             "command_finished",
@@ -84,7 +87,7 @@ def run_cli_subcommand(
         raise
     except BaseException as exc:
         if logger:
-            logger.start_step(f"{total_steps}/{total_steps}", f"completed {name}")
+            logger.start_step(f"{total_steps}/{total_steps}", f"完了 {name}")
             logger.finish_current_step()
             logger.event(
                 "command_finished",
@@ -129,16 +132,16 @@ def _emit_completion_summary(
     """サブコマンド完了時に標準の stdout サマリーを出力する。"""
     elapsed = logger.elapsed()
     typer.echo(
-        f"# {console_timestamp()} ({total_steps}/{total_steps}) completed {command_name}"
+        f"# {console_timestamp()} ({total_steps}/{total_steps}) 完了 {command_name}"
     )
-    typer.echo(f"- sub_command_log: `{logger.path}`")
+    typer.echo(f"- サブコマンドログ: `{logger.path}`")
     for step in logger.step_timings:
         step_elapsed = step.elapsed_sec
         if step_elapsed is None:
             step_elapsed = elapsed - (step.started_at - logger.started_at)
         typer.echo(
-            f"- step_elapsed[{step.index} {step.description}]: `{format_duration(step_elapsed)}`"
+            f"- ステップ経過時間[{step.index} {step.description}]: `{format_duration(step_elapsed)}`"
         )
-    typer.echo(f"- elapsed: `{format_duration(elapsed)}`")
-    typer.echo(f"- quota_wait: `{format_duration(logger.quota_wait_sec)}`")
-    typer.echo(f"- returncode: `{returncode}`")
+    typer.echo(f"- 経過時間: `{format_duration(elapsed)}`")
+    typer.echo(f"- quota 待機時間: `{format_duration(logger.quota_wait_sec)}`")
+    typer.echo(f"- 終了コード: `{returncode}`")

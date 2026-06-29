@@ -237,10 +237,10 @@ def render_apply_join_report(
     unexpected_lines = [
         f"- {kind}: {', '.join(paths)}"
         for kind, paths in unexpected.items()
-    ] or ["- none"]
+    ] or ["- なし"]
     conflict_lines = [
-        f"- unresolved: {path}" for path in merge_conflicts
-    ] or ["- none"]
+        f"- 未解決: {path}" for path in merge_conflicts
+    ] or ["- なし"]
     if merge_conflicts:
         result = "apply branch の merge conflict が残っています。cmoc は自動解決しませんでした。"
     elif unexpected and not force_resolve:
@@ -258,12 +258,12 @@ def render_apply_join_report(
             f"force_resolve: {force_resolve}",
             f"cleanup_reachable: {cleanup_reachable}",
             "---",
-            "# cmoc apply join report",
-            "## Result",
+            "# cmoc apply join 結果レポート",
+            "## 結果",
             result,
-            "## Unexpected Changes",
+            "## 想定外差分",
             *unexpected_lines,
-            "## Merge Conflicts",
+            "## マージコンフリクト",
             *conflict_lines,
             "",
         ]

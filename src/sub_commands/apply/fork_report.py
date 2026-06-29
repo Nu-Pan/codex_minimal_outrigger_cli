@@ -220,12 +220,12 @@ def render_apply_fork_report(
         "error": "エラー: 途中でエラーが起きてループを正常に終了出来ませんでした。",
     }.get(result_label, result_label)
     count_lines = "\n".join(
-        f"- loop {idx}: {count}" for idx, count in enumerate(finding_counts, 1)
-    ) or "- no finding enumeration loops were executed"
+        f"- ループ {idx}: {count}" for idx, count in enumerate(finding_counts, 1)
+    ) or "- 所見列挙ループは実行されませんでした"
     change_lines = "\n".join(
         (
             f"- {change.get('category')}: {change.get('summary')} "
-            f"({', '.join(change.get('changed_paths', [])) or 'no paths'})"
+            f"({', '.join(change.get('changed_paths', [])) or '変更 path なし'})"
         )
         for change in changes
     )
@@ -239,12 +239,12 @@ def render_apply_fork_report(
             f"cmoc_apply_worktree: {apply_worktree}",
             f"result: {result_label}",
             "---",
-            "# cmoc apply fork report",
-            "## Result",
+            "# cmoc apply fork 作業レポート",
+            "## 作業結果",
             result_text,
-            "## Finding Count",
+            "## 所見数の推移",
             count_lines,
-            "## Change Summary",
+            "## 変更内容要約",
             change_lines,
             "",
         ]

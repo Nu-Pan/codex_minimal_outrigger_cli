@@ -52,8 +52,7 @@ def render_review_oracle_report(
 ) -> str:
     """review oracle report を Markdown + YAML frontmatter で描画する。"""
     # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md:
-    # 必須 H2 と所見区分の表示順を両立するため、採用分と不採用分で
-    # severity section を分けて描画する。
+    # Fatal/Minor findings は各 H2 section の中に severity 別で列挙する。
     accepted = [finding for finding in findings if finding.get("verdict") == "accept"]
     rejected = [finding for finding in findings if finding.get("verdict") == "reject"]
     fatal_accepted = _findings_with(accepted, "fatal")
@@ -108,16 +107,18 @@ def render_review_oracle_report(
             "|---:|---|---:|",
             rows,
             "## Fatal findings",
-            "### Accepted",
+            f"- Accepted: {len(fatal_accepted)}",
+            f"- Rejected: {len(fatal_rejected)}",
+            "### Accepted fatal findings",
             render_finding_section(fatal_accepted),
-            "## Minor findings",
-            "### Accepted",
-            render_finding_section(minor_accepted),
-            "## Fatal findings",
-            "### Rejected",
+            "### Rejected fatal findings",
             render_finding_section(fatal_rejected),
             "## Minor findings",
-            "### Rejected",
+            f"- Accepted: {len(minor_accepted)}",
+            f"- Rejected: {len(minor_rejected)}",
+            "### Accepted minor findings",
+            render_finding_section(minor_accepted),
+            "### Rejected minor findings",
             render_finding_section(minor_rejected),
             "",
         ]
@@ -156,11 +157,16 @@ def _render_frontmatter_field(name: str, value: object) -> str:
 def render_finding_section(findings: list[dict]) -> str:
     if not findings:
         return "なし"
-    return "\n".join(
-        f"- `{finding.get('finding_id')}` [{finding.get('verdict') or 'unjudged'}] "
-        f"{finding.get('title')}: {finding.get('reason')}"
-        for finding in findings
-    )
+    lines = []
+    for finding in findings:
+        line = (
+            f"- `{finding.get('finding_id')}` [{finding.get('verdict') or 'unjudged'}] "
+            f"{finding.get('title')}: {finding.get('reason')}"
+        )
+        if finding.get("judge_reason"):
+            line += f" (judge reason: {finding.get('judge_reason')})"
+        lines.append(line)
+    return "\n".join(lines)
 
 
 def path_display(root: Path, path: Path) -> str:

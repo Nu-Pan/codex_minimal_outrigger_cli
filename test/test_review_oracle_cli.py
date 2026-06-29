@@ -5,6 +5,7 @@
 列挙・検証・judge・merge、上限到達、join commit の扱いは同じ review run の状態と
 出力を共有するため、分割すると同じ fake Codex 応答と report 文脈が分散する。
 現状は review oracle の読み取り文脈を一箇所に保つ方が凝集性が高い。
+根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import subprocess
@@ -74,6 +75,8 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyP
     ]
     section_offsets = [rendered.index(section) for section in required_sections]
     assert section_offsets == sorted(section_offsets)
+    h2_sections = [line for line in rendered.splitlines() if line.startswith("## ")]
+    assert h2_sections == required_sections[1:]
     assert "`oracle/spec.md`" in rendered
     assert "review_join_commit: null" in rendered
     assert "session_id:" not in rendered
@@ -156,21 +159,34 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
     rendered = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
-    finding_offsets = [
-        rendered.index(title)
-        for title in [
-            "accepted fatal",
-            "accepted minor",
-            "rejected fatal",
-            "rejected minor",
-        ]
+    h2_sections = [line for line in rendered.splitlines() if line.startswith("## ")]
+    assert h2_sections == [
+        "## Verdict",
+        "## Evaluated oracle file",
+        "## Fatal findings",
+        "## Minor findings",
     ]
-    assert finding_offsets == sorted(finding_offsets)
+    detail_order = [
+        "### Accepted fatal findings",
+        "accepted fatal",
+        "### Rejected fatal findings",
+        "rejected fatal",
+        "## Minor findings",
+        "### Accepted minor findings",
+        "accepted minor",
+        "### Rejected minor findings",
+        "rejected minor",
+    ]
+    assert [rendered.index(text) for text in detail_order] == sorted(
+        rendered.index(text) for text in detail_order
+    )
     assert "result: fatal" in rendered
     assert "fatal_findings_accepted_count: 1" in rendered
     assert "minor_findings_accepted_count: 1" in rendered
     assert "fatal_findings_rejected_count: 1" in rendered
     assert "minor_findings_rejected_count: 1" in rendered
+    assert "judge reason: accepted" in rendered
+    assert "judge reason: rejected" in rendered
 
 
 @pytest.mark.parametrize(
@@ -202,6 +218,7 @@ def test_review_oracle_report_includes_rejected_findings(
                 "verdict": "reject",
                 "title": "rejected finding",
                 "reason": "rejected reason",
+                "judge_reason": "judge rejected reason",
             }
         ],
         "cmoc/run/session-1/run-1",
@@ -215,10 +232,25 @@ def test_review_oracle_report_includes_rejected_findings(
     assert f"minor_findings_rejected_count: {expected_minor_count}" in rendered
     assert "## Fatal findings" in rendered
     assert "## Minor findings" in rendered
-    assert "## Rejected fatal findings" not in rendered
-    assert "## Rejected minor findings" not in rendered
+    assert [line for line in rendered.splitlines() if line.startswith("## ")] == [
+        "## Verdict",
+        "## Evaluated oracle file",
+        "## Fatal findings",
+        "## Minor findings",
+    ]
+    fatal_section = rendered[
+        rendered.index("## Fatal findings") : rendered.index("## Minor findings")
+    ]
+    minor_section = rendered[rendered.index("## Minor findings") :]
+    assert "### Rejected fatal findings" in rendered
+    assert "### Rejected minor findings" in rendered
+    assert "### Rejected fatal findings" in fatal_section
+    assert "### Rejected minor findings" not in fatal_section
+    assert "### Rejected minor findings" in minor_section
+    assert "### Rejected fatal findings" not in minor_section
     assert "rejected finding" in rendered
     assert "rejected reason" in rendered
+    assert "judge reason: judge rejected reason" in rendered
     assert "session_id:" not in rendered
 
 

@@ -5,6 +5,7 @@
 dirty worktree、想定外差分、merge conflict は同じ join 操作の可否を判断する
 境界条件であり、分割すると同じ fixture と git 状態の読み取り文脈が分散する。
 現状は apply join の成功条件と拒否条件を一箇所で読む方が凝集性が高い。
+根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import json
@@ -71,7 +72,7 @@ def test_apply_join_removes_apply_worktree_and_resets_state(
     ][-1]
     report_path = Path(report_line.split("`")[1])
     assert report_path.is_file()
-    assert "# cmoc apply join report" in report_path.read_text()
+    assert "# cmoc apply join 結果レポート" in report_path.read_text()
 
 
 def test_apply_join_can_run_from_apply_worktree(
@@ -351,10 +352,10 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     report_path = Path(report_line.rsplit(": ", 1)[1])
     report = report_path.read_text()
     assert "join を中止しました" in report
-    assert "## Unexpected Changes" in report
+    assert "## 想定外差分" in report
     assert "- apply: oracle/spec.md" in report
-    assert "## Merge Conflicts" in report
-    assert "- none" in report
+    assert "## マージコンフリクト" in report
+    assert "- なし" in report
     forced = runner.invoke(
         app, ["apply", "join", "--force-resolve"], catch_exceptions=False
     )
@@ -513,8 +514,8 @@ def test_apply_join_reports_unresolved_non_index_conflict(
     ][0]
     report_path = Path(report_line.rsplit(": ", 1)[1])
     report = report_path.read_text()
-    assert "## Merge Conflicts" in report
-    assert "- unresolved: README.md" in report
+    assert "## マージコンフリクト" in report
+    assert "- 未解決: README.md" in report
     assert json.loads(state_path.read_text())["apply"]["state"] == "completed"
     assert apply_worktree.exists()
 

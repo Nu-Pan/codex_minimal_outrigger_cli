@@ -1,25 +1,26 @@
 # `apply`
 
 ## Summary
-- 未 join の適用作業を開始・破棄・取り込みするサブコマンド群と、その実行中 process 追跡、作業用 worktree/branch の cleanup、実行結果 report 生成を扱う実装領域。
-- 状態遷移、branch/worktree 作成と削除、実行中 process の停止、finding 適用後の commit/report 化、merge conflict や想定外差分の復旧補助など、適用作業ライフサイクル全体への入口になる。
+- apply run の開始、破棄、取り込み、実行時 process 管理、結果 report 保存を扱うサブコマンド実装群への入口。
+- apply branch/worktree の作成・特定・削除、session state の running/completed/error/ready 遷移、Codex subprocess 追跡、merge・conflict・cleanup・report 出力など、apply 系操作の制御境界を切り分けている。
+- apply fork の大きな orchestration、join の merge と後片付け、abandon の破棄処理、runtime helper、fork report 生成、package 初期化確認へ進むための判断起点として読む。
 
 ## Read this when
-- 適用作業の開始から完了・エラー・破棄・取り込みまでの状態遷移や実行条件を確認・変更したいとき。
-- 作業用 branch/worktree の作成、削除、cleanup、または session 側への merge と conflict 処理を追いたいとき。
-- 実行中の適用 process や Codex subprocess の記録、停止、pid file 管理、異常な pid 内容の扱いを確認したいとき。
-- finding の列挙・適用・再キュー、禁止対象に出た差分の rollback、適用後 diff からの commit subject 生成に関わる制御を確認したいとき。
-- 適用作業の実行結果や失敗結果を report として保存し、変更差分や要約、状態情報を出力する処理を確認・変更したいとき。
+- apply 系サブコマンドのどの実装へ進むべきかを、開始・破棄・取り込み・process 管理・report 生成の責務境界から選びたいとき。
+- apply branch や isolated worktree、session branch、apply state、apply process id file、Codex subprocess、merge report のどれが関係する変更かを見極めたいとき。
+- apply run のライフサイクル全体にまたがる変更で、fork・join・abandon・runtime・report のうち複数箇所を読む必要があるか確認したいとき。
+- apply fork の対象列挙、Codex 呼び出し、再キュー、commit、join 済み merge commit 探索などの開始側処理へ進むべきか判断したいとき。
+- join や abandon による state 初期化、worktree/branch cleanup、実行中 process 停止、想定外差分や conflict の扱いに関係する読む先を選びたいとき。
 
 ## Do not read this when
-- 個別の適用作業ではなく、CLI 全体の共通実行ラッパー、git command 実行規約、path model、設定読み込み、状態ファイルの低レベル読み書きを調べたいとき。
-- Codex に渡す prompt や構造化出力設計そのもの、finding enumeration や finding application の詳細だけを調べたいとき。
-- report directory、timestamp、汎用 report 表示仕様など、適用作業固有でない report 共通機能だけを確認したいとき。
-- ルーティング文書や INDEX.md エントリー生成規約だけを確認したいとき。
-- パッケージ説明や import 副作用の有無だけを確認したいときは、具体的な制御実装へ進む必要はない。
+- apply 以外のサブコマンド、CLI 共通 runtime、git wrapper、config load、state 永続化の低レベル共通処理だけを調べたいとき。
+- apply の正本仕様や公開仕様そのものを確認したいとき。この対象は realization implementation の入口であり、仕様根拠としては oracle 側を読む。
+- Codex exec の汎用起動機構、LLM 呼び出し基盤、prompt parameter の詳細 schema だけを調べたいとき。
+- report directory 解決、timestamp、git command 実行、worktree 操作など apply 固有ではない helper の実装だけを確認したいとき。
+- パッケージ説明の有無だけを確認する場合を除き、実際の apply 制御ロジックが不要なとき。
 
 ## hash
-- 66b4c02abc252fdfbad427064bfe9e5a3bc235901db0a4ee33f208e122fbe9eb
+- 4381185d208617c4162f448f9dc7614488f743f3ba942890254789b9a8303a82
 
 # `indexing.py`
 
@@ -139,23 +140,22 @@
 # `review_report.py`
 
 ## Summary
-- review oracle の実行結果を、人間が読む報告書として Markdown と YAML frontmatter に整形し、reports 配下へ書き出す処理を担う。
-- レビュー対象 oracle の一覧、採用・不採用に分けた fatal/minor 所見、処理失敗や対象なしを含む最終 verdict、報告書内での oracle path 表示を組み立てる。
+- review oracle の実行結果を Markdown レポートとして生成する実装。評価対象 oracle、accepted/rejected と fatal/minor の finding 集計、処理失敗時や対象なしを含む判定文、YAML frontmatter、oracle パス表示を組み立てる。
+- レポート保存先の作成とタイムスタンプ付き本文書き出し、および finding 一覧・判定結果・評価対象表の描画責務を持つ。
 
 ## Read this when
-- review oracle report の保存先、生成タイミング、frontmatter、見出し、表、所見セクション、verdict 文言を変更したいとき。
-- 採用所見と不採用所見、fatal と minor の分類が報告書にどう表示されるかを確認したいとき。
-- oracle path を報告書上でどのように相対表示するか、または oracle ツリー外の path をどう表示するかを確認したいとき。
-- review oracle の失敗時、対象 oracle なし、accepted fatal あり、accepted minor あり、問題なしの場合の report result と本文を調べるとき。
+- review oracle のレポート内容、判定結果、frontmatter、finding の分類表示を変更したいとき。
+- review oracle の実行結果がどの条件で error、no_targets、fatal、minor、ok と表示されるかを確認したいとき。
+- oracle パスをレポート上でどのように相対表示するか、または oracle ツリー外のパスをどう扱うかを調べたいとき。
+- review oracle のレポート保存場所やタイムスタンプ付き Markdown 生成の実装を確認したいとき。
 
 ## Do not read this when
-- review oracle が oracle file をどう収集・評価するか、所見をどう生成・判定するかを知りたいだけのとき。
-- CLI の引数定義、サブコマンド登録、実行フローの入口を調べたいとき。
-- reports directory や timestamp の共通仕様そのものを確認したいとき。
-- INDEX.md 生成やルーティング文書の仕様を調べたいとき。
+- review oracle の評価ロジックそのもの、finding を検出・採否判定する処理、または git branch 操作を調べたいとき。
+- 他サブコマンドの CLI 引数定義、実行フロー、状態更新を調べたいとき。
+- 生成済みレポートの内容を確認したいだけで、レポート描画実装を変更しないとき。
 
 ## hash
-- 12c1a56a7dc4c31d006b2c3c0fd1b8962a519f80f003772c9f2c8c96ee20fa10
+- 590d7190d2e8e86d99775a8387ad3741fcafaeda043ae2de20b160dc5a394a76
 
 # `review_targets.py`
 
@@ -181,42 +181,42 @@
 # `session`
 
 ## Summary
-- session 系サブコマンド実装をまとめるディレクトリで、session branch の作成、破棄、home branch への merge といった利用者操作の入口になる。
-- 各モジュールは CLI runtime 経由の実行、session 状態確認、clean worktree や branch 条件の検証、git 操作、利用者向け出力や失敗時処理を扱う。
-- パッケージ自体は最小限で、具体的な挙動を調べるときは fork、abandon、join など目的の session 操作に対応する下位モジュールへ進む。
+- session 系サブコマンドの実装群を収める領域。active session の破棄、通常 branch からの session 開始、home branch への統合など、session lifecycle に関わる CLI 本体処理への入口になる。
+- 各サブコマンド実装は、CLI runtime 経由の起動、事前条件確認、git branch 操作、session state 更新、利用者向け結果出力を扱い、必要に応じて失敗時 rollback や merge conflict 解消フローも担う。
+- パッケージ自体は最小限の境界を示すだけで、具体的な挙動は個別のサブコマンド実装に分かれている。
 
 ## Read this when
-- session 系サブコマンドの実行条件、状態遷移、branch 操作、state file 更新、成功時出力や失敗時挙動の実装を調べたいとき。
-- active session の作成、破棄、home branch への merge、session branch 削除など、session branch のライフサイクルに関わる CLI 処理を確認・変更したいとき。
-- session 操作ごとの oracle 根拠コメント、rollback、merge conflict 解消、post-precondition failure など、個別コマンド内の制御フローを入口から探したいとき。
+- session 系サブコマンドのうち、作成・統合・破棄のどの実装へ進むべきかを選びたいとき。
+- session branch と home branch の関係、active session の状態遷移、session state file 更新、clean worktree 要求など、session 操作の入口となる実装を探したいとき。
+- session 操作が git branch の作成・切り替え・merge・削除や、失敗時の状態復旧をどのサブコマンドで扱っているかを切り分けたいとき。
+- session join 中の merge conflict 解消や、Codex CLI による conflict resolution 連携の実装箇所を探したいとき。
 
 ## Do not read this when
-- session state のデータ構造、永続化形式、path model、branch 操作 helper、git 実行 wrapper、worktree clean 判定などの共通部品そのものを調べたいとき。
-- CLI 全体のサブコマンド登録、Typer アプリ構成、runtime の共通処理、または session 以外のサブコマンド実装を調べたいとき。
-- Codex CLI に渡す conflict resolution prompt や parameter の詳細だけを調べたいとき。
+- session state のデータ構造、永続化 schema、branch 判定 helper、git 実行 wrapper、worktree clean 判定そのものを調べたいとき。これらは共通 helper や状態管理側を読む。
+- CLI 全体のサブコマンド登録、Typer アプリ構成、runtime 共通処理だけを確認したいとき。
+- session 以外のサブコマンド、または apply など別領域の状態操作を調べたいとき。
+- session 系サブコマンドの正本仕様断片そのものを確認したいとき。実装領域ではなく対応する oracle doc を読む。
 
 ## hash
-- 676da3666e0cb3c4d4ecaf423b81ab0bc40b978bf16bfe622c4078400b827ab1
+- d3c422529520adf8744c5d2dd934ef794dc29ad053c4364810894109e3fd247d
 
 # `tui.py`
 
 ## Summary
-- 利用者が入力した依頼文を編集させ、解決用 Agent 呼び出しで TUI 実行パラメータを決め、完全な prompt を保存して Codex TUI を起動するサブコマンド実装を扱う。
-- TUI 実行前の indexing preflight、ログ領域の `.cmoc` ignore 保証、元 prompt と完全 prompt の保存、利用可能エディタ選択、Markdown 見出しの構造化、解決済み JSON からの AgentCallParameter 構築を一つの流れとして担う。
+- `cmoc tui` の実行本体を担う realization implementation。利用者が編集する元 prompt の作成、エディタ起動、prompt からの TUI 起動パラメータ解決、Codex TUI 起動までの一連の制御を扱う。
+- TUI 実行前に `.cmoc` ignore を保証し、TUI で許可される file access mode の検証、解決済み JSON から `AgentCallParameter` への変換、ネストされた `{value: ...}` 形式の値取得を行う。
 
 ## Read this when
-- 利用者編集用 prompt から Codex TUI 起動までの制御フローを確認または変更したいとき。
-- TUI で許可する file access mode、resolve parameter の結果の読み取り、完全 prompt に含める oracle/review/indexing 系フラグの扱いを確認したいとき。
-- TUI 用ログ領域への元 prompt・完全 prompt の保存先、保存名、`.cmoc` ignore の事前保証に関わる挙動を確認したいとき。
-- TUI 起動前に使うエディタの選択順、エディタ異常終了時のエラー、prompt テンプレート中の HTML comment 除去を扱うとき。
-- Markdown の見出し・本文・コードフェンスを StructDoc 階層へ変換する処理を確認または変更したいとき。
+- `cmoc tui` の起動フロー、prompt 編集から Codex TUI 起動までの制御順序を確認・変更したいとき。
+- TUI 用の元 prompt テンプレート、保存先、HTML comment 除去、エディタ選択、エディタ異常終了時の扱いを確認したいとき。
+- TUI の file access mode 制限、解決済みパラメータの既定値、`role`・`summary`・`goal`・各 standard flag から TUI 起動用パラメータを組み立てる処理を確認したいとき。
+- TUI 実行時に `.cmoc` ignore をどの root に対して保証するか、repository root と work root の扱いを確認したいとき。
 
 ## Do not read this when
-- TUI ではなく exec など別サブコマンドの CLI 制御や入出力を確認したいだけのとき。
-- Codex 実行ランタイム、設定読み込み、repository/work root 判定、ログ実行基盤そのものの実装を確認したいとき。
-- resolve parameter の prompt 生成内容や TUI で選べる file access mode の定義自体を確認したいとき。
-- 完全 prompt の共通生成ロジックや StructDoc のレンダリング仕様そのものを確認したいとき。
-- エディタ起動や Markdown 構造化ではなく、TUI セッション内で Codex が行う作業内容を調べたいとき。
+- TUI 向け prompt からパラメータを推定する LLM 呼び出し用入力の schema や builder 自体を確認したいだけなら、resolve parameter 側を読む。
+- Codex TUI 起動用 prompt 全体の文面・構成・標準指示の内容を確認したいだけなら、launch TUI parameter builder 側を読む。
+- CLI runtime 全般、repository root や work root の解決、Codex 実行 wrapper、設定読み込みの共通挙動を確認したいだけなら runtime 側を読む。
+- TUI 以外の sub command の実行フローや引数処理を確認したい場合は、対象 sub command の実装を読む。
 
 ## hash
-- 374ac7e1a3e18a4b8a01c23ab501cd5769d6c0792add919a64687852a17d1984
+- 5fd4f89ffaa5bd36df37c3140cac01b525bd4d460c1d94bdea8dd4925d644cd2

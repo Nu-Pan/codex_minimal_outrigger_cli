@@ -58,19 +58,18 @@
 # `join.py`
 
 ## Summary
-- `session join` の実行本体を担い、active な session branch を session home branch へ merge し、状態を joined に更新して session branch の削除結果と警告を CLI 出力する。
-- 実行前に indexing preflight、session/apply 状態、clean worktree、cmoc ignore の条件を確認し、merge conflict が発生した場合は Codex CLI へ解消を依頼して残存 marker や unmerged path を検査して commit する。
-- merge 後の失敗は手動 git 解決が必要になり得るため stderr 報告へ切り替える制約や、Git の conflict-marker-size を考慮した conflict marker 検出を含む。
+- active な session branch を session home branch へ統合する `session join` サブコマンドの実行本体を扱う。実行前の indexing preflight、CLI runtime 経由の起動、session/apply state と clean worktree の事前条件確認、home branch への切り替え、merge、state 更新、session branch 削除可否判定、利用者向け結果出力までをまとめて担う。
+- merge conflict 発生時に Codex CLI へ conflict 解消を依頼し、conflict marker 残存確認、対象ファイルの add、unmerged path 確認、merge commit 完了までを扱う補助処理も含む。
 
 ## Read this when
-- `session join` の事前条件、branch 切り替え、merge、状態更新、session branch 削除、CLI 出力の実装を確認・変更したいとき。
-- session join 中の merge conflict を Codex CLI に解消させる流れ、conflicted path の収集、marker 検査、git add/commit の制御を確認・変更したいとき。
-- post-precondition failure のエラー出力先、または conflict marker 判定の仕様根拠付きコメントに関わる挙動を確認したいとき。
+- `session join` の実行条件、成功時の状態更新、branch 切り替え、merge、session branch 削除、警告出力の挙動を確認または変更したいとき。
+- session join 中の merge conflict を Codex CLI に解消させる流れ、conflict 対象ファイルの検出、writable path の渡し方、解消後の marker/unmerged 検査、commit 処理を確認または変更したいとき。
+- post-precondition failure を stderr 報告にする扱い、remote-tracking ref ではなく local session branch の到達可能性だけで削除安全性を判定する扱い、Git の conflict-marker-size を考慮した marker 検出を確認したいとき。
 
 ## Do not read this when
-- session join 以外の session サブコマンドの通常処理を調べたいとき。
-- session 状態モデル、branch state の永続化形式、repo/work root の解決、git 実行 wrapper そのものを調べたいとき。
-- Codex CLI に渡す conflict resolution prompt や parameter の詳細だけを調べたいとき。
+- session join の正本仕様断片そのものを確認したいとき。この実装ではなく対応する oracle doc を読む。
+- session state の保存形式、branch から state を読み込む共通処理、repo/work root や git 実行 wrapper の詳細を調べたいとき。ここではそれらを呼び出す側の制御だけを扱う。
+- session join conflict resolution 用に Codex CLI へ渡す prompt/parameter の組み立て内容だけを変更したいとき。ここではその builder を呼び出すだけで、parameter の詳細責務は持たない。
 
 ## hash
-- f786533c016baa4ed67a100ea11e345fdc163f64e5b8b20ed0dd5d6962954cbf
+- 3954acd06c08ebdafcb234136542fc75d68aadfe0f783b4ea157641247a6016c

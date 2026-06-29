@@ -5,12 +5,15 @@ Codex CLI から返る機械的な実行結果の解釈に閉じている。sand
 CODEX_HOME、child process tracking、schema 配置、JSONL error 判定は同じ
 subprocess 境界の不変条件を共有するため、分割すると呼び出し側が同時に読むべき
 失敗時文脈が増える。現状は Codex profile 境界として一箇所に保つ方が凝集性が高い。
+根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
-import hashlib
+import fcntl
 import json
 import os
 import subprocess
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +25,47 @@ from commons.runtime_errors import CmocError
 from commons.runtime_paths import schema_store_dir
 
 APPLY_PROCESS_TRACKING_ENV = "CMOC_APPLY_PROCESS_ID_PATH"
+_active_apply_process_tracking_path: Path | None = None
+_PROFILE_BLOCKED_ROOT_NAMES = {
+    ".agents",
+    ".cmoc",
+    ".codex",
+    ".git",
+    ".pytest_cache",
+    "AGENTS.md",
+    "INDEX.md",
+    "README.md",
+    "memo",
+}
+_REALIZATION_WRITE_BLOCKED_ROOT_NAMES = {
+    *_PROFILE_BLOCKED_ROOT_NAMES,
+    "oracle",
+}
+_REPO_WRITE_BLOCKED_ROOT_NAMES = _PROFILE_BLOCKED_ROOT_NAMES
+_CONFLICT_WRITE_BLOCKED_ROOT_NAMES = {
+    ".agents",
+    ".cmoc",
+    ".codex",
+    ".git",
+    ".pytest_cache",
+    "memo",
+}
+
+
+@contextmanager
+def apply_process_id_file_lock(path: Path) -> Iterator[None]:
+    """apply process pid file の読み書きを直列化する。"""
+    lock_path = path.with_name(f"{path.name}.lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a+") as lock_file:
+        # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+        # abandon が Codex child 起動直後の未記録状態を読まないよう、
+        # parent/child pid file 操作は同じ advisory lock に集約する。
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
 def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
@@ -43,7 +87,7 @@ def file_access_to_codex_cwd(mode: FileAccessMode, root: Path) -> Path:
     """FileAccessMode の読み取り境界に合わせた Codex 作業 root を返す。"""
     root = root.resolve()
     if mode == FileAccessMode.PURE_ORACLE_READ:
-        # <work-root>/oracle/src/acp/prompt_parts/file_access_rule.py
+        # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
         # Codex profile は read-only の読み取り root を分けられないため、
         # 公開済みの --cd/cwd で oracle tree だけを作業 root にする。
         return root / "oracle"
@@ -99,24 +143,26 @@ def _writable_roots(
     mode: FileAccessMode,
     root: Path,
     extra_writable_paths: list[Path] | None,
+    allow_oracle_conflict_writes: bool = False,
 ) -> list[Path]:
-    """Codex sandbox に渡せる正リストとして書き込み root を最小化する。"""
+    """Codex sandbox に渡せる書き込み root を作る。"""
     if file_access_to_sandbox_mode(mode) == "read-only":
         return []
     root = root.resolve()
     match mode:
         case FileAccessMode.REALIZATION_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-            # Codex profile has no deny-list expression for "work root except
-            # oracle/memo", so the root itself is required to allow new
-            # top-level realization files.
-            paths = [root]
-        case FileAccessMode.ORACLE_WRITE:
-            paths = [root / "oracle"]
+            # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+            paths = _existing_writable_top_level_roots(mode, root)
         case FileAccessMode.REPO_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-            # REPO_WRITE likewise permits creating new top-level files.
-            paths = [root]
+            # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+            # Codex profile has no deny-list, so modes that exclude memo/.agents
+            # cannot make <work-root> itself writable. New top-level paths must
+            # be passed explicitly through extra_writable_paths.
+            paths = _existing_writable_top_level_roots(mode, root)
+        case FileAccessMode.ORACLE_WRITE:
+            paths = [root / "oracle"]
         case _:
             paths = []
     result: list[Path] = []
@@ -130,7 +176,9 @@ def _writable_roots(
             result.append(resolved)
     for path in extra_writable_paths or []:
         resolved = path.resolve()
-        if not _is_writable_path_allowed(mode, root, resolved):
+        if not _is_writable_path_allowed(
+            mode, root, resolved, allow_oracle_conflict_writes
+        ):
             raise CmocError(
                 "追加書き込み許可 path が FileAccessMode の許可領域外にあります。",
                 [
@@ -146,139 +194,51 @@ def _writable_roots(
     return result
 
 
-def _is_writable_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
+def _existing_writable_top_level_roots(mode: FileAccessMode, root: Path) -> list[Path]:
+    return sorted(
+        [
+            path
+            for path in root.iterdir()
+            if _is_writable_path_allowed(mode, root, path.resolve())
+        ],
+        key=lambda path: str(path.resolve()),
+    )
+
+
+def _is_writable_path_allowed(
+    mode: FileAccessMode,
+    root: Path,
+    path: Path,
+    allow_oracle_conflict_writes: bool = False,
+) -> bool:
     """FileAccessMode の禁止領域を追加 writable path にも適用する。"""
     if not path.is_relative_to(root):
         return False
-    # <work-root>/oracle/src/acp/prompt_parts/file_access_rule.py
+    # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # Codex profile は deny を持たないため、FileAccessMode と Codex exec の
-    # 禁止領域を writable_roots に入れない正リストとして表現する。
-    if path.is_relative_to(root / "memo") or path.is_relative_to(root / ".agents"):
+    # 追加 writable path は、prompt で伝える禁止領域を広げない範囲だけ許可する。
+    if mode == FileAccessMode.REALIZATION_WRITE and allow_oracle_conflict_writes:
+        # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
+        # session join の conflict 解消は README.md/INDEX.md/oracle file も
+        # git conflict 対象なら編集する。runtime 管理領域だけは sandbox 側でも開かない。
+        relative = path.relative_to(root)
+        return (
+            bool(relative.parts)
+            and relative.parts[0] not in _CONFLICT_WRITE_BLOCKED_ROOT_NAMES
+        )
+    relative = path.relative_to(root)
+    blocked_root_names = (
+        _REPO_WRITE_BLOCKED_ROOT_NAMES
+        if mode == FileAccessMode.REPO_WRITE
+        else _REALIZATION_WRITE_BLOCKED_ROOT_NAMES
+    )
+    if relative.parts and relative.parts[0] in blocked_root_names:
         return False
     if mode == FileAccessMode.REALIZATION_WRITE:
         return not path.is_relative_to(root / "oracle")
     if mode == FileAccessMode.ORACLE_WRITE:
         return path.is_relative_to(root / "oracle")
     return mode == FileAccessMode.REPO_WRITE
-
-
-def protected_write_paths(mode: FileAccessMode) -> tuple[str, ...]:
-    # <work-root>/oracle/src/acp/prompt_parts/file_access_rule.py
-    # Codex profile lacks deny rules, so root-wide writable modes need a
-    # post-call git guard for the deny areas that the profile cannot express.
-    if mode == FileAccessMode.REALIZATION_WRITE:
-        return ("oracle", "memo", ".agents")
-    if mode == FileAccessMode.REPO_WRITE:
-        return ("memo", ".agents")
-    return (".agents",)
-
-
-def _git_stdout(root: Path, args: list[str]) -> str:
-    return subprocess.run(
-        ["git", *args],
-        cwd=root,
-        text=True,
-        capture_output=True,
-        check=False,
-    ).stdout
-
-
-def _git_paths(root: Path, args: list[str]) -> list[str]:
-    stdout = subprocess.run(
-        ["git", *args],
-        cwd=root,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-    ).stdout
-    return sorted(path.decode() for path in stdout.split(b"\0") if path)
-
-
-def _worktree_file_hash(root: Path, relative_path: str) -> str:
-    path = root / relative_path
-    if path.is_symlink():
-        return "symlink:" + hashlib.sha256(os.readlink(path).encode()).hexdigest()
-    if path.is_file():
-        return "file:" + hashlib.sha256(path.read_bytes()).hexdigest()
-    if path.exists():
-        return "other"
-    return "missing"
-
-
-def protected_write_status(mode: FileAccessMode, root: Path) -> str:
-    paths = protected_write_paths(mode)
-    if not paths:
-        return ""
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # `git status --short` alone cannot detect content changes when a deny
-    # path is already dirty before Codex runs, so the guard snapshots content.
-    tracked_paths = _git_paths(root, ["ls-files", "-z", "--", *paths])
-    other_paths = _git_paths(
-        root, ["ls-files", "--others", "--exclude-standard", "-z", "--", *paths]
-    )
-    ignored_paths = _git_paths(
-        root,
-        ["ls-files", "--others", "--ignored", "--exclude-standard", "-z", "--", *paths],
-    )
-    file_paths = sorted(set(tracked_paths + other_paths + ignored_paths))
-    return json.dumps(
-        {
-            "status": _git_stdout(
-                root,
-                [
-                    "status",
-                    "--short",
-                    "--ignored",
-                    "--untracked-files=all",
-                    "--",
-                    *paths,
-                ],
-            ),
-            "diff": _git_stdout(root, ["diff", "--binary", "--", *paths]),
-            "cached_diff": _git_stdout(
-                root, ["diff", "--cached", "--binary", "--", *paths]
-            ),
-            "files": [
-                [relative_path, _worktree_file_hash(root, relative_path)]
-                for relative_path in file_paths
-            ],
-        },
-        ensure_ascii=False,
-        sort_keys=True,
-    )
-
-
-def reject_protected_write(
-    mode: FileAccessMode, root: Path, before: str, call_path: Path
-) -> None:
-    after = protected_write_status(mode, root)
-    if after == before:
-        return
-    paths = ", ".join(protected_write_paths(mode))
-    if paths == ".agents":
-        summary = "Codex CLI 呼び出しが .agents 配下を変更しました。"
-        next_actions = [
-            ".agents 配下を変更しない形で作業をやり直してください。",
-            "必要な変更がある場合は、人間が別途 .agents 配下を編集してください。",
-        ]
-    else:
-        summary = "Codex CLI 呼び出しが FileAccessMode の禁止領域を変更しました。"
-        next_actions = [
-            "file access mode の禁止領域を変更しない形で作業をやり直してください。",
-            "必要な変更がある場合は、許可された別手順で人間が編集してください。",
-        ]
-    raise CmocError(
-        summary,
-        next_actions,
-        (
-            f"mode: {mode.value}\n"
-            f"protected_paths: {paths}\n"
-            f"call_log: {call_path}\n"
-            f"before:\n{before or '(clean)'}\n"
-            f"after:\n{after or '(clean)'}"
-        ),
-    )
 
 
 def _append_workspace_write_section(
@@ -300,6 +260,9 @@ def build_codex_profile(
     root: Path | None = None,
     extra_read_paths: list[Path] | None = None,
     extra_writable_paths: list[Path] | None = None,
+    *,
+    extra_read_root: Path | None = None,
+    allow_oracle_conflict_writes: bool = False,
 ) -> str:
     """AgentCallParameter と repo config から再利用可能な Codex profile 本文を作る。"""
     model = config.codex.model[parameter.model_class]
@@ -310,7 +273,10 @@ def build_codex_profile(
     ]
     if root is not None:
         root = root.resolve()
-        _validate_extra_read_paths(parameter.file_access_mode, root, extra_read_paths)
+        read_root = (extra_read_root or root).resolve()
+        _validate_extra_read_paths(
+            parameter.file_access_mode, read_root, extra_read_paths
+        )
     sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
     lines.append(f'sandbox_mode = "{sandbox_mode}"')
     if root is not None:
@@ -320,6 +286,7 @@ def build_codex_profile(
                 parameter.file_access_mode,
                 root,
                 extra_writable_paths,
+                allow_oracle_conflict_writes,
             ),
         )
     lines.append("")
@@ -382,6 +349,9 @@ def prepare_codex_profile(
     root: Path | None = None,
     extra_read_paths: list[Path] | None = None,
     extra_writable_paths: list[Path] | None = None,
+    *,
+    extra_read_root: Path | None = None,
+    allow_oracle_conflict_writes: bool = False,
 ) -> Path:
     """Codex home 内へ内容 hash 名の profile を作り、同一内容なら再利用する。"""
     profile = build_codex_profile(
@@ -390,6 +360,8 @@ def prepare_codex_profile(
         root,
         extra_read_paths,
         extra_writable_paths,
+        extra_read_root=extra_read_root,
+        allow_oracle_conflict_writes=allow_oracle_conflict_writes,
     )
     target_home = codex_home or resolve_codex_home()
     try:
@@ -419,10 +391,14 @@ def run_codex_subprocess(
     argv: list[str], **kwargs: Any
 ) -> subprocess.CompletedProcess[Any]:
     """Codex CLI 不在を Python の生例外ではなく cmoc の実行時エラーにそろえる。"""
-    tracking_path = os.environ.get(APPLY_PROCESS_TRACKING_ENV)
     try:
-        if tracking_path and argv[:1] == ["codex"]:
-            return run_tracked_codex_subprocess(argv, Path(tracking_path), **kwargs)
+        # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+        # Tracking is apply-run internal state; an inherited env var alone must
+        # not redirect unrelated Codex calls to a stale or foreign pid file.
+        if _active_apply_process_tracking_path is not None and argv[:1] == ["codex"]:
+            return run_tracked_codex_subprocess(
+                argv, _active_apply_process_tracking_path, **kwargs
+            )
         return subprocess.run(argv, **kwargs)
     except FileNotFoundError as exc:
         if argv[:1] != ["codex"]:
@@ -434,6 +410,14 @@ def run_codex_subprocess(
             ["Codex CLI をインストールし、PATH に codex を含めてください。"],
             f"argv: {argv}\nerror: {exc}",
         ) from exc
+
+
+def set_apply_process_tracking_path(path: Path | None) -> Path | None:
+    """apply 実行中だけ有効な process-local tracking path を差し替える。"""
+    global _active_apply_process_tracking_path
+    old_path = _active_apply_process_tracking_path
+    _active_apply_process_tracking_path = path
+    return old_path
 
 
 def run_tracked_codex_subprocess(
@@ -450,8 +434,25 @@ def run_tracked_codex_subprocess(
     if capture_output:
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
-    process = subprocess.Popen(argv, start_new_session=True, **kwargs)
-    record_tracked_child_process(tracking_path, process.pid)
+    process: subprocess.Popen[Any] | None = None
+    try:
+        with apply_process_id_file_lock(tracking_path):
+            process = subprocess.Popen(argv, start_new_session=True, **kwargs)
+            _record_tracked_child_process(tracking_path, process.pid)
+    except OSError as exc:
+        if process is None:
+            raise
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+        raise CmocError(
+            "apply process tracking を更新できません。",
+            ["apply process pid file の権限と保存先を確認してください。"],
+            f"path: {tracking_path}\nerror: {exc}",
+        ) from exc
     try:
         stdout, stderr = process.communicate(input_data)
         result = subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
@@ -464,11 +465,23 @@ def run_tracked_codex_subprocess(
             )
         return result
     finally:
-        remove_tracked_child_process(tracking_path, process.pid)
+        try:
+            remove_tracked_child_process(tracking_path, process.pid)
+        except OSError as exc:
+            raise CmocError(
+                "apply process tracking を更新できません。",
+                ["apply process pid file の権限と保存先を確認してください。"],
+                f"path: {tracking_path}\nerror: {exc}",
+            ) from exc
 
 
 def record_tracked_child_process(path: Path, process_id: int) -> None:
     """apply process pid file へ Codex child process の同一性情報を追記する。"""
+    with apply_process_id_file_lock(path):
+        _record_tracked_child_process(path, process_id)
+
+
+def _record_tracked_child_process(path: Path, process_id: int) -> None:
     start_time = process_start_time(process_id)
     if start_time is None:
         return
@@ -483,14 +496,15 @@ def record_tracked_child_process(path: Path, process_id: int) -> None:
 
 def remove_tracked_child_process(path: Path, process_id: int) -> None:
     """終了した Codex child process を apply process pid file から除く。"""
-    if not path.exists():
-        return
-    lines = [
-        line
-        for line in path.read_text().splitlines()
-        if not line.startswith(f"child {process_id} ")
-    ]
-    path.write_text(("\n".join(lines) + "\n") if lines else "")
+    with apply_process_id_file_lock(path):
+        if not path.exists():
+            return
+        lines = [
+            line
+            for line in path.read_text().splitlines()
+            if not line.startswith(f"child {process_id} ")
+        ]
+        path.write_text(("\n".join(lines) + "\n") if lines else "")
 
 
 def process_start_time(process_id: int) -> int | None:

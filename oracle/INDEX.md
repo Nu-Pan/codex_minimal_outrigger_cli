@@ -1,25 +1,26 @@
 # `doc`
 
 ## Summary
-- cmoc の oracle file のうち、自然言語 markdown で書かれた正本仕様断片を集めた領域。利用者向けアプリケーション挙動、git branch / commit / worktree のモデル、採用しなかった設計案、realization code 開発時の横断規則を扱う。
-- 外部 CLI 挙動や実行時制御を確認する仕様、ブランチ分離モデル、設計判断の non-goal、Python 実装・テスト・開発環境の規則へ進むための入口になる。
+- cmoc の正本仕様断片のうち、自然言語の markdown ドキュメント群を収める領域。CLI 外部挙動、実行基盤、branch/worktree モデル、開発規則、不採用設計案など、人間が直接所有する仕様判断を文章として確認する入口になる。
+- 利用者に見えるサブコマンド仕様や状態・ログ・出力・隔離境界だけでなく、実装・テスト時に守る横断的な品質基準や、現行方針の背景にある non-goal も扱う。
+- 実装ファイルやテストそのものではなく、realization code を正本仕様断片に沿わせるために、どの公開面・制御境界・設計判断を優先すべきかを探すための文書領域である。
 
 ## Read this when
-- cmoc の正本仕様断片のうち、自然言語で書かれた仕様文書から読むべき対象を選びたいとき。
-- CLI サブコマンド、Codex CLI 呼び出し、ログ、エラー処理、インデクシング、実行隔離、セッション状態など、利用者に見える挙動や実行時制御の仕様を探したいとき。
-- session / run / apply / review などで使う branch、commit、linked worktree の関係や命名モデルを確認したいとき。
-- AI 記憶、作業計画レビュー、apply 系 orchestration など、採用しなかった workflow や設計案の背景を確認したいとき。
-- realization code を追加・変更・検証する前に、Python コーディング、CLI 構成、共通処理、開発環境、テスト方針の横断規則を確認したいとき。
+- cmoc の CLI 挙動、サブコマンド、利用手順、状態遷移、出力、ログ、エラー処理、run 隔離、agent call 境界など、利用者や外部連携に見える仕様を確認したいとき。
+- session fork / join、session branch、run branch、linked worktree、cmoc-managed branch など、git branch・commit・worktree の cmoc 用語と責務を仕様から確認したいとき。
+- Python 実装、CLI 構成、共通処理の配置、開発環境、pytest 方針など、realization code を追加・修正する前の横断的な開発規則を確認したいとき。
+- AI 記憶、kaizen、自動注入、作業計画レビュー、apply 系 orchestration など、採用しなかった設計案の理由や non-goal を確認して現行方針を変えるべきか判断したいとき。
+- oracle file に書かれた人間意図を根拠に、実装差を避けるべき公開面・保存先・失敗時挙動・責務分担を確認したいとき。
 
 ## Do not read this when
-- oracle file と realization file の一般的な定義、責務分担、正本仕様断片としての基本原則だけを確認したいとき。
-- パスキーワード、root 種別、作業ディレクトリ概念そのものの定義だけを確認したいとき。
-- プログラミング言語や設定ファイルで書かれた oracle src、または oracle test の具体的な schema、parameter builder、prompt 生成、テスト実装を探しているとき。
-- realization implementation や realization test の現在のファイル配置、関数、クラス、既存テスト期待値など、実装側の具体構造だけを調べたいとき。
-- 対象がすでに特定の CLI 挙動、サブコマンド、branch モデル、不採用案、開発規則に絞れている場合は、その責務を直接扱う下位文書へ進む。
+- path キーワード、root 種別、oracle file / realization file の基本定義だけを確認したいときは、基礎概念やパスモデルを扱う仕様へ直接進む。
+- 自然言語仕様ではなく、具体的な関数、クラス、helper、テスト期待値、既存実装の現在構造を調べたいときは、実装またはテストを読む。
+- 個別の prompt builder や AgentCallParameter builder が生成する具体的な値、引数、profile 内容だけを確認したいときは、それらの正本となる実装側を読む。
+- INDEX.md エントリー生成の一般基準、oracle file の正本性、realization file の編集責務など、リポジトリ全体に共通する基本標準だけを確認したいときは、その標準を扱う文書へ進む。
+- 対象が特定の文書領域や単一仕様に絞れているときは、この領域全体ではなく、その下位の直接該当する文書へ進む。
 
 ## hash
-- 3692f17696531d3fb7a3bb1dd1ee0fb1ab6a338f1fa3f230238cb2b8b99f98e9
+- eff0885158e480807893633e66a9f8c15363820f859b6148ed69e6cdfbf1205e
 
 # `src`
 
