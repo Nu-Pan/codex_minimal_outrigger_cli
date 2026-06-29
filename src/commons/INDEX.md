@@ -96,24 +96,25 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex CLI の exec 呼び出しを 1 回の状態機械として制御する実装。profile・sandbox cwd・Structured Output schema を準備し、prompt/stdout/stderr/output/call log を保存しながら subprocess を実行する。
-- capacity retry、quota wait と代表 probe、resume token による継続、Structured Output の JSON 読み取りと schema 検証、subcommand event 記録を同じ実行文脈で扱う。
-- 16,000 文字を超えるが、retry counter、resume 状態、log/event、subprocess 結果を分離すると文脈が分断されるため、exec 実行制御として凝集させている。
+- Codex CLI の exec 呼び出しを 1 回の状態機械として制御し、prompt/stdout/stderr/output/call log の作成、Structured Output 検証、semantic retry、capacity retry、quota wait/probe、resume 継続、subcommand event 記録をまとめて扱う実行制御の入口。
+- TUI 起動や profile/env/schema の低レベル準備ではなく、Codex exec 実行中に発生する再試行・待機・検証・ログ出力の文脈を同じ subprocess 結果と retry counter の上で追うための実装を持つ。
 
 ## Read this when
-- Codex CLI の exec 実行、再試行、quota 枯渇時の待機・probe、capacity error の exponential backoff、resume 継続の挙動を確認または変更したいとき。
-- Structured Output schema の準備、output file の必須 JSON 読み取り、schema validation 失敗時の semantic retry、検証失敗エラーの扱いを確認または変更したいとき。
-- Codex call log、prompt/stdout/stderr/output の保存先、call log の内容、console/subcommand log に記録される codex_call event を追いたいとき。
-- CODEX_HOME の解決・検証、Codex profile 名、Codex subprocess の環境、file access mode から Codex cwd を決める exec 実行前処理の流れを読む必要があるとき。
+- Codex exec 呼び出しの成功・失敗・再試行・待機の流れを確認または変更したいとき。
+- Structured Output の output file 読み取り、JSON parse、jsonschema 検証、semantic retry、検証失敗時のエラー化に関わる挙動を確認したいとき。
+- capacity error の指数バックオフ retry、quota error の代表 probe、quota wait 中の他スレッド待機、resume token を使った継続実行を扱う必要があるとき。
+- Codex call log、prompt/stdout/stderr/output log、console 表示、subcommand event に記録される実行条件や結果を追跡したいとき。
+- Codex exec に渡す argv、profile 名、Codex cwd、output schema、output-last-message、resume 指定がどのタイミングで組み立てられるかを確認したいとき。
 
 ## Do not read this when
-- Codex profile の具体的な生成内容、Codex subprocess の低レベル実行、resume token 抽出、quota/capacity error 判定 helper の詳細だけを調べたいときは、それらを提供する profile 系の共通実装を直接読む。
-- TUI 起動や exec 以外の Codex 実行モードを調べたいときは、この実装ではなく対象モードの runtime module を読む。
-- subcommand log 全般、runtime path の定義、config load、AgentCallParameter や CodexExecResult の型そのものを確認したいだけなら、それぞれの定義元を読む。
-- oracle の正本仕様を確認したいときは、コード内コメントが参照する app spec や run isolation の正本文書を読む。
+- Codex TUI 起動の制御を探しているとき。exec 実行分岐とは別の起動処理を読む方が直接的。
+- Codex profile の具体的な生成、CODEX_HOME 解決、subprocess 実行 wrapper、error text 抽出、resume token 抽出、output JSON の通常読み取りだけを調べたいとき。これらは呼び出し先 helper の責務。
+- cmoc 設定ファイルの読み込み規則、path model、work root/repo root/log directory の定義そのものを確認したいとき。
+- Codex exec の仕様断片や oracle 側の要求を変更・確認したいとき。実装ではなく対応する oracle doc を読むべき。
+- 個別のコマンドが Codex exec に渡す prompt や AgentCallParameter をどう作るかを調べたいとき。呼び出し元のサブコマンド実装を読む方が直接的。
 
 ## hash
-- 25300d9e1216e2cf92d7207e8b9c2f40e1b945636d5a1ce07bad989e0aa6acd3
+- adfbe79e4f4ce38979483d35d0eed5a938a1c1ef82871f83c427f670e53b4df5
 
 # `runtime_codex_logging.py`
 
