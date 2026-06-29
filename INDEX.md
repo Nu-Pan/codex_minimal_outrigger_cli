@@ -147,25 +147,26 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を置く領域。公開 CLI の登録入口、利用者向けサブコマンドの orchestration、横断 runtime helper、ACP 呼び出し用 builder、正本側実装・設定定義への互換 import 境界をまとめる。
-- 正本仕様断片そのものではなく、oracle file で述べられた意図を実行可能な CLI 挙動、git/worktree 操作、Codex 呼び出し、INDEX.md maintenance、session/apply/review の制御フローとして具体化する実装階層である。
+- cmoc の realization implementation 全体を収める実装ルート。公開 CLI の登録入口、利用者向けサブコマンドの orchestration、共通 runtime helper、設定・basic・ACP builder・oracle src への互換 import 境界を束ねる。
+- 正本仕様断片を直接述べる場所ではなく、oracle file の人間意図を実際の CLI 挙動、Codex 呼び出し、git/worktree/state 操作、INDEX.md maintenance、review/apply/session 制御へ落とし込む実装側の起点になる。
+- この階層は実装本文へのルーティング入口であり、まず CLI 登録層、サブコマンド実装、共通 runtime、互換再公開境界、ACP prompt parameter builder 境界のどれを読むべきかを切り分けるために使う。
 
 ## Read this when
-- cmoc の実装本体を調べ、CLI 入口、サブコマンド処理、共通 runtime、ACP builder、正本側への shim のどこへ進むべきかを切り分けたいとき。
-- CLI コマンドの登録、引数、サブコマンドから実装関数への委譲、または console script 起動後の処理入口を確認・変更したいとき。
-- session、apply、review、indexing、init、TUI など、利用者操作に対応する実行時副作用や orchestration を追いたいとき。
-- Codex exec/TUI 呼び出し、preflight indexing、設定同期、git 操作、ログ、標準 path、状態ファイル、エラー表示、結果モデルなど、複数の処理から共有される runtime helper の所在を探したいとき。
-- oracle 側の basic、config、acp、builder 実装と realization 側 import path の対応、または ACP 呼び出しパラメータや prompt builder の実装入口を確認したいとき。
+- cmoc の実装側で、公開 CLI 入口からサブコマンド本体、共通 runtime、Codex 呼び出し、git/worktree/state 操作、互換 import 境界のどこへ進むべきかを判断したいとき。
+- CLI コマンド構成、サブコマンドの実行制御、利用者向け出力、エラー表示、レポート生成、INDEX.md 更新、review/apply/session/tui/init/indexing の実装を調査または変更したいとき。
+- oracle src 側の path model、設定、ACP builder などを realization 側から import 可能にしている薄い再公開・shim の境界を確認したいとき。
+- Codex exec/TUI 起動、sandbox/profile/schema/call log/retry/quota、設定読み書き、内容 hash、runtime path、subcommand log、永続 state、git wrapper など、複数サブコマンドが共有する実行時 helper を探したいとき。
+- oracle file の要求に対して、realization implementation が現在どの実装単位で具体化しているかを追いたいとき。
 
 ## Do not read this when
-- 正本仕様断片としての要求、用語定義、path keyword、サブコマンド仕様、INDEX.md 文書規約そのものを確認したいとき。その場合は oracle 側の該当本文を読む。
-- 自動テスト、fixture、期待値、テスト観点を確認・変更したいとき。その場合は realization test 側を読む。
-- 生成済みのログ、レポート、session state、INDEX.md の文章内容、worktree 実体などの成果物を閲覧したいだけのとき。この領域はそれらを生成・操作する実装であり、生成物の保管場所ではない。
-- パッケージ設定、開発補助ファイル、バイナリ起動 wrapper、git ignore など、実装ソース以外の補助的な repository 構成を調べたいとき。
-- 読むべき個別責務がすでに分かっているときは、この階層全体ではなく、CLI 入口、サブコマンド、共通 runtime、ACP builder、互換 shim など目的に直結する下位対象へ直接進む。
+- 正本仕様断片そのもの、用語定義、要求の意図、利用者向け仕様の根拠を確認したいとき。この階層ではなく oracle file を読む。
+- テスト観点、fixture、期待される外部挙動の検証内容を調べたいだけのとき。この階層ではなく realization test 側を読む。
+- 実装に関係しない補助ファイル、配布設定、開発用 ancillary、生成済み成果物、または memo を探しているとき。
+- path model や構造化ドキュメントなどの正本側定義そのものを確認したいとき。realization 側の再公開入口ではなく、正本側の定義本文へ進む。
+- 個別サブコマンドや共通 helper の詳細が読む対象として既に分かっているとき。この階層全体ではなく、該当する下位対象へ直接進む。
 
 ## hash
-- 4cfa4455404d61c4b43a70568e1de73b54f75720bbfb34632f2af67e6a7a1517
+- 6986c3a0f796c5ee47451ac2fce9cf9afe4335c6206ad295e0d4965d12fd2adc
 
 # `test`
 
