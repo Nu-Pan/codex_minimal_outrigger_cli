@@ -147,26 +147,28 @@
 # `src`
 
 ## Summary
-- `src` は cmoc の realization implementation 全体を収める実装ルートで、CLI entrypoint、サブコマンド制御、共通 runtime helper、ACP builder 互換入口、正本側定義への shim・再公開口をまとめる。
-- 下位には、利用者向け CLI 登録とサブコマンド orchestration、Codex・git・設定・状態・INDEX.md maintenance などの共通処理、正本側 oracle 実装へ到達する互換 import 経路が分かれて配置されている。
-- 実装変更時はここを入口に、公開 CLI 面を追うなら最上位 entrypoint、操作単位の副作用を追うならサブコマンド階層、横断的な実行時部品を追うなら共通 helper 階層、正本側定義との import 境界を追うなら ACP・basic・config・oracle の各入口へ進む。
+- cmoc の realization implementation 全体の入口で、CLI 登録、サブコマンド orchestration、共通 runtime helper、ACP builder、basic/config の互換 import、oracle package shim など、実装側の主要領域へ進むための分岐点になる。
+- この階層は正本仕様断片ではなく、oracle file の意図を具体化する実装本体を収める場所であり、利用者向け CLI 挙動、Codex CLI 呼び出し、git/worktree/state/report/indexing などの実行時副作用、正本側実装への薄い再公開境界を読む入口になる。
+- 下位には、トップレベル CLI 入口、利用者操作単位のサブコマンド実装、複数機能から共有される runtime 基盤、ACP 呼び出しパラメータ構築領域、正本側 basic/config/oracle への互換 import 経路が分かれて配置されている。
 
 ## Read this when
-- cmoc の realization implementation の全体構成から、読むべき下位ディレクトリやトップレベル module を切り分けたいとき。
-- CLI entrypoint、サブコマンド実装、共通 runtime helper、ACP 関連 builder、正本側定義への再公開・shim のどこへ進むべきか判断したいとき。
-- 実装側で `cmoc` コマンドがどのように構成され、実行時 helper やサブコマンド層へどう分岐するかを上位から確認したいとき。
-- realization implementation と oracle src の import 互換境界を確認し、実処理を持つ箇所と薄い再公開入口を区別したいとき。
-- cmoc の実装変更に着手する前に、対象が CLI 登録、サブコマンド orchestration、共通 runtime、設定・path・ACP 型、または oracle shim のどれに属するかを絞りたいとき。
+- cmoc の実装側で、CLI からどのサブコマンド・runtime helper・ACP builder・互換 import 入口へ進むべきかを大きく切り分けたいとき。
+- 利用者向けの `session`、`apply`、`review`、indexing、TUI、初期化などの実行制御や副作用を、正本仕様ではなく realization implementation として確認・変更したいとき。
+- Codex CLI 呼び出し、preflight indexing、設定読み書き、git/worktree 操作、ログ、path helper、state 永続化、共通エラー表示など、複数サブコマンドで共有される実行時基盤の入口を探したいとき。
+- agent call parameter の構築、model・reasoning effort・file access mode・prompt・Structured Output schema の受け渡し、apply/review/session/TUI/indexing 用 builder への公開経路を確認したいとき。
+- 正本側 `oracle`、`basic`、`config`、ACP builder への import 互換 shim や再公開境界が、実装側 package でどのように成立しているかを確認したいとき。
+- トップレベル CLI の Typer app 登録、サブコマンド名・option・委譲先、CLI 引数解析エラーの cmoc 形式表示、console script 起動入口を確認したいとき。
 
 ## Do not read this when
-- 正本仕様断片、oracle doc、oracle src、oracle test の内容そのものを確認したいとき。この領域は realization implementation であり、正本本文は oracle 側を読む。
-- realization test の検証観点、fixture、テストコードを調べたいときは、テスト領域へ直接進む。
-- README、AGENTS、pyproject、bin など、実装ルート外の補助ファイルやプロジェクト設定を確認したいとき。
-- 個別の処理対象が既に分かっており、特定のサブコマンド本体、共通 helper、ACP builder、設定 shim などへ直接進めるとき。
-- INDEX.md エントリーやルーティング文書の既存記述を確認したいだけのとき。対象本文ではなく生成済みルーティング情報を読む作業になる。
+- oracle file の正本仕様断片、基本概念、path keyword、realization/oracle の責務、INDEX.md 規約、人間所有の要求本文を確認したいとき。その場合は oracle 側の該当本文を読む。
+- realization test の観点、fixture、テストコード、外部挙動の検証内容を確認したいとき。その場合は test 側へ進む。
+- README、AGENTS、補助スクリプト、パッケージ設定、リポジトリ設定など、実装ソース以外の ancillary file を確認したいとき。
+- 生成済みのログ、report、state、INDEX.md 本文、作業メモなど、実行結果やルーティング文書そのものを解析したいとき。
+- 個別の正本側アルゴリズムや仕様定義、たとえば path model、構造化ドキュメント、review standard、prompt 断片、ACP builder の正本実装を確認したいときは、実装側の互換入口ではなく oracle 側の本文へ直接進む。
+- 特定サブコマンド内の低レベル処理、共通 helper、builder、import shim のどれを読むべきか既に分かっているときは、この階層全体ではなく該当する下位対象へ直接進む。
 
 ## hash
-- b2d7bf43c487c3350f4d221dd72651c0146b4538ebd4bc29d65bf1940fc59581
+- 2068acfc2f2c2842986200ebbe052467b07b9159ff2f4c44d70482d4e2356d6c
 
 # `test`
 
