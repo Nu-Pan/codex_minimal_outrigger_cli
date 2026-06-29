@@ -236,24 +236,22 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- indexing preflight と indexing サブコマンドが routing document を生成・更新・commit する外部挙動を検証する realization test。未初期化・dirty worktree・linked worktree・apply worktree などの CLI 境界、Codex 生成呼び出し、hash 再利用、malformed entry 再生成、schema 検証、並列 entry 生成、memo 配下の対象除外境界を扱う。
-- routing document 更新ワークフローの回帰観測点をまとめたテストであり、fixture と git 状態を共有しながら indexing の対象列挙、commit 対象、conflict 解決、preflight の挙動を確認する入口になる。
+- indexing preflight と indexing サブコマンドが routing document を生成・更新・commit する外部挙動を検証する回帰テスト群。
+- 未初期化・dirty worktree・linked worktree・apply worktree 設定参照・既存 hash 再利用・malformed entry 再生成・schema 不一致拒否・兄弟 entry の並列生成・root 直下 memo 除外と nested memo indexing など、routing 更新ワークフローの境界条件を一箇所で扱う。
+- INDEX.md conflict 解決が conflict 中の routing document を削除して merge commit を成立させる挙動も、この workflow の観測点として含む。
 
 ## Read this when
-- indexing サブコマンドまたは indexing preflight の成功・失敗条件、git commit 条件、未コミット差分の扱いを変更する。
-- routing document の entry 生成、hash による再生成スキップ、malformed entry の検出、semantic list の schema 検証を変更する。
-- linked worktree や apply worktree から indexing を実行したときの対象 root、config 参照元、commit 先の挙動を確認する。
-- routing document の conflict 解決で削除・commit する挙動、または commit 対象を routing document のみに限定する制御を変更する。
-- memo 配下を indexing 対象に含めるか除外するか、または sibling entry 生成の並列性を変更する。
+- indexing コマンドや indexing preflight の CLI 境界、git clean/dirty 判定、commit 対象、linked worktree 上の動作を変更・調査するとき。
+- routing document 生成で Codex 呼び出しを行う条件、既存 hash が fresh な entry の再利用、malformed entry の再生成、entry schema validation を確認するとき。
+- INDEX.md conflict 解決、root 直下 memo の除外、nested memo directory の indexing、同階層対象の並列 entry 生成に関わる回帰を確認するとき。
 
 ## Do not read this when
-- indexing 以外のサブコマンドの通常 CLI 挙動だけを確認したい。
-- routing document の自然言語エントリー内容そのものを作成するだけで、生成・更新・commit・hash 検証の実装挙動を追う必要がない。
-- 個別の path model、設定 schema、AgentCallParameter の詳細だけを確認したい場合で、indexing ワークフロー上の境界挙動に関心がない。
-- oracle file の正本仕様を確認したい場合。
+- routing document の文面生成規則や entry rendering の内部実装だけを確認したい場合は、先に indexing 共通処理の実装を読む。
+- init コマンド単体、apply/join 全体、git helper、test fixture の基礎挙動を調べるだけなら、それぞれの直接の実装または支援モジュールを読む。
+- Codex CLI や LLM 出力品質そのものを評価したい場合は対象外で、このテストは fake result による境界挙動を検証している。
 
 ## hash
-- 19d9a44b1a1e5d610c9b462f3173f91c73ee15b23cb48ac45579667df4502601
+- dc34b171fa7bcce87ccf4b3ea7b3fefa5cdc41a04eeace29c9e29693f233c7fc
 
 # `test_indexing_preflight.py`
 
