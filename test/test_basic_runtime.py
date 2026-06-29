@@ -710,3 +710,76 @@ def test_codex_profile_opens_only_conflict_file_for_session_join_conflict_resolu
     }
     _assert_writable(profile, target)
     _assert_not_writable(profile, root / "oracle" / "other.md")
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        "README.md",
+        "INDEX.md",
+        "AGENTS.md",
+        "oracle/INDEX.md",
+        "oracle/spec.md",
+    ],
+)
+def test_codex_profile_allows_session_join_conflict_targets_by_exact_path(
+    tmp_path: Path, extra: str
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "src").mkdir()
+    (root / "oracle").mkdir()
+    target = root / extra
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("conflict\n")
+
+    profile = build_codex_profile(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            FileAccessMode.REALIZATION_WRITE,
+            "prompt",
+            None,
+        ),
+        CmocConfig(),
+        root,
+        extra_writable_paths=[target],
+        allow_oracle_conflict_writes=True,
+    )
+
+    assert str(target.resolve()) in _profile_writable_roots(profile)
+    _assert_writable(profile, target)
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        ".agents/blocked.md",
+        ".cmoc/state.json",
+        ".codex/config.toml",
+        ".git/config",
+        ".pytest_cache/state",
+        "memo/blocked.md",
+    ],
+)
+def test_codex_profile_rejects_runtime_paths_even_for_session_join_conflict(
+    tmp_path: Path, extra: str
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "src").mkdir()
+
+    with pytest.raises(CmocError, match="追加書き込み許可 path"):
+        build_codex_profile(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                FileAccessMode.REALIZATION_WRITE,
+                "prompt",
+                None,
+            ),
+            CmocConfig(),
+            root,
+            extra_writable_paths=[root / extra],
+            allow_oracle_conflict_writes=True,
+        )

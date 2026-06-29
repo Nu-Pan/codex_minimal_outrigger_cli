@@ -42,6 +42,14 @@ _REALIZATION_WRITE_BLOCKED_ROOT_NAMES = {
     "oracle",
 }
 _REPO_WRITE_BLOCKED_ROOT_NAMES = _PROFILE_BLOCKED_ROOT_NAMES
+_CONFLICT_WRITE_BLOCKED_ROOT_NAMES = {
+    ".agents",
+    ".cmoc",
+    ".codex",
+    ".git",
+    ".pytest_cache",
+    "memo",
+}
 
 
 @contextmanager
@@ -216,11 +224,13 @@ def _is_writable_path_allowed(
     # 追加 writable path は、prompt で伝える禁止領域を広げない範囲だけ許可する。
     if mode == FileAccessMode.REALIZATION_WRITE and allow_oracle_conflict_writes:
         # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
-        # session join の conflict 解消だけは、prompt だけでなく sandbox
-        # profile でも conflict 対象 oracle file の個別書き込みを開く。
-        oracle_root = root / "oracle"
-        if path.is_relative_to(oracle_root):
-            return path != oracle_root and path.name != "INDEX.md"
+        # session join の conflict 解消は README.md/INDEX.md/oracle file も
+        # git conflict 対象なら編集する。runtime 管理領域だけは sandbox 側でも開かない。
+        relative = path.relative_to(root)
+        return (
+            bool(relative.parts)
+            and relative.parts[0] not in _CONFLICT_WRITE_BLOCKED_ROOT_NAMES
+        )
     relative = path.relative_to(root)
     blocked_root_names = (
         _REPO_WRITE_BLOCKED_ROOT_NAMES
