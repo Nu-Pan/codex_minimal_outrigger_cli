@@ -1,23 +1,24 @@
 # `acp`
 
 ## Summary
-- ACP builder 関連の realization 側互換入口を束ねる領域。正本実装を oracle 側に置いたまま、既存の `acp.*` / `acp.builder.*` 参照を維持するための package と薄い adapter を配置している。
-- apply fork、indexing、review oracle、session join、TUI 起動・解決パラメータなどの builder 入口について、realization 側から oracle 側正本実装へ到達する import 境界と、互換維持のために残している最小調整を確認する入口である。
+- realization 側で、oracle 側にある ACP builder 正本実装を既存の公開 import 経路から利用できるようにする互換入口のまとまり。実装本体を複製する領域ではなく、既存参照を維持しながら oracle 側へ再公開または薄く委譲する境界を担う。
+- 下位には apply fork、review oracle、session join、TUI、indexing に対応する builder 入口があり、多くは oracle 側実装の再公開で、一部は実行時 import 経路の確保や oracle src 側 prompt typo の最小補正を行う。
 
 ## Read this when
-- 既存の `acp.*` または `acp.builder.*` import path が、oracle 側の ACP builder 正本実装へどのように接続されているかを確認したいとき。
-- ACP builder 互換入口を削除・移動・置換してよいか判断するため、残している理由や削除条件を確認したいとき。
-- apply fork、indexing、review oracle、session join、TUI 関連の agent call parameter builder が realization 側でどの互換領域に分かれているかを把握したいとき。
-- oracle 側 builder への委譲前後で、realization 側が行う最小限の import 準備、型適合、prompt placeholder 補正、再公開の境界を探したいとき。
+- 既存の ACP builder 系 import 参照を oracle 側実装または別の実体 module へ移行する作業で、互換入口を残す理由や削除条件を確認したいとき。
+- realization 側または利用者向け公開面に残る ACP builder 系 import 経路が、oracle 側の正本実装へどのように接続されているか確認したいとき。
+- apply fork、review oracle、session join、TUI、indexing の builder 入口がこの互換層で再公開されているのか、実行時に薄い補正や import 経路調整を持つのかを切り分けたいとき。
+- oracle 側 ACP builder の正本実装を直接読む前に、既存公開面との互換境界や realization 側に残された最小処理の有無を把握したいとき。
 
 ## Do not read this when
-- ACP builder の正本仕様、prompt 本文、Structured Output schema、モデル設定、file access mode の詳細を確認したいとき。正本を持つ oracle 側の本文または実装へ進む。
-- apply fork や review workflow の CLI 制御、git 操作、fork 作成、入出力処理など、builder 互換境界の外側にある実行フローを調べたいとき。
-- indexing、session join、TUI、review 判定などの具体的なアルゴリズムや入出力仕様そのものを理解したいとき。再公開先または委譲先の oracle 側実装へ進む。
-- 互換公開面ではなく、新しい ACP 機能、API 仕様、正本 builder 実装を追加する場所を探しているとき。
+- ACP builder の prompt 本文、structured output schema、モデル選択、file access mode などの正本仕様そのものを確認したいとき。互換入口ではなく oracle 側の正本実装へ進む。
+- apply、review、session、TUI、indexing の具体的な判定基準や生成内容を調べたいとき。この領域は多くが再公開または薄い委譲なので、対応する oracle 側本文を読む。
+- 新しい ACP 機能や API 仕様を追加する場所を探しているとき。既存 import 経路の互換維持が主題でないなら、正本仕様または実体実装の責務を持つ領域へ進む。
+- CLI 全体の制御フロー、git 操作、状態管理、path model、バックエンドへのモデル名解決などを調べたいとき。この領域はそれらの責務を所有しない。
+- 生成キャッシュやバイトコード成果物の内容を確認したいだけのとき。ルーティング上の本文根拠にはならない。
 
 ## hash
-- 6c15b04bf876b04508960ed72169d13067ad231db713dc31f068909ef99c3da6
+- 5d79511241eb37a4cddcd342c27a8dffcb44d37ea8dd9733d714530535853313
 
 # `basic`
 

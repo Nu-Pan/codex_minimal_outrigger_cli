@@ -19,21 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP builder の realization 側公開入口を束ねる階層。正本実装を oracle 側に置いたまま、既存の builder 参照経路を維持する互換 package と薄い adapter 群を配置している。
-- 主な入口は、apply fork の agent call parameter 構築委譲、indexing 実装の再公開、review oracle 機能の再公開と一部 prompt placeholder 補正、session join への互換経路、TUI 起動・解決パラメータの再公開で構成される。
-- この階層は builder 本体仕様を所有する場所ではなく、realization 側から oracle 側正本実装へ到達する import 境界と、既存参照を壊さないための互換面を確認するための入口である。
+- ACP builder 領域の realization 側公開入口を束ねる階層。正本側実装を既存の import 経路から利用できるようにする互換境界を中心に、apply fork、review oracle、session join、TUI パラメータ、indexing 関連の下位入口へ進むための案内を担う。
+- この階層の主な役割は builder 本体仕様や処理本体を所有することではなく、oracle 側に置かれた正本実装との対応関係、既存参照経路の維持、互換入口の削除可否、下位領域への委譲境界を確認するための入口になること。
 
 ## Read this when
-- ACP builder の既存公開参照が、oracle 側の正本実装へどのように接続されているかを確認したいとき。
-- apply fork、review oracle、indexing、session join、TUI 関連の builder 入口が realization 側でどの領域に分かれているかを把握したいとき。
-- builder 互換 import path を削除・移動・置換してよいか、残す理由や削除条件を確認したいとき。
-- oracle 側 builder へ委譲する前後で、realization 側が行う最小限の調整や adapter 境界を探したいとき。
+- ACP builder の realization 側 import path が、oracle 側の builder 実装や正本 package 構造へどのように接続されているか確認したいとき。
+- 既存の ACP builder 公開入口や互換 package を削除・移動・置換してよいか判断するために、残す理由や削除条件を確認したいとき。
+- apply fork、review oracle、session join、TUI パラメータ、indexing のいずれかに関する builder 入口の所在を、この階層から切り分けたいとき。
+- realization 側が独自処理を持つ箇所と、oracle 側 builder へ薄く委譲または再公開しているだけの箇所を区別したいとき。
 
 ## Do not read this when
-- builder の正本仕様、prompt 本文、Structured Output schema、モデル設定、file access mode などを確認したいとき。対応する oracle 側の本文や実装を読む。
-- apply fork や review workflow の CLI 制御、git 操作、fork 作成、入出力処理など、builder 外の実行フローを調べたいとき。
-- indexing、session join、TUI、review 判定などの具体的なアルゴリズムや入出力仕様そのものを理解したいとき。委譲先の oracle 側実装またはより直接の下位領域へ進む。
-- 互換公開面ではなく、新しい機能の実装場所、公開 API の追加、または builder 以外の ACP 関連責務を探しているとき。
+- ACP builder の prompt 本文、structured output schema、モデル選択、file access mode などの正本仕様を確認したいとき。対応する oracle 側の本文を読む。
+- apply、review、session、TUI、indexing の具体的な処理内容や判定基準、入出力仕様を調べたいとき。互換入口ではなく、委譲先の正本実装またはより直接の下位実装へ進む。
+- CLI 全体の制御フロー、fork 作成、git 操作、状態管理、共通型定義、path model などを調べたいとき。この階層はそれらの責務を所有しない。
+- 新規機能の実装場所やテスト対象を探しており、既存 import path 互換や oracle 側への接続関係が主題ではないとき。
 
 ## hash
-- 73e625154b662dd2592a44d610000f5654108ab1f4036fdf4e52eb18b5162050
+- d76a837643de314a4b49b67f51757cdd04b9b17494549d139181bc2de376475f

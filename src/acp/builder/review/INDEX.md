@@ -18,21 +18,21 @@
 # `oracle`
 
 ## Summary
-- review oracle 領域の realization 側互換入口を集めた package。finding の列挙・判定・統合、advocate/challenger 検証の各処理について、主に oracle 側実装の再公開または薄い adapter を提供する。
-- この階層自体は review oracle の正本仕様や主要ロジックを保持する場所ではなく、realization implementation 側の import path から oracle 由来の実装へ到達するための境界として位置づく。
-- 一部の adapter は oracle 側パラメータ生成を包み、実行側で許容された範囲の prompt placeholder typo 補正だけを行う。
+- review oracle に関する realization 側の互換入口をまとめた階層。多くは正本側実装を再公開するだけで、finding の列挙・判定・challenger 検証の実体は持たない。
+- 所見マージと所見擁護検証の agent call parameter 生成では、正本側 builder の戻り値を使い、実行前に prompt 内の oracle root token 表記だけを最小補正する。
+- review oracle の処理本体や正本仕様ではなく、realization 側の import path から正本由来の review oracle 機能へ到達するための境界を扱う。
 
 ## Read this when
-- realization 側から review oracle の finding 列挙・判定・統合・検証機能へ到達する import 経路を確認したいとき。
-- この階層のモジュールが独自ロジックを持つのか、oracle 側実装の再公開または薄い adapter なのかを切り分けたいとき。
-- merge finding や finding advocate 検証で、oracle 側 prompt 由来の placeholder 表記補正が realization 側のどこで行われるかを確認したいとき。
-- review oracle 関連の互換 import path を変更・削除してよいか判断するために、package 境界や再公開入口としての役割を確認したいとき。
+- realization 側から review oracle の finding 列挙・判定・検証・所見マージ機能が、どの正本側実装へ委譲されるか確認したいとき。
+- review oracle 関連の import path を変更・削除してよいか判断するために、互換入口としての役割を確認したいとき。
+- 所見マージまたは所見擁護検証の実行用 parameter 生成で、正本側 builder の戻り値に対してどの prompt token 補正が加わるか確認したいとき。
+- この階層の module が独自の review ロジックを持つのか、正本側実装の再公開または最小補正に留まるのかを切り分けたいとき。
 
 ## Do not read this when
-- review oracle の正本仕様、prompt 本文、Structured Output schema、model 設定、reasoning effort、file access mode を確認したいとき。その場合は対応する oracle 側の仕様文書または実装を読む。
-- finding 列挙・判定・統合・検証の具体的なアルゴリズム、入出力、判定基準を理解したいとき。この階層ではなく委譲先の oracle 側実装へ進む。
-- review workflow 全体の制御、CLI 入出力、レビュー結果の検証観点、または review oracle 以外の builder 処理を調べたいとき。より上位または該当責務の本文を読む。
-- 公開 API の詳細実装、関数・クラス・定数の新規定義、または再公開ではない処理本体を探しているとき。この階層の多くは互換境界としての薄い入口に留まる。
+- finding 列挙・finding 判定・challenger 検証の具体的な処理内容、入出力、判定基準を理解したいとき。その場合は委譲先の正本側実装を読む。
+- 所見マージや所見擁護検証の prompt 正本内容、structured output schema、review oracle の仕様断片を確認したいとき。正本側の対応する oracle src や関連 doc を読む。
+- review 実行全体の制御フロー、CLI の入出力、agent call parameter の共通型定義や属性の意味を調べたいとき。より上位または共通定義の本文へ進む。
+- oracle file の typo 修正提案や正本仕様の変更可否を判断したいとき。この階層は実行側の最小補正境界を示すだけで、正本変更の根拠を扱わない。
 
 ## hash
-- cd535c81c0d262808645c95f3a38ac97d7ad94ba8222db6629903a884d244a9c
+- 25f48ce6091efed3854a9d49eda78cc592ee9447656c567adaf9de8201bbf5ec

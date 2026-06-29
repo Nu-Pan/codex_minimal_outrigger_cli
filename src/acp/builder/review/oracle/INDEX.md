@@ -51,39 +51,39 @@
 # `merge_finding.py`
 
 ## Summary
-- 対象は正本側のパラメータ生成関数を再公開しつつ、プロンプト中のプレースホルダー typo だけを実行側で最小補正する薄いアダプタである。レビュー oracle の merge finding 用 agent call パラメータを扱う箇所への入口になる。
+- 所見マージ用の agent call parameter を oracle src 実装から取り込み、実行側で必要な最小限の prompt 補正を加える realization implementation。oracle src 側の既存ビルダーを正としつつ、生成された parameter の prompt 内に残る oracle root トークン表記の typo だけを実行前に置換して返す入口である。
 
 ## Read this when
-- レビュー oracle の finding 統合プロンプトを呼び出す実装側の入口や、正本側パラメータ生成関数との接続を確認したいとき。
-- 正本側プロンプトに含まれるプレースホルダー表記の補正が、どこでどの範囲に限って行われているかを確認したいとき。
-- agent call に渡すプロンプトを原則そのまま使いつつ、正本側 typo への最小限の実行側補正を扱う実装を調べるとき。
+- 所見マージ prompt の実行用 parameter がどの oracle src 実装を呼び出しているか確認したいとき。
+- 所見マージ prompt に含まれる oracle root トークン表記の補正理由や補正範囲を確認したいとき。
+- oracle src 由来の parameter を realization 側でどこまで変更してよいか、最小補正の実装境界を確認したいとき。
 
 ## Do not read this when
-- finding 統合プロンプト本文そのもの、モデル設定、Structured Output schema の正本定義を確認したいときは、正本側のパラメータ生成定義や schema を読む。
-- レビュー結果の finding を実際に統合するアルゴリズムや出力内容の検証を調べたいだけのとき。
-- 一般的な prompt 規範や、実行側でプロンプト加工を許容する条件を確認したいときは、該当する正本ドキュメントを読む。
+- 所見マージ prompt の正本内容そのもの、structured output schema、または review oracle の仕様断片を確認したいとき。
+- 所見マージ以外の review builder parameter 生成や、review 実行全体の制御フローを調べたいとき。
+- oracle file の typo を修正する提案や正本仕様の変更可否を判断したいとき。
 
 ## hash
-- 37e43437904eec28eb3c24ffb908fdde174cbc4f643ed67852e003304232861b
+- 9480575f8b473f6392c067c70449375146ec969882cb148940af310af578751a
 
 # `validate_finding_advocate.py`
 
 ## Summary
-- realization 側で review oracle の finding advocate 検証パラメータ生成を公開し、oracle 側実装へ委譲したうえで prompt 内の oracle root 表記 typo だけを補正する薄い adapter。
-- oracle src prompt の placeholder 表記差を、仕様で許容された realization-side patch として吸収するための入口。
+- 所見擁護検証用の agent call parameter を実行側で組み立てる薄いラッパー。正本側の同名 builder を呼び出し、prompt 内の path token typo だけを最小補正して返す。
+- 正本仕様断片から生成された parameter をそのまま使うのではなく、realization 側で許容された `<oracle_root>` から `<oracle-root>` への補正を挟む入口として位置づく。
 
 ## Read this when
-- review oracle の finding advocate 検証パラメータ生成が、oracle 側実装と異なる prompt 文字列を返す理由を確認したいとき。
-- `<oracle_root>` と `<oracle-root>` の表記補正がどこで行われているかを追うとき。
-- review oracle validate finding advocate 用の realization 実装が、oracle 側パラメータ生成をどのように包んでいるか確認したいとき。
+- 所見擁護検証 prompt の実行用 parameter 生成経路を確認したいとき。
+- 正本側 builder の戻り値に対して realization 側でどの最小補正を加えているかを確認したいとき。
+- `<oracle_root>` と `<oracle-root>` の表記差が、所見擁護検証 prompt でどこで補正されるかを調べるとき。
 
 ## Do not read this when
-- finding advocate 検証 prompt の正本仕様や本来のパラメータ構成を確認したいだけなら、対応する oracle 側の実装または仕様文書を読む。
-- review oracle 全般の設計、他の検証者、または review workflow の制御を調べるときは、より上位または該当 component の本文へ進む。
-- 単に Structured Output schema、model class、reasoning effort、file access mode の定義を調べるときは、それらを定義する oracle 側または共通定義を読む。
+- 所見擁護検証 prompt の正本内容や schema 自体を確認したいときは、正本側の対応する oracle src や関連 doc を読む。
+- 所見擁護ではない review oracle prompt の parameter 生成経路を調べるときは、対象 prompt に対応する別の builder を読む。
+- agent call parameter の型定義や共通属性の意味を調べるときは、共通の parameter 定義を読む。
 
 ## hash
-- d64a075a6c1eec148438477316a1fedb9e53cdc8de0df390c33141b049e5ca04
+- 4d0405bdc8dff07f326fbe150096936fc60459e6f4f820c5ed1daa079c0311a6
 
 # `validate_finding_challenger.py`
 
