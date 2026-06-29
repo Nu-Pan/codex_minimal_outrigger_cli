@@ -112,25 +112,25 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の共通 runtime 契約を横断的に固定する realization test。root placeholder と worktree 境界、設定既定値と検証、CmocError の Markdown 表示、CLI error の stdout 化、subcommand log、`.cmoc` ignore、FileAccessMode から Codex sandbox/profile への変換、binary 判定など、個別サブコマンドより下位の実行前提をまとめて検証する。
-- 16,000 文字を超えるが、共通 fixture と root 状態の読み取り文脈が強く結合するため、basic runtime 回帰として一箇所に保たれている。runtime 境界の変更時に、複数機能へ波及する基礎契約を確認する入口になる。
+- cmoc の共通 runtime 契約を横断的に固定する realization test。root placeholder と worktree 境界、config 既定値と検証、CmocError の Markdown 表示、CLI error の stdout 変換、subcommand log、FileAccessMode から sandbox/profile への変換、binary 判定など、個別サブコマンドより下の基礎挙動をまとめて検証する。
+- 16,000 文字を超えるが、共通 fixture と root 状態の読み取り文脈を分散させないため、basic runtime 回帰として一箇所に保つ意図を持つ。
 
 ## Read this when
-- root placeholder、repo root、run root、work root、linked worktree、managed worktree の境界や拒否条件を変更・確認するとき。
-- CmocError、render_error、CLI 引数解析 error、preflight error、stdout/stderr の扱い、起動 wrapper の call stack 表示を変更・確認するとき。
-- CmocConfig、codex model class、reasoning effort、config_from_dict の型検証に関わる変更をするとき。
-- subcommand log の生成条件、timestamp 衝突時の log file 扱い、pre-log check failure 時の副作用抑止を確認するとき。
-- `.cmoc` の `.gitignore` 追記挙動、FileAccessMode の永続化値、sandbox mode 変換、Codex profile の writable roots と追加書き込み許可 path の制限を変更・確認するとき。
-- binary 判定の読み取り量や、shell completion probe が cmoc preflight と初期化副作用を避ける契約を確認するとき。
+- runtime の root 解決、repo root と run/work root の区別、main worktree と linked worktree の扱いを確認・変更する。
+- CmocError、CLI 引数解析 error、想定済み CLI error のレポート形式、stdout/stderr の出し分け、call stack 表示を確認・変更する。
+- config の既定値、codex model class、reasoning effort、非文字列設定値の拒否条件を確認・変更する。
+- subcommand log の生成条件、timestamp 衝突時のファイル分離、pre-log check 失敗時に log を書かない契約を確認・変更する。
+- FileAccessMode の永続化値、Codex sandbox mode、cwd、writable roots、extra writable paths、oracle conflict write の許可範囲を確認・変更する。
+- `.cmoc` の gitignore 追加、run worktree 作成・削除の安全境界、binary 判定の読み取り範囲など、複数 runtime helper にまたがる基礎回帰を確認する。
 
 ## Do not read this when
-- 特定サブコマンド固有の業務フロー、入出力 schema、個別コマンドの詳細挙動だけを調べたいとき。
-- runtime の共通契約ではなく、oracle 文書の正本仕様やルーティング文書そのものを確認したいとき。
-- 単一 helper の内部実装だけを局所的に変更し、root 解決、config、error report、logging、sandbox/profile、file access、binary 判定へ影響しないことが明らかなとき。
-- Codex CLI や LLM の出力品質そのものを検証したいとき。
+- 個別サブコマンド固有の正常系・業務ロジックだけを調べたい場合。共通 runtime 境界に触れないなら、対象サブコマンドの実装や専用テストへ進む。
+- oracle 正本仕様の内容や文書構成を確認したい場合。この対象は realization test であり、仕様の正本ではない。
+- 単一 helper の細かな実装だけを読みたい場合。まず該当 runtime module の実装を直接読み、共通契約の既存回帰が必要になったときに読む。
+- INDEX.md 生成・ルーティング文書の形式そのものを確認したい場合。この対象は routing entry の仕様ではなく、runtime 挙動のテストである。
 
 ## hash
-- e8f6030d55acadbf5bb32c377603cb22fe61c8e5f27c8be75dc5b38e0cc299d0
+- fec280dd69bc161a7821710a9408704f134b6c976651d98d0a074b4c2c4dea07
 
 # `test_cli_init_tui.py`
 

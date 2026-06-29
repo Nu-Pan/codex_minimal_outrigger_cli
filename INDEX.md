@@ -169,23 +169,23 @@
 # `test`
 
 ## Summary
-- realization test 全体の入口。CLI サブコマンド、Codex runtime、indexing preflight、prompt builder、共通 runtime 契約、session/apply/review 系の外部挙動を pytest で固定している。
-- 一時 Git repository、fake Codex executable、Codex home、worktree/branch/state/report/log などを使い、oracle ではなく実装側の観測可能な副作用と制御ロジックを確認するテスト群を束ねる。
-- 共通補助関数と機能別の統合テストが同階層にあり、実装変更時にどの外部挙動の回帰確認へ進むかを選ぶための入口になる。
+- cmoc の realization test 群を収める領域。CLI サブコマンド、Codex runtime、prompt/ACP builder、indexing、session/apply/review の外部挙動を、Git worktree・branch・state・log・report・subprocess 境界から検証する。
+- 一時 repository、fake Codex executable、Codex home、profile 差し替え、Git 状態確認など、CLI 統合テストの共通 fixture と補助関数もここに置かれている。
+- 実装変更時に、利用者から観測される終了コード、標準出力・標準エラー、永続状態、commit、cleanup、report、structured output schema 参照が既存期待と合うか確認する入口になる。
 
 ## Read this when
-- CLI サブコマンドの終了コード、標準出力・標準エラー、Git branch/worktree 操作、状態ファイル、report、cleanup など、利用者または外部プロセスから観測できる挙動の既存期待値を確認したいとき。
-- apply、session、review、indexing、init/TUI、Codex runtime、prompt 構築、共通 runtime 境界の実装変更が、既存の realization test とどの観点で接続しているかを探したいとき。
-- Codex CLI 呼び出しを fake にした subprocess 制御、profile/CODEX_HOME/sandbox/cwd/schema/log/retry/quota handling の回帰テストを探したいとき。
-- 一時 repository、linked worktree、apply worktree、oracle 最小 fixture、fake executable、Codex home など、CLI 統合テストの準備に使う共通 helper を確認したいとき。
-- routing document 生成・更新、INDEX conflict、hash 再利用、preflight commit、prompt builder の schema 参照など、索引と prompt 生成に関する実装側の回帰確認をしたいとき。
+- CLI サブコマンドの外部挙動を変更し、終了コード、出力、Git branch/worktree、状態ファイル、report、cleanup の期待値を確認したいとき。
+- session や apply の fork/join/abandon、review oracle、indexing、init/TUI 起動前処理など、複数の repository 状態を伴う統合的な回帰を確認・追加するとき。
+- Codex CLI 呼び出し wrapper の argv、cwd、CODEX_HOME、profile、sandbox、subprocess tracking、retry、quota retry、call log を変更・調査するとき。
+- prompt 構築、file access rule、routing rule、standard 文書、ACP builder、structured output schema の組み込み結果をテスト上で確認するとき。
+- CLI テスト用の最小 Git repository、認証済み Codex home、fake executable、profile 生成差し替え、apply worktree path 解決などの共通補助を使う、または変更するとき。
 
 ## Do not read this when
-- oracle file の正本仕様、用語定義、標準、JSON schema の内容そのものを確認したい場合は、oracle 側の本文を読む。
-- 実装本体の責務分割、helper の内部アルゴリズム、設定 loader、path model、git wrapper などを直接変更する場合は、まず対応する実装側を読む。
-- Codex CLI や LLM の実際の応答品質、認証フロー、外部 Codex 本体の機能を評価したい場合は、この対象ではない。
-- INDEX.md エントリー生成規則やルーティング文書の形式そのものを確認したいだけなら、正本仕様または対象の routing standard を読む。
-- 単一の小さな入力変換や純粋 helper の挙動だけを確認したい場合で、CLI から観測される副作用や共有 fixture の文脈が不要なら、より直接の実装または専用テストへ進む。
+- 正本仕様断片そのものを確認・変更したいときは、ここではなく oracle 側の本文を読む。
+- 実装内部の責務分割、helper の詳細、データ構造の組み立て方を直接修正したいだけなら、まず対応する実装領域を読む。
+- Codex CLI や LLM の実際の応答品質、モデル選択の妥当性、プロンプト内容の良し悪しを評価したいだけなら、このテスト群は主対象ではない。
+- routing document の個別エントリー本文を作成・評価したいだけで、indexing workflow や schema 検証の外部挙動を扱わない場合は、正本のルーティング規約や対象本文を読む。
+- 単純な fixture 作成方法だけを探しており、個別サブコマンドの期待挙動を確認する必要がない場合は、共通補助だけを直接読む。
 
 ## hash
-- 994a5350466955510dbc74ba0466d47923dcd30dd06379e67afaaf516e8c641d
+- 89121ebb5854d74dc56072c744df0876226bb6a081d662ed0e00883c3953fbff
