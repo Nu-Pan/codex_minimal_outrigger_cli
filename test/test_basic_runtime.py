@@ -67,6 +67,13 @@ def _assert_writable(profile: str, path: Path) -> None:
     )
 
 
+def _assert_not_writable(profile: str, path: Path) -> None:
+    target = path.resolve()
+    assert not any(
+        target.is_relative_to(Path(root)) for root in _profile_writable_roots(profile)
+    )
+
+
 def test_path_model_resolves_token_path_inside_repo() -> None:
     """root placeholder path が repo 内の実 path から復元できる契約を固定する。"""
     cmoc_root = resolve_real_path(RootPathPlaceHolder.CMOC)
@@ -479,10 +486,13 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     (root / "AGENTS.md").write_text("agents\n")
     (root / "INDEX.md").write_text("index\n")
     (root / "src").mkdir()
+    (root / "test").mkdir()
     (root / "README.md").write_text("# repo\n")
     (root / "oracle").mkdir()
     (root / "memo").mkdir()
     (root / ".agents").mkdir()
+    (root / ".git").mkdir()
+    (root / ".gitignore").write_text("memo\n")
 
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
@@ -517,18 +527,38 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         assert 'sandbox_mode = "workspace-write"' in profiles[mode]
         assert "[sandbox_workspace_write]" in profiles[mode]
     assert _profile_writable_roots(profiles[FileAccessMode.REALIZATION_WRITE]) == {
-        str(root.resolve()),
+        str((root / ".gitignore").resolve()),
+        str((root / "src").resolve()),
+        str((root / "test").resolve()),
     }
     assert _profile_writable_roots(profiles[FileAccessMode.ORACLE_WRITE]) == {
         str((root / "oracle").resolve())
     }
     assert _profile_writable_roots(profiles[FileAccessMode.REPO_WRITE]) == {
-        str(root.resolve()),
+        str((root / ".gitignore").resolve()),
+        str((root / "oracle").resolve()),
+        str((root / "src").resolve()),
+        str((root / "test").resolve()),
     }
+    for blocked in (
+        "oracle/spec.md",
+        "memo/note.md",
+        ".agents/state.json",
+        ".cmoc/log",
+    ):
+        _assert_not_writable(profiles[FileAccessMode.REALIZATION_WRITE], root / blocked)
+    for blocked in ("memo/note.md", ".agents/state.json", ".git/config"):
+        _assert_not_writable(profiles[FileAccessMode.REPO_WRITE], root / blocked)
     _assert_writable(
-        profiles[FileAccessMode.REALIZATION_WRITE], root / "new_top_level.md"
+        profiles[FileAccessMode.REALIZATION_WRITE], root / "src" / "created.py"
     )
     _assert_writable(
+        profiles[FileAccessMode.REPO_WRITE], root / "oracle" / "created.md"
+    )
+    _assert_not_writable(
+        profiles[FileAccessMode.REALIZATION_WRITE], root / "new_top_level.md"
+    )
+    _assert_not_writable(
         profiles[FileAccessMode.REPO_WRITE], root / "new_dir" / "created.md"
     )
 
@@ -545,7 +575,11 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         root,
         extra_writable_paths=[extra],
     )
-    assert _profile_writable_roots(profile) == {str(root.resolve())}
+    assert _profile_writable_roots(profile) == {
+        str((root / ".gitignore").resolve()),
+        str((root / "src").resolve()),
+        str((root / "test").resolve()),
+    }
 
     with pytest.raises(CmocError, match="許可領域外"):
         build_codex_profile(
@@ -611,6 +645,8 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         (FileAccessMode.ORACLE_WRITE, ".agents/blocked.md"),
         (FileAccessMode.REPO_WRITE, "memo/blocked.md"),
         (FileAccessMode.REPO_WRITE, ".agents/blocked.md"),
+        (FileAccessMode.REPO_WRITE, ".cmoc/state.json"),
+        (FileAccessMode.REPO_WRITE, ".git/config"),
         (FileAccessMode.REPO_WRITE, "../outside.md"),
     ],
 )
@@ -639,7 +675,7 @@ def test_codex_profile_rejects_disallowed_extra_writable_paths(
         )
 
 
-def test_codex_profile_keeps_work_root_writable_for_session_join_conflict_resolution(
+def test_codex_profile_opens_only_conflict_file_for_session_join_conflict_resolution(
     tmp_path: Path,
 ) -> None:
     root = tmp_path / "repo"
@@ -664,6 +700,8 @@ def test_codex_profile_keeps_work_root_writable_for_session_join_conflict_resolu
     )
 
     assert _profile_writable_roots(profile) == {
-        str(root.resolve()),
+        str((root / "src").resolve()),
+        str(target.resolve()),
     }
     _assert_writable(profile, target)
+    _assert_not_writable(profile, root / "oracle" / "other.md")

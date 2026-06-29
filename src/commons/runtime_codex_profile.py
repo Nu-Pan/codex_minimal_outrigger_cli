@@ -22,7 +22,7 @@ from commons.runtime_paths import schema_store_dir
 
 APPLY_PROCESS_TRACKING_ENV = "CMOC_APPLY_PROCESS_ID_PATH"
 _active_apply_process_tracking_path: Path | None = None
-_REALIZATION_WRITE_BLOCKED_ROOT_NAMES = {
+_PROFILE_BLOCKED_ROOT_NAMES = {
     ".agents",
     ".cmoc",
     ".codex",
@@ -33,7 +33,11 @@ _REALIZATION_WRITE_BLOCKED_ROOT_NAMES = {
     "README.md",
     "memo",
 }
-_REPO_WRITE_BLOCKED_ROOT_NAMES = {".agents", "memo"}
+_REALIZATION_WRITE_BLOCKED_ROOT_NAMES = {
+    *_PROFILE_BLOCKED_ROOT_NAMES,
+    "oracle",
+}
+_REPO_WRITE_BLOCKED_ROOT_NAMES = _PROFILE_BLOCKED_ROOT_NAMES
 
 
 def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
@@ -121,12 +125,17 @@ def _writable_roots(
         case FileAccessMode.REALIZATION_WRITE | FileAccessMode.REPO_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            # Codex profile has no deny-list expression. The oracle contract still
-            # requires profile-based access setup, but allowing new top-level paths
-            # needs <work-root> itself as the writable root; fine-grained bans are
-            # carried in the injected prompt, not approximated by enumerating
-            # currently existing children.
-            paths = [root]
+            # Codex profile has no deny-list expression. Listing currently existing
+            # writable top-level paths keeps forbidden trees out of the sandbox
+            # instead of relying on the injected prompt to narrow a writable root.
+            paths = sorted(
+                [
+                    path
+                    for path in root.iterdir()
+                    if _is_writable_path_allowed(mode, root, path.resolve())
+                ],
+                key=lambda path: str(path.resolve()),
+            )
         case FileAccessMode.ORACLE_WRITE:
             paths = [root / "oracle"]
         case _:
@@ -172,6 +181,13 @@ def _is_writable_path_allowed(
     # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # 追加 writable path は、prompt で伝える禁止領域を広げない範囲だけ許可する。
+    if mode == FileAccessMode.REALIZATION_WRITE and allow_oracle_conflict_writes:
+        # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
+        # session join の conflict 解消だけは、prompt だけでなく sandbox
+        # profile でも conflict 対象 oracle file の個別書き込みを開く。
+        oracle_root = root / "oracle"
+        if path.is_relative_to(oracle_root):
+            return path != oracle_root and path.name != "INDEX.md"
     relative = path.relative_to(root)
     blocked_root_names = (
         _REPO_WRITE_BLOCKED_ROOT_NAMES
@@ -181,16 +197,6 @@ def _is_writable_path_allowed(
     if relative.parts and relative.parts[0] in blocked_root_names:
         return False
     if mode == FileAccessMode.REALIZATION_WRITE:
-        if allow_oracle_conflict_writes:
-            # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
-            # session join の conflict 解消だけは、prompt だけでなく sandbox
-            # profile でも conflict 対象 oracle file の個別書き込みを開く。
-            oracle_root = root / "oracle"
-            return (
-                path.is_relative_to(oracle_root)
-                and path != oracle_root
-                and path.name != "INDEX.md"
-            ) or not path.is_relative_to(oracle_root)
         return not path.is_relative_to(root / "oracle")
     if mode == FileAccessMode.ORACLE_WRITE:
         return path.is_relative_to(root / "oracle")
