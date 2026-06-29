@@ -147,47 +147,48 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体への入口。公開 CLI の組み立て、利用者向けサブコマンドの実行本体、Codex 実行・TUI 起動・indexing preflight・設定・状態・ログ・git・path・エラー表示などの共有 runtime helper、正本側実装を既存 import 経路へ再公開する互換境界を扱う。
-- この階層は正本仕様やテストの置き場ではなく、oracle file で述べられた意図を実際の CLI 挙動・実行 orchestration・共通補助処理・互換 import 面として具体化する realization implementation の集合である。
+- cmoc の realization implementation を置く階層。最上位 CLI、サブコマンド実装、共通 runtime helper、Codex 実行制御、git/worktree/state/config/log/path/result/error などの共有処理、INDEX maintenance、TUI 起動、apply/session/review の実行フローを扱う。
+- 一方で、ACP builder や basic/config/oracle 由来の概念については、正本側実装を複製せず既存 import 経路を保つための互換・再公開層も含む。実体ロジックを探す場合は、互換境界、共通 runtime、個別サブコマンドのどれを調べるべきかをここから切り分ける。
 
 ## Read this when
-- cmoc の CLI コマンド構成、サブコマンド登録、利用者操作がどの実装へ委譲されるかを実装側から確認または変更したいとき。
-- session、apply、review、init、indexing、TUI などの利用者向け操作について、branch/worktree 操作、state 更新、report 出力、Codex 呼び出しまでの制御フローを追いたいとき。
-- Codex exec/TUI、sandbox/profile、Structured Output schema 受け渡し、preflight indexing、設定読み書き、内容 hash、git wrapper、ログ、runtime path、エラー表示、実行結果 model、session state 永続化など、複数のコマンドにまたがる共有 runtime helper を探したいとき。
-- ACP builder、basic 型、config、oracle package などについて、realization 側に残る旧来 import 経路が正本側実装へどう接続されているか、またその互換入口を削除できる条件を判断したいとき。
-- 正本仕様ではなく、現在の realization implementation がどの責務境界で分割され、どの下位領域へ進むべきかを選びたいとき。
+- cmoc の実装側で、CLI 入口、サブコマンド、共通 runtime、互換 import 境界のどこへ進むべきかを最初に判断したいとき。
+- 公開 CLI のコマンド構成、引数、Typer 起動、CLI 引数解析エラーの cmoc 形式表示、console script からの起動経路を確認・変更したいとき。
+- session、apply、review、init、indexing、TUI などのサブコマンドが、branch/worktree 操作、状態更新、Codex 呼び出し、report 生成、利用者向け出力へどう接続されるかを追いたいとき。
+- Codex exec/TUI 呼び出し、Codex profile、file access mode、Structured Output schema、capacity/quota retry、preflight indexing、call log など、複数機能から使われる Codex 実行周辺の共通処理を確認・変更したいとき。
+- 設定読み書き、content hash、binary 判定、git subprocess、ignore 条件、runtime path、エラー表示、subcommand logging、結果型、session/apply state の永続化など、サブコマンド横断の runtime helper を探したいとき。
+- INDEX maintenance の実装側として、対象 directory 列挙、entry 鮮度判定、entry 生成依頼、lock、commit、Markdown rendering の流れを確認・変更したいとき。
+- 既存の ACP builder、basic、config、oracle 関連 import 経路が、正本側実装や実体 module へどの互換入口を通って接続されているか確認したいとき。
 
 ## Do not read this when
-- 正本仕様断片、利用者向け仕様、prompt 本文、Structured Output schema の意味、path keyword の定義、oracle file と realization file の基本概念を確認したいとき。その場合は oracle 側の本文を読む。
-- 実装の外部挙動を検証するテスト、fixture、テスト観点を調べたいとき。その場合は realization test 側を読む。
-- 生成済みログ、保存済み state、report、既存 INDEX.md の内容など、実行結果として作られたデータを読みたいとき。この階層はそれらを生成・解釈する実装側である。
-- 特定のサブコマンド、共有 helper、互換 module、または正本側再公開元が既に分かっているとき。その場合はこの階層全体ではなく、該当する下位対象へ直接進む。
-- 正本側の ACP builder ロジック、基本型、設定定義、path model、構造化ドキュメント定義そのものを変更・確認したいとき。この階層にある同名領域は主に互換・再公開境界であり、実体は正本側にある。
+- 正本仕様断片そのもの、oracle file の意味、path keyword の定義、prompt 本文、Structured Output schema の正本、設定定義の正本、ACP 基本型の正本を確認したいとき。その場合は oracle 側の本文を読む。
+- realization test の期待値、fixture、テスト観点だけを確認・変更したいとき。この階層ではなく test 側を読む。
+- README、package metadata、補助 script、生成済みログ、永続状態ファイルの実データ、実行 report の内容など、実装本体以外の ancillary や実行成果物を調べたいとき。
+- 個別サブコマンドの内部処理だけが目的で、読むべきサブコマンド実装がすでに分かっているときは、その下位領域へ直接進む。
+- 共通 runtime helper を利用するだけで、その契約や挙動を変更しないときは、呼び出し側の実装から必要な公開名だけ確認する。
+- ACP builder、basic、config などの互換入口を削除・移行する作業ではなく、正本側の型・設定・prompt・生成ロジックの詳細を調べたいときは、再公開元へ進む。
 
 ## hash
-- 9db0e431ff5de7199f42af696981f40ba6f330089e3fa95d2a8f6edbf22cce2e
+- 0ccfd3a0eb30b5afdd2c919c0390322cd63a6f9b4b444892d8a9b322b3274b14
 
 # `test`
 
 ## Summary
-- realization test 全体の入口。CLI サブコマンド、Codex runtime、prompt builder、indexing preflight、session/apply/review の worktree・branch・state・report・error handling を、外部挙動と重要な制御境界として検証するテスト群を収める。
-- 共通 fixture と fake Codex/Git 実行環境を使い、oracle file 由来の意図が realization implementation で期待どおり具体化されているかを確認するための回帰観測点になる。
+- cmoc の realization test 群を集約する領域。CLI サブコマンド、Codex 実行基盤、prompt builder、indexing preflight、session/apply/review の git worktree・branch・state・report 副作用を、外部挙動と重要な制御境界として検証する。
+- 共通 fixture と fake Codex 実行を使い、oracle ではなく実装が正本仕様断片をどう具体化しているかを回帰確認する入口になる。個別機能の実装変更時に、利用者から観測される CLI 出力、終了コード、永続状態、ログ、cleanup、拒否条件を確認するためのテスト本文へ進む階層である。
 
 ## Read this when
-- CLI の init、tui、session fork/join/abandon、apply fork/join/abandon、review oracle、indexing などの外部挙動、終了コード、標準出力・標準エラー、report、state 更新、worktree/branch cleanup を確認または変更するとき。
-- Codex CLI 呼び出しラッパーの引数生成、sandbox/profile、CODEX_HOME 解決、環境変数遮断、process tracking、retry、quota retry、structured output 検証、ログ出力の回帰条件を確認するとき。
-- root/worktree/path 解決、設定値検証、構造化エラー表示、CLI preflight、subcommand log、.cmoc ignore、binary 判定、session/apply branch state 読み取りなど、複数機能の前提になる runtime 境界を調べるとき。
-- prompt part や AgentCallParameter builder が、標準文書、routing/file access rule、structured output schema、model/reasoning/file access mode をどう組み合わせるかを検証したいとき。
-- indexing の INDEX.md 更新、hash 再利用、conflict/malformed entry 再生成、linked/apply worktree 上の更新対象、Codex 呼び出し前 preflight と commit 制御を確認するとき。
-- 新しい realization test を追加する前に、既存のどのテストへケース追加・統合できるか、同じ観点の回帰がすでに存在するかを確認するとき。
-- CLI テスト用の一時 Git repository、Codex home、fake executable、profile 差し替え、apply worktree path 解決などの共通補助処理を使う、または変更するとき。
+- CLI サブコマンドの変更により、終了コード、stdout/stderr、report、subcommand log、git branch/worktree、session/apply state、cleanup の外部挙動が変わる可能性があるとき。
+- Codex CLI 呼び出し基盤、CODEX_HOME、profile、sandbox、structured output schema、retry、quota probe、TUI 起動前処理など、Codex 実行制御の回帰観点を確認したいとき。
+- apply fork/join/abandon、session fork/join/abandon、review oracle、indexing、init、tui について、実装内部ではなく CLI 経由で観測される成功条件・拒否条件・副作用を調べたいとき。
+- prompt builder、routing rule、file access rule、standard 文書注入、AgentCallParameter の生成結果が期待どおりかを横断的に確認したいとき。
+- 一時 Git リポジトリ、認証済み Codex home、fake executable、branch 状態確認など、realization test の共通準備や補助処理を使う、または変更するとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片そのものを確認・編集したい場合は、oracle 側の該当文書や schema を読む。この領域は realization test であり正本仕様ではない。
-- 実装本体の責務分割、内部 helper、低レベル処理の詳細を直接変更する場合は、まず対応する implementation 側のファイルを読む。ここは期待される外部挙動や制御境界を確認する入口である。
-- Codex CLI や LLM の出力品質そのもの、生成文章の良し悪しを評価したい場合は対象外である。ここでは fake/stub を使い、呼び出し制御と副作用を検証する。
-- 特定サブコマンドに関係しない一般的な oracle standard、routing standard、path token の定義だけを調べたい場合は、より直接の oracle 文書を読む。
-- 単一の fixture や純粋 helper の内部実装だけを局所的に確認したい場合は、共通補助または対応する実装ファイルへ直接進む。
+- 正本仕様断片そのものを確認・編集したいとき。この階層は realization test であり、oracle file の代替ではない。
+- 個別 helper やサブコマンドの内部実装だけを局所的に変更し、CLI から観測される挙動や永続副作用の回帰確認が不要なときは、実装側の該当 module を先に読む。
+- Codex CLI や LLM の出力品質そのものを評価したいとき。この階層の多くは Codex 実行を fake に差し替え、cmoc 側の制御と副作用を検証する。
+- INDEX.md エントリーの生成規則、oracle/realization の分類、routing document の標準だけを確認したいときは、該当する正本仕様断片を読む。
+- 単純な path model、config schema、git helper、prompt 本文などの定義を確認したいだけで、テスト上の期待挙動や回帰観点を必要としないとき。
 
 ## hash
-- f0104e5b8ff24e1fa19f64df58cb254150f9e1fb8239abc91f9401811dda9481
+- ed678f8a2f8574be5b123e9f1139f0fa65ba75a795ea73c290bd4042824ef2ee

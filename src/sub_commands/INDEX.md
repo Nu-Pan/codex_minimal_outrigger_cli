@@ -1,27 +1,23 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実行・破棄・取り込みと、その実行時補助処理を扱う実装領域。作業用 branch/worktree の作成・検出・cleanup、apply state の遷移、process id 管理、実行中 process の停止、report 生成、join 時の merge/conflict 対応までを含む。
-- 所見を Codex に適用させる実行フロー、未 join run の破棄、完了またはエラーになった run の session branch への取り込み、実行結果 report の保存など、apply run のライフサイクル全体を調べる入口になる。
-- 実行本体、runtime 補助、report 生成、破棄、join が分かれているため、利用者向けの流れを確認したい場合はサブコマンド処理へ、process/worktree/pid の低レベルな扱いを確認したい場合は runtime 補助へ、report 内容だけを確認したい場合は report 生成処理へ進む。
+- apply サブコマンド群の実装を収める領域で、apply run の開始、join、abandon と、それらを支える runtime 補助や report 生成を扱う。
+- session branch と apply branch/worktree の関係、apply state の遷移、Codex 実行、成果取り込み、破棄、process 追跡・停止の入口になる。
 
 ## Read this when
-- apply run の開始から完了・エラー・破棄・join までの状態遷移や cleanup 条件を確認・変更したいとき。
-- apply 用の branch/worktree 作成、session branch との対応、linked worktree 検出、作業後の worktree や branch の削除を調べたいとき。
-- apply 実行中の process id file、Codex subprocess tracking、実行中 process の停止、running 状態の abandon 処理を確認・変更したいとき。
-- 所見列挙、Codex による適用、変更済み file の再キュー、commit、report 出力までの apply fork orchestration を追いたいとき。
-- apply run の結果を session branch に取り込む条件、merge conflict や想定外差分への対応、force-resolve、join 後の状態初期化を確認したいとき。
-- apply fork の実行結果や失敗結果として保存される report の生成内容、変更差分収集、変更要約、frontmatter を確認・変更したいとき。
+- apply fork、join、abandon のいずれかの CLI 実行フロー、状態遷移、branch/worktree cleanup、利用者向け出力を確認・変更したいとき。
+- apply branch と session branch/worktree の対応、apply process id file、Codex subprocess tracking、running apply の停止処理を確認・変更したいとき。
+- apply fork の report 保存、変更要約、所見数推移、成功・失敗時の記録内容を確認・変更したいとき。
+- apply scope の対象列挙、変更 file の再キュー、直近 join 済み merge commit からの差分範囲、apply 成果の commit や session branch への merge を追いたいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド実装、CLI 共通 runtime、git wrapper、config load、path model、state file 入出力の共通挙動だけを調べたいとき。
-- apply の正本仕様や公開仕様そのものを確認したいとき。実装ではなく正本仕様断片を根拠にする必要がある。
-- Codex CLI 呼び出しの共通実装、prompt parameter の汎用構築、または Codex subprocess tracking の apply 以外の利用箇所だけを調べたいとき。
-- INDEX.md エントリー生成やルーティング文書の規約を調べたいとき。
-- apply run の成果物ではなく、session state schema や apply state の保存形式そのものを確認したいだけのときは、状態定義や永続化を扱う対象へ直接進む。
+- apply 以外のサブコマンド、CLI 共通 runtime、git wrapper、設定 load、state file 入出力の共通処理だけを調べたいとき。
+- apply の正本仕様や公開仕様そのものを確認したいときは、oracle doc を読む方が適切なとき。
+- Codex CLI 全般の挙動、prompt profile、または apply fork 用 prompt parameter の詳細だけを調べたいとき。
+- 実装を読む必要がなく、パッケージ説明や import 副作用の有無だけを確認したいときは、入口ファイルだけで足りるとき。
 
 ## hash
-- 8d69247872297b15dcc27feb91b4ec1531a325c331b77a1bcc16381e4e87ddbb
+- e1c4a72101bde94aae63bc56b8518e55926996fe42a679a0641967c36f6e2367
 
 # `indexing.py`
 

@@ -56,24 +56,23 @@
 # `runtime_cli.py`
 
 ## Summary
-- CLI サブコマンドの共通実行ライフサイクルを扱う実装。work root 検査、サブコマンドログの作成と現在 logger の設定、開始・実行・完了の標準出力、戻り値の終了コード化、例外時のエラー表示と終了コード化を一箇所で管理する。
-- 標準サマリー以外に追加の stdout を返すサブコマンド用の結果型、work root で実行されていることの検査、完了時の標準サマリー出力 helper も含む。
+- CLI サブコマンド実行時の共通ライフサイクルを扱う実装。work root での実行検査、サブコマンドログの開始・終了記録、標準の進捗・完了サマリー出力、戻り値の終了コード化、例外時のエラー表示と終了コード変換を一箇所に集約している。
+- 標準サマリー以外の stdout を返すサブコマンド向けの結果型と、完了時サマリー出力の共通処理も含む。
 
 ## Read this when
-- CLI サブコマンド実行時の共通フロー、標準サマリー出力、終了コード、例外表示、typer.Exit への変換を確認または変更したいとき。
-- サブコマンドログの生成場所、現在のサブコマンド logger の設定・解除、command_invoked や command_finished の記録内容を追うとき。
-- init など、runtime state を通常の root ではなく初期化対象 root に置く挙動や、その前後の pre-log check の呼び出し位置を確認したいとき。
-- サブコマンドが標準サマリーに加えて独自 stdout を返す契約を扱うとき。
-- cmoc が work root 以外で実行された場合のエラー内容や検査条件を確認したいとき。
+- CLI サブコマンドに共通する開始・実行・完了表示、終了コード、例外表示、サブコマンドログ記録の挙動を確認または変更したいとき。
+- サブコマンド実装の戻り値を終了コードや追加 stdout として扱う契約を確認したいとき。
+- コマンド実行前に work root で実行されていることを検査する挙動を確認または変更したいとき。
+- 通常の runtime state と初期化対象の runtime state の置き場所を切り替える呼び出し側契約を確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジック、引数定義、永続状態の具体的な読み書きを調べたいだけのとき。
-- ログファイルの内部形式、step timing の記録実装、quota wait の加算処理そのものを確認したいとき。
-- root path の検出規則、timestamp や duration の整形規則そのものを変更したいとき。
-- CmocError の構造や render_error の詳細な表示形式を確認したいとき。
+- 個別サブコマンドの業務処理、引数定義、入出力内容そのものを確認したいだけのとき。
+- ログファイルの保存形式や現在のサブコマンド logger の内部状態管理を確認したいとき。
+- repo root、work root、時刻表示、経過時間整形などの path・表示 helper の詳細を確認したいとき。
+- エラー型の定義やエラーメッセージのレンダリング規則そのものを確認したいとき。
 
 ## hash
-- a466afe8e6879cc65200f1014b108f67cebc42f41f437a41f34fc04250e0234d
+- 3ee60c18a82bc6bc1463cc643947de86c82417f64c69a8b06963e4dd8b589366
 
 # `runtime_codex.py`
 
@@ -117,20 +116,20 @@
 # `runtime_codex_logging.py`
 
 ## Summary
-- Codex exec/TUI 呼び出し単位の完了サマリーを利用者の console へ出力する小さな共有 helper を扱う。
-- Codex call log path、purpose、elapsed、returncode を同じ表示形式にそろえるための補助であり、exec/TUI の起動制御や retry は持たない。
+- Codex CLI 呼び出しが完了した後に、目的、呼び出しログの位置、経過時間、終了コードを利用者向け console へまとめて表示する小さな実装。時刻表記と所要時間表記は実行時 path 系の共通 helper に委ね、ここでは完了サマリーの文面と出力だけを担う。
 
 ## Read this when
-- Codex exec/TUI 共通の console 表示形式、表示項目、timestamp や duration の出し方を変更・確認したいとき。
-- Codex runtime の呼び出し完了サマリーだけを調べたいとき。
+- Codex CLI 呼び出し単位の完了サマリーとして利用者の console に何を表示するかを確認または変更したいとき。
+- 呼び出し目的、ログへの参照、経過時間、終了コードをまとめて出す処理の呼び出し先を探しているとき。
+- Codex 呼び出し後の console 出力の flush 有無、複数行の組み立て、表示順を確認したいとき。
 
 ## Do not read this when
-- Codex exec の retry、Structured Output 検証、quota/capacity 制御を調べたいときは `runtime_codex_exec.py` を読む。
-- Codex TUI の起動準備や失敗時例外化を調べたいときは `runtime_codex_tui.py` を読む。
-- サブコマンド単位の JSON Lines event 保存や quota 待機時間の集計を調べたいときは logging 側の runtime helper を読む。
+- 時刻文字列や経過時間文字列そのものの整形規則を確認したいとき。対象はその整形 helper を使うだけなので、実行時 path 系の共通 helper を直接読む。
+- Codex CLI の起動、引数構築、プロセス実行、ログファイル作成の流れを確認したいとき。対象は完了後の利用者向け表示だけを扱う。
+- 機械処理用のログ内容、永続状態、JSON 出力 schema を確認したいとき。対象の出力は利用者が読む console サマリーであり、構造化データの生成ではない。
 
 ## hash
-- 65cfde582382659dd394662fe73f4e8796945c7ad06a7f2d2240181e63abaab8
+- 8e80af8d0387c49fb2e862afe1b567959a36e2e3f5d086a737714eb4dd64464b
 
 # `runtime_codex_preflight.py`
 
