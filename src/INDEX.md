@@ -64,29 +64,25 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation のうち、複数の上位機能から使われる共通 runtime helper 群を収める領域。Codex CLI 呼び出し、CLI サブコマンド共通ライフサイクル、設定、git、path、ログ、エラー、状態、結果型、内容 hash、INDEX.md 更新などの横断的な実行支援を扱う。
-- 上位コードが個別サブコマンド固有処理ではなく、実行環境・外部コマンド・永続状態・利用者向け共通表示・Codex 呼び出し境界を共有するための入口として位置づく。
+- cmoc の realization implementation のうち、複数サブコマンドや上位 workflow から共有される runtime helper 群をまとめる領域。Codex CLI 呼び出し、設定、path、git、ログ、状態、結果型、エラー表示、内容 hash、CLI 実行ライフサイクル、INDEX.md 更新 preflight など、横断的な実行時基盤への入口になる。
+- 単一の機能実装だけでなく、下位の責務別 helper と、それらをまとめて再公開する facade を含むため、共通 runtime API の依存関係や境界を確認する起点として使う。
 
 ## Read this when
-- runtime helper の公開入口や、複数領域をまとめて import できる共通 API の所在を確認したいとき。
-- Codex exec/TUI 呼び出し、profile 生成、quota/capacity retry、Structured Output 検証、call log、resume token、preflight の実行制御を調べたいとき。
-- CLI サブコマンド共通の開始・完了表示、終了コード化、例外表示、サブコマンドログ作成、current logger の扱いを確認または変更したいとき。
-- 設定ファイルの読み書き、既定値復元、不正 JSON や不正値の利用者向けエラー化を扱うとき。
-- git subprocess 境界、branch/worktree 状態確認、cmoc 管理 branch や linked worktree 操作、.cmoc の ignore 管理を調べたいとき。
-- 実行時の root/path 解決、標準保存先、timestamp、memo 判定、一時的な作業ディレクトリ変更を使う処理の参照先を探すとき。
-- session/apply state の永続化、state file の JSON 検証、branch 名からの session_id 抽出、active session 探索を扱うとき。
-- INDEX.md 更新 preflight、目次対象列挙、hash による再生成判定、既存エントリー再利用、Structured Output 検証、Markdown 生成、更新 commit の流れを確認したいとき。
-- 共通のエラー報告、外部コマンド結果、Codex exec 結果、内容 hash 保存、binary 判定など、複数機能にまたがる小さな runtime 支援の責務境界を確認したいとき。
+- サブコマンドや workflow から共通利用される runtime helper の責務分担、公開 import 面、または横断的な実行時処理の入口を探したいとき。
+- Codex CLI の exec/TUI 起動、profile・sandbox・CODEX_HOME・Structured Output・quota/capacity retry・call log など、Codex 呼び出し境界の実装を追いたいとき。
+- 設定ファイル、runtime path、状態ファイル、ログ、外部コマンド結果、利用者向けエラー表示、git 操作、内容 hash 保存など、複数機能から共有される基盤処理を確認または変更したいとき。
+- INDEX.md 更新の preflight、対象列挙、鮮度判定、既存エントリー再利用、生成結果検証、Markdown 化、更新 commit など、目次同期処理の実装を追いたいとき。
+- CLI サブコマンド共通の開始・完了表示、終了コード化、例外表示、サブコマンド logger の設定や解除など、個別コマンドの外側にある共通ライフサイクルを調べたいとき。
 
 ## Do not read this when
-- 個別サブコマンドの引数定義、コマンド登録、業務処理、利用者向け出力 schema だけを調べたいときは、該当する上位コマンド実装へ進む。
-- cmoc の正本仕様断片、path model の概念定義、INDEX.md エントリー文面の要求、CLI 出力互換性など人間意図を確認したいときは、oracle 側の本文を読む。
-- 個別 helper の利用先だけを追いたいときは、呼び出し側の実装から読む方が直接的である。
-- テスト期待値、fixture、外部挙動の検証観点を確認したいだけなら、対応する realization test を読む。
-- 実行ログや状態ファイルなど生成済み runtime artifact の内容を調査したいだけのときは、この実装領域ではなく対象 artifact または読み取り側へ進む。
+- 個別サブコマンド固有の引数定義、業務処理、画面出力、状態更新フローだけを調べたいときは、そのサブコマンド実装へ直接進む。
+- 正本仕様、設計意図、path model の概念定義、INDEX.md エントリー文面の基準や prompt 文言そのものを確認したいときは、対応する oracle 側の本文を読む。
+- テスト期待値や fixture の確認だけが目的のときは、対応する realization test を読む。
+- 共有 helper の利用先でどの値を渡すか、どのタイミングで呼ぶかという上位 workflow 固有の判断だけを知りたいときは、呼び出し側の実装を読む。
+- 単に package 境界だけを確認したい場合を除き、個別 helper の具体的な挙動はこの階層の責務別本文へ進んで確認する。
 
 ## hash
-- d15829569dad53c4993e392f6153c093e5142cdcf630d2167bd7991673684267
+- b7765ef7355812d2ca2542009ee72a4db28e8820344d72e12a8df46d287aa503
 
 # `config`
 
