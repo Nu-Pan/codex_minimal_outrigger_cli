@@ -20,26 +20,23 @@
 # `apply`
 
 ## Summary
-- apply 系の agent call parameter builder 互換領域への入口。realization 側から oracle 側 builder へ処理を委譲し、repo root 解決、oracle src の import 準備、oracle parameter から runtime 側 parameter への薄い適合を行う下位領域を束ねる。
-- 変更要約、ファイル単位所見列挙、所見適用など、apply fork 系の agent 呼び出しで使う parameter 構築経路を探すための上位ルーティング対象。
-- この領域は prompt 本文や ACP 正本仕様を所有せず、oracle 側の正本仕様断片と realization 側実行コードを接続する委譲層として位置づけられる。
+- apply builder 領域の realization 側 package。apply 系 agent call parameter 構築に関する互換入口をまとめ、oracle 側 package との対応を保ちながら、apply fork 向け builder 群への入口を提供する。
+- この階層自体は薄い package 境界であり、実処理は下位領域が担う。特に apply fork では oracle 側 builder への委譲、oracle src import path の準備、repo root 由来の fallback、oracle parameter から realization 側 agent call parameter への適合処理を扱う。
 
 ## Read this when
-- apply 系 builder が oracle 側 package 構造とどのように対応しているかを確認したいとき。
-- apply fork 系の agent call parameter 構築について、realization 側入口から oracle 側 builder への委譲経路を確認したいとき。
-- 変更要約、ファイル単位所見列挙、所見適用のいずれかで、入力値から runtime 側 parameter へ至る薄い adapter 層を探しているとき。
-- repo root 解決、oracle src の import 準備、oracle parameter を runtime 側へ渡す境界処理など、apply fork 系 builder 間で共有される補助処理を確認したいとき。
-- package 初期化部分に、oracle 側 apply builder package との互換性を示す意図があるかだけを確認したいとき。
+- apply builder 領域が oracle 側 package 構造とどう対応するかを確認したいとき。
+- apply 系の agent call parameter builder のうち、apply fork 向けの変更要約、ファイル単位所見列挙、所見適用の入口を選びたいとき。
+- oracle 側 builder を realization 側から呼び出す境界や、oracle 側戻り値を realization 側型として扱う適合処理の所在を確認したいとき。
+- oracle package を通常 import できない配置で、repo root 由来の候補から oracle src を import path に追加する fallback を調べたいとき。
 
 ## Do not read this when
-- apply fork の prompt 内容、モデル選択、file access mode、出力条件、AgentCallParameter の正本仕様そのものを確認したいとき。正本仕様断片を持つ oracle 側 builder を読む方が直接的。
-- apply fork 全体の CLI 制御、git 操作、fork 適用処理、作業レポート生成フローを調べたいとき。この領域は agent call parameter 構築の委譲入口に限られる。
-- repo root 解決そのものの仕様、path model の定義、ACP 型や enum 型の定義を調べたいとき。この領域はそれらを所有せず、外部の定義へ委譲または依存している。
-- apply builder の具体的な処理、変換、適用ロジックだけを調べたいときは、package 初期化要素ではなく該当する実装本体へ進む。
-- 公開関数、クラス、入出力仕様、エラー処理を package 初期化要素に期待しているとき。この上位対象だけではそれらの定義は確認できない。
+- apply builder の具体的な処理や agent call parameter 構築ロジックを確認したいとき。この階層の package 初期化部分ではなく、該当する下位実装を読む。
+- apply fork のプロンプト内容、出力条件、agent call parameter の正本仕様そのものを確認したいとき。realization 側の薄い委譲実装ではなく、対応する oracle 側本文を読む。
+- apply fork 全体の CLI 制御、fork 適用処理、git 操作、作業レポート生成フローを調べたいとき。この領域は agent call parameter 構築の入口と共通境界に限られる。
+- repo root 解決仕様、ACP 型の定義・検証規則、oracle 側 builder 本体の詳細を確認したいとき。それぞれの定義元や委譲先を読む。
 
 ## hash
-- 93ade740f919f05476041f7b88f2ddf5c769b57cafd14c160aafb107ee2932e8
+- 6c0c8d0dd7e34017f6fd337be982bfc258fc5deb27e06becc8f3d7a11b42e98a
 
 # `indexing`
 

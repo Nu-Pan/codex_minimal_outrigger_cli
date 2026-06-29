@@ -67,27 +67,25 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 実行を通じて、所見列挙、所見適用、commit、変更要約、report 生成、session state 更新までの一連の制御を検証する realization test。
-- 未収束、収束、error、変更ファイル再調査、未追跡ファイルの変更要約、調査対象なし、rolling apply fork の基準 commit などを、report と副作用からまとめて確認する。
-- Codex 実行は fake に差し替え、作業 tree・git branch・session state・生成 report を観測して apply fork の外部挙動を検証する。
+- apply fork の CLI 実行を通じて、所見列挙から適用、commit、変更要約、作業 report、session state 更新までの制御を検証する realization test。
+- apply fork report の収束・未収束・error 表示、変更ファイル再調査、未追跡ファイルを含む差分要約、rolling fork の対象選定を、同じ loop と report schema の観測結果としてまとめて扱う。
+- apply fork 用 ACP builder が src だけの Python path や packaged layout から import できること、生成 prompt が標準 prompt・schema・path 置換を満たすことも検証対象に含む。
 
 ## Read this when
-- apply fork の report 内容、終了コード、収束判定、未収束判定、error report の挙動を確認したいとき。
-- apply fork が所見適用後に変更ファイルを再調査する条件や、再調査対象から除外される対象を確認したいとき。
-- apply fork の変更要約が commit 済み差分、未 commit 差分、未追跡ファイルをどう扱うかを確認したいとき。
-- apply fork 実行後に session state や apply branch の commit がどう更新されるかを確認したいとき。
-- apply fork 用の ACP builder が標準 prompt、structured output schema、root token 展開、対象 path 検証を満たしているかを確認したいとき。
-- rolling apply fork が前回 apply join 後の変更だけを対象にする制御を確認したいとき。
+- apply fork の CLI 挙動、終了コード、作業 report の内容、変更要約、commit message、session state 更新を変更または調査するとき。
+- apply fork が適用後に変更ファイルを再調査する条件、再調査対象から INDEX.md を除外する制御、所見が残る場合や差分が出ない場合の未収束判定を確認するとき。
+- apply fork の error report が未 commit の working tree 差分を変更要約へ含める挙動や、未追跡ファイルを report 用差分として扱う処理を確認するとき。
+- rolling apply fork が前回 apply join 後の oracle 側変更だけを対象にし、session state に join 済み apply snapshot commit を反映する挙動を確認するとき。
+- apply fork 用の変更要約・ファイル所見列挙・所見適用 ACP builder の import 経路、structured output schema、標準 prompt 組み立て、root path 置換を変更または検証するとき。
 
 ## Do not read this when
-- apply fork の実装内部だけを変更したいが、CLI 経由の report、git 副作用、session state 副作用を確認する必要がないとき。
-- apply fork 以外の subcommand の挙動や、汎用 CLI runner の使い方だけを調べたいとき。
-- ACP builder の個別 prompt 生成ロジックそのものを詳しく変更する作業で、外部挙動テストではなく builder 実装を直接読む方が適切なとき。
-- git helper、test fixture、runner の共通実装だけを調べたいとき。
-- INDEX.md 生成やルーティング文書の仕様を調べたいとき。
+- apply fork 以外のサブコマンドや、report・再検査・ACP builder prompt に関係しない CLI 挙動だけを調べるとき。
+- apply fork の内部 helper の細部実装だけを読みたい場合で、CLI 経由の外部挙動や report 期待値を確認する必要がないとき。
+- Codex CLI や LLM の実出力品質そのものを検証したいとき。このテストは fake 応答で apply fork の制御ロジックを観測する。
+- 個別の path model、git wrapper、session fork/join の基礎挙動だけを調べるときは、それらを直接扱う実装またはテストを先に読む。
 
 ## hash
-- a3db69fe3a20b856dfe11fd7000f116ef91f86cc2a4412f440f70aea162ee185
+- ac9c09caf0265ac098f46dbdca2b60c29cc245eaca317c5e920d1d1028b0eca8
 
 # `test_apply_join_cli.py`
 

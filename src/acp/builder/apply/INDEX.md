@@ -17,21 +17,19 @@
 # `fork`
 
 ## Summary
-- apply fork 系の agent call parameter builder 実装をまとめる領域。各 builder は realization 側の入口として、repo root 解決、oracle src の import 準備、oracle 側 builder への委譲、oracle parameter から runtime 側 parameter への薄い適合を担う。
-- 変更要約、ファイル単位所見列挙、所見適用など、`cmoc apply fork` の各 agent 呼び出しで使う parameter 構築経路と、それらが共有する import 境界・型境界の補助処理への入口になる。
-- この領域自体は prompt 本文や ACP の正本仕様を所有せず、正本仕様断片を持つ oracle 側 builder と realization 側実行コードを接続する委譲層として位置づけられる。
+- apply fork 向け agent call parameter builder の realization 側実装をまとめる領域。oracle 側 builder への委譲入口と、その委譲に必要な oracle src import 準備、repo root 由来の fallback、oracle parameter から realization 側型への適合処理を扱う。
+- 変更要約、ファイル単位所見列挙、所見適用など、apply fork の各 agent 呼び出し用 parameter 構築は個別 builder が担い、共通の import・型変換境界は共有 helper に集約されている。
 
 ## Read this when
-- `cmoc apply fork` の agent call parameter 構築が、realization 側から oracle 側 builder へどのように委譲されているかを確認したいとき。
-- apply fork 系の変更要約、ファイル単位所見列挙、所見適用のいずれかで、入力値から runtime 側 parameter へ至る薄い入口を探しているとき。
-- oracle src を import 可能にする処理、repo root 解決、oracle parameter を realization 側へ渡す adapter など、apply fork 系 builder 間で共有される境界処理を確認したいとき。
-- `oracle.acp_builder.apply.fork` と同じ import 経路を realization 側に用意する互換 package の存在理由を確認したいとき。
+- apply fork の各 agent 呼び出しで、realization 側が oracle 側 builder をどの入口から呼び出しているか確認したいとき。
+- oracle 側 builder の戻り値を realization 側の agent call parameter として扱う変換境界を調べたいとき。
+- oracle パッケージを通常 import できない配置で、repo root 由来の候補から oracle src を import path に追加する fallback を確認したいとき。
+- 変更要約、ファイル単位所見列挙、所見適用のどの parameter builder を読むべきか、この領域内で入口を選びたいとき。
 
 ## Do not read this when
-- apply fork の prompt 内容、モデル選択、file access mode、出力条件、AgentCallParameter の正本仕様そのものを確認したいとき。正本仕様断片を持つ oracle 側 builder を読む方が直接的。
-- `cmoc apply fork` 全体の CLI 制御、git 操作、fork 適用処理、作業レポート全体の生成フローを調べたいとき。この領域は agent call parameter 構築の委譲入口に限られる。
-- repo root 解決そのものの仕様、path model の定義、ACP 型や enum 型の定義を調べたいとき。この領域はそれらを所有せず、外部の定義へ委譲または依存している。
-- package 初期化 docstring 以外の実行時挙動や副作用を探しているときは、互換 package の入口だけを読む必要はない。
+- apply fork のプロンプト内容、出力条件、agent call parameter の正本仕様そのものを確認したいとき。この領域は realization 側の薄い委譲実装なので、対応する oracle 側の本文を読む。
+- apply fork 全体の CLI 制御、fork 適用処理、git 操作、作業レポート生成フローを調べたいとき。この領域は agent call parameter 構築の入口と共通境界に限られる。
+- repo root 解決そのものの仕様、ACP 型の定義・フィールド・検証規則、または oracle 側 builder 本体の詳細を確認したいとき。それぞれの定義元や委譲先を読む。
 
 ## hash
-- 8bf0c9d853176094f1a45df32c67777ceb93115bc71fcfcc3536947e4efd3b6b
+- 776bf75f4f272d2e5c153e34de033989cc8d5e54f37f42e94f91dd7b307650c4

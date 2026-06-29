@@ -19,22 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP builder に関する realization 側の互換入口を束ねる領域。正本側の builder 実装を既存の公開参照経路から利用できるようにし、apply、indexing、review、session、TUI などの下位領域へ進むための境界として位置づく。
-- この領域自体は ACP builder の正本仕様や主要ロジックを所有せず、oracle 側実装への委譲、再公開、薄い適合、互換 import path の維持を扱う。
+- ACP builder の realization 側公開入口を束ねる領域。正本実装を oracle 側に置いたまま、既存の acp.builder 系 import path から apply、indexing、review、session、TUI などの builder へ到達できる互換境界を提供する。
+- この階層の主な責務は、正本側 package 構造との対応維持、薄い再公開、最小限の適合処理、下位 builder 領域への入口整理であり、各 builder の本体仕様や具体的な処理ロジックは下位領域または oracle 側実装が担う。
 
 ## Read this when
-- realization 側の ACP builder 公開入口が、oracle 側 builder 実装へどのように接続されているかを確認したいとき。
-- acp.builder 系の既存参照経路を残す理由、互換層の役割、削除条件を確認したいとき。
-- apply、indexing、review、session、TUI の各 builder 領域のうち、どの互換入口または下位領域へ進むべきか切り分けたいとき。
-- oracle 側の AgentCallParameter 構築結果を runtime 側へ渡す薄い adapter 層や、repo root 解決、oracle src import 準備などの境界処理を探しているとき。
-- TUI 起動のように、正本側 builder へ委譲しつつ realization 側で最小限の差分や公開候補を扱う入口を確認したいとき。
+- acp.builder 系の公開入口が oracle 側実装や下位 builder 領域へどのように接続されているかを確認したいとき。
+- 既存の acp.builder.* 参照を残す理由、互換 import path の位置づけ、削除・移動・置換してよい条件を判断したいとき。
+- apply、indexing、review、session、TUI のどの builder 領域へ進むべきかを、この階層の役割から切り分けたいとき。
+- realization 側が正本側 builder を再公開するだけなのか、repo root 由来の oracle src import path 追加、戻り値の型適合、TUI 起動時の schema 除去、typo 補正などの最小調整を行うのかを確認したいとき。
 
 ## Do not read this when
-- ACP builder の正本仕様、prompt 本文、model class、file access mode、Structured Output schema、AgentCallParameter 型そのものを確認したいとき。正本仕様断片または oracle 側の実装を読む。
-- apply fork、review oracle、indexing、session join、TUI 本体などの具体的な処理ロジック、判定条件、入出力仕様を調べたいとき。該当する下位領域または正本側実装を読む。
-- CLI 制御、git 操作、fork 適用、作業レポート生成、対話 UI の画面描画やキー操作など、builder の互換入口ではない実行フローを調べているとき。
-- path model、ACP 共通型、enum 定義など、builder 領域が依存する外部定義そのものを確認したいとき。
-- 新規機能の実装場所やテスト対象を探しており、互換 import path の維持や正本側への委譲境界が主題ではないとき。
+- oracle.acp_builder 側の正本仕様、prompt 本文、structured output schema、具体的な agent call parameter 構築ロジックを理解したいとき。
+- apply fork、review oracle、indexing、session join、TUI resolve parameter など個別 builder の詳細処理や入出力仕様を直接調べたいとき。
+- ACP builder 以外の CLI 制御、fork 適用、git 操作、TUI 画面描画、状態管理、共通型定義、file access mode enum の意味を調べたいとき。
+- 新規機能の実装場所やテスト対象を探しており、互換公開面や下位領域への入口ではなく処理本体を読むべきとき。
 
 ## hash
-- 4c927c8e7730f757825f365bcda38be08832bf513367278fd9b6f08869e31cd2
+- 96826ba38afbb19521765a25eeea2eb69e690abc37f358504150320f4fef6669

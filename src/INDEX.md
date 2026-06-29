@@ -1,25 +1,23 @@
 # `acp`
 
 ## Summary
-- realization 側に残る `acp.*` import 互換入口をまとめる領域。正本側の ACP builder 実装を複製せず、既存参照経路を成立させるために oracle 側実装への委譲、再公開、薄い適合を扱う。
-- この領域自体は ACP builder の正本仕様や主要ロジックを所有しない。下位には builder 系の互換入口があり、apply、indexing、review、session、TUI などの既存参照経路や、TUI 起動向けの最小差分 adapter へ進む入口になる。
+- ACP builder 関連の realization 側互換公開面をまとめる領域。正本実装を oracle 側または下位実体側に置いたまま、既存の公開 import path から builder 群へ到達できる入口を維持する。
+- 主な役割は、移行期間中の互換 import 維持、正本側 package 構造との対応、薄い再公開、必要最小限の適合処理、下位 builder 領域への案内であり、builder 本体仕様や生成ロジックの正本ではない。
 
 ## Read this when
-- realization 側または利用者向け公開面に残る `acp.*` import をどう扱うか判断したいとき。
-- 既存の `acp.*` / `acp.builder.*` 参照が oracle 側 ACP builder 実装へどのように接続されているか確認したいとき。
-- 互換入口を残す理由、削除条件、正本側実装へ移行済みかどうかの確認観点を知りたいとき。
-- apply、indexing、review、session、TUI などの builder 系互換入口のうち、どの下位領域へ進むべきか切り分けたいとき。
-- TUI 起動パラメータのように、正本側 builder へ委譲しつつ realization 側で最小限の差分を加える adapter を探しているとき。
+- ACP builder 関連の既存 import path を残す理由、互換境界、削除条件、移行判断を確認したいとき。
+- realization 側の公開面から oracle 側実装または下位 builder 領域へどのように接続しているかを切り分けたいとき。
+- apply、indexing、review、session、TUI などの個別 builder 領域へ進む前に、この階層が担う再公開と最小調整の範囲を確認したいとき。
+- oracle src 由来の ACP builder 互換 import が realization 側でどこまで維持されているかを把握したいとき。
 
 ## Do not read this when
-- ACP builder の正本仕様、prompt 本文、model class、file access mode、Structured Output schema、AgentCallParameter 型そのものを確認したいとき。oracle 側の仕様断片または実装へ進む。
-- apply、indexing、review、session、TUI の具体的な処理ロジックや入出力仕様を調べたいとき。該当する下位領域または oracle 側実装を直接読む。
-- CLI 制御、git 操作、fork 適用、作業レポート生成、画面描画やキー操作など、builder 互換 import 経路ではない実行フローを調べているとき。
-- 新しい ACP 機能や API 仕様を追加する場所を探しているとき。この領域は互換維持の入口であり、機能追加の正本ではない。
-- realization 側と利用者向け公開面から `acp.*` 参照が消えていることだけを確認済みで、互換入口の詳細を読む必要がないとき。
+- ACP builder の正本仕様、prompt 本文、structured output schema、agent call parameter 構築ロジックを理解したいとき。
+- apply fork、review oracle、indexing、session join、TUI resolve parameter など個別 builder の詳細処理や入出力仕様を直接調べたいとき。
+- ACP builder 以外の CLI 制御、fork 適用、git 操作、TUI 描画、状態管理、共通型、file access mode の意味を調べたいとき。
+- 新しい ACP 機能や API 仕様を追加する実装本体を探しているとき。
 
 ## hash
-- c867deb1854c480760ef11d94b5ae2719706dfb8e8153fcc2bf12213612750dc
+- b6858fa8ebb1a7fff5acf32e4db5b119ae6ecdd06473ab78e6d7468e7f632218
 
 # `basic`
 
