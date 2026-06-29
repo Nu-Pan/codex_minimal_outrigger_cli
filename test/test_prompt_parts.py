@@ -592,6 +592,32 @@ def test_review_oracle_enumerate_finding_schema_matches_oracle_source() -> None:
     )
 
 
+def test_review_oracle_enumerate_prompt_embeds_standard_and_target_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "repo"
+    target = root / "oracle" / "doc" / "sample.md"
+    target.parent.mkdir(parents=True)
+    (root / ".git").mkdir()
+    target.write_text("# sample oracle\n\nsample requirement\n", encoding="utf-8")
+    monkeypatch.chdir(root)
+
+    parameter = build_review_oracle_enumerate_finding_parameter(
+        Path("<work-root>/oracle/doc/sample.md"),
+        "[]",
+    )
+
+    assert "# oracle standard" in parameter.prompt
+    assert "oracle file は正本仕様断片である" in parameter.prompt
+    assert "# apply review standard" in parameter.prompt
+    assert "oracle file と realization file の明確な不整合" in parameter.prompt
+    assert "# target oracle file" in parameter.prompt
+    assert "# sample oracle" in parameter.prompt
+    assert "sample requirement" in parameter.prompt
+    assert "# output schema" in parameter.prompt
+    assert "`findings`" in parameter.prompt
+
+
 def test_review_oracle_enumerate_builder_imports_from_packaged_layout(
     tmp_path: Path,
 ) -> None:
