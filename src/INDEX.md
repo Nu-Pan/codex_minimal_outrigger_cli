@@ -60,25 +60,26 @@
 # `commons`
 
 ## Summary
-- cmoc の実行時共通 helper 群をまとめる実装領域。Codex 呼び出し、CLI サブコマンド共通ライフサイクル、設定、内容 hash、エラー表示、git 操作、ログ、パス、結果型、永続状態、ルーティング文書更新 preflight など、複数の上位機能から共有される runtime 境界を扱う。
-- この領域は個別サブコマンドの業務ロジックではなく、上位処理が共通して使う実行基盤と、その公開 import 面・互換入口・責務別 helper への入口として位置づけられる。
+- cmoc の realization implementation のうち、CLI 実行時に複数サブコマンドや上位処理から共有される runtime helper 群を収める領域。
+- Codex CLI 呼び出し、preflight indexing、設定、内容 hash、エラー表示、git 操作、ログ、パス、結果型、session state など、横断的な実行時支援の実装と、それらをまとめて公開する import 入口を扱う。
+- 個別サブコマンドの業務ロジックではなく、サブコマンドや workflow が共通して利用する実行境界、永続状態、外部プロセス、標準配置、失敗時表示の責務へ進むための入口である。
 
 ## Read this when
-- cmoc の上位コマンドから共有される runtime API、実行結果モデル、例外表示、設定読み書き、git・path・state・logging などの共通基盤を確認または変更したいとき。
-- Codex exec/TUI 呼び出しの profile 作成、sandbox/cwd 決定、call log、quota/capacity retry、Structured Output 検証、preflight 実行、subcommand event 記録の流れを追いたいとき。
-- CLI サブコマンド実行時の共通フロー、work root 検査、標準サマリー出力、終了コード化、例外時の利用者向け表示、サブコマンド logger の設定を確認したいとき。
-- ルーティング文書の自動検査・再生成、対象列挙、既存エントリーの鮮度判定、Markdown 化、排他制御、更新差分 commit の実装を調べたいとき。
-- 複数領域をまたぐ変更の前に、共通 runtime の公開面と責務分割を把握し、どの下位 helper へ進むべきか判断したいとき。
+- CLI サブコマンド共通の実行ライフサイクル、終了コード化、標準サマリー、例外表示、subcommand log の設定を確認・変更したいとき。
+- Codex exec/TUI 呼び出し、profile・sandbox・CODEX_HOME・call log・quota/capacity retry・Structured Output 検証・preflight indexing との接続を調べたいとき。
+- INDEX.md 更新 preflight、索引 entry の鮮度判定、対象内容抽出、Codex への entry 生成依頼、Markdown entry 描画など、索引更新の実装を追いたいとき。
+- cmoc 設定ファイル、内容 hash 保存、git worktree/branch 操作、runtime path、ログ、結果モデル、session state file など、複数機能から共有される runtime 基盤を探しているとき。
+- 上位実装の import 面を整理する前に、共通 runtime API がどの module に分かれ、どの集約入口から公開されているかを把握したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの引数定義、業務処理、画面出力、状態遷移の上位制御だけを調べたいとき。その場合は対象コマンドの実装へ進む。
-- oracle に書かれた正本仕様、path keyword の概念定義、ルーティング文書の仕様そのもの、session state の仕様意図を確認したいだけのとき。その場合は対応する正本仕様断片を読む。
-- 生成済みの個別ルーティング文書の文章内容や、特定ディレクトリ・特定ファイルの要約を直したいだけのとき。その対象本文と生成指示を確認する方が直接的。
-- 単一の責務だけを変更することが明らかなときは、この領域全体ではなく、設定、git、path、logging、state、Codex exec/TUI など該当する下位対象へ直接進む。
-- 外部コマンドや Codex CLI の出力品質、LLM 応答内容、利用者が読む正本仕様の妥当性を評価したいだけのとき。この領域は実行境界と共通 helper を扱う。
+- 個別サブコマンドの引数定義、業務処理、利用者向けレポート、状態遷移の上位 workflow を調べたいだけのとき。その場合は該当する command や workflow 実装へ進む。
+- oracle の正本仕様、INDEX.md entry に書くべき意味情報、path keyword の定義、session state の仕様意図などを確認したいとき。その場合は対応する oracle doc/source を読む。
+- テストケース、fixture、期待値だけを確認・変更したいとき。その場合は test 側の対象へ進む。
+- 生成済みの log、report、schema store、call log の内容を読みたいだけで、生成・保存・表示の runtime 実装を変更しないとき。
+- 単一の下位責務がすでに分かっており、その具体挙動だけを調べたいとき。その場合は設定、git、path、logging、Codex exec/TUI、state などの該当 runtime 本文へ直接進む。
 
 ## hash
-- f4e88b62d4aba3ecfe842f1c1da9ac7e4b30c1cfeac8be0d08c3fde7175c19f9
+- 0b097804faf6ca4f419c75c19e0f00f112e3a385fd6ffd4e3895a419ec8290ea
 
 # `config`
 

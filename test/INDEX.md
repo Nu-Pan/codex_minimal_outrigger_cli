@@ -237,26 +237,22 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- indexing preflight と indexing subcommand が routing document を生成・更新・commit する外部挙動を検証する realization test。
-- 未初期化・dirty worktree・linked worktree・apply worktree 設定参照・fresh hash 再利用・malformed entry 再生成・semantic field validation・sibling 並列生成・memo 除外境界を、routing 更新ワークフローの回帰としてまとめて扱う。
-- routing document conflict 解決で対象 document を削除して merge commit を完了させる apply 側の境界も、同じ routing 更新ワークフローの観測点として含む。
+- indexing の preflight と CLI サブコマンドが routing document を生成・更新し、INDEX.md conflict、hash 再利用、Codex 呼び出し、commit 対象、linked worktree、dirty worktree をどう扱うかを外部挙動として検証する realization test。
+- semantic entry の妥当性検証、 malformed entry の再生成、兄弟 entry の並列生成、root 直下 memo 除外と nested memo 対象化まで含め、indexing 更新ワークフローの回帰観測点を一箇所に集約している。
 
 ## Read this when
-- indexing CLI が clean repo だけで実行され、routing document 更新後に indexing commit を作る条件を確認したいとき。
-- indexing preflight が通常の indexing subcommand と異なり、既存の非 routing document 差分を許しつつ routing document だけを commit する挙動を確認したいとき。
-- linked worktree や apply worktree から indexing を実行したとき、対象 worktree・参照する repository config・commit 先が正しいかを確認したいとき。
-- 既存 hash が fresh な entry の Codex 呼び出し省略、malformed entry の再生成、semantic list の受理・拒否条件を確認したいとき。
-- routing document 生成対象の列挙、sibling entry の並列生成、root 直下の memo 除外と nested memo indexing の境界を確認したいとき。
-- routing document conflict 解決の delete-and-commit 挙動を apply workflow 側から確認したいとき。
+- indexing サブコマンドや indexing preflight の成功・失敗条件、git 差分がある場合の停止条件、INDEX.md 更新後の commit 条件を確認・変更するとき。
+- INDEX.md conflict 解決、既存 hash が新鮮な場合の Codex 呼び出し省略、malformed entry の再生成、semantic field のバリデーションを確認するとき。
+- linked worktree や apply worktree 上で indexing がどの root/config/cwd を使い、どの worktree に INDEX.md を作成するかを確認するとき。
+- routing document 更新対象の列挙、兄弟 entry の並列生成、root 直下 memo と nested memo の扱いを変更するとき。
 
 ## Do not read this when
-- 個別の indexing 実装アルゴリズムや parser helper の内部構造を変更したいだけで、CLI・preflight・git commit 境界の回帰確認が不要なとき。
-- routing entry の文面そのものや Codex 生成結果の品質を評価したいとき。
-- init、apply、git helper、runtime config の一般的な仕様を調べたいだけで、indexing workflow との接続条件を扱わないとき。
-- 単一の小さな rendering 仕様だけを確認したい場合で、より局所的な unit test や実装本文から直接確認できるとき。
+- 個別の indexing 実装ロジックや helper の責務を知りたいだけなら、対応する実装ファイルを読む。
+- init、apply、join など indexing の回帰観測点として現れる範囲を超えたサブコマンド仕様を調べるだけなら、より直接の CLI テストや実装を読む。
+- INDEX.md エントリーの文章生成規則や正本仕様断片を確認したいだけなら、oracle 側の該当文書を読む。
 
 ## hash
-- 44b3240ac87938539cea96444edb51175fc76ee5286f694be5600fa56a23dc1e
+- f054171afce78e8df4c108ca283958c3d8bcaa6f3256b7eff69b64068e45fc9a
 
 # `test_indexing_preflight.py`
 

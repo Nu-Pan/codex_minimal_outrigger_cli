@@ -34,25 +34,24 @@
 # `indexing.py`
 
 ## Summary
-- Codex 呼び出し前の preflight として、各階層のルーティング文書を検査・再生成し、必要な差分だけを専用 commit にまとめる実装を担う。
-- 対象の列挙、既存エントリーの鮮度判定、エントリー生成 Codex 呼び出し、Markdown レンダリング、排他 lock、git add/commit までの一連の制御がまとまっている。
-- 除外対象、hash 計算、Structured Output 検証、対象内容抽出など、ルーティング文書生成の実装詳細を追う入口になる。
+- Codex 呼び出し前の索引更新 preflight を登録し、排他制御下で各階層の索引を再生成して必要な commit を作る実装をまとめる。
+- 索引対象の directory/child 列挙、既存 entry の hash 検証、対象内容の抽出、Codex への entry 生成依頼、Structured Output から Markdown entry への描画を扱う。
+- 索引更新処理全体の入口と、索引 entry の鮮度判定・生成・保存の流れを追うための中心実装である。
 
 ## Read this when
-- ルーティング文書の自動更新がいつ・どの順序で走るか、preflight 登録から commit 作成までの流れを確認したいとき。
-- 更新対象のディレクトリや子要素の列挙条件、無視対象、バイナリ除外、memo 除外、git ignore との関係を調べるとき。
-- 既存エントリーの再利用条件、hash の抽出・検証、対象 hash の計算方法、生成結果の Markdown 形式を変更または確認したいとき。
-- エントリー生成用の Codex 実行関数に渡す root・cwd・config・purpose や、生成 prompt に渡す対象内容の選び方を確認するとき。
-- ルーティング文書更新の排他制御や、更新差分だけを commit する git 操作の挙動を調べるとき。
+- Codex 実行前に索引更新を走らせる preflight 登録や実行順序を確認・変更したいとき。
+- 索引更新時の lock、git add/commit、深い directory からの再生成順、並列生成数の扱いを調べたいとき。
+- 索引対象から除外される child、既存 entry の再利用条件、hash 計算、Codex に渡す対象内容の作り方を確認したいとき。
+- Structured Output の検証失敗時の扱いや、索引 entry Markdown の必須 section 構造を実装側から確認したいとき。
 
 ## Do not read this when
-- ルーティング文書に書くべき仕様そのものやエントリー形式の正本を確認したいだけなら、対応する oracle 文書や schema を読む方が直接的。
-- Codex 実行の一般ルール、run isolation、設定ファイルの読み込み、git wrapper、hash 関数、memo 判定などの共通 runtime 実装を調べたいだけなら、それぞれの提供元を読む方が適切。
-- 特定ディレクトリや特定ファイルのルーティング文書本文の内容を知りたいだけなら、その階層のルーティング文書または対象本文を読む方がよい。
-- 生成されたエントリーの文章品質や個別対象の要約内容を直したいだけなら、ここではなく対象本文とエントリー生成に使う指示・schema を確認する。
+- 索引 entry に書くべき意味情報や bullet-only 形式など、正本仕様そのものを確認したいだけのとき。
+- runtime の git 実行、hash 計算、binary 判定、設定読み込みの詳細を調べたいとき。
+- Codex 実行 parameter の構築内容や prompt 部品の詳細を確認したいとき。
+- 特定 directory のルーティング内容を読みたいだけで、索引生成ロジックを変更しないとき。
 
 ## hash
-- 6e25427cee0fe7b0262a150659b55dd335b6ed88a942d5c5fdcaac0ef670e353
+- b9a71a5e66c6844ff709f179677be506e1db7cac6984ee44f2df3cb7117b4f41
 
 # `runtime_cli.py`
 
