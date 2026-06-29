@@ -148,22 +148,14 @@ def _writable_roots(
             # keep oracle/memo/etc. out of the sandbox, so it lists currently
             # existing allowed top-level roots and intentionally cannot create a
             # new top-level path.
-            paths = sorted(
-                [
-                    path
-                    for path in root.iterdir()
-                    if _is_writable_path_allowed(mode, root, path.resolve())
-                ],
-                key=lambda path: str(path.resolve()),
-            )
+            paths = _existing_writable_top_level_roots(mode, root)
         case FileAccessMode.REPO_WRITE:
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            # REPO_WRITE does not forbid creating new top-level paths. Codex
-            # profile cannot express "root writable except memo/.agents/etc.";
-            # using existing-root enumeration would silently narrow the oracle
-            # rule, so the effective sandbox opens the work root and the prompt
-            # carries the finer deny-list.
-            paths = [root]
+            # Codex profile has no deny-list expression. REPO_WRITE therefore
+            # cannot use the work root itself because memo must stay outside
+            # the effective sandbox.
+            paths = _existing_writable_top_level_roots(mode, root)
         case FileAccessMode.ORACLE_WRITE:
             paths = [root / "oracle"]
         case _:
@@ -195,6 +187,17 @@ def _writable_roots(
             seen.add(resolved)
             result.append(resolved)
     return result
+
+
+def _existing_writable_top_level_roots(mode: FileAccessMode, root: Path) -> list[Path]:
+    return sorted(
+        [
+            path
+            for path in root.iterdir()
+            if _is_writable_path_allowed(mode, root, path.resolve())
+        ],
+        key=lambda path: str(path.resolve()),
+    )
 
 
 def _is_writable_path_allowed(
