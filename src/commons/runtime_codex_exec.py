@@ -18,7 +18,6 @@ from typing import Any
 
 from jsonschema import validate
 
-from acp.builder.quota_probe import build_quota_availability_probe_parameter
 from basic.acp import AgentCallParameter
 from config.cmoc_config import CmocConfig
 
@@ -96,6 +95,31 @@ def _base_exec_argv(profile_name: str, codex_cwd: Path) -> list[str]:
     ]
 
 
+def _quota_availability_probe_parameter(
+    base_parameter: AgentCallParameter,
+) -> AgentCallParameter:
+    # <work-root>/oracle/doc/app_spec/prompt_standard.md
+    # Probe stdin is still an agent-call prompt, so realization code must not
+    # invent it. If oracle src has not defined this boundary yet, failing is
+    # preferable to silently running a realization-owned prompt.
+    try:
+        from oracle.acp_builder.quota_probe import (
+            build_quota_availability_probe_parameter,
+        )
+    except ModuleNotFoundError as exc:
+        if exc.name != "oracle.acp_builder.quota_probe":
+            raise
+        raise CmocError(
+            "quota availability probe の正本 builder がありません。",
+            [
+                "<work-root>/oracle/src/oracle/acp_builder に quota probe 用 "
+                "build_*_parameter 関数を追加してから再実行してください。"
+            ],
+            str(exc),
+        ) from exc
+    return build_quota_availability_probe_parameter(base_parameter)
+
+
 def _next_codex_log_timestamp() -> str:
     """壁時計後退時も同一プロセス内の Codex exec log 名を単調増加させる。"""
     global _LAST_CODEX_LOG_TIMESTAMP
@@ -153,7 +177,6 @@ def run_codex_exec(
         allow_oracle_conflict_writes=allow_oracle_conflict_writes,
     )
     profile_name = codex_profile_name(profile_path)
-    quota_probe_parameter = build_quota_availability_probe_parameter(parameter)
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # `--output-schema` must point at state under the same work root Codex uses.
     schema_path = (
@@ -352,6 +375,7 @@ def run_codex_exec(
                     status="quota_waiting",
                     error=error_text,
                 )
+                quota_probe_parameter = _quota_availability_probe_parameter(parameter)
                 with _QUOTA_CONDITION:
                     if _QUOTA_POLLING:
                         wait_started_at = time.perf_counter()

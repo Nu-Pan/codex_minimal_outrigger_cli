@@ -29,19 +29,28 @@ from commons.runtime_codex import run_codex_exec
 from commons.runtime_errors import CmocError
 
 
+PROBE_PROMPT = "ビルダー由来の確認入力"
+
+
 def prompt_log_text(path: str) -> str:
     return Path(path).read_text()
 
 
-def quota_probe_prompt() -> str:
-    parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
+def stub_quota_probe_builder(
+    monkeypatch: pytest.MonkeyPatch, probe_prompt: str = PROBE_PROMPT
+) -> str:
+    monkeypatch.setattr(
+        runtime_codex_exec,
+        "_quota_availability_probe_parameter",
+        lambda base_parameter: AgentCallParameter(
+            base_parameter.model_class,
+            base_parameter.reasoning_effort,
+            base_parameter.file_access_mode,
+            probe_prompt,
+            None,
+        ),
     )
-    return runtime_codex_exec.build_quota_availability_probe_parameter(parameter).prompt
+    return probe_prompt
 
 
 def test_run_codex_exec_polls_and_resumes_after_quota(
@@ -59,18 +68,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
         ]
     )
     monkeypatch.setattr(runtime_codex_exec, "timestamp", lambda: next(timestamps))
-    probe_prompt = "ビルダー由来の確認入力"
-    monkeypatch.setattr(
-        runtime_codex_exec,
-        "build_quota_availability_probe_parameter",
-        lambda base_parameter: AgentCallParameter(
-            base_parameter.model_class,
-            base_parameter.reasoning_effort,
-            base_parameter.file_access_mode,
-            probe_prompt,
-            None,
-        ),
-    )
+    probe_prompt = stub_quota_probe_builder(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "calls.jsonl"
@@ -216,6 +214,45 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert "- 終了コード: `0`" in console
 
 
+def test_quota_probe_requires_oracle_builder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
+    calls = []
+
+    def fake_run(argv, **kwargs):
+        calls.append(kwargs["stdin"].read())
+        return subprocess.CompletedProcess(
+            argv,
+            1,
+            '{"type":"thread.started","thread_id":"sess-1"}\n'
+            '{"type":"error","message":"Quota exceeded"}\n',
+            "",
+        )
+
+    monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+    )
+
+    with pytest.raises(CmocError, match="正本 builder"):
+        run_codex_exec(
+            parameter,
+            root=root,
+            quota_poll_interval_sec=0,
+            max_quota_polls=1,
+            config=CmocConfig(),
+        )
+
+    assert calls == ["prompt"]
+
+
 def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -226,7 +263,7 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
     monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
     stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
-    probe_prompt = quota_probe_prompt()
+    probe_prompt = stub_quota_probe_builder(monkeypatch)
     records = []
 
     def fake_run(argv, **kwargs):
@@ -286,7 +323,7 @@ def test_run_codex_exec_reruns_after_quota_without_resume_token(
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
-    probe_prompt = quota_probe_prompt()
+    probe_prompt = stub_quota_probe_builder(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "calls.jsonl"
@@ -348,7 +385,7 @@ def test_quota_probe_non_quota_failure_fails_immediately(
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
-    probe_prompt = quota_probe_prompt()
+    probe_prompt = stub_quota_probe_builder(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "failed_probe_calls.jsonl"
@@ -408,7 +445,7 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_profile(tmp_path, monkeypatch)
-    probe_prompt = quota_probe_prompt()
+    probe_prompt = stub_quota_probe_builder(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "parallel_calls.jsonl"
@@ -477,7 +514,7 @@ def test_waiting_quota_calls_fail_when_representative_probe_fails(
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_profile(tmp_path, monkeypatch)
-    probe_prompt = quota_probe_prompt()
+    probe_prompt = stub_quota_probe_builder(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     calls = tmp_path / "parallel_failed_probe_calls.jsonl"
