@@ -73,24 +73,23 @@
 # `validate_finding_advocate.py`
 
 ## Summary
-- review oracle の finding advocate 検証用 AgentCallParameter を、正本側 builder の結果を基に生成する realization 実装。
-- 正本側 API を再公開しつつ、生成済み prompt に含まれる静的な oracle root 表記 typo だけを最小修正して返す入口。
-- finding と既知理由の入力値はそのまま正本側 builder に渡し、動的入力を byte-for-byte で変更しない制約を担う。
+- review oracle の finding 検証で advocate 側を呼び出す AgentCallParameter を組み立てるための realization implementation。正本側の builder から生成した parameter をほぼそのまま返しつつ、静的 prompt 内に残る oracle root 表記の typo だけを最小限に補正する薄い互換層として機能する。
+- 動的入力である finding と既知理由は改変せず、正本由来 prompt の固定文言だけを 1 箇所置換する責務を持つ。
 
 ## Read this when
-- review oracle の finding advocate 検証呼び出しで使う AgentCallParameter の組み立て経路を確認したいとき。
-- 正本側 builder の返却値に対して realization 側でどの補正を加えているかを確認したいとき。
-- prompt 内の oracle root 表記 typo 補正が、静的な goal 文だけに限定されているかを調べるとき。
-- finding、既知 advocate 理由、既知 challenger 理由などの動的入力を改変していないことを確認したいとき。
+- review oracle の finding 検証における advocate 側 AgentCallParameter の生成経路を確認・変更するとき。
+- 正本側 builder の出力を realization 側でどの程度補正しているかを調べるとき。
+- prompt 内の `<oracle-root>` 表記補正、または dynamic input を byte-for-byte に保つ制約に関わる変更を行うとき。
+- oracle src に残る静的 typo と realization 側の最小補正の関係を確認するとき。
 
 ## Do not read this when
-- review oracle 全体の判定仕様や finding advocate の正本プロンプト本文を確認したいだけのとき。
-- AgentCallParameter 型そのものの定義、model class、reasoning effort、file access mode の一般仕様を確認したいとき。
-- review oracle 以外の builder や、advocate ではない検証ロールの実装経路を調べているとき。
-- INDEX.md 生成やルーティング文書の一般規則を確認したいだけのとき。
+- review oracle の challenger 側、別の review builder、または finding 検証以外の AgentCallParameter 生成を調べるとき。
+- 正本仕様そのものの文言や prompt 標準を確認・変更したいとき。この対象は realization 側の補正実装であり、正本仕様の代替ではない。
+- finding 本文や既知理由の生成・解釈・検証ロジックを調べたいとき。この対象はそれらを加工せず parameter へ渡すだけである。
+- 単に AgentCallParameter の型定義、モデル設定、structured output schema の内容を調べたいとき。
 
 ## hash
-- 1ccc000be2eabbaf35cd53d1a83e2e1f45e77126fb7d54ec57eb38f9917139b9
+- 7a11d132eebabaa517f49ce2d7551b2adc0098d73ea6027f8e93fa605d9ad858
 
 # `validate_finding_challenger.py`
 

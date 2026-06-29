@@ -62,21 +62,26 @@
 # `review`
 
 ## Summary
-- レビュー用 agent call parameter builder 領域への入口。互換 package 境界と、oracle 所見の列挙・統合・判定・advocate/challenger 検証へ進む下位領域を束ねる。
-- この階層自体はレビュー基準や判定意味論の正本ではなく、realization 側の import path から正本由来の review builder 機能へ到達するためのルーティング境界として位置づく。
+- review builder 領域の realization 側入口。review builder package と、review oracle の finding 列挙・統合・検証・判定へ到達するための互換・補正層を扱う。
+- 主な読む先は、package としての互換名前空間だけを示す初期化部分と、正本側 builder への委譲・再公開、review oracle 用 prompt への対象 oracle file 本文やレビュー指示の追加、oracle root 表記の最小補正を担う下位領域である。
+- review oracle 関連の agent call parameter 生成経路を確認するための入口であり、共通の型定義、モデル設定、structured output schema、レビュー基準そのもの、正本仕様本文そのものの入口ではない。
 
 ## Read this when
-- レビュー用 builder 領域で、package としての互換境界だけを確認するか、所見処理に関する下位領域へ進むかを切り分けたいとき。
-- レビュー用 oracle 所見の列挙・統合・判定・検証に関する agent call parameter 生成や再公開の実装入口を探しているとき。
-- 正本側 builder の返却値を保ちながら、prompt 追記や静的文面補正などの realization 側互換調整がどこにあるかを探したいとき。
+- review builder 領域で realization 側の package 互換性や import 経路の入口を確認したいとき。
+- review oracle の finding 列挙・統合・検証・判定に関する realization 側の公開経路、委譲先、または薄い補正層の有無を切り分けたいとき。
+- oracle file レビュー用の agent call parameter が、正本側 builder の生成結果をどう利用し、レビュー指示、対象 oracle file 本文、既知 finding、検証対象 finding を prompt にどう渡すかを確認・変更したいとき。
+- 正本側 prompt に残る oracle root 表記の不整合だけを realization 側で最小補正する範囲や、dynamic input を改変しない制約を確認したいとき。
+- 対象 oracle path の解決、対象ファイルが存在しない場合の本文扱い、markdown code fence のエスケープなど、oracle file 本文をレビュー prompt に埋め込む周辺処理を調べたいとき。
 
 ## Do not read this when
-- レビュー基準そのもの、finding の意味判定、重複判定、advocate/challenger 検証の正本プロンプト本文を理解したいとき。委譲先の正本側本文を読む。
-- AgentCallParameter 型、model class、reasoning effort、file access mode、structured output schema の一般仕様を確認したいとき。共通定義側を読む。
-- レビュー処理全体の CLI 出力仕様、テスト観点、またはこの階層外の builder 責務を調べたいとき。より上位のレビュー実装または該当責務の本文へ進む。
+- review builder の具体的な処理ではなく、package 初期化や import 経路の成立だけを確認したい場合を除き、初期化部分だけを読んでも実装詳細は分からない。
+- review finding の判定基準、重複判定、意味解釈、統合方針そのものを理解したいとき。この領域はそれらの基準自体ではなく、基準や本文を prompt と import 経路へ接続する realization 実装を扱う。
+- oracle file の正本仕様本文、oracle と realization の基本概念、または正本仕様断片としての要求を確認したいとき。
+- AgentCallParameter の型定義、モデル選択、reasoning effort、file access mode、structured output schema などの共通仕様を調べたいとき。
+- review oracle 以外の builder、CLI 出力仕様、テスト観点、または正本側 prompt 標準や oracle src の文言そのものを変更したいとき。
 
 ## hash
-- 22025076e1449bdaa52fbd2caa4b269e755fa55cf81afedfcbd61737c3c2be02
+- b017d1025b90ada1c3c97a7fa1c249227098771ec8dc775cd8765fb79944e1f3
 
 # `session`
 

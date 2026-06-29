@@ -19,20 +19,22 @@
 # `builder`
 
 ## Summary
-- ACP の agent call parameter builder 群に対する realization 側の公開入口と互換境界を束ねる領域。正本側実装を本体としつつ、既存の公開参照経路から apply、indexing、review、session、TUI 関連の builder 機能へ到達できるようにする。
-- この階層は主に package 境界、再公開、委譲、互換維持、削除条件の確認に使う入口であり、各 builder の正本仕様や具体的な構築ロジックそのものは下位領域または正本側実装に置かれる。
+- ACP の agent call parameter builder 群に対する realization 側の入口を束ねる領域。正本側実装への委譲、既存公開 import path の互換維持、TUI・apply・review・session・indexing など用途別 builder 境界への案内を担う。
+- この階層の多くは処理本体ではなく薄い互換・再公開・補正層であり、具体的な構築ロジックや正本仕様は下位領域または対応する oracle 側実装へ進んで確認する。
 
 ## Read this when
-- ACP builder 領域で、realization 側の公開 import path と正本側 builder 実装との対応関係を把握したいとき。
-- 既存の acp.builder 系参照を残す理由、互換入口の役割、削除してよい条件を確認したいとき。
-- apply、indexing、review、session、TUI のどの builder 領域へ進むべきかを、この階層の責務境界から切り分けたいとき。
-- 正本側 builder への委譲、再公開、戻り値や import path の互換調整など、realization 側に残された薄い境界処理の所在を探しているとき。
+- ACP builder 全体の realization 側入口から、apply、review、session、TUI、indexing など用途別の読む先を選びたいとき。
+- 既存の acp.builder.* 参照や公開 import path が、oracle 側 builder 実装へどう接続されているかを確認したいとき。
+- 正本側へ実装を集約しつつ realization 側に互換入口を残している理由、削除条件、再公開先との対応関係を確認したいとき。
+- AgentCallParameter 構築に関する realization 側の薄い委譲層、補正層、公開境界の所在を切り分けたいとき。
+- TUI 起動、apply fork、review oracle、session join、indexing 互換入口のどの下位領域へ進むべきか判断したいとき。
 
 ## Do not read this when
-- ACP builder の具体的な parameter 構築処理、プロンプト本文、出力 schema、判定意味論などの正本仕様を確認したいとき。対応する正本側本文または下位実装を読む。
-- apply fork、review、session join、TUI など個別機能の詳細な制御フロー、入出力変換、git 操作、画面挙動を調べたいとき。より直接の機能実装へ進む。
-- AgentCallParameter 型、model class、reasoning effort、file access mode、repo root 解決などの共通定義や一般仕様を調べたいとき。定義元の共通領域を読む。
-- 新しい builder 機能の本体実装や仕様追加先を探しているとき。この階層は互換公開面と委譲入口が中心であり、処理本体の追加場所ではない。
+- AgentCallParameter の型定義、モデル設定、reasoning effort、file access mode、structured output schema など共通仕様そのものを調べたいとき。
+- oracle 側 builder の正本仕様、プロンプト内容、具体的な引数組み立て、検証処理の本体を確認したいとき。
+- apply fork 全体の CLI 制御、git 操作、作業レポート生成、TUI 画面描画、キー操作など builder 境界外の挙動を調べたいとき。
+- indexing の生成処理・探索処理・データ構造、review finding の判定基準や統合方針、session join の具体的な分岐を直接確認したいとき。
+- 互換入口ではなく新規機能の実装場所、正本仕様本文、または下位 builder の具体的な処理本体を読む対象が既に分かっているとき。
 
 ## hash
-- d2e3501d55dd034c5beb16f1948eea45e75562f13e455f187bc04f958e95572b
+- eff139d3af5f23e608bde57bec637a21de0206b9f1098191371687d1f5b46b44

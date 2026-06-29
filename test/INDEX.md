@@ -275,23 +275,22 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- prompt 部品と ACP builder が生成する最終 prompt、file access rule、routing rule、各種標準文書、structured output schema の期待値を横断的に検証する realization test。
-- 標準 prompt の構成、root token の保持、schema path と oracle source の一致、TUI parameter 解決、review/apply/session builder の model・reasoning・file access mode を同じ読み取り文脈で確認する。
-- 16,000 文字を超えるが、agent prompt と structured output schema の構築結果という責務境界に閉じており、共通の render/schema 期待値を一箇所で追うための凝集したテスト群として位置づけられている。
+- prompt part と ACP builder の生成結果を横断的に検証する realization test。標準 prompt、routing、file access rule、各種 builder parameter、structured output schema path と schema 内容、root token や placeholder の扱いが期待通りに組み合わさることを確認する。
+- prompt 構築まわりの回帰観点を一箇所に集約しており、StructDoc の markdown render、complete prompt の標準文書注入、apply/review/session/indexing/TUI 各 builder の model class・reasoning effort・file access mode・schema 参照を検証する入口になる。
 
 ## Read this when
-- prompt builder の標準文書、routing rule、file access rule、realization/review/apply/index entry standard の render 結果に関する回帰を確認したいとき。
-- ACP builder が返す prompt、structured output schema path、model class、reasoning effort、file access mode の組み合わせを変更・検証するとき。
-- root token や work root placeholder の扱い、動的 prompt 文字列の保持、oracle schema JSON との一致を確認する必要があるとき。
-- review oracle、apply fork、session join、TUI resolve parameter、indexing index entry の builder 間で共通する prompt/schema 期待値を横断的に追いたいとき。
+- prompt builder の出力文言、標準文書の注入条件、routing rule や file access rule のレンダリング結果を変更・調査するとき。
+- ACP builder が生成する AgentCallParameter の model class、reasoning effort、file access mode、prompt 内容、structured output schema path を確認するとき。
+- apply fork、review oracle、session join、indexing、TUI resolve parameter に関する schema 参照や prompt への root 表記・placeholder 展開の回帰を調べるとき。
+- StructDoc や StructCodeBlock の markdown rendering、特に連続空行の畳み込みや code block 内空行の扱いを変更するとき。
 
 ## Do not read this when
-- 個別の prompt 部品や builder の実装責務そのものを調べたいだけで、テスト期待値ではなく実装本文を直接確認すべきとき。
-- 特定の oracle schema JSON の定義内容だけを確認したいとき。
-- 単一の外部挙動テストや CLI 実行結果の確認が目的で、prompt 構築・schema 構築・builder parameter に関係しないとき。
+- 個別コマンドの実装挙動そのものを調べたいだけで、prompt 生成や ACP builder parameter の契約に関係しないとき。
+- oracle file の正本仕様本文を確認したいとき。標準文書の期待断片は検証しているが、仕様内容の根拠として読む対象ではない。
+- 特定の JSON schema の完全な定義を確認したいとき。このテストは schema との一致や validate 例を扱うが、schema 本文は対応する schema 定義を直接読む方がよい。
 
 ## hash
-- 2244ebaed17150c8f57d9a9565b4cece83fa66c5622f3893e3eb7b177830d88b
+- c3bbfa47c5f15061311e3cb2ea25bc300da5f430a64f93824004425ad0142bc7
 
 # `test_review_oracle_cli.py`
 

@@ -1,23 +1,24 @@
 # `acp`
 
 ## Summary
-- ACP builder 互換層の realization 側入口を束ねる領域。既存の `acp.*` import 経路を維持しつつ、実体は正本側または下位 builder 実装へ委譲する。
-- この階層自体は機能本体ではなく、公開 import path、再公開、互換維持、削除条件を判断するための案内役である。
+- ACP 関連の realization 側入口を置く領域。公開 import 面の互換維持と、agent call parameter builder 群への導線を担う。
+- 実体の多くは正本側実装や下位 builder への薄い委譲・再公開・補正であり、ACP 構築ロジック本体を読むための起点として使う。
 
 ## Read this when
-- `acp.*` または ACP builder 系の既存 import 経路が、realization 側でどの互換入口により維持されているかを確認したいとき。
-- 正本側の ACP builder 実装と realization 側の公開面との対応、委譲、再公開の境界を把握したいとき。
-- apply、indexing、review、session、TUI 関連の builder 領域へ進む前に、この階層が担う互換境界と下位領域の切り分けを確認したいとき。
-- 移行期間中の `acp.*` 参照を残す理由や、互換入口を削除してよい条件を判断したいとき。
+- 既存の `acp.*` import や `acp.builder.*` import が realization 側でどの互換入口により維持されているか確認したいとき。
+- ACP の AgentCallParameter builder 群について、apply、review、session、TUI、indexing など用途別の下位領域へ進む入口を選びたいとき。
+- 正本側に実装を集約しつつ realization 側に互換入口を残している理由、公開 import 面の扱い、削除条件を判断したいとき。
+- ACP builder の実装本体ではなく、realization 側公開境界、委譲層、補正層の所在を切り分けたいとき。
 
 ## Do not read this when
-- ACP builder の具体的な parameter 構築処理、プロンプト本文、出力 schema、判定意味論を調べたいとき。正本側本文または該当 builder の実装へ進む。
-- apply fork、review、session join、TUI など個別機能の詳細な制御フロー、入出力変換、git 操作、画面挙動を調べたいとき。より直接の機能実装を読む。
-- AgentCallParameter 型、model class、reasoning effort、file access mode、repo root 解決などの共通定義を調べたいとき。定義元の共通領域へ進む。
-- 新しい ACP 機能や builder 本体を追加する場所を探しているとき。この階層は互換公開面と委譲入口が中心であり、処理本体の追加先ではない。
+- AgentCallParameter の型定義、モデル設定、reasoning effort、file access mode、structured output schema など共通仕様そのものを調べたいとき。
+- ACP builder の正本仕様、プロンプト内容、具体的な引数組み立て、検証処理の本体を直接確認したいとき。
+- apply fork 全体の CLI 制御、git 操作、作業レポート生成、TUI 画面描画、キー操作など builder 境界外の挙動を調べたいとき。
+- 新しい ACP 機能や API 仕様を追加する場所を探しているとき。ここは主に互換入口と下位 builder への導線であり、機能追加の本体ではない。
+- 既に用途別 builder、正本側実装、または互換入口の具体的な読み先が分かっているとき。
 
 ## hash
-- d768228843ed7cb876334710caa3c7dd4f5dad921e7e052ad540d069783b1e41
+- bf27fdc982be31f42cd30f740d05d08e4f34e6041a1dbe849df0c23a35134b5b
 
 # `basic`
 
