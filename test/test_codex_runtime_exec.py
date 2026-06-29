@@ -100,7 +100,7 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
             "home = pathlib.Path(os.environ['CODEX_HOME'])",
             "profile_path = home / f'{profile}.config.toml'",
             "output.write_text('done\\n')",
-            "pathlib.Path('new_top_level.txt').write_text('created\\n')",
+            "pathlib.Path('oracle/created.md').write_text('created\\n')",
             f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
             "    'args': args,",
             "    'cwd': os.getcwd(),",
@@ -137,8 +137,8 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
     writable_roots = set(
         tomllib.loads(record["profile"])["sandbox_workspace_write"]["writable_roots"]
     )
-    assert writable_roots == {str(root.resolve())}
-    assert (root / "new_top_level.txt").read_text() == "created\n"
+    assert writable_roots == {str((root / "oracle").resolve())}
+    assert (root / "oracle" / "created.md").read_text() == "created\n"
     assert result.output_text == "done\n"
 
 
@@ -373,7 +373,7 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
         Path(json.loads(call_log.read_text())["profile_path"]).read_text()
     )
     assert profile["sandbox_workspace_write"]["writable_roots"] == [
-        str(linked.resolve())
+        str((linked / "oracle").resolve())
     ]
 
 

@@ -526,7 +526,10 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         str((root / "oracle").resolve())
     }
     assert _profile_writable_roots(profiles[FileAccessMode.REPO_WRITE]) == {
-        str(root.resolve()),
+        str((root / ".gitignore").resolve()),
+        str((root / "oracle").resolve()),
+        str((root / "src").resolve()),
+        str((root / "test").resolve()),
     }
     for blocked in (
         "oracle/spec.md",
@@ -543,7 +546,9 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     _assert_writable(
         profiles[FileAccessMode.REPO_WRITE], root / "oracle" / "created.md"
     )
-    _assert_writable(
+    for blocked in ("memo/note.md", ".agents/state.json", ".cmoc/log"):
+        _assert_not_writable(profiles[FileAccessMode.REPO_WRITE], root / blocked)
+    _assert_not_writable(
         profiles[FileAccessMode.REPO_WRITE], root / "new_dir" / "created.md"
     )
     _assert_not_writable(
@@ -583,8 +588,13 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         extra_writable_paths=[repo_extra],
     )
     assert _profile_writable_roots(profile) == {
-        str(root.resolve()),
+        str((root / ".gitignore").resolve()),
+        str(repo_extra.resolve()),
+        str((root / "oracle").resolve()),
+        str((root / "src").resolve()),
+        str((root / "test").resolve()),
     }
+    _assert_writable(profile, repo_extra / "created.md")
 
     with pytest.raises(CmocError, match="許可領域外"):
         build_codex_profile(

@@ -153,19 +153,14 @@ def _writable_roots(
         case FileAccessMode.REALIZATION_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            # Codex profile has no deny-list expression. REALIZATION_WRITE must
-            # keep oracle/memo/etc. out of the sandbox, so it lists currently
-            # existing allowed top-level roots and intentionally cannot create a
-            # new top-level path.
             paths = _existing_writable_top_level_roots(mode, root)
         case FileAccessMode.REPO_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            # REPO_WRITE must allow creating new top-level realization paths.
-            # Codex profile has no deny-list for <work-root>/memo, so the
-            # profile expresses the required writable boundary as closely as
-            # Codex can enforce and the prompt carries the memo ban.
-            paths = [root]
+            # Codex profile has no deny-list, so modes that exclude memo/.agents
+            # cannot make <work-root> itself writable. New top-level paths must
+            # be passed explicitly through extra_writable_paths.
+            paths = _existing_writable_top_level_roots(mode, root)
         case FileAccessMode.ORACLE_WRITE:
             paths = [root / "oracle"]
         case _:
