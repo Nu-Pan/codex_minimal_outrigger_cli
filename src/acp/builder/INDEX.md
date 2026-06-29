@@ -62,21 +62,24 @@
 # `review`
 
 ## Summary
-- レビュー用 AgentCallParameter builder 群の realization 側入口となる領域。package 互換性だけを示す初期化部分と、review oracle builder の import 経路・一部 prompt 補正を担う下位領域へ進むための分岐点になる。
-- finding の列挙・判定・統合・検証に関する builder を src 側から辿るとき、正本側実装の薄い再公開と、生成済み AgentCallParameter の oracle root 表記だけを補正する互換層を切り分ける入口になる。
+- review builder 領域の realization 側 package。正本側 review builder との互換 package 境界と、レビュー用 oracle 機能へ到達するための realization 側 import 経路を扱う。
+- 主な内容は、package としての互換名前空間の成立確認と、finding の列挙・判定・検証・merge を正本側実装へ委譲する薄い入口群である。
+- 一部では、review oracle 用 AgentCallParameter 生成後の prompt に含まれる oracle root 表記を、正本側の表記不具合に対する互換目的で局所補正する。
 
 ## Read this when
-- レビュー用 builder の realization 側で、package 互換性の確認と review oracle builder への進み先を選びたいとき。
-- finding の列挙・判定・統合・challenger 検証・advocate 検証に関する builder の import 経路を src 側から探すとき。
-- merge finding または advocate 検証で、正本側 builder の生成結果を保ったまま prompt 内の oracle root 表記補正を行う場所へ進みたいとき。
+- review builder 領域で、正本側 package に対応する realization 側 package や import 経路が存在するかを確認したいとき。
+- review oracle 関連処理を呼び出す realization 側コードが、正本側実装へどの境界で委譲されるかを俯瞰したいとき。
+- finding の列挙、判定、検証、merge の入口が realization 側の独自実装なのか、正本側実装の再公開なのかを切り分けたいとき。
+- review oracle 用 AgentCallParameter の prompt 内にある oracle root 表記の局所補正箇所や、その互換 wrapper を削除できる条件を確認したいとき。
 
 ## Do not read this when
-- review oracle の finding 条件、判定基準、統合規則、検証ルール、出力 schema など正本仕様そのものを調べたいとき。
-- AgentCallParameter の共通型、モデル選択、reasoning effort、file access mode など review builder に限らない基盤を調べたいとき。
-- レビュー builder 以外の CLI 出力仕様、oracle file と realization file の一般的な役割分担、または package 初期化より先の具体処理を直接調べたいとき。
+- finding の列挙条件、判定基準、検証プロンプト、merge prompt の正本内容を理解したいとき。その場合は委譲先の正本側実装や対応する正本仕様断片を読む。
+- AgentCallParameter 型の共通構造、model_class、reasoning_effort、file_access_mode、structured output schema の一般仕様を調べたいとき。
+- review oracle 全体の設計意図、検出対象、出力仕様を確認したいとき。その場合はより上位の正本仕様または該当責務の本文へ進む。
+- レビュー処理本体、CLI 出力処理、または package 初期化と正本側実装への再公開・局所補正以外の実装変更先を探しているとき。
 
 ## hash
-- 8bf13fce368aebf2f82397f5c072e2a6a13392adcccb57d8c8a55de8af9fa828
+- a9603b35ce0466237404c12bf31e6f748489b10fe2599d55508231d0d5976ad0
 
 # `session`
 

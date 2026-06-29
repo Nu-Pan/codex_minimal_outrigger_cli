@@ -147,26 +147,26 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体を収める実装領域。最上位 CLI、個別サブコマンド本体、共有 runtime helper、Codex exec/TUI 呼び出し境界、git・path・設定・状態・ログ・INDEX.md 更新処理、正本側実装への互換 import 入口が配置されている。
-- 利用者が実行する CLI から実処理へ到達する経路と、サブコマンド間で共有される実行時基盤を追うための起点になる。正本仕様そのものではなく、oracle file で述べられた意図を実際の Python 実装として具体化する realization 側の入口である。
-- 配下には、CLI app 定義、init・indexing・tui・session・apply・review の実行本体、ACP builder や basic/config/oracle 互換 shim、共通 runtime facade と責務別 helper があり、作業内容に応じて下位 package または対象 module へ進むための階層である。
+- cmoc の realization implementation 全体を収める実装ルートで、トップレベル CLI、サブコマンド本体、共通 runtime helper、互換 import shim、正本側実装への再公開境界を扱う。
+- 実処理は主に CLI 入口、サブコマンド群、共有 helper 群に分かれ、既存公開 import path を維持するための薄い互換 package も同居する。
+- oracle file で述べられた正本仕様断片を具体化する realization code の入口であり、テスト期待値や正本仕様そのものではなく、cmoc の実行時挙動を実装する対象へ進むための階層である。
 
 ## Read this when
-- cmoc の CLI コマンドがどの実装関数へ委譲され、そこからどのサブコマンド処理や共通 runtime helper へ進むかを調べたいとき。
-- realization 側で、session、apply、review、init、indexing、tui の branch/worktree 操作、状態更新、Codex 呼び出し、report 生成、利用者向け出力の実装を確認または変更したいとき。
-- Codex CLI 起動、Structured Output、sandbox/profile、設定読み込み、path 解決、git wrapper、ログ、状態ファイル、エラー表示、内容 hash、INDEX.md 更新 preflight など、複数機能から共有される実行時基盤を探したいとき。
-- 正本側の ACP builder、設定定義、path model、構造化文書実装を realization 側の既存 import path からどう再公開・委譲しているか確認したいとき。
-- oracle file ではなく、現行仕様を満たすための実装差分、テスト対象となる実装挙動、互換 shim の残置理由や削除条件を調べる入口を選びたいとき。
+- cmoc の実装本体について、CLI 入口、サブコマンド、共通 runtime helper、互換 import 境界のどこから調べるべきかを選びたいとき。
+- `cmoc` console script からの起動、Typer app 構成、サブコマンド委譲先、または個別サブコマンドの実行処理を確認・変更したいとき。
+- Codex CLI 呼び出し、設定・path・git・状態・ログ・エラー表示・INDEX.md 更新 preflight など、複数機能から共有される runtime 基盤を調べたいとき。
+- realization 側や公開面に残る `acp.*`、`basic.*`、`config.*`、`oracle.*` などの旧 import path が、正本側または実体 module へどう橋渡しされているかを確認したいとき。
+- oracle 側の正本実装と realization 側実装の境界、または互換 shim を削除・移行できる条件を調べたいとき。
 
 ## Do not read this when
-- 正本仕様断片、設計意図、利用者向け仕様、prompt 内容、path model の概念定義、設定項目の正本定義だけを確認したいときは、oracle 側の該当本文を読む。
-- テスト期待値、fixture、回帰確認観点だけを調べたいときは、realization test 側を読む。
-- README、補助スクリプト、配布設定、gitignore など、実装ソース以外の補助ファイルを確認したいだけのときは、該当する ancillary file を直接読む。
-- すでに個別サブコマンド、共通 helper、互換 shim、ACP builder など読むべき対象が特定できているときは、この階層全体ではなく該当する下位対象へ直接進む。
-- 正本側実装を変更したいとき、または oracle file と realization file の責務境界を判断したいだけで実装本体を読む必要がないとき。
+- 正本仕様断片、設計意図、prompt 文言、path model の概念定義、設定定義の正本を確認したいとき。その場合は oracle 側の該当本文を読む。
+- realization test の期待値、fixture、テスト観点だけを確認したいとき。その場合は test 側を読む。
+- README、AGENTS、開発補助ファイル、配布設定など、実装ルート外の ancillary や文書だけを調べたいとき。
+- 個別の対象ファイルや下位 package がすでに特定できており、その本文だけを読めば足りるとき。
+- 生成済みのルーティング文書そのものを確認したいとき。ここは実装本文へ進むための入口であり、INDEX.md の既存内容を根拠にする場所ではない。
 
 ## hash
-- b62dacda13fbe8cae0f34cfb707322a86d35b5528a4bca957797c1cc0638ca68
+- fbe3b786a15d2f75137090c51c1d09c79a4df7fa4e7e9513df18cd971718ddca
 
 # `test`
 

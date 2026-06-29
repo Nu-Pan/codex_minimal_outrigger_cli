@@ -19,22 +19,21 @@
 # `builder`
 
 ## Summary
-- ACP builder 群の realization 側における互換入口をまとめる領域。正本側に置かれた builder 実装を既存の公開参照経路から利用できるようにし、薄い package 境界・再公開・委譲・一部の適合処理を担う。
-- 扱う範囲は、変更要約や所見処理、インデックス生成関連、レビュー用所見処理、セッション結合、TUI 起動・解決パラメータなどの AgentCallParameter 構築入口である。実処理や正本仕様の本体ではなく、正本側 builder へ進むための realization 側接続点として位置づく。
-- 互換入口を残す理由、正本側 package 構造との対応、既存 import path の維持、正本側戻り値を realization 側型として扱う境界、削除可能条件を確認するための上位入口になる。
+- ACP builder 領域における realization 側の互換入口群を束ねる階層。正本側に置かれた builder 実装への import 経路を維持し、既存の公開参照を壊さないための薄い再公開境界として機能する。
+- 扱う対象は、apply fork 向け agent call parameter 構築入口、indexing 関連実装の互換公開、review oracle 関連 builder の委譲入口、session join 領域への境界、TUI 起動・resolve parameter 構築入口などである。
+- この階層自体は各 builder の正本仕様や処理本体ではなく、realization 側から正本側実装へ到達するための package 境界、公開名の維持、局所的な互換補正、削除条件の確認に使う入口である。
 
 ## Read this when
-- ACP builder の realization 側で、既存の公開参照経路が正本側 builder 実装へどのように接続されているか把握したいとき。
-- 変更要約、ファイル単位所見、所見適用、インデックス関連、レビュー用 finding 処理、セッション結合、TUI 用パラメータ生成のうち、どの下位領域へ進むべきか選びたいとき。
-- 正本側へ実装を集約しつつ、既存利用者や残存参照を壊さないための互換 package、再公開、委譲境界を確認したいとき。
-- oracle 側 builder を通常 import できない配置での import path fallback、正本側生成結果への realization 側適合、または prompt 内の oracle root 表記補正など、realization 側の薄い補正境界の所在を探したいとき。
-- 互換入口を削除・移動・置換してよいか、残存参照や利用者向け公開面との関係から判断したいとき。
+- ACP builder 全体で、realization 側の公開 import path と正本側 builder 実装との対応関係を俯瞰したいとき。
+- 既存利用者や残存参照を壊さずに、builder 関連の公開入口を維持・廃止・移動できるか判断したいとき。
+- apply、indexing、review、session、TUI の各 builder 領域について、どの下位領域へ進むべきかを選びたいとき。
+- 正本側 builder への委譲、正本側戻り値の realization 側型への適合、oracle import path の fallback、review prompt の局所的な互換補正など、互換境界の所在を探したいとき。
 
 ## Do not read this when
-- AgentCallParameter builder の正本仕様、プロンプト内容、出力条件、型定義、モデル選択、reasoning effort、file access mode の意味そのものを確認したいとき。対応する正本側本文または基本定義を読む。
-- 各 builder の具体的な生成処理、探索処理、判定条件、データ構造、入出力変換、検証規則を調べたいとき。互換入口ではなく処理本体または正本側実装を読む。
-- ACP builder 以外の CLI 制御、fork 適用、git 操作、作業レポート生成、TUI 表示・イベント処理・対話フローを調べたいとき。該当する機能本体の領域を読む。
-- 新規機能の実装場所やテスト対象を探しているだけで、既存公開参照経路の維持、正本側への委譲、互換層の削除条件に関心がないとき。
+- agent call parameter の具体的な組み立て内容、プロンプト本文、出力条件、型定義、検証規則などの正本仕様を確認したいとき。その場合は委譲先の正本側本文や定義元を読む。
+- indexing の生成処理・探索処理・データ構造、review finding の判定基準、session join の具体処理、TUI の画面制御やイベント処理を調べたいとき。各処理本体の領域へ直接進む。
+- ACP builder 以外の ACP 関連モジュール、CLI 制御、git 操作、fork 適用処理、作業レポート生成フローを調べたいとき。
+- 互換 package 境界や公開入口の維持・削除条件に関係しない新規機能の実装場所やテスト対象を探しているとき。
 
 ## hash
-- 8fdac0ac0aaa17e13c185bd22ab3452995dd35c13b41e46dd1924630a800ca04
+- 12275ff74918696d883a8d719eb8c1c93586105d58d269728fcb641a4cc1a686

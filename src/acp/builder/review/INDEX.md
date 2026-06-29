@@ -18,17 +18,20 @@
 # `oracle`
 
 ## Summary
-- review oracle builder の realization 側入口をまとめる package。finding の列挙・判定・challenger 検証は正本側実装の薄い再公開として扱い、merge finding と advocate 検証は正本側 builder の生成結果を保ったまま prompt 内の oracle root 表記だけを最小補正する互換層を含む。
+- レビュー用 oracle 機能を realization 側の互換 import 経路から参照するための薄い入口群をまとめる package。多くは正本側実装の再公開だけを担い、一部は AgentCallParameter 生成後の prompt に含まれる oracle root 表記だけを局所補正する。
+- finding の列挙・判定・検証・merge について、realization 側コードが正本側の review oracle 実装へ到達する境界を確認するための起点になる。
 
 ## Read this when
-- レビュー用 oracle builder のうち、finding の列挙・判定・統合・検証に関する realization 側の import 経路を探すとき。
-- 正本側 review oracle 実装を src 側から再公開しているだけの入口と、生成済み AgentCallParameter の一部だけを補正する実装を切り分けたいとき。
-- merge finding または advocate 検証で、known findings や finding 入力を保ったまま prompt 内の oracle root 表記補正がどこで行われるか確認したいとき。
+- review oracle 関連処理を呼び出す realization 側 import 経路が、正本側実装へどう委譲されているかを俯瞰したいとき。
+- finding の列挙、判定、検証、merge の入口が独自実装なのか再公開なのかを切り分けたいとき。
+- review oracle 用 AgentCallParameter の生成後に、prompt 内の oracle root 表記を一時的に補正している箇所を探すとき。
+- 正本側の typo や placeholder 表記不具合が解消された後に、互換補正 wrapper を削除できるか判断したいとき。
 
 ## Do not read this when
-- finding の列挙条件、判定基準、統合ロジック、検証ルール、出力 schema など review oracle の正本仕様そのものを理解したいとき。
-- AgentCallParameter の型定義、モデル選択、reasoning effort、file access mode など共通基盤を調べたいとき。
-- レビュー builder 全体、CLI 出力仕様、oracle file と realization file の一般的な役割分担を確認したいとき。
+- finding の列挙条件、判定基準、検証プロンプト、merge prompt の正本内容を理解したいとき。その場合は委譲先の正本側実装や対応する oracle file を読む。
+- AgentCallParameter 型の共通構造、model_class、reasoning_effort、file_access_mode、structured output schema の一般仕様を調べたいとき。
+- review oracle 全体の設計意図、検出対象、出力仕様を確認したいとき。より上位の正本仕様または該当責務の本文へ進む。
+- 再公開や局所的な prompt 補正ではない、レビュー処理本体や CLI 出力処理の実装を探しているとき。
 
 ## hash
-- 9c81504b436a0ef3e65f8973c77f8d4393f3bdc1f5599e8fe92e96b7d1a59ac5
+- 07338706edd3154067d973bcd33cdb0317183771bab40f081e1f92ad539bf3b1

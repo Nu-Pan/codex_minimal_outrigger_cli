@@ -51,42 +51,43 @@
 # `merge_finding.py`
 
 ## Summary
-- レビュー用 oracle merge finding パラメータ生成を、正本側の既存生成処理へ委譲しつつ、既知 finding 入力を含む prompt 内の oracle root プレースホルダー表記だけを最小修正する realization 実装。
-- 正本仕様側の一時的な表記不整合に対して、生成済み AgentCallParameter の型・モデル・推論設定・アクセス設定・structured output schema 指定を保ったまま prompt だけを差し替える薄い互換層として機能する。
+- review oracle の finding merge 呼び出し用 AgentCallParameter を、正本側の生成処理に委譲して作る realization 側の薄いアダプタ。
+- 生成された prompt 内の oracle root プレースホルダー定義だけを最小補正し、正本側の不具合が解消されるまでの互換処理を担う。
 
 ## Read this when
-- レビュー oracle の merge finding 用 AgentCallParameter がどのように作られるか、または known findings が prompt へ渡った後にどの補正を受けるかを確認したいとき。
-- oracle root プレースホルダー表記の `<<...>>` から `<...>` への補正が、どこで、どの範囲に限定して行われているかを調べるとき。
-- 正本側の builder 実装を realization 側でラップしている箇所や、生成パラメータの一部だけを変更して他の設定を維持する実装を確認したいとき。
+- review oracle の finding merge 呼び出しで渡される AgentCallParameter の生成経路を確認したいとき。
+- known findings を入力にした prompt が、実行前にどのように補正されるかを確認したいとき。
+- oracle root プレースホルダー表記の一時的な互換補正や、その削除条件を調べたいとき。
 
 ## Do not read this when
-- レビュー finding の統合ロジックそのもの、finding の意味判定、重複判定、出力 schema の内容を調べたいとき。
-- AgentCallParameter 型の定義、モデル選択、reasoning effort、file access mode の一般仕様を調べたいとき。
-- oracle file と realization file の基本概念、または oracle root などのパスモデル全体を確認したいとき。
+- finding merge の本来の prompt 内容や structured output schema の正本定義を確認したいとき。
+- review oracle 全体の設計意図、検出対象、出力仕様を確認したいとき。
+- AgentCallParameter 型そのものの構造や共通仕様を調べたいとき。
 
 ## hash
-- c31535b2daad9099a12ca97622a917e1bbb7f3b5c1579039578d3e3753a3c8de
+- 391548e4fea16d20a1993058722af75334c480677e68a5911e83052504043623
 
 # `validate_finding_advocate.py`
 
 ## Summary
-- review oracle の finding 検証で advocate 側を呼び出す AgentCallParameter を組み立てるための realization implementation。正本側の builder から生成した parameter をほぼそのまま返しつつ、静的 prompt 内に残る oracle root 表記の typo だけを最小限に補正する薄い互換層として機能する。
-- 動的入力である finding と既知理由は改変せず、正本由来 prompt の固定文言だけを 1 箇所置換する責務を持つ。
+- review oracle の finding advocate 検証用 AgentCallParameter を構築する薄い実装で、正本側の builder を呼び出した後、生成 prompt に含まれる既知の `<oracle_root>` 表記 typo だけを最小補正して返す。
+- finding、既知の advocate 理由、既知の challenger 理由は正本側 builder にそのまま渡し、動的入力は byte-for-byte で維持しつつ、静的な goal 文言の表記補正だけを担う。
+- 正本実装への追従用 wrapper として、正本側で `<oracle-root>` 表記が修正されるまで残す一時的な互換処理の入口になっている。
 
 ## Read this when
-- review oracle の finding 検証における advocate 側 AgentCallParameter の生成経路を確認・変更するとき。
-- 正本側 builder の出力を realization 側でどの程度補正しているかを調べるとき。
-- prompt 内の `<oracle-root>` 表記補正、または dynamic input を byte-for-byte に保つ制約に関わる変更を行うとき。
-- oracle src に残る静的 typo と realization 側の最小補正の関係を確認するとき。
+- review oracle の finding advocate 検証に渡す AgentCallParameter の構築経路を確認・変更したいとき。
+- 生成 prompt 内の `<oracle_root>` と `<oracle-root>` の表記揺れ補正がどこで行われるかを調べるとき。
+- 正本側 builder の返す parameter を保ったまま、prompt だけに局所的な補正をかける実装意図や削除条件を確認したいとき。
+- finding や既知理由の動的入力を変更せず保持する必要がある変更・テストを扱うとき。
 
 ## Do not read this when
-- review oracle の challenger 側、別の review builder、または finding 検証以外の AgentCallParameter 生成を調べるとき。
-- 正本仕様そのものの文言や prompt 標準を確認・変更したいとき。この対象は realization 側の補正実装であり、正本仕様の代替ではない。
-- finding 本文や既知理由の生成・解釈・検証ロジックを調べたいとき。この対象はそれらを加工せず parameter へ渡すだけである。
-- 単に AgentCallParameter の型定義、モデル設定、structured output schema の内容を調べたいとき。
+- review oracle の finding advocate 検証プロンプトそのものの正本仕様を確認したいだけなら、正本側の対応する oracle file を読む。
+- review oracle の challenger 側や別種類の検証 parameter 構築を扱う場合は、その対象の実装へ進む。
+- AgentCallParameter 型そのものの定義、model_class、reasoning_effort、file_access_mode などの共通仕様を調べる場合は、共通の parameter 定義を読む。
+- INDEX.md 生成やルーティング文書全般の仕様を調べる場合は、この個別 wrapper ではなく INDEX.md エントリー仕様の正本を読む。
 
 ## hash
-- 7a11d132eebabaa517f49ce2d7551b2adc0098d73ea6027f8e93fa605d9ad858
+- 2b79e3665d77ceff0cd1636e2e772a5ab3a92e025778f47e83833b7105feca7c
 
 # `validate_finding_challenger.py`
 
