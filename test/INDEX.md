@@ -114,21 +114,22 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の共通 runtime 契約を横断的に固定する realization test。root placeholder と run/work/repo root 解決、設定値検証、CmocError の Markdown report、CLI error の stdout 変換、subcommand log、session/apply branch state、`.cmoc` ignore、FileAccessMode と Codex sandbox profile、binary 判定など、個別サブコマンドより下位の基礎挙動をまとめて検証する。
-- 16,000 文字を超えるが、対象は共通 fixture と root 状態の文脈を共有する basic runtime 回帰に閉じており、分割すると検証文脈が散る領域として扱われている。
+- cmoc の共通 runtime 契約を横断的に固定する realization test。root/worktree 解決、config 既定値と検証、CmocError の Markdown 表示、CLI error の stdout 化、subcommand log、FileAccessMode から Codex sandbox/profile への変換、binary 判定など、個別サブコマンドより下位の実行前提をまとめて検証する。
+- 16,000 文字超の大きなテストだが、共通 fixture と root 状態の文脈を共有して崩れやすい basic runtime 回帰を一箇所で扱うための凝集した入口になっている。
 
 ## Read this when
-- cmoc の基礎 runtime 挙動、root 解決、worktree 判定、設定既定値や設定エラー、構造化 error 表示、CLI preflight、subcommand log、state branch 名、`.cmoc` ignore、FileAccessMode と Codex profile、binary 判定の回帰テストを確認・変更する時。
-- 複数の runtime helper をまたぐ変更で、個別サブコマンドのテストより先に共通契約が壊れていないか確認したい時。
-- sandbox profile の writable roots、追加書き込み許可 path、oracle conflict write、memo・`.agents`・管理ファイルへの書き込み禁止境界をテスト観点から確認する時。
+- runtime の基礎契約、特に repo root と run/work root の扱い、linked worktree、main worktree 拒否、managed worktree 外の保護を確認または変更する時。
+- config の既定値、codex model/reasoning effort 名の検証、FileAccessMode の永続化値、sandbox mode、Codex profile の writable roots 制御を変更する時。
+- CmocError の表示形式、CLI の想定済み error や Click parse error の stdout report 化、shell completion probe の preflight 回避、subcommand log の失敗記録を扱う時。
+- `.cmoc` の ignore 設定、起動 wrapper の call stack 表示、binary 判定の読み取り範囲など、個別コマンドではなく runtime 共通の副作用・安全境界を確認する時。
 
 ## Do not read this when
-- 特定サブコマンド固有の正常系・業務フロー・利用者操作の詳細を確認したいだけの時。
-- runtime 契約ではなく、oracle 文書、実装方針、CLI コマンド本体、個別 helper の内部実装だけを読みたい時。
-- テスト fixture や支援関数そのものの実装を調べたい時は、先にその支援コードを直接読む方が適切。
+- 特定サブコマンド固有の正常系・業務ロジック・入出力仕様だけを調べる時は、そのサブコマンドの実装または専用テストを先に読む。
+- oracle 文書そのものの正本仕様や用語定義を確認したい時は、対応する oracle file を読む。
+- 単体の小さな helper の内部実装だけを変更し、runtime 境界や CLI 表示、sandbox/profile、worktree 安全性に影響しないことが明らかな時は、対象 helper とその近接テストを優先する。
 
 ## hash
-- 9503682d9012f67ddd2820f598454796b6c227d625ebe2e58ff1278085f82f8b
+- eebacc7913c758aaa3b699815f409ac318d991034639822114fa39836ad93d68
 
 # `test_cli_init_tui.py`
 
