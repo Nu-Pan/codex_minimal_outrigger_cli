@@ -17,21 +17,24 @@
 # `apply`
 
 ## Summary
-- apply 系の ACP builder 領域への入口となる package。apply builder 全体の実体は下位要素に分かれており、package 初期化の互換要素と、apply fork 用の AgentCallParameter 生成・structured output schema 連携を扱う下位ディレクトリを束ねる。
-- oracle 側の apply builder 構造に対応する realization 側 adapter 群を探すための分岐点であり、具体的な apply fork の builder 実装や出力契約へ進む入口になる。
+- apply builder 領域の realization 側 package。oracle 側の apply builder package と対応する互換 package として成立し、下位に apply fork 系の agent call parameter builder 群への入口を持つ。
+- この領域では、apply fork の各段階で使う agent 呼び出しパラメータ生成について、realization 側から oracle 側 builder へ委譲し、repository root 解決、oracle src import 準備、runtime 側 parameter への橋渡しを扱う。
 
 ## Read this when
-- apply 系 ACP builder の中で、package 初期化だけを見るべきか、apply fork 系の builder・schema へ進むべきかを判断したいとき。
-- oracle 側 apply builder と realization 側 AgentCallParameter 生成の対応関係を、apply 領域の入口から辿りたいとき。
-- `cmoc apply fork` の変更要約、ファイル単位の所見列挙、所見適用などに関わる builder や structured output schema の所在を探したいとき。
+- apply builder 領域が oracle 側 package 構造とどう対応しているかを確認したいとき。
+- apply fork 系の agent call parameter builder へ進む入口を探しているとき。
+- apply fork 系 builder で、realization 側から oracle 側 builder へどう委譲されるか、repository root 解決や oracle src import 準備をどこから確認するか判断したいとき。
+- 変更要約、ファイル単位の所見列挙、検出済み所見の適用に対応する agent 呼び出しパラメータ生成箇所を探しているとき。
 
 ## Do not read this when
-- fork 作成、git 操作、差分適用、実行制御など apply fork コマンド全体の制御フローを調べたいとき。
-- prompt 本文や正本仕様断片としての builder 挙動を確認したいとき。この領域は oracle 側 builder へ橋渡しする realization 側要素が中心である。
-- repo root 解決、path model、AgentCallParameter、enum 型そのものの定義を調べたいとき。この領域ではそれらを利用するが、基礎定義は別領域にある。
+- apply builder の具体的な変換・適用ロジックや公開関数・クラスの詳細だけを調べたいときは、該当する実装本体へ直接進む。
+- apply fork の prompt 本文、JSON schema、モデル選択、file access mode などの正本仕様を確認したいときは、対応する oracle 側 builder や schema を読む。
+- apply fork 全体の制御フロー、fork 作成、git 操作、実行 orchestration を調べたいときは、上位の apply fork 実装へ進む。
+- repository root 解決そのものの仕様、path model、AgentCallParameter や enum 型の定義を調べたいときは、それぞれの基本定義側を読む。
+- apply fork 以外の apply 系 command や、所見の検出・分類・生成ロジックを調べたいだけのとき。
 
 ## hash
-- f3bb50f5ae4050a0f30926694c2f0db98c2c8b33a240bf8fd27c0ccbc04848bf
+- 30a141b5c106ba2f0181deead440ccdfb91d81c9dfc10a1ba0ae9f295bfeb9d5
 
 # `indexing`
 

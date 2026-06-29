@@ -18,21 +18,21 @@
 # `builder`
 
 ## Summary
-- ACP builder の realization 側入口であり、oracle 側 builder 実装を `acp.builder` 配下の import 経路から参照できるようにする互換 package 群を束ねる。
-- apply、indexing、review、session、tui などの builder 領域へ進む分岐点で、主な実体は oracle 側に置かれ、この階層では公開経路、薄い adapter、実行側契約に合わせた小さな補正を扱う。
-- 具体的な AgentCallParameter 生成、Structured Output schema 連携、review finding 系の検証、session join、TUI パラメータ解決などは下位領域へ進んで確認する。
+- ACP builder の realization implementation 側入口であり、正本側 builder 実装を実行側の import 経路から利用するための互換 package 群を束ねる。
+- この領域は builder 処理の正本実装そのものではなく、apply fork、review oracle、session join、TUI、indexing などの各 builder 領域へ進むための境界として位置づけられる。
+- 多くの下位要素は oracle 側実体の再公開または薄い adapter であり、一部では実行時契約に合わせた最小限の補正や runtime 側 parameter への橋渡しを扱う。
 
 ## Read this when
-- realization implementation 側で ACP builder の各領域がどの package 境界から公開されているかを把握したいとき。
-- oracle 側 builder 実装と `acp.builder` 配下の互換 import 経路の対応関係を確認したいとき。
-- apply、indexing、review、session、tui のどの builder 領域へ進むべきかを、この階層を入口に切り分けたいとき。
-- builder 本体ではなく、realization 側で oracle 側定義を再公開する窓口や、実行時契約に合わせた薄い補正箇所を探しているとき。
+- ACP builder 関連機能を realization implementation 側からどの import 経路で参照できるか確認したいとき。
+- apply fork、review oracle、session join、TUI、indexing など、どの builder 領域へ進むべきかを切り分けたいとき。
+- 正本側 builder 実装と realization 側 package 構造の対応関係や、互換入口・薄い adapter の有無を確認したいとき。
+- repository root 解決、oracle src import 準備、runtime 側 AgentCallParameter への橋渡し、または実行時契約に合わせた小さな補正が builder 境界で行われるかを探しているとき。
 
 ## Do not read this when
-- ACP builder の正本仕様、prompt 本文、Structured Output schema の詳細、model 設定などを確認したいとき。その場合は oracle 側の対応箇所を読む。
-- AgentCallParameter、path model、enum などの基礎定義そのものを調べたいとき。その場合は基本定義の領域を読む。
-- fork 作成、git 操作、差分適用、CLI 入出力、TUI 画面描画など、builder 呼び出し後または周辺 workflow の制御を調べたいとき。
-- 各 builder 領域の具体的な生成ロジック、判定基準、入出力変換を直接確認したいとき。その場合は該当する下位領域または委譲先の oracle 側実装を読む。
+- 各 builder の prompt 本文、Structured Output schema、model 設定、reasoning effort、file access mode などの正本仕様を確認したいとき。その場合は対応する oracle 側の仕様文書または実装を読む。
+- builder の具体的な生成処理、変換ロジック、判定基準、データ構造、公開関数・クラスの詳細を理解したいとき。その場合は該当する下位の実装本体または委譲先を読む。
+- apply fork 全体、review workflow、TUI 起動後の画面処理、session join の制御など、builder 境界より外側の orchestration や UI 本体を調べたいとき。
+- path model、AgentCallParameter、基本 enum、repository root 解決そのものなど、builder から参照される基礎定義の意味を確認したいとき。
 
 ## hash
-- 22fd3d5f0a6676777f1fffa33d6fb2164a39cd35890923b4d97ece2c15b43c8c
+- 4b2f77a48d5d74f0d3eab7cf6c3066b886ed9492b74f35eb62736e9e5fea8b6a

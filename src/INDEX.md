@@ -1,45 +1,43 @@
 # `acp`
 
 ## Summary
-- realization implementation 側の ACP 名前空間の入口であり、oracle src 側の ACP 実装を `acp` 配下から参照できるようにする互換 import 経路を束ねる領域。
-- この階層自体は実処理や正本仕様を持つ場所ではなく、パッケージ入口と builder 領域への分岐点として、oracle 側定義の再公開や実行側契約に合わせた薄い補正へ案内する。
-- ACP builder の apply、indexing、review、session、tui などの具体的な生成・変換・検証処理を調べる場合は、下位の builder 領域へ進む入口になる。
+- realization implementation 側の ACP 名前空間入口であり、oracle src 側の acp 実装へ到達するための互換 import 経路を提供する領域。
+- パッケージ入口そのものは最小の import 成立用で、下位の builder 領域では apply fork、review oracle、session join、TUI、indexing などの builder 関連互換入口や薄い adapter へ進むための境界を扱う。
+- ACP の正本仕様や実処理本体ではなく、正本側実装を実行側 package 構造から参照するための realization 側の入口として位置づけられる。
 
 ## Read this when
-- realization implementation 側で `acp` 名前空間がどのように成立し、oracle src 側 ACP 実装と互換 import 経路がどう接続されているかを確認したいとき。
-- ACP 関連の実装を読む前に、この階層が実処理ではなく import 入口と下位 builder 領域への分岐を担うことを確認したいとき。
-- AgentCallParameter 生成、Structured Output schema 連携、review finding 検証、session join、TUI パラメータ解決など、ACP builder のどの下位領域へ進むべきかを切り分けたいとき。
-- oracle 側 ACP 定義を realization 側から再公開する窓口や、実行時契約に合わせた薄い adapter の位置を探しているとき。
+- realization implementation 側から acp 名前空間または ACP builder 関連機能をどの import 経路で参照できるか確認したいとき。
+- oracle src 側の acp 実装と realization 側 package 構造の対応関係、互換入口、薄い adapter の有無を切り分けたいとき。
+- apply fork、review oracle、session join、TUI、indexing など、ACP builder 配下のどの領域へ進むべきか判断したいとき。
+- repository root 解決、oracle src import 準備、runtime 側 AgentCallParameter への橋渡し、実行時契約に合わせた小さな補正が ACP builder 境界で扱われるか探しているとき。
 
 ## Do not read this when
-- ACP の正本仕様断片、prompt 本文、Structured Output schema の詳細、model 設定を確認したいとき。その場合は oracle 側の対応箇所を読む。
-- AgentCallParameter、path model、enum などの基礎定義そのものを調べたいとき。その場合は基本定義の領域を読む。
-- fork 作成、git 操作、差分適用、CLI 入出力、TUI 画面描画など、ACP import 入口や builder 分岐の外側にある workflow 制御を調べたいとき。
-- ACP builder 各領域の具体的な生成ロジック、判定基準、入出力変換を直接確認したいとき。その場合は該当する下位領域または委譲先の oracle 側実装を読む。
+- ACP の正本仕様断片、builder prompt 本文、Structured Output schema、model 設定、reasoning effort、file access mode などを確認したいとき。その場合は対応する oracle 側の仕様文書または実装を読む。
+- ACP や builder の具体的な処理内容、生成処理、変換ロジック、判定基準、データ構造、公開関数・クラスの詳細を理解したいとき。その場合は該当する下位の実装本体または委譲先を読む。
+- apply fork 全体、review workflow、TUI 起動後の画面処理、session join の制御など、ACP builder 境界より外側の orchestration や UI 本体を調べたいとき。
+- path model、AgentCallParameter、基本 enum、repository root 解決そのものなど、ACP builder から参照される基礎定義の意味を確認したいとき。
 
 ## hash
-- 69a21e967529ba2adb197864cb3e457cd281ef0e158955f5e00f7f080a4bf20f
+- 56927e3e786f0d74a811d77c19fc18cce0355bfe5a2e6a928be857f383432498
 
 # `basic`
 
 ## Summary
-- realization implementation 側の basic 領域で、正本側 basic との import 互換入口、正本側定義の再公開口、ACP 実行時に共有する呼び出しパラメータ型をまとめる場所。
-- この領域自体の多くは独自ロジックではなく正本側実装への薄い接続を担い、例外的に ACP 呼び出し条件を実行時に受け渡すための型定義を持つ。
+- realization implementation 側で、正本側の basic 領域にある基礎概念や共有型へ到達するための薄い互換入口をまとめるパッケージ。
+- ACP 呼び出しパラメータ、path model、構造化ドキュメントなどの実体は正本側に置き、この領域は独自仕様や主要ロジックを持たず、通常の実装側 import 経路から同じ公開要素を参照できるようにする位置づけを持つ。
 
 ## Read this when
-- realization implementation 側から basic 概念を import する経路や、正本側 basic との対応関係を確認したいとき。
-- path model や構造化ドキュメント関連の公開名が、realization 側で独自実装されているのか正本側から再公開されているのかを切り分けたいとき。
-- ACP のモデル区分、推論努力、ファイルアクセスモード、プロンプト、structured output schema path をまとめて渡す実行時パラメータ型を確認・変更したいとき。
-- basic パッケージ全体の入口としての意図を確認し、個別の実装本文へ進むか正本側へ進むかを判断したいとき。
+- realization implementation 側の基礎パッケージが、正本側の basic 領域と import 構造上どのように対応しているかを確認したいとき。
+- ACP 型、path model、構造化ドキュメント関連の公開要素について、実装側から正本側へ接続する入口を探したいとき。
+- basic 領域に独自実装があるのか、正本側の再公開だけなのかを切り分けたいとき。
 
 ## Do not read this when
-- path model の root token の意味、path 変換仕様、構造化ドキュメントの型・関数・検証規則など、再公開元の具体的な仕様や実装を確認したいとき。その場合は正本側の該当本文を読む。
-- ACP パラメータ値を組み立てるロジック、モデル選択規則、実際のファイルアクセス制御や権限判定を調べたいだけのとき。その場合はそれらの処理を持つ対象へ進む。
-- oracle file と realization file の一般定義、編集責任、正本仕様断片としての扱いを確認したいとき。その場合は基本概念を定義する正本仕様断片を読む。
-- CLI 挙動、サブコマンド処理、永続状態、テスト観点など basic の import 入口や共有型と直接関係しない実装を調べたいとき。
+- ACP 型のフィールド、enum 値、path token の意味、構造化ドキュメントの変換規則など、正本定義や詳細仕様そのものを確認したいとき。その場合は正本側の対応本文を読む。
+- ACP パラメータ値の組み立て、ファイルアクセス制御、権限判定、structured output schema 検証など、再公開入口ではなく実際の処理ロジックを調べたいとき。
+- oracle file と realization file の一般定義、編集責任、標準方針、ルーティング文書の生成規則を確認したいとき。その場合はそれらを定義する正本仕様断片を読む。
 
 ## hash
-- f1bb0596c35f80d43d7d62b5bccab057c120fc799ccda52f6c1e6b8fb0b8b870
+- c4d76a0cbbb4df80f82c4d01d5bdb0499d90084134f17dd15ffafde1f759d161
 
 # `cmoc_runtime.py`
 

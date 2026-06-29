@@ -17,17 +17,21 @@
 # `fork`
 
 ## Summary
-- apply fork 系の ACP builder 実装と、その agent 呼び出しに使う structured output schema をまとめるディレクトリ。oracle 側 builder への委譲、repo root 解決、oracle src import 準備、realization 側 AgentCallParameter への変換、および変更要約・所見列挙の出力契約への入口になる。
+- apply fork 系の agent call parameter builder 群をまとめる realization 側 package。oracle 側 builder への委譲、repository root 解決、oracle src import 準備、runtime 側 parameter への橋渡しを担う。
+- 変更要約、ファイル単位の所見列挙、検出済み所見の適用など、`cmoc apply fork` の各段階で使う agent 呼び出しパラメータ生成の入口を置く。
 
 ## Read this when
-- `cmoc apply fork` の agent call parameter 生成経路を、変更要約・ファイル単位の所見列挙・所見適用などの段階別に探したいとき。
-- apply fork 系 builder が oracle 側の parameter を realization 側の AgentCallParameter や JSON schema path に橋渡しする構造を確認したいとき。
-- apply fork の作業レポートやレビュー結果に使う structured output schema の責務を確認したいとき。
+- `cmoc apply fork` で agent call parameter がどの realization 側 builder から作られ、oracle 側 builder へどう委譲されるかを確認したいとき。
+- apply fork 系 builder 共通の repository root 解決、oracle src import 準備、oracle parameter を runtime 側へ渡す境界を調べたいとき。
+- 変更要約、ファイル単位の所見列挙、所見適用に対応する builder の入口を探しているとき。
+- oracle 側 ACP builder と realization 側実行コードの型境界や adapter 責務を変更する必要があるとき。
 
 ## Do not read this when
-- fork 作成、git 操作、差分適用、実行制御など `cmoc apply fork` 全体の制御フローを調べたいとき。
-- prompt 本文や正本仕様断片としての builder 挙動を確認したいとき。このディレクトリの実装は oracle 側 builder へ委譲する adapter が中心である。
-- repo root 解決、path model、AgentCallParameter、enum 型そのものの定義を調べたいとき。ここではそれらを利用するだけで、定義は別の基礎領域にある。
+- apply fork の prompt 本文、JSON schema、モデル選択、file access mode などの正本仕様を確認したいときは、対応する oracle 側 builder や schema を読む。
+- `cmoc apply fork` 全体の制御フロー、fork 作成、git 操作、実行 orchestration を調べたいときは、上位の apply fork 実装へ進む。
+- repository root 解決そのものの仕様や path model の定義を確認したいときは、path model 側を読む。
+- AgentCallParameter や enum 型そのものの定義を調べたいときは、ACP basic 側の型定義を読む。
+- apply fork 以外の apply 系 command や、所見の検出・分類・生成ロジックを調べたいだけのとき。
 
 ## hash
-- 36155a900b41206d9c74b82a4f148cd7731f60c331831dbd922e880b0c44cec8
+- 54543fb718f22cf570ddc6de6604977c32eb4d9ae0b40be48edaf783b96dc5c1
