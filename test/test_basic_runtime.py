@@ -20,7 +20,6 @@ from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningE
 from basic.path_model import (
     RootPathPlaceHolder,
     resolve_real_path,
-    resolve_run_root,
     resolve_ph_path,
 )
 from cmoc_runtime import (
@@ -107,24 +106,28 @@ def test_subcommand_logger_keeps_one_file_per_command_on_timestamp_collision(
 
 
 def test_runtime_distinguishes_repo_root_from_linked_worktree(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """linked worktree では repo root と run/work root を分けて扱う。"""
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "worktrees" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
 
+    monkeypatch.chdir(linked)
     assert repo_root(linked) == root.resolve()
-    assert resolve_run_root(linked) == linked.resolve()
+    assert resolve_real_path(RootPathPlaceHolder.RUN) == linked.resolve()
     assert work_root(linked) == linked.resolve()
 
 
-def test_resolve_run_root_rejects_main_worktree(tmp_path: Path) -> None:
+def test_run_root_placeholder_rejects_main_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """main worktree は run root として扱わない。"""
     root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
 
     with pytest.raises(ValueError, match="`<run-root>` was not found"):
-        resolve_run_root(root)
+        resolve_real_path(RootPathPlaceHolder.RUN)
 
 
 def test_create_run_worktree_rejects_path_outside_managed_worktrees(

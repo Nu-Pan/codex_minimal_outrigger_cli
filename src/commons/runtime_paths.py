@@ -4,14 +4,23 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
-from basic.path_model import resolve_cmoc_root, resolve_repo_root, resolve_work_root
+from basic.path_model import RootPathPlaceHolder, resolve_real_path
 
 from commons.runtime_errors import CmocError
+
+# `<work-root>/oracle/src/oracle/other/path_model.py` keeps root resolver
+# functions internal to path resolution. Runtime needs `start_path` for cwd-like
+# checks, so this module wraps those internals without re-exporting them through
+# `basic.path_model`.
+from oracle.other.path_model import (
+    resolve_repo_root as _resolve_repo_root,
+    resolve_work_root as _resolve_work_root,
+)
 
 
 def repo_root(cwd: Path | None = None) -> Path:
     try:
-        return resolve_repo_root(cwd)
+        return _resolve_repo_root(cwd)
     except ValueError as exc:
         raise CmocError(
             "<repo-root> を特定できません。",
@@ -22,7 +31,7 @@ def repo_root(cwd: Path | None = None) -> Path:
 
 def work_root(cwd: Path | None = None) -> Path:
     try:
-        return resolve_work_root(cwd)
+        return _resolve_work_root(cwd)
     except ValueError as exc:
         raise CmocError(
             "<work-root> を特定できません。",
@@ -96,7 +105,7 @@ def pushd(path: Path) -> Iterator[None]:
 
 def cmoc_root() -> Path:
     try:
-        return resolve_cmoc_root()
+        return resolve_real_path(RootPathPlaceHolder.CMOC)
     except ValueError as exc:
         raise CmocError(
             "<cmoc-root> を特定できません。",

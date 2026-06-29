@@ -5,10 +5,11 @@ import sys
 from pathlib import Path
 
 from basic.acp import AgentCallParameter
+from basic.path_model import RootPathPlaceHolder, resolve_real_path
 
-# `<work-root>/oracle/src/oracle/other/path_model.py` owns repo-root
-# resolution; this module keeps the existing apply builder import boundary.
-from basic.path_model import resolve_repo_root as resolve_repo_root
+
+def resolve_repo_root() -> Path:
+    return resolve_real_path(RootPathPlaceHolder.REPO)
 
 
 def ensure_oracle_src_importable(repo_root: Path) -> None:
