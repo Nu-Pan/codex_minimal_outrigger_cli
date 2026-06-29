@@ -236,22 +236,23 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- indexing preflight と indexing サブコマンドが routing document を生成・更新・commit する外部挙動を検証する回帰テスト群。
-- 未初期化・dirty worktree・linked worktree・apply worktree 設定参照・既存 hash 再利用・malformed entry 再生成・schema 不一致拒否・兄弟 entry の並列生成・root 直下 memo 除外と nested memo indexing など、routing 更新ワークフローの境界条件を一箇所で扱う。
-- INDEX.md conflict 解決が conflict 中の routing document を削除して merge commit を成立させる挙動も、この workflow の観測点として含む。
+- INDEX.md の生成・更新、fresh hash による再生成省略、malformed entry の再生成、commit 対象の限定、conflict 解決、linked worktree と apply worktree 上の indexing preflight など、routing document 更新ワークフローの CLI 境界と制御ロジックをまとめて検証する回帰テスト。
+- Codex によるエントリー生成結果の取り込み、schema 不一致や空白・複数行 semantic item の拒否、空ディレクトリや nested memo directory の扱い、兄弟 entry 生成の並列化も同じ indexing 更新責務の観測点として扱う。
 
 ## Read this when
-- indexing コマンドや indexing preflight の CLI 境界、git clean/dirty 判定、commit 対象、linked worktree 上の動作を変更・調査するとき。
-- routing document 生成で Codex 呼び出しを行う条件、既存 hash が fresh な entry の再利用、malformed entry の再生成、entry schema validation を確認するとき。
-- INDEX.md conflict 解決、root 直下 memo の除外、nested memo directory の indexing、同階層対象の並列 entry 生成に関わる回帰を確認するとき。
+- indexing subcommand や indexing preflight の外部挙動、git commit 条件、dirty worktree 拒否、linked worktree での更新先、apply worktree での repo config 利用を変更・確認したいとき。
+- INDEX.md entry の生成・再利用・再生成判定、hash freshness、malformed entry 検出、render_index_entry の schema validation、空ディレクトリや memo directory の indexing 対象判定を調べたいとき。
+- resolve_index_conflicts が INDEX.md の merge conflict を削除・解消して merge commit を成立させる挙動を変更・確認したいとき。
+- indexing 更新処理で Codex 呼び出しをどの条件で行うか、または sibling entry 生成を並列化する制御を変更する前に既存の期待挙動を確認したいとき。
 
 ## Do not read this when
-- routing document の文面生成規則や entry rendering の内部実装だけを確認したい場合は、先に indexing 共通処理の実装を読む。
-- init コマンド単体、apply/join 全体、git helper、test fixture の基礎挙動を調べるだけなら、それぞれの直接の実装または支援モジュールを読む。
-- Codex CLI や LLM 出力品質そのものを評価したい場合は対象外で、このテストは fake result による境界挙動を検証している。
+- init、apply、join などのサブコマンド全般を調べたいだけで、INDEX.md 更新や indexing preflight の挙動に触れないとき。
+- routing document の正本仕様や設計意図を確認したいときは、この回帰テストではなく oracle 配下の該当仕様を読む。
+- indexing の内部 helper 実装だけを局所的に確認したい場合は、まず実装側の対象モジュールを読む。
+- Codex CLI や LLM 出力品質そのものを検証したい場合は、このテストは対象外であり、ここでは生成結果を fake に差し替えた制御境界だけを扱う。
 
 ## hash
-- dc34b171fa7bcce87ccf4b3ea7b3fefa5cdc41a04eeace29c9e29693f233c7fc
+- 4eca837d056016a4e977f2ebde1f2e0720c68d1c851239a907fdfa66f8b6ca42
 
 # `test_indexing_preflight.py`
 
