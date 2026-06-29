@@ -332,6 +332,53 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
     )
 
 
+def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    linked = root / ".cmoc" / "worktrees" / "linked"
+    linked.parent.mkdir(parents=True)
+    run_git(root, "worktree", "add", "-b", "linked-tui-runtime", str(linked), "HEAD")
+    prompt_path = root / ".cmoc" / "log" / "tui" / "20260101_cmpl.md"
+    prompt_path.parent.mkdir(parents=True)
+    prompt_path.write_text("complete prompt\n")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    recorder = tmp_path / "record.json"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, os, pathlib, sys",
+            "args = sys.argv[1:]",
+            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
+            "    'args': args,",
+            "    'cwd': os.getcwd(),",
+            "}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_tui(
+        _parameter(FileAccessMode.REPO_WRITE),
+        root=root,
+        cwd=linked,
+        extra_read_paths=[prompt_path],
+        config=CmocConfig(),
+    )
+
+    record = json.loads(recorder.read_text())
+    assert record["cwd"] == str(linked.resolve())
+    assert record["args"][record["args"].index("--cd") + 1] == str(linked.resolve())
+    call_log = next((root / ".cmoc" / "log" / "codex").glob("*_tui_call.json"))
+    profile = tomllib.loads(
+        Path(json.loads(call_log.read_text())["profile_path"]).read_text()
+    )
+    assert str((linked / "oracle").resolve()) in profile["sandbox_workspace_write"][
+        "writable_roots"
+    ]
+
+
 def test_run_codex_tui_fails_when_codex_exits_nonzero(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

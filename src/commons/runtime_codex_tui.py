@@ -47,8 +47,16 @@ def run_codex_tui(
     # CODEX_HOME while keeping the user-provided env value unchanged.
     codex_home = resolve_codex_home(codex_cwd)
     validate_codex_home(codex_home)
+    # <work-root>/oracle/doc/app_spec/sub_command/tui.md
+    # TUI complete prompt is stored under <repo-root> even when Codex runs in a
+    # linked worktree; writable roots and schema state still follow codex_work_root.
     profile_path = prepare_codex_profile(
-        parameter, config, codex_home, codex_work_root, extra_read_paths
+        parameter,
+        config,
+        codex_home,
+        codex_work_root,
+        extra_read_paths,
+        extra_read_root=root,
     )
     profile_name = codex_profile_name(profile_path)
     argv = [

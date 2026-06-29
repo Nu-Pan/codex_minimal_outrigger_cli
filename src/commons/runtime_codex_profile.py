@@ -200,6 +200,8 @@ def build_codex_profile(
     root: Path | None = None,
     extra_read_paths: list[Path] | None = None,
     extra_writable_paths: list[Path] | None = None,
+    *,
+    extra_read_root: Path | None = None,
 ) -> str:
     """AgentCallParameter と repo config から再利用可能な Codex profile 本文を作る。"""
     model = config.codex.model[parameter.model_class]
@@ -210,7 +212,10 @@ def build_codex_profile(
     ]
     if root is not None:
         root = root.resolve()
-        _validate_extra_read_paths(parameter.file_access_mode, root, extra_read_paths)
+        read_root = (extra_read_root or root).resolve()
+        _validate_extra_read_paths(
+            parameter.file_access_mode, read_root, extra_read_paths
+        )
     sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
     lines.append(f'sandbox_mode = "{sandbox_mode}"')
     if root is not None:
@@ -282,6 +287,8 @@ def prepare_codex_profile(
     root: Path | None = None,
     extra_read_paths: list[Path] | None = None,
     extra_writable_paths: list[Path] | None = None,
+    *,
+    extra_read_root: Path | None = None,
 ) -> Path:
     """Codex home 内へ内容 hash 名の profile を作り、同一内容なら再利用する。"""
     profile = build_codex_profile(
@@ -290,6 +297,7 @@ def prepare_codex_profile(
         root,
         extra_read_paths,
         extra_writable_paths,
+        extra_read_root=extra_read_root,
     )
     target_home = codex_home or resolve_codex_home()
     try:
