@@ -165,14 +165,19 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
         "## Fatal findings",
         "## Minor findings",
     ]
-    fatal_section = rendered.split("## Fatal findings", 1)[1].split(
-        "## Minor findings", 1
-    )[0]
-    minor_section = rendered.split("## Minor findings", 1)[1]
-    assert fatal_section.index("### Accepted") < fatal_section.index("accepted fatal")
-    assert fatal_section.index("### Rejected") < fatal_section.index("rejected fatal")
-    assert minor_section.index("### Accepted") < minor_section.index("accepted minor")
-    assert minor_section.index("### Rejected") < minor_section.index("rejected minor")
+    detail_order = [
+        "### Accepted fatal findings",
+        "accepted fatal",
+        "### Accepted minor findings",
+        "accepted minor",
+        "### Rejected fatal findings",
+        "rejected fatal",
+        "### Rejected minor findings",
+        "rejected minor",
+    ]
+    assert [rendered.index(text) for text in detail_order] == sorted(
+        rendered.index(text) for text in detail_order
+    )
     assert "result: fatal" in rendered
     assert "fatal_findings_accepted_count: 1" in rendered
     assert "minor_findings_accepted_count: 1" in rendered
@@ -231,8 +236,8 @@ def test_review_oracle_report_includes_rejected_findings(
         "## Fatal findings",
         "## Minor findings",
     ]
-    assert "## Rejected fatal findings" not in rendered
-    assert "## Rejected minor findings" not in rendered
+    assert "### Rejected fatal findings" in rendered
+    assert "### Rejected minor findings" in rendered
     assert "rejected finding" in rendered
     assert "rejected reason" in rendered
     assert "judge reason: judge rejected reason" in rendered

@@ -52,7 +52,8 @@ def render_review_oracle_report(
 ) -> str:
     """review oracle report を Markdown + YAML frontmatter で描画する。"""
     # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md:
-    # 必須 H2 は重複させず、採否は各 severity section 内の H3 で分ける。
+    # 必須 H2 順と所見単位の表示順が別に定められているため、
+    # H2 は severity 別 summary、詳細 block は所見単位順で描画する。
     accepted = [finding for finding in findings if finding.get("verdict") == "accept"]
     rejected = [finding for finding in findings if finding.get("verdict") == "reject"]
     fatal_accepted = _findings_with(accepted, "fatal")
@@ -107,14 +108,18 @@ def render_review_oracle_report(
             "|---:|---|---:|",
             rows,
             "## Fatal findings",
-            "### Accepted",
-            render_finding_section(fatal_accepted),
-            "### Rejected",
-            render_finding_section(fatal_rejected),
+            f"- Accepted: {len(fatal_accepted)}",
+            f"- Rejected: {len(fatal_rejected)}",
             "## Minor findings",
-            "### Accepted",
+            f"- Accepted: {len(minor_accepted)}",
+            f"- Rejected: {len(minor_rejected)}",
+            "### Accepted fatal findings",
+            render_finding_section(fatal_accepted),
+            "### Accepted minor findings",
             render_finding_section(minor_accepted),
-            "### Rejected",
+            "### Rejected fatal findings",
+            render_finding_section(fatal_rejected),
+            "### Rejected minor findings",
             render_finding_section(minor_rejected),
             "",
         ]
