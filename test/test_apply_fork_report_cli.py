@@ -9,6 +9,7 @@ report schema の観測結果として読まれるため、分割すると期待
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -103,6 +104,47 @@ def test_finding_application_builder_imports_with_src_pythonpath_only() -> None:
         ],
         cwd=root,
         env={**os.environ, "PYTHONPATH": str(root / "src")},
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_apply_fork_builders_import_from_packaged_layout(tmp_path: Path) -> None:
+    root = Path(__file__).parents[1]
+    target = tmp_path / "site"
+    shutil.copytree(root / "src" / "acp", target / "acp")
+    shutil.copytree(root / "src" / "basic", target / "basic")
+    shutil.copytree(root / "oracle" / "src" / "oracle", target / "oracle")
+
+    work = tmp_path / "work"
+    (work / ".git").mkdir(parents=True)
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "from pathlib import Path; "
+                "from acp.builder.apply.fork.change_summary import "
+                "build_apply_fork_change_summary_parameter as change_summary; "
+                "from acp.builder.apply.fork.file_finding_enumeration import "
+                "build_apply_fork_file_finding_enumeration_parameter as enumerate_file; "
+                "from acp.builder.apply.fork.finding_application import "
+                "build_apply_fork_finding_application_parameter as apply_finding; "
+                "cs = change_summary('diff'); "
+                "fe = enumerate_file(Path('<repo-root>') / 'src' / 'main.py'); "
+                "fa = apply_finding([{'title': 't'}]); "
+                "assert cs.structured_output_schema_path.name == 'change_summary.json'; "
+                "assert fe.structured_output_schema_path.name == "
+                "'file_finding_enumeration.json'; "
+                "assert fa.structured_output_schema_path is None; "
+                "assert '# oracle and realization basic' in cs.prompt; "
+                "assert 'realization file' in fa.prompt"
+            ),
+        ],
+        cwd=work,
+        env={**os.environ, "PYTHONPATH": str(target), "PYTHONNOUSERSITE": "1"},
         text=True,
         capture_output=True,
     )

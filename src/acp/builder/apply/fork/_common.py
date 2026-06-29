@@ -1,5 +1,6 @@
 """apply fork ACP builder の共有補助。"""
 
+import importlib.util
 import sys
 from pathlib import Path
 
@@ -11,6 +12,14 @@ from basic.path_model import resolve_repo_root as resolve_repo_root
 
 
 def ensure_oracle_src_importable(repo_root: Path) -> None:
+    # `<work-root>/oracle/src/oracle/acp_builder/apply/fork/*.py` are packaged
+    # as `oracle.*`; installed layouts do not necessarily retain `oracle/src`.
+    try:
+        if importlib.util.find_spec("oracle.acp_builder") is not None:
+            return
+    except ModuleNotFoundError:
+        pass
+
     candidates = [
         repo_root / "oracle" / "src",
         Path(__file__).resolve().parents[5] / "oracle" / "src",
