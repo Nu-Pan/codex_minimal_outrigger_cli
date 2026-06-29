@@ -28,6 +28,7 @@ from acp.builder.apply.fork.file_finding_enumeration import (
     build_apply_fork_file_finding_enumeration_parameter,
 )
 from acp.builder.apply.fork.change_summary import (
+    build_acp_change_summary_file,
     build_apply_fork_change_summary_parameter,
 )
 from acp.builder.apply.fork.finding_application import (
@@ -218,6 +219,57 @@ def test_apply_fork_change_summary_schema_matches_oracle_source() -> None:
         },
         schema,
     )
+
+
+def test_build_acp_change_summary_file_writes_schema_json(tmp_path: Path) -> None:
+    diff_file = tmp_path / "branch.diff"
+    summary_file = tmp_path / "nested" / "change_summary.json"
+    diff_file.write_text(
+        "\n".join(
+            [
+                "diff --git a/src/app.py b/src/app.py",
+                "--- a/src/app.py",
+                "+++ b/src/app.py",
+                "@@ -1 +1 @@",
+                "-old",
+                "+new",
+                "diff --git a/test/test_app.py b/test/test_app.py",
+            ]
+        )
+    )
+
+    build_acp_change_summary_file(diff_file, summary_file)
+
+    summary = json.loads(summary_file.read_text())
+    assert summary == {
+        "changes": [
+            {
+                "category": "ACP branch diff",
+                "summary": "ACP branch diff から変更 path を機械的に記録しました。",
+                "changed_paths": ["src/app.py", "test/test_app.py"],
+            }
+        ]
+    }
+    schema_path = Path("oracle/src/oracle/acp_builder/apply/fork/change_summary.json")
+    validate(summary, json.loads(schema_path.read_text()))
+
+
+def test_build_acp_change_summary_file_handles_empty_diff(tmp_path: Path) -> None:
+    diff_file = tmp_path / "branch.diff"
+    summary_file = tmp_path / "change_summary.json"
+    diff_file.write_text("")
+
+    build_acp_change_summary_file(diff_file, summary_file)
+
+    assert json.loads(summary_file.read_text()) == {
+        "changes": [
+            {
+                "category": "変更なし",
+                "summary": "ACP branch diff に変更はありません。",
+                "changed_paths": [],
+            }
+        ]
+    }
 
 
 def test_file_access_rule_titles_and_bodies_match_modes() -> None:
