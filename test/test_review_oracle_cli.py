@@ -74,6 +74,8 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyP
     ]
     section_offsets = [rendered.index(section) for section in required_sections]
     assert section_offsets == sorted(section_offsets)
+    h2_sections = [line for line in rendered.splitlines() if line.startswith("## ")]
+    assert h2_sections == required_sections[1:]
     assert "`oracle/spec.md`" in rendered
     assert "review_join_commit: null" in rendered
     assert "session_id:" not in rendered
@@ -156,16 +158,21 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
     rendered = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
-    finding_offsets = [
-        rendered.index(title)
-        for title in [
-            "accepted fatal",
-            "accepted minor",
-            "rejected fatal",
-            "rejected minor",
-        ]
+    h2_sections = [line for line in rendered.splitlines() if line.startswith("## ")]
+    assert h2_sections == [
+        "## Verdict",
+        "## Evaluated oracle file",
+        "## Fatal findings",
+        "## Minor findings",
     ]
-    assert finding_offsets == sorted(finding_offsets)
+    fatal_section = rendered.split("## Fatal findings", 1)[1].split(
+        "## Minor findings", 1
+    )[0]
+    minor_section = rendered.split("## Minor findings", 1)[1]
+    assert fatal_section.index("### Accepted") < fatal_section.index("accepted fatal")
+    assert fatal_section.index("### Rejected") < fatal_section.index("rejected fatal")
+    assert minor_section.index("### Accepted") < minor_section.index("accepted minor")
+    assert minor_section.index("### Rejected") < minor_section.index("rejected minor")
     assert "result: fatal" in rendered
     assert "fatal_findings_accepted_count: 1" in rendered
     assert "minor_findings_accepted_count: 1" in rendered
@@ -218,6 +225,12 @@ def test_review_oracle_report_includes_rejected_findings(
     assert f"minor_findings_rejected_count: {expected_minor_count}" in rendered
     assert "## Fatal findings" in rendered
     assert "## Minor findings" in rendered
+    assert [line for line in rendered.splitlines() if line.startswith("## ")] == [
+        "## Verdict",
+        "## Evaluated oracle file",
+        "## Fatal findings",
+        "## Minor findings",
+    ]
     assert "## Rejected fatal findings" not in rendered
     assert "## Rejected minor findings" not in rendered
     assert "rejected finding" in rendered
