@@ -62,24 +62,25 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation における共有 runtime helper 群をまとめる領域。Codex CLI 呼び出し、CLI サブコマンド共通ライフサイクル、設定、content hash、共通エラー、git 操作、ログ、path、結果型、session state、INDEX.md 更新 preflight など、複数の上位機能から使われる実行時支援を扱う。
-- 個別 helper 実装へ進む前の入口として、公開 API の再 export、互換 import 境界、実行前 hook、外部プロセス境界、永続状態やログの共通モデルなど、共通 runtime 層の責務別 module が並ぶ。
+- cmoc の realization implementation における共有 runtime helper 群をまとめる領域。Codex CLI 呼び出し、設定、内容 hash、CLI 実行ライフサイクル、エラー表示、git 操作、ログ、パス、結果型、session state、INDEX.md 更新 preflight など、複数の上位機能から共通利用される実行時支援を扱う。
+- 上位コードから使う公開 import 入口と、責務別に分かれた runtime 実装本文の両方を含むため、共通 helper の利用可否を確認する入口にも、個別 runtime 挙動へ進むための分岐点にもなる。
 
 ## Read this when
-- 上位の CLI サブコマンドや workflow 実装から、設定読み込み、path 解決、git 操作、Codex 実行、ログ記録、状態永続化、エラー表示などの共通 runtime helper を探したいとき。
-- Codex exec/TUI 呼び出しの profile 準備、sandbox/cwd/CODEX_HOME、Structured Output 検証、quota/capacity retry、call log、resume token、subcommand event の実装経路を追いたいとき。
-- INDEX.md 更新の preflight、対象列挙、hash による鮮度判定、既存エントリー再利用、Structured Output 検証、Markdown 生成、更新 commit までの runtime 実装を確認したいとき。
-- CLI サブコマンド共通の開始・完了表示、終了コード化、例外時エラー表示、サブコマンド log、current logger、step timing、quota 待機時間集計を確認または変更したいとき。
-- cmoc の共有結果型、共通例外、実行時設定、content hash 保存、binary 判定、session state file、標準保存先、memo 判定、git worktree/branch 操作など、複数機能にまたがる実行時基盤を扱うとき。
+- サブコマンドや上位 workflow から共通利用される runtime helper の所在を探したいとき。
+- Codex exec/TUI 呼び出し、profile・sandbox・CODEX_HOME、Structured Output 検証、quota/capacity retry、call log、resume 継続など Codex 実行境界の実装を追いたいとき。
+- CLI サブコマンド共通の開始・完了表示、終了コード化、例外表示、サブコマンドログ、current logger、preflight 実行順序を確認または変更したいとき。
+- 設定ファイルの読み書き、内容 hash 保存、binary 判定、共通エラーレポート、git repository 操作、runtime path、結果モデル、session state 永続化など、複数機能にまたがる基盤処理を扱うとき。
+- INDEX.md 更新 preflight、目次対象列挙、既存エントリー再利用、hash による鮮度判定、Structured Output から Markdown への変換、更新 commit の制御を確認または変更したいとき。
 
 ## Do not read this when
-- 個別 CLI サブコマンドの引数定義、command 登録、利用者向け仕様、業務処理だけを調べたいときは、呼び出し側のサブコマンド実装へ進む。
-- 正本仕様断片、設計意図、path model、設定モデル、FileAccessMode、session state の仕様意図、INDEX.md エントリー文面や prompt の仕様を確認したいときは、対応する oracle または基本モデル側を読む。
-- 共通 runtime helper を使うだけで、特定の利用箇所がどの値を渡すか、どの保存先をいつ更新するか、どの上位 workflow でどう分岐するかを知りたいときは、その上位実装を読む。
-- 生成済み log、report、state、config などの実データ内容を調査したいだけのときは、この領域ではなく対象となる保存物または読み取り側の実装へ進む。
+- 特定サブコマンド固有の引数定義、画面出力、業務処理、状態更新の流れだけを調べたいときは、そのサブコマンド実装へ進む。
+- 正本仕様断片、設計意図、出力互換性の人間判断、prompt 文言そのものを確認したいときは、oracle 側の本文を読む。
+- 設定モデル、FileAccessMode、path model など基本層の型定義や概念定義だけを確認したいときは、対応する basic 層の本文へ進む。
+- 個別の生成済みログ、レポート、状態ファイル、利用者向け成果物の内容を読む必要があるときは、この共有 runtime 実装ではなく対象の保存先や読み取り側へ進む。
+- テスト期待値や fixture の調整だけを行う場合は、まず対応する test 側の本文へ進み、必要になった場合だけこの領域の runtime 実装を読む。
 
 ## hash
-- 42d18b5517ff00229679f07311d83fc30474f21ccfc39290789450a1de9ead48
+- 3000a10d8ef866df491f57a1b82abe9deb42a8d4f645f40405692ffa84c12e80
 
 # `config`
 

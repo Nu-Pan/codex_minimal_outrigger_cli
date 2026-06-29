@@ -92,23 +92,25 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の 1 回以上の実行試行をまとめて制御する実装。プロファイル準備、実行 argv 構築、stdin 用 prompt log・call log・stdout/stderr/output log の保存、Structured Output 検証、capacity retry、quota wait の代表 probe、resume token による継続、subcommand event 記録を同じ状態機械として扱う。
-- TUI 起動ではなく、Codex CLI の exec 分岐そのものの実行制御と結果収集を読む入口になる。
+- Codex CLI の exec 呼び出しを 1 回の状態機械として制御する実行基盤。profile/schema 準備、prompt/stdout/stderr/output/call log の保存、Structured Output 検証、capacity retry、quota 待機の代表 probe、resume token による継続、subcommand event 発行をまとめて扱う。
+- quota 待機と resume 継続は subprocess 結果、log/event、retry counter を共有するため、この対象では分離せず一体で読む前提になっている。TUI 起動ではなく、exec 実行制御側の分岐を確認する入口である。
 
 ## Read this when
-- Codex exec 呼び出しの再試行条件、失敗時の CmocError、Structured Output の必須 JSON 読み取り・schema 検証、または成功時に返す実行結果の組み立てを確認したいとき。
-- Codex CLI の quota 枯渇時に、複数呼び出し間で代表 probe を共有し、quota 回復後に resume token で元の作業へ戻る流れを確認したいとき。
-- Codex call の prompt/stdout/stderr/output/call log、console 出力、subcommand log event に何を記録し、どのタイミングで出すかを変更・調査するとき。
-- Codex exec の作業 root、CODEX_HOME、profile、output schema path、file access mode に基づく cwd や環境の準備を追う必要があるとき。
+- Codex CLI exec の argv、stdin prompt、output schema、Codex home/profile、作業ディレクトリ、ファイルアクセス権限がどのように組み立てられるかを確認・変更したいとき。
+- Codex 呼び出しの call log、prompt/stdout/stderr/output log、console 出力、subcommand log event の記録内容やタイミングを確認・変更したいとき。
+- Structured Output の出力 JSON 読み取り、空・欠落・不正 JSON の扱い、jsonschema 検証失敗時の semantic retry と最終エラーを確認・変更したいとき。
+- capacity error の exponential backoff retry、quota error 時の polling、代表 probe、複数スレッドの quota 待機共有、quota 回復後の resume 継続を確認・変更したいとき。
+- Codex exec の失敗を CmocError としてどの log path・原因情報付きで報告するかを調べたいとき。
 
 ## Do not read this when
-- Codex profile の具体的な生成、CODEX_HOME の解決、quota/capacity エラー判定、resume token 抽出、output JSON の補助読み取りだけを確認したい場合は、それらを提供する Codex profile/runtime helper 側を読む。
-- TUI 起動や exec 以外のサブコマンド分岐を確認したい場合は、この対象ではなく該当する起動・コマンド制御の実装を読む。
-- subcommand logger や console 表示の汎用的な仕組みだけを確認したい場合は、ログ基盤側を読む。
-- 返却される実行結果データ構造のフィールド定義だけを確認したい場合は、結果型の定義を読む。
+- Codex profile の具体的な生成、CODEX_HOME 解決、quota/capacity error 判定、resume token 抽出、subprocess 実行 wrapper の詳細だけを調べたいときは、それらの helper 定義側を読む。
+- TUI 起動や対話 UI 側の実行制御を調べたいときは、この対象ではなく TUI 用の実行 module を読む。
+- subcommand logger のデータ構造や log writer 自体の実装を調べたいだけなら、logging 側の module を読む。
+- Codex exec の戻り値コンテナの属性や利用側の解釈だけを確認したいときは、結果型の定義または呼び出し元を読む。
+- oracle の正本仕様を確認したいときは、この実装ではなく対応する仕様文書を読む。
 
 ## hash
-- f110f0c5be39210d439a78e5d28424893ce534cd0f8eab628a5e45f24c22139a
+- 9fd7833616599f42110a3ac3cc28f8d0d0ec384002ea83a2cd1ab5998d434466
 
 # `runtime_codex_logging.py`
 
