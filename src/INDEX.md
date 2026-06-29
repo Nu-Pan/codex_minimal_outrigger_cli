@@ -143,22 +143,23 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実行本体を収める realization implementation 領域で、CLI runtime から呼ばれる init、indexing、tui、session、apply、review oracle の処理入口と、その近接補助処理へ進むための階層である。
-- この階層では、サブコマンドごとの preflight、worktree・branch・state 操作、Codex exec/TUI 呼び出し、report 生成、利用者向け Markdown 出力の制御を扱う。
-- session・apply・review は下位 package や補助モジュールに分かれており、ライフサイクル操作、apply run、review oracle loop、INDEX.md 差分取り込みなどの個別責務へ読み進める入口になる。
+- cmoc の各 CLI サブコマンドの実行本体を収める実装領域であり、CLI runtime から呼ばれる command body、preflight、利用者向け出力、git 操作、state 更新、report 生成への接続点を扱う。
+- 初期化、INDEX maintenance、TUI 起動、session ライフサイクル、apply ライフサイクル、review oracle 実行に関する処理がまとまっており、単独サブコマンドの薄い orchestration と、複数モジュールに分かれたサブコマンド群への入口が混在する。
+- 共通 runtime、ACP builder、設定モデル、path model、git wrapper そのものではなく、それらをサブコマンドとして組み合わせて実行条件確認、branch/worktree 操作、Codex 呼び出し、commit、cleanup、Markdown 出力へ進める層として読む。
 
 ## Read this when
-- cmoc の特定サブコマンドがどの実装ファイルまたは下位 package にあるかを探したいとき。
-- init、indexing、tui、session fork/join/abandon、apply fork/join/abandon、review oracle の実行条件、状態遷移、branch/worktree 操作、Codex 呼び出し、出力や report の流れを調べ始めるとき。
-- CLI runtime から個別サブコマンド本体へ渡される command 名、argv、preflight、work root runtime 指定、Codex exec callback の接続箇所を確認したいとき。
-- session、apply、review oracle のように複数ファイルへ分かれたサブコマンド群で、まず大分類を選び、対象列挙・merge・cleanup・report・process tracking などの詳細処理へ進みたいとき。
+- 特定の cmoc サブコマンドが CLI runtime からどの関数・事前条件・command 名・argv で起動されるかを確認したいとき。
+- 初期化、indexing、TUI、session、apply、review oracle のどの実装領域へ進むべきかを、サブコマンド単位で切り分けたいとき。
+- サブコマンド実行時の clean worktree 要求、cmoc ignore 保証、active session 判定、scope 検証、state 遷移、branch/worktree 作成・merge・削除、report 出力の流れを追い始めるとき。
+- Codex exec または Codex TUI をサブコマンドからどの目的・cwd・config・追加権限で呼び出しているかを確認したいとき。
+- session branch と apply branch/worktree、review worktree、INDEX.md 変更 commit、merge conflict 処理など、複数の下位 helper にまたがるサブコマンド上位制御を調査するとき。
 
 ## Do not read this when
-- Typer app へのサブコマンド登録、トップレベル CLI 構成、共通 runtime、path model、git wrapper、設定 load、state file のデータ構造や永続化形式だけを調べたいとき。
-- サブコマンドの正本仕様や利用者向け仕様そのものを確認したいときは、oracle doc 側を読む方が適切なとき。
-- Codex prompt builder、Structured Output parameter、prompt profile、file access prompt の詳細だけを確認したいときは、ACP builder 側を読む方が適切なとき。
-- INDEX.md の文章生成・更新アルゴリズム、lock、commit 処理など indexing 共通処理の詳細を調べたいときは、共通 indexing 実装へ直接進む方が適切なとき。
-- 個別サブコマンドや補助処理が既に特定できており、そのファイルだけを読めば足りるとき。
+- Typer app へのトップレベルなサブコマンド登録や CLI 全体のエントリーポイントだけを確認したいとき。
+- repo root/work root 解決、共通 error 型、git 実行 wrapper、state schema、config load、timestamp、report directory など、サブコマンド固有でない runtime helper の詳細を調べたいとき。
+- Codex に渡す prompt や Structured Output parameter の本文、file access prompt、ACP builder の中身だけを確認したいとき。
+- oracle 上の公開仕様、設計意図、サブコマンド利用者向け要求を確認したいとき。実装ではなく oracle doc を読むべき。
+- 対象が初期化、indexing、TUI、session、apply、review oracle のどれかに既に特定できており、その下位モジュールまたは個別処理へ直接進めるとき。
 
 ## hash
-- b68bd3cf2a28b80f78a8e7be5d8f9128d0624b1fdb66d934a7b686e926bb060c
+- 03251406cf8d9bbba9f8fcf811f54d85be017339b47acca7a7be20f2e844e352

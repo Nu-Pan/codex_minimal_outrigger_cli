@@ -19,24 +19,24 @@
 # `_runtime.py`
 
 ## Summary
-- apply 実行時の worktree 特定、apply process pid file の保存・読取・削除、Codex subprocess 追跡環境の一時設定、running abandon 時の停止処理をまとめる runtime 補助実装。
-- pid 再利用を避けるため process start time を含む識別子を扱い、pidfd と process group signal を使って apply 本体と配下の Codex subprocess を停止する責務を持つ。
-- apply branch 名から managed worktree を復元する処理と、git linked worktree から branch checkout 先を探す処理もここに含まれる。
+- apply 実行時に使う linked worktree 解決、apply 用 worktree path 復元、apply process pid file の保存・読取・削除、Codex subprocess 追跡環境の一時設定、apply abandon での process / process group 停止を扱う実行時補助モジュール。
+- pid 再利用を避けるため process start time と pidfd を使い、停止対象の同一性確認、SIGTERM から SIGKILL への段階的停止、停止済み・stale pid の警告化、権限不足や安全確認不能時の cmoc error 化を担う。
 
 ## Read this when
-- apply branch と linked worktree の対応付け、または session branch の worktree 検出処理を確認・変更したいとき。
-- apply 実行中に保存される pid file の path、形式、読取時の破損扱い、cleanup 後の削除を確認・変更したいとき。
-- apply 実行中だけ Codex subprocess 追跡を有効化する環境変数・process-local tracking の扱いを確認・変更したいとき。
-- apply abandon が実行中 apply process や Codex child process group を停止する条件、同一性確認、SIGTERM/SIGKILL の待機処理、権限・race 対応を確認・変更したいとき。
+- session branch や apply branch から対象 worktree を特定する処理を確認・変更したいとき。
+- apply 実行中の pid file の形式、生成条件、読取時の破損扱い、cleanup 後の削除を確認・変更したいとき。
+- apply abandon が実行中 apply process や Codex subprocess group をどの順序・条件・signal で停止するかを確認・変更したいとき。
+- Codex subprocess 追跡用の環境変数と process-local tracking path の復元挙動を確認・変更したいとき。
+- Linux pidfd、process start time、/proc の process group 検査に関わる停止安全性や race 回避の挙動を調査するとき。
 
 ## Do not read this when
-- apply サブコマンドの利用者向け CLI 引数、出力文言、全体フローだけを確認したいときは、呼び出し側の command 実装や仕様文書を先に読む。
-- session state の schema や apply state 全体の保存内容を確認したいだけなら、状態定義や state 入出力を扱う対象を読む。
-- Codex CLI 呼び出し内容そのもの、prompt、実作業の適用ロジックを確認したいだけなら、apply の実行本体を扱う対象を読む。
-- 一般的な git 操作 helper や cmoc runtime 共通関数の挙動を確認したいだけなら、共通 runtime 側を読む。
+- apply subcommand の CLI 引数定義、ユーザー向け出力、または上位の command flow だけを確認したいとき。
+- session state 全体の schema、apply branch の生成規則、または state file の読み書き全般を確認したいとき。
+- Codex CLI の起動方法や通常の apply 作業内容を確認したいだけで、abandon 用の process 追跡・停止処理に触れないとき。
+- git worktree の一般的な作成・削除処理を確認したいだけで、既存 branch から linked worktree を逆引きする処理に触れないとき。
 
 ## hash
-- 4022eb4c2e409743d467cecee54f5a344fbd4546c5f7e85bfdb4eeb3e866fb06
+- 282aaad7fa4d99a38607c0be1de675d6675914fe0dbd75fc568912c6fde691be
 
 # `abandon.py`
 

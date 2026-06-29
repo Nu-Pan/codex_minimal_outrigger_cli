@@ -147,45 +147,49 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体を収める領域。最上位 CLI、サブコマンド本体、共通 runtime helper、git・path・状態・ログ・Codex 呼び出し基盤、INDEX.md 更新処理、利用者向けエラー表示など、実行時に動く実装の入口になる。
-- oracle 側を正本に持つ ACP builder、ACP 型、path model、構造化文書、設定定義への既存 import path を維持するための薄い互換層も含む。正本実装を複製せず、realization 側や利用者向け公開面に残る参照を正本側または実体 module へ接続する境界を扱う。
-- 下位には、CLI 構成を定義する入口、複数サブコマンドから共有される runtime 基盤、init・indexing・tui・session・apply・review oracle の実行本体、正本側 builder や basic/config 定義への再公開入口が分かれているため、実装変更時に読む対象を選ぶ起点になる。
+- cmoc の realization implementation 全体への入口。公開 CLI、サブコマンド実行本体、複数 workflow で共有される runtime helper、既存 import path を保つ互換 shim・再公開層を含む。
+- 正本仕様や正本実装を複製する領域ではなく、oracle file で述べられた意図を CLI 実行、状態操作、git 操作、Codex 呼び出し、INDEX.md maintenance、互換 import 境界として具体化する実装側の上位階層である。
+- 下位要素へ進む際は、CLI 定義、個別サブコマンド、共有 runtime 基盤、ACP・basic・config・oracle 関連の互換入口のどれを調べるべきかを切り分ける起点になる。
 
 ## Read this when
-- cmoc の実装側で、公開 CLI、サブコマンド本体、共通 runtime helper、互換 import 層、ACP builder 接続層のどこへ進むべきかを上位から切り分けたいとき。
-- CLI サブコマンドの登録、引数、共通実行ライフサイクル、実装関数への委譲、または利用者向けエラー表示の入口を探したいとき。
-- init、indexing、tui、session fork/join/abandon、apply fork/join/abandon、review oracle の実行条件、状態遷移、worktree・branch 操作、Codex 呼び出し、report 生成の実装領域を探したいとき。
-- Codex exec/TUI 起動、profile・sandbox・CODEX_HOME・Structured Output・quota/capacity retry・call log、設定読み書き、path 解決、git wrapper、状態ファイル、ログ、内容 hash、INDEX.md 更新 preflight など、複数機能から共有される基盤処理を確認または変更したいとき。
-- realization 側に残る `acp.*`、`basic.*`、`config.*`、`oracle.*`、または古い runtime import path が、正本側実装や実体 module へどう接続されているか確認したいとき。
-- 正本側へ移行済みまたは移行予定の公開 import path について、互換層を残す理由、削除条件、一時的な補正の所在を調べたいとき。
+- cmoc の realization implementation を変更・調査する作業で、最上位 CLI、サブコマンド本体、共有 runtime helper、互換 import 層のどこへ進むべきかを判断したいとき。
+- 公開 CLI のコマンド構成、各コマンドから実装関数への委譲、引数解析エラー表示、console script 起動境界を確認したいとき。
+- 初期化、INDEX maintenance、TUI、session、apply、review oracle などのサブコマンド実行フロー、preflight、state 遷移、branch/worktree 操作、report 出力への接続点を追い始めるとき。
+- Codex CLI 呼び出し、設定、runtime path、git wrapper、ログ、状態、エラー表示、内容 hash、CLI 実行ライフサイクルなど、複数機能から共有される実行時基盤の所在を探したいとき。
+- realization 側に残る ACP、basic、config、oracle、runtime などの旧 import path や互換再公開が、正本側実装または実体 module へどう接続されているかを確認したいとき。
 
 ## Do not read this when
-- 正本仕様断片、CLI 利用者仕様、prompt 文言、structured output schema、path model の概念定義、設定項目の正本を確認したいとき。その場合は oracle 側の該当本文を読む。
-- 実装ではなく realization test の期待値、fixture、回帰観点だけを確認したいとき。その場合は test 側へ進む。
-- 個別サブコマンドや補助 module が既に特定できており、その本文だけを読めば足りるとき。
-- ACP builder の prompt 内容や出力条件そのものを調べたいとき。realization 側の互換入口ではなく、正本側 builder の本文を読む。
-- CLI から呼ばれる実処理ではなく、リポジトリ全体のメタ情報、包装設定、補助スクリプト、または oracle file の編集方針を調べたいとき。
+- 正本仕様断片、設計意図、prompt、structured output schema、path model の概念定義、設定定義の正本を確認したいとき。その場合は oracle 側の本文へ進む。
+- テスト期待値、fixture、検証観点だけを調べたいとき。その場合は realization test 側を読む。
+- 補助スクリプト、配布設定、gitignore など、実装ソースではない realization ancillary を確認したいとき。
+- 個別の対象がすでに特定できているとき。CLI 定義、特定サブコマンド、共有 helper、互換 shim、正本側実装など、より直接の下位対象へ進む。
+- ACP builder の prompt 本体、設定項目の内容、path 解決の定義、構造化文書処理、indexing の実体処理など、互換入口ではなく正本側または責務別実装を読むべき作業のとき。
 
 ## hash
-- c681a909cd217ab15deebdb48c92144c76af581235c39aaef28b12ab9e63bb98
+- 41a87ddbbbc28d857e0f59d2c6d76eec9fcd24eb7f78d47edc91a1835e2bb805
 
 # `test`
 
 ## Summary
-- cmoc の realization test 全体への入口。CLI サブコマンド、Codex runtime、session/apply lifecycle、INDEX 更新、prompt/schema 構築、基礎 runtime 契約を、外部挙動・状態更新・Git worktree/branch 副作用・ログ/report 生成の観点から検証するテスト群を収める。
-- 実装本文ではなく、oracle file を具体化した既存 realization の期待挙動を固定する領域であり、共通 fixture と個別サブコマンド別テストをたどって回帰観点を選ぶための起点になる。
+- cmoc の realization test 群への入口。CLI サブコマンド、Codex runtime、prompt/schema 構築、INDEX 更新、session/apply/review の外部挙動と制御ロジックを、共通テスト補助とともに扱う。
+- 正本仕様そのものではなく、oracle file の人間意図を具体化した既存実装の観測可能な挙動、状態ファイル・Git worktree/branch・ログ・レポート・エラー表示などの回帰境界を確認するための領域である。
+- 個別機能のテストは対象サブコマンドや runtime 責務ごとに分かれており、共通 fixture、fake Codex 実行、最小 Git repository、Codex home/profile 差し替えなどの準備処理も同じ領域にまとまっている。
 
 ## Read this when
-- realization implementation の変更が、CLI 出力、終了コード、状態ファイル、Git branch/worktree、cleanup、report、subcommand log、Codex 呼び出し制御などの外部観測可能な挙動に影響する可能性があるとき。
-- session fork/join/abandon、apply fork/join/abandon、review oracle、init/TUI、indexing、Codex runtime retry/quota/home/exec、prompt/schema、基礎 runtime 境界の既存期待値をテストから確認したいとき。
-- 新しい realization test を追加する前に、同じ観点を既存テストへ統合できるか、共通 fixture や補助関数を使えるかを確認したいとき。
-- Codex CLI や Git 操作を fake/stub と一時 repository で検証するテストの作り方、または共通の repository/setup/helper の入口を探すとき。
+- cmoc の実装変更に対して、CLI から観測される出力、終了コード、Git branch/worktree 副作用、状態ファイル更新、ログ、レポート生成の既存期待値を確認したいとき。
+- session の fork/join/abandon、apply の fork/join/abandon、review oracle、init/TUI、indexing など、利用者向けサブコマンドの回帰テストや境界条件を探すとき。
+- Codex CLI 呼び出し wrapper の subprocess 起動、profile/sandbox/cwd/schema/log、CODEX_HOME 検証、retry、quota probe/resume、異常終了時のエラー報告を確認・変更するとき。
+- prompt builder、ACP builder、structured output schema、routing rule、file access rule、root token の扱いが最終 prompt や schema 参照にどう反映されるかを横断的に検証したいとき。
+- INDEX 更新や indexing preflight の生成・再生成判定、hash freshness、malformed entry、conflict 解決、commit 条件、worktree 選択、Codex 呼び出し条件を確認するとき。
+- CLI テスト用の一時 Git repository、最小 oracle 構成、fake Codex/Python executable、Codex home、profile 生成差し替え、branch/worktree 検証 helper を使う、または変更するとき。
+- 新しい realization test を追加する前に、既存テストへ同じ観点のケースを統合できるか、既存 fixture や helper を使えるかを確認するとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片そのものを確認・変更したいとき。この領域は realization test であり、正本仕様の代替ではない。
-- src 配下の実装構造、内部 helper の責務分割、関数単位の処理詳細だけを先に調べたいときは、対応する implementation module を読む方が直接的である。
-- Codex CLI や LLM の実出力品質、モデル選択の妥当性、生成文章の品質を検証したいとき。このテスト群は fake/stub を用いた cmoc 側制御ロジックと副作用の検証を主に扱う。
-- 特定サブコマンドや runtime 部品と無関係なルーティング文書作成、oracle 文書の編集方針、または補助ファイル一般の分類だけを調べたいとき。
+- oracle file の正本仕様断片、用語定義、設計意図、標準文書そのものを確認・変更したいときは、oracle 側の本文を読む。
+- 実装本体の関数分割、内部 helper、データ構造、アルゴリズムを直接修正したいだけで、外部挙動や回帰期待値を確認する必要がないときは、対応する realization implementation を先に読む。
+- Codex CLI や LLM の実出力品質、モデル選択の妥当性、生成内容の品質そのものを評価したいとき。この領域は fake 実行や構造化された観測結果で cmoc 側の制御を検証する。
+- 特定サブコマンドや runtime 責務と無関係な一般的な repository 構造、path model、oracle/realization 概念、INDEX ルーティング規約だけを知りたいときは、該当する仕様文書や実装入口へ進む。
+- pytest の個別アサーションではなく利用者向け仕様を決めたいとき。この領域の内容は realization test であり、正本仕様の代替として扱わない。
 
 ## hash
-- 035e670648c9d839070d6c94e54359997f381d70509b9f57e1d362de2d7dce90
+- 15729214ea0dd88ca201b2a9a9b4010e17f50c5c720eb07f3c1b18ceb4734308

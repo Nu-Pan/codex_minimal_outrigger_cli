@@ -22,24 +22,25 @@
 # `test_apply_abandon_cli.py`
 
 ## Summary
-- apply abandon を CLI 経由で実行したときの active apply run 破棄の外部挙動を検証する realization test。
-- completed/running apply run の worktree・branch・session state cleanup、cleanup 対象欠落時の警告、running process と記録済み child process の停止順、PID reuse や raced exit の扱いを固定する。
-- repo root、apply worktree、linked session/apply worktree、stale apply branch など実行位置ごとの abandon 境界条件を扱う。
+- active apply run を破棄する CLI 挙動の realization test。apply abandon が apply worktree、apply branch、session state、process identity を cleanup する成功経路と、警告・拒否条件を検証する。
+- completed/running apply run の破棄、linked session worktree からの実行、apply worktree 内からの実行、stale apply branch の拒否など、実行位置と state の整合性をまたぐ外部挙動を一箇所で扱う。
+- running apply process 停止では、記録済み child process group を親 process より先に止める順序、PID reuse 回避、終了済み process や zombie leader を cleanup 失敗にしない境界を固定する。
 
 ## Read this when
-- apply abandon の成功時に apply worktree・apply branch・state・process id 記録がどう削除または ready 化されるかを確認したいとき。
-- running apply process の停止、child process group の停止順、pidfd signal、PID reuse、終了済み process の許容に関する制御ロジックを変更するとき。
-- apply abandon をどの worktree から実行できるか、linked session の state をどう正として扱うか、stale apply branch をどう拒否するかを確認するとき。
-- cleanup 対象が先に消えている場合の warning 出力や、破損 state・process identity 欠落・dirty linked session worktree の拒否条件を変更するとき。
+- apply abandon の CLI 出力、終了コード、worktree/branch/state cleanup の期待挙動を確認・変更する場合。
+- running apply run の abandon で process identity を読み、Codex child process group と親 apply process を停止する制御を変更する場合。
+- apply abandon を repo root、apply worktree、linked session worktree、linked apply worktree のどこから実行できるか、またはどこで拒否するかを確認する場合。
+- apply branch から worktree を導けない破損 state、running state で process identity が無い state、stale apply branch などの失敗条件を確認する場合。
+- cleanup 対象が既に消えている場合を警告つき成功として扱うかどうかを確認する場合。
 
 ## Do not read this when
-- apply fork の生成処理そのもの、Codex 実行結果の解釈、findings の扱いを調べたいだけのとき。
-- apply abandon 以外の session fork、init、merge などの CLI 挙動を確認したいとき。
-- oracle の正本仕様断片を確認したいとき。この対象は realization test であり、正本仕様ではない。
-- process 停止や worktree cleanup を伴わない単純な path model、INDEX 生成、補助 fixture の責務を調べたいとき。
+- apply abandon 以外の apply サブコマンドの通常フローや review/fork の詳細挙動だけを調べる場合。
+- session fork、repository 初期化、git helper、test runner fixture の一般的な使い方だけを確認したい場合。
+- oracle の正本仕様断片や利用者向け仕様そのものを確認したい場合。この対象は realization test であり正本仕様ではない。
+- apply process 停止とは無関係な CLI command 登録、引数 parsing、表示 formatting の共通実装だけを変更する場合。
 
 ## hash
-- f7e3591b4969ab79a729de5928c6ee1e9d8461e0eacdbfe6f0afb89f877c50a7
+- c2f183001b4f1991f59d360ec54d8d35aee47c827749d78c3dd13ff8d69d401b
 
 # `test_apply_fork_cli.py`
 
