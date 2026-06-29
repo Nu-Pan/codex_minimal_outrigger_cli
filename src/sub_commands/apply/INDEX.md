@@ -19,24 +19,24 @@
 # `_runtime.py`
 
 ## Summary
-- apply 実行時に使う linked worktree 解決、apply 用 worktree path 復元、apply process pid file の保存・読取・削除、Codex subprocess 追跡環境の一時設定、apply abandon での process / process group 停止を扱う実行時補助モジュール。
-- pid 再利用を避けるため process start time と pidfd を使い、停止対象の同一性確認、SIGTERM から SIGKILL への段階的停止、停止済み・stale pid の警告化、権限不足や安全確認不能時の cmoc error 化を担う。
+- apply 実行時の worktree 解決、apply process の pid file ライフサイクル、Codex subprocess 追跡、running abandon 時の停止制御を担う実行時 helper 群。
+- branch から linked worktree を特定し、apply branch 名から managed worktree path を復元する処理と、停止対象 process の同一性確認に使う識別子をまとめている。
+- pidfd、process start time、process group、Linux /proc を使い、pid 再利用や zombie child を考慮しながら apply 本体 process と Codex child process group を安全に停止する境界を扱う。
 
 ## Read this when
-- session branch や apply branch から対象 worktree を特定する処理を確認・変更したいとき。
-- apply 実行中の pid file の形式、生成条件、読取時の破損扱い、cleanup 後の削除を確認・変更したいとき。
-- apply abandon が実行中 apply process や Codex subprocess group をどの順序・条件・signal で停止するかを確認・変更したいとき。
-- Codex subprocess 追跡用の環境変数と process-local tracking path の復元挙動を確認・変更したいとき。
-- Linux pidfd、process start time、/proc の process group 検査に関わる停止安全性や race 回避の挙動を調査するとき。
+- apply 実行中 process の登録、読み取り、削除、停止、または abandon の running cleanup 前停止処理を変更する。
+- Codex subprocess を apply 実行中だけ追跡する環境変数・process-local tracking・pid file 形式の扱いを確認する。
+- session branch や apply branch から対象 worktree を特定する処理、または worktree が見つからない場合のエラーを変更する。
+- pid 再利用対策、pidfd 非対応環境、権限不足、process group の停止待ち、zombie child の扱いなど、process 同一性と停止安全性に関わる挙動を調べる。
 
 ## Do not read this when
-- apply subcommand の CLI 引数定義、ユーザー向け出力、または上位の command flow だけを確認したいとき。
-- session state 全体の schema、apply branch の生成規則、または state file の読み書き全般を確認したいとき。
-- Codex CLI の起動方法や通常の apply 作業内容を確認したいだけで、abandon 用の process 追跡・停止処理に触れないとき。
-- git worktree の一般的な作成・削除処理を確認したいだけで、既存 branch から linked worktree を逆引きする処理に触れないとき。
+- apply の CLI 引数定義、利用者向け出力、session state 全体の読み書き、または apply の高レベルな制御フローだけを確認したい。
+- Codex へ渡す prompt、生成結果の取り込み、git patch 適用、commit 作成など、apply の実作業内容を調べたい。
+- abandon 以外のサブコマンドの状態管理や process 制御を調べたい。
+- worktree path の基本概念や `<work-root>` などのパス用語定義そのものを確認したい。
 
 ## hash
-- 282aaad7fa4d99a38607c0be1de675d6675914fe0dbd75fc568912c6fde691be
+- 5b1b6c10aa74bc72b8fdf072892983281f0baead3ac859c4ab9de6d7fa24abd4
 
 # `abandon.py`
 

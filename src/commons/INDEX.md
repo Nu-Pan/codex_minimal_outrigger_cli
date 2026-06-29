@@ -15,21 +15,21 @@
 # `cmoc_runtime.py`
 
 ## Summary
-- 共通 runtime 層の主要 API を 1 か所から import できるように集約する薄い入口である。Codex 実行、profile・config・content・CLI・error・git・logging・path・result・state など、複数の runtime helper の公開名を再公開する。
-- 独自ロジックは持たず、下位 runtime module 群へのルーティング用 facade として位置づく。
+- commons の runtime 系機能を一箇所から参照できるように、Codex 実行、profile、設定、content hash、CLI 実行、error、git、logging、path、result、state などの補助 API を取りまとめて import する集約モジュール。
+- ここ自体は挙動を実装せず、各 runtime helper の利用入口をまとめる役割を持つ。
 
 ## Read this when
-- 共通 runtime helper を利用する呼び出し側が、どの公開名をまとめて import できるか確認したいとき。
-- runtime 関連の import 経路を整理し、集約入口で再公開されている名前を追加・削除・確認したいとき。
-- Codex 実行、設定、git 操作、path、状態、結果型など複数の runtime 領域を横断して使う上位コードの依存先を確認したいとき。
+- runtime 系 helper を呼び出す側の import 経路を確認したいとき。
+- commons 配下の runtime helper を移動・分割・統合した結果、この集約入口に載せる import を調整する必要があるとき。
+- Codex 実行、git、path、state、config など複数の runtime helper 群を横断して、どの API がまとめて公開されているかだけを確認したいとき。
 
 ## Do not read this when
-- 個別 helper の挙動、引数、失敗時処理、永続化内容を調べたいときは、対応する下位 runtime module を直接読む。
-- CLI サブコマンド固有の処理や UI 出力の詳細を調べたいときは、呼び出し側の実装を直接読む。
-- runtime API の再公開一覧ではなく、正本仕様や設計意図を確認したいときは oracle 側の本文を読む。
+- 各 helper の具体的な挙動、引数、失敗時処理、副作用を確認したいとき。その場合は対応する実装元モジュールを直接読む。
+- 特定領域だけを変更する作業で、呼び出し元の import 集約を変える必要がないとき。
+- 新しい runtime 挙動を実装したいとき。ここではなく、責務に対応する個別の runtime helper 側を読む。
 
 ## hash
-- 27afe62020c91412f5b3bc611a23155d28e3ef2dbe1974f771f522e0cde0a461
+- 5938d7fab050dcf151579a85b507ed1bc982691d11fabbaad698dccc0f723eaa
 
 # `indexing.py`
 
@@ -157,26 +157,26 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI を起動する subprocess 境界で共有される実行 profile、sandbox/cwd、読み書き許可 root、CODEX_HOME、child process tracking、Structured Output schema 配置、JSONL error 判定をまとめる実装。
-- cmoc の FileAccessMode と Codex CLI が受け取る sandbox profile の差分を吸収し、prompt 側のアクセス規則だけでは表現しきれない許可境界や例外的な conflict 解消時の書き込み許可を組み立てる。
-- Codex subprocess の起動前検証、実行失敗の cmoc 向けエラー化、apply abandon 用の child process 記録、quota/capacity retry 判断に必要な stdout JSONL 解析の入口になる。
+- Codex CLI subprocess 境界で使う profile、sandbox、cwd、CODEX_HOME、schema 配置、process tracking、JSONL error 判定をまとめる実装。
+- FileAccessMode を Codex CLI が理解する sandbox/profile 設定へ変換し、追加 read/write path が cmoc の許可境界を越えないことを検査する。
+- apply abandon で停止対象を識別できるよう Codex child process の pid と starttime を lock 付き pid file に記録・削除し、Codex 実行失敗や capacity/quota 系 JSONL event を cmoc の実行時判断へ変換する。
 
 ## Read this when
-- FileAccessMode から Codex CLI の sandbox mode、cwd、writable_roots、追加 read/write path の許可判定がどう作られるかを確認・変更したいとき。
-- Codex profile の生成、内容 hash による保存、profile 名抽出、CODEX_HOME 解決・検証、subprocess へ渡す環境変数の扱いを追うとき。
-- Codex CLI 実行のラッパー、Codex CLI 不在時の利用者向けエラー、apply 実行中だけ有効な child process tracking、pid 再利用検出を扱うとき。
-- Structured Output schema を実行 root 配下の hash store へ配置する処理、schema なし出力 JSON の読み取り、Codex JSONL stdout/stderr から error detail、resume token、capacity/quota 判定を作る処理を確認するとき。
-- oracle 側のファイルアクセス規則や Codex 実行規則と、実際に Codex profile と subprocess 境界へ反映される不変条件の対応を調べるとき。
+- Codex CLI 起動用 profile の生成、再利用、profile 名抽出、sandbox_mode、writable_roots、cwd、CODEX_HOME の扱いを確認・変更するとき。
+- FileAccessMode ごとの読み取り・書き込み許可境界、追加 read/write path の検査、REALIZATION_WRITE、REPO_WRITE、ORACLE_WRITE、PURE_ORACLE_READ の sandbox 上の表現を調べるとき。
+- apply 実行中の Codex child process tracking、pid file lock、pid 再利用検出、abandon から停止できる subprocess 記録の挙動を確認・変更するとき。
+- Codex subprocess 呼び出し時の環境変数、Codex CLI 不在時の CmocError 化、subprocess.run と tracked Popen の境界を調べるとき。
+- Structured Output schema の hash store 配置、schema なし output JSON の読み取り、Codex JSONL stdout/stderr から利用者向け error detail、resume token、capacity/quota retry 判定を扱うとき。
 
 ## Do not read this when
-- prompt 文面として利用者に提示するファイルアクセス規則そのものを変更したいだけなら、prompt builder 側の実装を読む。
-- cmoc の root/work/oracle などの path 概念定義や schema store の場所だけを確認したいなら、path 定義や runtime paths の実装を読む。
-- hash 名ファイルの書き込み方式や content-addressed な保存処理そのものを変更したいなら、runtime content の実装を読む。
-- CmocError の構造、表示形式、共通エラー処理を調べたいだけなら、runtime error の実装を読む。
-- Codex CLI の応答内容を評価する上位 retry 方針や、サブコマンド固有の apply/session/tui の業務フローを知りたい場合は、それぞれの呼び出し側や対応する仕様を読む。
+- prompt 本文に載せる file access rule の文言や利用者向け指示そのものを確認したいだけの場合は、prompt builder 側の仕様・実装を読む。
+- cmoc の path token、work root、run root、schema store directory などの基本 path 定義を調べたいだけの場合は、path model や runtime path の実装を読む。
+- Codex model 名や reasoning effort の設定値そのもの、設定ファイルの読み込み規則を変更したい場合は、設定定義側を読む。
+- hash 付きファイルを書き出す低レベル処理や内容 hash の命名規則だけを調べたい場合は、runtime content 側を読む。
+- CLI サブコマンドの画面仕様、apply、session join、tui などの利用者向け挙動を確認したい場合は、該当サブコマンド仕様または呼び出し側を読む。
 
 ## hash
-- 891fc110177eb508375d337681b42823ad6ac93e22c3781567d34e0d12224d5f
+- fe3bad7d4ed7b3a2bf07b30d6ac46fc7dd0eae27b4fa85e5ef6686624841bdfc
 
 # `runtime_codex_tui.py`
 

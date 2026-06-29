@@ -1,24 +1,26 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実行領域であり、apply run の開始、破棄、取り込み、実行時補助、結果レポート生成を扱う実装への入口。
-- session branch と apply branch/worktree の関係、apply state の running/completed/error/ready 相当への遷移、Codex subprocess の追跡、変更の再キュー、merge・cleanup・report 出力など、apply run のライフサイクルに沿った処理を下位要素へ振り分ける。
-- apply run 全体の流れを把握したい場合は orchestration、破棄や取り込みの利用者操作は各コマンド処理、process 追跡や worktree 逆引きは実行時補助、report の本文生成はレポート処理へ進むためのまとまり。
+- apply run の開始、完了取り込み、破棄、report 生成、実行時 process/worktree 管理を扱うサブコマンド実装領域。
+- session branch と isolated worktree / apply branch の間で、状態遷移、cleanup、merge、Codex 実行、変更要約、利用者向け report 出力をどう結び付けるかを確認する入口になる。
+- 高レベルな orchestration と低レベルな実行時 helper が同じ領域に分かれているため、apply のどの段階を調べるかを決めてから下位対象へ進むための分岐点として使う。
 
 ## Read this when
-- apply run の開始から完了・失敗・破棄・取り込みまでの実装上の読む先を選びたいとき。
-- apply branch、apply worktree、session branch、apply state、process id file、Codex subprocess tracking、report 生成のどの責務がどこにあるかを切り分けたいとき。
-- apply fork、apply abandon、apply join のいずれに関係する変更かまだ確定しておらず、まず apply 系実装内で対象を絞りたいとき。
-- apply 実行中の cleanup、停止、merge conflict、force resolve、変更要約、再キュー、commit 生成など、apply run のライフサイクルにまたがる挙動を調査するとき。
+- apply run の fork、join、abandon のいずれかの実行条件、状態遷移、branch/worktree cleanup、利用者向け出力を調べたいとき。
+- apply branch や apply worktree の作成・特定・削除、session branch への merge、未 join run の破棄など、apply 固有の lifecycle を追いたいとき。
+- Codex subprocess の追跡、pid file、running apply の停止、pid 再利用対策など、apply 実行時 process 管理を確認したいとき。
+- apply fork の調査対象列挙、所見適用、再キュー、commit、report 保存、失敗時復旧条件を変更または検証したいとき。
+- apply join における想定外差分、force resolve、merge conflict、INDEX.md conflict 自動解決、結果 report の扱いを調べたいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド、CLI 共通 runtime、git wrapper、state schema、config load など、apply 固有でない共通処理を直接調べたいとき。
-- 正本仕様断片として apply の公開仕様や設計意図を確認したいとき。実装ではなく oracle doc を読むべき。
-- 特定の単一処理の担当箇所がすでに分かっており、開始処理、破棄処理、取り込み処理、実行時補助、レポート生成へ直接進めるとき。
-- パッケージ説明や import 副作用の有無だけを確認したいとき。具体的な制御ロジックではなくパッケージ入口だけを読む方が直接的。
+- apply 以外のサブコマンド、CLI 全体の command 登録、共通 runtime、git wrapper、設定読み込み、state 永続化の一般処理だけを調べたいとき。
+- work-root、run-root、worktree path などの基本パス概念そのものを確認したいとき。
+- apply の正本仕様や公開仕様を確認したいときで、実装ではなく oracle doc を根拠にすべきとき。
+- apply fork report の本文構造だけ、Codex prompt parameter だけ、process id tracking だけなど、下位のより直接的な責務対象が既に特定できているとき。
+- パッケージ説明や import 副作用の有無だけを確認する場合を除き、具体的な制御ロジックを読む必要がないとき。
 
 ## hash
-- b3628211765e69933f9de7058837e9dcff14d632e967280b1aceea8bf445976c
+- bfad16826b108ec70a4f651f1fa54d533f9b14117289dcf1d0c7faedc263b9c4
 
 # `indexing.py`
 
