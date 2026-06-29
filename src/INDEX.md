@@ -141,21 +141,23 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の CLI サブコマンド実装を集める領域で、初期化、indexing、TUI、apply、review、session などの利用者向け操作を runtime・git 操作・状態管理・出力生成へ接続する入口になる。
-- 各対象はサブコマンドごとに分かれ、単体ファイルは薄い orchestration、下位 package は lifecycle や loop、report、対象列挙、merge などの段階別実装を担う。
-- CLI 登録後に実際のコマンド挙動、事前条件、worktree/branch 操作、Codex 呼び出し、利用者向け結果出力のどこを読むべきかを選ぶための分岐点として使う。
+- cmoc の主要サブコマンド実装を集約する領域で、初期化、indexing、TUI、apply、session、review oracle などの CLI 実行入口へ進むための判断起点になる。
+- 各実装は CLI runtime への接続、事前条件確認、git・worktree・state 操作、Codex 呼び出し、利用者向け出力や report 生成など、サブコマンドごとの大きな orchestration を担う。
+- apply、session、review のように下位 package へ分割された操作と、単一 module にまとまった init・indexing・tui の入口を切り分けて案内する階層である。
 
 ## Read this when
-- cmoc のサブコマンド実行本体がどこにあり、対象操作に応じて init、indexing、tui、apply、review、session のどれへ進むべきかを切り分けたいとき。
-- サブコマンドが CLI runtime を通じて preflight、work root runtime、git 操作、Codex 実行関数、状態更新、標準出力や report 生成へどう接続しているかを追いたいとき。
-- apply run、review oracle、session lifecycle など、branch/worktree を伴うサブコマンドの大きな制御順序や下位 helper への入口を探したいとき。
-- 初期化、INDEX.md maintenance、TUI 起動など、個別サブコマンドの実行条件、副作用、利用者向け出力を実装側から確認・変更したいとき。
+- どのサブコマンド実装へ進むべきかを、初期化、indexing、TUI、apply、session、review oracle などの利用者操作単位から選びたいとき。
+- CLI runtime 経由の起動、preflight、clean worktree 要求、cmoc ignore 保証、work root runtime の使い方など、サブコマンド入口側の制御を確認したいとき。
+- git branch・worktree・merge・cleanup・state 更新・report 出力など、複数サブコマンドにまたがる操作領域の入口を探したいとき。
+- Codex exec や Codex TUI の呼び出しが、各サブコマンドからどの処理に渡されるかをたどりたいとき。
+- apply、session、review の下位実装へ進む前に、開始・統合・破棄・対象列挙・loop・INDEX 反映・report 生成の責務境界を把握したいとき。
 
 ## Do not read this when
-- Typer app へのトップレベル登録、CLI 全体の共通 runtime、設定読み込み、path model、git wrapper、state schema など、サブコマンド本体ではなく共有基盤だけを調べたいとき。
-- oracle doc にある外部仕様や正本仕様断片を確認したいとき。実装挙動ではなく仕様根拠が必要なら oracle 側を読む。
-- INDEX.md の生成アルゴリズム、review finding の prompt、apply report の本文構造、process tracking など、より直接の下位モジュールや builder が既に特定できているとき。
-- テスト、fixture、実行ログ、生成済み report の内容を確認したいだけで、サブコマンド実装の制御フローを読む必要がないとき。
+- CLI 全体の Typer app 登録、トップレベル entrypoint、共通 runtime、path 解決、git wrapper、config load、state 永続化の低レベル実装だけを調べたいとき。
+- 各サブコマンドの正本仕様や利用者向け要求そのものを確認したいときは、実装入口ではなく対応する oracle 側を読む。
+- INDEX.md の本文生成、差分検出、更新対象探索、lock、commit など indexing 共通処理の詳細だけを調べたいとき。
+- Codex exec の汎用起動機構、LLM prompt builder、Structured Output parameter、path token 解決など、サブコマンド固有ではない基盤だけを確認したいとき。
+- テスト、fixture、生成済み report、または実行ログを調べたいだけで、サブコマンド本体の制御を読む必要がないとき。
 
 ## hash
-- 7e67ca84b4947b391ea69bfced2ff17706b9946a9ae24d8de03e377043a1aff1
+- c8e2c382df6ff1efe9104b0511fb735d284131d55505b1658d0e39aac35ba371

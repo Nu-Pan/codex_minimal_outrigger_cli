@@ -19,24 +19,22 @@
 # `_runtime.py`
 
 ## Summary
-- apply 実行時の worktree 解決、apply process の pid file ライフサイクル、Codex subprocess 追跡、running abandon 時の停止制御を担う実行時 helper 群。
-- branch から linked worktree を特定し、apply branch 名から managed worktree path を復元する処理と、停止対象 process の同一性確認に使う識別子をまとめている。
-- pidfd、process start time、process group、Linux /proc を使い、pid 再利用や zombie child を考慮しながら apply 本体 process と Codex child process group を安全に停止する境界を扱う。
+- apply 実行時の作業ツリー特定、apply process の pid file ライフサイクル、Codex subprocess 追跡、abandon 時の安全な停止処理を担う実装。
+- pid 再利用を避けるため process start time と pidfd を使い、apply 本体 process と Codex child process group の同一性確認、SIGTERM/SIGKILL 送信、停止待ち、stale 判定、権限エラーの cmoc エラー化を扱う。
+- apply branch 名から managed worktree を復元する処理と、git worktree list から branch checkout 済み worktree を探す処理も含む。
 
 ## Read this when
-- apply 実行中 process の登録、読み取り、削除、停止、または abandon の running cleanup 前停止処理を変更する。
-- Codex subprocess を apply 実行中だけ追跡する環境変数・process-local tracking・pid file 形式の扱いを確認する。
-- session branch や apply branch から対象 worktree を特定する処理、または worktree が見つからない場合のエラーを変更する。
-- pid 再利用対策、pidfd 非対応環境、権限不足、process group の停止待ち、zombie child の扱いなど、process 同一性と停止安全性に関わる挙動を調べる。
+- apply や apply abandon の実行中 process 管理、pid file の保存・読取・削除、Codex subprocess の追跡先環境変数を変更する。
+- running abandon で apply 本体または Codex subprocess group を安全に停止する挙動、pidfd 必須条件、PID reuse 対策、zombie child を含む process group 終了判定を確認する。
+- session branch や apply branch から対応 worktree を特定する処理、または worktree が見つからない場合のエラーを確認する。
 
 ## Do not read this when
-- apply の CLI 引数定義、利用者向け出力、session state 全体の読み書き、または apply の高レベルな制御フローだけを確認したい。
-- Codex へ渡す prompt、生成結果の取り込み、git patch 適用、commit 作成など、apply の実作業内容を調べたい。
-- abandon 以外のサブコマンドの状態管理や process 制御を調べたい。
-- worktree path の基本概念や `<work-root>` などのパス用語定義そのものを確認したい。
+- apply の CLI 引数定義、ユーザー向け出力、session state 全体の読み書き、merge や patch 適用の流れだけを確認したい。
+- Codex subprocess の起動方法そのもの、LLM 呼び出し、prompt 作成、または apply 以外のサブコマンドの process 管理を確認したい。
+- 単に git worktree の一般的な作成・削除処理や、apply branch 命名以外の branch 管理を確認したい。
 
 ## hash
-- 5b1b6c10aa74bc72b8fdf072892983281f0baead3ac859c4ab9de6d7fa24abd4
+- 25625f4e91acd37a8ef3835a54cfb3b03718bb4b8ecb56db40212f4f3f026937
 
 # `abandon.py`
 
