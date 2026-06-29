@@ -7,6 +7,7 @@ from commons.runtime_codex_preflight import (
 )
 from commons.runtime_codex_profile import (
     APPLY_PROCESS_TRACKING_ENV,
+    apply_process_id_file_lock,
     build_codex_profile,
     codex_error_text,
     codex_profile_name,

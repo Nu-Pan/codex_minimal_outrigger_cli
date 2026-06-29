@@ -10,6 +10,7 @@ from typing import NamedTuple
 from cmoc_runtime import (
     APPLY_PROCESS_TRACKING_ENV,
     CmocError,
+    apply_process_id_file_lock,
     process_start_time,
     run_git,
     set_apply_process_tracking_path,
@@ -81,14 +82,15 @@ def apply_process_id_path(root: Path, session_id: str) -> Path:
 def write_apply_process_id(root: Path, session_id: str, process_id: int) -> None:
     """apply abandon が同一 process だけを止められる形で pid file を保存する。"""
     path = apply_process_id_path(root, session_id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    start_time = process_start_time(process_id)
-    text = (
-        f"{process_id} {start_time}\n"
-        if start_time is not None
-        else f"{process_id}\n"
-    )
-    path.write_text(text)
+    with apply_process_id_file_lock(path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        start_time = process_start_time(process_id)
+        text = (
+            f"{process_id} {start_time}\n"
+            if start_time is not None
+            else f"{process_id}\n"
+        )
+        path.write_text(text)
 
 
 @contextmanager
@@ -114,35 +116,40 @@ def apply_process_tracking(root: Path, session_id: str) -> Iterator[None]:
 def read_apply_process_id(root: Path, session_id: str) -> ApplyProcessIdentity | None:
     """壊れた pid file を停止対象にせず、読める場合だけ識別子を返す。"""
     path = apply_process_id_path(root, session_id)
-    if not path.is_file():
-        return None
-    try:
-        lines = [line.split() for line in path.read_text().splitlines() if line.strip()]
-        if not lines:
+    with apply_process_id_file_lock(path):
+        if not path.is_file():
             return None
-        parts = lines[0]
-        if len(parts) not in {1, 2}:
-            return None
-        process_id = int(parts[0])
-        if process_id <= 0:
-            return None
-        start_time = int(parts[1]) if len(parts) == 2 else None
-        children: list[ProcessIdentity] = []
-        for child_parts in lines[1:]:
-            if len(child_parts) != 3 or child_parts[0] != "child":
+        try:
+            lines = [
+                line.split() for line in path.read_text().splitlines() if line.strip()
+            ]
+            if not lines:
                 return None
-            child_id = int(child_parts[1])
-            if child_id <= 0:
+            parts = lines[0]
+            if len(parts) not in {1, 2}:
                 return None
-            children.append(ProcessIdentity(child_id, int(child_parts[2])))
-        return ApplyProcessIdentity(process_id, start_time, tuple(children))
-    except (IndexError, ValueError):
-        return None
+            process_id = int(parts[0])
+            if process_id <= 0:
+                return None
+            start_time = int(parts[1]) if len(parts) == 2 else None
+            children: list[ProcessIdentity] = []
+            for child_parts in lines[1:]:
+                if len(child_parts) != 3 or child_parts[0] != "child":
+                    return None
+                child_id = int(child_parts[1])
+                if child_id <= 0:
+                    return None
+                children.append(ProcessIdentity(child_id, int(child_parts[2])))
+            return ApplyProcessIdentity(process_id, start_time, tuple(children))
+        except (IndexError, ValueError):
+            return None
 
 
 def delete_apply_process_id(root: Path, session_id: str) -> None:
     """apply cleanup 後に stale な停止対象を残さないよう pid file を消す。"""
-    apply_process_id_path(root, session_id).unlink(missing_ok=True)
+    path = apply_process_id_path(root, session_id)
+    with apply_process_id_file_lock(path):
+        path.unlink(missing_ok=True)
 
 
 def stop_apply_process(process: ApplyProcessIdentity) -> str | None:

@@ -7,9 +7,12 @@ subprocess 境界の不変条件を共有するため、分割すると呼び出
 失敗時文脈が増える。現状は Codex profile 境界として一箇所に保つ方が凝集性が高い。
 """
 
+import fcntl
 import json
 import os
 import subprocess
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +41,22 @@ _REALIZATION_WRITE_BLOCKED_ROOT_NAMES = {
     "oracle",
 }
 _REPO_WRITE_BLOCKED_ROOT_NAMES = _PROFILE_BLOCKED_ROOT_NAMES
+
+
+@contextmanager
+def apply_process_id_file_lock(path: Path) -> Iterator[None]:
+    """apply process pid file の読み書きを直列化する。"""
+    lock_path = path.with_name(f"{path.name}.lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a+") as lock_file:
+        # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+        # abandon が Codex child 起動直後の未記録状態を読まないよう、
+        # parent/child pid file 操作は同じ advisory lock に集約する。
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
 def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
@@ -405,10 +424,14 @@ def run_tracked_codex_subprocess(
     if capture_output:
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
-    process = subprocess.Popen(argv, start_new_session=True, **kwargs)
+    process: subprocess.Popen[Any] | None = None
     try:
-        record_tracked_child_process(tracking_path, process.pid)
+        with apply_process_id_file_lock(tracking_path):
+            process = subprocess.Popen(argv, start_new_session=True, **kwargs)
+            _record_tracked_child_process(tracking_path, process.pid)
     except OSError as exc:
+        if process is None:
+            raise
         process.terminate()
         try:
             process.wait(timeout=5)
@@ -444,6 +467,11 @@ def run_tracked_codex_subprocess(
 
 def record_tracked_child_process(path: Path, process_id: int) -> None:
     """apply process pid file へ Codex child process の同一性情報を追記する。"""
+    with apply_process_id_file_lock(path):
+        _record_tracked_child_process(path, process_id)
+
+
+def _record_tracked_child_process(path: Path, process_id: int) -> None:
     start_time = process_start_time(process_id)
     if start_time is None:
         return
@@ -458,14 +486,15 @@ def record_tracked_child_process(path: Path, process_id: int) -> None:
 
 def remove_tracked_child_process(path: Path, process_id: int) -> None:
     """終了した Codex child process を apply process pid file から除く。"""
-    if not path.exists():
-        return
-    lines = [
-        line
-        for line in path.read_text().splitlines()
-        if not line.startswith(f"child {process_id} ")
-    ]
-    path.write_text(("\n".join(lines) + "\n") if lines else "")
+    with apply_process_id_file_lock(path):
+        if not path.exists():
+            return
+        lines = [
+            line
+            for line in path.read_text().splitlines()
+            if not line.startswith(f"child {process_id} ")
+        ]
+        path.write_text(("\n".join(lines) + "\n") if lines else "")
 
 
 def process_start_time(process_id: int) -> int | None:
