@@ -1,62 +1,28 @@
-"""`cmoc apply fork` のファイル単位の所見リストアップ prompt 構築実装。
+"""
+`cmoc apply fork` のファイル単位所見列挙 builder。
 
-対応 oracle file: `<work-root>/oracle/src/acp/builder/apply/fork/file_finding_enumeration.py`。
+Oracle: <work-root>/oracle/src/oracle/acp_builder/apply/fork/file_finding_enumeration.py
 """
 
-# std
 from pathlib import Path
 
-# cmoc
-from basic.struct_doc import render_as_markdown
-from basic.path_model import resolve_repo_root, resolve_real_path
-from basic.acp import (
-    AgentCallParameter,
-    ModelClass,
-    ReasoningEffort,
-    FileAccessMode,
+from acp.builder.apply.fork._common import (
+    adapt_oracle_parameter,
+    ensure_oracle_src_importable,
+    resolve_repo_root,
 )
-from acp.prompt_parts.complete_prompt import build_complete_prompt
+from basic.acp import AgentCallParameter
 
 
 def build_apply_fork_file_finding_enumeration_parameter(
     target_path: Path,
 ) -> AgentCallParameter:
-    """
-    `cmoc apply fork` サブコマンド、ファイル単位の所見リストアップ用。
-    AI エージェント呼び出しパラメータを構築する。
-
-    target_path: Path
-        所見リストアップの起点となるファイルのパス
-        oracle file, realization file が渡される想定
-    """
-    # パス
+    """所見列挙用 agent call parameter を構築する。"""
     repo_root = resolve_repo_root()
-    target_path = resolve_real_path(target_path)
-    # プロンプト
-    prompt = build_complete_prompt(
-        role="- あなたはソフトウェア実装の所見リストアップ担当です",
-        summary=f"""
-        - `{target_path}` を起点に `{repo_root}` ツリー内の所見 (realization file の要修正点) を調査すること
-        """,
-        goal=f"""
-        - `{target_path}` 以外の必要な oracle file, realization file も読んでいること
-        - 指定された Structured Output schema に従って所見リストを返すこと
-        - 列挙した所見リストが apply review standard を満たしている事
-        """,
-        file_access_mode=FileAccessMode.READONLY,
-        aux_prompt=[],
-        oracle_standard=True,
-        realization_standard=True,
-        apply_review_standard=True,
+    ensure_oracle_src_importable(repo_root)
+
+    from oracle.acp_builder.apply.fork.file_finding_enumeration import (
+        build_apply_fork_file_finding_enumeration_parameter as build_oracle_parameter,
     )
-    # パラメータを生成して返す
-    # NOTE
-    #   ファイル数だけ呼び出されるということは、トークン消費 N 倍なので重い。
-    #   しかし、ここの失敗が下流全てに影響することを鑑みて MAINSTREAM にしている。
-    return AgentCallParameter(
-        ModelClass.MAINSTREAM,
-        ReasoningEffort.MEDIUM,
-        FileAccessMode.READONLY,
-        render_as_markdown(prompt),
-        Path(__file__).with_suffix(".json"),
-    )
+
+    return adapt_oracle_parameter(build_oracle_parameter(target_path))

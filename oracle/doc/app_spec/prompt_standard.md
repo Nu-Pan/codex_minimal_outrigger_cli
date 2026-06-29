@@ -6,12 +6,11 @@
 - cmoc が agent に渡すプロンプトが従うべき規範を述べる
 - これは cmoc に固有の規範である（任意のプロダクトに適用可能な規範ではない）ため oracle doc として述べる
 
-## cmoc 概念をプロンプトに含めてはいけない
+## agent call に渡すプロンプトは、oracle src 定義の関数を使用する
 
-- `<cmoc-root>`, `<repo-root>` などの cmoc 仕様特有のワード・概念を Codex CLI に渡すプロンプトに含めてはいけない
-- ファイル・ディレクトリ・ブランチなどを指定する場合は、必ず具体的なパスに解決すること
-- 依頼を受けた AI エージェントが「自分は cmoc から呼び出されたエージェントであるというメタ認知」を持っていないと成立しないようなプロンプトは禁止
-- cmoc の作業対象環境に特定のスキルが実装されていることを前提としたプロンプトは禁止
+- agent call に渡すプロンプトは `<cmoc-root>/oracle/src/oracle/acp_builder/**/*.py` で定義されている `build_*_parameter` 関数で動的に構築する
+- 原則として、この動的構築された　プロンプトをそのまま agent call 側に渡す事し、realization file 側でプロンプトを加工するのは禁止
+- 例外として、oracle src 側にバグがあって realization file 側でフォローする必要がある場合は、必要最低限の範囲内での加工を許容する
 
 ## 言語
 
@@ -25,6 +24,7 @@
     - INDEX.md の Summary / Read this when / Do not read this when
     - エラーの説明・次に取るべきアクション
     - Codex CLI によるレビュー結果・調査結果の文章部分
+    - ...
 
 ### 例外
 

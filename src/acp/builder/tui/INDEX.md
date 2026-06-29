@@ -1,39 +1,54 @@
-# `resolve_parameter.json`
+# `__init__.py`
 
 ## Summary
-- AI Agent CLI/TUI が受け取った作業依頼を、実行時に必要な論理ファイルアクセス権限と、参照すべき標準群の有無へ分類するための判定結果を定義する。
-- 権限設定の理由付けと、oracle・realization・review・INDEX.md エントリー作成に関する各標準を読む必要があるかどうかの理由付けを、同じ形で返すための入口になる。
+- 正本側の ACP builder TUI パッケージとの互換性を示すだけの package 初期化地点。具体的な処理や公開オブジェクトは持たず、この階層が互換 package として存在する理由を示す。
 
 ## Read this when
-- 作業依頼から、読み取り専用・oracle 読み取り・realization 編集・oracle 編集・リポジトリ編集のどれを選ぶべきかを判定する出力を扱うとき。
-- AI Agent CLI/TUI の parameter resolve 処理で、各種標準文書を読む必要があるかどうかを構造化して返す仕様を確認するとき。
-- 依頼内容に対する権限選択や標準参照要否の理由を、実装やテストで検証するために期待形を確認するとき。
+- ACP builder の TUI 関連 package が、正本側の対応 package と互換の入口として用意されているかを確認したいとき。
+- この package 初期化地点自体に、追加の初期化処理、公開 import、互換性説明があるかを確認したいとき。
 
 ## Do not read this when
-- 実際の oracle file や realization file の責務、編集可否、品質基準そのものを確認したいだけのとき。
-- INDEX.md エントリー本文の書き方やルーティング文書としての判断基準だけを確認したいとき。
-- TUI 表示、対話フロー、コマンドライン引数、ファイルシステム操作など、判定結果の外側にある挙動を調べるとき。
+- TUI の構築処理、画面制御、入出力処理などの実装内容を調べたいとき。
+- 正本仕様断片そのもの、または互換先の詳細な挙動を確認したいとき。
+- 関数、クラス、定数、CLI 動作などの具体的な公開面を探しているとき。
 
 ## hash
-- c2f005d3f1e5fe15233afabe47653322e47dd41db9a8180e474a2221e7b8bbe0
+- 0a593accdb428d084c035fe120f2a06b5788abb28e112e72252680ca369fb14d
+
+# `launch_tui.py`
+
+## Summary
+- TUI 起動パラメータ生成関数の実体を oracle 側に置いたまま、既存の公開 import path から同じ関数を参照できるようにする互換用モジュール。
+- realization 側や利用者向け公開面に残っている既存参照を維持するための薄い再 export であり、TUI 起動パラメータの仕様や組み立てロジック自体は持たない。
+
+## Read this when
+- TUI 起動パラメータ生成関数の import 経路、公開面との互換性、または oracle 側実装への接続を確認したいとき。
+- 既存の公開 import path を削除・移動・置換してよいか判断するために、互換コードを残す理由と削除条件を確認したいとき。
+- TUI builder 周辺で、realization 側から oracle 側の TUI 起動パラメータ正本へどのように委譲しているかを確認したいとき。
+
+## Do not read this when
+- TUI 起動パラメータの具体的な構造、値、生成ロジックの正本を確認したいとき。この対象は再 export だけを担うため、oracle 側の実体を読む。
+- TUI 画面の描画、イベント処理、ユーザー操作、または端末 UI の挙動を調べたいとき。
+- 互換 import path ではなく、新しい起動仕様や利用者向け CLI 挙動そのものを設計・確認したいとき。
+
+## hash
+- 23d4d93c40bb8191cb1d3b58b15845e17afca479d63366ca50c92836df1b6091
 
 # `resolve_parameter.py`
 
 ## Summary
-- AI Agent CLI/TUI の実行パラメータ選定用プロンプトを組み立てる実装。元プロンプトを埋め込み、読み取り専用でパラメータ選択を行わせる完了プロンプトを作成し、効率重視モデル・中程度 reasoning・読み取り専用アクセス・対応する JSON schema パスを持つ呼び出しパラメータへ変換する。
-- TUI で選択候補として提示する複数のファイルアクセスモードを定義し、それぞれのアクセスルールを補助プロンプトとして展開する入口でもある。
+- TUI の resolve-parameter builder について、既存の TUI 側 import surface を保つための互換モジュール。正本側の builder 関数を再公開し、TUI 利用者向けに利用可能な file access mode の tuple も公開する。
+- 実体のある builder 実装ではなく、canonical な oracle 側実装へ呼び出し元を移行するまで残す互換 import path として位置づけられている。
 
 ## Read this when
-- TUI から入力された元プロンプトを、AI Agent CLI/TUI 実行パラメータ選定用の呼び出しパラメータへ変換する処理を確認・変更したいとき。
-- 実行パラメータ選定担当エージェントへ渡す role、summary、goal、補助プロンプト、標準仕様断片の有効化フラグを確認したいとき。
-- TUI のパラメータ解決で提示するファイルアクセスモード候補や、最終的に選択担当へ与えるアクセス制約を確認したいとき。
-- パラメータ解決結果の Structured Output schema の対応付けや、呼び出しに使うモデル種別・reasoning effort・アクセスモードの既定値を確認したいとき。
+- TUI 側から resolve-parameter builder を import している既存コードの互換性を確認・変更するとき。
+- TUI の import surface で公開される file access mode の選択肢を確認するとき。
+- canonical な oracle 側 builder への移行に伴い、この互換モジュールを削除できる条件を確認するとき。
 
 ## Do not read this when
-- TUI サブコマンド全体の起動処理、エディタ入力の取得、または元プロンプトのコメント除去・strip 処理を調べたいとき。
-- 各ファイルアクセスモードのルール本文そのものを変更したいとき。この実装はそれらを列挙してプロンプトへ組み込む側であり、ルール定義本体ではない。
-- 完了プロンプト構築の共通ロジックや markdown レンダリングの詳細を調べたいとき。ここでは共通 builder を呼び出しているだけで、共通処理本体は別の対象を読む。
-- 実行パラメータ選定後に実際の AI Agent CLI/TUI を起動する処理や、選定結果 JSON の解析・適用処理を調べたいとき。
+- resolve-parameter builder の実際の組み立て処理や仕様を確認したいとき。この対象は再公開だけを担うため、canonical な builder 実装を読む方が直接的。
+- FileAccessMode 自体の定義や意味を確認したいとき。この対象は列挙値を tuple として公開するだけで、mode 定義は別の基本モジュールが担う。
+- TUI 以外の ACP builder import 経路や UI 非依存の parameter 構築を調べたいとき。
 
 ## hash
-- c62808fa9a1f6f37b8bde46db94d819e78ee7205f5387256ddb65d180052fd28
+- 5a7fc4f43bce998fa5f6b2d56dfe1fae5bce7c9bebf69cc9b49635cca3ef12a9

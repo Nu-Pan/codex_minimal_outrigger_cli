@@ -5,9 +5,9 @@
 subcommand log、FileAccessMode、binary 判定は実行前提として一緒に崩れやすく、
 分割すると共通 fixture と root 状態の読み取り文脈が分散する。現状は basic runtime
 回帰として一箇所に保つ方が凝集性が高い。
+根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
-import json
 import shutil
 import subprocess
 import sys
@@ -19,18 +19,19 @@ import main as main_module
 import commons.runtime_logging as runtime_logging
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from basic.path_model import (
-    RootToken,
+    RootPathPlaceHolder,
     resolve_real_path,
-    resolve_run_root,
-    resolve_token_path,
+    resolve_ph_path,
 )
 from cmoc_runtime import (
     CmocError,
     SubcommandLogger,
     config_from_dict,
+    create_run_worktree,
     ensure_cmoc_ignored,
     file_access_to_sandbox_mode,
     format_duration,
+    remove_worktree,
     render_error,
     repo_root,
     work_root,
@@ -60,10 +61,24 @@ def _profile_writable_roots(profile: str) -> set[str]:
     return set(parsed.get("sandbox_workspace_write", {}).get("writable_roots", []))
 
 
+def _assert_writable(profile: str, path: Path) -> None:
+    target = path.resolve()
+    assert any(
+        target.is_relative_to(Path(root)) for root in _profile_writable_roots(profile)
+    )
+
+
+def _assert_not_writable(profile: str, path: Path) -> None:
+    target = path.resolve()
+    assert not any(
+        target.is_relative_to(Path(root)) for root in _profile_writable_roots(profile)
+    )
+
+
 def test_path_model_resolves_token_path_inside_repo() -> None:
-    """root token path が repo 内の実 path から復元できる契約を固定する。"""
-    cmoc_root = resolve_real_path(RootToken.CMOC)
-    token_path = resolve_token_path(cmoc_root / "src", RootToken.CMOC)
+    """root placeholder path が repo 内の実 path から復元できる契約を固定する。"""
+    cmoc_root = resolve_real_path(RootPathPlaceHolder.CMOC)
+    token_path = resolve_ph_path(cmoc_root / "src", RootPathPlaceHolder.CMOC)
 
     assert token_path == Path("<cmoc-root>") / "src"
 
@@ -99,24 +114,70 @@ def test_subcommand_logger_keeps_one_file_per_command_on_timestamp_collision(
 
 
 def test_runtime_distinguishes_repo_root_from_linked_worktree(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """linked worktree では repo root と run/work root を分けて扱う。"""
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "worktrees" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
 
+    monkeypatch.chdir(linked)
     assert repo_root(linked) == root.resolve()
-    assert resolve_run_root(linked) == linked.resolve()
+    assert resolve_real_path(RootPathPlaceHolder.RUN) == linked.resolve()
     assert work_root(linked) == linked.resolve()
 
 
-def test_resolve_run_root_rejects_main_worktree(tmp_path: Path) -> None:
+def test_run_root_placeholder_rejects_main_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """main worktree は run root として扱わない。"""
     root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
 
     with pytest.raises(ValueError, match="`<run-root>` was not found"):
-        resolve_run_root(root)
+        resolve_real_path(RootPathPlaceHolder.RUN)
+
+
+def test_create_run_worktree_rejects_path_outside_managed_worktrees(
+    tmp_path: Path,
+) -> None:
+    root = make_repo(tmp_path)
+    target = tmp_path / "unrelated"
+    target.mkdir()
+    (target / "keep.txt").write_text("keep\n")
+
+    with pytest.raises(CmocError, match="run worktree path"):
+        create_run_worktree(root, "cmoc/apply/session/run", target)
+
+    assert (target / "keep.txt").read_text() == "keep\n"
+
+
+def test_create_run_worktree_rejects_path_not_matching_branch(
+    tmp_path: Path,
+) -> None:
+    root = make_repo(tmp_path)
+    target = root / ".cmoc" / "worktrees" / "session" / "other-run"
+    target.mkdir(parents=True)
+    (target / "keep.txt").write_text("keep\n")
+
+    with pytest.raises(CmocError, match="run worktree path"):
+        create_run_worktree(root, "cmoc/apply/session/run", target)
+
+    assert (target / "keep.txt").read_text() == "keep\n"
+
+
+def test_remove_worktree_rejects_path_outside_managed_worktrees(
+    tmp_path: Path,
+) -> None:
+    root = make_repo(tmp_path)
+    target = tmp_path / "unrelated"
+    target.mkdir()
+    (target / "keep.txt").write_text("keep\n")
+
+    with pytest.raises(CmocError, match="cmoc 管理外の worktree"):
+        remove_worktree(root, target)
+
+    assert (target / "keep.txt").read_text() == "keep\n"
 
 
 def test_config_defaults_match_logical_model_classes() -> None:
@@ -283,27 +344,19 @@ def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
     assert not (root / ".cmoc").exists()
 
 
-def test_pre_log_check_failure_still_writes_subcommand_log(
+def test_pre_log_check_failure_does_not_write_subcommand_log(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    log_paths_before = set((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))
     (root / "README.md").write_text("dirty\n")
 
     result = runner.invoke(app, ["indexing"])
 
     assert result.exit_code == 1
-    log_path = sorted((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))[-1]
-    records = [json.loads(line) for line in log_path.read_text().splitlines()]
-    assert records[0]["event"] == "command_invoked"
-    assert records[0]["command"] == "indexing"
-    assert any(
-        record["event"] == "command_finished"
-        and record["returncode"] == 1
-        and "error" in record
-        for record in records
-    )
+    assert set((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl")) == log_paths_before
 
 
 def test_bin_cmoc_missing_venv_call_stack_uses_root_token_path(tmp_path: Path) -> None:
@@ -387,34 +440,24 @@ def test_file_access_to_codex_cwd_limits_pure_oracle_read(tmp_path: Path) -> Non
 def test_is_binary_reads_only_initial_chunk() -> None:
     """binary 判定は大きい file 全体を読まず先頭 chunk だけを見る。"""
     class Reader:
-        """読み取り size を記録する fake binary reader。"""
-
         def __init__(self) -> None:
-            """未読み取り状態で fake reader を初期化する。"""
             self.size: int | None = None
 
         def __enter__(self) -> "Reader":
-            """context manager として fake reader 自身を返す。"""
             return self
 
         def __exit__(self, *args: object) -> None:
-            """fake reader では close 副作用を観測しない。"""
             pass
 
         def read(self, size: int) -> bytes:
-            """binary 判定が要求した read size を記録する。"""
             self.size = size
             return b"text"
 
     class FakePath:
-        """open 呼び出しを fake reader へ接続する path 代替。"""
-
         def __init__(self) -> None:
-            """assertion から参照する fake reader を保持する。"""
             self.reader = Reader()
 
         def open(self, mode: str) -> Reader:
-            """binary 判定が binary mode で開くことを確認する。"""
             assert mode == "rb"
             return self.reader
 
@@ -428,11 +471,19 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     """root 付き通常経路でも FileAccessMode ごとの profile を生成する。"""
     root = tmp_path / "repo"
     root.mkdir()
+    (root / ".cmoc").mkdir()
+    (root / ".codex").mkdir()
+    (root / ".pytest_cache").mkdir()
+    (root / "AGENTS.md").write_text("agents\n")
+    (root / "INDEX.md").write_text("index\n")
     (root / "src").mkdir()
+    (root / "test").mkdir()
     (root / "README.md").write_text("# repo\n")
     (root / "oracle").mkdir()
     (root / "memo").mkdir()
     (root / ".agents").mkdir()
+    (root / ".git").mkdir()
+    (root / ".gitignore").write_text("memo\n")
 
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
@@ -467,14 +518,42 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         assert 'sandbox_mode = "workspace-write"' in profiles[mode]
         assert "[sandbox_workspace_write]" in profiles[mode]
     assert _profile_writable_roots(profiles[FileAccessMode.REALIZATION_WRITE]) == {
-        str(root.resolve()),
+        str((root / ".gitignore").resolve()),
+        str((root / "src").resolve()),
+        str((root / "test").resolve()),
     }
     assert _profile_writable_roots(profiles[FileAccessMode.ORACLE_WRITE]) == {
         str((root / "oracle").resolve())
     }
     assert _profile_writable_roots(profiles[FileAccessMode.REPO_WRITE]) == {
-        str(root.resolve()),
+        str((root / ".gitignore").resolve()),
+        str((root / "oracle").resolve()),
+        str((root / "src").resolve()),
+        str((root / "test").resolve()),
     }
+    for blocked in (
+        "oracle/spec.md",
+        "memo/note.md",
+        ".agents/state.json",
+        ".cmoc/log",
+    ):
+        _assert_not_writable(
+            profiles[FileAccessMode.REALIZATION_WRITE], root / blocked
+        )
+    _assert_writable(
+        profiles[FileAccessMode.REALIZATION_WRITE], root / "src" / "created.py"
+    )
+    _assert_writable(
+        profiles[FileAccessMode.REPO_WRITE], root / "oracle" / "created.md"
+    )
+    for blocked in ("memo/note.md", ".agents/state.json", ".cmoc/log"):
+        _assert_not_writable(profiles[FileAccessMode.REPO_WRITE], root / blocked)
+    _assert_not_writable(
+        profiles[FileAccessMode.REPO_WRITE], root / "new_dir" / "created.md"
+    )
+    _assert_not_writable(
+        profiles[FileAccessMode.REALIZATION_WRITE], root / "new_top_level.md"
+    )
 
     extra = root / "src" / "extra"
     profile = build_codex_profile(
@@ -490,8 +569,32 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         extra_writable_paths=[extra],
     )
     assert _profile_writable_roots(profile) == {
-        str(root.resolve()),
+        str((root / ".gitignore").resolve()),
+        str((root / "src").resolve()),
+        str((root / "test").resolve()),
     }
+
+    repo_extra = root / "new_dir"
+    profile = build_codex_profile(
+        AgentCallParameter(
+            parameter.model_class,
+            parameter.reasoning_effort,
+            FileAccessMode.REPO_WRITE,
+            parameter.prompt,
+            parameter.structured_output_schema_path,
+        ),
+        CmocConfig(),
+        root,
+        extra_writable_paths=[repo_extra],
+    )
+    assert _profile_writable_roots(profile) == {
+        str((root / ".gitignore").resolve()),
+        str(repo_extra.resolve()),
+        str((root / "oracle").resolve()),
+        str((root / "src").resolve()),
+        str((root / "test").resolve()),
+    }
+    _assert_writable(profile, repo_extra / "created.md")
 
     with pytest.raises(CmocError, match="許可領域外"):
         build_codex_profile(
@@ -549,11 +652,16 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         (FileAccessMode.REALIZATION_WRITE, "oracle/blocked.md"),
         (FileAccessMode.REALIZATION_WRITE, "memo/blocked.md"),
         (FileAccessMode.REALIZATION_WRITE, ".agents/blocked.md"),
+        (FileAccessMode.REALIZATION_WRITE, ".cmoc/state.json"),
+        (FileAccessMode.REALIZATION_WRITE, ".codex/config.toml"),
+        (FileAccessMode.REALIZATION_WRITE, "README.md"),
         (FileAccessMode.ORACLE_WRITE, "src/blocked.md"),
         (FileAccessMode.ORACLE_WRITE, "memo/blocked.md"),
         (FileAccessMode.ORACLE_WRITE, ".agents/blocked.md"),
         (FileAccessMode.REPO_WRITE, "memo/blocked.md"),
         (FileAccessMode.REPO_WRITE, ".agents/blocked.md"),
+        (FileAccessMode.REPO_WRITE, ".cmoc/state.json"),
+        (FileAccessMode.REPO_WRITE, ".git/config"),
         (FileAccessMode.REPO_WRITE, "../outside.md"),
     ],
 )
@@ -579,4 +687,109 @@ def test_codex_profile_rejects_disallowed_extra_writable_paths(
             CmocConfig(),
             root,
             extra_writable_paths=[root / extra],
+        )
+
+
+def test_codex_profile_opens_only_conflict_file_for_session_join_conflict_resolution(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "src").mkdir()
+    (root / "oracle").mkdir()
+    target = root / "oracle" / "spec.md"
+    target.write_text("conflict\n")
+
+    profile = build_codex_profile(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            FileAccessMode.REALIZATION_WRITE,
+            "prompt",
+            None,
+        ),
+        CmocConfig(),
+        root,
+        extra_writable_paths=[target],
+        allow_oracle_conflict_writes=True,
+    )
+
+    assert _profile_writable_roots(profile) == {
+        str((root / "src").resolve()),
+        str(target.resolve()),
+    }
+    _assert_writable(profile, target)
+    _assert_not_writable(profile, root / "oracle" / "other.md")
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        "README.md",
+        "INDEX.md",
+        "AGENTS.md",
+        "oracle/INDEX.md",
+        "oracle/spec.md",
+    ],
+)
+def test_codex_profile_allows_session_join_conflict_targets_by_exact_path(
+    tmp_path: Path, extra: str
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "src").mkdir()
+    (root / "oracle").mkdir()
+    target = root / extra
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("conflict\n")
+
+    profile = build_codex_profile(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            FileAccessMode.REALIZATION_WRITE,
+            "prompt",
+            None,
+        ),
+        CmocConfig(),
+        root,
+        extra_writable_paths=[target],
+        allow_oracle_conflict_writes=True,
+    )
+
+    assert str(target.resolve()) in _profile_writable_roots(profile)
+    _assert_writable(profile, target)
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        ".agents/blocked.md",
+        ".cmoc/state.json",
+        ".codex/config.toml",
+        ".git/config",
+        ".pytest_cache/state",
+        "memo/blocked.md",
+    ],
+)
+def test_codex_profile_rejects_runtime_paths_even_for_session_join_conflict(
+    tmp_path: Path, extra: str
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "src").mkdir()
+
+    with pytest.raises(CmocError, match="追加書き込み許可 path"):
+        build_codex_profile(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                FileAccessMode.REALIZATION_WRITE,
+                "prompt",
+                None,
+            ),
+            CmocConfig(),
+            root,
+            extra_writable_paths=[root / extra],
+            allow_oracle_conflict_writes=True,
         )

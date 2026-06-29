@@ -1,100 +1,86 @@
-# `change_summary.json`
+# `__init__.py`
 
 ## Summary
-- 変更差分を意味上のカテゴリごとに要約し、各カテゴリで何をどう変えたかと根拠になる主要な変更箇所をまとめるためのデータ構造を定義する。
-- 空でない差分要約を、実行制御・レポート生成・テスト・ルーティング文書などの人間が把握しやすいまとまりへ分けて扱う場面の入口になる。
+- `oracle.acp_builder.apply.fork` と同じ import 経路を実装側に用意するための互換 package 初期化ファイル。本文は互換 package であることを示す docstring のみを持ち、具体的な処理や公開 API の定義は持たない。
 
 ## Read this when
-- 作業結果や差分を、人間向けにカテゴリ別要約として出力・検証する処理を確認するとき。
-- 変更内容の意味分類、カテゴリごとの説明、主要な変更箇所の対応関係を扱うデータの形を確認するとき。
-- 差分要約の出力が、網羅的なファイル一覧ではなく要約根拠として有用な主要箇所を示す方針になっているか確認するとき。
+- `oracle.acp_builder.apply.fork` 互換 package の存在理由を確認したいとき。
+- この package 直下の実装を読む前に、package 自体が処理本体ではなく互換用の入口であることだけを確認したいとき。
 
 ## Do not read this when
-- 個々の差分をどのように検出するか、またはカテゴリへ分類するアルゴリズムを確認したいとき。
-- 実際のパッチ適用、分岐作成、ファイル編集などの実行制御を確認したいとき。
-- 単一ファイルの本文内容や具体的な変更後コードを調べたいだけで、変更全体のカテゴリ別要約データを扱わないとき。
+- fork 適用処理の具体的な実装、関数、クラス、入出力を調べたいとき。
+- 互換 package ではなく oracle 側の正本仕様断片を確認したいとき。
+- package 初期化 docstring 以外の実行時挙動や副作用を探しているとき。
 
 ## hash
-- 51ffe6e61588c7c347494a36267c02b8d48f69f6e264fcaf396096938cdd672d
+- c5707d270af058dc9b548e1d49ffefdd38c20a0785a67a293523f2be83ebc266
+
+# `_common.py`
+
+## Summary
+- apply fork の ACP builder 群で共通して使う、リポジトリルート解決、oracle 側 ACP builder パッケージの import 経路補正、ACP パラメータ型の受け渡しを担う補助モジュール。
+- oracle 側実装が実行時に import 可能であることと、実装側の ACP 型が oracle 側の実行時型を再公開している前提を、この領域の builder から共有する入口として位置づける。
+
+## Read this when
+- apply fork の builder 実装で、リポジトリルートをどう解決して oracle 側モジュールを読み込める状態にしているか確認したいとき。
+- packaged layout と開発ツリー layout の違いにより、oracle 側 ACP builder の import が失敗する問題を調査するとき。
+- apply fork の builder が受け取る ACP パラメータを oracle 側 API へ渡す際の型境界や変換有無を確認するとき。
+
+## Do not read this when
+- 個別の apply fork 用 ACP の組み立て内容、プロンプト、引数構造を確認したいだけのとき。
+- oracle 側の ACP builder の正本仕様や実装内容そのものを確認したいとき。
+- リポジトリルート解決や oracle 側 import 経路補正と関係しない、他領域の builder や CLI 挙動を調査しているとき。
+
+## hash
+- 8f2faead7113a3f665f4405f064544614a0165f567433fa39fc0fe8e779dfbd1
 
 # `change_summary.py`
 
 ## Summary
-- `cmoc apply fork` の作業レポート向けに、変更要約生成を担当する AI エージェント呼び出しパラメータを構築する実装。
-- 未加工の `git diff` 出力を補助プロンプトとして埋め込み、差分を人間向けに Structured Output schema へ要約させるための complete prompt、モデル種別、推論量、読み取り専用アクセス、出力 schema 参照をまとめて返す。
-- リポジトリルート解決、prompt parts、ACP の基本型を組み合わせ、変更内容そのものの解析ではなく要約依頼用パラメータ生成に責務を限定している。
+- `cmoc apply fork` の作業レポート向け変更要約を組み立てる実装。agent call parameter の生成は対応する oracle 実装へ委譲し、生成結果を realization 側の型へ変換する。
 
 ## Read this when
-- `cmoc apply fork` の作業レポートで、変更要約生成エージェントに渡す role、summary、goal、補助 diff、file access mode を確認または変更したいとき。
-- `git diff` の生テキストをどのように prompt に埋め込み、どの AgentCallParameter と schema に接続しているかを追いたいとき。
-- apply fork 系の prompt builder のうち、変更差分の要約生成だけに関わる実装入口を探しているとき。
+- `cmoc apply fork` の変更要約 agent call parameter 生成、oracle builder への委譲、または oracle parameter から realization parameter への変換経路を確認・変更したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` の実際の git 操作、branch 操作、fork 適用処理、作業ツリー変更処理を調べたいだけのとき。
-- 生成された要約 JSON の項目定義や Structured Output schema 自体を確認したいとき。
-- complete prompt の共通構築規則、StructDoc の markdown 描画、ACP 型の汎用仕様を調べたいとき。
-- 差分内容を解析・整形するロジックを探しているとき。この実装は raw diff を解析せず prompt に渡すだけである。
+- `cmoc apply fork` 全体の実行フロー、fork 作成、branch 操作、または diff 生成そのものを調べたいときは、より上位の apply fork 実装へ進む。
+- 変更要約の正本仕様や agent prompt の人間意図を確認したいときは、対応する oracle 側の builder を読む。
+- 汎用的な git 操作 helper、path model、または ACP 共通型の定義を調べたいだけなら、それぞれの共通実装・基本型定義へ進む。
 
 ## hash
-- 0753a2b42aa5847606f10680feaa7ea8d9221643539dae78c24c4ac6c8aeb225
-
-# `file_finding_enumeration.json`
-
-## Summary
-- 実装調査で見つかった問題点を、根拠位置、正本仕様上の要求、観測された実装、問題理由、修正方針として報告するための構造化出力を定義する。
-- 仕様と実装の乖離をレビュー結果として人間に渡す場面で使う、所見リストの出力契約を担う。
-
-## Read this when
-- 実装レビューや適合性調査の結果として、明確に修正が必要な所見を返す出力形式を確認したいとき。
-- 所見に含めるべき根拠情報、仕様要求、観測結果、理由、修正方針の粒度を確認したいとき。
-- レビュー結果の生成側または検証側で、所見リストが空でない根拠位置を持つことを前提にしたいとき。
-
-## Do not read this when
-- 単に実装対象の仕様そのものを探しているとき。ここには個別機能の要求ではなく、レビュー所見の報告形式だけがある。
-- INDEX.md 用エントリーや一般的なルーティング文書の書き方を確認したいとき。
-- 所見を JSON 以外の文章、ログ、CLI 表示としてどう見せるかを確認したいとき。
-
-## hash
-- 0bed168a2a89c47730cdc914c08c08f2a3ad4022595c4b910c5d8ff9ca335524
+- 953844150e43aae9519c0790bc24357d2ab0b3efe4e05ac9ceb1064eb2c902db
 
 # `file_finding_enumeration.py`
 
 ## Summary
-- `cmoc apply fork` で、単一の起点ファイルから realization file の要修正点を列挙するための AI 呼び出しパラメータを組み立てる実装。
-- 起点パスを実パス化し、リポジトリルート内の関連する oracle file と realization file を読む read-only 調査 prompt を生成して、所見リスト用の構造化出力設定とともに返す。
-- ファイル数分呼ばれる重い処理だが、下流への影響が大きいため mainstream model と medium reasoning を選ぶ、という判断もこの対象内で扱う。
+- `cmoc apply fork` でファイル単位の所見列挙を行うための agent call parameter を構築する薄い realization 側 builder。
+- 実処理は oracle 側の同目的 builder に委譲し、repo root 解決、oracle src の import 準備、oracle parameter から realization 側 `AgentCallParameter` への変換だけを担う。
 
 ## Read this when
-- `cmoc apply fork` のファイル単位レビューや所見列挙の prompt 内容、role・summary・goal・標準適用条件を確認したいとき。
-- 起点ファイルから関連する oracle file と realization file を読ませる AI 呼び出しパラメータの構築方法を変更したいとき。
-- apply review standard、oracle standard、realization standard を有効にした所見リストアップ呼び出しの model class、reasoning effort、file access mode、出力 schema の指定を確認したいとき。
+- `cmoc apply fork` のファイル単位所見列挙 agent を呼ぶための parameter 構築経路を確認したいとき。
+- realization 側 builder が oracle 側 builder をどのように呼び出し、戻り値を `AgentCallParameter` に適合させるかを確認したいとき。
+- `target_path` がファイル単位所見列挙用 parameter 構築に渡される境界だけを確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` 全体のコマンド制御、ファイル列挙、複数ファイル分の呼び出し集約、または結果の適用処理を調べたいだけのとき。
-- 所見リストの構造化出力 schema そのもの、または complete prompt の共通レンダリング処理を変更したいとき。
-- パスモデルの定義、実パス解決、リポジトリルート解決の詳細を確認したいとき。
+- 所見列挙のプロンプト内容、出力条件、正本仕様を確認したいときは、委譲先の oracle 側 builder を読む。
+- repo root 解決、oracle src import 準備、oracle parameter 変換の共通挙動を確認したいときは、共通 helper の定義を読む。
+- `cmoc apply fork` コマンド全体の制御フロー、CLI 引数処理、またはテスト観点を調べたいときは、それぞれの呼び出し元やテストを読む。
 
 ## hash
-- aebe9ac6115f9e612efcca42bb3f08ac10dde025487f49775c846e99596a087f
+- 7f348f0ca54f4b074d5e43be005498ea92f45db03c66c9725e905c528f9bba40
 
 # `finding_application.py`
 
 ## Summary
-- `cmoc apply fork` で検出済みの所見に対応する修正作業を AI エージェントへ依頼するための呼び出しパラメータを構築する実装。
-- 所見リストを JSON コードブロックとしてプロンプトに埋め込み、realization file の修正、realization standard 遵守、git add/commit 禁止などの作業条件を含む complete prompt を生成する。
-- モデル種別、推論努力、ファイルアクセスモード、生成済み Markdown prompt をまとめた `AgentCallParameter` を返す入口。
+- `cmoc apply fork` の所見適用用 agent call parameter を構築する realization 側の薄い builder。repo root 解決と oracle src の import 準備を行い、対応する oracle builder の結果を realization 側の `AgentCallParameter` へ適合して返す入口を担う。
 
 ## Read this when
-- `cmoc apply fork` が所見対応用エージェントを起動する際の prompt 内容、権限、モデル指定を確認または変更したいとき。
-- 所見データをどのように AI への作業指示へ変換しているかを調べたいとき。
-- 所見対応作業に含める注意事項、realization file 修正条件、realization standard の適用有無を調整したいとき。
-- `AgentCallParameter` の生成ロジックのうち、所見対応フェーズ専用の入力と出力を確認したいとき。
+- `cmoc apply fork` の所見適用で、findings から agent call parameter を得る realization 側の呼び出し入口を確認したいとき。
+- 対応する oracle builder を realization 実装からどのように呼び出し、戻り値を `AgentCallParameter` に変換しているか確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` の CLI 引数解析、サブコマンド登録、実行フロー全体を調べたいだけのとき。
-- 所見そのものを生成・検出するロジックを調べたいとき。
-- complete prompt の共通構築処理や Markdown rendering の詳細を調べたいとき。
-- path model、file access mode、agent call parameter などの基礎型や共通定義を確認したいだけのとき。
+- 所見適用プロンプトや agent call parameter の正本仕様そのものを確認したいときは、対応する oracle 側の実装を読む。
+- repo root 解決、oracle src の import 可能化、oracle parameter の適合処理という共通 helper の詳細を確認したいだけのときは、共通処理側を読む。
 
 ## hash
-- 09fc110b1ae3e5680a8bdfa4f8e94fb7691d4d1f271e7484d642f4602f5a5c3b
+- f20f8f2dab686c194560fba1c68209b00301cb133ebd3bb06f1b4437124840f4

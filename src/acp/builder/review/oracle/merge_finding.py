@@ -1,60 +1,37 @@
-"""`cmoc review oracle` の所見リストマージ prompt 構築実装。
-
-対応 oracle file: `<work-root>/oracle/src/acp/builder/review/oracle/merge_finding.py`。
-"""
-
-# std
-from pathlib import Path
-
-# cmoc
-from basic.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
-from basic.path_model import resolve_real_path
-from basic.acp import (
-    AgentCallParameter,
-    ModelClass,
-    ReasoningEffort,
-    FileAccessMode,
+from oracle.acp_builder.basic import AgentCallParameter
+from oracle.acp_builder.review.oracle.merge_finding import *  # noqa: F403
+from oracle.acp_builder.review.oracle.merge_finding import (
+    build_review_oracle_merge_finding_parameter as _build_parameter,
 )
-from acp.prompt_parts.complete_prompt import build_complete_prompt
 
 
 def build_review_oracle_merge_finding_parameter(
-    findings: str,
+    known_findings: str,
 ) -> AgentCallParameter:
-    """
-    `cmoc review oracle` サブコマンド、所見リストマージ用。
-    AI エージェント呼び出しパラメータを構築する。
+    parameter = _build_parameter(known_findings)
+    return type(parameter)(
+        parameter.model_class,
+        parameter.reasoning_effort,
+        parameter.file_access_mode,
+        _fix_oracle_root_placeholder_definition(parameter.prompt),
+        parameter.structured_output_schema_path,
+    )
 
-    findings: str
-        現状の所見リスト。各所見は finding_id を含む想定。
-    """
-    # パス
-    oracle_root = resolve_real_path(Path("<work-root>/oracle"))
-    # プロンプト
-    prompt = build_complete_prompt(
-        role="- あなたはソフトウェア仕様断片レビュー結果の整理担当です",
-        summary=f"- `{oracle_root}` ツリー内の oracle file に対する所見リストを整理すること",
-        goal="""
-        - 指定の Structured Output schema に従って編集操作を列挙すること
-        - 編集操作実行後、所見同士の内容的な重複や相互矛盾が解消されていること
-        - 十分コンパクトで整合的なら空配列を返すこと
-        - target_ids には入力所見の finding_id を指定すること
-        """,
-        file_access_mode=FileAccessMode.PURE_ORACLE_READ,
-        aux_prompt=[
-            StructDoc(
-                "現状の所見リスト",
-                StructCodeBlock("text", findings),
-            ),
-        ],
-        oracle_standard=True,
-        review_oracle_standard=True,
-    )
-    # パラメータを生成して返す
-    return AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.MEDIUM,
-        FileAccessMode.PURE_ORACLE_READ,
-        render_as_markdown(prompt),
-        Path(__file__).with_suffix(".json"),
-    )
+
+def _fix_oracle_root_placeholder_definition(prompt: str) -> str:
+    # Oracle: <work-root>/oracle/src/oracle/acp_builder/review/oracle/merge_finding.py
+    # <work-root>/oracle/doc/app_spec/prompt_standard.md permits only the
+    # minimum correction needed for an oracle src bug; known findings are input.
+    # Delete this helper and its tests once oracle src emits "- <oracle-root> =".
+    marker = "\n# place holder definition\n"
+    marker_index = prompt.rfind(marker)
+    if marker_index == -1:
+        return prompt
+    prefix_end = marker_index + len(marker)
+    prefix = prompt[:prefix_end]
+    lines = prompt[prefix_end:].splitlines(keepends=True)
+    for index, line in enumerate(lines):
+        if line.startswith("- <<oracle-root>> ="):
+            lines[index] = line.replace("- <<oracle-root>> =", "- <oracle-root> =", 1)
+            break
+    return prefix + "".join(lines)

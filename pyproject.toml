@@ -18,11 +18,11 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+package-dir = {"" = "src", "oracle" = "oracle/src/oracle"}
 py-modules = ["main", "cmoc_runtime"]
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["src", "oracle/src"]
 
 [tool.setuptools.package-data]
 "*" = ["*.json"]

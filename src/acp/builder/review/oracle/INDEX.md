@@ -1,193 +1,111 @@
-# `enumerate_finding.json`
+# `__init__.py`
 
 ## Summary
-- oracle レビューで見つかった新規所見を返すための構造化出力を定義する。レビュー対象および関連する正本仕様断片から、既知所見と重複しない問題だけを重大度・根拠・理由つきで列挙する応答の契約を担う。
+- `oracle.acp_builder.review.oracle` 互換名前空間を成立させるための package 初期化ファイル。本文は互換 package であることだけを示し、レビュー処理や oracle 内容そのものは持たない。
 
 ## Read this when
-- oracle レビュー機能が、検出した所見をどの粒度で出力すべきか確認したいとき。
-- 新規所見が無い場合の応答や、所見ごとに含める根拠情報の扱いを確認したいとき。
-- レビュー結果の構造化出力を生成・検証する実装やテストを扱うとき。
+- 互換 import 経路として `oracle.acp_builder.review.oracle` 名前空間が存在する理由を確認したいとき。
+- この階層が実処理を持つ module ではなく package 境界として置かれているかを確認したいとき。
 
 ## Do not read this when
-- レビュー対象の正本仕様断片そのものの妥当性や内容を調べたいとき。
-- 所見検出のアルゴリズム、既知所見との重複判定方法、関連する正本仕様断片の探索方法を調べたいとき。
-- 重大度ごとの意味を超えて、具体的な修正方針やレビュー運用ルールを知りたいとき。
+- レビューの具体的な判定ロジック、builder 処理、oracle の仕様断片を調べたいとき。
+- 公開 API、関数、クラス、定数、再 export の実装を探しているとき。
 
 ## hash
-- d1bd69c75e8d60791cc304f06e103a7efdcc6566dc16c1254b8a92d6fcb38c5d
+- af0101216671fb90a1b9f95b81758a8f49779d3a1830bc39993735590f29a60d
 
 # `enumerate_finding.py`
 
 ## Summary
-- `cmoc review oracle` のうち、指定された oracle file を起点に oracle ツリー内の正本仕様断片をレビューし、既知所見と重複しない新規所見を列挙させるための AI 呼び出しパラメータ構築を担う。
-- レビュー対象パスと既知の関連所見を受け取り、oracle 専用の読み取り制約、レビュー担当ロール、レビュー範囲、重複除外条件、所見が無い場合の扱いを含む完全 prompt を組み立てる入口である。
+- レビュー指摘列挙機能について、旧来の実装側 import 経路を維持するための互換モジュール。実体は正本側の実装に委譲し、この経路を使う呼び出し元が残っている間だけ入口として機能する。
+- この対象自体は列挙ロジックを定義せず、互換経路の維持理由と削除条件を示す薄い再公開層として位置づけられる。
 
 ## Read this when
-- `cmoc review oracle` で新規所見列挙用の prompt 内容、レビュー範囲、既知所見の渡し方、または所見重複を避ける指示を確認・変更したいとき。
-- oracle file レビュー用の AI 呼び出しパラメータについて、使用するモデル種別、推論強度、ファイルアクセスモード、応答 schema との接続を確認したいとき。
-- 指定された oracle file だけでなく関連する oracle file も読むよう誘導するレビュー prompt の構成を追いたいとき。
+- レビュー指摘列挙機能の import 経路を整理し、旧来の実装側経路をまだ残す必要があるか確認するとき。
+- 正本側の実装へ呼び出し元を移行する作業で、互換モジュールの削除条件や残置理由を確認するとき。
+- 互換 import 層が意図的な一時経路なのか、不要な重複実装なのかを判断するとき。
 
 ## Do not read this when
-- oracle review の所見列挙結果そのものの schema 定義だけを確認したいときは、対応する schema 定義を直接読む。
-- oracle file の一般的なレビュー基準や正本仕様断片の品質基準だけを確認したいときは、それらの標準 prompt 部品または oracle 側の基準を読む。
-- CLI サブコマンドの引数処理、実行フロー、所見の保存・表示処理を確認したいときは、呼び出し側の command 実装や所見管理側を読む。
+- レビュー指摘列挙そのものの仕様、出力内容、検出ロジックを確認したいとき。この対象ではなく正本側の実装を読む。
+- 新しい列挙処理や判定ロジックを追加・変更したいとき。この対象は実装本体ではないため、委譲先を確認する。
+- 互換経路と無関係なレビュー機能全般、CLI 表示、テスト方針を調べたいとき。より直接その責務を持つ対象へ進む。
 
 ## hash
-- 2e119a092ea4489b8c9c813ed7acc4cdf1208d064d708afaf75192945fd22ef2
-
-# `judge_finding.json`
-
-## Summary
-- レビューで得られた対象所見を、人間に要確認項目として提示するかどうかを判定するための出力契約を定める。
-- 判定結果だけでなく、所見が妥当と見なせる点と妥当でない点を踏まえた具体的理由を返すことを求める。
-
-## Read this when
-- レビュー所見を採用して人間へ提示するか、却下して提示しないかを機械的に受け渡す出力を実装・検証する場合。
-- レビュー所見の採否判定を行うプロンプト、ビルダー、レスポンス検証、テストを確認する場合。
-- 採否の理由に、妥当性と不妥当性の両面を踏まえた説明が必要かを確認する場合。
-
-## Do not read this when
-- レビュー所見そのものの生成条件、検出ルール、重大度分類、表示形式を確認したい場合。
-- 人間へ提示された後のレビュー UI、保存形式、集計処理、通知処理を確認したい場合。
-- 汎用的な JSON Schema の構文や、他のレビュー用出力契約を調べたい場合。
-
-## hash
-- 260ad5636b98dcbb46dc9ebf3181533f5c550384320219dd6c44661e7ec4e53e
+- 0469200f883330879457152116ebf6fce239124db5e820f3bc7d0122adf3707b
 
 # `judge_finding.py`
 
 ## Summary
-- `cmoc review oracle` で、レビュー所見を人間へ提示すべきかを判定するための AI 呼び出しパラメータを構築する実装。
-- 判定対象の所見、所見を妥当とする理由、妥当ではないとする理由をプロンプト補助情報として渡し、oracle 読み取り前提の完全プロンプトと Structured Output 用スキーマを結び付ける入口。
+- review finding judgment の実体を canonical oracle 側へ委譲するための互換 import module。既存 caller が旧来の realization 側 import path を使っている間だけ残され、実装本体は持たず wildcard import で canonical implementation を再公開する。
+- 互換層を削除できる条件として、全 caller が canonical oracle path を直接使う状態になることを docstring で示す。
 
 ## Read this when
-- レビュー所見の採否判定プロンプトに含める役割、目的、補助情報、標準文脈の指定を確認または変更したいとき。
-- 所見本文、支持理由、反対理由が AI 呼び出しパラメータへどう渡されるかを確認したいとき。
-- 所見採否判定で使うモデル区分、推論量、ファイルアクセスモード、Structured Output スキーマ参照の組み立てを確認したいとき。
+- review finding judgment の import 経路を調査していて、旧来の realization 側 path がまだ使われているか、canonical oracle 側への委譲だけをしているかを確認したいとき。
+- 互換 import module の削除可否を判断するために、残している理由と削除条件を確認したいとき。
+- 同名機能の実装が realization 側にあるように見えるが、実体がどこにあるかを切り分けたいとき。
 
 ## Do not read this when
-- レビュー所見そのものを収集・生成する処理を確認したいとき。
-- 所見が妥当である理由や妥当ではない理由を作る別段階のプロンプト構築を確認したいとき。
-- `cmoc review oracle` 全体の CLI 制御、実行順序、入出力管理を確認したいとき。
-- 判定結果の出力構造そのものを確認または変更したいとき。
+- review finding judgment の判定仕様や具体的な実装内容を確認したいとき。この module は互換 import 層なので、canonical oracle 側の実装を直接読む方が適切。
+- 新しい判定ロジック、データ構造、テスト観点を探しているとき。この module にはそれらの本文はない。
+- 単に oracle file と realization file の一般的な責務境界を確認したいとき。この module 固有の情報は互換 import path の維持理由に限られる。
 
 ## hash
-- f8769d64f769ab87396c4bd48b4b7bbcbdfaffdb32e6cfcff0c6de828850b943
-
-# `merge_finding.json`
-
-## Summary
-- 入力された所見群について、重複・矛盾を解消するための編集操作だけを返す出力契約を定義する。
-- 所見を削除する場合、単一所見を置き換える場合、複数所見を統合する場合の表現と、編集後に残す所見の重大度・根拠・理由の境界を固定する。
-
-## Read this when
-- レビューで得た複数の所見を、最終的に扱いやすい一貫した所見群へ整理する出力を組み立てるとき。
-- 同じ問題を指す複数所見、互いに矛盾する所見、または十分に整理済みで編集不要な所見群をどう表すか確認したいとき。
-- 編集後の所見に、重大度、短い見出し、主な根拠となる正本仕様断片への参照、整理理由を含める必要がある処理を確認するとき。
-
-## Do not read this when
-- 個々の正本仕様断片をレビューして新しい所見を発見する判断基準を知りたいだけのとき。
-- 所見リスト全体ではなく、単一の所見そのものの入力形式や表示形式だけを確認したいとき。
-- 重複・矛盾の整理を行わず、既に確定した所見をそのまま保存・表示・転送する処理だけを扱うとき。
-
-## hash
-- ef00100875ad3a93bd012fc2fe2f8dceb892a60020b8f202a80594e2426a60c0
+- 1af803594cd6409cf869f8b42cff07b9196e96439b57002bc1b935c328c1e069
 
 # `merge_finding.py`
 
 ## Summary
-- `cmoc review oracle` のレビュー結果について、入力済みの所見リストを AI に整理させるための呼び出しパラメータを構築する実装。
-- 所見同士の重複や相互矛盾を解消する編集操作を列挙させ、整理不要な場合は何も変更しない判断を返させる prompt を組み立てる。
-- 対象 oracle ツリーを読み取り専用で扱い、現状の所見リストを補助文脈として渡すレビュー整理処理の入口になる。
+- レビュー用 oracle merge finding の AgentCallParameter 生成を、正本側の生成処理に委譲しつつ、prompt 内の oracle root プレースホルダー表記だけを最小補正する実装。
+- 正本側がまだ誤ったプレースホルダー表記を出す場合に限り、既知 findings を入力として生成された parameter の prompt を差し替え、他の parameter 属性は維持する。
 
 ## Read this when
-- `cmoc review oracle` の所見リストを、重複・矛盾の観点で整理する AI 呼び出し内容を確認または変更したいとき。
-- レビュー結果のマージで、入力所見の識別子を使った編集操作を返させる prompt の goal や補助文脈を調整したいとき。
-- oracle file レビュー用の読み取り権限、利用モデル、推論強度、Structured Output schema の対応付けを確認したいとき。
+- review oracle merge finding 用の AgentCallParameter を realization 側でどう組み立てているか確認したいとき。
+- 正本側の prompt 生成結果に含まれる oracle root プレースホルダー表記の互換補正を調査・修正したいとき。
+- known findings を入力にした review oracle merge finding prompt の生成経路や、正本実装への委譲境界を確認したいとき。
 
 ## Do not read this when
-- 個別の oracle file をレビューして新しい所見を検出する prompt を確認したいとき。
-- 所見リストの編集操作を実際に適用する処理や、適用後の保存・表示処理を探しているとき。
-- レビュー対象となる oracle file の仕様本文や、oracle 標準・レビュー標準そのものを確認したいとき。
+- review oracle merge finding の正本仕様や本来の prompt 内容を確認したいだけなら、対応する oracle 側の本文を読む。
+- AgentCallParameter の型や共通属性の定義を確認したいだけなら、その基礎定義を読む。
+- review oracle merge finding 以外の review builder や oracle prompt 生成処理を調査しているなら、対象となる別モジュールを読む。
 
 ## hash
-- e66e8b43df7e91c85929a443e6698c3d778f4ce9aefdce9bd84f893adc659271
-
-# `validate_finding_advocate.json`
-
-## Summary
-- レビュー対象の所見について、正本仕様断片に基づき妥当性を支持できる新規根拠だけを返すための構造を定める。
-- 既知の根拠と重複しない理由があるかを判定し、推測ではなく oracle file の記述に基づく根拠へ限定する出力契約として位置づけられる。
-
-## Read this when
-- レビュー所見が正本仕様断片に照らして妥当かどうかを、追加の根拠として列挙する出力を扱うとき。
-- 既に提示済みの根拠と重複しない、新規の妥当性理由だけを返す必要がある処理を確認するとき。
-- oracle file の記述を根拠にしたレビュー検証結果の構造を実装・テスト・調整するとき。
-
-## Do not read this when
-- 所見が不当である理由、反証、修正提案、設計改善案を返す構造を探しているとき。
-- レビュー対象そのものの検出ロジックや、oracle file の読み取り・探索手順を確認したいとき。
-- 正本仕様断片に基づかない一般的なレビュー品質評価や、LLM 出力文面の改善を扱うとき。
-
-## hash
-- f265bb48178831b146ee5d071395ff0dd9dfb6bb509f2d062fa54e3243f4cb4e
+- 30f34cf41e060b2567a79f4e46fafe181afdd10fd79a1a7be75807ec8320b973
 
 # `validate_finding_advocate.py`
 
 ## Summary
-- `cmoc review oracle` で、レビュー所見が妥当である理由を追加調査する AI 呼び出し用 prompt と呼び出し条件を組み立てる実装。対象所見、既知の擁護理由、既知の反論理由を補助情報として渡し、oracle file を根拠にした重複しない新規擁護理由だけを返させる責務を持つ。
+- review oracle の finding advocate 検証用 AgentCallParameter を、正本側 builder に委譲して生成する realization 実装。
+- 正本側 prompt に含まれる `<oracle_root>` 表記の typo だけを `<oracle-root>` に補正する薄い wrapper であり、finding と既知理由の動的入力は改変せず、元の parameter の model・reasoning・file access・structured output schema 指定を維持して返す。
 
 ## Read this when
-- レビュー所見を妥当と判断できる根拠を列挙するための AI 呼び出し prompt を確認・変更したいとき。
-- 既知の擁護理由や反論理由を踏まえて、新規の擁護理由だけを出させる制御を確認したいとき。
-- oracle file だけを根拠にし、推測を根拠にしないレビュー所見検証の入力条件を確認したいとき。
+- review oracle の finding advocate 検証呼び出しで、realization 側が正本側 builder をどのように包んでいるか確認したいとき。
+- 生成される prompt の `<oracle-root>` 表記補正、またはその補正が動的入力へ影響しないことを確認・変更したいとき。
+- AgentCallParameter の各フィールドを保持したまま prompt だけを最小補正する実装意図を確認したいとき。
 
 ## Do not read this when
-- レビュー所見が妥当ではない理由を列挙する prompt を確認したいとき。
-- レビュー所見の生成、集約、表示、または CLI サブコマンド全体の制御を確認したいとき。
-- 共通 prompt 構築処理、構造化文書の描画、パス解決、または AI 呼び出しパラメータ型そのものを確認したいとき。
+- review oracle の finding advocate 検証そのものの正本仕様や元 prompt の全体内容を確認したいとき。
+- finding、advocate reasons、challenger reasons の内容生成や評価ロジックを調べたいとき。
+- review oracle 以外の builder、または typo 補正を含まない通常の parameter 生成経路を調べたいとき。
 
 ## hash
-- ddc5c0144f1ad335748a4d297b1dc05658fb418b99a97454d6ddced04fc15041
-
-# `validate_finding_challenger.json`
-
-## Summary
-- 対象所見が妥当ではないと判断できる新規理由だけを返すための Structured Output schema。
-- 理由は推測ではなく oracle file の記述に基づく具体的根拠に限定し、既知理由と重複するものがなければ空のリストで表す。
-
-## Read this when
-- レビュー所見に対して、oracle file を根拠に反証・異議申し立てとなる理由を構造化して返す処理を確認する。
-- 既知の反証理由と重複しない、新しい不当性の根拠だけを出力すべき場面の出力契約を確認する。
-- oracle file の記述に基づく理由と、推測や実装都合に基づく理由を区別する必要がある。
-
-## Do not read this when
-- レビュー所見そのものを生成するための出力契約を確認したい。
-- 所見が妥当である理由、修正案、実装方針、テスト方針を扱いたい。
-- oracle file ではなく realization file、一般的なベストプラクティス、推測に基づく判断理由を扱いたい。
-- 個々の oracle file の内容や、所見の妥当性判断に使う正本仕様断片そのものを読みたい。
-
-## hash
-- a90232c11fe6071e9aaf6200efe525e546aef4775f06fb11cc71018c28f1d214
+- 31b050587e1d463e96b41b466bf5c79a8f3e17f87aa8c35847045f73823e5d2a
 
 # `validate_finding_challenger.py`
 
 ## Summary
-- `cmoc review oracle` でレビュー所見が妥当ではない理由を列挙する反証担当エージェント呼び出しパラメータを構築する実装。
-- 対象所見、既知の妥当理由、既知の否定理由を補助プロンプトに含め、oracle file を具体的根拠として新規の否定理由だけを返すよう指示する。
-- モデル種別、推論量、oracle 読み取り専用のファイルアクセス方針、対応する出力定義への接続をまとめて返す入口になっている。
+- 既存呼び出し元向けに、古い import 経路から正本側の challenger finding validation 実装を再公開する互換モジュール。
+- 実体の検証ロジックは持たず、全公開名を正本側実装へ委譲する入口としてだけ機能する。
+- 呼び出し元が正本側の経路へ移行し終えた後に削除する前提の一時的な互換層である。
 
 ## Read this when
-- `cmoc review oracle` の所見検証で、所見を否定する側のプロンプト内容やエージェント呼び出し条件を確認・変更したいとき。
-- 対象所見、既知の妥当理由、既知の否定理由がどのようにプロンプトへ渡されるかを追いたいとき。
-- 否定理由の列挙で、既存理由との重複排除、oracle file に基づく具体的根拠、推測禁止、新規理由なしの場合の扱いを確認したいとき。
-- レビュー用プロンプト構築で oracle 標準や review oracle 標準を有効にする箇所を確認したいとき。
+- 古い import 経路を使う呼び出し元が残っているか確認する。
+- challenger finding validation の import 互換性や移行完了条件を調べる。
+- 互換モジュールを削除できるか、または削除前に参照元を正本側へ移す必要があるか判断する。
 
 ## Do not read this when
-- レビュー所見が妥当である理由を列挙する側のプロンプトを調べたいとき。
-- `cmoc review oracle` の CLI 引数解析、サブコマンド配線、入出力の実行制御を調べたいとき。
-- oracle file 自体の正本仕様、レビュー標準、または Structured Output の内容を確認したいとき。
-- プロンプト共通部品の生成規則や markdown レンダリングの詳細を調べたいとき。
+- challenger finding validation の実際の判定仕様や検証ロジックを確認したい。その場合は正本側の実装を読む。
+- 新しい検証処理を実装・変更したい。この対象は委譲だけであり、挙動本体の変更先ではない。
+- 互換 import と無関係な review oracle 周辺の処理を調べている。
 
 ## hash
-- de331e5be31635dba0c8e8cde674f4bbdc384d3df1ccb04bc9aa7c5da4ecaac8
+- 65259bcd79ca803eef7fc76ba4bbabf8267bb9b725e86300e20be0da2181ff24

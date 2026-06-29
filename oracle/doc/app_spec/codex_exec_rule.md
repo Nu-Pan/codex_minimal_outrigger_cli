@@ -30,6 +30,7 @@
 - Codex CLI に対するファイルアクセス制限の設定は codex profile 経由で行う
 - 具体的な設定は AgentCallParameter builder を正本とする
 - cmoc はファイルアクセス制限についての情報をプロンプトとして注入して Codex CLI に知らせる
+- agent call 後に、編集禁止ファイル・ディレクトリに差分が出ているかのチェックするのは禁止
 
 ## Model, Reasoning Effort
 

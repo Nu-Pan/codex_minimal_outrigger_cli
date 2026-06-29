@@ -1,102 +1,140 @@
+# `__init__.py`
+
+## Summary
+- oracle.acp_builder を既存の acp.builder 参照から利用できるようにするための互換入口。正本実装を oracle 側に置いたまま、公開済み参照経路を維持する役割を持つ。
+- 互換維持のためだけに残される薄い入口であり、削除条件は realization 側と利用者向け公開面の双方から acp.builder.* 参照がなくなること。
+
+## Read this when
+- acp.builder.* 参照が残っている理由や、oracle.acp_builder との互換関係を確認したいとき。
+- acp.builder 系の公開入口を削除・移動・置換してよいか判断したいとき。
+- realization 側の互換コードについて、残す理由と削除条件を確認したいとき。
+
+## Do not read this when
+- oracle.acp_builder の具体的な実装内容や builder の本体仕様を調べたいとき。
+- acp.builder.* 以外の ACP 関連モジュールの責務や挙動を調べたいとき。
+- 互換入口ではなく、新規機能の実装場所やテスト対象を探しているとき。
+
+## hash
+- bce540ff289ae7f7f8c83e9796e27376d4c6313646e45756110fa755ab94158c
+
 # `apply`
 
 ## Summary
-- `cmoc apply fork` 向けの AI 呼び出しパラメータ構築を扱う領域。変更差分の人間向け要約、起点ファイルごとの所見列挙、列挙済み所見をもとにした realization file 修正依頼という各段階で、prompt、補助入力、file access mode、model/reasoning、Structured Output schema をどう組み立てるかへの入口になる。
-- 実際の fork 適用処理や git・作業ツリー操作ではなく、apply fork の各フェーズで AI に何を読ませ、どの権限で呼び出し、どの構造化出力を期待するかを定義する。
+- apply 系の agent call parameter builder への入口となる領域。package 初期化要素と、fork 適用で使う builder 群への下位入口を含み、実処理は主に下位の個別 builder 領域に委ねる。
+- realization 側から oracle 側 builder を利用するための互換 package として位置づけられ、apply 系の処理準備を調べる際に、まず package 構造と下位領域の分担を見分けるための階層である。
 
 ## Read this when
-- `cmoc apply fork` の作業レポート用に、raw git diff をカテゴリ別の変更要約へ変換する AI 呼び出しや出力契約を確認したいとき。
-- 起点となる oracle file または realization file から関連ファイルを読ませ、realization file の要修正所見を列挙させる調査フェーズの prompt、モデル指定、権限、出力形式を確認または変更したいとき。
-- 検出済み所見を AI への修正作業指示へ変換する際の prompt 内容、realization file 書き込み権限、git add/commit 禁止、realization standard 適用条件を確認したいとき。
-- apply fork 系で、raw diff、起点パス、所見 JSON などの補助入力が complete prompt と AgentCallParameter にどう接続されるかを追いたいとき。
-- apply fork の要約・所見列挙フェーズにおける Structured Output schema の意味的な責務と、その schema を使う呼び出し側の対応関係を確認したいとき。
+- apply 系の agent call parameter builder がどの下位領域に分かれているかを確認したいとき。
+- apply builder 領域が oracle 側の package 構造に対応する互換 packageとして置かれているか確認したいとき。
+- fork 適用に関する agent 呼び出し準備、oracle builder への委譲、realization 側 parameter 型への適合を調べる入口を探しているとき。
+- 変更要約、ファイル単位所見列挙、所見適用など、apply fork の個別 agent 呼び出し準備へ進む前に上位の配置を確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` の CLI 引数解析、サブコマンド登録、実行フロー全体、git branch 操作、実際の fork 適用処理、作業ツリー変更処理を調べたいだけのとき。
-- 個々の差分検出、差分分類アルゴリズム、ファイル列挙、複数ファイル分の呼び出し集約、結果の適用制御を確認したいとき。
-- complete prompt の共通構築規則、Markdown rendering、StructDoc、path model、file access mode、AgentCallParameter などの基礎型や共通定義そのものを調べたいとき。
-- 単一ファイルの本文内容、具体的な変更後コード、または realization file の実装修正箇所を直接調べたいだけのとき。
-- 一般的な INDEX.md 用エントリーの書き方やルーティング文書全体の規約を確認したいとき。
+- apply fork の具体的な builder 実装や repo root 解決、oracle import 経路補正、parameter 型変換を直接調べたいときは、下位の fork 用 builder 領域へ進む。
+- apply fork コマンド全体の制御フロー、fork 作成、branch 操作、diff 生成、CLI 引数処理を調べたいときは、コマンド実装や上位の apply fork 実装へ進む。
+- agent prompt、出力条件、変更要約や所見処理の正本仕様を確認したいときは、委譲先の oracle 側 builder または正本仕様断片を読む。
+- package 初期化の互換性メモだけで十分な場合を除き、この階層自体には公開 API や具体的な適用ロジックの定義を期待しない。
 
 ## hash
-- d0ed97b71e987d094ce82f137529135272604cffd96cb0c787bf7cccb0bbd82f
+- 701ec977b0f06fbfb6f6a79d4e93b731b69f1160c2dc4895c4de00ac87f32c96
 
 # `indexing`
 
 ## Summary
-- cmoc の目次情報生成のうち、対象ファイルまたはディレクトリから INDEX.md 用エントリーを作る AI 呼び出し設定と、その structured output の外形を扱う領域。
-- 対象パスの解決、読み取り専用プロンプトへの役割・目的・制約・本文埋め込み、モデルや推論負荷、出力検証 schema の指定を確認する入口となる。
-- エントリーに書く意味内容の判断そのものではなく、個別対象からエントリーを生成させるための呼び出し条件と返却形の制約を扱う。
+- 正本側に置かれた indexing 関連実装を、既存の公開参照から到達できるようにする互換入口をまとめる領域。実処理や仕様本体ではなく、旧来の import 経路を壊さないための薄い再公開境界を担う。
+- 互換コードを残す理由、正本側実装との対応、削除できる条件を確認するための入口であり、indexing の生成処理・探索処理・データ構造そのものはこの領域の責務ではない。
 
 ## Read this when
-- cmoc indexing が個別対象の INDEX.md エントリー生成を AI に依頼する流れや呼び出しパラメータを確認したいとき。
-- エントリー生成時に既存 INDEX.md を根拠にさせず、対象本文と必要な関連文書だけを読む制約を調整したいとき。
-- 生成結果の検証で、要約、読む条件、読まなくてよい条件を配列文字列として返し、余分な項目を許さない外形を確認したいとき。
-- 目次情報生成用のモデル選択、推論負荷、ファイルアクセスモード、structured output schema の指定に関係する実装を変更するとき。
+- 旧来の公開名や import 経路が、正本側の indexing 実装へどのように接続されているか確認したいとき。
+- 正本側へ実装を集約しつつ、既存利用者や残存参照を壊さないための互換公開面を確認したいとき。
+- 互換入口を残す理由、削除条件、残存参照の有無に関わる変更を検討しているとき。
+- 公開参照の維持または廃止に伴い、再公開先の正本側実装との対応関係を確認したいとき。
 
 ## Do not read this when
-- INDEX.md 全体を走査、更新、保存するファイルシステム処理を調べたいとき。
-- 生成されたエントリーを markdown として描画する処理や、目次ファイル全体の組み立てを調べたいとき。
-- 特定の対象について実際に読むべきかどうか、またはエントリーにどの意味内容を書くべきかを判断したいとき。
-- 通常の実装変更やテスト追加で、目次情報生成プロンプト、AI 呼び出し設定、出力 schema に関係しないとき。
+- indexing の具体的な生成処理、探索処理、データ構造、入出力仕様を確認したいとき。実体を持つ正本側実装を読む。
+- インデックスエントリーの型・関数・挙動そのものを確認したいとき。再公開先の正本側実装を読む。
+- 新しい indexing 機能を追加または変更したいとき。互換入口ではなく処理本体の実装側を読む。
+- 互換参照の削除条件や再公開先ではなく、正本仕様全体を確認したいとき。該当する正本側の本文を読む。
 
 ## hash
-- a7628c344fe8ab13d81cb306fe13865c27f52674f0200efbb0196feca500a2a2
+- 0ab736b2c29b4ef0eadf9408768a9f99642c5d3d95caecb6c4def825217c487a
+
+# `quota_probe.py`
+
+## Summary
+- Codex quota 枯渇後の availability probe で使う最小 AgentCallParameter builder。通常作業ではなく quota 回復確認だけを目的に、意味のある編集や調査を依頼しない prompt を返す。
+- probe 実行時の CODEX_HOME、profile、cwd、ログ保存、代表 polling 制御は runtime 側が担い、この builder は stdin に渡す probe prompt の境界だけを持つ。
+
+## Read this when
+- quota 枯渇後の polling probe がどの prompt を Codex CLI に渡すか確認または変更したいとき。
+- oracle 側に専用 builder file がない quota probe 境界について、realization 側の最小 builder と runtime の責務分担を確認したいとき。
+- Codex exec retry のテストで、quota availability probe の prompt 由来を追いたいとき。
+
+## Do not read this when
+- quota error 検出、polling loop、resume token、代表 probe 共有、call log/subcommand log の制御を調べたいときは、Codex exec runtime を読む。
+- Codex profile、CODEX_HOME、sandbox、cwd、schema 保存の構築を調べたいときは、Codex profile/runtime helper を読む。
+- apply/review/session/TUI 用の AgentCallParameter builder を確認したいときは、それぞれの下位 builder 領域を読む。
+
+## hash
+- 4a4a7eebc4ed7184af908b6f5e4a7e4a93d853c29603dd8e2c73d85ce792dcac
 
 # `review`
 
 ## Summary
-- `cmoc review oracle` の AI 呼び出しビルダーと Structured Output 契約をまとめる領域。oracle file から新規所見を列挙し、所見の擁護・反証理由を追加調査し、採否判定し、重複・矛盾する所見群を整理する各段階への入口になる。
-- 各 Python 実装は、対象所見や既知理由・既知所見を補助文脈として渡し、oracle 読み取り前提のプロンプト、モデル設定、推論量、ファイルアクセス方針、対応する JSON schema 参照を組み立てる責務を持つ。
-- 各 JSON schema は、所見列挙、妥当性支持理由、妥当性否定理由、採否判定、所見マージ編集操作について、AI 応答を機械処理できる構造へ固定する責務を持つ。
+- review builder 領域の realization 側 package で、正本側 review oracle builder との互換 import 境界と、旧経路から正本側実装へ委譲する薄い入口を扱う。
+- review finding の列挙・判定・challenger validation は実装本体ではなく再公開層として置かれ、merge finding と finding advocate validation では正本側 builder の生成結果を保ちながら prompt 内の oracle root 表記だけを補正する。
 
 ## Read this when
-- `cmoc review oracle` のレビュー AI に渡すプロンプトや呼び出しパラメータを、所見列挙・検証・採否判定・マージの段階別に確認または変更したいとき。
-- oracle file を根拠にしたレビュー所見について、新規所見、既知理由との重複除外、擁護理由、反証理由、人間提示可否、所見群の重複・矛盾整理をどう扱うか確認したいとき。
-- レビュー結果の Structured Output schema と、その schema を参照するビルダー実装の対応関係を確認・実装・テストしたいとき。
-- oracle レビュー用 AI 呼び出しで使うモデル区分、推論強度、oracle 読み取り専用のファイルアクセス制約、標準プロンプト部品の有効化箇所を追いたいとき。
+- review builder 領域で、正本側 review oracle builder に対応する realization 側 package や旧 import 経路の互換境界を確認したいとき。
+- review oracle builder 周辺の処理が、この領域の実装本体なのか、正本側実装への委譲または最小 wrapper なのかを切り分けたいとき。
+- review oracle merge finding や finding advocate validation の AgentCallParameter 生成で、正本側 builder への委譲と prompt 内 oracle root 表記補正の有無を確認したいとき。
+- package としての互換性や import 経路の成立だけを確認したいとき。
 
 ## Do not read this when
-- CLI サブコマンドの引数解析、実行順序、入出力管理、所見の保存・表示・適用処理を確認したいとき。
-- レビュー対象となる oracle file の正本仕様本文、oracle 標準、レビュー標準そのものの妥当性や内容を調べたいとき。
-- 共通プロンプト部品、構造化文書の描画、パス解決、AI 呼び出しパラメータ型など、この領域のビルダーから利用される汎用基盤を確認したいとき。
-- レビュー後に人間へ提示された所見の UI、通知、集計、永続化など、AI 応答生成後の処理だけを扱うとき。
+- review finding の列挙・判定・検証そのものの正本仕様、出力内容、検出ロジック、評価ロジックを調べたいとき。
+- AgentCallParameter の共通型、model、reasoning、file access、structured output schema などの基礎定義を調べたいとき。
+- review oracle 以外の builder、CLI 表示、テスト方針、または互換 import と prompt 表記補正に関係しない review 機能全般を調べたいとき。
+- review builder の新しい判定ロジックや検証処理を追加・変更する実装本体を探しているとき。
 
 ## hash
-- e26067e72d898d32b326c708729c24c0cb480da17a4084bf89f9288d93eb0374
+- b5982b09e4ce2166f96a96ee67c2e95418af42cdfc1006f94bbe53b9ce6eef84
 
 # `session`
 
 ## Summary
-- AI エージェントへ依頼する session 関連処理の呼び出しパラメータを組み立てる領域。対象パスの解決、対象ファイル一覧、作業範囲、禁止事項、例外的な編集許可を含む complete prompt とモデル設定の確認入口になる。
+- ACP builder の session 領域で、oracle 側と同じ package 構造を実装側に成立させるための互換入口を扱う階層。
+- この階層自体は session builder の実処理を担う場所ではなく、実体を持たない package 初期化と、session join 配下の互換境界へ進むための入口として位置づけられる。
 
 ## Read this when
-- session 関連コマンドから AI エージェントへ渡す呼び出しパラメータ、complete prompt、モデル設定を確認または変更したいとき。
-- merge conflict marker 解消の対象ファイルが worktree 上の実パスへどう解決され、AI への対象一覧や作業範囲としてどう渡されるかを確認したいとき。
-- conflict marker 解消時の作業境界、禁止事項、oracle file の限定的な編集例外を確認または調整したいとき。
+- ACP builder の session 領域が oracle 側の package 構造とどう対応しているかを確認したいとき。
+- session 領域が import 可能な package として存在する理由を確認したいとき。
+- session join 配下へ進む前に、この領域が実処理ではなく互換 package 境界を扱う場所かどうかを見分けたいとき。
 
 ## Do not read this when
-- session 関連コマンド全体の制御フロー、merge 実行、conflict 検出、状態管理を調べたいとき。
-- complete prompt の共通構築、構造化 markdown レンダリング、path model、AgentCallParameter 型そのものを調べたいとき。
-- AI 呼び出し後の検証、テスト、CLI 入出力の外部仕様を確認したいとき。
+- session builder の具体的な処理、状態管理、入出力変換、関数、クラス、定数を調べたいとき。
+- session join の衝突解決ロジックや判定内容など、実体を持つ処理を確認したいとき。
+- oracle 側の正本仕様や互換対象そのものを確認したいとき。
 
 ## hash
-- befc1a0955fd583c3a081c4e67e6b5e71b4234dfb3b41fece2837fcf6c832c09
+- 8c4fa4ee9bc1e65c70dcc8ff005ed00bb8e4079aff3755b9674a92cfef3a0446
 
 # `tui`
 
 ## Summary
-- 対象ファイル本文から、TUI のパラメータ解決用プロンプト構築と、その判定結果 schema を扱う領域として要約を作ります。既存の `INDEX.md` は読まず、対象ディレクトリ直下の本文だけ確認します。
+- ACP builder の TUI 互換 package。正本側の TUI 起動パラメータ生成や resolve-parameter builder を既存 import path から参照できるようにする薄い再公開層で、TUI 画面制御や builder 本体の実装は担わない。
+- TUI 関連の公開 import surface、oracle 側実装への委譲、利用者向けに公開される file access mode 選択肢を確認する入口。
 
 ## Read this when
-- TUI で入力された依頼から、AI Agent CLI/TUI 実行時のファイルアクセス権限や参照すべき標準群を選ばせる parameter resolve 処理を確認・変更するとき。
-- パラメータ解決担当へ渡すプロンプト、アクセスモード候補、モデル・reasoning・sandbox・Structured Output schema の対応を確認するとき。
-- パラメータ解決結果として、権限選択と oracle・realization・review・INDEX.md エントリー作成標準の参照要否をどのような論理情報で返すかを確認するとき。
+- ACP builder の TUI 関連 import path が正本側実装と互換に保たれているか確認したいとき。
+- TUI 起動パラメータ生成関数や resolve-parameter builder が、既存公開面から oracle 側の canonical 実装へどのように接続されているか確認したいとき。
+- TUI 側の互換モジュールを削除・移動・置換してよいか判断するため、残している理由や削除条件を確認したいとき。
+- TUI の import surface で公開される file access mode の選択肢を確認したいとき。
 
 ## Do not read this when
-- TUI サブコマンドの起動、エディタ入力、元プロンプトの前処理、または解決結果を実際の起動パラメータへ適用する処理を調べるとき。
-- 各ファイルアクセスモードや各標準文書の本文そのものを確認・変更したいとき。
-- oracle file や realization file の責務、編集可否、品質基準、または INDEX.md エントリー本文の一般的な書き方だけを確認したいとき。
+- TUI 起動パラメータや resolve-parameter builder の具体的な仕様、値、組み立てロジックを確認したいとき。ここは再公開層なので oracle 側の実体を読む方が直接的。
+- TUI 画面の描画、イベント処理、ユーザー操作、端末 UI の挙動を調べたいとき。
+- FileAccessMode 自体の定義や意味を確認したいとき。ここは利用可能な列挙値を公開するだけで、mode 定義は別の基本モジュールが担う。
+- TUI 以外の ACP builder import 経路、UI 非依存の parameter 構築、または CLI 挙動そのものを設計・確認したいとき。
 
 ## hash
-- 778e755d0682c8f5994005e35065398602a0b7a42afacc310d4d8a531363ac3a
+- 0f7127854e17a6db82e7f58872ea5748010a064dad179defecf04b874bc1f572

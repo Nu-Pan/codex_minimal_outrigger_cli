@@ -79,6 +79,13 @@ def create_run_worktree(
     root: Path, branch: str, worktree: Path, start_point: str = "HEAD"
 ) -> Path:
     """既存 path を除去してから run/apply 用 linked worktree を作る。"""
+    expected_worktree = _expected_managed_worktree(root, branch)
+    if worktree.resolve() != expected_worktree:
+        raise CmocError(
+            "run worktree path が cmoc 管理領域と一致しません。",
+            ["branch 名と worktree path の対応を確認してください。"],
+            f"branch: {branch}\nworktree: {worktree}\nexpected: {expected_worktree}",
+        )
     worktree.parent.mkdir(parents=True, exist_ok=True)
     if worktree.exists():
         shutil.rmtree(worktree)
@@ -88,6 +95,7 @@ def create_run_worktree(
 
 def remove_worktree(root: Path, worktree: Path) -> CommandResult:
     """git worktree remove 失敗時も実体 directory の削除まで試みる。"""
+    _require_managed_worktree(root, worktree)
     result = run_git(
         ["worktree", "remove", "--force", str(worktree)], root, check=False
     )
@@ -100,6 +108,53 @@ def remove_worktree(root: Path, worktree: Path) -> CommandResult:
 def delete_branch(root: Path, branch: str, force: bool = False) -> CommandResult:
     """削除失敗を caller が warning 化できる branch 削除 helper。"""
     return run_git(["branch", "-D" if force else "-d", branch], root, check=False)
+
+
+def _expected_managed_worktree(root: Path, branch: str) -> Path:
+    parts = branch.split("/")
+    if (
+        len(parts) != 4
+        or parts[0] != "cmoc"
+        or parts[1] not in {"apply", "run"}
+        or not parts[2]
+        or not parts[3]
+    ):
+        raise CmocError(
+            "run worktree を作成できない branch 名です。",
+            ["cmoc apply/run branch 名を確認してください。"],
+            f"branch: {branch}",
+        )
+    return (
+        _main_worktree_root(root) / ".cmoc" / "worktrees" / parts[2] / parts[3]
+    ).resolve()
+
+
+def _require_managed_worktree(root: Path, worktree: Path) -> None:
+    base = (_main_worktree_root(root) / ".cmoc" / "worktrees").resolve()
+    resolved = worktree.resolve()
+    try:
+        relative = resolved.relative_to(base)
+    except ValueError as exc:
+        raise _unmanaged_worktree_error(worktree, base) from exc
+    # <work-root>/oracle/src/oracle/other/path_model.py
+    # work-root deletion is limited to .cmoc/worktrees/<parent-run-id>/<run-id>.
+    if len(relative.parts) != 2 or not all(relative.parts):
+        raise _unmanaged_worktree_error(worktree, base)
+
+
+def _unmanaged_worktree_error(worktree: Path, base: Path) -> CmocError:
+    return CmocError(
+        "cmoc 管理外の worktree は削除できません。",
+        ["worktree path と session state file を確認してください。"],
+        f"worktree: {worktree}\nmanaged_base: {base}",
+    )
+
+
+def _main_worktree_root(root: Path) -> Path:
+    common = run_git(
+        ["rev-parse", "--path-format=absolute", "--git-common-dir"], root
+    ).stdout.strip()
+    return Path(common).parent.resolve()
 
 
 def _cmoc_ignore_status(root: Path) -> tuple[str, int]:

@@ -1,22 +1,36 @@
+# `__init__.py`
+
+## Summary
+- oracle 側の apply builder package と対応する互換 package であることだけを示す package 初期化要素。実処理や公開 API の定義ではなく、同領域を package として扱うための入口に位置づけられる。
+
+## Read this when
+- apply builder 領域が oracle 側の package 構造と対応しているかを確認したいとき。
+- package 初期化部分に実装意図や互換性メモがあるかを確認したいとき。
+
+## Do not read this when
+- apply builder の具体的な処理、変換、適用ロジックを調べたいとき。その場合は同 package 内の実装本体を読む。
+- 公開関数、クラス、入出力仕様、エラー処理を確認したいとき。この対象にはそれらの定義は含まれない。
+
+## hash
+- a6df93a5897c266e6f48287739c8bf8192733ea9fb19e2f6eb05a302f4165b06
+
 # `fork`
 
 ## Summary
-- `cmoc apply fork` の AI エージェント呼び出しに関わる prompt builder と構造化出力契約をまとめる領域。差分要約、起点ファイルごとの適合性調査、検出済み所見への修正依頼という各フェーズで、role・goal・補助入力・file access mode・model/reasoning・Structured Output schema をどう組み立てるかへの入口になる。
-- 実際の git 操作や作業ツリー操作ではなく、apply fork の各段階で AI に何を読ませ、何を出力させ、どの権限で呼び出すかを定義する責務を持つ。
+- apply fork 用の agent call parameter builder 群をまとめる実装ディレクトリ。各 builder は realization 側の入口として、repo root 解決、oracle 側 builder の import 準備、oracle builder への委譲、realization 側 parameter 型への適合を担う。
+- この階層は、変更要約、ファイル単位所見列挙、所見適用といった `cmoc apply fork` の個別 agent 呼び出し準備と、それらが共有する oracle 連携 helper への入口である。
 
 ## Read this when
-- `cmoc apply fork` の作業レポート向けに、変更差分を人間向けカテゴリ別要約へ変換する AI 呼び出しや出力契約を確認したいとき。
-- 起点ファイルから関連する oracle file と realization file を読ませ、仕様と実装の乖離や要修正所見を列挙させる調査フェーズの prompt、モデル指定、権限、出力形式を確認または変更したいとき。
-- 検出済み所見を AI への修正作業指示へ変換する際の prompt 内容、realization file 修正条件、git add/commit 禁止、realization standard 適用などの作業条件を確認したいとき。
-- apply fork 系で、AI エージェントに渡す raw diff、所見 JSON、起点パスなどの補助入力が complete prompt と AgentCallParameter にどう接続されるかを追いたいとき。
-- apply fork のレビュー・要約・所見対応フェーズにおける Structured Output schema の意味的な責務と、その schema を使う呼び出し側の対応関係を確認したいとき。
+- `cmoc apply fork` で agent call parameter をどの builder が組み立てるか確認したいとき。
+- realization 側 apply fork builder が oracle 側 builder をどのように import 可能にし、委譲結果を realization 側型へ変換しているか確認したいとき。
+- 変更要約、ファイル単位所見列挙、所見適用のいずれかの agent 呼び出し準備を調査・変更したいとき。
+- apply fork builder 群に共通する repo root 解決、oracle src import 経路補正、ACP parameter 型境界を確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` の CLI 引数解析、サブコマンド登録、実行フロー全体、git branch 操作、実際の fork 適用処理、作業ツリー変更処理を調べたいだけのとき。
-- 個々の差分検出、差分分類アルゴリズム、ファイル列挙、複数ファイル分の呼び出し集約、結果の適用制御を確認したいとき。
-- complete prompt の共通構築規則、Markdown rendering、StructDoc、path model、file access mode、AgentCallParameter などの基礎型や共通定義そのものを調べたいとき。
-- 単一ファイルの本文内容、具体的な変更後コード、または realization file の実装修正箇所を直接調べたいだけのとき。
-- 一般的な INDEX.md 用エントリーの書き方やルーティング文書全体の規約を確認したいとき。
+- `cmoc apply fork` コマンド全体の制御フロー、fork 作成、branch 操作、diff 生成、CLI 引数処理を調べたいときは、上位の apply fork 実装や CLI 側へ進む。
+- agent prompt、出力条件、変更要約や所見処理の正本仕様を確認したいときは、委譲先の oracle 側 builder や正本仕様断片を読む。
+- 汎用 git 操作 helper、path model、ACP 共通型そのものを調べたいだけなら、それぞれの共通実装や基本型定義へ進む。
+- package 初期化 docstring だけを確認したい場合を除き、互換 package の存在確認だけで個別 builder の処理内容まで読む必要がないとき。
 
 ## hash
-- dfcfb1f164fc840aea194a1f73483c2ac39d2a5afcffeaea0da829f68e648827
+- b61afcbe59a8921889d4655a9d05a907c43f8ec6b2d43238acc56489c3b9cb2d

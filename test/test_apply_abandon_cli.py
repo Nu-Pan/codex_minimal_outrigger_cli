@@ -5,10 +5,14 @@
 running process の停止は同じ abandon 操作の成功・警告・失敗条件を共有するため、
 分割すると同じ state fixture と境界条件を複数ファイルで読み直すことになる。
 現状は apply abandon の読み取り文脈を一箇所に保つ方が凝集性が高い。
+根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import json
 import subprocess
+import threading
+import time
+from multiprocessing import Pipe, Process
 from pathlib import Path
 
 import pytest
@@ -23,6 +27,15 @@ from main import app
 import sub_commands.apply.abandon as apply_abandon_module
 import sub_commands.apply.fork as apply_fork_module
 from sub_commands.apply import _runtime as apply_runtime
+
+
+def hold_apply_process_id_lock(path: Path, ready: object, release: object) -> None:
+    """別 process で advisory lock を保持するテスト用 helper。"""
+    from commons.runtime_codex_profile import apply_process_id_file_lock
+
+    with apply_process_id_file_lock(path):
+        ready.send(True)
+        release.recv()
 
 
 def setup_linked_session_apply(
@@ -258,6 +271,77 @@ def test_apply_process_id_reads_tracked_child_processes(tmp_path: Path) -> None:
     )
 
 
+def test_apply_process_id_read_waits_for_tracking_lock(tmp_path: Path) -> None:
+    """abandon は child pid file 更新中の中間状態を読まない。"""
+    root = tmp_path
+    path = apply_runtime.apply_process_id_path(root, "session")
+    path.parent.mkdir(parents=True)
+    path.write_text("12345 20\nchild 23456 30\n")
+    ready_parent, ready_child = Pipe()
+    release_parent, release_child = Pipe()
+    lock_holder = Process(
+        target=hold_apply_process_id_lock,
+        args=(path, ready_child, release_child),
+    )
+    result: list[apply_runtime.ApplyProcessIdentity | None] = []
+    reader = threading.Thread(
+        target=lambda: result.append(
+            apply_runtime.read_apply_process_id(root, "session")
+        )
+    )
+
+    lock_holder.start()
+    assert ready_parent.recv() is True
+    reader.start()
+    time.sleep(0.1)
+    assert result == []
+    release_parent.send(True)
+    reader.join(2)
+    lock_holder.join(2)
+
+    assert not reader.is_alive()
+    assert not lock_holder.is_alive()
+    assert result == [
+        apply_runtime.ApplyProcessIdentity(
+            12345, 20, (apply_runtime.ProcessIdentity(23456, 30),)
+        )
+    ]
+
+
+def test_stop_child_process_group_accepts_exited_zombie_leader(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """終了済み child が親の reap 待ちで group に残っても親停止へ進める。"""
+    sent: list[int] = []
+
+    monkeypatch.setattr(apply_runtime, "process_start_time", lambda process_id: 30)
+    monkeypatch.setattr(apply_runtime.os, "getpgid", lambda process_id: process_id)
+    monkeypatch.setattr(apply_runtime, "open_process_fd", lambda process_id, name: 10)
+    monkeypatch.setattr(
+        apply_runtime,
+        "send_process_group_signal",
+        lambda process_group_id, sig: sent.append(sig),
+    )
+    monkeypatch.setattr(
+        apply_runtime,
+        "wait_process_group_exit",
+        lambda process_group_id, timeout: False,
+    )
+    monkeypatch.setattr(
+        apply_runtime,
+        "process_group_has_no_running_members",
+        lambda process_fd, pgid: True,
+    )
+    monkeypatch.setattr(apply_runtime.os, "close", lambda process_fd: None)
+
+    warning = apply_runtime.stop_child_process_group(
+        apply_runtime.ProcessIdentity(23456, 30)
+    )
+
+    assert warning is None
+    assert sent == [apply_runtime.signal.SIGTERM]
+
+
 def test_stop_apply_process_treats_raced_exit_as_stopped(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -320,6 +404,40 @@ def test_stop_apply_process_does_not_signal_reused_pid(
     )
 
     assert warning == "stale apply process id ignored: 12345"
+    assert sent == []
+
+
+def test_stop_child_process_group_opens_pidfd_before_identity_check(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """child PID reuse 確認前に pidfd を握り、別 group への signal を避ける。"""
+    order: list[str] = []
+    sent: list[int] = []
+
+    def fake_open_process_fd(process_id: int, name: str) -> int:
+        order.append(f"open:{process_id}:{name}")
+        return 10
+
+    def fake_process_start_time(process_id: int) -> int:
+        order.append(f"start:{process_id}")
+        return 99
+
+    monkeypatch.setattr(apply_runtime, "open_process_fd", fake_open_process_fd)
+    monkeypatch.setattr(apply_runtime, "process_start_time", fake_process_start_time)
+    monkeypatch.setattr(apply_runtime.os, "getpgid", lambda process_id: process_id)
+    monkeypatch.setattr(
+        apply_runtime,
+        "send_process_group_signal",
+        lambda process_group_id, sig: sent.append(sig),
+    )
+    monkeypatch.setattr(apply_runtime.os, "close", lambda process_fd: None)
+
+    warning = apply_runtime.stop_child_process_group(
+        apply_runtime.ProcessIdentity(23456, 30)
+    )
+
+    assert warning == "stale apply child process id ignored: 23456"
+    assert order == ["open:23456:Codex subprocess", "start:23456"]
     assert sent == []
 
 

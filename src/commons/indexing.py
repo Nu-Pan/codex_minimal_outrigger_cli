@@ -2,6 +2,7 @@ import fcntl
 from collections.abc import Iterator
 from contextlib import contextmanager
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
@@ -21,6 +22,14 @@ from commons.runtime_codex_preflight import configure_indexing_preflight
 
 
 CodexExec = Callable[..., object]
+INDEX_ENTRY_KEYS = {"summary", "read_this_when", "do_not_read_this_when"}
+
+
+@dataclass
+class _IndexDirectoryPlan:
+    directory: Path
+    entries: list[str | None]
+    missing_children: list[tuple[int, Path, str]]
 
 
 def enable_indexing_preflight() -> None:
@@ -74,41 +83,61 @@ def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path
     config_root = repo_root(root)
     dirs = indexable_directories(root)
     dirs.append(root)
-    dirs.sort(key=lambda p: len(p.relative_to(root).parts), reverse=True)
     updated: list[Path] = []
+    dirs_by_depth: dict[int, list[Path]] = {}
     for directory in dirs:
-        existing_entries = parse_index_entries(directory / "INDEX.md")
-        entries = []
-        missing_children: list[tuple[Path, str]] = []
-        for child in indexable_children(root, directory):
-            digest = index_target_hash(root, child)
-            existing_entry = existing_entries.get(child.name)
-            if existing_entry and existing_entry["hash"] == digest:
-                entries.append(existing_entry["text"])
-            else:
-                entries.append(None)
-                missing_children.append((child, digest))
-        if missing_children:
+        depth = len(directory.relative_to(root).parts)
+        dirs_by_depth.setdefault(depth, []).append(directory)
+    # <work-root>/oracle/doc/app_spec/indexing.md requires descendants to
+    # finish first, while allowing non-ancestor INDEX.md entries to run in
+    # parallel. A depth batch is the smallest scheduling boundary for that.
+    for depth in sorted(dirs_by_depth, reverse=True):
+        plans = [
+            _plan_index_directory(root, directory)
+            for directory in dirs_by_depth[depth]
+        ]
+        missing = [(plan, item) for plan in plans for item in plan.missing_children]
+        if missing:
             config = load_config(config_root)
             with ThreadPoolExecutor(max_workers=max(1, config.num_parallel)) as executor:
-                generated_entries = list(
-                    executor.map(
-                        lambda item: build_index_entry(
-                            root, item[0], digest=item[1], codex_exec=codex_exec
-                        ),
-                        missing_children,
+                futures = [
+                    executor.submit(
+                        build_index_entry,
+                        root,
+                        child,
+                        digest=digest,
+                        codex_exec=codex_exec,
                     )
-                )
-            generated_iter = iter(generated_entries)
-            entries = [entry if entry is not None else next(generated_iter) for entry in entries]
-        content = "\n\n".join(entries)
-        if content:
-            content += "\n"
-        index_path = directory / "INDEX.md"
-        if not index_path.exists() or index_path.read_text() != content:
-            index_path.write_text(content)
-            updated.append(index_path)
+                    for plan, (_index, child, digest) in missing
+                ]
+                for (plan, (index, _child, _digest)), future in zip(missing, futures):
+                    plan.entries[index] = future.result()
+        for plan in plans:
+            entries = [entry for entry in plan.entries if entry is not None]
+            content = "\n\n".join(entries)
+            if content:
+                content += "\n"
+            index_path = plan.directory / "INDEX.md"
+            if not index_path.exists() or index_path.read_text() != content:
+                index_path.write_text(content)
+                updated.append(index_path)
     return updated
+
+
+def _plan_index_directory(root: Path, directory: Path) -> _IndexDirectoryPlan:
+    """既存 entry の再利用可否と生成対象を判定する。"""
+    existing_entries = parse_index_entries(directory / "INDEX.md")
+    entries: list[str | None] = []
+    missing_children: list[tuple[int, Path, str]] = []
+    for child in indexable_children(root, directory):
+        digest = index_target_hash(root, child)
+        existing_entry = existing_entries.get(child.name)
+        if existing_entry and existing_entry["hash"] == digest:
+            entries.append(existing_entry["text"])
+        else:
+            entries.append(None)
+            missing_children.append((len(entries) - 1, child, digest))
+    return _IndexDirectoryPlan(directory, entries, missing_children)
 
 
 def indexable_directories(root: Path) -> list[Path]:
@@ -118,7 +147,7 @@ def indexable_directories(root: Path) -> list[Path]:
     while stack:
         directory = stack.pop()
         for child in sorted(directory.iterdir(), key=lambda p: p.name, reverse=True):
-            if not child.is_dir() or child.name.startswith("."):
+            if not child.is_dir() or child.is_symlink() or child.name.startswith("."):
                 continue
             if is_root_memo(root, child) or is_git_ignored(root, child):
                 continue
@@ -173,6 +202,10 @@ def extract_valid_index_entry_hash(entry_text: str, entry_name: str) -> str:
         section_positions
     ):
         return ""
+    # <work-root>/oracle/doc/app_spec/indexing.md defines an entry as title plus
+    # fixed sections; preserving fresh malformed text here would skip regeneration.
+    if any(line.strip() for line in lines[1 : section_positions[0]]):
+        return ""
     for start, end in zip(section_positions[:3], section_positions[1:]):
         section_lines = [line.strip() for line in lines[start + 1 : end] if line.strip()]
         # <work-root>/oracle/doc/app_spec/indexing.md requires each entry
@@ -199,6 +232,11 @@ def indexable_children(root: Path, directory: Path) -> list[Path]:
     children: list[Path] = []
     for child in sorted(directory.iterdir(), key=lambda p: p.name):
         if child.name == "INDEX.md" or child.name.startswith("."):
+            continue
+        # <work-root>/oracle/doc/app_spec/indexing.md requires indexing
+        # maintenance to finish before agent calls; symlink cycles cannot be
+        # valid traversal targets for that contract.
+        if child.is_symlink():
             continue
         if is_root_memo(root, child):
             continue
@@ -268,6 +306,12 @@ def render_index_entry(
     digest: str | None = None,
 ) -> str:
     """Structured Output から INDEX.md entry Markdown を生成する。"""
+    if not isinstance(entry, dict) or set(entry) != INDEX_ENTRY_KEYS:
+        raise CmocError(
+            "INDEX.md entry 生成結果が不正です。",
+            ["cmoc indexing を再実行してください。"],
+            f"{path.relative_to(root)}: entry の項目が schema と一致していません。",
+        )
     digest = digest or index_target_hash(root, path)
     summary = entry_list(root, path, entry, "summary")
     read_this_when = entry_list(root, path, entry, "read_this_when")
@@ -295,16 +339,23 @@ def render_index_entry(
 def entry_list(root: Path, path: Path, entry: dict | None, key: str) -> list[str]:
     """Structured Output の必須 list[str] 項目を検証して取り出す。"""
     value = entry.get(key) if isinstance(entry, dict) else None
-    if isinstance(value, list) and value and all(
-        isinstance(item, str)
-        and item.strip()
-        and "\n" not in item
-        and "\r" not in item
-        for item in value
+    # <work-root>/oracle/doc/app_spec/indexing.md and
+    # <work-root>/oracle/src/oracle/prompt_builder/parts/index_entry_standard.py
+    # require bullet-only semantic entries that are useful before reading the target.
+    if (
+        isinstance(value, list)
+        and value
+        and all(
+            isinstance(item, str)
+            and item.strip()
+            and "\n" not in item
+            and "\r" not in item
+            for item in value
+        )
     ):
-        return [item.strip() for item in value]
+        return value
     raise CmocError(
         "INDEX.md entry 生成結果が不正です。",
         ["cmoc indexing を再実行してください。"],
-        f"{path.relative_to(root)}: `{key}` は改行を含まない非空文字列配列である必要があります。",
+        f"{path.relative_to(root)}: `{key}` は 1 件以上の 1 行文字列配列である必要があります。",
     )

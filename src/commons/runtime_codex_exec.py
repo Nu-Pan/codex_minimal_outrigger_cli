@@ -6,6 +6,7 @@ subcommand event、retry counter を共有する 1 つの状態機械である�
 別 module へ分け、exec の分岐だけをここに残すことで責務境界を exec 実行制御
 へ限定している。quota 処理だけをさらに分離すると、resume token と log/event
 の読み取り文脈が呼び出し元と分断されるため、現状は一体で読む方が凝集性が高い。
+根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
 import json
@@ -33,8 +34,6 @@ from commons.runtime_codex_profile import (
     prepare_codex_profile,
     prepare_schema,
     read_output_json,
-    protected_write_status,
-    reject_protected_write,
     resolve_codex_home,
     run_codex_subprocess,
     validate_codex_home,
@@ -54,6 +53,8 @@ from commons.runtime_results import CodexExecResult
 
 _QUOTA_CONDITION = threading.Condition()
 _QUOTA_POLLING = False
+_QUOTA_PROBE_AVAILABLE = False
+_QUOTA_PROBE_ERROR: BaseException | None = None
 _CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
 _LAST_CODEX_LOG_TIMESTAMP: str | None = None
 
@@ -78,6 +79,33 @@ def _read_required_output_json(path: Path) -> Any:
         return json.loads(text)
     except json.JSONDecodeError as exc:
         raise ValueError(f"output file is not valid JSON: {exc}") from exc
+
+
+def _base_exec_argv(profile_name: str, codex_cwd: Path) -> list[str]:
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # cmoc may run Codex from linked worktrees or generated roots; repo
+    # validation belongs to cmoc's own preflight, not to Codex CLI startup.
+    return [
+        "codex",
+        "exec",
+        "--skip-git-repo-check",
+        "--profile",
+        profile_name,
+        "--cd",
+        str(codex_cwd),
+    ]
+
+
+def _quota_availability_probe_parameter(
+    base_parameter: AgentCallParameter,
+) -> AgentCallParameter:
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # The oracle specifies the polling behavior but has no dedicated oracle-src
+    # builder file. Keep this realization builder tiny and let runtime reuse the
+    # same CODEX_HOME/profile/cwd as the failed call.
+    from acp.builder.quota_probe import build_quota_availability_probe_parameter
+
+    return build_quota_availability_probe_parameter(base_parameter)
 
 
 def _next_codex_log_timestamp() -> str:
@@ -111,6 +139,7 @@ def run_codex_exec(
     subcommand_logger: SubcommandLogger | None = None,
     extra_read_paths: list[Path] | None = None,
     extra_writable_paths: list[Path] | None = None,
+    allow_oracle_conflict_writes: bool = False,
 ) -> CodexExecResult:
     """Codex exec の再試行、Structured Output 検証、実行記録を一括制御する。"""
     root = root or repo_root()
@@ -133,16 +162,13 @@ def run_codex_exec(
         codex_work_root,
         extra_read_paths,
         extra_writable_paths,
+        allow_oracle_conflict_writes=allow_oracle_conflict_writes,
     )
     profile_name = codex_profile_name(profile_path)
-    protected_status_before = protected_write_status(
-        parameter.file_access_mode, codex_work_root
-    )
-    # <work-root>/oracle/doc/app_spec/run_isolation.md
-    # Structured Output schema is cmoc state; run worktrees keep Codex cwd and
-    # sandbox roots, but state files belong under the repo-side `root`.
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # `--output-schema` must point at state under the same work root Codex uses.
     schema_path = (
-        prepare_schema(root, parameter.structured_output_schema_path)
+        prepare_schema(codex_work_root, parameter.structured_output_schema_path)
         if parameter.structured_output_schema_path
         else None
     )
@@ -172,23 +198,29 @@ def run_codex_exec(
 
     def build_argv(output_path: Path, resume_token: str | None) -> list[str]:
         """schema と resume 状態を反映した `codex exec` の argv を組み立てる。"""
-        run_argv = [
-            "codex",
-            "exec",
-            "--profile",
-            profile_name,
-            "--cd",
-            str(codex_cwd),
-            "--json",
-            "--output-last-message",
-            str(output_path),
-        ]
+        run_argv = _base_exec_argv(profile_name, codex_cwd)
+        run_argv.extend(["--json", "--output-last-message", str(output_path)])
         if schema_path is not None:
             run_argv.extend(["--output-schema", str(schema_path)])
         if resume_token:
             run_argv.extend(["resume", resume_token])
         run_argv.append("-")
         return run_argv
+
+    def run_with_prompt_file(
+        run_argv: list[str], run_prompt_path: Path
+    ) -> subprocess.CompletedProcess[str]:
+        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+        # The prompt log file is the stdin source for `codex exec ... -`.
+        with run_prompt_path.open() as prompt_file:
+            return run_codex_subprocess(
+                run_argv,
+                cwd=codex_cwd,
+                stdin=prompt_file,
+                text=True,
+                capture_output=True,
+                env=codex_env,
+            )
 
     def write_call_log(
         path: Path,
@@ -273,45 +305,6 @@ def run_codex_exec(
     last_result: subprocess.CompletedProcess[str] | None = None
     resume_token: str | None = None
 
-    def reject_protected_write_after_event(
-        *,
-        run_purpose: str,
-        run_call_path: Path,
-        run_prompt_path: Path,
-        run_stdout_path: Path,
-        run_stderr_path: Path,
-        run_output_path: Path,
-        run_schema_path: Path | None,
-        started_at: float,
-        returncode: int,
-    ) -> None:
-        try:
-            reject_protected_write(
-                parameter.file_access_mode,
-                codex_work_root,
-                protected_status_before,
-                run_call_path,
-            )
-        except CmocError as exc:
-            # <work-root>/oracle/doc/app_spec/console_and_file_log.md requires
-            # every completed Codex CLI call to be logged, even when
-            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md then rejects
-            # the call because a profile-inexpressible deny area changed.
-            emit_codex_call_event(
-                run_purpose=run_purpose,
-                run_call_path=run_call_path,
-                run_prompt_path=run_prompt_path,
-                run_stdout_path=run_stdout_path,
-                run_stderr_path=run_stderr_path,
-                run_output_path=run_output_path,
-                run_schema_path=run_schema_path,
-                started_at=started_at,
-                returncode=returncode,
-                status="failed",
-                error=exc.detail,
-            )
-            raise
-
     while True:
         ts, prompt_path, stdout_path, stderr_path, output_path, call_path = new_log_paths()
         current_argv = build_argv(output_path, resume_token)
@@ -328,28 +321,10 @@ def run_codex_exec(
             run_schema_path=schema_path,
         )
         attempt_started_at = time.perf_counter()
-        result = run_codex_subprocess(
-            current_argv,
-            cwd=codex_cwd,
-            input=prompt_path.read_text(),
-            text=True,
-            capture_output=True,
-            env=codex_env,
-        )
+        result = run_with_prompt_file(current_argv, prompt_path)
         last_result = result
         stdout_path.write_text(result.stdout)
         stderr_path.write_text(result.stderr)
-        reject_protected_write_after_event(
-            run_purpose=purpose,
-            run_call_path=call_path,
-            run_prompt_path=prompt_path,
-            run_stdout_path=stdout_path,
-            run_stderr_path=stderr_path,
-            run_output_path=output_path,
-            run_schema_path=schema_path,
-            started_at=attempt_started_at,
-            returncode=result.returncode,
-        )
         error_text = codex_error_text(result.stdout, result.stderr)
         if result.returncode != 0:
             if (
@@ -374,7 +349,7 @@ def run_codex_exec(
                 sleep_sec *= 2
                 continue
             if is_quota_error(result.stdout):
-                global _QUOTA_POLLING
+                global _QUOTA_POLLING, _QUOTA_PROBE_AVAILABLE, _QUOTA_PROBE_ERROR
                 emit_codex_call_event(
                     run_purpose=purpose,
                     run_call_path=call_path,
@@ -388,6 +363,7 @@ def run_codex_exec(
                     status="quota_waiting",
                     error=error_text,
                 )
+                quota_probe_parameter = _quota_availability_probe_parameter(parameter)
                 with _QUOTA_CONDITION:
                     if _QUOTA_POLLING:
                         wait_started_at = time.perf_counter()
@@ -402,13 +378,27 @@ def run_codex_exec(
                         quota_wait_sec += waited_sec
                         if logger is not None:
                             logger.add_quota_wait(waited_sec)
+                        if _QUOTA_PROBE_ERROR is not None:
+                            raise _QUOTA_PROBE_ERROR
+                        if not _QUOTA_PROBE_AVAILABLE:
+                            raise CmocError(
+                                "Codex CLI quota 待機の代表 probe が中断しました。",
+                                [
+                                    "quota 回復後に同じ cmoc コマンドを再実行してください。"
+                                ],
+                                error_text,
+                            )
                         resume_token = extract_resume_token(result.stdout)
                         continue
+                    _QUOTA_PROBE_AVAILABLE = False
+                    _QUOTA_PROBE_ERROR = None
                     _QUOTA_POLLING = True
                 print(
                     f"# {console_timestamp()} Codex CLI quota wait: entering polling mode",
                     flush=True,
                 )
+                probe_available = False
+                probe_error: BaseException | None = None
                 try:
                     while True:
                         if (
@@ -435,20 +425,17 @@ def run_codex_exec(
                             probe_output_path,
                             probe_call_path,
                         ) = new_log_paths()
-                        probe_argv = [
-                            "codex",
-                            "exec",
-                            "--profile",
-                            profile_name,
-                            "--cd",
-                            str(codex_cwd),
-                            "--json",
-                            "--output-last-message",
-                            str(probe_output_path),
-                            "-",
-                        ]
+                        probe_argv = _base_exec_argv(profile_name, codex_cwd)
+                        probe_argv.extend(
+                            [
+                                "--json",
+                                "--output-last-message",
+                                str(probe_output_path),
+                                "-",
+                            ]
+                        )
                         _write_prompt_log(
-                            probe_prompt_path, "quota availability probe"
+                            probe_prompt_path, quota_probe_parameter.prompt
                         )
                         write_call_log(
                             probe_call_path,
@@ -462,31 +449,66 @@ def run_codex_exec(
                             run_schema_path=None,
                         )
                         probe_started_at = time.perf_counter()
-                        poll = run_codex_subprocess(
-                            probe_argv,
-                            cwd=codex_cwd,
-                            input=probe_prompt_path.read_text(),
-                            text=True,
-                            capture_output=True,
-                            env=codex_env,
-                        )
+                        poll = run_with_prompt_file(probe_argv, probe_prompt_path)
                         probe_stdout_path.write_text(poll.stdout)
                         probe_stderr_path.write_text(poll.stderr)
-                        reject_protected_write_after_event(
-                            run_purpose="quota availability probe",
-                            run_call_path=probe_call_path,
-                            run_prompt_path=probe_prompt_path,
-                            run_stdout_path=probe_stdout_path,
-                            run_stderr_path=probe_stderr_path,
-                            run_output_path=probe_output_path,
-                            run_schema_path=None,
-                            started_at=probe_started_at,
-                            returncode=poll.returncode,
-                        )
                         probe_error_text = codex_error_text(poll.stdout, poll.stderr)
-                        probe_available = poll.returncode == 0 and not is_quota_error(
-                            poll.stdout
+                        probe_quota_error = is_quota_error(poll.stdout)
+                        probe_capacity_error = is_capacity_error(poll.stdout)
+                        probe_available = (
+                            poll.returncode == 0
+                            and not probe_quota_error
+                            and not probe_capacity_error
                         )
+                        if (
+                            probe_capacity_error
+                            and capacity_attempts < max_capacity_retries
+                        ):
+                            capacity_attempts += 1
+                            quota_polls -= 1
+                            emit_codex_call_event(
+                                run_purpose="quota availability probe",
+                                run_call_path=probe_call_path,
+                                run_prompt_path=probe_prompt_path,
+                                run_stdout_path=probe_stdout_path,
+                                run_stderr_path=probe_stderr_path,
+                                run_output_path=probe_output_path,
+                                run_schema_path=None,
+                                started_at=probe_started_at,
+                                returncode=poll.returncode,
+                                status="capacity_retrying",
+                                error=probe_error_text,
+                            )
+                            time.sleep(sleep_sec)
+                            sleep_sec *= 2
+                            continue
+                        if not probe_available and not probe_quota_error:
+                            emit_codex_call_event(
+                                run_purpose="quota availability probe",
+                                run_call_path=probe_call_path,
+                                run_prompt_path=probe_prompt_path,
+                                run_stdout_path=probe_stdout_path,
+                                run_stderr_path=probe_stderr_path,
+                                run_output_path=probe_output_path,
+                                run_schema_path=None,
+                                started_at=probe_started_at,
+                                returncode=poll.returncode,
+                                status="failed",
+                                error=probe_error_text,
+                            )
+                            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+                            # A probe is still `codex exec`; non-quota failure is
+                            # not recoverable by waiting for quota reset.
+                            raise CmocError(
+                                "Codex CLI quota availability probe が失敗しました。",
+                                ["stderr/stdout log を確認して原因を解消してください。"],
+                                (
+                                    f"call_log: {probe_call_path}\n"
+                                    f"stdout_log: {probe_stdout_path}\n"
+                                    f"stderr_log: {probe_stderr_path}\n"
+                                    f"{probe_error_text}"
+                                ),
+                            )
                         emit_codex_call_event(
                             run_purpose="quota availability probe",
                             run_call_path=probe_call_path,
@@ -502,8 +524,16 @@ def run_codex_exec(
                         )
                         if probe_available:
                             break
+                except BaseException as exc:
+                    probe_error = exc
+                    raise
                 finally:
                     with _QUOTA_CONDITION:
+                        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+                        # Waiters may resume only after the representative probe
+                        # proved quota availability; probe failure is shared.
+                        _QUOTA_PROBE_AVAILABLE = probe_available
+                        _QUOTA_PROBE_ERROR = probe_error
                         _QUOTA_POLLING = False
                         _QUOTA_CONDITION.notify_all()
                 print(

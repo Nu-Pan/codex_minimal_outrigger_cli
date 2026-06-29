@@ -1,21 +1,38 @@
+# `__init__.py`
+
+## Summary
+- oracle.acp_builder.review と互換の package であることだけを示す、review builder 領域の package 初期化用ファイル。実装ロジックや詳細な仕様ではなく、互換名前空間としての位置づけを確認する入口になる。
+
+## Read this when
+- review builder 領域で、oracle 側の同名 package と対応する realization package が存在するかを確認したいとき。
+- package としての互換性や import 経路の成立だけを確認したいとき。
+
+## Do not read this when
+- review builder の具体的な処理、関数、クラス、出力、制御フローを調べたいとき。
+- 正本仕様断片としての review builder の要求を調べたいとき。
+- package 初期化以外の実装変更先を探しているとき。
+
+## hash
+- adf6124f1c3a49a136159186b6a58b39f4321e0113527b60e85d8b1e3205484e
+
 # `oracle`
 
 ## Summary
-- `cmoc review oracle` の AI 呼び出しビルダーと Structured Output 契約をまとめる領域。oracle file から新規所見を列挙し、所見の擁護・反証理由を追加調査し、採否判定し、重複・矛盾する所見群を整理する各段階への入口になる。
-- 各 Python 実装は、対象所見や既知理由・既知所見を補助文脈として渡し、oracle 読み取り前提のプロンプト、モデル設定、推論量、ファイルアクセス方針、対応する JSON schema 参照を組み立てる責務を持つ。
-- 各 JSON schema は、所見列挙、妥当性支持理由、妥当性否定理由、採否判定、所見マージ編集操作について、AI 応答を機械処理できる構造へ固定する責務を持つ。
+- 対象階層は、review oracle builder 関連の realization 側互換 package であり、旧来 import 経路から正本側実装へ委譲する薄い module 群と、一部 prompt の oracle root 表記だけを補正する wrapper を収める。
+- review finding の列挙・判定・challenger validation は実装本体を持たない再公開層として位置づけられ、呼び出し元が正本側経路へ移行した後に削除できる互換境界を示す。
+- merge finding と finding advocate validation は、正本側 builder で生成した AgentCallParameter の他属性を維持しつつ、prompt 内の oracle root placeholder typo だけを補正する realization 側入口である。
 
 ## Read this when
-- `cmoc review oracle` のレビュー AI に渡すプロンプトや呼び出しパラメータを、所見列挙・検証・採否判定・マージの段階別に確認または変更したいとき。
-- oracle file を根拠にしたレビュー所見について、新規所見、既知理由との重複除外、擁護理由、反証理由、人間提示可否、所見群の重複・矛盾整理をどう扱うか確認したいとき。
-- レビュー結果の Structured Output schema と、その schema を参照するビルダー実装の対応関係を確認・実装・テストしたいとき。
-- oracle レビュー用 AI 呼び出しで使うモデル区分、推論強度、oracle 読み取り専用のファイルアクセス制約、標準プロンプト部品の有効化箇所を追いたいとき。
+- review oracle builder 周辺で、旧来の realization 側 import 経路が正本側実装へどう委譲されているかを確認したいとき。
+- review finding の列挙・判定・challenger validation の互換 module が残っている理由や削除条件を確認したいとき。
+- review oracle merge finding や finding advocate validation の AgentCallParameter 生成で、正本側 builder への委譲境界と prompt 内 oracle root 表記補正を確認したいとき。
+- 同名機能の実装がこの階層にあるように見えるが、実体が正本側にあるのか realization 側 wrapper にあるのかを切り分けたいとき。
 
 ## Do not read this when
-- CLI サブコマンドの引数解析、実行順序、入出力管理、所見の保存・表示・適用処理を確認したいとき。
-- レビュー対象となる oracle file の正本仕様本文、oracle 標準、レビュー標準そのものの妥当性や内容を調べたいとき。
-- 共通プロンプト部品、構造化文書の描画、パス解決、AI 呼び出しパラメータ型など、この領域のビルダーから利用される汎用基盤を確認したいとき。
-- レビュー後に人間へ提示された所見の UI、通知、集計、永続化など、AI 応答生成後の処理だけを扱うとき。
+- review finding の列挙・判定・検証そのものの正本仕様、出力内容、検出ロジック、評価ロジックを調べたいとき。正本側の oracle 実装を読む。
+- AgentCallParameter の共通型、model・reasoning・file access・structured output schema などの基礎定義を調べたいとき。
+- review oracle 以外の builder、CLI 表示、テスト方針、または互換 import と prompt 表記補正に関係しない review 機能全般を調べたいとき。
+- 新しい review 判定ロジックや検証処理を追加・変更したいとき。この階層の多くは委譲または最小補正だけを担うため、実装本体の対象へ進む。
 
 ## hash
-- 73e1b62f0387f4c1ad7bf7435affddf77d7905a178c57b525215fa4c2694cf01
+- 970b5b4cebe0698ddd6ee2e13b4b8bbc5afab4ecd7fe0dc2d7d1b99292896ed7

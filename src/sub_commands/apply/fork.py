@@ -2,14 +2,12 @@
 
 このファイルは 16,000 文字を超えるが、責務境界は一つの apply run を開始し、
 対象列挙、Codex による finding 適用、commit、state 更新まで進める制御に閉じている。
-apply state、worktree、禁止差分 rollback、再キュー、commit subject は同じ loop の
-失敗時復旧条件を共有するため、分割すると fork 中の読み取り文脈がかえって分散する。
+apply state、worktree、再キュー、commit subject は同じ loop の失敗時復旧条件を
+共有するため、分割すると fork 中の読み取り文脈がかえって分散する。
 現状は apply fork の orchestration として一箇所に保つ方が凝集性が高い。
 """
 
-import json
 import os
-import shutil
 from pathlib import Path
 from typing import Callable
 
@@ -19,13 +17,12 @@ from acp.builder.apply.fork.file_finding_enumeration import (
 from acp.builder.apply.fork.finding_application import (
     build_apply_fork_finding_application_parameter,
 )
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from basic.struct_doc import StructCodeBlock, StructDoc, render_as_markdown
 from cmoc_runtime import (
     ApplyPart,
     CliRunResult,
     CmocError,
     SessionState,
+    apply_branch_session_id,
     create_run_worktree,
     current_branch,
     current_subcommand_logger,
@@ -127,7 +124,7 @@ def _cmoc_apply_fork_body(
                 if not findings:
                     continue
                 pending_targets.append(target)
-                run_finding_application_with_forbidden_rollback(
+                run_finding_application(
                     root,
                     apply_worktree,
                     findings,
@@ -146,11 +143,8 @@ def _cmoc_apply_fork_body(
                 )
                 if changed:
                     commit_message = generate_apply_commit_message(
-                        root,
                         apply_worktree,
                         {"findings": findings},
-                        config,
-                        codex_exec,
                     )
                     run_git(["add", "."], apply_worktree)
                     run_git(["commit", "-m", commit_message], apply_worktree)
@@ -188,137 +182,49 @@ def _cmoc_apply_fork_body(
     )
 
 
-def forbidden_apply_diff(worktree: Path) -> str:
-    """apply fork 中の編集禁止対象差分を porcelain status で返す。"""
-    return run_git(
-        ["status", "--short", "--", "oracle", ".agents", "memo"],
-        worktree,
-    ).stdout.strip()
-
-
-def rollback_forbidden_apply_diff(worktree: Path) -> None:
-    """編集禁止対象に発生した未コミット差分だけを HEAD へ戻す。"""
-    tracked_paths: list[str] = []
-    untracked_paths: list[str] = []
-    for line in forbidden_apply_diff(worktree).splitlines():
-        status = line[:2]
-        path_text = line[3:]
-        if " -> " in path_text:
-            path_text = path_text.split(" -> ", 1)[1]
-        if path_text.startswith("agents/") and (worktree / f".{path_text}").exists():
-            path_text = f".{path_text}"
-        if status == "??":
-            untracked_paths.append(path_text)
-        else:
-            tracked_paths.append(path_text)
-    if tracked_paths:
-        run_git(
-            [
-                "restore",
-                "--staged",
-                "--worktree",
-                "--",
-                *[f":(literal){path}" for path in tracked_paths],
-            ],
-            worktree,
-        )
-    for path_text in untracked_paths:
-        path = worktree / path_text
-        if path.is_dir():
-            shutil.rmtree(path)
-        elif path.exists():
-            path.unlink()
-
-
-def run_finding_application_with_forbidden_rollback(
+def run_finding_application(
     root: Path,
     apply_worktree: Path,
     findings: list[dict],
     config: CmocConfig,
     codex_exec: CodexExec,
 ) -> None:
-    """所見リスト適用を行い、編集禁止対象差分が出た場合は戻して 1 回再実行する。"""
+    """所見リスト適用を Codex profile と prompt の file access 制限に委ねる。"""
     parameter = build_apply_fork_finding_application_parameter(findings)
-    for attempt in range(2):
-        codex_exec(
-            parameter,
-            root=root,
-            cwd=apply_worktree,
-            config=config,
-            purpose="apply fork finding application",
-        )
-        forbidden_diff = forbidden_apply_diff(apply_worktree)
-        if not forbidden_diff:
-            return
-        rollback_forbidden_apply_diff(apply_worktree)
-        if attempt == 0:
-            continue
-        raise CmocError(
-            "apply fork 中に編集禁止対象へ差分が発生しました。",
-            ["該当差分をロールバックしました。apply を abandon してから再実行してください。"],
-            forbidden_diff,
-        )
-
-
-def generate_apply_commit_message(
-    root: Path,
-    apply_worktree: Path,
-    applied_findings: dict,
-    config: CmocConfig,
-    codex_exec: CodexExec,
-) -> str:
-    """所見リスト適用後の差分に対する commit subject を Codex CLI で生成する。"""
-    raw_diff = run_git(["diff"], apply_worktree).stdout
-    findings_text = json.dumps(applied_findings, ensure_ascii=False, indent=2)
-    prompt = [
-        StructDoc("Role", "- あなたは git commit message の作成担当です"),
-        StructDoc(
-            "Goal",
-            """
-            - 以下の所見リストと git diff から、git commit subject を 1 行だけ生成すること
-            - 出力は commit subject 本文だけにすること
-            - 先頭に箇条書き記号、引用符、Markdown、コードブロックを付けないこと
-            - 72 文字程度を目安に、人間が変更内容を理解できる具体的な文にすること
-            """,
-        ),
-        StructDoc("Applied findings", StructCodeBlock("json", findings_text)),
-        StructDoc("Git diff", StructCodeBlock("diff", raw_diff)),
-    ]
-    result = codex_exec(
-        AgentCallParameter(
-            ModelClass.EFFICIENCY,
-            ReasoningEffort.LOW,
-            FileAccessMode.READONLY,
-            render_as_markdown(prompt),
-            None,
-        ),
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md forbids post agent-call
+    # checks for disallowed file diffs; enforcement belongs to the Codex profile
+    # and the injected file access prompt built by the ACP builder.
+    codex_exec(
+        parameter,
         root=root,
         cwd=apply_worktree,
         config=config,
-        purpose="apply fork commit message",
+        purpose="apply fork finding application",
     )
-    return sanitize_commit_message(result.output_text, applied_findings)
 
 
-def sanitize_commit_message(message: str, applied_findings: dict) -> str:
-    """Codex 出力を commit subject として使える 1 行へ丸める。"""
-    for line in message.splitlines():
-        subject = line.strip().strip("`").strip("\"'")
-        if not subject:
-            continue
-        for prefix in ("- ", "* ", "commit message:", "Commit message:"):
-            if subject.startswith(prefix):
-                subject = subject.removeprefix(prefix).strip()
-        if subject:
-            return subject[:120]
+def generate_apply_commit_message(
+    apply_worktree: Path,
+    applied_findings: dict,
+) -> str:
+    """所見リスト適用後の差分に対する commit subject を機械的に生成する。"""
     findings = applied_findings.get("findings")
     if isinstance(findings, list):
         for finding in findings:
             if isinstance(finding, dict):
                 title = finding.get("title")
                 if isinstance(title, str) and title.strip():
-                    return f"Apply findings: {title.strip()}"[:120]
+                    return commit_subject(f"Apply finding: {title.strip()}")
+    paths = run_git(["diff", "--name-only"], apply_worktree).stdout.splitlines()
+    if paths:
+        suffix = " and more" if len(paths) > 3 else ""
+        return commit_subject(f"Update {', '.join(paths[:3])}{suffix}")
     return "Apply cmoc finding"
+
+
+def commit_subject(text: str) -> str:
+    """git commit subject として扱う 1 行へ丸める。"""
+    return " ".join(text.split())[:120] or "Apply cmoc finding"
 
 
 def enumerate_apply_findings_for_target(
@@ -429,17 +335,27 @@ def enumerate_apply_targets(
 
 
 def previous_apply_join_commit(root: Path, state: SessionState) -> str | None:
-    """最後に join した apply の merge commit を永続 state ではなく git 履歴から解決する。"""
+    """最後に join した同一 session の apply merge commit を git 履歴から解決する。"""
     snapshot = state.session.last_joined_apply_oracle_snapshot_commit
     if not snapshot:
+        return None
+    try:
+        session_id = apply_branch_session_id(current_branch(root))
+    except CmocError:
         return None
     merges = run_git(
         ["rev-list", "--first-parent", "--merges", "--reverse", f"{snapshot}..HEAD"],
         root,
     ).stdout.splitlines()
-    joined: str | None = None
     for merge_commit in merges:
-        parents = run_git(["show", "-s", "--format=%P", merge_commit], root).stdout.split()
+        subject = run_git(
+            ["show", "-s", "--format=%s", merge_commit], root
+        ).stdout.strip()
+        if f"'cmoc/apply/{session_id}/" not in subject:
+            continue
+        parents = run_git(
+            ["show", "-s", "--format=%P", merge_commit], root
+        ).stdout.split()
         if any(
             run_git(
                 ["merge-base", "--is-ancestor", snapshot, parent],
@@ -449,5 +365,5 @@ def previous_apply_join_commit(root: Path, state: SessionState) -> str | None:
             == 0
             for parent in parents[1:]
         ):
-            joined = merge_commit
-    return joined
+            return merge_commit
+    return None

@@ -54,8 +54,8 @@ def _enum_str_map_from_dict(
     if not isinstance(data, dict):
         return restored
     for key, value in data.items():
-        # `<work-root>/oracle/src/config/cmoc_config.py` defines these JSON values
-        # as Codex CLI names; non-strings must be rejected, not stringified.
+        # `<work-root>/oracle/src/oracle/other/cmoc_config.py` stores enum values
+        # in JSON, so non-strings must be rejected, not stringified.
         if not isinstance(value, str):
             raise TypeError
         restored[key_type(key)] = value
