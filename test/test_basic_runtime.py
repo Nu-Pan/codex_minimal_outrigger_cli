@@ -7,7 +7,6 @@ subcommand log、FileAccessMode、binary 判定は実行前提として一緒に
 回帰として一箇所に保つ方が凝集性が高い。
 """
 
-import json
 import shutil
 import subprocess
 import sys
@@ -333,27 +332,19 @@ def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
     assert not (root / ".cmoc").exists()
 
 
-def test_pre_log_check_failure_still_writes_subcommand_log(
+def test_pre_log_check_failure_does_not_write_subcommand_log(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    log_paths_before = set((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))
     (root / "README.md").write_text("dirty\n")
 
     result = runner.invoke(app, ["indexing"])
 
     assert result.exit_code == 1
-    log_path = sorted((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))[-1]
-    records = [json.loads(line) for line in log_path.read_text().splitlines()]
-    assert records[0]["event"] == "command_invoked"
-    assert records[0]["command"] == "indexing"
-    assert any(
-        record["event"] == "command_finished"
-        and record["returncode"] == 1
-        and "error" in record
-        for record in records
-    )
+    assert set((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl")) == log_paths_before
 
 
 def test_bin_cmoc_missing_venv_call_stack_uses_root_token_path(tmp_path: Path) -> None:

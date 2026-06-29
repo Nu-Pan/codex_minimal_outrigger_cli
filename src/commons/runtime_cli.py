@@ -34,7 +34,7 @@ def run_cli_subcommand(
 ) -> None:
     """CLI サブコマンドの共通実行ライフサイクルを管理する。
 
-    work root 検査後にサブコマンドログを作成し、
+    work root 検査後、必要な pre-log 処理を済ませてからサブコマンドログを作成し、
     開始・完了表示、戻り値の終了コード化、例外のエラー表示を一箇所で扱う。
     runtime state は通常 repo root に置き、init だけは初期化対象である work root に置く。
     サブコマンドログは常に repo root に置く。
@@ -48,14 +48,17 @@ def run_cli_subcommand(
         require_current_directory_is_work_root(current_root)
         log_root = repo_root()
         runtime_root = current_root if use_work_root_runtime else log_root
+        if pre_log_check is not None:
+            # <work-root>/oracle/doc/app_spec/sub_command/init.md
+            # <work-root>/oracle/doc/app_spec/sub_command/tui.md
+            # require .cmoc ignore guarantees before any .cmoc log file is created.
+            pre_log_check(runtime_root)
         logger = SubcommandLogger(log_root, name)
         logger_token = set_current_subcommand_logger(logger)
         logger.event("command_invoked", argv=list(command_argv or [name]))
         logger.start_step(f"1/{total_steps}", f"開始 {name}")
         typer.echo(f"# {console_timestamp()} (1/{total_steps}) 開始 {name}")
         typer.echo(f"- サブコマンドログ: `{logger.path}`")
-        if pre_log_check is not None:
-            pre_log_check(runtime_root)
         logger.start_step(f"{total_steps - 1}/{total_steps}", f"実行 {name}")
         typer.echo(
             f"# {console_timestamp()} ({total_steps - 1}/{total_steps}) 実行 {name}"
