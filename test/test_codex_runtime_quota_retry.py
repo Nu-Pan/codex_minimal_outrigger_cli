@@ -313,6 +313,66 @@ def test_run_codex_exec_reruns_after_quota_without_resume_token(
     assert result.output_json == {"ok": True}
 
 
+def test_quota_probe_non_quota_failure_fails_immediately(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
+    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    calls = tmp_path / "failed_probe_calls.jsonl"
+    fake_codex = bin_dir / "codex"
+    write_python_executable(
+        fake_codex,
+        [
+            "import json, pathlib, sys",
+            f"calls = pathlib.Path({str(calls)!r})",
+            "args = sys.argv[1:]",
+            "stdin = sys.stdin.read()",
+            "with calls.open('a') as f: f.write(json.dumps({'args': args, 'stdin': stdin}) + '\\n')",
+            "if stdin == 'quota availability probe':",
+            "    print(json.dumps({'type':'error','message':'profile is broken'}))",
+            "    sys.exit(2)",
+            "print(json.dumps({'type':'thread.started','thread_id':'sess-1'}))",
+            "print(json.dumps({'type':'error','message':'Quota exceeded'}))",
+            "sys.exit(1)",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+    )
+    logger = SubcommandLogger(root, "test")
+
+    with pytest.raises(CmocError, match="quota availability probe"):
+        run_codex_exec(
+            parameter,
+            root=root,
+            quota_poll_interval_sec=0,
+            max_quota_polls=3,
+            config=CmocConfig(),
+            subcommand_logger=logger,
+        )
+
+    call_records = [json.loads(line) for line in calls.read_text().splitlines()]
+    assert [record["stdin"] for record in call_records] == [
+        "prompt",
+        "quota availability probe",
+    ]
+    log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
+    codex_events = [event for event in log_events if event["event"] == "codex_call"]
+    assert [event["status"] for event in codex_events] == ["quota_waiting", "failed"]
+    assert codex_events[1]["purpose"] == "quota availability probe"
+    assert codex_events[1]["returncode"] == 2
+    assert "profile is broken" in codex_events[1]["error"]
+
+
 def test_run_codex_exec_uses_single_representative_quota_probe(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

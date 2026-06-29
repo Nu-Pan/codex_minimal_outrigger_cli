@@ -436,9 +436,62 @@ def run_codex_exec(
                         probe_stdout_path.write_text(poll.stdout)
                         probe_stderr_path.write_text(poll.stderr)
                         probe_error_text = codex_error_text(poll.stdout, poll.stderr)
-                        probe_available = poll.returncode == 0 and not is_quota_error(
-                            poll.stdout
+                        probe_quota_error = is_quota_error(poll.stdout)
+                        probe_capacity_error = is_capacity_error(poll.stdout)
+                        probe_available = (
+                            poll.returncode == 0
+                            and not probe_quota_error
+                            and not probe_capacity_error
                         )
+                        if (
+                            probe_capacity_error
+                            and capacity_attempts < max_capacity_retries
+                        ):
+                            capacity_attempts += 1
+                            quota_polls -= 1
+                            emit_codex_call_event(
+                                run_purpose="quota availability probe",
+                                run_call_path=probe_call_path,
+                                run_prompt_path=probe_prompt_path,
+                                run_stdout_path=probe_stdout_path,
+                                run_stderr_path=probe_stderr_path,
+                                run_output_path=probe_output_path,
+                                run_schema_path=None,
+                                started_at=probe_started_at,
+                                returncode=poll.returncode,
+                                status="capacity_retrying",
+                                error=probe_error_text,
+                            )
+                            time.sleep(sleep_sec)
+                            sleep_sec *= 2
+                            continue
+                        if not probe_available and not probe_quota_error:
+                            emit_codex_call_event(
+                                run_purpose="quota availability probe",
+                                run_call_path=probe_call_path,
+                                run_prompt_path=probe_prompt_path,
+                                run_stdout_path=probe_stdout_path,
+                                run_stderr_path=probe_stderr_path,
+                                run_output_path=probe_output_path,
+                                run_schema_path=None,
+                                started_at=probe_started_at,
+                                returncode=poll.returncode,
+                                status="failed",
+                                error=probe_error_text,
+                            )
+                            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+                            # A probe is still `codex exec`; non-quota failure is
+                            # not recoverable by waiting for quota reset.
+                            raise CmocError(
+                                "Codex CLI quota availability probe が失敗しました。",
+                                ["stderr/stdout log を確認して原因を解消してください。"],
+                                (
+                                    f"call_log: {probe_call_path}\n"
+                                    f"stdout_log: {probe_stdout_path}\n"
+                                    f"stderr_log: {probe_stderr_path}\n"
+                                    f"{probe_error_text}"
+                                ),
+                            )
                         emit_codex_call_event(
                             run_purpose="quota availability probe",
                             run_call_path=probe_call_path,
