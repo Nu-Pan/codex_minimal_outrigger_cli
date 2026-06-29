@@ -110,6 +110,7 @@ def _writable_roots(
     mode: FileAccessMode,
     root: Path,
     extra_writable_paths: list[Path] | None,
+    allow_oracle_conflict_writes: bool = False,
 ) -> list[Path]:
     """Codex sandbox に渡せる正リストとして書き込み root を最小化する。"""
     if file_access_to_sandbox_mode(mode) == "read-only":
@@ -140,7 +141,9 @@ def _writable_roots(
             result.append(resolved)
     for path in extra_writable_paths or []:
         resolved = path.resolve()
-        if not _is_writable_path_allowed(mode, root, resolved):
+        if not _is_writable_path_allowed(
+            mode, root, resolved, allow_oracle_conflict_writes
+        ):
             raise CmocError(
                 "追加書き込み許可 path が FileAccessMode の許可領域外にあります。",
                 [
@@ -164,7 +167,12 @@ def _default_writable_paths(mode: FileAccessMode, root: Path) -> list[Path]:
     ]
 
 
-def _is_writable_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
+def _is_writable_path_allowed(
+    mode: FileAccessMode,
+    root: Path,
+    path: Path,
+    allow_oracle_conflict_writes: bool = False,
+) -> bool:
     """FileAccessMode の禁止領域を追加 writable path にも適用する。"""
     if not path.is_relative_to(root):
         return False
@@ -175,6 +183,16 @@ def _is_writable_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> b
     if relative.parts and relative.parts[0] in _NEVER_WRITABLE_ROOT_NAMES:
         return False
     if mode == FileAccessMode.REALIZATION_WRITE:
+        if allow_oracle_conflict_writes:
+            # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
+            # session join の conflict 解消だけは、prompt だけでなく sandbox
+            # profile でも conflict 対象 oracle file の個別書き込みを開く。
+            oracle_root = root / "oracle"
+            return (
+                path.is_relative_to(oracle_root)
+                and path != oracle_root
+                and path.name != "INDEX.md"
+            ) or not path.is_relative_to(oracle_root)
         return not path.is_relative_to(root / "oracle")
     if mode == FileAccessMode.ORACLE_WRITE:
         return path.is_relative_to(root / "oracle")
@@ -202,6 +220,7 @@ def build_codex_profile(
     extra_writable_paths: list[Path] | None = None,
     *,
     extra_read_root: Path | None = None,
+    allow_oracle_conflict_writes: bool = False,
 ) -> str:
     """AgentCallParameter と repo config から再利用可能な Codex profile 本文を作る。"""
     model = config.codex.model[parameter.model_class]
@@ -225,6 +244,7 @@ def build_codex_profile(
                 parameter.file_access_mode,
                 root,
                 extra_writable_paths,
+                allow_oracle_conflict_writes,
             ),
         )
     lines.append("")
@@ -289,6 +309,7 @@ def prepare_codex_profile(
     extra_writable_paths: list[Path] | None = None,
     *,
     extra_read_root: Path | None = None,
+    allow_oracle_conflict_writes: bool = False,
 ) -> Path:
     """Codex home 内へ内容 hash 名の profile を作り、同一内容なら再利用する。"""
     profile = build_codex_profile(
@@ -298,6 +319,7 @@ def prepare_codex_profile(
         extra_read_paths,
         extra_writable_paths,
         extra_read_root=extra_read_root,
+        allow_oracle_conflict_writes=allow_oracle_conflict_writes,
     )
     target_home = codex_home or resolve_codex_home()
     try:

@@ -111,6 +111,7 @@ def run_codex_exec(
     subcommand_logger: SubcommandLogger | None = None,
     extra_read_paths: list[Path] | None = None,
     extra_writable_paths: list[Path] | None = None,
+    allow_oracle_conflict_writes: bool = False,
 ) -> CodexExecResult:
     """Codex exec の再試行、Structured Output 検証、実行記録を一括制御する。"""
     root = root or repo_root()
@@ -133,6 +134,7 @@ def run_codex_exec(
         codex_work_root,
         extra_read_paths,
         extra_writable_paths,
+        allow_oracle_conflict_writes=allow_oracle_conflict_writes,
     )
     profile_name = codex_profile_name(profile_path)
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md

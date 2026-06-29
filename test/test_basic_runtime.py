@@ -601,3 +601,36 @@ def test_codex_profile_rejects_disallowed_extra_writable_paths(
             root,
             extra_writable_paths=[root / extra],
         )
+
+
+def test_codex_profile_allows_only_conflicted_oracle_file_for_session_join(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "src").mkdir()
+    (root / "oracle").mkdir()
+    target = root / "oracle" / "spec.md"
+    other = root / "oracle" / "other.md"
+    target.write_text("conflict\n")
+    other.write_text("other\n")
+
+    profile = build_codex_profile(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            FileAccessMode.REALIZATION_WRITE,
+            "prompt",
+            None,
+        ),
+        CmocConfig(),
+        root,
+        extra_writable_paths=[target],
+        allow_oracle_conflict_writes=True,
+    )
+
+    assert _profile_writable_roots(profile) == {
+        str((root / "src").resolve()),
+        str(target.resolve()),
+    }
+    _assert_not_writable(profile, other)

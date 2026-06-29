@@ -105,13 +105,15 @@ def resolve_session_join_conflict(
             ["git status を確認し、手動解決後に再実行してください。"],
             git(["status", "--short"], root).stdout,
         )
-    # <work-root>/oracle/doc/app_spec/sub_command/session_join.md:
-    # oracle conflict は prompt 上の例外規則で限定し、profile の
-    # REALIZATION_WRITE 追加 writable path 検証には渡さない。
     codex_exec(
         build_session_join_conflict_resolution_parameter(conflicted_paths),
         root=root,
         purpose="session join conflict resolution",
+        # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
+        # oracle conflict の例外は prompt だけでは sandbox に効かないため、
+        # conflict 対象だけを profile の writable root にも反映する。
+        extra_writable_paths=conflicted_paths,
+        allow_oracle_conflict_writes=True,
     )
     remaining_markers = [
         path
