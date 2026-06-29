@@ -19,6 +19,7 @@ def build_review_oracle_merge_finding_parameter(
 
 
 def _fix_oracle_root_placeholder_definition(prompt: str) -> str:
+    # Oracle: <work-root>/oracle/src/oracle/acp_builder/review/oracle/merge_finding.py
     # <work-root>/oracle/doc/app_spec/prompt_standard.md permits only the
     # minimum correction needed for an oracle src bug; known findings are input.
     # Delete this helper and its tests once oracle src emits "- <oracle-root> =".

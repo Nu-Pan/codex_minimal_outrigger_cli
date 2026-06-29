@@ -25,6 +25,7 @@ def build_review_oracle_validate_finding_advocate_parameter(
 
 
 def _fix_oracle_root_goal_typo(prompt: str) -> str:
+    # Oracle: <work-root>/oracle/src/oracle/acp_builder/review/oracle/validate_finding_advocate.py
     # <work-root>/oracle/doc/app_spec/prompt_standard.md permits only the
     # minimum correction needed for the oracle src static goal typo; findings
     # and known reasons are dynamic input and must stay byte-for-byte intact.
