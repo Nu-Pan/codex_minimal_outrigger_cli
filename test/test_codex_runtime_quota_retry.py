@@ -202,7 +202,7 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
     records = []
 
     def fake_run(argv, **kwargs):
-        stdin = str(kwargs["input"])
+        stdin = kwargs["stdin"].read()
         cwd = Path(kwargs["cwd"])
         kind = (
             "resume"

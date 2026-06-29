@@ -133,11 +133,10 @@ def run_codex_exec(
         extra_writable_paths,
     )
     profile_name = codex_profile_name(profile_path)
-    # <work-root>/oracle/doc/app_spec/run_isolation.md
-    # Structured Output schema is cmoc state; run worktrees keep Codex cwd and
-    # sandbox roots, but state files belong under the repo-side `root`.
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # `--output-schema` must point at state under the same work root Codex uses.
     schema_path = (
-        prepare_schema(root, parameter.structured_output_schema_path)
+        prepare_schema(codex_work_root, parameter.structured_output_schema_path)
         if parameter.structured_output_schema_path
         else None
     )
@@ -184,6 +183,21 @@ def run_codex_exec(
             run_argv.extend(["resume", resume_token])
         run_argv.append("-")
         return run_argv
+
+    def run_with_prompt_file(
+        run_argv: list[str], run_prompt_path: Path
+    ) -> subprocess.CompletedProcess[str]:
+        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+        # The prompt log file is the stdin source for `codex exec ... -`.
+        with run_prompt_path.open() as prompt_file:
+            return run_codex_subprocess(
+                run_argv,
+                cwd=codex_cwd,
+                stdin=prompt_file,
+                text=True,
+                capture_output=True,
+                env=codex_env,
+            )
 
     def write_call_log(
         path: Path,
@@ -284,14 +298,7 @@ def run_codex_exec(
             run_schema_path=schema_path,
         )
         attempt_started_at = time.perf_counter()
-        result = run_codex_subprocess(
-            current_argv,
-            cwd=codex_cwd,
-            input=prompt_path.read_text(),
-            text=True,
-            capture_output=True,
-            env=codex_env,
-        )
+        result = run_with_prompt_file(current_argv, prompt_path)
         last_result = result
         stdout_path.write_text(result.stdout)
         stderr_path.write_text(result.stderr)
@@ -407,14 +414,7 @@ def run_codex_exec(
                             run_schema_path=None,
                         )
                         probe_started_at = time.perf_counter()
-                        poll = run_codex_subprocess(
-                            probe_argv,
-                            cwd=codex_cwd,
-                            input=probe_prompt_path.read_text(),
-                            text=True,
-                            capture_output=True,
-                            env=codex_env,
-                        )
+                        poll = run_with_prompt_file(probe_argv, probe_prompt_path)
                         probe_stdout_path.write_text(poll.stdout)
                         probe_stderr_path.write_text(poll.stderr)
                         probe_error_text = codex_error_text(poll.stdout, poll.stderr)

@@ -423,8 +423,8 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     recorded = json.loads(recorder.read_text())
     schema_arg = recorded["args"][recorded["args"].index("--output-schema") + 1]
     assert recorded["cwd"] == str(linked)
-    assert Path(schema_arg).parent == root / ".cmoc" / "state" / "schema"
-    assert not (linked / ".cmoc" / "state" / "schema").exists()
+    assert Path(schema_arg).parent == linked / ".cmoc" / "state" / "schema"
+    assert not (root / ".cmoc" / "state" / "schema").exists()
 
 
 def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(

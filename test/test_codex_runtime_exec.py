@@ -104,6 +104,7 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
             "    'args': args,",
             "    'cwd': os.getcwd(),",
             "    'stdin': sys.stdin.read(),",
+            "    'stdin_fd': os.readlink('/proc/self/fd/0'),",
             "    'profile': profile_path.read_text(),",
             "}))",
             "print(json.dumps({'type': 'turn.completed'}))",
@@ -129,6 +130,7 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
     ]
     assert record["cwd"] == str(root.resolve())
     assert record["stdin"] == "prompt"
+    assert Path(record["stdin_fd"]).resolve() == result.prompt_log_path.resolve()
     assert 'sandbox_mode = "workspace-write"' in record["profile"]
     writable_roots = set(
         tomllib.loads(record["profile"])["sandbox_workspace_write"]["writable_roots"]
@@ -185,7 +187,7 @@ def test_run_codex_exec_limits_pure_oracle_read_to_oracle_cwd(
     assert "sandbox_workspace_write" not in tomllib.loads(record["profile"])
 
 
-def test_run_codex_exec_stores_schema_state_under_repo_root_for_run_worktree(
+def test_run_codex_exec_stores_schema_state_under_codex_work_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -241,8 +243,8 @@ def test_run_codex_exec_stores_schema_state_under_repo_root_for_run_worktree(
     schema_arg = Path(record["args"][record["args"].index("--output-schema") + 1])
     assert record["cwd"] == str(linked.resolve())
     assert result.schema_path == schema_arg
-    assert schema_arg.parent == root / ".cmoc" / "state" / "schema"
-    assert not (linked / ".cmoc" / "state" / "schema").exists()
+    assert schema_arg.parent == linked / ".cmoc" / "state" / "schema"
+    assert not (root / ".cmoc" / "state" / "schema").exists()
 
 
 def test_run_codex_exec_does_not_check_protected_diffs_after_call(
