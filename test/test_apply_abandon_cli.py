@@ -407,6 +407,40 @@ def test_stop_apply_process_does_not_signal_reused_pid(
     assert sent == []
 
 
+def test_stop_child_process_group_opens_pidfd_before_identity_check(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """child PID reuse 確認前に pidfd を握り、別 group への signal を避ける。"""
+    order: list[str] = []
+    sent: list[int] = []
+
+    def fake_open_process_fd(process_id: int, name: str) -> int:
+        order.append(f"open:{process_id}:{name}")
+        return 10
+
+    def fake_process_start_time(process_id: int) -> int:
+        order.append(f"start:{process_id}")
+        return 99
+
+    monkeypatch.setattr(apply_runtime, "open_process_fd", fake_open_process_fd)
+    monkeypatch.setattr(apply_runtime, "process_start_time", fake_process_start_time)
+    monkeypatch.setattr(apply_runtime.os, "getpgid", lambda process_id: process_id)
+    monkeypatch.setattr(
+        apply_runtime,
+        "send_process_group_signal",
+        lambda process_group_id, sig: sent.append(sig),
+    )
+    monkeypatch.setattr(apply_runtime.os, "close", lambda process_fd: None)
+
+    warning = apply_runtime.stop_child_process_group(
+        apply_runtime.ProcessIdentity(23456, 30)
+    )
+
+    assert warning == "stale apply child process id ignored: 23456"
+    assert order == ["open:23456:Codex subprocess", "start:23456"]
+    assert sent == []
+
+
 def test_apply_abandon_rejects_running_state_without_process_id(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

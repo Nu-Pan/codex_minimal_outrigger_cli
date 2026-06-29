@@ -199,33 +199,34 @@ def stop_apply_process(process: ApplyProcessIdentity) -> str | None:
 def stop_child_process_group(process: ProcessIdentity) -> str | None:
     """Codex subprocess を専用 process group 単位で停止する。"""
     process_id = process.process_id
-    current_start_time = process_start_time(process_id)
-    if current_start_time is None:
-        return f"apply child process already stopped: {process_id}"
-    if process.start_time is None:
-        raise CmocError(
-            "実行中 Codex subprocess の同一性を確認できません。",
-            ["apply process と pid file を確認し、停止後に再実行してください。"],
-            f"pid: {process_id}",
-        )
-    if current_start_time != process.start_time:
-        return f"stale apply child process id ignored: {process_id}"
-    try:
-        process_group_id = os.getpgid(process_id)
-    except ProcessLookupError:
-        return f"apply child process already stopped: {process_id}"
-    if process_group_id != process_id:
-        raise CmocError(
-            "実行中 Codex subprocess の process group を確認できません。",
-            ["Codex subprocess を手動で停止してから再実行してください。"],
-            f"pid: {process_id}\npgid: {process_group_id}",
-        )
     process_fd = open_process_fd(process_id, "Codex subprocess")
     if process_fd is None:
         return f"apply child process already stopped: {process_id}"
     # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
-    # Codex CLI は apply の実作業なので、親 cmoc process より先に専用 group ごと止める。
+    # pidfd を先に握り、PID reuse で別 group を止める余地を減らしてから
+    # Codex CLI を apply の実作業として親 cmoc process より先に group ごと止める。
     try:
+        current_start_time = process_start_time(process_id)
+        if current_start_time is None:
+            return f"apply child process already stopped: {process_id}"
+        if process.start_time is None:
+            raise CmocError(
+                "実行中 Codex subprocess の同一性を確認できません。",
+                ["apply process と pid file を確認し、停止後に再実行してください。"],
+                f"pid: {process_id}",
+            )
+        if current_start_time != process.start_time:
+            return f"stale apply child process id ignored: {process_id}"
+        try:
+            process_group_id = os.getpgid(process_id)
+        except ProcessLookupError:
+            return f"apply child process already stopped: {process_id}"
+        if process_group_id != process_id:
+            raise CmocError(
+                "実行中 Codex subprocess の process group を確認できません。",
+                ["Codex subprocess を手動で停止してから再実行してください。"],
+                f"pid: {process_id}\npgid: {process_group_id}",
+            )
         send_process_group_signal(process_group_id, signal.SIGTERM)
         if (
             wait_process_group_exit(process_group_id, 5.0)
