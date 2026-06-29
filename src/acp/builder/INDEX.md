@@ -62,19 +62,21 @@
 # `quota_probe.py`
 
 ## Summary
-- quota availability probe 用 AgentCallParameter を構築する realization 側の暫定 adapter。Codex exec runtime に prompt literal を置かず、probe 呼び出しも parameter の prompt を保存して stdin に渡す境界へ揃える。
-- 現行 oracle src に quota probe 専用 builder がない制約を明示し、同用途の oracle builder が追加された時点で置換・削除する対象である。
+- quota availability probe のために、既存の agent call parameter から probe 用の ACP を組み立てる小さな builder。model class、reasoning effort、file access mode は元の値を引き継ぎ、自然言語 prompt を持たない空 stdin の probe に限定して stdin と追加入力を空扱いにする。
+- 現行 oracle src に同用途の builder が存在しないための adapter であり、同用途の oracle 側 builder が追加されたら削除する前提を docstring に持つ。
 
 ## Read this when
-- Codex exec の quota 待機中に実行される代表 probe の prompt、schema 無し指定、または元呼び出し parameter から引き継ぐ model/reasoning/file access の境界を確認・変更したいとき。
-- runtime 側で probe prompt を直接作らないための暫定 adapter が残っている理由と削除条件を確認したいとき。
+- quota availability probe 実行時に渡す agent call parameter の組み立て内容を確認または変更したいとき。
+- probe では base parameter のどの項目を引き継ぎ、どの項目を空にするかを確認したいとき。
+- 自然言語 prompt を持たない空 stdin の probe という制約、またはこの adapter の削除条件を確認したいとき。
 
 ## Do not read this when
-- quota 待機の状態機械、代表 probe の共有、resume token、call log、subcommand event の制御を調べたいときは Codex exec runtime を読む。
-- oracle 側に quota probe 専用 builder が存在するか、または正本仕様としてどう定義すべきか確認したいときは oracle 側の acp_builder と app_spec を読む。
+- 通常の prompt 付き Codex 実行や、一般的な ACP builder の仕様・実装を探しているとき。
+- quota availability の判定ロジック、実行結果の解釈、または quota 不足時の制御フローを確認したいとき。
+- oracle 側の正本仕様や prompt 標準そのものを確認したいとき。
 
 ## hash
-- d2967195fb145e02d6f2ee795d9cc966b20a4502a6a14fc96b58793db181f68a
+- 8c4351eae4b30619b8338cc6c2cbc0170b8f28574ca95d18c8a81cb1bbc2e49d
 
 # `review`
 

@@ -19,23 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP builder の realization 側互換入口をまとめる階層。正本側 builder 実装を既存の acp.builder 系 import path から利用できるようにする再公開・委譲の境界を扱う。
-- apply、indexing、review、session、tui などの builder 領域ごとの互換 package へ進むための上位入口であり、quota probe だけは正本側専用 builder が未整備な制約を補う暫定 adapter を含む。
-- この階層の主眼は builder 本体仕様や各機能の実処理ではなく、realization 側に残る公開参照、旧 import 経路、oracle 側実装との対応、互換層の削除条件を見分けることにある。
+- ACP の agent call parameter builder に関する realization 側の互換入口をまとめる領域。正本側 builder への委譲・再公開を中心に、既存 import 経路を保つための package 境界と、quota probe など正本側に未集約の小さな adapter を扱う。
+- apply、indexing、review、session、TUI などの用途別 builder 領域へ進むための上位入口であり、具体的な builder 本体仕様ではなく、realization 側公開面と oracle 側実装の対応関係を見分けるために読む対象である。
 
 ## Read this when
-- acp.builder 系の公開 import path が oracle 側 builder 実装へどう接続されているかを確認したいとき。
-- apply、indexing、review、session、tui の各 builder 領域について、実装本体ではなく互換入口・再公開層・委譲境界を探したいとき。
-- 既存参照を維持するために残された互換 package や薄い wrapper の理由、対応する正本側実装、削除条件を確認したいとき。
-- quota probe 用 AgentCallParameter の暫定 adapter が、runtime 側 prompt literal を避けるためにどこで扱われているか確認したいとき。
-- builder 領域の下位構造を見て、apply fork、review oracle、session join、TUI 起動、indexing 互換公開面のどこへ進むべきか切り分けたいとき。
+- ACP builder 周辺で、既存の公開 import path が正本側 builder 実装へどのように接続されているかを確認したいとき。
+- agent call parameter builder の用途別領域を見分け、apply、indexing、review、session、TUI、quota probe のどこへ進むべきか判断したいとき。
+- 正本側への実装集約後も realization 側に互換入口を残している理由や、削除条件を確認したいとき。
+- realization 側 builder が実処理本体なのか、正本側への薄い委譲・再公開・adapter なのかを切り分けたいとき。
 
 ## Do not read this when
-- oracle 側 builder の正本仕様、prompt、出力条件、具体的な AgentCallParameter 組み立てロジックを確認したいときは、対応する oracle 側実装または正本仕様断片を読む。
-- apply fork、review、session join、TUI、indexing の実処理・制御フロー・データ構造・判定ロジックを調べたいときは、それぞれの処理本体へ進む。
-- AgentCallParameter、FileAccessMode、model、reasoning、structured output schema などの共通型や基礎定義を調べたいときは、型定義を持つ基本モジュールを読む。
-- 新しい builder 機能の本体実装や仕様変更の根拠を探しているときは、互換入口ではなく正本側 builder または該当機能の実装領域を読む。
-- CLI 表示、branch 操作、diff 生成、quota 待機状態機械、TUI 画面処理など、builder 呼び出し準備より外側のワークフローを調べたいときは、該当する runtime や command 実装を読む。
+- 個別 builder の prompt、parameter 変換、repo root 解決、file access mode、structured output schema などの具体的な組み立て仕様を直接確認したいときは、該当する下位領域または正本側実装へ進む。
+- ACP の共通型、model class、reasoning effort、file access mode の定義そのものを調べたいときは、基礎定義を扱う別領域へ進む。
+- apply fork、review、session join、TUI 表示など各機能の制御フローや UI 本体を調べたいときは、それぞれの機能実装へ進む。
+- 互換 import 経路や正本側 builder への委譲に関係しない新規機能の実装場所、テスト対象、CLI 挙動を探しているとき。
 
 ## hash
-- b5b380e64fbc75410aff5d5806720ea4c044844bbd1a1b130489457202a145b3
+- 67aeed0f4ee0bc290012587352ae460eaccb7dcf9f2c6e1146aea10079ab909c

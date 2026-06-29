@@ -1,27 +1,23 @@
 # `acp`
 
 ## Summary
-- realization 側に残る acp 系 import path の互換入口を扱う領域。oracle 側の acp builder 実装を複製せず、旧公開 import 経路から正本側実装へ接続する再公開・委譲の境界を示す。
-- 主な対象は builder 領域の互換 package 群で、apply、indexing、review、session、tui などの builder 呼び出し入口へ進むための上位案内になる。quota probe については、正本側専用 builder が未整備な制約を補う暫定 adapter も含む。
-- この領域の責務は acp builder 本体の仕様や生成処理ではなく、移行期間中に残る acp 系公開参照、旧 import 経路、oracle 側実装との対応、互換層の削除条件を見分けることにある。
+- ACP 関連の realization 側互換入口をまとめる領域。正本側実装へ集約された builder 群を複製せず、既存の公開 import 経路を維持するための薄い入口と、用途別 builder 領域への上位ルーティングを担う。
+- apply、indexing、review、session、TUI、quota probe などの agent call parameter builder 周辺で、realization 側公開面と oracle 側実体の対応関係を見分けるための入口であり、具体的な生成処理本体や機能制御フローそのものを読む場所ではない。
 
 ## Read this when
-- acp 系 import を oracle 側または実体 module 側へ移行する作業で、互換入口を残す理由や削除条件を確認したいとき。
-- realization 側や利用者向け公開面に残る acp 系参照が、oracle 側 builder 実装へどう接続されているかを確認したいとき。
-- apply、indexing、review、session、tui などの builder 領域について、実処理ではなく互換入口、再公開層、委譲境界を探したいとき。
-- quota probe 用 AgentCallParameter の暫定 adapter が、runtime 側 prompt literal を避けるためにどの互換領域で扱われているかを確認したいとき。
-- builder 領域の下位構造を見て、apply fork、review oracle、session join、TUI 起動、indexing 互換公開面のどこへ進むべきか切り分けたいとき。
+- ACP builder 周辺の既存 import path が、正本側 builder 実装または互換 adapter へどのように接続されているかを確認したいとき。
+- agent call parameter builder の用途別領域を見分け、apply、indexing、review、session、TUI、quota probe のどこへ進むべきか判断したいとき。
+- 正本側への実装集約後も realization 側に互換入口を残している理由や、残存する公開 import 面の扱いを確認したいとき。
+- realization 側の ACP builder 関連コードが実処理本体なのか、薄い委譲・再公開・互換維持なのかを切り分けたいとき。
 
 ## Do not read this when
-- acp builder の正本仕様、prompt、出力条件、具体的な AgentCallParameter 組み立てロジックを確認したいとき。対応する oracle 側実装または正本仕様断片へ進む。
-- apply fork、review、session join、TUI、indexing の実処理、制御フロー、データ構造、判定ロジックを調べたいとき。それぞれの処理本体へ進む。
-- AgentCallParameter、FileAccessMode、model、reasoning、structured output schema などの共通型や基礎定義を調べたいとき。型定義を持つ基本モジュールへ進む。
-- 新しい acp 機能や builder 機能の本体実装、API 仕様追加、仕様変更の根拠を探しているとき。互換入口ではなく正本側 builder または該当機能の実装領域を読む。
-- CLI 表示、branch 操作、diff 生成、quota 待機状態機械、TUI 画面処理など、builder 呼び出し準備より外側のワークフローを調べたいとき。該当する runtime や command 実装へ進む。
-- acp 系参照が全公開面と realization 側から消えていることを確認済みで、互換入口の詳細や削除条件を読む必要がないとき。
+- 個別 builder の prompt、parameter 変換、repo root 解決、file access mode、structured output schema など、具体的な組み立て仕様を直接確認したいとき。該当する用途別領域または正本側実装へ進む。
+- ACP の共通型、model class、reasoning effort、file access mode の定義そのものを調べたいとき。基礎定義を扱う領域へ進む。
+- apply fork、review、session join、TUI 表示など、各機能の制御フローや UI 本体を調べたいとき。それぞれの機能実装へ進む。
+- 互換 import 経路や正本側 builder への委譲に関係しない新規機能の実装場所、テスト対象、CLI 挙動を探しているとき。
 
 ## hash
-- bc4b15b46140f9dfb0b5476761ef9339be056b9ef33da319e948c1a704e232de
+- 936bb78a6a2606a2a7452757408466aaae0c2aa6c29914adb7204d5943f30649
 
 # `basic`
 
