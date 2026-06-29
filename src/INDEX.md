@@ -1,24 +1,23 @@
 # `acp`
 
 ## Summary
-- ACP builder 系の realization implementation 入口。正本を oracle 側に置いたまま、既存の公開 import path を維持する互換 package と、一部の runtime 側 agent call parameter builder adapter を束ねる。
-- 主な責務は、apply fork の変更要約・ファイル単位所見列挙・所見適用、review oracle、session join、TUI 起動・解決、indexing などの builder 領域について、oracle 側実装への再公開・委譲境界を提供すること。
-- この領域は ACP builder の正本仕様や詳細アルゴリズムそのものではなく、realization 側から既存 import 互換を保ちながらどの builder 境界へ進むかを判断するための入口である。
+- ACP builder 関連の realization 側互換入口を束ねる領域。正本実装を oracle 側に置いたまま、既存の `acp.*` / `acp.builder.*` 参照を維持するための package と薄い adapter を配置している。
+- apply fork、indexing、review oracle、session join、TUI 起動・解決パラメータなどの builder 入口について、realization 側から oracle 側正本実装へ到達する import 境界と、互換維持のために残している最小調整を確認する入口である。
 
 ## Read this when
-- realization 側で ACP builder 関連の import path 互換、再公開、oracle 側実装への委譲境界を確認したいとき。
-- 既存の `acp.*` または `acp.builder.*` 参照を維持する理由、移行先、削除条件を判断したいとき。
-- apply fork、review oracle、session join、TUI、indexing の builder 領域のうち、どの下位入口へ進むべきかを切り分けたいとき。
-- agent call parameter 構築処理が oracle 側正本を呼ぶだけなのか、realization 側で最小限の adapter や補正を持つのかを確認したいとき。
+- 既存の `acp.*` または `acp.builder.*` import path が、oracle 側の ACP builder 正本実装へどのように接続されているかを確認したいとき。
+- ACP builder 互換入口を削除・移動・置換してよいか判断するため、残している理由や削除条件を確認したいとき。
+- apply fork、indexing、review oracle、session join、TUI 関連の agent call parameter builder が realization 側でどの互換領域に分かれているかを把握したいとき。
+- oracle 側 builder への委譲前後で、realization 側が行う最小限の import 準備、型適合、prompt placeholder 補正、再公開の境界を探したいとき。
 
 ## Do not read this when
-- ACP builder の prompt 本文、Structured Output schema、model 設定、reasoning effort、file access mode などの正本仕様を確認したいとき。その場合は oracle 側の対応する仕様または実装へ進む。
-- finding 列挙・判定・統合・検証、indexing 生成、session join、TUI パラメータ解決などの具体的なアルゴリズムを理解したいとき。その場合は委譲先の oracle 側実装またはより直接の下位実装を読む。
-- CLI コマンド全体の制御フロー、fork 作成、git 操作、引数処理、画面イベント処理、基本 enum・path model・runtime 型定義を調べたいとき。
-- ACP builder 互換 import 境界ではなく、新規機能の正本仕様、利用者向け API 全体、またはテスト対象を探しているとき。
+- ACP builder の正本仕様、prompt 本文、Structured Output schema、モデル設定、file access mode の詳細を確認したいとき。正本を持つ oracle 側の本文または実装へ進む。
+- apply fork や review workflow の CLI 制御、git 操作、fork 作成、入出力処理など、builder 互換境界の外側にある実行フローを調べたいとき。
+- indexing、session join、TUI、review 判定などの具体的なアルゴリズムや入出力仕様そのものを理解したいとき。再公開先または委譲先の oracle 側実装へ進む。
+- 互換公開面ではなく、新しい ACP 機能、API 仕様、正本 builder 実装を追加する場所を探しているとき。
 
 ## hash
-- 555483559f3e7e0a202396452ba98a91e577cf0f46319ac2decc22c1d69f27ef
+- 6c15b04bf876b04508960ed72169d13067ad231db713dc31f068909ef99c3da6
 
 # `basic`
 
