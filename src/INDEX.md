@@ -1,24 +1,24 @@
 # `acp`
 
 ## Summary
-- realization 側に残る ACP 関連の互換 import 面を扱う領域。正本側実装を複製せず、既存参照を壊さないための入口や再公開・委譲境界を置く。
-- agent call parameter builder 群について、apply fork、review oracle、session、TUI、indexing などの既存公開参照を正本側 canonical 実装へ接続するための上位入口になる。
+- 対象は realization 側に残る ACP builder 互換公開面の入口であり、正本側の builder 実装を複製せずに既存の `acp.*` / `acp.builder.*` import path を成立させるための薄い再公開・委譲・adapter をまとめる。
+- 下位には apply fork、review oracle、indexing、session join、TUI 起動・resolve、quota availability probe などの agent call parameter 構築経路への入口があり、多くは正本側実装への接続、既存参照維持、削除条件を示す境界として機能する。
+- 正本側に同用途の builder がない quota probe など一部の暫定境界も含むが、主目的は ACP builder の本体仕様や処理本体を置くことではなく、realization 側から正本側または暫定実装へ進むための互換層を保つことにある。
 
 ## Read this when
-- realization 側または利用者向け公開面に残る ACP 関連 import を、正本側実装へどう接続しているか確認したいとき。
-- agent call parameter builder の公開 import path、再公開層、委譲層、一時的な互換補正の所在を上位から切り分けたいとき。
-- apply fork、review oracle、session join、TUI 起動・resolve、indexing 関連の builder 系入口のどれへ進むべきか判断したいとき。
-- 正本側 package 構造に合わせて realization 側に互換 package や薄い入口が残っている理由、削除条件、移行判断を確認したいとき。
+- realization 側に残る `acp.*` / `acp.builder.*` import path が、正本側 ACP builder または暫定 adapter へどのようにつながっているか確認したいとき。
+- agent call parameter builder のうち、apply fork、review oracle、indexing、session join、TUI、quota availability probe のどの下位領域へ進むべきか切り分けたいとき。
+- 既存参照を壊さないために残された再公開・委譲・互換入口の理由や、削除できる条件を確認したいとき。
+- oracle package を通常 import できない配置への fallback、正本側戻り値の realization 側型への適合、runtime 側から prompt literal を外すための暫定 adapter など、互換境界に関わる処理の所在を探したいとき。
 
 ## Do not read this when
-- ACP builder の prompt、出力条件、structured output schema、正本仕様そのものを確認したいとき。正本側の対応する本文へ進む。
-- agent call parameter の型定義、file access mode、model class、repo root 解決などの共通構造を確認したいとき。共通定義を扱う領域へ進む。
-- apply fork の CLI 制御、fork 適用処理、git 操作、作業レポート生成フローを調べたいとき。ここは parameter 構築入口と互換境界に限られる。
-- TUI の画面表示、イベント処理、入力操作など UI 本体の実装を調べたいとき。TUI 本体の領域へ進む。
-- indexing の生成処理、探索処理、データ構造、入出力仕様を調べたいとき。互換入口ではなく実体を持つ正本側実装へ進む。
+- ACP builder の正本仕様、prompt 内容、structured output schema、AgentCallParameter の本来の組み立て規則を確認したいとき。正本側の対応する builder 実装や仕様文書へ進む。
+- 個別の生成処理、探索処理、状態管理、UI 表示、CLI 制御、git 操作、fork 適用処理など、agent call parameter 構築入口を越えた実処理を調べたいとき。
+- AgentCallParameter、FileAccessMode、model class、reasoning effort、repo root 解決などの共通型や基本仕様を確認したいとき。定義元の基本モジュールまたは正本側本文へ進む。
+- 新しい ACP builder の正本ロジックや仕様を追加・変更したいとき。互換層ではなく、実体を持つ正本側または該当する処理本体へ進む。
 
 ## hash
-- f72451816d2b4445ac0ddeb63a3798ac36431744d0e9ae472eba627960a138c4
+- 93a383057d7d6b1b273257a72c20e62e04db78c11a3d6d2f85dd66efe7c212bc
 
 # `basic`
 
@@ -62,25 +62,25 @@
 # `commons`
 
 ## Summary
-- cmoc の realization implementation における共有 runtime helper 群をまとめる領域。Codex CLI 呼び出し、設定、内容 hash、CLI 実行ライフサイクル、エラー表示、git 操作、ログ、パス、結果型、session state、INDEX.md 更新 preflight など、複数の上位機能から共通利用される実行時支援を扱う。
-- 上位コードから使う公開 import 入口と、責務別に分かれた runtime 実装本文の両方を含むため、共通 helper の利用可否を確認する入口にも、個別 runtime 挙動へ進むための分岐点にもなる。
+- cmoc の realization implementation のうち、複数の CLI サブコマンドや上位処理から共有される runtime helper 群を収める領域。Codex 呼び出し、設定、内容 hash 保存、共通エラー、git 操作、実行ログ、path、結果型、永続 state、目次更新 preflight などの横断的な実行時支援を扱う。
+- この階層は、共通 runtime API の集約入口と、責務別に分かれた下位 helper 実装への入口である。上位コマンド固有の処理ではなく、実行境界、永続化、外部プロセス、ログ、状態、目次同期などを複数機能から再利用するための実装を探すときの起点になる。
 
 ## Read this when
-- サブコマンドや上位 workflow から共通利用される runtime helper の所在を探したいとき。
-- Codex exec/TUI 呼び出し、profile・sandbox・CODEX_HOME、Structured Output 検証、quota/capacity retry、call log、resume 継続など Codex 実行境界の実装を追いたいとき。
-- CLI サブコマンド共通の開始・完了表示、終了コード化、例外表示、サブコマンドログ、current logger、preflight 実行順序を確認または変更したいとき。
-- 設定ファイルの読み書き、内容 hash 保存、binary 判定、共通エラーレポート、git repository 操作、runtime path、結果モデル、session state 永続化など、複数機能にまたがる基盤処理を扱うとき。
-- INDEX.md 更新 preflight、目次対象列挙、既存エントリー再利用、hash による鮮度判定、Structured Output から Markdown への変換、更新 commit の制御を確認または変更したいとき。
+- CLI サブコマンド間で共有される runtime helper の責務分担や、どの下位実装へ進むべきかを判断したいとき。
+- Codex exec/TUI 呼び出し、profile・sandbox・CODEX_HOME・Structured Output schema・quota/capacity retry・resume・call log など、Codex CLI との実行境界を確認または変更したいとき。
+- 設定ファイルの読み書き、内容 hash による保存、binary 判定、共通エラーレポート、git repository 操作、subcommand event log、runtime path、実行結果型、session state のいずれかの共通 runtime 実装を探しているとき。
+- INDEX.md 更新の preflight、目次生成対象の列挙、hash による鮮度判定、既存エントリー再利用、Structured Output 検証、Markdown 生成、更新 commit までの実装経路を追いたいとき。
+- 上位コードが複数の runtime 領域を横断して利用しており、公開 import 面や共通 helper の依存先を整理したいとき。
 
 ## Do not read this when
-- 特定サブコマンド固有の引数定義、画面出力、業務処理、状態更新の流れだけを調べたいときは、そのサブコマンド実装へ進む。
-- 正本仕様断片、設計意図、出力互換性の人間判断、prompt 文言そのものを確認したいときは、oracle 側の本文を読む。
-- 設定モデル、FileAccessMode、path model など基本層の型定義や概念定義だけを確認したいときは、対応する basic 層の本文へ進む。
-- 個別の生成済みログ、レポート、状態ファイル、利用者向け成果物の内容を読む必要があるときは、この共有 runtime 実装ではなく対象の保存先や読み取り側へ進む。
-- テスト期待値や fixture の調整だけを行う場合は、まず対応する test 側の本文へ進み、必要になった場合だけこの領域の runtime 実装を読む。
+- 正本仕様断片、用語定義、path model、CLI の利用者向け仕様、設定モデル自体の定義を確認したいだけのときは、oracle や basic/config 側の本文へ進む。
+- 個別サブコマンドの引数定義、command 登録、業務処理、UI 出力、状態遷移フローを調べたいときは、該当する上位コマンド実装へ進む。
+- 共通 helper の利用先で渡される具体的な値、個別 workflow の呼び出し順、テスト期待値だけを確認したいときは、その呼び出し元または対応する test を読む。
+- 生成される INDEX.md の文面基準や prompt の正本意図だけを確認したいときは、この runtime 実装ではなく、対応する oracle または prompt builder 側を読む。
+- 外部コマンド、git、path、logging、state などのうち単一の低レベル責務だけを調べたい場合は、この階層全体ではなく該当する責務別 runtime 実装へ直接進む。
 
 ## hash
-- 3000a10d8ef866df491f57a1b82abe9deb42a8d4f645f40405692ffa84c12e80
+- 6bbb999430197ae8ec2d4c2f370769a4ad2ab8d61b79c643f30226a5371ee4fd
 
 # `config`
 

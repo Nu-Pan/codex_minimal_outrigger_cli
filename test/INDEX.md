@@ -198,25 +198,25 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex exec が quota exceeded になった後の待機、probe、resume、retry の外部挙動を検証する realization test。
-- quota 復帰時の fake Codex 呼び出し列、resume token の有無による再開または再実行、call log、subcommand log、CODEX_HOME/cwd の扱いを同じ retry 状態機械の観測点として扱う。
-- 並列に quota 待機した複数呼び出しが単一の代表 probe を共有し、probe 成功時は各呼び出しが復帰し、probe 失敗時は待機中の呼び出しが失敗することも検証する。
+- Codex exec が quota exceeded になった後の待機、availability probe、resume token を使った復帰、resume 不能時の再実行を外部挙動として検証する realization test。
+- fake Codex subprocess、call log、subcommand log、標準出力、CODEX_HOME と cwd、並列実行時の代表 probe 共有を観測し、quota retry 状態機械の回帰をまとめて扱う。
+- 16,000 文字を超えるが、probe 共有、resume、retry、ログ、実行ディレクトリが同じ fake 呼び出し列に強く結び付くため、一つの quota retry 回帰テストとして凝集させている。
 
 ## Read this when
-- Codex exec の quota exceeded 検出後に、quota availability probe を投げて復帰確認し、元の呼び出しを resume または再実行する制御を変更・調査するとき。
-- quota 待機中の Codex 呼び出しログ、標準出力・標準エラー・prompt・output-last-message の保存、subcommand log の status や purpose を確認するとき。
-- resume token が得られた場合の resume 呼び出しと、token が得られない場合の通常再実行の分岐を確認するとき。
-- 相対 CODEX_HOME と Codex 実行 cwd、特に oracle 読み取り系 file access mode での cwd 解決を扱うとき。
-- 複数の Codex exec が同時に quota exceeded になった場合の代表 probe 共有、待機呼び出しの復帰、失敗伝播を確認するとき。
+- Codex exec の quota exceeded 検出後に、probe を挟んで resume または再実行する制御を変更・調査するとき。
+- quota availability probe の生成、成功・非 quota 失敗・quota 継続失敗の扱い、待機中呼び出しへの失敗伝播を確認するとき。
+- Codex 呼び出しログ、subcommand log、prompt/stdout/stderr/output の保存内容、console 表示、result の call_log_path を quota retry 文脈で確認するとき。
+- CODEX_HOME が相対パスの場合の実行 cwd、`--cd` の向き先、PURE_ORACLE_READ での oracle root 利用を quota probe と合わせて確認するとき。
+- 複数の Codex exec が同時に quota exceeded になった場合に、代表 probe を一回だけ実行し、各呼び出しが resume または失敗する挙動を確認するとき。
 
 ## Do not read this when
-- quota exceeded 後の retry 状態機械と無関係な Codex exec の通常成功・通常失敗・引数構築だけを確認したいとき。
-- Codex CLI や LLM の出力品質そのもの、または実際の外部 Codex サービスの挙動を検証したいとき。
-- quota probe、resume token、call log、subcommand log、CODEX_HOME/cwd、並列 quota 待機のいずれにも関係しないテスト支援 fixture や repository setup の詳細だけを調べたいとき。
-- oracle file の正本仕様を確認したいとき。この対象は正本仕様ではなく、実装された retry 制御の realization test である。
+- 通常成功する Codex exec の引数組み立てや出力解析だけを確認したいときは、quota retry ではない runtime 実装または該当する通常系テストを読む。
+- quota exceeded と無関係な設定読み込み、repository fixture、Codex profile stub、補助 executable 作成の詳細を調べたいときは、対応する support や config の本文を読む。
+- Codex CLI や LLM の出力品質そのものを評価したいときは、このテストは対象外であり、ここでは fake subprocess による制御ロジックだけを検証している。
+- oracle file の正本仕様を確認したいときは、この realization test ではなく oracle 配下の該当本文を読む。
 
 ## hash
-- 987a30d44b196de976e233c6d228f6dc7167ab5691477a7847f39b2ab552c1b3
+- 5c77e55551c5c963cc706fa674788efc84b6c0edd5d0671ff74dfb818cf64a05
 
 # `test_codex_runtime_retry.py`
 

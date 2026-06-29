@@ -59,6 +59,23 @@
 ## hash
 - 0ab736b2c29b4ef0eadf9408768a9f99642c5d3d95caecb6c4def825217c487a
 
+# `quota_probe.py`
+
+## Summary
+- quota availability probe 用 AgentCallParameter を構築する realization 側の暫定 adapter。Codex exec runtime に prompt literal を置かず、probe 呼び出しも parameter の prompt を保存して stdin に渡す境界へ揃える。
+- 現行 oracle src に quota probe 専用 builder がない制約を明示し、同用途の oracle builder が追加された時点で置換・削除する対象である。
+
+## Read this when
+- Codex exec の quota 待機中に実行される代表 probe の prompt、schema 無し指定、または元呼び出し parameter から引き継ぐ model/reasoning/file access の境界を確認・変更したいとき。
+- runtime 側で probe prompt を直接作らないための暫定 adapter が残っている理由と削除条件を確認したいとき。
+
+## Do not read this when
+- quota 待機の状態機械、代表 probe の共有、resume token、call log、subcommand event の制御を調べたいときは Codex exec runtime を読む。
+- oracle 側に quota probe 専用 builder が存在するか、または正本仕様としてどう定義すべきか確認したいときは oracle 側の acp_builder と app_spec を読む。
+
+## hash
+- d2967195fb145e02d6f2ee795d9cc966b20a4502a6a14fc96b58793db181f68a
+
 # `review`
 
 ## Summary

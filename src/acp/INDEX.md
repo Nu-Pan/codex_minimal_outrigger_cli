@@ -19,22 +19,21 @@
 # `builder`
 
 ## Summary
-- ACP の agent call parameter builder 群について、realization 側に残る公開 import path と oracle 側 canonical 実装への互換境界をまとめる領域。多くは正本側実装の薄い再公開・委譲入口であり、実処理本体ではなく、既存参照を壊さずに正本側へ接続する役割を持つ。
-- apply fork、review oracle、session、TUI、indexing などの builder 系入口へ進むための上位境界であり、どの系統が互換 package、再公開層、委譲層、一時補正層のどれに当たるかを切り分ける入口になる。
+- ACP builder の realization 側公開面をまとめる階層。正本側にある builder 実装への薄い互換入口、再公開、委譲、暫定 adapter を配置し、既存の参照経路を維持する役割を持つ。
+- 実処理の本体や正本仕様を置く場所ではなく、apply fork、indexing、review、session、TUI、quota probe などの agent call parameter 構築経路について、realization 側から正本側または暫定実装へ進むための入口になる。
+- 多くの下位要素は、正本側実装との対応関係、既存 import path を残す理由、互換層を削除できる条件を確認するための案内点として位置づけられる。
 
 ## Read this when
-- ACP builder 系の既存公開参照が oracle 側実装へどう接続されているかを、上位から切り分けたいとき。
-- agent call parameter builder のうち、apply fork、review oracle、session join、TUI 起動・resolve、indexing 関連のどの入口へ進むべきか判断したいとき。
-- realization 側に残る互換 import path、再公開層、委譲層を残す理由や削除条件を確認したいとき。
-- oracle 側 package 構造に合わせて realization 側 package が存在している理由を確認したいとき。
-- 正本側 builder の戻り値や公開面を realization 側で扱うための適合処理、import path fallback、一時的な互換補正の所在を探し始めるとき。
+- ACP builder の realization 側に残る公開 import path や互換入口が、正本側 builder 実装へどのように接続されているか確認したいとき。
+- agent call parameter builder のうち、apply fork、review oracle、session join、TUI 起動・resolve、indexing 公開面、quota availability probe のどの下位領域へ進むべきか切り分けたいとき。
+- 正本側へ実装を集約した後も既存参照を壊さないために残された再公開・委譲・adapter の理由や削除条件を確認したいとき。
+- oracle package を通常 import できない配置での fallback、正本側戻り値を realization 側型として扱う適合、prompt 内表記の一時補正、probe prompt の runtime 外出しなど、互換境界に関わる処理の所在を探したいとき。
 
 ## Do not read this when
-- builder の具体的な prompt、出力条件、structured output schema、正本仕様そのものを確認したいとき。正本側の対応する本文を読む。
-- agent call parameter の型定義、file access mode、model class、repo root 解決などの共通構造を確認したいとき。共通定義のある領域へ進む。
-- apply fork 全体の CLI 制御、fork 適用処理、git 操作、作業レポート生成フローを調べたいとき。ここは parameter 構築入口と互換境界に限られる。
-- TUI の画面表示、イベント処理、入力操作など UI 本体の実装を調べたいとき。TUI 本体の領域へ進む。
-- indexing の生成処理、探索処理、データ構造、入出力仕様を調べたいとき。互換入口ではなく実体を持つ正本側実装を読む。
+- ACP builder の正本仕様、prompt 内容、structured output schema、AgentCallParameter の本来の組み立て規則を確認したいとき。正本側の対応する builder 実装や仕様文書を読む。
+- 個別の生成処理、探索処理、状態管理、UI 表示、CLI 制御、git 操作、fork 適用処理など、agent call parameter 構築入口を越えた実処理を調べたいとき。
+- AgentCallParameter、FileAccessMode、model class、reasoning effort、repo root 解決などの共通型や基本仕様を確認したいとき。定義元の基本モジュールや正本側本文を読む。
+- 新しい builder ロジックや正本仕様を追加・変更したいとき。互換層ではなく、実体を持つ正本側または該当する処理本体へ進む。
 
 ## hash
-- a05c840cbeae069b5a217e3011efb80b6404b8ce94f28ae846fffe57203ae605
+- 359718fc6ed3b1c1e0d43b653f151a5c07aa84acaf02274f0d176710f72b510e
