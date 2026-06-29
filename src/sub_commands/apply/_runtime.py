@@ -12,6 +12,7 @@ from cmoc_runtime import (
     CmocError,
     process_start_time,
     run_git,
+    set_apply_process_tracking_path,
     worktrees_dir,
 )
 
@@ -92,13 +93,18 @@ def write_apply_process_id(root: Path, session_id: str, process_id: int) -> None
 
 @contextmanager
 def apply_process_tracking(root: Path, session_id: str) -> Iterator[None]:
-    """Codex subprocess 追跡先を apply 実行中だけ環境変数で渡す。"""
+    """Codex subprocess 追跡先を apply 実行中だけ有効化する。"""
     path = apply_process_id_path(root, session_id)
     old_value = os.environ.get(APPLY_PROCESS_TRACKING_ENV)
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # Env is restored for compatibility, but the active tracking decision stays
+    # process-local so a parent shell cannot force unrelated Codex calls into it.
+    old_tracking_path = set_apply_process_tracking_path(path)
     os.environ[APPLY_PROCESS_TRACKING_ENV] = str(path)
     try:
         yield
     finally:
+        set_apply_process_tracking_path(old_tracking_path)
         if old_value is None:
             os.environ.pop(APPLY_PROCESS_TRACKING_ENV, None)
         else:

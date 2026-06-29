@@ -21,6 +21,7 @@ from commons.runtime_errors import CmocError
 from commons.runtime_paths import schema_store_dir
 
 APPLY_PROCESS_TRACKING_ENV = "CMOC_APPLY_PROCESS_ID_PATH"
+_active_apply_process_tracking_path: Path | None = None
 _NEVER_WRITABLE_ROOT_NAMES = {
     ".agents",
     ".cmoc",
@@ -318,10 +319,14 @@ def run_codex_subprocess(
     argv: list[str], **kwargs: Any
 ) -> subprocess.CompletedProcess[Any]:
     """Codex CLI 不在を Python の生例外ではなく cmoc の実行時エラーにそろえる。"""
-    tracking_path = os.environ.get(APPLY_PROCESS_TRACKING_ENV)
     try:
-        if tracking_path and argv[:1] == ["codex"]:
-            return run_tracked_codex_subprocess(argv, Path(tracking_path), **kwargs)
+        # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+        # Tracking is apply-run internal state; an inherited env var alone must
+        # not redirect unrelated Codex calls to a stale or foreign pid file.
+        if _active_apply_process_tracking_path is not None and argv[:1] == ["codex"]:
+            return run_tracked_codex_subprocess(
+                argv, _active_apply_process_tracking_path, **kwargs
+            )
         return subprocess.run(argv, **kwargs)
     except FileNotFoundError as exc:
         if argv[:1] != ["codex"]:
@@ -333,6 +338,14 @@ def run_codex_subprocess(
             ["Codex CLI をインストールし、PATH に codex を含めてください。"],
             f"argv: {argv}\nerror: {exc}",
         ) from exc
+
+
+def set_apply_process_tracking_path(path: Path | None) -> Path | None:
+    """apply 実行中だけ有効な process-local tracking path を差し替える。"""
+    global _active_apply_process_tracking_path
+    old_path = _active_apply_process_tracking_path
+    _active_apply_process_tracking_path = path
+    return old_path
 
 
 def run_tracked_codex_subprocess(
@@ -350,7 +363,20 @@ def run_tracked_codex_subprocess(
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
     process = subprocess.Popen(argv, start_new_session=True, **kwargs)
-    record_tracked_child_process(tracking_path, process.pid)
+    try:
+        record_tracked_child_process(tracking_path, process.pid)
+    except OSError as exc:
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+        raise CmocError(
+            "apply process tracking を更新できません。",
+            ["apply process pid file の権限と保存先を確認してください。"],
+            f"path: {tracking_path}\nerror: {exc}",
+        ) from exc
     try:
         stdout, stderr = process.communicate(input_data)
         result = subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
@@ -363,7 +389,14 @@ def run_tracked_codex_subprocess(
             )
         return result
     finally:
-        remove_tracked_child_process(tracking_path, process.pid)
+        try:
+            remove_tracked_child_process(tracking_path, process.pid)
+        except OSError as exc:
+            raise CmocError(
+                "apply process tracking を更新できません。",
+                ["apply process pid file の権限と保存先を確認してください。"],
+                f"path: {tracking_path}\nerror: {exc}",
+            ) from exc
 
 
 def record_tracked_child_process(path: Path, process_id: int) -> None:
