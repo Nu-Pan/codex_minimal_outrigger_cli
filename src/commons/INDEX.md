@@ -15,21 +15,21 @@
 # `cmoc_runtime.py`
 
 ## Summary
-- cmoc の実行時共通機能を直接実装せず、Codex 実行、設定、内容ハッシュ、CLI 呼び出し、エラー描画、git 操作、ログ、パス、結果型、状態管理などの下位 runtime API をまとめて公開する集約入口。
-- この対象自体の責務は、各 runtime 領域の具体処理を置くことではなく、呼び出し側が複数の共通機能へ一つの import 面から到達できるようにすることにある。
+- 共通 runtime 層の主要 API を 1 か所から import できるように集約する薄い入口である。Codex 実行、profile・config・content・CLI・error・git・logging・path・result・state など、複数の runtime helper の公開名を再公開する。
+- 独自ロジックは持たず、下位 runtime module 群へのルーティング用 facade として位置づく。
 
 ## Read this when
-- runtime 系の共通 API がどの機能群から集約されているかを確認したいとき。
-- 呼び出し側の import 面を整理する変更で、既存の共通 runtime API が集約入口から公開されているかを確認したいとき。
-- Codex 実行、設定、git、パス、状態など複数領域をまたぐ処理を読む前に、利用可能な共通 API の入口を把握したいとき。
+- 共通 runtime helper を利用する呼び出し側が、どの公開名をまとめて import できるか確認したいとき。
+- runtime 関連の import 経路を整理し、集約入口で再公開されている名前を追加・削除・確認したいとき。
+- Codex 実行、設定、git 操作、path、状態、結果型など複数の runtime 領域を横断して使う上位コードの依存先を確認したいとき。
 
 ## Do not read this when
-- 各 API の具体的な挙動、入出力、副作用、例外処理を知りたいとき。その場合は該当する責務を実装している下位の runtime 本体を読む。
-- 新しい runtime 処理の実装場所を探しているとき。この対象は集約入口であり、処理本体を追加する場所ではない。
-- 設定、内容ハッシュ、git 操作、パス解決、状態ファイル操作など単一領域だけを変更する場合。その領域を担当する下位対象へ直接進む。
+- 個別 helper の挙動、引数、失敗時処理、永続化内容を調べたいときは、対応する下位 runtime module を直接読む。
+- CLI サブコマンド固有の処理や UI 出力の詳細を調べたいときは、呼び出し側の実装を直接読む。
+- runtime API の再公開一覧ではなく、正本仕様や設計意図を確認したいときは oracle 側の本文を読む。
 
 ## hash
-- 2685ce534f01e5ce3f6f5191a1baeff4bd5e26e471f8610d4dc55ad3d2401846
+- 27afe62020c91412f5b3bc611a23155d28e3ef2dbe1974f771f522e0cde0a461
 
 # `indexing.py`
 
@@ -158,25 +158,24 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI を起動する subprocess 境界で共有される profile、sandbox、cwd、CODEX_HOME、schema 配置、child process tracking、JSONL error 判定をまとめた実装。
-- cmoc の FileAccessMode を Codex CLI が理解する sandbox/profile 設定へ変換し、追加 read/write path の許可境界を検査する責務を持つ。
-- Codex CLI 実行前の home/auth 検証、profile 生成と再利用、subprocess 実行失敗の cmoc error 化、apply abandon 用の child process 記録、quota/capacity retry 判定の入口になる。
+- Codex CLI を起動する subprocess 境界で共有される実行 profile、sandbox/cwd、CODEX_HOME、child process tracking、Structured Output schema 配置、JSONL error 判定をまとめる実装。
+- cmoc の FileAccessMode を Codex CLI profile が理解する sandbox 設定と writable/read path 制約へ変換し、追加許可 path が cmoc の読み書き境界を広げないことを検査する。
+- Codex subprocess の実行、apply abandon 用の child process pid tracking、Codex CLI 不在時の利用者向けエラー化、stdout/stderr/JSONL からの error・resume・capacity・quota 判定を扱う。
 
 ## Read this when
-- AgentCallParameter や CmocConfig から Codex profile を生成する処理、sandbox_mode、writable_roots、Codex cwd の決まりを確認・変更したいとき。
-- FileAccessMode ごとの read/write 許可境界、PURE_ORACLE_READ、REALIZATION_WRITE、ORACLE_WRITE、REPO_WRITE の Codex 実行環境への落とし込みを調べるとき。
-- CODEX_HOME の解決・検証、auth.json 不在時のエラー、Codex CLI 不在時の CmocError 変換を扱うとき。
-- Codex subprocess の起動、apply abandon 向けの child process tracking、pid file 記録・削除、Linux proc stat による pid 同一性確認を変更するとき。
-- Structured Output schema を hash store に配置する処理、schema なし output JSON の読み取り、Codex JSONL stdout/stderr から error detail、resume token、quota/capacity 判定を抽出する処理を確認するとき。
+- Codex CLI に渡す profile 本文、sandbox mode、writable_roots、cwd、CODEX_HOME、または追加 read/write path の挙動を確認・変更したいとき。
+- FileAccessMode ごとの読み取り・書き込み境界、PURE_ORACLE_READ の cwd、REALIZATION_WRITE/ORACLE_WRITE/REPO_WRITE の sandbox 許可範囲を調べるとき。
+- Codex subprocess の起動失敗、apply 実行中の child process tracking、pid file の記録・削除、または process start time による pid 同一性確認を扱うとき。
+- Structured Output schema を実行 root 配下の hash store へ配置する処理、schema なし output JSON の読み取り、Codex JSONL stdout/stderr からの error detail・resume token・capacity/quota retry 判定を追うとき。
 
 ## Do not read this when
-- Codex に渡す prompt 本文、file access rule の利用者向け説明文、oracle 側の仕様断片そのものを確認したいだけなら、prompt builder や oracle doc/source の該当箇所を読む。
-- hash 名ファイルの書き込み方式そのもの、schema store directory の物理配置そのものを変更したい場合は、content 書き込み helper や runtime path helper を直接読む。
-- CmocError の表現、例外型の共通仕様、利用者向け error formatting を変更したい場合は、error 定義側を読む。
-- Codex CLI の通常出力品質や LLM 応答内容を評価したいだけなら、この subprocess 境界ではなく呼び出し元の制御や出力処理を読む。
+- prompt 本文に利用者へ提示する file access rule を生成する処理だけを確認したいとき。
+- hash 名ファイルの書き込み処理や schema store のパス定義そのものを確認したいだけのとき。
+- cmoc config の model や reasoning effort の定義・読み込み方法を確認したいだけのとき。
+- Codex CLI を呼ばない通常のアプリケーションロジック、サブコマンド仕様、または oracle 文書そのものの内容を調べたいとき。
 
 ## hash
-- 9654325331d9c9af10418e444351afd2416825573fb064cf512b5d0cea92e822
+- 2a0a866f98a54047a71d418e78dc8b0ef1b4b0bb6d1a9f42313fb94e1f48dd5a
 
 # `runtime_codex_tui.py`
 

@@ -1,27 +1,27 @@
 # `apply`
 
 ## Summary
-- apply サブコマンド群の実装ディレクトリとして、apply run の開始、破棄、join、実行時 process/worktree 管理、fork report 生成を扱う入口。
-- apply branch/worktree、apply state、Codex subprocess、所見適用、差分再キュー、merge conflict、cleanup といった apply 固有の制御を、各操作単位の実装へ分岐して確認するための対象。
-- fork の orchestration、abandon の cleanup、join の session branch 取り込み、runtime helper、report writer が同階層にまとまっており、apply サブコマンドの責務境界を把握する起点になる。
+- apply 系サブコマンドの実行・破棄・取り込みと、その実行時補助処理を扱う実装領域。作業用 branch/worktree の作成・検出・cleanup、apply state の遷移、process id 管理、実行中 process の停止、report 生成、join 時の merge/conflict 対応までを含む。
+- 所見を Codex に適用させる実行フロー、未 join run の破棄、完了またはエラーになった run の session branch への取り込み、実行結果 report の保存など、apply run のライフサイクル全体を調べる入口になる。
+- 実行本体、runtime 補助、report 生成、破棄、join が分かれているため、利用者向けの流れを確認したい場合はサブコマンド処理へ、process/worktree/pid の低レベルな扱いを確認したい場合は runtime 補助へ、report 内容だけを確認したい場合は report 生成処理へ進む。
 
 ## Read this when
-- apply fork、apply abandon、apply join のいずれかの CLI 実行条件、状態遷移、branch/worktree 操作、cleanup、利用者向け出力を確認・変更したいとき。
-- apply 実行中 process の追跡・停止、pid file、Codex subprocess group、apply worktree 解決など、apply 固有の runtime 補助処理を調べたいとき。
-- apply fork が Codex に所見列挙・適用を依頼し、変更 path を再キューし、commit と report 出力へ進む全体フローを追いたいとき。
-- apply join における apply branch の session branch への取り込み、想定外差分の扱い、force-resolve、merge conflict report、INDEX.md conflict 自動解決を確認したいとき。
-- apply run の破棄、実行中 process 停止、apply worktree・branch・pid file 削除、apply state 初期化の一連の処理を確認したいとき。
-- apply fork report の保存内容、変更差分収集、構造化変更要約、frontmatter と本文の構成を確認・変更したいとき。
+- apply run の開始から完了・エラー・破棄・join までの状態遷移や cleanup 条件を確認・変更したいとき。
+- apply 用の branch/worktree 作成、session branch との対応、linked worktree 検出、作業後の worktree や branch の削除を調べたいとき。
+- apply 実行中の process id file、Codex subprocess tracking、実行中 process の停止、running 状態の abandon 処理を確認・変更したいとき。
+- 所見列挙、Codex による適用、変更済み file の再キュー、commit、report 出力までの apply fork orchestration を追いたいとき。
+- apply run の結果を session branch に取り込む条件、merge conflict や想定外差分への対応、force-resolve、join 後の状態初期化を確認したいとき。
+- apply fork の実行結果や失敗結果として保存される report の生成内容、変更差分収集、変更要約、frontmatter を確認・変更したいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド、CLI 全体の共通実行ラッパー、git wrapper、config load、path model、state file 永続化の共通仕様だけを調べたいとき。
-- apply の正本仕様や公開仕様そのものを確認したいときは、oracle doc を読むべきであり、この実装ディレクトリだけを仕様根拠にしない。
-- session state の schema や保存形式そのもの、reports directory や timestamp の共通仕様、process start time 取得の共通実装を調べたいだけのとき。
-- Codex exec に渡す prompt parameter の具体的な構築だけ、または INDEX.md エントリー生成やルーティング文書規約だけを確認したいとき。
-- 特定操作の低レベル helper ではなく、利用者向けの大まかな CLI 引数や出力だけを確認したい場合は、より上位の command 層を先に読む。
+- apply 以外のサブコマンド実装、CLI 共通 runtime、git wrapper、config load、path model、state file 入出力の共通挙動だけを調べたいとき。
+- apply の正本仕様や公開仕様そのものを確認したいとき。実装ではなく正本仕様断片を根拠にする必要がある。
+- Codex CLI 呼び出しの共通実装、prompt parameter の汎用構築、または Codex subprocess tracking の apply 以外の利用箇所だけを調べたいとき。
+- INDEX.md エントリー生成やルーティング文書の規約を調べたいとき。
+- apply run の成果物ではなく、session state schema や apply state の保存形式そのものを確認したいだけのときは、状態定義や永続化を扱う対象へ直接進む。
 
 ## hash
-- 98b03a8ae6c0388a85622ae75e341035a17fefa0b4d008a6df29a17827d5a7b2
+- 8d69247872297b15dcc27feb91b4ec1531a325c331b77a1bcc16381e4e87ddbb
 
 # `indexing.py`
 
