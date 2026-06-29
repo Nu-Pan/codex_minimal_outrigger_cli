@@ -1,23 +1,21 @@
 # `acp`
 
 ## Summary
-- realization 側で ACP builder 互換名前空間を維持する入口領域。既存の acp 系 import path を残しつつ、実体は正本側または別 module 側の builder 実装へ委譲するための境界を担う。
-- 下位には、acp 直下の互換入口と、apply・review・session・TUI・indexing などの builder 領域へ進むための入口がある。ここ自体は ACP builder の正本仕様や処理本体を所有せず、公開参照経路の維持と下位対象選択のための案内に位置づけられる。
+- realization 側の ACP 公開入口をまとめる階層。旧来の `acp.*` import 互換を維持する薄い入口と、ACP builder 領域へ進むための下位入口を扱う。
+- 実装本体や正本仕様をこの階層に複製せず、oracle 側または下位 builder 領域へ委譲する境界を示すための場所。
 
 ## Read this when
-- realization 側に残る acp 系 import path が、正本側 builder 実装や実体 module とどう接続されているか確認したいとき。
-- 旧来の acp 系参照を互換入口として残す理由、公開 import 面での扱い、削除条件を判断したいとき。
-- ACP builder 関連で、apply・review・session・TUI・indexing などのどの下位領域へ進むべきかを大まかに切り分けたいとき。
-- builder の処理本体ではなく、realization 側から正本側実装へ委譲する名前空間や package 境界を確認したいとき。
+- realization 側に残る ACP 関連の公開 import path や互換入口の所在を確認したいとき。
+- 既存の `acp.*` 参照を維持する理由、移行時の扱い、削除条件を判断したいとき。
+- ACP builder に関する realization 側入口から、apply・review・session・TUI・indexing などの下位領域へ進むべきか切り分けたいとき。
 
 ## Do not read this when
-- ACP builder の prompt 本文、structured output schema、モデル選択、file access mode、判定基準などの正本仕様を確認したいとき。対応する oracle 側の本文を読む。
-- apply・review・session join・TUI・indexing などの具体的な処理内容や入出力仕様をすでに調べる対象として特定しているとき。該当する下位領域または正本側実装へ直接進む。
-- 新しい ACP 機能や API 仕様を追加する場所を探しているとき。この領域は互換維持と委譲入口のための領域であり、機能追加の正本入口ではない。
-- CLI 全体の制御フロー、fork 作成、git 操作、ユーザー向け挙動、TUI 画面やイベント処理を調べたいとき。ACP builder 互換入口ではなく、それらを実装する対象を読む。
+- ACP builder の prompt 本文、出力 schema、モデル選択、file access mode などの正本仕様を確認したいとき。対応する oracle 側の仕様や実装へ直接進む。
+- apply・review・session・TUI・indexing の具体的な処理ロジックや入出力仕様をすでに特定しているとき。該当する下位領域または正本側実装を読む。
+- CLI 全体の制御フロー、git 操作、画面描画、状態管理、共通型など ACP 公開互換入口以外の挙動を調べたいとき。
 
 ## hash
-- d912acf53b755082ecee4db0a27842369e3da4df2c22c3c748c5f25b30df0c56
+- dcd7d5111374b4a2d587b83c9cc3a8e21db76e440dfb93db28c472f9064726f8
 
 # `basic`
 

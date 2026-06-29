@@ -18,38 +18,38 @@
 # `launch_tui.py`
 
 ## Summary
-- oracle 側にある TUI 起動パラメータ生成関数を、既存の公開 import path から参照できるように再公開する互換用モジュール。
-- TUI 起動パラメータの正本を oracle 側に置いたまま、realization 側や利用者向け公開面に残る参照を成立させるための薄い入口である。
-- この互換入口は、realization 側と利用者向け公開面から該当 import path 参照がなくなった時点で削除できる。
+- TUI 起動用の AgentCallParameter 生成を oracle 側の正本実装へ委譲しつつ、既存の公開 import path を維持する互換入口。
+- oracle 側で組み立てたパラメータから Structured Output schema 指定だけを外し、対話的な TUI 起動では schema を渡さないという実装上の差分を担う。
+- 削除条件は、realization 側と利用者向け公開面の両方から、この互換 import path への参照がなくなること。
 
 ## Read this when
-- TUI 起動パラメータ生成関数の公開 import path の互換性を確認・変更したいとき。
-- oracle 側の TUI 起動パラメータ生成関数を realization 側からどの名前で再公開しているかを確認したいとき。
-- 互換用 import path を削除できるかどうか、削除条件を確認したいとき。
+- TUI 起動時に渡す AgentCallParameter の生成経路や、Structured Output schema を無効化している理由を確認したいとき。
+- oracle 側の TUI 起動パラメータ生成と、realization 側の既存公開 import path との接続を調べるとき。
+- 互換 import path の維持・削除条件、または TUI 起動パラメータの公開面への影響を変更・確認するとき。
 
 ## Do not read this when
-- TUI 起動パラメータの正本となる生成ロジックや仕様を確認したいときは、oracle 側の実体を読む。
-- TUI の画面構成、入力処理、イベント処理などの実装を調べたいときは、TUI 本体の実装へ進む。
-- 互換 import path ではなく、新しい公開 API や CLI の利用方法を調べたいときは、公開面を定義している対象を読む。
+- TUI 起動パラメータそのものの正本仕様や引数全体の組み立てを確認したいだけなら、委譲先の oracle 側実装を読む。
+- Structured Output schema を要求する非 TUI 起動や index entry 生成など、schema 付き AgentCallParameter の挙動を調べたい場合は、その起動種別の builder を読む。
+- TUI 表示、キー操作、画面描画などの対話 UI 本体の挙動を調べたい場合は、起動パラメータ生成ではなく TUI 実行側の実装を読む。
 
 ## hash
-- a88611127f710dfc4faa014cf5a1420685ccb329009914d37c15cfa1ceb0cc28
+- 4b32161e90fc11b826340f1f17158acbeae5f46b75ec0a538f1d381aac45f932
 
 # `resolve_parameter.py`
 
 ## Summary
-- TUI 向けのパラメータ解決機能を正本側実装から公開し、TUI で扱うファイルアクセスモードの選択肢を基本定義の列挙値から組み立てる薄い realization 実装。
-- 独自の解決ロジックを持つ入口ではなく、正本側の TUI パラメータ解決と基本定義の列挙値を、実装側から参照できる形に接続する役割を持つ。
+- TUI の resolve parameter 構築で使う公開入口をまとめる薄い実装モジュール。正本側のパラメータ構築関数をそのまま公開し、TUI で選べるファイルアクセスモード集合を正本 enum から導出して公開する。
+- 独自の変換ロジックや状態管理は持たず、TUI ビルダー層から正本実装由来の resolve parameter 構築機能とファイルアクセスモード候補へ到達するための中継点として位置づく。
 
 ## Read this when
-- TUI のパラメータ解決を realization implementation 側でどこから import しているか確認したいとき。
-- TUI で提示・利用するファイルアクセスモードの候補が、基本定義の列挙値と同期しているか確認したいとき。
-- 正本側の TUI パラメータ解決実装を realization 側へ露出する接続部分を変更・確認したいとき。
+- TUI ビルダー層で resolve parameter の構築入口や公開 API を確認したいとき。
+- TUI で扱うファイルアクセスモード候補がどこから導出されるかを確認したいとき。
+- この階層から正本側の resolve parameter 構築関数を利用する import 境界を確認したいとき。
 
 ## Do not read this when
-- パラメータ解決の具体的な仕様や処理内容を確認したいときは、正本側の TUI パラメータ解決実装を読む。
-- ファイルアクセスモード自体の定義や意味を確認したいときは、基本定義側の列挙値を読む。
-- TUI 全体の画面構成、入力フロー、表示処理を調べたいだけなら、より直接それらを実装する対象を読む。
+- resolve parameter 構築の具体的な引数組み立てや検証処理を確認したいとき。この対象ではなく、正本側の構築関数本体を読む。
+- ファイルアクセスモード enum 自体の定義や各モードの意味を確認したいとき。この対象ではなく、正本側の基本定義を読む。
+- TUI 全体の画面制御、入力処理、描画、対話フローを調べたいとき。この対象は公開入口の中継だけを扱う。
 
 ## hash
-- c5a764ce2693eef8273489b9de5d8f063ec7dcd7e72609d239251b54dc4554bd
+- 397d9d6c29f5c7ee1e126d51d959f814e9032cb2eb2c71b58e3907f9bd17a2ad

@@ -19,20 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP builder 領域の realization 側入口をまとめる階層。正本側実装を既存の公開参照経路から利用するための互換入口と、apply・review・session・TUI・indexing などの下位 builder 領域への案内を担う。
-- この階層は builder 本体の正本仕様や各処理の詳細を所有する場所ではなく、realization 側の import path を維持しながら oracle 側実装へ委譲する境界と、下位領域を選ぶための入口として位置づけられる。
+- ACP builder の realization 側入口をまとめる階層。正本実装を oracle 側に置いたまま既存の公開 import path を維持する互換境界と、apply・review・session・TUI・indexing 各領域への委譲入口を扱う。
+- この階層の主な役割は、旧来参照から正本側 builder 実装へ到達できるようにすること、および apply fork や review oracle、session join、TUI 起動パラメータ、indexing 互換公開面の下位領域へ進むための案内である。
 
 ## Read this when
-- realization 側で ACP builder 関連の公開参照経路や package 構成が、正本側実装とどう接続されているか確認したいとき。
-- apply、review、session、TUI、indexing のどの builder 領域へ進むべきかを大まかに切り分けたいとき。
-- 旧来の acp.builder 系参照を残す理由、正本側実装への再公開関係、互換入口の削除条件を確認したいとき。
-- builder の処理本体ではなく、realization 側から oracle 側 builder へ委譲する入口や互換名前空間を探しているとき。
+- ACP builder の realization 側で、公開済み参照経路と oracle 側 builder 実装の対応関係を確認したいとき。
+- apply・review・session・TUI・indexing のどの builder 領域へ進むべきかを、realization 側の入口から切り分けたいとき。
+- 既存の builder import path を残す理由、正本側への委譲境界、互換入口の削除条件を確認したいとき。
+- apply fork の agent call parameter 構築、review oracle 向け builder 再公開、session join 入口、TUI 起動パラメータ、indexing 互換公開面の所在を探しているとき。
 
 ## Do not read this when
-- 各 builder の prompt 本文、structured output schema、モデル選択、file access mode、判定基準などの正本仕様を確認したいとき。対応する oracle 側の本文を読む。
-- apply、review、session join、TUI、indexing の具体的な処理内容や入出力仕様をすでに調べる対象として特定しているとき。該当する下位領域または正本側実装へ直接進む。
-- CLI 全体の制御フロー、fork 作成、git 操作、ユーザー向け挙動、TUI 画面やイベント処理を調べたいとき。builder 互換入口ではなく、それらを実装する対象を読む。
-- AgentCallParameter、path model、基本 enum、共通型など、builder 領域に限らない基礎定義そのものを確認したいとき。
+- ACP builder の prompt 本文、出力 schema、モデル選択、file access mode、判定基準などの正本仕様を確認したいとき。対応する oracle 側の builder や JSON 定義を読む。
+- apply fork、review oracle、session join、TUI、indexing の具体的な処理ロジックや入出力仕様をすでに特定しているとき。該当する下位領域または正本側実装へ直接進む。
+- CLI コマンド全体の制御フロー、fork 作成、git 操作、画面描画、キー操作、状態管理など builder 以外の挙動を調べたいとき。
+- AgentCallParameter 型、path model、model class、reasoning effort、file access mode enum など、builder 領域に限らない共通型や共通仕様そのものを調べたいとき。
 
 ## hash
-- 7ddfd871aad11ab69af2fec2a0597606862fec9d41c5fa92f22802580f6525c7
+- 919d783ca312c9e813bd57d97a75ff8b7d5410d3f184e2cbca45d466c877207d

@@ -134,24 +134,24 @@
 # `test_cli_init_tui.py`
 
 ## Summary
-- init と TUI 起動直前の CLI 外部挙動を検証する realization test。初期化時の .cmoc 無視設定、既存 staged/unstaged 差分の保護、既存 .cmoc 追跡解除、既定 config.json 生成と既存設定値の保持、sub_command ログ、linked worktree 上での root/worktree 分離を扱う。
-- TUI については、エディタで作成された Markdown prompt からコメントを除去して完全版 prompt を保存し、resolve_parameter の結果から AgentCallParameter を構築して Codex TUI を起動する前処理を検証する。linked worktree ではログ保存先、schema 生成先、root/cwd、extra_read_paths が期待通り分離されることも確認する。
-- 16,000 文字を超えるが、init 済み状態と TUI 前処理が同じ利用開始直後の CLI 境界を共有するため、repository/runtime 準備の回帰テストとして一箇所にまとめられている。
+- init と対話起動前処理の外部挙動を検証する realization test。cmoc 管理領域の ignore 化、既存 staged/unstaged 差分の保護、初期設定生成と同期、linked worktree での初期化・ログ保存・schema 配置、Markdown prompt からの TUI parameter 解決と Codex 起動引数構築を扱う。
+- 利用開始直後の CLI 境界で共有される repository/runtime 準備を一続きの回帰として確認するための入口であり、初期化済み状態を前提に TUI 起動へ進む挙動まで同じ文脈で読む対象。
 
 ## Read this when
-- init の外部挙動、特に .cmoc の git ignore、.gitignore 更新、既存差分の保護、tracked .cmoc file の untrack、初期 commit、config.json の既定値同期を変更または確認する場合。
-- linked worktree で init または tui を実行したときの、共通 root 側 .cmoc と worktree 側 .gitignore、ログ保存先、schema 保存先、git status への影響を確認する場合。
-- tui サブコマンドの起動前処理、エディタ起動、Markdown prompt のコメント除去、resolve_parameter 呼び出し、file_access_mode の既定化、AgentCallParameter の組み立て、Codex TUI 呼び出し引数を変更または確認する場合。
-- sub_command ログのイベント内容や、init/tui が古いログディレクトリではなく現在の log/sub_command・log/tui 配下を使うことを確認する場合。
+- init の外部挙動、特に cmoc 管理領域を git tracking から外す処理、ignore 設定、cleanup commit、サブコマンドログ記録を確認・変更する時。
+- init が利用者の既存 staged 変更や unstaged 変更、既存の ignore ファイル変更を壊さないことを確認・変更する時。
+- 初期設定ファイルの default 値、既存の人間設定を保持した defaults 同期、設定項目追加時の初期化回帰を確認する時。
+- linked worktree 上で init または TUI を実行した時の repository root と worktree cwd の扱い、ignore 設定、ログ保存先、schema 配置、git status の汚れ防止を確認する時。
+- TUI 起動前のエディタ実行、HTML comment 除去を含む prompt 整形、parameter 解決用 Codex 呼び出し、file access mode の default、最終 prompt 保存、TUI 用 Codex parameter 構築を確認・変更する時。
 
 ## Do not read this when
-- 個別の CLI サブコマンド実装や内部 helper の詳細だけを調べたい場合は、対応する実装ファイルを先に読む。
-- init や tui に関係しないサブコマンド、oracle review、apply fork、一般的な config schema の詳細を調べる場合は、より直接のテストまたは実装を読む。
-- Codex CLI やエディタ実体の出力品質そのものを検証したい場合は、このテストの対象外であり、ここでは前処理と呼び出し境界だけを扱う。
-- 単純な path model、repository root 検出、git helper の単体挙動だけを確認したい場合は、それらを直接検証するテストまたは実装を読む。
+- 個別サブコマンドの business logic や内部 helper の詳細だけを調べたい時。この対象は init/TUI 起動境界の外部挙動回帰に絞られている。
+- Codex CLI や LLM の出力品質そのものを検証したい時。この対象は呼び出し引数・保存先・制御境界を stub で確認する。
+- 一般的な test support、repository fixture、fake executable 作成 helper の実装を調べたい時。ここではそれらを利用する側の回帰だけを扱う。
+- TUI 実行後の対話 UI 内部挙動を調べたい時。この対象は対話起動前の parameter 構築と起動呼び出しまでを扱う。
 
 ## hash
-- 8165435f4efa3ccf701190d3ce0e4d5b01bc5cf253eef38bc3ee77c0b96fc42b
+- 52aa8bc9dca127f656fd33da495d4ea1e1e7ffe9c5666c332a30912fc5b3584f
 
 # `test_codex_runtime_exec.py`
 
@@ -272,25 +272,24 @@
 # `test_prompt_parts.py`
 
 ## Summary
-- prompt part と ACP builder が生成する prompt、routing/file access 標準、各種 standard 文書、structured output schema path、model/reasoning/file access mode の期待値を横断的に検証する realization test。
-- 標準 prompt の組み立て、root token や work-root placeholder の保持、apply/review/indexing/tui/session join 系 builder parameter と oracle schema の一致を一箇所で確認する入口。
-- ファイル冒頭の docstring は、16,000 文字を超えていても agent prompt と structured output schema の構築結果という責務境界に閉じ、共通の render/schema 期待値を追うために凝集させている理由を説明している。
+- prompt part と ACP builder が生成する prompt、file access rule、routing rule、各種 standard 文書、structured output schema、実行パラメータの組み合わせを横断的に検証する realization test。
+- 標準 prompt の構成要素が期待語句を含むこと、root placeholder や動的テキストを保持すること、builder が正しい model class・reasoning effort・file access mode・schema path を返すことを確認する。
+- 単一ファイルとしては大きいが、agent prompt と structured output schema の構築結果を同じ読み取り文脈で検証するため、共通の render/schema 期待値を一箇所に集約している。
 
 ## Read this when
-- prompt_builder parts が出力する標準文書の title、markdown render 結果、routing rule、file access rule、realization/index/review/apply standard の含有語を変更・確認するとき。
-- build_complete_prompt の標準文書挿入、root token の扱い、code block 内文字列の保持、work-root placeholder 記録、apply/review/index standard の既定 include/omit 挙動を確認するとき。
-- ACP builder が返す model_class、reasoning_effort、file_access_mode、prompt 文面、structured_output_schema_path、oracle schema JSON との一致を変更・検証するとき。
-- apply fork、review oracle、indexing index entry、TUI resolve parameter、session join conflict resolution の builder parameter に関する回帰テストを探すとき。
-- render_as_markdown の連続空行圧縮や code block 内空行の扱いを変更・確認するとき。
+- prompt builder の出力内容、markdown rendering、routing/file access/index entry/review/apply/realization standard の挿入条件や期待語句に関する回帰テストを確認・更新したいとき。
+- ACP builder が生成する AgentCallParameter の model class、reasoning effort、file access mode、prompt 内容、structured output schema path の期待値を確認したいとき。
+- review oracle、apply fork、session join、TUI parameter resolution、indexing index entry など複数 builder にまたがる schema 一致や prompt 組み立ての挙動を検証したいとき。
+- root token、work root placeholder、oracle root 表記、動的入力文字列が prompt 内で置換されるべきか保持されるべきかを判断したいとき。
 
 ## Do not read this when
-- 個別 builder の実装ロジック自体を修正したいだけで、期待される外部挙動や schema との一致を確認する段階ではないとき。
-- oracle 側の正本 schema や標準文書の内容そのものを確認したいときは、対応する oracle source または prompt_builder parts を直接読む。
-- CLI command、永続状態、worktree 操作など prompt/ACP builder 生成結果と関係しない realization behavior のテストを探しているとき。
-- 単一の小さな helper の内部実装だけを調べたいときは、この横断テストではなく対象 helper または近い単体テストへ進む。
+- 個別 builder の実装ロジックそのものを変更したいだけで、テスト期待値や横断的な prompt/schema 契約を確認する必要がないとき。
+- StructDoc や render_as_markdown の内部実装だけを調べたいときは、実装側の構造化文書・rendering module を先に読む方が直接的である。
+- oracle 側 JSON schema の正本内容を確認したいときは、このテストではなく対応する oracle schema 本文を直接読む方が適切である。
+- 単一機能の CLI 動作や外部挙動だけを確認したいときは、その機能に対応するより限定されたテストを先に読む方がよい。
 
 ## hash
-- 7a8d3a2653292db38f0c3f7dff25a31e6fd8b1f20d89f8e91c6a5a9df4093de9
+- 02494b156e4edff1335366ca4e99f6751c05b333b57bf26a41243cbc0a5c4f1c
 
 # `test_review_oracle_cli.py`
 

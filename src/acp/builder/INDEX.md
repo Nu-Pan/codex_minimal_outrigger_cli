@@ -103,20 +103,20 @@
 # `tui`
 
 ## Summary
-- ACP builder の TUI 関連 realization package で、正本側にある TUI 起動パラメータ生成と TUI パラメータ解決を既存 import path から参照できるようにする互換入口をまとめる階層。
-- この階層自体は TUI 画面やイベント処理の本体ではなく、oracle 側の実装・基本定義の列挙値を realization 側の公開面へ薄く接続する役割を持つ。
+- ACP builder の TUI 起動・resolve parameter 構築に関する realization 側の互換入口をまとめる階層。正本側の TUI builder 実装へ処理を委譲しつつ、既存の公開 import path を維持する。
+- 対話的な TUI 起動では AgentCallParameter から Structured Output schema 指定を外す差分を扱い、resolve parameter 構築関数と TUI で選べるファイルアクセスモード候補を正本側定義から公開する。
 
 ## Read this when
-- ACP builder の TUI 関連 import path が、正本側の対応 package や関数と互換になるよう用意されているか確認したいとき。
-- TUI 起動パラメータ生成関数や TUI パラメータ解決関数が、realization implementation 側からどの入口で再公開されているか確認したいとき。
-- TUI で扱うファイルアクセスモード候補が、基本定義の列挙値から組み立てられている接続部分を確認したいとき。
-- TUI 関連の互換用 import path を削除・変更できるか、その接続先や削除条件を確認したいとき。
+- ACP builder の TUI 関連公開入口が、正本側実装へどのように接続されているかを確認したいとき。
+- TUI 起動用 AgentCallParameter の生成経路、または対話的な TUI 起動で Structured Output schema を渡さない理由を確認したいとき。
+- TUI ビルダー層から resolve parameter 構築関数やファイルアクセスモード候補へ到達する import 境界を確認したいとき。
+- 正本側との互換 import path を維持する理由や削除条件が、TUI 起動パラメータの公開面にどう関係するかを調べるとき。
 
 ## Do not read this when
-- TUI 起動パラメータ生成や TUI パラメータ解決の具体的な正本仕様・処理内容を確認したいときは、oracle 側の実体を読む。
-- TUI の画面構成、入力処理、イベント処理、表示制御などの本体実装を調べたいときは、それらを直接実装する対象へ進む。
-- ファイルアクセスモード自体の定義や意味を確認したいときは、基本定義側の列挙値を読む。
-- 新しい公開 API、CLI の利用方法、または利用者向けの公開面全体を調べたいときは、その公開面を定義している対象を読む。
+- TUI の画面描画、キー操作、入力処理、対話フローなど、対話 UI 本体の挙動を調べたいとき。
+- TUI 起動パラメータや resolve parameter の正本仕様、具体的な引数組み立て、検証処理を確認したいだけのとき。この階層ではなく委譲先の正本側実装を読む。
+- Structured Output schema を要求する非 TUI 起動や index entry 生成など、schema 付き AgentCallParameter の挙動を調べたいとき。
+- ファイルアクセスモード enum 自体の定義や各モードの意味を確認したいとき。この階層は正本側定義から候補集合を公開するだけを扱う。
 
 ## hash
-- 93af006861378091a3c7ebdc1df93776c2cc057b1c561b96b2b60c5da4a9d167
+- cc9d5fc6cfc2286f721f05a6da86a2b65c56b0789f704e9478e76083f84da07d
