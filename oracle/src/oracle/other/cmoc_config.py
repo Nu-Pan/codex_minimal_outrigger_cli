@@ -40,6 +40,35 @@ class CmocConfig:
 
 
 @dataclass(frozen=True)
+class CmocConfigCodex:
+    """
+    cmoc の設定 (config) のうち Codex CLI 向けの設定を集約したクラス
+    """
+
+    # `ModelClass` --> Codex CLI が受理可能な Model 名
+    model: dict[ModelClass, str] = field(
+        default_factory=lambda: {
+            ModelClass.MAINSTREAM: "GPT-5.5",
+            ModelClass.FLAGSHIP: "GPT-5.5",
+            ModelClass.EFFICIENCY: "GPT-5.4-mini",
+            ModelClass.MINIMUM: "GPT-5.4-mini",
+        }
+    )
+
+    # `ReasoningEffort` --> Codex CLI が受理可能な Reasoning Effort 名
+    reasoning_effort: dict[ReasoningEffort, str] = field(
+        default_factory=lambda: {
+            ReasoningEffort.LOW: "low",
+            ReasoningEffort.MEDIUM: "medium",
+            ReasoningEffort.HIGH: "high",
+        }
+    )
+
+    # ファイルアクセス規則違反時のリカバリ試行回数
+    num_try_falv_recovery: int = field(default=1)
+
+
+@dataclass(frozen=True)
 class CmocConfigApplyFork:
     """
     `cmoc apply fork` サブコマンドの挙動に関する設定を集約したクラス
@@ -67,29 +96,3 @@ class CmocConfigReviewOracle:
     #   よってこのループ回数は「judge 前に advocate/challenger にどれだけ議論させるかの予算」という意味合いを持つ。
     #   生成される理由の妥当性もわからないので、１度だけ反論の機会を与えるという意味でループ数 2 としている。
     num_validate_findings_loop: int = field(default=2)
-
-
-@dataclass(frozen=True)
-class CmocConfigCodex:
-    """
-    cmoc の設定 (config) のうち Codex CLI 向けの設定を集約したクラス
-    """
-
-    # `ModelClass` --> Codex CLI が受理可能な Model 名
-    model: dict[ModelClass, str] = field(
-        default_factory=lambda: {
-            ModelClass.MAINSTREAM: "GPT-5.5",
-            ModelClass.FLAGSHIP: "GPT-5.5",
-            ModelClass.EFFICIENCY: "GPT-5.4-mini",
-            ModelClass.MINIMUM: "GPT-5.4-mini",
-        }
-    )
-
-    # `ReasoningEffort` --> Codex CLI が受理可能な Reasoning Effort 名
-    reasoning_effort: dict[ReasoningEffort, str] = field(
-        default_factory=lambda: {
-            ReasoningEffort.LOW: "low",
-            ReasoningEffort.MEDIUM: "medium",
-            ReasoningEffort.HIGH: "high",
-        }
-    )

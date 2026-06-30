@@ -43,6 +43,10 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
                 "`<work-root>` ツリー外は読み書き禁止",
                 "`<work-root>/memo` は読み書き禁止",
             ]
+        case FileAccessMode.NO_RULE:
+            # `build_complete_prompt` によるアクセス規則文面が生成されない
+            # 特殊文面を個別に構築する用の特別モードで、よほどのことがない限り使ってはいけない
+            return ({}, StructDoc("", ""))
         case _:
             raise ValueError(f"Invalid mode (mode={mode})")
     rules += [

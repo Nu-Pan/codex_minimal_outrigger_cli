@@ -138,7 +138,8 @@ def build_complete_prompt(
         _extend_static_prompt(build_index_entry_standard)
     if aux_static_prompt:
         prompt.extend(aux_static_prompt)
-    _extend_static_prompt(build_file_access_rule, file_access_mode)
+    if file_access_mode != FileAccessMode.NO_RULE:
+        _extend_static_prompt(build_file_access_rule, file_access_mode)
     _extend_static_prompt(build_routing_rule)
 
     # 動的プロンプトを構築

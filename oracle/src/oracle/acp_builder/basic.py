@@ -38,7 +38,7 @@ class ModelClass(StrEnum):
 class ReasoningEffort(StrEnum):
     """
     cmoc 上の論理的な Reasoning effort
-    バックエンドが受理可能なモデル名への解決は realization src の責任
+    バックエンドが受理可能な Reasoning Effort 名への解決は realization src の責任
     """
 
     LOW = auto()
@@ -47,9 +47,9 @@ class ReasoningEffort(StrEnum):
 
 
 class FileAccessMode(StrEnum):
-    """
-    cmoc 上の論理的なファイルアクセスモード
-    バックエンドが受理可能なモデル名への解決は realization src の責任
+    """cmoc 上の論理的なファイルアクセスモード
+
+    各モードの詳細は `build_file_access_rule` を参照
     """
 
     READONLY = auto()
@@ -57,6 +57,7 @@ class FileAccessMode(StrEnum):
     REALIZATION_WRITE = auto()
     ORACLE_WRITE = auto()
     REPO_WRITE = auto()
+    NO_RULE = auto()
 
 
 @dataclass(frozen=True)
