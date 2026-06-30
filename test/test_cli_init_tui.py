@@ -14,7 +14,6 @@ from pathlib import Path
 
 import commons.runtime_codex_preflight as codex_preflight_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-from oracle.other.file_access_profile import build_faprofile
 import pytest
 
 from _support import (
@@ -281,14 +280,7 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
 
     class FakeResolveResult:
         output_json = {
-            "file_access_profile": {
-                "value": {
-                    "oracle": "write",
-                    "realization": "write",
-                    "index": "write",
-                },
-                "reason": "repo wide task",
-            },
+            "file_access_mode": {"value": "repo_write", "reason": "repo wide task"},
             "oracle_and_realization_basic": {"value": True, "reason": "needed"},
             "oracle_standard": {"value": False, "reason": "not needed"},
             "realization_standard": {"value": True, "reason": "needed"},
@@ -312,11 +304,7 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         assert kwargs["purpose"] == "tui codex"
         assert parameter.model_class == ModelClass.MAINSTREAM
         assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
-        assert parameter.file_access_profile == build_faprofile(
-            oracle="write",
-            realization="write",
-            index="write",
-        )
+        assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
         assert parameter.structured_output_schema_path is not None
         assert parameter.structured_output_schema_path.name == "launch_tui.json"
         assert parameter.prompt.endswith("_cmpl.md を読んで、その指示に従って下さい")
@@ -337,7 +325,7 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     complete_files = list((root / ".cmoc" / "log" / "tui").glob("*_cmpl.md"))
     assert len(complete_files) == 1
     complete_prompt = complete_files[0].read_text()
-    assert "# file access profile" in complete_prompt
+    assert "# file read write rule - repo_write" in complete_prompt
     assert "# オリジナルプロンプト" in complete_prompt
     assert "src を確認して必要なら直す" in complete_prompt
     assert "remove me" not in complete_prompt
@@ -356,14 +344,10 @@ def test_tui_uses_default_file_access_mode_for_empty_resolved_value(
     (root / ".cmoc" / "log" / "tui").mkdir(parents=True, exist_ok=True)
     parameter = tui_module.build_tui_codex_parameter(
         "確認して下さい。",
-        {"file_access_profile": {"value": "", "reason": "default accepted"}},
+        {"file_access_mode": {"value": "", "reason": "default accepted"}},
     )
 
-    assert parameter.file_access_profile == build_faprofile(
-        oracle="read",
-        realization="read",
-        index="read",
-    )
+    assert parameter.file_access_mode == FileAccessMode.READONLY
     assert parameter.structured_output_schema_path is not None
     assert parameter.structured_output_schema_path.name == "launch_tui.json"
 
@@ -408,10 +392,7 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
             "    'apply_review_standard',",
             "    'index_entry_standard',",
             "]}",
-            "data['file_access_profile'] = {",
-            "    'value': {'oracle': 'write', 'realization': 'write', 'index': 'write'},",
-            "    'reason': 'test',",
-            "}",
+            "data['file_access_mode'] = {'value': 'repo_write', 'reason': 'test'}",
             "data['role'] = {'value': 'role', 'reason': 'test'}",
             "data['summary'] = {'value': 'summary', 'reason': 'test'}",
             "data['goal'] = {'value': 'goal', 'reason': 'test'}",
@@ -474,12 +455,7 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
     class FakeResolveResult:
-        output_json = {
-            "file_access_profile": {
-                "value": {"oracle": "read", "realization": "read", "index": "read"},
-                "reason": "test",
-            }
-        }
+        output_json = {"file_access_mode": {"value": "readonly", "reason": "test"}}
 
     monkeypatch.setattr(tui_module, "enable_indexing_preflight", lambda: None)
     monkeypatch.setattr(tui_module, "run_codex_exec", lambda *_, **__: FakeResolveResult())

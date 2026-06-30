@@ -2,10 +2,9 @@
 
 # std
 from pathlib import Path
-from typing import TypedDict
 
 # cmoc
-from oracle.other.file_access_profile import FAAttr, build_faprofile
+from oracle.other.file_access_profile import FAPProfilePreset
 from oracle.other.struct_doc import StructDoc, render_as_markdown
 from oracle.other.path_model import resolve_repo_root
 from oracle.acp_builder.basic import (
@@ -21,9 +20,7 @@ def build_tui_launch_tui_parameter(
     role: str,
     summary: str,
     goal: str,
-    faattr_oracle: FAAttr,
-    faattr_realization: FAAttr,
-    faattr_index: FAAttr,
+    file_access_mode: FAPProfilePreset,
     original_prompt: str,
     oracle_and_realization_basic: bool,
     oracle_standard: bool,
@@ -41,9 +38,7 @@ def build_tui_launch_tui_parameter(
     role: str
     summary: str
     goal: str
-    faattr_oracle: FAAttr
-    faattr_realization: FAAttr
-    faattr_index: FAAttr
+    file_access_mode: str
     oracle_and_realization_basic: bool
     oracle_standard: bool
     realization_standard: bool
@@ -56,19 +51,12 @@ def build_tui_launch_tui_parameter(
         ユーザーがエディタ入力した、AI Agent CLI/TUI に渡す元プロンプト。
         コメント除去と strip は呼び出し側で完了している想定。
     """
-    # ファイルアクセスプロファイル
-    faprofile = build_faprofile(
-        oracle=faattr_oracle,
-        realization=faattr_realization,
-        index=faattr_index,
-    )
-
     # 完全なプロンプトを生成してファイルに保存
     complete_prompt = build_complete_prompt(
         role=role,
         summary=summary,
         goal=goal,
-        faprofile=faprofile,
+        file_access_mode=file_access_mode,
         aux_dynamic_prompt=[
             StructDoc(
                 "オリジナルプロンプト",
@@ -91,7 +79,7 @@ def build_tui_launch_tui_parameter(
     return AgentCallParameter(
         ModelClass.MAINSTREAM,
         ReasoningEffort.MEDIUM,
-        faprofile,
+        file_access_mode,
         f"{complete_prompt_path} を読んで、その指示に従って下さい",
         Path(__file__).with_suffix(".json"),
     )

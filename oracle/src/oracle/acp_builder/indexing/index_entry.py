@@ -4,7 +4,7 @@
 from pathlib import Path
 
 # cmoc
-from oracle.other.file_access_profile import build_faprofile
+from oracle.other.file_access_profile import FAPProfilePreset
 from oracle.other.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
 from oracle.other.path_model import resolve_real_path
 from oracle.acp_builder.basic import (
@@ -30,18 +30,12 @@ def build_indexing_index_entry_parameter(
         目次情報生成対象の内容
         ディレクトリの場合は、その直下の `INDEX.md` の内容が渡される想定
     """
-    # ファイルアクセスプロファイル
-    faprofile = build_faprofile(
-        oracle="read",
-        realization="read",
-        index="read",
-    )
     # プロンプト
     prompt = build_complete_prompt(
         role="- あなたはソフトウェアリポジトリのルーティング文書作成担当です",
         summary="- `<target-path>` の `INDEX.md` 用エントリーを生成すること",
         goal="- 指定された Structured Output schema に従ってエントリーを返すこと",
-        faprofile=faprofile,
+        file_access_mode=FAPProfilePreset.READONLY,
         aux_dynamic_prompt=[
             StructDoc(
                 "エントリー生成規則",
@@ -68,7 +62,7 @@ def build_indexing_index_entry_parameter(
     return AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        faprofile,
+        FAPProfilePreset.READONLY,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),
     )

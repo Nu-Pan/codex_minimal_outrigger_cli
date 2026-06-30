@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+
 # ファイル・ディレクトリに適用するアクセス属性
 # deny: 読み書き共に不可
 # write: 読み書き共に可能
@@ -42,11 +43,20 @@ class FARule:
 type FAProfile = list[FARule]
 
 
+class FAPProfilePreset(StrEnum):
+    """cmoc 上の論理的なファイルアクセスプロファイルのプリセット"""
+
+    READONLY = auto()
+    PURE_ORACLE_READ = auto()
+    REALIZATION_WRITE = auto()
+    ORACLE_WRITE = auto()
+    REPO_WRITE = auto()
+
+
 def build_faprofile(
-    *,
-    oracle: FAAttr,
-    realization: FAAttr,
-    index: FAAttr,
+    oracle_faattr: FAAttr,
+    realization_faattr: FAAttr,
+    index_faattr: FAAttr,
 ) -> FAProfile:
     """プリセット値を元に具体的なファイルアクセスプロファイルを構築する
 
@@ -67,16 +77,58 @@ def build_faprofile(
     """
     # 基本ルール
     # NOTE
-    #   realization file は `<work-root>` 側の既定値で表現し、oracle file と
-    #   INDEX.md はより狭いルールで上書きする。
+    #   一番弱い基礎設定として `<work-root>` 全体に対する read を設定する
     #   どんな場合でも `<work-root>/memo` はアクセス全面禁止
-    # TODO
-    #   oracle file, realization file の定義は oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py に従う
-    #   oracle file, realization file のパターンを動的に生成する
-    #   __pycache__ とかの git 管理対象外の要素は自由に読み書き出来るようにしたい（じゃないとゴミ掃除が出来ない）
-    return [
-        FARule(".", realization),
-        FARule("oracle", oracle),
-        FARule("**/INDEX.md", index),
+    basic_rule = [
+        FARule(".", "read"),
         FARule("memo", "deny"),
     ]
+    # TODO 
+    #   oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py の定義に従う
+    #   oracle file, realization file のパターンを動的に生成する
+    #   __pycache__ とかの非トラック対象は自由に読み書き出来るようにしたい
+
+    match preset:
+        case FAPProfilePreset.READONLY:
+            # body = ntqs(f"""
+            # - `<work-root>` ツリー外は読み書き禁止
+            # - `<work-root>` ツリー内は書き込み禁止
+            # - `<work-root>/memo` は読み書き禁止
+            # """)
+            return [
+
+                FARule(".", "read"),
+                FARule("memo", "deny"),
+                FARule("**/INDEX.md", "write"),
+            ]
+        case FAPProfilePreset.PURE_ORACLE_READ:
+            # body = ntqs(f"""
+            # - `<work-root>` ツリー外は読み書き禁止
+            # - `<work-root>/oracle` ツリー内は書き込み禁止
+            # - `<work-root>/oracle` ツリー外は読み書き禁止
+            # """)
+            return [
+                FARule("**/INDEX.md", "write")
+            ]
+        case FAPProfilePreset.REALIZATION_WRITE:
+            # body = ntqs(f"""
+            # - `<work-root>` ツリー外は読み書き禁止
+            # - `<work-root>/oracle` ツリー内は書き込み禁止
+            # - `<work-root>/memo` は読み書き禁止
+            # """)
+        case FAPProfilePreset.ORACLE_WRITE:
+            # body = ntqs(f"""
+            # - `<work-root>` ツリー外は読み書き禁止
+            # - `<work-root>/oracle` ツリー外は書き込み禁止
+            # - `<work-root>/memo` は読み書き禁止
+            # """)
+        case FAPProfilePreset.REPO_WRITE:
+            # body = ntqs(f"""
+            # - `<work-root>` ツリー外は読み書き共に禁止
+            # - `<work-root>/memo` は読み書き禁止
+            # """)
+
+def _build_oracle_file_farule(attribute: FAAttr) -> list[FARule]:
+    """oracle file に対するファイルアクセスルールを生成する"""
+
+    # TODO 

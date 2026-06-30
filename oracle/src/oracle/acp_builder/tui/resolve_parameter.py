@@ -1,11 +1,10 @@
 """`cmoc tui` の実行パラメータ解決 prompt 正本。"""
 
 # std
-import json
 from pathlib import Path
 
 # cmoc
-from oracle.other.file_access_profile import FAAttr, build_faprofile
+from oracle.other.file_access_profile import FAPProfilePreset
 from oracle.other.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
 from oracle.other.path_model import resolve_repo_root, resolve_work_root
 from oracle.acp_builder.basic import (
@@ -29,12 +28,14 @@ def build_tui_resolve_parameter_parameter(
         ユーザーがエディタ入力した、AI Agent CLI/TUI に渡す元プロンプト。
         コメント除去と strip は呼び出し側で完了している想定。
     """
-    # ファイルアクセスプロファイル
-    faprofile = build_faprofile(
-        oracle="read",
-        realization="read",
-        index="read",
-    )
+    # ファイルアクセスモード関係だけ先に処理
+    fam_prompt: list[StructDoc] = list()
+    fam_ph_def: PlaceholderMap = dict()
+    for fam in FAPProfilePreset:
+        temp_ph_def, temp_fam_prompt = build_file_access_rule(fam)
+        fam_prompt.append(temp_fam_prompt)
+        fam_ph_def.update(fam_ph_def)
+
     # プロンプト
     # NOTE
     #   oracle_and_realization_basic 以降の固定プロンプト系フラグは全て True にする
@@ -48,7 +49,7 @@ def build_tui_resolve_parameter_parameter(
         - Structured Output schema に従ってパラメータ選択結果を返していること
         - パラメータ選択の根拠として、オリジナルプロンプトの該当行、あるいは `<work-root>` ツリー内のファイルの該当行が具体的に示されていること
         """,
-        faprofile=faprofile,
+        file_access_mode=FAPProfilePreset.READONLY,
         aux_dynamic_prompt=[
             StructDoc(
                 "オリジナルプロンプト",
@@ -57,10 +58,15 @@ def build_tui_resolve_parameter_parameter(
                     original_prompt,
                 ),
             ),
+            StructDoc(
+                "ファイルアクセスモード",
+                *fam_prompt,
+            ),
         ],
         aux_placeholder_def={
             "repo-root": resolve_repo_root(),
             "work-root": resolve_work_root(),
+            **fam_ph_def,
         },
         oracle_and_realization_basic=True,
         oracle_standard=True,
@@ -73,7 +79,7 @@ def build_tui_resolve_parameter_parameter(
     return AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.MEDIUM,
-        faprofile,
+        FAPProfilePreset.READONLY,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),
     )

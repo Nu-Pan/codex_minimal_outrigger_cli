@@ -54,6 +54,7 @@ from acp.builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter,
 )
 from acp.builder.tui.resolve_parameter import build_tui_resolve_parameter_parameter
+from acp.builder.tui.resolve_parameter import TUI_FILE_ACCESS_MODES
 from oracle.prompt_builder.complete_prompt import build_complete_prompt
 from oracle.prompt_builder.parts.apply_review_standard import (
     build_apply_review_standard as _build_apply_review_standard,
@@ -223,41 +224,35 @@ def test_apply_fork_change_summary_schema_matches_oracle_source() -> None:
 def test_file_access_rule_titles_and_bodies_match_modes() -> None:
     expected = {
         FileAccessMode.READONLY: [
-            "- `.` is `read`",
-            "- `oracle` is `read`",
-            "- `**/INDEX.md` is `read`",
-            "- `memo` is `deny`",
+            "ツリー外は読み書き禁止",
+            "ツリー内は書き込み禁止",
+            "/memo` は読み書き禁止",
         ],
         FileAccessMode.PURE_ORACLE_READ: [
-            "- `.` is `deny`",
-            "- `oracle` is `read`",
-            "- `**/INDEX.md` is `read`",
-            "- `memo` is `deny`",
+            "ツリー外は読み書き禁止",
+            "/oracle` ツリー内は書き込み禁止",
+            "/oracle` ツリー外は読み書き禁止",
         ],
         FileAccessMode.REALIZATION_WRITE: [
-            "- `.` is `write`",
-            "- `oracle` is `read`",
-            "- `**/INDEX.md` is `read`",
-            "- `memo` is `deny`",
+            "ツリー外は読み書き禁止",
+            "/oracle` ツリー内は書き込み禁止",
+            "/memo` は読み書き禁止",
         ],
         FileAccessMode.ORACLE_WRITE: [
-            "- `.` is `read`",
-            "- `oracle` is `write`",
-            "- `**/INDEX.md` is `write`",
-            "- `memo` is `deny`",
+            "ツリー外は読み書き禁止",
+            "/oracle` ツリー外は書き込み禁止",
+            "/memo` は読み書き禁止",
         ],
         FileAccessMode.REPO_WRITE: [
-            "- `.` is `write`",
-            "- `oracle` is `write`",
-            "- `**/INDEX.md` is `write`",
-            "- `memo` is `deny`",
+            "ツリー外は読み書き共に禁止",
+            "/memo` は読み書き禁止",
         ],
     }
 
     for mode, fragments in expected.items():
         doc = build_file_access_rule(mode)
         rendered = render_as_markdown(doc)
-        assert doc.title == "file access profile"
+        assert doc.title == f"file read write rule - {mode.value}"
         for fragment in fragments:
             assert fragment in rendered
 
@@ -478,7 +473,7 @@ def test_tui_resolve_parameter_builder_embeds_original_prompt() -> None:
 
     assert parameter.model_class == ModelClass.EFFICIENCY
     assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
-    assert parameter.file_access_profile
+    assert parameter.file_access_mode == FileAccessMode.READONLY
     assert parameter.structured_output_schema_path is not None
     assert parameter.structured_output_schema_path.name == "resolve_parameter.json"
     assert parameter.structured_output_schema_path.exists()
@@ -503,7 +498,7 @@ def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
     assert schema["required"] == [
         "role",
         "summary",
-        "file_access_profile",
+        "file_access_mode",
         "oracle_and_realization_basic",
         "oracle_standard",
         "realization_standard",
@@ -519,14 +514,10 @@ def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
         assert parameter_schema["required"] == ["value", "reason"]
         assert parameter_schema["properties"]["reason"]["type"] == "string"
         assert parameter_schema["properties"]["reason"]["description"]
-    profile_schema = schema["properties"]["file_access_profile"]["properties"]["value"]
-    assert profile_schema["required"] == ["oracle", "realization", "index"]
-    for attr_name in profile_schema["required"]:
-        assert profile_schema["properties"][attr_name]["enum"] == [
-            "deny",
-            "read",
-            "write",
-        ]
+    assert schema["properties"]["file_access_mode"]["properties"]["value"]["enum"] == [
+        file_access_mode.value for file_access_mode in TUI_FILE_ACCESS_MODES
+    ]
+    assert "repo_write" in schema["properties"]["file_access_mode"]["properties"]["value"]["enum"]
     for flag_name in [
         "oracle_and_realization_basic",
         "oracle_standard",
@@ -541,6 +532,7 @@ def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
 def test_tui_resolve_parameter_module_exports_only_required_names() -> None:
     assert tui_resolve_parameter_module.__all__ == [
         "build_tui_resolve_parameter_parameter",
+        "TUI_FILE_ACCESS_MODES",
     ]
     assert not hasattr(tui_resolve_parameter_module, "render_as_markdown")
 

@@ -4,7 +4,7 @@
 from pathlib import Path
 
 # cmoc
-from oracle.other.file_access_profile import build_faprofile
+from oracle.other.file_access_profile import FAPProfilePreset
 from oracle.other.struct_doc import StructDoc, StructCodeBlock, render_as_markdown
 from oracle.other.path_model import resolve_real_path
 from oracle.acp_builder.basic import (
@@ -31,12 +31,6 @@ def build_review_oracle_validate_finding_advocate_parameter(
     known_challenger_reasons: str
         既知の妥当ではない理由。
     """
-    # ファイルアクセスプロファイル
-    faprofile = build_faprofile(
-        oracle="read",
-        realization="deny",
-        index="read",
-    )
     # プロンプト
     prompt = build_complete_prompt(
         role="- あなたはソフトウェア仕様断片レビュー所見の擁護担当です",
@@ -47,7 +41,7 @@ def build_review_oracle_validate_finding_advocate_parameter(
         - `<oracle_root>` ツリー内の oracle file を具体的な根拠とし、「かもしれない」「可能性がある」は根拠にしていないこと
         - 新規理由が無い場合、空配列を返していること
         """,
-        faprofile=faprofile,
+        file_access_mode=FAPProfilePreset.PURE_ORACLE_READ,
         aux_dynamic_prompt=[
             StructDoc(
                 "対象所見",
@@ -81,7 +75,7 @@ def build_review_oracle_validate_finding_advocate_parameter(
     return AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.MEDIUM,
-        faprofile,
+        FAPProfilePreset.PURE_ORACLE_READ,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),
     )

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from enum import StrEnum, auto
 
-from oracle.other.file_access_profile import FAProfile
+from oracle.other.file_access_profile import FAPProfilePreset
 
 
 class ModelClass(StrEnum):
@@ -60,8 +60,8 @@ class AgentCallParameter:
     # Reasoning Effort
     reasoning_effort: ReasoningEffort
 
-    # ファイルアクセスプロファイル
-    faprofile: FAProfile
+    # ファイルアクセスモード
+    file_access_mode: FAPProfilePreset
 
     # プロンプト本文
     prompt: str

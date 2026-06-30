@@ -15,19 +15,19 @@
 - ファイルアクセス属性やパスモデルそのものの定義を確認したいとき。
 
 ## hash
-- 6e95602a3cfe36294b1814a9c2d1b7fd6b8f5d30a80fc807df88bd9c457099d3
+- 34dcc4c5b0222dd5e5dd23ccbd13ee575ea33d5ffb182f921ae0cc74f562fc0a
 
 # `resolve_parameter.json`
 
 ## Summary
-- AI Agent CLI/TUI がオリジナルプロンプトを実行するための解決済みパラメータ構造を定義する JSON Schema。役割・作業概要・ゴール、oracle file・realization file・INDEX.md へのアクセス権、各標準断片を読む必要性を、値と根拠の組で表す。
-- プロンプト実行前に、対象作業で必要なファイルアクセス範囲や読むべき標準セクションを機械的に受け渡すための構造を確認する入口になる。
+- AI Agent CLI/TUI がオリジナルプロンプトを実行する前に、役割・作業概要・ゴール・論理ファイルアクセスモード・各種標準文書を読む要否を、根拠付きで解決するための入力パラメータ schema を定義する。
+- 権限設定は readonly / pure_oracle_read / realization_write / oracle_write / repo_write から選ばせ、oracle と realization の基本、oracle standard、realization standard、review oracle standard、apply review standard、index entry standard の参照要否を boolean と理由の組で表す。
 
 ## Read this when
-- AI Agent CLI/TUI に渡す解決済み実行パラメータの JSON 形状を確認したいとき。
-- role、summary、goal、ファイルアクセス権、各標準セクションの要否をどの項目として持つかを確認したいとき。
-- oracle file、realization file、INDEX.md に対する deny/read/write の判定結果と、その理由を出力に含める処理を扱うとき。
-- oracle and realization basic、oracle standard、realization standard、review oracle standard、apply review standard、index entry standard の読解要否を構造化する処理を扱うとき。
+- オリジナルプロンプトから、AI Agent CLI/TUI に渡す実行前パラメータを構造化して決める処理を実装・検証する。
+- 作業の役割、概要、ゴール、必要最小限のファイルアクセス権限を、理由付きで出力する schema を確認する。
+- oracle / realization 関連の標準文書を読むべきかどうかを、各標準ごとに boolean と根拠で表す出力仕様を確認する。
+- TUI のパラメータ解決結果について、追加プロパティ禁止、必須項目、列挙値、各フィールドの意味を確認する。
 
 ## Do not read this when
 - 個別の標準本文そのものの要求内容を確認したいとき。対象の標準セクション本文を直接読む。
@@ -36,7 +36,7 @@
 - AI Agent が実行する具体的な実装・テスト・レビュー手順を知りたいだけで、解決済みパラメータの JSON 形状を確認しないとき。
 
 ## hash
-- 2b60813c7d9fceaaa0147eb512473e0bf8863a05e9667632ea5dee459ad0a42c
+- ff75f059106ad9edc2b3ecda599f770b0173e67d21c17a3d4423ba9b46b0145d
 
 # `resolve_parameter.py`
 
@@ -56,4 +56,4 @@
 - TUI 以外のサブコマンド向け実行パラメータ解決 prompt を確認したいとき。
 
 ## hash
-- 66edd4b7dace80756392913d05bf41f7b4d65a40ffcdfdea792d9c578b459c71
+- 8202ec643da88fee167595217c54338e0673284beb20aff300feeccf5af06224
