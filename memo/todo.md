@@ -1,13 +1,21 @@
 
 # 最優先
 
+## TODO
+
+- Codex CLI 用の permission profile の自動生成をやめる
+    - 完全な read-only の場合を除いて repository-write を設定する
+    - 細かいアクセス規則はいままで通りプロンプトで流し込む
+    - .gitignore 周りは `"git check-ignore --stdin` で判定させればよいだろう
+- build_faprofile をレビュー・修正
+- FAProfile を元に Codex CLI 用のプロファイルを生成するべきだと読み取れる文言が oracle file になかったかもしれない
+
 ## 編集禁止領域に差分出しちゃった時のリカバリー
 
 - リカバリー作業を agent call する
 - 「テスト実行したら `__pycache__` 出来ちゃったけど、書き込み禁止だからリカバリ出来ませんでした」っていう事例があったので、こいうのは agent call で拾えるはず
 - それはそれとして、事後チェックの仕様が雑すぎるので、禁止ルールの文言と合わせてリファインが必要
 - cmoc 上で論理的な許可・不許可リストを書いて、それを元に必要な設定を生成するべきか
-- FileAccessMode, FAPProfilePreset みたいな旧方式を完全削除
 
 # cmoc の作業品質
 
