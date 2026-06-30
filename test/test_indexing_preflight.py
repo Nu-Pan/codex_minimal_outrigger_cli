@@ -6,15 +6,8 @@ from multiprocessing.connection import Connection
 from pathlib import Path
 
 import pytest
-from _profiles import (
-    ORACLE_ONLY_READ_PROFILE,
-    ORACLE_WRITE_PROFILE,
-    READONLY_PROFILE,
-    REALIZATION_WRITE_PROFILE,
-    REPO_WRITE_PROFILE,
-)
 import commons.runtime_codex_preflight as codex_preflight_module
-from basic.acp import AgentCallParameter, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 
 from _support import (
     make_repo,
@@ -42,7 +35,7 @@ def test_command_codex_call_runs_indexing_preflight(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        READONLY_PROFILE,
+        FileAccessMode.READONLY,
         "prompt",
         None,
     )
@@ -92,7 +85,7 @@ def test_command_codex_call_indexes_cwd_worktree_before_root(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        READONLY_PROFILE,
+        FileAccessMode.READONLY,
         "prompt",
         None,
     )
@@ -150,7 +143,7 @@ def test_command_tui_codex_call_runs_indexing_preflight(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        READONLY_PROFILE,
+        FileAccessMode.READONLY,
         "prompt",
         None,
     )
@@ -239,7 +232,7 @@ def test_command_codex_call_skips_indexing_for_index_entry_and_conflict_resoluti
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        READONLY_PROFILE,
+        FileAccessMode.READONLY,
         "prompt",
         None,
     )

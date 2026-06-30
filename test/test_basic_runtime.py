@@ -2,7 +2,7 @@
 
 このファイルは 16,000 文字を超えるが、責務境界は個別サブコマンドより下の
 共通 runtime 契約に閉じている。root 解決、config、CmocError、CLI error 表示、
-subcommand log、ファイルアクセスプロファイル、binary 判定は実行前提として一緒に崩れやすく、
+subcommand log、FileAccessMode、binary 判定は実行前提として一緒に崩れやすく、
 分割すると共通 fixture と root 状態の読み取り文脈が分散する。現状は basic runtime
 回帰として一箇所に保つ方が凝集性が高い。
 根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
@@ -15,16 +15,9 @@ import tomllib
 from pathlib import Path
 
 import pytest
-from _profiles import (
-    ORACLE_ONLY_READ_PROFILE,
-    ORACLE_WRITE_PROFILE,
-    READONLY_PROFILE,
-    REALIZATION_WRITE_PROFILE,
-    REPO_WRITE_PROFILE,
-)
 import main as main_module
 import commons.runtime_logging as runtime_logging
-from basic.acp import AgentCallParameter, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from basic.path_model import (
     RootPathPlaceHolder,
     resolve_real_path,
@@ -417,35 +410,20 @@ def test_ensure_cmoc_ignored_adds_literal_pattern_after_existing_effective_patte
     assert run_git(root, "status", "--short").stdout.strip() == "M .gitignore"
 
 
-def test_file_access_profiles_are_explicit_rule_lists() -> None:
-    """ファイルアクセスプロファイルは永続化しやすい明示的なルール列にする。"""
-    assert [(str(rule.pattern), rule.attr) for rule in READONLY_PROFILE] == [
-        (".", "read"),
-        ("oracle", "read"),
-        ("**/INDEX.md", "read"),
-        ("memo", "deny"),
-    ]
-    assert [(str(rule.pattern), rule.attr) for rule in REALIZATION_WRITE_PROFILE] == [
-        (".", "write"),
-        ("oracle", "read"),
-        ("**/INDEX.md", "read"),
-        ("memo", "deny"),
-    ]
-    assert [(str(rule.pattern), rule.attr) for rule in REPO_WRITE_PROFILE] == [
-        (".", "write"),
-        ("oracle", "write"),
-        ("**/INDEX.md", "write"),
-        ("memo", "deny"),
-    ]
+def test_file_access_mode_values_are_json_ready() -> None:
+    """FileAccessMode の永続化値は JSON schema 側と共有できる文字列にする。"""
+    assert FileAccessMode.READONLY.value == "readonly"
+    assert FileAccessMode.REALIZATION_WRITE.value == "realization_write"
+    assert FileAccessMode.REPO_WRITE.value == "repo_write"
 
 
 def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
     """repo write mode まで Codex sandbox mode へ欠落なく変換する。"""
-    assert file_access_to_sandbox_mode(READONLY_PROFILE) == "read-only"
-    assert file_access_to_sandbox_mode(ORACLE_ONLY_READ_PROFILE) == "read-only"
-    assert file_access_to_sandbox_mode(REALIZATION_WRITE_PROFILE) == "workspace-write"
-    assert file_access_to_sandbox_mode(ORACLE_WRITE_PROFILE) == "workspace-write"
-    assert file_access_to_sandbox_mode(REPO_WRITE_PROFILE) == "workspace-write"
+    assert file_access_to_sandbox_mode(FileAccessMode.READONLY) == "read-only"
+    assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_READ) == "read-only"
+    assert file_access_to_sandbox_mode(FileAccessMode.REALIZATION_WRITE) == "workspace-write"
+    assert file_access_to_sandbox_mode(FileAccessMode.ORACLE_WRITE) == "workspace-write"
+    assert file_access_to_sandbox_mode(FileAccessMode.REPO_WRITE) == "workspace-write"
 
 
 def test_file_access_to_codex_cwd_limits_pure_oracle_read(tmp_path: Path) -> None:
@@ -453,8 +431,8 @@ def test_file_access_to_codex_cwd_limits_pure_oracle_read(tmp_path: Path) -> Non
     root = tmp_path / "repo"
     root.mkdir()
 
-    assert file_access_to_codex_cwd(READONLY_PROFILE, root) == root.resolve()
-    assert file_access_to_codex_cwd(ORACLE_ONLY_READ_PROFILE, root) == (
+    assert file_access_to_codex_cwd(FileAccessMode.READONLY, root) == root.resolve()
+    assert file_access_to_codex_cwd(FileAccessMode.PURE_ORACLE_READ, root) == (
         root / "oracle"
     ).resolve()
 
@@ -490,7 +468,7 @@ def test_is_binary_reads_only_initial_chunk() -> None:
 
 
 def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
-    """root 付き通常経路でも ファイルアクセスプロファイル ごとの profile を生成する。"""
+    """root 付き通常経路でも FileAccessMode ごとの profile を生成する。"""
     root = tmp_path / "repo"
     root.mkdir()
     (root / ".cmoc").mkdir()
@@ -510,51 +488,44 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        READONLY_PROFILE,
+        FileAccessMode.READONLY,
         "prompt",
         None,
     )
-    profile_cases = {
-        "readonly": READONLY_PROFILE,
-        "oracle_only_read": ORACLE_ONLY_READ_PROFILE,
-        "realization_write": REALIZATION_WRITE_PROFILE,
-        "oracle_write": ORACLE_WRITE_PROFILE,
-        "repo_write": REPO_WRITE_PROFILE,
-    }
     profiles = {
-        name: build_codex_profile(
+        mode: build_codex_profile(
             AgentCallParameter(
                 parameter.model_class,
                 parameter.reasoning_effort,
-                faprofile,
+                mode,
                 parameter.prompt,
                 parameter.structured_output_schema_path,
             ),
             CmocConfig(),
             root,
         )
-        for name, faprofile in profile_cases.items()
+        for mode in FileAccessMode
     }
 
-    assert 'sandbox_mode = "read-only"' in profiles["readonly"]
-    assert 'sandbox_mode = "read-only"' in profiles["oracle_only_read"]
-    assert "[sandbox_workspace_write]" not in profiles["readonly"]
-    for name in (
-        "realization_write",
-        "oracle_write",
-        "repo_write",
+    assert 'sandbox_mode = "read-only"' in profiles[FileAccessMode.READONLY]
+    assert 'sandbox_mode = "read-only"' in profiles[FileAccessMode.PURE_ORACLE_READ]
+    assert "[sandbox_workspace_write]" not in profiles[FileAccessMode.READONLY]
+    for mode in (
+        FileAccessMode.REALIZATION_WRITE,
+        FileAccessMode.ORACLE_WRITE,
+        FileAccessMode.REPO_WRITE,
     ):
-        assert 'sandbox_mode = "workspace-write"' in profiles[name]
-        assert "[sandbox_workspace_write]" in profiles[name]
-    assert _profile_writable_roots(profiles["realization_write"]) == {
+        assert 'sandbox_mode = "workspace-write"' in profiles[mode]
+        assert "[sandbox_workspace_write]" in profiles[mode]
+    assert _profile_writable_roots(profiles[FileAccessMode.REALIZATION_WRITE]) == {
         str((root / ".gitignore").resolve()),
         str((root / "src").resolve()),
         str((root / "test").resolve()),
     }
-    assert _profile_writable_roots(profiles["oracle_write"]) == {
+    assert _profile_writable_roots(profiles[FileAccessMode.ORACLE_WRITE]) == {
         str((root / "oracle").resolve())
     }
-    assert _profile_writable_roots(profiles["repo_write"]) == {
+    assert _profile_writable_roots(profiles[FileAccessMode.REPO_WRITE]) == {
         str((root / ".gitignore").resolve()),
         str((root / "oracle").resolve()),
         str((root / "src").resolve()),
@@ -567,21 +538,21 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         ".cmoc/log",
     ):
         _assert_not_writable(
-            profiles["realization_write"], root / blocked
+            profiles[FileAccessMode.REALIZATION_WRITE], root / blocked
         )
     _assert_writable(
-        profiles["realization_write"], root / "src" / "created.py"
+        profiles[FileAccessMode.REALIZATION_WRITE], root / "src" / "created.py"
     )
     _assert_writable(
-        profiles["repo_write"], root / "oracle" / "created.md"
+        profiles[FileAccessMode.REPO_WRITE], root / "oracle" / "created.md"
     )
     for blocked in ("memo/note.md", ".agents/state.json", ".cmoc/log"):
-        _assert_not_writable(profiles["repo_write"], root / blocked)
+        _assert_not_writable(profiles[FileAccessMode.REPO_WRITE], root / blocked)
     _assert_not_writable(
-        profiles["repo_write"], root / "new_dir" / "created.md"
+        profiles[FileAccessMode.REPO_WRITE], root / "new_dir" / "created.md"
     )
     _assert_not_writable(
-        profiles["realization_write"], root / "new_top_level.md"
+        profiles[FileAccessMode.REALIZATION_WRITE], root / "new_top_level.md"
     )
 
     extra = root / "src" / "extra"
@@ -589,7 +560,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         AgentCallParameter(
             parameter.model_class,
             parameter.reasoning_effort,
-            REALIZATION_WRITE_PROFILE,
+            FileAccessMode.REALIZATION_WRITE,
             parameter.prompt,
             parameter.structured_output_schema_path,
         ),
@@ -608,7 +579,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         AgentCallParameter(
             parameter.model_class,
             parameter.reasoning_effort,
-            REPO_WRITE_PROFILE,
+            FileAccessMode.REPO_WRITE,
             parameter.prompt,
             parameter.structured_output_schema_path,
         ),
@@ -638,7 +609,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
             AgentCallParameter(
                 parameter.model_class,
                 parameter.reasoning_effort,
-                ORACLE_ONLY_READ_PROFILE,
+                FileAccessMode.PURE_ORACLE_READ,
                 parameter.prompt,
                 parameter.structured_output_schema_path,
             ),
@@ -651,7 +622,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         AgentCallParameter(
             parameter.model_class,
             parameter.reasoning_effort,
-            ORACLE_ONLY_READ_PROFILE,
+            FileAccessMode.PURE_ORACLE_READ,
             parameter.prompt,
             parameter.structured_output_schema_path,
         ),
@@ -665,7 +636,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
             AgentCallParameter(
                 parameter.model_class,
                 parameter.reasoning_effort,
-                ORACLE_ONLY_READ_PROFILE,
+                FileAccessMode.PURE_ORACLE_READ,
                 parameter.prompt,
                 parameter.structured_output_schema_path,
             ),
@@ -678,24 +649,24 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("mode", "extra"),
     [
-        (REALIZATION_WRITE_PROFILE, "oracle/blocked.md"),
-        (REALIZATION_WRITE_PROFILE, "memo/blocked.md"),
-        (REALIZATION_WRITE_PROFILE, ".agents/blocked.md"),
-        (REALIZATION_WRITE_PROFILE, ".cmoc/state.json"),
-        (REALIZATION_WRITE_PROFILE, ".codex/config.toml"),
-        (REALIZATION_WRITE_PROFILE, "README.md"),
-        (ORACLE_WRITE_PROFILE, "src/blocked.md"),
-        (ORACLE_WRITE_PROFILE, "memo/blocked.md"),
-        (ORACLE_WRITE_PROFILE, ".agents/blocked.md"),
-        (REPO_WRITE_PROFILE, "memo/blocked.md"),
-        (REPO_WRITE_PROFILE, ".agents/blocked.md"),
-        (REPO_WRITE_PROFILE, ".cmoc/state.json"),
-        (REPO_WRITE_PROFILE, ".git/config"),
-        (REPO_WRITE_PROFILE, "../outside.md"),
+        (FileAccessMode.REALIZATION_WRITE, "oracle/blocked.md"),
+        (FileAccessMode.REALIZATION_WRITE, "memo/blocked.md"),
+        (FileAccessMode.REALIZATION_WRITE, ".agents/blocked.md"),
+        (FileAccessMode.REALIZATION_WRITE, ".cmoc/state.json"),
+        (FileAccessMode.REALIZATION_WRITE, ".codex/config.toml"),
+        (FileAccessMode.REALIZATION_WRITE, "README.md"),
+        (FileAccessMode.ORACLE_WRITE, "src/blocked.md"),
+        (FileAccessMode.ORACLE_WRITE, "memo/blocked.md"),
+        (FileAccessMode.ORACLE_WRITE, ".agents/blocked.md"),
+        (FileAccessMode.REPO_WRITE, "memo/blocked.md"),
+        (FileAccessMode.REPO_WRITE, ".agents/blocked.md"),
+        (FileAccessMode.REPO_WRITE, ".cmoc/state.json"),
+        (FileAccessMode.REPO_WRITE, ".git/config"),
+        (FileAccessMode.REPO_WRITE, "../outside.md"),
     ],
 )
 def test_codex_profile_rejects_disallowed_extra_writable_paths(
-    tmp_path: Path, mode, extra: str
+    tmp_path: Path, mode: FileAccessMode, extra: str
 ) -> None:
     root = tmp_path / "repo"
     root.mkdir()
@@ -733,7 +704,7 @@ def test_codex_profile_opens_only_conflict_file_for_session_join_conflict_resolu
         AgentCallParameter(
             ModelClass.EFFICIENCY,
             ReasoningEffort.LOW,
-            REALIZATION_WRITE_PROFILE,
+            FileAccessMode.REALIZATION_WRITE,
             "prompt",
             None,
         ),
@@ -776,7 +747,7 @@ def test_codex_profile_allows_session_join_conflict_targets_by_exact_path(
         AgentCallParameter(
             ModelClass.EFFICIENCY,
             ReasoningEffort.LOW,
-            REALIZATION_WRITE_PROFILE,
+            FileAccessMode.REALIZATION_WRITE,
             "prompt",
             None,
         ),
@@ -813,7 +784,7 @@ def test_codex_profile_rejects_runtime_paths_even_for_session_join_conflict(
             AgentCallParameter(
                 ModelClass.EFFICIENCY,
                 ReasoningEffort.LOW,
-                REALIZATION_WRITE_PROFILE,
+                FileAccessMode.REALIZATION_WRITE,
                 "prompt",
                 None,
             ),

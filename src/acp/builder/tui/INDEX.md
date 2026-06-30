@@ -54,18 +54,18 @@
 # `resolve_parameter.py`
 
 ## Summary
-- TUI の resolve-parameter builder について、既存の TUI 側 import surface を保つための互換モジュール。prompt 構築は oracle 側の正本 builder に委譲し、戻り値の Structured Output schema path だけを realization 側の整合 schema へ差し替える。
-- oracle 側 schema の `required` と `properties` が file access profile について食い違う間、TUI runtime が実際に読む `file_access_profile.value.{oracle,realization,index}` 形式を検証可能にする境界として位置づけられる。
+- TUI の resolve-parameter builder について、既存の TUI 側 import surface を保つための互換モジュール。正本側の builder 関数を再公開し、TUI 利用者向けに利用可能な file access mode の tuple も公開する。
+- 実体のある builder 実装ではなく、canonical な oracle 側実装へ呼び出し元を移行するまで残す互換 import path として位置づけられている。
 
 ## Read this when
 - TUI 側から resolve-parameter builder を import している既存コードの互換性を確認・変更するとき。
-- TUI resolve parameter の prompt は oracle 側へ委譲しつつ、Structured Output schema だけ realization 側で補正している理由を確認するとき。
+- TUI の import surface で公開される file access mode の選択肢を確認するとき。
 - canonical な oracle 側 builder への移行に伴い、この互換モジュールを削除できる条件を確認するとき。
 
 ## Do not read this when
-- resolve-parameter builder の実際の prompt 組み立て処理や正本仕様を確認したいとき。この対象は prompt 生成を oracle 側へ委譲するため、canonical な builder 実装を読む方が直接的。
-- ファイルアクセスプロファイル自体の定義や意味を確認したいとき。この対象は TUI resolve 用 schema の接続だけを担う。
+- resolve-parameter builder の実際の組み立て処理や仕様を確認したいとき。この対象は再公開だけを担うため、canonical な builder 実装を読む方が直接的。
+- FileAccessMode 自体の定義や意味を確認したいとき。この対象は列挙値を tuple として公開するだけで、mode 定義は別の基本モジュールが担う。
 - TUI 以外の ACP builder import 経路や UI 非依存の parameter 構築を調べたいとき。
 
 ## hash
-- 3d226f80d42a0ac3d7551617d002af4d355b8d3c2077fd8e8dc52f9ef8f0c929
+- 5a7fc4f43bce998fa5f6b2d56dfe1fae5bce7c9bebf69cc9b49635cca3ef12a9

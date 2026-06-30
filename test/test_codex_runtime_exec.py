@@ -5,14 +5,7 @@ from pathlib import Path
 
 import cmoc_runtime
 import pytest
-from _profiles import (
-    ORACLE_ONLY_READ_PROFILE,
-    ORACLE_WRITE_PROFILE,
-    READONLY_PROFILE,
-    REALIZATION_WRITE_PROFILE,
-    REPO_WRITE_PROFILE,
-)
-from basic.acp import AgentCallParameter, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from cmoc_runtime import CmocError
 from config.cmoc_config import CmocConfig
 from _support import (
@@ -29,7 +22,7 @@ from commons.runtime_codex_profile import (
 )
 
 
-def _parameter(mode = READONLY_PROFILE) -> AgentCallParameter:
+def _parameter(mode: FileAccessMode = FileAccessMode.READONLY) -> AgentCallParameter:
     return AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
@@ -121,7 +114,7 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
     result = run_codex_exec(
-        _parameter(REPO_WRITE_PROFILE),
+        _parameter(FileAccessMode.REPO_WRITE),
         root=root,
         capacity_initial_sleep_sec=0,
         config=CmocConfig(),
@@ -178,7 +171,7 @@ def test_run_codex_exec_limits_pure_oracle_read_to_oracle_cwd(
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
     run_codex_exec(
-        _parameter(ORACLE_ONLY_READ_PROFILE),
+        _parameter(FileAccessMode.PURE_ORACLE_READ),
         root=root,
         capacity_initial_sleep_sec=0,
         config=CmocConfig(),
@@ -231,7 +224,7 @@ def test_run_codex_exec_stores_schema_state_under_codex_work_root(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        REPO_WRITE_PROFILE,
+        FileAccessMode.REPO_WRITE,
         "prompt",
         schema_source,
     )
@@ -292,7 +285,7 @@ def test_run_codex_tui_checks_extra_read_path_before_starting_codex(
 
     with pytest.raises(CmocError, match="許可領域外"):
         run_codex_tui(
-            _parameter(REPO_WRITE_PROFILE),
+            _parameter(FileAccessMode.REPO_WRITE),
             root=root,
             extra_read_paths=[root / "memo" / "prompt_cmpl.md"],
             config=CmocConfig(),
@@ -324,7 +317,7 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
     run_codex_tui(
-        _parameter(ORACLE_ONLY_READ_PROFILE),
+        _parameter(FileAccessMode.PURE_ORACLE_READ),
         root=root,
         extra_read_paths=[prompt_path],
         config=CmocConfig(),
@@ -365,7 +358,7 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
     run_codex_tui(
-        _parameter(REPO_WRITE_PROFILE),
+        _parameter(FileAccessMode.REPO_WRITE),
         root=root,
         cwd=linked,
         extra_read_paths=[prompt_path],

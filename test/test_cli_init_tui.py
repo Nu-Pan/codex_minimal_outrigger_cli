@@ -13,7 +13,7 @@ import subprocess
 from pathlib import Path
 
 import commons.runtime_codex_preflight as codex_preflight_module
-from basic.acp import AgentCallParameter, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from oracle.other.file_access_profile import build_faprofile
 import pytest
 
@@ -312,7 +312,7 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
         assert kwargs["purpose"] == "tui codex"
         assert parameter.model_class == ModelClass.MAINSTREAM
         assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
-        assert parameter.faprofile == build_faprofile(
+        assert parameter.file_access_profile == build_faprofile(
             oracle="write",
             realization="write",
             index="write",
@@ -347,7 +347,7 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     assert not (root / ".cmoc" / "logs" / "sub_commands").exists()
 
 
-def test_tui_uses_default_file_access_profile_for_empty_resolved_value(
+def test_tui_uses_default_file_access_mode_for_empty_resolved_value(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -359,7 +359,7 @@ def test_tui_uses_default_file_access_profile_for_empty_resolved_value(
         {"file_access_profile": {"value": "", "reason": "default accepted"}},
     )
 
-    assert parameter.faprofile == build_faprofile(
+    assert parameter.file_access_profile == build_faprofile(
         oracle="read",
         realization="read",
         index="read",

@@ -1,5 +1,5 @@
 # cmoc
-from ..other.file_access_profile import FAProfile
+from ..other.file_access_profile import FAPProfilePreset
 from oracle.other.struct_doc import StructDoc
 from copy import deepcopy
 from typing import Callable
@@ -21,7 +21,7 @@ def build_complete_prompt(
     role: str,
     summary: str,
     goal: str,
-    faprofile: FAProfile,
+    file_access_mode: FAPProfilePreset,
     aux_static_prompt: list[StructDoc] = list(),
     aux_dynamic_prompt: list[StructDoc] = list(),
     aux_placeholder_def: PlaceholderMap = dict(),
@@ -52,7 +52,7 @@ def build_complete_prompt(
     goal:
         agent が作業完了と判断する条件・基準
 
-    faprofile:
+    file_access_mode:
         agent によるファイルアクセスに対する制限設定
 
     aux_static_prompt:
@@ -135,7 +135,7 @@ def build_complete_prompt(
         _extend_static_prompt(build_index_entry_standard)
     if aux_static_prompt:
         prompt.extend(aux_static_prompt)
-    _extend_static_prompt(build_file_access_rule, faprofile)
+    _extend_static_prompt(build_file_access_rule, file_access_mode)
     _extend_static_prompt(build_routing_rule)
 
     # 動的プロンプトを構築

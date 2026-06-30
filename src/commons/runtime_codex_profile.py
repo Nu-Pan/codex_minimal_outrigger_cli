@@ -17,9 +17,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
-from basic.acp import AgentCallParameter
+from basic.acp import AgentCallParameter, FileAccessMode
 from config.cmoc_config import CmocConfig
-from oracle.other.file_access_profile import FAAttr, FAProfile, FARule
 
 from commons.runtime_content import write_hashed_file, write_hashed_file_in_existing_dir
 from commons.runtime_errors import CmocError
@@ -51,7 +50,6 @@ _CONFLICT_WRITE_BLOCKED_ROOT_NAMES = {
     ".pytest_cache",
     "memo",
 }
-_FAATTR_PRIORITY: dict[FAAttr, int] = {"read": 0, "write": 1, "deny": 2}
 
 
 @contextmanager
@@ -70,21 +68,25 @@ def apply_process_id_file_lock(path: Path) -> Iterator[None]:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
-def file_access_to_sandbox_mode(faprofile: FAProfile) -> str:
+def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
     """cmoc の file access policy を Codex CLI が理解する sandbox 名へ落とす。"""
-    return (
-        "workspace-write"
-        if any(rule.attr == "write" for rule in faprofile)
-        else "read-only"
-    )
+    match mode:
+        case FileAccessMode.READONLY | FileAccessMode.PURE_ORACLE_READ:
+            return "read-only"
+        case (
+            FileAccessMode.REALIZATION_WRITE
+            | FileAccessMode.ORACLE_WRITE
+            | FileAccessMode.REPO_WRITE
+        ):
+            return "workspace-write"
+        case _:
+            raise CmocError("不明な FileAccessMode です。", [], str(mode))
 
 
-def file_access_to_codex_cwd(faprofile: FAProfile, root: Path) -> Path:
-    """ファイルアクセスプロファイルの読み取り境界に合わせた Codex 作業 root を返す。"""
+def file_access_to_codex_cwd(mode: FileAccessMode, root: Path) -> Path:
+    """FileAccessMode の読み取り境界に合わせた Codex 作業 root を返す。"""
     root = root.resolve()
-    if _effective_attr(faprofile, Path(".")) == "deny" and _effective_attr(
-        faprofile, Path("oracle")
-    ) in {"read", "write"}:
+    if mode == FileAccessMode.PURE_ORACLE_READ:
         # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
         # Codex profile は read-only の読み取り root を分けられないため、
         # 公開済みの --cd/cwd で oracle tree だけを作業 root にする。
@@ -92,7 +94,7 @@ def file_access_to_codex_cwd(faprofile: FAProfile, root: Path) -> Path:
     return root
 
 
-def _is_read_path_allowed(faprofile: FAProfile, root: Path, path: Path) -> bool:
+def _is_read_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
     """prompt 上の読み取り禁止領域を追加 read path にも適用する。"""
     if not path.is_relative_to(root):
         return False
@@ -100,10 +102,12 @@ def _is_read_path_allowed(faprofile: FAProfile, root: Path, path: Path) -> bool:
         return False
     if _is_tui_complete_prompt_path(root, path):
         # <work-root>/oracle/doc/app_spec/sub_command/tui.md
-        # oracle のみに読める profile では Codex cwd は oracle に閉じるが、TUI の完全
+        # PURE_ORACLE_READ の Codex cwd は oracle に閉じるが、TUI の完全
         # prompt だけは起動指示そのものなので `.cmoc` 側から読ませる。
         return True
-    return _effective_attr(faprofile, path.relative_to(root)) in {"read", "write"}
+    return mode != FileAccessMode.PURE_ORACLE_READ or path.is_relative_to(
+        root / "oracle"
+    )
 
 
 def _is_tui_complete_prompt_path(root: Path, path: Path) -> bool:
@@ -113,20 +117,20 @@ def _is_tui_complete_prompt_path(root: Path, path: Path) -> bool:
 
 
 def _validate_extra_read_paths(
-    faprofile: FAProfile,
+    mode: FileAccessMode,
     root: Path,
     extra_read_paths: list[Path] | None,
 ) -> None:
     """Codex profile に足す read path が cmoc の許可境界内か検査する。"""
     for path in extra_read_paths or []:
         resolved = path.resolve()
-        if not _is_read_path_allowed(faprofile, root, resolved):
+        if not _is_read_path_allowed(mode, root, resolved):
             raise CmocError(
-                "追加読み取り許可 path がファイルアクセスプロファイルの許可領域外にあります。",
+                "追加読み取り許可 path が FileAccessMode の許可領域外にあります。",
                 [
-                    "ファイルアクセスプロファイルで読み取り可能な work root 配下の path を指定してください。"
+                    "file access mode で読み取り可能な work root 配下の path を指定してください。"
                 ],
-                f"file access profile: {_format_faprofile(faprofile)}\npath: {resolved}",
+                f"mode: {mode.value}\npath: {resolved}",
             )
 
 
@@ -136,20 +140,31 @@ def _toml_string(value: str) -> str:
 
 
 def _writable_roots(
-    faprofile: FAProfile,
+    mode: FileAccessMode,
     root: Path,
     extra_writable_paths: list[Path] | None,
     allow_oracle_conflict_writes: bool = False,
 ) -> list[Path]:
     """Codex sandbox に渡せる書き込み root を作る。"""
-    if file_access_to_sandbox_mode(faprofile) == "read-only":
+    if file_access_to_sandbox_mode(mode) == "read-only":
         return []
     root = root.resolve()
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # Codex profile has no deny-list, so profiles that exclude memo/.agents
-    # cannot make <work-root> itself writable. Existing top-level writable paths
-    # are passed individually; new paths must be explicit extra_writable_paths.
-    paths = _existing_writable_top_level_roots(faprofile, root)
+    match mode:
+        case FileAccessMode.REALIZATION_WRITE:
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+            paths = _existing_writable_top_level_roots(mode, root)
+        case FileAccessMode.REPO_WRITE:
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+            # Codex profile has no deny-list, so modes that exclude memo/.agents
+            # cannot make <work-root> itself writable. New top-level paths must
+            # be passed explicitly through extra_writable_paths.
+            paths = _existing_writable_top_level_roots(mode, root)
+        case FileAccessMode.ORACLE_WRITE:
+            paths = [root / "oracle"]
+        case _:
+            paths = []
     result: list[Path] = []
     seen: set[Path] = set()
     for path in paths:
@@ -162,14 +177,14 @@ def _writable_roots(
     for path in extra_writable_paths or []:
         resolved = path.resolve()
         if not _is_writable_path_allowed(
-            faprofile, root, resolved, allow_oracle_conflict_writes
+            mode, root, resolved, allow_oracle_conflict_writes
         ):
             raise CmocError(
-                "追加書き込み許可 path がファイルアクセスプロファイルの許可領域外にあります。",
+                "追加書き込み許可 path が FileAccessMode の許可領域外にあります。",
                 [
-                    "ファイルアクセスプロファイルで書き込み可能な work root 配下の path を指定してください。"
+                    "file access mode で書き込み可能な work root 配下の path を指定してください。"
                 ],
-                f"file access profile: {_format_faprofile(faprofile)}\npath: {resolved}",
+                f"mode: {mode.value}\npath: {resolved}",
             )
         if resolved not in seen and not any(
             resolved.is_relative_to(parent) for parent in seen
@@ -179,75 +194,51 @@ def _writable_roots(
     return result
 
 
-def _existing_writable_top_level_roots(faprofile: FAProfile, root: Path) -> list[Path]:
+def _existing_writable_top_level_roots(mode: FileAccessMode, root: Path) -> list[Path]:
     return sorted(
         [
             path
             for path in root.iterdir()
-            if _is_writable_path_allowed(faprofile, root, path.resolve())
+            if _is_writable_path_allowed(mode, root, path.resolve())
         ],
         key=lambda path: str(path.resolve()),
     )
 
 
 def _is_writable_path_allowed(
-    faprofile: FAProfile,
+    mode: FileAccessMode,
     root: Path,
     path: Path,
     allow_oracle_conflict_writes: bool = False,
 ) -> bool:
-    """ファイルアクセスプロファイルの禁止領域を追加 writable path にも適用する。"""
+    """FileAccessMode の禁止領域を追加 writable path にも適用する。"""
     if not path.is_relative_to(root):
         return False
     # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # 追加 writable path は、prompt で伝える禁止領域を広げない範囲だけ許可する。
-    relative = path.relative_to(root)
-    if allow_oracle_conflict_writes:
+    if mode == FileAccessMode.REALIZATION_WRITE and allow_oracle_conflict_writes:
         # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
         # session join の conflict 解消は README.md/INDEX.md/oracle file も
         # git conflict 対象なら編集する。runtime 管理領域だけは sandbox 側でも開かない。
+        relative = path.relative_to(root)
         return (
             bool(relative.parts)
             and relative.parts[0] not in _CONFLICT_WRITE_BLOCKED_ROOT_NAMES
-            and _effective_attr(faprofile, relative) != "deny"
         )
-    if relative.parts and relative.parts[0] in _PROFILE_BLOCKED_ROOT_NAMES:
-        return False
-    return _effective_attr(faprofile, relative) == "write"
-
-
-def _effective_attr(faprofile: FAProfile, relative_path: Path) -> FAAttr:
-    matched: list[tuple[int, int, FAAttr]] = []
-    for rule in faprofile:
-        if _rule_matches(rule, relative_path):
-            pattern = Path(rule.pattern)
-            matched.append(
-                (
-                    len(pattern.parts),
-                    _FAATTR_PRIORITY[rule.attr],
-                    rule.attr,
-                )
-            )
-    if not matched:
-        return "deny"
-    return max(matched)[2]
-
-
-def _rule_matches(rule: FARule, relative_path: Path) -> bool:
-    pattern = Path(rule.pattern)
-    if str(pattern) == ".":
-        return True
-    if relative_path == pattern or relative_path.is_relative_to(pattern):
-        return True
-    pattern_text = str(rule.pattern)
-    return relative_path.match(pattern_text) or (
-        pattern_text.startswith("**/") and relative_path.match(pattern_text[3:])
+    relative = path.relative_to(root)
+    blocked_root_names = (
+        _REPO_WRITE_BLOCKED_ROOT_NAMES
+        if mode == FileAccessMode.REPO_WRITE
+        else _REALIZATION_WRITE_BLOCKED_ROOT_NAMES
     )
-
-
-def _format_faprofile(faprofile: FAProfile) -> str:
-    return ", ".join(f"{rule.pattern}:{rule.attr}" for rule in faprofile)
+    if relative.parts and relative.parts[0] in blocked_root_names:
+        return False
+    if mode == FileAccessMode.REALIZATION_WRITE:
+        return not path.is_relative_to(root / "oracle")
+    if mode == FileAccessMode.ORACLE_WRITE:
+        return path.is_relative_to(root / "oracle")
+    return mode == FileAccessMode.REPO_WRITE
 
 
 def _append_workspace_write_section(
@@ -257,7 +248,7 @@ def _append_workspace_write_section(
     if not writable_roots:
         return
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # ファイルアクセスプロファイルの細かい deny は prompt 側にも載せるが、Codex profile
+    # FileAccessMode の細かい deny は prompt 側にも載せるが、Codex profile
     # で表現できる sandbox 境界はここで必ず渡してから起動する。
     roots = ", ".join(_toml_string(str(path)) for path in writable_roots)
     lines.extend(["[sandbox_workspace_write]", f"writable_roots = [{roots}]"])
@@ -284,15 +275,15 @@ def build_codex_profile(
         root = root.resolve()
         read_root = (extra_read_root or root).resolve()
         _validate_extra_read_paths(
-            parameter.faprofile, read_root, extra_read_paths
+            parameter.file_access_mode, read_root, extra_read_paths
         )
-    sandbox_mode = file_access_to_sandbox_mode(parameter.faprofile)
+    sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
     lines.append(f'sandbox_mode = "{sandbox_mode}"')
     if root is not None:
         _append_workspace_write_section(
             lines,
             _writable_roots(
-                parameter.faprofile,
+                parameter.file_access_mode,
                 root,
                 extra_writable_paths,
                 allow_oracle_conflict_writes,

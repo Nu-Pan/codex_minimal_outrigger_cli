@@ -9,9 +9,11 @@ from oracle.acp_builder.basic import (
     ModelClass,
     ReasoningEffort,
 )
+from oracle.other.file_access_profile import FAPProfilePreset as FileAccessMode
 
 __all__ = [
     "AgentCallParameter",
+    "FileAccessMode",
     "ModelClass",
     "ReasoningEffort",
 ]

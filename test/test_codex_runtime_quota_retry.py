@@ -15,17 +15,10 @@ from pathlib import Path
 
 import cmoc_runtime
 import commons.runtime_codex_exec as runtime_codex_exec
-from basic.acp import AgentCallParameter, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from cmoc_runtime import SubcommandLogger
 from config.cmoc_config import CmocConfig
 import pytest
-from _profiles import (
-    ORACLE_ONLY_READ_PROFILE,
-    ORACLE_WRITE_PROFILE,
-    READONLY_PROFILE,
-    REALIZATION_WRITE_PROFILE,
-    REPO_WRITE_PROFILE,
-)
 
 from _support import (
     make_repo,
@@ -53,7 +46,7 @@ def stub_quota_probe_builder(
         lambda base_parameter: AgentCallParameter(
             base_parameter.model_class,
             base_parameter.reasoning_effort,
-            base_parameter.faprofile,
+            base_parameter.file_access_mode,
             probe_prompt,
             None,
         ),
@@ -108,7 +101,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        READONLY_PROFILE,
+        FileAccessMode.READONLY,
         "prompt",
         None,
     )
@@ -255,7 +248,7 @@ def test_quota_probe_uses_realization_builder_when_quota_recovers(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        READONLY_PROFILE,
+        FileAccessMode.READONLY,
         "prompt",
         None,
     )
@@ -315,7 +308,7 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        ORACLE_ONLY_READ_PROFILE,
+        FileAccessMode.PURE_ORACLE_READ,
         "prompt",
         None,
     )
@@ -374,7 +367,7 @@ def test_run_codex_exec_reruns_after_quota_without_resume_token(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        READONLY_PROFILE,
+        FileAccessMode.READONLY,
         "prompt",
         None,
     )
@@ -429,7 +422,7 @@ def test_quota_probe_non_quota_failure_fails_immediately(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        READONLY_PROFILE,
+        FileAccessMode.READONLY,
         "prompt",
         None,
     )
@@ -503,7 +496,7 @@ def test_run_codex_exec_uses_single_representative_quota_probe(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        READONLY_PROFILE,
+        FileAccessMode.READONLY,
         "prompt",
         None,
     )
@@ -570,7 +563,7 @@ def test_waiting_quota_calls_fail_when_representative_probe_fails(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        READONLY_PROFILE,
+        FileAccessMode.READONLY,
         "prompt",
         None,
     )

@@ -2,17 +2,10 @@ import json
 from pathlib import Path
 
 import cmoc_runtime
-from basic.acp import AgentCallParameter, ModelClass, ReasoningEffort
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from cmoc_runtime import CmocError, SubcommandLogger
 from config.cmoc_config import CmocConfig
 import pytest
-from _profiles import (
-    ORACLE_ONLY_READ_PROFILE,
-    ORACLE_WRITE_PROFILE,
-    READONLY_PROFILE,
-    REALIZATION_WRITE_PROFILE,
-    REPO_WRITE_PROFILE,
-)
 
 from _support import (
     make_repo,
@@ -66,7 +59,7 @@ def test_run_codex_exec_retries_semantic_output(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        READONLY_PROFILE,
+        FileAccessMode.READONLY,
         "prompt",
         schema,
     )
@@ -150,7 +143,7 @@ def test_run_codex_exec_retries_structured_output_parse_failure(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        READONLY_PROFILE,
+        FileAccessMode.READONLY,
         "prompt",
         schema,
     )
@@ -209,7 +202,7 @@ def test_run_codex_exec_logs_capacity_retrying_call(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        READONLY_PROFILE,
+        FileAccessMode.READONLY,
         "prompt",
         None,
     )
@@ -250,7 +243,7 @@ def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(
     parameter = AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        READONLY_PROFILE,
+        FileAccessMode.READONLY,
         "prompt",
         None,
     )

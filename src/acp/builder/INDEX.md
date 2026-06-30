@@ -119,20 +119,20 @@
 # `tui`
 
 ## Summary
-- ACP builder の TUI 向け realization package。既存の TUI 側 import surface を維持しながら、TUI 起動パラメータ生成や resolve-parameter builder の実体・prompt は oracle 側へ委譲し、runtime 入力に必要な Structured Output schema の補正だけをこの階層で扱う。
-- この階層は、正本側 TUI builder との互換 package としての存在、互換再 export、resolve parameter schema 差し替えの入口になる。TUI 画面処理そのものではなく、TUI builder 周辺の import 経路と schema 接続を確認するための対象である。
+- ACP builder の TUI 互換 package。正本側の TUI 起動パラメータ生成や resolve-parameter builder を既存 import path から参照できるようにする薄い再公開層で、TUI 画面制御や builder 本体の実装は担わない。
+- TUI 関連の公開 import surface、oracle 側実装への委譲、利用者向けに公開される file access mode 選択肢を確認する入口。
 
 ## Read this when
-- ACP builder の TUI 関連 import path が、正本側 builder や既存公開面との互換のためにどう残されているかを確認したいとき。
-- TUI 起動パラメータ生成関数や resolve-parameter builder が、realization 側から oracle 側実体へどのように委譲されているかを確認したいとき。
-- TUI resolve parameter の Structured Output 検証で、runtime が読む file access profile 形式に合わせた realization 側 schema を確認・変更したいとき。
-- canonical な oracle 側 builder への移行に伴い、この階層の互換モジュールや補正 schema を削除・置換できるか判断したいとき。
+- ACP builder の TUI 関連 import path が正本側実装と互換に保たれているか確認したいとき。
+- TUI 起動パラメータ生成関数や resolve-parameter builder が、既存公開面から oracle 側の canonical 実装へどのように接続されているか確認したいとき。
+- TUI 側の互換モジュールを削除・移動・置換してよいか判断するため、残している理由や削除条件を確認したいとき。
+- TUI の import surface で公開される file access mode の選択肢を確認したいとき。
 
 ## Do not read this when
-- TUI 画面の描画、イベント処理、ユーザー操作、端末 UI の挙動など、TUI runtime の具体的な実装を調べたいとき。
-- TUI 起動パラメータや resolve-parameter prompt の正本仕様、値の組み立てロジックそのものを確認したいとき。その場合は oracle 側の対応 builder や prompt 仕様を読む。
-- Codex CLI 起動時の sandbox profile 生成、writable roots、cwd 選択など、runtime 変換の詳細を調べたいとき。
-- TUI 以外の ACP builder import 経路、UI 非依存の parameter 構築、または新しい CLI 公開面を設計・確認したいとき。
+- TUI 起動パラメータや resolve-parameter builder の具体的な仕様、値、組み立てロジックを確認したいとき。ここは再公開層なので oracle 側の実体を読む方が直接的。
+- TUI 画面の描画、イベント処理、ユーザー操作、端末 UI の挙動を調べたいとき。
+- FileAccessMode 自体の定義や意味を確認したいとき。ここは利用可能な列挙値を公開するだけで、mode 定義は別の基本モジュールが担う。
+- TUI 以外の ACP builder import 経路、UI 非依存の parameter 構築、または CLI 挙動そのものを設計・確認したいとき。
 
 ## hash
 - a06d2b1249b5b845e565d0103b984f0eb0d68abddfcfa4ebfbb78c018b939b4e
