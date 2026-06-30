@@ -18,19 +18,19 @@
 # `oracle`
 
 ## Summary
-- レビュー oracle 関連の AgentCallParameter builder と finding 判定・列挙・検証の互換 import 層をまとめる階層。多くは旧来の realization 側 import 経路から canonical oracle 側実装へ委譲するための薄い入口であり、一部は oracle src 由来 prompt の既知 placeholder 表記だけを限定的に補正する。
-- 実処理本体や正本仕様を保持する場所ではなく、既存呼び出し元の移行中に必要な互換経路、削除条件、補正境界を確認するための入口として位置づけられる。
+- review oracle 周辺の agent call parameter builder と、旧来 import 経路を保つ互換層をまとめる階層。正本側 builder への委譲、prompt placeholder の暫定補正、互換 module の残置理由と削除条件を扱う。
+- レビュー指摘の列挙・判定・検証・merge finding に関する実装入口があるが、多くは実装本体ではなく canonical oracle 側への再公開または薄い wrapper として位置づけられる。
 
 ## Read this when
-- レビュー oracle finding の列挙・判定・検証・統合 builder について、旧来の import 経路が canonical oracle 側へどう委譲されているか確認したいとき。
-- 互換 import 層を削除できるか、または呼び出し元を canonical oracle path へ移行する必要があるか判断したいとき。
-- oracle src 由来 prompt の placeholder 表記補正が、どの builder wrapper でどの範囲に限定されているか確認・変更したいとき。
-- review oracle 用 AgentCallParameter 生成で、既知 finding や検証理由などの動的入力を保持しつつ静的 prompt だけを補正する境界を調べたいとき。
+- review oracle 系の agent call parameter 生成処理を調査・変更したいとき。
+- 正本側 builder の出力を realization 側でどのように補正しているか、特に oracle root placeholder 表記の暫定補正を確認したいとき。
+- レビュー指摘の列挙・判定・検証に関する旧来 import 経路が残っている理由、委譲先、削除条件を確認したいとき。
+- 同名機能の実装が realization 側にあるように見えるが、実体が canonical oracle 側か薄い wrapper かを切り分けたいとき。
 
 ## Do not read this when
-- レビュー finding の判定仕様、検出ロジック、正本 prompt、schema そのものを調べたいとき。この階層の多くは互換・補正層なので、canonical oracle 側または対応する oracle src を直接読む。
-- AgentCallParameter の型、model、reasoning、profile、schema 指定の一般仕様を確認したいとき。基礎定義側を読む。
-- 互換 import 経路や placeholder 補正と無関係な review 機能全般、CLI 表示、テスト方針を調べたいとき。より直接その責務を持つ対象へ進む。
+- review oracle の正本仕様断片そのもの、prompt の正本文面、判定仕様、検出ロジックを確認したいときは、対応する oracle file または canonical 実装を読む。
+- agent call parameter の基礎データ構造、model、reasoning effort、file access mode などの共通仕様を調べたいときは、基礎定義側を読む。
+- 互換 import 経路や review oracle builder と無関係な CLI 表示、テスト方針、review 機能全般を調べたいときは、より直接その責務を持つ対象へ進む。
 
 ## hash
-- 845a81fc4c46c5f38c41cf6651df63e7ba22c7cfdf1d1afb4a0d6eb9f561899d
+- 970b5b4cebe0698ddd6ee2e13b4b8bbc5afab4ecd7fe0dc2d7d1b99292896ed7

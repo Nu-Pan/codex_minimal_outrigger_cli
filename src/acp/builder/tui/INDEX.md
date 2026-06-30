@@ -34,23 +34,6 @@
 ## hash
 - 23d4d93c40bb8191cb1d3b58b15845e17afca479d63366ca50c92836df1b6091
 
-# `resolve_parameter.json`
-
-## Summary
-- TUI resolve parameter の realization 側 Structured Output schema。TUI runtime が解釈する `file_access_profile.value.{oracle,realization,index}` と標準 prompt 注入フラグを、理由付きの JSON object として検証する。
-- oracle 側 schema の field 構成が runtime 入力形式と食い違う間、`acp.builder.tui.resolve_parameter` wrapper から参照される補正 schema として使われる。
-
-## Read this when
-- `cmoc tui` の resolve parameter 結果として Codex に返させる JSON 形、特に `file_access_profile` と標準 prompt 注入フラグの schema を確認・変更するとき。
-- TUI resolve parameter の Structured Output 検証が、oracle 側 schema ではなく realization 側 schema を使う理由を確認するとき。
-
-## Do not read this when
-- TUI resolve parameter の prompt 本文やパラメータ選定方針そのものを確認したいとき。その場合は oracle 側 builder と prompt 仕様を読む。
-- Codex CLI 起動時の sandbox profile 生成、writable roots、cwd 選択など runtime 変換を調べたいとき。
-
-## hash
-- 1f277462bbae21469b8ef7bf246d5ce6845882a781799429c114c5273a8ea51d
-
 # `resolve_parameter.py`
 
 ## Summary

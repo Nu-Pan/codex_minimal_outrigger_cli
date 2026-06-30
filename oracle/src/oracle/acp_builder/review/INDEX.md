@@ -1,21 +1,21 @@
 # `oracle`
 
 ## Summary
-- `cmoc review oracle` のレビュー用 agent call parameter と Structured Output schema を集めた oracle src ディレクトリ。
-- oracle file から新規所見を列挙し、所見を擁護・反証し、人間提示の採否を判定し、重複・矛盾する所見リストを整理する各フェーズの正本仕様への入口になる。
-- 各ファイルは、レビュー対象・既知所見や既知理由・file access profile・モデル設定・出力 schema など、oracle file レビューの AI 呼び出し契約をフェーズ別に定義する。
+- `cmoc review oracle` の各段階で使う oracle file レビュー用 agent call parameter と Structured Output schema をまとめるディレクトリ。
+- 新規所見の列挙、所見の擁護・反証、採否判定、重複・矛盾の整理について、AI 呼び出しへ渡す prompt 断片、読み取り制約、モデル設定、出力契約を確認する入口になる。
+- レビュー所見の生成から検証・整理までの出力境界や prompt 接続を段階別にたどるための下位ファイルを収める。
 
 ## Read this when
-- `cmoc review oracle` の所見列挙、所見検証、採否判定、所見マージに関する agent call parameter や出力 schema を確認したいとき。
-- oracle file レビューで、既知所見や既知理由との重複を避けて新規の所見・擁護理由・反証理由を返す仕様を追いたいとき。
-- レビュー用 agent に oracle と INDEX だけを読ませ、realization file を読ませないアクセス制御や placeholder の扱いを確認したいとき。
-- レビュー所見の重大度、見出し、根拠、理由、採否理由、整理理由を Structured Output 上でどう扱うか確認したいとき。
+- `cmoc review oracle` の oracle file レビュー処理で、所見列挙、所見検証、採否判定、所見マージのいずれかの agent call parameter や出力 schema を確認・変更したいとき。
+- レビュー対象 oracle file、既知所見、既知の擁護理由・反証理由、所見リストが、各レビュー段階の prompt や Structured Output にどう渡るか調べたいとき。
+- oracle file を根拠にした新規所見、新規理由、採否理由、重複・矛盾整理の応答契約を段階別に確認したいとき。
+- `PURE_ORACLE_READ`、review oracle standard、対応 JSON schema、reasoning effort、モデル設定など、oracle review 用 agent call の正本 prompt 断片を探すとき。
 
 ## Do not read this when
-- `cmoc review oracle` 以外のサブコマンドや、oracle file 以外を対象にした review 用 agent call parameter を確認したいとき。
-- CLI の実行制御、結果表示、ファイル編集、テスト追加など、レビュー用 AI 呼び出し契約の外側にある realization 側の実装だけを確認したいとき。
-- file access profile、path placeholder、complete prompt rendering、AgentCallParameter などの共通部品そのものの仕様を確認したいとき。
-- oracle file 全般の品質基準や仕様断片として何を問題扱いするかの標準を確認したいとき。
+- `cmoc review oracle` サブコマンド全体の CLI 引数、実行制御、結果集約、表示処理など realization implementation 側の挙動を確認したいとき。
+- oracle file 全般の品質基準、oracle standard、review oracle standard の本文そのものを読みたいとき。
+- oracle review 以外の agent call parameter、または oracle file 以外を読むレビュー処理を調べたいとき。
+- INDEX.md エントリーやルーティング文書の生成規則を確認したいとき。
 
 ## hash
-- f17b777e0537e918f35232e12f9408e13b30a5288258265259ca8b2b83003cbf
+- 0ca42e71c8d96d420ccfc746ebb73086636777932770c73e0dac3ef85aefe3d9

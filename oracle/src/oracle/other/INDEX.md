@@ -19,25 +19,6 @@
 ## hash
 - 2dfafd96b3273b40153020a66ccc0409286c6cf02ec19be4fef3bf9522df8989
 
-# `file_access_profile.py`
-
-## Summary
-- cmoc 上の論理的なファイルアクセス権限を表す基本型とルール構築 helper を定義する。
-- アクセス属性、パスパターン単位のアクセスルール、アクセスプロファイル、および oracle・realization・INDEX・memo 向けの基本プロファイル生成を扱う。
-
-## Read this when
-- cmoc のファイル読み書き可否を表す型やデータ構造を確認したいとき。
-- agent call 用のファイルアクセスプロファイルをどのルール順・優先関係で組み立てるか確認したいとき。
-- oracle、realization、INDEX、memo に対する論理アクセス属性のプリセット構築を変更したいとき。
-
-## Do not read this when
-- 実際のファイルシステム権限や OS サンドボックスの実装を確認したいだけのとき。
-- oracle file と realization file の正本定義そのものを確認したいとき。
-- 個別コマンドの入出力仕様や CLI 引数を確認したいとき。
-
-## hash
-- 4c72a9154d20193e189cea60130d6541fa9d93515ce629f6811a03b8283b9ae1
-
 # `path_model.py`
 
 ## Summary

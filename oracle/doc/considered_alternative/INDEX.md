@@ -20,6 +20,25 @@
 ## hash
 - a3a005b892d1f98ae6278c59c8e740a94d42f92ef59987cf959c1432ea020309
 
+# `gitignore_to_permission_profile.md`
+
+## Summary
+- git 追跡対象外と判定されるファイルを通常の読み書き規則の例外として自由に扱えるようにし、その規則を permission profile へ変換する案を検討した記録。
+- .gitignore の表現力と permission profile の表現力が一致せず、ディレクトリ限定パターンや柔軟なワイルドカードを正しく変換できないため断念した理由を説明する。
+
+## Read this when
+- git 追跡対象外ファイルを読み書き規則や permission profile 上で例外扱いする案の背景を確認したいとき。
+- .gitignore の判定結果を Codex CLI の permission profile へ変換する設計が採用されていない理由を調べるとき。
+- 作業中に生成される追跡対象外ファイルの掃除と、oracle などの書き込み禁止領域との関係を検討するとき。
+
+## Do not read this when
+- 現在採用されている permission profile の仕様や実装方法を確認したいだけのとき。
+- .gitignore そのものの一般的な仕様や git の ignore 判定を詳しく調べたいとき。
+- 読み書き規則全体の正本仕様や、oracle file と realization file の責務境界を確認したいとき。
+
+## hash
+- ed09c3445976ef4bebdd51511c2b056d7a10291f1e2bf13ca123977c4ed991e9
+
 # `memory_alternative.md`
 
 ## Summary

@@ -19,23 +19,22 @@
 # `builder`
 
 ## Summary
-- Agent call parameter builder 群の実装側入口。正本側 builder を既存の公開参照経路から利用できるようにする互換 package 群と、quota availability probe 用の最小 parameter builder を含む。
-- 主な責務は、旧来の import surface 維持、正本側実装への委譲、TUI resolve parameter schema など実行時入力に必要な限定的補正、apply・review・session・indexing・TUI 各 builder 領域へのルーティングである。
-- この階層自体は多くの場合、処理本体や正本仕様ではなく互換境界であり、具体的な builder 実装・prompt・schema・制御ロジックは下位領域または正本側実装へ進むための入口として扱う。
+- ACP builder 関連の既存公開参照を、正本側 builder 実装へつなぐ互換入口をまとめる領域。apply、review、session、TUI、indexing、quota probe などの agent call parameter 生成周辺について、実体が正本側にあるのか、realization 側の薄い wrapper なのかを切り分けるための上位入口である。
+- この領域の主な責務は、公開済み import 経路の維持、正本側 builder への委譲、realization 側 parameter 型への適合、互換コードの残置理由と削除条件の確認である。各 builder の正本仕様や詳細ロジックそのものは、下位の個別領域または正本側実装に委ねられる。
 
 ## Read this when
-- agent call parameter builder の実装側 package 構造と、正本側 builder への委譲関係を確認したいとき。
-- 既存の公開参照経路や import surface が残っている理由、削除条件、canonical な正本側 path への移行可否を判断したいとき。
-- apply fork、review oracle、session join、indexing、TUI 起動・resolve parameter などの builder 領域のうち、どの下位領域へ進むべきか見分けたいとき。
-- Codex quota availability probe の agent call parameter が、通常設定から何を引き継ぎ、どの入力を固定するか確認・変更したいとき。
-- 正本側 prompt や実装を保持したまま、realization 側で必要な互換再公開、placeholder 補正、runtime schema 差し替えの境界を確認したいとき。
+- ACP builder 周辺で、既存公開参照が正本側実装へどのように接続されているかを確認したいとき。
+- agent call parameter builder の領域分担を見分け、apply、review、session、TUI、indexing、quota probe などのどの下位領域へ進むべきか判断したいとき。
+- realization 側に残る互換 package、再公開 module、wrapper、暫定補正について、残す理由や削除条件を確認したいとき。
+- 正本側 builder の出力を realization 側で利用する際の委譲関係、型適合、公開 import 経路維持の境界を調べたいとき。
+- 同名機能が realization 側にあるように見える場合に、実処理の所在が正本側か互換入口かを切り分けたいとき。
 
 ## Do not read this when
-- agent call parameter builder の正本 prompt、出力条件、schema、具体的な値の組み立て仕様を確認したいときは、対応する正本側実装または正本仕様断片を読む。
-- apply fork コマンド全体の制御フロー、branch 操作、diff 生成、CLI 引数処理、状態管理を調べたいときは、コマンド実装や上位の apply fork 実装を読む。
-- review finding の判定仕様、検出ロジック、統合ロジック、CLI 表示、テスト方針を調べたいときは、review の処理本体や正本側仕様を読む。
-- TUI 画面描画、イベント処理、端末 UI の挙動、sandbox profile 生成、writable roots、cwd 選択など runtime 側の詳細を調べたいときは、TUI runtime や起動処理の実装を読む。
-- indexing の生成処理、探索処理、データ構造、入出力仕様そのものを変更・確認したいときは、互換入口ではなく実体を持つ正本側実装を読む。
+- 個別 builder の具体的な生成ロジック、repo root 解決、prompt 文面、出力条件、判定仕様を直接確認したいときは、下位の個別領域または正本側実装を読む。
+- CLI コマンド全体の制御フロー、branch 操作、diff 生成、TUI 描画、イベント処理、Codex CLI 実行など、parameter builder 以外の処理を調べたいときは、その責務を持つ実装へ進む。
+- agent call parameter の共通データ構造、model、reasoning effort、file access mode などの基礎定義を確認したいときは、基礎定義側を読む。
+- 正本仕様断片そのものや oracle 側の実装内容を確認したいときは、互換入口ではなく対応する正本側本文を読む。
+- 新しい機能の実装場所やテスト対象を探しているだけで、既存 import 経路の互換維持や正本側 builder への委譲関係を確認する必要がないとき。
 
 ## hash
-- d7c75dedac85c9cdedb8e1d9196e043ca2014103f635404c660664dfb679fe48
+- 8c0a8c3e4b5c601a729618217ed20f80faba0a561f372b10988bddcda449cb59

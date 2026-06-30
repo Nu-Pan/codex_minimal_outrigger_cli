@@ -20,23 +20,22 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- cmoc が Codex CLI を `codex exec` で呼び出す際の実行規約を定める正本仕様断片。`CODEX_HOME` の引き渡しと検証、動的 profile 生成、prompt の渡し方、ログ保存、stdout/stderr、Structured Output、並列実行、失敗時の retry・quota 待機・resume、編集禁止領域の扱いをまとめている。
-- Codex CLI 呼び出し仕様の詳細値そのものは AgentCallParameter builder を正本とし、この文書は cmoc 側が呼び出し前後に守るべき境界、保存先、禁止事項、失敗時制御を確認する入口になる。
+- cmoc が Codex CLI を `codex exec` で呼び出す際の正本仕様断片です。`CODEX_HOME` の扱い、preflight validation、動的 codex profile、プロンプト渡し、ログ保存、Structured Output、失敗時リトライ・quota 待機・resume、編集禁止領域の事後検証を扱います。
+- 個別呼び出し仕様や profile 設定の具体値は AgentCallParameter builder を正本とし、この文書は cmoc から Codex CLI へ渡す方法、保存する呼び出し情報、失敗時制御の境界を定める入口です。
 
 ## Read this when
-- cmoc から Codex CLI を起動する実装、テスト、ログ保存、prompt 受け渡し、profile 生成、Structured Output 指定、stdout/stderr 処理を変更する。
-- `CODEX_HOME` の既定値設定、auth.json の存在確認、Codex CLI が参照する設定ディレクトリの preflight validation を扱う。
-- Codex CLI 呼び出しの retry、quota 枯渇時の待機・ポーリング・resume、サーバー一時不調時の再試行、想定外エラー時の失敗方針を確認する。
-- Codex CLI に渡すファイルアクセス制限、model、reasoning effort、profile、prompt 注入可否の責務境界を確認する。
-- `.agents` 配下の編集禁止や、agent call 後に編集禁止ファイル差分を検査してはならないという制約を確認する。
+- cmoc から Codex CLI を起動する実装、ログ保存、stdin 経由のプロンプト入力、`--json`、`--output-last-message`、`--output-schema` の扱いを確認・変更するとき。
+- `CODEX_HOME` の決定、auth.json の事前検証、動的に生成する codex profile、Model や Reasoning Effort の渡し方を実装するとき。
+- Codex CLI 呼び出し失敗時の再試行、quota 枯渇時のポーリング待機、resume、サーバー一時不調時の backoff、レスポンス検証失敗時の扱いを確認するとき。
+- agent call 後に編集禁止ファイル・ディレクトリへの差分を検査し、違反時にリカバリする制御を扱うとき。
 
 ## Do not read this when
-- 個別の AgentCallParameter builder が生成する具体的な引数・profile 内容・ファイルアクセス設定の詳細だけを確認したい場合は、builder 側の正本を読む。
-- cmoc 全体の path 用語、oracle file と realization file の一般定義、INDEX.md 生成規約を確認したいだけなら、それらを定義する基礎仕様を読む。
-- Codex CLI 呼び出しと無関係な CLI サブコマンド、実装ファイル分割、通常の realization code 品質基準だけを扱う場合は、この文書を入口にしなくてよい。
+- AgentCallParameter builder 自体の具体的な生成内容や各 call 種別の詳細仕様だけを確認したい場合は、builder 側の正本へ進む方が直接的です。
+- Codex CLI を介さない cmoc 内部処理、通常の path model、INDEX 生成、または oracle/realization の一般規約だけを扱う場合は、この文書は入口ではありません。
+- `.agents` 配下の一般的な運用やファイルアクセス規則全体を確認したいだけで、`codex exec` 呼び出し時の編集不可制約を扱わない場合は、より直接の仕様を読む方が適切です。
 
 ## hash
-- 8799419ec9fbe1ff88f970d355e529c74d8d3f8c6bf9fee9bfd53be9a4292812
+- 0a8179d5f3e1acf15af171cbbde207e767beab42d1bce9b0f683695f8de721d0
 
 # `console_and_file_log.md`
 

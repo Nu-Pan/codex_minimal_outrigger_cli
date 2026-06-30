@@ -62,40 +62,40 @@
 # `quota_probe.py`
 
 ## Summary
-- Codex quota availability probe に使う最小限の agent call parameter を組み立てる実装。通常の呼び出し設定から model class、reasoning effort、profile を引き継ぎつつ、意味のある作業を依頼しない固定 prompt の probe 呼び出しを作る。
+- Codex quota availability probe のために、既存の AgentCallParameter から最小限の動作確認用 AgentCallParameter を生成する builder です。
+- base parameter の model class、reasoning effort、file access mode を引き継ぎ、意味のある作業を依頼しない固定 prompt を持つ probe parameter を返します。
 
 ## Read this when
-- Codex quota availability probe の agent call parameter がどの設定を引き継ぎ、どの入力を固定するか確認したいとき。
-- quota availability probe の prompt、作業依頼の有無、または Codex CLI 呼び出し時の最小パラメータ構成を変更するとき。
-- Codex CLI 実行ルールに対応する probe 用 parameter builder の実装箇所を探しているとき。
+- Codex quota availability probe で使う AgentCallParameter の組み立て内容を確認・変更したいとき。
+- quota probe が通常の agent call と同じ model class、reasoning effort、file access mode を使う理由や、probe prompt の意図を確認したいとき。
+- Codex CLI 呼び出し前の quota availability 確認処理から、実際に渡される parameter の生成元を追うとき。
 
 ## Do not read this when
-- quota availability probe の実行タイミング、プロセス起動、CODEX_HOME、profile、cwd の適用処理を確認したいだけのとき。
-- agent call parameter 型そのものの定義や通常の parameter builder 全般を確認したいとき。
-- Codex CLI 実行ルールの正本仕様断片を確認したいとき。
+- AgentCallParameter 型そのものの定義やフィールド仕様を確認したいときは、その型を定義する basic.acp 側を読む。
+- Codex CLI の実行規則や quota availability probe の正本仕様を確認したいときは、対応する oracle doc を読む。
+- probe parameter の生成後に Codex CLI を起動する runtime 側の処理を確認したいときは、この builder ではなく実行側の module を読む。
 
 ## hash
-- 10efcfba9e5fde341cf5938462b2719a485ee5de2495db23651d7b5f9d53a153
+- 4a4a7eebc4ed7184af908b6f5e4a7e4a93d853c29603dd8e2c73d85ce792dcac
 
 # `review`
 
 ## Summary
-- レビュー用 AgentCallParameter builder 領域のうち、互換 package 初期化と review oracle 関連 builder の互換 import 層をまとめる階層。主に旧来の realization 側 import 経路から canonical oracle 側実装へ委譲する入口であり、正本仕様や実処理本体ではなく、互換名前空間・移行中の import 経路・限定的な prompt placeholder 補正の境界を確認するための場所。
+- review builder 領域の realization package と review oracle 系 builder 実装への入口。package 初期化は oracle 側同名 package との互換名前空間だけを示し、下位階層では review oracle 周辺の agent call parameter 生成、正本側 builder への委譲、prompt placeholder の暫定補正、旧来 import 経路の互換 wrapper を扱う。
 
 ## Read this when
-- review builder 領域で、oracle 側 package と対応する realization 側 package の互換 import 経路が成立しているか確認したいとき。
-- レビュー oracle finding の列挙・判定・検証・統合 builder について、旧来の呼び出し経路が canonical oracle 側へどう委譲されているか調べたいとき。
-- 互換 import 層を削除できるか、または呼び出し元を canonical oracle path へ移行すべきか判断したいとき。
-- oracle src 由来 prompt の既知 placeholder 表記補正が、どの範囲で静的 prompt にだけ適用され、動的入力を保持しているか確認・変更したいとき。
+- review builder 領域で、realization 側 package の存在確認から review oracle 系 agent call parameter 生成処理までの読む先を選びたいとき。
+- 正本側 builder の出力を realization 側でどう補正しているか、特に oracle root placeholder 表記の暫定補正を追いたいとき。
+- レビュー指摘の列挙・判定・検証に関する旧来 import 経路、委譲先、互換層の残置理由や削除条件を確認したいとき。
+- 同名機能が realization 側にあるように見える場合に、実体が canonical oracle 側か薄い wrapper かを切り分けたいとき。
 
 ## Do not read this when
-- review builder の具体的な処理本体、関数、クラス、出力、制御フローを調べたいとき。
-- レビュー finding の判定仕様、検出ロジック、正本 prompt、schema そのものを調べたいとき。
-- AgentCallParameter の型、model、reasoning、profile、schema 指定の一般仕様を確認したいとき。
-- 互換 import 経路や placeholder 補正と無関係な review 機能全般、CLI 表示、テスト方針を調べたいとき。
+- review builder の正本仕様断片、prompt の正本文面、判定仕様、検出ロジックそのものを確認したいときは、対応する oracle file または canonical 実装を読む。
+- agent call parameter の共通データ構造、model、reasoning effort、file access mode などの基礎定義を調べたいときは、基礎定義側を読む。
+- 互換 import 経路や review oracle builder と無関係な CLI 表示、テスト方針、review 機能全般を調べたいときは、より直接その責務を持つ対象へ進む。
 
 ## hash
-- 332200c050599cc766823f835aaa4ee6697948e6ea885ef80efce02f04f2c635
+- b5982b09e4ce2166f96a96ee67c2e95418af42cdfc1006f94bbe53b9ce6eef84
 
 # `session`
 
@@ -119,20 +119,17 @@
 # `tui`
 
 ## Summary
-- ACP builder の TUI 互換 package。正本側の TUI 起動パラメータ生成や resolve-parameter builder を既存 import path から参照できるようにする薄い再公開層で、TUI 画面制御や builder 本体の実装は担わない。
-- TUI 関連の公開 import surface、oracle 側実装への委譲、利用者向けに公開される file access mode 選択肢を確認する入口。
+- ACP builder の TUI 関連 import surface を互換維持するための薄い package 階層。正本側実装を参照・再公開する初期化地点や互換モジュールを含み、TUI 起動パラメータや resolve-parameter builder の実体は持たない。
 
 ## Read this when
-- ACP builder の TUI 関連 import path が正本側実装と互換に保たれているか確認したいとき。
-- TUI 起動パラメータ生成関数や resolve-parameter builder が、既存公開面から oracle 側の canonical 実装へどのように接続されているか確認したいとき。
-- TUI 側の互換モジュールを削除・移動・置換してよいか判断するため、残している理由や削除条件を確認したいとき。
-- TUI の import surface で公開される file access mode の選択肢を確認したいとき。
+- ACP builder の TUI 関連 package や既存 import path が、正本側実装への互換入口として残されているかを確認したいとき。
+- TUI 起動パラメータ生成関数や resolve-parameter builder の公開 import 経路、再 export、削除条件を確認したいとき。
+- TUI 側で公開される file access mode の選択肢や、oracle 側 builder への委譲関係を確認したいとき。
 
 ## Do not read this when
-- TUI 起動パラメータや resolve-parameter builder の具体的な仕様、値、組み立てロジックを確認したいとき。ここは再公開層なので oracle 側の実体を読む方が直接的。
+- TUI 起動パラメータや resolve-parameter builder の具体的な仕様・生成ロジックを確認したいとき。正本側または canonical な実体を読む。
 - TUI 画面の描画、イベント処理、ユーザー操作、端末 UI の挙動を調べたいとき。
-- FileAccessMode 自体の定義や意味を確認したいとき。ここは利用可能な列挙値を公開するだけで、mode 定義は別の基本モジュールが担う。
-- TUI 以外の ACP builder import 経路、UI 非依存の parameter 構築、または CLI 挙動そのものを設計・確認したいとき。
+- TUI 以外の ACP builder import 経路、FileAccessMode 自体の定義、または UI 非依存の parameter 構築を調べたいとき。
 
 ## hash
-- a06d2b1249b5b845e565d0103b984f0eb0d68abddfcfa4ebfbb78c018b939b4e
+- 0f7127854e17a6db82e7f58872ea5748010a064dad179defecf04b874bc1f572

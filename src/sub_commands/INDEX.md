@@ -203,19 +203,21 @@
 # `tui.py`
 
 ## Summary
-- `cmoc tui` の実行本体を担う。インデックス事前処理、`.cmoc` ignore 保証、元プロンプト作成、エディタ起動、パラメータ解決用 Codex exec、TUI 起動用 AgentCallParameter 構築までの一連の制御を扱う。
-- TUI 用のファイルアクセスプロファイル、role/summary/goal などの解決済み JSON 値の取り出し、利用可能エディタ選択、元プロンプトからテンプレートコメントを除去する補助処理を含む。
+- `cmoc tui` の実行本体を担い、依頼文テンプレートの作成、エディタ起動、入力 prompt の読み込み、Codex Exec による TUI 起動パラメータ解決、Codex TUI 起動までの流れを扱う。
+- TUI 実行前の indexing preflight、`.cmoc` ignore 保証、実行時 context からの root/config 解決、TUI 用 file access mode の検証と `AgentCallParameter` 構築をまとめる。
+- TUI parameter JSON の `{value: ...}` 形式から文字列値・真偽値を取り出す小さな補助処理も含む。
 
 ## Read this when
-- `cmoc tui` サブコマンドの実行フロー、ログ作成、エディタ起動、Codex TUI 起動パラメータ構築を確認または変更したいとき。
-- TUI 起動前に `.cmoc` を ignore 対象として保証する処理や、root と work root が異なる場合の扱いを確認したいとき。
-- TUI resolve parameter の結果から role、summary、goal、file_access_profile、各 standard フラグを AgentCallParameter へ反映する処理を確認したいとき。
-- `code`、`nano`、`vim`、`vi` の選択順や、エディタ異常終了時・不正なファイルアクセスプロファイル時のエラーを扱うとき。
+- `cmoc tui` の起動フロー、依頼文編集、TUI log 領域への prompt ファイル作成、完成 prompt の参照渡しを確認・変更したいとき。
+- TUI で許可する file access mode、resolved parameter の default 値、role/summary/goal や各 standard flag の TUI prompt への反映を確認・変更したいとき。
+- TUI 実行前に `.cmoc` を ignore へ入れる処理、repository root と work root の扱い、config 読み込みを確認したいとき。
+- 利用可能なエディタの選択順、エディタ異常終了時のエラー、元 prompt から HTML comment テンプレートを除去する処理を確認・変更したいとき。
 
 ## Do not read this when
-- TUI プロンプト本文や AgentCallParameter の具体的な出力形式そのものを確認したいだけなら、TUI 用 builder 側を直接読む。
-- CLI 共通のサブコマンド実行、設定読込、repo/work root 解決、Codex exec/TUI 実行の低レベル挙動を確認したいだけなら、runtime 側を読む。
-- TUI 以外のサブコマンドの挙動を調べる場合は、そのサブコマンドの実装へ進む。
+- TUI prompt の具体的な組み立て形式や launch parameter の詳細だけを確認したい場合は、TUI launch parameter builder を直接読む。
+- TUI parameter を Codex Exec で解決するための schema や resolve prompt の詳細だけを確認したい場合は、TUI resolve parameter builder を直接読む。
+- CLI 共通の subcommand 実行、Codex Exec/TUI 実行、設定読み込み、root 判定、timestamp、`.cmoc` ignore の汎用挙動だけを確認したい場合は、runtime 側を直接読む。
+- indexing preflight の仕様や実装だけを確認したい場合は、indexing preflight 側を直接読む。
 
 ## hash
-- 9aec9cf0a9c7b4f63a35d42ce2e47c45ee2af63080df1bdc7c2c799b9e3564cc
+- 5fd4f89ffaa5bd36df37c3140cac01b525bd4d460c1d94bdea8dd4925d644cd2

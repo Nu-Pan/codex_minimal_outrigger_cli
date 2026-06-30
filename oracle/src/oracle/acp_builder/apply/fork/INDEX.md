@@ -20,21 +20,21 @@
 # `change_summary.py`
 
 ## Summary
-- `cmoc apply fork` の作業レポート向けに、git diff そのものを入力として変更要約生成用の agent call parameter を組み立てる oracle src。
-- ファイルアクセスプロファイル、complete prompt、Structured Output schema の参照先、モデル種別と推論強度を結び、差分要約担当 agent の呼び出し条件を定義する。
+- `cmoc apply fork` の作業レポート用に、git diff そのままの差分テキストから変更要約生成エージェント呼び出しパラメータを組み立てる oracle src。
+- 要約担当 AI の role、summary、goal、readonly のファイルアクセス、差分コードブロック、`<repo-root>` プレースホルダ、Structured Output schema の参照先を定義する。
 
 ## Read this when
-- `cmoc apply fork` が作業レポート用の変更要約を生成する際の prompt、入力差分の扱い、agent call parameter の構成を確認したいとき。
-- 変更要約 agent に渡す role、summary、goal、補助プロンプト、プレースホルダ、ファイルアクセス権限の正本仕様断片を確認したいとき。
-- `cmoc apply fork` の変更要約出力 schema と prompt 構築処理の対応関係を調べたいとき。
+- `cmoc apply fork` で作業レポート向けの変更要約を生成する prompt や agent call parameter の正本仕様を確認したいとき。
+- `raw_git_diff` をどのように prompt へ渡すか、差分要約生成時の file access mode、model class、reasoning effort、出力 schema の指定を確認したいとき。
+- `cmoc apply fork` の変更要約が参照する `<repo-root>` プレースホルダや oracle/realization 基本説明の組み込み方を確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` の実際の git 操作、branch 操作、差分取得処理を確認したいとき。
-- 変更要約の Structured Output schema の項目そのものを確認したいとき。
-- 汎用的な prompt 構築、ファイルアクセスプロファイル、パスプレースホルダ解決の共通実装を確認したいとき。
+- `cmoc apply fork` の実際の git 操作、branch 操作、作業レポート保存処理を確認したいとき。
+- 差分要約の Structured Output schema そのものの項目や型を確認したいとき。
+- apply 系以外のサブコマンドの prompt や agent call parameter を確認したいとき。
 
 ## hash
-- 39f8e03312feee3f3e19f1a92821cbaecf0570ef2a0d12c3d0d035f230c0ac22
+- 6e989f5c5236652fcaa587074dd0aa04df726ac6c636631cdbfdea6e27f4af94
 
 # `file_finding_enumeration.json`
 
@@ -58,35 +58,36 @@
 # `file_finding_enumeration.py`
 
 ## Summary
-- `cmoc apply fork` で特定ファイルを起点に realization file の要修正点を列挙するための、AI エージェント呼び出しパラメータを構築する prompt 正本。file access profile、complete prompt の役割・目的・標準適用、モデルクラス、reasoning effort、出力 schema 対応ファイルを定める。
+- `cmoc apply fork` で、1 つの対象ファイルを起点に realization file の要修正点を列挙するための AI エージェント呼び出しパラメータを組み立てる oracle src。
+- 読み取り専用のファイルアクセス、oracle/realization/apply review 各 standard を含む complete prompt、対象パスと repo root の placeholder、MAINSTREAM モデルと MEDIUM reasoning effort の選択を正本として定める。
 
 ## Read this when
-- `cmoc apply fork` のファイル単位の所見リストアップ agent call の入力 prompt や呼び出しパラメータを確認・変更したいとき。
-- 所見列挙で読むべき対象、Structured Output schema への要求、apply review standard の適用有無を確認したいとき。
-- ファイル数分呼び出される apply fork 系処理で、モデルクラスや reasoning effort の選択理由を確認したいとき。
+- `cmoc apply fork` のファイル単位所見リストアップ呼び出しで、AI に渡す role、summary、goal、標準文書、placeholder、Structured Output schema の指定を確認したいとき。
+- 対象ファイルを起点に、必要な oracle file と realization file を読ませて realization file の要修正点を列挙させる prompt 正本を確認したいとき。
+- ファイル数分呼び出される処理で MAINSTREAM モデルを使う理由や、トークン消費と下流影響の判断根拠を確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` 全体の処理フローや集約処理を確認したいだけの場合。
-- 所見リストの Structured Output schema そのものを確認したい場合。
-- file access profile、path 解決、complete prompt の汎用的な組み立て仕様を確認したい場合。
+- `cmoc apply fork` 全体の制御フロー、所見の統合、修正適用、実行結果処理を調べたいとき。
+- apply review standard の内容そのもの、または所見リストが満たすべき判定基準の詳細を調べたいとき。
+- AgentCallParameter、complete prompt builder、path placeholder 解決、markdown rendering などの共通部品の実装詳細を調べたいとき。
 
 ## hash
-- 65814c968bbfec2eb7cf744fafd35e758135bf71e4fc3298351e78724031fe0c
+- 9b0f19cf132f0da09b6530de64be558f71605d380949239b6c3c98014b8ad910
 
 # `finding_application.py`
 
 ## Summary
-- `cmoc apply fork` で検出された所見に対応するための agent call parameter を構築する正本実装。所見リストをプロンプト本文へ埋め込み、realization file の修正担当 AI に渡す role、goal、file access profile、標準規則、placeholder を組み立てる。
+- `cmoc apply fork` で検出された所見に対応するための AI エージェント呼び出しパラメータを構築する oracle src。所見一覧を JSON コードブロックとして作業 prompt に埋め込み、realization file の修正担当に渡す正本 prompt の内容を定める。
 
 ## Read this when
-- `cmoc apply fork` の所見対応作業で AI に渡すプロンプト、モデル種別、reasoning effort、file access profile を確認・変更したいとき。
-- 所見本文の扱い、git 操作禁止、realization standard の適用など、所見対応 agent call の作業条件を確認したいとき。
-- 所見リストがどのような markdown 構造や JSON code block としてプロンプトへ渡されるかを確認したいとき。
+- `cmoc apply fork` の所見対応作業で、エージェントに渡す role、summary、goal、注意事項、所見本文の組み立てを確認したいとき。
+- 所見対応エージェントの file access mode、model class、reasoning effort、または prompt に含める oracle/realization standard の指定を確認したいとき。
+- `cmoc apply fork` が生成する所見対応用 AgentCallParameter の構成を変更・検証したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` 以外のサブコマンドや、所見対応ではない通常の agent call parameter を確認したいとき。
-- oracle file や realization file の一般定義、path placeholder の意味、file access profile の詳細仕様を確認したいとき。
-- 所見を生成する側の処理や、実際に realization file を修正する実装本体を探しているとき。
+- `cmoc apply fork` 以外のサブコマンド用 prompt や agent call parameter を確認したいとき。
+- 所見の検出ロジック、fork の作成処理、または git 操作そのものを調べたいとき。
+- realization file の修正内容そのものや、所見対応エージェントが実行した結果を確認したいとき。
 
 ## hash
-- b49e1a25fa969d2dcc4888309a1d2af679a40908dfdfaf0e72bd64d95a387f5a
+- f9f304dfe1dda61a95ab9a19e78c9f09560cf0e018b07acd09e4b4a336332db5
