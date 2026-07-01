@@ -13,38 +13,45 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
         読み書きモードプリセット
     """
     # 本文を構築
+    rules = list()
     match mode:
         case FileAccessMode.READONLY:
-            body = ntqs(f"""
-            - `<work-root>` ツリー外は読み書き禁止
-            - `<work-root>` ツリー内は書き込み禁止
-            - `<work-root>/memo` は読み書き禁止
-            """)
+            rules += [
+                "`<work-root>` ツリー外は読み書き禁止",
+                "`<work-root>` ツリー内は書き込み禁止",
+                "`<work-root>/memo` は読み書き禁止",
+            ]
         case FileAccessMode.PURE_ORACLE_READ:
-            body = ntqs(f"""
-            - `<work-root>` ツリー外は読み書き禁止
-            - `<work-root>/oracle` ツリー内は書き込み禁止
-            - `<work-root>/oracle` ツリー外は読み書き禁止
-            """)
+            rules += [
+                "`<work-root>/oracle` ツリー外は読み書き禁止",
+                "`<work-root>/oracle` ツリー内は書き込み禁止",
+            ]
         case FileAccessMode.REALIZATION_WRITE:
-            body = ntqs(f"""
-            - `<work-root>` ツリー外は読み書き禁止
-            - `<work-root>/oracle` ツリー内は書き込み禁止
-            - `<work-root>/memo` は読み書き禁止
-            """)
+            rules += [
+                "`<work-root>` ツリー外は読み書き禁止",
+                "`<work-root>/oracle` ツリー内は書き込み禁止",
+                "`<work-root>/memo` は読み書き禁止",
+            ]
         case FileAccessMode.ORACLE_WRITE:
-            body = ntqs(f"""
-            - `<work-root>` ツリー外は読み書き禁止
-            - `<work-root>/oracle` ツリー外は書き込み禁止
-            - `<work-root>/memo` は読み書き禁止
-            """)
+            rules += [
+                "`<work-root>` ツリー外は読み書き禁止",
+                "`<work-root>/oracle` ツリー外は書き込み禁止",
+                "`<work-root>/memo` は読み書き禁止",
+            ]
         case FileAccessMode.REPO_WRITE:
-            body = ntqs(f"""
-            - `<work-root>` ツリー外は読み書き共に禁止
-            - `<work-root>/memo` は読み書き禁止
-            """)
+            rules += [
+                "`<work-root>` ツリー外は読み書き禁止",
+                "`<work-root>/memo` は読み書き禁止",
+            ]
+        case FileAccessMode.NO_RULE:
+            # `build_complete_prompt` によるアクセス規則文面が生成されない
+            # 特殊文面を個別に構築する用の特別モードで、よほどのことがない限り使ってはいけない
+            return ({}, StructDoc("", ""))
         case _:
             raise ValueError(f"Invalid mode (mode={mode})")
+    rules += [
+        "上記に対する例外として `git check-ignore --stdin` で git 追跡対象外と判定されたファイル・ディレクトリは読み書き許可",
+    ]
     # 正常終了
     return (
         {
@@ -52,6 +59,6 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
         },
         StructDoc(
             f"file read write rule - {mode.value}",
-            body,
+            "\n".join(f"- {r}" for r in rules),
         ),
     )

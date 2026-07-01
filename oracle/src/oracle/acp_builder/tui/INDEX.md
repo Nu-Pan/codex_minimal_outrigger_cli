@@ -1,19 +1,18 @@
 # `launch_tui.py`
 
 ## Summary
-- `cmoc tui` で AI Agent CLI/TUI を起動するための呼び出しパラメータを構築する正本仕様断片。
-- role、summary、goal、file access mode、各種標準適用フラグ、ユーザーの元プロンプトから完全プロンプトを生成し、TUI 用ログへ保存したうえで、エージェント呼び出しに渡すモデル種別・推論努力・入力指示・対応する JSON パスを決める。
-- TUI 起動時に完全プロンプトをどう保存し、その保存済みプロンプトを読むようエージェントへどう指示するかを確認する入口。
+- `cmoc tui` の起動時に AI エージェントへ渡す呼び出しパラメータを構築する正本実装。ファイルアクセスプロファイル、完全プロンプト、保存先、モデルクラス、推論強度、参照すべきプロンプト指示の組み立て方を定義する。
+- TUI 起動で使う元プロンプト、標準類の有効化フラグ、oracle・realization・index のアクセス属性を、最終的な agent call parameter へ接続する入口として扱う。
 
 ## Read this when
-- `cmoc tui` の起動時に、AI エージェントへ渡す `AgentCallParameter` の組み立て方を確認したいとき。
-- TUI 起動用の完全プロンプト生成、元プロンプトの埋め込み、標準適用フラグの渡し方、保存先ログの扱いを確認したいとき。
-- TUI 起動で使用するモデルクラス、reasoning effort、file access mode、プロンプトファイル参照指示、対応 JSON パスの正本を確認したいとき。
+- `cmoc tui` がどのモデルクラス・推論強度・ファイルアクセスプロファイルで agent call を起動するか確認したいとき。
+- TUI 起動時の complete prompt の構築、保存、agent への指示文生成の正本仕様断片を確認したいとき。
+- TUI 起動で、ユーザー入力プロンプトや各種 standard フラグが complete prompt にどう渡るかを確認したいとき。
 
 ## Do not read this when
-- 完全プロンプトそのものの文書構造や各標準フラグの意味を確認したいだけなら、完全プロンプト構築側を読む。
-- パス語彙や repo root 解決の定義を確認したいだけなら、path model 側を読む。
-- TUI ではないサブコマンドのエージェント呼び出しパラメータや、実際の CLI/TUI 実行制御を調べたい場合は、その対象を扱う別の仕様断片へ進む。
+- TUI 以外のサブコマンドにおける agent call parameter 構築を確認したいとき。
+- complete prompt の内部構成や各 standard フラグの本文内容を確認したいとき。
+- ファイルアクセス属性やパスモデルそのものの定義を確認したいとき。
 
 ## hash
 - 34dcc4c5b0222dd5e5dd23ccbd13ee575ea33d5ffb182f921ae0cc74f562fc0a
@@ -31,9 +30,10 @@
 - TUI のパラメータ解決結果について、追加プロパティ禁止、必須項目、列挙値、各フィールドの意味を確認する。
 
 ## Do not read this when
-- 実際の oracle file や realization file の編集方針そのものを確認したいだけで、TUI が実行前パラメータとしてそれらの参照要否をどう表すかは不要である。
-- review oracle や apply review の個別コマンド挙動を知りたい場合。ここでは、それらの標準を読む必要があるかどうかを表す枠組みだけを扱う。
-- INDEX.md エントリー自体の書き方を確認したい場合。ここでは index entry standard を読む要否を表す項目はあるが、標準本文の内容は定義しない。
+- 個別の標準本文そのものの要求内容を確認したいとき。対象の標準セクション本文を直接読む。
+- INDEX.md エントリーの文章作成規則を確認したいとき。index entry standard の本文を直接読む。
+- 実際の oracle file や realization file の定義・分類を確認したいとき。oracle and realization basic の本文を直接読む。
+- AI Agent が実行する具体的な実装・テスト・レビュー手順を知りたいだけで、解決済みパラメータの JSON 形状を確認しないとき。
 
 ## hash
 - ff75f059106ad9edc2b3ecda599f770b0173e67d21c17a3d4423ba9b46b0145d
@@ -41,20 +41,19 @@
 # `resolve_parameter.py`
 
 ## Summary
-- `cmoc tui` でユーザー入力プロンプトを AI Agent CLI/TUI に渡す前に、実行パラメータ選定用のエージェント呼び出し内容を組み立てる正本仕様断片。
-- 元プロンプトを動的な補助文書として埋め込み、ファイルアクセスモード候補、パス placeholder、oracle/realization/review/index entry 系の固定プロンプトを含む完全プロンプトを作る入口になっている。
-- 返却するエージェント呼び出し条件として、効率向けモデル、中程度 reasoning、readonly ファイルアクセス、生成した markdown prompt、対応する structured output schema を結び付ける。
+- `cmoc tui` でユーザー入力プロンプトから AI Agent CLI/TUI の実行パラメータを選ぶための AgentCallParameter を構築する正本実装。
+- oracle と realization と index を読み取り可能にしたファイルアクセスプロファイル、実行パラメータ選定担当としての固定プロンプト、元プロンプトの動的埋め込み、Structured Output と根拠行提示を求める goal を組み立てる。
+- モデルクラス、推論努力、完成プロンプト、対応する JSON schema path をまとめて返す処理の入口になる。
 
 ## Read this when
-- `cmoc tui` の実行前に、元プロンプトからどの AI Agent CLI/TUI 呼び出しパラメータを解決させるかを確認・変更したいとき。
-- 実行パラメータ解決担当エージェントへ渡す role、summary、goal、補助文書、placeholder、標準プロンプト群の有効化範囲を確認したいとき。
-- `cmoc tui` のパラメータ解決が readonly 前提で行われること、または選定根拠に元プロンプトやリポジトリ内ファイルの該当箇所を求めることを確認したいとき。
+- `cmoc tui` の実行前に、元プロンプトから選ばれる AgentCallParameter の内容を確認・変更したいとき。
+- TUI のパラメータ解決で使う role、summary、goal、読み取り権限、固定プロンプト系フラグ、プレースホルダ定義の正本を確認したいとき。
+- AI Agent CLI/TUI 実行パラメータ選定の出力に、Structured Output 準拠や根拠行提示を要求している箇所を確認したいとき。
 
 ## Do not read this when
-- 個別のファイルアクセスモード説明文そのものを確認したいだけのときは、その説明文を構築する対象を読む。
-- リポジトリルートや作業ルートの定義・解決規則を確認したいだけのときは、パスモデルの正本を読む。
-- エージェント呼び出しパラメータ、モデル種別、reasoning effort、ファイルアクセスモードの型定義を確認したいだけのときは、それらの基本定義を読む。
-- `cmoc tui` の画面操作、入力エディタ処理、または実際のサブコマンド実行フローを調べたいときは、このパラメータ解決 prompt ではなく TUI 実行側の正本を読む。
+- `cmoc tui` のユーザー入力取得、エディタ起動、コメント除去、strip の処理を調べたいとき。
+- AgentCallParameter、ModelClass、ReasoningEffort、PlaceholderMap、complete prompt 構築などの共通部品そのものの定義を調べたいとき。
+- TUI 以外のサブコマンド向け実行パラメータ解決 prompt を確認したいとき。
 
 ## hash
 - 8202ec643da88fee167595217c54338e0673284beb20aff300feeccf5af06224

@@ -1,21 +1,17 @@
 # `conflict_resolution.py`
 
 ## Summary
-- `cmoc session join` で merge conflict marker を解消する AI エージェント呼び出しパラメータを組み立てる正本仕様断片。
-- conflict 対象パスを実パスへ解決して prompt に列挙し、作業範囲を conflict marker 解消に限定する goal、oracle file への最小編集例外、git add/commit 禁止、作業後に marker を残さない条件を与える。
-- 呼び出しモデル、reasoning effort、file access mode、完全 prompt 生成時に含める basic/standard 系の前提を確認する入口になる。
+- `cmoc session join` で検出された merge conflict marker を解消するための agent call parameter を組み立てる正本実装。対象パス一覧、追加の oracle file 編集許可、作業範囲、禁止事項、完了条件を含む prompt を生成する。
 
 ## Read this when
-- `cmoc session join` の conflict marker 解消用エージェント prompt や呼び出しパラメータを確認・変更したいとき。
-- conflict 対象ファイル一覧が prompt にどのように渡されるか、また対象パスがどの path 解決を経由するかを確認したいとき。
-- merge conflict 解消作業において、編集範囲、oracle file 例外、git add/commit 禁止、marker 残存禁止などの制約を確認したいとき。
-- session join が conflict marker 解消エージェントにどの model class、reasoning effort、file access mode を指定するか確認したいとき。
+- `cmoc session join` の conflict marker 解消用 agent 呼び出し prompt の役割・制約・許可範囲を確認したいとき。
+- conflict 対象ファイル一覧を prompt に渡す方法や、agent call parameter の model・reasoning effort・file access mode を確認したいとき。
+- merge conflict 解消時に oracle file の最小編集を例外的に許可する条件を確認したいとき。
 
 ## Do not read this when
-- `cmoc session join` 全体の制御フロー、ブランチ操作、merge 実行、conflict 検出の仕様を調べたいだけのとき。
-- path keyword や実パス・work-root 解決の一般仕様を調べたいとき。
-- 完全 prompt の共通組み立て処理、構造化 markdown rendering、agent parameter 型そのものの定義を調べたいとき。
-- merge conflict の内容を実際にどう選んで解消するかという人間・AI の編集判断ルールを、session join 用 prompt 以外から調べたいとき。
+- 通常の session join 処理、git 操作、branch 統合、状態管理の実装を調べたいとき。
+- merge conflict marker の検出方法や conflicted paths の収集方法を調べたいとき。
+- 汎用 prompt builder、構造化 markdown レンダリング、path placeholder 解決の実装を調べたいとき。
 
 ## hash
 - cabeb6ea53bbb3b884eec3dc2e6313d19604e19479e67bda5e1c115b33065555

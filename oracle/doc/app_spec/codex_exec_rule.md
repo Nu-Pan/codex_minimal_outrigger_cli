@@ -30,7 +30,13 @@
 - Codex CLI に対するファイルアクセス制限の設定は codex profile 経由で行う
 - 具体的な設定は AgentCallParameter builder を正本とする
 - cmoc はファイルアクセス制限についての情報をプロンプトとして注入して Codex CLI に知らせる
-- agent call 後に、編集禁止ファイル・ディレクトリに差分が出ているかのチェックするのは禁止
+
+## ファイルアクセス制限違反の事後検証とリカバリ
+
+- cmoc は agent call 後、リポジトリ内の編集禁止ファイル・ディレクトリに差分が出ていないか、事後検証を行う
+- 事後検証で違反が見つかった場合、agent call によるリカバリを試みる
+- agent call の仕様は `build_apply_fork_finding_application_parameter` を正本とする
+- リカバリの最大試行回数は `CmocConfigCodex.num_try_falv_recovery` とする
 
 ## Model, Reasoning Effort
 

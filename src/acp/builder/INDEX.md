@@ -62,18 +62,18 @@
 # `quota_probe.py`
 
 ## Summary
-- Codex quota 枯渇後の availability probe で使う最小 AgentCallParameter builder。通常作業ではなく quota 回復確認だけを目的に、意味のある編集や調査を依頼しない prompt を返す。
-- probe 実行時の CODEX_HOME、profile、cwd、ログ保存、代表 polling 制御は runtime 側が担い、この builder は stdin に渡す probe prompt の境界だけを持つ。
+- Codex quota availability probe のために、既存の AgentCallParameter から最小限の動作確認用 AgentCallParameter を生成する builder です。
+- base parameter の model class、reasoning effort、file access mode を引き継ぎ、意味のある作業を依頼しない固定 prompt を持つ probe parameter を返します。
 
 ## Read this when
-- quota 枯渇後の polling probe がどの prompt を Codex CLI に渡すか確認または変更したいとき。
-- oracle 側に専用 builder file がない quota probe 境界について、realization 側の最小 builder と runtime の責務分担を確認したいとき。
-- Codex exec retry のテストで、quota availability probe の prompt 由来を追いたいとき。
+- Codex quota availability probe で使う AgentCallParameter の組み立て内容を確認・変更したいとき。
+- quota probe が通常の agent call と同じ model class、reasoning effort、file access mode を使う理由や、probe prompt の意図を確認したいとき。
+- Codex CLI 呼び出し前の quota availability 確認処理から、実際に渡される parameter の生成元を追うとき。
 
 ## Do not read this when
-- quota error 検出、polling loop、resume token、代表 probe 共有、call log/subcommand log の制御を調べたいときは、Codex exec runtime を読む。
-- Codex profile、CODEX_HOME、sandbox、cwd、schema 保存の構築を調べたいときは、Codex profile/runtime helper を読む。
-- apply/review/session/TUI 用の AgentCallParameter builder を確認したいときは、それぞれの下位 builder 領域を読む。
+- AgentCallParameter 型そのものの定義やフィールド仕様を確認したいときは、その型を定義する basic.acp 側を読む。
+- Codex CLI の実行規則や quota availability probe の正本仕様を確認したいときは、対応する oracle doc を読む。
+- probe parameter の生成後に Codex CLI を起動する runtime 側の処理を確認したいときは、この builder ではなく実行側の module を読む。
 
 ## hash
 - 4a4a7eebc4ed7184af908b6f5e4a7e4a93d853c29603dd8e2c73d85ce792dcac
@@ -81,20 +81,18 @@
 # `review`
 
 ## Summary
-- review builder 領域の realization 側 package で、正本側 review oracle builder との互換 import 境界と、旧経路から正本側実装へ委譲する薄い入口を扱う。
-- review finding の列挙・判定・challenger validation は実装本体ではなく再公開層として置かれ、merge finding と finding advocate validation では正本側 builder の生成結果を保ちながら prompt 内の oracle root 表記だけを補正する。
+- review builder 領域の realization package と review oracle 系 builder 実装への入口。package 初期化は oracle 側同名 package との互換名前空間だけを示し、下位階層では review oracle 周辺の agent call parameter 生成、正本側 builder への委譲、prompt placeholder の暫定補正、旧来 import 経路の互換 wrapper を扱う。
 
 ## Read this when
-- review builder 領域で、正本側 review oracle builder に対応する realization 側 package や旧 import 経路の互換境界を確認したいとき。
-- review oracle builder 周辺の処理が、この領域の実装本体なのか、正本側実装への委譲または最小 wrapper なのかを切り分けたいとき。
-- review oracle merge finding や finding advocate validation の AgentCallParameter 生成で、正本側 builder への委譲と prompt 内 oracle root 表記補正の有無を確認したいとき。
-- package としての互換性や import 経路の成立だけを確認したいとき。
+- review builder 領域で、realization 側 package の存在確認から review oracle 系 agent call parameter 生成処理までの読む先を選びたいとき。
+- 正本側 builder の出力を realization 側でどう補正しているか、特に oracle root placeholder 表記の暫定補正を追いたいとき。
+- レビュー指摘の列挙・判定・検証に関する旧来 import 経路、委譲先、互換層の残置理由や削除条件を確認したいとき。
+- 同名機能が realization 側にあるように見える場合に、実体が canonical oracle 側か薄い wrapper かを切り分けたいとき。
 
 ## Do not read this when
-- review finding の列挙・判定・検証そのものの正本仕様、出力内容、検出ロジック、評価ロジックを調べたいとき。
-- AgentCallParameter の共通型、model、reasoning、file access、structured output schema などの基礎定義を調べたいとき。
-- review oracle 以外の builder、CLI 表示、テスト方針、または互換 import と prompt 表記補正に関係しない review 機能全般を調べたいとき。
-- review builder の新しい判定ロジックや検証処理を追加・変更する実装本体を探しているとき。
+- review builder の正本仕様断片、prompt の正本文面、判定仕様、検出ロジックそのものを確認したいときは、対応する oracle file または canonical 実装を読む。
+- agent call parameter の共通データ構造、model、reasoning effort、file access mode などの基礎定義を調べたいときは、基礎定義側を読む。
+- 互換 import 経路や review oracle builder と無関係な CLI 表示、テスト方針、review 機能全般を調べたいときは、より直接その責務を持つ対象へ進む。
 
 ## hash
 - b5982b09e4ce2166f96a96ee67c2e95418af42cdfc1006f94bbe53b9ce6eef84
@@ -121,20 +119,17 @@
 # `tui`
 
 ## Summary
-- ACP builder の TUI 互換 package。正本側の TUI 起動パラメータ生成や resolve-parameter builder を既存 import path から参照できるようにする薄い再公開層で、TUI 画面制御や builder 本体の実装は担わない。
-- TUI 関連の公開 import surface、oracle 側実装への委譲、利用者向けに公開される file access mode 選択肢を確認する入口。
+- ACP builder の TUI 関連 import surface を互換維持するための薄い package 階層。正本側実装を参照・再公開する初期化地点や互換モジュールを含み、TUI 起動パラメータや resolve-parameter builder の実体は持たない。
 
 ## Read this when
-- ACP builder の TUI 関連 import path が正本側実装と互換に保たれているか確認したいとき。
-- TUI 起動パラメータ生成関数や resolve-parameter builder が、既存公開面から oracle 側の canonical 実装へどのように接続されているか確認したいとき。
-- TUI 側の互換モジュールを削除・移動・置換してよいか判断するため、残している理由や削除条件を確認したいとき。
-- TUI の import surface で公開される file access mode の選択肢を確認したいとき。
+- ACP builder の TUI 関連 package や既存 import path が、正本側実装への互換入口として残されているかを確認したいとき。
+- TUI 起動パラメータ生成関数や resolve-parameter builder の公開 import 経路、再 export、削除条件を確認したいとき。
+- TUI 側で公開される file access mode の選択肢や、oracle 側 builder への委譲関係を確認したいとき。
 
 ## Do not read this when
-- TUI 起動パラメータや resolve-parameter builder の具体的な仕様、値、組み立てロジックを確認したいとき。ここは再公開層なので oracle 側の実体を読む方が直接的。
+- TUI 起動パラメータや resolve-parameter builder の具体的な仕様・生成ロジックを確認したいとき。正本側または canonical な実体を読む。
 - TUI 画面の描画、イベント処理、ユーザー操作、端末 UI の挙動を調べたいとき。
-- FileAccessMode 自体の定義や意味を確認したいとき。ここは利用可能な列挙値を公開するだけで、mode 定義は別の基本モジュールが担う。
-- TUI 以外の ACP builder import 経路、UI 非依存の parameter 構築、または CLI 挙動そのものを設計・確認したいとき。
+- TUI 以外の ACP builder import 経路、FileAccessMode 自体の定義、または UI 非依存の parameter 構築を調べたいとき。
 
 ## hash
 - 0f7127854e17a6db82e7f58872ea5748010a064dad179defecf04b874bc1f572

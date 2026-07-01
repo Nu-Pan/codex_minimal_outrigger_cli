@@ -18,21 +18,19 @@
 # `oracle`
 
 ## Summary
-- 対象階層は、review oracle builder 関連の realization 側互換 package であり、旧来 import 経路から正本側実装へ委譲する薄い module 群と、一部 prompt の oracle root 表記だけを補正する wrapper を収める。
-- review finding の列挙・判定・challenger validation は実装本体を持たない再公開層として位置づけられ、呼び出し元が正本側経路へ移行した後に削除できる互換境界を示す。
-- merge finding と finding advocate validation は、正本側 builder で生成した AgentCallParameter の他属性を維持しつつ、prompt 内の oracle root placeholder typo だけを補正する realization 側入口である。
+- review oracle 周辺の agent call parameter builder と、旧来 import 経路を保つ互換層をまとめる階層。正本側 builder への委譲、prompt placeholder の暫定補正、互換 module の残置理由と削除条件を扱う。
+- レビュー指摘の列挙・判定・検証・merge finding に関する実装入口があるが、多くは実装本体ではなく canonical oracle 側への再公開または薄い wrapper として位置づけられる。
 
 ## Read this when
-- review oracle builder 周辺で、旧来の realization 側 import 経路が正本側実装へどう委譲されているかを確認したいとき。
-- review finding の列挙・判定・challenger validation の互換 module が残っている理由や削除条件を確認したいとき。
-- review oracle merge finding や finding advocate validation の AgentCallParameter 生成で、正本側 builder への委譲境界と prompt 内 oracle root 表記補正を確認したいとき。
-- 同名機能の実装がこの階層にあるように見えるが、実体が正本側にあるのか realization 側 wrapper にあるのかを切り分けたいとき。
+- review oracle 系の agent call parameter 生成処理を調査・変更したいとき。
+- 正本側 builder の出力を realization 側でどのように補正しているか、特に oracle root placeholder 表記の暫定補正を確認したいとき。
+- レビュー指摘の列挙・判定・検証に関する旧来 import 経路が残っている理由、委譲先、削除条件を確認したいとき。
+- 同名機能の実装が realization 側にあるように見えるが、実体が canonical oracle 側か薄い wrapper かを切り分けたいとき。
 
 ## Do not read this when
-- review finding の列挙・判定・検証そのものの正本仕様、出力内容、検出ロジック、評価ロジックを調べたいとき。正本側の oracle 実装を読む。
-- AgentCallParameter の共通型、model・reasoning・file access・structured output schema などの基礎定義を調べたいとき。
-- review oracle 以外の builder、CLI 表示、テスト方針、または互換 import と prompt 表記補正に関係しない review 機能全般を調べたいとき。
-- 新しい review 判定ロジックや検証処理を追加・変更したいとき。この階層の多くは委譲または最小補正だけを担うため、実装本体の対象へ進む。
+- review oracle の正本仕様断片そのもの、prompt の正本文面、判定仕様、検出ロジックを確認したいときは、対応する oracle file または canonical 実装を読む。
+- agent call parameter の基礎データ構造、model、reasoning effort、file access mode などの共通仕様を調べたいときは、基礎定義側を読む。
+- 互換 import 経路や review oracle builder と無関係な CLI 表示、テスト方針、review 機能全般を調べたいときは、より直接その責務を持つ対象へ進む。
 
 ## hash
 - 970b5b4cebe0698ddd6ee2e13b4b8bbc5afab4ecd7fe0dc2d7d1b99292896ed7

@@ -213,6 +213,7 @@ def test_init_writes_default_config_json(tmp_path: Path, monkeypatch: pytest.Mon
     assert data["codex"]["model"]["mainstream"] == "GPT-5.5"
     assert data["codex"]["model"]["efficiency"] == "GPT-5.4-mini"
     assert data["codex"]["reasoning_effort"]["high"] == "high"
+    assert data["codex"]["num_try_falv_recovery"] == 1
     assert (
         subprocess.run(
             ["git", "check-ignore", "-q", ".cmoc/config.json"], cwd=root
@@ -251,6 +252,7 @@ def test_init_syncs_config_defaults_without_overwriting_human_values(
     assert data["codex"]["model"]["mainstream"] == "CUSTOM-MAIN"
     assert data["codex"]["model"]["efficiency"] == "GPT-5.4-mini"
     assert data["codex"]["reasoning_effort"]["low"] == "low"
+    assert data["codex"]["num_try_falv_recovery"] == 1
     assert data["apply_fork"]["num_apply_files"] == 200
     assert data["review_oracle"]["num_validate_findings_loop"] == 2
 

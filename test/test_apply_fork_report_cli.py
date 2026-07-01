@@ -553,6 +553,71 @@ def test_apply_fork_is_unconverged_when_finding_application_makes_no_diff(
     )
 
 
+def test_apply_fork_recovers_file_access_rule_violation_before_commit(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """所見適用が禁止領域を汚した場合、recovery 後の許可差分だけを commit する。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    (root / "README.md").write_text("# changed\n")
+    run_git(root, "add", "README.md")
+    run_git(root, "commit", "-m", "change readme")
+    finding = {
+        "title": "Update README",
+        "evidences": [
+            {
+                "path": str(root / "README.md"),
+                "line_start": 1,
+                "line_end": 1,
+                "summary": "readme",
+            }
+        ],
+        "oracle_requirement": "test requirement",
+        "observed_implementation": "old",
+        "reason": "needs update",
+        "suggested_fix": "update readme",
+    }
+    calls: list[tuple[str, str]] = []
+
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> FakeCodexResult:
+        purpose = str(kwargs["purpose"])
+        calls.append((purpose, parameter.file_access_mode.value))
+        if purpose.startswith("apply fork enumerate findings"):
+            return FakeCodexResult({"findings": [finding] if len(calls) == 1 else []})
+        if purpose == "apply fork finding application":
+            (Path.cwd() / "README.md").write_text("# updated\n")
+            (Path.cwd() / "oracle" / "spec.md").write_text("# violated\n")
+            return FakeCodexResult()
+        if purpose == "file access rule violation recovery":
+            assert parameter.file_access_mode.value == "no_rule"
+            (Path.cwd() / "oracle" / "spec.md").write_text("# spec\n")
+            return FakeCodexResult({})
+        if purpose == "apply fork change summary":
+            return FakeCodexResult({"changes": []})
+        raise AssertionError(purpose)
+
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(
+        app, ["apply", "fork", "--scope", "session"], catch_exceptions=False
+    )
+
+    assert result.exit_code == 0
+    assert ("file access rule violation recovery", "no_rule") in calls
+    branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = branch.removeprefix("cmoc/session/")
+    state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
+    apply_branch = state["apply"]["apply_branch"]
+    assert run_git(root, "show", f"{apply_branch}:README.md").stdout == "# updated\n"
+    assert run_git(root, "show", f"{apply_branch}:oracle/spec.md").stdout == "# spec\n"
+
+
 def test_apply_fork_error_report_summarizes_uncommitted_diff(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:

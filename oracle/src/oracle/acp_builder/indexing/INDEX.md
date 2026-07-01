@@ -20,18 +20,19 @@
 # `index_entry.py`
 
 ## Summary
-- `cmoc indexing` の目次情報生成に使う AI エージェント呼び出しパラメータを構築する正本仕様断片。対象パスと対象内容を受け取り、読み取り専用の complete prompt、効率重視モデル、低 reasoning、構造化出力先を組み合わせて返す責務を持つ。
-- ルーティング文書作成担当としての role、対象の `INDEX.md` 用エントリー生成という summary/goal、既存 `INDEX.md` を根拠にしない生成規則、対象内容の埋め込み、`<target-path>` の実パス解決を一体で定義する入口。
+- `cmoc indexing` で、対象ファイルまたはディレクトリの内容から `INDEX.md` 用エントリーを生成するための agent call parameter を組み立てる prompt 正本。
+- ルーティング文書作成担当としての role、Structured Output schema に従う goal、readonly の file access mode、既存 `INDEX.md` を読まずオリジナル本文を根拠にする生成規則、対象内容の埋め込みを定義する。
+- 生成した complete prompt を markdown 化し、効率重視モデル・低 reasoning・readonly・同名 JSON schema 出力先を持つ agent call parameter として返す。
 
 ## Read this when
-- `cmoc indexing` における `INDEX.md` 用エントリー生成の prompt 内容、補助文書、プレースホルダー、対象内容の渡し方を確認または変更するとき。
-- 目次情報生成用の AI 呼び出しで使うモデルクラス、reasoning effort、ファイルアクセスモード、出力 schema path の正本仕様を確認するとき。
-- 既存 `INDEX.md` を読ませず、対象本文を根拠に structured output を返させる制約がどこで組み立てられているかを調べるとき。
+- `cmoc indexing` のうち、個別対象の `INDEX.md` エントリー生成用 prompt や agent call parameter の内容を確認・変更したいとき。
+- エントリー生成時に AI へ渡す role、summary、goal、file access mode、補助 prompt、placeholder、index entry standard の適用有無を確認したいとき。
+- 対象がディレクトリの場合に直下の目次内容を対象内容として扱う前提や、生成結果の JSON schema 出力先を確認したいとき。
 
 ## Do not read this when
-- `INDEX.md` エントリーの個別対象本文そのものや、生成結果の日本語文面だけを確認したいとき。
-- path keyword や実パス解決の一般仕様を知りたいだけの場合は、path model の定義を直接読む方がよい。
-- complete prompt の汎用構築処理、構造化 markdown の描画処理、または AgentCallParameter 自体のデータ構造を調べたい場合は、それぞれの定義元を直接読む方がよい。
+- `cmoc indexing` 全体の CLI 起動、対象探索、ファイル書き込み、既存目次更新処理を調べたいだけのときは、それぞれを担う実装へ進む。
+- complete prompt の汎用組み立て規則、構造化 markdown の描画、path placeholder 解決、agent call parameter 型そのものを調べたいときは、それぞれの定義元を読む。
+- 人間が守るべき `INDEX.md` エントリー品質基準そのものを確認したいときは、基準を定義する正本仕様を読む。
 
 ## hash
 - b700d4d32d1442f6c130f4a14239ff09202788fcb071a19e010f5eba0a7e4b3e
