@@ -288,7 +288,7 @@ def test_run_codex_exec_stores_schema_state_under_codex_work_root(
     assert not (root / ".cmoc" / "state" / "schema").exists()
 
 
-def test_run_codex_exec_does_not_check_protected_diffs_after_call(
+def test_run_codex_exec_rejects_blocked_runtime_diffs_after_call(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -310,9 +310,15 @@ def test_run_codex_exec_does_not_check_protected_diffs_after_call(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
-    result = run_codex_exec(_parameter(), root=root, config=CmocConfig())
+    with pytest.raises(CmocError, match="ファイルアクセス規則"):
+        run_codex_exec(
+            _parameter(),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
 
-    assert result.output_json == {"ok": True}
+    assert (root / ".agents" / "generated.md").read_text() == "changed\n"
 
 
 def test_run_codex_tui_checks_extra_read_path_before_starting_codex(
