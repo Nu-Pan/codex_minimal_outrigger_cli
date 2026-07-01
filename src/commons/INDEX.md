@@ -93,24 +93,22 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の実行制御を担う実装。プロファイル準備、schema 指定、prompt/stdout/stderr/output/call log の生成、Structured Output 検証、capacity retry、quota 待機と代表 probe、resume 継続、subcommand event 記録、実行後の file access rule 違反検出と修復をまとめて扱う。
-- exec 実行中の retry counter、resume token、生成 log、subprocess 結果を共有する状態機械として凝集しており、TUI 起動ではなく `codex exec` の分岐と後処理を読む入口になる。
+- Codex exec の単一試行ループと再試行制御を扱う実行制御モジュール。Structured Output 検証、capacity retry、quota 代表 probe、resume 継続、call log と subcommand event 記録、実行後の file access rule 違反修復を同じ状態機械として管理する。
 
 ## Read this when
-- Codex CLI を `exec` で呼び出す argv、CODEX_HOME/profile/cwd/schema/output の扱い、prompt を stdin として渡す実行経路を確認する時。
-- Codex call log、prompt/stdout/stderr/output log、console 出力、subcommand log の記録内容や生成タイミングを変更する時。
-- Structured Output の parse/schema validation 失敗、semantic retry、capacity retry、quota 枯渇時の polling、代表 probe、resume token 継続の挙動を調べる時。
-- agent call 後に残った変更を FileAccessMode に照らして検査し、違反修復 call を行う流れを変更する時。
-- worktree の変更 path 列挙、git status の rename/untracked 展開、FileAccessMode ごとの書き込み許可判定を確認する時。
+- Codex CLI の exec 呼び出し、標準入力 prompt、出力 schema、resume token、capacity/quota retry の挙動を確認または変更する場合。
+- Codex call log、stdout/stderr/output の保存、subcommand log への codex_call event、quota wait の記録を追う場合。
+- agent call 後に残った worktree 差分を FileAccessMode に照らして検査し、違反修復を行う流れを確認する場合。
+- Codex exec 実行時の CODEX_HOME、profile、cwd、schema path、生成 log path の組み立てを追う場合。
 
 ## Do not read this when
-- Codex profile の具体的な生成内容、CODEX_HOME 解決、schema 準備、quota/capacity エラー判定などの低レベル helper だけを変更する場合は、それらを定義する runtime Codex profile 側を直接読む。
-- subcommand logger の保存形式や logger 自体の責務を調べる場合は、runtime logging 側を読む。
-- Codex exec に渡す AgentCallParameter の prompt を組み立てる仕様や builder を変更する場合は、対応する acp builder 側を読む。
-- TUI 起動や exec 以外の Codex 実行形態を調べる場合は、この実装ではなく該当する起動制御 module を読む。
+- Codex profile の生成内容、CODEX_HOME の解決、schema ファイル準備、エラー文字列判定などの低水準 runtime helper だけを確認したい場合。
+- TUI 起動や exec 以外の Codex 呼び出し分岐を確認したい場合。
+- quota availability probe の prompt 本文や AgentCallParameter の生成規則そのものを確認したい場合。
+- FileAccessMode の型定義や設定値の定義だけを確認したい場合。
 
 ## hash
-- d9ea21b44fd6c6f140cfb02c227b425eccbb2874ee7c8adb291e0fa3711d23c2
+- 8fa8c7813ae276082201d234f1529eab24d1fdcfde91449adaa513f55162c356
 
 # `runtime_codex_logging.py`
 

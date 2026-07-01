@@ -170,24 +170,22 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI/TUI 呼び出しランタイムの実行制御を検証するテスト。Codex subprocess の process group 分離、apply tracking 環境変数の遮断、profile 生成、sandbox 設定、cwd 選択、schema 状態保存先、ファイルアクセス違反の扱い、extra read path の事前検査、非ゼロ終了や CLI 欠如時のエラー報告を扱う。
-- `run_codex_exec` と `run_codex_tui` の外部プロセス起動まわりを、実 Codex CLI ではなく一時ディレクトリ上の stub 実行ファイルで検証する入口。
+- Codex CLI 実行層のテスト。exec/TUI 呼び出し時のプロファイル生成、作業ディレクトリ、sandbox 設定、schema 出力先、プロンプト入出力、プロセス追跡、エラー報告、ファイルアクセス違反の回復・検出を検証する。
+- スタブ化した `codex` 実行ファイルと一時 Git リポジトリを使い、`commons.runtime_codex` と `commons.runtime_codex_profile` の外部挙動を確認する入口。
 
 ## Read this when
-- Codex CLI/TUI 起動時の argv、cwd、stdin、profile、sandbox writable_roots、出力ファイル、call log の期待挙動を確認・変更するとき。
-- `FileAccessMode` ごとの Codex 実行環境、特に `REPO_WRITE`、`REALIZATION_WRITE`、`PURE_ORACLE_READ` の差分を確認するとき。
-- `.cmoc` worktree 配下で schema 状態や TUI prompt log をどこに置くか、linked worktree からの実行をどう扱うかを確認するとき。
-- apply process tracking、process group、継承された tracking env の無効化など、Codex subprocess の低レベル実行制御を変更するとき。
-- Codex 実行後の禁止領域 diff、extra read path、Codex CLI の非ゼロ終了・未インストール時の `CmocError` 表示を変更するとき。
+- Codex CLI の exec/TUI 呼び出し処理、プロファイル TOML、sandbox writable roots、`--cd`、`--output-schema`、`--output-last-message` の組み立てを変更する。
+- `FileAccessMode` ごとの Codex 実行時 cwd、読み書き許可、oracle/realization 境界、追加 read/write path の検証挙動を確認する。
+- Codex subprocess のプロセスグループ分離、apply process tracking 環境変数、欠落した Codex CLI、非 0 終了時のエラー表示を扱う実装を変更する。
+- linked worktree 上での Codex 実行、`.cmoc` 配下の schema state や codex call log の配置に関するテストを探している。
 
 ## Do not read this when
-- Codex runtime 以外の CLI コマンド仕様や oracle 文書生成のテストを探しているとき。
-- 外部プロセス起動を伴わない pure path helper、設定 object 単体、git helper 単体の挙動だけを確認したいとき。
-- 実 Codex CLI の出力品質や LLM 応答内容そのものを検証したいとき。
-- テスト支援関数の実装詳細を確認したいだけなら、支援 module を直接読む方がよい。
+- Codex CLI 呼び出しではなく、通常のリポジトリ作成支援、Git helper、テスト fixture そのものの実装だけを確認したい。
+- oracle 文書や INDEX 生成の仕様を調べたい場合。
+- LLM 出力品質やプロンプト本文の内容評価を目的にしたテストを探している場合。
 
 ## hash
-- 1d70af1bb005d35891bef92b758d021cf6fd40404f02fb1337a40c510c714200
+- acf565bc2e298c83a65aa47b3f7bec185b11dda4c10abf50efbc735f0a4fbd93
 
 # `test_codex_runtime_home.py`
 
@@ -352,23 +350,21 @@
 # `test_session_cli.py`
 
 ## Summary
-- session fork、join、abandon の CLI 回帰テストをまとめる realization test。session branch と session state のライフサイクル、linked worktree、state cleanup、dirty worktree 拒否、join 時の競合解決と branch 削除可否を外部挙動として検証する。
+- session branch と session state のライフサイクルを、CLI 外部挙動としてまとめて検証する realization test。fork、join、abandon、linked worktree、state cleanup、dirty worktree 拒否、conflict resolution とエラー出力先を、同じ session 状態遷移の観測点として扱う。
 
 ## Read this when
-- session fork、join、abandon の CLI 挙動や出力、終了コード、branch/state 遷移を変更・確認する。
-- session state file の生成、破損時エラー、cleanup 失敗時の rollback、abandoned/joined 状態の扱いを確認する。
-- linked worktree 上での session 操作、home branch の保持、session branch の削除・未削除警告を変更・確認する。
-- session join の競合解決、oracle conflict の書き込み profile、未解決 conflict marker 検出、delete conflict staging を確認する。
-- dirty worktree 拒否や session join/abandon のエラー報告先が stdout/stderr のどちらかを確認する。
+- session fork が session branch と state file を作成する挙動、session-id collision、既存 state との衝突、linked worktree 上の開始 branch/head を確認したいとき。
+- session abandon が home branch へ戻り、session branch を削除し、state を abandoned に更新する挙動や、home branch 不在・cleanup 失敗時の rollback を確認したいとき。
+- session join が home branch へ取り込み、conflict resolution を Codex 実行へ委譲し、delete conflict の解決を stage し、session branch 削除可否を出力する挙動を確認したいとき。
+- session completion 系が壊れた state file、dirty worktree、merge 後の予期しない conflict marker 残存をどう扱い、stdout/stderr のどちらへ報告するかを確認したいとき。
 
 ## Do not read this when
-- session CLI 以外のサブコマンド挙動を確認したい。
-- session の内部 helper 実装だけを局所的に確認したく、CLI 経由の branch/state ライフサイクル観測が不要である。
-- oracle 正本仕様や INDEX.md ルーティング規則そのものを確認したい。
-- 単体の git wrapper、config、runtime profile の一般挙動を確認したいだけで、session join の競合解決経路に関係しない。
+- session CLI の実装方針や helper の責務境界を調べたいだけなら、対応する session sub-command 実装を読む。
+- session 以外の CLI コマンド、agent call 一般、設定読み込み、ログ基盤の挙動を調べたいだけなら、それぞれの対象テストや実装を読む。
+- oracle file の正本仕様や realization standard 自体を確認したい場合は、oracle 配下の該当本文を読む。
 
 ## hash
-- 217128b35d1efb878b56c76eb8363be96d3ec5ce84c980faf5f876c2b1861749
+- 5bd4a4c5a8c064008e49f02d663a1d9ed7792fe6487fc84e9104a99b33d4fe15
 
 # `test_struct_doc_rendering.py`
 
