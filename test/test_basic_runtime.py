@@ -547,21 +547,6 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         profiles[FileAccessMode.REALIZATION_WRITE], root / "new_top_level.md"
     )
 
-    profile = build_codex_profile(
-        AgentCallParameter(
-            parameter.model_class,
-            parameter.reasoning_effort,
-            FileAccessMode.REALIZATION_WRITE,
-            parameter.prompt,
-            parameter.structured_output_schema_path,
-        ),
-        CmocConfig(),
-        root,
-        extra_writable_paths=[root / ".gitignore"],
-    )
-    assert _profile_writable_roots(profile) == {str(root.resolve())}
-    _assert_writable(profile, root / ".gitignore")
-
     extra = root / "src" / "extra"
     profile = build_codex_profile(
         AgentCallParameter(
@@ -662,6 +647,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         (FileAccessMode.REALIZATION_WRITE, "README.md"),
         (FileAccessMode.REALIZATION_WRITE, "AGENTS.md"),
         (FileAccessMode.REALIZATION_WRITE, "INDEX.md"),
+        (FileAccessMode.REALIZATION_WRITE, ".gitignore"),
         (FileAccessMode.PURE_ORACLE_WRITE, "src/blocked.md"),
         (FileAccessMode.PURE_ORACLE_WRITE, "memo/blocked.md"),
         (FileAccessMode.PURE_ORACLE_WRITE, ".agents/blocked.md"),
@@ -674,6 +660,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         (FileAccessMode.REPO_WRITE, "README.md"),
         (FileAccessMode.REPO_WRITE, "AGENTS.md"),
         (FileAccessMode.REPO_WRITE, "INDEX.md"),
+        (FileAccessMode.REPO_WRITE, ".gitignore"),
         (FileAccessMode.REPO_WRITE, "../outside.md"),
     ],
 )
@@ -686,6 +673,8 @@ def test_codex_profile_rejects_disallowed_extra_writable_paths(
     (root / "oracle").mkdir()
     (root / "memo").mkdir()
     (root / ".agents").mkdir()
+    if extra == ".gitignore":
+        (root / extra).write_text("memo\n")
 
     with pytest.raises(CmocError, match="追加書き込み許可 path|安全に表現"):
         build_codex_profile(
@@ -769,7 +758,9 @@ def test_codex_profile_allows_session_join_conflict_targets_under_allowed_dirs(
     _assert_writable(profile, target)
 
 
-@pytest.mark.parametrize("extra", ["README.md", "INDEX.md", "AGENTS.md"])
+@pytest.mark.parametrize(
+    "extra", ["README.md", "INDEX.md", "AGENTS.md", ".gitignore"]
+)
 def test_codex_profile_rejects_root_file_session_join_conflict_targets(
     tmp_path: Path, extra: str
 ) -> None:

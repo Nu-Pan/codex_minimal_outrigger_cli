@@ -191,6 +191,19 @@ def _writable_roots(
         if resolved not in seen and not any(
             resolved.is_relative_to(parent) for parent in seen
         ):
+            if _cannot_sandbox_without_work_root(mode, root, resolved):
+                # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+                # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+                # Codex profile has no deny-list. Existing root files would be
+                # represented by writable <work-root>, which opens blocked paths.
+                raise CmocError(
+                    "追加書き込み許可 path は Codex profile で安全に表現できません。",
+                    [
+                        "対象ファイルを手動で解決するか、"
+                        "directory 配下の path を指定してください。"
+                    ],
+                    f"mode: {mode.value}\npath: {resolved}",
+                )
             sandbox_root = _sandbox_writable_root(resolved)
             _append_writable_root(result, seen, sandbox_root)
     return result
@@ -212,6 +225,18 @@ def _sandbox_writable_root(path: Path) -> Path:
     if path.exists() and path.is_file():
         return path.parent.resolve()
     return path.resolve()
+
+
+def _cannot_sandbox_without_work_root(
+    mode: FileAccessMode,
+    root: Path,
+    path: Path,
+) -> bool:
+    deny_list_mode = mode in {
+        FileAccessMode.REALIZATION_WRITE,
+        FileAccessMode.REPO_WRITE,
+    }
+    return deny_list_mode and path.exists() and path.is_file() and path.parent == root
 
 
 def _append_writable_root(result: list[Path], seen: set[Path], path: Path) -> None:
