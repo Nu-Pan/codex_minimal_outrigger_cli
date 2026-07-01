@@ -60,23 +60,23 @@
 # `fork.py`
 
 ## Summary
-- apply fork の実行制御を担う実装。session branch 上で isolated apply worktree と apply branch を作り、scope に応じた対象列挙、Codex による finding 列挙と適用、差分 commit、report 出力、apply state 更新、process id 管理、失敗時 report 生成までを一つの apply run として扱う。
-- 対象 file の正規化、apply scope ごとの候補算出、直近 join 済み apply merge commit の解決、finding 由来または差分由来の commit subject 生成もここに含まれる。
+- apply fork の実行制御を担う実装。session branch 上での事前条件確認、apply branch/worktree 作成、apply state 更新、対象ファイル列挙、Codex による finding 列挙と適用、差分 commit、report 生成、失敗時の error report と state 復旧を一つの apply run として扱う。
+- apply scope ごとの対象選択、apply finding 対象として扱えるファイルの正規化、重複排除、前回 join 済み apply merge commit の探索、適用差分からの commit subject 生成もこの制御ループ内に含む。
 
 ## Read this when
-- apply fork サブコマンドの実行条件、状態遷移、worktree 作成、apply branch 命名、process id の扱い、report 出力、終了コードを確認・変更したいとき。
-- apply fork がどの file を finding 列挙対象にするか、rolling/session/full scope の対象範囲、oracle や INDEX/AGENTS や ignore 対象の除外条件を確認・変更したいとき。
-- Codex に依頼する finding 列挙・finding 適用 loop、未収束時の扱い、変更 file の再キュー、apply commit の作成条件や commit subject 生成を確認・変更したいとき。
-- apply join 後の rolling scope が基準にする過去 merge commit の解決条件を確認・変更したいとき。
+- apply fork サブコマンドの実行条件、state 遷移、worktree/branch 作成、process id 管理、report 出力、終了コードを確認または変更したいとき。
+- scope に応じた apply 対象ファイル列挙、oracle や git ignore 対象の扱い、変更後ファイルの再キュー条件を確認または変更したいとき。
+- Codex に渡す finding 列挙・finding 適用処理の呼び出し順、loop 収束判定、適用後 commit の作成条件や commit subject 生成を確認したいとき。
+- apply fork 失敗時に state、process id、error report、stdout 用 report path がどう扱われるかを追うとき。
 
 ## Do not read this when
-- apply fork の report 本文生成や error report の内容だけを確認・変更したいときは、report 生成側を直接読む。
-- Codex に渡す apply fork 用 parameter の文面や structured output だけを確認・変更したいときは、parameter builder 側を直接読む。
-- apply process id の永続化 API や tracking context manager の内部だけを確認・変更したいときは、apply runtime 側を直接読む。
-- session state、git 実行、worktree 作成、config 読み込みなど共通 runtime primitive の内部挙動だけを確認・変更したいときは、runtime 側を直接読む。
+- apply fork の report ファイル本文の生成内容だけを変更したい場合は、report 生成側の実装を直接読む。
+- Codex に渡す prompt や parameter の組み立て内容だけを確認したい場合は、builder 側の apply fork 用実装を直接読む。
+- apply process id の保存形式や tracking helper の内部だけを確認したい場合は、apply runtime 側を直接読む。
+- apply fork 以外の apply サブコマンドや join 側の挙動を調べたい場合は、それぞれのサブコマンド実装を読む。
 
 ## hash
-- a08e0d2d4d3a760cfe9f8a3dce58486926d6b47ae20e5fc7f6475b2848c0dbd3
+- 5df4bc5c860a258c6b78a92eac6b0ee37c45e24b27440ca2e0148d387c9f8cc8
 
 # `fork_report.py`
 

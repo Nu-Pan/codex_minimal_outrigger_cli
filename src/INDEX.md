@@ -61,21 +61,23 @@
 # `commons`
 
 ## Summary
-- cmoc の実行時共通処理を集める実装ディレクトリ。Codex CLI 呼び出し、INDEX 更新 preflight、CLI サブコマンド共通ライフサイクル、設定、content hash、git、logging、path、結果型、session state など、複数領域から使われる runtime helper とその集約 import を扱う。
-- 各ファイルは、具体的な runtime 挙動を担う責務別実装、または既存 import path を保つための薄い入口として分かれている。
+- cmoc の共通ランタイム支援を集める実装ディレクトリ。Codex 実行、CLI 共通ライフサイクル、設定、Git、ログ、パス、状態、INDEX.md 自動更新など、複数領域から使われる runtime helper とその再エクスポート入口を持つ。
+- 個別の runtime_* モジュールへ進むための入口であり、共通処理の実装場所、互換 import、責務別 helper の所在を判断するために使う。
 
 ## Read this when
-- Codex exec/TUI、INDEX.md 自動更新、CLI 共通実行、設定読み書き、git 操作、runtime path、logging、state、外部コマンド結果など、cmoc 全体で共有される runtime helper の読む先を選びたいとき。
-- 複数のサブコマンドや上位 module から利用される共通 runtime 処理を確認、変更、分割、統合したいとき。
-- 個別 helper の実装元ではなく、runtime helper 群の公開 import 経路やパッケージ境界を確認したいとき。
+- CLI サブコマンド、Codex exec/TUI、Git、設定、ログ、状態、パス、INDEX.md 更新などにまたがる共通 runtime 実装の所在を探したいとき。
+- 複数の runtime helper をまとめて import する集約入口や、旧 import path を保つ互換 module の責務を確認したいとき。
+- Codex 実行前 preflight、INDEX.md 自動更新、Structured Output 検証、quota/capacity retry、file access rule 検査など、共通実行基盤の制御を追いたいとき。
+- サブコマンド共通の開始・完了表示、例外表示、ログ記録、実行結果型、永続 state、設定 JSON、runtime 保存先 path などの共通部品を変更したいとき。
 
 ## Do not read this when
-- 個別 CLI サブコマンドの引数定義、利用者向け処理フロー、出力 schema だけを調べたいとき。その場合は command 側の実装へ進む。
-- path placeholder や oracle 上の正本仕様、INDEX.md エントリー標準など、仕様意図そのものを確認したいとき。その場合は対応する oracle doc または oracle src を読む。
-- ACP builder、prompt 文面、設定データクラス、schema 定義など、runtime helper の利用元または入力定義だけを変更したいとき。
+- 個別 CLI コマンドの引数定義、利用者向け制御フロー、業務処理だけを調べたいときは、そのサブコマンド実装へ直接進む。
+- oracle 上の正本仕様や path placeholder の概念定義、INDEX.md の仕様意図だけを確認したいときは、対応する oracle doc または仕様側を読む。
+- 特定の低レベル処理だけを調べたい場合は、この階層全体ではなく、Git、設定、path、content、error、logging、state、Codex profile など責務に対応する module を直接読む。
+- 公開 import 面ではなく新しい業務ロジックを追加したいだけのときは、共有 runtime に置く必要があるかを確認し、該当する上位実装を先に読む。
 
 ## hash
-- 2dc5ae26d1048a8648dc9e1c728f4969eb4df2e73177343137fbe43a4c408b55
+- 52acc5047b83b6eae6c3bd0d70dae0e32758cee0ae223765f1d163d29c3e0d4f
 
 # `config`
 
@@ -138,20 +140,21 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装を集める領域で、初期化、indexing、TUI、session、review、apply の各実行入口と制御ロジックへの分岐点になる。
-- 各サブコマンドは CLI runtime への接続、preflight、git・worktree・branch・state 操作、Codex 実行連携、利用者向け report や標準出力を扱い、詳細は用途別の下位モジュールに分かれている。
+- CLI サブコマンドごとの実行入口と制御実装を集める領域で、初期化、索引更新、TUI、session lifecycle、apply lifecycle、review oracle などの利用者操作を runtime・git・状態管理・Codex 実行へ接続する。
+- 各サブコマンドは、実行前条件の確認、対象 worktree や branch の準備、状態更新、commit・merge・cleanup、利用者向け出力や report 生成までの大きな制御順序を担う。
+- 詳細な共通処理や仕様断片そのものではなく、利用者が起動する操作から下位 helper・共通処理へ入るためのサブコマンド別オーケストレーションを探す入口になる。
 
 ## Read this when
-- cmoc のサブコマンド実装のうち、どの領域へ進むべきかを選びたいとき。
-- 初期化、indexing、TUI、session lifecycle、review oracle、apply run の実行入口、事前条件、状態遷移、出力、後始末を確認または変更したいとき。
-- サブコマンドから共通 runtime、git helper、Codex 実行、report 生成、worktree や branch 操作へどのように接続しているかをたどりたいとき。
-- review や apply の対象列挙、反復 loop、merge・conflict 処理、INDEX.md 反映、利用者向け結果 report などの制御実装を探したいとき。
+- cmoc の特定サブコマンドが、CLI runtime からどのように起動され、どの preflight、状態確認、git 操作、出力処理へ進むかを確認または変更したいとき。
+- 初期化、索引更新、TUI、session の開始・統合・破棄、apply の開始・破棄・取り込み、review oracle の実行など、利用者操作単位の実装箇所を選びたいとき。
+- サブコマンド実行時の branch/worktree 作成、対象列挙、Codex 実行、pid や state の扱い、commit・merge・conflict 処理、cleanup、report 出力の入口を追いたいとき。
+- サブコマンド固有の補助処理と、共通 runtime helper、git helper、状態管理、prompt builder、report builder など下位領域との接続位置を切り分けたいとき。
 
 ## Do not read this when
-- Typer app への登録、CLI 全体の entrypoint、共通 runtime primitive、git 実行 wrapper、path model、設定読み込み、state file 定義だけを調べたいとき。
-- oracle file の正本仕様、サブコマンドの外部仕様文書、または INDEX.md エントリー作成基準そのものを確認したいとき。
-- Codex subprocess の起動方法一般、LLM prompt や Structured Output schema の詳細だけを確認したいとき。
-- 特定サブコマンド内の下位責務がすでに分かっており、対象列挙、loop、report、merge、state 操作などの専用モジュールへ直接進めるとき。
+- CLI 全体のアプリ登録、Typer 構成、runtime 共通規約、path 解決、git 実行 wrapper、state schema、設定モデルなど、サブコマンド横断の低レベル共通処理だけを調べたいとき。
+- INDEX.md の本文生成、oracle file の正本仕様、prompt や Structured Output schema、LLM 出力品質、設定値定義など、サブコマンド制御ではない詳細を確認したいとき。
+- 特定のサブコマンド内でも、対象列挙、review loop、report rendering、merge conflict 解決、Codex subprocess 起動などの下位詳細だけを調べる場合で、より直接の実装領域が分かっているとき。
+- テスト、fixture、oracle 側ドキュメント、または利用者向け仕様だけを探しており、realization implementation のサブコマンド実行フローを読む必要がないとき。
 
 ## hash
-- 1fe85dd4f0335a3a26e969798aff64699b9ffb62aa1eeb507b1f049dbb0f8290
+- 2b844e55f7f67ead55a46e11118fbfe054f57b1691b87dee013942e78bdbae6c
