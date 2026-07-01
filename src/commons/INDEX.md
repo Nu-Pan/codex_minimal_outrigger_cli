@@ -155,24 +155,26 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI の subprocess 境界で必要になる実行 profile、sandbox/cwd、CODEX_HOME、schema 配置、child process tracking、JSONL error 判定をまとめる実装。
-- FileAccessMode を Codex CLI が受け取れる sandbox 設定と writable/readable path 境界へ変換し、起動前検証と起動後の機械的結果解釈を担う。
+- Codex CLI を起動する直前から実行結果を解釈する直後までの subprocess 境界を扱う。
+- file access mode から Codex sandbox/profile/cwd/writable root を作る処理、CODEX_HOME 検証、profile 保存、Codex subprocess 実行、apply 中の child process tracking、schema 配置、Codex JSONL からの error/quota/capacity/resume 判定をまとめる。
+- sandbox/profile/cwd、CODEX_HOME、child process tracking、schema、JSONL error 判定は同じ Codex profile 境界の不変条件を共有するため、この境界の失敗時挙動を確認する入口になる。
 
 ## Read this when
-- Codex CLI 起動用 profile の生成、保存、profile 名解決、sandbox mode、writable_roots、cwd の決定を確認または変更したいとき。
-- FileAccessMode ごとの読み取り・書き込み許可境界、追加 read/write path の検証、oracle/conflict 解消時の書き込み例外を扱うとき。
-- CODEX_HOME の解決、auth.json を含む起動前検証、Codex subprocess に渡す環境変数を確認したいとき。
-- Codex CLI 不在時の CmocError 化、apply 実行中の child process tracking、pid file lock、process group 起動、pid 再利用対策を変更するとき。
-- Structured Output schema の hash store 配置、schema なし output JSON の読み取り、Codex JSONL stdout/stderr からの error detail、resume token、capacity/quota error 判定を扱うとき。
+- FileAccessMode と Codex sandbox 名、作業 root、読み書き許可 path、writable_roots の対応を確認または変更したいとき。
+- Codex profile の TOML 生成、hash 名での保存、profile 名の取り出し、CODEX_HOME の解決・検証・subprocess 環境引き継ぎを扱うとき。
+- Codex CLI 不在時の CmocError 化、apply 実行中の Codex child process pid 記録、pid file lock、process group 起動、pid 再利用検出を確認または変更したいとき。
+- Structured Output schema の配置、schema なし出力 JSON の読み取り、Codex stdout/stderr/JSONL から利用者向け error detail、resume token、capacity error、quota error を判定する処理を扱うとき。
+- Codex subprocess 境界で、prompt 上の file access rule と実際に Codex profile へ渡せる sandbox 制約の差を調べたいとき。
 
 ## Do not read this when
-- Codex CLI に渡す prompt 本文や file access rule の自然言語生成を調べたいだけなら、prompt builder 側を読む。
-- cmoc の設定値そのもの、model class や reasoning effort の定義を調べたいだけなら、設定定義側を読む。
-- runtime path の保存先規則や hash file 書き込み処理そのものを変更したい場合は、それぞれの runtime path/content helper を読む。
-- Codex subprocess 境界と無関係な CLI サブコマンドの業務ロジック、ユーザー向け command flow、通常の入出力整形だけを扱う場合は読まなくてよい。
+- agent call parameter や FileAccessMode 自体の型定義・意味を確認したいだけなら、basic 側の定義を直接読む。
+- cmoc config の model や reasoning effort の設定値定義を確認したいだけなら、config 側を直接読む。
+- prompt 文面として利用者へ伝える file access rule の生成内容を確認したいだけなら、prompt builder 側を直接読む。
+- Codex subprocess の呼び出し元コマンド全体の制御フローを追いたい場合は、各 subcommand や agent call orchestration の入口から読む。
+- hash file store や schema store directory の汎用保存処理そのものを変更したい場合は、runtime content/path 側を直接読む。
 
 ## hash
-- 916d86fc393ee79168a595bc74906a3cbc9e07ffe6c8cdaf0f0265f5fda94d14
+- 4745798d2e690fe89108f37d19bc16c19b9072f5cff5d3c57aaeade0fb9f2379
 
 # `runtime_codex_tui.py`
 

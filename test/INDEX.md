@@ -129,24 +129,24 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder 解決、worktree 境界、config 既定値と検証、CmocError の Markdown 表示、CLI error の stdout 化、subcommand log、`.cmoc` ignore、FileAccessMode 変換、Codex sandbox profile、binary 判定、branch session state など、個別サブコマンドより下位の共通実行前提をまとめて扱う。
+- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder 解決、worktree root 判定、config 既定値と検証、CmocError の表示、CLI preflight と error 出力、subcommand log、state branch 解析、FileAccessMode 変換、Codex sandbox profile、binary 判定など、個別サブコマンドより下位の共通実行前提をまとめて扱う。
+- 単一責務は共通 runtime 回帰の維持であり、root 状態や共通 fixture を共有するため、個別機能の詳細テストではなく runtime 境界が一緒に崩れないことを確認する入口として位置づけられる。
 
 ## Read this when
-- runtime の共通契約や実行前提に関わる挙動を変更する。
-- root 解決、repo root と work/run root、linked worktree、run worktree 作成・削除の安全条件を確認する。
-- CmocConfig、config_from_dict、model class、reasoning effort、FileAccessMode の値や変換を変更する。
-- CmocError、render_error、CLI parse error、stdout/stderr の error report 表示を変更する。
-- Codex profile の sandbox mode、cwd、writable_roots、extra writable paths、session join conflict 用の書き込み許可を変更する。
-- subcommand log、completion probe、preflight、副作用抑制、`.cmoc` ignore、binary 判定、branch session state の基本挙動を確認する。
+- root placeholder、repo root、run root、work root、linked worktree、managed worktree の扱いを変更する。
+- CmocError、CLI 引数解析 error、stdout/stderr への error report、call stack 表示、CLI preflight、completion probe、subcommand log の生成条件を変更する。
+- config の既定値、codex model class、reasoning effort、config_from_dict の検証挙動を変更する。
+- SessionState の branch 名解析、apply/session branch の形、branch からの state 読み込みを変更する。
+- FileAccessMode、sandbox mode、Codex cwd、writable_roots、extra writable paths、session join conflict の書き込み許可範囲を変更する。
+- binary 判定、duration 表示、`.cmoc` ignore pattern 追加のような共通 runtime helper の外部挙動を変更する。
 
 ## Do not read this when
-- 特定サブコマンド固有の業務ロジックだけを調べる場合。
-- runtime 境界に関係しない UI 文言、個別 prompt、個別 agent call の内容だけを変更する場合。
-- oracle file の正本仕様そのものを確認・編集したい場合。
-- 単一 helper の内部実装だけを調べれば足り、共通 runtime 契約の回帰確認が不要な場合。
+- 特定サブコマンド固有の business logic、prompt 内容、indexing、session fork/join などの詳細挙動だけを確認したい場合は、そのサブコマンドや機能に対応するテストを先に読む。
+- oracle file の正本仕様本文を確認したい場合は oracle 側の該当文書を読む。この対象は正本仕様ではなく realization test である。
+- 単一 helper の内部実装だけを読みたい場合は、対応する実装モジュールを直接読む。ここは runtime 境界の回帰観点を確認するための入口である。
 
 ## hash
-- 2b7d1136ff001240378c1b28c9e114cef0afdabba1b236597a7fb1782d49d58c
+- 8b4fcd7566e0f09531dbabbb19791749068b68cb927bf76b6e7770d76198f47e
 
 # `test_cli_init_tui.py`
 
@@ -170,22 +170,20 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行層のテスト。exec/TUI 呼び出し時のプロファイル生成、作業ディレクトリ、sandbox 設定、schema 出力先、プロンプト入出力、プロセス追跡、エラー報告、ファイルアクセス違反の回復・検出を検証する。
-- スタブ化した `codex` 実行ファイルと一時 Git リポジトリを使い、`commons.runtime_codex` と `commons.runtime_codex_profile` の外部挙動を確認する入口。
+- Codex CLI 呼び出しランタイムのテスト群。exec/TUI 起動時の profile 生成、cwd と sandbox 設定、schema 配置、apply process tracking、ファイルアクセス違反の回復・拒否、追加 read path 検査、Codex CLI 不在や非ゼロ終了時のエラー報告を検証する。
 
 ## Read this when
-- Codex CLI の exec/TUI 呼び出し処理、プロファイル TOML、sandbox writable roots、`--cd`、`--output-schema`、`--output-last-message` の組み立てを変更する。
-- `FileAccessMode` ごとの Codex 実行時 cwd、読み書き許可、oracle/realization 境界、追加 read/write path の検証挙動を確認する。
-- Codex subprocess のプロセスグループ分離、apply process tracking 環境変数、欠落した Codex CLI、非 0 終了時のエラー表示を扱う実装を変更する。
-- linked worktree 上での Codex 実行、`.cmoc` 配下の schema state や codex call log の配置に関するテストを探している。
+- Codex CLI の exec/TUI 呼び出し処理、profile 設定、sandbox writable roots、作業ディレクトリ選択、schema 出力設定、または call log 周辺の挙動を変更する。
+- FileAccessMode ごとの読み書き許可、oracle/memo/.agents/.cmoc へのアクセス制御、違反差分の検出・回復処理を確認または変更する。
+- Codex subprocess の process group 管理、apply process tracking 環境変数の扱い、Codex CLI 不在・失敗時の CmocError と利用者向け出力を検証する。
 
 ## Do not read this when
-- Codex CLI 呼び出しではなく、通常のリポジトリ作成支援、Git helper、テスト fixture そのものの実装だけを確認したい。
-- oracle 文書や INDEX 生成の仕様を調べたい場合。
-- LLM 出力品質やプロンプト本文の内容評価を目的にしたテストを探している場合。
+- Codex CLI 呼び出しランタイムに関係しない通常の CLI コマンド処理、設定モデル定義、path model、INDEX 生成規則だけを調べる。
+- oracle file の正本仕様本文やドキュメント構成だけを確認したい場合。
+- 実際の Codex/LLM 出力品質やプロンプト内容そのものを評価したい場合。
 
 ## hash
-- acf565bc2e298c83a65aa47b3f7bec185b11dda4c10abf50efbc735f0a4fbd93
+- 54904239d7ac9fd67f23ce416a8393c45b82a0addb53f5738ef8c5aa64f8c1dc
 
 # `test_codex_runtime_home.py`
 
