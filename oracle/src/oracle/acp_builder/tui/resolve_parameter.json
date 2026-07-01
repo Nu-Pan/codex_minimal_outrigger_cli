@@ -81,9 +81,9 @@
                     "enum": [
                         "readonly",
                         "pure_oracle_read",
-                        "realization_write",
-                        "oracle_write",
-                        "repo_write"
+                        "repo_write",
+                        "pure_oracle_write",
+                        "realization_write"
                     ]
                 },
                 "reason": {
