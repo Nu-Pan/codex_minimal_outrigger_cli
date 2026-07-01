@@ -531,9 +531,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         str((root / "oracle").resolve())
     }
     assert _profile_writable_roots(profiles[FileAccessMode.REPO_WRITE]) == {
-        str((root / "oracle").resolve()),
-        str((root / "src").resolve()),
-        str((root / "test").resolve()),
+        str(root.resolve()),
     }
     for profile in profiles.values():
         assert all(Path(path).is_dir() for path in _profile_writable_roots(profile))
@@ -543,6 +541,10 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     _assert_writable(
         profiles[FileAccessMode.REPO_WRITE], root / "oracle" / "created.md"
     )
+    _assert_writable(
+        profiles[FileAccessMode.REPO_WRITE], root / "new_top_level.md"
+    )
+    _assert_writable(profiles[FileAccessMode.REPO_WRITE], root / ".gitignore")
     _assert_not_writable(
         profiles[FileAccessMode.REALIZATION_WRITE], root / "new_top_level.md"
     )
@@ -579,10 +581,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         extra_writable_paths=[repo_extra],
     )
     assert _profile_writable_roots(profile) == {
-        str((root / "new_dir").resolve()),
-        str((root / "oracle").resolve()),
-        str((root / "src").resolve()),
-        str((root / "test").resolve()),
+        str(root.resolve()),
     }
     _assert_writable(profile, repo_extra / "created.md")
 
@@ -660,7 +659,6 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         (FileAccessMode.REPO_WRITE, "README.md"),
         (FileAccessMode.REPO_WRITE, "AGENTS.md"),
         (FileAccessMode.REPO_WRITE, "INDEX.md"),
-        (FileAccessMode.REPO_WRITE, ".gitignore"),
         (FileAccessMode.REPO_WRITE, "../outside.md"),
     ],
 )

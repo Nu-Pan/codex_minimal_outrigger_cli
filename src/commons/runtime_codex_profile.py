@@ -157,10 +157,10 @@ def _writable_roots(
         case FileAccessMode.REPO_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            # Codex profile has no deny-list, so modes that exclude memo/.agents
-            # cannot make <work-root> itself writable. New top-level paths must
-            # be passed explicitly through extra_writable_paths.
-            paths = _existing_writable_top_level_roots(mode, root)
+            # Codex profile cannot express cmoc's deny-list. REPO_WRITE would be
+            # under-permissive if limited to existing top-level dirs, so runtime
+            # post-checks reject forbidden diffs after Codex can edit the work root.
+            paths = [root]
         case FileAccessMode.PURE_ORACLE_WRITE:
             paths = [root / "oracle"]
         case FileAccessMode.NO_RULE:

@@ -101,6 +101,9 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
             "profile_path = home / f'{profile}.config.toml'",
             "output.write_text('done\\n')",
             "pathlib.Path('oracle/created.md').write_text('created\\n')",
+            "pathlib.Path('src').mkdir(exist_ok=True)",
+            "pathlib.Path('src/created.py').write_text('created\\n')",
+            "pathlib.Path('.gitignore').write_text('memo\\n')",
             f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
             "    'args': args,",
             "    'cwd': os.getcwd(),",
@@ -137,8 +140,10 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
     writable_roots = set(
         tomllib.loads(record["profile"])["sandbox_workspace_write"]["writable_roots"]
     )
-    assert writable_roots == {str((root / "oracle").resolve())}
+    assert writable_roots == {str(root.resolve())}
     assert (root / "oracle" / "created.md").read_text() == "created\n"
+    assert (root / "src" / "created.py").read_text() == "created\n"
+    assert (root / ".gitignore").read_text() == "memo\n"
     assert result.output_text == "done\n"
 
 
@@ -365,6 +370,38 @@ def test_run_codex_exec_rejects_blocked_runtime_diffs_after_call(
     assert (root / ".agents" / "generated.md").read_text() == "changed\n"
 
 
+def test_run_codex_exec_rejects_repo_write_blocked_diffs_after_call(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text(json.dumps({'ok': True}))",
+            "pathlib.Path('memo').mkdir(exist_ok=True)",
+            "pathlib.Path('memo/blocked.md').write_text('blocked\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    with pytest.raises(CmocError, match="ファイルアクセス規則"):
+        run_codex_exec(
+            _parameter(FileAccessMode.REPO_WRITE),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
+
+    assert (root / "memo" / "blocked.md").read_text() == "blocked\n"
+
+
 def test_run_codex_tui_checks_extra_read_path_before_starting_codex(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -466,7 +503,7 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
         Path(json.loads(call_log.read_text())["profile_path"]).read_text()
     )
     assert profile["sandbox_workspace_write"]["writable_roots"] == [
-        str((linked / "oracle").resolve())
+        str(linked.resolve())
     ]
 
 
