@@ -9,6 +9,7 @@ from config.cmoc_config import CmocConfig
 
 
 CodexExec = Callable[..., object]
+MANAGED_CHANGE_DIFF_OPTIONS = ("--find-renames", "--diff-filter=ACMRT")
 
 
 def write_apply_fork_report(
@@ -116,15 +117,17 @@ def build_change_summary(
 
 
 def changed_diff_since_fork(apply_worktree: Path, fork_commit: str) -> str:
+    # <work-root>/oracle/doc/app_spec/misc_spec.md excludes deleted paths from
+    # managed-branch event scope and classifies renames by their new path.
     commands = (
         [
-            ["diff", f"{fork_commit}..HEAD"],
-            ["diff"],
-            ["diff", "--cached"],
+            ["diff", *MANAGED_CHANGE_DIFF_OPTIONS, f"{fork_commit}..HEAD"],
+            ["diff", *MANAGED_CHANGE_DIFF_OPTIONS],
+            ["diff", "--cached", *MANAGED_CHANGE_DIFF_OPTIONS],
         ]
         if fork_commit
         else [
-            ["diff", "HEAD"],
+            ["diff", *MANAGED_CHANGE_DIFF_OPTIONS, "HEAD"],
         ]
     )
     diffs = [
@@ -180,15 +183,20 @@ def fallback_change_summary(
 def changed_paths_since_fork(apply_worktree: Path, fork_commit: str) -> list[str]:
     commands = (
         [
-            ["diff", "--name-only", f"{fork_commit}..HEAD"],
-            ["diff", "--name-only"],
-            ["diff", "--cached", "--name-only"],
+            [
+                "diff",
+                "--name-only",
+                *MANAGED_CHANGE_DIFF_OPTIONS,
+                f"{fork_commit}..HEAD",
+            ],
+            ["diff", "--name-only", *MANAGED_CHANGE_DIFF_OPTIONS],
+            ["diff", "--cached", "--name-only", *MANAGED_CHANGE_DIFF_OPTIONS],
         ]
         if fork_commit
         else [
-            ["diff", "--name-only", "HEAD"],
-            ["diff", "--name-only"],
-            ["diff", "--cached", "--name-only"],
+            ["diff", "--name-only", *MANAGED_CHANGE_DIFF_OPTIONS, "HEAD"],
+            ["diff", "--name-only", *MANAGED_CHANGE_DIFF_OPTIONS],
+            ["diff", "--cached", "--name-only", *MANAGED_CHANGE_DIFF_OPTIONS],
         ]
     )
     paths: list[str] = []

@@ -26,10 +26,12 @@ from _support import (
 )
 from cmoc_runtime import CmocError
 from commons.runtime_codex import run_codex_exec as real_run_codex_exec
+from config.cmoc_config import CmocConfig
 from main import app
 from pytest import MonkeyPatch
 import sub_commands.apply.fork as apply_fork_module
 from sub_commands.apply.fork_report import (
+    build_change_summary,
     changed_diff_since_fork,
     changed_paths_since_fork,
     fallback_change_summary,
@@ -741,6 +743,54 @@ def test_apply_fork_change_summary_includes_untracked_files(tmp_path: Path) -> N
             "changed_paths": ["new_realization.py"],
         }
     ]
+
+
+def test_apply_fork_change_summary_excludes_deleted_tracked_files(
+    tmp_path: Path,
+) -> None:
+    """管理 branch 上の削除済み file は report 用変更要約の対象外にする。"""
+    root = make_repo(tmp_path)
+    (root / "deleted_realization.py").write_text("print('delete')\n")
+    run_git(root, "add", "deleted_realization.py")
+    run_git(root, "commit", "-m", "add deleted target")
+    fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    (root / "deleted_realization.py").unlink()
+    (root / "README.md").write_text("# kept change\n")
+    captured_prompt = ""
+
+    def fake_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> FakeCodexResult:
+        nonlocal captured_prompt
+        captured_prompt = parameter.prompt
+        return FakeCodexResult(
+            {
+                "changes": [
+                    {
+                        "category": "実装",
+                        "summary": "README を更新した",
+                        "changed_paths": ["README.md"],
+                    }
+                ]
+            }
+        )
+
+    raw_diff = changed_diff_since_fork(root, fork_commit)
+    paths = changed_paths_since_fork(root, fork_commit)
+    fallback = fallback_change_summary(root, fork_commit, "fallback")
+    summary = build_change_summary(
+        root, root, fork_commit, CmocConfig(), fake_codex_exec
+    )
+
+    assert "README.md" in raw_diff
+    assert "+# kept change" in raw_diff
+    assert "deleted_realization.py" not in raw_diff
+    assert "-print('delete')" not in raw_diff
+    assert paths == ["README.md"]
+    assert fallback[0]["changed_paths"] == ["README.md"]
+    assert summary[0]["changed_paths"] == ["README.md"]
+    assert "README.md" in captured_prompt
+    assert "deleted_realization.py" not in captured_prompt
 
 
 def test_apply_fork_report_does_not_invent_loop_when_no_targets(
