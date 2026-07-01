@@ -65,24 +65,24 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 経由の制御を検証する realization test。所見列挙、所見適用、commit、変更要約、report 生成、session state 更新までの一連の挙動を、収束・未収束・error・変更ファイル再調査・rolling fork の観測結果として扱う。
-- apply fork 用 AgentCallParameter builder の import 可能性、prompt 内容、Structured Output schema 参照も検証し、packaged layout や src のみの PYTHONPATH で成立するかを確認する。
-- report 用の変更差分・変更 path・fallback 要約が未追跡ファイルや未 commit 差分を含めて扱えることを検証する。
+- apply fork の CLI 経由の制御を検証するテスト。所見列挙、所見適用、commit、変更要約、report 生成、session state 更新までの一連の挙動を扱う。
+- apply fork report の収束、未収束、error、変更ファイル再調査、rolling fork の観測結果を、同じ loop と report schema に対する期待値としてまとめて確認する。
+- apply fork 用 ACP builder の import 可能性、prompt 内容、oracle schema 参照も検証し、packaged layout や src のみの PYTHONPATH で動くことを確認する。
 
 ## Read this when
-- apply fork の report 内容、終了コード、収束判定、未収束判定、error report、変更要約、commit message、session state 更新の CLI 挙動を確認・変更したいとき。
-- apply fork が所見適用後に変更ファイルや新規ディレクトリ配下を再調査する制御、または所見適用で差分が出ない場合の扱いを確認したいとき。
-- apply fork が file access rule violation recovery を挟んで許可差分を commit する挙動を確認したいとき。
-- apply join 後の rolling apply fork が、前回 apply join の oracle snapshot 以降の変更を対象にするか確認したいとき。
-- apply fork の change summary builder、file finding enumeration builder、finding application builder の import、prompt 構成、schema path 参照を確認したいとき。
+- apply fork の report 出力、exit code、収束・未収束・error の扱いを変更または確認したいとき。
+- apply fork が所見適用後の変更ファイルを再調査する制御や、新規ディレクトリ配下の展開を確認したいとき。
+- apply fork の commit 作成、変更要約、未追跡ファイルを含む差分要約、file access rule violation recovery の挙動を確認したいとき。
+- rolling apply fork が前回 apply join 後の変更だけを対象にする session state 更新を確認したいとき。
+- apply fork 用の change summary、file finding enumeration、finding application の ACP builder、prompt、structured output schema 参照を変更するとき。
 
 ## Do not read this when
-- apply fork の内部 helper 単体の小さな仕様だけを確認したい場合で、該当する実装ファイルやより局所的なテストを直接読めるとき。
-- apply fork 以外の subcommand、session fork/join 自体、init、または通常の Git 操作 wrapper の挙動を調べたいとき。
-- oracle file の正本仕様を確認したいとき。この対象は realization test であり、正本仕様ではない。
+- apply fork の内部実装だけを探している場合は、まず該当する実装モジュールを読む。
+- apply join、session fork、init など apply fork の report loop 以外の CLI 挙動を確認したいだけなら、それぞれの専用テストを読む。
+- Codex 実行基盤全般や ACP builder 全般の共通仕様を確認したい場合は、より直接その責務を持つ実装またはテストを読む。
 
 ## hash
-- 688028dac5e7ac9eb0ac5bee8cabbcf9652385e2c82bd08243c7b3800e587da5
+- bc56550a489112289f5c1c97e0f3db300afbbff8dd00ab4ded38ee8d30310e4f
 
 # `test_apply_join_cli.py`
 

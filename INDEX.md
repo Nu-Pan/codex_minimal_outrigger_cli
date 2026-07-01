@@ -164,21 +164,22 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 群を収めるディレクトリ。CLI サブコマンド、Codex runtime、prompt builder、indexing preflight、session/apply/review の外部挙動と共通 runtime 契約を、pytest ベースの回帰テストとして確認する入口になる。
-- テスト共通補助、apply/session/review/indexing/runtime/prompt などの観点ごとに分かれており、実装変更が利用者から見える出力、終了コード、Git 状態、state、report、Codex 呼び出し parameter に与える影響を調べるためのルーティング起点になる。
+- cmoc の realization test をまとめるディレクトリ。CLI サブコマンド、Codex runtime、prompt builder、indexing、session/apply/review の外部挙動と共通 runtime 契約を pytest で検証する入口になる。
+- 共通補助関数により、一時 Git リポジトリ、Codex home、fake executable、apply worktree 解決などのテスト前提を共有し、各テストファイルは対象機能ごとの state 遷移、出力、終了コード、cleanup、拒否条件を扱う。
+- apply、session、review、indexing、Codex 実行、init/TUI、prompt 構築の回帰観点が分かれているため、変更対象の CLI 境界や runtime 境界に対応するテスト本文へ進むための起点になる。
 
 ## Read this when
-- realization implementation を変更した後、対応する外部挙動や制御ロジックの既存テストを探したいとき。
-- CLI サブコマンドの出力、終了コード、Git branch/worktree/state/report の期待値を確認または変更したいとき。
-- Codex CLI 実行ラッパー、sandbox profile、CODEX_HOME、retry、quota retry、process tracking など runtime 境界の回帰テストを探すとき。
-- prompt 標準部品、AgentCallParameter builder、Structured Output schema 参照、indexing preflight や routing document 更新のテストを確認したいとき。
-- 複数テストで使う Git fixture、Codex home、fake executable、profile 生成差し替えなどの共通補助を探したいとき。
+- cmoc の realization test 全体から、変更対象のサブコマンドや runtime 境界に対応するテストファイルを探すとき。
+- CLI の外部挙動、終了コード、標準出力、state 遷移、Git branch/worktree 操作、report 生成、cleanup 条件の回帰テストを確認または変更するとき。
+- Codex CLI 実行、sandbox profile、CODEX_HOME、quota/capacity retry、process tracking、TUI 起動前処理など、Codex runtime 境界のテスト入口を探すとき。
+- INDEX.md 生成・preflight、prompt builder、oracle/review/apply/session 系 ACP builder など、正本仕様断片から生成される実行パラメータや routing document の realization test を探すとき。
+- テスト用 Git repository、Codex home、fake executable、branch 確認、apply worktree path 解決など、複数テストで使う補助処理を確認したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片、oracle/realization の標準、routing 規則そのものを確認したい場合は、oracle 側の文書を読む。
-- 実装内部の関数分割、helper の局所的なアルゴリズム、データ構造定義だけを変更したい場合は、対応する実装側を先に読む。
-- Codex CLI や LLM の出力品質そのものを評価したい場合は、この realization test 群を正本や品質評価基準として扱わない。
-- 個別機能に関係しない repository 全体の説明、配布情報、開発手順を確認したいだけなら、より上位の案内や該当文書を読む。
+- 実装本体の関数分割、内部 helper、データ構造だけを変更したい場合は、対応する実装側のディレクトリやモジュールを先に読む。
+- oracle file の正本仕様、oracle/realization 標準、INDEX.md ルーティング規則そのものを確認または編集したい場合は、oracle 側の文書を読む。
+- Codex CLI や LLM の実出力品質そのものを評価したい場合は、このテスト群ではなく prompt や schema の責務を持つ対象を確認する。
+- 特定機能の既存テスト名や対象ファイルがすでに分かっている場合は、このディレクトリ全体ではなく該当テストファイルを直接読む。
 
 ## hash
-- b77f3cfcba18ff48342d7342397b47ba0081ed0d487281639eb9bd972387f30c
+- ee6dd58e03f2682b06470c09268c17c1ae6f6c4463135ba9009f470e9923411d
