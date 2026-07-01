@@ -158,23 +158,22 @@
 # `review_targets.py`
 
 ## Summary
-- review oracle の対象となる oracle file を列挙する実装。scope が full の場合は全 oracle file、差分対象の場合は session_start_commit から HEAD までに変更された oracle 配下の対象だけを返す。
-- oracle 配下から review 対象候補を集める際に、通常ファイルだけを対象にし、AGENTS.md、INDEX.md、root memo、git ignore 対象を除外する。
+- review oracle 実行時に、scope とセッション開始コミットに基づいて対象となる oracle file を列挙する実装。
+- full scope では全 oracle file を対象にし、それ以外ではセッション開始コミット以降に変更された oracle 配下の対象だけへ絞り込む。
+- oracle file の対象判定では、正本対象外の管理ファイルと git ignore で追跡対象外となるファイルを除外する。
 
 ## Read this when
-- review oracle で対象ファイルをどのように列挙するか確認・変更する。
-- scope による full review と差分 review の対象切り替えを確認・変更する。
-- review 対象から除外する oracle 配下ファイルの条件を確認・変更する。
-- session_start_commit がない場合の差分 review 対象の扱いを確認する。
+- review oracle の対象ファイル列挙ロジックを確認・変更したいとき。
+- scope による full review と差分 review の挙動を確認したいとき。
+- oracle file の列挙対象から除外される条件を確認したいとき。
 
 ## Do not read this when
-- review の診断内容、指摘ルール、出力形式を確認したい場合。
-- oracle file の定義や path keyword の仕様そのものを確認したい場合。
-- git ignore 判定、root memo 判定、git コマンド実行の内部実装を確認したい場合。
-- review oracle 以外のサブコマンドの対象列挙を確認したい場合。
+- review コマンド全体の CLI 引数、出力形式、実行フローを確認したいだけのとき。
+- oracle file や work-root などの用語定義そのものを確認したいとき。
+- realization file 側の review 対象列挙やレビュー判定ロジックを確認したいとき。
 
 ## hash
-- 37195008af7f3a3abe48579f0d0d76e4ab26c03fbae9ffdf574a5ffcb36a8d85
+- 28b03448e9265718c49bf8a6f074624abca54ca337d8c92149a3ad90beaebe86
 
 # `session`
 

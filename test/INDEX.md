@@ -287,24 +287,24 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle の CLI 外部挙動を検証するテスト群。report 生成、対象 oracle file の列挙、所見の enumerate・validate・judge・merge loop、accepted/rejected findings の出力、session/full scope、linked worktree、INDEX.md 変更の取り込み、処理失敗時 report、review worktree が許可外差分を作った場合の拒否を扱う。
-- review oracle の対象選択と report 文脈を共有する大きな統合テストであり、fake Codex 応答を使って CLI 実行結果・生成 report・git/worktree 状態・所見 merge 操作の契約をまとめて確認する。
+- review oracle を CLI 経由で実行したときの外部挙動を検証するテスト群。report の生成内容、scope 別の対象選択、所見の列挙・検証・judge・merge、エラー時 report、review 用 worktree と join commit、INDEX.md 差分の取り込み・競合解決を扱う。
+- 所見評価 loop の制御と report 文脈を共有するため、複数の観点を単一の review run の統合テストとしてまとめている。
 
 ## Read this when
-- review oracle コマンドの report 形式、判定結果、件数、エラー report、または出力順序を変更する。
-- oracle file のレビュー対象列挙、full/session scope、gitignored oracle file、AGENTS.md/INDEX.md の除外、binary oracle file、memo 形状のパスや symlink の扱いを確認する。
-- review oracle の enumerate・validate challenger・validate advocate・judge・merge loop、同一 round の理由受け渡し、所見 merge operation の契約や invalid operation rejection を変更する。
-- review oracle が linked worktree や session branch 上で対象 commit・対象 oracle をどう扱うか、review 用 worktree で Codex を実行する挙動を確認する。
-- review oracle による INDEX.md 変更の取り込み、merge conflict 解決、または INDEX.md 以外の差分を拒否して元 worktree を汚さない制御を変更する。
+- review oracle コマンドの CLI 挙動、終了結果、標準出力、生成 report の構成やメタデータを変更・確認するとき。
+- review oracle の対象 oracle file 列挙、full scope と session scope、git ignored だが tracked な oracle file、AGENTS.md や INDEX.md の除外条件を確認するとき。
+- review oracle の所見 loop で、列挙結果の次 round への渡し方、challenger と advocate の理由、judge 結果、merge operation の契約や不正操作拒否を変更するとき。
+- review oracle 実行中の一時 worktree、linked worktree 上の session branch、review が生成した INDEX.md の取り込み、join commit、INDEX.md 競合解決を扱うとき。
+- review oracle が途中失敗した場合の error report、または review が INDEX.md 以外の差分を作った場合の拒否と原状維持を確認するとき。
 
 ## Do not read this when
-- review oracle 以外の review コマンド、session 操作、init 処理、または一般的な git helper の単体挙動だけを確認したい。
-- Codex 実行 wrapper、Structured Output schema、prompt 文面そのものの詳細を調べたい場合で、CLI 統合挙動ではなく該当実装や schema を直接読む方が適切である。
-- oracle file の正本仕様文書そのもの、または INDEX.md エントリー生成規則を確認したい。
-- 所見 merge helper の公開契約ではなく、内部実装の細部だけを局所的に変更する場合で、実装側の該当関数を直接読む方が狭く済む。
+- oracle review の prompt 文面や structured output schema だけを確認したいとき。
+- review oracle 以外の review サブコマンド、または一般的な session fork/init の単体挙動だけを確認したいとき。
+- report rendering の細部ではなく、対象ファイル列挙 helper の最小単位の実装だけを確認したいとき。
+- CLI を経由しない低レベルな git helper や設定モデルの構造だけを確認したいとき。
 
 ## hash
-- 17911a2136d90c2ce5ae62cc1f5b87a5a5e22229c3cba31443b671c55c5f1a93
+- 963813a19eb75c2c5dc4742e2613e94860da6869f4800b819c0a0920b98d6cbf
 
 # `test_session_cli.py`
 

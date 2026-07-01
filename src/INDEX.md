@@ -141,21 +141,20 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装を集める領域で、apply、review、session、init、indexing、tui など利用者が直接起動する機能の実行入口を扱う。
-- 各下位要素は CLI runtime への接続、事前条件確認、git/worktree/state 操作、Codex 実行連携、report 出力などを、サブコマンド単位またはサブコマンド群単位で分担する。
-- サブコマンド固有の制御フローを探すための入口であり、共通 runtime primitive、正本仕様、prompt/schema、低レベル helper の詳細へ進む前に読む対象を切り分ける場所である。
+- CLI サブコマンド実装を集める領域で、apply、review、session、init、indexing、tui などの利用者向け操作を runtime・git・state・report 生成へ接続する入口になる。
+- 各サブコマンドの実行条件、preflight、worktree/branch 操作、Codex 実行連携、結果出力、cleanup など、コマンド単位の制御フローから下位実装へ進むためのルーティングを担う。
 
 ## Read this when
-- 利用者向け CLI サブコマンドの実装がどの下位領域にあるかを選びたいとき。
-- apply、review、session、init、indexing、tui の実行条件、状態遷移、git/worktree 操作、Codex 連携、report や標準出力の生成に関わる入口を探したいとき。
-- サブコマンド固有の orchestration と、共通 runtime helper や下位の詳細処理との境界を確認したいとき。
-- 複数のサブコマンド領域にまたがる変更で、まず対象となる実装パッケージまたは実装ファイルを絞り込みたいとき。
+- 特定の cmoc サブコマンドについて、CLI から実行本体へ渡る制御順序、事前条件、runtime への接続、利用者向け出力を確認または変更したいとき。
+- apply、review、session のような複数ファイルに分かれたサブコマンド領域で、どの下位モジュールが対象列挙、loop、merge、report、cleanup、状態更新を担うかを選びたいとき。
+- init、indexing、tui の実行入口から、ignore 保証、設定同期、INDEX.md maintenance、エディタ起動、Codex Exec/TUI 連携などの処理へ入る箇所を探したいとき。
+- サブコマンドごとの worktree/branch/state 操作、conflict 処理、pid 管理、report 保存、成功・失敗時の後始末など、利用者操作に直結する orchestration を追いたいとき。
 
 ## Do not read this when
-- CLI 全体の Typer app 登録、共通 runtime、git 実行 wrapper、config 読み込み、state file 定義、path model などの共通 primitive だけを調べたいとき。
-- oracle file の正本仕様、サブコマンド仕様文書、prompt 文面、Structured Output schema の詳細を直接確認したいとき。
-- INDEX.md 生成ロジック、review finding 生成ロジック、低レベルな branch/worktree/state 操作など、下位または共通モジュールに責務がある詳細処理だけを調べたいとき。
-- 生成済み report、実行ログ、LLM 出力品質そのものを確認したいだけで、サブコマンド実装を変更しないとき。
+- CLI 全体の Typer 登録、共通 runtime、git 実行 wrapper、config 読み込み、path model、state file 定義など、サブコマンド横断の primitive だけを調べたいとき。
+- oracle file の正本仕様、サブコマンド仕様文書、prompt builder、Structured Output schema、Codex subprocess 起動一般など、実装入口ではなく仕様・共通部品を直接確認したいとき。
+- INDEX.md の文章生成、差分検出、lock、commit など indexing 共通処理の詳細だけを調べたいとき。
+- apply、review、session などの個別制御ロジックではなく、低レベルな branch/worktree/state helper や生成済み report の内容だけを確認したいとき。
 
 ## hash
-- ab6730fbbfc8e45aa91fe890a161f7c44b5afa1c5b1192428113a778ecf39f77
+- 54dd448e56352988293703aa6e7706b1feb51cafb91dfe0af09715244d08e1ed
