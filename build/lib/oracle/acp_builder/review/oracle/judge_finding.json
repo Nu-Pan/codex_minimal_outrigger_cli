@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "verdict",
+    "reason"
+  ],
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "description": "対象所見を人間へ要確認項目として提示すべきかの判定。提示すべきなら accept、提示すべきでないなら reject。",
+      "enum": [
+        "accept",
+        "reject"
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "description": "採否判定の具体的な理由。所見が妥当である理由と妥当ではない理由を踏まえて書く。"
+    }
+  }
+}
