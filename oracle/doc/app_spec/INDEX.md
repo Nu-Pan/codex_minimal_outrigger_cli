@@ -20,22 +20,23 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- cmoc が Codex CLI を `codex exec` で呼び出す際の正本仕様断片です。`CODEX_HOME` の扱い、preflight validation、動的 codex profile、プロンプト渡し、ログ保存、Structured Output、失敗時リトライ・quota 待機・resume、編集禁止領域の事後検証を扱います。
-- 個別呼び出し仕様や profile 設定の具体値は AgentCallParameter builder を正本とし、この文書は cmoc から Codex CLI へ渡す方法、保存する呼び出し情報、失敗時制御の境界を定める入口です。
+- cmoc が Codex CLI を `codex exec` で呼び出す際の実行規約を定める正本仕様断片。`CODEX_HOME` の引き渡しと事前検証、動的 codex profile 生成、ファイルアクセス制限、プロンプト受け渡し、ログ保存、stdout/stderr/output の扱い、Structured Output、並列実行、失敗時の再試行・待機・再開、編集禁止領域の扱いを読む入口になる。
+- 個別の agent call パラメータや具体的な profile 設定そのものは builder 側を正本とし、この対象は Codex CLI 呼び出しの外部契約、保存先、検証、失敗時制御の境界を扱う。
 
 ## Read this when
-- cmoc から Codex CLI を起動する実装、ログ保存、stdin 経由のプロンプト入力、`--json`、`--output-last-message`、`--output-schema` の扱いを確認・変更するとき。
-- `CODEX_HOME` の決定、auth.json の事前検証、動的に生成する codex profile、Model や Reasoning Effort の渡し方を実装するとき。
-- Codex CLI 呼び出し失敗時の再試行、quota 枯渇時のポーリング待機、resume、サーバー一時不調時の backoff、レスポンス検証失敗時の扱いを確認するとき。
-- agent call 後に編集禁止ファイル・ディレクトリへの差分を検査し、違反時にリカバリする制御を扱うとき。
+- cmoc から Codex CLI を起動する実装、テスト、ログ保存、標準入出力リダイレクト、`--json`、`--output-last-message`、`--output-schema` の扱いを確認する。
+- `CODEX_HOME` の既定値、auth file の preflight validation、動的 codex profile の生成条件や hash 命名を確認する。
+- Codex CLI 呼び出し時のファイルアクセス制限、編集禁止ファイルの事後検証、違反時リカバリ、`.agents` 配下の編集禁止を確認する。
+- Codex CLI のレスポンス検証失敗、quota 枯渇、usage limit、credits 不足、spend cap、model capacity、その他エラーに対する retry・polling・resume 方針を確認する。
+- Structured Output schema の保存、参照、cmoc 側での機械的検証、または並列 `codex exec` 呼び出し数の制御を扱う。
 
 ## Do not read this when
-- AgentCallParameter builder 自体の具体的な生成内容や各 call 種別の詳細仕様だけを確認したい場合は、builder 側の正本へ進む方が直接的です。
-- Codex CLI を介さない cmoc 内部処理、通常の path model、INDEX 生成、または oracle/realization の一般規約だけを扱う場合は、この文書は入口ではありません。
-- `.agents` 配下の一般的な運用やファイルアクセス規則全体を確認したいだけで、`codex exec` 呼び出し時の編集不可制約を扱わない場合は、より直接の仕様を読む方が適切です。
+- 個別 agent call の prompt 内容、パラメータ生成、ファイルアクセス制限の具体的な builder 定義だけを確認したい場合は、AgentCallParameter builder 側を読む。
+- Codex CLI ではなく cmoc 自体の一般的な CLI コマンド仕様、path model、設定全体の定義、または fork finding の仕様を調べる場合は、それぞれの直接の正本仕様へ進む。
+- INDEX.md エントリーの生成規則や oracle/realization の一般原則だけを確認したい場合は、この対象ではなく該当する標準仕様を読む。
 
 ## hash
-- 0a8179d5f3e1acf15af171cbbde207e767beab42d1bce9b0f683695f8de721d0
+- 2d7ab502cdf361cfa33a55ebc0e398e05a8bcff7bd8333428026e190a0315785
 
 # `console_and_file_log.md`
 

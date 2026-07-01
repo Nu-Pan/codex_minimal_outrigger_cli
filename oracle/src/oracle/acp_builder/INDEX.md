@@ -20,20 +20,39 @@
 # `basic.py`
 
 ## Summary
-- AI コーディングエージェント呼び出し時に渡す論理パラメータを定義する oracle src。モデルクラス、reasoning effort、ファイルアクセスモード、プロンプト、Structured Output schema の有無を、バックエンド非依存の入力単位としてまとめる。
+- AI コーディングエージェント呼び出しに渡す基本パラメータの oracle src。論理モデルクラス、Reasoning effort、ファイルアクセスモード、プロンプト、Structured Output schema パスを 1 つの不変データ構造として定義する。
+- バックエンド固有のモデル名や Reasoning Effort 名への解決は扱わず、cmoc 内で使う論理的な選択肢と呼び出しパラメータの形だけを定める。
 
 ## Read this when
-- agent call の入力パラメータとして、どの論理モデル種別・推論量・ファイルアクセス権限・プロンプト・Structured Output schema 指定を持たせるか確認したいとき。
-- バックエンドが受理する具体的なモデル名や権限指定へ変換する前段の、cmoc 内部で使う論理的な呼び出し指定を確認したいとき。
-- oracle src 側で定義されている agent call parameter の正本仕様断片に基づき、realization src の変換・生成処理やテストを実装するとき。
+- agent call の入力パラメータとしてどの項目を持たせるかを確認したいとき。
+- モデル選択、reasoning effort、ファイルアクセスモードを表す論理 enum の意味を確認したいとき。
+- Structured Output schema を要求する呼び出しと要求しない呼び出しで、schema パスをどう表すかを確認したいとき。
 
 ## Do not read this when
-- 具体的なバックエンド用モデル名、CLI 引数、実行コマンドへの解決方法だけを確認したいとき。
-- agent call の実行結果、出力 schema の内容、またはプロンプト本文の組み立て規則を確認したいとき。
-- ファイルアクセスモードの語が実際のファイルシステム制限やサンドボックス設定へどう反映されるかだけを調べたいとき。
+- バックエンドが実際に受理する具体的なモデル名や reasoning effort 名への変換処理を確認したいとき。
+- 各ファイルアクセスモードが生成する具体的なファイルアクセス規則を確認したいとき。
+- agent call の実行手順、プロセス起動、結果処理、エラー処理を確認したいとき。
 
 ## hash
-- b29c0e8554c3f417d6684f400fb782525bfb74856125803ab5e7838779ee2620
+- c2a86abaffb6201c6e5a3f5ee4490bde862d4a6a1e4ae82494c650de9ea0c5f1
+
+# `common`
+
+## Summary
+- ファイルアクセス規則違反が起きた agent call を修復するための、再呼び出し用パラメータ構築を扱う正本断片への入口。違反時の規則本文、対象ファイル、発生ログをリカバリー担当 agent に渡す設計意図を確認するための領域。
+
+## Read this when
+- ファイルアクセス規則違反リカバリー用の agent call parameter の構成意図を確認したいとき。
+- 違反ファイル一覧、違反時のアクセスモード、違反ログを動的プロンプトへ渡す仕様断片を確認したいとき。
+- 違反修復タスクで指定するモデル種別、推論量、アクセスモードの正本断片を確認したいとき。
+
+## Do not read this when
+- 通常の agent call parameter 全般や、違反リカバリー以外の呼び出し種別を調べたいとき。
+- ファイルアクセス規則そのものの本文生成や、アクセスモード別の規則内容を確認したいとき。
+- パスプレースホルダの一般定義や repo root 解決の仕様だけを確認したいとき。
+
+## hash
+- 762d2116b4bf3bb6703a279d25e1debdcea801b946975aa6bb5a4276289fab9c
 
 # `indexing`
 
@@ -97,20 +116,19 @@
 # `tui`
 
 ## Summary
-- TUI 起動時の agent call parameter 構築に関する正本実装と schema をまとめる領域。ユーザー入力プロンプトから実行前パラメータを解決し、その結果を使って TUI 用の完全プロンプト、ファイルアクセスプロファイル、保存先、モデルクラス、推論強度、参照標準の指示を組み立てる流れを扱う。
-- TUI の元プロンプト、標準類の有効化判断、oracle・realization・index へのアクセス属性、Structured Output 付きのパラメータ解決結果を、最終的な agent call parameter へ接続する入口になる。
+- `cmoc tui` の agent call parameter 構築に関する正本実装と Structured Output schema を置くディレクトリ。TUI 起動時の呼び出しパラメータ、ユーザー入力プロンプトからの実行条件解決、解決結果 schema への入口になる。
+- TUI が使うファイルアクセスプロファイル、complete prompt、モデルクラス、推論強度、標準文書参照フラグ、パラメータ解決結果の構造を確認するための対象を含む。
 
 ## Read this when
-- TUI 起動で agent call に渡すモデルクラス、推論強度、ファイルアクセスプロファイル、完全プロンプト、保存先の正本仕様断片を確認したいとき。
-- TUI がユーザー入力プロンプトから、役割、作業概要、ゴール、論理ファイルアクセスモード、参照すべき標準文書をどのように理由付きで解決するか確認したいとき。
-- TUI のパラメータ解決結果について、Structured Output schema、必須項目、追加プロパティ禁止、列挙値、各標準参照要否の表現を確認したいとき。
-- TUI 起動時の complete prompt 構築で、元プロンプトや各種 standard フラグが agent への指示文へどう接続されるか確認したいとき。
+- `cmoc tui` の起動または実行前解決で、AI Agent に渡す AgentCallParameter の正本仕様断片を確認・変更したいとき。
+- TUI 起動時の complete prompt、モデルクラス、推論強度、保存先、ファイルアクセスプロファイル、標準フラグの組み立てを確認したいとき。
+- ユーザー入力プロンプトから役割、概要、ゴール、論理ファイルアクセスモード、参照すべき標準文書を構造化する schema や出力要求を確認したいとき。
 
 ## Do not read this when
-- TUI のユーザー入力取得、エディタ起動、コメント除去、文字列整形など、入力処理そのものを調べたいとき。
-- TUI 以外のサブコマンド向け agent call parameter 構築を確認したいとき。
-- AgentCallParameter、モデル種別、推論強度、プレースホルダ、complete prompt 構築などの共通部品そのものの定義を調べたいとき。
-- 個別の標準本文、oracle file や realization file の定義、ファイルアクセス属性やパスモデルそのものを確認したいとき。
+- TUI 以外のサブコマンドにおける agent call parameter 構築を確認したいとき。
+- ユーザー入力取得、エディタ起動、コメント除去、strip など TUI 入力フローの実装だけを調べたいとき。
+- AgentCallParameter、ModelClass、ReasoningEffort、PlaceholderMap、complete prompt 構築などの共通部品そのものの定義を調べたいとき。
+- 個々の標準文書の本文、ファイルアクセス属性、パスモデル、INDEX.md エントリー作成規則そのものを確認したいとき。
 
 ## hash
-- ba18d3a92643aee27315dd8cc29361c0c9df4125c7a5ca831d700ef07ad1b4e7
+- f50ccba3761276eb29fc0a31a2dfef25297ad15c127525ba62f530da031b72c7

@@ -157,25 +157,20 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界で必要になる profile 生成、sandbox/cwd/write root 判定、CODEX_HOME 検証、child process tracking、Structured Output schema 配置、JSON/JSONL 出力からの error・quota・capacity 判定をまとめて扱う実装。
-- FileAccessMode を Codex CLI が受け取れる実行環境へ変換し、cmoc 側の読み書き許可境界を Codex profile と起動前検証に反映する責務を持つ。
-- apply abandon や quota retry など、Codex CLI 実行前後の状態管理と機械的な実行結果解釈に関わる入口として読む。
+- Codex CLI subprocess 境界で使う profile、sandbox/cwd、CODEX_HOME、schema 配置、child process tracking、JSONL error 判定をまとめる実装。Codex 起動前の環境構築と、起動後の機械的な結果解釈を同じ不変条件で扱う入口。
 
 ## Read this when
-- Codex CLI に渡す model、reasoning effort、sandbox mode、writable roots、cwd、CODEX_HOME、環境変数の組み立てや検証を確認・変更したいとき。
-- FileAccessMode ごとの読み取り・書き込み許可境界、oracle/read-only/realization/repo write の扱い、追加 read/write path の許可判定を追うとき。
-- apply 実行中の Codex child process 記録、pid file lock、pid 再利用検出、abandon から停止可能にするための process tracking を扱うとき。
-- Structured Output schema の保存先配置、Codex output JSON の読み取り、JSONL stdout/stderr からの利用者向け error detail、resume token、capacity error、quota error 判定を確認するとき。
-- Codex CLI が存在しない場合や Codex home/auth.json が不足する場合の cmoc 実行時エラー化を確認するとき。
+- FileAccessMode から Codex sandbox/profile/cwd/writable_roots を作る処理を確認・変更したいとき。
+- Codex subprocess 起動、CODEX_HOME 検証、Codex CLI 不在時のエラー化、apply abandon 用の child process tracking を扱うとき。
+- Structured Output schema の配置、Codex stdout/stderr からの JSON 読み取り、resume token、capacity/quota error 判定を確認したいとき。
 
 ## Do not read this when
-- prompt 本文や file access rule の正本仕様断片そのものを確認したいだけのときは、対応する oracle 側の文書や実装を読む。
-- Codex CLI に渡す前の agent call parameter、設定値の定義、設定ファイル読み込みの構造を確認したいときは、それらを定義する実装を読む。
-- hash 付きファイル保存や schema store directory の低レベルな保存先計算だけを変更したいときは、runtime content/path の共通処理を読む。
-- Codex subprocess を呼ばない CLI command の制御、画面表示、通常の業務ロジックを調べたいときは、各 command の実装を読む。
+- cmoc の file access policy の正本仕様や prompt 文面そのものを確認したいだけなら、対応する oracle file を読む。
+- Codex CLI 以外の subprocess 実行一般、または個別サブコマンドの業務ロジックを確認したいとき。
+- runtime path や hashed file store の実装詳細だけを確認したいときは、それぞれの共通 runtime module を読む。
 
 ## hash
-- 2afb9604e7cf5f72e0a365eb435bcb7bcb0acd369502a4bd6d169335f2a94ea1
+- 05477629b67969bff611e8820bb42ff34826dff832d03a2e82c5263d2c4c0481
 
 # `runtime_codex_tui.py`
 
@@ -200,21 +195,20 @@
 # `runtime_config.py`
 
 ## Summary
-- cmoc の実行時設定を JSON 永続形式と設定モデルの間で変換し、設定ファイルの読み込み・書き込み・初期同期を扱う実装。
-- 既定値を基準に、Codex のモデル・推論努力、apply fork、review oracle、並列数の設定を復元し、不正な JSON や型変換失敗を利用者向けエラーへ変換する。
+- cmoc の設定ファイルを `CmocConfig` と JSON object の間で変換し、設定ファイルの読み込み・書き込み・存在しない場合の同期生成を行う runtime 設定処理。設定値の既定値補完、enum key の復元、不正 JSON や不正な値に対する `CmocError` への変換を担う。
 
 ## Read this when
-- 設定ファイルの保存形式、既定値の補完、enum key を持つ設定 map の復元方法を確認したいとき。
-- 設定ファイルが存在しない、JSON として読めない、top-level が object でない、不正値を含む場合のエラー文言や失敗時挙動を変更するとき。
-- 設定項目を追加・削除・改名し、実行時設定の dict 変換、読み込み、書き込み、初期同期に反映する必要があるとき。
+- `.cmoc/config.json` の読み書き、初期生成、既定値補完、または JSON schema 相当の実装挙動を確認・変更したいとき。
+- `CmocConfig` と永続化 JSON の対応、model や reasoning effort の enum key 変換、設定値の数値変換エラー処理を調べたいとき。
+- 設定ファイルが存在しない、JSON として読めない、top-level が object でない、不正な型を含む場合の利用者向けエラーを確認したいとき。
 
 ## Do not read this when
-- 設定モデルそのもののフィールド定義や既定値だけを確認したいときは、設定モデル定義を直接読む。
-- 設定ファイルのパス決定だけを確認したいときは、runtime path 側の実装を直接読む。
-- 個別コマンドが設定値をどう利用するかを調べたいときは、そのコマンドや呼び出し側の実装を読む。
+- 設定データクラスそのものの定義や既定値を確認したいだけなら、設定型を定義している対象を読む。
+- 設定ファイルの配置パスの決定だけを確認したいなら、runtime path の対象を読む。
+- ACP の model class や reasoning effort の enum 定義だけを確認したいなら、ACP 基本型の対象を読む。
 
 ## hash
-- a6a3e9f90e4fd4ccd00387650d0b445f05b7c211843dbf10bd887c4a69592116
+- 9bc797d6ae683de03d7f73ecba67078ac5048aba263a064e4a99e34b0b5aead5
 
 # `runtime_content.py`
 

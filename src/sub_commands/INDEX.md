@@ -1,26 +1,24 @@
 # `apply`
 
 ## Summary
-- apply run の開始、破棄、取り込み、実行時 process 管理、結果 report 保存を扱うサブコマンド実装群への入口。
-- apply branch/worktree の作成・特定・削除、session state の running/completed/error/ready 遷移、Codex subprocess 追跡、merge・conflict・cleanup・report 出力など、apply 系操作の制御境界を切り分けている。
-- apply fork の大きな orchestration、join の merge と後片付け、abandon の破棄処理、runtime helper、fork report 生成、package 初期化確認へ進むための判断起点として読む。
+- apply 系サブコマンドの実装をまとめるディレクトリ。apply fork、join、abandon の実行制御と、それらに付随する process 管理、worktree/branch 復元、report 生成を扱う。
+- apply run の開始、破棄、取り込み、実行中 process 停止、apply branch/worktree の cleanup、apply fork report など、apply サブコマンド固有の挙動へ進む入口となる。
 
 ## Read this when
-- apply 系サブコマンドのどの実装へ進むべきかを、開始・破棄・取り込み・process 管理・report 生成の責務境界から選びたいとき。
-- apply branch や isolated worktree、session branch、apply state、apply process id file、Codex subprocess、merge report のどれが関係する変更かを見極めたいとき。
-- apply run のライフサイクル全体にまたがる変更で、fork・join・abandon・runtime・report のうち複数箇所を読む必要があるか確認したいとき。
-- apply fork の対象列挙、Codex 呼び出し、再キュー、commit、join 済み merge commit 探索などの開始側処理へ進むべきか判断したいとき。
-- join や abandon による state 初期化、worktree/branch cleanup、実行中 process 停止、想定外差分や conflict の扱いに関係する読む先を選びたいとき。
+- apply fork、apply join、apply abandon のいずれかの実行条件、状態遷移、branch/worktree 操作、出力、終了処理を確認または変更したいとき。
+- apply 実行中 process の pid file、Codex subprocess 追跡、running abandon の停止処理、apply branch から worktree を特定する処理を調べたいとき。
+- apply fork の対象 file 列挙、finding 適用 loop、file access rule 違反リカバリー、commit、report 保存の流れを追いたいとき。
+- apply join の merge、想定外差分の分類、force-resolve、merge conflict 処理、apply state 初期化、cleanup を確認したいとき。
+- 未 join の apply run を破棄して ready 状態へ戻す処理や、破棄時の warnings・削除対象情報を確認したいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド、CLI 共通 runtime、git wrapper、config load、state 永続化の低レベル共通処理だけを調べたいとき。
-- apply の正本仕様や公開仕様そのものを確認したいとき。この対象は realization implementation の入口であり、仕様根拠としては oracle 側を読む。
-- Codex exec の汎用起動機構、LLM 呼び出し基盤、prompt parameter の詳細 schema だけを調べたいとき。
-- report directory 解決、timestamp、git command 実行、worktree 操作など apply 固有ではない helper の実装だけを確認したいとき。
-- パッケージ説明の有無だけを確認する場合を除き、実際の apply 制御ロジックが不要なとき。
+- apply 以外のサブコマンド、session 管理全体、共通 CLI runtime の低レベル helper を調べたいとき。
+- Codex subprocess の起動方法、LLM 呼び出し、prompt 作成、構造化出力 schema の詳細だけを確認したいとき。
+- git command 実行 helper、state file 読み書き、report directory 解決、timestamp 生成などの共通処理だけを調べたいとき。
+- oracle file の正本仕様、apply の仕様文書、または INDEX.md ルーティングそのものを確認したいとき。
 
 ## hash
-- 4381185d208617c4162f448f9dc7614488f743f3ba942890254789b9a8303a82
+- 5c4e451054e62b2d6fa6fc4b4a994d2d53cbedf8a9f8853d4611364f20da766b
 
 # `indexing.py`
 
@@ -160,23 +158,23 @@
 # `review_targets.py`
 
 ## Summary
-- review oracle が検査対象にする oracle file を列挙する処理を担う。scope が full の場合は全対象を返し、それ以外では session_start_commit から HEAD までに oracle 配下で変更された対象だけを返す。
-- oracle file 候補の列挙では oracle ツリーを再帰走査し、通常ファイルのうち INDEX.md、root memo、git ignore 対象を除外して並び順を安定させる。
+- review oracle の対象となる oracle file を列挙する実装。scope が full の場合は全 oracle file、差分対象の場合は session_start_commit から HEAD までに変更された oracle 配下の対象だけを返す。
+- oracle 配下から review 対象候補を集める際に、通常ファイルだけを対象にし、AGENTS.md、INDEX.md、root memo、git ignore 対象を除外する。
 
 ## Read this when
-- review oracle の対象ファイル集合が scope によってどう変わるかを確認・変更したいとき。
-- session_start_commit を基準にした差分対象の判定や、git diff の対象範囲を確認・変更したいとき。
-- oracle file 候補から INDEX.md、root memo、git ignore 対象を除外する条件を確認・変更したいとき。
-- review oracle が参照する oracle file の列挙順やフィルタ条件に関する不具合を調査するとき。
+- review oracle で対象ファイルをどのように列挙するか確認・変更する。
+- scope による full review と差分 review の対象切り替えを確認・変更する。
+- review 対象から除外する oracle 配下ファイルの条件を確認・変更する。
+- session_start_commit がない場合の差分 review 対象の扱いを確認する。
 
 ## Do not read this when
-- review oracle の結果表示、診断内容、プロンプト、出力形式を確認したいだけのとき。
-- oracle file や realization file の概念定義そのものを確認したいとき。
-- oracle 以外の realization file や test file の列挙条件を確認したいとき。
-- root memo 判定、git ignore 判定、git コマンド実行 helper の詳細を確認したいとき。
+- review の診断内容、指摘ルール、出力形式を確認したい場合。
+- oracle file の定義や path keyword の仕様そのものを確認したい場合。
+- git ignore 判定、root memo 判定、git コマンド実行の内部実装を確認したい場合。
+- review oracle 以外のサブコマンドの対象列挙を確認したい場合。
 
 ## hash
-- 8757d7467f9e0f50ab5b0c8b0f40fda477f0e603870376d607db08c28669e79e
+- 37195008af7f3a3abe48579f0d0d76e4ab26c03fbae9ffdf574a5ffcb36a8d85
 
 # `session`
 

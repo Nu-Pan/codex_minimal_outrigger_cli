@@ -19,22 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP builder 関連の既存公開参照を、正本側 builder 実装へつなぐ互換入口をまとめる領域。apply、review、session、TUI、indexing、quota probe などの agent call parameter 生成周辺について、実体が正本側にあるのか、realization 側の薄い wrapper なのかを切り分けるための上位入口である。
-- この領域の主な責務は、公開済み import 経路の維持、正本側 builder への委譲、realization 側 parameter 型への適合、互換コードの残置理由と削除条件の確認である。各 builder の正本仕様や詳細ロジックそのものは、下位の個別領域または正本側実装に委ねられる。
+- ACP の agent call parameter builder 群への上位入口。正本側 builder を既存の実装側参照経路から利用するための互換 package 群と、quota probe など実装側で持つ builder を含む。
+- apply、review、session、TUI、indexing、file access recovery などの builder 領域へ進む前に、各下位領域が互換入口なのか具体的な parameter 生成実装なのかを見分けるための階層。
 
 ## Read this when
-- ACP builder 周辺で、既存公開参照が正本側実装へどのように接続されているかを確認したいとき。
-- agent call parameter builder の領域分担を見分け、apply、review、session、TUI、indexing、quota probe などのどの下位領域へ進むべきか判断したいとき。
-- realization 側に残る互換 package、再公開 module、wrapper、暫定補正について、残す理由や削除条件を確認したいとき。
-- 正本側 builder の出力を realization 側で利用する際の委譲関係、型適合、公開 import 経路維持の境界を調べたいとき。
-- 同名機能が realization 側にあるように見える場合に、実処理の所在が正本側か互換入口かを切り分けたいとき。
+- ACP builder 全体で、目的の agent call parameter 生成処理や互換入口がどの下位領域にあるかを選びたいとき。
+- 正本側 builder を実装側の既存 import path から参照するための互換層、公開参照経路、削除条件を確認したいとき。
+- apply fork、review oracle、session join、TUI 起動、file access recovery、indexing、quota probe などの builder 関連処理の入口を探しているとき。
+- builder 領域に見える実装が、正本側への薄い委譲・再公開なのか、実装側で parameter を組み立てる処理なのかを切り分けたいとき。
 
 ## Do not read this when
-- 個別 builder の具体的な生成ロジック、repo root 解決、prompt 文面、出力条件、判定仕様を直接確認したいときは、下位の個別領域または正本側実装を読む。
-- CLI コマンド全体の制御フロー、branch 操作、diff 生成、TUI 描画、イベント処理、Codex CLI 実行など、parameter builder 以外の処理を調べたいときは、その責務を持つ実装へ進む。
-- agent call parameter の共通データ構造、model、reasoning effort、file access mode などの基礎定義を確認したいときは、基礎定義側を読む。
-- 正本仕様断片そのものや oracle 側の実装内容を確認したいときは、互換入口ではなく対応する正本側本文を読む。
-- 新しい機能の実装場所やテスト対象を探しているだけで、既存 import 経路の互換維持や正本側 builder への委譲関係を確認する必要がないとき。
+- 個別 builder の具体的な関数、型変換、prompt 補正、import 経路補正、schema fallback などを直接確認したいときは、該当する下位領域を読む。
+- agent call parameter の基礎型、model、reasoning effort、file access mode の定義を調べたいときは、基礎定義側を読む。
+- CLI コマンドの制御フロー、branch 操作、diff 生成、Codex CLI 実行、TUI 描画など、parameter builder 以外の実処理を調べたいときは、それぞれの実行側を読む。
+- 正本仕様断片、prompt の正本文面、oracle 側 builder 本体、indexing や review の仕様そのものを確認したいときは、対応する oracle 側の本文を読む。
 
 ## hash
-- 8c0a8c3e4b5c601a729618217ed20f80faba0a561f372b10988bddcda449cb59
+- fb147b6aed1448b03b9b4c86ee7c9d25d77e9075c5cd6dae3faf8efe8d4b6f7d
