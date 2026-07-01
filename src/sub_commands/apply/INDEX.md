@@ -60,24 +60,23 @@
 # `fork.py`
 
 ## Summary
-- apply fork の実行制御を担い、session branch 上で apply 用 branch/worktree を作成して、対象ファイル列挙、Codex による finding 列挙・適用、変更 commit、apply state 更新、report 出力までを一つの run として進める。
-- apply scope ごとの対象選択、finding 適用後に変更ファイルを再キューする loop、unconverged 判定、apply process id の管理、失敗時の error report と state 復旧を同じ orchestration 内で扱う。
-- apply fork の commit subject 生成、対象ファイル正規化、直近 apply join merge commit の探索など、apply fork loop の進行条件に密接な補助処理も含む。
+- apply fork の実行制御を担う実装。session branch 上で isolated apply worktree と apply branch を作り、scope に応じた対象列挙、Codex による finding 列挙と適用、差分 commit、report 出力、apply state 更新、process id 管理、失敗時 report 生成までを一つの apply run として扱う。
+- 対象 file の正規化、apply scope ごとの候補算出、直近 join 済み apply merge commit の解決、finding 由来または差分由来の commit subject 生成もここに含まれる。
 
 ## Read this when
-- apply fork サブコマンドの開始条件、branch/worktree 作成、apply state の running/completed/error 遷移、report path の返却を確認または変更したいとき。
-- apply scope に応じた finding 列挙対象、oracle や ignored file や管理対象外ディレクトリの除外条件、変更後ファイルの再キュー条件を確認したいとき。
-- Codex に apply finding の列挙・適用を依頼する流れ、apply loop の収束・未収束判定、finding 適用後の commit 作成を扱うとき。
-- apply fork の失敗時復旧、process id の削除、error report 生成、例外 stdout への report path 設定を調べるとき。
+- apply fork サブコマンドの実行条件、状態遷移、worktree 作成、apply branch 命名、process id の扱い、report 出力、終了コードを確認・変更したいとき。
+- apply fork がどの file を finding 列挙対象にするか、rolling/session/full scope の対象範囲、oracle や INDEX/AGENTS や ignore 対象の除外条件を確認・変更したいとき。
+- Codex に依頼する finding 列挙・finding 適用 loop、未収束時の扱い、変更 file の再キュー、apply commit の作成条件や commit subject 生成を確認・変更したいとき。
+- apply join 後の rolling scope が基準にする過去 merge commit の解決条件を確認・変更したいとき。
 
 ## Do not read this when
-- apply fork の最終 report の内容や書き込み形式だけを確認したい場合は、report 生成を担当する対象を読む。
-- Codex に渡す finding 列挙・適用用 parameter の具体的な prompt 構築だけを確認したい場合は、builder 側の対象を読む。
-- apply 以外のサブコマンド実行基盤、git 実行、state 永続化、worktree 作成の共通 runtime 挙動そのものを確認したい場合は、共通 runtime 側を読む。
-- apply fork ではなく apply join や他の apply workflow の制御を調べたい場合は、そのサブコマンド実装を読む。
+- apply fork の report 本文生成や error report の内容だけを確認・変更したいときは、report 生成側を直接読む。
+- Codex に渡す apply fork 用 parameter の文面や structured output だけを確認・変更したいときは、parameter builder 側を直接読む。
+- apply process id の永続化 API や tracking context manager の内部だけを確認・変更したいときは、apply runtime 側を直接読む。
+- session state、git 実行、worktree 作成、config 読み込みなど共通 runtime primitive の内部挙動だけを確認・変更したいときは、runtime 側を直接読む。
 
 ## hash
-- a16f7cb8d4994b4035d3f91243a9e0f676a0358d17d4a72dbb04f59ba5956f8f
+- a08e0d2d4d3a760cfe9f8a3dce58486926d6b47ae20e5fc7f6475b2848c0dbd3
 
 # `fork_report.py`
 

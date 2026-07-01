@@ -1,23 +1,24 @@
 # `apply`
 
 ## Summary
-- apply workflow のサブコマンド実装をまとめる領域。apply run の開始、進行、破棄、join、report 生成、実行中 process 管理、apply branch/worktree の特定と掃除を扱う。
-- apply の状態遷移、対象 scope、Codex による finding 列挙・適用、merge や conflict 処理、abandon 時の停止処理など、apply 系操作の制御ロジックへ進む入口になる。
+- apply 系サブコマンドの実装群で、apply run の開始、破棄、join、実行時 process 管理、worktree/branch/state の片付け、結果 report 生成を扱う。
+- 対象範囲の列挙、Codex による finding 適用 loop、apply branch と session branch の統合、running apply の停止、想定外差分や conflict の処理など、apply run の主要な制御ロジックへの入口になる。
 
 ## Read this when
-- apply fork、join、abandon のいずれかの実行条件、状態遷移、branch/worktree 操作、cleanup、利用者向け出力を確認または変更したいとき。
-- apply 実行中 process の追跡、停止、pid file の扱い、Codex subprocess group の終了判定、apply branch から worktree を復元する処理を調べたいとき。
-- apply fork の対象ファイル選択、finding 適用 loop、未収束判定、変更 commit、失敗時 report や完了 report の生成を追いたいとき。
-- apply join の merge、想定外差分の分類、force resolve、INDEX.md conflict の自動解決、apply state 初期化、apply branch/worktree 削除条件を確認したいとき。
+- apply fork、apply abandon、apply join の実行条件、状態遷移、worktree/branch 操作、process id 管理、cleanup、report 出力を確認または変更したいとき。
+- apply scope ごとの対象 file 選定、finding 列挙・適用 loop、apply commit 作成、join 後 rolling scope の基準 commit 解決を追いたいとき。
+- running apply の停止、pid file ライフサイクル、Codex subprocess group の追跡、pid reuse 対策、apply branch から worktree を復元する処理を確認したいとき。
+- apply join での merge、想定外差分の分類、force-resolve、INDEX.md conflict の自動解決、apply worktree や apply branch の削除条件を調べたいとき。
+- apply fork の成功・失敗 report や join report の保存内容、変更要約、warning、before/after 状態など、apply 利用者向け結果出力を確認したいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド、共通 CLI 実行基盤、git 実行 helper、state 永続化 helper、report directory 解決など、複数機能で共有される低レベル処理そのものを調べたいとき。
-- Codex に渡す prompt や structured output schema の詳細だけを確認したいとき。
-- oracle file の正本仕様、path model、ignore 判定、worktree 一般操作など、apply workflow ではなく仕様文書または共通領域を直接読む方が適切なとき。
-- 具体的な apply サブコマンドの制御ロジックではなく、パッケージ説明や import 時副作用の有無だけを確認したいとき。
+- apply 以外のサブコマンド、共通 CLI 登録、config 読み込み、git 実行 helper、state file 定義、reports directory 解決などの共通 runtime primitive だけを調べたいとき。
+- Codex subprocess の起動方法そのもの、LLM 呼び出し一般、apply fork 用 parameter 文面や structured output schema の詳細だけを確認したいとき。
+- oracle file の正本仕様、apply の仕様文書、または低レベルな branch/worktree/state 操作の共通実装を直接確認したいとき。
+- 具体的な apply 制御ロジックではなく、サブコマンド実装パッケージに初期化処理や再 export があるかだけを確認したいとき。
 
 ## hash
-- 62c5f9bf0326a501916271913dbc6689f7fa268d7165310fd917d0b131b53ca8
+- 46a762ecd913fed0a6148b46c616c83531d819daba0dca31a319456fa9fb1c3c
 
 # `indexing.py`
 

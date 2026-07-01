@@ -44,23 +44,23 @@
 # `test_apply_fork_cli.py`
 
 ## Summary
-- apply fork CLI の realization test。Codex 実行を fake 化し、apply run の開始・完了、session state 更新、apply worktree 配置、branch/HEAD の扱い、.cmoc ignore、設定読み込み失敗時の中断、.gitignore を所見対象として編集できること、apply 対象 path 正規化を外部挙動として検証する。
+- `apply fork` CLI の realization test。Codex 実行を fake 化し、apply run の作成・完了、session state 更新、apply worktree 配置、linked worktree 起点の branch/HEAD、`.gitignore` 保持・編集、設定読み込み失敗時の非開始、apply 対象 path の正規化を検証する。
 
 ## Read this when
-- apply fork コマンドの挙動、session state の apply 欄、apply branch/worktree の生成規則を変更・確認するとき。
-- linked worktree 上で apply fork を実行した場合の起点 commit や worktree 配置を確認するとき。
-- .cmoc の ignore 方法、session 側 .gitignore の保持、apply branch 側での .gitignore 編集可否を変更・確認するとき。
-- 設定ファイルの欠落・不正 JSON など、apply run 開始前のエラー処理と副作用抑止を確認するとき。
-- apply 対象から root 直下 memo、管理 path、INDEX、AGENTS、oracle 配下などを除外または保持する正規化条件を変更・確認するとき。
+- `apply fork` の外部挙動、state 遷移、apply branch/worktree 作成、Codex 呼び出しループに関するテストを確認・変更する時。
+- linked worktree 上で開始した session から apply run を作る挙動や、apply branch の開始 commit を確認する時。
+- `apply fork` が session 側 `.gitignore` を汚さずに `.cmoc` ignore を確保する挙動、または apply branch 側で `.gitignore` を編集対象にできる挙動を確認する時。
+- cmoc config の読み込み失敗時に apply run の branch/state/pid を作らないエラー処理を確認する時。
+- apply 対象候補から root 直下の `memo`、管理 path、`INDEX.md`、`AGENTS.md` などを除外する正規化ルールの realization test を確認する時。
 
 ## Do not read this when
-- apply fork の実装詳細を読む必要があり、テストではなく実装本体から制御フローや helper の責務を確認したいとき。
-- Codex 実行結果の schema や AgentCallParameter 自体の仕様を確認したいとき。
-- apply 以外の session fork、init、git helper、test support fixture の一般的な挙動を調べたいとき。
-- oracle file や INDEX.md の生成規則そのものを確認したいとき。
+- `apply fork` の実装詳細だけを変更したく、外部挙動テストや期待 state を確認する必要がない時。
+- apply 以外の session fork、init、設定ファイル処理、worktree helper の単体挙動を直接確認したい時。
+- oracle file 側の正本仕様断片を確認・編集したい時。
+- Codex CLI や LLM の実出力品質そのものを検証したい時。
 
 ## hash
-- 0119f72efc7096ab8e6c2099e0843e61d1e8c2031c5631938266b99a3e64fae7
+- 118139392a3180ae63f3d170e94c0ff10a2e3d6df7ac0aabd694654e2e041b21
 
 # `test_apply_fork_report_cli.py`
 
@@ -108,22 +108,22 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の共通 runtime 契約を横断的に検証する realization test。root placeholder 解決、linked worktree と main worktree の扱い、run worktree の安全境界、config 既定値と不正値、CmocError の Markdown 表示、CLI error の stdout 出力、subcommand log、`.cmoc` ignore、FileAccessMode 変換、Codex sandbox profile、binary 判定、branch session state の基本挙動をまとめて扱う。
-- 個別サブコマンドの詳細仕様ではなく、複数機能の実行前提として共有される runtime 境界の回帰を確認する入口。
+- cmoc の基礎 runtime 契約を横断して検証する回帰テスト群。root placeholder と worktree 解決、config 既定値と検証、CmocError 表示、CLI error 出力、subcommand log、session state branch 解析、FileAccessMode と Codex sandbox profile、binary 判定など、個別サブコマンドより下の共通実行前提を扱う。
+- 複数機能にまたがるが、共通 fixture と root 状態を一体で読む必要がある basic runtime 境界の検証入口として位置づけられている。
 
 ## Read this when
-- runtime の root 解決、work root 判定、linked worktree、run worktree 作成・削除の安全条件に関わる変更をする。
-- CmocError、CLI 引数解析 error、stdout/stderr の error report、call stack 表示、subcommand log の生成条件を変更する。
-- CmocConfig、FileAccessMode、Codex profile、sandbox writable roots、追加書き込み許可 path の制御を変更する。
-- branch 名から session id を読む処理、session state 読み込み、`.cmoc` ignore、binary 判定など、cmoc の基礎 runtime helper の挙動を確認したい。
+- runtime の共通契約、root 解決、worktree 安全性、config 読み込み、CmocError の Markdown 表示、CLI error の stdout 化、subcommand log の生成条件を変更・確認する。
+- FileAccessMode、Codex profile の writable_roots、extra_writable_paths、oracle conflict write、sandbox mode 変換、Codex cwd 制限の挙動を変更・確認する。
+- session/apply branch 名から session id を解釈する処理、session state 読み込み、binary 判定、duration 表示、`.cmoc` ignore 追加、起動 wrapper の error report を変更・確認する。
+- 個別サブコマンドの前提になる runtime 回帰が壊れていないか、複数の基礎挙動をまとめて確認したい。
 
 ## Do not read this when
-- 特定サブコマンド固有の入出力、業務フロー、プロンプト内容だけを確認したい場合は、そのサブコマンドや該当 prompt のテストを直接読む。
-- oracle file の正本仕様本文や path placeholder の定義そのものを確認したい場合は、対応する oracle doc または oracle src を読む。
-- 単一 helper の実装詳細だけを局所的に直す場合は、対象 runtime module とより近い単体テストを先に読む。
+- 特定サブコマンド固有の正常系・業務ロジックだけを確認したい場合は、そのサブコマンドのテストへ直接進む。
+- oracle file の正本仕様そのものを確認・変更したい場合は、対応する oracle doc または oracle src を読む。
+- 単一の低レベル helper の実装詳細だけを調べる場合は、対象 helper の実装またはより局所的なテストを優先する。
 
 ## hash
-- 4cadec900fdad11a8ec1f216024e395c0b26228a6268ad2cdbda2c1459adfff5
+- 7f5b071096b9dcd763283a8002b661bdcab1e40fc0a6fbe62e4336369b99d78b
 
 # `test_cli_init_tui.py`
 
