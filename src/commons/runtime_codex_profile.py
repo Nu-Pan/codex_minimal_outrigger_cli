@@ -22,6 +22,7 @@ from config.cmoc_config import CmocConfig
 
 from commons.runtime_content import write_hashed_file, write_hashed_file_in_existing_dir
 from commons.runtime_errors import CmocError
+from commons.runtime_git import is_untracked_git_ignored
 from commons.runtime_paths import schema_store_dir
 
 APPLY_PROCESS_TRACKING_ENV = "CMOC_APPLY_PROCESS_ID_PATH"
@@ -285,6 +286,11 @@ def _is_writable_path_allowed(
     if relative.parts and relative.parts[0] in blocked_root_names:
         return False
     if mode == FileAccessMode.REALIZATION_WRITE:
+        if is_untracked_git_ignored(root, path):
+            # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+            # realization file excludes git ignored untracked paths; tracked ignored
+            # paths remain writable because normal git check-ignore treats them as tracked.
+            return False
         return not path.is_relative_to(root / "oracle")
     if mode == FileAccessMode.PURE_ORACLE_WRITE:
         return path.is_relative_to(root / "oracle")

@@ -635,6 +635,51 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         )
 
 
+def test_codex_profile_excludes_git_ignored_realization_write_roots(
+    tmp_path: Path,
+) -> None:
+    root = make_repo(tmp_path)
+    (root / ".gitignore").write_text("/build/\n")
+    (root / "src").mkdir()
+    (root / "test").mkdir()
+    (root / "build").mkdir()
+    run_git(root, "add", ".gitignore", "src", "test")
+    run_git(root, "commit", "-m", "add realization dirs")
+
+    profile = build_codex_profile(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            FileAccessMode.REALIZATION_WRITE,
+            "prompt",
+            None,
+        ),
+        CmocConfig(),
+        root,
+    )
+
+    assert _profile_writable_roots(profile) == {
+        str((root / "src").resolve()),
+        str((root / "test").resolve()),
+    }
+    _assert_not_writable(profile, root / "build" / "artifact.txt")
+    _assert_writable(profile, root / "src" / "manual.py")
+
+    with pytest.raises(CmocError, match="許可領域外"):
+        build_codex_profile(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                FileAccessMode.REALIZATION_WRITE,
+                "prompt",
+                None,
+            ),
+            CmocConfig(),
+            root,
+            extra_writable_paths=[root / "build"],
+        )
+
+
 @pytest.mark.parametrize(
     ("mode", "extra"),
     [
