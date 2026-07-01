@@ -158,24 +158,24 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI の subprocess 境界で使う profile 生成、sandbox/cwd/CODEX_HOME の解決、schema 配置、実行エラー文面化、apply child process tracking、JSONL error 判定をまとめて扱う。
-- FileAccessMode に応じた読み書き許可境界を Codex CLI が受け取れる profile と実行時検査へ落とし込み、Codex 起動前後の機械的な不変条件を維持する入口である。
+- Codex CLI 起動に渡す profile・sandbox・cwd・CODEX_HOME・schema 配置と、起動後に返る subprocess 結果・JSONL error・resume token・apply child process tracking の解釈を扱う実行境界。
+- FileAccessMode を Codex sandbox/profile へ落とし込む際の読み書き許可 root、追加 read/write path 検証、oracle conflict 例外、Codex home 検証、Codex CLI 不在時の cmoc error 化をまとめている。
+- apply abandon 用の child process pid 記録、pid file lock、Linux proc starttime による pid 再利用対策、Codex stdout/stderr からの error detail・capacity/quota 判定も同じ subprocess 境界の責務として保持している。
 
 ## Read this when
-- Codex CLI 起動用 profile、sandbox mode、writable roots、追加 read/write path の許可判定を確認または変更したいとき。
-- Codex subprocess の cwd、CODEX_HOME、auth.json 検査、profile 名、subprocess env の扱いを確認したいとき。
-- apply abandon のための Codex child process tracking、pid file lock、pid 再利用判定、tracking path の有効化範囲を確認したいとき。
-- Structured Output schema の配置、schema なし output JSON 読み取り、Codex stderr/stdout JSONL からの error detail 抽出を扱うとき。
-- capacity error、quota error、resume token など Codex JSONL event に基づく retry・待機判定を確認または変更したいとき。
+- Codex CLI を起動するための profile 本文、sandbox_mode、writable_roots、cwd、CODEX_HOME、環境変数を確認または変更したいとき。
+- FileAccessMode ごとの読み取り・書き込み境界、追加 read/write path の許可判定、root 直下 file や oracle conflict 解消時の扱いを調べるとき。
+- Codex CLI subprocess の実行、Codex CLI 不在時の例外変換、apply 実行中の child process tracking、abandon と pid file 操作の競合回避を変更するとき。
+- Structured Output schema の配置、schema なし output JSON の読み取り、Codex JSONL stdout/stderr からの error message・resume token・capacity error・quota error 判定を扱うとき。
 
 ## Do not read this when
-- AgentCallParameter や FileAccessMode の定義そのものを確認したいだけのときは、それらの定義元を読む。
-- prompt 上で利用者へ提示する file access rule の文面を変更したいときは、prompt builder 側の仕様断片または実装を読む。
-- Codex CLI に渡す前後ではない通常の runtime path、hashed content store、CmocError の一般実装を確認したいだけのときは、それぞれの共通 runtime module を読む。
-- subprocess 境界と無関係な CLI command の制御フロー、設定読み込み全体、アプリ仕様全体を調べたいときは、より上位の command 実装や config 実装を読む。
+- prompt 本文や file access policy の利用者向け説明文そのものを変更したいだけなら、prompt builder 側の該当仕様・実装を読む。
+- Codex 以外の外部コマンド実行全般や、subprocess を使わない通常のファイル入出力を調べたいだけなら、より直接その責務を持つ対象を読む。
+- cmoc config の model 名や reasoning effort の設定値そのものを変更したいだけなら、設定定義側を読む。
+- 実行結果を表示する CLI command の user-facing 出力整形だけを変更したい場合は、この境界ではなく呼び出し側の command 実装を読む。
 
 ## hash
-- 87c42872ccf11d142b9a2a8e521047a367f20f3a40c6ed8f85fbc760611bc6e4
+- 2911d76d865ffbe8c83ca8d11804564ea5fbc2791b1ccf0ee9b3199e1af31f62
 
 # `runtime_codex_tui.py`
 

@@ -61,24 +61,24 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper 群を収める実装領域。Codex CLI 実行、INDEX 更新 preflight、CLI サブコマンド共通ライフサイクル、設定、content hash、git、logging、path、result、state、error など、複数機能から参照される実行時支援を扱う。
-- 個別 helper の実装本文に加え、runtime 系 API の集約 import 入口や互換 import 入口も含み、上位の command 実装から共通処理へ進むための入口になる。
+- cmoc の共有 runtime helper 群を収める領域。Codex 実行、CLI 共通ライフサイクル、設定、content hash、error、git、logging、path、result、state、INDEX 更新 preflight など、複数の上位処理から使われる実行時支援を扱う。
+- 個別 helper の実装だけでなく、runtime 系 API を一箇所から参照するための集約入口や、既存 import path を維持する薄い互換入口も含む。
 
 ## Read this when
-- Codex exec/TUI 呼び出し、profile、quota/capacity retry、Structured Output 検証、call log、file access rule 違反検出など、Codex CLI 実行境界の共通処理を調べたいとき。
-- INDEX.md 自動更新 preflight、対象走査、hash 鮮度判定、既存エントリー再利用、エントリー生成、排他制御、差分 commit の実装を確認したいとき。
-- CLI サブコマンド共通の実行順序、標準出力、終了コード化、例外表示、サブコマンド logger の設定と解除を扱うとき。
-- 設定ファイル、content hash 保存、git repository/worktree 操作、runtime path、実行 log、結果モデル、session state、共通エラー表示など、複数サブコマンドで共有される runtime helper を探すとき。
-- runtime helper の移動・分割・統合に伴い、公開 import 経路や互換 import 入口を確認または調整したいとき。
+- 複数の CLI command や agent call 実行経路から共通利用される runtime helper の所在を探したいとき。
+- Codex exec/TUI 起動、profile・sandbox・schema・quota/capacity・call log・resume・file access rule 検査など、Codex CLI 呼び出し境界の実装へ進みたいとき。
+- サブコマンド共通の実行順序、標準出力、終了コード、例外表示、subcommand log、current logger などの実行ライフサイクルを確認したいとき。
+- INDEX.md の自動更新 preflight、対象走査、hash 鮮度判定、既存エントリー再利用、Structured Output 検証、並列更新、排他制御を調べたいとき。
+- 設定ファイル、runtime path、git 操作、content hash、binary 判定、永続 state、外部コマンド結果モデル、共通 error report などの横断的な実行時基盤を確認または変更したいとき。
 
 ## Do not read this when
-- 個別 CLI サブコマンドの引数定義、利用者向け操作フロー、出力 schema、業務処理だけを調べたいとき。その場合は command 実装側へ進む。
-- AgentCallParameter の prompt 構築、ACP 基本型、model class、reasoning effort など、agent call 仕様や型定義そのものを確認したいとき。
-- oracle 上の正本仕様、path placeholder の概念定義、INDEX.md の仕様意図、session state file の仕様意図だけを確認したいとき。その場合は対応する oracle doc または oracle src を読む。
-- 生成済み log の解析、report の読み取り、状態値の利用先など、runtime helper が作成・取得した値を消費する上位処理を調べたいとき。
+- 個別 CLI command の引数定義、利用者向け command 固有出力、業務フローだけを調べたいとき。その場合は command 実装側へ進む。
+- oracle 上の正本仕様、path placeholder の概念定義、INDEX.md の仕様意図そのものを確認したいとき。その場合は対応する oracle doc または oracle src を読む。
+- agent call prompt の組み立て、ACP の基本型、設定データクラス定義など、runtime helper の利用元または型定義側が主対象のとき。
+- 生成済みログや state を利用する上位処理だけを追いたいとき。保存・表示・検証の共通境界を変更しないなら、この領域全体を読む必要はない。
 
 ## hash
-- af412a4424b1e61d33ecb31c9606e1a27077c6318e12f805bd354f437bd8273e
+- f2eb6e3fb44c6701498d36a1de2ef9fcd6371221f8761f46af01b70e00cb540b
 
 # `config`
 

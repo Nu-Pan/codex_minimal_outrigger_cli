@@ -108,22 +108,20 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断して検証する回帰テスト群。root placeholder と worktree 解決、config 既定値と検証、CmocError 表示、CLI error 出力、subcommand log、session state branch 解析、FileAccessMode と Codex sandbox profile、binary 判定など、個別サブコマンドより下の共通実行前提を扱う。
-- 複数機能にまたがるが、共通 fixture と root 状態を一体で読む必要がある basic runtime 境界の検証入口として位置づけられている。
+- cmoc の基礎 runtime 契約を横断して検証する realization test。root placeholder 解決、repo/run/work root 判定、config 既定値と検証、CmocError の表示、CLI preflight と parse error、subcommand log、worktree 作成・削除ガード、FileAccessMode 変換、Codex profile の sandbox 許可範囲、binary 判定など、サブコマンド共通の実行前提をまとめて扱う。
 
 ## Read this when
-- runtime の共通契約、root 解決、worktree 安全性、config 読み込み、CmocError の Markdown 表示、CLI error の stdout 化、subcommand log の生成条件を変更・確認する。
-- FileAccessMode、Codex profile の writable_roots、extra_writable_paths、oracle conflict write、sandbox mode 変換、Codex cwd 制限の挙動を変更・確認する。
-- session/apply branch 名から session id を解釈する処理、session state 読み込み、binary 判定、duration 表示、`.cmoc` ignore 追加、起動 wrapper の error report を変更・確認する。
-- 個別サブコマンドの前提になる runtime 回帰が壊れていないか、複数の基礎挙動をまとめて確認したい。
+- runtime 全体の共通契約、root 解決、worktree 管理、CLI error 表示、config 読み込み、FileAccessMode、Codex sandbox profile、状態 branch 名、binary 判定の回帰テストを確認・変更する時。
+- 個別サブコマンドではなく、複数機能の実行前提として共有される cmoc runtime 挙動が壊れていないかを調べる時。
+- sandbox 書き込み許可範囲や追加 writable path の拒否・許可条件に関するテストを確認する時。
 
 ## Do not read this when
-- 特定サブコマンド固有の正常系・業務ロジックだけを確認したい場合は、そのサブコマンドのテストへ直接進む。
-- oracle file の正本仕様そのものを確認・変更したい場合は、対応する oracle doc または oracle src を読む。
-- 単一の低レベル helper の実装詳細だけを調べる場合は、対象 helper の実装またはより局所的なテストを優先する。
+- 特定サブコマンド固有の入出力、分岐、永続状態だけを調べたい時は、そのサブコマンドの実装・テストを直接読む。
+- oracle file の正本仕様そのものを確認したい時は、対応する oracle doc または oracle src を読む。
+- runtime 共通契約に関係しない UI、prompt 文面、個別生成物、補助スクリプトの詳細だけを調べたい時。
 
 ## hash
-- 7f5b071096b9dcd763283a8002b661bdcab1e40fc0a6fbe62e4336369b99d78b
+- 1eb9475eca578153a8e895613e4fba2f48c6e93259df3c015984dfd0ffcb7488
 
 # `test_cli_init_tui.py`
 
