@@ -19,6 +19,26 @@
 ## hash
 - 54cf181de55105f9065ad7f515d614e2705529029548b38b874d2326362e0b59
 
+# `test_acp_builder_parameters.py`
+
+## Summary
+- ACP builder が生成する AgentCallParameter の model/reasoning/file access mode、prompt へ埋め込まれる root 表記・標準文書・動的文字列、structured output schema 参照が oracle source と一致することを検証するテスト群。
+- apply fork、TUI parameter 解決、indexing index entry、oracle review、session join conflict resolution、file access rule violation recovery の builder 挙動を横断的に扱う。
+
+## Read this when
+- ACP builder の parameter 生成結果、prompt 内容、structured_output_schema_path、または schema enum/required/additionalProperties の期待値を変更する。
+- apply fork、TUI resolve parameter、indexing index entry、oracle review finding 系、session join conflict resolution、file access rule violation recovery の builder 実装を変更した後に、既存の外部挙動テストを確認する。
+- oracle source 側の ACP builder schema を変更し、realization 側 builder が同じ schema を参照または生成しているか確認する。
+- prompt 内の `<repo-root>`、`<work-root>`、`<oracle-root>`、`<oracle_root>` などの placeholder 表記や、動的入力文字列の保持挙動を変更する。
+
+## Do not read this when
+- 個別 builder の内部 helper 分割や import 整理だけを調べたい場合は、対象 builder 実装を先に読む。
+- ACP builder 以外の CLI 挙動、永続状態、git 操作、一般的な path model を調べる場合は、それぞれの対象テストまたは実装を読む。
+- oracle file の仕様本文や schema の正本内容を確認したい場合は、oracle 側の該当 doc/src を直接読む。
+
+## hash
+- 260bb17a591a3bfe649fa1f73ee13ca6ff6dff11505bfd4e13cc7742e3617f0a
+
 # `test_apply_abandon_cli.py`
 
 ## Summary
@@ -267,27 +287,42 @@
 ## hash
 - 5549e75d6493464e59f5f4cb68232c1fbd9fc7d03b85ee5f6cb6ea3ad4e04099
 
+# `test_packaged_import.py`
+
+## Summary
+- packaged layout から review oracle enumerate builder を import できることと、packaging 設定が oracle package を期待した配置で公開していることを検証するテスト。
+- 一時的な import 環境を組み立て、builder が schema path と prompt を正しく返せることをサブプロセスで確認する。
+
+## Read this when
+- packaged layout、setuptools package-dir、oracle package の import 境界を変更する。
+- review oracle enumerate builder の依存関係、schema 参照、prompt 組み立てが配布後の import 環境で壊れていないか確認する。
+- oracle src と realization src の配置分離に関わるテスト失敗を調査する。
+
+## Do not read this when
+- builder の prompt 本文や schema 内容そのものの詳細仕様を確認したい場合。
+- 通常の CLI 動作、入出力、状態管理など packaged import 境界と無関係な挙動を調査する場合。
+- 単体の helper ロジックを直接検証するテストを探している場合。
+
+## hash
+- cccc21d8925cdcc0798ceaddea1bf75e25fbadf671e8b6ee5e76317db75fb27f
+
 # `test_prompt_parts.py`
 
 ## Summary
-- agent prompt の各標準部品と ACP builder の生成結果を、最終 prompt 上で組み合わさった外部挙動として横断検証する realization test。
-- routing、file access、oracle/realization/review/index 系 standard、TUI parameter 選定、review/apply/session 系 builder の prompt・実行パラメータ・structured output schema 参照が、正本仕様断片とずれないことを確認する入口。
-- 単一ファイルとしては大きいが、prompt 構築の回帰観点を同じ render/schema 期待値で読む必要があるため、関連する prompt 構築テストを一箇所に集約している。
+- 標準 prompt parts と complete prompt の組み立てに関する realization test。各標準文書ビルダーが主要な要求語句を markdown に含めること、complete prompt が指定された標準・file access rule・root token 表記を意図どおり含める／省くことを検証する。
 
 ## Read this when
-- prompt 標準部品の markdown render 結果、空行処理、root token の保持、または最終 prompt への標準文書注入条件を変更する。
-- ACP builder が返す model class、reasoning effort、file access mode、prompt 本文、または structured output schema 参照の挙動を変更する。
-- oracle 配下の schema や prompt builder 正本仕様断片を変更し、realization 側の生成結果との一致を確認したい。
-- TUI parameter 選定、review oracle、apply fork、session join など、複数 builder にまたがる prompt/schema 回帰を調べる。
+- prompt builder の標準文書生成、complete prompt の構成、file access mode ごとの読み書きルール出力を変更する。
+- oracle standard、realization standard、review oracle standard、apply review standard、index entry standard、routing rule の prompt への注入条件やレンダリング内容を確認する。
+- `<work-root>` などの root token、補助 prompt、コードブロック内文字列が complete prompt で保持される挙動を検証する。
 
 ## Do not read this when
-- 個別 builder の内部実装だけを読みたい場合は、対象 builder の implementation を先に読む。
-- oracle file 側の正本仕様断片そのものを確認・検討したい場合は、oracle 配下の該当本文を読む。
-- prompt 構築と関係しない CLI 実行、永続状態、git 操作、または一般的な補助処理のテストを探している。
-- 単一の小さな helper の実装詳細だけを確認したい場合は、その helper の実装またはより局所的なテストを読む。
+- 個別標準文書の正本内容そのものを確認したい場合は、対応する oracle 側の prompt part 定義を読む。
+- prompt rendering の外部挙動ではなく、StructDoc や markdown renderer の低レベルな構造変換だけを調べる。
+- CLI コマンド実行、git 操作、ファイル探索など prompt builder 以外の機能を変更する。
 
 ## hash
-- c0e7ff3c7ac7d2eca4ba7d7719d98093e9121fb7c58c40643d2e6a75eea51df5
+- 4ad1f3518e86aefeb906a6fa8b1a6537ec1ae2ca05cc46cf1e42c1fc75a1e104
 
 # `test_review_oracle_cli.py`
 
@@ -331,3 +366,21 @@
 
 ## hash
 - 217128b35d1efb878b56c76eb8363be96d3ec5ce84c980faf5f876c2b1861749
+
+# `test_struct_doc_rendering.py`
+
+## Summary
+- StructDoc の Markdown renderer が本文中の連続空行を正規化する挙動を検証する単体テスト。通常テキストとコードブロックを対象に、過剰な空行が折りたたまれ、期待される Markdown 文字列になることを確認する。
+
+## Read this when
+- StructDoc の Markdown 出力で空行の扱いを変更・確認したいとき。
+- 通常テキストまたはコードブロック内の連続空行がどのように描画されるべきかをテストから確認したいとき。
+- render_as_markdown の整形挙動に関するテストを追加・修正したいとき。
+
+## Do not read this when
+- StructDoc のデータ構造そのものや renderer 全体の実装を確認したいときは、実装側を読む。
+- Markdown renderer 以外の prompt builder 分割根拠や正本仕様を確認したいときは、対応する oracle 側の文書を読む。
+- CLI 挙動、ファイル操作、永続状態など StructDoc の Markdown 整形と無関係な挙動を調べたいとき。
+
+## hash
+- 51580019f3a5f35c894b459980668eec4b098eecee22f1645f571c7c2084f811

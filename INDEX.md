@@ -164,20 +164,20 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 群を置くディレクトリ。CLI サブコマンド、Codex runtime、prompt 構築、indexing、session/apply/review workflow、共通 runtime 契約を外部挙動中心に検証する。
-- 個別テストへ進む前の入口として、対象機能の期待出力、終了コード、state・branch・worktree・report・log・profile などの回帰観点を選ぶために使う。
+- cmoc の realization test 群を置くディレクトリ。CLI サブコマンド、Codex runtime、ACP builder、prompt rendering、packaged import、indexing、session/apply/review の外部挙動と共通実行前提を検証する入口になる。
+- 共通テスト補助から個別サブコマンドの統合テストまでを含み、実装変更後にどの外部挙動・制御ロジックの回帰を確認すべきかを探すための階層である。
 
 ## Read this when
-- cmoc の CLI 外部挙動や realization implementation の変更に対応する既存テストを探すとき。
-- apply fork/join/abandon、session fork/join/abandon、review oracle、indexing、init/TUI、Codex runtime、prompt builder の回帰テストを確認または変更するとき。
-- Git worktree、branch、session state、Codex subprocess、CODEX_HOME、sandbox profile、INDEX.md 更新、report 生成など、複数モジュールにまたがる挙動をテスト側から調べたいとき。
-- 新しい realization test を追加する前に、既存テストへケース追加・統合できる場所や共通補助関数の入口を確認したいとき。
+- realization implementation を変更した後に、対応する CLI 外部挙動、状態遷移、git 操作、Codex 実行制御、prompt/schema 参照の既存テストを探すとき。
+- apply、session、review oracle、indexing、init/TUI、Codex runtime、ACP builder、prompt parts、StructDoc rendering、packaged import の回帰テストを確認・変更するとき。
+- 一時 Git リポジトリ、Codex home、fake executable、worktree path 解決など、テスト用 fixture や共通補助関数の使い方を確認するとき。
+- oracle source や prompt/schema との接続が realization 側テストでどう検証されているかを確認するとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片、oracle/realization 標準、INDEX.md ルーティング規則そのものを確認したい場合は、oracle 側の文書を読む。
-- 特定機能の実装内部だけを変更したく、外部挙動テストや期待 state を確認する必要がない場合は、対応する実装モジュールを直接読む。
-- テスト支援関数、fixture、fake executable 生成などの共通補助だけを確認したい場合は、共通補助ファイルを直接読む。
-- Codex CLI や LLM の実出力品質そのものを評価したい場合は、この realization test 群を読む目的ではない。
+- oracle file の正本仕様断片、標準、schema、prompt 本文そのものを確認したい場合は、oracle 側の該当 doc/src/test を読む。
+- 実装内部の helper 分割、低レベルな git/path/config 処理、個別 builder の本体を局所的に変更するだけなら、先に src 側の該当モジュールを読む。
+- Codex CLI や LLM の実出力品質そのものを評価したい場合は、このテスト群ではなく対象の実行環境や評価手段を確認する。
+- INDEX.md エントリー生成規則やルーティング文書の正本内容を確認したいだけなら、oracle 側の文書を読む。
 
 ## hash
-- be4c538eb5b79abeeb1504c64db5f3dd043d81d7b57b4f570cb1c4aa30f3be7d
+- da669d2d3bb50c5b7e3720fe888655ea9b44686e78eea571c4ffcfb8a569f0e7
