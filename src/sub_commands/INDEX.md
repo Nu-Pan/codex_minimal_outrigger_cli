@@ -1,23 +1,21 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンド実装のまとまりで、apply run の開始、破棄、join、report 生成、実行中 process 管理、apply branch/worktree 特定を扱う入口。
-- apply state 遷移、apply worktree/branch の作成・削除、Codex subprocess 追跡、finding 適用ループ、merge/conflict 処理、apply fork/join/abandon の利用者向け出力へ進むための対象。
+- apply サブコマンド群の実装をまとめるディレクトリで、fork・join・abandon の実行制御、apply 実行時 runtime、fork report 生成、パッケージ入口を下位対象として持つ。
+- apply run の開始、破棄、取り込み、process 管理、apply branch/worktree 管理、report 生成など、apply 系 CLI の具体的な挙動へ進むための入口。
 
 ## Read this when
-- apply fork、apply join、apply abandon の実行条件、状態更新、branch/worktree cleanup、終了時 report、エラー時挙動を確認または変更したいとき。
-- apply 実行中 process の pid file、pidfd、Codex child process group、running abandon の停止処理、stale 判定を確認したいとき。
-- apply scope に応じた対象ファイル列挙、finding 適用、変更 commit、apply report の差分要約、merge conflict や force-resolve の扱いを調べたいとき。
-- session branch または apply branch から対象 apply run や managed worktree を特定する処理を追いたいとき。
+- apply fork、apply join、apply abandon のどれを読むべきか、または process 管理や report 生成の補助実装へ進むべきかを選びたいとき。
+- apply run の state 遷移、apply branch/worktree の作成・削除、未 join run の破棄、join 時の merge や conflict 処理、fork report の生成に関係する変更を行うとき。
+- apply 実行中 process、pid file、Codex subprocess 追跡、running abandon の停止処理、apply branch から worktree を探す処理を調べる入口を探すとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド実装、または CLI 全体の command 登録や共通 runtime を調べたいとき。
-- git 実行、state file 読み書き、reports directory、clean worktree 検証などの低レベル共通 helper だけを確認したいとき。
-- Codex prompt や structured output parameter の具体的な組み立てだけを確認したいとき。
-- oracle file の正本仕様、または apply 仕様文書そのものを確認したいとき。
+- apply 以外のサブコマンド、共通 CLI runtime、git wrapper、state file の低レベル読み書き、Codex prompt builder だけを調べたいとき。
+- oracle file の正本仕様、apply に限らない branch/worktree 一般処理、または LLM 呼び出し自体を確認したいとき。
+- 具体的に fork、join、abandon、runtime、fork report のいずれかを読む必要がすでに決まっている場合は、この階層ではなく該当する下位対象へ直接進む。
 
 ## hash
-- 17936c8d991797e2baac96e3256ff7e8b29ec747e3f67dc3ee6ca02a1a4be42c
+- 4238efddb87b8629d35954b92da218a0f1425aab09cd52cc257beda815ef3983
 
 # `indexing.py`
 

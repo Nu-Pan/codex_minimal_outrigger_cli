@@ -81,24 +81,21 @@
 # `fork_report.py`
 
 ## Summary
-- apply fork の終了時または失敗時に作業レポートを生成する処理を扱う。
-- apply worktree の管理対象差分、未追跡ファイル差分、変更 path を集め、Codex による変更要約または機械的な fallback 要約を report に埋め込む。
-- report の YAML frontmatter、結果ラベル文言、所見数推移、変更内容要約の Markdown 描画を確認する入口となる。
+- apply fork の実行結果または失敗結果を Markdown report として生成し、所見数の推移、結果ラベル、apply branch の変更要約をまとめる。
+- apply worktree の fork commit 以降の管理対象差分、未コミット差分、staged 差分、untracked file 差分を集め、Codex による構造化要約または path 一覧の fallback を report に反映する。
 
 ## Read this when
-- apply fork の作業レポートの生成先、生成タイミング、内容を確認または変更したいとき。
-- apply fork の差分検出対象、削除済み path の扱い、rename や未追跡ファイルの report 反映を確認したいとき。
-- 変更要約の Codex 呼び出し、要約失敗時の fallback、変更なし時の report 表示を確認または変更したいとき。
-- report frontmatter の session branch、fork commit、apply branch、apply worktree、result の出力を確認したいとき。
+- apply fork の report 生成内容、frontmatter、本文見出し、未収束時の注意文を確認・変更したいとき。
+- apply fork の変更要約に含める git diff の範囲、rename・deleted path・untracked file の扱いを確認・変更したいとき。
+- apply fork の変更要約生成が失敗した場合や空だった場合の fallback 表示を確認・変更したいとき。
 
 ## Do not read this when
-- apply fork のループ制御、所見列挙、収束判定そのものを確認したいだけのとき。
-- 変更要約用の Codex prompt や structured output parameter の定義を確認したいとき。
-- reports directory や timestamp の共通的な生成規則だけを確認したいとき。
-- apply 以外の subcommand の report 生成を確認したいとき。
+- apply fork のループ制御、所見列挙、apply branch の作成・削除など report 出力以外の処理を確認したいとき。
+- 変更要約を生成する Codex prompt parameter の内容だけを確認したいとき。
+- cmoc 全体の report 保存先規則、timestamp、git 実行 wrapper の実装を確認したいとき。
 
 ## hash
-- c7226e131c37868e9bca44b61ec1b05a65e0caa1a2babf58e134693e5e858595
+- f83951bd570f6adfcfede4efacbd4bf7c87b06f26647a27f24109280f7c194b4
 
 # `join.py`
 

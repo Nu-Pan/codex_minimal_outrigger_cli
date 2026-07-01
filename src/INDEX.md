@@ -141,21 +141,20 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装を集める領域で、apply、indexing、init、review、session、tui などの利用者向け操作から各実装へ進む入口になる。
-- 各対象は CLI runtime 経由の起動、事前条件確認、git・state・worktree 操作、Codex 実行連携、利用者向け出力などを扱い、詳細処理は apply/review/session などの下位領域や共通 helper へ分かれている。
-- サブコマンド単位で実行条件、状態更新、後始末、report 出力、conflict 処理、INDEX maintenance、TUI 起動などの実装箇所を切り分けるための階層である。
+- CLI サブコマンド実装を集約する領域で、init、indexing、tui、apply、session、review 系の実行入口とサブコマンド別 orchestration へ進むための入口になる。
+- 各対象は CLI runtime 経由の起動、preflight、git 操作、state 更新、Codex subprocess 連携、レポート生成など、利用者向けコマンドの具体的な実行制御を扱う。
+- 共通 runtime や低レベル helper そのものではなく、個別サブコマンドがそれらをどう組み合わせて外部挙動を作るかを確認するために読む。
 
 ## Read this when
-- apply、review、session、indexing、init、tui のどのサブコマンド実装へ進むべきかを選びたいとき。
-- CLI runtime 経由でサブコマンドが起動される流れ、preflight、clean worktree 要求、cmoc ignore 保証、work root runtime、Codex exec callback の受け渡し位置を確認したいとき。
-- サブコマンド実行に伴う branch/worktree/state 操作、commit、merge、conflict 解消、report 生成、終了時 cleanup、利用者向け出力の入口を探したいとき。
-- review oracle や apply run のように、対象列挙、反復処理、finding 適用、INDEX 反映、report 描画など複数の下位処理へ分岐する実装の起点を確認したいとき。
+- 特定の CLI サブコマンドの実行順序、preflight、引数受け渡し、利用者向け出力、失敗時処理を確認・変更したいとき。
+- init、indexing、tui、apply、session、review のどの実装領域へ進むべきかを選びたいとき。
+- apply run、session lifecycle、review oracle、INDEX.md maintenance、初期化、TUI 起動など、サブコマンド単位の制御フローを追いたいとき。
+- サブコマンドが git 操作、worktree/branch 管理、state file、Codex Exec/TUI、report 出力、indexing 共通処理へどこから依存しているかを確認したいとき。
 
 ## Do not read this when
-- CLI 全体のトップレベル登録、Typer app 構成、共通 runtime、path 解決、git 実行 wrapper、state file schema などサブコマンド横断の低レベル helper だけを調べたいとき。
-- oracle file の正本仕様断片、サブコマンドの外部仕様文書、または INDEX.md エントリー作成基準そのものを確認したいとき。
-- Codex prompt、Structured Output parameter、TUI launch/resolve parameter など builder の具体的な組み立てだけを調べたいとき。
-- 特定サブコマンド内部の詳細処理だけが目的で、対象列挙、review loop、report rendering、INDEX merge、git status 解析などを担う下位モジュールが既に分かっているとき。
+- CLI 共通 runtime、git wrapper、path model、state file schema、設定読み込み、ignore 判定などの低レベル共通処理だけを調べたいときは、それぞれの共通実装を読む。
+- oracle file の正本仕様断片、サブコマンドの外部仕様、prompt builder、LLM 呼び出し詳細だけを確認したいときは、対応する oracle または builder/runtime 側を読む。
+- 読むべきサブコマンドや補助モジュールがすでに決まっている場合は、この階層ではなく該当する下位対象へ直接進む。
 
 ## hash
-- 935180eed2133c88074882a1dbca77797f086f07b3b6182e63450a0900c0d52d
+- 8ea1d673dd2276b559bbaf9325a03a85ab7e7b0830606e348dc404f6fd1a62e2

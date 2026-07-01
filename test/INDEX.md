@@ -86,24 +86,26 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 経由の挙動を、所見列挙から適用、commit、変更要約、report 生成、session state 更新までの一連の制御として検証するテスト群。
-- builder の import 可能性、標準 prompt と schema の参照、変更ファイル再調査、収束・未収束・error report、未追跡 file や削除 file の変更要約、rolling 実行時の対象選定を扱う。
-- 大きなテストファイルだが、apply fork report と再検査 loop の観測文脈を一箇所に保つため、関連する期待値がまとめられている。
+- apply fork の CLI 経由の挙動を検証する realization test。所見列挙、所見適用、commit、変更要約、report 出力、session state 更新、再検査、rolling apply fork の制御を一連の外部挙動として扱う。
+- apply fork report の生成内容と収束判定、未収束判定、error 時の未 commit 差分要約、変更ファイル再調査、禁止領域汚染からの recovery を確認する入口になる。
+- apply fork 用 AgentCallParameter builder が src のみの PYTHONPATH や packaged layout で import でき、oracle schema と標準 prompt を参照できることも検証する。
 
 ## Read this when
-- apply fork の CLI 実行結果、終了コード、report 内容、commit message、session state 更新を変更または調査するとき。
-- 所見適用後の変更 file 再調査、収束判定、未収束判定、差分なし適用時の扱い、調査対象なしの場合の report 表示を確認するとき。
-- apply fork 用 ACP builder の import 経路、prompt 内容、Structured Output schema 参照を変更するとき。
-- report 用変更要約で、未追跡 file、削除済み tracked file、commit 前の working tree 差分をどう扱うか確認するとき。
-- rolling apply fork が前回 apply join 後の変更だけを対象にする制御を確認するとき。
+- `apply fork` の report 内容、終了コード、収束・未収束・error の扱いを変更または調査する。
+- 所見適用後に変更された file を再調査対象へ戻す制御、新規 directory 配下の展開、最後の調査対象が空所見だった場合の収束判定を確認する。
+- apply fork の変更要約で未追跡 file、削除済み tracked file、commit 前 working tree 差分をどう扱うかを確認する。
+- apply fork が禁止領域を汚した Codex 実行を recovery し、許可差分だけを apply branch に commit する挙動を確認する。
+- rolling apply fork が前回 apply join 後の oracle 変更だけを調査対象にする session state 更新を確認する。
+- apply fork 関連の ACP builder、Structured Output schema path、標準 prompt 組み立て、packaged layout import を変更する。
 
 ## Do not read this when
-- apply fork 以外のサブコマンド、通常の session fork/join、または汎用的な git helper の単体挙動だけを調査するとき。
-- report schema や prompt の正本仕様そのものを確認したいときは、対応する oracle file を読む。
-- apply fork の内部実装だけを局所的に変更し、CLI report・再検査 loop・session state・変更要約の外部挙動に影響しないことが明らかなとき。
+- apply fork 以外の subcommand の CLI 挙動だけを調査する場合。
+- report の表示内容ではなく、低レベルな git wrapper や共通 runtime Codex 実行処理だけを調査する場合。
+- apply fork の所見列挙・適用 loop ではなく、個別 prompt 文面や schema 定義そのものを確認したい場合は、対応する builder または oracle source を直接読む。
+- INDEX.md エントリー生成や routing 文書の仕様だけを確認する場合。
 
 ## hash
-- a23d11397933b25dab37dff6a0bfb74ba9581ddcca7339bc68f5c4dd9091db0a
+- f8dfe753b40a2eace94c5b42d13807d14e5d30c741119b8ecde6d319a502251b
 
 # `test_apply_join_cli.py`
 
