@@ -77,6 +77,7 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
             FileAccessMode.REALIZATION_WRITE
             | FileAccessMode.ORACLE_WRITE
             | FileAccessMode.REPO_WRITE
+            | FileAccessMode.NO_RULE
         ):
             return "workspace-write"
         case _:
@@ -163,6 +164,8 @@ def _writable_roots(
             paths = _existing_writable_top_level_roots(mode, root)
         case FileAccessMode.ORACLE_WRITE:
             paths = [root / "oracle"]
+        case FileAccessMode.NO_RULE:
+            paths = [root]
         case _:
             paths = []
     result: list[Path] = []
@@ -172,8 +175,8 @@ def _writable_roots(
         if resolved not in seen and not any(
             resolved.is_relative_to(parent) for parent in seen
         ):
-            seen.add(resolved)
-            result.append(resolved)
+            sandbox_root = _sandbox_writable_root(resolved)
+            _append_writable_root(result, seen, sandbox_root)
     for path in extra_writable_paths or []:
         resolved = path.resolve()
         if not _is_writable_path_allowed(
@@ -189,8 +192,8 @@ def _writable_roots(
         if resolved not in seen and not any(
             resolved.is_relative_to(parent) for parent in seen
         ):
-            seen.add(resolved)
-            result.append(resolved)
+            sandbox_root = _sandbox_writable_root(resolved)
+            _append_writable_root(result, seen, sandbox_root)
     return result
 
 
@@ -203,6 +206,26 @@ def _existing_writable_top_level_roots(mode: FileAccessMode, root: Path) -> list
         ],
         key=lambda path: str(path.resolve()),
     )
+
+
+def _sandbox_writable_root(path: Path) -> Path:
+    """Codex sandbox の writable_roots に渡せる directory path へ正規化する。"""
+    if path.exists() and path.is_file():
+        return path.parent.resolve()
+    return path.resolve()
+
+
+def _append_writable_root(result: list[Path], seen: set[Path], path: Path) -> None:
+    """親子関係で冗長な writable root を持たないように追加する。"""
+    resolved = path.resolve()
+    if resolved in seen or any(resolved.is_relative_to(parent) for parent in seen):
+        return
+    redundant = [existing for existing in seen if existing.is_relative_to(resolved)]
+    if redundant:
+        result[:] = [existing for existing in result if existing not in redundant]
+        seen.difference_update(redundant)
+    seen.add(resolved)
+    result.append(resolved)
 
 
 def _is_writable_path_allowed(
@@ -238,7 +261,7 @@ def _is_writable_path_allowed(
         return not path.is_relative_to(root / "oracle")
     if mode == FileAccessMode.ORACLE_WRITE:
         return path.is_relative_to(root / "oracle")
-    return mode == FileAccessMode.REPO_WRITE
+    return mode in {FileAccessMode.REPO_WRITE, FileAccessMode.NO_RULE}
 
 
 def _append_workspace_write_section(

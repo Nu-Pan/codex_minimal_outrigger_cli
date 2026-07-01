@@ -187,6 +187,7 @@ def test_config_defaults_match_logical_model_classes() -> None:
     assert config.num_parallel == 8
     assert config.codex.model[ModelClass.MAINSTREAM] == "GPT-5.5"
     assert config.codex.reasoning_effort[ReasoningEffort.HIGH] == "high"
+    assert config.codex.num_try_falv_recovery == 1
 
 
 @pytest.mark.parametrize("value", [False, None, [], {}])
@@ -518,40 +519,23 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         assert 'sandbox_mode = "workspace-write"' in profiles[mode]
         assert "[sandbox_workspace_write]" in profiles[mode]
     assert _profile_writable_roots(profiles[FileAccessMode.REALIZATION_WRITE]) == {
-        str((root / ".gitignore").resolve()),
-        str((root / "src").resolve()),
-        str((root / "test").resolve()),
+        str(root.resolve()),
     }
     assert _profile_writable_roots(profiles[FileAccessMode.ORACLE_WRITE]) == {
         str((root / "oracle").resolve())
     }
     assert _profile_writable_roots(profiles[FileAccessMode.REPO_WRITE]) == {
-        str((root / ".gitignore").resolve()),
-        str((root / "oracle").resolve()),
-        str((root / "src").resolve()),
-        str((root / "test").resolve()),
+        str(root.resolve()),
     }
-    for blocked in (
-        "oracle/spec.md",
-        "memo/note.md",
-        ".agents/state.json",
-        ".cmoc/log",
-    ):
-        _assert_not_writable(
-            profiles[FileAccessMode.REALIZATION_WRITE], root / blocked
-        )
+    for profile in profiles.values():
+        assert all(Path(path).is_dir() for path in _profile_writable_roots(profile))
     _assert_writable(
         profiles[FileAccessMode.REALIZATION_WRITE], root / "src" / "created.py"
     )
     _assert_writable(
         profiles[FileAccessMode.REPO_WRITE], root / "oracle" / "created.md"
     )
-    for blocked in ("memo/note.md", ".agents/state.json", ".cmoc/log"):
-        _assert_not_writable(profiles[FileAccessMode.REPO_WRITE], root / blocked)
-    _assert_not_writable(
-        profiles[FileAccessMode.REPO_WRITE], root / "new_dir" / "created.md"
-    )
-    _assert_not_writable(
+    _assert_writable(
         profiles[FileAccessMode.REALIZATION_WRITE], root / "new_top_level.md"
     )
 
@@ -569,9 +553,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         extra_writable_paths=[extra],
     )
     assert _profile_writable_roots(profile) == {
-        str((root / ".gitignore").resolve()),
-        str((root / "src").resolve()),
-        str((root / "test").resolve()),
+        str(root.resolve()),
     }
 
     repo_extra = root / "new_dir"
@@ -588,11 +570,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         extra_writable_paths=[repo_extra],
     )
     assert _profile_writable_roots(profile) == {
-        str((root / ".gitignore").resolve()),
-        str(repo_extra.resolve()),
-        str((root / "oracle").resolve()),
-        str((root / "src").resolve()),
-        str((root / "test").resolve()),
+        str(root.resolve()),
     }
     _assert_writable(profile, repo_extra / "created.md")
 
@@ -690,7 +668,7 @@ def test_codex_profile_rejects_disallowed_extra_writable_paths(
         )
 
 
-def test_codex_profile_opens_only_conflict_file_for_session_join_conflict_resolution(
+def test_codex_profile_uses_directory_roots_for_session_join_conflict_resolution(
     tmp_path: Path,
 ) -> None:
     root = tmp_path / "repo"
@@ -716,10 +694,9 @@ def test_codex_profile_opens_only_conflict_file_for_session_join_conflict_resolu
 
     assert _profile_writable_roots(profile) == {
         str((root / "src").resolve()),
-        str(target.resolve()),
+        str((root / "oracle").resolve()),
     }
     _assert_writable(profile, target)
-    _assert_not_writable(profile, root / "oracle" / "other.md")
 
 
 @pytest.mark.parametrize(
@@ -757,7 +734,7 @@ def test_codex_profile_allows_session_join_conflict_targets_by_exact_path(
         allow_oracle_conflict_writes=True,
     )
 
-    assert str(target.resolve()) in _profile_writable_roots(profile)
+    assert all(Path(path).is_dir() for path in _profile_writable_roots(profile))
     _assert_writable(profile, target)
 
 

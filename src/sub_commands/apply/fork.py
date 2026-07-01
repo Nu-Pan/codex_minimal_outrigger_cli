@@ -17,6 +17,10 @@ from acp.builder.apply.fork.file_finding_enumeration import (
 from acp.builder.apply.fork.finding_application import (
     build_apply_fork_finding_application_parameter,
 )
+from acp.builder.common.file_access_rule_vaolation_recovery import (
+    build_file_access_rule_vaolation_recovery_parameter,
+)
+from basic.acp import FileAccessMode
 from cmoc_runtime import (
     ApplyPart,
     CliRunResult,
@@ -189,18 +193,114 @@ def run_finding_application(
     config: CmocConfig,
     codex_exec: CodexExec,
 ) -> None:
-    """所見リスト適用を Codex profile と prompt の file access 制限に委ねる。"""
+    """所見リスト適用後、禁止領域に残った差分をリカバリーする。"""
     parameter = build_apply_fork_finding_application_parameter(findings)
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md forbids post agent-call
-    # checks for disallowed file diffs; enforcement belongs to the Codex profile
-    # and the injected file access prompt built by the ACP builder.
-    codex_exec(
+    result = codex_exec(
         parameter,
         root=root,
         cwd=apply_worktree,
         config=config,
         purpose="apply fork finding application",
     )
+    recover_file_access_violations(
+        root,
+        apply_worktree,
+        result,
+        parameter.file_access_mode,
+        config,
+        codex_exec,
+    )
+
+
+def recover_file_access_violations(
+    log_root: Path,
+    apply_worktree: Path,
+    violated_result: object,
+    violated_mode: FileAccessMode,
+    config: CmocConfig,
+    codex_exec: CodexExec,
+) -> None:
+    """agent call 後に残った file access rule 違反を設定回数だけ修復する。"""
+    violations = file_access_violations(
+        apply_worktree,
+        changed_worktree_paths(apply_worktree),
+        violated_mode,
+    )
+    if not violations:
+        return
+    call_log_path = Path(getattr(violated_result, "call_log_path", log_root))
+    for _attempt in range(config.codex.num_try_falv_recovery):
+        parameter = build_file_access_rule_vaolation_recovery_parameter(
+            call_log_path,
+            violations,
+            violated_mode,
+        )
+        codex_exec(
+            parameter,
+            root=log_root,
+            cwd=apply_worktree,
+            config=config,
+            purpose="file access rule violation recovery",
+        )
+        violations = file_access_violations(
+            apply_worktree,
+            changed_worktree_paths(apply_worktree),
+            violated_mode,
+        )
+        if not violations:
+            return
+    raise CmocError(
+        "agent call がファイルアクセス規則に違反しました。",
+        ["Codex call log と作業差分を確認してから apply を再実行してください。"],
+        "\n".join(str(path) for path in violations),
+    )
+
+
+def file_access_violations(
+    root: Path,
+    paths: list[Path],
+    mode: FileAccessMode,
+) -> list[Path]:
+    """FileAccessMode 上、差分が残ってはいけない path だけを返す。"""
+    return [
+        path
+        for path in paths
+        if not _is_write_allowed_by_file_access_mode(root, path, mode)
+    ]
+
+
+def _is_write_allowed_by_file_access_mode(
+    root: Path,
+    path: Path,
+    mode: FileAccessMode,
+) -> bool:
+    try:
+        relative = path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    if not relative.parts:
+        return False
+    blocked_runtime_roots = {
+        ".agents",
+        ".cmoc",
+        ".codex",
+        ".git",
+        ".pytest_cache",
+        "memo",
+    }
+    if relative.parts[0] in blocked_runtime_roots:
+        return False
+    match mode:
+        case FileAccessMode.READONLY | FileAccessMode.PURE_ORACLE_READ:
+            return False
+        case FileAccessMode.REALIZATION_WRITE:
+            return relative.parts[0] != "oracle"
+        case FileAccessMode.ORACLE_WRITE:
+            return relative.parts[0] == "oracle"
+        case FileAccessMode.REPO_WRITE | FileAccessMode.NO_RULE:
+            return True
+        case _:
+            return False
 
 
 def generate_apply_commit_message(

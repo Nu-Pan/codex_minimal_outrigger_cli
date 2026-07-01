@@ -33,6 +33,7 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
                     key=lambda item: item[0].value,
                 )
             },
+            "num_try_falv_recovery": config.codex.num_try_falv_recovery,
         },
         "apply_fork": {
             "num_apply_files": config.apply_fork.num_apply_files,
@@ -88,7 +89,16 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
 
         return CmocConfig(
             num_parallel=int(data.get("num_parallel", default.num_parallel)),
-            codex=CmocConfigCodex(model=model, reasoning_effort=reasoning_effort),
+            codex=CmocConfigCodex(
+                model=model,
+                reasoning_effort=reasoning_effort,
+                num_try_falv_recovery=int(
+                    codex_data.get(
+                        "num_try_falv_recovery",
+                        default.codex.num_try_falv_recovery,
+                    )
+                ),
+            ),
             apply_fork=CmocConfigApplyFork(
                 num_apply_files=int(
                     apply_fork_data.get(

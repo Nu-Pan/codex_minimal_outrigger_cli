@@ -34,6 +34,9 @@ from acp.builder.apply.fork.change_summary import (
 from acp.builder.apply.fork.finding_application import (
     build_apply_fork_finding_application_parameter,
 )
+from acp.builder.common.file_access_rule_vaolation_recovery import (
+    build_file_access_rule_vaolation_recovery_parameter,
+)
 from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
 from acp.builder.review.oracle.enumerate_finding import (
     build_review_oracle_enumerate_finding_parameter,
@@ -244,7 +247,7 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
             "/memo` は読み書き禁止",
         ],
         FileAccessMode.REPO_WRITE: [
-            "ツリー外は読み書き共に禁止",
+            "ツリー外は読み書き禁止",
             "/memo` は読み書き禁止",
         ],
     }
@@ -255,6 +258,36 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
         assert doc.title == f"file read write rule - {mode.value}"
         for fragment in fragments:
             assert fragment in rendered
+
+
+def test_no_rule_complete_prompt_omits_standard_file_access_rule() -> None:
+    prompt = build_complete_prompt(
+        role="role",
+        summary="summary",
+        goal="goal",
+        file_access_mode=FileAccessMode.NO_RULE,
+    )
+    rendered = render_as_markdown(prompt)
+
+    assert "file read write rule" not in rendered
+
+
+def test_file_access_rule_violation_recovery_builder_uses_no_rule_mode(
+    tmp_path: Path,
+) -> None:
+    call_log = tmp_path / "2026-01-01_00-00_00_000000000_call.json"
+    call_log.write_text("{}\n")
+
+    parameter = build_file_access_rule_vaolation_recovery_parameter(
+        call_log,
+        [tmp_path / "oracle" / "spec.md"],
+        FileAccessMode.REALIZATION_WRITE,
+    )
+
+    assert parameter.file_access_mode == FileAccessMode.NO_RULE
+    assert parameter.structured_output_schema_path is not None
+    assert parameter.structured_output_schema_path.exists()
+    assert "ファイルアクセス規則違反" in parameter.prompt
 
 
 def test_complete_prompt_can_include_apply_review_standard() -> None:
