@@ -9,7 +9,9 @@ subcommand event、retry counter を共有する 1 つの状態機械である�
 根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
+import hashlib
 import json
+import os
 import subprocess
 import threading
 import time
@@ -58,6 +60,8 @@ _QUOTA_PROBE_AVAILABLE = False
 _QUOTA_PROBE_ERROR: BaseException | None = None
 _CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
 _LAST_CODEX_LOG_TIMESTAMP: str | None = None
+_FORBIDDEN_FILESYSTEM_DIFF_ROOTS = (".agents", ".codex", ".git", "memo")
+_ForbiddenSnapshot = dict[Path, tuple[int, int, int, int, str | None]]
 
 
 def _write_prompt_log(path: Path, prompt: str) -> None:
@@ -309,6 +313,9 @@ def run_codex_exec(
     generated_paths: set[Path] = set()
     if schema_path is not None:
         generated_paths.add(schema_path.resolve())
+    forbidden_baseline = (
+        _forbidden_filesystem_snapshot(codex_work_root) if verify_file_access else None
+    )
 
     while True:
         ts, prompt_path, stdout_path, stderr_path, output_path, call_path = new_log_paths()
@@ -664,6 +671,7 @@ def run_codex_exec(
                 root=root,
                 subcommand_logger=logger,
                 allowed_paths=allowed_paths,
+                forbidden_baseline=forbidden_baseline,
             )
         return exec_result
 
@@ -680,6 +688,7 @@ def recover_file_access_violations(
     root: Path | None = None,
     subcommand_logger: SubcommandLogger | None = None,
     allowed_paths: list[Path] | None = None,
+    forbidden_baseline: _ForbiddenSnapshot | None = None,
 ) -> None:
     """agent call 後に残った file access rule 違反を設定回数だけ修復する。"""
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
@@ -688,7 +697,7 @@ def recover_file_access_violations(
     ignored = {path.resolve() for path in ignored_paths or set()}
     violations = file_access_violations(
         worktree,
-        changed_worktree_paths(worktree),
+        _post_call_changed_worktree_paths(worktree, forbidden_baseline),
         violated_mode,
         ignored,
         allowed_paths,
@@ -728,7 +737,7 @@ def recover_file_access_violations(
             ignored.add(recovery_result.schema_path.resolve())
         violations = file_access_violations(
             worktree,
-            changed_worktree_paths(worktree),
+            _post_call_changed_worktree_paths(worktree, forbidden_baseline),
             violated_mode,
             ignored,
             allowed_paths,
@@ -755,6 +764,71 @@ def changed_worktree_paths(root: Path) -> list[Path]:
             path_text = path_text.split(" -> ", 1)[1]
         paths.append(root / path_text)
     return paths
+
+
+def _post_call_changed_worktree_paths(
+    root: Path, forbidden_baseline: _ForbiddenSnapshot | None
+) -> list[Path]:
+    """agent call 後の検査対象 path を返す。"""
+    paths = changed_worktree_paths(root)
+    if forbidden_baseline is not None:
+        paths.extend(_forbidden_filesystem_changed_paths(root, forbidden_baseline))
+    seen: set[Path] = set()
+    result: list[Path] = []
+    for path in paths:
+        resolved = path.resolve()
+        if resolved not in seen:
+            seen.add(resolved)
+            result.append(path)
+    return result
+
+
+def _forbidden_filesystem_snapshot(root: Path) -> _ForbiddenSnapshot:
+    snapshot: _ForbiddenSnapshot = {}
+    for name in _FORBIDDEN_FILESYSTEM_DIFF_ROOTS:
+        base = root / name
+        if not base.exists():
+            continue
+        if base.is_file() or base.is_symlink():
+            snapshot[base.relative_to(root)] = _forbidden_file_fingerprint(
+                base, include_digest=name == ".git"
+            )
+            continue
+        if name == ".git":
+            # cmoc の git status 自体が .git directory を更新し得るため、
+            # linked worktree の .git file だけを filesystem 差分対象にする。
+            continue
+        for current_root, _dirnames, filenames in os.walk(base):
+            for filename in filenames:
+                path = Path(current_root) / filename
+                try:
+                    fingerprint = _forbidden_file_fingerprint(path)
+                except FileNotFoundError:
+                    continue
+                snapshot[path.relative_to(root)] = fingerprint
+    return snapshot
+
+
+def _forbidden_file_fingerprint(
+    path: Path, *, include_digest: bool = False
+) -> tuple[int, int, int, int, str | None]:
+    stat = path.lstat()
+    digest = hashlib.sha256(path.read_bytes()).hexdigest() if include_digest else None
+    return stat.st_mode, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns, digest
+
+
+def _forbidden_filesystem_changed_paths(
+    root: Path, baseline: _ForbiddenSnapshot
+) -> list[Path]:
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # Ignored files below denied roots do not appear in git status, so post-check
+    # also compares file metadata captured immediately before the agent call.
+    current = _forbidden_filesystem_snapshot(root)
+    changed: list[Path] = []
+    for relative in sorted(set(baseline) | set(current), key=str):
+        if baseline.get(relative) != current.get(relative):
+            changed.append(root / relative)
+    return changed
 
 
 def file_access_violations(

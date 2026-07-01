@@ -374,6 +374,9 @@ def test_run_codex_exec_rejects_repo_write_blocked_diffs_after_call(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
+    (root / ".gitignore").write_text("memo/\n")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "ignore memo")
     setup_codex_home(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
