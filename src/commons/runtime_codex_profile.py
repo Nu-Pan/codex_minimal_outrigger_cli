@@ -174,7 +174,7 @@ def _writable_roots(
         if resolved not in seen and not any(
             resolved.is_relative_to(parent) for parent in seen
         ):
-            sandbox_root = _sandbox_writable_root(resolved)
+            sandbox_root = _sandbox_writable_root_for_mode(mode, root, resolved)
             _append_writable_root(result, seen, sandbox_root)
     for path in extra_writable_paths or []:
         resolved = path.resolve()
@@ -191,7 +191,7 @@ def _writable_roots(
         if resolved not in seen and not any(
             resolved.is_relative_to(parent) for parent in seen
         ):
-            sandbox_root = _sandbox_writable_root(resolved)
+            sandbox_root = _sandbox_writable_root_for_mode(mode, root, resolved)
             _append_writable_root(result, seen, sandbox_root)
     return result
 
@@ -201,7 +201,7 @@ def _existing_writable_top_level_roots(mode: FileAccessMode, root: Path) -> list
         [
             path
             for path in root.iterdir()
-            if _is_writable_path_allowed(mode, root, path.resolve())
+            if path.is_dir() and _is_writable_path_allowed(mode, root, path.resolve())
         ],
         key=lambda path: str(path.resolve()),
     )
@@ -212,6 +212,22 @@ def _sandbox_writable_root(path: Path) -> Path:
     if path.exists() and path.is_file():
         return path.parent.resolve()
     return path.resolve()
+
+
+def _sandbox_writable_root_for_mode(
+    mode: FileAccessMode, root: Path, path: Path
+) -> Path:
+    sandbox_root = _sandbox_writable_root(path)
+    if sandbox_root == root.resolve() and mode != FileAccessMode.NO_RULE:
+        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+        # Codex profile has no deny-list. Opening <work-root> for one root file
+        # also opens memo/.git/.agents/.codex and other forbidden siblings.
+        raise CmocError(
+            "追加書き込み許可 path は Codex profile で安全に表現できません。",
+            ["禁止領域を含まない既存 directory 配下の path を指定してください。"],
+            f"mode: {mode.value}\npath: {path}",
+        )
+    return sandbox_root
 
 
 def _append_writable_root(result: list[Path], seen: set[Path], path: Path) -> None:

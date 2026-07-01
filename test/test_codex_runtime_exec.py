@@ -137,9 +137,52 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
     writable_roots = set(
         tomllib.loads(record["profile"])["sandbox_workspace_write"]["writable_roots"]
     )
-    assert writable_roots == {str(root.resolve())}
+    assert writable_roots == {str((root / "oracle").resolve())}
     assert (root / "oracle" / "created.md").read_text() == "created\n"
     assert result.output_text == "done\n"
+
+
+def test_run_codex_exec_recovers_file_access_violations(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    (root / "src").mkdir()
+    (root / "src" / "app.py").write_text("")
+    run_git(root, "add", "src")
+    run_git(root, "commit", "-m", "add src")
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "count.txt"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "blocked = pathlib.Path('oracle/blocked.md')",
+            "if count == 0:",
+            "    blocked.write_text('blocked\\n')",
+            "else:",
+            "    blocked.unlink(missing_ok=True)",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_exec(
+        _parameter(FileAccessMode.REALIZATION_WRITE),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    assert counter.read_text() == "2"
+    assert not (root / "oracle" / "blocked.md").exists()
 
 
 def test_run_codex_exec_limits_pure_oracle_read_to_oracle_cwd(
@@ -373,7 +416,7 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
         Path(json.loads(call_log.read_text())["profile_path"]).read_text()
     )
     assert profile["sandbox_workspace_write"]["writable_roots"] == [
-        str(linked.resolve())
+        str((linked / "oracle").resolve())
     ]
 
 

@@ -524,13 +524,16 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         assert 'sandbox_mode = "workspace-write"' in profiles[mode]
         assert "[sandbox_workspace_write]" in profiles[mode]
     assert _profile_writable_roots(profiles[FileAccessMode.REALIZATION_WRITE]) == {
-        str(root.resolve()),
+        str((root / "src").resolve()),
+        str((root / "test").resolve()),
     }
     assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_WRITE]) == {
         str((root / "oracle").resolve())
     }
     assert _profile_writable_roots(profiles[FileAccessMode.REPO_WRITE]) == {
-        str(root.resolve()),
+        str((root / "oracle").resolve()),
+        str((root / "src").resolve()),
+        str((root / "test").resolve()),
     }
     for profile in profiles.values():
         assert all(Path(path).is_dir() for path in _profile_writable_roots(profile))
@@ -540,7 +543,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     _assert_writable(
         profiles[FileAccessMode.REPO_WRITE], root / "oracle" / "created.md"
     )
-    _assert_writable(
+    _assert_not_writable(
         profiles[FileAccessMode.REALIZATION_WRITE], root / "new_top_level.md"
     )
 
@@ -558,7 +561,8 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         extra_writable_paths=[extra],
     )
     assert _profile_writable_roots(profile) == {
-        str(root.resolve()),
+        str((root / "src").resolve()),
+        str((root / "test").resolve()),
     }
 
     repo_extra = root / "new_dir"
@@ -575,7 +579,10 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         extra_writable_paths=[repo_extra],
     )
     assert _profile_writable_roots(profile) == {
-        str(root.resolve()),
+        str((root / "new_dir").resolve()),
+        str((root / "oracle").resolve()),
+        str((root / "src").resolve()),
+        str((root / "test").resolve()),
     }
     _assert_writable(profile, repo_extra / "created.md")
 
@@ -637,6 +644,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         (FileAccessMode.REALIZATION_WRITE, ".agents/blocked.md"),
         (FileAccessMode.REALIZATION_WRITE, ".cmoc/state.json"),
         (FileAccessMode.REALIZATION_WRITE, ".codex/config.toml"),
+        (FileAccessMode.REALIZATION_WRITE, "README.md"),
         (FileAccessMode.REALIZATION_WRITE, "AGENTS.md"),
         (FileAccessMode.REALIZATION_WRITE, "INDEX.md"),
         (FileAccessMode.PURE_ORACLE_WRITE, "src/blocked.md"),
@@ -648,6 +656,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         (FileAccessMode.REPO_WRITE, ".agents/blocked.md"),
         (FileAccessMode.REPO_WRITE, ".cmoc/state.json"),
         (FileAccessMode.REPO_WRITE, ".git/config"),
+        (FileAccessMode.REPO_WRITE, "README.md"),
         (FileAccessMode.REPO_WRITE, "AGENTS.md"),
         (FileAccessMode.REPO_WRITE, "INDEX.md"),
         (FileAccessMode.REPO_WRITE, "../outside.md"),
@@ -663,7 +672,7 @@ def test_codex_profile_rejects_disallowed_extra_writable_paths(
     (root / "memo").mkdir()
     (root / ".agents").mkdir()
 
-    with pytest.raises(CmocError, match="追加書き込み許可 path"):
+    with pytest.raises(CmocError, match="追加書き込み許可 path|安全に表現"):
         build_codex_profile(
             AgentCallParameter(
                 ModelClass.EFFICIENCY,
@@ -712,14 +721,11 @@ def test_codex_profile_uses_directory_roots_for_session_join_conflict_resolution
 @pytest.mark.parametrize(
     "extra",
     [
-        "README.md",
-        "INDEX.md",
-        "AGENTS.md",
         "oracle/INDEX.md",
         "oracle/spec.md",
     ],
 )
-def test_codex_profile_allows_session_join_conflict_targets_by_exact_path(
+def test_codex_profile_allows_session_join_conflict_targets_under_allowed_dirs(
     tmp_path: Path, extra: str
 ) -> None:
     root = tmp_path / "repo"
@@ -746,6 +752,32 @@ def test_codex_profile_allows_session_join_conflict_targets_by_exact_path(
 
     assert all(Path(path).is_dir() for path in _profile_writable_roots(profile))
     _assert_writable(profile, target)
+
+
+@pytest.mark.parametrize("extra", ["README.md", "INDEX.md", "AGENTS.md"])
+def test_codex_profile_rejects_root_file_session_join_conflict_targets(
+    tmp_path: Path, extra: str
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "src").mkdir()
+    target = root / extra
+    target.write_text("conflict\n")
+
+    with pytest.raises(CmocError, match="安全に表現できません"):
+        build_codex_profile(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                FileAccessMode.REALIZATION_WRITE,
+                "prompt",
+                None,
+            ),
+            CmocConfig(),
+            root,
+            extra_writable_paths=[target],
+            allow_oracle_conflict_writes=True,
+        )
 
 
 @pytest.mark.parametrize(

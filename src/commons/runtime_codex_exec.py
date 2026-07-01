@@ -19,7 +19,7 @@ from typing import Any
 
 from jsonschema import validate
 
-from basic.acp import AgentCallParameter
+from basic.acp import AgentCallParameter, FileAccessMode
 from config.cmoc_config import CmocConfig
 
 from commons.runtime_config import load_config
@@ -40,6 +40,7 @@ from commons.runtime_codex_profile import (
 )
 from commons.runtime_errors import CmocError
 from commons.runtime_codex_logging import emit_codex_call_console
+from commons.runtime_git import run_git
 from commons.runtime_logging import SubcommandLogger, current_subcommand_logger
 from commons.runtime_paths import (
     codex_log_dir,
@@ -140,6 +141,7 @@ def run_codex_exec(
     extra_read_paths: list[Path] | None = None,
     extra_writable_paths: list[Path] | None = None,
     allow_oracle_conflict_writes: bool = False,
+    verify_file_access: bool = True,
 ) -> CodexExecResult:
     """Codex exec の再試行、Structured Output 検証、実行記録を一括制御する。"""
     root = root or repo_root()
@@ -304,11 +306,18 @@ def run_codex_exec(
     sleep_sec = capacity_initial_sleep_sec
     last_result: subprocess.CompletedProcess[str] | None = None
     resume_token: str | None = None
+    generated_paths: set[Path] = set()
+    if schema_path is not None:
+        generated_paths.add(schema_path.resolve())
 
     while True:
         ts, prompt_path, stdout_path, stderr_path, output_path, call_path = new_log_paths()
         current_argv = build_argv(output_path, resume_token)
         _write_prompt_log(prompt_path, parameter.prompt)
+        generated_paths.update(
+            path.resolve()
+            for path in (prompt_path, stdout_path, stderr_path, output_path, call_path)
+        )
         write_call_log(
             call_path,
             run_purpose=purpose,
@@ -622,7 +631,7 @@ def run_codex_exec(
             returncode=result.returncode,
             status="succeeded",
         )
-        return CodexExecResult(
+        exec_result = CodexExecResult(
             returncode=result.returncode,
             output_text=output_text,
             output_json=output_json,
@@ -639,5 +648,152 @@ def run_codex_exec(
             quota_wait_sec=quota_wait_sec,
             quota_polls=quota_polls,
         )
+        if verify_file_access:
+            recover_file_access_violations(
+                codex_work_root,
+                exec_result,
+                parameter.file_access_mode,
+                config,
+                generated_paths,
+                root=root,
+                subcommand_logger=logger,
+            )
+        return exec_result
 
     assert last_result is not None
+
+
+def recover_file_access_violations(
+    worktree: Path,
+    violated_result: CodexExecResult,
+    violated_mode: FileAccessMode,
+    config: CmocConfig,
+    ignored_paths: set[Path] | None = None,
+    *,
+    root: Path | None = None,
+    subcommand_logger: SubcommandLogger | None = None,
+) -> None:
+    """agent call 後に残った file access rule 違反を設定回数だけ修復する。"""
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # Runtime-generated logs are ignored here; the post-check targets agent
+    # edits that remain in the worktree after the call.
+    ignored = {path.resolve() for path in ignored_paths or set()}
+    violations = file_access_violations(
+        worktree,
+        changed_worktree_paths(worktree),
+        violated_mode,
+        ignored,
+    )
+    if not violations:
+        return
+    for _attempt in range(config.codex.num_try_falv_recovery):
+        from acp.builder.common.file_access_rule_vaolation_recovery import (
+            build_file_access_rule_vaolation_recovery_parameter,
+        )
+
+        parameter = build_file_access_rule_vaolation_recovery_parameter(
+            violated_result.call_log_path,
+            violations,
+            violated_mode,
+        )
+        recovery_result = run_codex_exec(
+            parameter,
+            root=root or worktree,
+            cwd=worktree,
+            config=config,
+            purpose="file access rule violation recovery",
+            subcommand_logger=subcommand_logger,
+            verify_file_access=False,
+        )
+        ignored.update(
+            path.resolve()
+            for path in (
+                recovery_result.call_log_path,
+                recovery_result.prompt_log_path,
+                recovery_result.stdout_log_path,
+                recovery_result.stderr_log_path,
+                recovery_result.output_path,
+            )
+        )
+        if recovery_result.schema_path is not None:
+            ignored.add(recovery_result.schema_path.resolve())
+        violations = file_access_violations(
+            worktree,
+            changed_worktree_paths(worktree),
+            violated_mode,
+            ignored,
+        )
+        if not violations:
+            return
+    raise CmocError(
+        "agent call がファイルアクセス規則に違反しました。",
+        ["Codex call log と作業差分を確認してから cmoc コマンドを再実行してください。"],
+        "\n".join(str(path) for path in violations),
+    )
+
+
+def changed_worktree_paths(root: Path) -> list[Path]:
+    """worktree 上の変更 path を absolute path として返す。"""
+    paths: list[Path] = []
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # apply requeue and file access validation both need file-level paths;
+    # default status can collapse untracked directories into one directory path.
+    for line in run_git(["status", "--short", "-uall"], root).stdout.splitlines():
+        path_text = line[3:]
+        if " -> " in path_text:
+            path_text = path_text.split(" -> ", 1)[1]
+        paths.append(root / path_text)
+    return paths
+
+
+def file_access_violations(
+    root: Path,
+    paths: list[Path],
+    mode: FileAccessMode,
+    ignored_paths: set[Path] | None = None,
+) -> list[Path]:
+    """FileAccessMode 上、差分が残ってはいけない path だけを返す。"""
+    ignored = {path.resolve() for path in ignored_paths or set()}
+    return [
+        path
+        for path in paths
+        if path.resolve() not in ignored
+        and not _is_write_allowed_by_file_access_mode(root, path, mode)
+    ]
+
+
+def _is_write_allowed_by_file_access_mode(
+    root: Path,
+    path: Path,
+    mode: FileAccessMode,
+) -> bool:
+    try:
+        relative = path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    if not relative.parts:
+        return False
+    blocked_runtime_roots = {
+        ".agents",
+        ".cmoc",
+        ".codex",
+        ".git",
+        ".pytest_cache",
+        "memo",
+    }
+    if relative.parts[0] in blocked_runtime_roots:
+        return False
+    if path.name in {"AGENTS.md", "INDEX.md"}:
+        return False
+    match mode:
+        case FileAccessMode.READONLY | FileAccessMode.PURE_ORACLE_READ:
+            return False
+        case FileAccessMode.REALIZATION_WRITE:
+            return relative.parts[0] != "oracle"
+        case FileAccessMode.PURE_ORACLE_WRITE:
+            return relative.parts[0] == "oracle"
+        case FileAccessMode.REPO_WRITE | FileAccessMode.NO_RULE:
+            return True
+        case _:
+            return False
