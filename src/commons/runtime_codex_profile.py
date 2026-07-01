@@ -265,7 +265,9 @@ def _is_writable_path_allowed(
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # 追加 writable path は、prompt で伝える禁止領域を広げない範囲だけ許可する。
     relative = path.relative_to(root)
-    if len(relative.parts) == 1 and path.name in {"README.md", "AGENTS.md", "INDEX.md"}:
+    if path.name in {"AGENTS.md", "INDEX.md"}:
+        return False
+    if len(relative.parts) == 1 and path.name == "README.md":
         return False
     if mode == FileAccessMode.REALIZATION_WRITE and allow_oracle_conflict_writes:
         # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
@@ -275,8 +277,6 @@ def _is_writable_path_allowed(
             bool(relative.parts)
             and relative.parts[0] not in _CONFLICT_WRITE_BLOCKED_ROOT_NAMES
         )
-    if path.name in {"AGENTS.md", "INDEX.md"}:
-        return False
     blocked_root_names = (
         _REPO_WRITE_BLOCKED_ROOT_NAMES
         if mode == FileAccessMode.REPO_WRITE

@@ -722,21 +722,14 @@ def test_codex_profile_uses_directory_roots_for_session_join_conflict_resolution
     _assert_writable(profile, target)
 
 
-@pytest.mark.parametrize(
-    "extra",
-    [
-        "oracle/INDEX.md",
-        "oracle/spec.md",
-    ],
-)
 def test_codex_profile_allows_session_join_conflict_targets_under_allowed_dirs(
-    tmp_path: Path, extra: str
+    tmp_path: Path,
 ) -> None:
     root = tmp_path / "repo"
     root.mkdir()
     (root / "src").mkdir()
     (root / "oracle").mkdir()
-    target = root / extra
+    target = root / "oracle" / "spec.md"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text("conflict\n")
 
@@ -756,6 +749,33 @@ def test_codex_profile_allows_session_join_conflict_targets_under_allowed_dirs(
 
     assert all(Path(path).is_dir() for path in _profile_writable_roots(profile))
     _assert_writable(profile, target)
+
+
+@pytest.mark.parametrize("extra", ["oracle/INDEX.md", "oracle/AGENTS.md"])
+def test_codex_profile_rejects_session_join_conflict_targets_with_denied_names(
+    tmp_path: Path, extra: str
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "src").mkdir()
+    target = root / extra
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("conflict\n")
+
+    with pytest.raises(CmocError, match="追加書き込み許可 path"):
+        build_codex_profile(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                FileAccessMode.REALIZATION_WRITE,
+                "prompt",
+                None,
+            ),
+            CmocConfig(),
+            root,
+            extra_writable_paths=[target],
+            allow_oracle_conflict_writes=True,
+        )
 
 
 @pytest.mark.parametrize(
