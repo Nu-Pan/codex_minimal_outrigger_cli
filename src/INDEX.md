@@ -141,22 +141,23 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装を集約する領域で、初期化、indexing、TUI、session、review、apply などの利用者操作を runtime や共通処理へ接続する入口を扱う。
-- 各サブコマンドの実行条件、preflight、状態更新、git 操作、worktree/branch 管理、利用者向け出力、report 生成へ進むための上位ルーティング対象。
-- 詳細な生成ロジック、状態管理、git wrapper、prompt builder などは共通処理や下位モジュールへ委譲され、この階層はサブコマンド単位の制御境界を選ぶために読む。
+- CLI サブコマンド実装を集めた領域で、apply、review、session、init、indexing、tui などの利用者向け操作から具体的な実装入口を選ぶための階層。
+- 各サブコマンドは CLI runtime 経由の起動、事前条件確認、git・state・worktree 操作、Codex 実行連携、利用者向け出力や report 作成へ分かれており、この階層は目的の操作領域へ進む入口になる。
+- サブコマンド横断の共通 helper や oracle 正本仕様ではなく、実際の CLI 操作単位で実装を追うために読む対象。
 
 ## Read this when
-- CLI から起動されるサブコマンド実装のうち、どの処理領域へ進むべきかを選びたいとき。
-- 初期化、indexing、TUI、session lifecycle、review oracle、apply 系操作の実行フロー、事前条件、状態更新、branch/worktree 操作、終了時出力を確認または変更したいとき。
-- 利用者向けコマンドが共通 runtime、Codex 実行、INDEX maintenance、report 作成、merge/conflict 処理、cleanup 処理へどこから接続されるかを追いたいとき。
-- サブコマンド固有の orchestration と、共通 helper や下位処理へ委譲される責務の境界を切り分けたいとき。
+- 特定の CLI サブコマンドの実行フロー、事前条件、状態更新、git 操作、副作用、利用者向け出力を調べる入口を探したいとき。
+- apply、review、session のように複数ファイルへ分かれたサブコマンド群の中で、どの実装ファイルまたは下位 package へ進むべきかを切り分けたいとき。
+- init、indexing、tui のような単独サブコマンドが CLI runtime、preflight、Codex 実行、設定・ignore・work root 処理へどう接続しているかを確認したいとき。
+- review oracle の対象列挙、finding loop、INDEX 反映、report 出力など、review 系処理の責務別実装への入口を選びたいとき。
+- session lifecycle や apply run lifecycle に関わる branch、worktree、state、cleanup、merge/conflict 処理の実装箇所を探したいとき。
 
 ## Do not read this when
-- CLI 全体の command 登録、runtime の一般規約、git 実行 wrapper、state file 読み書き、path 解決、設定読み込みなどの共通基盤だけを確認したいとき。
-- oracle file の正本仕様、サブコマンド仕様文書、または INDEX.md エントリー作成基準そのものを確認したいとき。
-- Codex prompt、Structured Output parameter、TUI launch/resolve parameter の具体的な組み立てだけを確認したいとき。
-- INDEX.md 本文生成、差分検出、lock、commit、routing 文書品質など indexing 共通処理の詳細だけを調べたいとき。
-- review や apply の対象列挙、finding 生成、report 描画、merge/conflict 解決など、下位モジュールが直接担う詳細処理だけを確認したいとき。
+- CLI 全体の Typer app 登録、共通 runtime、git wrapper、state file schema、path 解決、設定モデルなど、サブコマンドから呼ばれる共通基盤だけを調べたいとき。
+- oracle file の正本仕様、各サブコマンドの外部仕様文書、review 基準、INDEX.md エントリー作成基準そのものを確認したいとき。
+- Codex prompt や Structured Output parameter の具体的な組み立てだけを確認したいときは、対応する builder 側を直接読む。
+- INDEX.md の本文生成、差分検出、更新対象探索、lock、commit など indexing 共通処理の詳細だけを調べたいとき。
+- git 実行、reports directory、clean worktree 検証、cmoc ignore 判定などの低レベル helper の実装だけを確認したいとき。
 
 ## hash
-- 9c6e045762288f75f1835c534ead3a047c8fa83c7eced643ba93933c877043e7
+- c3e0bdd2887c2e7e903e7219a94cfd731b077b333673d1a624e08f0e262e0a84

@@ -324,26 +324,22 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle コマンドの外部挙動を CLI 経由で検証する realization test。report の構成と集計、対象 oracle file の列挙条件、session/full scope、linked worktree、所見の列挙・検証・judge・merge、review 中に許される INDEX.md 変更と許されない差分、処理失敗時の error report を扱う。
-- 所見評価 loop の fake Codex 応答と report 文脈を共有するため、oracle review run 全体の制御と出力を一箇所で確認する入口になる。
+- review oracle コマンドの外部挙動を CLI 経由で検証するテスト。report 生成、対象 oracle file の列挙、session/full scope、linked worktree、所見の列挙・検証・judge・merge、INDEX.md 変更の取り込み、異常終了時 report、review worktree の不正差分拒否を扱う。
 
 ## Read this when
-- review oracle コマンドの report 出力、終了コード、標準出力、集計値、section 順序、accepted/rejected finding の表示を変更・確認する。
-- review oracle の対象 oracle file の選択条件を変更・確認する。特に AGENTS.md/INDEX.md の除外、git ignore された tracked file、未追跡 ignored file、symlink、memo 配下との境界を扱う。
-- review oracle の session scope と full scope、短縮 option、対象 0 件時の挙動を変更・確認する。
-- review oracle が linked worktree 上の session branch と oracle を扱う挙動、review 用 worktree、fork commit、join commit を変更・確認する。
-- finding の enumerate loop、validate challenger/advocate、judge、merge operation の契約、loop 上限、対象別 prompt に渡す既存 finding 文脈を変更・確認する。
-- review oracle 実行中に生成された INDEX.md 変更の取り込み、INDEX.md conflict 解決、INDEX.md 以外の差分拒否を変更・確認する。
-- review oracle 処理途中の例外で error report を残す挙動を変更・確認する。
+- review oracle の report 内容、section 順、accepted/rejected findings の表示、no_targets/error 結果を変更する時。
+- review oracle の対象 oracle file 列挙条件、tracked ignored file、AGENTS.md/INDEX.md 除外、session scope と full scope の差分を確認する時。
+- review oracle の所見 loop、enumerate prompt に渡す既存所見、challenger/advocate/judge/merge の制御、merge operation の契約を変更する時。
+- review oracle が linked worktree、review 用 worktree、join commit、INDEX.md 変更や conflict を扱う処理を変更する時。
+- review oracle 実行中に Codex が作る差分の許可範囲や、INDEX.md 以外の差分を拒否する挙動を確認する時。
 
 ## Do not read this when
-- oracle review 以外の review コマンドや一般的な CLI 初期化・session 操作だけを確認したい場合。
-- report renderer や review loop の内部実装だけを局所的に読みたい場合で、対応する実装ファイルを直接読む方が早い場合。
-- oracle file の正本仕様そのもの、prompt 文面、Structured Output schema の項目定義を確認したい場合。
-- INDEX.md エントリー生成規則やルーティング文書の書き方だけを確認したい場合。
+- review oracle 以外の review サブコマンドや通常の session 操作だけを変更する時。
+- oracle file の定義そのものや正本仕様文書の文言だけを確認したい時。
+- report renderer や review loop の内部実装を読む前の入口だけが必要な時は、まず対応する実装側のルーティング情報から読む。
 
 ## hash
-- 35b2d261f8fb5be8c89b1d133435957cf2ff500d9d0d0e5c5077625d5cab1597
+- 49d3290fe119dbda85026d0d207939d6f4534017f55c06e1335e1a57e63b6492
 
 # `test_session_cli.py`
 
