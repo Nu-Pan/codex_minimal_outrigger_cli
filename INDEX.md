@@ -143,41 +143,42 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を収める実装ルート。最上位 CLI、サブコマンド実装、runtime 共通処理、agent call parameter builder、設定・basic・oracle 互換入口など、利用者向け操作と実装側共通部品への入口をまとめる。
-- 下位領域は、実処理を担う実装、複数領域から使われる runtime helper、正本側実装を複製せず参照するための薄い互換層に分かれる。
+- cmoc の realization implementation 全体への入口。最上位 CLI、サブコマンド実装、共通 runtime helper、agent call parameter builder、設定・basic・oracle 正本実装への互換参照境界を含む。
+- 実装本体を担う領域と、既存 import path を維持する薄い互換層とを見分け、CLI 制御、runtime 共通処理、builder、正本側実装参照のどこへ進むかを選ぶためのルーティング対象。
 
 ## Read this when
-- cmoc の実装側で、CLI 入口、サブコマンド、runtime helper、ACP builder、設定・basic・oracle 互換入口のどこへ進むべきか選びたいとき。
-- 公開 CLI コマンド構成、利用者操作の制御フロー、Codex 実行連携、git・state・path・logging などの共通処理、agent call parameter 生成処理の入口を探しているとき。
-- 既存 import path を保つ互換層が、どの正本側実装または実体 module へ委譲しているか、または削除条件を確認したいとき。
-- oracle src を realization 側へ複製せず参照する境界と、実装側で具体的な処理を持つ領域の違いを見分けたいとき。
+- cmoc の realization implementation 全体から、CLI 入口、サブコマンド実装、共通 runtime helper、builder、互換 import 層のどこを読むべきか選びたいとき。
+- 公開 CLI コマンド構成、サブコマンド制御、Codex 実行連携、git・worktree・state 操作、INDEX 更新、report 生成など、実装側の入口を探しているとき。
+- 既存 import path を維持する互換層が、どの正本側実装または実体 module へ委譲しているか確認したいとき。
+- realization 側にある対象が、実処理を持つ implementation なのか、正本側または実体 module への薄い再公開なのかを切り分けたいとき。
 
 ## Do not read this when
-- 正本仕様断片、prompt の正本文面、path model や設定定義など oracle 側の本文を確認したいときは、対応する oracle 側へ進む。
-- 個別サブコマンド、個別 runtime helper、個別 builder の具体処理をすでに特定しているときは、該当する下位領域へ直接進む。
-- テストの期待挙動や test fixture を確認したいときは、実装ルートではなく test 側へ進む。
-- memo、AGENTS、INDEX.md、git 管理情報、codex 実行環境など、realization implementation ではない対象を調べたいときは、この対象を入口にしない。
+- 正本仕様断片、oracle 側 builder 本体、prompt の正本文面、path model や設定定義の正本を確認したいときは、対応する oracle 側本文へ進む。
+- 個別サブコマンド内の対象列挙、loop、merge、report、state 操作など、読むべき下位責務がすでに分かっているときは、その専用領域へ直接進む。
+- agent call parameter の個別 builder 処理、型変換、prompt 補正、schema fallback などを直接確認したいときは、builder の下位領域へ進む。
+- runtime helper の利用元や CLI から委譲された実処理ではなく、外部仕様文書、INDEX.md エントリー基準、または oracle file の記述方針そのものを調べたいときは、この領域ではなく仕様側へ進む。
 
 ## hash
-- 812e45bdb7705ad82b975b51f717feb86bceaa6cd448318b973ba223a850c139
+- 0b548f8313205edf8f2ebfa6797181e253e8fee1cb317b332879fd3d81a4f69a
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群を置くディレクトリ。CLI サブコマンド、Codex runtime、ACP builder、prompt rendering、packaged import、indexing、session/apply/review の外部挙動と共通実行前提を検証する入口になる。
-- 共通テスト補助から個別サブコマンドの統合テストまでを含み、実装変更後にどの外部挙動・制御ロジックの回帰を確認すべきかを探すための階層である。
+- CLI 外部挙動、runtime 契約、Codex 実行制御、ACP builder、prompt rendering、indexing、review oracle、apply/session lifecycle を検証する realization test 群。
+- 各サブコマンドや共通 runtime の期待出力、終了コード、state 遷移、git 副作用、Codex 呼び出し境界を確認するための入口であり、共通 fixture と補助関数も含む。
 
 ## Read this when
-- realization implementation を変更した後に、対応する CLI 外部挙動、状態遷移、git 操作、Codex 実行制御、prompt/schema 参照の既存テストを探すとき。
-- apply、session、review oracle、indexing、init/TUI、Codex runtime、ACP builder、prompt parts、StructDoc rendering、packaged import の回帰テストを確認・変更するとき。
-- 一時 Git リポジトリ、Codex home、fake executable、worktree path 解決など、テスト用 fixture や共通補助関数の使い方を確認するとき。
-- oracle source や prompt/schema との接続が realization 側テストでどう検証されているかを確認するとき。
+- CLI サブコマンドの外部挙動、終了コード、標準出力、report、state 更新、branch/worktree cleanup の期待値を確認または変更するとき。
+- Codex CLI/TUI 実行、CODEX_HOME、profile、sandbox、quota/capacity retry、file access mode など runtime 境界の回帰テストを探すとき。
+- ACP builder、prompt parts、Structured Output schema 参照、packaged import、StructDoc Markdown rendering の realization test を確認するとき。
+- indexing、review oracle、apply fork/join/abandon、session fork/join/abandon の制御フローや境界条件をテストから確認したいとき。
+- テスト用 Git repository、Codex home、fake executable、branch/worktree helper など共通テスト支援処理を利用または変更するとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片、標準、schema、prompt 本文そのものを確認したい場合は、oracle 側の該当 doc/src/test を読む。
-- 実装内部の helper 分割、低レベルな git/path/config 処理、個別 builder の本体を局所的に変更するだけなら、先に src 側の該当モジュールを読む。
-- Codex CLI や LLM の実出力品質そのものを評価したい場合は、このテスト群ではなく対象の実行環境や評価手段を確認する。
-- INDEX.md エントリー生成規則やルーティング文書の正本内容を確認したいだけなら、oracle 側の文書を読む。
+- 正本仕様断片そのもの、oracle file の定義、標準文書、schema の正本内容を確認したい場合は、oracle 側を読む。
+- 個別機能の内部実装、helper 分割、git 操作 wrapper、report renderer などを局所的に変更するだけで、外部挙動テストの期待値確認が不要な場合は、実装側を先に読む。
+- Codex CLI や LLM の実出力品質そのものを評価したい場合は、このテスト群ではなく該当する prompt や運用上の確認対象を見る。
+- INDEX.md エントリー生成規則やルーティング文書の書き方だけを確認したい場合は、対応する oracle 文書や生成処理側を読む。
 
 ## hash
-- da669d2d3bb50c5b7e3720fe888655ea9b44686e78eea571c4ffcfb8a569f0e7
+- 11c84134b845c7223974561fe17bdb31797773c4e1d093a490bab6287eea9eb1

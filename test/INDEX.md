@@ -327,24 +327,26 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle を CLI 経由で実行したときの外部挙動を検証するテスト群。report の生成内容、scope 別の対象選択、所見の列挙・検証・judge・merge、エラー時 report、review 用 worktree と join commit、INDEX.md 差分の取り込み・競合解決を扱う。
-- 所見評価 loop の制御と report 文脈を共有するため、複数の観点を単一の review run の統合テストとしてまとめている。
+- review oracle コマンドの外部挙動を CLI 経由で検証する realization test。report の構成と集計、対象 oracle file の列挙条件、session/full scope、linked worktree、所見の列挙・検証・judge・merge、review 中に許される INDEX.md 変更と許されない差分、処理失敗時の error report を扱う。
+- 所見評価 loop の fake Codex 応答と report 文脈を共有するため、oracle review run 全体の制御と出力を一箇所で確認する入口になる。
 
 ## Read this when
-- review oracle コマンドの CLI 挙動、終了結果、標準出力、生成 report の構成やメタデータを変更・確認するとき。
-- review oracle の対象 oracle file 列挙、full scope と session scope、git ignored だが tracked な oracle file、AGENTS.md や INDEX.md の除外条件を確認するとき。
-- review oracle の所見 loop で、列挙結果の次 round への渡し方、challenger と advocate の理由、judge 結果、merge operation の契約や不正操作拒否を変更するとき。
-- review oracle 実行中の一時 worktree、linked worktree 上の session branch、review が生成した INDEX.md の取り込み、join commit、INDEX.md 競合解決を扱うとき。
-- review oracle が途中失敗した場合の error report、または review が INDEX.md 以外の差分を作った場合の拒否と原状維持を確認するとき。
+- review oracle コマンドの report 出力、終了コード、標準出力、集計値、section 順序、accepted/rejected finding の表示を変更・確認する。
+- review oracle の対象 oracle file の選択条件を変更・確認する。特に AGENTS.md/INDEX.md の除外、git ignore された tracked file、未追跡 ignored file、symlink、memo 配下との境界を扱う。
+- review oracle の session scope と full scope、短縮 option、対象 0 件時の挙動を変更・確認する。
+- review oracle が linked worktree 上の session branch と oracle を扱う挙動、review 用 worktree、fork commit、join commit を変更・確認する。
+- finding の enumerate loop、validate challenger/advocate、judge、merge operation の契約、loop 上限、対象別 prompt に渡す既存 finding 文脈を変更・確認する。
+- review oracle 実行中に生成された INDEX.md 変更の取り込み、INDEX.md conflict 解決、INDEX.md 以外の差分拒否を変更・確認する。
+- review oracle 処理途中の例外で error report を残す挙動を変更・確認する。
 
 ## Do not read this when
-- oracle review の prompt 文面や structured output schema だけを確認したいとき。
-- review oracle 以外の review サブコマンド、または一般的な session fork/init の単体挙動だけを確認したいとき。
-- report rendering の細部ではなく、対象ファイル列挙 helper の最小単位の実装だけを確認したいとき。
-- CLI を経由しない低レベルな git helper や設定モデルの構造だけを確認したいとき。
+- oracle review 以外の review コマンドや一般的な CLI 初期化・session 操作だけを確認したい場合。
+- report renderer や review loop の内部実装だけを局所的に読みたい場合で、対応する実装ファイルを直接読む方が早い場合。
+- oracle file の正本仕様そのもの、prompt 文面、Structured Output schema の項目定義を確認したい場合。
+- INDEX.md エントリー生成規則やルーティング文書の書き方だけを確認したい場合。
 
 ## hash
-- 963813a19eb75c2c5dc4742e2613e94860da6869f4800b819c0a0920b98d6cbf
+- 35b2d261f8fb5be8c89b1d133435957cf2ff500d9d0d0e5c5077625d5cab1597
 
 # `test_session_cli.py`
 
