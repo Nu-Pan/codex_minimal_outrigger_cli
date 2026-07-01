@@ -351,9 +351,13 @@ def test_apply_fork_writes_report_with_change_summary(
     assert report_path.is_file()
     rendered = report_path.read_text()
     assert "result: unconverged" in rendered
-    assert "未収束: 回数上限に達したためループを終了しました。まだ所見が残っている可能性があります。" in rendered
+    assert "未収束: 回数上限に達したためループを終了しました。" in rendered
     assert "# cmoc apply fork 作業レポート" in rendered
     assert "## 所見数の推移" in rendered
+    count_section = rendered.split("## 所見数の推移\n", 1)[1].split(
+        "\n## 変更内容要約", 1
+    )[0]
+    assert "まだ所見が残っている可能性があります。" in count_section
     assert "ドキュメント: README を更新した (README.md)" in rendered
     assert "apply fork change summary" in calls
     assert "apply fork commit message" not in calls
