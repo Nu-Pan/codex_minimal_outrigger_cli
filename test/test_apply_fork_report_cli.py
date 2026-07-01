@@ -21,8 +21,11 @@ from _support import (
     make_repo,
     run_git,
     runner,
+    setup_codex_home,
+    write_python_executable,
 )
 from cmoc_runtime import CmocError
+from commons.runtime_codex import run_codex_exec as real_run_codex_exec
 from main import app
 from pytest import MonkeyPatch
 import sub_commands.apply.fork as apply_fork_module
@@ -561,58 +564,92 @@ def test_apply_fork_recovers_file_access_rule_violation_before_commit(
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
-    (root / "README.md").write_text("# changed\n")
-    run_git(root, "add", "README.md")
-    run_git(root, "commit", "-m", "change readme")
+    (root / "src").mkdir()
+    (root / "src" / "app.py").write_text("print('old')\n")
+    run_git(root, "add", "src/app.py")
+    run_git(root, "commit", "-m", "add app")
     finding = {
-        "title": "Update README",
+        "title": "Update app",
         "evidences": [
             {
-                "path": str(root / "README.md"),
+                "path": str(root / "src" / "app.py"),
                 "line_start": 1,
                 "line_end": 1,
-                "summary": "readme",
+                "summary": "app",
             }
         ],
         "oracle_requirement": "test requirement",
         "observed_implementation": "old",
         "reason": "needs update",
-        "suggested_fix": "update readme",
+        "suggested_fix": "update app",
     }
-    calls: list[tuple[str, str]] = []
+    setup_codex_home(tmp_path, monkeypatch)
+    monkeypatch.setattr(apply_fork_module, "enable_indexing_preflight", lambda: None)
+    counts = tmp_path / "codex_counts"
+    counts.mkdir()
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            f"counts = pathlib.Path({str(counts)!r})",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "def bump(name):",
+            "    path = counts / f'{name}.txt'",
+            "    value = int(path.read_text()) if path.exists() else 0",
+            "    path.write_text(str(value + 1))",
+            "    return value",
+            "schema = None",
+            "if '--output-schema' in args:",
+            "    schema_path = pathlib.Path(args[args.index('--output-schema') + 1])",
+            "    schema = json.loads(schema_path.read_text())",
+            "props = (schema or {}).get('properties', {})",
+            "if 'findings' in props:",
+            f"    finding = {json.dumps(finding)!r}",
+            "    output.write_text(json.dumps({'findings': [json.loads(finding)] if bump('findings') == 0 else []}))",
+            "elif 'changes' in props:",
+            "    output.write_text(json.dumps({'changes': []}))",
+            "else:",
+            "    if bump('plain') == 0:",
+            "        pathlib.Path('src/app.py').write_text(\"print('updated')\\n\")",
+            "        pathlib.Path('oracle/spec.md').write_text('# violated\\n')",
+            "    else:",
+            "        pathlib.Path('oracle/spec.md').write_text('# spec\\n')",
+            "    output.write_text('{}')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
-    def fake_run_codex_exec(
-        parameter: AgentCallParameter, **kwargs: object
-    ) -> FakeCodexResult:
-        purpose = str(kwargs["purpose"])
-        calls.append((purpose, parameter.file_access_mode.value))
-        if purpose.startswith("apply fork enumerate findings"):
-            return FakeCodexResult({"findings": [finding] if len(calls) == 1 else []})
-        if purpose == "apply fork finding application":
-            (Path.cwd() / "README.md").write_text("# updated\n")
-            (Path.cwd() / "oracle" / "spec.md").write_text("# violated\n")
-            return FakeCodexResult()
-        if purpose == "file access rule violation recovery":
-            assert parameter.file_access_mode.value == "no_rule"
-            (Path.cwd() / "oracle" / "spec.md").write_text("# spec\n")
-            return FakeCodexResult({})
-        if purpose == "apply fork change summary":
-            return FakeCodexResult({"changes": []})
-        raise AssertionError(purpose)
+    def run_real_codex_exec(parameter: AgentCallParameter, **kwargs: object) -> object:
+        return real_run_codex_exec(
+            parameter,
+            capacity_initial_sleep_sec=0,
+            **kwargs,
+        )
 
-    monkeypatch.setattr(apply_fork_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", run_real_codex_exec)
 
     result = runner.invoke(
         app, ["apply", "fork", "--scope", "session"], catch_exceptions=False
     )
 
     assert result.exit_code == 0
+    calls = []
+    for path in sorted((root / ".cmoc" / "log" / "codex").glob("*_call.json")):
+        call = json.loads(path.read_text())
+        calls.append((call["purpose"], call["file_access_mode"]))
     assert ("file access rule violation recovery", "no_rule") in calls
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
     state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
     apply_branch = state["apply"]["apply_branch"]
-    assert run_git(root, "show", f"{apply_branch}:README.md").stdout == "# updated\n"
+    assert (
+        run_git(root, "show", f"{apply_branch}:src/app.py").stdout
+        == "print('updated')\n"
+    )
     assert run_git(root, "show", f"{apply_branch}:oracle/spec.md").stdout == "# spec\n"
 
 
