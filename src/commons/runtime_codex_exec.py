@@ -649,6 +649,12 @@ def run_codex_exec(
             quota_polls=quota_polls,
         )
         if verify_file_access:
+            allowed_paths: list[Path] = []
+            if allow_oracle_conflict_writes:
+                # <work-root>/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py
+                # Codex profile can only open parent directories, so the
+                # stricter file-level conflict target boundary is enforced here.
+                allowed_paths.extend(extra_writable_paths or [])
             recover_file_access_violations(
                 codex_work_root,
                 exec_result,
@@ -657,6 +663,7 @@ def run_codex_exec(
                 generated_paths,
                 root=root,
                 subcommand_logger=logger,
+                allowed_paths=allowed_paths,
             )
         return exec_result
 
@@ -672,6 +679,7 @@ def recover_file_access_violations(
     *,
     root: Path | None = None,
     subcommand_logger: SubcommandLogger | None = None,
+    allowed_paths: list[Path] | None = None,
 ) -> None:
     """agent call 後に残った file access rule 違反を設定回数だけ修復する。"""
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
@@ -683,6 +691,7 @@ def recover_file_access_violations(
         changed_worktree_paths(worktree),
         violated_mode,
         ignored,
+        allowed_paths,
     )
     if not violations:
         return
@@ -722,6 +731,7 @@ def recover_file_access_violations(
             changed_worktree_paths(worktree),
             violated_mode,
             ignored,
+            allowed_paths,
         )
         if not violations:
             return
@@ -752,13 +762,16 @@ def file_access_violations(
     paths: list[Path],
     mode: FileAccessMode,
     ignored_paths: set[Path] | None = None,
+    allowed_paths: list[Path] | None = None,
 ) -> list[Path]:
     """FileAccessMode 上、差分が残ってはいけない path だけを返す。"""
     ignored = {path.resolve() for path in ignored_paths or set()}
+    allowed = {path.resolve() for path in allowed_paths or []}
     return [
         path
         for path in paths
         if path.resolve() not in ignored
+        and path.resolve() not in allowed
         and not _is_write_allowed_by_file_access_mode(root, path, mode)
     ]
 

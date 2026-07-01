@@ -185,6 +185,50 @@ def test_run_codex_exec_recovers_file_access_violations(
     assert not (root / "oracle" / "blocked.md").exists()
 
 
+def test_run_codex_exec_allows_only_session_join_conflict_targets(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "count.txt"
+    target = root / "oracle" / "spec.md"
+    other = root / "oracle" / "other.md"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "if count == 0:",
+            "    pathlib.Path('oracle/spec.md').write_text('resolved\\n')",
+            "    pathlib.Path('oracle/other.md').write_text('blocked\\n')",
+            "else:",
+            "    pathlib.Path('oracle/other.md').unlink(missing_ok=True)",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_exec(
+        _parameter(FileAccessMode.REALIZATION_WRITE),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+        extra_writable_paths=[target],
+        allow_oracle_conflict_writes=True,
+    )
+
+    assert counter.read_text() == "2"
+    assert target.read_text() == "resolved\n"
+    assert not other.exists()
+
+
 def test_run_codex_exec_limits_pure_oracle_read_to_oracle_cwd(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
