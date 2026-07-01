@@ -1,24 +1,23 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実装をまとめるディレクトリ。apply fork、join、abandon の実行制御と、それらに付随する process 管理、worktree/branch 復元、report 生成を扱う。
-- apply run の開始、破棄、取り込み、実行中 process 停止、apply branch/worktree の cleanup、apply fork report など、apply サブコマンド固有の挙動へ進む入口となる。
+- apply workflow のサブコマンド実装をまとめる領域。apply run の開始、進行、破棄、join、report 生成、実行中 process 管理、apply branch/worktree の特定と掃除を扱う。
+- apply の状態遷移、対象 scope、Codex による finding 列挙・適用、merge や conflict 処理、abandon 時の停止処理など、apply 系操作の制御ロジックへ進む入口になる。
 
 ## Read this when
-- apply fork、apply join、apply abandon のいずれかの実行条件、状態遷移、branch/worktree 操作、出力、終了処理を確認または変更したいとき。
-- apply 実行中 process の pid file、Codex subprocess 追跡、running abandon の停止処理、apply branch から worktree を特定する処理を調べたいとき。
-- apply fork の対象 file 列挙、finding 適用 loop、file access rule 違反リカバリー、commit、report 保存の流れを追いたいとき。
-- apply join の merge、想定外差分の分類、force-resolve、merge conflict 処理、apply state 初期化、cleanup を確認したいとき。
-- 未 join の apply run を破棄して ready 状態へ戻す処理や、破棄時の warnings・削除対象情報を確認したいとき。
+- apply fork、join、abandon のいずれかの実行条件、状態遷移、branch/worktree 操作、cleanup、利用者向け出力を確認または変更したいとき。
+- apply 実行中 process の追跡、停止、pid file の扱い、Codex subprocess group の終了判定、apply branch から worktree を復元する処理を調べたいとき。
+- apply fork の対象ファイル選択、finding 適用 loop、未収束判定、変更 commit、失敗時 report や完了 report の生成を追いたいとき。
+- apply join の merge、想定外差分の分類、force resolve、INDEX.md conflict の自動解決、apply state 初期化、apply branch/worktree 削除条件を確認したいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド、session 管理全体、共通 CLI runtime の低レベル helper を調べたいとき。
-- Codex subprocess の起動方法、LLM 呼び出し、prompt 作成、構造化出力 schema の詳細だけを確認したいとき。
-- git command 実行 helper、state file 読み書き、report directory 解決、timestamp 生成などの共通処理だけを調べたいとき。
-- oracle file の正本仕様、apply の仕様文書、または INDEX.md ルーティングそのものを確認したいとき。
+- apply 以外のサブコマンド、共通 CLI 実行基盤、git 実行 helper、state 永続化 helper、report directory 解決など、複数機能で共有される低レベル処理そのものを調べたいとき。
+- Codex に渡す prompt や structured output schema の詳細だけを確認したいとき。
+- oracle file の正本仕様、path model、ignore 判定、worktree 一般操作など、apply workflow ではなく仕様文書または共通領域を直接読む方が適切なとき。
+- 具体的な apply サブコマンドの制御ロジックではなく、パッケージ説明や import 時副作用の有無だけを確認したいとき。
 
 ## hash
-- 5c4e451054e62b2d6fa6fc4b4a994d2d53cbedf8a9f8853d4611364f20da766b
+- 62c5f9bf0326a501916271913dbc6689f7fa268d7165310fd917d0b131b53ca8
 
 # `indexing.py`
 

@@ -108,24 +108,22 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に固定する realization test。root placeholder と worktree 解決、config 既定値と検証、CmocError の Markdown 表示、CLI error の stdout report、subcommand log、FileAccessMode から Codex sandbox/profile への変換、binary 判定、session/apply branch state の基本挙動を一体で検証する。
-- 個別サブコマンドの仕様ではなく、複数機能の実行前提になる共通 runtime 境界の回帰を扱う。共通 fixture と root 状態の文脈を分散させないため、関連する基礎挙動を同じテスト単位に集約している。
+- cmoc の共通 runtime 契約を横断的に検証する realization test。root placeholder 解決、linked worktree と main worktree の扱い、run worktree の安全境界、config 既定値と不正値、CmocError の Markdown 表示、CLI error の stdout 出力、subcommand log、`.cmoc` ignore、FileAccessMode 変換、Codex sandbox profile、binary 判定、branch session state の基本挙動をまとめて扱う。
+- 個別サブコマンドの詳細仕様ではなく、複数機能の実行前提として共有される runtime 境界の回帰を確認する入口。
 
 ## Read this when
-- root placeholder、repo root、run root、work root、linked worktree、run worktree 作成・削除の挙動を変更または確認するとき。
-- CmocError、CLI 引数解析 error、stdout/stderr の error report、call stack 表示、duration 表示、subcommand log 生成条件を変更または確認するとき。
-- CmocConfig、codex model/reasoning effort 名、FileAccessMode、Codex sandbox mode、Codex cwd、writable roots、追加書き込み許可 path の制御を変更または確認するとき。
-- session/apply branch 名から session id や state を扱う処理、または壊れた branch 名の拒否挙動を変更または確認するとき。
-- binary 判定や `.cmoc` の gitignore 追加など、runtime の共通補助処理に関する回帰テストを探すとき。
+- runtime の root 解決、work root 判定、linked worktree、run worktree 作成・削除の安全条件に関わる変更をする。
+- CmocError、CLI 引数解析 error、stdout/stderr の error report、call stack 表示、subcommand log の生成条件を変更する。
+- CmocConfig、FileAccessMode、Codex profile、sandbox writable roots、追加書き込み許可 path の制御を変更する。
+- branch 名から session id を読む処理、session state 読み込み、`.cmoc` ignore、binary 判定など、cmoc の基礎 runtime helper の挙動を確認したい。
 
 ## Do not read this when
-- 特定サブコマンド固有の正常系・業務フロー・出力内容だけを確認したいとき。より直接そのサブコマンドのテストへ進む。
-- oracle file の正本仕様本文を確認したいとき。この対象は realization test であり、仕様判断の根拠そのものではない。
-- runtime 境界に関係しない UI、プロンプト本文、個別ドキュメント生成、または domain 固有処理だけを扱うとき。
-- テスト支援 fixture や git repository 作成 helper の実装詳細だけを確認したいとき。支援コード側を直接読む。
+- 特定サブコマンド固有の入出力、業務フロー、プロンプト内容だけを確認したい場合は、そのサブコマンドや該当 prompt のテストを直接読む。
+- oracle file の正本仕様本文や path placeholder の定義そのものを確認したい場合は、対応する oracle doc または oracle src を読む。
+- 単一 helper の実装詳細だけを局所的に直す場合は、対象 runtime module とより近い単体テストを先に読む。
 
 ## hash
-- ead12fa581fd7e815fba5c43ec274f07e5a2025bc67037304f2bf38fe3474588
+- 4cadec900fdad11a8ec1f216024e395c0b26228a6268ad2cdbda2c1459adfff5
 
 # `test_cli_init_tui.py`
 
@@ -149,21 +147,23 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 呼び出し runtime の pytest 群。exec/TUI 実行時の subprocess 起動、profile 生成、sandbox/cwd 切り替え、schema 状態配置、追加 read path 検査、異常終了・CLI 欠落時のエラー報告、apply process tracking の扱いを検証する。
+- Codex CLI 実行・TUI 呼び出しの runtime 境界を検証する pytest 群。プロセスグループ追跡、継承された追跡環境変数の無視、profile 生成、sandbox と writable_roots、作業ディレクトリ、schema 保存先、追加 read path 検査、非ゼロ終了、CLI 不在時エラーを扱う。
+- `run_codex_exec` と `run_codex_tui` が、file access mode と worktree に応じて Codex subprocess をどの引数・cwd・profile・許可領域で起動するかを確認する入口。
 
 ## Read this when
-- Codex CLI を起動する runtime 実装、profile 生成、sandbox 設定、cwd 選択、CODEX_HOME 周辺の挙動を変更する時。
-- exec/TUI 呼び出しで `FileAccessMode` ごとの read-only/workspace-write、pure oracle read、linked worktree の扱いを確認したい時。
-- Codex subprocess の apply process tracking、継承環境変数の無視、process group、call log、missing CLI、非ゼロ終了時のエラー表示を変更・調査する時。
-- `--output-schema` に渡す schema state の配置先や、complete prompt の extra read path 許可条件を確認する時。
+- Codex CLI 呼び出し時の subprocess 起動引数、stdin、`--cd`、`--profile`、`--output-schema`、`--output-last-message` の外部挙動を変更・確認するとき。
+- Codex runtime の sandbox mode、writable_roots、pure oracle read、repo write、realization write、linked worktree での cwd や許可領域の扱いを調べるとき。
+- Codex subprocess の apply process tracking、process group、追跡環境変数の扱い、file access violation からの再試行挙動を変更するとき。
+- TUI 呼び出し前の extra read path 検査、complete prompt の許可条件、TUI 失敗時の console 表示・call log、Codex CLI 不在時の `CmocError` を検証するとき。
 
 ## Do not read this when
-- Codex runtime 以外の CLI コマンド、設定読み込み、oracle/realization の一般規則だけを調べる時。
-- テスト支援関数や一時 repo 作成 helper の実装詳細を変更するだけなら、支援 module 側を直接読む方がよい。
-- Codex CLI や LLM の出力品質そのものを検証したい時。このテストは runtime の制御と外部挙動を検証する。
+- Codex runtime の実装詳細だけを読みたい場合は、対応する runtime 実装モジュールを直接読む。
+- Codex profile の低レベルな TOML 生成規則だけを確認したい場合は、profile 生成側の実装またはその単体テストを読む。
+- agent call parameter、file access mode、model class などの基本データ構造の定義を確認したい場合は、それらの定義元を読む。
+- Git repository fixture、stub executable、Codex home setup などテスト支援関数の実装を調べたい場合は、テスト support 側を読む。
 
 ## hash
-- 779f4a465417e107ab97c7ae5eec3dea2a4474a9990fac814da87353fe6af49e
+- 6b7ee1fbdbb5044992214adcf591df6b2354e8e39c21d5843e05eba8b180b328
 
 # `test_codex_runtime_home.py`
 

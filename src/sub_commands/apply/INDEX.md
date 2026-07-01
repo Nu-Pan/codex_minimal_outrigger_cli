@@ -60,23 +60,24 @@
 # `fork.py`
 
 ## Summary
-- apply fork 実行時の orchestration を担う実装。session branch 上での事前条件確認、apply branch/worktree 作成、対象 file の列挙、Codex による finding 列挙・適用、file access rule 違反リカバリー、commit、report 出力、apply state 更新までの一連の loop を扱う。
-- apply scope に応じた対象選定、変更 file の再キュー、前回 join 済み apply commit の探索、apply finding 適用後の commit subject 生成など、apply fork の制御フローに閉じた helper も同居する。
+- apply fork の実行制御を担い、session branch 上で apply 用 branch/worktree を作成して、対象ファイル列挙、Codex による finding 列挙・適用、変更 commit、apply state 更新、report 出力までを一つの run として進める。
+- apply scope ごとの対象選択、finding 適用後に変更ファイルを再キューする loop、unconverged 判定、apply process id の管理、失敗時の error report と state 復旧を同じ orchestration 内で扱う。
+- apply fork の commit subject 生成、対象ファイル正規化、直近 apply join merge commit の探索など、apply fork loop の進行条件に密接な補助処理も含む。
 
 ## Read this when
-- apply fork サブコマンドの実行条件、状態遷移、worktree/branch 作成、report 出力、終了コードを確認・変更したいとき。
-- apply finding の列挙対象、scope ごとの差分基準、変更後 file の再キュー、重複排除の挙動を確認・変更したいとき。
-- Codex 実行後に残った file access rule 違反の検出・回復、許可される書き込み範囲、違反時エラーを確認・変更したいとき。
-- apply fork が生成する commit message、commit 実行タイミング、前回 join 済み apply commit の解決方法を確認・変更したいとき。
+- apply fork サブコマンドの開始条件、branch/worktree 作成、apply state の running/completed/error 遷移、report path の返却を確認または変更したいとき。
+- apply scope に応じた finding 列挙対象、oracle や ignored file や管理対象外ディレクトリの除外条件、変更後ファイルの再キュー条件を確認したいとき。
+- Codex に apply finding の列挙・適用を依頼する流れ、apply loop の収束・未収束判定、finding 適用後の commit 作成を扱うとき。
+- apply fork の失敗時復旧、process id の削除、error report 生成、例外 stdout への report path 設定を調べるとき。
 
 ## Do not read this when
-- apply fork の report 本文生成だけを確認・変更したい場合は、report 書き込み側を直接読む。
-- Codex に渡す apply finding 列挙・適用・file access rule recovery の parameter 内容だけを確認したい場合は、builder 側を直接読む。
-- apply process id の保存・削除・tracking の低レベル処理だけを確認したい場合は、apply runtime 側を直接読む。
-- apply fork 以外の apply サブコマンドや session 管理、共通 CLI runtime の一般挙動を確認したい場合は、それぞれの担当箇所を直接読む。
+- apply fork の最終 report の内容や書き込み形式だけを確認したい場合は、report 生成を担当する対象を読む。
+- Codex に渡す finding 列挙・適用用 parameter の具体的な prompt 構築だけを確認したい場合は、builder 側の対象を読む。
+- apply 以外のサブコマンド実行基盤、git 実行、state 永続化、worktree 作成の共通 runtime 挙動そのものを確認したい場合は、共通 runtime 側を読む。
+- apply fork ではなく apply join や他の apply workflow の制御を調べたい場合は、そのサブコマンド実装を読む。
 
 ## hash
-- 72294bf2bfa0c4d0f34ac3f6f2ef6bb1144b8ebc726900ae5ef6a21af601ebdb
+- a16f7cb8d4994b4035d3f91243a9e0f676a0358d17d4a72dbb04f59ba5956f8f
 
 # `fork_report.py`
 
