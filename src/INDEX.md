@@ -141,23 +141,21 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装を集めた領域で、apply、review、session、init、indexing、tui などの利用者向け操作から具体的な実装入口を選ぶための階層。
-- 各サブコマンドは CLI runtime 経由の起動、事前条件確認、git・state・worktree 操作、Codex 実行連携、利用者向け出力や report 作成へ分かれており、この階層は目的の操作領域へ進む入口になる。
-- サブコマンド横断の共通 helper や oracle 正本仕様ではなく、実際の CLI 操作単位で実装を追うために読む対象。
+- CLI サブコマンド実装を集める領域で、apply、indexing、init、review、session、tui などの利用者向け操作から各実装へ進む入口になる。
+- 各対象は CLI runtime 経由の起動、事前条件確認、git・state・worktree 操作、Codex 実行連携、利用者向け出力などを扱い、詳細処理は apply/review/session などの下位領域や共通 helper へ分かれている。
+- サブコマンド単位で実行条件、状態更新、後始末、report 出力、conflict 処理、INDEX maintenance、TUI 起動などの実装箇所を切り分けるための階層である。
 
 ## Read this when
-- 特定の CLI サブコマンドの実行フロー、事前条件、状態更新、git 操作、副作用、利用者向け出力を調べる入口を探したいとき。
-- apply、review、session のように複数ファイルへ分かれたサブコマンド群の中で、どの実装ファイルまたは下位 package へ進むべきかを切り分けたいとき。
-- init、indexing、tui のような単独サブコマンドが CLI runtime、preflight、Codex 実行、設定・ignore・work root 処理へどう接続しているかを確認したいとき。
-- review oracle の対象列挙、finding loop、INDEX 反映、report 出力など、review 系処理の責務別実装への入口を選びたいとき。
-- session lifecycle や apply run lifecycle に関わる branch、worktree、state、cleanup、merge/conflict 処理の実装箇所を探したいとき。
+- apply、review、session、indexing、init、tui のどのサブコマンド実装へ進むべきかを選びたいとき。
+- CLI runtime 経由でサブコマンドが起動される流れ、preflight、clean worktree 要求、cmoc ignore 保証、work root runtime、Codex exec callback の受け渡し位置を確認したいとき。
+- サブコマンド実行に伴う branch/worktree/state 操作、commit、merge、conflict 解消、report 生成、終了時 cleanup、利用者向け出力の入口を探したいとき。
+- review oracle や apply run のように、対象列挙、反復処理、finding 適用、INDEX 反映、report 描画など複数の下位処理へ分岐する実装の起点を確認したいとき。
 
 ## Do not read this when
-- CLI 全体の Typer app 登録、共通 runtime、git wrapper、state file schema、path 解決、設定モデルなど、サブコマンドから呼ばれる共通基盤だけを調べたいとき。
-- oracle file の正本仕様、各サブコマンドの外部仕様文書、review 基準、INDEX.md エントリー作成基準そのものを確認したいとき。
-- Codex prompt や Structured Output parameter の具体的な組み立てだけを確認したいときは、対応する builder 側を直接読む。
-- INDEX.md の本文生成、差分検出、更新対象探索、lock、commit など indexing 共通処理の詳細だけを調べたいとき。
-- git 実行、reports directory、clean worktree 検証、cmoc ignore 判定などの低レベル helper の実装だけを確認したいとき。
+- CLI 全体のトップレベル登録、Typer app 構成、共通 runtime、path 解決、git 実行 wrapper、state file schema などサブコマンド横断の低レベル helper だけを調べたいとき。
+- oracle file の正本仕様断片、サブコマンドの外部仕様文書、または INDEX.md エントリー作成基準そのものを確認したいとき。
+- Codex prompt、Structured Output parameter、TUI launch/resolve parameter など builder の具体的な組み立てだけを調べたいとき。
+- 特定サブコマンド内部の詳細処理だけが目的で、対象列挙、review loop、report rendering、INDEX merge、git status 解析などを担う下位モジュールが既に分かっているとき。
 
 ## hash
-- c3e0bdd2887c2e7e903e7219a94cfd731b077b333673d1a624e08f0e262e0a84
+- 935180eed2133c88074882a1dbca77797f086f07b3b6182e63450a0900c0d52d

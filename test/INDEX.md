@@ -324,22 +324,22 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle コマンドの外部挙動を CLI 経由で検証するテスト。report 生成、対象 oracle file の列挙、session/full scope、linked worktree、所見の列挙・検証・judge・merge、INDEX.md 変更の取り込み、異常終了時 report、review worktree の不正差分拒否を扱う。
+- review oracle コマンドの CLI 経由の外部挙動を検証する realization test。対象 oracle file の列挙、report 生成、所見の列挙・検証・judge・merge、上限到達時や処理失敗時の report、review 用 worktree からの INDEX.md 変更の取り込み、非 INDEX.md 差分の拒否を扱う。
 
 ## Read this when
-- review oracle の report 内容、section 順、accepted/rejected findings の表示、no_targets/error 結果を変更する時。
-- review oracle の対象 oracle file 列挙条件、tracked ignored file、AGENTS.md/INDEX.md 除外、session scope と full scope の差分を確認する時。
-- review oracle の所見 loop、enumerate prompt に渡す既存所見、challenger/advocate/judge/merge の制御、merge operation の契約を変更する時。
-- review oracle が linked worktree、review 用 worktree、join commit、INDEX.md 変更や conflict を扱う処理を変更する時。
-- review oracle 実行中に Codex が作る差分の許可範囲や、INDEX.md 以外の差分を拒否する挙動を確認する時。
+- review oracle の report 形式、件数、section 順、accepted/rejected finding の出力、error/no_targets/fatal/ok verdict を変更または確認したいとき。
+- review oracle が full scope または session scope でどの oracle file を対象にするかを変更または確認したいとき。
+- review oracle の所見 loop、challenger/advocate/judge/merge の制御、prompt に渡す既存所見の範囲、merge operation の契約を変更または確認したいとき。
+- review oracle が linked worktree、session branch、review worktree、join commit、INDEX.md 変更の merge conflict をどう扱うかを変更または確認したいとき。
+- review oracle 実行中に Codex が作成した差分のうち、INDEX.md だけを許し、それ以外を拒否して元 worktree を汚さない挙動を確認したいとき。
 
 ## Do not read this when
-- review oracle 以外の review サブコマンドや通常の session 操作だけを変更する時。
-- oracle file の定義そのものや正本仕様文書の文言だけを確認したい時。
-- report renderer や review loop の内部実装を読む前の入口だけが必要な時は、まず対応する実装側のルーティング情報から読む。
+- review oracle 以外の review サブコマンドや通常の session 操作だけを扱うとき。
+- 実装内部の helper 分割や型定義だけを確認したく、CLI 実行結果、report 内容、git/worktree 副作用を検証する必要がないとき。
+- oracle file の正本仕様本文を確認したいとき。
 
 ## hash
-- 49d3290fe119dbda85026d0d207939d6f4534017f55c06e1335e1a57e63b6492
+- 1a8726db12b961d86532ae2594f48bb2d46607622497863717b193de359e1c47
 
 # `test_session_cli.py`
 
