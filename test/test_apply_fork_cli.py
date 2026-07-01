@@ -322,21 +322,38 @@ def test_apply_fork_target_normalization_excludes_non_realization_paths(
     root = make_repo(tmp_path)
     src_target = root / "src" / "target.py"
     codex_target = root / ".codex" / "config.toml"
+    nested_codex_target = root / "src" / ".codex" / "template.txt"
+    nested_agents_target = root / "docs" / ".agents" / "rule.md"
     agents_target = root / "AGENTS.md"
     index_target = root / "INDEX.md"
     src_target.parent.mkdir()
     codex_target.parent.mkdir()
+    nested_codex_target.parent.mkdir(parents=True)
+    nested_agents_target.parent.mkdir(parents=True)
     src_target.write_text("target\n")
     codex_target.write_text("config\n")
+    nested_codex_target.write_text("template\n")
+    nested_agents_target.write_text("rule\n")
     agents_target.write_text("agents\n")
     index_target.write_text("index\n")
 
     targets = apply_fork_module.normalize_apply_targets(
         root,
-        {src_target, codex_target, agents_target, index_target},
+        {
+            src_target,
+            codex_target,
+            nested_codex_target,
+            nested_agents_target,
+            agents_target,
+            index_target,
+        },
     )
 
-    assert targets == [src_target.resolve()]
+    assert targets == [
+        nested_agents_target.resolve(),
+        nested_codex_target.resolve(),
+        src_target.resolve(),
+    ]
 
 
 def test_apply_fork_target_normalization_keeps_binary_files(

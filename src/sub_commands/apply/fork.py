@@ -272,12 +272,7 @@ def normalize_apply_targets(
             continue
         if not rel_parts:
             continue
-        if (
-            ".git" in rel_parts
-            or ".agents" in rel_parts
-            or ".codex" in rel_parts
-            or rel_parts[0] == "memo"
-        ):
+        if rel_parts[0] in {".git", ".agents", ".codex", "memo"}:
             continue
         if not include_oracle and rel_parts[0] == "oracle":
             continue

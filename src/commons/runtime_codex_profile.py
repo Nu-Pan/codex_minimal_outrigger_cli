@@ -174,7 +174,7 @@ def _writable_roots(
         if resolved not in seen and not any(
             resolved.is_relative_to(parent) for parent in seen
         ):
-            sandbox_root = _sandbox_writable_root_for_mode(mode, root, resolved)
+            sandbox_root = _sandbox_writable_root(resolved)
             _append_writable_root(result, seen, sandbox_root)
     for path in extra_writable_paths or []:
         resolved = path.resolve()
@@ -191,7 +191,7 @@ def _writable_roots(
         if resolved not in seen and not any(
             resolved.is_relative_to(parent) for parent in seen
         ):
-            sandbox_root = _sandbox_writable_root_for_mode(mode, root, resolved)
+            sandbox_root = _sandbox_writable_root(resolved)
             _append_writable_root(result, seen, sandbox_root)
     return result
 
@@ -212,22 +212,6 @@ def _sandbox_writable_root(path: Path) -> Path:
     if path.exists() and path.is_file():
         return path.parent.resolve()
     return path.resolve()
-
-
-def _sandbox_writable_root_for_mode(
-    mode: FileAccessMode, root: Path, path: Path
-) -> Path:
-    sandbox_root = _sandbox_writable_root(path)
-    if sandbox_root == root.resolve() and mode != FileAccessMode.NO_RULE:
-        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-        # Codex profile has no deny-list. Opening <work-root> for one root file
-        # also opens memo/.git/.agents/.codex and other forbidden siblings.
-        raise CmocError(
-            "追加書き込み許可 path は Codex profile で安全に表現できません。",
-            ["禁止領域を含まない既存 directory 配下の path を指定してください。"],
-            f"mode: {mode.value}\npath: {path}",
-        )
-    return sandbox_root
 
 
 def _append_writable_root(result: list[Path], seen: set[Path], path: Path) -> None:
@@ -255,16 +239,17 @@ def _is_writable_path_allowed(
     # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # 追加 writable path は、prompt で伝える禁止領域を広げない範囲だけ許可する。
+    relative = path.relative_to(root)
+    if len(relative.parts) == 1 and path.name in {"README.md", "AGENTS.md", "INDEX.md"}:
+        return False
     if mode == FileAccessMode.REALIZATION_WRITE and allow_oracle_conflict_writes:
         # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
-        # session join の conflict 解消は README.md/INDEX.md/oracle file も
-        # git conflict 対象なら編集する。runtime 管理領域だけは sandbox 側でも開かない。
-        relative = path.relative_to(root)
+        # session join の conflict 解消は oracle file も git conflict 対象なら編集する。
+        # runtime 管理領域と root 禁止 file は sandbox 側でも開かない。
         return (
             bool(relative.parts)
             and relative.parts[0] not in _CONFLICT_WRITE_BLOCKED_ROOT_NAMES
         )
-    relative = path.relative_to(root)
     if path.name in {"AGENTS.md", "INDEX.md"}:
         return False
     blocked_root_names = (

@@ -784,7 +784,10 @@ def _is_write_allowed_by_file_access_mode(
     }
     if relative.parts[0] in blocked_runtime_roots:
         return False
-    if path.name in {"AGENTS.md", "INDEX.md"}:
+    if (len(relative.parts) == 1 and path.name == "README.md") or path.name in {
+        "AGENTS.md",
+        "INDEX.md",
+    }:
         return False
     match mode:
         case FileAccessMode.READONLY | FileAccessMode.PURE_ORACLE_READ:

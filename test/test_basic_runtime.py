@@ -547,6 +547,21 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         profiles[FileAccessMode.REALIZATION_WRITE], root / "new_top_level.md"
     )
 
+    profile = build_codex_profile(
+        AgentCallParameter(
+            parameter.model_class,
+            parameter.reasoning_effort,
+            FileAccessMode.REALIZATION_WRITE,
+            parameter.prompt,
+            parameter.structured_output_schema_path,
+        ),
+        CmocConfig(),
+        root,
+        extra_writable_paths=[root / ".gitignore"],
+    )
+    assert _profile_writable_roots(profile) == {str(root.resolve())}
+    _assert_writable(profile, root / ".gitignore")
+
     extra = root / "src" / "extra"
     profile = build_codex_profile(
         AgentCallParameter(
@@ -764,7 +779,7 @@ def test_codex_profile_rejects_root_file_session_join_conflict_targets(
     target = root / extra
     target.write_text("conflict\n")
 
-    with pytest.raises(CmocError, match="安全に表現できません"):
+    with pytest.raises(CmocError, match="追加書き込み許可 path"):
         build_codex_profile(
             AgentCallParameter(
                 ModelClass.EFFICIENCY,
