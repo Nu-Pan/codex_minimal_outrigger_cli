@@ -140,21 +140,22 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドごとの実行入口と制御実装を集める領域で、初期化、索引更新、TUI、session lifecycle、apply lifecycle、review oracle などの利用者操作を runtime・git・状態管理・Codex 実行へ接続する。
-- 各サブコマンドは、実行前条件の確認、対象 worktree や branch の準備、状態更新、commit・merge・cleanup、利用者向け出力や report 生成までの大きな制御順序を担う。
-- 詳細な共通処理や仕様断片そのものではなく、利用者が起動する操作から下位 helper・共通処理へ入るためのサブコマンド別オーケストレーションを探す入口になる。
+- CLI サブコマンド実装を集約する領域で、初期化、indexing、TUI、session、review、apply などの利用者操作を runtime や共通処理へ接続する入口を扱う。
+- 各サブコマンドの実行条件、preflight、状態更新、git 操作、worktree/branch 管理、利用者向け出力、report 生成へ進むための上位ルーティング対象。
+- 詳細な生成ロジック、状態管理、git wrapper、prompt builder などは共通処理や下位モジュールへ委譲され、この階層はサブコマンド単位の制御境界を選ぶために読む。
 
 ## Read this when
-- cmoc の特定サブコマンドが、CLI runtime からどのように起動され、どの preflight、状態確認、git 操作、出力処理へ進むかを確認または変更したいとき。
-- 初期化、索引更新、TUI、session の開始・統合・破棄、apply の開始・破棄・取り込み、review oracle の実行など、利用者操作単位の実装箇所を選びたいとき。
-- サブコマンド実行時の branch/worktree 作成、対象列挙、Codex 実行、pid や state の扱い、commit・merge・conflict 処理、cleanup、report 出力の入口を追いたいとき。
-- サブコマンド固有の補助処理と、共通 runtime helper、git helper、状態管理、prompt builder、report builder など下位領域との接続位置を切り分けたいとき。
+- CLI から起動されるサブコマンド実装のうち、どの処理領域へ進むべきかを選びたいとき。
+- 初期化、indexing、TUI、session lifecycle、review oracle、apply 系操作の実行フロー、事前条件、状態更新、branch/worktree 操作、終了時出力を確認または変更したいとき。
+- 利用者向けコマンドが共通 runtime、Codex 実行、INDEX maintenance、report 作成、merge/conflict 処理、cleanup 処理へどこから接続されるかを追いたいとき。
+- サブコマンド固有の orchestration と、共通 helper や下位処理へ委譲される責務の境界を切り分けたいとき。
 
 ## Do not read this when
-- CLI 全体のアプリ登録、Typer 構成、runtime 共通規約、path 解決、git 実行 wrapper、state schema、設定モデルなど、サブコマンド横断の低レベル共通処理だけを調べたいとき。
-- INDEX.md の本文生成、oracle file の正本仕様、prompt や Structured Output schema、LLM 出力品質、設定値定義など、サブコマンド制御ではない詳細を確認したいとき。
-- 特定のサブコマンド内でも、対象列挙、review loop、report rendering、merge conflict 解決、Codex subprocess 起動などの下位詳細だけを調べる場合で、より直接の実装領域が分かっているとき。
-- テスト、fixture、oracle 側ドキュメント、または利用者向け仕様だけを探しており、realization implementation のサブコマンド実行フローを読む必要がないとき。
+- CLI 全体の command 登録、runtime の一般規約、git 実行 wrapper、state file 読み書き、path 解決、設定読み込みなどの共通基盤だけを確認したいとき。
+- oracle file の正本仕様、サブコマンド仕様文書、または INDEX.md エントリー作成基準そのものを確認したいとき。
+- Codex prompt、Structured Output parameter、TUI launch/resolve parameter の具体的な組み立てだけを確認したいとき。
+- INDEX.md 本文生成、差分検出、lock、commit、routing 文書品質など indexing 共通処理の詳細だけを調べたいとき。
+- review や apply の対象列挙、finding 生成、report 描画、merge/conflict 解決など、下位モジュールが直接担う詳細処理だけを確認したいとき。
 
 ## hash
-- 2b844e55f7f67ead55a46e11118fbfe054f57b1691b87dee013942e78bdbae6c
+- 9c6e045762288f75f1835c534ead3a047c8fa83c7eced643ba93933c877043e7

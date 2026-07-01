@@ -1,25 +1,23 @@
 # `apply`
 
 ## Summary
-- apply run の開始・破棄・取り込みを扱うサブコマンド実装群で、apply branch/worktree、apply state、process id、report、merge/cleanup までの利用者操作に対応する制御をまとめる。
-- apply fork の対象列挙と Codex 適用ループ、apply abandon の実行中 process 停止と state 復旧、apply join の merge・conflict 処理・後片付けに進む入口になる。
-- apply 実行時の worktree 特定、pid file ライフサイクル、Codex subprocess 追跡、apply fork report 生成など、apply サブコマンド専用の補助処理も含む。
+- apply 系サブコマンド実装のまとまりで、apply run の開始、破棄、join、report 生成、実行中 process 管理、apply branch/worktree 特定を扱う入口。
+- apply state 遷移、apply worktree/branch の作成・削除、Codex subprocess 追跡、finding 適用ループ、merge/conflict 処理、apply fork/join/abandon の利用者向け出力へ進むための対象。
 
 ## Read this when
-- apply run の開始、破棄、join、state 遷移、apply branch/worktree の作成・探索・削除、process id 管理、report 出力を確認または変更したいとき。
-- apply scope に応じた対象ファイル列挙、Codex による finding 列挙・適用、変更後ファイルの再キュー、適用差分 commit、失敗時の error report と復旧を追いたいとき。
-- running apply の停止、pidfd や process start time を使う PID reuse 対策、Codex subprocess group の終了判定、stale pid file や権限エラーの扱いを調べたいとき。
-- apply join の実行条件、想定外差分の分類、force-resolve、merge conflict の扱い、INDEX.md conflict の自動解決、session branch への取り込み後 cleanup を確認したいとき。
-- apply fork 完了時・失敗時の Markdown report、変更差分要約、fallback 要約、branch・commit・worktree 情報の出力を確認したいとき。
+- apply fork、apply join、apply abandon の実行条件、状態更新、branch/worktree cleanup、終了時 report、エラー時挙動を確認または変更したいとき。
+- apply 実行中 process の pid file、pidfd、Codex child process group、running abandon の停止処理、stale 判定を確認したいとき。
+- apply scope に応じた対象ファイル列挙、finding 適用、変更 commit、apply report の差分要約、merge conflict や force-resolve の扱いを調べたいとき。
+- session branch または apply branch から対象 apply run や managed worktree を特定する処理を追いたいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド、一般的な CLI 登録、共通 runtime helper、state file 定義、git 実行 helper、report directory 解決などの低レベル共通処理だけを調べたいとき。
-- Codex subprocess の起動方法そのもの、LLM 呼び出し、prompt や parameter、構造化出力 schema の詳細だけを確認したいとき。
-- oracle file の正本仕様、apply 仕様文書、または実装ではなく仕様断片そのものを確認したいとき。
-- 具体的なサブコマンド制御や apply 専用 helper を読む必要がなく、パッケージ説明や import 副作用の有無だけを確認したいとき。
+- apply 以外のサブコマンド実装、または CLI 全体の command 登録や共通 runtime を調べたいとき。
+- git 実行、state file 読み書き、reports directory、clean worktree 検証などの低レベル共通 helper だけを確認したいとき。
+- Codex prompt や structured output parameter の具体的な組み立てだけを確認したいとき。
+- oracle file の正本仕様、または apply 仕様文書そのものを確認したいとき。
 
 ## hash
-- 7749db608b2140d6a5e48706ea516019d20f4e9a28a0aa3f86a0b095661718a4
+- 17936c8d991797e2baac96e3256ff7e8b29ec747e3f67dc3ee6ca02a1a4be42c
 
 # `indexing.py`
 
