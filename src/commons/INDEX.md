@@ -158,24 +158,24 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI 起動に渡す profile・sandbox・cwd・CODEX_HOME・schema 配置と、起動後に返る subprocess 結果・JSONL error・resume token・apply child process tracking の解釈を扱う実行境界。
-- FileAccessMode を Codex sandbox/profile へ落とし込む際の読み書き許可 root、追加 read/write path 検証、oracle conflict 例外、Codex home 検証、Codex CLI 不在時の cmoc error 化をまとめている。
-- apply abandon 用の child process pid 記録、pid file lock、Linux proc starttime による pid 再利用対策、Codex stdout/stderr からの error detail・capacity/quota 判定も同じ subprocess 境界の責務として保持している。
+- Codex CLI の subprocess 境界で必要になる実行 profile、sandbox/cwd、CODEX_HOME、schema 配置、child process tracking、JSONL error 判定をまとめる実装。
+- FileAccessMode を Codex CLI が受け取れる sandbox 設定と writable/readable path 境界へ変換し、起動前検証と起動後の機械的結果解釈を担う。
 
 ## Read this when
-- Codex CLI を起動するための profile 本文、sandbox_mode、writable_roots、cwd、CODEX_HOME、環境変数を確認または変更したいとき。
-- FileAccessMode ごとの読み取り・書き込み境界、追加 read/write path の許可判定、root 直下 file や oracle conflict 解消時の扱いを調べるとき。
-- Codex CLI subprocess の実行、Codex CLI 不在時の例外変換、apply 実行中の child process tracking、abandon と pid file 操作の競合回避を変更するとき。
-- Structured Output schema の配置、schema なし output JSON の読み取り、Codex JSONL stdout/stderr からの error message・resume token・capacity error・quota error 判定を扱うとき。
+- Codex CLI 起動用 profile の生成、保存、profile 名解決、sandbox mode、writable_roots、cwd の決定を確認または変更したいとき。
+- FileAccessMode ごとの読み取り・書き込み許可境界、追加 read/write path の検証、oracle/conflict 解消時の書き込み例外を扱うとき。
+- CODEX_HOME の解決、auth.json を含む起動前検証、Codex subprocess に渡す環境変数を確認したいとき。
+- Codex CLI 不在時の CmocError 化、apply 実行中の child process tracking、pid file lock、process group 起動、pid 再利用対策を変更するとき。
+- Structured Output schema の hash store 配置、schema なし output JSON の読み取り、Codex JSONL stdout/stderr からの error detail、resume token、capacity/quota error 判定を扱うとき。
 
 ## Do not read this when
-- prompt 本文や file access policy の利用者向け説明文そのものを変更したいだけなら、prompt builder 側の該当仕様・実装を読む。
-- Codex 以外の外部コマンド実行全般や、subprocess を使わない通常のファイル入出力を調べたいだけなら、より直接その責務を持つ対象を読む。
-- cmoc config の model 名や reasoning effort の設定値そのものを変更したいだけなら、設定定義側を読む。
-- 実行結果を表示する CLI command の user-facing 出力整形だけを変更したい場合は、この境界ではなく呼び出し側の command 実装を読む。
+- Codex CLI に渡す prompt 本文や file access rule の自然言語生成を調べたいだけなら、prompt builder 側を読む。
+- cmoc の設定値そのもの、model class や reasoning effort の定義を調べたいだけなら、設定定義側を読む。
+- runtime path の保存先規則や hash file 書き込み処理そのものを変更したい場合は、それぞれの runtime path/content helper を読む。
+- Codex subprocess 境界と無関係な CLI サブコマンドの業務ロジック、ユーザー向け command flow、通常の入出力整形だけを扱う場合は読まなくてよい。
 
 ## hash
-- 2911d76d865ffbe8c83ca8d11804564ea5fbc2791b1ccf0ee9b3199e1af31f62
+- 916d86fc393ee79168a595bc74906a3cbc9e07ffe6c8cdaf0f0265f5fda94d14
 
 # `runtime_codex_tui.py`
 

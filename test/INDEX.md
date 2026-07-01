@@ -108,20 +108,24 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断して検証する realization test。root placeholder 解決、repo/run/work root 判定、config 既定値と検証、CmocError の表示、CLI preflight と parse error、subcommand log、worktree 作成・削除ガード、FileAccessMode 変換、Codex profile の sandbox 許可範囲、binary 判定など、サブコマンド共通の実行前提をまとめて扱う。
+- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder 解決、worktree 境界、config 既定値と検証、CmocError の Markdown 表示、CLI error の stdout 化、subcommand log、`.cmoc` ignore、FileAccessMode 変換、Codex sandbox profile、binary 判定、branch session state など、個別サブコマンドより下位の共通実行前提をまとめて扱う。
 
 ## Read this when
-- runtime 全体の共通契約、root 解決、worktree 管理、CLI error 表示、config 読み込み、FileAccessMode、Codex sandbox profile、状態 branch 名、binary 判定の回帰テストを確認・変更する時。
-- 個別サブコマンドではなく、複数機能の実行前提として共有される cmoc runtime 挙動が壊れていないかを調べる時。
-- sandbox 書き込み許可範囲や追加 writable path の拒否・許可条件に関するテストを確認する時。
+- runtime の共通契約や実行前提に関わる挙動を変更する。
+- root 解決、repo root と work/run root、linked worktree、run worktree 作成・削除の安全条件を確認する。
+- CmocConfig、config_from_dict、model class、reasoning effort、FileAccessMode の値や変換を変更する。
+- CmocError、render_error、CLI parse error、stdout/stderr の error report 表示を変更する。
+- Codex profile の sandbox mode、cwd、writable_roots、extra writable paths、session join conflict 用の書き込み許可を変更する。
+- subcommand log、completion probe、preflight、副作用抑制、`.cmoc` ignore、binary 判定、branch session state の基本挙動を確認する。
 
 ## Do not read this when
-- 特定サブコマンド固有の入出力、分岐、永続状態だけを調べたい時は、そのサブコマンドの実装・テストを直接読む。
-- oracle file の正本仕様そのものを確認したい時は、対応する oracle doc または oracle src を読む。
-- runtime 共通契約に関係しない UI、prompt 文面、個別生成物、補助スクリプトの詳細だけを調べたい時。
+- 特定サブコマンド固有の業務ロジックだけを調べる場合。
+- runtime 境界に関係しない UI 文言、個別 prompt、個別 agent call の内容だけを変更する場合。
+- oracle file の正本仕様そのものを確認・編集したい場合。
+- 単一 helper の内部実装だけを調べれば足り、共通 runtime 契約の回帰確認が不要な場合。
 
 ## hash
-- 1eb9475eca578153a8e895613e4fba2f48c6e93259df3c015984dfd0ffcb7488
+- 2b7d1136ff001240378c1b28c9e114cef0afdabba1b236597a7fb1782d49d58c
 
 # `test_cli_init_tui.py`
 
