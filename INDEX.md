@@ -164,21 +164,20 @@
 # `test`
 
 ## Summary
-- CLI の外部挙動と共通 runtime 契約を検証する realization test 群。session、apply、review、indexing、init/TUI、Codex runtime、prompt 構築など、利用者に見える状態遷移・出力・終了コード・副作用をサブコマンド横断で扱う。
-- 一時 Git repository、Codex home、fake executable、worktree path 解決などの共通テスト補助も含み、CLI 境界や runtime 境界の回帰確認を始める入口になる。
+- cmoc の realization test 群を置くディレクトリ。CLI サブコマンド、Codex runtime、prompt 構築、indexing、session/apply/review workflow、共通 runtime 契約を外部挙動中心に検証する。
+- 個別テストへ進む前の入口として、対象機能の期待出力、終了コード、state・branch・worktree・report・log・profile などの回帰観点を選ぶために使う。
 
 ## Read this when
-- CLI サブコマンドの外部挙動、終了コード、標準出力、report、state 遷移、branch/worktree cleanup に関する realization test を探すとき。
-- Codex CLI 呼び出しの profile、sandbox、writable roots、CODEX_HOME、retry、quota retry、process tracking、call log の期待挙動を確認または変更するとき。
-- INDEX.md 更新、indexing preflight、routing document 生成・commit・conflict 解決のテストを確認するとき。
-- prompt 標準部品や ACP builder が生成する prompt、実行パラメータ、structured output schema 参照の回帰を確認するとき。
-- CLI テスト用 fixture、fake Codex 実行、最小 Git repository、branch や worktree 検証の共通補助処理を探すとき。
+- cmoc の CLI 外部挙動や realization implementation の変更に対応する既存テストを探すとき。
+- apply fork/join/abandon、session fork/join/abandon、review oracle、indexing、init/TUI、Codex runtime、prompt builder の回帰テストを確認または変更するとき。
+- Git worktree、branch、session state、Codex subprocess、CODEX_HOME、sandbox profile、INDEX.md 更新、report 生成など、複数モジュールにまたがる挙動をテスト側から調べたいとき。
+- 新しい realization test を追加する前に、既存テストへケース追加・統合できる場所や共通補助関数の入口を確認したいとき。
 
 ## Do not read this when
-- 実装内部の関数分割、低レベル helper、データ構造定義だけを変更したい場合は、対応する実装側を直接読む。
 - oracle file の正本仕様断片、oracle/realization 標準、INDEX.md ルーティング規則そのものを確認したい場合は、oracle 側の文書を読む。
-- Codex CLI や LLM の出力品質そのものを評価したい場合は、この realization test 群ではなく prompt や schema の責務を持つ対象を読む。
-- 個別サブコマンドと無関係な一般的 path model、設定 schema、git wrapper の内部だけを確認したい場合は、より直接の実装または局所テストを読む。
+- 特定機能の実装内部だけを変更したく、外部挙動テストや期待 state を確認する必要がない場合は、対応する実装モジュールを直接読む。
+- テスト支援関数、fixture、fake executable 生成などの共通補助だけを確認したい場合は、共通補助ファイルを直接読む。
+- Codex CLI や LLM の実出力品質そのものを評価したい場合は、この realization test 群を読む目的ではない。
 
 ## hash
-- e73c4ff9e9f919909e30e460af1c6f5bc64840c1b94f89b7424ef7140d64232f
+- be4c538eb5b79abeeb1504c64db5f3dd043d81d7b57b4f570cb1c4aa30f3be7d

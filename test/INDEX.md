@@ -149,23 +149,24 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行・TUI 呼び出しの runtime 境界を検証する pytest 群。プロセスグループ追跡、継承された追跡環境変数の無視、profile 生成、sandbox と writable_roots、作業ディレクトリ、schema 保存先、追加 read path 検査、非ゼロ終了、CLI 不在時エラーを扱う。
-- `run_codex_exec` と `run_codex_tui` が、file access mode と worktree に応じて Codex subprocess をどの引数・cwd・profile・許可領域で起動するかを確認する入口。
+- Codex CLI/TUI 呼び出しランタイムの実行制御を検証するテスト。Codex subprocess の process group 分離、apply tracking 環境変数の遮断、profile 生成、sandbox 設定、cwd 選択、schema 状態保存先、ファイルアクセス違反の扱い、extra read path の事前検査、非ゼロ終了や CLI 欠如時のエラー報告を扱う。
+- `run_codex_exec` と `run_codex_tui` の外部プロセス起動まわりを、実 Codex CLI ではなく一時ディレクトリ上の stub 実行ファイルで検証する入口。
 
 ## Read this when
-- Codex CLI 呼び出し時の subprocess 起動引数、stdin、`--cd`、`--profile`、`--output-schema`、`--output-last-message` の外部挙動を変更・確認するとき。
-- Codex runtime の sandbox mode、writable_roots、pure oracle read、repo write、realization write、linked worktree での cwd や許可領域の扱いを調べるとき。
-- Codex subprocess の apply process tracking、process group、追跡環境変数の扱い、file access violation からの再試行挙動を変更するとき。
-- TUI 呼び出し前の extra read path 検査、complete prompt の許可条件、TUI 失敗時の console 表示・call log、Codex CLI 不在時の `CmocError` を検証するとき。
+- Codex CLI/TUI 起動時の argv、cwd、stdin、profile、sandbox writable_roots、出力ファイル、call log の期待挙動を確認・変更するとき。
+- `FileAccessMode` ごとの Codex 実行環境、特に `REPO_WRITE`、`REALIZATION_WRITE`、`PURE_ORACLE_READ` の差分を確認するとき。
+- `.cmoc` worktree 配下で schema 状態や TUI prompt log をどこに置くか、linked worktree からの実行をどう扱うかを確認するとき。
+- apply process tracking、process group、継承された tracking env の無効化など、Codex subprocess の低レベル実行制御を変更するとき。
+- Codex 実行後の禁止領域 diff、extra read path、Codex CLI の非ゼロ終了・未インストール時の `CmocError` 表示を変更するとき。
 
 ## Do not read this when
-- Codex runtime の実装詳細だけを読みたい場合は、対応する runtime 実装モジュールを直接読む。
-- Codex profile の低レベルな TOML 生成規則だけを確認したい場合は、profile 生成側の実装またはその単体テストを読む。
-- agent call parameter、file access mode、model class などの基本データ構造の定義を確認したい場合は、それらの定義元を読む。
-- Git repository fixture、stub executable、Codex home setup などテスト支援関数の実装を調べたい場合は、テスト support 側を読む。
+- Codex runtime 以外の CLI コマンド仕様や oracle 文書生成のテストを探しているとき。
+- 外部プロセス起動を伴わない pure path helper、設定 object 単体、git helper 単体の挙動だけを確認したいとき。
+- 実 Codex CLI の出力品質や LLM 応答内容そのものを検証したいとき。
+- テスト支援関数の実装詳細を確認したいだけなら、支援 module を直接読む方がよい。
 
 ## hash
-- 6b7ee1fbdbb5044992214adcf591df6b2354e8e39c21d5843e05eba8b180b328
+- 1d70af1bb005d35891bef92b758d021cf6fd40404f02fb1337a40c510c714200
 
 # `test_codex_runtime_home.py`
 
