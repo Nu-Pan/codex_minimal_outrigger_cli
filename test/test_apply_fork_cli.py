@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 from basic.acp import AgentCallParameter
 from _support import (
+    add_tracked_ignored_oracle_file,
     apply_worktree_from_state,
     make_repo,
     run_git,
@@ -372,3 +373,34 @@ def test_apply_fork_target_normalization_keeps_binary_files(
     )
 
     assert targets == [realization_binary.resolve(), oracle_binary.resolve()]
+
+
+def test_apply_fork_target_normalization_keeps_tracked_ignored_files(
+    tmp_path: Path,
+) -> None:
+    """通常の git check-ignore と同じく tracked ignored file を対象に残す。"""
+    root = make_repo(tmp_path)
+    add_tracked_ignored_oracle_file(root)
+    realization_target = root / "src" / "ignored.py"
+    realization_target.parent.mkdir()
+    realization_target.write_text("value = 1\n")
+    with (root / ".gitignore").open("a") as file:
+        file.write("src/ignored.py\nsrc/untracked.py\n")
+    run_git(root, "add", "-f", ".gitignore", "src/ignored.py")
+    run_git(root, "commit", "-m", "add ignored realization")
+    untracked_ignored = root / "src" / "untracked.py"
+    untracked_ignored.write_text("value = 2\n")
+
+    targets = apply_fork_module.normalize_apply_targets(
+        root,
+        {
+            root / "oracle" / "ignored.md",
+            realization_target,
+            untracked_ignored,
+        },
+    )
+
+    assert targets == [
+        (root / "oracle" / "ignored.md").resolve(),
+        realization_target.resolve(),
+    ]

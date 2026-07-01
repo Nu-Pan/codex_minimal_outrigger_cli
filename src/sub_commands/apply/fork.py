@@ -29,7 +29,7 @@ from cmoc_runtime import (
     current_subcommand_logger,
     ensure_cmoc_ignored_in_exclude,
     head_commit,
-    is_git_ignored,
+    is_untracked_git_ignored,
     load_config,
     load_state_for_branch,
     pushd,
@@ -280,7 +280,7 @@ def normalize_apply_targets(
         # binary 除外を置かないため、file 種別だけでは対象から落とさない。
         if path.name in {"AGENTS.md", "INDEX.md"}:
             continue
-        if is_git_ignored(root, path):
+        if is_untracked_git_ignored(root, path):
             continue
         targets.append(path)
     return targets
