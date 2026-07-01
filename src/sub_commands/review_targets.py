@@ -29,7 +29,7 @@ def enumerate_review_all_oracle_files(root: Path) -> list[Path]:
         path
         for path in sorted((root / "oracle").rglob("*"))
         if path.is_file()
-        and path.name != "INDEX.md"
+        and path.name not in {"AGENTS.md", "INDEX.md"}
         and not is_root_memo(root, path)
         and not is_git_ignored(root, path)
     ]

@@ -23,6 +23,7 @@ from cmoc_runtime import SessionState
 from config.cmoc_config import CmocConfig, CmocConfigReviewOracle
 from main import app
 import sub_commands.review.oracle as review_module
+from sub_commands.review_targets import enumerate_review_all_oracle_files
 
 
 def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -738,6 +739,21 @@ def test_review_oracle_session_scope_excludes_changed_gitignored_oracle_files(
     assert "oracle/ignored-link.md" not in rendered
     assert "oracle/ignored.md" not in rendered
     assert "result: no_targets" in rendered
+
+
+def test_review_oracle_target_enumeration_excludes_agents_and_index(
+    tmp_path: Path,
+) -> None:
+    """oracle file 定義から外れる AGENTS.md と INDEX.md をレビュー対象にしない。"""
+    root = make_repo(tmp_path)
+    spec = root / "oracle" / "spec.md"
+    agents = root / "oracle" / "AGENTS.md"
+    index = root / "oracle" / "INDEX.md"
+    spec.write_text("# spec\n")
+    agents.write_text("# agents\n")
+    index.write_text("# index\n")
+
+    assert enumerate_review_all_oracle_files(root) == [spec.resolve()]
 
 
 def test_review_oracle_merges_review_index_changes(

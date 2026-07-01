@@ -414,8 +414,10 @@ def test_ensure_cmoc_ignored_adds_literal_pattern_after_existing_effective_patte
 def test_file_access_mode_values_are_json_ready() -> None:
     """FileAccessMode の永続化値は JSON schema 側と共有できる文字列にする。"""
     assert FileAccessMode.READONLY.value == "readonly"
-    assert FileAccessMode.REALIZATION_WRITE.value == "realization_write"
+    assert FileAccessMode.PURE_ORACLE_READ.value == "pure_oracle_read"
     assert FileAccessMode.REPO_WRITE.value == "repo_write"
+    assert FileAccessMode.PURE_ORACLE_WRITE.value == "pure_oracle_write"
+    assert FileAccessMode.REALIZATION_WRITE.value == "realization_write"
 
 
 def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
@@ -423,7 +425,7 @@ def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
     assert file_access_to_sandbox_mode(FileAccessMode.READONLY) == "read-only"
     assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_READ) == "read-only"
     assert file_access_to_sandbox_mode(FileAccessMode.REALIZATION_WRITE) == "workspace-write"
-    assert file_access_to_sandbox_mode(FileAccessMode.ORACLE_WRITE) == "workspace-write"
+    assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_WRITE) == "workspace-write"
     assert file_access_to_sandbox_mode(FileAccessMode.REPO_WRITE) == "workspace-write"
 
 
@@ -434,6 +436,9 @@ def test_file_access_to_codex_cwd_limits_pure_oracle_read(tmp_path: Path) -> Non
 
     assert file_access_to_codex_cwd(FileAccessMode.READONLY, root) == root.resolve()
     assert file_access_to_codex_cwd(FileAccessMode.PURE_ORACLE_READ, root) == (
+        root / "oracle"
+    ).resolve()
+    assert file_access_to_codex_cwd(FileAccessMode.PURE_ORACLE_WRITE, root) == (
         root / "oracle"
     ).resolve()
 
@@ -513,7 +518,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     assert "[sandbox_workspace_write]" not in profiles[FileAccessMode.READONLY]
     for mode in (
         FileAccessMode.REALIZATION_WRITE,
-        FileAccessMode.ORACLE_WRITE,
+        FileAccessMode.PURE_ORACLE_WRITE,
         FileAccessMode.REPO_WRITE,
     ):
         assert 'sandbox_mode = "workspace-write"' in profiles[mode]
@@ -521,7 +526,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     assert _profile_writable_roots(profiles[FileAccessMode.REALIZATION_WRITE]) == {
         str(root.resolve()),
     }
-    assert _profile_writable_roots(profiles[FileAccessMode.ORACLE_WRITE]) == {
+    assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_WRITE]) == {
         str((root / "oracle").resolve())
     }
     assert _profile_writable_roots(profiles[FileAccessMode.REPO_WRITE]) == {
@@ -632,14 +637,19 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         (FileAccessMode.REALIZATION_WRITE, ".agents/blocked.md"),
         (FileAccessMode.REALIZATION_WRITE, ".cmoc/state.json"),
         (FileAccessMode.REALIZATION_WRITE, ".codex/config.toml"),
-        (FileAccessMode.REALIZATION_WRITE, "README.md"),
-        (FileAccessMode.ORACLE_WRITE, "src/blocked.md"),
-        (FileAccessMode.ORACLE_WRITE, "memo/blocked.md"),
-        (FileAccessMode.ORACLE_WRITE, ".agents/blocked.md"),
+        (FileAccessMode.REALIZATION_WRITE, "AGENTS.md"),
+        (FileAccessMode.REALIZATION_WRITE, "INDEX.md"),
+        (FileAccessMode.PURE_ORACLE_WRITE, "src/blocked.md"),
+        (FileAccessMode.PURE_ORACLE_WRITE, "memo/blocked.md"),
+        (FileAccessMode.PURE_ORACLE_WRITE, ".agents/blocked.md"),
+        (FileAccessMode.PURE_ORACLE_WRITE, "oracle/INDEX.md"),
+        (FileAccessMode.PURE_ORACLE_WRITE, "oracle/AGENTS.md"),
         (FileAccessMode.REPO_WRITE, "memo/blocked.md"),
         (FileAccessMode.REPO_WRITE, ".agents/blocked.md"),
         (FileAccessMode.REPO_WRITE, ".cmoc/state.json"),
         (FileAccessMode.REPO_WRITE, ".git/config"),
+        (FileAccessMode.REPO_WRITE, "AGENTS.md"),
+        (FileAccessMode.REPO_WRITE, "INDEX.md"),
         (FileAccessMode.REPO_WRITE, "../outside.md"),
     ],
 )

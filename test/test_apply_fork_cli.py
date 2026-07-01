@@ -315,6 +315,30 @@ def test_apply_fork_target_normalization_keeps_nested_memo_directory(
     assert targets == [nested.resolve()]
 
 
+def test_apply_fork_target_normalization_excludes_non_realization_paths(
+    tmp_path: Path,
+) -> None:
+    """realization file 定義から外れる管理 path と規範 path を除外する。"""
+    root = make_repo(tmp_path)
+    src_target = root / "src" / "target.py"
+    codex_target = root / ".codex" / "config.toml"
+    agents_target = root / "AGENTS.md"
+    index_target = root / "INDEX.md"
+    src_target.parent.mkdir()
+    codex_target.parent.mkdir()
+    src_target.write_text("target\n")
+    codex_target.write_text("config\n")
+    agents_target.write_text("agents\n")
+    index_target.write_text("index\n")
+
+    targets = apply_fork_module.normalize_apply_targets(
+        root,
+        {src_target, codex_target, agents_target, index_target},
+    )
+
+    assert targets == [src_target.resolve()]
+
+
 def test_apply_fork_target_normalization_keeps_binary_files(
     tmp_path: Path,
 ) -> None:

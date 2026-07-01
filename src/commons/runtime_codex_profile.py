@@ -34,7 +34,6 @@ _PROFILE_BLOCKED_ROOT_NAMES = {
     ".pytest_cache",
     "AGENTS.md",
     "INDEX.md",
-    "README.md",
     "memo",
 }
 _REALIZATION_WRITE_BLOCKED_ROOT_NAMES = {
@@ -75,7 +74,7 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
             return "read-only"
         case (
             FileAccessMode.REALIZATION_WRITE
-            | FileAccessMode.ORACLE_WRITE
+            | FileAccessMode.PURE_ORACLE_WRITE
             | FileAccessMode.REPO_WRITE
             | FileAccessMode.NO_RULE
         ):
@@ -87,10 +86,10 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
 def file_access_to_codex_cwd(mode: FileAccessMode, root: Path) -> Path:
     """FileAccessMode の読み取り境界に合わせた Codex 作業 root を返す。"""
     root = root.resolve()
-    if mode == FileAccessMode.PURE_ORACLE_READ:
+    if mode in {FileAccessMode.PURE_ORACLE_READ, FileAccessMode.PURE_ORACLE_WRITE}:
         # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-        # Codex profile は read-only の読み取り root を分けられないため、
-        # 公開済みの --cd/cwd で oracle tree だけを作業 root にする。
+        # Codex profile は読み取り root を分けられないため、公開済みの
+        # --cd/cwd で oracle tree だけを作業 root にする。
         return root / "oracle"
     return root
 
@@ -106,9 +105,9 @@ def _is_read_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
         # PURE_ORACLE_READ の Codex cwd は oracle に閉じるが、TUI の完全
         # prompt だけは起動指示そのものなので `.cmoc` 側から読ませる。
         return True
-    return mode != FileAccessMode.PURE_ORACLE_READ or path.is_relative_to(
-        root / "oracle"
-    )
+    if mode in {FileAccessMode.PURE_ORACLE_READ, FileAccessMode.PURE_ORACLE_WRITE}:
+        return path.is_relative_to(root / "oracle")
+    return True
 
 
 def _is_tui_complete_prompt_path(root: Path, path: Path) -> bool:
@@ -162,7 +161,7 @@ def _writable_roots(
             # cannot make <work-root> itself writable. New top-level paths must
             # be passed explicitly through extra_writable_paths.
             paths = _existing_writable_top_level_roots(mode, root)
-        case FileAccessMode.ORACLE_WRITE:
+        case FileAccessMode.PURE_ORACLE_WRITE:
             paths = [root / "oracle"]
         case FileAccessMode.NO_RULE:
             paths = [root]
@@ -250,6 +249,8 @@ def _is_writable_path_allowed(
             and relative.parts[0] not in _CONFLICT_WRITE_BLOCKED_ROOT_NAMES
         )
     relative = path.relative_to(root)
+    if path.name in {"AGENTS.md", "INDEX.md"}:
+        return False
     blocked_root_names = (
         _REPO_WRITE_BLOCKED_ROOT_NAMES
         if mode == FileAccessMode.REPO_WRITE
@@ -259,7 +260,7 @@ def _is_writable_path_allowed(
         return False
     if mode == FileAccessMode.REALIZATION_WRITE:
         return not path.is_relative_to(root / "oracle")
-    if mode == FileAccessMode.ORACLE_WRITE:
+    if mode == FileAccessMode.PURE_ORACLE_WRITE:
         return path.is_relative_to(root / "oracle")
     return mode in {FileAccessMode.REPO_WRITE, FileAccessMode.NO_RULE}
 

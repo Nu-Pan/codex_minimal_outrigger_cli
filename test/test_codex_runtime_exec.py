@@ -137,7 +137,7 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
     writable_roots = set(
         tomllib.loads(record["profile"])["sandbox_workspace_write"]["writable_roots"]
     )
-    assert writable_roots == {str((root / "oracle").resolve())}
+    assert writable_roots == {str(root.resolve())}
     assert (root / "oracle" / "created.md").read_text() == "created\n"
     assert result.output_text == "done\n"
 
@@ -373,7 +373,7 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
         Path(json.loads(call_log.read_text())["profile_path"]).read_text()
     )
     assert profile["sandbox_workspace_write"]["writable_roots"] == [
-        str((linked / "oracle").resolve())
+        str(linked.resolve())
     ]
 
 

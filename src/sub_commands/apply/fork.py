@@ -290,12 +290,14 @@ def _is_write_allowed_by_file_access_mode(
     }
     if relative.parts[0] in blocked_runtime_roots:
         return False
+    if path.name in {"AGENTS.md", "INDEX.md"}:
+        return False
     match mode:
         case FileAccessMode.READONLY | FileAccessMode.PURE_ORACLE_READ:
             return False
         case FileAccessMode.REALIZATION_WRITE:
             return relative.parts[0] != "oracle"
-        case FileAccessMode.ORACLE_WRITE:
+        case FileAccessMode.PURE_ORACLE_WRITE:
             return relative.parts[0] == "oracle"
         case FileAccessMode.REPO_WRITE | FileAccessMode.NO_RULE:
             return True
@@ -388,13 +390,18 @@ def normalize_apply_targets(
             continue
         if not rel_parts:
             continue
-        if ".git" in rel_parts or ".agents" in rel_parts or rel_parts[0] == "memo":
+        if (
+            ".git" in rel_parts
+            or ".agents" in rel_parts
+            or ".codex" in rel_parts
+            or rel_parts[0] == "memo"
+        ):
             continue
         if not include_oracle and rel_parts[0] == "oracle":
             continue
         # `<work-root>/oracle/doc/app_spec/misc_spec.md` は実装ファイル列挙に
         # binary 除外を置かないため、file 種別だけでは対象から落とさない。
-        if path.name == "INDEX.md":
+        if path.name in {"AGENTS.md", "INDEX.md"}:
             continue
         if is_git_ignored(root, path):
             continue

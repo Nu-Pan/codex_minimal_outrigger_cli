@@ -187,9 +187,9 @@ def test_finding_application_prompt_uses_complete_standard_prompt(
     assert "# oracle and realization basic" in parameter.prompt
     assert "# realization standard" in parameter.prompt
     assert "# file read write rule - realization_write" in parameter.prompt
-    assert "- `<work-root>/oracle` ツリー内は書き込み禁止" in parameter.prompt
+    assert "- oracle file は書き込み禁止" in parameter.prompt
     assert "- `<work-root>/memo` は読み書き禁止" in parameter.prompt
-    assert "/.agents` ツリー内は書き込み禁止" not in parameter.prompt
+    assert "/.agents` ツリー内は書き込み禁止" in parameter.prompt
     assert "## FINDING-00" in parameter.prompt
     assert '"title": "first"' in parameter.prompt
     assert "_comment.md" in parameter.prompt
@@ -365,7 +365,7 @@ def test_apply_fork_writes_report_with_change_summary(
 def test_apply_fork_rechecks_changed_files_until_converged(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
-    """apply 後の変更ファイルを再調査し、INDEX.md だけは再調査対象から外す。"""
+    """apply 後の変更ファイルを再調査し、新規ディレクトリ配下も展開する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -403,7 +403,6 @@ def test_apply_fork_rechecks_changed_files_until_converged(
             )
         if purpose == "apply fork finding application":
             (Path.cwd() / "README.md").write_text("# updated\n")
-            (Path.cwd() / "INDEX.md").write_text("generated index\n")
             (Path.cwd() / "newdir").mkdir()
             (Path.cwd() / "newdir" / "new.py").write_text("print('new')\n")
             return FakeCodexResult(None)
@@ -437,7 +436,6 @@ def test_apply_fork_rechecks_changed_files_until_converged(
     assert enumerate_calls >= 2
     assert "README.md" in target_rels
     assert "newdir/new.py" in target_rels
-    assert "INDEX.md" not in target_rels
     report_path = report_path_from_stdout(result.stdout)
     assert "result: converged" in report_path.read_text()
 
