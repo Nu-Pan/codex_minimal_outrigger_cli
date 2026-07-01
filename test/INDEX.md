@@ -131,24 +131,25 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder 解決、worktree root 判定、config 既定値と検証、CmocError の表示、CLI preflight と error 出力、subcommand log、state branch 解析、FileAccessMode 変換、Codex sandbox profile、binary 判定など、個別サブコマンドより下位の共通実行前提をまとめて扱う。
-- 単一責務は共通 runtime 回帰の維持であり、root 状態や共通 fixture を共有するため、個別機能の詳細テストではなく runtime 境界が一緒に崩れないことを確認する入口として位置づけられる。
+- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder 解決、repo/run/work root 判定、config 既定値と検証、CmocError の表示、CLI error の stdout report、subcommand log、worktree 作成・削除の安全性、FileAccessMode から sandbox/Codex profile への変換、binary 判定など、個別サブコマンドより下位の共通実行前提を扱う。
+- 共通 fixture と root 状態を共有する runtime 回帰テスト群としてまとまっており、runtime 境界の変更時に関連挙動をまとめて確認する入口になる。
 
 ## Read this when
-- root placeholder、repo root、run root、work root、linked worktree、managed worktree の扱いを変更する。
-- CmocError、CLI 引数解析 error、stdout/stderr への error report、call stack 表示、CLI preflight、completion probe、subcommand log の生成条件を変更する。
-- config の既定値、codex model class、reasoning effort、config_from_dict の検証挙動を変更する。
-- SessionState の branch 名解析、apply/session branch の形、branch からの state 読み込みを変更する。
-- FileAccessMode、sandbox mode、Codex cwd、writable_roots、extra writable paths、session join conflict の書き込み許可範囲を変更する。
-- binary 判定、duration 表示、`.cmoc` ignore pattern 追加のような共通 runtime helper の外部挙動を変更する。
+- root placeholder、repo root、run root、work root、linked worktree の扱いを変更・調査するとき。
+- CmocError、render_error、CLI 引数解析 error、想定済み CLI error の stdout/stderr 挙動を変更・調査するとき。
+- subcommand log の生成条件、timestamp 衝突時の扱い、preflight 失敗時の副作用抑制を確認するとき。
+- config の既定値、codex model/reasoning effort 名の検証、FileAccessMode の永続化値や sandbox mode 変換を変更するとき。
+- Codex profile の writable roots、extra writable paths、oracle/memo/runtime path の許可境界、session join conflict の書き込み許可を変更するとき。
+- worktree 作成・削除の対象 path 安全性、`.cmoc` ignore 追加、binary 判定の読み取り範囲、duration 表示形式を変更するとき。
 
 ## Do not read this when
-- 特定サブコマンド固有の business logic、prompt 内容、indexing、session fork/join などの詳細挙動だけを確認したい場合は、そのサブコマンドや機能に対応するテストを先に読む。
-- oracle file の正本仕様本文を確認したい場合は oracle 側の該当文書を読む。この対象は正本仕様ではなく realization test である。
-- 単一 helper の内部実装だけを読みたい場合は、対応する実装モジュールを直接読む。ここは runtime 境界の回帰観点を確認するための入口である。
+- 個別サブコマンド固有の利用者フロー、出力 schema、分岐ロジックだけを確認したいとき。
+- oracle file の記述方針や正本仕様断片そのものを確認したいとき。
+- runtime 共通契約に触れない UI、prompt 文面、agent call の内容生成、ドメイン固有処理だけを変更するとき。
+- 単体 helper の内部実装だけを読めば十分で、外部挙動や CLI/runtime 境界の回帰確認が不要なとき。
 
 ## hash
-- 8b4fcd7566e0f09531dbabbb19791749068b68cb927bf76b6e7770d76198f47e
+- 778f89bb68663ab3549fc9e4590652c9297c8d774d72e8da13f1547c73be03ef
 
 # `test_cli_init_tui.py`
 

@@ -155,26 +155,22 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI を起動する直前から実行結果を解釈する直後までの subprocess 境界を扱う。
-- file access mode から Codex sandbox/profile/cwd/writable root を作る処理、CODEX_HOME 検証、profile 保存、Codex subprocess 実行、apply 中の child process tracking、schema 配置、Codex JSONL からの error/quota/capacity/resume 判定をまとめる。
-- sandbox/profile/cwd、CODEX_HOME、child process tracking、schema、JSONL error 判定は同じ Codex profile 境界の不変条件を共有するため、この境界の失敗時挙動を確認する入口になる。
+- Codex CLI を起動する subprocess 境界で必要な profile 生成、sandbox/cwd/writable/read path 判定、CODEX_HOME 検査、child process tracking、schema 配置、出力 JSON/JSONL の error 判定をまとめる実装。
+- FileAccessMode から Codex CLI が理解する sandbox profile と実行環境へ変換し、cmoc 側の読み書き許可境界を Codex profile と実行前後の検査で保つ責務を持つ。
 
 ## Read this when
-- FileAccessMode と Codex sandbox 名、作業 root、読み書き許可 path、writable_roots の対応を確認または変更したいとき。
-- Codex profile の TOML 生成、hash 名での保存、profile 名の取り出し、CODEX_HOME の解決・検証・subprocess 環境引き継ぎを扱うとき。
-- Codex CLI 不在時の CmocError 化、apply 実行中の Codex child process pid 記録、pid file lock、process group 起動、pid 再利用検出を確認または変更したいとき。
-- Structured Output schema の配置、schema なし出力 JSON の読み取り、Codex stdout/stderr/JSONL から利用者向け error detail、resume token、capacity error、quota error を判定する処理を扱うとき。
-- Codex subprocess 境界で、prompt 上の file access rule と実際に Codex profile へ渡せる sandbox 制約の差を調べたいとき。
+- Codex CLI 呼び出し前に渡す profile、sandbox mode、writable_roots、cwd、CODEX_HOME、subprocess env の挙動を確認・変更したいとき。
+- FileAccessMode ごとの追加 read path / writable path の許可判定、oracle conflict 解消時の例外的な書き込み許可、git ignored path の扱いを確認したいとき。
+- apply 実行中の Codex child process を pid file に記録・削除する処理や、abandon との競合を避ける lock の挙動を確認したいとき。
+- Structured Output schema の配置、schema なし出力 JSON の読み取り、Codex JSONL stdout/stderr から利用者向け error detail、resume token、capacity/quota error を判定する処理を確認したいとき。
 
 ## Do not read this when
-- agent call parameter や FileAccessMode 自体の型定義・意味を確認したいだけなら、basic 側の定義を直接読む。
-- cmoc config の model や reasoning effort の設定値定義を確認したいだけなら、config 側を直接読む。
-- prompt 文面として利用者へ伝える file access rule の生成内容を確認したいだけなら、prompt builder 側を直接読む。
-- Codex subprocess の呼び出し元コマンド全体の制御フローを追いたい場合は、各 subcommand や agent call orchestration の入口から読む。
-- hash file store や schema store directory の汎用保存処理そのものを変更したい場合は、runtime content/path 側を直接読む。
+- prompt 本文に載せる file access rule や oracle/realization の定義そのものを確認したいだけなら、対応する oracle 側の仕様断片を読む。
+- Codex subprocess 境界ではなく、上位の agent call orchestration、CLI subcommand の流れ、設定値の正本定義を確認したいだけなら、それぞれの呼び出し元や設定定義を読む。
+- 一般的な git 操作、runtime path の組み立て、hashed file store の実装だけを確認したい場合は、それぞれの専用実装を読む。
 
 ## hash
-- 4745798d2e690fe89108f37d19bc16c19b9072f5cff5d3c57aaeade0fb9f2379
+- 01b2fef23152c749c3e249f32817547a6c20c65aa84f1d7c278055887e5e03e8
 
 # `runtime_codex_tui.py`
 
