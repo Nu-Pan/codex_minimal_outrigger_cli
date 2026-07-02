@@ -175,23 +175,25 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行・TUI 起動を包む runtime 層のテスト。Codex subprocess の起動引数、profile 生成、cwd、標準入力、出力 schema 保存先、ログ、process group tracking、Codex CLI 不在時や非 0 終了時のエラー報告を検証する。
-- file access mode ごとの post-call diff 判定を扱うテスト。readonly、realization write、repo write、pure oracle read、追加 read/write path、oracle conflict write、ignored/cache/venv 差分、禁止領域差分の許可・拒否・復旧挙動を確認する。
-- linked worktree から Codex を呼ぶ場合の cwd、writable_roots、schema state、repo log read の扱いも含む。
+- Codex CLI の exec/TUI 呼び出しをテストする realization test。Codex profile 生成、作業ディレクトリ、sandbox writable_roots、prompt/stdin/output/schema の受け渡し、process group tracking、欠落 CLI や非ゼロ終了時のエラー報告を検証する。
+- agent call 後のファイルアクセス規則検査を扱い、readonly・realization write・repo write・pure oracle read 各 mode で、oracle/memo/.agents/.codex/.git、ignored file、temporary cache、venv、session join conflict 対象の差分を許可または拒否する境界を確認する。
+- linked worktree での schema state 配置、repo log read 例外、TUI complete prompt の読み取り許可など、Codex runtime が work-root/repo-root/oracle-root を切り替える挙動の入口になる。
 
 ## Read this when
-- Codex runtime の exec/TUI 呼び出し、profile 生成、Codex subprocess 実行、prompt/stdin/output/schema/log の受け渡しを変更する。
-- file access mode、許可 read/write path、oracle・memo・.agents・.codex・ignored file・cache・venv に関する差分検査や復旧処理を変更する。
-- linked worktree 上での Codex 呼び出し、schema 保存先、repo-root log 参照、pure oracle read の cwd 制限を確認・変更する。
-- Codex CLI が見つからない場合、TUI が非 0 終了した場合、または runtime が出す CmocError の外部挙動を変更する。
+- Codex CLI の exec または TUI 起動引数、profile 生成、sandbox 設定、cwd、stdin/output/schema の扱いを変更する。
+- agent call 実行後の file access violation 検出、復旧 retry、preexisting forbidden diff、ignored/untracked/cache/venv 差分の許可条件を変更する。
+- PURE_ORACLE_READ、READONLY、REALIZATION_WRITE、REPO_WRITE の runtime 挙動や、extra_read_paths、extra_writable_paths、allow_oracle_conflict_writes の扱いを変更する。
+- linked worktree 上での Codex runtime 実行、schema state の保存先、repo log prompt/read 例外、TUI complete prompt の扱いを確認する。
+- Codex CLI が存在しない場合、または TUI が非ゼロ終了した場合の CmocError と console/log 出力を確認する。
 
 ## Do not read this when
-- Codex runtime 以外の CLI command 仕様、通常の git 操作、設定読み込みだけを確認したい場合。
-- agent call parameter の型定義や enum の意味だけを確認したい場合は、その定義元を直接読む。
-- INDEX.md 生成規則や oracle 文書のルーティングだけを扱う場合。
+- AgentCallParameter、FileAccessMode、ModelClass、ReasoningEffort そのものの型定義や意味だけを確認したい場合は、それらの basic 層を読む。
+- Codex runtime の実装を直接変更したい場合は、まず runtime 実装側を読み、このテストは期待挙動の確認が必要になった時に読む。
+- git repository fixture、Codex home fixture、stub executable 作成などテスト支援関数の詳細だけを確認したい場合は、support 側を読む。
+- oracle file の正本仕様や path model の定義を確認したい場合は、oracle 側の文書または source を読む。
 
 ## hash
-- 57d582bc23f389b96fcf1f69b7eda24d44a2e6ac3edef317e1fa83c9c003c0a2
+- 627eb1590ed92c3f709ba6db7df594f1996ae0b67d9597b489cfd75ff8569221
 
 # `test_codex_runtime_home.py`
 

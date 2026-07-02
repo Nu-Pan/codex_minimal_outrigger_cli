@@ -93,21 +93,24 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループと、その実行後に残った file access rule 違反の検出・修復を扱う実行制御モジュール。Structured Output 検証、capacity retry、quota 代表 probe、resume 継続、Codex call log/event、変更差分検査を同じ状態機械として読む入口になる。
+- Codex exec の実行制御を担う。単一試行ループ内で、Structured Output 検証、capacity retry、quota 代表 probe、resume 継続、call log と subcommand event の記録、agent call 後の file access rule 違反検出・修復を扱う。
+- exec 実行時の Codex profile、CODEX_HOME、作業 root、schema、prompt/stdout/stderr/output/call log の生成と受け渡しをまとめる入口である。
+- worktree 差分、禁止 root の filesystem 差分、FileAccessMode ごとの書き込み許可判定を使い、Codex call 後に残った不正変更を検出する。
 
 ## Read this when
-- Codex CLI 呼び出しの argv、stdin 用 prompt log、output/schema/call log の生成と保存条件を確認したいとき。
-- Codex exec の失敗時に、capacity retry、quota 待機、代表 probe、resume token 継続、Structured Output 再試行のどれが行われるかを確認したいとき。
-- agent call 後に file access rule 違反を検出し、設定回数だけ recovery call を実行する流れを確認したいとき。
-- worktree の変更 path、git ignored path、禁止 root 配下の filesystem 差分、FileAccessMode ごとの書き込み可否判定を扱う変更をするとき。
+- Codex exec 呼び出しの argv、stdin、CODEX_HOME、profile、schema、log 出力、resume token の扱いを確認・変更したいとき。
+- Structured Output の JSON 読み取り、jsonschema 検証、semantic retry、capacity retry、quota wait/probe の制御を確認・変更したいとき。
+- Codex call の実行結果を console や subcommand log へ記録する内容、call log の保存内容、CodexExecResult の組み立てを確認したいとき。
+- agent call 後の file access rule 違反検出、違反修復 call、worktree 差分取得、禁止 root の変更検出、FileAccessMode ごとの許可判定を確認・変更したいとき。
 
 ## Do not read this when
-- Codex profile、CODEX_HOME、schema 配置、subprocess 実行、resume token 抽出などの低レベル helper 自体を変更したい場合は、それらを定義する runtime Codex profile 側を読む。
-- TUI 起動や exec 以外の Codex サブコマンド分岐を調べたい場合は、このファイルではなく該当する起動制御モジュールを読む。
-- file access rule の正本仕様や AgentCallParameter のモード定義を確認したい場合は、oracle 側または basic.acp 側を読む。
+- Codex profile の具体的な生成規則、Codex subprocess 実行 wrapper、エラー文字列判定、schema 準備、output JSON 読み取りの低レベル処理だけを確認したい場合は、それらを提供する runtime Codex profile 側を読む。
+- Codex call の結果データ構造そのものだけを確認したい場合は、結果型を定義する対象を読む。
+- subcommand log の基盤 API や console 表示 helper の実装だけを確認したい場合は、logging 側を読む。
+- AgentCallParameter、FileAccessMode、quota probe parameter、file access rule violation recovery parameter の構築仕様だけを確認したい場合は、それぞれの ACP 定義・builder 側を読む。
 
 ## hash
-- 8f46a7fbf40d24e8e3a53afd11b64a3fc6945357f9229814c1223d5321cf8ef8
+- d8453b8ce3af444a0e15d4a555adb3795a9ab27780a2b022433ccc5f86434e90
 
 # `runtime_codex_logging.py`
 
