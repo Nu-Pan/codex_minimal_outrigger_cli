@@ -363,10 +363,10 @@ def test_review_oracle_validate_finding_advocate_preserves_dynamic_text() -> Non
     assert "`<oracle-root>` ツリー内" in parameter.prompt
 
 
-def test_session_join_conflict_resolution_uses_realization_write_mode() -> None:
+def test_session_join_conflict_resolution_uses_repo_write_mode() -> None:
     parameter = build_session_join_conflict_resolution_parameter([__file__])
 
     assert parameter.model_class == ModelClass.MAINSTREAM
     assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
-    assert parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE
+    assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
     assert "conflict 対象ファイル" in parameter.prompt

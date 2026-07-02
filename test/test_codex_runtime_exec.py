@@ -614,6 +614,49 @@ def test_run_codex_exec_stores_schema_state_under_codex_work_root(
     assert not (root / ".cmoc" / "state" / "schema").exists()
 
 
+def test_run_codex_exec_allows_repo_log_read_from_linked_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    linked = root / ".cmoc" / "worktrees" / "linked-exec-log"
+    linked.parent.mkdir(parents=True)
+    run_git(root, "worktree", "add", "-b", "linked-exec-log", str(linked), "HEAD")
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    recorder = tmp_path / "record.json"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, os, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text('done\\n')",
+            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
+            "    'args': args,",
+            "    'cwd': os.getcwd(),",
+            "}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_exec(
+        _parameter(FileAccessMode.PURE_ORACLE_READ),
+        root=root,
+        cwd=linked,
+        extra_read_paths=[root / ".cmoc" / "log" / "codex" / "20260101_call.json"],
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    record = json.loads(recorder.read_text())
+    assert record["cwd"] == str((linked / "oracle").resolve())
+    assert record["args"][record["args"].index("--cd") + 1] == str(
+        (linked / "oracle").resolve()
+    )
+
+
 def test_run_codex_exec_rejects_blocked_runtime_diffs_after_call(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

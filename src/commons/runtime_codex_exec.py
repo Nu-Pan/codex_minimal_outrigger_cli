@@ -171,6 +171,7 @@ def run_codex_exec(
         codex_work_root,
         extra_read_paths,
         extra_writable_paths,
+        extra_read_root=root,
         allow_oracle_conflict_writes=allow_oracle_conflict_writes,
     )
     profile_name = codex_profile_name(profile_path)

@@ -189,8 +189,9 @@ def test_complete_prompt_preserves_injected_standard_terms() -> None:
     assert "`oracle spec`" in rendered
     assert "`仕様ファイル`" in rendered
     assert "`oracles file` のような typo" in rendered
-    for forbidden in ["<cmoc-root>", "<repo-root>", "<run-root>"]:
+    for forbidden in ["<cmoc-root>", "<run-root>"]:
         assert forbidden not in rendered
+    assert "<repo-root>" in rendered
     assert "コメントにプレースホルダ `<work-root>` 起点の oracle file path を書く" in rendered
     assert "`<work-root>/oracle/doc/...` のように根拠 path" in rendered
     for expected in [
@@ -243,6 +244,7 @@ def test_complete_prompt_keeps_root_tokens_and_records_work_root_placeholder(
     assert "<repo-root> ツリー内の realization file" in rendered
     assert "<cmoc-root> と <run-root> と <work-root> 配下" in rendered
     assert '"summary": "realization file and <repo-root> stay in code block"' in rendered
+    assert f"- <repo-root> = {repo_root}" in rendered
     assert f"- <work-root> = {repo_root}" in rendered
 
 

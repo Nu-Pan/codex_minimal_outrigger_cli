@@ -387,7 +387,7 @@ def test_session_completion_rejects_missing_state_fields(
     assert current_branch(root) == session_branch
 
 
-def test_session_join_resolves_oracle_conflict_with_realization_write_profile(
+def test_session_join_resolves_oracle_conflict_with_repo_write_profile(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -441,7 +441,7 @@ def test_session_join_resolves_oracle_conflict_with_realization_write_profile(
     assert current_branch(root) == home_branch
     assert target.read_text() == "resolved change\nTitle\n=======\n"
     assert calls == ["session join conflict resolution"]
-    assert modes == [FileAccessMode.REALIZATION_WRITE]
+    assert modes == [FileAccessMode.REPO_WRITE]
 
 
 def test_session_join_conflict_marker_detection_uses_marker_block() -> None:

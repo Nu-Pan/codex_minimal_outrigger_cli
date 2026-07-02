@@ -634,6 +634,40 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         )
 
 
+def test_codex_profile_allows_repo_log_read_from_linked_worktree(
+    tmp_path: Path,
+) -> None:
+    """linked worktree 実行時だけ repo 側 log 読み取りを追加許可する。"""
+    root = make_repo(tmp_path)
+    linked = root / ".cmoc" / "worktrees" / "linked-read"
+    linked.parent.mkdir(parents=True)
+    run_git(root, "worktree", "add", "-b", "linked-read", str(linked), "HEAD")
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.PURE_ORACLE_READ,
+        "prompt",
+        None,
+    )
+
+    build_codex_profile(
+        parameter,
+        CmocConfig(),
+        linked,
+        [root / ".cmoc" / "log" / "codex" / "20260101_call.json"],
+        extra_read_root=root,
+    )
+
+    with pytest.raises(CmocError, match="許可領域外"):
+        build_codex_profile(
+            parameter,
+            CmocConfig(),
+            linked,
+            [root / "src" / "blocked.md"],
+            extra_read_root=root,
+        )
+
+
 def test_codex_profile_allows_root_for_realization_write_and_ignored_extra(
     tmp_path: Path,
 ) -> None:

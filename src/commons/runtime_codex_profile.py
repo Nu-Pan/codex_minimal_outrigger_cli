@@ -105,6 +105,10 @@ def _is_read_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
     return True
 
 
+def _is_repo_log_read_path(root: Path, path: Path) -> bool:
+    return path.is_relative_to(root / ".cmoc" / "log")
+
+
 def _is_tui_complete_prompt_path(root: Path, path: Path) -> bool:
     return path.parent == root / ".cmoc" / "log" / "tui" and path.name.endswith(
         "_cmpl.md"
@@ -115,11 +119,17 @@ def _validate_extra_read_paths(
     mode: FileAccessMode,
     root: Path,
     extra_read_paths: list[Path] | None,
+    extra_read_root: Path | None = None,
 ) -> None:
     """Codex profile に足す read path が cmoc の許可境界内か検査する。"""
+    extra_log_root = extra_read_root.resolve() if extra_read_root is not None else None
     for path in extra_read_paths or []:
         resolved = path.resolve()
-        if not _is_read_path_allowed(mode, root, resolved):
+        if not _is_read_path_allowed(mode, root, resolved) and not (
+            extra_log_root is not None
+            and extra_log_root != root
+            and _is_repo_log_read_path(extra_log_root, resolved)
+        ):
             raise CmocError(
                 "追加読み取り許可 path が FileAccessMode の許可領域外にあります。",
                 [
@@ -306,7 +316,10 @@ def build_codex_profile(
         root = root.resolve()
         read_root = (extra_read_root or root).resolve()
         _validate_extra_read_paths(
-            parameter.file_access_mode, read_root, extra_read_paths
+            parameter.file_access_mode,
+            root,
+            extra_read_paths,
+            extra_read_root=read_root,
         )
     sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
     lines.append(f'sandbox_mode = "{sandbox_mode}"')
