@@ -89,6 +89,16 @@ def _read_required_output_json(path: Path) -> Any:
         raise ValueError(f"output file is not valid JSON: {exc}") from exc
 
 
+def _extract_resume_token_from_jsonl_log(path: Path) -> str | None:
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # quota resume must be based on the persisted JSONL log for the failed
+    # Codex session; if it is unreadable, retry without `resume`.
+    try:
+        return extract_resume_token(path.read_text())
+    except OSError:
+        return None
+
+
 def _base_exec_argv(profile_name: str, codex_cwd: Path) -> list[str]:
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # cmoc may run Codex from linked worktrees or generated roots; repo
@@ -463,7 +473,9 @@ def run_codex_exec(
                                 ],
                                 error_text,
                             )
-                        resume_token = extract_resume_token(result.stdout)
+                        resume_token = _extract_resume_token_from_jsonl_log(
+                            stdout_path
+                        )
                         continue
                     _QUOTA_PROBE_AVAILABLE = False
                     _QUOTA_PROBE_ERROR = None
@@ -615,7 +627,7 @@ def run_codex_exec(
                     f"# {console_timestamp()} Codex CLI quota wait: resuming work",
                     flush=True,
                 )
-                resume_token = extract_resume_token(result.stdout)
+                resume_token = _extract_resume_token_from_jsonl_log(stdout_path)
                 continue
             emit_codex_call_event(
                 run_purpose=purpose,

@@ -54,6 +54,19 @@ def stub_quota_probe_builder(
     return probe_prompt
 
 
+def test_resume_token_is_read_from_persisted_jsonl_log(tmp_path: Path) -> None:
+    log_path = tmp_path / "failed_call.jsonl"
+    log_path.write_text('{"type":"thread.started","thread_id":"sess-from-log"}\n')
+
+    assert (
+        runtime_codex_exec._extract_resume_token_from_jsonl_log(log_path)
+        == "sess-from-log"
+    )
+    assert runtime_codex_exec._extract_resume_token_from_jsonl_log(
+        tmp_path / "missing.jsonl"
+    ) is None
+
+
 def test_run_codex_exec_polls_and_resumes_after_quota(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
