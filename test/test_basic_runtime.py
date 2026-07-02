@@ -415,8 +415,8 @@ def test_file_access_mode_values_are_json_ready() -> None:
 
 def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
     """repo write mode まで Codex sandbox mode へ欠落なく変換する。"""
-    assert file_access_to_sandbox_mode(FileAccessMode.READONLY) == "read-only"
-    assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_READ) == "read-only"
+    assert file_access_to_sandbox_mode(FileAccessMode.READONLY) == "workspace-write"
+    assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_READ) == "workspace-write"
     assert file_access_to_sandbox_mode(FileAccessMode.REALIZATION_WRITE) == "workspace-write"
     assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_WRITE) == "workspace-write"
     assert file_access_to_sandbox_mode(FileAccessMode.REPO_WRITE) == "workspace-write"
@@ -506,10 +506,11 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         for mode in FileAccessMode
     }
 
-    assert 'sandbox_mode = "read-only"' in profiles[FileAccessMode.READONLY]
-    assert 'sandbox_mode = "read-only"' in profiles[FileAccessMode.PURE_ORACLE_READ]
-    assert "[sandbox_workspace_write]" not in profiles[FileAccessMode.READONLY]
+    assert 'sandbox_mode = "workspace-write"' in profiles[FileAccessMode.READONLY]
+    assert 'sandbox_mode = "workspace-write"' in profiles[FileAccessMode.PURE_ORACLE_READ]
     for mode in (
+        FileAccessMode.READONLY,
+        FileAccessMode.PURE_ORACLE_READ,
         FileAccessMode.REALIZATION_WRITE,
         FileAccessMode.PURE_ORACLE_WRITE,
         FileAccessMode.REPO_WRITE,
@@ -518,6 +519,12 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         assert "[sandbox_workspace_write]" in profiles[mode]
     assert _profile_writable_roots(profiles[FileAccessMode.REALIZATION_WRITE]) == {
         str(root.resolve()),
+    }
+    assert _profile_writable_roots(profiles[FileAccessMode.READONLY]) == {
+        str(root.resolve()),
+    }
+    assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_READ]) == {
+        str((root / "oracle").resolve())
     }
     assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_WRITE]) == {
         str((root / "oracle").resolve())

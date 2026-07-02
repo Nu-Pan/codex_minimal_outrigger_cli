@@ -941,6 +941,8 @@ def _is_write_allowed_by_file_access_mode(
         return False
     if not relative.parts:
         return False
+    if mode in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}:
+        return _is_readonly_temporary_diff_path(root, path, mode)
     blocked_runtime_roots = {
         ".agents",
         ".cmoc",
@@ -957,8 +959,6 @@ def _is_write_allowed_by_file_access_mode(
     }:
         return False
     match mode:
-        case FileAccessMode.READONLY | FileAccessMode.PURE_ORACLE_READ:
-            return False
         case FileAccessMode.REALIZATION_WRITE:
             if is_untracked_git_ignored(root, path):
                 return False
@@ -969,3 +969,24 @@ def _is_write_allowed_by_file_access_mode(
             return True
         case _:
             return False
+
+
+def _is_readonly_temporary_diff_path(
+    root: Path,
+    path: Path,
+    mode: FileAccessMode,
+) -> bool:
+    """READONLY 系で許す実行時一時生成物かどうかを返す。"""
+    try:
+        relative = path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    if mode == FileAccessMode.PURE_ORACLE_READ and not path.resolve().is_relative_to(
+        (root / "oracle").resolve()
+    ):
+        return False
+    return (
+        ".pytest_cache" in relative.parts
+        or "__pycache__" in relative.parts
+        or path.name.endswith((".pyc", ".pyo"))
+    )

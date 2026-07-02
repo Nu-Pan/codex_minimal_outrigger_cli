@@ -71,10 +71,10 @@ def apply_process_id_file_lock(path: Path) -> Iterator[None]:
 def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
     """cmoc の file access policy を Codex CLI が理解する sandbox 名へ落とす。"""
     match mode:
-        case FileAccessMode.READONLY | FileAccessMode.PURE_ORACLE_READ:
-            return "read-only"
         case (
-            FileAccessMode.REALIZATION_WRITE
+            FileAccessMode.READONLY
+            | FileAccessMode.PURE_ORACLE_READ
+            | FileAccessMode.REALIZATION_WRITE
             | FileAccessMode.PURE_ORACLE_WRITE
             | FileAccessMode.REPO_WRITE
             | FileAccessMode.NO_RULE
@@ -147,10 +147,16 @@ def _writable_roots(
     allow_oracle_conflict_writes: bool = False,
 ) -> list[Path]:
     """Codex sandbox に渡せる書き込み root を作る。"""
-    if file_access_to_sandbox_mode(mode) == "read-only":
-        return []
     root = root.resolve()
     match mode:
+        case FileAccessMode.READONLY:
+            # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+            # READONLY は cmoc 上の論理的な読み取り専用であり、Codex CLI
+            # sandbox は pytest cache などの一時生成物を許せるよう workspace
+            # に寄せる。実ファイル変更は post-check で拒否する。
+            paths = [root]
+        case FileAccessMode.PURE_ORACLE_READ:
+            paths = [root / "oracle"]
         case FileAccessMode.REALIZATION_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
@@ -262,6 +268,8 @@ def _is_writable_path_allowed(
         return not path.is_relative_to(root / "oracle")
     if mode == FileAccessMode.PURE_ORACLE_WRITE:
         return path.is_relative_to(root / "oracle")
+    if mode in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}:
+        return False
     return mode in {FileAccessMode.REPO_WRITE, FileAccessMode.NO_RULE}
 
 

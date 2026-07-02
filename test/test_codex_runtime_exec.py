@@ -357,6 +357,74 @@ def test_run_codex_exec_ignores_venv_diff_from_post_call_file_access_check(
     assert venv_python.read_text() == "touched 0\n"
 
 
+def test_run_codex_exec_allows_readonly_temporary_pytest_cache_diff(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "cache = pathlib.Path('.pytest_cache')",
+            "cache.mkdir(exist_ok=True)",
+            "(cache / 'state').write_text('temporary\\n')",
+            "pycache = pathlib.Path('oracle/__pycache__')",
+            "pycache.mkdir(exist_ok=True)",
+            "(pycache / 'spec.cpython-313.pyc').write_bytes(b'cache')",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_exec(
+        _parameter(FileAccessMode.READONLY),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    assert (root / ".pytest_cache" / "state").read_text() == "temporary\n"
+    assert (root / "oracle" / "__pycache__" / "spec.cpython-313.pyc").is_file()
+
+
+def test_run_codex_exec_rejects_readonly_realization_diff_after_call(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "pathlib.Path('src').mkdir(exist_ok=True)",
+            "pathlib.Path('src/changed.py').write_text('changed\\n')",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    with pytest.raises(CmocError, match="ファイルアクセス規則"):
+        run_codex_exec(
+            _parameter(FileAccessMode.READONLY),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
+
+    assert (root / "src" / "changed.py").read_text() == "changed\n"
+
+
 def test_run_codex_exec_allows_only_session_join_conflict_targets(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -440,8 +508,9 @@ def test_run_codex_exec_limits_pure_oracle_read_to_oracle_cwd(
     oracle_root = str((root / "oracle").resolve())
     assert record["args"][record["args"].index("--cd") + 1] == oracle_root
     assert record["cwd"] == oracle_root
-    assert 'sandbox_mode = "read-only"' in record["profile"]
-    assert "sandbox_workspace_write" not in tomllib.loads(record["profile"])
+    assert 'sandbox_mode = "workspace-write"' in record["profile"]
+    profile = tomllib.loads(record["profile"])
+    assert profile["sandbox_workspace_write"]["writable_roots"] == [oracle_root]
 
 
 def test_run_codex_exec_stores_schema_state_under_codex_work_root(
