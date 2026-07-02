@@ -46,9 +46,9 @@ def build_file_access_rule_vaolation_recovery_parameter(
         - このファイルアクセス規則違反をリカバリーして下さい
         """,
         goal="""
-        - `<repo-root>` ツリー内の差分が、<violated-file-access-rule> に違反していないこと
+        - `<repo-root>` ツリー内の `<violated-file-list>` 差分が、<violated-file-access-rule> に違反していないこと
         - `<repo-root>/.cmoc/log/codex/<time-stamp>_call.json` の作業目的を意味論的に損ねていないこと
-        - `<violated-file-list>` の違反が解消されていること
+        - git で追跡するべきでない一時ファイルが .gitignore の対象に追加されていること
         """,
         file_access_mode=FileAccessMode.NO_RULE,
         aux_dynamic_prompt=[

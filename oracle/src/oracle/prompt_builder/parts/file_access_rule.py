@@ -9,7 +9,7 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
     """
     AI エージェントによるファイル読み書き規則のプロンプトを構築する
 
-    規則は、リポジトリ全体 read-only, repo-write をベースとした deny list 形式で記述する。
+    規則は、原則として、リポジトリ全体 repo-write をベースとした deny list 形式で記述する。
 
     mode:
         読み書きモードプリセット
@@ -18,9 +18,20 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
     # NOTE
     #   work-root 外の書き込み禁止は、言わなくてもわかりそう。
     #   だが、ルール文章としての整合性を優先して明示する。
-    out_repo_deny_rule = [
-        "`<work-root>` ツリー外は読み書き禁止",
-    ]
+    # NOTE
+    #   ログ関係だけは例外的に `<run-root>` で作業していようと cmoc が `<repo-root>/.cmoc/log` に書きに行く。
+    #   その関係で、agent が `<run-root>` での作業中に `<repo-root>/.cmoc/log` を読みに行きたくなる事がある。
+    #   よって、`<repo-root>/.cmoc/log` だけは例外的にアクセスを許可する。
+    repo_root = resolve_repo_root()
+    work_root = resolve_work_root()
+    if repo_root == work_root:
+        out_repo_deny_rule = [
+            "`<repo-root>` ツリー外は読み書き禁止",
+        ]
+    else:
+        out_repo_deny_rule = [
+            "`<work-root>` ツリー外は読み書き禁止だが、例外的に `<repo-root>/.cmoc/log` ツリー内は読み込み可能",
+        ]
     # 基礎 deny ルール
     # NOTE
     #   `.git`, `.agents`, `.codex` Codex CLI の実装で書き込み禁止とされている。
@@ -111,7 +122,8 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
     # 正常終了
     return (
         {
-            "work-root": resolve_work_root(),
+            "repo-root": repo_root,
+            "work-root": work_root,
         },
         StructDoc(
             f"file read write rule - {mode.value}",
