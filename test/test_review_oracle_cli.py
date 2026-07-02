@@ -335,7 +335,7 @@ def test_review_oracle_enumerate_receives_only_related_findings(
                     {
                         "findings": [
                             {
-                                "oracle_path": "oracle/a.md",
+                                "oracle_path": "<oracle-root>/a.md",
                                 "severity": "fatal",
                                 "title": "a finding",
                                 "reason": "a reason",
