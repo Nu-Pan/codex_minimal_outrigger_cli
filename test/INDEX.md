@@ -346,25 +346,24 @@
 # `test_session_cli.py`
 
 ## Summary
-- session fork、join、abandon の CLI 回帰テストをまとめる。session branch と session state のライフサイクル、linked worktree での分岐、state cleanup、dirty worktree 拒否、join 時の conflict 解消とエラー出力先を外部挙動として検証する。
-- session 状態遷移を同じ branch/state fixture で追う必要があるテスト群であり、16,000 文字を超えるが session CLI 回帰の凝集した入口として扱う。
+- session の分岐作成・統合・破棄に関する CLI 外部挙動を、Git branch と session state のライフサイクルとしてまとめて検証する realization test。
+- linked worktree 上での branch/state 操作、session-id 衝突、状態ファイル破損、dirty worktree 拒否、cleanup 失敗時の rollback、conflict 解消 agent の権限と差分制限、branch 削除可否、stdout/stderr へのエラー出力先を扱う。
+- 同じ session branch/state fixture を共有する回帰観点を一箇所に集約し、分割よりも session CLI の状態遷移を通しで追うことを優先している。
 
 ## Read this when
-- session fork が session branch と state file を作成する挙動、session-id 衝突時の retry・失敗、破損 state の拒否、`.cmoc` ignore 初期化、linked worktree 上での開始 commit と home branch 記録を確認したいとき。
-- session abandon が home branch へ戻り、session branch を削除し、state を abandoned にする挙動を確認したいとき。
-- session abandon の home branch 不在、cleanup 失敗、破損 state などの失敗時に、branch・state・出力先がどう保たれるかを確認したいとき。
-- session join が session branch の変更を home branch へ取り込み、state を joined にし、session branch 削除の成功・失敗をどのように出力するかを確認したいとき。
-- session join の conflict 解消 agent 呼び出し、oracle conflict 書き込み profile、conflict 解消以外の差分拒否、delete conflict staging、conflict marker 検出を確認したいとき。
-- session join の dirty worktree 拒否や、merge 後の予期しない error が stdout と stderr のどちらに出るべきかを確認したいとき。
+- session の fork・join・abandon の CLI 挙動、出力、終了コード、Git branch 操作、session state 更新を変更または確認するとき。
+- session 操作が linked worktree でどの branch を基準に動くか、root worktree への影響を受けるかを確認するとき。
+- session state file の生成・破損検出・abandoned/joined/active 遷移・cleanup 失敗時の復旧挙動を確認するとき。
+- join 時の merge conflict 解消 agent、oracle conflict write 権限、conflict marker 検出、delete conflict staging、余計な差分の拒否を変更するとき。
+- session 完了処理でのエラー報告先、サブコマンドログ付き完了表示、branch 削除失敗時の警告表示を確認するとき。
 
 ## Do not read this when
-- session 以外のサブコマンドの CLI 外部挙動を確認したいだけのとき。
-- session fork、join、abandon の実装詳細や helper の責務を変更したい場合で、まず対応する implementation module を読むべきとき。
-- 個別の git helper、config、runtime profile、agent call parameter の単体挙動だけを確認したいとき。
-- oracle file の正本仕様そのものを確認・編集したいとき。
+- session 以外の CLI サブコマンド、設定読み込み、agent call の一般処理だけを確認したいとき。
+- session の内部 helper 単体の細部だけを調べたい場合で、対象 helper の実装やより小さい単体テストを直接読めるとき。
+- oracle file の正本仕様そのものを確認したいとき。この対象は realization test であり、正本仕様ではない。
 
 ## hash
-- 5fd04f94b2a5aa9ad018711bff4c13bfd3cb6b334c2451792d93470bc6fb7536
+- 05c54f4da38117724999b77fb2ed1e5490a1f0f1bac67603844556163a9c18f8
 
 # `test_struct_doc_rendering.py`
 

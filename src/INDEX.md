@@ -142,19 +142,20 @@
 # `sub_commands`
 
 ## Summary
-- CLI のサブコマンド実行本体を集める実装領域。apply、session、review、init、indexing、tui など、利用者向け操作を runtime や共通 helper へ接続する入口になる。
-- 各サブコマンド固有の事前条件検証、状態遷移、git 操作、外部プロセス起動、report 出力、cleanup の大枠を追い、詳細ロジックは責務ごとの下位実装へ分かれる。
+- CLI サブコマンドの実行本体を集める実装領域。session、apply、review、init、indexing、tui など、利用者向けコマンドを runtime・git 操作・状態管理・report 出力へ接続する入口になる。
+- 各サブコマンドの詳細は責務ごとに下位へ分かれており、この階層はコマンド種別ごとの読む先を選び、実行前条件、状態遷移、後始末、共通処理への委譲位置を切り分けるための起点である。
 
 ## Read this when
-- 利用者向けサブコマンドの実行フローから、目的の操作に対応する実装入口を選びたいとき。
-- apply run、session lifecycle、review oracle、初期化、INDEX maintenance、TUI 起動のどの領域を読むべきか切り分けたいとき。
-- サブコマンド固有の preflight、clean worktree 要求、branch・worktree・state 操作、commit・merge・rollback、report や stdout 出力の責務分担を確認したいとき。
-- CLI runtime、Codex 実行、git helper、設定、path 解決などの共通基盤が、各サブコマンドからどのように呼び出されるかをたどりたいとき。
+- 利用者向けサブコマンドの実行フロー、事前条件、git 操作、状態更新、cleanup、report 出力の入口を探したいとき。
+- session や apply の branch・worktree・state の扱い、review の対象列挙から report までの制御、init/indexing/tui の orchestration をどこで読むべきか判断したいとき。
+- サブコマンド固有の処理と、runtime helper、git wrapper、設定、path model、parameter builder などの共通処理との境界を確認したいとき。
+- INDEX.md maintenance、review 用 INDEX 変更、apply/report、TUI 起動 parameter など、利用者コマンドから下位処理へ入る接続点を追いたいとき。
 
 ## Do not read this when
-- Typer アプリへの登録、トップレベル CLI 配線、共通 runtime、git wrapper、state 永続化、path model、設定モデルなど、サブコマンド横断の低レベル基盤そのものを調べたいとき。
-- oracle 側の正本仕様断片、prompt builder、Structured Output parameter、INDEX.md 生成ロジック、レポート描画など、より直接の責務を持つ実装や仕様を確認すべきとき。
-- 個別サブコマンドの詳細な内部処理だけを調べる対象がすでに分かっているとき。
+- Typer への登録やトップレベル CLI 配線だけを確認したいときは、CLI entrypoint 側を直接読む。
+- git コマンド wrapper、state 永続化、root 解決、設定読み込み、clean worktree 判定、cmoc ignore 判定など、サブコマンドに限らない共通 helper の詳細だけを調べたいとき。
+- Codex に渡す prompt や Structured Output parameter の具体的な組み立てだけを確認したいときは、対応する parameter builder 側を読む。
+- oracle 上の正本仕様そのもの、または INDEX.md エントリー作成基準そのものを確認したいときは、実装ではなく対応する oracle file を読む。
 
 ## hash
-- ffcba3ae2900ca392984aacc0d431fd73489adc763eeb2d8c45dd289de923f3e
+- f2292c7b233a95637741eaeda01d5b6966abbe41de2cbbd8d33c3564f75456cf
