@@ -93,21 +93,26 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の実行制御を担い、単一試行ループ内で argv 構築、prompt/stdout/stderr/output/call log の記録、Structured Output 検証、semantic/capacity/quota retry、resume 継続、subcommand event 発行をまとめて扱う。
-- agent call 後の file access rule 事後検証と、違反時の recovery agent call、git status と禁止 root の snapshot に基づく差分検出、FileAccessMode 別の書き込み可否判定も扱う。
+- Codex exec の単一試行ループと、その周辺の実行制御を担う。Structured Output 検証、capacity retry、quota 待機と代表 probe、resume 継続、call log/subcommand event 記録、実行後の file access rule 違反検出とリカバリを、同じ subprocess 結果・ログ・retry 状態を共有する状態機械として扱う。
+- Codex CLI 呼び出しに必要な profile/schema/log path/stdin prompt/argv を組み立て、実行結果を記録し、成功時は結果オブジェクトへ変換する。失敗時は capacity、quota、schema 検証、通常失敗を分岐し、それぞれの再試行・待機・例外化を制御する。
+- agent call 後に worktree 差分と禁止領域の filesystem snapshot を比較し、FileAccessMode に反する残存差分だけを検出する。違反があれば専用の agent call で修復を試み、修復不能な場合はエラーとして報告する。
 
 ## Read this when
-- Codex exec 呼び出しの再試行条件、quota 待機、代表 probe、resume token 利用、Structured Output 検証、call log や Codex 実行ログの生成を確認・変更したいとき。
-- agent call 後に編集禁止ファイルや禁止ディレクトリの差分を検出する処理、file access rule violation recovery、FileAccessMode ごとの書き込み許可境界を確認・変更したいとき。
-- Codex exec の実行結果から CodexExecResult を組み立てる箇所、subcommand log の codex_call event、quota_wait_sec や quota_polls の記録を追いたいとき。
+- Codex exec 呼び出しの再試行条件、Structured Output 検証、quota 枯渇時の待機と resume、capacity error の扱いを変更または調査するとき。
+- Codex call log、prompt/stdout/stderr/output の保存内容、subcommand log event、quota wait 秒数や poll 回数の記録を確認するとき。
+- agent call 後の file access rule 違反検出、禁止領域の差分比較、git status による変更 path 収集、違反リカバリの挙動を扱うとき。
+- FileAccessMode ごとの書き込み許可境界、oracle file 判定、readonly 系で許容する一時生成物の扱いを確認するとき。
+- Codex exec 実行制御と file access post-check が共有するログ path、生成差分 path、baseline snapshot、recovery call の関係を追う必要があるとき。
 
 ## Do not read this when
-- Codex profile、CODEX_HOME、schema file、subprocess 実行、resume token 抽出などの低レベル helper 自体を確認したいだけなら、それらを定義する runtime Codex profile 周辺を直接読む。
-- TUI 起動や exec 以外の Codex 実行分岐を確認したいだけなら、このファイルではなく該当する起動制御 module を読む。
-- ACP builder の prompt 内容や quota probe parameter の正本的な組み立てを確認したいだけなら、ここではなく対応する builder 側を読む。
+- Codex profile、CODEX_HOME、schema ファイル準備、resume token 抽出、subprocess 実行そのものの低レベル helper だけを調べたいときは、それらの runtime helper を直接読む。
+- TUI 起動や exec 以外の Codex 起動経路を扱うときは、TUI 側の実行制御を読む。
+- quota availability probe の prompt 内容や AgentCallParameter の生成意図だけを変更したいときは、quota probe builder を読む。
+- apply fork の finding application agent contract や通常の finding 適用ロジックを変更したいときは、apply fork 側の builder/実行経路を読む。
+- 単に worktree root、repo root、log directory、timestamp などの path 解決だけを確認したいときは、runtime path helper を読む。
 
 ## hash
-- d451b2c7efd32b623ce516f2e4b85c563ca47ed4c9bfb457efd0cf5242428c44
+- c1ec22f761951111584f9cfa240daec665c61c248fdcc13fd10220d715a2e994
 
 # `runtime_codex_logging.py`
 

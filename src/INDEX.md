@@ -62,23 +62,24 @@
 # `commons`
 
 ## Summary
-- cmoc の共有 runtime helper 群をまとめる実装ディレクトリ。Codex 実行、indexing preflight、CLI 共通ライフサイクル、設定、内容 hash、エラー、Git、ログ、path、結果モデル、session state など、複数領域から使われる runtime_* API とその集約入口を扱う。
-- 個別 helper の実装本文へ進む前に、共通 runtime 層のどの責務へ進むべきかを判断する入口になる。
+- cmoc の共通 runtime helper 群をまとめる実装領域。Codex 実行、CLI 共通ライフサイクル、設定、Git、ログ、path、状態、内容 hash、エラー、実行結果、INDEX 更新 preflight など、複数サブコマンドから使われる横断的な runtime 責務への入口になる。
+- 個別 helper の実装だけでなく、Codex 実行前後の制御、file access post-check、INDEX 自動更新、session state 永続化、subcommand log など、上位機能を支える共通処理の所在を判断するための階層である。
 
 ## Read this when
-- Codex exec/TUI 呼び出し、INDEX.md 自動更新 preflight、file access rule 事後検証、quota/capacity retry、Structured Output 検証、call log など Codex runtime 周辺の実装を探したいとき。
-- CLI サブコマンド共通の実行順序、進捗表示、完了サマリー、終了コード化、例外表示、サブコマンド logger の扱いを確認したいとき。
-- cmoc の設定ファイル、内容 hash 保存、利用者向けエラー表示、Git 操作、実行ログ、runtime path、外部コマンド結果、session state など、複数サブコマンドで共有される runtime helper を確認または変更したいとき。
-- 複数の runtime_* API をまとめて import する公開入口や、旧 import path 互換の再 export 境界を確認したいとき。
+- 複数サブコマンドや複数上位 module から使われる共通 runtime 処理の実装箇所を探したいとき。
+- Codex exec/TUI 呼び出し、profile 作成、quota/capacity/retry、Structured Output 検証、call log、file access post-check の runtime 経路を確認または変更したいとき。
+- CLI サブコマンド共通の実行順序、標準出力、終了コード化、例外表示、subcommand logger、実行 log の扱いを調べたいとき。
+- 設定 JSON、runtime path、Git 操作、内容 hash、binary 判定、共通エラー表示、外部コマンド結果、session state 永続化などの共通 helper を探したいとき。
+- Codex 実行前の INDEX 更新 preflight、INDEX.md 更新対象の走査・除外・hash 判定・エントリー生成制御を調べたいとき。
 
 ## Do not read this when
-- 個別 CLI コマンドの引数定義、利用者向け制御フロー、サブコマンド固有の業務処理だけを調べたいとき。
-- oracle file にある正本仕様、INDEX.md エントリーの標準、path placeholder の抽象定義、session state の仕様意図などを確認したいだけのとき。
-- ACP builder の prompt 内容、設定データクラス、runtime path の正本的な path model、個別 schema や enum 定義など、より直接の定義元がある対象を調べたいとき。
-- 生成済み log の解析、Codex や Git を使わない上位 workflow、または特定サブコマンドの公開挙動だけを確認したいとき。
+- 個別 CLI サブコマンドの引数定義、利用者向け command 登録、サブコマンド固有の業務処理だけを調べたいとき。
+- oracle 上の正本仕様、path placeholder の概念定義、INDEX.md の仕様意図、file access policy の仕様文面そのものを確認したいとき。
+- 特定領域の公開仕様やプロンプト文面を変更したいだけで、共通 runtime 実装の呼び出し経路や失敗時挙動を扱わないとき。
+- 生成済み log や state の内容を利用者として確認したいだけで、読み書き・検証・保存先決定の実装を調べないとき。
 
 ## hash
-- 57e39c8631317c44fc3708aedc21c59bae6c18b85cf4dee3c0ccf45747277ef3
+- 6794f0c0a876dda9817962170485e18e0cc450309b17235c2ecbe390a8e9a6ed
 
 # `config`
 

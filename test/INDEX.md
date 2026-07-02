@@ -167,24 +167,26 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行/TUI 呼び出しの runtime 挙動を、スタブ実行ファイルと一時 Git リポジトリで検証するテスト群。
-- プロファイル生成、cwd と writable_roots、標準入力・出力 schema、process group 追跡、Codex CLI 不在や非 0 終了時のエラー報告を扱う。
-- 呼び出し後のファイルアクセス規則チェックとリカバリを中心に、oracle、realization、runtime 管理領域、ignored/cache/venv、linked worktree、追加 read/write path の境界を検証する。
+- Codex CLI の exec/TUI 呼び出しランタイムを対象に、プロファイル生成、作業ディレクトリ、標準入力・出力 schema、サブプロセス実行、process group 記録、呼び出しログ、ファイルアクセス規則違反の検出・リカバリを検証する realization test。
+- readonly、realization write、repo write、pure oracle read などのアクセスモードごとに、許可される差分と拒否・復旧される差分の境界を外部挙動として固定する。
+- 実 Codex CLI の代わりに一時的な実行ファイルを配置し、引数、環境変数、生成ファイル、終了コード、git worktree 上の挙動を観測する統合寄りのテスト群。
 
 ## Read this when
-- Codex CLI を起動する runtime wrapper の exec/TUI 呼び出し仕様、profile 設定、cwd、stdin、output-last-message、output-schema の扱いを確認・変更したいとき。
-- FileAccessMode ごとの post-call diff 判定、禁止領域変更の検出、リカバリ再実行、既存の禁止 diff の扱いを変更するとき。
-- `.cmoc` linked worktree、repo log 読み込み、pure oracle read の oracle cwd 制限、extra_read_paths/extra_writable_paths の許可判定を確認したいとき。
-- Codex subprocess の process group 追跡、apply tracking 環境変数の扱い、Codex CLI 欠落・非 0 終了時の CmocError と表示内容を検証したいとき。
+- Codex CLI exec/TUI の起動引数、プロファイル内容、作業ディレクトリ、CODEX_HOME、prompt 入力、output-last-message、output-schema の扱いを変更・確認するとき。
+- Codex 呼び出し後の git 差分検査、禁止領域への書き込み検出、oracle・memo・.git・.agents・.codex・一時 cache・ignored file の扱いを変更・確認するとき。
+- ファイルアクセス規則違反後の再実行、preexisting forbidden diff の扱い、schema retry や非ゼロ終了とリカバリ順序の関係を変更・確認するとき。
+- pure oracle read や linked worktree での cwd、writable_roots、repo log read、schema state 配置など、work-root と repo-root の境界を変更・確認するとき。
+- Codex CLI 未検出、TUI 非ゼロ終了、追加 read path の事前検証など、ランタイムエラー報告の外部挙動を変更・確認するとき。
 
 ## Do not read this when
-- Codex runtime の実装詳細を先に調べたいだけなら、対応する runtime 実装ファイルを直接読む。
-- agent call parameter、file access mode、model class などの型定義そのものを確認したいだけなら、basic/config 側の定義を読む。
-- Git リポジトリ作成やスタブ実行ファイル作成の test helper の仕様を調べたいだけなら、テスト支援モジュールを読む。
-- Codex runtime 以外の CLI サブコマンド、oracle 文書仕様、INDEX.md 生成規則のテストを探しているときは対象外。
+- AgentCallParameter、FileAccessMode、ModelClass、ReasoningEffort などの値オブジェクト自体の定義だけを確認したいとき。
+- Codex runtime の実装詳細を読む必要があり、テスト期待値ではなく実際の関数分割や内部 helper を確認したいとき。
+- git repository fixture、一時実行ファイル作成、Codex home 設定など、テスト支援 API の実装だけを変更・確認するとき。
+- oracle doc や oracle src の正本仕様断片そのものを確認したいとき。
+- Codex 以外の runtime、CLI サブコマンド、設定読み込み全般など、このテストが直接検証していない領域を調べるとき。
 
 ## hash
-- a20fcc439b3e5757646bca90c4a61b52e869a283f0976c92c1e788bc804efbb2
+- 67e25e0e174b81b89e6e2f87497ecba9d8b5cbe4051ba1ba1be5f61e8c49eb0d
 
 # `test_codex_runtime_home.py`
 
