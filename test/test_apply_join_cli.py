@@ -363,6 +363,51 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     assert (root / "oracle" / "spec.md").read_text() == "# spec\n"
 
 
+def test_apply_join_reports_session_oracle_agents_diff_and_force_reverts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    class FakeCodexResult:
+        output_json = {"findings": []}
+
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
+    )
+    assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
+    session_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = session_branch.removeprefix("cmoc/session/")
+    agents = root / "oracle" / "AGENTS.md"
+    agents.write_text("session agents\n")
+    run_git(root, "add", "oracle/AGENTS.md")
+    run_git(root, "commit", "-m", "session oracle agents")
+
+    normal = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+
+    assert normal.exit_code == 1
+    assert "想定外差分" in normal.output
+    report_line = [
+        line for line in normal.output.splitlines() if "保存済み report" in line
+    ][0]
+    report_path = Path(report_line.rsplit(": ", 1)[1])
+    report = report_path.read_text()
+    assert "- session: oracle/AGENTS.md" in report
+    forced = runner.invoke(
+        app, ["apply", "join", "--force-resolve"], catch_exceptions=False
+    )
+    assert forced.exit_code == 0
+    assert not agents.exists()
+    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    assert json.loads(state_path.read_text())["apply"]["state"] == "ready"
+
+
 def test_apply_join_excludes_deleted_apply_paths_from_unexpected_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -424,7 +469,7 @@ def test_apply_join_classifies_root_memo_as_session_change(
     root = make_repo(tmp_path)
 
     assert apply_module.is_expected_apply_change(root, path) is False
-    assert apply_module.is_expected_session_change(path) is True
+    assert apply_module.is_expected_session_change(root, path) is True
 
 
 def test_apply_join_allows_gitignore_change_as_apply_diff(

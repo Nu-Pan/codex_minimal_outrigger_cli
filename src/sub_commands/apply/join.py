@@ -12,6 +12,7 @@ from cmoc_runtime import (
     delete_branch,
     ensure_cmoc_ignored,
     is_git_ignored,
+    is_untracked_git_ignored,
     load_state_for_branch,
     remove_worktree,
     repo_root,
@@ -288,7 +289,7 @@ def collect_apply_join_unexpected_changes(
         path for path in apply_paths if not is_expected_apply_change(root, path)
     ]
     unexpected_session = [
-        path for path in session_paths if not is_expected_session_change(path)
+        path for path in session_paths if not is_expected_session_change(root, path)
     ]
     result: dict[str, list[str]] = {}
     if unexpected_apply:
@@ -334,10 +335,18 @@ def is_expected_apply_change(root: Path, path: str) -> bool:
     return not is_git_ignored(root, root / path)
 
 
-def is_expected_session_change(path: str) -> bool:
+def is_expected_session_change(root: Path, path: str) -> bool:
     """session branch 上で apply 実行中に許可される差分かどうかを判定する。"""
     p = Path(path)
-    return p.name == "INDEX.md" or path.startswith("oracle/") or is_root_memo_path(path)
+    if p.name == "INDEX.md" or is_root_memo_path(path):
+        return True
+    # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    # defines oracle file by excluding AGENTS.md/INDEX.md and untracked ignored paths.
+    return (
+        path.startswith("oracle/")
+        and p.name not in {"AGENTS.md", "INDEX.md"}
+        and not is_untracked_git_ignored(root, root / path)
+    )
 
 
 def is_root_memo_path(path: str) -> bool:
