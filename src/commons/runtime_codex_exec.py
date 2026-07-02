@@ -62,6 +62,8 @@ _CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
 _LAST_CODEX_LOG_TIMESTAMP: str | None = None
 _FORBIDDEN_FILESYSTEM_DIFF_ROOTS = (".agents", ".codex", ".git", "memo")
 _ForbiddenSnapshot = dict[Path, tuple[int, int, int, int, str | None]]
+_PathFingerprint = tuple[str, int, int, str | None] | None
+_WorktreeDiffSnapshot = dict[Path, tuple[str, _PathFingerprint]]
 
 
 def _write_prompt_log(path: Path, prompt: str) -> None:
@@ -315,6 +317,9 @@ def run_codex_exec(
         generated_paths.add(schema_path.resolve())
     forbidden_baseline = (
         _forbidden_filesystem_snapshot(codex_work_root) if verify_file_access else None
+    )
+    worktree_diff_baseline = (
+        _worktree_diff_snapshot(codex_work_root) if verify_file_access else None
     )
 
     while True:
@@ -672,6 +677,7 @@ def run_codex_exec(
                 subcommand_logger=logger,
                 allowed_paths=allowed_paths,
                 forbidden_baseline=forbidden_baseline,
+                worktree_diff_baseline=worktree_diff_baseline,
             )
         return exec_result
 
@@ -689,6 +695,7 @@ def recover_file_access_violations(
     subcommand_logger: SubcommandLogger | None = None,
     allowed_paths: list[Path] | None = None,
     forbidden_baseline: _ForbiddenSnapshot | None = None,
+    worktree_diff_baseline: _WorktreeDiffSnapshot | None = None,
 ) -> None:
     """agent call 後に残った file access rule 違反を設定回数だけ修復する。"""
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
@@ -697,7 +704,9 @@ def recover_file_access_violations(
     ignored = {path.resolve() for path in ignored_paths or set()}
     violations = file_access_violations(
         worktree,
-        _post_call_changed_worktree_paths(worktree, forbidden_baseline),
+        _post_call_changed_worktree_paths(
+            worktree, forbidden_baseline, worktree_diff_baseline
+        ),
         violated_mode,
         ignored,
         allowed_paths,
@@ -737,7 +746,9 @@ def recover_file_access_violations(
             ignored.add(recovery_result.schema_path.resolve())
         violations = file_access_violations(
             worktree,
-            _post_call_changed_worktree_paths(worktree, forbidden_baseline),
+            _post_call_changed_worktree_paths(
+                worktree, forbidden_baseline, worktree_diff_baseline
+            ),
             violated_mode,
             ignored,
             allowed_paths,
@@ -753,24 +764,42 @@ def recover_file_access_violations(
 
 def changed_worktree_paths(root: Path) -> list[Path]:
     """worktree 上の変更 path を absolute path として返す。"""
-    paths: list[Path] = []
+    return [path for _status, path in _changed_worktree_path_statuses(root)]
+
+
+def _changed_worktree_path_statuses(
+    root: Path, *, include_ignored: bool = False
+) -> list[tuple[str, Path]]:
+    """worktree 上の変更 path と git status code を absolute path として返す。"""
+    paths: list[tuple[str, Path]] = []
     # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # apply requeue and file access validation both need file-level paths;
     # default status can collapse untracked directories into one directory path.
     for line in run_git(["status", "--short", "-uall"], root).stdout.splitlines():
+        status = line[:2]
         path_text = line[3:]
         if " -> " in path_text:
             path_text = path_text.split(" -> ", 1)[1]
-        paths.append(root / path_text)
+        paths.append((status, root / path_text))
+    if not include_ignored:
+        return paths
+    for line in run_git(
+        ["ls-files", "--others", "--ignored", "--exclude-standard"], root
+    ).stdout.splitlines():
+        if Path(line).parts[:1] == (".cmoc",):
+            continue
+        paths.append(("!!", root / line))
     return paths
 
 
 def _post_call_changed_worktree_paths(
-    root: Path, forbidden_baseline: _ForbiddenSnapshot | None
+    root: Path,
+    forbidden_baseline: _ForbiddenSnapshot | None,
+    worktree_diff_baseline: _WorktreeDiffSnapshot | None,
 ) -> list[Path]:
     """agent call 後の検査対象 path を返す。"""
-    paths = changed_worktree_paths(root)
+    paths = _post_call_changed_git_paths(root, worktree_diff_baseline)
     if forbidden_baseline is not None:
         paths.extend(_forbidden_filesystem_changed_paths(root, forbidden_baseline))
     seen: set[Path] = set()
@@ -781,6 +810,46 @@ def _post_call_changed_worktree_paths(
             seen.add(resolved)
             result.append(path)
     return result
+
+
+def _post_call_changed_git_paths(
+    root: Path, baseline: _WorktreeDiffSnapshot | None
+) -> list[Path]:
+    paths: list[Path] = []
+    for status, path in _changed_worktree_path_statuses(root, include_ignored=True):
+        if baseline is None:
+            paths.append(path)
+            continue
+        resolved = path.resolve()
+        current = (status, _path_fingerprint(path))
+        if baseline.get(resolved) != current:
+            paths.append(path)
+    return paths
+
+
+def _worktree_diff_snapshot(root: Path) -> _WorktreeDiffSnapshot:
+    return {
+        path.resolve(): (status, _path_fingerprint(path))
+        for status, path in _changed_worktree_path_statuses(root, include_ignored=True)
+    }
+
+
+def _path_fingerprint(path: Path) -> _PathFingerprint:
+    try:
+        stat = path.lstat()
+    except FileNotFoundError:
+        return None
+    digest: str | None = None
+    if path.is_symlink():
+        digest = hashlib.sha256(os.readlink(path).encode()).hexdigest()
+    elif path.is_file():
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    return (
+        "dir" if path.is_dir() else "file",
+        stat.st_mode,
+        stat.st_size,
+        digest,
+    )
 
 
 def _forbidden_filesystem_snapshot(root: Path) -> _ForbiddenSnapshot:
@@ -846,8 +915,17 @@ def file_access_violations(
         for path in paths
         if path.resolve() not in ignored
         and path.resolve() not in allowed
+        and not _is_cmoc_generated_diff_path(root, path)
         and not _is_write_allowed_by_file_access_mode(root, path, mode)
     ]
+
+
+def _is_cmoc_generated_diff_path(root: Path, path: Path) -> bool:
+    try:
+        relative = path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    return len(relative.parts) >= 2 and relative.parts[:2] == (".cmoc", "log")
 
 
 def _is_write_allowed_by_file_access_mode(

@@ -190,6 +190,89 @@ def test_run_codex_exec_recovers_file_access_violations(
     assert not (root / "oracle" / "blocked.md").exists()
 
 
+def test_run_codex_exec_ignores_preexisting_forbidden_diff(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    target = root / "oracle" / "spec.md"
+    target.write_text("base\n")
+    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "commit", "-m", "add oracle spec")
+    target.write_text("preexisting\n")
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "count.txt"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_exec(
+        _parameter(FileAccessMode.REALIZATION_WRITE),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    assert counter.read_text() == "1"
+    assert target.read_text() == "preexisting\n"
+
+
+def test_run_codex_exec_recovers_when_preexisting_forbidden_diff_is_modified(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    target = root / "oracle" / "spec.md"
+    target.write_text("base\n")
+    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "commit", "-m", "add oracle spec")
+    target.write_text("preexisting\n")
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "count.txt"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "target = pathlib.Path('oracle/spec.md')",
+            "if count == 0:",
+            "    target.write_text('agent changed\\n')",
+            "else:",
+            "    target.write_text('preexisting\\n')",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_exec(
+        _parameter(FileAccessMode.REALIZATION_WRITE),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    assert counter.read_text() == "2"
+    assert target.read_text() == "preexisting\n"
+
+
 def test_run_codex_exec_recovers_ignored_untracked_realization_write_diff(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
