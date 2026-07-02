@@ -1,26 +1,21 @@
 # `apply`
 
 ## Summary
-- apply run の開始、破棄、取り込み、実行時 process 管理、結果 report 保存を扱うサブコマンド実装群への入口。
-- apply branch/worktree の作成・特定・削除、session state の running/completed/error/ready 遷移、Codex subprocess 追跡、merge・conflict・cleanup・report 出力など、apply 系操作の制御境界を切り分けている。
-- apply fork の大きな orchestration、join の merge と後片付け、abandon の破棄処理、runtime helper、fork report 生成、package 初期化確認へ進むための判断起点として読む。
+- apply サブコマンド群の実装をまとめるディレクトリで、fork・join・abandon の実行制御、apply 実行時 runtime、fork report 生成、パッケージ入口を下位対象として持つ。
+- apply run の開始、破棄、取り込み、process 管理、apply branch/worktree 管理、report 生成など、apply 系 CLI の具体的な挙動へ進むための入口。
 
 ## Read this when
-- apply 系サブコマンドのどの実装へ進むべきかを、開始・破棄・取り込み・process 管理・report 生成の責務境界から選びたいとき。
-- apply branch や isolated worktree、session branch、apply state、apply process id file、Codex subprocess、merge report のどれが関係する変更かを見極めたいとき。
-- apply run のライフサイクル全体にまたがる変更で、fork・join・abandon・runtime・report のうち複数箇所を読む必要があるか確認したいとき。
-- apply fork の対象列挙、Codex 呼び出し、再キュー、commit、join 済み merge commit 探索などの開始側処理へ進むべきか判断したいとき。
-- join や abandon による state 初期化、worktree/branch cleanup、実行中 process 停止、想定外差分や conflict の扱いに関係する読む先を選びたいとき。
+- apply fork、apply join、apply abandon のどれを読むべきか、または process 管理や report 生成の補助実装へ進むべきかを選びたいとき。
+- apply run の state 遷移、apply branch/worktree の作成・削除、未 join run の破棄、join 時の merge や conflict 処理、fork report の生成に関係する変更を行うとき。
+- apply 実行中 process、pid file、Codex subprocess 追跡、running abandon の停止処理、apply branch から worktree を探す処理を調べる入口を探すとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド、CLI 共通 runtime、git wrapper、config load、state 永続化の低レベル共通処理だけを調べたいとき。
-- apply の正本仕様や公開仕様そのものを確認したいとき。この対象は realization implementation の入口であり、仕様根拠としては oracle 側を読む。
-- Codex exec の汎用起動機構、LLM 呼び出し基盤、prompt parameter の詳細 schema だけを調べたいとき。
-- report directory 解決、timestamp、git command 実行、worktree 操作など apply 固有ではない helper の実装だけを確認したいとき。
-- パッケージ説明の有無だけを確認する場合を除き、実際の apply 制御ロジックが不要なとき。
+- apply 以外のサブコマンド、共通 CLI runtime、git wrapper、state file の低レベル読み書き、Codex prompt builder だけを調べたいとき。
+- oracle file の正本仕様、apply に限らない branch/worktree 一般処理、または LLM 呼び出し自体を確認したいとき。
+- 具体的に fork、join、abandon、runtime、fork report のいずれかを読む必要がすでに決まっている場合は、この階層ではなく該当する下位対象へ直接進む。
 
 ## hash
-- 4381185d208617c4162f448f9dc7614488f743f3ba942890254789b9a8303a82
+- 4238efddb87b8629d35954b92da218a0f1425aab09cd52cc257beda815ef3983
 
 # `indexing.py`
 
@@ -140,43 +135,39 @@
 # `review_report.py`
 
 ## Summary
-- review oracle の実行結果を Markdown レポートとして生成する実装。評価対象 oracle、accepted/rejected と fatal/minor の finding 集計、処理失敗時や対象なしを含む判定文、YAML frontmatter、oracle パス表示を組み立てる。
-- レポート保存先の作成とタイムスタンプ付き本文書き出し、および finding 一覧・判定結果・評価対象表の描画責務を持つ。
+- review oracle の実行結果を Markdown レポートとして保存・描画する実装。YAML frontmatter、判定文、評価対象 oracle 一覧、severity/verdict 別の finding 集計と詳細表示、oracle path の表示用整形を扱う。
 
 ## Read this when
-- review oracle のレポート内容、判定結果、frontmatter、finding の分類表示を変更したいとき。
-- review oracle の実行結果がどの条件で error、no_targets、fatal、minor、ok と表示されるかを確認したいとき。
-- oracle パスをレポート上でどのように相対表示するか、または oracle ツリー外のパスをどう扱うかを調べたいとき。
-- review oracle のレポート保存場所やタイムスタンプ付き Markdown 生成の実装を確認したいとき。
+- review oracle のレポート出力内容、見出し順、frontmatter 項目、判定 result の決まり方を確認・変更したいとき。
+- review oracle の findings を accepted/rejected や fatal/minor に分類して表示する処理を追うとき。
+- oracle file のパスをレポート上でどのように相対表示するかを確認・変更したいとき。
 
 ## Do not read this when
-- review oracle の評価ロジックそのもの、finding を検出・採否判定する処理、または git branch 操作を調べたいとき。
-- 他サブコマンドの CLI 引数定義、実行フロー、状態更新を調べたいとき。
-- 生成済みレポートの内容を確認したいだけで、レポート描画実装を変更しないとき。
+- review oracle の対象 oracle file を収集・選択する処理を探しているとき。
+- review oracle の finding を生成・判定するレビュー本体のロジックを調べたいとき。
+- review oracle 以外のコマンドのレポート出力を確認したいとき。
 
 ## hash
-- 590d7190d2e8e86d99775a8387ad3741fcafaeda043ae2de20b160dc5a394a76
+- 78249bbed205387b3ea6da3190592d887dc393325f6dac73ba150217fb94c000
 
 # `review_targets.py`
 
 ## Summary
-- review oracle が検査対象にする oracle file を列挙する処理を担う。scope が full の場合は全対象を返し、それ以外では session_start_commit から HEAD までに oracle 配下で変更された対象だけを返す。
-- oracle file 候補の列挙では oracle ツリーを再帰走査し、通常ファイルのうち INDEX.md、root memo、git ignore 対象を除外して並び順を安定させる。
+- review oracle の対象候補を列挙する処理を扱う。oracle ツリー配下から対象外名・memo・git ignore 対象を除外し、scope が full でない場合は session 開始 commit から HEAD までに変更された oracle file だけへ絞り込む。
 
 ## Read this when
-- review oracle の対象ファイル集合が scope によってどう変わるかを確認・変更したいとき。
-- session_start_commit を基準にした差分対象の判定や、git diff の対象範囲を確認・変更したいとき。
-- oracle file 候補から INDEX.md、root memo、git ignore 対象を除外する条件を確認・変更したいとき。
-- review oracle が参照する oracle file の列挙順やフィルタ条件に関する不具合を調査するとき。
+- review oracle が対象にする oracle file の列挙条件を確認・変更したいとき。
+- review oracle の full scope と変更分 scope の違いを確認したいとき。
+- session 開始 commit がない場合の review oracle 対象の扱いを確認したいとき。
+- oracle file 対象から INDEX.md、AGENTS.md、memo、git ignore 対象を除外する制御を確認したいとき。
 
 ## Do not read this when
-- review oracle の結果表示、診断内容、プロンプト、出力形式を確認したいだけのとき。
-- oracle file や realization file の概念定義そのものを確認したいとき。
-- oracle 以外の realization file や test file の列挙条件を確認したいとき。
-- root memo 判定、git ignore 判定、git コマンド実行 helper の詳細を確認したいとき。
+- review oracle の実際の検査内容や診断ルールを確認したいとき。
+- review oracle 以外のサブコマンドの対象列挙を確認したいとき。
+- git コマンド実行、SessionState、memo 判定、git ignore 判定の共通実装そのものを確認したいとき。
 
 ## hash
-- 8757d7467f9e0f50ab5b0c8b0f40fda477f0e603870376d607db08c28669e79e
+- 00f712ea56b7dacdfbe5d7a0faf2bd9c9f3629aa7f0ce1a36ffa2280b37e3eb9
 
 # `session`
 

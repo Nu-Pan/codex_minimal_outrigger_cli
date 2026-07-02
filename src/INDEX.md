@@ -1,26 +1,23 @@
 # `acp`
 
 ## Summary
-- oracle src 側の ACP builder 実装を複製せず、既存の `acp.*` import 経路を正本側実装または薄い wrapper へ接続する互換入口領域。
-- agent call parameter builder 周辺の公開参照維持、正本側 builder への委譲、realization 側 parameter 型への適合、互換コードの残置理由と削除条件を確認するための上位入口。
-- apply、review、session、TUI、indexing、quota probe などの builder 領域へ進む前に、実処理の所在が正本側か realization 側の互換入口かを切り分けるために使う。
+- ACP 関連の realization 側公開入口。正本側実装を複製せずに既存の `acp.*` import 経路を維持する互換層と、builder 関連の委譲境界・probe parameter 生成領域への入口を担う。
+- ACP builder 作業で、正本側へ進むべきか、互換 import 維持を確認すべきか、quota availability probe 用 parameter 生成を確認すべきかを切り分ける階層。
 
 ## Read this when
-- ACP builder 周辺で、既存の `acp.*` import 参照が正本側実装へどのように接続されているか確認したいとき。
-- realization 側または利用者向け公開面に残る `acp.*` import、再公開 module、薄い wrapper、暫定補正について、残す理由や削除条件を判断したいとき。
-- apply、review、session、TUI、indexing、quota probe などの agent call parameter 生成周辺で、どの下位領域または正本側実装へ進むべきか見分けたいとき。
-- 正本側 builder の出力を realization 側で利用する際の委譲関係、型適合、公開 import 経路維持の境界を調べたいとき。
-- 同名機能が realization 側にあるように見える場合に、実処理の所在が正本側実装か互換入口かを切り分けたいとき。
+- `acp.*` import 参照を維持する互換入口の残置理由、削除条件、公開面での扱いを確認したいとき。
+- ACP builder の realization 側入口、正本側 builder への委譲、旧 import 経路との対応を確認したいとき。
+- apply、review、session、TUI、indexing、file access recovery などの builder 関連作業で、下位領域のどこへ進むべきかを選びたいとき。
+- Codex quota availability probe 用に既存 parameter から動作確認用 parameter を組み立てる処理を確認または変更したいとき。
 
 ## Do not read this when
-- 個別 builder の具体的な生成ロジック、repo root 解決、prompt 文面、出力条件、判定仕様を直接確認したいときは、下位の個別領域または正本側実装を読む。
-- CLI コマンド全体の制御フロー、branch 操作、diff 生成、TUI 描画、イベント処理、Codex CLI 実行など、parameter builder 以外の処理を調べたいときは、その責務を持つ実装へ進む。
-- agent call parameter の共通データ構造、model、reasoning effort、file access mode などの基礎定義を確認したいときは、基礎定義側を読む。
-- 正本仕様断片そのものや oracle 側の実装内容を確認したいときは、互換入口ではなく対応する正本側本文を読む。
-- 新しい ACP 機能や API 仕様を追加する場所を探しているとき。この領域は既存 import 経路の互換維持と正本側 builder への委譲関係の確認に限られる。
+- ACP builder の正本仕様、prompt 正本文面、出力条件、判定仕様そのものを確認したいときは、対応する oracle file または正本側実装を読む。
+- apply fork の制御フロー、branch 操作、diff 生成、CLI 引数処理、TUI の描画やイベント処理など、builder 入口ではない実行処理を調べたいとき。
+- AgentCallParameter、FileAccessMode、model、reasoning effort などの基礎データ構造を調べたいときは、基礎定義側を読む。
+- 互換 import 経路や quota probe parameter 生成に関係しない新規機能の実装場所やテスト対象を探しているとき。
 
 ## hash
-- 019351fc7abed6d4fdfa427d4b9b4e7ba2b2fe31646193a530fa79a164393daf
+- 248a388b2bb432024fda8f641ba769be61d6b5a7ebfdc16b34ec63f0a8a01d2e
 
 # `basic`
 
@@ -64,24 +61,23 @@
 # `commons`
 
 ## Summary
-- cmoc の実行時共通基盤を扱う実装群。Codex CLI 実行、INDEX 更新 preflight、設定読み書き、content hash、git 操作、logging、path 解決、実行結果、session state、CLI サブコマンド共通ライフサイクルなど、複数の上位機能から使われる runtime helper を集める。
-- 個別 helper の実装本文へ進むための入口であり、runtime 系 API の集約 import、互換 import、責務別 runtime module の所在を判断するための階層。
+- cmoc の共通 runtime helper 群を集める実装領域。Codex 実行、CLI 共通処理、設定、Git、ログ、パス、状態、INDEX.md 更新など、複数サブコマンドから使われる横断的な処理への入口になる。
+- 集約 import 入口と責務別 runtime 実装が同階層に並び、個別挙動を調べる場合は該当する runtime_* 実装へ進むための階層である。
 
 ## Read this when
-- Codex 実行、INDEX.md 自動更新、設定、git、path、logging、state、外部コマンド結果など、cmoc 全体で共有される runtime helper の実装場所を探したいとき。
-- CLI サブコマンド共通の実行順序、エラー表示、ログ作成、work root 検査、完了サマリーなど、個別コマンドをまたぐ実行基盤を確認または変更したいとき。
-- Codex exec/TUI の profile 作成、subprocess 起動、quota/capacity retry、Structured Output 検証、call log、preflight のいずれかに関わる挙動を追いたいとき。
-- INDEX.md 更新処理の対象判定、hash 鮮度判定、既存エントリー再利用、エントリー生成依頼、並列更新、排他 lock を確認または変更したいとき。
-- runtime helper を移動・分割・統合し、共有 import 入口や互換 import 入口の調整が必要なとき。
+- 複数の CLI サブコマンドや agent call 実行経路から共有される runtime 処理の所在を探したいとき。
+- Codex exec/TUI 起動、profile、preflight、call log、Structured Output、quota/capacity retry、file access rule 違反検出など Codex 呼び出し周辺の共通実装を確認したいとき。
+- CLI 共通ライフサイクル、利用者向けエラー表示、Git 操作、設定ファイル、runtime path、ログ、結果モデル、session state などの共通処理を変更する対象を選びたいとき。
+- INDEX.md 自動更新の preflight、対象走査、既存エントリー再利用、hash 鮮度判定、Codex へのエントリー生成依頼を扱う実装へ進みたいとき。
 
 ## Do not read this when
-- 個別 CLI コマンドの引数定義、command 登録、利用者向け業務フローだけを調べたいときは、該当 command 実装へ進む。
-- oracle file にある正本仕様断片、path model の概念定義、INDEX.md の仕様意図そのものを確認したいときは、対応する oracle 側の文書または実装を読む。
-- 上位機能が runtime helper から得た値をどう使うか、session/report/apply などの業務状態をどう進めるかだけを知りたいときは、その上位処理の実装を読む。
-- 生成済みログや保存済み state の利用者向け解析、または特定の出力 schema の利用者向け仕様だけを調べたいときは、その読み取り側や仕様側へ進む。
+- 個別サブコマンドの引数定義、利用者向け制御フロー、サブコマンド固有の状態更新だけを調べたいとき。その場合はサブコマンド実装側へ進む。
+- oracle file にある正本仕様、path model、file access rule、INDEX.md エントリー標準などの仕様意図を確認したいとき。その場合は対応する oracle doc または oracle src を読む。
+- 共通 runtime helper を使う側の業務ロジックだけを変更したいとき。呼び出し元の実装を先に読み、共通挙動を変える必要がある場合だけこの階層へ進む。
+- 生成済みログ、状態ファイル、設定ファイルなどの実データを調査したいだけのとき。この階層はそれらを読み書きする実装を扱う。
 
 ## hash
-- a3c1ff07ee7ca18708e14e206db9c3fc65f61f27ad32de8416b92f4a06cf09f9
+- 75c4be2394933baceda860ab1abe2e509d4027c1552cedf502b3c2c5775c34be
 
 # `config`
 
@@ -144,23 +140,20 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装の上位入口。初期化、indexing、TUI、apply、review、session など、利用者が起動する操作を runtime や下位制御処理へ接続する実装群を扱う。
-- 各サブコマンド領域は、実行前条件の確認、work root や session/apply state の扱い、git 操作、Codex 実行、report 出力などの大枠を担い、詳細な共通処理は runtime・git・config・state・builder など別領域へ委譲する。
-- どのサブコマンド実装または下位 package へ進むべきかを、操作種別と責務境界から選ぶための判断起点として読む。
+- CLI サブコマンド実装を集約する領域で、init、indexing、tui、apply、session、review 系の実行入口とサブコマンド別 orchestration へ進むための入口になる。
+- 各対象は CLI runtime 経由の起動、preflight、git 操作、state 更新、Codex subprocess 連携、レポート生成など、利用者向けコマンドの具体的な実行制御を扱う。
+- 共通 runtime や低レベル helper そのものではなく、個別サブコマンドがそれらをどう組み合わせて外部挙動を作るかを確認するために読む。
 
 ## Read this when
-- CLI サブコマンドの実装を探しており、初期化、indexing、TUI、apply、review、session のどの領域へ進むべきかを選びたいとき。
-- 利用者向けコマンドが CLI runtime、work root runtime、Codex exec/TUI、git 操作、state 更新、report 生成へどのようにつながるかを大枠で確認したいとき。
-- apply run、review oracle、session lifecycle のように複数モジュールへ分かれたサブコマンド制御の入口を特定したいとき。
-- サブコマンド実行前の preflight、clean worktree 要求、cmoc ignore 保証、branch/worktree 準備、後始末などがどのコマンド領域に属するかを切り分けたいとき。
-- 特定サブコマンドの正本仕様ではなく、その仕様を具体化する realization implementation の配置と読む順序を判断したいとき。
+- 特定の CLI サブコマンドの実行順序、preflight、引数受け渡し、利用者向け出力、失敗時処理を確認・変更したいとき。
+- init、indexing、tui、apply、session、review のどの実装領域へ進むべきかを選びたいとき。
+- apply run、session lifecycle、review oracle、INDEX.md maintenance、初期化、TUI 起動など、サブコマンド単位の制御フローを追いたいとき。
+- サブコマンドが git 操作、worktree/branch 管理、state file、Codex Exec/TUI、report 出力、indexing 共通処理へどこから依存しているかを確認したいとき。
 
 ## Do not read this when
-- CLI 全体の Typer app 登録、トップレベル entrypoint、共通 runtime 規約だけを調べたいときは、それらを担う上位または runtime 側を読む。
-- git command wrapper、config load、state 永続化、path 解決、ignore 判定、timestamp、report directory 解決など、サブコマンド固有ではない低レベル共通処理だけを確認したいとき。
-- Codex exec/TUI の汎用起動機構、prompt builder、Structured Output parameter、LLM 呼び出し基盤だけを調べたいとき。
-- サブコマンドの正本仕様や公開仕様そのものを確認したいときは、realization implementation ではなく対応する oracle file を読む。
-- 実装ではなくテスト、fixture、生成済み report、または INDEX.md 文章品質だけを確認したいとき。
+- CLI 共通 runtime、git wrapper、path model、state file schema、設定読み込み、ignore 判定などの低レベル共通処理だけを調べたいときは、それぞれの共通実装を読む。
+- oracle file の正本仕様断片、サブコマンドの外部仕様、prompt builder、LLM 呼び出し詳細だけを確認したいときは、対応する oracle または builder/runtime 側を読む。
+- 読むべきサブコマンドや補助モジュールがすでに決まっている場合は、この階層ではなく該当する下位対象へ直接進む。
 
 ## hash
-- c8e2c382df6ff1efe9104b0511fb735d284131d55505b1658d0e39aac35ba371
+- 8ea1d673dd2276b559bbaf9325a03a85ab7e7b0830606e348dc404f6fd1a62e2

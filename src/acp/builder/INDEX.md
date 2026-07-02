@@ -38,6 +38,27 @@
 ## hash
 - 701ec977b0f06fbfb6f6a79d4e93b731b69f1160c2dc4895c4de00ac87f32c96
 
+# `common`
+
+## Summary
+- ファイルアクセス規則違反からの復旧に使う acp builder common 領域で、oracle 側の正本 builder への委譲、realization 側 parameter への適応、代替 schema の扱いをまとめる。
+- 互換 package の入口と、復旧結果を任意の JSON object として受け渡すための schema を含む。
+
+## Read this when
+- ファイルアクセス規則違反の recovery 用 agent call parameter がどの領域で構築されるかを確認したいとき。
+- oracle 側 builder への委譲、oracle parameter から realization parameter への適応、schema path 不在時の fallback を調べたいとき。
+- 復旧処理の入出力データを固定項目ではなく任意の JSON object として許容している根拠を確認したいとき。
+- acp builder common 領域で oracle 側との互換 package の入口や import 経路を確認したいとき。
+
+## Do not read this when
+- ファイルアクセス規則そのものの定義、違反判定ロジック、復旧手順、エラーメッセージを調べたいとき。
+- AgentCallParameter や FileAccessMode の基本構造を調べたいとき。
+- oracle 側の正本 builder が生成する具体的な prompt 内容や schema 内容を確認したいとき。
+- builder common 配下の復旧 builder 以外の具体的な個別処理を調べたいとき。
+
+## hash
+- e71d435c791cd3da013ac21b3b3a31ca6c0be0144db59e9ba1645d2df7efde62
+
 # `indexing`
 
 ## Summary
@@ -119,17 +140,19 @@
 # `tui`
 
 ## Summary
-- ACP builder の TUI 関連 import surface を互換維持するための薄い package 階層。正本側実装を参照・再公開する初期化地点や互換モジュールを含み、TUI 起動パラメータや resolve-parameter builder の実体は持たない。
+- ACP builder の TUI 互換 package。正本側に実体を置く TUI builder 関連機能について、既存の realization 側 import path から参照できるようにする薄い互換層を収める。
+- この階層自体は TUI の画面制御や起動パラメータ生成ロジックの正本ではなく、公開 import surface の維持、oracle 側実装への委譲、旧 import path から正本側 import path への移行判断の入口となる。
 
 ## Read this when
-- ACP builder の TUI 関連 package や既存 import path が、正本側実装への互換入口として残されているかを確認したいとき。
-- TUI 起動パラメータ生成関数や resolve-parameter builder の公開 import 経路、再 export、削除条件を確認したいとき。
-- TUI 側で公開される file access mode の選択肢や、oracle 側 builder への委譲関係を確認したいとき。
+- ACP builder の TUI 関連 import path が、正本側 package や builder と互換の入口として維持されているかを確認したいとき。
+- TUI 起動パラメータ生成関数や resolve parameter builder について、realization 側の既存公開 import surface が oracle 側実体へどのように接続しているかを確認したいとき。
+- TUI builder 周辺の互換モジュールを残す理由、公開名、削除条件、または正本側 import path への移行方針を確認したいとき。
+- 既存 TUI 呼び出し向けに公開される file access mode の選択肢を確認したいとき。
 
 ## Do not read this when
-- TUI 起動パラメータや resolve-parameter builder の具体的な仕様・生成ロジックを確認したいとき。正本側または canonical な実体を読む。
-- TUI 画面の描画、イベント処理、ユーザー操作、端末 UI の挙動を調べたいとき。
-- TUI 以外の ACP builder import 経路、FileAccessMode 自体の定義、または UI 非依存の parameter 構築を調べたいとき。
+- TUI 起動パラメータや resolve parameter builder の具体的な構造、値、生成ロジックの正本を確認したいとき。
+- TUI の描画、画面制御、イベント処理、ユーザー操作、端末 UI の挙動を調べたいとき。
+- TUI 以外の builder、file access mode 全体の定義、CLI 動作など、互換 import path の維持や移行に関係しない公開面を調べたいとき。
 
 ## hash
-- 0f7127854e17a6db82e7f58872ea5748010a064dad179defecf04b874bc1f572
+- 8ac371cf10db95db117b90e515679e1087d5a1fc8233a8f029864a9f41aa17f5

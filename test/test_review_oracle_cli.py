@@ -23,6 +23,7 @@ from cmoc_runtime import SessionState
 from config.cmoc_config import CmocConfig, CmocConfigReviewOracle
 from main import app
 import sub_commands.review.oracle as review_module
+from sub_commands.review_targets import enumerate_review_all_oracle_files
 
 
 def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -169,11 +170,10 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
     detail_order = [
         "### Accepted fatal findings",
         "accepted fatal",
-        "### Rejected fatal findings",
-        "rejected fatal",
-        "## Minor findings",
         "### Accepted minor findings",
         "accepted minor",
+        "### Rejected fatal findings",
+        "rejected fatal",
         "### Rejected minor findings",
         "rejected minor",
     ]
@@ -238,16 +238,8 @@ def test_review_oracle_report_includes_rejected_findings(
         "## Fatal findings",
         "## Minor findings",
     ]
-    fatal_section = rendered[
-        rendered.index("## Fatal findings") : rendered.index("## Minor findings")
-    ]
-    minor_section = rendered[rendered.index("## Minor findings") :]
     assert "### Rejected fatal findings" in rendered
     assert "### Rejected minor findings" in rendered
-    assert "### Rejected fatal findings" in fatal_section
-    assert "### Rejected minor findings" not in fatal_section
-    assert "### Rejected minor findings" in minor_section
-    assert "### Rejected fatal findings" not in minor_section
     assert "rejected finding" in rendered
     assert "rejected reason" in rendered
     assert "judge reason: judge rejected reason" in rendered
@@ -544,7 +536,7 @@ def test_apply_finding_merge_operations_rejects_reused_targets(
         )
 
 
-def test_review_oracle_full_scope_includes_binary_and_excludes_gitignored_oracle_files(
+def test_review_oracle_full_scope_keeps_tracked_ignored_oracle_files(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -553,8 +545,9 @@ def test_review_oracle_full_scope_includes_binary_and_excludes_gitignored_oracle
     outside_target = tmp_path / "ignored-link-target.md"
     outside_target.write_text("# outside\n")
     with (root / ".gitignore").open("a") as file:
-        file.write("oracle/ignored-link.md\n")
+        file.write("oracle/ignored-link.md\noracle/untracked-ignored.md\n")
     (root / "oracle" / "ignored-link.md").symlink_to(outside_target)
+    (root / "oracle" / "untracked-ignored.md").write_text("# untracked ignored\n")
     (root / "oracle" / "asset.bin").write_bytes(b"\x00\x01binary\n")
     (root / "memo" / "oracle").mkdir(parents=True)
     (root / "memo" / "oracle" / "draft.md").write_text("# memo draft\n")
@@ -601,19 +594,20 @@ def test_review_oracle_full_scope_includes_binary_and_excludes_gitignored_oracle
     rendered = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
-    assert "oracle_count_total: 3" in rendered
-    assert "oracle_count_evaluated: 3" in rendered
+    assert "oracle_count_total: 5" in rendered
+    assert "oracle_count_evaluated: 5" in rendered
     assert "`oracle/asset.bin`" in rendered
+    assert "`oracle/ignored-link.md`" in rendered
+    assert "`oracle/ignored.md`" in rendered
     assert "`oracle/memo/kept.md`" in rendered
     assert "`oracle/spec.md`" in rendered
-    assert "oracle/ignored-link.md" not in rendered
-    assert "oracle/ignored.md" not in rendered
+    assert "oracle/untracked-ignored.md" not in rendered
     assert "oracle/memo-link.md" not in rendered
     assert "memo/oracle/draft.md" not in rendered
     enumerate_calls = [
         call for call in calls if call.startswith("review oracle enumerate findings")
     ]
-    assert len(enumerate_calls) == 3
+    assert len(enumerate_calls) == 5
 
 
 def test_review_oracle_accepts_short_scope_option(
@@ -692,7 +686,7 @@ def test_review_oracle_session_scope_reports_total_and_no_targets(
     assert "レビュー対象 oracle が 0 件でした。" in rendered
 
 
-def test_review_oracle_session_scope_excludes_changed_gitignored_oracle_files(
+def test_review_oracle_session_scope_keeps_changed_tracked_ignored_oracle_files(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -720,24 +714,48 @@ def test_review_oracle_session_scope_excludes_changed_gitignored_oracle_files(
     run_git(root, "commit", "-m", "change ignored oracle")
     calls: list[str] = []
 
-    def fail_run_codex_exec(parameter: object, **kwargs: object) -> None:
-        calls.append(kwargs["purpose"])
-        raise AssertionError("gitignored oracle files should not be reviewed")
+    class FakeCodexResult:
+        def __init__(self, output_json: dict[str, object]) -> None:
+            self.output_json = output_json
 
-    monkeypatch.setattr(review_module, "run_codex_exec", fail_run_codex_exec)
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        calls.append(kwargs["purpose"])
+        schema_name = parameter.structured_output_schema_path.name
+        if schema_name == "enumerate_finding.json":
+            return FakeCodexResult({"findings": []})
+        raise AssertionError(schema_name)
+
+    monkeypatch.setattr(review_module, "run_codex_exec", fake_run_codex_exec)
 
     result = runner.invoke(app, ["review", "oracle"], catch_exceptions=False)
 
     assert result.exit_code == 0
-    assert calls == []
+    enumerate_calls = [
+        call for call in calls if call.startswith("review oracle enumerate findings")
+    ]
+    assert len(enumerate_calls) == 2
     rendered = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
-    assert "oracle_count_total: 1" in rendered
-    assert "oracle_count_evaluated: 0" in rendered
-    assert "oracle/ignored-link.md" not in rendered
-    assert "oracle/ignored.md" not in rendered
-    assert "result: no_targets" in rendered
+    assert "oracle_count_total: 3" in rendered
+    assert "oracle_count_evaluated: 2" in rendered
+    assert "`oracle/ignored-link.md`" in rendered
+    assert "`oracle/ignored.md`" in rendered
+
+
+def test_review_oracle_target_enumeration_excludes_agents_and_index(
+    tmp_path: Path,
+) -> None:
+    """oracle file 定義から外れる AGENTS.md と INDEX.md をレビュー対象にしない。"""
+    root = make_repo(tmp_path)
+    spec = root / "oracle" / "spec.md"
+    agents = root / "oracle" / "AGENTS.md"
+    index = root / "oracle" / "INDEX.md"
+    spec.write_text("# spec\n")
+    agents.write_text("# agents\n")
+    index.write_text("# index\n")
+
+    assert enumerate_review_all_oracle_files(root) == [spec.resolve()]
 
 
 def test_review_oracle_merges_review_index_changes(

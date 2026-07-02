@@ -19,22 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP builder 関連の既存公開参照を、正本側 builder 実装へつなぐ互換入口をまとめる領域。apply、review、session、TUI、indexing、quota probe などの agent call parameter 生成周辺について、実体が正本側にあるのか、realization 側の薄い wrapper なのかを切り分けるための上位入口である。
-- この領域の主な責務は、公開済み import 経路の維持、正本側 builder への委譲、realization 側 parameter 型への適合、互換コードの残置理由と削除条件の確認である。各 builder の正本仕様や詳細ロジックそのものは、下位の個別領域または正本側実装に委ねられる。
+- ACP builder 領域の realization 側入口。正本側に実体を置く builder 群について、既存の公開参照経路を維持する互換 package 群と、quota availability probe 用の最小 parameter builder をまとめる。
+- apply、review、session、TUI、indexing、file access recovery などの下位領域へ進む前に、実処理本体ではなく互換層・委譲境界・probe parameter 生成のどれを読むべきかを切り分けるための階層。
 
 ## Read this when
-- ACP builder 周辺で、既存公開参照が正本側実装へどのように接続されているかを確認したいとき。
-- agent call parameter builder の領域分担を見分け、apply、review、session、TUI、indexing、quota probe などのどの下位領域へ進むべきか判断したいとき。
-- realization 側に残る互換 package、再公開 module、wrapper、暫定補正について、残す理由や削除条件を確認したいとき。
-- 正本側 builder の出力を realization 側で利用する際の委譲関係、型適合、公開 import 経路維持の境界を調べたいとき。
-- 同名機能が realization 側にあるように見える場合に、実処理の所在が正本側か互換入口かを切り分けたいとき。
+- ACP builder の realization 側公開入口が、正本側 builder や旧 import 経路とどう対応しているかを確認したいとき。
+- apply fork、review oracle、session join、TUI、indexing、file access recovery などの builder 関連作業で、まず下位領域の分担を選びたいとき。
+- 正本側実装への委譲、realization 側 parameter 型への適応、互換 wrapper の残置理由や削除条件を確認したいとき。
+- Codex quota availability probe 用に、既存 parameter から動作確認用 parameter を組み立てる処理を確認・変更したいとき。
 
 ## Do not read this when
-- 個別 builder の具体的な生成ロジック、repo root 解決、prompt 文面、出力条件、判定仕様を直接確認したいときは、下位の個別領域または正本側実装を読む。
-- CLI コマンド全体の制御フロー、branch 操作、diff 生成、TUI 描画、イベント処理、Codex CLI 実行など、parameter builder 以外の処理を調べたいときは、その責務を持つ実装へ進む。
-- agent call parameter の共通データ構造、model、reasoning effort、file access mode などの基礎定義を確認したいときは、基礎定義側を読む。
-- 正本仕様断片そのものや oracle 側の実装内容を確認したいときは、互換入口ではなく対応する正本側本文を読む。
-- 新しい機能の実装場所やテスト対象を探しているだけで、既存 import 経路の互換維持や正本側 builder への委譲関係を確認する必要がないとき。
+- 各 builder の正本仕様、prompt 正本文面、出力条件、判定仕様そのものを確認したいときは、対応する oracle file または正本側実装を読む。
+- apply fork の制御フロー、branch 操作、diff 生成、CLI 引数処理、TUI の描画やイベント処理など、builder 入口ではない実行処理を調べたいとき。
+- AgentCallParameter、FileAccessMode、model、reasoning effort などの基礎データ構造を調べたいときは、基礎定義側を読む。
+- 互換 import 経路や quota probe parameter 生成に関係しない新規機能の実装場所やテスト対象を探しているとき。
 
 ## hash
-- 8c0a8c3e4b5c601a729618217ed20f80faba0a561f372b10988bddcda449cb59
+- f71ed6f2f66d30c5e3a816090e2206dc3d311607064cf488f717172c102a9317

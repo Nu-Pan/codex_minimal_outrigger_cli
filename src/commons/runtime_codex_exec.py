@@ -9,7 +9,9 @@ subcommand event、retry counter を共有する 1 つの状態機械である�
 根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
+import hashlib
 import json
+import os
 import subprocess
 import threading
 import time
@@ -19,7 +21,7 @@ from typing import Any
 
 from jsonschema import validate
 
-from basic.acp import AgentCallParameter
+from basic.acp import AgentCallParameter, FileAccessMode
 from config.cmoc_config import CmocConfig
 
 from commons.runtime_config import load_config
@@ -40,6 +42,7 @@ from commons.runtime_codex_profile import (
 )
 from commons.runtime_errors import CmocError
 from commons.runtime_codex_logging import emit_codex_call_console
+from commons.runtime_git import is_untracked_git_ignored, run_git
 from commons.runtime_logging import SubcommandLogger, current_subcommand_logger
 from commons.runtime_paths import (
     codex_log_dir,
@@ -57,6 +60,8 @@ _QUOTA_PROBE_AVAILABLE = False
 _QUOTA_PROBE_ERROR: BaseException | None = None
 _CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
 _LAST_CODEX_LOG_TIMESTAMP: str | None = None
+_FORBIDDEN_FILESYSTEM_DIFF_ROOTS = (".agents", ".codex", ".git", "memo")
+_ForbiddenSnapshot = dict[Path, tuple[int, int, int, int, str | None]]
 
 
 def _write_prompt_log(path: Path, prompt: str) -> None:
@@ -140,6 +145,7 @@ def run_codex_exec(
     extra_read_paths: list[Path] | None = None,
     extra_writable_paths: list[Path] | None = None,
     allow_oracle_conflict_writes: bool = False,
+    verify_file_access: bool = True,
 ) -> CodexExecResult:
     """Codex exec の再試行、Structured Output 検証、実行記録を一括制御する。"""
     root = root or repo_root()
@@ -304,11 +310,21 @@ def run_codex_exec(
     sleep_sec = capacity_initial_sleep_sec
     last_result: subprocess.CompletedProcess[str] | None = None
     resume_token: str | None = None
+    generated_paths: set[Path] = set()
+    if schema_path is not None:
+        generated_paths.add(schema_path.resolve())
+    forbidden_baseline = (
+        _forbidden_filesystem_snapshot(codex_work_root) if verify_file_access else None
+    )
 
     while True:
         ts, prompt_path, stdout_path, stderr_path, output_path, call_path = new_log_paths()
         current_argv = build_argv(output_path, resume_token)
         _write_prompt_log(prompt_path, parameter.prompt)
+        generated_paths.update(
+            path.resolve()
+            for path in (prompt_path, stdout_path, stderr_path, output_path, call_path)
+        )
         write_call_log(
             call_path,
             run_purpose=purpose,
@@ -622,7 +638,7 @@ def run_codex_exec(
             returncode=result.returncode,
             status="succeeded",
         )
-        return CodexExecResult(
+        exec_result = CodexExecResult(
             returncode=result.returncode,
             output_text=output_text,
             output_json=output_json,
@@ -639,5 +655,237 @@ def run_codex_exec(
             quota_wait_sec=quota_wait_sec,
             quota_polls=quota_polls,
         )
+        if verify_file_access:
+            allowed_paths: list[Path] = []
+            if allow_oracle_conflict_writes:
+                # <work-root>/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py
+                # Codex profile can only open parent directories, so the
+                # stricter file-level conflict target boundary is enforced here.
+                allowed_paths.extend(extra_writable_paths or [])
+            recover_file_access_violations(
+                codex_work_root,
+                exec_result,
+                parameter.file_access_mode,
+                config,
+                generated_paths,
+                root=root,
+                subcommand_logger=logger,
+                allowed_paths=allowed_paths,
+                forbidden_baseline=forbidden_baseline,
+            )
+        return exec_result
 
     assert last_result is not None
+
+
+def recover_file_access_violations(
+    worktree: Path,
+    violated_result: CodexExecResult,
+    violated_mode: FileAccessMode,
+    config: CmocConfig,
+    ignored_paths: set[Path] | None = None,
+    *,
+    root: Path | None = None,
+    subcommand_logger: SubcommandLogger | None = None,
+    allowed_paths: list[Path] | None = None,
+    forbidden_baseline: _ForbiddenSnapshot | None = None,
+) -> None:
+    """agent call 後に残った file access rule 違反を設定回数だけ修復する。"""
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # Runtime-generated logs are ignored here; the post-check targets agent
+    # edits that remain in the worktree after the call.
+    ignored = {path.resolve() for path in ignored_paths or set()}
+    violations = file_access_violations(
+        worktree,
+        _post_call_changed_worktree_paths(worktree, forbidden_baseline),
+        violated_mode,
+        ignored,
+        allowed_paths,
+    )
+    if not violations:
+        return
+    for _attempt in range(config.codex.num_try_falv_recovery):
+        from acp.builder.common.file_access_rule_vaolation_recovery import (
+            build_file_access_rule_vaolation_recovery_parameter,
+        )
+
+        parameter = build_file_access_rule_vaolation_recovery_parameter(
+            violated_result.call_log_path,
+            violations,
+            violated_mode,
+        )
+        recovery_result = run_codex_exec(
+            parameter,
+            root=root or worktree,
+            cwd=worktree,
+            config=config,
+            purpose="file access rule violation recovery",
+            subcommand_logger=subcommand_logger,
+            verify_file_access=False,
+        )
+        ignored.update(
+            path.resolve()
+            for path in (
+                recovery_result.call_log_path,
+                recovery_result.prompt_log_path,
+                recovery_result.stdout_log_path,
+                recovery_result.stderr_log_path,
+                recovery_result.output_path,
+            )
+        )
+        if recovery_result.schema_path is not None:
+            ignored.add(recovery_result.schema_path.resolve())
+        violations = file_access_violations(
+            worktree,
+            _post_call_changed_worktree_paths(worktree, forbidden_baseline),
+            violated_mode,
+            ignored,
+            allowed_paths,
+        )
+        if not violations:
+            return
+    raise CmocError(
+        "agent call がファイルアクセス規則に違反しました。",
+        ["Codex call log と作業差分を確認してから cmoc コマンドを再実行してください。"],
+        "\n".join(str(path) for path in violations),
+    )
+
+
+def changed_worktree_paths(root: Path) -> list[Path]:
+    """worktree 上の変更 path を absolute path として返す。"""
+    paths: list[Path] = []
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # apply requeue and file access validation both need file-level paths;
+    # default status can collapse untracked directories into one directory path.
+    for line in run_git(["status", "--short", "-uall"], root).stdout.splitlines():
+        path_text = line[3:]
+        if " -> " in path_text:
+            path_text = path_text.split(" -> ", 1)[1]
+        paths.append(root / path_text)
+    return paths
+
+
+def _post_call_changed_worktree_paths(
+    root: Path, forbidden_baseline: _ForbiddenSnapshot | None
+) -> list[Path]:
+    """agent call 後の検査対象 path を返す。"""
+    paths = changed_worktree_paths(root)
+    if forbidden_baseline is not None:
+        paths.extend(_forbidden_filesystem_changed_paths(root, forbidden_baseline))
+    seen: set[Path] = set()
+    result: list[Path] = []
+    for path in paths:
+        resolved = path.resolve()
+        if resolved not in seen:
+            seen.add(resolved)
+            result.append(path)
+    return result
+
+
+def _forbidden_filesystem_snapshot(root: Path) -> _ForbiddenSnapshot:
+    snapshot: _ForbiddenSnapshot = {}
+    for name in _FORBIDDEN_FILESYSTEM_DIFF_ROOTS:
+        base = root / name
+        if not base.exists():
+            continue
+        if base.is_file() or base.is_symlink():
+            snapshot[base.relative_to(root)] = _forbidden_file_fingerprint(
+                base, include_digest=name == ".git"
+            )
+            continue
+        if name == ".git":
+            # cmoc の git status 自体が .git directory を更新し得るため、
+            # linked worktree の .git file だけを filesystem 差分対象にする。
+            continue
+        for current_root, _dirnames, filenames in os.walk(base):
+            for filename in filenames:
+                path = Path(current_root) / filename
+                try:
+                    fingerprint = _forbidden_file_fingerprint(path)
+                except FileNotFoundError:
+                    continue
+                snapshot[path.relative_to(root)] = fingerprint
+    return snapshot
+
+
+def _forbidden_file_fingerprint(
+    path: Path, *, include_digest: bool = False
+) -> tuple[int, int, int, int, str | None]:
+    stat = path.lstat()
+    digest = hashlib.sha256(path.read_bytes()).hexdigest() if include_digest else None
+    return stat.st_mode, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns, digest
+
+
+def _forbidden_filesystem_changed_paths(
+    root: Path, baseline: _ForbiddenSnapshot
+) -> list[Path]:
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # Ignored files below denied roots do not appear in git status, so post-check
+    # also compares file metadata captured immediately before the agent call.
+    current = _forbidden_filesystem_snapshot(root)
+    changed: list[Path] = []
+    for relative in sorted(set(baseline) | set(current), key=str):
+        if baseline.get(relative) != current.get(relative):
+            changed.append(root / relative)
+    return changed
+
+
+def file_access_violations(
+    root: Path,
+    paths: list[Path],
+    mode: FileAccessMode,
+    ignored_paths: set[Path] | None = None,
+    allowed_paths: list[Path] | None = None,
+) -> list[Path]:
+    """FileAccessMode 上、差分が残ってはいけない path だけを返す。"""
+    ignored = {path.resolve() for path in ignored_paths or set()}
+    allowed = {path.resolve() for path in allowed_paths or []}
+    return [
+        path
+        for path in paths
+        if path.resolve() not in ignored
+        and path.resolve() not in allowed
+        and not _is_write_allowed_by_file_access_mode(root, path, mode)
+    ]
+
+
+def _is_write_allowed_by_file_access_mode(
+    root: Path,
+    path: Path,
+    mode: FileAccessMode,
+) -> bool:
+    try:
+        relative = path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    if not relative.parts:
+        return False
+    blocked_runtime_roots = {
+        ".agents",
+        ".cmoc",
+        ".codex",
+        ".git",
+        ".pytest_cache",
+        "memo",
+    }
+    if relative.parts[0] in blocked_runtime_roots:
+        return False
+    if (len(relative.parts) == 1 and path.name == "README.md") or path.name in {
+        "AGENTS.md",
+        "INDEX.md",
+    }:
+        return False
+    match mode:
+        case FileAccessMode.READONLY | FileAccessMode.PURE_ORACLE_READ:
+            return False
+        case FileAccessMode.REALIZATION_WRITE:
+            if is_untracked_git_ignored(root, path):
+                return False
+            return relative.parts[0] != "oracle"
+        case FileAccessMode.PURE_ORACLE_WRITE:
+            return relative.parts[0] == "oracle"
+        case FileAccessMode.REPO_WRITE | FileAccessMode.NO_RULE:
+            return True
+        case _:
+            return False

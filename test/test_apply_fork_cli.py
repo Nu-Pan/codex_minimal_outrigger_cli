@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 from basic.acp import AgentCallParameter
 from _support import (
+    add_tracked_ignored_oracle_file,
     apply_worktree_from_state,
     make_repo,
     run_git,
@@ -315,6 +316,47 @@ def test_apply_fork_target_normalization_keeps_nested_memo_directory(
     assert targets == [nested.resolve()]
 
 
+def test_apply_fork_target_normalization_excludes_non_realization_paths(
+    tmp_path: Path,
+) -> None:
+    """realization file 定義から外れる管理 path と規範 path を除外する。"""
+    root = make_repo(tmp_path)
+    src_target = root / "src" / "target.py"
+    codex_target = root / ".codex" / "config.toml"
+    nested_codex_target = root / "src" / ".codex" / "template.txt"
+    nested_agents_target = root / "docs" / ".agents" / "rule.md"
+    agents_target = root / "AGENTS.md"
+    index_target = root / "INDEX.md"
+    src_target.parent.mkdir()
+    codex_target.parent.mkdir()
+    nested_codex_target.parent.mkdir(parents=True)
+    nested_agents_target.parent.mkdir(parents=True)
+    src_target.write_text("target\n")
+    codex_target.write_text("config\n")
+    nested_codex_target.write_text("template\n")
+    nested_agents_target.write_text("rule\n")
+    agents_target.write_text("agents\n")
+    index_target.write_text("index\n")
+
+    targets = apply_fork_module.normalize_apply_targets(
+        root,
+        {
+            src_target,
+            codex_target,
+            nested_codex_target,
+            nested_agents_target,
+            agents_target,
+            index_target,
+        },
+    )
+
+    assert targets == [
+        nested_agents_target.resolve(),
+        nested_codex_target.resolve(),
+        src_target.resolve(),
+    ]
+
+
 def test_apply_fork_target_normalization_keeps_binary_files(
     tmp_path: Path,
 ) -> None:
@@ -331,3 +373,34 @@ def test_apply_fork_target_normalization_keeps_binary_files(
     )
 
     assert targets == [realization_binary.resolve(), oracle_binary.resolve()]
+
+
+def test_apply_fork_target_normalization_keeps_tracked_ignored_files(
+    tmp_path: Path,
+) -> None:
+    """通常の git check-ignore と同じく tracked ignored file を対象に残す。"""
+    root = make_repo(tmp_path)
+    add_tracked_ignored_oracle_file(root)
+    realization_target = root / "src" / "ignored.py"
+    realization_target.parent.mkdir()
+    realization_target.write_text("value = 1\n")
+    with (root / ".gitignore").open("a") as file:
+        file.write("src/ignored.py\nsrc/untracked.py\n")
+    run_git(root, "add", "-f", ".gitignore", "src/ignored.py")
+    run_git(root, "commit", "-m", "add ignored realization")
+    untracked_ignored = root / "src" / "untracked.py"
+    untracked_ignored.write_text("value = 2\n")
+
+    targets = apply_fork_module.normalize_apply_targets(
+        root,
+        {
+            root / "oracle" / "ignored.md",
+            realization_target,
+            untracked_ignored,
+        },
+    )
+
+    assert targets == [
+        (root / "oracle" / "ignored.md").resolve(),
+        realization_target.resolve(),
+    ]

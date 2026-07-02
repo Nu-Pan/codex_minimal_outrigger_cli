@@ -22,6 +22,7 @@ from config.cmoc_config import CmocConfig
 
 from commons.runtime_content import write_hashed_file, write_hashed_file_in_existing_dir
 from commons.runtime_errors import CmocError
+from commons.runtime_git import is_untracked_git_ignored
 from commons.runtime_paths import schema_store_dir
 
 APPLY_PROCESS_TRACKING_ENV = "CMOC_APPLY_PROCESS_ID_PATH"
@@ -34,7 +35,6 @@ _PROFILE_BLOCKED_ROOT_NAMES = {
     ".pytest_cache",
     "AGENTS.md",
     "INDEX.md",
-    "README.md",
     "memo",
 }
 _REALIZATION_WRITE_BLOCKED_ROOT_NAMES = {
@@ -75,7 +75,7 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
             return "read-only"
         case (
             FileAccessMode.REALIZATION_WRITE
-            | FileAccessMode.ORACLE_WRITE
+            | FileAccessMode.PURE_ORACLE_WRITE
             | FileAccessMode.REPO_WRITE
             | FileAccessMode.NO_RULE
         ):
@@ -87,10 +87,10 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
 def file_access_to_codex_cwd(mode: FileAccessMode, root: Path) -> Path:
     """FileAccessMode の読み取り境界に合わせた Codex 作業 root を返す。"""
     root = root.resolve()
-    if mode == FileAccessMode.PURE_ORACLE_READ:
+    if mode in {FileAccessMode.PURE_ORACLE_READ, FileAccessMode.PURE_ORACLE_WRITE}:
         # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-        # Codex profile は read-only の読み取り root を分けられないため、
-        # 公開済みの --cd/cwd で oracle tree だけを作業 root にする。
+        # Codex profile は読み取り root を分けられないため、公開済みの
+        # --cd/cwd で oracle tree だけを作業 root にする。
         return root / "oracle"
     return root
 
@@ -106,9 +106,9 @@ def _is_read_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
         # PURE_ORACLE_READ の Codex cwd は oracle に閉じるが、TUI の完全
         # prompt だけは起動指示そのものなので `.cmoc` 側から読ませる。
         return True
-    return mode != FileAccessMode.PURE_ORACLE_READ or path.is_relative_to(
-        root / "oracle"
-    )
+    if mode in {FileAccessMode.PURE_ORACLE_READ, FileAccessMode.PURE_ORACLE_WRITE}:
+        return path.is_relative_to(root / "oracle")
+    return True
 
 
 def _is_tui_complete_prompt_path(root: Path, path: Path) -> bool:
@@ -154,15 +154,19 @@ def _writable_roots(
         case FileAccessMode.REALIZATION_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            paths = _existing_writable_top_level_roots(mode, root)
+            # Codex profile cannot express cmoc's deny-list. REALIZATION_WRITE
+            # includes root ancillary files such as .gitignore, so limiting the
+            # sandbox to existing directories is under-permissive; post-checks
+            # reject forbidden and non-realization diffs after Codex can edit root.
+            paths = [root]
         case FileAccessMode.REPO_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            # Codex profile has no deny-list, so modes that exclude memo/.agents
-            # cannot make <work-root> itself writable. New top-level paths must
-            # be passed explicitly through extra_writable_paths.
-            paths = _existing_writable_top_level_roots(mode, root)
-        case FileAccessMode.ORACLE_WRITE:
+            # Codex profile cannot express cmoc's deny-list. REPO_WRITE would be
+            # under-permissive if limited to existing top-level dirs, so runtime
+            # post-checks reject forbidden diffs after Codex can edit the work root.
+            paths = [root]
+        case FileAccessMode.PURE_ORACLE_WRITE:
             paths = [root / "oracle"]
         case FileAccessMode.NO_RULE:
             paths = [root]
@@ -197,17 +201,6 @@ def _writable_roots(
     return result
 
 
-def _existing_writable_top_level_roots(mode: FileAccessMode, root: Path) -> list[Path]:
-    return sorted(
-        [
-            path
-            for path in root.iterdir()
-            if _is_writable_path_allowed(mode, root, path.resolve())
-        ],
-        key=lambda path: str(path.resolve()),
-    )
-
-
 def _sandbox_writable_root(path: Path) -> Path:
     """Codex sandbox の writable_roots に渡せる directory path へ正規化する。"""
     if path.exists() and path.is_file():
@@ -240,16 +233,19 @@ def _is_writable_path_allowed(
     # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # 追加 writable path は、prompt で伝える禁止領域を広げない範囲だけ許可する。
+    relative = path.relative_to(root)
+    if path.name in {"AGENTS.md", "INDEX.md"}:
+        return False
+    if len(relative.parts) == 1 and path.name == "README.md":
+        return False
     if mode == FileAccessMode.REALIZATION_WRITE and allow_oracle_conflict_writes:
         # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
-        # session join の conflict 解消は README.md/INDEX.md/oracle file も
-        # git conflict 対象なら編集する。runtime 管理領域だけは sandbox 側でも開かない。
-        relative = path.relative_to(root)
+        # session join の conflict 解消は oracle file も git conflict 対象なら編集する。
+        # runtime 管理領域と root 禁止 file は sandbox 側でも開かない。
         return (
             bool(relative.parts)
             and relative.parts[0] not in _CONFLICT_WRITE_BLOCKED_ROOT_NAMES
         )
-    relative = path.relative_to(root)
     blocked_root_names = (
         _REPO_WRITE_BLOCKED_ROOT_NAMES
         if mode == FileAccessMode.REPO_WRITE
@@ -258,8 +254,13 @@ def _is_writable_path_allowed(
     if relative.parts and relative.parts[0] in blocked_root_names:
         return False
     if mode == FileAccessMode.REALIZATION_WRITE:
+        if is_untracked_git_ignored(root, path):
+            # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+            # realization file excludes git ignored untracked paths; tracked ignored
+            # paths remain writable because normal git check-ignore treats them as tracked.
+            return False
         return not path.is_relative_to(root / "oracle")
-    if mode == FileAccessMode.ORACLE_WRITE:
+    if mode == FileAccessMode.PURE_ORACLE_WRITE:
         return path.is_relative_to(root / "oracle")
     return mode in {FileAccessMode.REPO_WRITE, FileAccessMode.NO_RULE}
 

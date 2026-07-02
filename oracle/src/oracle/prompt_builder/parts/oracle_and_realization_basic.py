@@ -25,15 +25,15 @@ def build_oracle_and_realization_basic() -> tuple[PlaceholderMap, StructDoc]:
                         """
                         以下の条件をすべて満たしたファイルの事を指す
                         - `<work-root>/oracle` ツリー内である
-                        - `<work-root>/.gitignore` の対象ではない
-                        - `INDEX.md` ではない
+                        - `INDEX.md`, `AGENTS.md` ではない
+                        - `git check-ignore` で git 追跡対象外ではない
                         """,
                     ),
                     StructDoc(
                         "役割",
                         """
                         - oracle file は人間が所有し 100% の責任を負う正本仕様断片である
-                        - oracle file の内容に対して AI は提案を行うことは出来るが、実際の編集を行うのは必ず人間である
+                        - oracle file の内容に対する主たる編集者は人間であり、agent は補助のみを行う
                         - oracle file を正本として realization file が生成されるものとし、その逆は禁止である
                         """,
                     ),
@@ -60,9 +60,13 @@ def build_oracle_and_realization_basic() -> tuple[PlaceholderMap, StructDoc]:
                     """
                     以下の条件をすべて満たしたファイルの事を指す
                     - `<work-root>` ツリー内である
-                    - `<work-root>/oracle` ツリー内ではない (i.e. oracle file ではない)
-                    - `<work-root>/.gitignore` の対象ではない
-                    - `INDEX.md` ではない
+                    - `<work-root>/oracle` ツリー内ではない
+                    - `<work-root>/memo` ツリー内ではない
+                    - `<work-root>/.git` ツリー内ではない
+                    - `<work-root>/.agents` ツリー内ではない
+                    - `<work-root>/.codex` ツリー内ではない
+                    - `INDEX.md`, `AGENTS.md` ではない
+                    - `git check-ignore` で git 追跡対象外ではない
                     """,
                 ),
                 StructDoc(
