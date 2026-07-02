@@ -350,24 +350,25 @@
 # `test_session_cli.py`
 
 ## Summary
-- session fork、join、abandon の CLI 回帰テストをまとめる。session branch と session state のライフサイクル、linked worktree 上の挙動、状態 cleanup、dirty worktree や壊れた state の拒否、join 時の conflict 解決とエラー出力先を外部挙動として検証する。
-- 16,000 文字を超えるが、同じ session 状態遷移と branch/state fixture を共有する観測点を一箇所に集めたテストファイルである。
+- session fork、join、abandon の CLI 回帰テストをまとめる。session branch と session state のライフサイクル、linked worktree での分岐、state cleanup、dirty worktree 拒否、join 時の conflict 解消とエラー出力先を外部挙動として検証する。
+- session 状態遷移を同じ branch/state fixture で追う必要があるテスト群であり、16,000 文字を超えるが session CLI 回帰の凝集した入口として扱う。
 
 ## Read this when
-- session fork が session branch と state を作成する挙動、session-id 衝突時の retry や既存 state 非破壊を確認・変更するとき。
-- session abandon が home branch へ戻る挙動、state を abandoned にする挙動、session branch 削除、cleanup 失敗時の rollback、home branch 不在時の失敗出力を確認・変更するとき。
-- session join が session branch の変更を home branch へ統合する挙動、branch 削除可否、state 更新、linked worktree 上の current branch 維持を確認・変更するとき。
-- session join の conflict 解決で Codex 実行 profile、oracle conflict 書き込み許可、delete conflict の staging、conflict marker 検出を確認・変更するとき。
-- session 系 CLI のエラー報告が stdout と stderr のどちらへ出るべきかを確認・変更するとき。
-- session state file の必須 field 検証や壊れた state への拒否挙動を確認・変更するとき。
+- session fork が session branch と state file を作成する挙動、session-id 衝突時の retry・失敗、破損 state の拒否、`.cmoc` ignore 初期化、linked worktree 上での開始 commit と home branch 記録を確認したいとき。
+- session abandon が home branch へ戻り、session branch を削除し、state を abandoned にする挙動を確認したいとき。
+- session abandon の home branch 不在、cleanup 失敗、破損 state などの失敗時に、branch・state・出力先がどう保たれるかを確認したいとき。
+- session join が session branch の変更を home branch へ取り込み、state を joined にし、session branch 削除の成功・失敗をどのように出力するかを確認したいとき。
+- session join の conflict 解消 agent 呼び出し、oracle conflict 書き込み profile、conflict 解消以外の差分拒否、delete conflict staging、conflict marker 検出を確認したいとき。
+- session join の dirty worktree 拒否や、merge 後の予期しない error が stdout と stderr のどちらに出るべきかを確認したいとき。
 
 ## Do not read this when
-- session コマンド以外の CLI 外部挙動だけを確認する場合。
-- session fork、join、abandon の内部 helper 単体の詳細だけを確認したい場合。ただし CLI から見える branch/state 副作用との整合が必要なら読む。
-- session と無関係な path model、oracle 文書構成、設定読み込み、一般的な git helper の挙動だけを確認する場合。
+- session 以外のサブコマンドの CLI 外部挙動を確認したいだけのとき。
+- session fork、join、abandon の実装詳細や helper の責務を変更したい場合で、まず対応する implementation module を読むべきとき。
+- 個別の git helper、config、runtime profile、agent call parameter の単体挙動だけを確認したいとき。
+- oracle file の正本仕様そのものを確認・編集したいとき。
 
 ## hash
-- 80a2286a0d351566ca7e0266cd40874ac259773c4ae2b8f9d3c48f1bda09f850
+- 5fd04f94b2a5aa9ad018711bff4c13bfd3cb6b334c2451792d93470bc6fb7536
 
 # `test_struct_doc_rendering.py`
 

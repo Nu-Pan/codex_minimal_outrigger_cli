@@ -58,18 +58,18 @@
 # `join.py`
 
 ## Summary
-- active な session branch を session home branch へ統合する `session join` サブコマンドの実行本体を扱う。実行前の indexing preflight、CLI runtime 経由の起動、session/apply state と clean worktree の事前条件確認、home branch への切り替え、merge、state 更新、session branch 削除可否判定、利用者向け結果出力までをまとめて担う。
-- merge conflict 発生時に Codex CLI へ conflict 解消を依頼し、conflict marker 残存確認、対象ファイルの add、unmerged path 確認、merge commit 完了までを扱う補助処理も含む。
+- session join サブコマンドの実行本体。active session branch を session home branch へ merge し、状態更新、session branch 削除、結果表示までを扱う。
+- merge conflict 発生時は Codex CLI に conflict 対象の解消を依頼し、対象外差分、残存 conflict marker、unmerged path を検査して merge commit を完了する。
 
 ## Read this when
-- `session join` の実行条件、成功時の状態更新、branch 切り替え、merge、session branch 削除、警告出力の挙動を確認または変更したいとき。
-- session join 中の merge conflict を Codex CLI に解消させる流れ、conflict 対象ファイルの検出、writable path の渡し方、解消後の marker/unmerged 検査、commit 処理を確認または変更したいとき。
-- post-precondition failure を stderr 報告にする扱い、remote-tracking ref ではなく local session branch の到達可能性だけで削除安全性を判定する扱い、Git の conflict-marker-size を考慮した marker 検出を確認したいとき。
+- session join の事前条件、成功時の状態遷移、session home branch への merge、session branch 削除条件、出力内容を確認または変更したいとき。
+- session join 中の merge conflict 解消フロー、Codex CLI へ渡す conflict 対象、oracle conflict 書き込み例外、対象外差分の拒否、conflict marker 検出を確認または変更したいとき。
+- session join 失敗時のエラー出力先、手動解決を要する merge 状態、git status や merge-base に基づく判定を調査するとき。
 
 ## Do not read this when
-- session join の正本仕様断片そのものを確認したいとき。この実装ではなく対応する oracle doc を読む。
-- session state の保存形式、branch から state を読み込む共通処理、repo/work root や git 実行 wrapper の詳細を調べたいとき。ここではそれらを呼び出す側の制御だけを扱う。
-- session join conflict resolution 用に Codex CLI へ渡す prompt/parameter の組み立て内容だけを変更したいとき。ここではその builder を呼び出すだけで、parameter の詳細責務は持たない。
+- session join 以外の session サブコマンドの挙動を調べたいとき。
+- Codex CLI に渡す conflict 解消 prompt の内容やパラメータ構築そのものを変更したいときは、conflict resolution parameter builder を直接読む。
+- branch 状態ファイルの schema、repo/work root 解決、git 実行 wrapper、CLI 実行 wrapper の汎用挙動を調べたいだけのときは、runtime 側を直接読む。
 
 ## hash
-- 3954acd06c08ebdafcb234136542fc75d68aadfe0f783b4ea157641247a6016c
+- 0cb7e79dd80f8783c5b3b6c434e595030162b2f19376e3d11c5d0ba4a6278031
