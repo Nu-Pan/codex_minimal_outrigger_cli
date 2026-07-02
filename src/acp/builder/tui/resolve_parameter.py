@@ -14,9 +14,7 @@ from oracle.acp_builder.tui.resolve_parameter import (
 )
 
 TUI_FILE_ACCESS_MODES = tuple(
-    mode
-    for mode in FileAccessMode
-    if mode not in {FileAccessMode.INDEX_WRITE, FileAccessMode.NO_RULE}
+    mode for mode in FileAccessMode if mode != FileAccessMode.NO_RULE
 )
 
 __all__ = ["build_tui_resolve_parameter_parameter", "TUI_FILE_ACCESS_MODES"]
