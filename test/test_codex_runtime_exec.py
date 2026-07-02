@@ -316,6 +316,47 @@ def test_run_codex_exec_recovers_ignored_untracked_realization_write_diff(
     assert not (root / "build" / "artifact.txt").exists()
 
 
+def test_run_codex_exec_ignores_venv_diff_from_post_call_file_access_check(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    (root / ".gitignore").write_text("/.venv/\n")
+    venv_python = root / ".venv" / "bin" / "python3"
+    venv_python.parent.mkdir(parents=True)
+    venv_python.write_text("before\n")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "ignore venv")
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "count.txt"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "pathlib.Path('.venv/bin/python3').write_text(f'touched {count}\\n')",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_exec(
+        _parameter(FileAccessMode.READONLY),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    assert counter.read_text() == "1"
+    assert venv_python.read_text() == "touched 0\n"
+
+
 def test_run_codex_exec_allows_only_session_join_conflict_targets(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

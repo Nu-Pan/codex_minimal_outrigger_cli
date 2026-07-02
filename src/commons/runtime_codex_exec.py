@@ -61,6 +61,7 @@ _QUOTA_PROBE_ERROR: BaseException | None = None
 _CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
 _LAST_CODEX_LOG_TIMESTAMP: str | None = None
 _FORBIDDEN_FILESYSTEM_DIFF_ROOTS = (".agents", ".codex", ".git", "memo")
+_IGNORED_GIT_DIFF_EXCLUDED_ROOTS = (".cmoc", ".venv")
 _ForbiddenSnapshot = dict[Path, tuple[int, int, int, int, str | None]]
 _PathFingerprint = tuple[str, int, int, str | None] | None
 _WorktreeDiffSnapshot = dict[Path, tuple[str, _PathFingerprint]]
@@ -787,7 +788,8 @@ def _changed_worktree_path_statuses(
     for line in run_git(
         ["ls-files", "--others", "--ignored", "--exclude-standard"], root
     ).stdout.splitlines():
-        if Path(line).parts[:1] == (".cmoc",):
+        parts = Path(line).parts
+        if parts and parts[0] in _IGNORED_GIT_DIFF_EXCLUDED_ROOTS:
             continue
         paths.append(("!!", root / line))
     return paths
