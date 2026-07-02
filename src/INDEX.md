@@ -62,24 +62,21 @@
 # `commons`
 
 ## Summary
-- cmoc の複数領域から使われる共通 runtime helper 群を置く実装ディレクトリ。Codex 呼び出し、INDEX 更新 preflight、設定、内容 hash、エラー表示、Git 操作、ログ、パス解決、外部コマンド結果、session state など、サブコマンド横断の実行時支援を責務別に分けている。
-- 単一責務の runtime 実装だけでなく、既存 import path 互換や複数 runtime API の再エクスポート入口も含むため、上位コマンドから共通処理へ進む際の入口になる。
+- cmoc の共有 runtime helper 群を収める実装ディレクトリ。Codex CLI 実行、preflight indexing、CLI 共通ライフサイクル、設定、内容 hash、エラー表示、Git、ログ、path、結果モデル、session state など、複数サブコマンドから使われる共通処理への入口になる。
+- 単一の集約 import 入口と、責務別の runtime_* 実装に分かれており、個別領域の詳細を読む前に共通 runtime 層の担当範囲を見極めるための上位入口である。
 
 ## Read this when
-- CLI サブコマンド横断で使われる runtime 共通処理の所在を探したいとき。
-- Codex exec/TUI 実行、profile、preflight、Structured Output、quota/capacity retry、file access post-check、call log など Codex 呼び出し周辺の実装を確認または変更したいとき。
-- INDEX.md 自動更新の対象探索、hash 鮮度判定、既存エントリー再利用、排他制御、entry 生成依頼、Markdown 描画を追いたいとき。
-- 設定ファイル、内容 hash 保存、binary 判定、共通エラー表示、Git 操作、サブコマンドログ、runtime path、外部コマンド結果、session state のいずれかの共通 helper を探しているとき。
-- 上位の command 実装から呼ばれる共通 API の依存元や、責務別 runtime 実装へ進むための候補を絞りたいとき。
+- cmoc の複数サブコマンドや agent call 実行経路にまたがる共通 runtime 処理の所在を探したいとき。
+- Codex exec/TUI、INDEX.md 更新 preflight、Git 操作、設定読み書き、状態管理、ログ、path 解決、共通エラー表示など、共有 helper の責務境界を確認したいとき。
+- 複数の runtime API をまとめて import している箇所の依存元や、責務別 runtime モジュールへ進む入口を判断したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの引数定義、利用者向け制御フロー、業務処理だけを調べたいとき。その場合は command 側の実装へ進む。
-- oracle file 上の正本仕様、path placeholder の概念定義、INDEX.md の仕様意図、file access rule そのものを確認したいとき。その場合は対応する oracle 側を読む。
-- AgentCallParameter や設定データクラスなど、runtime helper が利用する基本型そのものを確認したいだけのとき。その場合は型定義側へ進む。
-- 特定の低レベル処理や個別 API の実装箇所が既に分かっているとき。その場合はこの階層全体ではなく、責務に対応する本文を直接読む。
+- 個別 CLI サブコマンドの引数定義、利用者向け制御フロー、コマンド固有の処理だけを調べたいときは、そのサブコマンド実装を読む。
+- oracle 上の正本仕様、path model、file access rule、session state 仕様、INDEX.md 仕様意図そのものを確認したいときは、対応する oracle 側を読む。
+- 特定 helper の内部挙動、引数、失敗時挙動が既に分かっている場合は、この階層全体ではなく該当する責務別 runtime 実装を直接読む。
 
 ## hash
-- 4120ce65ec27520cfe27714b501bc844dade075cf68feeeced5733fefa57d95b
+- 27135cdc5f5a524efaf35fc5f7b8b273791f3a4d218b6ed01e563380a782b9a2
 
 # `config`
 
