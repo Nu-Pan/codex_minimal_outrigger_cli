@@ -195,6 +195,52 @@ def test_run_codex_exec_recovers_file_access_violations(
     assert "ファイルアクセス規則違反のリカバリ" in recovery_prompt.read_text()
 
 
+def test_run_codex_exec_recovers_git_directory_file_access_violation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "count.txt"
+    saved_config = tmp_path / "git_config.txt"
+    recovery_prompt = tmp_path / "recovery_prompt.txt"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            f"saved_config = pathlib.Path({str(saved_config)!r})",
+            f"recovery_prompt = pathlib.Path({str(recovery_prompt)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "config = pathlib.Path('.git/config')",
+            "if count == 0:",
+            "    saved_config.write_text(config.read_text())",
+            "    config.write_text(config.read_text() + '\\n[cmoc-test]\\n\\tvalue = true\\n')",
+            "else:",
+            "    recovery_prompt.write_text(sys.stdin.read())",
+            "    config.write_text(saved_config.read_text())",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_exec(
+        _parameter(FileAccessMode.REPO_WRITE),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    assert counter.read_text() == "2"
+    assert (root / ".git" / "config").read_text() == saved_config.read_text()
+    assert ".git/config" in recovery_prompt.read_text()
+
+
 def test_run_codex_exec_recovers_file_access_violations_before_nonzero_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

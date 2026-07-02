@@ -65,6 +65,10 @@ _IGNORED_GIT_DIFF_EXCLUDED_ROOTS = (".cmoc", ".venv")
 _ForbiddenSnapshot = dict[Path, tuple[int, int, int, int, str | None]]
 _PathFingerprint = tuple[str, int, int, str | None] | None
 _WorktreeDiffSnapshot = dict[Path, tuple[str, _PathFingerprint]]
+# <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+# `git status` may refresh the index during post-check; .git itself is still
+# denied, so only that cmoc-owned metadata churn is excluded from comparison.
+_GIT_STATUS_MUTABLE_PATHS = {Path(".git/index")}
 
 
 def _write_prompt_log(path: Path, prompt: str) -> None:
@@ -975,28 +979,33 @@ def _forbidden_filesystem_snapshot(root: Path) -> _ForbiddenSnapshot:
                 base, include_digest=name == ".git"
             )
             continue
-        if name == ".git":
-            # cmoc の git status 自体が .git directory を更新し得るため、
-            # linked worktree の .git file だけを filesystem 差分対象にする。
-            continue
         for current_root, _dirnames, filenames in os.walk(base):
             paths = [Path(current_root)]
             paths.extend(Path(current_root) / filename for filename in filenames)
             for path in paths:
+                relative = path.relative_to(root)
+                if relative in _GIT_STATUS_MUTABLE_PATHS:
+                    continue
                 try:
-                    fingerprint = _forbidden_path_fingerprint(path)
+                    fingerprint = _forbidden_path_fingerprint(
+                        path,
+                        include_digest=name == ".git" and path.is_file(),
+                        stable_metadata=name == ".git",
+                    )
                 except FileNotFoundError:
                     continue
-                snapshot[path.relative_to(root)] = fingerprint
+                snapshot[relative] = fingerprint
     return snapshot
 
 
 def _forbidden_path_fingerprint(
-    path: Path, *, include_digest: bool = False
+    path: Path, *, include_digest: bool = False, stable_metadata: bool = False
 ) -> tuple[int, int, int, int, str | None]:
     stat = path.lstat()
     digest = hashlib.sha256(path.read_bytes()).hexdigest() if include_digest else None
-    return stat.st_mode, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns, digest
+    mtime_ns = 0 if stable_metadata else stat.st_mtime_ns
+    ctime_ns = 0 if stable_metadata else stat.st_ctime_ns
+    return stat.st_mode, stat.st_size, mtime_ns, ctime_ns, digest
 
 
 def _forbidden_filesystem_changed_paths(
