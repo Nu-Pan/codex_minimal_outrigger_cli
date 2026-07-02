@@ -146,39 +146,42 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を収める実装ルート。最上位 CLI、サブコマンド実装、共通 runtime helper、oracle 側正本実装への互換 shim、旧 import 経路を維持する再公開層への入口になる。
-- 実装本体は、CLI 登録、サブコマンド制御、共通 runtime、設定・basic・ACP builder 互換入口、正本側 oracle package への import 境界に分かれている。
+- cmoc の realization implementation を収める実装領域。最上位 CLI、サブコマンド、共通 runtime helper、互換 import 境界、正本側実装への委譲入口を扱う。
+- CLI 公開面から実処理へ進む入口、複数サブコマンドで共有される実行基盤、旧 import 経路を正本側または実体側へ接続する互換層を選ぶためのルーティング起点になる。
 
 ## Read this when
-- cmoc の実装領域で、CLI 入口、サブコマンド、共通 helper、互換 import 層のどこへ進むべきかを切り分けたいとき。
-- 利用者向け CLI の公開コマンド構成、各サブコマンド実行フロー、共通 runtime 処理、設定・basic・ACP builder の旧 import 経路を確認または変更したいとき。
-- oracle src を realization 側へ複製せず、正本側実装へ委譲または到達する import 境界を確認したいとき。
+- cmoc の CLI 実装、サブコマンド実行フロー、共通 runtime、互換 import 境界のどの領域へ進むべきかを選びたいとき。
+- 公開 CLI コマンド構成、session・apply・review・index maintenance・TUI・初期化などの実装入口を探したいとき。
+- Codex 呼び出し、Git 操作、設定、ログ、状態管理、runtime path、INDEX.md 更新 preflight など、複数領域で共有される実装の所在を確認したいとき。
+- oracle 側の正本実装や定義を realization 側へ複製せず、既存公開参照や旧 import 経路を維持する互換層を調べたいとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片、prompt 本文、path model、file access rule、INDEX.md entry standard の意図を確認したいときは、対応する oracle 側の文書または実装を読む。
-- 個別の実装対象がすでに CLI 登録、特定サブコマンド、共通 runtime、設定互換、basic 互換、ACP builder 互換のいずれかに特定できているときは、該当する下位対象へ直接進む。
-- 生成済み log、state、memo、git 内部情報、または realization implementation 以外の補助ファイルを調べたいときは、この実装ルートではなく該当責務の対象を読む。
+- oracle file の正本仕様断片、prompt 本文、path model、設定定義、ACP builder の生成ロジックそのものを確認したいときは、対応する oracle 側の文書または実装を読む。
+- 生成済みログ、永続状態、memo、git 管理情報、agent 用補助情報の内容確認だけが目的で、realization implementation を変更しないとき。
+- 特定の下位領域や実体 module がすでに分かっているときは、この階層ではなく該当対象へ直接進む。
+- テスト実装や検証観点を調べたいときは、実装領域ではなくテスト領域を読む。
 
 ## hash
-- be6a276f282b9651aed5e8e99a116b8a39344fa9609b97cfb6cd91b587b3fa3b
+- 54a1707b31158df2534fabb73fce9c144b0f037a3c51e78b935171c3d097fe11
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群を収めるディレクトリ。CLI サブコマンド、Codex runtime、ACP builder、prompt、INDEX.md 更新、packaged import、StructDoc rendering など、実装の外部挙動と制御境界を検証する。
-- 共通 fixture と補助関数を入口に、session/apply/review/indexing/init/TUI/runtime などの機能別テストへ進むためのルーティング対象になる。
+- CLI と共通 runtime の外部挙動を検証する realization test 群。session、apply、indexing、review oracle、Codex 実行、init/TUI、prompt、packaged import、StructDoc rendering などの回帰テストを配置する。
+- 各テストは実装詳細よりも CLI 出力、終了コード、git/worktree/state 副作用、agent call parameter、file access 境界など、利用者または上位制御から観測できる挙動を確認する入口になる。
+- 共通 fixture と補助関数も含み、一時 Git repository、Codex home、fake executable、branch/state 検証など、複数テストで共有する前提準備を提供する。
 
 ## Read this when
-- cmoc のテスト全体から、変更対象の機能に対応する realization test を探したいとき。
-- CLI 外部挙動、終了コード、標準出力、state 遷移、git worktree/branch 副作用、Codex runtime 呼び出しの期待値を確認または変更するとき。
-- apply、session、review oracle、indexing、init/TUI、Codex exec/retry/home/quota、ACP builder、prompt parts、packaged import、StructDoc Markdown rendering の回帰テストを追加・修正するとき。
-- テスト用 Git repository、Codex home、fake executable、branch 確認、apply worktree path 解決など、複数テストで使う補助処理を探すとき。
+- cmoc の CLI サブコマンドや runtime 制御を変更し、既存の外部挙動テストや期待値を確認したいとき。
+- session、apply、indexing、review oracle、Codex runtime、init/TUI、prompt builder、ACP builder の回帰テストを探すとき。
+- git branch/worktree/state、Codex profile、file access mode、INDEX.md 更新、structured output schema 参照などがテスト上どう期待されているか確認したいとき。
+- 新しい realization test を追加する前に、既存テストへケース追加または共通補助関数利用で済むか確認したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様本文、path model、oracle/realization file の定義や標準を確認したい場合は、oracle 側の文書または source を読む。
-- 実装内部の関数分割、型定義、git helper、runtime helper、builder 本体を変更したいだけなら、先に対応する implementation module を読む。
-- 個別機能と無関係な一般的な repository 構成、設定定義、公開 API の説明だけを確認したい場合は、より直接の source または oracle を読む。
-- INDEX.md エントリーの自然言語内容だけを作成・更新したい場合で、CLI 境界や git 状態の回帰確認が不要なら、このテスト群全体を読む必要はない。
+- oracle file の正本仕様、oracle 標準、routing 規則そのものを確認したい場合は、oracle 側の文書を読む。
+- 実装内部の関数分割、型定義、helper の責務だけを変更したい場合は、まず src 側の該当実装を読む。
+- 特定テストの対象が明確で、そのファイル本文へ直接進める場合は、この階層全体ではなく該当テストまたは共通補助だけを読む。
+- Codex CLI や LLM の出力品質そのものを評価したい場合は、このテスト群の目的ではない。
 
 ## hash
-- 9aff3617f0df75e428cb439a39b97c299e68f7cb38315dfc30aa890527ece7ab
+- d6c90351a7be5f223df4e816866199bcb00034f2ae78013d891ae89588f36639

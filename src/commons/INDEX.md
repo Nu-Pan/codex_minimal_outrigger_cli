@@ -93,24 +93,27 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の実行制御を担う。単一試行ループ内で、Structured Output 検証、capacity retry、quota 代表 probe、resume 継続、call log と subcommand event の記録、agent call 後の file access rule 違反検出・修復を扱う。
-- exec 実行時の Codex profile、CODEX_HOME、作業 root、schema、prompt/stdout/stderr/output/call log の生成と受け渡しをまとめる入口である。
-- worktree 差分、禁止 root の filesystem 差分、FileAccessMode ごとの書き込み許可判定を使い、Codex call 後に残った不正変更を検出する。
+- Codex exec の単一試行ループを中心に、profile/schema 準備、stdin prompt log、call log、stdout/stderr/output 保存、Structured Output 検証、capacity retry、quota 代表 probe、resume 継続、subcommand event 記録をまとめて制御する実行制御層。
+- agent call 後に残った差分を file access mode と禁止 runtime 領域に照らして検査し、必要に応じて file access rule violation recovery を再実行する後処理も扱う。
+- git status と filesystem snapshot から変更 path を集め、cmoc 生成 log や許可 path を除外したうえで、oracle file、runtime 領域、readonly 系一時生成物などの書き込み可否を判定する。
 
 ## Read this when
-- Codex exec 呼び出しの argv、stdin、CODEX_HOME、profile、schema、log 出力、resume token の扱いを確認・変更したいとき。
-- Structured Output の JSON 読み取り、jsonschema 検証、semantic retry、capacity retry、quota wait/probe の制御を確認・変更したいとき。
-- Codex call の実行結果を console や subcommand log へ記録する内容、call log の保存内容、CodexExecResult の組み立てを確認したいとき。
-- agent call 後の file access rule 違反検出、違反修復 call、worktree 差分取得、禁止 root の変更検出、FileAccessMode ごとの許可判定を確認・変更したいとき。
+- Codex exec 呼び出しの argv、CODEX_HOME/profile/cwd/schema の準備、prompt を stdin source として保存して実行する流れを確認または変更したいとき。
+- Structured Output の読み取り・JSON parse・schema validation・semantic retry の成功失敗条件を確認または変更したいとき。
+- capacity error の exponential backoff、quota error 時の代表 probe、quota 待機の共有状態、resume token 継続の挙動を確認または変更したいとき。
+- Codex call の console 出力、subcommand event、call/prompt/stdout/stderr/output log に記録される実行条件や status を確認または変更したいとき。
+- agent call 後の file access rule violation 検出、許可差分の除外、recovery call、違反時エラーを確認または変更したいとき。
+- worktree の変更 path 収集、ignored file を含む差分検出、禁止 runtime 領域の filesystem snapshot 比較、file access mode ごとの書き込み可否判定を確認または変更したいとき。
 
 ## Do not read this when
-- Codex profile の具体的な生成規則、Codex subprocess 実行 wrapper、エラー文字列判定、schema 準備、output JSON 読み取りの低レベル処理だけを確認したい場合は、それらを提供する runtime Codex profile 側を読む。
-- Codex call の結果データ構造そのものだけを確認したい場合は、結果型を定義する対象を読む。
-- subcommand log の基盤 API や console 表示 helper の実装だけを確認したい場合は、logging 側を読む。
-- AgentCallParameter、FileAccessMode、quota probe parameter、file access rule violation recovery parameter の構築仕様だけを確認したい場合は、それぞれの ACP 定義・builder 側を読む。
+- TUI 起動や exec 以外の対話 UI 分岐だけを扱うとき。
+- Codex profile、schema file、CODEX_HOME、subprocess 実行、Codex stdout/stderr 解析の低レベル helper 自体を変更したいときは、それらの runtime helper を直接読む。
+- AgentCallParameter の生成、quota probe prompt の内容、file access recovery prompt の内容を変更したいときは、対応する builder を直接読む。
+- subcommand logger の保存形式や runtime path の算出規則そのものを変更したいときは、logging/path を担当する module を直接読む。
+- oracle file や file access mode の正本定義を確認したいだけなら、対応する oracle または基本型定義を読む。
 
 ## hash
-- d8453b8ce3af444a0e15d4a555adb3795a9ab27780a2b022433ccc5f86434e90
+- 5722f125a78959ba4a6581f32394ccf6d7f25dcef7111b5d337fddb3f7e65e63
 
 # `runtime_codex_logging.py`
 
@@ -157,27 +160,24 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界で必要になる profile 生成、sandbox/cwd/write root 判定、CODEX_HOME 検査、schema 配置、実行エラー抽出、quota/capacity 判定をまとめて扱う実装。
-- FileAccessMode を Codex CLI に渡せる実行環境へ変換し、cmoc 側の読み書き禁止領域や追加 read/write path の検査を subprocess 起動前後の不変条件として集約している。
-- apply abandon のための child process tracking と、Codex JSONL stdout/stderr から利用者向け error detail や resume token を取り出す処理も同じ境界として扱う。
+- Codex CLI subprocess 境界で使う profile 生成、sandbox/cwd/read-write path 検証、CODEX_HOME 検査、schema 配置、実行エラー解釈をまとめて扱う実装。
+- apply 実行中の Codex child process tracking と、abandon が競合しないための pid file lock 操作もこの境界で扱う。
+- FileAccessMode を Codex CLI が受け取れる実行環境へ変換し、Codex JSONL stdout/stderr から capacity・quota・resume token・利用者向け error detail を読み取る入口。
 
 ## Read this when
-- Codex CLI 起動用 profile の model、reasoning effort、sandbox、writable root、cwd の決定ロジックを確認または変更する。
-- FileAccessMode と Codex CLI sandbox の対応、追加 read/write path の許可判定、oracle/realization/repo write 境界の扱いを調べる。
-- CODEX_HOME の解決、auth.json の事前検査、subprocess に渡す環境変数の扱いを変更する。
-- Codex CLI 不在時の CmocError 化、Codex JSONL の error message 抽出、capacity error や quota error の retry 判定、resume token 抽出を確認する。
-- apply 実行中の Codex child process pid 記録、pid file lock、pid 再利用検出、tracking path の process-local 切り替えを調べる。
-- Structured Output schema を runtime store へ配置する処理、または schema なし output JSON の読み取り挙動を確認する。
+- Codex CLI 起動前に渡す profile、sandbox mode、writable roots、cwd、追加 read/write path の許可判定を確認または変更したいとき。
+- CODEX_HOME の解決、認証情報の事前検査、Codex subprocess に渡す環境変数、Codex CLI 不在時のエラー化を扱うとき。
+- apply abandon 用の Codex child process 記録、pid 再利用対策、pid file lock、tracked subprocess 実行の挙動を確認したいとき。
+- Structured Output schema の hash store 配置、schema なし output JSON 読み取り、Codex JSONL error からの retry/quota/capacity 判定を変更したいとき。
 
 ## Do not read this when
-- AgentCallParameter や FileAccessMode の型定義そのものを変更したい場合は、その定義側を先に読む。
-- cmoc config の model 名や reasoning effort の設定 schema 自体を変更したい場合は、設定定義側を読む。
-- oracle 上の file access rule、codex exec rule、apply abandon、session join、tui の正本仕様を確認したい場合は、対応する oracle file を読む。
-- Codex CLI 以外の外部コマンド実行一般、git 操作一般、runtime path 計算一般を調べたいだけなら、より直接その責務を持つ実装を読む。
-- INDEX.md エントリー生成やルーティング文書そのものの規則を調べたい場合は、この実行境界ではなくルーティング規則の正本仕様を読む。
+- cmoc の file access policy 自体の正本仕様や prompt 文面を確認したいだけなら、oracle 側の file access rule や app spec を読む。
+- Codex 実行後の git diff 検査や禁止ファイル変更の post-check 実装を探しているだけなら、その責務を持つ実行後検証側へ進む。
+- 設定ファイルの model や reasoning effort の値そのものを確認したいだけなら、config 定義側を読む。
+- runtime path の保存先規約や schema store directory の定義だけを確認したい場合は、path 管理側を読む。
 
 ## hash
-- ac21157d25c8f4d7aee2d978c61cfb3629d0590f5dd7da0960961ef17aa38577
+- 396de1d26ffc5121e87965c4378e4e8fc0710ad150ff22ea77867c273d7b0e06
 
 # `runtime_codex_tui.py`
 

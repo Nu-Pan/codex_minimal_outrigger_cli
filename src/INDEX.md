@@ -61,24 +61,23 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper 群を収める実装ディレクトリ。Codex 実行、CLI ライフサイクル、設定、Git、ログ、パス、状態、INDEX.md 自動更新など、複数サブコマンドから使われる共有処理への入口になる。
-- 個別責務の runtime_* 実装に加えて、既存 import path を保つ互換入口や、共通 API をまとめて再エクスポートする集約モジュールを含む。
+- cmoc の共通ランタイム支援を集めた実装ディレクトリ。Codex 実行、CLI 共通ライフサイクル、設定、Git、ログ、パス、状態、INDEX.md 更新など、複数サブコマンドから使われる runtime_* 系 helper と、その集約入口を扱う。
+- 個別の実装責務はファイルごとに分かれており、複数 runtime API の公開入口、Codex exec/TUI 呼び出し、preflight、profile、設定永続化、content hash、共通エラー、git 操作、subcommand logging、runtime path、結果モデル、session state 管理へ進むための入口になる。
 
 ## Read this when
-- 複数サブコマンドにまたがる共通 runtime 処理の読む先を探したいとき。
-- Codex CLI/TUI 呼び出し、profile、preflight、Structured Output、quota/capacity retry、call log、file access rule 違反検出に関わる実装を確認または変更したいとき。
-- CLI サブコマンド共通の実行順序、console 出力、サブコマンドログ、エラー表示、終了コード化を調べたいとき。
-- 設定ファイル、Git 操作、runtime path、content hash、binary 判定、実行結果モデル、session state file などの共有 helper を探したいとき。
-- INDEX.md 自動更新の preflight、対象探索、entry 生成、hash 鮮度判定、Markdown 描画、並列生成、排他 lock を確認または変更したいとき。
+- CLI サブコマンド間で共有される runtime helper の所在を探したいとき。
+- Codex 呼び出し、INDEX.md 更新 preflight、Git 操作、設定読み書き、ログ、状態管理、runtime path、共通エラーなど、複数領域にまたがる共通実装の読む先を選びたいとき。
+- 特定サブコマンド固有ではなく、cmoc 全体の実行基盤や共通データ受け渡しを確認または変更したいとき。
+- 既存の `commons.runtime_codex` や `commons.cmoc_runtime` などの集約 import が、どの責務別 runtime 実装へ接続されるか確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の引数定義、利用者向け制御フロー、業務処理だけを調べたいとき。その場合は該当する command 実装へ進む。
-- oracle 上の正本仕様、path model、file access rule、INDEX.md entry standard などの仕様意図を確認したいとき。その場合は対応する oracle file を読む。
-- AgentCallParameter、FileAccessMode、設定データクラス、enum などの型定義そのものを変更したいとき。その場合は定義側を直接読む。
-- 生成済み log や state の利用者向け解析、または特定の保存物を読む側の処理だけを探しているとき。
+- 個別 CLI コマンドの引数定義、利用者向け制御フロー、コマンド固有の状態更新だけを調べたいとき。その場合は command 実装側を読む。
+- oracle file にある正本仕様、path model、file access rule、INDEX.md の仕様意図などを確認したいだけのとき。その場合は対応する oracle doc または oracle src を読む。
+- 単一 helper の引数、失敗時挙動、保存先、出力形式がすでに分かっているとき。その場合は該当する責務別 runtime 実装へ直接進む。
+- 生成済みログや永続状態の利用者視点での内容確認だけが目的で、runtime helper の実装を変更しないとき。
 
 ## hash
-- aaa13161bb01bde58287b814caf0aedfa6bce19c8129d0485023ae36a5a452c0
+- 69ffe9dbea945bea8547987fd5825d4f1e0c25c1fa8d5dd4ebbf23ec4572c6cd
 
 # `config`
 
