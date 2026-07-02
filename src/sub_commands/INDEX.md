@@ -108,26 +108,24 @@
 # `review_loop.py`
 
 ## Summary
-- review oracle の finding 収集から統合、検証、判定までの反復制御を担う実装。
-- oracle file ごとに既存 finding との関連を渡して列挙を行い、merge operation を検証して finding list に適用し、advocate/challenger の検証理由を蓄積したうえで最終 verdict と judge reason を設定する。
-- finding 内の oracle_path を絶対 path、worktree 相対 path、または path token 付き表記から解決し、対象 oracle file に紐づく finding を絞り込む処理も含む。
+- review oracle の finding を列挙し、重複整理し、検証者と擁護者の往復評価を行い、最終判定まで進めるループ処理を担う。
+- oracle path 表記を実ファイル path に解決し、finding と対象 oracle file の関連付けを行う。
+- merge finding の Structured Output edit operation を検証し、delete・replace・merge を finding list に適用する。
 
 ## Read this when
-- review oracle の enumerate、merge、validate、judge の実行順序や反復停止条件を確認したいとき。
-- review oracle が生成・更新する finding の初期値、finding_id の採番、advocate_reasons/challenger_reasons/verdict/judge_reason の扱いを変更または確認したいとき。
-- merge finding の delete、replace、merge operation の検証条件、target_ids の重複・未知 ID の扱い、置換後 finding の作り方を調べたいとき。
-- finding の oracle_path がどのように実 path に解決され、特定の oracle file に関連する finding と判定されるかを確認したいとき。
-- Codex 実行関数へ渡す review oracle 用 builder parameter、cwd、root、purpose の組み立てを追いたいとき。
+- review oracle の finding enumerate、merge、validate、judge の実行順序や反復条件を確認したいとき。
+- finding の dirty 管理、finding_id 採番、advocate/challenger/judge フィールドの初期化や更新を調べたいとき。
+- oracle_path の絶対 path、相対 path、プレースホルダ表記、oracle root alias の解決挙動を確認したいとき。
+- merge finding operation の入力検証、target_ids の重複・未知 ID 検出、delete・replace・merge の適用規則を変更またはテストしたいとき。
 
 ## Do not read this when
-- 個々の review oracle prompt や Structured Output parameter の内容を確認したいだけなら、builder 側の該当実装を読む。
-- review_oracle のループ回数など設定値の定義や読み込みを確認したいだけなら、設定モデル側を読む。
-- path token の仕様や resolve_real_path の詳細な解決規則を確認したいだけなら、path model 側を読む。
-- CLI サブコマンドとして review oracle loop がどこから呼ばれるか、引数や利用者向け入出力を確認したいだけなら、呼び出し元の sub command 実装を読む。
-- finding の内容品質や LLM 判定結果そのものを調べたい場合は、この制御実装ではなく実行ログや生成結果を確認する。
+- review oracle 用 prompt や codex 実行 parameter の文面を確認したいだけなら、builder 側の対象を読む。
+- cmoc 全体の path placeholder 定義や実 path 解決の一般仕様を確認したいだけなら、path model 側の対象を読む。
+- review oracle の反復回数など設定値の定義を確認したいだけなら、設定モデル側の対象を読む。
+- oracle file の内容そのものをレビューしたいだけで、finding ループ制御や merge operation 適用には関心がないとき。
 
 ## hash
-- b19cd10eb6d96e1d94ba9b04991f574bba4c0ba9898fd7f44625b5cdb29ecc0b
+- 72935ec2e446bd58d0781ad2ecd853617501102084f80999f492fd638c188ece
 
 # `review_report.py`
 

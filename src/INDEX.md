@@ -141,21 +141,20 @@
 # `sub_commands`
 
 ## Summary
-- CLI の各サブコマンド実行本体を集める実装領域。session、apply、review、init、indexing、tui など、利用者向けコマンドを共通 runtime や下位 helper へ接続する orchestration 層への入口になる。
-- 各領域は、コマンドごとの事前条件、root/config 解決、git・worktree・state 操作、Codex 呼び出し、report や stdout 出力までの大きな制御順序を扱い、詳細な共通処理は runtime や専用 helper へ委譲する。
-- サブコマンド単位で読む先を選ぶ分岐点であり、特定コマンドの外部挙動や実行フローを確認するときは該当する下位要素へ進む。
+- cmoc のサブコマンド実行本体を集める実装領域。init、indexing、tui、session、apply、review など、CLI から呼ばれる各コマンドの orchestration、preflight、状態遷移、git 操作、出力処理への入口になる。
+- 共通 runtime や低レベル helper そのものではなく、サブコマンド単位でどの実装へ進むべきかを選ぶための分岐点として使う。
 
 ## Read this when
-- どのサブコマンド実装が特定の CLI 挙動、状態遷移、git 操作、Codex 呼び出し、report 出力を担当しているかを切り分けたいとき。
-- session の作成・合流・破棄、apply run の開始・統合・破棄、review oracle の実行、初期化、INDEX maintenance、TUI 起動などの実行入口を探したいとき。
-- サブコマンドが共通 runtime、preflight、root/config 解決、worktree/state/helper 群へどのようにつながるかを追いたいとき。
-- CLI から起動された後の command name、argv、事前検査、成功・失敗時出力、cleanup の大枠を確認・変更したいとき。
+- cmoc の特定サブコマンドの実行フロー、事前条件、状態更新、git 操作、stdout/report 出力を確認・変更したいとき。
+- init、indexing、tui、session、apply、review のどの実装ファイルまたは下位 package を読むべきかを選びたいとき。
+- session branch、apply run、review worktree、INDEX.md maintenance、TUI 起動、初期化 commit など、サブコマンド起点の制御順序を追いたいとき。
+- サブコマンドから共通 runtime、git helper、indexing 処理、Codex 実行、report 生成、状態管理へどこで接続しているかを確認したいとき。
 
 ## Do not read this when
-- CLI parser、トップレベルのサブコマンド登録、Typer app 配線だけを確認したいときは、CLI entrypoint や routing 側を読む。
-- git 実行 wrapper、path model、state model、config、runtime、lock、ignore 判定などの低レベル共通 helper 自体を変更したいときは、該当する共通実装を直接読む。
-- oracle file と realization file の定義、path token、managed branch、各コマンドの正本仕様などを確認したいときは、実装ではなく oracle 側の該当文書を読む。
-- INDEX.md 本文生成、review finding 生成、prompt builder、report rendering、merge conflict 解決など、サブコマンド配下のさらに専用化された詳細だけを調べたいときは、その責務を持つ下位要素へ直接進む。
+- CLI parser、Typer app への登録、トップレベル command routing だけを確認したいときは、CLI entrypoint や subcommand 登録側を読む。
+- git 実行、work root 解決、config、state model、path model、cmoc ignore、clean worktree 判定などの共通 helper 自体を変更したいときは、runtime や model 側を直接読む。
+- oracle file と realization file の定義、各サブコマンドの正本仕様、managed branch や path model の仕様を確認したいときは、対応する oracle doc または oracle src を読む。
+- INDEX.md の文章生成、review finding 生成、report rendering、merge conflict 解決 prompt など、下位の専用処理だけを調べたいときは、その責務を持つ下位 module を直接読む。
 
 ## hash
-- aa475b5b45bf3169cc3cf2a86894f27614f758f7f9c74b57cd3734be150f15f3
+- 08d759318992bf4dff904ab302d22227d68528f4b6a9f170f33f7e39b5afe1fb
