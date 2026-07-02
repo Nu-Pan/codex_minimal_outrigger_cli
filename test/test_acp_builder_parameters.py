@@ -117,8 +117,7 @@ def test_file_access_rule_violation_recovery_builder_uses_no_rule_mode(
     )
 
     assert parameter.file_access_mode == FileAccessMode.NO_RULE
-    assert parameter.structured_output_schema_path is not None
-    assert parameter.structured_output_schema_path.exists()
+    assert parameter.structured_output_schema_path is None
     assert "ファイルアクセス規則違反" in parameter.prompt
 
 

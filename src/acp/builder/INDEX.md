@@ -41,23 +41,22 @@
 # `common`
 
 ## Summary
-- ファイルアクセス規則違反からの復旧に使う acp builder common 領域で、oracle 側の正本 builder への委譲、realization 側 parameter への適応、代替 schema の扱いをまとめる。
-- 互換 package の入口と、復旧結果を任意の JSON object として受け渡すための schema を含む。
+- ファイルアクセス規則違反からの復旧に使う acp builder common 領域で、oracle 側の正本 builder への委譲と realization 側 parameter への適応をまとめる。
+- 互換 package の入口と、ファイルアクセス規則違反リカバリー用 builder wrapper を含む。
 
 ## Read this when
 - ファイルアクセス規則違反の recovery 用 agent call parameter がどの領域で構築されるかを確認したいとき。
-- oracle 側 builder への委譲、oracle parameter から realization parameter への適応、schema path 不在時の fallback を調べたいとき。
-- 復旧処理の入出力データを固定項目ではなく任意の JSON object として許容している根拠を確認したいとき。
+- oracle 側 builder への委譲と、oracle parameter から realization parameter への適応を調べたいとき。
 - acp builder common 領域で oracle 側との互換 package の入口や import 経路を確認したいとき。
 
 ## Do not read this when
 - ファイルアクセス規則そのものの定義、違反判定ロジック、復旧手順、エラーメッセージを調べたいとき。
 - AgentCallParameter や FileAccessMode の基本構造を調べたいとき。
-- oracle 側の正本 builder が生成する具体的な prompt 内容や schema 内容を確認したいとき。
+- oracle 側の正本 builder が生成する具体的な prompt 内容を確認したいとき。
 - builder common 配下の復旧 builder 以外の具体的な個別処理を調べたいとき。
 
 ## hash
-- e71d435c791cd3da013ac21b3b3a31ca6c0be0144db59e9ba1645d2df7efde62
+- b65260087e68c3d9186ca49711d6d214f242cdcbd63335950c566aee5cab5780
 
 # `indexing`
 

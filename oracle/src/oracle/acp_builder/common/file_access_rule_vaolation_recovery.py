@@ -74,5 +74,5 @@ def build_file_access_rule_vaolation_recovery_parameter(
         ReasoningEffort.MEDIUM,
         FileAccessMode.NO_RULE,
         render_as_markdown(prompt),
-        Path(__file__).with_suffix(".json"),
+        None,
     )

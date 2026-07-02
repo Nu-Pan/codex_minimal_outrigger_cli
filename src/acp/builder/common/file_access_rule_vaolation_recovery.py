@@ -27,20 +27,10 @@ def build_file_access_rule_vaolation_recovery_parameter(
         build_file_access_rule_vaolation_recovery_parameter as build_oracle_parameter,
     )
 
-    parameter = adapt_oracle_parameter(
+    return adapt_oracle_parameter(
         build_oracle_parameter(
             violated_agent_call_log,
             violated_file_list,
             violated_file_access_mode,
         )
     )
-    schema_path = parameter.structured_output_schema_path
-    if schema_path is not None and not schema_path.exists():
-        return AgentCallParameter(
-            parameter.model_class,
-            parameter.reasoning_effort,
-            parameter.file_access_mode,
-            parameter.prompt,
-            Path(__file__).with_suffix(".json"),
-        )
-    return parameter
