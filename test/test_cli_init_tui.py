@@ -68,6 +68,10 @@ def test_subcommand_log_identifies_invoked_cli_command(
     assert invoked["event"] == "command_invoked"
     assert invoked["command"] == "init"
     assert invoked["argv"] == ["cmoc", "init"]
+    step_names = [
+        event["step"] for event in events if event["event"] == "step_started"
+    ]
+    assert step_names == ["start init", "run init", "complete init"]
 
 
 def test_init_commits_agents_gitkeep_when_agents_has_no_tracked_files(

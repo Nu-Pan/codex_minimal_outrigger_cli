@@ -17,6 +17,7 @@ ConfigKey = TypeVar("ConfigKey", ModelClass, ReasoningEffort)
 
 
 def config_to_dict(config: CmocConfig) -> dict[str, Any]:
+    """正本 config 型を、永続化 JSON の object 境界へ変換する。"""
     return {
         "num_parallel": config.num_parallel,
         "codex": {
@@ -51,6 +52,7 @@ def _enum_str_map_from_dict(
     data: Any,
     key_type: type[ConfigKey],
 ) -> dict[ConfigKey, str]:
+    """enum key の JSON 表現を、既定値補完済みの runtime map へ戻す。"""
     restored = dict(default)
     if not isinstance(data, dict):
         return restored
@@ -64,6 +66,7 @@ def _enum_str_map_from_dict(
 
 
 def config_from_dict(data: dict[str, Any]) -> CmocConfig:
+    """永続化 JSON object から、不足項目を既定値で補った config を復元する。"""
     default = CmocConfig()
     try:
         codex_data = data.get("codex", {})
@@ -137,6 +140,7 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
 
 
 def write_config(path: Path, config: CmocConfig) -> None:
+    """config JSON を人間が確認しやすい安定した表現で保存する。"""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(config_to_dict(config), ensure_ascii=False, indent=2) + "\n"
@@ -144,6 +148,7 @@ def write_config(path: Path, config: CmocConfig) -> None:
 
 
 def load_config(root: Path) -> CmocConfig:
+    """既存 config JSON を読み、利用者向け error 境界で config に復元する。"""
     path = config_path(root)
     if not path.exists():
         raise CmocError(
@@ -169,6 +174,7 @@ def load_config(root: Path) -> CmocConfig:
 
 
 def sync_config(root: Path) -> CmocConfig:
+    """未作成なら既定 config を生成し、既存 config も現在の形へ書き戻す。"""
     path = config_path(root)
     if path.exists():
         config = load_config(root)

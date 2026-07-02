@@ -17,6 +17,8 @@ _CURRENT_SUBCOMMAND_LOGGER: ContextVar["SubcommandLogger | None"] = ContextVar(
 
 @dataclass
 class StepTiming:
+    """console summary と log event が共有する step timing の実測単位。"""
+
     index: str
     description: str
     started_at: float
@@ -57,16 +59,25 @@ class SubcommandLogger:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
             f.flush()
 
-    def start_step(self, index: str, description: str) -> None:
+    def start_step(
+        self, index: str, description: str, log_description: str | None = None
+    ) -> None:
         """完了サマリー用の step 実測値を開始 event と同じ単位で保持する。
 
         根拠: <work-root>/oracle/doc/app_spec/console_and_file_log.md
+        `<work-root>/oracle/doc/dev_rule/coding_rule.md` が log message を英語に
+        限るため、console 表示名と JSON Lines の step 名は分けられる。
         """
         self.finish_current_step()
         self.step_timings.append(StepTiming(index, description, time.perf_counter()))
-        self.event("step_started", step=description, step_index=index)
+        self.event(
+            "step_started",
+            step=log_description or description,
+            step_index=index,
+        )
 
     def finish_current_step(self) -> None:
+        """進行中 step があれば終了時刻を一度だけ記録する。"""
         if self.step_timings and self.step_timings[-1].elapsed_sec is None:
             step = self.step_timings[-1]
             step.elapsed_sec = time.perf_counter() - step.started_at

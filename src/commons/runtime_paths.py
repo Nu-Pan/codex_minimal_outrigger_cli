@@ -19,6 +19,7 @@ from oracle.other.path_model import (
 
 
 def repo_root(cwd: Path | None = None) -> Path:
+    """cmoc の実行前提に合う repository root を runtime error として解決する。"""
     try:
         return _resolve_repo_root(cwd)
     except ValueError as exc:
@@ -30,6 +31,7 @@ def repo_root(cwd: Path | None = None) -> Path:
 
 
 def work_root(cwd: Path | None = None) -> Path:
+    """cmoc の実行前提に合う worktree root を runtime error として解決する。"""
     try:
         return _resolve_work_root(cwd)
     except ValueError as exc:
@@ -41,14 +43,17 @@ def work_root(cwd: Path | None = None) -> Path:
 
 
 def timestamp() -> str:
+    """file name に使う衝突しにくい実行時刻表記を返す。"""
     return datetime.now().strftime("%Y-%m-%d_%H-%M_%S_%f000")
 
 
 def console_timestamp() -> str:
+    """利用者向け console 表示用にミリ秒までの時刻表記を返す。"""
     return datetime.now().strftime("%Y/%m/%d %H:%M:%S.%f")[:-3]
 
 
 def format_duration(seconds: float) -> str:
+    """ログと console の duration 表示を丸めず 0.1 秒単位へそろえる。"""
     total_tenths = int(seconds * 10)
     hours = total_tenths // 36000
     minutes = (total_tenths % 36000) // 600
@@ -59,30 +64,37 @@ def format_duration(seconds: float) -> str:
 
 
 def sessions_dir(root: Path) -> Path:
+    """session state の保存先 directory を返す。"""
     return root / ".cmoc" / "sessions"
 
 
 def reports_dir(root: Path, command: str) -> Path:
+    """サブコマンド別 report 保存先 directory を返す。"""
     return root / ".cmoc" / "reports" / command
 
 
 def logs_dir(root: Path) -> Path:
+    """サブコマンド log 保存先 directory を返す。"""
     return root / ".cmoc" / "log" / "sub_command"
 
 
 def worktrees_dir(root: Path) -> Path:
+    """cmoc 管理 worktree の保存先 directory を返す。"""
     return root / ".cmoc" / "worktrees"
 
 
 def codex_log_dir(root: Path) -> Path:
+    """Codex call log 保存先 directory を返す。"""
     return root / ".cmoc" / "log" / "codex"
 
 
 def schema_store_dir(root: Path) -> Path:
+    """Structured Output schema store directory を返す。"""
     return root / ".cmoc" / "state" / "schema"
 
 
 def config_path(root: Path) -> Path:
+    """cmoc config JSON の保存 path を返す。"""
     return root / ".cmoc" / "config.json"
 
 
@@ -95,6 +107,7 @@ def is_root_memo(root: Path, path: Path) -> bool:
 
 @contextmanager
 def pushd(path: Path) -> Iterator[None]:
+    """外部 API が cwd 前提を持つ短い区間だけ作業 directory を差し替える。"""
     previous = Path.cwd()
     os.chdir(path)
     try:
@@ -104,6 +117,7 @@ def pushd(path: Path) -> Iterator[None]:
 
 
 def cmoc_root() -> Path:
+    """cmoc 自身の repository root を runtime error として解決する。"""
     try:
         return resolve_real_path(RootPathPlaceHolder.CMOC)
     except ValueError as exc:

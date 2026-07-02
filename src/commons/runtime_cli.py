@@ -56,10 +56,12 @@ def run_cli_subcommand(
         logger = SubcommandLogger(log_root, name)
         logger_token = set_current_subcommand_logger(logger)
         logger.event("command_invoked", argv=list(command_argv or [name]))
-        logger.start_step(f"1/{total_steps}", f"開始 {name}")
+        logger.start_step(f"1/{total_steps}", f"開始 {name}", f"start {name}")
         typer.echo(f"# {console_timestamp()} (1/{total_steps}) 開始 {name}")
         typer.echo(f"- サブコマンドログ: `{logger.path}`")
-        logger.start_step(f"{total_steps - 1}/{total_steps}", f"実行 {name}")
+        logger.start_step(
+            f"{total_steps - 1}/{total_steps}", f"実行 {name}", f"run {name}"
+        )
         typer.echo(
             f"# {console_timestamp()} ({total_steps - 1}/{total_steps}) 実行 {name}"
         )
@@ -70,7 +72,9 @@ def run_cli_subcommand(
         else:
             returncode = impl_result if isinstance(impl_result, int) else 0
             result_stdout = None
-        logger.start_step(f"{total_steps}/{total_steps}", f"完了 {name}")
+        logger.start_step(
+            f"{total_steps}/{total_steps}", f"完了 {name}", f"complete {name}"
+        )
         logger.finish_current_step()
         logger.event(
             "command_finished",
@@ -87,7 +91,9 @@ def run_cli_subcommand(
         raise
     except BaseException as exc:
         if logger:
-            logger.start_step(f"{total_steps}/{total_steps}", f"完了 {name}")
+            logger.start_step(
+                f"{total_steps}/{total_steps}", f"完了 {name}", f"complete {name}"
+            )
             logger.finish_current_step()
             logger.event(
                 "command_finished",
