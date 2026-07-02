@@ -101,6 +101,18 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
                 "oracle file は書き込み禁止",
                 # realization file は書き込み許可
             ]
+        case FileAccessMode.INDEX_WRITE:
+            #
+            deny_rule = [
+                *base_deny_rule,
+                "`<work-root>/.git` ツリー内は書き込み禁止",
+                "`<work-root>/.agents` ツリー内は書き込み禁止",
+                "`<work-root>/.codex` ツリー内は書き込み禁止",
+                "`AGENTS.md` は書き込み禁止",
+                # `INDEX.md` は書き込み許可
+                "oracle file は書き込み禁止",
+                "realization file は読み書き禁止",
+            ]
         case FileAccessMode.NO_RULE:
             # `build_complete_prompt` によるアクセス規則文面が生成されない
             # 特殊文面を個別に構築する用の特別モードで、よほどのことがない限り使ってはいけない

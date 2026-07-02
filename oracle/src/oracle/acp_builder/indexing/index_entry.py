@@ -35,7 +35,7 @@ def build_indexing_index_entry_parameter(
         role="- あなたはソフトウェアリポジトリのルーティング文書作成担当です",
         summary="- `<target-path>` の `INDEX.md` 用エントリーを生成すること",
         goal="- 指定された Structured Output schema に従ってエントリーを返すこと",
-        file_access_mode=FileAccessMode.READONLY,
+        file_access_mode=FileAccessMode.INDEX_WRITE,
         aux_dynamic_prompt=[
             StructDoc(
                 "エントリー生成規則",
@@ -62,7 +62,7 @@ def build_indexing_index_entry_parameter(
     return AgentCallParameter(
         ModelClass.EFFICIENCY,
         ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
+        FileAccessMode.INDEX_WRITE,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),
     )
