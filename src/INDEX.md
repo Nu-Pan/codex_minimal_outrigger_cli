@@ -61,24 +61,23 @@
 # `commons`
 
 ## Summary
-- cmoc の共通実行時支援を集めた実装領域。Codex 呼び出し、INDEX 更新、CLI 共通ライフサイクル、設定、内容 hash、エラー表示、Git、ログ、パス、実行結果、session state など、複数サブコマンドから共有される runtime helper と互換 import 入口を扱う。
+- cmoc の共通 runtime helper 群を集める実装領域。Codex 実行、CLI 共通処理、設定、Git、ログ、パス、状態、INDEX.md 更新など、複数サブコマンドから使われる横断的な処理への入口になる。
+- 集約 import 入口と責務別 runtime 実装が同階層に並び、個別挙動を調べる場合は該当する runtime_* 実装へ進むための階層である。
 
 ## Read this when
-- 複数のサブコマンドや上位処理から使われる共通 runtime API の所在を探したいとき。
-- Codex exec/TUI 呼び出し、preflight、profile、quota/capacity、call log、file access rule 事後検査など、Codex 実行境界の共通処理を確認または変更したいとき。
-- INDEX.md 自動更新の走査、除外判定、既存エントリー再利用、hash 鮮度判定、エントリー生成依頼、Markdown 描画を扱う実装を探すとき。
-- CLI サブコマンド共通の開始・完了表示、終了コード化、例外表示、サブコマンドログ、current logger、独自 stdout 契約を確認したいとき。
-- 設定ファイル、内容 hash 保存、binary 判定、利用者向けエラーレポート、Git 操作、runtime path、実行結果モデル、session state 永続化など、特定の共通 helper 領域へ進む入口を選びたいとき。
+- 複数の CLI サブコマンドや agent call 実行経路から共有される runtime 処理の所在を探したいとき。
+- Codex exec/TUI 起動、profile、preflight、call log、Structured Output、quota/capacity retry、file access rule 違反検出など Codex 呼び出し周辺の共通実装を確認したいとき。
+- CLI 共通ライフサイクル、利用者向けエラー表示、Git 操作、設定ファイル、runtime path、ログ、結果モデル、session state などの共通処理を変更する対象を選びたいとき。
+- INDEX.md 自動更新の preflight、対象走査、既存エントリー再利用、hash 鮮度判定、Codex へのエントリー生成依頼を扱う実装へ進みたいとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の引数定義、利用者向け制御フロー、業務処理だけを調べたいときは、サブコマンド側の実装へ進む。
-- oracle file、realization file、path placeholder、INDEX.md、session state などの正本仕様意図を確認したいだけなら、対応する oracle doc または oracle src を読む。
-- 設定データクラス、agent call parameter、file access mode、model class などの型定義そのものを確認したいだけなら、それを定義する領域を読む。
-- プロンプト文面、Structured Output schema の正本、quota probe prompt など、人間意図を保持する入力文面や schema を変更したいだけなら、プロンプト構築側または正本仕様側を先に読む。
-- 生成済みログの解析、個別利用箇所で渡す引数、上位 workflow の状態更新条件だけを知りたいときは、その読み取り側または呼び出し元へ直接進む。
+- 個別サブコマンドの引数定義、利用者向け制御フロー、サブコマンド固有の状態更新だけを調べたいとき。その場合はサブコマンド実装側へ進む。
+- oracle file にある正本仕様、path model、file access rule、INDEX.md エントリー標準などの仕様意図を確認したいとき。その場合は対応する oracle doc または oracle src を読む。
+- 共通 runtime helper を使う側の業務ロジックだけを変更したいとき。呼び出し元の実装を先に読み、共通挙動を変える必要がある場合だけこの階層へ進む。
+- 生成済みログ、状態ファイル、設定ファイルなどの実データを調査したいだけのとき。この階層はそれらを読み書きする実装を扱う。
 
 ## hash
-- 84d7662749690dff5a6d49bc554c791b4702b1f306e726ba370d0fc877649aed
+- 75c4be2394933baceda860ab1abe2e509d4027c1552cedf502b3c2c5775c34be
 
 # `config`
 

@@ -131,25 +131,26 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder 解決、repo/run/work root 判定、config 既定値と検証、CmocError の表示、CLI error の stdout report、subcommand log、worktree 作成・削除の安全性、FileAccessMode から sandbox/Codex profile への変換、binary 判定など、個別サブコマンドより下位の共通実行前提を扱う。
-- 共通 fixture と root 状態を共有する runtime 回帰テスト群としてまとまっており、runtime 境界の変更時に関連挙動をまとめて確認する入口になる。
+- cmoc の共通 runtime 契約を横断的に固定する回帰テスト。root placeholder 解決、linked worktree と run/work root、config 既定値と不正値、CmocError の Markdown 表示、CLI error の stdout 出力、subcommand log、`.cmoc` ignore、FileAccessMode と Codex sandbox/profile、状態 branch 解析、binary 判定など、個別サブコマンドより下位の実行前提をまとめて検証する。
+- 16,000 文字を超えるが、共通 fixture と root 状態を共有する basic runtime 回帰として凝集しているため、runtime 境界の変更時に一括で確認する入口になる。
 
 ## Read this when
-- root placeholder、repo root、run root、work root、linked worktree の扱いを変更・調査するとき。
-- CmocError、render_error、CLI 引数解析 error、想定済み CLI error の stdout/stderr 挙動を変更・調査するとき。
-- subcommand log の生成条件、timestamp 衝突時の扱い、preflight 失敗時の副作用抑制を確認するとき。
-- config の既定値、codex model/reasoning effort 名の検証、FileAccessMode の永続化値や sandbox mode 変換を変更するとき。
-- Codex profile の writable roots、extra writable paths、oracle/memo/runtime path の許可境界、session join conflict の書き込み許可を変更するとき。
-- worktree 作成・削除の対象 path 安全性、`.cmoc` ignore 追加、binary 判定の読み取り範囲、duration 表示形式を変更するとき。
+- root path placeholder、repo root、run root、work root、linked worktree 判定の挙動を変更・確認する。
+- CmocError、render_error、CLI parse error、preflight error、stdout/stderr の扱い、起動 wrapper の call stack 表示を変更・確認する。
+- CmocConfig、config_from_dict、model class、reasoning effort の既定値や検証を変更・確認する。
+- SubcommandLogger、sub_command log の作成条件、timestamp 衝突時の log file 命名を変更・確認する。
+- FileAccessMode、sandbox mode、Codex profile の writable roots、extra writable paths、oracle/memo/runtime path の許可境界を変更・確認する。
+- session/apply branch から session id や state を読む制御、壊れた branch 名の拒否条件を変更・確認する。
+- `.cmoc` の `.gitignore` 反映、binary 判定、duration 表示など、basic runtime の小さな共通契約を変更・確認する。
 
 ## Do not read this when
-- 個別サブコマンド固有の利用者フロー、出力 schema、分岐ロジックだけを確認したいとき。
-- oracle file の記述方針や正本仕様断片そのものを確認したいとき。
-- runtime 共通契約に触れない UI、prompt 文面、agent call の内容生成、ドメイン固有処理だけを変更するとき。
-- 単体 helper の内部実装だけを読めば十分で、外部挙動や CLI/runtime 境界の回帰確認が不要なとき。
+- 個別サブコマンド固有の business logic、入出力、状態遷移だけを確認したい場合。
+- oracle file の正本仕様本文を確認したい場合。
+- runtime 境界ではなく、UI 文言、prompt 生成、agent orchestration の詳細実装だけを変更したい場合。
+- 特定 helper の内部実装だけを局所的に読む方が十分で、外部 runtime 契約の回帰観点が不要な場合。
 
 ## hash
-- 778f89bb68663ab3549fc9e4590652c9297c8d774d72e8da13f1547c73be03ef
+- d92362e43d75af5536da073c4db1b78162a37b880c657b801a244393e77db113
 
 # `test_cli_init_tui.py`
 
@@ -173,24 +174,21 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 呼び出しランタイムの実行系を、実際の Codex バイナリを小さな Python 実行ファイルで置き換えて検証するテスト群。
-- exec と TUI の起動引数、作業ディレクトリ、生成プロファイル、標準入力、出力回収、schema 保存先、呼び出しログ、Codex CLI 不在時や非ゼロ終了時のエラー報告を扱う。
-- ファイルアクセスモードごとの sandbox 設定、許可外差分の検出、oracle 書き込み違反からの再実行回復、session join 用の例外的な書き込み許可、apply process tracking の分離を検証する。
+- Codex CLI/TUI 呼び出し実行層の realization test。Codex subprocess のプロセスグループ分離、apply tracking 環境変数の遮断、profile 生成、cwd と sandbox 設定、schema state 配置、ファイルアクセス違反検出、再実行による回復、エラー表示を検証する。
+- fake `codex` 実行ファイルと一時 git repo を使い、`run_codex_exec`、`run_codex_tui`、`run_codex_subprocess`、`run_tracked_codex_subprocess` の外部挙動を確認する入口。
 
 ## Read this when
-- Codex exec/TUI 呼び出しの subprocess 起動方法、引数構築、プロファイル生成、作業ディレクトリ選択、標準入力や出力ファイルの扱いを変更する時。
-- FileAccessMode に応じた read-only、workspace-write、writable_roots、pure oracle read、linked worktree の挙動を確認または変更する時。
-- Codex 呼び出し後の禁止領域差分検出、oracle 書き込み違反の回復、extra read/write path の許可判定、session join conflict の許可範囲を扱う時。
-- Codex CLI が見つからない場合、TUI が非ゼロ終了した場合、または apply process tracking 環境変数や専用 process group の扱いに関する失敗挙動を確認する時。
+- Codex runtime が生成する CLI 引数、profile TOML、`CODEX_HOME`、`--cd`、`--output-schema`、prompt stdin、call log の挙動を変更する時。
+- FileAccessMode ごとの read/write 許可、oracle・memo・`.agents`・ignored file・linked worktree に関するアクセス制御や違反後の回復処理を変更する時。
+- Codex CLI/TUI が存在しない場合、非ゼロ終了した場合、または subprocess tracking に関するエラー処理を変更する時。
 
 ## Do not read this when
-- CLI コマンドのユーザー向け引数、設定ファイル形式、通常の repository 操作など、Codex ランタイム起動の外側にある機能だけを変更する時。
-- Codex subprocess を起動せずに完結する純粋な path helper、git helper、設定 loader などの単体挙動だけを確認したい時。
-- LLM の応答品質、プロンプト本文の生成規則、または oracle 文書そのものの仕様内容を検証したい時。
-- テスト支援関数や fixture の実装詳細だけを探している場合で、呼び出しランタイムの外部挙動を確認する必要がない時。
+- agent call parameter の値オブジェクト自体、model class、reasoning effort、file access mode の定義だけを確認したい時は、その定義元を読む。
+- runtime 実装の内部構造を先に理解したい時は、対応する `commons.runtime_codex` や `commons.runtime_codex_profile` の実装を読む。
+- Codex runtime 以外の CLI command、設定読み込み、oracle 文書生成、INDEX.md 生成のテストを探している時。
 
 ## hash
-- d9fc9fe1b32cb6898890a83f218485695799d77661c231dafe8a3e7b511d7033
+- ef935689e8b3213e16b992f8de0debb9023b4645d8524716f677563f8f91a718
 
 # `test_codex_runtime_home.py`
 
