@@ -167,22 +167,22 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行/TUI 呼び出しの runtime 挙動を検証する pytest 群。プロファイル生成、作業ディレクトリ、sandbox writable roots、schema 出力先、prompt/stdin、process group、Codex CLI 欠落・非ゼロ終了時のエラー化を扱う。
-- agent call 後のファイルアクセス規則チェックとリカバリを重点的に検証する。readonly/realization write/repo write/pure oracle read の各 mode で、oracle・memo・.agents・cache・ignored file・preexisting diff・session join conflict target の扱いを確認する。
+- Codex CLI 実行/TUI 呼び出しのランタイム挙動を検証するテスト群。プロファイル生成、作業ディレクトリ、標準入力、出力取得、schema 状態の配置、プロセスグループ追跡、呼び出しログ、CLI 不在や非ゼロ終了時のエラー報告を扱う。
+- ファイルアクセスモードごとの許可・禁止差分を、呼び出し後検査とリカバリの観点から確認する。oracle、realization、runtime 管理領域、git 管理領域、ignored cache、linked worktree、追加 read/write path の境界を検証する。
 
 ## Read this when
-- Codex CLI の exec/TUI 起動引数、cwd、CODEX_HOME profile、sandbox 設定、schema 保存先、prompt 入力経路の外部挙動を変更・確認する時。
-- agent call 後の差分検査、ファイルアクセス規則違反の検出、違反後の再実行リカバリ、preexisting forbidden diff の扱いを変更・確認する時。
-- FileAccessMode ごとの許可領域、ignored/cache/venv など一時・追跡対象外ファイルの許容条件、pure oracle read の oracle cwd 制限を確認する時。
-- run_codex_subprocess、run_tracked_codex_subprocess、run_codex_exec、run_codex_tui の失敗時エラー表示や Codex CLI 欠落時の扱いを変更する時。
+- Codex CLI を起動する runtime 層の外部挙動、引数、環境、プロファイル、cwd、stdin/stdout、ログ出力を変更する。
+- ファイルアクセス規則違反の検出、リカバリ再実行、preexisting diff の扱い、ignored file や一時 cache の扱いを変更する。
+- READONLY、REALIZATION_WRITE、REPO_WRITE、PURE_ORACLE_READ の許可領域や linked worktree 上の挙動を変更する。
+- Codex CLI/TUI の失敗時メッセージ、missing CLI のエラー、subprocess wrapper、apply process tracking の扱いを変更する。
 
 ## Do not read this when
-- Codex runtime ではなく、agent call parameter や file access mode enum そのものの定義だけを確認したい時。
-- Codex CLI 呼び出しを伴わない path model、oracle/realization 分類、INDEX.md 生成規則の仕様を確認したい時。
-- 個別サブコマンドの業務ロジックや、Codex 以外の外部プロセス実行テストを探している時。
+- agent call parameter の値オブジェクトや enum 自体の仕様だけを確認したい場合。
+- Codex runtime を経由しない通常の CLI command、git 操作、設定読み込みの挙動だけを変更する場合。
+- oracle 文書や realization 実装の一般的なルーティング規則を確認したいだけで、Codex CLI 呼び出し時の runtime 境界に触れない場合。
 
 ## hash
-- 1d305db09decf48eb4698cf81b39f0819f1771a5484b0336a40c6e38cffa33e8
+- cd4e803a9baf191dc2514724f076c613a231f626fffa2a67b39756f997e1110d
 
 # `test_codex_runtime_home.py`
 
