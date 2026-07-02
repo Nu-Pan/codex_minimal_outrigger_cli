@@ -340,6 +340,7 @@ def run_codex_exec(
         run_stdout_path: Path,
         run_stderr_path: Path,
         run_output_path: Path,
+        run_schema_path: Path | None = schema_path,
     ) -> CodexExecResult:
         output_text = run_output_path.read_text() if run_output_path.exists() else ""
         return CodexExecResult(
@@ -354,7 +355,7 @@ def run_codex_exec(
             codex_home=codex_home,
             profile_name=profile_name,
             profile_path=profile_path,
-            schema_path=schema_path,
+            schema_path=run_schema_path,
             elapsed_sec=time.perf_counter() - call_started_at,
             quota_wait_sec=quota_wait_sec,
             quota_polls=quota_polls,
@@ -382,6 +383,28 @@ def run_codex_exec(
             allowed_paths=allowed_paths,
             forbidden_baseline=forbidden_baseline,
             worktree_diff_baseline=worktree_diff_baseline,
+        )
+
+    def recover_call_file_access_violations(
+        result: subprocess.CompletedProcess[str],
+        *,
+        run_call_path: Path,
+        run_prompt_path: Path,
+        run_stdout_path: Path,
+        run_stderr_path: Path,
+        run_output_path: Path,
+        run_schema_path: Path | None = schema_path,
+    ) -> None:
+        recover_terminal_file_access_violations(
+            codex_exec_result_from_paths(
+                result,
+                run_call_path=run_call_path,
+                run_prompt_path=run_prompt_path,
+                run_stdout_path=run_stdout_path,
+                run_stderr_path=run_stderr_path,
+                run_output_path=run_output_path,
+                run_schema_path=run_schema_path,
+            )
         )
 
     semantic_attempts = 0
@@ -482,8 +505,24 @@ def run_codex_exec(
                         if logger is not None:
                             logger.add_quota_wait(waited_sec)
                         if _QUOTA_PROBE_ERROR is not None:
+                            recover_call_file_access_violations(
+                                result,
+                                run_call_path=call_path,
+                                run_prompt_path=prompt_path,
+                                run_stdout_path=stdout_path,
+                                run_stderr_path=stderr_path,
+                                run_output_path=output_path,
+                            )
                             raise _QUOTA_PROBE_ERROR
                         if not _QUOTA_PROBE_AVAILABLE:
+                            recover_call_file_access_violations(
+                                result,
+                                run_call_path=call_path,
+                                run_prompt_path=prompt_path,
+                                run_stdout_path=stdout_path,
+                                run_stderr_path=stderr_path,
+                                run_output_path=output_path,
+                            )
                             raise CmocError(
                                 "Codex CLI quota 待機の代表 probe が中断しました。",
                                 [
@@ -510,6 +549,14 @@ def run_codex_exec(
                             max_quota_polls is not None
                             and quota_polls >= max_quota_polls
                         ):
+                            recover_call_file_access_violations(
+                                result,
+                                run_call_path=call_path,
+                                run_prompt_path=prompt_path,
+                                run_stdout_path=stdout_path,
+                                run_stderr_path=stderr_path,
+                                run_output_path=output_path,
+                            )
                             raise CmocError(
                                 "Codex CLI quota が枯渇しました。",
                                 [
@@ -615,6 +662,15 @@ def run_codex_exec(
                             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
                             # A probe is still `codex exec`; non-quota failure is
                             # not recoverable by waiting for quota reset.
+                            recover_call_file_access_violations(
+                                poll,
+                                run_call_path=probe_call_path,
+                                run_prompt_path=probe_prompt_path,
+                                run_stdout_path=probe_stdout_path,
+                                run_stderr_path=probe_stderr_path,
+                                run_output_path=probe_output_path,
+                                run_schema_path=None,
+                            )
                             raise CmocError(
                                 "Codex CLI quota availability probe が失敗しました。",
                                 ["stderr/stdout log を確認して原因を解消してください。"],

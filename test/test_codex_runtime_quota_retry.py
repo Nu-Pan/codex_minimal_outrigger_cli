@@ -464,6 +464,119 @@ def test_quota_probe_non_quota_failure_fails_immediately(
     assert "profile is broken" in codex_events[1]["error"]
 
 
+def test_quota_poll_limit_recovers_failed_call_file_access_violation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    calls = tmp_path / "quota_limit_recovery_calls.jsonl"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"calls = pathlib.Path({str(calls)!r})",
+            "args = sys.argv[1:]",
+            "stdin = sys.stdin.read()",
+            "with calls.open('a') as f: f.write(json.dumps({'stdin': stdin}) + '\\n')",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "if stdin == 'prompt':",
+            "    pathlib.Path('src').mkdir(exist_ok=True)",
+            "    pathlib.Path('src/blocked.py').write_text('blocked\\n')",
+            "    print(json.dumps({'type':'thread.started','thread_id':'sess-1'}))",
+            "    print(json.dumps({'type':'error','message':'Quota exceeded'}))",
+            "    sys.exit(1)",
+            "pathlib.Path('src/blocked.py').unlink(missing_ok=True)",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+    )
+
+    with pytest.raises(CmocError, match="quota"):
+        run_codex_exec(
+            parameter,
+            root=root,
+            quota_poll_interval_sec=0,
+            max_quota_polls=0,
+            config=CmocConfig(),
+        )
+
+    call_records = [json.loads(line) for line in calls.read_text().splitlines()]
+    assert len(call_records) == 2
+    assert call_records[0]["stdin"] == "prompt"
+    assert "ファイルアクセス規則違反" in call_records[1]["stdin"]
+    assert not (root / "src" / "blocked.py").exists()
+
+
+def test_quota_probe_failure_recovers_probe_file_access_violation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    stub_codex_profile(tmp_path, monkeypatch)
+    monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
+    probe_prompt = stub_quota_probe_builder(monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    calls = tmp_path / "probe_failure_recovery_calls.jsonl"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"calls = pathlib.Path({str(calls)!r})",
+            "args = sys.argv[1:]",
+            "stdin = sys.stdin.read()",
+            "with calls.open('a') as f: f.write(json.dumps({'stdin': stdin}) + '\\n')",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "if stdin == 'prompt':",
+            "    print(json.dumps({'type':'thread.started','thread_id':'sess-1'}))",
+            "    print(json.dumps({'type':'error','message':'Quota exceeded'}))",
+            "    sys.exit(1)",
+            f"if stdin == {probe_prompt!r}:",
+            "    pathlib.Path('src').mkdir(exist_ok=True)",
+            "    pathlib.Path('src/probe.py').write_text('blocked\\n')",
+            "    print(json.dumps({'type':'error','message':'profile is broken'}))",
+            "    sys.exit(2)",
+            "pathlib.Path('src/probe.py').unlink(missing_ok=True)",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+    )
+
+    with pytest.raises(CmocError, match="quota availability probe"):
+        run_codex_exec(
+            parameter,
+            root=root,
+            quota_poll_interval_sec=0,
+            max_quota_polls=1,
+            config=CmocConfig(),
+        )
+
+    call_records = [json.loads(line) for line in calls.read_text().splitlines()]
+    assert [record["stdin"] for record in call_records[:2]] == ["prompt", probe_prompt]
+    assert len(call_records) == 3
+    assert "ファイルアクセス規則違反" in call_records[2]["stdin"]
+    assert not (root / "src" / "probe.py").exists()
+
+
 def test_run_codex_exec_uses_single_representative_quota_probe(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
