@@ -165,20 +165,21 @@
 # `test`
 
 ## Summary
-- cmoc の realization test をまとめるディレクトリ。CLI サブコマンド、Codex runtime、prompt builder、ACP builder、packaged import、StructDoc rendering など、実装の外部挙動と共通実行前提を検証する入口になる。
-- apply/session/indexing/review oracle/init/TUI/Codex 実行層などの機能別テストと、テスト用 Git repo・Codex home・fake executable などの共通補助関数を同階層に置き、変更対象に応じて該当テストへ進むための上位ルーティングを担う。
+- CLI 外部挙動、runtime 契約、Codex 実行層、ACP builder、prompt rendering、indexing、review oracle、session/apply 系サブコマンドを検証する realization test 群を収める。
+- 一時 Git リポジトリや fake Codex 実行を使う共通補助と、各機能の状態遷移・出力・終了コード・git 副作用・回復処理を確認するテストへの入口になる。
+- 実装変更後に、対象機能の回帰観点と既存テストの配置を選ぶためのルーティング対象である。
 
 ## Read this when
-- cmoc の実装変更後に、どの realization test が外部挙動・状態遷移・git 副作用・prompt/schema 契約を検証しているかを探すとき。
-- apply fork/join/abandon、session fork/join/abandon、indexing、review oracle、init/TUI、Codex runtime の CLI 境界テストへ進む入口を探すとき。
-- ACP builder、prompt parts、packaged import、StructDoc markdown rendering など、CLI 本体より下位の builder/import/rendering 契約を検証するテストを探すとき。
-- 一時 Git リポジトリ、Codex home、fake Codex/Python executable、apply worktree path など、CLI テスト共通 fixture や helper の置き場を確認したいとき。
+- CLI サブコマンド、Codex runtime、ACP builder、prompt builder、indexing、review oracle、session/apply の外部挙動を変更し、対応する realization test を探すとき。
+- 終了コード、標準出力、report、state file、branch/worktree cleanup、merge/conflict、file access mode、Codex profile/call log など、利用者や orchestration から観測される挙動の期待値を確認するとき。
+- 一時 Git リポジトリ、CODEX_HOME、fake executable、profile 差し替えなど、CLI テスト用 fixture や補助関数を使う・変更するとき。
+- oracle source や prompt/schema を参照する builder/import 境界が、realization 側のテストでどう固定されているか確認するとき。
 
 ## Do not read this when
-- oracle file の正本仕様、oracle/realization 標準、routing 規則そのものを確認したい場合は、oracle 側の文書を読む。
-- 実装内部の関数分割、型定義、低レベル helper の詳細を変更したいだけなら、対象の実装モジュールを先に読む。
-- 特定サブコマンドの仕様本文ではなくテスト観点が不要な場合は、このディレクトリではなく該当する oracle doc または implementation を読む。
-- Codex CLI や LLM の出力品質そのものを評価したい場合は、この realization test 群ではなく、呼び出し制御や外部副作用を検証する範囲に限定して読む。
+- oracle file の正本仕様、oracle/realization 標準、INDEX.md エントリー生成規則そのものを確認したい場合は、oracle 側の文書や source を読む。
+- 個別実装の内部 helper 分割、低レベルな git wrapper、path model、runtime module の構造だけを変更する場合は、対応する実装側を先に読む。
+- Codex CLI や LLM の出力品質そのものを評価したい場合は、このテスト群の主目的ではない。
+- 特定機能に関係しないテストを広く読む前に、該当サブコマンドや runtime 領域のファイルへ絞り込む。
 
 ## hash
-- 359dae77d7c8fe362ec87c1d249000dc017a4bd4df213abafe4b80d5c911382d
+- 17787b95124cbb812f6596cfe31ce5519e98aa9c94c1a5fbc1787a3b34c1d728

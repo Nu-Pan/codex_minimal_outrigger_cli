@@ -251,24 +251,20 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- indexing preflight と indexing subcommand が routing document を生成・更新・commit する CLI 境界の回帰テストをまとめる realization test。
-- INDEX.md conflict 解決、未初期化・dirty worktree の拒否、linked worktree 対象化、repo config 利用、fresh hash による再生成スキップ、index path だけの commit を外部挙動として検証する。
-- INDEX.md エントリーの schema 検証、 malformed entry の再生成、空ディレクトリ・memo 除外境界・symlink cycle・並列生成など、routing 更新ワークフローの観測点を扱う。
+- indexing の preflight と CLI サブコマンドが routing document を更新する外部挙動を検証する回帰テスト。INDEX.md の生成・再生成・commit 範囲・hash 再利用・Codex 呼び出し・linked worktree・conflict 解決・対象除外条件を扱う。
 
 ## Read this when
-- indexing CLI の実行条件、失敗時メッセージ、commit 条件、linked worktree での対象 root 判定を変更・確認するとき。
-- INDEX.md の生成・更新、hash 再利用、entry schema validation、malformed entry 再生成、空ディレクトリへの INDEX.md 配置を変更・確認するとき。
-- indexing preflight が通常の indexing subcommand と異なり、既存の非 INDEX.md 差分を許容しつつ INDEX.md だけ commit する挙動を確認するとき。
-- routing document 更新処理の並列化、memo ディレクトリの扱い、directory symlink cycle の除外を変更・確認するとき。
-- apply 側の INDEX.md conflict 解決が conflict 中の INDEX.md を削除して merge commit を完了する挙動を確認するとき。
+- indexing コマンドまたは indexing preflight の外部挙動、git 状態、commit 条件、Codex による INDEX.md エントリー生成のテストを確認・変更するとき。
+- INDEX.md の malformed entry、fresh hash、空ディレクトリ、並列生成、memo や ignored directory や symlink cycle の扱いを検証するテストを探すとき。
+- apply 側の INDEX.md conflict 解決が unresolved conflict を消し、merge commit へ進む挙動を確認するとき。
 
 ## Do not read this when
-- 個別の indexing 実装 helper の内部アルゴリズムだけを調べたい場合は、実装モジュールを直接読む方が適切。
-- Codex が生成する自然言語エントリーの品質や内容そのものを評価したい場合は、このテストではなく生成プロンプトや schema 側を確認する。
-- indexing 以外の CLI subcommand、通常 apply workflow、設定ファイル全般の仕様を調べる場合は、該当する実装・テストへ進む方が適切。
+- routing document 更新の実装そのものを確認したいときは、indexing の実装や共通処理を直接読む。
+- INDEX.md エントリーの文面基準や oracle 上の仕様意図を確認したいだけなら、対応する oracle doc または oracle src を読む。
+- init、apply、git helper など indexing CLI 回帰の観測点ではない挙動を調べるときは、それぞれの専用テストへ進む。
 
 ## hash
-- ba84ba2a5f8fac06dd16494e65b04728e1b72568d45ca51a5e25aa2604e2bf43
+- 4bfa0e6c9f97aafe359646aa97813093e7e47c18d9926e2d9230c4b07855b5e6
 
 # `test_indexing_preflight.py`
 
