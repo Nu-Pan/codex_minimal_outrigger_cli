@@ -143,23 +143,24 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体への入口。CLI 起動、サブコマンド orchestration、共通 runtime helper、agent call parameter builder、設定・基礎 API・oracle package への互換 import 境界を含む。
-- 正本側実装を複製せず参照する薄い再公開層と、利用者向け CLI 挙動や横断的 runtime 処理を具体化する実装領域を切り分けるためのルーティング対象。
+- cmoc の realization implementation を収める実装ルート。CLI 最上位入口、サブコマンド実行制御、共通 runtime helper、互換 import 層、oracle 側正本実装への橋渡しが並ぶ。
+- 公開 CLI の構成を確認する入口、個別サブコマンドへ進む入口、複数経路で共有される runtime 実装へ進む入口、旧 import path 互換層の残置理由や削除条件を切り分ける階層。
 
 ## Read this when
-- cmoc の実装側で、CLI 入口、サブコマンド本体、共通 runtime、agent call parameter builder、互換 import 層のどこへ進むべきかを選びたいとき。
-- 公開 CLI コマンド構成、実行制御、Codex 呼び出し、Git・状態・ログ・path・INDEX.md 更新など、realization 側の処理所在を探したいとき。
-- oracle 側の ACP 基本型、path model、設定、builder などを realization 側で複製せず参照する互換経路や、その削除条件を確認したいとき。
-- 既存の公開 import path と実体 module の対応、正本側 package への到達方法、移行用 shim の責務境界を確認したいとき。
+- cmoc の実装領域で、CLI 入口、サブコマンド、共通 runtime、互換 import 層のどこへ進むべきかを選びたいとき。
+- 公開 CLI コマンド構成、Typer app、console script 起動、引数解析エラー表示、サブコマンド委譲先を確認または変更したいとき。
+- init、indexing、tui、apply、session、review など、利用者向けサブコマンドの実行順序、preflight、状態更新、git 操作、Codex 連携、出力処理を追いたいとき。
+- Codex 実行、設定、Git、ログ、パス、状態、INDEX.md 更新など、複数サブコマンドから使われる共通 runtime 処理の所在を探したいとき。
+- acp.*、basic.*、config、oracle.*、古い runtime module などの互換 import 経路が、正本側実装または実体 module へどう委譲されているかを確認したいとき。
 
 ## Do not read this when
-- 正本仕様断片、prompt の正本文面、oracle 側 builder 本体、path model や file access rule などの仕様意図を確認したいときは、対応する oracle 側本文へ進む。
-- 個別の CLI サブコマンド、共通 runtime helper、builder、互換入口など、読むべき下位領域がすでに決まっているときは、該当する下位対象へ直接進む。
-- 生成済みログ、状態ファイル、設定ファイルなどの実データを調査したいだけのとき。この対象はそれらを扱う実装側の入口であり、実データそのものではない。
-- 実装ではなくテストの挙動やテストケースを確認・変更したいときは、realization test 側へ進む。
+- oracle file にある正本仕様断片、prompt 正本文面、path model、設定定義、INDEX.md エントリー標準などの人間所有仕様を確認したいときは、対応する oracle doc または oracle src を読む。
+- 対象の下位領域がすでに決まっている場合は、この階層ではなく該当する実装ファイルまたは下位ディレクトリへ直接進む。
+- 生成済みログ、状態ファイル、設定ファイルなどの実データを調査したいだけのとき。この階層はそれらを扱う実装への入口である。
+- 互換 import 経路や CLI/runtime 実装に関係しない新しい仕様判断だけをしたいときは、正本仕様側または該当する設計対象を読む。
 
 ## hash
-- 4b9fefd819fb8700fd0ff5a46799174ffca5df280a6d82c3e42be6e74dad187f
+- 5cc6fdd4513e8dd11d58697c2feae17c57961b5d0b05e33fefdbee7be0510477
 
 # `test`
 

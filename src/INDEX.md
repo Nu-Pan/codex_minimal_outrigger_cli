@@ -1,23 +1,23 @@
 # `acp`
 
 ## Summary
-- ACP builder 領域への実装側入口。既存の `acp.*` import 参照を維持する互換入口と、quota probe など実装側で持つ agent call parameter builder への下位入口をまとめる。
-- 正本側 builder を複製せず参照するための互換層と、実際に parameter を組み立てる下位領域を切り分けるためのルーティング対象。
+- ACP 関連の realization 側公開入口。正本側実装を複製せずに既存の `acp.*` import 経路を維持する互換層と、builder 関連の委譲境界・probe parameter 生成領域への入口を担う。
+- ACP builder 作業で、正本側へ進むべきか、互換 import 維持を確認すべきか、quota availability probe 用 parameter 生成を確認すべきかを切り分ける階層。
 
 ## Read this when
-- ACP builder 全体から、目的の agent call parameter 生成処理または互換入口がどの下位領域にあるかを選びたいとき。
-- 既存の `acp.*` import 参照、正本側 builder への委譲、公開参照経路、互換入口の削除条件を確認したいとき。
-- apply fork、review oracle、session join、TUI 起動、file access recovery、indexing、quota probe などの builder 関連処理の入口を探しているとき。
-- builder 領域にある対象が、正本側への薄い再公開なのか、実装側で parameter を生成する処理なのかを見分けたいとき。
+- `acp.*` import 参照を維持する互換入口の残置理由、削除条件、公開面での扱いを確認したいとき。
+- ACP builder の realization 側入口、正本側 builder への委譲、旧 import 経路との対応を確認したいとき。
+- apply、review、session、TUI、indexing、file access recovery などの builder 関連作業で、下位領域のどこへ進むべきかを選びたいとき。
+- Codex quota availability probe 用に既存 parameter から動作確認用 parameter を組み立てる処理を確認または変更したいとき。
 
 ## Do not read this when
-- 個別 builder の関数、型変換、prompt 補正、import 経路補正、schema fallback などの具体処理を直接確認したいときは、該当する下位領域へ進む。
-- agent call parameter の基礎型、model、reasoning effort、file access mode の定義を調べたいときは、基礎定義側へ進む。
-- CLI コマンドの制御フロー、branch 操作、diff 生成、Codex CLI 実行、TUI 描画など、parameter builder 以外の実処理を調べたいときは、それぞれの実行側へ進む。
-- 正本仕様断片、prompt の正本文面、oracle 側 builder 本体、indexing や review の仕様そのものを確認したいときは、対応する oracle 側の本文へ進む。
+- ACP builder の正本仕様、prompt 正本文面、出力条件、判定仕様そのものを確認したいときは、対応する oracle file または正本側実装を読む。
+- apply fork の制御フロー、branch 操作、diff 生成、CLI 引数処理、TUI の描画やイベント処理など、builder 入口ではない実行処理を調べたいとき。
+- AgentCallParameter、FileAccessMode、model、reasoning effort などの基礎データ構造を調べたいときは、基礎定義側を読む。
+- 互換 import 経路や quota probe parameter 生成に関係しない新規機能の実装場所やテスト対象を探しているとき。
 
 ## hash
-- 79f02f6a83cdd11df298cb43e21c3b55bf875861f43fb9485447172ee7f7b976
+- 248a388b2bb432024fda8f641ba769be61d6b5a7ebfdc16b34ec63f0a8a01d2e
 
 # `basic`
 

@@ -34,17 +34,18 @@
 # `file_access_rule_vaolation_recovery.py`
 
 ## Summary
-- ファイルアクセス規則違反からのリカバリー用 agent call parameter を組み立てる realization wrapper。oracle 側の正本 builder を呼び出し、realization 側の型へ適応したうえで、参照される structured output schema が存在しない場合だけ同階層の代替 schema に差し替える。
+- ファイルアクセス規則違反からの復旧用 AgentCallParameter を、oracle 側の正本 builder に委譲して構築する wrapper。
+- oracle src を import 可能にしたうえで正本 builder の戻り値を realization 側の型へ適応し、参照 schema が存在しない場合だけ同階層の代替 schema path を設定する。
 
 ## Read this when
-- ファイルアクセス規則違反時に起動するリカバリー agent call の parameter 構築経路を確認・変更したいとき。
-- oracle 側 builder の戻り値を realization 側の AgentCallParameter として扱う適応処理を調べたいとき。
-- structured output schema path が欠落している場合の fallback 挙動を確認したいとき。
+- ファイルアクセス規則違反の recovery 用 agent call parameter がどこで構築されるかを確認する。
+- oracle 側 builder への委譲、oracle parameter から realization parameter への適応、schema path 不在時の fallback を調べる。
+- ファイルアクセス規則違反リカバリーの prompt/model/reasoning/file access mode/schema の由来を追う入口を探す。
 
 ## Do not read this when
-- ファイルアクセス規則そのものの定義や違反判定ロジックを調べたいとき。
-- oracle 側のリカバリー parameter 正本仕様や builder 本体を確認したいとき。
-- 一般的な agent call parameter の型定義や file access mode の意味を調べたいとき。
+- ファイルアクセス規則そのものの定義や違反判定ロジックを調べる場合。
+- AgentCallParameter や FileAccessMode の基本構造を調べる場合。
+- oracle 側の正本 builder が生成する具体的な prompt 内容や schema 内容を確認したい場合。
 
 ## hash
-- 7562e91bea8502a7832008cf268a59e8a62d51c64298190701a4026ccac40ef4
+- 8712e8a30dc992444044bc06acfa57d485f9f6d55b0afd5b7be1e15f9f51d114
