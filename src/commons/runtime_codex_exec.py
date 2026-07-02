@@ -972,21 +972,30 @@ def _changed_worktree_path_statuses(
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # apply requeue and file access validation both need file-level paths;
     # default status can collapse untracked directories into one directory path.
-    for line in run_git(["status", "--short", "-uall"], root).stdout.splitlines():
-        status = line[:2]
-        path_text = line[3:]
-        if " -> " in path_text:
-            path_text = path_text.split(" -> ", 1)[1]
-        paths.append((status, root / path_text))
+    status_fields = run_git(
+        ["status", "--porcelain=v1", "-z", "-uall"], root
+    ).stdout.split("\0")
+    index = 0
+    while index < len(status_fields):
+        field = status_fields[index]
+        index += 1
+        if not field:
+            continue
+        status = field[:2]
+        paths.append((status, root / field[3:]))
+        if status[0] in {"R", "C"} or status[1] in {"R", "C"}:
+            index += 1
     if not include_ignored:
         return paths
-    for line in run_git(
-        ["ls-files", "--others", "--ignored", "--exclude-standard"], root
-    ).stdout.splitlines():
-        parts = Path(line).parts
+    for path_text in run_git(
+        ["ls-files", "--others", "--ignored", "--exclude-standard", "-z"], root
+    ).stdout.split("\0"):
+        if not path_text:
+            continue
+        parts = Path(path_text).parts
         if parts and parts[0] in _IGNORED_GIT_DIFF_EXCLUDED_ROOTS:
             continue
-        paths.append(("!!", root / line))
+        paths.append(("!!", root / path_text))
     return paths
 
 

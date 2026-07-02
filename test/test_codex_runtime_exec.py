@@ -195,6 +195,47 @@ def test_run_codex_exec_recovers_file_access_violations(
     assert "ファイルアクセス規則違反のリカバリ" in recovery_prompt.read_text()
 
 
+@pytest.mark.parametrize("blocked_name", ["a b.md", 'quoted " name.md'])
+def test_run_codex_exec_recovers_quoted_oracle_path_file_access_violations(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, blocked_name: str
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "count.txt"
+    blocked_path = Path("oracle") / blocked_name
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            f"blocked = pathlib.Path({str(blocked_path)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "if count == 0:",
+            "    blocked.write_text('blocked\\n')",
+            "else:",
+            "    blocked.unlink(missing_ok=True)",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_exec(
+        _parameter(FileAccessMode.REALIZATION_WRITE),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    assert counter.read_text() == "2"
+    assert not (root / blocked_path).exists()
+
+
 def test_run_codex_exec_recovers_git_directory_file_access_violation(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
