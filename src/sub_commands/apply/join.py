@@ -24,7 +24,7 @@ from cmoc_runtime import (
     work_root,
     write_state,
 )
-from sub_commands.apply._runtime import worktree_for_branch, worktree_for_branch_optional
+from commons.runtime_apply import worktree_for_branch, worktree_for_branch_optional
 
 
 def cmoc_apply_join_impl(force_resolve: bool) -> None:

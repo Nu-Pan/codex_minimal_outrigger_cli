@@ -81,6 +81,6 @@ def write_python_executable(path: Path, lines: list[str]) -> None:
 
 def apply_worktree_from_state(root: Path, state: dict) -> Path:
     """Resolve the apply worktree path encoded by a session state snapshot."""
-    from sub_commands.apply import join as apply_module
+    import commons.runtime_apply as apply_module
 
     return apply_module.worktree_for_branch(root, state["apply"]["apply_branch"])

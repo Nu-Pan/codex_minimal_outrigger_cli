@@ -48,7 +48,7 @@ from sub_commands.apply.fork_report import (
     write_apply_fork_error_report,
     write_apply_fork_report,
 )
-from sub_commands.apply._runtime import (
+from commons.runtime_apply import (
     apply_process_tracking,
     delete_apply_process_id,
     write_apply_process_id,

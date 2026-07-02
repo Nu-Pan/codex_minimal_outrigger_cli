@@ -26,7 +26,7 @@ from _support import (
 from main import app
 import sub_commands.apply.abandon as apply_abandon_module
 import sub_commands.apply.fork as apply_fork_module
-from sub_commands.apply import _runtime as apply_runtime
+import commons.runtime_apply as apply_runtime
 
 
 def hold_apply_process_id_lock(path: Path, ready: object, release: object) -> None:
