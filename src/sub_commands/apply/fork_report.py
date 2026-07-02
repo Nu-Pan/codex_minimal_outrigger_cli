@@ -9,6 +9,8 @@ from config.cmoc_config import CmocConfig
 
 
 CodexExec = Callable[..., object]
+MANAGED_CHANGE_DIFF_OPTIONS = ("--find-renames", "--diff-filter=ACMRT")
+UNCONVERGED_FINDINGS_NOTE = "まだ所見が残っている可能性があります。"
 
 
 def write_apply_fork_report(
@@ -116,15 +118,17 @@ def build_change_summary(
 
 
 def changed_diff_since_fork(apply_worktree: Path, fork_commit: str) -> str:
+    # <work-root>/oracle/doc/app_spec/misc_spec.md excludes deleted paths from
+    # managed-branch event scope and classifies renames by their new path.
     commands = (
         [
-            ["diff", f"{fork_commit}..HEAD"],
-            ["diff"],
-            ["diff", "--cached"],
+            ["diff", *MANAGED_CHANGE_DIFF_OPTIONS, f"{fork_commit}..HEAD"],
+            ["diff", *MANAGED_CHANGE_DIFF_OPTIONS],
+            ["diff", "--cached", *MANAGED_CHANGE_DIFF_OPTIONS],
         ]
         if fork_commit
         else [
-            ["diff", "HEAD"],
+            ["diff", *MANAGED_CHANGE_DIFF_OPTIONS, "HEAD"],
         ]
     )
     diffs = [
@@ -180,15 +184,20 @@ def fallback_change_summary(
 def changed_paths_since_fork(apply_worktree: Path, fork_commit: str) -> list[str]:
     commands = (
         [
-            ["diff", "--name-only", f"{fork_commit}..HEAD"],
-            ["diff", "--name-only"],
-            ["diff", "--cached", "--name-only"],
+            [
+                "diff",
+                "--name-only",
+                *MANAGED_CHANGE_DIFF_OPTIONS,
+                f"{fork_commit}..HEAD",
+            ],
+            ["diff", "--name-only", *MANAGED_CHANGE_DIFF_OPTIONS],
+            ["diff", "--cached", "--name-only", *MANAGED_CHANGE_DIFF_OPTIONS],
         ]
         if fork_commit
         else [
-            ["diff", "--name-only", "HEAD"],
-            ["diff", "--name-only"],
-            ["diff", "--cached", "--name-only"],
+            ["diff", "--name-only", *MANAGED_CHANGE_DIFF_OPTIONS, "HEAD"],
+            ["diff", "--name-only", *MANAGED_CHANGE_DIFF_OPTIONS],
+            ["diff", "--cached", "--name-only", *MANAGED_CHANGE_DIFF_OPTIONS],
         ]
     )
     paths: list[str] = []
@@ -216,12 +225,17 @@ def render_apply_fork_report(
     """apply fork report を Markdown + YAML frontmatter で描画する。"""
     result_text = {
         "converged": "収束: 検出された所見リストが空によりループを終了しました。",
-        "unconverged": "未収束: 回数上限に達したためループを終了しました。まだ所見が残っている可能性があります。",
+        "unconverged": "未収束: 回数上限に達したためループを終了しました。",
         "error": "エラー: 途中でエラーが起きてループを正常に終了出来ませんでした。",
     }.get(result_label, result_label)
-    count_lines = "\n".join(
+    count_line_items = [
         f"- ループ {idx}: {count}" for idx, count in enumerate(finding_counts, 1)
-    ) or "- 所見列挙ループは実行されませんでした"
+    ] or ["- 所見列挙ループは実行されませんでした"]
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md requires this
+    # warning in the finding-count transition section, not only in the result.
+    if result_label == "unconverged":
+        count_line_items.append(UNCONVERGED_FINDINGS_NOTE)
+    count_lines = "\n".join(count_line_items)
     change_lines = "\n".join(
         (
             f"- {change.get('category')}: {change.get('summary')} "

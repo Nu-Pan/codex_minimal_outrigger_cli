@@ -247,3 +247,14 @@ def is_git_ignored(root: Path, path: Path) -> bool:
         ).returncode
         == 0
     )
+
+
+def is_untracked_git_ignored(root: Path, path: Path) -> bool:
+    # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    # oracle/realization file definitions use normal git check-ignore behavior:
+    # tracked files remain targets even when they match an ignore pattern.
+    candidate = path if path.is_absolute() else root / path
+    rel = candidate.absolute().relative_to(root.absolute())
+    return (
+        run_git(["check-ignore", "-q", str(rel)], root, check=False).returncode == 0
+    )

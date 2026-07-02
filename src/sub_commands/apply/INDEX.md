@@ -60,45 +60,42 @@
 # `fork.py`
 
 ## Summary
-- apply fork 実行時の orchestration を担う実装。session branch 上での事前条件確認、apply branch/worktree 作成、対象 file の列挙、Codex による finding 列挙・適用、file access rule 違反リカバリー、commit、report 出力、apply state 更新までの一連の loop を扱う。
-- apply scope に応じた対象選定、変更 file の再キュー、前回 join 済み apply commit の探索、apply finding 適用後の commit subject 生成など、apply fork の制御フローに閉じた helper も同居する。
+- apply fork の実行制御を担う実装。session branch 上での事前条件確認、apply branch/worktree 作成、apply state 更新、対象ファイル列挙、Codex による finding 列挙と適用、差分 commit、report 生成、失敗時の error report と state 復旧を一つの apply run として扱う。
+- apply scope ごとの対象選択、apply finding 対象として扱えるファイルの正規化、重複排除、前回 join 済み apply merge commit の探索、適用差分からの commit subject 生成もこの制御ループ内に含む。
 
 ## Read this when
-- apply fork サブコマンドの実行条件、状態遷移、worktree/branch 作成、report 出力、終了コードを確認・変更したいとき。
-- apply finding の列挙対象、scope ごとの差分基準、変更後 file の再キュー、重複排除の挙動を確認・変更したいとき。
-- Codex 実行後に残った file access rule 違反の検出・回復、許可される書き込み範囲、違反時エラーを確認・変更したいとき。
-- apply fork が生成する commit message、commit 実行タイミング、前回 join 済み apply commit の解決方法を確認・変更したいとき。
+- apply fork サブコマンドの実行条件、state 遷移、worktree/branch 作成、process id 管理、report 出力、終了コードを確認または変更したいとき。
+- scope に応じた apply 対象ファイル列挙、oracle や git ignore 対象の扱い、変更後ファイルの再キュー条件を確認または変更したいとき。
+- Codex に渡す finding 列挙・finding 適用処理の呼び出し順、loop 収束判定、適用後 commit の作成条件や commit subject 生成を確認したいとき。
+- apply fork 失敗時に state、process id、error report、stdout 用 report path がどう扱われるかを追うとき。
 
 ## Do not read this when
-- apply fork の report 本文生成だけを確認・変更したい場合は、report 書き込み側を直接読む。
-- Codex に渡す apply finding 列挙・適用・file access rule recovery の parameter 内容だけを確認したい場合は、builder 側を直接読む。
-- apply process id の保存・削除・tracking の低レベル処理だけを確認したい場合は、apply runtime 側を直接読む。
-- apply fork 以外の apply サブコマンドや session 管理、共通 CLI runtime の一般挙動を確認したい場合は、それぞれの担当箇所を直接読む。
+- apply fork の report ファイル本文の生成内容だけを変更したい場合は、report 生成側の実装を直接読む。
+- Codex に渡す prompt や parameter の組み立て内容だけを確認したい場合は、builder 側の apply fork 用実装を直接読む。
+- apply process id の保存形式や tracking helper の内部だけを確認したい場合は、apply runtime 側を直接読む。
+- apply fork 以外の apply サブコマンドや join 側の挙動を調べたい場合は、それぞれのサブコマンド実装を読む。
 
 ## hash
-- 72294bf2bfa0c4d0f34ac3f6f2ef6bb1144b8ebc726900ae5ef6a21af601ebdb
+- 5df4bc5c860a258c6b78a92eac6b0ee37c45e24b27440ca2e0148d387c9f8cc8
 
 # `fork_report.py`
 
 ## Summary
-- apply fork の実行結果または失敗結果を Markdown report として保存する処理を扱う。
-- apply fork worktree の fork commit 以降の変更差分を集め、Codex による構造化要約または変更 path の fallback 要約へ変換する。
-- report の frontmatter、作業結果、所見数推移、変更内容要約の組み立てを担う。
+- apply fork の実行結果または失敗結果を Markdown report として生成し、所見数の推移、結果ラベル、apply branch の変更要約をまとめる。
+- apply worktree の fork commit 以降の管理対象差分、未コミット差分、staged 差分、untracked file 差分を集め、Codex による構造化要約または path 一覧の fallback を report に反映する。
 
 ## Read this when
-- apply fork 完了時・失敗時に生成される report の内容、保存先、生成タイミングを確認したいとき。
-- apply fork の変更要約がどの差分を対象にし、未追跡ファイルをどう扱うかを確認または変更したいとき。
-- 変更要約生成に失敗した場合や空要約だった場合の fallback 表示を確認または変更したいとき。
-- report に出力される result label、所見数推移、branch・commit・worktree 情報の扱いを確認したいとき。
+- apply fork の report 生成内容、frontmatter、本文見出し、未収束時の注意文を確認・変更したいとき。
+- apply fork の変更要約に含める git diff の範囲、rename・deleted path・untracked file の扱いを確認・変更したいとき。
+- apply fork の変更要約生成が失敗した場合や空だった場合の fallback 表示を確認・変更したいとき。
 
 ## Do not read this when
-- apply fork のループ制御、所見列挙、収束判定そのものを調べたいとき。
-- apply fork の変更要約プロンプトや構造化出力 schema の詳細を調べたいとき。
-- git コマンド実行 helper、report directory 解決、timestamp 生成、session state 定義の共通実装を調べたいとき。
-- apply 以外の sub command の report 生成や通常ログ出力を調べたいとき。
+- apply fork のループ制御、所見列挙、apply branch の作成・削除など report 出力以外の処理を確認したいとき。
+- 変更要約を生成する Codex prompt parameter の内容だけを確認したいとき。
+- cmoc 全体の report 保存先規則、timestamp、git 実行 wrapper の実装を確認したいとき。
 
 ## hash
-- 186ef04236529c1d7562192dcb8b72c304f536d3faa14511b89b4366a768f69c
+- f83951bd570f6adfcfede4efacbd4bf7c87b06f26647a27f24109280f7c194b4
 
 # `join.py`
 

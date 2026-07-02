@@ -22,6 +22,7 @@ from config.cmoc_config import CmocConfig
 
 from commons.runtime_content import write_hashed_file, write_hashed_file_in_existing_dir
 from commons.runtime_errors import CmocError
+from commons.runtime_git import is_untracked_git_ignored
 from commons.runtime_paths import schema_store_dir
 
 APPLY_PROCESS_TRACKING_ENV = "CMOC_APPLY_PROCESS_ID_PATH"
@@ -153,14 +154,18 @@ def _writable_roots(
         case FileAccessMode.REALIZATION_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            paths = _existing_writable_top_level_roots(mode, root)
+            # Codex profile cannot express cmoc's deny-list. REALIZATION_WRITE
+            # includes root ancillary files such as .gitignore, so limiting the
+            # sandbox to existing directories is under-permissive; post-checks
+            # reject forbidden and non-realization diffs after Codex can edit root.
+            paths = [root]
         case FileAccessMode.REPO_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            # Codex profile has no deny-list, so modes that exclude memo/.agents
-            # cannot make <work-root> itself writable. New top-level paths must
-            # be passed explicitly through extra_writable_paths.
-            paths = _existing_writable_top_level_roots(mode, root)
+            # Codex profile cannot express cmoc's deny-list. REPO_WRITE would be
+            # under-permissive if limited to existing top-level dirs, so runtime
+            # post-checks reject forbidden diffs after Codex can edit the work root.
+            paths = [root]
         case FileAccessMode.PURE_ORACLE_WRITE:
             paths = [root / "oracle"]
         case FileAccessMode.NO_RULE:
@@ -196,17 +201,6 @@ def _writable_roots(
     return result
 
 
-def _existing_writable_top_level_roots(mode: FileAccessMode, root: Path) -> list[Path]:
-    return sorted(
-        [
-            path
-            for path in root.iterdir()
-            if _is_writable_path_allowed(mode, root, path.resolve())
-        ],
-        key=lambda path: str(path.resolve()),
-    )
-
-
 def _sandbox_writable_root(path: Path) -> Path:
     """Codex sandbox の writable_roots に渡せる directory path へ正規化する。"""
     if path.exists() and path.is_file():
@@ -239,18 +233,19 @@ def _is_writable_path_allowed(
     # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # 追加 writable path は、prompt で伝える禁止領域を広げない範囲だけ許可する。
+    relative = path.relative_to(root)
+    if path.name in {"AGENTS.md", "INDEX.md"}:
+        return False
+    if len(relative.parts) == 1 and path.name == "README.md":
+        return False
     if mode == FileAccessMode.REALIZATION_WRITE and allow_oracle_conflict_writes:
         # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
-        # session join の conflict 解消は README.md/INDEX.md/oracle file も
-        # git conflict 対象なら編集する。runtime 管理領域だけは sandbox 側でも開かない。
-        relative = path.relative_to(root)
+        # session join の conflict 解消は oracle file も git conflict 対象なら編集する。
+        # runtime 管理領域と root 禁止 file は sandbox 側でも開かない。
         return (
             bool(relative.parts)
             and relative.parts[0] not in _CONFLICT_WRITE_BLOCKED_ROOT_NAMES
         )
-    relative = path.relative_to(root)
-    if path.name in {"AGENTS.md", "INDEX.md"}:
-        return False
     blocked_root_names = (
         _REPO_WRITE_BLOCKED_ROOT_NAMES
         if mode == FileAccessMode.REPO_WRITE
@@ -259,6 +254,11 @@ def _is_writable_path_allowed(
     if relative.parts and relative.parts[0] in blocked_root_names:
         return False
     if mode == FileAccessMode.REALIZATION_WRITE:
+        if is_untracked_git_ignored(root, path):
+            # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+            # realization file excludes git ignored untracked paths; tracked ignored
+            # paths remain writable because normal git check-ignore treats them as tracked.
+            return False
         return not path.is_relative_to(root / "oracle")
     if mode == FileAccessMode.PURE_ORACLE_WRITE:
         return path.is_relative_to(root / "oracle")

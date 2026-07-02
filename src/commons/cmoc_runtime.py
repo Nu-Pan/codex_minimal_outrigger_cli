@@ -55,6 +55,7 @@ from commons.runtime_git import (
     head_commit,
     is_git_ignored,
     is_managed_branch,
+    is_untracked_git_ignored,
     remove_worktree,
     require_cmoc_ignored,
     require_clean_worktree,

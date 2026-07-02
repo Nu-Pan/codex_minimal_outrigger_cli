@@ -21,12 +21,17 @@ from _support import (
     make_repo,
     run_git,
     runner,
+    setup_codex_home,
+    write_python_executable,
 )
 from cmoc_runtime import CmocError
+from commons.runtime_codex import run_codex_exec as real_run_codex_exec
+from config.cmoc_config import CmocConfig
 from main import app
 from pytest import MonkeyPatch
 import sub_commands.apply.fork as apply_fork_module
 from sub_commands.apply.fork_report import (
+    build_change_summary,
     changed_diff_since_fork,
     changed_paths_since_fork,
     fallback_change_summary,
@@ -346,9 +351,13 @@ def test_apply_fork_writes_report_with_change_summary(
     assert report_path.is_file()
     rendered = report_path.read_text()
     assert "result: unconverged" in rendered
-    assert "未収束: 回数上限に達したためループを終了しました。まだ所見が残っている可能性があります。" in rendered
+    assert "未収束: 回数上限に達したためループを終了しました。" in rendered
     assert "# cmoc apply fork 作業レポート" in rendered
     assert "## 所見数の推移" in rendered
+    count_section = rendered.split("## 所見数の推移\n", 1)[1].split(
+        "\n## 変更内容要約", 1
+    )[0]
+    assert "まだ所見が残っている可能性があります。" in count_section
     assert "ドキュメント: README を更新した (README.md)" in rendered
     assert "apply fork change summary" in calls
     assert "apply fork commit message" not in calls
@@ -561,58 +570,92 @@ def test_apply_fork_recovers_file_access_rule_violation_before_commit(
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
-    (root / "README.md").write_text("# changed\n")
-    run_git(root, "add", "README.md")
-    run_git(root, "commit", "-m", "change readme")
+    (root / "src").mkdir()
+    (root / "src" / "app.py").write_text("print('old')\n")
+    run_git(root, "add", "src/app.py")
+    run_git(root, "commit", "-m", "add app")
     finding = {
-        "title": "Update README",
+        "title": "Update app",
         "evidences": [
             {
-                "path": str(root / "README.md"),
+                "path": str(root / "src" / "app.py"),
                 "line_start": 1,
                 "line_end": 1,
-                "summary": "readme",
+                "summary": "app",
             }
         ],
         "oracle_requirement": "test requirement",
         "observed_implementation": "old",
         "reason": "needs update",
-        "suggested_fix": "update readme",
+        "suggested_fix": "update app",
     }
-    calls: list[tuple[str, str]] = []
+    setup_codex_home(tmp_path, monkeypatch)
+    monkeypatch.setattr(apply_fork_module, "enable_indexing_preflight", lambda: None)
+    counts = tmp_path / "codex_counts"
+    counts.mkdir()
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            f"counts = pathlib.Path({str(counts)!r})",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "def bump(name):",
+            "    path = counts / f'{name}.txt'",
+            "    value = int(path.read_text()) if path.exists() else 0",
+            "    path.write_text(str(value + 1))",
+            "    return value",
+            "schema = None",
+            "if '--output-schema' in args:",
+            "    schema_path = pathlib.Path(args[args.index('--output-schema') + 1])",
+            "    schema = json.loads(schema_path.read_text())",
+            "props = (schema or {}).get('properties', {})",
+            "if 'findings' in props:",
+            f"    finding = {json.dumps(finding)!r}",
+            "    output.write_text(json.dumps({'findings': [json.loads(finding)] if bump('findings') == 0 else []}))",
+            "elif 'changes' in props:",
+            "    output.write_text(json.dumps({'changes': []}))",
+            "else:",
+            "    if bump('plain') == 0:",
+            "        pathlib.Path('src/app.py').write_text(\"print('updated')\\n\")",
+            "        pathlib.Path('oracle/spec.md').write_text('# violated\\n')",
+            "    else:",
+            "        pathlib.Path('oracle/spec.md').write_text('# spec\\n')",
+            "    output.write_text('{}')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
-    def fake_run_codex_exec(
-        parameter: AgentCallParameter, **kwargs: object
-    ) -> FakeCodexResult:
-        purpose = str(kwargs["purpose"])
-        calls.append((purpose, parameter.file_access_mode.value))
-        if purpose.startswith("apply fork enumerate findings"):
-            return FakeCodexResult({"findings": [finding] if len(calls) == 1 else []})
-        if purpose == "apply fork finding application":
-            (Path.cwd() / "README.md").write_text("# updated\n")
-            (Path.cwd() / "oracle" / "spec.md").write_text("# violated\n")
-            return FakeCodexResult()
-        if purpose == "file access rule violation recovery":
-            assert parameter.file_access_mode.value == "no_rule"
-            (Path.cwd() / "oracle" / "spec.md").write_text("# spec\n")
-            return FakeCodexResult({})
-        if purpose == "apply fork change summary":
-            return FakeCodexResult({"changes": []})
-        raise AssertionError(purpose)
+    def run_real_codex_exec(parameter: AgentCallParameter, **kwargs: object) -> object:
+        return real_run_codex_exec(
+            parameter,
+            capacity_initial_sleep_sec=0,
+            **kwargs,
+        )
 
-    monkeypatch.setattr(apply_fork_module, "run_codex_exec", fake_run_codex_exec)
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", run_real_codex_exec)
 
     result = runner.invoke(
         app, ["apply", "fork", "--scope", "session"], catch_exceptions=False
     )
 
     assert result.exit_code == 0
+    calls = []
+    for path in sorted((root / ".cmoc" / "log" / "codex").glob("*_call.json")):
+        call = json.loads(path.read_text())
+        calls.append((call["purpose"], call["file_access_mode"]))
     assert ("file access rule violation recovery", "no_rule") in calls
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
     state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
     apply_branch = state["apply"]["apply_branch"]
-    assert run_git(root, "show", f"{apply_branch}:README.md").stdout == "# updated\n"
+    assert (
+        run_git(root, "show", f"{apply_branch}:src/app.py").stdout
+        == "print('updated')\n"
+    )
     assert run_git(root, "show", f"{apply_branch}:oracle/spec.md").stdout == "# spec\n"
 
 
@@ -704,6 +747,54 @@ def test_apply_fork_change_summary_includes_untracked_files(tmp_path: Path) -> N
             "changed_paths": ["new_realization.py"],
         }
     ]
+
+
+def test_apply_fork_change_summary_excludes_deleted_tracked_files(
+    tmp_path: Path,
+) -> None:
+    """管理 branch 上の削除済み file は report 用変更要約の対象外にする。"""
+    root = make_repo(tmp_path)
+    (root / "deleted_realization.py").write_text("print('delete')\n")
+    run_git(root, "add", "deleted_realization.py")
+    run_git(root, "commit", "-m", "add deleted target")
+    fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    (root / "deleted_realization.py").unlink()
+    (root / "README.md").write_text("# kept change\n")
+    captured_prompt = ""
+
+    def fake_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> FakeCodexResult:
+        nonlocal captured_prompt
+        captured_prompt = parameter.prompt
+        return FakeCodexResult(
+            {
+                "changes": [
+                    {
+                        "category": "実装",
+                        "summary": "README を更新した",
+                        "changed_paths": ["README.md"],
+                    }
+                ]
+            }
+        )
+
+    raw_diff = changed_diff_since_fork(root, fork_commit)
+    paths = changed_paths_since_fork(root, fork_commit)
+    fallback = fallback_change_summary(root, fork_commit, "fallback")
+    summary = build_change_summary(
+        root, root, fork_commit, CmocConfig(), fake_codex_exec
+    )
+
+    assert "README.md" in raw_diff
+    assert "+# kept change" in raw_diff
+    assert "deleted_realization.py" not in raw_diff
+    assert "-print('delete')" not in raw_diff
+    assert paths == ["README.md"]
+    assert fallback[0]["changed_paths"] == ["README.md"]
+    assert summary[0]["changed_paths"] == ["README.md"]
+    assert "README.md" in captured_prompt
+    assert "deleted_realization.py" not in captured_prompt
 
 
 def test_apply_fork_report_does_not_invent_loop_when_no_targets(

@@ -19,20 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP の agent call parameter builder 群への上位入口。正本側 builder を既存の実装側参照経路から利用するための互換 package 群と、quota probe など実装側で持つ builder を含む。
-- apply、review、session、TUI、indexing、file access recovery などの builder 領域へ進む前に、各下位領域が互換入口なのか具体的な parameter 生成実装なのかを見分けるための階層。
+- ACP builder 領域の realization 側入口。正本側に実体を置く builder 群について、既存の公開参照経路を維持する互換 package 群と、quota availability probe 用の最小 parameter builder をまとめる。
+- apply、review、session、TUI、indexing、file access recovery などの下位領域へ進む前に、実処理本体ではなく互換層・委譲境界・probe parameter 生成のどれを読むべきかを切り分けるための階層。
 
 ## Read this when
-- ACP builder 全体で、目的の agent call parameter 生成処理や互換入口がどの下位領域にあるかを選びたいとき。
-- 正本側 builder を実装側の既存 import path から参照するための互換層、公開参照経路、削除条件を確認したいとき。
-- apply fork、review oracle、session join、TUI 起動、file access recovery、indexing、quota probe などの builder 関連処理の入口を探しているとき。
-- builder 領域に見える実装が、正本側への薄い委譲・再公開なのか、実装側で parameter を組み立てる処理なのかを切り分けたいとき。
+- ACP builder の realization 側公開入口が、正本側 builder や旧 import 経路とどう対応しているかを確認したいとき。
+- apply fork、review oracle、session join、TUI、indexing、file access recovery などの builder 関連作業で、まず下位領域の分担を選びたいとき。
+- 正本側実装への委譲、realization 側 parameter 型への適応、互換 wrapper の残置理由や削除条件を確認したいとき。
+- Codex quota availability probe 用に、既存 parameter から動作確認用 parameter を組み立てる処理を確認・変更したいとき。
 
 ## Do not read this when
-- 個別 builder の具体的な関数、型変換、prompt 補正、import 経路補正、schema fallback などを直接確認したいときは、該当する下位領域を読む。
-- agent call parameter の基礎型、model、reasoning effort、file access mode の定義を調べたいときは、基礎定義側を読む。
-- CLI コマンドの制御フロー、branch 操作、diff 生成、Codex CLI 実行、TUI 描画など、parameter builder 以外の実処理を調べたいときは、それぞれの実行側を読む。
-- 正本仕様断片、prompt の正本文面、oracle 側 builder 本体、indexing や review の仕様そのものを確認したいときは、対応する oracle 側の本文を読む。
+- 各 builder の正本仕様、prompt 正本文面、出力条件、判定仕様そのものを確認したいときは、対応する oracle file または正本側実装を読む。
+- apply fork の制御フロー、branch 操作、diff 生成、CLI 引数処理、TUI の描画やイベント処理など、builder 入口ではない実行処理を調べたいとき。
+- AgentCallParameter、FileAccessMode、model、reasoning effort などの基礎データ構造を調べたいときは、基礎定義側を読む。
+- 互換 import 経路や quota probe parameter 生成に関係しない新規機能の実装場所やテスト対象を探しているとき。
 
 ## hash
-- fb147b6aed1448b03b9b4c86ee7c9d25d77e9075c5cd6dae3faf8efe8d4b6f7d
+- f71ed6f2f66d30c5e3a816090e2206dc3d311607064cf488f717172c102a9317
