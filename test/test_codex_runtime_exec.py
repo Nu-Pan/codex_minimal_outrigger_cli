@@ -191,8 +191,9 @@ def test_run_codex_exec_recovers_file_access_violations(
 
     assert counter.read_text() == "2"
     assert not (root / "oracle" / "blocked.md").exists()
-    assert "FINDING-00" in recovery_prompt.read_text()
-    assert "ファイルアクセス規則違反のリカバリ" in recovery_prompt.read_text()
+    assert "ファイルアクセス規則違反のリカバリー担当" in recovery_prompt.read_text()
+    assert "<violated-file-list>" in recovery_prompt.read_text()
+    assert "oracle/blocked.md" in recovery_prompt.read_text()
 
 
 @pytest.mark.parametrize("blocked_name", ["a b.md", 'quoted " name.md'])

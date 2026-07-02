@@ -647,7 +647,7 @@ def test_apply_fork_recovers_file_access_rule_violation_before_commit(
     for path in sorted((root / ".cmoc" / "log" / "codex").glob("*_call.json")):
         call = json.loads(path.read_text())
         calls.append((call["purpose"], call["file_access_mode"]))
-    assert ("file access rule violation recovery", "realization_write") in calls
+    assert ("file access rule violation recovery", "no_rule") in calls
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
     state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())

@@ -970,39 +970,14 @@ def _file_access_recovery_parameter(
     violations: list[Path],
     violated_mode: FileAccessMode,
 ) -> AgentCallParameter:
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # File-access recovery reuses the apply finding-application agent contract;
-    # the recovery-specific details are supplied as a finding instead of a
-    # separate realization-side builder.
-    from acp.builder.apply.fork.finding_application import (
-        build_apply_fork_finding_application_parameter,
+    from acp.builder.common.file_access_rule_vaolation_recovery import (
+        build_file_access_rule_vaolation_recovery_parameter,
     )
 
-    return build_apply_fork_finding_application_parameter(
-        [
-            {
-                "title": "ファイルアクセス規則違反のリカバリ",
-                "evidences": [
-                    {
-                        "path": str(path),
-                        "summary": "agent call 後の事後検証で編集禁止差分として検出された。",
-                    }
-                    for path in violations
-                ],
-                "oracle_requirement": (
-                    "agent call 後に編集禁止ファイル・ディレクトリの差分を検証し、"
-                    "違反があれば agent call によるリカバリを試みる。"
-                ),
-                "observed_implementation": (
-                    f"{violated_mode.value} の agent call が編集禁止差分を残した。"
-                ),
-                "reason": f"違反元 call log: {violated_agent_call_log}",
-                "suggested_fix": (
-                    "違反元 agent call が発生させた編集禁止差分だけを、"
-                    "呼び出し前の状態に戻してください。"
-                ),
-            }
-        ]
+    return build_file_access_rule_vaolation_recovery_parameter(
+        violated_agent_call_log,
+        violations,
+        violated_mode,
     )
 
 
