@@ -990,6 +990,52 @@ def test_run_codex_exec_rejects_agent_created_cmoc_log_diff(
     )
 
 
+def test_run_codex_exec_rejects_agent_modified_previous_cmoc_log_diff(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "count.txt"
+    previous_log_ref = tmp_path / "previous_log.txt"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            f"previous_log_ref = pathlib.Path({str(previous_log_ref)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "if count >= 1:",
+            "    pathlib.Path(previous_log_ref.read_text()).write_text('agent\\n')",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    first_result = run_codex_exec(
+        _parameter(FileAccessMode.REPO_WRITE),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+    previous_log_ref.write_text(str(first_result.call_log_path))
+
+    with pytest.raises(CmocError, match="ファイルアクセス規則"):
+        run_codex_exec(
+            _parameter(FileAccessMode.REPO_WRITE),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
+
+    assert first_result.call_log_path.read_text() == "agent\n"
+
+
 @pytest.mark.parametrize(
     ("blocked_dir", "mode"),
     [

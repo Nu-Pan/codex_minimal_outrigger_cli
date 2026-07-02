@@ -60,12 +60,12 @@ _QUOTA_PROBE_AVAILABLE = False
 _QUOTA_PROBE_ERROR: BaseException | None = None
 _CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
 _LAST_CODEX_LOG_TIMESTAMP: str | None = None
+_PathFingerprint = tuple[str, int, int, str | None] | None
 _GENERATED_DIFF_PATHS_LOCK = threading.Lock()
-_GENERATED_DIFF_PATHS: set[Path] = set()
+_GENERATED_DIFF_FINGERPRINTS: dict[Path, _PathFingerprint] = {}
 _FORBIDDEN_FILESYSTEM_DIFF_ROOTS = (".agents", ".codex", ".git", "memo")
 _IGNORED_GIT_DIFF_EXCLUDED_ROOTS = (".venv",)
 _ForbiddenSnapshot = dict[Path, tuple[int, int, int, int, str | None]]
-_PathFingerprint = tuple[str, int, int, str | None] | None
 _WorktreeDiffSnapshot = dict[Path, tuple[str, _PathFingerprint]]
 # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
 # `git status` may refresh the index during post-check; .git itself is still
@@ -77,14 +77,18 @@ def _write_prompt_log(path: Path, prompt: str) -> None:
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # The prompt log is the replayable stdin source itself, not metadata.
     path.write_text(prompt)
+    _record_generated_diff_paths({path})
 
 
 def _record_generated_diff_paths(paths: set[Path]) -> None:
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # Concurrent cmoc calls share one worktree; only exact paths recorded here
-    # are cmoc-generated diffs, not the whole `.cmoc/log` tree.
+    # Concurrent cmoc calls share a worktree. A generated path is ignored only
+    # while its fingerprint still matches the cmoc-written content; later agent
+    # edits to that same path must be checked normally.
     with _GENERATED_DIFF_PATHS_LOCK:
-        _GENERATED_DIFF_PATHS.update(path.resolve() for path in paths)
+        for path in paths:
+            resolved = path.resolve()
+            _GENERATED_DIFF_FINGERPRINTS[resolved] = _path_fingerprint(resolved)
 
 
 def _read_required_output_json(path: Path) -> Any:
@@ -331,6 +335,7 @@ def run_codex_exec(
         if error is not None:
             payload["error"] = error
         logger.event("codex_call", **payload)
+        _record_generated_diff_paths({logger.path})
 
     def codex_exec_result_from_paths(
         result: subprocess.CompletedProcess[str],
@@ -434,7 +439,6 @@ def run_codex_exec(
             path.resolve()
             for path in (prompt_path, stdout_path, stderr_path, output_path, call_path)
         )
-        _record_generated_diff_paths(generated_paths)
         write_call_log(
             call_path,
             run_purpose=purpose,
@@ -446,11 +450,13 @@ def run_codex_exec(
             run_output_path=output_path,
             run_schema_path=schema_path,
         )
+        _record_generated_diff_paths({call_path})
         attempt_started_at = time.perf_counter()
         result = run_with_prompt_file(current_argv, prompt_path)
         last_result = result
         stdout_path.write_text(result.stdout)
         stderr_path.write_text(result.stderr)
+        _record_generated_diff_paths({stdout_path, stderr_path, output_path})
         error_text = codex_error_text(result.stdout, result.stderr)
         if result.returncode != 0:
             if (
@@ -587,7 +593,6 @@ def run_codex_exec(
                                 probe_call_path,
                             )
                         )
-                        _record_generated_diff_paths(generated_paths)
                         probe_argv = _base_exec_argv(profile_name, codex_cwd)
                         probe_argv.extend(
                             [
@@ -611,10 +616,14 @@ def run_codex_exec(
                             run_output_path=probe_output_path,
                             run_schema_path=None,
                         )
+                        _record_generated_diff_paths({probe_call_path})
                         probe_started_at = time.perf_counter()
                         poll = run_with_prompt_file(probe_argv, probe_prompt_path)
                         probe_stdout_path.write_text(poll.stdout)
                         probe_stderr_path.write_text(poll.stderr)
+                        _record_generated_diff_paths(
+                            {probe_stdout_path, probe_stderr_path, probe_output_path}
+                        )
                         probe_error_text = codex_error_text(poll.stdout, poll.stderr)
                         probe_quota_error = is_quota_error(poll.stdout)
                         probe_capacity_error = is_capacity_error(poll.stdout)
@@ -898,7 +907,7 @@ def recover_file_access_violations(
             subcommand_logger=subcommand_logger,
             verify_file_access=False,
         )
-        ignored.update(
+        recovery_generated_paths = {
             path.resolve()
             for path in (
                 recovery_result.call_log_path,
@@ -907,9 +916,16 @@ def recover_file_access_violations(
                 recovery_result.stderr_log_path,
                 recovery_result.output_path,
             )
-        )
+        }
         if recovery_result.schema_path is not None:
-            ignored.add(recovery_result.schema_path.resolve())
+            recovery_generated_paths.add(recovery_result.schema_path.resolve())
+        ignored.update(recovery_generated_paths)
+        if ignored_paths is not None:
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # Recovery is part of the same cmoc-managed post-check sequence;
+            # later retries in this outer call must not treat its logs as agent
+            # edits, but future run_codex_exec calls get a fresh ignore set.
+            ignored_paths.update(recovery_generated_paths)
         violations = file_access_violations(
             worktree,
             _post_call_changed_worktree_paths(
@@ -1132,16 +1148,22 @@ def file_access_violations(
 ) -> list[Path]:
     """FileAccessMode 上、差分が残ってはいけない path だけを返す。"""
     ignored = {path.resolve() for path in ignored_paths or set()}
-    with _GENERATED_DIFF_PATHS_LOCK:
-        ignored.update(_GENERATED_DIFF_PATHS)
     allowed = {path.resolve() for path in allowed_paths or []}
     return [
         path
         for path in paths
         if path.resolve() not in ignored
+        and not _is_unchanged_generated_diff_path(path)
         and path.resolve() not in allowed
         and not _is_write_allowed_by_file_access_mode(root, path, mode)
     ]
+
+
+def _is_unchanged_generated_diff_path(path: Path) -> bool:
+    resolved = path.resolve()
+    with _GENERATED_DIFF_PATHS_LOCK:
+        fingerprint = _GENERATED_DIFF_FINGERPRINTS.get(resolved)
+    return fingerprint is not None and fingerprint == _path_fingerprint(resolved)
 
 
 def _is_blocked_runtime_path(root: Path, path: Path) -> bool:
