@@ -126,6 +126,16 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
             "/memo` は読み書き禁止",
             "oracle file は書き込み禁止",
         ],
+        FileAccessMode.INDEX_WRITE: [
+            "ツリー外は読み書き禁止",
+            "/memo` は読み書き禁止",
+            "/.git` ツリー内は書き込み禁止",
+            "/.agents` ツリー内は書き込み禁止",
+            "/.codex` ツリー内は書き込み禁止",
+            "`AGENTS.md` は書き込み禁止",
+            "oracle file は書き込み禁止",
+            "realization file は読み書き禁止",
+        ],
     }
 
     for mode, fragments in expected.items():

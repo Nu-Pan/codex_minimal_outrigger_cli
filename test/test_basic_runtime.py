@@ -37,6 +37,7 @@ from cmoc_runtime import (
     work_root,
 )
 from commons.runtime_codex_profile import build_codex_profile, file_access_to_codex_cwd
+from commons.runtime_codex_exec import file_access_violations
 from commons.runtime_content import is_binary
 from commons.runtime_state import (
     SessionState,
@@ -411,6 +412,7 @@ def test_file_access_mode_values_are_json_ready() -> None:
     assert FileAccessMode.REPO_WRITE.value == "repo_write"
     assert FileAccessMode.PURE_ORACLE_WRITE.value == "pure_oracle_write"
     assert FileAccessMode.REALIZATION_WRITE.value == "realization_write"
+    assert FileAccessMode.INDEX_WRITE.value == "index_write"
 
 
 def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
@@ -419,6 +421,7 @@ def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
     assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_READ) == "read-only"
     assert file_access_to_sandbox_mode(FileAccessMode.REALIZATION_WRITE) == "workspace-write"
     assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_WRITE) == "workspace-write"
+    assert file_access_to_sandbox_mode(FileAccessMode.INDEX_WRITE) == "workspace-write"
     assert file_access_to_sandbox_mode(FileAccessMode.REPO_WRITE) == "workspace-write"
 
 
@@ -512,6 +515,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     for mode in (
         FileAccessMode.REALIZATION_WRITE,
         FileAccessMode.PURE_ORACLE_WRITE,
+        FileAccessMode.INDEX_WRITE,
         FileAccessMode.REPO_WRITE,
     ):
         assert 'sandbox_mode = "workspace-write"' in profiles[mode]
@@ -523,6 +527,9 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         str((root / "oracle").resolve())
     }
     assert _profile_writable_roots(profiles[FileAccessMode.REPO_WRITE]) == {
+        str(root.resolve()),
+    }
+    assert _profile_writable_roots(profiles[FileAccessMode.INDEX_WRITE]) == {
         str(root.resolve()),
     }
     for profile in profiles.values():
@@ -576,6 +583,26 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         str(root.resolve()),
     }
     _assert_writable(profile, repo_extra / "created.md")
+
+    root_index_extra = root / "INDEX.md"
+    index_extra = root / "src" / "INDEX.md"
+    profile = build_codex_profile(
+        AgentCallParameter(
+            parameter.model_class,
+            parameter.reasoning_effort,
+            FileAccessMode.INDEX_WRITE,
+            parameter.prompt,
+            parameter.structured_output_schema_path,
+        ),
+        CmocConfig(),
+        root,
+        extra_writable_paths=[root_index_extra, index_extra],
+    )
+    assert _profile_writable_roots(profile) == {
+        str(root.resolve()),
+    }
+    _assert_writable(profile, root_index_extra)
+    _assert_writable(profile, index_extra)
 
     with pytest.raises(CmocError, match="許可領域外"):
         build_codex_profile(
@@ -693,6 +720,16 @@ def test_codex_profile_allows_root_for_realization_write_and_rejects_ignored_ext
         (FileAccessMode.REPO_WRITE, "AGENTS.md"),
         (FileAccessMode.REPO_WRITE, "INDEX.md"),
         (FileAccessMode.REPO_WRITE, "../outside.md"),
+        (FileAccessMode.INDEX_WRITE, "README.md"),
+        (FileAccessMode.INDEX_WRITE, "AGENTS.md"),
+        (FileAccessMode.INDEX_WRITE, "src/app.py"),
+        (FileAccessMode.INDEX_WRITE, "oracle/spec.md"),
+        (FileAccessMode.INDEX_WRITE, "memo/INDEX.md"),
+        (FileAccessMode.INDEX_WRITE, ".agents/INDEX.md"),
+        (FileAccessMode.INDEX_WRITE, ".cmoc/INDEX.md"),
+        (FileAccessMode.INDEX_WRITE, ".codex/INDEX.md"),
+        (FileAccessMode.INDEX_WRITE, ".git/INDEX.md"),
+        (FileAccessMode.INDEX_WRITE, "../outside/INDEX.md"),
     ],
 )
 def test_codex_profile_rejects_disallowed_extra_writable_paths(
@@ -745,6 +782,34 @@ def test_codex_profile_allows_root_ancillary_extra_writable_path(
 
     assert _profile_writable_roots(profile) == {str(root.resolve())}
     _assert_writable(profile, root / ".gitignore")
+
+
+def test_index_write_file_access_allows_only_index_files(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    changed_paths = [
+        root / "INDEX.md",
+        root / "src" / "INDEX.md",
+        root / "src" / "app.py",
+        root / "oracle" / "spec.md",
+        root / "README.md",
+        root / "AGENTS.md",
+        root / "memo" / "INDEX.md",
+        root / ".cmoc" / "INDEX.md",
+        root / ".git" / "INDEX.md",
+    ]
+
+    violations = file_access_violations(root, changed_paths, FileAccessMode.INDEX_WRITE)
+
+    assert violations == [
+        root / "src" / "app.py",
+        root / "oracle" / "spec.md",
+        root / "README.md",
+        root / "AGENTS.md",
+        root / "memo" / "INDEX.md",
+        root / ".cmoc" / "INDEX.md",
+        root / ".git" / "INDEX.md",
+    ]
 
 
 def test_codex_profile_uses_directory_roots_for_session_join_conflict_resolution(

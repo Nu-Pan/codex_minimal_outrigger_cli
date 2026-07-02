@@ -174,6 +174,8 @@ def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
         file_access_mode.value for file_access_mode in TUI_FILE_ACCESS_MODES
     ]
     assert "repo_write" in schema["properties"]["file_access_mode"]["properties"]["value"]["enum"]
+    assert "index_write" not in schema["properties"]["file_access_mode"]["properties"]["value"]["enum"]
+    assert "no_rule" not in schema["properties"]["file_access_mode"]["properties"]["value"]["enum"]
     for flag_name in [
         "oracle_and_realization_basic",
         "oracle_standard",
@@ -198,7 +200,7 @@ def test_indexing_index_entry_uses_low_reasoning() -> None:
 
     assert parameter.model_class == ModelClass.EFFICIENCY
     assert parameter.reasoning_effort == ReasoningEffort.LOW
-    assert parameter.file_access_mode == FileAccessMode.READONLY
+    assert parameter.file_access_mode == FileAccessMode.INDEX_WRITE
 
 
 def test_review_oracle_merge_finding_uses_efficiency_model() -> None:
