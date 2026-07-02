@@ -167,26 +167,21 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI の exec/TUI 呼び出しランタイムを対象に、プロファイル生成、作業ディレクトリ、標準入力・出力 schema、サブプロセス実行、process group 記録、呼び出しログ、ファイルアクセス規則違反の検出・リカバリを検証する realization test。
-- readonly、realization write、repo write、pure oracle read などのアクセスモードごとに、許可される差分と拒否・復旧される差分の境界を外部挙動として固定する。
-- 実 Codex CLI の代わりに一時的な実行ファイルを配置し、引数、環境変数、生成ファイル、終了コード、git worktree 上の挙動を観測する統合寄りのテスト群。
+- Codex CLI 実行・TUI 起動の runtime 境界を検証するテスト群。プロファイル生成、作業ディレクトリ、sandbox writable roots、schema 出力先、プロンプト stdin、call log、subprocess process group、missing CLI や nonzero exit のエラー報告を扱う。
+- agent 呼び出し後のファイルアクセス規則検査とリカバリを重点的に検証する。oracle、blocked runtime root、git directory、cmoc log、readonly realization diff、ignored temporary cache、preexisting forbidden diff、session join conflict 許可対象などの差分判定を扱う。
 
 ## Read this when
-- Codex CLI exec/TUI の起動引数、プロファイル内容、作業ディレクトリ、CODEX_HOME、prompt 入力、output-last-message、output-schema の扱いを変更・確認するとき。
-- Codex 呼び出し後の git 差分検査、禁止領域への書き込み検出、oracle・memo・.git・.agents・.codex・一時 cache・ignored file の扱いを変更・確認するとき。
-- ファイルアクセス規則違反後の再実行、preexisting forbidden diff の扱い、schema retry や非ゼロ終了とリカバリ順序の関係を変更・確認するとき。
-- pure oracle read や linked worktree での cwd、writable_roots、repo log read、schema state 配置など、work-root と repo-root の境界を変更・確認するとき。
-- Codex CLI 未検出、TUI 非ゼロ終了、追加 read path の事前検証など、ランタイムエラー報告の外部挙動を変更・確認するとき。
+- Codex runtime の exec/TUI 起動引数、CODEX_HOME profile、cwd、stdin、output schema、call log の挙動を変更・確認する。
+- FileAccessMode ごとの読み書き許可、post-call diff 検査、違反時リカバリ、許容される一時キャッシュや ignored file の扱いを変更・確認する。
+- Codex subprocess wrapper の process group、apply process tracking env の扱い、Codex CLI 不在や終了コード異常時のエラー表示を変更・確認する。
 
 ## Do not read this when
-- AgentCallParameter、FileAccessMode、ModelClass、ReasoningEffort などの値オブジェクト自体の定義だけを確認したいとき。
-- Codex runtime の実装詳細を読む必要があり、テスト期待値ではなく実際の関数分割や内部 helper を確認したいとき。
-- git repository fixture、一時実行ファイル作成、Codex home 設定など、テスト支援 API の実装だけを変更・確認するとき。
-- oracle doc や oracle src の正本仕様断片そのものを確認したいとき。
-- Codex 以外の runtime、CLI サブコマンド、設定読み込み全般など、このテストが直接検証していない領域を調べるとき。
+- agent call parameter の値オブジェクト自体、model class、reasoning effort、file access mode の定義だけを確認したい場合。
+- Codex runtime ではなく、通常の git 操作 helper、repo fixture 作成、テスト支援 executable 生成の実装だけを確認したい場合。
+- oracle 文書や realization 実装の内容そのものを変更する作業で、Codex CLI 呼び出し後のアクセス検査や runtime 境界に関係しない場合。
 
 ## hash
-- 67e25e0e174b81b89e6e2f87497ecba9d8b5cbe4051ba1ba1be5f61e8c49eb0d
+- e217e0d227d85d08873b2b1cb1275442b7b4564116d374a0a846a3c03a0a1378
 
 # `test_codex_runtime_home.py`
 

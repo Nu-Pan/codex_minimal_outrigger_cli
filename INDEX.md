@@ -146,39 +146,42 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を収める実装領域。CLI の公開入口、サブコマンド実行、共通 runtime helper、Codex 実行連携、状態・Git・設定・path・INDEX 更新 preflight など、利用者向け挙動を具体化するコードへの入口になる。
-- oracle 側の正本実装を複製せず参照するための互換層も含み、既存 import 経路を維持しながら正本側実装または実体 module へ橋渡しする責務を持つ。
+- cmoc の realization implementation 全体の入口であり、CLI 登録、サブコマンド実装、共通 runtime helper、互換 import 層、正本側実装への shim、ACP builder 関連入口を下位領域へ振り分ける。
+- この対象自体は単一の実装本体ではなく、公開 CLI、実行時共通処理、設定・basic・oracle・acp 系互換経路、各サブコマンド実装のどこへ進むべきかを選ぶための階層である。
 
 ## Read this when
-- cmoc の CLI 構成、サブコマンドの実行フロー、runtime 共通処理、Codex 呼び出し、状態操作、Git 操作、設定参照、path 処理、INDEX.md maintenance など realization 側の実装入口を探したいとき。
-- 既存の公開 import path や互換 layer が、どの実体 module または oracle 側実装へ委譲しているかを確認したいとき。
-- 正本仕様断片を realization 側でどう具体化しているか、またはどの実装領域へ進むべきかを切り分けたいとき。
+- cmoc の realization implementation の中で、CLI 入口、サブコマンド、共通 runtime、互換 import 層、ACP builder 関連入口のどれを読むべきか切り分けたいとき。
+- 公開 CLI コマンド構成、引数解析エラー処理、console script 起動、サブコマンド実行入口の所在を確認したいとき。
+- Codex 実行、preflight、設定、Git、ログ、path、state、INDEX 更新など、複数サブコマンドで共有される runtime helper の入口を探したいとき。
+- oracle 側の basic、config、ACP builder 実装を realization 側へ複製せず、既存 import 経路として維持している互換層や削除条件を確認したいとき。
+- apply、review、session、TUI、index maintenance、初期化など、利用者向け CLI 挙動を具体化する下位サブコマンド実装へ進みたいとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片、prompt 正本文面、path model や ACP builder の定義そのものを確認したいときは、oracle 側の本文を読む。
-- 生成済み log、state、memo、git 内部情報など、実装コードではなく実行結果や管理領域の内容を確認したいだけのとき。
-- 対象の下位実装領域がすでに特定できている場合は、この階層ではなく該当する下位対象へ直接進む。
+- oracle file の正本仕様断片、prompt 正本文面、path model、file access policy、INDEX.md 仕様などを確認したいときは、対応する oracle 側の本文を読む。
+- 特定の下位 module やサブコマンドがすでに分かっているときは、この階層ではなく該当する対象を直接読む。
+- 生成済み log、memo、git 内部状態、作業外の補助情報を調べたいときは、この realization implementation 階層ではなく、その責務を持つ対象へ進む。
+- AgentCallParameter 型、設定項目、構造化文書 API、ACP builder の正本側処理など、互換入口の再公開先そのものの内容を確認したいときは、再公開先の正本側実装を読む。
+- 実装変更ではなく INDEX.md や AGENTS.md 自体を編集したいときは、この対象は編集先ではない。
 
 ## hash
-- 95b80d9f33aed954bf19c0a73ec026e53b1cb4a580d1354c511ca8b5be175b55
+- ccd01b25c28937ec66625db5dd399c68d37de34ce9bc4f85efe8222565642d45
 
 # `test`
 
 ## Summary
-- CLI 外部挙動と下位 runtime 契約を検証する realization test 群。session、apply、indexing、review oracle、Codex runtime、init/TUI、prompt、packaging、StructDoc rendering などの回帰入口をまとめる。
-- 共通テスト支援から個別サブコマンドの統合寄りテストまでを含み、実装変更後に期待される出力、終了コード、git/worktree 副作用、state 遷移、Codex 呼び出し境界を確認するための入口になる。
+- cmoc の realization test 群を収めるディレクトリ。CLI サブコマンド、Codex runtime、ACP builder、prompt、packaging、StructDoc rendering など、realization implementation の外部挙動と制御境界を検証する。
+- 共通 fixture と補助関数を入口に、session/apply/indexing/review oracle/init/TUI などの機能別テストへ進むためのルーティング対象になる。
 
 ## Read this when
-- realization implementation の変更に対応する既存テスト観点や回帰対象を探すとき。
-- CLI サブコマンドの外部挙動、Codex runtime、file access rule、INDEX.md 更新、session/apply/review の state と worktree 副作用をテストから確認したいとき。
-- テスト支援 fixture、fake Codex 実行、最小 Git repository、Codex home、builder parameter、prompt parts、packaged import、Markdown rendering の検証箇所を探すとき。
-- 新しい realization test を追加する前に、同じ観点を既存テストへ統合できるか確認したいとき。
+- cmoc の実装変更後に、対応する realization test の所在や既存の検証観点を探すとき。
+- CLI の終了コード、標準出力、状態遷移、worktree/branch 副作用、Codex 呼び出し、file access rule violation recovery などの外部挙動をテストから確認したいとき。
+- apply、session、indexing、review oracle、init/TUI、Codex runtime、ACP builder、prompt、packaging、StructDoc rendering のテスト追加・修正対象を選びたいとき。
+- テスト用 Git リポジトリ、Codex home、fake executable、branch/state 確認など、複数テストで使う共通補助処理を探すとき。
 
 ## Do not read this when
-- 正本仕様断片そのもの、oracle file の定義、oracle src の schema や prompt 本文を確認したい場合は、oracle 側を直接読む。
-- 実装内部の関数分割、helper の責務、永続状態や runtime の実装詳細を変更する入口を探す場合は、対応する realization implementation を先に読む。
-- INDEX.md エントリーの自然言語内容だけを作成・評価したい場合で、CLI による生成・更新・commit 挙動の確認が不要なとき。
-- Codex CLI や LLM の出力品質そのものを検証したい場合。このテスト群は fake 実行や外部副作用の観測で cmoc 側の制御を検証する。
+- 正本仕様断片である oracle file の内容や標準を確認したい場合は、oracle 側の文書や source を読む。
+- 実装内部の関数分割、責務境界、helper の詳細を直接変更したい場合は、まず対応する realization implementation を読む。
+- 個別機能に関係しない repository 全体の構成、path model の定義、または INDEX.md 生成規則そのものを確認したいだけの場合は、より直接の対象へ進む。
 
 ## hash
-- e5512371c20e349d3146266a47c6d4dacc7cdbe6bad038ac5161101c9c2c1a1b
+- 6af8dfd23bf5ae42aa9c218b7587b210508a916c12364425e16fc952ec1243ad

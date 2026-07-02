@@ -62,24 +62,25 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper 群をまとめる実装領域。Codex 実行、CLI 共通ライフサイクル、設定、Git、ログ、path、状態、内容 hash、エラー、実行結果、INDEX 更新 preflight など、複数サブコマンドから使われる横断的な runtime 責務への入口になる。
-- 個別 helper の実装だけでなく、Codex 実行前後の制御、file access post-check、INDEX 自動更新、session state 永続化、subcommand log など、上位機能を支える共通処理の所在を判断するための階層である。
+- cmoc の共通 runtime helper 群を収める領域。Codex 実行、CLI 共通ライフサイクル、設定、Git、ログ、パス、状態、内容 hash、エラー、結果モデル、INDEX 更新 preflight など、複数サブコマンドから使われる実行時支援を責務別に分けて扱う。
+- 個別 runtime_* 実装へ進む前に、共通 API の入口、責務分割、集約 import、INDEX 自動更新や Codex 呼び出し周辺の実装位置を見分けるための階層である。
 
 ## Read this when
-- 複数サブコマンドや複数上位 module から使われる共通 runtime 処理の実装箇所を探したいとき。
-- Codex exec/TUI 呼び出し、profile 作成、quota/capacity/retry、Structured Output 検証、call log、file access post-check の runtime 経路を確認または変更したいとき。
-- CLI サブコマンド共通の実行順序、標準出力、終了コード化、例外表示、subcommand logger、実行 log の扱いを調べたいとき。
-- 設定 JSON、runtime path、Git 操作、内容 hash、binary 判定、共通エラー表示、外部コマンド結果、session state 永続化などの共通 helper を探したいとき。
-- Codex 実行前の INDEX 更新 preflight、INDEX.md 更新対象の走査・除外・hash 判定・エントリー生成制御を調べたいとき。
+- 複数サブコマンドで共有される runtime helper の所在や責務分割を確認したいとき。
+- Codex exec/TUI 呼び出し、preflight、profile、call log、quota/capacity retry、Structured Output 検証、file access rule post-check など Codex runtime 周辺の読む先を選びたいとき。
+- CLI 共通実行順序、サブコマンドログ、利用者向けエラー、設定 JSON、Git wrapper、runtime path、session state、外部コマンド結果モデルの実装入口を探すとき。
+- INDEX.md 自動更新、対象走査、hash 鮮度判定、既存エントリー再利用、Codex へのエントリー生成依頼、Markdown 描画の実装を調べたいとき。
+- 共通 runtime API をまとめて import する集約モジュールと、責務別の個別モジュールのどちらを読むべきか判断したいとき。
 
 ## Do not read this when
-- 個別 CLI サブコマンドの引数定義、利用者向け command 登録、サブコマンド固有の業務処理だけを調べたいとき。
-- oracle 上の正本仕様、path placeholder の概念定義、INDEX.md の仕様意図、file access policy の仕様文面そのものを確認したいとき。
-- 特定領域の公開仕様やプロンプト文面を変更したいだけで、共通 runtime 実装の呼び出し経路や失敗時挙動を扱わないとき。
-- 生成済み log や state の内容を利用者として確認したいだけで、読み書き・検証・保存先決定の実装を調べないとき。
+- 個別 CLI コマンドの引数定義、利用者向け制御フロー、画面出力、業務処理だけを調べたいときは、コマンド実装側へ進む。
+- path placeholder、oracle file、realization file、INDEX.md、file access policy などの正本仕様や仕様意図を確認したいだけなら、対応する oracle doc または oracle src を読む。
+- ACP の型、prompt builder、config データクラス、path model など、runtime helper が利用する上位または正本側の定義そのものを調べたいときは、その責務を持つ対象を直接読む。
+- 特定の低レベル処理だけが目的で、どの module が担当するか既に分かっているときは、この階層全体ではなく該当する runtime 実装を直接読む。
+- 生成済み log の解析、個別サブコマンドの状態遷移、保存ファイルのライフサイクルなど、共通 helper ではなく利用側の挙動を調べたいとき。
 
 ## hash
-- 6794f0c0a876dda9817962170485e18e0cc450309b17235c2ecbe390a8e9a6ed
+- 926ba1df94d7b36e5b4151a503ed900180e8cbb866ac2d70ab892be8d01e6251
 
 # `config`
 
