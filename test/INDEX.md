@@ -173,20 +173,24 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 呼び出しランタイムのテスト群。exec/TUI 起動時の profile 生成、cwd と sandbox 設定、schema 配置、apply process tracking、ファイルアクセス違反の回復・拒否、追加 read path 検査、Codex CLI 不在や非ゼロ終了時のエラー報告を検証する。
+- Codex CLI 呼び出しランタイムの実行系を、実際の Codex バイナリを小さな Python 実行ファイルで置き換えて検証するテスト群。
+- exec と TUI の起動引数、作業ディレクトリ、生成プロファイル、標準入力、出力回収、schema 保存先、呼び出しログ、Codex CLI 不在時や非ゼロ終了時のエラー報告を扱う。
+- ファイルアクセスモードごとの sandbox 設定、許可外差分の検出、oracle 書き込み違反からの再実行回復、session join 用の例外的な書き込み許可、apply process tracking の分離を検証する。
 
 ## Read this when
-- Codex CLI の exec/TUI 呼び出し処理、profile 設定、sandbox writable roots、作業ディレクトリ選択、schema 出力設定、または call log 周辺の挙動を変更する。
-- FileAccessMode ごとの読み書き許可、oracle/memo/.agents/.cmoc へのアクセス制御、違反差分の検出・回復処理を確認または変更する。
-- Codex subprocess の process group 管理、apply process tracking 環境変数の扱い、Codex CLI 不在・失敗時の CmocError と利用者向け出力を検証する。
+- Codex exec/TUI 呼び出しの subprocess 起動方法、引数構築、プロファイル生成、作業ディレクトリ選択、標準入力や出力ファイルの扱いを変更する時。
+- FileAccessMode に応じた read-only、workspace-write、writable_roots、pure oracle read、linked worktree の挙動を確認または変更する時。
+- Codex 呼び出し後の禁止領域差分検出、oracle 書き込み違反の回復、extra read/write path の許可判定、session join conflict の許可範囲を扱う時。
+- Codex CLI が見つからない場合、TUI が非ゼロ終了した場合、または apply process tracking 環境変数や専用 process group の扱いに関する失敗挙動を確認する時。
 
 ## Do not read this when
-- Codex CLI 呼び出しランタイムに関係しない通常の CLI コマンド処理、設定モデル定義、path model、INDEX 生成規則だけを調べる。
-- oracle file の正本仕様本文やドキュメント構成だけを確認したい場合。
-- 実際の Codex/LLM 出力品質やプロンプト内容そのものを評価したい場合。
+- CLI コマンドのユーザー向け引数、設定ファイル形式、通常の repository 操作など、Codex ランタイム起動の外側にある機能だけを変更する時。
+- Codex subprocess を起動せずに完結する純粋な path helper、git helper、設定 loader などの単体挙動だけを確認したい時。
+- LLM の応答品質、プロンプト本文の生成規則、または oracle 文書そのものの仕様内容を検証したい時。
+- テスト支援関数や fixture の実装詳細だけを探している場合で、呼び出しランタイムの外部挙動を確認する必要がない時。
 
 ## hash
-- 54904239d7ac9fd67f23ce416a8393c45b82a0addb53f5738ef8c5aa64f8c1dc
+- d9fc9fe1b32cb6898890a83f218485695799d77661c231dafe8a3e7b511d7033
 
 # `test_codex_runtime_home.py`
 
