@@ -93,25 +93,21 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループと、その周辺の再試行・検証・実行記録・事後ファイルアクセス検査を扱う実行制御モジュール。
-- Structured Output 検証、capacity retry、quota 待機と代表 probe、resume 継続、call log/subcommand event 出力、Codex subprocess 実行結果の組み立てが同じ状態機械としてまとまっている。
-- agent call 後に残った差分から file access rule 違反を検出し、設定回数だけ Codex によるリカバリを試みる処理も含む。
+- Codex exec の実行制御を担い、単一試行ループ内で argv 構築、prompt/stdout/stderr/output/call log の記録、Structured Output 検証、semantic/capacity/quota retry、resume 継続、subcommand event 発行をまとめて扱う。
+- agent call 後の file access rule 事後検証と、違反時の recovery agent call、git status と禁止 root の snapshot に基づく差分検出、FileAccessMode 別の書き込み可否判定も扱う。
 
 ## Read this when
-- Codex exec 呼び出しの argv、stdin prompt log、stdout/stderr/output/call log の生成や記録内容を確認・変更したいとき。
-- Structured Output の読み取り、JSON parse、schema validation、semantic retry の挙動を確認・変更したいとき。
-- Codex CLI の capacity error retry、quota error 待機、代表 probe、resume token 利用、quota 待機時間や poll 数の記録を扱うとき。
-- agent call 後の file access rule 事後検証、編集禁止差分の検出、リカバリ用 agent call、FileAccessMode ごとの書き込み許可判定を確認・変更したいとき。
-- Codex call の console 出力、subcommand log event、CodexExecResult に入る実行メタデータを追う必要があるとき。
+- Codex exec 呼び出しの再試行条件、quota 待機、代表 probe、resume token 利用、Structured Output 検証、call log や Codex 実行ログの生成を確認・変更したいとき。
+- agent call 後に編集禁止ファイルや禁止ディレクトリの差分を検出する処理、file access rule violation recovery、FileAccessMode ごとの書き込み許可境界を確認・変更したいとき。
+- Codex exec の実行結果から CodexExecResult を組み立てる箇所、subcommand log の codex_call event、quota_wait_sec や quota_polls の記録を追いたいとき。
 
 ## Do not read this when
-- Codex profile、CODEX_HOME、output schema file の作成や Codex subprocess 実行ラッパー自体を変更したいだけなら、それらを提供する runtime Codex profile 側を読む。
-- TUI 起動や exec 以外の Codex 起動経路を扱う場合は、このモジュールではなく該当する起動制御のモジュールを読む。
-- AgentCallParameter の構築内容や quota probe prompt の正本側ビルダーを変更したい場合は、このモジュール内の呼び出し先ではなく acp builder 側を読む。
-- git command の低レベル実行や repository path 解決そのものを変更したいだけなら、runtime git/path 系の共通モジュールを読む。
+- Codex profile、CODEX_HOME、schema file、subprocess 実行、resume token 抽出などの低レベル helper 自体を確認したいだけなら、それらを定義する runtime Codex profile 周辺を直接読む。
+- TUI 起動や exec 以外の Codex 実行分岐を確認したいだけなら、このファイルではなく該当する起動制御 module を読む。
+- ACP builder の prompt 内容や quota probe parameter の正本的な組み立てを確認したいだけなら、ここではなく対応する builder 側を読む。
 
 ## hash
-- 9f705de701acb38f32b9c33363626c115559a32bda5ba999cffdfc724d7d49bf
+- d451b2c7efd32b623ce516f2e4b85c563ca47ed4c9bfb457efd0cf5242428c44
 
 # `runtime_codex_logging.py`
 

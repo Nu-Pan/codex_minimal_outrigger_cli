@@ -62,21 +62,23 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper 群を収める実装領域。Codex 実行、INDEX 更新 preflight、CLI 共通ライフサイクル、設定、内容 hash、エラー表示、Git、ログ、パス、結果、状態管理など、複数サブコマンドから参照される基盤処理への入口になる。
-- 集約 import 入口と、責務別の runtime_* 実装が同階層に並び、個別挙動を確認する場合は対象領域の実装本文へ進むための分岐点になる。
+- cmoc の共有 runtime helper 群をまとめる実装ディレクトリ。Codex 実行、indexing preflight、CLI 共通ライフサイクル、設定、内容 hash、エラー、Git、ログ、path、結果モデル、session state など、複数領域から使われる runtime_* API とその集約入口を扱う。
+- 個別 helper の実装本文へ進む前に、共通 runtime 層のどの責務へ進むべきかを判断する入口になる。
 
 ## Read this when
-- cmoc 全体で共有される runtime helper の所在を探し、Codex 実行、Git、設定、状態、ログ、パス、エラーなどのどの共通実装へ進むべきか判断したいとき。
-- 複数サブコマンドにまたがる共通処理、共通 result 型、共通例外、共通 logger、共通 path 解決、Codex profile/exec/TUI/preflight の実装境界を確認したいとき。
-- INDEX.md 自動更新、Codex call 実行制御、file access rule 事後検査、session state 永続化、git worktree 管理など、特定サブコマンド固有ではない基盤挙動を変更する入口を探しているとき。
+- Codex exec/TUI 呼び出し、INDEX.md 自動更新 preflight、file access rule 事後検証、quota/capacity retry、Structured Output 検証、call log など Codex runtime 周辺の実装を探したいとき。
+- CLI サブコマンド共通の実行順序、進捗表示、完了サマリー、終了コード化、例外表示、サブコマンド logger の扱いを確認したいとき。
+- cmoc の設定ファイル、内容 hash 保存、利用者向けエラー表示、Git 操作、実行ログ、runtime path、外部コマンド結果、session state など、複数サブコマンドで共有される runtime helper を確認または変更したいとき。
+- 複数の runtime_* API をまとめて import する公開入口や、旧 import path 互換の再 export 境界を確認したいとき。
 
 ## Do not read this when
-- 個別 CLI サブコマンドの引数定義、利用者向け制御フロー、業務処理だけを調べたいときは、該当する command 実装側へ進む。
-- oracle file 上の正本仕様、path model、INDEX.md 仕様意図、file access rule の要求そのものを確認したいときは、対応する oracle doc または oracle src を読む。
-- 低レベルの個別挙動をすでに特定できているときは、この階層全体ではなく、該当する runtime_* 実装本文を直接読む。
+- 個別 CLI コマンドの引数定義、利用者向け制御フロー、サブコマンド固有の業務処理だけを調べたいとき。
+- oracle file にある正本仕様、INDEX.md エントリーの標準、path placeholder の抽象定義、session state の仕様意図などを確認したいだけのとき。
+- ACP builder の prompt 内容、設定データクラス、runtime path の正本的な path model、個別 schema や enum 定義など、より直接の定義元がある対象を調べたいとき。
+- 生成済み log の解析、Codex や Git を使わない上位 workflow、または特定サブコマンドの公開挙動だけを確認したいとき。
 
 ## hash
-- 80694ea9dbc16ff3ba8d1efda09caadc36840528d19c9b0d8be1d973fb13dff4
+- 57e39c8631317c44fc3708aedc21c59bae6c18b85cf4dee3c0ccf45747277ef3
 
 # `config`
 

@@ -167,22 +167,24 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行ランタイムの pytest 群。exec/TUI 呼び出し時の profile 生成、作業ディレクトリ、schema 配置、subprocess の process group と環境変数隔離、出力取得、失敗報告を検証する。
-- 呼び出し後の file access rule 検査とリカバリ挙動を重点的に扱う。oracle、realization、blocked runtime root、git directory、ignored cache、linked worktree、repo log read、preexisting forbidden diff、session join conflict target などの許可・拒否境界を確認する。
+- Codex CLI 実行/TUI 呼び出しの runtime 挙動を、スタブ実行ファイルと一時 Git リポジトリで検証するテスト群。
+- プロファイル生成、cwd と writable_roots、標準入力・出力 schema、process group 追跡、Codex CLI 不在や非 0 終了時のエラー報告を扱う。
+- 呼び出し後のファイルアクセス規則チェックとリカバリを中心に、oracle、realization、runtime 管理領域、ignored/cache/venv、linked worktree、追加 read/write path の境界を検証する。
 
 ## Read this when
-- Codex CLI を起動する実装、profile 生成、CODEX_HOME、sandbox workspace write、writable_roots、--cd、--output-last-message、--output-schema の扱いを変更する。
-- run_codex_exec、run_codex_tui、run_codex_subprocess、run_tracked_codex_subprocess の外部挙動やエラー処理を変更する。
-- agent 呼び出し後の差分検査、file access rule 違反の検出・復旧、ignored file や一時 cache の扱い、blocked root 配下の変更拒否を変更する。
-- linked worktree、pure oracle read、extra read path、extra writable path、oracle conflict write、repo log read の許可範囲を変更する。
+- Codex CLI を起動する runtime wrapper の exec/TUI 呼び出し仕様、profile 設定、cwd、stdin、output-last-message、output-schema の扱いを確認・変更したいとき。
+- FileAccessMode ごとの post-call diff 判定、禁止領域変更の検出、リカバリ再実行、既存の禁止 diff の扱いを変更するとき。
+- `.cmoc` linked worktree、repo log 読み込み、pure oracle read の oracle cwd 制限、extra_read_paths/extra_writable_paths の許可判定を確認したいとき。
+- Codex subprocess の process group 追跡、apply tracking 環境変数の扱い、Codex CLI 欠落・非 0 終了時の CmocError と表示内容を検証したいとき。
 
 ## Do not read this when
-- Codex 呼び出しランタイムではなく、agent call parameter の型定義や設定値の静的な意味だけを確認したい。
-- 通常の CLI サブコマンドの入出力や UI 表示を調べたいだけで、Codex subprocess 起動や file access rule 検査に触れない。
-- oracle 文書や realization 実装のルーティング規則そのものを調べたいだけで、実行後差分の許可・拒否挙動を検証しない。
+- Codex runtime の実装詳細を先に調べたいだけなら、対応する runtime 実装ファイルを直接読む。
+- agent call parameter、file access mode、model class などの型定義そのものを確認したいだけなら、basic/config 側の定義を読む。
+- Git リポジトリ作成やスタブ実行ファイル作成の test helper の仕様を調べたいだけなら、テスト支援モジュールを読む。
+- Codex runtime 以外の CLI サブコマンド、oracle 文書仕様、INDEX.md 生成規則のテストを探しているときは対象外。
 
 ## hash
-- 942a8f1ae694186ea3563f38a732d37e142b00ca1bf37799e15bd94d1d3acf57
+- a20fcc439b3e5757646bca90c4a61b52e869a283f0976c92c1e788bc804efbb2
 
 # `test_codex_runtime_home.py`
 
