@@ -151,21 +151,22 @@
 # `test_cli_init_tui.py`
 
 ## Summary
-- init と TUI 起動直前の CLI 前処理を外部挙動として検証するテスト。cmoc 初期化、.cmoc ignore、既存差分保護、設定既定値同期、linked worktree、Markdown prompt 整形、Codex TUI 起動 parameter 構築を同じ利用開始境界の回帰として扱う。
+- init と TUI 起動直前の CLI 前処理を対象に、repository/runtime 準備の外部挙動を検証するテスト。
+- .cmoc ignore、既存 staged/unstaged 差分保護、初期設定同期、linked worktree、Markdown prompt 整形、Codex TUI 起動 parameter 構築が同じ利用開始直後の境界で期待通り動くかを確認する。
 
 ## Read this when
-- `init` の git ignore 更新、.cmoc 配下の追跡解除、cleanup commit、既存 staged/unstaged 差分保護を変更・確認する。
-- 初期設定ファイルの既定値生成、既存 human value を保持した設定同期、sub_command log の記録内容を変更・確認する。
-- linked worktree での init/TUI の root/cwd、ignore、config/log/schema 保存先、git status への影響を確認する。
-- TUI 起動前の editor 実行、HTML comment 除去、complete prompt 保存、resolve parameter の解釈、AgentCallParameter 構築を変更・確認する。
+- init の外部挙動、コミット対象、.gitignore 更新、.cmoc 追跡除外、設定ファイル初期化や既存値保持を変更・確認するとき。
+- TUI 起動前の editor 実行、prompt 保存、resolve parameter、launch_tui schema、file access mode、Codex 呼び出し parameter を変更・確認するとき。
+- linked worktree 上で init または TUI を実行したときの root/cwd、ログ保存先、ignore 設定、schema 生成先を確認するとき。
+- subcommand 実行ログの記録形式や保存場所が init/TUI 境界で維持されるかを確認するとき。
 
 ## Do not read this when
-- 個別サブコマンドの本体処理や agent call 実行結果を確認したいだけで、init または TUI 起動前処理に関係しない。
-- 設定値の定義元や prompt 構築仕様そのものを確認したい場合は、対応する oracle または実装側を直接読む。
-- INDEX.md 生成規則や oracle/realization 標準の内容を確認したいだけで、この CLI 境界の回帰テストを見ない。
+- init や TUI 起動前処理に関係しないサブコマンドの挙動だけを確認するとき。
+- Codex/LLM の出力品質そのものや TUI 起動後の対話内容を検証したいとき。
+- 設定値の定義元や prompt 構築仕様そのものを読みたいときは、対応する実装または oracle 側の根拠を直接確認する。
 
 ## hash
-- b78e4d3a16f472b8ec6f743589c4e5f1fc8915248148f5d95c2f1a348d42db08
+- 001f4f4228a451b5eec2906718bdc49f53ad9f91119a4b58b6794652f8fd69d7
 
 # `test_codex_runtime_exec.py`
 

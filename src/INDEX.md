@@ -142,20 +142,19 @@
 # `sub_commands`
 
 ## Summary
-- cmoc のサブコマンド実装を集約するディレクトリ。初期化、indexing、TUI、apply、session、review など、CLI runtime 経由で起動される各コマンドの実行入口と実行制御へ進むための上位ルーティングを担う。
-- 各サブコマンドの責務は下位ファイル・ディレクトリに分かれており、ここは目的のコマンド実装、状態遷移、git 操作、report 出力、runtime helper への入口を選ぶために読む。
+- CLI のサブコマンド実行本体を集める実装領域。apply、session、review、init、indexing、tui など、利用者向け操作を runtime や共通 helper へ接続する入口になる。
+- 各サブコマンド固有の事前条件検証、状態遷移、git 操作、外部プロセス起動、report 出力、cleanup の大枠を追い、詳細ロジックは責務ごとの下位実装へ分かれる。
 
 ## Read this when
-- cmoc のサブコマンド実装から、対象コマンドに対応するファイルや下位ディレクトリを選びたいとき。
-- init、indexing、tui、apply、session、review の実行フロー、preflight、CLI runtime への接続、git 状態操作、成功時出力や report 生成の入口を切り分けたいとき。
-- apply run、session lifecycle、review oracle、INDEX.md maintenance、TUI 起動、初期化処理のどの実装へ進むべきか判断したいとき。
-- サブコマンド固有の cleanup、branch・worktree・state・process・report の扱いがどの責務に属するかを俯瞰したいとき。
+- 利用者向けサブコマンドの実行フローから、目的の操作に対応する実装入口を選びたいとき。
+- apply run、session lifecycle、review oracle、初期化、INDEX maintenance、TUI 起動のどの領域を読むべきか切り分けたいとき。
+- サブコマンド固有の preflight、clean worktree 要求、branch・worktree・state 操作、commit・merge・rollback、report や stdout 出力の責務分担を確認したいとき。
+- CLI runtime、Codex 実行、git helper、設定、path 解決などの共通基盤が、各サブコマンドからどのように呼び出されるかをたどりたいとき。
 
 ## Do not read this when
-- CLI 全体の Typer app 登録、共通 runtime、git command wrapper、path model、設定モデル、state 永続化など、個別サブコマンドではない共通基盤を直接調べたいとき。
-- oracle 側の正本仕様断片、INDEX.md エントリー作成基準、またはサブコマンド外部仕様だけを確認したいとき。
-- Codex に渡す prompt や Structured Output parameter の詳細、INDEX.md 生成ロジック、report rendering など、下位の専用 builder や共通処理を直接読む方が適切な詳細だけを調べたいとき。
-- テスト、fixture、パッケージ外の補助ファイル、またはサブコマンド以外の実装領域を探しているとき。
+- Typer アプリへの登録、トップレベル CLI 配線、共通 runtime、git wrapper、state 永続化、path model、設定モデルなど、サブコマンド横断の低レベル基盤そのものを調べたいとき。
+- oracle 側の正本仕様断片、prompt builder、Structured Output parameter、INDEX.md 生成ロジック、レポート描画など、より直接の責務を持つ実装や仕様を確認すべきとき。
+- 個別サブコマンドの詳細な内部処理だけを調べる対象がすでに分かっているとき。
 
 ## hash
-- b4ce8066f3e2528489ff8ff90df1a0fd92e0b2d9037aab6b01af9e2cba4ab45e
+- ffcba3ae2900ca392984aacc0d431fd73489adc763eeb2d8c45dd289de923f3e
