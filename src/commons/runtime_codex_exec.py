@@ -42,7 +42,7 @@ from commons.runtime_codex_profile import (
 )
 from commons.runtime_errors import CmocError
 from commons.runtime_codex_logging import emit_codex_call_console
-from commons.runtime_git import run_git
+from commons.runtime_git import is_untracked_git_ignored, run_git
 from commons.runtime_logging import SubcommandLogger, current_subcommand_logger
 from commons.runtime_paths import (
     codex_log_dir,
@@ -880,6 +880,8 @@ def _is_write_allowed_by_file_access_mode(
         case FileAccessMode.READONLY | FileAccessMode.PURE_ORACLE_READ:
             return False
         case FileAccessMode.REALIZATION_WRITE:
+            if is_untracked_git_ignored(root, path):
+                return False
             return relative.parts[0] != "oracle"
         case FileAccessMode.PURE_ORACLE_WRITE:
             return relative.parts[0] == "oracle"
