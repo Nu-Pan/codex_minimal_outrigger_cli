@@ -93,24 +93,25 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループと、その試行に付随する Structured Output 検証、capacity retry、quota 待機・代表 probe、resume 継続、call log・subcommand event 記録、実行後の file access rule 違反検出とリカバリを扱う実行制御モジュール。
-- Codex subprocess の argv・stdin・log path・profile・schema・CODEX_HOME を組み立て、成功時は実行結果を返し、失敗時は quota/capacity/semantic retry または cmoc error へ振り分ける状態機械として読む入口になる。
-- worktree 差分、禁止領域の filesystem snapshot、FileAccessMode に基づく書き込み可否判定もここで扱い、agent call 後に残った編集禁止差分を検出する。
+- Codex exec の単一試行ループと、その周辺の再試行・検証・実行記録・事後ファイルアクセス検査を扱う実行制御モジュール。
+- Structured Output 検証、capacity retry、quota 待機と代表 probe、resume 継続、call log/subcommand event 出力、Codex subprocess 実行結果の組み立てが同じ状態機械としてまとまっている。
+- agent call 後に残った差分から file access rule 違反を検出し、設定回数だけ Codex によるリカバリを試みる処理も含む。
 
 ## Read this when
-- Codex exec 呼び出しの再試行条件、Structured Output 検証失敗時の扱い、quota 枯渇時の polling/resume、capacity error の backoff を変更または調査する時。
-- Codex call の prompt/stdout/stderr/output/call log、console 出力、subcommand log event、quota wait 集計の内容や生成タイミングを確認する時。
-- agent call 後の file access rule 違反検出、リカバリ call、FileAccessMode ごとの書き込み許可範囲、禁止 root や ignored/generated path の扱いを変更または調査する時。
-- Codex subprocess に渡す profile、CODEX_HOME、cwd、output schema、resume token、stdin prompt file の組み立てを確認する時。
+- Codex exec 呼び出しの argv、stdin prompt log、stdout/stderr/output/call log の生成や記録内容を確認・変更したいとき。
+- Structured Output の読み取り、JSON parse、schema validation、semantic retry の挙動を確認・変更したいとき。
+- Codex CLI の capacity error retry、quota error 待機、代表 probe、resume token 利用、quota 待機時間や poll 数の記録を扱うとき。
+- agent call 後の file access rule 事後検証、編集禁止差分の検出、リカバリ用 agent call、FileAccessMode ごとの書き込み許可判定を確認・変更したいとき。
+- Codex call の console 出力、subcommand log event、CodexExecResult に入る実行メタデータを追う必要があるとき。
 
 ## Do not read this when
-- TUI 起動や exec 以外の UI 分岐を調べる時。
-- Codex profile、schema、CODEX_HOME、subprocess 実行、resume token 抽出、quota/capacity error 判定の低レベル helper 自体を変更する時は、それらを定義する runtime profile 側を直接読む。
-- 設定値の読み込み形式、path model、subcommand logger、git wrapper、実行結果データ構造そのものを変更する時は、それぞれの責務を持つ module を直接読む。
-- oracle の正本仕様断片や prompt builder の内容を変更・確認する時は oracle 側の該当文書または実装を読む。
+- Codex profile、CODEX_HOME、output schema file の作成や Codex subprocess 実行ラッパー自体を変更したいだけなら、それらを提供する runtime Codex profile 側を読む。
+- TUI 起動や exec 以外の Codex 起動経路を扱う場合は、このモジュールではなく該当する起動制御のモジュールを読む。
+- AgentCallParameter の構築内容や quota probe prompt の正本側ビルダーを変更したい場合は、このモジュール内の呼び出し先ではなく acp builder 側を読む。
+- git command の低レベル実行や repository path 解決そのものを変更したいだけなら、runtime git/path 系の共通モジュールを読む。
 
 ## hash
-- 29a30f31acab8efb61f09174c95d59265deb91aaeca93726a99354fe65aaa2c2
+- 9f705de701acb38f32b9c33363626c115559a32bda5ba999cffdfc724d7d49bf
 
 # `runtime_codex_logging.py`
 

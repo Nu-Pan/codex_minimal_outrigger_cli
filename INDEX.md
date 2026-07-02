@@ -146,41 +146,39 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体への入口。最上位 CLI、サブコマンド実装、共通 runtime 基盤、oracle 側正本実装を複製しないための互換 import 層を扱う。
-- この対象は個別実装本体を直接読む場所ではなく、CLI・runtime・subcommand・互換層・ACP builder 関連のどの実装領域へ進むかを選ぶためのルーティング対象である。
+- cmoc の realization implementation 全体への入口。公開 CLI、サブコマンド実行、共通 runtime、互換 import 層、設定・基本型・ACP builder 参照境界など、利用者向け挙動と実装本体を配置する領域である。
+- 下位には、実処理を担う command/runtime 領域と、正本側実装を複製せず既存 import 経路を維持するための薄い互換領域が混在するため、変更対象の責務を切り分けて読むための分岐点になる。
 
 ## Read this when
-- cmoc の realization 側実装で、CLI 入口、サブコマンド、共通 runtime、設定・basic・oracle・ACP builder 互換層のどこから確認すべきかを切り分けたいとき。
-- 公開 CLI コマンド構成、サブコマンド実行フロー、Codex 実行制御、INDEX 更新 preflight、git・path・state・logging・error など複数領域にまたがる実装変更の入口を探すとき。
-- oracle 側の正本実装を realization 側へ複製せず、既存 import 経路を維持している互換境界や削除条件を確認したいとき。
-- ACP builder、quota availability probe、TUI 起動 parameter、apply・review・session・indexing などの実装入口を選びたいとき。
+- cmoc の実装側で、CLI 登録、サブコマンド処理、共通 runtime、設定参照、基本型参照、ACP builder 入口のどこへ進むべきか判断したいとき。
+- 利用者向け CLI 挙動、実行制御、git/worktree/state 操作、Codex 実行連携、INDEX 更新 preflight、エラー表示など realization 側の実装変更を始めるとき。
+- oracle 側実装を realization 側へ複製せず、既存 import surface を維持している互換層の位置づけや削除条件を確認したいとき。
 
 ## Do not read this when
-- oracle file にある正本仕様断片、prompt 正本文面、path model、設定定義、file access rule、INDEX.md 仕様意図そのものを確認したいときは、対応する oracle 側の本文を読む。
-- 個別サブコマンド、共通 helper、ACP builder、互換 shim など対象領域がすでに特定できているときは、この階層ではなく該当する下位対象へ直接進む。
-- 実装本体ではなく利用者向け高レベル仕様、JSON schema の正本、生成済み log の解析、または外部から見える出力互換性だけを確認したいとき。
-- realization 側の既存 import 経路や CLI/runtime 実装と関係しない新仕様、正本仕様の編集判断、または oracle file の構成を調べたいとき。
+- 正本仕様断片、prompt 正本文面、path model、設定定義、ACP builder の正本実装そのものを確認したいときは、対応する oracle 側を読む。
+- テストの期待値、fixture、検証観点を調べたいときは、realization test 側を読む。
+- 特定の下位責務がすでに分かっているときは、この階層全体ではなく、該当する command、runtime、builder、互換入口の対象へ直接進む。
 
 ## hash
-- 2b903f3b42dc39f7aea2da76cb31de11d3006604de48de52526b511b6b56f903
+- 492c9e35266b31e9936b833e7b2befd0b7f2a15bfeff2ac4dfbc0ce23963abd2
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群を収める領域。CLI サブコマンド、Codex 実行ランタイム、ACP builder、prompt rendering、packaged import など、実装の外部挙動と制御境界を検証する入口になる。
-- 一時 Git リポジトリや Codex home、fake executable、worktree path 解決など、複数のテストで共有する補助処理も含み、個別テストの前提準備を集約している。
+- cmoc の realization test 全体を置くディレクトリ。CLI サブコマンド、Codex 実行ランタイム、ACP builder、prompt、INDEX.md 生成、packaged import、StructDoc rendering など、realization implementation の外部挙動や制御境界を pytest で検証する。
+- 共通テスト補助を入口に、session/apply/review/indexing/init/TUI/Codex runtime などの領域別テストへ進むための階層であり、実装変更後に対応する回帰観点を探す起点になる。
 
 ## Read this when
-- realization implementation の変更後に、対応する外部挙動、終了コード、出力、state 遷移、git/worktree 副作用を検証する既存テストを探すとき。
-- apply、session、init、indexing、review oracle、Codex runtime などの CLI 境界で、成功条件・拒否条件・cleanup・report 生成の期待値を確認するとき。
-- ACP builder、prompt parts、structured output schema 参照、packaged import、Markdown rendering など、CLI 本体以外の制御ロジックに対する realization test を確認するとき。
-- テスト用リポジトリ、Codex home、fake command、Git 操作、branch 状態確認など、CLI テスト共通の fixture や helper を利用・変更したいとき。
+- realization implementation を変更した後、対応する CLI 外部挙動、状態遷移、git/worktree 副作用、Codex 呼び出し、prompt/builder 出力、packaging 境界の既存テスト観点を探すとき。
+- session fork/join/abandon、apply fork/join/abandon/report、review oracle、indexing、init/TUI、Codex runtime など、複数のテストファイルから対象領域を選びたいとき。
+- テスト用 Git repository、Codex home、fake executable、profile 生成差し替え、apply worktree path 解決など、CLI テスト共通 fixture や補助処理の入口を探すとき。
+- runtime 共通契約、file access rule、quota/capacity retry、structured output schema 参照、prompt parts、StructDoc Markdown rendering など、個別サブコマンドより下位または横断的な回帰テストを確認したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様、oracle/realization file の定義、INDEX.md エントリー生成規則そのものを確認したい場合は、oracle 側の文書を読む。
-- 実装内部の責務分割、helper の詳細、型定義、設定値定義を直接変更する入口を探している場合は、対応する realization implementation を先に読む。
-- Codex CLI や LLM の出力品質そのものを評価したい場合は、このテスト群の対象外として扱う。
-- 個別機能に関係しない一般的なプロジェクト構成や利用者向け概要だけを知りたい場合は、より上位の文書を読む。
+- oracle file の正本仕様本文、oracle standard、realization standard、path model、schema の定義元を確認したい場合は、oracle 側の文書または source を読む。
+- realization implementation の関数分割、内部 helper、設定読み込み、git 操作、Codex 実行器本体を直接変更する場合は、まず対応する実装側へ進む。
+- INDEX.md エントリーの自然言語内容だけを作成・確認したい場合で、CLI による indexing 挙動やテスト期待値を調べる必要がないとき。
+- 単一テストファイルの対象がすでに分かっている場合は、この階層全体ではなく該当テスト本文を直接読む。
 
 ## hash
-- b9f59bcb97ee6f9fb368d5c19fdbb466d6e6b0491d1b5bd911a775645f47f584
+- d73bd6bb31f3a08a8eb5103b7ce6a2d8ddc744c558e4dafafeb86864ea81007c
