@@ -1,24 +1,24 @@
 # `acp`
 
 ## Summary
-- ACP builder 関連の realization 側入口。正本側実装を複製せず既存の acp 系 import 参照を保つための互換層と、quota availability probe 用 parameter builder への入口を扱う。
-- この対象自体は実装本体ではなく、旧来 import 経路の維持理由、削除条件、下位 builder 領域への振り分けを確認するための場所である。
+- ACP builder 関連の旧 import 経路を維持するための realization 側互換入口を置く階層。実体を複製せず、正本側実装や下位 wrapper へ接続する役割を担う。
+- apply、review、session、TUI、indexing、quota probe などの builder 領域について、公開参照経路の維持、正本側への委譲、realization 側型への適合、互換コードの削除条件を確認する入口となる。
 
 ## Read this when
-- acp 系 import surface と正本側 builder 実装の対応関係を確認したいとき。
-- 既存の acp または acp.builder 系参照を残す理由、互換入口の削除条件、移行判断を確認したいとき。
-- apply、review、session、TUI、indexing、common など ACP builder 関連の下位領域へ進む前に入口を選びたいとき。
-- Codex quota availability probe に渡す最小限の AgentCallParameter 生成内容を確認または変更したいとき。
+- ACP builder 関連の `acp.*` import や旧公開 import path が、正本側実装または下位互換 wrapper にどう接続されているか確認したいとき。
+- agent call parameter builder の変更で、apply、review、session、TUI、indexing、quota probe などのどの下位領域へ進むべきか判断したいとき。
+- oracle src 側へ実体を集約しつつ realization 側に残る互換 package、薄い wrapper、再公開境界の残置理由や削除条件を確認したいとき。
+- 正本 builder の出力を realization 側の parameter 型や既存公開面へ適合させる経路を探しているとき。
 
 ## Do not read this when
-- ACP builder の正本仕様断片、prompt 正本文面、出力条件、判定仕様そのものを確認したいときは、対応する oracle 側の本文を読む。
-- apply fork、review oracle、session join、TUI 起動 parameter、indexing 生成処理などの具体的な実装本体を調べたいときは、該当する下位領域または正本側実装を読む。
-- AgentCallParameter 型、model、reasoning effort、file access mode などの基礎定義を確認したいときは、基礎定義側を読む。
-- Codex CLI の実行規則、quota probe parameter 生成後の runtime 処理、CLI コマンド全体の制御フローを調べたいときは、実行側またはコマンド実装側を読む。
-- 互換 import 経路の維持や削除判断と関係しない新規機能、画面制御、状態管理、ユーザー向け挙動を探しているときは、より直接その責務を持つ対象へ進む。
+- 個別 builder の正本仕様、prompt、出力条件、具体的な生成ロジックを確認したいときは、対応する oracle 側本文または実装へ進む。
+- CLI コマンド全体の制御フロー、fork 作成、branch 操作、diff 生成、画面制御、状態管理など、builder 互換入口以外の処理を調べたいときは、それぞれの実装領域へ進む。
+- agent call parameter の共通データ構造、model、reasoning effort、file access mode などの基礎定義だけを調べたいときは、基礎定義側へ進む。
+- 新しい acp 機能や API 仕様の追加場所を探しており、旧 import path の維持や正本側 builder への委譲と関係しないとき。
+- `acp.*` 参照が全公開面と realization 側から消えていることだけを確認済みで、互換入口の詳細を読む必要がないとき。
 
 ## hash
-- 79093e544721f088a1f881c40244ac903a6259bce6431129e8174e574d58cc60
+- fc2286cbc273ce54d85c75025fcdc905b01d360d989032802c1f1abaeafec5f6
 
 # `basic`
 
@@ -62,21 +62,24 @@
 # `commons`
 
 ## Summary
-- cmoc の共有 runtime helper 群を収める実装ディレクトリ。Codex 呼び出し、CLI 共通ライフサイクル、設定、内容 hash、エラー表示、Git、ログ、パス、結果モデル、状態管理、INDEX.md 自動更新に関する共通処理への入口になる。
-- 個別責務の runtime_* 実装と、それらをまとめて再エクスポートする集約モジュールを含み、サブコマンド実装から横断的に使われる共通実行基盤を扱う。
+- cmoc の共通実行時支援を集める implementation directory。Codex 呼び出し、CLI 共通ライフサイクル、設定、Git、ログ、パス、状態、INDEX 更新など、複数サブコマンドから共有される runtime helper と集約 import 入口を収める。
+- 低レベル helper の実装本文と、互換 import・再 export 用の薄い入口が混在するため、個別挙動を追う場合は対象領域の runtime_* 実装へ進むための入口になる。
 
 ## Read this when
-- cmoc の共通 runtime helper がどの対象に分かれているかを把握し、Codex 実行、CLI、設定、Git、状態、ログ、パス、エラーなどの読む先を選びたいとき。
-- 複数サブコマンドにまたがる実行時支援、共通結果型、永続状態、INDEX.md preflight や自動更新処理の実装入口を探しているとき。
-- 既存の共有 runtime API を利用・変更する前に、責務を持つ個別モジュールと集約 import 入口の境界を確認したいとき。
+- CLI サブコマンド間で共有される runtime helper の所在を探したいとき。
+- Codex exec/TUI、preflight、profile、logging など Codex CLI 呼び出し周辺の共通実装を調べたいとき。
+- work root 検査、設定 JSON、Git 操作、runtime path、subcommand log、session state、外部コマンド結果、共通エラー表示などの横断的な runtime 処理を確認または変更したいとき。
+- INDEX.md 自動更新の preflight、対象走査、hash 判定、エントリー生成、Markdown 描画までの indexing 実行経路を調べたいとき。
+- 複数の runtime API をまとめて import する公開入口や、旧 import path を維持する互換入口の責務境界を確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの引数定義、利用者向け制御フロー、業務処理だけを調べたいときは、該当する command 実装へ進む。
-- oracle 上の正本仕様、path model、INDEX.md の仕様意図、session state file の仕様意図などを確認したいだけなら、対応する oracle doc または oracle src を読む。
-- 特定 helper の引数、失敗時挙動、保存条件、出力内容を詳しく確認したいときは、この階層全体ではなく責務別の runtime 実装を直接読む。
+- 個別 CLI サブコマンドの引数定義、利用者向け制御フロー、業務処理だけを調べたいとき。その場合は command 実装側を読む。
+- oracle 上の正本仕様、path placeholder の概念定義、file access policy、INDEX.md の仕様意図そのものを確認したいとき。その場合は対応する oracle doc または oracle src を読む。
+- 特定の helper 関数や型の詳細が既に分かっているとき。その場合は集約入口ではなく、責務を持つ個別 runtime 実装を直接読む。
+- 生成済み log や state を利用者視点で読むだけで、runtime の生成・検証・永続化処理を変更しないとき。
 
 ## hash
-- be03778f5f456340e0a6c01665ec0cff2bbeffd0b16ffdb34a75a219dbe5606c
+- 32e0e203bab7cab9b7544192274460f194a8a4fc4b6b761f5ace65e585820b02
 
 # `config`
 

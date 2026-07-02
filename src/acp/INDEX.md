@@ -19,23 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP builder 領域の realization 側入口。正本側 builder 実装を既存の公開参照経路から利用するための互換 package 群と、quota availability probe 用 parameter builder を扱う。
-- 主な責務は、正本側実装への薄い委譲、旧来 import 経路の維持、互換層の残置理由と削除条件の確認、apply・review・session・TUI・indexing など下位 builder 領域へのルーティングである。
-- この領域自体は多くの builder 本体仕様を持たず、具体的な処理内容は下位の個別 builder、正本側実装、または実行側 module へ進んで確認する。
+- ACP の agent call parameter builder 群に対する realization 側の互換入口を集める階層。正本側 builder を既存の公開参照経路から利用できるようにし、実処理は主に oracle 側実装または下位の個別互換 wrapper に委ねる。
+- apply、review、session、TUI、indexing、quota probe などの builder 領域について、旧来 import path の維持、正本側への委譲、realization 側 parameter 型への適合、互換コードの残置理由や削除条件を確認するための上位入口である。
 
 ## Read this when
-- ACP builder 全体で、realization 側の公開 import surface と正本側 builder 実装の対応関係を確認したいとき。
-- 既存の acp.builder 系参照が残っている理由、互換入口を残す条件、削除できる条件を判断したいとき。
-- apply、review、session、TUI、indexing、common などの builder 関連領域について、どの下位領域へ進むべきかを選びたいとき。
-- Codex quota availability probe に渡す最小限の AgentCallParameter の生成内容を確認・変更したいとき。
-- 正本側へ実装を集約しつつ、realization 側で旧来参照を壊さないための wrapper や package 初期化境界を調べたいとき。
+- ACP builder 関連の公開 import path が正本側実装へどう接続されているかを、領域単位で切り分けたいとき。
+- agent call parameter builder の変更で、どの下位領域が apply、review、session、TUI、indexing、quota probe などを担当するか判断したいとき。
+- oracle 側へ実体を集約しつつ realization 側に残る互換 package、薄い wrapper、再公開境界の残置理由や削除条件を確認したいとき。
+- 正本 builder の出力を realization 側の型や既存公開面へ適合させる経路を探しているとき。
 
 ## Do not read this when
-- 各 builder の正本仕様断片、prompt の正本文面、出力条件、判定仕様そのものを確認したいときは、対応する oracle 側の本文を読む。
-- apply fork、review oracle、session join、TUI 起動 parameter、indexing 生成処理などの具体的な実装を直接調べたいときは、該当する下位領域または正本側実装を読む。
-- AgentCallParameter 型、model、reasoning effort、file access mode などの基礎定義を確認したいときは、基礎定義側を読む。
-- Codex CLI の実行規則、quota probe parameter 生成後の runtime 処理、CLI コマンド全体の制御フローを調べたいときは、実行側またはコマンド実装側を読む。
-- 互換 import 経路の維持や削除判断と関係しない新規機能の実装場所、画面制御、状態管理、ユーザー向け挙動を探しているときは、より直接その責務を持つ対象へ進む。
+- 個別 builder の正本仕様、prompt、出力条件、具体的な生成ロジックを確認したいときは、対応する oracle 側の本文または実装を読む。
+- CLI コマンド全体の制御フロー、fork 作成、branch 操作、diff 生成、画面制御、状態管理など builder 互換入口以外の処理を調べたいときは、それぞれの実装領域へ進む。
+- agent call parameter の共通データ構造、model、reasoning effort、file access mode などの基礎定義だけを調べたいときは、基礎定義側を読む。
+- 新しい機能の実装場所やテスト対象を探しており、旧 import path の維持や正本側 builder への委譲と関係しないとき。
 
 ## hash
-- 677081123f5a0fe4ce05f57b3b2626dbc216883df46012db0d251f3273fd50ab
+- 4713ed4a77a3cfb016121318ce6455d3cf080b543a1bc78c87ff7a6bbb8b751b

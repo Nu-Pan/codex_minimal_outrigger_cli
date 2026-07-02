@@ -204,23 +204,22 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex quota exceeded 後の retry 状態機械を外部挙動として検証するテスト。quota availability probe、resume token、再実行、call log、subcommand log、CODEX_HOME と cwd、並列呼び出し時の代表 probe 共有を、fake Codex 呼び出し列とログ観測でまとめて扱う。
+- Codex quota exceeded 後の `run_codex_exec` の retry 状態機械を検証するテスト。quota availability probe、resume token、再実行、call log、subcommand log、`CODEX_HOME` と cwd、並列呼び出し時の代表 probe 共有を同じ外部挙動として扱う。
+- ファイルは大きいが、quota 待機から復帰する Codex exec の観測点を一箇所で追うための凝集した回帰テストとして位置づけられている。
 
 ## Read this when
-- Codex exec が quota exceeded を返した後の probe、resume、再実行制御を変更・調査する。
-- quota retry 時の call log、subcommand log、stdout/prompt/output path、console 表示の記録内容を確認する。
-- resume token を JSONL log から抽出する挙動や、token が無い場合の再実行挙動を変更する。
-- CODEX_HOME が相対パスの場合の Codex subprocess の cwd と --cd の扱いを確認する。
-- quota 待機中または probe 失敗時の file access violation 回復処理を変更する。
-- 複数の Codex exec が同時に quota に到達した場合の代表 probe 共有と待機側の成功・失敗伝播を確認する。
+- Codex exec が quota exceeded を返した後の probe、resume、rerun、poll limit、失敗時挙動を変更・調査する。
+- quota retry に関する codex call log、subcommand log、prompt/stdout/stderr/output log の記録内容や順序を変更・確認する。
+- `CODEX_HOME` が相対パスの場合の cwd、file access mode ごとの `--cd`、quota 待機中のファイルアクセス違反回復を調査する。
+- 複数の `run_codex_exec` が同時に quota 待機した場合に、probe を代表 1 回だけ実行し、待機中の呼び出しが同じ結果で復帰または失敗する挙動を確認する。
 
 ## Do not read this when
-- quota retry と無関係な通常の Codex exec 引数組み立てや実行結果処理だけを調べる場合。
-- Codex 以外のサブコマンド実行、ログ形式、設定読み込みの一般挙動を調べる場合。
-- ファイルアクセス規則そのものの仕様や検査ロジックを調べる場合。
+- 通常の Codex exec 成功系、引数構築、JSON 出力読み取りだけを確認したい。
+- quota exceeded と関係しない runtime error、設定読み込み、CLI サブコマンド全般のテストを探している。
+- oracle builder の定義そのものや quota probe prompt の正本仕様を確認したい。
 
 ## hash
-- 821af6b9d3a9fe4b262d4f82d4c9d093dca37aa04bf456f6458138fea0d05ea4
+- 086d72d3abbcb3b4b80e74660e39a46911e0c77921b18e6598bafd3ff8ebb7c7
 
 # `test_codex_runtime_retry.py`
 

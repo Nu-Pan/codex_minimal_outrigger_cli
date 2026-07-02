@@ -93,25 +93,26 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループを中心に、実行 argv 構築、prompt/stdout/stderr/output/call log 記録、Structured Output 検証、capacity retry、quota 待機と代表 probe、resume 継続、実行後のファイルアクセス規則違反検出とリカバリを一体で扱う。
-- Codex call の実行結果、subcommand event、retry counter、quota wait 集計、生成 log の差分除外、worktree 差分 snapshot を共有する状態機械として読む入口になる。
-- TUI 起動や profile/schema 生成の詳細ではなく、exec 実行制御とその事後検証を追うための対象である。
+- Codex exec の実行制御を担い、単一試行ループ内で Structured Output 検証、capacity retry、quota 待機と代表 probe、resume 継続、call log と subcommand event 記録、実行後の file access rule 違反検出と回復を扱う。
+- Codex CLI 呼び出しに必要な profile、schema、log path、stdin prompt、argv、環境を組み立て、成功・失敗・再試行の結果を実行結果として返す状態機械である。
+- worktree 差分、禁止 root の filesystem snapshot、生成済み log の fingerprint、FileAccessMode ごとの書き込み可否を使い、agent call 後に残った編集禁止差分を検出する。
 
 ## Read this when
-- Codex exec 呼び出しの再試行条件、Structured Output 検証失敗時の扱い、capacity error や quota error の制御フローを確認したいとき。
-- quota 枯渇時に代表 probe がどのように共有され、待機中の call が resume token を使って継続するかを確認したいとき。
-- Codex call の prompt/stdout/stderr/output/call log がどの条件で作られ、console や subcommand log へどの結果が記録されるかを追いたいとき。
-- agent call 後に編集禁止領域や FileAccessMode に反する差分を検出し、リカバリ agent call を起動する挙動を確認したいとき。
-- worktree の git 差分、git ignored 差分、編集禁止 runtime root の filesystem snapshot、cmoc 生成 log の差分除外が絡むファイルアクセス検証を調べるとき。
+- Codex exec 呼び出しの再試行条件、Structured Output 検証失敗時の扱い、capacity error や quota error からの復帰挙動を確認・変更したいとき。
+- Codex call log、prompt/stdout/stderr/output log、subcommand event、quota wait 計測、resume token の扱いを追う必要があるとき。
+- agent call 後の file access rule 違反検出、違反回復用 agent call、生成 log を差分検査から除外する条件を確認・変更したいとき。
+- FileAccessMode による oracle file、realization file、readonly 系一時生成物、blocked runtime path の書き込み可否判定を調べたいとき。
+- Codex exec 実行前後の worktree 差分 snapshot、git status ベースの変更 path、git ignore 対象の扱い、禁止 root 配下の変更検出を調べたいとき。
 
 ## Do not read this when
-- Codex profile、CODEX_HOME、schema file の作成や subprocess 実行 wrapper の低レベル詳細だけを確認したい場合は、それらを担う runtime helper を直接読む。
-- AgentCallParameter の構築、quota probe prompt の正本、apply finding application parameter の内容を変更したい場合は、対応する builder 側を読む。
-- TUI 起動や exec 以外のサブコマンド分岐を調べたい場合は、この対象ではなく該当する command 実行制御を読む。
-- 単に work root、repo root、log directory、timestamp などの path 解決規則を確認したい場合は、path runtime helper を読む。
+- TUI 起動や exec 以外の Codex 起動 UI を変更したいだけのとき。
+- Codex profile、CODEX_HOME、schema ファイル準備、Codex subprocess 実行、quota/capacity error 判定などの低レベル helper の詳細だけを確認したいときは、それぞれの runtime helper を直接読む。
+- 個別サブコマンドの prompt 生成、AgentCallParameter の構築、または quota probe 用 parameter の内容を変更したいだけのときは、対応する builder 側を読む。
+- subcommand log の永続形式や logger 実装そのものを変更したいだけのときは、logging 側を読む。
+- git コマンド wrapper や repository path 解決の一般処理を変更したいだけのときは、git/path runtime helper 側を読む。
 
 ## hash
-- d60934e8a23894511e0b80c626c4768092591b727d20b73c92888d41b0d56c53
+- 66364fbfe472d4cf7331eac5a0f7e4cd11a731d577c3c5a6860ecb220eb8d935
 
 # `runtime_codex_logging.py`
 
