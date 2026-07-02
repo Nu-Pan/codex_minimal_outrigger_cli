@@ -142,18 +142,20 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装を集約する領域で、初期化、index maintenance、TUI 起動、session lifecycle、apply run、review oracle の各実行入口へ進むためのルーティング対象。
-- 各サブコマンドは共通 runtime に接続し、事前条件検証、git/worktree/state 操作、Codex 実行連携、成功時出力や report 生成など、利用者向け CLI 挙動の具体化を担う。
+- cmoc のサブコマンド実装を集約するディレクトリ。初期化、indexing、TUI、apply、session、review など、CLI runtime 経由で起動される各コマンドの実行入口と実行制御へ進むための上位ルーティングを担う。
+- 各サブコマンドの責務は下位ファイル・ディレクトリに分かれており、ここは目的のコマンド実装、状態遷移、git 操作、report 出力、runtime helper への入口を選ぶために読む。
 
 ## Read this when
-- どのサブコマンド実装へ進むべきかを、初期化、index 更新、TUI、session 操作、apply 操作、review oracle の観点で切り分けたいとき。
-- CLI サブコマンドの実行フロー、preflight、runtime への渡し方、git branch/worktree/state 操作、出力や report 生成に関係する変更を行うとき。
-- apply run、session lifecycle、review oracle、INDEX.md maintenance、初期化時 ignore 保証、TUI 起動 parameter 解決の入口を探すとき。
+- cmoc のサブコマンド実装から、対象コマンドに対応するファイルや下位ディレクトリを選びたいとき。
+- init、indexing、tui、apply、session、review の実行フロー、preflight、CLI runtime への接続、git 状態操作、成功時出力や report 生成の入口を切り分けたいとき。
+- apply run、session lifecycle、review oracle、INDEX.md maintenance、TUI 起動、初期化処理のどの実装へ進むべきか判断したいとき。
+- サブコマンド固有の cleanup、branch・worktree・state・process・report の扱いがどの責務に属するかを俯瞰したいとき。
 
 ## Do not read this when
-- CLI 全体の登録、共通 runtime、git wrapper、path model、設定読み込み、state file の低レベル読み書きだけを調べたいときは、それぞれの共通基盤を直接読む。
-- oracle file の正本仕様、INDEX.md 文章生成ロジック、Codex prompt builder、LLM 呼び出し自体の詳細を確認したいときは、対応する oracle または builder/runtime 側を読む。
-- 対象サブコマンドや補助責務がすでに特定できている場合は、この階層ではなく該当する下位対象へ直接進む。
+- CLI 全体の Typer app 登録、共通 runtime、git command wrapper、path model、設定モデル、state 永続化など、個別サブコマンドではない共通基盤を直接調べたいとき。
+- oracle 側の正本仕様断片、INDEX.md エントリー作成基準、またはサブコマンド外部仕様だけを確認したいとき。
+- Codex に渡す prompt や Structured Output parameter の詳細、INDEX.md 生成ロジック、report rendering など、下位の専用 builder や共通処理を直接読む方が適切な詳細だけを調べたいとき。
+- テスト、fixture、パッケージ外の補助ファイル、またはサブコマンド以外の実装領域を探しているとき。
 
 ## hash
-- 821d5c9c432b6b29d7c13ed2e092cd299ac2aa54c1fc0a15615667ba8a9f66da
+- b4ce8066f3e2528489ff8ff90df1a0fd92e0b2d9037aab6b01af9e2cba4ab45e

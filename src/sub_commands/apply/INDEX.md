@@ -100,21 +100,21 @@
 # `join.py`
 
 ## Summary
-- apply run の join 実行を担う実装。session branch または apply branch 上で実行され、対象 apply branch を session branch へ merge し、apply state を初期化して ready 相当に戻し、結果レポートを保存する。
-- join 前の worktree 清潔性確認、cmoc ignore 確保、active session と completed/error apply run の検証、oracle snapshot commit と apply branch の特定、merge 後の apply worktree・apply branch の掃除を扱う。
-- apply/session branch 上の想定外差分を分類し、通常時はレポート付きで中止し、force-resolve 時は基準 commit へ戻して commit する処理を含む。INDEX.md だけの merge conflict は削除 commit で機械解決し、それ以外の conflict はレポートして手動解決へ回す。
+- apply 実行結果を session 側へ取り込む処理を担う。対象 branch と session state を検証し、想定外差分の検出または force-resolve、merge、state 更新、report 作成、apply worktree と branch の cleanup、利用者向け結果出力まで扱う。
+- apply/session branch 上で許可される差分の分類、managed branch の変更 path 抽出、想定外差分の復元、INDEX.md だけの merge conflict の機械解決もこの対象に含まれる。
 
 ## Read this when
-- apply join の実行条件、成功時の state 更新、apply branch の merge、apply worktree や branch の削除条件を確認したいとき。
-- apply join で想定外差分がどのように検出・分類され、--force-resolve でどの branch 側の変更がどの基準 commit へ戻されるかを調べるとき。
-- apply join 結果レポートの記録内容、merge conflict 時の中止条件、INDEX.md conflict の自動解決挙動を変更または検証するとき。
-- session branch 上と apply branch 上の許可差分の境界、root memo・oracle・.agents・git ignored path の扱いを追うとき。
+- apply run 完了後または error 後に session branch へ取り込む制御を調べるとき。
+- apply join の実行条件、clean worktree 要求、session state の更新、apply state の初期化、apply branch/worktree の削除条件を変更するとき。
+- apply join の想定外差分判定、force-resolve による復元、merge conflict report、結果 report の内容を確認するとき。
+- apply branch と session branch で許可される変更範囲、root memo や oracle/INDEX.md/.agents/.gitignore 対象 path の扱いを調べるとき。
+- INDEX.md だけの merge conflict を自動解決する挙動、または未解決 conflict 時の停止条件を確認するとき。
 
 ## Do not read this when
-- apply run の開始、apply branch や worktree の作成、session state への apply 情報の書き込みを調べたいだけのとき。
-- apply join 以外の apply サブコマンドの CLI option 定義や Typer command 登録だけを確認したいとき。
-- git 実行、state 読み書き、reports directory、worktree 探索などの共通 runtime helper の低レベル実装を調べたいとき。
-- oracle file の正本仕様そのもの、または apply join の仕様文書を確認したいとき。
+- apply run の開始、apply branch/worktree の作成、agent 実行そのものを調べたいときは、apply 開始側の実装を読む。
+- worktree 探索や apply branch 共通 helper の責務だけを確認したいときは、apply 共通 runtime を読む。
+- git コマンド実行、state の永続化、report 保存先、branch 削除などの低レベル共通処理を変更したいだけなら、runtime 側の定義を読む。
+- CLI command の登録や Typer の option 定義だけを確認したいときは、command 配線側を読む。
 
 ## hash
-- fff7ab6917b17a245a6a01863838ed827e5fe02fffaba951e76fddb05210aabf
+- 7f4e4ccebfff79c1b2716b6c79a7ba2403622c9ae774b1bc52a1caaf1df02b63
