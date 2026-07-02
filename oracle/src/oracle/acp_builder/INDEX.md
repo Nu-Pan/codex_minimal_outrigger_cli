@@ -1,21 +1,21 @@
 # `apply`
 
 ## Summary
-- `cmoc apply fork` のレビュー・報告段階で使う agent call の正本仕様への入口。fork 適用後の差分要約、realization file の所見列挙、所見対応作業の委譲に関する prompt、AgentCallParameter、出力契約を扱う。
-- git diff 由来の変更説明、人間へ渡すレビュー所見、所見対応エージェントへ渡す作業指示について、出力互換性や根拠情報の粒度を確認するための領域。
+- `cmoc apply fork` 向けの AI エージェント呼び出しパラメータと出力契約を扱う。
+- 差分要約、ファイル単位の所見列挙、所見対応作業に使う prompt、モデル設定、ファイルアクセス方針、Structured Output schema への入口となる。
 
 ## Read this when
-- `cmoc apply fork` で、fork 適用後の差分要約、realization file の要修正点列挙、所見対応作業の委譲に使う prompt や AgentCallParameter の正本仕様を確認したいとき。
-- 差分要約やレビュー所見の出力契約について、互換性、必須の根拠情報、空でない前提、主要変更箇所や修正方針の粒度を確認したいとき。
-- apply fork のレビュー・報告系 agent call に渡す role、summary、goal、file access mode、model class、reasoning effort、placeholder、標準文書の組み込み方を変更または検証したいとき。
+- `cmoc apply fork` の作業レポート向け差分要約、実装レビュー所見の列挙、または検出所見への対応 agent call parameter を確認するとき。
+- fork 適用後の差分や対象ファイルを AI に渡す prompt、placeholder、readonly/write 権限、model class、reasoning effort、Structured Output schema の指定を確認したいとき。
+- 変更要約や所見リストの JSON 出力契約と、それを生成・利用する apply fork 用 oracle src の対応関係をたどりたいとき。
 
 ## Do not read this when
-- `cmoc apply fork` の fork 作成、適用、branch 操作、git 操作、作業レポート保存など、レビュー・報告用 agent call より前後の実行フローを調べたいとき。
-- 個別ファイルのパッチ内容、diff 生成手順、実際の realization file 修正結果、または所見の統合・実行結果処理を確認したいとき。
-- apply fork 以外のサブコマンドの prompt、AgentCallParameter、共通部品の実装詳細、または一般的なルーティング文書の書き方を探しているとき。
+- `cmoc apply fork` 全体の CLI 引数解析、git 操作、branch 操作、作業レポート保存、所見統合などの実行フローを調べたいとき。
+- apply fork 以外のサブコマンド用 prompt、agent call parameter、出力 schema を探しているとき。
+- AgentCallParameter、complete prompt builder、path placeholder 解決、markdown rendering などの共通部品そのものの実装詳細を確認したいとき。
 
 ## hash
-- c471f88082c2cc273436db5b8e4e2bf40947e4b9a9c20ac95dd298f61404132a
+- 6965fe0f3359098b85dc1f37d601f441b5a4b3afc4ab56802f1807a95e677e39
 
 # `basic.py`
 
@@ -39,20 +39,20 @@
 # `common`
 
 ## Summary
-- ファイルアクセス規則違反が起きた agent call を修復するための、再呼び出し用パラメータ構築を扱う正本断片への入口。違反時の規則本文、対象ファイル、発生ログをリカバリー担当 agent に渡す設計意図を確認するための領域。
+- ファイルアクセス規則違反が発生した agent call のリカバリー用パラメータを構築する oracle src を扱う。違反時のアクセス規則、違反ファイル一覧、発生ログをプロンプトへ渡し、リカバリー担当 agent の完全プロンプトと実行条件を定義する。
 
 ## Read this when
-- ファイルアクセス規則違反リカバリー用の agent call parameter の構成意図を確認したいとき。
-- 違反ファイル一覧、違反時のアクセスモード、違反ログを動的プロンプトへ渡す仕様断片を確認したいとき。
-- 違反修復タスクで指定するモデル種別、推論量、アクセスモードの正本断片を確認したいとき。
+- ファイルアクセス規則違反リカバリー用 agent call の role、summary、goal、補助プロンプトを確認したいとき。
+- 違反ファイル一覧、違反時のファイルアクセスモード、発生ログのタイムスタンプがプロンプトへどう渡されるかを確認したいとき。
+- ファイルアクセス規則違反リカバリーの AgentCallParameter、モデル種別、reasoning effort、file access mode の正本仕様断片を確認したいとき。
 
 ## Do not read this when
-- 通常の agent call parameter 全般や、違反リカバリー以外の呼び出し種別を調べたいとき。
-- ファイルアクセス規則そのものの本文生成や、アクセスモード別の規則内容を確認したいとき。
-- パスプレースホルダの一般定義や repo root 解決の仕様だけを確認したいとき。
+- 通常の agent call パラメータ全般や、モデル種別、reasoning effort、file access mode の型定義だけを確認したいとき。
+- ファイルアクセス規則そのものの文章生成や、各アクセスモードの具体的な規則を確認したいとき。
+- 完全プロンプトの共通組み立て処理や markdown rendering の仕様を確認したいとき。
 
 ## hash
-- 762d2116b4bf3bb6703a279d25e1debdcea801b946975aa6bb5a4276289fab9c
+- 118c4466ad2a34587fbc2709af936f495b9ec760662e1ea9b96398735de6459f
 
 # `indexing`
 
@@ -98,37 +98,39 @@
 # `session`
 
 ## Summary
-- `cmoc session join` の merge conflict marker 解消用 agent call parameter 生成に関する正本実装領域。conflict 対象パス、例外的な oracle file 編集許可、作業範囲、禁止事項、完了条件を含む prompt 生成の入口になる。
+- `cmoc session join` における merge conflict marker 解消用 agent call parameter の正本実装を扱う領域。
+- 衝突対象パスの prompt への提示、complete prompt の構成、モデルクラス・reasoning effort・ファイルアクセス権限など、session join の conflict 解消 agent call 条件を確認する入口。
 
 ## Read this when
-- `cmoc session join` で merge conflict marker 解消用 agent を呼び出すための prompt や agent call parameter の仕様を確認したいとき。
-- conflict 対象ファイル一覧を agent prompt に渡す扱い、model、reasoning effort、file access mode を確認したいとき。
-- merge conflict 解消時に oracle file の最小編集を例外的に許可する条件や範囲を確認したいとき。
+- `cmoc session join` が merge conflict marker 解消エージェントへ渡す prompt、目標、呼び出し条件を確認または変更したいとき。
+- conflict 対象ファイル一覧が実パスへ解決され、prompt 内に提示される方法を確認したいとき。
+- oracle file の conflict 解消時だけ許可される追加編集規則を確認したいとき。
+- `oracle_and_realization_basic`、`oracle_standard`、`realization_standard` を含む complete prompt 構成が必要な session join 用 agent call parameter を調べるとき。
 
 ## Do not read this when
-- 通常の session join 処理、git 操作、branch 統合、状態管理を調べたいとき。
-- merge conflict marker の検出方法や conflicted paths の収集方法を調べたいとき。
-- 汎用 prompt builder、構造化 markdown レンダリング、path placeholder 解決の実装を調べたいとき。
+- merge conflict marker の検出処理、git merge の実行、または `cmoc session join` 全体の制御フローを調べたいだけのとき。
+- complete prompt builder、構造化 markdown rendering、path placeholder 解決、agent call parameter 型そのものの汎用仕様を調べたいとき。
+- session join 以外のサブコマンドや、merge conflict marker 解消以外の agent call prompt を確認したいとき。
 
 ## hash
-- 5c74a34b38d44d8ccd1049c61e73da7fd68ce6299fb0acc6afbfde7ebbd6bea7
+- 088e0aff40eb39bdcf24e7eece505ca6ecf057ef5733490bde12a05f8c554c03
 
 # `tui`
 
 ## Summary
-- `cmoc tui` の agent call parameter 構築に関する正本実装と Structured Output schema を置くディレクトリ。TUI 起動時の呼び出しパラメータ、ユーザー入力プロンプトからの実行条件解決、解決結果 schema への入口になる。
-- TUI が使うファイルアクセスプロファイル、complete prompt、モデルクラス、推論強度、標準文書参照フラグ、パラメータ解決結果の構造を確認するための対象を含む。
+- TUI 起動時に AI Agent CLI/TUI へ渡す実行パラメータを、元プロンプト、固定プロンプト、ファイルアクセスプロファイル、モデル設定、Structured Output schema へ接続する正本仕様断片を収める。
+- ユーザー入力プロンプトから作業条件を構造化する前段のパラメータ解決と、実際の TUI agent call 起動用パラメータ構築の入口になる。
 
 ## Read this when
-- `cmoc tui` の起動または実行前解決で、AI Agent に渡す AgentCallParameter の正本仕様断片を確認・変更したいとき。
-- TUI 起動時の complete prompt、モデルクラス、推論強度、保存先、ファイルアクセスプロファイル、標準フラグの組み立てを確認したいとき。
-- ユーザー入力プロンプトから役割、概要、ゴール、論理ファイルアクセスモード、参照すべき標準文書を構造化する schema や出力要求を確認したいとき。
+- `cmoc tui` が agent call に渡すモデルクラス、推論強度、ファイルアクセス範囲、保存先、完全プロンプトを確認・変更したいとき。
+- TUI 起動前にユーザー入力プロンプトから role、summary、goal、file access mode、参照すべき標準群を選ぶ処理を確認・変更したいとき。
+- TUI 向け agent call parameter の Structured Output 要求、根拠行提示要求、標準文書参照フラグの扱いを確認したいとき。
 
 ## Do not read this when
-- TUI 以外のサブコマンドにおける agent call parameter 構築を確認したいとき。
-- ユーザー入力取得、エディタ起動、コメント除去、strip など TUI 入力フローの実装だけを調べたいとき。
-- AgentCallParameter、ModelClass、ReasoningEffort、PlaceholderMap、complete prompt 構築などの共通部品そのものの定義を調べたいとき。
-- 個々の標準文書の本文、ファイルアクセス属性、パスモデル、INDEX.md エントリー作成規則そのものを確認したいとき。
+- TUI 以外のサブコマンド向け agent call parameter 構築を確認したいとき。
+- AgentCallParameter、ModelClass、ReasoningEffort、PlaceholderMap、complete prompt 構築などの共通部品そのものを調べたいとき。
+- ユーザー入力取得、エディタ起動、コメント除去、文字列整形など、TUI の入出力処理を調べたいとき。
+- oracle file、realization file、index entry、各 standard の本文や定義そのものを確認したいとき。
 
 ## hash
-- f50ccba3761276eb29fc0a31a2dfef25297ad15c127525ba62f530da031b72c7
+- dc7ec765166481a217e83dee235d8554aeb3e96c8b7ab7023fdb2146f9c9223f

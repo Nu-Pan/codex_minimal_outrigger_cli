@@ -35,13 +35,12 @@ def build_session_join_conflict_resolution_parameter(
         - `<work-root>` ツリー内の merge conflict marker を解消すること
         """,
         goal="""
-        - 作業は conflict marker の解消に限定すること
-        - 仕様の意味的な改訂や、conflict 対象外ファイルの編集は禁止
-        - oracle file に conflict marker がある場合も、この conflict 解消作業に限って必要最小限の編集を許可する
-        - git add と git commit は実行しないこと
-        - 作業後に conflict marker が残らない状態にすること
+        - conflict marker の解消いがいの余計な差分が存在しないこと
+        - 作業前後で仕様の意味がへんかしていないこと
+        - conflict marker が残っていないこと
+        - 全てのテストに通過する状態であること
         """,
-        file_access_mode=FileAccessMode.REALIZATION_WRITE,
+        file_access_mode=FileAccessMode.REPO_WRITE,
         aux_dynamic_prompt=[
             StructDoc(
                 "conflict 対象ファイル",
@@ -68,7 +67,7 @@ def build_session_join_conflict_resolution_parameter(
     return AgentCallParameter(
         ModelClass.MAINSTREAM,
         ReasoningEffort.MEDIUM,
-        FileAccessMode.REALIZATION_WRITE,
+        FileAccessMode.REPO_WRITE,
         render_as_markdown(prompt),
         None,
     )

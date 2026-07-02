@@ -415,8 +415,8 @@ def test_file_access_mode_values_are_json_ready() -> None:
 
 def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
     """repo write mode まで Codex sandbox mode へ欠落なく変換する。"""
-    assert file_access_to_sandbox_mode(FileAccessMode.READONLY) == "read-only"
-    assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_READ) == "read-only"
+    assert file_access_to_sandbox_mode(FileAccessMode.READONLY) == "workspace-write"
+    assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_READ) == "workspace-write"
     assert file_access_to_sandbox_mode(FileAccessMode.REALIZATION_WRITE) == "workspace-write"
     assert file_access_to_sandbox_mode(FileAccessMode.PURE_ORACLE_WRITE) == "workspace-write"
     assert file_access_to_sandbox_mode(FileAccessMode.REPO_WRITE) == "workspace-write"
@@ -506,10 +506,11 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         for mode in FileAccessMode
     }
 
-    assert 'sandbox_mode = "read-only"' in profiles[FileAccessMode.READONLY]
-    assert 'sandbox_mode = "read-only"' in profiles[FileAccessMode.PURE_ORACLE_READ]
-    assert "[sandbox_workspace_write]" not in profiles[FileAccessMode.READONLY]
+    assert 'sandbox_mode = "workspace-write"' in profiles[FileAccessMode.READONLY]
+    assert 'sandbox_mode = "workspace-write"' in profiles[FileAccessMode.PURE_ORACLE_READ]
     for mode in (
+        FileAccessMode.READONLY,
+        FileAccessMode.PURE_ORACLE_READ,
         FileAccessMode.REALIZATION_WRITE,
         FileAccessMode.PURE_ORACLE_WRITE,
         FileAccessMode.REPO_WRITE,
@@ -518,6 +519,12 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         assert "[sandbox_workspace_write]" in profiles[mode]
     assert _profile_writable_roots(profiles[FileAccessMode.REALIZATION_WRITE]) == {
         str(root.resolve()),
+    }
+    assert _profile_writable_roots(profiles[FileAccessMode.READONLY]) == {
+        str(root.resolve()),
+    }
+    assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_READ]) == {
+        str((root / "oracle").resolve())
     }
     assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_WRITE]) == {
         str((root / "oracle").resolve())
@@ -627,7 +634,41 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         )
 
 
-def test_codex_profile_allows_root_for_realization_write_and_rejects_ignored_extra(
+def test_codex_profile_allows_repo_log_read_from_linked_worktree(
+    tmp_path: Path,
+) -> None:
+    """linked worktree 実行時だけ repo 側 log 読み取りを追加許可する。"""
+    root = make_repo(tmp_path)
+    linked = root / ".cmoc" / "worktrees" / "linked-read"
+    linked.parent.mkdir(parents=True)
+    run_git(root, "worktree", "add", "-b", "linked-read", str(linked), "HEAD")
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.PURE_ORACLE_READ,
+        "prompt",
+        None,
+    )
+
+    build_codex_profile(
+        parameter,
+        CmocConfig(),
+        linked,
+        [root / ".cmoc" / "log" / "codex" / "20260101_call.json"],
+        extra_read_root=root,
+    )
+
+    with pytest.raises(CmocError, match="許可領域外"):
+        build_codex_profile(
+            parameter,
+            CmocConfig(),
+            linked,
+            [root / "src" / "blocked.md"],
+            extra_read_root=root,
+        )
+
+
+def test_codex_profile_allows_root_for_realization_write_and_ignored_extra(
     tmp_path: Path,
 ) -> None:
     root = make_repo(tmp_path)
@@ -654,19 +695,19 @@ def test_codex_profile_allows_root_for_realization_write_and_rejects_ignored_ext
     _assert_writable(profile, root / "src" / "manual.py")
     _assert_writable(profile, root / ".gitignore")
 
-    with pytest.raises(CmocError, match="許可領域外"):
-        build_codex_profile(
-            AgentCallParameter(
-                ModelClass.EFFICIENCY,
-                ReasoningEffort.LOW,
-                FileAccessMode.REALIZATION_WRITE,
-                "prompt",
-                None,
-            ),
-            CmocConfig(),
-            root,
-            extra_writable_paths=[root / "build"],
-        )
+    profile = build_codex_profile(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            FileAccessMode.REALIZATION_WRITE,
+            "prompt",
+            None,
+        ),
+        CmocConfig(),
+        root,
+        extra_writable_paths=[root / "build"],
+    )
+    assert _profile_writable_roots(profile) == {str(root.resolve())}
 
 
 @pytest.mark.parametrize(
@@ -677,7 +718,6 @@ def test_codex_profile_allows_root_for_realization_write_and_rejects_ignored_ext
         (FileAccessMode.REALIZATION_WRITE, ".agents/blocked.md"),
         (FileAccessMode.REALIZATION_WRITE, ".cmoc/state.json"),
         (FileAccessMode.REALIZATION_WRITE, ".codex/config.toml"),
-        (FileAccessMode.REALIZATION_WRITE, "README.md"),
         (FileAccessMode.REALIZATION_WRITE, "AGENTS.md"),
         (FileAccessMode.REALIZATION_WRITE, "INDEX.md"),
         (FileAccessMode.PURE_ORACLE_WRITE, "src/blocked.md"),
@@ -689,7 +729,6 @@ def test_codex_profile_allows_root_for_realization_write_and_rejects_ignored_ext
         (FileAccessMode.REPO_WRITE, ".agents/blocked.md"),
         (FileAccessMode.REPO_WRITE, ".cmoc/state.json"),
         (FileAccessMode.REPO_WRITE, ".git/config"),
-        (FileAccessMode.REPO_WRITE, "README.md"),
         (FileAccessMode.REPO_WRITE, "AGENTS.md"),
         (FileAccessMode.REPO_WRITE, "INDEX.md"),
         (FileAccessMode.REPO_WRITE, "../outside.md"),
@@ -727,24 +766,27 @@ def test_codex_profile_allows_root_ancillary_extra_writable_path(
 ) -> None:
     root = make_repo(tmp_path)
     (root / ".gitignore").write_text("memo\n")
+    (root / "README.md").write_text("# repo\n")
     run_git(root, "add", ".gitignore")
+    run_git(root, "add", "README.md")
     run_git(root, "commit", "-m", "add gitignore")
 
-    profile = build_codex_profile(
-        AgentCallParameter(
-            ModelClass.EFFICIENCY,
-            ReasoningEffort.LOW,
-            FileAccessMode.REALIZATION_WRITE,
-            "prompt",
-            None,
-        ),
-        CmocConfig(),
-        root,
-        extra_writable_paths=[root / ".gitignore"],
-    )
+    for extra in [root / ".gitignore", root / "README.md"]:
+        profile = build_codex_profile(
+            AgentCallParameter(
+                ModelClass.EFFICIENCY,
+                ReasoningEffort.LOW,
+                FileAccessMode.REALIZATION_WRITE,
+                "prompt",
+                None,
+            ),
+            CmocConfig(),
+            root,
+            extra_writable_paths=[extra],
+        )
 
-    assert _profile_writable_roots(profile) == {str(root.resolve())}
-    _assert_writable(profile, root / ".gitignore")
+        assert _profile_writable_roots(profile) == {str(root.resolve())}
+        _assert_writable(profile, extra)
 
 
 def test_codex_profile_uses_directory_roots_for_session_join_conflict_resolution(
@@ -831,7 +873,7 @@ def test_codex_profile_rejects_session_join_conflict_targets_with_denied_names(
         )
 
 
-@pytest.mark.parametrize("extra", ["README.md", "INDEX.md", "AGENTS.md"])
+@pytest.mark.parametrize("extra", ["INDEX.md", "AGENTS.md"])
 def test_codex_profile_rejects_root_file_session_join_conflict_targets(
     tmp_path: Path, extra: str
 ) -> None:
@@ -857,6 +899,33 @@ def test_codex_profile_rejects_root_file_session_join_conflict_targets(
         )
 
 
+def test_codex_profile_allows_root_readme_session_join_conflict_target(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "src").mkdir()
+    target = root / "README.md"
+    target.write_text("conflict\n")
+
+    profile = build_codex_profile(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            FileAccessMode.REALIZATION_WRITE,
+            "prompt",
+            None,
+        ),
+        CmocConfig(),
+        root,
+        extra_writable_paths=[target],
+        allow_oracle_conflict_writes=True,
+    )
+
+    assert _profile_writable_roots(profile) == {str(root.resolve())}
+    _assert_writable(profile, target)
+
+
 @pytest.mark.parametrize(
     "extra",
     [
@@ -864,7 +933,6 @@ def test_codex_profile_rejects_root_file_session_join_conflict_targets(
         ".cmoc/state.json",
         ".codex/config.toml",
         ".git/config",
-        ".pytest_cache/state",
         "memo/blocked.md",
     ],
 )

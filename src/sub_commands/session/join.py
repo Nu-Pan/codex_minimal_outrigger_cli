@@ -1,3 +1,4 @@
+import hashlib
 import json
 from pathlib import Path
 from typing import Callable
@@ -119,6 +120,7 @@ def resolve_session_join_conflict(
             ["git status を確認し、手動解決後に再実行してください。"],
             git(["status", "--short"], root).stdout,
         )
+    before_codex = _changed_path_snapshot(root, git)
     codex_exec(
         build_session_join_conflict_resolution_parameter(conflicted_paths),
         root=root,
@@ -129,6 +131,7 @@ def resolve_session_join_conflict(
         extra_writable_paths=conflicted_paths,
         allow_oracle_conflict_writes=True,
     )
+    _reject_non_conflict_changes(root, git, before_codex, conflicted_paths)
     remaining_markers = [
         path
         for path in conflicted_paths
@@ -150,6 +153,57 @@ def resolve_session_join_conflict(
             unmerged,
         )
     git(["commit", "--no-edit"], root)
+
+
+def _reject_non_conflict_changes(
+    root: Path,
+    git: GitRun,
+    before_codex: dict[Path, tuple[str, tuple[str, int, int, str | None] | None]],
+    conflicted_paths: list[Path],
+) -> None:
+    # <work-root>/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py:
+    # REPO_WRITE is needed for oracle conflicts, so this command enforces the
+    # narrower "conflict targets only" boundary after the agent returns.
+    allowed = {path.resolve() for path in conflicted_paths}
+    changed = [
+        path
+        for path, value in _changed_path_snapshot(root, git).items()
+        if path.resolve() not in allowed and before_codex.get(path) != value
+    ]
+    if changed:
+        raise CmocError(
+            "conflict 解消以外の差分が残っています。",
+            ["差分を確認し、不要な変更を戻してから手動で merge を完了してください。"],
+            "\n".join(str(path.relative_to(root)) for path in changed),
+        )
+
+
+def _changed_path_snapshot(
+    root: Path, git: GitRun
+) -> dict[Path, tuple[str, tuple[str, int, int, str | None] | None]]:
+    snapshot: dict[Path, tuple[str, tuple[str, int, int, str | None] | None]] = {}
+    for line in git(["status", "--short", "-uall"], root).stdout.splitlines():
+        path_text = line[3:]
+        if " -> " in path_text:
+            path_text = path_text.split(" -> ", 1)[1]
+        path = (root / path_text).resolve()
+        snapshot[path] = (line[:2], _path_fingerprint(path))
+    return snapshot
+
+
+def _path_fingerprint(path: Path) -> tuple[str, int, int, str | None] | None:
+    try:
+        stat = path.lstat()
+    except FileNotFoundError:
+        return None
+    digest: str | None = None
+    if path.is_symlink():
+        digest = hashlib.sha256(path.readlink().as_posix().encode()).hexdigest()
+    elif path.is_file():
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    if path.is_dir():
+        return ("dir", stat.st_mode, stat.st_size, None)
+    return ("file", stat.st_mode, stat.st_size, digest)
 
 
 def _has_conflict_marker_block(text: str) -> bool:

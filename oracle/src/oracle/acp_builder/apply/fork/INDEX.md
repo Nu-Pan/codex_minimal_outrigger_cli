@@ -77,17 +77,17 @@
 # `finding_application.py`
 
 ## Summary
-- `cmoc apply fork` で検出された所見に対応するための AI エージェント呼び出しパラメータを構築する oracle src。所見一覧を JSON コードブロックとして作業 prompt に埋め込み、realization file の修正担当に渡す正本 prompt の内容を定める。
+- `cmoc apply fork` で検出された所見に対応するための agent call parameter を組み立てる oracle src。所見 JSON を prompt に埋め込み、realization file 修正担当 agent に渡す役割を持つ。
 
 ## Read this when
-- `cmoc apply fork` の所見対応作業で、エージェントに渡す role、summary、goal、注意事項、所見本文の組み立てを確認したいとき。
-- 所見対応エージェントの file access mode、model class、reasoning effort、または prompt に含める oracle/realization standard の指定を確認したいとき。
-- `cmoc apply fork` が生成する所見対応用 AgentCallParameter の構成を変更・検証したいとき。
+- `cmoc apply fork` の所見対応作業で、呼び出される agent の role、summary、goal、注意事項、file access mode、model class、reasoning effort を確認したいとき。
+- 所見本文のリストが prompt にどのような構造で渡されるかを確認したいとき。
+- 所見対応作業に oracle and realization basic や realization standard を含めるかを確認したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` 以外のサブコマンド用 prompt や agent call parameter を確認したいとき。
-- 所見の検出ロジック、fork の作成処理、または git 操作そのものを調べたいとき。
-- realization file の修正内容そのものや、所見対応エージェントが実行した結果を確認したいとき。
+- `cmoc apply fork` 全体の CLI 引数解析や実行フローを確認したいとき。
+- 所見の検出・生成ロジックそのものを確認したいとき。
+- `cmoc apply fork` 以外のサブコマンド用 agent call parameter を確認したいとき。
 
 ## hash
-- f9f304dfe1dda61a95ab9a19e78c9f09560cf0e018b07acd09e4b4a336332db5
+- 4a2abca94d26cd1a8ee16ebf311d6f466b77f3c9abc978767dd4395f2bc9b781

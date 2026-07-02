@@ -172,24 +172,22 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドの実装群を収める領域。active session の破棄、通常 branch からの session 開始、home branch への統合など、session lifecycle に関わる CLI 本体処理への入口になる。
-- 各サブコマンド実装は、CLI runtime 経由の起動、事前条件確認、git branch 操作、session state 更新、利用者向け結果出力を扱い、必要に応じて失敗時 rollback や merge conflict 解消フローも担う。
-- パッケージ自体は最小限の境界を示すだけで、具体的な挙動は個別のサブコマンド実装に分かれている。
+- session 系サブコマンドの実装をまとめるディレクトリ。
+- session の開始、home branch への統合、merge しない破棄など、session branch と session state を操作する各サブコマンド実装への入口になる。
+- 各実装は CLI runtime 経由の実行、事前条件検証、git branch 操作、状態更新、成功時出力、失敗時の利用者向けエラーや rollback を扱う。
 
 ## Read this when
-- session 系サブコマンドのうち、作成・統合・破棄のどの実装へ進むべきかを選びたいとき。
-- session branch と home branch の関係、active session の状態遷移、session state file 更新、clean worktree 要求など、session 操作の入口となる実装を探したいとき。
-- session 操作が git branch の作成・切り替え・merge・削除や、失敗時の状態復旧をどのサブコマンドで扱っているかを切り分けたいとき。
-- session join 中の merge conflict 解消や、Codex CLI による conflict resolution 連携の実装箇所を探したいとき。
+- session 系サブコマンドの実装全体から、目的の操作に対応する読む先を選びたいとき。
+- session branch の作成、home branch への merge、merge しない破棄など、session lifecycle に関わる CLI 挙動を調べたいとき。
+- session 操作の事前条件、状態遷移、branch 削除、clean worktree 要求、merge conflict 対応のどれがどの実装に属するかを切り分けたいとき。
 
 ## Do not read this when
-- session state のデータ構造、永続化 schema、branch 判定 helper、git 実行 wrapper、worktree clean 判定そのものを調べたいとき。これらは共通 helper や状態管理側を読む。
-- CLI 全体のサブコマンド登録、Typer アプリ構成、runtime 共通処理だけを確認したいとき。
-- session 以外のサブコマンド、または apply など別領域の状態操作を調べたいとき。
-- session 系サブコマンドの正本仕様断片そのものを確認したいとき。実装領域ではなく対応する oracle doc を読む。
+- CLI 全体のコマンド登録、Typer アプリ構成、共通 runtime、git 実行 wrapper、path model など、session 個別操作ではない共通基盤を調べたいとき。
+- session state の schema、永続化形式、branch 判定 helper、worktree clean 判定そのものの実装を直接確認したいとき。
+- oracle 側の正本仕様断片や、session 以外のサブコマンド実装を調べたいとき。
 
 ## hash
-- d3c422529520adf8744c5d2dd934ef794dc29ad053c4364810894109e3fd247d
+- 119ad92e34ce996052054e3d9c5130fa60339eab184386f4b007909fe876d20f
 
 # `tui.py`
 

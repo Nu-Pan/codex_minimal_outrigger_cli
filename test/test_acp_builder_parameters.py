@@ -20,9 +20,6 @@ from acp.builder.apply.fork.file_finding_enumeration import (
 from acp.builder.apply.fork.finding_application import (
     build_apply_fork_finding_application_parameter,
 )
-from acp.builder.common.file_access_rule_vaolation_recovery import (
-    build_file_access_rule_vaolation_recovery_parameter,
-)
 from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
 from acp.builder.review.oracle.enumerate_finding import (
     build_review_oracle_enumerate_finding_parameter,
@@ -104,24 +101,6 @@ def test_apply_fork_change_summary_schema_matches_oracle_source() -> None:
     )
 
 
-def test_file_access_rule_violation_recovery_builder_uses_no_rule_mode(
-    tmp_path: Path,
-) -> None:
-    call_log = tmp_path / "2026-01-01_00-00_00_000000000_call.json"
-    call_log.write_text("{}\n")
-
-    parameter = build_file_access_rule_vaolation_recovery_parameter(
-        call_log,
-        [tmp_path / "oracle" / "spec.md"],
-        FileAccessMode.REALIZATION_WRITE,
-    )
-
-    assert parameter.file_access_mode == FileAccessMode.NO_RULE
-    assert parameter.structured_output_schema_path is not None
-    assert parameter.structured_output_schema_path.exists()
-    assert "ファイルアクセス規則違反" in parameter.prompt
-
-
 def test_tui_resolve_parameter_builder_embeds_original_prompt() -> None:
     original_prompt = "# 依頼\n\nsrc の実装を調べて必要なら修正して下さい。"
 
@@ -154,6 +133,7 @@ def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
     assert schema["required"] == [
         "role",
         "summary",
+        "goal",
         "file_access_mode",
         "oracle_and_realization_basic",
         "oracle_standard",
@@ -363,10 +343,10 @@ def test_review_oracle_validate_finding_advocate_preserves_dynamic_text() -> Non
     assert "`<oracle-root>` ツリー内" in parameter.prompt
 
 
-def test_session_join_conflict_resolution_uses_realization_write_mode() -> None:
+def test_session_join_conflict_resolution_uses_repo_write_mode() -> None:
     parameter = build_session_join_conflict_resolution_parameter([__file__])
 
     assert parameter.model_class == ModelClass.MAINSTREAM
     assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
-    assert parameter.file_access_mode == FileAccessMode.REALIZATION_WRITE
+    assert parameter.file_access_mode == FileAccessMode.REPO_WRITE
     assert "conflict 対象ファイル" in parameter.prompt

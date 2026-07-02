@@ -1,23 +1,22 @@
 # `oracle`
 
 ## Summary
-- AI Agent 呼び出し条件と Structured Output schema、完全プロンプト構築、設定・パス表記・規範文書モデルなど、cmoc の正本実装断片のうち複数機能の基礎になる領域をまとめる。
-- 用途別の AgentCallParameter、プロンプトへ注入される標準文書、ルートプレースホルダ付きパスや設定の正本仕様断片を探すための入口になる。
+- AI agent call に渡すパラメータ、完全プロンプト構築、Structured Output schema、設定・パス表記・構造化文書モデルなど、正本実装断片の基礎領域を束ねる入口。
+- 用途別の agent call parameter 構築仕様、横断的な prompt 部品、ルートプレースホルダ付きパス解決、規範文書モデル、Markdown レンダリング helper へ進むためのルーティングを担う。
 
 ## Read this when
-- cmoc の機能が AI Agent へ渡す prompt、model class、reasoning effort、file access mode、role、summary、goal、Structured Output schema を正本仕様断片として確認または変更したいとき。
-- agent call 用の完全なプロンプトの構成順序、静的パーツと動的パーツの分離、標準文書の注入条件、placeholder mapping の扱いを確認したいとき。
-- oracle/realization の基本概念、各種 standard、review や routing の規範、file access rule など、エージェント用プロンプトに組み込まれる規範文書への入口を探すとき。
-- cmoc の設定項目、既定値、設定ファイルの永続化境界、リポジトリ別挙動設定の正本仕様断片を確認したいとき。
-- <cmoc-root>、<repo-root>、<run-root>、<work-root> などのルート概念、placeholder 付きパス、絶対パス、git worktree との関係を確認したいとき。
-- 規範文書を構造化して保持するモデルや、階層化された文章・本文・コードブロックを Markdown として整形する helper の挙動を確認したいとき。
+- AI 呼び出しで使う role、summary、goal、prompt 断片、placeholder、モデル設定、reasoning effort、file access mode、出力契約を正本仕様断片から確認または変更したいとき。
+- 完全プロンプトの構成順序、静的・動的 prompt 部品、file access rule、routing rule、各種 standard の prompt 注入責務を切り分けたいとき。
+- cmoc の設定項目、既定値、永続化境界、リポジトリ別の挙動設定を確認したいとき。
+- `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` などのルート概念、プレースホルダ付きパス、絶対パス、git worktree との関係を確認したいとき。
+- 規範文書を構造化して保持するモデルや、階層化された文章を Markdown として整形する helper を確認したいとき。
 
 ## Do not read this when
-- agent call のプロセス起動、実行制御、結果処理、エラー処理など、正本仕様断片ではなく realization implementation 側の処理を調べたいとき。
-- CLI 引数、git 操作、branch 操作、状態管理、ファイル探索、INDEX.md 更新など、agent call parameter やプロンプト構築以外のサブコマンド実行フローを確認したいとき。
-- StructDoc、Standard、Requirement などの共通データ構造ではなく、規範本文の意味だけを確認したいとき。
-- 生成済みプロンプトが実際にどこで agent call へ渡されるか、または設定の読み書き処理や JSON 変換処理の実装を追いたいとき。
-- 特定の作業ディレクトリ内で読むべきファイルを知りたいだけで、パス表記モデル、ルート解決規則、agent call 条件、プロンプト部品を確認する必要がないとき。
+- CLI 引数解析、git 操作、branch 操作、作業レポート保存、結果集約、表示処理など、サブコマンド全体の実行フローを調べたいとき。
+- agent call のプロセス起動、バックエンドが受理する具体的なモデル名への変換、結果処理、エラー処理を調べたいとき。
+- 設定の読み書き処理、JSON 変換処理、初期化処理など、正本仕様断片ではなく実装箇所を探しているとき。
+- oracle file、realization file、index entry、各 standard、review oracle standard などの品質基準本文や定義そのものを読みたいとき。
+- 実装ファイルやテストファイルの現在構造を確認して、具体的なコード変更箇所を探したいだけのとき。
 
 ## hash
-- 7826fd8e9a35fe7ce4aadad73fb60bb7e4d4e6e0b639b678858a9931b7a6d5e6
+- 131c99457642dc05ca605a1debcb0f487ca5b5a3c2e6411158e29c92c57be4d1

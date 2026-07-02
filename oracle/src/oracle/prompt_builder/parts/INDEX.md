@@ -25,21 +25,20 @@
 # `file_access_rule.py`
 
 ## Summary
-- AI エージェントへ渡すファイル読み書き規則文を、指定されたアクセスモードごとの deny list として組み立てる prompt builder 部品。
-- 読み取り専用、oracle 専用読み書き、realization 追従作業、規則なしなどのプリセットに応じて、プレースホルダと構造化ドキュメントを返す。
+- AI エージェントへ注入するファイル読み書き規則文面を、指定されたアクセスモードに応じて構築する oracle src。リポジトリ外・管理ディレクトリ・AGENTS.md・INDEX.md・memo などの共通 deny ルールを組み立て、oracle file と realization file の読み書き可否をモード別に追加して StructDoc とプレースホルダ値を返す。
 
 ## Read this when
-- ファイルアクセス権限モードから、プロンプトへ埋め込む読み書き禁止ルールの本文がどう生成されるかを確認したいとき。
-- `FileAccessMode` の各値に対応する deny rule、`<work-root>` プレースホルダ、生成される `StructDoc` の見出しを変更するとき。
-- oracle file と realization file の読み書き禁止を、エージェント作業モード別にどう切り替えるかを調べるとき。
+- ファイルアクセス規則プロンプトの生成内容、deny list の共通ルール、またはアクセスモードごとの差分を確認する場合。
+- READONLY、PURE_ORACLE_READ、REPO_WRITE、PURE_ORACLE_WRITE、REALIZATION_WRITE、NO_RULE が生成する読み書き制約文面を変更・検証する場合。
+- repo-root と work-root の関係に応じたリポジトリ外アクセス制約や、ログディレクトリ読み取り例外の扱いを確認する場合。
 
 ## Do not read this when
-- ファイルアクセスモードの列挙値そのものの定義や意味を確認したいだけなら、その定義元を読む。
-- `<work-root>` の解決方法やパスキーワードの意味を確認したいだけなら、パスモデルの定義元を読む。
-- プロンプト全体の組み立て順、他のプロンプト部品、または `StructDoc` のデータ構造を確認したい場合は、それぞれの直接の実装を読む。
+- パス語彙そのものの定義や repo-root、work-root の解決仕様を確認したい場合は、パスモデル側を読む。
+- ファイルアクセスモードの列挙値や意味の入口だけを確認したい場合は、アクセスモード定義側を読む。
+- プロンプト全体の組み立て順序や他のプロンプト部品との結合方法を確認したい場合は、プロンプト構築の上位処理を読む。
 
 ## hash
-- d97cb4699a40d624de847db6d3f2e7e59119b33e5da8b2c9d29cf67a2c802dd6
+- b41f36b4b8b34425e307bb03f95a9a11e41fe03517485f1669242a1255697964
 
 # `index_entry_standard.py`
 

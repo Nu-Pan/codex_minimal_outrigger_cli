@@ -32,14 +32,9 @@ _PROFILE_BLOCKED_ROOT_NAMES = {
     ".cmoc",
     ".codex",
     ".git",
-    ".pytest_cache",
     "AGENTS.md",
     "INDEX.md",
     "memo",
-}
-_REALIZATION_WRITE_BLOCKED_ROOT_NAMES = {
-    *_PROFILE_BLOCKED_ROOT_NAMES,
-    "oracle",
 }
 _REPO_WRITE_BLOCKED_ROOT_NAMES = _PROFILE_BLOCKED_ROOT_NAMES
 _CONFLICT_WRITE_BLOCKED_ROOT_NAMES = {
@@ -47,7 +42,6 @@ _CONFLICT_WRITE_BLOCKED_ROOT_NAMES = {
     ".cmoc",
     ".codex",
     ".git",
-    ".pytest_cache",
     "memo",
 }
 
@@ -71,10 +65,10 @@ def apply_process_id_file_lock(path: Path) -> Iterator[None]:
 def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
     """cmoc の file access policy を Codex CLI が理解する sandbox 名へ落とす。"""
     match mode:
-        case FileAccessMode.READONLY | FileAccessMode.PURE_ORACLE_READ:
-            return "read-only"
         case (
-            FileAccessMode.REALIZATION_WRITE
+            FileAccessMode.READONLY
+            | FileAccessMode.PURE_ORACLE_READ
+            | FileAccessMode.REALIZATION_WRITE
             | FileAccessMode.PURE_ORACLE_WRITE
             | FileAccessMode.REPO_WRITE
             | FileAccessMode.NO_RULE
@@ -111,6 +105,10 @@ def _is_read_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
     return True
 
 
+def _is_repo_log_read_path(root: Path, path: Path) -> bool:
+    return path.is_relative_to(root / ".cmoc" / "log")
+
+
 def _is_tui_complete_prompt_path(root: Path, path: Path) -> bool:
     return path.parent == root / ".cmoc" / "log" / "tui" and path.name.endswith(
         "_cmpl.md"
@@ -121,11 +119,17 @@ def _validate_extra_read_paths(
     mode: FileAccessMode,
     root: Path,
     extra_read_paths: list[Path] | None,
+    extra_read_root: Path | None = None,
 ) -> None:
     """Codex profile に足す read path が cmoc の許可境界内か検査する。"""
+    extra_log_root = extra_read_root.resolve() if extra_read_root is not None else None
     for path in extra_read_paths or []:
         resolved = path.resolve()
-        if not _is_read_path_allowed(mode, root, resolved):
+        if not _is_read_path_allowed(mode, root, resolved) and not (
+            extra_log_root is not None
+            and extra_log_root != root
+            and _is_repo_log_read_path(extra_log_root, resolved)
+        ):
             raise CmocError(
                 "追加読み取り許可 path が FileAccessMode の許可領域外にあります。",
                 [
@@ -147,10 +151,16 @@ def _writable_roots(
     allow_oracle_conflict_writes: bool = False,
 ) -> list[Path]:
     """Codex sandbox に渡せる書き込み root を作る。"""
-    if file_access_to_sandbox_mode(mode) == "read-only":
-        return []
     root = root.resolve()
     match mode:
+        case FileAccessMode.READONLY:
+            # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+            # READONLY は cmoc 上の論理的な読み取り専用であり、Codex CLI
+            # sandbox は pytest cache などの一時生成物を許せるよう workspace
+            # に寄せる。実ファイル変更は post-check で拒否する。
+            paths = [root]
+        case FileAccessMode.PURE_ORACLE_READ:
+            paths = [root / "oracle"]
         case FileAccessMode.REALIZATION_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
@@ -236,8 +246,6 @@ def _is_writable_path_allowed(
     relative = path.relative_to(root)
     if path.name in {"AGENTS.md", "INDEX.md"}:
         return False
-    if len(relative.parts) == 1 and path.name == "README.md":
-        return False
     if mode == FileAccessMode.REALIZATION_WRITE and allow_oracle_conflict_writes:
         # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
         # session join の conflict 解消は oracle file も git conflict 対象なら編集する。
@@ -246,23 +254,30 @@ def _is_writable_path_allowed(
             bool(relative.parts)
             and relative.parts[0] not in _CONFLICT_WRITE_BLOCKED_ROOT_NAMES
         )
-    blocked_root_names = (
-        _REPO_WRITE_BLOCKED_ROOT_NAMES
-        if mode == FileAccessMode.REPO_WRITE
-        else _REALIZATION_WRITE_BLOCKED_ROOT_NAMES
-    )
+    blocked_root_names = _REPO_WRITE_BLOCKED_ROOT_NAMES
     if relative.parts and relative.parts[0] in blocked_root_names:
         return False
     if mode == FileAccessMode.REALIZATION_WRITE:
-        if is_untracked_git_ignored(root, path):
-            # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-            # realization file excludes git ignored untracked paths; tracked ignored
-            # paths remain writable because normal git check-ignore treats them as tracked.
-            return False
-        return not path.is_relative_to(root / "oracle")
+        return not _is_oracle_file_path(root, path)
     if mode == FileAccessMode.PURE_ORACLE_WRITE:
         return path.is_relative_to(root / "oracle")
+    if mode in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}:
+        return False
     return mode in {FileAccessMode.REPO_WRITE, FileAccessMode.NO_RULE}
+
+
+def _is_oracle_file_path(root: Path, path: Path) -> bool:
+    """oracle file 定義に該当する path かを返す。"""
+    try:
+        relative = path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    return (
+        bool(relative.parts)
+        and relative.parts[0] == "oracle"
+        and path.name not in {"AGENTS.md", "INDEX.md"}
+        and not is_untracked_git_ignored(root, path)
+    )
 
 
 def _append_workspace_write_section(
@@ -299,7 +314,10 @@ def build_codex_profile(
         root = root.resolve()
         read_root = (extra_read_root or root).resolve()
         _validate_extra_read_paths(
-            parameter.file_access_mode, read_root, extra_read_paths
+            parameter.file_access_mode,
+            root,
+            extra_read_paths,
+            extra_read_root=read_root,
         )
     sandbox_mode = file_access_to_sandbox_mode(parameter.file_access_mode)
     lines.append(f'sandbox_mode = "{sandbox_mode}"')

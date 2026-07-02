@@ -33,7 +33,8 @@ def build_apply_fork_finding_application_parameter(
         summary="- `<repo-root>` ツリー内の realization file を修正すること",
         goal="""
         - 所見として指摘されている問題の修正作業をベストエフォートで実施したこと
-        - 修正後の realization file が realization standard に従っている事
+        - realization file が realization standard に従っていること
+        - 全てのテストに通過する状態であること
         """,
         file_access_mode=FileAccessMode.REALIZATION_WRITE,
         aux_dynamic_prompt=[
