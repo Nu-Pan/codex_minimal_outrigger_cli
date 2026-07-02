@@ -477,6 +477,17 @@ def run_codex_exec(
                     status="capacity_retrying",
                     error=error_text,
                 )
+                # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+                # Capacity retry does not exempt the completed agent call
+                # from the mandatory file-access post-check.
+                recover_call_file_access_violations(
+                    result,
+                    run_call_path=call_path,
+                    run_prompt_path=prompt_path,
+                    run_stdout_path=stdout_path,
+                    run_stderr_path=stderr_path,
+                    run_output_path=output_path,
+                )
                 time.sleep(sleep_sec)
                 sleep_sec *= 2
                 continue
@@ -650,6 +661,18 @@ def run_codex_exec(
                                 returncode=poll.returncode,
                                 status="capacity_retrying",
                                 error=probe_error_text,
+                            )
+                            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+                            # A quota probe is still an agent call; capacity
+                            # retry only changes the next step, not post-check.
+                            recover_call_file_access_violations(
+                                poll,
+                                run_call_path=probe_call_path,
+                                run_prompt_path=probe_prompt_path,
+                                run_stdout_path=probe_stdout_path,
+                                run_stderr_path=probe_stderr_path,
+                                run_output_path=probe_output_path,
+                                run_schema_path=None,
                             )
                             time.sleep(sleep_sec)
                             sleep_sec *= 2
