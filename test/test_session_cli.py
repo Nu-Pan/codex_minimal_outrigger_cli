@@ -444,6 +444,48 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_profile(
     assert modes == [FileAccessMode.REPO_WRITE]
 
 
+def test_session_join_rejects_non_conflict_changes_from_conflict_agent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    target = root / "oracle" / "spec.md"
+    extra = root / "src" / "extra.py"
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    home_branch = session_home_branch(root, session_branch)
+    target.write_text("session change\n")
+    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "commit", "-m", "session change")
+    run_git(root, "switch", home_branch)
+    target.write_text("home change\n")
+    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "commit", "-m", "home change")
+    run_git(root, "switch", session_branch)
+
+    class FakeCodexResult:
+        output_json = None
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        target.write_text("resolved change\n")
+        extra.parent.mkdir(exist_ok=True)
+        extra.write_text("extra\n")
+        return FakeCodexResult()
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["session", "join"])
+
+    assert result.exit_code != 0
+    assert current_branch(root) == home_branch
+    assert "conflict 解消以外の差分が残っています。" in result.stderr
+    assert "src/extra.py" in result.stderr
+    assert "session change" not in run_git(root, "log", "--oneline", "-1").stdout
+
+
 def test_session_join_conflict_marker_detection_uses_marker_block() -> None:
     assert not session_join_module._has_conflict_marker_block("Title\n=======\n")
     assert session_join_module._has_conflict_marker_block(
