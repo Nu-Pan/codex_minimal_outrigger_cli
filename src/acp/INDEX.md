@@ -19,20 +19,23 @@
 # `builder`
 
 ## Summary
-- ACP builder 領域の realization 側入口。正本側に置かれた builder 実装を既存の公開参照経路から利用するための互換層をまとめ、各 builder の戻り値を realization 側の公開型へ適合させる役割を持つ。
-- apply、common、indexing、quota probe、review、session、TUI などの builder 互換領域へ進むための上位ルーティング対象であり、多くは実処理本体ではなく oracle 側実装への委譲、公開 import surface の維持、削除条件の確認を扱う。
+- ACP builder 領域で、正本側 builder を既存の realization 側公開 import path から利用できるようにする互換入口を束ねる階層。
+- 主な責務は、oracle 側実装への委譲、realization 側公開型への適合、旧 import 経路の維持、互換コードの残存理由と削除条件の確認入口を提供することである。
+- apply、common、indexing、quota probe、review、session、TUI などの builder 系互換領域へ進むための上位ルーティング位置にある。
 
 ## Read this when
-- ACP builder 全体で、正本側 builder と realization 側公開 API の接続関係を俯瞰したいとき。
-- 既存の acp.builder 系 import path が残っている理由、互換 wrapper の範囲、削除条件を確認したいとき。
-- apply、common、indexing、quota probe、review、session、TUI のどの builder 互換領域へ進むべきかを選びたいとき。
-- 正本側 builder への委譲、oracle src import 準備、realization 側 AgentCallParameter への変換に関わる入口を探しているとき。
+- ACP builder 全体で、oracle 側 builder と realization 側の既存公開 import path の対応関係を確認したいとき。
+- 正本側へ実装を置いたまま、acp.builder 配下の旧参照経路や公開入口を維持している理由を確認したいとき。
+- builder が oracle 側へ委譲し、戻り値を realization 側の公開型や AgentCallParameter へ適合させる経路を探したいとき。
+- apply、common、indexing、quota probe、review、session、TUI のどの builder 互換領域へ進むべきか切り分けたいとき。
+- acp.builder 配下の互換入口を削除・移動・置換してよいか、残存参照や削除条件を確認したいとき。
 
 ## Do not read this when
-- builder の正本仕様、prompt 文面、parameter 生成内容そのものを確認したいときは、対応する oracle 側の本文または実装を読む。
-- ACP parameter の公開型、共通データ構造、汎用変換処理そのものを調べたいときは、基礎定義や共通 helper 側を読む。
-- apply fork、review、TUI、session などの機能全体の実行フローや画面制御、状態管理を調べたいときは、それぞれの実処理を担う領域を読む。
-- 互換 import path の維持や oracle 側 builder への委譲と無関係な新規機能の実装場所を探しているとき。
+- agent prompt、出力条件、parameter 生成内容、人間意図などの正本仕様を確認したいときは、対応する oracle 側 builder を読む。
+- ACP parameter の基礎構造、公開型、共通 model 設定、file access mode 全体の定義を確認したいときは、それぞれの基本型定義や共通実装を読む。
+- apply fork、review、TUI、session join など各機能の具体的な制御フローや実処理を調べたいときは、対象機能の本体実装へ直接進む。
+- indexing の生成処理・探索処理・データ構造など、互換入口ではなく処理本体を確認したいときは、正本側の実体を持つ実装を読む。
+- 新規 builder 機能の仕様や実装場所を探しているだけで、既存 import path の互換維持や oracle 側委譲に関係しないとき。
 
 ## hash
-- aaab00c9ff486b50fcfdde4d30d71a4e0be0c07d1d0a536d679eaaf271ad08b6
+- 599ddc5f706184846308c0f1331b24291dcc772ad0954d7748c74a31c207928a

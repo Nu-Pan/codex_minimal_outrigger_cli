@@ -99,21 +99,22 @@
 # `review`
 
 ## Summary
-- review builder 領域の realization package と review oracle 系 builder 実装への入口。package 初期化は oracle 側同名 package との互換名前空間だけを示し、下位階層では review oracle 周辺の agent call parameter 生成、正本側 builder への委譲、prompt placeholder の暫定補正、旧来 import 経路の互換 wrapper を扱う。
+- review builder 領域の package 入口と、review oracle builder 周辺の旧 import 経路互換層を束ねる階層。実装本体よりも、canonical oracle 側への再公開・委譲、薄い wrapper、暫定補正、移行中の互換性と削除条件を確認する入口になる。
 
 ## Read this when
-- review builder 領域で、realization 側 package の存在確認から review oracle 系 agent call parameter 生成処理までの読む先を選びたいとき。
-- 正本側 builder の出力を realization 側でどう補正しているか、特に oracle root placeholder 表記の暫定補正を追いたいとき。
-- レビュー指摘の列挙・判定・検証に関する旧来 import 経路、委譲先、互換層の残置理由や削除条件を確認したいとき。
-- 同名機能が realization 側にあるように見える場合に、実体が canonical oracle 側か薄い wrapper かを切り分けたいとき。
+- review builder 領域で、oracle 側に対応する realization package や互換名前空間があるかを確認したいとき。
+- review oracle builder の旧経路 import が canonical oracle 側へどう委譲されているか確認したいとき。
+- review finding enumeration、judgment、validation、merge finding などの互換 module や薄い wrapper の残存理由、移行状況、削除条件を調べたいとき。
+- 正本側 builder の出力に対する realization 側の最小補正や agent call parameter 生成 wrapper の場所を探したいとき。
 
 ## Do not read this when
-- review builder の正本仕様断片、prompt の正本文面、判定仕様、検出ロジックそのものを確認したいときは、対応する oracle file または canonical 実装を読む。
-- agent call parameter の共通データ構造、model、reasoning effort、file access mode などの基礎定義を調べたいときは、基礎定義側を読む。
-- 互換 import 経路や review oracle builder と無関係な CLI 表示、テスト方針、review 機能全般を調べたいときは、より直接その責務を持つ対象へ進む。
+- review builder の具体的な処理、関数、クラス、出力、制御フローを調べたいとき。
+- review finding の判定仕様、検証ロジック、prompt 正本文面など、挙動本体や正本仕様を確認したいとき。
+- agent call parameter の基礎構造、共通 model 設定、file access mode などの一般仕様を確認したいとき。
+- package 初期化や旧 import 互換層以外の実装変更先を探しているとき。
 
 ## hash
-- b5982b09e4ce2166f96a96ee67c2e95418af42cdfc1006f94bbe53b9ce6eef84
+- 857116df4ad80bb76c8dcecf2c94b8d197cf0006fc8c4b22885010721b42dcb3
 
 # `session`
 

@@ -149,23 +149,24 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体への入口。最上位 CLI、サブコマンド実行本体、共通 runtime helper、oracle 側実装への互換 shim、既存 import path を維持する互換層を収める。
-- CLI 公開面から各サブコマンド実装へ進む経路と、config・basic・acp builder・oracle package など正本側実装を複製せず参照するための接続境界を切り分ける階層。
+- cmoc の realization implementation を収める実装領域で、CLI 入口、サブコマンド本体、共通 runtime helper、oracle 側正本実装への互換 shim、既存公開 import path を維持する再公開層への分岐点になる。
+- サブコマンドの実行制御、共通処理、公開 CLI 構成、設定・basic・ACP builder 互換入口、正本側 package への委譲境界など、実装側でどの責務へ進むべきかを切り分ける上位階層である。
+- この階層には処理本体を持つ実装と、旧 import 経路を正本側または実体 module へ橋渡しする互換層が混在するため、実処理の変更か互換入口の移行判断かを分けて読む。
 
 ## Read this when
-- cmoc の実装領域で、CLI entrypoint、サブコマンド本体、共通 runtime helper、互換 import 入口のどこから読むべきかを選びたいとき。
-- `cmoc` コマンドの Typer 構成、init・indexing・tui・session・apply・review などのサブコマンド処理、または複数機能から共有される runtime helper の所在を探したいとき。
-- oracle 側の config、basic、ACP builder、`oracle.*` 実装を realization 側へ複製せず、既存公開 API や import path から利用する境界を確認したいとき。
-- 古い import path や互換 shim を残す理由、委譲先、削除条件を調べたいとき。
+- cmoc の realization implementation 全体から、CLI 入口、サブコマンド本体、共通 runtime helper、互換 import 層のどこへ進むべきかを選びたいとき。
+- 公開 CLI コマンド構成、サブコマンドの実行フロー、Codex 実行境界、config・state・Git・path・logging・INDEX 更新などの共通実装を探したいとき。
+- oracle src の定義を realization 側へ複製せず、既存の公開 import path や旧 import 経路から利用できるようにしている互換境界を確認したいとき。
+- ACP builder、basic、config、runtime などの既存参照を、正本側実装または実体 module へ移行する作業で、互換入口を残す理由や削除条件を切り分けたいとき。
 
 ## Do not read this when
-- oracle file に書かれた正本仕様、prompt 文面、path model、設定定義、ACP builder の正本実装そのものを確認したいときは、oracle 側の対象を読む。
-- 個別サブコマンドの詳細、共通 helper の内部挙動、builder 互換領域の詳細など、読むべき下位対象がすでに特定できているときは、その対象へ直接進む。
-- テストコードを確認・変更したいときは、test 側を読む。
-- memo、INDEX、AGENTS、git 管理情報、agent 設定など、realization implementation 以外の領域を探しているとき。
+- oracle file に書かれた正本仕様断片、agent prompt、人間意図、path placeholder 定義、設定定義そのものを確認したいときは、対応する oracle 側の本文を読む。
+- 個別の実装責務がすでに特定できているときは、この階層全体ではなく、該当する CLI 入口、サブコマンド実装、共通 runtime helper、互換 shim へ直接進む。
+- テスト挙動や realization test を確認・変更したいときは、実装領域ではなくテスト領域を読む。
+- 既存 import path の互換維持や oracle 側委譲に関係しない新しい正本仕様や API 方針を検討しているだけのときは、この階層を入口にしない。
 
 ## hash
-- d2612c7df7f2c7d564f0b844738558f62be4442c353b7624c2df3853de4986a2
+- 0aabce9c20059fe6c025e51fcd5dd15f37c69f8d9b8be712fa58ab2e0e453f5d
 
 # `test`
 

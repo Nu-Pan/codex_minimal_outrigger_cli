@@ -18,19 +18,17 @@
 # `oracle`
 
 ## Summary
-- review oracle 周辺の agent call parameter builder と、旧来 import 経路を保つ互換層をまとめる階層。正本側 builder への委譲、prompt placeholder の暫定補正、互換 module の残置理由と削除条件を扱う。
-- レビュー指摘の列挙・判定・検証・merge finding に関する実装入口があるが、多くは実装本体ではなく canonical oracle 側への再公開または薄い wrapper として位置づけられる。
+- review oracle builder 周辺で、旧 import 経路の互換層と一部の agent call parameter 生成 wrapper をまとめる階層。多くは canonical oracle 側実装への再公開または委譲で、実体ロジックよりも移行中の import 互換性、暫定 prompt 補正、削除条件を扱う。
 
 ## Read this when
-- review oracle 系の agent call parameter 生成処理を調査・変更したいとき。
-- 正本側 builder の出力を realization 側でどのように補正しているか、特に oracle root placeholder 表記の暫定補正を確認したいとき。
-- レビュー指摘の列挙・判定・検証に関する旧来 import 経路が残っている理由、委譲先、削除条件を確認したいとき。
-- 同名機能の実装が realization 側にあるように見えるが、実体が canonical oracle 側か薄い wrapper かを切り分けたいとき。
+- review oracle builder の旧経路 import が canonical oracle 側へどう委譲されているか確認したいとき。
+- review finding enumeration、judgment、validation、merge finding の互換 module や薄い wrapper の残存理由、移行状況、削除条件を調べたいとき。
+- 正本側 builder の出力を realization 側で最小補正して agent call parameter を生成している箇所を探したいとき。
 
 ## Do not read this when
-- review oracle の正本仕様断片そのもの、prompt の正本文面、判定仕様、検出ロジックを確認したいときは、対応する oracle file または canonical 実装を読む。
-- agent call parameter の基礎データ構造、model、reasoning effort、file access mode などの共通仕様を調べたいときは、基礎定義側を読む。
-- 互換 import 経路や review oracle builder と無関係な CLI 表示、テスト方針、review 機能全般を調べたいときは、より直接その責務を持つ対象へ進む。
+- review finding の判定仕様、検証ロジック、prompt 正本文面など、挙動本体や正本仕様を確認したいときは canonical oracle 側または対応する oracle file を読む。
+- agent call parameter の基礎構造、共通 model 設定、file access mode などの一般仕様を確認したいときは基礎定義側を読む。
+- review 全体の builder 構成や、この階層にない別種の review 処理を調べたいときは、より上位または該当する対象へ進む。
 
 ## hash
-- 970b5b4cebe0698ddd6ee2e13b4b8bbc5afab4ecd7fe0dc2d7d1b99292896ed7
+- af1dc93a74559b4fada9eb5a2266a8362f76b2ed3699b0d4239f039390a81b02
