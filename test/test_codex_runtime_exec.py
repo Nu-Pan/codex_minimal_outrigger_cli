@@ -159,11 +159,13 @@ def test_run_codex_exec_recovers_file_access_violations(
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     counter = tmp_path / "count.txt"
+    recovery_prompt = tmp_path / "recovery_prompt.txt"
     write_python_executable(
         bin_dir / "codex",
         [
             "import json, pathlib, sys",
             f"counter = pathlib.Path({str(counter)!r})",
+            f"recovery_prompt = pathlib.Path({str(recovery_prompt)!r})",
             "count = int(counter.read_text()) if counter.exists() else 0",
             "counter.write_text(str(count + 1))",
             "args = sys.argv[1:]",
@@ -172,6 +174,7 @@ def test_run_codex_exec_recovers_file_access_violations(
             "if count == 0:",
             "    blocked.write_text('blocked\\n')",
             "else:",
+            "    recovery_prompt.write_text(sys.stdin.read())",
             "    blocked.unlink(missing_ok=True)",
             "output.write_text('{}\\n')",
             "print(json.dumps({'type': 'turn.completed'}))",
@@ -185,6 +188,49 @@ def test_run_codex_exec_recovers_file_access_violations(
         capacity_initial_sleep_sec=0,
         config=CmocConfig(),
     )
+
+    assert counter.read_text() == "2"
+    assert not (root / "oracle" / "blocked.md").exists()
+    assert "FINDING-00" in recovery_prompt.read_text()
+    assert "ファイルアクセス規則違反のリカバリ" in recovery_prompt.read_text()
+
+
+def test_run_codex_exec_recovers_file_access_violations_before_nonzero_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "count.txt"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "blocked = pathlib.Path('oracle/blocked.md')",
+            "if count == 0:",
+            "    blocked.write_text('blocked\\n')",
+            "    print(json.dumps({'type': 'error', 'message': 'boom'}))",
+            "    raise SystemExit(7)",
+            "blocked.unlink(missing_ok=True)",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    with pytest.raises(CmocError, match="Codex CLI 呼び出しが失敗しました"):
+        run_codex_exec(
+            _parameter(FileAccessMode.REALIZATION_WRITE),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
 
     assert counter.read_text() == "2"
     assert not (root / "oracle" / "blocked.md").exists()

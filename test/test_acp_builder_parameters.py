@@ -20,9 +20,6 @@ from acp.builder.apply.fork.file_finding_enumeration import (
 from acp.builder.apply.fork.finding_application import (
     build_apply_fork_finding_application_parameter,
 )
-from acp.builder.common.file_access_rule_vaolation_recovery import (
-    build_file_access_rule_vaolation_recovery_parameter,
-)
 from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
 from acp.builder.review.oracle.enumerate_finding import (
     build_review_oracle_enumerate_finding_parameter,
@@ -102,25 +99,6 @@ def test_apply_fork_change_summary_schema_matches_oracle_source() -> None:
         },
         schema,
     )
-
-
-def test_file_access_rule_violation_recovery_builder_uses_no_rule_mode(
-    tmp_path: Path,
-) -> None:
-    call_log = tmp_path / "2026-01-01_00-00_00_000000000_call.json"
-    call_log.write_text("{}\n")
-
-    parameter = build_file_access_rule_vaolation_recovery_parameter(
-        call_log,
-        [tmp_path / "oracle" / "spec.md"],
-        FileAccessMode.REALIZATION_WRITE,
-    )
-
-    assert parameter.file_access_mode == FileAccessMode.NO_RULE
-    assert parameter.structured_output_schema_path is None
-    assert "ファイルアクセス規則違反" in parameter.prompt
-    assert "- <time-stamp> = 2026-01-01_00-00_00_000000000\n" in parameter.prompt
-    assert "- <time-stamp> = 2026-01-01_00-00_00_000000000_call\n" not in parameter.prompt
 
 
 def test_tui_resolve_parameter_builder_embeds_original_prompt() -> None:

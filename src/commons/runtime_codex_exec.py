@@ -308,6 +308,58 @@ def run_codex_exec(
             payload["error"] = error
         logger.event("codex_call", **payload)
 
+    def codex_exec_result_from_paths(
+        result: subprocess.CompletedProcess[str],
+        *,
+        run_call_path: Path,
+        run_prompt_path: Path,
+        run_stdout_path: Path,
+        run_stderr_path: Path,
+        run_output_path: Path,
+    ) -> CodexExecResult:
+        output_text = run_output_path.read_text() if run_output_path.exists() else ""
+        return CodexExecResult(
+            returncode=result.returncode,
+            output_text=output_text,
+            output_json=read_output_json(run_output_path),
+            call_log_path=run_call_path,
+            prompt_log_path=run_prompt_path,
+            stdout_log_path=run_stdout_path,
+            stderr_log_path=run_stderr_path,
+            output_path=run_output_path,
+            codex_home=codex_home,
+            profile_name=profile_name,
+            profile_path=profile_path,
+            schema_path=schema_path,
+            elapsed_sec=time.perf_counter() - call_started_at,
+            quota_wait_sec=quota_wait_sec,
+            quota_polls=quota_polls,
+        )
+
+    def recover_terminal_file_access_violations(
+        exec_result: CodexExecResult,
+    ) -> None:
+        if not verify_file_access:
+            return
+        allowed_paths: list[Path] = []
+        if allow_oracle_conflict_writes:
+            # <work-root>/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py
+            # Codex profile can only open parent directories, so the
+            # stricter file-level conflict target boundary is enforced here.
+            allowed_paths.extend(extra_writable_paths or [])
+        recover_file_access_violations(
+            codex_work_root,
+            exec_result,
+            parameter.file_access_mode,
+            config,
+            generated_paths,
+            root=root,
+            subcommand_logger=logger,
+            allowed_paths=allowed_paths,
+            forbidden_baseline=forbidden_baseline,
+            worktree_diff_baseline=worktree_diff_baseline,
+        )
+
     semantic_attempts = 0
     capacity_attempts = 0
     quota_polls = 0
@@ -578,6 +630,16 @@ def run_codex_exec(
                 status="failed",
                 error=error_text,
             )
+            recover_terminal_file_access_violations(
+                codex_exec_result_from_paths(
+                    result,
+                    run_call_path=call_path,
+                    run_prompt_path=prompt_path,
+                    run_stdout_path=stdout_path,
+                    run_stderr_path=stderr_path,
+                    run_output_path=output_path,
+                )
+            )
             raise CmocError(
                 "Codex CLI 呼び出しが失敗しました。",
                 ["stderr/stdout log を確認して原因を解消してください。"],
@@ -624,6 +686,16 @@ def run_codex_exec(
                     status="schema_validation_failed",
                     error=str(exc),
                 )
+                recover_terminal_file_access_violations(
+                    codex_exec_result_from_paths(
+                        result,
+                        run_call_path=call_path,
+                        run_prompt_path=prompt_path,
+                        run_stdout_path=stdout_path,
+                        run_stderr_path=stderr_path,
+                        run_output_path=output_path,
+                    )
+                )
                 raise CmocError(
                     "Codex CLI の Structured Output 検証に失敗しました。",
                     ["schema と output を確認してください。"],
@@ -631,8 +703,6 @@ def run_codex_exec(
                 ) from exc
         else:
             output_json = read_output_json(output_path)
-        output_text = output_path.read_text() if output_path.exists() else ""
-        elapsed_sec = time.perf_counter() - call_started_at
         emit_codex_call_event(
             run_purpose=purpose,
             run_call_path=call_path,
@@ -645,9 +715,17 @@ def run_codex_exec(
             returncode=result.returncode,
             status="succeeded",
         )
+        exec_result = codex_exec_result_from_paths(
+            result,
+            run_call_path=call_path,
+            run_prompt_path=prompt_path,
+            run_stdout_path=stdout_path,
+            run_stderr_path=stderr_path,
+            run_output_path=output_path,
+        )
         exec_result = CodexExecResult(
-            returncode=result.returncode,
-            output_text=output_text,
+            returncode=exec_result.returncode,
+            output_text=exec_result.output_text,
             output_json=output_json,
             call_log_path=call_path,
             prompt_log_path=prompt_path,
@@ -658,29 +736,11 @@ def run_codex_exec(
             profile_name=profile_name,
             profile_path=profile_path,
             schema_path=schema_path,
-            elapsed_sec=elapsed_sec,
+            elapsed_sec=exec_result.elapsed_sec,
             quota_wait_sec=quota_wait_sec,
             quota_polls=quota_polls,
         )
-        if verify_file_access:
-            allowed_paths: list[Path] = []
-            if allow_oracle_conflict_writes:
-                # <work-root>/oracle/src/oracle/acp_builder/session/join/conflict_resolution.py
-                # Codex profile can only open parent directories, so the
-                # stricter file-level conflict target boundary is enforced here.
-                allowed_paths.extend(extra_writable_paths or [])
-            recover_file_access_violations(
-                codex_work_root,
-                exec_result,
-                parameter.file_access_mode,
-                config,
-                generated_paths,
-                root=root,
-                subcommand_logger=logger,
-                allowed_paths=allowed_paths,
-                forbidden_baseline=forbidden_baseline,
-                worktree_diff_baseline=worktree_diff_baseline,
-            )
+        recover_terminal_file_access_violations(exec_result)
         return exec_result
 
     assert last_result is not None
@@ -716,11 +776,7 @@ def recover_file_access_violations(
     if not violations:
         return
     for _attempt in range(config.codex.num_try_falv_recovery):
-        from acp.builder.common.file_access_rule_vaolation_recovery import (
-            build_file_access_rule_vaolation_recovery_parameter,
-        )
-
-        parameter = build_file_access_rule_vaolation_recovery_parameter(
+        parameter = _file_access_recovery_parameter(
             violated_result.call_log_path,
             violations,
             violated_mode,
@@ -761,6 +817,47 @@ def recover_file_access_violations(
         "agent call がファイルアクセス規則に違反しました。",
         ["Codex call log と作業差分を確認してから cmoc コマンドを再実行してください。"],
         "\n".join(str(path) for path in violations),
+    )
+
+
+def _file_access_recovery_parameter(
+    violated_agent_call_log: Path,
+    violations: list[Path],
+    violated_mode: FileAccessMode,
+) -> AgentCallParameter:
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # File-access recovery reuses the apply finding-application agent contract;
+    # the recovery-specific details are supplied as a finding instead of a
+    # separate realization-side builder.
+    from acp.builder.apply.fork.finding_application import (
+        build_apply_fork_finding_application_parameter,
+    )
+
+    return build_apply_fork_finding_application_parameter(
+        [
+            {
+                "title": "ファイルアクセス規則違反のリカバリ",
+                "evidences": [
+                    {
+                        "path": str(path),
+                        "summary": "agent call 後の事後検証で編集禁止差分として検出された。",
+                    }
+                    for path in violations
+                ],
+                "oracle_requirement": (
+                    "agent call 後に編集禁止ファイル・ディレクトリの差分を検証し、"
+                    "違反があれば agent call によるリカバリを試みる。"
+                ),
+                "observed_implementation": (
+                    f"{violated_mode.value} の agent call が編集禁止差分を残した。"
+                ),
+                "reason": f"違反元 call log: {violated_agent_call_log}",
+                "suggested_fix": (
+                    "違反元 agent call が発生させた編集禁止差分だけを、"
+                    "呼び出し前の状態に戻してください。"
+                ),
+            }
+        ]
     )
 
 
