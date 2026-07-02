@@ -862,7 +862,7 @@ def _forbidden_filesystem_snapshot(root: Path) -> _ForbiddenSnapshot:
         if not base.exists():
             continue
         if base.is_file() or base.is_symlink():
-            snapshot[base.relative_to(root)] = _forbidden_file_fingerprint(
+            snapshot[base.relative_to(root)] = _forbidden_path_fingerprint(
                 base, include_digest=name == ".git"
             )
             continue
@@ -871,17 +871,18 @@ def _forbidden_filesystem_snapshot(root: Path) -> _ForbiddenSnapshot:
             # linked worktree の .git file だけを filesystem 差分対象にする。
             continue
         for current_root, _dirnames, filenames in os.walk(base):
-            for filename in filenames:
-                path = Path(current_root) / filename
+            paths = [Path(current_root)]
+            paths.extend(Path(current_root) / filename for filename in filenames)
+            for path in paths:
                 try:
-                    fingerprint = _forbidden_file_fingerprint(path)
+                    fingerprint = _forbidden_path_fingerprint(path)
                 except FileNotFoundError:
                     continue
                 snapshot[path.relative_to(root)] = fingerprint
     return snapshot
 
 
-def _forbidden_file_fingerprint(
+def _forbidden_path_fingerprint(
     path: Path, *, include_digest: bool = False
 ) -> tuple[int, int, int, int, str | None]:
     stat = path.lstat()

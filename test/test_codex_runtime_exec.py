@@ -690,6 +690,48 @@ def test_run_codex_exec_rejects_blocked_runtime_diffs_after_call(
     assert (root / ".agents" / "generated.md").read_text() == "changed\n"
 
 
+@pytest.mark.parametrize(
+    ("blocked_dir", "mode"),
+    [
+        (".agents", FileAccessMode.READONLY),
+        ("memo", FileAccessMode.REPO_WRITE),
+    ],
+)
+def test_run_codex_exec_rejects_empty_blocked_runtime_dir_after_call(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    blocked_dir: str,
+    mode: FileAccessMode,
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text(json.dumps({'ok': True}))",
+            f"pathlib.Path({blocked_dir!r}).mkdir(exist_ok=True)",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    with pytest.raises(CmocError, match="ファイルアクセス規則"):
+        run_codex_exec(
+            _parameter(mode),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
+
+    assert (root / blocked_dir).is_dir()
+    assert not any((root / blocked_dir).iterdir())
+
+
 def test_run_codex_exec_rejects_repo_write_blocked_diffs_after_call(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
