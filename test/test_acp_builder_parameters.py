@@ -153,6 +153,7 @@ def test_tui_resolve_parameter_schema_matches_logical_enum_values() -> None:
     assert schema["required"] == [
         "role",
         "summary",
+        "goal",
         "file_access_mode",
         "oracle_and_realization_basic",
         "oracle_standard",

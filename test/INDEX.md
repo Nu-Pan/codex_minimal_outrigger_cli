@@ -37,7 +37,7 @@
 - oracle file の仕様本文や schema の正本内容を確認したい場合は、oracle 側の該当 doc/src を直接読む。
 
 ## hash
-- 260bb17a591a3bfe649fa1f73ee13ca6ff6dff11505bfd4e13cc7742e3617f0a
+- 97cd429e091041099c10445ed0dec145b51ead51f90df024af509ee16da04c48
 
 # `test_apply_abandon_cli.py`
 
