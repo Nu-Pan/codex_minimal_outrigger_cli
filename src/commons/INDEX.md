@@ -93,23 +93,23 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループと、その周辺の実行制御を扱う実装。Structured Output 検証、capacity retry、quota 代表 probe、resume 継続、call log/subcommand event 記録、agent call 後の file access rule 違反検出・修復を同じ状態機械として読む入口。
+- Codex exec の実行制御を担う。単一試行ループ内で Structured Output 検証、capacity retry、quota 代表 probe、resume 継続、call log/subcommand event 記録、実行後の file access rule 違反検出と修復を扱う。
+- Codex CLI 呼び出しの argv、stdin prompt log、stdout/stderr/output/call log、schema 準備、CODEX_HOME/profile/cwd 解決、quota 待機の同期、worktree 差分検査が同じ状態機械として結合しているため、exec 実行時の成否判定と副作用確認の入口になる。
 
 ## Read this when
-- Codex CLI を `codex exec` として起動する argv、stdin prompt log、output/schema path、CODEX_HOME/profile/cwd の扱いを確認・変更したいとき。
-- Structured Output の JSON 読み込み、schema validation、semantic retry、capacity retry、quota 枯渇時の代表 probe と待機共有、resume token 継続の挙動を追いたいとき。
-- Codex call の call log、stdout/stderr/output log、console 出力、subcommand event payload、quota wait 記録の生成条件や内容を確認したいとき。
-- agent call 後に file access rule 違反を検出し、必要に応じて recovery agent call を実行する流れを確認・変更したいとき。
-- worktree の git status 差分、禁止 runtime root の filesystem 差分、FileAccessMode ごとの書き込み許可判定を扱う変更をするとき。
+- Codex exec の呼び出し方法、再試行、resume token、Structured Output 検証、quota/capacity エラー処理を確認または変更したいとき。
+- Codex call log、prompt/stdout/stderr/output log、subcommand event、quota wait 秒数や poll 回数の記録内容を確認または変更したいとき。
+- agent call 後に file access rule 違反を検出・修復する処理、worktree 差分や禁止 root 配下の変更検査を確認または変更したいとき。
+- Codex 実行時の CODEX_HOME、profile、cwd、schema path、生成 log path の扱いが実行結果や検証にどう渡るかを追いたいとき。
 
 ## Do not read this when
-- TUI 起動や対話 UI 側の制御だけを扱うとき。
-- Codex profile、schema、CODEX_HOME、subprocess 実行、resume token 抽出、quota/capacity error 判定などの個別 helper 実装だけを確認したいときは、それらを定義する runtime helper 側を読む。
-- AgentCallParameter の生成や quota probe/recovery 用 prompt の中身だけを変更したいときは、対応する ACP builder 側を読む。
-- 設定値の定義や読み込み形式だけを確認したいときは、config/runtime config 側を読む。
+- TUI 起動や exec 以外の表示制御だけを確認したいとき。
+- prompt 本文の生成規則や quota probe 用 prompt の内容だけを確認したいときは、該当する builder 側を直接読む。
+- Codex profile の具体的な生成内容、runtime config の読み込み、git コマンド wrapper、path model の定義だけを確認したいときは、それぞれの担当 module を直接読む。
+- file access mode の仕様そのものや oracle/realization の正本定義を確認したいだけのときは、対応する oracle document を読む。
 
 ## hash
-- 8851d302ffe21a43bbd5a322640e367c5504f5d0be316a2819e6958d7cb2767b
+- c3da056f7e9b0e5ee858be19ef42518c0504291f8b74c0afa091a8bee358754d
 
 # `runtime_codex_logging.py`
 

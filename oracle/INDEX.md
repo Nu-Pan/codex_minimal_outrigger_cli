@@ -1,44 +1,44 @@
 # `doc`
 
 ## Summary
-- cmoc の自然言語による正本仕様断片を集める領域。アプリケーション仕様、branch/worktree モデル、開発規則、不採用設計案など、実装差を避けたい人間意図を文書として確認する入口になる。
-- 利用者向け挙動や実行基盤の個別仕様へ進む領域と、realization code を変更する際の横断的な開発規則へ進む領域、不採用案の背景を確認する領域を分けて扱う。
+- cmoc の正本仕様ドキュメント群を置く領域であり、アプリケーション仕様、branch/worktree モデル、採用しなかった代替案、開発規則など、自然言語で書かれた oracle doc への入口になる。
+- 利用者向け外部挙動、git branch / worktree の概念、設計判断の背景、realization code の開発基準などを、下位領域や個別文書ごとに分けて扱う。
 
 ## Read this when
-- cmoc の CLI 挙動、run/session、git branch/worktree、Codex CLI 呼び出し、状態、ログ、エラー、インデクシングなどの正本仕様断片を探すとき。
-- Python 実装・テスト・CLI 構成・開発環境など、realization code を追加または修正する前に従うべき開発規則を確認したいとき。
-- 新機能や workflow 変更の前に、過去に検討されたが採用されなかった設計案と、その不採用理由を確認したいとき。
-- 対象がアプリケーション外部仕様、branch モデル、開発規則、不採用案のどれに属するかを切り分けたいとき。
+- cmoc の仕様を自然言語の正本仕様断片から確認したいとき。
+- CLI 挙動、サブコマンド仕様、Codex CLI 呼び出し、ログ、エラー、セッション状態、INDEX.md 自動生成、run 隔離などのアプリケーション仕様文書へ進む入口を探すとき。
+- session fork / join、cmoc-managed branch、run branch、linked worktree、fork / join commit などの git branch / worktree モデルを確認したいとき。
+- 採用されなかった設計案の背景や、不採用理由を確認して、自然に見える代替案を再導入してよいか判断したいとき。
+- Python 実装、CLI 構成、開発環境、pytest 方針など、realization code を追加・変更する前の横断的な開発規則を確認したいとき。
 
 ## Do not read this when
-- oracle file と realization file の一般的な責務分担、編集権限、品質基準、INDEX.md エントリー生成基準だけを確認したいとき。
-- パスキーワードや repo root / run root / work root などの体系そのものを確認したいだけのとき。
-- realization implementation や realization test の具体的な既存コード、内部 helper、現在のテスト期待値を調べたいとき。
-- agent call の個別 prompt builder や parameter schema の正本実装だけを確認したいとき。
+- oracle file と realization file の一般的な責務分担、編集権限、品質基準、INDEX.md エントリー生成基準そのものを確認したいだけのとき。
+- パスキーワードやルートディレクトリ概念そのものの定義だけを確認したいとき。
+- 現在の実装ファイル、テストファイル、既存関数、内部 helper、依存関係など realization code の具体構造を調べたいとき。
+- 既に読むべき個別の正本仕様文書や下位領域が特定できており、その本文を直接読む方が早いとき。
 
 ## hash
-- 13d029d63537483e9dddd92b1e1b14bc087d9878ab0d55ef43c7aed9f91ff048
+- 70d66840404497d3494dcf52385a33c7ce77c82bd116110b178b148893699d30
 
 # `src`
 
 ## Summary
-- AI Agent 呼び出しパラメータ、Structured Output schema、完全プロンプト構築、標準文書パーツ、設定・パス表記・構造化文書モデルを定義する正本実装断片の領域。
-- cmoc の各ワークフローが AI Agent に渡す role、summary、goal、file access mode、prompt、schema、およびそれらを組み立てる共通部品を確認する入口になる。
+- cmoc の oracle src として、AI agent 呼び出しパラメータ、プロンプト構築部品、設定、パス表記、規範文書、構造化 Markdown などの正本実装断片を収める領域。
+- AgentCallParameter、論理モデル種別、Reasoning Effort、ファイルアクセスモード、Structured Output schema 付き agent call、完全プロンプトへの規範注入、ルートパスプレースホルダ解決、リポジトリ別設定の既定値を確認する入口になる。
+- apply fork、review oracle、indexing、tui、session join、ファイルアクセス規則違反リカバリなど、cmoc が別 agent call に渡す prompt と呼び出し条件の正本を探す分岐点になる。
 
 ## Read this when
-- AI Agent 呼び出しで使う論理モデルクラス、reasoning effort、ファイルアクセスモード、AgentCallParameter の構造を正本仕様断片として確認または変更したいとき。
-- cmoc の indexing、TUI、apply fork、review oracle、session join、ファイルアクセス規則違反リカバリで生成されるプロンプトや Structured Output schema を確認したいとき。
-- 完全プロンプトの構成、静的プロンプトと動的プロンプトの分離、標準文書の注入条件、placeholder mapping、ファイルアクセス規則のプロンプト化を確認したいとき。
-- oracle/realization の基本、oracle standard、realization standard、review standard、apply review standard、index entry standard、routing rule など、Agent 向けプロンプトに入る規範本文の正本実装断片を確認したいとき。
-- cmoc の設定項目と既定値、論理モデル名や reasoning effort の設定表現、apply fork や review oracle の処理予算設定を確認したいとき。
-- ルートパスプレースホルダ、絶対パス解決、プレースホルダ付きパス表記、git worktree root との関係、構造化文書や規範モデルの Markdown 整形を確認したいとき。
+- cmoc の oracle src に定義された実装形式の正本仕様断片を確認・変更したいとき。
+- AI agent 呼び出しで使う model class、reasoning effort、file access mode、prompt 本文、Structured Output schema の扱いを調べたいとき。
+- apply fork や review oracle などのサブコマンドが、どの役割・ゴール・規範・ファイルアクセス規則で agent call を組み立てるか確認したいとき。
+- 完全プロンプトに oracle standard、realization standard、review oracle standard、apply review standard、index entry standard、routing rule、file access rule がどう注入されるか確認したいとき。
+- cmoc 設定の既定値、Codex CLI 向けモデル名対応、並列数、各レビュー・適用ループの予算、ルートパスプレースホルダの解決規則、構造化文書の Markdown レンダリングを調べたいとき。
 
 ## Do not read this when
-- AI Agent 呼び出しのプロセス起動、ログ保存、結果処理、エラー処理、git 操作、branch 操作、状態管理など、正本実装断片ではなく realization implementation 側の実行フローを追いたいとき。
-- CLI 引数解析、サブコマンドの制御、設定ファイルの読み書き、JSON 変換、Codex CLI へ渡す実際のコマンド列を調べたいとき。
-- 正本仕様断片としてのプロンプト・schema・モデル定義ではなく、特定の作業ディレクトリで読むべきファイルや生成済み INDEX.md の内容だけを知りたいとき。
-- oracle file の自然言語ドキュメントだけを読み、Python や JSON で表現された正本実装断片の構造を確認する必要がないとき。
-- realization code や realization test の実装不具合、テスト追加、リファクタリング対象を探しており、AgentCallParameter やプロンプト構築の正本定義に触れる必要がないとき。
+- 利用者向け CLI の実行フロー、プロセス起動、git 操作、状態ファイル更新、結果表示など、実際に動く realization implementation を調べたいとき。
+- 自然言語 Markdown の正本仕様文書そのものを読みたいとき。
+- oracle src ではなく realization test、realization implementation、補助スクリプト、生成物、または実際の差分適用箇所を探しているとき。
+- 個別ファイルの修正 diff、レビュー結果の保存・集約処理、TUI 入力処理、merge conflict marker の検出処理など、oracle src の prompt 正本ではなく実装側の処理を確認したいとき。
 
 ## hash
-- d92de2b8b4cbbd262fc8e241ac3691022c7278ede9c5a1826e436409606c9c46
+- 83c7ac54e4115d17dc1a7da0bf6a22b64df58a743f021041951ac0cdd3e2a441

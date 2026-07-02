@@ -19,20 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP builder 領域の realization 側入口。正本側に実体を置く builder 群について、既存の公開参照経路を維持する互換 package 群と、quota availability probe 用の最小 parameter builder をまとめる。
-- apply、review、session、TUI、indexing、file access recovery などの下位領域へ進む前に、実処理本体ではなく互換層・委譲境界・probe parameter 生成のどれを読むべきかを切り分けるための階層。
+- ACP builder 配下の realization 側互換入口をまとめる領域。oracle 側に置かれた正本 builder 実装を既存の acp.builder.* 参照から利用できるようにし、apply、common、indexing、review、session、tui、quota probe などの下位領域へ進むための上位入口となる。
+- この階層は builder 本体仕様や各処理の正本ではなく、公開 import path の維持、oracle 側実装への委譲、realization 側 parameter への適応、互換 wrapper の残置理由と削除条件を見分けるために読む。
 
 ## Read this when
-- ACP builder の realization 側公開入口が、正本側 builder や旧 import 経路とどう対応しているかを確認したいとき。
-- apply fork、review oracle、session join、TUI、indexing、file access recovery などの builder 関連作業で、まず下位領域の分担を選びたいとき。
-- 正本側実装への委譲、realization 側 parameter 型への適応、互換 wrapper の残置理由や削除条件を確認したいとき。
-- Codex quota availability probe 用に、既存 parameter から動作確認用 parameter を組み立てる処理を確認・変更したいとき。
+- acp.builder.* 参照が oracle 側 builder 実装へどの互換入口を経由して接続されているか確認したいとき。
+- apply、common、indexing、review、session、tui、quota probe など、ACP builder 関連の読む先を上位階層から選びたいとき。
+- realization 側に残る builder 互換 package、旧 import 経路、公開名、委譲先、削除条件を確認したいとき。
+- oracle 側の正本 builder を利用しつつ、既存利用者や残存参照を壊さないための公開面を調べたいとき。
 
 ## Do not read this when
-- 各 builder の正本仕様、prompt 正本文面、出力条件、判定仕様そのものを確認したいときは、対応する oracle file または正本側実装を読む。
-- apply fork の制御フロー、branch 操作、diff 生成、CLI 引数処理、TUI の描画やイベント処理など、builder 入口ではない実行処理を調べたいとき。
-- AgentCallParameter、FileAccessMode、model、reasoning effort などの基礎データ構造を調べたいときは、基礎定義側を読む。
-- 互換 import 経路や quota probe parameter 生成に関係しない新規機能の実装場所やテスト対象を探しているとき。
+- 個別 builder の具体的な生成ロジック、repo root 解決、parameter 型変換、prompt 補正などを直接確認したいときは、該当する下位領域へ進む。
+- builder の正本仕様、prompt 文面、出力条件、判定仕様、file access rule などを確認したいときは、対応する oracle file または正本側実装を読む。
+- AgentCallParameter、FileAccessMode、model、reasoning effort などの基礎定義を調べたいときは、基礎定義側を読む。
+- CLI コマンド全体の制御フロー、fork 作成、branch 操作、TUI 描画、runtime 実行処理など、ACP builder 互換入口ではない責務を調べたいときは、より直接の実装領域へ進む。
 
 ## hash
-- f71ed6f2f66d30c5e3a816090e2206dc3d311607064cf488f717172c102a9317
+- 40926c0ca3cd569f9931362761ea2a508ebb48d2d3ddefc14a56b0b256b1e4f3

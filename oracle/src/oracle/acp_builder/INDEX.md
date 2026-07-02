@@ -39,20 +39,20 @@
 # `common`
 
 ## Summary
-- ファイルアクセス規則違反が起きた agent call を修復するための、再呼び出し用パラメータ構築を扱う正本断片への入口。違反時の規則本文、対象ファイル、発生ログをリカバリー担当 agent に渡す設計意図を確認するための領域。
+- ファイルアクセス規則違反が発生した agent call を復旧するための oracle src を扱う。違反規則本文、違反ファイル一覧、対象ログの時刻情報を修復担当 agent へ渡す入力として組み立てる責務を持つ。
 
 ## Read this when
-- ファイルアクセス規則違反リカバリー用の agent call parameter の構成意図を確認したいとき。
-- 違反ファイル一覧、違反時のアクセスモード、違反ログを動的プロンプトへ渡す仕様断片を確認したいとき。
-- 違反修復タスクで指定するモデル種別、推論量、アクセスモードの正本断片を確認したいとき。
+- ファイルアクセス規則違反の復旧用 agent call parameter の内容、モデル種別、推論強度、アクセスモードを確認・変更したいとき。
+- 違反ファイル一覧や違反したファイルアクセス規則を、復旧担当 agent のプロンプトへどう渡すか確認したいとき。
+- ファイルアクセス規則、完成プロンプト構築、agent call parameter を組み合わせた違反復旧用プロンプト生成の正本仕様断片を確認したいとき。
 
 ## Do not read this when
-- 通常の agent call parameter 全般や、違反リカバリー以外の呼び出し種別を調べたいとき。
-- ファイルアクセス規則そのものの本文生成や、アクセスモード別の規則内容を確認したいとき。
-- パスプレースホルダの一般定義や repo root 解決の仕様だけを確認したいとき。
+- 通常の agent call parameter 全般、モデル種別、推論強度、ファイルアクセスモードの型定義だけを確認したいとき。
+- ファイルアクセス規則そのものの本文生成や、各アクセスモードの規則内容を確認したいとき。
+- 完成プロンプトの汎用的な組み立て規則や placeholder 展開の全体仕様を確認したいとき。
 
 ## hash
-- 762d2116b4bf3bb6703a279d25e1debdcea801b946975aa6bb5a4276289fab9c
+- 6b9530767c917b55d12959e1891f77735b45a5329b8e5d05b34c9e4a650e4ee3
 
 # `indexing`
 
@@ -116,19 +116,19 @@
 # `tui`
 
 ## Summary
-- `cmoc tui` の agent call parameter 構築に関する正本実装と Structured Output schema を置くディレクトリ。TUI 起動時の呼び出しパラメータ、ユーザー入力プロンプトからの実行条件解決、解決結果 schema への入口になる。
-- TUI が使うファイルアクセスプロファイル、complete prompt、モデルクラス、推論強度、標準文書参照フラグ、パラメータ解決結果の構造を確認するための対象を含む。
+- TUI 起動時に AI Agent CLI/TUI へ渡す実行パラメータを、元プロンプト、固定プロンプト、ファイルアクセスプロファイル、モデル設定、Structured Output schema へ接続する正本仕様断片を収める。
+- ユーザー入力プロンプトから作業条件を構造化する前段のパラメータ解決と、実際の TUI agent call 起動用パラメータ構築の入口になる。
 
 ## Read this when
-- `cmoc tui` の起動または実行前解決で、AI Agent に渡す AgentCallParameter の正本仕様断片を確認・変更したいとき。
-- TUI 起動時の complete prompt、モデルクラス、推論強度、保存先、ファイルアクセスプロファイル、標準フラグの組み立てを確認したいとき。
-- ユーザー入力プロンプトから役割、概要、ゴール、論理ファイルアクセスモード、参照すべき標準文書を構造化する schema や出力要求を確認したいとき。
+- `cmoc tui` が agent call に渡すモデルクラス、推論強度、ファイルアクセス範囲、保存先、完全プロンプトを確認・変更したいとき。
+- TUI 起動前にユーザー入力プロンプトから role、summary、goal、file access mode、参照すべき標準群を選ぶ処理を確認・変更したいとき。
+- TUI 向け agent call parameter の Structured Output 要求、根拠行提示要求、標準文書参照フラグの扱いを確認したいとき。
 
 ## Do not read this when
-- TUI 以外のサブコマンドにおける agent call parameter 構築を確認したいとき。
-- ユーザー入力取得、エディタ起動、コメント除去、strip など TUI 入力フローの実装だけを調べたいとき。
-- AgentCallParameter、ModelClass、ReasoningEffort、PlaceholderMap、complete prompt 構築などの共通部品そのものの定義を調べたいとき。
-- 個々の標準文書の本文、ファイルアクセス属性、パスモデル、INDEX.md エントリー作成規則そのものを確認したいとき。
+- TUI 以外のサブコマンド向け agent call parameter 構築を確認したいとき。
+- AgentCallParameter、ModelClass、ReasoningEffort、PlaceholderMap、complete prompt 構築などの共通部品そのものを調べたいとき。
+- ユーザー入力取得、エディタ起動、コメント除去、文字列整形など、TUI の入出力処理を調べたいとき。
+- oracle file、realization file、index entry、各 standard の本文や定義そのものを確認したいとき。
 
 ## hash
-- f50ccba3761276eb29fc0a31a2dfef25297ad15c127525ba62f530da031b72c7
+- dc7ec765166481a217e83dee235d8554aeb3e96c8b7ab7023fdb2146f9c9223f

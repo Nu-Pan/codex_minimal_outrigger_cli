@@ -1,21 +1,21 @@
 # `acp_builder`
 
 ## Summary
-- AI Agent 呼び出しに渡す AgentCallParameter と Structured Output schema の正本仕様断片を集める領域。共通の基本パラメータに加え、apply fork、indexing、review oracle、session join、tui、ファイルアクセス違反リカバリーなど用途別の呼び出し条件と出力契約への入口になる。
-- prompt、model class、reasoning effort、file access mode、placeholder、schema パスなど、cmoc の各機能が agent call をどの条件で構成するかを確認するための下位対象を収める。
+- AI コーディングエージェント呼び出しに渡す AgentCallParameter と Structured Output schema の正本仕様断片を集める領域。共通の基本パラメータ型に加え、apply fork、indexing、review oracle、session join、tui、ファイルアクセス規則違反復旧など各用途の prompt、モデル設定、推論強度、アクセスモード、出力契約への入口になる。
+- agent call parameter の入力境界、プロンプト構築条件、Structured Output schema の指定、レビュー・報告・修復・TUI 起動など用途別の AI 呼び出し仕様を確認するための下位要素を収める。
 
 ## Read this when
-- cmoc の機能ごとに、AI Agent へ渡す AgentCallParameter、prompt、Structured Output schema の正本仕様断片を探したいとき。
-- agent call の model class、reasoning effort、file access mode、role、summary、goal、placeholder、標準文書の組み込み方を、用途別に確認または変更したいとき。
-- apply fork のレビュー・報告、indexing の INDEX.md エントリー生成、review oracle、session join の conflict 解消、tui、ファイルアクセス違反リカバリーのいずれかに関する agent call parameter の入口を選びたいとき。
+- cmoc が AI agent を呼び出すときに渡す AgentCallParameter、モデルクラス、Reasoning effort、ファイルアクセスモード、prompt、Structured Output schema の正本仕様断片を確認・変更したいとき。
+- apply fork、indexing、review oracle、session join、tui、ファイルアクセス規則違反復旧のいずれかで使う agent call parameter や出力契約の入口を探したいとき。
+- 用途別 agent call に渡す role、summary、goal、placeholder、標準文書、対象内容、読み取り制約、出力互換性の境界を確認したいとき。
 
 ## Do not read this when
-- agent call のプロセス起動、実行制御、結果処理、エラー処理など realization implementation 側の処理を調べたいとき。
-- CLI 引数、git 操作、branch 操作、状態管理、ファイル探索、INDEX.md 更新など、agent call parameter 構築以外のサブコマンド実行フローを確認したいとき。
-- oracle standard、review oracle standard、index entry standard、パスモデル、ファイルアクセス規則本文など、各 prompt に組み込まれる標準文書や共通概念そのものを読みたいとき。
+- agent call の実行手順、プロセス起動、結果処理、エラー処理、CLI 引数処理、git 操作、状態管理など realization implementation 側の挙動を調べたいとき。
+- oracle file、realization file、index entry、各 standard、file access rule、complete prompt、path placeholder など、agent call parameter から参照される共通仕様そのものを読みたいとき。
+- 個別ファイルのパッチ内容、実際の修正結果、diff 生成手順、TUI のユーザー入力処理、merge conflict marker 検出、レビュー結果の集約や表示処理を確認したいとき。
 
 ## hash
-- df23de11068ec1104d57c7f95d7094f711ea9a966df4235071e179fe709efed5
+- aeedb3ce41de5eb4ade0e2bf3dcc18cd3cfe1fcc20dae945e66f8894f881f90d
 
 # `other`
 

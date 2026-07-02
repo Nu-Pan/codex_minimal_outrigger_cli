@@ -1,23 +1,24 @@
 # `acp`
 
 ## Summary
-- ACP 関連の realization 側公開入口。正本側実装を複製せずに既存の `acp.*` import 経路を維持する互換層と、builder 関連の委譲境界・probe parameter 生成領域への入口を担う。
-- ACP builder 作業で、正本側へ進むべきか、互換 import 維持を確認すべきか、quota availability probe 用 parameter 生成を確認すべきかを切り分ける階層。
+- ACP builder 関連の既存 import 経路を維持するための互換入口を置く領域。oracle src 側の正本実装を複製せず、`acp.*` や `acp.builder.*` 参照から委譲先へ接続する役割を持つ。
+- builder 配下の apply、common、indexing、review、session、tui、quota probe などへ進むための上位入口であり、互換 wrapper の残置理由、公開 import 面、委譲先、削除条件を見分けるために読む。
 
 ## Read this when
-- `acp.*` import 参照を維持する互換入口の残置理由、削除条件、公開面での扱いを確認したいとき。
-- ACP builder の realization 側入口、正本側 builder への委譲、旧 import 経路との対応を確認したいとき。
-- apply、review、session、TUI、indexing、file access recovery などの builder 関連作業で、下位領域のどこへ進むべきかを選びたいとき。
-- Codex quota availability probe 用に既存 parameter から動作確認用 parameter を組み立てる処理を確認または変更したいとき。
+- `acp.*` または `acp.builder.*` 参照が oracle 側 builder 実装へどの互換入口を経由して接続されているか確認したいとき。
+- realization 側や利用者向け公開面に残る ACP builder 互換 import、旧 import 経路、公開名、委譲先、削除条件を判断したいとき。
+- apply、common、indexing、review、session、tui、quota probe など、ACP builder 関連の下位領域へ進む入口を選びたいとき。
+- oracle src 側の正本 builder 実装を利用しつつ、既存利用者や残存参照を壊さないための公開面を調べたいとき。
 
 ## Do not read this when
-- ACP builder の正本仕様、prompt 正本文面、出力条件、判定仕様そのものを確認したいときは、対応する oracle file または正本側実装を読む。
-- apply fork の制御フロー、branch 操作、diff 生成、CLI 引数処理、TUI の描画やイベント処理など、builder 入口ではない実行処理を調べたいとき。
-- AgentCallParameter、FileAccessMode、model、reasoning effort などの基礎データ構造を調べたいときは、基礎定義側を読む。
-- 互換 import 経路や quota probe parameter 生成に関係しない新規機能の実装場所やテスト対象を探しているとき。
+- ACP builder の具体的な生成ロジック、repo root 解決、parameter 型変換、prompt 補正などを直接確認したいときは、該当する下位領域または実装本体へ進む。
+- builder の正本仕様、prompt 文面、出力条件、判定仕様、file access rule などを確認したいときは、対応する oracle file または正本側実装を読む。
+- AgentCallParameter、FileAccessMode、model、reasoning effort などの基礎定義を調べたいときは、基礎定義側を読む。
+- CLI コマンド全体の制御フロー、fork 作成、branch 操作、TUI 描画、runtime 実行処理など、ACP builder 互換入口ではない責務を調べたいときは、より直接の実装領域へ進む。
+- 新しい ACP 機能や API 仕様を追加する場所を探しているとき。この領域は互換維持用の入口であり、機能追加の正本ではない。
 
 ## hash
-- 248a388b2bb432024fda8f641ba769be61d6b5a7ebfdc16b34ec63f0a8a01d2e
+- a6158e66e2fbebb54c3bbcd32c755744a03ec22b354c2bce3b62cbdc6f87da63
 
 # `basic`
 
@@ -61,23 +62,24 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper 群を集める実装領域。Codex 実行、CLI 共通処理、設定、Git、ログ、パス、状態、INDEX.md 更新など、複数サブコマンドから使われる横断的な処理への入口になる。
-- 集約 import 入口と責務別 runtime 実装が同階層に並び、個別挙動を調べる場合は該当する runtime_* 実装へ進むための階層である。
+- cmoc の共通 runtime helper 群を収める領域。Codex 呼び出し、INDEX 更新 preflight、CLI 実行ライフサイクル、設定、内容 hash、エラー表示、Git、ログ、パス、実行結果、session state など、複数サブコマンドから共有される実行時支援を扱う。
+- 個別 helper へ進む前に、共通 runtime 層のどの責務が対象かを切り分けるための入口になる。
 
 ## Read this when
-- 複数の CLI サブコマンドや agent call 実行経路から共有される runtime 処理の所在を探したいとき。
-- Codex exec/TUI 起動、profile、preflight、call log、Structured Output、quota/capacity retry、file access rule 違反検出など Codex 呼び出し周辺の共通実装を確認したいとき。
-- CLI 共通ライフサイクル、利用者向けエラー表示、Git 操作、設定ファイル、runtime path、ログ、結果モデル、session state などの共通処理を変更する対象を選びたいとき。
-- INDEX.md 自動更新の preflight、対象走査、既存エントリー再利用、hash 鮮度判定、Codex へのエントリー生成依頼を扱う実装へ進みたいとき。
+- Codex exec/TUI 呼び出し、profile、quota/capacity、Structured Output、call log、file access rule 違反検出など、Codex 実行境界の共通処理を調べたいとき。
+- INDEX.md 自動更新 preflight、エントリー生成、hash 鮮度判定、除外判定、並列更新、排他制御など、indexing 実行経路を確認または変更したいとき。
+- CLI サブコマンド共通の実行順序、標準出力、終了コード、例外表示、サブコマンド logger、実行 log を扱うとき。
+- 設定 JSON、内容 hash 保存、binary 判定、利用者向けエラー report、Git 操作、runtime path、外部コマンド結果、session state の読み書きなど、複数領域で共有される runtime helper の責務を探すとき。
+- 複数の runtime helper をまとめて import する公開入口や、互換 import の接続先を確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの引数定義、利用者向け制御フロー、サブコマンド固有の状態更新だけを調べたいとき。その場合はサブコマンド実装側へ進む。
-- oracle file にある正本仕様、path model、file access rule、INDEX.md エントリー標準などの仕様意図を確認したいとき。その場合は対応する oracle doc または oracle src を読む。
-- 共通 runtime helper を使う側の業務ロジックだけを変更したいとき。呼び出し元の実装を先に読み、共通挙動を変える必要がある場合だけこの階層へ進む。
-- 生成済みログ、状態ファイル、設定ファイルなどの実データを調査したいだけのとき。この階層はそれらを読み書きする実装を扱う。
+- 個別 CLI サブコマンドの引数定義、利用者向けワークフロー、コマンド固有の処理だけを調べたいとき。その場合はサブコマンド実装側へ進む。
+- oracle file、realization file、file access mode、path placeholder、INDEX.md 仕様意図など、正本仕様断片そのものを確認したいとき。その場合は対応する oracle 側を読む。
+- ACP の基本型、設定データクラス、prompt 本文の構築、JSON schema の正本、生成済みログの解析など、共通 runtime helper ではなく専用の定義・生成・読み取り側が主対象のとき。
+- 特定 helper の内部挙動が既に分かっており、その実装だけを変更したいとき。その場合はこの領域全体ではなく、該当する責務別 runtime 実装へ直接進む。
 
 ## hash
-- 75c4be2394933baceda860ab1abe2e509d4027c1552cedf502b3c2c5775c34be
+- 092238f49238c889dd1f5be0063e769d1e68acf3eedf6ec21c104f2bd213aa4f
 
 # `config`
 

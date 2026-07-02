@@ -20,23 +20,23 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- cmoc が Codex CLI を `codex exec` で呼び出す際の実行規約を定める正本仕様断片。`CODEX_HOME` の引き渡しと事前検証、動的 codex profile 生成、ファイルアクセス制限、プロンプト受け渡し、ログ保存、stdout/stderr/output の扱い、Structured Output、並列実行、失敗時の再試行・待機・再開、編集禁止領域の扱いを読む入口になる。
-- 個別の agent call パラメータや具体的な profile 設定そのものは builder 側を正本とし、この対象は Codex CLI 呼び出しの外部契約、保存先、検証、失敗時制御の境界を扱う。
+- cmoc が Codex CLI を `codex exec` で呼び出す際の正本仕様断片。`$CODEX_HOME` の受け渡しと preflight validation、動的 codex profile、ファイルアクセス制限、プロンプト保存と stdin 入力、ログ保存、stdout/stderr、Structured Output、並列実行、失敗時の retry・quota 待機・resume、`.agents` 編集禁止を扱う。
+- 個別の呼び出しパラメータや具体的な profile 設定は AgentCallParameter builder を正本とし、この文書は呼び出し全体の不変条件と外部挙動の境界を示す。
 
 ## Read this when
-- cmoc から Codex CLI を起動する実装、テスト、ログ保存、標準入出力リダイレクト、`--json`、`--output-last-message`、`--output-schema` の扱いを確認する。
-- `CODEX_HOME` の既定値、auth file の preflight validation、動的 codex profile の生成条件や hash 命名を確認する。
-- Codex CLI 呼び出し時のファイルアクセス制限、編集禁止ファイルの事後検証、違反時リカバリ、`.agents` 配下の編集禁止を確認する。
-- Codex CLI のレスポンス検証失敗、quota 枯渇、usage limit、credits 不足、spend cap、model capacity、その他エラーに対する retry・polling・resume 方針を確認する。
-- Structured Output schema の保存、参照、cmoc 側での機械的検証、または並列 `codex exec` 呼び出し数の制御を扱う。
+- cmoc から Codex CLI を起動する実装、テスト、ログ出力、プロンプト引き渡し、profile 生成、Structured Output 検証、失敗時 retry・resume 処理を確認または変更するとき。
+- `$CODEX_HOME` の既定値、auth.json の事前検証、Codex CLI に渡す環境変数、codex profile の生成場所・命名・hash 条件を確認するとき。
+- ファイルアクセス制限を codex profile とプロンプト通知のどちらで扱うか、agent call 後の編集禁止領域差分検証とリカバリ条件を確認するとき。
+- Codex CLI 呼び出しに関する prompt、call 情報、stdout、stderr、output、schema の保存先や `<time-stamp>` の対応関係を確認するとき。
+- quota 枯渇、レートリミット、モデル capacity、レスポンス検証失敗、想定外エラーに対する cmoc の停止・待機・再実行・resume 方針を確認するとき。
 
 ## Do not read this when
-- 個別 agent call の prompt 内容、パラメータ生成、ファイルアクセス制限の具体的な builder 定義だけを確認したい場合は、AgentCallParameter builder 側を読む。
-- Codex CLI ではなく cmoc 自体の一般的な CLI コマンド仕様、path model、設定全体の定義、または fork finding の仕様を調べる場合は、それぞれの直接の正本仕様へ進む。
-- INDEX.md エントリーの生成規則や oracle/realization の一般原則だけを確認したい場合は、この対象ではなく該当する標準仕様を読む。
+- AgentCallParameter builder が生成する個別の `codex exec` 引数、具体的な sandbox/profile 設定、Model や Reasoning Effort の詳細値そのものを確認したいだけなら、builder 側の正本へ進む。
+- Codex CLI を伴わない cmoc 内部処理、oracle/realization の一般的な責務分類、または path placeholder の定義だけを確認したい場合は、より直接その対象を扱う文書へ進む。
+- INDEX.md 用エントリーの形式やルーティング文書の書き方を確認したいだけなら、この文書ではなく INDEX エントリー標準を扱う文書を読む。
 
 ## hash
-- 2d7ab502cdf361cfa33a55ebc0e398e05a8bcff7bd8333428026e190a0315785
+- 06ae830d80b06d1fe84606de0bd026b0aef92a7f8f9c02b25256e87a02a4ee2e
 
 # `console_and_file_log.md`
 

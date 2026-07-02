@@ -1,23 +1,19 @@
 # `oracle`
 
 ## Summary
-- AI Agent 呼び出し条件と Structured Output schema、完全プロンプト構築、設定・パス表記・規範文書モデルなど、cmoc の正本実装断片のうち複数機能の基礎になる領域をまとめる。
-- 用途別の AgentCallParameter、プロンプトへ注入される標準文書、ルートプレースホルダ付きパスや設定の正本仕様断片を探すための入口になる。
+- cmoc の正本実装断片を収める領域で、agent call parameter、完全プロンプト構築、設定・パス・規範文書・Markdown レンダリングなどの基礎モデルへの入口になる。
+- AI 呼び出し仕様を扱う領域、複数領域から参照される補助モデル、プロンプト組み立て規範を扱う領域へ進むための分岐点になる。
 
 ## Read this when
-- cmoc の機能が AI Agent へ渡す prompt、model class、reasoning effort、file access mode、role、summary、goal、Structured Output schema を正本仕様断片として確認または変更したいとき。
-- agent call 用の完全なプロンプトの構成順序、静的パーツと動的パーツの分離、標準文書の注入条件、placeholder mapping の扱いを確認したいとき。
-- oracle/realization の基本概念、各種 standard、review や routing の規範、file access rule など、エージェント用プロンプトに組み込まれる規範文書への入口を探すとき。
-- cmoc の設定項目、既定値、設定ファイルの永続化境界、リポジトリ別挙動設定の正本仕様断片を確認したいとき。
-- <cmoc-root>、<repo-root>、<run-root>、<work-root> などのルート概念、placeholder 付きパス、絶対パス、git worktree との関係を確認したいとき。
-- 規範文書を構造化して保持するモデルや、階層化された文章・本文・コードブロックを Markdown として整形する helper の挙動を確認したいとき。
+- cmoc の oracle src として記述された実装・設定・型・builder・helper の正本仕様断片を確認・変更したいとき。
+- AI agent 呼び出しに渡す AgentCallParameter、Structured Output schema、モデル設定、推論強度、prompt、ファイルアクセスモードの仕様入口を探したいとき。
+- 完全プロンプトの構成、oracle/realization standard や file access rule などの規範注入、プレースホルダ定義の扱いを確認したいとき。
+- cmoc の設定既定値、リポジトリ別設定、ルートプレースホルダ付きパス、規範文書モデル、構造化 Markdown レンダリング helper を確認したいとき。
 
 ## Do not read this when
-- agent call のプロセス起動、実行制御、結果処理、エラー処理など、正本仕様断片ではなく realization implementation 側の処理を調べたいとき。
-- CLI 引数、git 操作、branch 操作、状態管理、ファイル探索、INDEX.md 更新など、agent call parameter やプロンプト構築以外のサブコマンド実行フローを確認したいとき。
-- StructDoc、Standard、Requirement などの共通データ構造ではなく、規範本文の意味だけを確認したいとき。
-- 生成済みプロンプトが実際にどこで agent call へ渡されるか、または設定の読み書き処理や JSON 変換処理の実装を追いたいとき。
-- 特定の作業ディレクトリ内で読むべきファイルを知りたいだけで、パス表記モデル、ルート解決規則、agent call 条件、プロンプト部品を確認する必要がないとき。
+- oracle src ではなく、利用者向け CLI の実行フロー、プロセス起動、git 操作、状態管理、結果表示など realization implementation を調べたいとき。
+- 自然言語の正本仕様文書、oracle/realization/index entry/file access rule などの規範本文そのものを読みたいとき。
+- 個別の修正 diff、実際のパッチ内容、レビュー結果の集約、TUI 入力処理、merge conflict marker 検出などの実装箇所を探しているとき。
 
 ## hash
-- 7826fd8e9a35fe7ce4aadad73fb60bb7e4d4e6e0b639b678858a9931b7a6d5e6
+- 8f6d36dfb45a1b4240b4f91e89bcbe6ebf55cfcdafaf84500fdbae302013b2cf
