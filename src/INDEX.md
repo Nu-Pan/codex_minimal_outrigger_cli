@@ -1,23 +1,23 @@
 # `acp`
 
 ## Summary
-- ACP builder 互換入口の上位領域。正本側にある実体を既存の公開参照経路から使えるようにし、旧来の参照名、委譲、公開型への適合、互換 wrapper の削除条件を切り分ける入口になる。
-- この領域自体は builder の正本仕様や実処理本体を持つ場所ではなく、正本側実装を複製せずに移行期間中の公開 import 面を保つための薄い境界である。
+- ACP builder 互換領域への入口。既存の `acp.*` / `acp.builder.*` import 参照を維持しつつ、実体は oracle 側または下位の builder 互換層へ委譲するための公開面をまとめる。
+- 直下には、実体を持たない互換 import 入口と、apply・common・indexing・quota probe・review・session・TUI などの builder 互換領域へ進むための上位入口がある。
 
 ## Read this when
-- ACP builder 系の既存公開参照が、正本側実装や正本側 package 構造へどのように接続されているかを確認したいとき。
-- agent call parameter 構築経路で、正本側 builder への委譲、realization 側公開型への変換、互換 wrapper、旧 import 経路の扱いを追いたいとき。
-- apply fork、review、quota availability probe、session、TUI、indexing、common などの builder 種別ごとに、どの互換入口へ進むべきか判断したいとき。
-- 公開面または realization 側に残る ACP builder 参照を、正本側参照へ移行できるか、互換入口を残す必要があるか判断したいとき。
+- 既存の `acp.*` または `acp.builder.*` import path が残っている理由、互換維持の範囲、削除条件を確認したいとき。
+- oracle src 側の acp builder 実装を複製せずに、realization 側公開 API から利用する接続関係を俯瞰したいとき。
+- apply、common、indexing、quota probe、review、session、TUI のどの builder 互換領域へ進むべきかを選びたいとき。
+- 正本側 builder への委譲、oracle src import 準備、realization 側公開型への変換に関わる入口を探しているとき。
 
 ## Do not read this when
-- builder の prompt、parameter 生成内容、判定仕様、出力条件、人間意図などの正本仕様断片を確認したいときは、対応する oracle 側の本文を読む。
-- apply fork コマンド全体、TUI の画面制御、review 機能全般、indexing の生成処理や探索処理など、builder 互換入口ではない実処理を調べたいときは、その責務を持つ実装へ直接進む。
-- ACP parameter の基礎データ構造、model、reasoning effort、file access mode、path model、汎用 helper などの共通定義を確認したいときは、該当する基礎定義を読む。
-- 新しい ACP 機能や API 仕様を追加する場所を探しているだけで、既存公開参照の互換維持や正本側実装への委譲判断に関係しないとき。
+- builder の正本仕様、prompt 文面、parameter 生成内容そのものを確認したいときは、対応する oracle 側の本文または実装を読む。
+- ACP parameter の公開型、共通データ構造、汎用変換処理そのものを調べたいときは、基礎定義や共通 helper 側を読む。
+- apply fork、review、TUI、session などの機能全体の実行フロー、画面制御、状態管理を調べたいときは、それぞれの実処理を担う領域を読む。
+- 互換 import path の維持や oracle 側 builder への委譲と無関係な新規機能の実装場所を探しているとき。
 
 ## hash
-- 90d83fde69a289bed54e459713d6563eecd7e7ba7db46c94fc5c0fd10705d6fa
+- e4e0526fca1d7786aba886657ab0be16a62cb115041f9655e0e2198fd33fc3c1
 
 # `basic`
 
@@ -61,21 +61,24 @@
 # `commons`
 
 ## Summary
-- cmoc の共通ランタイム支援を集めた実装領域。Codex 呼び出し、INDEX 更新 preflight、CLI 共通ライフサイクル、設定、内容 hash、エラー表示、Git、ログ、path、結果モデル、session/apply 状態、apply process 停止など、複数サブコマンドから使われる runtime_* 系 API を扱う。
-- 単一 API の実装だけでなく、共通 runtime API の再エクスポート入口や互換 import 入口も含み、個別 command 層から共有される低レベル制御の入口になる。
+- cmoc の共有 runtime helper 群を収める実装ディレクトリ。Codex 実行、profile、config、content hash、CLI 共通ライフサイクル、error 表示、Git、logging、path、result、state、apply process 停止、INDEX 更新 preflight など、複数サブコマンドから使われる共通処理への入口になる。
+- 単一入口の再 export と責務別 runtime 実装が同階層に並び、個別領域の詳細へ進む前に、共通 runtime のどの責務を読むべきかを切り分けるための階層である。
 
 ## Read this when
-- 複数サブコマンドにまたがる runtime helper、Codex CLI 実行、INDEX.md 自動更新、Git/worktree 操作、ログ、設定、状態管理、path 解決、共通エラー表示の実装箇所を探したいとき。
-- CLI command 層から呼ばれる共通実行ライフサイクル、外部 command/Codex 実行結果の受け渡し、quota/capacity/retry、file access rule 違反検出などの共通制御を確認または変更したいとき。
-- 個別 runtime_* モジュールへ進む前に、commons runtime 領域の責務分担や、集約 import 入口と責務別実装のどちらを読むべきかを判断したいとき。
+- CLI サブコマンド固有処理ではなく、複数機能から共有される runtime helper の所在を探したいとき。
+- Codex CLI exec/TUI 呼び出し、profile、quota/capacity retry、call log、file access rule 違反検査、indexing preflight など Codex 実行境界の共通処理を調べたいとき。
+- config 永続化、content hash 保存、CmocError 表示、Git 操作、subcommand logging、runtime path、CommandResult/CodexExecResult、session state などの共通モデルや helper を確認・変更したいとき。
+- apply abandon に関係する pid file、Codex subprocess 追跡、process group 停止、worktree 特定など、apply 実行の下位 runtime 処理を追いたいとき。
+- INDEX.md 自動更新の preflight、対象走査、hash 鮮度判定、entry 生成依頼、Markdown 描画など indexing 実装の入口を探したいとき。
 
 ## Do not read this when
-- 特定の CLI サブコマンド固有の引数、利用者向け制御フロー、prompt 生成、report 内容だけを調べたいとき。その場合は command 側や対象サブコマンドの実装へ進む。
-- oracle file 上の正本仕様、path placeholder の定義、file access policy の仕様意図、INDEX.md エントリー標準そのものを確認したいとき。その場合は oracle 側の該当文書を読む。
-- 生成済みログ、実行履歴、memo、または個別の状態ファイル内容を調査したいだけで、runtime 実装自体を変更しないとき。
+- 個別 CLI サブコマンドの引数、利用者向け制御フロー、業務処理だけを調べたいときは、command 層の対象へ進む。
+- oracle file に書かれた正本仕様、path placeholder の定義、INDEX.md の仕様意図そのものを確認したいときは、oracle 側の対象を読む。
+- runtime helper の利用箇所で渡す具体的な値や上位 workflow の意味を知りたいだけなら、その利用元の実装を直接読む。
+- 個別 helper の引数、失敗時挙動、内部アルゴリズムが既に特定できている場合は、この階層全体ではなく該当する責務別 runtime 実装を直接読む。
 
 ## hash
-- 78dcdaebd36c11e4d5a5f0697c114735732269d72588b2806ec7ac04e132734e
+- 6502e1eb5530957b12ccfa8b5d632121f77b58ad3087357b4d792c8748b18249
 
 # `config`
 
