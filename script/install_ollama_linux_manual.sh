@@ -43,7 +43,7 @@ Options:
 
   --skip-apt
       Do not install prerequisite packages automatically. The script will fail
-      if required commands/packages are missing.
+      if required commands are missing.
 
   --remove-old-libraries
       Remove /usr/lib/ollama before extracting the new package. Ollama's manual
@@ -96,19 +96,6 @@ run() {
   "$@"
 }
 
-run_sudo() {
-  if [[ "${EUID}" -eq 0 ]]; then
-    run "$@"
-    return 0
-  fi
-
-  local sudo_bin="${SUDO:-sudo}"
-  if ! have_cmd "$sudo_bin"; then
-    fail "sudo command not found: $sudo_bin"
-  fi
-  run "$sudo_bin" "$@"
-}
-
 confirm() {
   local prompt="$1"
   if [[ "$assume_yes" == 1 ]]; then
@@ -126,8 +113,15 @@ have_cmd() {
   command -v "$1" >/dev/null 2>&1
 }
 
-has_ca_certificates() {
-  [[ -f /etc/ssl/certs/ca-certificates.crt ]]
+sudo_cmd() {
+  if [[ "${EUID}" -eq 0 ]]; then
+    return 0
+  fi
+  local sudo_bin="${SUDO:-sudo}"
+  if ! have_cmd "$sudo_bin"; then
+    fail "sudo command not found: $sudo_bin"
+  fi
+  printf '%s' "$sudo_bin"
 }
 
 is_wsl() {
@@ -191,33 +185,32 @@ package_url_for_arch() {
 }
 
 install_prerequisites_if_needed() {
-  local missing_packages=()
+  local missing=()
   local cmd
-  for cmd in curl tar zstd; do
+  for cmd in curl tar zstd ca-certificates; do
     if ! have_cmd "$cmd"; then
-      missing_packages+=("$cmd")
+      missing+=("$cmd")
     fi
   done
-  if ! has_ca_certificates; then
-    missing_packages+=("ca-certificates")
-  fi
 
-  if [[ "${#missing_packages[@]}" -eq 0 ]]; then
+  if [[ "${#missing[@]}" -eq 0 ]]; then
     return 0
   fi
 
   if [[ "$skip_apt" == 1 ]]; then
-    fail "missing required packages: ${missing_packages[*]}"
+    fail "missing required commands/packages: ${missing[*]}"
   fi
 
   if ! have_cmd apt-get; then
-    fail "missing required packages and apt-get is unavailable: ${missing_packages[*]}"
+    fail "missing required commands/packages and apt-get is unavailable: ${missing[*]}"
   fi
 
-  log "Missing prerequisites: ${missing_packages[*]}"
+  log "Missing prerequisites: ${missing[*]}"
   log "Installing prerequisite packages with apt-get."
-  run_sudo apt-get update
-  run_sudo apt-get install -y --no-install-recommends "${missing_packages[@]}"
+  local sudo_bin
+  sudo_bin="$(sudo_cmd)"
+  run "$sudo_bin" apt-get update
+  run "$sudo_bin" apt-get install -y --no-install-recommends curl zstd ca-certificates
 }
 
 download_package() {
@@ -287,20 +280,23 @@ EOF
   log "Downloading Ollama package."
   download_package "$package_url" "$base_pkg"
 
+  local sudo_bin
+  sudo_bin="$(sudo_cmd)"
+
   if [[ "$remove_old_libraries" == 1 ]]; then
     log "Removing old Ollama libraries: /usr/lib/ollama"
-    run_sudo rm -rf /usr/lib/ollama
+    run "$sudo_bin" rm -rf /usr/lib/ollama
   fi
 
   log "Extracting Ollama package into /usr."
-  run_sudo tar -x -C /usr -f "$base_pkg"
+  run "$sudo_bin" tar -x -C /usr -f "$base_pkg"
 
   if [[ "$with_rocm" == 1 ]]; then
     local rocm_pkg="$tmpdir/ollama-linux-amd64-rocm.tar.zst"
     log "Downloading optional ROCm package."
     download_package "$DEFAULT_ROCM_URL" "$rocm_pkg"
     log "Extracting optional ROCm package into /usr."
-    run_sudo tar -x -C /usr -f "$rocm_pkg"
+    run "$sudo_bin" tar -x -C /usr -f "$rocm_pkg"
   fi
 
   if [[ "$dry_run" != 1 ]]; then
