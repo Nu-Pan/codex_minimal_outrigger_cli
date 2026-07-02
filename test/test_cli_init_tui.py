@@ -70,6 +70,25 @@ def test_subcommand_log_identifies_invoked_cli_command(
     assert invoked["argv"] == ["cmoc", "init"]
 
 
+def test_init_commits_agents_gitkeep_when_agents_has_no_tracked_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(app, ["init"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert run_git(root, "ls-files", "--", ".agents").stdout.splitlines() == [
+        ".agents/.gitkeep"
+    ]
+    assert (root / ".agents" / ".gitkeep").is_file()
+    committed_paths = run_git(
+        root, "show", "--name-only", "--format=", "HEAD"
+    ).stdout.splitlines()
+    assert ".agents/.gitkeep" in committed_paths
+
+
 def test_init_does_not_commit_preexisting_staged_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -88,6 +107,29 @@ def test_init_does_not_commit_preexisting_staged_changes(
     assert "user.txt" not in committed_paths
     assert run_git(root, "diff", "--cached", "--name-only").stdout.splitlines() == [
         "user.txt"
+    ]
+
+
+def test_init_does_not_commit_preexisting_staged_agents_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    agents_file = root / ".agents" / "rule.md"
+    agents_file.parent.mkdir()
+    agents_file.write_text("user staged\n")
+    run_git(root, "add", ".agents/rule.md")
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(app, ["init"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    committed_paths = run_git(
+        root, "show", "--name-only", "--format=", "HEAD"
+    ).stdout.splitlines()
+    assert ".agents/.gitkeep" in committed_paths
+    assert ".agents/rule.md" not in committed_paths
+    assert run_git(root, "diff", "--cached", "--name-only").stdout.splitlines() == [
+        ".agents/rule.md"
     ]
 
 
