@@ -19,20 +19,23 @@
 # `builder`
 
 ## Summary
-- ACP builder 配下の realization 側互換入口をまとめる領域。oracle 側に置かれた正本 builder 実装を既存の acp.builder.* 参照から利用できるようにし、apply、common、indexing、review、session、tui、quota probe などの下位領域へ進むための上位入口となる。
-- この階層は builder 本体仕様や各処理の正本ではなく、公開 import path の維持、oracle 側実装への委譲、realization 側 parameter への適応、互換 wrapper の残置理由と削除条件を見分けるために読む。
+- ACP builder 領域の realization 側入口。正本側 builder 実装を既存の公開参照経路から利用するための互換 package 群と、quota availability probe 用 parameter builder を扱う。
+- 主な責務は、正本側実装への薄い委譲、旧来 import 経路の維持、互換層の残置理由と削除条件の確認、apply・review・session・TUI・indexing など下位 builder 領域へのルーティングである。
+- この領域自体は多くの builder 本体仕様を持たず、具体的な処理内容は下位の個別 builder、正本側実装、または実行側 module へ進んで確認する。
 
 ## Read this when
-- acp.builder.* 参照が oracle 側 builder 実装へどの互換入口を経由して接続されているか確認したいとき。
-- apply、common、indexing、review、session、tui、quota probe など、ACP builder 関連の読む先を上位階層から選びたいとき。
-- realization 側に残る builder 互換 package、旧 import 経路、公開名、委譲先、削除条件を確認したいとき。
-- oracle 側の正本 builder を利用しつつ、既存利用者や残存参照を壊さないための公開面を調べたいとき。
+- ACP builder 全体で、realization 側の公開 import surface と正本側 builder 実装の対応関係を確認したいとき。
+- 既存の acp.builder 系参照が残っている理由、互換入口を残す条件、削除できる条件を判断したいとき。
+- apply、review、session、TUI、indexing、common などの builder 関連領域について、どの下位領域へ進むべきかを選びたいとき。
+- Codex quota availability probe に渡す最小限の AgentCallParameter の生成内容を確認・変更したいとき。
+- 正本側へ実装を集約しつつ、realization 側で旧来参照を壊さないための wrapper や package 初期化境界を調べたいとき。
 
 ## Do not read this when
-- 個別 builder の具体的な生成ロジック、repo root 解決、parameter 型変換、prompt 補正などを直接確認したいときは、該当する下位領域へ進む。
-- builder の正本仕様、prompt 文面、出力条件、判定仕様、file access rule などを確認したいときは、対応する oracle file または正本側実装を読む。
-- AgentCallParameter、FileAccessMode、model、reasoning effort などの基礎定義を調べたいときは、基礎定義側を読む。
-- CLI コマンド全体の制御フロー、fork 作成、branch 操作、TUI 描画、runtime 実行処理など、ACP builder 互換入口ではない責務を調べたいときは、より直接の実装領域へ進む。
+- 各 builder の正本仕様断片、prompt の正本文面、出力条件、判定仕様そのものを確認したいときは、対応する oracle 側の本文を読む。
+- apply fork、review oracle、session join、TUI 起動 parameter、indexing 生成処理などの具体的な実装を直接調べたいときは、該当する下位領域または正本側実装を読む。
+- AgentCallParameter 型、model、reasoning effort、file access mode などの基礎定義を確認したいときは、基礎定義側を読む。
+- Codex CLI の実行規則、quota probe parameter 生成後の runtime 処理、CLI コマンド全体の制御フローを調べたいときは、実行側またはコマンド実装側を読む。
+- 互換 import 経路の維持や削除判断と関係しない新規機能の実装場所、画面制御、状態管理、ユーザー向け挙動を探しているときは、より直接その責務を持つ対象へ進む。
 
 ## hash
-- 40926c0ca3cd569f9931362761ea2a508ebb48d2d3ddefc14a56b0b256b1e4f3
+- 677081123f5a0fe4ce05f57b3b2626dbc216883df46012db0d251f3273fd50ab

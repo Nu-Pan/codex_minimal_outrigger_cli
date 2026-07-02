@@ -246,8 +246,6 @@ def _is_writable_path_allowed(
     relative = path.relative_to(root)
     if path.name in {"AGENTS.md", "INDEX.md"}:
         return False
-    if len(relative.parts) == 1 and path.name == "README.md":
-        return False
     if mode == FileAccessMode.REALIZATION_WRITE and allow_oracle_conflict_writes:
         # <work-root>/oracle/doc/app_spec/sub_command/session_join.md
         # session join の conflict 解消は oracle file も git conflict 対象なら編集する。

@@ -159,16 +159,62 @@ def test_run_codex_exec_recovers_file_access_violations(
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     counter = tmp_path / "count.txt"
+    recovery_prompt = tmp_path / "recovery_prompt.txt"
     write_python_executable(
         bin_dir / "codex",
         [
             "import json, pathlib, sys",
             f"counter = pathlib.Path({str(counter)!r})",
+            f"recovery_prompt = pathlib.Path({str(recovery_prompt)!r})",
             "count = int(counter.read_text()) if counter.exists() else 0",
             "counter.write_text(str(count + 1))",
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
             "blocked = pathlib.Path('oracle/blocked.md')",
+            "if count == 0:",
+            "    blocked.write_text('blocked\\n')",
+            "else:",
+            "    recovery_prompt.write_text(sys.stdin.read())",
+            "    blocked.unlink(missing_ok=True)",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_exec(
+        _parameter(FileAccessMode.REALIZATION_WRITE),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    assert counter.read_text() == "2"
+    assert not (root / "oracle" / "blocked.md").exists()
+    assert "FINDING-00" in recovery_prompt.read_text()
+    assert "ファイルアクセス規則違反のリカバリ" in recovery_prompt.read_text()
+
+
+@pytest.mark.parametrize("blocked_name", ["a b.md", 'quoted " name.md'])
+def test_run_codex_exec_recovers_quoted_oracle_path_file_access_violations(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, blocked_name: str
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "count.txt"
+    blocked_path = Path("oracle") / blocked_name
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            f"blocked = pathlib.Path({str(blocked_path)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
             "if count == 0:",
             "    blocked.write_text('blocked\\n')",
             "else:",
@@ -187,7 +233,189 @@ def test_run_codex_exec_recovers_file_access_violations(
     )
 
     assert counter.read_text() == "2"
+    assert not (root / blocked_path).exists()
+
+
+def test_run_codex_exec_recovers_git_directory_file_access_violation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "count.txt"
+    saved_config = tmp_path / "git_config.txt"
+    recovery_prompt = tmp_path / "recovery_prompt.txt"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            f"saved_config = pathlib.Path({str(saved_config)!r})",
+            f"recovery_prompt = pathlib.Path({str(recovery_prompt)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "config = pathlib.Path('.git/config')",
+            "if count == 0:",
+            "    saved_config.write_text(config.read_text())",
+            "    config.write_text(config.read_text() + '\\n[cmoc-test]\\n\\tvalue = true\\n')",
+            "else:",
+            "    recovery_prompt.write_text(sys.stdin.read())",
+            "    config.write_text(saved_config.read_text())",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_exec(
+        _parameter(FileAccessMode.REPO_WRITE),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    assert counter.read_text() == "2"
+    assert (root / ".git" / "config").read_text() == saved_config.read_text()
+    assert ".git/config" in recovery_prompt.read_text()
+
+
+def test_run_codex_exec_recovers_file_access_violations_before_nonzero_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "count.txt"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "blocked = pathlib.Path('oracle/blocked.md')",
+            "if count == 0:",
+            "    blocked.write_text('blocked\\n')",
+            "    print(json.dumps({'type': 'error', 'message': 'boom'}))",
+            "    raise SystemExit(7)",
+            "blocked.unlink(missing_ok=True)",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    with pytest.raises(CmocError, match="Codex CLI 呼び出しが失敗しました"):
+        run_codex_exec(
+            _parameter(FileAccessMode.REALIZATION_WRITE),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
+
+    assert counter.read_text() == "2"
     assert not (root / "oracle" / "blocked.md").exists()
+
+
+def test_run_codex_exec_recovers_file_access_violations_before_schema_retry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "count.txt"
+    schema = tmp_path / "schema.json"
+    schema.write_text(
+        json.dumps(
+            {
+                "type": "object",
+                "properties": {"ok": {"type": "boolean"}},
+                "required": ["ok"],
+                "additionalProperties": False,
+            }
+        )
+    )
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "blocked = pathlib.Path('oracle/blocked.md')",
+            "if count == 0:",
+            "    blocked.write_text('blocked\\n')",
+            "    output.write_text('{}\\n')",
+            "elif count == 1:",
+            "    blocked.unlink(missing_ok=True)",
+            "    output.write_text('{}\\n')",
+            "else:",
+            "    output.write_text(json.dumps({'ok': True}) + '\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    result = run_codex_exec(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            FileAccessMode.REALIZATION_WRITE,
+            "prompt",
+            schema,
+        ),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    assert counter.read_text() == "3"
+    assert not (root / "oracle" / "blocked.md").exists()
+    assert result.output_json == {"ok": True}
+
+
+def test_run_codex_exec_allows_root_readme_realization_diff(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "count.txt"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "pathlib.Path('README.md').write_text('# updated\\n')",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_exec(
+        _parameter(FileAccessMode.REALIZATION_WRITE),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    assert counter.read_text() == "1"
+    assert (root / "README.md").read_text() == "# updated\n"
 
 
 def test_run_codex_exec_ignores_preexisting_forbidden_diff(
@@ -432,6 +660,40 @@ def test_run_codex_exec_allows_readonly_temporary_pytest_cache_diff(
 
     assert (root / ".pytest_cache" / "state").read_text() == "temporary\n"
     assert (root / "oracle" / "__pycache__" / "spec.cpython-313.pyc").is_file()
+
+
+@pytest.mark.parametrize("blocked_dir", [".agents", ".codex", ".git", "memo"])
+def test_run_codex_exec_rejects_readonly_temporary_cache_under_blocked_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, blocked_dir: str
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            f"pycache = pathlib.Path({blocked_dir!r}) / '__pycache__'",
+            "pycache.mkdir(parents=True, exist_ok=True)",
+            "(pycache / 'blocked.cpython-313.pyc').write_bytes(b'cache')",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    with pytest.raises(CmocError, match="ファイルアクセス規則"):
+        run_codex_exec(
+            _parameter(FileAccessMode.READONLY),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
+
+    assert (root / blocked_dir / "__pycache__" / "blocked.cpython-313.pyc").is_file()
 
 
 def test_run_codex_exec_rejects_readonly_realization_diff_after_call(
@@ -688,6 +950,132 @@ def test_run_codex_exec_rejects_blocked_runtime_diffs_after_call(
         )
 
     assert (root / ".agents" / "generated.md").read_text() == "changed\n"
+
+
+def test_run_codex_exec_rejects_agent_created_cmoc_log_diff(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    (root / ".gitignore").write_text("/.cmoc/\n")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "ignore cmoc")
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "agent_log = pathlib.Path('.cmoc/log/codex/agent-created.txt')",
+            "agent_log.parent.mkdir(parents=True, exist_ok=True)",
+            "agent_log.write_text('agent\\n')",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    with pytest.raises(CmocError, match="ファイルアクセス規則"):
+        run_codex_exec(
+            _parameter(FileAccessMode.REPO_WRITE),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
+
+    assert (root / ".cmoc" / "log" / "codex" / "agent-created.txt").read_text() == (
+        "agent\n"
+    )
+
+
+def test_run_codex_exec_rejects_agent_modified_previous_cmoc_log_diff(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "count.txt"
+    previous_log_ref = tmp_path / "previous_log.txt"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            f"previous_log_ref = pathlib.Path({str(previous_log_ref)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "if count >= 1:",
+            "    pathlib.Path(previous_log_ref.read_text()).write_text('agent\\n')",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    first_result = run_codex_exec(
+        _parameter(FileAccessMode.REPO_WRITE),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+    previous_log_ref.write_text(str(first_result.call_log_path))
+
+    with pytest.raises(CmocError, match="ファイルアクセス規則"):
+        run_codex_exec(
+            _parameter(FileAccessMode.REPO_WRITE),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
+
+    assert first_result.call_log_path.read_text() == "agent\n"
+
+
+@pytest.mark.parametrize(
+    ("blocked_dir", "mode"),
+    [
+        (".agents", FileAccessMode.READONLY),
+        ("memo", FileAccessMode.REPO_WRITE),
+    ],
+)
+def test_run_codex_exec_rejects_empty_blocked_runtime_dir_after_call(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    blocked_dir: str,
+    mode: FileAccessMode,
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "output.write_text(json.dumps({'ok': True}))",
+            f"pathlib.Path({blocked_dir!r}).mkdir(exist_ok=True)",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    with pytest.raises(CmocError, match="ファイルアクセス規則"):
+        run_codex_exec(
+            _parameter(mode),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
+
+    assert (root / blocked_dir).is_dir()
+    assert not any((root / blocked_dir).iterdir())
 
 
 def test_run_codex_exec_rejects_repo_write_blocked_diffs_after_call(

@@ -1,24 +1,24 @@
 # `acp`
 
 ## Summary
-- ACP builder 関連の既存 import 経路を維持するための互換入口を置く領域。oracle src 側の正本実装を複製せず、`acp.*` や `acp.builder.*` 参照から委譲先へ接続する役割を持つ。
-- builder 配下の apply、common、indexing、review、session、tui、quota probe などへ進むための上位入口であり、互換 wrapper の残置理由、公開 import 面、委譲先、削除条件を見分けるために読む。
+- ACP builder 関連の realization 側入口。正本側実装を複製せず既存の acp 系 import 参照を保つための互換層と、quota availability probe 用 parameter builder への入口を扱う。
+- この対象自体は実装本体ではなく、旧来 import 経路の維持理由、削除条件、下位 builder 領域への振り分けを確認するための場所である。
 
 ## Read this when
-- `acp.*` または `acp.builder.*` 参照が oracle 側 builder 実装へどの互換入口を経由して接続されているか確認したいとき。
-- realization 側や利用者向け公開面に残る ACP builder 互換 import、旧 import 経路、公開名、委譲先、削除条件を判断したいとき。
-- apply、common、indexing、review、session、tui、quota probe など、ACP builder 関連の下位領域へ進む入口を選びたいとき。
-- oracle src 側の正本 builder 実装を利用しつつ、既存利用者や残存参照を壊さないための公開面を調べたいとき。
+- acp 系 import surface と正本側 builder 実装の対応関係を確認したいとき。
+- 既存の acp または acp.builder 系参照を残す理由、互換入口の削除条件、移行判断を確認したいとき。
+- apply、review、session、TUI、indexing、common など ACP builder 関連の下位領域へ進む前に入口を選びたいとき。
+- Codex quota availability probe に渡す最小限の AgentCallParameter 生成内容を確認または変更したいとき。
 
 ## Do not read this when
-- ACP builder の具体的な生成ロジック、repo root 解決、parameter 型変換、prompt 補正などを直接確認したいときは、該当する下位領域または実装本体へ進む。
-- builder の正本仕様、prompt 文面、出力条件、判定仕様、file access rule などを確認したいときは、対応する oracle file または正本側実装を読む。
-- AgentCallParameter、FileAccessMode、model、reasoning effort などの基礎定義を調べたいときは、基礎定義側を読む。
-- CLI コマンド全体の制御フロー、fork 作成、branch 操作、TUI 描画、runtime 実行処理など、ACP builder 互換入口ではない責務を調べたいときは、より直接の実装領域へ進む。
-- 新しい ACP 機能や API 仕様を追加する場所を探しているとき。この領域は互換維持用の入口であり、機能追加の正本ではない。
+- ACP builder の正本仕様断片、prompt 正本文面、出力条件、判定仕様そのものを確認したいときは、対応する oracle 側の本文を読む。
+- apply fork、review oracle、session join、TUI 起動 parameter、indexing 生成処理などの具体的な実装本体を調べたいときは、該当する下位領域または正本側実装を読む。
+- AgentCallParameter 型、model、reasoning effort、file access mode などの基礎定義を確認したいときは、基礎定義側を読む。
+- Codex CLI の実行規則、quota probe parameter 生成後の runtime 処理、CLI コマンド全体の制御フローを調べたいときは、実行側またはコマンド実装側を読む。
+- 互換 import 経路の維持や削除判断と関係しない新規機能、画面制御、状態管理、ユーザー向け挙動を探しているときは、より直接その責務を持つ対象へ進む。
 
 ## hash
-- a6158e66e2fbebb54c3bbcd32c755744a03ec22b354c2bce3b62cbdc6f87da63
+- 79093e544721f088a1f881c40244ac903a6259bce6431129e8174e574d58cc60
 
 # `basic`
 
@@ -62,24 +62,21 @@
 # `commons`
 
 ## Summary
-- cmoc の複数領域から使われる共通 runtime helper 群を置く実装ディレクトリ。Codex 呼び出し、INDEX 更新 preflight、設定、内容 hash、エラー表示、Git 操作、ログ、パス解決、外部コマンド結果、session state など、サブコマンド横断の実行時支援を責務別に分けている。
-- 単一責務の runtime 実装だけでなく、既存 import path 互換や複数 runtime API の再エクスポート入口も含むため、上位コマンドから共通処理へ進む際の入口になる。
+- cmoc の共有 runtime helper 群を収める実装ディレクトリ。Codex 呼び出し、CLI 共通ライフサイクル、設定、内容 hash、エラー表示、Git、ログ、パス、結果モデル、状態管理、INDEX.md 自動更新に関する共通処理への入口になる。
+- 個別責務の runtime_* 実装と、それらをまとめて再エクスポートする集約モジュールを含み、サブコマンド実装から横断的に使われる共通実行基盤を扱う。
 
 ## Read this when
-- CLI サブコマンド横断で使われる runtime 共通処理の所在を探したいとき。
-- Codex exec/TUI 実行、profile、preflight、Structured Output、quota/capacity retry、file access post-check、call log など Codex 呼び出し周辺の実装を確認または変更したいとき。
-- INDEX.md 自動更新の対象探索、hash 鮮度判定、既存エントリー再利用、排他制御、entry 生成依頼、Markdown 描画を追いたいとき。
-- 設定ファイル、内容 hash 保存、binary 判定、共通エラー表示、Git 操作、サブコマンドログ、runtime path、外部コマンド結果、session state のいずれかの共通 helper を探しているとき。
-- 上位の command 実装から呼ばれる共通 API の依存元や、責務別 runtime 実装へ進むための候補を絞りたいとき。
+- cmoc の共通 runtime helper がどの対象に分かれているかを把握し、Codex 実行、CLI、設定、Git、状態、ログ、パス、エラーなどの読む先を選びたいとき。
+- 複数サブコマンドにまたがる実行時支援、共通結果型、永続状態、INDEX.md preflight や自動更新処理の実装入口を探しているとき。
+- 既存の共有 runtime API を利用・変更する前に、責務を持つ個別モジュールと集約 import 入口の境界を確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの引数定義、利用者向け制御フロー、業務処理だけを調べたいとき。その場合は command 側の実装へ進む。
-- oracle file 上の正本仕様、path placeholder の概念定義、INDEX.md の仕様意図、file access rule そのものを確認したいとき。その場合は対応する oracle 側を読む。
-- AgentCallParameter や設定データクラスなど、runtime helper が利用する基本型そのものを確認したいだけのとき。その場合は型定義側へ進む。
-- 特定の低レベル処理や個別 API の実装箇所が既に分かっているとき。その場合はこの階層全体ではなく、責務に対応する本文を直接読む。
+- 個別サブコマンドの引数定義、利用者向け制御フロー、業務処理だけを調べたいときは、該当する command 実装へ進む。
+- oracle 上の正本仕様、path model、INDEX.md の仕様意図、session state file の仕様意図などを確認したいだけなら、対応する oracle doc または oracle src を読む。
+- 特定 helper の引数、失敗時挙動、保存条件、出力内容を詳しく確認したいときは、この階層全体ではなく責務別の runtime 実装を直接読む。
 
 ## hash
-- 4120ce65ec27520cfe27714b501bc844dade075cf68feeeced5733fefa57d95b
+- be03778f5f456340e0a6c01665ec0cff2bbeffd0b16ffdb34a75a219dbe5606c
 
 # `config`
 
@@ -142,20 +139,18 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装を集約する領域で、init、indexing、tui、apply、session、review 系の実行入口とサブコマンド別 orchestration へ進むための入口になる。
-- 各対象は CLI runtime 経由の起動、preflight、git 操作、state 更新、Codex subprocess 連携、レポート生成など、利用者向けコマンドの具体的な実行制御を扱う。
-- 共通 runtime や低レベル helper そのものではなく、個別サブコマンドがそれらをどう組み合わせて外部挙動を作るかを確認するために読む。
+- CLI サブコマンド実装を集約する領域で、初期化、index maintenance、TUI 起動、session lifecycle、apply run、review oracle の各実行入口へ進むためのルーティング対象。
+- 各サブコマンドは共通 runtime に接続し、事前条件検証、git/worktree/state 操作、Codex 実行連携、成功時出力や report 生成など、利用者向け CLI 挙動の具体化を担う。
 
 ## Read this when
-- 特定の CLI サブコマンドの実行順序、preflight、引数受け渡し、利用者向け出力、失敗時処理を確認・変更したいとき。
-- init、indexing、tui、apply、session、review のどの実装領域へ進むべきかを選びたいとき。
-- apply run、session lifecycle、review oracle、INDEX.md maintenance、初期化、TUI 起動など、サブコマンド単位の制御フローを追いたいとき。
-- サブコマンドが git 操作、worktree/branch 管理、state file、Codex Exec/TUI、report 出力、indexing 共通処理へどこから依存しているかを確認したいとき。
+- どのサブコマンド実装へ進むべきかを、初期化、index 更新、TUI、session 操作、apply 操作、review oracle の観点で切り分けたいとき。
+- CLI サブコマンドの実行フロー、preflight、runtime への渡し方、git branch/worktree/state 操作、出力や report 生成に関係する変更を行うとき。
+- apply run、session lifecycle、review oracle、INDEX.md maintenance、初期化時 ignore 保証、TUI 起動 parameter 解決の入口を探すとき。
 
 ## Do not read this when
-- CLI 共通 runtime、git wrapper、path model、state file schema、設定読み込み、ignore 判定などの低レベル共通処理だけを調べたいときは、それぞれの共通実装を読む。
-- oracle file の正本仕様断片、サブコマンドの外部仕様、prompt builder、LLM 呼び出し詳細だけを確認したいときは、対応する oracle または builder/runtime 側を読む。
-- 読むべきサブコマンドや補助モジュールがすでに決まっている場合は、この階層ではなく該当する下位対象へ直接進む。
+- CLI 全体の登録、共通 runtime、git wrapper、path model、設定読み込み、state file の低レベル読み書きだけを調べたいときは、それぞれの共通基盤を直接読む。
+- oracle file の正本仕様、INDEX.md 文章生成ロジック、Codex prompt builder、LLM 呼び出し自体の詳細を確認したいときは、対応する oracle または builder/runtime 側を読む。
+- 対象サブコマンドや補助責務がすでに特定できている場合は、この階層ではなく該当する下位対象へ直接進む。
 
 ## hash
-- 8ea1d673dd2276b559bbaf9325a03a85ab7e7b0830606e348dc404f6fd1a62e2
+- 821d5c9c432b6b29d7c13ed2e092cd299ac2aa54c1fc0a15615667ba8a9f66da
