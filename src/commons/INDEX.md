@@ -53,6 +53,26 @@
 ## hash
 - 6ba17c4c80501d669fa28fcf2b4202f71ff6a7c45240909755758c3e971c5982
 
+# `runtime_apply.py`
+
+## Summary
+- apply 実行に紐づく worktree 特定、pid file の読み書き、Codex subprocess 追跡、apply abandon 時の停止処理を扱う runtime 補助実装。
+- PID reuse を避けるための process start time 照合、pidfd 経由の signal 送信、process group 停止、zombie を考慮した終了確認をまとめる。
+
+## Read this when
+- apply branch から managed worktree を復元する処理、または branch が checkout された linked worktree を探す処理を確認・変更したいとき。
+- apply 実行中の pid file 保存、読込、削除、壊れた pid file の無視条件、Codex subprocess 追跡用 environment の扱いを確認・変更したいとき。
+- apply abandon が実行中 apply process や Codex subprocess group を安全に停止する条件、警告、CmocError、SIGTERM/SIGKILL の順序を確認・変更したいとき。
+- pidfd、process start time、Linux /proc、process group、zombie process を使った停止対象の同一性確認や終了待ちを調べるとき。
+
+## Do not read this when
+- apply の CLI 引数、session state の上位制御、または利用者向け出力だけを確認したいときは、command 層や state 管理の対象を読む。
+- 通常の git command 実行 wrapper、worktree root の基本 path 規則、CmocError の共通定義を確認したいだけなら、runtime 共通処理の対象を読む。
+- apply abandon 以外のサブコマンド仕様や、process 停止と関係しない apply 本体の作業手順を調べるときは、より直接その責務を持つ対象を読む。
+
+## hash
+- 25625f4e91acd37a8ef3835a54cfb3b03718bb4b8ecb56db40212f4f3f026937
+
 # `runtime_cli.py`
 
 ## Summary

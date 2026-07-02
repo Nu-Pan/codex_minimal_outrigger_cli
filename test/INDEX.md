@@ -1,23 +1,20 @@
 # `_support.py`
 
 ## Summary
-- CLI テストで使う共通補助関数群。最小構成の Git リポジトリ作成、ブランチ状態確認、Codex ホームのテスト用設定、Codex profile 生成の差し替え、偽の Python 実行ファイル作成、apply 用 worktree path 解決をまとめて提供する。
-- 外部コマンドとしての Git と Codex 実行制御を伴うテストの前提準備を集約し、個別テストが fixture 作成や monkeypatch の詳細を重複して持たないための入口になる。
+- CLI テストで共有される補助関数群。最小 Git リポジトリの作成、Git 状態確認、Codex home と fake profile の準備、fake 外部コマンド作成、session state から apply worktree を解決する処理をまとめる。
 
 ## Read this when
-- CLI テストで一時 Git リポジトリ、初期 commit、oracle 配下の最小ファイル、追跡済みかつ ignore 対象の oracle ファイルを用意する方法を確認したいとき。
-- Codex CLI 実行を伴うテストで、認証済みの最小 CODEX_HOME や profile 生成差し替えの仕組みを使う、または変更するとき。
-- テスト内で現在の Git ブランチ名、Git コマンド実行結果、apply 状態から導かれる worktree path を検証する補助処理を探すとき。
-- 外部コマンドの代替として実行可能な Python スクリプトをテスト中に生成する必要があるとき。
+- CLI テストで使う一時 Git リポジトリ、初期コミット、branch 状態、tracked かつ ignored な oracle file の fixture を確認・変更したいとき。
+- Codex 実行や TUI 実行をテスト内で fake profile に差し替える方法、`CODEX_HOME` の最小セットアップ、fake 実行ファイルの作り方を確認したいとき。
+- apply 系テストで session state に記録された apply branch から worktree path を求める補助処理を探しているとき。
 
 ## Do not read this when
-- 個別サブコマンドの期待挙動、CLI 出力、終了コード、状態ファイルの仕様を確認したいだけなら、該当するテスト本文または実装を直接読む。
-- pytest の個別ケースやアサーション内容を探しているだけなら、この共通補助関数群ではなく対象機能のテストを読む。
-- Codex profile 生成や apply worktree 解決の本体実装を変更する場合は、ここではなく実装側の該当モジュールを読む。
-- oracle file や realization file の正本上の定義・標準を確認したい場合は、このテスト補助ではなく oracle 側の文書を読む。
+- 個別 CLI コマンドの期待挙動や assertion 内容を確認したいだけなら、該当するテスト本文を読む。
+- プロダクト実装の Git 操作、Codex profile 生成、apply worktree 管理の仕様や実装を確認したいなら、対応する実装モジュールを読む。
+- pytest fixture の網羅的な定義やテスト設定全体を確認したいだけなら、テスト設定用の別ファイルを読む。
 
 ## hash
-- 54cf181de55105f9065ad7f515d614e2705529029548b38b874d2326362e0b59
+- 5dbdaa085d2071735998882ad1e46e3d4b4bc9980f15dabcb148a45de893a484
 
 # `test_acp_builder_parameters.py`
 
@@ -41,24 +38,22 @@
 # `test_apply_abandon_cli.py`
 
 ## Summary
-- active apply run を CLI 経由で破棄する外部挙動を検証する realization test。worktree、branch、session state の cleanup、cleanup 対象欠落時の警告、running process 停止、実行位置判定、linked session worktree との境界条件を同じ abandon 操作の文脈で扱う。
-- apply process identity の読み取り、child process group を含む停止順序、PID reuse や race 済み終了の扱いなど、abandon 前処理として必要な process 停止ロジックの制御境界も検証する。
-- 16,000 文字を超えるが、active apply run の破棄という単一責務に閉じ、同じ state fixture と境界条件を共有するため、分割せず読み取り文脈を一箇所に保っている。
+- apply abandon が active apply run を破棄する CLI 外部挙動を検証するテスト群。worktree、branch、session state の cleanup、実行位置の補正、linked session worktree の扱い、running apply process と記録済み child process group の停止を同じ操作の境界条件として扱う。
+- 16,000 文字を超えるが、対象責務は apply abandon の成功、警告、拒否条件に閉じており、同じ state fixture と境界条件を共有するため一箇所にまとまっている。
 
 ## Read this when
-- apply abandon の CLI 挙動、出力、終了コード、state 遷移、apply worktree と apply branch の削除を変更または確認するとき。
-- running apply を abandon する際の process identity 読み取り、tracked child process group の停止、PID reuse 防止、終了 race の扱いを変更または確認するとき。
-- apply worktree 内、linked session worktree、linked apply worktree、stale apply branch など、abandon 実行位置ごとの許可・拒否条件を調べるとき。
-- cleanup 対象がすでに存在しない場合の警告成功、または破損 state や process identity 欠落時に cleanup 前で拒否する挙動を確認するとき。
+- apply abandon の CLI 出力、終了コード、state 遷移、worktree/branch 削除、cleanup 警告の期待値を確認または変更するとき。
+- running 状態の apply abandon が process identity を読み、child process group と親 process を停止してから cleanup する挙動を確認または変更するとき。
+- apply worktree、linked session worktree、linked apply worktree、stale apply branch など、abandon 実行位置ごとの許可・拒否条件を確認するとき。
+- apply process id file の読み取り、advisory lock 待機、PID reuse、終了済み process、zombie leader の扱いに関するテストを探すとき。
 
 ## Do not read this when
-- apply abandon 以外の apply サブコマンドの通常フローや Codex 実行結果の品質を調べたいとき。
-- session fork、init、git helper、runner などの共通 fixture や補助 API 自体の実装を確認したいとき。
-- oracle file の正本仕様や実装標準を確認したいとき。
-- active apply run の破棄に関係しない一般的な worktree、branch、session state の挙動を調べたいとき。
+- apply fork 自体の Codex 実行、findings 生成、active run 作成の仕様を確認したいだけなら、apply fork 側の実装またはテストを読む。
+- session fork、init、git worktree 作成 helper など、abandon の前提を作る補助処理そのものを調べたい場合は、それぞれの責務を持つ実装やサポートコードを読む。
+- apply abandon 以外の apply サブコマンドの外部挙動や CLI 仕様を確認したい場合は、そのサブコマンドに対応するテストを読む。
 
 ## hash
-- ec0375e8de29f038d1dc8b4010eae864fadb5ba208f43ab7385d198d6ddc6158
+- dfb4db2e9b41c4b652b91c0b52a49bef4332ff6c432f132f747de3365c84d9fa
 
 # `test_apply_fork_cli.py`
 

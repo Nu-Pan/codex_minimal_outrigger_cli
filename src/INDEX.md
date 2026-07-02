@@ -61,21 +61,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共有 runtime helper 群を置く実装ディレクトリ。Codex 呼び出し、INDEX 更新 preflight、CLI 共通ライフサイクル、設定、Git、ログ、path、エラー、結果、状態管理など、複数サブコマンドから使われる共通処理への入口になる。
-- 単一の集約 import 入口と、責務別の runtime_* 実装に分かれており、個別挙動を調べる場合は対象領域の実装へ進むための分岐点になる。
+- cmoc の共通ランタイム支援を集めた実装領域。Codex 呼び出し、INDEX 更新 preflight、CLI 共通ライフサイクル、設定、内容 hash、エラー表示、Git、ログ、path、結果モデル、session/apply 状態、apply process 停止など、複数サブコマンドから使われる runtime_* 系 API を扱う。
+- 単一 API の実装だけでなく、共通 runtime API の再エクスポート入口や互換 import 入口も含み、個別 command 層から共有される低レベル制御の入口になる。
 
 ## Read this when
-- 複数の CLI サブコマンドや上位機能から共有される runtime 処理の所在を探したいとき。
-- Codex exec/TUI 呼び出し、INDEX.md 自動更新、config 読み書き、Git 操作、logging、path 解決、state 永続化など、共通 runtime 境界に関わる変更対象を選びたいとき。
-- 集約 import 入口を使うべきか、責務別 runtime 実装を直接読むべきか判断したいとき。
+- 複数サブコマンドにまたがる runtime helper、Codex CLI 実行、INDEX.md 自動更新、Git/worktree 操作、ログ、設定、状態管理、path 解決、共通エラー表示の実装箇所を探したいとき。
+- CLI command 層から呼ばれる共通実行ライフサイクル、外部 command/Codex 実行結果の受け渡し、quota/capacity/retry、file access rule 違反検出などの共通制御を確認または変更したいとき。
+- 個別 runtime_* モジュールへ進む前に、commons runtime 領域の責務分担や、集約 import 入口と責務別実装のどちらを読むべきかを判断したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの利用者向け挙動、引数、業務処理だけを調べたいとき。その場合は command 側の実装へ進む。
-- oracle 上の正本仕様、path model、INDEX.md 仕様意図、file access rule の根拠を確認したいとき。その場合は対応する oracle doc または oracle src を読む。
-- 生成済みログ、実行履歴、状態ファイルの内容確認が目的で、runtime 実装自体を変更しないとき。
+- 特定の CLI サブコマンド固有の引数、利用者向け制御フロー、prompt 生成、report 内容だけを調べたいとき。その場合は command 側や対象サブコマンドの実装へ進む。
+- oracle file 上の正本仕様、path placeholder の定義、file access policy の仕様意図、INDEX.md エントリー標準そのものを確認したいとき。その場合は oracle 側の該当文書を読む。
+- 生成済みログ、実行履歴、memo、または個別の状態ファイル内容を調査したいだけで、runtime 実装自体を変更しないとき。
 
 ## hash
-- 46c7cefb5df49ca98d035a9c75958fdfcc83907fdad44b62fb0d695bef69d98b
+- 78dcdaebd36c11e4d5a5f0697c114735732269d72588b2806ec7ac04e132734e
 
 # `config`
 
@@ -138,20 +138,21 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実行本体を集める実装領域。session、apply、review、init、indexing、tui など、利用者向けコマンドを runtime・git 操作・状態管理・report 出力へ接続する入口になる。
-- 各サブコマンドの詳細は責務ごとに下位へ分かれており、この階層はコマンド種別ごとの読む先を選び、実行前条件、状態遷移、後始末、共通処理への委譲位置を切り分けるための起点である。
+- CLI の各サブコマンド実行本体を集める実装領域。session、apply、review、init、indexing、tui など、利用者向けコマンドを共通 runtime や下位 helper へ接続する orchestration 層への入口になる。
+- 各領域は、コマンドごとの事前条件、root/config 解決、git・worktree・state 操作、Codex 呼び出し、report や stdout 出力までの大きな制御順序を扱い、詳細な共通処理は runtime や専用 helper へ委譲する。
+- サブコマンド単位で読む先を選ぶ分岐点であり、特定コマンドの外部挙動や実行フローを確認するときは該当する下位要素へ進む。
 
 ## Read this when
-- 利用者向けサブコマンドの実行フロー、事前条件、git 操作、状態更新、cleanup、report 出力の入口を探したいとき。
-- session や apply の branch・worktree・state の扱い、review の対象列挙から report までの制御、init/indexing/tui の orchestration をどこで読むべきか判断したいとき。
-- サブコマンド固有の処理と、runtime helper、git wrapper、設定、path model、parameter builder などの共通処理との境界を確認したいとき。
-- INDEX.md maintenance、review 用 INDEX 変更、apply/report、TUI 起動 parameter など、利用者コマンドから下位処理へ入る接続点を追いたいとき。
+- どのサブコマンド実装が特定の CLI 挙動、状態遷移、git 操作、Codex 呼び出し、report 出力を担当しているかを切り分けたいとき。
+- session の作成・合流・破棄、apply run の開始・統合・破棄、review oracle の実行、初期化、INDEX maintenance、TUI 起動などの実行入口を探したいとき。
+- サブコマンドが共通 runtime、preflight、root/config 解決、worktree/state/helper 群へどのようにつながるかを追いたいとき。
+- CLI から起動された後の command name、argv、事前検査、成功・失敗時出力、cleanup の大枠を確認・変更したいとき。
 
 ## Do not read this when
-- Typer への登録やトップレベル CLI 配線だけを確認したいときは、CLI entrypoint 側を直接読む。
-- git コマンド wrapper、state 永続化、root 解決、設定読み込み、clean worktree 判定、cmoc ignore 判定など、サブコマンドに限らない共通 helper の詳細だけを調べたいとき。
-- Codex に渡す prompt や Structured Output parameter の具体的な組み立てだけを確認したいときは、対応する parameter builder 側を読む。
-- oracle 上の正本仕様そのもの、または INDEX.md エントリー作成基準そのものを確認したいときは、実装ではなく対応する oracle file を読む。
+- CLI parser、トップレベルのサブコマンド登録、Typer app 配線だけを確認したいときは、CLI entrypoint や routing 側を読む。
+- git 実行 wrapper、path model、state model、config、runtime、lock、ignore 判定などの低レベル共通 helper 自体を変更したいときは、該当する共通実装を直接読む。
+- oracle file と realization file の定義、path token、managed branch、各コマンドの正本仕様などを確認したいときは、実装ではなく oracle 側の該当文書を読む。
+- INDEX.md 本文生成、review finding 生成、prompt builder、report rendering、merge conflict 解決など、サブコマンド配下のさらに専用化された詳細だけを調べたいときは、その責務を持つ下位要素へ直接進む。
 
 ## hash
-- f2292c7b233a95637741eaeda01d5b6966abbe41de2cbbd8d33c3564f75456cf
+- aa475b5b45bf3169cc3cf2a86894f27614f758f7f9c74b57cd3734be150f15f3
