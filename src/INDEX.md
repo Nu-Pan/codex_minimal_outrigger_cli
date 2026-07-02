@@ -62,24 +62,24 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper 群を収める領域。Codex 呼び出し、INDEX 更新 preflight、CLI 実行ライフサイクル、設定、内容 hash、エラー表示、Git、ログ、パス、実行結果、session state など、複数サブコマンドから共有される実行時支援を扱う。
-- 個別 helper へ進む前に、共通 runtime 層のどの責務が対象かを切り分けるための入口になる。
+- cmoc の複数領域から使われる共通 runtime helper 群を置く実装ディレクトリ。Codex 呼び出し、INDEX 更新 preflight、設定、内容 hash、エラー表示、Git 操作、ログ、パス解決、外部コマンド結果、session state など、サブコマンド横断の実行時支援を責務別に分けている。
+- 単一責務の runtime 実装だけでなく、既存 import path 互換や複数 runtime API の再エクスポート入口も含むため、上位コマンドから共通処理へ進む際の入口になる。
 
 ## Read this when
-- Codex exec/TUI 呼び出し、profile、quota/capacity、Structured Output、call log、file access rule 違反検出など、Codex 実行境界の共通処理を調べたいとき。
-- INDEX.md 自動更新 preflight、エントリー生成、hash 鮮度判定、除外判定、並列更新、排他制御など、indexing 実行経路を確認または変更したいとき。
-- CLI サブコマンド共通の実行順序、標準出力、終了コード、例外表示、サブコマンド logger、実行 log を扱うとき。
-- 設定 JSON、内容 hash 保存、binary 判定、利用者向けエラー report、Git 操作、runtime path、外部コマンド結果、session state の読み書きなど、複数領域で共有される runtime helper の責務を探すとき。
-- 複数の runtime helper をまとめて import する公開入口や、互換 import の接続先を確認したいとき。
+- CLI サブコマンド横断で使われる runtime 共通処理の所在を探したいとき。
+- Codex exec/TUI 実行、profile、preflight、Structured Output、quota/capacity retry、file access post-check、call log など Codex 呼び出し周辺の実装を確認または変更したいとき。
+- INDEX.md 自動更新の対象探索、hash 鮮度判定、既存エントリー再利用、排他制御、entry 生成依頼、Markdown 描画を追いたいとき。
+- 設定ファイル、内容 hash 保存、binary 判定、共通エラー表示、Git 操作、サブコマンドログ、runtime path、外部コマンド結果、session state のいずれかの共通 helper を探しているとき。
+- 上位の command 実装から呼ばれる共通 API の依存元や、責務別 runtime 実装へ進むための候補を絞りたいとき。
 
 ## Do not read this when
-- 個別 CLI サブコマンドの引数定義、利用者向けワークフロー、コマンド固有の処理だけを調べたいとき。その場合はサブコマンド実装側へ進む。
-- oracle file、realization file、file access mode、path placeholder、INDEX.md 仕様意図など、正本仕様断片そのものを確認したいとき。その場合は対応する oracle 側を読む。
-- ACP の基本型、設定データクラス、prompt 本文の構築、JSON schema の正本、生成済みログの解析など、共通 runtime helper ではなく専用の定義・生成・読み取り側が主対象のとき。
-- 特定 helper の内部挙動が既に分かっており、その実装だけを変更したいとき。その場合はこの領域全体ではなく、該当する責務別 runtime 実装へ直接進む。
+- 個別サブコマンドの引数定義、利用者向け制御フロー、業務処理だけを調べたいとき。その場合は command 側の実装へ進む。
+- oracle file 上の正本仕様、path placeholder の概念定義、INDEX.md の仕様意図、file access rule そのものを確認したいとき。その場合は対応する oracle 側を読む。
+- AgentCallParameter や設定データクラスなど、runtime helper が利用する基本型そのものを確認したいだけのとき。その場合は型定義側へ進む。
+- 特定の低レベル処理や個別 API の実装箇所が既に分かっているとき。その場合はこの階層全体ではなく、責務に対応する本文を直接読む。
 
 ## hash
-- 092238f49238c889dd1f5be0063e769d1e68acf3eedf6ec21c104f2bd213aa4f
+- 4120ce65ec27520cfe27714b501bc844dade075cf68feeeced5733fefa57d95b
 
 # `config`
 

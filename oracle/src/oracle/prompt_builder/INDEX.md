@@ -42,23 +42,26 @@
 # `parts`
 
 ## Summary
-- oracle/realization の基本概念、各種 standard、レビュー判定規範、ファイルアクセス規則、ルーティング規則など、エージェントへ渡すプロンプト文書の部品を構築する対象群。
-- StructDoc として組み立てられる規範文書の内容を確認・変更する入口であり、個別の標準やレビュー観点ごとに下位対象へ進むためのまとまり。
+- oracle/realization の基本概念、oracle file と realization file の標準、レビュー判定、ファイルアクセス規則、INDEX.md ルーティング規則など、AI エージェントへ注入するプロンプト断片を構築する oracle src 群。
+- 各部品は StructDoc 形式の規範文書または規則文書を生成し、正本仕様断片の扱い、実装側品質、レビュー所見の境界、読み書き制約、読む先の選び方を個別の責務として分担する。
+- プロンプト全体の具体的な結合処理ではなく、注入される規範・規則そのものの内容と境界を確認する入口になる。
 
 ## Read this when
-- oracle file と realization file の概念、oracle standard、realization standard、INDEX.md エントリー規範、レビュー所見規範、ファイルアクセス規則、ルーティング規則などのプロンプト部品を探すとき。
-- エージェント用プロンプトに含める規範文書の内容や、各標準文書がどの責務を持つかを確認したいとき。
-- oracle file 適用レビュー、oracle file 自体のレビュー、ファイルアクセスモード別の禁止規則、INDEX.md の使い方など、作業規則系の本文生成箇所を選びたいとき。
-- oracle/realization やルーティング文書の規範に関する変更で、どの部品を読むべきかを絞り込みたいとき。
+- AI エージェントに渡す oracle/realization 関連の規範文書やルーティング規則の生成内容を確認・変更したいとき。
+- oracle file、realization file、レビュー所見、ファイルアクセス、INDEX.md エントリー、ルーティングの各標準がどのプロンプト部品で定義されているかを探したいとき。
+- oracle file の保守方針、realization file の品質基準、レビューで所見にする条件など、複数の標準部品のどれを読むべきか判断したいとき。
+- ファイルアクセスモード別の禁止事項や、oracle file と realization file の読み書き可否を生成する部品を探したいとき。
+- プロンプト部品が出力する規範の責務境界を確認し、特定の標準部品へ進む前に同階層の候補を比較したいとき。
 
 ## Do not read this when
-- 特定の CLI コマンド、状態ファイル、パスモデル、入出力 schema など、個別機能の実装や仕様を確認したいとき。
-- StructDoc、Standard、Requirement、PlaceholderMap などの共通データ構造や変換処理そのものを調べたいとき。
-- 実際の realization implementation や realization test の現在構造を修正するために、プロダクトコードやテストコードを直接読みたいとき。
-- INDEX.md エントリーを生成する対象本文そのものがすでに特定されており、この階層内のプロンプト部品を選ぶ必要がないとき。
+- 特定の CLI コマンド、状態ファイル、パスモデル、出力 schema など、個別機能の正本仕様断片を確認したいとき。
+- StructDoc、Standard、Requirement、PlaceholderMap などの汎用データ構造や、プロンプト全体の結合フローを調べたいとき。
+- oracle/realization の規範ではなく、実際の realization implementation や realization test の現在構造を修正するために読みたいとき。
+- 個別ファイルの責務がすでに分かっており、そのファイル本文へ直接進む方が早いとき。
+- INDEX.md エントリーの生成対象本文そのものではなく、既存のルーティング文書や生成済みエントリーを確認したいとき。
 
 ## hash
-- 35d1e9ace8d11ea92d19c436caaff7adad63df38421b09a5e94e37b6d4a02593
+- 2bf112d3713b00ceb458dce06165a3ef9a944f21982756ceaf66b923919068fd
 
 # `prompt_.py`
 

@@ -23,22 +23,22 @@
 # `src`
 
 ## Summary
-- cmoc の oracle src として、AI agent 呼び出しパラメータ、プロンプト構築部品、設定、パス表記、規範文書、構造化 Markdown などの正本実装断片を収める領域。
-- AgentCallParameter、論理モデル種別、Reasoning Effort、ファイルアクセスモード、Structured Output schema 付き agent call、完全プロンプトへの規範注入、ルートパスプレースホルダ解決、リポジトリ別設定の既定値を確認する入口になる。
-- apply fork、review oracle、indexing、tui、session join、ファイルアクセス規則違反リカバリなど、cmoc が別 agent call に渡す prompt と呼び出し条件の正本を探す分岐点になる。
+- cmoc の正本実装断片のうち、AI エージェント呼び出しパラメータ、完全プロンプト構築、設定・パス表記・規範文書・Markdown 整形などの基礎モデルを束ねる領域。
+- サブコマンド別の agent call parameter、Structured Output schema、prompt 注入規則、ルートプレースホルダ付きパス、設定境界、構造化文書モデルへ進むための入口になる。
 
 ## Read this when
-- cmoc の oracle src に定義された実装形式の正本仕様断片を確認・変更したいとき。
-- AI agent 呼び出しで使う model class、reasoning effort、file access mode、prompt 本文、Structured Output schema の扱いを調べたいとき。
-- apply fork や review oracle などのサブコマンドが、どの役割・ゴール・規範・ファイルアクセス規則で agent call を組み立てるか確認したいとき。
-- 完全プロンプトに oracle standard、realization standard、review oracle standard、apply review standard、index entry standard、routing rule、file access rule がどう注入されるか確認したいとき。
-- cmoc 設定の既定値、Codex CLI 向けモデル名対応、並列数、各レビュー・適用ループの予算、ルートパスプレースホルダの解決規則、構造化文書の Markdown レンダリングを調べたいとき。
+- cmoc が AI エージェントへ渡す prompt、role、goal、モデル設定、reasoning effort、ファイルアクセス方針、Structured Output schema の正本仕様断片を探すとき。
+- agent call 用の完全なプロンプトが、標準プロンプト、補助プロンプト、ファイルアクセス規則、ルーティング規則、プレースホルダ定義からどう組み立てられるかを確認したいとき。
+- cmoc の設定項目、既定値、リポジトリ別挙動設定、設定ファイルの永続化境界を確認したいとき。
+- ルート概念、プレースホルダ付きパス、絶対パス、git worktree との関係を確認したいとき。
+- 規範文書を構造化して保持するモデルや、階層化された文章を Markdown へ整形する helper の正本実装断片を確認したいとき。
 
 ## Do not read this when
-- 利用者向け CLI の実行フロー、プロセス起動、git 操作、状態ファイル更新、結果表示など、実際に動く realization implementation を調べたいとき。
-- 自然言語 Markdown の正本仕様文書そのものを読みたいとき。
-- oracle src ではなく realization test、realization implementation、補助スクリプト、生成物、または実際の差分適用箇所を探しているとき。
-- 個別ファイルの修正 diff、レビュー結果の保存・集約処理、TUI 入力処理、merge conflict marker の検出処理など、oracle src の prompt 正本ではなく実装側の処理を確認したいとき。
+- CLI 引数解析、git 操作、branch 操作、実行フロー、保存処理、結果集約、表示処理など、正本実装断片を利用する realization implementation 側の制御を調べたいとき。
+- oracle file、realization file、index entry、各 standard の定義本文や品質基準そのものを確認したいだけのとき。
+- 設定の読み書き処理、JSON 変換処理、状態ファイル操作、レビュー所見の生成・検証ロジック自体を探しているとき。
+- 生成済みプロンプトをどこで agent call へ渡すか、または realization implementation や realization test の現在構造を追いたいとき。
+- 特定の下位領域が対象だと分かっており、用途別 agent call parameter、プロンプト構築、または基礎補助モデルへ直接進めるとき。
 
 ## hash
-- 83c7ac54e4115d17dc1a7da0bf6a22b64df58a743f021041951ac0cdd3e2a441
+- beb99b12591d3dcede0d9bf49ab078e3b0e0e7ce5374d7b9e2435a949731a51f
