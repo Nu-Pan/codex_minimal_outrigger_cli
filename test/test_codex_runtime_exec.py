@@ -273,7 +273,7 @@ def test_run_codex_exec_recovers_when_preexisting_forbidden_diff_is_modified(
     assert target.read_text() == "preexisting\n"
 
 
-def test_run_codex_exec_recovers_ignored_untracked_realization_write_diff(
+def test_run_codex_exec_allows_ignored_untracked_realization_write_diff(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -293,12 +293,9 @@ def test_run_codex_exec_recovers_ignored_untracked_realization_write_diff(
             "counter.write_text(str(count + 1))",
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "blocked = pathlib.Path('build/artifact.txt')",
-            "if count == 0:",
-            "    blocked.parent.mkdir(exist_ok=True)",
-            "    blocked.write_text('blocked\\n')",
-            "else:",
-            "    blocked.unlink(missing_ok=True)",
+            "artifact = pathlib.Path('build/artifact.txt')",
+            "artifact.parent.mkdir(exist_ok=True)",
+            "artifact.write_text('ignored\\n')",
             "output.write_text('{}\\n')",
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
@@ -312,8 +309,52 @@ def test_run_codex_exec_recovers_ignored_untracked_realization_write_diff(
         config=CmocConfig(),
     )
 
-    assert counter.read_text() == "2"
-    assert not (root / "build" / "artifact.txt").exists()
+    assert counter.read_text() == "1"
+    assert (root / "build" / "artifact.txt").read_text() == "ignored\n"
+
+
+def test_run_codex_exec_allows_realization_write_temporary_cache_diff(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    (root / ".gitignore").write_text("/.pytest_cache/\n__pycache__/\n*.pyc\n")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "ignore python caches")
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "count.txt"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "cache = pathlib.Path('.pytest_cache')",
+            "cache.mkdir(exist_ok=True)",
+            "(cache / 'state').write_text('temporary\\n')",
+            "pycache = pathlib.Path('oracle/__pycache__')",
+            "pycache.mkdir(exist_ok=True)",
+            "(pycache / 'spec.cpython-313.pyc').write_bytes(b'cache')",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_exec(
+        _parameter(FileAccessMode.REALIZATION_WRITE),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    assert counter.read_text() == "1"
+    assert (root / ".pytest_cache" / "state").read_text() == "temporary\n"
+    assert (root / "oracle" / "__pycache__" / "spec.cpython-313.pyc").is_file()
 
 
 def test_run_codex_exec_ignores_venv_diff_from_post_call_file_access_check(

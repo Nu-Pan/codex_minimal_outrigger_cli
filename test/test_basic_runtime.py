@@ -634,7 +634,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         )
 
 
-def test_codex_profile_allows_root_for_realization_write_and_rejects_ignored_extra(
+def test_codex_profile_allows_root_for_realization_write_and_ignored_extra(
     tmp_path: Path,
 ) -> None:
     root = make_repo(tmp_path)
@@ -661,19 +661,19 @@ def test_codex_profile_allows_root_for_realization_write_and_rejects_ignored_ext
     _assert_writable(profile, root / "src" / "manual.py")
     _assert_writable(profile, root / ".gitignore")
 
-    with pytest.raises(CmocError, match="許可領域外"):
-        build_codex_profile(
-            AgentCallParameter(
-                ModelClass.EFFICIENCY,
-                ReasoningEffort.LOW,
-                FileAccessMode.REALIZATION_WRITE,
-                "prompt",
-                None,
-            ),
-            CmocConfig(),
-            root,
-            extra_writable_paths=[root / "build"],
-        )
+    profile = build_codex_profile(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            FileAccessMode.REALIZATION_WRITE,
+            "prompt",
+            None,
+        ),
+        CmocConfig(),
+        root,
+        extra_writable_paths=[root / "build"],
+    )
+    assert _profile_writable_roots(profile) == {str(root.resolve())}
 
 
 @pytest.mark.parametrize(
@@ -871,7 +871,6 @@ def test_codex_profile_rejects_root_file_session_join_conflict_targets(
         ".cmoc/state.json",
         ".codex/config.toml",
         ".git/config",
-        ".pytest_cache/state",
         "memo/blocked.md",
     ],
 )

@@ -948,7 +948,6 @@ def _is_write_allowed_by_file_access_mode(
         ".cmoc",
         ".codex",
         ".git",
-        ".pytest_cache",
         "memo",
     }
     if relative.parts[0] in blocked_runtime_roots:
@@ -960,9 +959,7 @@ def _is_write_allowed_by_file_access_mode(
         return False
     match mode:
         case FileAccessMode.REALIZATION_WRITE:
-            if is_untracked_git_ignored(root, path):
-                return False
-            return relative.parts[0] != "oracle"
+            return not _is_oracle_file_path(root, path)
         case FileAccessMode.PURE_ORACLE_WRITE:
             return relative.parts[0] == "oracle"
         case FileAccessMode.REPO_WRITE | FileAccessMode.NO_RULE:
@@ -989,4 +986,18 @@ def _is_readonly_temporary_diff_path(
         ".pytest_cache" in relative.parts
         or "__pycache__" in relative.parts
         or path.name.endswith((".pyc", ".pyo"))
+    )
+
+
+def _is_oracle_file_path(root: Path, path: Path) -> bool:
+    """oracle file 定義に該当する path かを返す。"""
+    try:
+        relative = path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    return (
+        bool(relative.parts)
+        and relative.parts[0] == "oracle"
+        and path.name not in {"AGENTS.md", "INDEX.md"}
+        and not is_untracked_git_ignored(root, path)
     )

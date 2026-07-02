@@ -32,14 +32,9 @@ _PROFILE_BLOCKED_ROOT_NAMES = {
     ".cmoc",
     ".codex",
     ".git",
-    ".pytest_cache",
     "AGENTS.md",
     "INDEX.md",
     "memo",
-}
-_REALIZATION_WRITE_BLOCKED_ROOT_NAMES = {
-    *_PROFILE_BLOCKED_ROOT_NAMES,
-    "oracle",
 }
 _REPO_WRITE_BLOCKED_ROOT_NAMES = _PROFILE_BLOCKED_ROOT_NAMES
 _CONFLICT_WRITE_BLOCKED_ROOT_NAMES = {
@@ -47,7 +42,6 @@ _CONFLICT_WRITE_BLOCKED_ROOT_NAMES = {
     ".cmoc",
     ".codex",
     ".git",
-    ".pytest_cache",
     "memo",
 }
 
@@ -252,25 +246,30 @@ def _is_writable_path_allowed(
             bool(relative.parts)
             and relative.parts[0] not in _CONFLICT_WRITE_BLOCKED_ROOT_NAMES
         )
-    blocked_root_names = (
-        _REPO_WRITE_BLOCKED_ROOT_NAMES
-        if mode == FileAccessMode.REPO_WRITE
-        else _REALIZATION_WRITE_BLOCKED_ROOT_NAMES
-    )
+    blocked_root_names = _REPO_WRITE_BLOCKED_ROOT_NAMES
     if relative.parts and relative.parts[0] in blocked_root_names:
         return False
     if mode == FileAccessMode.REALIZATION_WRITE:
-        if is_untracked_git_ignored(root, path):
-            # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-            # realization file excludes git ignored untracked paths; tracked ignored
-            # paths remain writable because normal git check-ignore treats them as tracked.
-            return False
-        return not path.is_relative_to(root / "oracle")
+        return not _is_oracle_file_path(root, path)
     if mode == FileAccessMode.PURE_ORACLE_WRITE:
         return path.is_relative_to(root / "oracle")
     if mode in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}:
         return False
     return mode in {FileAccessMode.REPO_WRITE, FileAccessMode.NO_RULE}
+
+
+def _is_oracle_file_path(root: Path, path: Path) -> bool:
+    """oracle file 定義に該当する path かを返す。"""
+    try:
+        relative = path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    return (
+        bool(relative.parts)
+        and relative.parts[0] == "oracle"
+        and path.name not in {"AGENTS.md", "INDEX.md"}
+        and not is_untracked_git_ignored(root, path)
+    )
 
 
 def _append_workspace_write_section(
