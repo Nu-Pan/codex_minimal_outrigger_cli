@@ -135,10 +135,6 @@ def _base_exec_argv(profile_name: str, codex_cwd: Path) -> list[str]:
 def _quota_availability_probe_parameter(
     base_parameter: AgentCallParameter,
 ) -> AgentCallParameter:
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # The oracle specifies the polling behavior but has no dedicated oracle-src
-    # builder file. Keep this realization builder tiny and let runtime reuse the
-    # same CODEX_HOME/profile/cwd as the failed call.
     from acp.builder.quota_probe import build_quota_availability_probe_parameter
 
     return build_quota_availability_probe_parameter(base_parameter)
@@ -506,7 +502,6 @@ def run_codex_exec(
                     status="quota_waiting",
                     error=error_text,
                 )
-                quota_probe_parameter = _quota_availability_probe_parameter(parameter)
                 with _QUOTA_CONDITION:
                     if _QUOTA_POLLING:
                         wait_started_at = time.perf_counter()
@@ -586,6 +581,9 @@ def run_codex_exec(
                             logger.add_quota_wait(quota_poll_interval_sec)
                         quota_wait_sec += quota_poll_interval_sec
                         time.sleep(quota_poll_interval_sec)
+                        quota_probe_parameter = _quota_availability_probe_parameter(
+                            parameter
+                        )
                         (
                             probe_ts,
                             probe_prompt_path,
