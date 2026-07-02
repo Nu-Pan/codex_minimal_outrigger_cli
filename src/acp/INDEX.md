@@ -19,20 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP builder 配下の realization 側互換入口をまとめる領域。oracle 側に置かれた正本 builder 実装を既存の acp.builder.* 参照から利用できるようにし、apply、common、indexing、review、session、tui、quota probe などの下位領域へ進むための上位入口となる。
-- この階層は builder 本体仕様や各処理の正本ではなく、公開 import path の維持、oracle 側実装への委譲、realization 側 parameter への適応、互換 wrapper の残置理由と削除条件を見分けるために読む。
+- ACP の agent call parameter builder 群を収める領域。正本側に実体を置く builder への互換入口、個別 builder への下位入口、quota probe 用 parameter 生成などを扱い、既存の acp.builder.* 参照から正本側実装や実装側 wrapper へ到達するための境界になる。
+- apply、common、indexing、review、session、tui などの builder 系 package の分担を見分け、正本側への委譲、realization 側型への適合、旧 import 経路の維持や削除条件を確認するための上位入口。
 
 ## Read this when
-- acp.builder.* 参照が oracle 側 builder 実装へどの互換入口を経由して接続されているか確認したいとき。
-- apply、common、indexing、review、session、tui、quota probe など、ACP builder 関連の読む先を上位階層から選びたいとき。
-- realization 側に残る builder 互換 package、旧 import 経路、公開名、委譲先、削除条件を確認したいとき。
-- oracle 側の正本 builder を利用しつつ、既存利用者や残存参照を壊さないための公開面を調べたいとき。
+- acp.builder.* の公開参照や互換 package が、正本側 builder 実装へどのように接続されているか確認したいとき。
+- apply、common、review、session、tui、indexing など、ACP builder 配下のどの下位領域へ進むべきかを選びたいとき。
+- 正本側 builder への委譲、realization 側 AgentCallParameter への変換、旧 import 経路の互換 wrapper、削除条件を調べる入口が必要なとき。
+- Codex quota availability probe 用の AgentCallParameter 生成元や、probe が base parameter から引き継ぐ条件を確認したいとき。
 
 ## Do not read this when
-- 個別 builder の具体的な生成ロジック、repo root 解決、parameter 型変換、prompt 補正などを直接確認したいときは、該当する下位領域へ進む。
-- builder の正本仕様、prompt 文面、出力条件、判定仕様、file access rule などを確認したいときは、対応する oracle file または正本側実装を読む。
-- AgentCallParameter、FileAccessMode、model、reasoning effort などの基礎定義を調べたいときは、基礎定義側を読む。
-- CLI コマンド全体の制御フロー、fork 作成、branch 操作、TUI 描画、runtime 実行処理など、ACP builder 互換入口ではない責務を調べたいときは、より直接の実装領域へ進む。
+- oracle 側 builder の正本仕様、prompt 本文、生成ロジックそのものを確認したいときは、対応する oracle file または正本側実装を読む。
+- apply fork、review、TUI、session join などの具体的な処理内容を直接調べたいときは、該当する下位領域または実処理を持つ module を読む。
+- AgentCallParameter 型、model、reasoning effort、file access mode などの基礎定義を確認したいだけのときは、基礎定義側を読む。
+- ACP builder 以外の CLI 制御、fork 作成、branch 操作、diff 生成、TUI 描画、状態管理、ファイルアクセス規則の判定を調べたいときは、それぞれの責務を持つ対象へ進む。
 
 ## hash
-- 40926c0ca3cd569f9931362761ea2a508ebb48d2d3ddefc14a56b0b256b1e4f3
+- dc4a372a0843e54d5f1f7c5ba326d674e1f0d2a8415d3016ddcac98f4216995c

@@ -22,23 +22,21 @@
 # `test_acp_builder_parameters.py`
 
 ## Summary
-- ACP builder が返す AgentCallParameter のモデル種別、reasoning effort、file access mode、prompt 文面、structured output schema 参照を検証する realization test。
-- apply fork、file access rule violation recovery、TUI parameter resolution、index entry generation、review oracle finding、session join conflict resolution など複数 builder の外部挙動を横断的に確認する。
-- oracle source 側の schema や builder と realization builder の対応関係を検証し、schema のコピーではなく正本参照に合っていることを担保する。
+- ACP builder が生成する AgentCallParameter のモデル種別、reasoning effort、file access mode、prompt 内容、structured output schema 参照を検証するテスト。
+- apply fork、TUI parameter resolve、indexing index entry、review oracle、session join conflict resolution など複数 builder の外部挙動と oracle schema との一致を確認する。
 
 ## Read this when
-- ACP builder の prompt、実行パラメータ、structured output schema path の期待値を変更する。
-- TUI resolve parameter の schema required 項目、enum、公開 export 名、埋め込む標準文書の範囲を確認する。
-- review oracle finding 系 builder が oracle source の schema や oracle builder と一致するかを確認する。
-- apply fork や session join の builder が `<repo-root>`、`<work-root>`、file access mode をどう扱うべきかをテストから確認する。
+- ACP builder の parameter 生成結果、prompt に埋め込まれる path・標準文書・動的文字列、structured output schema path の期待値を変更する。
+- apply fork、file access rule violation recovery、TUI resolve parameter、index entry、review oracle、session join conflict resolution の builder に関する回帰テストを確認する。
+- oracle 側の ACP builder schema と realization 側 builder が参照する schema の一致を検証したい。
 
 ## Do not read this when
-- 個別 builder の実装詳細だけを確認したい場合は、対応する実装モジュールを直接読む。
-- oracle source の schema 定義そのものを編集・確認したい場合は、oracle 配下の該当 schema を読む。
-- ACP parameter と関係しない CLI 挙動、path model、index entry 本文生成規則を調べる場合は、より直接のテストまたは実装へ進む。
+- ACP builder の実装責務や prompt 組み立て処理そのものを調べたいだけで、テスト期待値を確認する必要がない。
+- oracle file の正本 schema 定義や oracle builder の内容を直接確認したい場合。
+- ACP builder 以外の CLI 挙動、永続状態、git 操作、一般的な path model を調べている。
 
 ## hash
-- 07e66467d4cdb5147efa65f42cbb14819d94f70e782d5fc739e8fab4c2330269
+- 6d74c82358a4ef3513d01ed69c7bd08efddebbeedd7d27a4a270be308fb3faab
 
 # `test_apply_abandon_cli.py`
 

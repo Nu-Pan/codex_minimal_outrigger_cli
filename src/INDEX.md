@@ -1,24 +1,23 @@
 # `acp`
 
 ## Summary
-- ACP builder 関連の既存 import 経路を維持するための互換入口を置く領域。oracle src 側の正本実装を複製せず、`acp.*` や `acp.builder.*` 参照から委譲先へ接続する役割を持つ。
-- builder 配下の apply、common、indexing、review、session、tui、quota probe などへ進むための上位入口であり、互換 wrapper の残置理由、公開 import 面、委譲先、削除条件を見分けるために読む。
+- ACP の agent call parameter builder 互換入口をまとめる領域。正本側に実体を置く builder への委譲、旧 import 経路の維持、realization 側型への適合、quota probe 用 parameter 生成元への入口を扱う。
+- 互換入口自体は実装本体ではなく、既存公開参照から正本側実装または実装側 wrapper へ到達するための境界として機能する。
 
 ## Read this when
-- `acp.*` または `acp.builder.*` 参照が oracle 側 builder 実装へどの互換入口を経由して接続されているか確認したいとき。
-- realization 側や利用者向け公開面に残る ACP builder 互換 import、旧 import 経路、公開名、委譲先、削除条件を判断したいとき。
-- apply、common、indexing、review、session、tui、quota probe など、ACP builder 関連の下位領域へ進む入口を選びたいとき。
-- oracle src 側の正本 builder 実装を利用しつつ、既存利用者や残存参照を壊さないための公開面を調べたいとき。
+- ACP builder の公開参照や旧 import 経路が、正本側 builder 実装または realization 側 wrapper へどのように接続されているか確認したいとき。
+- apply、review、session、TUI、indexing、quota probe など、builder 系のどの下位領域へ進むべきかを選びたいとき。
+- 正本側 builder 実装を複製しないための互換入口、委譲、型変換、削除条件を確認したいとき。
+- 利用者向け公開面または realization 側に残る ACP builder import の扱いを判断したいとき。
 
 ## Do not read this when
-- ACP builder の具体的な生成ロジック、repo root 解決、parameter 型変換、prompt 補正などを直接確認したいときは、該当する下位領域または実装本体へ進む。
-- builder の正本仕様、prompt 文面、出力条件、判定仕様、file access rule などを確認したいときは、対応する oracle file または正本側実装を読む。
-- AgentCallParameter、FileAccessMode、model、reasoning effort などの基礎定義を調べたいときは、基礎定義側を読む。
-- CLI コマンド全体の制御フロー、fork 作成、branch 操作、TUI 描画、runtime 実行処理など、ACP builder 互換入口ではない責務を調べたいときは、より直接の実装領域へ進む。
-- 新しい ACP 機能や API 仕様を追加する場所を探しているとき。この領域は互換維持用の入口であり、機能追加の正本ではない。
+- ACP builder の正本仕様、prompt 本文、生成ロジックそのものを確認したいときは、対応する正本側の文書または実装を読む。
+- apply fork、review、session join、TUI などの具体的な処理内容を直接調べたいときは、該当する下位領域または実処理を持つ対象を読む。
+- AgentCallParameter 型、model、reasoning effort、file access mode などの基礎定義だけを確認したいときは、基礎定義側を読む。
+- builder 以外の CLI 制御、fork 作成、branch 操作、diff 生成、TUI 描画、状態管理、ファイルアクセス規則の判定を調べたいときは、それぞれの責務を持つ対象へ進む。
 
 ## hash
-- a6158e66e2fbebb54c3bbcd32c755744a03ec22b354c2bce3b62cbdc6f87da63
+- cd7b6f1db89146710a6725e7be8fecb45872a0949239bd56dbec6adfff06e95f
 
 # `basic`
 

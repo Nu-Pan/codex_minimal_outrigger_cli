@@ -41,22 +41,21 @@
 # `common`
 
 ## Summary
-- ファイルアクセス規則違反からの復旧に使う acp builder common 領域で、oracle 側の正本 builder への委譲と realization 側 parameter への適応をまとめる。
-- 互換 package の入口と、ファイルアクセス規則違反リカバリー用 builder wrapper を含む。
+- acp builder common 領域の互換 package 入口と、ファイルアクセス規則違反リカバリー用 AgentCallParameter 構築 wrapper を扱う。oracle 側 builder への委譲、realization 側型への変換、違反 call log 名由来の `<time-stamp>` 補正を確認する入口になる。
 
 ## Read this when
-- ファイルアクセス規則違反の recovery 用 agent call parameter がどの領域で構築されるかを確認したいとき。
-- oracle 側 builder への委譲と、oracle parameter から realization parameter への適応を調べたいとき。
 - acp builder common 領域で oracle 側との互換 package の入口や import 経路を確認したいとき。
+- ファイルアクセス規則違反リカバリー用 AgentCallParameter の構築処理を確認・変更したいとき。
+- oracle 側 builder の出力を realization 側でどう適応し、違反 call log 名由来の `<time-stamp>` をどう補正するか調べたいとき。
 
 ## Do not read this when
-- ファイルアクセス規則そのものの定義、違反判定ロジック、復旧手順、エラーメッセージを調べたいとき。
-- AgentCallParameter や FileAccessMode の基本構造を調べたいとき。
-- oracle 側の正本 builder が生成する具体的な prompt 内容を確認したいとき。
-- builder common 配下の復旧 builder 以外の具体的な個別処理を調べたいとき。
+- builder common 配下の個別機能の詳細だけを調べたいときは、該当する下位 module を直接読む。
+- リカバリー prompt や parameter の正本仕様そのものを確認したいときは、対応する oracle file を読む。
+- oracle src の import 経路解決や AgentCallParameter 変換の共通処理を調べたいときは、共通 helper 側を読む。
+- ファイルアクセス規則全体の定義や違反判定ロジックを調べたいだけのときは、規則定義や判定処理を読む。
 
 ## hash
-- b65260087e68c3d9186ca49711d6d214f242cdcbd63335950c566aee5cab5780
+- 8c68abe83dd1bffe456793b73c81dbfc891356ef1d6592df34aad14834cb0663
 
 # `indexing`
 
