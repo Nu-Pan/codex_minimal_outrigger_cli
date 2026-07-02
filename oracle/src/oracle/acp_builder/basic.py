@@ -57,7 +57,6 @@ class FileAccessMode(StrEnum):
     REPO_WRITE = auto()
     PURE_ORACLE_WRITE = auto()
     REALIZATION_WRITE = auto()
-    INDEX_WRITE = auto()
     NO_RULE = auto()
 
 
