@@ -22,21 +22,21 @@
 # `test_acp_builder_parameters.py`
 
 ## Summary
-- ACP builder が生成する AgentCallParameter のモデル種別、reasoning effort、file access mode、prompt 内容、structured output schema 参照を検証するテスト。
-- apply fork、TUI parameter resolve、indexing index entry、review oracle、session join conflict resolution など複数 builder の外部挙動と oracle schema との一致を確認する。
+- ACP builder が生成する AgentCallParameter のモデル種別、reasoning effort、file access mode、prompt 埋め込み内容、structured output schema 参照を検証する realization test。
+- apply fork、TUI parameter resolution、index entry、review oracle、session join conflict resolution の builder 出力が、期待される権限・schema・oracle src 参照と一致するかを確認する。
 
 ## Read this when
-- ACP builder の parameter 生成結果、prompt に埋め込まれる path・標準文書・動的文字列、structured output schema path の期待値を変更する。
-- apply fork、file access rule violation recovery、TUI resolve parameter、index entry、review oracle、session join conflict resolution の builder に関する回帰テストを確認する。
-- oracle 側の ACP builder schema と realization 側 builder が参照する schema の一致を検証したい。
+- ACP builder の parameter 設定、prompt 内容、structured output schema path、または oracle schema との一致を変更する。
+- TUI resolve parameter、apply fork、review oracle、indexing index entry、session join conflict resolution の builder 実装を変更した後に、既存テスト観点を確認する。
+- oracle src に置かれた ACP builder schema を realization 側 builder が正しく参照しているかを調べる。
 
 ## Do not read this when
-- ACP builder の実装責務や prompt 組み立て処理そのものを調べたいだけで、テスト期待値を確認する必要がない。
-- oracle file の正本 schema 定義や oracle builder の内容を直接確認したい場合。
-- ACP builder 以外の CLI 挙動、永続状態、git 操作、一般的な path model を調べている。
+- ACP builder 以外の CLI 挙動や永続状態だけを調べる場合。
+- structured output schema の正本内容そのものを確認したい場合は、対応する oracle src の schema を直接読む。
+- 個別 builder の実装詳細を修正する入口を探している場合は、対象 builder の realization implementation を直接読む。
 
 ## hash
-- 6d74c82358a4ef3513d01ed69c7bd08efddebbeedd7d27a4a270be308fb3faab
+- 3d6cf517dbdce70e881a1f179d3712ec99a5d4f966c9ac9d26b9ca1bdb98079f
 
 # `test_apply_abandon_cli.py`
 
@@ -85,26 +85,23 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 経由の挙動を検証する realization test。所見列挙、所見適用、commit、変更要約、report 出力、session state 更新、再検査、rolling apply fork の制御を一連の外部挙動として扱う。
-- apply fork report の生成内容と収束判定、未収束判定、error 時の未 commit 差分要約、変更ファイル再調査、禁止領域汚染からの recovery を確認する入口になる。
-- apply fork 用 AgentCallParameter builder が src のみの PYTHONPATH や packaged layout で import でき、oracle schema と標準 prompt を参照できることも検証する。
+- apply fork の CLI 実行について、所見列挙、所見適用、commit、変更要約、report 生成、session state 更新、再検査制御をまとめて検証するテスト。
+- change summary / file finding enumeration / finding application の ACP builder が src 単体 PYTHONPATH や packaged layout から import できること、oracle source の schema を参照すること、標準 prompt と path placeholder を含むことを確認する。
+- apply fork report の converged / unconverged / error 表示、変更要約、未追跡 file・削除 file の差分扱い、変更 file 再調査、file access rule violation recovery、rolling apply fork の対象 commit 選択を CLI 経由で検証する。
 
 ## Read this when
-- `apply fork` の report 内容、終了コード、収束・未収束・error の扱いを変更または調査する。
-- 所見適用後に変更された file を再調査対象へ戻す制御、新規 directory 配下の展開、最後の調査対象が空所見だった場合の収束判定を確認する。
-- apply fork の変更要約で未追跡 file、削除済み tracked file、commit 前 working tree 差分をどう扱うかを確認する。
-- apply fork が禁止領域を汚した Codex 実行を recovery し、許可差分だけを apply branch に commit する挙動を確認する。
-- rolling apply fork が前回 apply join 後の oracle 変更だけを調査対象にする session state 更新を確認する。
-- apply fork 関連の ACP builder、Structured Output schema path、標準 prompt 組み立て、packaged layout import を変更する。
+- apply fork の report 内容、終了コード、収束判定、未収束判定、error report、変更要約生成の挙動を確認・変更したいとき。
+- apply fork が所見適用後の変更 file を再調査する制御、新規 directory 配下の展開、所見適用が差分を作らない場合の扱いを確認したいとき。
+- apply fork 関連 ACP builder の import 可能性、prompt 構成、structured output schema 参照、packaged layout 対応を変更したいとき。
+- apply fork の commit 作成、session state の apply branch 更新、file access rule violation recovery、rolling fork が前回 apply join 後の変更だけを対象にする挙動を検証したいとき。
 
 ## Do not read this when
-- apply fork 以外の subcommand の CLI 挙動だけを調査する場合。
-- report の表示内容ではなく、低レベルな git wrapper や共通 runtime Codex 実行処理だけを調査する場合。
-- apply fork の所見列挙・適用 loop ではなく、個別 prompt 文面や schema 定義そのものを確認したい場合は、対応する builder または oracle source を直接読む。
-- INDEX.md エントリー生成や routing 文書の仕様だけを確認する場合。
+- apply fork 以外の CLI サブコマンドや session fork / join 単体の挙動だけを確認したいとき。
+- apply fork の内部 helper の局所的な純粋関数だけを確認する場合で、CLI 経由の report・再検査・state 更新まで追う必要がないとき。
+- Codex CLI や LLM 出力品質そのものを検証したいとき。
 
 ## hash
-- f8dfe753b40a2eace94c5b42d13807d14e5d30c741119b8ecde6d319a502251b
+- dd0c7c5f5b265d7071b5a91321c9ca416fc6ac144a256bc1c1e29f49d1b2abbd
 
 # `test_apply_join_cli.py`
 
@@ -170,22 +167,22 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行・TUI 呼び出しのランタイム制御を検証するテスト群。プロファイル生成、作業ディレクトリ、標準入力、schema 出力先、process group tracking、Codex CLI 欠落・異常終了時のエラー報告を扱う。
-- agent call 後のファイルアクセス規則チェックを検証する。readonly、realization write、repo write、pure oracle read、linked worktree、追加 read/write path、preexisting forbidden diff、session join conflict target、ignore 済み cache・venv・build 差分の扱いを確認する。
+- Codex CLI 実行/TUI 呼び出しの runtime 挙動を検証する pytest 群。プロファイル生成、作業ディレクトリ、sandbox writable roots、schema 出力先、prompt/stdin、process group、Codex CLI 欠落・非ゼロ終了時のエラー化を扱う。
+- agent call 後のファイルアクセス規則チェックとリカバリを重点的に検証する。readonly/realization write/repo write/pure oracle read の各 mode で、oracle・memo・.agents・cache・ignored file・preexisting diff・session join conflict target の扱いを確認する。
 
 ## Read this when
-- Codex CLI/TUI 呼び出しラッパーの挙動、生成される Codex profile、`--cd`・`--profile`・`--output-schema`・`--output-last-message` 引数、標準入力ログの扱いを変更または確認したいとき。
-- agent call 後のファイルアクセス違反検出、許可される一時 cache・ignore 済み差分、禁止ディレクトリや oracle/memo/.agents/.codex 周辺の差分回復処理を変更または確認したいとき。
-- linked worktree 上での Codex 実行、schema state 配置、repo log read 許可、pure oracle read 時の cwd 制限に関するテストを探すとき。
-- Codex CLI が存在しない場合、または TUI が非ゼロ終了した場合のエラー文言・ログ出力を確認したいとき。
+- Codex CLI の exec/TUI 起動引数、cwd、CODEX_HOME profile、sandbox 設定、schema 保存先、prompt 入力経路の外部挙動を変更・確認する時。
+- agent call 後の差分検査、ファイルアクセス規則違反の検出、違反後の再実行リカバリ、preexisting forbidden diff の扱いを変更・確認する時。
+- FileAccessMode ごとの許可領域、ignored/cache/venv など一時・追跡対象外ファイルの許容条件、pure oracle read の oracle cwd 制限を確認する時。
+- run_codex_subprocess、run_tracked_codex_subprocess、run_codex_exec、run_codex_tui の失敗時エラー表示や Codex CLI 欠落時の扱いを変更する時。
 
 ## Do not read this when
-- Codex runtime の実装そのものを変更したいだけで、期待される外部挙動をまだ確認する段階でないときは、対応する実装側を先に読む。
-- agent call parameter、file access mode、model class などの型定義や仕様を調べたいときは、それらを定義する basic/config 側を直接読む。
-- Codex 以外の runtime、Git 操作 helper、テスト用 repository fixture の一般的な挙動を調べたいときは、該当 helper や別テストを読む。
+- Codex runtime ではなく、agent call parameter や file access mode enum そのものの定義だけを確認したい時。
+- Codex CLI 呼び出しを伴わない path model、oracle/realization 分類、INDEX.md 生成規則の仕様を確認したい時。
+- 個別サブコマンドの業務ロジックや、Codex 以外の外部プロセス実行テストを探している時。
 
 ## hash
-- 3bc57427cfcb65e0398a14196df2831063498e05434506657899c733ccdbc04d
+- 1d305db09decf48eb4698cf81b39f0819f1771a5484b0336a40c6e38cffa33e8
 
 # `test_codex_runtime_home.py`
 

@@ -41,21 +41,19 @@
 # `common`
 
 ## Summary
-- acp builder common 領域の互換 package 入口と、ファイルアクセス規則違反リカバリー用 AgentCallParameter 構築 wrapper を扱う。oracle 側 builder への委譲、realization 側型への変換、違反 call log 名由来の `<time-stamp>` 補正を確認する入口になる。
+- oracle.acp_builder.common に対応する互換 builder package の入口を示す。
+- 配下の具体的な処理内容ではなく、互換 package としての存在、import 経路、package 初期化の扱いを判断するための入口である。
 
 ## Read this when
-- acp builder common 領域で oracle 側との互換 package の入口や import 経路を確認したいとき。
-- ファイルアクセス規則違反リカバリー用 AgentCallParameter の構築処理を確認・変更したいとき。
-- oracle 側 builder の出力を realization 側でどう適応し、違反 call log 名由来の `<time-stamp>` をどう補正するか調べたいとき。
+- acp builder common 領域で oracle 側との互換 package の有無や入口を確認したいとき。
+- builder common 配下の import 経路や package 初期化の扱いを確認したいとき。
 
 ## Do not read this when
-- builder common 配下の個別機能の詳細だけを調べたいときは、該当する下位 module を直接読む。
-- リカバリー prompt や parameter の正本仕様そのものを確認したいときは、対応する oracle file を読む。
-- oracle src の import 経路解決や AgentCallParameter 変換の共通処理を調べたいときは、共通 helper 側を読む。
-- ファイルアクセス規則全体の定義や違反判定ロジックを調べたいだけのときは、規則定義や判定処理を読む。
+- builder common の具体的な処理内容や個別機能を調べたいときは、下位 module を直接読む。
+- oracle 側の正本仕様断片を確認したいときは、対応する oracle file を読む。
 
 ## hash
-- 8c68abe83dd1bffe456793b73c81dbfc891356ef1d6592df34aad14834cb0663
+- 759b15549fffb04d354d3bac8650ecf21372fc809b7dbe75bd4b9d688c2e6bf3
 
 # `indexing`
 

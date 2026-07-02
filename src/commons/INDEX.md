@@ -93,27 +93,23 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループを中心に、profile/schema 準備、stdin prompt log、call log、stdout/stderr/output 保存、Structured Output 検証、capacity retry、quota 代表 probe、resume 継続、subcommand event 記録をまとめて制御する実行制御層。
-- agent call 後に残った差分を file access mode と禁止 runtime 領域に照らして検査し、必要に応じて file access rule violation recovery を再実行する後処理も扱う。
-- git status と filesystem snapshot から変更 path を集め、cmoc 生成 log や許可 path を除外したうえで、oracle file、runtime 領域、readonly 系一時生成物などの書き込み可否を判定する。
+- Codex exec の単一試行ループと、その周辺の実行制御を扱う。Structured Output 検証、capacity retry、quota 代表 probe、resume 継続、call log と subcommand event の記録を、同じ subprocess 結果と retry 状態を共有する状態機械としてまとめている。
+- agent call 後に残ったファイルアクセス規則違反の検出と、設定回数内でのリカバリ実行も扱う。worktree 差分、禁止領域の filesystem snapshot、FileAccessMode ごとの書き込み許可判定を使い、実行時生成物と許可済み path を除外して違反 path を抽出する。
 
 ## Read this when
-- Codex exec 呼び出しの argv、CODEX_HOME/profile/cwd/schema の準備、prompt を stdin source として保存して実行する流れを確認または変更したいとき。
-- Structured Output の読み取り・JSON parse・schema validation・semantic retry の成功失敗条件を確認または変更したいとき。
-- capacity error の exponential backoff、quota error 時の代表 probe、quota 待機の共有状態、resume token 継続の挙動を確認または変更したいとき。
-- Codex call の console 出力、subcommand event、call/prompt/stdout/stderr/output log に記録される実行条件や status を確認または変更したいとき。
-- agent call 後の file access rule violation 検出、許可差分の除外、recovery call、違反時エラーを確認または変更したいとき。
-- worktree の変更 path 収集、ignored file を含む差分検出、禁止 runtime 領域の filesystem snapshot 比較、file access mode ごとの書き込み可否判定を確認または変更したいとき。
+- Codex exec の argv、stdin prompt log、output/schema path、CODEX_HOME/profile/cwd の扱いを確認または変更したいとき。
+- Structured Output の読み取り、JSON/schema 検証、semantic retry、capacity retry、quota 枯渇時の代表 probe と待機共有、resume token 継続の挙動を追うとき。
+- Codex call の call log、stdout/stderr/output log、console 表示、subcommand event payload、経過時間や quota 待機時間の記録を調べるとき。
+- agent call 後のファイルアクセス規則違反検出、違反リカバリ、git status と禁止領域 snapshot の差分比較、FileAccessMode ごとの書き込み可否を確認または変更したいとき。
 
 ## Do not read this when
-- TUI 起動や exec 以外の対話 UI 分岐だけを扱うとき。
-- Codex profile、schema file、CODEX_HOME、subprocess 実行、Codex stdout/stderr 解析の低レベル helper 自体を変更したいときは、それらの runtime helper を直接読む。
-- AgentCallParameter の生成、quota probe prompt の内容、file access recovery prompt の内容を変更したいときは、対応する builder を直接読む。
-- subcommand logger の保存形式や runtime path の算出規則そのものを変更したいときは、logging/path を担当する module を直接読む。
-- oracle file や file access mode の正本定義を確認したいだけなら、対応する oracle または基本型定義を読む。
+- TUI 起動や TUI 固有の分岐を調べたいとき。ここは exec 実行制御だけを扱うため、TUI 側の module を読む。
+- Codex profile の内容生成、schema 準備、CODEX_HOME 解決、Codex subprocess 実行 wrapper、quota/capacity/error 判定そのものを変更したいとき。ここではそれらを呼び出す側の制御だけを扱う。
+- AgentCallParameter の構築規則や quota probe 用 prompt の正本を調べたいとき。ここは既存 builder を呼び出すだけで、builder の仕様本体は扱わない。
+- 単に worktree の変更一覧だけが必要で、Codex exec の再試行・検証・リカバリ制御を読む必要がないとき。
 
 ## hash
-- 5722f125a78959ba4a6581f32394ccf6d7f25dcef7111b5d337fddb3f7e65e63
+- 2c7325681eeb3cdabe80712890d6a03fc3d2a4cddce137ddf17d8577cb859005
 
 # `runtime_codex_logging.py`
 

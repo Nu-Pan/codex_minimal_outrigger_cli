@@ -1,23 +1,24 @@
 # `acp`
 
 ## Summary
-- ACP の agent call parameter builder 互換入口をまとめる領域。正本側に実体を置く builder への委譲、旧 import 経路の維持、realization 側型への適合、quota probe 用 parameter 生成元への入口を扱う。
-- 互換入口自体は実装本体ではなく、既存公開参照から正本側実装または実装側 wrapper へ到達するための境界として機能する。
+- ACP builder 関連の realization 側入口。正本側実装を複製せず既存の acp 系 import 参照を保つための互換層と、quota availability probe 用 parameter builder への入口を扱う。
+- この対象自体は実装本体ではなく、旧来 import 経路の維持理由、削除条件、下位 builder 領域への振り分けを確認するための場所である。
 
 ## Read this when
-- ACP builder の公開参照や旧 import 経路が、正本側 builder 実装または realization 側 wrapper へどのように接続されているか確認したいとき。
-- apply、review、session、TUI、indexing、quota probe など、builder 系のどの下位領域へ進むべきかを選びたいとき。
-- 正本側 builder 実装を複製しないための互換入口、委譲、型変換、削除条件を確認したいとき。
-- 利用者向け公開面または realization 側に残る ACP builder import の扱いを判断したいとき。
+- acp 系 import surface と正本側 builder 実装の対応関係を確認したいとき。
+- 既存の acp または acp.builder 系参照を残す理由、互換入口の削除条件、移行判断を確認したいとき。
+- apply、review、session、TUI、indexing、common など ACP builder 関連の下位領域へ進む前に入口を選びたいとき。
+- Codex quota availability probe に渡す最小限の AgentCallParameter 生成内容を確認または変更したいとき。
 
 ## Do not read this when
-- ACP builder の正本仕様、prompt 本文、生成ロジックそのものを確認したいときは、対応する正本側の文書または実装を読む。
-- apply fork、review、session join、TUI などの具体的な処理内容を直接調べたいときは、該当する下位領域または実処理を持つ対象を読む。
-- AgentCallParameter 型、model、reasoning effort、file access mode などの基礎定義だけを確認したいときは、基礎定義側を読む。
-- builder 以外の CLI 制御、fork 作成、branch 操作、diff 生成、TUI 描画、状態管理、ファイルアクセス規則の判定を調べたいときは、それぞれの責務を持つ対象へ進む。
+- ACP builder の正本仕様断片、prompt 正本文面、出力条件、判定仕様そのものを確認したいときは、対応する oracle 側の本文を読む。
+- apply fork、review oracle、session join、TUI 起動 parameter、indexing 生成処理などの具体的な実装本体を調べたいときは、該当する下位領域または正本側実装を読む。
+- AgentCallParameter 型、model、reasoning effort、file access mode などの基礎定義を確認したいときは、基礎定義側を読む。
+- Codex CLI の実行規則、quota probe parameter 生成後の runtime 処理、CLI コマンド全体の制御フローを調べたいときは、実行側またはコマンド実装側を読む。
+- 互換 import 経路の維持や削除判断と関係しない新規機能、画面制御、状態管理、ユーザー向け挙動を探しているときは、より直接その責務を持つ対象へ進む。
 
 ## hash
-- cd7b6f1db89146710a6725e7be8fecb45872a0949239bd56dbec6adfff06e95f
+- 79093e544721f088a1f881c40244ac903a6259bce6431129e8174e574d58cc60
 
 # `basic`
 
@@ -61,23 +62,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共通ランタイム支援を集めた実装ディレクトリ。Codex 実行、CLI 共通ライフサイクル、設定、Git、ログ、パス、状態、INDEX.md 更新など、複数サブコマンドから使われる runtime_* 系 helper と、その集約入口を扱う。
-- 個別の実装責務はファイルごとに分かれており、複数 runtime API の公開入口、Codex exec/TUI 呼び出し、preflight、profile、設定永続化、content hash、共通エラー、git 操作、subcommand logging、runtime path、結果モデル、session state 管理へ進むための入口になる。
+- cmoc の共有 runtime helper 群を収める実装領域。Codex 呼び出し、INDEX 更新 preflight、CLI 共通ライフサイクル、設定、内容 hash、エラー表示、Git、ログ、パス、実行結果、session state など、複数サブコマンドから使われる共通処理への入口になる。
+- 単一の集約入口と、責務別の runtime_* 実装に分かれており、広く公開される import 面を確認する場合は集約入口、個別挙動を追う場合は該当する責務別実装へ進む。
 
 ## Read this when
-- CLI サブコマンド間で共有される runtime helper の所在を探したいとき。
-- Codex 呼び出し、INDEX.md 更新 preflight、Git 操作、設定読み書き、ログ、状態管理、runtime path、共通エラーなど、複数領域にまたがる共通実装の読む先を選びたいとき。
-- 特定サブコマンド固有ではなく、cmoc 全体の実行基盤や共通データ受け渡しを確認または変更したいとき。
-- 既存の `commons.runtime_codex` や `commons.cmoc_runtime` などの集約 import が、どの責務別 runtime 実装へ接続されるか確認したいとき。
+- CLI サブコマンドや agent call 実行経路から共通 runtime helper を使う・変更する必要があり、どの責務別実装を読むべきか判断したいとき。
+- Codex exec/TUI、indexing preflight、設定読み書き、Git 操作、ログ記録、パス解決、状態管理など、複数領域にまたがる共通実行時支援の配置を把握したいとき。
+- 共有 helper の公開 import 境界、互換 import 入口、責務別 module の分割方針を確認したいとき。
 
 ## Do not read this when
-- 個別 CLI コマンドの引数定義、利用者向け制御フロー、コマンド固有の状態更新だけを調べたいとき。その場合は command 実装側を読む。
-- oracle file にある正本仕様、path model、file access rule、INDEX.md の仕様意図などを確認したいだけのとき。その場合は対応する oracle doc または oracle src を読む。
-- 単一 helper の引数、失敗時挙動、保存先、出力形式がすでに分かっているとき。その場合は該当する責務別 runtime 実装へ直接進む。
-- 生成済みログや永続状態の利用者視点での内容確認だけが目的で、runtime helper の実装を変更しないとき。
+- 個別 CLI コマンドの引数定義、利用者向け制御フロー、サブコマンド固有の業務処理だけを調べたいとき。その場合は command 実装側へ進む。
+- oracle file 上の正本仕様、path model、INDEX.md の仕様意図、session state の仕様意図などを確認したいだけのとき。その場合は対応する oracle doc または oracle src を読む。
+- 生成済みログの解析、実行済み state の調査、外部コマンドの結果確認だけが目的で、共通 runtime 実装を変更しないとき。
 
 ## hash
-- 69ffe9dbea945bea8547987fd5825d4f1e0c25c1fa8d5dd4ebbf23ec4572c6cd
+- f7e753157623308a7f0dbcdad85b449ca9208b065c99fa66b5336e2ffd3e3959
 
 # `config`
 
