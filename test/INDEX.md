@@ -151,22 +151,23 @@
 # `test_cli_init_tui.py`
 
 ## Summary
-- init と TUI 起動直前の CLI 前処理を対象に、repository/runtime 準備の外部挙動を検証するテスト。
-- .cmoc ignore、既存 staged/unstaged 差分保護、初期設定同期、linked worktree、Markdown prompt 整形、Codex TUI 起動 parameter 構築が同じ利用開始直後の境界で期待通り動くかを確認する。
+- init と TUI 起動直前の CLI 境界における外部挙動を検証するテスト。cmoc 初期化、.cmoc ignore、既存 staged/unstaged 変更の保護、設定既定値同期、linked worktree での root/worktree 扱い、TUI prompt 保存、parameter 解決、Codex 起動引数の組み立てを同じ利用開始直後の回帰領域として扱う。
+- 16,000 文字を超えるが、初期化済み repository/runtime 状態を共有する init/TUI 前処理の凝集した回帰テストとして一箇所に保つ意図を持つ。
 
 ## Read this when
-- init の外部挙動、コミット対象、.gitignore 更新、.cmoc 追跡除外、設定ファイル初期化や既存値保持を変更・確認するとき。
-- TUI 起動前の editor 実行、prompt 保存、resolve parameter、launch_tui schema、file access mode、Codex 呼び出し parameter を変更・確認するとき。
-- linked worktree 上で init または TUI を実行したときの root/cwd、ログ保存先、ignore 設定、schema 生成先を確認するとき。
-- subcommand 実行ログの記録形式や保存場所が init/TUI 境界で維持されるかを確認するとき。
+- init の外部挙動、生成・更新される設定、.cmoc の ignore 化、初期化コミット、既存の staged/unstaged 変更を壊さない制御を変更または確認する時。
+- linked worktree 上での init/TUI 実行時に、root 側と worktree 側の .cmoc、.gitignore、log、schema、config の配置や git 状態を確認する時。
+- TUI 起動前の editor 実行、Markdown prompt 解析、parameter 解決、complete prompt 保存、Codex TUI へ渡す AgentCallParameter や extra read path を変更する時。
+- subcommand log の command_invoked や step_started など、init/TUI 開始前後の記録形式や保存場所を変更する時。
 
 ## Do not read this when
-- init や TUI 起動前処理に関係しないサブコマンドの挙動だけを確認するとき。
-- Codex/LLM の出力品質そのものや TUI 起動後の対話内容を検証したいとき。
-- 設定値の定義元や prompt 構築仕様そのものを読みたいときは、対応する実装または oracle 側の根拠を直接確認する。
+- init や TUI 前処理を経由しない個別サブコマンドの挙動だけを確認する時。
+- Codex CLI や editor の実体の品質、LLM 出力内容そのもの、または外部ツール自体の動作を検証したい時。
+- 設定値や AgentCallParameter の型定義そのものを確認する時は、実装または定義側を先に読む。
+- oracle の正本仕様断片を確認する時は、対応する oracle file を読む。
 
 ## hash
-- 001f4f4228a451b5eec2906718bdc49f53ad9f91119a4b58b6794652f8fd69d7
+- 22f2bb4c955b256be15fa821fc5dc65609144b9431a938ae8b2c69e8e9fca25d
 
 # `test_codex_runtime_exec.py`
 

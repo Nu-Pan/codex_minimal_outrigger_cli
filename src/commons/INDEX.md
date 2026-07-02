@@ -56,21 +56,22 @@
 # `runtime_cli.py`
 
 ## Summary
-- CLI サブコマンド共通の実行ライフサイクルをまとめる実装。work root 検査、pre-log 処理、サブコマンドログ作成、開始・実行・完了の標準出力、戻り値の終了コード化、例外時のエラー表示、現在のサブコマンド logger の設定と解除を扱う。
-- 標準サマリー以外の stdout を返すサブコマンド向けの結果型と、cmoc が work root で実行されていることを検査する共通関数、完了時サマリー出力の helper も含む。
+- CLI サブコマンドの共通実行ライフサイクルを扱う実装。work root 検査、pre-log 処理、サブコマンドログ作成、開始・実行・完了表示、戻り値の終了コード化、例外時のエラー表示、実行時間や quota 待機時間を含む完了サマリー出力を一箇所に集約する。
+- 通常の標準サマリーとは別の stdout 契約を持つサブコマンド向けの結果型と、cmoc が work root で実行されている前提を検査する処理も含む。
 
 ## Read this when
-- CLI サブコマンドの共通実行順序、標準の進捗表示、完了サマリー、終了コード処理、例外表示の挙動を確認または変更したいとき。
-- サブコマンドログの生成場所、runtime state の root 選択、init などでログ作成前に行う検査、現在のサブコマンド logger の扱いを追いたいとき。
-- サブコマンド実装から独自 stdout と終了コードを返す契約、または work root 以外で実行された場合の共通エラーを調べたいとき。
+- CLI サブコマンドの実行前後に共通して行うログ作成、進捗表示、完了サマリー、終了コード処理、例外表示を変更する。
+- サブコマンド実装の戻り値を CLI 終了コードや stdout に変換する挙動を確認する。
+- init など、runtime state の配置先や pre-log 検査のタイミングが重要なサブコマンドの実行ライフサイクルを調べる。
+- cmoc が work root 以外で実行された場合のエラー内容や検査条件を変更する。
 
 ## Do not read this when
-- 個別サブコマンドの引数定義、CLI アプリへの command 登録、または各サブコマンド固有の処理内容だけを知りたいとき。
-- サブコマンドログファイルの内部形式、step timing の記録方法、quota 待機時間の更新方法そのものを調べたいとき。
-- repo root や work root の検出規則、タイムスタンプや経過時間の整形規則そのものを確認したいとき。
+- 個別サブコマンドの業務処理そのものを変更したいだけで、共通の実行ライフサイクルや表示契約に触れない。
+- サブコマンドログの内部フォーマット、イベント記録の保存方法、現在の logger 管理の詳細だけを調べたい場合は、runtime logging 側を直接読む。
+- repo root、work root、時刻表示、経過時間整形の解決方法だけを確認したい場合は、runtime paths 側を直接読む。
 
 ## hash
-- add81e2cda35041a82bd78cd995edbaca0e6561e6da1438a9ee203063373515c
+- fa9d69da666a38b9545a60975c7d3cd29db49c818a6e4db315962330424ee39e
 
 # `runtime_codex.py`
 
@@ -201,20 +202,19 @@
 # `runtime_config.py`
 
 ## Summary
-- cmoc の設定ファイルを `CmocConfig` と JSON object の間で変換し、設定ファイルの読み込み・書き込み・存在しない場合の同期生成を行う runtime 設定処理。設定値の既定値補完、enum key の復元、不正 JSON や不正な値に対する `CmocError` への変換を担う。
+- cmoc config の永続化 JSON と runtime config 型の相互変換、既定値補完、読み書き、初期生成と正規化を担う。利用者向けの config 読み込みエラー境界もここで扱う。
 
 ## Read this when
-- `.cmoc/config.json` の読み書き、初期生成、既定値補完、または JSON schema 相当の実装挙動を確認・変更したいとき。
-- `CmocConfig` と永続化 JSON の対応、model や reasoning effort の enum key 変換、設定値の数値変換エラー処理を調べたいとき。
-- 設定ファイルが存在しない、JSON として読めない、top-level が object でない、不正な型を含む場合の利用者向けエラーを確認したいとき。
+- config JSON の保存形式、読み込み時の既定値補完、enum key map の復元、または config 不正時の利用者向けエラーを確認・変更したいとき。
+- config の初期生成、既存 config の現在形式への書き戻し、または config 保存先 path を使った読み書きフローを追いたいとき。
 
 ## Do not read this when
-- 設定データクラスそのものの定義や既定値を確認したいだけなら、設定型を定義している対象を読む。
-- 設定ファイルの配置パスの決定だけを確認したいなら、runtime path の対象を読む。
-- ACP の model class や reasoning effort の enum 定義だけを確認したいなら、ACP 基本型の対象を読む。
+- config 型そのものの項目定義や既定値を確認したいだけのときは、正本 config 型の定義を読む。
+- config 保存先 path の決定規則だけを確認したいときは、runtime path 側の定義を読む。
+- config を使う各機能の挙動や CLI command 側の処理を確認したいときは、その利用箇所を読む。
 
 ## hash
-- 9bc797d6ae683de03d7f73ecba67078ac5048aba263a064e4a99e34b0b5aead5
+- 0e456ca44c87e3df2e1e44c788f8daa462cfeaad051b053e189371602b9651cf
 
 # `runtime_content.py`
 
@@ -285,45 +285,43 @@
 # `runtime_logging.py`
 
 ## Summary
-- サブコマンド実行中のイベント記録、step の開始・経過時間、quota 待機時間を集約する実行時 logger を定義する。
-- 実行ごとに logs 配下へ JSON Lines の log file を確保し、event record を追記する責務を持つ。
-- 深い runtime helper から現在のサブコマンド logger を参照できるよう、context ごとの current logger の設定・復元・取得を提供する。
+- サブコマンド実行単位のログファイルを初期化し、JSON Lines event、経過時間、quota 待機時間、step 実測値を集約する runtime logging 実装。
+- 現在の制御文脈から任意参照できるサブコマンド logger を ContextVar で保持し、深い runtime helper からログ記録へ接続する入口を提供する。
+- console summary と file log の共有 timing 情報、および console 表示名と JSON Lines 用 step 名を分ける制約を扱う。
 
 ## Read this when
-- サブコマンド単位の実行 log、JSON Lines event、step_started event、完了サマリー用の step timing を調べるとき。
-- Codex quota 待機時間を実行全体の待機時間として集計する処理を確認・変更するとき。
-- 実行中の制御文脈に紐づく current logger を設定、リセット、参照する runtime helper の挙動を確認するとき。
-- log file の生成場所、timestamp 名による排他的な確保、event record の基本項目を確認するとき。
+- サブコマンド単位のログファイル生成、JSON Lines event の出力、ログレコードの共通 payload、timestamp 付与を確認または変更するとき。
+- step 開始・終了、経過秒、quota 待機秒、完了サマリー向け timing 集計の挙動を確認または変更するとき。
+- runtime helper から現在のサブコマンド logger を参照する仕組み、または logger の一時差し替えと復元を確認または変更するとき。
+- console 表示用の step description と log event 用の step description を分ける必要がある処理を扱うとき。
 
 ## Do not read this when
-- CLI の表示文言や利用者向けの console 出力仕様だけを確認したいとき。
-- logs 配下のパス解決や timestamp 文字列の生成規則そのものを確認したいとき。
-- 個別サブコマンドの業務処理、引数解析、状態更新の実装を探しているとき。
-- 生成済み log を解析・集計する読み取り側の処理を探しているとき。
+- ログ保存先ディレクトリや時刻文字列の生成規則だけを確認したい場合は、それらを定義する runtime path 側を読む。
+- CLI サブコマンドの呼び出し構造、ユーザー向け console 出力文面、または個別サブコマンドの業務処理を確認したいだけの場合。
+- 生成済みログファイルの内容調査や実行履歴の確認が目的で、logging 実装自体を変更しない場合。
 
 ## hash
-- 6c9b4a4c583c28c18afd061c8230290bf642e6b5004f5889d6039988207fbd45
+- 435c34b19e2277edd8f95d4456eadef464c857b66fc7bca81fa0646e1a77a4f8
 
 # `runtime_paths.py`
 
 ## Summary
-- 実行時に必要なルート解決、時刻文字列、実行状態を置くディレクトリや設定ファイルのパス、memo 配下判定、作業ディレクトリ一時変更をまとめる共通 helper。
-- repository/worktree の位置特定失敗を CmocError に変換し、CLI 実行場所に依存する処理が共通の失敗時挙動を使うための入口になる。
+- 実行時に必要な root 解決、時刻・duration 表示、cmoc 管理領域の保存先 path、memo 判定、短時間の cwd 切替をまとめる共通 utility。
+- oracle 側の path model で内部扱いの root resolver を、実行時エラーへ変換して runtime から使える形にする入口でもある。
 
 ## Read this when
-- 実行時の repository root、worktree root、cmoc root の解決方法や、解決失敗時のエラーメッセージを確認・変更したいとき。
-- sessions、reports、logs、worktrees、codex log、schema store、config など、`.cmoc` 配下の保存先パスを作る処理を確認・変更したいとき。
-- timestamp や console 表示用 timestamp、経過時間表示の形式を確認・変更したいとき。
-- memo 自体またはその配下を判定する処理や、処理中だけ cwd を切り替えて必ず戻す文脈管理を使う・修正するとき。
+- 実行中の repository root、worktree root、cmoc root を取得する処理を確認・変更したいとき。
+- session、report、log、worktree、schema store、config などの cmoc 管理ファイル・ディレクトリの保存先を確認・変更したいとき。
+- console や log に出す timestamp、duration 表示の形式を確認・変更したいとき。
+- `<work-root>/memo` 判定や、一時的に cwd を変更して外部 API を呼ぶ処理を確認したいとき。
 
 ## Do not read this when
-- path placeholder の種類、抽象的な path model、実パス解決の正本仕様を確認したいだけなら、path model 側の仕様・実装を読む。
-- 個別サブコマンドがどの保存先をいつ作成・更新・削除するかを知りたいときは、そのサブコマンド側の実装を読む。
-- CmocError の構造、表示形式、例外の共通扱いを変更したいときは、runtime error 定義側を読む。
-- ファイルシステム操作全般、Git 操作、設定 JSON の読み書き内容を確認したいだけなら、それぞれの責務を持つ別の実装を読む。
+- path placeholder の定義や root path 解決仕様そのものを確認したいときは、oracle 側の path model を読む。
+- CmocError の構造や表示仕様を確認したいだけのときは、runtime error を扱う定義を読む。
+- 各 sub command 固有の report 内容、session state 内容、log 内容を確認したいときは、それぞれの生成・利用箇所を読む。
 
 ## hash
-- 7415276735049b6804964a29f6671212540142e6dec612218466b2617747e2fc
+- f3704d5a8acf92715269020e9e67e1c714c6ea31eefd7958f4776a03e660ac3e
 
 # `runtime_results.py`
 

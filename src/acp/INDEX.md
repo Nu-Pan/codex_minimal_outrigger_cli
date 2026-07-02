@@ -19,20 +19,22 @@
 # `builder`
 
 ## Summary
-- ACP の agent call parameter builder 群に対する realization 側の互換入口を集める階層。正本側 builder を既存の公開参照経路から利用できるようにし、実処理は主に oracle 側実装または下位の個別互換 wrapper に委ねる。
-- apply、review、session、TUI、indexing、quota probe などの builder 領域について、旧来 import path の維持、正本側への委譲、realization 側 parameter 型への適合、互換コードの残置理由や削除条件を確認するための上位入口である。
+- ACP builder 領域の realization 側互換入口をまとめる階層。正本側 builder を既存の公開参照経路から利用できるようにし、必要に応じて正本側の agent call parameter を realization 側の公開型へ適合させる。
+- 主な責務は、apply fork、review、quota availability probe、session、TUI、indexing、common などの builder 参照について、正本側実装への委譲、旧 import 経路の維持、互換 wrapper の残置理由と削除条件を切り分ける入口になることである。
+- この階層は builder の正本仕様や実処理本体を集約する場所ではなく、正本側へ実体を置いたまま公開済み参照経路を壊さないための薄い互換境界として読む。
 
 ## Read this when
-- ACP builder 関連の公開 import path が正本側実装へどう接続されているかを、領域単位で切り分けたいとき。
-- agent call parameter builder の変更で、どの下位領域が apply、review、session、TUI、indexing、quota probe などを担当するか判断したいとき。
-- oracle 側へ実体を集約しつつ realization 側に残る互換 package、薄い wrapper、再公開境界の残置理由や削除条件を確認したいとき。
-- 正本 builder の出力を realization 側の型や既存公開面へ適合させる経路を探しているとき。
+- ACP builder 系の既存公開参照が、正本側 builder や正本側 package 構造へどのように接続されているかを確認したいとき。
+- agent call parameter 構築経路で、正本側 builder への委譲、realization 側公開型への変換、import 準備、互換 wrapper の役割を追いたいとき。
+- apply fork、review、quota availability probe、session、TUI、indexing など、builder 種別ごとの互換入口や読むべき下位領域を選びたいとき。
+- 旧来 import 経路や公開名を残す理由、削除条件、正本側 import path への移行可否を判断したいとき。
+- 同名機能が realization 側にあるように見える場合に、実体が正本側実装なのか薄い互換入口なのかを切り分けたいとき。
 
 ## Do not read this when
-- 個別 builder の正本仕様、prompt、出力条件、具体的な生成ロジックを確認したいときは、対応する oracle 側の本文または実装を読む。
-- CLI コマンド全体の制御フロー、fork 作成、branch 操作、diff 生成、画面制御、状態管理など builder 互換入口以外の処理を調べたいときは、それぞれの実装領域へ進む。
-- agent call parameter の共通データ構造、model、reasoning effort、file access mode などの基礎定義だけを調べたいときは、基礎定義側を読む。
-- 新しい機能の実装場所やテスト対象を探しており、旧 import path の維持や正本側 builder への委譲と関係しないとき。
+- builder の prompt、parameter 生成内容、判定仕様、出力条件、人間意図などの正本仕様断片を確認したいときは、対応する oracle 側の本文を読む。
+- apply fork コマンド全体、TUI の画面制御、review 機能全般、indexing の生成処理や探索処理など、builder 互換入口ではない実処理を調べたいときは、その責務を持つ実装へ直接進む。
+- ACP parameter の基礎データ構造、model、reasoning effort、file access mode 全体、path model、汎用 helper などの共通定義を確認したいときは、該当する基礎定義を読む。
+- 新規機能の実装場所やテスト対象を探しているだけで、既存公開参照の互換維持、正本側実装への委譲、削除条件の判断に関係しないとき。
 
 ## hash
-- 4713ed4a77a3cfb016121318ce6455d3cf080b543a1bc78c87ff7a6bbb8b751b
+- c66a8e96f54ea1372a2a8a11a1b30c0411fe3aa1e379478ce22a318623bb0f96
