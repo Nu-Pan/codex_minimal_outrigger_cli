@@ -15,7 +15,11 @@ def build_file_access_rule_vaolation_recovery_parameter(
     violated_file_list: list[Path],
     violated_file_access_mode: FileAccessMode,
 ) -> AgentCallParameter:
-    """oracle 側正本 builder へ委譲して recovery parameter を構築する。"""
+    """
+    oracle 側正本 builder へ委譲して recovery parameter を構築する。
+
+    対応 oracle file: `<work-root>/oracle/src/oracle/acp_builder/common/file_access_rule_vaolation_recovery.py`
+    """
     repo_root = resolve_repo_root()
     ensure_oracle_src_importable(repo_root)
 
