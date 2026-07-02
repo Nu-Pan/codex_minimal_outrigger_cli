@@ -561,6 +561,40 @@ def test_run_codex_exec_allows_readonly_temporary_pytest_cache_diff(
     assert (root / "oracle" / "__pycache__" / "spec.cpython-313.pyc").is_file()
 
 
+@pytest.mark.parametrize("blocked_dir", [".agents", ".codex", ".git", "memo"])
+def test_run_codex_exec_rejects_readonly_temporary_cache_under_blocked_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, blocked_dir: str
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            f"pycache = pathlib.Path({blocked_dir!r}) / '__pycache__'",
+            "pycache.mkdir(parents=True, exist_ok=True)",
+            "(pycache / 'blocked.cpython-313.pyc').write_bytes(b'cache')",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    with pytest.raises(CmocError, match="ファイルアクセス規則"):
+        run_codex_exec(
+            _parameter(FileAccessMode.READONLY),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
+
+    assert (root / blocked_dir / "__pycache__" / "blocked.cpython-313.pyc").is_file()
+
+
 def test_run_codex_exec_rejects_readonly_realization_diff_after_call(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -815,6 +849,44 @@ def test_run_codex_exec_rejects_blocked_runtime_diffs_after_call(
         )
 
     assert (root / ".agents" / "generated.md").read_text() == "changed\n"
+
+
+def test_run_codex_exec_rejects_agent_created_cmoc_log_diff(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    (root / ".gitignore").write_text("/.cmoc/\n")
+    run_git(root, "add", ".gitignore")
+    run_git(root, "commit", "-m", "ignore cmoc")
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "agent_log = pathlib.Path('.cmoc/log/codex/agent-created.txt')",
+            "agent_log.parent.mkdir(parents=True, exist_ok=True)",
+            "agent_log.write_text('agent\\n')",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    with pytest.raises(CmocError, match="ファイルアクセス規則"):
+        run_codex_exec(
+            _parameter(FileAccessMode.REPO_WRITE),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+        )
+
+    assert (root / ".cmoc" / "log" / "codex" / "agent-created.txt").read_text() == (
+        "agent\n"
+    )
 
 
 @pytest.mark.parametrize(

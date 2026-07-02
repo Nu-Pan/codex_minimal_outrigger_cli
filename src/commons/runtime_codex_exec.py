@@ -60,8 +60,10 @@ _QUOTA_PROBE_AVAILABLE = False
 _QUOTA_PROBE_ERROR: BaseException | None = None
 _CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
 _LAST_CODEX_LOG_TIMESTAMP: str | None = None
+_GENERATED_DIFF_PATHS_LOCK = threading.Lock()
+_GENERATED_DIFF_PATHS: set[Path] = set()
 _FORBIDDEN_FILESYSTEM_DIFF_ROOTS = (".agents", ".codex", ".git", "memo")
-_IGNORED_GIT_DIFF_EXCLUDED_ROOTS = (".cmoc", ".venv")
+_IGNORED_GIT_DIFF_EXCLUDED_ROOTS = (".venv",)
 _ForbiddenSnapshot = dict[Path, tuple[int, int, int, int, str | None]]
 _PathFingerprint = tuple[str, int, int, str | None] | None
 _WorktreeDiffSnapshot = dict[Path, tuple[str, _PathFingerprint]]
@@ -75,6 +77,14 @@ def _write_prompt_log(path: Path, prompt: str) -> None:
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # The prompt log is the replayable stdin source itself, not metadata.
     path.write_text(prompt)
+
+
+def _record_generated_diff_paths(paths: set[Path]) -> None:
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # Concurrent cmoc calls share one worktree; only exact paths recorded here
+    # are cmoc-generated diffs, not the whole `.cmoc/log` tree.
+    with _GENERATED_DIFF_PATHS_LOCK:
+        _GENERATED_DIFF_PATHS.update(path.resolve() for path in paths)
 
 
 def _read_required_output_json(path: Path) -> Any:
@@ -383,6 +393,9 @@ def run_codex_exec(
     generated_paths: set[Path] = set()
     if schema_path is not None:
         generated_paths.add(schema_path.resolve())
+    if logger is not None:
+        generated_paths.add(logger.path.resolve())
+    _record_generated_diff_paths(generated_paths)
     forbidden_baseline = (
         _forbidden_filesystem_snapshot(codex_work_root) if verify_file_access else None
     )
@@ -398,6 +411,7 @@ def run_codex_exec(
             path.resolve()
             for path in (prompt_path, stdout_path, stderr_path, output_path, call_path)
         )
+        _record_generated_diff_paths(generated_paths)
         write_call_log(
             call_path,
             run_purpose=purpose,
@@ -516,6 +530,17 @@ def run_codex_exec(
                             probe_output_path,
                             probe_call_path,
                         ) = new_log_paths()
+                        generated_paths.update(
+                            path.resolve()
+                            for path in (
+                                probe_prompt_path,
+                                probe_stdout_path,
+                                probe_stderr_path,
+                                probe_output_path,
+                                probe_call_path,
+                            )
+                        )
+                        _record_generated_diff_paths(generated_paths)
                         probe_argv = _base_exec_argv(profile_name, codex_cwd)
                         probe_argv.extend(
                             [
@@ -1031,23 +1056,34 @@ def file_access_violations(
 ) -> list[Path]:
     """FileAccessMode 上、差分が残ってはいけない path だけを返す。"""
     ignored = {path.resolve() for path in ignored_paths or set()}
+    with _GENERATED_DIFF_PATHS_LOCK:
+        ignored.update(_GENERATED_DIFF_PATHS)
     allowed = {path.resolve() for path in allowed_paths or []}
     return [
         path
         for path in paths
         if path.resolve() not in ignored
         and path.resolve() not in allowed
-        and not _is_cmoc_generated_diff_path(root, path)
         and not _is_write_allowed_by_file_access_mode(root, path, mode)
     ]
 
 
-def _is_cmoc_generated_diff_path(root: Path, path: Path) -> bool:
+def _is_blocked_runtime_path(root: Path, path: Path) -> bool:
     try:
         relative = path.resolve().relative_to(root.resolve())
     except ValueError:
         return False
-    return len(relative.parts) >= 2 and relative.parts[:2] == (".cmoc", "log")
+    blocked_runtime_roots = {
+        ".agents",
+        ".cmoc",
+        ".codex",
+        ".git",
+        "memo",
+    }
+    return bool(relative.parts) and (
+        relative.parts[0] in blocked_runtime_roots
+        or path.name in {"AGENTS.md", "INDEX.md"}
+    )
 
 
 def _is_write_allowed_by_file_access_mode(
@@ -1061,19 +1097,10 @@ def _is_write_allowed_by_file_access_mode(
         return False
     if not relative.parts:
         return False
+    if _is_blocked_runtime_path(root, path):
+        return False
     if mode in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}:
         return _is_readonly_temporary_diff_path(root, path, mode)
-    blocked_runtime_roots = {
-        ".agents",
-        ".cmoc",
-        ".codex",
-        ".git",
-        "memo",
-    }
-    if relative.parts[0] in blocked_runtime_roots:
-        return False
-    if path.name in {"AGENTS.md", "INDEX.md"}:
-        return False
     match mode:
         case FileAccessMode.REALIZATION_WRITE:
             return not _is_oracle_file_path(root, path)
