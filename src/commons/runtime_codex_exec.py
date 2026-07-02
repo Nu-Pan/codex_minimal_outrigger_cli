@@ -769,6 +769,17 @@ def run_codex_exec(
                         status="schema_validation_retrying",
                         error=str(exc),
                     )
+                    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+                    # Semantic retry does not exempt the completed agent call
+                    # from the mandatory file-access post-check.
+                    recover_call_file_access_violations(
+                        result,
+                        run_call_path=call_path,
+                        run_prompt_path=prompt_path,
+                        run_stdout_path=stdout_path,
+                        run_stderr_path=stderr_path,
+                        run_output_path=output_path,
+                    )
                     continue
                 emit_codex_call_event(
                     run_purpose=purpose,

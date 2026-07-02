@@ -323,6 +323,66 @@ def test_run_codex_exec_recovers_file_access_violations_before_nonzero_error(
     assert not (root / "oracle" / "blocked.md").exists()
 
 
+def test_run_codex_exec_recovers_file_access_violations_before_schema_retry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "count.txt"
+    schema = tmp_path / "schema.json"
+    schema.write_text(
+        json.dumps(
+            {
+                "type": "object",
+                "properties": {"ok": {"type": "boolean"}},
+                "required": ["ok"],
+                "additionalProperties": False,
+            }
+        )
+    )
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "blocked = pathlib.Path('oracle/blocked.md')",
+            "if count == 0:",
+            "    blocked.write_text('blocked\\n')",
+            "    output.write_text('{}\\n')",
+            "elif count == 1:",
+            "    blocked.unlink(missing_ok=True)",
+            "    output.write_text('{}\\n')",
+            "else:",
+            "    output.write_text(json.dumps({'ok': True}) + '\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    result = run_codex_exec(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            FileAccessMode.REALIZATION_WRITE,
+            "prompt",
+            schema,
+        ),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    assert counter.read_text() == "3"
+    assert not (root / "oracle" / "blocked.md").exists()
+    assert result.output_json == {"ok": True}
+
+
 def test_run_codex_exec_allows_root_readme_realization_diff(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
