@@ -82,14 +82,14 @@
 
 ## Summary
 - apply fork の CLI 経由の統合的な挙動を検証するテスト。所見列挙、適用、commit、変更要約、report 生成、session state 更新までの制御を一つの文脈として扱う。
-- apply fork 用 ACP builder の import 可能性、prompt/schema 参照、変更ファイル再検査、未収束・収束・error report、禁止領域変更からの recovery、rolling apply fork の対象選定を検証する。
+- apply fork 用 ACP builder の import 可能性、prompt/schema 参照、変更ファイル再検査、未収束・収束・error report、禁止領域変更時の停止、rolling apply fork の対象選定を検証する。
 
 ## Read this when
 - apply fork の report 内容、終了コード、収束判定、未収束判定、error 時の変更要約を確認・変更したいとき。
 - apply fork が所見適用後に変更ファイルや新規ディレクトリ配下を再検査する制御を確認・変更したいとき。
 - apply fork の commit message、apply branch、session state 更新、rolling apply fork の基準 commit を確認・変更したいとき。
 - apply fork 用の change summary、file finding enumeration、finding application の ACP builder、prompt、schema path、packaged layout import を確認・変更したいとき。
-- apply fork 中に oracle など禁止領域が変更された場合の recovery と、許可差分だけを commit する挙動を確認・変更したいとき。
+- apply fork 中に oracle など禁止領域が変更された場合に、許可差分だけを commit せず未収束として止める挙動を確認・変更したいとき。
 
 ## Do not read this when
 - apply fork 以外のサブコマンド、または CLI を介さない低レベル helper 単体の挙動だけを確認したいとき。
@@ -98,7 +98,7 @@
 - 変更要約 helper の内部実装だけを変更したいときは、まず実装側の該当モジュールを読む。
 
 ## hash
-- dd0c7c5f5b265d7071b5a91321c9ca416fc6ac144a256bc1c1e29f49d1b2abbd
+- 12b684155421257f7f555b6a66ecf09bb64b89e8d65defb0ae5a4b000cf08eec
 
 # `test_apply_join_cli.py`
 
@@ -180,7 +180,7 @@
 - 一般的な Git helper、テスト用 repo 作成 helper、stub executable helper の詳細だけを調べる時は、support 側のテスト補助コードを読む方が直接的。
 
 ## hash
-- f701b7ba39e41089c935c1c08113a7f6878c6bfcf922d556f91737314d39cb05
+- 94446d92d879c2a7cfe0eaa2f5237646cfd80da95d38a04da126c9a76f71115c
 
 # `test_codex_runtime_home.py`
 
@@ -217,7 +217,7 @@
 - realization standard やファイル分割方針の正本仕様を確認したい場合。
 
 ## hash
-- 75fe18b650824444abf3ba72899f3964f455528e0e8a4a65742c8486ea2b7c6d
+- 3f8ea45b330e57799ca5c0d921d48fa04f7777b978d5be287d8ec9e5eefbe754
 
 # `test_codex_runtime_retry.py`
 
@@ -239,7 +239,7 @@
 - INDEX.md 生成規則や oracle/realization の概念定義を確認したいだけなら、この retry テストではなく正本仕様断片を読む。
 
 ## hash
-- 8313d00d0611f65598134671436e71a2d2672817c7c23087ee8913235ceba802
+- 118abe8694a4f2e5aa72946ec6b81d5fe4b3dd16e53c0fc49afa13326f3907f5
 
 # `test_indexing_cli.py`
 
@@ -259,19 +259,18 @@
 - 単体 helper の内部実装だけを確認したく、外部 CLI 挙動、commit、worktree、git conflict の観測が不要なとき。
 
 ## hash
-- ba84ba2a5f8fac06dd16494e65b04728e1b72568d45ca51a5e25aa2604e2bf43
+- e40e4a7a7de570e5a5e343b138b87c9256c9a1c5eeabc5ad72d0427a8a40cea1
 
 # `test_indexing_preflight.py`
 
 ## Summary
 - Codex 実行前に INDEX 更新の preflight が走ること、その更新が git commit され作業ツリーを汚さないことを検証する realization test。
-- 実行対象 worktree の選択、repository lock 待機、特定 purpose での preflight skip、file access recovery 後の再実行時 preflight までを扱う。
+- 実行対象 worktree の選択、repository lock 待機、特定 purpose での preflight skip を扱う。
 
 ## Read this when
 - Codex 呼び出し前の indexing preflight の起動条件、skip 条件、実行順序を変更する。
 - root と cwd が別 worktree を指す場合に、どの worktree の INDEX 更新を行うかを確認する。
 - indexing lock の待機挙動や、preflight 更新後の git commit・clean status の期待を確認する。
-- file access recovery による Codex 再試行時にも indexing preflight が再実行されるかを確認する。
 
 ## Do not read this when
 - INDEX 生成内容そのもの、エントリー本文の品質、ルーティング文書の記述規則だけを確認したい。
@@ -279,7 +278,7 @@
 - CLI 引数 parsing や設定読み込みなど、preflight 起動後の Codex 実行順序と関係しない領域を調べたい。
 
 ## hash
-- a693f2e5f73bf64bdf25ba7f48910e3be0fffbd38f9fafe0a5b3954d37d8fe11
+- 3acf23fa47098ab15a3be7f2e5aee79bf66f091be6fd7808f39b0c1e0f9f0f73
 
 # `test_packaged_import.py`
 
@@ -316,7 +315,7 @@
 - oracle file の正本文言そのものを確認したい場合は、対応する oracle 側の文書または生成元を読む。
 
 ## hash
-- b9fef4ddaeb2f0e1b881f9a3685913297160ea4124bfa48ab10ce916c6c54096
+- a61448d13fe6b11acc398a8f268160b43e11b800fb149526e056ef20a992fdad
 
 # `test_review_oracle_cli.py`
 

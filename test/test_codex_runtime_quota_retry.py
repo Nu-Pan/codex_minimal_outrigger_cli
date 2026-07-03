@@ -513,7 +513,7 @@ def test_quota_probe_non_quota_failure_fails_immediately(
     assert "profile is broken" in codex_events[1]["error"]
 
 
-def test_quota_poll_limit_recovers_failed_call_file_access_violation(
+def test_quota_poll_limit_does_not_post_validate_failed_call_file_access_violation(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -521,7 +521,7 @@ def test_quota_poll_limit_recovers_failed_call_file_access_violation(
     stub_codex_profile(tmp_path, monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    calls = tmp_path / "quota_limit_recovery_calls.jsonl"
+    calls = tmp_path / "quota_limit_post_validation_calls.jsonl"
     write_python_executable(
         bin_dir / "codex",
         [
@@ -537,9 +537,7 @@ def test_quota_poll_limit_recovers_failed_call_file_access_violation(
             "    print(json.dumps({'type':'thread.started','thread_id':'sess-1'}))",
             "    print(json.dumps({'type':'error','message':'Quota exceeded'}))",
             "    sys.exit(1)",
-            "pathlib.Path('src/blocked.py').unlink(missing_ok=True)",
-            "output.write_text('{}\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
+            "raise AssertionError('unexpected extra call')",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
@@ -561,14 +559,12 @@ def test_quota_poll_limit_recovers_failed_call_file_access_violation(
         )
 
     call_records = [json.loads(line) for line in calls.read_text().splitlines()]
-    assert len(call_records) == 2
+    assert len(call_records) == 1
     assert call_records[0]["stdin"] == "prompt"
-    assert "FINDING-00" in call_records[1]["stdin"]
-    assert "src/blocked.py" in call_records[1]["stdin"]
-    assert not (root / "src" / "blocked.py").exists()
+    assert (root / "src" / "blocked.py").read_text() == "blocked\n"
 
 
-def test_quota_probe_failure_recovers_probe_file_access_violation(
+def test_quota_probe_failure_does_not_post_validate_probe_file_access_violation(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -578,7 +574,7 @@ def test_quota_probe_failure_recovers_probe_file_access_violation(
     probe_prompt = stub_quota_probe_builder(monkeypatch)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    calls = tmp_path / "probe_failure_recovery_calls.jsonl"
+    calls = tmp_path / "probe_failure_post_validation_calls.jsonl"
     write_python_executable(
         bin_dir / "codex",
         [
@@ -597,9 +593,7 @@ def test_quota_probe_failure_recovers_probe_file_access_violation(
             "    pathlib.Path('src/probe.py').write_text('blocked\\n')",
             "    print(json.dumps({'type':'error','message':'profile is broken'}))",
             "    sys.exit(2)",
-            "pathlib.Path('src/probe.py').unlink(missing_ok=True)",
-            "output.write_text('{}\\n')",
-            "print(json.dumps({'type': 'turn.completed'}))",
+            "raise AssertionError('unexpected extra call')",
         ],
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
@@ -621,11 +615,8 @@ def test_quota_probe_failure_recovers_probe_file_access_violation(
         )
 
     call_records = [json.loads(line) for line in calls.read_text().splitlines()]
-    assert [record["stdin"] for record in call_records[:2]] == ["prompt", probe_prompt]
-    assert len(call_records) == 3
-    assert "FINDING-00" in call_records[2]["stdin"]
-    assert "src/probe.py" in call_records[2]["stdin"]
-    assert not (root / "src" / "probe.py").exists()
+    assert [record["stdin"] for record in call_records] == ["prompt", probe_prompt]
+    assert (root / "src" / "probe.py").read_text() == "blocked\n"
 
 
 def test_run_codex_exec_uses_single_representative_quota_probe(

@@ -560,10 +560,10 @@ def test_apply_fork_is_unconverged_when_finding_application_makes_no_diff(
     )
 
 
-def test_apply_fork_recovers_file_access_rule_violation_before_commit(
+def test_apply_fork_does_not_recover_agent_written_forbidden_file(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
-    """所見適用が禁止領域を汚した場合、recovery 後の許可差分だけを commit する。"""
+    """所見適用が禁止領域を汚しても事後修復しない。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
@@ -647,7 +647,7 @@ def test_apply_fork_recovers_file_access_rule_violation_before_commit(
     for path in sorted((root / ".cmoc" / "local" / "log" / "codex").glob("*_call.json")):
         call = json.loads(path.read_text())
         calls.append((call["purpose"], call["file_access_mode"]))
-    assert ("file access rule violation recovery", "realization_write") in calls
+    assert ("file access rule violation recovery", "realization_write") not in calls
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
     state = json.loads((root / ".cmoc" / "local" / "session" / f"{session_id}.json").read_text())
@@ -656,7 +656,10 @@ def test_apply_fork_recovers_file_access_rule_violation_before_commit(
         run_git(root, "show", f"{apply_branch}:src/app.py").stdout
         == "print('updated')\n"
     )
-    assert run_git(root, "show", f"{apply_branch}:oracle/spec.md").stdout == "# spec\n"
+    assert (
+        run_git(root, "show", f"{apply_branch}:oracle/spec.md").stdout
+        == "# violated\n"
+    )
 
 
 def test_apply_fork_error_report_summarizes_uncommitted_diff(

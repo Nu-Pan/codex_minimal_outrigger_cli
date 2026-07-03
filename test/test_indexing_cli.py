@@ -10,6 +10,7 @@ indexing subcommand が routing document を更新する外部挙動に閉じて
 
 import json
 import subprocess
+import threading
 from collections.abc import Callable
 from pathlib import Path
 
@@ -600,7 +601,7 @@ def test_update_indexes_generates_sibling_entries_serially(
     assert calls == ["a.txt", "b.txt"]
 
 
-def test_update_indexes_generates_non_ancestor_indexes_serially(
+def test_update_indexes_generates_non_ancestor_indexes_in_parallel(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -612,6 +613,7 @@ def test_update_indexes_generates_non_ancestor_indexes_serially(
     (second / "b.txt").write_text("b\n")
     cmoc_runtime.sync_config(root)
     calls: list[tuple[str, str]] = []
+    sibling_barrier = threading.Barrier(2)
 
     def fake_build_index_entry(
         update_root: Path,
@@ -621,6 +623,7 @@ def test_update_indexes_generates_non_ancestor_indexes_serially(
     ) -> str:
         if path.parent in {first, second}:
             calls.append((path.parent.name, path.name))
+            sibling_barrier.wait(timeout=2)
         return indexing_common.render_index_entry(
             update_root,
             path,
@@ -638,7 +641,7 @@ def test_update_indexes_generates_non_ancestor_indexes_serially(
 
     assert first / "INDEX.md" in updated
     assert second / "INDEX.md" in updated
-    assert calls == [("second", "b.txt"), ("first", "a.txt")]
+    assert sorted(calls) == [("first", "a.txt"), ("second", "b.txt")]
 
 
 def test_update_indexes_indexes_nested_memo_directory(

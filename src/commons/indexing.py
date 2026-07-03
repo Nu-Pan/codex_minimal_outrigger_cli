@@ -1,4 +1,5 @@
 import fcntl
+from concurrent.futures import ThreadPoolExecutor
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -94,14 +95,27 @@ def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path
         ]
         missing = [(plan, item) for plan in plans for item in plan.missing_children]
         if missing:
-            load_config(config_root)
-            for plan, (index, child, digest) in missing:
-                plan.entries[index] = build_index_entry(
-                    root,
-                    child,
-                    digest=digest,
-                    codex_exec=codex_exec,
+            config = load_config(config_root)
+            max_workers = max(1, min(config.num_parallel, len(missing)))
+
+            def build_missing(
+                missing_item: tuple[_IndexDirectoryPlan, tuple[int, Path, str]],
+            ) -> tuple[_IndexDirectoryPlan, int, str]:
+                plan, (index, child, digest) = missing_item
+                return (
+                    plan,
+                    index,
+                    build_index_entry(
+                        root,
+                        child,
+                        digest=digest,
+                        codex_exec=codex_exec,
+                    ),
                 )
+
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                for plan, index, entry in executor.map(build_missing, missing):
+                    plan.entries[index] = entry
         for plan in plans:
             entries = [entry for entry in plan.entries if entry is not None]
             content = "\n\n".join(entries)

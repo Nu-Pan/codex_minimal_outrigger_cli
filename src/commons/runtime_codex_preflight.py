@@ -37,7 +37,6 @@ def run_codex_exec(parameter: AgentCallParameter, **kwargs: Any) -> CodexExecRes
     """INDEX 更新 preflight を挟んで Codex exec 実行本体へ委譲する。"""
     if parameter.run_indexing_preflight:
         _run_indexing_before_codex(_indexing_root_for_codex(kwargs))
-    kwargs["_before_recovery_codex_call"] = _run_indexing_before_codex
     return runtime_run_codex_exec(parameter, **kwargs)
 
 

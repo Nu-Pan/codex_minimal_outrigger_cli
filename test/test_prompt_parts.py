@@ -99,7 +99,6 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
     expected = {
         FileAccessMode.READONLY: [
             "ツリー外は読み書き禁止",
-            "ツリー外は書き込み禁止",
             "/.git` ツリー内は書き込み禁止",
             "oracle file は書き込み禁止",
             "realization file は書き込み禁止",
@@ -107,13 +106,11 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
         ],
         FileAccessMode.PURE_ORACLE_READ: [
             "ツリー外は読み書き禁止",
-            "ツリー外は書き込み禁止",
             "oracle file は書き込み禁止",
             "realization file は読み書き禁止",
         ],
         FileAccessMode.REPO_WRITE: [
             "ツリー外は読み書き禁止",
-            "ツリー外は書き込み禁止",
             "/memo` は読み書き禁止",
             "/.git` ツリー内は書き込み禁止",
             "/.agents` ツリー内は書き込み禁止",
@@ -123,13 +120,11 @@ def test_file_access_rule_titles_and_bodies_match_modes() -> None:
         ],
         FileAccessMode.PURE_ORACLE_WRITE: [
             "ツリー外は読み書き禁止",
-            "ツリー外は書き込み禁止",
             "/memo` は読み書き禁止",
             "realization file は読み書き禁止",
         ],
         FileAccessMode.REALIZATION_WRITE: [
             "ツリー外は読み書き禁止",
-            "ツリー外は書き込み禁止",
             "/memo` は読み書き禁止",
             "oracle file は書き込み禁止",
         ],

@@ -275,7 +275,7 @@ def test_command_codex_call_skips_indexing_when_parameter_disables_preflight(
     ]
 
 
-def test_file_access_recovery_codex_call_skips_indexing_preflight(
+def test_file_access_violation_does_not_trigger_recovery_indexing_preflight(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -293,10 +293,7 @@ def test_file_access_recovery_codex_call_skips_indexing_preflight(
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
             "blocked = pathlib.Path('oracle/blocked.md')",
-            "if count == 0:",
-            "    blocked.write_text('blocked\\n')",
-            "else:",
-            "    blocked.unlink(missing_ok=True)",
+            "blocked.write_text('blocked\\n')",
             "output.write_text('{}\\n')",
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
@@ -333,6 +330,6 @@ def test_file_access_recovery_codex_call_skips_indexing_preflight(
     finally:
         codex_preflight_module.disable_indexing_preflight()
 
-    assert counter.read_text() == "2"
+    assert counter.read_text() == "1"
     assert events == [root]
-    assert not (root / "oracle" / "blocked.md").exists()
+    assert (root / "oracle" / "blocked.md").read_text() == "blocked\n"

@@ -229,7 +229,7 @@ def test_run_codex_exec_logs_capacity_retrying_call(
     assert "Selected model is at capacity" in codex_events[0]["error"]
 
 
-def test_run_codex_exec_recovers_file_access_violations_before_capacity_retry(
+def test_run_codex_exec_does_not_post_validate_file_access_violations_before_capacity_retry(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -257,11 +257,7 @@ def test_run_codex_exec_recovers_file_access_violations_before_capacity_retry(
                 "'message': 'Selected model is at capacity'}))"
             ),
             "    sys.exit(1)",
-            "if count == 1:",
-            "    blocked.unlink(missing_ok=True)",
-            "    output.write_text('{}\\n')",
-            "else:",
-            "    output.write_text(json.dumps({'ok': True}) + '\\n')",
+            "output.write_text(json.dumps({'ok': True}) + '\\n')",
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
     )
@@ -281,8 +277,8 @@ def test_run_codex_exec_recovers_file_access_violations_before_capacity_retry(
     )
 
     assert result.output_json == {"ok": True}
-    assert counter.read_text() == "3"
-    assert not (root / "oracle" / "blocked.md").exists()
+    assert counter.read_text() == "2"
+    assert (root / "oracle" / "blocked.md").read_text() == "blocked\n"
 
 
 def test_run_codex_exec_ignores_error_markers_outside_stdout_jsonl(

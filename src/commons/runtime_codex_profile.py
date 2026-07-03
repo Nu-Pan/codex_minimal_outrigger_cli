@@ -157,7 +157,7 @@ def _writable_roots(
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
             # READONLY は cmoc 上の論理的な読み取り専用であり、Codex CLI
             # sandbox は pytest cache などの一時生成物を許せるよう workspace
-            # に寄せる。実ファイル変更は post-check で拒否する。
+            # に寄せる。
             paths = [root]
         case FileAccessMode.PURE_ORACLE_READ:
             paths = [root / "oracle"]
@@ -166,15 +166,13 @@ def _writable_roots(
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
             # Codex profile cannot express cmoc's deny-list. REALIZATION_WRITE
             # includes root ancillary files such as .gitignore, so limiting the
-            # sandbox to existing directories is under-permissive; post-checks
-            # reject forbidden and non-realization diffs after Codex can edit root.
+            # sandbox to existing directories is under-permissive.
             paths = [root]
         case FileAccessMode.REPO_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
             # Codex profile cannot express cmoc's deny-list. REPO_WRITE would be
-            # under-permissive if limited to existing top-level dirs, so runtime
-            # post-checks reject forbidden diffs after Codex can edit the work root.
+            # under-permissive if limited to existing top-level dirs.
             paths = [root]
         case FileAccessMode.PURE_ORACLE_WRITE:
             paths = [root / "oracle"]
