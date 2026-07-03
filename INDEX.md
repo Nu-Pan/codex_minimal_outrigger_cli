@@ -173,21 +173,20 @@
 # `test`
 
 ## Summary
-- CLI 外部挙動と共通 runtime 契約を検証する realization test 群への入口。init/TUI、session、apply fork/join/abandon、review oracle、indexing、Codex runtime、ACP builder、prompt、packaging、StructDoc rendering などの回帰テストを責務別に収める。
-- テスト補助コードも同階層に含み、一時 Git リポジトリ、fake Codex home/profile、fake executable、apply worktree 解決など、複数の CLI テストで共有される fixture と helper の入口にもなる。
+- cmoc の realization test を集約するディレクトリ。CLI サブコマンド、Codex runtime、indexing、prompt builder、packaged import、共通 runtime 契約など、実装が正本仕様断片を外部挙動として満たしているかを検証するテスト群への入口になる。
+- 共通 fixture や支援 helper も含み、一時 Git リポジトリ、Codex home、fake external command、session/apply state などを使う統合寄りの回帰テストを探す起点になる。
 
 ## Read this when
-- CLI サブコマンドの外部挙動、終了コード、stdout/stderr、Git branch/worktree/state、report、commit、cleanup などの期待値を確認・変更したいとき。
-- Codex CLI 実行、profile、sandbox/file access mode、retry、quota retry、file access violation recovery、preflight indexing など runtime 境界の回帰テストを探すとき。
-- apply、session、review oracle、indexing、init/TUI など複数領域のテストのうち、どの対象へ進むべきかを選びたいとき。
-- ACP builder、prompt parts、packaged import、StructDoc Markdown rendering など、CLI 本体より下位の公開挙動・互換境界を検証する realization test を探しているとき。
-- テスト用 Git リポジトリ、fake Codex 実行環境、tracked ignored file、apply branch から worktree path を求める補助処理など、テスト支援コードを確認・変更したいとき。
+- realization implementation の変更後に、対応する外部挙動や制御ロジックを検証するテストを探すとき。
+- cmoc CLI の init、session、apply、review oracle、indexing、Codex runtime、TUI 起動、prompt builder、packaging import の回帰範囲を確認するとき。
+- root/worktree/path model、file access mode、設定検証、subcommand log、Codex subprocess、quota/capacity retry、file access violation recovery など複数領域にまたがる runtime 前提のテストを探すとき。
+- テスト用 Git fixture、Codex profile/home stub、fake executable、apply worktree path 解決など、CLI 制御系テストで共有する補助関数を探すとき。
 
 ## Do not read this when
-- 正本仕様断片そのものを確認したいときは、対応する oracle 側の文書・src・test を読む。
-- プロダクト実装の内部 helper、CLI 実装、runtime 実装、Git 操作、prompt builder 実装だけを局所的に変更したい場合は、まず対応する implementation 側を読む。
-- INDEX.md エントリーの自然言語内容や routing 文書の記述規則だけを確認したい場合は、仕様または indexing 実装の対象箇所を直接読む。
-- pytest 設定全体や、この階層にない fixture 定義だけを確認したい場合は、より直接のテスト設定ファイルを読む。
+- oracle file の正本仕様本文、標準、prompt/schema の根拠そのものを確認したいときは、oracle 側の該当本文を読む。
+- 個別機能の実装詳細を変更したいだけで、まず実装側の責務や helper 分割を確認する必要があるときは、対応する src 側へ進む。
+- INDEX.md エントリーの自然言語内容だけを生成・修正したいときで、CLI 境界や git 状態の回帰確認が不要な場合。
+- Codex CLI や LLM の出力品質そのものを評価したいとき。
 
 ## hash
-- a4cec8c5608917224bd62b502228c1973cf5293bd436995865487fce6bd1c624
+- b5be0550ab5e55b4056c20b50de6c96c31f4a6621619361a914f7edca78a8220

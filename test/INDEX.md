@@ -1,20 +1,20 @@
 # `_support.py`
 
 ## Summary
-- CLI テストで共有される補助関数群。最小 Git リポジトリの作成、Git 状態確認、Codex home と fake profile の準備、fake 外部コマンド作成、session state から apply worktree を解決する処理をまとめる。
+- CLI 制御系の realization test で使う共通テスト補助を集めたファイル。最小 Git リポジトリの作成、git 状態確認、Codex home の準備、Codex profile 生成のスタブ化、外部コマンド用 Python 実行ファイルの生成、session state から apply worktree path を解決する helper を提供する。
 
 ## Read this when
-- CLI テストで使う一時 Git リポジトリ、初期コミット、branch 状態、tracked かつ ignored な oracle file の fixture を確認・変更したいとき。
-- Codex 実行や TUI 実行をテスト内で fake profile に差し替える方法、`CODEX_HOME` の最小セットアップ、fake 実行ファイルの作り方を確認したいとき。
-- apply 系テストで session state に記録された apply branch から worktree path を求める補助処理を探しているとき。
+- cmoc CLI のテストで、一時 Git リポジトリや初期 commit 済み fixture を作る必要があるとき。
+- テスト中に現在 branch、tracked だが ignore される oracle file、Codex home、Codex profile stub、fake external command を準備する helper を探すとき。
+- runtime apply の state から apply worktree path を確認するテスト補助が必要なとき。
 
 ## Do not read this when
-- 個別 CLI コマンドの期待挙動や assertion 内容を確認したいだけなら、該当するテスト本文を読む。
-- プロダクト実装の Git 操作、Codex profile 生成、apply worktree 管理の仕様や実装を確認したいなら、対応する実装モジュールを読む。
-- pytest fixture の網羅的な定義やテスト設定全体を確認したいだけなら、テスト設定用の別ファイルを読む。
+- 個別の CLI コマンド挙動そのものを検証するテストケースを探しているとき。
+- 本番実装側の git 操作、Codex 実行、apply worktree 管理の処理を変更したいとき。
+- oracle file の仕様やテスト方針の正本記述を確認したいとき。
 
 ## hash
-- 5dbdaa085d2071735998882ad1e46e3d4b4bc9980f15dabcb148a45de893a484
+- 0cca941e1150a51ddaccd880353c25aaaa2b13e64623de563fee334ecbd61346
 
 # `test_acp_builder_parameters.py`
 
@@ -123,26 +123,24 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder 解決、repo/run/work root 判定、設定読み込み、CmocError 表示、CLI error 出力、subcommand log、FileAccessMode から Codex sandbox/profile への変換、binary 判定など、個別サブコマンドより下位の共通実行前提をまとめて扱う。
-- 共通 fixture と root 状態を共有しながら崩れやすい runtime 境界を回帰検証する位置づけで、個別機能の詳細仕様ではなく、cmoc 全体の実行基盤が守るべき外部挙動と制御ロジックへの入口になる。
+- cmoc の共通 runtime 契約を横断して固定する基本回帰テスト。root placeholder 解決、linked worktree と work root 判定、設定 dict 検証、CmocError の Markdown 表示、CLI parse/preflight error の stdout report、subcommand log、状態 branch 名、`.cmoc` ignore、FileAccessMode から Codex sandbox/profile への変換、binary 判定など、個別サブコマンドより下位の実行前提を扱う。
+- 複数領域にまたがるが、共通 fixture と root 状態を共有して一緒に崩れやすい runtime 境界のテストを集約する入口として位置づける。
 
 ## Read this when
-- root placeholder、linked worktree、repo root、run root、work root の解決や拒否条件を確認・変更する時。
-- CmocConfig の既定値、config_from_dict の型検証、設定不正時の CmocError を確認・変更する時。
-- CmocError の Markdown 表示、CLI 解析 error や想定済み error の stdout/stderr 挙動、起動 wrapper の call stack 表示を確認・変更する時。
-- subcommand log の生成条件、timestamp 衝突時の log file 分離、pre-log check 失敗時に log を残さない挙動を確認・変更する時。
-- FileAccessMode の値、sandbox mode 変換、Codex profile の writable roots、追加書き込み・読み取り許可 path の許可境界を確認・変更する時。
-- `.cmoc` ignore pattern の生成、managed worktree の作成・削除拒否条件、session/apply branch 名から state を読む境界を確認・変更する時。
-- binary 判定が読む範囲や、基礎 runtime 契約をまたぐ回帰テストを追加・整理する時。
+- runtime の root 解決、worktree 作成・削除、安全な対象 path 判定、または `<run-root>` / `<work-root>` / `<cmoc-root>` の挙動を変更する。
+- 設定読み込み、既定値、型検証、CmocError、CLI error report、Click parse error の表示形式や出力先を変更する。
+- subcommand log の生成条件、timestamp 衝突時の扱い、preflight 失敗時の副作用、shell completion probe の副作用抑制を確認する。
+- FileAccessMode、Codex profile、sandbox writable roots、extra writable/read path、oracle conflict write、repo log read 許可、binary 判定の runtime 契約を変更または検証する。
+- cmoc の基礎 runtime 変更後に、個別サブコマンドのテストより先に共通前提の回帰範囲を把握したい。
 
 ## Do not read this when
-- 特定サブコマンド固有の業務フロー、出力内容、prompt 構築、agent call orchestration の詳細だけを確認したい時は、そのサブコマンドまたは責務別のテストへ進む。
-- 個別の oracle doc、oracle src、oracle test の正本仕様断片そのものを確認したい時は、対応する oracle 側の本文へ進む。
-- runtime helper の内部実装だけを局所的に変更し、既存の外部挙動や共通契約に影響しないことが明らかな時は、該当する implementation file とより直接の単体テストを読む。
-- INDEX ルーティングや AGENTS 指示の変更を扱う時は、この runtime 回帰テストではなく対象階層のルーティング文書や指示文書を確認する。
+- 特定サブコマンド固有の正常系・業務ロジックだけを確認したい場合は、そのサブコマンドのテストへ進む。
+- oracle 文書や prompt builder の正本仕様そのものを確認したい場合は、oracle 側の該当本文を読む。
+- UI 文言や個別出力内容のうち、runtime error/report/profile と関係しない仕様を調べるだけなら対象外。
+- INDEX.md ルーティングの生成・検証だけが目的で、runtime の外部挙動を読む必要がない場合は本文まで読まなくてよい。
 
 ## hash
-- cf2aa2f06d232f5d34b9946ff665ef334383300fa81271cae83112b654052413
+- 532736633e7ef52228a71848d2b565f26d7271bd7602281592bc1e160eeedfe3
 
 # `test_cli_init_tui.py`
 
