@@ -151,23 +151,22 @@
 # `test_cli_init_tui.py`
 
 ## Summary
-- init と TUI 起動直前の CLI 境界における外部挙動を検証するテスト。cmoc 初期化、.cmoc ignore、既存 staged/unstaged 変更の保護、設定既定値同期、linked worktree での root/worktree 扱い、TUI prompt 保存、parameter 解決、Codex 起動引数の組み立てを同じ利用開始直後の回帰領域として扱う。
-- 16,000 文字を超えるが、初期化済み repository/runtime 状態を共有する init/TUI 前処理の凝集した回帰テストとして一箇所に保つ意図を持つ。
+- init と TUI 起動直前の CLI 境界における外部挙動を検証するテスト群。cmoc 初期化、.cmoc ignore、既存 git 差分の保護、設定既定値の同期、linked worktree での状態配置、Markdown prompt 整形、Codex TUI 起動 parameter 構築を同じ利用開始フローとして扱う。
 
 ## Read this when
-- init の外部挙動、生成・更新される設定、.cmoc の ignore 化、初期化コミット、既存の staged/unstaged 変更を壊さない制御を変更または確認する時。
-- linked worktree 上での init/TUI 実行時に、root 側と worktree 側の .cmoc、.gitignore、log、schema、config の配置や git 状態を確認する時。
-- TUI 起動前の editor 実行、Markdown prompt 解析、parameter 解決、complete prompt 保存、Codex TUI へ渡す AgentCallParameter や extra read path を変更する時。
-- subcommand log の command_invoked や step_started など、init/TUI 開始前後の記録形式や保存場所を変更する時。
+- init 実行時の gitignore 更新、.cmoc 追跡解除、.agents/.gitkeep commit、既存 staged/unstaged 変更の保護に関する回帰を確認・変更するとき。
+- linked worktree 上での init/TUI 実行時に、repository root と worktree 側の .cmoc、log、config、schema、gitignore がどこに作られるかを確認するとき。
+- TUI 起動前の editor 実行、Markdown comment 除去、完成 prompt 保存、resolve_parameter の解釈、AgentCallParameter への file access mode・model・reasoning effort・schema・extra_read_paths 反映を変更するとき。
+- init が既存 config の人間設定を保持しつつ不足した既定値を補完する挙動を確認するとき。
 
 ## Do not read this when
-- init や TUI 前処理を経由しない個別サブコマンドの挙動だけを確認する時。
-- Codex CLI や editor の実体の品質、LLM 出力内容そのもの、または外部ツール自体の動作を検証したい時。
-- 設定値や AgentCallParameter の型定義そのものを確認する時は、実装または定義側を先に読む。
-- oracle の正本仕様断片を確認する時は、対応する oracle file を読む。
+- init や TUI 前処理ではなく、個別 subcommand の業務ロジックや Codex 実行結果そのものを確認したいとき。
+- CLI 境界の外部挙動ではなく、低レベル helper の内部実装だけを変更するとき。ただしその helper が init/TUI の observable な状態配置や parameter に影響する場合は読む。
+- oracle 文書や routing entry の内容を確認したいとき。
+- テスト支援関数、repo fixture、fake executable 作成処理そのものを変更したいときは、支援コード側を直接読む。
 
 ## hash
-- 22f2bb4c955b256be15fa821fc5dc65609144b9431a938ae8b2c69e8e9fca25d
+- 0176c3bc7925652d3299ab136525799032a454b93a9cb2841d06780bed1ee5a8
 
 # `test_codex_runtime_exec.py`
 

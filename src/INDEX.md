@@ -142,20 +142,20 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドごとの実行本体を収める領域。初期化、indexing、TUI、session、review、apply などの上位 orchestration から、各コマンド固有の事前条件、状態遷移、git 操作、report 出力、失敗時処理への入口になる。
-- 共通 runtime や低レベル helper そのものではなく、それらをサブコマンドの外部挙動としてどう接続するかを確認するための階層。配下には、複数モジュールに分かれた command family と、単体の薄い command entrypoint が混在する。
+- サブコマンド実装を機能単位で分けて収める領域。apply、session、review、init、indexing、tui など、各 CLI 操作の実行入口と上位 orchestration へ進むための分岐点になる。
+- 各サブコマンドの事前条件、状態遷移、git/worktree/state/Codex 呼び出し、report や stdout 生成などを確認する際に、どの下位領域または実装ファイルを読むべきか判断する入口になる。
 
 ## Read this when
-- どのサブコマンド実装へ進むべきか判断したいとき。
-- サブコマンドの外部挙動、事前条件、状態更新、git 操作、report 生成、stdout 文面、失敗条件の入口を探したいとき。
-- apply、review、session のように複数モジュールへ分かれた command family の担当境界を把握したいとき。
-- init、indexing、tui のように CLI runtime と共通処理を結びつける薄い orchestration 層を確認または変更したいとき。
+- どのサブコマンド実装へ進むべきかを、機能名や扱う状態から切り分けたいとき。
+- apply run、session 操作、review oracle、init、indexing、tui の実行フローや上位制御を確認・変更する入口を探しているとき。
+- サブコマンドごとの branch、worktree、state、report、INDEX.md、Codex 実行、git 操作の責務境界を把握したいとき。
+- CLI runtime や共通 helper ではなく、利用者が実行する個別サブコマンド側の orchestration を追いたいとき。
 
 ## Do not read this when
-- CLI entrypoint への登録、Typer app 全体の配線、共通 runtime の実行規約だけを確認したいとき。
-- git command wrapper、state 読み書き、worktree 探索、Codex 実行、path model、設定モデルなど、複数サブコマンドで使われる低レベル helper の基本挙動だけを調べたいとき。
-- サブコマンドの正本仕様そのものを確認したいとき。その場合は対応する oracle doc を読む。
-- INDEX.md の生成規則、oracle file と realization file の関係、path placeholder など、特定サブコマンド固有ではない仕様概念を調べたいとき。
+- git command wrapper、state 読み書き、root 解決、Codex runtime、設定モデル、path model など、複数サブコマンドで使う共通処理そのものを調べたいとき。
+- oracle file、realization file、INDEX.md エントリー生成規則など、サブコマンド固有ではない仕様概念を確認したいとき。
+- Typer app への登録やトップレベル CLI 配線だけを確認したいときは、CLI entrypoint やサブコマンド登録側を読む。
+- 個別サブコマンドの正本仕様そのものを確認したいときは、対応する oracle doc を読む。
 
 ## hash
-- 3584e3290a91659dc3c958aacab48b79d91bdda90240e796479e709b82bafb4d
+- 339f32e0ad94c1272a1ab4f648b23463fdae1a2294aa0d0089a0c6fc1d22164a

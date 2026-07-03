@@ -44,22 +44,21 @@
 # `init.py`
 
 ## Summary
-- `cmoc init` の実行本体を担い、CLI runtime 経由で初期化処理を起動する。work root の `.cmoc` ignore 保証、設定同期、`.agents` の追跡用 placeholder 作成、初期化 commit、実行前の staged 差分や `.gitignore` 状態の復元を扱う。
-- init 実行前にログ出力先が git 管理へ混入しないよう ignore 状態を整え、実行後には Markdown 形式の成功結果を組み立てる。
+- `cmoc init` の実行本体を担う実装。runtime 経由で init サブコマンドを起動し、work root の `.cmoc` ignore、`.agents` 追跡 placeholder、設定同期、init commit、実行結果 Markdown 出力を処理する。
+- init 実行前から存在した `.gitignore` と staged 差分を退避・復元し、init が作る管理用変更と利用者の作業中差分を混ぜないための復元処理も含む。
 
 ## Read this when
-- `cmoc init` の外部挙動、初期化時の git 操作、`.gitignore` や exclude の扱いを確認・変更したいとき。
-- init が既存の staged 差分や利用者の `.gitignore` 作業ツリー状態をどう退避・復元するかを調べたいとき。
-- `.agents` が空の場合に追跡対象の placeholder を作る処理、または init commit に含める対象を確認したいとき。
-- `cmoc init` の stdout 文面を変更したいとき。
+- `cmoc init` の実行順序、git 操作、commit 作成条件、stdout 出力を確認・変更したいとき。
+- init が `.gitignore`、`.cmoc`、`.agents`、git index、staged 差分をどう扱うかを調べるとき。
+- ログ作成前に `.cmoc` ignore を保証する処理や、work root と repo root が異なる場合の exclude 更新を確認したいとき。
 
 ## Do not read this when
-- init 以外のサブコマンド実装を調べたいとき。
-- CLI runtime 共通の実行制御、git コマンド wrapper、work root や repo root の解決、設定同期 helper 自体の仕様を調べたいとき。
-- oracle 側の init 仕様や ignore 仕様そのものを確認したいとき。
+- init 以外のサブコマンド実装を探しているとき。
+- cmoc runtime 共通処理、git wrapper、root 解決、設定同期、ignore pattern 生成そのものを変更したいときは、それらを定義する runtime 側を読む。
+- 正本仕様として init の要求を確認したいだけのときは、対応する oracle doc を読む。
 
 ## hash
-- c54e629b998aecdefbd2cba613d73532e598c4a29248a962d643403f76950293
+- 74f27bc5512015dfdb5a1abc0cf9dcba26060cbdf8daccdc82c252cc1c6d5f36
 
 # `review`
 
