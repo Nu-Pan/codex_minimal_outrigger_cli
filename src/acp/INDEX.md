@@ -19,23 +19,21 @@
 # `builder`
 
 ## Summary
-- ACP builder 領域で、正本側 builder を既存の realization 側公開 import path から利用できるようにする互換入口を束ねる階層。
-- 主な責務は、oracle 側実装への委譲、realization 側公開型への適合、旧 import 経路の維持、互換コードの残存理由と削除条件の確認入口を提供することである。
-- apply、common、indexing、quota probe、review、session、TUI などの builder 系互換領域へ進むための上位ルーティング位置にある。
+- ACP builder 領域で、oracle 側 builder 実装を正本に保ちながら既存の realization 側 import 経路を成立させる互換層を束ねる階層。
+- 各 subpackage や wrapper は、oracle 側 package への search path 接続、旧 import path から canonical 実装への再公開・委譲、oracle parameter から realization 側公開型への最小変換を担う。
+- 実処理や正本仕様そのものではなく、apply、common、indexing、quota probe、review、session、TUI などの builder 互換入口と、移行中の公開面を残す理由・削除条件を確認するための入口になる。
 
 ## Read this when
-- ACP builder 全体で、oracle 側 builder と realization 側の既存公開 import path の対応関係を確認したいとき。
-- 正本側へ実装を置いたまま、acp.builder 配下の旧参照経路や公開入口を維持している理由を確認したいとき。
-- builder が oracle 側へ委譲し、戻り値を realization 側の公開型や AgentCallParameter へ適合させる経路を探したいとき。
-- apply、common、indexing、quota probe、review、session、TUI のどの builder 互換領域へ進むべきか切り分けたいとき。
-- acp.builder 配下の互換入口を削除・移動・置換してよいか、残存参照や削除条件を確認したいとき。
+- ACP builder 全体で、oracle 側実装を正本としつつ realization 側の既存 import surface をどう維持しているか確認したいとき。
+- acp.builder 経由の旧参照、subpackage 互換入口、module alias、package path 接続、再公開先の対応関係を調べたいとき。
+- oracle builder の戻り値を realization 側の AgentCallParameter や公開型へ適合させる wrapper の場所を探したいとき。
+- apply、common、indexing、quota probe、review、session、TUI の各 builder 領域について、互換層を残す理由、移行状況、削除条件を確認したいとき。
 
 ## Do not read this when
-- agent prompt、出力条件、parameter 生成内容、人間意図などの正本仕様を確認したいときは、対応する oracle 側 builder を読む。
-- ACP parameter の基礎構造、公開型、共通 model 設定、file access mode 全体の定義を確認したいときは、それぞれの基本型定義や共通実装を読む。
-- apply fork、review、TUI、session join など各機能の具体的な制御フローや実処理を調べたいときは、対象機能の本体実装へ直接進む。
-- indexing の生成処理・探索処理・データ構造など、互換入口ではなく処理本体を確認したいときは、正本側の実体を持つ実装を読む。
-- 新規 builder 機能の仕様や実装場所を探しているだけで、既存 import path の互換維持や oracle 側委譲に関係しないとき。
+- builder の prompt、parameter 生成内容、判定ロジック、変換処理本体などの正本仕様を確認したいときは、対応する oracle 側実装を読む。
+- CLI コマンド全体の実行フロー、fork 作成、branch 操作、diff 生成、TUI 描画、状態管理など、builder 互換入口以外の実処理を調べたいときは、該当する実装領域を読む。
+- AgentCallParameter の基礎構造、公開型、共通 model 設定、file access mode 全体の定義を確認したいときは、基本型定義や共通実装を読む。
+- 個別 builder の具体的な関数、クラス、出力、制御フローを変更したいときは、この階層の入口ではなく、該当する個別 module または正本側実装を読む。
 
 ## hash
-- 599ddc5f706184846308c0f1331b24291dcc772ad0954d7748c74a31c207928a
+- ba9ad87e2f8de11a4449d9664f10683d35ffd21cc94bbac1b69a978f7b0f87d3

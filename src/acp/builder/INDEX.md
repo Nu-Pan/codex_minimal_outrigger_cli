@@ -1,21 +1,22 @@
 # `__init__.py`
 
 ## Summary
-- oracle.acp_builder を既存の acp.builder 参照から利用できるようにするための互換入口。正本実装を oracle 側に置いたまま、公開済み参照経路を維持する役割を持つ。
-- 互換維持のためだけに残される薄い入口であり、削除条件は realization 側と利用者向け公開面の双方から acp.builder.* 参照がなくなること。
+- oracle 側の acp builder 実装を正本に保ちながら、既存の acp.builder 経由の import を成立させる互換入口。
+- oracle package の検索結果を確認し、oracle 側の submodule search path をこの package に追加したうえで、既存参照向けに basic module を oracle 実装へ対応付ける。
+- local wrapper を oracle 側 path より優先できる順序を保ち、互換が必要な出力だけ realization 側で適応できる余地を残す。
 
 ## Read this when
-- acp.builder.* 参照が残っている理由や、oracle.acp_builder との互換関係を確認したいとき。
-- acp.builder 系の公開入口を削除・移動・置換してよいか判断したいとき。
-- realization 側の互換コードについて、残す理由と削除条件を確認したいとき。
+- acp.builder 経由の import 互換性、特に既存の acp.builder.basic 参照が oracle 側実装へ解決される仕組みを確認したいとき。
+- oracle 側の acp builder package を正本としつつ、realization 側で package path や module alias をどう接続しているかを調べるとき。
+- acp.builder.* 参照を削除または移行する作業で、この互換入口を残す条件や削除条件を確認したいとき。
 
 ## Do not read this when
-- oracle.acp_builder の具体的な実装内容や builder の本体仕様を調べたいとき。
-- acp.builder.* 以外の ACP 関連モジュールの責務や挙動を調べたいとき。
-- 互換入口ではなく、新規機能の実装場所やテスト対象を探しているとき。
+- oracle 側 acp builder の正本仕様や canonical module の実装内容を確認したいだけなら、oracle 側の該当実装を直接読む。
+- acp.builder 以外の acp package 公開面や import 互換性を調べる場合は、より上位または該当 subpackage の入口を読む。
+- builder の個別変換処理や wrapper の詳細挙動を調べる場合は、その処理を持つ個別 module を読む。
 
 ## hash
-- bce540ff289ae7f7f8c83e9796e27376d4c6313646e45756110fa755ab94158c
+- 7af83fea8ad03595625c00432641609f104d01f963904ec5b9ef0a1d8dc05693
 
 # `apply`
 
