@@ -323,23 +323,25 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle の CLI 実行を、report 生成、対象 oracle file の選択、所見列挙から検証・judge・merge までの loop、review 用 worktree で発生した INDEX.md 差分の join、失敗時 report まで含めて検証する realization test。
-- 16,000 文字を超えるが、同じ review run の fake Codex 応答、report 文脈、対象選択、所見評価 loop の状態を共有する外部挙動テストとして凝集している。
+- review oracle コマンドの CLI 経由の外部挙動と、所見の列挙・検証・judge・merge を含む評価 loop の制御を検証するテスト群。
+- report 生成時の章構成、件数、accepted/rejected 所見の表示、エラー report、対象 oracle file の列挙条件、session/full scope、linked worktree、review 中に生成された INDEX 変更の merge、非 INDEX 差分の拒否を扱う。
+- oracle review の fake Codex 応答と report 文脈を共有する統合的なテストとしてまとまっており、review run 全体の状態遷移と出力確認の入口になる。
 
 ## Read this when
-- review oracle コマンドの外部挙動、出力 report の構成・集計・所見表示を変更または確認する。
-- review oracle の対象 oracle file 列挙、full/session scope、tracked ignored file、AGENTS.md・INDEX.md 除外、symlink や memo 配下の扱いを確認する。
-- review oracle の所見列挙 loop、対象ごとの既存所見 prompt、challenger/advocate/judge、merge operation の契約や invalid operation の扱いを変更する。
-- review oracle が linked worktree や review worktree をどう使い、生成・preflight された INDEX.md 差分をどう join するかを確認する。
-- review oracle の処理失敗時 report、非 INDEX.md 差分の拒否、index conflict 解決など、review 実行中の失敗・差分管理を変更する。
+- review oracle コマンドの report 出力、終了コード、表示されるメタ情報、章順、所見件数、エラー時 report の挙動を確認または変更したいとき。
+- oracle review の対象ファイル選択、full scope と session scope、git ignored だが追跡済みの oracle file、AGENTS.md や INDEX.md の除外条件を確認したいとき。
+- review oracle の所見 loop で、列挙結果の再投入範囲、challenger/advocate/judge/merge の呼び出し順や入力、merge operation の検証規則を変更するとき。
+- linked worktree 上の session branch、review 用 worktree、review_join_commit、review 中に生じた INDEX.md 変更の取り込み、INDEX conflict 解決を扱うとき。
+- review oracle 実行中に INDEX.md 以外の差分が発生した場合の拒否と、元 worktree を汚さない制御を確認したいとき。
 
 ## Do not read this when
-- oracle review 以外の review サブコマンドや、一般的な CLI 起動処理だけを確認したい。
-- report rendering や所見 loop の実装だけを局所的に読みたい場合で、まず対応する実装 module を読む方が直接的である。
-- INDEX.md エントリー生成、path model、session fork などの個別仕様・実装を確認したいだけで、review oracle CLI の統合挙動に関心がない。
+- review oracle 以外の review コマンドや通常の session/init CLI の挙動だけを確認したいとき。
+- oracle file の正本仕様本文や prompt 文面そのものを確認したいとき。
+- INDEX.md 生成一般、runtime Codex preflight 一般、git worktree 操作一般の実装詳細を単体で確認したいとき。
+- report rendering や merge operation helper の局所的な実装だけを先に読みたい場合で、対応する実装ファイルを直接読む方が目的に近いとき。
 
 ## hash
-- 5bd15606b49b7cbdc4c905c452efe8489f1da98c2d70676e062cd086187b5470
+- decd06f7ed777ec7afb7f4be6549973f71431105626811ce534533a617c2784e
 
 # `test_session_cli.py`
 

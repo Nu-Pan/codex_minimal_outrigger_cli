@@ -149,24 +149,23 @@
 # `review_report.py`
 
 ## Summary
-- review oracle の実行結果を Markdown レポートとして保存・描画する責務を持つ。
-- YAML frontmatter、判定文、評価対象 oracle file 一覧、重大度と採否別の finding 集計・詳細表示を組み立てる。
-- finding から表示用 oracle path を導く処理や、レビュー失敗・対象なし・fatal/minor/ok の結果判定もこの対象にまとまっている。
+- review oracle の実行結果を、Markdown 本文と YAML frontmatter を持つレポートとして生成する処理を扱う。
+- 評価対象 oracle file 一覧、accept/reject された finding の重大度別集計、コマンド実行メタデータ、結果 verdict をレポートに整形する。
+- finding の表示、oracle path の表示名変換、エラー時・対象なし・fatal/minor/ok の結果判定を確認する入口になる。
 
 ## Read this when
-- review oracle のレポート出力内容、見出し順、frontmatter 項目、判定文、finding 表示形式を確認または変更したいとき。
-- review oracle の実行結果をどのディレクトリへ保存し、保存パスをどう返すかを確認したいとき。
-- finding の verdict・severity による分類、accepted/rejected 件数、評価対象ごとの findings 数の集計挙動を確認したいとき。
-- oracle path をレポート上でどのように相対表示するかを確認したいとき。
+- review oracle のレポート出力内容、frontmatter 項目、見出し構成、finding の並びや表示形式を変更したいとき。
+- review oracle の結果判定が error、no_targets、fatal、minor、ok のどれになるかを確認したいとき。
+- oracle file のパスをレポート上でどのように相対表示するか、または oracle ツリー外の path 表示を調べたいとき。
+- accepted/rejected finding や fatal/minor finding の件数がレポートにどう反映されるかを確認したいとき。
 
 ## Do not read this when
-- review oracle がどの oracle file を対象に選ぶか、finding をどう検出するかを知りたいだけのとき。
-- SessionState、reports_dir、timestamp など実行時状態や共通保存先 helper の定義を確認したいとき。
-- review oracle 以外のサブコマンドのレポート形式や CLI 引数処理を確認したいとき。
-- 既存の INDEX.md ルーティング文書そのものを更新・検証したいとき。
+- review oracle がどの oracle file を対象に選ぶか、または finding をどう検出・判定するかを調べたいとき。
+- レポート保存先ディレクトリ、timestamp、session state などの共通 runtime 処理そのものを調べたいとき。
+- review oracle 以外のサブコマンドの出力やレポート生成を変更したいとき。
 
 ## hash
-- 4c5b6aa60c471154c7532eab988f9baee39390511b34f3df47abaa67200d742d
+- 343a451b0583fb9e3ab827733b2dad6c371ed1689c01dbdda7c419ba5d8f3baf
 
 # `review_targets.py`
 

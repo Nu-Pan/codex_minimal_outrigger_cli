@@ -143,23 +143,21 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実装を収める領域。init、indexing、tui、session、review、apply などの CLI 実行入口と、各 workflow の orchestration 層への入口になる。
-- サブコマンドごとの事前条件、runtime 接続、git/worktree/state 操作、Codex 呼び出し、report 出力、merge/abandon などの利用者向け制御フローを調べるための分岐点である。
-- 詳細な生成ロジック、prompt builder、共通 runtime、git wrapper、path/state model そのものではなく、サブコマンド単位でそれらをどう接続しているかを読む起点になる。
+- cmoc の各サブコマンド実行本体を集約する領域。session、apply、review、init、indexing、tui などの利用者向けコマンドを、runtime、git 操作、state 管理、Codex 呼び出し、report 出力へ接続する orchestration 層への入口になる。
+- 配下はコマンド単位または workflow 単位に分かれ、事前条件、状態遷移、branch/worktree 操作、出力、失敗時処理、後片付けを確認するための起点になる。
 
 ## Read this when
-- cmoc のサブコマンド実装のうち、どの領域へ進むべきかを判断したいとき。
-- init、indexing、tui、session、review、apply の実行順序、事前条件、状態遷移、出力、失敗時処理を確認または変更したいとき。
-- session branch、run worktree、state file、report、process id、git merge/commit/delete などが各サブコマンドでどう扱われるかを追いたいとき。
-- review や apply の対象列挙、finding 処理、INDEX 変更反映、session branch への反映または破棄など、workflow 全体の入口から下位処理への接続を確認したいとき。
-- CLI runtime、Codex Exec/TUI、設定、root 解決、ignore/preflight、共通 helper がサブコマンド実行本体からどう呼ばれているかを確認したいとき。
+- 特定の cmoc サブコマンドの実行順序、事前条件、状態更新、git 操作、stdout/report 出力、失敗条件を確認または変更したいとき。
+- session branch の作成・合流・破棄、apply run の作成・適用・join/abandon、review oracle の対象列挙・判定・INDEX 反映など、コマンド別 workflow の入口を探したいとき。
+- init、indexing、tui のような単独サブコマンドが、共通 runtime、設定、ignore、Codex Exec/TUI、commit 処理へどう接続されるかを追いたいとき。
+- サブコマンド固有の report 生成、merge conflict 処理、想定外差分検査、worktree 作成・削除、process id や state file のライフサイクルを調べたいとき。
 
 ## Do not read this when
-- サブコマンドに依存しない CLI 登録、runtime 共通規約、git wrapper、config、path model、state model の詳細だけを調べたいとき。
-- Codex に渡す prompt、Structured Output parameter、builder の具体的な内容だけを確認したいとき。
-- INDEX.md の本文生成、差分検出、lock、commit、ルーティング文書作成規則そのものを調べたいとき。
-- oracle file、realization file、path placeholder、scope などの正本仕様断片を確認したいとき。
-- 個別 workflow の下位 helper が担う対象列挙、report 描画、path 解決、merge operation 検証などに読む対象をすでに絞れているとき。
+- CLI 全体の登録、引数定義、共通 runtime、git wrapper、root/path model、state 読み書き helper の汎用挙動だけを調べたいとき。
+- oracle file、realization file、INDEX.md 生成規則、ルーティング文書作成規則など、正本仕様や共通概念を確認したいとき。
+- Codex に渡す prompt、Structured Output parameter、launch parameter の内容そのものだけを確認したいときは、対応する builder 側を読む。
+- INDEX.md の内容生成、commit、lock、差分検出など indexing 共通処理の詳細だけを調べたいとき。
+- 個別サブコマンドの正本仕様そのものを確認したいときは、対応する oracle doc を読む。
 
 ## hash
-- 52f30255596f02c59497dc4f3311b5de2c0da2ad1500b87198876dba75f55fac
+- 3f6fbd6a4cc3c514365767fa3db8f9d160cc568fd97b28132298ec62c03bce83
