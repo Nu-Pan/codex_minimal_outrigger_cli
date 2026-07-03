@@ -20,17 +20,16 @@
 # `index_entry.py`
 
 ## Summary
-- 正本側のインデックスエントリー定義を再公開し、既存の公開参照を保つための互換入口。実体は正本側にあり、この対象自体は互換 import の薄い層として位置づけられる。
+- oracle 側の indexing index entry builder を旧 acp.builder 名前空間から再公開する互換入口。
+- 既存利用者が旧参照で build_indexing_index_entry_parameter を import し続けられるようにする薄い転送層。
 
 ## Read this when
-- 既存の公開参照がどの正本側実装へ接続されているかを確認したいとき。
-- 互換入口を残す理由や、削除できる条件を確認したいとき。
-- 公開参照の維持・廃止に関わる変更で、正本側実装との対応関係を確認したいとき。
+- 旧 acp.builder.indexing.index_entry 参照の維持・削除条件を確認したいとき。
+- indexing index entry builder の import 経路互換性を調べるとき。
 
 ## Do not read this when
-- インデックスエントリーの型・関数・挙動そのものを確認したいとき。その場合は再公開先の正本側実装を読む。
-- 新しいインデックス生成ロジックや詳細な処理内容を探しているとき。この対象は互換入口であり、処理本体ではない。
-- 互換参照の削除条件や再公開先だけでなく、正本仕様全体を確認したいとき。その場合は該当する正本側の本文を読む。
+- builder 本体の実装や引数構築ロジックを確認したいときは、再公開先を読む。
+- 新規機能追加や index entry 生成仕様そのものを調べたいとき。
 
 ## hash
-- f40922bbff39f2f514b174dfbb7ba079bdcf376ff8108a6e5a8bfc9f329f189c
+- 0942f373b620da2b885fbc99301d410e8eb54a141bea9edc93310c4ff55fbbeb

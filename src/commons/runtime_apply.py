@@ -155,6 +155,11 @@ def delete_apply_process_id(root: Path, session_id: str) -> None:
 def stop_apply_process(process: ApplyProcessIdentity) -> str | None:
     """running abandon では cleanup 前に apply process が消えたことを確認する。"""
     warnings: list[str] = []
+
+    def joined_warnings(*extra: str) -> str | None:
+        combined = [*warnings, *extra]
+        return "; ".join(combined) if combined else None
+
     for child in process.child_processes:
         warning = stop_child_process_group(child)
         if warning:
@@ -168,11 +173,11 @@ def stop_apply_process(process: ApplyProcessIdentity) -> str | None:
         )
     process_fd = open_process_fd(process_id)
     if process_fd is None:
-        return f"apply process already stopped: {process_id}"
+        return joined_warnings(f"apply process already stopped: {process_id}")
     try:
         current_start_time = process_start_time(process_id)
         if current_start_time is None and wait_process_fd_exit(process_fd, 0):
-            return f"apply process already stopped: {process_id}"
+            return joined_warnings(f"apply process already stopped: {process_id}")
         if process.start_time is None or current_start_time is None:
             raise CmocError(
                 "実行中 apply process の同一性を確認できません。",
@@ -180,13 +185,13 @@ def stop_apply_process(process: ApplyProcessIdentity) -> str | None:
                 f"pid: {process_id}",
             )
         if current_start_time != process.start_time:
-            return f"stale apply process id ignored: {process_id}"
+            return joined_warnings(f"stale apply process id ignored: {process_id}")
         send_process_signal(process_fd, process_id, signal.SIGTERM)
         if wait_process_fd_exit(process_fd, 5.0):
-            return "; ".join(warnings) if warnings else None
+            return joined_warnings()
         send_process_signal(process_fd, process_id, signal.SIGKILL)
         if wait_process_fd_exit(process_fd, 5.0):
-            return "; ".join(warnings) if warnings else None
+            return joined_warnings()
         raise CmocError(
             "実行中 apply process を停止できません。",
             ["apply process を確認して停止後に再実行してください。"],

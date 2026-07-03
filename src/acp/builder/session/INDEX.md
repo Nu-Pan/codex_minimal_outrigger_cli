@@ -1,36 +1,33 @@
 # `__init__.py`
 
 ## Summary
-- oracle.acp_builder.session と同じ import 経路を実装側に用意するための互換 package 初期化ファイル。
-- 実体の処理や公開オブジェクト定義は持たず、この階層を session package として成立させる入口に位置づけられる。
+- oracle.acp_builder.session との互換性を保つための package 初期化ファイル。既存の acp.builder.session.* import を維持するためだけに残されている。
 
 ## Read this when
-- acp builder の session package が oracle 側の package 構造とどう対応しているかを確認したいとき。
-- この階層が import 可能な package として存在する理由だけを確認したいとき。
+- acp.builder.session.* import の互換維持経路を確認する。
+- oracle.acp_builder.session 参照への移行や、互換 package を削除できる条件を確認する。
 
 ## Do not read this when
-- session builder の具体的な処理、状態管理、入出力変換を調べたいとき。
-- 公開 API、関数、クラス、定数の実装内容を探しているとき。
-- oracle 側の正本仕様や互換対象そのものを確認したいとき。
+- session 実装の挙動や構成要素を確認したい場合。
+- 新規機能の入口や通常の公開 API を探している場合。
 
 ## hash
-- 7e4bc9c978926c93dcef2adf49463fd3703f72086d6dffc318e9381b610b5c88
+- 1c24d1b1720d385b0f3388d0c70ebd4fa053c26df3a40f54e8cb91484c901dc8
 
 # `join`
 
 ## Summary
-- ACP builder の session join 領域における package 入口と、旧 import 経路を維持する互換入口を収める領域。
-- この階層自体は session join の実処理を担う場所ではなく、oracle 側の対応構成との package 互換性と、正本側実装への再 export 境界を扱う。
+- session join builder 配下の旧 import path 互換入口をまとめる領域。実装本体ではなく、既存の acp.builder.session.join.* 参照を canonical oracle 実装または互換 package 配置へ中継する薄い公開面維持層を扱う。
 
 ## Read this when
-- ACP builder の session join 配下が package として成立している理由や、oracle 側の対応構成との互換性を確認したいとき。
-- session join conflict resolution について、旧 import 経路が残っている理由、移行用の互換入口、削除可否の前提を確認したいとき。
-- session join 配下の実体を持つ実装へ進む前に、この階層が実処理ではなく互換境界として存在しているかを見分けたいとき。
+- session join builder の旧 acp.builder 配下 import path が、どの canonical 実装や互換入口へつながるかを確認したいとき。
+- acp.builder.session.join 配下の互換 package や再公開モジュールを残す理由、公開面維持、削除条件を調べたいとき。
+- build_session_join_conflict_resolution_parameter の旧公開元を追跡しているとき。
 
 ## Do not read this when
-- session join の具体的な処理内容、関数、クラス、入出力仕様、衝突解決の判定内容を調べたいときは、実体を持つ正本側実装へ進む。
-- ACP builder 全体の設計や session join 以外の領域を調べたいときは、より上位または対象領域の入口から確認する。
-- oracle 側の正本仕様そのものを確認したいときは、この互換領域ではなく oracle 側の該当本文を読む。
+- session join の具体的な処理内容、制御フロー、builder 呼び出し順を確認したいときは、呼び出し元の session join 実装を読む。
+- conflict resolution parameter builder の実装内容や仕様根拠を確認したいときは、canonical oracle 実装を読む。
+- 互換 import の実際の利用箇所や、realization 側と利用者向け公開面から参照がなくなったかを判断したいときは、参照元を調査する。
 
 ## hash
-- 85933db87f4a855b5a4bdd80b5593fcd293c47c0e7c1c7fa2e11a1270fa78021
+- a15ba1cd6e0e08fbb876b209ed53bd6220137d51d7d7005d7c797e2610045d3c

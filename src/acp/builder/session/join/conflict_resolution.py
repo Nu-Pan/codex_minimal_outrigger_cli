@@ -6,4 +6,8 @@ the canonical implementation is
 Delete this module after all callers use the canonical oracle path directly.
 """
 
-from oracle.acp_builder.session.join.conflict_resolution import *  # noqa: F403
+from oracle.acp_builder.session.join.conflict_resolution import (
+    build_session_join_conflict_resolution_parameter,
+)
+
+__all__ = ["build_session_join_conflict_resolution_parameter"]

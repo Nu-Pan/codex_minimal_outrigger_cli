@@ -5,4 +5,16 @@
 参照がなくなること。
 """
 
-from oracle.other.cmoc_config import *  # noqa: F403
+from oracle.other.cmoc_config import (
+    CmocConfig,
+    CmocConfigApplyFork,
+    CmocConfigCodex,
+    CmocConfigReviewOracle,
+)
+
+__all__ = [
+    "CmocConfig",
+    "CmocConfigApplyFork",
+    "CmocConfigCodex",
+    "CmocConfigReviewOracle",
+]

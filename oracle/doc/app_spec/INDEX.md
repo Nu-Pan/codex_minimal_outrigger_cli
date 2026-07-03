@@ -199,24 +199,22 @@
 # `sub_command`
 
 ## Summary
-- サブコマンド仕様断片をまとめる領域として、session、apply、review、indexing、init、TUI 起動などの CLI 外部挙動を扱う。
-- 各文書は、対象サブコマンドの引数、事前条件、状態遷移、git 操作、agent call 境界、終了時の出力・レポート・cleanup のうち、実装差を避けたい要件を確認する入口になる。
-- cmoc 全体の基本概念ではなく、利用者が実行するサブコマンド単位で挙動を探すための案内対象である。
+- cmoc の各サブコマンドについて、正本仕様断片への入口をまとめる領域。
+- session の作成・完了・破棄、apply の開始・取り込み・破棄、初期化、明示インデクシング、oracle review、TUI 起動など、CLI 外部挙動と状態遷移をサブコマンド単位で確認するための配下項目を持つ。
+- 各項目は、対象サブコマンドの事前条件、状態更新、git 操作、agent call 境界、出力や終了扱いなど、実装差を避けたい外部仕様を読む入口になる。
 
 ## Read this when
-- 特定の cmoc サブコマンドを実装・修正・テストする前に、その CLI としての外部挙動、事前条件、状態更新、終了条件を確認したい。
-- session の開始・完了・破棄、apply run の開始・取り込み・破棄、oracle review、indexing、init、TUI 起動のいずれかに関する仕様断片を探している。
-- サブコマンドごとの git branch/worktree 操作、未コミット差分の扱い、状態ファイル更新、cleanup、stdout や report の扱いを比較して読む先を選びたい。
-- agent call を伴うサブコマンドについて、どの処理境界を CLI 側が担い、どこから先を agent call や別仕様へ委ねるかを確認したい。
+- 特定の cmoc サブコマンドの CLI 挙動、事前条件、状態遷移、git 操作、出力、終了条件を実装・変更・テストする。
+- session lifecycle、apply lifecycle、初期化、インデクシング実行、oracle review、TUI 起動のうち、どの正本仕様断片へ進むべきかを選びたい。
+- サブコマンドごとの責務境界、他サブコマンドとの違い、旧仕様や互換挙動を残してよいかを確認したい。
 
 ## Do not read this when
-- oracle file、realization file、path model、run 隔離実行など、サブコマンド横断の基本概念や共通仕様だけを確認したい。
-- agent call に渡す詳細な parameter schema や prompt builder の正本仕様そのものを探している。
-- サブコマンド仕様ではなく、現在の実装モジュール、テスト配置、helper 分割、既存コード構造を調べたい。
-- INDEX.md の生成規則、インデクシングで生成・更新される内容そのもの、またはルーティング文書のレビュー仕様を確認したい。
+- oracle file、realization file、パスモデル、INDEX.md 生成規則など、cmoc 全体の基本概念や標準だけを確認したい。
+- agent call の parameter schema や prompt 仕様そのもの、run 隔離実行の共通仕様、インデクシング処理内容など、サブコマンド外部仕様より直接の正本仕様が別にある内容を確認したい。
+- 実装モジュール、テスト、helper 分割、補助スクリプトなど realization 側の現在構造だけを調べたい。
 
 ## hash
-- c0e3c24d4e7cdd543ee7f8de79b797c644fe227b66157a6f45254138db4048cf
+- bc6ecaadd73f38acea13c70340c4923dfbcd63f38f92977c1c1d73c4c1f0c238
 
 # `usage.md`
 

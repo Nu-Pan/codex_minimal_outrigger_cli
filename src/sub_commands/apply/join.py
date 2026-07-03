@@ -11,7 +11,8 @@ from cmoc_runtime import (
     current_branch,
     delete_branch,
     ensure_cmoc_ignored,
-    is_git_ignored,
+    is_oracle_file_path,
+    is_untracked_git_ignored,
     load_state_for_branch,
     remove_worktree,
     repo_root,
@@ -23,7 +24,7 @@ from cmoc_runtime import (
     work_root,
     write_state,
 )
-from sub_commands.apply._runtime import worktree_for_branch, worktree_for_branch_optional
+from commons.runtime_apply import worktree_for_branch, worktree_for_branch_optional
 
 
 def cmoc_apply_join_impl(force_resolve: bool) -> None:
@@ -288,7 +289,7 @@ def collect_apply_join_unexpected_changes(
         path for path in apply_paths if not is_expected_apply_change(root, path)
     ]
     unexpected_session = [
-        path for path in session_paths if not is_expected_session_change(path)
+        path for path in session_paths if not is_expected_session_change(root, path)
     ]
     result: dict[str, list[str]] = {}
     if unexpected_apply:
@@ -327,17 +328,21 @@ def is_expected_apply_change(root: Path, path: str) -> bool:
     p = Path(path)
     if p.name == "INDEX.md":
         return True
-    if path.startswith(".git/"):
+    if p.name == "AGENTS.md":
+        return False
+    if path.startswith((".git/", ".codex/")):
         return False
     if path.startswith(("oracle/", ".agents/")) or is_root_memo_path(path):
         return False
-    return not is_git_ignored(root, root / path)
+    return not is_untracked_git_ignored(root, root / path)
 
 
-def is_expected_session_change(path: str) -> bool:
+def is_expected_session_change(root: Path, path: str) -> bool:
     """session branch 上で apply 実行中に許可される差分かどうかを判定する。"""
     p = Path(path)
-    return p.name == "INDEX.md" or path.startswith("oracle/") or is_root_memo_path(path)
+    if p.name == "INDEX.md" or is_root_memo_path(path):
+        return True
+    return is_oracle_file_path(root, root / path)
 
 
 def is_root_memo_path(path: str) -> bool:

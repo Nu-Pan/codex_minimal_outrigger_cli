@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from cmoc_runtime import SessionState, reports_dir, timestamp
+from sub_commands.review_paths import finding_oracle_path
 
 
 def write_review_oracle_report(
@@ -52,7 +53,7 @@ def render_review_oracle_report(
 ) -> str:
     """review oracle report を Markdown + YAML frontmatter で描画する。"""
     # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md:
-    # Keep the required H2 order while listing finding details in aggregate verdict order.
+    # Fatal/minor details must stay under their severity H2 sections.
     accepted = [finding for finding in findings if finding.get("verdict") == "accept"]
     rejected = [finding for finding in findings if finding.get("verdict") == "reject"]
     fatal_accepted = _findings_with(accepted, "fatal")
@@ -69,11 +70,14 @@ def render_review_oracle_report(
     )
     findings_by_path: dict[str, int] = {}
     for finding in [*accepted, *rejected]:
-        oracle_path = finding.get("oracle_path", "")
-        findings_by_path[oracle_path] = findings_by_path.get(oracle_path, 0) + 1
+        oracle_path = finding_oracle_path(finding, root)
+        if oracle_path is None:
+            continue
+        display = path_display(root, oracle_path)
+        findings_by_path[display] = findings_by_path.get(display, 0) + 1
     rows = "\n".join(
         f"| {idx} | `{path_display(root, path)}` | "
-        f"{findings_by_path.get(str(path), findings_by_path.get(path_display(root, path), 0))} |"
+        f"{findings_by_path.get(path_display(root, path), 0)} |"
         for idx, path in enumerate(oracle_files, 1)
     )
     frontmatter = [
@@ -109,15 +113,15 @@ def render_review_oracle_report(
             "## Fatal findings",
             f"- Accepted: {len(fatal_accepted)}",
             f"- Rejected: {len(fatal_rejected)}",
+            "### Accepted fatal findings",
+            render_finding_section(fatal_accepted),
+            "### Rejected fatal findings",
+            render_finding_section(fatal_rejected),
             "## Minor findings",
             f"- Accepted: {len(minor_accepted)}",
             f"- Rejected: {len(minor_rejected)}",
-            "### Accepted fatal findings",
-            render_finding_section(fatal_accepted),
             "### Accepted minor findings",
             render_finding_section(minor_accepted),
-            "### Rejected fatal findings",
-            render_finding_section(fatal_rejected),
             "### Rejected minor findings",
             render_finding_section(minor_rejected),
             "",

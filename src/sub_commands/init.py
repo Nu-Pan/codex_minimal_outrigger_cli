@@ -60,12 +60,13 @@ def _cmoc_init_body() -> None:
         run_git(["restore", "--staged", "--", "."], root)
     try:
         ensure_cmoc_ignored(root)
+        _ensure_agents_tracked(root)
         if config_root.resolve() != root.resolve():
             ensure_cmoc_ignored_in_exclude(config_root)
         sync_config(config_root)
         run_git(["add", ".gitignore"], root)
         diff = run_git(
-            ["diff", "--cached", "--quiet", "--", ".gitignore", ".cmoc"],
+            ["diff", "--cached", "--quiet", "--", ".gitignore", ".cmoc", ".agents"],
             root,
             check=False,
         )
@@ -73,6 +74,10 @@ def _cmoc_init_body() -> None:
             run_git(["commit", "-m", "cmoc init"], root)
     finally:
         _restore_staged_patch(root, staged_patch)
+        # <work-root>/oracle/doc/app_spec/sub_command/init.md requires the
+        # final index state to keep .agents tracked even when a restored
+        # preexisting staged deletion removed the last tracked .agents file.
+        _ensure_agents_tracked(root)
         _restore_gitignore_state(
             root,
             gitignore,
@@ -100,6 +105,18 @@ def ensure_cmoc_ignored_before_init_log(root: Path) -> None:
     except BaseException:
         _PRE_LOG_GITIGNORE_STATES.pop(state_key, None)
         raise
+
+
+def _ensure_agents_tracked(root: Path) -> None:
+    # <work-root>/oracle/doc/app_spec/sub_command/init.md requires init to
+    # create a tracked placeholder when .agents has no tracked files.
+    agents = root / ".agents"
+    agents.mkdir(exist_ok=True)
+    if run_git(["ls-files", "--", ".agents"], root).stdout.strip():
+        return
+    gitkeep = agents / ".gitkeep"
+    gitkeep.touch(exist_ok=True)
+    run_git(["add", "-f", ".agents/.gitkeep"], root)
 
 
 def _git_show(root: Path, spec: str) -> str | None:

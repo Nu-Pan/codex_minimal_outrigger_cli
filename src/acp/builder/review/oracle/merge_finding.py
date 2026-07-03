@@ -1,13 +1,14 @@
-from oracle.acp_builder.basic import AgentCallParameter
-from oracle.acp_builder.review.oracle.merge_finding import *  # noqa: F403
+from oracle.acp_builder.basic import AgentCallParameter as _AgentCallParameter
 from oracle.acp_builder.review.oracle.merge_finding import (
     build_review_oracle_merge_finding_parameter as _build_parameter,
 )
 
+__all__ = ["build_review_oracle_merge_finding_parameter"]
+
 
 def build_review_oracle_merge_finding_parameter(
     known_findings: str,
-) -> AgentCallParameter:
+) -> _AgentCallParameter:
     parameter = _build_parameter(known_findings)
     return type(parameter)(
         parameter.model_class,

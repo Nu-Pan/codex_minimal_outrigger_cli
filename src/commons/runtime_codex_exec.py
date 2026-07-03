@@ -15,6 +15,7 @@ import os
 import subprocess
 import threading
 import time
+from collections.abc import Callable
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -42,7 +43,7 @@ from commons.runtime_codex_profile import (
 )
 from commons.runtime_errors import CmocError
 from commons.runtime_codex_logging import emit_codex_call_console
-from commons.runtime_git import is_untracked_git_ignored, run_git
+from commons.runtime_git import is_oracle_file_path, run_git
 from commons.runtime_logging import SubcommandLogger, current_subcommand_logger
 from commons.runtime_paths import (
     codex_log_dir,
@@ -71,9 +72,11 @@ _WorktreeDiffSnapshot = dict[Path, tuple[str, _PathFingerprint]]
 # `git status` may refresh the index during post-check; .git itself is still
 # denied, so only that cmoc-owned metadata churn is excluded from comparison.
 _GIT_STATUS_MUTABLE_PATHS = {Path(".git/index")}
+_BeforeCodexCall = Callable[[str, Path], None]
 
 
 def _write_prompt_log(path: Path, prompt: str) -> None:
+    """Codex に渡した完全 prompt を再実行可能な stdin log として保存する。"""
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # The prompt log is the replayable stdin source itself, not metadata.
     path.write_text(prompt)
@@ -81,6 +84,7 @@ def _write_prompt_log(path: Path, prompt: str) -> None:
 
 
 def _record_generated_diff_paths(paths: set[Path]) -> None:
+    """cmoc が生成した差分 path の現在 fingerprint を post-check 用に記録する。"""
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # Concurrent cmoc calls share a worktree. A generated path is ignored only
     # while its fingerprint still matches the cmoc-written content; later agent
@@ -92,6 +96,7 @@ def _record_generated_diff_paths(paths: set[Path]) -> None:
 
 
 def _read_required_output_json(path: Path) -> Any:
+    """Structured Output の必須 JSON を semantic retry 用に厳格に読み取る。"""
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # Structured Output parse failure is semantic failure; schema permissiveness
     # must not turn missing, empty, or malformed output into success.
@@ -108,6 +113,7 @@ def _read_required_output_json(path: Path) -> Any:
 
 
 def _extract_resume_token_from_jsonl_log(path: Path) -> str | None:
+    """失敗した Codex session の永続 JSONL log から resume token を取り出す。"""
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # quota resume must be based on the persisted JSONL log for the failed
     # Codex session; if it is unreadable, retry without `resume`.
@@ -118,6 +124,7 @@ def _extract_resume_token_from_jsonl_log(path: Path) -> str | None:
 
 
 def _base_exec_argv(profile_name: str, codex_cwd: Path) -> list[str]:
+    """cmoc 側で検査済みの cwd/profile を使う Codex exec argv の共通部分を作る。"""
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # cmoc may run Codex from linked worktrees or generated roots; repo
     # validation belongs to cmoc's own preflight, not to Codex CLI startup.
@@ -135,10 +142,6 @@ def _base_exec_argv(profile_name: str, codex_cwd: Path) -> list[str]:
 def _quota_availability_probe_parameter(
     base_parameter: AgentCallParameter,
 ) -> AgentCallParameter:
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # The oracle specifies the polling behavior but has no dedicated oracle-src
-    # builder file. Keep this realization builder tiny and let runtime reuse the
-    # same CODEX_HOME/profile/cwd as the failed call.
     from acp.builder.quota_probe import build_quota_availability_probe_parameter
 
     return build_quota_availability_probe_parameter(base_parameter)
@@ -177,6 +180,7 @@ def run_codex_exec(
     extra_writable_paths: list[Path] | None = None,
     allow_oracle_conflict_writes: bool = False,
     verify_file_access: bool = True,
+    _before_recovery_codex_call: _BeforeCodexCall | None = None,
 ) -> CodexExecResult:
     """Codex exec の再試行、Structured Output 検証、実行記録を一括制御する。"""
     root = root or repo_root()
@@ -210,14 +214,24 @@ def run_codex_exec(
         if parameter.structured_output_schema_path
         else None
     )
-    base_call_data = {
-        "codex_home": str(codex_home),
-        "profile_name": profile_name,
-        "profile_path": str(profile_path),
-        "model_class": parameter.model_class.value,
-        "reasoning_effort": parameter.reasoning_effort.value,
-        "file_access_mode": parameter.file_access_mode.value,
-    }
+
+    def call_data(
+        run_parameter: AgentCallParameter,
+        run_codex_home: Path,
+        run_profile_path: Path,
+        run_profile_name: str,
+    ) -> dict[str, str]:
+        """call log に残す profile 由来値を実際の呼び出し parameter に揃える。"""
+        return {
+            "codex_home": str(run_codex_home),
+            "profile_name": run_profile_name,
+            "profile_path": str(run_profile_path),
+            "model_class": run_parameter.model_class.value,
+            "reasoning_effort": run_parameter.reasoning_effort.value,
+            "file_access_mode": run_parameter.file_access_mode.value,
+        }
+
+    base_call_data = call_data(parameter, codex_home, profile_path, profile_name)
 
     def new_log_paths() -> tuple[str, Path, Path, Path, Path, Path]:
         """Codex call 用 log path 群を時刻順に追える名前で確保する。"""
@@ -246,18 +260,22 @@ def run_codex_exec(
         return run_argv
 
     def run_with_prompt_file(
-        run_argv: list[str], run_prompt_path: Path
+        run_argv: list[str],
+        run_prompt_path: Path,
+        *,
+        run_codex_cwd: Path = codex_cwd,
+        run_codex_env: dict[str, str] = codex_env,
     ) -> subprocess.CompletedProcess[str]:
         # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
         # The prompt log file is the stdin source for `codex exec ... -`.
         with run_prompt_path.open() as prompt_file:
             return run_codex_subprocess(
                 run_argv,
-                cwd=codex_cwd,
+                cwd=run_codex_cwd,
                 stdin=prompt_file,
                 text=True,
                 capture_output=True,
-                env=codex_env,
+                env=run_codex_env,
             )
 
     def write_call_log(
@@ -271,6 +289,7 @@ def run_codex_exec(
         run_stderr_path: Path,
         run_output_path: Path,
         run_schema_path: Path | None,
+        run_call_data: dict[str, str] | None = None,
     ) -> None:
         """後から実行条件を追跡できる call log JSON を保存する。"""
         path.write_text(
@@ -279,7 +298,7 @@ def run_codex_exec(
                     "purpose": run_purpose,
                     "timestamp": run_ts,
                     "argv": run_argv,
-                    **base_call_data,
+                    **(run_call_data or base_call_data),
                     "schema_path": str(run_schema_path) if run_schema_path else None,
                     "prompt_log_path": str(run_prompt_path),
                     "stdout_log_path": str(run_stdout_path),
@@ -309,6 +328,9 @@ def run_codex_exec(
         returncode: int,
         status: str,
         error: str | None = None,
+        run_codex_home: Path = codex_home,
+        run_profile_path: Path = profile_path,
+        run_profile_name: str = profile_name,
     ) -> None:
         """console と subcommand log の両方へ Codex call 結果を記録する。"""
         elapsed_sec = time.perf_counter() - started_at
@@ -327,9 +349,9 @@ def run_codex_exec(
             "stdout_log_path": str(run_stdout_path),
             "stderr_log_path": str(run_stderr_path),
             "output_path": str(run_output_path),
-            "codex_home": str(codex_home),
-            "profile_name": profile_name,
-            "profile_path": str(profile_path),
+            "codex_home": str(run_codex_home),
+            "profile_name": run_profile_name,
+            "profile_path": str(run_profile_path),
             "schema_path": str(run_schema_path) if run_schema_path else None,
         }
         if error is not None:
@@ -388,6 +410,7 @@ def run_codex_exec(
             allowed_paths=allowed_paths,
             forbidden_baseline=forbidden_baseline,
             worktree_diff_baseline=worktree_diff_baseline,
+            before_recovery_codex_call=_before_recovery_codex_call,
         )
 
     def recover_call_file_access_violations(
@@ -418,7 +441,7 @@ def run_codex_exec(
     sleep_sec = capacity_initial_sleep_sec
     last_result: subprocess.CompletedProcess[str] | None = None
     resume_token: str | None = None
-    generated_paths: set[Path] = set()
+    generated_paths: set[Path] = {profile_path.resolve()}
     if schema_path is not None:
         generated_paths.add(schema_path.resolve())
     if logger is not None:
@@ -506,7 +529,6 @@ def run_codex_exec(
                     status="quota_waiting",
                     error=error_text,
                 )
-                quota_probe_parameter = _quota_availability_probe_parameter(parameter)
                 with _QUOTA_CONDITION:
                     if _QUOTA_POLLING:
                         wait_started_at = time.perf_counter()
@@ -586,6 +608,34 @@ def run_codex_exec(
                             logger.add_quota_wait(quota_poll_interval_sec)
                         quota_wait_sec += quota_poll_interval_sec
                         time.sleep(quota_poll_interval_sec)
+                        quota_probe_parameter = _quota_availability_probe_parameter(
+                            parameter
+                        )
+                        probe_codex_cwd = file_access_to_codex_cwd(
+                            quota_probe_parameter.file_access_mode, codex_work_root
+                        )
+                        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+                        # quota probe is a separate Codex call; its minimal
+                        # AgentCallParameter must drive profile/cwd/env too.
+                        probe_codex_home = resolve_codex_home(probe_codex_cwd)
+                        validate_codex_home(probe_codex_home)
+                        probe_codex_env = codex_subprocess_env(probe_codex_home)
+                        probe_profile_path = prepare_codex_profile(
+                            quota_probe_parameter,
+                            config,
+                            probe_codex_home,
+                            codex_work_root,
+                            extra_read_root=root,
+                        )
+                        probe_profile_name = codex_profile_name(probe_profile_path)
+                        probe_call_data = call_data(
+                            quota_probe_parameter,
+                            probe_codex_home,
+                            probe_profile_path,
+                            probe_profile_name,
+                        )
+                        generated_paths.add(probe_profile_path.resolve())
+                        _record_generated_diff_paths({probe_profile_path})
                         (
                             probe_ts,
                             probe_prompt_path,
@@ -604,7 +654,9 @@ def run_codex_exec(
                                 probe_call_path,
                             )
                         )
-                        probe_argv = _base_exec_argv(profile_name, codex_cwd)
+                        probe_argv = _base_exec_argv(
+                            probe_profile_name, probe_codex_cwd
+                        )
                         probe_argv.extend(
                             [
                                 "--json",
@@ -626,10 +678,16 @@ def run_codex_exec(
                             run_stderr_path=probe_stderr_path,
                             run_output_path=probe_output_path,
                             run_schema_path=None,
+                            run_call_data=probe_call_data,
                         )
                         _record_generated_diff_paths({probe_call_path})
                         probe_started_at = time.perf_counter()
-                        poll = run_with_prompt_file(probe_argv, probe_prompt_path)
+                        poll = run_with_prompt_file(
+                            probe_argv,
+                            probe_prompt_path,
+                            run_codex_cwd=probe_codex_cwd,
+                            run_codex_env=probe_codex_env,
+                        )
                         probe_stdout_path.write_text(poll.stdout)
                         probe_stderr_path.write_text(poll.stderr)
                         _record_generated_diff_paths(
@@ -661,6 +719,9 @@ def run_codex_exec(
                                 returncode=poll.returncode,
                                 status="capacity_retrying",
                                 error=probe_error_text,
+                                run_codex_home=probe_codex_home,
+                                run_profile_path=probe_profile_path,
+                                run_profile_name=probe_profile_name,
                             )
                             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
                             # A quota probe is still an agent call; capacity
@@ -690,6 +751,9 @@ def run_codex_exec(
                                 returncode=poll.returncode,
                                 status="failed",
                                 error=probe_error_text,
+                                run_codex_home=probe_codex_home,
+                                run_profile_path=probe_profile_path,
+                                run_profile_name=probe_profile_name,
                             )
                             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
                             # A probe is still `codex exec`; non-quota failure is
@@ -725,6 +789,9 @@ def run_codex_exec(
                             returncode=poll.returncode,
                             status="succeeded" if probe_available else "quota_waiting",
                             error=None if probe_available else probe_error_text,
+                            run_codex_home=probe_codex_home,
+                            run_profile_path=probe_profile_path,
+                            run_profile_name=probe_profile_name,
                         )
                         if probe_available:
                             break
@@ -898,6 +965,7 @@ def recover_file_access_violations(
     allowed_paths: list[Path] | None = None,
     forbidden_baseline: _ForbiddenSnapshot | None = None,
     worktree_diff_baseline: _WorktreeDiffSnapshot | None = None,
+    before_recovery_codex_call: _BeforeCodexCall | None = None,
 ) -> None:
     """agent call 後に残った file access rule 違反を設定回数だけ修復する。"""
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
@@ -921,12 +989,26 @@ def recover_file_access_violations(
             violations,
             violated_mode,
         )
+        purpose = "file access rule violation recovery"
+        recovery_root = root or worktree
+        if before_recovery_codex_call is not None:
+            # <work-root>/oracle/doc/app_spec/indexing.md
+            # Recovery is an agent call, but it recurses into this exec
+            # implementation instead of the outer preflight wrapper.
+            before_recovery_codex_call(purpose, worktree)
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # The post-check targets agent edits only; indexing preflight may
+            # commit INDEX.md and update .git before the recovery agent starts.
+            if forbidden_baseline is not None:
+                forbidden_baseline = _forbidden_filesystem_snapshot(worktree)
+            if worktree_diff_baseline is not None:
+                worktree_diff_baseline = _worktree_diff_snapshot(worktree)
         recovery_result = run_codex_exec(
             parameter,
-            root=root or worktree,
+            root=recovery_root,
             cwd=worktree,
             config=config,
-            purpose="file access rule violation recovery",
+            purpose=purpose,
             subcommand_logger=subcommand_logger,
             verify_file_access=False,
         )
@@ -972,36 +1054,45 @@ def _file_access_recovery_parameter(
     violations: list[Path],
     violated_mode: FileAccessMode,
 ) -> AgentCallParameter:
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # File-access recovery reuses the apply finding-application agent contract;
-    # the recovery-specific details are supplied as a finding instead of a
-    # separate realization-side builder.
     from acp.builder.apply.fork.finding_application import (
         build_apply_fork_finding_application_parameter,
     )
 
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # File-access recovery must use the finding-application agent call
+    # contract; the runtime only adapts detected violations into findings.
     return build_apply_fork_finding_application_parameter(
         [
             {
-                "title": "ファイルアクセス規則違反のリカバリ",
+                "title": "File access rule violation recovery",
                 "evidences": [
                     {
                         "path": str(path),
-                        "summary": "agent call 後の事後検証で編集禁止差分として検出された。",
+                        "line_start": 1,
+                        "line_end": 1,
+                        "summary": (
+                            f"`{path}` still has a diff forbidden by "
+                            f"`{violated_mode.value}`."
+                        ),
                     }
                     for path in violations
                 ],
                 "oracle_requirement": (
-                    "agent call 後に編集禁止ファイル・ディレクトリの差分を検証し、"
-                    "違反があれば agent call によるリカバリを試みる。"
+                    "`<work-root>/oracle/doc/app_spec/codex_exec_rule.md` requires "
+                    "post-call file access violations to be recovered by an agent "
+                    "call whose contract is `build_apply_fork_finding_application_parameter`."
                 ),
                 "observed_implementation": (
-                    f"{violated_mode.value} の agent call が編集禁止差分を残した。"
+                    f"`{violated_agent_call_log}` left diffs outside the "
+                    f"`{violated_mode.value}` file access mode."
                 ),
-                "reason": f"違反元 call log: {violated_agent_call_log}",
+                "reason": (
+                    "The remaining diffs violate the file access mode of the "
+                    "agent call that produced them."
+                ),
                 "suggested_fix": (
-                    "違反元 agent call が発生させた編集禁止差分だけを、"
-                    "呼び出し前の状態に戻してください。"
+                    "Remove or move the forbidden diffs while preserving the "
+                    "semantic purpose of the original agent call log."
                 ),
             }
         ]
@@ -1224,7 +1315,7 @@ def _is_write_allowed_by_file_access_mode(
         return _is_readonly_temporary_diff_path(root, path, mode)
     match mode:
         case FileAccessMode.REALIZATION_WRITE:
-            return not _is_oracle_file_path(root, path)
+            return not is_oracle_file_path(root, path)
         case FileAccessMode.PURE_ORACLE_WRITE:
             return relative.parts[0] == "oracle"
         case FileAccessMode.REPO_WRITE | FileAccessMode.NO_RULE:
@@ -1251,18 +1342,4 @@ def _is_readonly_temporary_diff_path(
         ".pytest_cache" in relative.parts
         or "__pycache__" in relative.parts
         or path.name.endswith((".pyc", ".pyo"))
-    )
-
-
-def _is_oracle_file_path(root: Path, path: Path) -> bool:
-    """oracle file 定義に該当する path かを返す。"""
-    try:
-        relative = path.resolve().relative_to(root.resolve())
-    except ValueError:
-        return False
-    return (
-        bool(relative.parts)
-        and relative.parts[0] == "oracle"
-        and path.name not in {"AGENTS.md", "INDEX.md"}
-        and not is_untracked_git_ignored(root, path)
     )

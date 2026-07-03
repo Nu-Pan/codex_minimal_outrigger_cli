@@ -4,4 +4,6 @@
 削除条件は realization 側と利用者向け公開面から同参照がなくなること。
 """
 
-from oracle.acp_builder.indexing.index_entry import *  # noqa: F403
+from oracle.acp_builder.indexing.index_entry import build_indexing_index_entry_parameter
+
+__all__ = ["build_indexing_index_entry_parameter"]

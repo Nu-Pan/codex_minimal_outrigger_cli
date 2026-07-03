@@ -54,6 +54,7 @@ from commons.runtime_git import (
     ensure_cmoc_ignored_in_exclude,
     head_commit,
     is_git_ignored,
+    is_oracle_file_path,
     is_managed_branch,
     is_untracked_git_ignored,
     remove_worktree,

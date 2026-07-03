@@ -22,7 +22,7 @@ from config.cmoc_config import CmocConfig
 
 from commons.runtime_content import write_hashed_file, write_hashed_file_in_existing_dir
 from commons.runtime_errors import CmocError
-from commons.runtime_git import is_untracked_git_ignored
+from commons.runtime_git import is_oracle_file_path
 from commons.runtime_paths import schema_store_dir
 
 APPLY_PROCESS_TRACKING_ENV = "CMOC_APPLY_PROCESS_ID_PATH"
@@ -258,26 +258,12 @@ def _is_writable_path_allowed(
     if relative.parts and relative.parts[0] in blocked_root_names:
         return False
     if mode == FileAccessMode.REALIZATION_WRITE:
-        return not _is_oracle_file_path(root, path)
+        return not is_oracle_file_path(root, path)
     if mode == FileAccessMode.PURE_ORACLE_WRITE:
         return path.is_relative_to(root / "oracle")
     if mode in {FileAccessMode.READONLY, FileAccessMode.PURE_ORACLE_READ}:
         return False
     return mode in {FileAccessMode.REPO_WRITE, FileAccessMode.NO_RULE}
-
-
-def _is_oracle_file_path(root: Path, path: Path) -> bool:
-    """oracle file 定義に該当する path かを返す。"""
-    try:
-        relative = path.resolve().relative_to(root.resolve())
-    except ValueError:
-        return False
-    return (
-        bool(relative.parts)
-        and relative.parts[0] == "oracle"
-        and path.name not in {"AGENTS.md", "INDEX.md"}
-        and not is_untracked_git_ignored(root, path)
-    )
 
 
 def _append_workspace_write_section(
