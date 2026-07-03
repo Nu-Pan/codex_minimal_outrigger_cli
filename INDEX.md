@@ -174,21 +174,21 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 全体を収める領域。CLI 外部挙動、Codex 実行 wrapper、apply/session/indexing/review の状態遷移、prompt・schema・packaging・runtime 境界の回帰確認へ進む入口になる。
-- 個別テストは、サブコマンド単位の統合挙動、Codex 呼び出しと file access rule、INDEX 更新 workflow、正本仕様断片との参照境界、共通テスト支援処理に分かれている。
+- CLI 外部挙動と runtime 境界を検証する realization test 群。init/TUI、session、apply、review oracle、indexing、Codex runtime、prompt 構築、packaged import、StructDoc rendering などの回帰観点へ進む入口になる。
+- 共通支援コードも含み、一時 Git リポジトリ、fake Codex/CODEX_HOME、session/apply state、linked worktree などを使った統合的なテスト文脈を扱う。
 
 ## Read this when
-- CLI サブコマンドの終了コード、標準出力、Git branch/worktree、session state、report、cleanup などの observable な挙動を確認または変更するとき。
-- Codex CLI/TUI 実行 wrapper、CODEX_HOME、sandbox/file access mode、retry・quota retry、call log、preflight など、agent call 実行境界の回帰テストを探すとき。
-- apply、session、indexing、review oracle の workflow について、複数の状態条件や失敗条件を横断して期待値を確認したいとき。
-- prompt parts、ACP builder parameter、structured output schema 参照、packaged import、StructDoc Markdown rendering など、実装と正本仕様断片の接続面に関するテストを探すとき。
-- テスト用の Git repository、fake Codex profile、fake executable、apply worktree 解決など、CLI テスト共通の支援処理を確認・変更するとき。
+- CLI サブコマンドの終了コード、stdout/stderr、Git branch/worktree/state、report、cleanup、拒否条件など、利用者から見える挙動のテストを探すとき。
+- Codex CLI/TUI 実行 wrapper、file access rule、quota/capacity retry、CODEX_HOME、sandbox profile、call log など runtime 境界の回帰テストを確認・変更するとき。
+- apply fork/join/abandon、session fork/join/abandon、review oracle、indexing preflight/update など、複数ファイル・Git 状態・agent call が絡むワークフローの期待値を確認するとき。
+- prompt parts、ACP builder parameter、packaged import、StructDoc Markdown rendering のような、実装モジュールの公開契約や出力整形に対応する realization test を探すとき。
+- テスト用の Git fixture、fake executable、fake Codex profile、session state から worktree を解決する補助関数を確認・変更するとき。
 
 ## Do not read this when
 - 正本仕様断片そのものを確認・変更したい場合は、oracle 側の対象本文を読む。
-- プロダクト実装の責務分割、内部 helper、低レベル処理だけを調べたい場合は、対応する実装モジュールを読む。
-- 特定の単体機能について CLI 境界や回帰期待値を確認する必要がなく、実装本文だけで判断できる場合は、対象 implementation へ直接進む。
-- INDEX.md エントリー本文の品質や routing standard だけを確認したい場合は、正本仕様断片または indexing 関連の実装・テストのうち目的に合う対象を読む。
+- プロダクト実装の責務分割、低レベル helper、状態管理、Git 操作、Codex 実行処理の実装詳細だけを調べたい場合は、対応する implementation を直接読む。
+- 個別テストの assertion や fixture ではなく、ルーティング文書の記述規則や INDEX.md entry の自然言語内容だけを設計したい場合は、関連する oracle 文書や indexing 実装を読む。
+- CLI や runtime の外部挙動に影響しない局所的な内部整理だけが目的で、既存の小さい単体テストや対象実装を直接読める場合。
 
 ## hash
-- cdf6d2c32e7c972098644207614784bc75355fe99fe2b90ff93752d743ab606f
+- fabc8cf82eb71fb564a22fe5927e3246f4014c0315c61a1b41a68b8da4a94f63
