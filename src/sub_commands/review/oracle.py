@@ -82,8 +82,6 @@ def _cmoc_review_oracle_body(
     codex_exec: CodexExec,
 ) -> None:
     """現在の session branch の oracle を isolated review worktree 上でレビューする。"""
-    if scope not in {"session", "full"}:
-        raise CmocError("scope が不正です。", ["session または full を指定してください。"], scope)
     root = repo_root()
     current_root = work_root()
     branch = current_branch(current_root)

@@ -1,5 +1,6 @@
 import os
 from collections.abc import Sequence
+from enum import Enum
 
 import click
 import typer
@@ -18,6 +19,17 @@ from sub_commands.session.abandon import cmoc_session_abandon_impl
 from sub_commands.session.fork import cmoc_session_fork_impl
 from sub_commands.session.join import cmoc_session_join_impl
 from sub_commands.tui import cmoc_tui_impl
+
+
+class ApplyForkScope(str, Enum):
+    rolling = "rolling"
+    session = "session"
+    full = "full"
+
+
+class ReviewOracleScope(str, Enum):
+    session = "session"
+    full = "full"
 
 
 class _CmocTyperGroup(typer.core.TyperGroup):
@@ -102,9 +114,12 @@ def session_abandon() -> None:
 
 
 @apply_app.command("fork")
-def apply_fork(scope: str = typer.Option("rolling", "--scope", "-s")) -> None:
+def apply_fork(
+    scope: ApplyForkScope = typer.Option(ApplyForkScope.rolling, "--scope", "-s"),
+) -> None:
     """finding 適用用の apply run を開始する CLI 入口。"""
-    cmoc_apply_fork_impl(scope)
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
+    cmoc_apply_fork_impl(scope.value)
 
 
 @apply_app.command("join")
@@ -120,10 +135,12 @@ def apply_abandon() -> None:
 
 
 @review_app.command("oracle")
-def review_oracle(scope: str = typer.Option("session", "--scope", "-s")) -> None:
+def review_oracle(
+    scope: ReviewOracleScope = typer.Option(ReviewOracleScope.session, "--scope", "-s"),
+) -> None:
     """oracle review を隔離 worktree で実行する CLI 入口。"""
     # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
-    cmoc_review_oracle_impl(scope)
+    cmoc_review_oracle_impl(scope.value)
 
 
 @app.command()

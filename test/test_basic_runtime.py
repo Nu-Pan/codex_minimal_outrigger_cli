@@ -330,6 +330,29 @@ def test_cli_parse_error_report_is_written_to_stdout() -> None:
     assert "No such option: --bad-option" not in result.stderr
 
 
+@pytest.mark.parametrize(
+    ("argv", "allowed"),
+    [
+        (["apply", "fork", "--scope", "bad"], ["rolling", "session", "full"]),
+        (["review", "oracle", "--scope", "rolling"], ["session", "full"]),
+    ],
+)
+def test_scope_options_are_rejected_by_cli_parser(
+    argv: list[str], allowed: list[str]
+) -> None:
+    """scope の公開値制約はサブコマンド実行前の CLI 解析で拒否する。"""
+    result = runner.invoke(app, argv)
+
+    assert result.exit_code != 0
+    assert "# ERROR" in result.stdout
+    assert "CLI 引数解析に失敗しました。" in result.stdout
+    assert "Invalid value for '--scope'" in result.stdout
+    assert argv[-1] in result.stdout
+    for value in allowed:
+        assert value in result.stdout
+    assert "# ERROR" not in result.stderr
+
+
 def test_cli_requires_current_directory_to_be_work_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -76,8 +76,6 @@ def _cmoc_apply_fork_body(
     codex_exec: CodexExec,
 ) -> CliRunResult:
     """Codex CLI による apply loop を isolated apply worktree 上で実行する。"""
-    if scope not in {"rolling", "session", "full"}:
-        raise CmocError("scope が不正です。", ["rolling, session, full のいずれかを指定してください。"], scope)
     root = repo_root()
     current_root = work_root()
     branch = current_branch(current_root)
