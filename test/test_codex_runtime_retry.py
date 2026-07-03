@@ -75,7 +75,7 @@ def test_run_codex_exec_retries_semantic_output(
 
     assert result.output_json == {"ok": True}
     assert counter.read_text() == "2"
-    call_paths = sorted((root / ".cmoc" / "log" / "codex").glob("*_call.json"))
+    call_paths = sorted((root / ".cmoc" / "local" / "log" / "codex").glob("*_call.json"))
     call_logs = [json.loads(path.read_text()) for path in call_paths]
     assert len(call_logs) == 2
     assert [Path(log["output_path"]).read_text() for log in call_logs] == [
@@ -217,7 +217,7 @@ def test_run_codex_exec_logs_capacity_retrying_call(
     )
 
     assert result.output_json == {"ok": True}
-    call_paths = sorted((root / ".cmoc" / "log" / "codex").glob("*_call.json"))
+    call_paths = sorted((root / ".cmoc" / "local" / "log" / "codex").glob("*_call.json"))
     log_events = [json.loads(line) for line in logger.path.read_text().splitlines()]
     codex_events = [event for event in log_events if event["event"] == "codex_call"]
     assert [event["status"] for event in codex_events] == [

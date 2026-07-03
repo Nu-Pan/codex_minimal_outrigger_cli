@@ -266,7 +266,7 @@ def test_review_oracle_report_counts_oracle_root_alias_findings(
         "cmoc/session/session-1",
         SessionState(),
         1,
-        [root / ".cmoc" / "worktrees" / "session-1" / "run-1" / "oracle" / "a.md"],
+        [root / ".cmoc" / "local" / "worktree" / "session-1" / "run-1" / "oracle" / "a.md"],
         [
             {
                 "finding_id": "finding-0001",
@@ -292,7 +292,7 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    linked = root / ".cmoc" / "worktrees" / "linked-review"
+    linked = root / ".cmoc" / "local" / "worktree" / "linked-review"
     run_git(root, "worktree", "add", "-b", "linked-review-home", str(linked), "HEAD")
     (linked / "oracle" / "linked.md").write_text("# linked oracle\n")
     run_git(linked, "add", "oracle/linked.md")
@@ -335,7 +335,7 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
     session_id = branch.removeprefix("cmoc/session/")
     assert review_worktrees
     for review_worktree in review_worktrees:
-        assert review_worktree.parent == root / ".cmoc" / "worktrees" / session_id
+        assert review_worktree.parent == root / ".cmoc" / "local" / "worktree" / session_id
         assert not review_worktree.is_relative_to(linked)
     assert any("linked.md" in call for call in calls)
 
@@ -846,11 +846,11 @@ def test_review_oracle_merges_review_index_changes(
     assert "review_join_commit: null" not in rendered
     assert review_worktrees
     for review_worktree in review_worktrees:
-        assert review_worktree.parent == root / ".cmoc" / "worktrees" / session_id
+        assert review_worktree.parent == root / ".cmoc" / "local" / "worktree" / session_id
     assert not any(
-        path.name == ".git" for path in (root / ".cmoc" / "worktrees").rglob(".git")
+        path.name == ".git" for path in (root / ".cmoc" / "local" / "worktree").rglob(".git")
     )
-    assert not (root / ".cmoc" / "worktrees" / "review").exists()
+    assert not (root / ".cmoc" / "local" / "worktree" / "review").exists()
 
 
 def test_review_oracle_merges_preflight_committed_index_changes(

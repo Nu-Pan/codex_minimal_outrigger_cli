@@ -25,7 +25,7 @@ def build_file_access_rule_vaolation_recovery_parameter(
 
     violated_call_log: Path
         ファイルアクセス規則に違反した agetn call のログファイル
-        `<repo-root>/.cmoc/log/codex/<time-stamp>_call.json` が渡される想定
+        `<repo-root>/.cmoc/local/log/codex/<time-stamp>_call.json` が渡される想定
 
     violated_file_list: list[Path]
         ファイルアクセス規則に違反したファイルのリスト
@@ -42,12 +42,12 @@ def build_file_access_rule_vaolation_recovery_parameter(
         role="- あなたはファイルアクセス規則違反のリカバリー担当です",
         summary="""
         - <violated-file-list> が <violated-file-access-rule> に違反しています
-        - この違反は `<repo-root>/.cmoc/log/codex/<time-stamp>_call.json` で発生しました
+        - この違反は `<repo-root>/.cmoc/local/log/codex/<time-stamp>_call.json` で発生しました
         - このファイルアクセス規則違反をリカバリーして下さい
         """,
         goal="""
         - `<repo-root>` ツリー内の `<violated-file-list>` 差分が、<violated-file-access-rule> に違反していないこと
-        - `<repo-root>/.cmoc/log/codex/<time-stamp>_call.json` の作業目的を意味論的に損ねていないこと
+        - `<repo-root>/.cmoc/local/log/codex/<time-stamp>_call.json` の作業目的を意味論的に損ねていないこと
         - git で追跡するべきでない一時ファイルが .gitignore の対象に追加されていること
         """,
         file_access_mode=FileAccessMode.NO_RULE,

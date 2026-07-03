@@ -65,32 +65,32 @@ def format_duration(seconds: float) -> str:
 
 def sessions_dir(root: Path) -> Path:
     """session state の保存先 directory を返す。"""
-    return root / ".cmoc" / "sessions"
+    return root / ".cmoc" / "local" / "session"
 
 
 def reports_dir(root: Path, command: str) -> Path:
     """サブコマンド別 report 保存先 directory を返す。"""
-    return root / ".cmoc" / "reports" / command
+    return root / ".cmoc" / "local" / "report" / command
 
 
 def logs_dir(root: Path) -> Path:
     """サブコマンド log 保存先 directory を返す。"""
-    return root / ".cmoc" / "log" / "sub_command"
+    return root / ".cmoc" / "local" / "log" / "sub_command"
 
 
 def worktrees_dir(root: Path) -> Path:
     """cmoc 管理 worktree の保存先 directory を返す。"""
-    return root / ".cmoc" / "worktrees"
+    return root / ".cmoc" / "local" / "worktree"
 
 
 def codex_log_dir(root: Path) -> Path:
     """Codex call log 保存先 directory を返す。"""
-    return root / ".cmoc" / "log" / "codex"
+    return root / ".cmoc" / "local" / "log" / "codex"
 
 
 def schema_store_dir(root: Path) -> Path:
     """Structured Output schema store directory を返す。"""
-    return root / ".cmoc" / "state" / "schema"
+    return root / ".cmoc" / "local" / "state" / "schema"
 
 
 def config_path(root: Path) -> Path:

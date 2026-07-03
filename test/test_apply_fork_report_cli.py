@@ -166,7 +166,7 @@ def test_finding_application_prompt_uses_complete_standard_prompt(
     )
 
     repo_root = tmp_path / "repo"
-    apply_worktree = repo_root / ".cmoc" / "worktrees" / "session" / "run"
+    apply_worktree = repo_root / ".cmoc" / "local" / "worktree" / "session" / "run"
     apply_worktree.mkdir(parents=True)
     (repo_root / ".git").mkdir()
     (apply_worktree / ".git").write_text("gitdir: ignored\n")
@@ -363,7 +363,7 @@ def test_apply_fork_writes_report_with_change_summary(
     assert "apply fork commit message" not in calls
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
-    state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
+    state = json.loads((root / ".cmoc" / "local" / "session" / f"{session_id}.json").read_text())
     apply_branch = state["apply"]["apply_branch"]
     assert (
         run_git(root, "log", "-1", "--pretty=%s", apply_branch).stdout.strip()
@@ -553,7 +553,7 @@ def test_apply_fork_is_unconverged_when_finding_application_makes_no_diff(
     assert "result: unconverged" in report_path.read_text()
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
-    state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
+    state = json.loads((root / ".cmoc" / "local" / "session" / f"{session_id}.json").read_text())
     assert (
         run_git(root, "rev-parse", state["apply"]["apply_branch"]).stdout.strip()
         == run_git(root, "rev-parse", "HEAD").stdout.strip()
@@ -644,13 +644,13 @@ def test_apply_fork_recovers_file_access_rule_violation_before_commit(
 
     assert result.exit_code == 0
     calls = []
-    for path in sorted((root / ".cmoc" / "log" / "codex").glob("*_call.json")):
+    for path in sorted((root / ".cmoc" / "local" / "log" / "codex").glob("*_call.json")):
         call = json.loads(path.read_text())
         calls.append((call["purpose"], call["file_access_mode"]))
     assert ("file access rule violation recovery", "realization_write") in calls
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
-    state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
+    state = json.loads((root / ".cmoc" / "local" / "session" / f"{session_id}.json").read_text())
     apply_branch = state["apply"]["apply_branch"]
     assert (
         run_git(root, "show", f"{apply_branch}:src/app.py").stdout
@@ -841,9 +841,9 @@ def test_apply_fork_rolling_uses_previous_apply_join_commit(
     )
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     apply_branch = f"cmoc/apply/{session_id}/manual"
-    apply_worktree = root / ".cmoc" / "worktrees" / session_id / "manual"
+    apply_worktree = root / ".cmoc" / "local" / "worktree" / session_id / "manual"
     oracle_snapshot_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
     run_git(root, "worktree", "add", "-b", apply_branch, str(apply_worktree), "HEAD")
     (apply_worktree / "README.md").write_text("# updated by apply\n")

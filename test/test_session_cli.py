@@ -33,7 +33,7 @@ import sub_commands.session.join as session_join_module
 
 def session_state_path(root: Path, session_branch: str) -> Path:
     session_id = session_branch.removeprefix("cmoc/session/")
-    return root / ".cmoc" / "sessions" / f"{session_id}.json"
+    return root / ".cmoc" / "local" / "session" / f"{session_id}.json"
 
 
 def session_home_branch(root: Path, session_branch: str) -> str:
@@ -42,7 +42,7 @@ def session_home_branch(root: Path, session_branch: str) -> str:
 
 
 def write_abandoned_state(root: Path, session_id: str) -> Path:
-    path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(
@@ -132,7 +132,7 @@ def test_session_fork_retries_session_id_collision(
     assert result.exit_code == 0
     assert current_branch(root) == f"cmoc/session/{next_id}"
     assert old_path.read_text() == original
-    assert (root / ".cmoc" / "sessions" / f"{next_id}.json").is_file()
+    assert (root / ".cmoc" / "local" / "session" / f"{next_id}.json").is_file()
     assert f"- session_branch: `cmoc/session/{next_id}`" in result.output
 
 
@@ -142,7 +142,7 @@ def test_session_fork_rejects_corrupt_state_without_active_session_message(
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     home_branch = current_branch(root)
-    path = root / ".cmoc" / "sessions" / "broken.json"
+    path = root / ".cmoc" / "local" / "session" / "broken.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps({"session": {"session_home_branch": home_branch}, "apply": {}})
@@ -173,12 +173,12 @@ def test_session_fork_initializes_cmoc_ignore_before_logging(
     assert not (root / ".gitignore").exists()
     assert (
         subprocess.run(
-            ["git", "check-ignore", "-q", ".cmoc/.__cmoc_ignore_probe__"],
+            ["git", "check-ignore", "-q", ".cmoc/local/.__cmoc_ignore_probe__"],
             cwd=root,
         ).returncode
         == 0
     )
-    assert len(list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))) == 1
+    assert len(list((root / ".cmoc" / "local" / "log" / "sub_command").glob("*.jsonl"))) == 1
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
@@ -189,7 +189,7 @@ def test_session_fork_uses_linked_worktree_branch_and_head(
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
     root_branch = current_branch(root)
-    linked = root / ".cmoc" / "worktrees" / "linked"
+    linked = root / ".cmoc" / "local" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
     (linked / "README.md").write_text("# linked\n")
     run_git(linked, "add", "README.md")
@@ -247,7 +247,7 @@ def test_session_abandon_uses_linked_worktree_branch(
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
     root_branch = current_branch(root)
-    linked = root / ".cmoc" / "worktrees" / "linked"
+    linked = root / ".cmoc" / "local" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
     monkeypatch.chdir(linked)
     assert (
@@ -290,7 +290,7 @@ def test_session_abandon_requires_existing_home_branch(
     gitignore = root / ".gitignore"
     gitignore.write_text(
         "\n".join(
-            line for line in gitignore.read_text().splitlines() if line != "/.cmoc/"
+            line for line in gitignore.read_text().splitlines() if line != "/.cmoc/local/"
         )
         + "\n"
     )
@@ -321,7 +321,7 @@ def test_session_abandon_requires_existing_home_branch(
         ).returncode
         == 0
     )
-    assert "/.cmoc/" not in gitignore.read_text().splitlines()
+    assert "/.cmoc/local/" not in gitignore.read_text().splitlines()
     assert run_git(root, "ls-files", "--", ".cmoc").stdout == tracked_cmoc
 
 
@@ -339,7 +339,7 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     gitignore = root / ".gitignore"
     gitignore.write_text(
         "\n".join(
-            line for line in gitignore.read_text().splitlines() if line != "/.cmoc/"
+            line for line in gitignore.read_text().splitlines() if line != "/.cmoc/local/"
         )
         + "\n"
     )
@@ -373,7 +373,7 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     )
     state = json.loads(state_path.read_text())
     assert state["session"]["state"] == "active"
-    assert "/.cmoc/" not in gitignore.read_text().splitlines()
+    assert "/.cmoc/local/" not in gitignore.read_text().splitlines()
     assert run_git(root, "ls-files", "--", ".cmoc").stdout == tracked_cmoc
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
@@ -519,7 +519,7 @@ def test_session_join_uses_linked_worktree_branch(
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
     root_branch = current_branch(root)
-    linked = root / ".cmoc" / "worktrees" / "linked"
+    linked = root / ".cmoc" / "local" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
     monkeypatch.chdir(linked)
     assert (

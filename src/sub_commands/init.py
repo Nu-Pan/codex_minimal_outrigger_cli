@@ -64,7 +64,10 @@ def _cmoc_init_body() -> None:
         if config_root.resolve() != root.resolve():
             ensure_cmoc_ignored_in_exclude(config_root)
         sync_config(config_root)
-        run_git(["add", ".gitignore"], root)
+        add_paths = [".gitignore"]
+        if config_root.resolve() == root.resolve():
+            add_paths.append(".cmoc/config.json")
+        run_git(["add", *add_paths], root)
         diff = run_git(
             ["diff", "--cached", "--quiet", "--", ".gitignore", ".cmoc", ".agents"],
             root,

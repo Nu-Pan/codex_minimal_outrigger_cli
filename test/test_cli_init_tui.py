@@ -42,9 +42,12 @@ def test_init_untracks_existing_cmoc_files_and_commits_cleanup(
 
     assert result.exit_code == 0
     assert tracked_cmoc_file.exists()
-    assert run_git(root, "ls-files", "--", ".cmoc").stdout.strip() == ""
+    assert ".cmoc/tracked.txt" not in run_git(
+        root, "ls-files", "--", ".cmoc"
+    ).stdout.splitlines()
+    assert run_git(root, "ls-files", "--", ".cmoc/local").stdout.strip() == ""
     ignored = subprocess.run(
-        ["git", "check-ignore", "-q", ".cmoc/.__cmoc_ignore_probe__"],
+        ["git", "check-ignore", "-q", ".cmoc/local/.__cmoc_ignore_probe__"],
         cwd=root,
     )
     assert ignored.returncode == 0
@@ -61,7 +64,7 @@ def test_subcommand_log_identifies_invoked_cli_command(
     result = runner.invoke(app, ["init"], catch_exceptions=False)
 
     assert result.exit_code == 0
-    log_paths = list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))
+    log_paths = list((root / ".cmoc" / "local" / "log" / "sub_command").glob("*.jsonl"))
     assert len(log_paths) == 1
     events = [json.loads(line) for line in log_paths[0].read_text().splitlines()]
     invoked = events[0]
@@ -177,12 +180,12 @@ def test_init_does_not_commit_preexisting_gitignore_changes(
     result = runner.invoke(app, ["init"], catch_exceptions=False)
 
     assert result.exit_code == 0
-    assert run_git(root, "show", "HEAD:.gitignore").stdout == "base\n\n/.cmoc/\n"
+    assert run_git(root, "show", "HEAD:.gitignore").stdout == "base\n\n/.cmoc/local/\n"
     assert run_git(root, "diff", "--cached", "--", ".gitignore").stdout.count(
         "+staged"
     ) == 1
     assert run_git(root, "diff", "--", ".gitignore").stdout.count("+unstaged") == 1
-    assert gitignore.read_text() == "base\nstaged\nunstaged\n\n/.cmoc/\n"
+    assert gitignore.read_text() == "base\nstaged\nunstaged\n\n/.cmoc/local/\n"
 
 
 def test_init_keeps_cmoc_ignored_after_preexisting_gitignore_unstaged_delete(
@@ -199,11 +202,11 @@ def test_init_keeps_cmoc_ignored_after_preexisting_gitignore_unstaged_delete(
     result = runner.invoke(app, ["init"], catch_exceptions=False)
 
     assert result.exit_code == 0
-    assert run_git(root, "show", "HEAD:.gitignore").stdout == "base\n\n/.cmoc/\n"
-    assert gitignore.read_text() == "base\n\n/.cmoc/\n"
+    assert run_git(root, "show", "HEAD:.gitignore").stdout == "base\n\n/.cmoc/local/\n"
+    assert gitignore.read_text() == "base\n\n/.cmoc/local/\n"
     assert (
         subprocess.run(
-            ["git", "check-ignore", "-q", ".cmoc/.__cmoc_ignore_probe__"],
+            ["git", "check-ignore", "-q", ".cmoc/local/.__cmoc_ignore_probe__"],
             cwd=root,
         ).returncode
         == 0
@@ -219,7 +222,7 @@ def test_init_initializes_linked_worktree_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
-    linked = root / ".cmoc" / "worktrees" / "linked"
+    linked = root / ".cmoc" / "local" / "worktree" / "linked"
     linked.parent.mkdir(parents=True)
     run_git(root, "worktree", "add", "-b", "linked-init", str(linked), "HEAD")
     monkeypatch.chdir(linked)
@@ -229,12 +232,12 @@ def test_init_initializes_linked_worktree_root(
     assert result.exit_code == 0
     assert not (root / ".gitignore").exists()
     assert (
-        "/.cmoc/" in (root / ".git" / "info" / "exclude").read_text().splitlines()
+        "/.cmoc/local/" in (root / ".git" / "info" / "exclude").read_text().splitlines()
     )
-    assert "/.cmoc/" in (linked / ".gitignore").read_text()
+    assert "/.cmoc/local/" in (linked / ".gitignore").read_text()
     assert (
         subprocess.run(
-            ["git", "check-ignore", "-q", ".cmoc/.__cmoc_ignore_probe__"],
+            ["git", "check-ignore", "-q", ".cmoc/local/.__cmoc_ignore_probe__"],
             cwd=linked,
         ).returncode
         == 0
@@ -245,12 +248,12 @@ def test_init_initializes_linked_worktree_root(
             ["git", "check-ignore", "-q", ".cmoc/config.json"],
             cwd=root,
         ).returncode
-        == 0
+        == 1
     )
-    assert run_git(root, "status", "--short", "--", ".cmoc").stdout.strip() == ""
+    assert run_git(root, "status", "--short", "--", ".cmoc/local").stdout.strip() == ""
     assert not (linked / ".cmoc" / "config.json").exists()
-    assert len(list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))) == 1
-    assert not (linked / ".cmoc" / "log" / "sub_command").exists()
+    assert len(list((root / ".cmoc" / "local" / "log" / "sub_command").glob("*.jsonl"))) == 1
+    assert not (linked / ".cmoc" / "local" / "log" / "sub_command").exists()
     assert (
         run_git(
             linked,
@@ -258,7 +261,7 @@ def test_init_initializes_linked_worktree_root(
             "--short",
             "--",
             ".cmoc/config.json",
-            ".cmoc/log/sub_command",
+            ".cmoc/local/log/sub_command",
         ).stdout.strip()
         == ""
     )
@@ -288,7 +291,7 @@ def test_init_writes_default_config_json(tmp_path: Path, monkeypatch: pytest.Mon
         subprocess.run(
             ["git", "check-ignore", "-q", ".cmoc/config.json"], cwd=root
         ).returncode
-        == 0
+        == 1
     )
     assert (
         run_git(root, "status", "--short", "--", ".cmoc/config.json").stdout.strip()
@@ -391,10 +394,10 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     assert result.exit_code == 0
     assert len(exec_calls) == 1
     assert len(tui_calls) == 1
-    orig_files = list((root / ".cmoc" / "log" / "tui").glob("*_orig.md"))
+    orig_files = list((root / ".cmoc" / "local" / "log" / "tui").glob("*_orig.md"))
     assert len(orig_files) == 1
     assert "TODO ここから書き始める" in orig_files[0].read_text()
-    complete_files = list((root / ".cmoc" / "log" / "tui").glob("*_cmpl.md"))
+    complete_files = list((root / ".cmoc" / "local" / "log" / "tui").glob("*_cmpl.md"))
     assert len(complete_files) == 1
     complete_prompt = complete_files[0].read_text()
     assert "# file read write rule - repo_write" in complete_prompt
@@ -402,8 +405,8 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     assert "src を確認して必要なら直す" in complete_prompt
     assert "remove me" not in complete_prompt
     assert str(complete_files[0]) in tui_calls[0][0].prompt
-    assert "/.cmoc/" in (root / ".gitignore").read_text()
-    assert (root / ".cmoc" / "log" / "sub_command").is_dir()
+    assert "/.cmoc/local/" in (root / ".gitignore").read_text()
+    assert (root / ".cmoc" / "local" / "log" / "sub_command").is_dir()
     assert not (root / ".cmoc" / "logs" / "sub_commands").exists()
 
 
@@ -413,7 +416,7 @@ def test_tui_uses_default_file_access_mode_for_empty_resolved_value(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    (root / ".cmoc" / "log" / "tui").mkdir(parents=True, exist_ok=True)
+    (root / ".cmoc" / "local" / "log" / "tui").mkdir(parents=True, exist_ok=True)
     parameter = tui_module.build_tui_codex_parameter(
         "確認して下さい。",
         {"file_access_mode": {"value": "", "reason": "default accepted"}},
@@ -433,7 +436,7 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    linked = root / ".cmoc" / "worktrees" / "linked"
+    linked = root / ".cmoc" / "local" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
     monkeypatch.chdir(linked)
     bin_dir = tmp_path / "bin"
@@ -489,17 +492,17 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     assert len(tui_calls) == 1
     assert tui_calls[0][1]["root"] == root.resolve()
     assert tui_calls[0][1]["cwd"] == linked.resolve()
-    assert len(list((root / ".cmoc" / "log" / "tui").glob("*_orig.md"))) == 1
-    complete_files = list((root / ".cmoc" / "log" / "tui").glob("*_cmpl.md"))
-    assert not list((linked / ".cmoc" / "log" / "tui").glob("*_cmpl.md"))
+    assert len(list((root / ".cmoc" / "local" / "log" / "tui").glob("*_orig.md"))) == 1
+    complete_files = list((root / ".cmoc" / "local" / "log" / "tui").glob("*_cmpl.md"))
+    assert not list((linked / ".cmoc" / "local" / "log" / "tui").glob("*_cmpl.md"))
     assert len(complete_files) == 1
     assert str(complete_files[0]) in tui_calls[0][0].prompt
     assert tui_calls[0][1]["extra_read_paths"] == [complete_files[0]]
     recorded = json.loads(recorder.read_text())
     schema_arg = recorded["args"][recorded["args"].index("--output-schema") + 1]
     assert recorded["cwd"] == str(linked)
-    assert Path(schema_arg).parent == linked / ".cmoc" / "state" / "schema"
-    assert not (root / ".cmoc" / "state" / "schema").exists()
+    assert Path(schema_arg).parent == linked / ".cmoc" / "local" / "state" / "schema"
+    assert not (root / ".cmoc" / "local" / "state" / "schema").exists()
 
 
 def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
@@ -510,7 +513,7 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
     config_path = root / ".cmoc" / "config.json"
     config_path.parent.mkdir()
     config_path.write_text("{}\n")
-    linked = root / ".cmoc" / "worktrees" / "linked"
+    linked = root / ".cmoc" / "local" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-tui-ignore", str(linked), "HEAD")
     monkeypatch.chdir(linked)
     bin_dir = tmp_path / "bin"
@@ -536,11 +539,11 @@ def test_tui_ignores_repo_and_work_cmoc_before_linked_worktree_logs(
     result = runner.invoke(app, ["tui"], catch_exceptions=False)
 
     assert result.exit_code == 0
-    assert "/.cmoc/" in (root / ".gitignore").read_text()
-    assert "/.cmoc/" in (linked / ".gitignore").read_text()
-    assert len(list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))) == 1
-    assert len(list((root / ".cmoc" / "log" / "tui").glob("*_orig.md"))) == 1
-    assert len(list((root / ".cmoc" / "log" / "tui").glob("*_cmpl.md"))) == 1
-    assert not list((linked / ".cmoc" / "log" / "tui").glob("*_cmpl.md"))
-    assert run_git(root, "status", "--short", "--", ".cmoc").stdout.strip() == ""
+    assert "/.cmoc/local/" in (root / ".gitignore").read_text()
+    assert "/.cmoc/local/" in (linked / ".gitignore").read_text()
+    assert len(list((root / ".cmoc" / "local" / "log" / "sub_command").glob("*.jsonl"))) == 1
+    assert len(list((root / ".cmoc" / "local" / "log" / "tui").glob("*_orig.md"))) == 1
+    assert len(list((root / ".cmoc" / "local" / "log" / "tui").glob("*_cmpl.md"))) == 1
+    assert not list((linked / ".cmoc" / "local" / "log" / "tui").glob("*_cmpl.md"))
+    assert run_git(root, "status", "--short", "--", ".cmoc/local").stdout.strip() == ""
     assert run_git(linked, "status", "--short", "--", ".cmoc").stdout.strip() == ""

@@ -825,7 +825,7 @@ def test_run_codex_exec_stores_schema_state_under_codex_work_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
-    linked = root / ".cmoc" / "worktrees" / "linked"
+    linked = root / ".cmoc" / "local" / "worktree" / "linked"
     linked.parent.mkdir(parents=True)
     run_git(root, "worktree", "add", "-b", "linked-exec", str(linked), "HEAD")
     setup_codex_home(tmp_path, monkeypatch)
@@ -877,15 +877,15 @@ def test_run_codex_exec_stores_schema_state_under_codex_work_root(
     schema_arg = Path(record["args"][record["args"].index("--output-schema") + 1])
     assert record["cwd"] == str(linked.resolve())
     assert result.schema_path == schema_arg
-    assert schema_arg.parent == linked / ".cmoc" / "state" / "schema"
-    assert not (root / ".cmoc" / "state" / "schema").exists()
+    assert schema_arg.parent == linked / ".cmoc" / "local" / "state" / "schema"
+    assert not (root / ".cmoc" / "local" / "state" / "schema").exists()
 
 
 def test_run_codex_exec_allows_repo_log_read_from_linked_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
-    linked = root / ".cmoc" / "worktrees" / "linked-exec-log"
+    linked = root / ".cmoc" / "local" / "worktree" / "linked-exec-log"
     linked.parent.mkdir(parents=True)
     run_git(root, "worktree", "add", "-b", "linked-exec-log", str(linked), "HEAD")
     setup_codex_home(tmp_path, monkeypatch)
@@ -912,7 +912,7 @@ def test_run_codex_exec_allows_repo_log_read_from_linked_worktree(
         _parameter(FileAccessMode.PURE_ORACLE_READ),
         root=root,
         cwd=linked,
-        extra_read_paths=[root / ".cmoc" / "log" / "codex" / "20260101_call.json"],
+        extra_read_paths=[root / ".cmoc" / "local" / "log" / "codex" / "20260101_call.json"],
         capacity_initial_sleep_sec=0,
         config=CmocConfig(),
     )
@@ -961,7 +961,7 @@ def test_run_codex_exec_rejects_agent_created_cmoc_log_diff(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
-    (root / ".gitignore").write_text("/.cmoc/\n")
+    (root / ".gitignore").write_text("/.cmoc/local/\n")
     run_git(root, "add", ".gitignore")
     run_git(root, "commit", "-m", "ignore cmoc")
     setup_codex_home(tmp_path, monkeypatch)
@@ -973,7 +973,7 @@ def test_run_codex_exec_rejects_agent_created_cmoc_log_diff(
             "import json, pathlib, sys",
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
-            "agent_log = pathlib.Path('.cmoc/log/codex/agent-created.txt')",
+            "agent_log = pathlib.Path('.cmoc/local/log/codex/agent-created.txt')",
             "agent_log.parent.mkdir(parents=True, exist_ok=True)",
             "agent_log.write_text('agent\\n')",
             "output.write_text('{}\\n')",
@@ -990,7 +990,7 @@ def test_run_codex_exec_rejects_agent_created_cmoc_log_diff(
             config=CmocConfig(),
         )
 
-    assert (root / ".cmoc" / "log" / "codex" / "agent-created.txt").read_text() == (
+    assert (root / ".cmoc" / "local" / "log" / "codex" / "agent-created.txt").read_text() == (
         "agent\n"
     )
 
@@ -1143,7 +1143,7 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    prompt_path = root / ".cmoc" / "log" / "tui" / "20260101_cmpl.md"
+    prompt_path = root / ".cmoc" / "local" / "log" / "tui" / "20260101_cmpl.md"
     prompt_path.parent.mkdir(parents=True)
     prompt_path.write_text("complete prompt\n")
     bin_dir = tmp_path / "bin"
@@ -1181,10 +1181,10 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    linked = root / ".cmoc" / "worktrees" / "linked"
+    linked = root / ".cmoc" / "local" / "worktree" / "linked"
     linked.parent.mkdir(parents=True)
     run_git(root, "worktree", "add", "-b", "linked-tui-runtime", str(linked), "HEAD")
-    prompt_path = root / ".cmoc" / "log" / "tui" / "20260101_cmpl.md"
+    prompt_path = root / ".cmoc" / "local" / "log" / "tui" / "20260101_cmpl.md"
     prompt_path.parent.mkdir(parents=True)
     prompt_path.write_text("complete prompt\n")
     bin_dir = tmp_path / "bin"
@@ -1214,7 +1214,7 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
     record = json.loads(recorder.read_text())
     assert record["cwd"] == str(linked.resolve())
     assert record["args"][record["args"].index("--cd") + 1] == str(linked.resolve())
-    call_log = next((root / ".cmoc" / "log" / "codex").glob("*_tui_call.json"))
+    call_log = next((root / ".cmoc" / "local" / "log" / "codex").glob("*_tui_call.json"))
     profile = tomllib.loads(
         Path(json.loads(call_log.read_text())["profile_path"]).read_text()
     )
@@ -1240,7 +1240,7 @@ def test_run_codex_tui_fails_when_codex_exits_nonzero(
     console = capsys.readouterr().out
     assert "- Purpose: `codex tui`" in console
     assert "- Exit code: `7`" in console
-    call_logs = list((root / ".cmoc" / "log" / "codex").glob("*_tui_call.json"))
+    call_logs = list((root / ".cmoc" / "local" / "log" / "codex").glob("*_tui_call.json"))
     assert len(call_logs) == 1
     call_log = json.loads(call_logs[0].read_text())
     assert call_log["argv"][:3] == ["codex", "--profile", call_log["profile_name"]]

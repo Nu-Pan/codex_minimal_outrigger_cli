@@ -15,19 +15,20 @@
 
 ## 実行手順
 
-1. `<work-root>/.cmoc` が git 追跡対象外であることを保証する
+1. `<work-root>/.cmoc/local` が git 追跡対象外であることを保証する
 2. `<work-root>/.agents` が git 追跡対象であることを保証する
 3. ここまでの作業で発生した差分を git commit する
 
-## 「`<repo-root>/.cmoc` が git 追跡対象外であることを保証する」の詳細
+## 「`<repo-root>/.cmoc/local` が git 追跡対象外であることを保証する」の詳細
 
 - 必要な操作
-    - `/.cmoc/` を `<work-root>/.gitignore` に追加する
-    - 既に tracked な `<work-root>/.cmoc` 配下ファイルは追跡を解除する (e.g. `git rm --cached`)
-- `<repo-root>/.cmoc` 追跡対象外保証の完了判定は、以下の両方を満たすこととする
-    - `git ls-files -- <repo-root>/.cmoc` の出力が空である
-    - `git check-ignore -q <repo-root>/.cmoc/.__cmoc_ignore_probe__` が成功する
-        - これは `<work-root>/.cmoc` 配下に将来作成されるファイルが git ignore 対象になることを確認するための probe path である
+    - `/.cmoc/local/` を `<work-root>/.gitignore` に追加する
+    - 既に tracked な `<work-root>/.cmoc/local` ツリー内ファイルは追跡を解除する (e.g. `git rm --cached`)
+    - `<work-root>/.cmoc` ツリー内ファイルは追跡を解除する (e.g. `git rm --cached`)
+- `<repo-root>/.cmoc/local` 追跡対象外保証の完了判定は、以下の両方を満たすこととする
+    - `git ls-files -- <repo-root>/.cmoc/local` の出力が空である
+    - `git check-ignore -q <repo-root>/.cmoc/local/.__cmoc_ignore_probe__` が成功する
+        - これは `<work-root>/.cmoc/local` 配下に将来作成されるファイルが git ignore 対象になることを確認するための probe path である
     - よって、実ファイルを作成する必要はない
 
 

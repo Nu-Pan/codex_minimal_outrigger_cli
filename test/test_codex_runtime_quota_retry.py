@@ -145,7 +145,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert result.output_json == {"ok": True}
     call_entries = [
         (path, json.loads(path.read_text()))
-        for path in sorted((root / ".cmoc" / "log" / "codex").glob("*_call.json"))
+        for path in sorted((root / ".cmoc" / "local" / "log" / "codex").glob("*_call.json"))
     ]
     call_logs = [log for _path, log in call_entries]
     assert [log["purpose"] for log in call_logs] == [

@@ -55,18 +55,18 @@ def test_apply_fork_runs_codex_loop_and_updates_state(
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     assert branch.startswith("cmoc/session/")
     session_id = branch.removeprefix("cmoc/session/")
-    state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
+    state = json.loads((root / ".cmoc" / "local" / "session" / f"{session_id}.json").read_text())
     assert state["apply"]["state"] == "completed"
     assert state["apply"]["apply_branch"].startswith(f"cmoc/apply/{session_id}/")
     run_id = state["apply"]["apply_branch"].removeprefix(f"cmoc/apply/{session_id}/")
     apply_worktree = apply_worktree_from_state(root, state)
-    assert apply_worktree == root / ".cmoc" / "worktrees" / session_id / run_id
+    assert apply_worktree == root / ".cmoc" / "local" / "worktree" / session_id / run_id
     assert apply_worktree.is_dir()
-    assert not (root / ".cmoc" / "worktrees" / "apply").exists()
+    assert not (root / ".cmoc" / "local" / "worktree" / "apply").exists()
     assert "apply_worktree" not in state["apply"]
     assert "apply_process_id" not in state["apply"]
     assert not (
-        root / ".cmoc" / "state" / "apply_processes" / f"{session_id}.pid"
+        root / ".cmoc" / "local" / "state" / "apply_processes" / f"{session_id}.pid"
     ).exists()
     assert calls
     assert any(call.startswith("apply fork enumerate findings") for call in calls)
@@ -79,7 +79,7 @@ def test_apply_fork_uses_linked_worktree_branch_and_head(
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    linked = root / ".cmoc" / "worktrees" / "linked-apply"
+    linked = root / ".cmoc" / "local" / "worktree" / "linked-apply"
     run_git(root, "worktree", "add", "-b", "linked-apply-home", str(linked), "HEAD")
     (linked / "README.md").write_text("# linked apply\n")
     run_git(linked, "add", "README.md")
@@ -105,7 +105,7 @@ def test_apply_fork_uses_linked_worktree_branch_and_head(
     assert result.exit_code == 0
     branch = run_git(linked, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
-    state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
+    state = json.loads((root / ".cmoc" / "local" / "session" / f"{session_id}.json").read_text())
     assert state["apply"]["oracle_snapshot_commit"] == linked_commit
     assert (
         run_git(root, "rev-parse", state["apply"]["apply_branch"]).stdout.strip()
@@ -113,7 +113,7 @@ def test_apply_fork_uses_linked_worktree_branch_and_head(
     )
     run_id = state["apply"]["apply_branch"].removeprefix(f"cmoc/apply/{session_id}/")
     apply_worktree = apply_worktree_from_state(root, state)
-    assert apply_worktree == root / ".cmoc" / "worktrees" / session_id / run_id
+    assert apply_worktree == root / ".cmoc" / "local" / "worktree" / session_id / run_id
     assert not apply_worktree.is_relative_to(linked)
 
 
@@ -167,10 +167,10 @@ def test_apply_fork_ensures_cmoc_ignore_without_dirtying_session(
     run_git(root, "commit", "-m", "stop ignoring cmoc in gitignore")
     exclude = root / ".git" / "info" / "exclude"
     exclude.write_text(
-        "\n".join(line for line in exclude.read_text().splitlines() if line != "/.cmoc/")
+        "\n".join(line for line in exclude.read_text().splitlines() if line != "/.cmoc/local/")
         + "\n"
     )
-    assert run_git(root, "status", "--short").stdout.strip() == "?? .cmoc/"
+    assert run_git(root, "status", "--short").stdout.strip() == "?? .cmoc/local/"
 
     class FakeCodexResult:
         output_json = {"findings": []}
@@ -182,7 +182,7 @@ def test_apply_fork_ensures_cmoc_ignore_without_dirtying_session(
     assert result.returncode == 0
     assert Path(result.stdout).is_file()
     assert run_git(root, "status", "--short").stdout.strip() == ""
-    assert "/.cmoc/" in exclude.read_text().splitlines()
+    assert "/.cmoc/local/" in exclude.read_text().splitlines()
 
 
 @pytest.mark.parametrize("config_case", ["invalid_json", "missing"])
@@ -198,7 +198,7 @@ def test_apply_fork_config_load_error_does_not_start_apply_run(
     )
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     config_path = root / ".cmoc" / "config.json"
     if config_case == "invalid_json":
         config_path.write_text("{invalid\n")
@@ -216,7 +216,7 @@ def test_apply_fork_config_load_error_does_not_start_apply_run(
     assert state["apply"]["state"] == "ready"
     assert "apply_process_id" not in state["apply"]
     assert not (
-        root / ".cmoc" / "state" / "apply_processes" / f"{session_id}.pid"
+        root / ".cmoc" / "local" / "state" / "apply_processes" / f"{session_id}.pid"
     ).exists()
     assert run_git(root, "branch", "--list", f"cmoc/apply/{session_id}/*").stdout == ""
     if config_case == "missing":
@@ -270,7 +270,7 @@ def test_apply_fork_can_target_and_edit_gitignore(
         """apply による .gitignore 編集と後続出力を再現する。"""
         purpose = str(kwargs["purpose"])
         if purpose == "apply fork finding application":
-            (Path.cwd() / ".gitignore").write_text("/.cmoc/\n# editable\n")
+            (Path.cwd() / ".gitignore").write_text("/.cmoc/local/\n# editable\n")
             return FakeCodexResult()
         if purpose == "apply fork change summary":
             return FakeCodexResult({"changes": []})
@@ -290,10 +290,10 @@ def test_apply_fork_can_target_and_edit_gitignore(
     assert [".gitignore"] in target_rels_by_call
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
-    state = json.loads((root / ".cmoc" / "sessions" / f"{session_id}.json").read_text())
+    state = json.loads((root / ".cmoc" / "local" / "session" / f"{session_id}.json").read_text())
     assert (
         run_git(root, "show", f"{state['apply']['apply_branch']}:.gitignore").stdout
-        == "/.cmoc/\n# editable\n"
+        == "/.cmoc/local/\n# editable\n"
     )
 
 

@@ -23,7 +23,7 @@ from config.cmoc_config import CmocConfig
 from commons.runtime_content import write_hashed_file, write_hashed_file_in_existing_dir
 from commons.runtime_errors import CmocError
 from commons.runtime_git import is_oracle_file_path
-from commons.runtime_paths import schema_store_dir
+from commons.runtime_paths import logs_dir, schema_store_dir
 
 APPLY_PROCESS_TRACKING_ENV = "CMOC_APPLY_PROCESS_ID_PATH"
 _active_apply_process_tracking_path: Path | None = None
@@ -106,11 +106,11 @@ def _is_read_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
 
 
 def _is_repo_log_read_path(root: Path, path: Path) -> bool:
-    return path.is_relative_to(root / ".cmoc" / "log")
+    return path.is_relative_to(logs_dir(root).parent)
 
 
 def _is_tui_complete_prompt_path(root: Path, path: Path) -> bool:
-    return path.parent == root / ".cmoc" / "log" / "tui" and path.name.endswith(
+    return path.parent == logs_dir(root).parent / "tui" and path.name.endswith(
         "_cmpl.md"
     )
 

@@ -13,6 +13,7 @@ from cmoc_runtime import (
     apply_process_id_file_lock,
     process_start_time,
     run_git,
+    schema_store_dir,
     set_apply_process_tracking_path,
     worktrees_dir,
 )
@@ -76,7 +77,7 @@ def worktree_for_branch_optional(root: Path, branch: str) -> Path | None:
 
 def apply_process_id_path(root: Path, session_id: str) -> Path:
     """session ごとの apply process pid file path を一箇所で決める。"""
-    return root / ".cmoc" / "state" / "apply_processes" / f"{session_id}.pid"
+    return schema_store_dir(root).parent / "apply_processes" / f"{session_id}.pid"
 
 
 def write_apply_process_id(root: Path, session_id: str, process_id: int) -> None:
