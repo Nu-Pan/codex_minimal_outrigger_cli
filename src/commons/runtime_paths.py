@@ -90,7 +90,7 @@ def codex_log_dir(root: Path) -> Path:
 
 def schema_store_dir(root: Path) -> Path:
     """Structured Output schema store directory を返す。"""
-    return root / ".cmoc" / "local" / "state" / "schema"
+    return root / ".cmoc" / "local" / "schema"
 
 
 def config_path(root: Path) -> Path:

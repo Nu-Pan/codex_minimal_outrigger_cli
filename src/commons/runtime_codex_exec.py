@@ -208,9 +208,10 @@ def run_codex_exec(
     )
     profile_name = codex_profile_name(profile_path)
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # `--output-schema` must point at state under the same work root Codex uses.
+    # `--output-schema` must point at the repo-root local schema store, even
+    # when Codex itself runs inside a linked worktree.
     schema_path = (
-        prepare_schema(codex_work_root, parameter.structured_output_schema_path)
+        prepare_schema(root, parameter.structured_output_schema_path)
         if parameter.structured_output_schema_path
         else None
     )
@@ -304,6 +305,7 @@ def run_codex_exec(
                     "stdout_log_path": str(run_stdout_path),
                     "stderr_log_path": str(run_stderr_path),
                     "output_path": str(run_output_path),
+                    "output_jsonl_log_path": str(run_output_path.with_suffix(".jsonl")),
                 },
                 ensure_ascii=False,
                 indent=2,
@@ -456,11 +458,19 @@ def run_codex_exec(
 
     while True:
         ts, prompt_path, stdout_path, stderr_path, output_path, call_path = new_log_paths()
+        output_jsonl_path = output_path.with_suffix(".jsonl")
         current_argv = build_argv(output_path, resume_token)
         _write_prompt_log(prompt_path, parameter.prompt)
         generated_paths.update(
             path.resolve()
-            for path in (prompt_path, stdout_path, stderr_path, output_path, call_path)
+            for path in (
+                prompt_path,
+                stdout_path,
+                stderr_path,
+                output_path,
+                output_jsonl_path,
+                call_path,
+            )
         )
         write_call_log(
             call_path,
@@ -478,8 +488,11 @@ def run_codex_exec(
         result = run_with_prompt_file(current_argv, prompt_path)
         last_result = result
         stdout_path.write_text(result.stdout)
+        output_jsonl_path.write_text(result.stdout)
         stderr_path.write_text(result.stderr)
-        _record_generated_diff_paths({stdout_path, stderr_path, output_path})
+        _record_generated_diff_paths(
+            {stdout_path, stderr_path, output_path, output_jsonl_path}
+        )
         error_text = codex_error_text(result.stdout, result.stderr)
         if result.returncode != 0:
             if (
@@ -570,7 +583,7 @@ def run_codex_exec(
                                 error_text,
                             )
                         resume_token = _extract_resume_token_from_jsonl_log(
-                            stdout_path
+                            output_jsonl_path
                         )
                         continue
                     _QUOTA_PROBE_AVAILABLE = False
@@ -644,6 +657,7 @@ def run_codex_exec(
                             probe_output_path,
                             probe_call_path,
                         ) = new_log_paths()
+                        probe_output_jsonl_path = probe_output_path.with_suffix(".jsonl")
                         generated_paths.update(
                             path.resolve()
                             for path in (
@@ -651,6 +665,7 @@ def run_codex_exec(
                                 probe_stdout_path,
                                 probe_stderr_path,
                                 probe_output_path,
+                                probe_output_jsonl_path,
                                 probe_call_path,
                             )
                         )
@@ -689,9 +704,15 @@ def run_codex_exec(
                             run_codex_env=probe_codex_env,
                         )
                         probe_stdout_path.write_text(poll.stdout)
+                        probe_output_jsonl_path.write_text(poll.stdout)
                         probe_stderr_path.write_text(poll.stderr)
                         _record_generated_diff_paths(
-                            {probe_stdout_path, probe_stderr_path, probe_output_path}
+                            {
+                                probe_stdout_path,
+                                probe_stderr_path,
+                                probe_output_path,
+                                probe_output_jsonl_path,
+                            }
                         )
                         probe_error_text = codex_error_text(poll.stdout, poll.stderr)
                         probe_quota_error = is_quota_error(poll.stdout)
@@ -811,7 +832,7 @@ def run_codex_exec(
                     f"# {console_timestamp()} Codex CLI quota wait: resuming work",
                     flush=True,
                 )
-                resume_token = _extract_resume_token_from_jsonl_log(stdout_path)
+                resume_token = _extract_resume_token_from_jsonl_log(output_jsonl_path)
                 continue
             emit_codex_call_event(
                 run_purpose=purpose,

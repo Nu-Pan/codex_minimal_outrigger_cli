@@ -821,7 +821,7 @@ def test_run_codex_exec_limits_pure_oracle_read_to_oracle_cwd(
     assert profile["sandbox_workspace_write"]["writable_roots"] == [oracle_root]
 
 
-def test_run_codex_exec_stores_schema_state_under_codex_work_root(
+def test_run_codex_exec_stores_schema_state_under_repo_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -877,11 +877,11 @@ def test_run_codex_exec_stores_schema_state_under_codex_work_root(
     schema_arg = Path(record["args"][record["args"].index("--output-schema") + 1])
     assert record["cwd"] == str(linked.resolve())
     assert result.schema_path == schema_arg
-    assert schema_arg.parent == linked / ".cmoc" / "local" / "state" / "schema"
-    assert not (root / ".cmoc" / "local" / "state" / "schema").exists()
+    assert schema_arg.parent == root / ".cmoc" / "local" / "schema"
+    assert not (linked / ".cmoc" / "local" / "schema").exists()
 
 
-def test_run_codex_exec_allows_repo_log_read_from_linked_worktree(
+def test_run_codex_exec_allows_repo_local_read_from_linked_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -912,7 +912,7 @@ def test_run_codex_exec_allows_repo_log_read_from_linked_worktree(
         _parameter(FileAccessMode.PURE_ORACLE_READ),
         root=root,
         cwd=linked,
-        extra_read_paths=[root / ".cmoc" / "local" / "log" / "codex" / "20260101_call.json"],
+        extra_read_paths=[root / ".cmoc" / "local" / "report" / "review" / "report.md"],
         capacity_initial_sleep_sec=0,
         config=CmocConfig(),
     )

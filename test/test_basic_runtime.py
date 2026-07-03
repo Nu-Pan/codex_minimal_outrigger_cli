@@ -722,10 +722,10 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         )
 
 
-def test_codex_profile_allows_repo_log_read_from_linked_worktree(
+def test_codex_profile_allows_repo_local_read_from_linked_worktree(
     tmp_path: Path,
 ) -> None:
-    """linked worktree 実行時だけ repo 側 log 読み取りを追加許可する。"""
+    """linked worktree 実行時だけ repo 側 `.cmoc/local` 読み取りを追加許可する。"""
     root = make_repo(tmp_path)
     linked = root / ".cmoc" / "local" / "worktree" / "linked-read"
     linked.parent.mkdir(parents=True)
@@ -742,7 +742,7 @@ def test_codex_profile_allows_repo_log_read_from_linked_worktree(
         parameter,
         CmocConfig(),
         linked,
-        [root / ".cmoc" / "local" / "log" / "codex" / "20260101_call.json"],
+        [root / ".cmoc" / "local" / "report" / "review" / "report.md"],
         extra_read_root=root,
     )
 

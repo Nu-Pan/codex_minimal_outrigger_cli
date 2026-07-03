@@ -105,8 +105,8 @@ def _is_read_path_allowed(mode: FileAccessMode, root: Path, path: Path) -> bool:
     return True
 
 
-def _is_repo_log_read_path(root: Path, path: Path) -> bool:
-    return path.is_relative_to(logs_dir(root).parent)
+def _is_repo_local_read_path(root: Path, path: Path) -> bool:
+    return path.is_relative_to(logs_dir(root).parent.parent)
 
 
 def _is_tui_complete_prompt_path(root: Path, path: Path) -> bool:
@@ -128,7 +128,7 @@ def _validate_extra_read_paths(
         if not _is_read_path_allowed(mode, root, resolved) and not (
             extra_log_root is not None
             and extra_log_root != root
-            and _is_repo_log_read_path(extra_log_root, resolved)
+            and _is_repo_local_read_path(extra_log_root, resolved)
         ):
             raise CmocError(
                 "追加読み取り許可 path が FileAccessMode の許可領域外にあります。",

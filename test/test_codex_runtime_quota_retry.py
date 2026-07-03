@@ -205,6 +205,10 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
         '{"type": "thread.started", "thread_id": "sess-1"}\n'
         '{"type": "error", "message": "Quota exceeded"}'
     )
+    assert Path(initial_log["output_jsonl_log_path"]).name.endswith("_output.jsonl")
+    assert Path(initial_log["output_jsonl_log_path"]).read_text() == Path(
+        initial_log["stdout_log_path"]
+    ).read_text()
     assert Path(resume_log["stdout_log_path"]).read_text().strip() == (
         '{"type": "turn.completed"}'
     )
