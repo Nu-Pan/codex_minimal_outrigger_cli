@@ -51,3 +51,28 @@ def test_review_oracle_enumerate_builder_imports_from_packaged_layout(
     )
 
     assert result.returncode == 0, result.stderr
+
+
+def test_acp_builder_basic_imports_from_packaged_layout(tmp_path: Path) -> None:
+    root = Path(__file__).parents[1]
+    target = tmp_path / "site"
+    shutil.copytree(root / "src" / "acp", target / "acp")
+    shutil.copytree(root / "oracle" / "src" / "oracle", target / "oracle")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "from acp.builder.basic import AgentCallParameter, ModelClass; "
+                "from oracle.acp_builder.basic import AgentCallParameter as Canonical; "
+                "assert AgentCallParameter is Canonical; "
+                "assert ModelClass.MAINSTREAM.value == 'mainstream'"
+            ),
+        ],
+        env={**os.environ, "PYTHONPATH": str(target), "PYTHONNOUSERSITE": "1"},
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0, result.stderr
