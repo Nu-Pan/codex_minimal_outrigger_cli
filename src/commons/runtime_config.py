@@ -55,7 +55,7 @@ def _enum_str_map_from_dict(
     """enum key の JSON 表現を、既定値補完済みの runtime map へ戻す。"""
     restored = dict(default)
     if not isinstance(data, dict):
-        return restored
+        raise TypeError
     for key, value in data.items():
         # `<work-root>/oracle/src/oracle/other/cmoc_config.py` stores enum values
         # in JSON, so non-strings must be rejected, not stringified.

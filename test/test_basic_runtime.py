@@ -202,6 +202,17 @@ def test_config_rejects_non_string_codex_names(
     assert exc_info.value.summary == "cmoc config が不正です。"
 
 
+@pytest.mark.parametrize("field", ["model", "reasoning_effort"])
+@pytest.mark.parametrize("value", [None, [], "invalid"])
+def test_config_rejects_non_object_codex_name_maps(
+    field: str, value: object
+) -> None:
+    with pytest.raises(CmocError) as exc_info:
+        config_from_dict({"codex": {field: value}})
+
+    assert exc_info.value.summary == "cmoc config が不正です。"
+
+
 @pytest.mark.parametrize("section", ["codex", "apply_fork", "review_oracle"])
 @pytest.mark.parametrize("value", [None, [], "invalid"])
 def test_config_rejects_non_object_sections(section: str, value: object) -> None:
