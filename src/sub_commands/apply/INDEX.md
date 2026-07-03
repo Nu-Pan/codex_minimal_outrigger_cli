@@ -38,23 +38,24 @@
 # `fork.py`
 
 ## Summary
-- apply fork の実行制御を担い、session branch 上で isolated apply worktree と apply branch を作成し、対象ファイル列挙、Codex による finding 列挙・適用、差分 commit、report 出力、apply state 更新までを一つの apply run として進める。
-- apply scope に応じた調査対象の決定、apply 対象の正規化・重複除去、前回 join 済み apply merge commit の解決、finding からの commit subject 生成など、apply fork loop の復旧条件と進行条件を共有する補助処理も含む。
+- apply fork の実行制御を担う実装。session branch 上で isolated apply worktree と apply branch を作成し、対象ファイル列挙、Codex による finding 列挙と適用、差分 commit、report 出力、apply state 更新、失敗時 report 生成までを一つの apply run として扱う。
+- apply scope、session state、前回 join 済み apply commit から調査対象を決め、git 管理外・除外領域・INDEX/AGENTS・必要に応じた oracle 除外を反映して apply 対象を正規化する。
+- finding 適用後の変更ファイルを再キューし、重複排除しながら収束または上限到達まで apply loop を進める orchestration の入口。
 
 ## Read this when
-- apply fork の開始条件、scope validation、session/apply state の遷移、apply branch や run worktree の生成、process id 管理、report 出力、終了コードを確認または変更したいとき。
-- apply fork がどのファイルを finding 列挙対象にするか、rolling・session・full の scope ごとの差分基準、oracle や git ignored file の扱いを確認または変更したいとき。
-- Codex に apply fork 用の finding 列挙や finding 適用を依頼する制御、適用後差分の commit 作成、commit subject 生成、未収束時の再キュー処理を確認または変更したいとき。
-- 前回 join された apply merge commit の探索、last joined oracle snapshot を使った rolling scope の基準、apply fork の失敗時 state 更新や error report 生成を調べたいとき。
+- apply fork コマンドの事前条件、worktree/branch 作成、apply state の running/completed/error 遷移、process id 管理、report path 出力を確認または変更したいとき。
+- apply fork がどのファイルを finding 列挙対象にするか、scope full/session/差分時の挙動、oracle や git ignored file の扱いを確認したいとき。
+- Codex に渡す finding 列挙・finding 適用の呼び出し順、変更後の再キュー、commit subject 生成、収束判定や unconverged 終了コードを追いたいとき。
+- apply fork の失敗時に state と error report がどう更新され、例外へ report path がどう渡るかを調べたいとき。
 
 ## Do not read this when
-- apply fork の CLI 引数定義やコマンド登録だけを確認したいときは、CLI parser や command routing を扱う対象を読む。
-- apply fork report の本文構成や report file の書き込み形式だけを変更したいときは、report 生成を扱う対象を読む。
-- Codex に渡す finding 列挙・finding 適用 prompt parameter の内容だけを変更したいときは、apply fork 用 builder を扱う対象を読む。
-- apply join、apply status、session 作成など、apply fork 以外の subcommand の外部挙動を確認したいだけのときは、それぞれの subcommand 実装を読む。
+- apply fork の利用者向け report 本文の生成内容だけを変更したい場合は、report 生成を担う対象を直接読む。
+- Codex に渡す prompt/parameter の中身だけを確認したい場合は、apply fork 用 builder の対象を直接読む。
+- apply join、apply abort、session 作成など apply fork 以外のサブコマンド挙動を調べる場合は、それぞれのサブコマンド実装を読む。
+- 共通の git 実行、worktree 作成、state 読み書き、Codex exec runtime の基本挙動だけを調べる場合は、共通 runtime 側を読む。
 
 ## hash
-- cc43a5b04b8c2d04bfea12696d6c830f4f71cf12886f39b1642701eeeebf3286
+- 89eda996430eb4665fed7ed1d99c87b7a2c670150c07701c4c9d1aea30dedd39
 
 # `fork_report.py`
 

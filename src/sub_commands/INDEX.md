@@ -1,23 +1,23 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実行本体をまとめる実装ディレクトリ。apply run の開始、所見適用、report 生成、join、abandon など、apply lifecycle の各操作へ進む入口になる。
-- 個別ファイルはサブコマンド単位または report 生成単位で責務が分かれており、apply state、apply branch、apply worktree、process id、session branch との関係を扱う制御を探すときに読む。
+- apply 系サブコマンドの実行制御をまとめる実装パッケージ。run の開始、破棄、取り込み、結果 report 生成を扱い、branch・worktree・state・process id・Codex 呼び出し・変更要約の連携を確認する入口になる。
+- apply run の lifecycle に沿って、対象ファイル選定、finding 列挙と適用、収束判定、失敗時処理、merge と conflict 処理、後片付けまでの上位 orchestration を担う。
 
 ## Read this when
-- apply fork、join、abandon など apply lifecycle の外部挙動、状態遷移、branch/worktree の扱い、終了時の掃除を確認または変更したいとき。
-- apply run の開始条件、破棄条件、session branch への取り込み条件、想定外差分や conflict の扱いを、サブコマンド実装から辿りたいとき。
-- apply fork の report 生成、変更要約、未収束時や失敗時の report 表示を扱う実装へ進みたいとき。
-- apply パッケージ自体に import 時処理や再 export があるかを確認したうえで、具体的なサブコマンド実装へ進むべきか判断したいとき。
+- apply 系サブコマンドの外部挙動、事前条件、状態遷移、出力内容、失敗条件、report 生成のどこを読むべきか判断したいとき。
+- apply run が branch、worktree、process id、session state、report をどのタイミングで作成・更新・削除するかを追いたいとき。
+- finding 列挙対象の決定、変更後の再キュー、apply branch の session branch への取り込み、想定外差分や conflict の扱いを調べたいとき。
+- apply fork の report 本文や変更要約、apply join の結果 report など、apply run の利用者向け結果生成を確認または変更したいとき。
 
 ## Do not read this when
-- apply 以外の subcommand、CLI parser、command routing、共通 runtime wrapper の挙動だけを確認したいとき。
-- git command wrapper、state file、worktree 探索、report directory 生成など、apply サブコマンドから使われる低レベル helper の実装詳細だけを調べたいとき。
-- Codex に渡す prompt parameter の本文や builder の内容だけを変更したいとき。
-- oracle file や realization file の一般定義、INDEX.md 生成規則、パスモデル自体を確認したいとき。
+- apply 以外のサブコマンドの CLI 定義、状態遷移、入出力を調べたいとき。
+- git command wrapper、state 読み書き、worktree 探索、Codex exec runtime、report directory 生成など、複数機能で使われる低レベル helper の基本挙動だけを確認したいとき。
+- oracle file、realization file、INDEX.md 生成規則、path model など、apply run 固有ではない仕様概念を確認したいとき。
+- パッケージ説明や import 時副作用の有無だけを確認したい場合を除き、具体的な制御ロジックが不要なとき。
 
 ## hash
-- 75d39ad24ffd94a30d1312e69f62fc787812e1cf3115ac00179b40686ef56353
+- 06b00bc96e45831f9e65695d05464eaa91aa3129ccd9e9a9aea7232cd216cb37
 
 # `indexing.py`
 
@@ -64,26 +64,25 @@
 # `review`
 
 ## Summary
-- review 系サブコマンドを収める Python package で、現内容では package 境界と review oracle サブコマンドの実行入口を扱う。
-- 主な責務は、active session branch 上での実行前提確認、scope 検証、clean worktree 要求、review 用 worktree と一時 branch の準備、対象列挙・review loop・INDEX 反映・report 出力・後始末の順序付けである。
-- 対象列挙、finding 生成、review loop、INDEX 変更の commit・merge・conflict 関連処理、report rendering などの詳細処理は下位モジュールへ委譲し、この階層自体は CLI runtime 上のオーケストレーションを中心に読む。
+- review 系サブコマンドをまとめる package 階層であり、package 境界を示す初期化モジュールと、oracle review の実行入口を含む。
+- oracle review では、active session branch と clean worktree を前提に isolated review worktree を作成し、対象列挙、review loop、INDEX 変更の commit/merge、後片付け、report 出力までを統括する。
+- 具体的な対象列挙、review loop、report 描画・保存、index commit/merge の詳細は下位モジュール側に分かれ、この階層は review 系 CLI orchestration への入口として位置づく。
 
 ## Read this when
-- review 系サブコマンド群が Python package として扱われる境界を確認したいとき。
-- review oracle サブコマンドの実行可能条件、active session branch 判定、scope validation、clean worktree 要求、cmoc ignore 確保の流れを確認したいとき。
-- review 用 worktree と一時 branch の作成から、review loop 実行、INDEX 変更の commit と session branch への merge、worktree・branch 後始末、成功・失敗 report 出力までの大きな制御順序を追いたいとき。
-- CLI から review oracle を起動する際の command name、command argv、Codex exec callback、preflight の受け渡し位置を確認したいとき。
-- review oracle 実行中に対象列挙、findings 生成、report 書き出し、merge conflict 関連処理へどこから入るかをたどりたいとき。
+- review 系サブコマンド群の package 境界や、この階層が review 用 Python package として扱われる根拠を確認したいとき。
+- review oracle サブコマンドの全体フロー、実行前条件、isolated review worktree の作成・削除、review branch の生成・merge、report 出力の制御を確認または変更したいとき。
+- review oracle 関連 helper の公開入口や、対象列挙・review loop・report・index commit/merge の担当境界を把握したいとき。
+- active session branch 以外での拒否、clean worktree 要求、cmoc ignore 確保、失敗時にも report を書く挙動に関わる変更を行うとき。
 
 ## Do not read this when
-- review 系サブコマンド群の package 境界だけでなく、package 初期化時の import、副作用、公開シンボルを調べたいとき。現内容からはそのような責務は読み取れない。
-- oracle file の列挙条件や scope ごとの対象選択ロジックそのものだけを調べたいとき。対象列挙を担う下位モジュールを直接読む方が適切である。
-- Codex による review loop の prompt、finding の生成・統合、merge operation 適用の詳細だけを調べたいとき。review loop を担う下位モジュールを直接読む方が適切である。
-- report の本文構成、finding section の描画、report ファイルへの書き出し形式だけを調べたいとき。report を担う下位モジュールを直接読む方が適切である。
-- review 用 INDEX 変更の status 判定、commit、merge、conflict 解決の詳細だけを調べたいとき。INDEX 反映を担う下位モジュールを直接読む方が適切である。
+- review 系サブコマンドの package 境界だけでなく個別機能の詳細を調べたい場合は、該当する下位モジュールを直接読む方がよい。
+- 個別 oracle file の列挙条件や scope 解釈だけを確認したい場合は、review target 列挙を担当する下位モジュールを直接読む方がよい。
+- findings の生成手順や Codex review loop の詳細だけを確認したい場合は、review loop を担当する下位モジュールを直接読む方がよい。
+- report の markdown 表現、section 描画、保存内容だけを確認したい場合は、review report を担当する下位モジュールを直接読む方がよい。
+- package 初期化時の import、副作用、公開シンボルを調べたい場合は、現在内容からそのような責務は読み取れないため読む必要は薄い。
 
 ## hash
-- 083601eeadc4297e6e80477998dbca65d18259c365ba9273e1ccf1655dbb7c65
+- c743d6197540d7a1705e090e02a6074881584d24523c910567fd9152b9771cfb
 
 # `review_index.py`
 

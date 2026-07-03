@@ -149,44 +149,41 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を収める実装ルート。CLI 公開入口、サブコマンド実行本体、共通 runtime helper、oracle src への互換 import 境界を扱う。
-- 正本仕様断片そのものではなく、oracle 側 canonical 実装や oracle doc の意図を実行可能な CLI・runtime・互換層として具体化する領域。
-- 内部は、利用者向け CLI routing、session・apply・review・index maintenance などの orchestration、複数サブコマンドから共有される helper、旧公開 import path の再公開層に分かれる。
+- cmoc の realization implementation を収める領域。CLI 入口、サブコマンド実行本体、共通 runtime helper、設定・basic・acp・oracle import 互換層など、利用者向け挙動と oracle src への接続境界を具体化するコードへの入口になる。
+- 配下は、公開 CLI 配線、サブコマンド orchestration、横断的 runtime 支援、正本側実装を複製しないための再公開・shim に分かれる。仕様断片そのものではなく、oracle file と既存公開面を実行可能な形へ接続する realization 側実装を扱う。
 
 ## Read this when
-- cmoc の実装本体を確認または変更したいとき。
-- CLI コマンド構成、サブコマンドの実行フロー、共通 runtime 処理、git・state・logging・path・Codex 呼び出し周辺の実装入口を探したいとき。
-- oracle src の定義を realization 側へ複製せず、既存公開 import path や package path をどう維持しているか確認したいとき。
-- 個別機能の実装へ進む前に、CLI 入口、サブコマンド本体、共通 helper、互換層のどこを読むべきか切り分けたいとき。
+- cmoc の CLI 実装、サブコマンド実行経路、共通 runtime helper、設定・状態・git・Codex 呼び出し・INDEX 更新などの realization 側コードを確認または変更したいとき。
+- 公開 import path、再 export、module alias、oracle src package への shim など、正本側実装を複製せず既存参照を維持する互換境界を調べたいとき。
+- CLI の最上位登録から各 subcommand family、または複数サブコマンドで共有される helper へ読む先を絞りたいとき。
+- oracle file の要求を満たすために、realization implementation 側でどの実体 module や互換入口が責務を持つか判断したいとき。
 
 ## Do not read this when
-- 正本仕様断片、人間意図、prompt・parameter・設定・path model・INDEX.md 生成規則などの仕様そのものを確認したいだけのときは、oracle 側の対応する doc または src を読む。
-- 自動テストの期待挙動やテスト fixture を確認したいときは、test 側を読む。
-- 実行ログ、生成済み成果物、管理用メタデータ、作業メモを探しているときは、この実装ルートではなく該当する管理領域を確認する。
-- 旧 import path の互換維持と無関係に、新しい正本仕様や API 仕様を追加する場所を探しているときは、まず oracle 側の仕様断片を検討する。
+- 正本仕様断片、人間意図、prompt builder、設定定義、path model、INDEX.md 生成規則などを確認したいだけなら、対応する oracle doc または oracle src を読む。
+- テストの期待挙動や検証観点を確認したいだけなら、test 側へ進む。
+- 生成済みログ、実行履歴、一時成果物の内容確認が目的で、runtime 実装を変更しないとき。
+- 特定の共通型や helper、個別サブコマンド実装、互換 shim の読む先がすでに分かっているときは、該当する下位対象を直接読む。
 
 ## hash
-- bc1c3618256ce933bb7bb72357c1e557cd01ef806f9eb2d513e7ac298ddd6933
+- 1368bba341d7c3721bc30a0f3c0e8faaf2d937573192fa9d9053a4582e6f1e76
 
 # `test`
 
 ## Summary
-- CLI 外部挙動と共通 runtime 境界を中心に、cmoc の realization test をまとめるディレクトリ。
-- apply、session、init、TUI、Codex 実行、indexing、review oracle、prompt builder、packaging、StructDoc rendering など、ユーザー向け挙動や制御ロジックの回帰確認への入口になる。
-- 一時 Git リポジトリ、fake Codex、fake profile、state fixture など、複数テストで共有される補助処理も含む。
+- cmoc の realization test 群をまとめるディレクトリ。CLI サブコマンド、Codex runtime、INDEX 更新、session/apply lifecycle、prompt/StructDoc/packaging など、実装の外部挙動と回帰条件を検証する入口になる。
+- 共通テスト補助から個別サブコマンドの統合テストまでを含み、対象機能の期待出力、git 状態、永続 state、sandbox/file access 境界、agent call parameter の互換性を確認するために下位ファイルへ進む起点になる。
 
 ## Read this when
-- CLI サブコマンドの終了コード、標準出力、Git branch/worktree 操作、state 更新、report 生成などの外部挙動を確認・変更するとき。
-- Codex CLI/TUI 呼び出し、CODEX_HOME、profile、sandbox/file access mode、retry、quota wait、file access violation recovery などの runtime 回帰を確認するとき。
-- INDEX 生成・更新、indexing preflight、routing document 更新 workflow、review oracle、prompt parts、ACP builder parameter、packaged import のテストを探すとき。
-- realization/oracle file 判定、tracked ignored file、memo、管理ディレクトリ、binary、INDEX/AGENTS の扱いが CLI 挙動にどう反映されるか確認するとき。
-- テスト用 Git repository、fake executable、fake Codex home、session/apply state helper など、CLI テスト共通 fixture を確認・変更するとき。
+- cmoc の実装変更に対して、対応する realization test や既存の回帰観点を探したいとき。
+- CLI の init、TUI、session、apply、review oracle、indexing、Codex runtime などの外部挙動をテストから確認または変更したいとき。
+- Git worktree、branch、session/apply state、Codex home、fake executable、file access rule、INDEX preflight など、複数テストで共有される fixture や補助処理を探したいとき。
+- prompt builder、ACP builder、packaged import、StructDoc rendering など、CLI 実行以外の実装境界に対するテストを探したいとき。
 
 ## Do not read this when
-- プロダクト実装の責務分割、内部 helper の詳細、設定や state の実装を直接変更したい場合は、対応する実装側へ進む。
-- oracle file の正本仕様本文、schema、path model、file access rule、prompt 正本文言そのものを確認・変更したい場合は、oracle 側を読む。
-- 個別の CLI サブコマンドや builder のテスト期待値だけを確認したい場合は、この階層全体ではなく該当するテスト本文へ直接進む。
-- LLM 出力品質や外部ツールそのものの品質を検証したい場合は、この realization test 群の対象外。
+- 正本仕様断片そのものを確認・変更したい場合は、oracle 側の対象本文を読む。
+- プロダクト実装の責務分割、内部 helper、設定や型定義の実装詳細だけを確認したい場合は、src 側の対応モジュールを読む。
+- 特定サブコマンドや機能に対応するテストファイルが既に分かっている場合は、このディレクトリ全体ではなく該当テストへ直接進む。
+- INDEX.md エントリー本文の自然言語品質だけを設計したい場合で、CLI 境界や回帰テストの確認が不要なら、indexing 関連の対象に絞る。
 
 ## hash
-- 9ff4c25f39b6e88c689c7baaa923ac42620c7c38868e05477d15a0e97cc293f3
+- dd2547caba9c0afc1fe110ef3050054e9f62de37074dafa019aa8e0ad7ceed2e

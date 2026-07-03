@@ -127,22 +127,26 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に検証する regression test。path placeholder 解決、run/work/repo root、worktree 作成・削除防御、config validation、CmocError 表示、CLI error 出力、subcommand log、FileAccessMode と Codex profile、binary 判定、session/apply branch state 解決を同じ runtime 前提として扱う。
-- 個別機能単位ではなく、CLI 実行前提や sandbox/profile 境界が一緒に崩れやすい共通 runtime 層の挙動をまとめて固定する入口。
+- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder と worktree root 解決、config validation、CmocError の Markdown 表示、CLI error の stdout 変換、subcommand log、FileAccessMode ごとの Codex sandbox profile、binary 判定、session/apply branch state 解析を一つの回帰テスト群として扱う。
+- 個別サブコマンドの機能仕様ではなく、複数の実行経路の前提になる runtime 境界をまとめて固定する入口。共通 fixture と root 状態を共有するため、runtime の基礎契約を変更する際に関連する挙動を同時に確認できる。
 
 ## Read this when
-- root placeholder、repo root、work root、run root、linked worktree の解決挙動を確認・変更する。
-- CmocError、CLI parse error、stdout/stderr の error report、call stack 表示、subcommand log の生成条件を確認・変更する。
-- cmoc config の既定値や不正値拒否、FileAccessMode、Codex sandbox profile、追加 writable/read path の許可境界を確認・変更する。
-- session/apply branch 名からの session id 抽出や state 読み込み、managed worktree の作成・削除防御、`.cmoc` ignore、binary 判定の runtime 回帰を確認する。
+- root placeholder、repo root、run root、work root、linked worktree、main worktree の解決規則を変更または調査する。
+- CmocError、CLI 引数解析 error、stdout/stderr の error report、Call stack 表示、duration 表示など、利用者向け error/rendering 契約を変更または調査する。
+- cmoc config の既定値、型 validation、論理 model class、reasoning effort の扱いを変更または調査する。
+- subcommand log の生成タイミング、timestamp 衝突時の log file 扱い、preflight 失敗時の副作用抑制を変更または調査する。
+- FileAccessMode、Codex sandbox profile、追加 writable/read path、oracle・memo・runtime 管理領域のアクセス制限を変更または調査する。
+- session branch や apply branch から session id/state を読む制御、壊れた branch 名の拒否を変更または調査する。
+- `.cmoc` ignore pattern、起動 wrapper の missing venv report、binary 判定の読み取り範囲など、runtime の基礎的な補助挙動を変更または調査する。
 
 ## Do not read this when
-- 個別サブコマンド固有の業務ロジックや出力仕様だけを調べたい場合。
-- oracle file の正本仕様そのものを確認したい場合。
-- 単一 helper の内部実装だけを読みたい場合で、runtime 境界全体の外部挙動を確認する必要がない場合。
+- 個別サブコマンド固有の業務ロジック、入出力 schema、差分生成、review/apply の詳細挙動だけを確認したい場合は、そのサブコマンドや機能に対応するテストへ直接進む。
+- oracle doc や oracle src の正本仕様そのものを確認したい場合は、realization test ではなく oracle 側の対象本文を読む。
+- テスト共通 fixture、runner、git helper の実装だけを変更したい場合は、support 用のテスト補助コードを読む。
+- runtime の外部挙動ではなく、内部 helper の局所的な実装整理だけが目的で、ここに固定された契約へ影響しない場合は、対象 implementation とより小さい単位のテストを優先する。
 
 ## hash
-- cd044770d2804b9741505b9cfb542ca3b3a8d4472628bd035c73d2233c3b94d0
+- f63b5c14aaf2a8933343ac939915bd3de09c8e53d267fa2ac6fb39f5e58013f1
 
 # `test_cli_init_tui.py`
 
