@@ -27,6 +27,10 @@ def make_repo(tmp_path: Path) -> Path:
     run_git(root, "init")
     run_git(root, "config", "user.email", "cmoc@example.invalid")
     run_git(root, "config", "user.name", "cmoc test")
+    # <work-root>/oracle/doc/dev_rule/test_rule.md: test repos must not depend on
+    # user Git signing or hook configuration before cmoc control logic runs.
+    run_git(root, "config", "commit.gpgsign", "false")
+    run_git(root, "config", "core.hooksPath", "/dev/null")
     (root / "README.md").write_text("# repo\n")
     (root / "oracle").mkdir()
     (root / "oracle" / "spec.md").write_text("# spec\n")

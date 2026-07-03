@@ -83,6 +83,27 @@ def test_format_duration_truncates_msec_digit_and_space_pads_time_parts() -> Non
     assert format_duration(59.99) == " 0h  0m 59.9s"
 
 
+def test_make_repo_ignores_global_commit_signing_and_hooks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hooks = tmp_path / "hooks"
+    hooks.mkdir()
+    hook = hooks / "pre-commit"
+    hook.write_text("#!/bin/sh\nexit 1\n")
+    hook.chmod(0o755)
+    global_config = tmp_path / "gitconfig"
+    global_config.write_text(
+        f"[commit]\n\tgpgsign = true\n[core]\n\thooksPath = {hooks}\n"
+    )
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(global_config))
+
+    root = make_repo(tmp_path)
+
+    assert run_git(root, "config", "--local", "commit.gpgsign").stdout == "false\n"
+    assert run_git(root, "config", "--local", "core.hooksPath").stdout == "/dev/null\n"
+    assert run_git(root, "rev-parse", "--verify", "HEAD").stdout.strip()
+
+
 def test_subcommand_logger_keeps_one_file_per_command_on_timestamp_collision(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
