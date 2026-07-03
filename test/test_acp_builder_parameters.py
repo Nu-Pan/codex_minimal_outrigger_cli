@@ -60,7 +60,7 @@ def test_apply_fork_prompts_use_expected_roots(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     repo_root = tmp_path / "repo"
-    apply_worktree = repo_root / ".cmoc" / "worktrees" / "session" / "run"
+    apply_worktree = repo_root / ".cmoc" / "local" / "worktree" / "session" / "run"
     apply_worktree.mkdir(parents=True)
     (repo_root / ".git").mkdir()
     (apply_worktree / ".git").write_text("gitdir: ignored\n")

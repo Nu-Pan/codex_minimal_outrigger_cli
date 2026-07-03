@@ -42,7 +42,7 @@ def setup_linked_session_apply(
     root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> tuple[Path, Path, str, Path]:
     """linked session 上の active apply run を abandon 境界条件用に作る。"""
-    linked = root / ".cmoc" / "worktrees" / "linked-session-abandon"
+    linked = root / ".cmoc" / "local" / "worktree" / "linked-session-abandon"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
     monkeypatch.chdir(linked)
     assert (
@@ -50,10 +50,10 @@ def setup_linked_session_apply(
     )
     session_branch = run_git(linked, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_branch = f"cmoc/apply/{session_id}/manual"
-    apply_worktree = root / ".cmoc" / "worktrees" / session_id / "manual"
+    apply_worktree = root / ".cmoc" / "local" / "worktree" / session_id / "manual"
     run_git(
         root,
         "worktree",
@@ -96,7 +96,7 @@ def test_apply_abandon_removes_apply_worktree_and_branch(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
@@ -147,7 +147,7 @@ def test_apply_abandon_reports_missing_cleanup_targets_as_warnings(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
@@ -190,14 +190,14 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
     state["apply"]["state"] = "running"
     state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
     process_id_path = (
-        root / ".cmoc" / "state" / "apply_processes" / f"{session_id}.pid"
+        root / ".cmoc" / "local" / "state" / "apply_processes" / f"{session_id}.pid"
     )
     process_id_path.parent.mkdir(parents=True, exist_ok=True)
     process_id_path.write_text("12345 67890\n")
@@ -291,7 +291,7 @@ def test_stop_apply_process_keeps_child_warning_when_parent_is_stale(
 def test_apply_process_id_reads_tracked_child_processes(tmp_path: Path) -> None:
     """running abandon が親 PID と同時に記録済み Codex child PID を読める。"""
     root = tmp_path
-    path = root / ".cmoc" / "state" / "apply_processes" / "session.pid"
+    path = root / ".cmoc" / "local" / "state" / "apply_processes" / "session.pid"
     path.parent.mkdir(parents=True)
     path.write_text("12345 20\nchild 23456 30\n")
 
@@ -496,7 +496,7 @@ def test_apply_abandon_rejects_running_state_without_process_id(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
@@ -529,7 +529,7 @@ def test_apply_abandon_rejects_apply_branch_without_derivable_worktree(
     )
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     state["apply"]["state"] = "completed"
     state["apply"]["apply_branch"] = "cmoc/apply/malformed"
@@ -568,7 +568,7 @@ def test_apply_abandon_can_run_from_apply_worktree(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
@@ -665,12 +665,12 @@ def test_apply_abandon_rejects_stale_apply_branch(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
     stale_branch = f"cmoc/apply/{session_id}/stale"
-    stale_worktree = root / ".cmoc" / "worktrees" / session_id / "stale"
+    stale_worktree = root / ".cmoc" / "local" / "worktree" / session_id / "stale"
     run_git(
         root,
         "worktree",

@@ -15,6 +15,7 @@ from cmoc_runtime import (
     CodexExecResult,
     ensure_cmoc_ignored,
     load_config,
+    logs_dir,
     repo_root,
     run_cli_subcommand,
     run_codex_exec,
@@ -74,7 +75,7 @@ def _cmoc_tui_body(
         resolved or {},
         launch_timestamp=launch_timestamp,
     )
-    complete_prompt_path = root / ".cmoc" / "log" / "tui" / f"{launch_timestamp}_cmpl.md"
+    complete_prompt_path = logs_dir(root).parent / "tui" / f"{launch_timestamp}_cmpl.md"
     run_codex_tui(
         parameter,
         root=root,
@@ -110,7 +111,7 @@ def _cmoc_tui_from_current_context() -> None:
 
 def initialize_original_prompt(root: Path) -> Path:
     """利用者が編集する元 prompt ファイルを TUI log 領域へ作成する。"""
-    path = root / ".cmoc" / "log" / "tui" / f"{timestamp()}_orig.md"
+    path = logs_dir(root).parent / "tui" / f"{timestamp()}_orig.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(ORIGINAL_PROMPT_TEMPLATE)
     return path

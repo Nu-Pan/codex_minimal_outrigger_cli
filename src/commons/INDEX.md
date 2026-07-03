@@ -72,7 +72,7 @@
 - process 停止と関係しない session state の読み書き、agent 呼び出し、merge や commit の処理を調べたい場合は、このファイルではなく該当責務の実装へ進む。
 
 ## hash
-- 00f0d83432cfa9e2937ec970715c42f9d4a296b65cc60cdd383ff0777baf7fa0
+- f48a64e4dbb0a9f631872914269d3cd2c10db20a575988980f6af5b7a85740ad
 
 # `runtime_cli.py`
 
@@ -192,7 +192,7 @@
 - Codex subprocess の起動結果を使う上位フローや retry 全体の制御を追いたいだけなら、呼び出し側の実装を読む。
 
 ## hash
-- 076a9629abb417a95c6eae9b708b6bacded4000c4203486316547c35b9151037
+- 711c5588b76b09ab47dbe739e150d1740de1df0dfd7ecc64d4b9b4cd5bbd533d
 
 # `runtime_codex_tui.py`
 
@@ -282,13 +282,13 @@
 
 ## Summary
 - git コマンド実行を cmoc のエラー形式へ変換する境界と、branch・HEAD・worktree・ignore 状態に関する共通操作をまとめた runtime helper。
-- cmoc 管理 branch/worktree の作成・削除制約、clean worktree 要求、.cmoc の ignore 初期化・検査、oracle file 判定など、git 状態に依存する実装の入口になる。
+- cmoc 管理 branch/worktree の作成・削除制約、clean worktree 要求、.cmoc/local の ignore 初期化・検査、oracle file 判定など、git 状態に依存する実装の入口になる。
 
 ## Read this when
 - git subprocess の呼び出し結果を利用者向けエラーへそろえる処理を確認・変更したいとき。
 - 現在 branch、HEAD commit、未コミット差分、branch 存在確認など、repository 状態の取得・検査に関わる実装を扱うとき。
 - cmoc 管理 worktree の作成・削除、管理外 worktree 削除防止、管理 branch namespace の判定を確認したいとき。
-- .cmoc を git ignore 対象にする初期化・検査、または tracked file と ignored file の扱いを変更したいとき。
+- .cmoc/local を git ignore 対象にする初期化・検査、または tracked file と ignored file の扱いを変更したいとき。
 - oracle file 判定や git ignore 判定を使うアクセス制御・diff 分類の挙動を追うとき。
 
 ## Do not read this when
@@ -298,7 +298,7 @@
 - 永続 state file の schema や読み書き形式だけを確認したいとき。
 
 ## hash
-- 3d23d9153ada9e6575be7247b7a3504f952d987f22cdf5811c0d29517aeb393d
+- 6a378bcabcc734fecb03ff64c0b4c2f9a674ae993ffc3a55d18e79cd22c9a33e
 
 # `runtime_logging.py`
 
@@ -339,7 +339,7 @@
 - 各 sub command 固有の report 内容、session state 内容、log 内容を確認したいときは、それぞれの生成・利用箇所を読む。
 
 ## hash
-- f3704d5a8acf92715269020e9e67e1c714c6ea31eefd7958f4776a03e660ac3e
+- a3ccc3a7b94c195b2287c300c0ae0edef9578ad3f366c51b4a97a5081416e1ad
 
 # `runtime_results.py`
 
@@ -376,7 +376,7 @@
 ## Do not read this when
 - CLI subcommand の引数定義、画面出力、コマンド全体の制御フローを調べたいだけのとき。
 - session state file の仕様意図そのものを確認したいときは、対応する oracle doc を直接読む方がよい。
-- runtime path の基準ディレクトリ定義や sessions directory の組み立てだけを調べたいとき。
+- runtime path の基準ディレクトリ定義や session directory の組み立てだけを調べたいとき。
 - CmocError の表示形式や例外クラス自体の責務を調べたいとき。
 
 ## hash

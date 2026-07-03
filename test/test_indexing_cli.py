@@ -116,7 +116,7 @@ def test_indexing_uninitialized_clean_repo_fails_before_subcommand_log(
     assert "cmoc init を実行してから再実行してください。" not in result.stderr
     assert not (root / ".gitignore").exists()
     assert not (root / "INDEX.md").exists()
-    assert not (root / ".cmoc" / "log" / "sub_command").exists()
+    assert not (root / ".cmoc" / "local" / "log" / "sub_command").exists()
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
@@ -127,7 +127,7 @@ def test_indexing_targets_current_linked_worktree(
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
     main_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
-    linked = root / ".cmoc" / "worktrees" / "indexing"
+    linked = root / ".cmoc" / "local" / "worktree" / "indexing"
     run_git(root, "worktree", "add", "-b", "linked-indexing", str(linked), "HEAD")
 
     class FakeCodexResult:
@@ -160,7 +160,7 @@ def test_indexing_rejects_dirty_current_linked_worktree(
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    linked = root / ".cmoc" / "worktrees" / "dirty-indexing"
+    linked = root / ".cmoc" / "local" / "worktree" / "dirty-indexing"
     run_git(root, "worktree", "add", "-b", "dirty-indexing", str(linked), "HEAD")
     (linked / "README.md").write_text("# repo\n\nlinked change\n")
     head_before = run_git(linked, "rev-parse", "HEAD").stdout.strip()
@@ -192,7 +192,7 @@ def test_indexing_preflight_in_apply_worktree_uses_repo_config(
     config = cmoc_runtime.sync_config(root)
     config.codex.model[ModelClass.EFFICIENCY] = "CUSTOM-INDEXING-EFFICIENCY"
     cmoc_runtime.write_config(root / ".cmoc" / "config.json", config)
-    apply_worktree = root / ".cmoc" / "worktrees" / "session" / "run"
+    apply_worktree = root / ".cmoc" / "local" / "worktree" / "session" / "run"
     run_git(
         root,
         "worktree",
@@ -224,7 +224,7 @@ def test_indexing_preflight_in_apply_worktree_uses_repo_config(
     assert seen_models
     assert set(seen_models) == {"CUSTOM-INDEXING-EFFICIENCY"}
     assert (apply_worktree / "INDEX.md").is_file()
-    assert not (apply_worktree / ".cmoc" / "config.json").exists()
+    assert (apply_worktree / ".cmoc" / "config.json").is_file()
 
 
 def test_indexing_skips_codex_when_existing_hashes_are_fresh(
@@ -271,7 +271,7 @@ def test_commit_index_updates_commits_only_index_paths(tmp_path: Path) -> None:
     root = make_repo(tmp_path)
     index_path = root / "INDEX.md"
     index_path.write_text("# generated\n")
-    (root / ".gitignore").write_text("/.cmoc/\n")
+    (root / ".gitignore").write_text("/.cmoc/local/\n")
 
     indexing_common.commit_index_updates(root, [index_path])
 

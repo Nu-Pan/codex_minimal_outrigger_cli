@@ -46,7 +46,7 @@ def test_apply_join_removes_apply_worktree_and_resets_state(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_oracle_snapshot_commit = state["apply"]["oracle_snapshot_commit"]
@@ -97,7 +97,7 @@ def test_apply_join_can_run_from_apply_worktree(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_oracle_snapshot_commit = state["apply"]["oracle_snapshot_commit"]
@@ -132,7 +132,7 @@ def test_apply_join_from_linked_session_worktree_merges_into_current_session(
     root_branch = current_branch(root)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    linked = root / ".cmoc" / "worktrees" / "linked-session"
+    linked = root / ".cmoc" / "local" / "worktree" / "linked-session"
     run_git(root, "worktree", "add", "-b", "linked-session-home", str(linked), "HEAD")
     monkeypatch.chdir(linked)
     assert (
@@ -150,7 +150,7 @@ def test_apply_join_from_linked_session_worktree_merges_into_current_session(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(linked, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_worktree = apply_worktree_from_state(root, state)
     (apply_worktree / "JOINED.md").write_text("joined from apply\n")
@@ -189,12 +189,12 @@ def test_apply_join_rejects_stale_apply_branch_for_same_session(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     active_apply_branch = state["apply"]["apply_branch"]
     active_apply_worktree = apply_worktree_from_state(root, state)
     stale_apply_branch = f"cmoc/apply/{session_id}/stale"
-    stale_apply_worktree = root / ".cmoc" / "worktrees" / session_id / "stale"
+    stale_apply_worktree = root / ".cmoc" / "local" / "worktree" / session_id / "stale"
     run_git(
         root,
         "worktree",
@@ -243,13 +243,13 @@ def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
     (apply_worktree / "dirty.txt").write_text("dirty\n")
     root_log_count = len(
-        list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))
+        list((root / ".cmoc" / "local" / "log" / "sub_command").glob("*.jsonl"))
     )
     monkeypatch.chdir(apply_worktree)
 
@@ -266,10 +266,10 @@ def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(
     state = json.loads(state_path.read_text())
     assert state["apply"]["state"] == "completed"
     assert (
-        len(list((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl")))
+        len(list((root / ".cmoc" / "local" / "log" / "sub_command").glob("*.jsonl")))
         == root_log_count + 1
     )
-    assert not (apply_worktree / ".cmoc" / "log" / "sub_command").exists()
+    assert not (apply_worktree / ".cmoc" / "local" / "log" / "sub_command").exists()
     assert "git 未コミット差分が存在します。" in result.stdout
     assert "git 未コミット差分が存在します。" not in result.stderr
 
@@ -295,7 +295,7 @@ def test_apply_join_from_session_requires_clean_apply_worktree(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_branch = state["apply"]["apply_branch"]
     apply_worktree = apply_worktree_from_state(root, state)
@@ -337,7 +337,7 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
-    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     state = json.loads(state_path.read_text())
     apply_worktree = apply_worktree_from_state(root, state)
     (apply_worktree / "oracle" / "spec.md").write_text("# changed oracle in apply\n")
@@ -391,8 +391,7 @@ def test_apply_join_reports_codex_apply_diff_and_force_reverts(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     state_path = (
         root
-        / ".cmoc"
-        / "sessions"
+        / ".cmoc" / "local" / "session"
         / f"{run_git(root, 'branch', '--show-current').stdout.strip().removeprefix('cmoc/session/')}.json"
     )
     state = json.loads(state_path.read_text())
@@ -458,7 +457,7 @@ def test_apply_join_reports_session_oracle_agents_diff_and_force_reverts(
     )
     assert forced.exit_code == 0
     assert not agents.exists()
-    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     assert json.loads(state_path.read_text())["apply"]["state"] == "ready"
 
 
@@ -483,8 +482,7 @@ def test_apply_join_excludes_deleted_apply_paths_from_unexpected_changes(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     state_path = (
         root
-        / ".cmoc"
-        / "sessions"
+        / ".cmoc" / "local" / "session"
         / f"{run_git(root, 'branch', '--show-current').stdout.strip().removeprefix('cmoc/session/')}.json"
     )
     state = json.loads(state_path.read_text())
@@ -564,8 +562,7 @@ def test_apply_join_allows_gitignore_and_tracked_ignored_apply_diff(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     state_path = (
         root
-        / ".cmoc"
-        / "sessions"
+        / ".cmoc" / "local" / "session"
         / f"{run_git(root, 'branch', '--show-current').stdout.strip().removeprefix('cmoc/session/')}.json"
     )
     state = json.loads(state_path.read_text())
@@ -605,8 +602,7 @@ def test_apply_join_reports_unresolved_non_index_conflict(
     assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
     state_path = (
         root
-        / ".cmoc"
-        / "sessions"
+        / ".cmoc" / "local" / "session"
         / f"{run_git(root, 'branch', '--show-current').stdout.strip().removeprefix('cmoc/session/')}.json"
     )
     state = json.loads(state_path.read_text())
@@ -662,8 +658,7 @@ def test_apply_join_continues_after_resolving_index_conflict_in_normal_mode(
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     state_path = (
         root
-        / ".cmoc"
-        / "sessions"
+        / ".cmoc" / "local" / "session"
         / f"{session_branch.removeprefix('cmoc/session/')}.json"
     )
     state = json.loads(state_path.read_text())

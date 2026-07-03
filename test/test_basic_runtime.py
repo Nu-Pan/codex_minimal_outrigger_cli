@@ -132,7 +132,7 @@ def test_runtime_distinguishes_repo_root_from_linked_worktree(
 ) -> None:
     """linked worktree では repo root と run/work root を分けて扱う。"""
     root = make_repo(tmp_path)
-    linked = root / ".cmoc" / "worktrees" / "linked"
+    linked = root / ".cmoc" / "local" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
 
     monkeypatch.chdir(linked)
@@ -170,7 +170,7 @@ def test_create_run_worktree_rejects_path_not_matching_branch(
     tmp_path: Path,
 ) -> None:
     root = make_repo(tmp_path)
-    target = root / ".cmoc" / "worktrees" / "session" / "other-run"
+    target = root / ".cmoc" / "local" / "worktree" / "session" / "other-run"
     target.mkdir(parents=True)
     (target / "keep.txt").write_text("keep\n")
 
@@ -432,13 +432,13 @@ def test_pre_log_check_failure_does_not_write_subcommand_log(
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
-    log_paths_before = set((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl"))
+    log_paths_before = set((root / ".cmoc" / "local" / "log" / "sub_command").glob("*.jsonl"))
     (root / "README.md").write_text("dirty\n")
 
     result = runner.invoke(app, ["indexing"])
 
     assert result.exit_code == 1
-    assert set((root / ".cmoc" / "log" / "sub_command").glob("*.jsonl")) == log_paths_before
+    assert set((root / ".cmoc" / "local" / "log" / "sub_command").glob("*.jsonl")) == log_paths_before
 
 
 def test_bin_cmoc_missing_venv_call_stack_uses_root_token_path(tmp_path: Path) -> None:
@@ -469,9 +469,9 @@ def test_ensure_cmoc_ignored_updates_gitignore(tmp_path: Path) -> None:
 
     ensure_cmoc_ignored(root)
 
-    assert "/.cmoc/" in (root / ".gitignore").read_text()
+    assert "/.cmoc/local/" in (root / ".gitignore").read_text()
     ignored = subprocess.run(
-        ["git", "check-ignore", "-q", ".cmoc/.__cmoc_ignore_probe__"],
+        ["git", "check-ignore", "-q", ".cmoc/local/.__cmoc_ignore_probe__"],
         cwd=root,
     )
     assert ignored.returncode == 0
@@ -488,7 +488,7 @@ def test_ensure_cmoc_ignored_adds_literal_pattern_after_existing_effective_patte
 
     ensure_cmoc_ignored(root)
 
-    assert (root / ".gitignore").read_text() == ".cmoc/\n\n/.cmoc/\n"
+    assert (root / ".gitignore").read_text() == ".cmoc/\n\n/.cmoc/local/\n"
     assert run_git(root, "status", "--short").stdout.strip() == "M .gitignore"
 
 
@@ -704,7 +704,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         ),
         CmocConfig(),
         root,
-        [root / ".cmoc" / "log" / "tui" / "20260101_cmpl.md"],
+        [root / ".cmoc" / "local" / "log" / "tui" / "20260101_cmpl.md"],
     )
 
     with pytest.raises(CmocError, match="許可領域外"):
@@ -718,7 +718,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
             ),
             CmocConfig(),
             root,
-            [root / ".cmoc" / "log" / "tui" / "20260101_orig.md"],
+            [root / ".cmoc" / "local" / "log" / "tui" / "20260101_orig.md"],
         )
 
 
@@ -727,7 +727,7 @@ def test_codex_profile_allows_repo_log_read_from_linked_worktree(
 ) -> None:
     """linked worktree 実行時だけ repo 側 log 読み取りを追加許可する。"""
     root = make_repo(tmp_path)
-    linked = root / ".cmoc" / "worktrees" / "linked-read"
+    linked = root / ".cmoc" / "local" / "worktree" / "linked-read"
     linked.parent.mkdir(parents=True)
     run_git(root, "worktree", "add", "-b", "linked-read", str(linked), "HEAD")
     parameter = AgentCallParameter(
@@ -742,7 +742,7 @@ def test_codex_profile_allows_repo_log_read_from_linked_worktree(
         parameter,
         CmocConfig(),
         linked,
-        [root / ".cmoc" / "log" / "codex" / "20260101_call.json"],
+        [root / ".cmoc" / "local" / "log" / "codex" / "20260101_call.json"],
         extra_read_root=root,
     )
 
@@ -804,7 +804,7 @@ def test_codex_profile_allows_root_for_realization_write_and_ignored_extra(
         (FileAccessMode.REALIZATION_WRITE, "oracle/blocked.md"),
         (FileAccessMode.REALIZATION_WRITE, "memo/blocked.md"),
         (FileAccessMode.REALIZATION_WRITE, ".agents/blocked.md"),
-        (FileAccessMode.REALIZATION_WRITE, ".cmoc/state.json"),
+        (FileAccessMode.REALIZATION_WRITE, ".cmoc/local/state.json"),
         (FileAccessMode.REALIZATION_WRITE, ".codex/config.toml"),
         (FileAccessMode.REALIZATION_WRITE, "AGENTS.md"),
         (FileAccessMode.REALIZATION_WRITE, "INDEX.md"),
@@ -815,7 +815,7 @@ def test_codex_profile_allows_root_for_realization_write_and_ignored_extra(
         (FileAccessMode.PURE_ORACLE_WRITE, "oracle/AGENTS.md"),
         (FileAccessMode.REPO_WRITE, "memo/blocked.md"),
         (FileAccessMode.REPO_WRITE, ".agents/blocked.md"),
-        (FileAccessMode.REPO_WRITE, ".cmoc/state.json"),
+        (FileAccessMode.REPO_WRITE, ".cmoc/local/state.json"),
         (FileAccessMode.REPO_WRITE, ".git/config"),
         (FileAccessMode.REPO_WRITE, "AGENTS.md"),
         (FileAccessMode.REPO_WRITE, "INDEX.md"),
@@ -1018,7 +1018,7 @@ def test_codex_profile_allows_root_readme_session_join_conflict_target(
     "extra",
     [
         ".agents/blocked.md",
-        ".cmoc/state.json",
+        ".cmoc/local/state.json",
         ".codex/config.toml",
         ".git/config",
         "memo/blocked.md",
