@@ -1054,14 +1054,48 @@ def _file_access_recovery_parameter(
     violations: list[Path],
     violated_mode: FileAccessMode,
 ) -> AgentCallParameter:
-    from acp.builder.common.file_access_rule_vaolation_recovery import (
-        build_file_access_rule_vaolation_recovery_parameter,
+    from acp.builder.apply.fork.finding_application import (
+        build_apply_fork_finding_application_parameter,
     )
 
-    return build_file_access_rule_vaolation_recovery_parameter(
-        violated_agent_call_log,
-        violations,
-        violated_mode,
+    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+    # File-access recovery must use the finding-application agent call
+    # contract; the runtime only adapts detected violations into findings.
+    return build_apply_fork_finding_application_parameter(
+        [
+            {
+                "title": "File access rule violation recovery",
+                "evidences": [
+                    {
+                        "path": str(path),
+                        "line_start": 1,
+                        "line_end": 1,
+                        "summary": (
+                            f"`{path}` still has a diff forbidden by "
+                            f"`{violated_mode.value}`."
+                        ),
+                    }
+                    for path in violations
+                ],
+                "oracle_requirement": (
+                    "`<work-root>/oracle/doc/app_spec/codex_exec_rule.md` requires "
+                    "post-call file access violations to be recovered by an agent "
+                    "call whose contract is `build_apply_fork_finding_application_parameter`."
+                ),
+                "observed_implementation": (
+                    f"`{violated_agent_call_log}` left diffs outside the "
+                    f"`{violated_mode.value}` file access mode."
+                ),
+                "reason": (
+                    "The remaining diffs violate the file access mode of the "
+                    "agent call that produced them."
+                ),
+                "suggested_fix": (
+                    "Remove or move the forbidden diffs while preserving the "
+                    "semantic purpose of the original agent call log."
+                ),
+            }
+        ]
     )
 
 

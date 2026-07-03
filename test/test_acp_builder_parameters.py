@@ -26,9 +26,6 @@ from acp.builder.apply.fork.file_finding_enumeration import (
 from acp.builder.apply.fork.finding_application import (
     build_apply_fork_finding_application_parameter,
 )
-from acp.builder.common.file_access_rule_vaolation_recovery import (
-    build_file_access_rule_vaolation_recovery_parameter,
-)
 from acp.builder.indexing.index_entry import build_indexing_index_entry_parameter
 from acp.builder.review.oracle.enumerate_finding import (
     build_review_oracle_enumerate_finding_parameter,
@@ -108,26 +105,6 @@ def test_apply_fork_change_summary_schema_matches_oracle_source() -> None:
         },
         schema,
     )
-
-
-def test_file_access_rule_violation_recovery_uses_dedicated_parameter() -> None:
-    call_log = Path(".cmoc/log/codex/20260102_030405_call.json")
-    parameter = build_file_access_rule_vaolation_recovery_parameter(
-        call_log,
-        [Path("oracle/spec.md")],
-        FileAccessMode.REALIZATION_WRITE,
-    )
-
-    assert parameter.model_class == ModelClass.FLAGSHIP
-    assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
-    assert parameter.file_access_mode == FileAccessMode.NO_RULE
-    assert parameter.structured_output_schema_path is None
-    assert "ファイルアクセス規則違反のリカバリー担当" in parameter.prompt
-    assert "# <violated-file-access-rule>" in parameter.prompt
-    assert "# <violated-file-list>" in parameter.prompt
-    assert "- `oracle/spec.md`" in parameter.prompt
-    assert "20260102_030405_call" in parameter.prompt
-    assert "FINDING-00" not in parameter.prompt
 
 
 def test_tui_resolve_parameter_builder_embeds_original_prompt() -> None:

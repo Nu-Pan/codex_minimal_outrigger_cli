@@ -191,9 +191,11 @@ def test_run_codex_exec_recovers_file_access_violations(
 
     assert counter.read_text() == "2"
     assert not (root / "oracle" / "blocked.md").exists()
-    assert "ファイルアクセス規則違反のリカバリー担当" in recovery_prompt.read_text()
-    assert "<violated-file-list>" in recovery_prompt.read_text()
-    assert "oracle/blocked.md" in recovery_prompt.read_text()
+    prompt = recovery_prompt.read_text()
+    assert "ソフトウェア実装の修正担当" in prompt
+    assert "FINDING-00" in prompt
+    assert "oracle/blocked.md" in prompt
+    assert "build_apply_fork_finding_application_parameter" in prompt
 
 
 @pytest.mark.parametrize("blocked_name", ["a b.md", 'quoted " name.md'])
@@ -280,7 +282,9 @@ def test_run_codex_exec_recovers_git_directory_file_access_violation(
 
     assert counter.read_text() == "2"
     assert (root / ".git" / "config").read_text() == saved_config.read_text()
-    assert ".git/config" in recovery_prompt.read_text()
+    prompt = recovery_prompt.read_text()
+    assert "FINDING-00" in prompt
+    assert ".git/config" in prompt
 
 
 def test_run_codex_exec_recovers_file_access_violations_before_nonzero_error(

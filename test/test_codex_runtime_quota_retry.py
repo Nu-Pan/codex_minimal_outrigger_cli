@@ -559,7 +559,8 @@ def test_quota_poll_limit_recovers_failed_call_file_access_violation(
     call_records = [json.loads(line) for line in calls.read_text().splitlines()]
     assert len(call_records) == 2
     assert call_records[0]["stdin"] == "prompt"
-    assert "ファイルアクセス規則違反" in call_records[1]["stdin"]
+    assert "FINDING-00" in call_records[1]["stdin"]
+    assert "src/blocked.py" in call_records[1]["stdin"]
     assert not (root / "src" / "blocked.py").exists()
 
 
@@ -618,7 +619,8 @@ def test_quota_probe_failure_recovers_probe_file_access_violation(
     call_records = [json.loads(line) for line in calls.read_text().splitlines()]
     assert [record["stdin"] for record in call_records[:2]] == ["prompt", probe_prompt]
     assert len(call_records) == 3
-    assert "ファイルアクセス規則違反" in call_records[2]["stdin"]
+    assert "FINDING-00" in call_records[2]["stdin"]
+    assert "src/probe.py" in call_records[2]["stdin"]
     assert not (root / "src" / "probe.py").exists()
 
 
