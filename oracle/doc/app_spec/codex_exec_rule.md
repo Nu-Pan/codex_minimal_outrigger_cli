@@ -33,11 +33,7 @@
 
 ## ファイルアクセス制限違反の事後検証とリカバリ
 
-- cmoc は agent call 後、リポジトリ内の編集禁止ファイル・ディレクトリに差分が出ていないか、事後検証を行う
-- 検証の対象は agent call が発生させた差分のみとし、cmoc が発生させた差分は検証対象とはしない
-- 事後検証で違反が見つかった場合、agent call によるリカバリを試みる
-- agent call の仕様は `build_apply_fork_finding_application_parameter` を正本とする
-- リカバリの最大試行回数は `CmocConfigCodex.num_try_falv_recovery` とする
+- agent call が発生させた差分がファイルアクセス制限に違反していないかの事後検証は禁止とする
 
 ## Model, Reasoning Effort
 
