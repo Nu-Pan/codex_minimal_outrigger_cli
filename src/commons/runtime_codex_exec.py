@@ -15,6 +15,7 @@ import os
 import subprocess
 import threading
 import time
+from collections.abc import Callable
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -71,6 +72,7 @@ _WorktreeDiffSnapshot = dict[Path, tuple[str, _PathFingerprint]]
 # `git status` may refresh the index during post-check; .git itself is still
 # denied, so only that cmoc-owned metadata churn is excluded from comparison.
 _GIT_STATUS_MUTABLE_PATHS = {Path(".git/index")}
+_BeforeCodexCall = Callable[[str, Path], None]
 
 
 def _write_prompt_log(path: Path, prompt: str) -> None:
@@ -173,6 +175,7 @@ def run_codex_exec(
     extra_writable_paths: list[Path] | None = None,
     allow_oracle_conflict_writes: bool = False,
     verify_file_access: bool = True,
+    _before_recovery_codex_call: _BeforeCodexCall | None = None,
 ) -> CodexExecResult:
     """Codex exec の再試行、Structured Output 検証、実行記録を一括制御する。"""
     root = root or repo_root()
@@ -384,6 +387,7 @@ def run_codex_exec(
             allowed_paths=allowed_paths,
             forbidden_baseline=forbidden_baseline,
             worktree_diff_baseline=worktree_diff_baseline,
+            before_recovery_codex_call=_before_recovery_codex_call,
         )
 
     def recover_call_file_access_violations(
@@ -896,6 +900,7 @@ def recover_file_access_violations(
     allowed_paths: list[Path] | None = None,
     forbidden_baseline: _ForbiddenSnapshot | None = None,
     worktree_diff_baseline: _WorktreeDiffSnapshot | None = None,
+    before_recovery_codex_call: _BeforeCodexCall | None = None,
 ) -> None:
     """agent call 後に残った file access rule 違反を設定回数だけ修復する。"""
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
@@ -919,12 +924,26 @@ def recover_file_access_violations(
             violations,
             violated_mode,
         )
+        purpose = "file access rule violation recovery"
+        recovery_root = root or worktree
+        if before_recovery_codex_call is not None:
+            # <work-root>/oracle/doc/app_spec/indexing.md
+            # Recovery is an agent call, but it recurses into this exec
+            # implementation instead of the outer preflight wrapper.
+            before_recovery_codex_call(purpose, worktree)
+            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
+            # The post-check targets agent edits only; indexing preflight may
+            # commit INDEX.md and update .git before the recovery agent starts.
+            if forbidden_baseline is not None:
+                forbidden_baseline = _forbidden_filesystem_snapshot(worktree)
+            if worktree_diff_baseline is not None:
+                worktree_diff_baseline = _worktree_diff_snapshot(worktree)
         recovery_result = run_codex_exec(
             parameter,
-            root=root or worktree,
+            root=recovery_root,
             cwd=worktree,
             config=config,
-            purpose="file access rule violation recovery",
+            purpose=purpose,
             subcommand_logger=subcommand_logger,
             verify_file_access=False,
         )
@@ -1225,4 +1244,3 @@ def _is_readonly_temporary_diff_path(
         or "__pycache__" in relative.parts
         or path.name.endswith((".pyc", ".pyo"))
     )
-

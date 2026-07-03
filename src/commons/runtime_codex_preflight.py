@@ -34,6 +34,7 @@ def disable_indexing_preflight() -> None:
 def run_codex_exec(parameter: AgentCallParameter, **kwargs: Any) -> CodexExecResult:
     purpose = str(kwargs.get("purpose", "codex exec"))
     _run_indexing_before_codex(purpose, _indexing_root_for_codex(kwargs))
+    kwargs["_before_recovery_codex_call"] = _run_indexing_before_codex
     return runtime_run_codex_exec(parameter, **kwargs)
 
 

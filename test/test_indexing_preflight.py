@@ -8,10 +8,13 @@ from pathlib import Path
 import pytest
 import commons.runtime_codex_preflight as codex_preflight_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from config.cmoc_config import CmocConfig
 
 from _support import (
     make_repo,
     run_git,
+    setup_codex_home,
+    write_python_executable,
 )
 import commons.indexing as indexing_module
 
@@ -269,3 +272,66 @@ def test_command_codex_call_skips_indexing_for_index_entry_and_conflict_resoluti
         "indexing index entry for README.md",
         "session join conflict resolution",
     ]
+
+
+def test_file_access_recovery_codex_call_runs_indexing_preflight(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    counter = tmp_path / "count.txt"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, pathlib, sys",
+            f"counter = pathlib.Path({str(counter)!r})",
+            "count = int(counter.read_text()) if counter.exists() else 0",
+            "counter.write_text(str(count + 1))",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "blocked = pathlib.Path('oracle/blocked.md')",
+            "if count == 0:",
+            "    blocked.write_text('blocked\\n')",
+            "else:",
+            "    blocked.unlink(missing_ok=True)",
+            "output.write_text('{}\\n')",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    index_path = root / "INDEX.md"
+    events: list[Path] = []
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.REALIZATION_WRITE,
+        "prompt",
+        None,
+    )
+
+    def fake_update_indexes(
+        update_root: Path, codex_exec: Callable[..., object] | None = None
+    ) -> list[Path]:
+        events.append(update_root)
+        index_path.write_text(f"# generated {len(events)}\n")
+        return [index_path]
+
+    indexing_module.enable_indexing_preflight()
+    monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
+
+    try:
+        codex_preflight_module.run_codex_exec(
+            parameter,
+            root=root,
+            capacity_initial_sleep_sec=0,
+            config=CmocConfig(),
+            purpose="apply fork refine findings",
+        )
+    finally:
+        codex_preflight_module.disable_indexing_preflight()
+
+    assert counter.read_text() == "2"
+    assert events == [root, root]
+    assert not (root / "oracle" / "blocked.md").exists()
