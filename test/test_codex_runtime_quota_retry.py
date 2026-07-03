@@ -46,9 +46,9 @@ def stub_quota_probe_builder(
         runtime_codex_exec,
         "_quota_availability_probe_parameter",
         lambda base_parameter: AgentCallParameter(
-            base_parameter.model_class,
-            base_parameter.reasoning_effort,
-            base_parameter.file_access_mode,
+            ModelClass.MINIMUM,
+            ReasoningEffort.LOW,
+            FileAccessMode.READONLY,
             probe_prompt,
             None,
         ),
@@ -74,7 +74,6 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
 ) -> None:
     root = make_repo(tmp_path)
     codex_home = setup_codex_home(tmp_path, monkeypatch)
-    stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     timestamps = iter(
         [
@@ -114,7 +113,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
     parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
+        ModelClass.FLAGSHIP,
         ReasoningEffort.LOW,
         FileAccessMode.READONLY,
         "prompt",
@@ -168,6 +167,9 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
         probe_logs[0]["profile_name"]
         == argv_calls[1][argv_calls[1].index("--profile") + 1]
     )
+    assert probe_logs[0]["model_class"] == "minimum"
+    assert probe_logs[0]["reasoning_effort"] == "low"
+    assert probe_logs[0]["file_access_mode"] == "readonly"
     assert Path(probe_logs[0]["stdout_log_path"]).read_text().strip() == (
         '{"type": "turn.completed"}'
     )
@@ -188,6 +190,11 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     resume_entry = next((path, log) for path, log in main_entries if log is resume_log)
     assert initial_log["argv"][1:] == argv_calls[0]
     assert resume_log["argv"][1:] == argv_calls[2]
+    assert probe_logs[0]["profile_name"] != initial_log["profile_name"]
+    assert probe_logs[0]["profile_path"] != initial_log["profile_path"]
+    assert Path(probe_logs[0]["profile_path"]).read_text() != Path(
+        initial_log["profile_path"]
+    ).read_text()
     assert len({log["stdout_log_path"] for log in main_logs}) == 2
     assert [prompt_log_text(log["prompt_log_path"]) for log in main_logs] == [
         "prompt",
@@ -299,9 +306,11 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
-    codex_home = root / "oracle" / "relative_codex_home"
-    codex_home.mkdir()
-    (codex_home / "auth.json").write_text("{}\n")
+    initial_codex_home = root / "oracle" / "relative_codex_home"
+    probe_codex_home = root / "relative_codex_home"
+    for codex_home in [initial_codex_home, probe_codex_home]:
+        codex_home.mkdir()
+        (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
     stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
@@ -354,9 +363,26 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
     )
 
     oracle_root = root / "oracle"
+    expected = [
+        (
+            "initial",
+            oracle_root,
+            Path("relative_codex_home"),
+            initial_codex_home,
+            oracle_root,
+        ),
+        ("probe", root, Path("relative_codex_home"), probe_codex_home, root),
+        (
+            "resume",
+            oracle_root,
+            Path("relative_codex_home"),
+            initial_codex_home,
+            oracle_root,
+        ),
+    ]
     assert records == [
-        (kind, oracle_root, Path("relative_codex_home"), codex_home, oracle_root)
-        for kind in ["initial", "probe", "resume"]
+        (kind, cwd, home, resolved_home, codex_cd)
+        for kind, cwd, home, resolved_home, codex_cd in expected
     ]
 
 
