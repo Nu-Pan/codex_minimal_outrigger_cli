@@ -211,22 +211,23 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex exec が quota exceeded になった後の待機、probe、resume token 利用、resume 不能時の再実行、ログ記録、ファイルアクセス違反回復、並行呼び出し時の代表 probe 共有を検証する realization test。
-- quota 待機から復帰する retry 状態機械の外部挙動を、fake Codex 呼び出し列、call log、subcommand log、CODEX_HOME/cwd の観測を通じてまとめて確認する。
+- Codex quota exceeded 後の待機、probe、resume、再実行を含む retry 状態機械の外部挙動を検証する realization test。
+- quota 回復時の probe 共有、resume token 抽出、call log/subcommand log、CODEX_HOME と cwd、file access violation 復旧を同じ fake Codex 呼び出し列から確認する。
+- 16,000 文字を超えるが、観測点が同一の quota retry 制御に閉じており、分割すると呼び出し列の文脈が分散するため一箇所に保たれている。
 
 ## Read this when
-- Codex exec の quota exceeded 検出後の retry、probe、resume、再実行に関する挙動を変更または調査するとき。
-- quota availability probe の生成、実行、失敗時処理、ログ出力、subcommand event の status/purpose/returncode を確認するとき。
-- CODEX_HOME が相対パスの場合の cwd、PURE_ORACLE_READ 時の --cd、quota 待機中のファイルアクセス違反回復を検証するとき。
-- 複数の run_codex_exec が同時に quota exceeded になった場合に、probe が代表 1 回だけ実行され、待機側が成功または失敗を共有する制御を確認するとき。
+- Codex exec が quota exceeded を返した後の待機、probe、resume、再実行の挙動を変更または調査するとき。
+- quota availability probe の入力、profile、ログ、失敗時挙動、並列呼び出し時の代表 probe 共有を確認するとき。
+- resume token を JSONL ログから読む処理や、token がない場合の再実行経路を変更するとき。
+- quota retry 中の CODEX_HOME、cwd、file access violation 復旧、call log/subcommand log の出力を確認するとき。
 
 ## Do not read this when
-- 通常の Codex exec 成功経路、引数構築、出力 JSON 読み取りだけを確認したいときは、より直接その挙動を扱う runtime Codex exec の実装または別テストを読む。
-- quota availability probe の prompt 内容そのものや AgentCallParameter の構築仕様だけを確認したいときは、probe builder 側を読む。
-- INDEX.md 生成、oracle/realization の分類、ファイルアクセス規則そのものの仕様を確認したいときは、対応する oracle 文書を読む。
+- 通常の Codex exec 成功経路だけを確認したいとき。
+- quota exceeded と無関係なプロンプト構築、設定読み込み、一般的な subprocess 実行を調べるとき。
+- realization test のルーティング情報だけを更新したいとき。
 
 ## hash
-- 57767c7bb7841e9f8290194c77b6113b29e7fbe433c7f0dcd9ecdea8d13ff7d0
+- db794d91af87579e74addc43d5d40241a60dcc243cee963e11165f9d1f32ef28
 
 # `test_codex_runtime_retry.py`
 

@@ -115,26 +115,25 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループを中心に、実行前準備、ログ保存、Structured Output 検証、capacity retry、quota 待機と代表 probe、resume 継続、実行後の file access rule 違反検査と修復を一体で扱う実行制御実装。
-- TUI 起動ではなく exec 分岐の状態機械を担い、subprocess 結果、call log、subcommand event、retry counter、resume token、生成差分の扱いを共有する処理の入口になる。
-- agent call 後に残った差分を FileAccessMode に照らして判定し、cmoc 生成ログや許可済み path を除外しつつ、禁止領域や oracle/realization の書き込み境界を検査する補助処理も含む。
+- Codex exec の実行制御を担う実装。単一試行ループの中で、Codex subprocess 呼び出し、prompt/stdout/stderr/output/call log の保存、Structured Output 検証、semantic retry、capacity retry、quota 待機と代表 probe、resume 継続、実行後の file access rule 違反検査と回復を一体で扱う。
+- TUI 起動ではなく exec 分岐の状態機械を扱う場所であり、subprocess 結果、call log、subcommand event、retry counter、resume token を共有する処理を同じ文脈で読むための入口となる。
+- agent call 後の差分検査に関する補助処理も含み、git status と禁止 runtime root の filesystem snapshot を使って、cmoc 生成ログと agent 編集差分を区別しながら FileAccessMode に反する残存変更を判定する。
 
 ## Read this when
-- Codex exec 呼び出しの argv、profile、CODEX_HOME、schema、cwd、prompt stdin、ログ path の組み立てや保存挙動を確認・変更したいとき。
-- Structured Output の読み取り、JSON schema 検証、semantic retry、capacity retry、quota 枯渇時の待機・代表 probe・resume 継続の制御を追うとき。
-- Codex call の console 出力、subcommand log event、call log、prompt/stdout/stderr/output log の生成と結果オブジェクトへの反映を確認するとき。
-- agent call 後の file access rule post-check、違反修復 call、禁止領域の filesystem snapshot、git status 差分、cmoc 生成差分の除外条件を扱うとき。
-- FileAccessMode ごとの書き込み許可判定、readonly 系で許される一時生成物、oracle file への書き込み禁止境界を実装側で確認するとき。
+- Codex exec 呼び出しの argv、cwd、profile、CODEX_HOME、schema、prompt stdin log の扱いを確認または変更したいとき。
+- Structured Output の読み取り、JSON schema 検証、semantic retry、capacity retry、quota polling、quota availability probe、resume token 継続の挙動を追うとき。
+- Codex call log、console 出力、subcommand event、quota wait 秒数、retry 回数、生成ログ path の記録方法を調べるとき。
+- agent call 後の file access rule 違反検出、回復 agent call、生成済みログ差分の除外、禁止 root や ignored file の post-check を変更するとき。
+- FileAccessMode ごとの書き込み許可境界や、oracle file・runtime path・readonly 一時生成物の扱いを確認するとき。
 
 ## Do not read this when
-- Codex exec の起動制御ではなく、TUI 起動や別 UI 経路の処理だけを確認したいとき。
-- AgentCallParameter の構築内容、quota probe 用 prompt、file access recovery 用 prompt そのものを変更したいときは、それぞれの builder 側を直接読む。
-- Codex profile の具体的な生成、CODEX_HOME 解決、schema 準備、subprocess 実行ラッパー、resume token 抽出の低レベル処理だけを確認したいときは、runtime Codex profile 側を直接読む。
-- git コマンド実行一般、runtime path 解決、subcommand logger、結果データ型など、この実行制御から呼び出される共有部品の内部仕様だけを確認したいとき。
-- INDEX.md エントリー生成や oracle 仕様文書の内容確認が目的で、Codex exec 実行時の制御ロジックを追う必要がないとき。
+- Codex profile の具体的な生成内容、Codex subprocess wrapper、resume token 抽出、capacity/quota error 判定そのものを変更したいだけなら、それらを提供する runtime Codex profile 側を読む。
+- AgentCallParameter の構造や quota probe 用 parameter の組み立て方を変更したいだけなら、acp builder 側を読む。
+- TUI 起動や exec 以外の Codex 実行入口を探している場合は、この exec 状態機械ではなく該当する起動 module を読む。
+- git コマンド wrapper、path model、runtime logging、CodexExecResult の型定義だけを確認したい場合は、それぞれの共通 module を直接読む。
 
 ## hash
-- 216a36dc05c0d51a22ca647f8df150570bb5c5d5150d447966b14f74777c3ff2
+- c4620040d8c67a3d940c7b049a648fd27bb0e3b36870904e6f78da550adb37c7
 
 # `runtime_codex_logging.py`
 

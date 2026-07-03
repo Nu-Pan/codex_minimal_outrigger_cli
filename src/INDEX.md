@@ -62,24 +62,24 @@
 # `commons`
 
 ## Summary
-- cmoc の実行時共通部品を集めた領域。Codex 呼び出し、INDEX 更新、CLI 共通ライフサイクル、設定、内容 hash、エラー表示、git 操作、ログ、path、実行結果、session state、apply process 管理など、複数サブコマンドから使われる runtime 支援を扱う。
-- 実処理を持つ責務別実装と、それらをまとめて参照する薄い公開入口が同階層にあり、個別サブコマンド固有の業務処理ではなく横断的な実行基盤を確認する入口になる。
+- cmoc の共有 runtime 実装を集めた領域。Codex 呼び出し、INDEX 更新、CLI 共通ライフサイクル、config、content hash、error、git、logging、path、result、state、apply process tracking など、複数サブコマンドから使われる共通部品への入口になる。
+- この階層には、実処理を持つ責務別 runtime module と、既存 import path や横断 API を維持する薄い集約 module が混在する。
 
 ## Read this when
-- 複数のサブコマンドや runtime 処理で共有される helper、型、例外、ログ、path、git、config、state、Codex 実行制御を探したいとき。
-- Codex exec/TUI 呼び出し、profile 作成、Structured Output 検証、quota/capacity retry、call log、file access rule post-check など、agent call の共通実行境界を調べたいとき。
-- INDEX.md 自動更新の preflight、対象走査、hash 鮮度判定、既存エントリー再利用、エントリー生成、排他制御、更新 commit 条件を確認または変更したいとき。
-- CLI サブコマンド共通の開始・完了表示、終了コード化、例外表示、サブコマンドログ、完了サマリー、work root 検査を扱うとき。
-- session state、apply process tracking、cmoc 管理 worktree/branch、git ignore 判定、memo 判定、内容 hash 保存など、上位 workflow から呼ばれる共通 runtime 境界を確認したいとき。
+- 複数の CLI サブコマンドや orchestration から共有される runtime helper の所在を探したいとき。
+- Codex exec/TUI 呼び出し、profile、preflight、call log、quota/capacity retry、file access post-check など、Codex 実行境界の実装へ進みたいとき。
+- INDEX.md 自動更新、entry 生成、hash 鮮度判定、対象走査、既存 entry 再利用、更新 commit の制御を調べたいとき。
+- CLI 共通の実行ライフサイクル、利用者向けエラー表示、git 操作、runtime path、設定読み書き、状態永続化、logging、外部コマンド結果モデルを確認または変更したいとき。
+- apply 実行中 process の追跡・停止や、session/apply branch から worktree・state を特定する runtime 処理を扱うとき。
 
 ## Do not read this when
-- 個別サブコマンドの利用者向け挙動、引数、状態遷移、出力仕様を確認したいだけの場合は、該当する command 実装やテストへ進む。
-- oracle file にある正本仕様、path placeholder の定義、file access rule の意図、config や state の仕様根拠を確認したい場合は、対応する oracle 側の文書や定義を読む。
-- 特定 helper の呼び出し元だけを調べたい場合や、上位 workflow の制御判断を追いたい場合は、その workflow 側を先に読む。
-- 生成済みログや実行履歴の内容確認が目的で、runtime logging や Codex 呼び出し実装そのものを変更しない場合は、この領域を読む必要はない。
+- 個別サブコマンドの CLI 引数、業務処理、利用者向け出力仕様だけを調べたいとき。その場合は command 実装や対応するテストへ進む。
+- 正本仕様断片、path model、config 型、file access rule、INDEX.md 仕様意図などを確認したいとき。その場合は oracle 側の該当本文を読む。
+- runtime helper を利用する上位 workflow の制御だけを追いたいとき。まず orchestration や command 側を読む。
+- 特定の低レベル処理の仕様意図ではなく生成済みログ、実行履歴、作業メモを確認したいだけのとき。
 
 ## hash
-- 9a85a862656a1292071d364dd5c1e9aab3675358ef53361c26cd549fab0fbd12
+- 2aabf36e323a2dcd240528533345538f7cdbc1ebc8932fc1f585463a5ffd809f
 
 # `config`
 
