@@ -123,26 +123,26 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder と worktree root 解決、config validation、CmocError の Markdown 表示、CLI error の stdout 変換、subcommand log、FileAccessMode ごとの Codex sandbox profile、binary 判定、session/apply branch state 解析を一つの回帰テスト群として扱う。
-- 個別サブコマンドの機能仕様ではなく、複数の実行経路の前提になる runtime 境界をまとめて固定する入口。共通 fixture と root 状態を共有するため、runtime の基礎契約を変更する際に関連する挙動を同時に確認できる。
+- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder 解決、repo/run/work root 判定、設定読み込み、CmocError 表示、CLI error 出力、subcommand log、FileAccessMode から Codex sandbox/profile への変換、binary 判定など、個別サブコマンドより下位の共通実行前提をまとめて扱う。
+- 共通 fixture と root 状態を共有しながら崩れやすい runtime 境界を回帰検証する位置づけで、個別機能の詳細仕様ではなく、cmoc 全体の実行基盤が守るべき外部挙動と制御ロジックへの入口になる。
 
 ## Read this when
-- root placeholder、repo root、run root、work root、linked worktree、main worktree の解決規則を変更または調査する。
-- CmocError、CLI 引数解析 error、stdout/stderr の error report、Call stack 表示、duration 表示など、利用者向け error/rendering 契約を変更または調査する。
-- cmoc config の既定値、型 validation、論理 model class、reasoning effort の扱いを変更または調査する。
-- subcommand log の生成タイミング、timestamp 衝突時の log file 扱い、preflight 失敗時の副作用抑制を変更または調査する。
-- FileAccessMode、Codex sandbox profile、追加 writable/read path、oracle・memo・runtime 管理領域のアクセス制限を変更または調査する。
-- session branch や apply branch から session id/state を読む制御、壊れた branch 名の拒否を変更または調査する。
-- `.cmoc` ignore pattern、起動 wrapper の missing venv report、binary 判定の読み取り範囲など、runtime の基礎的な補助挙動を変更または調査する。
+- root placeholder、linked worktree、repo root、run root、work root の解決や拒否条件を確認・変更する時。
+- CmocConfig の既定値、config_from_dict の型検証、設定不正時の CmocError を確認・変更する時。
+- CmocError の Markdown 表示、CLI 解析 error や想定済み error の stdout/stderr 挙動、起動 wrapper の call stack 表示を確認・変更する時。
+- subcommand log の生成条件、timestamp 衝突時の log file 分離、pre-log check 失敗時に log を残さない挙動を確認・変更する時。
+- FileAccessMode の値、sandbox mode 変換、Codex profile の writable roots、追加書き込み・読み取り許可 path の許可境界を確認・変更する時。
+- `.cmoc` ignore pattern の生成、managed worktree の作成・削除拒否条件、session/apply branch 名から state を読む境界を確認・変更する時。
+- binary 判定が読む範囲や、基礎 runtime 契約をまたぐ回帰テストを追加・整理する時。
 
 ## Do not read this when
-- 個別サブコマンド固有の業務ロジック、入出力 schema、差分生成、review/apply の詳細挙動だけを確認したい場合は、そのサブコマンドや機能に対応するテストへ直接進む。
-- oracle doc や oracle src の正本仕様そのものを確認したい場合は、realization test ではなく oracle 側の対象本文を読む。
-- テスト共通 fixture、runner、git helper の実装だけを変更したい場合は、support 用のテスト補助コードを読む。
-- runtime の外部挙動ではなく、内部 helper の局所的な実装整理だけが目的で、ここに固定された契約へ影響しない場合は、対象 implementation とより小さい単位のテストを優先する。
+- 特定サブコマンド固有の業務フロー、出力内容、prompt 構築、agent call orchestration の詳細だけを確認したい時は、そのサブコマンドまたは責務別のテストへ進む。
+- 個別の oracle doc、oracle src、oracle test の正本仕様断片そのものを確認したい時は、対応する oracle 側の本文へ進む。
+- runtime helper の内部実装だけを局所的に変更し、既存の外部挙動や共通契約に影響しないことが明らかな時は、該当する implementation file とより直接の単体テストを読む。
+- INDEX ルーティングや AGENTS 指示の変更を扱う時は、この runtime 回帰テストではなく対象階層のルーティング文書や指示文書を確認する。
 
 ## hash
-- f63b5c14aaf2a8933343ac939915bd3de09c8e53d267fa2ac6fb39f5e58013f1
+- cf2aa2f06d232f5d34b9946ff665ef334383300fa81271cae83112b654052413
 
 # `test_cli_init_tui.py`
 
