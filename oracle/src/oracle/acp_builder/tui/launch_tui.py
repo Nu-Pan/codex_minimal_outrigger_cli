@@ -87,4 +87,5 @@ def build_tui_launch_tui_parameter(
         file_access_mode,
         f"{complete_prompt_path} を読んで、その指示に従って下さい",
         Path(__file__).with_suffix(".json"),
+        True,
     )

@@ -84,3 +84,9 @@ class AgentCallParameter:
     # Structured Output schema ファイルパス
     # Structured Output を要求しない呼び出しでは None。
     structured_output_schema_path: Path | None
+
+    # True なら本命 agent call の前に indexing preflight を実行する
+    # False なら indexing preflight を実行しない
+    # 本命 agent call 自身が indexing である場合は indexling preflight をスキップする、というのが主な使い方。
+    # file access rule violation recovery のような indexing preflight から連鎖的に発生する処理の場合もスキップの対象。
+    run_indexing_preflight: bool

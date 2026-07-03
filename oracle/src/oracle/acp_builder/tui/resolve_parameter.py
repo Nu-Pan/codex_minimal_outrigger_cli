@@ -82,4 +82,5 @@ def build_tui_resolve_parameter_parameter(
         FileAccessMode.READONLY,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),
+        True,
     )

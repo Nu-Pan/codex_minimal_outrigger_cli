@@ -72,4 +72,5 @@ def build_apply_fork_finding_application_parameter(
         FileAccessMode.REALIZATION_WRITE,
         render_as_markdown(prompt),
         None,
+        True,
     )

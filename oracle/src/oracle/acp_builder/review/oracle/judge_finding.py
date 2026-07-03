@@ -73,4 +73,5 @@ def build_review_oracle_judge_finding_parameter(
         FileAccessMode.PURE_ORACLE_READ,
         render_as_markdown(prompt),
         Path(__file__).with_suffix(".json"),
+        True,
     )

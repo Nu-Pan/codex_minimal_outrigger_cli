@@ -69,10 +69,17 @@ def build_file_access_rule_vaolation_recovery_parameter(
         oracle_and_realization_basic=True,
     )
     # パラメータを生成して返す
+    # NOTE
+    #   run_indexing_preflight=True にしてしまうと、
+    # 　indexing preflight --> recovery --> indexing preflight という循環ルートが発生する。
+    #   indexing preflight は並列処理のためにロックを必要とするため、
+    #   循環ルートはデッドロックを引き起こしてしまう。
+    #   よって recovery は indexing preflight を実行しない。
     return AgentCallParameter(
         ModelClass.FLAGSHIP,
         ReasoningEffort.MEDIUM,
         FileAccessMode.NO_RULE,
         render_as_markdown(prompt),
         None,
+        False,
     )
