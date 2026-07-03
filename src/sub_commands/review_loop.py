@@ -17,8 +17,8 @@ from acp.builder.review.oracle.validate_finding_advocate import (
 from acp.builder.review.oracle.validate_finding_challenger import (
     build_review_oracle_validate_finding_challenger_parameter,
 )
-from basic.path_model import resolve_real_path
 from config.cmoc_config import CmocConfig
+from sub_commands.review_paths import finding_oracle_path
 
 CodexExec = Callable[..., object]
 
@@ -93,27 +93,8 @@ def _findings_related_to_oracle_path(
     return [
         finding
         for finding in findings
-        if _finding_oracle_path(finding, worktree) == oracle_path.resolve()
+        if finding_oracle_path(finding, worktree) == oracle_path.resolve()
     ]
-
-
-def _finding_oracle_path(finding: dict, worktree: Path) -> Path | None:
-    raw_path = finding.get("oracle_path")
-    if not isinstance(raw_path, str) or not raw_path:
-        return None
-    path = Path(raw_path)
-    if path.is_absolute():
-        return path.resolve()
-    if path.parts and path.parts[0] == "<oracle-root>":
-        # enumerate_finding prompt exposes this shorthand as an oracle root alias.
-        # 根拠: <work-root>/oracle/src/oracle/acp_builder/review/oracle/enumerate_finding.py
-        return (worktree / "oracle" / Path(*path.parts[1:])).resolve()
-    if path.parts and path.parts[0].startswith("<"):
-        try:
-            return resolve_real_path(path)
-        except (TypeError, ValueError):
-            return None
-    return (worktree / path).resolve()
 
 
 def _validate_and_judge_findings(

@@ -248,6 +248,35 @@ def test_review_oracle_report_includes_rejected_findings(
     assert "session_id:" not in rendered
 
 
+def test_review_oracle_report_counts_oracle_root_alias_findings(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    rendered = review_module.render_review_oracle_report(
+        root,
+        "full",
+        "cmoc/session/session-1",
+        SessionState(),
+        1,
+        [root / ".cmoc" / "worktrees" / "session-1" / "run-1" / "oracle" / "a.md"],
+        [
+            {
+                "finding_id": "finding-0001",
+                "oracle_path": "<oracle-root>/a.md",
+                "severity": "fatal",
+                "verdict": "accept",
+                "title": "accepted finding",
+                "reason": "accepted reason",
+            }
+        ],
+        "cmoc/run/session-1/run-1",
+        "fork",
+        None,
+    )
+
+    assert "| 1 | `oracle/a.md` | 1 |" in rendered
+
+
 def test_review_oracle_uses_linked_worktree_branch_and_oracle(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
