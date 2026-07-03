@@ -34,6 +34,9 @@ class ModelClass(StrEnum):
     # 結果的に MINIMUM = EFFICIENCY となることも許容する
     MINIMUM = auto()
 
+    # ローカル実行の ollama でサーブされる SLM を使う
+    LOCAL_SLM = auto()
+
 
 class ReasoningEffort(StrEnum):
     """

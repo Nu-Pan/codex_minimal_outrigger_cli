@@ -46,12 +46,14 @@ class CmocConfigCodex:
     """
 
     # `ModelClass` --> Codex CLI が受理可能な Model 名
+    # 未定義の場合は NONE を設定する
     model: dict[ModelClass, str] = field(
         default_factory=lambda: {
             ModelClass.MAINSTREAM: "GPT-5.5",
             ModelClass.FLAGSHIP: "GPT-5.5",
             ModelClass.EFFICIENCY: "GPT-5.4-mini",
             ModelClass.MINIMUM: "GPT-5.4-mini",
+            ModelClass.LOCAL_SLM: "smollm2:135m",  # デフォルト設定はメモリフットプリント最小を優先
         }
     )
 
