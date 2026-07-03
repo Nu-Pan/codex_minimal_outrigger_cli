@@ -16,6 +16,7 @@ import pytest
 
 from _support import (
     apply_worktree_from_state,
+    current_branch,
     make_repo,
     run_git,
     runner,
@@ -128,6 +129,7 @@ def test_apply_join_from_linked_session_worktree_merges_into_current_session(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
+    root_branch = current_branch(root)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
     linked = root / ".cmoc" / "worktrees" / "linked-session"
@@ -154,7 +156,7 @@ def test_apply_join_from_linked_session_worktree_merges_into_current_session(
     (apply_worktree / "JOINED.md").write_text("joined from apply\n")
     run_git(apply_worktree, "add", "JOINED.md")
     run_git(apply_worktree, "commit", "-m", "apply linked session change")
-    assert run_git(root, "branch", "--show-current").stdout.strip() == "master"
+    assert current_branch(root) == root_branch
 
     result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
 
@@ -163,7 +165,7 @@ def test_apply_join_from_linked_session_worktree_merges_into_current_session(
     assert not (root / "JOINED.md").exists()
     assert json.loads(state_path.read_text())["apply"]["state"] == "ready"
     assert run_git(linked, "branch", "--show-current").stdout.strip() == session_branch
-    assert run_git(root, "branch", "--show-current").stdout.strip() == "master"
+    assert current_branch(root) == root_branch
 
 
 def test_apply_join_rejects_stale_apply_branch_for_same_session(
