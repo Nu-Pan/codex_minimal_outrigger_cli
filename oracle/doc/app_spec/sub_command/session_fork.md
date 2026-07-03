@@ -29,7 +29,7 @@
 3. `<work-root>/.cmoc` が git の追跡対象外であることを保証する
 4. 一意な `<session-id>` を生成する
 5. `<cmoc-session-branch>` を作成して checkout する
-6. `<repo-root>/.cmoc/sessions/<session-id>.json` に必要な情報を保存する
+6. `<repo-root>/.cmoc/local/session/<session-id>.json` に必要な情報を保存する
 7. 作成した `<cmoc-session-branch>` 名と `<cmoc-session-home-branch>` 名を標準出力に表示する
 
 ## `<cmoc-session-branch>` の命名規則

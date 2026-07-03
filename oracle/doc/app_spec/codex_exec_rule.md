@@ -55,33 +55,33 @@
 - Codex CLI の実行形式に必要な保存、stdin 入力、末尾改行などの機械的処理は、プロンプトの意
 味内容を変更しない範囲に限って許可する
 - プロンプト本文を argv に載せてはならない
-- `codex exec` にわたすプロンプト全文は一度 `<repo-root>/.cmoc/log/codex/<time-stamp>_prompt.jsonl` に出力すること
+- `codex exec` にわたすプロンプト全文は一度 `<repo-root>/.cmoc/local/log/codex/<time-stamp>_prompt.jsonl` に出力すること
 - プロンプト本文は stdin 経由 (コマンド末尾に `-` を付ける) で `<time-stamp>_prompt.jsonl` をリダイレクト入力すること
 - argv に載せてよいのは、フラグ、短い固定文字列、短いファイルパスのみとする
 
 ## Codex CLI 呼び出し情報の保存
 
-- Codex CLI 呼び出しに関する情報は `<repo-root>/.cmoc/log/codex/<time-stamp>_call.json` に保存すること
+- Codex CLI 呼び出しに関する情報は `<repo-root>/.cmoc/local/log/codex/<time-stamp>_call.json` に保存すること
 - `<time-stamp>_stdout.jsonl`, `<time-stamp>_stderr.log`, `<time-stamp>_output.json` に残らない情報だけを `<time-stamp>_call.json` に書くこと
 - 同一の Codex CLI 呼び出しの間で `<time-stamp>` は一致しなければならない
 
 ## stdout, stderr の扱い
 
 - `--json` を必ず指定すること
-- stdout は `<repo-root>/.cmoc/log/codex/<time-stamp>_stdout.jsonl` に出力すること
-- stderr は `<repo-root>/.cmoc/log/codex/<time-stamp>_stderr.log` に出力すること
+- stdout は `<repo-root>/.cmoc/local/log/codex/<time-stamp>_stdout.jsonl` に出力すること
+- stderr は `<repo-root>/.cmoc/local/log/codex/<time-stamp>_stderr.log` に出力すること
 - stdout, stderr をコンソールには流さないこと
 
 ## `--output-last-message`
 
-- `--output-last-message <repo-root>/.cmoc/log/codex/<time-stamp>_output.json` を必ず指定すること
+- `--output-last-message <repo-root>/.cmoc/local/log/codex/<time-stamp>_output.json` を必ず指定すること
 - cmoc が Codex CLI の作業結果を取り出す必要がある場合、`<time-stamp>_output.json` から読み出すこと
 
 ## Structured Output
 
 - Codex CLI に Structured Output を要求する場合は、必ず `--output-schema` を使うこと
 - `--output-schema` を使わずにプロンプト上だけで JSON 出力を要求するのは禁止
-- スキーマは、一度 `<work-root>/.cmoc/state/schema/<hash>.json` に保存して、これを Codex CLI に参照させること
+- スキーマは、一度 `<work-root>/.cmoc/local/state/schema/<hash>.json` に保存して、これを Codex CLI に参照させること
 - `<hash>` は schema 本文の SHA256 ハッシュとする
 - Structured Output の結果は cmoc 側でも機械的検証を行うこと
 
@@ -122,7 +122,7 @@
     - 一番最初に待機に入ったスレッドだけが代表してポーリングを行う
     - 複数スレッドで並列にポーリングを行うのは禁止
 - 再開対象セッション ID の調査方法
-    - 対象セッションの `<repo-root>/.cmoc/log/codex/<time-stamp>/_output.jsonl` から読み取る
+    - 対象セッションの `<repo-root>/.cmoc/local/log/codex/<time-stamp>/_output.jsonl` から読み取る
     - `type == thread.started` になっている要素の `thread_id` フィールドから読み取る
     - e.g.
         ```json
