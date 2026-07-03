@@ -202,6 +202,39 @@ def test_config_rejects_non_string_codex_names(
     assert exc_info.value.summary == "cmoc config が不正です。"
 
 
+@pytest.mark.parametrize("section", ["codex", "apply_fork", "review_oracle"])
+@pytest.mark.parametrize("value", [None, [], "invalid"])
+def test_config_rejects_non_object_sections(section: str, value: object) -> None:
+    with pytest.raises(CmocError) as exc_info:
+        config_from_dict({section: value})
+
+    assert exc_info.value.summary == "cmoc config が不正です。"
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        {"num_parallel": True},
+        {"num_parallel": "3"},
+        {"codex": {"num_try_falv_recovery": False}},
+        {"codex": {"num_try_falv_recovery": "1"}},
+        {"apply_fork": {"num_apply_files": True}},
+        {"apply_fork": {"num_apply_files": "200"}},
+        {"review_oracle": {"num_enumerate_findings_loop": False}},
+        {"review_oracle": {"num_enumerate_findings_loop": "2"}},
+        {"review_oracle": {"num_merge_findings_loop": True}},
+        {"review_oracle": {"num_merge_findings_loop": "2"}},
+        {"review_oracle": {"num_validate_findings_loop": False}},
+        {"review_oracle": {"num_validate_findings_loop": "2"}},
+    ],
+)
+def test_config_rejects_non_integer_count_values(data: dict[str, object]) -> None:
+    with pytest.raises(CmocError) as exc_info:
+        config_from_dict(data)
+
+    assert exc_info.value.summary == "cmoc config が不正です。"
+
+
 def test_render_error_uses_structured_markdown() -> None:
     """CmocError は利用者が読む Markdown report として整形される。"""
     try:
