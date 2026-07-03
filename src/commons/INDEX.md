@@ -139,22 +139,21 @@
 # `runtime_codex_logging.py`
 
 ## Summary
-- Codex CLI 呼び出し完了時に、目的、呼び出しログ位置、経過時間、終了コードを利用者向け console へ通知するための小さな出力 helper を定義する。
-- 時刻表記と経過時間表記は共通の runtime path 系 helper に委ね、oracle が定める console 通知形式に沿った複数行メッセージを標準出力へ即時 flush する入口である。
+- Codex CLI 呼び出し後に、目的・call log path・経過時間・終了コードを利用者の console へ通知するための小さな出力 helper を提供する。
+- console 表示の時刻や経過時間の整形は runtime path 系 helper に委ね、この対象は oracle が定める通知ブロックの組み立てと標準出力への即時 flush に責務を絞る。
 
 ## Read this when
-- Codex CLI 呼び出し後に利用者の console へ出す通知内容、表示順、表示項目を確認または変更したいとき。
-- Codex CLI 呼び出しログへの参照、経過時間、終了コードをどのように人間向け表示へ整形しているかを追いたいとき。
-- console 用の時刻文字列や duration 文字列を使った Codex CLI 呼び出し通知の実装箇所を探しているとき。
+- Codex CLI call の console 通知内容や表示順を確認・変更したいとき。
+- Codex CLI 呼び出しの目的、call log、経過時間、終了コードを利用者へどう出すかを追うとき。
+- console log 仕様に対応する実装箇所を探しているとき。
 
 ## Do not read this when
-- Codex CLI 呼び出しそのものの実行、プロセス起動、標準入出力の捕捉、戻り値制御を調べたいとき。
-- ログファイルの生成、保存先決定、ファイルへの書き込み仕様を調べたいとき。
-- 汎用的な runtime path の解決、時刻文字列や経過時間文字列の詳細な整形規則を調べたいとき。
-- Codex 以外の CLI 通知や、利用者向け console 出力全般の設計を広く調べたいだけのとき。
+- timestamp や duration の具体的な整形規則を確認したいだけのとき。
+- call log file の作成、保存場所、書き込み内容を確認したいとき。
+- Codex CLI 呼び出しそのものの実行制御や subprocess 処理を調べたいとき。
 
 ## hash
-- f958a19df4363d9585a17c45b2fee6d85d6cd968c79555d33f83707bdfbf8aca
+- d6c16807d74cfa4ef374c6062dcd9ce3fd7c9464c0d331fb11bf238d5d5d5f6b
 
 # `runtime_codex_preflight.py`
 

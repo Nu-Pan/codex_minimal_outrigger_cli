@@ -171,21 +171,25 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行/TUI 呼び出しの runtime 挙動を、外部プロセス起動、profile 生成、作業ディレクトリ、schema 出力、call log、file access rule 違反検出・リカバリーの観点から検証する realization test。
-- 一時 repo と stub codex 実行ファイルを使い、readonly/repo write/realization write/pure oracle read の各 mode で、許可される差分と拒否・復旧される差分の境界を確認する。
+- Codex CLI 呼び出しの実行・TUI 起動まわりを、サブプロセス起動条件、生成 profile、cwd、標準入力、schema 出力、ログ記録、終了時エラーとして検証する realization test。
+- agent call 後の file access rule 検査を、oracle・runtime 管理領域・memo・git directory・readonly realization diff・一時 cache・ignore 対象・preexisting diff・recovery retry などの境界で確認する。
+- linked worktree や pure oracle read における cwd、writable roots、repo log 読み取り許可、schema state 配置など、実行 root と作業 root がずれるケースの回帰検査を担う。
 
 ## Read this when
-- Codex CLI を起動する runtime 層、特に exec/TUI の argv、cwd、CODEX_HOME profile、sandbox writable_roots、stdin/prompt log、schema state の扱いを変更するとき。
-- file access rule の post-call check、禁止領域差分、ignored cache、preexisting forbidden diff、oracle conflict write、linked worktree、repo log read の許可・拒否条件を確認または変更するとき。
-- Codex subprocess の process group tracking、apply process tracking env の遮断、Codex CLI 不在時や非 0 終了時のエラー報告を変更するとき。
+- Codex CLI/TUI を起動する runtime wrapper の引数、profile 生成、cwd、stdin、output schema、call log の挙動を変更する。
+- agent call 後の file access rule 違反検出、違反 recovery、許可される一時生成物や ignored diff の扱いを変更する。
+- readonly、repo write、realization write、pure oracle read の各 access mode による sandbox・許可 path・post-call diff 検査の違いを確認する。
+- linked worktree 上での Codex 実行、schema state 保存先、repo log の読み取り許可、complete prompt の扱いを変更する。
+- Codex CLI の missing binary、nonzero exit、TUI failure reporting などのエラー報告挙動を確認する。
 
 ## Do not read this when
-- agent call parameter の値オブジェクトや enum 自体の仕様だけを確認したいとき。
-- Codex runtime 以外の CLI command、oracle 文書、path model、一般的な git helper の挙動を調べたいとき。
-- 実際の Codex/LLM 出力品質やプロンプト内容そのものを検証したいとき。
+- Codex runtime ではなく、通常の CLI command parsing や agent call parameter の型定義だけを確認したい。
+- file access rule の正本仕様そのものを調べたい場合は、oracle doc または rule 実装へ直接進む。
+- INDEX entry 生成、path model、oracle/realization 分類など、Codex サブプロセス実行と無関係な routing 仕様を調べたい。
+- 個別の test support fixture や fake repository 作成 helper の実装詳細だけを確認したい場合は、support 側の対象へ直接進む。
 
 ## hash
-- 3e7245d835c736d6a9f8cf93628fd1d6c1fc390b6c6040c6b8ed975f8588e1df
+- e18d7ed81e6294b067ee93134119e3e7da205aa15cf17dface6601a01911e004
 
 # `test_codex_runtime_home.py`
 
@@ -208,26 +212,24 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex exec が quota exceeded で失敗した後の待機、probe、resume、再実行の外部挙動を検証するテスト。
-- quota 回復時の resume token 利用、resume token が無い場合の再実行、probe 用パラメータ、相対 CODEX_HOME と cwd、call log と subcommand log、ファイルアクセス規則違反からの復旧、並列呼び出し時の代表 probe 共有を扱う。
-- quota retry 状態機械の複数の観測点を同じ fake Codex 呼び出し列で追う必要があるため、quota 待機から復帰する Codex exec の回帰確認の入口になる。
+- Codex exec が quota exceeded で失敗した後の待機、probe、resume または再実行、ログ記録、ファイルアクセス違反回復をまとめて検証する realization test。
+- 単一呼び出しと並列呼び出しの両方について、quota retry 状態機械の外部挙動を fake Codex 呼び出し列、call log、subcommand log、CODEX_HOME、cwd から観測する。
 
 ## Read this when
-- Codex quota exceeded 後に、quota availability probe を挟んで元の Codex exec が resume または再実行される挙動を変更・確認するとき。
-- resume token を JSONL stdout log から抽出する処理、または token が無い場合の再実行経路を確認するとき。
-- quota retry 中の call log、subcommand log、stdout/stderr/prompt/output log path、console 表示の記録内容を変更・確認するとき。
-- quota retry と CODEX_HOME、Codex 実行 cwd、PURE_ORACLE_READ 時の `--cd` の関係を確認するとき。
-- quota 待機中または probe 失敗時に発生したファイルアクセス規則違反の回復処理を確認するとき。
-- 複数の Codex exec が同時に quota 待ちになった場合に、代表 probe を 1 回だけ実行し、待機中の呼び出しが成功または失敗を共有する挙動を確認するとき。
+- quota exceeded 後に Codex exec が probe を実行し、復旧後に resume token で再開する挙動を確認・変更する時。
+- resume token が無い場合の再実行、probe 失敗時の即時失敗、quota poll 上限到達時の扱いを確認する時。
+- quota retry 中の call log、subcommand log、prompt/stdout/stderr/output の記録内容や console 表示を変更する時。
+- CODEX_HOME が相対パスの場合の cwd、PURE_ORACLE_READ 時の実行位置、ファイルアクセス違反からの回復処理を確認する時。
+- 複数の Codex exec が同時に quota 待機した場合に、代表 probe を 1 回だけ実行し、待機中の呼び出しが同じ結果に従う制御を確認する時。
 
 ## Do not read this when
-- quota retry とは無関係な通常の Codex exec 成功・失敗、引数構築、出力 JSON 解析だけを確認したいとき。
-- quota availability probe のプロンプト生成仕様そのものを確認したいときは、probe parameter builder 側を読む。
-- SubcommandLogger の一般的なログ形式や保存先の仕様だけを確認したいときは、logger 実装またはその専用テストを読む。
-- ファイルアクセス規則違反の検出ロジック自体を確認したいときは、runtime のアクセス検証処理またはその専用テストを読む。
+- quota retry と関係しない通常成功時の Codex exec 起動引数や出力 JSON 処理だけを確認したい時。
+- quota availability probe の prompt を組み立てる仕様そのものを確認したい時。
+- CLI サブコマンド全体の構成、設定読み込み、repository fixture の基本動作を調べたい時。
+- ログファイルの汎用フォーマットや SubcommandLogger の通常動作だけを確認したい時。
 
 ## hash
-- a953cb89c9d334133e77ffeb8c8a3d5f78c8eb2728147139bb737aaf7a791b43
+- ff3997f87bd1f67490dd75b6c23f3bb4e7e6b88a431ae10a3d0a134011fcd49f
 
 # `test_codex_runtime_retry.py`
 

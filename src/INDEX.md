@@ -61,24 +61,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共通実行時支援を集めた領域。Codex 呼び出し、INDEX 更新 preflight、設定、内容 hash、CLI 実行ライフサイクル、エラー表示、git 操作、ログ、path、結果モデル、永続 state、apply 実行管理など、複数サブコマンドから使われる runtime 部品への入口になる。
-- 実処理を持つ責務別実装と、既存 import path を保つ薄い集約・互換入口が混在するため、共通 runtime の公開面と個別責務の実装先を切り分けて探すための階層である。
+- cmoc の実行時共通処理を集めた realization implementation 領域。Codex CLI 呼び出し、INDEX 更新 preflight、設定・状態・path・git・logging・error・content hash・CLI 共通ライフサイクルなど、複数サブコマンドから参照される runtime helper 群への入口になる。
+- 個別機能の本体だけでなく、分割済み runtime module をまとめて再公開する互換 import 層や、apply 実行プロセス停止、Codex exec/TUI 実行境界、session state 永続化などの横断的な支援実装を含む。
 
 ## Read this when
-- 複数サブコマンドから共有される runtime helper、結果モデル、例外、path、git、logging、config、state、Codex 実行境界を確認または変更したいとき。
-- Codex exec/TUI 呼び出し、Structured Output 検証、quota/capacity retry、call log、profile、CODEX_HOME、file access post-check、indexing preflight の実装経路を追いたいとき。
-- INDEX.md 自動更新の対象走査、hash 鮮度判定、既存エントリー再利用、entry 生成依頼、Markdown 描画、排他 lock、更新順序を調べたいとき。
-- apply 実行中の worktree 復元、pid file、Codex subprocess 追跡、abandon 時の process 停止を扱う共通 runtime を確認したいとき。
-- CLI サブコマンド共通の開始・完了表示、ログ作成、終了コード化、例外表示、完了サマリーなど、個別 command の外側にある実行ライフサイクルを変更したいとき。
+- 複数サブコマンドで共有される runtime helper、共通 API、または runtime 系 module の担当範囲を探したいとき。
+- Codex 実行、INDEX 自動更新、git 状態、config/state 読み書き、path 解決、logging、error 表示、CLI 共通処理など、cmoc の下位 runtime 境界に関わる実装を確認・変更したいとき。
+- 呼び出し側が `commons` 配下のどの runtime module を import すべきか、または既存の互換 import 入口がどの実装へ接続されるかを確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの利用者向け仕様、引数、業務処理、出力内容だけを確認したいとき。その場合は command 側の実装や対応するテストへ進む。
-- oracle 上の正本仕様、path placeholder の定義、file access rule、INDEX.md の仕様意図、session state の仕様意図を確認したいだけのとき。その場合は対応する oracle doc または oracle src を読む。
-- 低レベルな実装ではなく、実行済みログや生成済み成果物の内容を調査したいだけのとき。
-- 特定の helper 利用箇所で渡す値や上位 workflow の判断だけを追いたいとき。その場合は、この階層の共通 helper ではなく呼び出し側を読む。
+- 個別 CLI サブコマンドの利用者向け仕様、引数、出力、業務フローだけを調べたいとき。その場合は command 側の実装や対応するテストへ進む。
+- path model、config 型、file access rule、INDEX.md 仕様意図などの正本仕様断片を確認したいとき。その場合は対応する oracle file を読む。
+- 生成済み log、schema、state、worktree 内容などの実行結果を調査したいだけで、runtime helper の実装や責務境界を変更しないとき。
 
 ## hash
-- 1a8095bc01cf3bb35b28f4e932d4211a9a7e5fbf29c9da3ab7d0ce65128a5186
+- 956c3a5d58e2a72d819346b16862a50d91876301f3c4d55690aa417e0c634505
 
 # `config`
 
