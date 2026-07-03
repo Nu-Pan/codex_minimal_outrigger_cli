@@ -76,3 +76,29 @@ def test_acp_builder_basic_imports_from_packaged_layout(tmp_path: Path) -> None:
     )
 
     assert result.returncode == 0, result.stderr
+
+
+def test_cmoc_config_reexports_only_config_definitions(tmp_path: Path) -> None:
+    root = Path(__file__).parents[1]
+    target = tmp_path / "site"
+    shutil.copytree(root / "src" / "config", target / "config")
+    shutil.copytree(root / "oracle" / "src" / "oracle", target / "oracle")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import config.cmoc_config as c; "
+                "expected = ['CmocConfig', 'CmocConfigApplyFork', "
+                "'CmocConfigCodex', 'CmocConfigReviewOracle']; "
+                "assert c.__all__ == expected; "
+                "assert sorted(n for n in vars(c) if not n.startswith('_')) == expected"
+            ),
+        ],
+        env={**os.environ, "PYTHONPATH": str(target), "PYTHONNOUSERSITE": "1"},
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0, result.stderr
