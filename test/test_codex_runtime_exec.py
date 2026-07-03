@@ -191,8 +191,11 @@ def test_run_codex_exec_recovers_file_access_violations(
 
     assert counter.read_text() == "2"
     assert not (root / "oracle" / "blocked.md").exists()
-    assert "FINDING-00" in recovery_prompt.read_text()
-    assert "ファイルアクセス規則違反のリカバリ" in recovery_prompt.read_text()
+    prompt = recovery_prompt.read_text()
+    assert "ソフトウェア実装の修正担当" in prompt
+    assert "FINDING-00" in prompt
+    assert "oracle/blocked.md" in prompt
+    assert "build_apply_fork_finding_application_parameter" in prompt
 
 
 @pytest.mark.parametrize("blocked_name", ["a b.md", 'quoted " name.md'])
@@ -279,7 +282,9 @@ def test_run_codex_exec_recovers_git_directory_file_access_violation(
 
     assert counter.read_text() == "2"
     assert (root / ".git" / "config").read_text() == saved_config.read_text()
-    assert ".git/config" in recovery_prompt.read_text()
+    prompt = recovery_prompt.read_text()
+    assert "FINDING-00" in prompt
+    assert ".git/config" in prompt
 
 
 def test_run_codex_exec_recovers_file_access_violations_before_nonzero_error(
@@ -1233,8 +1238,8 @@ def test_run_codex_tui_fails_when_codex_exits_nonzero(
         run_codex_tui(_parameter(), root=root, config=CmocConfig())
 
     console = capsys.readouterr().out
-    assert "- 目的: `codex tui`" in console
-    assert "- 終了コード: `7`" in console
+    assert "- Purpose: `codex tui`" in console
+    assert "- Exit code: `7`" in console
     call_logs = list((root / ".cmoc" / "log" / "codex").glob("*_tui_call.json"))
     assert len(call_logs) == 1
     call_log = json.loads(call_logs[0].read_text())

@@ -11,6 +11,12 @@ import pytest
 from jsonschema import validate
 
 import acp.builder.tui.resolve_parameter as tui_resolve_parameter_module
+import acp.builder.indexing.index_entry as indexing_index_entry_module
+import acp.builder.review.oracle.judge_finding as review_judge_finding_module
+import acp.builder.review.oracle.merge_finding as review_merge_finding_module
+import acp.builder.review.oracle.validate_finding_advocate as review_validate_advocate_module
+import acp.builder.review.oracle.validate_finding_challenger as review_validate_challenger_module
+import acp.builder.session.join.conflict_resolution as session_conflict_resolution_module
 from acp.builder.apply.fork.change_summary import (
     build_apply_fork_change_summary_parameter,
 )
@@ -179,6 +185,55 @@ def test_indexing_index_entry_uses_low_reasoning() -> None:
     assert parameter.model_class == ModelClass.EFFICIENCY
     assert parameter.reasoning_effort == ReasoningEffort.LOW
     assert parameter.file_access_mode == FileAccessMode.READONLY
+
+
+def test_indexing_index_entry_module_exports_only_compatibility_builder() -> None:
+    assert indexing_index_entry_module.__all__ == [
+        "build_indexing_index_entry_parameter"
+    ]
+    assert not hasattr(indexing_index_entry_module, "Path")
+    assert not hasattr(indexing_index_entry_module, "render_as_markdown")
+
+
+@pytest.mark.parametrize(
+    ("module", "exported_name"),
+    [
+        (
+            review_judge_finding_module,
+            "build_review_oracle_judge_finding_parameter",
+        ),
+        (
+            review_merge_finding_module,
+            "build_review_oracle_merge_finding_parameter",
+        ),
+        (
+            review_validate_advocate_module,
+            "build_review_oracle_validate_finding_advocate_parameter",
+        ),
+        (
+            review_validate_challenger_module,
+            "build_review_oracle_validate_finding_challenger_parameter",
+        ),
+        (
+            session_conflict_resolution_module,
+            "build_session_join_conflict_resolution_parameter",
+        ),
+    ],
+)
+def test_review_and_session_compatibility_modules_export_only_builders(
+    module: object, exported_name: str
+) -> None:
+    assert module.__all__ == [exported_name]
+    for internal_name in [
+        "Path",
+        "StructDoc",
+        "StructCodeBlock",
+        "render_as_markdown",
+        "resolve_real_path",
+        "build_complete_prompt",
+        "AgentCallParameter",
+    ]:
+        assert not hasattr(module, internal_name)
 
 
 def test_review_oracle_merge_finding_uses_efficiency_model() -> None:

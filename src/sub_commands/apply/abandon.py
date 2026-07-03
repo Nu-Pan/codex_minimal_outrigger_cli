@@ -17,7 +17,7 @@ from cmoc_runtime import (
     work_root,
     write_state,
 )
-from sub_commands.apply._runtime import (
+from commons.runtime_apply import (
     delete_apply_process_id,
     expected_apply_worktree,
     read_apply_process_id,

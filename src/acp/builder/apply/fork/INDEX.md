@@ -1,38 +1,36 @@
 # `__init__.py`
 
 ## Summary
-- `oracle.acp_builder.apply.fork` と同じ import 経路を実装側に用意するための互換 package 初期化ファイル。本文は互換 package であることを示す docstring のみを持ち、具体的な処理や公開 API の定義は持たない。
+- 旧来の apply fork 系 import との互換性を保つためだけに残された package。実装本体ではなく、既存参照を壊さないための公開面維持と削除条件を示す。
 
 ## Read this when
-- `oracle.acp_builder.apply.fork` 互換 package の存在理由を確認したいとき。
-- この package 直下の実装を読む前に、package 自体が処理本体ではなく互換用の入口であることだけを確認したいとき。
+- 旧来の apply fork 系 import 経路を維持する必要があるか判断するとき。
+- 互換 package を削除できるか確認するため、realization 側と利用者向け公開面に同参照が残っているか調べるとき。
 
 ## Do not read this when
-- fork 適用処理の具体的な実装、関数、クラス、入出力を調べたいとき。
-- 互換 package ではなく oracle 側の正本仕様断片を確認したいとき。
-- package 初期化 docstring 以外の実行時挙動や副作用を探しているとき。
+- apply fork の実処理や挙動を調べたいとき。
+- 互換 import 経路ではなく、現行の実装責務や制御ロジックを変更したいとき。
 
 ## hash
-- c5707d270af058dc9b548e1d49ffefdd38c20a0785a67a293523f2be83ebc266
+- 9fbe41ef7b1f6461c182c9c72161a713cf2ce6cd068519b03772412301ad1bc7
 
 # `_common.py`
 
 ## Summary
-- apply fork の ACP builder 群で共通して使う、リポジトリルート解決、oracle 側 ACP builder パッケージの import 経路補正、ACP パラメータ型の受け渡しを担う補助モジュール。
-- oracle 側実装が実行時に import 可能であることと、実装側の ACP 型が oracle 側の実行時型を再公開している前提を、この領域の builder から共有する入口として位置づける。
+- apply fork の ACP builder 群で共通利用する補助をまとめる実装ファイル。repo root 解決、oracle builder import 経路の準備、oracle 側 ACP parameter を realization 側公開型として受け渡す境界を扱う。
 
 ## Read this when
-- apply fork の builder 実装で、リポジトリルートをどう解決して oracle 側モジュールを読み込める状態にしているか確認したいとき。
-- packaged layout と開発ツリー layout の違いにより、oracle 側 ACP builder の import が失敗する問題を調査するとき。
-- apply fork の builder が受け取る ACP パラメータを oracle 側 API へ渡す際の型境界や変換有無を確認するとき。
+- apply fork の ACP builder が oracle 側 builder を呼び出す前処理を確認・変更したいとき。
+- packaged layout と開発 tree layout の両方で oracle builder を import 可能にする処理を確認したいとき。
+- oracle 側から返る ACP parameter と realization 側の公開型の受け渡し境界を確認したいとき。
 
 ## Do not read this when
-- 個別の apply fork 用 ACP の組み立て内容、プロンプト、引数構造を確認したいだけのとき。
-- oracle 側の ACP builder の正本仕様や実装内容そのものを確認したいとき。
-- リポジトリルート解決や oracle 側 import 経路補正と関係しない、他領域の builder や CLI 挙動を調査しているとき。
+- apply fork 以外の ACP builder の個別ロジックを確認したいとき。
+- ACP parameter のデータ構造や公開型そのものの定義を確認したいとき。
+- oracle builder の具体的な parameter 生成内容を確認したいとき。
 
 ## hash
-- 8f2faead7113a3f665f4405f064544614a0165f567433fa39fc0fe8e779dfbd1
+- 065b46638098a92fc0239c40d1f390156b48ed492dee52caa72e04a2badfbe17
 
 # `change_summary.py`
 

@@ -28,6 +28,24 @@ def commit_review_index_changes(review_worktree: Path) -> bool:
     return False
 
 
+# <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md requires the
+# review branch to merge at isolation end, including INDEX commits already made
+# by the preflight in <work-root>/oracle/doc/app_spec/indexing.md.
+def review_branch_has_index_changes(review_worktree: Path, base_commit: str) -> bool:
+    """base commit 以降の review branch 差分が INDEX.md だけか確認する。"""
+    changed_paths = run_git(
+        ["diff", "--name-only", f"{base_commit}..HEAD"], review_worktree
+    ).stdout.splitlines()
+    non_index = [path for path in changed_paths if Path(path).name != "INDEX.md"]
+    if non_index:
+        raise CmocError(
+            "review branch に INDEX.md 以外の commit 済み差分があります。",
+            ["review branch の差分を確認してください。"],
+            "\n".join(non_index),
+        )
+    return bool(changed_paths)
+
+
 def review_worktree_status_paths(review_worktree: Path) -> list[str]:
     fields = run_git(
         ["status", "--porcelain=v1", "-z"], review_worktree

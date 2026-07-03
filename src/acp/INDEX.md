@@ -19,23 +19,18 @@
 # `builder`
 
 ## Summary
-- ACP builder 領域の realization 側入口。正本側 builder 実装を既存の公開参照経路から利用するための互換 package 群と、quota availability probe 用 parameter builder を扱う。
-- 主な責務は、正本側実装への薄い委譲、旧来 import 経路の維持、互換層の残置理由と削除条件の確認、apply・review・session・TUI・indexing など下位 builder 領域へのルーティングである。
-- この領域自体は多くの builder 本体仕様を持たず、具体的な処理内容は下位の個別 builder、正本側実装、または実行側 module へ進んで確認する。
+- ACP builder 配下の realization 側入口をまとめる領域。oracle 側 builder を正本に保ちながら、旧来の `acp.builder` import 経路、apply/review/session/tui/indexing などの互換 package、quota probe 用の軽量 builder へ進むためのルーティング起点になる。
+- 主な責務は、canonical oracle 実装への中継、既存参照を壊さない再 export、必要最小限の realization 側適応、各 builder 領域の削除条件や互換維持理由の確認入口を分けることにある。
 
 ## Read this when
-- ACP builder 全体で、realization 側の公開 import surface と正本側 builder 実装の対応関係を確認したいとき。
-- 既存の acp.builder 系参照が残っている理由、互換入口を残す条件、削除できる条件を判断したいとき。
-- apply、review、session、TUI、indexing、common などの builder 関連領域について、どの下位領域へ進むべきかを選びたいとき。
-- Codex quota availability probe に渡す最小限の AgentCallParameter の生成内容を確認・変更したいとき。
-- 正本側へ実装を集約しつつ、realization 側で旧来参照を壊さないための wrapper や package 初期化境界を調べたいとき。
+- ACP builder 全体で、旧 import path 互換、oracle 側 canonical builder への委譲、realization 側公開型への適応境界のどこを読むべきか選びたいとき。
+- apply fork、review oracle、session、TUI、indexing、quota probe などの agent call parameter builder 領域を横断して、該当する下位 package または module への入口を探すとき。
+- `acp.builder.*` 参照の移行・削除・互換維持を検討しており、どの互換入口がどの責務を持つか切り分けたいとき。
 
 ## Do not read this when
-- 各 builder の正本仕様断片、prompt の正本文面、出力条件、判定仕様そのものを確認したいときは、対応する oracle 側の本文を読む。
-- apply fork、review oracle、session join、TUI 起動 parameter、indexing 生成処理などの具体的な実装を直接調べたいときは、該当する下位領域または正本側実装を読む。
-- AgentCallParameter 型、model、reasoning effort、file access mode などの基礎定義を確認したいときは、基礎定義側を読む。
-- Codex CLI の実行規則、quota probe parameter 生成後の runtime 処理、CLI コマンド全体の制御フローを調べたいときは、実行側またはコマンド実装側を読む。
-- 互換 import 経路の維持や削除判断と関係しない新規機能の実装場所、画面制御、状態管理、ユーザー向け挙動を探しているときは、より直接その責務を持つ対象へ進む。
+- oracle 側 builder の正本 prompt、canonical 実装、生成内容そのものを確認したい場合は、対応する oracle 側の実装や doc を直接読む。
+- ACP parameter の共通型、汎用 git helper、path model、CLI 実行フロー、TUI 描画、apply/review/session の本体挙動など、builder 入口や import 互換と無関係な詳細を調べたい場合は、それぞれの実装領域へ進む。
+- 個別 builder の変換処理、wrapper の詳細、quota probe の呼び出し制御など読む対象が既に特定できている場合は、この階層ではなく該当する下位 module または呼び出し元を直接読む。
 
 ## hash
-- 677081123f5a0fe4ce05f57b3b2626dbc216883df46012db0d251f3273fd50ab
+- cb74f5bae750efd7e34355906d2dbf73619b6c92f710c13d85f84d87e1ecdf03

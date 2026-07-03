@@ -258,3 +258,19 @@ def is_untracked_git_ignored(root: Path, path: Path) -> bool:
     return (
         run_git(["check-ignore", "-q", str(rel)], root, check=False).returncode == 0
     )
+
+
+def is_oracle_file_path(root: Path, path: Path) -> bool:
+    # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+    # Keep the oracle file definition in one runtime helper because it is used by
+    # both Codex access checks and apply/session diff classification.
+    try:
+        relative = path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    return (
+        bool(relative.parts)
+        and relative.parts[0] == "oracle"
+        and path.name not in {"AGENTS.md", "INDEX.md"}
+        and not is_untracked_git_ignored(root, path)
+    )

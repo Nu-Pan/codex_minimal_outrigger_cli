@@ -16,6 +16,7 @@ import pytest
 
 from _support import (
     apply_worktree_from_state,
+    current_branch,
     make_repo,
     run_git,
     runner,
@@ -128,6 +129,7 @@ def test_apply_join_from_linked_session_worktree_merges_into_current_session(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
+    root_branch = current_branch(root)
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
     linked = root / ".cmoc" / "worktrees" / "linked-session"
@@ -154,7 +156,7 @@ def test_apply_join_from_linked_session_worktree_merges_into_current_session(
     (apply_worktree / "JOINED.md").write_text("joined from apply\n")
     run_git(apply_worktree, "add", "JOINED.md")
     run_git(apply_worktree, "commit", "-m", "apply linked session change")
-    assert run_git(root, "branch", "--show-current").stdout.strip() == "master"
+    assert current_branch(root) == root_branch
 
     result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
 
@@ -163,7 +165,7 @@ def test_apply_join_from_linked_session_worktree_merges_into_current_session(
     assert not (root / "JOINED.md").exists()
     assert json.loads(state_path.read_text())["apply"]["state"] == "ready"
     assert run_git(linked, "branch", "--show-current").stdout.strip() == session_branch
-    assert run_git(root, "branch", "--show-current").stdout.strip() == "master"
+    assert current_branch(root) == root_branch
 
 
 def test_apply_join_rejects_stale_apply_branch_for_same_session(
@@ -363,6 +365,103 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     assert (root / "oracle" / "spec.md").read_text() == "# spec\n"
 
 
+def test_apply_join_reports_codex_apply_diff_and_force_reverts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    codex_config = root / ".codex" / "config.toml"
+    codex_config.parent.mkdir()
+    codex_config.write_text('model = "base"\n')
+    run_git(root, "add", ".codex/config.toml")
+    run_git(root, "commit", "-m", "add tracked codex config")
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    class FakeCodexResult:
+        output_json = {"findings": []}
+
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
+    )
+    assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
+    state_path = (
+        root
+        / ".cmoc"
+        / "sessions"
+        / f"{run_git(root, 'branch', '--show-current').stdout.strip().removeprefix('cmoc/session/')}.json"
+    )
+    state = json.loads(state_path.read_text())
+    apply_worktree = apply_worktree_from_state(root, state)
+    (apply_worktree / ".codex" / "config.toml").write_text('model = "apply"\n')
+    run_git(apply_worktree, "add", ".codex/config.toml")
+    run_git(apply_worktree, "commit", "-m", "unexpected codex config")
+
+    normal = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+
+    assert normal.exit_code == 1
+    assert "想定外差分" in normal.output
+    report_line = [
+        line for line in normal.output.splitlines() if "保存済み report" in line
+    ][0]
+    report = Path(report_line.rsplit(": ", 1)[1]).read_text()
+    assert "- apply: .codex/config.toml" in report
+    forced = runner.invoke(
+        app, ["apply", "join", "--force-resolve"], catch_exceptions=False
+    )
+    assert forced.exit_code == 0
+    assert codex_config.read_text() == 'model = "base"\n'
+
+
+def test_apply_join_reports_session_oracle_agents_diff_and_force_reverts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    class FakeCodexResult:
+        output_json = {"findings": []}
+
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
+    )
+    assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
+    session_branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = session_branch.removeprefix("cmoc/session/")
+    agents = root / "oracle" / "AGENTS.md"
+    agents.write_text("session agents\n")
+    run_git(root, "add", "oracle/AGENTS.md")
+    run_git(root, "commit", "-m", "session oracle agents")
+
+    normal = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+
+    assert normal.exit_code == 1
+    assert "想定外差分" in normal.output
+    report_line = [
+        line for line in normal.output.splitlines() if "保存済み report" in line
+    ][0]
+    report_path = Path(report_line.rsplit(": ", 1)[1])
+    report = report_path.read_text()
+    assert "- session: oracle/AGENTS.md" in report
+    forced = runner.invoke(
+        app, ["apply", "join", "--force-resolve"], catch_exceptions=False
+    )
+    assert forced.exit_code == 0
+    assert not agents.exists()
+    state_path = root / ".cmoc" / "sessions" / f"{session_id}.json"
+    assert json.loads(state_path.read_text())["apply"]["state"] == "ready"
+
+
 def test_apply_join_excludes_deleted_apply_paths_from_unexpected_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -424,14 +523,30 @@ def test_apply_join_classifies_root_memo_as_session_change(
     root = make_repo(tmp_path)
 
     assert apply_module.is_expected_apply_change(root, path) is False
-    assert apply_module.is_expected_session_change(path) is True
+    assert apply_module.is_expected_session_change(root, path) is True
 
 
-def test_apply_join_allows_gitignore_change_as_apply_diff(
+@pytest.mark.parametrize("path", ["AGENTS.md", ".codex/config.toml"])
+def test_apply_join_rejects_non_realization_apply_paths(
+    tmp_path: Path,
+    path: str,
+) -> None:
+    root = make_repo(tmp_path)
+
+    assert apply_module.is_expected_apply_change(root, path) is False
+
+
+def test_apply_join_allows_gitignore_and_tracked_ignored_apply_diff(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = make_repo(tmp_path)
+    ignored_src = root / "src" / "ignored.py"
+    ignored_src.parent.mkdir()
+    ignored_src.write_text("value = 1\n")
+    (root / ".gitignore").write_text("src/ignored.py\n")
+    run_git(root, "add", "-f", ".gitignore", "src/ignored.py")
+    run_git(root, "commit", "-m", "add tracked ignored src")
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
     assert (
@@ -455,16 +570,18 @@ def test_apply_join_allows_gitignore_change_as_apply_diff(
     )
     state = json.loads(state_path.read_text())
     apply_worktree = apply_worktree_from_state(root, state)
+    (apply_worktree / "src" / "ignored.py").write_text("value = 2\n")
     changed_gitignore = (apply_worktree / ".gitignore").read_text() + "# expected\n"
     (apply_worktree / ".gitignore").write_text(changed_gitignore)
-    run_git(apply_worktree, "add", ".gitignore")
-    run_git(apply_worktree, "commit", "-m", "apply gitignore change")
+    run_git(apply_worktree, "add", ".gitignore", "src/ignored.py")
+    run_git(apply_worktree, "commit", "-m", "apply ignored implementation change")
 
     result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
 
     assert result.exit_code == 0
     assert "想定外差分" not in result.output
     assert (root / ".gitignore").read_text() == changed_gitignore
+    assert (root / "src" / "ignored.py").read_text() == "value = 2\n"
 
 
 def test_apply_join_reports_unresolved_non_index_conflict(

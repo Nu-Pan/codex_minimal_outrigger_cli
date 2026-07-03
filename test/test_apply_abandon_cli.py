@@ -26,7 +26,7 @@ from _support import (
 from main import app
 import sub_commands.apply.abandon as apply_abandon_module
 import sub_commands.apply.fork as apply_fork_module
-from sub_commands.apply import _runtime as apply_runtime
+import commons.runtime_apply as apply_runtime
 
 
 def hold_apply_process_id_lock(path: Path, ready: object, release: object) -> None:
@@ -203,11 +203,15 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
     process_id_path.write_text("12345 67890\n")
     stopped: list[int] = []
 
-    def fake_stop_apply_process(process: apply_runtime.ApplyProcessIdentity) -> None:
+    def fake_stop_apply_process(process: apply_runtime.ApplyProcessIdentity) -> str:
         """cleanup 前の worktree と branch がまだ残っていることを観測する。"""
         assert apply_worktree.is_dir()
         assert run_git(root, "rev-parse", "--verify", apply_branch).returncode == 0
         stopped.append(process.process_id)
+        return (
+            "apply child process already stopped: 23456; "
+            "apply process already stopped: 12345"
+        )
 
     monkeypatch.setattr(
         apply_abandon_module, "stop_apply_process", fake_stop_apply_process
@@ -217,6 +221,8 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
 
     assert result.exit_code == 0
     assert stopped == [12345]
+    assert "apply child process already stopped: 23456" in result.output
+    assert "apply process already stopped: 12345" in result.output
     assert not apply_worktree.exists()
     deleted = subprocess.run(["git", "rev-parse", "--verify", apply_branch], cwd=root)
     assert deleted.returncode != 0
@@ -255,6 +261,31 @@ def test_stop_apply_process_stops_tracked_child_group_before_parent(
 
     assert warning is None
     assert order == [f"child:23456", f"parent:12345:{apply_runtime.signal.SIGTERM}"]
+
+
+def test_stop_apply_process_keeps_child_warning_when_parent_is_stale(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """親 process 側の早期 warning でも child 停止 warning を破棄しない。"""
+    monkeypatch.setattr(
+        apply_runtime,
+        "stop_child_process_group",
+        lambda process: "apply child process already stopped: 23456",
+    )
+    monkeypatch.setattr(apply_runtime, "open_process_fd", lambda process_id: 10)
+    monkeypatch.setattr(apply_runtime, "process_start_time", lambda process_id: 99)
+    monkeypatch.setattr(apply_runtime.os, "close", lambda process_fd: None)
+
+    warning = apply_runtime.stop_apply_process(
+        apply_runtime.ApplyProcessIdentity(
+            12345, 20, (apply_runtime.ProcessIdentity(23456, 30),)
+        )
+    )
+
+    assert warning == (
+        "apply child process already stopped: 23456; "
+        "stale apply process id ignored: 12345"
+    )
 
 
 def test_apply_process_id_reads_tracked_child_processes(tmp_path: Path) -> None:

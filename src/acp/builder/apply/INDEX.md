@@ -1,36 +1,36 @@
 # `__init__.py`
 
 ## Summary
-- oracle 側の apply builder package と対応する互換 package であることだけを示す package 初期化要素。実処理や公開 API の定義ではなく、同領域を package として扱うための入口に位置づけられる。
+- oracle.acp_builder.apply と互換の package として、既存の acp.builder.apply.* import を維持するための入口。実体ではなく互換層であり、realization 側と公開面から同参照が消えた後に削除できる。
 
 ## Read this when
-- apply builder 領域が oracle 側の package 構造と対応しているかを確認したいとき。
-- package 初期化部分に実装意図や互換性メモがあるかを確認したいとき。
+- 既存コードや利用者向け公開面で acp.builder.apply.* import が残っている理由を確認したいとき。
+- oracle.acp_builder.apply 側への移行に伴い、この互換 package を削除できる条件を判断したいとき。
 
 ## Do not read this when
-- apply builder の具体的な処理、変換、適用ロジックを調べたいとき。その場合は同 package 内の実装本体を読む。
-- 公開関数、クラス、入出力仕様、エラー処理を確認したいとき。この対象にはそれらの定義は含まれない。
+- apply 機能の実装詳細や挙動を確認したいときは、実装本体へ進む。
+- 新しい import 経路や公開 API を追加する場所を探しているとき。
 
 ## hash
-- a6df93a5897c266e6f48287739c8bf8192733ea9fb19e2f6eb05a302f4165b06
+- 3b7b28a47bd63cc192d8e90c21680ef7b23035187cf7a0ead5fabeef8e509a4c
 
 # `fork`
 
 ## Summary
-- apply fork 用の agent call parameter builder 群をまとめる実装ディレクトリ。各 builder は realization 側の入口として、repo root 解決、oracle 側 builder の import 準備、oracle builder への委譲、realization 側 parameter 型への適合を担う。
-- この階層は、変更要約、ファイル単位所見列挙、所見適用といった `cmoc apply fork` の個別 agent 呼び出し準備と、それらが共有する oracle 連携 helper への入口である。
+- apply fork 向け agent call parameter builder 群を収める package。各 builder は realization 側の薄い入口として、repo root 解決、oracle builder import 準備、oracle 側生成結果から realization 側公開型への変換を担う。
+- 旧来の apply fork 系 import 互換を維持するための package 境界も含み、互換公開面を残す理由と削除判断の入口になる。
 
 ## Read this when
-- `cmoc apply fork` で agent call parameter をどの builder が組み立てるか確認したいとき。
-- realization 側 apply fork builder が oracle 側 builder をどのように import 可能にし、委譲結果を realization 側型へ変換しているか確認したいとき。
-- 変更要約、ファイル単位所見列挙、所見適用のいずれかの agent 呼び出し準備を調査・変更したいとき。
-- apply fork builder 群に共通する repo root 解決、oracle src import 経路補正、ACP parameter 型境界を確認したいとき。
+- `cmoc apply fork` の変更要約、ファイル単位所見列挙、所見適用に関する agent call parameter 構築経路を確認・変更したいとき。
+- apply fork の realization 側 builder が oracle 側 builder をどう呼び出し、戻り値を realization 側 `AgentCallParameter` に適合させるか確認したいとき。
+- apply fork 用 ACP builder 共通の repo root 解決、oracle src import 準備、oracle parameter 受け渡し境界を確認したいとき。
+- 旧来の apply fork 系 import 互換 package を維持または削除できるか判断したいとき。
 
 ## Do not read this when
-- `cmoc apply fork` コマンド全体の制御フロー、fork 作成、branch 操作、diff 生成、CLI 引数処理を調べたいときは、上位の apply fork 実装や CLI 側へ進む。
-- agent prompt、出力条件、変更要約や所見処理の正本仕様を確認したいときは、委譲先の oracle 側 builder や正本仕様断片を読む。
-- 汎用 git 操作 helper、path model、ACP 共通型そのものを調べたいだけなら、それぞれの共通実装や基本型定義へ進む。
-- package 初期化 docstring だけを確認したい場合を除き、互換 package の存在確認だけで個別 builder の処理内容まで読む必要がないとき。
+- `cmoc apply fork` 全体の実行フロー、fork 作成、branch 操作、diff 生成、CLI 引数処理を調べたいときは、上位の apply fork 実装や呼び出し元を読む。
+- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したいときは、対応する oracle 側 builder を読む。
+- ACP parameter のデータ構造、公開型そのもの、汎用 git helper、path model を調べたいだけなら、それぞれの共通実装や型定義を読む。
+- apply fork 以外の ACP builder の個別ロジックを確認したいとき。
 
 ## hash
-- b61afcbe59a8921889d4655a9d05a907c43f8ec6b2d43238acc56489c3b9cb2d
+- aa780174e29dd5732bd1c16b52ac8021bcb036497590175d985fe4d9b4e7c86a

@@ -1,15 +1,16 @@
-from oracle.acp_builder.basic import AgentCallParameter
-from oracle.acp_builder.review.oracle.validate_finding_advocate import *  # noqa: F403
+from oracle.acp_builder.basic import AgentCallParameter as _AgentCallParameter
 from oracle.acp_builder.review.oracle.validate_finding_advocate import (
     build_review_oracle_validate_finding_advocate_parameter as _build_parameter,
 )
+
+__all__ = ["build_review_oracle_validate_finding_advocate_parameter"]
 
 
 def build_review_oracle_validate_finding_advocate_parameter(
     finding: str,
     known_advocate_reasons: str,
     known_challenger_reasons: str,
-) -> AgentCallParameter:
+) -> _AgentCallParameter:
     parameter = _build_parameter(
         finding,
         known_advocate_reasons,

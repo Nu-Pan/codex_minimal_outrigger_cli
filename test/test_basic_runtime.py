@@ -83,6 +83,27 @@ def test_format_duration_truncates_msec_digit_and_space_pads_time_parts() -> Non
     assert format_duration(59.99) == " 0h  0m 59.9s"
 
 
+def test_make_repo_ignores_global_commit_signing_and_hooks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hooks = tmp_path / "hooks"
+    hooks.mkdir()
+    hook = hooks / "pre-commit"
+    hook.write_text("#!/bin/sh\nexit 1\n")
+    hook.chmod(0o755)
+    global_config = tmp_path / "gitconfig"
+    global_config.write_text(
+        f"[commit]\n\tgpgsign = true\n[core]\n\thooksPath = {hooks}\n"
+    )
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(global_config))
+
+    root = make_repo(tmp_path)
+
+    assert run_git(root, "config", "--local", "commit.gpgsign").stdout == "false\n"
+    assert run_git(root, "config", "--local", "core.hooksPath").stdout == "/dev/null\n"
+    assert run_git(root, "rev-parse", "--verify", "HEAD").stdout.strip()
+
+
 def test_subcommand_logger_keeps_one_file_per_command_on_timestamp_collision(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -202,6 +223,50 @@ def test_config_rejects_non_string_codex_names(
     assert exc_info.value.summary == "cmoc config が不正です。"
 
 
+@pytest.mark.parametrize("field", ["model", "reasoning_effort"])
+@pytest.mark.parametrize("value", [None, [], "invalid"])
+def test_config_rejects_non_object_codex_name_maps(
+    field: str, value: object
+) -> None:
+    with pytest.raises(CmocError) as exc_info:
+        config_from_dict({"codex": {field: value}})
+
+    assert exc_info.value.summary == "cmoc config が不正です。"
+
+
+@pytest.mark.parametrize("section", ["codex", "apply_fork", "review_oracle"])
+@pytest.mark.parametrize("value", [None, [], "invalid"])
+def test_config_rejects_non_object_sections(section: str, value: object) -> None:
+    with pytest.raises(CmocError) as exc_info:
+        config_from_dict({section: value})
+
+    assert exc_info.value.summary == "cmoc config が不正です。"
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        {"num_parallel": True},
+        {"num_parallel": "3"},
+        {"codex": {"num_try_falv_recovery": False}},
+        {"codex": {"num_try_falv_recovery": "1"}},
+        {"apply_fork": {"num_apply_files": True}},
+        {"apply_fork": {"num_apply_files": "200"}},
+        {"review_oracle": {"num_enumerate_findings_loop": False}},
+        {"review_oracle": {"num_enumerate_findings_loop": "2"}},
+        {"review_oracle": {"num_merge_findings_loop": True}},
+        {"review_oracle": {"num_merge_findings_loop": "2"}},
+        {"review_oracle": {"num_validate_findings_loop": False}},
+        {"review_oracle": {"num_validate_findings_loop": "2"}},
+    ],
+)
+def test_config_rejects_non_integer_count_values(data: dict[str, object]) -> None:
+    with pytest.raises(CmocError) as exc_info:
+        config_from_dict(data)
+
+    assert exc_info.value.summary == "cmoc config が不正です。"
+
+
 def test_render_error_uses_structured_markdown() -> None:
     """CmocError は利用者が読む Markdown report として整形される。"""
     try:
@@ -295,6 +360,29 @@ def test_cli_parse_error_report_is_written_to_stdout() -> None:
     assert "# ERROR" not in result.stderr
     assert "CLI 引数解析に失敗しました。" not in result.stderr
     assert "No such option: --bad-option" not in result.stderr
+
+
+@pytest.mark.parametrize(
+    ("argv", "allowed"),
+    [
+        (["apply", "fork", "--scope", "bad"], ["rolling", "session", "full"]),
+        (["review", "oracle", "--scope", "rolling"], ["session", "full"]),
+    ],
+)
+def test_scope_options_are_rejected_by_cli_parser(
+    argv: list[str], allowed: list[str]
+) -> None:
+    """scope の公開値制約はサブコマンド実行前の CLI 解析で拒否する。"""
+    result = runner.invoke(app, argv)
+
+    assert result.exit_code != 0
+    assert "# ERROR" in result.stdout
+    assert "CLI 引数解析に失敗しました。" in result.stdout
+    assert "Invalid value for '--scope'" in result.stdout
+    assert argv[-1] in result.stdout
+    for value in allowed:
+        assert value in result.stdout
+    assert "# ERROR" not in result.stderr
 
 
 def test_cli_requires_current_directory_to_be_work_root(

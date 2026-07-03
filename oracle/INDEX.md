@@ -1,24 +1,25 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様ドキュメント群を置く領域であり、アプリケーション仕様、branch/worktree モデル、採用しなかった代替案、開発規則など、自然言語で書かれた oracle doc への入口になる。
-- 利用者向け外部挙動、git branch / worktree の概念、設計判断の背景、realization code の開発基準などを、下位領域や個別文書ごとに分けて扱う。
+- cmoc の正本仕様断片のうち、自然言語で書かれた文書群へ進むための領域。アプリケーション全体の外部挙動、branch / worktree モデル、採用しなかった設計案、開発時の横断規則を扱う入口になる。
+- 個別の実装構造ではなく、CLI、agent call、状態管理、作業隔離、インデクシング、開発・テスト方針などについて、人間意図に基づく仕様判断を始めるために読む。
 
 ## Read this when
-- cmoc の仕様を自然言語の正本仕様断片から確認したいとき。
-- CLI 挙動、サブコマンド仕様、Codex CLI 呼び出し、ログ、エラー、セッション状態、INDEX.md 自動生成、run 隔離などのアプリケーション仕様文書へ進む入口を探すとき。
-- session fork / join、cmoc-managed branch、run branch、linked worktree、fork / join commit などの git branch / worktree モデルを確認したいとき。
-- 採用されなかった設計案の背景や、不採用理由を確認して、自然に見える代替案を再導入してよいか判断したいとき。
-- Python 実装、CLI 構成、開発環境、pytest 方針など、realization code を追加・変更する前の横断的な開発規則を確認したいとき。
+- cmoc の利用者向け挙動、サブコマンド仕様、ログ、エラー処理、補完、Codex CLI 呼び出し、Structured Output、retry / resume、run 隔離、セッション状態、apply / fork / join などに関する正本仕様断片を探すとき。
+- session branch、run branch、linked worktree、cmoc-managed branch、fork / join commit など、git branch・commit・worktree の cmoc 用語と責務を確認したいとき。
+- 機能や workflow の追加時に、過去に検討されたが採用されなかった設計案と、その不採用理由を確認したいとき。
+- Python 実装、CLI 構成、共通処理の配置、開発環境、依存追加、pytest による決定論的テストなど、realization code を変更する前の共通開発規則を確認したいとき。
+- どの自然言語仕様文書へ進むべきかを、アプリケーション仕様、branch モデル、不採用案、開発規則という観点で切り分けたいとき。
 
 ## Do not read this when
-- oracle file と realization file の一般的な責務分担、編集権限、品質基準、INDEX.md エントリー生成基準そのものを確認したいだけのとき。
-- パスキーワードやルートディレクトリ概念そのものの定義だけを確認したいとき。
-- 現在の実装ファイル、テストファイル、既存関数、内部 helper、依存関係など realization code の具体構造を調べたいとき。
-- 既に読むべき個別の正本仕様文書や下位領域が特定できており、その本文を直接読む方が早いとき。
+- oracle file と realization file の一般的な責務分担、編集権限、品質基準、INDEX.md エントリー作成基準そのものだけを確認したいとき。
+- パスキーワードやルート種別の定義そのものを確認したいとき。
+- 実装モジュール、テスト、helper 分割、既存関数、現在のテスト期待値など、realization 側の具体的なコード構造だけを調べたいとき。
+- 特定サブコマンドや特定の仕様断片の読む先が既に分かっており、その本文から実装・テスト判断を行うだけのとき。
+- 採用済み仕様ではなく実装都合だけを確認したいとき、または Codex CLI や LLM の実際の応答品質そのものを評価したいとき。
 
 ## hash
-- 70d66840404497d3494dcf52385a33c7ce77c82bd116110b178b148893699d30
+- a3b821774f43dc74d64ca71ee581b605c8cf1699fda4023c20e31f30fbc47959
 
 # `src`
 
