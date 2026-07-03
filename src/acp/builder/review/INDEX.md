@@ -19,21 +19,20 @@
 # `oracle`
 
 ## Summary
-- review oracle finding 周辺の agent call parameter builder と、旧 import 経路を維持する互換層を扱う realization 側の領域。
-- 正本側 builder の結果を最小補正して使う実装と、既存 caller の移行完了まで canonical 実装を再公開する shim が混在する。
-- 実処理本体や正本仕様ではなく、realization 側で必要な一時補正・互換 import・削除条件を確認する入口になる。
+- review oracle 用の agent call parameter builder 群を扱う領域。主に finding enumeration、judgment、merge、finding advocate/challenger validation に関する builder 入口と、旧 import 経路を維持する互換層を含む。
+- 正本 prompt や canonical 実装そのものではなく、oracle src 由来の builder 結果を realization 側で接続・再公開し、必要な箇所だけ限定的な placeholder 表記補正を行う境界を担う。
 
 ## Read this when
-- review oracle finding の merge や validation advocate の agent call parameter 生成を確認・変更したい。
-- 正本側 builder 出力を realization 側でどう補正しているか、また補正を削除できる条件を確認したい。
-- review finding enumeration、judgment、challenger validation について、旧 import 経路から canonical 実装へ委譲する互換層を調べたい。
-- 既存 caller の移行状況に応じて、互換 module を削除できるか判断したい。
+- review oracle の finding 関連 agent call parameter 生成経路を確認・変更する。
+- known findings、finding、既知理由などを入力にした review oracle prompt 組み立てが、structured output schema や canonical builder へどう接続されるかを追う。
+- 旧 import 経路から canonical oracle path への移行状況、互換 shim の再 export 対象、削除可否を判断する。
+- oracle src 側に残る oracle root placeholder 表記ゆれを realization 側で最小補正している理由、範囲、削除条件を確認する。
 
 ## Do not read this when
-- review oracle の正本仕様、prompt の本来の文面、判定仕様、検証ロジックそのものを確認したい場合は、対応する oracle file または canonical 実装を読む。
-- AgentCallParameter の基礎構造、model、reasoning effort、file access mode などの共通定義を確認したい場合は、基礎定義側を読む。
-- review oracle finding 以外の builder や review 処理を調べたい場合は、それぞれの対象へ進む。
-- 互換 import 経路や一時的な prompt 補正に関係しない、新しい公開 API や新規実装責務を探している場合。
+- review oracle の正本 prompt 内容そのものを確認したい場合。対応する oracle src や prompt standard を直接読む。
+- finding enumeration、judgment、validation の実処理や parameter 構築ロジックの本体だけを確認したい場合。canonical oracle path 側を直接読む。
+- review workflow 全体、CLI、永続状態、git 操作など、agent call parameter builder や旧 import 互換と無関係な領域を調べる。
+- AgentCallParameter 型そのものや共通 builder 基盤の仕様を確認したい場合。共通定義側を読む。
 
 ## hash
-- 68b7ecc937832c441d760ea14b0822e9de37756fa25c4bc2442b875578749f30
+- 467b1c9e2a916a59deb15867498c2f5d36f5daa6cc479ed70f2db12ff23bf35f

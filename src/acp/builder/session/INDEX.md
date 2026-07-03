@@ -17,17 +17,17 @@
 # `join`
 
 ## Summary
-- oracle.acp_builder.session.join 由来の互換入口を収める package。既存の acp.builder.session.join 配下 import を維持するための初期化ファイルと、正本側実装を再 export する conflict resolution 旧 import 経路を扱い、この階層自体は session join の実装本体を持たない。
+- session join builder 配下の旧 import path 互換入口をまとめる領域。実装本体ではなく、既存の acp.builder.session.join.* 参照を canonical oracle 実装または互換 package 配置へ中継する薄い公開面維持層を扱う。
 
 ## Read this when
-- acp.builder.session.join 配下の互換 package や旧 import 経路が残っている理由を確認したいとき。
-- session join conflict resolution の呼び出し元移行、互換 import の削除可否、または正本側実装への再 export の存在理由を確認したいとき。
-- oracle.acp_builder.session.join から realization 側へ置かれた互換入口の配置を調べているとき。
+- session join builder の旧 acp.builder 配下 import path が、どの canonical 実装や互換入口へつながるかを確認したいとき。
+- acp.builder.session.join 配下の互換 package や再公開モジュールを残す理由、公開面維持、削除条件を調べたいとき。
+- build_session_join_conflict_resolution_parameter の旧公開元を追跡しているとき。
 
 ## Do not read this when
-- session join の具体的な処理内容、衝突解決の挙動、API、判定内容、実装詳細を確認・変更したいときは、実体を持つ正本側実装へ進む。
-- 互換 import の実際の利用箇所や移行状況を調査したいときは、参照元検索を行う。
-- 旧 import 経路や公開面維持に関係しない session join 作業では読む必要はない。
+- session join の具体的な処理内容、制御フロー、builder 呼び出し順を確認したいときは、呼び出し元の session join 実装を読む。
+- conflict resolution parameter builder の実装内容や仕様根拠を確認したいときは、canonical oracle 実装を読む。
+- 互換 import の実際の利用箇所や、realization 側と利用者向け公開面から参照がなくなったかを判断したいときは、参照元を調査する。
 
 ## hash
-- c4f82f00262fb4c596f742c2dceb9dad9ae15cd0753c5e96470101c3a529da82
+- a15ba1cd6e0e08fbb876b209ed53bd6220137d51d7d7005d7c797e2610045d3c

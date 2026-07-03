@@ -94,41 +94,44 @@
 # `review`
 
 ## Summary
-- review builder 領域のうち、review oracle finding 向け agent call parameter 生成と旧 import 互換層を扱う入口。
-- 正本側 builder 出力の realization 側補正、canonical 実装への委譲、互換 import の残存理由と削除条件を確認するための領域。
+- review builder 周辺の互換 import と review oracle 用 agent call parameter builder 群への入口を扱う領域。finding enumeration、judgment、merge、finding advocate/challenger validation に関する生成経路と、旧参照を維持する互換層を含む。
+- 正本 prompt や canonical 実装そのものではなく、oracle src 由来の builder 結果を realization 側で接続・再公開し、必要な箇所だけ限定的な placeholder 表記補正を行う境界を担う。
 
 ## Read this when
-- review oracle finding の agent call parameter 生成、merge、validation advocate 周辺の挙動を確認・変更する。
-- 正本側 builder の結果を realization 側でどう最小補正しているか、またその補正を削除できる条件を確認する。
-- review finding enumeration、judgment、challenger validation の旧 import 経路が canonical 実装へどう委譲されているか調べる。
-- review builder 周辺の import 互換性、古い参照の削除可否、互換 package の残存理由を判断する。
+- review oracle の finding 関連 agent call parameter 生成経路を確認・変更する。
+- known findings、finding、既知理由などを入力にした review oracle prompt 組み立てが、structured output schema や canonical builder へどう接続されるかを追う。
+- 旧 import 経路から canonical oracle path への移行状況、互換 shim の再 export 対象、削除可否を判断する。
+- review builder 周辺の import 互換性、互換 package の残存理由、削除条件を確認する。
+- oracle src 側に残る oracle root placeholder 表記ゆれを realization 側で最小補正している理由、範囲、削除条件を確認する。
 
 ## Do not read this when
-- review oracle の正本仕様、prompt の本来の文面、判定仕様、検証ロジックそのものを確認したい場合。
-- AgentCallParameter の基礎構造、model、reasoning effort、file access mode などの共通定義を確認したい場合。
-- review oracle finding 以外の builder や review 処理を調べたい場合。
-- 互換 import 経路や一時的な prompt 補正と無関係な、新しい公開 API や利用者向け機能の仕様を確認したい場合。
+- review oracle の正本 prompt 内容そのものを確認したい場合。対応する oracle src や prompt standard を直接読む。
+- finding enumeration、judgment、validation の実処理や parameter 構築ロジックの本体だけを確認したい場合。canonical oracle path 側を直接読む。
+- review builder の実処理や変換ロジックだけを調べたい。
+- review workflow 全体、CLI、永続状態、git 操作など、agent call parameter builder や旧 import 互換と無関係な領域を調べる。
+- AgentCallParameter 型そのものや共通 builder 基盤の仕様を確認したい場合。共通定義側を読む。
 
 ## hash
-- dd9bef72b417903f190c5c78c5ccb9e9a1bc18600b501ef589491a4982edb280
+- 51a4ba5446c21a28ea8b262311c59e22347b93137dccbcf90e9cd6cfca7d7e4c
 
 # `session`
 
 ## Summary
-- oracle.acp_builder.session 由来の旧 import 経路を維持するための互換 package。session 実装本体ではなく、既存の acp.builder.session 配下参照を正本側実装へつなぐ入口として位置づけられる。
+- session builder 配下の旧 acp.builder 系 import path 互換を扱う領域。session 本体の挙動ではなく、既存参照を canonical oracle 実装または互換入口へ中継する薄い公開面維持層をまとめる。
 
 ## Read this when
-- acp.builder.session 配下の互換 import 経路が残っている理由を確認したいとき。
-- oracle.acp_builder.session 参照への移行、互換 package の削除可否、または正本側実装への再 export 経路を確認したいとき。
-- session join の旧 import 経路や conflict resolution 互換入口の配置を調べたいとき。
+- acp.builder.session.* の旧 import path 互換がどの入口や canonical 実装へつながるかを確認したいとき。
+- session builder 配下の互換 package や再公開モジュールを残す理由、公開面維持、削除条件を調べたいとき。
+- session join builder の旧公開元や互換経路を追跡しているとき。
 
 ## Do not read this when
-- session の具体的な挙動、構成要素、API、判定内容、実装詳細を確認・変更したいとき。
+- session 実装の具体的な挙動、制御フロー、builder 呼び出し順を確認したいとき。
+- conflict resolution parameter builder など canonical oracle 実装側の内容や仕様根拠を確認したいとき。
+- 互換 import の実際の利用箇所や、利用者向け公開面から参照がなくなったかを判断したいとき。
 - 新規機能の入口や通常の公開 API を探しているとき。
-- 互換 import の実際の利用箇所や移行状況を調査したいとき。
 
 ## hash
-- 1048dd64fdb792aab3d0f7f1ad1142ec2f685103a431bf31436c1235465949ed
+- d636121a29a1f6f7a6d22e0e3a8ad6b3f97e18b5065aec22c899dbab39d5d021
 
 # `tui`
 

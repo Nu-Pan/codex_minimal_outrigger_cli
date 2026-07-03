@@ -19,22 +19,23 @@
 # `test_acp_builder_parameters.py`
 
 ## Summary
-- ACP builder が生成する agent call parameter、prompt の埋め込み内容、file access mode、reasoning effort、structured output schema 参照が、正本仕様断片や既存互換の期待に合っているかを検証するテスト群。
-- apply fork、TUI parameter 解決、index entry 生成、oracle review、session join conflict resolution など、複数の builder の公開挙動を横断的に確認する。
+- ACP builder が生成する AgentCallParameter のモデル種別、reasoning effort、ファイルアクセスモード、prompt 内容、structured output schema 参照を検証するテスト群。
+- apply fork、TUI resolve、index entry、review oracle、session join conflict resolution など複数 builder の外部契約と、oracle source の schema との一致を確認する。
+- 互換 module の公開名が必要な builder のみに絞られていることも検証し、ACP builder 周辺の公開面整理を確認する入口になる。
 
 ## Read this when
-- ACP builder の返す model class、reasoning effort、file access mode、structured output schema path、prompt 文面を変更する。
-- 正本 schema と realization builder の schema 参照が一致しているかを確認したい。
-- TUI parameter 解決、index entry 生成、oracle review finding 系、apply fork 系、session join conflict resolution 系の builder 変更に伴う回帰テストを探している。
-- builder module の公開 export を絞る互換性要件を確認したい。
+- ACP builder の parameter 生成結果、prompt に埋め込まれる path・標準文書断片・動的文字列、または structured output schema path の挙動を変更する。
+- apply fork、TUI resolve、indexing index entry、review oracle、session join conflict resolution の builder 実装や互換 module の `__all__` を変更する。
+- oracle source の JSON schema を realization 側 builder が正しく参照しているか、または schema validation 用の代表入力を確認したい。
+- ファイルアクセス規則違反リカバリー担当や review oracle validate/merge/enumerate の prompt 中の `<oracle-root>` 表記、既知所見文字列の保持、公開名制限を調べる。
 
 ## Do not read this when
-- 個別 builder の実装責務や prompt 組み立て処理を読みたい場合は、対象 builder の実装へ直接進む。
-- 正本 schema 自体の内容を確認・変更したい場合は、oracle 側の schema 定義を読む。
-- INDEX.md エントリー生成ロジックそのものを変更したい場合は、indexing builder や関連実装を読む。
+- ACP builder 以外の CLI コマンド、永続状態、git 操作、path model の実装挙動を調べたいだけで、このテストが扱う parameter 生成契約に触れない。
+- 個別 schema の正本内容そのものを確認したい場合は、対応する oracle source の JSON schema を直接読む。
+- INDEX.md エントリー生成規則や routing 文書の仕様を確認したい場合は、仕様文書側を読む。
 
 ## hash
-- 57c4ec7a2e17dfe4510e65e26483bb9661348b995d0783d9766548dcd9488029
+- 922b293ac9298ad5387e636da3dc70107b818510fcb2ec89d2c8b25034582973
 
 # `test_apply_abandon_cli.py`
 

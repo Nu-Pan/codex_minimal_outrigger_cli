@@ -34,75 +34,68 @@
 # `judge_finding.py`
 
 ## Summary
-- review finding judgment の実体を canonical oracle 側へ委譲するための互換 import module。既存 caller が旧来の realization 側 import path を使っている間だけ残され、実装本体は持たず wildcard import で canonical implementation を再公開する。
-- 互換層を削除できる条件として、全 caller が canonical oracle path を直接使う状態になることを docstring で示す。
+- review finding judgment 用の旧 import path を維持する互換モジュール。実体は canonical oracle path 側にあり、この対象は既存 caller が旧 path から関数を import している間だけ再 export する入口である。
 
 ## Read this when
-- review finding judgment の import 経路を調査していて、旧来の realization 側 path がまだ使われているか、canonical oracle 側への委譲だけをしているかを確認したいとき。
-- 互換 import module の削除可否を判断するために、残している理由と削除条件を確認したいとき。
-- 同名機能の実装が realization 側にあるように見えるが、実体がどこにあるかを切り分けたいとき。
+- 旧 path からの import 互換性、再 export 対象、または canonical oracle path への移行状況を確認したいとき。
+- review finding judgment の caller を canonical oracle path へ移す作業で、削除可能条件を確認したいとき。
 
 ## Do not read this when
-- review finding judgment の判定仕様や具体的な実装内容を確認したいとき。この module は互換 import 層なので、canonical oracle 側の実装を直接読む方が適切。
-- 新しい判定ロジック、データ構造、テスト観点を探しているとき。この module にはそれらの本文はない。
-- 単に oracle file と realization file の一般的な責務境界を確認したいとき。この module 固有の情報は互換 import path の維持理由に限られる。
+- review finding judgment の実装内容や parameter 生成ロジックを確認したいときは、canonical oracle path 側を読む。
+- 新しい review 判定仕様や挙動を調べたいだけで、旧 import path の互換維持に関係しないとき。
 
 ## hash
-- 1af803594cd6409cf869f8b42cff07b9196e96439b57002bc1b935c328c1e069
+- c2e355ca77538012de3c69dadd0dc317c82169763711c3e520541922c02e544d
 
 # `merge_finding.py`
 
 ## Summary
-- review oracle merge finding 用の agent call parameter を組み立てる実装。oracle src 側の同名 builder を再利用しつつ、prompt 内の `<oracle-root>` プレースホルダ定義だけを最小限補正する。
+- review oracle merge finding 用の agent call parameter を oracle src の builder から生成し、prompt 内の oracle root placeholder 表記だけを最小補正して返す薄い実装。
+- oracle src 側の placeholder 生成不具合を吸収する一時的な互換処理を持ち、oracle src が正しい表記を出すようになった後に削除できる境界をコメントで示している。
 
 ## Read this when
-- review oracle merge finding の agent call parameter 生成処理を確認・変更したいとき。
-- oracle src の builder 出力を realization 側でどう補正しているか確認したいとき。
-- prompt 内の `<<oracle-root>>` から `<oracle-root>` への一時的な補正処理や、その削除条件を確認したいとき。
+- review oracle merge finding の agent call parameter 生成経路を確認・変更する場合。
+- known findings を入力として渡す review oracle merge finding prompt の組み立て結果や structured output schema への接続を追う場合。
+- prompt の placeholder 定義で oracle root 表記が補正される理由、範囲、削除条件を確認する場合。
 
 ## Do not read this when
-- review oracle merge finding の正本仕様そのものを確認したいときは、対応する oracle file を読む。
-- agent call parameter の基礎データ構造や共通仕様を確認したいときは、基礎定義側を読む。
-- 他の review oracle builder や merge finding 以外の review 処理を調べたいときは、それぞれの対象へ進む。
+- review oracle merge finding の正本 prompt 内容そのものを確認したい場合は、対応する oracle src を直接読む。
+- placeholder 表記補正と無関係な review workflow 全体、CLI、永続状態、git 操作を調べる場合。
+- agent call parameter の基本データ構造や共通 builder の仕様を調べる場合は、共通定義側を読む。
 
 ## hash
-- 30f34cf41e060b2567a79f4e46fafe181afdd10fd79a1a7be75807ec8320b973
+- 80e3f3d9dad597c0d434205368fa5b1ceecda22c8fbc650780e6ef7bd9c6ff11
 
 # `validate_finding_advocate.py`
 
 ## Summary
-- oracle finding 検証の advocate 側 agent call parameter を、正本側 builder の結果を基に生成する realization 実装。正本 prompt に残る `<oracle_root>` 表記だけを最小補正し、finding と既知理由の動的入力は変更しない責務を持つ。
-- 正本側の生成結果を再利用しつつ、一時的な typo 補正を挟むための薄い wrapper であり、補正対象が正本側で解消された後は削除対象となる。
+- review oracle の finding advocate 検証用 AgentCallParameter を生成する realization 実装。oracle src の builder 結果を利用しつつ、正本側に残る `<oracle_root>` 表記ゆれだけをプロンプト上で最小補正して返す。
 
 ## Read this when
-- oracle finding 検証の advocate 側 parameter 生成が、正本側 builder と実行時 prompt 補正のどちらに責務を持つか確認したいとき。
-- `<oracle_root>` と `<oracle-root>` の表記差に関する realization 側の暫定補正、またはその削除条件を確認したいとき。
-- finding、advocate reasons、challenger reasons の動的入力を byte-for-byte に保つ必要がある prompt 加工箇所を調べるとき。
+- review oracle の finding advocate 検証プロンプトを組み立てる経路を確認・変更したいとき。
+- oracle src 由来の AgentCallParameter を realization 側で包み直す理由や、プロンプト中の `<oracle_root>` から `<oracle-root>` への限定的な補正条件を確認したいとき。
+- dynamic input である finding や既知理由を変更せず、静的な oracle src の typo だけを扱う実装境界を確認したいとき。
 
 ## Do not read this when
-- oracle prompt の正本文面そのもの、review oracle validate finding advocate の本来の仕様、または prompt 標準を確認したいときは、対応する oracle file を読む。
-- review の challenger 側、別種の review builder、または oracle finding 検証以外の agent call parameter 生成を調べるときは、該当する builder 実装へ進む。
-- 単に AgentCallParameter の構造や model、reasoning effort、file access mode の一般仕様を確認したいときは、その基礎定義を読む。
+- review oracle 以外の agent call parameter builder を調べたいとき。
+- finding advocate 検証の正本プロンプト内容そのものを確認したいとき。この対象ではなく対応する oracle src または prompt standard を読む。
+- typo 補正の方針ではなく、AgentCallParameter 型そのものや共通 builder 基盤を調べたいとき。
 
 ## hash
-- 31b050587e1d463e96b41b466bf5c79a8f3e17f87aa8c35847045f73823e5d2a
+- 7111c4192cff8b09164626ba9bfec3d3a543e0d17313460e5ca6019bfab38d4c
 
 # `validate_finding_challenger.py`
 
 ## Summary
-- 既存呼び出し元向けに、古い import 経路から正本側の challenger finding validation 実装を再公開する互換モジュール。
-- 実体の検証ロジックは持たず、全公開名を正本側実装へ委譲する入口としてだけ機能する。
-- 呼び出し元が正本側の経路へ移行し終えた後に削除する前提の一時的な互換層である。
+- 旧 import path を維持するための互換モジュール。正本実装を canonical oracle path から再公開し、既存 caller が移行するまでの入口として機能する。
 
 ## Read this when
-- 古い import 経路を使う呼び出し元が残っているか確認する。
-- challenger finding validation の import 互換性や移行完了条件を調べる。
-- 互換モジュールを削除できるか、または削除前に参照元を正本側へ移す必要があるか判断する。
+- 旧 import path から challenger finding validation の builder を import している呼び出し元との互換性を確認するとき。
+- canonical oracle path への移行状況や、この互換モジュールを削除できる条件を確認するとき。
 
 ## Do not read this when
-- challenger finding validation の実際の判定仕様や検証ロジックを確認したい。その場合は正本側の実装を読む。
-- 新しい検証処理を実装・変更したい。この対象は委譲だけであり、挙動本体の変更先ではない。
-- 互換 import と無関係な review oracle 周辺の処理を調べている。
+- challenger finding validation の実装内容や parameter 構築ロジックを確認したいときは、canonical oracle path の実装を読む。
+- 新規 caller が利用すべき import path を確認したいだけなら、canonical oracle path 側を読む。
 
 ## hash
-- 65259bcd79ca803eef7fc76ba4bbabf8267bb9b725e86300e20be0da2181ff24
+- 193a5392c8f2941fe14476d297db143c523c67a4970540d017d65eb5035c19bf
