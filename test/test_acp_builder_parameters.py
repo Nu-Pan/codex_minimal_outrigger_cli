@@ -185,6 +185,7 @@ def test_indexing_index_entry_uses_low_reasoning() -> None:
     assert parameter.model_class == ModelClass.EFFICIENCY
     assert parameter.reasoning_effort == ReasoningEffort.LOW
     assert parameter.file_access_mode == FileAccessMode.READONLY
+    assert parameter.run_indexing_preflight is False
 
 
 def test_indexing_index_entry_module_exports_only_compatibility_builder() -> None:
@@ -242,6 +243,7 @@ def test_review_oracle_merge_finding_uses_efficiency_model() -> None:
     assert parameter.model_class == ModelClass.EFFICIENCY
     assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
     assert parameter.file_access_mode == FileAccessMode.PURE_ORACLE_READ
+    assert parameter.run_indexing_preflight is True
 
 
 def test_review_oracle_enumerate_finding_schema_matches_oracle_source() -> None:

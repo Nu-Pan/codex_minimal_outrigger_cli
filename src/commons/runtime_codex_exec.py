@@ -72,7 +72,7 @@ _WorktreeDiffSnapshot = dict[Path, tuple[str, _PathFingerprint]]
 # `git status` may refresh the index during post-check; .git itself is still
 # denied, so only that cmoc-owned metadata churn is excluded from comparison.
 _GIT_STATUS_MUTABLE_PATHS = {Path(".git/index")}
-_BeforeCodexCall = Callable[[str, Path], None]
+_BeforeCodexCall = Callable[[Path], None]
 
 
 def _write_prompt_log(path: Path, prompt: str) -> None:
@@ -1012,18 +1012,6 @@ def recover_file_access_violations(
         )
         purpose = "file access rule violation recovery"
         recovery_root = root or worktree
-        if before_recovery_codex_call is not None:
-            # <work-root>/oracle/doc/app_spec/indexing.md
-            # Recovery is an agent call, but it recurses into this exec
-            # implementation instead of the outer preflight wrapper.
-            before_recovery_codex_call(purpose, worktree)
-            # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-            # The post-check targets agent edits only; indexing preflight may
-            # commit INDEX.md and update .git before the recovery agent starts.
-            if forbidden_baseline is not None:
-                forbidden_baseline = _forbidden_filesystem_snapshot(worktree)
-            if worktree_diff_baseline is not None:
-                worktree_diff_baseline = _worktree_diff_snapshot(worktree)
         recovery_result = run_codex_exec(
             parameter,
             root=recovery_root,

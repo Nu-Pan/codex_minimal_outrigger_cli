@@ -227,7 +227,7 @@ def test_indexing_preflight_waits_for_repository_lock(
             process.join()
 
 
-def test_command_codex_call_skips_indexing_for_index_entry_and_conflict_resolution(
+def test_command_codex_call_skips_indexing_when_parameter_disables_preflight(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -238,6 +238,7 @@ def test_command_codex_call_skips_indexing_for_index_entry_and_conflict_resoluti
         FileAccessMode.READONLY,
         "prompt",
         None,
+        False,
     )
     calls: list[str] = []
 
@@ -274,7 +275,7 @@ def test_command_codex_call_skips_indexing_for_index_entry_and_conflict_resoluti
     ]
 
 
-def test_file_access_recovery_codex_call_runs_indexing_preflight(
+def test_file_access_recovery_codex_call_skips_indexing_preflight(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -333,5 +334,5 @@ def test_file_access_recovery_codex_call_runs_indexing_preflight(
         codex_preflight_module.disable_indexing_preflight()
 
     assert counter.read_text() == "2"
-    assert events == [root, root]
+    assert events == [root]
     assert not (root / "oracle" / "blocked.md").exists()

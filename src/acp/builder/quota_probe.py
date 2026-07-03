@@ -17,6 +17,7 @@ def build_quota_availability_probe_parameter(
         FileAccessMode.READONLY,
         PROBE_PROMPT,
         None,
+        False,
     )
 
 

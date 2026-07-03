@@ -16,6 +16,7 @@ def build_review_oracle_merge_finding_parameter(
         parameter.file_access_mode,
         _fix_oracle_root_placeholder_definition(parameter.prompt),
         parameter.structured_output_schema_path,
+        parameter.run_indexing_preflight,
     )
 
 

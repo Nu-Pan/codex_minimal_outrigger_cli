@@ -1,7 +1,6 @@
 import fcntl
 from collections.abc import Iterator
 from contextlib import contextmanager
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -88,9 +87,6 @@ def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path
     for directory in dirs:
         depth = len(directory.relative_to(root).parts)
         dirs_by_depth.setdefault(depth, []).append(directory)
-    # <work-root>/oracle/doc/app_spec/indexing.md requires descendants to
-    # finish first, while allowing non-ancestor INDEX.md entries to run in
-    # parallel. A depth batch is the smallest scheduling boundary for that.
     for depth in sorted(dirs_by_depth, reverse=True):
         plans = [
             _plan_index_directory(root, directory)
@@ -98,20 +94,14 @@ def update_indexes(root: Path, codex_exec: CodexExec | None = None) -> list[Path
         ]
         missing = [(plan, item) for plan in plans for item in plan.missing_children]
         if missing:
-            config = load_config(config_root)
-            with ThreadPoolExecutor(max_workers=max(1, config.num_parallel)) as executor:
-                futures = [
-                    executor.submit(
-                        build_index_entry,
-                        root,
-                        child,
-                        digest=digest,
-                        codex_exec=codex_exec,
-                    )
-                    for plan, (_index, child, digest) in missing
-                ]
-                for (plan, (index, _child, _digest)), future in zip(missing, futures):
-                    plan.entries[index] = future.result()
+            load_config(config_root)
+            for plan, (index, child, digest) in missing:
+                plan.entries[index] = build_index_entry(
+                    root,
+                    child,
+                    digest=digest,
+                    codex_exec=codex_exec,
+                )
         for plan in plans:
             entries = [entry for entry in plan.entries if entry is not None]
             content = "\n\n".join(entries)

@@ -10,8 +10,6 @@ indexing subcommand が routing document を更新する外部挙動に閉じて
 
 import json
 import subprocess
-import threading
-import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -564,7 +562,7 @@ def test_update_indexes_creates_empty_index_for_empty_directory(
     assert (empty_dir / "INDEX.md").read_text() == ""
 
 
-def test_update_indexes_generates_sibling_entries_in_parallel(
+def test_update_indexes_generates_sibling_entries_serially(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -573,9 +571,7 @@ def test_update_indexes_generates_sibling_entries_in_parallel(
     (docs / "a.txt").write_text("a\n")
     (docs / "b.txt").write_text("b\n")
     cmoc_runtime.sync_config(root)
-    active = 0
-    max_active = 0
-    lock = threading.Lock()
+    calls: list[str] = []
 
     def fake_build_index_entry(
         update_root: Path,
@@ -583,14 +579,8 @@ def test_update_indexes_generates_sibling_entries_in_parallel(
         digest: str | None = None,
         codex_exec: Callable[..., object] | None = None,
     ) -> str:
-        nonlocal active, max_active
         if path.parent == docs:
-            with lock:
-                active += 1
-                max_active = max(max_active, active)
-            time.sleep(0.05)
-            with lock:
-                active -= 1
+            calls.append(path.name)
         return indexing_common.render_index_entry(
             update_root,
             path,
@@ -607,10 +597,10 @@ def test_update_indexes_generates_sibling_entries_in_parallel(
     updated = indexing_common.update_indexes(root)
 
     assert docs / "INDEX.md" in updated
-    assert max_active >= 2
+    assert calls == ["a.txt", "b.txt"]
 
 
-def test_update_indexes_generates_non_ancestor_indexes_in_parallel(
+def test_update_indexes_generates_non_ancestor_indexes_serially(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -621,9 +611,7 @@ def test_update_indexes_generates_non_ancestor_indexes_in_parallel(
     (first / "a.txt").write_text("a\n")
     (second / "b.txt").write_text("b\n")
     cmoc_runtime.sync_config(root)
-    active = 0
-    max_active = 0
-    lock = threading.Lock()
+    calls: list[tuple[str, str]] = []
 
     def fake_build_index_entry(
         update_root: Path,
@@ -631,14 +619,8 @@ def test_update_indexes_generates_non_ancestor_indexes_in_parallel(
         digest: str | None = None,
         codex_exec: Callable[..., object] | None = None,
     ) -> str:
-        nonlocal active, max_active
         if path.parent in {first, second}:
-            with lock:
-                active += 1
-                max_active = max(max_active, active)
-            time.sleep(0.05)
-            with lock:
-                active -= 1
+            calls.append((path.parent.name, path.name))
         return indexing_common.render_index_entry(
             update_root,
             path,
@@ -656,7 +638,7 @@ def test_update_indexes_generates_non_ancestor_indexes_in_parallel(
 
     assert first / "INDEX.md" in updated
     assert second / "INDEX.md" in updated
-    assert max_active >= 2
+    assert calls == [("second", "b.txt"), ("first", "a.txt")]
 
 
 def test_update_indexes_indexes_nested_memo_directory(
