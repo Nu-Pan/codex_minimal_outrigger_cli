@@ -21,7 +21,8 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
     # NOTE
     #   ログ関係だけは例外的に `<run-root>` で作業していようと cmoc が `<repo-root>/.cmoc/local/log` に書きに行く。
     #   その関係で、agent が `<run-root>` での作業中に `<repo-root>/.cmoc/local/log` を読みに行きたくなる事がある。
-    #   よって、`<repo-root>/.cmoc/local/log` だけは例外的にアクセスを許可する。
+    #   更に log から `<repo-root>/.cmoc/local` ツリー内を読みに行きたくなるはずである (report とか)。
+    #   よって、`<repo-root>/.cmoc/local` だけは例外的にアクセスを許可する。
     repo_root = resolve_repo_root()
     work_root = resolve_work_root()
     if repo_root == work_root:
@@ -30,7 +31,7 @@ def build_file_access_rule(mode: FileAccessMode) -> tuple[PlaceholderMap, Struct
         ]
     else:
         out_repo_deny_rule = [
-            "`<work-root>` ツリー外は読み書き禁止だが、例外的に `<repo-root>/.cmoc/local/log` ツリー内は読み込み可能",
+            "`<work-root>` ツリー外は読み書き禁止だが、例外的に `<repo-root>/.cmoc/local` ツリー内は読み込み可能",
         ]
     # 基礎 deny ルール
     # NOTE

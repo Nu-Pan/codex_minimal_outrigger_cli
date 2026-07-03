@@ -71,7 +71,12 @@ def build_tui_launch_tui_parameter(
         index_entry_standard=index_entry_standard,
     )
     complete_prompt_path = (
-        resolve_repo_root() / ".cmoc" / "log" / "tui" / f"{time_stamp}_cmpl.md"
+        resolve_repo_root()
+        / ".cmoc"
+        / "local"
+        / "log"
+        / "tui"
+        / f"{time_stamp}_cmpl.md"
     )
     with open(complete_prompt_path, "w") as f:
         f.write(render_as_markdown(complete_prompt))

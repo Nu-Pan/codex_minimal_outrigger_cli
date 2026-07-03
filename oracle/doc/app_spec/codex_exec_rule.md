@@ -81,7 +81,7 @@
 
 - Codex CLI に Structured Output を要求する場合は、必ず `--output-schema` を使うこと
 - `--output-schema` を使わずにプロンプト上だけで JSON 出力を要求するのは禁止
-- スキーマは、一度 `<work-root>/.cmoc/local/state/schema/<hash>.json` に保存して、これを Codex CLI に参照させること
+- スキーマは、一度 `<repo-root>/.cmoc/local/schema/<hash>.json` に保存して、これを Codex CLI に参照させること
 - `<hash>` は schema 本文の SHA256 ハッシュとする
 - Structured Output の結果は cmoc 側でも機械的検証を行うこと
 
@@ -122,7 +122,7 @@
     - 一番最初に待機に入ったスレッドだけが代表してポーリングを行う
     - 複数スレッドで並列にポーリングを行うのは禁止
 - 再開対象セッション ID の調査方法
-    - 対象セッションの `<repo-root>/.cmoc/local/log/codex/<time-stamp>/_output.jsonl` から読み取る
+    - 対象セッションの `<repo-root>/.cmoc/local/log/codex/<time-stamp>_output.jsonl` から読み取る
     - `type == thread.started` になっている要素の `thread_id` フィールドから読み取る
     - e.g.
         ```json
