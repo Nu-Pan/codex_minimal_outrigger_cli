@@ -11,8 +11,8 @@ from cmoc_runtime import (
     current_branch,
     delete_branch,
     ensure_cmoc_ignored,
-    is_git_ignored,
     is_oracle_file_path,
+    is_untracked_git_ignored,
     load_state_for_branch,
     remove_worktree,
     repo_root,
@@ -332,7 +332,7 @@ def is_expected_apply_change(root: Path, path: str) -> bool:
         return False
     if path.startswith(("oracle/", ".agents/")) or is_root_memo_path(path):
         return False
-    return not is_git_ignored(root, root / path)
+    return not is_untracked_git_ignored(root, root / path)
 
 
 def is_expected_session_change(root: Path, path: str) -> bool:

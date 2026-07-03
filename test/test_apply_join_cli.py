@@ -472,11 +472,17 @@ def test_apply_join_classifies_root_memo_as_session_change(
     assert apply_module.is_expected_session_change(root, path) is True
 
 
-def test_apply_join_allows_gitignore_change_as_apply_diff(
+def test_apply_join_allows_gitignore_and_tracked_ignored_apply_diff(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = make_repo(tmp_path)
+    ignored_src = root / "src" / "ignored.py"
+    ignored_src.parent.mkdir()
+    ignored_src.write_text("value = 1\n")
+    (root / ".gitignore").write_text("src/ignored.py\n")
+    run_git(root, "add", "-f", ".gitignore", "src/ignored.py")
+    run_git(root, "commit", "-m", "add tracked ignored src")
     monkeypatch.chdir(root)
     assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
     assert (
@@ -500,16 +506,18 @@ def test_apply_join_allows_gitignore_change_as_apply_diff(
     )
     state = json.loads(state_path.read_text())
     apply_worktree = apply_worktree_from_state(root, state)
+    (apply_worktree / "src" / "ignored.py").write_text("value = 2\n")
     changed_gitignore = (apply_worktree / ".gitignore").read_text() + "# expected\n"
     (apply_worktree / ".gitignore").write_text(changed_gitignore)
-    run_git(apply_worktree, "add", ".gitignore")
-    run_git(apply_worktree, "commit", "-m", "apply gitignore change")
+    run_git(apply_worktree, "add", ".gitignore", "src/ignored.py")
+    run_git(apply_worktree, "commit", "-m", "apply ignored implementation change")
 
     result = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
 
     assert result.exit_code == 0
     assert "想定外差分" not in result.output
     assert (root / ".gitignore").read_text() == changed_gitignore
+    assert (root / "src" / "ignored.py").read_text() == "value = 2\n"
 
 
 def test_apply_join_reports_unresolved_non_index_conflict(
