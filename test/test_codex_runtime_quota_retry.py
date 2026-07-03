@@ -10,13 +10,12 @@ subcommand log、CODEX_HOME/cwd は同じ retry 状態機械の観測点であ�
 
 import json
 import subprocess
-import sys
-import types
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import cmoc_runtime
 import commons.runtime_codex_exec as runtime_codex_exec
+from acp.builder.quota_probe import build_quota_availability_probe_parameter
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from cmoc_runtime import SubcommandLogger
 from config.cmoc_config import CmocConfig
@@ -230,7 +229,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert "- 終了コード: `0`" in console
 
 
-def test_quota_probe_uses_oracle_builder_when_quota_recovers(
+def test_quota_probe_uses_real_builder_when_quota_recovers(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -238,22 +237,19 @@ def test_quota_probe_uses_oracle_builder_when_quota_recovers(
     stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     calls = []
-    oracle_prompt = "oracle builder prompt"
-    oracle_module = types.ModuleType("oracle.acp_builder.quota_probe")
-
-    def build_oracle_probe(base_parameter):
-        return AgentCallParameter(
-            base_parameter.model_class,
-            base_parameter.reasoning_effort,
-            base_parameter.file_access_mode,
-            oracle_prompt,
+    probe_parameter = build_quota_availability_probe_parameter(
+        AgentCallParameter(
+            ModelClass.EFFICIENCY,
+            ReasoningEffort.LOW,
+            FileAccessMode.READONLY,
+            "prompt",
             None,
         )
-
-    oracle_module.build_quota_availability_probe_parameter = build_oracle_probe
-    monkeypatch.setitem(
-        sys.modules, "oracle.acp_builder.quota_probe", oracle_module
     )
+    assert probe_parameter.model_class == ModelClass.MINIMUM
+    assert probe_parameter.reasoning_effort == ReasoningEffort.LOW
+    assert probe_parameter.file_access_mode == FileAccessMode.READONLY
+    assert probe_parameter.structured_output_schema_path is None
 
     def fake_run(argv, **kwargs):
         prompt = kwargs["stdin"].read()
@@ -292,7 +288,7 @@ def test_quota_probe_uses_oracle_builder_when_quota_recovers(
         config=CmocConfig(),
     )
 
-    assert calls == ["prompt", oracle_prompt, "prompt"]
+    assert calls == ["prompt", probe_parameter.prompt, "prompt"]
     assert result.output_json == {"ok": 3}
 
 
