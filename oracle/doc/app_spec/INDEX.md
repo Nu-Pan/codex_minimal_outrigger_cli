@@ -20,44 +20,70 @@
 # `codex_exec_rule.md`
 
 ## Summary
-- cmoc が Codex CLI を `codex exec` で呼び出す際の正本仕様断片。`$CODEX_HOME` の受け渡しと preflight validation、動的 codex profile、ファイルアクセス制限、プロンプト保存と stdin 入力、ログ保存、stdout/stderr、Structured Output、並列実行、失敗時の retry・quota 待機・resume、`.agents` 編集禁止を扱う。
-- 個別の呼び出しパラメータや具体的な profile 設定は AgentCallParameter builder を正本とし、この文書は呼び出し全体の不変条件と外部挙動の境界を示す。
+- cmoc が Codex CLI を `codex exec` で呼び出す際の正本規約を扱う。環境変数、preflight validation、動的 codex profile、ファイルアクセス制限、プロンプト受け渡し、ログ保存、Structured Output、並列実行、失敗時の retry・quota 待機・resume、編集禁止領域の扱いを定める。
+- 個別の呼び出し仕様や具体的な profile 設定は AgentCallParameter builder を正本とし、この対象は呼び出し全体の境界条件、保存先、失敗処理、Codex CLI へ渡す情報と渡してはいけない情報を判断する入口になる。
 
 ## Read this when
-- cmoc から Codex CLI を起動する実装、テスト、ログ出力、プロンプト引き渡し、profile 生成、Structured Output 検証、失敗時 retry・resume 処理を確認または変更するとき。
-- `$CODEX_HOME` の既定値、auth.json の事前検証、Codex CLI に渡す環境変数、codex profile の生成場所・命名・hash 条件を確認するとき。
-- ファイルアクセス制限を codex profile とプロンプト通知のどちらで扱うか、agent call 後の編集禁止領域差分検証とリカバリ条件を確認するとき。
-- Codex CLI 呼び出しに関する prompt、call 情報、stdout、stderr、output、schema の保存先や `<time-stamp>` の対応関係を確認するとき。
-- quota 枯渇、レートリミット、モデル capacity、レスポンス検証失敗、想定外エラーに対する cmoc の停止・待機・再実行・resume 方針を確認するとき。
+- cmoc から Codex CLI を起動する実装、テスト、設計判断を扱うとき。
+- `CODEX_HOME` の決定、auth の事前確認、動的 codex profile の生成、`--profile`・`--json`・`--output-last-message`・`--output-schema` の使い方を確認したいとき。
+- Codex CLI に渡すプロンプト本文をどこまで加工してよいか、argv・stdin・ログ保存をどう分けるかを判断するとき。
+- Codex CLI 呼び出しの stdout、stderr、output、call 情報、schema、prompt の保存先や同一呼び出し内の timestamp 一致条件を確認するとき。
+- Structured Output の要求方法、schema 保存、cmoc 側での機械的検証を実装または検証するとき。
+- Codex CLI 呼び出しの失敗時に、レスポンス検証失敗、quota 枯渇、レートリミット、モデル capacity、想定外エラーをどう扱うかを確認するとき。
+- quota 待機時のポーリング、並列呼び出し時の代表ポーリング、resume 対象セッション ID の取得、resume 失敗時の再実行方針を扱うとき。
+- Codex CLI に対するファイルアクセス制限を profile とプロンプトでどう伝え、事後検証を行わない理由を確認するとき。
+- `.agents` 配下を cmoc から編集対象にしてよいか判断するとき。
 
 ## Do not read this when
-- AgentCallParameter builder が生成する個別の `codex exec` 引数、具体的な sandbox/profile 設定、Model や Reasoning Effort の詳細値そのものを確認したいだけなら、builder 側の正本へ進む。
-- Codex CLI を伴わない cmoc 内部処理、oracle/realization の一般的な責務分類、または path placeholder の定義だけを確認したい場合は、より直接その対象を扱う文書へ進む。
-- INDEX.md 用エントリーの形式やルーティング文書の書き方を確認したいだけなら、この文書ではなく INDEX エントリー標準を扱う文書を読む。
+- AgentCallParameter builder が定める個別パラメータの具体的な構築ロジックだけを確認したいときは、builder 側を直接読む。
+- cmoc の一般的なパス用語や `<cmoc-root>`、`<repo-root>`、`<work-root>`、`<run-root>` の定義だけを確認したいときは、パスモデルの正本を読む。
+- Codex CLI 呼び出しと無関係なサブコマンド、内部データ構造、UI 表示、通常のファイル走査ロジックだけを扱うとき。
+- Codex CLI 自体の一般的な利用方法や外部ドキュメント上の仕様だけを調べたいとき。
+- oracle file と realization file の所有関係、編集責務、INDEX.md エントリー作成規則だけを確認したいとき。
 
 ## hash
-- 06ae830d80b06d1fe84606de0bd026b0aef92a7f8f9c02b25256e87a02a4ee2e
+- c0e2ede26482c4cb97d2b0455c403f538aeffb04674676da87479b74d41600c5
 
 # `console_and_file_log.md`
 
 ## Summary
-- cmoc のコンソール出力とサブコマンド単位のログファイル出力について、表示形式・出力先・イベント粒度・最低限含める情報を定める仕様断片。
-- stdout に出す時間表示とパス表示の共通フォーマット、サブコマンドログを JSON Lines として保存する要件、人間向けコンソールログを markdown 形式で出す要件を扱う。
-- サブコマンド実行の開始、ステップ進入、Codex CLI 呼び出し、終了サマリーを、利用者確認用出力と追跡用ログにどう残すかを判断する入口になる。
+- コンソール表示、パス・時間の表記、サブコマンドごとの JSON Lines ログファイル、サブコマンド実行状況を人間が読むための markdown 形式コンソールログについて定める正本仕様断片。
+- ログファイルの出力先、即時 flush、必須イベント、ステップ開始・Codex CLI 呼び出し・完了サマリーでコンソールに出す最低限の情報を確認する入口。
 
 ## Read this when
-- サブコマンド実行中または終了時に、stdout・stderr へ何をどの形式で出すべきかを確認したいとき。
-- サブコマンドごとのログファイルの保存場所、JSON Lines 形式、イベント単位、flush 方針を実装またはテストするとき。
-- ステップ開始通知、Codex CLI 呼び出し通知、完了サマリーに含めるべき情報や表示形式を確認するとき。
-- ログやコンソール出力内で時間・経過時間・ファイルパスをどう表記するかを確認するとき。
+- stdout や stderr に出すログの形式、時間表示、パス表示を実装・変更・検証する。
+- サブコマンド単位のログファイル作成、保存場所、JSON Lines 形式、イベント記録、flush 方針を扱う。
+- サブコマンド実行中のステップ通知、Codex CLI 呼び出し通知、完了サマリーのコンソール出力を扱う。
 
 ## Do not read this when
-- CLI 引数、サブコマンド構成、設定ファイル、作業ディレクトリモデルなど、ログ出力以外の仕様を確認したいとき。
-- Codex CLI 自体の実行方法や呼び出しログの内部内容など、サブコマンドログに記録される対象の詳細仕様を確認したいとき。
-- 実装内部の helper 分割、具体的な JSON key 一覧、イベント項目の完全な schema など、本文が実装者裁量として残している詳細だけを決めたいとき。
+- ログ以外の CLI 引数、サブコマンド構成、作業ディレクトリ構造そのものを確認したい。
+- Codex CLI 呼び出しログファイル自体の内部形式だけを確認したい。
+- oracle file と realization file の一般的な責務境界や編集規則だけを確認したい。
 
 ## hash
-- 12a896e8767c83c9b3518ceba5148d23610aca8eb3b02013ad2f37499098749c
+- aa330ad885fd644d57380e4babe3dd24c7f26e386cca778036e7bc1efd864ed9
+
+# `doctor_preprocess.md`
+
+## Summary
+- 各サブコマンド開始時に実行される doctor preprocess の正本仕様断片。cmoc 実行前に git 管理状態や SLM 提供状態を検証し、可能なら修復し、修復不能ならエラー終了する前処理を定義する。
+- git ignore されるべきローカル状態領域、追跡されるべき agent 操作禁止領域、ollama による SLM サーブ可否、前処理で生じた差分の commit までの大枠を扱う。
+
+## Read this when
+- 各サブコマンド開始時に共通実行される前処理の仕様を確認したいとき。
+- `.cmoc/local` を git 追跡対象外にする判定や修復方針を実装・テストしたいとき。
+- `.agents` を git 追跡対象として確保する処理を実装・テストしたいとき。
+- doctor preprocess が失敗時に cmoc をエラー終了すべき条件を確認したいとき。
+- ollama が SLM をサーブ可能か確認する前処理の仕様位置を確認したいとき。
+
+## Do not read this when
+- 個別サブコマンド固有の入出力や実行手順だけを確認したいとき。
+- 通常の path placeholder の意味や `<repo-root>`、`<work-root>` の定義だけを確認したいとき。
+- doctor preprocess 以外の git 操作、commit 方針、状態管理の一般仕様を探しているとき。
+- ollama や SLM の一般的な設定方法だけを調べたいとき。
+
+## hash
+- f4b9e028f2837042c494c58638270d6f27584ab176dcc93da32e639a8b668252
 
 # `error_handling.md`
 
@@ -84,27 +110,25 @@
 # `indexing.md`
 
 ## Summary
-- `<work-root>` 配下に自動配置されるルーティング用 `INDEX.md` の対象範囲、除外条件、目次情報フォーマット、ハッシュ計算、更新判定、自動コミットまでのインデクシング仕様を定義する。
-- ディレクトリごとの `INDEX.md` を深い階層から処理し、同階層エントリーや非祖先関係の処理を並列化できる条件を示す。
-- agent call 前に実行されるインデクシングの例外条件と、最新状態では目次生成を呼ばず機械的チェックだけで完了する挙動を扱う。
+- `<work-root>` 配下のディレクトリへ `INDEX.md` を自動配置し、同階層の目次情報を生成・更新する仕様を定義する。
+- 配置対象ディレクトリ、目次作成対象、目次情報フォーマット、ハッシュ判定、深い階層からの処理順、自動コミット範囲、agent call によるエントリー生成、並列実行、実行タイミングを扱う。
+- `INDEX.md` が既に最新の場合は機械的チェックだけで目次生成を実行しない、というメンテナンス時の挙動も定義する。
 
 ## Read this when
-- `<work-root>` 上の `INDEX.md` をどのディレクトリに配置し、どのファイル・ディレクトリを目次対象から除外するかを確認したいとき。
-- `INDEX.md` の目次情報に含める各セクション、ハッシュ記録、ファイルとディレクトリそれぞれのハッシュ計算方法を実装・検証するとき。
-- インデクシング処理の順序、既存差分がある場合の扱い、`INDEX.md` 差分だけを自動コミットする要件を確認するとき。
-- 目次情報の欠落・不要エントリー・ハッシュ不一致を検出して再生成する条件を実装・テストするとき。
-- 目次情報生成の agent call をいつ並列化でき、どの祖先・子孫関係では直列化すべきかを判断するとき。
-- agent call 前にインデクシングを実行するタイミング、例外となる呼び出し、同時起動時の排他制御を確認するとき。
+- `INDEX.md` の自動生成・更新・削除条件を確認するとき。
+- インデクシング対象に含めるファイルやディレクトリ、除外するパスやバイナリ扱いを判断するとき。
+- 目次情報のフォーマット、参照ハッシュ、ディレクトリハッシュの計算方法を実装・検証するとき。
+- インデクシング処理の順序、並列化可能な範囲、自動コミット対象を実装・テストするとき。
+- 本命の agent call 前にインデクシングを実行する条件や、最新状態でのスキップ挙動を確認するとき。
 
 ## Do not read this when
-- `<cmoc-root>` や `<work-root>` などのパス概念そのものの定義を確認したいだけのとき。
-- oracle file と realization file の所有責任、編集可否、正本仕様としての位置づけを確認したいとき。
-- 個別コマンドの利用者向け出力、CLI 引数、設定項目など、`INDEX.md` 自動生成以外の公開仕様を調べるとき。
-- 実装ファイルやテストファイルの分割方針、抽象化、依存追加など、realization code の一般的な品質基準を確認したいとき。
-- 既に目次情報生成対象が 1 件に絞られており、その対象本文から `Summary`、`Read this when`、`Do not read this when` だけを作る作業をしているとき。
+- 個別ファイルや個別ディレクトリの `INDEX.md` エントリー文面だけを作成するとき。
+- `INDEX.md` 以外の oracle file、realization file、memo、git 管理対象の定義を確認したいとき。
+- agent call の具体的なパラメータ定義そのものを確認したいとき。
+- 通常の CLI コマンド仕様や、インデクシング以外の実行フローを調べたいとき。
 
 ## hash
-- 70fae4fedb655923a2482bb02c452c89a2c63bbcb5d4f1f268cb928376826758
+- e6dde01d8bb1df856e9151bafaf24975302e022db1fc9cfd2df3e5f8297adc6c
 
 # `misc_spec.md`
 
@@ -128,6 +152,25 @@
 
 ## hash
 - 69c963981887477d4763539bc1d4d802043f5e3795d0dc6c923a41eab08016c7
+
+# `ollama_slm_server.md`
+
+## Summary
+- ローカル実行の ollama で SLM をサーブする方針を述べる。doctor による ollama/SLM インストール、cmoc からのローカル接続、モデル名取得、未定義時の扱い、並列実行時の共有、起動と停止の寿命管理を扱う。
+
+## Read this when
+- SLM バックエンドで Codex CLI を実行するための ollama 起動・接続・停止の仕様を確認したいとき。
+- doctor が ollama やローカル SLM をどの条件でインストールするかを確認したいとき。
+- ローカル SLM のモデル名未定義時に、インストールや実行要求がどう扱われるかを確認したいとき。
+- 複数の cmoc 実行が同じ ollama を共有する場合の寿命管理を実装・検証したいとき。
+
+## Do not read this when
+- 外部 API 型の LLM バックエンドや Codex CLI 全般の実行仕様だけを確認したいとき。
+- 設定オブジェクトやモデル分類そのものの定義を確認したいとき。
+- ローカルサーバーではなく、doctor コマンド全体の検査・修復項目を確認したいとき。
+
+## hash
+- 721db6f7e66e5e08b1717476e381f240d801afd7e7543c84ce87f2b2fe830f1e
 
 # `prompt_standard.md`
 
@@ -175,46 +218,42 @@
 # `session_state.md`
 
 ## Summary
-- cmoc のセッション状態ファイルに永続化する最小限の状態情報を定義する仕様断片。
-- fork と join の挙動を一意に決めるため、セッション全体の状態、fork 元ブランチ・コミット、最後に join した oracle snapshot、apply 処理の状態・作業ブランチ・参照コミットを扱う。
-- 永続化する値と、その場で解決できるため保持しない値の境界を確認する入口になる。
+- cmoc のセッション状態ファイルに永続化する最小情報と JSON 構造を定める正本仕様断片。
+- fork 元ブランチ、fork 元コミット、最後に join した oracle snapshot、apply の状態・作業ブランチ・oracle snapshot commit など、session/apply の状態遷移で保持する値の意味と初期化条件を扱う。
 
 ## Read this when
-- セッションの fork、join、abandon、error などの状態遷移に関わる実装やテストを変更する時。
-- セッション状態として何を永続化するべきか、または永続化しないべきかを判断する時。
-- セッション新規作成直後の初期値を確認する時。
-- apply 処理の ready、running、completed、error の扱いや、apply 用ブランチ・oracle snapshot commit の保存条件を確認する時。
-- join 済み apply の oracle snapshot commit をどのフィールドで追跡するかを確認する時。
+- セッション状態ファイルの保存先、責務、永続化する情報の範囲を確認したいとき。
+- `cmoc session fork`、`cmoc apply join`、apply state の ready 遷移などが、状態ファイルの各フィールドをどう初期化・更新するか確認したいとき。
+- fork、join、apply の挙動を一意にするために必要な session/apply state の JSON schema を実装・テストする とき。
 
 ## Do not read this when
-- path キーワードやルートディレクトリ概念そのものの定義だけを確認したい時。
-- oracle file と realization file の責務分担や編集権限だけを確認したい時。
-- CLI の表示形式、サブコマンド一覧、引数仕様など、永続化されるセッション状態以外の公開面を調べたい時。
-- git 操作一般やブランチ命名一般を調べたいだけで、セッション状態ファイルに保存される値を扱わない時。
-- INDEX.md の生成方針やルーティング文書の書き方を確認したい時。
+- oracle file と realization file の一般的な責務境界や編集規則だけを確認したいとき。
+- パスキーワード一般の定義を確認したいとき。
+- セッション状態ではなく、他の永続状態・CLI 出力・サブコマンド仕様を確認したいとき。
 
 ## hash
-- 3e56c02becb452f6181e383b125f3aff1f3010d8158e2ab309df379bead1824b
+- 5df81738a7b7d744d2c6708e1822bb7a68bea88de3cf1407cec7aa6c964fe8cf
 
 # `sub_command`
 
 ## Summary
-- cmoc の各サブコマンドについて、正本仕様断片への入口をまとめる領域。
-- session の作成・完了・破棄、apply の開始・取り込み・破棄、初期化、明示インデクシング、oracle review、TUI 起動など、CLI 外部挙動と状態遷移をサブコマンド単位で確認するための配下項目を持つ。
-- 各項目は、対象サブコマンドの事前条件、状態更新、git 操作、agent call 境界、出力や終了扱いなど、実装差を避けたい外部仕様を読む入口になる。
+- cmoc の利用者向けサブコマンド仕様を集めた領域。session の作成・完了・破棄、apply run の開始・取り込み・破棄、oracle review、indexing、doctor、TUI 起動など、各 CLI 操作の正本仕様断片への入口になる。
+- 各サブコマンドについて、CLI 引数、事前条件、状態遷移、git branch/worktree 操作、Codex CLI や agent call との責務境界、stdout・report・終了時処理などの外部挙動を確認するためのルーティング対象。
 
 ## Read this when
-- 特定の cmoc サブコマンドの CLI 挙動、事前条件、状態遷移、git 操作、出力、終了条件を実装・変更・テストする。
-- session lifecycle、apply lifecycle、初期化、インデクシング実行、oracle review、TUI 起動のうち、どの正本仕様断片へ進むべきかを選びたい。
-- サブコマンドごとの責務境界、他サブコマンドとの違い、旧仕様や互換挙動を残してよいかを確認したい。
+- cmoc のサブコマンド単位の仕様、実装、テスト、CLI 挙動を確認したい。
+- session lifecycle、apply lifecycle、review、indexing、doctor、TUI 起動のいずれかについて、状態条件や git 操作、出力、失敗時の扱いを調べたい。
+- ある操作がどのサブコマンドの責務か、または join・abandon・fork など近い操作の境界を切り分けたい。
+- サブコマンドから Codex CLI、agent call、run isolation、report 生成、indexing、doctor preprocess へ進む入口条件だけを確認したい。
 
 ## Do not read this when
-- oracle file、realization file、パスモデル、INDEX.md 生成規則など、cmoc 全体の基本概念や標準だけを確認したい。
-- agent call の parameter schema や prompt 仕様そのもの、run 隔離実行の共通仕様、インデクシング処理内容など、サブコマンド外部仕様より直接の正本仕様が別にある内容を確認したい。
-- 実装モジュール、テスト、helper 分割、補助スクリプトなど realization 側の現在構造だけを調べたい。
+- oracle file、realization file、path placeholder、managed branch、session state schema など、cmoc 全体の横断概念だけを確認したい場合は、それらを定義する共通仕様を読む。
+- 個別 agent call の prompt、parameter、Structured Output の詳細を確認したい場合は、対応する builder 仕様を直接読む。
+- run isolation、doctor preprocess、indexing 処理そのものなど、サブコマンドから呼ばれる下位機構の詳細だけを確認したい場合は、その機構の仕様を直接読む。
+- 実装内部の helper 分割、関数名、テスト fixture 配置だけを判断したい場合は、該当する realization code や test のルーティングへ進む。
 
 ## hash
-- bc6ecaadd73f38acea13c70340c4923dfbcd63f38f92977c1c1d73c4c1f0c238
+- ead3d2722174314424402322672a9130d9154343ace19eb0f96060b45f9a6f4a
 
 # `usage.md`
 

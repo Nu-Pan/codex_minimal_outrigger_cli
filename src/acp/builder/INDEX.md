@@ -71,43 +71,41 @@
 # `quota_probe.py`
 
 ## Summary
-- Codex quota availability probe 用の AgentCallParameter を組み立てる小さな builder。最小モデル、低 reasoning、readonly file access、固定プロンプトで Codex CLI の軽量な疎通確認呼び出しを表す。
+- Codex quota availability probe 用の agent call parameter を組み立てる小さな builder。最小 model、低 reasoning、読み取り専用アクセス、固定の疎通確認 prompt を使う probe 呼び出しの生成だけを担う。
 
 ## Read this when
-- quota availability probe の agent call parameter がどのモデル class、reasoning effort、file access mode、prompt で作られるか確認したいとき。
-- Codex CLI の quota 確認・疎通確認のための最小 agent call を生成する処理を変更するとき。
-- quota probe 専用の prompt 文字列や exported builder の責務を確認するとき。
+- Codex quota availability probe の agent call parameter がどの model class、reasoning effort、file access mode、prompt で作られるかを確認したいとき。
+- quota availability probe の呼び出し条件や Codex CLI 最小呼び出し仕様に対応する realization 実装を変更するとき。
 
 ## Do not read this when
-- 通常の agent call parameter 全般の構造や型定義を確認したいだけなら、AgentCallParameter や関連 enum の定義を直接読む。
-- quota probe の実行タイミング、呼び出し元の制御、エラー処理を調べたいときは、この builder ではなく probe を呼び出す側の実装を読む。
-- oracle 上の Codex CLI 実行規則や quota availability probe の根拠仕様を確認したいときは、対応する oracle doc を読む。
+- 通常の agent call parameter 構築全般や、probe 以外の command 用 parameter を調べたいとき。
+- quota 判定結果の解釈、retry、呼び出し実行側の制御を調べたいとき。
 
 ## hash
-- 5bfbf50041f5503c29548fe6ee7eff79e4215b815946e39f30a665410c2625ab
+- 5099c77b11a5c1ec31cb0b7f1c4ca1b26e5b5ffc1beb4f2e95bcb2fd173f46ab
 
 # `review`
 
 ## Summary
-- review builder 周辺の互換 import と review oracle 用 agent call parameter builder 群への入口を扱う領域。finding enumeration、judgment、merge、finding advocate/challenger validation に関する生成経路と、旧参照を維持する互換層を含む。
-- 正本 prompt や canonical 実装そのものではなく、oracle src 由来の builder 結果を realization 側で接続・再公開し、必要な箇所だけ限定的な placeholder 表記補正を行う境界を担う。
+- review builder 領域のうち、旧 import 経路を保つ互換 package と、review oracle 用 agent call parameter builder の互換入口・最小補正層をまとめる場所。
+- canonical 実装への再 export、既存 caller 移行までの互換維持、oracle src 由来 builder 戻り値への既知 placeholder/typo 補正が主な責務であり、review finding の実処理本体や正本 prompt は扱わない。
 
 ## Read this when
-- review oracle の finding 関連 agent call parameter 生成経路を確認・変更する。
-- known findings、finding、既知理由などを入力にした review oracle prompt 組み立てが、structured output schema や canonical builder へどう接続されるかを追う。
-- 旧 import 経路から canonical oracle path への移行状況、互換 shim の再 export 対象、削除可否を判断する。
-- review builder 周辺の import 互換性、互換 package の残存理由、削除条件を確認する。
-- oracle src 側に残る oracle root placeholder 表記ゆれを realization 側で最小補正している理由、範囲、削除条件を確認する。
+- review builder 周辺で、古い import 経路から canonical 実装へつながる互換層を確認する。
+- 既存 caller を canonical path へ移行する作業で、互換 package や互換モジュールの削除可否・削除条件を判断する。
+- review oracle finding の列挙・判定・統合・検証に関して、旧 import 経路がどの canonical 実装へ委譲されるか確認する。
+- oracle src 由来の agent call parameter に対して、prompt 内の oracle root placeholder 表記や静的 typo の最小補正がどこで行われるか確認する。
+- finding や既知理由などの動的入力を改変せず保持する境界を確認する。
 
 ## Do not read this when
-- review oracle の正本 prompt 内容そのものを確認したい場合。対応する oracle src や prompt standard を直接読む。
-- finding enumeration、judgment、validation の実処理や parameter 構築ロジックの本体だけを確認したい場合。canonical oracle path 側を直接読む。
-- review builder の実処理や変換ロジックだけを調べたい。
-- review workflow 全体、CLI、永続状態、git 操作など、agent call parameter builder や旧 import 互換と無関係な領域を調べる。
-- AgentCallParameter 型そのものや共通 builder 基盤の仕様を確認したい場合。共通定義側を読む。
+- review finding enumeration、judgment、validation の実処理や parameter 構築ロジックを確認したい場合は、canonical oracle path 側を読む。
+- review builder の実処理や変換ロジックそのものを調べたい。
+- レビュー一般の finding 統合仕様、prompt 本文、または oracle src 側の正本定義そのものを確認・変更したい。
+- agent call parameter の基本構造、型責務、構造化出力 schema、path model、ファイルアクセスなど、互換 import 経路や既知表記補正と無関係な基礎仕様を調べる。
+- 新しい公開 API、利用者向け機能の仕様、または新規 caller が利用すべき import path だけを確認したい。
 
 ## hash
-- 51a4ba5446c21a28ea8b262311c59e22347b93137dccbcf90e9cd6cfca7d7e4c
+- 5f3817838f319760619962a83f071479c50ecfdf4d4843e53f43904faad19e04
 
 # `session`
 
@@ -131,18 +129,20 @@
 # `tui`
 
 ## Summary
-- TUI builder の旧公開 import surface を維持するための互換層。実体は oracle 側の canonical builder に置き、既存参照向けに薄い package 入口・再 export・TUI 用 file access mode 選択肢を提供する。
-- TUI 起動パラメータや resolve parameter の仕様本体ではなく、realization 側と利用者向け公開面に残る既存 import 経路を oracle 側実体へ接続する位置づけを持つ。
+- TUI 起動用 agent call parameter の組み立てと、旧 import 経路を維持する互換層を扱う領域。
+- oracle 側 prompt builder や canonical builder と realization 側 runtime path・既存 TUI 呼び出しをつなぐ入口として位置づけられる。
 
 ## Read this when
-- TUI builder 周辺の旧 import 経路を維持・移行・削除できるか判断する。
-- 既存公開 import path から oracle 側の TUI 起動パラメータ生成や resolve parameter builder へどのように委譲しているか確認する。
-- TUI 向け互換 surface が公開する名前や file access mode の選択肢を確認する。
+- TUI 起動時に渡す agent call parameter の内容、prompt 保存先、model class、reasoning effort、file access mode を確認または変更する。
+- TUI 起動用 complete prompt の生成フラグや original prompt の渡し方を変更する。
+- oracle 側 builder と realization 側 runtime path の接続箇所を確認する。
+- 既存 TUI import 経路の互換維持、公開名、削除可否、canonical import path への移行を確認する。
 
 ## Do not read this when
-- TUI 起動パラメータや resolve parameter builder の正本仕様・生成ロジックを確認したい場合は、oracle 側の実体を読む。
-- TUI 画面の描画、イベント処理、端末 UI の挙動を調べたい場合。
-- 新しい公開 API、起動仕様、CLI 挙動、または TUI 以外の builder や file access mode 全体を設計・確認したい場合。
+- TUI 起動後の UI 表示、入力処理、イベントループを調べたい場合は、TUI 本体の実装を読む。
+- complete prompt の本文構造や standard prompt の内容を確認したい場合は、oracle 側 prompt builder や関連する oracle file を読む。
+- runtime local 配下の一般的なディレクトリ規約や logs path 処理を確認したい場合は、runtime path を扱う共通実装を読む。
+- TUI 以外の builder、file access mode 全体、または新しい公開 API・新規 import 経路を設計したい場合は、それぞれの定義元や設計対象を読む。
 
 ## hash
-- 360577811f86bbaa7e4bf65e6625f71f31b46acf97b662761a7b818fa854ceab
+- 1e889f00d80795151b0d813ad92a1130bc49d4fb43cf7debeb86777771651aad

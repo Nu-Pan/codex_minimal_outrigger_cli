@@ -1,24 +1,25 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実行制御をまとめる領域。apply run の作成、所見列挙・適用、report 生成、join/abandon による session branch への反映または破棄、state・branch・worktree・process id の扱いを担う。
-- apply scope に基づく対象ファイル選定、Codex 呼び出しの orchestration、失敗時 report、未収束判定、merge conflict や想定外差分の処理など、apply workflow の利用者向け挙動と制御ロジックへの入口となる。
+- apply 系サブコマンドの実行制御をまとめる領域。apply run の開始、破棄、join、report 生成など、session branch と apply branch/worktree/state/process id をまたぐ orchestration を扱う。
+- 対象ファイル列挙、Codex による finding 列挙・適用、変更 commit、state 遷移、cleanup、想定外差分や conflict の扱いなど、apply run の外部挙動と制御ロジックへの入口になる。
 
 ## Read this when
-- apply workflow 全体またはいずれかの apply サブコマンドの事前条件、状態遷移、出力、失敗条件を確認・変更したいとき。
-- apply run の branch、worktree、state file、process id、report が作成・更新・削除される条件を調べたいとき。
-- finding 列挙・適用、対象ファイルの正規化、変更後の再キュー、収束判定、差分 commit など、apply fork の orchestration を追いたいとき。
-- apply 結果の session branch への merge、想定外差分の分類、force-resolve、INDEX.md conflict の自動解決、または apply run の破棄処理を確認したいとき。
-- apply fork の Markdown report、変更要約、未収束や失敗時の表示内容を確認・変更したいとき。
+- apply run の開始、破棄、join、失敗時 report、cleanup、state 遷移のいずれかを確認または変更したいとき。
+- apply branch、apply worktree、session branch、process id、apply state が各 apply 操作でどう作成・更新・削除されるかを追いたいとき。
+- apply 対象ファイルの選定、git ignored file・oracle・INDEX/AGENTS の扱い、変更後の再キュー、収束判定を確認したいとき。
+- apply branch を session branch へ取り込む際の clean 判定、想定外差分、force-resolve、merge conflict、INDEX.md 自動解決の扱いを調べたいとき。
+- apply fork の利用者向け report 内容や、変更要約に含める差分範囲・fallback 表示を確認または変更したいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド、session 作成、CLI 全体の共通 runtime、git wrapper、state 読み書き helper の基本挙動だけを調べたいとき。
-- oracle file や realization file の一般定義、INDEX.md 生成ルール、ルーティング文書作成規則を確認したいとき。
-- Codex に渡す prompt や parameter の定義だけを確認したい場合で、apply 実行制御ではなく builder 側へ直接進めるとき。
-- パッケージ説明や import 副作用の有無だけを確認したい場合で、具体的な apply 制御ロジックを読む必要がないとき。
+- apply 以外のサブコマンド、session 作成、CLI runtime 共通処理の挙動を調べたいとき。
+- git 実行、worktree 操作、state file 読み書き、Codex exec runtime などの低レベル helper だけを確認したいとき。
+- Codex に渡す prompt や parameter の中身だけを確認したいとき。
+- oracle file、realization file、INDEX.md 生成規則など、apply 実行制御ではない仕様概念を確認したいとき。
+- パッケージ説明や import 時副作用の有無だけを確認したい場合を除き、具体的な制御ロジックへ直接進めるとき。
 
 ## hash
-- 6d3d375b5ce66ba786e59dff98f76797d38a461583335c9de43bc60e1e52a0fe
+- c96024266ff3ba5c6d62e41a77e88a2eb6595cf0e936cd430c6b0b6428894897
 
 # `indexing.py`
 

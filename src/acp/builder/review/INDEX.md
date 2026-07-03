@@ -19,20 +19,20 @@
 # `oracle`
 
 ## Summary
-- review oracle 用の agent call parameter builder 群を扱う領域。主に finding enumeration、judgment、merge、finding advocate/challenger validation に関する builder 入口と、旧 import 経路を維持する互換層を含む。
-- 正本 prompt や canonical 実装そのものではなく、oracle src 由来の builder 結果を realization 側で接続・再公開し、必要な箇所だけ限定的な placeholder 表記補正を行う境界を担う。
+- review oracle 用 agent call parameter builder 群のうち、旧 import 経路を維持する互換入口と、oracle src 由来 builder の戻り値へ既知の静的 placeholder/typo 補正を加える薄い realization 実装を収める。
+- 主な責務は canonical 実装への再 export、既存 caller 移行までの互換維持、正本側の既知表記不具合に対する最小補正であり、review finding の実処理本体や正本 prompt そのものは別対象にある。
 
 ## Read this when
-- review oracle の finding 関連 agent call parameter 生成経路を確認・変更する。
-- known findings、finding、既知理由などを入力にした review oracle prompt 組み立てが、structured output schema や canonical builder へどう接続されるかを追う。
-- 旧 import 経路から canonical oracle path への移行状況、互換 shim の再 export 対象、削除可否を判断する。
-- oracle src 側に残る oracle root placeholder 表記ゆれを realization 側で最小補正している理由、範囲、削除条件を確認する。
+- review oracle finding の列挙・判定・統合・検証に関して、旧 import 経路から canonical 実装へつながる互換層を確認する。
+- 既存 caller を canonical path へ移行する作業で、互換モジュールの削除可否や削除条件を判断する。
+- oracle src 由来の agent call parameter に対して、prompt 内の oracle root placeholder 表記や静的 typo の最小補正がどこで行われるか確認する。
+- finding や既知理由などの動的入力を改変せず保持する境界を確認する。
 
 ## Do not read this when
-- review oracle の正本 prompt 内容そのものを確認したい場合。対応する oracle src や prompt standard を直接読む。
-- finding enumeration、judgment、validation の実処理や parameter 構築ロジックの本体だけを確認したい場合。canonical oracle path 側を直接読む。
-- review workflow 全体、CLI、永続状態、git 操作など、agent call parameter builder や旧 import 互換と無関係な領域を調べる。
-- AgentCallParameter 型そのものや共通 builder 基盤の仕様を確認したい場合。共通定義側を読む。
+- review finding enumeration、judgment、validation の実処理や parameter 構築ロジックを確認したい場合は、canonical oracle path 側を読む。
+- レビュー一般の finding 統合仕様、prompt 本文、または oracle src 側の正本定義そのものを確認・変更したい場合。
+- agent call parameter の基本構造、型責務、構造化出力 schema、path model、ファイルアクセスなど、互換 import 経路や既知表記補正と無関係な基礎仕様を調べる場合。
+- 新規 caller が利用すべき import path だけを確認したい場合は、canonical oracle path 側を読む。
 
 ## hash
-- 467b1c9e2a916a59deb15867498c2f5d36f5daa6cc479ed70f2db12ff23bf35f
+- 2069772fc99338daeb1c34226e17f35226659623c1c5d8443103c3e8749d1fd5

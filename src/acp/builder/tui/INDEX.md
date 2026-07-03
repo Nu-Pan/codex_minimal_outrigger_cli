@@ -18,21 +18,20 @@
 # `launch_tui.py`
 
 ## Summary
-- TUI 起動パラメータ生成関数の既存公開 import path を維持しつつ、完全 prompt の構築と `.cmoc/local/log/tui` への保存を realization runtime の path 配置に合わせて行う互換モジュール。
-- prompt 本文の構成は oracle 側 helper を利用し、保存先や返却する prompt path など実行時配置に依存する部分だけを realization 側で適応する。
+- TUI 起動時に使う AgentCallParameter を realization 側で組み立てる互換入口。oracle 側の prompt builder で complete prompt を作り、runtime の local 配下へ保存したうえで、その保存先を読む指示を agent call parameter に渡す。
 
 ## Read this when
-- TUI 起動パラメータ生成関数の import 経路、公開面との互換性、または oracle prompt helper と runtime path helper の接続を確認したいとき。
-- TUI の完全 prompt 保存先、`AgentCallParameter.prompt` に含める prompt file path、または `.cmoc/local/log/tui` への追従を確認・変更したいとき。
-- 既存の公開 import path を削除・移動・置換してよいか判断するために、互換コードを残す理由と削除条件を確認したいとき。
+- `cmoc tui` の起動時に渡す agent call parameter の内容、model class、reasoning effort、file access mode、prompt 保存先を確認する必要があるとき。
+- TUI 起動用 complete prompt の生成フラグや original prompt の渡し方を変更するとき。
+- oracle 側 prompt builder と realization 側 runtime path の接続箇所を確認するとき。
 
 ## Do not read this when
-- TUI 起動パラメータの prompt 構成そのものの正本を確認したいとき。prompt 構築 helper や基礎型は oracle 側の実体を読む。
-- TUI 画面の描画、イベント処理、ユーザー操作、または端末 UI の挙動を調べたいとき。
-- 互換 import path ではなく、新しい起動仕様や利用者向け CLI 挙動そのものを設計・確認したいとき。
+- complete prompt の本文構造や各 standard prompt の内容を確認したいだけのときは、oracle 側の prompt builder や関連する oracle file を読む。
+- `.cmoc/local` 配下のディレクトリ規約や logs path の一般処理を確認したいだけのときは、runtime path を扱う共通実装を読む。
+- TUI 起動後の UI 表示、入力処理、イベントループを調べるときは、TUI 本体の実装を読む。
 
 ## hash
-- bcc66a74e9ebc1259044e48efc1ced73240648b864dae22b997826dfea253f5f
+- a594973bd10fe9f71f595f33097bacd11b21fa148eacb37af3c4e96d712805f5
 
 # `resolve_parameter.py`
 

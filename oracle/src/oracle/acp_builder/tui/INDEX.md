@@ -1,21 +1,20 @@
 # `launch_tui.py`
 
 ## Summary
-- `cmoc tui` の起動時に AI エージェントへ渡す呼び出しパラメータを構築する正本実装。ファイルアクセスプロファイル、完全プロンプト、保存先、モデルクラス、推論強度、参照すべきプロンプト指示の組み立て方を定義する。
-- TUI 起動で使う元プロンプト、標準類の有効化フラグ、oracle・realization・index のアクセス属性を、最終的な agent call parameter へ接続する入口として扱う。
+- `cmoc tui` の TUI 起動時に AI エージェント呼び出しパラメータを組み立てる正本実装。ユーザー入力プロンプトを complete prompt に統合し、TUI 用ログへ保存したうえで、その保存先を読む指示を含む `AgentCallParameter` を返す。
 
 ## Read this when
-- `cmoc tui` がどのモデルクラス・推論強度・ファイルアクセスプロファイルで agent call を起動するか確認したいとき。
-- TUI 起動時の complete prompt の構築、保存、agent への指示文生成の正本仕様断片を確認したいとき。
-- TUI 起動で、ユーザー入力プロンプトや各種 standard フラグが complete prompt にどう渡るかを確認したいとき。
+- `cmoc tui` の TUI 起動で渡される role、summary、goal、file access mode、各 standard フラグ、元プロンプトがどのように complete prompt と呼び出しパラメータへ反映されるか確認したいとき。
+- TUI 起動時の complete prompt 保存先、ログファイル名、保存された prompt を AI Agent CLI/TUI に読ませる指示文の正本を確認したいとき。
+- TUI 起動用パラメータの model class、reasoning effort、file access mode、JSON 対応ファイル、実行可否フラグの正本値を確認したいとき。
 
 ## Do not read this when
-- TUI 以外のサブコマンドにおける agent call parameter 構築を確認したいとき。
-- complete prompt の内部構成や各 standard フラグの本文内容を確認したいとき。
-- ファイルアクセス属性やパスモデルそのものの定義を確認したいとき。
+- `cmoc tui` 以外のサブコマンドの AI エージェント呼び出しパラメータを確認したいとき。
+- complete prompt 全体の構成規則や各 standard フラグの意味そのものを確認したいときは、prompt builder 側の正本を読む。
+- パスキーワードや repository root 解決の定義を確認したいときは、path model 側の正本を読む。
 
 ## hash
-- 34dcc4c5b0222dd5e5dd23ccbd13ee575ea33d5ffb182f921ae0cc74f562fc0a
+- 425b1e8a3cb5778476b6f5ac9bf9c710b35901e2e0f909fb22e7edd47fa89e5b
 
 # `resolve_parameter.json`
 
@@ -39,19 +38,18 @@
 # `resolve_parameter.py`
 
 ## Summary
-- `cmoc tui` でユーザー入力プロンプトから AI Agent CLI/TUI の実行パラメータを選ぶための AgentCallParameter を構築する正本実装。
-- oracle と realization と index を読み取り可能にしたファイルアクセスプロファイル、実行パラメータ選定担当としての固定プロンプト、元プロンプトの動的埋め込み、Structured Output と根拠行提示を求める goal を組み立てる。
-- モデルクラス、推論努力、完成プロンプト、対応する JSON schema path をまとめて返す処理の入口になる。
+- `cmoc tui` でエディタ入力された元プロンプトから、AI Agent CLI/TUI の実行パラメータ選定用 AgentCallParameter を構築する oracle src。
+- 完全プロンプトの role、summary、goal、ファイルアクセスモード候補、placeholder、各種標準プロンプトフラグを組み立て、読み取り専用・効率モデル・中程度 reasoning の呼び出し条件と Structured Output schema path を返す。
 
 ## Read this when
-- `cmoc tui` の実行前に、元プロンプトから選ばれる AgentCallParameter の内容を確認・変更したいとき。
-- TUI のパラメータ解決で使う role、summary、goal、読み取り権限、固定プロンプト系フラグ、プレースホルダ定義の正本を確認したいとき。
-- AI Agent CLI/TUI 実行パラメータ選定の出力に、Structured Output 準拠や根拠行提示を要求している箇所を確認したいとき。
+- `cmoc tui` の実行前に、元プロンプトからどの agent call パラメータ選定 prompt が作られるか確認したいとき。
+- TUI 用の実行パラメータ解決で使うモデルクラス、reasoning effort、ファイルアクセスモード、schema path の正本仕様断片を確認したいとき。
+- `build_complete_prompt` に渡す固定プロンプト要素や標準プロンプトフラグの扱いを確認したいとき。
 
 ## Do not read this when
-- `cmoc tui` のユーザー入力取得、エディタ起動、コメント除去、strip の処理を調べたいとき。
-- AgentCallParameter、ModelClass、ReasoningEffort、PlaceholderMap、complete prompt 構築などの共通部品そのものの定義を調べたいとき。
-- TUI 以外のサブコマンド向け実行パラメータ解決 prompt を確認したいとき。
+- TUI 以外のサブコマンドの実行パラメータ解決を確認したいとき。
+- ファイルアクセスルール自体の本文や FileAccessMode ごとの詳細を確認したいとき。
+- prompt builder の共通構造、StructDoc の表現、path placeholder 解決の詳細実装を確認したいとき。
 
 ## hash
-- 8202ec643da88fee167595217c54338e0673284beb20aff300feeccf5af06224
+- 9d458ce69f80106270b20b16fc6cd4820f082c03c665730c6fadd4292a70aafe

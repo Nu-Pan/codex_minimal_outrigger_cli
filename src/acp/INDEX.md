@@ -19,18 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP builder 配下の realization 側入口をまとめる領域。oracle 側 builder を正本に保ちながら、旧来の `acp.builder` import 経路、apply/review/session/tui/indexing などの互換 package、quota probe 用の軽量 builder へ進むためのルーティング起点になる。
-- 主な責務は、canonical oracle 実装への中継、既存参照を壊さない再 export、必要最小限の realization 側適応、各 builder 領域の削除条件や互換維持理由の確認入口を分けることにある。
+- ACP builder 関連の realization 実装をまとめる領域。oracle 側 builder を正本として参照しながら、既存の acp.builder 系 import 経路を維持する互換入口と、quota probe や TUI 起動など一部の realization 側 builder を扱う。
+- apply、review、session、indexing、tui などの用途別 builder package への入口になり、canonical oracle 実装への委譲、旧公開名の維持、realization 側公開型への最小適応が必要な箇所を切り分ける。
 
 ## Read this when
-- ACP builder 全体で、旧 import path 互換、oracle 側 canonical builder への委譲、realization 側公開型への適応境界のどこを読むべきか選びたいとき。
-- apply fork、review oracle、session、TUI、indexing、quota probe などの agent call parameter builder 領域を横断して、該当する下位 package または module への入口を探すとき。
-- `acp.builder.*` 参照の移行・削除・互換維持を検討しており、どの互換入口がどの責務を持つか切り分けたいとき。
+- acp.builder 配下の旧 import path 互換が、oracle 側 canonical 実装や realization 側 wrapper にどう接続されるかを調べたいとき。
+- apply fork、review、session、indexing、TUI、quota probe など、用途別 ACP builder の入口や読むべき下位領域を選びたいとき。
+- oracle 側 builder を正本に保ちながら realization 側で package path、module alias、戻り値変換、既知表記補正を行う境界を確認したいとき。
+- 既存 caller を canonical import path へ移行する作業で、互換 package や再公開 module の削除条件を確認したいとき。
 
 ## Do not read this when
-- oracle 側 builder の正本 prompt、canonical 実装、生成内容そのものを確認したい場合は、対応する oracle 側の実装や doc を直接読む。
-- ACP parameter の共通型、汎用 git helper、path model、CLI 実行フロー、TUI 描画、apply/review/session の本体挙動など、builder 入口や import 互換と無関係な詳細を調べたい場合は、それぞれの実装領域へ進む。
-- 個別 builder の変換処理、wrapper の詳細、quota probe の呼び出し制御など読む対象が既に特定できている場合は、この階層ではなく該当する下位 module または呼び出し元を直接読む。
+- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したい場合は、対応する oracle 側 builder や oracle doc を読む。
+- apply、review、session、TUI など各機能の実行フロー、CLI 引数処理、UI 処理、branch 操作、finding 処理を調べたい場合は、それぞれの機能実装へ進む。
+- AgentCallParameter の公開型、path model、git helper、file access mode など builder 共通外の基礎構造を調べたい場合は、該当する共通実装を読む。
+- 新しい公開 API や新規 import 経路を設計したいだけの場合は、互換入口ではなく canonical な定義元や設計対象を読む。
 
 ## hash
-- cb74f5bae750efd7e34355906d2dbf73619b6c92f710c13d85f84d87e1ecdf03
+- d73a20e3637bd8206627a39c4b2c8e380367afd26573f7b9a8216aaf9a0bc30f

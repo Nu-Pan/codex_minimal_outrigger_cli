@@ -57,22 +57,23 @@
 # `runtime_apply.py`
 
 ## Summary
-- apply 実行中 process の識別・追跡・停止を扱う runtime 補助実装。session branch から worktree を引く処理、apply branch 名から managed worktree を復元する処理、apply process pid file の読み書きと削除、Codex subprocess group を含む停止制御を担う。
-- pid reuse を避けるため pidfd と process start time を使い、壊れた pid file は停止対象にせず、停止失敗や権限不足は CmocError として利用者向けの対処文付きで返す。
+- apply 実行に関わる linked worktree の特定、apply process pid file の保存・読取・削除、Codex subprocess 追跡環境の一時設定、apply abandon 時の停止処理を担う runtime 補助実装。
+- pid 再利用を避けるため process start time と pidfd を使って停止対象の同一性を確認し、Codex subprocess は process group 単位で停止する。
 
 ## Read this when
-- apply abandon、apply cleanup、apply 実行中断、または session ごとの apply process tracking の挙動を変更・調査する。
-- apply process pid file の形式、保存場所、lock、stale 判定、削除タイミングを確認する。
-- Codex subprocess を process group 単位で停止する処理、pidfd 利用、SIGTERM/SIGKILL の順序、zombie を含む group 終了判定を確認する。
-- session branch または apply branch から対応 worktree を特定する runtime 処理を確認する。
+- apply branch から managed worktree を復元する処理、または session branch が checkout された linked worktree を探す処理を確認・変更したいとき。
+- apply process の pid file の保存形式、破損時の扱い、削除タイミング、process tracking 用環境変数の復元挙動を確認・変更したいとき。
+- apply abandon が実行中 apply process や Codex subprocess group をどの順序・条件・signal で停止するかを確認・変更したいとき。
+- pidfd、process start time、Linux /proc、process group、zombie process を使った停止対象の安全確認や警告生成を扱うとき。
 
 ## Do not read this when
-- 通常の git command 実行 wrapper、worktree root の一般的な path 定義、CmocError 本体など runtime 共通部品そのものを調べたい場合は、それらを定義する runtime 側を読む。
-- apply サブコマンドの CLI 引数、状態遷移、利用者向け出力の仕様を確認したい場合は、該当する app spec または command 実装を読む。
-- process 停止と関係しない session state の読み書き、agent 呼び出し、merge や commit の処理を調べたい場合は、このファイルではなく該当責務の実装へ進む。
+- apply の CLI 引数、session state schema、出力文言全体、または subcommand の高レベル制御だけを確認したいとき。
+- git worktree の一般的な作成・削除処理や session 管理の永続状態全体を確認したいとき。
+- Codex CLI 呼び出しそのもののコマンドライン構築、プロンプト生成、または LLM 出力処理を確認したいとき。
+- process 停止と関係しない runtime 共通関数、git command wrapper、path model の定義を確認したいとき。
 
 ## hash
-- f48a64e4dbb0a9f631872914269d3cd2c10db20a575988980f6af5b7a85740ad
+- 560d83c54153af00482520b92b6a5d9fd4bc5289777b59ed22976f848c21f8b0
 
 # `runtime_cli.py`
 
@@ -321,22 +322,22 @@
 # `runtime_paths.py`
 
 ## Summary
-- 実行時に必要な root 解決、時刻・duration 表示、cmoc 管理領域の保存先 path、memo 判定、短時間の cwd 切替をまとめる共通 utility。
-- oracle 側の path model で内部扱いの root resolver を、実行時エラーへ変換して runtime から使える形にする入口でもある。
+- 実行時に必要な root path 解決、時刻文字列、duration 表示、cmoc の local state/config/log/report/schema/worktree 保存先 path、memo 判定、短時間の cwd 変更をまとめる runtime 用 path utility。
+- 正本側の path resolver を runtime error に変換して扱い、CLI 実行前提に合わない cwd や cmoc root 解決失敗を利用者向けの CmocError として返す入口になる。
 
 ## Read this when
-- 実行中の repository root、worktree root、cmoc root を取得する処理を確認・変更したいとき。
-- session、report、log、worktree、schema store、config などの cmoc 管理ファイル・ディレクトリの保存先を確認・変更したいとき。
-- console や log に出す timestamp、duration 表示の形式を確認・変更したいとき。
-- `<work-root>/memo` 判定や、一時的に cwd を変更して外部 API を呼ぶ処理を確認したいとき。
+- 実行中の repository root、worktree root、cmoc root を解決する処理を確認・変更するとき。
+- session、report、sub_command log、Codex call log、worktree、schema store、config JSON など、.cmoc local 配下の保存先 path を確認・変更するとき。
+- 利用者向け時刻表示、file name 用 timestamp、duration 表示の形式を確認・変更するとき。
+- memo 配下判定や、一時的に cwd を差し替える処理の挙動を確認・変更するとき。
 
 ## Do not read this when
-- path placeholder の定義や root path 解決仕様そのものを確認したいときは、oracle 側の path model を読む。
-- CmocError の構造や表示仕様を確認したいだけのときは、runtime error を扱う定義を読む。
-- 各 sub command 固有の report 内容、session state 内容、log 内容を確認したいときは、それぞれの生成・利用箇所を読む。
+- path placeholder の定義や root resolver の正本仕様を確認したいだけなら、oracle 側の path model を直接読む。
+- 個別サブコマンドの実行手順、出力 schema、report 内容、session state の中身を調べたい場合は、それぞれの command 実装や state 管理の対象へ進む。
+- CmocError の構造や表示形式そのものを変更したい場合は、runtime error 定義を直接読む。
 
 ## hash
-- a3ccc3a7b94c195b2287c300c0ae0edef9578ad3f366c51b4a97a5081416e1ad
+- 48f612d340a45bf5d137635a4caadb23384a661da842f554fe82e50c97e40931
 
 # `runtime_results.py`
 

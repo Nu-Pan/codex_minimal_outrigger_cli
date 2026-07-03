@@ -23,25 +23,24 @@
 # `apply_fork.md`
 
 ## Summary
-- Codex CLI による apply ループのサブコマンド仕様。セッション状態と git 状態を前提条件として確認し、隔離された作業先で所見調査と修正依頼を繰り返し、結果を状態遷移・コミット・レポート・終了コードとして扱う責務境界を定義する。
-- apply ループの調査対象スコープ、調査待ちリストの更新規則、所見列挙・修正適用・変更要約の agent call 連携、回数上限到達時の未収束扱い、作業レポートに含める情報を確認する入口になる。
+- Codex CLI による apply ループを実行するサブコマンドの正本仕様断片。セッション状態・git 差分・scope に基づき調査対象を選び、所見列挙、修正依頼、コミット、状態遷移、作業レポート生成までの責務境界を定める。
+- このサブコマンドは `<cmoc-session-branch>` と元の作業コピーを直接汚さず、apply 用ブランチと隔離 worktree 上でベストエフォートに実装品質と oracle 一致へ近づけるものとして扱う。
 
 ## Read this when
-- apply ループを実行するサブコマンドの仕様、前提条件、状態遷移、終了区分、レポート生成を実装または検証するとき。
-- ローリング・セッション・フルの各スコープで、どのファイルを調査待ちリストの初期値にするかを確認するとき。
-- 所見列挙、所見に対する修正適用、変更内容要約を Codex CLI へ依頼する agent call の呼び出しタイミングや副作用を確認するとき。
-- apply 用ブランチ、作業用コピー、セッション状態ファイル、隔離実行、git commit の関係を確認するとき。
-- 作業結果が収束・未収束・エラーのどれに分類され、標準出力・レポート・終了コードでどう扱われるべきかを確認するとき。
+- apply ループの開始条件、終了条件、回数上限到達時の扱い、収束・未収束・エラーの区別を確認したいとき。
+- rolling、session、full の各 scope が調査待ちファイルリストをどう初期化するかを実装またはテストしたいとき。
+- 所見列挙 agent call、所見反映 agent call、変更要約 agent call の呼び出しタイミングや結果の扱いを確認したいとき。
+- apply 実行中のセッション状態ファイル更新、apply 用ブランチへのコミット、作業レポート保存、標準出力、終了コードを扱うとき。
+- run 隔離実行と組み合わせた apply 作業の責務境界を確認したいとき。
 
 ## Do not read this when
-- apply ループではなく、review 系やその他のサブコマンドの外部仕様を確認したいとき。
-- agent call に渡すパラメータの詳細 schema やプロンプト仕様そのものを確認したいときは、ここではなく各 builder の正本仕様へ進む。
-- run 隔離実行の一般仕様だけを確認したいときは、隔離実行を定義する文書へ進む。
-- oracle file と realization file の一般定義や品質基準だけを確認したいときは、基本概念や標準を扱う文書へ進む。
-- 特定の実装モジュールやテストの現在のコード構造を調べたいだけのときは、対応する realization 側のルーティングへ進む。
+- run 隔離実行そのものの詳細仕様を確認したいだけの場合は、隔離実行の仕様を直接読む。
+- 所見列挙、所見反映、変更要約の各 agent call parameter の詳細なプロンプトや Structured Output を確認したい場合は、それぞれの builder 定義を直接読む。
+- apply 以外のサブコマンドの引数、状態遷移、レポート仕様を確認したい場合は、そのサブコマンドの仕様を読む。
+- oracle file、realization file、パスプレースホルダなどの横断的な定義を確認したいだけの場合は、それらを定義する共通仕様を読む。
 
 ## hash
-- 7185b2407e571a30711be4e4439b61b87eead12e43ddb12b914cc5019526fa43
+- 26e4695c1716e10fb02586d2898d41fc4fd74d87c98e9490ea22839d44033847
 
 # `apply_join.md`
 
@@ -65,6 +64,24 @@
 ## hash
 - 8cd2425c6a8ae9b88c0fef539076160d9f8bf341bc5cb40a607960ebaceb9c85
 
+# `doctor.md`
+
+## Summary
+- cmoc の実行可能性を検証し、可能な範囲で修復するために doctor preprocess を明示実行するサブコマンド仕様。引数を取らず、固有の事前条件も持たない単純な起動口として位置づけられる。
+
+## Read this when
+- 利用者が明示的にリポジトリ状態の検証・修復を起動するサブコマンドの挙動を確認したいとき。
+- doctor preprocess を CLI から呼び出す入口の引数、事前条件、実行手順を確認したいとき。
+- 引数なしで実行される診断系サブコマンドの仕様に合わせて実装やテストを書くとき。
+
+## Do not read this when
+- doctor preprocess 自体が何を検証・修復するかを詳しく確認したいとき。
+- 通常のコマンド実行時に暗黙で行われる前処理の適用条件や順序を確認したいとき。
+- リポジトリパスや作業ルートなどのパス概念そのものを確認したいとき。
+
+## hash
+- 7e91b86ad01bbeb36bc4e965ac92b894e817234344a580d86fb46694185d690f
+
 # `indexing.md`
 
 ## Summary
@@ -84,49 +101,27 @@
 ## hash
 - 56dd83624b22d9f2e9219cb4fc720d730f72ace8968376b51b9cb29b70d96cca
 
-# `init.md`
-
-## Summary
-- `cmoc init` による初期化の正本仕様断片。作業可能化のために、作業用メタ領域を git 追跡対象外にし、agent 用領域を git 追跡対象として用意し、その差分を commit する流れを定義している。
-- 引数なしで実行される初期化コマンドについて、ignore 設定、既存追跡ファイルの追跡解除、agent 用領域の作成・保持、完了判定に使う git コマンド条件を確認する入口になる。
-
-## Read this when
-- 初期化サブコマンドの挙動、引数、事前条件、実行順序を確認したいとき。
-- 作業用メタ領域を git 追跡対象外にする処理、または将来作成ファイルまで ignore されることの判定条件を実装・検証するとき。
-- agent 用領域を初期化時に作成し、空の場合も git 追跡対象として保持する理由や必要操作を確認するとき。
-- 初期化処理の最後に、初期化で発生した差分を commit する必要があるかを確認するとき。
-
-## Do not read this when
-- 初期化以外のサブコマンドの CLI 仕様や実行手順を調べたいとき。
-- パスプレースホルダ全般の意味や、作業ルート・リポジトリルートの概念定義だけを確認したいとき。
-- agent 操作禁止領域の一般ルールだけを確認したいとき。
-- git ignore や git 追跡状態を扱わない実装内部の整理、共通 helper の分割方針、テスト構成だけを検討するとき。
-
-## hash
-- 96c03604e2136c25cc176229f1eb007a2fbee2a3a0626ad28b19c47ce8956c80
-
 # `review_oracle.md`
 
 ## Summary
-- `cmoc review oracle` サブコマンドの正本仕様断片。現在の作業対象の oracle file をレビューし、致命的・軽微な所見を人間向けレポートとして提示する処理の責務、事前条件、ループ構造、agent call 境界、レポート構成を定義する。
-- レビュー対象の列挙、所見の列挙・マージ・検証・採否判定、隔離実行、レポート保存と stdout への提示までの流れを扱う。
+- `cmoc review oracle` サブコマンドの仕様。現在の oracle file を対象に致命的または軽微な所見を Codex CLI による複数段の列挙・マージ・検証・判定で抽出し、人間向け Markdown レポートとして保存してそのパスを出力する流れを定義している。
+- セッション状態・ブランチ・未コミット差分に関する事前条件、`--scope` によるレビュー対象範囲、run 隔離実行、所見 ID とダーティフラグ管理、レポート frontmatter と本文構成を扱う。
 
 ## Read this when
-- oracle file の問題検出を行うレビュー用サブコマンドの仕様を確認・実装・テストする。
-- レビューのスコープ、事前条件、git 未コミット差分の扱い、セッション状態との関係を確認する。
-- 所見リストの列挙、マージ、検証、採否判定の各ループや、対応する agent call の責務境界を確認する。
-- レビュー結果レポートの frontmatter、本文セクション、所見の並び順、保存先、stdout 出力の仕様を確認する。
-- レビュー処理が oracle file だけを対象とし、実装ファイルや自動生成ファイルをレビュー対象にしない境界を確認する。
+- `cmoc review oracle` の CLI 引数、事前条件、終了時の出力、またはレポート保存先を確認したいとき。
+- oracle file レビューの対象範囲を `session` と `full` でどう切り替えるか確認したいとき。
+- 所見リストの列挙・マージ・検証・採用判定の制御フロー、ループ上限、ダーティフラグ更新規則を実装またはテストしたいとき。
+- `cmoc review oracle` が何をレビュー対象に含め、何を責務外とするか確認したいとき。
+- レビュー結果 Markdown の frontmatter、本文セクション、所見の表示順、`result` の判定を確認したいとき。
 
 ## Do not read this when
-- oracle file の一般的な定義、realization file との関係、正本仕様断片としての原則だけを確認したい。
-- run の隔離実行そのものの共通仕様を確認したい場合は、隔離実行を扱う共通仕様を読む。
-- 個別 agent call に渡すパラメータの詳細仕様だけを確認したい場合は、対応する parameter builder の正本を読む。
-- 通常の実装ファイルを交えたコードレビュー、設計改善提案、過去の oracle file 差分調査の仕様を探している。
-- 自動生成されるルーティング文書のレビューや生成規則を確認したい。
+- 個別 agent call の prompt やパラメータ詳細だけを確認したいとき。対応する `build_review_oracle_*_parameter()` の定義を読む方が直接的。
+- run 隔離実行そのものの汎用仕様を確認したいとき。run isolation の仕様を読む方が直接的。
+- oracle file や realization file の一般定義、または oracle 標準全体を確認したいとき。
+- `cmoc review oracle` 以外のサブコマンドの引数、実行手順、レポート仕様を確認したいとき。
 
 ## hash
-- df8019d8baa140e05925cec45090ae6a0b3b3e36fa029594bad66eddb64dd48b
+- 0dcdad4b5ac6720f32a78b727d3298a1566dbfb3d9c71f68edc9c8840cd6f43f
 
 # `session_abandon.md`
 
@@ -154,24 +149,22 @@
 # `session_fork.md`
 
 ## Summary
-- 現在 checkout しているローカルブランチを session の home branch とし、その HEAD から active session branch を作成するサブコマンドの正本仕様断片。
-- 実行可能な checkout 状態、未コミット差分や既存 active session の禁止、session branch と状態ファイルの作成、標準出力に出す branch 名の扱いを定める。
-- repository default branch を特別扱いしないこと、任意 start point を受け取らないこと、旧 branch 形式や旧サブコマンドの互換性を残さないことも境界として示す。
+- 現在のローカルブランチから session を開始するサブコマンドの正本仕様断片。分岐元・merge 先となる home branch、作成される session branch、保存される session 情報、標準出力、実行可能な checkout 状態、未コミット差分や既存 active session のエラー条件を扱う。
+- repository default branch を特別扱いしないこと、任意 start point を受け取らないこと、旧 branch 形式や旧サブコマンドの互換実装を残さないことを明示する。
 
 ## Read this when
-- session を開始するサブコマンドの実装・テスト・CLI 挙動を確認または変更するとき。
-- home branch、session branch、fork commit、session id、状態ファイル保存の関係を確認したいとき。
-- detached HEAD、remote-tracking branch、commit hash、cmoc 管理 branch、未コミット差分、既存 active session などのエラー条件を扱うとき。
-- session branch の命名規則、active session は home branch ごとに高々 1 つという原則、旧仕様の削除範囲を判断するとき。
+- 現在 checkout 中のローカルブランチから session branch を作成する処理、CLI 出力、session 情報保存、branch 命名、gitignore 対象の確保を実装・検証する。
+- detached HEAD、remote tracking branch、commit hash、managed branch、未コミット差分、既存 active session がある場合のエラー終了条件を確認する。
+- session home branch と session branch の関係、1 home branch あたり active session を高々 1 つにする制約を確認する。
+- 旧 branch 形式や旧サブコマンド名への後方互換性を削除・禁止してよいか判断する。
 
 ## Do not read this when
-- session の終了、merge、apply、一覧表示など、session 作成以外のサブコマンドだけを扱うとき。
-- path keyword や root model の定義そのものを確認したいとき。
-- 実装ファイルの分割方針、テスト構成、補助スクリプトなど、正本仕様ではなく realization 側の設計だけを調べるとき。
-- 旧 branch 形式や旧サブコマンドを実装互換対象として復活させる目的のとき。
+- session の作成ではなく、既存 session の merge、apply、終了、一覧表示など別操作の仕様を確認したい。
+- branch 作成の外部挙動ではなく、内部 helper の分割、実装上の関数名、テスト fixture の置き方だけを判断したい。
+- path placeholder の一般定義、managed branch 全体の分類、session 情報ファイルの共通 schema など、この仕様断片で定義されていない横断概念を確認したい。
 
 ## hash
-- 7c6bbb2121f0e62abea69d96f955068bed6ff201353f4f3296bcd23411c39e16
+- 9ed112129e33d4ad4e9633f88c0188b43039369d51764e0dccb27ef660ea240b
 
 # `session_join.md`
 
@@ -198,20 +191,21 @@
 # `tui.md`
 
 ## Summary
-- ユーザーがエディタで入力したオリジナルプロンプトと cmoc 側の自動生成プロンプトを用いて、AI Agent CLI/TUI を起動するサブコマンドの正本仕様断片。
-- 引数なしで実行され、git 追跡除外の保証、プロンプト入力用ファイルの作成と読み出し、agent call による起動パラメータ決定、バックエンド別の TUI 起動条件を扱う。
+- `cmoc tui` サブコマンドの正本仕様断片。ユーザーがエディタで入力したオリジナルプロンプトと cmoc の自動生成プロンプトを注入し、AI Agent CLI/TUI を起動する流れを定義している。
+- 引数なし・事前条件なしのコマンドとして、`.cmoc` の git 追跡対象外保証、エディタ入力、agent call による必要パラメータ決定、TUI 起動までの実行手順を扱う。
+- エディタ選択順、編集対象ファイル、初期 Markdown 文面、コメント除去と strip による読み出し、固定するモデル種別・推論強度、Codex CLI 起動時に持ち込む要素を確認する入口になる。
 
 ## Read this when
-- 任意のユーザープロンプトを cmoc の規則・規範の上で実行するサブコマンドの挙動を確認・実装・テストする。
-- エディタ起動順、`code --wait`、プロンプト初期文面、コメント除去と `strip` によるオリジナルプロンプト読み出しを確認する。
-- TUI 起動前に agent call で決定するパラメータと、agent call に委ねない固定パラメータを確認する。
-- AI Agent CLI/TUI 起動パラメータ、または Codex CLI バックエンドで持ち込む `$CODEX_HOME`、preflight validation、codex profile の扱いを確認する。
+- `cmoc tui` の実装、テスト、または挙動確認を行うとき。
+- ユーザー入力プロンプトの作成場所、初期内容、エディタ起動順、入力完了判定、読み出し時の整形規則を確認したいとき。
+- TUI 起動前に agent call へ委ねるパラメータと固定値の境界を確認したいとき。
+- Codex CLI を TUI バックエンドとして起動する際のコマンド名や、codex exec rule から持ち込む要素を確認したいとき。
 
 ## Do not read this when
-- TUI 起動ではなく、非対話実行や別サブコマンド固有の CLI 挙動だけを確認したい。
-- agent call の詳細な parameter schema そのものを確認したい場合は、参照先の parameter builder 仕様を直接読む方が適切である。
-- Codex CLI の preflight validation や codex profile の詳細仕様だけを確認したい場合は、それらを定義する参照元仕様を直接読む方が適切である。
-- oracle file や realization file の一般原則、INDEX.md エントリー作成規則、またはパスモデルの定義だけを確認したい。
+- `cmoc tui` 以外のサブコマンド仕様を確認したいとき。
+- agent call の詳細なパラメータ仕様そのものを確認したいときは、ここではなく対応する `build_tui_resolve_parameter_parameter` の正本を読む。
+- TUI 起動パラメータの詳細そのものを確認したいときは、ここではなく対応する `build_tui_launch_tui_parameter` の正本を読む。
+- Codex CLI の preflight validation、`$CODEX_HOME`、codex profile の詳細を確認したいときは、ここではなく codex exec rule の正本を読む。
 
 ## hash
-- 32f5c6ae5e38803d7063ee32abe5978afa645f09fcb982a528d04ffe63d1f987
+- bf9e56d62773457f35ea256e938a9e9c6f17712b545de2ea129e5b3ed3c5e1ac

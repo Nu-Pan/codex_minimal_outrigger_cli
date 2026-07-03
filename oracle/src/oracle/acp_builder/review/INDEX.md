@@ -1,21 +1,20 @@
 # `oracle`
 
 ## Summary
-- `cmoc review oracle` の各段階で使う oracle file レビュー用 agent call parameter と Structured Output schema をまとめるディレクトリ。
-- 新規所見の列挙、所見の擁護・反証、採否判定、重複・矛盾の整理について、AI 呼び出しへ渡す prompt 断片、読み取り制約、モデル設定、出力契約を確認する入口になる。
-- レビュー所見の生成から検証・整理までの出力境界や prompt 接続を段階別にたどるための下位ファイルを収める。
+- `cmoc review oracle` で oracle file レビュー所見を列挙・検証・採否判定・整理する agent call parameter と Structured Output schema をまとめた領域。
+- レビュー対象から新規所見を抽出し、所見の妥当理由と反証理由を集め、人間へ提示するか判定し、重複や矛盾を整理する一連の出力契約と prompt 正本を確認する入口になる。
 
 ## Read this when
-- `cmoc review oracle` の oracle file レビュー処理で、所見列挙、所見検証、採否判定、所見マージのいずれかの agent call parameter や出力 schema を確認・変更したいとき。
-- レビュー対象 oracle file、既知所見、既知の擁護理由・反証理由、所見リストが、各レビュー段階の prompt や Structured Output にどう渡るか調べたいとき。
-- oracle file を根拠にした新規所見、新規理由、採否理由、重複・矛盾整理の応答契約を段階別に確認したいとき。
-- `PURE_ORACLE_READ`、review oracle standard、対応 JSON schema、reasoning effort、モデル設定など、oracle review 用 agent call の正本 prompt 断片を探すとき。
+- `cmoc review oracle` の所見生成、所見検証、採否判定、所見リスト整理に関する agent call parameter や Structured Output schema を確認したいとき。
+- oracle file レビューで、既知所見や既知理由との重複を避けて新規の所見・理由だけを返す契約を確認したいとき。
+- レビュー所見について、妥当理由、反証理由、採否理由、重大度、見出し、根拠となる oracle file、整理理由をどの意味で扱うか確認したいとき。
+- 複数のレビュー所見から、削除・置換・統合・変更不要のいずれとして整理するかの出力境界を確認したいとき。
 
 ## Do not read this when
-- `cmoc review oracle` サブコマンド全体の CLI 引数、実行制御、結果集約、表示処理など realization implementation 側の挙動を確認したいとき。
-- oracle file 全般の品質基準、oracle standard、review oracle standard の本文そのものを読みたいとき。
-- oracle review 以外の agent call parameter、または oracle file 以外を読むレビュー処理を調べたいとき。
-- INDEX.md エントリーやルーティング文書の生成規則を確認したいとき。
+- oracle file 全般の品質基準や、仕様断片として何を問題扱いするかの標準を確認したいとき。
+- `cmoc review oracle` の CLI 実装、所見保存処理、表示整形、対象ファイル探索など、agent call parameter と応答 schema 以外の実装を確認したいとき。
+- oracle review ではなく realization review や INDEX.md エントリー生成の prompt 正本を確認したいとき。
+- prompt 部品の共通組み立て、path placeholder 解決、markdown rendering などの共通実装詳細を確認したいとき。
 
 ## hash
-- 0ca42e71c8d96d420ccfc746ebb73086636777932770c73e0dac3ef85aefe3d9
+- b6e44967c4b4429485af5337e5f9e101a73ba2e569eb9068cf3bbda8292e886b
