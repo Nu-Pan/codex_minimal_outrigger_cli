@@ -78,19 +78,22 @@
 # `join.py`
 
 ## Summary
-- apply join サブコマンドの実行本体を担い、apply branch を session branch へ merge して apply state を初期化し、join 結果レポートと後片付けを行う実装。
-- session/apply branch 上で join 可能状態かを検証し、想定外差分の検出、--force-resolve 時の復元 commit、merge conflict 処理、apply worktree と branch の削除を扱う。
-- apply join レポートの生成、managed branch 差分の分類、apply/session 側で許可される変更範囲の判定、INDEX.md conflict の機械解決もこのファイルにまとまっている。
+- apply run の完了またはエラー後に、apply branch を session branch へ取り込み、apply state を初期状態へ戻す CLI 処理を実装する。
+- join 実行前の branch・worktree・state 検証、想定外差分の検出と force resolve、merge conflict 報告、結果 report 作成、apply worktree と branch の cleanup を扱う。
+- apply 側と session 側で許可される変更範囲の判定、managed branch 上の変更 path 抽出、INDEX conflict の機械解決など、apply join 固有の制御ロジックへの入口になる。
 
 ## Read this when
-- apply join の CLI 挙動、状態遷移、merge、cleanup、レポート出力を変更または調査するとき。
-- apply branch と session branch のどの差分を想定内または想定外として扱うかを確認するとき。
-- --force-resolve による想定外差分の revert、apply worktree の扱い、INDEX.md だけの merge conflict 解決条件を確認するとき。
+- apply run を session branch に取り込む処理、join 可否判定、apply state の reset、last joined oracle snapshot commit の更新を確認・変更したいとき。
+- apply join 時の想定外差分、force resolve による差分復元、apply branch と session branch の変更範囲分類を調べたいとき。
+- apply join の結果 report、merge conflict report、cleanup 成否や warning 出力の内容を確認・変更したいとき。
+- apply worktree 上または session worktree 上から join を実行した場合の branch 解決、worktree 削除、apply branch 削除の挙動を追いたいとき。
+- INDEX conflict だけを自動解決する条件や、削除 path・rename path の扱いを確認したいとき。
 
 ## Do not read this when
-- apply join 以外の apply サブコマンドの開始・実行・中断処理を調べたいとき。
-- session state のデータ構造、git wrapper、worktree 探索、report 保存先などの共通 runtime API 自体を変更したいとき。
-- oracle file と realization file の定義や managed branch 変更範囲の正本仕様を確認したいとき。
+- apply run の開始、apply branch の作成、agent 実行、または apply state を completed/error にする処理を調べたいだけのとき。
+- session の作成・終了・状態ファイル形式そのものを調べたいときは、session 管理や状態定義を扱う対象を先に読む。
+- git command 実行 wrapper、worktree 探索、report 保存先、ignore 判定などの共通 runtime helper の詳細だけを調べたいとき。
+- oracle file 判定や path model の仕様そのものを調べたいときは、正本仕様または共通判定処理を読む。
 
 ## hash
-- 97356c6b54af7312c85ef178e301d9254839180bdafd612602ecbd3560d2fbad
+- 9c5a5e5ab5cbb865ce3106ec028468a933a079b8361df794b92887d5ab1d7abd

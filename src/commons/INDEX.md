@@ -15,20 +15,21 @@
 # `cmoc_runtime.py`
 
 ## Summary
-- 共通ランタイム機能を単一の入口から再エクスポートする集約モジュール。Codex 実行、プロファイル、設定、ファイル内容、CLI、エラー、Git、ログ、パス、結果、状態管理にまたがる runtime_* 系 API をまとめて参照できるようにする。
+- runtime 系 commons の主要 API を 1 か所から参照できるように集約する入口。Codex 実行・profile・config・content・CLI・error・git・logging・paths・results・state にまたがる既存 runtime 部品を再公開する役割を持つ。
+- 実処理の実装本体ではなく、周辺モジュールに分散した runtime 機能への import 境界をまとめるための薄い集約層として読む。
 
 ## Read this when
-- 複数の共通ランタイム API をまとめて import している箇所の依存元を確認したいとき。
-- runtime_codex_profile、runtime_git、runtime_state など複数の commons runtime モジュールにまたがる公開入口を把握したいとき。
-- この集約モジュール経由で利用できる共通関数・型・定数の範囲を確認したいとき。
+- 複数の runtime commons 機能をまとめて利用している呼び出し側の import 元を確認したいとき。
+- runtime 系 API の公開入口にどの関数・クラス・定数が含まれているかを確認したいとき。
+- runtime commons の分割済みモジュールへ進む前に、Codex 実行、git、path、state、config などの横断的な参照関係を把握したいとき。
 
 ## Do not read this when
-- 個別 API の実装、引数、失敗時挙動を確認したいとき。その場合は該当する runtime_* モジュールを直接読む。
-- 新しい共通処理を実装・修正したいとき。このファイルではなく、責務を持つ個別モジュールを読む。
-- CLI サブコマンド、Git 操作、状態管理など特定領域だけを調べたいとき。対象領域の専用モジュールを直接読む。
+- 個別機能の挙動や副作用を調べたいとき。その場合は、対応する runtime commons の実装本体を直接読む。
+- 新しい runtime 処理を実装・修正したいとき。この集約層ではなく、責務を持つ下位モジュールを読む。
+- CLI サブコマンドの利用者向け挙動や出力仕様を確認したいとき。より直接の command 実装またはテストを読む。
 
 ## hash
-- 1f4b3c37a1e680ec77e3065cb3cd68676b0d79551bbc1f65b89c78719cfabf24
+- 8966f0d5a850e449686651c59834522e9dbbe9937161b01765fe8e2215085580
 
 # `indexing.py`
 
@@ -114,21 +115,26 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の実行制御を担う実装。Structured Output 検証、semantic retry、capacity retry、quota 待機と代表 probe、resume 継続、call log・prompt/stdout/stderr/output log 生成、subcommand event 記録、file access rule 違反検査と回復を、単一の subprocess 実行状態機械として扱う。
-- agent call 後の worktree 差分検出、runtime 生成 log の除外、禁止 root の filesystem snapshot 比較、FileAccessMode ごとの書き込み許可判定もここで扱う。
+- Codex exec の実行制御を担い、単一試行ループ内で subprocess 呼び出し、Structured Output 検証、capacity retry、quota 待機と代表 probe、resume 継続、call log と subcommand event 記録をまとめて扱う。
+- agent call 後の file access rule 違反検査と修復、worktree 差分検出、生成済み log/schema/output の差分除外、禁止 runtime 領域の filesystem snapshot 比較もここで扱う。
+- TUI 起動や Codex profile・schema 準備そのものではなく、exec 実行結果と retry/post-check が共有する状態機械の入口として位置づけられている。
 
 ## Read this when
-- Codex CLI の `exec` 呼び出し、retry、quota 枯渇時の待機・probe・resume、Structured Output schema 検証、Codex call log の生成や記録内容を確認・変更するとき。
-- agent call 後の file access rule 違反検出、違反回復 call、worktree 差分の列挙、禁止 root や runtime 生成物の扱い、FileAccessMode による書き込み可否判定を確認・変更するとき。
-- Codex exec 実行中に作られる prompt/stdout/stderr/output/call log や subcommand log event が、差分検査でどのように扱われるかを追うとき。
+- Codex CLI の `exec` 呼び出し、`resume`、`--output-schema`、`--output-last-message`、stdin prompt log の扱いを確認・変更したいとき。
+- Structured Output の JSON 読み取り、schema validation failure、semantic retry、capacity retry、quota polling、quota availability probe の制御を調べるとき。
+- Codex call log、prompt/stdout/stderr/output log、subcommand の `codex_call` event、quota wait 秒数や poll 回数の記録を追うとき。
+- agent call 後に worktree の file access rule 違反を検出・修復する挙動、生成済み差分の無視条件、禁止領域や readonly mode で許される一時生成物の扱いを確認するとき。
+- `changed_worktree_paths` や git status 由来の変更 path 一覧を利用する処理の挙動を確認するとき。
 
 ## Do not read this when
-- Codex profile、Codex home、schema file、subprocess 実行 wrapper、error text 判定などの低レベルな Codex runtime helper だけを確認したい場合は、それらを定義する runtime helper 側を読む。
-- TUI 起動や exec 以外の Codex 実行形態を確認したい場合は、この対象ではなく該当する起動制御 module を読む。
-- 個別サブコマンドの目的、prompt 構築、AgentCallParameter の生成内容を確認したい場合は、この対象ではなく各 builder や subcommand 実装を読む。
+- Codex profile、Codex home、subprocess env、schema file の具体的な生成・解決処理だけを確認したい場合は、それらを提供する runtime Codex profile 系の対象を読む。
+- TUI 起動や exec 以外の Codex 実行分岐を調べたい場合は、この対象ではなく TUI 側の実行制御を読む。
+- 設定値の定義や読み込み形式そのものを調べたい場合は、設定モデルまたは runtime config の対象を読む。
+- git コマンド wrapper の低レベルな実装だけを調べたい場合は、runtime git の対象を読む。
+- file access mode の enum 定義や agent call parameter の構造だけを確認したい場合は、ACP の基本型を読む。
 
 ## hash
-- c2905cb72c438e39174e73e6dcd22ddd33d4177cbbb7efd44c9b12c31a4772ef
+- 884b7faabf2f5378af187b4b6508826199f5d249115f96a278fd4f263f352d6d
 
 # `runtime_codex_logging.py`
 
@@ -175,24 +181,22 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界で使う profile 生成、sandbox/cwd/read-write path 検証、CODEX_HOME 検査、schema 配置、実行エラー解釈をまとめて扱う実装。
-- apply 実行中の Codex child process tracking と、abandon が競合しないための pid file lock 操作もこの境界で扱う。
-- FileAccessMode を Codex CLI が受け取れる実行環境へ変換し、Codex JSONL stdout/stderr から capacity・quota・resume token・利用者向け error detail を読み取る入口。
+- Codex CLI subprocess 境界で使う profile 生成、sandbox/cwd/write/read path 検査、CODEX_HOME 検証、apply child process tracking、Structured Output schema 配置、Codex JSONL の error/resume 判定をまとめる実装。
+- FileAccessMode を Codex CLI が受け取れる実行環境へ変換し、cmoc 側の禁止領域や post-check 前提を保つための実行時境界を担う。
 
 ## Read this when
-- Codex CLI 起動前に渡す profile、sandbox mode、writable roots、cwd、追加 read/write path の許可判定を確認または変更したいとき。
-- CODEX_HOME の解決、認証情報の事前検査、Codex subprocess に渡す環境変数、Codex CLI 不在時のエラー化を扱うとき。
-- apply abandon 用の Codex child process 記録、pid 再利用対策、pid file lock、tracked subprocess 実行の挙動を確認したいとき。
-- Structured Output schema の hash store 配置、schema なし output JSON 読み取り、Codex JSONL error からの retry/quota/capacity 判定を変更したいとき。
+- Codex CLI 起動用 profile の内容、sandbox mode、writable_roots、cwd、追加 read/write path の許可判定を確認または変更したいとき。
+- CODEX_HOME の解決・検証、profile ファイル生成、Codex subprocess へ渡す環境変数、Codex CLI 不在時のエラー化を扱うとき。
+- apply abandon に関係する Codex child process の pid 記録、lock、process group 起動、pid 再利用検出を調べるとき。
+- Structured Output schema の保存先配置、Codex output JSON の読み取り、JSONL stdout/stderr からの error detail、resume token、capacity/quota retry 判定を変更するとき。
 
 ## Do not read this when
-- cmoc の file access policy 自体の正本仕様や prompt 文面を確認したいだけなら、oracle 側の file access rule や app spec を読む。
-- Codex 実行後の git diff 検査や禁止ファイル変更の post-check 実装を探しているだけなら、その責務を持つ実行後検証側へ進む。
-- 設定ファイルの model や reasoning effort の値そのものを確認したいだけなら、config 定義側を読む。
-- runtime path の保存先規約や schema store directory の定義だけを確認したい場合は、path 管理側を読む。
+- FileAccessMode そのものの正本定義や prompt 上のファイルアクセス規則を確認したいだけなら、oracle 側の file access rule を読む。
+- Codex profile 境界ではなく、cmoc の CLI サブコマンド仕様、設定 schema、git 差分検査、runtime path 定義を調べたいときは、それぞれの担当ファイルへ進む。
+- Codex subprocess の起動結果を使う上位フローや retry 全体の制御を追いたいだけなら、呼び出し側の実装を読む。
 
 ## hash
-- 396de1d26ffc5121e87965c4378e4e8fc0710ad150ff22ea77867c273d7b0e06
+- 076a9629abb417a95c6eae9b708b6bacded4000c4203486316547c35b9151037
 
 # `runtime_codex_tui.py`
 
@@ -278,24 +282,24 @@
 # `runtime_git.py`
 
 ## Summary
-- Git コマンド実行を cmoc の結果型・利用者向けエラーへ変換し、branch、HEAD、clean worktree、linked worktree、branch 削除、ignore 判定を扱う共通実装。
-- .cmoc 管理領域の worktree 作成・削除を、branch namespace と管理下 path の対応確認に基づいて制限する。
-- .cmoc を git 追跡対象外に保つための .gitignore、git exclude、index 状態の更新・検査と、oracle/realization 判定で使う ignore helper を提供する。
+- git コマンド実行を cmoc のエラー形式へ変換する境界と、branch・HEAD・worktree・ignore 状態に関する共通操作をまとめた runtime helper。
+- cmoc 管理 branch/worktree の作成・削除制約、clean worktree 要求、.cmoc の ignore 初期化・検査、oracle file 判定など、git 状態に依存する実装の入口になる。
 
 ## Read this when
-- git subprocess の呼び出し、失敗時の CmocError 変換、CommandResult の扱いを確認・変更したいとき。
-- cmoc 管理 branch の判定、run/apply 用 linked worktree の作成・削除、worktree path の安全確認に関わる挙動を調べるとき。
-- .cmoc の ignore 初期化、clean worktree を保つための exclude 更新、git check-ignore による対象判定を扱うとき。
-- detached HEAD、未コミット差分、branch 存在確認、HEAD commit 取得など git repository 前提条件の共通処理を変更するとき。
+- git subprocess の呼び出し結果を利用者向けエラーへそろえる処理を確認・変更したいとき。
+- 現在 branch、HEAD commit、未コミット差分、branch 存在確認など、repository 状態の取得・検査に関わる実装を扱うとき。
+- cmoc 管理 worktree の作成・削除、管理外 worktree 削除防止、管理 branch namespace の判定を確認したいとき。
+- .cmoc を git ignore 対象にする初期化・検査、または tracked file と ignored file の扱いを変更したいとき。
+- oracle file 判定や git ignore 判定を使うアクセス制御・diff 分類の挙動を追うとき。
 
 ## Do not read this when
-- CLI 引数定義、サブコマンドの利用者向け制御フロー、表示文言だけを調べたいとき。
-- git を使わない path model、prompt 組み立て、状態ファイルの schema だけを確認したいとき。
-- oracle file や realization file の概念定義そのものを確認したいとき。
-- 特定サブコマンドの仕様根拠やユーザー操作単位の挙動を読みたいだけで、git 共通処理の実装詳細を変更しないとき。
+- CLI 引数定義、表示文言の組み立て、コマンドごとの上位制御だけを確認したいとき。
+- git を介さない path model の正本仕様や、path 用語そのものの定義を確認したいとき。
+- Codex や LLM への prompt 構築ロジックを確認したいとき。ただし oracle file 判定 helper の利用箇所を追う場合は読む。
+- 永続 state file の schema や読み書き形式だけを確認したいとき。
 
 ## hash
-- 15cb165e66243e3f32378864165e42984718c8920ba2978b0ff521353cf57366
+- 3d23d9153ada9e6575be7247b7a3504f952d987f22cdf5811c0d29517aeb393d
 
 # `runtime_logging.py`
 

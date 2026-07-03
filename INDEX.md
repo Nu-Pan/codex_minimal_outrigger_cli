@@ -149,24 +149,24 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を収める実装領域で、CLI 入口、サブコマンド本体、共通 runtime helper、oracle 側正本実装への互換 shim、既存公開 import path を維持する再公開層への分岐点になる。
-- サブコマンドの実行制御、共通処理、公開 CLI 構成、設定・basic・ACP builder 互換入口、正本側 package への委譲境界など、実装側でどの責務へ進むべきかを切り分ける上位階層である。
-- この階層には処理本体を持つ実装と、旧 import 経路を正本側または実体 module へ橋渡しする互換層が混在するため、実処理の変更か互換入口の移行判断かを分けて読む。
+- cmoc の realization implementation 全体の入口で、CLI entrypoint、サブコマンド本体、共通 runtime、設定・basic・ACP builder などの互換 import 層を配下に持つ。
+- 実処理を持つ実装領域と、oracle 側正本実装や既存実体 module へ委譲する薄い互換入口が混在するため、公開 CLI、サブコマンド orchestration、共通 helper、旧 import path 維持のどこへ進むべきかを切り分ける階層。
+- oracle src の内容を realization 側へ複製しない方針のもと、既存の `oracle.*`、`basic.*`、`config.*`、`acp.*`、`acp.builder.*`、旧 runtime module 参照を成立させる境界も確認できる。
 
 ## Read this when
-- cmoc の realization implementation 全体から、CLI 入口、サブコマンド本体、共通 runtime helper、互換 import 層のどこへ進むべきかを選びたいとき。
-- 公開 CLI コマンド構成、サブコマンドの実行フロー、Codex 実行境界、config・state・Git・path・logging・INDEX 更新などの共通実装を探したいとき。
-- oracle src の定義を realization 側へ複製せず、既存の公開 import path や旧 import 経路から利用できるようにしている互換境界を確認したいとき。
-- ACP builder、basic、config、runtime などの既存参照を、正本側実装または実体 module へ移行する作業で、互換入口を残す理由や削除条件を切り分けたいとき。
+- cmoc の realization implementation のうち、CLI 構成、サブコマンド実行本体、共通 runtime helper、互換 import 層のどの領域へ進むべきか判断したいとき。
+- `cmoc` console script から Typer app、各サブコマンド、実装関数、共通 runtime、git/state/Codex 実行支援へ至る実装上の入口を探したいとき。
+- `basic.*`、`config.*`、`acp.*`、`acp.builder.*`、`oracle.*`、旧 runtime module などの既存 import path を、oracle 側正本実装または実体 module へ委譲・再公開している互換境界を確認したいとき。
+- INDEX 更新、Codex exec/TUI 呼び出し、quota retry、file access post-check、apply 実行管理、ログ、path、state、結果モデルなど、複数サブコマンドで共有される runtime 実装への入口を探したいとき。
 
 ## Do not read this when
-- oracle file に書かれた正本仕様断片、agent prompt、人間意図、path placeholder 定義、設定定義そのものを確認したいときは、対応する oracle 側の本文を読む。
-- 個別の実装責務がすでに特定できているときは、この階層全体ではなく、該当する CLI 入口、サブコマンド実装、共通 runtime helper、互換 shim へ直接進む。
-- テスト挙動や realization test を確認・変更したいときは、実装領域ではなくテスト領域を読む。
-- 既存 import path の互換維持や oracle 側委譲に関係しない新しい正本仕様や API 方針を検討しているだけのときは、この階層を入口にしない。
+- oracle file に書かれた正本仕様断片、agent prompt、人間意図、path placeholder、file access rule、設定定義、ACP builder の正本内容を確認したいときは、対応する oracle 側の doc または src を読む。
+- 個別サブコマンドの内部処理、共通 helper、互換 import 層など読む対象がすでに決まっているときは、この階層ではなく該当する下位対象を直接読む。
+- 実行済みログ、生成済み成果物、作業メモ、テストだけを調査したいときは、この実装入口ではなく該当する保存先やテスト領域へ進む。
+- 新しい公開 API、CLI option、設定項目を追加する場所を探しているだけで、現行 realization implementation や既存互換 import path の責務境界を確認する必要がないとき。
 
 ## hash
-- 0aabce9c20059fe6c025e51fcd5dd15f37c69f8d9b8be712fa58ab2e0e453f5d
+- 8804c0db747c8b654c665d4346e4c1fe298b91701e5ad13d15c0f8c5744ccb9f
 
 # `test`
 
