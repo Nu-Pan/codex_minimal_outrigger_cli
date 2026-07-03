@@ -1,23 +1,23 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実行本体を集めた実装領域。apply run の開始、破棄、取り込み、report 生成など、apply state・branch・worktree・process id・利用者向け出力を伴う制御への入口になる。
-- 各対象は具体的なサブコマンドまたは report 生成の責務を持ち、apply run のライフサイクル、scope 判定、finding 適用、join 時の差分分類や cleanup を調べる際の起点になる。
+- apply 系サブコマンドの実行本体をまとめる実装ディレクトリ。apply run の開始、所見適用、report 生成、join、abandon など、apply lifecycle の各操作へ進む入口になる。
+- 個別ファイルはサブコマンド単位または report 生成単位で責務が分かれており、apply state、apply branch、apply worktree、process id、session branch との関係を扱う制御を探すときに読む。
 
 ## Read this when
-- apply fork、apply join、apply abandon の外部挙動、失敗条件、状態遷移、branch・worktree・process id の扱いを確認または変更したいとき。
-- apply run の開始から Codex 実行、差分 commit、report 出力、session branch への取り込み、cleanup までの制御を、サブコマンド単位で読み分けたいとき。
-- apply fork の report 内容、変更要約、未収束時や失敗時の表示など、apply run の結果を利用者に示す処理を確認または変更したいとき。
-- apply join 時の想定外差分、force resolve、merge conflict、INDEX conflict の自動解決、last joined oracle snapshot の更新を調べたいとき。
+- apply fork、join、abandon など apply lifecycle の外部挙動、状態遷移、branch/worktree の扱い、終了時の掃除を確認または変更したいとき。
+- apply run の開始条件、破棄条件、session branch への取り込み条件、想定外差分や conflict の扱いを、サブコマンド実装から辿りたいとき。
+- apply fork の report 生成、変更要約、未収束時や失敗時の report 表示を扱う実装へ進みたいとき。
+- apply パッケージ自体に import 時処理や再 export があるかを確認したうえで、具体的なサブコマンド実装へ進むべきか判断したいとき。
 
 ## Do not read this when
-- apply 系サブコマンドの CLI 引数定義やコマンド登録だけを確認したいとき。
-- branch、worktree、state file、process id、git command、report 保存先、ignore 判定などの共通 helper の低レベル実装だけを調べたいとき。
-- session の作成・終了・状態ファイル形式そのもの、または oracle file 判定や path model の仕様を確認したいとき。
-- Codex に渡す prompt parameter の内容だけを変更したいとき。
+- apply 以外の subcommand、CLI parser、command routing、共通 runtime wrapper の挙動だけを確認したいとき。
+- git command wrapper、state file、worktree 探索、report directory 生成など、apply サブコマンドから使われる低レベル helper の実装詳細だけを調べたいとき。
+- Codex に渡す prompt parameter の本文や builder の内容だけを変更したいとき。
+- oracle file や realization file の一般定義、INDEX.md 生成規則、パスモデル自体を確認したいとき。
 
 ## hash
-- 22861d596487f5bafeb696bf2f0b9c39cd472badebef51715e5cc2404e6026a6
+- 75d39ad24ffd94a30d1312e69f62fc787812e1cf3115ac00179b40686ef56353
 
 # `indexing.py`
 

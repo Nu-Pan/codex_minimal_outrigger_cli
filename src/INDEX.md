@@ -141,20 +141,20 @@
 # `sub_commands`
 
 ## Summary
-- cmoc のサブコマンド実行本体を集める実装領域。init、indexing、tui、session、apply、review など、CLI entrypoint から呼ばれた後の各操作の orchestration への入口になる。
-- 各対象は個別サブコマンドまたはサブコマンド群の責務を持ち、work root、git、state、branch、worktree、Codex 実行、report 出力、INDEX 更新などを伴う制御を調べる際に読み分ける起点になる。
+- CLI サブコマンドの実行本体を集める実装領域。初期化、index maintenance、TUI 起動、session lifecycle、apply lifecycle、review oracle など、利用者向け操作から各ドメインの制御へ進む入口になる。
+- 各領域はサブコマンド単位またはサブコマンド群単位で分かれており、CLI runtime から呼ばれる orchestration、事前条件検査、git 状態操作、worktree・branch・state の更新、report 出力への接続を確認する起点になる。
 
 ## Read this when
-- cmoc の各サブコマンドについて、CLI 登録後の実行フロー、事前条件、状態更新、git 操作、Codex 実行、利用者向け出力を確認または変更したいとき。
-- init、indexing、tui の単体サブコマンド実装、または session、apply、review のサブコマンド群のどの下位対象へ進むべきかを判断したいとき。
-- session branch や apply run、review oracle など、複数段階のライフサイクルを持つ操作の大きな制御順序と責務境界を追いたいとき。
-- INDEX.md maintenance、review report、apply report、TUI prompt、初期化結果など、サブコマンド固有の出力や後処理への入口を探したいとき。
+- 利用者向けサブコマンドの実行フロー、事前条件、状態遷移、git 操作、stdout や report 出力への接続を確認または変更したいとき。
+- session、apply、review など lifecycle を持つ操作について、開始・合流・破棄・後始末のどの実装へ進むべきかを判断したいとき。
+- index maintenance、初期化、TUI 起動など、共通 runtime や下位 helper をサブコマンドとして呼び出す薄い orchestration 層を探したいとき。
+- 個別サブコマンドから、対象列挙、review loop、report rendering、conflict 解決、prompt parameter builder、git helper などの下位処理へどこから入るかをたどりたいとき。
 
 ## Do not read this when
-- Typer app へのコマンド登録、CLI 引数定義、トップレベル entrypoint だけを確認したいとき。
-- git command wrapper、CLI runtime、path model、state model、config、ignore 判定、Codex parameter builder など、共通 helper の低レベル実装だけを調べたいとき。
-- oracle doc に書かれた各サブコマンドの正本仕様そのものを確認したいとき。
-- INDEX.md の文章生成ロジック、review finding 生成、prompt parameter の具体的文面など、下位の専用モジュールや builder が直接担う詳細だけを調べたいとき。
+- CLI parser、Typer app への登録、トップレベル command routing、共通 runtime wrapper だけを確認したいとき。
+- git command wrapper、path model、state model、config、ignore 判定、lock、commit 処理など、複数サブコマンドから使われる低レベル helper の詳細だけを調べたいとき。
+- Codex に渡す prompt や parameter builder の本文、Structured Output schema、TUI launch parameter の詳細だけを変更したいとき。
+- oracle file の正本仕様、INDEX.md 生成規則、oracle file と realization file の一般定義を確認したいとき。
 
 ## hash
-- d0139106857328c61dd7a042e2ba83db00d8eb7564a2d1659195804a0700cb64
+- 5fc6ec2d5263c0f24fea5bf6e836619f35e041c1722fc1296c81dacef64f8ae5

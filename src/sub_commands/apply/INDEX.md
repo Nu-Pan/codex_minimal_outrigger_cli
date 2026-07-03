@@ -78,22 +78,22 @@
 # `join.py`
 
 ## Summary
-- apply run の完了またはエラー後に、apply branch を session branch へ取り込み、apply state を初期状態へ戻す CLI 処理を実装する。
-- join 実行前の branch・worktree・state 検証、想定外差分の検出と force resolve、merge conflict 報告、結果 report 作成、apply worktree と branch の cleanup を扱う。
-- apply 側と session 側で許可される変更範囲の判定、managed branch 上の変更 path 抽出、INDEX conflict の機械解決など、apply join 固有の制御ロジックへの入口になる。
+- apply run の完了またはエラー後に、apply branch を session branch へ取り込み、apply state を初期状態へ戻す処理を扱う。
+- join 実行可否の検証、想定外差分の検出と force-resolve、merge conflict の扱い、結果レポート作成、apply worktree と branch の後片付けを担う。
+- apply branch と session branch で許可される変更範囲、INDEX.md conflict の機械解決、root memo の扱いなど、apply join 固有の変更分類を確認する入口になる。
 
 ## Read this when
-- apply run を session branch に取り込む処理、join 可否判定、apply state の reset、last joined oracle snapshot commit の更新を確認・変更したいとき。
-- apply join 時の想定外差分、force resolve による差分復元、apply branch と session branch の変更範囲分類を調べたいとき。
-- apply join の結果 report、merge conflict report、cleanup 成否や warning 出力の内容を確認・変更したいとき。
-- apply worktree 上または session worktree 上から join を実行した場合の branch 解決、worktree 削除、apply branch 削除の挙動を追いたいとき。
-- INDEX conflict だけを自動解決する条件や、削除 path・rename path の扱いを確認したいとき。
+- apply join の実行条件、状態遷移、出力内容、結果レポートを変更または確認したいとき。
+- apply branch を session branch へ merge する流れ、merge conflict 時の中断条件、INDEX.md conflict の自動処理を調べたいとき。
+- apply join 時に oracle、memo、INDEX.md、git ignored path、.agents などの差分が apply 側または session 側でどう分類されるかを確認したいとき。
+- --force-resolve が想定外差分をどの基準 commit へ戻し、どの branch に commit するかを変更または検証したいとき。
+- apply join 後に apply worktree や apply branch が削除される条件、または残る場合の warning を調べたいとき。
 
 ## Do not read this when
-- apply run の開始、apply branch の作成、agent 実行、または apply state を completed/error にする処理を調べたいだけのとき。
-- session の作成・終了・状態ファイル形式そのものを調べたいときは、session 管理や状態定義を扱う対象を先に読む。
-- git command 実行 wrapper、worktree 探索、report 保存先、ignore 判定などの共通 runtime helper の詳細だけを調べたいとき。
-- oracle file 判定や path model の仕様そのものを調べたいときは、正本仕様または共通判定処理を読む。
+- apply run の開始、実行、完了判定そのものを扱う場合。apply join 前後の apply lifecycle を担う別の処理を読む方が直接的。
+- session state のデータ構造、git command wrapper、worktree 探索、report directory 生成などの共通 runtime helper の仕様を確認したいだけの場合。
+- apply join 以外の subcommand の CLI 定義、出力、状態遷移を調べたい場合。
+- oracle file や realization file の一般定義、INDEX.md 生成規則、パスモデル自体を確認したい場合。
 
 ## hash
-- 9c5a5e5ab5cbb865ce3106ec028468a933a079b8361df794b92887d5ab1d7abd
+- dbb7326c92f2cb078b06fc3a0f48d49a6f4808b52456011cdc093f322b50d694

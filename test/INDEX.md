@@ -105,26 +105,24 @@
 # `test_apply_join_cli.py`
 
 ## Summary
-- apply run を session へ join する CLI 外部挙動を検証するテスト群。正常 join、apply worktree からの実行、linked session worktree への反映、後片付け、state 更新、report 生成を扱う。
-- join 可否を分ける境界条件として、stale apply branch、dirty apply worktree、想定外差分、force resolve、削除差分、rename target、memo 判定、gitignore 変更、merge conflict、INDEX.md conflict の扱いを同じ文脈で確認する。
-- ファイル自体は大きいが、同じ fixture と git 状態を使う apply join の成功条件・拒否条件を一箇所で読むための凝集したテストとして位置づけられている。
+- apply run を session へ join する CLI 外部挙動を検証するテスト群。成功時の merge、apply worktree と branch の cleanup、state 更新、report 生成に加え、apply worktree 上からの実行、linked session worktree、dirty worktree、stale apply branch、想定外差分、force resolve、merge conflict の扱いを確認する。
+- apply join の変更可否を決める境界条件を、同じ fixture と git 状態の文脈でまとめて読むためのテスト入口。
 
 ## Read this when
-- apply join の CLI 挙動、終了コード、標準出力、report 内容、state 更新、worktree/branch cleanup を変更または確認したいとき。
-- apply join が session worktree と apply worktree のどちらから実行されたかで cleanup や merge 先がどう変わるかを確認したいとき。
-- apply join で許可される差分と拒否される差分の境界、または --force-resolve による revert 挙動を確認したいとき。
-- apply join の merge conflict 検出、INDEX.md conflict の自動解決、想定外差分 report の内容を変更または検証したいとき。
-- apply join 周辺の helper が、変更パスの抽出、memo 判定、expected apply/session change 判定をどう扱うべきか確認したいとき。
+- apply join の CLI 挙動、終了コード、標準出力、report、state 更新、cleanup の期待値を確認または変更する。
+- apply fork 後の apply branch や apply worktree を session に取り込む処理のテストを追加・修正する。
+- apply join が dirty worktree、stale apply branch、想定外差分、oracle/AGENTS.md 差分、tracked ignored file、削除、rename、merge conflict をどう扱うべきか確認する。
+- apply join を session worktree 以外、特に apply worktree や linked session worktree から実行した場合の挙動を確認する。
+- apply join の unexpected changes 分類や managed branch 上の変更 path 抽出に関わる制御ロジックを確認する。
 
 ## Do not read this when
-- apply fork の Codex 実行や apply worktree 作成そのものを確認したいだけのとき。
-- session fork、init、repository fixture など join 前提を作る別 CLI の単独挙動を確認したいとき。
-- apply join の内部実装だけを局所的に読みたい場合で、外部挙動テストの期待値を確認する必要がないとき。
-- oracle 正本仕様や realization standard の本文を確認したいとき。
-- INDEX.md ルーティング文書の生成規則や他ファイルへの入口を確認したいとき。
+- apply fork 単体の Codex 実行、branch 作成、apply worktree 作成だけを確認したい。
+- session fork や init の基本挙動だけを確認したい。
+- join 以外の apply サブコマンド、または CLI を経由しない内部 helper の単体仕様だけを確認したい。
+- oracle file の正本仕様本文を確認したい場合は、対応する oracle 側の文書や実装を読む。
 
 ## hash
-- 46beb0d4dff71ffe132541609d84cd7a44f9f350ad4618a383b8daf3c40c943f
+- 26a23b713fa9b7e808bcde1bbfcd855b2548d3a89ab1f07c60e8a38ffc5cb667
 
 # `test_basic_runtime.py`
 
