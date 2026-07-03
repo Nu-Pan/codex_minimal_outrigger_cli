@@ -1,25 +1,25 @@
 # `acp`
 
 ## Summary
-- oracle src 側の ACP builder 正本実装を複製せず、既存の acp import 経路を維持するための互換入口をまとめる領域。
-- 旧 import 経路から oracle 側実装への委譲、再 export、module alias、realization 側の型や公開面への最小限の適合を扱う。
-- apply fork、review、session、TUI、indexing、quota probe、common recovery など、builder 互換入口の下位領域へ進むための上位入口になる。
+- oracle src 側の acp builder 実装を正本に保ち、既存の `acp.*` / builder import 経路を canonical oracle 実装へ委譲する互換入口の領域。
+- 実処理や正本仕様そのものではなく、旧 import surface の維持、realization 側公開型への適合、一時補正、互換層の残存理由や削除条件を確認するためのまとまり。
 
 ## Read this when
-- ACP builder 周辺の旧 import 互換性、再 export、module alias、oracle 側実装への委譲境界を確認したいとき。
-- 既存の acp import 参照を oracle 側または実体 module へ移行する作業で、互換入口を残す理由や削除条件を確認したいとき。
-- 正本側 builder の生成結果を realization 側の agent call parameter 型や既存公開面へどう適合させているかを調べたいとき。
-- apply fork、review、session、TUI、indexing、quota probe、common recovery などの builder 互換入口のうち、どの下位領域へ進むべきか判断したいとき。
+- ACP builder 周辺で、旧来の公開 import 経路が oracle 側実装へどう解決されるか確認したいとき。
+- `acp.*` 参照を `oracle.*` または実体 module へ移行する作業で、互換入口を残す理由や削除条件を確認したいとき。
+- oracle 側 builder の生成結果を realization 側の agent call parameter 型へ適合させる wrapper や package 入口を探すとき。
+- apply fork、review、session、TUI、indexing、quota probe など、特定用途の builder 互換層や削除条件を調べる入口を選びたいとき。
+- 同名機能の実装が realization 側に見える場合に、実体を持つ処理なのか import 互換層なのか切り分けたいとき。
 
 ## Do not read this when
-- agent prompt、parameter 生成内容、判定仕様、builder 本体などの正本仕様を確認したいときは、対応する oracle 側の本文または実装を読む。
-- apply の実行フロー、fork 作成、branch 操作、diff 生成、CLI 引数処理など、builder 互換層以外の機能実装を調べたいときは、その機能本体を読む。
-- agent call parameter の基礎データ構造、汎用変換 helper、repo root 解決、git helper、path model だけを調べたいときは、それぞれの共通実装を読む。
-- TUI 画面、session 挙動、review 判定、indexing 生成処理など、個別機能の実処理やデータ構造を変更したいときは、互換入口ではなく実体を持つ対象を読む。
-- acp import 参照が全公開面と realization 側から消えていることだけを確認済みで、互換入口の詳細を読む必要がないとき。
+- agent prompt、parameter 生成内容、判定仕様、変換仕様などの正本仕様断片を確認したい場合は、対応する oracle 側の実体を読む。
+- apply、review、session、TUI など各機能の実行フロー、画面挙動、CLI 処理、git 操作などを調べたい場合は、その機能本体へ進む。
+- AgentCallParameter の基礎データ構造、repo root 解決、oracle import 準備、汎用変換 helper だけを確認したい場合は、共通定義や helper 側を読む。
+- 新しい acp 機能や API 仕様を追加する場所を探しているとき。この領域は互換維持専用であり、機能追加の入口ではない。
+- `acp.*` 参照が全公開面と realization 側から消えていることだけを確認済みで、互換入口の詳細を読む必要がないとき。
 
 ## hash
-- 2801f9593c87c1229f9338b0d15af457305e9c4148b41fc0731216fc01742f7b
+- 06bcb4eebb113d2713cd9f0eb71824505c85ddd768ef825620220b6b2446fc7f
 
 # `basic`
 

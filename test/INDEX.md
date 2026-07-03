@@ -19,22 +19,22 @@
 # `test_acp_builder_parameters.py`
 
 ## Summary
-- ACP builder が返す AgentCallParameter のモデル種別、推論量、ファイルアクセスモード、プロンプト内容、structured output schema 参照が期待どおりかを検証する realization test。
-- apply fork、TUI parameter resolution、index entry generation、review oracle finding 系、session join conflict resolution など、複数の builder の公開的な出力契約と oracle schema との一致をまとめて扱う。
+- ACP builder が生成する agent call parameter、prompt の埋め込み内容、file access mode、reasoning effort、structured output schema 参照が、正本仕様断片や既存互換の期待に合っているかを検証するテスト群。
+- apply fork、TUI parameter 解決、index entry 生成、oracle review、session join conflict resolution など、複数の builder の公開挙動を横断的に確認する。
 
 ## Read this when
-- ACP builder の parameter 設定や structured_output_schema_path を変更したとき。
-- builder prompt に含める path placeholder、標準文書断片、動的入力文字列の保持・置換境界を確認したいとき。
-- review oracle finding 系 schema、apply fork change summary schema、TUI resolve parameter schema と oracle src の schema 一致を検証したいとき。
-- FileAccessMode、ModelClass、ReasoningEffort の選定を builder 単位で変更または調査するとき。
+- ACP builder の返す model class、reasoning effort、file access mode、structured output schema path、prompt 文面を変更する。
+- 正本 schema と realization builder の schema 参照が一致しているかを確認したい。
+- TUI parameter 解決、index entry 生成、oracle review finding 系、apply fork 系、session join conflict resolution 系の builder 変更に伴う回帰テストを探している。
+- builder module の公開 export を絞る互換性要件を確認したい。
 
 ## Do not read this when
-- 個別 builder の実装詳細だけを確認したい場合は、対応する実装側の builder module を直接読む。
-- oracle schema 自体の正本定義を確認したい場合は、oracle src 配下の該当 schema を直接読む。
-- ACP builder と無関係な CLI 挙動、永続状態、path model、agent orchestration の仕様や実装を調べるとき。
+- 個別 builder の実装責務や prompt 組み立て処理を読みたい場合は、対象 builder の実装へ直接進む。
+- 正本 schema 自体の内容を確認・変更したい場合は、oracle 側の schema 定義を読む。
+- INDEX.md エントリー生成ロジックそのものを変更したい場合は、indexing builder や関連実装を読む。
 
 ## hash
-- 12d0fbe9fbb74e0205b1025e765d117d9e99edce45b1498bda427918f05e27c8
+- 57c4ec7a2e17dfe4510e65e26483bb9661348b995d0783d9766548dcd9488029
 
 # `test_apply_abandon_cli.py`
 

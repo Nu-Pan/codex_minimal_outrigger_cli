@@ -19,20 +19,21 @@
 # `builder`
 
 ## Summary
-- ACP builder の旧 import 経路を oracle 側の正本実装へ接続する互換層をまとめる領域。realization 側では package path、module alias、再 export、最小限の出力適合を担い、builder の仕様本体や生成ロジックは oracle 側に置く。
-- apply fork、review、session、TUI、indexing、quota probe、common recovery など、既存参照を壊さず正本側 builder を利用するための入口を切り分ける。互換層を残す理由、削除条件、正本側実装との対応関係を確認するための上位入口になる。
+- oracle 側 ACP builder を正本に保ちつつ、既存の builder import 経路を成立させる互換層のまとまり。
+- apply、review、session、TUI、indexing、quota probe などの builder 参照を canonical oracle 実装へ委譲し、必要な箇所だけ realization 側の公開型や一時補正へ適合させる入口になる。
+- 実処理や正本仕様そのものではなく、旧 import surface の維持、oracle builder への接続、互換層の残存理由や削除条件を確認するための領域。
 
 ## Read this when
-- ACP builder 周辺の旧 import 互換性、再 export、module alias、oracle 側実装への委譲境界を確認したいとき。
-- 正本側 builder の生成結果を realization 側の agent call parameter 型や既存公開面へどう適合させているかを調べたいとき。
-- apply fork、review、session、TUI、indexing、quota probe、common recovery などの builder 互換入口のうち、どの下位領域へ進むべきか判断したいとき。
-- 互換 wrapper や一時補正を残す理由、削除条件、旧参照から canonical oracle 実装への移行可否を検討するとき。
+- ACP builder 周辺で、旧来の公開 import 経路が oracle 側実装へどう解決されるか確認したいとき。
+- oracle 側 builder の生成結果を realization 側の agent call parameter 型へ適合させる wrapper や package 入口を探すとき。
+- apply fork、review、session、TUI、indexing、quota probe など、特定用途の builder 互換層や削除条件を調べる入口を選びたいとき。
+- 同名機能の実装が realization 側に見える場合に、実体を持つ処理なのか import 互換層なのか切り分けたいとき。
 
 ## Do not read this when
-- agent prompt、parameter 生成内容、判定仕様、builder 本体などの正本仕様を確認したい場合は、対応する oracle 側の本文または実装を読む。
-- apply の実行フロー、fork 作成、branch 操作、diff 生成、CLI 引数処理など、builder 互換層以外の機能実装を調べたい場合は、その機能本体へ進む。
-- agent call parameter の基礎データ構造、汎用変換 helper、repo root 解決、git helper、path model だけを調べたい場合は、それぞれの共通実装を読む。
-- TUI 画面、session 挙動、review 判定、indexing 生成処理など、個別機能の実処理やデータ構造を変更したい場合は、互換入口ではなく実体を持つ対象を読む。
+- agent prompt、parameter 生成内容、判定仕様、変換仕様などの正本仕様断片を確認したい場合は、対応する oracle 側の実体を読む。
+- apply、review、session、TUI など各機能の実行フロー、画面挙動、CLI 処理、git 操作などを調べたい場合は、その機能本体へ進む。
+- AgentCallParameter の基礎データ構造、repo root 解決、oracle import 準備、汎用変換 helper だけを確認したい場合は、共通定義や helper 側を読む。
+- 互換 import 経路や oracle builder への委譲と無関係な ACP 全体の公開面や別領域の処理を調べたい場合は、より直接の対象へ進む。
 
 ## hash
-- 6d2d2cd4f62f90144129d2842351186dac529aa02513d4638da681ace1a029e8
+- e1ba63c694024765d3bdc375e006c972c9dfcaa5580a8a8df24b6aab33e3db63
