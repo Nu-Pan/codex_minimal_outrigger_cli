@@ -76,6 +76,7 @@ _BeforeCodexCall = Callable[[str, Path], None]
 
 
 def _write_prompt_log(path: Path, prompt: str) -> None:
+    """Codex に渡した完全 prompt を再実行可能な stdin log として保存する。"""
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # The prompt log is the replayable stdin source itself, not metadata.
     path.write_text(prompt)
@@ -83,6 +84,7 @@ def _write_prompt_log(path: Path, prompt: str) -> None:
 
 
 def _record_generated_diff_paths(paths: set[Path]) -> None:
+    """cmoc が生成した差分 path の現在 fingerprint を post-check 用に記録する。"""
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # Concurrent cmoc calls share a worktree. A generated path is ignored only
     # while its fingerprint still matches the cmoc-written content; later agent
@@ -94,6 +96,7 @@ def _record_generated_diff_paths(paths: set[Path]) -> None:
 
 
 def _read_required_output_json(path: Path) -> Any:
+    """Structured Output の必須 JSON を semantic retry 用に厳格に読み取る。"""
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # Structured Output parse failure is semantic failure; schema permissiveness
     # must not turn missing, empty, or malformed output into success.
@@ -110,6 +113,7 @@ def _read_required_output_json(path: Path) -> Any:
 
 
 def _extract_resume_token_from_jsonl_log(path: Path) -> str | None:
+    """失敗した Codex session の永続 JSONL log から resume token を取り出す。"""
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # quota resume must be based on the persisted JSONL log for the failed
     # Codex session; if it is unreadable, retry without `resume`.
@@ -120,6 +124,7 @@ def _extract_resume_token_from_jsonl_log(path: Path) -> str | None:
 
 
 def _base_exec_argv(profile_name: str, codex_cwd: Path) -> list[str]:
+    """cmoc 側で検査済みの cwd/profile を使う Codex exec argv の共通部分を作る。"""
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # cmoc may run Codex from linked worktrees or generated roots; repo
     # validation belongs to cmoc's own preflight, not to Codex CLI startup.

@@ -12,6 +12,7 @@ import json
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from typing import TextIO, cast
 
 import cmoc_runtime
 import commons.runtime_codex_exec as runtime_codex_exec
@@ -236,7 +237,7 @@ def test_quota_probe_uses_real_builder_when_quota_recovers(
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
-    calls = []
+    calls: list[str] = []
     probe_parameter = build_quota_availability_probe_parameter(
         AgentCallParameter(
             ModelClass.EFFICIENCY,
@@ -251,8 +252,10 @@ def test_quota_probe_uses_real_builder_when_quota_recovers(
     assert probe_parameter.file_access_mode == FileAccessMode.READONLY
     assert probe_parameter.structured_output_schema_path is None
 
-    def fake_run(argv, **kwargs):
-        prompt = kwargs["stdin"].read()
+    def fake_run(
+        argv: list[str], **kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        prompt = cast(TextIO, kwargs["stdin"]).read()
         calls.append(prompt)
         if len(calls) == 1:
             return subprocess.CompletedProcess(
@@ -303,11 +306,13 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
     stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     probe_prompt = stub_quota_probe_builder(monkeypatch)
-    records = []
+    records: list[tuple[str, Path, Path, Path, Path]] = []
 
-    def fake_run(argv, **kwargs):
-        stdin = kwargs["stdin"].read()
-        cwd = Path(kwargs["cwd"])
+    def fake_run(
+        argv: list[str], **kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        stdin = cast(TextIO, kwargs["stdin"]).read()
+        cwd = Path(cast(str, kwargs["cwd"]))
         kind = (
             "resume"
             if "resume" in argv
@@ -315,7 +320,7 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
             if stdin == probe_prompt
             else "initial"
         )
-        home = Path(kwargs["env"]["CODEX_HOME"])
+        home = Path(cast(dict[str, str], kwargs["env"])["CODEX_HOME"])
         records.append((kind, cwd, home, cwd / home, Path(argv[argv.index("--cd") + 1])))
         if kind == "initial":
             return subprocess.CompletedProcess(

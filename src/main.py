@@ -22,12 +22,16 @@ from sub_commands.tui import cmoc_tui_impl
 
 
 class ApplyForkScope(str, Enum):
+    """apply fork の調査対象範囲を CLI option 値として表す。"""
+
     rolling = "rolling"
     session = "session"
     full = "full"
 
 
 class ReviewOracleScope(str, Enum):
+    """review oracle の調査対象範囲を CLI option 値として表す。"""
+
     session = "session"
     full = "full"
 
