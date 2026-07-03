@@ -1,0 +1,25 @@
+{
+  "num_parallel": 8,
+  "codex": {
+    "model": {
+      "efficiency": "GPT-5.4-mini",
+      "flagship": "GPT-5.5",
+      "mainstream": "GPT-5.5",
+      "minimum": "GPT-5.4-mini"
+    },
+    "reasoning_effort": {
+      "high": "high",
+      "low": "low",
+      "medium": "medium"
+    },
+    "num_try_falv_recovery": 1
+  },
+  "apply_fork": {
+    "num_apply_files": 200
+  },
+  "review_oracle": {
+    "num_enumerate_findings_loop": 2,
+    "num_merge_findings_loop": 2,
+    "num_validate_findings_loop": 2
+  }
+}
