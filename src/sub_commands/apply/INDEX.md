@@ -79,22 +79,21 @@
 # `join.py`
 
 ## Summary
-- apply run の完了またはエラー後に、apply branch を session branch へ取り込み、apply state を初期状態へ戻す処理を扱う。
-- join 実行可否の検証、想定外差分の検出と force-resolve、merge conflict の扱い、結果レポート作成、apply worktree と branch の後片付けを担う。
-- apply branch と session branch で許可される変更範囲、INDEX.md conflict の機械解決、root memo の扱いなど、apply join 固有の変更分類を確認する入口になる。
+- apply join サブコマンドの実行本体を担い、apply branch を session branch へマージして apply state を初期状態へ戻す。
+- join 前のブランチ種別、session/apply state、作業ツリーの clean 状態、想定外差分、merge conflict を検査し、必要に応じて report 作成・エラー終了・force-resolve による復元を行う。
+- apply/session branch 上の許可差分判定、想定外差分の分類、INDEX.md conflict の機械解決、apply worktree と apply branch の cleanup も扱う。
 
 ## Read this when
-- apply join の実行条件、状態遷移、出力内容、結果レポートを変更または確認したいとき。
-- apply branch を session branch へ merge する流れ、merge conflict 時の中断条件、INDEX.md conflict の自動処理を調べたいとき。
-- apply join 時に oracle、memo、INDEX.md、git ignored path、.agents などの差分が apply 側または session 側でどう分類されるかを確認したいとき。
-- --force-resolve が想定外差分をどの基準 commit へ戻し、どの branch に commit するかを変更または検証したいとき。
-- apply join 後に apply worktree や apply branch が削除される条件、または残る場合の warning を調べたいとき。
+- apply join の実行条件、成功時の状態更新、apply branch/worktree の削除条件を確認したいとき。
+- apply join が検出する想定外差分の分類基準、force-resolve 時の復元・commit 挙動、report 内容を変更したいとき。
+- apply branch の merge conflict 処理、特に INDEX.md だけの conflict を自動解決する挙動を確認したいとき。
+- apply branch 上と session branch 上で許可される変更範囲の判定を調べたいとき。
 
 ## Do not read this when
-- apply run の開始、実行、完了判定そのものを扱う場合。apply join 前後の apply lifecycle を担う別の処理を読む方が直接的。
-- session state のデータ構造、git command wrapper、worktree 探索、report directory 生成などの共通 runtime helper の仕様を確認したいだけの場合。
-- apply join 以外の subcommand の CLI 定義、出力、状態遷移を調べたい場合。
-- oracle file や realization file の一般定義、INDEX.md 生成規則、パスモデル自体を確認したい場合。
+- apply join 以外の apply サブコマンドの作成・実行・状態遷移を調べたいとき。
+- CLI 共通のエラー表示、git 実行、state 読み書き、worktree 探索などの基盤処理だけを調べたいとき。
+- oracle file や realization file の一般的な定義・ルールを確認したいとき。
+- INDEX.md のルーティング文書生成ルールそのものを確認したいとき。
 
 ## hash
-- dbb7326c92f2cb078b06fc3a0f48d49a6f4808b52456011cdc093f322b50d694
+- 0af4c5756155990fb87e3bd82613cdeeb0953bc7b2f3dd54be6877238e9ac34f

@@ -106,25 +106,22 @@
 # `test_apply_join_cli.py`
 
 ## Summary
-- apply run を session へ join する CLI 外部挙動を検証するテスト。join 成功時の worktree/branch cleanup、state 更新、report 生成、apply worktree からの実行、linked session worktree への反映を扱う。
-- apply join の拒否・異常系として、stale apply branch、dirty apply worktree、想定外差分、force-resolve、merge conflict、INDEX.md conflict 解決、tracked ignored file、memo 分類、managed branch changed path 抽出を検証する。
-- 16,000 文字を超えるが、apply join の成功条件と拒否条件を同じ fixture と git 状態の文脈で読む必要があるため、外部挙動検証として一箇所にまとまっている。
+- apply run を session へ join する CLI 外部挙動を検証する realization test。成功時の worktree/branch cleanup、state 更新、report 生成と、dirty worktree、stale apply branch、想定外差分、merge conflict、force resolve の拒否・復旧条件を扱う。
+- apply join の可否判断に関わる git 状態、session/apply worktree、管理対象 path 分類の境界条件を一箇所で確認するための入口。
 
 ## Read this when
-- apply join CLI の成功時 cleanup、state 遷移、last joined oracle snapshot、report 出力を変更または確認する場合。
-- apply join を session worktree、apply worktree、linked session worktree のどこから実行できるかを確認する場合。
-- apply join が dirty worktree、stale apply branch、想定外差分、merge conflict をどう検出・報告・中止するかを変更または確認する場合。
-- apply join の --force-resolve による oracle/AGENTS.md や oracle file 差分の扱い、revert 後の state を確認する場合。
-- apply join の expected apply/session change 判定、tracked ignored file、.gitignore、memo、削除・rename path の扱いを変更する場合。
+- apply join の CLI 挙動、終了コード、標準出力、report、state 更新、worktree/branch 後片付けを変更または確認したいとき。
+- apply join が apply worktree 内・session worktree 内・linked session worktree 内から実行された場合の挙動を確認したいとき。
+- apply join の dirty worktree、stale apply branch、想定外差分、merge conflict、force resolve の扱いを変更または調査したいとき。
+- apply join で realization file、oracle、AGENTS、INDEX、memo、tracked ignored file などの path 分類が join 可否にどう影響するかを確認したいとき。
 
 ## Do not read this when
-- apply fork の Codex 実行内容や apply worktree 作成だけを確認したい場合。
-- session fork や init の基本挙動だけを確認したい場合。
-- apply join の内部 helper の単体仕様だけを探しており、CLI 経由の end-to-end な git 状態検証が不要な場合。
-- oracle や realization の一般方針を確認したいだけで、apply join の挙動変更に関係しない場合。
+- apply fork の Codex 実行、prompt 構築、apply worktree 作成だけを確認したいとき。
+- session fork や init の基本挙動だけを確認したいとき。
+- apply join の内部 helper 実装を直接変更したいだけで、CLI 経由の外部挙動テストを先に読む必要がないとき。
 
 ## hash
-- a4cede3bdb2fa785bce441f75ab9bad1314b4c65ff84f502452096005255c6fe
+- f9a4d466f8c0587c817e3794b259953e6897ec1a8567ce6750298cd7400128a4
 
 # `test_basic_runtime.py`
 
