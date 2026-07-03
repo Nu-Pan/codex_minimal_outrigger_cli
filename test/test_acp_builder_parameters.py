@@ -11,6 +11,7 @@ import pytest
 from jsonschema import validate
 
 import acp.builder.tui.resolve_parameter as tui_resolve_parameter_module
+import acp.builder.indexing.index_entry as indexing_index_entry_module
 from acp.builder.apply.fork.change_summary import (
     build_apply_fork_change_summary_parameter,
 )
@@ -202,6 +203,14 @@ def test_indexing_index_entry_uses_low_reasoning() -> None:
     assert parameter.model_class == ModelClass.EFFICIENCY
     assert parameter.reasoning_effort == ReasoningEffort.LOW
     assert parameter.file_access_mode == FileAccessMode.READONLY
+
+
+def test_indexing_index_entry_module_exports_only_compatibility_builder() -> None:
+    assert indexing_index_entry_module.__all__ == [
+        "build_indexing_index_entry_parameter"
+    ]
+    assert not hasattr(indexing_index_entry_module, "Path")
+    assert not hasattr(indexing_index_entry_module, "render_as_markdown")
 
 
 def test_review_oracle_merge_finding_uses_efficiency_model() -> None:
