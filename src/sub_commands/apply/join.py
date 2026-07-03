@@ -328,7 +328,9 @@ def is_expected_apply_change(root: Path, path: str) -> bool:
     p = Path(path)
     if p.name == "INDEX.md":
         return True
-    if path.startswith(".git/"):
+    if p.name == "AGENTS.md":
+        return False
+    if path.startswith((".git/", ".codex/")):
         return False
     if path.startswith(("oracle/", ".agents/")) or is_root_memo_path(path):
         return False

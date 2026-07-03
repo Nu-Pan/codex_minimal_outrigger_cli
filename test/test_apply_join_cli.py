@@ -365,6 +365,58 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     assert (root / "oracle" / "spec.md").read_text() == "# spec\n"
 
 
+def test_apply_join_reports_codex_apply_diff_and_force_reverts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    codex_config = root / ".codex" / "config.toml"
+    codex_config.parent.mkdir()
+    codex_config.write_text('model = "base"\n')
+    run_git(root, "add", ".codex/config.toml")
+    run_git(root, "commit", "-m", "add tracked codex config")
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+
+    class FakeCodexResult:
+        output_json = {"findings": []}
+
+    monkeypatch.setattr(
+        apply_fork_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
+    )
+    assert runner.invoke(app, ["apply", "fork"], catch_exceptions=False).exit_code == 0
+    state_path = (
+        root
+        / ".cmoc"
+        / "sessions"
+        / f"{run_git(root, 'branch', '--show-current').stdout.strip().removeprefix('cmoc/session/')}.json"
+    )
+    state = json.loads(state_path.read_text())
+    apply_worktree = apply_worktree_from_state(root, state)
+    (apply_worktree / ".codex" / "config.toml").write_text('model = "apply"\n')
+    run_git(apply_worktree, "add", ".codex/config.toml")
+    run_git(apply_worktree, "commit", "-m", "unexpected codex config")
+
+    normal = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
+
+    assert normal.exit_code == 1
+    assert "想定外差分" in normal.output
+    report_line = [
+        line for line in normal.output.splitlines() if "保存済み report" in line
+    ][0]
+    report = Path(report_line.rsplit(": ", 1)[1]).read_text()
+    assert "- apply: .codex/config.toml" in report
+    forced = runner.invoke(
+        app, ["apply", "join", "--force-resolve"], catch_exceptions=False
+    )
+    assert forced.exit_code == 0
+    assert codex_config.read_text() == 'model = "base"\n'
+
+
 def test_apply_join_reports_session_oracle_agents_diff_and_force_reverts(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -472,6 +524,16 @@ def test_apply_join_classifies_root_memo_as_session_change(
 
     assert apply_module.is_expected_apply_change(root, path) is False
     assert apply_module.is_expected_session_change(root, path) is True
+
+
+@pytest.mark.parametrize("path", ["AGENTS.md", ".codex/config.toml"])
+def test_apply_join_rejects_non_realization_apply_paths(
+    tmp_path: Path,
+    path: str,
+) -> None:
+    root = make_repo(tmp_path)
+
+    assert apply_module.is_expected_apply_change(root, path) is False
 
 
 def test_apply_join_allows_gitignore_and_tracked_ignored_apply_diff(
