@@ -62,24 +62,23 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime 支援を集約する領域。Codex 呼び出し、INDEX 更新、CLI 共通ライフサイクル、設定、内容 hash、エラー表示、git 操作、logging、path、結果モデル、session state、apply process 管理など、複数サブコマンドから参照される実行時 helper を扱う。
-- 多くの対象は実処理本体と互換 import・公開入口に分かれており、横断的な runtime API の入口確認と、責務別 helper の挙動確認の両方の起点になる。
+- cmoc の runtime 共有 helper 群をまとめる実装領域。Codex 呼び出し、INDEX 更新、config、content hash、error 表示、git、logging、path、result model、session/apply state、apply process 管理など、複数サブコマンドから使われる共通実行時処理を扱う。
+- 個別実装は責務別に分かれており、横断的な公開 import 入口と、Codex exec/TUI、indexing preflight、runtime profile、CLI 共通ライフサイクルなどの上位 runtime 制御への入口になる。
 
 ## Read this when
-- 複数サブコマンドで共有される runtime helper、共通データ型、共通例外、共通 logging、共通 path 解決、git 境界、config/state 永続化を確認または変更したいとき。
-- Codex exec/TUI 呼び出し、profile 生成、quota/capacity retry、Structured Output、call log、file access post-check、INDEX 更新 preflight など、agent call 周辺の共通実行制御を追いたいとき。
-- CLI サブコマンドの共通実行ライフサイクル、終了コード化、エラー表示、完了サマリー、subcommand log event など、個別 command に入る前後の共通処理を扱うとき。
-- apply abandon の process 停止、pid file、managed worktree 復元、session state file、cmoc 管理 branch/worktree など、runtime state と外部プロセス・git 状態の接続を調べるとき。
-- INDEX.md の自動更新、対象走査、hash 鮮度判定、既存エントリー再利用、entry 生成依頼、Markdown 描画など、routing 文書生成の実行経路を確認したいとき。
+- CLI サブコマンド横断で使う runtime 共通処理の実装場所を探したいとき。
+- Codex 実行、INDEX.md 自動更新、git 状態操作、config/state 永続化、logging、path 解決、error 変換などの runtime 境界を確認または変更したいとき。
+- 複数の runtime helper を利用する呼び出し側の import 元や、責務別 runtime 実装への進み先を選びたいとき。
+- apply process tracking、session/apply state、Codex subprocess profile、file access mode 境界など、サブコマンド固有処理を支える共通実行時制御を調べたいとき。
 
 ## Do not read this when
-- 個別サブコマンドの利用者向け仕様、引数定義、業務処理、出力 schema だけを確認したいとき。その場合は command 層や対応するテストへ直接進む。
-- path placeholder、config 型、file access rule、INDEX.md 仕様意図、session state の正本要求など、oracle 上の仕様断片そのものを確認したいとき。
-- 特定 helper の内部挙動だけを調べたい場合に、集約入口だけで判断できるとき。責務が分かっているなら対応する下位実装を直接読む。
-- 生成済みログや実行履歴の内容確認が目的で、runtime logging や call log の実装を変更しないとき。
+- 個別 CLI サブコマンドの利用者向け仕様、引数、出力、業務処理だけを調べたいときは、command 実装または対応する仕様・テストを読む。
+- path placeholder、config 型、session state、INDEX.md などの正本仕様意図だけを確認したいときは、対応する oracle doc または oracle src を読む。
+- 特定の低レベル helper の挙動だけが分かっている場合は、この階層全体ではなく該当する責務別 runtime 実装へ直接進む。
+- 生成済みログ、実行履歴、状態ファイルの内容調査が目的で、runtime 実装自体を変更しないとき。
 
 ## hash
-- 279fa3986c218c67902425843f8200e1201224038f788549199eb493d2a4335e
+- f3e4e4148059b8f8f3c36fb41bcb2439c050e2ffed939030de90673e12f4e1de
 
 # `config`
 

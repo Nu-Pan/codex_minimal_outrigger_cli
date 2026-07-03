@@ -40,22 +40,22 @@
 # `test_apply_abandon_cli.py`
 
 ## Summary
-- apply abandon が active apply run を破棄する CLI 外部挙動を検証するテスト群。worktree、branch、session state の cleanup、実行位置の補正、linked session worktree の扱い、running apply process と記録済み child process group の停止を同じ操作の境界条件として扱う。
-- 16,000 文字を超えるが、対象責務は apply abandon の成功、警告、拒否条件に閉じており、同じ state fixture と境界条件を共有するため一箇所にまとまっている。
+- active apply run を abandon する CLI 外部挙動を検証するテスト。apply worktree と branch の cleanup、state の ready への復帰、cleanup 対象欠落時の warning、running process と記録済み child process の停止、PID 再利用・終了競合・lock 待機の扱いを同じ abandon 境界として確認する。
+- 通常 worktree、linked session worktree、apply worktree 内からの実行位置差を含め、abandon が repo 側 state を正として処理することや、dirty な linked session、破損 state、stale apply branch を拒否することを検証する。
 
 ## Read this when
-- apply abandon の CLI 出力、終了コード、state 遷移、worktree/branch 削除、cleanup 警告の期待値を確認または変更するとき。
-- running 状態の apply abandon が process identity を読み、child process group と親 process を停止してから cleanup する挙動を確認または変更するとき。
-- apply worktree、linked session worktree、linked apply worktree、stale apply branch など、abandon 実行位置ごとの許可・拒否条件を確認するとき。
-- apply process id file の読み取り、advisory lock 待機、PID reuse、終了済み process、zombie leader の扱いに関するテストを探すとき。
+- apply abandon の成功時 cleanup、warning 出力、state 更新、worktree/branch 削除の期待挙動を確認または変更するとき。
+- running apply を abandon する際の process identity 読み取り、child process group 停止、PID 再利用防止、pidfd signal、終了済み process の扱いを確認または変更するとき。
+- apply abandon をどの worktree から実行できるか、linked session や stale apply branch の拒否条件を確認または変更するとき。
+- apply fork が作る active apply run の state 形状が abandon のテスト fixture に影響する変更を行うとき。
 
 ## Do not read this when
-- apply fork 自体の Codex 実行、findings 生成、active run 作成の仕様を確認したいだけなら、apply fork 側の実装またはテストを読む。
-- session fork、init、git worktree 作成 helper など、abandon の前提を作る補助処理そのものを調べたい場合は、それぞれの責務を持つ実装やサポートコードを読む。
-- apply abandon 以外の apply サブコマンドの外部挙動や CLI 仕様を確認したい場合は、そのサブコマンドに対応するテストを読む。
+- apply abandon 以外の apply サブコマンドの通常フローだけを確認したいとき。
+- Codex 実行結果の品質や findings 内容そのものを検証したいとき。
+- session fork、init、git helper の一般仕様を確認したいだけで、active apply run の破棄挙動に触れないとき。
 
 ## hash
-- dfb4db2e9b41c4b652b91c0b52a49bef4332ff6c432f132f747de3365c84d9fa
+- 3dbe52f9e2bd55b89592854c3796a71cd636b99783fe8d8098a8d70e1e3aff3d
 
 # `test_apply_fork_cli.py`
 
