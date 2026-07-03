@@ -293,20 +293,21 @@
 # `test_packaged_import.py`
 
 ## Summary
-- packaged layout から読み込まれる import 境界を検証する realization test。配布時の package 設定、oracle package の配置、acp builder が oracle 側の正本実装を参照できることを subprocess 上の隔離 PYTHONPATH で確認する。
+- packaged layout でコピーした最小の site 環境から、主要な realization module が oracle package を正しく import・再 export できることを検証するテスト。
+- pyproject の oracle package 設定、review oracle enumerate finding builder、acp.builder.basic、config.cmoc_config の import 境界と公開名を確認する。
 
 ## Read this when
-- packaged layout、pyproject の package-dir/packages 設定、または oracle/src と src 配下 package の import 境界を変更する。
-- acp.builder.review.oracle.enumerate_finding または acp.builder.basic の配布環境での import 失敗を調査する。
-- oracle.acp_builder.basic の canonical 定義と acp.builder.basic の再 export 関係を検証したい。
+- packaging 設定、PYTHONPATH 上の配置、または oracle/src/oracle を package として扱う import 経路を変更する。
+- acp.builder.review.oracle.enumerate_finding、acp.builder.basic、config.cmoc_config の import 元や re-export の境界を変更する。
+- oracle src の定義を realization 側へコピーせず参照する方針が、インストール相当のレイアウトで壊れていないか確認したい。
 
 ## Do not read this when
-- 通常の prompt 内容、review oracle standard の本文、または structured output schema の詳細仕様だけを確認したい。
-- 開発環境上の直接 import だけを調査しており、packaged layout や隔離 PYTHONPATH での挙動が関係しない。
-- packaging ではなく個別 builder の内部ロジックや finding 列挙仕様そのものを変更する。
+- 通常の CLI 実行フロー、コマンド引数、永続状態、ログ出力の挙動を調べたい。
+- prompt の本文内容や schema の詳細仕様そのものを確認したい場合は、対応する oracle file や builder 実装を直接読む方がよい。
+- 単体関数の内部ロジックや helper 分割を調べたいだけで、packaged layout 上の import 境界に関係しない。
 
 ## hash
-- c8a690ba867f441064f70e79f446514d95e4f7f52d690a0fd4d91457ce91970a
+- 484451aa5216148342d78d9c4c971994fc8e33e9de194a997d6b2fc605432142
 
 # `test_prompt_parts.py`
 
