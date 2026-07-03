@@ -13,6 +13,8 @@ from pathlib import Path
 
 import pytest
 
+import commons.indexing as indexing_module
+import commons.runtime_codex_preflight as codex_preflight_module
 from _support import (
     add_tracked_ignored_oracle_file,
     make_repo,
@@ -812,6 +814,57 @@ def test_review_oracle_merges_review_index_changes(
         path.name == ".git" for path in (root / ".cmoc" / "worktrees").rglob(".git")
     )
     assert not (root / ".cmoc" / "worktrees" / "review").exists()
+
+
+def test_review_oracle_merges_preflight_committed_index_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    review_worktrees: list[Path] = []
+
+    def fake_update_indexes(
+        update_root: Path, codex_exec: object | None = None
+    ) -> list[Path]:
+        review_worktrees.append(update_root)
+        index_path = update_root / "INDEX.md"
+        index_path.write_text("# preflight review index\n")
+        return [index_path]
+
+    class FakeCodexResult:
+        def __init__(self, output_json: dict[str, object]) -> None:
+            self.output_json = output_json
+
+    def fake_runtime_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        schema_name = parameter.structured_output_schema_path.name
+        if schema_name == "enumerate_finding.json":
+            return FakeCodexResult({"findings": []})
+        raise AssertionError(schema_name)
+
+    monkeypatch.setattr(indexing_module, "update_indexes", fake_update_indexes)
+    monkeypatch.setattr(
+        codex_preflight_module, "runtime_run_codex_exec", fake_runtime_run_codex_exec
+    )
+
+    result = runner.invoke(
+        app, ["review", "oracle", "--scope", "full"], catch_exceptions=False
+    )
+
+    assert result.exit_code == 0
+    assert (root / "INDEX.md").read_text() == "# preflight review index\n"
+    assert review_worktrees and all(path != root for path in review_worktrees)
+    assert (
+        run_git(root, "log", "--first-parent", "-1", "--pretty=%s").stdout.strip()
+        != "cmoc indexing"
+    )
+    rendered = Path(
+        [line for line in result.output.splitlines() if line.startswith("/")][-1]
+    ).read_text()
+    assert "review_join_commit: null" not in rendered
 
 
 def test_review_oracle_resolves_index_conflict_when_session_deleted_index(

@@ -25,6 +25,7 @@ from cmoc_runtime import (
 from sub_commands.review_index import (
     commit_review_index_changes,
     merge_review_branch,
+    review_branch_has_index_changes,
     resolve_review_index_conflicts,
     review_worktree_status_paths,
 )
@@ -112,8 +113,11 @@ def _cmoc_review_oracle_body(
                 findings = run_review_oracle_loop(
                     root, review_worktree, oracle_files, config, codex_exec
                 )
-                review_has_index_commit = commit_review_index_changes(review_worktree)
-            if review_has_index_commit:
+                commit_review_index_changes(review_worktree)
+                review_has_index_changes = review_branch_has_index_changes(
+                    review_worktree, review_fork_commit
+                )
+            if review_has_index_changes:
                 review_join_commit = merge_review_branch(current_root, review_branch)
         finally:
             if worktree_created:
