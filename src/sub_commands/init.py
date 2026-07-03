@@ -74,6 +74,10 @@ def _cmoc_init_body() -> None:
             run_git(["commit", "-m", "cmoc init"], root)
     finally:
         _restore_staged_patch(root, staged_patch)
+        # <work-root>/oracle/doc/app_spec/sub_command/init.md requires the
+        # final index state to keep .agents tracked even when a restored
+        # preexisting staged deletion removed the last tracked .agents file.
+        _ensure_agents_tracked(root)
         _restore_gitignore_state(
             root,
             gitignore,

@@ -137,6 +137,30 @@ def test_init_does_not_commit_preexisting_staged_agents_changes(
     ]
 
 
+def test_init_keeps_agents_tracked_after_preexisting_staged_agents_deletion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    agents_file = root / ".agents" / "rule.md"
+    agents_file.parent.mkdir()
+    agents_file.write_text("tracked\n")
+    run_git(root, "add", ".agents/rule.md")
+    run_git(root, "commit", "-m", "track agents file")
+    run_git(root, "rm", ".agents/rule.md")
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(app, ["init"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert run_git(root, "ls-files", "--", ".agents").stdout.splitlines() == [
+        ".agents/.gitkeep"
+    ]
+    assert run_git(root, "diff", "--cached", "--name-status").stdout.splitlines() == [
+        "A\t.agents/.gitkeep",
+        "D\t.agents/rule.md",
+    ]
+
+
 def test_init_does_not_commit_preexisting_gitignore_changes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
