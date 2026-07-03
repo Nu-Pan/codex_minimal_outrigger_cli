@@ -12,7 +12,7 @@ from cmoc_runtime import (
     delete_branch,
     ensure_cmoc_ignored,
     is_git_ignored,
-    is_untracked_git_ignored,
+    is_oracle_file_path,
     load_state_for_branch,
     remove_worktree,
     repo_root,
@@ -340,13 +340,7 @@ def is_expected_session_change(root: Path, path: str) -> bool:
     p = Path(path)
     if p.name == "INDEX.md" or is_root_memo_path(path):
         return True
-    # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
-    # defines oracle file by excluding AGENTS.md/INDEX.md and untracked ignored paths.
-    return (
-        path.startswith("oracle/")
-        and p.name not in {"AGENTS.md", "INDEX.md"}
-        and not is_untracked_git_ignored(root, root / path)
-    )
+    return is_oracle_file_path(root, root / path)
 
 
 def is_root_memo_path(path: str) -> bool:

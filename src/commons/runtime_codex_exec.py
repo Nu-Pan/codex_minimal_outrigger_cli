@@ -42,7 +42,7 @@ from commons.runtime_codex_profile import (
 )
 from commons.runtime_errors import CmocError
 from commons.runtime_codex_logging import emit_codex_call_console
-from commons.runtime_git import is_untracked_git_ignored, run_git
+from commons.runtime_git import is_oracle_file_path, run_git
 from commons.runtime_logging import SubcommandLogger, current_subcommand_logger
 from commons.runtime_paths import (
     codex_log_dir,
@@ -1197,7 +1197,7 @@ def _is_write_allowed_by_file_access_mode(
         return _is_readonly_temporary_diff_path(root, path, mode)
     match mode:
         case FileAccessMode.REALIZATION_WRITE:
-            return not _is_oracle_file_path(root, path)
+            return not is_oracle_file_path(root, path)
         case FileAccessMode.PURE_ORACLE_WRITE:
             return relative.parts[0] == "oracle"
         case FileAccessMode.REPO_WRITE | FileAccessMode.NO_RULE:
@@ -1226,16 +1226,3 @@ def _is_readonly_temporary_diff_path(
         or path.name.endswith((".pyc", ".pyo"))
     )
 
-
-def _is_oracle_file_path(root: Path, path: Path) -> bool:
-    """oracle file 定義に該当する path かを返す。"""
-    try:
-        relative = path.resolve().relative_to(root.resolve())
-    except ValueError:
-        return False
-    return (
-        bool(relative.parts)
-        and relative.parts[0] == "oracle"
-        and path.name not in {"AGENTS.md", "INDEX.md"}
-        and not is_untracked_git_ignored(root, path)
-    )
