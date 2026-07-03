@@ -19,21 +19,23 @@
 # `builder`
 
 ## Summary
-- oracle 側 ACP builder を正本に保ちつつ、既存の builder import 経路を成立させる互換層のまとまり。
-- apply、review、session、TUI、indexing、quota probe などの builder 参照を canonical oracle 実装へ委譲し、必要な箇所だけ realization 側の公開型や一時補正へ適合させる入口になる。
-- 実処理や正本仕様そのものではなく、旧 import surface の維持、oracle builder への接続、互換層の残存理由や削除条件を確認するための領域。
+- ACP builder 領域の realization 側入口。oracle 側 builder を正本に保ちながら、旧来の公開 import 経路を維持する互換 package 群と、quota probe など realization 側で完結する小さな builder を扱う。
+- apply、review、session、TUI、indexing、common などの builder 参照を oracle 側 canonical 実装へ接続し、必要な箇所では oracle builder の出力を realization 側公開型へ適合させる境界を持つ。
+- 実処理や仕様本体よりも、既存 caller との import 互換性、oracle 側実装への委譲、互換層の残存理由や削除条件を確認するための入口になる。
 
 ## Read this when
-- ACP builder 周辺で、旧来の公開 import 経路が oracle 側実装へどう解決されるか確認したいとき。
-- oracle 側 builder の生成結果を realization 側の agent call parameter 型へ適合させる wrapper や package 入口を探すとき。
-- apply fork、review、session、TUI、indexing、quota probe など、特定用途の builder 互換層や削除条件を調べる入口を選びたいとき。
-- 同名機能の実装が realization 側に見える場合に、実体を持つ処理なのか import 互換層なのか切り分けたいとき。
+- ACP builder 周辺で、旧来の公開 import 経路が oracle 側 canonical 実装へどのように接続されているかを確認したいとき。
+- apply fork、review、session、TUI、indexing、common などの builder 互換入口を維持・移行・削除できるか判断したいとき。
+- oracle 側 builder の生成結果を realization 側の agent call parameter や公開型へ変換・補正する境界を調べたいとき。
+- quota availability probe 用の軽量な agent call parameter builder を確認・変更したいとき。
+- 同名機能の実装が realization 側にあるように見える場合に、実体を持つ builder なのか互換 import 層なのかを切り分けたいとき。
 
 ## Do not read this when
-- agent prompt、parameter 生成内容、判定仕様、変換仕様などの正本仕様断片を確認したい場合は、対応する oracle 側の実体を読む。
-- apply、review、session、TUI など各機能の実行フロー、画面挙動、CLI 処理、git 操作などを調べたい場合は、その機能本体へ進む。
-- AgentCallParameter の基礎データ構造、repo root 解決、oracle import 準備、汎用変換 helper だけを確認したい場合は、共通定義や helper 側を読む。
-- 互換 import 経路や oracle builder への委譲と無関係な ACP 全体の公開面や別領域の処理を調べたい場合は、より直接の対象へ進む。
+- agent prompt、parameter 生成内容、判定仕様、出力条件などの正本仕様や人間意図を確認したい場合は、対応する oracle 側の仕様または canonical 実装を読む。
+- apply、review、session、TUI など各機能そのものの実行フロー、CLI 引数処理、画面描画、git 操作、エラー処理を調べたい場合は、それぞれの機能実装や呼び出し元へ進む。
+- AgentCallParameter の基礎データ構造、model、reasoning effort、file access mode、path model、汎用 git helper などの共通定義だけを確認したい場合は、共通実装側を直接読む。
+- 個別 builder の変換処理や wrapper の詳細挙動を調べたい場合は、この領域全体ではなく、対象の個別 module または subpackage を読む。
+- oracle 側実装への互換 import 経路と無関係な新規公開 API、別領域の builder、または通常の package 構成を調べたい場合は、より直接の対象へ進む。
 
 ## hash
-- e1ba63c694024765d3bdc375e006c972c9dfcaa5580a8a8df24b6aab33e3db63
+- a7b36def9a2c6a687c45ec5430c3be8aeca60205364f8114c0fceebd7f305590

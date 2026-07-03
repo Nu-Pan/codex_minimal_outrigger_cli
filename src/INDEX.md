@@ -1,25 +1,25 @@
 # `acp`
 
 ## Summary
-- oracle src 側の acp builder 実装を正本に保ち、既存の `acp.*` / builder import 経路を canonical oracle 実装へ委譲する互換入口の領域。
-- 実処理や正本仕様そのものではなく、旧 import surface の維持、realization 側公開型への適合、一時補正、互換層の残存理由や削除条件を確認するためのまとまり。
+- ACP builder 周辺の realization 側ルーティング領域。oracle 側 canonical 実装を正本に保ちつつ、旧来の公開 import 経路を維持する互換入口と、quota probe など realization 側で完結する小さな builder への入口を持つ。
+- apply、review、session、TUI、indexing、common などの builder 参照について、実体を持つ処理か、oracle 側実装へ委譲する互換層か、公開型へ適合させる境界かを切り分けるための対象。
 
 ## Read this when
-- ACP builder 周辺で、旧来の公開 import 経路が oracle 側実装へどう解決されるか確認したいとき。
-- `acp.*` 参照を `oracle.*` または実体 module へ移行する作業で、互換入口を残す理由や削除条件を確認したいとき。
-- oracle 側 builder の生成結果を realization 側の agent call parameter 型へ適合させる wrapper や package 入口を探すとき。
-- apply fork、review、session、TUI、indexing、quota probe など、特定用途の builder 互換層や削除条件を調べる入口を選びたいとき。
-- 同名機能の実装が realization 側に見える場合に、実体を持つ処理なのか import 互換層なのか切り分けたいとき。
+- ACP builder 周辺で、旧来の公開 import 経路が oracle 側 canonical 実装へどのように接続されているかを確認したいとき。
+- apply fork、review、session、TUI、indexing、common などの builder 互換入口を維持・移行・削除できるか判断したいとき。
+- oracle 側 builder の生成結果を realization 側の agent call parameter や公開型へ変換・補正する境界を調べたいとき。
+- quota availability probe 用の軽量な agent call parameter builder を確認・変更したいとき。
+- 同名機能の実装が realization 側にあるように見える場合に、実体を持つ builder なのか互換 import 層なのかを切り分けたいとき。
 
 ## Do not read this when
-- agent prompt、parameter 生成内容、判定仕様、変換仕様などの正本仕様断片を確認したい場合は、対応する oracle 側の実体を読む。
-- apply、review、session、TUI など各機能の実行フロー、画面挙動、CLI 処理、git 操作などを調べたい場合は、その機能本体へ進む。
-- AgentCallParameter の基礎データ構造、repo root 解決、oracle import 準備、汎用変換 helper だけを確認したい場合は、共通定義や helper 側を読む。
-- 新しい acp 機能や API 仕様を追加する場所を探しているとき。この領域は互換維持専用であり、機能追加の入口ではない。
-- `acp.*` 参照が全公開面と realization 側から消えていることだけを確認済みで、互換入口の詳細を読む必要がないとき。
+- agent prompt、parameter 生成内容、判定仕様、出力条件などの正本仕様や人間意図を確認したい場合は、対応する oracle 側の仕様または canonical 実装を読む。
+- apply、review、session、TUI など各機能そのものの実行フロー、CLI 引数処理、画面描画、git 操作、エラー処理を調べたい場合は、それぞれの機能実装や呼び出し元へ進む。
+- AgentCallParameter の基礎データ構造、model、reasoning effort、file access mode、path model、汎用 git helper などの共通定義だけを確認したい場合は、共通実装側を直接読む。
+- 個別 builder の変換処理や wrapper の詳細挙動を調べたい場合は、この領域全体ではなく、対象の個別 module または subpackage を読む。
+- oracle 側実装への互換 import 経路と無関係な新規公開 API、別領域の builder、または通常の package 構成を調べたい場合は、より直接の対象へ進む。
 
 ## hash
-- 06bcb4eebb113d2713cd9f0eb71824505c85ddd768ef825620220b6b2446fc7f
+- 8fbcafe41cf989cf6a06e602228d03af1795fa7d2ab31ce8ca89e936609bbe56
 
 # `basic`
 
