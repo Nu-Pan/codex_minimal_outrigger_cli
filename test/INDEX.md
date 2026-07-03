@@ -211,24 +211,22 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex exec が quota exceeded で失敗した後の待機、probe、resume または再実行、ログ記録、ファイルアクセス違反回復をまとめて検証する realization test。
-- 単一呼び出しと並列呼び出しの両方について、quota retry 状態機械の外部挙動を fake Codex 呼び出し列、call log、subcommand log、CODEX_HOME、cwd から観測する。
+- Codex exec が quota exceeded になった後の待機、probe、resume token 利用、resume 不能時の再実行、ログ記録、ファイルアクセス違反回復、並行呼び出し時の代表 probe 共有を検証する realization test。
+- quota 待機から復帰する retry 状態機械の外部挙動を、fake Codex 呼び出し列、call log、subcommand log、CODEX_HOME/cwd の観測を通じてまとめて確認する。
 
 ## Read this when
-- quota exceeded 後に Codex exec が probe を実行し、復旧後に resume token で再開する挙動を確認・変更する時。
-- resume token が無い場合の再実行、probe 失敗時の即時失敗、quota poll 上限到達時の扱いを確認する時。
-- quota retry 中の call log、subcommand log、prompt/stdout/stderr/output の記録内容や console 表示を変更する時。
-- CODEX_HOME が相対パスの場合の cwd、PURE_ORACLE_READ 時の実行位置、ファイルアクセス違反からの回復処理を確認する時。
-- 複数の Codex exec が同時に quota 待機した場合に、代表 probe を 1 回だけ実行し、待機中の呼び出しが同じ結果に従う制御を確認する時。
+- Codex exec の quota exceeded 検出後の retry、probe、resume、再実行に関する挙動を変更または調査するとき。
+- quota availability probe の生成、実行、失敗時処理、ログ出力、subcommand event の status/purpose/returncode を確認するとき。
+- CODEX_HOME が相対パスの場合の cwd、PURE_ORACLE_READ 時の --cd、quota 待機中のファイルアクセス違反回復を検証するとき。
+- 複数の run_codex_exec が同時に quota exceeded になった場合に、probe が代表 1 回だけ実行され、待機側が成功または失敗を共有する制御を確認するとき。
 
 ## Do not read this when
-- quota retry と関係しない通常成功時の Codex exec 起動引数や出力 JSON 処理だけを確認したい時。
-- quota availability probe の prompt を組み立てる仕様そのものを確認したい時。
-- CLI サブコマンド全体の構成、設定読み込み、repository fixture の基本動作を調べたい時。
-- ログファイルの汎用フォーマットや SubcommandLogger の通常動作だけを確認したい時。
+- 通常の Codex exec 成功経路、引数構築、出力 JSON 読み取りだけを確認したいときは、より直接その挙動を扱う runtime Codex exec の実装または別テストを読む。
+- quota availability probe の prompt 内容そのものや AgentCallParameter の構築仕様だけを確認したいときは、probe builder 側を読む。
+- INDEX.md 生成、oracle/realization の分類、ファイルアクセス規則そのものの仕様を確認したいときは、対応する oracle 文書を読む。
 
 ## hash
-- ff3997f87bd1f67490dd75b6c23f3bb4e7e6b88a431ae10a3d0a134011fcd49f
+- 57767c7bb7841e9f8290194c77b6113b29e7fbe433c7f0dcd9ecdea8d13ff7d0
 
 # `test_codex_runtime_retry.py`
 
