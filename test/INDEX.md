@@ -276,21 +276,22 @@
 # `test_indexing_preflight.py`
 
 ## Summary
-- Codex 実行前の indexing preflight が、exec/TUI 呼び出し前に INDEX.md 更新を実行し、必要な commit と worktree 選択を行うことを検証する realization test。
-- repository lock 待機、index entry 生成や conflict resolution 用途で preflight を skip する条件も扱う。
+- Codex 実行前に INDEX 更新の preflight が走ること、その更新が git commit され作業ツリーを汚さないことを検証する realization test。
+- 実行対象 worktree の選択、repository lock 待機、特定 purpose での preflight skip、file access recovery 後の再実行時 preflight までを扱う。
 
 ## Read this when
-- Codex 呼び出し前に indexing preflight が走る順序、commit、clean worktree を確認・変更する。
-- cwd が別 worktree 配下にある場合、root ではなく cwd 側 worktree を index 更新対象にする挙動を確認・変更する。
-- indexing lock の排他待機や、特定 purpose で preflight を skip する条件を確認・変更する。
+- Codex 呼び出し前の indexing preflight の起動条件、skip 条件、実行順序を変更する。
+- root と cwd が別 worktree を指す場合に、どの worktree の INDEX 更新を行うかを確認する。
+- indexing lock の待機挙動や、preflight 更新後の git commit・clean status の期待を確認する。
+- file access recovery による Codex 再試行時にも indexing preflight が再実行されるかを確認する。
 
 ## Do not read this when
-- INDEX.md の本文生成ロジックやエントリー内容の仕様を確認したい場合。
-- Codex 実行ラッパーではなく、個別の git helper や repository fixture の詳細を確認したい場合。
-- oracle file の正本仕様や INDEX.md ルーティング規則そのものを確認したい場合。
+- INDEX 生成内容そのもの、エントリー本文の品質、ルーティング文書の記述規則だけを確認したい。
+- Codex 実行ラッパーではなく、通常の indexing 更新処理の差分検出や文書生成ロジックを確認したい。
+- CLI 引数 parsing や設定読み込みなど、preflight 起動後の Codex 実行順序と関係しない領域を調べたい。
 
 ## hash
-- 5549e75d6493464e59f5f4cb68232c1fbd9fc7d03b85ee5f6cb6ea3ad4e04099
+- a693f2e5f73bf64bdf25ba7f48910e3be0fffbd38f9fafe0a5b3954d37d8fe11
 
 # `test_packaged_import.py`
 

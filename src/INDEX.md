@@ -61,21 +61,24 @@
 # `commons`
 
 ## Summary
-- cmoc の実行時共通処理を集めた realization implementation 領域。Codex CLI 呼び出し、INDEX 更新 preflight、設定・状態・path・git・logging・error・content hash・CLI 共通ライフサイクルなど、複数サブコマンドから参照される runtime helper 群への入口になる。
-- 個別機能の本体だけでなく、分割済み runtime module をまとめて再公開する互換 import 層や、apply 実行プロセス停止、Codex exec/TUI 実行境界、session state 永続化などの横断的な支援実装を含む。
+- cmoc の共通 runtime helper 群を収める領域。Codex 実行、profile/config/content、CLI 共通ライフサイクル、error、git、logging、path、result、state、INDEX 更新 preflight、apply process 管理など、複数サブコマンドから参照される実行時支援を責務別に分けている。
+- 横断的な runtime API の再公開入口と、各責務の実装本体が同階層に並ぶため、共通実行基盤の import 境界から個別 helper の挙動までを探す入口になる。
 
 ## Read this when
-- 複数サブコマンドで共有される runtime helper、共通 API、または runtime 系 module の担当範囲を探したいとき。
-- Codex 実行、INDEX 自動更新、git 状態、config/state 読み書き、path 解決、logging、error 表示、CLI 共通処理など、cmoc の下位 runtime 境界に関わる実装を確認・変更したいとき。
-- 呼び出し側が `commons` 配下のどの runtime module を import すべきか、または既存の互換 import 入口がどの実装へ接続されるかを確認したいとき。
+- Codex exec/TUI 呼び出し、profile 作成、quota/capacity retry、Structured Output、call log、file access post-check などの共通 Codex 実行基盤を確認または変更したいとき。
+- CLI サブコマンド共通の開始・完了表示、終了コード化、例外表示、サブコマンドログ、実行時間や quota 待機時間の集計を扱うとき。
+- config 永続化、content hash 保存、runtime error 表示、git/worktree/ignore 判定、root/path 解決、結果モデル、session state 永続化など、複数機能で共有される runtime helper を探すとき。
+- INDEX 自動更新 preflight、INDEX 対象走査、既存エントリー再利用、hash 鮮度判定、Codex へのエントリー生成依頼、生成結果検証を確認または変更したいとき。
+- apply 実行に紐づく worktree 復元、pid file、Codex subprocess 追跡、abandon 時の process 停止を調べるとき。
 
 ## Do not read this when
-- 個別 CLI サブコマンドの利用者向け仕様、引数、出力、業務フローだけを調べたいとき。その場合は command 側の実装や対応するテストへ進む。
-- path model、config 型、file access rule、INDEX.md 仕様意図などの正本仕様断片を確認したいとき。その場合は対応する oracle file を読む。
-- 生成済み log、schema、state、worktree 内容などの実行結果を調査したいだけで、runtime helper の実装や責務境界を変更しないとき。
+- 個別サブコマンドの利用者向け仕様、引数、業務処理、出力内容だけを調べたいときは、command 層または該当テストへ進む。
+- path placeholder、file access rule、INDEX 仕様、session state 仕様などの正本意図そのものを確認したいときは、対応する oracle 側の文書や定義を読む。
+- Codex や git や logging を実際に使う上位 workflow の分岐や状態遷移だけを追いたいときは、呼び出し元の実装を読む。
+- 生成済みログ、実行履歴、既存 INDEX.md の内容確認が目的で、runtime helper の実装を変更しないときは、この領域を読む必要は薄い。
 
 ## hash
-- 956c3a5d58e2a72d819346b16862a50d91876301f3c4d55690aa417e0c634505
+- f24440e7fac4401d29ed6f45ed35f51b57be3d6b7d05b16d6ba3b1b49fa54c8b
 
 # `config`
 

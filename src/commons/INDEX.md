@@ -115,26 +115,26 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の実行制御を担い、単一試行ループ内で subprocess 呼び出し、Structured Output 検証、capacity retry、quota 待機と代表 probe、resume 継続、call log と subcommand event 記録をまとめて扱う。
-- agent call 後の file access rule 違反検査と修復、worktree 差分検出、生成済み log/schema/output の差分除外、禁止 runtime 領域の filesystem snapshot 比較もここで扱う。
-- TUI 起動や Codex profile・schema 準備そのものではなく、exec 実行結果と retry/post-check が共有する状態機械の入口として位置づけられている。
+- Codex exec の実行制御を担う。単一試行ループ内で Structured Output 検証、capacity retry、quota 待機と代表 probe、resume 継続、call log と subcommand event 記録、実行後の file access rule 違反検出・回復を一体で扱う。
+- file access mode ごとの書き込み許可判定、agent call 後に残った差分の検査、cmoc が生成した log・schema・output と agent が残した変更の区別もここで扱う。
+- 16,000 文字を超えるが、retry counter、resume token、subprocess 結果、log/event、post-check baseline を共有する状態機械として凝集しており、exec 実行制御の責務境界内に収めている。
 
 ## Read this when
-- Codex CLI の `exec` 呼び出し、`resume`、`--output-schema`、`--output-last-message`、stdin prompt log の扱いを確認・変更したいとき。
-- Structured Output の JSON 読み取り、schema validation failure、semantic retry、capacity retry、quota polling、quota availability probe の制御を調べるとき。
-- Codex call log、prompt/stdout/stderr/output log、subcommand の `codex_call` event、quota wait 秒数や poll 回数の記録を追うとき。
-- agent call 後に worktree の file access rule 違反を検出・修復する挙動、生成済み差分の無視条件、禁止領域や readonly mode で許される一時生成物の扱いを確認するとき。
-- `changed_worktree_paths` や git status 由来の変更 path 一覧を利用する処理の挙動を確認するとき。
+- Codex exec 呼び出しの argv、cwd、profile、CODEX_HOME、Structured Output schema、stdin prompt log、output log の生成や記録を確認・変更するとき。
+- Codex CLI の capacity error、quota error、quota availability probe、resume token による再開、semantic retry の挙動を確認・変更するとき。
+- agent call 後の file access rule 違反検出、回復用 Codex call、禁止 root や git 差分の snapshot、生成済み log を検査対象から除外する条件を確認・変更するとき。
+- FileAccessMode に応じて oracle、realization、readonly、一時生成物への書き込みを許すかどうかの判定を確認・変更するとき。
+- Codex call の console 出力、subcommand log event、call log JSON、stdout/stderr/output path の扱いを調査するとき。
 
 ## Do not read this when
-- Codex profile、Codex home、subprocess env、schema file の具体的な生成・解決処理だけを確認したい場合は、それらを提供する runtime Codex profile 系の対象を読む。
-- TUI 起動や exec 以外の Codex 実行分岐を調べたい場合は、この対象ではなく TUI 側の実行制御を読む。
-- 設定値の定義や読み込み形式そのものを調べたい場合は、設定モデルまたは runtime config の対象を読む。
-- git コマンド wrapper の低レベルな実装だけを調べたい場合は、runtime git の対象を読む。
-- file access mode の enum 定義や agent call parameter の構造だけを確認したい場合は、ACP の基本型を読む。
+- TUI 起動や画面操作の責務だけを調べるとき。
+- Codex profile の具体的な生成内容、CODEX_HOME 解決、schema 準備、subprocess 実行 wrapper、Codex stdout/stderr 解析そのものを変更したいだけのとき。
+- AgentCallParameter の生成内容や quota probe/recovery 用 prompt の組み立てを変更したいとき。
+- git コマンド wrapper、runtime path 定義、設定読み込み、結果 dataclass、subcommand logger の一般仕様だけを調べるとき。
+- apply/requeue など特定サブコマンド固有の外部挙動を調べるだけで、Codex exec 呼び出し後の差分検査や retry 制御に触れないとき。
 
 ## hash
-- 884b7faabf2f5378af187b4b6508826199f5d249115f96a278fd4f263f352d6d
+- 456a47d57d1e38c32aabb09157000acb79b97e1e0ad84073278d0b08bbdc48bd
 
 # `runtime_codex_logging.py`
 
@@ -158,24 +158,21 @@
 # `runtime_codex_preflight.py`
 
 ## Summary
-- Codex 実行/TUI 起動の直前に、設定済みの indexing preflight を一度だけ走らせるための薄い実行ラッパーを定義している。
-- preflight の登録・解除、実行対象 root の決定、再入防止、排他制御、indexing 用途や conflict resolution 用途では preflight を省略する判定を扱う。
-- 実際の Codex 実行処理そのものは runtime 側へ委譲し、この対象は実行前フックの制御だけを担当する。
+- Codex 実行前に indexing preflight を差し込むためのラッパー実装。preflight の設定・解除、再入防止、直列化、目的文字列によるスキップ判定を扱う。
+- 通常の Codex exec / tui 呼び出しを runtime 実装へ委譲しつつ、呼び出し前に work root または repo root を起点とした indexing を必要に応じて実行する入口。
 
 ## Read this when
-- Codex exec または Codex TUI を呼び出す前に、INDEX.md 生成などの indexing 処理を自動実行する経路を確認・変更したいとき。
-- indexing preflight の登録、無効化、再入防止、スレッド間排他、skip 条件の挙動を調べたいとき。
-- Codex 呼び出し時の cwd/root から、indexing 対象 root がどう決まるかを確認したいとき。
-- indexing 自体がさらに Codex exec を呼ぶ場合の循環防止や、conflict resolution 時に preflight を避ける理由を追うとき。
+- Codex 呼び出し前に INDEX 更新や indexing を自動実行する制御を確認・変更したいとき。
+- indexing preflight の再入防止、ロック、スキップ条件、root 推定の挙動を調べたいとき。
+- recovery 用の Codex 呼び出し前 hook がどこで渡されるかを確認したいとき。
 
 ## Do not read this when
-- Codex CLI プロセスの実際の起動、コマンドライン構築、戻り値変換、標準入出力処理を調べたいだけのとき。
-- repo root、work root、cwd 変換などの path model や runtime path 解決そのものを調べたいとき。
-- Codex 実行結果やコマンド実行結果のデータ構造を確認したいだけのとき。
-- INDEX.md の内容生成ロジック、エントリー生成プロンプト、ファイル探索ルールそのものを調べたいとき。
+- Codex プロセスの実際の起動、標準出力・終了コード・結果型への変換を調べたいときは、runtime 側の実装を読む。
+- path placeholder や root 判定そのものの定義を調べたいときは、runtime path の責務を持つ実装を読む。
+- 個別の INDEX.md エントリー生成内容や oracle / realization の分類仕様を調べたいときは、該当する仕様文書または indexing 実装を読む。
 
 ## hash
-- 3878cafea4f3209a564a38a3ebe0f67ca85915e34f09112258511701c00f4c48
+- 09f8d8853e45703b1101bf821fe1d9ecbc95dd4d29741f82338d6ac880813f86
 
 # `runtime_codex_profile.py`
 
