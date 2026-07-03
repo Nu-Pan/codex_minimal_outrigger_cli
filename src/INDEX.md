@@ -61,24 +61,24 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime helper 群を収める領域。Codex 実行、profile/config/content、CLI 共通ライフサイクル、error、git、logging、path、result、state、INDEX 更新 preflight、apply process 管理など、複数サブコマンドから参照される実行時支援を責務別に分けている。
-- 横断的な runtime API の再公開入口と、各責務の実装本体が同階層に並ぶため、共通実行基盤の import 境界から個別 helper の挙動までを探す入口になる。
+- cmoc の共通 runtime 支援を集約する領域。Codex 呼び出し、INDEX 更新、CLI 共通ライフサイクル、設定、内容 hash、エラー表示、git 操作、logging、path、結果モデル、session state、apply process 管理など、複数サブコマンドから参照される実行時 helper を扱う。
+- 多くの対象は実処理本体と互換 import・公開入口に分かれており、横断的な runtime API の入口確認と、責務別 helper の挙動確認の両方の起点になる。
 
 ## Read this when
-- Codex exec/TUI 呼び出し、profile 作成、quota/capacity retry、Structured Output、call log、file access post-check などの共通 Codex 実行基盤を確認または変更したいとき。
-- CLI サブコマンド共通の開始・完了表示、終了コード化、例外表示、サブコマンドログ、実行時間や quota 待機時間の集計を扱うとき。
-- config 永続化、content hash 保存、runtime error 表示、git/worktree/ignore 判定、root/path 解決、結果モデル、session state 永続化など、複数機能で共有される runtime helper を探すとき。
-- INDEX 自動更新 preflight、INDEX 対象走査、既存エントリー再利用、hash 鮮度判定、Codex へのエントリー生成依頼、生成結果検証を確認または変更したいとき。
-- apply 実行に紐づく worktree 復元、pid file、Codex subprocess 追跡、abandon 時の process 停止を調べるとき。
+- 複数サブコマンドで共有される runtime helper、共通データ型、共通例外、共通 logging、共通 path 解決、git 境界、config/state 永続化を確認または変更したいとき。
+- Codex exec/TUI 呼び出し、profile 生成、quota/capacity retry、Structured Output、call log、file access post-check、INDEX 更新 preflight など、agent call 周辺の共通実行制御を追いたいとき。
+- CLI サブコマンドの共通実行ライフサイクル、終了コード化、エラー表示、完了サマリー、subcommand log event など、個別 command に入る前後の共通処理を扱うとき。
+- apply abandon の process 停止、pid file、managed worktree 復元、session state file、cmoc 管理 branch/worktree など、runtime state と外部プロセス・git 状態の接続を調べるとき。
+- INDEX.md の自動更新、対象走査、hash 鮮度判定、既存エントリー再利用、entry 生成依頼、Markdown 描画など、routing 文書生成の実行経路を確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの利用者向け仕様、引数、業務処理、出力内容だけを調べたいときは、command 層または該当テストへ進む。
-- path placeholder、file access rule、INDEX 仕様、session state 仕様などの正本意図そのものを確認したいときは、対応する oracle 側の文書や定義を読む。
-- Codex や git や logging を実際に使う上位 workflow の分岐や状態遷移だけを追いたいときは、呼び出し元の実装を読む。
-- 生成済みログ、実行履歴、既存 INDEX.md の内容確認が目的で、runtime helper の実装を変更しないときは、この領域を読む必要は薄い。
+- 個別サブコマンドの利用者向け仕様、引数定義、業務処理、出力 schema だけを確認したいとき。その場合は command 層や対応するテストへ直接進む。
+- path placeholder、config 型、file access rule、INDEX.md 仕様意図、session state の正本要求など、oracle 上の仕様断片そのものを確認したいとき。
+- 特定 helper の内部挙動だけを調べたい場合に、集約入口だけで判断できるとき。責務が分かっているなら対応する下位実装を直接読む。
+- 生成済みログや実行履歴の内容確認が目的で、runtime logging や call log の実装を変更しないとき。
 
 ## hash
-- f24440e7fac4401d29ed6f45ed35f51b57be3d6b7d05b16d6ba3b1b49fa54c8b
+- 279fa3986c218c67902425843f8200e1201224038f788549199eb493d2a4335e
 
 # `config`
 

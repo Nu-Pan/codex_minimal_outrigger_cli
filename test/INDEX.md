@@ -129,23 +129,22 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder と worktree 解決、config 既定値と検証、CmocError の表示、CLI preflight と parse error、subcommand log、`.cmoc` ignore、FileAccessMode から Codex sandbox/profile への変換、binary 判定、session state の branch 名検証を同じ実行前提として扱う。
-- 個別サブコマンドより下位の共通 runtime 境界をまとめて確認するための回帰テスト群であり、root 状態・共通 fixture・権限 profile の相互作用を一箇所で追う入口になる。
+- cmoc の基礎 runtime 契約を横断的に検証する regression test。path placeholder 解決、run/work/repo root、worktree 作成・削除防御、config validation、CmocError 表示、CLI error 出力、subcommand log、FileAccessMode と Codex profile、binary 判定、session/apply branch state 解決を同じ runtime 前提として扱う。
+- 個別機能単位ではなく、CLI 実行前提や sandbox/profile 境界が一緒に崩れやすい共通 runtime 層の挙動をまとめて固定する入口。
 
 ## Read this when
-- root placeholder、repo root、run root、work root、linked worktree、管理対象 worktree の作成・削除条件に関わる挙動を変更または調査するとき。
-- CmocError、CLI error report、Click parse error、stdout/stderr の扱い、preflight 失敗時の副作用抑止、completion probe の初期化回避を確認するとき。
-- config の既定値、codex model/reasoning effort 名の検証、duration 表示、subcommand log の生成衝突回避、`.cmoc` の ignore 追加を扱うとき。
-- FileAccessMode の永続化値、sandbox mode 変換、Codex profile の writable/readable root、追加書き込み許可 path、session join conflict target の許可・拒否条件を扱うとき。
-- session/apply branch 名から session id や state を読む制御、または binary 判定の読み取り範囲を変更するとき。
+- root placeholder、repo root、work root、run root、linked worktree の解決挙動を確認・変更する。
+- CmocError、CLI parse error、stdout/stderr の error report、call stack 表示、subcommand log の生成条件を確認・変更する。
+- cmoc config の既定値や不正値拒否、FileAccessMode、Codex sandbox profile、追加 writable/read path の許可境界を確認・変更する。
+- session/apply branch 名からの session id 抽出や state 読み込み、managed worktree の作成・削除防御、`.cmoc` ignore、binary 判定の runtime 回帰を確認する。
 
 ## Do not read this when
-- 個別サブコマンド固有の业务ロジック、プロンプト構築、indexing 内容、session fork/join の詳細仕様だけを確認したいときは、より直接その領域のテストや実装へ進む。
-- oracle file の正本仕様そのもの、oracle doc/src/test の構成、または INDEX エントリー生成規則を確認したいときは、oracle 側の該当文書を読む。
-- 単一 helper の内部実装だけを局所的に確認でき、共通 runtime 契約や CLI 実行前提との相互作用を追う必要がないとき。
+- 個別サブコマンド固有の業務ロジックや出力仕様だけを調べたい場合。
+- oracle file の正本仕様そのものを確認したい場合。
+- 単一 helper の内部実装だけを読みたい場合で、runtime 境界全体の外部挙動を確認する必要がない場合。
 
 ## hash
-- 78014a9810f8e9f8ca85a83b14ef378d8c1a71e7bcf35945aeec24069581f907
+- cd044770d2804b9741505b9cfb542ca3b3a8d4472628bd035c73d2233c3b94d0
 
 # `test_cli_init_tui.py`
 

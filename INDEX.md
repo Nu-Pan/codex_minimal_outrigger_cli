@@ -149,41 +149,40 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を収める実装ルート。最上位 CLI、サブコマンド実行本体、共通 runtime helper、oracle 側正本実装への互換 shim、旧 import path の再公開層がここから読み分けられる。
-- 実処理を担う領域と互換維持だけを担う領域が同階層に並ぶため、CLI 公開面、サブコマンド orchestration、共通 helper、oracle src への接続境界のどれを確認するかで下位対象を選ぶ入口になる。
+- cmoc の realization implementation を収める実装ルート。最上位 CLI、サブコマンド本体、共通 runtime helper、設定・basic・acp・oracle package 互換入口など、利用者向けコマンド実行と既存 import 公開面を具体化する。
+- 個別領域は、CLI entrypoint、サブコマンド orchestration、複数サブコマンドで共有される runtime 支援、oracle src を複製しないための再公開・shim・互換層に分かれる。
 
 ## Read this when
-- cmoc の realization implementation 全体から、CLI entrypoint、サブコマンド本体、共通 runtime helper、互換 import 層のどこへ進むべきか判断したいとき。
-- 公開 CLI コマンド構成、実行フロー、git/state/Codex 実行などの runtime 処理、または INDEX 更新や apply process 管理など複数機能にまたがる実装入口を探したいとき。
-- oracle 側 canonical 実装を複製せず、realization 側の既存公開 import path や package path を維持している shim・再公開層を確認したいとき。
+- cmoc の実装本体について、CLI 入口からサブコマンド実行、共通 helper、状態・git・Codex 呼び出し、INDEX 更新、エラー表示までの realization 側構成を調べたいとき。
+- 公開 CLI コマンド構成、サブコマンド実装、共通 runtime API、設定・basic・acp・oracle 系の既存 import 互換境界のどの下位対象へ進むべきか判断したいとき。
+- oracle src 側の正本実装を realization 側へ複製せず、既存 package path や公開 import 面を維持している接続構造を確認したいとき。
 
 ## Do not read this when
-- oracle file に書かれた正本仕様断片や人間意図そのものを確認したいときは、対応する oracle 側 doc、src、test を読む。
-- 個別機能の詳細な実行ロジックや共通 helper の低レベル挙動など、読むべき下位対象が既に分かっているときは、その対象へ直接進む。
-- テスト挙動や realization test を確認したいときは、実装ルートではなく test 側の対象を読む。
+- oracle file に書かれた正本仕様断片、人間意図、prompt builder や設定定義そのものを確認したいとき。その場合は oracle 側の該当 doc または src を読む。
+- 実装ではなく routing 文書、AGENTS 指示、memo、git 内部、実行ログだけを確認したいとき。
+- 特定の下位対象の責務がすでに分かっているときは、この階層で止まらず、該当する CLI、subcommand、commons、または互換層へ直接進む。
 
 ## hash
-- dec1248c41b6bb129567e19c875a0ab1888e408cd1338e866768cd3429740e84
+- c53f7642642f8a16a6e0a34651b289a18909534893e51d1d7c8556ad0d01a51b
 
 # `test`
 
 ## Summary
-- CLI 外部挙動、Codex runtime、apply/session/review/indexing、prompt builder、packaging、StructDoc rendering などを検証する realization test 群をまとめるディレクトリ。
-- 各テストは、正本仕様断片と実装の境界で利用者に見える挙動、状態遷移、Git 操作、Codex 呼び出し、file access rule、INDEX 更新などの回帰確認への入口になる。
-- 共通 fixture と補助関数は同階層のサポートファイルにまとまり、個別サブコマンドや runtime 領域の期待値はそれぞれのテスト本文へ分かれている。
+- CLI 外部挙動と共通 runtime 契約を検証する realization test 群。init/TUI、session、apply、review oracle、indexing、Codex 実行 wrapper、prompt rendering、packaged import など、cmoc の主要ワークフローの回帰入口をまとめる。
+- 共有補助関数も含み、一時 Git リポジトリ、fake Codex/profile、session/apply state、linked worktree、file access rule、INDEX 更新など、テストから観測する境界条件を探す起点になる。
 
 ## Read this when
-- CLI サブコマンドの終了コード、標準出力、Git branch/worktree、session state、report、cleanup などの外部挙動を確認または変更したいとき。
-- Codex CLI/TUI 実行、retry、quota retry、CODEX_HOME、profile、file access rule 違反検出や recovery など runtime 境界の回帰テストを探すとき。
-- apply fork/join/abandon、session fork/join/abandon、review oracle、indexing、init/TUI など、複数の状態や Git 操作を伴う機能の期待値をテストから確認したいとき。
-- ACP builder、prompt parts、structured output schema 参照、packaged import、StructDoc Markdown rendering など、実装変更に対応する realization test の入口を探すとき。
-- テスト用の最小 Git repository、fake Codex/TUI、fake profile、Codex home、apply worktree 解決など、CLI テスト共通の補助処理を確認したいとき。
+- CLI サブコマンドの終了コード、標準出力、Git branch/worktree/state の変化、cleanup、report、エラー表示などの外部挙動を確認・変更したいとき。
+- Codex 実行 wrapper、CODEX_HOME、profile、retry、quota retry、file access rule violation recovery、call log/subcommand log の回帰テストを探すとき。
+- INDEX.md 生成・preflight・conflict 解決、review oracle、apply fork/join/abandon、session fork/join/abandon のテスト入口を選びたいとき。
+- prompt parts、ACP builder parameter、StructDoc markdown rendering、packaged import など、実装横断の互換性や出力組み立てに関する期待値を確認したいとき。
+- テスト用 repository、fake 外部コマンド、fake Codex home、tracked ignored file、apply worktree 解決など、CLI テスト共通 fixture の補助処理を探すとき。
 
 ## Do not read this when
-- プロダクト実装の責務分割、内部 helper、状態管理ロジックそのものを読みたい場合は、対応する実装ディレクトリへ進む。
-- oracle file の正本仕様断片、schema 定義、path model、file access rule や routing rule の本文を確認したい場合は、oracle 側の該当文書や実装を読む。
-- INDEX.md エントリーの自然言語品質やルーティング文書作成規則だけを確認したい場合は、正本仕様側または indexing 関連のより直接の対象を読む。
-- 単一ファイルの局所的な期待値が分かっている場合は、このディレクトリ全体ではなく該当テストファイルまたはサポートファイルへ直接進む。
+- 正本仕様断片そのものを確認・変更したい場合は、oracle 側の該当文書や schema を読む。
+- プロダクト実装の責務分割、内部 helper、Git 操作、Codex runtime 実装、path model などを局所的に確認したい場合は、対応する実装ディレクトリへ直接進む。
+- INDEX.md エントリーの自然言語内容だけを作成・修正したい場合で、CLI 更新フローや回帰期待値を確認する必要がないとき。
+- 単一サブコマンドに関係しない一般的な repository 構成、設定定義、oracle/realization 概念定義を確認したいだけのとき。
 
 ## hash
-- b70d4d8aa0bb54f197f02d381e1ff8e3bf2c29e6ea8485bb442d06760b121175
+- 8d193830b67dc94bfd6228587150bcf80208bca80cc6829ca9dcdb0f37a8eaa6

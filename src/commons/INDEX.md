@@ -217,19 +217,20 @@
 # `runtime_config.py`
 
 ## Summary
-- cmoc config の永続化 JSON と runtime config 型の相互変換、既定値補完、読み書き、初期生成と正規化を担う。利用者向けの config 読み込みエラー境界もここで扱う。
+- 正本 config 型と永続化 JSON の相互変換、config ファイルの読み込み・保存・初期同期を扱う。既定値補完、enum key の復元、型不正時の利用者向けエラー化を通じて、runtime が扱う config 境界を担う。
 
 ## Read this when
-- config JSON の保存形式、読み込み時の既定値補完、enum key map の復元、または config 不正時の利用者向けエラーを確認・変更したいとき。
-- config の初期生成、既存 config の現在形式への書き戻し、または config 保存先 path を使った読み書きフローを追いたいとき。
+- cmoc config の JSON 保存形式と runtime 型の変換を確認・変更したいとき。
+- config ファイル未作成、JSON 構文不正、top-level 不正、項目型不正などのエラー境界を確認・変更したいとき。
+- 既定 config の生成、既存 config の現在形式への書き戻し、保存時の安定した JSON 表現を扱うとき。
 
 ## Do not read this when
-- config 型そのものの項目定義や既定値を確認したいだけのときは、正本 config 型の定義を読む。
-- config 保存先 path の決定規則だけを確認したいときは、runtime path 側の定義を読む。
-- config を使う各機能の挙動や CLI command 側の処理を確認したいときは、その利用箇所を読む。
+- config 型そのものの正本定義や項目追加の根拠を確認したいだけのときは、正本 config 定義を読む。
+- config ファイルの配置パスだけを確認したいときは、runtime path を扱う対象を読む。
+- 個別サブコマンドの CLI 挙動や agent 実行ロジックを変更したいだけのときは、そのコマンドや orchestration 側を読む。
 
 ## hash
-- 0e456ca44c87e3df2e1e44c788f8daa462cfeaad051b053e189371602b9651cf
+- 672b6bcec7d735f567ffac9ed457170fc5d5f10a59a12df6aad1b7f37a65d379
 
 # `runtime_content.py`
 
