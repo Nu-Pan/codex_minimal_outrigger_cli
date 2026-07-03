@@ -63,47 +63,47 @@
 # `review`
 
 ## Summary
-- review 系サブコマンドをまとめる package 階層であり、package 境界を示す初期化モジュールと、oracle review の実行入口を含む。
-- oracle review では、active session branch と clean worktree を前提に isolated review worktree を作成し、対象列挙、review loop、INDEX 変更の commit/merge、後片付け、report 出力までを統括する。
-- 具体的な対象列挙、review loop、report 描画・保存、index commit/merge の詳細は下位モジュール側に分かれ、この階層は review 系 CLI orchestration への入口として位置づく。
+- review 系サブコマンド群の package 境界と、oracle review を CLI 実行単位として接続する orchestration 層を含む。
+- この階層は、review oracle の実行入口を中心に、preflight、session/state 検証、worktree 操作、対象列挙、review loop、INDEX 変更反映、後片付け、report 出力へ処理をつなぐ入口になる。
+- 具体的な対象列挙、review loop、report 描画、INDEX 統合処理は下位 module が担い、この階層の入口はそれらを review oracle サブコマンドとして束ねる。
 
 ## Read this when
-- review 系サブコマンド群の package 境界や、この階層が review 用 Python package として扱われる根拠を確認したいとき。
-- review oracle サブコマンドの全体フロー、実行前条件、isolated review worktree の作成・削除、review branch の生成・merge、report 出力の制御を確認または変更したいとき。
-- review oracle 関連 helper の公開入口や、対象列挙・review loop・report・index commit/merge の担当境界を把握したいとき。
-- active session branch 以外での拒否、clean worktree 要求、cmoc ignore 確保、失敗時にも report を書く挙動に関わる変更を行うとき。
+- review 系サブコマンド群の Python package 境界を確認したいとき。
+- review oracle サブコマンドの実行順序、session branch 制約、clean worktree 要件、run worktree の作成・削除、review branch の merge 条件、失敗時 report 出力の扱いを確認または変更したいとき。
+- review oracle が対象列挙、findings 生成、INDEX 変更反映、report 書き込みをどの helper module で接続しているかを追いたいとき。
+- review oracle 実行時の公開入口や、review 関連 API の集約点を確認したいとき。
 
 ## Do not read this when
-- review 系サブコマンドの package 境界だけでなく個別機能の詳細を調べたい場合は、該当する下位モジュールを直接読む方がよい。
-- 個別 oracle file の列挙条件や scope 解釈だけを確認したい場合は、review target 列挙を担当する下位モジュールを直接読む方がよい。
-- findings の生成手順や Codex review loop の詳細だけを確認したい場合は、review loop を担当する下位モジュールを直接読む方がよい。
-- report の markdown 表現、section 描画、保存内容だけを確認したい場合は、review report を担当する下位モジュールを直接読む方がよい。
-- package 初期化時の import、副作用、公開シンボルを調べたい場合は、現在内容からそのような責務は読み取れないため読む必要は薄い。
+- review oracle の対象列挙条件や scope ごとの対象選定だけを変更したいときは、対象列挙を担う下位 module を読む。
+- review loop 内で Codex に渡す prompt、finding の merge 操作、反復制御だけを扱うときは、review loop を担う下位 module を読む。
+- report の本文構成、finding section の描画、report path の決定だけを扱うときは、report 生成を担う下位 module を読む。
+- INDEX 変更の commit、review branch merge、conflict 解決、status path 取得だけを扱うときは、INDEX 統合処理を担う下位 module を読む。
+- package 初期化時の import、副作用、公開シンボルを調べたいとき。ただし現在内容からはそのような責務は読み取れない。
 
 ## hash
-- c743d6197540d7a1705e090e02a6074881584d24523c910567fd9152b9771cfb
+- 7ea1740b338b184b4fba2974299d880e5575af5a23ebd4d13d2e6373496024e8
 
 # `review_index.py`
 
 ## Summary
-- review 用 worktree に作られた変更を INDEX.md 差分だけに限定して commit し、その review branch を session branch へ merge するための処理を持つ。
-- review worktree の git status から変更パスを取り出し、INDEX.md 以外の差分をエラーにし、INDEX.md のみを stage/commit する制御を扱う。
-- merge 失敗時に未解決 conflict が INDEX.md だけであれば ours 側採用または削除で自動解決し、merge commit 後の HEAD を返す処理への入口になる。
+- review 用 worktree と review branch に含まれる差分が INDEX.md のみであることを検査し、INDEX.md 変更だけを commit して session branch へ merge する処理を扱う。
+- review branch の merge 失敗時に、競合対象が INDEX.md だけなら ours 側または削除で自動解決し、解決不能な差分や競合は CmocError として扱う。
+- git status、diff、merge、checkout、rm、commit、ls-files を使った review oracle indexing 周辺の git 制御ロジックへの入口である。
 
 ## Read this when
-- review oracle が生成した INDEX.md 変更だけを commit する流れを確認・変更したいとき。
-- review branch を session branch へ merge する処理や、merge 後 HEAD の取得に関わる挙動を確認したいとき。
-- INDEX.md conflict だけを自動解決する条件、ours stage の有無による checkout/rm の分岐、非 INDEX.md conflict を手動解決へ回す境界を確認したいとき。
-- review worktree の porcelain status から rename/copy を含む変更パスを抽出するロジックを確認したいとき。
+- review oracle が生成した INDEX.md 変更だけを commit する処理を確認・変更したいとき。
+- review branch に INDEX.md 以外の commit 済み差分が混入していないか検査する挙動を確認・変更したいとき。
+- review branch を session branch へ merge する処理、または INDEX.md だけの merge conflict 自動解決を扱うとき。
+- review worktree の git status porcelain 出力から変更 path を抽出する処理を確認したいとき。
 
 ## Do not read this when
-- 通常のサブコマンド引数定義、CLI 表示、ユーザー入力解析を確認したいだけのとき。
-- INDEX.md 本文の生成内容やルーティング文書の文章品質を調べたいとき。
-- oracle file と realization file の仕様関係や、INDEX.md エントリー作成基準そのものを確認したいとき。
-- 一般的な git helper の実装や CmocError の定義を確認したいときは、それらを定義している共通 runtime 側を直接読む。
+- 通常の sub command 引数解析、CLI 出力、または review command 全体の制御フローを確認したいだけのとき。
+- INDEX.md エントリーの生成内容や oracle 文書のルーティング規則そのものを確認したいとき。
+- review 以外の sub command の git 操作や worktree 操作を扱うとき。
+- 一般的な git 実行ラッパー、HEAD 取得、CmocError の定義を確認したいとき。
 
 ## hash
-- fd46086c773e71294be6c9b8ed3da758d0729bfa1dc795d5f35336f661efd447
+- bd938a309c570ac01ae74652549b60ad737ca35824a7dc2043b471f2db2d8464
 
 # `review_loop.py`
 

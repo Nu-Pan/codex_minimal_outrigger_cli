@@ -333,22 +333,23 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle コマンドの外部挙動を CLI 経由で検証するテスト。対象 oracle file の列挙、scope 別の評価対象、report の構成と集計、accepted/rejected 所見の出力、エラー時 report、review 用 worktree と join commit、INDEX.md 変更の取り込み、想定外差分の拒否を扱う。
-- 所見評価 loop の制御を検証するテスト。enumerate が同一対象の既存所見だけを受け取ること、challenger/advocate/judge/merge の入出力、merge operation の契約違反や target 再利用の拒否を確認する。
+- review oracle コマンドの CLI 経由の外部挙動を検証するテスト群。report の構成・判定結果・対象 oracle file 数、session/full scope の対象選択、所見の列挙・検証・judge・merge、エラー時 report、review 用 worktree と INDEX.md 差分の取り込みや拒否を扱う。
+- oracle review の同一 run 内で共有される fake Codex 応答、report 文脈、対象列挙、join commit、所見評価 loop の制御を一箇所で確認する入口となる。
 
 ## Read this when
-- `review oracle` の CLI 挙動、report 出力、scope の意味、review 用 worktree、join commit、INDEX.md 変更の扱いを変更・調査する時。
-- oracle review の対象列挙で、tracked ignored file、symlink、binary、`AGENTS.md`、`INDEX.md`、memo 配下との境界を確認したい時。
-- review oracle の finding loop、validation、judge、merge operation、accepted/rejected 所見の集計や表示を変更する時。
-- review oracle 実行中の失敗時 report、標準出力へのエラー表示、または review が INDEX.md 以外の差分を作った場合の拒否挙動を確認する時。
+- review oracle CLI の report 出力、section 順、集計値、accepted/rejected finding の表示、error report の挙動を変更・確認する。
+- review oracle の full scope または session scope における oracle file 列挙条件、tracked ignored file、AGENTS.md・INDEX.md 除外、symlink や memo 形状 path の扱いを確認する。
+- 所見評価 loop で enumerate が既存 finding をどう受け取るか、challenger/advocate/judge/merge の呼び出し順や入力、merge operation の契約違反検出を確認する。
+- review oracle 実行時の linked worktree、review worktree、review_fork_commit、review_join_commit、INDEX.md の preflight 更新・merge・conflict 解決を扱う。
+- review oracle が INDEX.md 以外の差分を作った場合の拒否、作業ツリー復元、予期しない生成物の除去を確認する。
 
 ## Do not read this when
-- review oracle 以外の review サブコマンドや一般的な CLI 初期化・session 操作だけを調べる時。
-- oracle review の prompt 文面や structured output schema の詳細だけを確認したい時は、対応する実装または schema を直接読む方がよい。
-- 単体の path model、設定読み込み、git helper の内部実装だけを変更する時。ただし review oracle の外部挙動に影響する場合は読む。
+- oracle review 以外の review サブコマンドや通常の session 操作だけを調べたい。
+- Codex 実行 wrapper、config loader、git helper、INDEX.md 生成処理そのものの内部実装を確認したい場合で、review oracle CLI の外部挙動が関係しない。
+- report renderer や finding merge helper の単体的な関数仕様だけを軽く確認したい場合で、CLI 実行、worktree、対象列挙、fake Codex 応答を含む統合的な文脈が不要である。
 
 ## hash
-- 720fd16a240c7eae5a58619834e3a9cd4d328668ed56875e59ea09fe9ee7f726
+- 2549674b5a90b4b14c0aec2f3dec971d9671b864ceec586965503e2d1d3fa825
 
 # `test_session_cli.py`
 

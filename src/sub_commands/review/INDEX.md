@@ -19,18 +19,19 @@
 # `oracle.py`
 
 ## Summary
-- review oracle コマンドの実行入口であり、active session branch 上の clean な worktree を前提に、isolated review worktree を作成して oracle review を実行し、INDEX 変更の commit/merge、後片付け、report 出力までを統括する。
-- review 対象列挙、review loop、report 描画・保存、review branch の merge/conflict 処理は下位モジュールから再公開し、このファイル自体は CLI runtime と一連の orchestration を束ねる位置にある。
+- active session branch 上で oracle review を実行する CLI 実装の入口。preflight、session/state 検証、clean worktree 確認、isolated review worktree 作成、対象 oracle file 列挙、review loop 実行、INDEX 変更の commit/merge、worktree/branch 後片付け、report 出力までの制御フローを束ねる。
+- review 対象列挙、review loop、report 描画、INDEX merge/conflict 処理などの個別責務は下位 module へ委譲し、この対象はそれらを CLI 実行単位として接続する orchestration 層である。
 
 ## Read this when
-- review oracle サブコマンドの全体フロー、実行前条件、run worktree の作成・削除、review branch の生成・merge、report 出力の制御を確認または変更したいとき。
-- review oracle 関連 helper の公開入口や、どの下位モジュールが target 列挙・loop・report・index commit/merge を担当しているかを把握したいとき。
-- active session branch 以外での拒否、clean worktree 要求、cmoc ignore 確保、失敗時にも report を書く挙動に関わる変更を行うとき。
+- review oracle サブコマンドの実行順序、session branch 制約、clean worktree 要件、run worktree の作成・削除、review branch の merge 条件、失敗時 report 出力の扱いを確認または変更したいとき。
+- review oracle がどの helper module を呼び出し、対象列挙から findings 生成、INDEX 変更反映、report 書き込みまでをどう接続しているかを追いたいとき。
+- review oracle 実行時の公開入口や import/export される review 関連 API の集約点を確認したいとき。
 
 ## Do not read this when
-- 個別 oracle file の列挙条件や scope 解釈だけを確認したい場合は、review target 列挙を担当する下位モジュールを直接読む方がよい。
-- findings の生成手順や Codex review loop の詳細だけを確認したい場合は、review loop を担当する下位モジュールを直接読む方がよい。
-- report の markdown 表現、section 描画、保存内容だけを確認したい場合は、review report を担当する下位モジュールを直接読む方がよい。
+- oracle file の列挙条件や scope ごとの対象選定だけを変更したいときは、対象列挙を担う module を直接読む。
+- review loop 内で Codex に渡す prompt、finding の merge 操作、反復制御だけを扱うときは、review loop を担う module を直接読む。
+- report の本文構成、finding section の描画、report path の決定だけを扱うときは、report 生成を担う module を直接読む。
+- INDEX 変更の commit、review branch merge、conflict 解決、status path 取得だけを扱うときは、INDEX 統合処理を担う module を直接読む。
 
 ## hash
-- 968833adfb39a8697ddebcdb1cb2c9816d6cff18420f2e9033674cd6f17d4f63
+- 126e80a595c4eb9b059f539a8c38eab361dbe838dbfb24a31479464eb24bb50d
