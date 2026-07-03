@@ -21,22 +21,23 @@
 # `apply`
 
 ## Summary
-- apply builder 領域のうち、apply fork 向け ACP builder 群と oracle 側 apply builder package に対応する互換 package 初期化要素を含む階層。主な責務は、oracle 側 builder を利用できるようにし、生成された parameter を realization 側の公開型へ適合させることである。
+- apply fork 向け ACP builder と、既存の apply builder import 経路を維持する互換入口を含む領域。oracle 側 builder への委譲、repo root 解決、import 準備、realization 側公開型への変換に関する実装へ進むための入口。
 
 ## Read this when
 - apply fork の agent call parameter 構築経路を確認・変更したいとき。
-- apply fork 用 builder が oracle 側 builder に委譲し、戻り値を realization 側の公開型へ変換する流れを確認したいとき。
+- apply fork の builder が oracle 側 builder を呼び出し、戻り値を realization 側の公開型へ適合させる流れを確認したいとき。
 - packaged layout と開発 tree layout の両方で oracle builder を import 可能にする処理を確認したいとき。
-- apply builder 領域が oracle 側 package 構造と対応する互換入口を持つか確認したいとき。
+- 既存の apply builder import 経路が互換目的で残っている理由や、削除できる条件を判断したいとき。
 
 ## Do not read this when
-- apply fork コマンド全体の実行フロー、fork 作成、branch 操作、diff 生成、CLI 引数処理を調べたいときは、上位の apply fork 実装を読む。
+- apply fork コマンド全体の実行フロー、fork 作成、branch 操作、diff 生成、CLI 引数処理を調べたいときは、上位の apply fork 実装へ進む。
 - agent prompt、出力条件、parameter 生成内容、人間意図などの正本仕様を確認したいときは、対応する oracle 側 builder を読む。
-- ACP parameter のデータ構造や公開型そのものを確認したいときは、基本型定義を読む。
-- apply fork 以外の ACP builder、汎用 git 操作 helper、path model を調べたいだけのときは、それぞれの共通実装を読む。
+- ACP parameter のデータ構造や公開型そのものを確認したいときは、基本型定義へ進む。
+- apply fork 以外の ACP builder、汎用 git 操作 helper、path model を調べたいだけのときは、それぞれの共通実装へ進む。
+- 新しい import 経路や公開 API を追加する場所を探しているとき。
 
 ## hash
-- ba29c791f282b6618bfae5135c91417964bbf4550ab0f84b885c5e7e71ef03ca
+- 7069dae752a14c1ced75b10576af9f6a1cafc7be0d6686b2796aadffbb34923a
 
 # `common`
 

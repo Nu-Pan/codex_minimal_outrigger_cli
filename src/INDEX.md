@@ -1,23 +1,23 @@
 # `acp`
 
 ## Summary
-- oracle 側の ACP builder 実装を正本に保ちながら、realization 側に残る既存 import surface を成立させる互換入口を束ねる領域。
-- 実処理や正本仕様ではなく、旧参照から canonical 実装への再公開・委譲、package path 接続、oracle parameter から公開型への最小変換など、移行期間中の互換層を扱う。
+- oracle 側 acp builder 実装を正本に保ちながら、既存の `acp.*` import 経路を維持する互換入口。
+- 配下には builder 関連の互換 package や wrapper がまとまり、実処理ではなく oracle 側実体への委譲、再公開、型適合、移行中の削除条件を確認する入口として使う。
 
 ## Read this when
-- ACP builder 全体について、oracle 側実装を複製せずに realization 側の既存 import 経路を維持している理由や構造を確認したいとき。
-- 旧参照、subpackage 互換入口、module alias、再公開先、oracle 側 package への search path 接続の対応関係を調べたいとき。
-- oracle builder の戻り値を realization 側の公開型へ適合させる wrapper や、互換入口を残す削除条件を確認したいとき。
-- apply、common、indexing、quota probe、review、session、TUI などの builder 領域に関する互換層の入口を探したいとき。
+- `acp.*` import を `oracle.*` や実体 module へ移行する際に、互換入口を残す理由や削除条件を確認したいとき。
+- ACP builder 配下で、既存 import path と oracle 側 builder 実装の接続関係を確認したいとき。
+- apply、common、indexing、quota probe、review、session、TUI など、特定 builder 領域の互換入口や wrapper へ進む対象を選びたいとき。
+- realization 側または利用者向け公開面に残る `acp.*` import の扱いを判断したいとき。
 
 ## Do not read this when
-- builder の prompt、parameter 生成内容、判定ロジック、変換処理本体などの正本仕様を確認したいときは、対応する oracle 側実装を読む。
-- CLI コマンド全体の実行フロー、fork 作成、branch 操作、diff 生成、TUI 描画、状態管理など、builder 互換入口以外の実処理を調べたいとき。
-- AgentCallParameter の基礎構造、公開型、共通 model 設定、file access mode 全体の定義を確認したいとき。
-- 新しい ACP 機能や API 仕様を追加したいとき。この領域は互換維持専用であり、機能追加の入口ではない。
+- acp builder の prompt、parameter 内容、判定仕様、生成ロジックなどの正本仕様を確認したいだけなら、対応する oracle 側実装を読む。
+- apply fork、review、TUI、session join などの具体的な実行フロー、状態管理、UI 制御、判定処理を変更したい場合は、実処理を持つ個別 module を読む。
+- ACP parameter の基礎データ構造、共通変換処理、repo root 解決、oracle src import 準備の詳細を調べたい場合は、該当する共通 helper や型定義を読む。
+- 新しい acp 機能、公開 API、import 経路を追加する場所を探しているとき。
 
 ## hash
-- b7231eb572f137241bc97c76b75db5606d8d08fd16a07feacd640b718494716d
+- a6d98ddefe45727854887f76ce13b71b6a1d736cb4d439b1b369344b3e11327c
 
 # `basic`
 

@@ -1,18 +1,18 @@
 # `__init__.py`
 
 ## Summary
-- oracle 側の apply builder package と対応する互換 package であることだけを示す package 初期化要素。実処理や公開 API の定義ではなく、同領域を package として扱うための入口に位置づけられる。
+- oracle.acp_builder.apply と互換の package として、既存の acp.builder.apply.* import を維持するための入口。実体ではなく互換層であり、realization 側と公開面から同参照が消えた後に削除できる。
 
 ## Read this when
-- apply builder 領域が oracle 側の package 構造と対応しているかを確認したいとき。
-- package 初期化部分に実装意図や互換性メモがあるかを確認したいとき。
+- 既存コードや利用者向け公開面で acp.builder.apply.* import が残っている理由を確認したいとき。
+- oracle.acp_builder.apply 側への移行に伴い、この互換 package を削除できる条件を判断したいとき。
 
 ## Do not read this when
-- apply builder の具体的な処理、変換、適用ロジックを調べたいとき。その場合は同 package 内の実装本体を読む。
-- 公開関数、クラス、入出力仕様、エラー処理を確認したいとき。この対象にはそれらの定義は含まれない。
+- apply 機能の実装詳細や挙動を確認したいときは、実装本体へ進む。
+- 新しい import 経路や公開 API を追加する場所を探しているとき。
 
 ## hash
-- a6df93a5897c266e6f48287739c8bf8192733ea9fb19e2f6eb05a302f4165b06
+- 3b7b28a47bd63cc192d8e90c21680ef7b23035187cf7a0ead5fabeef8e509a4c
 
 # `fork`
 

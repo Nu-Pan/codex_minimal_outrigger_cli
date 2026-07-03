@@ -149,23 +149,21 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を収める実装ルート。最上位 CLI、サブコマンド本体、共通 runtime、設定・basic・ACP 互換入口、oracle package への import shim など、CLI 実行と既存 import surface を成立させる実装領域への入口になる。
-- 実処理を持つ sub_commands・commons・main と、oracle 側正本実装を複製せず旧 import 経路を維持する acp・basic・config・oracle.py・cmoc_runtime.py が同階層に並ぶため、CLI 挙動の実装先と互換層の確認先を切り分けて読むための階層である。
+- cmoc の realization implementation を収める最上位実装領域。最上位 CLI、サブコマンド本体、共通 runtime、設定・basic・acp・oracle import 互換 shim への入口になる。
+- 実処理を持つ実装領域と、oracle 側正本実装や既存実体 module へ委譲する互換入口が混在するため、CLI 公開面、サブコマンド制御、共通 helper、移行中 import path のどれを読むべきかを切り分ける起点として使う。
 
 ## Read this when
-- cmoc の CLI 実装、サブコマンド orchestration、共通 runtime helper、または既存 import path 互換層のどこへ進むべきかを判断したいとき。
-- トップレベル CLI 登録、session・apply・review・init・indexing・tui などの実行本体、git・state・Codex 呼び出し・INDEX 更新 preflight などの共通処理への入口を探したいとき。
-- oracle 側の正本実装を realization 側へ複製せず、ACP・basic・config・oracle package などの既存参照をどう再公開・委譲しているかを確認したいとき。
-- 旧 import path や互換 shim を削除できる条件、実体モジュールとの対応、公開面に残る参照の移行状況を調べたいとき。
+- cmoc の実装を変更する際に、最上位 CLI、サブコマンド本体、共通 runtime、互換 import 層のどこへ進むべきか判断したいとき。
+- CLI コマンド構成、サブコマンド実行フロー、共通 runtime helper、設定・basic・acp・oracle の既存 import 経路の扱いを調べる入口を探しているとき。
+- oracle 側正本実装を realization 側へ複製せず、既存公開面や import path を維持している境界を確認したいとき。
 
 ## Do not read this when
-- oracle file に書かれた正本仕様断片、prompt builder の正本、path model や設定定義そのものを確認したいときは、対応する oracle 側本文を読む。
-- テストの期待挙動や検証観点を確認したいときは、test 側の対象を読む。
-- 生成済みログ、一時成果物、実行履歴の内容だけを調査したいときは、この実装ルートではなく該当するログや状態の保存先を読む。
-- 特定の個別処理の実装先が既に分かっているときは、この階層ではなく該当する下位対象へ直接進む。
+- oracle file に書かれた正本仕様断片そのものを確認したいだけのとき。その場合は対応する oracle doc または oracle src を読む。
+- 個別サブコマンド、共通 helper、互換 shim など読む対象がすでに特定できているときは、その下位対象を直接読む。
+- 実行済みログ、生成済み成果物、memo、git 管理情報、AGENTS.md、INDEX.md の内容を調べたいとき。
 
 ## hash
-- d011ca5097f17c5b184a59388a58d0994ce7f330a4cfc4c1515f75a683d7a112
+- 0e859d9786c381b75e1f2b1657c86c01dfd14407bb9586bf701f2c202628d09e
 
 # `test`
 
