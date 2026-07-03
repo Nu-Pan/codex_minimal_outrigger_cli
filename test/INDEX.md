@@ -333,23 +333,23 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle コマンドの CLI 経由の外部挙動を検証するテスト群。report の構成・判定結果・対象 oracle file 数、session/full scope の対象選択、所見の列挙・検証・judge・merge、エラー時 report、review 用 worktree と INDEX.md 差分の取り込みや拒否を扱う。
-- oracle review の同一 run 内で共有される fake Codex 応答、report 文脈、対象列挙、join commit、所見評価 loop の制御を一箇所で確認する入口となる。
+- review oracle の CLI 実行を、report 生成、対象 oracle file の選択、所見列挙から検証・judge・merge までの loop、review 用 worktree で発生した INDEX.md 差分の join、失敗時 report まで含めて検証する realization test。
+- 16,000 文字を超えるが、同じ review run の fake Codex 応答、report 文脈、対象選択、所見評価 loop の状態を共有する外部挙動テストとして凝集している。
 
 ## Read this when
-- review oracle CLI の report 出力、section 順、集計値、accepted/rejected finding の表示、error report の挙動を変更・確認する。
-- review oracle の full scope または session scope における oracle file 列挙条件、tracked ignored file、AGENTS.md・INDEX.md 除外、symlink や memo 形状 path の扱いを確認する。
-- 所見評価 loop で enumerate が既存 finding をどう受け取るか、challenger/advocate/judge/merge の呼び出し順や入力、merge operation の契約違反検出を確認する。
-- review oracle 実行時の linked worktree、review worktree、review_fork_commit、review_join_commit、INDEX.md の preflight 更新・merge・conflict 解決を扱う。
-- review oracle が INDEX.md 以外の差分を作った場合の拒否、作業ツリー復元、予期しない生成物の除去を確認する。
+- review oracle コマンドの外部挙動、出力 report の構成・集計・所見表示を変更または確認する。
+- review oracle の対象 oracle file 列挙、full/session scope、tracked ignored file、AGENTS.md・INDEX.md 除外、symlink や memo 配下の扱いを確認する。
+- review oracle の所見列挙 loop、対象ごとの既存所見 prompt、challenger/advocate/judge、merge operation の契約や invalid operation の扱いを変更する。
+- review oracle が linked worktree や review worktree をどう使い、生成・preflight された INDEX.md 差分をどう join するかを確認する。
+- review oracle の処理失敗時 report、非 INDEX.md 差分の拒否、index conflict 解決など、review 実行中の失敗・差分管理を変更する。
 
 ## Do not read this when
-- oracle review 以外の review サブコマンドや通常の session 操作だけを調べたい。
-- Codex 実行 wrapper、config loader、git helper、INDEX.md 生成処理そのものの内部実装を確認したい場合で、review oracle CLI の外部挙動が関係しない。
-- report renderer や finding merge helper の単体的な関数仕様だけを軽く確認したい場合で、CLI 実行、worktree、対象列挙、fake Codex 応答を含む統合的な文脈が不要である。
+- oracle review 以外の review サブコマンドや、一般的な CLI 起動処理だけを確認したい。
+- report rendering や所見 loop の実装だけを局所的に読みたい場合で、まず対応する実装 module を読む方が直接的である。
+- INDEX.md エントリー生成、path model、session fork などの個別仕様・実装を確認したいだけで、review oracle CLI の統合挙動に関心がない。
 
 ## hash
-- 2549674b5a90b4b14c0aec2f3dec971d9671b864ceec586965503e2d1d3fa825
+- 5bd15606b49b7cbdc4c905c452efe8489f1da98c2d70676e062cd086187b5470
 
 # `test_session_cli.py`
 

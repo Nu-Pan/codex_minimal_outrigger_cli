@@ -108,42 +108,64 @@
 # `review_loop.py`
 
 ## Summary
-- review oracle の finding を列挙し、重複整理し、検証者と擁護者の往復評価を行い、最終判定まで進めるループ処理を担う。
-- oracle path 表記を実ファイル path に解決し、finding と対象 oracle file の関連付けを行う。
-- merge finding の Structured Output edit operation を検証し、delete・replace・merge を finding list に適用する。
+- oracle review で検出された finding を列挙し、関連 finding を統合し、advocate/challenger 検証を反復して judge 結果を付与するループ処理を担う。
+- finding merge の delete/replace/merge operation を検証し、finding_id の重複利用・未知 ID・不正な対象数や finding 形状を拒否しながら finding list に適用する。
 
 ## Read this when
-- review oracle の finding enumerate、merge、validate、judge の実行順序や反復条件を確認したいとき。
-- finding の dirty 管理、finding_id 採番、advocate/challenger/judge フィールドの初期化や更新を調べたいとき。
-- oracle_path の絶対 path、相対 path、プレースホルダ表記、oracle root alias の解決挙動を確認したいとき。
-- merge finding operation の入力検証、target_ids の重複・未知 ID 検出、delete・replace・merge の適用規則を変更またはテストしたいとき。
+- oracle file 群を対象にした review finding の列挙、統合、検証、判定の実行順序や反復条件を確認・変更したいとき。
+- review finding の初期フィールド、finding_id 採番、oracle path ごとの関連 finding の絞り込みを確認したいとき。
+- merge finding の Structured Output operation を finding list に適用する挙動や、operation validation の失敗条件を確認・変更したいとき。
+- review oracle 用 builder parameter と codex_exec の呼び出し境界、purpose 文字列、log/worktree/config の渡し方を追う必要があるとき。
 
 ## Do not read this when
-- review oracle 用 prompt や codex 実行 parameter の文面を確認したいだけなら、builder 側の対象を読む。
-- cmoc 全体の path placeholder 定義や実 path 解決の一般仕様を確認したいだけなら、path model 側の対象を読む。
-- review oracle の反復回数など設定値の定義を確認したいだけなら、設定モデル側の対象を読む。
-- oracle file の内容そのものをレビューしたいだけで、finding ループ制御や merge operation 適用には関心がないとき。
+- review oracle に渡す prompt や Structured Output parameter の内容そのものを確認したいだけなら、builder 側を直接読む。
+- finding から oracle path を取り出す規則だけを確認したいなら、path 変換を担う対象を直接読む。
+- CLI 引数、設定値の定義、設定ファイルの読み込み規則を確認したいだけなら、config や subcommand 定義を読む。
+- realization file ではなく oracle file の正本仕様断片を確認したい場合は、対応する oracle doc/src/test を読む。
 
 ## hash
-- 72935ec2e446bd58d0781ad2ecd853617501102084f80999f492fd638c188ece
+- 585f85604ee88d23118c193391084aeeb9bc6a6b3823bec4e2012df58e98fb24
+
+# `review_paths.py`
+
+## Summary
+- review finding の `oracle_path` 値を、実在パスまたは解決済みパスへ変換する補助処理を扱う。
+- 空値・非文字列・不正なプレースホルダを `None` にし、絶対パス、`<oracle-root>` alias、その他のパスプレースホルダ、worktree 相対パスを分岐して解決する。
+
+## Read this when
+- review finding に含まれる oracle 参照パスの解決方法を確認または変更したいとき。
+- `<oracle-root>` alias、`<...>` 形式のパスプレースホルダ、worktree 相対パスの扱いを調べたいとき。
+- finding に oracle path が無い場合や不正な場合の戻り値を確認したいとき。
+
+## Do not read this when
+- review finding の列挙 prompt や oracle path の出力仕様そのものを確認したいとき。
+- 汎用的なパスプレースホルダ解決規則や path model 全体を調べたいとき。
+- review サブコマンド全体の制御フロー、表示、終了コードを確認したいとき。
+
+## hash
+- 030dc150f751305de30cf8f55a7b22f925529de6c4aa2b2b36480935057e02ae
 
 # `review_report.py`
 
 ## Summary
-- review oracle の実行結果を Markdown レポートとして保存・描画する実装。YAML frontmatter、判定文、評価対象 oracle 一覧、severity/verdict 別の finding 集計と詳細表示、oracle path の表示用整形を扱う。
+- review oracle の実行結果を Markdown レポートとして保存・描画する責務を持つ。
+- YAML frontmatter、判定文、評価対象 oracle file 一覧、重大度と採否別の finding 集計・詳細表示を組み立てる。
+- finding から表示用 oracle path を導く処理や、レビュー失敗・対象なし・fatal/minor/ok の結果判定もこの対象にまとまっている。
 
 ## Read this when
-- review oracle のレポート出力内容、見出し順、frontmatter 項目、判定 result の決まり方を確認・変更したいとき。
-- review oracle の findings を accepted/rejected や fatal/minor に分類して表示する処理を追うとき。
-- oracle file のパスをレポート上でどのように相対表示するかを確認・変更したいとき。
+- review oracle のレポート出力内容、見出し順、frontmatter 項目、判定文、finding 表示形式を確認または変更したいとき。
+- review oracle の実行結果をどのディレクトリへ保存し、保存パスをどう返すかを確認したいとき。
+- finding の verdict・severity による分類、accepted/rejected 件数、評価対象ごとの findings 数の集計挙動を確認したいとき。
+- oracle path をレポート上でどのように相対表示するかを確認したいとき。
 
 ## Do not read this when
-- review oracle の対象 oracle file を収集・選択する処理を探しているとき。
-- review oracle の finding を生成・判定するレビュー本体のロジックを調べたいとき。
-- review oracle 以外のコマンドのレポート出力を確認したいとき。
+- review oracle がどの oracle file を対象に選ぶか、finding をどう検出するかを知りたいだけのとき。
+- SessionState、reports_dir、timestamp など実行時状態や共通保存先 helper の定義を確認したいとき。
+- review oracle 以外のサブコマンドのレポート形式や CLI 引数処理を確認したいとき。
+- 既存の INDEX.md ルーティング文書そのものを更新・検証したいとき。
 
 ## hash
-- 78249bbed205387b3ea6da3190592d887dc393325f6dac73ba150217fb94c000
+- 4c5b6aa60c471154c7532eab988f9baee39390511b34f3df47abaa67200d742d
 
 # `review_targets.py`
 

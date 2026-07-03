@@ -142,20 +142,22 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装の入口を集約する領域。初期化、INDEX maintenance、TUI 起動、session 操作、apply run、review oracle など、利用者向けコマンドを runtime・git・state・worktree・Codex 呼び出し・report 生成の共通処理へ接続する。
-- 各サブコマンド固有の事前条件、状態遷移、失敗時処理、公開出力、上位 orchestration の読む先を切り分けるための入口になる。
+- cmoc のサブコマンド実装を集める領域。init、indexing、tui、apply、review、session などの実行入口と上位 orchestration を扱い、各サブコマンドの事前条件、状態遷移、git 操作、Codex 呼び出し、出力・report 生成へ進むための入口になる。
+- 単一コマンドの詳細制御だけでなく、apply・review・session のように下位 module へ分かれるサブコマンド群について、どの責務の実装へ進むべきかを判断するための階層である。
 
 ## Read this when
-- CLI サブコマンドの実行本体や、どのコマンド実装へ進むべきかを判断したいとき。
-- init、indexing、TUI、session、apply、review oracle の外部挙動、事前条件、状態更新、git 操作、出力、report 生成を確認または変更したいとき。
-- run worktree、session branch、apply/review branch、process id、session state、INDEX 変更反映、merge/conflict 処理など、サブコマンド固有の orchestration を追いたいとき。
-- 共通 helper がどのサブコマンド入口から呼ばれ、サブコマンド固有処理とどこで接続されるかを確認したいとき。
+- cmoc のサブコマンド実装を調べる起点を探しているとき。
+- init、indexing、tui の実行順序、preflight、git 操作、設定・root 解決、CLI 出力など、個別サブコマンドの入口処理を確認または変更したいとき。
+- apply run の開始、破棄、取り込み、finding 適用、merge・conflict 処理、report 生成など、apply 系制御の読む先を判断したいとき。
+- review oracle の対象列挙、review loop、INDEX 変更反映、merge、report 出力など、review 系処理のどの module へ進むべきかを切り分けたいとき。
+- session branch の作成、home branch への合流、merge せず破棄する処理など、session 系サブコマンドの実装入口を探したいとき。
 
 ## Do not read this when
-- git command wrapper、state 読み書き、root 解決、worktree 探索、Codex exec runtime、report directory 生成など、複数機能で使われる低レベル helper の基本挙動だけを調べたいとき。
-- oracle file、realization file、path model、INDEX.md 生成規則など、特定サブコマンドに閉じない仕様概念を確認したいとき。
-- Typer app への登録やトップレベル CLI 配線だけを確認したいとき。
-- 各サブコマンドの正本仕様そのものを確認したいときは、実装ではなく対応する oracle doc を読む。
+- サブコマンド固有ではない git command wrapper、state 読み書き、root 解決、runtime、Codex exec runtime、report directory 生成などの共通 helper の基本挙動だけを確認したいとき。
+- oracle file、realization file、path model、INDEX.md 生成規則など、CLI サブコマンド実装ではなく仕様概念を確認したいとき。
+- Typer app へのトップレベル登録や CLI 全体の entrypoint だけを確認したいとき。
+- INDEX.md の内容生成、差分検出、lock、commit 処理など indexing 共通処理の詳細を調べたいとき。
+- Codex に渡す prompt や Structured Output parameter の具体的な組み立てだけを確認したいときは、各 builder 側を直接読む。
 
 ## hash
-- 2c0764e74ea8a31bf0739ac04029c00e17935f4b3dccdf0e20db5b1309587286
+- b45ed8dac1be0d93673e211000d4aef68309b8634ef87b6996d76aa28b053b5e
