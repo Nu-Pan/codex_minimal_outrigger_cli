@@ -1234,8 +1234,8 @@ def test_run_codex_tui_fails_when_codex_exits_nonzero(
         run_codex_tui(_parameter(), root=root, config=CmocConfig())
 
     console = capsys.readouterr().out
-    assert "- 目的: `codex tui`" in console
-    assert "- 終了コード: `7`" in console
+    assert "- Purpose: `codex tui`" in console
+    assert "- Exit code: `7`" in console
     call_logs = list((root / ".cmoc" / "log" / "codex").glob("*_tui_call.json"))
     assert len(call_logs) == 1
     call_log = json.loads(call_logs[0].read_text())
