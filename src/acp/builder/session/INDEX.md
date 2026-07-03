@@ -1,36 +1,33 @@
 # `__init__.py`
 
 ## Summary
-- oracle.acp_builder.session と同じ import 経路を実装側に用意するための互換 package 初期化ファイル。
-- 実体の処理や公開オブジェクト定義は持たず、この階層を session package として成立させる入口に位置づけられる。
+- oracle.acp_builder.session との互換性を保つための package 初期化ファイル。既存の acp.builder.session.* import を維持するためだけに残されている。
 
 ## Read this when
-- acp builder の session package が oracle 側の package 構造とどう対応しているかを確認したいとき。
-- この階層が import 可能な package として存在する理由だけを確認したいとき。
+- acp.builder.session.* import の互換維持経路を確認する。
+- oracle.acp_builder.session 参照への移行や、互換 package を削除できる条件を確認する。
 
 ## Do not read this when
-- session builder の具体的な処理、状態管理、入出力変換を調べたいとき。
-- 公開 API、関数、クラス、定数の実装内容を探しているとき。
-- oracle 側の正本仕様や互換対象そのものを確認したいとき。
+- session 実装の挙動や構成要素を確認したい場合。
+- 新規機能の入口や通常の公開 API を探している場合。
 
 ## hash
-- 7e4bc9c978926c93dcef2adf49463fd3703f72086d6dffc318e9381b610b5c88
+- 1c24d1b1720d385b0f3388d0c70ebd4fa053c26df3a40f54e8cb91484c901dc8
 
 # `join`
 
 ## Summary
-- ACP builder の session join 領域における package 入口と、旧 import 経路を維持する互換入口を収める領域。
-- この階層自体は session join の実処理を担う場所ではなく、oracle 側の対応構成との package 互換性と、正本側実装への再 export 境界を扱う。
+- oracle.acp_builder.session.join 由来の互換入口を収める package。既存の acp.builder.session.join 配下 import を維持するための初期化ファイルと、正本側実装を再 export する conflict resolution 旧 import 経路を扱い、この階層自体は session join の実装本体を持たない。
 
 ## Read this when
-- ACP builder の session join 配下が package として成立している理由や、oracle 側の対応構成との互換性を確認したいとき。
-- session join conflict resolution について、旧 import 経路が残っている理由、移行用の互換入口、削除可否の前提を確認したいとき。
-- session join 配下の実体を持つ実装へ進む前に、この階層が実処理ではなく互換境界として存在しているかを見分けたいとき。
+- acp.builder.session.join 配下の互換 package や旧 import 経路が残っている理由を確認したいとき。
+- session join conflict resolution の呼び出し元移行、互換 import の削除可否、または正本側実装への再 export の存在理由を確認したいとき。
+- oracle.acp_builder.session.join から realization 側へ置かれた互換入口の配置を調べているとき。
 
 ## Do not read this when
-- session join の具体的な処理内容、関数、クラス、入出力仕様、衝突解決の判定内容を調べたいときは、実体を持つ正本側実装へ進む。
-- ACP builder 全体の設計や session join 以外の領域を調べたいときは、より上位または対象領域の入口から確認する。
-- oracle 側の正本仕様そのものを確認したいときは、この互換領域ではなく oracle 側の該当本文を読む。
+- session join の具体的な処理内容、衝突解決の挙動、API、判定内容、実装詳細を確認・変更したいときは、実体を持つ正本側実装へ進む。
+- 互換 import の実際の利用箇所や移行状況を調査したいときは、参照元検索を行う。
+- 旧 import 経路や公開面維持に関係しない session join 作業では読む必要はない。
 
 ## hash
-- 85933db87f4a855b5a4bdd80b5593fcd293c47c0e7c1c7fa2e11a1270fa78021
+- c4f82f00262fb4c596f742c2dceb9dad9ae15cd0753c5e96470101c3a529da82

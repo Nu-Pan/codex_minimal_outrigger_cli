@@ -1,19 +1,19 @@
 # `__init__.py`
 
 ## Summary
-- 正本側の ACP builder TUI パッケージとの互換性を示すだけの package 初期化地点。具体的な処理や公開オブジェクトは持たず、この階層が互換 package として存在する理由を示す。
+- 既存の `acp.builder.tui.*` import を維持するためだけに残された、`oracle.acp_builder.tui` 互換 package の入口。
+- realization 側と利用者向け公開面からこの参照が消えた後に削除できる互換層として位置づけられる。
 
 ## Read this when
-- ACP builder の TUI 関連 package が、正本側の対応 package と互換の入口として用意されているかを確認したいとき。
-- この package 初期化地点自体に、追加の初期化処理、公開 import、互換性説明があるかを確認したいとき。
+- 既存 import 経路 `acp.builder.tui.*` の互換維持や削除可否を確認する。
+- `oracle.acp_builder.tui` との互換 package がなぜ残っているかを確認する。
 
 ## Do not read this when
-- TUI の構築処理、画面制御、入出力処理などの実装内容を調べたいとき。
-- 正本仕様断片そのもの、または互換先の詳細な挙動を確認したいとき。
-- 関数、クラス、定数、CLI 動作などの具体的な公開面を探しているとき。
+- TUI 実装本体の挙動や画面構成を確認したい場合。
+- 新しい公開 API や新規 import 経路を設計したい場合。
 
 ## hash
-- 0a593accdb428d084c035fe120f2a06b5788abb28e112e72252680ca369fb14d
+- 9e5ae7e28c1e80b5ffa414ac5eea7dd08927b7977f87292b3afa9b714a894d0a
 
 # `launch_tui.py`
 

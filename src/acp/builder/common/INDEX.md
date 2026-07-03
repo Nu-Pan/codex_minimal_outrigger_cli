@@ -1,18 +1,21 @@
 # `__init__.py`
 
 ## Summary
-- oracle.acp_builder.common に対応する互換 builder package の入口を示す。
+- 既存の acp.builder.common.* import を維持するためだけに存在する互換 package。
+- oracle.acp_builder.common 由来の参照経路を realization 側と利用者向け公開面から段階的に外すまでの暫定入口として位置づけられる。
 
 ## Read this when
-- acp builder common 領域で oracle 側との互換 package の有無や入口を確認したいとき。
-- builder common 配下の import 経路や package 初期化の扱いを確認したいとき。
+- acp.builder.common.* の既存 import 互換性を確認する。
+- この互換 package を削除できる条件を確認する。
+- oracle.acp_builder.common と acp.builder.common の参照関係を調べる。
 
 ## Do not read this when
-- builder common の具体的な処理内容や個別機能を調べたいときは、下位 module を直接読む。
-- oracle 側の正本仕様断片を確認したいときは、対応する oracle file を読む。
+- 互換 import 経路ではなく、common 配下の具体的な実装内容を確認したい。
+- 新規機能の実装場所や API 詳細を探している。
+- realization 側と利用者向け公開面に acp.builder.common.* 参照が残っているかを、呼び出し元から調査したい。
 
 ## hash
-- 39723a6719db306a6db964d9bcc53626a73d1311f463c76d706234e142954b99
+- 79afa093b284cae71da7d53b057c3b20b9988352691eacf3ce8d5221458c03b4
 
 # `file_access_rule_vaolation_recovery.py`
 

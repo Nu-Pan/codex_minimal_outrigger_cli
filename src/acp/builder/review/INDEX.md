@@ -1,34 +1,37 @@
 # `__init__.py`
 
 ## Summary
-- oracle.acp_builder.review と互換の package であることだけを示す、review builder 領域の package 初期化用ファイル。実装ロジックや詳細な仕様ではなく、互換名前空間としての位置づけを確認する入口になる。
+- 既存の review builder 系 import 互換性を保つためだけに残された package 初期化部分。現行実装や公開面から互換 import が消えた時点で削除候補になる境界を示す。
 
 ## Read this when
-- review builder 領域で、oracle 側の同名 package と対応する realization package が存在するかを確認したいとき。
-- package としての互換性や import 経路の成立だけを確認したいとき。
+- review builder 周辺の import 互換性を確認する。
+- 古い acp.builder.review 系参照を削除できるか判断する。
+- 互換 package の残存理由や削除条件を確認する。
 
 ## Do not read this when
-- review builder の具体的な処理、関数、クラス、出力、制御フローを調べたいとき。
-- 正本仕様断片としての review builder の要求を調べたいとき。
-- package 初期化以外の実装変更先を探しているとき。
+- review builder の実処理や変換ロジックを調べたい。
+- 新しい公開 API や利用者向け機能の仕様を確認したい。
+- 互換 import と無関係な builder 実装を変更する。
 
 ## hash
-- adf6124f1c3a49a136159186b6a58b39f4321e0113527b60e85d8b1e3205484e
+- 20e0879d03952a8b860e9d09a0f9c7e08c05699e96390ec504f3e0481a897ebb
 
 # `oracle`
 
 ## Summary
-- review oracle builder 周辺で、旧 import 経路の互換層と一部の agent call parameter 生成 wrapper をまとめる階層。多くは canonical oracle 側実装への再公開または委譲で、実体ロジックよりも移行中の import 互換性、暫定 prompt 補正、削除条件を扱う。
+- review oracle 向け agent call parameter builder 群を扱う領域。主に旧来 import 経路を canonical oracle 実装へ委譲する互換層と、正本側 builder 出力に残る placeholder 表記差を realization 側で最小補正する薄い wrapper を含む。
+- 実際の review oracle 仕様や判定ロジック本体ではなく、既存 caller との import 互換性、正本側 builder の再利用、一時的な typo・placeholder 補正の責務境界を確認する入口になる。
 
 ## Read this when
-- review oracle builder の旧経路 import が canonical oracle 側へどう委譲されているか確認したいとき。
-- review finding enumeration、judgment、validation、merge finding の互換 module や薄い wrapper の残存理由、移行状況、削除条件を調べたいとき。
-- 正本側 builder の出力を realization 側で最小補正して agent call parameter を生成している箇所を探したいとき。
+- review oracle 周辺の agent call parameter 生成で、realization 側が正本側 builder をどう再利用・補正しているか確認したい。
+- review finding enumeration、judgment、validation などの旧来 import 経路が canonical oracle 実装へ委譲されているか、また互換層を削除できる条件を調べたい。
+- prompt 内の oracle root placeholder 表記差など、正本側で解消されるまで realization 側に残している一時補正の範囲と削除条件を確認したい。
+- 同名機能の実装が realization 側にあるように見えるが、実体を持つ実装なのか互換 import 層なのかを切り分けたい。
 
 ## Do not read this when
-- review finding の判定仕様、検証ロジック、prompt 正本文面など、挙動本体や正本仕様を確認したいときは canonical oracle 側または対応する oracle file を読む。
-- agent call parameter の基礎構造、共通 model 設定、file access mode などの一般仕様を確認したいときは基礎定義側を読む。
-- review 全体の builder 構成や、この階層にない別種の review 処理を調べたいときは、より上位または該当する対象へ進む。
+- review oracle の正本仕様、prompt の本来の文面、判定仕様、検証ロジック本体を確認したい場合は、対応する oracle file または canonical oracle 実装を直接読む。
+- AgentCallParameter の基礎データ構造、model、reasoning effort、file access mode などの共通仕様を調べたい場合は、基礎定義側を読む。
+- 互換 import 経路や一時的な placeholder 補正と無関係な review 全体の構成、別種の builder、または他領域の処理を調べたい場合は、より上位または該当対象へ進む。
 
 ## hash
-- af1dc93a74559b4fada9eb5a2266a8362f76b2ed3699b0d4239f039390a81b02
+- 7085f936f3d433011992d08f54118e0e9fc1eb64cb173a71dbb53ff27f7b5a37

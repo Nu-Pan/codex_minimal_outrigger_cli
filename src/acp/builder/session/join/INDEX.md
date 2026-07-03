@@ -1,21 +1,19 @@
 # `__init__.py`
 
 ## Summary
-- ACP builder の session join 領域を、oracle 側の対応するモジュール構成と互換にするための package 入口を示す。
-- 実処理ではなく package としての存在および互換境界を担うだけの薄い初期化対象である。
+- oracle.acp_builder.session.join 互換の package 初期化ファイル。既存の acp.builder.session.join.* import を維持するためだけに残る互換入口であり、実装本体は持たない。
 
 ## Read this when
-- ACP builder の session join 領域で、package 階層や import 経路の互換性を確認するとき。
-- oracle 側の対応領域と realization 側の package 構成が対応しているかを調べるとき。
-- session join 配下の実装へ進む前に、この階層が package として成立している理由だけを確認したいとき。
+- acp.builder.session.join 配下の import 互換性や公開面維持のために、この package が存在する理由を確認したいとき。
+- oracle.acp_builder.session.join から realization 側への互換 package 配置を調べているとき。
 
 ## Do not read this when
-- session join の具体的な処理内容、関数、クラス、入出力仕様を調べたいとき。
-- ACP builder 全体の設計や session join 以外の領域を調べたいとき。
-- oracle 側の正本仕様そのものを確認したいとき。
+- session join の具体的な処理内容や振る舞いを確認したいとき。
+- 互換 import の利用箇所を探したいとき。
+- realization 側と利用者向け公開面から参照がなくなったかを判断するために、実際の参照元を調査したいとき。
 
 ## hash
-- b0d15cb786f4514211487ee0127714fafa93fe6b3674ae0b61f53efd3bd9602c
+- 072255c777a758fe7fa412dab9c417d50fc420b5871fae782e550e97a8c1b483
 
 # `conflict_resolution.py`
 

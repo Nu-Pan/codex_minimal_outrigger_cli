@@ -1,18 +1,19 @@
 # `__init__.py`
 
 ## Summary
-- `oracle.acp_builder.review.oracle` 互換名前空間を成立させるための package 初期化ファイル。本文は互換 package であることだけを示し、レビュー処理や oracle 内容そのものは持たない。
+- 旧来の import 経路を維持するための互換 package。
+- 既存の参照を壊さないために残されており、realization 側と利用者向け公開面から同参照がなくなった時点で削除候補になる。
 
 ## Read this when
-- 互換 import 経路として `oracle.acp_builder.review.oracle` 名前空間が存在する理由を確認したいとき。
-- この階層が実処理を持つ module ではなく package 境界として置かれているかを確認したいとき。
+- 旧来の import 経路に対する互換性維持や削除可否を確認する。
+- この package が残されている理由や、削除条件を確認する。
 
 ## Do not read this when
-- レビューの具体的な判定ロジック、builder 処理、oracle の仕様断片を調べたいとき。
-- 公開 API、関数、クラス、定数、再 export の実装を探しているとき。
+- 新しい実装責務や公開 API の仕様を確認したい場合。
+- 互換 import 経路ではなく、実際の review oracle 処理本体を調べたい場合。
 
 ## hash
-- af0101216671fb90a1b9f95b81758a8f49779d3a1830bc39993735590f29a60d
+- 1cc0bee48cb44a0d598bc18b30385b88d2a2c6d769d3f20ac96b52c29afcd7f9
 
 # `enumerate_finding.py`
 

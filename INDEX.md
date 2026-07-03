@@ -149,21 +149,24 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を収める最上位実装領域。最上位 CLI、サブコマンド本体、共通 runtime、設定・basic・acp・oracle import 互換 shim への入口になる。
-- 実処理を持つ実装領域と、oracle 側正本実装や既存実体 module へ委譲する互換入口が混在するため、CLI 公開面、サブコマンド制御、共通 helper、移行中 import path のどれを読むべきかを切り分ける起点として使う。
+- cmoc の realization implementation を収める実装領域で、最上位 CLI、サブコマンド本体、共通 runtime、互換 import 入口への起点になる。
+- 実処理を持つサブコマンド・共通 helper と、oracle 側正本実装を複製せず既存公開面を保つ薄い互換層が混在するため、公開 CLI、実行制御、共有 runtime、移行用 import 境界を読み分ける入口になる。
+- 設定、basic API、ACP builder、oracle package などの正本側実装への委譲や再公開を扱う互換領域と、init、indexing、TUI、session、apply、review などの操作実装へ進むための上位階層である。
 
 ## Read this when
-- cmoc の実装を変更する際に、最上位 CLI、サブコマンド本体、共通 runtime、互換 import 層のどこへ進むべきか判断したいとき。
-- CLI コマンド構成、サブコマンド実行フロー、共通 runtime helper、設定・basic・acp・oracle の既存 import 経路の扱いを調べる入口を探しているとき。
-- oracle 側正本実装を realization 側へ複製せず、既存公開面や import path を維持している境界を確認したいとき。
+- cmoc の realization implementation 全体から、CLI 入口、サブコマンド実装、共通 runtime、互換 import 層のどこへ進むべきか判断したいとき。
+- 公開 CLI の構成、コマンド委譲先、実行ライフサイクル、共通 helper、git・state・path・logging・Codex 呼び出しなど、実装側の入口を探したいとき。
+- oracle 側の正本実装を realization 側へ複製せず、既存 import path や公開面を維持している互換層の位置づけを確認したいとき。
+- init、indexing、TUI、session、apply、review など、CLI から呼ばれる各操作の orchestration や出力・後処理の実装先を探したいとき。
 
 ## Do not read this when
-- oracle file に書かれた正本仕様断片そのものを確認したいだけのとき。その場合は対応する oracle doc または oracle src を読む。
-- 個別サブコマンド、共通 helper、互換 shim など読む対象がすでに特定できているときは、その下位対象を直接読む。
-- 実行済みログ、生成済み成果物、memo、git 管理情報、AGENTS.md、INDEX.md の内容を調べたいとき。
+- oracle file に書かれた正本仕様断片、正本側 builder、設定定義、path model、prompt、判定仕様そのものを確認したいときは、対応する oracle 側の本文または実装を読む。
+- テストの期待挙動や検証観点を調べたいだけのときは、テスト領域を読む。
+- 実行済みログ、生成済み成果物、作業メモ、git 内部状態を調査したいだけのときは、この実装領域ではなく該当する保存先を読む。
+- 個別機能の読む先がすでに分かっており、上位の実装領域からルーティングし直す必要がないときは、該当する下位対象を直接読む。
 
 ## hash
-- 0e859d9786c381b75e1f2b1657c86c01dfd14407bb9586bf701f2c202628d09e
+- b95ecc8904e45543e43fd5f398920414e280e4c4c5e7be0b574ea083e8de265c
 
 # `test`
 

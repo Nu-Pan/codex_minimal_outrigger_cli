@@ -17,19 +17,20 @@
 # `fork`
 
 ## Summary
-- apply fork 向けの ACP builder 実装群を収めるディレクトリ。各 builder は repo root 解決、oracle builder の import 準備、oracle 側 parameter 生成への委譲、realization 側公開型への変換を担い、互換 package の入口も含む。
+- apply fork 向け agent call parameter builder 群を収める package。各 builder は realization 側の薄い入口として、repo root 解決、oracle builder import 準備、oracle 側生成結果から realization 側公開型への変換を担う。
+- 旧来の apply fork 系 import 互換を維持するための package 境界も含み、互換公開面を残す理由と削除判断の入口になる。
 
 ## Read this when
-- apply fork の agent call parameter 構築経路を確認・変更したいとき。
-- apply fork の各 agent 用 builder が oracle 側 builder をどのように呼び出し、戻り値を realization 側の公開型へ適合させているか確認したいとき。
-- packaged layout と開発 tree layout の両方で oracle builder を import 可能にする共通処理を確認したいとき。
-- apply fork 互換 package の存在理由や、package 自体が処理本体ではなく互換用入口であることを確認したいとき。
+- `cmoc apply fork` の変更要約、ファイル単位所見列挙、所見適用に関する agent call parameter 構築経路を確認・変更したいとき。
+- apply fork の realization 側 builder が oracle 側 builder をどう呼び出し、戻り値を realization 側 `AgentCallParameter` に適合させるか確認したいとき。
+- apply fork 用 ACP builder 共通の repo root 解決、oracle src import 準備、oracle parameter 受け渡し境界を確認したいとき。
+- 旧来の apply fork 系 import 互換 package を維持または削除できるか判断したいとき。
 
 ## Do not read this when
-- apply fork コマンド全体の実行フロー、fork 作成、branch 操作、diff 生成、CLI 引数処理を調べたいときは、上位の apply fork 実装へ進む。
-- agent prompt、出力条件、parameter 生成内容、人間意図などの正本仕様を確認したいときは、対応する oracle 側 builder を読む。
-- ACP parameter のデータ構造や公開型そのものを確認したいときは、基本型定義へ進む。
-- apply fork 以外の ACP builder や汎用 git 操作 helper、path model を調べたいだけのときは、それぞれの共通実装へ進む。
+- `cmoc apply fork` 全体の実行フロー、fork 作成、branch 操作、diff 生成、CLI 引数処理を調べたいときは、上位の apply fork 実装や呼び出し元を読む。
+- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したいときは、対応する oracle 側 builder を読む。
+- ACP parameter のデータ構造、公開型そのもの、汎用 git helper、path model を調べたいだけなら、それぞれの共通実装や型定義を読む。
+- apply fork 以外の ACP builder の個別ロジックを確認したいとき。
 
 ## hash
-- 252aa75f38436d8dbdd65ec89af91cb1f5a89d5fe495a8527a2ebbab03b6db96
+- aa780174e29dd5732bd1c16b52ac8021bcb036497590175d985fe4d9b4e7c86a

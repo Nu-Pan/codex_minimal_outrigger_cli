@@ -1,19 +1,18 @@
 # `__init__.py`
 
 ## Summary
-- `oracle.acp_builder.apply.fork` と同じ import 経路を実装側に用意するための互換 package 初期化ファイル。本文は互換 package であることを示す docstring のみを持ち、具体的な処理や公開 API の定義は持たない。
+- 旧来の apply fork 系 import との互換性を保つためだけに残された package。実装本体ではなく、既存参照を壊さないための公開面維持と削除条件を示す。
 
 ## Read this when
-- `oracle.acp_builder.apply.fork` 互換 package の存在理由を確認したいとき。
-- この package 直下の実装を読む前に、package 自体が処理本体ではなく互換用の入口であることだけを確認したいとき。
+- 旧来の apply fork 系 import 経路を維持する必要があるか判断するとき。
+- 互換 package を削除できるか確認するため、realization 側と利用者向け公開面に同参照が残っているか調べるとき。
 
 ## Do not read this when
-- fork 適用処理の具体的な実装、関数、クラス、入出力を調べたいとき。
-- 互換 package ではなく oracle 側の正本仕様断片を確認したいとき。
-- package 初期化 docstring 以外の実行時挙動や副作用を探しているとき。
+- apply fork の実処理や挙動を調べたいとき。
+- 互換 import 経路ではなく、現行の実装責務や制御ロジックを変更したいとき。
 
 ## hash
-- c5707d270af058dc9b548e1d49ffefdd38c20a0785a67a293523f2be83ebc266
+- 9fbe41ef7b1f6461c182c9c72161a713cf2ce6cd068519b03772412301ad1bc7
 
 # `_common.py`
 

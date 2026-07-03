@@ -19,20 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP builder 領域で、oracle 側 builder 実装を正本に保ちながら、既存の realization 側 import 経路を維持する互換入口を束ねる階層。
-- apply、common、indexing、quota probe、review、session、TUI などの builder 互換 package や wrapper へ進むための入口であり、実処理や正本仕様そのものではなく、oracle 側実体への委譲、再公開、型適合、削除条件の確認に使う。
+- ACP builder の旧 import 経路を oracle 側の正本実装へ接続する互換層をまとめる領域。realization 側では package path、module alias、再 export、最小限の出力適合を担い、builder の仕様本体や生成ロジックは oracle 側に置く。
+- apply fork、review、session、TUI、indexing、quota probe、common recovery など、既存参照を壊さず正本側 builder を利用するための入口を切り分ける。互換層を残す理由、削除条件、正本側実装との対応関係を確認するための上位入口になる。
 
 ## Read this when
-- ACP builder 配下で、既存 import path と oracle 側 builder 実装の接続関係を確認したいとき。
-- oracle 側 builder を正本に保ちつつ、realization 側で package path、module alias、薄い wrapper、公開型への変換をどう維持しているか調べたいとき。
-- apply、common、indexing、quota probe、review、session、TUI など、特定 builder 領域の互換入口や削除条件へ進む対象を選びたいとき。
-- 正本側実装への移行中に残された旧 import 経路、再公開、暫定補正、互換 layer の残存理由を確認したいとき。
+- ACP builder 周辺の旧 import 互換性、再 export、module alias、oracle 側実装への委譲境界を確認したいとき。
+- 正本側 builder の生成結果を realization 側の agent call parameter 型や既存公開面へどう適合させているかを調べたいとき。
+- apply fork、review、session、TUI、indexing、quota probe、common recovery などの builder 互換入口のうち、どの下位領域へ進むべきか判断したいとき。
+- 互換 wrapper や一時補正を残す理由、削除条件、旧参照から canonical oracle 実装への移行可否を検討するとき。
 
 ## Do not read this when
-- builder の prompt、parameter 内容、判定仕様、生成ロジックなどの正本仕様を確認したいだけなら、対応する oracle 側実装を直接読む。
-- ACP parameter の基礎データ構造、共通変換処理、repo root 解決、oracle src import 準備の詳細を調べたい場合は、該当する共通 helper や型定義へ進む。
-- apply fork、review、TUI、session join などの具体的な実行フロー、状態管理、UI 制御、判定処理を変更したい場合は、互換入口ではなく実処理を持つ個別 module を読む。
-- 新しい公開 API や import 経路を追加する場所を探しているだけのとき。
+- agent prompt、parameter 生成内容、判定仕様、builder 本体などの正本仕様を確認したい場合は、対応する oracle 側の本文または実装を読む。
+- apply の実行フロー、fork 作成、branch 操作、diff 生成、CLI 引数処理など、builder 互換層以外の機能実装を調べたい場合は、その機能本体へ進む。
+- agent call parameter の基礎データ構造、汎用変換 helper、repo root 解決、git helper、path model だけを調べたい場合は、それぞれの共通実装を読む。
+- TUI 画面、session 挙動、review 判定、indexing 生成処理など、個別機能の実処理やデータ構造を変更したい場合は、互換入口ではなく実体を持つ対象を読む。
 
 ## hash
-- 63022a3aec2f6a77c84b0455fe08cb7b91fd891359d35ec9d2544f14ccde1998
+- 6d2d2cd4f62f90144129d2842351186dac529aa02513d4638da681ace1a029e8
