@@ -18,18 +18,18 @@
 # `enumerate_finding.py`
 
 ## Summary
-- review finding enumeration 用の互換 import 経路を提供する薄い中継モジュール。canonical oracle 実装からパラメータ生成関数を再公開し、既存 caller が旧経路を import している間だけ残す。
+- review finding enumeration の旧 import 経路を維持する互換 shim。canonical 実装の関数を再 export し、既存呼び出し元が移行するまでの入口としてだけ機能する。
 
 ## Read this when
-- review finding enumeration の import 経路互換性を確認するとき。
-- 旧経路から canonical oracle 実装への移行状況や、この互換モジュールを削除できる条件を確認するとき。
+- review finding enumeration について、旧 import 経路から canonical 実装へつながる互換層を確認したいとき。
+- 旧 import 経路を使う呼び出し元の移行や、この互換層の削除可否を判断したいとき。
 
 ## Do not read this when
-- review finding enumeration の実際のパラメータ生成ロジックを確認したいときは、canonical oracle 実装を直接読む。
-- review 全体の builder 構成や他の oracle builder の責務を調べたいときは、より上位または該当対象へ進む。
+- review finding enumeration の実処理や parameter 構築内容を確認したいとき。canonical 実装を直接読む。
+- 新しい review finding enumeration の仕様や挙動を調べたいだけで、旧 import 経路との互換性が関係しないとき。
 
 ## hash
-- 733c5513e51720bf7692bfde98fb83775d5e4573149142702fce46da45f53a6f
+- 805a7b8cd6d94fa944dc4c2db6b83efdde249951781858f5652ec2531168d438
 
 # `judge_finding.py`
 

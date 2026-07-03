@@ -94,24 +94,23 @@
 # `review`
 
 ## Summary
-- review builder に関する互換 import と review oracle 向け agent call parameter builder の realization 側 wrapper を扱う領域。旧来 import 経路を canonical oracle 実装へ委譲する薄い互換層と、正本側 builder 出力に残る placeholder 表記差の最小補正を含む。
-- review oracle の仕様本体や判定ロジックではなく、既存 caller との import 互換性、正本側 builder の再利用、一時補正の残存理由と削除条件を確認する入口になる。
+- review builder 領域のうち、review oracle finding 向け agent call parameter 生成と旧 import 互換層を扱う入口。
+- 正本側 builder 出力の realization 側補正、canonical 実装への委譲、互換 import の残存理由と削除条件を確認するための領域。
 
 ## Read this when
-- review builder 周辺の import 互換性や、古い review builder 系参照を削除できるか確認する。
-- review oracle 周辺の agent call parameter 生成で、realization 側が正本側 builder をどう再利用・補正しているか確認する。
-- review finding enumeration、judgment、validation などの旧来 import 経路が canonical oracle 実装へ委譲されているか調べる。
-- prompt 内の oracle root placeholder 表記差など、正本側で解消されるまで realization 側に残している一時補正の範囲と削除条件を確認する。
-- 同名機能の実装が realization 側にあるように見えるが、実体を持つ実装なのか互換 import 層なのかを切り分ける。
+- review oracle finding の agent call parameter 生成、merge、validation advocate 周辺の挙動を確認・変更する。
+- 正本側 builder の結果を realization 側でどう最小補正しているか、またその補正を削除できる条件を確認する。
+- review finding enumeration、judgment、challenger validation の旧 import 経路が canonical 実装へどう委譲されているか調べる。
+- review builder 周辺の import 互換性、古い参照の削除可否、互換 package の残存理由を判断する。
 
 ## Do not read this when
-- review builder の実処理や変換ロジックを調べたい場合は、実処理を持つ対象を直接読む。
-- review oracle の正本仕様、prompt の本来の文面、判定仕様、検証ロジック本体を確認したい場合は、対応する oracle file または canonical oracle 実装を直接読む。
-- AgentCallParameter の基礎データ構造、model、reasoning effort、file access mode などの共通仕様を調べたい場合は、基礎定義側を読む。
-- 互換 import 経路や一時的な placeholder 補正と無関係な review 全体の構成、別種の builder、または他領域の処理を調べたい場合は、より直接の対象へ進む。
+- review oracle の正本仕様、prompt の本来の文面、判定仕様、検証ロジックそのものを確認したい場合。
+- AgentCallParameter の基礎構造、model、reasoning effort、file access mode などの共通定義を確認したい場合。
+- review oracle finding 以外の builder や review 処理を調べたい場合。
+- 互換 import 経路や一時的な prompt 補正と無関係な、新しい公開 API や利用者向け機能の仕様を確認したい場合。
 
 ## hash
-- e755008f1ced5c66a95b9a46fcf8d126a772a264f89fd0c7f3e9f7e714841dae
+- dd9bef72b417903f190c5c78c5ccb9e9a1bc18600b501ef589491a4982edb280
 
 # `session`
 

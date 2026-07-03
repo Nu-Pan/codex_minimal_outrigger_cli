@@ -149,25 +149,23 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を収める実装ルート。最上位 CLI、サブコマンド本体、共通 runtime、設定・basic・ACP builder 互換入口、oracle package shim などへの入口になる。
-- 実処理を持つサブコマンド・共通 helper と、oracle 側 canonical 実装や旧 import path をつなぐ薄い互換層が混在するため、CLI 実行経路、共通 runtime、互換 import 境界を切り分けて下位対象へ進むための階層。
+- cmoc の realization implementation 全体の入口であり、最上位 CLI、サブコマンド実行本体、共通 runtime helper、互換 import 層を含む領域。
+- CLI から各機能実装へ進む経路と、oracle 側 canonical 実装を複製せず realization 側の既存公開 import 面へ接続する境界を読み分けるための階層。
 
 ## Read this when
-- cmoc の CLI entrypoint、サブコマンド実行本体、共通 runtime helper、設定・basic・ACP builder の互換入口のどこへ進むべきか判断したいとき。
-- Typer による公開 CLI 構成から、session、apply、review、init、indexing、tui などの実装関数への委譲経路を確認または変更したいとき。
-- Codex 呼び出し、INDEX 更新、設定、path、git、logging、state、apply 実行管理など、複数サブコマンドで共有される runtime 部品を探したいとき。
-- oracle 側の正本実装を realization 側へ複製せず、既存の公開 import path や互換参照をどの shim・再公開層で維持しているか確認したいとき。
-- 実体を持つ realization 実装と、正本側実装へ委譲する互換層や公開型への変換境界を区別したいとき。
+- cmoc の実装ファイルについて、トップレベル CLI、サブコマンド本体、共通 runtime、互換 import 層のどこへ進むべきか判断したいとき。
+- CLI コマンド構成、各サブコマンドの実行フロー、共通 helper、Codex 実行境界、git・state・path・logging・INDEX 更新などの実装入口を探したいとき。
+- oracle 側の正本実装を realization 側へ複製せず、既存 import path、再公開、module alias、package path 接続を維持する構成を確認したいとき。
+- acp、basic、config、oracle などの互換入口について、残す理由、委譲先、削除条件、公開面との接続を調べたいとき。
 
 ## Do not read this when
-- oracle file にある正本仕様、人間意図、prompt・parameter 生成内容、path placeholder、file access rule、INDEX.md 仕様意図を確認したい場合は、対応する oracle 側の doc または src を読む。
-- 個別サブコマンドの詳細な実行フローや出力だけを調べたい場合は、この階層全体ではなく、対象のサブコマンド実装へ直接進む。
-- ACP 型、path model、構造化文書 API、設定定義などの定義内容そのものを確認したい場合は、互換入口ではなく再公開先の正本側実装または実体 module を読む。
-- 実行済みログ、生成済み成果物、一時ファイル、作業メモの内容を調査したいだけの場合は、この実装ルートではなく該当する保存先や許可されたログ領域を確認する。
-- テストの期待挙動や検証観点を確認したい場合は、実装ルートではなく対応するテスト領域を読む。
+- oracle file に書かれた正本仕様断片、人間意図、path placeholder、file access rule、prompt builder や設定定義そのものを確認したいときは、対応する oracle doc または oracle src を読む。
+- 個別サブコマンドの詳細実装、共通 runtime helper、互換 import 境界など読むべき対象がすでに分かっているときは、その下位対象を直接読む。
+- 実行済みログ、生成済み成果物、memo、git 内部状態、テストコードだけを調査したいときは、この実装入口ではなく該当領域へ進む。
+- 新しい公開面や仕様追加の判断だけをしたいときは、既存 realization 実装より先に対応する oracle 側の正本仕様断片を確認する。
 
 ## hash
-- 39ac4df22cbea2bc77932f43ccb38412b7c2461e9700d43dc4dec89534541828
+- a97a885b354c12ed71d385612374a8d2a7bb62a5f7fb5c96c7e7cae272e47a1d
 
 # `test`
 

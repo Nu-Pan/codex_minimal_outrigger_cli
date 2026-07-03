@@ -19,23 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP builder 領域の realization 側入口。oracle 側 builder を正本に保ちながら、旧来の公開 import 経路を維持する互換 package 群と、quota probe など realization 側で完結する小さな builder を扱う。
-- apply、review、session、TUI、indexing、common などの builder 参照を oracle 側 canonical 実装へ接続し、必要な箇所では oracle builder の出力を realization 側公開型へ適合させる境界を持つ。
-- 実処理や仕様本体よりも、既存 caller との import 互換性、oracle 側実装への委譲、互換層の残存理由や削除条件を確認するための入口になる。
+- ACP builder 群の旧公開 import 経路と互換入口を集約する領域。oracle 側の canonical builder を正本に保ちつつ、既存の `acp.builder.*` 参照を成立させる薄い再 export、module alias、package path 接続、realization 側公開型への最小変換を扱う。
+- apply fork、quota probe、review oracle finding、session、TUI、indexing、common recovery などの builder 入口を含み、builder 本体の正本仕様ではなく、oracle 側実装と realization 側公開面の接続境界を調べるための入口になる。
 
 ## Read this when
-- ACP builder 周辺で、旧来の公開 import 経路が oracle 側 canonical 実装へどのように接続されているかを確認したいとき。
-- apply fork、review、session、TUI、indexing、common などの builder 互換入口を維持・移行・削除できるか判断したいとき。
-- oracle 側 builder の生成結果を realization 側の agent call parameter や公開型へ変換・補正する境界を調べたいとき。
-- quota availability probe 用の軽量な agent call parameter builder を確認・変更したいとき。
-- 同名機能の実装が realization 側にあるように見える場合に、実体を持つ builder なのか互換 import 層なのかを切り分けたいとき。
+- `acp.builder.*` 配下の既存 import 互換性、互換 package の残存理由、削除条件、oracle 側 canonical 実装への委譲経路を確認したいとき。
+- oracle 側 builder 出力を realization 側の `AgentCallParameter` や既存公開型へどう適合させているかを確認・変更したいとき。
+- apply fork、quota probe、review、session、TUI、indexing、common recovery など、特定用途の agent call parameter builder 入口を探したいとき。
+- oracle 側 acp builder package を正本に保ちながら、realization 側 package path、module alias、再 export、薄い wrapper をどう配置しているか調べたいとき。
 
 ## Do not read this when
-- agent prompt、parameter 生成内容、判定仕様、出力条件などの正本仕様や人間意図を確認したい場合は、対応する oracle 側の仕様または canonical 実装を読む。
-- apply、review、session、TUI など各機能そのものの実行フロー、CLI 引数処理、画面描画、git 操作、エラー処理を調べたい場合は、それぞれの機能実装や呼び出し元へ進む。
-- AgentCallParameter の基礎データ構造、model、reasoning effort、file access mode、path model、汎用 git helper などの共通定義だけを確認したい場合は、共通実装側を直接読む。
-- 個別 builder の変換処理や wrapper の詳細挙動を調べたい場合は、この領域全体ではなく、対象の個別 module または subpackage を読む。
-- oracle 側実装への互換 import 経路と無関係な新規公開 API、別領域の builder、または通常の package 構成を調べたい場合は、より直接の対象へ進む。
+- agent prompt、parameter 生成内容、review 判定、TUI 起動パラメータなどの正本仕様や人間意図を確認したいだけなら、対応する oracle 側 builder または oracle doc を読む。
+- apply、review、session、TUI など各機能そのものの実行フロー、CLI 引数処理、画面描画、branch 操作、エラー処理を調べたいときは、それぞれの機能実装や呼び出し元へ進む。
+- `AgentCallParameter` の基礎構造、model、reasoning effort、file access mode、path model、汎用 git helper などの共通定義を確認したいだけなら、該当する共通実装を直接読む。
+- builder の個別変換処理や wrapper の詳細挙動だけを調べる場合は、この領域の入口ではなく、その処理を持つ個別 module または subpackage を読む。
 
 ## hash
-- a7b36def9a2c6a687c45ec5430c3be8aeca60205364f8114c0fceebd7f305590
+- 6a3ae3c9cd6c1b99ed5e1afd07b34cb44bdd8c4a81179bd0d37e3d50582c2510
