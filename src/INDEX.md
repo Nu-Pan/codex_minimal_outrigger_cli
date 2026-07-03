@@ -1,24 +1,24 @@
 # `acp`
 
 ## Summary
-- oracle 側の canonical ACP builder を正本に保ちつつ、realization 側に残る既存の公開 import 経路を壊さず接続する互換層。
-- agent call parameter builder の旧参照、再公開、module alias、package path 接続、realization 側公開型への必要最小限の適合を扱う。
-- 実装本体や正本仕様ではなく、旧 import 面を維持する理由、canonical 実装への到達経路、移行期間中の削除条件を確認する入口になる。
+- oracle src 側の ACP builder を正本に保ちながら、realization 側に残る旧 `acp.*` import 経路を維持する互換入口。
+- 公開 import 面を壊さない再 export、canonical oracle 実装への中継、必要最小限の realization 側適応、互換維持理由や削除条件を確認するための下位領域への入口になる。
 
 ## Read this when
-- ACP builder 周辺の旧 import 経路、再 export、module alias、package path 接続が canonical 実装へどうつながるかを確認したいとき。
-- 既存参照を保つための互換 package や shim を残す理由、公開面維持、削除条件、移行可否を判断したいとき。
-- agent call parameter builder 入口を探し、oracle 側の生成結果を realization 側公開型や既存利用者向け公開面へ適合させる境界を追いたいとき。
-- realization 側または利用者向け公開面に残る旧 import 参照の扱いを判断したいとき。
+- ACP builder まわりで、旧 import path 互換、oracle 側 canonical builder への委譲、realization 側公開型への適応境界のどこを読むべきか選びたいとき。
+- apply、review、session、TUI、indexing、quota probe などの agent call parameter builder 領域について、該当する下位 package または module への入口を探すとき。
+- `acp.*` または `acp.builder.*` 参照の移行・削除・互換維持を検討しており、互換入口を残す理由や削除条件を確認したいとき。
+- oracle src 由来の acp builder 互換 import が realization 側または公開面でどこに維持されているかを確認したいとき。
 
 ## Do not read this when
-- agent prompt、structured output、parameter 生成内容、canonical builder 実装などの正本仕様断片を確認したいだけのとき。
-- 各機能の実行フロー、CLI 引数処理、永続状態、git 操作、画面描画、イベント処理を調べたいとき。
-- AgentCallParameter 型、共通 enum、汎用 git helper、path model、file access rule 検出、ログ収集など builder 互換層以外の共通基盤を調べたいとき。
-- 旧 import 互換ではなく個別 builder の変換処理、wrapper の詳細挙動、新規公開 API の設計をしたいとき。
+- oracle 側 builder の正本 prompt、canonical 実装、生成内容そのものを確認したいとき。対応する oracle 側の実装や doc を直接読む。
+- ACP parameter の共通型、汎用 git helper、path model、CLI 実行フロー、TUI 描画、apply/review/session の本体挙動など、builder 入口や import 互換と無関係な詳細を調べたいとき。
+- 個別 builder の変換処理、wrapper の詳細、quota probe の呼び出し制御など読む対象が既に特定できているとき。該当する下位 module または呼び出し元を直接読む。
+- 新しい ACP 機能や API 仕様を追加する場所を探しているとき。この領域は互換維持と中継が主責務であり、機能追加の入口ではない。
+- `acp.*` 参照が全公開面と realization 側から消えていることを確認済みで、互換入口の詳細を読む必要がないとき。
 
 ## hash
-- c0af36a827c20f72bc478007859048ba68c9e41da8674608a553c068ba14daa1
+- c1585e905628497eb304f8dd03e1bc86b5dda368d3d830dab9d7efed6dd9994d
 
 # `basic`
 
@@ -62,24 +62,24 @@
 # `commons`
 
 ## Summary
-- cmoc の共有 runtime 実装を集めた領域。Codex 呼び出し、INDEX 更新、CLI 共通ライフサイクル、config、content hash、error、git、logging、path、result、state、apply process tracking など、複数サブコマンドから使われる共通部品への入口になる。
-- この階層には、実処理を持つ責務別 runtime module と、既存 import path や横断 API を維持する薄い集約 module が混在する。
+- cmoc の実行時共通機能を集めた領域。Codex 呼び出し、INDEX 更新、apply process 制御、CLI 共通ライフサイクル、config、content hash、error 表示、git 操作、logging、path、実行結果、session state などの runtime helper と、それらをまとめる import 境界を扱う。
+- 個別サブコマンドの業務処理本体ではなく、複数の処理から共有される実行時境界、永続状態、外部コマンド境界、利用者向け共通エラー・ログ・表示を確認する入口になる。
 
 ## Read this when
-- 複数の CLI サブコマンドや orchestration から共有される runtime helper の所在を探したいとき。
-- Codex exec/TUI 呼び出し、profile、preflight、call log、quota/capacity retry、file access post-check など、Codex 実行境界の実装へ進みたいとき。
-- INDEX.md 自動更新、entry 生成、hash 鮮度判定、対象走査、既存 entry 再利用、更新 commit の制御を調べたいとき。
-- CLI 共通の実行ライフサイクル、利用者向けエラー表示、git 操作、runtime path、設定読み書き、状態永続化、logging、外部コマンド結果モデルを確認または変更したいとき。
-- apply 実行中 process の追跡・停止や、session/apply branch から worktree・state を特定する runtime 処理を扱うとき。
+- Codex exec/TUI 呼び出し、profile、Structured Output、quota/capacity retry、call log、file access post-check などの共通 runtime 制御を調べたいとき。
+- INDEX.md の自動更新 preflight、エントリー生成、hash 鮮度判定、対象除外、並列更新、差分 commit の実装経路を確認・変更したいとき。
+- apply process の追跡・停止、pid file、session/apply branch と worktree の対応、process group 終了制御を扱うとき。
+- CLI サブコマンド共通の実行前後処理、ログ作成、完了サマリー、終了コード化、共通エラー表示、stdout 契約を変更したいとき。
+- config 永続化、content hash 保存、git 状態操作、runtime path、subcommand logging、実行結果モデル、session state file など、複数機能から使われる runtime helper を探すとき。
 
 ## Do not read this when
-- 個別サブコマンドの CLI 引数、業務処理、利用者向け出力仕様だけを調べたいとき。その場合は command 実装や対応するテストへ進む。
-- 正本仕様断片、path model、config 型、file access rule、INDEX.md 仕様意図などを確認したいとき。その場合は oracle 側の該当本文を読む。
-- runtime helper を利用する上位 workflow の制御だけを追いたいとき。まず orchestration や command 側を読む。
-- 特定の低レベル処理の仕様意図ではなく生成済みログ、実行履歴、作業メモを確認したいだけのとき。
+- 個別サブコマンドの利用者向け挙動、引数、出力仕様、業務フローだけを調べたいとき。その場合は command 実装または対応するテストへ進む。
+- oracle 上の正本仕様、path placeholder、file access rule、config 型、session state の仕様意図だけを確認したいとき。その場合は対応する oracle doc または oracle src を読む。
+- 特定の低レベル helper の利用箇所ではなく、正本仕様や上位 workflow の意図を確認したいとき。
+- 生成済みログ、実行履歴、キャッシュ的な成果物の内容を確認したいだけで、runtime 実装自体を変更しないとき。
 
 ## hash
-- 2aabf36e323a2dcd240528533345538f7cdbc1ebc8932fc1f585463a5ffd809f
+- 9eab34992267268966132292ce9e1c723620f1c74a8c3d0628116b11163e2c44
 
 # `config`
 

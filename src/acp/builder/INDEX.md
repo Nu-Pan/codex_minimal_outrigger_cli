@@ -39,21 +39,16 @@
 # `common`
 
 ## Summary
-- 既存の `acp.builder.common.*` import 互換性を保つための暫定 package。
-- 正本側 builder への委譲 wrapper と、oracle parameter から realization 側 agent call parameter への変換入口を含む。
+- 共通ビルダー処理を置くためのディレクトリだが、現在は対象本文となる通常ファイルを含まない。
 
 ## Read this when
-- `acp.builder.common.*` の既存 import 互換性や削除条件を確認したい。
-- ファイルアクセス規則違反 recovery の builder 呼び出し口を確認したい。
-- 正本側 builder を realization 側の `AgentCallParameter` として使う互換層や import 準備経路を追いたい。
+- 共通ビルダー処理の置き場所を確認しており、この階層に本文ファイルが追加されているかを確かめる必要があるとき。
 
 ## Do not read this when
-- common 配下の具体的な実装詳細や新規機能の実装場所を探している。
-- recovery builder の正本仕様断片そのものを確認したい。
-- agent call parameter 変換 helper、ファイルアクセス規則違反の検出、ログ収集だけを調べたい。
+- 既存の共通ビルダー処理の実装詳細を探しているとき。現時点ではこの対象から読める本文がないため、より直接の実装ファイルまたは下位要素へ進む。
 
 ## hash
-- bedf1d524b766abdb0a667c5422700600d08ebd16a9eaa488ab6d8c59d1be420
+- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
 # `indexing`
 

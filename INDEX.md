@@ -149,41 +149,45 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体への入口。CLI 登録、サブコマンド実行、共有 runtime、状態・git・設定・Codex 呼び出し、INDEX 更新など、実装本体の所在を判断するために使う。
-- 正本側実装を複製せず既存 import 経路を維持する互換層も含み、canonical 実装への接続、再公開、削除条件を確認する起点になる。
-- 正本仕様断片そのものではなく、oracle file の意図を realization 側でどう具体化し、既存公開面や利用者向け CLI に接続しているかを読む領域である。
+- cmoc の realization implementation を収める実装ルートで、CLI 入口、サブコマンド実装、runtime 共通機能、互換 import 層への分岐点になる。
+- 正本側実装を複製せず参照するための `oracle.*` shim や、旧来の `acp.*`、`basic.*`、設定、runtime import path を維持する互換入口も含む。
+- 個別 workflow 本体へ進む前に、CLI 登録、サブコマンド orchestration、共通 runtime、互換層のどこを読むべきかを選ぶ入口として位置づけられる。
 
 ## Read this when
-- cmoc の CLI コマンド階層、サブコマンド実装、共有 runtime helper、状態管理、git 操作、Codex 呼び出し、INDEX 更新処理の実装位置を探したいとき。
-- 個別 workflow の実行順序、事前条件、失敗時処理、利用者向け出力、runtime との接続を確認または変更したいとき。
-- 正本側の ACP builder、設定、basic API、oracle package などを realization 側の既存 import 経路へ接続する互換層の理由、境界、削除可否を確認したいとき。
-- 複数サブコマンドから使われる共通処理と、個別サブコマンド側の orchestration のどちらへ進むべきかを判断したいとき。
+- cmoc の実装領域で、CLI 入口、サブコマンド、runtime 共通 helper、互換 import 層のどこへ進むべきか判断したいとき。
+- init、indexing、tui、session、review、apply などのサブコマンド実行フローや、それらが runtime、git/worktree/state、Codex 呼び出しへどう接続するかを追いたいとき。
+- Codex exec/TUI 呼び出し、INDEX 更新、apply process 制御、config、content hash、error 表示、git 操作、logging、path、session state などの共通 runtime 実装を探したいとき。
+- 旧 import path 互換、正本側 oracle src への委譲、realization 側公開面の再 export 境界を確認したいとき。
+- Typer ベースの CLI コマンド階層、option、引数解析エラー処理、console script 入口を確認または変更したいとき。
 
 ## Do not read this when
-- oracle file に書かれた正本仕様断片、path model、設定定義、prompt builder、file access rule、INDEX.md 規則そのものを確認したいとき。
-- realization test の検証観点、fixture、期待挙動だけを調べたいとき。
-- 生成済みログ、作業メモ、git 内部状態、agent 用設定など、realization implementation ではない対象を確認したいとき。
-- 特定の下位実装や互換 shim に読む対象をすでに絞れているとき。
+- oracle file にある正本仕様断片、prompt builder、設定定義、path model、ACP builder の canonical 実装そのものを確認したいとき。対応する oracle 側の doc または src を読む。
+- 個別の下位 module や呼び出し元がすでに特定できているとき。該当対象を直接読む。
+- 生成済みログ、実行履歴、キャッシュ的な成果物の内容だけを確認したいとき。
+- realization test を確認または変更したいとき。テスト領域を直接読む。
+- 旧 import path 互換や実装入口と無関係な新しい正本仕様を検討しているとき。
 
 ## hash
-- 2c27db251ef4c247256b235d8f6b2d15f7cbb5fcc005d6c31758f8d57ded5267
+- 94995e5d8b2aeaeabdd6f27680c4625b131918d78cf98ea088b13c571974a281
 
 # `test`
 
 ## Summary
-- realization test 全体の入口。CLI 外部挙動、Codex 実行 wrapper、apply/session/indexing/review oracle、runtime 基礎契約、packaging import、prompt rendering など、cmoc の主要な回帰テストを配置している。
-- 共通支援コードと機能別テスト群があり、実装変更時にどの外部契約・制御ロジック・状態遷移が固定されているかを確認するためのルーティング対象になる。
+- CLI 外部挙動、Codex 実行 runtime、session/apply/indexing/review などの回帰テストと、テスト用 Git repository・fake Codex・prompt rendering などの補助テストを収める realization test 群。
+- サブコマンド単位の統合挙動、runtime 共通契約、ACP builder・prompt・packaging の境界、テスト支援 helper への入口として使う。
 
 ## Read this when
-- cmoc の realization test を探しており、変更対象に対応するテストファイルを選びたいとき。
-- CLI サブコマンド、Codex runtime、file access rule、INDEX 更新、apply/session/review oracle、prompt parts、packaged import の回帰テストを確認・変更したいとき。
-- 実装変更に対して既存テストへケース追加できるか、またはどの外部挙動テストが影響を受けるかを判断したいとき。
-- テスト共通 helper、fake Git repository、fake Codex 実行環境、Codex home、apply worktree 解決などのテスト支援処理を探しているとき。
+- CLI サブコマンドの終了コード、標準出力、Git branch/worktree/state、report、cleanup、拒否条件などの外部挙動を確認・変更するとき。
+- Codex CLI 実行、profile、CODEX_HOME、retry、quota、file access violation recovery、sandbox profile、call log など runtime 境界の回帰テストを探しているとき。
+- apply fork/join/abandon、session fork/join/abandon、indexing、review oracle、init/TUI の統合フローに影響する実装変更を行うとき。
+- ACP builder、prompt parts、StructDoc Markdown rendering、packaged layout import など、CLI 本体以外の公開境界や生成物参照をテスト側から確認したいとき。
+- CLI テストで共有される一時 Git repository、fake executable、fake Codex home、session/apply state helper を確認・変更したいとき。
 
 ## Do not read this when
-- 正本仕様断片そのものを確認したい場合は、oracle 側の対象本文を読む。
-- プロダクト実装の内部構造や helper を直接変更したいだけで、対応する外部挙動テストをまだ確認する必要がない場合は、src 側の対象へ進む。
-- 個別ファイル名がすでに分かっており、そのテスト本文だけを確認すれば足りる場合は、このディレクトリ全体ではなく該当テストへ直接進む。
+- 正本仕様断片そのものを確認したいときは、oracle 側の対象本文を読む。
+- 個別 implementation の内部 helper、低レベル Git 操作、Codex profile 生成、path model の実装だけを局所的に変更したいときは、対応する実装モジュールを先に読む。
+- INDEX エントリーの自然言語品質や routing document の記述規則だけを確認したいときは、仕様または builder 実装の該当箇所へ進む。
+- LLM 出力品質そのものを評価したいときは、このテスト群を読む必要はない。
 
 ## hash
-- 38c116e364a1d5fa4d8b5fd18fbe66019f6db0441baf61e68bbeb81a6fafd793
+- bc048ca25eb2451fe6e30f8bb67e39b4d172834c738899a9dea13007af3191f4
