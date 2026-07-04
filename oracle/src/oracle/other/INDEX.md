@@ -1,21 +1,20 @@
 # `cmoc_config.py`
 
 ## Summary
-- cmoc のリポジトリ別設定を表す正本実装断片。設定の永続化先、json 保存時の enum value 化、init による生成・同期、人間編集を前提とする設定責務を示す。
-- AI エージェント並列数、Codex CLI のモデル名・reasoning effort 対応、ファイルアクセス規則違反時のリカバリ回数、apply fork と review oracle のループ上限など、設定項目の既定値を定義する。
+- cmoc のリポジトリ別設定を表す正本定義。設定の永続化先、人間編集対象であること、JSON 保存時の Enum value 化、初期同期主体を示し、並列数、Codex CLI 向けモデル・推論努力対応、ファイルアクセス規則違反リカバリ回数、apply fork と review oracle のループ予算を集約する。
 
 ## Read this when
-- cmoc の設定として何をリポジトリごとに保持するか、どの設定クラスに集約するかを確認したいとき。
-- 設定ファイルの生成・同期・人間編集・json 変換に関する正本上の扱いを確認したいとき。
-- Codex CLI 向けモデル選択、reasoning effort 名、並列数、apply fork や review oracle の処理予算に関わる実装やテストを変更するとき。
+- リポジトリごとに変わる cmoc 設定の正本定義、既定値、永続化形式、または人間編集される設定ファイルの扱いを確認したいとき。
+- Codex CLI へ渡すモデル名・reasoning effort 名の対応、AI agent 呼び出し並列数、ファイルアクセス規則違反時のリカバリ試行回数を確認したいとき。
+- cmoc init による設定生成・同期、または apply fork / review oracle の処理件数・反復回数の設定根拠を確認したいとき。
 
 ## Do not read this when
-- パスキーワードや work-root/repo-root/run-root の意味を確認したいだけのとき。
-- 設定値を使わない CLI サブコマンドの入出力、git 操作、ファイル探索、ルーティング文書生成の仕様を調べたいとき。
-- 設定の正本ではなく、実際の読み書き処理、シリアライズ処理、init コマンド側の実装だけを確認したいとき。
+- 個別サブコマンドの実行手順、CLI 引数、出力形式、または制御フローそのものを確認したいとき。
+- ModelClass や ReasoningEffort の概念定義を確認したいとき。
+- 生成済み設定ファイルをどのように読み書き・変換するかという realization 側の実装詳細だけを確認したいとき。
 
 ## hash
-- d28b80e0c38aab24df7dd82eb601ed5f04920f8c4b86b26ac890747e6df1afbc
+- 3aecefa81ee3c2da1286f2f939ae9d040e42fa3434340942f827ae360a0ccedd
 
 # `path_model.py`
 
