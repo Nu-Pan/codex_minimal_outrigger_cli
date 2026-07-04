@@ -4,6 +4,7 @@
     "model": {
       "efficiency": "gpt-5.4-mini",
       "flagship": "gpt-5.5",
+      "local_slm": "smollm2:135m",
       "mainstream": "gpt-5.5",
       "minimum": "gpt-5.4-mini"
     },
