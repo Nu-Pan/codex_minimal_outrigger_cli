@@ -122,25 +122,24 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に検証するテスト群。root placeholder と worktree 判定、設定値検証、CmocError と CLI error report、subcommand log、session state、FileAccessMode から Codex sandbox/profile への変換、binary 判定など、個別サブコマンドより下位の共通実行前提を扱う。
-- 複数領域にまたがるが、共通 fixture と root 状態を前提に同時に崩れやすい basic runtime 回帰として一体に保たれている。
+- cmoc の共通 runtime 契約を横断的に固定する回帰テスト群。root 解決、worktree 安全性、設定検証、CmocError の表示、CLI preflight と parse error、subcommand log、FileAccessMode から Codex sandbox/profile への変換、binary 判定、session state branch 名解析など、個別サブコマンドより下位の実行前提をまとめて扱う。
+- この対象は大きいが、共通 fixture と root 状態を共有する basic runtime 境界の検証として凝集しており、runtime 基盤の変更時に関連する外部挙動を一括確認する入口になる。
 
 ## Read this when
-- root/repo/work/run root の解決、placeholder path、linked worktree、managed worktree の作成・削除条件を変更または確認するとき。
-- cmoc config の既定値、型検証、CmocError の整形、CLI 解析 error と想定済み error の stdout/stderr 挙動を変更または確認するとき。
-- subcommand log の生成条件、preflight 失敗時の副作用抑制、shell completion probe 時の初期化回避を扱うとき。
-- session/apply branch 名から session id や state を扱う制御を変更または確認するとき。
-- FileAccessMode、Codex profile、sandbox writable roots、追加 write/read 許可、local SLM provider 設定、許可領域外 path 拒否の挙動を変更または確認するとき。
-- binary 判定の読み取り範囲や、起動 wrapper の error report path 表示を変更または確認するとき。
+- cmoc の root 解決、repo root と linked worktree、run/work root placeholder、worktree 作成・削除の安全条件を変更または確認するとき。
+- CmocConfig の既定値、設定 dict の検証、Codex model/provider/reasoning effort の解釈を変更または確認するとき。
+- CmocError、CLI 引数解析 error、stdout/stderr の error report、call stack 表示、preflight、shell completion probe、subcommand log の挙動を変更または確認するとき。
+- FileAccessMode、Codex profile、sandbox writable roots、追加書き込み許可 path、oracle conflict write、linked worktree からの repo-local read 許可を変更または確認するとき。
+- branch 名から session id を読む処理、session state の読み込み拒否条件、binary 判定、duration 表示、`.cmoc` ignore 生成を変更または確認するとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の業務ロジックや出力内容だけを確認したいときは、そのサブコマンドの実装・テストへ進む。
-- oracle doc、oracle src、oracle test の正本仕様内容そのものを確認したいときは、対応する oracle 側の本文へ進む。
-- INDEX.md エントリーの書式やルーティング規則だけを確認したいときは、INDEX.md 生成・標準に関する仕様へ進む。
-- 単一の小さな helper の内部実装だけを確認し、共通 runtime 契約や CLI 実行前提に影響しないと分かっているときは、該当実装へ直接進む。
+- 個別サブコマンド固有の業務フローや出力仕様だけを確認したいときは、そのサブコマンドの実装または専用テストへ直接進む。
+- oracle file の記述方針や正本仕様そのものを確認したいときは、対応する oracle doc または oracle src を読む。
+- runtime 基盤と関係しない UI、文書、プロンプト断片、純粋なドメイン処理だけを変更するときは、この対象を入口にしない。
+- 単一 helper の内部実装詳細だけを調べたい場合で、外部挙動や runtime 契約の回帰確認が不要なら、該当実装へ直接進む。
 
 ## hash
-- f0d9dd0734e7108fdd31790a870dec2ca53b23fc0a9391a6d452aeecec363b3f
+- 1b6c36bf7b644160f844ae8942fe14988241b7db0aa84743a63b6390d207f64b
 
 # `test_cli_tui.py`
 
@@ -164,25 +163,25 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行・TUI 起動のランタイム挙動を、スタブ化した codex 実行ファイルと一時 Git リポジトリで検証するテスト群。
-- プロファイル生成、作業ディレクトリ、sandbox writable_roots、schema 出力先、ローカル SLM 用 provider 設定、apply process tracking、呼び出しログ、Codex CLI 不在・非ゼロ終了時のエラー報告を扱う。
-- 呼び出し後のファイル差分について、oracle、memo、.git、.agents、.codex、ignored/cache、README、linked worktree などを post validate しない／許容する現在挙動の境界を確認する。
+- Codex CLI 呼び出しの実行系テスト。exec/TUI 起動時のプロファイル生成、作業ディレクトリ、標準入力、schema 出力、ローカル Ollama provider、subprocess の process group と apply tracking 環境変数の扱いを検証する。
+- Codex 実行後の差分に対する post validation を行わない方針、および forbidden/oracle/memo/.git/.agents/.codex/ignored cache/log/worktree などの差分を実行結果として残す挙動を検証する。
+- extra read path の事前検査、linked worktree 実行、TUI 失敗時のエラー表示、Codex CLI 不在時のエラー変換を確認する実行時境界のテスト群。
 
 ## Read this when
-- run_codex_exec または run_codex_tui の引数組み立て、profile TOML、CODEX_HOME、--cd、--output-last-message、--output-schema の挙動を変更・確認するとき。
-- FileAccessMode ごとの Codex 呼び出し時 sandbox 設定、extra_read_paths、extra_writable_paths、linked worktree の cwd/root の扱いを変更・確認するとき。
-- Codex 呼び出し後の forbidden diff、ignored artifact、cache、.cmoc log、blocked runtime directory への変更を検査するかどうかの挙動を変更・確認するとき。
-- run_codex_subprocess や run_tracked_codex_subprocess の process group、APPLY_PROCESS_TRACKING_ENV、subprocess 起動環境の扱いを変更・確認するとき。
-- Codex CLI が見つからない場合、TUI が非ゼロ終了した場合、exec が schema retry や非ゼロ終了を扱う場合のエラー挙動を変更・確認するとき。
+- Codex exec/TUI ランナーの argv、profile、cwd、stdin、output schema、CODEX_HOME、ローカル model provider の挙動を変更する。
+- FileAccessMode ごとの sandbox/writable_roots や、Codex 実行後のファイル差分検査を変更する。
+- blocked root、oracle、memo、.git、.agents、.codex、ignored file、cache、cmoc log、linked worktree に関する実行後差分の扱いを確認する。
+- Codex subprocess の process group、apply process tracking、継承環境変数の遮断、Codex CLI 不在や非ゼロ終了時のエラー処理を変更する。
+- TUI 起動前の extra read path 検査や、pure oracle read/repo write と complete prompt の組み合わせを扱う。
 
 ## Do not read this when
-- Codex runtime ではなく、agent call parameter の型定義や enum 自体の仕様だけを確認したいとき。
-- Git リポジトリ作成、stub codex、pytest fixture などテスト支援関数の実装詳細を確認したいとき。
-- Codex 以外の外部コマンド実行、通常の CLI サブコマンド、または oracle/realization 文書生成の挙動を調べたいとき。
-- INDEX.md エントリー生成やルーティング文書の規則そのものを確認したいとき。
+- Codex 呼び出しではなく、一般的な設定読み込み、agent call parameter の型定義、または CLI command parsing の仕様だけを確認したい。
+- oracle/realization file の分類規則そのものを確認したい。
+- Codex 実行結果の JSON schema 内容を設計したいだけで、schema path の配置や retry 挙動には触れない。
+- 個別 helper の実装詳細だけを確認したい場合で、既に該当 implementation file が分かっている。
 
 ## hash
-- e43360607d9c6d637d97ab082632721d0dad162c214aca99e2c4f837ede13835
+- 257b2123f9eabce6a7a2378632f9d8d53d1bb7144910f9b9c3a5dd00cd1dce20
 
 # `test_codex_runtime_home.py`
 
@@ -250,40 +249,41 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor 実行がリポジトリ初期状態を修復し、ローカル Ollama 用の状態を作成し、必要な修復内容だけをコミットする外部挙動を検証するテスト。
-- 既存設定値を保持しながら既定設定を補完する挙動と、LOCAL_SLM 用 Codex profile 準備時にローカル Ollama の port 状態が欠けていれば doctor が再実行される連携を扱う。
+- doctor 実行時のリポジトリ初期補修、既定設定同期、管理対象 Ollama 起動、Codex profile 準備時の再補修を検証するテスト群。
+- gitignore・管理ディレクトリ・設定ファイルの repair commit が作られることと、既存の staged 変更を巻き込まないことを外部挙動として確認する。
 
 ## Read this when
-- doctor コマンドの初期化・修復・設定同期・修復コミット対象の挙動を変更または確認したいとき。
-- ローカル SLM / Ollama の port 生成や接続可能性、Codex profile 生成との連携を変更または確認したいとき。
-- doctor が人間の既存設定値や既存 staged change を上書き・混入しないことを検証したいとき。
+- doctor コマンドの前処理、設定同期、repair commit、管理対象 Ollama 起動に関するテストを確認・変更するとき。
+- Codex profile 準備処理が、管理対象 Ollama の port 情報欠落時に doctor 相当の補修を行う挙動を確認するとき。
+- 人間が事前に設定した設定値や staged 変更を doctor が上書き・混入しないことを検証したいとき。
 
 ## Do not read this when
-- doctor 以外の CLI コマンドや、通常の agent call 実行フローだけを確認したいとき。
-- 設定モデルの定義そのものや既定値一覧だけを確認したいとき。
-- git 操作 helper やテスト用リポジトリ生成 helper の実装だけを確認したいとき。
+- doctor 以外の CLI サブコマンドや通常の agent call 実行経路を確認したいとき。
+- 設定モデルや profile 生成の実装そのものを変更したいだけで、doctor 経由の外部挙動を確認しないとき。
+- Ollama サーバの詳細な実装やモデル実行品質を確認したいとき。
 
 ## hash
-- 273857ad2dd5617707946057ab037f37005bb2f2968d4c137d2ec8298d64d990
+- 78d91cdaa8e52d7886f13b0fbff840aa303cdf3c6e9ad2e6ad65915ad0d20d28
 
 # `test_indexing_cli.py`
 
 ## Summary
-- INDEX.md 生成・更新、indexing preflight、indexing サブコマンド、INDEX.md conflict 解決の外部挙動を検証する回帰テスト。
-- 対象列挙、hash 再利用、Codex 呼び出し、commit 対象、linked worktree、dirty worktree、空ディレクトリ、memo 除外、symlink cycle など、routing document 更新ワークフローの観測点をまとめて扱う。
+- INDEX.md 生成・更新、indexing CLI、indexing preflight、INDEX.md conflict 解決の外部挙動をまとめて検証する回帰テスト。
+- 対象列挙、hash 再利用、Codex 生成結果の反映、commit 対象、dirty worktree の拒否、linked worktree、空ディレクトリ、並列生成、memo 除外、symlink cycle 除外を扱う。
 
 ## Read this when
-- indexing コマンドや indexing preflight の CLI 境界、git 状態、commit 条件、worktree 対象を変更・調査する。
-- INDEX.md の生成規則、既存 hash の再利用、malformed entry の再生成、entry schema 検証、空ディレクトリ用 INDEX.md を確認する。
-- INDEX.md conflict 解決、memo ディレクトリの扱い、symlink cycle 除外、並列生成と sibling の直列生成の挙動を確認する。
+- indexing CLI または indexing preflight の成功・失敗条件、commit 条件、worktree 選択、dirty 状態の扱いを変更するとき。
+- INDEX.md エントリーの schema 検証、malformed entry の再生成、fresh hash による Codex 呼び出し省略、生成順序や並列化を確認するとき。
+- INDEX.md conflict 解決で conflict 中の routing document を削除して merge commit する挙動を確認するとき。
+- root 直下の memo 除外、ネストした memo の扱い、空ディレクトリの routing document 生成、directory symlink cycle の除外を確認するとき。
 
 ## Do not read this when
-- INDEX.md entry の文章生成プロンプトや schema 定義そのものだけを確認したい場合。
-- doctor、apply join、git helper の個別内部実装を調べたいだけで、indexing ワークフロー上の外部挙動を確認しない場合。
-- routing document 更新とは無関係な CLI サブコマンドやテスト支援 fixture の一般的な使い方を調べる場合。
+- routing document の自然言語エントリー内容そのものを調整したいだけで、CLI 境界や更新ワークフローの外部挙動を確認しないとき。
+- Codex 実行器、設定モデル、git helper、test fixture の単体的な実装詳細だけを調べたいとき。
+- indexing 以外のサブコマンドや apply workflow 全体の挙動を調べたいとき。
 
 ## hash
-- 5b7f371d8e42cbb5a70e45d110a8ff125ef5f24ed6bc5f034bef8f91e31903cd
+- a8cf05a02c443178582083aa4e9967f86e49f886942836b033021d3bd9c7975e
 
 # `test_indexing_preflight.py`
 
@@ -307,21 +307,20 @@
 # `test_packaged_import.py`
 
 ## Summary
-- packaged layout でコピーした最小の site 環境から、主要な realization module が oracle package を正しく import・再 export できることを検証するテスト。
-- pyproject の oracle package 設定、review oracle enumerate finding builder、acp.builder.basic、config.cmoc_config の import 境界と公開名を確認する。
+- packaged layout に近い一時配置を作り、実行時 import 境界と公開 re-export の最小性を検証する realization test。acp builder、oracle パッケージ、config 公開面がインストール相当の PYTHONPATH で期待通り参照できるかを確認する。
 
 ## Read this when
-- packaging 設定、PYTHONPATH 上の配置、または oracle/src/oracle を package として扱う import 経路を変更する。
-- acp.builder.review.oracle.enumerate_finding、acp.builder.basic、config.cmoc_config の import 元や re-export の境界を変更する。
-- oracle src の定義を realization 側へコピーせず参照する方針が、インストール相当のレイアウトで壊れていないか確認したい。
+- packaging 設定、package-dir、packages.find、PYTHONPATH 上の import 境界を変更する時。
+- acp.builder.basic や review oracle enumerate builder が oracle 側の正本実装をどう参照するかを確認する時。
+- config.cmoc_config の公開名、__all__、re-export 対象を変更する時。
 
 ## Do not read this when
-- 通常の CLI 実行フロー、コマンド引数、永続状態、ログ出力の挙動を調べたい。
-- prompt の本文内容や schema の詳細仕様そのものを確認したい場合は、対応する oracle file や builder 実装を直接読む方がよい。
-- 単体関数の内部ロジックや helper 分割を調べたいだけで、packaged layout 上の import 境界に関係しない。
+- 個別 builder の prompt 内容や schema 内容そのものを詳しく変更する時は、対応する builder 実装や oracle src を直接読む。
+- 通常の CLI 挙動、ファイル走査、git 判定など packaged import と無関係な挙動を調べる時。
+- テスト実行基盤全体や fixture 共通化を調べる時は、より広い test 配下の対象を読む。
 
 ## hash
-- 484451aa5216148342d78d9c4c971994fc8e33e9de194a997d6b2fc605432142
+- e077501d43694e62069dc02d23be290fe612d717b5bd21c5a523210f6ec168c0
 
 # `test_prompt_parts.py`
 
