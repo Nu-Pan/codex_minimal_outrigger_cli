@@ -73,22 +73,22 @@
 # `runtime_cli.py`
 
 ## Summary
-- CLI サブコマンドの共通実行ライフサイクルを扱う実装。work root 検査、pre-log 処理、サブコマンドログ作成、開始・実行・完了表示、戻り値の終了コード化、例外時のエラー表示、実行時間や quota 待機時間を含む完了サマリー出力を一箇所に集約する。
-- 通常の標準サマリーとは別の stdout 契約を持つサブコマンド向けの結果型と、cmoc が work root で実行されている前提を検査する処理も含む。
+- CLI サブコマンド実装を共通ライフサイクルで実行するための補助コード。work root 検査、サブコマンドログの開始・完了記録、標準進行表示、戻り値の終了コード化、例外表示、標準完了サマリー出力を扱う。
 
 ## Read this when
-- CLI サブコマンドの実行前後に共通して行うログ作成、進捗表示、完了サマリー、終了コード処理、例外表示を変更する。
-- サブコマンド実装の戻り値を CLI 終了コードや stdout に変換する挙動を確認する。
-- init など、runtime state の配置先や pre-log 検査のタイミングが重要なサブコマンドの実行ライフサイクルを調べる。
-- cmoc が work root 以外で実行された場合のエラー内容や検査条件を変更する。
+- CLI サブコマンドの起動から終了までの共通処理、ログ作成、進行表示、終了コード処理、例外時の出力先を確認・変更したいとき。
+- サブコマンド実装関数の戻り値を CLI の終了コードや追加 stdout に変換する挙動を確認したいとき。
+- cmoc が work root 以外で実行された場合のエラー処理を確認したいとき。
+- サブコマンド完了時に出力される経過時間、quota 待機時間、ログパス、終了コードのサマリー形式を確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務処理そのものを変更したいだけで、共通の実行ライフサイクルや表示契約に触れない。
-- サブコマンドログの内部フォーマット、イベント記録の保存方法、現在の logger 管理の詳細だけを調べたい場合は、runtime logging 側を直接読む。
-- repo root、work root、時刻表示、経過時間整形の解決方法だけを確認したい場合は、runtime paths 側を直接読む。
+- 個別サブコマンドの業務ロジックや引数定義を確認したいとき。
+- ログファイルの内部形式や記録 API の詳細を確認したいとき。
+- repo root、work root、時刻、経過時間整形の算出方法を確認したいとき。
+- エラーメッセージの描画内容そのものや CmocError の定義を確認したいとき。
 
 ## hash
-- fa9d69da666a38b9545a60975c7d3cd29db49c818a6e4db315962330424ee39e
+- 60274717b7dd820c3cdc434ee32f8f28e4ef65a3819871a8ae0e2c7825d17348
 
 # `runtime_codex.py`
 
@@ -211,22 +211,21 @@
 # `runtime_config.py`
 
 ## Summary
-- cmoc の永続化 config JSON と正本 config 型の変換、読み込み、書き込み、初期同期を扱う。
-- config の不足項目補完、型検証、enum key map の復元、利用者向け CmocError への変換を担う。
+- cmoc の runtime config を永続化 JSON と正本 config 型の間で変換し、config ファイルの読み込み・検証・既定値補完・安定形式での書き戻しを行う実装。
+- config JSON の欠落項目は既定値で補い、不正な型・未知の enum 値・JSON 構文エラー・未作成状態を利用者向けの CmocError に変換する。
 
 ## Read this when
-- <repo-root>/.cmoc/config.json の JSON 形式、既定値補完、保存順序、保存時の整形を確認・変更したいとき。
-- config 読み込み失敗時や不正値検出時の利用者向けエラー文言・エラー境界を確認・変更したいとき。
-- CmocConfig と永続化 JSON object の対応、ModelClass や ReasoningEffort を key にした map の変換を追うとき。
-- cmoc init 相当の config 生成・既存 config の現行形式への書き戻し挙動を確認したいとき。
+- .cmoc 配下の config JSON の生成、読み込み、同期、永続化形式を変更したいとき。
+- CmocConfig と JSON object の相互変換、enum key の文字列表現、int 値の型検証、欠落項目の既定値補完を確認したいとき。
+- config 読み込み失敗時の利用者向けエラーメッセージや、cmoc doctor による config 生成案内を扱うとき。
 
 ## Do not read this when
-- config の正本型や既定値そのものを確認したいだけなら、正本 config 定義を読む。
-- config ファイルの配置パス解決だけを確認したいなら、runtime path の責務を持つ対象を読む。
-- CLI 引数や個別サブコマンドが config 値をどう使うかを調べたい場合は、そのコマンド実装を読む。
+- CmocConfig の正本フィールド定義そのものを確認したいだけなら、config 型定義を読む。
+- config ファイルの配置パスだけを確認したいなら、runtime path を扱う対象を読む。
+- config に依存しない CLI サブコマンド処理、agent 実行制御、oracle review の詳細挙動を調べたいとき。
 
 ## hash
-- c9fc925256fc10765fbd3facd26cba96f606c598ea92625519b04918e0caf273
+- 43ef067f644957c400a3553f5c0d14f21bff0b595d2c084c463bb82ceb8357c2
 
 # `runtime_content.py`
 
@@ -254,24 +253,24 @@
 # `runtime_doctor.py`
 
 ## Summary
-- 共通実行前の自己修復をまとめて行う実装。ignore 設定、agent 用管理領域の追跡可能化、repo-local な Ollama 実行環境と local SLM model の準備を行い、修復差分だけを commit する。
-- Ollama の取得、展開、排他制御、port 選択、serve 起動確認、model pull/show 確認、失敗時の利用者向けエラー生成を担う。
+- 共通実行前修復として ignore 設定、agent 用ディレクトリの追跡確保、設定同期、repo-local Ollama SLM の準備、修復差分の commit をまとめて実行する処理を担う。
+- Ollama の取得・展開・起動・port 管理・model pull を、lock によって同一 work tree 内で直列化しながら行う。
+- git 操作、runtime config、runtime error と連携し、doctor preprocess の副作用境界を実装する入口である。
 
 ## Read this when
-- 共通実行前処理、doctor preprocess、または自動修復 commit の挙動を確認・変更したいとき。
-- agent 用管理領域を git 追跡対象にする条件や、ignore 設定の修復差分をどこで commit するかを追いたいとき。
-- repo-local な Ollama のインストール、起動、port 管理、lock、serve log、local SLM model 準備の実装を確認・変更したいとき。
-- Ollama archive 取得失敗、serve 起動失敗、port 選択失敗、model 取得失敗などのエラー文言や復旧案を扱うとき。
-- runtime config から local SLM model を読む処理と、config 読み込み失敗時の default config fallback を確認したいとき。
+- doctor preprocess が実行前にどの修復を行うか、どの差分を commit 対象にするかを確認・変更したいとき。
+- agent 用ディレクトリを git 追跡対象にする条件や、追跡不能時のエラー挙動を確認したいとき。
+- repo-local Ollama のインストール場所、port file、lock、serve 起動、model pull の制御を調べたいとき。
+- local SLM model 名を runtime config から取得する処理や、config 読み込み失敗時の fallback を確認したいとき。
 
 ## Do not read this when
-- git command の実行 wrapper、ignore 設定の具体的な生成処理、または git エラー処理そのものを確認したいだけのときは、それらを担う runtime git 側を読む。
-- runtime config の schema、default 値、model class の定義を確認したいときは、設定定義や基本型の側を読む。
-- CLI subcommand の引数定義、doctor command の呼び出し位置、利用者向け command routing を確認したいときは、CLI command 実装側を読む。
-- Ollama や local SLM を使った推論実行、prompt 組み立て、agent 呼び出し結果の処理を確認したいときは、この準備処理ではなく実際の推論・agent 実行側を読む。
+- CLI 引数定義、command dispatch、または利用者向け出力形式だけを調べたいとき。
+- git command 実行 helper や ignore 設定 helper そのものの実装を調べたいとき。
+- runtime config の schema、既定値、同期内容の詳細を調べたいとき。
+- Ollama 以外の provider や remote model API の呼び出し処理を調べたいとき。
 
 ## hash
-- d569de27b395017bf209f428c977ab64676c1d3c7ccb2105c8d646be0988415e
+- e61b7a93894f5b75ffd6d05e6195bb42dda8f7d5b03389a61f89220fa5b6eb79
 
 # `runtime_errors.py`
 
@@ -297,24 +296,25 @@
 # `runtime_git.py`
 
 ## Summary
-- git コマンド実行を cmoc のエラー形式へ変換する境界と、branch・HEAD・worktree・ignore 状態に関する共通操作をまとめた runtime helper。
-- cmoc 管理 branch/worktree の作成・削除制約、clean worktree 要求、.cmoc/local の ignore 初期化・検査、oracle file 判定など、git 状態に依存する実装の入口になる。
+- git コマンド実行、branch/HEAD 取得、clean worktree 検査、cmoc 管理 branch/worktree の作成・削除、.cmoc/local の ignore 保証、git ignore 判定、oracle file path 判定を担う runtime helper 群。
+- subprocess の git 失敗を利用者向け CmocError または CommandResult にそろえ、cmoc が操作してよい branch namespace と worktree 管理領域を検証する境界として機能する。
 
 ## Read this when
-- git subprocess の呼び出し結果を利用者向けエラーへそろえる処理を確認・変更したいとき。
-- 現在 branch、HEAD commit、未コミット差分、branch 存在確認など、repository 状態の取得・検査に関わる実装を扱うとき。
-- cmoc 管理 worktree の作成・削除、管理外 worktree 削除防止、管理 branch namespace の判定を確認したいとき。
-- .cmoc/local を git ignore 対象にする初期化・検査、または tracked file と ignored file の扱いを変更したいとき。
-- oracle file 判定や git ignore 判定を使うアクセス制御・diff 分類の挙動を追うとき。
+- git subprocess 呼び出し、git エラーの CmocError 化、CommandResult の扱いを確認・変更したいとき。
+- detached HEAD、現在 branch、HEAD commit、未コミット差分検査、.cmoc/config.json を除外した status 判定に関わる挙動を確認したいとき。
+- cmoc が作成する apply/run 用 linked worktree の path 検証、作成、削除、prune、管理外 worktree 削除防止を扱うとき。
+- cmoc 管理 branch の namespace 判定、branch 存在確認、branch 削除の失敗を caller 側で warning 化する流れを確認したいとき。
+- .cmoc/local を .gitignore または git exclude で追跡対象外にする処理、初期化済み repository の ignore 状態検査、git index からの除外処理を扱うとき。
+- git ignore 判定、追跡済みファイルを対象に残すための check-ignore 判定差、oracle file path 判定に関わる runtime 側の共通処理を確認したいとき。
 
 ## Do not read this when
-- CLI 引数定義、表示文言の組み立て、コマンドごとの上位制御だけを確認したいとき。
-- git を介さない path model の正本仕様や、path 用語そのものの定義を確認したいとき。
-- Codex や LLM への prompt 構築ロジックを確認したいとき。ただし oracle file 判定 helper の利用箇所を追う場合は読む。
-- 永続 state file の schema や読み書き形式だけを確認したいとき。
+- cmoc の path keyword や work-root/run-root/work-root の概念定義そのものを確認したいだけなら、正本仕様側の path model を読む。
+- CLI サブコマンドの利用者向け仕様、出力 schema、セッションや apply の業務フローを確認したいだけなら、対応する仕様文書または command 実装を読む。
+- git 以外の runtime path、runtime error、runtime result の型定義や責務を確認したいだけなら、それぞれの専用 helper を読む。
+- oracle file と realization file の正本定義そのものを確認したい場合は、正本仕様側の oracle/realization 定義を読む。
 
 ## hash
-- 6a378bcabcc734fecb03ff64c0b4c2f9a674ae993ffc3a55d18e79cd22c9a33e
+- 899a40cfbc8cf5c12fe0f2f55afc203ec87eb1262f30f35a0103fb9b58fcd002
 
 # `runtime_logging.py`
 

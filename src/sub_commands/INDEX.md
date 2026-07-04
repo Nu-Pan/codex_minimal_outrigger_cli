@@ -60,25 +60,6 @@
 ## hash
 - 300dd7538efb7a60cb06753149ee3b7f779bd687acbf6cc8a567083f8e6fa0a8
 
-# `init.py`
-
-## Summary
-- `cmoc init` の実行本体を担う実装。runtime 経由で init サブコマンドを起動し、work root の `.cmoc/local` ignore、`.agents` 追跡 placeholder、設定同期、init commit、実行結果 Markdown 出力を処理する。
-- init 実行前から存在した `.gitignore` と staged 差分を退避・復元し、init が作る管理用変更と利用者の作業中差分を混ぜないための復元処理も含む。
-
-## Read this when
-- `cmoc init` の実行順序、git 操作、commit 作成条件、stdout 出力を確認・変更したいとき。
-- init が `.gitignore`、`.cmoc/local`、`.agents`、git index、staged 差分をどう扱うかを調べるとき。
-- ログ作成前に `.cmoc/local` ignore を保証する処理や、work root と repo root が異なる場合の exclude 更新を確認したいとき。
-
-## Do not read this when
-- init 以外のサブコマンド実装を探しているとき。
-- cmoc runtime 共通処理、git wrapper、root 解決、設定同期、ignore pattern 生成そのものを変更したいときは、それらを定義する runtime 側を読む。
-- 正本仕様として init の要求を確認したいだけのときは、対応する oracle doc を読む。
-
-## hash
-- a36cef25cbfc8be0742dd10437ff3d16613704cb0aa602641c92cfc3cbd8fcb0
-
 # `review`
 
 ## Summary
