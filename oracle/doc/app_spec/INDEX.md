@@ -155,21 +155,21 @@
 # `ollama_slm_server.md`
 
 ## Summary
-- ローカルの Ollama で SLM をサーブし、cmoc がバックエンドモデルとして利用するための仕様断片。doctor preprocess によるインストール、モデル名未定義時の扱い、接続先ポート、LOCAL_SLM 設定からのモデル名取得、並列実行時の Ollama 共有、起動・終了の寿命管理に触れる。
+- ローカル ollama による SLM サーブを cmoc のバックエンドモデルとして使うための正本仕様断片。インストール先、冪等な取得・展開、起動時のモデル名取得、127.0.0.1 経由の利用、モデル未定義時のエラー、doctor preprocess と連動したインスタンス寿命管理を扱う。
 
 ## Read this when
-- ローカル SLM バックエンドで Codex CLI を実行する挙動を確認・実装する。
-- Ollama のインストール、起動、シャットダウン、複数 cmoc からの共有方法を扱う。
-- SLM モデル名が未定義の場合の doctor 実行やバックエンド選択時のエラー条件を確認する。
-- cmoc から Ollama へ接続するアドレスやポート決定の方針を確認する。
+- cmoc でローカル SLM バックエンドや ollama サーバー連携を実装・変更する時。
+- ollama のインストール、起動、アクセス先、モデル名取得、プロセス終了時の停止処理を確認する時。
+- doctor preprocess が準備するローカル依存として ollama を扱う条件や、並列 cmoc 実行時の単一インスタンス共有を確認する時。
+- SLM バックエンドで Codex CLI を実行する際のモデル未定義エラー条件を確認する時。
 
 ## Do not read this when
-- doctor preprocess 全体の処理順序や他の依存物インストール仕様だけを確認したい。
-- ローカル SLM 以外のバックエンドモデル選択や Codex CLI 実行仕様を確認したい。
-- Ollama や SLM サーバの寿命管理に関係しない設定項目を確認したい。
+- doctor preprocess 全体の処理順序や対象範囲だけを確認したい時は、doctor preprocess の仕様を直接読む。
+- ローカル SLM ではないバックエンドモデル選択や Codex CLI 実行全般を確認したいだけの時。
+- ollama 以外のローカル依存、設定ファイル全体、またはパス表記モデルの定義を調べたい時。
 
 ## hash
-- 6de1ff44a9201be02d3052a3bd31626a7f280bd6fdd0ed2324c0f485adfa0af4
+- 9d0773be5688e81f4f4b58b78282c5be4b31647042b12998e6f81e469fc3c257
 
 # `prompt_standard.md`
 
