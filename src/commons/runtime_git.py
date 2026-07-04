@@ -249,7 +249,7 @@ def require_cmoc_ignored(root: Path) -> None:
     if tracked or ignored_returncode != 0:
         raise CmocError(
             ".cmoc/local が git 追跡対象外に初期化されていません。",
-            ["cmoc init を実行してから再実行してください。"],
+            ["cmoc doctor を実行してから再実行してください。"],
             f"tracked:\n{tracked}\ncheck-ignore returncode: {ignored_returncode}",
         )
 

@@ -1,5 +1,6 @@
 import subprocess
 import sys
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -80,6 +81,52 @@ def stub_codex_profile(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def write_python_executable(path: Path, lines: list[str]) -> None:
     """Write an executable Python script used as a fake external command."""
     path.write_text("\n".join([f"#!{sys.executable}", *lines]) + "\n")
+    path.chmod(0o755)
+
+
+def run_doctor(root: Path):
+    """Run doctor with a repo-local fake Ollama executable."""
+    from main import app
+
+    _write_fake_ollama(root / ".cmoc" / "local" / "ollama" / "bin" / "ollama")
+    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+    assert result.exit_code == 0
+    return result
+
+
+def _write_fake_ollama(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        textwrap.dedent(
+            """\
+            #!/usr/bin/env python3
+            import http.server
+            import os
+            import sys
+
+            if sys.argv[1:] == ["--version"]:
+                print("ollama fake")
+                raise SystemExit(0)
+            if sys.argv[1:2] in [["show"], ["pull"]]:
+                raise SystemExit(0)
+            if sys.argv[1:] != ["serve"]:
+                raise SystemExit(2)
+
+            host, port = os.environ["OLLAMA_HOST"].split(":")
+
+            class Handler(http.server.BaseHTTPRequestHandler):
+                def do_GET(self):
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b'{"models":[]}')
+
+                def log_message(self, *_args):
+                    pass
+
+            http.server.ThreadingHTTPServer((host, int(port)), Handler).serve_forever()
+            """
+        )
+    )
     path.chmod(0o755)
 
 

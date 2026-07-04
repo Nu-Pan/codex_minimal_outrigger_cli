@@ -9,6 +9,7 @@ from _support import (
     make_repo,
     run_git,
     runner,
+    run_doctor,
 )
 from main import app
 from pytest import MonkeyPatch
@@ -30,8 +31,8 @@ def test_apply_fork_runs_codex_loop_and_updates_state(
     """apply fork が Codex loop 後に state と worktree を完成状態へ更新する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    init_result = runner.invoke(app, ["init"], catch_exceptions=False)
-    assert init_result.exit_code == 0
+    doctor_result = run_doctor(root)
+    assert doctor_result.exit_code == 0
     fork_result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
     assert fork_result.exit_code == 0
     calls: list[str] = []
@@ -78,7 +79,7 @@ def test_apply_fork_uses_linked_worktree_branch_and_head(
     """linked worktree 上の session branch と HEAD から apply run を開始する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     linked = root / ".cmoc" / "local" / "worktree" / "linked-apply"
     run_git(root, "worktree", "add", "-b", "linked-apply-home", str(linked), "HEAD")
     (linked / "README.md").write_text("# linked apply\n")
@@ -123,7 +124,7 @@ def test_apply_fork_does_not_rewrite_session_gitignore(
     """apply fork が session 側の既存 .gitignore 表現を書き換えないことを確認する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -158,7 +159,7 @@ def test_apply_fork_ensures_cmoc_ignore_without_dirtying_session(
     """apply fork は未 ignore の .cmoc を clean worktree のまま ignore する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -192,7 +193,7 @@ def test_apply_fork_config_load_error_does_not_start_apply_run(
     """設定読み込み失敗時に apply run の branch/state を開始しないことを確認する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -229,7 +230,7 @@ def test_apply_fork_can_target_and_edit_gitignore(
     """所見対象としての .gitignore は apply branch 側で編集できることを確認する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )

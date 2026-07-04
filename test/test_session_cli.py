@@ -24,6 +24,7 @@ from _support import (
     make_repo,
     run_git,
     runner,
+    run_doctor,
 )
 from main import app
 import sub_commands.session.abandon as session_module
@@ -73,8 +74,8 @@ def test_session_fork_creates_session_branch_and_state(
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     home_branch = current_branch(root)
-    init_result = runner.invoke(app, ["init"], catch_exceptions=False)
-    assert init_result.exit_code == 0
+    doctor_result = run_doctor(root)
+    assert doctor_result.exit_code == 0
 
     result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
 
@@ -187,7 +188,7 @@ def test_session_fork_uses_linked_worktree_branch_and_head(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     root_branch = current_branch(root)
     linked = root / ".cmoc" / "local" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
@@ -214,7 +215,7 @@ def test_session_abandon_switches_home_and_marks_state(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -245,7 +246,7 @@ def test_session_abandon_uses_linked_worktree_branch(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     root_branch = current_branch(root)
     linked = root / ".cmoc" / "local" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
@@ -280,7 +281,7 @@ def test_session_abandon_requires_existing_home_branch(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -330,7 +331,7 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -384,7 +385,7 @@ def test_session_completion_rejects_missing_state_fields(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -409,7 +410,7 @@ def test_session_join_resolves_oracle_conflict_with_repo_write_profile(
     root = make_repo(tmp_path)
     target = root / "oracle" / "spec.md"
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -467,7 +468,7 @@ def test_session_join_rejects_non_conflict_changes_from_conflict_agent(
     target = root / "oracle" / "spec.md"
     extra = root / "src" / "extra.py"
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -517,7 +518,7 @@ def test_session_join_uses_linked_worktree_branch(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     root_branch = current_branch(root)
     linked = root / ".cmoc" / "local" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
@@ -547,7 +548,7 @@ def test_session_join_stages_delete_conflict_resolution(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -584,7 +585,7 @@ def test_session_join_warns_when_session_branch_cannot_be_deleted(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -618,7 +619,7 @@ def test_session_join_does_not_delete_when_local_branch_reachability_check_fails
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -657,7 +658,7 @@ def test_session_join_error_report_is_written_to_stdout(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -679,7 +680,7 @@ def test_session_join_unexpected_error_after_merge_is_written_to_stderr(
     root = make_repo(tmp_path)
     target = root / "README.md"
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )

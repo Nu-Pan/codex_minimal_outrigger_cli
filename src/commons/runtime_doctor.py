@@ -13,7 +13,7 @@ from pathlib import Path
 from basic.acp import ModelClass
 from config.cmoc_config import CmocConfig
 
-from commons.runtime_config import load_config
+from commons.runtime_config import load_config, sync_config
 from commons.runtime_errors import CmocError
 from commons.runtime_git import ensure_cmoc_ignored, run_git
 
@@ -29,6 +29,7 @@ def run_doctor_preprocess(root: Path) -> None:
     root = root.resolve()
     ensure_cmoc_ignored(root)
     _ensure_agents_tracked(root)
+    sync_config(root)
     _ensure_ollama_serves_local_slm(root)
     _commit_doctor_repairs(root)
 
@@ -53,14 +54,15 @@ def _ensure_agents_tracked(root: Path) -> None:
 
 
 def _commit_doctor_repairs(root: Path) -> None:
-    run_git(["add", "--", ".gitignore", ".agents/.gitkeep"], root)
+    repair_paths = [".gitignore", ".agents/.gitkeep", ".cmoc/config.json"]
+    run_git(["add", "--", *repair_paths], root)
     diff = run_git(
-        ["diff", "--cached", "--quiet", "--", ".gitignore", ".cmoc", ".agents"],
+        ["diff", "--cached", "--quiet", "--", *repair_paths],
         root,
         check=False,
     )
     if diff.returncode == 1:
-        run_git(["commit", "-m", "cmoc doctor preprocess"], root)
+        run_git(["commit", "-m", "cmoc doctor preprocess", "--", *repair_paths], root)
 
 
 def _ensure_ollama_serves_local_slm(root: Path) -> None:

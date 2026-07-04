@@ -53,6 +53,7 @@ from _support import (
     make_repo,
     run_git,
     runner,
+    run_doctor,
 )
 
 
@@ -392,7 +393,7 @@ def test_cli_requires_current_directory_to_be_work_root(
     root = make_repo(tmp_path)
     monkeypatch.chdir(root / "oracle")
 
-    result = runner.invoke(app, ["init"])
+    result = runner.invoke(app, ["doctor"])
 
     assert result.exit_code != 0
     assert "# ERROR" in result.stdout
@@ -411,7 +412,7 @@ def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
     root = make_repo(tmp_path)
     main_path = Path(main_module.__file__).resolve()
     result = subprocess.run(
-        [sys.executable, str(main_path), "init"],
+        [sys.executable, str(main_path), "doctor"],
         cwd=root,
         env={"PYTHONPATH": str(main_path.parent), "_CMOC_COMPLETE": "bash_complete"},
         text=True,
@@ -431,7 +432,7 @@ def test_pre_log_check_failure_does_not_write_subcommand_log(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert runner.invoke(app, ["init"], catch_exceptions=False).exit_code == 0
+    assert run_doctor(root).exit_code == 0
     log_paths_before = set((root / ".cmoc" / "local" / "log" / "sub_command").glob("*.jsonl"))
     (root / "README.md").write_text("dirty\n")
 
