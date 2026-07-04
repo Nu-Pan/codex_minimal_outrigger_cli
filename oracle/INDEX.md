@@ -1,25 +1,25 @@
 # `doc`
 
 ## Summary
-- cmoc の自然言語による正本仕様断片を集めた領域。アプリケーション全体の外部挙動、branch/worktree モデル、不採用設計案、開発規則など、実装・テストへ進む前に人間意図と判断境界を確認する入口になる。
-- 個別ファイルは、利用者向け CLI 挙動や agent call 周辺の共通仕様、git branch と worktree による実行隔離、過去に退けた設計案、Python 実装・pytest・CLI 構成の開発ルールへ分かれている。
+- cmoc の正本仕様断片のうち、自然言語で記述された仕様文書を束ねる領域。アプリケーション仕様、branch/worktree モデル、不採用設計案、開発ルールなど、外部挙動・共通境界条件・設計判断・実装時規約へ進む入口になる。
+- 個別の実装ファイルやテストではなく、cmoc の利用者向け挙動、git branch/worktree の扱い、過去に退けた設計案、realization code/test の書き方を判断するための正本仕様文書を探す対象。
 
 ## Read this when
-- cmoc の実装やテストを変更する前に、自然言語で書かれた正本仕様断片から根拠を探したいとき。
-- CLI 挙動、サブコマンド、Codex CLI 呼び出し、ログ、エラー処理、セッション状態、run 隔離、索引生成など、アプリケーション横断の外部仕様を確認したいとき。
-- session fork/join、apply/review、managed branch、linked worktree など、cmoc が git branch・commit・worktree をどう扱うかを確認したいとき。
-- 現行設計の変更を検討する際に、過去に不採用となった代替案と不採用理由を確認したいとき。
-- Python コーディング規則、CLI 構成、開発環境、pytest 方針など、realization code と realization test の書き方に関する開発規則を確認したいとき。
+- cmoc の CLI 挙動、サブコマンド、共通前処理、エラー処理、ログ、索引生成、セッション状態、run 隔離、Codex CLI 呼び出し、プロンプト受け渡し、ローカル SLM 利用に関する仕様文書を探すとき。
+- session fork/join、apply/review などの run が利用する git branch、commit、linked worktree、session/run 系 branch の意味や命名規則を確認したいとき。
+- cmoc の現行設計に対して、過去に不採用となった代替案の背景や避けるべき理由を再確認したいとき。
+- Python 実装、CLI 構成、共通処理の配置、開発環境、pytest を中心とした realization test の規約を確認したいとき。
+- 個別仕様へ進む前に、cmoc の外部挙動、状態・ログ・ブランチ・agent call、または開発時の共通方針に関する読む先を絞りたいとき。
 
 ## Do not read this when
-- oracle file と realization file の一般定義、品質基準、INDEX.md エントリー規則など、リポジトリ全体の仕様管理原則だけを確認したいとき。
-- path keyword や root 種別そのものの定義だけを確認したいとき。
-- 実装ファイルやテストファイルの具体的な関数、クラス、内部 helper、既存コード構造だけを調べたいとき。
-- 採用済み仕様ではなく外部ツール自体の一般的な使い方だけを調べたいとき。
-- 読むべき個別の正本仕様断片が既に分かっており、その本文へ直接進めるとき。
+- oracle file と realization file の一般的な定義、責務境界、編集権限、追跡対象判定、INDEX.md エントリー作成規則、品質基準だけを確認したいとき。
+- パスキーワードやルート種別の定義だけを確認したいときは、パスモデルを扱う仕様へ直接進む。
+- AgentCallParameter builder の具体的な構築ロジック、実装ファイル、テストの内部構造、既存関数のシグネチャやテスト期待値だけを調べたいとき。
+- 採用済み仕様ではなく実装コード上の現在値、または Codex CLI 本体・git ignore・permission profile など外部機能の一般仕様を調べたいとき。
+- 個別サブコマンド、個別共通処理、開発規約など、読むべき仕様文書がすでに分かっており、その詳細だけを確認したいとき。
 
 ## hash
-- 902786cddbf8c9884bed360caf27f20aa99b07ddcdfeb9985ca0fabb14f81c61
+- 9586e65672078161cd566897bef1706c037ef09a475b82717130aa6f6489e5fe
 
 # `src`
 

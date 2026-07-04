@@ -101,28 +101,23 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様断片を置く領域。自然言語による外部挙動・開発規則・設計判断と、AI エージェント呼び出し仕様や横断的な基礎モデルを扱う実装形式の仕様断片へ進む入口になる。
-- 実装・テストへ進む前に、人間意図、判断境界、prompt や Structured Output schema、パス表記、設定、規範文書モデルなど、正本として確認すべき事項を切り分けるために使う。
+- cmoc の正本仕様断片を束ねる領域。自然言語の仕様文書と、AI エージェント呼び出し・prompt・Structured Output schema・横断モデルなどの oracle src へ進む入口になる。
+- 利用者向け挙動、git branch/worktree、過去に不採用となった設計案、開発規約、パス・設定・規範文書モデルなど、人間が責任を持つ仕様断片の読む先を切り分ける対象。
 
 ## Read this when
-- cmoc の実装やテストを変更する前に、正本仕様断片から根拠を探したいとき。
-- CLI 挙動、サブコマンド、Codex CLI 呼び出し、ログ、エラー処理、セッション状態、run 隔離、索引生成など、アプリケーション横断の外部仕様を確認したいとき。
-- git branch、commit、worktree を使った session fork/join、apply/review、managed branch、linked worktree の扱いを確認したいとき。
-- agent call parameter、prompt、Structured Output schema、共通規範注入、ファイルアクセス制限、ルーティング規則の注入位置を確認したいとき。
-- cmoc の設定値、ルートパスプレースホルダ、パス解決、規範文書の構造化、仕様文生成用 Markdown helper など、複数領域から参照される基礎概念を確認したいとき。
-- 現行設計の変更を検討する際に、過去に不採用となった代替案と不採用理由を確認したいとき。
-- Python コーディング規則、CLI 構成、開発環境、pytest 方針など、realization code と realization test の書き方に関する開発規則を確認したいとき。
+- cmoc の正本仕様断片を起点に、外部挙動、状態、ログ、branch/worktree、agent call、prompt、Structured Output schema、開発規約の読む先を探すとき。
+- CLI 挙動、サブコマンド、共通前処理、エラー処理、索引生成、セッション状態、run 隔離、Codex CLI 呼び出し、プロンプト受け渡し、ローカル SLM 利用に関する仕様文書を探すとき。
+- agent call parameter、機能別 builder、完全プロンプトの構築順序、共通規範プロンプト、ファイルアクセス制限やルーティング規則の注入位置を確認したいとき。
+- 設定値、ルートパスプレースホルダ、パス解決、規範文書の構造化、仕様文生成用 Markdown helper など、複数領域から参照される基礎概念の正本仕様断片を確認したいとき。
 
 ## Do not read this when
-- oracle file と realization file の一般定義、品質基準、INDEX.md エントリー規則など、リポジトリ全体の仕様管理原則だけを確認したいとき。
-- path keyword や root 種別そのものの定義だけを確認したいとき。
-- CLI 実行制御、branch 操作、diff 取得、レポート保存、対象ファイル探索、表示整形など、AI エージェント呼び出し仕様や横断モデルではない realization code を調べたいとき。
-- 実装ファイルやテストファイルの具体的な関数、クラス、内部 helper、既存コード構造だけを調べたいとき。
-- 特定サブコマンドの利用者向け入出力、実行手順、状態ファイル仕様だけを既に直接確認できるとき。
-- 採用済み仕様ではなく外部ツール自体の一般的な使い方だけを調べたいとき。
+- realization code 側の実装詳細、外部コマンド起動、表示整形、diff 取得、レポート保存、対象ファイル探索、既存関数のシグネチャ、テスト期待値だけを調べたいとき。
+- oracle file と realization file の一般的な定義、責務境界、編集権限、追跡対象判定、INDEX.md エントリー作成規則、品質基準だけを確認したいとき。
+- Codex CLI 本体、git ignore、permission profile など、cmoc の正本仕様断片ではなく外部機能の一般仕様を調べたいとき。
+- 読むべき個別仕様文書または oracle src がすでに分かっており、その本文へ直接進めばよいとき。
 
 ## hash
-- 7a7c60c25f4f77ef18b2b28f2c9193b74b4bbe612d7eea80033948271aa83c59
+- 2980a42f8cc7d1b98f2fa597f06822e9973af16e720320d4004abfc8ff13421f
 
 # `pyproject.toml`
 

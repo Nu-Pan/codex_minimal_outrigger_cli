@@ -155,21 +155,23 @@
 # `ollama_slm_server.md`
 
 ## Summary
-- ローカルの Ollama 実行環境で SLM をサーブし、cmoc が Codex CLI 用バックエンドとして利用するための仕様を扱う。モデル名のロード元、Ollama の取得・展開、ローカルアドレスでの起動、生成する Codex profile、doctor preprocess によるインスタンス寿命管理の境界を示す。
+- cmoc がローカルの ollama で SLM をサーブし、Codex CLI のバックエンドモデルとして使うための正本仕様断片。モデル名の設定ロード、ollama の冪等インストール、ローカル限定起動、生成する codex profile、Codex CLI 起動時に依存しない provider 指定、doctor preprocess での寿命管理を扱う。
 
 ## Read this when
-- cmoc からローカル SLM を使うための Ollama インストール、起動、接続設定を確認または実装するとき。
-- Codex CLI に渡す profile で Ollama 互換エンドポイントをどう設定するか、また `--oss` や組み込み provider ID に依存しない方針を確認するとき。
-- doctor preprocess で Ollama を準備する処理、同一 repo 内での単一インスタンス共有、利用終了時の停止条件を扱うとき。
-- ローカル SLM のモデル名を cmoc 設定からどのように取得するかを確認するとき。
+- LOCAL_SLM 用のモデル名を cmoc 設定から読み出す処理を実装・確認する。
+- ollama の取得、展開、既存インストール検出、冪等なインストール処理を実装・確認する。
+- ollama serve の起動方法、使用 port の選択、listen 先、子プロセス管理を実装・確認する。
+- Codex CLI にローカル ollama を使わせる codex profile の内容や、codex exec の argv に指定しない option を確認する。
+- doctor preprocess における ollama のインストール・起動、同一 repo 内での単一インスタンス共有、不要時の終了条件を扱う。
 
 ## Do not read this when
-- doctor preprocess 全体の実行順序や他の前処理項目を確認したいだけなら、doctor preprocess の仕様を直接読む。
-- Codex CLI 全般の argv 構築や profile 生成のうち、Ollama 固有でない設定を扱う場合は、その責務を持つ仕様または実装を読む。
-- 外部クラウドモデルや Ollama 以外の model provider の仕様を確認したい場合は、この対象ではなく該当 provider の仕様を読む。
+- ollama や LOCAL_SLM と関係しない通常の Codex CLI profile 生成だけを扱う。
+- doctor preprocess 全体の実行順序や対象範囲を確認したいだけで、ollama 固有の処理を扱わない。
+- path placeholder の意味や `<repo-root>`、`<cmoc-root>`、`<work-root>` の定義だけを確認したい。
+- ローカル SLM 以外のモデルクラス、リモートモデル、または Codex CLI の一般的な provider 設定を扱う。
 
 ## hash
-- d673067d5a926743218bc4aac4388ac07f758e7207ab9e0ad4518d3a1eeb3f9e
+- 4fe59fef3018c093319e9ca76401074c8bc2578fb28d14d33a59b24e77a20037
 
 # `prompt_standard.md`
 
