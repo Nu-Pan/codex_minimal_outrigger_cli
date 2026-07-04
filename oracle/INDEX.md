@@ -1,23 +1,24 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様断片のうち、自然言語ドキュメントを集めた領域。アプリケーション挙動、branch/worktree モデル、開発ルール、不採用設計案など、実装前に読むべき人間意図への入口になる。
-- 利用者向け仕様、実行基盤、開発時の横断ルール、過去に退けた設計判断を切り分け、どの正本仕様断片へ進むべきか判断するためのルーティング対象。
+- cmoc の oracle doc 群を収める領域。横断仕様、branch/worktree モデル、採用しなかった設計案、開発時の共通ルールなど、自然言語で記述された正本仕様断片への入口になる。
+- CLI 挙動、agent call 境界、永続状態、ログ、作業隔離、インデクシング、git branch/worktree、実装・テスト作法などについて、実装差を避けたい人間意図を確認するための文書群を扱う。
 
 ## Read this when
-- cmoc の CLI 挙動、run 隔離、セッション状態、ログ、エラー処理、インデクシング、Codex CLI 呼び出しなど、アプリケーション全体の自然言語仕様を探すとき。
-- session fork/join、run ごとの managed branch、linked worktree、repository default branch、session/run 系 branch の意味や命名規則を確認したいとき。
-- Python 実装、CLI 責務配置、開発環境、realization test、Fake Codex CLI 利用など、開発時に守る横断ルールを確認したいとき。
-- 採用済み仕様ではなく、apply orchestration、file access rule 違反処理、permission profile 変換、AI-generated memory や作業計画レビュー方式など、過去に不採用となった設計案の背景を確認したいとき。
+- cmoc の利用者向け CLI 挙動、サブコマンド仕様、共通前処理、ログ、エラー処理、状態管理、作業隔離、インデクシング、Codex CLI 呼び出しに関わる正本仕様断片を探すとき。
+- session fork/join、apply/review などの run が利用する branch、commit、worktree の概念や命名規則を確認したいとき。
+- 現行設計に対して過去に不採用となった代替案や、その不採用理由を再検討したいとき。
+- Python 実装、CLI 構成、共通機能配置、開発環境、realization test の方針など、開発時の横断ルールを確認したいとき。
+- 個別の oracle doc へ進む前に、対象仕様が横断仕様、branch/worktree モデル、設計判断メモ、開発ルールのどれに属するかを絞りたいとき。
 
 ## Do not read this when
-- oracle file と realization file の一般的な定義、責務境界、編集権限、追跡対象判定、品質基準だけを確認したいとき。
+- oracle file と realization file の一般的な役割分担、編集責任、品質基準、INDEX.md エントリー作成規則だけを確認したいとき。
 - パスキーワードやルート種別の定義だけを確認したいとき。
-- 実装内部の関数、クラス、テスト fixture、補助ファイル配置、Structured Output schema 構築ロジックなど、realization code の具体構造だけを調べたいとき。
-- 採用済み仕様や設計判断ではなく、外部ツールや git ignore などの一般仕様だけを調べたいとき。
+- 実装ファイルの関数構造、内部 helper、既存テスト、具体的なコード上の挙動だけを調べたいとき。
+- Codex CLI、git、permission profile など外部ツールや外部仕様そのものの一般的な利用方法だけを調べたいとき。
 
 ## hash
-- f6db99a82e43238d8d8efff382b5ed6af8eadfd951d5857a2fa4c30662f18619
+- f7f617fa1792f14d519995b1fe7e663660cd484a2fc1d10272d753007a522f0e
 
 # `script`
 

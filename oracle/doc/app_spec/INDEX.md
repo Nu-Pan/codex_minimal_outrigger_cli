@@ -66,24 +66,23 @@
 # `doctor_preprocess.md`
 
 ## Summary
-- 各サブコマンド開始時に実行される doctor preprocess の正本仕様断片。cmoc 実行前に git 管理状態や SLM 提供状態を検証し、可能なら修復し、修復不能ならエラー終了する前処理を定義する。
-- git ignore されるべきローカル状態領域、追跡されるべき agent 操作禁止領域、ollama による SLM サーブ可否、前処理で生じた差分の commit までの大枠を扱う。
+- 各サブコマンドの本命処理前に必ず走る共通事前検証・修復の正本仕様断片。cmoc 実行に必要な git ignore、agent 作業領域の追跡状態、ollama/SLM 利用可能性を確認し、可能な範囲で修復し、修復不能時はエラー終了する責務を扱う。
 
 ## Read this when
-- 各サブコマンド開始時に共通実行される前処理の仕様を確認したいとき。
-- `.cmoc/local` を git 追跡対象外にする判定や修復方針を実装・テストしたいとき。
-- `.agents` を git 追跡対象として確保する処理を実装・テストしたいとき。
-- doctor preprocess が失敗時に cmoc をエラー終了すべき条件を確認したいとき。
-- ollama が SLM をサーブ可能か確認する前処理の仕様位置を確認したいとき。
+- サブコマンド実行前に共通して行う検証・修復処理の仕様を確認したいとき。
+- `.cmoc/local` を git 追跡対象外に保つ条件、修復手順、完了判定を実装・テストするとき。
+- agent 操作禁止領域をあらかじめ作成し、git 追跡対象にする挙動を実装・テストするとき。
+- ollama 起動確認、SLM モデル利用可能性確認、未起動・未取得時の修復方針を扱うとき。
+- doctor preprocess が作った差分を commit するタイミングや、修復不能時のエラー終了境界を確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の入出力や実行手順だけを確認したいとき。
-- 通常の path placeholder の意味や `<repo-root>`、`<work-root>` の定義だけを確認したいとき。
-- doctor preprocess 以外の git 操作、commit 方針、状態管理の一般仕様を探しているとき。
-- ollama や SLM の一般的な設定方法だけを調べたいとき。
+- 個別サブコマンド固有の事前条件だけを確認したいとき。doctor preprocess 正常終了後に行う各サブコマンド側の仕様を読む。
+- SLM モデル名が未定義の場合の扱いだけを確認したいとき。ollama/SLM サーバ仕様を直接読む。
+- doctor preprocess 後の本命処理、CLI 出力、各サブコマンドのドメイン動作を確認したいとき。
+- git ignore や agent 作業領域や ollama/SLM に関係しない一般的な path 定義だけを確認したいとき。
 
 ## hash
-- f4b9e028f2837042c494c58638270d6f27584ab176dcc93da32e639a8b668252
+- 4c0195b140289f9e123fd0e6c6e0e8345615469898bb63970debc9182ed3d0f8
 
 # `error_handling.md`
 
@@ -156,21 +155,21 @@
 # `ollama_slm_server.md`
 
 ## Summary
-- ローカル実行の ollama で SLM をサーブする方針を述べる。doctor による ollama/SLM インストール、cmoc からのローカル接続、モデル名取得、未定義時の扱い、並列実行時の共有、起動と停止の寿命管理を扱う。
+- ローカルの Ollama で SLM をサーブし、cmoc がバックエンドモデルとして利用するための仕様断片。doctor preprocess によるインストール、モデル名未定義時の扱い、接続先ポート、LOCAL_SLM 設定からのモデル名取得、並列実行時の Ollama 共有、起動・終了の寿命管理に触れる。
 
 ## Read this when
-- SLM バックエンドで Codex CLI を実行するための ollama 起動・接続・停止の仕様を確認したいとき。
-- doctor が ollama やローカル SLM をどの条件でインストールするかを確認したいとき。
-- ローカル SLM のモデル名未定義時に、インストールや実行要求がどう扱われるかを確認したいとき。
-- 複数の cmoc 実行が同じ ollama を共有する場合の寿命管理を実装・検証したいとき。
+- ローカル SLM バックエンドで Codex CLI を実行する挙動を確認・実装する。
+- Ollama のインストール、起動、シャットダウン、複数 cmoc からの共有方法を扱う。
+- SLM モデル名が未定義の場合の doctor 実行やバックエンド選択時のエラー条件を確認する。
+- cmoc から Ollama へ接続するアドレスやポート決定の方針を確認する。
 
 ## Do not read this when
-- 外部 API 型の LLM バックエンドや Codex CLI 全般の実行仕様だけを確認したいとき。
-- 設定オブジェクトやモデル分類そのものの定義を確認したいとき。
-- ローカルサーバーではなく、doctor コマンド全体の検査・修復項目を確認したいとき。
+- doctor preprocess 全体の処理順序や他の依存物インストール仕様だけを確認したい。
+- ローカル SLM 以外のバックエンドモデル選択や Codex CLI 実行仕様を確認したい。
+- Ollama や SLM サーバの寿命管理に関係しない設定項目を確認したい。
 
 ## hash
-- 721db6f7e66e5e08b1717476e381f240d801afd7e7543c84ce87f2b2fe830f1e
+- 6de1ff44a9201be02d3052a3bd31626a7f280bd6fdd0ed2324c0f485adfa0af4
 
 # `prompt_standard.md`
 
@@ -237,23 +236,23 @@
 # `sub_command`
 
 ## Summary
-- cmoc の利用者向けサブコマンド仕様を集めた領域。session の作成・完了・破棄、apply run の開始・取り込み・破棄、oracle review、indexing、doctor、TUI 起動など、各 CLI 操作の正本仕様断片への入口になる。
-- 各サブコマンドについて、CLI 引数、事前条件、状態遷移、git branch/worktree 操作、Codex CLI や agent call との責務境界、stdout・report・終了時処理などの外部挙動を確認するためのルーティング対象。
+- cmoc のサブコマンド仕様断片を集めた領域。session の開始・完了・破棄、apply の実行・取り込み・破棄、oracle review、indexing、doctor、TUI 起動など、利用者が直接呼び出す CLI 挙動の正本仕様へ進む入口になる。
+- 各サブコマンドの事前条件、状態遷移、git 操作、agent call との境界、stdout report、終了条件、cleanup 対象など、外部挙動として実装差を避けたい事項を扱う。
 
 ## Read this when
-- cmoc のサブコマンド単位の仕様、実装、テスト、CLI 挙動を確認したい。
-- session lifecycle、apply lifecycle、review、indexing、doctor、TUI 起動のいずれかについて、状態条件や git 操作、出力、失敗時の扱いを調べたい。
-- ある操作がどのサブコマンドの責務か、または join・abandon・fork など近い操作の境界を切り分けたい。
-- サブコマンドから Codex CLI、agent call、run isolation、report 生成、indexing、doctor preprocess へ進む入口条件だけを確認したい。
+- cmoc のサブコマンド単位の CLI 引数、実行順序、事前条件、終了コード、標準出力、レポート保存、状態更新を確認したいとき。
+- session または apply の lifecycle に関わる開始、実行、join、abandon の仕様へ進みたいとき。
+- doctor、indexing、oracle review、TUI 起動など、利用者が明示実行するコマンド入口の仕様を探すとき。
+- サブコマンド実装やテストの変更前に、対象コマンドの正本仕様断片を特定したいとき。
 
 ## Do not read this when
-- oracle file、realization file、path placeholder、managed branch、session state schema など、cmoc 全体の横断概念だけを確認したい場合は、それらを定義する共通仕様を読む。
-- 個別 agent call の prompt、parameter、Structured Output の詳細を確認したい場合は、対応する builder 仕様を直接読む。
-- run isolation、doctor preprocess、indexing 処理そのものなど、サブコマンドから呼ばれる下位機構の詳細だけを確認したい場合は、その機構の仕様を直接読む。
-- 実装内部の helper 分割、関数名、テスト fixture 配置だけを判断したい場合は、該当する realization code や test のルーティングへ進む。
+- path placeholder、oracle file、realization file、managed branch、state file などの一般定義だけを確認したいときは、用語やパスモデルの仕様を読む。
+- agent call の詳細な prompt、Structured Output、parameter builder のみを確認したいときは、対応する agent call 定義へ直接進む。
+- 隔離実行、doctor preprocess、indexing 生成規則など、サブコマンドから呼ばれる共通処理そのものの詳細だけを確認したいときは、その共通仕様を読む。
+- 実装ファイルの責務分割、内部 helper、git command wrapper の設計だけを確認したいときは、realization code 側を読む。
 
 ## hash
-- ead3d2722174314424402322672a9130d9154343ace19eb0f96060b45f9a6f4a
+- 6e86e14345912a52ef710d6db2903cdb08e43538ed7f9ccbb36cc2e3b15666fe
 
 # `usage.md`
 
