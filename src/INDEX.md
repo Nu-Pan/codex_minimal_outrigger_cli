@@ -60,24 +60,24 @@
 # `commons`
 
 ## Summary
-- cmoc の共有 runtime helper 群を収める領域。Codex exec/TUI 呼び出し、profile/config/content/error/git/logging/path/result/state、apply process、INDEX.md indexing preflight など、複数サブコマンドから参照される実行時支援の実装と公開 import 境界を扱う。
-- 個別機能の本体だけでなく、責務別 runtime module を横断して再公開する薄い入口や、互換 import path を維持する境界層も含む。
+- cmoc の共有 runtime helper 群を収める領域。Codex 実行、profile/config/content、CLI 共通ライフサイクル、error、git、logging、path、result、state、indexing preflight、apply 補助など、複数 command から使われる実行時支援を責務別に分けて扱う。
+- 主要 runtime API を集約して再公開する薄い入口と、個別機能の実装本体が同じ階層にあり、横断的な import 境界の確認から責務別 helper の詳細確認へ進むための入口になる。
 
 ## Read this when
-- CLI サブコマンド共通の実行ライフサイクル、エラー表示、ログ記録、完了サマリー、終了コード化など、runtime 横断の共通挙動を確認または変更したいとき。
-- Codex CLI の exec/TUI 起動、profile/CODEX_HOME/schema/call log、Structured Output 検証、quota/capacity retry、resume 継続、preflight 実行の制御を追いたいとき。
-- cmoc の config、session/apply state、runtime path、git/worktree/ignore 判定、content hash 保存、外部コマンド結果モデルなど、複数箇所から使われる実行時 helper の責務や公開入口を探すとき。
-- apply abandon や linked worktree 復元、process pid file、Codex subprocess tracking、process group 停止など、apply 実行時の補助処理を確認または変更したいとき。
-- INDEX.md の自動更新 preflight、entry 再生成、hash による再利用、除外条件、indexing commit、排他 lock の実装を確認または変更したいとき。
+- 複数の CLI subcommand や runtime 実装から共有される処理の所在を探したいとき。
+- Codex exec/TUI 呼び出し、profile 作成、Structured Output 検証、quota/capacity retry、call log、preflight 連携など Codex runtime 周辺の共通処理を確認または変更したいとき。
+- work root 検査、共通エラー表示、git 状態操作、runtime path 解決、config/state の永続化、subcommand logging、外部コマンド結果モデルなど、command 固有ではない実行時基盤を扱うとき。
+- INDEX.md 自動更新、entry 生成 preflight、indexing commit、対象選別、hash 再利用、排他 lock など indexing runtime の実装へ進みたいとき。
+- apply 実行中 process の追跡、pid file、linked worktree 探索、abandon 時の停止処理など apply runtime 補助を調べたいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務処理、CLI 引数、利用者向け出力 schema、report 内容、prompt 構築そのものを確認したいとき。その場合は対象 command や prompt builder の実装を読む。
-- path placeholder、config 型、file access rule、session state の仕様意図、INDEX.md entry の文章基準など、正本仕様断片を確認したいとき。その場合は oracle 側の該当文書や定義を読む。
-- 生成済みログ、生成済み INDEX.md、特定 directory の routing entry、実行履歴など、runtime 実装ではなく生成物や個別結果を調べたいだけのとき。
-- git、path、logging、Codex profile などの低レベル helper のうち目的の責務が既に分かっているときは、この階層全体ではなく該当する責務別本文を直接読む。
+- 個別 subcommand の引数、業務処理、利用者向け出力、JSON schema を確認したいだけのとき。その場合は該当 command 実装または test を読む。
+- oracle file に書かれた正本仕様、prompt 文面、path model の定義、config 型そのものを確認したいとき。その場合は oracle 側の対応箇所を読む。
+- 生成済み INDEX.md の entry 内容や特定 directory のルーティング判断を確認したいだけのとき。その場合は対象 directory の INDEX.md または対象本文を読む。
+- 外部コマンドや Codex 呼び出しの単一 helper だけで完結する低レベル詳細を調べたいときは、この階層全体ではなく責務が一致する個別 runtime 実装へ直接進む。
 
 ## hash
-- 76d7833f517c45f653d04efe655d81b438e790735ba147f65a9f5aa91039aae1
+- 9ac0852e96e8fdc973d3146214672d5f4a43acd553cd7fee617afaedbfbda04e
 
 # `config`
 
