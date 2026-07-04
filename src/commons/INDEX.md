@@ -15,21 +15,20 @@
 # `cmoc_runtime.py`
 
 ## Summary
-- runtime 系 commons の主要 API を 1 か所から参照できるように集約する入口。Codex 実行・profile・config・content・CLI・error・git・logging・paths・results・state にまたがる既存 runtime 部品を再公開する役割を持つ。
-- 実処理の実装本体ではなく、周辺モジュールに分散した runtime 機能への import 境界をまとめるための薄い集約層として読む。
+- cmoc の runtime 系 API を単一の入口として再公開する集約モジュール。Codex 起動、profile、設定、content hash、CLI 実行、doctor 前処理、error、git、logging、path、result、state に関する共通実行時要素を各 runtime_* モジュールから取り込む。
 
 ## Read this when
-- 複数の runtime commons 機能をまとめて利用している呼び出し側の import 元を確認したいとき。
-- runtime 系 API の公開入口にどの関数・クラス・定数が含まれているかを確認したいとき。
-- runtime commons の分割済みモジュールへ進む前に、Codex 実行、git、path、state、config などの横断的な参照関係を把握したいとき。
+- 複数の runtime_* モジュールにまたがる共通 API を、呼び出し側でまとめて import している箇所の依存元を確認したいとき。
+- runtime 系 helper の公開入口として、どの関数・型・定数がまとめて提供されているかを確認したいとき。
+- 個別 runtime_* モジュールの移動・改名・公開範囲変更により、この集約 import の更新が必要か判断するとき。
 
 ## Do not read this when
-- 個別機能の挙動や副作用を調べたいとき。その場合は、対応する runtime commons の実装本体を直接読む。
-- 新しい runtime 処理を実装・修正したいとき。この集約層ではなく、責務を持つ下位モジュールを読む。
-- CLI サブコマンドの利用者向け挙動や出力仕様を確認したいとき。より直接の command 実装またはテストを読む。
+- Codex profile、git 操作、設定読み書き、path 計算、state 保存などの具体的な処理内容を確認したいときは、それぞれの runtime_* モジュールを直接読む。
+- CLI サブコマンドの利用者向け挙動や制御フローを調べたいときは、サブコマンド実装側を読む。
+- 新しい runtime 処理を実装したいだけで、この集約入口から公開する必要がまだ決まっていないとき。
 
 ## hash
-- 8966f0d5a850e449686651c59834522e9dbbe9937161b01765fe8e2215085580
+- 19c36c9004dc01f39de717d322a30831b8a1b6e0ded9336a719762767ebdda77
 
 # `indexing.py`
 
@@ -172,24 +171,24 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI subprocess 境界で使う profile 生成、sandbox writable/read path 検証、CODEX_HOME 検証、local ollama provider 設定、apply child process tracking、Structured Output schema 配置、Codex JSONL の error/quota/capacity/resume 判定をまとめる。
-- Codex CLI に渡す実行環境と、Codex CLI から返る機械的な実行結果の解釈を扱う入口であり、FileAccessMode と Codex sandbox/profile の対応、起動前検査、subprocess 実行失敗の cmoc error 化を確認できる。
+- Codex CLI の subprocess 境界で必要になる profile 生成、sandbox/cwd/書き込み root 判定、CODEX_HOME 検証、Structured Output schema 配置、実行結果 JSON/JSONL の error・quota・capacity 判定を扱う。
+- Codex child process の pid tracking と apply abandon 用の排他制御、ollama SLM 用 provider 設定、追加 read/write path の FileAccessMode 境界検証も同じ実行境界の不変条件としてまとめている。
 
 ## Read this when
-- Codex CLI 起動用 profile の内容、sandbox_mode、writable_roots、追加 read/write path の許可判定を変更または確認したいとき。
-- CODEX_HOME の解決・検証、Codex subprocess に渡す環境変数、Codex CLI 不在時のエラー処理を扱うとき。
-- local SLM 用の ollama provider 設定や repo-local port 読み取り条件を変更または調査するとき。
-- apply abandon と関係する Codex child process の pid file 記録、lock、process group 起動、pid 再利用検出を扱うとき。
-- Structured Output schema の runtime 配置、schema なし output JSON の読み取り、Codex JSONL stdout/stderr からの error detail、resume token、quota/capacity retry 判定を扱うとき。
+- Codex CLI 起動前に渡す profile、sandbox mode、writable_roots、model provider、CODEX_HOME、cwd、追加 read/write path の挙動を確認・変更したいとき。
+- FileAccessMode と Codex sandbox の対応、oracle/realization/repo write の許可境界、AGENTS.md・INDEX.md・memo・管理ディレクトリの書き込み禁止判定を調べるとき。
+- apply abandon が Codex child process を止めるための pid file 記録、lock、process group 起動、pid 再利用対策を確認・変更したいとき。
+- Codex CLI の stdout/stderr、JSONL event、Structured Output schema、resume token、quota/capacity retry 判定、空または不正 JSON 出力の扱いを調べるとき。
+- local SLM 実行で repo-local ollama port を profile に反映する処理や、doctor preprocess との接続条件を確認したいとき。
 
 ## Do not read this when
-- prompt 本文に載せる file access rule の文言や利用者向け指示を確認したいだけなら、prompt builder 側を読む。
-- Codex に渡す AgentCallParameter や FileAccessMode 自体の定義を確認したいだけなら、basic 側の型定義を読む。
-- runtime path の各保存先の意味やディレクトリ構成だけを確認したいなら、path helper 側を読む。
-- git 上の oracle file 判定そのものを変更したい場合は、git/path 判定を担う helper 側を読む。
+- 利用者向け prompt 本文、AGENTS.md/INDEX.md 用のルール文、または FileAccessMode の説明文そのものを変更したいだけなら、prompt builder 側の正本断片や実装を読む。
+- cmoc の CLI サブコマンド定義、引数 parsing、コマンド間の高水準 orchestration を調べたいだけなら、各 subcommand の実装へ進む。
+- runtime path の命名規則や logs/schema store の root 算出そのものを変更したい場合は、path 管理を担う対象を読む。
+- git 追跡対象判定や oracle file 判定の詳細を変更したい場合は、git/path 判定を担う対象を読む。
 
 ## hash
-- d452d443b602a818ce6425fa71bdf86568ce1fba3450f815b9b72b7bce3fffc1
+- 03294b07655198ecd0d9d99cd2fa05be0d6e066fe2e343528e309aa7d1cf226c
 
 # `runtime_codex_tui.py`
 
@@ -251,6 +250,28 @@
 
 ## hash
 - 327f8182b1ab2047a3f5f70e49d2feb4fba2029da38769d649f9ed82f4175106
+
+# `runtime_doctor.py`
+
+## Summary
+- 共通実行前の自己修復をまとめて行う実装。ignore 設定、agent 用管理領域の追跡可能化、repo-local な Ollama 実行環境と local SLM model の準備を行い、修復差分だけを commit する。
+- Ollama の取得、展開、排他制御、port 選択、serve 起動確認、model pull/show 確認、失敗時の利用者向けエラー生成を担う。
+
+## Read this when
+- 共通実行前処理、doctor preprocess、または自動修復 commit の挙動を確認・変更したいとき。
+- agent 用管理領域を git 追跡対象にする条件や、ignore 設定の修復差分をどこで commit するかを追いたいとき。
+- repo-local な Ollama のインストール、起動、port 管理、lock、serve log、local SLM model 準備の実装を確認・変更したいとき。
+- Ollama archive 取得失敗、serve 起動失敗、port 選択失敗、model 取得失敗などのエラー文言や復旧案を扱うとき。
+- runtime config から local SLM model を読む処理と、config 読み込み失敗時の default config fallback を確認したいとき。
+
+## Do not read this when
+- git command の実行 wrapper、ignore 設定の具体的な生成処理、または git エラー処理そのものを確認したいだけのときは、それらを担う runtime git 側を読む。
+- runtime config の schema、default 値、model class の定義を確認したいときは、設定定義や基本型の側を読む。
+- CLI subcommand の引数定義、doctor command の呼び出し位置、利用者向け command routing を確認したいときは、CLI command 実装側を読む。
+- Ollama や local SLM を使った推論実行、prompt 組み立て、agent 呼び出し結果の処理を確認したいときは、この準備処理ではなく実際の推論・agent 実行側を読む。
+
+## hash
+- d569de27b395017bf209f428c977ab64676c1d3c7ccb2105c8d646be0988415e
 
 # `runtime_errors.py`
 

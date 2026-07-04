@@ -249,6 +249,24 @@
 ## hash
 - 118abe8694a4f2e5aa72946ec6b81d5fe4b3dd16e53c0fc49afa13326f3907f5
 
+# `test_doctor_cli.py`
+
+## Summary
+- doctor 実行時のリポジトリ前処理とローカル Ollama 起動、および local SLM 用 Codex profile 準備が doctor 相当の補修を行うことを検証する realization test。fake Ollama 実行ファイルを作り、git 状態、port ファイル、接続可能性、profile 内容を外部挙動として確認する。
+
+## Read this when
+- doctor コマンドが `.gitignore` や `.agents/.gitkeep` を補修し commit する挙動を変更・確認する時。
+- ローカル Ollama の配置、起動、port ファイル生成、接続確認に関わる実装を変更・確認する時。
+- LOCAL_SLM の `prepare_codex_profile` が doctor 前処理を必要に応じて実行し、`cmoc_ollama` provider profile を生成する挙動を変更・確認する時。
+
+## Do not read this when
+- doctor や local SLM profile 準備に関係しない CLI サブコマンドのテストを探している時。
+- Ollama 連携の詳細実装だけを確認したい時は、対応する実装側の routing から読む。
+- 共通 test helper の作り方や runner、repo fixture の定義だけを確認したい時は、support 側のテスト補助対象を読む。
+
+## hash
+- 2a6a99226729eb2811ce36e57073daec0f831e7bb0d9befbab2557f96ab5bad8
+
 # `test_indexing_cli.py`
 
 ## Summary

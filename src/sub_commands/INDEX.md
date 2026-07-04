@@ -19,6 +19,25 @@
 ## hash
 - 597a169e701d82a35d722b73b386888ff56d06d232d0cdeb38496dc28f9e9f28
 
+# `doctor.py`
+
+## Summary
+- doctor サブコマンドの実装を担い、CLI runtime 経由で doctor preprocess を実行して現在の repo root を cmoc 実行可能状態へ修復する入口。
+- repo root の検出、doctor preprocess の呼び出し、doctor 実行結果として表示する最小出力を扱う。
+
+## Read this when
+- doctor サブコマンドの実行経路、前処理、repo root 修復処理の呼び出しを確認または変更したいとき。
+- `cmoc doctor` の表示内容や、CLI runtime へ渡す command name / argv の扱いを確認したいとき。
+- doctor preprocess がどこから呼ばれるかを追跡したいとき。
+
+## Do not read this when
+- doctor preprocess の具体的な修復内容や repo root 判定の詳細だけを確認したいときは、それらを定義する runtime 側を読む。
+- doctor 以外のサブコマンドの実行経路を確認したいとき。
+- CLI 全体のコマンド登録や Typer アプリ構成を確認したいとき。
+
+## hash
+- 7efbb30f8c8b005dd46667a357c7971ec21c9165c69d61cc3a176586b0806ea5
+
 # `indexing.py`
 
 ## Summary
