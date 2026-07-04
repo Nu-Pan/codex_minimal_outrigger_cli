@@ -27,6 +27,7 @@
     - 乱数で選択
 - ollama は `<repo-root>/.cmoc/local/ollama/bin/ollama serve` を、デーモン化しない子プロセスとして起動する
 - ollama の listen 先は `127.0.0.1:<port>` に限定する
+- 起動処理は冪等性を持つこと
 
 ## ollama の使用方法
 

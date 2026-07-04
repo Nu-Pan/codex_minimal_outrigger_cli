@@ -1,9 +1,6 @@
 
 # 現在の TODO
 
-- `install_ollama.sh` の内容を doctor preporcess に仕様に組み込み
-- `doctor_preprocess.md` を真面目に書く
-- `ollama_slm_server.md` を真面目に書く
 - `doctor.md` を真面目に書く
 - `test_rule.md` を真面目に書く
 

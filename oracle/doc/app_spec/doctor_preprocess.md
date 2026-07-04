@@ -59,14 +59,15 @@
 
 ## 「ollama が SLM をサーブ可能であることを保証する」の詳細
 
+### 前提
+
+- ollama による SLM サーブ関係は `<cmoc-root>/oracle/doc/app_spec/ollama_slm_server.md` を正本とする
+
 ### 検証
 
-- SLM backend を利用する可能性があるサブコマンドの共通前提として、ollama が cmoc から接続可能であることを確認する
-- cmoc が利用する SLM モデル名が定義されている場合、そのモデルを ollama が serve 可能であることを確認する
-- SLM モデル名が未定義の場合の扱いは `<cmoc-root>/oracle/doc/app_spec/ollama_slm_server.md` を正本とする
+- ollama が cmoc から接続可能であることを確認する
+- `CmocConfigCodex.model[ModelClass.LOCAL_SLM]` で指定される SLM モデルが実際に serve 可能である事を確認する
 
 ### 修復
 
-- ollama が未起動で、cmoc が起動可能な場合は起動する
-- 必要な SLM モデルが未取得で、cmoc が取得可能な場合は取得する
-- 修復後も cmoc から SLM を利用できない場合はエラー終了する
+- ollama をインストール・起動する
