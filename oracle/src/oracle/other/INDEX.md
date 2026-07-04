@@ -1,21 +1,40 @@
 # `cmoc_config.py`
 
 ## Summary
-- 開発対象リポジトリごとに変わりうる cmoc の挙動設定を集約する正本仕様断片。設定の永続化先、人間による編集対象であること、Enum 系値の JSON 保存時表現、Codex CLI 向けモデル名・推論努力名、apply fork と review oracle のループ予算を定義している。
+- cmoc のリポジトリ別設定を集約する `CmocConfig` と、その配下の Codex CLI、apply fork、review oracle 向け設定クラスを定義する oracle src。設定の永続化先、人間編集対象であること、Enum 系値の JSON 保存時の扱い、各サブコマンドの実行予算やモデル指定の正本断片を扱う。
 
 ## Read this when
-- cmoc のリポジトリ単位設定の生成・同期・読み込み・保存を実装または確認するとき。
-- 設定値を JSON に保存する際の Enum 系値の扱いを確認するとき。
-- Codex CLI に渡すモデル名、Reasoning Effort 名、ファイルアクセス規則違反時のリカバリ試行回数を確認するとき。
-- apply fork の処理ファイル数上限、または review oracle の所見列挙・マージ・検証ループ回数を確認するとき。
+- cmoc の設定項目、既定値、永続化先、人間編集可能な設定ファイルの扱いを確認したいとき。
+- Codex CLI に渡すモデル、reasoning effort、model provider、ファイルアクセス規則違反時のリカバリ回数に関する仕様断片を確認したいとき。
+- `cmoc apply fork` や `cmoc review oracle` のループ回数・処理件数など、リポジトリごとに変わりうる実行予算設定を扱うとき。
+- Enum 系の設定値を JSON へ保存する際の value 化など、設定のシリアライズ方針を確認したいとき。
 
 ## Do not read this when
-- cmoc の設定ではなく、パス概念、agent call の組み立て、サブコマンドの入出力仕様そのものを確認したいとき。
-- 特定サブコマンドの実行手順や制御フローを確認したいだけで、設定値の定義や既定値を確認する必要がないとき。
-- Codex CLI が受理するモデル名や Reasoning Effort 名の外部仕様そのものを調べたいとき。
+- 設定値を読み書きする実装コードや JSON 変換処理そのものを探しているだけで、正本仕様断片の確認が不要なとき。
+- パス概念一般、work-root や repo-root の定義を確認したいとき。
+- Codex CLI 呼び出し全体のプロンプト構築、agent call orchestration、モデルクラスや reasoning effort 自体の定義を確認したいとき。
 
 ## hash
-- 502c8337d07d9c8209b07f5a715011b5a8b830fc118f2fe1612ab77234b17b75
+- 273608bef07480763b0eaf32bd644b1ec2901f3430f15a9453edf4bb90c6d2b4
+
+# `cmoc_managed_ollama.py`
+
+## Summary
+- cmoc 設定で model_provider が cmoc のモデルがある場合に、cmoc 管理の Ollama を利用可能にするための手順を置く実装断片。
+- Ollama の取得・展開、ユーザー systemd service の定義、サービス起動確認、API 疎通確認、対象モデルの pull までの流れを扱う。
+
+## Read this when
+- cmoc 管理の Ollama を準備する処理、起動方式、systemd user service、OLLAMA_HOST・OLLAMA_MODELS の扱いを確認したいとき。
+- cmoc 設定内のモデル指定から Ollama を必要とするか判定する処理を確認したいとき。
+- cmoc provider のモデルをローカル Ollama へインストールする流れを実装・検討するとき。
+
+## Do not read this when
+- Codex や cmoc 設定構造そのものを確認したいだけのとき。
+- Ollama 以外の model_provider や外部 API provider の接続処理を調べたいとき。
+- パス表記や struct doc の文字列整形 helper の定義を確認したいとき。
+
+## hash
+- e545328ae1911e5803298068794f35bd0a134c34a762894dcf8e352d2a3e3849
 
 # `path_model.py`
 

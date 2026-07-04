@@ -1,18 +1,22 @@
 # `oracle`
 
 ## Summary
-- cmoc の oracle src 群のうち、AI エージェント呼び出し仕様と横断的な基礎モデルを扱う領域への入口。agent call parameter、prompt、Structured Output schema、パス表記、設定、規範文書モデル、Markdown helper などの正本仕様断片を下位領域へ振り分ける。
-- プロンプト構築や共通規範注入、サブコマンド向け agent 呼び出し契約、複数領域から参照される補助モデルのどれを確認すべきか判断するためのルーティング対象。
+- AI エージェント呼び出しパラメータ、プロンプト構築、設定・パス・文書モデルなど、oracle src 内の基礎的な正本仕様断片をまとめる領域。
+- agent call の入力契約・出力契約と共通規範プロンプト、cmoc の横断的な設定・パス・構造化文書 helper への入口になる。
 
 ## Read this when
-- cmoc の oracle src にある正本仕様断片のうち、AI エージェント呼び出し、prompt、Structured Output schema、またはそれらを支える横断モデルを探すとき。
-- agent call 用の共通 parameter、機能別 builder、完全プロンプトの構築順序、共通規範プロンプト、ファイルアクセス制限やルーティング規則の注入位置を切り分けたいとき。
-- cmoc の設定値、ルートパスプレースホルダ、パス解決、規範文書の構造化、仕様文生成用 Markdown helper など、複数領域から参照される基礎概念の oracle src を確認したいとき。
+- cmoc が AI agent call をどの prompt、Structured Output schema、モデル設定、ファイルアクセス権限、preflight 設定で組み立てるか確認したいとき。
+- agent call 用の完全プロンプトが、役割・概要・ゴール・標準文書・読み書き規則・プレースホルダ定義などからどう構築されるか確認したいとき。
+- oracle standard、realization standard、review standard、apply review standard、index entry standard など、AI に注入する共通規範プロンプトの生成元を探すとき。
+- cmoc のリポジトリ別設定、モデル指定、実行予算、設定 JSON 保存方針、管理対象 Ollama に関する正本仕様断片を探すとき。
+- パスプレースホルダ、ルート探索、実パス変換、構造化 Markdown レンダリング helper など、複数領域から参照される基礎概念を確認したいとき。
 
 ## Do not read this when
-- CLI 実行制御、branch 操作、diff 取得、レポート保存、対象ファイル探索、表示整形など、AI エージェント呼び出し仕様や横断モデルではない実装を調べたいとき。
-- 特定サブコマンドの利用者向け入出力、実行手順、状態ファイル仕様だけを確認したいとき。
-- realization code 側の prompt builder 実装、外部コマンド起動、バックエンド固有モデル名への変換、またはテスト構成を確認したいとき。
+- CLI サブコマンド固有の利用者向け入出力、実行フロー、状態ファイル仕様、branch 操作、diff 取得、merge 実行などを調べたいとき。
+- バックエンド API へ送る実リクエスト形式、具体的なモデル名解決、agent CLI 実行処理など realization src 側の実装詳細を調べたいとき。
+- 個別の規範本文や生成済み Markdown 文書の意味だけを読みたいとき。
+- oracle file、realization file、INDEX.md などの管理方針そのものだけを確認したいとき。
+- 実装ファイルやテストファイルの現在構造を把握して直接修正したいだけで、agent call parameter、prompt 生成、設定・パス・文書モデルに関係しないとき。
 
 ## hash
-- 0c23d06673deb2af31e4f14e81a46914955e314e08a516d37c75426143903307
+- 443beddd7fe32ab31686b14e45d26f238265bb70770bf7dc3defd3f078dae18d

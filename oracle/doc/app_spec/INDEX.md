@@ -66,23 +66,24 @@
 # `doctor_preprocess.md`
 
 ## Summary
-- 各サブコマンドの本命処理前に必ず走る doctor preprocess の責務を定義する。cmoc 実行前に必要な共通検証・修復として、ローカル状態の git ignore 保証、agent 禁止領域の追跡保証、ollama による LOCAL_SLM サーブ可能性の保証、修復差分の commit を扱う。
+- 各サブコマンドの本命処理前に共通実行される doctor preprocess の正本仕様断片。実行環境の検証・可能な修復・修復不能時のエラー終了を扱い、共通前提条件とサブコマンド固有前提条件の責務境界を定める。
+- git ignore 対象にすべきローカル状態領域、追跡対象として維持すべき agent 操作禁止領域、cmoc managed ollama、external model provider、preprocess 後の commit について、検証・修復・完了判定の入口となる。
 
 ## Read this when
-- サブコマンド共通の事前検証・自動修復の順序や責務境界を確認したいとき。
-- `.cmoc/local` を git 追跡対象外に保つ処理、`.gitignore` への追加、tracked file の index 除外条件を実装・変更するとき。
-- `.agents` を存在させ、必要に応じて `.gitkeep` を作成し、git 追跡対象にする処理を実装・変更するとき。
-- cmoc 起動前に ollama 接続可否や LOCAL_SLM モデルの serve 可能性を検証・修復する流れを確認するとき。
-- doctor preprocess が修復困難な場合に cmoc をエラー終了する条件や、修復後差分を commit する方針を確認するとき。
+- サブコマンド開始前に必ず走る共通前処理の順序、責務範囲、失敗時挙動を確認したいとき。
+- ローカル状態領域を git 追跡対象外に保つ処理、gitignore への追加、tracked file の index 除外、ignore 判定 probe の扱いを実装・テストするとき。
+- agent 操作禁止領域をあらかじめ git 追跡対象にする処理、空ディレクトリ用ファイルの作成、git index 追加、tracked file 存在確認を実装・テストするとき。
+- cmoc managed ollama や external model provider の利用可能性確認を、共通前処理としてどこまで行うか判断するとき。
+- doctor preprocess が行った修復差分を commit するタイミングを確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の事前条件や本命処理だけを確認したいとき。
-- ollama による SLM サーブ仕様そのものを確認したいときは、ollama SLM server の正本仕様を直接読む。
-- path keyword の意味や `<work-root>`、`<repo-root>`、`<cmoc-root>` の定義だけを確認したいとき。
-- doctor preprocess 後に実行される通常のコマンド処理や出力形式だけを調べたいとき。
+- 個別サブコマンドだけに固有の事前条件や本命処理を調べたいとき。doctor preprocess 正常終了後に検証される側の仕様を読む。
+- ollama の起動・管理そのものの詳細や、ensure_cmoc_managed_ollama の内部仕様を調べたいとき。対応する実装または専用仕様を読む。
+- external model provider 側の設定方法、認証、修復手順を調べたいとき。この文書は cmoc から接続可能かの確認と、修復を諦める境界だけを扱う。
+- git の一般的な ignore や index 操作の解説を探しているとき。ここでは doctor preprocess 上必要な判定と修復条件だけを扱う。
 
 ## hash
-- cdc846b3d54af7449e093af294e923b847e07d2c88c2b8b34722da6f124e4166
+- 46834efa6a54d6ae88a817ba5f6cc769b6854b2046b302acb45496a2e56494a2
 
 # `error_handling.md`
 
@@ -155,23 +156,22 @@
 # `ollama_slm_server.md`
 
 ## Summary
-- cmoc がローカルの ollama で SLM をサーブし、Codex CLI のバックエンドモデルとして使うための正本仕様断片。モデル名の設定ロード、ollama の冪等インストール、ローカル限定起動、生成する codex profile、Codex CLI 起動時に依存しない provider 指定、doctor preprocess での寿命管理を扱う。
+- cmoc が設定有効時にローカルの ollama で SLM をサーブし、Codex CLI の model provider として利用するための正本仕様断片。ollama の起動確保、Codex profile に設定する provider 情報、codex exec へ渡さない argv、doctor preprocess での寿命管理を扱う。
 
 ## Read this when
-- LOCAL_SLM 用のモデル名を cmoc 設定から読み出す処理を実装・確認する。
-- ollama の取得、展開、既存インストール検出、冪等なインストール処理を実装・確認する。
-- ollama serve の起動方法、使用 port の選択、listen 先、子プロセス管理を実装・確認する。
-- Codex CLI にローカル ollama を使わせる codex profile の内容や、codex exec の argv に指定しない option を確認する。
-- doctor preprocess における ollama のインストール・起動、同一 repo 内での単一インスタンス共有、不要時の終了条件を扱う。
+- cmoc managed ollama を Codex CLI の model provider として設定する処理を実装・確認する時。
+- `ensure_cmoc_managed_ollama` を呼び出すタイミングや、ollama を利用可能にする責務境界を確認する時。
+- ollama への接続先、SLM 名の取得元、生成する Codex profile の provider 設定を確認する時。
+- `codex exec` 実行時に ollama 関連の argv や Codex CLI 組み込み provider への依存可否を判断する時。
+- doctor preprocess における cmoc managed ollama のインスタンス寿命管理を扱う時。
 
 ## Do not read this when
-- ollama や LOCAL_SLM と関係しない通常の Codex CLI profile 生成だけを扱う。
-- doctor preprocess 全体の実行順序や対象範囲を確認したいだけで、ollama 固有の処理を扱わない。
-- path placeholder の意味や `<repo-root>`、`<cmoc-root>`、`<work-root>` の定義だけを確認したい。
-- ローカル SLM 以外のモデルクラス、リモートモデル、または Codex CLI の一般的な provider 設定を扱う。
+- ollama と無関係な Codex CLI 実行一般、agent call 制御、または profile 生成全体の仕様を確認したいだけの時。
+- `ensure_cmoc_managed_ollama` の内部実装詳細だけを調べたい時。
+- ローカル SLM ではない外部 model provider や通常の Codex CLI provider 設定を扱う時。
 
 ## hash
-- 4fe59fef3018c093319e9ca76401074c8bc2578fb28d14d33a59b24e77a20037
+- 8cea533c20ea650f7a54c68a89d601d05ac4cbd906898fb240bc070b4e3befb6
 
 # `prompt_standard.md`
 

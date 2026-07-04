@@ -101,23 +101,24 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様断片を束ねる領域。自然言語の仕様文書と、AI エージェント呼び出し・prompt・Structured Output schema・横断モデルなどの oracle src へ進む入口になる。
-- 利用者向け挙動、git branch/worktree、過去に不採用となった設計案、開発規約、パス・設定・規範文書モデルなど、人間が責任を持つ仕様断片の読む先を切り分ける対象。
+- cmoc の正本仕様断片を置く領域。自然言語仕様、agent call の入力契約・プロンプト・設定・パスなど、realization file が従う人間意図の確認入口になる。
+- 外部仕様や横断仕様を自然言語文書から探す場合と、AI agent call や共通規範プロンプトなどの基礎概念を実装形式の正本仕様断片から探す場合の分岐点になる。
 
 ## Read this when
-- cmoc の正本仕様断片を起点に、外部挙動、状態、ログ、branch/worktree、agent call、prompt、Structured Output schema、開発規約の読む先を探すとき。
-- CLI 挙動、サブコマンド、共通前処理、エラー処理、索引生成、セッション状態、run 隔離、Codex CLI 呼び出し、プロンプト受け渡し、ローカル SLM 利用に関する仕様文書を探すとき。
-- agent call parameter、機能別 builder、完全プロンプトの構築順序、共通規範プロンプト、ファイルアクセス制限やルーティング規則の注入位置を確認したいとき。
-- 設定値、ルートパスプレースホルダ、パス解決、規範文書の構造化、仕様文生成用 Markdown helper など、複数領域から参照される基礎概念の正本仕様断片を確認したいとき。
+- cmoc の実装・テストを始める前に、正本仕様断片から読むべき領域を選びたいとき。
+- CLI 挙動、サブコマンド、状態遷移、ログ、エラー処理、Codex CLI 連携などの外部仕様や横断仕様を確認したいとき。
+- session fork/join、run worktree、managed branch など、cmoc の git branch・commit・worktree モデルを確認したいとき。
+- Python 実装、CLI 構成、開発環境、pytest を中心としたテスト規約など、realization code や realization test の書き方に関わる正本仕様断片を確認したいとき。
+- AI agent call のパラメータ、Structured Output schema、モデル設定、ファイルアクセス権限、preflight、共通規範プロンプト、リポジトリ別設定、パスプレースホルダなどの基礎概念を確認したいとき。
 
 ## Do not read this when
-- realization code 側の実装詳細、外部コマンド起動、表示整形、diff 取得、レポート保存、対象ファイル探索、既存関数のシグネチャ、テスト期待値だけを調べたいとき。
-- oracle file と realization file の一般的な定義、責務境界、編集権限、追跡対象判定、INDEX.md エントリー作成規則、品質基準だけを確認したいとき。
-- Codex CLI 本体、git ignore、permission profile など、cmoc の正本仕様断片ではなく外部機能の一般仕様を調べたいとき。
-- 読むべき個別仕様文書または oracle src がすでに分かっており、その本文へ直接進めばよいとき。
+- 正本仕様断片ではなく、現在の realization implementation や realization test の具体的なコード本文だけを調べたいとき。
+- oracle file と realization file の一般的な責務境界、編集責任、INDEX.md エントリー作成規則だけを確認したいとき。
+- パスキーワードの定義そのものだけを確認したいとき。
+- 採用済み仕様ではなく、実装上の関数、クラス、内部 helper、テスト構造を直接調べたいとき。
 
 ## hash
-- 2980a42f8cc7d1b98f2fa597f06822e9973af16e720320d4004abfc8ff13421f
+- d6bca67183766fdd91f227ce006e85a31474238beb83b6c7482690c59e49b7aa
 
 # `pyproject.toml`
 

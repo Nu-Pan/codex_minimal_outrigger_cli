@@ -20,24 +20,21 @@
 # `basic.py`
 
 ## Summary
-- AI コーディングエージェント呼び出しに渡す基本パラメータの正本断片。論理的なモデルクラス、reasoning effort、ファイルアクセスモード、プロンプト、Structured Output schema、indexing preflight 実行有無、呼び出し時 cwd をまとめる。
-- バックエンド固有のモデル名や reasoning effort 名への解決は realization 側の責務であり、ここでは cmoc 上の論理分類と agent call parameter の構造だけを定義する。
+- AI コーディングエージェント呼び出しに渡す論理パラメータを定義する oracle src。モデルクラス、reasoning effort、ファイルアクセスモード、プロンプト、Structured Output schema、indexing preflight 実行有無、呼び出し時 cwd を 1 つのデータ構造として扱う。
+- バックエンド固有のモデル名や reasoning effort 名ではなく、cmoc 内部の論理名を定義し、それらの実際の解決は realization src 側の責務として分離している。
 
 ## Read this when
-- agent call parameter の構造、必須項目、既定値を確認したいとき。
-- モデル選択を MAINSTREAM、FLAGSHIP、EFFICIENCY、MINIMUM、LOCAL_SLM の論理分類として扱う根拠を確認したいとき。
-- reasoning effort や file access mode を cmoc 上の論理値として扱う箇所を実装・テストするとき。
-- indexing preflight を実行するか、または本命 agent call 自身が indexing の場合などにスキップするかを判断する処理を扱うとき。
-- agent call の cwd が通常 work root になることを前提にする処理を扱うとき。
+- agent call の入力パラメータ構造、デフォルト cwd、Structured Output schema の指定方法、indexing preflight を実行するかどうかの制御を確認する。
+- cmoc 上で選べる論理モデルクラス、論理 reasoning effort、ファイルアクセスモードの列挙値と、それぞれの選択意図を確認する。
+- realization src でバックエンド向けの具体的なモデル名や reasoning effort 名へ変換する前提となる oracle src の定義を確認する。
 
 ## Do not read this when
-- バックエンドが実際に受理する具体的なモデル名や reasoning effort 名への変換規則を知りたいとき。
-- 各 file access mode の詳細な許可・禁止ルールを確認したいとき。
-- agent call の実行手順、外部コマンド起動、結果処理、リカバリ処理そのものを調べたいとき。
-- Structured Output schema の中身や schema ファイルの配置規則を確認したいとき。
+- 各ファイルアクセスモードが具体的に許可・禁止する読み書き規則を確認したい場合は、その規則を組み立てる対象を読む。
+- バックエンド API へ送る実際のリクエスト形式、モデル名解決、CLI 実行処理の実装を確認したい場合は realization src 側の呼び出し実装を読む。
+- パスキーワードや work root 解決の詳細を確認したい場合は、パスモデルを定義する対象を読む。
 
 ## hash
-- 8937577d3ef4a8dfd56f187c34bf7e2f5cb8a4d365119260d9a62a36f6c8cf56
+- b4f08ff959bdcefa5e6105e9e5ce1652bd358824cf5e2c9f60293a50cfe112cc
 
 # `common`
 
