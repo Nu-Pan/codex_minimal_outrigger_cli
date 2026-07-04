@@ -25,9 +25,9 @@
 
 ## 実行手順
 
-1. 事前検証
+1. doctor preprocess を呼び出す
+2. 事前検証
     - 事前条件を満たしている事を確認する
-2. `<work-root>/.cmoc` が git の追跡対象外であることを保証する
 3. マージ処理
     1. `git switch <session-home-branch>` を実行する
     2. `git merge --no-ff <cmoc-session-branch>` を実行する

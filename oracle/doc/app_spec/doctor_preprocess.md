@@ -4,7 +4,9 @@
 ## 概要
 
 - doctor preprocess では `<repo-root>` が cmoc を正常に実行可能な状態か検証し、可能な限り修復を試みる
-- doctor preprocess は各サブコマンドの開始時に必ず実行される
+- doctor preprocess は各サブコマンドの本命処理の開始前に必ず実行される
+- 各サブコマンドに共通して必要な検証・修復は、個別サブコマンドではなく doctor preprocess の責務とする
+- 各サブコマンド固有の事前条件は、doctor preprocess が正常終了した後に検証する
 - 修復困難な場合はその場で cmoc をエラー終了する
 
 ## 実行手順
@@ -30,7 +32,10 @@
 
 ### 修復
 
-- TODO
+- `<work-root>/.gitignore` が存在しなければ作成する
+- `<work-root>/.gitignore` に `/.cmoc/local/` が無ければ追加する
+- `<work-root>/.cmoc/local` ツリー内に tracked file があれば、working tree 上の実ファイルを残したまま git index から除外する
+- 修復後も完了判定を満たさない場合はエラー終了する
 
 ## 「`<work-root>/.agents` が git 追跡対象であることを保証する」の詳細
 
@@ -46,15 +51,22 @@
 
 ### 修復
 
-- TODO
+- `<work-root>/.agents` が存在しなければ作成する
+- `<work-root>/.agents` が空ディレクトリならば `<work-root>/.agents/.gitkeep` を作成する
+- `<work-root>/.agents` ツリー内に tracked file が無い場合は `<work-root>/.agents/.gitkeep` を git index に追加する
+- 修復後も `<work-root>/.agents` ツリー内に tracked file が無い場合はエラー終了する
 
 
 ## 「ollama が SLM をサーブ可能であることを保証する」の詳細
 
 ### 検証
 
-- TODO
+- SLM backend を利用する可能性があるサブコマンドの共通前提として、ollama が cmoc から接続可能であることを確認する
+- cmoc が利用する SLM モデル名が定義されている場合、そのモデルを ollama が serve 可能であることを確認する
+- SLM モデル名が未定義の場合の扱いは `<cmoc-root>/oracle/doc/app_spec/ollama_slm_server.md` を正本とする
 
 ### 修復
 
-- TODO
+- ollama が未起動で、cmoc が起動可能な場合は起動する
+- 必要な SLM モデルが未取得で、cmoc が取得可能な場合は取得する
+- 修復後も cmoc から SLM を利用できない場合はエラー終了する

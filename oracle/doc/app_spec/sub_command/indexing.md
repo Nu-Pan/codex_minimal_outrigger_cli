@@ -18,10 +18,10 @@
 
 ## 実行手順
 
-- インデクシングを明示的に実行
-- インデクシングによって発生した差分を git commit
+1. doctor preprocess を呼び出す
+2. インデクシングを明示的に実行
+3. インデクシングによって発生した差分を git commit
 
 ## インデクシングとは
 
 - `<cmoc-root>/oracle/doc/app_specs/indexing.md` を参照
-
