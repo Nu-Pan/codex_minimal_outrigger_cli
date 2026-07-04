@@ -66,23 +66,23 @@
 # `doctor_preprocess.md`
 
 ## Summary
-- 各サブコマンドの本命処理前に必ず走る共通事前検証・修復の正本仕様断片。cmoc 実行に必要な git ignore、agent 作業領域の追跡状態、ollama/SLM 利用可能性を確認し、可能な範囲で修復し、修復不能時はエラー終了する責務を扱う。
+- 各サブコマンドの本命処理前に必ず走る doctor preprocess の責務を定義する。cmoc 実行前に必要な共通検証・修復として、ローカル状態の git ignore 保証、agent 禁止領域の追跡保証、ollama による LOCAL_SLM サーブ可能性の保証、修復差分の commit を扱う。
 
 ## Read this when
-- サブコマンド実行前に共通して行う検証・修復処理の仕様を確認したいとき。
-- `.cmoc/local` を git 追跡対象外に保つ条件、修復手順、完了判定を実装・テストするとき。
-- agent 操作禁止領域をあらかじめ作成し、git 追跡対象にする挙動を実装・テストするとき。
-- ollama 起動確認、SLM モデル利用可能性確認、未起動・未取得時の修復方針を扱うとき。
-- doctor preprocess が作った差分を commit するタイミングや、修復不能時のエラー終了境界を確認したいとき。
+- サブコマンド共通の事前検証・自動修復の順序や責務境界を確認したいとき。
+- `.cmoc/local` を git 追跡対象外に保つ処理、`.gitignore` への追加、tracked file の index 除外条件を実装・変更するとき。
+- `.agents` を存在させ、必要に応じて `.gitkeep` を作成し、git 追跡対象にする処理を実装・変更するとき。
+- cmoc 起動前に ollama 接続可否や LOCAL_SLM モデルの serve 可能性を検証・修復する流れを確認するとき。
+- doctor preprocess が修復困難な場合に cmoc をエラー終了する条件や、修復後差分を commit する方針を確認するとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の事前条件だけを確認したいとき。doctor preprocess 正常終了後に行う各サブコマンド側の仕様を読む。
-- SLM モデル名が未定義の場合の扱いだけを確認したいとき。ollama/SLM サーバ仕様を直接読む。
-- doctor preprocess 後の本命処理、CLI 出力、各サブコマンドのドメイン動作を確認したいとき。
-- git ignore や agent 作業領域や ollama/SLM に関係しない一般的な path 定義だけを確認したいとき。
+- 個別サブコマンド固有の事前条件や本命処理だけを確認したいとき。
+- ollama による SLM サーブ仕様そのものを確認したいときは、ollama SLM server の正本仕様を直接読む。
+- path keyword の意味や `<work-root>`、`<repo-root>`、`<cmoc-root>` の定義だけを確認したいとき。
+- doctor preprocess 後に実行される通常のコマンド処理や出力形式だけを調べたいとき。
 
 ## hash
-- 4c0195b140289f9e123fd0e6c6e0e8345615469898bb63970debc9182ed3d0f8
+- cdc846b3d54af7449e093af294e923b847e07d2c88c2b8b34722da6f124e4166
 
 # `error_handling.md`
 
@@ -155,21 +155,21 @@
 # `ollama_slm_server.md`
 
 ## Summary
-- ローカル ollama による SLM サーブを cmoc のバックエンドモデルとして使うための正本仕様断片。インストール先、冪等な取得・展開、起動時のモデル名取得、127.0.0.1 経由の利用、モデル未定義時のエラー、doctor preprocess と連動したインスタンス寿命管理を扱う。
+- ローカルの Ollama 実行環境で SLM をサーブし、cmoc が Codex CLI 用バックエンドとして利用するための仕様を扱う。モデル名のロード元、Ollama の取得・展開、ローカルアドレスでの起動、生成する Codex profile、doctor preprocess によるインスタンス寿命管理の境界を示す。
 
 ## Read this when
-- cmoc でローカル SLM バックエンドや ollama サーバー連携を実装・変更する時。
-- ollama のインストール、起動、アクセス先、モデル名取得、プロセス終了時の停止処理を確認する時。
-- doctor preprocess が準備するローカル依存として ollama を扱う条件や、並列 cmoc 実行時の単一インスタンス共有を確認する時。
-- SLM バックエンドで Codex CLI を実行する際のモデル未定義エラー条件を確認する時。
+- cmoc からローカル SLM を使うための Ollama インストール、起動、接続設定を確認または実装するとき。
+- Codex CLI に渡す profile で Ollama 互換エンドポイントをどう設定するか、また `--oss` や組み込み provider ID に依存しない方針を確認するとき。
+- doctor preprocess で Ollama を準備する処理、同一 repo 内での単一インスタンス共有、利用終了時の停止条件を扱うとき。
+- ローカル SLM のモデル名を cmoc 設定からどのように取得するかを確認するとき。
 
 ## Do not read this when
-- doctor preprocess 全体の処理順序や対象範囲だけを確認したい時は、doctor preprocess の仕様を直接読む。
-- ローカル SLM ではないバックエンドモデル選択や Codex CLI 実行全般を確認したいだけの時。
-- ollama 以外のローカル依存、設定ファイル全体、またはパス表記モデルの定義を調べたい時。
+- doctor preprocess 全体の実行順序や他の前処理項目を確認したいだけなら、doctor preprocess の仕様を直接読む。
+- Codex CLI 全般の argv 構築や profile 生成のうち、Ollama 固有でない設定を扱う場合は、その責務を持つ仕様または実装を読む。
+- 外部クラウドモデルや Ollama 以外の model provider の仕様を確認したい場合は、この対象ではなく該当 provider の仕様を読む。
 
 ## hash
-- 9d0773be5688e81f4f4b58b78282c5be4b31647042b12998e6f81e469fc3c257
+- d673067d5a926743218bc4aac4388ac07f758e7207ab9e0ad4518d3a1eeb3f9e
 
 # `prompt_standard.md`
 
