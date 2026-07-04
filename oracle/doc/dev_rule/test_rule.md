@@ -29,6 +29,7 @@
 ## ollama バックエンド
 
 - Codex CLI 呼び出しを伴うテストを実行する際は、原則としてローカル実行の SLM を バックエンドとして使用する
+- テスト目的の場合は oracle src 上の構築関数が返した `AgentCallParameter` のモデル指定をオーバーライドして SLM に切り変えて良い
 
 ## Fake Codex CLI
 
