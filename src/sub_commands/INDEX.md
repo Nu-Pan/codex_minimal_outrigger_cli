@@ -1,25 +1,23 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実行制御をまとめる領域。apply run の開始、破棄、join、report 生成など、session branch と apply branch/worktree/state/process id をまたぐ orchestration を扱う。
-- 対象ファイル列挙、Codex による finding 列挙・適用、変更 commit、state 遷移、cleanup、想定外差分や conflict の扱いなど、apply run の外部挙動と制御ロジックへの入口になる。
+- apply 系サブコマンドの実装群を収めるディレクトリ。apply run の開始、fork、join、abandon、report 生成など、apply branch/worktree/state を操作する上位制御への入口になる。
+- 各ファイルは具体的な apply サブコマンドまたは apply fork report 生成に対応し、低レベル helper ではなく、利用者向けコマンドの事前条件・状態遷移・出力・失敗時処理を追うための対象を選ぶ階層。
 
 ## Read this when
-- apply run の開始、破棄、join、失敗時 report、cleanup、state 遷移のいずれかを確認または変更したいとき。
-- apply branch、apply worktree、session branch、process id、apply state が各 apply 操作でどう作成・更新・削除されるかを追いたいとき。
-- apply 対象ファイルの選定、git ignored file・oracle・INDEX/AGENTS の扱い、変更後の再キュー、収束判定を確認したいとき。
-- apply branch を session branch へ取り込む際の clean 判定、想定外差分、force-resolve、merge conflict、INDEX.md 自動解決の扱いを調べたいとき。
-- apply fork の利用者向け report 内容や、変更要約に含める差分範囲・fallback 表示を確認または変更したいとき。
+- apply start/fork/join/abandon など apply サブコマンドの実行条件、状態遷移、branch/worktree/state の扱いを調べる入口を探したいとき。
+- apply fork の対象列挙、Codex 呼び出し、finding 適用、commit、report 出力、失敗時 report 生成のどの実装へ進むべきか判断したいとき。
+- apply join や apply abandon の cleanup、merge conflict、想定外差分、process id、apply state 初期化に関わる上位制御を確認したいとき。
+- apply サブコマンド単位の外部挙動や利用者向け出力を変更するため、該当する実行本体または report 生成対象を選びたいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド、session 作成、CLI runtime 共通処理の挙動を調べたいとき。
-- git 実行、worktree 操作、state file 読み書き、Codex exec runtime などの低レベル helper だけを確認したいとき。
-- Codex に渡す prompt や parameter の中身だけを確認したいとき。
-- oracle file、realization file、INDEX.md 生成規則など、apply 実行制御ではない仕様概念を確認したいとき。
-- パッケージ説明や import 時副作用の有無だけを確認したい場合を除き、具体的な制御ロジックへ直接進めるとき。
+- branch、worktree、git 実行、state file、process id などの低レベル helper の実装詳細だけを確認したいとき。
+- CLI runtime の共通ラップ処理、run_cli_subcommand、共通エラー表示、設定 schema、path model など apply サブコマンド固有でない基盤処理を調べたいとき。
+- oracle file、realization file、INDEX.md 生成、一般的なルーティング文書規則など apply 実行制御から独立した仕様を確認したいとき。
+- 具体的に読むべき apply サブコマンドや report 生成対象が既に分かっており、そのファイルへ直接進めるとき。
 
 ## hash
-- c96024266ff3ba5c6d62e41a77e88a2eb6595cf0e936cd430c6b0b6428894897
+- 597a169e701d82a35d722b73b386888ff56d06d232d0cdeb38496dc28f9e9f28
 
 # `indexing.py`
 
@@ -110,23 +108,23 @@
 # `review_loop.py`
 
 ## Summary
-- oracle review で検出された finding を列挙し、関連 finding を統合し、advocate/challenger 検証を反復して judge 結果を付与するループ処理を担う。
-- finding merge の delete/replace/merge operation を検証し、finding_id の重複利用・未知 ID・不正な対象数や finding 形状を拒否しながら finding list に適用する。
+- review oracle の指摘抽出、重複整理、検証、判定を codex 実行で順に回すループ処理を担う。
+- finding の採番、関連 oracle path による絞り込み、merge operation の検証と適用、advocate/challenger/judge の結果反映を扱う。
 
 ## Read this when
-- oracle file 群を対象にした review finding の列挙、統合、検証、判定の実行順序や反復条件を確認・変更したいとき。
-- review finding の初期フィールド、finding_id 採番、oracle path ごとの関連 finding の絞り込みを確認したいとき。
-- merge finding の Structured Output operation を finding list に適用する挙動や、operation validation の失敗条件を確認・変更したいとき。
-- review oracle 用 builder parameter と codex_exec の呼び出し境界、purpose 文字列、log/worktree/config の渡し方を追う必要があるとき。
+- review oracle 実行時に finding がどの順序で列挙、merge、validate、judge されるかを確認したいとき。
+- merge finding Structured Output の delete、replace、merge operation がどの条件で受理または拒否されるかを確認したいとき。
+- finding_id、advocate_reasons、challenger_reasons、verdict、judge_reason の初期化や更新タイミングを調べたいとき。
+- oracle path ごとに既存 finding を渡す条件や、dirty 状態の進み方を変更したいとき。
 
 ## Do not read this when
-- review oracle に渡す prompt や Structured Output parameter の内容そのものを確認したいだけなら、builder 側を直接読む。
-- finding から oracle path を取り出す規則だけを確認したいなら、path 変換を担う対象を直接読む。
-- CLI 引数、設定値の定義、設定ファイルの読み込み規則を確認したいだけなら、config や subcommand 定義を読む。
-- realization file ではなく oracle file の正本仕様断片を確認したい場合は、対応する oracle doc/src/test を読む。
+- review oracle 用 prompt parameter の内容や Structured Output schema 自体を確認したいときは、builder 側の該当対象を読む。
+- finding から oracle path を解決する規則だけを確認したいときは、review path 解決を担う対象を読む。
+- 設定値そのものや loop 回数の定義を確認したいときは、config 側の対象を読む。
+- review oracle 以外の review loop や CLI entrypoint の挙動を確認したいときは、その責務を持つ対象を読む。
 
 ## hash
-- 585f85604ee88d23118c193391084aeeb9bc6a6b3823bec4e2012df58e98fb24
+- 6d2050cdbc25b2851d391f49e9b895d0632b0ea9489de6552196593d56188ebf
 
 # `review_paths.py`
 
@@ -190,40 +188,39 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドの実装群を収める領域。active session の作成、home branch への合流、破棄など、session branch と session state を操作する各サブコマンドへの入口になる。
-- 配下には、パッケージ初期化だけを担う最小モジュールと、fork、join、abandon の実行本体があり、各コマンドの事前条件、git 操作、状態更新、失敗時処理を確認する起点になる。
+- session 系サブコマンドの実行本体をまとめる実装領域。session の開始、取り込み、破棄に関する branch/state 操作、事前条件確認、失敗時処理、利用者向け出力の具体化を扱う。
+- パッケージ自体は初期化処理や公開 API を持たず、個別の session サブコマンド実装へ進むための入口として位置づく。
 
 ## Read this when
-- session 系サブコマンドのどの実装へ進むべきかを判断したいとき。
-- session branch の作成、home branch への merge、merge せず破棄する処理の入口を探したいとき。
-- session state の更新、branch switch/delete、clean worktree 確認、既存 active session 判定などが、どの session 操作に属するかを切り分けたいとき。
+- session 系サブコマンドの実装を調べ、どの処理本体へ進むべきかを判断したいとき。
+- session の開始、home branch への merge、session branch の破棄、state 更新、branch switch/delete、clean worktree 確認などの実装を確認または変更したいとき。
+- session 操作中の git 操作失敗、rollback、conflict 解消委譲、conflict marker/unmerged path 検査、利用者向けエラー出力の扱いを調べたいとき。
+- session 配下のパッケージ境界を確認し、パッケージ自体に初期化処理があるかを見たいとき。
 
 ## Do not read this when
-- session 以外のサブコマンド、共通 CLI ルーティング、git 実行 wrapper、runtime、path model、state model の汎用実装を調べたいとき。
-- 個別コマンドの正本仕様そのものを確認したいとき。その場合は対応する oracle doc を読む。
-- Codex CLI に渡す conflict 解消 prompt やパラメータ構築だけを調べたいときは、conflict resolution parameter builder を直接読む。
+- session サブコマンドの正本仕様を確認したいときは、対応する oracle doc を読む。
+- session state のデータ構造、state file schema、path model、git wrapper、CLI runtime、branch 判定などの共通機構そのものを調べたいときは、それぞれの定義または共通実装へ進む。
+- session 以外のサブコマンド実装、共通 CLI ルーティング、サブコマンド登録を調べたいとき。
+- INDEX.md 用エントリーの生成規則やルーティング文書の書き方だけを確認したいときは、規則本文を読む。
 
 ## hash
-- de61c6979e3e3ba27721b704545bb23c7478091b32aa0e7f0fa3287c2291e605
+- 3f5d8784a365ddc733c78060bd96b6dcd807e5310d92e72cc43195ec711c5a8c
 
 # `tui.py`
 
 ## Summary
-- `cmoc tui` の実行本体を担い、依頼文テンプレートの作成、エディタ起動、入力 prompt の読み込み、Codex Exec による TUI 起動パラメータ解決、Codex TUI 起動までの流れを扱う。
-- TUI 実行前の indexing preflight、`.cmoc/local` ignore 保証、実行時 context からの root/config 解決、TUI 用 file access mode の検証と `AgentCallParameter` 構築をまとめる。
-- TUI parameter JSON の `{value: ...}` 形式から文字列値・真偽値を取り出す小さな補助処理も含む。
+- TUI サブコマンドの実行本体を扱う。利用者が編集する元プロンプトの作成、エディタ起動、プロンプト本文の読み取り、実行パラメータ解決、Codex TUI 起動までの一連の制御を担う。
+- TUI 用のファイルアクセスモード検証、起動パラメータの既定値補完、TUI ログ領域への prompt ファイル作成、TUI 実行前の `.cmoc` ignore 保証を扱う入口である。
 
 ## Read this when
-- `cmoc tui` の起動フロー、依頼文編集、TUI log 領域への prompt ファイル作成、完成 prompt の参照渡しを確認・変更したいとき。
-- TUI で許可する file access mode、resolved parameter の default 値、role/summary/goal や各 standard flag の TUI prompt への反映を確認・変更したいとき。
-- TUI 実行前に `.cmoc/local` を ignore へ入れる処理、repository root と work root の扱い、config 読み込みを確認したいとき。
-- 利用可能なエディタの選択順、エディタ異常終了時のエラー、元 prompt から HTML comment テンプレートを除去する処理を確認・変更したいとき。
+- TUI サブコマンドの起動フロー、エディタ選択、prompt テンプレート、prompt 読み取り、または Codex TUI へ渡すパラメータ生成を確認・変更するとき。
+- TUI 実行時に許可するファイルアクセスモード、resolve parameter の JSON からの値取り出し、または TUI 起動前の ignore 設定保証に関する挙動を調べるとき。
+- TUI サブコマンドのテストで、外部実行関数を差し替えながら本体処理の制御順序や例外条件を検証したいとき。
 
 ## Do not read this when
-- TUI prompt の具体的な組み立て形式や launch parameter の詳細だけを確認したい場合は、TUI launch parameter builder を直接読む。
-- TUI parameter を Codex Exec で解決するための schema や resolve prompt の詳細だけを確認したい場合は、TUI resolve parameter builder を直接読む。
-- CLI 共通の subcommand 実行、Codex Exec/TUI 実行、設定読み込み、root 判定、timestamp、`.cmoc/local` ignore の汎用挙動だけを確認したい場合は、runtime 側を直接読む。
-- indexing preflight の仕様や実装だけを確認したい場合は、indexing preflight 側を直接読む。
+- CLI runtime 全体の共通実行・ログ・設定読み込み・Codex 呼び出しの低レベル処理だけを調べる場合は、それらを提供する runtime 側を読む。
+- TUI 用 prompt の文面構築や AgentCallParameter の詳細な構造そのものを調べる場合は、TUI builder 側を読む。
+- indexing preflight の仕様や実装だけを調べる場合は、indexing 側を読む。
 
 ## hash
-- dc59aec8fa53720d9581d9d62a2a838f34bca6691d80513282daba0944a65826
+- 1624cda85856bef68561ea9c9090f7e56efc69184746b9dcf344337499083636

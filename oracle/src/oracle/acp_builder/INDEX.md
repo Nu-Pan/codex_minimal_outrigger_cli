@@ -20,22 +20,24 @@
 # `basic.py`
 
 ## Summary
-- AI コーディングエージェント呼び出しに渡す基本パラメータの正本定義を扱う。
-- cmoc 上の論理モデルクラス、reasoning effort、ファイルアクセスモード、prompt、Structured Output schema path、indexing preflight 実行有無をまとめた呼び出しパラメータを定義する。
-- バックエンド固有のモデル名や reasoning effort 名への解決ではなく、呼び出し方針を表す論理値の入口として位置づけられる。
+- AI コーディングエージェント呼び出しに渡す基本パラメータの正本断片。論理的なモデルクラス、reasoning effort、ファイルアクセスモード、プロンプト、Structured Output schema、indexing preflight 実行有無、呼び出し時 cwd をまとめる。
+- バックエンド固有のモデル名や reasoning effort 名への解決は realization 側の責務であり、ここでは cmoc 上の論理分類と agent call parameter の構造だけを定義する。
 
 ## Read this when
-- agent call の入力パラメータ構造、モデル選択区分、reasoning effort 区分、ファイルアクセスモード区分を確認したいとき。
-- indexing preflight を呼び出し前に実行するかどうかを表すフラグの正本定義を確認したいとき。
-- Structured Output を要求する agent call と要求しない agent call のパラメータ上の表現を確認したいとき。
+- agent call parameter の構造、必須項目、既定値を確認したいとき。
+- モデル選択を MAINSTREAM、FLAGSHIP、EFFICIENCY、MINIMUM、LOCAL_SLM の論理分類として扱う根拠を確認したいとき。
+- reasoning effort や file access mode を cmoc 上の論理値として扱う箇所を実装・テストするとき。
+- indexing preflight を実行するか、または本命 agent call 自身が indexing の場合などにスキップするかを判断する処理を扱うとき。
+- agent call の cwd が通常 work root になることを前提にする処理を扱うとき。
 
 ## Do not read this when
-- バックエンドが実際に受理する具体的なモデル名や reasoning effort 名への変換処理を確認したいとき。
-- 各ファイルアクセスモードが生成する具体的なルール文面や権限内容を確認したいとき。
-- agent call の実行手順、プロセス起動、結果処理、エラー処理を確認したいとき。
+- バックエンドが実際に受理する具体的なモデル名や reasoning effort 名への変換規則を知りたいとき。
+- 各 file access mode の詳細な許可・禁止ルールを確認したいとき。
+- agent call の実行手順、外部コマンド起動、結果処理、リカバリ処理そのものを調べたいとき。
+- Structured Output schema の中身や schema ファイルの配置規則を確認したいとき。
 
 ## hash
-- f3a4083892f9d03894b5656a9335b5060efc10e0f3ed85973fee486a37bc7857
+- 8937577d3ef4a8dfd56f187c34bf7e2f5cb8a4d365119260d9a62a36f6c8cf56
 
 # `common`
 

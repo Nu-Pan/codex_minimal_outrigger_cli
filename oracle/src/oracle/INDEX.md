@@ -1,45 +1,37 @@
 # `acp_builder`
 
 ## Summary
-- AI エージェント呼び出しパラメータと Structured Output schema を構成する oracle src 群への入口。基本パラメータ、各サブコマンド固有の prompt・出力契約、共通部品を扱う。
-- 差分要約、レビュー所見、所見対応、INDEX.md エントリー生成、merge conflict marker 解消、TUI 起動時の呼び出し条件など、AI 呼び出しの正本仕様断片を領域別に探すためのまとまり。
-- バックエンド実行処理や CLI 制御そのものではなく、AI に渡す role、prompt、権限、モデル方針、preflight 有無、Structured Output schema の正本値を確認する入口。
+- AI エージェント呼び出しパラメータを組み立てる oracle src 群への入口。共通の基本パラメータに加え、apply、indexing、review、session、tui など各機能で使う prompt と Structured Output schema の正本仕様断片を扱う。
+- 個別サブコマンド用の agent call parameter と出力契約を探す前に、どの下位領域へ進むべきかを判断するためのルーティング対象。
 
 ## Read this when
-- cmoc の各機能が AI エージェントを呼び出す際のパラメータ、prompt、Structured Output schema の正本仕様断片を探すとき。
-- agent call の基本構造と、個別機能ごとの呼び出し方針・出力契約のどちらを読むべきかを切り分けたいとき。
-- レビュー、indexing、apply 後処理、session join conflict 解消、TUI 起動などで AI 呼び出しに渡す情報と応答 JSON の境界を確認したいとき。
-- 複数の agent call builder に共通する状態、ルール、結果表現を確認してから個別領域へ進みたいとき。
+- cmoc が AI エージェント呼び出しへ渡す parameter、prompt、Structured Output schema の正本仕様断片を探すとき。
+- agent call parameter の共通構造と、特定機能向け builder のどちらを読むべきか切り分けたいとき。
+- apply fork 後処理、INDEX.md エントリー生成、oracle review、session join の conflict 解消、tui 起動前後のいずれかで使う agent 呼び出し仕様を確認したいとき。
 
 ## Do not read this when
-- AI エージェント呼び出しではなく、CLI サブコマンドの実行制御、branch 操作、diff 取得、保存処理、表示整形、対象ファイル探索を調べたいとき。
-- oracle standard、realization standard、apply review standard、index entry standard など、レビューや記述品質の標準そのものを確認したいとき。
-- prompt builder の共通構成、path placeholder 解決、markdown rendering、StructDoc 表現など、呼び出しパラメータを支える汎用実装の詳細を調べたいとき。
-- バックエンド固有のモデル名・reasoning effort 名への変換、プロセス起動、結果処理、エラー処理を確認したいとき。
+- AI エージェント呼び出しではなく、CLI 実行制御、branch 操作、diff 取得、レポート保存、対象ファイル探索、表示整形などの実装を調べたいとき。
+- oracle standard、realization standard、index entry standard、file access mode、path placeholder など、agent call parameter 以外の概念定義そのものを確認したいとき。
+- realization code 側の prompt builder 実装、外部コマンド起動、バックエンド固有モデル名への変換、テスト構成を確認したいとき。
 
 ## hash
-- 088701378920a7e78a3df63c28f8263f11d74040889e5c8068c054903760dff0
+- a643bbf574a5c9dc77b567a0427f2dc430f33e2ad30712163217fd2db685d284
 
 # `other`
 
 ## Summary
-- cmoc の正本仕様断片のうち、設定定義、パス表記モデル、規範文書モデル、構造化 Markdown レンダリング helper を扱う実装群への入口。
-- リポジトリ別設定の永続化・同期・既定値、ルートプレースホルダ付きパスの解決と逆変換、規範文書を構造化して出力するためのデータ構造、階層文書を Markdown 化する処理を確認するための領域。
+- cmoc の横断的な正本仕様断片を置く領域。リポジトリ単位設定、ルートパスプレースホルダとパス解決、規範文書モデル、構造化 Markdown レンダリング helper への入口になる。
 
 ## Read this when
-- cmoc のリポジトリ別設定、Codex CLI 向けモデル・推論努力対応、並列数、リカバリ回数、apply fork や review oracle のループ予算に関する正本定義を探すとき。
-- cmoc で使うルートプレースホルダ、絶対パスへの解決、実パスからプレースホルダ表記への変換、プレースホルダなし相対パスの禁止を確認したいとき。
-- 規範文書をプログラム上で保持するための見出し・背景・要求・判断例・要求ラベルの構造や、構造化ドキュメントへの変換規則を確認したいとき。
-- 階層化された自然言語文書、本文、コードブロックを Markdown にレンダリングする helper の挙動や、インデント正規化・空行圧縮の規則を確認したいとき。
+- cmoc の設定値、パス表記モデル、規範文書の構造化、または仕様文生成用 Markdown helper の正本仕様断片を探すとき。
+- サブコマンド固有仕様ではなく、複数領域から参照される基礎概念や補助モデルを確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの実行手順、CLI 引数、利用者向け出力形式、状態ファイル、または制御フローそのものを確認したいとき。
-- INDEX.md のルーティング規則、oracle file と realization file の管理方針、または実現ファイルに適用される品質基準そのものだけを確認したいとき。
-- 生成済み設定ファイルの読み書き、変換、保存処理など realization 側の実装詳細だけを調べたいとき。
-- ModelClass や ReasoningEffort の概念定義、個別の規範本文、生成済み Markdown の配置先や読み方を確認したいとき。
+- 特定サブコマンドの利用者向け入出力、実行手順、状態ファイル仕様だけを確認したいとき。
+- oracle file と realization file の管理方針、INDEX.md のルーティング規則、または個別の規範本文そのものを確認したいとき。
 
 ## hash
-- 112266f80923a3054a1cd3d9d91399ff94806b57c55b53eb7a8b791b671a7a2c
+- f00594a311874ec9cce50630cb6035d65acb894265ac8fb87f197c2268899207
 
 # `prompt_builder`
 

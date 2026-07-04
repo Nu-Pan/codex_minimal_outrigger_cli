@@ -19,20 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP builder 関連の realization 実装をまとめる領域。oracle 側 builder を正本として参照しながら、既存の acp.builder 系 import 経路を維持する互換入口と、quota probe や TUI 起動など一部の realization 側 builder を扱う。
-- apply、review、session、indexing、tui などの用途別 builder package への入口になり、canonical oracle 実装への委譲、旧公開名の維持、realization 側公開型への最小適応が必要な箇所を切り分ける。
+- agent call parameter builder 群の realization 側領域。oracle 側 builder を正本に保ちながら旧 import 経路を維持する互換入口と、quota probe・TUI・apply fork など一部呼び出し用途向けの最小適応層をまとめる。
+- 主な責務は、canonical oracle 実装への中継、既存参照を壊さない再公開、oracle builder 戻り値を realization 側公開型や runtime path へ接続する境界の提供であり、prompt 本文や正本仕様そのものは扱わない。
 
 ## Read this when
-- acp.builder 配下の旧 import path 互換が、oracle 側 canonical 実装や realization 側 wrapper にどう接続されるかを調べたいとき。
-- apply fork、review、session、indexing、TUI、quota probe など、用途別 ACP builder の入口や読むべき下位領域を選びたいとき。
-- oracle 側 builder を正本に保ちながら realization 側で package path、module alias、戻り値変換、既知表記補正を行う境界を確認したいとき。
-- 既存 caller を canonical import path へ移行する作業で、互換 package や再公開 module の削除条件を確認したいとき。
+- agent call parameter builder 周辺で、旧 import 経路がどの canonical 実装や互換入口へつながるかを確認したいとき。
+- oracle 側 builder を正本に保ちつつ、realization 側で package path、module alias、公開型変換、runtime path 接続をどう補っているかを調べるとき。
+- apply fork、quota availability probe、review、session、TUI などの agent call parameter 構築入口や互換層の残存理由・削除条件を確認したいとき。
+- 既存 caller を canonical path へ移行する作業で、互換 package や再公開 module の影響範囲を絞りたいとき。
 
 ## Do not read this when
-- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したい場合は、対応する oracle 側 builder や oracle doc を読む。
-- apply、review、session、TUI など各機能の実行フロー、CLI 引数処理、UI 処理、branch 操作、finding 処理を調べたい場合は、それぞれの機能実装へ進む。
-- AgentCallParameter の公開型、path model、git helper、file access mode など builder 共通外の基礎構造を調べたい場合は、該当する共通実装を読む。
-- 新しい公開 API や新規 import 経路を設計したいだけの場合は、互換入口ではなく canonical な定義元や設計対象を読む。
+- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したい場合は、対応する oracle 側 builder や oracle file を読む。
+- agent call parameter の基本型、enum、構造化出力 schema、汎用 git helper、path model などの共通定義を調べたい場合は、それぞれの定義元へ進む。
+- apply、review、session、TUI など各機能の実行フロー、UI、branch 操作、結果判定、外部コマンド実行を調べたい場合は、機能本体の実装を読む。
+- 互換 import 経路ではなく新規公開 API や新機能の設計だけを検討している場合は、利用すべき canonical 実装または設計対象を直接読む。
 
 ## hash
-- d73a20e3637bd8206627a39c4b2c8e380367afd26573f7b9a8216aaf9a0bc30f
+- dc27cd3715146b39aafcc4d982c3e5a76c5341802dbddbca0b9cfe6a38385831

@@ -57,18 +57,21 @@
 # `join.py`
 
 ## Summary
-- session join サブコマンドの実行本体。active session branch を session home branch へ merge し、状態更新、session branch 削除、結果表示までを扱う。
-- merge conflict 発生時は Codex CLI に conflict 対象の解消を依頼し、対象外差分、残存 conflict marker、unmerged path を検査して merge commit を完了する。
+- `session join` の実行本体を担い、active session branch を session home branch へ merge し、状態更新、session branch 削除判定、CLI 出力までを扱う。
+- merge conflict 発生時は Codex CLI に解消を委譲し、conflict 対象外の差分混入、残存 conflict marker、unmerged path を検査して merge commit まで進める。
+- session branch・apply 状態・clean worktree・cmoc ignore・home branch の事前条件と、post-precondition 失敗時の stderr 報告境界を実装する。
 
 ## Read this when
-- session join の事前条件、成功時の状態遷移、session home branch への merge、session branch 削除条件、出力内容を確認または変更したいとき。
-- session join 中の merge conflict 解消フロー、Codex CLI へ渡す conflict 対象、oracle conflict 書き込み例外、対象外差分の拒否、conflict marker 検出を確認または変更したいとき。
-- session join 失敗時のエラー出力先、手動解決を要する merge 状態、git status や merge-base に基づく判定を調査するとき。
+- `session join` の事前条件、merge 手順、状態遷移、出力内容、session branch 削除条件を確認または変更したいとき。
+- `session join` の merge conflict 自動解消、Codex CLI へ渡す conflict 対象、oracle conflict 書き込み許可、対象外差分の拒否ロジックを確認したいとき。
+- conflict marker 検出、unmerged path 検査、merge commit 実行、git status に基づく変更スナップショットの扱いを調べたいとき。
+- `session join` 実行中の git 操作失敗をどの出力経路で報告するか、または手動解決が必要な失敗の扱いを確認したいとき。
 
 ## Do not read this when
-- session join 以外の session サブコマンドの挙動を調べたいとき。
-- Codex CLI に渡す conflict 解消 prompt の内容やパラメータ構築そのものを変更したいときは、conflict resolution parameter builder を直接読む。
-- branch 状態ファイルの schema、repo/work root 解決、git 実行 wrapper、CLI 実行 wrapper の汎用挙動を調べたいだけのときは、runtime 側を直接読む。
+- session join 以外の session サブコマンドの実装を調べたいとき。
+- Codex CLI に渡す conflict 解消 prompt や parameter の組み立て自体を変更したいときは、その builder 側を読む。
+- branch/state/path model の正本仕様や状態データ構造そのものを確認したいときは、対応する oracle または runtime 側を読む。
+- INDEX.md 生成、ルーティング文書、preflight indexing の一般仕様だけを調べたいとき。
 
 ## hash
-- 0cb7e79dd80f8783c5b3b6c434e595030162b2f19376e3d11c5d0ba4a6278031
+- 959ce69a327c7a5d0acfeee433ffbf92f16512b48b5eb03b065888e2e3a08f80

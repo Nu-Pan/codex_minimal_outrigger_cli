@@ -71,18 +71,21 @@
 # `quota_probe.py`
 
 ## Summary
-- Codex quota availability probe 用の agent call parameter を組み立てる小さな builder。最小 model、低 reasoning、読み取り専用アクセス、固定の疎通確認 prompt を使う probe 呼び出しの生成だけを担う。
+- Codex quota availability probe 用の agent call parameter を組み立てる realization implementation。通常の呼び出し設定を引き継ぐのではなく、最小モデル、低 reasoning、readonly access、固定の疎通確認 prompt、indexing preflight 無効という probe 専用の設定を返す。
+- quota availability 確認が通常の agent call 実行経路へ渡す最小パラメータをどのように作るかを確認する入口。
 
 ## Read this when
-- Codex quota availability probe の agent call parameter がどの model class、reasoning effort、file access mode、prompt で作られるかを確認したいとき。
-- quota availability probe の呼び出し条件や Codex CLI 最小呼び出し仕様に対応する realization 実装を変更するとき。
+- Codex quota availability probe の prompt、model class、reasoning effort、file access mode、indexing preflight の有無を確認または変更したいとき。
+- quota availability 確認時に、呼び出し元の作業ディレクトリだけを引き継ぎ、他の call 設定を probe 専用値に固定する理由や実装位置を確認したいとき。
+- 通常の agent call parameter から probe 用 parameter へ変換される境界を追いたいとき。
 
 ## Do not read this when
-- 通常の agent call parameter 構築全般や、probe 以外の command 用 parameter を調べたいとき。
-- quota 判定結果の解釈、retry、呼び出し実行側の制御を調べたいとき。
+- 一般的な agent call parameter の型定義、各 enum の意味、通常実行時の parameter 構築を調べたいとき。
+- Codex CLI 実行規則そのものや quota availability probe が必要になる仕様背景を読みたいとき。
+- quota probe の結果判定、エラー処理、呼び出し順序、外部コマンド実行処理を調べたいとき。
 
 ## hash
-- 5099c77b11a5c1ec31cb0b7f1c4ca1b26e5b5ffc1beb4f2e95bcb2fd173f46ab
+- 432e4c74de0ccac095c1c76b03dbd2e93a30b63bd2f956a9ba7d7737d8d5d6ea
 
 # `review`
 
