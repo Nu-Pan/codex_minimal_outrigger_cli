@@ -13,7 +13,7 @@
 
 - 手順
     1. `<repo-root>/.cmoc/local/ollama/bin/ollama --version` が通るなら、インストールを中断（正常系）
-    2. ollama archive を `https://ollama.com/download/ollama-linux-amd64.tar.zst` から取得し `/tmp/ollama-linux-amd64.tar.zst` に保存
+    2. ollama archive を `https://ollama.com/download/ollama-linux-amd64.tar.zst` から取得し `<repo-root>/.cmoc/local/ollama-linux-amd64.tar.zst` に保存
     3. archive を `<repo-root>/.cmoc/local/ollama` へ展開
 - 仕様
     - インストール処理は冪等性を持つこと
