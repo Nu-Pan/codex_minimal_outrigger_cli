@@ -2,7 +2,7 @@ import fcntl
 from concurrent.futures import ThreadPoolExecutor
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Callable
 
@@ -265,8 +265,9 @@ def build_index_entry(
         )
     content = target_content_for_indexing(path)
     log_root = repo_root(root)
+    parameter = replace(build_indexing_index_entry_parameter(path, content), cwd=root)
     result = codex_exec(
-        build_indexing_index_entry_parameter(path, content),
+        parameter,
         # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
         # <work-root>/oracle/doc/app_spec/run_isolation.md
         # INDEX 更新対象は worktree root のまま、Codex のログ/state 保存先は

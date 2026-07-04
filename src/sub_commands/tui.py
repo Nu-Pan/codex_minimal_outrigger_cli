@@ -2,6 +2,7 @@ import re
 import shutil
 import subprocess
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 
 from acp.builder.tui.resolve_parameter import (
@@ -63,7 +64,7 @@ def _cmoc_tui_body(
     run_editor(original_path)
     original_prompt = read_original_prompt(original_path)
     resolved = run_codex_exec(
-        build_tui_resolve_parameter_parameter(original_prompt),
+        replace(build_tui_resolve_parameter_parameter(original_prompt), cwd=work_root),
         root=root,
         cwd=work_root,
         config=config,
@@ -75,6 +76,7 @@ def _cmoc_tui_body(
         resolved or {},
         launch_timestamp=launch_timestamp,
     )
+    parameter = replace(parameter, cwd=work_root)
     complete_prompt_path = logs_dir(root).parent / "tui" / f"{launch_timestamp}_cmpl.md"
     run_codex_tui(
         parameter,

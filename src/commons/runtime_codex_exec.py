@@ -29,7 +29,6 @@ from commons.runtime_codex_profile import (
     codex_profile_name,
     codex_subprocess_env,
     extract_resume_token,
-    file_access_to_codex_cwd,
     is_capacity_error,
     is_quota_error,
     prepare_codex_profile,
@@ -138,6 +137,15 @@ def _next_codex_log_timestamp() -> str:
         return current
 
 
+def _codex_cwd(parameter: AgentCallParameter, codex_work_root: Path) -> Path:
+    """AgentCallParameter.cwd を優先し、対象 work root 外の古い呼び出しを補正する。"""
+    parameter_cwd = parameter.cwd.resolve()
+    work = codex_work_root.resolve()
+    if parameter_cwd.is_relative_to(work):
+        return parameter_cwd
+    return work
+
+
 def run_codex_exec(
     parameter: AgentCallParameter,
     *,
@@ -164,7 +172,7 @@ def run_codex_exec(
     log_dir = codex_log_dir(root)
     log_dir.mkdir(parents=True, exist_ok=True)
     codex_work_root = work_root(cwd)
-    codex_cwd = file_access_to_codex_cwd(parameter.file_access_mode, codex_work_root)
+    codex_cwd = _codex_cwd(parameter, codex_work_root)
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # Relative CODEX_HOME is still passed through unchanged, so preflight and
     # profile generation must target the path Codex resolves from its real cwd.
@@ -196,6 +204,7 @@ def run_codex_exec(
         run_codex_home: Path,
         run_profile_path: Path,
         run_profile_name: str,
+        run_codex_cwd: Path,
     ) -> dict[str, str]:
         """call log に残す profile 由来値を実際の呼び出し parameter に揃える。"""
         return {
@@ -205,9 +214,12 @@ def run_codex_exec(
             "model_class": run_parameter.model_class.value,
             "reasoning_effort": run_parameter.reasoning_effort.value,
             "file_access_mode": run_parameter.file_access_mode.value,
+            "cwd": str(run_codex_cwd.resolve()),
         }
 
-    base_call_data = call_data(parameter, codex_home, profile_path, profile_name)
+    base_call_data = call_data(
+        parameter, codex_home, profile_path, profile_name, codex_cwd
+    )
 
     def new_log_paths() -> tuple[str, Path, Path, Path, Path, Path]:
         """Codex call 用 log path 群を時刻順に追える名前で確保する。"""
@@ -546,8 +558,8 @@ def run_codex_exec(
                         quota_probe_parameter = _quota_availability_probe_parameter(
                             parameter
                         )
-                        probe_codex_cwd = file_access_to_codex_cwd(
-                            quota_probe_parameter.file_access_mode, codex_work_root
+                        probe_codex_cwd = _codex_cwd(
+                            quota_probe_parameter, codex_work_root
                         )
                         # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
                         # quota probe is a separate Codex call; its minimal
@@ -568,6 +580,7 @@ def run_codex_exec(
                             probe_codex_home,
                             probe_profile_path,
                             probe_profile_name,
+                            probe_codex_cwd,
                         )
                         (
                             probe_ts,

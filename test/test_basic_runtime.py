@@ -199,7 +199,7 @@ def test_config_defaults_match_logical_model_classes() -> None:
     config = CmocConfig()
 
     assert config.num_parallel == 8
-    assert config.codex.model[ModelClass.MAINSTREAM] == "GPT-5.5"
+    assert config.codex.model[ModelClass.MAINSTREAM] == "gpt-5.5"
     assert config.codex.reasoning_effort[ReasoningEffort.HIGH] == "high"
     assert config.codex.num_try_falv_recovery == 1
 
@@ -510,18 +510,16 @@ def test_file_access_to_sandbox_mode_supports_repo_write() -> None:
     assert file_access_to_sandbox_mode(FileAccessMode.REPO_WRITE) == "workspace-write"
 
 
-def test_file_access_to_codex_cwd_limits_pure_oracle_read(tmp_path: Path) -> None:
-    """PURE_ORACLE_READ は Codex の作業 root も oracle tree に閉じる。"""
+def test_file_access_to_codex_cwd_keeps_work_root_for_compatibility(
+    tmp_path: Path,
+) -> None:
+    """Codex の作業 root は AgentCallParameter.cwd 側で指定する。"""
     root = tmp_path / "repo"
     root.mkdir()
 
     assert file_access_to_codex_cwd(FileAccessMode.READONLY, root) == root.resolve()
-    assert file_access_to_codex_cwd(FileAccessMode.PURE_ORACLE_READ, root) == (
-        root / "oracle"
-    ).resolve()
-    assert file_access_to_codex_cwd(FileAccessMode.PURE_ORACLE_WRITE, root) == (
-        root / "oracle"
-    ).resolve()
+    assert file_access_to_codex_cwd(FileAccessMode.PURE_ORACLE_READ, root) == root.resolve()
+    assert file_access_to_codex_cwd(FileAccessMode.PURE_ORACLE_WRITE, root) == root.resolve()
 
 
 def test_is_binary_reads_only_initial_chunk() -> None:

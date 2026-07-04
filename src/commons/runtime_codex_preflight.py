@@ -36,21 +36,25 @@ def disable_indexing_preflight() -> None:
 def run_codex_exec(parameter: AgentCallParameter, **kwargs: Any) -> CodexExecResult:
     """INDEX 更新 preflight を挟んで Codex exec 実行本体へ委譲する。"""
     if parameter.run_indexing_preflight:
-        _run_indexing_before_codex(_indexing_root_for_codex(kwargs))
+        _run_indexing_before_codex(_indexing_root_for_codex(parameter, kwargs))
     return runtime_run_codex_exec(parameter, **kwargs)
 
 
 def run_codex_tui(parameter: AgentCallParameter, **kwargs: Any) -> CommandResult:
     """INDEX 更新 preflight を挟んで Codex TUI 実行本体へ委譲する。"""
     if parameter.run_indexing_preflight:
-        _run_indexing_before_codex(_indexing_root_for_codex(kwargs))
+        _run_indexing_before_codex(_indexing_root_for_codex(parameter, kwargs))
     return runtime_run_codex_tui(parameter, **kwargs)
 
 
-def _indexing_root_for_codex(kwargs: dict[str, Any]) -> Path:
+def _indexing_root_for_codex(parameter: AgentCallParameter, kwargs: dict[str, Any]) -> Path:
     """Codex 呼び出し設定から indexing の起点 root を決める。"""
-    cwd = kwargs.get("cwd")
-    return work_root(cwd) if cwd else kwargs.get("root") or repo_root()
+    context = kwargs.get("cwd") or kwargs.get("root") or repo_root()
+    context_root = work_root(context)
+    parameter_cwd = parameter.cwd.resolve()
+    if parameter_cwd.is_relative_to(context_root.resolve()):
+        return work_root(parameter_cwd)
+    return context_root
 
 
 def _run_indexing_before_codex(root: Path) -> None:

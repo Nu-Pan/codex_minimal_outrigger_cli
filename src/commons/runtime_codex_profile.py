@@ -79,13 +79,8 @@ def file_access_to_sandbox_mode(mode: FileAccessMode) -> str:
 
 
 def file_access_to_codex_cwd(mode: FileAccessMode, root: Path) -> Path:
-    """FileAccessMode の読み取り境界に合わせた Codex 作業 root を返す。"""
+    """旧互換 API。Codex 作業 root は AgentCallParameter.cwd が正本。"""
     root = root.resolve()
-    if mode in {FileAccessMode.PURE_ORACLE_READ, FileAccessMode.PURE_ORACLE_WRITE}:
-        # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-        # Codex profile は読み取り root を分けられないため、公開済みの
-        # --cd/cwd で oracle tree だけを作業 root にする。
-        return root / "oracle"
     return root
 
 

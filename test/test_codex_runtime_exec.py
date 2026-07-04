@@ -746,7 +746,7 @@ def test_run_codex_exec_does_not_post_validate_session_join_conflict_targets(
     assert other.read_text() == "blocked\n"
 
 
-def test_run_codex_exec_limits_pure_oracle_read_to_oracle_cwd(
+def test_run_codex_exec_uses_parameter_cwd_independent_of_pure_oracle_read(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -782,9 +782,10 @@ def test_run_codex_exec_limits_pure_oracle_read_to_oracle_cwd(
     )
 
     record = json.loads(recorder.read_text())
+    work_root = str(root.resolve())
     oracle_root = str((root / "oracle").resolve())
-    assert record["args"][record["args"].index("--cd") + 1] == oracle_root
-    assert record["cwd"] == oracle_root
+    assert record["args"][record["args"].index("--cd") + 1] == work_root
+    assert record["cwd"] == work_root
     assert 'sandbox_mode = "workspace-write"' in record["profile"]
     profile = tomllib.loads(record["profile"])
     assert profile["sandbox_workspace_write"]["writable_roots"] == [oracle_root]
@@ -887,10 +888,8 @@ def test_run_codex_exec_allows_repo_local_read_from_linked_worktree(
     )
 
     record = json.loads(recorder.read_text())
-    assert record["cwd"] == str((linked / "oracle").resolve())
-    assert record["args"][record["args"].index("--cd") + 1] == str(
-        (linked / "oracle").resolve()
-    )
+    assert record["cwd"] == str(linked.resolve())
+    assert record["args"][record["args"].index("--cd") + 1] == str(linked.resolve())
 
 
 def test_run_codex_exec_allows_blocked_runtime_diffs_after_call(
@@ -1134,10 +1133,8 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
     )
 
     record = json.loads(recorder.read_text())
-    assert record["cwd"] == str((root / "oracle").resolve())
-    assert record["args"][record["args"].index("--cd") + 1] == str(
-        (root / "oracle").resolve()
-    )
+    assert record["cwd"] == str(root.resolve())
+    assert record["args"][record["args"].index("--cd") + 1] == str(root.resolve())
 
 
 def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(

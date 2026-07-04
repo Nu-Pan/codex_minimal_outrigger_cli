@@ -283,8 +283,8 @@ def test_init_writes_default_config_json(tmp_path: Path, monkeypatch: pytest.Mon
     assert config_path.is_file()
     data = json.loads(config_path.read_text())
     assert data["num_parallel"] == 8
-    assert data["codex"]["model"]["mainstream"] == "GPT-5.5"
-    assert data["codex"]["model"]["efficiency"] == "GPT-5.4-mini"
+    assert data["codex"]["model"]["mainstream"] == "gpt-5.5"
+    assert data["codex"]["model"]["efficiency"] == "gpt-5.4-mini"
     assert data["codex"]["reasoning_effort"]["high"] == "high"
     assert data["codex"]["num_try_falv_recovery"] == 1
     assert (
@@ -323,7 +323,7 @@ def test_init_syncs_config_defaults_without_overwriting_human_values(
     data = json.loads(config_path.read_text())
     assert data["num_parallel"] == 3
     assert data["codex"]["model"]["mainstream"] == "CUSTOM-MAIN"
-    assert data["codex"]["model"]["efficiency"] == "GPT-5.4-mini"
+    assert data["codex"]["model"]["efficiency"] == "gpt-5.4-mini"
     assert data["codex"]["reasoning_effort"]["low"] == "low"
     assert data["codex"]["num_try_falv_recovery"] == 1
     assert data["apply_fork"]["num_apply_files"] == 200

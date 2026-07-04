@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 from typing import Callable
 
@@ -100,7 +101,10 @@ def build_change_summary(
         ]
     try:
         summary = codex_exec(
-            build_apply_fork_change_summary_parameter(raw_diff),
+            replace(
+                build_apply_fork_change_summary_parameter(raw_diff),
+                cwd=apply_worktree,
+            ),
             root=root,
             cwd=apply_worktree,
             config=config,

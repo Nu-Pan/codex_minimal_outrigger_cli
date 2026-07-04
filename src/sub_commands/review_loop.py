@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from pathlib import Path
 from typing import Callable
 
@@ -39,15 +40,18 @@ def run_review_oracle_loop(
             break
         for oracle_path in sorted(dirty_files):
             result = codex_exec(
-                build_review_oracle_enumerate_finding_parameter(
-                    oracle_path,
-                    json.dumps(
-                        _findings_related_to_oracle_path(
-                            findings, oracle_path, worktree
+                replace(
+                    build_review_oracle_enumerate_finding_parameter(
+                        oracle_path,
+                        json.dumps(
+                            _findings_related_to_oracle_path(
+                                findings, oracle_path, worktree
+                            ),
+                            ensure_ascii=False,
+                            indent=2,
                         ),
-                        ensure_ascii=False,
-                        indent=2,
                     ),
+                    cwd=worktree,
                 ),
                 root=log_root,
                 cwd=worktree,
@@ -69,8 +73,11 @@ def run_review_oracle_loop(
             break
         for _ in range(config.review_oracle.num_merge_findings_loop):
             operations = codex_exec(
-                build_review_oracle_merge_finding_parameter(
-                    json.dumps(findings, ensure_ascii=False, indent=2)
+                replace(
+                    build_review_oracle_merge_finding_parameter(
+                        json.dumps(findings, ensure_ascii=False, indent=2)
+                    ),
+                    cwd=worktree,
                 ),
                 root=log_root,
                 cwd=worktree,
@@ -114,10 +121,13 @@ def _validate_and_judge_findings(
                 continue
             finding_text = json.dumps(finding, ensure_ascii=False, indent=2)
             challenger = codex_exec(
-                build_review_oracle_validate_finding_challenger_parameter(
-                    finding_text,
-                    "\n".join(finding["advocate_reasons"]),
-                    "\n".join(finding["challenger_reasons"]),
+                replace(
+                    build_review_oracle_validate_finding_challenger_parameter(
+                        finding_text,
+                        "\n".join(finding["advocate_reasons"]),
+                        "\n".join(finding["challenger_reasons"]),
+                    ),
+                    cwd=worktree,
                 ),
                 root=log_root,
                 cwd=worktree,
@@ -126,10 +136,13 @@ def _validate_and_judge_findings(
             ).output_json
             challenger_reasons = list((challenger or {}).get("reasons", []))
             advocate = codex_exec(
-                build_review_oracle_validate_finding_advocate_parameter(
-                    finding_text,
-                    "\n".join(finding["advocate_reasons"]),
-                    "\n".join(finding["challenger_reasons"] + challenger_reasons),
+                replace(
+                    build_review_oracle_validate_finding_advocate_parameter(
+                        finding_text,
+                        "\n".join(finding["advocate_reasons"]),
+                        "\n".join(finding["challenger_reasons"] + challenger_reasons),
+                    ),
+                    cwd=worktree,
                 ),
                 root=log_root,
                 cwd=worktree,
@@ -144,10 +157,13 @@ def _validate_and_judge_findings(
         dirty_findings = next_dirty
     for finding in findings:
         judge = codex_exec(
-            build_review_oracle_judge_finding_parameter(
-                json.dumps(finding, ensure_ascii=False, indent=2),
-                "\n".join(finding["advocate_reasons"]),
-                "\n".join(finding["challenger_reasons"]),
+            replace(
+                build_review_oracle_judge_finding_parameter(
+                    json.dumps(finding, ensure_ascii=False, indent=2),
+                    "\n".join(finding["advocate_reasons"]),
+                    "\n".join(finding["challenger_reasons"]),
+                ),
+                cwd=worktree,
             ),
             root=log_root,
             cwd=worktree,

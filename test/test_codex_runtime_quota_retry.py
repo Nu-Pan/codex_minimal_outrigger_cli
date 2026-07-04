@@ -51,6 +51,7 @@ def stub_quota_probe_builder(
             FileAccessMode.READONLY,
             probe_prompt,
             None,
+            cwd=base_parameter.cwd,
         ),
     )
     return probe_prompt
@@ -310,9 +311,9 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
-    initial_codex_home = root / "oracle" / "relative_codex_home"
+    initial_codex_home = root / "relative_codex_home"
     probe_codex_home = root / "relative_codex_home"
-    for codex_home in [initial_codex_home, probe_codex_home]:
+    for codex_home in {initial_codex_home, probe_codex_home}:
         codex_home.mkdir()
         (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.setenv("CODEX_HOME", "relative_codex_home")
@@ -366,22 +367,21 @@ def test_quota_probe_uses_codex_cwd_for_relative_codex_home(
         config=CmocConfig(),
     )
 
-    oracle_root = root / "oracle"
     expected = [
         (
             "initial",
-            oracle_root,
+            root,
             Path("relative_codex_home"),
             initial_codex_home,
-            oracle_root,
+            root,
         ),
         ("probe", root, Path("relative_codex_home"), probe_codex_home, root),
         (
             "resume",
-            oracle_root,
+            root,
             Path("relative_codex_home"),
             initial_codex_home,
-            oracle_root,
+            root,
         ),
     ]
     assert records == [
