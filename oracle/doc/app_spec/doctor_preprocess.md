@@ -13,8 +13,9 @@
 
 1. `<work-root>/.cmoc/local` が git 追跡対象外であることを保証する
 2. `<work-root>/.agents` が git 追跡対象であることを保証する
-3. ollama が SLM をサーブ可能であることを保証する
-4. ここまでの作業で発生した差分を git commit する
+3. cmoc managed ollama が利用可能であることを保証する
+4. external model provider が利用可能であることを保証する
+5. ここまでの作業で発生した差分を git commit する
 
 ## 「`<repo-root>/.cmoc/local` が git 追跡対象外であることを保証する」の詳細
 
@@ -56,18 +57,16 @@
 - `<work-root>/.agents` ツリー内に tracked file が無い場合は `<work-root>/.agents/.gitkeep` を git index に追加する
 - 修復後も `<work-root>/.agents` ツリー内に tracked file が無い場合はエラー終了する
 
+## 「cmoc managed ollama が利用可能であることを保証する」の詳細
 
-## 「ollama が SLM をサーブ可能であることを保証する」の詳細
+- `ensure_cmoc_managed_ollama` の呼び出しを、検証・修復とする
 
-### 前提
-
-- ollama による SLM サーブ関係は `<cmoc-root>/oracle/doc/app_spec/ollama_slm_server.md` を正本とする
+## 「external model provider が利用可能であることを保証する」の詳細
 
 ### 検証
 
-- ollama が cmoc から接続可能であることを確認する
-- `CmocConfigCodex.model[ModelClass.LOCAL_SLM]` で指定される SLM モデルが実際に serve 可能である事を確認する
+- `CodexModelSpec.model_provider` の設定が external model provider である場合、`CodexModelSpec.model` が cmoc から接続可能である事を確認する
 
 ### 修復
 
-- ollama をインストール・起動する
+- cmoc の外側の話なので諦める

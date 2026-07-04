@@ -11,6 +11,9 @@
 
 # std
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Literal
+from enum import StrEnum, auto
 
 # cmoc
 from oracle.acp_builder.basic import ModelClass, ReasoningEffort
@@ -22,10 +25,13 @@ class CmocConfig:
     cmoc の設定 (config) を集約したクラス
     """
 
+    # ユーザーローカル .cmoc ディレクトリのパス
+    user_local_cmoc_dir: Path = field(default_factory=lambda: Path("$HOME/.comc"))
+
     # AI エージェント呼び出しの最大並列数
     num_parallel: int = field(default=8)
 
-    # Codex CLI 用の設定
+    # Codex CLI 関係の設定
     codex: "CmocConfigCodex" = field(default_factory=lambda: CmocConfigCodex())
 
     # `cmoc apply fork` サブコマンドの挙動設定
@@ -40,6 +46,25 @@ class CmocConfig:
 
 
 @dataclass(frozen=True)
+class CodexModelSpec:
+    """Codex CLI 上のモデル指定"""
+
+    # model provider 設定
+    # codex:
+    #   Codex CLI 標準のモデル設定を使う
+    #   いわば未指定 (default)
+    # cmoc:
+    #   cmoc managed ollama を使う
+    # その他:
+    #   `127.0.0.1:11434` のような <host>:<port> 形式で、
+    #   external model provider の直接指定を受け付ける。
+    model_provider: Literal["codex", "cmoc"] | str
+
+    # モデル名
+    model: str
+
+
+@dataclass(frozen=True)
 class CmocConfigCodex:
     """
     cmoc の設定 (config) のうち Codex CLI 向けの設定を集約したクラス
@@ -49,13 +74,12 @@ class CmocConfigCodex:
     # NOTE
     #   モデル名の未定義は禁止
     #   モデル名は case sensitive なので注意
-    model: dict[ModelClass, str] = field(
+    model: dict[ModelClass, CodexModelSpec] = field(
         default_factory=lambda: {
-            ModelClass.MAINSTREAM: "gpt-5.5",
-            ModelClass.FLAGSHIP: "gpt-5.5",
-            ModelClass.EFFICIENCY: "gpt-5.4-mini",
-            ModelClass.MINIMUM: "gpt-5.4-mini",
-            ModelClass.LOCAL_SLM: "smollm2:135m",
+            ModelClass.MAINSTREAM: CodexModelSpec("codex", "gpt-5.5"),
+            ModelClass.FLAGSHIP: CodexModelSpec("codex", "gpt-5.5"),
+            ModelClass.EFFICIENCY: CodexModelSpec("codex", "gpt-5.4-mini"),
+            ModelClass.MINIMUM: CodexModelSpec("codex", "gpt-5.4-mini"),
         }
     )
 
