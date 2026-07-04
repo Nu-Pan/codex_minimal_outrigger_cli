@@ -48,12 +48,13 @@ class CmocConfigCodex:
     # `ModelClass` --> Codex CLI が受理可能な Model 名
     # NOTE
     #   モデル名の未定義は禁止
+    #   モデル名は case sensitive なので注意
     model: dict[ModelClass, str] = field(
         default_factory=lambda: {
-            ModelClass.MAINSTREAM: "GPT-5.5",
-            ModelClass.FLAGSHIP: "GPT-5.5",
-            ModelClass.EFFICIENCY: "GPT-5.4-mini",
-            ModelClass.MINIMUM: "GPT-5.4-mini",
+            ModelClass.MAINSTREAM: "gpt-5.5",
+            ModelClass.FLAGSHIP: "gpt-5.5",
+            ModelClass.EFFICIENCY: "gpt-5.4-mini",
+            ModelClass.MINIMUM: "gpt-5.4-mini",
             ModelClass.LOCAL_SLM: "smollm2:135m",
         }
     )

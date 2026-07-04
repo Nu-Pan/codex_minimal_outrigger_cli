@@ -2,10 +2,10 @@
   "num_parallel": 8,
   "codex": {
     "model": {
-      "efficiency": "GPT-5.4-mini",
-      "flagship": "GPT-5.5",
-      "mainstream": "GPT-5.5",
-      "minimum": "GPT-5.4-mini"
+      "efficiency": "gpt-5.4-mini",
+      "flagship": "gpt-5.5",
+      "mainstream": "gpt-5.5",
+      "minimum": "gpt-5.4-mini"
     },
     "reasoning_effort": {
       "high": "high",
