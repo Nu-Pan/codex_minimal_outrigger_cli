@@ -171,24 +171,23 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI の subprocess 境界で必要になる profile 生成、sandbox writable/read path 検査、CODEX_HOME 検査、Codex 実行、apply 用 child process tracking、schema 配置、JSON/JSONL 出力解釈をまとめる実装。
-- FileAccessMode と Codex profile の対応、Codex CLI 起動前条件、実行失敗や capacity/quota 判定を確認する入口。
+- Codex CLI subprocess 境界で必要になる profile 生成、sandbox writable/read path 検証、CODEX_HOME 検査、local SLM 用 ollama provider 設定、apply 実行中の child process tracking、Structured Output schema 配置、Codex JSONL stdout/stderr からの error・resume・retry 判定をまとめる。
+- FileAccessMode から Codex CLI が受け取れる sandbox/profile 表現へ落とす処理と、Codex CLI 実行結果を cmoc の実行時判断へ変換する処理を同じ境界で扱う。
 
 ## Read this when
-- Codex CLI に渡す sandbox/profile/cwd/CODEX_HOME/model provider の組み立てや検証を変更する。
-- FileAccessMode ごとの read/write 許可境界、oracle file や runtime 管理領域への書き込み禁止判定を確認する。
-- apply abandon が対象にする Codex child process の記録、削除、pid 再利用判定、lock 処理を変更する。
-- Structured Output schema の保存先、Codex stdout/stderr からの JSON 読み取り、error message 集約、resume token 抽出、capacity/quota retry 判定を扱う。
-- Codex CLI 不在、CODEX_HOME/auth.json 不備、追加 read/write path 不正などを利用者向け CmocError に変換する挙動を確認する。
+- AgentCallParameter や CmocConfig から Codex CLI profile を作る処理、sandbox_mode、writable_roots、追加 read/write path の許可判定を確認・変更したいとき。
+- CODEX_HOME の解決・検証、Codex subprocess に渡す環境変数、Codex CLI 不在時の CmocError 化を確認したいとき。
+- local SLM 実行で使う repo-local ollama port の読み取り、provider section 生成、doctor preprocess との接続を扱うとき。
+- apply abandon に関係する Codex child process の pid file 記録、lock、process group 起動、pid 再利用検出を確認・変更したいとき。
+- Structured Output schema の hash store 配置、schema なし output JSON の読み取り、Codex JSONL から error detail・resume token・capacity/quota retry 条件を抽出する処理を扱うとき。
 
 ## Do not read this when
-- Codex subprocess 境界ではなく、agent call parameter の型定義や FileAccessMode 自体の正本定義を確認したい。
-- prompt 本文に載せる file access rule の文章や oracle/realization の概念定義を変更したい。
-- ログディレクトリや schema store のパス規則そのものを確認したい。
-- Codex CLI 以外の外部コマンド実行、または subprocess を伴わない runtime helper を扱う。
+- CLI subcommand の利用者向け仕様、prompt 本文、file access rule の正本断片そのものを確認したいだけなら、対応する oracle 側を読む。
+- Codex に渡す prompt の文面生成や agent call 全体の制御フローを追いたい場合は、呼び出し元の orchestration や prompt builder 側を先に読む。
+- git 上の oracle file 判定、runtime directory の path 定義、hash file 書き込みの詳細だけを変更したい場合は、それぞれの専用 runtime module を読む。
 
 ## hash
-- a006d0712ee956cf2c62b68acb048b0bbde645630c209895a5ac7cabea6ee48a
+- 03294b07655198ecd0d9d99cd2fa05be0d6e066fe2e343528e309aa7d1cf226c
 
 # `runtime_codex_tui.py`
 
@@ -211,20 +210,21 @@
 # `runtime_config.py`
 
 ## Summary
-- 正本 config 型と永続化 JSON の相互変換、設定ファイルの読み書き、未作成時の既定 config 生成を担う。人間編集された config JSON を runtime config へ復元し、不正な型・構文・top-level 形状を利用者向け error に変換する境界として機能する。
+- cmoc の runtime config を永続化 JSON と正本 config 型の間で変換し、設定ファイルの読み込み・検証・既定値補完・安定した書き戻しを担う。
+- config の top-level/section/key 型不正や JSON 構文不正を利用者向け CmocError に変換し、未作成時は既定 config を生成する入口になる。
 
 ## Read this when
-- config JSON の永続化形式、既定値補完、enum key や model 指定の復元挙動を確認または変更したいとき。
-- config 読み込み失敗時の利用者向け error message、修正指示、対象 path 表示を確認または変更したいとき。
-- doctor などの処理で、config が存在しない場合の生成、既存 config の現行形式への書き戻し、安定した JSON 出力を扱うとき。
+- `.cmoc/config.json` の生成、同期、読み込み、書き戻し、または不正 config のエラー表示を変更したいとき。
+- CmocConfig、ModelClass、ReasoningEffort と JSON object 表現の対応、既定値補完、enum key map の復元規則を確認したいとき。
+- config の int field や enum-keyed string map に対する型検証の挙動を確認・変更したいとき。
 
 ## Do not read this when
-- 正本 config 型そのものの field 定義や既定値を確認したいだけなら、正本側の config 定義を読む。
-- config path の決定方法だけを確認したい場合は、runtime path を扱う対象を読む。
-- 個別 command の実行制御、agent 呼び出し、review や apply fork の処理内容を調べたい場合は、それぞれの command 実装や制御ロジックを読む。
+- 正本 config 型そのものの field 定義や既定値を確認したいだけなら、config 型定義を読む。
+- config ファイルのパス規則だけを確認したいなら、runtime path を扱う対象を読む。
+- config 以外の runtime error 表示形式や CmocError の基本構造を調べたいだけなら、runtime error を扱う対象を読む。
 
 ## hash
-- de13f5ad7b120b1d2115f3a7007647ebf28fb9afbf3c09552bbb1732233554df
+- 43ef067f644957c400a3553f5c0d14f21bff0b595d2c084c463bb82ceb8357c2
 
 # `runtime_content.py`
 
@@ -252,22 +252,23 @@
 # `runtime_doctor.py`
 
 ## Summary
-- 共通実行前の doctor preprocess を担当する実装。git 管理前提の補修、runtime config 同期、cmoc provider 用の repo-local ollama 導入・起動・model pull、補修差分 commit までをまとめて扱う。
+- 共通実行前修復をまとめる実装。cmoc 用 ignore 設定、`.agents` の git 追跡維持、runtime config 同期、repo-local Ollama SLM server と model の準備、修復差分だけの commit を扱う。
+- Ollama 実行ファイルの取得・展開、排他 lock、port file による共有、serve 起動確認、model pull/show、失敗時の `CmocError` 生成を含む。
 
 ## Read this when
-- 実行前修復の順序、対象 path、commit 対象を確認・変更するとき。
-- cmoc provider の model を local ollama で serve 可能にする処理を確認・変更するとき。
-- repo-local ollama の保存場所、lock、download、起動確認、model pull の失敗時挙動を確認するとき。
-- .agents を git 追跡対象にする補修や .cmoc/config.json 同期後の commit 挙動を確認するとき。
+- doctor preprocess の実行順序、修復対象、commit 対象 path を確認または変更したいとき。
+- `.agents` を git 追跡対象に保つ処理や `.gitignore`、`.cmoc/config.json` との関係を調べるとき。
+- repo-local Ollama の install、lock、port 選択、serve 起動、model 準備、エラー文言を変更したいとき。
+- local SLM model 名を runtime config から取得する挙動や、config 読み込み失敗時の fallback を確認したいとき。
 
 ## Do not read this when
-- runtime config の schema、読み書き、同期内容そのものを確認するだけなら、その責務を持つ config 関連実装を読む。
-- git command 実行 wrapper や .gitignore 補修の低レベル挙動だけを確認するなら、git 関連の共通実装を読む。
-- CLI command の引数や表示文言を確認するだけなら、CLI 層の実装を読む。
-- ollama 以外の provider 選択や model 定義の正本仕様を確認するなら、対応する oracle file を読む。
+- CLI 引数やサブコマンド定義だけを調べたいとき。
+- runtime config の schema、保存形式、同期内容そのものを調べたいとき。
+- git command wrapper の低レベルな実行仕様や git error 処理だけを調べたいとき。
+- Ollama 以外の ACP model class や provider 全般の仕様を調べたいとき。
 
 ## hash
-- 27c95b101483653a30971ab73573071f1a6ac0eb78b15dc2d7520673246d9034
+- e61b7a93894f5b75ffd6d05e6195bb42dda8f7d5b03389a61f89220fa5b6eb79
 
 # `runtime_errors.py`
 

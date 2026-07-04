@@ -60,42 +60,42 @@
 # `commons`
 
 ## Summary
-- cmoc の共通実行時支援を集めた領域。Codex 呼び出し、INDEX 更新 preflight、config、content hash、doctor、error、git、logging、path、result、session state、apply process 管理など、複数の CLI サブコマンドから使われる runtime helper とその集約入口を扱う。
+- cmoc の共通実行時支援を集めた realization implementation のディレクトリ。Codex 起動、INDEX.md 自動更新、CLI 共通ライフサイクル、設定、content hash、doctor 前処理、error、git、logging、path、result、session state、apply process 管理などの runtime helper と、その集約 import 入口を扱う。
 
 ## Read this when
-- CLI サブコマンド横断で使われる runtime helper の入口を探したいとき。
-- Codex exec/TUI 呼び出し、profile、preflight、quota/capacity retry、call log、Structured Output 検証など Codex 実行基盤を確認・変更したいとき。
-- INDEX.md 自動更新、entry 再生成、indexing commit、git ignore や binary 判定を含む indexing preflight の実装を確認・変更したいとき。
-- config 読み書き、doctor preprocess、git 操作、path 解決、runtime error 表示、subcommand logging、session state 永続化、apply process 停止などの共通 runtime 挙動を確認・変更したいとき。
-- 個別 runtime_* モジュールの移動・改名・公開範囲変更により、共通 import 入口や再 export の更新が必要か判断したいとき。
+- 複数の runtime helper にまたがる共通 API、公開 import 入口、または runtime 系 module の配置を確認したいとき。
+- Codex exec/TUI 呼び出し、preflight、profile、Structured Output、quota/capacity retry、call log など Codex CLI 境界の実装を調べるとき。
+- CLI サブコマンド共通の起動・終了処理、ログ、進行表示、終了コード化、共通 error report を確認または変更したいとき。
+- config、content hash、doctor preprocess、git wrapper、path utility、result model、session state 永続化、apply process 停止などの共通 runtime 挙動を扱うとき。
+- INDEX.md の自動更新、entry 再生成、indexing commit、対象除外条件、Codex への entry 生成依頼を確認または変更したいとき。
 
 ## Do not read this when
-- 個別 CLI サブコマンドの利用者向け仕様、引数定義、業務フロー、出力 schema を調べたいときは、対象サブコマンドの実装や対応する oracle doc へ進む。
-- oracle file、realization file、path placeholder、config 型、session state の仕様意図など正本仕様断片そのものを確認したいときは、oracle 側の該当本文を読む。
-- 生成済み INDEX.md の個別 entry 内容や特定 directory のルーティング判断だけを確認したいときは、その directory の INDEX.md または対象本文を読む。
-- 特定 helper の具体的な処理内容だけを確認したいときは、この領域全体ではなく、Codex、git、path、state、logging など責務に対応する個別 runtime 実装へ直接進む。
+- 個別 CLI サブコマンドの利用者向け仕様、引数定義、業務フロー、出力 schema を調べたいときは、対象サブコマンドや oracle 側の仕様へ進む。
+- path keyword、config 型、file access rule、oracle/realization 定義、INDEX.md entry 文面基準などの正本仕様断片そのものを確認したいときは、oracle 側を読む。
+- 特定の runtime helper の具体処理だけを調べたいときは、このディレクトリ全体ではなく該当する責務別 module を直接読む。
+- 生成済みログ、生成済み INDEX.md、特定ディレクトリのルーティング判断、または実行履歴の確認だけが目的で runtime 実装を変更しないとき。
 
 ## hash
-- f7b5ebfc447325e60e13f199af479d0779b887979172e0fd9c480b90c2417749
+- 698d77809f2f559ee3b312c606f0eddf8da07be90e959865c684f4dd8eb78c26
 
 # `config`
 
 ## Summary
-- oracle src 側の設定実装を正本に保ったまま、realization 側や利用者向け公開面に残る旧来の設定 import を受け止める互換層。
-- 設定定義や設定ロジック本体を持たず、既存公開参照を正本側へ委譲し続けるための入口だけを扱う。
+- oracle src 側の設定実装を正本に保ったまま、realization 側に残る旧来の設定 import 経路を受ける互換入口をまとめるディレクトリ。
+- 設定定義や設定ロジック本体を保持せず、正本側の型や実装を再公開して既存の公開参照を維持する境界を扱う。
 
 ## Read this when
-- realization 側に残る旧来の設定 import がどこで受け止められているかを確認したいとき。
-- 設定型や設定モジュールへの既存公開参照を維持する理由、削除できる条件、責務境界を確認したいとき。
-- 設定定義を realization 側へ複製せず、oracle src 側の正本実装へ委譲している構造を確認したいとき。
+- `config.*` や設定定義の公開 import 経路が realization 側でどこに残っているか確認したいとき。
+- oracle src 側の設定実装を複製せず、realization 側から互換参照として再公開する方針を確認・変更するとき。
+- 旧来の設定参照を削除・置換する作業で、この互換入口や再公開経路を削除できる条件を判断したいとき。
 
 ## Do not read this when
-- 設定項目そのものの定義、型の内容、正本仕様としての設定構造を確認したいとき。
-- 設定値の読み込み、検証、適用処理など、互換 import や再公開以外の本体挙動を調べたいとき。
-- 新しい設定項目や公開面を追加する作業で、旧来の設定 import の残存理由が論点ではないとき。
+- 設定値の定義、意味、読み込み、検証などの本体挙動を確認したいとき。
+- oracle src 側の正本となる設定実装そのものを確認したいとき。
+- 新しい設定項目や設定公開面を追加する作業で、既存の互換 import 経路の残存理由が論点ではないとき。
 
 ## hash
-- de1d1e07ffc148f0a5f184f082cb08172356db842929686beeaaae9aa4e1708e
+- 97eb1bfd8f73945ab835c22962809b5a59009f2d7e1581a56e7058b6c8c786a4
 
 # `main.py`
 
