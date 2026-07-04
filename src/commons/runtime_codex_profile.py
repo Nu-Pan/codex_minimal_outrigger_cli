@@ -17,7 +17,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
-from basic.acp import AgentCallParameter, FileAccessMode
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass
 from config.cmoc_config import CmocConfig
 
 from commons.runtime_content import write_hashed_file, write_hashed_file_in_existing_dir
@@ -44,6 +44,9 @@ _CONFLICT_WRITE_BLOCKED_ROOT_NAMES = {
     ".git",
     "memo",
 }
+_OLLAMA_PROVIDER_ID = "cmoc_ollama"
+_OLLAMA_PORT_MIN = 49152
+_OLLAMA_PORT_MAX = 65535
 
 
 @contextmanager
@@ -272,6 +275,58 @@ def _append_workspace_write_section(
     lines.extend(["[sandbox_workspace_write]", f"writable_roots = [{roots}]"])
 
 
+def _ollama_port_file(root: Path) -> Path:
+    return root / ".cmoc" / "local" / "ollama" / "port"
+
+
+def _read_ollama_port(root: Path) -> int:
+    """doctor preprocess が確保した ollama port を profile 境界で読む。"""
+    # <work-root>/oracle/doc/app_spec/ollama_slm_server.md
+    # The profile must reference the repo-local ollama instance, not Codex's
+    # built-in provider ID. The port is runtime state prepared under .cmoc/local.
+    path = _ollama_port_file(root)
+    try:
+        text = path.read_text().strip()
+        port = int(text)
+    except (OSError, ValueError) as exc:
+        raise CmocError(
+            "ollama SLM の接続情報が存在しません。",
+            [
+                "doctor preprocess で ollama を起動してから再実行してください。",
+                "<repo-root>/.cmoc/local/ollama/port を確認してください。",
+            ],
+            f"path: {path}",
+        ) from exc
+    if not (_OLLAMA_PORT_MIN <= port <= _OLLAMA_PORT_MAX):
+        raise CmocError(
+            "ollama SLM の port が不正です。",
+            [
+                "doctor preprocess で ollama を起動し直してください。",
+                f"port は {_OLLAMA_PORT_MIN} 以上 {_OLLAMA_PORT_MAX} 以下である必要があります。",
+            ],
+            f"path: {path}\nport: {port}",
+        )
+    return port
+
+
+def _append_ollama_provider_section(lines: list[str], root: Path | None) -> None:
+    if root is None:
+        raise CmocError(
+            "ollama SLM profile には repo root が必要です。",
+            ["repo root を指定できる Codex 呼び出し経路から再実行してください。"],
+            "ModelClass: local_slm",
+        )
+    port = _read_ollama_port(root.resolve())
+    lines.extend(
+        [
+            f"[model_providers.{_OLLAMA_PROVIDER_ID}]",
+            'name = "cmoc ollama"',
+            f'base_url = "http://127.0.0.1:{port}/v1"',
+            'wire_api = "responses"',
+        ]
+    )
+
+
 def build_codex_profile(
     parameter: AgentCallParameter,
     config: CmocConfig,
@@ -289,6 +344,9 @@ def build_codex_profile(
         f'model = "{model}"',
         f'model_reasoning_effort = "{reasoning_effort}"',
     ]
+    use_local_slm = parameter.model_class == ModelClass.LOCAL_SLM
+    if use_local_slm:
+        lines.append(f'model_provider = "{_OLLAMA_PROVIDER_ID}"')
     if root is not None:
         root = root.resolve()
         read_root = (extra_read_root or root).resolve()
@@ -310,6 +368,8 @@ def build_codex_profile(
                 allow_oracle_conflict_writes,
             ),
         )
+    if use_local_slm:
+        _append_ollama_provider_section(lines, root)
     lines.append("")
     return "\n".join(lines)
 
@@ -375,6 +435,14 @@ def prepare_codex_profile(
     allow_oracle_conflict_writes: bool = False,
 ) -> Path:
     """Codex home 内へ内容 hash 名の profile を作り、同一内容なら再利用する。"""
+    if (
+        parameter.model_class == ModelClass.LOCAL_SLM
+        and root is not None
+        and not _ollama_port_file(root.resolve()).exists()
+    ):
+        from commons.runtime_doctor import run_doctor_preprocess
+
+        run_doctor_preprocess(root)
     profile = build_codex_profile(
         parameter,
         config or CmocConfig(),

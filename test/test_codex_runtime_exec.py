@@ -147,6 +147,59 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
     assert result.output_text == "done\n"
 
 
+def test_run_codex_exec_uses_local_slm_profile_without_builtin_ollama_flags(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    port_path = root / ".cmoc" / "local" / "ollama" / "port"
+    port_path.parent.mkdir(parents=True)
+    port_path.write_text("49153\n")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    recorder = tmp_path / "record.json"
+    write_python_executable(
+        bin_dir / "codex",
+        [
+            "import json, os, pathlib, sys",
+            "args = sys.argv[1:]",
+            "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "profile = args[args.index('--profile') + 1]",
+            "home = pathlib.Path(os.environ['CODEX_HOME'])",
+            "profile_path = home / f'{profile}.config.toml'",
+            "output.write_text('done\\n')",
+            f"pathlib.Path({str(recorder)!r}).write_text(json.dumps({{",
+            "    'args': args,",
+            "    'profile': profile_path.read_text(),",
+            "}))",
+            "print(json.dumps({'type': 'turn.completed'}))",
+        ],
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+
+    run_codex_exec(
+        AgentCallParameter(
+            ModelClass.LOCAL_SLM,
+            ReasoningEffort.LOW,
+            FileAccessMode.READONLY,
+            "prompt",
+            None,
+        ),
+        root=root,
+        capacity_initial_sleep_sec=0,
+        config=CmocConfig(),
+    )
+
+    record = json.loads(recorder.read_text())
+    profile = tomllib.loads(record["profile"])
+    assert "--oss" not in record["args"]
+    assert "--local-provider" not in record["args"]
+    assert profile["model_provider"] == "cmoc_ollama"
+    assert profile["model_providers"]["cmoc_ollama"]["base_url"] == (
+        "http://127.0.0.1:49153/v1"
+    )
+
+
 def test_run_codex_exec_does_not_post_validate_file_access_violations(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

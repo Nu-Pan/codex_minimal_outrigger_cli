@@ -720,6 +720,56 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         )
 
 
+def test_codex_profile_uses_cmoc_ollama_provider_for_local_slm(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    port_path = root / ".cmoc" / "local" / "ollama" / "port"
+    port_path.parent.mkdir(parents=True)
+    port_path.write_text("49152\n")
+
+    profile = build_codex_profile(
+        AgentCallParameter(
+            ModelClass.LOCAL_SLM,
+            ReasoningEffort.LOW,
+            FileAccessMode.READONLY,
+            "prompt",
+            None,
+        ),
+        CmocConfig(),
+        root,
+    )
+
+    parsed = tomllib.loads(profile)
+    provider = parsed["model_providers"]["cmoc_ollama"]
+    assert parsed["model"] == "smollm2:135m"
+    assert parsed["model_provider"] == "cmoc_ollama"
+    assert provider == {
+        "name": "cmoc ollama",
+        "base_url": "http://127.0.0.1:49152/v1",
+        "wire_api": "responses",
+    }
+
+
+def test_codex_profile_requires_ollama_port_for_local_slm(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+
+    with pytest.raises(CmocError, match="ollama SLM の接続情報"):
+        build_codex_profile(
+            AgentCallParameter(
+                ModelClass.LOCAL_SLM,
+                ReasoningEffort.LOW,
+                FileAccessMode.READONLY,
+                "prompt",
+                None,
+            ),
+            CmocConfig(),
+            root,
+        )
+
+
 def test_codex_profile_allows_repo_local_read_from_linked_worktree(
     tmp_path: Path,
 ) -> None:

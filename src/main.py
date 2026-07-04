@@ -12,6 +12,7 @@ from cmoc_runtime import (
 from sub_commands.apply.abandon import cmoc_apply_abandon_impl
 from sub_commands.apply.fork import cmoc_apply_fork_impl
 from sub_commands.apply.join import cmoc_apply_join_impl
+from sub_commands.doctor import cmoc_doctor_impl
 from sub_commands.indexing import cmoc_indexing_impl
 from sub_commands.init import cmoc_init_impl
 from sub_commands.review.oracle import cmoc_review_oracle_impl
@@ -91,6 +92,12 @@ app.add_typer(review_app, name="review")
 def init() -> None:
     """work root を cmoc 管理状態へ同期する CLI 入口。"""
     cmoc_init_impl()
+
+
+@app.command()
+def doctor() -> None:
+    """cmoc 実行前の共通検証・修復を明示実行する CLI 入口。"""
+    cmoc_doctor_impl()
 
 
 @app.command()
