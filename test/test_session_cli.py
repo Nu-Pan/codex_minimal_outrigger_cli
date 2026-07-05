@@ -53,6 +53,7 @@ def write_abandoned_state(root: Path, session_id: str) -> Path:
                     "session_home_branch": "old-home",
                     "session_start_commit": "old-commit",
                     "last_joined_apply_oracle_snapshot_commit": None,
+                    "joined_at": None,
                 },
                 "apply": {
                     "state": "ready",
@@ -106,6 +107,7 @@ def test_session_fork_creates_session_branch_and_state(
     assert state["session"]["state"] == "active"
     assert state["session"]["session_home_branch"] == home_branch
     assert state["session"]["last_joined_apply_oracle_snapshot_commit"] is None
+    assert state["session"]["joined_at"] is None
     assert state["apply"]["state"] == "ready"
 
 
@@ -257,6 +259,7 @@ def test_session_abandon_switches_home_and_marks_state(
     )
     state = json.loads(state_path.read_text())
     assert state["session"]["state"] == "abandoned"
+    assert state["session"]["joined_at"] is None
     assert f"- abandoned_branch: `{session_branch}`" in result.output
     assert "- session_state: `abandoned`" in result.output
 
@@ -293,6 +296,7 @@ def test_session_abandon_uses_linked_worktree_branch(
     )
     state = json.loads(state_path.read_text())
     assert state["session"]["state"] == "abandoned"
+    assert state["session"]["joined_at"] is None
     assert f"- abandoned_branch: `{session_branch}`" in result.output
 
 
@@ -422,6 +426,7 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     )
     state = json.loads(state_path.read_text())
     assert state["session"]["state"] == "active"
+    assert state["session"]["joined_at"] is None
     assert "/.cmoc/local/" in gitignore.read_text().splitlines()
     assert run_git(root, "ls-files", "--", ".cmoc").stdout == ""
     assert run_git(root, "status", "--short").stdout.strip() == ""
@@ -635,7 +640,7 @@ def test_session_join_uses_linked_worktree_branch(
     assert (linked / "README.md").read_text() == "linked session change\n"
     state = json.loads(session_state_path(root, session_branch).read_text())
     assert state["session"]["state"] == "joined"
-    assert "joined_at" not in state["session"]
+    assert state["session"]["joined_at"] is None
 
 
 def test_session_join_preprocesses_linked_worktree_before_preconditions(

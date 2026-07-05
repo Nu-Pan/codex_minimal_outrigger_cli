@@ -48,6 +48,7 @@ def _cmoc_session_abandon_body() -> None:
     try:
         run_git(["switch", home], work)
         state.session.state = "abandoned"
+        state.session.joined_at = None
         write_state(path, state)
         # <work-root>/oracle/doc/app_spec/sub_command/session_abandon.md
         # requires preserving the home branch while deleting only the session branch.

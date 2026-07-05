@@ -15,6 +15,9 @@ class SessionPart:
     session_home_branch: str | None = None
     session_start_commit: str | None = None
     last_joined_apply_oracle_snapshot_commit: str | None = None
+    # <work-root>/oracle/doc/app_spec/sub_command/session_abandon.md
+    # session abandon requires this field to remain serialized as JSON null.
+    joined_at: str | None = None
 
 
 @dataclass
