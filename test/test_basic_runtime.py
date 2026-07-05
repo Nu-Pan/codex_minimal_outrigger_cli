@@ -210,10 +210,11 @@ def test_config_defaults_match_logical_model_classes() -> None:
     assert config.codex.reasoning_effort[ReasoningEffort.HIGH] == "high"
 
 
-def test_config_json_omits_stale_falv_recovery_key() -> None:
-    config = config_from_dict({"codex": {"num_try_falv_recovery": False}})
+def test_config_json_preserves_falv_recovery_count() -> None:
+    config = config_from_dict({"codex": {"num_try_falv_recovery": 3}})
 
-    assert "num_try_falv_recovery" not in config_to_dict(config)["codex"]
+    assert config.codex.num_try_falv_recovery == 3
+    assert config_to_dict(config)["codex"]["num_try_falv_recovery"] == 3
 
 
 def test_load_config_missing_points_to_init(tmp_path: Path) -> None:
@@ -269,6 +270,8 @@ def test_config_rejects_non_object_sections(section: str, value: object) -> None
     [
         {"num_parallel": True},
         {"num_parallel": "3"},
+        {"codex": {"num_try_falv_recovery": False}},
+        {"codex": {"num_try_falv_recovery": "1"}},
         {"apply_fork": {"num_apply_files": True}},
         {"apply_fork": {"num_apply_files": "200"}},
         {"review_oracle": {"num_enumerate_findings_loop": False}},
