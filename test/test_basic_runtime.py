@@ -27,6 +27,7 @@ from cmoc_runtime import (
     CmocError,
     SubcommandLogger,
     config_from_dict,
+    config_to_dict,
     create_run_worktree,
     ensure_cmoc_ignored,
     file_access_to_sandbox_mode,
@@ -207,7 +208,12 @@ def test_config_defaults_match_logical_model_classes() -> None:
         "codex", "gpt-5.5"
     )
     assert config.codex.reasoning_effort[ReasoningEffort.HIGH] == "high"
-    assert config.codex.num_try_falv_recovery == 1
+
+
+def test_config_json_omits_stale_falv_recovery_key() -> None:
+    config = config_from_dict({"codex": {"num_try_falv_recovery": False}})
+
+    assert "num_try_falv_recovery" not in config_to_dict(config)["codex"]
 
 
 def test_load_config_missing_points_to_init(tmp_path: Path) -> None:
@@ -263,8 +269,6 @@ def test_config_rejects_non_object_sections(section: str, value: object) -> None
     [
         {"num_parallel": True},
         {"num_parallel": "3"},
-        {"codex": {"num_try_falv_recovery": False}},
-        {"codex": {"num_try_falv_recovery": "1"}},
         {"apply_fork": {"num_apply_files": True}},
         {"apply_fork": {"num_apply_files": "200"}},
         {"review_oracle": {"num_enumerate_findings_loop": False}},
