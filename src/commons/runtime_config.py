@@ -9,6 +9,7 @@ from config.cmoc_config import (
     CmocConfigCodex,
     CmocConfigReviewOracle,
 )
+from oracle.other.cmoc_config import CodexModelSpec
 
 from commons.runtime_errors import CmocError
 from commons.runtime_paths import config_path
@@ -22,7 +23,10 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
         "num_parallel": config.num_parallel,
         "codex": {
             "model": {
-                key.value: value
+                key.value: {
+                    "model_provider": value.model_provider,
+                    "model": value.model,
+                }
                 for key, value in sorted(
                     config.codex.model.items(), key=lambda item: item[0].value
                 )
@@ -65,6 +69,24 @@ def _enum_str_map_from_dict(
     return restored
 
 
+def _model_spec_map_from_dict(
+    default: dict[ModelClass, CodexModelSpec],
+    data: Any,
+) -> dict[ModelClass, CodexModelSpec]:
+    restored = dict(default)
+    if not isinstance(data, dict):
+        raise TypeError
+    for key, value in data.items():
+        if not isinstance(value, dict):
+            raise TypeError
+        provider = value.get("model_provider")
+        model = value.get("model")
+        if provider not in {"codex", "cmoc"} or not isinstance(model, str):
+            raise TypeError
+        restored[ModelClass(key)] = CodexModelSpec(provider, model)
+    return restored
+
+
 def _section(data: dict[str, Any], key: str) -> dict[str, Any]:
     if key not in data:
         return {}
@@ -88,10 +110,9 @@ def config_from_dict(data: dict[str, Any]) -> CmocConfig:
     default = CmocConfig()
     try:
         codex_data = _section(data, "codex")
-        model = _enum_str_map_from_dict(
+        model = _model_spec_map_from_dict(
             default.codex.model,
             codex_data.get("model", {}),
-            ModelClass,
         )
         reasoning_effort = _enum_str_map_from_dict(
             default.codex.reasoning_effort,

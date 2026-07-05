@@ -8,6 +8,7 @@ import pytest
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from cmoc_runtime import CmocError
 from config.cmoc_config import CmocConfig
+from oracle.other.cmoc_config import CodexModelSpec
 from _support import (
     make_repo,
     run_git,
@@ -155,6 +156,8 @@ def test_run_codex_exec_uses_local_slm_profile_without_builtin_ollama_flags(
     port_path = root / ".cmoc" / "local" / "ollama" / "port"
     port_path.parent.mkdir(parents=True)
     port_path.write_text("49153\n")
+    config = CmocConfig()
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", "smollm2:135m")
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"
@@ -179,7 +182,7 @@ def test_run_codex_exec_uses_local_slm_profile_without_builtin_ollama_flags(
 
     run_codex_exec(
         AgentCallParameter(
-            ModelClass.LOCAL_SLM,
+            ModelClass.MINIMUM,
             ReasoningEffort.LOW,
             FileAccessMode.READONLY,
             "prompt",
@@ -187,7 +190,7 @@ def test_run_codex_exec_uses_local_slm_profile_without_builtin_ollama_flags(
         ),
         root=root,
         capacity_initial_sleep_sec=0,
-        config=CmocConfig(),
+        config=config,
     )
 
     record = json.loads(recorder.read_text())

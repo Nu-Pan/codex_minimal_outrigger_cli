@@ -4,6 +4,7 @@ from pathlib import Path
 
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from config.cmoc_config import CmocConfig
+from oracle.other.cmoc_config import CodexModelSpec
 from commons.runtime_codex_profile import prepare_codex_profile
 from main import app
 from _support import make_repo, run_doctor, run_git, runner
@@ -39,7 +40,19 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
     config_path = root / ".cmoc" / "config.json"
     config_path.parent.mkdir()
     config_path.write_text(
-        json.dumps({"num_parallel": 3, "codex": {"model": {"mainstream": "CUSTOM"}}})
+        json.dumps(
+            {
+                "num_parallel": 3,
+                "codex": {
+                    "model": {
+                        "mainstream": {
+                            "model_provider": "codex",
+                            "model": "CUSTOM",
+                        }
+                    }
+                },
+            }
+        )
         + "\n"
     )
     monkeypatch.chdir(root)
@@ -48,8 +61,14 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
 
     data = json.loads(config_path.read_text())
     assert data["num_parallel"] == 3
-    assert data["codex"]["model"]["mainstream"] == "CUSTOM"
-    assert data["codex"]["model"]["efficiency"] == "gpt-5.4-mini"
+    assert data["codex"]["model"]["mainstream"] == {
+        "model_provider": "codex",
+        "model": "CUSTOM",
+    }
+    assert data["codex"]["model"]["efficiency"] == {
+        "model_provider": "codex",
+        "model": "gpt-5.4-mini",
+    }
     assert data["codex"]["reasoning_effort"]["low"] == "low"
     assert data["apply_fork"]["num_apply_files"] == 200
 
@@ -81,16 +100,18 @@ def test_prepare_local_slm_profile_runs_doctor_when_port_is_missing(
     (root / ".cmoc" / "local" / "ollama" / "port").unlink()
     codex_home = tmp_path / "codex_home"
     codex_home.mkdir()
+    config = CmocConfig()
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", "smollm2:135m")
 
     profile_path = prepare_codex_profile(
         AgentCallParameter(
-            ModelClass.LOCAL_SLM,
+            ModelClass.MINIMUM,
             ReasoningEffort.LOW,
             FileAccessMode.READONLY,
             "prompt",
             None,
         ),
-        CmocConfig(),
+        config,
         codex_home,
         root,
     )

@@ -281,7 +281,7 @@ def _ollama_port_file(root: Path) -> Path:
 
 def _read_ollama_port(root: Path) -> int:
     """doctor preprocess が確保した ollama port を profile 境界で読む。"""
-    # <work-root>/oracle/doc/app_spec/ollama_slm_server.md
+    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
     # The profile must reference the repo-local ollama instance, not Codex's
     # built-in provider ID. The port is runtime state prepared under .cmoc/local.
     path = _ollama_port_file(root)
@@ -338,14 +338,14 @@ def build_codex_profile(
     allow_oracle_conflict_writes: bool = False,
 ) -> str:
     """AgentCallParameter と repo config から再利用可能な Codex profile 本文を作る。"""
-    model = config.codex.model[parameter.model_class]
+    model_spec = config.codex.model[parameter.model_class]
     reasoning_effort = config.codex.reasoning_effort[parameter.reasoning_effort]
     lines = [
-        f'model = "{model}"',
+        f'model = "{model_spec.model}"',
         f'model_reasoning_effort = "{reasoning_effort}"',
     ]
-    use_local_slm = parameter.model_class == ModelClass.LOCAL_SLM
-    if use_local_slm:
+    use_cmoc_ollama = model_spec.model_provider == "cmoc"
+    if use_cmoc_ollama:
         lines.append(f'model_provider = "{_OLLAMA_PROVIDER_ID}"')
     if root is not None:
         root = root.resolve()
@@ -368,7 +368,7 @@ def build_codex_profile(
                 allow_oracle_conflict_writes,
             ),
         )
-    if use_local_slm:
+    if use_cmoc_ollama:
         _append_ollama_provider_section(lines, root)
     lines.append("")
     return "\n".join(lines)
@@ -436,7 +436,8 @@ def prepare_codex_profile(
 ) -> Path:
     """Codex home 内へ内容 hash 名の profile を作り、同一内容なら再利用する。"""
     if (
-        parameter.model_class == ModelClass.LOCAL_SLM
+        (config or CmocConfig()).codex.model[parameter.model_class].model_provider
+        == "cmoc"
         and root is not None
         and not _ollama_port_file(root.resolve()).exists()
     ):

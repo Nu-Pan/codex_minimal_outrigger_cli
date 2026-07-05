@@ -18,6 +18,7 @@ import pytest
 import cmoc_runtime
 import commons.indexing as indexing_common
 from basic.acp import AgentCallParameter, ModelClass
+from oracle.other.cmoc_config import CodexModelSpec
 
 from _support import (
     current_branch,
@@ -190,7 +191,8 @@ def test_indexing_preflight_in_apply_worktree_uses_repo_config(
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
     config = cmoc_runtime.sync_config(root)
-    config.codex.model[ModelClass.EFFICIENCY] = "CUSTOM-INDEXING-EFFICIENCY"
+    custom_model = CodexModelSpec("codex", "CUSTOM-INDEXING-EFFICIENCY")
+    config.codex.model[ModelClass.EFFICIENCY] = custom_model
     cmoc_runtime.write_config(root / ".cmoc" / "config.json", config)
     apply_worktree = root / ".cmoc" / "local" / "worktree" / "session" / "run"
     run_git(
@@ -202,7 +204,7 @@ def test_indexing_preflight_in_apply_worktree_uses_repo_config(
         str(apply_worktree),
         "HEAD",
     )
-    seen_models: list[str] = []
+    seen_models: list[CodexModelSpec] = []
 
     class FakeCodexResult:
         output_json = {
@@ -222,7 +224,7 @@ def test_indexing_preflight_in_apply_worktree_uses_repo_config(
     indexing_common.run_indexing_preflight(apply_worktree, fake_codex_exec)
 
     assert seen_models
-    assert set(seen_models) == {"CUSTOM-INDEXING-EFFICIENCY"}
+    assert set(seen_models) == {custom_model}
     assert (apply_worktree / "INDEX.md").is_file()
     assert (apply_worktree / ".cmoc" / "config.json").is_file()
 

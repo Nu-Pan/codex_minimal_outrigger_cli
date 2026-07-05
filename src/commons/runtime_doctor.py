@@ -10,7 +10,6 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
-from basic.acp import ModelClass
 from config.cmoc_config import CmocConfig
 
 from commons.runtime_config import load_config, sync_config
@@ -22,6 +21,7 @@ _OLLAMA_PORT_MIN = 49152
 _OLLAMA_PORT_MAX = 65535
 _OLLAMA_CONNECT_TIMEOUT_SEC = 0.5
 _OLLAMA_START_TIMEOUT_SEC = 30.0
+_FALLBACK_LOCAL_SLM_MODEL = "smollm2:135m"
 
 
 def run_doctor_preprocess(root: Path) -> None:
@@ -66,7 +66,7 @@ def _commit_doctor_repairs(root: Path) -> None:
 
 
 def _ensure_ollama_serves_local_slm(root: Path) -> None:
-    # <work-root>/oracle/doc/app_spec/ollama_slm_server.md
+    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
     # repo-local な ollama instance と port file を Codex profile 境界で共有する。
     with _ollama_lock(root):
         executable = _ensure_ollama_installed(root)
@@ -80,7 +80,10 @@ def _local_slm_model(root: Path) -> str:
         config = load_config(root)
     except CmocError:
         config = CmocConfig()
-    return config.codex.model[ModelClass.LOCAL_SLM]
+    for spec in config.codex.model.values():
+        if spec.model_provider == "cmoc":
+            return spec.model
+    return _FALLBACK_LOCAL_SLM_MODEL
 
 
 def _ollama_root(root: Path) -> Path:
