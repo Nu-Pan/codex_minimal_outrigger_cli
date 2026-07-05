@@ -61,24 +61,23 @@
 # `commons`
 
 ## Summary
-- cmoc の共有 runtime 実装をまとめる領域。Codex CLI 起動、profile、config、content hash、CLI 実行境界、doctor 前処理、error、git、logging、path、result、state、indexing preflight、apply process 管理など、複数 command から使われる共通実行時支援を扱う。
-- runtime 系 API の集約 import 入口と、責務別 runtime_* 実装の入口になる。
+- cmoc の共通 runtime 実装を集める領域。Codex 起動、CLI 実行、設定、content hash、doctor 前処理、error、git、logging、path、result、state、apply process 管理、INDEX.md preflight など、複数の command から使われる実行時支援を扱う。
+- 公開入口や互換 import だけを担う小さな module と、責務別の runtime_* 実装が同居しており、共通 API の集約点から個別の処理実装へ進むための入口になる。
 
 ## Read this when
-- CLI command や agent 実行系から呼ばれる共通 runtime helper の定義元を探したいとき。
-- Codex exec/TUI の起動、profile、Structured Output、quota/capacity retry、call log、preflight、subprocess 追跡の実装箇所を絞り込みたいとき。
-- config 読み書き、git 操作、path 解決、state 永続化、共通 error/report、subcommand logging など、複数機能で共有される実行時処理を確認または変更したいとき。
-- INDEX.md の自動更新や indexing preflight、または apply abandon の process 停止・worktree 解決の実装を探したいとき。
-- runtime helper の公開入口から責務別 module への接続関係を確認したいとき。
+- CLI サブコマンドや agent 実行から共有される runtime helper の所在を探したいとき。
+- Codex exec/TUI 起動、profile、Structured Output、quota/capacity retry、call log、preflight indexing、apply subprocess 追跡など、Codex 呼び出し周辺の共通実行制御を確認または変更したいとき。
+- config 永続化、git 操作、path 解決、error 表示、result モデル、session state、subcommand logging、content hash 保存など、command 横断の runtime 基盤を確認または変更したいとき。
+- 複数の runtime 実装にまたがる公開 import 面や、既存 import path を維持する互換入口を確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの CLI 引数、利用者向け制御フロー、業務ロジックだけを調べたいときは、command 実装側を読む。
-- oracle file にある正本仕様、prompt 本文、INDEX.md entry の文章基準、path keyword の概念定義だけを確認したいときは、oracle 側の該当文書を読む。
-- 生成済み INDEX.md の個別 entry 内容、実行済み log、特定 session の状態内容を確認したいだけで、共通 runtime 実装を変更しないとき。
-- 特定 helper の低レベル挙動が分かっており、その責務別 runtime_* module を直接読めるときは、この階層全体ではなく対象 module へ進む。
+- 個別 CLI サブコマンドの利用者向け仕様、引数、上位制御フローだけを調べたいときは、該当する command 実装へ進む。
+- path keyword、config 型、oracle file 判定、INDEX.md entry 文面などの正本仕様を確認したいときは、対応する oracle 側の文書または実装を読む。
+- 生成済みログ、生成済み INDEX.md、特定 directory のルーティング内容など、runtime 実装ではなく成果物の内容を確認したいだけのときは、その成果物または対象本文を読む。
+- 個別 helper の具体的な挙動を調べる対象が既に分かっているときは、この階層全体ではなく責務別 module を直接読む。
 
 ## hash
-- f48670b6d20fab9d3f36e2523ecf8b2547053ffb9208029acf48e8277ce8c876
+- aa6b5fbafa7acc34ff9678e204994c848f8e81edb6ff09edd371e5edba710d02
 
 # `config`
 

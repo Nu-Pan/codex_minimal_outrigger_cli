@@ -123,26 +123,27 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に固定する回帰テスト。root placeholder 解決、linked worktree と run/work root、config 読み書きと validation、CmocError の Markdown 表示、CLI error の stdout 化、subcommand log、session/apply branch state、`.cmoc` ignore、FileAccessMode から Codex sandbox/profile への変換、binary 判定など、個別サブコマンドより下位の共通実行前提を扱う。
-- 共通 fixture と root 状態を共有して検証する性質が強く、個別機能の単体テストではなく runtime 境界の崩れをまとめて検出する入口として位置づけられる。
+- cmoc の基礎 runtime 契約を横断的に検証する回帰テスト。root placeholder と worktree 解決、設定の既定値・検証・変換、CmocError と CLI error report、subcommand log、gitignore 更新、FileAccessMode から Codex sandbox/profile への変換、session/apply branch state、binary 判定など、サブコマンド実行前提として一緒に崩れやすい共通挙動を扱う。
+- 個別サブコマンドより下位の共通 runtime 境界を一箇所で確認する入口。root 状態や共通 fixture を共有するため、basic runtime の変更が複数領域へ波及する場合に読む。
 
 ## Read this when
-- root path placeholder、repo root、work root、run root、linked worktree の扱いを変更または調査する。
-- CmocConfig の既定値、dict 変換、config validation、missing config error を変更または調査する。
-- CmocError、CLI parse error、CLI preflight error、error report の stdout/stderr 境界や Markdown 表示を変更または調査する。
-- subcommand log の生成条件、timestamp 衝突時の log path、pre-log check 失敗時の副作用を変更または調査する。
-- session/apply branch 名から session id や state を扱う処理を変更または調査する。
-- `.cmoc` の gitignore 追加、run worktree 作成・削除の安全境界を変更または調査する。
-- FileAccessMode、Codex sandbox mode、Codex profile の writable/readable path 制約、local SLM provider 設定を変更または調査する。
-- binary 判定の読み取り量や runtime content 判定を変更または調査する。
+- root 解決、placeholder path、repo root と linked worktree の扱い、main worktree の拒否条件を変更する。
+- run worktree の作成・削除の安全条件や、cmoc 管理外 path の拒否挙動を変更する。
+- cmoc config の既定値、JSON 変換、型検証、missing config error を変更する。
+- CmocError の Markdown report、CLI parse error、stdout/stderr の出し分け、preflight 失敗時の副作用抑制を変更する。
+- subcommand log の生成条件、timestamp 衝突時の log file 作成、completion probe 時の副作用抑制を変更する。
+- branch 名から session id を解釈する処理や、session state の読み書き・拒否条件を変更する。
+- FileAccessMode の永続化値、sandbox mode 変換、Codex profile の writable root・extra writable path・provider 設定を変更する。
+- `.cmoc` の gitignore 追加方針、起動 wrapper の missing venv report、binary 判定の読み取り範囲を変更する。
 
 ## Do not read this when
-- 特定サブコマンド固有の正常系・業務ロジックだけを確認したい場合は、そのサブコマンドのテストを先に読む。
-- oracle 文書の正本仕様や prompts の内容を確認したい場合は、対応する oracle file を直接読む。
-- 個別 helper の内部実装だけを局所的に変更し、root/config/error/profile など共通 runtime 契約に影響しないことが明らかな場合は、該当実装とより小さいテストを先に読む。
+- 個別サブコマンド固有の正常系・業務ロジックだけを確認したい場合は、そのサブコマンドのテストを読む。
+- oracle 文書や oracle src の正本仕様そのものを確認したい場合は、対応する oracle file を読む。
+- 単一 helper の内部実装だけを局所的に変更し、共通 runtime 契約や CLI 表示・sandbox/profile・state に影響しないことが明らかな場合は、該当実装とより近いテストを読む。
+- INDEX.md のルーティング記述やファイル構成だけを更新する場合は、この runtime 回帰テストを読む必要はない。
 
 ## hash
-- a21e84da85716a6c94671abc7b170415e0ad9e49f927f2b265896bb4f6c574cb
+- 7a81fb23603026cd77dc60a4d591f76e8be5b56b9a8a9eb72c1fa95bfd4a6459
 
 # `test_cli_tui.py`
 
