@@ -578,7 +578,7 @@ def test_update_indexes_creates_empty_index_for_empty_directory(
     assert (empty_dir / "INDEX.md").read_text() == ""
 
 
-def test_update_indexes_generates_sibling_entries_serially(
+def test_update_indexes_generates_sibling_entries_in_stable_render_order(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -613,7 +613,9 @@ def test_update_indexes_generates_sibling_entries_serially(
     updated = indexing_common.update_indexes(root)
 
     assert docs / "INDEX.md" in updated
-    assert calls == ["a.txt", "b.txt"]
+    assert sorted(calls) == ["a.txt", "b.txt"]
+    rendered = (docs / "INDEX.md").read_text()
+    assert rendered.index("# `a.txt`") < rendered.index("# `b.txt`")
 
 
 def test_update_indexes_generates_non_ancestor_indexes_in_parallel(
