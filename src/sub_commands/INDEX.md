@@ -87,24 +87,25 @@
 # `review_index.py`
 
 ## Summary
-- review 用 worktree と review branch に含まれる差分が INDEX.md のみであることを検査し、INDEX.md 変更だけを commit して session branch へ merge する処理を扱う。
-- review branch の merge 失敗時に、競合対象が INDEX.md だけなら ours 側または削除で自動解決し、解決不能な差分や競合は CmocError として扱う。
-- git status、diff、merge、checkout、rm、commit、ls-files を使った review oracle indexing 周辺の git 制御ロジックへの入口である。
+- review 用 worktree/branch に生じた差分を INDEX.md のみに制限し、必要な INDEX.md 変更だけを commit する処理を扱う。
+- review branch を session branch へ merge し、競合が INDEX.md だけの場合に ours 側採用または削除で自動解決して merge commit を完了させる処理を扱う。
+- git status、diff、merge、checkout、rm、commit を通じて review oracle indexing の差分検査・確定・取り込みを行う入口である。
 
 ## Read this when
-- review oracle が生成した INDEX.md 変更だけを commit する処理を確認・変更したいとき。
-- review branch に INDEX.md 以外の commit 済み差分が混入していないか検査する挙動を確認・変更したいとき。
-- review branch を session branch へ merge する処理、または INDEX.md だけの merge conflict 自動解決を扱うとき。
-- review worktree の git status porcelain 出力から変更 path を抽出する処理を確認したいとき。
+- review oracle が作った差分に INDEX.md 以外が混ざった場合のエラー条件や確認方法を調べるとき。
+- review worktree 上の INDEX.md 変更を commit する条件、commit しない条件、戻り値を確認するとき。
+- base commit 以降の review branch 差分が INDEX.md だけであることを検査する処理を確認するとき。
+- review branch の merge 失敗時に、INDEX.md 競合だけを自動解決する挙動を変更・確認するとき。
+- review oracle indexing と review branch merge の git コマンド呼び出し順や失敗時の CmocError を追うとき。
 
 ## Do not read this when
-- 通常の sub command 引数解析、CLI 出力、または review command 全体の制御フローを確認したいだけのとき。
-- INDEX.md エントリーの生成内容や oracle 文書のルーティング規則そのものを確認したいとき。
-- review 以外の sub command の git 操作や worktree 操作を扱うとき。
-- 一般的な git 実行ラッパー、HEAD 取得、CmocError の定義を確認したいとき。
+- INDEX.md エントリー本文の生成規則や preflight indexing 全体の仕様を確認したいだけの場合は、対応する oracle doc を読む。
+- git コマンド実行ラッパー、HEAD commit 取得、status path 収集の共通処理そのものを変更したい場合は、それらの runtime/helper 側を読む。
+- review oracle のプロンプト、分離 worktree の作成、または subcommand 全体の制御フローを調べたい場合は、上位の review command 実装を読む。
+- INDEX.md 以外の通常ファイル差分を merge・解決する汎用的な仕組みを探している場合は、この対象ではない。
 
 ## hash
-- bd938a309c570ac01ae74652549b60ad737ca35824a7dc2043b471f2db2d8464
+- 500e71a4ff36cb5a35cbc12a4bb56b76f82c137800554580654c20e984e4fc66
 
 # `review_loop.py`
 
@@ -188,24 +189,22 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドの実装をまとめるディレクトリ。session branch の作成、home branch への join、merge せず破棄する abandon など、session の状態遷移と git 操作を CLI runtime 経由で実行する処理を収める。
-- 個別サブコマンドの実行条件、branch/state 更新、clean worktree や active session の事前条件確認、失敗時の CmocError と利用者向け出力を調べる入口になる。
-- join では merge conflict 解消を Codex CLI に依頼する制御、conflict 対象外差分や未解消状態の検出、merge commit までの監視も扱う。
+- session 系サブコマンド実装をまとめるディレクトリ。session fork、join、abandon と、パッケージ境界を示す初期化モジュールを含む。
+- session branch の作成、home branch への join、merge せず破棄する abandon など、session の lifecycle 操作に関する CLI 実装へ進む入口となる。
 
 ## Read this when
-- session 系サブコマンド全体の実装場所を探し、作成・join・破棄のどの処理へ進むべきか判断したいとき。
-- session branch と home branch の関係、session state file の作成・更新、branch 削除、active session の有無確認に関わる CLI 挙動を調べたいとき。
-- session join の merge conflict 解消フロー、対象外差分の拒否、未解消 marker や unmerged path の検出を調査または変更したいとき。
-- session サブコマンドの利用者向け出力、失敗時 rollback、手動復旧メッセージ、CmocError の文脈情報を確認したいとき。
+- session 系サブコマンドの実装場所を選びたいとき。
+- session fork、join、abandon の実行条件、状態遷移、branch 操作、利用者向け出力の実装を調べたいとき。
+- session join の merge conflict 解消制御、または session abandon の rollback/cleanup failure handling を調べたいとき。
+- session branch と home branch の関係、active session state file の作成・更新・削除に関わるサブコマンド実装を確認したいとき。
 
 ## Do not read this when
 - session 系サブコマンドの正本仕様だけを確認したいときは、対応する oracle doc を読む。
-- session state のデータ構造、永続化形式、path model、git wrapper、worktree 検証などの共通 helper の詳細だけを調べたいときは、runtime や state model 側へ進む。
-- 共通 CLI ルーティング、サブコマンド登録、または session 以外のサブコマンド実装を調べたいときは、該当する上位または別サブコマンドの実装へ進む。
-- join の conflict 解消で Codex CLI に渡す prompt や実行 parameter の内容だけを確認したいときは、builder 側の conflict resolution 定義を読む。
+- CLI 全体の dispatch、共通 runtime、git wrapper、worktree 検証、state schema、path model の詳細を調べたいときは、それぞれの共通実装へ進む。
+- session 以外のサブコマンド、apply workflow、または共通 indexing 処理を調べたいとき。
 
 ## hash
-- ececbe728f46af93eb9db9769da311f7af8753d226e4c9901504798b8c21f0ac
+- 6808f64c3c792e174df9f8e8c533af5b52df67831d9f56984a39f0e333744e09
 
 # `tui.py`
 

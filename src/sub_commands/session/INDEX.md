@@ -58,21 +58,19 @@
 # `join.py`
 
 ## Summary
-- session join サブコマンドの実行本体を扱う。active session branch を session home branch へ merge し、state 更新、session branch 削除判定、利用者向け結果出力までを担当する。
-- merge conflict 発生時に Codex CLI へ conflict 解消を依頼し、conflict 対象外の差分混入、未解消 marker、unmerged path を検出して merge commit まで進める制御を含む。
-- session join の事前条件確認、clean worktree 確認、cmoc ignore 確認、post-precondition failure の stderr 報告指定など、CLI runtime と git 操作をつなぐ入口として読む。
+- `session join` の実行本体を扱う CLI 実装。active session branch の事前条件確認、session home branch への merge、状態更新、session branch 削除判定、利用者向け結果出力を担う。
+- merge conflict 発生時に Codex CLI へ conflict 解消を依頼し、conflict 対象外の差分拒否、conflict marker 残存検出、unmerged path 確認、merge commit 完了までの制御を担う。
+- git の変更スナップショット、path fingerprint、可変長 conflict marker block 検出など、session join の安全境界を保つための補助処理を含む。
 
 ## Read this when
-- session join の実行条件、状態遷移、merge 先、session branch 削除可否、結果出力を確認または変更したいとき。
-- session join 中の merge conflict 解消フロー、Codex CLI に渡す conflict 対象、oracle conflict 書き込み例外、対象外差分の拒否を確認または変更したいとき。
-- conflict marker 検出、unmerged path 検出、merge commit 実行、git status snapshot や path fingerprint による差分監視の挙動を確認したいとき。
-- session join の失敗時に CmocError がどの文脈情報や stderr 報告指定を持つか調べたいとき。
+- `cmoc session join` の挙動、事前条件、出力、状態遷移、session branch 削除条件を確認または変更したいとき。
+- session join 中の merge conflict 解消フロー、Codex CLI への依頼内容、oracle conflict 書き込み許可、conflict 対象外差分の拒否条件を確認または変更したいとき。
+- session join 失敗時のエラー出力先、manual resolution を要求する条件、conflict marker 検出や unmerged path 検査の実装を調べるとき。
 
 ## Do not read this when
-- session join conflict 解消用に Codex CLI へ渡す prompt や実行 parameter の内容だけを確認したい場合は、builder 側の conflict resolution 定義を読む。
-- session state や apply state のデータ構造、永続化形式、branch と state file の対応を確認したいだけの場合は、runtime や state model の定義を読む。
-- 他の session サブコマンドの CLI 仕様や処理を調べたい場合は、それぞれのサブコマンド実装へ進む。
-- INDEX.md エントリー生成や indexing preflight 自体の仕様を調べたい場合は、indexing 側の実装を読む。
+- session join 用 Codex prompt や conflict resolution parameter の組み立てだけを確認したい場合は、その builder 側を直接読む。
+- git status の path status 解析や runtime git wrapper の一般挙動を確認したい場合は、共通 runtime または indexing 側を直接読む。
+- session join 以外の session subcommand、apply workflow、または CLI 全体の dispatch を調べる場合は、それぞれの subcommand 実装や runtime 側を読む。
 
 ## hash
-- 2bab0b8755c1f1ea15a06cb24170cd761e236bc680131d28c9f38200241e073d
+- 17b55332f672e0cd9519d19f2fcdfc2695585dc4de1c08681a9a3db569e174a9

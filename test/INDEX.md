@@ -366,24 +366,21 @@
 # `test_session_cli.py`
 
 ## Summary
-- session fork/join/abandon の CLI 回帰テスト。session branch と session state のライフサイクルを中心に、linked worktree、state cleanup、dirty worktree 拒否、join 時の conflict 解消、branch 削除失敗時の外部挙動をまとめて検証する。
-- session 状態ファイルの生成・更新・破損検出、home/session branch の切替、preprocess による .cmoc/.agents/.gitignore 整理、stdout/stderr へのエラー出力先など、session CLI の観測可能な挙動を扱う。
+- session fork/join/abandon の CLI 回帰テスト。session branch と session state のライフサイクルを軸に、状態ファイル作成・衝突、linked worktree、join 時の conflict 解消、branch 削除、cleanup、dirty worktree 拒否、stdout/stderr のエラー出力を検証する。
 
 ## Read this when
-- session fork、session join、session abandon の外部挙動や回帰テストを確認・変更する。
-- session branch と session state file のライフサイクル、既存 state との衝突、active/joined/abandoned 状態遷移を扱う。
-- linked worktree 上での session 操作、home branch の検出、root worktree との branch 状態の分離を確認する。
-- session join の merge conflict 解消、oracle conflict 解消用 agent 呼び出し、conflict marker 検出、delete conflict の stage 処理を変更する。
-- session completion 時の cleanup、branch 削除失敗時の警告、cleanup failure 時の rollback、未コミット差分拒否、エラー出力先を検証する。
+- session fork/join/abandon の外部挙動、終了後の branch/state 遷移、または出力内容を変更・確認する。
+- session 操作で linked worktree を扱う挙動、home branch への復帰、session branch 削除可否、state cleanup の回帰を確認する。
+- session join の conflict 解消 agent 呼び出し、oracle conflict 書き込み許可、conflict marker 検出、非 conflict 差分拒否を確認する。
+- session 操作前後の preprocess、.cmoc/.agents の追跡状態、dirty worktree や不正 state file の拒否を確認する。
 
 ## Do not read this when
-- session CLI 以外のサブコマンド挙動を調べる場合。
-- session の内部 helper 単体の細部だけを確認したい場合で、対象 helper の実装ファイルまたはより小さい単体テストへ直接進める場合。
-- doctor、config、runtime profile、agent call parameter の一般仕様を確認したいだけで、session join/fork/abandon の外部挙動に関係しない場合。
-- oracle file の正本仕様そのものを読む必要がある場合。
+- session 以外の CLI サブコマンドや doctor 単体の挙動だけを確認する。
+- session の内部 helper 実装だけを変更し、fork/join/abandon の外部挙動や branch/state ライフサイクルに影響しない。
+- apply 系の状態遷移や agent call 全般を確認したいだけで、session join の conflict 解消経路を扱わない。
 
 ## hash
-- 2943eb85367151a80f9c8136874af2c73d52ff9ebc2e8e1576c8db6c2277c43c
+- fc3e96ceebf51d7fff64d10e7b20b02d59840d6b03a23aae70b2f245aa3f8591
 
 # `test_struct_doc_rendering.py`
 

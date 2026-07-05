@@ -116,22 +116,24 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループと、その周辺の実行制御を扱う。Structured Output 検証、semantic retry、capacity retry、quota 待機と代表 probe、resume 継続、call log・prompt/stdout/stderr/output log、subcommand event 記録を同じ状態機械としてまとめている。
-- Codex CLI 呼び出し用の cwd/profile/CODEX_HOME/schema/argv 準備、quota probe 用の別 AgentCallParameter 実行、CodexExecResult の組み立て、Codex call 後の worktree 変更 path 取得もここで扱う。
+- Codex exec の単一試行ループを中心に、Structured Output 検証、semantic retry、capacity retry、quota 代表 probe、resume 継続、call log/subcommand event 記録を同じ状態機械として制御する実行制御モジュール。
+- Codex CLI 呼び出し用の prompt/stdout/stderr/output/call log を作成し、profile・schema・cwd・CODEX_HOME を解決したうえで `codex exec` の argv と subprocess 実行を管理する。
+- agent call 後の worktree 変更 path を git status から absolute path として取得し、必要に応じて ignored file も含める補助処理も持つ。
 
 ## Read this when
-- Codex exec 呼び出しの再試行条件、quota 枯渇時の待機・代表 probe・resume token 継続、capacity error の backoff、Structured Output schema 検証失敗時の扱いを確認または変更したいとき。
-- Codex call の prompt/stdout/stderr/output/call log の生成内容、subcommand log へ記録される codex_call event、CodexExecResult に入る実行結果 metadata を追いたいとき。
-- Codex exec に渡す profile、CODEX_HOME、cwd、output schema、argv、stdin prompt log の関係を確認したいとき。
-- agent call 後の worktree 変更 path 収集や、ignored file を含めた git status path 取得の挙動を確認したいとき。
+- Codex exec 呼び出しの再試行、quota 待機、capacity error、resume token、Structured Output schema 検証の挙動を確認・変更したいとき。
+- Codex call log、prompt log、stdout/stderr/output log、subcommand event の生成内容や記録タイミングを確認・変更したいとき。
+- Codex 実行時の cwd、CODEX_HOME、profile、schema path、subprocess env、`codex exec` argv の組み立てを追う必要があるとき。
+- agent call 後に変更された worktree path の収集方法、untracked/ignored file の扱いを確認・変更したいとき。
 
 ## Do not read this when
-- TUI 起動や exec 以外の Codex 起動経路を調べたいだけのとき。
-- Codex profile 生成、runtime config 読み込み、path model、git command 実行 wrapper の詳細を変更したいときは、それぞれの専用 module を直接読む。
-- 個別 subcommand の仕様や apply requeue 全体の制御を調べたいときは、subcommand 側の実装を先に読む。
+- TUI 起動や exec 以外の UI 分岐を調べたいとき。
+- Codex profile、schema、CODEX_HOME、エラー判定、resume token 抽出などの低レベル helper 自体の実装を変更したいだけのときは、それらを定義する runtime Codex profile 周辺の対象を直接読む。
+- subcommand log の保存基盤や logger 実装そのものを変更したいだけのときは、logging 側の対象を直接読む。
+- git command 実行 wrapper や status parser の基本挙動を変更したいだけのときは、runtime git 側の対象を直接読む。
 
 ## hash
-- 1b1106ae235e45a3122e44bd13d6ad3a1dc0cbd97a3e7467a4175771349467dc
+- e1f74822c797e29849d127c111c4bbc37474ecf138420832a35f0dc3163d93ed
 
 # `runtime_codex_logging.py`
 
@@ -302,23 +304,25 @@
 # `runtime_git.py`
 
 ## Summary
-- git コマンド実行を cmoc のエラー形式へ変換し、現在 branch・HEAD commit・clean worktree 条件・branch 存在確認など、git repository の基本状態を取得/検査する helper を持つ。
-- cmoc 管理 branch と linked worktree の作成・削除・branch 削除を扱い、管理外 worktree 削除を防ぐために branch 名と `.cmoc/local/worktree` 配下の期待 path を検証する。
-- `.cmoc` / `.cmoc/local` の git ignore 状態を `.gitignore` または git exclude に反映・検査し、oracle file 判定などで使う git ignore 判定 helper を提供する。
+- git コマンド実行を cmoc のエラー形式へ変換し、branch・HEAD・status・worktree・branch 削除などの git 操作を共通化する runtime helper。
+- .cmoc/local の git ignore 状態を検査・更新し、oracle file 判定や git ignore 判定など、git の追跡・ignore 状態に依存するファイル分類を扱う。
+- cmoc 管理 branch namespace と linked worktree の対応を検証し、管理外 worktree の削除を防ぐ安全境界を担う。
 
 ## Read this when
-- git subprocess の失敗を `CmocError` にそろえる境界や、git command の stdout/stderr/returncode を扱う共通処理を確認・変更したいとき。
-- cmoc が作る branch namespace、run/apply 用 linked worktree の作成・削除、管理外 worktree 削除防止の条件を確認・変更したいとき。
-- `.cmoc/local` を git 追跡対象外にする処理、`.gitignore` / git exclude への ignore pattern 追加、初期化済み repository の ignore 検査を扱うとき。
-- git ignore 判定、oracle file path 判定、tracked file と ignored untracked file の扱いを確認・変更したいとき。
+- git subprocess の呼び出し、失敗時の CmocError 化、または git コマンド結果の扱いを確認・変更したいとき。
+- cmoc の session/run/apply 用 branch や linked worktree の作成・削除・管理領域判定に関わる挙動を確認・変更したいとき。
+- .cmoc/local を git 追跡対象外にする処理、.gitignore や git exclude への ignore pattern 追加、初期化済み repository の ignore 検査を扱うとき。
+- git status の porcelain 出力から path と status を取得する処理、rename/copy source の扱い、未追跡ファイルの列挙条件を確認・変更したいとき。
+- oracle file 判定、git ignored 判定、tracked file と ignore pattern の関係に基づくファイル分類を扱うとき。
 
 ## Do not read this when
-- cmoc の path keyword や work-root/run-root の概念定義そのものを確認したいだけなら、oracle 側の path model を読む。
-- CLI subcommand の引数定義、ユーザー向け出力 schema、session/apply/run の高レベルな制御フローを調べたいだけなら、各 subcommand 実装へ進む。
-- git とは無関係な runtime path 計算、結果オブジェクト、汎用エラー型の詳細を変更したいだけなら、それぞれの commons module を直接読む。
+- cmoc の path keyword や work-root/run-root の概念定義だけを確認したいときは、path model 側を読む。
+- CLI subcommand の引数定義、表示文言、上位の実行フローを確認したいだけなら、各 subcommand 実装を直接読む。
+- CmocError や CommandResult のデータ構造そのものを確認したいときは、それぞれの runtime error/result 定義を読む。
+- oracle file や realization file の正本仕様を確認したいときは、この helper ではなく対応する oracle 文書を読む。
 
 ## hash
-- 1f4511030020ca1b4f7800fcc20154747a2585c309d64ece8ad785aebf5627d8
+- 73c3866df657cea05215893e182b3d869328aff8d031cb776f886880a2174d99
 
 # `runtime_logging.py`
 
