@@ -276,6 +276,50 @@ def test_session_abandon_uses_linked_worktree_branch(
     assert f"- abandoned_branch: `{session_branch}`" in result.output
 
 
+def test_session_abandon_preprocesses_linked_worktree_before_preconditions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    linked = root / ".cmoc" / "local" / "worktree" / "linked"
+    run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
+    monkeypatch.chdir(linked)
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(linked)
+    home_branch = session_home_branch(root, session_branch)
+    gitignore = linked / ".gitignore"
+    gitignore.write_text(
+        "\n".join(
+            line
+            for line in gitignore.read_text().splitlines()
+            if line != "/.cmoc/local/"
+        )
+        + "\n"
+    )
+    tracked_probe = linked / ".cmoc" / "tracked-probe"
+    tracked_probe.write_text("tracked\n")
+    run_git(linked, "add", ".gitignore")
+    run_git(linked, "add", "-f", ".cmoc/tracked-probe")
+    run_git(linked, "rm", ".agents/.gitkeep")
+    run_git(linked, "commit", "-m", "break linked worktree preprocess invariants")
+    run_git(root, "branch", "-D", home_branch)
+
+    result = runner.invoke(app, ["session", "abandon"])
+
+    assert result.exit_code != 0
+    assert current_branch(linked) == session_branch
+    assert "session home branch が存在しません。" in result.stdout
+    assert "/.cmoc/local/" in gitignore.read_text().splitlines()
+    assert run_git(linked, "ls-files", "--", ".cmoc").stdout == ""
+    assert run_git(linked, "ls-files", "--", ".agents").stdout.splitlines() == [
+        ".agents/.gitkeep"
+    ]
+    assert run_git(linked, "status", "--short").stdout.strip() == ""
+
+
 def test_session_abandon_requires_existing_home_branch(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
