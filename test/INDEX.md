@@ -363,24 +363,26 @@
 # `test_session_cli.py`
 
 ## Summary
-- session fork・join・abandon の CLI 回帰テスト群。session branch と session state のライフサイクルを中心に、状態ファイル生成・衝突時の保護、linked worktree 上の分岐、preprocess、cleanup、dirty worktree 拒否、join 時の conflict 解消と失敗時出力を検証する。
-- session CLI の外部挙動を、Git branch・worktree・state file・stdout/stderr・Codex conflict resolver 呼び出し条件まで含めて観測する入口。
+- session fork、join、abandon の CLI 回帰を、session branch と session state のライフサイクルを軸に検証する realization test。
+- linked worktree、state cleanup、dirty worktree 拒否、session-id 衝突、壊れた state、join conflict 解消、branch 削除失敗時の出力など、session CLI の外部挙動と状態遷移をまとめて扱う。
+- 16,000 文字を超えるが、同じ branch/state fixture を追う session CLI 回帰として凝集しているため一箇所に保つ意図が本文冒頭に記録されている。
 
 ## Read this when
-- session fork が session branch と state file をどう作るか、既存 state との session-id 衝突時に何を保護するかを確認したいとき。
-- session abandon が home branch へ戻る処理、session branch 削除、state の abandoned 化、cleanup 失敗時の rollback を確認したいとき。
-- session join が session branch の変更を home branch に取り込む処理、conflict 解消 agent の権限・許容差分・失敗時出力を確認したいとき。
-- linked worktree で session fork・join・abandon を実行した場合の branch/state/preprocess の扱いを確認したいとき。
-- session state file の必須 field 欠落や破損、dirty worktree、存在しない home branch などの session CLI エラー経路を変更・調査するとき。
+- session fork が session branch と state file を作る挙動、session-id 衝突時の retry・失敗、壊れた session state の拒否を確認したいとき。
+- session abandon が home branch へ戻る挙動、state を abandoned にする挙動、home branch 不在や cleanup 失敗時の rollback・エラー出力を確認したいとき。
+- session join が session branch の変更を home branch へ反映する挙動、joined state、session branch 削除可否、delete conflict 解消を確認したいとき。
+- linked worktree 上で session fork、join、abandon を実行した場合の branch 選択、state 保存場所、preprocess の挙動を確認したいとき。
+- oracle conflict 解消 agent の file access mode、書き込み許可範囲、conflict 解消以外の差分拒否、conflict marker 検出を確認したいとき。
+- session join、abandon の成功・失敗時に stdout と stderr のどちらへ完了報告やエラーが出るかを調べたいとき。
 
 ## Do not read this when
-- session CLI 以外の subcommand の挙動だけを確認したいとき。
-- session 状態遷移ではなく、単体 helper の純粋な path 変換や JSON schema の局所仕様だけを確認したいとき。
-- Codex 実行基盤そのものや profile 生成一般を調べたいだけで、session join conflict resolver 経由の権限設定に関心がないとき。
-- Git 操作 wrapper や test support fixture の一般的な実装を確認したいとき。
+- session CLI の実装構造や内部 helper の責務を変更したいだけで、外部挙動の回帰条件を確認する必要がないときは、対応する実装側を先に読む。
+- session 以外の sub command、設定読み込み、共通 runtime、doctor の個別仕様を調べたいときは、それぞれの対象へ直接進む。
+- 単体の git wrapper、path helper、ログ出力 helper の細部だけを確認したいときは、session CLI 全体の回帰を扱うこの対象から始めなくてよい。
+- oracle file の正本仕様そのものを確認したいときは、realization test ではなく oracle 側の該当箇所を読む。
 
 ## hash
-- 6b585ba24fa31ecbd1abf36365ec880a3bc736dcc3f72dfc8b7a44341e315904
+- 889f628ebbcd43943748868134d19693e97a29e71663a845e5034a26fe6e9d32
 
 # `test_struct_doc_rendering.py`
 

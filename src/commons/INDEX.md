@@ -387,20 +387,17 @@
 # `runtime_state.py`
 
 ## Summary
-- session state file の永続化モデルと読み書き操作を扱う実装。session/apply の state 断片、JSON schema 検証、cmoc 管理 branch 名からの session_id 抽出、現在 branch に対応する state 読み込み、canonical JSON 書き戻し、home branch に紐づく active session 探索をまとめている。
-- session state file の不正構造や不正な state 値、cmoc 管理外 branch、欠落した state file を CmocError として扱う境界もここにある。
+- session state file の永続化構造と読み書き、cmoc 管理 branch 名からの session_id 抽出、home branch に紐づく active session 探索を扱う。session/apply の state 断片を dataclass で表し、JSON schema 相当の必須 field と許可 state を読み込み時に検証する。
 
 ## Read this when
-- session state file の JSON 構造、必須 field、許容される session/apply state 値を確認または変更したいとき。
-- cmoc session branch や cmoc apply branch の命名から session_id を取り出す処理、または branch 種別ごとの state file 解決を扱うとき。
-- session state file の読み込み、検証、書き戻し、保存先 path、active session 探索に関する挙動を調べるとき。
-- session/apply の進行状態を更新する上位処理から、永続 state の表現やエラー条件を確認したいとき。
+- session state file の JSON 構造、canonical な保存形式、欠落 field や不正 state の扱いを確認したいとき。
+- cmoc session branch または cmoc apply branch から session_id を特定する処理や、その失敗時エラーを変更したいとき。
+- 現在 branch に対応する session state file の読み込み、書き戻し、または home branch から active session を探す処理を調べたいとき。
 
 ## Do not read this when
-- CLI subcommand の引数定義、画面出力、コマンド全体の制御フローを調べたいだけのとき。
-- session state file の仕様意図そのものを確認したいときは、対応する oracle doc を直接読む方がよい。
-- runtime path の基準ディレクトリ定義や session directory の組み立てだけを調べたいとき。
-- CmocError の表示形式や例外クラス自体の責務を調べたいとき。
+- runtime 上のディレクトリ配置や sessions directory の場所だけを確認したいときは、runtime paths を扱う対象を読む。
+- CmocError の表示形式やエラー出力全体の方針を確認したいときは、runtime errors を扱う対象を読む。
+- session/apply 各サブコマンドの CLI 制御フローそのものを変更したいときは、該当する command 実装を読む。
 
 ## hash
-- 639a3107fd6c4d1ad5208798d2042e7bdaa8b70ba12f3984bd72b4432b5dab30
+- d608145646343b8c53fb1f215b685f21693e0ada024aee1bbbd2f2b2abe8961e

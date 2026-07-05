@@ -191,22 +191,22 @@
 # `session`
 
 ## Summary
-- session 系サブコマンド実装をまとめるディレクトリ。session fork、join、abandon と、パッケージ境界を示す初期化モジュールを含む。
-- session branch の作成、home branch への join、merge せず破棄する abandon など、session の lifecycle 操作に関する CLI 実装へ進む入口となる。
+- session 系サブコマンドの実装をまとめるディレクトリ。session の作成、取り込み、破棄など、session branch と session state を扱う個別コマンド実装への入口になる。
+- 各コマンド実装は、clean worktree、active session、home branch、state file、branch 切り替え・削除などの事前条件と状態遷移を扱い、失敗時には利用者向けの復旧情報を返す。
+- merge conflict 解消や session-id 衝突回避など、特定コマンド固有の安全境界もこの配下の該当実装に分かれている。
 
 ## Read this when
-- session 系サブコマンドの実装場所を選びたいとき。
-- session fork、join、abandon の実行条件、状態遷移、branch 操作、利用者向け出力の実装を調べたいとき。
-- session join の merge conflict 解消制御、または session abandon の rollback/cleanup failure handling を調べたいとき。
-- session branch と home branch の関係、active session state file の作成・更新・削除に関わるサブコマンド実装を確認したいとき。
+- session 系サブコマンドのどの実装へ進むべきかを選びたいとき。
+- session branch の作成、home branch への取り込み、破棄、状態更新、branch 削除条件など、session 操作の実行本体を調べたいとき。
+- session 操作の事前条件、失敗時 rollback、cleanup、manual resolution、利用者向けエラーや出力の扱いを確認したいとき。
 
 ## Do not read this when
-- session 系サブコマンドの正本仕様だけを確認したいときは、対応する oracle doc を読む。
-- CLI 全体の dispatch、共通 runtime、git wrapper、worktree 検証、state schema、path model の詳細を調べたいときは、それぞれの共通実装へ進む。
-- session 以外のサブコマンド、apply workflow、または共通 indexing 処理を調べたいとき。
+- CLI 全体の dispatch、共通 runtime、git wrapper、path model、state schema そのものを調べたいとき。その場合は共通基盤側を読む。
+- apply workflow や session 以外のサブコマンド実装を調べたいとき。
+- session の正本仕様断片そのものを確認したいとき。その場合は oracle 側の該当文書を読む。
 
 ## hash
-- 6808f64c3c792e174df9f8e8c533af5b52df67831d9f56984a39f0e333744e09
+- ebca94b04c4964aacd9c7206a1c632dcd214cb6372dc3629f2533963058f98cc
 
 # `tui.py`
 
