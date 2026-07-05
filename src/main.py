@@ -99,6 +99,13 @@ def doctor() -> None:
     cmoc_doctor_impl()
 
 
+@app.command("dector")
+def dector_alias() -> None:
+    """usage 手順の `cmoc dector` を doctor 実装へ接続する CLI 入口。"""
+    # <work-root>/oracle/doc/app_spec/usage.md
+    cmoc_doctor_impl()
+
+
 @app.command()
 def tui() -> None:
     """Codex TUI を cmoc の依頼文と設定で起動する CLI 入口。"""

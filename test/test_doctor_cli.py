@@ -167,6 +167,21 @@ def test_doctor_generates_and_tracks_config(tmp_path: Path, monkeypatch) -> None
     ).stdout.splitlines() == [".cmoc/config.json"]
 
 
+def test_dector_alias_runs_doctor(tmp_path: Path, monkeypatch) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(
+        app,
+        ["dector"],
+        env=fake_managed_ollama_env(root),
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert (root / ".cmoc" / "config.json").is_file()
+
+
 def test_doctor_preprocess_targets_current_linked_worktree(
     tmp_path: Path, monkeypatch
 ) -> None:
