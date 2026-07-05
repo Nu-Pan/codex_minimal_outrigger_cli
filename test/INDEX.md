@@ -123,27 +123,24 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に検証する回帰テスト。root placeholder と worktree 解決、設定の既定値・検証・変換、CmocError と CLI error report、subcommand log、gitignore 更新、FileAccessMode から Codex sandbox/profile への変換、session/apply branch state、binary 判定など、サブコマンド実行前提として一緒に崩れやすい共通挙動を扱う。
-- 個別サブコマンドより下位の共通 runtime 境界を一箇所で確認する入口。root 状態や共通 fixture を共有するため、basic runtime の変更が複数領域へ波及する場合に読む。
+- cmoc の基礎 runtime 契約を横断して固定する回帰テスト群。root placeholder と worktree 判定、config の既定値・不正値、CmocError と CLI error report、subcommand log、状態 branch 名、`.cmoc` ignore、Codex sandbox profile、FileAccessMode、binary 判定など、個別サブコマンドより下位の共通実行前提をまとめて検証する。
 
 ## Read this when
-- root 解決、placeholder path、repo root と linked worktree の扱い、main worktree の拒否条件を変更する。
-- run worktree の作成・削除の安全条件や、cmoc 管理外 path の拒否挙動を変更する。
-- cmoc config の既定値、JSON 変換、型検証、missing config error を変更する。
-- CmocError の Markdown report、CLI parse error、stdout/stderr の出し分け、preflight 失敗時の副作用抑制を変更する。
-- subcommand log の生成条件、timestamp 衝突時の log file 作成、completion probe 時の副作用抑制を変更する。
-- branch 名から session id を解釈する処理や、session state の読み書き・拒否条件を変更する。
-- FileAccessMode の永続化値、sandbox mode 変換、Codex profile の writable root・extra writable path・provider 設定を変更する。
-- `.cmoc` の gitignore 追加方針、起動 wrapper の missing venv report、binary 判定の読み取り範囲を変更する。
+- root/repo/work/run の解決、linked worktree、managed worktree の作成・削除拒否条件を確認したいとき。
+- config の dict 変換、既定 model/reasoning effort、不正な section・count・model spec のエラー挙動を確認したいとき。
+- CmocError、Click parse error、CLI preflight、stdout/stderr の error report 形式を確認したいとき。
+- subcommand log の生成条件、timestamp 衝突時の扱い、pre-log check 失敗時に log を書かない挙動を確認したいとき。
+- FileAccessMode と Codex profile の sandbox mode、writable roots、追加書き込み許可 path、session join conflict target の許可・拒否境界を確認したいとき。
+- branch 名から session state を読む処理、binary 判定、起動 wrapper の missing venv report など、共通 runtime の前提が壊れていないか調べたいとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の正常系・業務ロジックだけを確認したい場合は、そのサブコマンドのテストを読む。
-- oracle 文書や oracle src の正本仕様そのものを確認したい場合は、対応する oracle file を読む。
-- 単一 helper の内部実装だけを局所的に変更し、共通 runtime 契約や CLI 表示・sandbox/profile・state に影響しないことが明らかな場合は、該当実装とより近いテストを読む。
-- INDEX.md のルーティング記述やファイル構成だけを更新する場合は、この runtime 回帰テストを読む必要はない。
+- 個別サブコマンドの業務ロジックや出力内容だけを確認したいときは、そのサブコマンドのテストへ進む。
+- oracle file の正本仕様文そのものを確認したいときは、対応する oracle doc/src/test を読む。
+- 実装 helper の内部構造だけを変更する作業で、共通 runtime の外部挙動や sandbox/profile/config/error 契約に影響しないと分かっているとき。
+- routing 文書や INDEX.md の記述方針を確認したいだけのとき。
 
 ## hash
-- 7a81fb23603026cd77dc60a4d591f76e8be5b56b9a8a9eb72c1fa95bfd4a6459
+- 4646a3b4da5898ba29ba91e4f280f0b278723ee960b5ef303cf1cdfeb9625e92
 
 # `test_cli_tui.py`
 

@@ -61,23 +61,24 @@
 # `commons`
 
 ## Summary
-- cmoc の共通 runtime 実装を集める領域。Codex 起動、CLI 実行、設定、content hash、doctor 前処理、error、git、logging、path、result、state、apply process 管理、INDEX.md preflight など、複数の command から使われる実行時支援を扱う。
-- 公開入口や互換 import だけを担う小さな module と、責務別の runtime_* 実装が同居しており、共通 API の集約点から個別の処理実装へ進むための入口になる。
+- cmoc の共有 runtime helper 群を扱う領域。Codex CLI 起動、preflight、config、content hash、doctor、error、git、logging、path、result、state、apply process 管理など、複数の command 実装から使われる共通実行時処理を集約する。
+- runtime 系 API の再公開入口と、責務別 runtime 実装の両方を含むため、共通 helper の公開面を確認する入口にも、具体的な runtime 挙動へ進む入口にもなる。
 
 ## Read this when
-- CLI サブコマンドや agent 実行から共有される runtime helper の所在を探したいとき。
-- Codex exec/TUI 起動、profile、Structured Output、quota/capacity retry、call log、preflight indexing、apply subprocess 追跡など、Codex 呼び出し周辺の共通実行制御を確認または変更したいとき。
-- config 永続化、git 操作、path 解決、error 表示、result モデル、session state、subcommand logging、content hash 保存など、command 横断の runtime 基盤を確認または変更したいとき。
-- 複数の runtime 実装にまたがる公開 import 面や、既存 import path を維持する互換入口を確認したいとき。
+- CLI サブコマンドから共通実行ライフサイクル、ログ、エラー、終了コード、doctor 前処理、runtime state などへ接続する実装を探すとき。
+- Codex exec/TUI 呼び出し、profile、schema、quota/capacity retry、Structured Output 検証、call log、preflight indexing などの共通 runtime 制御を確認または変更したいとき。
+- git 操作、worktree・branch 管理、ignore 判定、oracle file 判定、path 解決、config 永続化、session state 読み書きなど、複数機能で共有される実行時基盤を扱うとき。
+- apply abandon の process 特定・停止、pid file、Codex subprocess tracking など、apply 実行を支える低レベル runtime 補助を調べるとき。
+- INDEX.md の自動再生成 preflight、entry 生成依頼、hash による再利用、indexing commit、対象除外条件を実装側で確認または変更したいとき。
 
 ## Do not read this when
-- 個別 CLI サブコマンドの利用者向け仕様、引数、上位制御フローだけを調べたいときは、該当する command 実装へ進む。
-- path keyword、config 型、oracle file 判定、INDEX.md entry 文面などの正本仕様を確認したいときは、対応する oracle 側の文書または実装を読む。
-- 生成済みログ、生成済み INDEX.md、特定 directory のルーティング内容など、runtime 実装ではなく成果物の内容を確認したいだけのときは、その成果物または対象本文を読む。
-- 個別 helper の具体的な挙動を調べる対象が既に分かっているときは、この階層全体ではなく責務別 module を直接読む。
+- 個別サブコマンドの CLI 引数、利用者向け出力、業務ロジック、上位制御フローだけを確認したいときは、該当する command 実装へ進む。
+- oracle file に書かれた正本仕様、path placeholder の概念定義、INDEX.md entry の文章基準、CLI 出力 schema の仕様を確認したいだけなら、対応する oracle 側を読む。
+- 生成済み INDEX.md の個別内容、実行済みログ、特定 session の状態ファイルなど、成果物や状態そのものを調査したいだけなら、対象の生成物または状態ファイルを直接確認する。
+- runtime helper の公開入口だけを確認したい場合は集約入口へ進み、特定の処理内容を確認したい場合は該当する責務別 runtime 実装へ直接進む。
 
 ## hash
-- aa6b5fbafa7acc34ff9678e204994c848f8e81edb6ff09edd371e5edba710d02
+- 7fd22b9ddb5955d3abdd89999c78e069c8745b4bcca69aacf3f71540b5bce024
 
 # `config`
 
