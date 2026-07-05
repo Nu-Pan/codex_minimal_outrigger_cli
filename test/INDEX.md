@@ -145,20 +145,21 @@
 # `test_cli_tui.py`
 
 ## Summary
-- TUI 起動直前の CLI 前処理について、エディタで作成された依頼文の整形、パラメータ解決、Codex TUI 起動用パラメータ、ログ保存先、gitignore 更新、linked worktree 上での root/cwd/schema/log の扱いを外部挙動として検証するテスト。
+- TUI 起動直前の CLI 前処理について、エディタで作られた依頼文の整形、Codex 実行パラメータ解決、完成プロンプト保存、ログ配置、linked worktree での root/cwd 分離、`.cmoc/local` の ignore 反映を外部挙動として検証するテスト。
 
 ## Read this when
-- TUI サブコマンドの起動前処理、依頼文保存、補完済みプロンプト生成、Codex 実行パラメータ解決、または Codex TUI 呼び出し条件を変更する。
-- TUI サブコマンドが生成するローカルログ、schema 配置、`.cmoc/local` の gitignore 対象化、または linked worktree での保存先解決を確認する。
-- エディタ入力から削除されるテンプレート文言、補完済みプロンプトに含める標準文書、file access mode の既定値を検証する。
+- TUI サブコマンドがエディタ起動後に Codex TUI を呼び出すまでの制御を変更する。
+- TUI 用の解決済み file access mode、structured output schema、extra read path、purpose など AgentCallParameter の組み立てを確認する。
+- TUI のオリジナルプロンプト・完成プロンプト・sub_command ログの保存先や `.cmoc/local` の git ignore 挙動を変更する。
+- linked worktree 上で TUI を実行したときの root、cwd、schema 保存先、ログ保存先の扱いを確認する。
 
 ## Do not read this when
-- TUI 起動前処理ではなく、Codex 本体の対話 UI や LLM 応答品質そのものを確認したい。
-- TUI 以外のサブコマンド固有の CLI 挙動だけを変更する。
-- oracle 側の仕様断片やルーティング文書の内容を確認したい。
+- Codex 実行ラッパー自体の低レベルな引数変換やプロセス起動だけを確認したい場合。
+- TUI 以外のサブコマンド、初期化処理、git worktree 操作そのものの仕様を確認したい場合。
+- エディタで編集される依頼文の内容ではなく、INDEX.md 生成や oracle/realization の仕様文書ルーティングを扱う場合。
 
 ## hash
-- 108810a6a73d65b528b8eedfa8b0132a62f06394c906c075e5572579e029b5bf
+- aa7bdcd098756577daa3aea7e9adb2f86d9f32fc7485beae852486fe6697583d
 
 # `test_codex_runtime_errors.py`
 

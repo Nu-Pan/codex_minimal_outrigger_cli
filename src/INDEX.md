@@ -1,23 +1,23 @@
 # `acp`
 
 ## Summary
-- ACP builder 互換領域への入口。旧来の `acp.*` / `acp.builder.*` import 経路を維持しつつ、oracle 側または canonical 実装へ接続するための package・module alias・最小適応層を扱う。
-- apply fork、quota probe、review、session、TUI、indexing などの agent call parameter builder 互換入口へ進むためのルーティング起点。prompt 正本や各機能本体ではなく、既存 import 互換と移行境界の確認を担う。
+- ACP builder 互換層の realization 側入口。oracle 側 builder を正本として保ち、旧 import 経路から canonical 実装や個別用途の builder 接続層へつなぐ。
+- 主な役割は、既存 caller の移行期間中に公開 import 面を維持しつつ、prompt 内容や正本仕様を realization 側へ複製しない境界を示すこと。
 
 ## Read this when
-- `acp.*` または `acp.builder.*` 経由の import 互換性を確認し、旧公開名前空間から oracle 側または canonical 実装へ到達する経路を調べたいとき。
-- agent call parameter builder のうち、apply fork、quota probe、review、session、TUI、indexing のどの互換領域へ進むべきか判断したいとき。
-- oracle 側 builder を正本に保ちながら、realization 側で package path、module alias、戻り値変換、既知表記補正などをどこで扱うか確認したいとき。
-- 既存 caller を canonical path へ移行する作業で、互換入口を残す理由、削除条件、残存参照の確認入口を探しているとき。
+- 旧 ACP builder import 経路が、どの oracle 実装、互換 package、個別 builder 接続層へつながるかを確認したいとき。
+- oracle 側 builder を正本に保ったまま、realization 側で module alias、公開型変換、最小補正、再公開をどう扱うか判断したいとき。
+- apply fork、quota probe、review、session、TUI 起動などの AgentCallParameter 構築入口を探すとき。
+- 旧 import 経路や互換入口を削除・移行する作業で、残す理由、削除条件、canonical path への接続先を確認したいとき。
 
 ## Do not read this when
-- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したいとき。対応する oracle 側 builder や oracle file を読む。
-- apply、review、session、TUI など各機能そのものの実行フロー、UI、branch 操作、diff 生成、CLI 引数処理を調べたいとき。各機能本体の実装へ進む。
-- AgentCallParameter の型定義、構造化出力 schema、path model、汎用 git helper、runtime path など共通基盤だけを確認したいとき。それぞれの定義元を読む。
-- 新しい acp 機能、新規公開 API、新規 import 経路を設計する場所を探しているとき。この領域は互換維持と移行境界の確認用であり、機能追加の入口ではない。
+- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図だけを確認したいとき。対応する oracle 側 builder を読む。
+- 各機能の実行フロー、画面挙動、branch 操作、finding 処理、イベントループなど、builder 以外の本体実装を調べたいとき。該当機能の実装へ進む。
+- AgentCallParameter の基本型、構造化出力 schema、path model、汎用 git helper、file access mode 全体など、builder 互換入口や個別 parameter 構築境界と無関係な共通定義を調べたいとき。
+- 新しい ACP 機能、公開 API、新規 import 経路を設計したいとき。既存互換面ではなく、正本仕様や利用者向け公開面を扱う対象を読む。
 
 ## hash
-- 5cc8762033158572f340b5b681ced32ea9372f428968b1f3f020b8458f57b8a3
+- 5a6568673440cf2ce5a954251b13d4f427287110398b9445b7e0c2bd1d8c033f
 
 # `basic`
 

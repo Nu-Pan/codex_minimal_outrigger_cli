@@ -131,20 +131,19 @@
 # `tui`
 
 ## Summary
-- TUI 起動用 agent call parameter の組み立てと、旧 import 経路を維持する互換層を扱う領域。
-- oracle 側 prompt builder や canonical builder と realization 側 runtime path・既存 TUI 呼び出しをつなぐ入口として位置づけられる。
+- TUI 起動用 builder まわりの互換層を扱うディレクトリ。既存の `acp.builder.tui.*` import surface を維持しつつ、正本側 builder の再公開や realization runtime への complete prompt 保存を経由して TUI 用 AgentCallParameter を組み立てる入口を置く。
 
 ## Read this when
-- TUI 起動時に渡す agent call parameter の内容、prompt 保存先、model class、reasoning effort、file access mode を確認または変更する。
-- TUI 起動用 complete prompt の生成フラグや original prompt の渡し方を変更する。
-- oracle 側 builder と realization 側 runtime path の接続箇所を確認する。
-- 既存 TUI import 経路の互換維持、公開名、削除可否、canonical import path への移行を確認する。
+- 既存の `acp.builder.tui.*` import 互換性、公開名、削除可否を確認する。
+- TUI 起動用 AgentCallParameter の組み立て、モデル種別、reasoning effort、file access mode、Structured Output schema 非指定の扱いを確認または変更する。
+- TUI 起動時の complete prompt 生成、markdown 保存、保存先パス、agent へ渡す指示文の関係を確認する。
+- TUI resolve parameter builder の呼び出し元を正本側 import path へ移行する。
 
 ## Do not read this when
-- TUI 起動後の UI 表示、入力処理、イベントループを調べたい場合は、TUI 本体の実装を読む。
-- complete prompt の本文構造や standard prompt の内容を確認したい場合は、oracle 側 prompt builder や関連する oracle file を読む。
-- runtime local 配下の一般的なディレクトリ規約や logs path 処理を確認したい場合は、runtime path を扱う共通実装を読む。
-- TUI 以外の builder、file access mode 全体、または新しい公開 API・新規 import 経路を設計したい場合は、それぞれの定義元や設計対象を読む。
+- TUI 画面そのものの表示、入力処理、イベントループ、端末 UI の挙動を調べたい場合。
+- prompt builder の正本仕様、StructDoc の markdown rendering、runtime のローカルディレクトリ配置や repo root 解決の一般仕様を調べたい場合。
+- TUI 以外の builder や file access mode 全体の定義を確認したい場合。
+- 新しい公開 API や新規 import 経路を設計したい場合。
 
 ## hash
-- 1e889f00d80795151b0d813ad92a1130bc49d4fb43cf7debeb86777771651aad
+- e24d457b6a6333995ae031725e52ee505ea421f7f2b703335e0eff1f3f22782b
