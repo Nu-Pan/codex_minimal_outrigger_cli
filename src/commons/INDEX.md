@@ -214,20 +214,23 @@
 # `runtime_config.py`
 
 ## Summary
-- 正本 config 型と永続化 JSON の相互変換、読み込み、保存、未作成時の生成を扱う実行時 config 境界。既定値補完、enum key map の復元、型不正や JSON 不正を利用者向け error に変換する責務を持つ。
+- cmoc の永続化 config JSON と runtime config 型の相互変換、読み込み、書き込み、初期同期を扱う。
+- 正本 config 型の既定値を基準に、不足項目の補完、enum key map と model spec map の復元、利用者向け config エラーへの変換を担う。
 
 ## Read this when
-- cmoc config の JSON 保存形式、読み込み時の既定値補完、型検証、error message を変更したいとき。
-- config の永続化 path から正本 config 型を復元する処理、または既定 config を生成して書き戻す処理を確認したいとき。
-- model provider、reasoning effort、apply fork、review oracle などの config section が runtime でどう組み立てられるかを調べるとき。
+- config JSON の保存形式、安定した書き出し順、既定値補完の挙動を確認または変更したいとき。
+- config 読み込み時の JSON 構文エラー、top-level 型エラー、項目型エラーをどの利用者向けエラーにするか確認したいとき。
+- 正本 config 型と永続化 JSON object の境界、特に model、reasoning effort、各種 loop 回数や並列数の変換を扱うとき。
+- 未作成 config の生成、既存 config の現在形式への書き戻し、config path を使ったロード処理を変更するとき。
 
 ## Do not read this when
-- config 型そのものの項目定義や既定値だけを確認したいとき。正本 config 定義を直接読む。
-- config file の配置場所や path keyword の意味だけを確認したいとき。path 解決を担う対象を読む。
-- CLI command の引数処理や doctor command 全体の制御を調べたいとき。command 実装を直接読む。
+- config 型そのものの正本定義や既定値を確認したいだけなら、正本 config 側を読む。
+- config path の決定規則を確認したいだけなら、runtime path 側を読む。
+- CLI command の引数処理や init command の制御フローを変更したいだけなら、command 実装側を読む。
+- agent 実行時の model や reasoning effort の使われ方を確認したいだけなら、実行制御側を読む。
 
 ## hash
-- 55bd6094b87b350e3efdb837af5e94d484818c2788259f3ba9845c0aec4c8fa1
+- 6596cefa50adcd3cd685b616f5c32d1ffa4a4ba5d38539a9a2d5d006a5a8231f
 
 # `runtime_content.py`
 

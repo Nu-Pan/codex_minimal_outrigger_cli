@@ -143,43 +143,39 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を置く階層。CLI 入口、サブコマンド制御、共有 runtime helper、設定・基本型・ACP・oracle import の互換層など、プロダクト挙動を具体化する実装を扱う。
-- Typer ベースの公開 CLI から、apply、review、session、doctor、indexing、tui などの実行入口、共通 runtime、oracle src への薄い再公開・互換 import 境界へ進むための起点になる。
+- cmoc の realization implementation を置く階層。最上位 CLI 入口、サブコマンド実装、runtime 共通処理、oracle src への互換 shim、旧 import path 維持用の再公開層を扱う。
+- 利用者向け CLI 公開面から各機能実装への接続と、既存参照を壊さず oracle 側の正本実装へ到達するための最小適応層への入口になる。
 
 ## Read this when
-- cmoc の CLI 実装、サブコマンド実行入口、共通 runtime helper、または既存公開 import 経路の realization 側配置を調べたいとき。
-- トップレベル CLI から sub_commands、commons、互換層のどこへ進むべきかを判断したいとき。
-- oracle src を複製せず参照するための `oracle.*`、`basic.*`、`config.*`、`acp.*` などの互換入口や削除条件を確認したいとき。
-- サブコマンド横断の Codex 実行、git、path、state、logging、error、INDEX 更新 preflight などの共有実行時処理を確認または変更したいとき。
+- cmoc の実装本体を調べる作業で、CLI 入口、サブコマンド、runtime 共通処理、互換 import 層のどこへ進むべきか判断したいとき。
+- サブコマンドの外部挙動、実行 orchestration、git/worktree/state/Codex 実行連携、利用者向け出力や report 生成の実装場所を探したいとき。
+- 旧 `acp.*`、`config.*`、基本型、runtime、`oracle.*` などの既存 import 経路が、どの互換入口や oracle 側正本実装へつながるか確認したいとき。
+- CLI 公開面や互換 import path の整理で、既存参照を残す理由、削除条件、影響範囲を絞りたいとき。
 
 ## Do not read this when
-- oracle file にある正本仕様断片、prompt、構造化出力 schema、path model、設定定義そのものを確認したいとき。対応する oracle 側の文書または実装を読む。
-- 生成済み INDEX.md、ログ、state、report の個別内容だけを調べたいとき。
-- 特定サブコマンド、共通 helper、互換 import 境界など、読むべき下位対象がすでに明確なときは、その対象へ直接進む。
-- 新しい正本仕様断片や oracle src の定義を追加する場所を探しているとき。
+- 正本仕様断片、人間意図、prompt、parameter 生成内容、path model、設定定義など oracle 側の本文を確認したいときは、対応する oracle file を読む。
+- INDEX.md のルーティング規則や生成済み entry の内容だけを確認したいときは、この実装階層ではなく対象の仕様または生成物を読む。
+- 実行ログ、session report、state file など実データを調べたいだけのときは、保存先や対象生成物を直接確認する。
+- 新しい正本仕様断片や API 仕様を追加する場所を探しているときは、この realization implementation 階層ではなく oracle 側の該当領域を起点にする。
 
 ## hash
-- 66dbc69c953301950ad38688ff8390d2b15c7077494c57d5a2d0461f8305355d
+- 2a7dec1b5e6746ced31a6ce078afd76958cbfe0eab2d1ce0b22d2e5fe2b416ba
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群を収めるディレクトリ。CLI サブコマンド、Codex runtime、ACP builder、prompt 組み立て、INDEX 生成、session/apply/review/doctor などの外部挙動と制御ロジックを検証する。
-- 実装側の変更が既存の利用者向け挙動、状態遷移、Git worktree 操作、Codex 呼び出し境界、file access mode、packaging import 境界に影響するかを確認する入口になる。
-- 共通テスト補助も含み、一時 Git repository、Codex home/profile、fake 外部コマンド、doctor 実行環境、apply worktree 解決などを複数テストで共有する。
+- cmoc の realization test 群を収めるディレクトリ。CLI 外部挙動、Codex runtime、session/apply/review/indexing、prompt/builder、packaged import、StructDoc rendering など、実装の観測可能な挙動と回帰条件を検証する。
+- 共通 fixture・fake command・一時 repository などのテスト支援は補助モジュールに集約され、各 test file は対象 subcommand や runtime 領域ごとの期待挙動へ進む入口になる。
 
 ## Read this when
-- cmoc の CLI 外部挙動、終了コード、stdout/stderr、report、state 更新、worktree/branch cleanup に関する回帰テストを探すとき。
-- apply、session、review oracle、indexing、doctor、tui などのサブコマンド変更に対して、どの観測可能な挙動が既存テストで固定されているか確認したいとき。
-- Codex exec/TUI runtime の profile 生成、CODEX_HOME、sandbox/file access mode、retry/quota retry、ログ・schema 保存先、失敗時エラー報告を変更または検証するとき。
-- ACP builder、prompt parts、StructDoc rendering、packaged import など、CLI より下位の builder・文書生成・import 境界の realization test を確認するとき。
-- テストで使う repository fixture、fake executable、tracked ignored oracle file、Codex profile stub、doctor 用 fake 環境などの共通セットアップを再利用または変更したいとき。
+- cmoc の既存テスト構成から、変更対象に対応する realization test を探したいとき。
+- CLI subcommand、Codex 実行基盤、session/apply/review/indexing、prompt/builder、config/runtime 境界の外部挙動をテストで確認・変更したいとき。
+- 新しい realization test を追加する前に、既存テストへ case 追加・統合できる場所や共通 test support の使い方を確認したいとき。
 
 ## Do not read this when
-- 本番実装の責務分割、内部 helper、Git 操作、Codex 実行、Ollama 管理、path model の仕様を先に確認したいときは、対応する実装または oracle file を読む。
-- oracle file の正本仕様、oracle/realization の責務境界、INDEX.md 生成規則そのものを確認したいときは、正本仕様側を読む。
-- Codex CLI や LLM の出力品質そのものを評価したいとき。このディレクトリのテストは fake 実行や制御ロジックの観測を中心に扱う。
-- 個別 helper の局所実装だけを変更し、外部挙動や共通 runtime 契約に影響しないことが明らかなときは、対象の実装を直接読む。
+- 本番実装の責務・内部 helper・処理手順だけを確認したいときは、対応する src 側の INDEX.md または実装ファイルへ進む。
+- oracle file の正本仕様、oracle/realization の責務境界、INDEX.md 生成規則そのものを確認したいときは、oracle 側の文書を読む。
+- 個別 test file が既に分かっており、その期待値だけを確認したいときは、このディレクトリ入口ではなく該当 test file を直接読む。
 
 ## hash
-- 3bccfb6792b1fe7d6e30755676eff2fc5ea187395d812a341af8ba912c67ed4c
+- 9e1a8adfbb4e0ede3c6759b10e43ea1356671dd731cb855d16b1d0b908d0c32b

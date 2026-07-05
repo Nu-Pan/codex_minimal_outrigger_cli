@@ -22,21 +22,21 @@
 # `doctor.py`
 
 ## Summary
-- doctor サブコマンドの実行本体を定義し、CLI runtime 経由で doctor preprocess を明示的に起動する。
-- 現在の repo root を取得し、cmoc 実行可能状態への修復処理を走らせたうえで、doctor の実行結果として repo root を表示する。
+- CLI runtime の preprocess 経路を使って、初回 setup・config 同期入口と doctor preprocess の明示実行を提供するサブコマンド実装。
+- repo root を cmoc 実行可能状態へ修復し、実行した command heading と repo root を CLI 出力する責務を持つ。
 
 ## Read this when
-- doctor サブコマンドの挙動、実行入口、または表示内容を確認・変更したいとき。
-- doctor preprocess を通常の CLI preprocess とは別に明示実行する経路を確認したいとき。
-- repo root を取得して修復処理へ渡す doctor 固有の制御を確認したいとき。
+- init または doctor サブコマンドが、CLI runtime の preprocess をどのように呼び出すか確認したいとき。
+- 初回 setup、config 同期入口、または .cmoc ignore の保証がどこで行われるかを追うとき。
+- doctor preprocess を command wrapper 経由で実行する際の引数、preprocess 抑制、出力 heading を確認したいとき。
 
 ## Do not read this when
-- doctor preprocess の具体的な修復内容を確認したいだけなら、runtime 側の preprocess 実装を読む。
-- repo root の探索規則そのものを確認したいだけなら、repo root を定義する runtime 側を読む。
-- doctor 以外のサブコマンドの CLI 挙動を確認したいときは、そのサブコマンドの実装を読む。
+- CLI runtime 側の共通実行制御、repo root 解決、doctor preprocess 本体の修復内容を調べたいときは、runtime 実装を直接読む。
+- 設定内容そのものや config 同期仕様の正本を確認したいときは、対応する oracle 側の config 定義を読む。
+- init や doctor 以外のサブコマンド実装を調べたいときは、それぞれのサブコマンド実装へ進む。
 
 ## hash
-- 8381189b496dd020a8b46e16e2d13b3f03f58b372c085a3849ae81db685728ea
+- e2853624f970ea7d00a94f40e035fcd3dfa010ffb923459ccfa71a9e8a72e56e
 
 # `indexing.py`
 

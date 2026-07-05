@@ -120,25 +120,23 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断して検証する realization test。root placeholder 解決、repo/run/work root の区別、config 読み込み、CmocError の表示、CLI error の stdout report、subcommand log、worktree 作成・削除の安全条件、FileAccessMode から Codex sandbox/profile への変換、binary 判定、session state branch 名解析など、個別サブコマンドより下位の共通実行前提をまとめて扱う。
-- 共通 fixture と root 状態を共有する runtime 回帰テスト群として一箇所に凝集しており、分割よりも同じ実行前提で崩れやすい契約をまとめて確認する位置づけを持つ。
+- cmoc の基礎 runtime 契約を横断検証する realization test。root placeholder と worktree 判定、config 読み込み・検証、CmocError の表示、CLI preflight と parse error、subcommand log、gitignore 更新、FileAccessMode から Codex sandbox/profile への変換、binary 判定、session state branch 解析をまとめて扱う。
+- 個別サブコマンド単体ではなく、実行前提として同時に崩れやすい runtime 境界の回帰確認を担う。
 
 ## Read this when
-- cmoc の root 解決、placeholder path、linked worktree、main worktree、run/work root 判定に関する挙動を確認・変更する時。
-- config の既定値、不正 config の検出、Codex model/provider/reasoning effort の runtime 変換を変更する時。
-- CmocError、CLI 引数解析 error、stdout/stderr の error report、call stack 表示、preflight 失敗時の副作用抑制を確認する時。
-- subcommand log、`.cmoc` ignore 設定、run worktree の作成・削除安全条件、session/apply branch 名からの state 解決を変更する時。
-- FileAccessMode と Codex profile の writable/readable root、extra writable path、oracle conflict write、repo/local 読み取り許可の境界を確認する時。
-- binary 判定や duration 表示など、個別サブコマンドに属さない小さな runtime 共通契約を変更する時。
+- root/repo/work/run root の解決、linked worktree、run worktree 作成・削除の安全条件を変更・調査する時。
+- cmoc config の既定値、辞書からの構築、型検証、missing config error を変更・調査する時。
+- CmocError の Markdown report、CLI error の stdout/stderr、Click parse error、work root preflight、completion probe、subcommand log 生成条件を変更・調査する時。
+- FileAccessMode、Codex profile、sandbox writable roots、extra writable/read paths、oracle conflict write、local SLM provider の挙動を変更・調査する時。
+- session/apply branch 名から session id や state を読む制御、binary 判定、duration 表示、起動 wrapper の call stack 表示を変更・調査する時。
 
 ## Do not read this when
-- 特定サブコマンド固有の business logic、出力内容、状態遷移だけを確認したい時は、そのサブコマンドの実装または専用テストを読む。
-- oracle file の正本仕様そのものを確認・編集したい時は、対応する oracle doc または oracle src を読む。
-- 個別 helper の内部実装だけを局所的に変更し、共通 runtime 境界や外部挙動に影響しないことが明らかな時は、対象 helper の実装を直接読む。
-- Codex CLI や外部 LLM の品質・応答内容そのものを検証したい時は、この対象ではなく実行環境や手動確認の範囲を扱う。
+- apply、review、session など個別サブコマンド固有の業務ロジックだけを確認したい時。
+- oracle doc や oracle src の正本仕様そのものを確認したい時。
+- 単一 helper の内部実装だけを追えば足り、runtime 境界をまたぐ外部挙動や CLI 表示に影響しない時。
 
 ## hash
-- 68964f8ad0614d45d5755d7f3e9e1de5da6164215083cbc5d0e09217452957a1
+- ec99e0e08d126e5c5c21de8446890ee66b607d2db8bdd22d7588d73a0a431ddb
 
 # `test_cli_tui.py`
 
@@ -249,19 +247,22 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor preprocess と local SLM profile 準備に関する realization test。git 状態修復、管理対象 Ollama の配置・systemd user service 生成、cmoc provider model pull、既存設定値を保つ default config 同期、.cmoc の追跡解除、既存 staged changes の保全を外部挙動として検証する。
+- doctor/init がリポジトリ初期化状態、`.cmoc` の ignore/untrack、`.agents` の追跡、managed ollama の準備、既定設定の同期、Codex profile 準備時の doctor 起動を正しく行うことを検証する realization test。
+- git 状態修復、設定ファイル生成・同期、managed ollama provider model の取得、既存 staged 変更の保持といった、doctor 系 CLI/前処理の外部挙動を確認する入口になる。
 
 ## Read this when
-- doctor preprocess の挙動、特に .gitignore/.agents/.cmoc/config.json/git commit/staging の扱いを変更する。
-- 管理対象 Ollama の install/service/model pull や cmoc provider model の重複排除を変更する。
-- default config 同期、または local SLM 用 Codex profile 準備時の doctor 実行条件を変更する。
+- doctor preprocess、init、`.cmoc` の git ignore/untrack、`.agents` の初期追跡、managed ollama のインストール・service・model pull に関する挙動を変更する時。
+- 既定 config の追加・変更時に、人間が書いた値を上書きせず不足項目だけ同期されるかを確認したい時。
+- Codex profile 準備処理が local SLM 用 provider を使う条件や、ollama service が未準備の時に doctor を走らせる制御を変更する時。
+- doctor の repair commit が既存の staged 変更を巻き込まないこと、または修復後に作業ツリーを汚さないことを確認する時。
 
 ## Do not read this when
-- doctor や local SLM profile 準備に関係しない CLI command、設定 schema、path model の仕様だけを確認したい。
-- Ollama 以外の provider、通常の agent call 実行、または oracle file の記述方針を調べたい。
+- agent call の一般的な引数モデル、file access mode、reasoning effort の仕様だけを確認したい時。
+- ollama の実インストール手順や systemd service の詳細実装だけを追う時は、実装側の runtime doctor/profile preparation を直接読む方がよい。
+- 設定 schema や default 値の正本定義そのものを確認したい時は、oracle 側または config 実装の定義を直接読む方がよい。
 
 ## hash
-- c0ebb6ab8e9d0dd9f84335c50d35e94a7accee46ab8e9fc1bbcc8a1d7db7a05b
+- cafc3e40ef4e2a1d33ca4ca9d4c3a5c04b6970dc0dfaae1af4745b7eb278d536
 
 # `test_indexing_cli.py`
 
