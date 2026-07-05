@@ -173,11 +173,11 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
     detail_order = [
         "### Accepted fatal findings",
         "accepted fatal",
-        "### Rejected fatal findings",
-        "rejected fatal",
         "## Minor findings",
         "### Accepted minor findings",
         "accepted minor",
+        "### Rejected fatal findings",
+        "rejected fatal",
         "### Rejected minor findings",
         "rejected minor",
     ]
@@ -249,7 +249,7 @@ def test_review_oracle_report_includes_rejected_findings(
     minor_section = rendered.index("## Minor findings")
     finding_offset = rendered.index("rejected finding")
     if severity == "fatal":
-        assert fatal_section < finding_offset < minor_section
+        assert fatal_section < minor_section < finding_offset
     else:
         assert minor_section < finding_offset
     assert "rejected reason" in rendered
