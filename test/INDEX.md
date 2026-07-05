@@ -182,23 +182,22 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行ラッパーのテスト群で、プロファイル生成、作業ディレクトリ、sandbox の writable_roots、標準入力、最終出力、Structured Output schema の保存場所、ローカル SLM 用 provider 設定を検証する。
-- fake の codex 実行ファイルと一時 git repository/worktree を使い、agent call parameter と実際の codex exec 起動引数・生成 profile・副作用の対応を確認する。
+- Codex CLI 実行ラッパーが、モデル設定、sandbox profile、作業ディレクトリ、標準入力、出力、生成ファイル、schema 配置、linked worktree 上の読み取り許可を正しく扱うかを検証する realization test。
+- 実物の Codex CLI と cmoc 管理 Ollama provider を組み合わせた統合寄りの確認と、偽の codex 実行ファイルによる引数・profile・副作用の確認を含む。
 
 ## Read this when
-- Codex CLI を起動する runtime 実装、特に exec 引数、profile TOML、CODEX_HOME、--cd、--output-last-message、--output-schema の扱いを変更する時。
-- FileAccessMode ごとの sandbox 設定、repo 書き込み、pure oracle read、linked worktree 上での cwd と writable_roots の挙動を確認したい時。
-- cmoc 管理の Ollama provider や最小 model class のローカル SLM profile 生成が、組み込み Ollama flag ではなく profile 設定で表現されることを検証したい時。
-- schema state や prompt/output log の保存先が、linked worktree ではなく repository root 側に置かれるべきかを確認する時。
+- Codex CLI を起動する処理、profile 生成、model provider 設定、sandbox の writable roots、Codex 実行時の cwd や標準入力の扱いを変更するとき。
+- FileAccessMode と Codex profile の対応、特に repo write と pure oracle read の書き込み可能範囲を確認したいとき。
+- 構造化出力 schema の保存場所、linked worktree から実行した場合の repo local 配下の扱い、Codex 実行ログの内容を確認したいとき。
+- cmoc 管理 Ollama provider 用の Codex profile から、Codex CLI 組み込みの Ollama 向け flag を使わないことを検証したいとき。
 
 ## Do not read this when
-- Codex CLI 起動ラッパーではなく、agent call parameter のデータ構造そのものや model enum の定義だけを調べたい時。
-- oracle file の分類、path placeholder の概念、INDEX.md 生成規則など、repository routing や仕様文書の内容を調べたい時。
-- Codex 実行結果の JSON event stream 解析全般や LLM 出力品質そのものを検証したい時。
-- git worktree 作成 helper、fake executable 作成 helper、test fixture の共通実装を変更したいだけで、runtime exec の外部挙動を確認しない時。
+- Codex 実行ラッパーではなく、agent call parameter や config のデータ構造そのものだけを確認したいとき。
+- 通常の git 操作、repository 作成 helper、テスト支援用 fake executable の実装詳細だけを調べたいとき。
+- Codex CLI や LLM の応答品質を評価したいとき。この対象は provider と実行制御を確認するもので、出力品質を検証しない。
 
 ## hash
-- d5db898b5b7af9e3c94d01dc651c54f9f90bb1f4593ff59b22092b7e9bf2e161
+- 929a3eeb0018059d8a77da251a968763e3bd4964137b3d2cd41c6164085f66eb
 
 # `test_codex_runtime_exec_post_validation_forbidden.py`
 

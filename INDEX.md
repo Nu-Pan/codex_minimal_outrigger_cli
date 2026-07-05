@@ -155,20 +155,21 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 全体を配置するディレクトリ。CLI サブコマンド、Codex runtime、ACP builder、prompt rendering、indexing、doctor/init、session/apply/review oracle など、実装の外部挙動と共通 runtime 契約を pytest で検証する入口になる。
-- 共通テスト支援から個別コマンドの大きな回帰テストまでを含み、production 実装ではなく realization code の期待挙動を確認するための対象である。
+- cmoc の realization test 全体を置くディレクトリ。CLI サブコマンド、Codex 実行、runtime、ACP builder、INDEX.md 更新、prompt rendering、packaged import など、src 側実装の外部挙動と共通制御を pytest で検証する入口になる。
+- 共通 test support と、apply/session/review/indexing/doctor/TUI/Codex runtime など機能別の大きな回帰テストが同階層に並ぶため、対象機能の外部挙動・状態遷移・git 副作用・エラー出力を確認する際のルーティング起点になる。
 
 ## Read this when
-- cmoc の実装変更に対して、どの realization test が対応する外部挙動や制御ロジックを検証しているかを探すとき。
-- CLI サブコマンド、Codex 実行、file access mode、path/root 解決、Git worktree/state 操作、INDEX.md 更新、prompt/ACP builder の回帰テストを追加・変更・確認するとき。
-- 複数テストで共有される一時 Git repository、Codex home、fake Codex/Ollama/systemctl、CLI runner などの pytest 補助を確認したいとき。
-- apply、session、review oracle など、状態 fixture や git 境界条件を共有する大きな外部挙動テストの入口を選びたいとき。
+- cmoc の realization test を追加・変更する前に、既存テストへ統合できる対象や共通 helper の所在を判断したいとき。
+- CLI から観測されるサブコマンド挙動、session/apply/review/indexing の状態遷移、worktree/branch cleanup、report 出力、git 副作用の回帰テストを探すとき。
+- Codex exec/TUI runtime、profile、sandbox、Codex home、retry/quota、subprocess tracking、post validation、外部コマンド不在時のエラー変換に関するテストを探すとき。
+- ACP builder、prompt parts、StructDoc Markdown rendering、packaged import、基礎 runtime 契約など、複数機能の前提になる realization test を確認したいとき。
+- 一時 Git repository、Codex home、fake Codex/Ollama/systemctl、CLI runner など複数テストで共有される test support を使う必要があるとき。
 
 ## Do not read this when
-- production 実装の責務、内部 helper、CLI 処理本体を変更したい場合は、先に src 配下の対応 implementation を読む。
-- oracle file の正本仕様、path model、標準文書、structured output schema の内容そのものを確認する場合は、oracle 配下の該当対象を読む。
-- 個別ファイルの期待挙動が既に分かっている場合は、このディレクトリ全体ではなく該当するテストファイルへ直接進む。
-- INDEX.md エントリー生成規則やルーティング文書の正本仕様を確認したい場合は、この realization test 群ではなく oracle 側の仕様を読む。
+- production 実装の責務や内部処理を変更したい場合は、まず src 配下の対応 implementation を読む。
+- oracle file の正本仕様、schema、prompt 文面、file access rule、テスト標準そのものを確認・編集したい場合は、oracle 配下の該当文書を読む。
+- 個別サブコマンドや runtime helper の局所的な実装詳細だけを調べたい場合は、このディレクトリ全体ではなく対応する実装または該当 test file へ直接進む。
+- Codex CLI や LLM の応答品質そのものを評価したい場合は対象外であり、ここでは fake 応答や実行制御から cmoc 側の外部挙動を検証する。
 
 ## hash
-- e639c65885c3e9ac64a2fd83dda4db8eab42cd749e1019c7ce53230d526c6a8d
+- e2a9c5fcd6259710aae12a0f8821d15cfc94f5a8882053206e8af7bbe36b37f8
