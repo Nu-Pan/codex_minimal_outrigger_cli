@@ -16,6 +16,7 @@ import tomllib
 from pathlib import Path
 
 import pytest
+import typer
 import main as main_module
 import commons.runtime_cli as runtime_cli
 import commons.runtime_logging as runtime_logging
@@ -170,6 +171,34 @@ def test_cli_wrapper_doctor_preprocess_uses_current_worktree(
 
     assert doctor_roots == [linked.resolve()]
     assert pre_log_roots == [root.resolve()]
+
+
+def test_cli_wrapper_doctor_preprocess_failure_writes_subcommand_log(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+
+    def fail_doctor(_root: Path) -> None:
+        raise CmocError("doctor failed", ["fix doctor"], "doctor detail")
+
+    monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", fail_doctor)
+
+    with pytest.raises(typer.Exit) as exc_info:
+        runtime_cli.run_cli_subcommand(
+            lambda: 0,
+            command_name="probe",
+            command_argv=["cmoc", "probe"],
+        )
+
+    assert exc_info.value.exit_code == 1
+    [log_path] = (root / ".cmoc" / "local" / "log" / "sub_command").glob("*.jsonl")
+    events = [json.loads(line) for line in log_path.read_text().splitlines()]
+    assert events[0]["event"] == "command_invoked"
+    assert events[0]["argv"] == ["cmoc", "probe"]
+    assert events[-1]["event"] == "command_finished"
+    assert events[-1]["returncode"] == 1
+    assert events[-1]["error"] == "doctor failed"
 
 
 def test_run_root_placeholder_rejects_main_worktree(

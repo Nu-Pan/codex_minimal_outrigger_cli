@@ -36,7 +36,7 @@ def run_cli_subcommand(
 ) -> None:
     """CLI サブコマンドの共通実行ライフサイクルを管理する。
 
-    work root 検査と doctor preprocess 後にサブコマンドログを作成し、
+    work root 検査後、doctor preprocess より前にサブコマンドログを作成し、
     開始・完了表示、戻り値の終了コード化、例外のエラー表示を一箇所で扱う。
     runtime state は通常 repo root に置き、linked worktree 前処理では work root に置く。
     doctor preprocess は runtime state の保存先とは別に常に current work root を修復する。
@@ -51,16 +51,17 @@ def run_cli_subcommand(
         require_current_directory_is_work_root(current_root)
         log_root = repo_root()
         runtime_root = current_root if use_work_root_runtime else log_root
-        if doctor_preprocess:
-            # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
-            # サブコマンド固有の検査より前に、共通修復を current work root 基準で済ませる。
-            run_doctor_preprocess(current_root)
         logger = SubcommandLogger(log_root, name)
         logger_token = set_current_subcommand_logger(logger)
         logger.event("command_invoked", argv=list(command_argv or [name]))
         logger.start_step(f"1/{total_steps}", f"開始 {name}", f"start {name}")
         typer.echo(f"# {console_timestamp()} (1/{total_steps}) 開始 {name}")
         typer.echo(f"- サブコマンドログ: `{logger.path}`")
+        if doctor_preprocess:
+            # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+            # <work-root>/oracle/doc/app_spec/console_and_file_log.md
+            # 共通修復の失敗もサブコマンド単位の終了経路として記録する。
+            run_doctor_preprocess(current_root)
         if pre_log_check is not None:
             # <work-root>/oracle/doc/app_spec/console_and_file_log.md requires a
             # subcommand log even when command-specific preconditions fail.
