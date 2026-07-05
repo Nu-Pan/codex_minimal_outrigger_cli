@@ -1,6 +1,7 @@
 import json
 import subprocess
 import tomllib
+from dataclasses import replace
 from pathlib import Path
 
 import cmoc_runtime
@@ -63,8 +64,14 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
     )
     monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
 
+    schema_path = tmp_path / "schema.json"
+    schema_path.write_text('{"type":"object"}\n')
+
     run_codex_tui(
-        codex_parameter(FileAccessMode.PURE_ORACLE_READ),
+        replace(
+            codex_parameter(FileAccessMode.PURE_ORACLE_READ),
+            structured_output_schema_path=schema_path,
+        ),
         root=root,
         extra_read_paths=[prompt_path],
         config=CmocConfig(),
@@ -73,6 +80,7 @@ def test_run_codex_tui_allows_complete_prompt_for_pure_oracle_read(
     record = json.loads(recorder.read_text())
     assert record["cwd"] == str(root.resolve())
     assert record["args"][record["args"].index("--cd") + 1] == str(root.resolve())
+    assert "--output-schema" not in record["args"]
 
 
 def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(

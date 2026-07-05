@@ -1,7 +1,5 @@
 """TUI 起動 parameter builder の realization 側互換入口。"""
 
-from dataclasses import replace
-
 from oracle.acp_builder.basic import AgentCallParameter, FileAccessMode
 from oracle.acp_builder.tui.launch_tui import (
     build_tui_launch_tui_parameter as _oracle_build_tui_launch_tui_parameter,
@@ -30,7 +28,7 @@ def build_tui_launch_tui_parameter(
     # oracle builder が正本だが保存先 directory を作らないため、呼び出し前に
     # runtime 側の配置だけ保証する。oracle 側で作成されるようになれば削除できる。
     (logs_dir(resolve_repo_root()).parent / "tui").mkdir(parents=True, exist_ok=True)
-    parameter = _oracle_build_tui_launch_tui_parameter(
+    return _oracle_build_tui_launch_tui_parameter(
         time_stamp,
         role,
         summary,
@@ -44,10 +42,6 @@ def build_tui_launch_tui_parameter(
         apply_review_standard,
         index_entry_standard,
     )
-    # <work-root>/oracle/doc/app_spec/sub_command/tui.md
-    # TUI 起動は codex exec ではないため schema を渡さない。oracle 側の
-    # 戻り値が None になれば、この post-process は削除できる。
-    return replace(parameter, structured_output_schema_path=None)
 
 
 __all__ = ["build_tui_launch_tui_parameter"]
