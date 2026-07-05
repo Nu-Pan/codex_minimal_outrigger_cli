@@ -157,7 +157,10 @@ def _writable_roots(
             # に寄せる。
             paths = _top_level_writable_roots(mode, root)
         case FileAccessMode.PURE_ORACLE_READ:
-            paths = [root / "oracle"]
+            # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
+            # READONLY より狭い読み取り系モードなので、oracle tree も
+            # sandbox writable root には渡さない。
+            paths = _top_level_writable_roots(mode, root)
         case FileAccessMode.REALIZATION_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py

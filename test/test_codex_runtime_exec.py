@@ -235,12 +235,11 @@ def test_run_codex_exec_uses_parameter_cwd_independent_of_pure_oracle_read(
 
     record = json.loads(recorder.read_text())
     work_root = str(root.resolve())
-    oracle_root = str((root / "oracle").resolve())
     assert record["args"][record["args"].index("--cd") + 1] == work_root
     assert record["cwd"] == work_root
     assert 'sandbox_mode = "workspace-write"' in record["profile"]
     profile = tomllib.loads(record["profile"])
-    assert profile["sandbox_workspace_write"]["writable_roots"] == [oracle_root]
+    assert profile["sandbox_workspace_write"]["writable_roots"] == []
 
 
 def test_run_codex_exec_stores_schema_state_under_repo_root(

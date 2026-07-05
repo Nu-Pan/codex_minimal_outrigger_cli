@@ -740,9 +740,7 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
         profiles[FileAccessMode.REALIZATION_WRITE]
     ) == realization_roots
     assert _profile_writable_roots(profiles[FileAccessMode.READONLY]) == set()
-    assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_READ]) == {
-        str((root / "oracle").resolve())
-    }
+    assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_READ]) == set()
     assert _profile_writable_roots(profiles[FileAccessMode.PURE_ORACLE_WRITE]) == {
         str((root / "oracle").resolve())
     }
@@ -763,6 +761,9 @@ def test_codex_profile_generates_rooted_sandbox(tmp_path: Path) -> None:
     _assert_writable(profiles[FileAccessMode.REALIZATION_WRITE], root / ".gitignore")
     _assert_not_writable(
         profiles[FileAccessMode.REALIZATION_WRITE], root / ".agents" / "blocked.md"
+    )
+    _assert_not_writable(
+        profiles[FileAccessMode.PURE_ORACLE_READ], root / "oracle" / "blocked.md"
     )
     _assert_writable(
         profiles[FileAccessMode.REPO_WRITE], root / "oracle" / "created.md"
