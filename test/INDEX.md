@@ -124,24 +124,23 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder 解決、linked worktree 判定、config 変換・検証、CmocError の表示、CLI wrapper の preflight と error report、subcommand log、session/apply branch state、FileAccessMode から Codex sandbox profile への変換、binary 判定など、個別サブコマンドより下位の共通実行前提を扱う。
-- 共通 fixture と root 状態を共有する runtime 回帰テスト群であり、複数領域が同時に崩れやすい基礎挙動を一箇所で確認する入口になる。
+- cmoc の基礎 runtime 契約を横断的に固定する回帰テスト群。root placeholder と worktree 判定、config 復元と検証、CmocError の Markdown 表示、CLI preflight と parse error、subcommand log、FileAccessMode から Codex sandbox profile への変換、binary 判定など、複数サブコマンドの実行前提になる共通挙動を扱う。
 
 ## Read this when
-- cmoc の root 解決、repo root と work root、run worktree 作成・削除、linked worktree 実行時の挙動を確認・変更する時。
-- config の既定値、JSON 変換順序、不正値検証、missing config error、Codex model provider 変換を確認・変更する時。
-- CmocError の Markdown 表示、CLI parse error、stdout/stderr の出し分け、doctor preprocess、pre-log check、subcommand log の記録条件を確認・変更する時。
-- FileAccessMode、Codex sandbox profile、追加 writable/read path の許可・拒否、oracle や realization の書き込み境界を確認・変更する時。
-- session/apply branch 名から session id を読む処理、branch state 読み込み、binary 判定、duration 表示など basic runtime の共通契約に関わる回帰を確認する時。
+- root 解決、linked worktree、run/work/repo root の扱いを変更する。
+- CmocError、CLI error 表示、Click/Typer の parse error 変換、preflight、doctor preprocess、subcommand log の挙動を変更する。
+- config の既定値、JSON 化順序、config 読み込み・検証・復元処理を変更する。
+- FileAccessMode、Codex profile、sandbox writable roots、追加書き込み許可 path、repo local read 許可の制御を変更する。
+- runtime state の branch 名解析、session/apply branch からの session id 取得、state 読み込み条件を変更する。
+- `.cmoc/local` の ignore 追加、起動 wrapper の missing venv report、binary 判定など runtime 共通の外部挙動を変更する。
 
 ## Do not read this when
-- 個別サブコマンド固有の business logic、入出力、永続状態だけを確認したい時は、そのサブコマンドの専用テストを先に読む。
-- oracle file の正本仕様そのものを確認・編集したい時は、対応する oracle doc/src/test を読む。
-- テスト helper や repo fixture の実装だけを調べたい時は、共通 test support 側を直接読む。
-- INDEX.md エントリー生成やルーティング文書の規則だけを確認したい時は、この runtime 回帰テストではなく該当する routing/index standard を読む。
+- 個別サブコマンド固有の業務ロジックだけを確認したい場合。
+- oracle file の内容や routing 文書そのものの仕様を確認したい場合。
+- 特定の小さな helper の単体挙動だけを追えば足り、root 状態・CLI wrapper・config・sandbox profile の共通契約に影響しない場合。
 
 ## hash
-- f54c0903bd892db1b8c77edbf2d93d01e367959cebacb4ff8ebb4dda97f2e33d
+- 5d2ad271121650ec3008cc5d9975a9a9293544160d54001d28f551ce22d6e5e5
 
 # `test_cli_tui.py`
 
@@ -334,23 +333,22 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor/init CLI がリポジトリ初期化・修復・設定生成・管理 Ollama 準備・Codex profile 生成を行う外部挙動を検証するテスト。
-- gitignore、.agents、.cmoc/config.json、.cmoc/local、worktree、既存 staged/unstaged 変更の扱いなど、doctor preprocess の git 状態保全と追跡対象制御を扱う。
-- Ollama service の検証条件、cmoc provider model の pull、SLM profile 準備時の doctor 実行も対象に含む。
+- CLI の初期化・doctor 前処理・管理 Ollama 連携を外部挙動として検証するテスト群。設定ファイル生成と既存値保持、gitignore と追跡状態の修復、preexisting staged/unstaged 変更の保全、worktree 対象選択、doctor 別名、Codex profile 準備時の doctor 起動を扱う。
+- Ollama サービスについては、systemd user service の生成内容、管理バイナリと models ディレクトリの配置、サービス PID と listener process の照合、cmoc provider model の重複排除 pull を検証する。
 
 ## Read this when
-- doctor または init コマンドの初期化・修復・設定生成・git commit/追跡対象制御の挙動を変更する。
-- 管理 Ollama のインストール先、systemd user service、listener/process 検証、model pull 条件を変更する。
-- preprocess が既存の staged change、unstaged hunk、rename、追跡済み .cmoc/local をどう扱うかを確認する。
-- Codex profile 生成時に managed Ollama の準備や doctor 実行が必要になる条件を変更する。
+- doctor または init コマンドの利用者向け挙動、生成される設定、git 追跡・ignore 修復、修復 commit の対象範囲を変更・確認したいとき。
+- 管理 Ollama のインストール、systemd service 生成、サービス検証、listener 照合、cmoc provider model pull の制御ロジックを変更・確認したいとき。
+- Codex profile 準備時に local SLM 用の managed Ollama が不足している場合の自動 doctor 実行を変更・確認したいとき。
+- 既存の staged 変更、unstaged hunk、rename、過去に追跡された local cache を doctor 前処理がどう保全・整理するかを検証したいとき。
 
 ## Do not read this when
-- 個別の設定データ構造や default 値の定義だけを確認したい場合は、設定モデルや oracle 側の定義を直接読む。
-- doctor/init 以外の CLI サブコマンドの表示や引数処理を調べる場合は、そのコマンドのテストへ進む。
-- Ollama service の実装詳細だけを変更し、CLI 経由の外部挙動や git 状態への影響を確認しない場合は、実装モジュールを直接読む。
+- doctor/init の外部挙動ではなく、設定 schema やデフォルト値の正本定義そのものを確認したいだけのとき。
+- Ollama service の内部 helper 実装だけを局所的に読めば足り、CLI 経由の統合挙動や git 状態への副作用を確認しないとき。
+- agent call、apply fork、path model など doctor/init と直接関係しない領域のテストを探しているとき。
 
 ## hash
-- d61a084aa8238d1e9fc5be8a34cb8dcc800525bfa7bb26c709cc8fd5c7cb10e2
+- eac9f79b06ec0e5bdecd7d97218e71b6976de00f65617f1e848276832574f357
 
 # `test_indexing_cli.py`
 
