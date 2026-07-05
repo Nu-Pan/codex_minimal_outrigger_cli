@@ -19,20 +19,21 @@
 # `builder`
 
 ## Summary
-- agent call parameter builder 群の realization 側領域。oracle 側 builder を正本に保ちながら旧 import 経路を維持する互換入口と、quota probe・TUI・apply fork など一部呼び出し用途向けの最小適応層をまとめる。
-- 主な責務は、canonical oracle 実装への中継、既存参照を壊さない再公開、oracle builder 戻り値を realization 側公開型や runtime path へ接続する境界の提供であり、prompt 本文や正本仕様そのものは扱わない。
+- ACP builder 領域全体の入口で、oracle 側 builder を正本に保ちながら既存の acp.builder 系 import 経路を維持する互換層をまとめる。
+- apply、review、session、tui など個別 builder 領域へのルーティングと、旧公開名前空間から canonical oracle 実装または realization 側適応層へ接続する境界を確認する起点になる。
+- 実際の prompt、parameter 構築仕様、finding 処理、TUI 本体挙動などはここではなく、対象ごとの oracle 実装または個別 module に委ねる。
 
 ## Read this when
-- agent call parameter builder 周辺で、旧 import 経路がどの canonical 実装や互換入口へつながるかを確認したいとき。
-- oracle 側 builder を正本に保ちつつ、realization 側で package path、module alias、公開型変換、runtime path 接続をどう補っているかを調べるとき。
-- apply fork、quota availability probe、review、session、TUI などの agent call parameter 構築入口や互換層の残存理由・削除条件を確認したいとき。
-- 既存 caller を canonical path へ移行する作業で、互換 package や再公開 module の影響範囲を絞りたいとき。
+- acp.builder 配下の旧 import path 互換が、oracle 側 canonical 実装や realization 側 wrapper へどう接続されるかを俯瞰したいとき。
+- apply fork、review、session、tui、quota probe、indexing などの builder 互換入口のうち、どの下位領域を読むべきか判断したいとき。
+- oracle src を正本に保ちつつ realization 側で path 接続、module alias、返却型適応、最小補正を行う境界を確認したいとき。
+- acp.builder 系の互換 package や再公開 module を削除または移行する作業で、残す理由や削除条件を調べ始めるとき。
 
 ## Do not read this when
-- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したい場合は、対応する oracle 側 builder や oracle file を読む。
-- agent call parameter の基本型、enum、構造化出力 schema、汎用 git helper、path model などの共通定義を調べたい場合は、それぞれの定義元へ進む。
-- apply、review、session、TUI など各機能の実行フロー、UI、branch 操作、結果判定、外部コマンド実行を調べたい場合は、機能本体の実装を読む。
-- 互換 import 経路ではなく新規公開 API や新機能の設計だけを検討している場合は、利用すべき canonical 実装または設計対象を直接読む。
+- oracle 側 builder の正本仕様、prompt 本文、parameter 生成内容を確認したいだけなら、対応する oracle 側 builder を直接読む。
+- apply、review、session、TUI など各機能の実行フローや本体挙動を調べたい場合は、それぞれの実装領域へ進む。
+- AgentCallParameter 型、path model、git helper、file access mode など ACP builder 以外の共通基盤を確認したい場合は、その定義元を読む。
+- 特定の変換処理、wrapper の詳細挙動、既知 typo 補正、runtime path 接続などを変更する場合は、該当する個別 module または下位 package を読む。
 
 ## hash
-- dc27cd3715146b39aafcc4d982c3e5a76c5341802dbddbca0b9cfe6a38385831
+- e6655cc76801aede8a22b3b91dd714f3c3b1c2146b66314cdf4a8b2d8b18b1ad

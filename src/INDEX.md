@@ -1,22 +1,24 @@
 # `acp`
 
 ## Summary
-- oracle src 側の agent call parameter builder を正本に保ちながら、realization 側で旧 `acp.*` import 経路を維持する互換領域。canonical oracle 実装への中継、再公開、公開型変換、runtime path 接続など、既存参照を壊さないための最小適応層を扱う。
+- ACP 互換層の入口で、oracle 側 builder を正本に保ちながら既存の acp 系 import 経路を維持する領域。
+- 公開 import 面の移行期間中に残す互換入口と、個別 builder 領域へ進むためのルーティングを担う。
+- 実際の builder 実装、prompt、parameter 構築、finding 処理、TUI 挙動は下位領域または対応する実体 module へ委ねる。
 
 ## Read this when
-- agent call parameter builder 周辺で、旧 `acp.*` import がどの canonical 実装や互換入口へつながるかを確認したいとき。
-- oracle 側 builder を複製せず正本として使いながら、realization 側で package path、module alias、公開型変換、runtime path 接続をどう補っているかを調べたいとき。
-- apply fork、quota probe、review、session、TUI などの agent call parameter 構築入口や互換層の残存理由・削除条件を確認したいとき。
-- 既存 caller や利用者向け公開面に残る `acp.*` import を canonical path へ移行する作業で、影響範囲を絞りたいとき。
+- 既存の acp 系 import 参照を oracle 側 canonical 実装や realization 側 wrapper へどう接続しているかを確認したいとき。
+- apply、review、session、tui、quota probe、indexing などの builder 互換入口のうち、読むべき下位領域を判断したいとき。
+- acp 系互換 package や再公開 module を削除または移行する作業で、残す理由や削除条件を調べ始めるとき。
+- oracle src 由来の acp builder 互換 import が realization 側または利用者向け公開面でどう維持されているかを確認したいとき。
 
 ## Do not read this when
-- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したいとき。対応する oracle 側 builder や oracle file を読む。
-- agent call parameter の基本型、enum、構造化出力 schema、汎用 git helper、path model などの共通定義を調べたいとき。それぞれの定義元へ進む。
-- apply、review、session、TUI など各機能の実行フロー、UI、branch 操作、結果判定、外部コマンド実行を調べたいとき。機能本体の実装を読む。
-- 新しい acp 機能や API 仕様を追加する場所を探しているとき。この対象は互換維持と最小適応層の入口であり、新機能設計の入口ではない。
+- oracle 側 builder の正本仕様、prompt 本文、parameter 生成内容を確認したいだけなら、対応する oracle 側 builder を直接読む。
+- apply、review、session、TUI など各機能の実行フローや本体挙動を調べたい場合は、それぞれの実装領域へ進む。
+- AgentCallParameter 型、path model、git helper、file access mode など ACP builder 以外の共通基盤を確認したい場合は、その定義元を読む。
+- 特定の変換処理、wrapper の詳細挙動、既知 typo 補正、runtime path 接続などを変更する場合は、該当する個別 module または下位 package を読む。
 
 ## hash
-- 871c1d3698bf7219f005efd72f17aaff6274f7ddbdb99325bb64f21b9f306cc6
+- ff451940106c25e6c85f5144a6578f39e1068598cdb6f7f35c39b9914c9db615
 
 # `basic`
 
