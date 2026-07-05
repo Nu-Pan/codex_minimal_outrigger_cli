@@ -1,26 +1,23 @@
 # `acp`
 
 ## Summary
-- oracle src 側の ACP builder を正本に保ち、旧来の acp 系 import 参照を成立させるための互換入口をまとめる領域。実装本体や正本 prompt を複製せず、既存 caller 向けの薄い公開面、委譲、再 export、型適合を扱う。
-- apply fork、review、session、TUI、quota probe、indexing などの agent call parameter builder について、oracle 側 canonical 実装への接続と realization 側公開面の最小補正を確認する入口になる。
+- ACP builder 領域への上位入口。旧来の acp import 経路を維持する互換入口と、各種 AgentCallParameter builder への下位入口をまとめる。
+- oracle 側 builder を正本に保ちながら、realization 側で公開 import 面、再公開、戻り値適合、既存 caller 移行までの薄い互換層を扱う。
 
 ## Read this when
-- acp 系または acp.builder 系の旧 import 経路が、oracle 側 canonical 実装や互換 wrapper へどう接続されるかを確認したいとき。
-- ACP builder の互換層を削除・移行する作業で、既存 caller 向け公開面を残す理由や削除条件を調べたいとき。
-- apply fork、review、session、TUI、quota probe、indexing の agent call parameter builder について、oracle builder への委譲境界や realization 側での最小補正・型適合を確認したいとき。
-- 正本 prompt や canonical builder を realization 側へ複製しないための接続方法、package path、module alias、再 export の扱いを調べたいとき。
-- realization 側または利用者向け公開面に残る acp 系 import の扱いを判断したいとき。
+- ACP builder 全体で、旧 import 経路と canonical oracle 実装または realization 側 wrapper の接続関係を確認したいとき。
+- apply fork、review、session、TUI、quota availability probe 向けの AgentCallParameter builder の入口を探しているとき。
+- oracle src 由来の acp builder 互換 import がどこで維持され、どの下位要素へ進むべきか判断したいとき。
+- acp.* 参照を oracle.* または実体 module へ移行する作業で、互換入口を残す理由や削除条件を確認したいとき。
 
 ## Do not read this when
-- oracle 側 builder の正本仕様、prompt 本文、canonical 実装内容を確認したいだけなら、oracle 側の該当実装を直接読む。
-- acp builder の実装内容や生成処理そのものを調べたいとき。この領域は互換入口なので、実装本体へ進む。
-- apply、review、session、TUI、quota probe など各機能そのものの実行フロー、CLI 引数処理、UI 挙動、判定処理、状態操作を調べたい場合は、それぞれの機能実装へ進む。
-- AgentCallParameter の基本構造、汎用 git helper、path model、file access mode、Structured Output schema など builder 互換入口以外の共通基盤を調べたい場合は、該当する共通実装を読む。
-- 新しい acp 機能、公開 API、新規 import 経路を設計したいだけの場合は、既存互換維持を扱うこの領域ではなく、正本仕様や対象機能の入口を確認する。
-- acp 系参照がすでに全公開面と realization 側から消えていることだけを確認済みで、互換入口の詳細を読む必要がないとき。
+- prompt 本文、出力条件、parameter 生成内容の人間意図、canonical builder の正本定義を確認したいときは、対応する oracle 側の文書または実装を読む。
+- apply、review、session、TUI の機能本体の制御フロー、CLI 引数処理、画面挙動、branch 操作、finding 処理などを調べたいときは、各機能の実装側へ進む。
+- agent call parameter、path model、file access mode、Structured Output schema などの基礎型や共通仕様だけを確認したいときは、それぞれの共通実装や正本仕様を読む。
+- 新しい acp 機能、公開 API、新規 import 経路を設計したいだけのときは、互換維持層ではなく公開面や呼び出し元の設計箇所を読む。
 
 ## hash
-- f9e8063b728d3db72874a1be02c78ac61acad79e996a2b03272d9fa85feea752
+- 93612001656072cf2e2a28718a43a5d4cf3eff400ba6f3ed3c269bd95e7a4986
 
 # `basic`
 

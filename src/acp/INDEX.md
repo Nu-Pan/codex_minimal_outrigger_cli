@@ -19,20 +19,21 @@
 # `builder`
 
 ## Summary
-- ACP builder まわりの互換入口を集める領域。oracle 側の canonical builder を正本に保ちつつ、旧来の acp.builder 系 import 経路や既存 caller からの参照を成立させる薄い公開面を提供する。
-- apply fork、review、session、TUI、quota probe、indexing などの builder について、oracle 側実装への委譲、realization 側公開型への最小適合、既存 import path 維持、削除条件確認の入口になる。
+- ACP builder 領域の実装入口。正本側 builder を維持しながら旧来の公開名前空間や import 経路を成立させる互換層と、apply fork・review・session・TUI・quota availability probe 向けの AgentCallParameter 構築境界を扱う。
+- 多くの下位要素は実処理本体ではなく、canonical 実装への再公開、oracle 側 builder 戻り値の realization 側公開型への適合、既存 caller 移行まで残す薄い公開面維持を責務にする。
 
 ## Read this when
-- acp.builder 系の旧 import 経路が oracle 側 canonical 実装や互換 wrapper へどう接続されるかを確認したいとき。
-- ACP builder の互換層を削除・移行する作業で、既存 caller 向け公開面を残す理由や削除条件を調べたいとき。
-- apply fork、review、session、TUI、quota probe、indexing の agent call parameter builder について、oracle builder への委譲境界や realization 側での最小補正・型適合を確認したいとき。
-- 正本 prompt や canonical builder を realization 側へ複製しないための接続方法、package path、module alias、再 export の扱いを調べたいとき。
+- ACP builder 全体で、旧 import 経路と canonical oracle 実装または realization 側 wrapper の接続関係を確認したいとき。
+- apply fork、review、session、TUI、quota availability probe のいずれかの AgentCallParameter builder の入口を探しているとき。
+- oracle 側 builder を正本に保ちつつ、realization 側で package path、module alias、戻り値変換、既知の最小補正をどこで行うかを調べるとき。
+- acp.builder 配下の互換 package や再公開モジュールを削除できるか判断するために、残す理由・削除条件・移行対象を確認したいとき。
+- 通常の agent call parameter 生成ではなく、quota failure 後の readonly availability probe 用 parameter 生成箇所を探しているとき。
 
 ## Do not read this when
-- oracle 側 builder の正本仕様、prompt 本文、canonical 実装内容を確認したいだけなら、oracle 側の該当実装を直接読む。
-- apply、review、session、TUI、quota probe など各機能そのものの実行フロー、CLI 引数処理、UI 挙動、判定処理、状態操作を調べたい場合は、それぞれの機能実装へ進む。
-- AgentCallParameter の基本構造、汎用 git helper、path model、file access mode、Structured Output schema など builder 互換入口以外の共通基盤を調べたい場合は、該当する共通実装を読む。
-- 新しい公開 API や新規 import 経路を設計したいだけの場合は、既存互換維持を扱うこの領域ではなく、正本仕様や対象機能の入口を確認する。
+- agent call parameter、path model、file access mode、Structured Output schema などの基礎型や共通仕様だけを確認したい場合は、それぞれの共通実装や正本仕様を読む。
+- prompt 本文、出力条件、parameter 生成内容の人間意図、canonical builder の正本定義を確認したい場合は、対応する oracle 側の文書または実装を読む。
+- apply、review、session、TUI の機能本体の制御フロー、CLI 引数処理、画面挙動、branch 操作、finding 処理などを調べたい場合は、各機能の実装側へ進む。
+- 新しい公開 API や新規 import 経路を設計したいだけの場合は、互換維持層ではなく公開面や呼び出し元の設計箇所を読む。
 
 ## hash
-- a04347ec13bca4d4f64c12283ccea2684da024db656cc373e875ae0e01af2b8c
+- 774669af8cb48bd45a1d04ce5b00eb73a958c8aa3e2ed10a3bef0deaa3cbee49
