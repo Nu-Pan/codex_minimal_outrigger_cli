@@ -298,7 +298,7 @@ def test_quota_probe_builder_delegates_to_oracle_builder_when_available(
     assert calls == [base]
 
 
-def test_quota_probe_builder_requires_oracle_builder() -> None:
+def test_quota_probe_builder_uses_minimal_fallback_when_oracle_builder_is_absent() -> None:
     base = AgentCallParameter(
         ModelClass.FLAGSHIP,
         ReasoningEffort.HIGH,
@@ -308,8 +308,14 @@ def test_quota_probe_builder_requires_oracle_builder() -> None:
         cwd=Path("/tmp/base-cwd"),
     )
 
-    with pytest.raises(RuntimeError, match="oracle.acp_builder.quota_probe"):
-        build_quota_availability_probe_parameter(base)
+    parameter = build_quota_availability_probe_parameter(base)
+
+    assert parameter.model_class == ModelClass.MINIMUM
+    assert parameter.reasoning_effort == ReasoningEffort.LOW
+    assert parameter.file_access_mode == FileAccessMode.READONLY
+    assert parameter.structured_output_schema_path is None
+    assert parameter.run_indexing_preflight is False
+    assert parameter.cwd == base.cwd
 
 
 def test_quota_probe_uses_real_builder_when_quota_recovers(
