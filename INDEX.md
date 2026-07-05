@@ -143,23 +143,23 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を置く上位領域。CLI 入口、サブコマンド本体、共通 runtime helper、互換 import path、oracle src への再公開 shim など、利用者向けコマンドと実行基盤を構成する実装の入口になる。
-- 正本側実装を複製せずに既存公開参照を維持する互換層と、実際の CLI 実行フローを担う実装領域を含み、コマンド構成・共通処理・互換経路のどこへ進むべきかを選ぶための階層。
+- cmoc の realization implementation 全体を置く階層で、CLI 入口、サブコマンド本体、共通 runtime helper、正本側実装への互換 import 層を束ねる。
+- 利用者向けコマンドを runtime・state・git 操作・Codex 実行・レポート出力へ接続する実装と、oracle src を複製せず既存公開参照を維持する最小適応層への上位入口になる。
 
 ## Read this when
-- cmoc の CLI 入口、サブコマンド実行本体、runtime 共通処理、互換 import path のどこを読むべきかを判断したいとき。
-- 利用者向けコマンドから state、git、path、logging、Codex 実行、report、preflight などの共通基盤へどう接続されるかを追いたいとき。
-- oracle src 側の型・設定・builder・path model などを realization 側で複製せず、既存公開参照として再公開する互換層や削除条件を確認したいとき。
-- 古い公開 import path を canonical 実装へ移行する作業で、残っている互換入口と影響範囲を絞りたいとき。
+- CLI の公開入口、サブコマンド登録、サブコマンド固有の実行フロー、または複数サブコマンドで使う runtime API の読む先を選びたいとき。
+- 既存の公開 import 経路が、正本側実装や実体 module へどう委譲・再公開されているかを確認したいとき。
+- 設定、基本型、agent call parameter builder、path model、構造化文書などを realization 側へ複製しないための互換境界や削除条件を調べたいとき。
+- apply、review、session、doctor、indexing、TUI などの実装領域へ進む前に、どの下位責務を読むべきかを絞りたいとき。
 
 ## Do not read this when
-- oracle file に書かれた正本仕様断片、prompt、出力条件、設定定義、path model、構造化出力 schema そのものを確認したいとき。対応する oracle 側の文書または実装を読む。
-- 自動テストの内容やテスト観点を確認したいとき。テスト側の階層へ進む。
-- 生成済み INDEX entry、実行済み log、特定 session の状態内容など、実装変更を伴わない成果物や実行結果だけを確認したいとき。
-- 新しい公開 API、設定項目、CLI option、永続状態を設計したいだけで、既存実装や互換入口の変更箇所を探していないとき。
+- oracle file にある正本仕様断片、prompt、出力条件、設定値の意味、schema、path placeholder などの人間意図を確認したいとき。対応する oracle 側の文書または実装を読む。
+- 生成済み INDEX、ログ、state、report の個別内容を確認したいだけで、runtime 実装や CLI 実装を変更しないとき。
+- 特定の共通定義や機能本体の場所がすでに分かっているときは、この階層全体ではなく該当する下位対象を直接読む。
+- 新しい公開 API、設定項目、サブコマンド、永続状態を追加する設計だけが目的で、既存実装や互換 import 経路の影響確認が不要なとき。
 
 ## hash
-- 3e4c694663add3a0e766f260740780808ed8b62bbb80f7b5cfd6eef1a63a65a0
+- e1add01526858452ec8c44e28ec2d911a5abbfc8121ade1866d9d3094bfe10cd
 
 # `test`
 

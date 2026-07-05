@@ -114,24 +114,22 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の実行制御を担う。単一試行ループ内で prompt/call/stdout/stderr/output の記録、Structured Output 検証、semantic retry、capacity retry、quota 待機と代表 probe、resume 継続、subcommand event 発行を同じ状態機械として扱う。
-- agent call 後の file access 事後検証を行わない互換 API と、git status 由来の worktree 変更 path 取得も含む。
+- Codex exec の単一試行ループと、その周辺の実行制御を扱う。Structured Output 検証、semantic retry、capacity retry、quota 待機と代表 probe、resume 継続、call log・prompt/stdout/stderr/output log、subcommand event 記録を同じ状態機械としてまとめている。
+- Codex CLI 呼び出し用の cwd/profile/CODEX_HOME/schema/argv 準備、quota probe 用の別 AgentCallParameter 実行、CodexExecResult の組み立て、Codex call 後の worktree 変更 path 取得もここで扱う。
 
 ## Read this when
-- Codex CLI を `exec` で呼び出す処理、実行時 profile/cwd/CODEX_HOME/schema の扱い、または Codex call log の生成内容を確認・変更したいとき。
-- Structured Output の読み取り失敗や schema 検証失敗を semantic retry として扱う条件を確認・変更したいとき。
-- capacity error、quota error、quota availability probe、resume token、複数 caller 間の quota polling 共有を扱う挙動を確認・変更したいとき。
-- Codex call の console 出力、subcommand log event、quota wait 時間や poll 回数の記録を確認・変更したいとき。
-- agent call 後の file access 事後検証を無効化している互換 API、または worktree の変更 path 列挙を確認・変更したいとき。
+- Codex exec 呼び出しの再試行条件、quota 枯渇時の待機・代表 probe・resume token 継続、capacity error の backoff、Structured Output schema 検証失敗時の扱いを確認または変更したいとき。
+- Codex call の prompt/stdout/stderr/output/call log の生成内容、subcommand log へ記録される codex_call event、CodexExecResult に入る実行結果 metadata を追いたいとき。
+- Codex exec に渡す profile、CODEX_HOME、cwd、output schema、argv、stdin prompt log の関係を確認したいとき。
+- agent call 後の worktree 変更 path 収集や、ignored file を含めた git status path 取得の挙動を確認したいとき。
 
 ## Do not read this when
-- TUI 起動や exec 以外の Codex 起動経路を確認したいだけのとき。
-- Codex profile、schema file、Codex home、resume token 抽出、quota/capacity error 判定などの個別 helper の実装詳細を確認したいときは、それぞれの runtime helper 側を直接読む。
-- CLI サブコマンド固有の仕様や prompt 構築内容を確認したいときは、対象サブコマンドや prompt builder 側を読む。
-- git の低レベル実行 wrapper そのものや path model の定義を確認したいだけのとき。
+- TUI 起動や exec 以外の Codex 起動経路を調べたいだけのとき。
+- Codex profile 生成、runtime config 読み込み、path model、git command 実行 wrapper の詳細を変更したいときは、それぞれの専用 module を直接読む。
+- 個別 subcommand の仕様や apply requeue 全体の制御を調べたいときは、subcommand 側の実装を先に読む。
 
 ## hash
-- ab354246a8c6a03dc23464d07229185c1fa3c4c7737ee0733f9e23b5769eaf0e
+- 1b1106ae235e45a3122e44bd13d6ad3a1dc0cbd97a3e7467a4175771349467dc
 
 # `runtime_codex_logging.py`
 
