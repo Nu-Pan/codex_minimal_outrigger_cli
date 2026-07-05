@@ -155,21 +155,20 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 群を収める領域。CLI サブコマンド、Codex runtime、ACP builder、prompt、INDEX.md 更新、packaging、共通 runtime 契約を外部挙動と回帰観点から検証する。
-- 共通 pytest 支援コードも含み、一時 Git リポジトリ、Codex home/profile、fake command、Typer CLI 実行、apply worktree 解決など、複数テストで共有される fixture/helper の入口になる。
+- cmoc の realization test 群を置くディレクトリ。CLI サブコマンド、Codex runtime、ACP builder、prompt rendering、INDEX.md 更新、session/apply/review/doctor など、src 側実装の外部挙動と共通制御の回帰テストへの入口になる。
+- 共通 fixture/helper はテスト支援モジュールに集約され、個別ファイルは対象サブコマンドまたは runtime 領域ごとの期待挙動・状態遷移・git 副作用を検証する。
 
 ## Read this when
-- cmoc の実装変更に対応する既存 realization test を探し、外部挙動・状態遷移・git 副作用・ログ・report・error 表示の期待値を確認または更新したい。
-- session、apply、doctor/init、review oracle、indexing、TUI、Codex runtime などの CLI 経由の回帰範囲を把握し、どのテストを読むべきか判断したい。
-- Codex exec/TUI の起動引数、sandbox、Codex home、retry、quota、post validation、subprocess tracking など runtime 境界のテストを探したい。
-- ACP builder、prompt rendering、structured output schema 参照、packaged import 境界、StructDoc rendering など、CLI 本体より下位の共通契約を検証するテストを探したい。
-- テスト用 fixture/helper を使うまたは変更する前に、既存の一時リポジトリ作成、fake 実行環境、Codex stub、CLI runner の責務を確認したい。
+- cmoc の既存テストから、変更対象の CLI 外部挙動、runtime 制御、ACP builder、prompt、indexing、session/apply/review/doctor の回帰観点を探したいとき。
+- src 側の変更に対応する realization test を追加・更新するため、同じ観点の既存テストや共通 fixture/helper を確認したいとき。
+- Codex CLI/TUI 実行、file access mode、sandbox profile、post validation、retry、quota、Codex home など runtime 共通契約のテスト入口を探すとき。
+- Git worktree、branch、state file、INDEX.md、oracle/realization file 境界、managed Ollama など、CLI 実行で観測される副作用の期待値を確認したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片そのものを確認・編集したい場合は、対応する oracle 側の doc、src、test を読む。
-- 実装本体の責務や内部 helper の設計を先に確認したい場合は、対応する implementation を読む。
-- 個別の不具合や仕様変更に対応するテスト対象が既に分かっている場合は、この階層全体ではなく該当するテストまたは支援コードへ直接進む。
-- INDEX.md エントリー生成規則、routing standard、oracle/realization standard そのものを読みたい場合は、この realization test 領域ではなく正本仕様側を読む。
+- 本番実装の責務・内部処理を先に確認したい場合は、src 側の該当モジュールを読む。
+- oracle file の正本仕様、schema、prompt 正本、開発ルールを確認または編集したい場合は、oracle 配下の該当文書を読む。
+- 特定テストの共通 helper だけを確認したい場合は、テスト支援モジュールへ直接進む。
+- INDEX.md エントリー生成規則そのものを確認したい場合は、routing/index standard の正本仕様を読む。
 
 ## hash
-- 4186b80b7761b0515dbd89368c50668a68a469bb30384ce529233fb0b8b2eea8
+- 41946cc7a470bc6595e50a4e7ccb166e343dd318bf199c3152b5ab1edd88d82b

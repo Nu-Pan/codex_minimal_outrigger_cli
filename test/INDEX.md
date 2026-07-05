@@ -1,20 +1,21 @@
 # `_support.py`
 
 ## Summary
-- CLI・ランタイム系テストで使う共通 pytest 支援コード。最小 Git リポジトリ作成、Codex home/profile のスタブ、Typer CLI 実行 helper、管理対象 Ollama/systemctl の fake 実行環境、apply worktree 解決をまとめる。
+- cmoc の realization test から共有されるテスト支援モジュール。最小 Git リポジトリ、Codex home、Codex 実行パラメータ、fake Codex profile、fake Ollama/systemctl 環境、doctor/init 実行、apply worktree 解決など、CLI・runtime 系テストの共通 fixture/helper をまとめている。
 
 ## Read this when
-- テストで cmoc 対象の一時 Git リポジトリ、追跡済み oracle file、Codex home、Codex 実行パラメータを用意する helper を使うまたは変更する。
-- doctor/init や profile 作成を伴うテストで、Ollama・systemctl を実サービスではなく fake command で動かす仕組みを確認する。
-- Codex CLI subprocess 制御、Typer CLI 実行結果、apply session state から worktree path を解決するテスト支援処理を調べる。
+- テスト内で Git リポジトリや tracked oracle file を作る既存 helper を使いたいとき。
+- Codex CLI 実行、profile 生成、Codex home、AgentCallParameter に関するテスト支援処理を確認・変更するとき。
+- doctor/init や managed Ollama/systemctl を伴うテストの fake 外部コマンド環境を確認・変更するとき。
+- session state から apply worktree を解決するテスト helper を探すとき。
 
 ## Do not read this when
-- 個別コマンドの仕様や実装本体を確認したいだけで、テスト用 fixture/helper の挙動を変更しない。
-- oracle file の正本仕様、path model、開発ルールそのものを読みたい場合。
-- 単体テストの assertion 内容や個別シナリオを確認したい場合は、この共通 helper ではなく該当する test file を読む。
+- 個別コマンドの期待挙動や assertion を確認したいだけなら、該当するテストファイルを直接読む。
+- 本番実装の Git 操作、Codex 実行、Ollama 管理、apply worktree 解決を変更したい場合は、src 側の該当モジュールを読む。
+- oracle file の正本仕様や開発ルールを確認したい場合は、oracle 配下の該当文書を読む。
 
 ## hash
-- 168ce8fa3edf60cfd84ff5c21b56236c330538c9f649e8a6d367db48c1eacf49
+- 5e196edd21cf742a57e6103709833292de810b3e53516c437704cae8d6f0ebc5
 
 # `test_acp_builder_parameters.py`
 
