@@ -123,12 +123,20 @@ def _restore_preexisting_staged_paths(
     root: Path, patches: dict[str, str], committed_paths: set[str]
 ) -> None:
     for path, patch in patches.items():
+        if _is_cmoc_tree_path(path):
+            # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+            # doctor repair の .cmoc 追跡解除は、preprocess 前の staged 状態より優先する。
+            continue
         if path in committed_paths:
             # The working tree already contains the preexisting staged content plus
             # the committed repair for same-path cases such as .gitignore.
             run_git(["add", "-f", "--", path], root)
         else:
             _apply_cached_patch(root, patch)
+
+
+def _is_cmoc_tree_path(path: str) -> bool:
+    return path == ".cmoc" or path.startswith(".cmoc/")
 
 
 def _staged_paths(root: Path) -> list[str]:

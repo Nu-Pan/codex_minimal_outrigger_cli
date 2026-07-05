@@ -222,6 +222,25 @@ def test_doctor_preprocess_untracks_existing_cmoc_files(
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
+def test_doctor_preprocess_does_not_restore_preexisting_staged_cmoc_files(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    config_path = root / ".cmoc" / "config.json"
+    write_config(config_path, CmocConfig())
+    run_git(root, "add", "-f", ".cmoc/config.json")
+    run_git(root, "commit", "-m", "track old cmoc config")
+    config_path.write_text('{"num_parallel": 3}\n')
+    run_git(root, "add", "-f", ".cmoc/config.json")
+    monkeypatch.chdir(root)
+
+    run_doctor(root)
+
+    assert config_path.read_text() == '{"num_parallel": 3}\n'
+    assert run_git(root, "ls-files", "--", ".cmoc").stdout.strip() == ""
+    assert run_git(root, "diff", "--cached", "--name-only").stdout.strip() == ""
+
+
 def test_doctor_repair_commit_does_not_include_preexisting_staged_changes(
     tmp_path: Path, monkeypatch
 ) -> None:
