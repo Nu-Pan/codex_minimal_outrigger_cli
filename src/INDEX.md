@@ -138,20 +138,21 @@
 # `sub_commands`
 
 ## Summary
-- cmoc のサブコマンド実行本体を集める領域。apply、doctor、indexing、review、session、tui など、CLI runtime や共通処理を利用して各サブコマンド固有の実行制御へ接続する入口になる。
-- 各サブコマンドの上位 orchestration、事前条件確認、状態遷移、git/worktree 操作、Codex 実行や report 出力への接続を扱い、詳細ロジックは必要に応じて配下の個別 module へ分岐して読む。
+- cmoc の各サブコマンド実行本体を集約する実装領域。apply、doctor、indexing、review、session、tui などの CLI 入口から、runtime・git・state・Codex 実行・report 生成などの共通処理へつなぐ上位 orchestration を扱う。
+- サブコマンド単位の実行順序、事前条件確認、状態遷移、branch/worktree 操作、利用者向け出力、失敗時処理を追うための入口であり、詳細ロジックは必要に応じて各サブコマンド配下や共通 helper へ進む。
 
 ## Read this when
-- cmoc のサブコマンド実装を調べ、どのコマンド固有処理へ進むべきかを選びたいとき。
-- apply run、session 操作、review oracle、indexing maintenance、doctor 修復起動、TUI 起動などの CLI 実行フローを確認または変更したいとき。
-- サブコマンド実行時の preflight、state/branch/worktree 操作、cleanup、merge、report、利用者向け出力がどの実装に接続されるかを追いたいとき。
-- 共通 runtime や git wrapper ではなく、各サブコマンド固有の orchestration 層を起点に調査したいとき。
+- cmoc のサブコマンド実装を確認し、どの command 本体または下位 module へ進むべきかを判断したいとき。
+- apply、review、session など、branch、worktree、state、process id、report、cleanup を伴うサブコマンドの外部挙動や状態遷移を確認または変更したいとき。
+- doctor、indexing、tui など、CLI runtime から特定の処理を起動する接続点、preflight、実行パラメータ解決、利用者向け出力を確認したいとき。
+- サブコマンドの上位制御と、対象列挙、loop、report、INDEX 変更反映、git 操作、Codex 実行 builder などの詳細処理との接続関係を追いたいとき。
 
 ## Do not read this when
-- トップレベルの CLI 登録、引数解析全体、runtime の共通実行規約、設定読み込み、git wrapper、path model、state 型そのものを調べたいとき。
-- Codex に渡す prompt、parameter builder、Structured Output schema、INDEX.md 生成ロジック、report 描画などの詳細実装だけを確認したいときは、それぞれの専用領域を読む。
-- oracle file や realization file の一般定義、ルーティング規則、INDEX.md エントリー生成規則そのものを確認したいとき。
-- 特定サブコマンドの正本仕様を確認したいときは、実装ではなく対応する oracle doc を読む。
+- CLI runtime、git wrapper、state 型、path model、設定読み込み、Codex 実行基盤などの共通機構そのものを調べたいとき。
+- oracle file、realization file、INDEX.md 生成規則、ルーティング規則など、仕様文書や文書生成の一般定義を確認したいとき。
+- Codex に渡す prompt、parameter builder、Structured Output schema の詳細だけを確認したいとき。
+- サブコマンド登録やトップレベル CLI 配線だけを確認したいとき。
+- 低レベルな branch、worktree、state file、process id 操作 helper の汎用実装だけを確認したいとき。
 
 ## hash
-- 0a4ed453fd591816f94162a4eddecd097f9f24bfb9c7d5d0934c34b3f5dc331e
+- 4b5587f17604677913bfa9f131d2aa758eb88af8fe828d566b93aed689aeeef7
