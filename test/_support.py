@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 
 import pytest
+from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from typer.testing import CliRunner
 
 runner = CliRunner()
@@ -64,6 +65,17 @@ def setup_codex_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     (codex_home / "auth.json").write_text("{}\n")
     monkeypatch.setenv("CODEX_HOME", str(codex_home))
     return codex_home
+
+
+def codex_parameter(mode: FileAccessMode = FileAccessMode.READONLY) -> AgentCallParameter:
+    """Build the small default Codex parameter used by runtime wrapper tests."""
+    return AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        mode,
+        "prompt",
+        None,
+    )
 
 
 def stub_codex_profile(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
