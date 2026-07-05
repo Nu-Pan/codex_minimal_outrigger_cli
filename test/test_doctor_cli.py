@@ -162,6 +162,7 @@ def test_doctor_generates_and_tracks_config(tmp_path: Path, monkeypatch) -> None
         run_git(root, "ls-files", "--", ".cmoc/config.json").stdout.strip()
         == ".cmoc/config.json"
     )
+    assert json.loads(config_path.read_text())["codex"]["num_try_falv_recovery"] == 1
     assert run_git(
         root, "show", "--name-only", "--format=", "HEAD"
     ).stdout.splitlines() == [".cmoc/config.json"]
@@ -225,7 +226,8 @@ def test_init_syncs_default_config_without_overwriting_human_values(
                             "model_provider": "codex",
                             "model": "CUSTOM",
                         }
-                    }
+                    },
+                    "num_try_falv_recovery": 5,
                 },
             }
         )
@@ -251,6 +253,7 @@ def test_init_syncs_default_config_without_overwriting_human_values(
         "model_provider": "codex",
         "model": "gpt-5.4-mini",
     }
+    assert data["codex"]["num_try_falv_recovery"] == 5
     assert data["codex"]["reasoning_effort"]["low"] == "low"
     assert data["apply_fork"]["num_apply_files"] == 200
 
