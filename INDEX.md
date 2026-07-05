@@ -143,25 +143,23 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体への入口。最上位 CLI、サブコマンド実装、共通 runtime helper、oracle src への互換 shim、旧 import path を維持する薄い互換層を含む。
-- 利用者向けコマンドの公開面から、apply/session/review/indexing/doctor/init/TUI などの上位制御、または複数機能で共有される runtime 基盤へ進むための階層。
-- oracle 側の正本実装を複製せず参照・再公開する互換入口も含むため、公開 import 経路の移行状況や削除条件を確認する入口になる。
+- cmoc の realization implementation を置く階層で、最上位 CLI 入口、サブコマンド実装、共有 runtime helper、oracle src への互換 shim、旧 import 経路の互換層へ進むための入口。
+- 利用者向け CLI 公開面、サブコマンド orchestration、共通 runtime 制御、設定・基本型・ACP builder などの互換 import 境界を確認し、実装側の読む先を選ぶために使う。
 
 ## Read this when
-- cmoc の CLI 入口、サブコマンド実装、共通 runtime helper のどこから読み始めるべきか選びたいとき。
-- apply、session、review、indexing、doctor/init、TUI など、利用者向けサブコマンドの実行フローや orchestration を確認・変更したいとき。
-- Codex 起動、preflight、config、git/worktree、path、state、logging、error、Structured Output 検証など、複数コマンドで共有される実行時基盤を探すとき。
-- oracle src 由来の基本型、設定、ACP builder、oracle package を realization 側の既存 import path からどう参照・再公開しているか確認したいとき。
-- 古い公開 import path や互換入口を残す理由、実体モジュールとの対応、削除条件を判断したいとき。
+- cmoc の realization implementation の中で、CLI entrypoint、個別サブコマンド、共通 runtime helper、互換 import 層のどこから調査を始めるべきか判断したいとき。
+- CLI コマンド構成、引数解析エラー変換、サブコマンド実行フロー、git・worktree・state・logging・preflight などの実装側接続を追いたいとき。
+- oracle src の正本実装を複製せず、realization 側の既存 import path や公開参照を維持する互換層の所在と削除条件を確認したいとき。
+- apply、session、review、indexing、doctor/init、TUI、ACP builder 互換入口など、利用者向け機能に近い realization 実装の入口を選びたいとき。
 
 ## Do not read this when
-- oracle file にある正本仕様断片、prompt 本文、path model の概念定義、INDEX.md entry の文章基準、CLI 出力 schema の仕様を確認したいだけのときは、oracle 側の該当文書または実装を読む。
-- 生成済み INDEX.md、実行ログ、特定 session の状態ファイルなど、成果物や状態そのものを調べたいだけのときは、対象の生成物または状態ファイルを直接確認する。
-- 個別サブコマンドの内部処理、runtime helper、互換 import 層など、読む対象がすでに下位要素へ絞れているときは、その下位対象へ直接進む。
-- 新しい正本仕様断片や oracle 側 canonical builder を確認・変更したいときは、この realization implementation 階層ではなく oracle 側を読む。
+- oracle file に書かれた正本仕様、prompt 本文、path model、Structured Output schema、INDEX.md entry 基準などを確認したいとき。対応する oracle 側を直接読む。
+- 生成済み INDEX.md、実行ログ、特定 session の状態ファイル、作業メモなど、実装ではなく成果物や状態そのものを調査したいとき。
+- 個別の読む対象がすでに CLI 入口、特定サブコマンド、共通 runtime helper、互換 import 層のいずれかに絞れているとき。該当する下位対象へ直接進む。
+- 新しい公開 API、設定項目、import 経路を設計したいだけで、現行 realization implementation の入口や既存互換層の残存理由を調べる必要がないとき。
 
 ## hash
-- 44a86a215e4f00682d12a780600a2b5a2ede6dcc56ca92135dea700b1e03d963
+- 35bbb57d8a58d5b8bb7e9e8e4679c3113914d64bc28fa098a4959c2c16c6b5e6
 
 # `test`
 

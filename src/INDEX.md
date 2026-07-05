@@ -1,23 +1,24 @@
 # `acp`
 
 ## Summary
-- ACP builder 領域への上位入口。旧来の acp import 経路を維持する互換入口と、各種 AgentCallParameter builder への下位入口をまとめる。
-- oracle 側 builder を正本に保ちながら、realization 側で公開 import 面、再公開、戻り値適合、既存 caller 移行までの薄い互換層を扱う。
+- 旧来の acp import 経路を、oracle 側の canonical builder 実装や realization 側の適応層へ接続する互換領域。実装本体ではなく、既存公開面の維持、oracle src の複製回避、移行期間中の import 互換、削除条件確認の入口として使う。
+- apply fork、indexing、quota probe、review、session、TUI などの builder 互換入口へ進むための領域で、AgentCallParameter への最小変換、module alias、package path 追加、既知 typo 補正など、旧 import 経路を残すための接続点を扱う。
 
 ## Read this when
-- ACP builder 全体で、旧 import 経路と canonical oracle 実装または realization 側 wrapper の接続関係を確認したいとき。
-- apply fork、review、session、TUI、quota availability probe 向けの AgentCallParameter builder の入口を探しているとき。
-- oracle src 由来の acp builder 互換 import がどこで維持され、どの下位要素へ進むべきか判断したいとき。
-- acp.* 参照を oracle.* または実体 module へ移行する作業で、互換入口を残す理由や削除条件を確認したいとき。
+- 旧来の acp import 参照を canonical import path、oracle 側実装、または realization 側 wrapper へ移行する作業で、互換入口を残す理由や削除条件を確認したいとき。
+- acp builder 系の既存公開面が、oracle 側 canonical 実装や realization 側の適応層へどう接続されているかを調べたいとき。
+- apply fork、indexing、quota probe、review、session、TUI などの builder 互換入口の所在を確認し、個別領域へ進む入口を選びたいとき。
+- oracle src 由来の builder 実装を複製せずに既存 import 参照を維持するための compatibility layer を判断したいとき。
 
 ## Do not read this when
-- prompt 本文、出力条件、parameter 生成内容の人間意図、canonical builder の正本定義を確認したいときは、対応する oracle 側の文書または実装を読む。
-- apply、review、session、TUI の機能本体の制御フロー、CLI 引数処理、画面挙動、branch 操作、finding 処理などを調べたいときは、各機能の実装側へ進む。
-- agent call parameter、path model、file access mode、Structured Output schema などの基礎型や共通仕様だけを確認したいときは、それぞれの共通実装や正本仕様を読む。
-- 新しい acp 機能、公開 API、新規 import 経路を設計したいだけのときは、互換維持層ではなく公開面や呼び出し元の設計箇所を読む。
+- builder の正本仕様、prompt 本文、parameter 生成内容そのものを確認したいとき。対応する oracle 側実装を直接読む。
+- apply、review、session、TUI など各機能の実行フロー、画面挙動、branch 操作、finding 処理など、builder 以外の実装詳細を調べたいとき。該当機能の実装へ進む。
+- AgentCallParameter の基本型、file access mode、path model、Structured Output schema などの共通基礎仕様だけを確認したいとき。それぞれの共通定義を読む。
+- 新しい acp 機能、公開 API、新規 import 経路を設計したいとき。この領域は互換維持専用であり、機能追加の入口ではない。
+- 旧 acp import 参照が全公開面と realization 側から消えていることだけを確認済みで、互換入口の詳細や削除条件を読む必要がないとき。
 
 ## hash
-- 93612001656072cf2e2a28718a43a5d4cf3eff400ba6f3ed3c269bd95e7a4986
+- 1c5e2b3dac5ab40713d93f624d513992ff330b37eee6cb378d8ccfd94f37125e
 
 # `basic`
 

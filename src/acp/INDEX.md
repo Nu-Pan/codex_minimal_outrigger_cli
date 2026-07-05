@@ -19,21 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP builder 領域の実装入口。正本側 builder を維持しながら旧来の公開名前空間や import 経路を成立させる互換層と、apply fork・review・session・TUI・quota availability probe 向けの AgentCallParameter 構築境界を扱う。
-- 多くの下位要素は実処理本体ではなく、canonical 実装への再公開、oracle 側 builder 戻り値の realization 側公開型への適合、既存 caller 移行まで残す薄い公開面維持を責務にする。
+- acp builder 配下の互換入口と個別 builder 領域へのルーティングを担うディレクトリ。oracle 側実装を正本に保ちつつ、旧来の acp.builder import 経路を canonical 実装や realization 側の適応層へ接続する。
+- apply fork、indexing、quota probe、review、session、TUI などの builder 入口があり、実処理本体ではなく import 互換、oracle builder 委譲、realization 公開型への最小変換、削除条件確認の入口として使う。
 
 ## Read this when
-- ACP builder 全体で、旧 import 経路と canonical oracle 実装または realization 側 wrapper の接続関係を確認したいとき。
-- apply fork、review、session、TUI、quota availability probe のいずれかの AgentCallParameter builder の入口を探しているとき。
-- oracle 側 builder を正本に保ちつつ、realization 側で package path、module alias、戻り値変換、既知の最小補正をどこで行うかを調べるとき。
-- acp.builder 配下の互換 package や再公開モジュールを削除できるか判断するために、残す理由・削除条件・移行対象を確認したいとき。
-- 通常の agent call parameter 生成ではなく、quota failure 後の readonly availability probe 用 parameter 生成箇所を探しているとき。
+- acp.builder.* の旧 import 経路が、oracle 側 canonical 実装または realization 側 wrapper へどう接続されるかを調べたいとき。
+- oracle 側 builder を正本としながら realization 側で AgentCallParameter への変換、module alias、package path 追加、既知 typo 補正などをどこで行うか確認したいとき。
+- apply fork、quota probe、review、session、TUI、indexing の builder 互換入口や削除条件を確認し、個別領域へ進む入口を選びたいとき。
+- 旧 acp.builder 参照を canonical import path へ移行する作業で、残すべき互換層、既存参照向け公開面、削除できる条件を調べたいとき。
 
 ## Do not read this when
-- agent call parameter、path model、file access mode、Structured Output schema などの基礎型や共通仕様だけを確認したい場合は、それぞれの共通実装や正本仕様を読む。
-- prompt 本文、出力条件、parameter 生成内容の人間意図、canonical builder の正本定義を確認したい場合は、対応する oracle 側の文書または実装を読む。
-- apply、review、session、TUI の機能本体の制御フロー、CLI 引数処理、画面挙動、branch 操作、finding 処理などを調べたい場合は、各機能の実装側へ進む。
-- 新しい公開 API や新規 import 経路を設計したいだけの場合は、互換維持層ではなく公開面や呼び出し元の設計箇所を読む。
+- oracle 側 builder の正本仕様、prompt 本文、parameter 生成内容そのものを確認したい場合は、対応する oracle 側実装を直接読む。
+- apply、review、session、TUI など各機能の実行フロー、画面挙動、branch 操作、finding 処理など builder 以外の実装詳細を調べたい場合は、該当機能の実装へ進む。
+- AgentCallParameter の基本型、file access mode、path model、Structured Output schema などの共通基礎仕様だけを確認したい場合は、それぞれの共通定義を読む。
+- 新しい公開 API や新規 import 経路を設計したい場合は、この互換領域ではなく正本仕様または新規機能の入口を確認する。
 
 ## hash
-- 774669af8cb48bd45a1d04ce5b00eb73a958c8aa3e2ed10a3bef0deaa3cbee49
+- ebd7c0a82c1bef7ff80f973308194949451ef3a138f2dbeb65af7707112da669
