@@ -147,21 +147,20 @@
 # `test_cli_tui.py`
 
 ## Summary
-- TUI サブコマンド起動前の CLI 前処理を、外部挙動として検証するテスト。エディタで作成された依頼文の整形、parameter resolve 用の Codex exec 呼び出し、TUI 用 Codex parameter 構築、prompt 保存先、`.cmoc/local` の ignore とログ配置を扱う。
-- 通常 worktree と linked worktree の両方で、TUI 起動時に root と cwd が分離され、schema・prompt・ログが repo root 側の `.cmoc/local` に置かれることを確認する。
+- TUI 起動直前の CLI 前処理について、エディタで作成された依頼文の整形、パラメータ解決、Codex TUI 起動用パラメータ、ログ保存先、gitignore 更新、linked worktree 上での root/cwd/schema/log の扱いを外部挙動として検証するテスト。
 
 ## Read this when
-- TUI サブコマンドの起動直前処理、prompt 作成、resolve_parameter の呼び出し条件、launch_tui schema の指定、または `run_codex_tui` へ渡す `AgentCallParameter` を変更する時。
-- linked worktree 上で `tui` を実行した場合の `.cmoc/local` の保存先、root/cwd の扱い、`.gitignore` 更新、sub_command/tui ログ配置を確認したい時。
-- 空文字の resolved file access mode を readonly へ戻す既定挙動を変更または確認する時。
+- TUI サブコマンドの起動前処理、依頼文保存、補完済みプロンプト生成、Codex 実行パラメータ解決、または Codex TUI 呼び出し条件を変更する。
+- TUI サブコマンドが生成するローカルログ、schema 配置、`.cmoc/local` の gitignore 対象化、または linked worktree での保存先解決を確認する。
+- エディタ入力から削除されるテンプレート文言、補完済みプロンプトに含める標準文書、file access mode の既定値を検証する。
 
 ## Do not read this when
-- TUI 画面そのものの対話挙動や表示を調べたいだけで、起動前の CLI 前処理・prompt 保存・Codex 呼び出し parameter に関心がない時。
-- TUI 以外のサブコマンドのログ形式や `.cmoc/local` 管理を調べる場合で、より直接そのサブコマンドのテストがある時。
-- oracle file や INDEX.md の仕様記述そのものを調べたい時。
+- TUI 起動前処理ではなく、Codex 本体の対話 UI や LLM 応答品質そのものを確認したい。
+- TUI 以外のサブコマンド固有の CLI 挙動だけを変更する。
+- oracle 側の仕様断片やルーティング文書の内容を確認したい。
 
 ## hash
-- e7782f01dad7fd46bef6892713197c923251aa615bf9a4f7bad29e1376e24d8f
+- 108810a6a73d65b528b8eedfa8b0132a62f06394c906c075e5572579e029b5bf
 
 # `test_codex_runtime_errors.py`
 

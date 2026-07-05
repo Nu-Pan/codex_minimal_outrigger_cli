@@ -167,22 +167,22 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 群を置くディレクトリ。CLI サブコマンド、Codex 実行 runtime、ACP builder、prompt 組み立て、packaged import、StructDoc rendering など、外部挙動と共通実行基盤の回帰を検証するテストへの入口となる。
-- 一時 Git リポジトリ、fake Codex/Ollama/systemctl、Typer runner、apply/session worktree などを使う統合寄りのテストと、builder・renderer などの局所的な単体テストが含まれる。
+- cmoc の realization test 群を置くディレクトリ。CLI サブコマンド、Codex 実行 runtime、prompt/ACP builder、indexing、session/apply/review workflow、packaging、構造化 Markdown 描画など、実装の外部挙動と共通実行基盤の回帰確認への入口になる。
+- 一時 Git リポジトリ、fake Codex/Ollama/systemctl、linked worktree、session/apply state など、外部コマンドや永続状態を伴うテスト補助もここで共有する。
 
 ## Read this when
-- realization implementation の変更に対して、対応する realization test や既存の回帰観点を探したいとき。
-- apply、session、doctor/init、indexing、review oracle、TUI などの CLI 外部挙動や state/worktree/branch のライフサイクルを確認・変更するとき。
-- Codex CLI 実行 wrapper、profile、CODEX_HOME、file access mode、quota/capacity retry、post validation、subprocess tracking など runtime 境界の期待挙動を調べるとき。
-- ACP builder、prompt parts、packaged import、StructDoc Markdown rendering など、CLI より下位の生成・公開 import・整形処理に対応するテストを探すとき。
-- テスト用 fixture、fake 外部コマンド、一時リポジトリ作成、apply worktree 解決など、共有テスト補助を確認または変更するとき。
+- cmoc の実装変更に対応する既存 realization test を探すとき。
+- CLI サブコマンドの外部挙動、終了コード、stdout/stderr、report、state 更新、worktree/branch cleanup の期待値を確認または変更するとき。
+- Codex CLI 実行 wrapper、profile/CODEX_HOME、file access mode、retry、quota、post validation、TUI 実行など runtime 境界のテストを探すとき。
+- apply、session、review oracle、indexing の workflow 全体を git 状態や linked worktree を含めて検証するテストへ進みたいとき。
+- ACP builder、prompt parts、StructDoc rendering、packaged import など、CLI 以外の realization 側契約を検証するテストを探すとき。
+- テスト用 fixture、fake 外部コマンド、一時 repository、Codex profile stub などの共有 helper を確認または変更するとき。
 
 ## Do not read this when
-- 正本仕様断片そのものを確認したい場合は、oracle 側の該当文書または oracle src/test を読む。
-- 本体実装の責務分割や内部 helper の詳細を先に理解したい場合は、対応する realization implementation を直接読む。
-- INDEX.md エントリー生成規則や routing 文書の表現だけを確認したい場合は、prompt/schema や oracle 側の仕様を読む。
-- 単純な設定値や型定義の意味だけを確認したい場合は、その定義元へ直接進む。
-- LLM や実際の Codex CLI の出力品質そのものを評価したい場合は、この fake 前提の回帰テスト群を入口にしない。
+- oracle file の正本仕様や仕様文書の編集方針を確認したい場合は、oracle 配下の対象を読む。
+- 本体実装の責務分割や内部 helper の詳細だけを調べたい場合は、対応する src 配下の実装を先に読む。
+- INDEX.md エントリーの記述規則や routing 文書の正本定義だけを確認したい場合は、対応する oracle file を読む。
+- 実際の Codex CLI や LLM の出力品質そのものを評価したい場合は、この fake 前提の realization test 群を入口にしない。
 
 ## hash
-- 9eb95d4497a0f28b12d3c054e5ca14ba2709bb470529b6370407bbbe5b752878
+- d95a500af4f670dba81bc85bda2b78dffde02073c0223c871f8ab3de38ad3578
