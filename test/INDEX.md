@@ -343,23 +343,25 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle コマンドの外部挙動を CLI 経由で検証するテスト。report の構成と集計、対象 oracle file の列挙、session/full scope、linked worktree、INDEX.md 差分の merge、処理失敗時 report、review worktree が許されない差分を作った場合の拒否を扱う。
-- 所見 loop の制御を検証するテストを含む。enumerate が対象ごとに関連所見だけを受け取ること、challenger/advocate/judge/merge の呼び出し、merge operation の契約違反や target 再利用の拒否を確認する。
+- review oracle の CLI 実行と report 生成の外部挙動を検証するテスト群。対象 oracle の列挙、scope 指定、report の構成・集計、accepted/rejected 所見の表示、エラー時 report、review 用 worktree と join commit の扱いを扱う。
+- 所見 loop の制御を検証するテスト群。列挙結果の次 round への渡し方、challenger/advocate/judge/merge の呼び出し、merge operation の契約、semantic merge 失敗時の retry と失敗終了を扱う。
+- tracked ignored oracle file、AGENTS.md/INDEX.md 除外、memo 配下や symlink の扱いなど、oracle file 定義に基づく review 対象選択の境界を検証する。
+- review 中に生成された INDEX.md 差分だけを取り込み、それ以外の作業ツリー差分を拒否する挙動を検証する。
 
 ## Read this when
-- review oracle の CLI 実行結果、report 文面・セクション順・集計値・終了コードを変更する。
-- review oracle の対象 oracle file 列挙条件、scope の意味、tracked ignored file、AGENTS.md/INDEX.md 除外、linked worktree 上の review 対象を変更する。
-- review oracle の所見 enumerate/validate/judge/merge loop、finding の採否、merge operation の検証規則を変更する。
-- review oracle 実行中に生成された INDEX.md 差分の取り込み、preflight indexing 差分の扱い、index conflict 解決、非 INDEX.md 差分の拒否を変更する。
-- review oracle の処理失敗時に error report を残す挙動や stdout/stderr へのエラー表示を変更する。
+- review oracle コマンドの CLI 挙動、scope オプション、report 出力、終了コードを変更または確認したいとき。
+- review oracle の所見列挙・検証・judge・merge loop、所見 ID、merge operation の validation や retry 制御を変更するとき。
+- oracle file の列挙条件、tracked ignored file、AGENTS.md/INDEX.md 除外、memo や symlink 境界を変更するとき。
+- review 用 worktree、linked worktree、join commit、review 中の INDEX.md 更新取り込み、非 INDEX 差分拒否の挙動を変更するとき。
 
 ## Do not read this when
-- review oracle 以外の review サブコマンドや通常の session 操作だけを変更する。
-- oracle file の定義そのものや正本仕様文書を確認したいだけで、CLI 実装の外部挙動テストを確認する必要がない。
-- INDEX.md エントリー生成や一般的な indexing の挙動だけを扱い、review oracle 実行時の差分取り込みや衝突解決に触れない。
+- review oracle 以外の review コマンドや通常の session 操作だけを確認したい場合は、対象機能に対応するテストへ進む。
+- report の文字列整形ではなく INDEX.md 生成そのものの仕様や実装を確認したい場合は、indexing 側の実装・テストを読む。
+- Codex 実行 wrapper や runtime preflight の一般挙動だけを確認したい場合は、その責務を持つ実装・テストを直接読む。
+- oracle file の正本仕様本文を確認したい場合は、テストではなく oracle 配下の該当文書を読む。
 
 ## hash
-- 539805ba7347128ae468217f6c61199958527dc5a481c5c567cd4a1429d1aee0
+- 6c008cf76073a00fadf64e2a936c1628f3b61f3c5f0dcd4a70e9c3eb8bcbc693
 
 # `test_session_cli.py`
 

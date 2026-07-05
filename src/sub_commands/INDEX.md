@@ -109,23 +109,21 @@
 # `review_loop.py`
 
 ## Summary
-- review oracle の指摘抽出、重複整理、検証、判定を codex 実行で順に回すループ処理を担う。
-- finding の採番、関連 oracle path による絞り込み、merge operation の検証と適用、advocate/challenger/judge の結果反映を扱う。
+- review oracle の finding 抽出、統合、検証、判定を Codex 呼び出しで反復実行する制御ロジックを扱う。
+- finding list に対する merge/delete/replace 操作の検証と適用、および semantic retry 失敗時のエラー化を担う。
 
 ## Read this when
-- review oracle 実行時に finding がどの順序で列挙、merge、validate、judge されるかを確認したいとき。
-- merge finding Structured Output の delete、replace、merge operation がどの条件で受理または拒否されるかを確認したいとき。
-- finding_id、advocate_reasons、challenger_reasons、verdict、judge_reason の初期化や更新タイミングを調べたいとき。
-- oracle path ごとに既存 finding を渡す条件や、dirty 状態の進み方を変更したいとき。
+- review oracle の finding enumerate/merge/validate/judge の実行順序、反復条件、dirty 管理を確認・変更したいとき。
+- finding merge の Structured Output operation の許容条件、finding_id の採番、重複・未知 ID・不正 kind の扱いを確認・変更したいとき。
+- review oracle loop が Codex 実行パラメータ builder、設定値、log root、worktree、oracle path とどう連携するかを追いたいとき。
 
 ## Do not read this when
-- review oracle 用 prompt parameter の内容や Structured Output schema 自体を確認したいときは、builder 側の該当対象を読む。
-- finding から oracle path を解決する規則だけを確認したいときは、review path 解決を担う対象を読む。
-- 設定値そのものや loop 回数の定義を確認したいときは、config 側の対象を読む。
-- review oracle 以外の review loop や CLI entrypoint の挙動を確認したいときは、その責務を持つ対象を読む。
+- review 対象の oracle file 一覧作成や finding から oracle path を取り出す処理だけを確認したいときは、より直接その責務の対象を読む。
+- Codex 実行パラメータのプロンプト内容や Structured Output schema 自体を確認したいときは、各 builder 側を読む。
+- review oracle 以外の review workflow、CLI 引数、設定定義を確認したいだけのときは、それぞれの責務を持つ対象を読む。
 
 ## hash
-- 6d2050cdbc25b2851d391f49e9b895d0632b0ea9489de6552196593d56188ebf
+- e905f9cf7705c92dbd8fbbdd55db0080f23e60a8bc26b5a4ca8987880fc5b237
 
 # `review_paths.py`
 

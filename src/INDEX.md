@@ -140,20 +140,20 @@
 # `sub_commands`
 
 ## Summary
-- cmoc のサブコマンド実装を集める階層。apply、session、review、indexing、doctor/init、tui など、CLI runtime から呼び出される各操作単位の入口と上位制御へ進むためのルーティング対象である。
-- 個別サブコマンドの lifecycle、preflight、state/branch/worktree/process の扱い、Codex 呼び出し、merge/cleanup/report/output などを確認するときに、該当する下位対象を選ぶ入口となる。
+- CLI サブコマンド実装を機能別に収める階層。apply、session、review、tui、doctor/init、indexing などの実行入口と、各サブコマンド固有の上位制御へ進むための分岐点になる。
+- サブコマンド単位の実行フロー、CLI runtime への接続、状態遷移、git/worktree 操作、Codex 呼び出し、レポート出力などを調べる入口として使う。
 
 ## Read this when
-- cmoc のサブコマンド実装の所在を探し、apply、session、review、indexing、doctor/init、tui のどこへ進むべきか判断したいとき。
-- CLI runtime に接続されたサブコマンド単位の実行順序、事前条件、状態更新、git 操作、利用者向け出力を確認したいとき。
-- apply run、session join、review oracle、INDEX.md maintenance、doctor preprocess、TUI 起動など、複数の下位実装候補から対象を絞り込みたいとき。
-- サブコマンド固有の report 生成入口、Codex 呼び出し入口、merge/conflict/cleanup 制御、対象列挙や状態遷移の接続点を探したいとき。
+- どのサブコマンド実装へ進むべきかを選びたいとき。
+- apply fork/join/abandon、session 作成/join/abandon、review oracle、tui、doctor/init、indexing の CLI 実行入口や上位 orchestration を確認したいとき。
+- サブコマンド固有の preflight、状態更新、branch/worktree 操作、cleanup、利用者向け出力、失敗時処理の所在を探したいとき。
+- review oracle の対象列挙、finding loop、INDEX 変更統合、report 出力など、review 関連の下位責務へ進む入口を判断したいとき。
 
 ## Do not read this when
-- CLI runtime 共通の実行ラッパー、repo root 解決、git wrapper、state 永続化、worktree 操作など、サブコマンドに依存しない基盤だけを調べたいとき。
-- Codex に渡す prompt、Structured Output schema、parameter builder、config 定義など、サブコマンド入口ではなく builder や oracle 側の詳細だけを確認したいとき。
-- INDEX.md の生成内容、oracle file・realization file の定義、ルーティング規則など、サブコマンド実装ではない仕様概念を確認したいとき。
-- 対象サブコマンドや責務が既に決まっており、下位の個別実装へ直接進めるとき。
+- CLI runtime の共通実行制御、repo root 解決、git wrapper、state 読み書き、worktree 操作などの汎用基盤だけを調べたいとき。
+- Codex に渡す prompt、Structured Output schema、parameter builder、設定定義など、サブコマンド制御ではない生成・設定詳細だけを変更したいとき。
+- INDEX.md の内容生成、差分検出、lock、commit など indexing 共通処理の詳細を調べたいとき。
+- oracle file・realization file・INDEX.md 生成規則など、サブコマンド実装ではない仕様概念を確認したいとき。
 
 ## hash
-- ed464b308dd8b05949982a8c4e09344f395595b0693f7992a19289c0b199d3e9
+- 58d114ddeeab668bb3c7dffb3a8b9ad68801cfe4ecc4d1c536c4b369c17efdf6
