@@ -8,7 +8,6 @@ indexing subcommand が routing document を更新する外部挙動に閉じて
 根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
-import json
 import subprocess
 import threading
 from collections.abc import Callable
