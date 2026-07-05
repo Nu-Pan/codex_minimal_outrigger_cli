@@ -71,20 +71,20 @@
 # `quota_probe.py`
 
 ## Summary
-- Codex quota availability probe 用の AgentCallParameter を組み立てる小さな builder。quota waiting で使う最小構成の Codex 呼び出しとして、最小モデル、低 reasoning、readonly file access、固定 prompt、indexing preflight 無効化、base parameter 由来の cwd を設定する。
+- Codex quota availability probe 用の AgentCallParameter を組み立てる実装。oracle 側に専用 builder があればそれを委譲先とし、存在しない場合は最小モデル・低 reasoning・readonly・固定プロンプトの孤立した fallback を返す。
 
 ## Read this when
-- quota availability probe の agent call parameter がどのように構成されるかを確認したいとき。
-- quota waiting が使う最小 Codex call の model class、reasoning effort、file access、prompt、cwd、indexing preflight の扱いを変更または調査するとき。
-- `AgentCallParameter` builder 群のうち、通常実行ではなく quota 確認専用の runtime-only probe に関わる処理を探しているとき。
+- quota availability probe の agent call parameter がどの model class、reasoning effort、file access mode、prompt、cwd で作られるかを確認したいとき。
+- oracle 側の quota probe builder が存在する場合と存在しない場合の委譲・fallback 境界を確認したいとき。
+- quota probe が indexing preflight を実行しない理由や、fallback を最小かつ削除しやすく保つ意図を確認したいとき。
 
 ## Do not read this when
-- 一般的な agent call parameter builder の共通設計や他用途の parameter 構成を調べたいだけのとき。
-- quota waiting 全体の制御フロー、待機判定、retry 動作を調べたいとき。
-- oracle 側で定義された Codex exec rule の正本仕様を確認したいとき。
+- 通常の Codex exec call 全般の仕様や quota probe の上位仕様を確認したいだけなら、対応する oracle doc を読む。
+- AgentCallParameter、ModelClass、ReasoningEffort、FileAccessMode の定義や意味を確認したいだけなら、それらを定義する basic.acp 側を読む。
+- quota probe 以外の agent call parameter builder を変更・確認したい場合は、対象 builder へ直接進む。
 
 ## hash
-- dcfb4fad630cd718821a65e700ae5814c83ede582ea327405c5fcbe0ad439cf8
+- aea768ee0c9ff371a1a82760f715688df46742d4fdfb72dd9a7e2abce14d5f00
 
 # `review`
 

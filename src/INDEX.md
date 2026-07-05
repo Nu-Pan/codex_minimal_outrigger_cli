@@ -1,24 +1,24 @@
 # `acp`
 
 ## Summary
-- ACP builder 関連の realization 側入口。oracle 側 builder を正本に保ちながら、旧 `acp.*` import 経路を維持する互換層と runtime 用の一部 builder への入口を持つ。
-- apply、review、session、TUI、indexing、quota availability probe など、用途別 builder の互換維持、canonical oracle 実装への中継、realization 側公開型や runtime path への適合境界を扱う。
+- ACP 関連 import の互換維持と builder 領域へのルーティング入口。oracle 側 builder を正本とし、realization 側の既存参照を canonical 実装や用途別 agent call parameter 構築入口へ接続する。
+- 旧 import path の維持、再 export、module alias、oracle builder 生成結果の最小適応、fallback や既知補正の境界確認に使う。prompt 本文、正本仕様、各機能本体の実行処理は扱わない。
 
 ## Read this when
-- ACP builder の旧 import 経路が oracle 側 canonical 実装や互換入口へどう接続されるかを調べるとき。
-- apply fork、review、session、TUI、indexing など、用途別 agent call parameter builder の読む先を選びたいとき。
-- oracle 側 builder の戻り値を realization 側の公開型や runtime path に適合させる境界を確認または変更するとき。
-- 既存 caller を canonical import path へ移行する作業で、互換入口を残す理由、公開面維持、削除条件を確認したいとき。
-- quota waiting が使う Codex 呼び出し用の最小 AgentCallParameter 構成を調べたいとき。
+- ACP builder 全体で、oracle 側実装を正本にしながら realization 側の既存 import 経路や公開型をどう成立させているか確認したいとき。
+- 旧 import path、互換入口、再 export、module alias、canonical 実装への中継、公開面維持の範囲を調べたいとき。
+- apply fork、quota probe、review、session、TUI 起動などの agent call parameter 構築入口を探しており、下位領域へ進む判断をしたいとき。
+- 既存 caller を canonical path へ移行する作業で、互換入口を残す理由、削除条件、oracle builder 戻り値を realization 側へ接続する境界を確認したいとき。
 
 ## Do not read this when
-- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したい場合は、対応する oracle 側 builder や oracle file を読む。
-- apply、review、session、TUI など各機能の実行フロー、UI、branch 操作、finding 処理など builder 以外の本体挙動を調べたい場合は、それぞれの実装領域へ進む。
-- AgentCallParameter の公開型、path model、git helper、file access mode など共通基盤だけを調べたい場合は、それぞれの定義元を読む。
-- 新しい公開 API や新規 import 経路を設計したいだけの場合は、互換維持層ではなく canonical な公開面や設計対象を読む。
+- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したいだけのとき。対応する oracle 側 builder や oracle doc を読む。
+- apply、review、session、TUI など各機能本体の実行フロー、UI、branch 操作、diff 生成、CLI 引数処理を調べたいとき。各実装領域へ進む。
+- 基礎型、model class、reasoning effort、file access mode、path model、git helper などの共通定義だけを確認したいとき。それぞれの定義元を読む。
+- 個別 builder の具体的な変換処理、探索処理、データ構造、入出力仕様を確認したいとき。その処理を持つ下位 module または canonical 実装を読む。
+- 旧 import 互換や既存 caller 移行に関係なく、新しい公開 API や新規 import 経路を設計したいだけのとき。公開面の定義元や対象機能の設計箇所を読む。
 
 ## hash
-- 66f9a9d31506fc1d7b60168dc0b487092d426facd75e7ec7f6915cb48c6553e6
+- 263b5e22b9491e73aac281a90a910df390e85405626d90bbc5ddcd9f194a59b0
 
 # `basic`
 

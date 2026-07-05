@@ -19,22 +19,22 @@
 # `builder`
 
 ## Summary
-- ACP builder 群の realization 側入口であり、oracle 側 builder を正本に保ちながら旧 import 経路を維持する互換層と、runtime 用の一部 builder をまとめる。
-- apply、review、session、TUI、indexing などの builder 領域について、canonical oracle 実装への中継、realization 側公開型への適合、既存 caller 移行までの互換維持を扱う。
-- quota availability probe のように通常実行ではなく runtime 制御のための最小 AgentCallParameter を組み立てる builder も含む。
+- ACP builder 領域の入口。oracle 側 builder を正本として扱いながら、realization 側の既存 import 経路や公開型へ接続する互換層と、apply fork・quota probe・review・session・TUI など用途別の agent call parameter 構築入口をまとめる。
+- 主な責務は、旧 import path の維持、canonical/oracle 実装への再 export、oracle builder 生成結果の最小適応、fallback や既知補正の境界管理であり、prompt 本文や各機能本体の実行処理そのものは扱わない。
 
 ## Read this when
-- ACP builder の旧 import 経路が oracle 側 canonical 実装や互換入口へどう接続されるかを調べるとき。
-- apply fork、review、session、TUI、indexing など、用途別の agent call parameter builder 入口や互換 package の読む先を選びたいとき。
-- oracle 側 builder の戻り値を realization 側の公開型や runtime path に適合させる境界を確認または変更するとき。
-- 既存 caller を canonical import path へ移行する作業で、互換入口を残す理由、公開面維持、削除条件を確認したいとき。
-- quota waiting が使う Codex 呼び出し用の最小 AgentCallParameter 構成を調べたいとき。
+- ACP builder 全体で、oracle 側実装を正本にしつつ realization 側の既存参照をどう成立させているかを確認したいとき。
+- acp.builder 系の旧 import 経路、互換 package、再 export、module alias、canonical 実装への中継を調べたいとき。
+- apply fork、quota probe、review、session、TUI 起動などの agent call parameter 構築入口を探しており、どの下位領域へ進むべきか判断したいとき。
+- 既存 caller を canonical path へ移行する作業で、互換入口を残す理由、削除条件、公開面維持の範囲を確認したいとき。
+- oracle builder の戻り値を realization 側公開型や runtime path に接続する境界、または既知 placeholder/typo 補正や fallback のような最小適応層を確認したいとき。
 
 ## Do not read this when
-- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したい場合は、対応する oracle 側 builder や oracle file を読む。
-- apply、review、session、TUI など各機能の実行フロー、UI、branch 操作、finding 処理など builder 以外の本体挙動を調べたい場合は、それぞれの実装領域へ進む。
-- AgentCallParameter の公開型、path model、git helper、file access mode など共通基盤だけを調べたい場合は、それぞれの定義元を読む。
-- 新しい公開 API や新規 import 経路を設計したいだけの場合は、互換維持層ではなく canonical な公開面や設計対象を読む。
+- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したいだけなら、対応する oracle 側 builder や oracle doc を読む。
+- apply、review、session、TUI など各機能本体の実行フロー、UI、branch 操作、diff 生成、CLI 引数処理を調べたい場合は、それぞれの実装領域へ進む。
+- AgentCallParameter、model class、reasoning effort、file access mode、path model、git helper などの基礎型や共通処理を確認したいだけなら、それらの定義元を読む。
+- 個別 builder の具体的な変換処理、探索処理、データ構造、入出力仕様を確認したい場合は、その処理を持つ下位 module または canonical 実装を読む。
+- 新しい公開 API や新規 import 経路を設計したいだけで、旧 import 互換や既存 caller 移行に関係しない場合は、公開面の定義元や対象機能の設計箇所を読む。
 
 ## hash
-- 5c1968a3bd20d62f94b7c8204d160cf4b4a68d53b0fdb400aeb9e61082ce511d
+- 286ab0829950b9bc5a6b8739224eb651153b65c6557e4efa846b2367f5eae824

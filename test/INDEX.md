@@ -263,24 +263,22 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex exec が quota exceeded になった後の待機、probe、resume、再実行の制御を検証する realization test。
-- quota retry 状態機械の観測点として、probe 共有、resume token 抽出、call log、subcommand log、CODEX_HOME、cwd、並列呼び出し時の代表 probe をまとめて扱う。
+- Codex quota exceeded 後の retry 状態機械を外部挙動から検証する realization test。quota 検出後の probe 共有、resume token 抽出、resume または再実行、call log・subcommand log、CODEX_HOME と cwd の扱い、失敗時の post validation 抑制を同じ fake Codex 呼び出し列の観測点として扱う。
 
 ## Read this when
-- Codex exec の quota exceeded 検出後に、availability probe を実行して復帰後に resume または再実行する挙動を確認・変更したいとき。
-- quota availability probe の AgentCallParameter、最小モデル、low reasoning、readonly、cwd 継承、実際の probe prompt を検証したいとき。
-- quota retry 中の call log、stdout/output jsonl log、prompt log、subcommand log、console 表示の記録内容を確認したいとき。
-- resume token を JSONL log から抽出する挙動、token がない場合の再実行挙動、relative CODEX_HOME と cwd の扱いを確認したいとき。
-- 並列に quota 待機した Codex exec が単一の代表 probe を共有し、probe 成功時は各呼び出しが復帰し、probe 失敗時は待機中の呼び出しも失敗する制御を確認したいとき。
-- quota 待機上限到達時や probe 失敗時に、quota で失敗した呼び出し・probe 呼び出しへ file access post validation をかけない挙動を確認したいとき。
+- Codex exec が quota exceeded を返した後の待機、probe、resume、再実行の制御を変更・確認したいとき。
+- quota availability probe の parameter 生成、oracle builder への委譲、probe 用 profile・model・reasoning effort・file access mode の分離を確認したいとき。
+- quota retry 中に出力される call log、stdout・stderr・prompt・output log、subcommand log、console 表示の期待挙動を確認したいとき。
+- 複数の Codex exec が同時に quota 待機した場合に、代表 probe を 1 回だけ実行し、待機中の呼び出しが復帰または失敗を共有する挙動を確認したいとき。
+- quota poll limit 到達時や probe 失敗時に、失敗した Codex 呼び出しの file access post validation を実行しないことを確認したいとき。
 
 ## Do not read this when
-- quota retry 以外の Codex exec 正常実行、引数構築、構造化出力処理だけを確認したいとき。
-- quota availability probe の実装本文や prompt builder の責務を確認したいだけで、retry 時の外部挙動テストを読む必要がないとき。
-- SubcommandLogger や call log 形式そのものの汎用仕様を確認したいだけで、quota retry 時の記録内容に関心がないとき。
+- 通常の Codex exec 成功経路、CLI 引数組み立て、profile 生成だけを確認したいときは、より直接その責務を持つ実装またはテストを読む。
+- quota retry と関係しない file access validation、repository setup、subcommand logging の一般挙動だけを確認したいとき。
+- oracle builder 側の probe prompt 内容や正本仕様そのものを確認したいときは、対応する oracle 側の定義を読む。
 
 ## hash
-- 9608587e76e52a1c7407c7978c17b649f56cb3fdb3532325b3f790841089e8ad
+- 356488debb1c23494fb42612361330802da8c88f1eecc7971ee336453250c77d
 
 # `test_codex_runtime_retry.py`
 
