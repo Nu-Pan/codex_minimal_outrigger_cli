@@ -100,23 +100,24 @@
 # `test_apply_join_cli.py`
 
 ## Summary
-- apply run を session へ join する CLI 外部挙動を検証するテスト。成功時の worktree/branch cleanup、state 更新、report 生成と、dirty worktree、stale branch、想定外差分、merge conflict などの拒否条件を扱う。
-- apply join が扱う realization/session/oracle/.codex/memo/INDEX.md などの path 分類や、force resolve 時の差分破棄・復元挙動も検証対象に含む。
+- apply run を session へ join する CLI 外部挙動を検証するテスト。apply worktree/branch の後片付け、session state 更新、join 結果 report、linked session worktree への merge、現在 cwd が apply worktree の場合の扱いを確認する。
+- apply join の拒否条件と異常検出も同じ責務として扱い、stale apply branch、dirty apply worktree、想定外差分、managed branch の変更パス分類、merge conflict、INDEX.md conflict 解決後の継続を検証する。
+- realization/oracle/memo/.git/.agents/.codex/INDEX/AGENTS などのパス分類に基づき、apply 側変更と session 側変更の期待可否を判定する helper の挙動も、この join 操作の境界条件として含める。
 
 ## Read this when
-- apply join の成功・失敗条件、後片付け、状態更新、report 出力に関するテストを確認または変更するとき。
-- apply worktree から実行した join、linked session worktree からの join、stale apply branch の拒否など、実行場所や branch 状態に依存する挙動を確認するとき。
-- apply join の想定外差分検出、force resolve、merge conflict 処理、INDEX.md conflict の扱いを確認するとき。
-- apply join が許可または拒否する path 分類を変更し、realization file、oracle file、memo、AGENTS.md、.codex、tracked ignored file への影響をテストで追うとき。
+- apply join の CLI 挙動、成功時の cleanup、state 更新、report 出力を変更または確認したいとき。
+- apply join が apply worktree 内、session worktree 内、linked session worktree 内のどこから実行されたかによって cleanup や merge 先が変わる挙動を確認したいとき。
+- apply join の拒否条件、dirty worktree、stale apply branch、想定外差分、force-resolve、merge conflict の扱いを変更または確認したいとき。
+- apply join で realization file と oracle/memo/.git/.agents/.codex/INDEX/AGENTS などをどう分類するか、変更パス検出 helper の期待値を確認したいとき。
 
 ## Do not read this when
-- apply fork の Codex 実行や apply worktree 作成だけを確認したいとき。
-- session fork、doctor、git helper、state schema など、join 以外の基盤実装を調べる必要があるとき。
-- apply join の内部実装を直接変更するために、テストではなく command 本体の制御フローから読み始めるべきとき。
-- 単に INDEX.md 用エントリーの形式やルーティング規則を確認したいだけのとき。
+- apply fork の Codex 実行や apply worktree 作成そのものを確認したいだけなら、apply fork 側のテストを読む。
+- session fork の基本挙動、session branch 作成、session state 初期化を確認したいだけなら、session fork 側のテストを読む。
+- join 操作を伴わない path model や oracle/realization 定義の正本仕様を確認したい場合は、oracle 側の該当文書または実装を読む。
+- CLI を経由しない小さな helper 単体の実装詳細だけを追う場合は、対象 helper が定義されている apply join 実装を直接読む。
 
 ## hash
-- 9e8523c640a4431026483f339cf443e7795633856526b5cf145eee2b4de11df6
+- 4ccd1a3f2a8925b1f2beb303e380699abc4ed905cfe5a2eab7c7be7ba900625e
 
 # `test_basic_runtime.py`
 

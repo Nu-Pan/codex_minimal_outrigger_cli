@@ -145,22 +145,22 @@
 # `sub_commands`
 
 ## Summary
-- CLI の各サブコマンド実装を集約する階層。session、apply、review、indexing、doctor/init、TUI などの実行入口と、各 workflow の上位 orchestration へ進むための入口になる。
-- サブコマンド単位の lifecycle 制御、runtime への接続、branch/worktree/state/report の扱い、対象列挙や merge/cleanup などの処理の所在を選ぶためのルーティング対象である。
+- cmoc のサブコマンド実装を集約する領域。apply、session、review、indexing、doctor/init、tui などの CLI 実行入口から、各 workflow の制御層へ進むための入口になる。
+- 各サブコマンド固有の実行条件、状態遷移、branch/worktree 操作、Codex 呼び出し、report 出力、利用者向け表示を確認する起点になる。
+- 共通 runtime や低レベル helper そのものではなく、サブコマンドとして既存の共通処理や下位 module をどう接続するかを扱う階層である。
 
 ## Read this when
-- どのサブコマンド実装へ進むべきかを選びたいとき。
-- session や apply の fork/join/abandon、review oracle、indexing、doctor/init、TUI の実行フローをサブコマンド単位で確認したいとき。
-- CLI runtime から各 workflow の共通処理へどう接続しているか、または command 実行時の preflight、状態遷移、branch/worktree 操作、report 出力の入口を探したいとき。
-- review oracle の対象列挙、finding loop、INDEX.md 変更反映、report 描画など、review 系処理の担当箇所を選びたいとき。
-- apply run や session lifecycle の cleanup、merge、conflict handling、process/state 管理に関わる実装場所を探したいとき。
+- cmoc のサブコマンド実装場所を選び、どの workflow の実行入口へ進むべきか判断したいとき。
+- apply、session、review、indexing、doctor/init、tui の CLI 実行フロー、引数受け渡し、実行前検査、状態更新、出力の接続関係を確認または変更したいとき。
+- サブコマンドが branch/worktree 操作、state、report、Codex 実行、INDEX maintenance などの下位処理をどの module へ委譲しているかを追いたいとき。
+- 特定サブコマンドの高レベルな lifecycle 操作から、より詳細な対象列挙、loop、merge、cleanup、report 生成処理へ読み進める入口を探しているとき。
 
 ## Do not read this when
-- CLI 共通 runtime、git wrapper、state 読み書き、worktree 操作、path model、config 定義など、サブコマンド固有ではない基盤だけを調べたいとき。
-- Codex に渡す prompt、Structured Output schema、parameter builder の本文や schema 詳細だけを確認したいとき。
-- INDEX.md の生成規則、oracle file・realization file などの仕様概念、または各サブコマンドの正本仕様だけを確認したいとき。
-- 対象サブコマンドと担当ファイルがすでに決まっており、その下位 module の詳細ロジックへ直接進めるとき。
-- トップレベル CLI のサブコマンド登録や dispatch だけを確認したいとき。
+- CLI runtime の共通実行制御、repo root 解決、設定読み込み、git wrapper、state 型、path model などの汎用 helper 自体を調べたいとき。
+- Codex に渡す prompt、Structured Output schema、parameter builder の詳細だけを確認または変更したいとき。
+- oracle file や realization file の一般定義、ファイルアクセス規則、仕様文書上の分類など、サブコマンド実装ではない正本仕様を確認したいとき。
+- INDEX.md の内容生成、差分検出、lock、commit などの共通 indexing ロジックそのものを調べたいとき。
+- 対象が既に特定のサブコマンド下位処理に絞れている場合は、その責務を持つ下位 module を直接読む。
 
 ## hash
-- c7921dd779601c063519d77620ba8c5d7aa4de8ff27f98c94b9809681568cf47
+- 0794fcfba1601fdca483414a70be1da44e82f21d7af7fc1fbfc2fca86905303a

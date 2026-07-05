@@ -1,24 +1,25 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実装をまとめるディレクトリ。apply fork・join・abandon の実行制御、apply run の状態遷移、branch/worktree/process id の扱い、fork report 生成への入口を持つ。
-- apply run の開始、finding 適用、差分 commit、join merge、abandon cleanup、想定外差分や conflict の処理など、apply 操作単位の上位制御を読むための入口となる。
+- apply 系サブコマンドの実行本体をまとめる領域。apply run の開始、破棄、join、report 生成に関する CLI 制御、状態遷移、branch/worktree 操作、Codex 呼び出し、結果表示への入口になる。
+- apply fork では対象 file の選定、finding 列挙・適用、差分 commit、収束判定、state 更新を扱い、apply join/abandon では apply run の取り込みや破棄、cleanup、失敗条件を扱う。
 
 ## Read this when
-- apply fork・join・abandon のどの実装ファイルへ進むべきかを選びたいとき。
-- apply run の lifecycle、session branch と apply branch、apply worktree、apply state、process id、report の関係をサブコマンド単位で確認したいとき。
-- apply fork の対象 file 選定、Codex 呼び出し、再調査 loop、commit、report 出力に関する実装を探したいとき。
-- apply join の merge、force-resolve、想定外差分、INDEX.md conflict 自動解決、cleanup に関する実装を探したいとき。
-- apply abandon の未 join apply run 破棄、process 停止、worktree/branch/state cleanup に関する実装を探したいとき。
+- apply fork、join、abandon の実行条件、状態遷移、return code、削除対象、merge や cleanup、CLI 表示を確認または変更したいとき。
+- apply run に紐づく apply branch、apply worktree、process id、session state、oracle snapshot commit、前回 join 済み apply merge commit の関係を調べたいとき。
+- apply fork がどの file を対象にするか、scope ごとの差分、oracle 除外、git ignore・管理外領域・AGENTS/INDEX 除外、再調査キューや収束判定を確認したいとき。
+- apply fork の report 生成、失敗時 report、Markdown 構成、frontmatter、変更差分収集、Codex 要約や fallback 要約を確認または変更したいとき。
+- apply join 時に許可される差分範囲、想定外差分、force-resolve、INDEX.md conflict の自動解決、root memo や oracle file の扱いを確認したいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド、CLI 共通の実行ラッパー、エラー表示、git wrapper、state 読み書き、worktree 操作の汎用基盤だけを調べたいとき。
-- apply fork report の Markdown 書式や差分要約だけを扱う場合を除き、report 生成詳細ではなく fork/join/abandon の制御対象が決まっているときは該当ファイルへ直接進めるとき。
+- apply 以外のサブコマンド実行基盤、CLI 共通ラッパー、設定読み込み、git wrapper、state 型、worktree 探索、report directory の共通処理だけを調べたいとき。
 - Codex に渡す prompt、Structured Output schema、parameter builder の詳細だけを変更したいとき。
-- oracle file・realization file・INDEX.md 生成規則など、apply サブコマンド実装ではない仕様概念を確認したいとき。
+- worktree 削除、branch 削除、process 停止、state 読み書きなどの低レベル helper の汎用実装そのものを確認したいとき。
+- oracle file や realization file の一般定義、ファイルアクセス規則、仕様文書上の分類を確認したいとき。
+- パッケージ説明や import 副作用の有無だけを確認したい場合を除き、具体的な apply サブコマンドと無関係な調査をしているとき。
 
 ## hash
-- b250d5db42f8e8934e1accf90fcb3a95c789203262135b20b52b0f38b2d515b7
+- 09d2209b9249bd86daac8668d21433834b3b639ef7e5010f5e7d4917f0949c99
 
 # `doctor.py`
 
