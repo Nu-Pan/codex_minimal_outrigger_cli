@@ -81,24 +81,25 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 経由の report 生成、所見再検査ループ、変更要約、commit、session state 更新を横断して検証するテスト。
-- apply fork の収束、未収束、error、変更ファイル再調査、rolling apply fork の挙動を、同じ loop と report schema の観測結果としてまとめて扱う。
-- apply fork 用 ACP builder の import 可能性、prompt 内容、oracle schema 参照、変更差分要約 helper の対象 path 判定も検証する。
+- apply fork の CLI 実行を通じて、所見列挙、適用、commit、変更要約、report 出力、session state 更新までの制御を検証するテスト群。
+- apply fork report の収束、未収束、error、変更ファイル再調査、未追跡 file の変更要約、削除 file の除外、rolling fork の対象選定を一つの文脈で扱う。
+- apply fork 用 ACP builder の import 可能性、prompt 内容、structured output schema 参照が期待どおりであることも検証する。
 
 ## Read this when
-- `apply fork` の終了コード、report 文面、所見数推移、変更内容要約、commit message、session state 更新を変更または調査する。
-- apply 後に変更されたファイルを再調査する制御、所見適用で差分が出ない場合の扱い、調査対象なしの場合の report を確認する。
-- apply fork の error report が未 commit 差分を要約する挙動、未追跡 file や削除済み tracked file の変更要約対象を確認する。
-- rolling apply fork が前回 apply join 後の変更だけを対象にする制御を調査する。
-- apply fork の finding enumeration、finding application、change summary の ACP builder import、prompt、structured output schema の参照先を変更する。
+- apply fork の CLI 挙動、終了 code、report 内容、変更要約、commit message、session state 更新を変更または調査する。
+- apply fork が適用後に変更 file を再調査する条件、所見が残る場合の未収束扱い、対象がない場合の収束 report を確認する。
+- apply fork report 用の差分取得、未追跡 file の扱い、削除済み tracked file の除外、fallback 変更要約を変更または調査する。
+- apply fork の rolling 実行が前回 apply join 後の変更だけを対象にするかを確認する。
+- apply fork 関連の ACP builder の import 経路、prompt に含める標準文脈、schema path を変更または調査する。
 
 ## Do not read this when
-- `apply fork` 以外の apply サブコマンドや join 単体の通常挙動だけを確認したい。
-- Codex 実行基盤や ACP builder 共通部の詳細だけを調査しており、apply fork の CLI report や再検査制御に関係しない。
-- session fork、初期化、git helper、テスト支援 fixture の一般的な挙動だけを確認したい場合は、より直接の支援コードや該当テストを読む。
+- apply fork 以外の subcommand の CLI report や state 更新だけを調査する。
+- Codex 実行基盤そのもの、git wrapper、session fork/join の一般挙動を調査しており、apply fork report の観測結果に関心がない。
+- oracle 側の正本仕様や prompt 断片そのものを編集・確認したい場合。
+- 単体 helper の実装詳細だけを確認したい場合で、CLI 経由の apply fork loop や report schema の期待値が不要な場合。
 
 ## hash
-- 2e4d304a5c74d7034a4d1cdc334996e1865faab3743382ac0d73e0c429b75ab9
+- ec9c152a6679e42935dc13923fa71675873739a79b1370774d5d822e67d79bec
 
 # `test_apply_join_cli.py`
 

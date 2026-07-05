@@ -155,20 +155,21 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 群を置くディレクトリ。CLI サブコマンド、Codex runtime、ACP builder、prompt rendering、INDEX.md 更新、session/apply/review/doctor など、src 側実装の外部挙動と共通制御の回帰テストへの入口になる。
-- 共通 fixture/helper はテスト支援モジュールに集約され、個別ファイルは対象サブコマンドまたは runtime 領域ごとの期待挙動・状態遷移・git 副作用を検証する。
+- cmoc の realization test 群を配置するディレクトリ。CLI サブコマンド、Codex runtime、ACP builder、prompt rendering、packaged import、INDEX.md 更新など、src 側の実装が外部挙動と共通 runtime 契約を満たすかを pytest で検証する。
+- 共通 test support はリポジトリ fixture、Codex home/profile、fake 外部コマンド、doctor/init 実行、apply worktree 解決などを提供し、各テストファイルは対象機能ごとの CLI 観測結果、state 遷移、git worktree/branch 副作用、ログ・report・schema 参照を扱う。
 
 ## Read this when
-- cmoc の既存テストから、変更対象の CLI 外部挙動、runtime 制御、ACP builder、prompt、indexing、session/apply/review/doctor の回帰観点を探したいとき。
-- src 側の変更に対応する realization test を追加・更新するため、同じ観点の既存テストや共通 fixture/helper を確認したいとき。
-- Codex CLI/TUI 実行、file access mode、sandbox profile、post validation、retry、quota、Codex home など runtime 共通契約のテスト入口を探すとき。
-- Git worktree、branch、state file、INDEX.md、oracle/realization file 境界、managed Ollama など、CLI 実行で観測される副作用の期待値を確認したいとき。
+- realization implementation の変更に対して、対応する外部挙動・runtime 契約・回帰テストの入口を探すとき。
+- apply/session/review/doctor/indexing/TUI などの CLI サブコマンドについて、終了 code、stdout/stderr、state、worktree/branch cleanup、report、git 状態への影響をテスト観点から確認するとき。
+- Codex exec/TUI runtime の起動引数、sandbox/file access、Codex home/profile、retry/quota、post validation、subprocess tracking、ログ出力の期待挙動を確認または変更するとき。
+- ACP builder、prompt parts、StructDoc Markdown rendering、packaged import など、CLI 実行より下位または横断的な realization 契約のテストを探すとき。
+- 既存 fixture/helper を使って新しい realization test を追加する前に、同じ観点の既存テストへ統合できるか確認するとき。
 
 ## Do not read this when
-- 本番実装の責務・内部処理を先に確認したい場合は、src 側の該当モジュールを読む。
-- oracle file の正本仕様、schema、prompt 正本、開発ルールを確認または編集したい場合は、oracle 配下の該当文書を読む。
-- 特定テストの共通 helper だけを確認したい場合は、テスト支援モジュールへ直接進む。
-- INDEX.md エントリー生成規則そのものを確認したい場合は、routing/index standard の正本仕様を読む。
+- 正本仕様断片そのものを確認・編集したい場合は、oracle 配下の対応する doc/src/test を読む。
+- 本番実装の責務、内部 helper、アルゴリズムだけを変更したい場合は、まず src 側の該当モジュールを読む。
+- INDEX.md エントリー生成規則や routing standard 自体を確認したい場合は、対応する oracle standard または builder/schema 側を読む。
+- 個別テストの fixture 実装だけを確認したい場合は、共通 test support または該当テストファイルへ直接進む。
 
 ## hash
-- 41946cc7a470bc6595e50a4e7ccb166e343dd318bf199c3152b5ab1edd88d82b
+- db85eb17e5f2d753203b822dc41a37850934074a3d15f98dfe5d66750d292093
