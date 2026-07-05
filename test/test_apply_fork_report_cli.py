@@ -852,6 +852,9 @@ def test_apply_fork_rolling_uses_previous_apply_join_commit(
     session_branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = session_branch.removeprefix("cmoc/session/")
     state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+    (root / "unrelated.py").write_text("print('before join')\n")
+    run_git(root, "add", "unrelated.py")
+    run_git(root, "commit", "-m", "change before apply join")
     apply_branch = f"cmoc/apply/{session_id}/manual"
     apply_worktree = root / ".cmoc" / "local" / "worktree" / session_id / "manual"
     oracle_snapshot_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
@@ -873,12 +876,6 @@ def test_apply_fork_rolling_uses_previous_apply_join_commit(
     (root / "oracle" / "spec.md").write_text("# changed after join\n")
     run_git(root, "add", "oracle/spec.md")
     run_git(root, "commit", "-m", "change oracle after apply join")
-    run_git(root, "switch", "-c", "unrelated", oracle_snapshot_commit)
-    (root / "unrelated.py").write_text("print('unrelated')\n")
-    run_git(root, "add", "unrelated.py")
-    run_git(root, "commit", "-m", "change unrelated branch")
-    run_git(root, "switch", session_branch)
-    run_git(root, "merge", "--no-ff", "unrelated", "-m", "merge unrelated branch")
 
     target_rels: list[str] = []
 
@@ -912,5 +909,7 @@ def test_apply_fork_rolling_uses_previous_apply_join_commit(
 
     assert result.exit_code == 0
     assert "oracle/spec.md" in target_rels
+    assert "README.md" not in target_rels
+    assert "unrelated.py" not in target_rels
     state = json.loads(state_path.read_text())["session"]
     assert state["last_joined_apply_oracle_snapshot_commit"] == oracle_snapshot_commit
