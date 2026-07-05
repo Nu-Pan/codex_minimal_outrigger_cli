@@ -19,20 +19,18 @@
 # `builder`
 
 ## Summary
-- ACP builder 領域全体の入口。oracle 側 builder を正本に保つための import path 接続、旧 acp.builder 系公開面の互換維持、各サブコマンド向け builder package へのルーティングを扱う。
-- apply、review、session、tui、indexing、quota probe などの builder 互換層や個別 builder 入口を下位に持ち、実処理本体よりも canonical oracle 実装への委譲・再公開・最小補正の境界を確認する起点になる。
+- ACP builder 領域で、oracle 側 builder を正本に保ちながら旧 import 経路を維持する互換入口群と、apply fork・quota probe・review・session・TUI など個別用途の agent call parameter 構築境界を束ねる。
+- 主な責務は、正本側実装への委譲、既存参照向けの再公開、realization 側公開型への限定的な適合、互換 shim の削除条件確認であり、builder 本体の正本仕様そのものは oracle 側へ分離されている。
 
 ## Read this when
-- acp.builder 配下の旧 import 経路互換、oracle 側 builder への接続、module alias、package path の扱いを広く確認したいとき。
-- apply fork、review、session、tui、indexing、quota probe のどの builder 領域へ進むべきか判断したいとき。
-- oracle 側 builder を正本としつつ realization 側で公開型への適合、既存 caller 向け再公開、互換入口の削除条件を調べたいとき。
-- acp.builder 配下の互換 package や薄い wrapper を削除・移行する作業で、対象となる下位領域を選びたいとき。
+- ACP builder 周辺で、旧 import 経路や公開名前空間を正本側 oracle 実装へどう接続しているかを確認したいとき。
+- apply fork、quota probe、review、session、TUI などの agent call parameter 構築について、realization 側が担う互換層・変換境界・fallback・削除条件を調べたいとき。
+- 既存の acp.builder 系参照を削除または移行する作業で、互換入口を残す理由、残存参照、canonical 実装への中継先を確認したいとき。
 
 ## Do not read this when
-- agent call parameter の型定義、path model、file access mode、git helper など builder 以外の共通基盤を調べたいときは、それぞれの定義元を読む。
-- prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したいだけなら、対応する oracle 側 builder または oracle document を直接読む。
-- apply、review、session、tui など各機能本体の実行フロー、CLI 引数処理、状態操作、画面構成を調べたいときは、対象機能の実装へ進む。
-- 特定 builder の個別変換処理、fallback、再公開、補正挙動が分かっている場合は、この階層全体ではなく該当する下位 package または module を読む。
+- agent prompt、出力条件、parameter 生成内容、builder 正本仕様など人間意図そのものを確認したい場合は、対応する oracle 側の仕様または canonical builder を読む。
+- apply、review、session、TUI など各機能の実行フロー、CLI 引数処理、branch 操作、画面構成、quota 管理など builder 以外の実装詳細を調べたい場合は、対象機能の実装へ進む。
+- 汎用 git helper、path model、ACP parameter 公開型、file access mode 全体、ログディレクトリ定義など builder 互換入口以外の共通定義を調べたい場合は、それぞれの定義元を読む。
 
 ## hash
-- 651246c3a0407f43a09b25729e30829c6b095bf74ce930fbbce04067e94d0de4
+- 3de9950550df83a2ad41fe24099c36172697bba2fc10e7eccb386b1b02bcc709

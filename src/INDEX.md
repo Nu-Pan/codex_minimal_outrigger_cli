@@ -1,24 +1,24 @@
 # `acp`
 
 ## Summary
-- ACP 互換領域の入口。oracle src 側の acp builder 実装を複製せず、既存の ACP import 経路を canonical oracle 実装または実体 module へ接続するための薄い公開面を扱う。
-- 移行期間中の公開 import 互換、builder 系 package へのルーティング、oracle 側 builder を正本に保つための再公開・委譲・最小補正の境界を確認する起点になる。
+- ACP builder 互換領域への入口。oracle 側 builder を正本に保ちながら、既存の acp 系 import 経路を維持する互換入口と、agent call parameter 構築に関する用途別の中継・適合境界を束ねる。
+- この領域の責務は、正本側実装への委譲、旧公開名前空間の再公開、realization 側公開型への限定的な適合、互換 shim の残存理由と削除条件の確認にある。builder の正本仕様や生成内容そのものはこの領域ではなく oracle 側に置かれる。
 
 ## Read this when
-- 旧 ACP import 経路を oracle 側または実体 module へ移行する作業で、互換入口を残す理由や削除条件を確認したいとき。
-- ACP builder 配下の互換 package、module alias、公開型への適合、既存 caller 向け再公開の扱いを広く確認したいとき。
-- apply fork、review、session、tui、indexing、quota probe などの builder 領域のどこへ進むべきか判断したいとき。
-- oracle src 由来の acp builder 互換 import が realization 側または利用者向け公開面でどこに維持されているかを確認したいとき。
+- ACP builder 周辺で、旧 import 経路や公開名前空間が oracle 側の正本実装へどう接続されているかを確認したいとき。
+- apply fork、quota probe、review、session、TUI などの agent call parameter 構築について、realization 側の互換層、変換境界、fallback、削除条件を調べたいとき。
+- 既存の acp 系参照を oracle 側または実体 module へ移行する作業で、互換入口を残す理由、残存参照、canonical 実装への中継先を確認したいとき。
+- realization 側または利用者向け公開面に残る acp 系 import の扱いを判断したいとき。
 
 ## Do not read this when
-- ACP builder の生成処理本体、prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したいときは、対応する oracle 側 builder または oracle document を直接読む。
-- agent call parameter の型定義、path model、file access mode、git helper など builder 以外の共通基盤を調べたいときは、それぞれの定義元を読む。
-- apply、review、session、tui など各機能本体の実行フロー、CLI 引数処理、状態操作、画面構成を調べたいときは、対象機能の実装へ進む。
-- 新しい ACP 機能や API 仕様を追加する場所を探しているとき。この領域は互換維持と builder 入口の接続が中心であり、機能追加の正本入口ではない。
-- ACP import 経路がすでに全公開面と realization 側から消えていることだけを確認済みで、互換入口や builder ルーティングの詳細を読む必要がないとき。
+- agent prompt、出力条件、parameter 生成内容、builder 正本仕様など、人間意図そのものを確認したいときは、対応する oracle 側の仕様または canonical builder を読む。
+- apply、review、session、TUI など各機能の実行フロー、CLI 引数処理、branch 操作、画面構成、quota 管理など、builder 以外の実装詳細を調べたいときは、対象機能の実装へ進む。
+- 汎用 git helper、path model、ACP parameter 公開型、file access mode 全体、ログディレクトリ定義など、builder 互換入口以外の共通定義を調べたいときは、それぞれの定義元を読む。
+- 新しい acp 機能や API 仕様を追加する場所を探しているとき。この領域は互換維持と正本側への中継が中心であり、機能追加の入口ではない。
+- acp 系参照がすでに全公開面と realization 側から消えていることだけを確認済みで、互換入口や削除条件の詳細を読む必要がないとき。
 
 ## hash
-- c998cd7e54fda57cb94b9bc6b62012bfde7472cbaecc8db84b5a3449cb3bce3b
+- cc339a0181d1f27864f4435d3249f64c08d108196048df3f60c68cdd5b1bb454
 
 # `basic`
 
@@ -58,22 +58,24 @@
 # `commons`
 
 ## Summary
-- cmoc の実行時に複数モジュールから共有される runtime helper 群をまとめる領域。
-- Codex 実行、設定、git、path、logging、state、INDEX 更新 preflight、doctor preprocess などの共通実行基盤への入口になる。
-- 対象直下には、runtime API の再公開入口と、各責務に分かれた実装モジュールが配置されている。
+- cmoc の実行時共通機能をまとめる領域。Codex 実行、CLI 共通 runner、config、content hash、doctor preprocess、error、git、logging、path、result、state、apply process、INDEX 更新 preflight など、複数の実装から使われる runtime helper 群への入口になる。
+- 共有 runtime API の再公開入口と、個別責務を持つ helper 実装が同じ領域に置かれているため、共通処理の配置先や既存 helper の責務境界を確認する起点になる。
 
 ## Read this when
-- cmoc の runtime 共通処理を調べるために、どの helper モジュールへ進むべきか判断したいとき。
-- Codex CLI 呼び出し、profile、preflight、設定、git 操作、path 解決、ログ、状態管理、エラー変換など、複数サブコマンドから使われる実行基盤を確認したいとき。
-- 共有 runtime API の import 入口と、個別実装モジュールの責務境界を切り分けたいとき。
+- 複数のサブコマンドや runtime 実装から使う共通 helper の配置先、公開入口、責務分担を確認したいとき。
+- Codex exec/TUI 呼び出し、profile、preflight、call log、quota/capacity retry、Structured Output、process tracking など Codex 実行境界の実装を調べたいとき。
+- CLI サブコマンド共通の実行ライフサイクル、doctor preprocess、エラー表示、ログ、終了コード変換、完了サマリーを扱う実装を確認したいとき。
+- config JSON、session/apply state、git worktree、branch、path、hash、外部コマンド結果など、runtime の永続状態や基盤 helper を確認・変更したいとき。
+- INDEX.md の自動更新 preflight、entry の hash 検証、再生成、indexing commit、対象列挙、既存 entry parse の実装を調べたいとき。
 
 ## Do not read this when
-- CLI サブコマンド固有の引数定義、業務処理、利用者向け workflow を調べたいときは、該当するサブコマンド実装へ進む。
-- 正本仕様断片、path model、config 型、INDEX entry 生成方針など oracle 側の定義そのものを確認したいときは、対応する oracle file を読む。
-- 個別 helper の挙動や失敗時処理をすでに特定できているときは、この領域全体ではなく該当モジュールを直接読む。
+- 個別サブコマンドの業務処理、引数定義、利用者向け workflow だけを確認したいときは、そのサブコマンド実装へ直接進む。
+- oracle file にある正本仕様断片、prompt builder、path model、file access policy、indexing 標準そのものを確認したいときは、対応する oracle 側を読む。
+- 特定 helper の細かな入出力や失敗時挙動がすでに分かっている場合は、この領域全体ではなく該当する下位要素の本文を直接読む。
+- テスト期待値や外部挙動だけを確認したいときは、対応する realization test または仕様側の対象へ進む。
 
 ## hash
-- 9a8b733da70fe84613125394dca0af0e5cb4f7c4a798c2cb1dd00f83c230733f
+- bf5688983dfabce2e65aabf47ba9fe55a41481bef1d0e7bf78035a32d4fa9ce6
 
 # `config`
 

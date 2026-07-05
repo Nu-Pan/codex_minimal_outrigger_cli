@@ -89,25 +89,21 @@
 # `review`
 
 ## Summary
-- review builder 領域のうち、旧 import 経路を保つ互換 package と、review oracle 用 agent call parameter builder の互換入口・最小補正層をまとめる場所。
-- canonical 実装への再 export、既存 caller 移行までの互換維持、oracle src 由来 builder 戻り値への既知 placeholder/typo 補正が主な責務であり、review finding の実処理本体や正本 prompt は扱わない。
+- review builder 配下で、旧 import 経路を維持する互換 package 初期化と review oracle 向け互換 adapter 群を束ねる階層。
+- 実処理は主に canonical oracle path や oracle src 側へ委譲され、この階層は移行中 caller との互換性、削除条件、正本 builder 由来 prompt の限定補正境界を確認する入口になる。
 
 ## Read this when
-- review builder 周辺で、古い import 経路から canonical 実装へつながる互換層を確認する。
-- 既存 caller を canonical path へ移行する作業で、互換 package や互換モジュールの削除可否・削除条件を判断する。
-- review oracle finding の列挙・判定・統合・検証に関して、旧 import 経路がどの canonical 実装へ委譲されるか確認する。
-- oracle src 由来の agent call parameter に対して、prompt 内の oracle root placeholder 表記や静的 typo の最小補正がどこで行われるか確認する。
-- finding や既知理由などの動的入力を改変せず保持する境界を確認する。
+- review builder 周辺の旧 import 互換性や、古い acp.builder.review 系参照を削除できるか確認する。
+- review oracle の旧 import 経路から canonical oracle path への移行状況、互換 shim の再 export 対象、または削除可否を確認する。
+- merge finding や validate finding advocate の agent call parameter について、正本 builder 取得後に realization 側で補正される範囲と削除条件を確認する。
 
 ## Do not read this when
-- review finding enumeration、judgment、validation の実処理や parameter 構築ロジックを確認したい場合は、canonical oracle path 側を読む。
-- review builder の実処理や変換ロジックそのものを調べたい。
-- レビュー一般の finding 統合仕様、prompt 本文、または oracle src 側の正本定義そのものを確認・変更したい。
-- agent call parameter の基本構造、型責務、構造化出力 schema、path model、ファイルアクセスなど、互換 import 経路や既知表記補正と無関係な基礎仕様を調べる。
-- 新しい公開 API、利用者向け機能の仕様、または新規 caller が利用すべき import path だけを確認したい。
+- review builder の実処理、変換ロジック、finding enumeration、judgment、challenger validation の parameter 構築を調べたい場合は、より直接の実装先を読む。
+- review oracle の正本仕様や正本 prompt の内容そのものを確認したい場合は、oracle 側の該当本文を読む。
+- review oracle 以外の builder、agent call parameter 全般、path model、INDEX.md エントリー生成、または一般的な oracle file 定義を調べたい場合。
 
 ## hash
-- 5f3817838f319760619962a83f071479c50ecfdf4d4843e53f43904faad19e04
+- 8c0170ecf4d16e76f4eabb38112c44d157461f19eb65650a549149278abf7611
 
 # `session`
 
