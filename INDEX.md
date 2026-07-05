@@ -143,39 +143,42 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を置く階層。最上位 CLI 入口、サブコマンド実装、runtime 共通処理、oracle src への互換 shim、旧 import path 維持用の再公開層を扱う。
-- 利用者向け CLI 公開面から各機能実装への接続と、既存参照を壊さず oracle 側の正本実装へ到達するための最小適応層への入口になる。
+- cmoc の realization implementation を収める実装ルート。CLI 入口、サブコマンド、共通 runtime helper、oracle src への互換 import shim、旧公開 import 経路を維持する薄い再公開層を扱う。
+- 正本仕様断片そのものは保持せず、oracle 側の定義や builder を複製しないための接続と、利用者向け CLI 挙動を実現するコードへの入口になる。
 
 ## Read this when
-- cmoc の実装本体を調べる作業で、CLI 入口、サブコマンド、runtime 共通処理、互換 import 層のどこへ進むべきか判断したいとき。
-- サブコマンドの外部挙動、実行 orchestration、git/worktree/state/Codex 実行連携、利用者向け出力や report 生成の実装場所を探したいとき。
-- 旧 `acp.*`、`config.*`、基本型、runtime、`oracle.*` などの既存 import 経路が、どの互換入口や oracle 側正本実装へつながるか確認したいとき。
-- CLI 公開面や互換 import path の整理で、既存参照を残す理由、削除条件、影響範囲を絞りたいとき。
+- cmoc の実装全体から、CLI 入口、サブコマンド、共通 runtime、互換 import 層のどこへ進むべきか判断したいとき。
+- 利用者向け command の公開面や実行入口から、apply、session、review、doctor、indexing、tui などの実処理へどう接続しているか確認したいとき。
+- Codex 起動、設定、git、path、state、logging、error、INDEX 更新 preflight など、複数 command から使う runtime helper の実装場所を探すとき。
+- oracle src 側の正本実装を複製せずに、realization 側で旧 import path、再公開 module、runtime path 接続をどう維持しているか調べたいとき。
 
 ## Do not read this when
-- 正本仕様断片、人間意図、prompt、parameter 生成内容、path model、設定定義など oracle 側の本文を確認したいときは、対応する oracle file を読む。
-- INDEX.md のルーティング規則や生成済み entry の内容だけを確認したいときは、この実装階層ではなく対象の仕様または生成物を読む。
-- 実行ログ、session report、state file など実データを調べたいだけのときは、保存先や対象生成物を直接確認する。
-- 新しい正本仕様断片や API 仕様を追加する場所を探しているときは、この realization implementation 階層ではなく oracle 側の該当領域を起点にする。
+- oracle file、oracle src、prompt、parameter builder、path model、設定定義などの正本仕様断片や人間意図を確認したいとき。その場合は oracle 側の該当本文を読む。
+- 生成済み INDEX.md、log、state、config の個別内容を確認したいだけで、実装の変更や経路確認をしないとき。
+- 特定のサブコマンド、runtime helper、互換層の対象がすでに分かっているとき。この階層全体ではなく該当する下位対象を直接読む。
+- 新しい正本仕様断片や oracle 側 API を追加する場所を探しているとき。この対象は realization implementation と互換接続の入口であり、正本仕様の置き場ではない。
 
 ## hash
-- 2a7dec1b5e6746ced31a6ce078afd76958cbfe0eab2d1ce0b22d2e5fe2b416ba
+- 05092b8c7b8e3ebb61762593a393715aea054fd3d789a2d99e5eabefe2ff2310
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群を収めるディレクトリ。CLI 外部挙動、Codex runtime、session/apply/review/indexing、prompt/builder、packaged import、StructDoc rendering など、実装の観測可能な挙動と回帰条件を検証する。
-- 共通 fixture・fake command・一時 repository などのテスト支援は補助モジュールに集約され、各 test file は対象 subcommand や runtime 領域ごとの期待挙動へ進む入口になる。
+- cmoc の realization test 群を集めたディレクトリ。CLI サブコマンド、Codex runtime、ACP builder、prompt 組み立て、INDEX 更新、packaged import、StructDoc rendering など、実装の観測可能な挙動や制御ロジックを検証する入口になる。
+- 一時 Git repository、Codex home/profile、fake 外部コマンド、doctor 実行環境など、複数テストで共有される補助処理も含み、個別機能の外部挙動テストと共通 fixture 相当の処理をここから選べる。
 
 ## Read this when
-- cmoc の既存テスト構成から、変更対象に対応する realization test を探したいとき。
-- CLI subcommand、Codex 実行基盤、session/apply/review/indexing、prompt/builder、config/runtime 境界の外部挙動をテストで確認・変更したいとき。
-- 新しい realization test を追加する前に、既存テストへ case 追加・統合できる場所や共通 test support の使い方を確認したいとき。
+- cmoc CLI の外部挙動、終了コード、stdout/stderr、report、state 更新、worktree/branch cleanup、dirty worktree 拒否などをテストで確認または変更したいとき。
+- apply、session、review oracle、indexing、doctor、tui などのサブコマンドについて、実際の Git repository や linked worktree を使った回帰テストを探すとき。
+- Codex exec/TUI の profile 生成、sandbox、CODEX_HOME、schema/log 保存先、retry、quota retry、file access mode 反映などの runtime 契約を確認したいとき。
+- ACP builder、prompt parts、structured output schema 参照、packaged import、StructDoc Markdown rendering など、CLI 実行以外の realization 側契約をテストから確認したいとき。
+- テスト用 repository、tracked ignored oracle file、fake Ollama/systemctl/Python executable、apply worktree 解決など、複数テストで再利用されるセットアップ処理を確認または変更したいとき。
 
 ## Do not read this when
-- 本番実装の責務・内部 helper・処理手順だけを確認したいときは、対応する src 側の INDEX.md または実装ファイルへ進む。
-- oracle file の正本仕様、oracle/realization の責務境界、INDEX.md 生成規則そのものを確認したいときは、oracle 側の文書を読む。
-- 個別 test file が既に分かっており、その期待値だけを確認したいときは、このディレクトリ入口ではなく該当 test file を直接読む。
+- oracle file の正本仕様、oracle/realization の責務境界、INDEX.md 生成規則そのものを確認したい場合は、対応する oracle 側の文書を読む。
+- 本番実装の内部制御フロー、helper 分割、Git 操作、Codex 実行、Ollama 管理、worktree 計算の詳細だけを調べたい場合は、対応する src 側の実装を読む。
+- 個別 helper や型定義の単体仕様だけを確認すれば足り、CLI の外部挙動や回帰テスト期待値に関心がないときは、より直接の実装または小さい単体テストへ進む。
+- 実際の Codex CLI や LLM の出力品質、対話 UI の表示内容、外部サービス連携そのものを評価したいとき。
 
 ## hash
-- 9e1a8adfbb4e0ede3c6759b10e43ea1356671dd731cb855d16b1d0b908d0c32b
+- dfe185dae848972d8690bd2d24f5c5d031cf8317895538cf6feafbe941984fd7

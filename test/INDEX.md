@@ -100,22 +100,23 @@
 # `test_apply_join_cli.py`
 
 ## Summary
-- apply run を session へ join する CLI 外部挙動を検証するテスト。
-- apply join の成功時 cleanup、state 更新、report 生成、linked session worktree への merge、apply worktree からの実行可否を扱う。
-- dirty worktree、stale apply branch、想定外差分、tracked ignored file、削除・rename path、merge conflict、INDEX conflict 解決など、join の受理・拒否境界をまとめて検証する。
+- apply run を session へ join する CLI 外部挙動を検証するテスト。成功時の worktree/branch cleanup、state 更新、report 生成と、dirty worktree、stale branch、想定外差分、merge conflict などの拒否条件を扱う。
+- apply join が扱う realization/session/oracle/.codex/memo/INDEX.md などの path 分類や、force resolve 時の差分破棄・復元挙動も検証対象に含む。
 
 ## Read this when
-- apply join の CLI 挙動、終了コード、標準出力、report、state 遷移、worktree/branch cleanup を変更・調査するとき。
-- apply branch と session branch の差分分類、realization/oracle/.codex/memo/AGENTS.md/INDEX.md の扱いを確認するとき。
-- apply join の merge conflict、想定外差分、force-resolve の挙動、linked worktree 上の session への反映を確認するとき。
+- apply join の成功・失敗条件、後片付け、状態更新、report 出力に関するテストを確認または変更するとき。
+- apply worktree から実行した join、linked session worktree からの join、stale apply branch の拒否など、実行場所や branch 状態に依存する挙動を確認するとき。
+- apply join の想定外差分検出、force resolve、merge conflict 処理、INDEX.md conflict の扱いを確認するとき。
+- apply join が許可または拒否する path 分類を変更し、realization file、oracle file、memo、AGENTS.md、.codex、tracked ignored file への影響をテストで追うとき。
 
 ## Do not read this when
-- apply fork の Codex 実行内容や apply worktree 作成だけを確認したいとき。
-- session fork の branch/state 初期化だけを確認したいとき。
-- apply join の内部 helper 実装を先に読みたいときは、対応する実装ファイルを直接読む。
+- apply fork の Codex 実行や apply worktree 作成だけを確認したいとき。
+- session fork、doctor、git helper、state schema など、join 以外の基盤実装を調べる必要があるとき。
+- apply join の内部実装を直接変更するために、テストではなく command 本体の制御フローから読み始めるべきとき。
+- 単に INDEX.md 用エントリーの形式やルーティング規則を確認したいだけのとき。
 
 ## hash
-- 0c76601fa64ea8b6bfa5e1d6b96e7814977b107a7316ad6e93dcb3e53b40c3fd
+- 9e8523c640a4431026483f339cf443e7795633856526b5cf145eee2b4de11df6
 
 # `test_basic_runtime.py`
 

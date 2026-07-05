@@ -59,20 +59,22 @@
 # `commons`
 
 ## Summary
-- cmoc の実行時共通処理を集めた領域。Codex CLI 呼び出し、profile/config/path/git/log/error/state、INDEX 更新 preflight、apply process 管理など、複数の CLI サブコマンドから使われる runtime helper とその公開入口を扱う。
+- cmoc の共有 runtime helper 群を収める implementation directory。Codex 起動、設定、git、path、state、logging、error、content hash、INDEX 更新 preflight、CLI 共通ライフサイクルなど、複数 command から使う実行時支援を責務別 module と集約 import で扱う。
 
 ## Read this when
-- CLI サブコマンドから共有される runtime API、実行ライフサイクル、Codex 起動、設定・状態・ログ・path・git・error などの共通処理の入口を探したいとき。
-- INDEX.md 自動更新 preflight、Codex exec/TUI 実行、apply process 停止、doctor 前処理など、複数の runtime helper が連携する実行基盤を確認または変更したいとき。
-- 個別 runtime helper の公開範囲、互換 import、集約 import、または責務別 module の境界を判断したいとき。
+- CLI command 実装から使う共通 runtime API の定義元や公開入口を探すとき。
+- Codex exec/TUI 起動、profile、preflight、call log、Structured Output 検証、quota/capacity retry、apply process tracking など Codex 実行境界を確認または変更したいとき。
+- config 読み書き、git/worktree 操作、root/path 解決、session state 永続化、subcommand logging、共通 error 表示など runtime 横断の helper を確認または変更したいとき。
+- INDEX.md 自動更新 preflight、entry 再生成、hash による再利用、indexing commit 作成に関する実装を調べたいとき。
 
 ## Do not read this when
-- 個別 CLI サブコマンドの利用者向け仕様、引数、出力、業務ロジックだけを確認したいときは、サブコマンド実装側へ進む。
-- 正本仕様、prompt 部品、path placeholder 定義、config 型の正本定義など oracle 側の意図を確認したいときは、対応する oracle file を読む。
-- 生成済み INDEX.md の個別 entry、実行ログ、session report、state file の実データを調べたいだけなら、対象の生成物や保存先を直接確認する。
+- 個別 CLI subcommand の利用者向け引数、出力、業務ロジックだけを調べたいときは、その command 実装へ進む。
+- path placeholder、config 型、INDEX entry 文章基準、session state の仕様意図など正本仕様断片を確認したいときは、対応する oracle file を読む。
+- 生成済み INDEX.md や log、state、config の個別内容を確認したいだけで、runtime 実装を変更しないとき。
+- 特定 helper の具体処理だけを読む対象が既に分かっているときは、この directory 全体ではなく該当 runtime module を直接読む。
 
 ## hash
-- 32868451a7d9b69d1cbcff4c10c5e1ba5bfe6cf51e7cee89627c69df26b4c270
+- 35f568c4c6bdc08df09d0e7a03d34aebaca79e7a98548518f10616e702d13f6e
 
 # `config`
 

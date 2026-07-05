@@ -298,25 +298,23 @@
 # `runtime_git.py`
 
 ## Summary
-- git subprocess 実行を cmoc の CommandResult と CmocError に変換し、branch・HEAD・worktree clean 状態など git 前提条件を扱う共通 helper を提供する。
-- cmoc 管理 branch と linked worktree の作成・削除・branch 削除、管理外 worktree 削除防止、main worktree root 推定を担う。
-- .cmoc/local の git ignore 初期化・検査、git ignore 判定、oracle file 判定など、git 追跡状態に依存する runtime 判定の入口になる。
+- git コマンド実行を cmoc のエラー形式へ変換し、現在 branch・HEAD commit・clean worktree 条件・branch 存在確認など、git repository の基本状態を取得/検査する helper を持つ。
+- cmoc 管理 branch と linked worktree の作成・削除・branch 削除を扱い、管理外 worktree 削除を防ぐために branch 名と `.cmoc/local/worktree` 配下の期待 path を検証する。
+- `.cmoc` / `.cmoc/local` の git ignore 状態を `.gitignore` または git exclude に反映・検査し、oracle file 判定などで使う git ignore 判定 helper を提供する。
 
 ## Read this when
-- git コマンド実行結果を cmoc の利用者向けエラーへ変換する処理を確認・変更したいとき。
-- detached HEAD、未コミット差分、現在 branch、HEAD commit など repository 状態の事前条件を扱う処理を探しているとき。
-- cmoc が作る run/apply worktree や managed branch の作成・削除・検証ロジックを確認したいとき。
-- .cmoc/local を git 追跡対象外にする処理、gitignore/exclude 更新、ignore 状態検査を変更したいとき。
-- git check-ignore に基づく file 判定、特に oracle file 判定や tracked file と ignored file の扱いを確認したいとき。
+- git subprocess の失敗を `CmocError` にそろえる境界や、git command の stdout/stderr/returncode を扱う共通処理を確認・変更したいとき。
+- cmoc が作る branch namespace、run/apply 用 linked worktree の作成・削除、管理外 worktree 削除防止の条件を確認・変更したいとき。
+- `.cmoc/local` を git 追跡対象外にする処理、`.gitignore` / git exclude への ignore pattern 追加、初期化済み repository の ignore 検査を扱うとき。
+- git ignore 判定、oracle file path 判定、tracked file と ignored untracked file の扱いを確認・変更したいとき。
 
 ## Do not read this when
-- path keyword や work-root/repo-root/run-root の仕様定義そのものを確認したいだけなら、oracle 側の path model を読む。
-- CLI subcommand の利用者向け仕様や出力 schema を調べたいだけなら、該当する app spec や command 実装へ進む。
-- session state や report の保存形式を変更したいだけなら、状態・report を担当する module を直接読む。
-- git と無関係な通常の path 操作、JSON 入出力、prompt 組み立ての処理を探しているなら別の commons または該当機能 module を読む。
+- cmoc の path keyword や work-root/run-root の概念定義そのものを確認したいだけなら、oracle 側の path model を読む。
+- CLI subcommand の引数定義、ユーザー向け出力 schema、session/apply/run の高レベルな制御フローを調べたいだけなら、各 subcommand 実装へ進む。
+- git とは無関係な runtime path 計算、結果オブジェクト、汎用エラー型の詳細を変更したいだけなら、それぞれの commons module を直接読む。
 
 ## hash
-- d0c26b0e38b586cb831ea83cf1f63a7c1cd6729d98a85727eaf44c1c7152d4ee
+- 1f4511030020ca1b4f7800fcc20154747a2585c309d64ece8ad785aebf5627d8
 
 # `runtime_logging.py`
 
