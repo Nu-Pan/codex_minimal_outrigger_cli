@@ -10,7 +10,6 @@ from commons.runtime_results import CommandResult
 
 MANAGED_BRANCH_PREFIXES = ("cmoc/session/", "cmoc/apply/", "cmoc/run/")
 CMOC_IGNORE_PATTERN = "/.cmoc/local/"
-CMOC_TREE_IGNORE_PATTERN = "/.cmoc/"
 CMOC_IGNORE_PROBE = ".cmoc/local/.__cmoc_ignore_probe__"
 
 
@@ -193,8 +192,8 @@ def _main_worktree_root(root: Path) -> Path:
 
 
 def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
-    """.cmoc の追跡有無と .cmoc/local の ignore 判定を取得する。"""
-    tracked = run_git(["ls-files", "--", ".cmoc"], root).stdout.strip()
+    """.cmoc/local の追跡有無と ignore 判定を取得する。"""
+    tracked = run_git(["ls-files", "--", ".cmoc/local"], root).stdout.strip()
     ignored = run_git(
         ["check-ignore", "-q", CMOC_IGNORE_PROBE],
         root,
@@ -204,11 +203,9 @@ def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
 
 
 def with_cmoc_ignore_pattern(content: str) -> str:
-    """既存の末尾改行を崩さず .cmoc ignore pattern を追加する。"""
+    """既存の末尾改行を崩さず .cmoc/local ignore pattern を追加する。"""
     lines = content.splitlines()
     patterns = []
-    if not _has_cmoc_tree_ignore(lines):
-        patterns.append(CMOC_TREE_IGNORE_PATTERN)
     if CMOC_IGNORE_PATTERN not in lines:
         patterns.append(CMOC_IGNORE_PATTERN)
     if not patterns:
@@ -219,12 +216,8 @@ def with_cmoc_ignore_pattern(content: str) -> str:
     return f"{content}{newline}{separator}{added}\n"
 
 
-def _has_cmoc_tree_ignore(lines: list[str]) -> bool:
-    return CMOC_TREE_IGNORE_PATTERN in lines or ".cmoc/" in lines
-
-
 def ensure_cmoc_ignored(root: Path) -> None:
-    """.gitignore と index を更新できる場面で .cmoc を追跡対象外にする。"""
+    """.gitignore と index を更新できる場面で .cmoc/local を追跡対象外にする。"""
     tracked, ignored_returncode = _cmoc_ignore_status(root)
     gitignore = root / ".gitignore"
     content = gitignore.read_text() if gitignore.exists() else ""
@@ -235,7 +228,7 @@ def ensure_cmoc_ignored(root: Path) -> None:
     if not tracked and ignored_returncode == 0:
         return
 
-    run_git(["rm", "--cached", "-r", "--ignore-unmatch", ".cmoc"], root)
+    run_git(["rm", "--cached", "-r", "--ignore-unmatch", ".cmoc/local"], root)
     tracked, ignored_returncode = _cmoc_ignore_status(root)
     if tracked or ignored_returncode != 0:
         raise CmocError(

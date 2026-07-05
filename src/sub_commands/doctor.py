@@ -1,8 +1,11 @@
+from pathlib import Path
+
 import typer
 
 from cmoc_runtime import (
     run_cli_subcommand,
     run_doctor_preprocess,
+    run_git,
     repo_root,
     sync_config,
     work_root,
@@ -44,4 +47,19 @@ def _cmoc_preprocess_body(
         # <work-root>/oracle/src/oracle/other/cmoc_config.py
         # config は人間編集対象なので、生成・同期入口を init に限定する。
         sync_config(root)
+        _commit_init_config(root)
     typer.echo(f"# cmoc {command_heading}\n- repo_root: `{root}`")
+
+
+def _commit_init_config(root: Path) -> None:
+    run_git(["add", ".cmoc/config.json"], root)
+    has_config_diff = (
+        run_git(
+            ["diff", "--cached", "--quiet", "--", ".cmoc/config.json"],
+            root,
+            check=False,
+        ).returncode
+        != 0
+    )
+    if has_config_diff:
+        run_git(["commit", "-m", "cmoc init config", "--", ".cmoc/config.json"], root)

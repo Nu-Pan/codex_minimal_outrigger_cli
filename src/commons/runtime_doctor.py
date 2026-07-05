@@ -78,7 +78,9 @@ def _commit_doctor_repairs_from_head(root: Path) -> list[str]:
         _stage_gitignore_repair(root, index_path)
         _stage_agents_gitkeep_repair(root, index_path)
         _run_git_with_index(
-            ["rm", "--cached", "-r", "--ignore-unmatch", ".cmoc"], root, index_path
+            ["rm", "--cached", "-r", "--ignore-unmatch", ".cmoc/local"],
+            root,
+            index_path,
         )
         paths = _run_git_with_index(
             ["diff", "--cached", "--name-only"], root, index_path
@@ -123,9 +125,9 @@ def _restore_preexisting_staged_paths(
     root: Path, patches: dict[str, str], committed_paths: set[str]
 ) -> None:
     for path, patch in patches.items():
-        if _is_cmoc_tree_path(path):
+        if _is_cmoc_local_path(path):
             # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
-            # doctor repair の .cmoc 追跡解除は、preprocess 前の staged 状態より優先する。
+            # doctor repair の .cmoc/local 追跡解除は、preprocess 前の staged 状態より優先する。
             continue
         if path in committed_paths:
             # The working tree already contains the preexisting staged content plus
@@ -135,8 +137,8 @@ def _restore_preexisting_staged_paths(
             _apply_cached_patch(root, patch)
 
 
-def _is_cmoc_tree_path(path: str) -> bool:
-    return path == ".cmoc" or path.startswith(".cmoc/")
+def _is_cmoc_local_path(path: str) -> bool:
+    return path == ".cmoc/local" or path.startswith(".cmoc/local/")
 
 
 def _staged_paths(root: Path) -> list[str]:

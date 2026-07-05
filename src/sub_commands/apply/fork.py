@@ -281,7 +281,9 @@ def normalize_apply_targets(
             continue
         if not rel_parts:
             continue
-        if rel_parts[0] in {".git", ".agents", ".cmoc", ".codex", "memo"}:
+        if rel_parts[0] in {".git", ".agents", ".codex", "memo"}:
+            continue
+        if len(rel_parts) >= 2 and rel_parts[:2] == (".cmoc", "local"):
             continue
         if rel_parts[0] == "oracle":
             if not include_oracle or not is_oracle_file_path(root, path):

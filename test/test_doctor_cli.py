@@ -1,4 +1,5 @@
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -58,9 +59,23 @@ def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
     assert ".gitignore" in committed_paths
     assert ".agents/.gitkeep" in committed_paths
     assert ".cmoc/config.json" not in committed_paths
-    assert run_git(root, "ls-files", "--", ".cmoc").stdout.strip() == ""
+    assert run_git(root, "ls-files", "--", ".cmoc/local").stdout.strip() == ""
     assert (
-        run_git(root, "check-ignore", "-q", ".cmoc/config.json").returncode == 0
+        run_git(
+            root,
+            "check-ignore",
+            "-q",
+            ".cmoc/local/.__cmoc_ignore_probe__",
+        ).returncode
+        == 0
+    )
+    assert (
+        subprocess.run(
+            ["git", "check-ignore", "-q", ".cmoc/config.json"],
+            cwd=root,
+            check=False,
+        ).returncode
+        != 0
     )
 
 
@@ -215,7 +230,7 @@ def test_init_syncs_default_config_without_overwriting_human_values(
     assert data["apply_fork"]["num_apply_files"] == 200
 
 
-def test_init_generates_config_and_ignores_cmoc(tmp_path: Path, monkeypatch) -> None:
+def test_init_generates_and_tracks_config(tmp_path: Path, monkeypatch) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
 
@@ -229,42 +244,55 @@ def test_init_generates_config_and_ignores_cmoc(tmp_path: Path, monkeypatch) -> 
     assert result.exit_code == 0
     assert "# cmoc init" in result.stdout
     assert (root / ".cmoc" / "config.json").is_file()
-    assert run_git(root, "check-ignore", "-q", ".cmoc/config.json").returncode == 0
-    assert run_git(root, "ls-files", "--", ".cmoc").stdout.strip() == ""
+    assert (
+        subprocess.run(
+            ["git", "check-ignore", "-q", ".cmoc/config.json"],
+            cwd=root,
+            check=False,
+        ).returncode
+        != 0
+    )
+    assert (
+        run_git(root, "ls-files", "--", ".cmoc/config.json").stdout.strip()
+        == ".cmoc/config.json"
+    )
+    assert run_git(root, "ls-files", "--", ".cmoc/local").stdout.strip() == ""
 
 
-def test_doctor_preprocess_untracks_existing_cmoc_files(
+def test_doctor_preprocess_untracks_existing_cmoc_local_files(
     tmp_path: Path, monkeypatch
 ) -> None:
     root = make_repo(tmp_path)
-    config_path = root / ".cmoc" / "config.json"
-    write_config(config_path, CmocConfig())
-    run_git(root, "add", "-f", ".cmoc/config.json")
-    run_git(root, "commit", "-m", "track old cmoc config")
+    local_path = root / ".cmoc" / "local" / "cache.json"
+    local_path.parent.mkdir(parents=True)
+    local_path.write_text("{}\n")
+    run_git(root, "add", "-f", ".cmoc/local/cache.json")
+    run_git(root, "commit", "-m", "track old cmoc local cache")
     monkeypatch.chdir(root)
 
     run_doctor(root)
 
-    assert run_git(root, "ls-files", "--", ".cmoc").stdout.strip() == ""
+    assert run_git(root, "ls-files", "--", ".cmoc/local").stdout.strip() == ""
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
-def test_doctor_preprocess_does_not_restore_preexisting_staged_cmoc_files(
+def test_doctor_preprocess_does_not_restore_preexisting_staged_cmoc_local_files(
     tmp_path: Path, monkeypatch
 ) -> None:
     root = make_repo(tmp_path)
-    config_path = root / ".cmoc" / "config.json"
-    write_config(config_path, CmocConfig())
-    run_git(root, "add", "-f", ".cmoc/config.json")
-    run_git(root, "commit", "-m", "track old cmoc config")
-    config_path.write_text('{"num_parallel": 3}\n')
-    run_git(root, "add", "-f", ".cmoc/config.json")
+    local_path = root / ".cmoc" / "local" / "cache.json"
+    local_path.parent.mkdir(parents=True)
+    local_path.write_text('{"old": true}\n')
+    run_git(root, "add", "-f", ".cmoc/local/cache.json")
+    run_git(root, "commit", "-m", "track old cmoc local cache")
+    local_path.write_text('{"new": true}\n')
+    run_git(root, "add", "-f", ".cmoc/local/cache.json")
     monkeypatch.chdir(root)
 
     run_doctor(root)
 
-    assert config_path.read_text() == '{"num_parallel": 3}\n'
-    assert run_git(root, "ls-files", "--", ".cmoc").stdout.strip() == ""
+    assert local_path.read_text() == '{"new": true}\n'
+    assert run_git(root, "ls-files", "--", ".cmoc/local").stdout.strip() == ""
     assert run_git(root, "diff", "--cached", "--name-only").stdout.strip() == ""
 
 
@@ -300,7 +328,7 @@ def test_doctor_repair_commit_does_not_include_preexisting_staged_gitignore(
     committed_gitignore = run_git(root, "show", "HEAD:.gitignore").stdout
     assert "human-rule" not in committed_gitignore
     assert "/.cmoc/local/" in committed_gitignore
-    assert gitignore.read_text() == "human-rule\n\n/.cmoc/\n/.cmoc/local/\n"
+    assert gitignore.read_text() == "human-rule\n\n/.cmoc/local/\n"
     assert run_git(root, "diff", "--cached", "--name-only").stdout.splitlines() == [
         ".gitignore"
     ]

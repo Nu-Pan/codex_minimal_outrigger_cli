@@ -79,11 +79,11 @@ def break_preprocess_invariants(work: Path) -> Path:
         )
         + "\n"
     )
-    tracked_probe = work / ".cmoc" / "tracked-probe"
-    tracked_probe.parent.mkdir(exist_ok=True)
+    tracked_probe = work / ".cmoc" / "local" / "tracked-probe"
+    tracked_probe.parent.mkdir(parents=True, exist_ok=True)
     tracked_probe.write_text("tracked\n")
     run_git(work, "add", ".gitignore")
-    run_git(work, "add", "-f", ".cmoc/tracked-probe")
+    run_git(work, "add", "-f", ".cmoc/local/tracked-probe")
     run_git(work, "rm", ".agents/.gitkeep")
     run_git(work, "commit", "-m", "break preprocess invariants")
     return gitignore
@@ -323,7 +323,7 @@ def test_session_abandon_preprocesses_linked_worktree_before_preconditions(
     assert current_branch(linked) == session_branch
     assert "session home branch が存在しません。" in result.stdout
     assert "/.cmoc/local/" in gitignore.read_text().splitlines()
-    assert run_git(linked, "ls-files", "--", ".cmoc").stdout == ""
+    assert run_git(linked, "ls-files", "--", ".cmoc/local").stdout == ""
     assert run_git(linked, "ls-files", "--", ".agents").stdout.splitlines() == [
         ".agents/.gitkeep"
     ]
@@ -349,10 +349,11 @@ def test_session_abandon_requires_existing_home_branch(
         )
         + "\n"
     )
-    tracked_probe = root / ".cmoc" / "tracked-probe"
+    tracked_probe = root / ".cmoc" / "local" / "tracked-probe"
+    tracked_probe.parent.mkdir(parents=True, exist_ok=True)
     tracked_probe.write_text("tracked\n")
     run_git(root, "add", ".gitignore")
-    run_git(root, "add", "-f", ".cmoc/tracked-probe")
+    run_git(root, "add", "-f", ".cmoc/local/tracked-probe")
     run_git(root, "commit", "-m", "track cmoc probe on session")
     run_git(root, "branch", "-D", home_branch)
     run_git(root, "tag", home_branch, home_commit)
@@ -376,7 +377,7 @@ def test_session_abandon_requires_existing_home_branch(
         == 0
     )
     assert "/.cmoc/local/" in gitignore.read_text().splitlines()
-    assert run_git(root, "ls-files", "--", ".cmoc").stdout == ""
+    assert run_git(root, "ls-files", "--", ".cmoc/local").stdout == ""
 
 
 def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
@@ -397,10 +398,11 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
         )
         + "\n"
     )
-    tracked_probe = root / ".cmoc" / "tracked-probe"
+    tracked_probe = root / ".cmoc" / "local" / "tracked-probe"
+    tracked_probe.parent.mkdir(parents=True, exist_ok=True)
     tracked_probe.write_text("tracked\n")
     run_git(root, "add", ".gitignore")
-    run_git(root, "add", "-f", ".cmoc/tracked-probe")
+    run_git(root, "add", "-f", ".cmoc/local/tracked-probe")
     run_git(root, "commit", "-m", "track cmoc probe on session")
     original_delete_branch = session_module.delete_branch
 
@@ -428,7 +430,7 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     assert state["session"]["state"] == "active"
     assert state["session"]["joined_at"] is None
     assert "/.cmoc/local/" in gitignore.read_text().splitlines()
-    assert run_git(root, "ls-files", "--", ".cmoc").stdout == ""
+    assert run_git(root, "ls-files", "--", ".cmoc/local").stdout == ""
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
@@ -667,7 +669,7 @@ def test_session_join_preprocesses_linked_worktree_before_preconditions(
     assert "git コマンドが失敗しました。" in result.stderr
     assert "git コマンドが失敗しました。" not in result.stdout
     assert "/.cmoc/local/" in gitignore.read_text().splitlines()
-    assert run_git(linked, "ls-files", "--", ".cmoc").stdout == ""
+    assert run_git(linked, "ls-files", "--", ".cmoc/local").stdout == ""
     assert run_git(linked, "ls-files", "--", ".agents").stdout.splitlines() == [
         ".agents/.gitkeep"
     ]

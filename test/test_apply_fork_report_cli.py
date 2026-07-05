@@ -467,8 +467,10 @@ def test_apply_fork_converges_when_last_allowed_target_has_no_findings(
     run_git(root, "commit", "-m", "change readme")
     config_path = root / ".cmoc" / "config.json"
     config = json.loads(config_path.read_text())
-    config["apply_fork"]["num_apply_files"] = 2
+    config["apply_fork"]["num_apply_files"] = 3
     config_path.write_text(json.dumps(config, indent=2) + "\n")
+    run_git(root, "add", ".cmoc/config.json")
+    run_git(root, "commit", "-m", "set apply file limit")
     enumerate_calls = 0
 
     def fake_run_codex_exec(
@@ -491,7 +493,7 @@ def test_apply_fork_converges_when_last_allowed_target_has_no_findings(
     )
 
     assert result.exit_code == 0
-    assert enumerate_calls == 2
+    assert enumerate_calls == 3
     report_path = report_path_from_stdout(result.stdout)
     assert "result: converged" in report_path.read_text()
 
@@ -513,6 +515,8 @@ def test_apply_fork_is_unconverged_when_finding_application_makes_no_diff(
     config = json.loads(config_path.read_text())
     config["apply_fork"]["num_apply_files"] = 1
     config_path.write_text(json.dumps(config, indent=2) + "\n")
+    run_git(root, "add", ".cmoc/config.json")
+    run_git(root, "commit", "-m", "set apply file limit")
     finding = {
         "title": "No-op finding",
         "evidences": [

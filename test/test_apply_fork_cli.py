@@ -156,7 +156,7 @@ def test_apply_fork_runs_doctor_preprocess_before_body(
 def test_apply_fork_ensures_cmoc_ignore_without_dirtying_session(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
-    """apply fork は未 ignore の .cmoc を clean worktree のまま ignore する。"""
+    """apply fork は未 ignore の .cmoc/local を clean worktree のまま ignore する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_init(root).exit_code == 0
@@ -171,11 +171,11 @@ def test_apply_fork_ensures_cmoc_ignore_without_dirtying_session(
         "\n".join(
             line
             for line in exclude.read_text().splitlines()
-            if line not in {"/.cmoc/", "/.cmoc/local/"}
+            if line != "/.cmoc/local/"
         )
         + "\n"
     )
-    assert run_git(root, "status", "--short").stdout.strip() == "?? .cmoc/"
+    assert run_git(root, "status", "--short").stdout.strip() == "?? .cmoc/local/"
 
     class FakeCodexResult:
         output_json = {"findings": []}
@@ -205,6 +205,8 @@ def test_apply_fork_config_load_error_does_not_start_apply_run(
     state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     config_path = root / ".cmoc" / "config.json"
     config_path.write_text("{invalid\n")
+    run_git(root, "add", ".cmoc/config.json")
+    run_git(root, "commit", "-m", "break cmoc config")
 
     result = runner.invoke(app, ["apply", "fork", "--scope", "full"])
 
@@ -231,7 +233,8 @@ def test_apply_fork_missing_config_fails_before_starting_apply_run(
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
-    (root / ".cmoc" / "config.json").unlink()
+    run_git(root, "rm", ".cmoc/config.json")
+    run_git(root, "commit", "-m", "remove cmoc config")
 
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
@@ -386,7 +389,7 @@ def test_apply_fork_target_normalization_excludes_non_realization_paths(
 def test_apply_fork_target_normalization_excludes_cmoc_runtime_files(
     tmp_path: Path,
 ) -> None:
-    """作業用状態領域の .cmoc 配下 file は対象にしない。"""
+    """作業用状態領域の .cmoc/local 配下 file は対象にしない。"""
     root = make_repo(tmp_path)
     config_target = root / ".cmoc" / "config.json"
     ignored_local_target = root / ".cmoc" / "local" / "cache.json"
@@ -403,7 +406,7 @@ def test_apply_fork_target_normalization_excludes_cmoc_runtime_files(
         {config_target, ignored_local_target},
     )
 
-    assert targets == []
+    assert targets == [config_target.resolve()]
 
 
 def test_apply_fork_target_normalization_keeps_binary_files(
