@@ -1,7 +1,5 @@
 import fcntl
 import os
-import random
-import socket
 import subprocess
 import time
 import urllib.error
@@ -17,10 +15,10 @@ from commons.runtime_errors import CmocError
 from commons.runtime_git import ensure_cmoc_ignored, run_git
 
 _OLLAMA_ARCHIVE_URL = "https://ollama.com/download/ollama-linux-amd64.tar.zst"
-_OLLAMA_PORT_MIN = 49152
-_OLLAMA_PORT_MAX = 65535
+_OLLAMA_HOST = "127.0.0.1:11434"
 _OLLAMA_CONNECT_TIMEOUT_SEC = 0.5
 _OLLAMA_START_TIMEOUT_SEC = 30.0
+_OLLAMA_SERVICE_NAME = "cmoc-ollama"
 _FALLBACK_LOCAL_SLM_MODEL = "smollm2:135m"
 
 
@@ -67,12 +65,13 @@ def _commit_doctor_repairs(root: Path) -> None:
 
 def _ensure_ollama_serves_local_slm(root: Path) -> None:
     # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
-    # repo-local な ollama instance と port file を Codex profile 境界で共有する。
-    with _ollama_lock(root):
-        executable = _ensure_ollama_installed(root)
-        port = _ensure_ollama_running(root, executable)
+    # cmoc managed ollama は利用者 home の user service として 11434 固定で扱う。
+    with _ollama_lock():
+        executable = _ensure_ollama_installed()
+        _ensure_ollama_service(executable)
+        _verify_ollama_service(executable)
         model = _local_slm_model(root)
-        _ensure_ollama_model(executable, port, model)
+        _ensure_ollama_model(executable, model)
 
 
 def _local_slm_model(root: Path) -> str:
@@ -86,21 +85,27 @@ def _local_slm_model(root: Path) -> str:
     return _FALLBACK_LOCAL_SLM_MODEL
 
 
-def _ollama_root(root: Path) -> Path:
-    return root / ".cmoc" / "local" / "ollama"
+def _ollama_root() -> Path:
+    return Path.home() / ".cmoc" / "ollama"
 
 
-def _ollama_executable(root: Path) -> Path:
-    return _ollama_root(root) / "bin" / "ollama"
+def _ollama_executable() -> Path:
+    return _ollama_root() / "bin" / "ollama"
 
 
-def _ollama_port_file(root: Path) -> Path:
-    return _ollama_root(root) / "port"
+def _ollama_service_file() -> Path:
+    return (
+        Path.home()
+        / ".config"
+        / "systemd"
+        / "user"
+        / f"{_OLLAMA_SERVICE_NAME}.service"
+    )
 
 
 @contextmanager
-def _ollama_lock(root: Path) -> Iterator[None]:
-    lock_path = _ollama_root(root) / "lock"
+def _ollama_lock() -> Iterator[None]:
+    lock_path = _ollama_root() / "lock"
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+") as lock_file:
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
@@ -110,15 +115,15 @@ def _ollama_lock(root: Path) -> Iterator[None]:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
-def _ensure_ollama_installed(root: Path) -> Path:
-    executable = _ollama_executable(root)
+def _ensure_ollama_installed() -> Path:
+    executable = _ollama_executable()
     if _ollama_version_ok(executable):
         return executable
-    archive_path = root / ".cmoc" / "local" / "ollama-linux-amd64.tar.zst"
+    archive_path = _ollama_root() / "ollama-linux-amd64.tar.zst"
     archive_path.parent.mkdir(parents=True, exist_ok=True)
     if not archive_path.exists():
         _download_ollama_archive(archive_path)
-    target = _ollama_root(root)
+    target = _ollama_root()
     target.mkdir(parents=True, exist_ok=True)
     result = subprocess.run(
         ["tar", "--zstd", "-xf", str(archive_path), "-C", str(target)],
@@ -130,7 +135,7 @@ def _ensure_ollama_installed(root: Path) -> Path:
             "ollama をインストールできませんでした。",
             [
                 "archive の取得状態と tar/zstd の利用可否を確認してください。",
-                "<repo-root>/.cmoc/local/ollama を削除してから再実行してください。",
+                "~/.cmoc/ollama を削除してから再実行してください。",
             ],
             f"archive: {archive_path}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}",
         )
@@ -157,80 +162,122 @@ def _download_ollama_archive(path: Path) -> None:
             "ollama archive を取得できませんでした。",
             [
                 "ネットワーク接続を確認してから再実行してください。",
-                "既に取得済みの archive がある場合は <repo-root>/.cmoc/local に配置してください。",
+                "既に取得済みの archive がある場合は ~/.cmoc/ollama に配置してください。",
             ],
             f"url: {_OLLAMA_ARCHIVE_URL}\npath: {path}",
         ) from exc
 
 
-def _ensure_ollama_running(root: Path, executable: Path) -> int:
-    port_path = _ollama_port_file(root)
-    existing_port = _read_port(port_path)
-    if existing_port is not None and _ollama_http_ok(existing_port):
-        return existing_port
-    port = _choose_port()
-    env = os.environ.copy()
-    env["OLLAMA_HOST"] = f"127.0.0.1:{port}"
-    log_path = _ollama_root(root) / "serve.log"
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-    log_file = log_path.open("ab")
-    try:
-        subprocess.Popen(
-            [str(executable), "serve"],
-            cwd=root,
-            env=env,
-            stdout=log_file,
-            stderr=subprocess.STDOUT,
-            start_new_session=True,
+def _ensure_ollama_service(executable: Path) -> None:
+    _write_ollama_service_file(executable)
+    reload_result = _run_systemctl(["daemon-reload"])
+    if reload_result.returncode != 0:
+        _raise_systemctl_error(
+            "ollama service 設定を再読み込みできませんでした。", reload_result
         )
-    finally:
-        log_file.close()
+    start_result = _run_systemctl(["enable", "--now", _OLLAMA_SERVICE_NAME])
+    if start_result.returncode != 0:
+        _raise_systemctl_error("ollama service を起動できませんでした。", start_result)
+
+
+def _write_ollama_service_file(executable: Path) -> None:
+    models_dir = executable.parents[1] / "models"
+    models_dir.mkdir(parents=True, exist_ok=True)
+    service_path = _ollama_service_file()
+    service_path.parent.mkdir(parents=True, exist_ok=True)
+    text = "\n".join(
+        [
+            "[Unit]",
+            "Description=cmoc managed ollama",
+            "",
+            "[Service]",
+            f"ExecStart={executable} serve",
+            f"Environment=OLLAMA_HOST={_OLLAMA_HOST}",
+            "Environment=OLLAMA_MODELS=%h/.cmoc/ollama/models",
+            "",
+            "[Install]",
+            "WantedBy=default.target",
+            "",
+        ]
+    )
+    if not service_path.exists() or service_path.read_text() != text:
+        service_path.write_text(text)
+
+
+def _verify_ollama_service(executable: Path) -> None:
+    if not _service_active():
+        raise CmocError(
+            "cmoc managed ollama service が起動していません。",
+            [f"systemctl --user status {_OLLAMA_SERVICE_NAME} を確認してください。"],
+            f"service: {_OLLAMA_SERVICE_NAME}",
+        )
+    if not _service_process_matches(executable):
+        raise CmocError(
+            "127.0.0.1:11434 の ollama service が cmoc managed ollama と一致しません。",
+            [
+                f"systemctl --user restart {_OLLAMA_SERVICE_NAME} を実行してから再試行してください。"
+            ],
+            f"expected executable: {executable}",
+        )
     deadline = time.monotonic() + _OLLAMA_START_TIMEOUT_SEC
     while time.monotonic() < deadline:
-        if _ollama_http_ok(port):
-            port_path.write_text(f"{port}\n")
-            return port
+        if _ollama_http_ok():
+            return
         time.sleep(0.2)
     raise CmocError(
-        "ollama serve を起動できませんでした。",
+        "cmoc managed ollama へ接続できませんでした。",
         [
-            "<repo-root>/.cmoc/local/ollama/serve.log を確認してください。",
-            "使用可能な local port と ollama 実行ファイルを確認してください。",
+            f"systemctl --user status {_OLLAMA_SERVICE_NAME} を確認してください。",
+            "127.0.0.1:11434 の利用状況を確認してください。",
         ],
-        f"port: {port}\nlog: {log_path}",
+        f"host: {_OLLAMA_HOST}",
     )
 
 
-def _read_port(path: Path) -> int | None:
+def _service_active() -> bool:
+    return (
+        _run_systemctl(["is-active", "--quiet", _OLLAMA_SERVICE_NAME]).returncode == 0
+    )
+
+
+def _service_process_matches(executable: Path) -> bool:
+    pid_result = _run_systemctl(
+        ["show", _OLLAMA_SERVICE_NAME, "--property=MainPID", "--value"]
+    )
+    if pid_result.returncode != 0:
+        return _service_file_matches(executable)
     try:
-        port = int(path.read_text().strip())
-    except (OSError, ValueError):
-        return None
-    if _OLLAMA_PORT_MIN <= port <= _OLLAMA_PORT_MAX:
-        return port
-    return None
-
-
-def _choose_port() -> int:
-    for _ in range(100):
-        port = random.randint(_OLLAMA_PORT_MIN, _OLLAMA_PORT_MAX)
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            try:
-                sock.bind(("127.0.0.1", port))
-            except OSError:
-                continue
-            return port
-    raise CmocError(
-        "ollama 用 local port を選択できませんでした。",
-        ["49152-65535 の local port 使用状況を確認してください。"],
-        "available port was not found",
+        process_id = int(pid_result.stdout.strip())
+    except ValueError:
+        return _service_file_matches(executable)
+    if process_id <= 0:
+        return _service_file_matches(executable)
+    return _process_argv_uses_executable(process_id, executable) or _service_file_matches(
+        executable
     )
 
 
-def _ollama_http_ok(port: int) -> bool:
+def _service_file_matches(executable: Path) -> bool:
+    try:
+        lines = _ollama_service_file().read_text().splitlines()
+    except OSError:
+        return False
+    return f"ExecStart={executable} serve" in lines
+
+
+def _process_argv_uses_executable(process_id: int, executable: Path) -> bool:
+    try:
+        raw = Path(f"/proc/{process_id}/cmdline").read_bytes()
+    except OSError:
+        return False
+    argv = [item.decode(errors="replace") for item in raw.split(b"\0") if item]
+    return str(executable) in argv[:2]
+
+
+def _ollama_http_ok() -> bool:
     try:
         with urllib.request.urlopen(
-            f"http://127.0.0.1:{port}/api/tags",
+            f"http://{_OLLAMA_HOST}/api/tags",
             timeout=_OLLAMA_CONNECT_TIMEOUT_SEC,
         ) as response:
             return 200 <= response.status < 500
@@ -238,17 +285,17 @@ def _ollama_http_ok(port: int) -> bool:
         return False
 
 
-def _ensure_ollama_model(executable: Path, port: int, model: str) -> None:
-    if _run_ollama(executable, port, ["show", model]).returncode == 0:
+def _ensure_ollama_model(executable: Path, model: str) -> None:
+    if _run_ollama(executable, ["show", model]).returncode == 0:
         return
-    pull = _run_ollama(executable, port, ["pull", model])
+    pull = _run_ollama(executable, ["pull", model])
     if pull.returncode != 0:
         raise CmocError(
             "ollama SLM model を取得できませんでした。",
             ["モデル名と ollama の接続状態を確認してください。"],
             f"model: {model}\nstdout:\n{pull.stdout}\nstderr:\n{pull.stderr}",
         )
-    show = _run_ollama(executable, port, ["show", model])
+    show = _run_ollama(executable, ["show", model])
     if show.returncode != 0:
         raise CmocError(
             "ollama SLM model を serve 可能な状態にできませんでした。",
@@ -257,14 +304,38 @@ def _ensure_ollama_model(executable: Path, port: int, model: str) -> None:
         )
 
 
-def _run_ollama(
-    executable: Path, port: int, args: list[str]
-) -> subprocess.CompletedProcess[str]:
+def _run_ollama(executable: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
-    env["OLLAMA_HOST"] = f"127.0.0.1:{port}"
+    env.update(_ollama_env())
     return subprocess.run(
         [str(executable), *args],
         text=True,
         capture_output=True,
         env=env,
+    )
+
+
+def _ollama_env() -> dict[str, str]:
+    root = Path.home() / ".cmoc" / "ollama"
+    return {
+        "OLLAMA_HOST": _OLLAMA_HOST,
+        "OLLAMA_MODELS": str(root / "models"),
+    }
+
+
+def _run_systemctl(args: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["systemctl", "--user", *args],
+        text=True,
+        capture_output=True,
+    )
+
+
+def _raise_systemctl_error(
+    message: str, result: subprocess.CompletedProcess[str]
+) -> None:
+    raise CmocError(
+        message,
+        ["systemd user service と systemctl --user の利用可否を確認してください。"],
+        f"argv: {' '.join(result.args)}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}",
     )

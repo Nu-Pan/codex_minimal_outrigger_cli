@@ -1,6 +1,7 @@
 import subprocess
 import sys
 import textwrap
+import os
 from pathlib import Path
 
 import pytest
@@ -85,13 +86,25 @@ def write_python_executable(path: Path, lines: list[str]) -> None:
 
 
 def run_doctor(root: Path):
-    """Run doctor with a repo-local fake Ollama executable."""
+    """Run doctor with fake managed Ollama/systemctl commands."""
     from main import app
 
-    _write_fake_ollama(root / ".cmoc" / "local" / "ollama" / "bin" / "ollama")
-    result = runner.invoke(app, ["doctor"], catch_exceptions=False)
+    env = fake_managed_ollama_env(root)
+    result = runner.invoke(app, ["doctor"], env=env, catch_exceptions=False)
     assert result.exit_code == 0
     return result
+
+
+def fake_managed_ollama_env(root: Path) -> dict[str, str]:
+    """Prepare fake commands for tests that trigger doctor through profile creation."""
+    home = root / ".cmoc" / "local" / "test-home"
+    fake_bin = root / ".cmoc" / "local" / "fake-bin"
+    _write_fake_ollama(home / ".cmoc" / "ollama" / "bin" / "ollama")
+    _write_fake_systemctl(fake_bin / "systemctl", home)
+    return {
+        "HOME": str(home),
+        "PATH": f"{fake_bin}{os.pathsep}{os.environ.get('PATH', '')}",
+    }
 
 
 def _write_fake_ollama(path: Path) -> None:
@@ -108,6 +121,8 @@ def _write_fake_ollama(path: Path) -> None:
                 print("ollama fake")
                 raise SystemExit(0)
             if sys.argv[1:2] in [["show"], ["pull"]]:
+                assert os.environ["OLLAMA_HOST"] == "127.0.0.1:11434"
+                assert os.environ["OLLAMA_MODELS"].endswith("/.cmoc/ollama/models")
                 raise SystemExit(0)
             if sys.argv[1:] != ["serve"]:
                 raise SystemExit(2)
@@ -124,6 +139,59 @@ def _write_fake_ollama(path: Path) -> None:
                     pass
 
             http.server.ThreadingHTTPServer((host, int(port)), Handler).serve_forever()
+            """
+        )
+    )
+    path.chmod(0o755)
+
+
+def _write_fake_systemctl(path: Path, home: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        textwrap.dedent(
+            f"""\
+            #!{sys.executable}
+            import os
+            import signal
+            import subprocess
+            import sys
+            from pathlib import Path
+
+            home = Path({str(home)!r})
+            service = home / ".config" / "systemd" / "user" / "cmoc-ollama.service"
+            pid_path = home / ".cmoc" / "ollama" / "service.pid"
+
+            args = sys.argv[1:]
+            if args[:1] == ["--user"]:
+                args = args[1:]
+            if args == ["daemon-reload"]:
+                raise SystemExit(0)
+            if args == ["enable", "--now", "cmoc-ollama"]:
+                lines = service.read_text().splitlines()
+                exec_start = next(line for line in lines if line.startswith("ExecStart="))
+                env_lines = [line.removeprefix("Environment=") for line in lines if line.startswith("Environment=")]
+                env = os.environ.copy()
+                env.update(dict(item.split("=", 1) for item in env_lines))
+                argv = exec_start.removeprefix("ExecStart=").split()
+                if pid_path.exists():
+                    try:
+                        os.kill(int(pid_path.read_text()), 0)
+                        raise SystemExit(0)
+                    except OSError:
+                        pass
+                process = subprocess.Popen(argv, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+                pid_path.parent.mkdir(parents=True, exist_ok=True)
+                pid_path.write_text(str(process.pid))
+                raise SystemExit(0)
+            if args == ["is-active", "--quiet", "cmoc-ollama"]:
+                if not pid_path.exists():
+                    raise SystemExit(3)
+                raise SystemExit(0)
+            if args == ["show", "cmoc-ollama", "--property=MainPID", "--value"]:
+                print(pid_path.read_text().strip() if pid_path.exists() else "0")
+                raise SystemExit(0)
+            print("unsupported fake systemctl args: " + repr(args), file=sys.stderr)
+            raise SystemExit(2)
             """
         )
     )

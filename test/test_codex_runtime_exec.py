@@ -10,6 +10,7 @@ from cmoc_runtime import CmocError
 from config.cmoc_config import CmocConfig
 from oracle.other.cmoc_config import CodexModelSpec
 from _support import (
+    fake_managed_ollama_env,
     make_repo,
     run_git,
     setup_codex_home,
@@ -153,9 +154,9 @@ def test_run_codex_exec_uses_local_slm_profile_without_builtin_ollama_flags(
 ) -> None:
     root = make_repo(tmp_path)
     setup_codex_home(tmp_path, monkeypatch)
-    port_path = root / ".cmoc" / "local" / "ollama" / "port"
-    port_path.parent.mkdir(parents=True)
-    port_path.write_text("49153\n")
+    fake_env = fake_managed_ollama_env(root)
+    for key, value in fake_env.items():
+        monkeypatch.setenv(key, value)
     config = CmocConfig()
     config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", "smollm2:135m")
     bin_dir = tmp_path / "bin"
@@ -178,7 +179,7 @@ def test_run_codex_exec_uses_local_slm_profile_without_builtin_ollama_flags(
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
     )
-    monkeypatch.setenv("PATH", f"{bin_dir}:{Path('/usr/bin')}")
+    monkeypatch.setenv("PATH", f"{bin_dir}:{fake_env['PATH']}")
 
     run_codex_exec(
         AgentCallParameter(
@@ -197,10 +198,12 @@ def test_run_codex_exec_uses_local_slm_profile_without_builtin_ollama_flags(
     profile = tomllib.loads(record["profile"])
     assert "--oss" not in record["args"]
     assert "--local-provider" not in record["args"]
-    assert profile["model_provider"] == "cmoc_ollama"
-    assert profile["model_providers"]["cmoc_ollama"]["base_url"] == (
-        "http://127.0.0.1:49153/v1"
-    )
+    assert profile["model_provider"] == "cmoc_managed_ollama"
+    assert profile["model_providers"]["cmoc_managed_ollama"] == {
+        "name": "cmoc managed ollama",
+        "base_url": "http://127.0.0.1:11434/v1",
+        "wire_api": "responses",
+    }
 
 
 def test_run_codex_exec_does_not_post_validate_file_access_violations(

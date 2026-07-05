@@ -44,9 +44,7 @@ _CONFLICT_WRITE_BLOCKED_ROOT_NAMES = {
     ".git",
     "memo",
 }
-_OLLAMA_PROVIDER_ID = "cmoc_ollama"
-_OLLAMA_PORT_MIN = 49152
-_OLLAMA_PORT_MAX = 65535
+_OLLAMA_PROVIDER_ID = "cmoc_managed_ollama"
 
 
 @contextmanager
@@ -275,53 +273,12 @@ def _append_workspace_write_section(
     lines.extend(["[sandbox_workspace_write]", f"writable_roots = [{roots}]"])
 
 
-def _ollama_port_file(root: Path) -> Path:
-    return root / ".cmoc" / "local" / "ollama" / "port"
-
-
-def _read_ollama_port(root: Path) -> int:
-    """doctor preprocess が確保した ollama port を profile 境界で読む。"""
-    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
-    # The profile must reference the repo-local ollama instance, not Codex's
-    # built-in provider ID. The port is runtime state prepared under .cmoc/local.
-    path = _ollama_port_file(root)
-    try:
-        text = path.read_text().strip()
-        port = int(text)
-    except (OSError, ValueError) as exc:
-        raise CmocError(
-            "ollama SLM の接続情報が存在しません。",
-            [
-                "doctor preprocess で ollama を起動してから再実行してください。",
-                "<repo-root>/.cmoc/local/ollama/port を確認してください。",
-            ],
-            f"path: {path}",
-        ) from exc
-    if not (_OLLAMA_PORT_MIN <= port <= _OLLAMA_PORT_MAX):
-        raise CmocError(
-            "ollama SLM の port が不正です。",
-            [
-                "doctor preprocess で ollama を起動し直してください。",
-                f"port は {_OLLAMA_PORT_MIN} 以上 {_OLLAMA_PORT_MAX} 以下である必要があります。",
-            ],
-            f"path: {path}\nport: {port}",
-        )
-    return port
-
-
 def _append_ollama_provider_section(lines: list[str], root: Path | None) -> None:
-    if root is None:
-        raise CmocError(
-            "ollama SLM profile には repo root が必要です。",
-            ["repo root を指定できる Codex 呼び出し経路から再実行してください。"],
-            "ModelClass: local_slm",
-        )
-    port = _read_ollama_port(root.resolve())
     lines.extend(
         [
             f"[model_providers.{_OLLAMA_PROVIDER_ID}]",
-            'name = "cmoc ollama"',
-            f'base_url = "http://127.0.0.1:{port}/v1"',
+            'name = "cmoc managed ollama"',
+            'base_url = "http://127.0.0.1:11434/v1"',
             'wire_api = "responses"',
         ]
     )
@@ -344,8 +301,8 @@ def build_codex_profile(
         f'model = "{model_spec.model}"',
         f'model_reasoning_effort = "{reasoning_effort}"',
     ]
-    use_cmoc_ollama = model_spec.model_provider == "cmoc"
-    if use_cmoc_ollama:
+    use_cmoc_managed_ollama = model_spec.model_provider == "cmoc"
+    if use_cmoc_managed_ollama:
         lines.append(f'model_provider = "{_OLLAMA_PROVIDER_ID}"')
     if root is not None:
         root = root.resolve()
@@ -368,7 +325,7 @@ def build_codex_profile(
                 allow_oracle_conflict_writes,
             ),
         )
-    if use_cmoc_ollama:
+    if use_cmoc_managed_ollama:
         _append_ollama_provider_section(lines, root)
     lines.append("")
     return "\n".join(lines)
@@ -439,7 +396,6 @@ def prepare_codex_profile(
         (config or CmocConfig()).codex.model[parameter.model_class].model_provider
         == "cmoc"
         and root is not None
-        and not _ollama_port_file(root.resolve()).exists()
     ):
         from commons.runtime_doctor import run_doctor_preprocess
 

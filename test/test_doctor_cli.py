@@ -1,4 +1,3 @@
-import socket
 import json
 from pathlib import Path
 
@@ -6,11 +5,10 @@ from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningE
 from config.cmoc_config import CmocConfig
 from oracle.other.cmoc_config import CodexModelSpec
 from commons.runtime_codex_profile import prepare_codex_profile
-from main import app
-from _support import make_repo, run_doctor, run_git, runner
+from _support import fake_managed_ollama_env, make_repo, run_doctor, run_git
 
 
-def test_doctor_preprocess_repairs_git_state_and_starts_repo_ollama(
+def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -24,9 +22,22 @@ def test_doctor_preprocess_repairs_git_state_and_starts_repo_ollama(
     assert run_git(root, "ls-files", "--", ".agents").stdout.splitlines() == [
         ".agents/.gitkeep"
     ]
-    port = int((root / ".cmoc" / "local" / "ollama" / "port").read_text())
-    assert 49152 <= port <= 65535
-    assert _can_connect(port)
+    home = root / ".cmoc" / "local" / "test-home"
+    service = home / ".config" / "systemd" / "user" / "cmoc-ollama.service"
+    assert (home / ".cmoc" / "ollama" / "bin" / "ollama").is_file()
+    assert (home / ".cmoc" / "ollama" / "models").is_dir()
+    assert service.read_text().splitlines() == [
+        "[Unit]",
+        "Description=cmoc managed ollama",
+        "",
+        "[Service]",
+        f"ExecStart={home}/.cmoc/ollama/bin/ollama serve",
+        "Environment=OLLAMA_HOST=127.0.0.1:11434",
+        "Environment=OLLAMA_MODELS=%h/.cmoc/ollama/models",
+        "",
+        "[Install]",
+        "WantedBy=default.target",
+    ]
     committed_paths = run_git(root, "show", "--name-only", "--format=", "HEAD").stdout
     assert ".gitignore" in committed_paths
     assert ".agents/.gitkeep" in committed_paths
@@ -96,8 +107,8 @@ def test_prepare_local_slm_profile_runs_doctor_when_port_is_missing(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    run_doctor(root)
-    (root / ".cmoc" / "local" / "ollama" / "port").unlink()
+    for key, value in fake_managed_ollama_env(root).items():
+        monkeypatch.setenv(key, value)
     codex_home = tmp_path / "codex_home"
     codex_home.mkdir()
     config = CmocConfig()
@@ -117,11 +128,14 @@ def test_prepare_local_slm_profile_runs_doctor_when_port_is_missing(
     )
 
     assert profile_path.is_file()
-    assert 'model_provider = "cmoc_ollama"' in profile_path.read_text()
-    assert (root / ".cmoc" / "local" / "ollama" / "port").is_file()
-
-
-def _can_connect(port: int) -> bool:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.settimeout(1)
-        return sock.connect_ex(("127.0.0.1", port)) == 0
+    assert 'model_provider = "cmoc_managed_ollama"' in profile_path.read_text()
+    assert (
+        root
+        / ".cmoc"
+        / "local"
+        / "test-home"
+        / ".config"
+        / "systemd"
+        / "user"
+        / "cmoc-ollama.service"
+    ).is_file()

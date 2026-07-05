@@ -726,9 +726,6 @@ def test_codex_profile_uses_cmoc_ollama_provider_for_local_slm(
 ) -> None:
     root = tmp_path / "repo"
     root.mkdir()
-    port_path = root / ".cmoc" / "local" / "ollama" / "port"
-    port_path.parent.mkdir(parents=True)
-    port_path.write_text("49152\n")
     config = CmocConfig()
     config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", "smollm2:135m")
 
@@ -745,34 +742,14 @@ def test_codex_profile_uses_cmoc_ollama_provider_for_local_slm(
     )
 
     parsed = tomllib.loads(profile)
-    provider = parsed["model_providers"]["cmoc_ollama"]
+    provider = parsed["model_providers"]["cmoc_managed_ollama"]
     assert parsed["model"] == "smollm2:135m"
-    assert parsed["model_provider"] == "cmoc_ollama"
+    assert parsed["model_provider"] == "cmoc_managed_ollama"
     assert provider == {
-        "name": "cmoc ollama",
-        "base_url": "http://127.0.0.1:49152/v1",
+        "name": "cmoc managed ollama",
+        "base_url": "http://127.0.0.1:11434/v1",
         "wire_api": "responses",
     }
-
-
-def test_codex_profile_requires_ollama_port_for_local_slm(tmp_path: Path) -> None:
-    root = tmp_path / "repo"
-    root.mkdir()
-    config = CmocConfig()
-    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", "smollm2:135m")
-
-    with pytest.raises(CmocError, match="ollama SLM の接続情報"):
-        build_codex_profile(
-            AgentCallParameter(
-                ModelClass.MINIMUM,
-                ReasoningEffort.LOW,
-                FileAccessMode.READONLY,
-                "prompt",
-                None,
-            ),
-            config,
-            root,
-        )
 
 
 def test_codex_profile_allows_repo_local_read_from_linked_worktree(
