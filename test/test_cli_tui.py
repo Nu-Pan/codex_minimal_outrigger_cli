@@ -1,7 +1,6 @@
 """TUI 起動直前の CLI 前処理の外部挙動を検証する。"""
 
 import json
-import subprocess
 from pathlib import Path
 
 import commons.runtime_codex_preflight as codex_preflight_module
