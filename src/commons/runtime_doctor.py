@@ -1,5 +1,6 @@
 import fcntl
 import os
+import shutil
 import subprocess
 import tempfile
 import time
@@ -25,14 +26,11 @@ _OLLAMA_SERVICE_NAME = "cmoc-ollama"
 def run_doctor_preprocess(root: Path, config: CmocConfig | None = None) -> None:
     """共通実行前修復を行い、修復差分だけを commit する。"""
     root = root.resolve()
-    preexisting_staged_paths = _staged_paths(root)
-    preexisting_staged_patches = {
-        path: _staged_patch(root, path) for path in preexisting_staged_paths
-    }
+    restored_index_tree = _restored_index_tree(root)
     ensure_cmoc_ignored(root)
     _ensure_agents_tracked(root)
     _ensure_ollama_serves_local_slm(root, config)
-    _commit_doctor_repairs(root, preexisting_staged_patches)
+    _commit_doctor_repairs(root, restored_index_tree)
 
 
 def _ensure_agents_tracked(root: Path) -> None:
@@ -54,19 +52,15 @@ def _ensure_agents_tracked(root: Path) -> None:
         )
 
 
-def _commit_doctor_repairs(
-    root: Path, preexisting_staged_patches: dict[str, str]
-) -> None:
-    committed_paths = _commit_doctor_repairs_from_head(root)
+def _commit_doctor_repairs(root: Path, restored_index_tree: str) -> None:
+    _commit_doctor_repairs_from_head(root)
     try:
         run_git(["reset", "-q", "HEAD"], root)
     finally:
-        _restore_preexisting_staged_paths(
-            root, preexisting_staged_patches, set(committed_paths)
-        )
+        run_git(["read-tree", restored_index_tree], root)
 
 
-def _commit_doctor_repairs_from_head(root: Path) -> list[str]:
+def _commit_doctor_repairs_from_head(root: Path) -> None:
     # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
     # repair commit は doctor の作業差分だけなので、通常 index ではなく
     # HEAD 起点の一時 index で user staged hunks と同一 path 上でも分離する。
@@ -89,7 +83,6 @@ def _commit_doctor_repairs_from_head(root: Path) -> list[str]:
             _run_git_with_index(
                 ["commit", "-m", "cmoc doctor preprocess"], root, index_path
             )
-        return paths
     finally:
         index_path.unlink(missing_ok=True)
 
@@ -110,6 +103,60 @@ def _stage_agents_gitkeep_repair(root: Path, index_path: Path) -> None:
         _stage_text(root, index_path, ".agents/.gitkeep", "")
 
 
+def _restored_index_tree(root: Path) -> str:
+    # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+    # 復元対象は path 列挙ではなく index 全体で扱う。rename や同一 path の
+    # unstaged hunk を壊さず、doctor 優先の修復だけを合成した tree を戻す。
+    index_path = _copy_current_index(root)
+    try:
+        _stage_gitignore_repair_from_index(root, index_path)
+        _stage_agents_gitkeep_repair_from_index(root, index_path)
+        _run_git_with_index(
+            ["rm", "--cached", "-r", "--ignore-unmatch", ".cmoc/local"],
+            root,
+            index_path,
+        )
+        return _run_git_with_index(["write-tree"], root, index_path).stdout.strip()
+    finally:
+        index_path.unlink(missing_ok=True)
+
+
+def _copy_current_index(root: Path) -> Path:
+    fd, index_name = tempfile.mkstemp(prefix="cmoc-doctor-restore-index-")
+    os.close(fd)
+    index_path = Path(index_name)
+    current_index = root / run_git(
+        ["rev-parse", "--git-path", "index"], root
+    ).stdout.strip()
+    if current_index.exists():
+        shutil.copy2(current_index, index_path)
+    else:
+        _run_git_with_index(["read-tree", "HEAD"], root, index_path)
+    return index_path
+
+
+def _stage_gitignore_repair_from_index(root: Path, index_path: Path) -> None:
+    current = _index_text(root, index_path, ".gitignore")
+    repaired = with_cmoc_ignore_pattern(current or "")
+    if repaired != (current or ""):
+        _stage_text(root, index_path, ".gitignore", repaired)
+
+
+def _stage_agents_gitkeep_repair_from_index(root: Path, index_path: Path) -> None:
+    agents = _run_git_with_index(
+        ["ls-files", "--", ".agents"], root, index_path
+    ).stdout.strip()
+    if not agents:
+        _stage_text(root, index_path, ".agents/.gitkeep", "")
+
+
+def _index_text(root: Path, index_path: Path, path: str) -> str | None:
+    result = _run_git_with_index(["show", f":{path}"], root, index_path, check=False)
+    if result.returncode != 0:
+        return None
+    return result.stdout
+
+
 def _stage_text(root: Path, index_path: Path, path: str, content: str) -> None:
     blob = _run_git_with_index(
         ["hash-object", "-w", "--stdin"], root, index_path, input_text=content
@@ -121,52 +168,12 @@ def _stage_text(root: Path, index_path: Path, path: str, content: str) -> None:
     )
 
 
-def _restore_preexisting_staged_paths(
-    root: Path, patches: dict[str, str], committed_paths: set[str]
-) -> None:
-    for path, patch in patches.items():
-        if _is_cmoc_local_path(path):
-            # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
-            # doctor repair の .cmoc/local 追跡解除は、preprocess 前の staged 状態より優先する。
-            continue
-        if path in committed_paths:
-            # The working tree already contains the preexisting staged content plus
-            # the committed repair for same-path cases such as .gitignore.
-            run_git(["add", "-f", "--", path], root)
-        else:
-            _apply_cached_patch(root, patch)
-
-
-def _is_cmoc_local_path(path: str) -> bool:
-    return path == ".cmoc/local" or path.startswith(".cmoc/local/")
-
-
-def _staged_paths(root: Path) -> list[str]:
-    return run_git(["diff", "--cached", "--name-only"], root).stdout.splitlines()
-
-
-def _staged_patch(root: Path, path: str) -> str:
-    return run_git(["diff", "--cached", "--binary", "--", path], root).stdout
-
-
-def _apply_cached_patch(root: Path, patch: str) -> None:
-    result = subprocess.run(
-        ["git", "apply", "--cached", "--binary"],
-        cwd=root,
-        input=patch,
-        text=True,
-        capture_output=True,
-    )
-    if result.returncode != 0:
-        raise CmocError(
-            "doctor preprocess 前の staged 差分を復元できませんでした。",
-            ["git index の状態を確認してください。"],
-            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}",
-        )
-
-
 def _run_git_with_index(
-    args: list[str], root: Path, index_path: Path, input_text: str | None = None
+    args: list[str],
+    root: Path,
+    index_path: Path,
+    input_text: str | None = None,
+    check: bool = True,
 ) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env["GIT_INDEX_FILE"] = str(index_path)
@@ -178,7 +185,7 @@ def _run_git_with_index(
         text=True,
         capture_output=True,
     )
-    if result.returncode != 0:
+    if check and result.returncode != 0:
         raise CmocError(
             "git コマンドが失敗しました。",
             ["git の状態を確認してから、同じ cmoc コマンドを再実行してください。"],
