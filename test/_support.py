@@ -1,13 +1,17 @@
+import atexit
+import os
+import signal
 import subprocess
 import sys
 import textwrap
-import os
+import time
 from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
 runner = CliRunner()
+_FAKE_OLLAMA_PID_PATHS: set[Path] = set()
 
 # <work-root>/oracle/doc/dev_rule/test_rule.md fixes the local SLM used by
 # Codex CLI tests.
@@ -113,12 +117,38 @@ def fake_managed_ollama_env(root: Path) -> dict[str, str]:
     """Prepare fake commands for tests that trigger doctor through profile creation."""
     home = root / ".cmoc" / "local" / "test-home"
     fake_bin = root / ".cmoc" / "local" / "fake-bin"
+    _stop_registered_fake_ollama_services()
+    _FAKE_OLLAMA_PID_PATHS.add(home / ".cmoc" / "ollama" / "service.pid")
     _write_fake_ollama(home / ".cmoc" / "ollama" / "bin" / "ollama")
     _write_fake_systemctl(fake_bin / "systemctl", home)
     return {
         "HOME": str(home),
         "PATH": f"{fake_bin}{os.pathsep}{os.environ.get('PATH', '')}",
     }
+
+
+def _stop_registered_fake_ollama_services() -> None:
+    # <work-root>/oracle/doc/dev_rule/test_rule.md keeps fake service state under
+    # each tmp_path; this in-memory registry only prevents fixed-port collisions
+    # between tests in the same pytest process.
+    for pid_path in _FAKE_OLLAMA_PID_PATHS:
+        try:
+            process_id = int(pid_path.read_text())
+        except (OSError, ValueError):
+            continue
+        try:
+            os.kill(process_id, signal.SIGTERM)
+        except OSError:
+            continue
+        for _ in range(20):
+            try:
+                os.kill(process_id, 0)
+            except OSError:
+                break
+            time.sleep(0.05)
+
+
+atexit.register(_stop_registered_fake_ollama_services)
 
 
 def _write_fake_ollama(path: Path) -> None:
@@ -166,16 +196,13 @@ def _write_fake_systemctl(path: Path, home: Path) -> None:
             f"""\
             #!{sys.executable}
             import os
-            import signal
             import subprocess
             import sys
-            import tempfile
             from pathlib import Path
 
             home = Path({str(home)!r})
             service = home / ".config" / "systemd" / "user" / "cmoc-ollama.service"
             pid_path = home / ".cmoc" / "ollama" / "service.pid"
-            global_pid_path = Path(tempfile.gettempdir()) / "cmoc-fake-ollama-service.pid"
 
             args = sys.argv[1:]
             if args[:1] == ["--user"]:
@@ -195,15 +222,9 @@ def _write_fake_systemctl(path: Path, home: Path) -> None:
                         raise SystemExit(0)
                     except OSError:
                         pass
-                if global_pid_path.exists():
-                    try:
-                        os.kill(int(global_pid_path.read_text()), signal.SIGTERM)
-                    except OSError:
-                        pass
                 process = subprocess.Popen(argv, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
                 pid_path.parent.mkdir(parents=True, exist_ok=True)
                 pid_path.write_text(str(process.pid))
-                global_pid_path.write_text(str(process.pid))
                 raise SystemExit(0)
             if args == ["is-active", "--quiet", "cmoc-ollama"]:
                 if not pid_path.exists():
