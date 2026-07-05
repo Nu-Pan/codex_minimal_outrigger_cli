@@ -12,7 +12,7 @@ from cmoc_runtime import (
 from sub_commands.apply.abandon import cmoc_apply_abandon_impl
 from sub_commands.apply.fork import cmoc_apply_fork_impl
 from sub_commands.apply.join import cmoc_apply_join_impl
-from sub_commands.doctor import cmoc_doctor_impl
+from sub_commands.doctor import cmoc_doctor_impl, cmoc_init_impl
 from sub_commands.indexing import cmoc_indexing_impl
 from sub_commands.review.oracle import cmoc_review_oracle_impl
 from sub_commands.session.abandon import cmoc_session_abandon_impl
@@ -85,6 +85,12 @@ review_app = typer.Typer(no_args_is_help=True)
 app.add_typer(session_app, name="session")
 app.add_typer(apply_app, name="apply")
 app.add_typer(review_app, name="review")
+
+
+@app.command()
+def init() -> None:
+    """初回 setup と config 同期を実行する CLI 入口。"""
+    cmoc_init_impl()
 
 
 @app.command()

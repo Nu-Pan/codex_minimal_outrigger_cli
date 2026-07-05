@@ -25,7 +25,7 @@ from _support import (
     make_repo,
     run_git,
     runner,
-    run_doctor,
+    run_init,
 )
 from main import app
 import sub_commands.apply.join as apply_module
@@ -71,7 +71,7 @@ def test_indexing_uses_codex_index_entry_builder_and_commits(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     calls: list[str] = []
 
     class FakeCodexResult:
@@ -104,20 +104,32 @@ def test_indexing_uses_codex_index_entry_builder_and_commits(
     assert "cmoc indexing" in run_git(root, "log", "--oneline", "-1").stdout
 
 
-def test_indexing_uninitialized_clean_repo_fails_before_subcommand_log(
+def test_indexing_uninitialized_clean_repo_runs_doctor_then_fails_missing_config(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
 
+    class FakeCodexResult:
+        output_json = {
+            "summary": ["summary"],
+            "read_this_when": ["read"],
+            "do_not_read_this_when": ["skip"],
+        }
+
+    monkeypatch.setattr(
+        indexing_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
+    )
     result = runner.invoke(app, ["indexing"], catch_exceptions=False)
 
     assert result.exit_code != 0
-    assert "cmoc doctor を実行してから再実行してください。" in result.stdout
-    assert "cmoc doctor を実行してから再実行してください。" not in result.stderr
-    assert not (root / ".gitignore").exists()
+    assert "cmoc config が存在しません。" in result.stdout
+    assert "/.cmoc/local/" in (root / ".gitignore").read_text()
+    assert (root / ".agents" / ".gitkeep").is_file()
     assert not (root / "INDEX.md").exists()
-    assert not (root / ".cmoc" / "local" / "log" / "sub_command").exists()
+    assert (root / ".cmoc" / "local" / "log" / "sub_command").is_dir()
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
@@ -126,7 +138,7 @@ def test_indexing_targets_current_linked_worktree(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     main_head = run_git(root, "rev-parse", "HEAD").stdout.strip()
     linked = root / ".cmoc" / "local" / "worktree" / "indexing"
     run_git(root, "worktree", "add", "-b", "linked-indexing", str(linked), "HEAD")
@@ -160,7 +172,7 @@ def test_indexing_rejects_dirty_current_linked_worktree(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     linked = root / ".cmoc" / "local" / "worktree" / "dirty-indexing"
     run_git(root, "worktree", "add", "-b", "dirty-indexing", str(linked), "HEAD")
     (linked / "README.md").write_text("# repo\n\nlinked change\n")
@@ -189,7 +201,7 @@ def test_indexing_preflight_in_apply_worktree_uses_repo_config(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     config = cmoc_runtime.sync_config(root)
     custom_model = CodexModelSpec("codex", "CUSTOM-INDEXING-EFFICIENCY")
     config.codex.model[ModelClass.EFFICIENCY] = custom_model
@@ -226,7 +238,7 @@ def test_indexing_preflight_in_apply_worktree_uses_repo_config(
     assert seen_models
     assert set(seen_models) == {custom_model}
     assert (apply_worktree / "INDEX.md").is_file()
-    assert (apply_worktree / ".cmoc" / "config.json").is_file()
+    assert not (apply_worktree / ".cmoc" / "config.json").exists()
 
 
 def test_indexing_skips_codex_when_existing_hashes_are_fresh(
@@ -234,7 +246,7 @@ def test_indexing_skips_codex_when_existing_hashes_are_fresh(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
 
     class FakeCodexResult:
         output_json = {
@@ -289,7 +301,7 @@ def test_indexing_rejects_existing_non_index_diff_without_index_commit(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     (root / "README.md").write_text("# repo\n\nchanged\n")
     head_before = run_git(root, "rev-parse", "HEAD").stdout.strip()
     calls: list[Path] = []
@@ -566,7 +578,7 @@ def test_update_indexes_creates_empty_index_for_empty_directory(
     assert (empty_dir / "INDEX.md").read_text() == ""
 
 
-def test_update_indexes_generates_sibling_entries_serially(
+def test_update_indexes_generates_sibling_entries_in_stable_render_order(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -601,7 +613,9 @@ def test_update_indexes_generates_sibling_entries_serially(
     updated = indexing_common.update_indexes(root)
 
     assert docs / "INDEX.md" in updated
-    assert calls == ["a.txt", "b.txt"]
+    assert sorted(calls) == ["a.txt", "b.txt"]
+    rendered = (docs / "INDEX.md").read_text()
+    assert rendered.index("# `a.txt`") < rendered.index("# `b.txt`")
 
 
 def test_update_indexes_generates_non_ancestor_indexes_in_parallel(

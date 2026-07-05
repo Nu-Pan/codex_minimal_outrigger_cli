@@ -61,9 +61,9 @@ def _enum_str_map_from_dict(
     if not isinstance(data, dict):
         raise TypeError
     for key, value in data.items():
-        # `<work-root>/oracle/src/oracle/other/cmoc_config.py` stores enum values
-        # in JSON, so non-strings must be rejected, not stringified.
-        if not isinstance(value, str):
+        # `<work-root>/oracle/src/oracle/other/cmoc_config.py` maps
+        # ReasoningEffort to Codex CLI names; blank names are invalid JSON edits.
+        if not isinstance(value, str) or not value.strip():
             raise TypeError
         restored[key_type(key)] = value
     return restored
@@ -81,7 +81,13 @@ def _model_spec_map_from_dict(
             raise TypeError
         provider = value.get("model_provider")
         model = value.get("model")
-        if provider not in {"codex", "cmoc"} or not isinstance(model, str):
+        # `<work-root>/oracle/src/oracle/other/cmoc_config.py` forbids undefined
+        # Codex model names; blank human-edited JSON values fail at this boundary.
+        if (
+            provider not in {"codex", "cmoc"}
+            or not isinstance(model, str)
+            or not model.strip()
+        ):
             raise TypeError
         restored[ModelClass(key)] = CodexModelSpec(provider, model)
     return restored
@@ -181,7 +187,7 @@ def load_config(root: Path) -> CmocConfig:
     if not path.exists():
         raise CmocError(
             "cmoc config が存在しません。",
-            ["cmoc doctor を実行して <repo-root>/.cmoc/config.json を生成してください。"],
+            ["cmoc init を実行して <repo-root>/.cmoc/config.json を生成してください。"],
             str(path),
         )
     try:

@@ -20,20 +20,20 @@
 # `acp.py`
 
 ## Summary
-- 旧来の basic.acp 公開面を維持するため、ACP 関連の正本型を oracle 側から再公開する互換モジュール。正本型を realization 側に複製せず、直接生成時に既定の preflight 挙動だけを付与する。
+- ACP 関連の正本型を実装側の既存公開面から再公開する互換モジュール。正本型を複製せず oracle 側の定義を参照し、既存の ACP 型 import 経路を維持する。
 
 ## Read this when
-- basic.acp 経由で参照される ACP 型の公開面や後方互換性を確認したいとき。
-- AgentCallParameter の既定 preflight 挙動がどこで付与されるかを確認したいとき。
-- oracle 側の ACP 型を realization 側へ複製しないための参照構造を確認したいとき。
+- 実装側で ACP 型の公開 import 経路や互換性維持を確認する。
+- 正本型を複製せず oracle 側の ACP 定義を参照する箇所を探している。
+- 既存の ACP 型参照を整理し、この再公開モジュールを削除できる条件を確認する。
 
 ## Do not read this when
-- ACP 型そのものの正本定義を確認したいときは、oracle 側の定義を読む。
-- basic.acp 以外の利用経路や新規 API の設計を調べたいだけのとき。
-- preflight 処理の実行内容や indexing の詳細を調べたいとき。
+- ACP 型そのものの定義や仕様を確認したい場合は、oracle 側の正本定義を読む。
+- ACP 以外の基本型や設定値を調べている。
+- 新しい ACP 型や公開面を追加するための実装場所を探している。
 
 ## hash
-- e4d37750d2412e4f51c93d144fe8c0a910c52dd76fa510951088db7d6b3d40ae
+- 74853f85de7f0fa46704caa4c8d85b1cd79cb9aaf22374be83f17e2f42019111
 
 # `path_model.py`
 

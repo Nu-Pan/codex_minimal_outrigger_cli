@@ -10,6 +10,7 @@ from acp.builder.session.join.conflict_resolution import (
     build_session_join_conflict_resolution_parameter,
 )
 from commons.indexing import enable_indexing_preflight
+from commons.runtime_git import status_path_statuses
 from cmoc_runtime import (
     CmocError,
     CommandResult,
@@ -39,6 +40,7 @@ def cmoc_session_join_impl() -> None:
         run_git,
         command_name="session join",
         command_argv=["cmoc", "session", "join"],
+        use_work_root_runtime=True,
     )
 
 
@@ -186,12 +188,9 @@ def _changed_path_snapshot(
     root: Path, git: GitRun
 ) -> dict[Path, tuple[str, tuple[str, int, int, str | None] | None]]:
     snapshot: dict[Path, tuple[str, tuple[str, int, int, str | None] | None]] = {}
-    for line in git(["status", "--short", "-uall"], root).stdout.splitlines():
-        path_text = line[3:]
-        if " -> " in path_text:
-            path_text = path_text.split(" -> ", 1)[1]
-        path = (root / path_text).resolve()
-        snapshot[path] = (line[:2], _path_fingerprint(path))
+    for status, path in status_path_statuses(root, untracked_all=True, git=git):
+        resolved = path.resolve()
+        snapshot[resolved] = (status, _path_fingerprint(resolved))
     return snapshot
 
 

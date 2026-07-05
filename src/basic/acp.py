@@ -4,21 +4,12 @@
 削除条件は realization 側と利用者向け公開面から `basic.acp` 参照がなくなること。
 """
 
-from dataclasses import dataclass
-
 from oracle.acp_builder.basic import (
-    AgentCallParameter as OracleAgentCallParameter,
+    AgentCallParameter,
     FileAccessMode,
     ModelClass,
     ReasoningEffort,
 )
-
-
-@dataclass(frozen=True)
-class AgentCallParameter(OracleAgentCallParameter):
-    """旧 `basic.acp` 経由の直接生成に既定 preflight 挙動を足す互換型。"""
-
-    run_indexing_preflight: bool = True
 
 
 __all__ = [

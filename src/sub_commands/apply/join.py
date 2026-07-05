@@ -394,8 +394,11 @@ def restore_path_from_commit(root: Path, commit: str, path: str) -> None:
         run_git(["checkout", commit, "--", path], root)
     else:
         target = root / path
-        if target.exists():
-            run_git(["rm", "-f", path], root)
+        # <work-root>/oracle/doc/app_spec/sub_command/apply_join.md requires
+        # force-resolve to revert added paths; broken symlinks are Git paths even
+        # though Path.exists() is false.
+        if target.exists() or target.is_symlink():
+            run_git(["rm", "-f", "--", path], root)
 
 
 def resolve_index_conflicts(root: Path) -> bool:

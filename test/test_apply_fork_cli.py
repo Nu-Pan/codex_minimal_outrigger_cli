@@ -9,7 +9,7 @@ from _support import (
     make_repo,
     run_git,
     runner,
-    run_doctor,
+    run_init,
 )
 from main import app
 from pytest import MonkeyPatch
@@ -31,8 +31,8 @@ def test_apply_fork_runs_codex_loop_and_updates_state(
     """apply fork が Codex loop 後に state と worktree を完成状態へ更新する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    doctor_result = run_doctor(root)
-    assert doctor_result.exit_code == 0
+    init_result = run_init(root)
+    assert init_result.exit_code == 0
     fork_result = runner.invoke(app, ["session", "fork"], catch_exceptions=False)
     assert fork_result.exit_code == 0
     calls: list[str] = []
@@ -79,7 +79,7 @@ def test_apply_fork_uses_linked_worktree_branch_and_head(
     """linked worktree 上の session branch と HEAD から apply run を開始する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     linked = root / ".cmoc" / "local" / "worktree" / "linked-apply"
     run_git(root, "worktree", "add", "-b", "linked-apply-home", str(linked), "HEAD")
     (linked / "README.md").write_text("# linked apply\n")
@@ -118,13 +118,13 @@ def test_apply_fork_uses_linked_worktree_branch_and_head(
     assert not apply_worktree.is_relative_to(linked)
 
 
-def test_apply_fork_does_not_rewrite_session_gitignore(
+def test_apply_fork_runs_doctor_preprocess_before_body(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
-    """apply fork が session 側の既存 .gitignore 表現を書き換えないことを確認する。"""
+    """apply fork 本体前に doctor preprocess の共通修復が実行される。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -148,8 +148,8 @@ def test_apply_fork_does_not_rewrite_session_gitignore(
         app, ["apply", "fork", "--scope", "full"], catch_exceptions=False
     )
 
-    assert result.exit_code == 0
-    assert (root / ".gitignore").read_text() == ".cmoc/\n"
+    assert result.exit_code == 0, result.stdout
+    assert "/.cmoc/local/" in (root / ".gitignore").read_text().splitlines()
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
@@ -159,7 +159,7 @@ def test_apply_fork_ensures_cmoc_ignore_without_dirtying_session(
     """apply fork は未 ignore の .cmoc を clean worktree のまま ignore する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -168,10 +168,14 @@ def test_apply_fork_ensures_cmoc_ignore_without_dirtying_session(
     run_git(root, "commit", "-m", "stop ignoring cmoc in gitignore")
     exclude = root / ".git" / "info" / "exclude"
     exclude.write_text(
-        "\n".join(line for line in exclude.read_text().splitlines() if line != "/.cmoc/local/")
+        "\n".join(
+            line
+            for line in exclude.read_text().splitlines()
+            if line not in {"/.cmoc/", "/.cmoc/local/"}
+        )
         + "\n"
     )
-    assert run_git(root, "status", "--short").stdout.strip() == "?? .cmoc/local/"
+    assert run_git(root, "status", "--short").stdout.strip() == "?? .cmoc/"
 
     class FakeCodexResult:
         output_json = {"findings": []}
@@ -186,14 +190,13 @@ def test_apply_fork_ensures_cmoc_ignore_without_dirtying_session(
     assert "/.cmoc/local/" in exclude.read_text().splitlines()
 
 
-@pytest.mark.parametrize("config_case", ["invalid_json", "missing"])
 def test_apply_fork_config_load_error_does_not_start_apply_run(
-    tmp_path: Path, monkeypatch: MonkeyPatch, config_case: str
+    tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """設定読み込み失敗時に apply run の branch/state を開始しないことを確認する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -201,10 +204,7 @@ def test_apply_fork_config_load_error_does_not_start_apply_run(
     session_id = branch.removeprefix("cmoc/session/")
     state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     config_path = root / ".cmoc" / "config.json"
-    if config_case == "invalid_json":
-        config_path.write_text("{invalid\n")
-    else:
-        config_path.unlink()
+    config_path.write_text("{invalid\n")
 
     result = runner.invoke(app, ["apply", "fork", "--scope", "full"])
 
@@ -220,8 +220,31 @@ def test_apply_fork_config_load_error_does_not_start_apply_run(
         root / ".cmoc" / "local" / "state" / "apply_processes" / f"{session_id}.pid"
     ).exists()
     assert run_git(root, "branch", "--list", f"cmoc/apply/{session_id}/*").stdout == ""
-    if config_case == "missing":
-        assert not config_path.exists()
+
+
+def test_apply_fork_missing_config_fails_before_starting_apply_run(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_init(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    (root / ".cmoc" / "config.json").unlink()
+
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> FakeCodexResult:
+        return FakeCodexResult({"findings": []})
+
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["apply", "fork", "--scope", "full"])
+
+    assert result.exit_code != 0
+    assert "cmoc config が存在しません。" in result.stdout
+    assert not (root / ".cmoc" / "config.json").exists()
 
 
 def test_apply_fork_can_target_and_edit_gitignore(
@@ -230,7 +253,7 @@ def test_apply_fork_can_target_and_edit_gitignore(
     """所見対象としての .gitignore は apply branch 側で編集できることを確認する。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -250,7 +273,7 @@ def test_apply_fork_can_target_and_edit_gitignore(
         "suggested_fix": "update gitignore",
     }
     target_rels_by_call: list[list[str]] = []
-    current_findings = [finding]
+    gitignore_finding_returned = False
 
     def enumerate_findings(
         root_arg: Path,
@@ -259,11 +282,14 @@ def test_apply_fork_can_target_and_edit_gitignore(
         codex_exec: object,
         **kwargs: object,
     ) -> list[dict[str, object]]:
-        """対象 path を記録し、初回だけ gitignore 所見を返す。"""
-        nonlocal current_findings
-        target_rels_by_call.append([str(target.relative_to(root_arg))])
-        current_findings = [finding] if len(target_rels_by_call) == 1 else []
-        return current_findings
+        """対象 path を記録し、gitignore 初回調査だけ所見を返す。"""
+        nonlocal gitignore_finding_returned
+        rel = str(target.relative_to(root_arg))
+        target_rels_by_call.append([rel])
+        if rel == ".gitignore" and not gitignore_finding_returned:
+            gitignore_finding_returned = True
+            return [finding]
+        return []
 
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
@@ -287,7 +313,6 @@ def test_apply_fork_can_target_and_edit_gitignore(
     )
 
     assert result.exit_code == 0
-    assert ".gitignore" in target_rels_by_call[0]
     assert [".gitignore"] in target_rels_by_call
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
@@ -358,6 +383,29 @@ def test_apply_fork_target_normalization_excludes_non_realization_paths(
     ]
 
 
+def test_apply_fork_target_normalization_excludes_cmoc_runtime_files(
+    tmp_path: Path,
+) -> None:
+    """作業用状態領域の .cmoc 配下 file は対象にしない。"""
+    root = make_repo(tmp_path)
+    config_target = root / ".cmoc" / "config.json"
+    ignored_local_target = root / ".cmoc" / "local" / "cache.json"
+    config_target.parent.mkdir()
+    ignored_local_target.parent.mkdir(parents=True)
+    config_target.write_text("{}\n")
+    ignored_local_target.write_text("{}\n")
+    (root / ".gitignore").write_text("/.cmoc/local/\n")
+    run_git(root, "add", ".gitignore", ".cmoc/config.json")
+    run_git(root, "commit", "-m", "add cmoc config")
+
+    targets = apply_fork_module.normalize_apply_targets(
+        root,
+        {config_target, ignored_local_target},
+    )
+
+    assert targets == []
+
+
 def test_apply_fork_target_normalization_keeps_binary_files(
     tmp_path: Path,
 ) -> None:
@@ -405,3 +453,56 @@ def test_apply_fork_target_normalization_keeps_tracked_ignored_files(
         (root / "oracle" / "ignored.md").resolve(),
         realization_target.resolve(),
     ]
+
+
+def test_apply_fork_target_normalization_classifies_oracle_symlink_by_repo_path(
+    tmp_path: Path,
+) -> None:
+    """oracle 配下 symlink は link 先ではなく repository path で分類する。"""
+    root = make_repo(tmp_path)
+    (root / "memo").mkdir()
+    (root / "memo" / "draft.md").write_text("# draft\n")
+    oracle_link = root / "oracle" / "memo-link.md"
+    oracle_link.symlink_to("../memo/draft.md")
+    run_git(root, "add", "memo/draft.md", "oracle/memo-link.md")
+    run_git(root, "commit", "-m", "add oracle symlink")
+
+    targets = apply_fork_module.normalize_apply_targets(root, {oracle_link})
+
+    assert targets == [oracle_link.absolute()]
+
+
+def test_apply_fork_marks_state_completed_before_report(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """apply loop 正常完了直後、report 生成前に completed を state file へ書く。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_init(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = branch.removeprefix("cmoc/session/")
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+    seen_states: list[str] = []
+    monkeypatch.setattr(apply_fork_module, "enumerate_apply_targets", lambda *args: [])
+
+    def fake_write_report(*args: object, **kwargs: object) -> Path:
+        seen_states.append(json.loads(state_path.read_text())["apply"]["state"])
+        report_path = root / ".cmoc" / "local" / "report" / "apply" / "fork" / "state.md"
+        report_path.parent.mkdir(parents=True)
+        report_path.write_text("# report\n")
+        return report_path
+
+    monkeypatch.setattr(apply_fork_module, "write_apply_fork_report", fake_write_report)
+
+    class FakeCodexResult:
+        output_json = {"findings": []}
+
+    result = apply_fork_module._cmoc_apply_fork_body(
+        "full", lambda *args, **kwargs: FakeCodexResult()
+    )
+
+    assert result.returncode == 0
+    assert seen_states == ["completed"]

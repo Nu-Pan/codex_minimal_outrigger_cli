@@ -20,7 +20,7 @@ from _support import (
     make_repo,
     run_git,
     runner,
-    run_doctor,
+    run_init,
 )
 from main import app
 import sub_commands.apply.fork as apply_fork_module
@@ -31,7 +31,7 @@ def test_apply_join_removes_apply_worktree_and_resets_state(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -82,7 +82,7 @@ def test_apply_join_can_run_from_apply_worktree(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -132,7 +132,7 @@ def test_apply_join_from_linked_session_worktree_merges_into_current_session(
     root = make_repo(tmp_path)
     root_branch = current_branch(root)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     linked = root / ".cmoc" / "local" / "worktree" / "linked-session"
     run_git(root, "worktree", "add", "-b", "linked-session-home", str(linked), "HEAD")
     monkeypatch.chdir(linked)
@@ -174,7 +174,7 @@ def test_apply_join_rejects_stale_apply_branch_for_same_session(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -228,7 +228,7 @@ def test_apply_join_from_apply_worktree_requires_clean_apply_worktree(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -280,7 +280,7 @@ def test_apply_join_from_session_requires_clean_apply_worktree(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -322,7 +322,7 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -342,7 +342,10 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     state = json.loads(state_path.read_text())
     apply_worktree = apply_worktree_from_state(root, state)
     (apply_worktree / "oracle" / "spec.md").write_text("# changed oracle in apply\n")
-    run_git(apply_worktree, "add", "oracle/spec.md")
+    broken_link = apply_worktree / ".codex" / "broken"
+    broken_link.parent.mkdir(exist_ok=True)
+    broken_link.symlink_to("missing-target")
+    run_git(apply_worktree, "add", "oracle/spec.md", ".codex/broken")
     run_git(apply_worktree, "commit", "-m", "unexpected oracle change")
 
     normal = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
@@ -356,7 +359,7 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     report = report_path.read_text()
     assert "join を中止しました" in report
     assert "## 想定外差分" in report
-    assert "- apply: oracle/spec.md" in report
+    assert "- apply: .codex/broken, oracle/spec.md" in report
     assert "## マージコンフリクト" in report
     assert "- なし" in report
     forced = runner.invoke(
@@ -364,6 +367,8 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     )
     assert forced.exit_code == 0
     assert (root / "oracle" / "spec.md").read_text() == "# spec\n"
+    assert not (root / ".codex" / "broken").exists()
+    assert not (root / ".codex" / "broken").is_symlink()
 
 
 def test_apply_join_reports_codex_apply_diff_and_force_reverts(
@@ -376,7 +381,7 @@ def test_apply_join_reports_codex_apply_diff_and_force_reverts(
     run_git(root, "add", ".codex/config.toml")
     run_git(root, "commit", "-m", "add tracked codex config")
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -422,7 +427,7 @@ def test_apply_join_reports_session_oracle_agents_diff_and_force_reverts(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -467,7 +472,7 @@ def test_apply_join_excludes_deleted_apply_paths_from_unexpected_changes(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -525,6 +530,24 @@ def test_apply_join_classifies_root_memo_as_session_change(
     assert apply_module.is_expected_session_change(root, path) is True
 
 
+def test_apply_join_allows_session_oracle_symlink_to_outside_root(
+    tmp_path: Path,
+) -> None:
+    root = make_repo(tmp_path)
+    outside_target = tmp_path / "outside-oracle.md"
+    outside_target.write_text("# outside\n")
+    with (root / ".gitignore").open("a") as file:
+        file.write("oracle/ignored-link.md\n")
+    (root / "oracle" / "ignored-link.md").symlink_to(outside_target)
+    run_git(root, "add", "-f", ".gitignore", "oracle/ignored-link.md")
+    run_git(root, "commit", "-m", "add ignored oracle symlink")
+
+    path = "oracle/ignored-link.md"
+
+    assert apply_module.is_expected_apply_change(root, path) is False
+    assert apply_module.is_expected_session_change(root, path) is True
+
+
 @pytest.mark.parametrize("path", ["AGENTS.md", ".codex/config.toml"])
 def test_apply_join_rejects_non_realization_apply_paths(
     tmp_path: Path,
@@ -547,7 +570,7 @@ def test_apply_join_allows_gitignore_and_tracked_ignored_apply_diff(
     run_git(root, "add", "-f", ".gitignore", "src/ignored.py")
     run_git(root, "commit", "-m", "add tracked ignored src")
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -587,7 +610,7 @@ def test_apply_join_reports_unresolved_non_index_conflict(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
@@ -642,7 +665,7 @@ def test_apply_join_continues_after_resolving_index_conflict_in_normal_mode(
     (root / "INDEX.md").write_text("base\n")
     run_git(root, "add", "INDEX.md")
     run_git(root, "commit", "-m", "add index")
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     assert (
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )

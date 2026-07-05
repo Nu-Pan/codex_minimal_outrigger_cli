@@ -2,8 +2,7 @@ from pathlib import Path
 
 from cmoc_runtime import (
     SessionState,
-    is_root_memo,
-    is_untracked_git_ignored,
+    is_oracle_file_path,
     run_git,
 )
 
@@ -33,8 +32,5 @@ def enumerate_review_all_oracle_files(root: Path) -> list[Path]:
     return [
         path
         for path in sorted((root / "oracle").rglob("*"))
-        if path.is_file()
-        and path.name not in {"AGENTS.md", "INDEX.md"}
-        and not is_root_memo(root, path)
-        and not is_untracked_git_ignored(root, path)
+        if path.is_file() and is_oracle_file_path(root, path)
     ]

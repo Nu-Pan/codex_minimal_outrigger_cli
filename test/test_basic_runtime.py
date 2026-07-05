@@ -27,10 +27,12 @@ from cmoc_runtime import (
     CmocError,
     SubcommandLogger,
     config_from_dict,
+    config_to_dict,
     create_run_worktree,
     ensure_cmoc_ignored,
     file_access_to_sandbox_mode,
     format_duration,
+    load_config,
     remove_worktree,
     render_error,
     repo_root,
@@ -51,6 +53,7 @@ from oracle.other.cmoc_config import CodexModelSpec
 from main import app
 
 from _support import (
+    TEST_SLM_MODEL,
     make_repo,
     run_git,
     runner,
@@ -205,7 +208,25 @@ def test_config_defaults_match_logical_model_classes() -> None:
         "codex", "gpt-5.5"
     )
     assert config.codex.reasoning_effort[ReasoningEffort.HIGH] == "high"
-    assert config.codex.num_try_falv_recovery == 1
+
+
+def test_config_json_preserves_falv_recovery_count() -> None:
+    config = config_from_dict({"codex": {"num_try_falv_recovery": 3}})
+
+    assert config.codex.num_try_falv_recovery == 3
+    assert config_to_dict(config)["codex"]["num_try_falv_recovery"] == 3
+
+
+def test_load_config_missing_points_to_init(tmp_path: Path) -> None:
+    root = make_repo(tmp_path)
+
+    with pytest.raises(CmocError) as exc_info:
+        load_config(root)
+
+    assert exc_info.value.summary == "cmoc config が存在しません。"
+    assert exc_info.value.next_actions == [
+        "cmoc init を実行して <repo-root>/.cmoc/config.json を生成してください。"
+    ]
 
 
 @pytest.mark.parametrize("value", [False, None, [], "gpt"])
@@ -216,7 +237,25 @@ def test_config_rejects_non_object_codex_model_specs(value: object) -> None:
     assert exc_info.value.summary == "cmoc config が不正です。"
 
 
-@pytest.mark.parametrize("value", [False, None, [], {}])
+@pytest.mark.parametrize(
+    "spec",
+    [
+        {"model_provider": "bad", "model": "gpt-5.5"},
+        {"model_provider": "codex", "model": ""},
+        {"model_provider": "codex", "model": "  "},
+        {"model_provider": "codex", "model": None},
+    ],
+)
+def test_config_rejects_invalid_codex_model_specs(
+    spec: dict[str, object],
+) -> None:
+    with pytest.raises(CmocError) as exc_info:
+        config_from_dict({"codex": {"model": {"mainstream": spec}}})
+
+    assert exc_info.value.summary == "cmoc config が不正です。"
+
+
+@pytest.mark.parametrize("value", [False, None, [], {}, "", "  "])
 def test_config_rejects_non_string_reasoning_effort_names(value: object) -> None:
     with pytest.raises(CmocError) as exc_info:
         config_from_dict({"codex": {"reasoning_effort": {"low": value}}})
@@ -470,6 +509,7 @@ def test_ensure_cmoc_ignored_updates_gitignore(tmp_path: Path) -> None:
 
     ensure_cmoc_ignored(root)
 
+    assert "/.cmoc/" in (root / ".gitignore").read_text()
     assert "/.cmoc/local/" in (root / ".gitignore").read_text()
     ignored = subprocess.run(
         ["git", "check-ignore", "-q", ".cmoc/local/.__cmoc_ignore_probe__"],
@@ -726,11 +766,8 @@ def test_codex_profile_uses_cmoc_ollama_provider_for_local_slm(
 ) -> None:
     root = tmp_path / "repo"
     root.mkdir()
-    port_path = root / ".cmoc" / "local" / "ollama" / "port"
-    port_path.parent.mkdir(parents=True)
-    port_path.write_text("49152\n")
     config = CmocConfig()
-    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", "smollm2:135m")
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
 
     profile = build_codex_profile(
         AgentCallParameter(
@@ -745,34 +782,14 @@ def test_codex_profile_uses_cmoc_ollama_provider_for_local_slm(
     )
 
     parsed = tomllib.loads(profile)
-    provider = parsed["model_providers"]["cmoc_ollama"]
-    assert parsed["model"] == "smollm2:135m"
-    assert parsed["model_provider"] == "cmoc_ollama"
+    provider = parsed["model_providers"]["cmoc_managed_ollama"]
+    assert parsed["model"] == TEST_SLM_MODEL
+    assert parsed["model_provider"] == "cmoc_managed_ollama"
     assert provider == {
-        "name": "cmoc ollama",
-        "base_url": "http://127.0.0.1:49152/v1",
+        "name": "cmoc managed ollama",
+        "base_url": "http://127.0.0.1:11434/v1",
         "wire_api": "responses",
     }
-
-
-def test_codex_profile_requires_ollama_port_for_local_slm(tmp_path: Path) -> None:
-    root = tmp_path / "repo"
-    root.mkdir()
-    config = CmocConfig()
-    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", "smollm2:135m")
-
-    with pytest.raises(CmocError, match="ollama SLM の接続情報"):
-        build_codex_profile(
-            AgentCallParameter(
-                ModelClass.MINIMUM,
-                ReasoningEffort.LOW,
-                FileAccessMode.READONLY,
-                "prompt",
-                None,
-            ),
-            config,
-            root,
-        )
 
 
 def test_codex_profile_allows_repo_local_read_from_linked_worktree(

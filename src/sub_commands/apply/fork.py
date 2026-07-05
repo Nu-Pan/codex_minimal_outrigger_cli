@@ -30,6 +30,7 @@ from cmoc_runtime import (
     current_subcommand_logger,
     ensure_cmoc_ignored_in_exclude,
     head_commit,
+    is_oracle_file_path,
     is_untracked_git_ignored,
     load_config,
     load_state_for_branch,
@@ -151,6 +152,8 @@ def _cmoc_apply_fork_body(
             else:
                 pending_targets = dedupe_apply_targets(pending_targets)
                 result_label = "unconverged" if pending_targets else "converged"
+            state.apply.state = "completed"
+            write_state(path, state)
             report_path = write_apply_fork_report(
                 root,
                 apply_worktree,
@@ -162,8 +165,6 @@ def _cmoc_apply_fork_body(
                 codex_exec,
             )
         delete_apply_process_id(root, session_id)
-        state.apply.state = "completed"
-        write_state(path, state)
     except BaseException as exc:
         delete_apply_process_id(root, session_id)
         state.apply.state = "error"
@@ -265,25 +266,36 @@ def normalize_apply_targets(
 ) -> list[Path]:
     """apply finding 列挙対象として扱える file だけに正規化する。"""
     targets: list[Path] = []
-    for path in sorted({candidate.resolve() for candidate in candidates}):
+    seen_resolved: set[Path] = set()
+    for path in sorted(
+        {
+            (candidate if candidate.is_absolute() else root / candidate).absolute()
+            for candidate in candidates
+        }
+    ):
         if not path.exists() or not path.is_file():
             continue
         try:
-            rel_parts = path.relative_to(root.resolve()).parts
+            rel_parts = path.relative_to(root.absolute()).parts
         except ValueError:
             continue
         if not rel_parts:
             continue
-        if rel_parts[0] in {".git", ".agents", ".codex", ".cmoc", "memo"}:
+        if rel_parts[0] in {".git", ".agents", ".cmoc", ".codex", "memo"}:
             continue
-        if not include_oracle and rel_parts[0] == "oracle":
+        if rel_parts[0] == "oracle":
+            if not include_oracle or not is_oracle_file_path(root, path):
+                continue
+        elif path.name in {"AGENTS.md", "INDEX.md"}:
             continue
-        # `<work-root>/oracle/doc/app_spec/misc_spec.md` は実装ファイル列挙に
-        # binary 除外を置かないため、file 種別だけでは対象から落とさない。
-        if path.name in {"AGENTS.md", "INDEX.md"}:
+        elif is_untracked_git_ignored(root, path):
             continue
-        if is_untracked_git_ignored(root, path):
+        # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
+        # 分類は repository path で行うが、同じ実体への再調査は 1 回に抑える。
+        resolved = path.resolve()
+        if resolved in seen_resolved:
             continue
+        seen_resolved.add(resolved)
         targets.append(path)
     return targets
 

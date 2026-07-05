@@ -242,6 +242,28 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert "- Exit code: `0`" in console
 
 
+def test_quota_probe_builder_returns_minimal_readonly_parameter() -> None:
+    base = AgentCallParameter(
+        ModelClass.FLAGSHIP,
+        ReasoningEffort.HIGH,
+        FileAccessMode.REPO_WRITE,
+        "base",
+        None,
+        run_indexing_preflight=True,
+        cwd=Path("/tmp/base-cwd"),
+    )
+
+    probe = build_quota_availability_probe_parameter(base)
+
+    assert probe.model_class == ModelClass.MINIMUM
+    assert probe.reasoning_effort == ReasoningEffort.LOW
+    assert probe.file_access_mode == FileAccessMode.READONLY
+    assert probe.prompt
+    assert probe.structured_output_schema_path is None
+    assert probe.run_indexing_preflight is False
+    assert probe.cwd == base.cwd
+
+
 def test_quota_probe_uses_real_builder_when_quota_recovers(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -250,19 +272,15 @@ def test_quota_probe_uses_real_builder_when_quota_recovers(
     stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     calls: list[str] = []
-    probe_parameter = build_quota_availability_probe_parameter(
-        AgentCallParameter(
-            ModelClass.EFFICIENCY,
-            ReasoningEffort.LOW,
-            FileAccessMode.READONLY,
-            "prompt",
-            None,
-        )
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+        cwd=root,
     )
-    assert probe_parameter.model_class == ModelClass.MINIMUM
-    assert probe_parameter.reasoning_effort == ReasoningEffort.LOW
-    assert probe_parameter.file_access_mode == FileAccessMode.READONLY
-    assert probe_parameter.structured_output_schema_path is None
+    probe_parameter = build_quota_availability_probe_parameter(parameter)
 
     def fake_run(
         argv: list[str], **kwargs: object
@@ -287,13 +305,6 @@ def test_quota_probe_uses_real_builder_when_quota_recovers(
         )
 
     monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
-    parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
-    )
 
     result = run_codex_exec(
         parameter,

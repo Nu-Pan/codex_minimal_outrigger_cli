@@ -18,20 +18,21 @@
 # `launch_tui.py`
 
 ## Summary
-- TUI 起動時に使う AgentCallParameter を realization 側で組み立てる互換入口。oracle 側の prompt builder で complete prompt を作り、runtime の local 配下へ保存したうえで、その保存先を読む指示を agent call parameter に渡す。
+- TUI 起動時に使う AgentCallParameter を realization 側で組み立てる互換入口。oracle 側の prompt builder で完全プロンプトを作り、realization runtime のローカルログ配置へ保存して、その保存先を読むよう agent call parameter に渡す。
+- TUI 起動が codex exec と異なり Structured Output schema を要求しないこと、実行時保存先が oracle 側ではなく realization runtime の配置に従うことを扱う。
 
 ## Read this when
-- `cmoc tui` の起動時に渡す agent call parameter の内容、model class、reasoning effort、file access mode、prompt 保存先を確認する必要があるとき。
-- TUI 起動用 complete prompt の生成フラグや original prompt の渡し方を変更するとき。
-- oracle 側 prompt builder と realization 側 runtime path の接続箇所を確認するとき。
+- TUI 起動用の AgentCallParameter の組み立て、モデル種別、reasoning effort、file access mode の受け渡しを確認または変更したいとき。
+- TUI 起動時の complete prompt の生成、markdown 保存、保存先パス、agent へ渡す指示文の関係を確認したいとき。
+- TUI 起動で Structured Output schema を渡すかどうか、または codex exec 向け parameter builder との差分を調べたいとき。
 
 ## Do not read this when
-- complete prompt の本文構造や各 standard prompt の内容を確認したいだけのときは、oracle 側の prompt builder や関連する oracle file を読む。
-- `.cmoc/local` 配下のディレクトリ規約や logs path の一般処理を確認したいだけのときは、runtime path を扱う共通実装を読む。
-- TUI 起動後の UI 表示、入力処理、イベントループを調べるときは、TUI 本体の実装を読む。
+- TUI 画面そのものの表示、入力処理、イベントループ、端末 UI の挙動を調べたいとき。
+- prompt builder の正本仕様や StructDoc の markdown rendering の詳細を調べたいとき。
+- runtime のローカルディレクトリ配置や repo root 解決の一般仕様を調べたいとき。
 
 ## hash
-- a594973bd10fe9f71f595f33097bacd11b21fa148eacb37af3c4e96d712805f5
+- c4b75a4700fea11fb62ce4b085ae5a85ec716da8fc011235fd7c25e568fc8974
 
 # `resolve_parameter.py`
 
