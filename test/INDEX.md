@@ -59,48 +59,49 @@
 # `test_apply_fork_cli.py`
 
 ## Summary
-- apply fork コマンドの CLI 挙動を検証するテスト群。Codex loop の呼び出し、apply run の state・branch・worktree 更新、doctor preprocess による修復、設定読み込み失敗時の停止、所見適用対象としての realization path 正規化を扱う。
-- session fork 後の apply fork 実行が、通常 worktree と linked worktree の両方で正しい基点 commit・apply branch・apply worktree を作ることを確認する入口になる。
-- root 直下の管理領域・規範領域・memo・ignore 状態と、入れ子の管理名 directory や binary file を含む対象候補の扱いを確認する入口になる。
+- apply fork コマンドの CLI 経路と内部本体に対する realization test。Codex 実行を fake 化し、apply run の開始・完了、session state 更新、apply branch/worktree 作成、report 前の completed 書き込み、doctor preprocess による修復、設定読み込み失敗時の中断、linked worktree 起点の HEAD 使用を検証する。
+- apply fork の対象正規化に対する realization test。root 直下の private 領域、管理用 path、INDEX/AGENTS、ignore 状態、tracked ignored file、tracked 設定、binary file、oracle 配下 file などが対象に残るか除外されるかの境界を検証する。
+- apply fork が所見対象として補助ファイルを扱えること、apply branch 側で編集結果を保持すること、旧 apply worktree path や pid/state の不要情報を残さないことを確認する入口になる。
 
 ## Read this when
-- apply fork の外部挙動、終了状態、state JSON、apply branch、apply worktree 配置を変更または調査する時。
-- apply fork 実行前の doctor preprocess、.cmoc ignore 修復、config.json 欠落修復、config 読み込みエラー時の副作用抑制を確認する時。
-- apply fork が Codex 実行をどの purpose で呼び、所見列挙・所見適用・変更要約のループをどう進めるかをテストから把握したい時。
-- apply 対象 path の正規化で、root 直下 memo、oracle、.agents、.codex、AGENTS、INDEX、tracked ignored file、binary file の扱いを確認する時。
-- linked worktree 上で開始した session branch と HEAD を apply run の基点にする挙動を変更する時。
+- apply fork の実行フロー、state 遷移、apply branch/worktree の配置、Codex loop 呼び出し、report 生成前後の順序を変更または調査する場合。
+- doctor preprocess、cmoc ignore 修復、設定ファイル読み込み失敗、設定ファイル欠落修復が apply fork に与える影響を確認する場合。
+- apply fork の target enumeration/normalization の対象境界を変更する場合。特に root 直下 private 領域、管理用 directory、INDEX/AGENTS、tracked ignored file、binary file、oracle 配下 file、tracked 設定の扱いを確認する場合。
+- linked worktree 上で session fork した後の apply fork が、現在の worktree branch と HEAD をどのように apply run の起点にするかを確認する場合。
+- apply fork が補助ファイルを所見対象として編集できるか、また編集が apply branch に保存されるかを確認する場合。
 
 ## Do not read this when
-- apply fork の内部実装だけを編集する場所を探しており、テストの期待挙動ではなく実装本体を先に読むべき時。
-- doctor コマンド単体、session fork 単体、config loader 単体の詳細仕様を確認したい時。
-- Codex 実行 wrapper や AgentCallParameter の汎用仕様を調べたい時。
-- apply fork 以外の subcommand、または apply 対象正規化と無関係な CLI テストを探している時。
+- apply fork 以外の apply 系サブコマンド、session fork 単体、doctor 単体の仕様や実装を調べたい場合は、より直接対応するテストまたは実装へ進む。
+- Codex CLI や LLM の出力内容そのものを検証したい場合。この対象は Codex 実行結果を fake 化し、apply fork 側の制御ロジックを検証している。
+- 実際の report 文面や findings schema の詳細だけを確認したい場合。この対象は report 生成の順序や呼び出し結果の影響を扱うが、文面仕様の正本ではない。
+- INDEX entry 生成や routing 文書の仕様を確認したい場合。この対象は apply fork realization test であり、routing 文書作成規則そのものは扱わない。
 
 ## hash
-- a0d1bd3f8340172271fe43740032b8437cc61ad172302ba8e6727c72b11635ac
+- 912f85c91cb7b4c6ddeecb9a68eec07a98ff7105ec8e6dc9849d0162cff885df
 
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 経由の制御を検証する大規模な realization test。所見列挙、所見適用、commit、変更要約、report 出力、session state 更新、再検査、rolling apply fork の対象選定までを一連の apply fork report 文脈として扱う。
-- apply fork 用 ACP builder の import 可能性、prompt 内容、oracle schema 参照、変更差分要約 helper の挙動も同じ apply fork report・再検査制御の入口として検証する。
+- apply fork の CLI 経由の挙動を、所見列挙から適用、commit、変更要約、report 生成、session state 更新まで一連の制御として検証するテスト。
+- apply fork report の収束・未収束・error 表示、変更ファイル再調査、未追跡 file を含む変更要約、削除済み tracked file の除外、rolling fork の対象選定を扱う。
+- apply fork 用 ACP builder が src のみの PYTHONPATH や packaged layout で import でき、oracle source の schema や標準 prompt を参照できることも検証する。
 
 ## Read this when
-- `apply fork` の CLI 実行結果、終了コード、作業レポート内容、所見数推移、変更内容要約、commit message、session state 更新を確認・変更する。
-- apply fork が所見適用後に変更ファイルや新規ディレクトリ配下を再調査する条件、収束・未収束・error の判定、上限到達時の扱いを確認・変更する。
-- apply fork report 用の変更要約が未 commit 差分、未追跡 file、削除済み tracked file をどう扱うかを確認・変更する。
-- apply fork 用の change summary、file finding enumeration、finding application の ACP builder import、prompt、structured output schema path を確認・変更する。
-- rolling apply fork が前回 apply join 後の oracle 変更だけを対象にする制御や、session state の join 済み apply snapshot 記録を確認・変更する。
-- 所見適用が oracle など禁止領域を書いた場合に apply fork が事後修復を呼ばない挙動を確認・変更する。
+- apply fork の report 内容、終了コード、所見数推移、変更内容要約、commit message、session state 更新を変更または調査するとき。
+- apply fork が変更後の file を再調査する条件、再調査対象の展開、上限到達時の収束・未収束判定を確認するとき。
+- apply fork の error 時 report、未 commit diff、未追跡 file、削除済み tracked file を含む変更要約ロジックを確認するとき。
+- rolling apply fork が前回 apply join 後の oracle 変更だけを対象にする挙動を確認するとき。
+- apply fork 関連の ACP builder import、schema path、標準 prompt 組み立て、packaged layout 対応を確認するとき。
+- 所見適用が oracle など禁止領域を書き換えた場合に、apply fork が事後修復を行わない挙動を確認するとき。
 
 ## Do not read this when
-- apply fork 以外のサブコマンド、または apply join・session fork 単体の通常動作だけを調べたい。
-- Codex 実行 wrapper、git helper、runner fixture などの共通テスト基盤そのものを調べたい。
-- apply fork の report・再検査・変更要約に関係しない ACP builder や structured output schema を調べたい。
-- 実装内部の小さな helper 分割や純粋な unit-level 挙動だけを確認したく、CLI report や session state まで観測する必要がない。
+- apply fork 以外のサブコマンドや、report を伴わない一般的な CLI 起動だけを確認したいとき。
+- apply fork の内部 helper 単体の詳細だけを確認すれば足り、CLI 経由の loop、report、session state まで追う必要がないとき。
+- ACP builder 全般の設計を確認したいだけで、apply fork 用 builder の import・prompt・schema に限定されないとき。
+- git worktree や session fork/join の基礎挙動だけを確認したいとき。
 
 ## hash
-- 3b79f259afd2bf81c3eeefb11c0a959cb330b8a2cfd51e70343a4dfb7101bd66
+- 59998e253ec23c08a3cf01bb271acecf47807d677e008402cea6c88f1a24a0ca
 
 # `test_apply_join_cli.py`
 

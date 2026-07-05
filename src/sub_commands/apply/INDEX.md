@@ -38,23 +38,23 @@
 # `fork.py`
 
 ## Summary
-- apply fork の実行制御を担う実装。session branch 上で apply 用 branch/worktree を作成し、対象 file の列挙、Codex による finding 列挙と適用、差分 commit、report 出力、apply state 更新、失敗時の error report 作成までを 1 回の apply run として扱う。
-- apply scope から列挙対象を決める処理、apply 対象の正規化と重複排除、前回 join 済み apply commit の解決、finding 適用後の commit subject 生成も同じ apply fork loop の復旧条件に関わる処理として含む。
+- apply fork の実行開始から isolated worktree 上での finding 列挙、Codex による適用、commit、apply state 更新、report 出力までを一つの apply run として制御する。
+- apply scope から列挙対象ファイルを決め、変更後の再キュー、対象重複排除、commit subject 生成、直近 apply join commit の解決も扱う。
 
 ## Read this when
-- apply fork サブコマンドの事前条件、実行順序、状態遷移、worktree/branch 作成、report 出力、失敗時処理を確認・変更したいとき。
-- apply scope ごとの finding 列挙対象、oracle や ignore 対象の除外条件、変更 file の再キュー条件を確認・変更したいとき。
-- apply fork が Codex に渡す finding 列挙・finding 適用の呼び出し、commit 作成、commit subject 生成に関わる挙動を追うとき。
-- 前回 join 済み apply merge commit 以降の差分を起点にする対象列挙ロジックを確認したいとき。
+- apply fork サブコマンドの事前条件、branch/worktree 作成、apply state 遷移、process tracking、report 出力の流れを確認・変更したいとき。
+- apply scope ごとの finding 列挙対象、oracle や ignored file の除外、変更ファイルの再キュー条件を確認・変更したいとき。
+- Codex に渡す finding 列挙・finding 適用処理、apply fork 中の commit 作成、unconverged/converged/error の扱いを追いたいとき。
+- session 内で前回 join 済みの apply merge commit を起点に差分対象を決める処理を確認したいとき。
 
 ## Do not read this when
-- apply fork の report 本文生成だけを確認・変更したい場合は、report 生成を担う対象を直接読む。
-- Codex に渡す apply fork 用 parameter の構築内容だけを確認・変更したい場合は、builder 側の対象を直接読む。
-- apply fork 以外の apply join や session 管理の詳細を確認したい場合は、それぞれのサブコマンド実装や runtime 状態管理を直接読む。
-- INDEX 生成、一般的な path model、設定 schema など apply fork loop から独立した共通仕様を調べる場合は、対応する仕様・共通 module を直接読む。
+- apply fork の report 本文生成だけを変更したいときは、report 生成を担う別対象を読む。
+- Codex prompt や Structured Output parameter の内容だけを変更したいときは、apply fork 用 builder 側を読む。
+- apply fork 以外の apply join や session 管理の CLI 挙動を調べたいだけのときは、それぞれのサブコマンド実装を読む。
+- INDEX.md の生成規則や一般的な indexing preflight の実装だけを確認したいときは、indexing 側の対象を読む。
 
 ## hash
-- 19727ef0d0fb550ee62fca0f703c2e1dc60f4ac06bcc5d3722c5ca7f4fdbddc7
+- eb4270e179eddb7a5759b7c1bbff9ebddb61c2bb089600831a5edf81ea714755
 
 # `fork_report.py`
 

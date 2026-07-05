@@ -138,20 +138,19 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実行本体を集約する領域。apply、session、review、doctor、indexing、TUI などの利用者向け操作について、runtime や共通 helper へ渡す前後の上位制御を扱う。
-- 各対象はサブコマンド単位またはその補助処理単位で分かれており、事前条件、状態遷移、branch/worktree/state 操作、Codex 呼び出し、report 出力、失敗時処理など、外部挙動に近い実装へ進むための入口になる。
+- CLI サブコマンド実装のうち、session、apply、review、doctor、indexing、TUI など利用者操作ごとの実行入口をまとめる階層。
+- 各サブコマンド固有の orchestration、runtime への接続、git/state/worktree/process/report/output の制御へ進むための入口になる。
+- 共通 runtime や低レベル helper そのものではなく、利用者向けサブコマンドとしてそれらをどう呼び出すかを切り分けるための領域。
 
 ## Read this when
-- CLI サブコマンドの実行フロー、公開挙動、利用者向け出力、失敗時処理、または runtime/helper との接続点を確認・変更したいとき。
-- apply、session、review、doctor、indexing、TUI のどの実行本体または補助処理へ進むべきか判断したいとき。
-- branch、worktree、state、report、Codex 実行、INDEX 更新反映などを、特定サブコマンドの上位制御として追いたいとき。
-- サブコマンド固有の preflight、cleanup、merge conflict、rollback、対象列挙、loop、出力生成などの担当箇所を選びたいとき。
+- CLI サブコマンドの実行本体、公開入口、利用者向け出力、またはサブコマンド固有の制御フローを確認・変更したいとき。
+- session、apply、review、doctor、indexing、TUI のどの実装領域へ進むべきかを判断したいとき。
+- サブコマンドが共通 runtime、git 操作、state、worktree、Codex 実行、report 生成、INDEX maintenance などへどう接続しているかを追いたいとき。
 
 ## Do not read this when
-- git 実行、path model、state file schema、process id、設定 schema、CLI runtime、Codex 呼び出し wrapper など、サブコマンド固有でない共通基盤の詳細だけを調べたいとき。
-- oracle file、realization file、INDEX.md 生成規則、ルーティング文書規則など、CLI サブコマンド実行制御から独立した仕様を確認したいとき。
-- INDEX.md の内容生成、差分検出、lock、commit などの共通 indexing ロジックそのものを調べたいとき。
-- 具体的に読むべきサブコマンド実装や補助 module が既に分かっており、その対象へ直接進めるとき。
+- CLI runtime、git wrapper、path model、state 型定義、Codex 呼び出し、INDEX 生成、report 描画などの共通実装だけを直接調べたいとき。
+- 対象サブコマンドや下位責務が既に決まっており、より具体的な実装へ直接進めるとき。
+- oracle 上の正本仕様、INDEX.md 生成規則、Structured Output schema、またはルーティング文書の一般規則だけを確認したいとき。
 
 ## hash
-- f0da990bdeb9d4a8dd6a866f5212ef4f3e7974e382417a25bf9f1c3b1d3bc52f
+- b7aa14620a306fba3bcb09f22881421cd95ce6379c0a9074caf895375ea81a9b
