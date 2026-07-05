@@ -143,42 +143,40 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を収める領域。CLI 入口、利用者向けサブコマンド、共通 runtime helper、互換 import path、oracle src への薄い再公開層など、正本仕様断片を実行可能な実装として具体化するコードへ進む入口になる。
-- oracle 側の正本実装を複製せず参照・再公開する互換層と、session、apply、review、doctor、indexing、TUI などのサブコマンド実装、および複数機能から使われる runtime 共通処理を切り分けて扱う。
+- cmoc の realization implementation を集める領域。CLI 入口、サブコマンド実行本体、共通 runtime helper、互換 import path、oracle src への再公開・中継層を扱う。
+- 正本仕様や oracle src の内容を複製せず、既存公開参照を維持しながら実体実装・サブコマンド orchestration・共通実行基盤へ進むための入口になる。
 
 ## Read this when
-- cmoc の CLI 公開面、サブコマンド実行本体、共通 runtime、設定・path・git・state・logging・error などの realization implementation を確認または変更したいとき。
-- 既存の互換 import path が canonical 実装や oracle src 側の正本実装へどう接続されるか、またその互換層を削除できる条件を調べたいとき。
-- 新しい実装を追加する前に、同じ責務または近い責務を持つ既存 realization code がどこにあるかを絞り込みたいとき。
-- CLI 入口から利用者操作ごとのサブコマンド、または複数サブコマンドで共有される runtime helper への委譲関係を追いたいとき。
+- CLI コマンド構成、サブコマンド実行フロー、共通 runtime helper、設定・path・git・state・logging・error などの realization 側実装の読む先を選びたいとき。
+- 既存の公開 import path、互換 shim、再公開 module がどの正本側実装または実体 module へつながるかを確認したいとき。
+- apply、review、session、indexing、doctor、TUI などの実行制御、preflight、状態遷移、Codex 起動、report 出力への接続を調べたいとき。
+- oracle src を正本に保ったまま realization 側で最小適応層や後方互換入口をどう維持しているか確認したいとき。
 
 ## Do not read this when
-- 正本仕様断片、人間意図、prompt、出力条件、path placeholder、構造化出力 schema などを確認したいとき。その場合は oracle 側の該当本文を読む。
-- 自動テストの観点、fixture、期待挙動の検証方法だけを確認したいとき。その場合は test 側を読む。
-- INDEX.md エントリー生成規則やルーティング文書の一般基準だけを確認したいとき。その場合は対応する oracle 側の文書を読む。
-- 特定のサブコマンド、共通 runtime、互換層など対象責務が既に決まっており、より具体的な下位対象へ直接進めるとき。
+- 正本仕様断片、人間意図、prompt、parameter 生成内容、設定定義、path model などの oracle 側本文を確認したいとき。対応する oracle file を読む。
+- 生成済み INDEX.md の個別 entry、実行済み log/report、特定 session の状態内容だけを確認したいとき。
+- 新しい API 仕様や公開面を設計したいだけで、既存 realization 実装・互換 import・サブコマンド接続の調査が不要なとき。
 
 ## hash
-- 3f4147478aa2a63100b01dd6a706085e0a6f3eac5b2e27bc581c6a4d700110ad
+- c886f08b680e97200245ff39ea6001875c6807e561148006f786633168ae1337
 
 # `test`
 
 ## Summary
-- cmoc の realization test を集約するディレクトリ。CLI サブコマンド、Codex 実行 runtime、ACP builder、prompt rendering、packaged import、INDEX 更新 preflight など、実装の外部挙動と共有テスト基盤を検証する入口になる。
-- apply/session/review/indexing/doctor/TUI などのコマンド別テストと、Codex home・retry・quota retry・file access・runtime 基礎契約の横断テストが配置されている。
+- cmoc の realization test 群を収めるディレクトリ。CLI サブコマンド、Codex runtime、ACP/prompt builder、indexing、review、session/apply 状態遷移、packaged import、StructDoc rendering など、外部挙動と制御ロジックの回帰確認への入口になる。
+- 共有支援モジュールも含み、最小 Git repository、fake Codex/Ollama/systemctl、Codex home/profile、Typer runner、apply worktree path 解決など、複数テストで使う fixture と fake 外部環境の準備を扱う。
 
 ## Read this when
-- cmoc の realization test 全体から、変更対象に対応するテストファイルを選びたいとき。
-- CLI サブコマンドの外部挙動、状態遷移、git worktree/branch cleanup、report、エラー出力の回帰テストを探すとき。
-- Codex CLI 実行 wrapper、profile、sandbox、retry、quota retry、file access、prompt log/call log のテストを探すとき。
-- ACP builder、prompt parts、StructDoc Markdown rendering、packaged import など、CLI 以外の実装契約に対応する realization test を探すとき。
-- テスト用 Git repository、Codex home stub、fake executable、Typer runner など、複数テストで共有される fixture/helper の所在を確認したいとき。
+- cmoc の実装変更に対応する既存 realization test を探し、外部挙動・状態遷移・ログ・report・file access 境界の期待値を確認または更新したいとき。
+- apply、session、review oracle、indexing、doctor、TUI、Codex runtime、ACP builder、prompt builder、packaged import、StructDoc rendering の回帰テストを追加・修正したいとき。
+- テスト用の repository、Codex home/profile、fake 外部コマンド、CLI runner、worktree/session state helper など、複数テストで共有される支援処理を再利用または変更したいとき。
+- 実装を読む前後に、現行仕様上意味のある外部挙動や制御ロジックがどのテストで検証されているかを絞り込みたいとき。
 
 ## Do not read this when
-- oracle file の正本仕様本文や oracle src/test を確認したいときは、oracle 側の対象を読む。
-- 本番実装の制御ロジックや helper の詳細を直接変更したいときは、対応する src 側の module を読む。
-- INDEX.md エントリー生成規則や routing 文書の標準そのものを確認したいだけのときは、対応する仕様文書を読む。
-- 個別テストファイルが既に分かっており、他のテスト候補を選ぶ必要がないときは、そのファイルを直接読む。
+- oracle file の正本仕様断片、標準文書、schema 定義そのものを確認したいときは、対応する oracle doc/src/test を読む。
+- 個別実装の helper 分割、内部アルゴリズム、低レベルな関数責務だけを調べたいときは、まず対応する realization implementation を読む。
+- INDEX.md エントリー生成規則やルーティング文書の書き方だけを確認したいときは、対象本文の責務把握に必要な範囲を超えてこのディレクトリ配下の詳細 assertion を読む必要はない。
+- Codex CLI や LLM の出力品質そのもの、外部サービスの実運用動作、ユーザー向けドキュメントを評価したいとき。
 
 ## hash
-- 6bc139238c5617fe5c755963f1d3ad12acb34e66192130fd982c75c6cb4d4f51
+- 2349eeb79b43458cfd1651e5f6e5bf5a14e60842537230c44fca451a32c170b9

@@ -38,23 +38,24 @@
 # `fork.py`
 
 ## Summary
-- apply fork の実行開始から isolated worktree 上での finding 列挙、Codex による適用、commit、apply state 更新、report 出力までを一つの apply run として制御する。
-- apply scope から列挙対象ファイルを決め、変更後の再キュー、対象重複排除、commit subject 生成、直近 apply join commit の解決も扱う。
+- apply fork の実行制御を担い、session branch 上で isolated apply worktree と apply branch を作成して、対象 file の列挙、Codex による finding 列挙と適用、差分 commit、apply state 更新、report 出力までを 1 回の apply run として進める。
+- apply scope に応じた対象 file の正規化・重複排除、再調査キュー、前回 join 済み apply merge commit の解決、finding 由来または差分由来の commit subject 生成も同じ apply loop の復旧条件と合わせて扱う。
 
 ## Read this when
-- apply fork サブコマンドの事前条件、branch/worktree 作成、apply state 遷移、process tracking、report 出力の流れを確認・変更したいとき。
-- apply scope ごとの finding 列挙対象、oracle や ignored file の除外、変更ファイルの再キュー条件を確認・変更したいとき。
-- Codex に渡す finding 列挙・finding 適用処理、apply fork 中の commit 作成、unconverged/converged/error の扱いを追いたいとき。
-- session 内で前回 join 済みの apply merge commit を起点に差分対象を決める処理を確認したいとき。
+- apply fork サブコマンドの開始条件、実行中 state、終了時 state、return code、report path 出力を確認または変更したいとき。
+- apply fork がどの file を finding 列挙対象にするか、scope ごとの対象差分、oracle 除外、git ignore・管理外領域・AGENTS/INDEX 除外の扱いを確認したいとき。
+- Codex に finding 列挙や finding 適用を依頼する parameter、cwd、log root、purpose、subcommand logger の渡し方を確認または変更したいとき。
+- apply fork の loop 内で変更 file を再キューする条件、commit する条件、unconverged と converged の判定、finding 件数の report 連携を扱うとき。
+- apply branch、apply worktree、apply process id、oracle snapshot commit、前回 join 済み apply merge commit の関係を調べるとき。
 
 ## Do not read this when
-- apply fork の report 本文生成だけを変更したいときは、report 生成を担う別対象を読む。
-- Codex prompt や Structured Output parameter の内容だけを変更したいときは、apply fork 用 builder 側を読む。
-- apply fork 以外の apply join や session 管理の CLI 挙動を調べたいだけのときは、それぞれのサブコマンド実装を読む。
-- INDEX.md の生成規則や一般的な indexing preflight の実装だけを確認したいときは、indexing 側の対象を読む。
+- apply fork の report 本文生成や error report の書式だけを変更したい場合は、report 生成側を直接読む。
+- Codex に渡す finding 列挙・finding 適用 prompt や parameter の詳細だけを変更したい場合は、builder 側を直接読む。
+- apply 以外のサブコマンド実行基盤、git wrapper、state の読み書き、worktree 作成、設定読み込みの汎用挙動を調べたい場合は、runtime や config 側を直接読む。
+- apply join の merge 処理そのものを確認または変更したい場合は、join 側を読む。
 
 ## hash
-- eb4270e179eddb7a5759b7c1bbff9ebddb61c2bb089600831a5edf81ea714755
+- d500937020bc92d2e20161e0f30d8b0d796141e77a344d0b90c31994508a1993
 
 # `fork_report.py`
 
