@@ -10,8 +10,10 @@ subcommand log、CODEX_HOME/cwd は同じ retry 状態機械の観測点であ�
 
 import json
 import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from types import ModuleType
 from typing import TextIO, cast
 
 import cmoc_runtime
@@ -242,7 +244,40 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert "- Exit code: `0`" in console
 
 
-def test_quota_probe_builder_returns_minimal_runtime_probe() -> None:
+def test_quota_probe_builder_delegates_to_oracle_builder_when_available(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    base = AgentCallParameter(
+        ModelClass.FLAGSHIP,
+        ReasoningEffort.HIGH,
+        FileAccessMode.REPO_WRITE,
+        "base",
+        None,
+        cwd=Path("/tmp/base-cwd"),
+    )
+    expected = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.MEDIUM,
+        FileAccessMode.READONLY,
+        "oracle probe",
+        None,
+        cwd=base.cwd,
+    )
+    calls: list[AgentCallParameter] = []
+    module = ModuleType("oracle.acp_builder.quota_probe")
+
+    def fake_builder(parameter: AgentCallParameter) -> AgentCallParameter:
+        calls.append(parameter)
+        return expected
+
+    setattr(module, "build_quota_availability_probe_parameter", fake_builder)
+    monkeypatch.setitem(sys.modules, "oracle.acp_builder.quota_probe", module)
+
+    assert build_quota_availability_probe_parameter(base) is expected
+    assert calls == [base]
+
+
+def test_quota_probe_builder_returns_isolated_runtime_probe() -> None:
     base = AgentCallParameter(
         ModelClass.FLAGSHIP,
         ReasoningEffort.HIGH,
@@ -254,10 +289,11 @@ def test_quota_probe_builder_returns_minimal_runtime_probe() -> None:
 
     probe = build_quota_availability_probe_parameter(base)
 
-    assert probe.model_class == ModelClass.MINIMUM
-    assert probe.reasoning_effort == ReasoningEffort.LOW
-    assert probe.file_access_mode == FileAccessMode.READONLY
-    assert probe.prompt == "Reply OK."
+    assert probe.model_class != base.model_class
+    assert probe.reasoning_effort != base.reasoning_effort
+    assert probe.file_access_mode != base.file_access_mode
+    assert probe.prompt
+    assert probe.prompt != base.prompt
     assert probe.structured_output_schema_path is None
     assert probe.run_indexing_preflight is False
     assert probe.cwd == base.cwd
@@ -280,13 +316,6 @@ def test_quota_probe_uses_real_builder_when_quota_recovers(
         cwd=root,
     )
     probe_parameter = build_quota_availability_probe_parameter(parameter)
-    assert probe_parameter.model_class == ModelClass.MINIMUM
-    assert probe_parameter.reasoning_effort == ReasoningEffort.LOW
-    assert probe_parameter.file_access_mode == FileAccessMode.READONLY
-    assert probe_parameter.prompt == "Reply OK."
-    assert probe_parameter.structured_output_schema_path is None
-    assert probe_parameter.run_indexing_preflight is False
-    assert probe_parameter.cwd == root
 
     def fake_run(
         argv: list[str], **kwargs: object
