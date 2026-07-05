@@ -1,26 +1,26 @@
 # `acp`
 
 ## Summary
-- ACP builder 領域の入口。oracle 側 builder を正本として扱い、旧来の公開 import 経路を維持する互換入口と、realization 側で必要な AgentCallParameter 構築境界への案内を担う。
-- canonical oracle 実装への委譲・再公開、旧 import 互換を残す理由と削除条件、oracle builder 戻り値を公開型や runtime 要件へ最小限適合させる境界を確認するための対象。
+- oracle src 側の ACP builder を正本に保ち、旧来の acp 系 import 参照を成立させるための互換入口をまとめる領域。実装本体や正本 prompt を複製せず、既存 caller 向けの薄い公開面、委譲、再 export、型適合を扱う。
+- apply fork、review、session、TUI、quota probe、indexing などの agent call parameter builder について、oracle 側 canonical 実装への接続と realization 側公開面の最小補正を確認する入口になる。
 
 ## Read this when
-- ACP builder 全体で、oracle 側正本実装と realization 側互換入口の接続方針を確認したいとき。
-- 旧来の acp.builder 系 import path や acp.* 参照を canonical 実装へ移行する作業で、互換入口を残す理由や削除条件を調べたいとき。
-- apply fork、quota probe、review、session、TUI、indexing など builder 領域のうち、どの下位対象へ進むべきかを判断したいとき。
-- oracle builder の生成結果を realization 側 AgentCallParameter、公開型、runtime 保存、既知表記補正へ適合させる境界を探しているとき。
-- realization 側または利用者向け公開面に残る acp.* import の扱いを判断したいとき。
+- acp 系または acp.builder 系の旧 import 経路が、oracle 側 canonical 実装や互換 wrapper へどう接続されるかを確認したいとき。
+- ACP builder の互換層を削除・移行する作業で、既存 caller 向け公開面を残す理由や削除条件を調べたいとき。
+- apply fork、review、session、TUI、quota probe、indexing の agent call parameter builder について、oracle builder への委譲境界や realization 側での最小補正・型適合を確認したいとき。
+- 正本 prompt や canonical builder を realization 側へ複製しないための接続方法、package path、module alias、再 export の扱いを調べたいとき。
+- realization 側または利用者向け公開面に残る acp 系 import の扱いを判断したいとき。
 
 ## Do not read this when
-- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したいだけなら、対応する oracle 側 builder を読む。
-- apply、review、session、TUI など各機能そのものの実行フロー、CLI 引数処理、状態操作、UI 挙動を調べたいなら、それぞれの機能実装へ進む。
-- ACP parameter の公開型、汎用 git helper、path model、file access mode、Structured Output schema など builder 互換層と無関係な基礎実装を確認したいなら、該当する共通実装を直接読む。
-- acp builder の実装内容や生成処理そのものを調べたいときは、互換入口ではなく実装本体へ進む。
-- 新しい acp 機能、公開 API、新規 import 経路を設計したいだけなら、既存互換層ではなく正本仕様と利用者向け公開面の方針を確認する。
-- acp.* 参照がすでに全公開面と realization 側から消えていることだけを確認済みで、互換入口の詳細を読む必要がないとき。
+- oracle 側 builder の正本仕様、prompt 本文、canonical 実装内容を確認したいだけなら、oracle 側の該当実装を直接読む。
+- acp builder の実装内容や生成処理そのものを調べたいとき。この領域は互換入口なので、実装本体へ進む。
+- apply、review、session、TUI、quota probe など各機能そのものの実行フロー、CLI 引数処理、UI 挙動、判定処理、状態操作を調べたい場合は、それぞれの機能実装へ進む。
+- AgentCallParameter の基本構造、汎用 git helper、path model、file access mode、Structured Output schema など builder 互換入口以外の共通基盤を調べたい場合は、該当する共通実装を読む。
+- 新しい acp 機能、公開 API、新規 import 経路を設計したいだけの場合は、既存互換維持を扱うこの領域ではなく、正本仕様や対象機能の入口を確認する。
+- acp 系参照がすでに全公開面と realization 側から消えていることだけを確認済みで、互換入口の詳細を読む必要がないとき。
 
 ## hash
-- 7ff535e97cca846cdae9fcf0ea18bdec0b63e76823ae84744aa0f3ac318c49be
+- f9e8063b728d3db72874a1be02c78ac61acad79e996a2b03272d9fa85feea752
 
 # `basic`
 

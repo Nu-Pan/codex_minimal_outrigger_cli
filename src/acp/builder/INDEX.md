@@ -71,20 +71,21 @@
 # `quota_probe.py`
 
 ## Summary
-- Codex CLI の quota 回復確認用 agent call parameter を構築する実装。正本側の quota probe builder が存在する場合はそれへ委譲し、未実装の場合だけ最小モデル・低 reasoning・readonly・短い確認 prompt の暫定 fallback を返す。
+- Codex quota availability probe 用の AgentCallParameter を構築する薄い wrapper。実際の probe prompt と構築処理は oracle 側の canonical builder に委譲し、realization 側に正本 prompt を複製しないための入口を提供する。
+- quota probe の parameter builder を呼び出す側から使われ、oracle 側 builder が存在しない場合は realization 側で代替せず import 失敗として扱う。
 
 ## Read this when
-- quota 回復確認のためにどの agent call parameter が使われるかを確認・変更したいとき。
-- 正本側の quota probe builder への委譲と、未実装時 fallback の境界を確認したいとき。
-- quota polling で indexing preflight、cwd、file access mode、model class、reasoning effort、prompt がどう扱われるかを調べるとき。
+- Codex quota availability probe の AgentCallParameter がどこで構築されるかを確認したいとき。
+- probe prompt を realization implementation に持たせず oracle src の builder に委譲する境界を確認したいとき。
+- quota probe parameter builder の import 経路や公開関数名を確認したいとき。
 
 ## Do not read this when
-- 通常の agent call parameter 全般の構築規則を調べたいだけのとき。
-- quota 回復確認以外の prompt 標準や Codex 実行規則そのものを確認したいとき。
-- 正本側 builder が存在する前提で、その正本実装の詳細を確認したいとき。
+- quota probe prompt の本文や正本仕様を確認したいとき。その場合は oracle 側の prompt・builder 定義を読む。
+- AgentCallParameter のデータ構造そのものを確認したいとき。その場合は basic.acp 側を読む。
+- quota probe の実行結果処理、quota 判定、agent call orchestration 全体を調べたいとき。
 
 ## hash
-- e84c007a034a626d2f5a5a0661de92b49bba60793f6c4c8c28ebd7943d4459c5
+- dba354855e524ebce6625b4b8ccda6ffa1f3cffa5d85b377f0babd930411add9
 
 # `review`
 

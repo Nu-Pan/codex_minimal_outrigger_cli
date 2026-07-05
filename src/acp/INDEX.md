@@ -19,20 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP builder 領域の入口。oracle 側 builder を正本として扱いながら、旧来の公開名前空間や既存 import 経路を維持する互換層と、quota probe・apply fork・TUI など一部の realization 側 AgentCallParameter 構築境界をまとめる。
-- 主な責務は、canonical oracle 実装への委譲・再公開、旧 import 互換の削除条件確認、oracle builder 戻り値を realization 側公開型や runtime 要件へ最小限適合させる境界の把握である。
+- ACP builder まわりの互換入口を集める領域。oracle 側の canonical builder を正本に保ちつつ、旧来の acp.builder 系 import 経路や既存 caller からの参照を成立させる薄い公開面を提供する。
+- apply fork、review、session、TUI、quota probe、indexing などの builder について、oracle 側実装への委譲、realization 側公開型への最小適合、既存 import path 維持、削除条件確認の入口になる。
 
 ## Read this when
-- ACP builder 全体で、oracle 側正本実装と realization 側互換入口の接続方針を確認したいとき。
-- 旧来の acp.builder 系 import path を canonical 実装へ移行する作業で、互換 package や再公開モジュールを残す理由・削除条件を調べたいとき。
-- apply fork、quota probe、review、session、TUI、indexing などの builder 領域のうち、どの下位対象へ進むべきかを判断したいとき。
-- oracle builder の生成結果を realization 側 AgentCallParameter、公開型、runtime 保存、既知表記補正へ適合させる境界を探しているとき。
+- acp.builder 系の旧 import 経路が oracle 側 canonical 実装や互換 wrapper へどう接続されるかを確認したいとき。
+- ACP builder の互換層を削除・移行する作業で、既存 caller 向け公開面を残す理由や削除条件を調べたいとき。
+- apply fork、review、session、TUI、quota probe、indexing の agent call parameter builder について、oracle builder への委譲境界や realization 側での最小補正・型適合を確認したいとき。
+- 正本 prompt や canonical builder を realization 側へ複製しないための接続方法、package path、module alias、再 export の扱いを調べたいとき。
 
 ## Do not read this when
-- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したいだけなら、対応する oracle 側 builder を読む。
-- apply、review、session、TUI など各機能そのものの実行フロー、CLI 引数処理、状態操作、UI 挙動を調べたいなら、それぞれの機能実装へ進む。
-- ACP parameter の公開型、汎用 git helper、path model、file access mode、Structured Output schema など builder 互換層と無関係な基礎実装を確認したいなら、該当する共通実装を直接読む。
-- 新しい公開 API や新規 import 経路を設計したいだけなら、既存互換層ではなく正本仕様と利用者向け公開面の方針を確認する。
+- oracle 側 builder の正本仕様、prompt 本文、canonical 実装内容を確認したいだけなら、oracle 側の該当実装を直接読む。
+- apply、review、session、TUI、quota probe など各機能そのものの実行フロー、CLI 引数処理、UI 挙動、判定処理、状態操作を調べたい場合は、それぞれの機能実装へ進む。
+- AgentCallParameter の基本構造、汎用 git helper、path model、file access mode、Structured Output schema など builder 互換入口以外の共通基盤を調べたい場合は、該当する共通実装を読む。
+- 新しい公開 API や新規 import 経路を設計したいだけの場合は、既存互換維持を扱うこの領域ではなく、正本仕様や対象機能の入口を確認する。
 
 ## hash
-- fcc671a2003cd9edba9f36d1a2592ac512b9ff9c97b3c8f9795c5777a9bb558a
+- a04347ec13bca4d4f64c12283ccea2684da024db656cc373e875ae0e01af2b8c
