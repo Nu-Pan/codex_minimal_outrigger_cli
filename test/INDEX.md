@@ -121,26 +121,26 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に検証する realization test。root 解決、config 変換と検証、CmocError 表示、CLI error 出力、subcommand log、session/apply branch state、FileAccessMode から Codex sandbox profile への変換、binary 判定など、個別サブコマンドより下位の共通実行前提をまとめて扱う。
-- 共通 fixture と root 状態を共有しながら壊れやすい runtime 境界を回帰確認する入口であり、実行基盤の振る舞い変更時に外部挙動と制御ロジックへの影響を確認するためのテスト群である。
+- cmoc の基礎 runtime 契約を横断的に固定する回帰テスト。root placeholder 解決、linked worktree と run/work root、config 読み書きと validation、CmocError の Markdown 表示、CLI error の stdout 化、subcommand log、session/apply branch state、`.cmoc` ignore、FileAccessMode から Codex sandbox/profile への変換、binary 判定など、個別サブコマンドより下位の共通実行前提を扱う。
+- 共通 fixture と root 状態を共有して検証する性質が強く、個別機能の単体テストではなく runtime 境界の崩れをまとめて検出する入口として位置づけられる。
 
 ## Read this when
-- root placeholder、repo root、run root、work root、linked worktree の解決や拒否条件を変更する。
-- cmoc config の既定値、dict 変換、不正入力検証、missing config error を変更する。
-- CmocError の Markdown report、CLI 解析 error、想定済み CLI error の stdout/stderr 振り分け、preflight、completion probe の挙動を変更する。
-- subcommand log の生成条件、timestamp 衝突処理、pre-log check 失敗時の副作用を変更する。
-- session branch、apply branch、session state の読み書きや branch 名検証を変更する。
-- FileAccessMode、Codex profile、sandbox writable roots、追加書き込み許可 path、repo local read 許可、session join conflict target の許可境界を変更する。
-- `.cmoc` ignore pattern の生成、起動 wrapper の call stack 表示、duration 表示、binary 判定など、共通 runtime helper の外部挙動を変更する。
+- root path placeholder、repo root、work root、run root、linked worktree の扱いを変更または調査する。
+- CmocConfig の既定値、dict 変換、config validation、missing config error を変更または調査する。
+- CmocError、CLI parse error、CLI preflight error、error report の stdout/stderr 境界や Markdown 表示を変更または調査する。
+- subcommand log の生成条件、timestamp 衝突時の log path、pre-log check 失敗時の副作用を変更または調査する。
+- session/apply branch 名から session id や state を扱う処理を変更または調査する。
+- `.cmoc` の gitignore 追加、run worktree 作成・削除の安全境界を変更または調査する。
+- FileAccessMode、Codex sandbox mode、Codex profile の writable/readable path 制約、local SLM provider 設定を変更または調査する。
+- binary 判定の読み取り量や runtime content 判定を変更または調査する。
 
 ## Do not read this when
-- 個別サブコマンド固有の business logic、出力内容、入力 scope の詳細だけを調べたい場合は、そのサブコマンドの実装または専用テストを先に読む。
-- oracle doc や oracle src の正本仕様そのものを確認したい場合は、対応する oracle file を読む。
-- テスト用 repository 作成 helper や CLI runner helper の実装詳細だけを変更する場合は、共通 test support を直接読む。
-- INDEX.md エントリー生成規則や routing 文書の書き方を確認したい場合は、routing 仕様を読む。
+- 特定サブコマンド固有の正常系・業務ロジックだけを確認したい場合は、そのサブコマンドのテストを先に読む。
+- oracle 文書の正本仕様や prompts の内容を確認したい場合は、対応する oracle file を直接読む。
+- 個別 helper の内部実装だけを局所的に変更し、root/config/error/profile など共通 runtime 契約に影響しないことが明らかな場合は、該当実装とより小さいテストを先に読む。
 
 ## hash
-- 00f00c2baa01f9efe280356432266f45a822b2ee90d10bdc3b077a91c7a2d5c2
+- a21e84da85716a6c94671abc7b170415e0ad9e49f927f2b265896bb4f6c574cb
 
 # `test_cli_tui.py`
 

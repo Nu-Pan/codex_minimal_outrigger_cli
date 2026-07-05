@@ -61,24 +61,23 @@
 # `commons`
 
 ## Summary
-- cmoc の共有 runtime helper 群をまとめる領域。CLI 共通実行ライフサイクル、Codex 呼び出し、設定永続化、git 操作、path 解決、ログ、エラー、状態保存、INDEX.md 自動更新など、複数機能から使われる実行時支援を扱う。
-- 個別責務の実装に加え、runtime 系 API をまとめて再公開する入口や、互換 import を維持する薄い境界も含む。
+- cmoc の共有 runtime helper 群をまとめる実装領域。Codex 起動、CLI 共通実行、設定、git、path、logging、state、doctor、INDEX 更新 preflight、apply 停止処理など、複数サブコマンドから使われる実行時支援を扱う。
+- 具体処理は責務別の下位実装に分かれ、一部に互換 import や集約 import の入口も含む。
 
 ## Read this when
-- CLI サブコマンド実装から共通 runtime API を使う箇所の依存元を確認したいとき。
-- Codex exec/TUI 呼び出し、profile、Structured Output、quota/capacity retry、call log、preflight の実行制御を確認または変更したいとき。
-- config 読み書き、git wrapper、path 解決、subcommand logging、共通 error/report、session state など、複数コマンドで共有される runtime 挙動を調べたいとき。
-- INDEX.md の自動更新 preflight、entry 再生成、hash による再利用、indexing commit の作成などの実装を確認または変更したいとき。
-- apply abandon の process 特定・停止、apply 用 worktree 解決、Codex subprocess tracking など、apply 実行に紐づく runtime 補助を扱うとき。
+- 複数の CLI サブコマンドから共有される runtime helper、結果モデル、共通例外、path・git・config・logging・state などの実装入口を探したいとき。
+- Codex exec/TUI 呼び出し、profile 生成、Structured Output 検証、quota/capacity retry、call log、preflight、subprocess tracking など Codex 実行境界を確認または変更したいとき。
+- INDEX.md 自動更新 preflight、doctor 修復、apply abandon の process 停止、session state 永続化など、サブコマンド本体より下位の共通制御を調べたいとき。
+- 既存の runtime import 公開面や互換 import が、どの責務別実装へ接続されるか確認したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの利用者向け仕様、引数、上位制御フロー、出力 schema を確認したいときは、該当する command 実装や oracle 仕様へ進む。
-- path keyword、config 型、INDEX.md entry 文面基準、doctor preprocess などの正本仕様を確認したいだけのときは、対応する oracle 側の文書または定義を読む。
-- 特定の helper 関数や具体的な runtime 挙動だけを調べたいときは、この領域全体ではなく該当責務の本文へ直接進む。
-- 生成済みログ、生成済み INDEX.md、特定 directory のルーティング判断など、実装ではなく成果物の内容確認が目的のときは対象成果物を読む。
+- 個別サブコマンドの CLI 引数、利用者向け制御フロー、業務ロジックだけを調べたいときは、その command 実装へ進む。
+- oracle file にある正本仕様、prompt 文面、path placeholder の定義、config 型そのものの意味を確認したいときは、対応する oracle 側を読む。
+- 生成済み INDEX.md の個別 entry 内容、実行済み log、特定 run/session の状態調査だけが目的で、runtime 実装を変更しないとき。
+- 特定 helper の具体処理をすでに特定できている場合は、この階層全体ではなく該当する責務別実装を直接読む。
 
 ## hash
-- b7cbc4b94cd9e818252f6422b530c5be7534e120661daac2df41927921240ab3
+- 50eba7132ac388f9293d09a7fb4c002a162c627e3e9b0fea52f13ecc30c8c661
 
 # `config`
 
