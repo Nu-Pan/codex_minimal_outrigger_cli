@@ -55,10 +55,15 @@ def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
         "[Install]",
         "WantedBy=default.target",
     ]
-    committed_paths = run_git(root, "show", "--name-only", "--format=", "HEAD").stdout
-    assert ".gitignore" in committed_paths
-    assert ".agents/.gitkeep" in committed_paths
-    assert ".cmoc/config.json" not in committed_paths
+    repair_commit_paths = run_git(
+        root, "show", "--name-only", "--format=", "HEAD~1"
+    ).stdout
+    assert ".gitignore" in repair_commit_paths
+    assert ".agents/.gitkeep" in repair_commit_paths
+    config_commit_paths = run_git(
+        root, "show", "--name-only", "--format=", "HEAD"
+    ).stdout
+    assert config_commit_paths.splitlines() == [".cmoc/config.json"]
     assert run_git(root, "ls-files", "--", ".cmoc/local").stdout.strip() == ""
     assert (
         run_git(
@@ -145,16 +150,21 @@ def test_doctor_pulls_each_unique_cmoc_provider_model(
     assert pulled == ["alpha", "beta"]
 
 
-def test_doctor_does_not_sync_config(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_doctor_generates_and_tracks_config(tmp_path: Path, monkeypatch) -> None:
     root = make_repo(tmp_path)
     config_path = root / ".cmoc" / "config.json"
     monkeypatch.chdir(root)
 
     run_doctor(root)
 
-    assert not config_path.exists()
+    assert config_path.is_file()
+    assert (
+        run_git(root, "ls-files", "--", ".cmoc/config.json").stdout.strip()
+        == ".cmoc/config.json"
+    )
+    assert run_git(
+        root, "show", "--name-only", "--format=", "HEAD"
+    ).stdout.splitlines() == [".cmoc/config.json"]
 
 
 def test_doctor_preprocess_targets_current_linked_worktree(

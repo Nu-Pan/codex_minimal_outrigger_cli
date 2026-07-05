@@ -242,7 +242,7 @@ def test_config_json_preserves_falv_recovery_count() -> None:
     assert config_to_dict(config)["codex"]["num_try_falv_recovery"] == 3
 
 
-def test_load_config_missing_points_to_init(tmp_path: Path) -> None:
+def test_load_config_missing_points_to_doctor(tmp_path: Path) -> None:
     root = make_repo(tmp_path)
 
     with pytest.raises(CmocError) as exc_info:
@@ -250,7 +250,7 @@ def test_load_config_missing_points_to_init(tmp_path: Path) -> None:
 
     assert exc_info.value.summary == "cmoc config が存在しません。"
     assert exc_info.value.next_actions == [
-        "cmoc init を実行して <repo-root>/.cmoc/config.json を生成してください。"
+        "cmoc doctor を実行して <repo-root>/.cmoc/config.json を生成してください。"
     ]
 
 
