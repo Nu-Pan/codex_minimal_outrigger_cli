@@ -62,17 +62,18 @@
 # `test_rule.md`
 
 ## Summary
-- cmoc の自動テスト実装規約を定める oracle doc。pytest の使用、realization test の配置、検証対象を決定論的な制御ロジックに限定する方針、テスト環境を tmp_path 配下に閉じる方針、Codex CLI 呼び出し時の有料モデル禁止、ローカル SLM や Fake Codex CLI の使い分けを扱う。
+- cmoc の自動テスト実装規約を扱う。pytest の使用、realization test の配置、検証対象を決定論的な制御ロジックに限定する方針、テスト環境を一時ツリー内に収める方針、Codex CLI 呼び出しを伴うテストで有料モデルを避けるための SLM 利用や Fake Codex CLI 利用の境界を定める。
 
 ## Read this when
-- cmoc の realization test を追加・修正する際に、テストで何を検証対象にしてよいか判断したいとき。
-- pytest、tmp_path、テスト用リポジトリ、Codex CLI 呼び出しを含むテスト環境の作り方を確認したいとき。
-- Codex CLI や LLM を伴うテストで、有料クラウドモデル、ローカル SLM、Fake Codex CLI のどれを使うべきか判断したいとき。
+- cmoc の realization test を新規作成・変更する。
+- pytest で構築するテスト環境や、被テスト cmoc を動かす作業ツリーの置き方を判断する。
+- Codex CLI 呼び出しを伴うテストで、使用モデル、ローカル SLM への切り替え、Fake Codex CLI の要否を判断する。
+- 自動テストで検証してよい対象と、LLM や Codex CLI の出力品質として検証対象外にすべき対象の境界を確認する。
 
 ## Do not read this when
-- 実装コード本体の責務分割や公開面の増減など、テスト以外の realization implementation 規約を確認したいとき。
-- Codex CLI や LLM の出力品質そのものを評価する方法を探しているとき。
-- pytest を使わない外部テスト基盤や、本番実行時の Codex CLI バックエンド設定を設計したいとき。
+- cmoc の本体実装だけを変更し、テスト方針やテスト環境には触れない。
+- oracle 側の仕様文書や実装断片そのものの責務を調べたい。
+- テストではなく、実運用時の Codex CLI モデル選択やクラウドバックエンド利用方針を確認したい。
 
 ## hash
-- c7d78c141762090ca86b7b3940433df41546e46806cf74723e1e6ec8cbb874c9
+- 61fff5d2238ac9e883f3520594a5bc3dea9e0015b18a5ff2e4cce03ec9d620aa

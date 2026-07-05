@@ -1,20 +1,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本実装断片を扱う領域。AI agent call parameter、prompt 構築、リポジトリ設定、パス表記、規範データ構造、Markdown レンダリングなど、複数の realization 実装が参照する仕様断片への入口になる。
-- CLI サブコマンドの実行制御そのものではなく、agent call の入力契約・出力契約、共通プロンプト部品、横断的な補助概念を確認するためのまとまり。
+- cmoc の正本実装のうち、AI agent call parameter、prompt 構築、共有設定・パス表記・規範モデル・Markdown rendering helper など、複数領域の実装やテストが参照する基礎仕様断片を扱う領域。
+- サブコマンドごとの AI エージェント呼び出し設定、共通規範プロンプトの組み立て、ルートプレースホルダ付きパスの扱い、横断的な設定値や構造化文書モデルを確認するための入口になる。
 
 ## Read this when
-- cmoc が AI agent call に渡す prompt、Structured Output schema、モデル設定、reasoning effort、cwd、ファイルアクセス権限、preflight 設定を確認したいとき。
-- agent call 用プロンプトの構築順序、静的部分と動的部分の分離、ファイルアクセス規則や各種標準文書の注入方法を確認したいとき。
-- リポジトリ別設定、ルートパスプレースホルダ、正本文書モデル、構造化文書から Markdown へのレンダリング helper など、横断的な正本実装断片を探すとき。
-- INDEX.md エントリー生成、oracle file レビュー、fork 適用後レビュー、session join の conflict marker 解消、TUI 起動前後の agent call parameter 選定に関する正本仕様断片を確認したいとき。
+- cmoc が AI エージェントを呼び出す際の prompt、Structured Output schema、モデル設定、reasoning effort、cwd、ファイルアクセス権限、preflight 設定などの正本仕様断片を確認したいとき。
+- agent call 用の完全なプロンプトが、役割・概要・ゴール・補助プロンプト・ファイルアクセス制限・ルーティング規則・各種標準などの部品からどう構築されるかを確認・変更したいとき。
+- oracle standard、realization standard、review standard、apply review standard、index entry standard など、AI に注入する共通規範プロンプトやその注入指定を確認したいとき。
+- cmoc 全体で共有される設定値、パス表記規則、規範文書の構造化、または Markdown rendering helper の正本実装を探すとき。
+- INDEX.md エントリー生成、oracle file レビュー、fork 適用後レビュー、session join の conflict marker 解消、TUI 起動前後のパラメータ選定など、AI agent call の入力契約と出力契約を実装・テストへ反映する前に確認したいとき。
 
 ## Do not read this when
-- CLI 引数処理、branch 操作、diff 取得、merge 実行、保存処理、表示整形など、サブコマンドの実行制御実装を直接調べたいとき。
-- oracle file と realization file の管理方針、文書品質基準、レビュー基準などの標準文書本文だけを確認したいとき。
-- バックエンド API へ送る実際のリクエスト形式、具体的なモデル名解決、agent CLI 実行処理など realization implementation 側の詳細を調べたいとき。
-- 実装ファイルやテストファイルの現在構造を把握して直接修正したいだけで、正本実装断片や prompt 生成に関係しないとき。
+- AI エージェント呼び出しや prompt 構築ではなく、CLI 引数処理、branch 操作、diff 取得、merge 実行、保存処理、表示整形などの実行制御実装を調べたいとき。
+- 個別サブコマンドの利用者向け入出力、実行フロー、状態ファイルの仕様を探しているとき。
+- 設定ファイルの読み書き処理、JSON 変換処理、init 処理、バックエンド API へ送る実リクエスト形式、具体的なモデル名解決、agent CLI 実行処理など realization implementation 側の具体的なアルゴリズムだけを確認したいとき。
+- 生成済み Markdown の内容や配置先、個別の規範本文、CLI の実行状態など、正本実装上の基礎概念や prompt 部品以外の具体的な仕様を調べているとき。
 
 ## hash
-- 2ec6e1274c29243bfdaf28e69ce5a714889a8ad7db4c796e43f0cb99f5a69432
+- 1f0bad8be1e8d1745d307119dacb2880c4990fbc65cb3f3e81dbf107780935cd

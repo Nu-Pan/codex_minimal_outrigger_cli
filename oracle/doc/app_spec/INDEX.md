@@ -20,19 +20,21 @@
 # `cmoc_managed_ollama.md`
 
 ## Summary
-- cmoc が設定に応じてローカルの ollama を管理起動し、Codex CLI の model provider として SLM を提供する仕様断片。サービス起動、archive 展開先、モデル配置先、Codex profile の provider 設定、doctor preprocess での起動条件を扱う。
+- cmoc が設定に応じてローカルの ollama を管理し、Codex CLI 向けの model provider として SLM を提供するための正本仕様断片。サービス起動、archive 展開先、モデル pull 先、provider 設定、検証条件、doctor preprocess での起動条件を扱う。
 
 ## Read this when
-- cmoc managed ollama を使う条件、検証項目、起動タイミングを確認したいとき。
-- ollama archive の取得元、展開先、systemd user service の設定場所、モデル pull 先を実装・確認するとき。
-- Codex CLI に渡す provider 設定や、組み込み ollama provider ID・`--oss`・`--local-provider` へ依存しない方針を確認するとき。
+- cmoc managed ollama を使う条件、起動タイミング、検証項目を確認したいとき。
+- ollama の取得、配置、systemd user service としての起動、モデル保存先を実装または確認するとき。
+- Codex CLI 用 profile に設定する cmoc managed ollama provider の接続先、wire API、model 指定を確認するとき。
+- CodexModelSpec の model_provider が cmoc の場合に、モデル pull や doctor preprocess が何をすべきか確認するとき。
 
 ## Do not read this when
-- 外部 model provider 全般や CodexModelSpec 全体の構造だけを確認したいとき。
-- ollama 以外のローカル実行基盤や、cmoc managed ollama に関係しない doctor 処理を調べるとき。
+- Codex CLI の通常 provider 全般や、cmoc managed ollama 以外の provider の仕様を確認したいとき。
+- ollama 自体の内部実装、モデル推論品質、モデル選定基準を調べたいとき。
+- cmoc managed ollama に関係しない CLI 引数、workspace、agent 呼び出し、path model の仕様を確認したいとき。
 
 ## hash
-- d00f46736cf86dc386854167deb00591c0deedadc75687202bcef6f333f1074c
+- 108da15c826775799a72737a1ca07f70d2f35ac5fe5840c6c3754a631d1e4d23
 
 # `codex_exec_rule.md`
 

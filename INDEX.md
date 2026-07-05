@@ -101,27 +101,23 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様断片を集めた領域。自然言語の仕様・設計判断・開発規則と、agent call parameter や prompt 構築などの横断的な正本実装断片への入口になる。
-- realization の実装差を避けたい利用者向け挙動、作業隔離モデル、branch/worktree の意味、AI agent call の入力契約・出力契約、共通補助概念の根拠を探すために読む。
+- cmoc の正本仕様断片を集める領域。自然言語で書かれた仕様、正本実装、正本テストを通じて、人間意図、外部挙動、責務境界、AI agent call 入力契約、共通規範、パス表記、構造化文書モデルなどを確認する入口になる。
+- 実装・テストへ反映すべき仕様根拠を探す際に、自然言語文書へ進むか、prompt・設定・schema・共有モデルなどの正本実装へ進むかを切り分けるための上位ルーティングを担う。
 
 ## Read this when
-- cmoc の実装・テスト・設計判断について、正本仕様断片から根拠を確認したいとき。
-- CLI 挙動、LLM 実行、補完、ログ、doctor preprocess、indexing、run 隔離、session state、managed ollama、外部 provider、サブコマンド仕様などのアプリケーション仕様へ進みたいとき。
-- session fork/join、apply/review などの run が扱う branch、commit、worktree、managed branch の意味や命名規則を確認したいとき。
-- AI agent call に渡す prompt、Structured Output schema、モデル設定、reasoning effort、cwd、ファイルアクセス権限、preflight 設定を確認したいとき。
-- agent call 用プロンプトの構築順序、静的部分と動的部分の分離、ファイルアクセス規則や各種標準文書の注入方法を確認したいとき。
-- リポジトリ別設定、ルートパスプレースホルダ、正本文書モデル、Markdown レンダリング helper など、複数の realization 実装が参照する横断的な正本実装断片を探すとき。
-- 過去に不採用となった設計案の背景や、Python 実装、CLI 構成、開発環境、pytest を中心とした realization code/test の開発規則を確認したいとき。
+- cmoc の realization code を追加・変更する前に、根拠となる正本仕様断片を探すとき。
+- 公開 CLI 挙動、状態・ログ・インデックス生成、agent call 境界、実行環境管理、branch/worktree モデル、開発作法など、人間意図として固定された仕様を確認したいとき。
+- AI エージェント呼び出し時の prompt、Structured Output schema、モデル設定、ファイルアクセス権限、preflight、共通規範プロンプトなど、実装へ反映する入力契約や出力契約を確認したいとき。
+- cmoc 全体で共有される設定値、パス表記、規範文書の構造化、Markdown rendering helper など、複数領域から参照される基礎仕様断片を探すとき。
 
 ## Do not read this when
-- 実装ファイルの内部構造、既存関数、テスト配置、CLI 引数処理、branch 操作、diff 取得、merge 実行、保存処理、表示整形など、具体的な realization code の詳細だけを調べたいとき。
-- バックエンド API へ送る実際のリクエスト形式、具体的なモデル名解決、agent CLI 実行処理など、realization implementation 側の詳細を調べたいとき。
-- oracle file と realization file の一般的な定義、責務境界、編集権限、品質基準、INDEX.md エントリー生成規則だけを確認したいとき。
-- パスキーワードやルート種別の定義だけを確認したいとき。
-- 特定の正本仕様断片や対象機能が既に分かっているときは、この領域全体ではなく該当する下位領域または個別仕様を直接読む。
+- 正本仕様断片ではなく、realization implementation や realization test の具体的な関数構造、内部 helper、実行制御実装だけを調べたいとき。
+- 設定ファイルの読み書き、JSON 変換、init 処理、バックエンド API への実リクエスト、agent CLI 実行処理など、実装側アルゴリズムだけを確認したいとき。
+- oracle file と realization file の一般的な定義、責務境界、記述標準、INDEX.md エントリー作成規則だけを確認したいとき。
+- パスキーワードやルート種別の定義そのものだけを確認したいとき。
 
 ## hash
-- 7babc2bcc409e185cd0920f4c139b17794f65c80bda44b275f828a4d54f905e1
+- 46573c8d7a6258d7cb4fc8a05d19fe2b1810aea02b5e6ae48561822476f9a9cf
 
 # `pyproject.toml`
 

@@ -1,21 +1,21 @@
 # `cmoc_config.py`
 
 ## Summary
-- cmoc のリポジトリ別設定を表す正本実装断片で、永続化先、JSON 保存時の Enum value 化、`cmoc init` による生成・同期、人間編集対象であることを定義する。
-- AI エージェント呼び出し、Codex CLI のモデル・reasoning effort 対応、ファイルアクセス規則違反時の recovery 試行回数、`cmoc apply fork` と `cmoc review oracle` のループ上限設定を集約する。
+- cmoc のリポジトリ別設定を集約する正本実装。設定の永続化先、人間編集される設定ファイルの生成・同期、Enum 系値の JSON 化、Codex CLI 向けモデル・reasoning effort 対応、apply fork と review oracle のループ上限などの既定値を定義する。
 
 ## Read this when
-- リポジトリごとに変わりうる cmoc 設定の責務、永続化先、生成・同期・編集主体を確認したいとき。
-- `CmocConfig` またはその下位設定クラスに対応する実装・生成処理・JSON 変換処理を扱うとき。
-- Codex CLI に渡すモデル名、model provider、reasoning effort、並列数、各サブコマンドの処理上限やループ予算の正本値を確認したいとき。
+- cmoc の設定値がどこに集約され、どのように永続化・同期されるべきかを確認したいとき。
+- Codex CLI に渡すモデル名、reasoning effort 名、モデル provider の扱い、またはファイルアクセス規則違反時のリカバリ試行回数を確認・実装したいとき。
+- apply fork の処理ファイル数上限や review oracle の findings 列挙・マージ・検証ループ上限を扱う実装やテストを変更するとき。
+- 設定を JSON として保存する際に Enum 系インスタンスをどの表現へ変換するべきかを確認したいとき。
 
 ## Do not read this when
-- パスキーワードや `<repo-root>` などのパスモデル自体を確認したいだけのとき。
-- 設定値をどう CLI 引数へ反映するか、または `.cmoc/config.json` を実際に読み書きする realization implementation の詳細だけを確認したいとき。
-- `cmoc apply fork` や `cmoc review oracle` のサブコマンド全体の仕様・制御フローを確認したいとき。
+- パス概念そのものの定義や各 root の意味を確認したいだけのときは、パスモデルの正本実装へ進む。
+- 個別サブコマンドの処理手順や CLI 入出力の詳細を確認したいだけのときは、そのサブコマンドの仕様または実装へ進む。
+- 設定ファイルの読み書き処理、JSON 変換処理、または init 実装の具体的なアルゴリズムだけを確認したいときは、対応する realization implementation を読む。
 
 ## hash
-- f8dd1cdef7a041b5333280cf0b3f6c5dc8d3c2a290005db5818c68bb7d153e65
+- e158b6a5e51918cb402176feb70a4950502e248067afde8528e00ce45fd03dcc
 
 # `path_model.py`
 
