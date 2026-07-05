@@ -1,24 +1,23 @@
 # `acp`
 
 ## Summary
-- ACP 関連 import の互換維持と builder 領域へのルーティング入口。oracle 側 builder を正本とし、realization 側の既存参照を canonical 実装や用途別 agent call parameter 構築入口へ接続する。
-- 旧 import path の維持、再 export、module alias、oracle builder 生成結果の最小適応、fallback や既知補正の境界確認に使う。prompt 本文、正本仕様、各機能本体の実行処理は扱わない。
+- ACP builder 互換領域への入口。旧来の `acp.*` / `acp.builder.*` import 経路を維持しつつ、oracle 側または canonical 実装へ接続するための package・module alias・最小適応層を扱う。
+- apply fork、quota probe、review、session、TUI、indexing などの agent call parameter builder 互換入口へ進むためのルーティング起点。prompt 正本や各機能本体ではなく、既存 import 互換と移行境界の確認を担う。
 
 ## Read this when
-- ACP builder 全体で、oracle 側実装を正本にしながら realization 側の既存 import 経路や公開型をどう成立させているか確認したいとき。
-- 旧 import path、互換入口、再 export、module alias、canonical 実装への中継、公開面維持の範囲を調べたいとき。
-- apply fork、quota probe、review、session、TUI 起動などの agent call parameter 構築入口を探しており、下位領域へ進む判断をしたいとき。
-- 既存 caller を canonical path へ移行する作業で、互換入口を残す理由、削除条件、oracle builder 戻り値を realization 側へ接続する境界を確認したいとき。
+- `acp.*` または `acp.builder.*` 経由の import 互換性を確認し、旧公開名前空間から oracle 側または canonical 実装へ到達する経路を調べたいとき。
+- agent call parameter builder のうち、apply fork、quota probe、review、session、TUI、indexing のどの互換領域へ進むべきか判断したいとき。
+- oracle 側 builder を正本に保ちながら、realization 側で package path、module alias、戻り値変換、既知表記補正などをどこで扱うか確認したいとき。
+- 既存 caller を canonical path へ移行する作業で、互換入口を残す理由、削除条件、残存参照の確認入口を探しているとき。
 
 ## Do not read this when
-- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したいだけのとき。対応する oracle 側 builder や oracle doc を読む。
-- apply、review、session、TUI など各機能本体の実行フロー、UI、branch 操作、diff 生成、CLI 引数処理を調べたいとき。各実装領域へ進む。
-- 基礎型、model class、reasoning effort、file access mode、path model、git helper などの共通定義だけを確認したいとき。それぞれの定義元を読む。
-- 個別 builder の具体的な変換処理、探索処理、データ構造、入出力仕様を確認したいとき。その処理を持つ下位 module または canonical 実装を読む。
-- 旧 import 互換や既存 caller 移行に関係なく、新しい公開 API や新規 import 経路を設計したいだけのとき。公開面の定義元や対象機能の設計箇所を読む。
+- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したいとき。対応する oracle 側 builder や oracle file を読む。
+- apply、review、session、TUI など各機能そのものの実行フロー、UI、branch 操作、diff 生成、CLI 引数処理を調べたいとき。各機能本体の実装へ進む。
+- AgentCallParameter の型定義、構造化出力 schema、path model、汎用 git helper、runtime path など共通基盤だけを確認したいとき。それぞれの定義元を読む。
+- 新しい acp 機能、新規公開 API、新規 import 経路を設計する場所を探しているとき。この領域は互換維持と移行境界の確認用であり、機能追加の入口ではない。
 
 ## hash
-- 263b5e22b9491e73aac281a90a910df390e85405626d90bbc5ddcd9f194a59b0
+- 5cc8762033158572f340b5b681ced32ea9372f428968b1f3f020b8458f57b8a3
 
 # `basic`
 

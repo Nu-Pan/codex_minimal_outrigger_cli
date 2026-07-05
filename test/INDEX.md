@@ -260,22 +260,23 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex quota exceeded 後の retry 状態機械を外部挙動から検証する realization test。quota 検出後の probe 共有、resume token 抽出、resume または再実行、call log・subcommand log、CODEX_HOME と cwd の扱い、失敗時の post validation 抑制を同じ fake Codex 呼び出し列の観測点として扱う。
+- Codex exec が quota exceeded で失敗した後の待機、probe、resume、再実行を検証するテスト群。
+- quota 回復時の resume token 利用、token 不在時の通常再実行、probe builder 連携、CODEX_HOME/cwd、call log と subcommand log、並列呼び出し時の代表 probe 共有を同じ retry 状態機械の外部挙動として扱う。
+- quota retry の観測点が一つの fake Codex 呼び出し列に依存するため、ファイルサイズは大きいが回帰テストとして一箇所にまとまっている。
 
 ## Read this when
-- Codex exec が quota exceeded を返した後の待機、probe、resume、再実行の制御を変更・確認したいとき。
-- quota availability probe の parameter 生成、oracle builder への委譲、probe 用 profile・model・reasoning effort・file access mode の分離を確認したいとき。
-- quota retry 中に出力される call log、stdout・stderr・prompt・output log、subcommand log、console 表示の期待挙動を確認したいとき。
-- 複数の Codex exec が同時に quota 待機した場合に、代表 probe を 1 回だけ実行し、待機中の呼び出しが復帰または失敗を共有する挙動を確認したいとき。
-- quota poll limit 到達時や probe 失敗時に、失敗した Codex 呼び出しの file access post validation を実行しないことを確認したいとき。
+- Codex quota exceeded 後の retry、probe、resume、再実行の挙動を変更または調査するとき。
+- quota availability probe のパラメータ生成、oracle builder 連携、probe 失敗時の扱いを確認するとき。
+- Codex 呼び出しログ、subcommand log、stdout/output jsonl、prompt log、profile、CODEX_HOME、cwd の quota retry 中の記録を検証するとき。
+- 複数の Codex exec が同時に quota 待機へ入った場合の代表 probe 共有や失敗伝播を確認するとき。
 
 ## Do not read this when
-- 通常の Codex exec 成功経路、CLI 引数組み立て、profile 生成だけを確認したいときは、より直接その責務を持つ実装またはテストを読む。
-- quota retry と関係しない file access validation、repository setup、subcommand logging の一般挙動だけを確認したいとき。
-- oracle builder 側の probe prompt 内容や正本仕様そのものを確認したいときは、対応する oracle 側の定義を読む。
+- quota exceeded と無関係な通常の Codex exec 成功・失敗処理だけを調べるとき。
+- CLI サブコマンド全体の仕様、設定読み込み、リポジトリ作成 helper の詳細を調べる場合で、quota retry の外部挙動が関係しないとき。
+- oracle 側の quota probe builder の正本仕様や realization standard 本文を確認したいとき。
 
 ## hash
-- 356488debb1c23494fb42612361330802da8c88f1eecc7971ee336453250c77d
+- 4ce62d02780c6392e2a3fb92aee9456d495bc5f052fcd11e9045c0d9141c8ec3
 
 # `test_codex_runtime_retry.py`
 

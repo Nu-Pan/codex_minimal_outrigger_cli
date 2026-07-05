@@ -19,22 +19,21 @@
 # `builder`
 
 ## Summary
-- ACP builder 領域の入口。oracle 側 builder を正本として扱いながら、realization 側の既存 import 経路や公開型へ接続する互換層と、apply fork・quota probe・review・session・TUI など用途別の agent call parameter 構築入口をまとめる。
-- 主な責務は、旧 import path の維持、canonical/oracle 実装への再 export、oracle builder 生成結果の最小適応、fallback や既知補正の境界管理であり、prompt 本文や各機能本体の実行処理そのものは扱わない。
+- ACP builder 群の公開入口を扱う領域。oracle 側 builder を正本に保ちながら、旧来の acp.builder import 経路を canonical 実装や realization 側の最小適応層へ接続する。
+- apply fork、quota probe、review、session、TUI、indexing などの agent call parameter builder 互換入口と、個別 builder 領域へ進むためのルーティング起点になる。
+- 主な責務は、oracle builder への委譲、既存 import 互換、module alias、package path 接続、必要最小限の realization 側変換境界の確認であり、prompt 正本や各機能本体の実行処理は扱わない。
 
 ## Read this when
-- ACP builder 全体で、oracle 側実装を正本にしつつ realization 側の既存参照をどう成立させているかを確認したいとき。
-- acp.builder 系の旧 import 経路、互換 package、再 export、module alias、canonical 実装への中継を調べたいとき。
-- apply fork、quota probe、review、session、TUI 起動などの agent call parameter 構築入口を探しており、どの下位領域へ進むべきか判断したいとき。
-- 既存 caller を canonical path へ移行する作業で、互換入口を残す理由、削除条件、公開面維持の範囲を確認したいとき。
-- oracle builder の戻り値を realization 側公開型や runtime path に接続する境界、または既知 placeholder/typo 補正や fallback のような最小適応層を確認したいとき。
+- acp.builder 経由の import 互換性や、旧公開名前空間から oracle 側または canonical 実装へ到達する経路を確認したいとき。
+- agent call parameter builder のうち、apply fork、quota probe、review、session、TUI、indexing のどの領域へ進むべきかを判断したいとき。
+- oracle 側 builder を正本としつつ、realization 側で package path、module alias、戻り値変換、既知表記補正などをどこで扱うか調べたいとき。
+- 既存 caller を canonical path へ移行する作業で、互換 package や再公開モジュールを残す理由、削除条件、残存参照の確認入口を探しているとき。
 
 ## Do not read this when
-- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したいだけなら、対応する oracle 側 builder や oracle doc を読む。
-- apply、review、session、TUI など各機能本体の実行フロー、UI、branch 操作、diff 生成、CLI 引数処理を調べたい場合は、それぞれの実装領域へ進む。
-- AgentCallParameter、model class、reasoning effort、file access mode、path model、git helper などの基礎型や共通処理を確認したいだけなら、それらの定義元を読む。
-- 個別 builder の具体的な変換処理、探索処理、データ構造、入出力仕様を確認したい場合は、その処理を持つ下位 module または canonical 実装を読む。
-- 新しい公開 API や新規 import 経路を設計したいだけで、旧 import 互換や既存 caller 移行に関係しない場合は、公開面の定義元や対象機能の設計箇所を読む。
+- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したい場合は、対応する oracle 側 builder や oracle file を読む。
+- apply、review、session、TUI など各機能そのものの実行フロー、UI、branch 操作、diff 生成、CLI 引数処理を調べたい場合は、その機能本体の実装へ進む。
+- AgentCallParameter の型定義、構造化出力 schema、path model、汎用 git helper、runtime path など共通基盤を確認したいだけの場合は、それぞれの定義元を読む。
+- 新規公開 API や新規 import 経路を設計したいだけの場合は、この互換領域ではなく、利用者向け公開面や設計対象の定義元を確認する。
 
 ## hash
-- 286ab0829950b9bc5a6b8739224eb651153b65c6557e4efa846b2367f5eae824
+- 5e5a44ec80b92a675a1e2b3be41555d9951673d48755266da2028992d4d7fc06
