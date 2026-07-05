@@ -123,23 +123,24 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder と worktree 判定、config 変換と検証、CmocError の表示、CLI preflight と parse error、subcommand log、FileAccessMode から Codex sandbox/profile への変換、binary 判定、session state branch 名検証など、個別サブコマンドより下位の共通実行前提をまとめて扱う。
-- 共通 fixture と root 状態を前提にした runtime 回帰を一箇所で確認する入口であり、単一機能の局所テストではなく、基礎 runtime 境界の相互作用が崩れていないかを調べるための対象。
+- cmoc の基礎 runtime 契約を横断的に固定する realization test。root placeholder 解決、repo root と linked worktree の扱い、config 読み書き、CmocError 表示、CLI error 出力、subcommand log、FileAccessMode と Codex sandbox profile、binary 判定、worktree 作成・削除の安全条件をまとめて検証する。
+- 個別サブコマンドの振る舞いではなく、複数機能の実行前提になる共通 runtime 境界の回帰を扱う入口。
 
 ## Read this when
-- root placeholder、repo root、work root、linked worktree、run worktree の解決や拒否条件を変更・確認する。
-- cmoc config の既定値、dict 変換、入力検証、missing config error を変更・確認する。
-- CmocError の Markdown report、CLI error の stdout 出力、Click parse error 変換、CLI preflight、completion probe、subcommand log の生成条件を変更・確認する。
-- FileAccessMode、Codex profile の sandbox writable roots、追加書き込み許可 path、session join conflict 書き込み許可、local SLM provider 設定を変更・確認する。
-- session/apply branch 名から session id や state を扱う runtime state 処理、または binary 判定の基本挙動を変更・確認する。
+- root 解決、work root / run root / repo root、linked worktree、または path placeholder の挙動を変更・調査するとき。
+- CmocConfig、config JSON 変換、model / reasoning effort の検証、load_config の error、または既定 config を変更・調査するとき。
+- CmocError、render_error、CLI parse error、stdout / stderr の error report、doctor preprocess、pre-log check、subcommand log の失敗時記録を変更・調査するとき。
+- FileAccessMode、Codex profile、sandbox writable roots、extra writable / readable path、oracle conflict write、local SLM provider 設定を変更・調査するとき。
+- create_run_worktree / remove_worktree の管理外 path 拒否、branch session id / apply branch session id、runtime state 読み込み条件を変更・調査するとき。
+- `.cmoc/local` ignore 設定、起動 wrapper の missing venv report、binary 判定の読み取り範囲など、cmoc の基礎 runtime 前提に関わる回帰を確認するとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の成果物、prompt、差分処理、review/apply/indexing の業務ロジックだけを確認したい場合は、その責務を持つテストへ直接進む。
-- oracle file の正本仕様本文や prompt builder の仕様断片を確認したい場合は、oracle 側の対象を読む。
-- 単一 helper の内部実装だけを局所的に確認でき、CLI 実行前提・root 状態・Codex profile・共通 error 表示との相互作用を見ない場合は、対応する実装ファイルまたはより狭いテストを読む。
+- 個別サブコマンド固有の業務ロジックや出力だけを調べる場合は、そのサブコマンドの test や実装を直接読む。
+- oracle doc や oracle src の正本仕様そのものを確認したい場合は、対応する oracle file を読む。
+- runtime と無関係な UI、文書、生成物、または isolated helper の単体挙動だけを扱う場合は、より直接の対象を読む。
 
 ## hash
-- ff6f3301647bba1dedb706d160d20a2fed160f74a155c5f04838c9c97723c4cd
+- 717e6f5bfaf1ceca21dfd55d385c5425ccb1fc237880c37a697901142b64b19b
 
 # `test_cli_tui.py`
 
@@ -333,42 +334,39 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor/init 系 CLI とローカル SLM 準備の統合テスト。git 状態修復、`.cmoc/local` の ignore/untrack、`.agents` 管理、managed ollama の設置・systemd service 検証、設定生成・同期、既存 staged 変更を巻き込まない修復 commit、linked worktree 対応を外部挙動として検証する。
+- doctor/init CLI の実行前処理と設定生成を検証する realization test。git 状態の修復、`.cmoc/local` の ignore/untrack、`.agents` の追跡、config の生成・同期、managed ollama の準備・検証、linked worktree 対象化、ローカル SLM profile 作成時の doctor 実行を扱う。
 
 ## Read this when
-- `doctor` コマンドの前処理、git 修復 commit、`.gitignore`、`.agents`、`.cmoc/local`、managed ollama の起動・検証・モデル pull に関するテストを確認または変更するとき。
-- `init` コマンドによる `.cmoc/config.json` の生成、git 追跡、既存人間設定を上書きしない default 同期の挙動を確認または変更するとき。
-- ローカル SLM 用 Codex profile 準備が ollama port 不在時に doctor 相当の準備を走らせる挙動を確認または変更するとき。
-- linked worktree 上で doctor が現在の worktree だけを対象にするか、または既存 staged 変更を修復 commit に混入させないかを検証したいとき。
+- doctor または init コマンドの外部挙動、git への副作用、config 生成・同期、managed ollama 準備に関するテストを確認・変更する場合。
+- `.cmoc/local` を追跡対象外に保つ処理、既存 staged/unstaged 変更を壊さない repair commit、既存 tracked local file の untrack 挙動を検証したい場合。
+- linked worktree 上で doctor が現在の作業ツリーだけを対象にすること、またはローカル SLM 用 Codex profile 作成時の doctor 連携を確認する場合。
 
 ## Do not read this when
-- doctor/init の CLI 外部挙動ではなく、個別 helper の純粋な単体ロジックだけを確認する場合は、対象 helper により近いテストまたは実装を読む。
-- oracle 側の設定 schema や model spec の正本定義を確認したい場合は、oracle 配下の該当文書または src を読む。
-- Codex profile 生成全般を確認したいだけで、doctor による managed ollama 準備との連携が関係しない場合は、runtime_codex_profile 周辺のより直接のテストを読む。
+- doctor/init 以外の CLI コマンドや、git 副作用を伴わない純粋な設定モデルの単体検証を探している場合。
+- runtime doctor の内部 helper 実装そのものを変更する場合は、まず対応する実装側を読む。
+- INDEX.md や oracle file のルーティング・正本仕様を編集するための根拠を探している場合。
 
 ## hash
-- 9e0061322507891ee434a5fe3db08e885c2f23efb49263084cef765b4f042d04
+- 94f148ad6ae03e6186caba88532a7dae0d5be432cd85265092d8cbd7fc6df2fd
 
 # `test_indexing_cli.py`
 
 ## Summary
-- indexing preflight と indexing subcommand が routing document を生成・更新・commit する外部挙動を検証する回帰テスト群。
-- 対象列挙、既存 hash による Codex 呼び出し省略、entry schema 検証、空 directory、安定順序、並列生成、root memo 除外、nested memo 対象化、symlink cycle 除外を扱う。
-- 通常 worktree、linked worktree、apply worktree、dirty worktree、未初期化 repository、INDEX.md conflict 解決など、git 状態を含む indexing workflow の入口。
+- INDEX.md 生成・更新の CLI 回帰テストを扱う。Codex によるエントリー生成、fresh hash による再生成スキップ、不正エントリー再生成、空ディレクトリ、兄弟順序、並列生成、memo 除外、symlink cycle 除外を検証する。
+- indexing 実行時の git 境界を扱う。clean/dirty worktree、linked worktree、apply worktree preflight、INDEX.md だけを commit する条件、INDEX.md conflict 解決の外部挙動を確認する。
 
 ## Read this when
-- indexing CLI の成功・失敗条件、commit 対象、dirty worktree の扱い、linked worktree での実行先を変更または確認するとき。
-- INDEX.md entry の rendering、schema mismatch、空白・複数行 semantic item、malformed entry 再生成、fresh hash 再利用の挙動を確認するとき。
-- routing document 更新対象の列挙規則、root memo 除外、nested memo indexing、directory symlink cycle の除外、同階層 entry の出力順序、非 ancestor index 生成の並列性を確認するとき。
-- apply 側の conflict 解決で INDEX.md を削除して merge commit を成立させる挙動を確認するとき。
+- indexing サブコマンド、indexing preflight、または INDEX.md 更新ワークフローの CLI から見える挙動を変更・確認する時。
+- INDEX.md の対象列挙、hash 再利用、エントリー schema 検証、render 順、並列更新、memo や symlink の扱いを調べる時。
+- indexing による commit 対象、dirty worktree 拒否、linked worktree での実行、merge conflict 解決の回帰を確認する時。
 
 ## Do not read this when
-- indexing の利用者向け仕様だけを確認したいときは、oracle doc の indexing 仕様を読む。
-- index entry 生成 prompt や Structured Output schema の正本を確認したいときは、oracle 側の prompt builder または schema を読む。
-- CLI 実装、git 操作 helper、設定読み書きの実装詳細を修正したいだけなら、対応する実装 module とその近接テストを読む。
+- INDEX.md エントリー文面の生成指示そのものや Structured Output schema の定義だけを確認したい時。
+- routing document 更新とは関係しない CLI サブコマンド、apply join の通常処理、または runtime 設定の一般的な読み書きを調べる時。
+- 個別 helper の内部実装だけを変更し、indexing CLI から観測される git 状態・生成結果・commit 条件に影響しない時。
 
 ## hash
-- e2178158922f7422afb5893671c284f7807472483e91bb055cb83ac9568c5537
+- b84e14c35db19fa57f4f3932aff74fd4e0bb8525dcf28ec71a3929a4447ffadd
 
 # `test_indexing_preflight.py`
 

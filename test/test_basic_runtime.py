@@ -8,6 +8,7 @@ subcommand log、FileAccessMode、binary 判定は実行前提として一緒に
 根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
+import json
 import shutil
 import subprocess
 import sys
@@ -15,7 +16,9 @@ import tomllib
 from pathlib import Path
 
 import pytest
+import typer
 import main as main_module
+import commons.runtime_cli as runtime_cli
 import commons.runtime_logging as runtime_logging
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from basic.path_model import (
@@ -146,6 +149,58 @@ def test_runtime_distinguishes_repo_root_from_linked_worktree(
     assert work_root(linked) == linked.resolve()
 
 
+def test_cli_wrapper_doctor_preprocess_uses_current_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """doctor preprocess は runtime state 保存先ではなく current work root を修復する。"""
+    root = make_repo(tmp_path)
+    linked = root / ".cmoc" / "local" / "worktree" / "linked"
+    run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
+    monkeypatch.chdir(linked)
+    doctor_roots: list[Path] = []
+    pre_log_roots: list[Path] = []
+
+    monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", doctor_roots.append)
+
+    runtime_cli.run_cli_subcommand(
+        lambda: 0,
+        pre_log_check=pre_log_roots.append,
+        command_name="probe",
+        command_argv=["cmoc", "probe"],
+    )
+
+    assert doctor_roots == [linked.resolve()]
+    assert pre_log_roots == [root.resolve()]
+
+
+def test_cli_wrapper_doctor_preprocess_failure_writes_subcommand_log(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+
+    def fail_doctor(_root: Path) -> None:
+        raise CmocError("doctor failed", ["fix doctor"], "doctor detail")
+
+    monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", fail_doctor)
+
+    with pytest.raises(typer.Exit) as exc_info:
+        runtime_cli.run_cli_subcommand(
+            lambda: 0,
+            command_name="probe",
+            command_argv=["cmoc", "probe"],
+        )
+
+    assert exc_info.value.exit_code == 1
+    [log_path] = (root / ".cmoc" / "local" / "log" / "sub_command").glob("*.jsonl")
+    events = [json.loads(line) for line in log_path.read_text().splitlines()]
+    assert events[0]["event"] == "command_invoked"
+    assert events[0]["argv"] == ["cmoc", "probe"]
+    assert events[-1]["event"] == "command_finished"
+    assert events[-1]["returncode"] == 1
+    assert events[-1]["error"] == "doctor failed"
+
+
 def test_run_root_placeholder_rejects_main_worktree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -217,7 +272,19 @@ def test_config_json_preserves_falv_recovery_count() -> None:
     assert config_to_dict(config)["codex"]["num_try_falv_recovery"] == 3
 
 
-def test_load_config_missing_points_to_init(tmp_path: Path) -> None:
+def test_config_json_preserves_oracle_member_order() -> None:
+    data = config_to_dict(CmocConfig())
+
+    assert list(data["codex"]["model"]) == [
+        "mainstream",
+        "flagship",
+        "efficiency",
+        "minimum",
+    ]
+    assert list(data["codex"]["reasoning_effort"]) == ["low", "medium", "high"]
+
+
+def test_load_config_missing_points_to_doctor(tmp_path: Path) -> None:
     root = make_repo(tmp_path)
 
     with pytest.raises(CmocError) as exc_info:
@@ -225,7 +292,7 @@ def test_load_config_missing_points_to_init(tmp_path: Path) -> None:
 
     assert exc_info.value.summary == "cmoc config が存在しません。"
     assert exc_info.value.next_actions == [
-        "cmoc init を実行して <repo-root>/.cmoc/config.json を生成してください。"
+        "cmoc doctor を実行して <repo-root>/.cmoc/config.json を生成してください。"
     ]
 
 
@@ -466,19 +533,29 @@ def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
     assert not (root / ".cmoc").exists()
 
 
-def test_pre_log_check_failure_does_not_write_subcommand_log(
+def test_pre_log_check_failure_writes_subcommand_log(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
-    log_paths_before = set((root / ".cmoc" / "local" / "log" / "sub_command").glob("*.jsonl"))
+    log_dir = root / ".cmoc" / "local" / "log" / "sub_command"
+    log_paths_before = set(log_dir.glob("*.jsonl"))
     (root / "README.md").write_text("dirty\n")
 
     result = runner.invoke(app, ["indexing"])
 
     assert result.exit_code == 1
-    assert set((root / ".cmoc" / "local" / "log" / "sub_command").glob("*.jsonl")) == log_paths_before
+    new_logs = set(log_dir.glob("*.jsonl")) - log_paths_before
+    assert len(new_logs) == 1
+    assert "- サブコマンドログ:" in result.stdout
+    assert "- 終了コード: `1`" in result.stdout
+    events = [
+        json.loads(line) for line in next(iter(new_logs)).read_text().splitlines()
+    ]
+    assert events[0]["event"] == "command_invoked"
+    assert events[-1]["event"] == "command_finished"
+    assert events[-1]["returncode"] == 1
 
 
 def test_bin_cmoc_missing_venv_call_stack_uses_root_token_path(tmp_path: Path) -> None:

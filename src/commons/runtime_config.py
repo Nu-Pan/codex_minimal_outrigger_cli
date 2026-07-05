@@ -27,16 +27,11 @@ def config_to_dict(config: CmocConfig) -> dict[str, Any]:
                     "model_provider": value.model_provider,
                     "model": value.model,
                 }
-                for key, value in sorted(
-                    config.codex.model.items(), key=lambda item: item[0].value
-                )
+                for key, value in config.codex.model.items()
             },
             "reasoning_effort": {
                 key.value: value
-                for key, value in sorted(
-                    config.codex.reasoning_effort.items(),
-                    key=lambda item: item[0].value,
-                )
+                for key, value in config.codex.reasoning_effort.items()
             },
             "num_try_falv_recovery": config.codex.num_try_falv_recovery,
         },
@@ -187,7 +182,7 @@ def load_config(root: Path) -> CmocConfig:
     if not path.exists():
         raise CmocError(
             "cmoc config が存在しません。",
-            ["cmoc init を実行して <repo-root>/.cmoc/config.json を生成してください。"],
+            ["cmoc doctor を実行して <repo-root>/.cmoc/config.json を生成してください。"],
             str(path),
         )
     try:

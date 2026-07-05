@@ -55,10 +55,15 @@ def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
         "[Install]",
         "WantedBy=default.target",
     ]
-    committed_paths = run_git(root, "show", "--name-only", "--format=", "HEAD").stdout
-    assert ".gitignore" in committed_paths
-    assert ".agents/.gitkeep" in committed_paths
-    assert ".cmoc/config.json" not in committed_paths
+    repair_commit_paths = run_git(
+        root, "show", "--name-only", "--format=", "HEAD~1"
+    ).stdout
+    assert ".gitignore" in repair_commit_paths
+    assert ".agents/.gitkeep" in repair_commit_paths
+    config_commit_paths = run_git(
+        root, "show", "--name-only", "--format=", "HEAD"
+    ).stdout
+    assert config_commit_paths.splitlines() == [".cmoc/config.json"]
     assert run_git(root, "ls-files", "--", ".cmoc/local").stdout.strip() == ""
     assert (
         run_git(
@@ -145,16 +150,21 @@ def test_doctor_pulls_each_unique_cmoc_provider_model(
     assert pulled == ["alpha", "beta"]
 
 
-def test_doctor_does_not_sync_config(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_doctor_generates_and_tracks_config(tmp_path: Path, monkeypatch) -> None:
     root = make_repo(tmp_path)
     config_path = root / ".cmoc" / "config.json"
     monkeypatch.chdir(root)
 
     run_doctor(root)
 
-    assert not config_path.exists()
+    assert config_path.is_file()
+    assert (
+        run_git(root, "ls-files", "--", ".cmoc/config.json").stdout.strip()
+        == ".cmoc/config.json"
+    )
+    assert run_git(
+        root, "show", "--name-only", "--format=", "HEAD"
+    ).stdout.splitlines() == [".cmoc/config.json"]
 
 
 def test_doctor_preprocess_targets_current_linked_worktree(
@@ -333,6 +343,47 @@ def test_doctor_repair_commit_does_not_include_preexisting_staged_gitignore(
         ".gitignore"
     ]
     assert "human-rule" in run_git(root, "diff", "--cached").stdout
+
+
+def test_doctor_preprocess_preserves_unstaged_hunks_on_repaired_path(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    gitignore = root / ".gitignore"
+    gitignore.write_text("staged-rule\n")
+    run_git(root, "add", ".gitignore")
+    gitignore.write_text("staged-rule\nunstaged-rule\n")
+    monkeypatch.chdir(root)
+
+    run_doctor(root)
+
+    cached_diff = run_git(root, "diff", "--cached").stdout
+    unstaged_diff = run_git(root, "diff").stdout
+    assert "staged-rule" in cached_diff
+    assert "unstaged-rule" not in cached_diff
+    assert "unstaged-rule" in unstaged_diff
+    assert gitignore.read_text() == "staged-rule\nunstaged-rule\n\n/.cmoc/local/\n"
+
+
+def test_doctor_preprocess_preserves_preexisting_staged_rename(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    old_path = root / "old.txt"
+    new_path = root / "new.txt"
+    old_path.write_text("same content\n")
+    run_git(root, "add", "old.txt")
+    run_git(root, "commit", "-m", "add old file")
+    old_path.rename(new_path)
+    run_git(root, "add", "-A", "old.txt", "new.txt")
+    monkeypatch.chdir(root)
+
+    run_doctor(root)
+
+    assert run_git(root, "diff", "--cached", "--name-status").stdout.splitlines() == [
+        "R100\told.txt\tnew.txt"
+    ]
+    assert run_git(root, "diff", "--name-status").stdout.strip() == ""
 
 
 def test_prepare_local_slm_profile_runs_doctor_when_port_is_missing(

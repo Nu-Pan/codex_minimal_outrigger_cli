@@ -59,24 +59,23 @@
 
 ## Summary
 - cmoc の実行時に複数箇所から共有される runtime helper 群をまとめる領域。
-- Codex 実行、INDEX 更新 preflight、設定変換、内容 hash、CLI 共通ライフサイクル、doctor preprocess、エラー整形、git 操作、ログ、path/time、結果型、永続状態、apply process 管理などの共通実装への入口になる。
-- 対象直下には、runtime API の集約 import 入口と、責務別の実装・再公開モジュールが配置されている。
+- Codex 実行、設定、git、ログ、path、状態、INDEX 更新 preflight、doctor preprocess、CLI 共通 runner など、サブコマンド横断の実行基盤への入口になる。
 
 ## Read this when
-- cmoc の CLI サブコマンドや runtime 処理から共有される helper の配置先を探すとき。
-- Codex exec/TUI 呼び出し、profile 準備、quota/capacity retry、call log、preflight、Structured Output 検証など Codex 実行基盤を調べるとき。
-- INDEX.md 自動更新、entry hash、indexing commit、indexable 対象判定、既存 entry の parse・再利用を確認または変更するとき。
-- 設定 JSON の読み書き、runtime path/time、git wrapper、サブコマンドログ、利用者向けエラー、外部コマンド結果型、session state など、複数機能から参照される runtime 基盤を扱うとき。
-- apply 実行中 process の追跡・停止、session/apply branch と worktree path の対応、cmoc 管理 branch や linked worktree の安全条件を調べるとき。
+- CLI サブコマンドや機能実装から共有 runtime API、共通 runner、共通 result/error/state/path helper の所在を探すとき。
+- Codex exec/TUI 実行、profile、preflight、call log、quota/capacity retry、Structured Output 検証など Codex 呼び出し基盤を調べるとき。
+- INDEX.md 自動更新、entry 生成、hash 検証、indexing commit、preflight 登録・実行の実装を調べるとき。
+- git 操作、worktree、branch、ignore 判定、oracle file 判定、session/apply state、apply process tracking など runtime 状態管理を扱うとき。
+- 実行前 doctor preprocess、cmoc 管理領域の修復、Ollama service/model 準備、サブコマンドログや console summary の共通挙動を確認するとき。
 
 ## Do not read this when
-- 個別 CLI サブコマンドの業務処理、引数定義、利用者向け workflow だけを確認したい場合は、該当するサブコマンド実装または app spec を読む。
-- oracle file にある正本仕様断片、prompt builder、path placeholder 定義、config 型定義、indexing 標準、entry standard だけを確認したい場合は、oracle 側の該当対象を読む。
-- 特定の runtime API の詳細が分かっている場合は、この領域全体ではなく、責務に対応する直下の実装モジュールを読む。
-- テスト固有の期待値、fixture、外部挙動の検証内容を調べたい場合は、test 側の対象を読む。
+- 個別サブコマンドの業務処理、引数定義、利用者向け workflow、標準出力契約だけを確認したいときは、そのサブコマンド実装または対応する仕様へ進む。
+- oracle file にある正本仕様断片、prompt、path model、config 型定義、indexing 標準そのものを確認したいときは、oracle 側の該当対象を読む。
+- 特定 helper の具体的な入出力、失敗時挙動、永続状態の詳細が分かっている場合は、この領域全体ではなく該当する下位要素を直接読む。
+- テスト固有の fixture、期待値、外部挙動の検証観点を調べるだけなら、共有 runtime helper ではなく test 側の対象へ進む。
 
 ## hash
-- bcbf50ca38453fd29e68942adfecb005ee9457a3a020ac7dae766112a834f099
+- 1b65fa2a89c115e69e1ccb7db1143d81257a7928b4f4433007309a4f133274a8
 
 # `config`
 
@@ -137,18 +136,21 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装を集約する階層。session、apply、review、doctor、indexing、tui など、利用者向け command の実行入口から runtime 共通処理や下位 helper へ処理を接続する。
-- 各サブコマンド固有の事前条件、状態遷移、branch/worktree 操作、Codex 呼び出し、report 生成、commit や cleanup への入口を選ぶためのルーティング単位になる。
+- CLI のサブコマンド実装を集約する階層で、初期化・修復、indexing、TUI、session、apply、review などの実行入口と個別コマンド群へのルーティングを担う。
+- 共通 runtime に載った薄い orchestration から、branch/worktree/state、preflight、cleanup、report 生成、INDEX 変更反映など各 workflow 固有の実装へ進むための入口になる。
 
 ## Read this when
-- 利用者向けサブコマンドの実行フロー、責務分担、どの実装へ進むべきかを切り分けたいとき。
-- session、apply、review、doctor、indexing、tui の各操作について、CLI runtime から個別処理や共通 helper へどう接続されるかを確認したいとき。
-- サブコマンド固有の実行条件、失敗条件、状態更新、branch/worktree 操作、commit、cleanup、report 出力、Codex 呼び出しの入口を探したいとき。
+- cmoc のサブコマンド実装のうち、どの workflow や個別コマンドへ進むべきかを切り分けたいとき。
+- 初期化・修復、indexing、TUI、session、apply、review oracle の実行フロー、事前条件、状態遷移、出力、後片付けを確認または変更したいとき。
+- session branch、apply branch/worktree、review branch、state file、process id、report、INDEX.md 更新など、サブコマンド固有の制御が複数領域にまたがる処理を追いたいとき。
+- サブコマンドから共通 runtime、Codex 実行、git 操作、worktree 操作、設定同期、対象列挙、差分検査などへどう接続しているかを確認したいとき。
 
 ## Do not read this when
-- CLI runtime、git wrapper、worktree 操作、state 入出力、path model など、複数サブコマンドで共有される基盤処理だけを調べたいとき。
+- CLI runtime、git wrapper、worktree 操作、state 入出力、path model、config schema など、サブコマンド固有でない共通基盤だけを調べたいとき。
 - oracle file、realization file、path model などの一般定義や正本仕様断片そのものを確認したいとき。
-- Codex に渡す prompt、parameter、Structured Output schema、INDEX.md 生成ロジックなど、サブコマンド入口ではなく専用 builder や共通処理が担う内容だけを確認したいとき。
+- Codex に渡す prompt、parameter、Structured Output schema の本文だけを確認したいとき。
+- INDEX.md の内容生成ロジック、差分検出、lock、commit 処理など indexing 共通処理の詳細だけを調べたいとき。
+- review の対象列挙、review loop、report 描画、INDEX 統合処理など、下位の責務が分かっている場合は、その担当実装を直接読む。
 
 ## hash
-- 6ea670b775708ceff5017af5f6721dd051f0664bc88c995b16313c4057ccf752
+- a212dae9e1ce4aac7f6ba11688b35351ffa01842647e395be3d5304d672d0667

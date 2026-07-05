@@ -134,43 +134,41 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を収める階層で、最上位 CLI、サブコマンド実装、runtime 共通 helper、oracle/package shim、旧 import 経路を維持する互換層への入口になる。
-- 配下には CLI 起動入口、共有 runtime 基盤、利用者向け command 実行層、正本側定義を複製しない再公開・委譲 shim があり、実装変更時にどの責務の module へ進むべきかを選ぶためのルーティング単位になる。
+- cmoc の realization implementation を置く領域。最上位 CLI、サブコマンド実装、共有 runtime helper、正本側定義を複製せず再公開する互換層、oracle package 参照 shim など、利用者向け挙動と実行基盤を具体化するコードへの入口になる。
+- 配下は、CLI command の接続、サブコマンド workflow、Codex 実行・git・状態・path・INDEX 更新などの共通 runtime、旧 import 経路の互換維持、正本側 oracle module 参照のための package 解決に分かれる。
 
 ## Read this when
-- cmoc の realization implementation 全体から、CLI 入口、サブコマンド、共通 runtime helper、互換 import 層のどこを読むべきか切り分けたいとき。
-- Typer/Click による最上位 CLI 定義、console script 起動、サブコマンドへの dispatch、引数解析エラーの cmoc 形式変換を確認したいとき。
-- session、apply、review、doctor、indexing、tui など利用者向け command の実行フロー、状態遷移、branch/worktree 操作、Codex 呼び出し、report や cleanup の入口を探したいとき。
-- Codex 実行、INDEX 更新 preflight、設定変換、hash、git wrapper、ログ、path/time、結果型、永続状態、apply process 管理など、複数機能から共有される runtime 基盤を確認したいとき。
-- oracle 側の正本定義を realization 側へ複製せず参照・再公開・変換する互換層や、acp.*、basic.*、config.*、runtime、oracle package の旧 import 経路を確認したいとき。
-- 旧 import 経路や互換 shim を canonical 実装へ移行する作業で、残すべき公開面、委譲先、削除条件を判断したいとき。
+- cmoc の realization implementation 全体から、CLI 入口、個別サブコマンド、共通 runtime、互換 import 層のどこへ進むべきかを切り分けたいとき。
+- サブコマンドの実行フロー、状態遷移、branch/worktree 操作、Codex 呼び出し、INDEX 更新、preflight、ログ、エラー処理など、実行時挙動の実装場所を探したいとき。
+- oracle src 側の正本定義を複製せず、realization 側の既存公開面や旧 import 経路からどう参照・再公開しているかを確認したいとき。
+- console script から起動される CLI 構成、サブコマンドへのディスパッチ、共通 runtime への接続を確認または変更したいとき。
 
 ## Do not read this when
-- oracle file にある正本仕様断片、prompt 本文、parameter 生成内容、path placeholder、config 型定義、Structured Output schema、indexing 標準そのものを確認したいときは、oracle 側の該当対象を読む。
-- ACP 型、path model、構造化文書 API、設定値などの仕様や実装詳細だけを確認したいときは、この階層の互換入口ではなく再公開先または正本側実装を読む。
-- 特定の runtime API、サブコマンド、builder 互換入口の詳細がすでに分かっているときは、この階層全体ではなく責務に対応する下位対象へ直接進む。
-- テスト固有の期待値、fixture、外部挙動の検証内容を調べたいときは、test 側の対象を読む。
-- 新しい公開 API、設定項目、import 経路、acp 機能を設計したいだけのときは、互換維持領域を起点にせず正本仕様または新規機能の入口を確認する。
+- oracle file の正本仕様断片、prompt 本文、path model、設定定義、Structured Output schema など仕様そのものを確認したいときは、oracle 側の該当対象を読む。
+- テストの期待値、fixture、外部挙動の検証観点だけを確認したいときは、test 側の対象へ進む。
+- 特定の下位責務がすでに分かっている場合は、この領域全体ではなく、その担当実装または下位領域を直接読む。
+- 新しい公開 API、設定項目、状態ファイル、import 経路を設計したいだけで、既存 realization implementation の接続や互換維持を調べる必要がないとき。
 
 ## hash
-- 9774d129f8352ecddc42c9be8c71d01dda9c503f090ea4e26c095185b98e9cd3
+- 8c11ce2589848584d977e2793f93fcf22579287518d55b181dc5a82eae03b4eb
 
 # `test`
 
 ## Summary
-- cmoc の realization test 全体を置くディレクトリ。CLI サブコマンド、Codex runtime、ACP builder、prompt rendering、indexing、doctor/init、session/apply/review oracle など、外部挙動と共通 runtime 契約を検証するテスト群への入口になる。
-- 共通 pytest 補助、fake Codex/Ollama/systemctl、最小 Git repository、Codex home、worktree fixture など、複数テストで共有される支援コードも含む。
+- cmoc の realization test 全体を配置するディレクトリ。CLI サブコマンド、Codex runtime、ACP builder、prompt rendering、indexing、doctor/init、session/apply/review oracle など、実装の外部挙動と共通 runtime 契約を pytest で検証する入口になる。
+- 共通テスト支援から個別コマンドの大きな回帰テストまでを含み、production 実装ではなく realization code の期待挙動を確認するための対象である。
 
 ## Read this when
-- cmoc の自動テストから、対象機能に対応するテストファイルを探したいとき。
-- CLI 外部挙動、Codex runtime、file access mode、indexing preflight、session/apply lifecycle、review oracle、doctor/init などの回帰テスト入口を選びたいとき。
-- テスト支援 fixture や fake 外部コマンド環境の使い方を確認したいとき。
-- 実装変更に対して、既存テストへケース追加できるか、新しいテストが必要かを判断したいとき。
+- cmoc の実装変更に対して、どの realization test が対応する外部挙動や制御ロジックを検証しているかを探すとき。
+- CLI サブコマンド、Codex 実行、file access mode、path/root 解決、Git worktree/state 操作、INDEX.md 更新、prompt/ACP builder の回帰テストを追加・変更・確認するとき。
+- 複数テストで共有される一時 Git repository、Codex home、fake Codex/Ollama/systemctl、CLI runner などの pytest 補助を確認したいとき。
+- apply、session、review oracle など、状態 fixture や git 境界条件を共有する大きな外部挙動テストの入口を選びたいとき。
 
 ## Do not read this when
-- production 実装そのものを変更したい場合は、まず対応する src 配下の実装へ進む。
-- 正本仕様、oracle schema、prompt 文面、file access rule、path model の定義を確認したい場合は、oracle 配下の該当文書または src を読む。
-- 個別テストファイルがすでに分かっている場合は、この階層全体ではなく該当テストを直接読む。
+- production 実装の責務、内部 helper、CLI 処理本体を変更したい場合は、先に src 配下の対応 implementation を読む。
+- oracle file の正本仕様、path model、標準文書、structured output schema の内容そのものを確認する場合は、oracle 配下の該当対象を読む。
+- 個別ファイルの期待挙動が既に分かっている場合は、このディレクトリ全体ではなく該当するテストファイルへ直接進む。
+- INDEX.md エントリー生成規則やルーティング文書の正本仕様を確認したい場合は、この realization test 群ではなく oracle 側の仕様を読む。
 
 ## hash
-- f24fc513dafe92eff2eb48133007c700fdafacfee1bf0449531ca716fd173013
+- e639c65885c3e9ac64a2fd83dda4db8eab42cd749e1019c7ce53230d526c6a8d
