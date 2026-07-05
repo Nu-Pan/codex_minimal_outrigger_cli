@@ -39,7 +39,7 @@ from commons.runtime_codex_profile import (
 )
 from commons.runtime_errors import CmocError
 from commons.runtime_codex_logging import emit_codex_call_console
-from commons.runtime_git import run_git, status_path_statuses
+from commons.runtime_git import status_path_statuses
 from commons.runtime_logging import SubcommandLogger, current_subcommand_logger
 from commons.runtime_paths import (
     codex_log_dir,
@@ -57,7 +57,6 @@ _QUOTA_PROBE_AVAILABLE = False
 _QUOTA_PROBE_ERROR: BaseException | None = None
 _CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
 _LAST_CODEX_LOG_TIMESTAMP: str | None = None
-_IGNORED_GIT_DIFF_EXCLUDED_ROOTS = (".venv",)
 
 
 def _write_prompt_log(path: Path, prompt: str) -> None:
@@ -777,23 +776,9 @@ def changed_worktree_paths(root: Path) -> list[Path]:
     return [path for _status, path in _changed_worktree_path_statuses(root)]
 
 
-def _changed_worktree_path_statuses(
-    root: Path, *, include_ignored: bool = False
-) -> list[tuple[str, Path]]:
+def _changed_worktree_path_statuses(root: Path) -> list[tuple[str, Path]]:
     """worktree 上の変更 path と git status code を absolute path として返す。"""
     # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
     # apply requeue needs file-level paths after an agent call; default status
     # can collapse untracked directories into one directory path.
-    paths = status_path_statuses(root, untracked_all=True)
-    if not include_ignored:
-        return paths
-    for path_text in run_git(
-        ["ls-files", "--others", "--ignored", "--exclude-standard", "-z"], root
-    ).stdout.split("\0"):
-        if not path_text:
-            continue
-        parts = Path(path_text).parts
-        if parts and parts[0] in _IGNORED_GIT_DIFF_EXCLUDED_ROOTS:
-            continue
-        paths.append(("!!", root / path_text))
-    return paths
+    return status_path_statuses(root, untracked_all=True)
