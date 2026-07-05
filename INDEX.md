@@ -164,19 +164,20 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 群を収めるディレクトリ。CLI サブコマンド、Codex runtime、ACP builder、prompt/StructDoc、packaged import、共有テスト支援など、実装の外部挙動と制御ロジックを検証する入口になる。
-- apply/session/review/indexing/doctor/TUI などの結合テストと、runtime・builder・rendering の基礎テストへ進むためのルーティング対象である。
+- cmoc の realization test 群への入口。CLI サブコマンド、Codex runtime、ACP builder、prompt 組み立て、INDEX 生成、session/apply/review/doctor などの外部挙動と共通 runtime 契約を、pytest ベースで検証する領域。
+- 個別テストは、実際の Git repository・worktree・state・fake 外部コマンド・Codex 呼び出し境界を使い、仕様上意味のある制御ロジックと副作用を確認する。
 
 ## Read this when
-- cmoc の realization test を探し、変更対象のサブコマンドや runtime 領域に対応するテストファイルを選びたいとき。
-- CLI 外部挙動、state/worktree/branch cleanup、Codex 呼び出し、file access、INDEX 更新、doctor/preprocess、prompt builder などの回帰テストを確認・変更したいとき。
-- テスト用 Git repository、Codex home、fake external command、Typer runner など、複数テストで共有される支援 helper の所在を判断したいとき。
-- oracle src 参照、packaged import、StructDoc Markdown rendering など、CLI 以外の realization test の入口を探したいとき。
+- cmoc の実装変更に対して、どの realization test が対応する外部挙動や回帰条件を検証しているかを探したいとき。
+- apply、session、review oracle、indexing、doctor、TUI、Codex runtime、prompt、ACP builder、packaged import などのテスト入口を選びたいとき。
+- テストで使う一時 repository、Codex home/profile、fake executable、managed Ollama、apply worktree 解決などの共通セットアップを確認したいとき。
+- CLI の終了コード、標準出力、report、state 遷移、branch/worktree cleanup、file access mode、retry、preflight など、利用者から観測できる挙動の期待値を確認・変更したいとき。
 
 ## Do not read this when
-- 本番実装の制御ロジックや helper の詳細を先に確認したい場合は、対応する implementation 側へ進む。
-- oracle file の正本仕様、oracle/realization の定義、INDEX.md 生成規則そのものを確認したい場合は、対応する oracle doc/src を読む。
-- 個別テストファイルが既に分かっており、その本文だけを読めば足りる場合は、この階層の一覧ではなく対象テストへ直接進む。
+- 本番実装の責務分割や内部 helper の詳細だけを確認したいときは、対応する src 側の実装へ進む。
+- oracle file の正本仕様、oracle/realization の責務境界、INDEX.md 生成規則そのものを確認したいときは、対応する oracle 側の文書や実装へ進む。
+- Codex CLI や LLM の出力品質そのものを評価したいときは対象外。ここでは fake 呼び出しや制御ロジックを中心に検証する。
+- 特定のサブコマンドや runtime 領域と無関係な補助処理だけを調べる場合は、より直接の実装ファイルまたは専用テストを読む。
 
 ## hash
-- 31cdffdf72f824337d8075a662cc67dcadb99f2709438446cc70d19b41151387
+- 2f4ffdbcf15a370af5958aaaa47e83e25438f2a3c02803187f97aff4f06a2276
