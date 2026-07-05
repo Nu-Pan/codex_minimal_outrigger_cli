@@ -167,22 +167,22 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 群を置くディレクトリ。CLI サブコマンド、Codex 実行 runtime、prompt/ACP builder、indexing、session/apply/review workflow、packaging、構造化 Markdown 描画など、実装の外部挙動と共通実行基盤の回帰確認への入口になる。
-- 一時 Git リポジトリ、fake Codex/Ollama/systemctl、linked worktree、session/apply state など、外部コマンドや永続状態を伴うテスト補助もここで共有する。
+- CLI、runtime、apply/session、Codex 実行、indexing、review oracle、prompt、packaging などの外部挙動と共通テスト支援を扱う realization test 群。
+- 一時 Git リポジトリ、fake Codex/Ollama/systemctl、Typer runner、linked worktree、session/apply state、structured output schema など、実装の公開挙動を回帰として確認する入口。
 
 ## Read this when
-- cmoc の実装変更に対応する既存 realization test を探すとき。
-- CLI サブコマンドの外部挙動、終了コード、stdout/stderr、report、state 更新、worktree/branch cleanup の期待値を確認または変更するとき。
-- Codex CLI 実行 wrapper、profile/CODEX_HOME、file access mode、retry、quota、post validation、TUI 実行など runtime 境界のテストを探すとき。
-- apply、session、review oracle、indexing の workflow 全体を git 状態や linked worktree を含めて検証するテストへ進みたいとき。
-- ACP builder、prompt parts、StructDoc rendering、packaged import など、CLI 以外の realization 側契約を検証するテストを探すとき。
-- テスト用 fixture、fake 外部コマンド、一時 repository、Codex profile stub などの共有 helper を確認または変更するとき。
+- CLI サブコマンドの外部挙動、終了コード、stdout/stderr、report、state 更新、git cleanup、worktree 操作を変更または確認するとき。
+- Codex CLI 実行ラッパー、profile/CODEX_HOME、sandbox/file access、retry/quota、post validation、TUI/exec 呼び出しの挙動を確認するとき。
+- apply fork/join/abandon、session fork/join/abandon、review oracle、indexing preflight など、複数の状態遷移や git 操作を伴う回帰条件を探すとき。
+- テスト用 fixture、fake 外部コマンド、一時リポジトリ、AgentCallParameter 差し替えなど、共有テスト helper の使い方や責務を確認するとき。
+- prompt parts、ACP builder、StructDoc rendering、packaged import など、CLI 以外の realization test から期待挙動を確認したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様や仕様文書の編集方針を確認したい場合は、oracle 配下の対象を読む。
-- 本体実装の責務分割や内部 helper の詳細だけを調べたい場合は、対応する src 配下の実装を先に読む。
-- INDEX.md エントリーの記述規則や routing 文書の正本定義だけを確認したい場合は、対応する oracle file を読む。
-- 実際の Codex CLI や LLM の出力品質そのものを評価したい場合は、この fake 前提の realization test 群を入口にしない。
+- oracle file の正本仕様本文や仕様方針そのものを確認したい場合は、oracle 側の該当文書または実装を読む。
+- 本体実装の内部構造、helper の責務、低レベル処理だけを局所的に調べたい場合は、対応する src 側を先に読む。
+- 個別の routing document エントリー文面だけを作る場合や、テスト基盤・CLI ワークフローの挙動確認が不要な場合。
+- Codex CLI や LLM の実出力品質、対話 UI そのもの、外部サービスの実挙動を検証したい場合。
+- 単純な assertion 追加だけで、共有 fixture、fake 外部コマンド、一時リポジトリ、状態遷移の確認が不要な場合。
 
 ## hash
-- d95a500af4f670dba81bc85bda2b78dffde02073c0223c871f8ab3de38ad3578
+- df05805d6d9fabb55d344b42072b514f62f5944e3e82e6043082c412baf7b2ca

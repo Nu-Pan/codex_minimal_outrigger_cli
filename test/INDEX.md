@@ -361,21 +361,22 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- INDEX.md の生成・更新、hash 再利用、Codex entry 生成、commit 対象、dirty worktree 拒否、linked worktree 対象化、apply preflight、INDEX.md conflict 解決を CLI 境界から検証する indexing 回帰テスト。
-- routing document 更新ワークフローの外部挙動を、git 状態、fixture、commit 履歴、preflight の設定参照、並列・直列生成制御、memo 除外、symlink cycle 除外まで含めて一箇所で扱う。
+- routing document の生成・更新を行う indexing 系 CLI と preflight の外部挙動を検証する回帰テスト。
+- 生成対象の列挙、既存 hash による再利用、Codex entry builder 呼び出し、commit 対象の限定、linked worktree、未初期化または dirty な状態、conflict 解決を同じ routing 更新ワークフローとして扱う。
 
 ## Read this when
-- indexing subcommand または indexing preflight の CLI 挙動、commit 条件、dirty worktree 判定、linked worktree 上の更新対象、Codex entry builder 呼び出し条件を確認・変更する。
-- INDEX.md の malformed entry 再生成、fresh hash による生成スキップ、空ディレクトリの INDEX.md 作成、兄弟 entry の生成順、非祖先 directory の並列生成、memo directory や directory symlink の扱いを確認する。
-- apply workflow で INDEX.md conflict を解決する処理が、INDEX.md を削除して unmerged 状態を解消し merge commit を成立させることを検証する。
+- indexing subcommand や indexing preflight の CLI 境界、git 状態、commit 条件、linked worktree 上の挙動を変更する。
+- routing document の生成対象、空ディレクトリ、root 直下 memo の除外、ネストした memo の扱い、symlink cycle 回避、兄弟 entry の描画順や並列生成を変更する。
+- entry schema の検証、既存 hash が新鮮な場合の再生成スキップ、malformed entry の再生成、Codex への structured output schema 指定を確認する。
+- apply 側の INDEX conflict 解決で、対象 document の削除、未解決 conflict の解消、merge commit の成立を確認する。
 
 ## Do not read this when
-- routing entry の本文表現や Structured Output schema だけを確認したい場合は、実装または oracle 側の prompt/schema 定義を読む方が直接的。
-- indexing 以外の subcommand、agent call 全般、設定ファイル形式そのもの、または git helper の低レベル実装だけを調べる場合。
-- 単体の内部 helper のアルゴリズム詳細を読む目的で、CLI 境界の回帰シナリオや git 状態を確認する必要がない場合。
+- 個別の routing document 本文を作るだけで、indexing CLI や更新ワークフローの挙動を確認しない。
+- Codex 実行や git 操作を伴わない純粋な entry 文面の品質だけを扱う。
+- indexing 以外の subcommand、apply join の一般処理、設定ファイル形式そのものを変更する場合で、routing document 更新や conflict 解決に触れない。
 
 ## hash
-- 40cda8c97ac4a60ea4e43e9c6275698dd62f61582aeebc49678f278af9da0b93
+- e5f0405a6aa471fc4f60ad61941d770a887aac67f98eb8b6d88a5376ec637921
 
 # `test_indexing_preflight.py`
 
