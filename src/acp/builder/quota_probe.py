@@ -1,25 +1,20 @@
-"""Codex quota availability probe parameter builder。"""
+"""Codex quota availability probe parameter builder."""
 
-from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
-
-PROBE_PROMPT = "Reply OK."
+from basic.acp import AgentCallParameter
 
 
 def build_quota_availability_probe_parameter(
     base_parameter: AgentCallParameter,
 ) -> AgentCallParameter:
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # The oracle requirement is only a minimal Codex CLI call; there is no
-    # oracle src builder for this purpose, so realization keeps the probe here.
-    return AgentCallParameter(
-        ModelClass.MINIMUM,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        PROBE_PROMPT,
-        None,
-        run_indexing_preflight=False,
-        cwd=base_parameter.cwd,
+    # Oracle: <work-root>/oracle/src/oracle/acp_builder/quota_probe.py
+    # `<work-root>/oracle/doc/app_spec/codex_exec_rule.md` makes each Codex
+    # exec call specification an oracle builder responsibility, so this
+    # realization module only preserves the legacy import path.
+    from oracle.acp_builder.quota_probe import (
+        build_quota_availability_probe_parameter as build_oracle_parameter,
     )
+
+    return build_oracle_parameter(base_parameter)
 
 
 __all__ = ["build_quota_availability_probe_parameter"]
