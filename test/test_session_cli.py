@@ -68,6 +68,25 @@ def write_abandoned_state(root: Path, session_id: str) -> Path:
     return path
 
 
+def break_preprocess_invariants(work: Path) -> Path:
+    gitignore = work / ".gitignore"
+    gitignore.write_text(
+        "\n".join(
+            line
+            for line in gitignore.read_text().splitlines()
+            if line != "/.cmoc/local/"
+        )
+        + "\n"
+    )
+    tracked_probe = work / ".cmoc" / "tracked-probe"
+    tracked_probe.write_text("tracked\n")
+    run_git(work, "add", ".gitignore")
+    run_git(work, "add", "-f", ".cmoc/tracked-probe")
+    run_git(work, "rm", ".agents/.gitkeep")
+    run_git(work, "commit", "-m", "break preprocess invariants")
+    return gitignore
+
+
 def test_session_fork_creates_session_branch_and_state(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -290,21 +309,7 @@ def test_session_abandon_preprocesses_linked_worktree_before_preconditions(
     )
     session_branch = current_branch(linked)
     home_branch = session_home_branch(root, session_branch)
-    gitignore = linked / ".gitignore"
-    gitignore.write_text(
-        "\n".join(
-            line
-            for line in gitignore.read_text().splitlines()
-            if line != "/.cmoc/local/"
-        )
-        + "\n"
-    )
-    tracked_probe = linked / ".cmoc" / "tracked-probe"
-    tracked_probe.write_text("tracked\n")
-    run_git(linked, "add", ".gitignore")
-    run_git(linked, "add", "-f", ".cmoc/tracked-probe")
-    run_git(linked, "rm", ".agents/.gitkeep")
-    run_git(linked, "commit", "-m", "break linked worktree preprocess invariants")
+    gitignore = break_preprocess_invariants(linked)
     run_git(root, "branch", "-D", home_branch)
 
     result = runner.invoke(app, ["session", "abandon"])
@@ -583,6 +588,37 @@ def test_session_join_uses_linked_worktree_branch(
     state = json.loads(session_state_path(root, session_branch).read_text())
     assert state["session"]["state"] == "joined"
     assert "joined_at" not in state["session"]
+
+
+def test_session_join_preprocesses_linked_worktree_before_preconditions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    linked = root / ".cmoc" / "local" / "worktree" / "linked"
+    run_git(root, "worktree", "add", "-b", "linked-home", str(linked), "HEAD")
+    monkeypatch.chdir(linked)
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(linked)
+    home_branch = session_home_branch(root, session_branch)
+    gitignore = break_preprocess_invariants(linked)
+    run_git(root, "branch", "-D", home_branch)
+
+    result = runner.invoke(app, ["session", "join"])
+
+    assert result.exit_code != 0
+    assert current_branch(linked) == session_branch
+    assert "git コマンドが失敗しました。" in result.stderr
+    assert "git コマンドが失敗しました。" not in result.stdout
+    assert "/.cmoc/local/" in gitignore.read_text().splitlines()
+    assert run_git(linked, "ls-files", "--", ".cmoc").stdout == ""
+    assert run_git(linked, "ls-files", "--", ".agents").stdout.splitlines() == [
+        ".agents/.gitkeep"
+    ]
+    assert run_git(linked, "status", "--short").stdout.strip() == ""
 
 
 def test_session_join_stages_delete_conflict_resolution(
