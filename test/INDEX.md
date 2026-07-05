@@ -429,25 +429,22 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle の CLI 実行、レポート描画、対象 oracle file 列挙、所見列挙・検証・judge・merge の制御、review 用 worktree と join commit、INDEX.md 変更の取り込み、異常時レポート、想定外差分の拒否をまとめて検証するテスト群。
-- fake Codex 応答と一時 Git repository を使い、外部挙動としての report 内容、scope 別の対象選択、tracked ignored file や symlink の扱い、merge operation の契約違反検出を確認する。
-- 大きなテストファイルだが、oracle review run の状態、出力、fake 応答文脈を共有する一連の外部挙動検証として凝集している。
+- review oracle の CLI 外部挙動を検証するテスト。report の生成内容、対象 oracle file の列挙、所見の列挙・検証・judge・merge loop、error report、review 用 worktree と join commit、INDEX.md 差分の取り込みと衝突解決を扱う。
+- eval-oracle から review oracle 実装への委譲、session/full scope、tracked ignored oracle file、oracle 配下 symlink、AGENTS.md と INDEX.md の除外、review 中に INDEX.md 以外の差分が作られた場合の拒否を確認する。
 
 ## Read this when
-- review oracle サブコマンドの CLI 挙動、report の見出し・集計・所見表示・error 表示を変更または調査する。
-- oracle review の対象ファイル列挙、full scope と session scope、tracked ignored oracle file、AGENTS.md・INDEX.md 除外、symlink の分類を変更または調査する。
-- review oracle の所見 loop、enumerate に渡す既存所見、challenger と advocate の検証理由、judge 結果、semantic merge の retry と失敗条件を変更または調査する。
-- review oracle 用 worktree、linked worktree 上の session branch、INDEX.md 変更の merge、preflight indexing、join commit、INDEX.md conflict 解決を変更または調査する。
-- review oracle 実行中に INDEX.md 以外の差分が生成された場合の拒否挙動や、processing failure 時の report 出力を変更または調査する。
+- review oracle CLI の出力 report、終了状態、scope 別の対象選択、review 用 worktree、join commit、INDEX.md 差分処理を変更する。
+- 所見 loop の enumerate、validate challenger、validate advocate、judge、merge の制御や Structured Output の扱いを変更する。
+- oracle file 列挙条件、tracked ignored file、symlink、AGENTS.md と INDEX.md の除外条件を変更する。
+- review oracle が失敗したときの error report や、INDEX.md 以外の差分を作ったときの拒否挙動を確認する。
 
 ## Do not read this when
-- review oracle 以外の review サブコマンドや通常の session 操作だけを調べる場合。
-- Codex 実行そのものの品質、LLM 出力内容、prompt 文面の詳細を検証したい場合は、対応する実装や prompt builder のテストを直接読む。
-- oracle file の正本仕様本文を確認したい場合は、oracle 配下の該当文書を読む。
-- 汎用的な Git helper、runtime preflight、indexing の単体挙動だけを確認したい場合は、それぞれの実装または専用テストを読む。
+- review oracle 以外の review 種別や、oracle 対象列挙と関係しない CLI サブコマンドだけを扱う。
+- report の本文構成や所見 loop ではなく、個別 prompt 文面や schema 定義そのものを確認したい。
+- INDEX.md 生成一般の仕様や実装を調べたいだけで、review oracle 実行時の INDEX.md 差分取り込みや衝突解決に関係しない。
 
 ## hash
-- 8f9544479db593c17e5a54d9ba47e1f89000aad759b50632b038bf3bcd60d112
+- d6a132330cb988755d1e585a7df62efe0c0976de33dddd9f745762997f195967
 
 # `test_session_cli.py`
 
