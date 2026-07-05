@@ -81,7 +81,13 @@ def _model_spec_map_from_dict(
             raise TypeError
         provider = value.get("model_provider")
         model = value.get("model")
-        if provider not in {"codex", "cmoc"} or not isinstance(model, str):
+        # `<work-root>/oracle/src/oracle/other/cmoc_config.py` forbids undefined
+        # Codex model names; blank human-edited JSON values fail at this boundary.
+        if (
+            provider not in {"codex", "cmoc"}
+            or not isinstance(model, str)
+            or not model.strip()
+        ):
             raise TypeError
         restored[ModelClass(key)] = CodexModelSpec(provider, model)
     return restored
