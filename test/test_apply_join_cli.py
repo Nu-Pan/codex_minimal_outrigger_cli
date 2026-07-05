@@ -342,7 +342,10 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     state = json.loads(state_path.read_text())
     apply_worktree = apply_worktree_from_state(root, state)
     (apply_worktree / "oracle" / "spec.md").write_text("# changed oracle in apply\n")
-    run_git(apply_worktree, "add", "oracle/spec.md")
+    broken_link = apply_worktree / ".codex" / "broken"
+    broken_link.parent.mkdir(exist_ok=True)
+    broken_link.symlink_to("missing-target")
+    run_git(apply_worktree, "add", "oracle/spec.md", ".codex/broken")
     run_git(apply_worktree, "commit", "-m", "unexpected oracle change")
 
     normal = runner.invoke(app, ["apply", "join"], catch_exceptions=False)
@@ -356,7 +359,7 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     report = report_path.read_text()
     assert "join を中止しました" in report
     assert "## 想定外差分" in report
-    assert "- apply: oracle/spec.md" in report
+    assert "- apply: .codex/broken, oracle/spec.md" in report
     assert "## マージコンフリクト" in report
     assert "- なし" in report
     forced = runner.invoke(
@@ -364,6 +367,8 @@ def test_apply_join_reports_unexpected_apply_diff_and_force_reverts(
     )
     assert forced.exit_code == 0
     assert (root / "oracle" / "spec.md").read_text() == "# spec\n"
+    assert not (root / ".codex" / "broken").exists()
+    assert not (root / ".codex" / "broken").is_symlink()
 
 
 def test_apply_join_reports_codex_apply_diff_and_force_reverts(
