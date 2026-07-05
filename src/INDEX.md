@@ -21,22 +21,21 @@
 # `basic`
 
 ## Summary
-- oracle 側の基本型・path model・構造化文書実装を realization 側で複製せず、既存の `basic.*` 公開参照として再公開する互換層をまとめるディレクトリ。
-- ACP、path model、struct doc などの既存 import 経路を正本側実装へ委譲し、後方互換性と公開名を維持する入口として位置づけられる。
-- 削除可否は、realization 側と利用者向け公開面から該当する `basic.*` 参照がなくなり、正本側または実体 module への移行が済んでいるかで判断する。
+- oracle 側にある基本型・path model・構造化文書などの正本実装を複製せず、realization 側の既存公開 import 経路として再公開する互換層。
+- 既存参照を維持するための入口であり、削除可否は realization 側と利用者向け公開面から対応する互換参照がなくなったかで判断する。
 
 ## Read this when
-- `basic.*` 経由の既存公開参照、互換維持、移行、削除条件を確認したいとき。
-- oracle 側の基本型・path model・構造化文書実装を realization 側へ複製せず再公開している import 経路を調べたいとき。
-- ACP 型の既定 preflight 付与、path model API、構造化文書 API など、basic 互換層が提供する公開面や `__all__` を調整したいとき。
+- realization 側で基本型、path model、構造化文書 API の既存 import 経路や再公開内容を確認したいとき。
+- oracle 側の正本定義・実装を複製せず参照する互換方針を確認したいとき。
+- 既存公開参照を整理し、この互換層を残す理由や削除条件を判断したいとき。
 
 ## Do not read this when
-- ACP 型、path placeholder、構造化文書処理などの正本定義や実装詳細そのものを確認したいとき。その場合は再公開先の oracle 側実装を読む。
-- preflight 処理、indexing、CLI 挙動、テスト挙動など、`basic.*` 互換参照の維持や削除条件に関係しない処理を調べたいとき。
-- 既存の basic 公開参照ではなく、新規 API 設計や利用元固有の挙動だけを確認したいとき。
+- 基本型、path model、構造化文書そのものの仕様や実処理を確認したいとき。その場合は oracle 側の正本定義・実装を読む。
+- 互換用の再公開経路ではなく、個別の利用元、CLI 挙動、テスト挙動、一般的な path 変換仕様を調べたいとき。
+- 新しい公開面や正本仕様断片を追加する実装場所を探しているとき。
 
 ## hash
-- ddd5f3fcf95fe84d0a51ba34e5edc5ce6f7e273f44a044efc2c4d81d41d0394c
+- ad0cfb03fb2c682437a55ec2ac464197bd2fc5eb3bb3da22e79f7473d62523e7
 
 # `cmoc_runtime.py`
 
