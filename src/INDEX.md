@@ -1,21 +1,24 @@
 # `acp`
 
 ## Summary
-- acp builder 由来の旧 import path を、oracle 側 canonical 実装や realization 側の薄い互換層へ接続するための互換領域。
-- 実装本体や正本仕様ではなく、既存公開面を維持する入口、再 export、module alias、削除条件の判断材料を扱う。
+- ACP 互換領域の入口。oracle src 側の acp builder 実装を複製せず、既存の ACP import 経路を canonical oracle 実装または実体 module へ接続するための薄い公開面を扱う。
+- 移行期間中の公開 import 互換、builder 系 package へのルーティング、oracle 側 builder を正本に保つための再公開・委譲・最小補正の境界を確認する起点になる。
 
 ## Read this when
-- acp builder 系の旧 import path がどの互換入口を通じて canonical 実装や wrapper に接続されるか確認したいとき。
-- 既存 caller を canonical path へ移行する作業で、互換入口を残す理由、削除条件、残存参照への影響を判断したいとき。
-- oracle src 由来の builder 実装を複製せずに、realization 側や公開面の import 互換を保つ仕組みを調べたいとき。
+- 旧 ACP import 経路を oracle 側または実体 module へ移行する作業で、互換入口を残す理由や削除条件を確認したいとき。
+- ACP builder 配下の互換 package、module alias、公開型への適合、既存 caller 向け再公開の扱いを広く確認したいとき。
+- apply fork、review、session、tui、indexing、quota probe などの builder 領域のどこへ進むべきか判断したいとき。
+- oracle src 由来の acp builder 互換 import が realization 側または利用者向け公開面でどこに維持されているかを確認したいとき。
 
 ## Do not read this when
-- agent prompt、parameter 生成内容、builder 本体の正本仕様や人間意図を確認したいときは、対応する oracle 側 builder を読む。
-- apply、review、session、tui、indexing、quota probe など各機能そのものの実行フローや状態操作を調べたいときは、それぞれの実装領域へ進む。
-- 新しい acp 機能、公開 API、新規 import 経路を設計したいときは、この互換領域ではなく canonical 実装または対象機能の公開面を確認する。
+- ACP builder の生成処理本体、prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したいときは、対応する oracle 側 builder または oracle document を直接読む。
+- agent call parameter の型定義、path model、file access mode、git helper など builder 以外の共通基盤を調べたいときは、それぞれの定義元を読む。
+- apply、review、session、tui など各機能本体の実行フロー、CLI 引数処理、状態操作、画面構成を調べたいときは、対象機能の実装へ進む。
+- 新しい ACP 機能や API 仕様を追加する場所を探しているとき。この領域は互換維持と builder 入口の接続が中心であり、機能追加の正本入口ではない。
+- ACP import 経路がすでに全公開面と realization 側から消えていることだけを確認済みで、互換入口や builder ルーティングの詳細を読む必要がないとき。
 
 ## hash
-- 42c99f5538a931cb8932a2116a0f65a406fe7dc55710bfc086ca475821b5f0a1
+- c998cd7e54fda57cb94b9bc6b62012bfde7472cbaecc8db84b5a3449cb3bce3b
 
 # `basic`
 

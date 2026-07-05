@@ -19,21 +19,20 @@
 # `builder`
 
 ## Summary
-- acp builder 領域の互換入口をまとめ、既存の acp.builder 系 import path を oracle 側 canonical 実装や realization 側の最小補正層へ接続する。
-- 主に apply、review、session、tui、indexing、quota probe などの builder 互換経路、oracle builder への委譲、旧公開面維持、削除条件確認の入口になる。
-- builder 本体の正本仕様ではなく、oracle 側実装を正本に保ちながら既存参照を成立させる package path、module alias、再 export、薄い fallback/補正を扱う。
+- ACP builder 領域全体の入口。oracle 側 builder を正本に保つための import path 接続、旧 acp.builder 系公開面の互換維持、各サブコマンド向け builder package へのルーティングを扱う。
+- apply、review、session、tui、indexing、quota probe などの builder 互換層や個別 builder 入口を下位に持ち、実処理本体よりも canonical oracle 実装への委譲・再公開・最小補正の境界を確認する起点になる。
 
 ## Read this when
-- acp.builder 経由の旧 import path 互換が、oracle 側 canonical 実装や realization 側 wrapper へどう接続されるか確認したいとき。
-- apply fork、review、session、tui、indexing、quota probe などの agent call parameter builder 互換入口、委譲境界、最小補正、fallback の所在を探すとき。
-- 既存 caller を canonical path へ移行する作業で、互換 package や再公開 module を残す理由、削除条件、残存参照への影響を判断したいとき。
-- oracle 側 builder を正本としつつ、realization 側公開型への適合、module alias、package search path、file access mode 再公開、structured output schema 抑制などの互換処理を調べるとき。
+- acp.builder 配下の旧 import 経路互換、oracle 側 builder への接続、module alias、package path の扱いを広く確認したいとき。
+- apply fork、review、session、tui、indexing、quota probe のどの builder 領域へ進むべきか判断したいとき。
+- oracle 側 builder を正本としつつ realization 側で公開型への適合、既存 caller 向け再公開、互換入口の削除条件を調べたいとき。
+- acp.builder 配下の互換 package や薄い wrapper を削除・移行する作業で、対象となる下位領域を選びたいとき。
 
 ## Do not read this when
-- agent prompt、出力条件、parameter 生成内容、builder 本体の正本仕様や人間意図を確認したいだけなら、対応する oracle 側 builder を読む。
-- apply、review、session、tui など各機能そのものの実行フロー、UI、branch 操作、finding 処理、quota 管理ロジックを調べる場合は、それぞれの実装領域へ進む。
-- AgentCallParameter、FileAccessMode、path model、git helper、構造化出力 schema などの基礎型や共通実装を確認したいだけなら、該当する共通定義を直接読む。
-- 新しい公開 API や新規 import 経路を設計したい場合は、この互換領域を入口にせず、現行の canonical 実装または対象機能の公開面を確認する。
+- agent call parameter の型定義、path model、file access mode、git helper など builder 以外の共通基盤を調べたいときは、それぞれの定義元を読む。
+- prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したいだけなら、対応する oracle 側 builder または oracle document を直接読む。
+- apply、review、session、tui など各機能本体の実行フロー、CLI 引数処理、状態操作、画面構成を調べたいときは、対象機能の実装へ進む。
+- 特定 builder の個別変換処理、fallback、再公開、補正挙動が分かっている場合は、この階層全体ではなく該当する下位 package または module を読む。
 
 ## hash
-- 24cab1f619625b7b6c17d0a86558d404f9c72d9351af6acca6869c2d3941f528
+- 651246c3a0407f43a09b25729e30829c6b095bf74ce930fbbce04067e94d0de4

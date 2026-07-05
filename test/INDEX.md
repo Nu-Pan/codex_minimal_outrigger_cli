@@ -143,21 +143,20 @@
 # `test_cli_tui.py`
 
 ## Summary
-- TUI サブコマンドが起動直前に行う CLI 前処理の外部挙動を検証するテスト。エディタで入力された依頼文の整形、パラメータ解決用 Codex 呼び出し、本番 TUI 呼び出し、生成されるプロンプトログ、gitignore 更新、linked worktree での保存先と実行位置の扱いを確認する。
+- TUI サブコマンド起動直前の CLI 前処理を検証する realization test。エディタで作成した依頼文の整形、パラメータ解決用 Codex exec 呼び出し、TUI 用 Codex 呼び出し、生成プロンプト保存、`.cmoc/local` ログ配置、gitignore 反映、リンク worktree 上での root/cwd/schema/log の扱いを外部挙動として確認する。
 
 ## Read this when
-- TUI 起動前のプロンプト作成、エディタ入力、HTML コメント除去、パラメータ解決、または TUI 用 Codex 呼び出しの挙動を変更・確認する場合。
-- TUI の file access mode 解決で空値を既定値に戻す挙動を確認する場合。
-- linked worktree から TUI を起動したときに、ログ・schema・追加 read path が worktree 側ではなくルート側の local 領域を使うことを確認する場合。
-- TUI 実行時に .cmoc/local 配下が git 追跡対象にならないことや、古い logs/sub_commands ではなく local/log/sub_command を使うことを確認する場合。
+- TUI サブコマンドの起動前処理、依頼文テンプレート編集、完了プロンプト生成、`launch_tui.json` や `resolve_parameter.json` の選択、file access mode 解決に関するテストを確認・変更したいとき。
+- リンク worktree で `tui` を実行した場合に、ログや schema をどの worktree 配下へ置くか、Codex 呼び出しへ渡す `root`・`cwd`・`extra_read_paths` がどう検証されているかを確認したいとき。
+- `.cmoc/local` の無視設定、TUI ログ、sub_command ログの生成場所が CLI 実行後に git 追跡対象外として扱われることを確認したいとき。
 
 ## Do not read this when
-- TUI の画面内操作や対話 UI そのものの表示・キー操作を確認したい場合。
-- TUI 以外のサブコマンドの実行ログ、初期化処理、git worktree 操作を単独で確認したい場合。
-- Codex 実行ラッパーの内部実装や AgentCallParameter の汎用的な構築規則だけを確認したい場合。
+- TUI 内部の画面操作や対話 UI そのものを調べたいとき。この対象は TUI 起動前の CLI 側処理と Codex 呼び出し境界を検証している。
+- TUI 以外のサブコマンド、共通ランタイム、または git worktree 操作の一般仕様だけを確認したいとき。より直接の実装または対応するテストを読む方がよい。
+- oracle file の正本仕様を確認したいとき。この対象は realization test であり、正本仕様断片ではない。
 
 ## hash
-- aa7bdcd098756577daa3aea7e9adb2f86d9f32fc7485beae852486fe6697583d
+- 108810a6a73d65b528b8eedfa8b0132a62f06394c906c075e5572579e029b5bf
 
 # `test_codex_runtime_errors.py`
 
@@ -313,22 +312,21 @@
 # `test_codex_runtime_tui.py`
 
 ## Summary
-- Codex TUI 実行時のアクセス制御、作業ディレクトリ、sandbox 用 writable roots、失敗時ログ出力を検証する realization test。
-- `run_codex_tui` が Codex subprocess を起動する前に追加 read path を検査すること、許可された complete prompt を TUI 呼び出しに渡せること、リンク済み worktree ではその worktree を基準に実行・権限設定することを扱う。
-- Codex CLI/TUI が非 0 終了した場合に `CmocError` となり、コンソール出力と呼び出しログに失敗情報が残ることを確認する。
+- Codex TUI 起動処理のテスト。追加読み取りパスの許可判定、complete prompt の扱い、linked worktree 起動時の作業ディレクトリと writable roots、Codex CLI/TUI の非ゼロ終了時のエラー表示と呼び出しログを検証する。
 
 ## Read this when
-- Codex TUI 起動処理の追加 read path 許可判定、特に `memo` 配下や complete prompt の扱いを変更する。
-- `run_codex_tui` の `cwd`、`--cd`、リンク済み worktree、sandbox workspace-write の writable roots 生成を変更する。
-- Codex CLI/TUI subprocess の非 0 終了時の例外、表示内容、呼び出しログ JSON の仕様に関わる変更を行う。
+- Codex TUI 実行時の `extra_read_paths` の許可・拒否条件を確認または変更する時。
+- PURE_ORACLE_READ で complete prompt を渡す場合の `--output-schema` 抑制や起動引数を確認する時。
+- linked worktree から TUI を起動する時の `cwd`、`--cd`、sandbox writable roots の挙動を確認する時。
+- Codex CLI/TUI が非ゼロ終了した時の `CmocError`、コンソール出力、codex 呼び出しログを確認する時。
 
 ## Do not read this when
-- Codex TUI ではなく non-TUI の Codex 呼び出し、agent call、または別目的の runtime 処理だけを調べる。
-- 設定読み込み、CLI 引数解析、git worktree 作成そのものなど、`run_codex_tui` の外部挙動に触れない領域を変更する。
-- Codex CLI や LLM の出力品質そのものを検証したい場合。
+- Codex TUI ではなく Codex API 呼び出しや通常の非対話実行の挙動を確認したい時。
+- ACP のファイルアクセスモードそのものの定義や一般的な許可領域モデルを確認したい時。
+- TUI 実行の実装詳細を先に確認したい時は、対応する runtime 実装を直接読む。
 
 ## hash
-- 6e38cc3e448c4aa3e93ed54d32b6f8b1c4895a1e88d8efb3d50ec4dc0cc62432
+- 2ce3e1be542f251fe08993bd60fc3ab97ab68e28680f466bf3763e5a0411fb47
 
 # `test_doctor_cli.py`
 
