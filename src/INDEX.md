@@ -60,23 +60,26 @@
 # `commons`
 
 ## Summary
-- cmoc の共通実行時支援を集めた realization implementation のディレクトリ。Codex 起動、INDEX.md 自動更新、CLI 共通ライフサイクル、設定、content hash、doctor 前処理、error、git、logging、path、result、session state、apply process 管理などの runtime helper と、その集約 import 入口を扱う。
+- cmoc の共通実行時支援を扱う realization 実装群。Codex 起動、INDEX 更新 preflight、CLI 共通ライフサイクル、config、content hash、doctor 修復、error 表示、git 操作、logging、path、result、session state、apply process 管理など、複数サブコマンドから使われる runtime 境界をまとめる。
+- 個別責務の実装に加えて、runtime 系 API をまとめて再公開する入口や、分割後の互換 import 入口も含む。
 
 ## Read this when
-- 複数の runtime helper にまたがる共通 API、公開 import 入口、または runtime 系 module の配置を確認したいとき。
-- Codex exec/TUI 呼び出し、preflight、profile、Structured Output、quota/capacity retry、call log など Codex CLI 境界の実装を調べるとき。
-- CLI サブコマンド共通の起動・終了処理、ログ、進行表示、終了コード化、共通 error report を確認または変更したいとき。
-- config、content hash、doctor preprocess、git wrapper、path utility、result model、session state 永続化、apply process 停止などの共通 runtime 挙動を扱うとき。
-- INDEX.md の自動更新、entry 再生成、indexing commit、対象除外条件、Codex への entry 生成依頼を確認または変更したいとき。
+- 複数サブコマンドにまたがる共通 runtime helper の実装場所を探すとき。
+- Codex exec/TUI 呼び出し、profile 作成、quota/capacity retry、call log、preflight、Structured Output 検証など Codex 実行基盤を確認または変更したいとき。
+- INDEX.md 自動更新 preflight、entry 再生成、除外条件、hash による鮮度判定、indexing commit を扱うとき。
+- CLI サブコマンド共通の起動終了処理、ログ、進行表示、終了コード化、利用者向け error report、runtime result model を確認したいとき。
+- config 永続化、runtime path、content hash 保存、git wrapper、ignore 判定、worktree 管理、session state、apply process pid 管理などの共通処理を調べるとき。
+- 個別 runtime helper の公開範囲変更、責務分割、互換 import の維持要否を判断するとき。
 
 ## Do not read this when
-- 個別 CLI サブコマンドの利用者向け仕様、引数定義、業務フロー、出力 schema を調べたいときは、対象サブコマンドや oracle 側の仕様へ進む。
-- path keyword、config 型、file access rule、oracle/realization 定義、INDEX.md entry 文面基準などの正本仕様断片そのものを確認したいときは、oracle 側を読む。
-- 特定の runtime helper の具体処理だけを調べたいときは、このディレクトリ全体ではなく該当する責務別 module を直接読む。
-- 生成済みログ、生成済み INDEX.md、特定ディレクトリのルーティング判断、または実行履歴の確認だけが目的で runtime 実装を変更しないとき。
+- 個別サブコマンドの利用者向け仕様、引数定義、業務フロー、出力 schema を調べたいだけのときは、対象サブコマンド実装または oracle 仕様へ進む。
+- oracle file、realization file、path placeholder、config 型などの正本仕様そのものを確認したいときは、oracle 側の該当本文を読む。
+- INDEX.md entry に書く文章基準や prompt 部品を確認したいだけのときは、oracle 側の indexing 仕様や prompt builder を読む。
+- 生成済み log、report、state、INDEX.md の個別内容を確認するだけで、runtime 実装を変更しないとき。
+- 特定の helper 関数や型の利用箇所が既に分かっている場合は、この階層全体ではなく該当する責務別 runtime 実装へ直接進む。
 
 ## hash
-- 698d77809f2f559ee3b312c606f0eddf8da07be90e959865c684f4dd8eb78c26
+- 1a502dab24f8ac77eee36fac8a067f7aa65af3053cb22c508df26f827843b1f8
 
 # `config`
 
