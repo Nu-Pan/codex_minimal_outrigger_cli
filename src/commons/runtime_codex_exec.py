@@ -13,14 +13,13 @@ import json
 import subprocess
 import threading
 import time
-from collections.abc import Callable
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from jsonschema import validate
 
-from basic.acp import AgentCallParameter, FileAccessMode
+from basic.acp import AgentCallParameter
 from config.cmoc_config import CmocConfig
 
 from commons.runtime_config import load_config
@@ -59,7 +58,6 @@ _QUOTA_PROBE_ERROR: BaseException | None = None
 _CODEX_LOG_TIMESTAMP_LOCK = threading.Lock()
 _LAST_CODEX_LOG_TIMESTAMP: str | None = None
 _IGNORED_GIT_DIFF_EXCLUDED_ROOTS = (".venv",)
-_BeforeCodexCall = Callable[[Path], None]
 
 
 def _write_prompt_log(path: Path, prompt: str) -> None:
@@ -162,8 +160,6 @@ def run_codex_exec(
     extra_read_paths: list[Path] | None = None,
     extra_writable_paths: list[Path] | None = None,
     allow_oracle_conflict_writes: bool = False,
-    verify_file_access: bool = True,
-    _before_recovery_codex_call: _BeforeCodexCall | None = None,
 ) -> CodexExecResult:
     """Codex exec の再試行、Structured Output 検証、実行記録を一括制御する。"""
     root = root or repo_root()
@@ -375,38 +371,12 @@ def run_codex_exec(
             quota_polls=quota_polls,
         )
 
-    def recover_terminal_file_access_violations(
-        exec_result: CodexExecResult,
-    ) -> None:
-        # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-        # File access rule post-validation is prohibited; this compatibility
-        # hook intentionally does not inspect or recover worktree diffs.
-        return
-
-    def recover_call_file_access_violations(
-        result: subprocess.CompletedProcess[str],
-        *,
-        run_call_path: Path,
-        run_prompt_path: Path,
-        run_stdout_path: Path,
-        run_stderr_path: Path,
-        run_output_path: Path,
-        run_schema_path: Path | None = schema_path,
-    ) -> None:
-        return
-
     semantic_attempts = 0
     capacity_attempts = 0
     quota_polls = 0
     sleep_sec = capacity_initial_sleep_sec
     last_result: subprocess.CompletedProcess[str] | None = None
     resume_token: str | None = None
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # Post-call validation of agent-generated file access rule violations is
-    # intentionally disabled. Keep the compatibility arguments accepted by
-    # callers, but do not snapshot or inspect worktree diffs here.
-    forbidden_baseline = None
-    worktree_diff_baseline = None
 
     while True:
         ts, prompt_path, stdout_path, stderr_path, output_path, call_path = new_log_paths()
@@ -450,14 +420,6 @@ def run_codex_exec(
                     status="capacity_retrying",
                     error=error_text,
                 )
-                recover_call_file_access_violations(
-                    result,
-                    run_call_path=call_path,
-                    run_prompt_path=prompt_path,
-                    run_stdout_path=stdout_path,
-                    run_stderr_path=stderr_path,
-                    run_output_path=output_path,
-                )
                 time.sleep(sleep_sec)
                 sleep_sec *= 2
                 continue
@@ -491,24 +453,8 @@ def run_codex_exec(
                         if logger is not None:
                             logger.add_quota_wait(waited_sec)
                         if _QUOTA_PROBE_ERROR is not None:
-                            recover_call_file_access_violations(
-                                result,
-                                run_call_path=call_path,
-                                run_prompt_path=prompt_path,
-                                run_stdout_path=stdout_path,
-                                run_stderr_path=stderr_path,
-                                run_output_path=output_path,
-                            )
                             raise _QUOTA_PROBE_ERROR
                         if not _QUOTA_PROBE_AVAILABLE:
-                            recover_call_file_access_violations(
-                                result,
-                                run_call_path=call_path,
-                                run_prompt_path=prompt_path,
-                                run_stdout_path=stdout_path,
-                                run_stderr_path=stderr_path,
-                                run_output_path=output_path,
-                            )
                             raise CmocError(
                                 "Codex CLI quota 待機の代表 probe が中断しました。",
                                 [
@@ -535,14 +481,6 @@ def run_codex_exec(
                             max_quota_polls is not None
                             and quota_polls >= max_quota_polls
                         ):
-                            recover_call_file_access_violations(
-                                result,
-                                run_call_path=call_path,
-                                run_prompt_path=prompt_path,
-                                run_stdout_path=stdout_path,
-                                run_stderr_path=stderr_path,
-                                run_output_path=output_path,
-                            )
                             raise CmocError(
                                 "Codex CLI quota が枯渇しました。",
                                 [
@@ -657,15 +595,6 @@ def run_codex_exec(
                                 run_profile_path=probe_profile_path,
                                 run_profile_name=probe_profile_name,
                             )
-                            recover_call_file_access_violations(
-                                poll,
-                                run_call_path=probe_call_path,
-                                run_prompt_path=probe_prompt_path,
-                                run_stdout_path=probe_stdout_path,
-                                run_stderr_path=probe_stderr_path,
-                                run_output_path=probe_output_path,
-                                run_schema_path=None,
-                            )
                             time.sleep(sleep_sec)
                             sleep_sec *= 2
                             continue
@@ -689,15 +618,6 @@ def run_codex_exec(
                             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
                             # A probe is still `codex exec`; non-quota failure is
                             # not recoverable by waiting for quota reset.
-                            recover_call_file_access_violations(
-                                poll,
-                                run_call_path=probe_call_path,
-                                run_prompt_path=probe_prompt_path,
-                                run_stdout_path=probe_stdout_path,
-                                run_stderr_path=probe_stderr_path,
-                                run_output_path=probe_output_path,
-                                run_schema_path=None,
-                            )
                             raise CmocError(
                                 "Codex CLI quota availability probe が失敗しました。",
                                 ["stderr/stdout log を確認して原因を解消してください。"],
@@ -757,16 +677,6 @@ def run_codex_exec(
                 status="failed",
                 error=error_text,
             )
-            recover_terminal_file_access_violations(
-                codex_exec_result_from_paths(
-                    result,
-                    run_call_path=call_path,
-                    run_prompt_path=prompt_path,
-                    run_stdout_path=stdout_path,
-                    run_stderr_path=stderr_path,
-                    run_output_path=output_path,
-                )
-            )
             raise CmocError(
                 "Codex CLI 呼び出しが失敗しました。",
                 ["stderr/stdout log を確認して原因を解消してください。"],
@@ -799,14 +709,6 @@ def run_codex_exec(
                         status="schema_validation_retrying",
                         error=str(exc),
                     )
-                    recover_call_file_access_violations(
-                        result,
-                        run_call_path=call_path,
-                        run_prompt_path=prompt_path,
-                        run_stdout_path=stdout_path,
-                        run_stderr_path=stderr_path,
-                        run_output_path=output_path,
-                    )
                     continue
                 emit_codex_call_event(
                     run_purpose=purpose,
@@ -820,16 +722,6 @@ def run_codex_exec(
                     returncode=result.returncode,
                     status="schema_validation_failed",
                     error=str(exc),
-                )
-                recover_terminal_file_access_violations(
-                    codex_exec_result_from_paths(
-                        result,
-                        run_call_path=call_path,
-                        run_prompt_path=prompt_path,
-                        run_stdout_path=stdout_path,
-                        run_stderr_path=stderr_path,
-                        run_output_path=output_path,
-                    )
                 )
                 raise CmocError(
                     "Codex CLI の Structured Output 検証に失敗しました。",
@@ -875,28 +767,9 @@ def run_codex_exec(
             quota_wait_sec=quota_wait_sec,
             quota_polls=quota_polls,
         )
-        recover_terminal_file_access_violations(exec_result)
         return exec_result
 
     assert last_result is not None
-
-
-def recover_file_access_violations(
-    worktree: Path,
-    violated_result: CodexExecResult,
-    violated_mode: FileAccessMode,
-    config: CmocConfig,
-    ignored_paths: set[Path] | None = None,
-    *,
-    root: Path | None = None,
-    subcommand_logger: SubcommandLogger | None = None,
-    allowed_paths: list[Path] | None = None,
-    forbidden_baseline: object | None = None,
-    worktree_diff_baseline: object | None = None,
-    before_recovery_codex_call: _BeforeCodexCall | None = None,
-) -> None:
-    """廃止済み互換 API。agent call 後の file access 事後検証は行わない。"""
-    return
 
 
 def changed_worktree_paths(root: Path) -> list[Path]:
@@ -910,9 +783,8 @@ def _changed_worktree_path_statuses(
     """worktree 上の変更 path と git status code を absolute path として返す。"""
     paths: list[tuple[str, Path]] = []
     # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
-    # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # apply requeue and file access validation both need file-level paths;
-    # default status can collapse untracked directories into one directory path.
+    # apply requeue needs file-level paths after an agent call; default status
+    # can collapse untracked directories into one directory path.
     status_fields = run_git(
         ["status", "--porcelain=v1", "-z", "-uall"], root
     ).stdout.split("\0")
