@@ -262,22 +262,21 @@
 # `runtime_doctor.py`
 
 ## Summary
-- 共通実行前の doctor 修復処理を担い、`.cmoc` ignore、`.agents` 追跡用 placeholder、cmoc managed ollama の準備を行ったうえで、修復差分だけを専用 commit として分離する実装。
-- 通常 index にある利用者の staged 差分を退避・復元しつつ、HEAD 起点の一時 index で修復 commit を作る制御と、その失敗時に `CmocError` を返す処理を含む。
-- cmoc provider の model が設定されている場合に、Ollama の取得、user systemd service の作成・起動確認、127.0.0.1:11434 の listener 検証、model pull を行う。
+- 共通実行前の doctor preprocess を担う実装。cmoc 管理領域の ignore 設定、.agents の追跡可能化、cmoc provider 向け local SLM の Ollama 準備、修復差分だけの commit と既存 staged 差分の復元を扱う。
+- Git の一時 index を使って doctor 修復差分を user staged hunks から分離し、Ollama は user systemd service、固定 host、model store、/proc による listener 照合で cmoc 管理プロセスとして確認する。
 
 ## Read this when
-- cmoc コマンド実行前に行われる自動修復、doctor preprocess、または修復差分だけの commit 作成を調べるとき。
-- `.gitignore`、`.agents/.gitkeep`、`.cmoc` の git index 上の扱い、または既存 staged 差分を壊さずに復元する処理を変更するとき。
-- cmoc provider の local SLM 利用、Ollama の自動インストール、user systemd service、11434 port の検証、model pull の挙動を確認・変更するとき。
+- 実行前修復、doctor preprocess、cmoc 管理ファイルの ignore、.agents の git 追跡、または修復 commit の作成・復元挙動を確認・変更したいとき。
+- cmoc provider の model を使う前に Ollama を自動インストール・起動・検証・pull する処理、systemd user service、固定ポートの衝突検出、model store 環境変数を調べたいとき。
+- Git index、staged 差分、.cmoc 追跡解除、.gitignore 修復など、ユーザーの既存 staging 状態を壊さずに自動修復を commit する制御を調べたいとき。
 
 ## Do not read this when
-- 通常の git command wrapper、設定読み込み、または `CmocError` 型そのものの仕様を確認したいだけなら、それぞれの共通実装を直接読む。
-- oracle 上の doctor preprocess や cmoc managed ollama の正本仕様を確認したい場合は、対応する oracle doc を読む。
-- CLI 引数、サブコマンド定義、出力形式など、実行前修復を呼び出す側の公開面だけを調べる場合は、CLI 側の実装を読む。
+- 通常の git コマンド wrapper、runtime config の読み込み、CmocError の定義そのものを確認したいだけのときは、それぞれの共通 runtime 実装を直接読む。
+- CLI 引数やサブコマンドの定義、doctor コマンドの呼び出し口、ユーザー向け出力形式を調べたいときは、CLI 層または command 層を先に読む。
+- Ollama 以外の model provider、LLM 呼び出し本体、prompt 構築、agent 実行制御を調べたいときは、それらの provider・agent 実行系を読む。
 
 ## hash
-- 9a609d8f1c331cb1a25a5b94694b67f902627ecf03d6d08b2e49d8ee94af11d1
+- 86e37269c6ae612c184ea8a95e0549ceb2e19eb2aa6e938b40a042607f54453a
 
 # `runtime_errors.py`
 

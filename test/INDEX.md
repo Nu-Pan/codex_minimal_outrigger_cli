@@ -250,20 +250,21 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor と init の CLI 周辺挙動を検証する pytest 群。cmoc 管理 Ollama の導入・systemd user service 生成・service 検証・モデル pull、.cmoc/config.json の生成または非同期、.gitignore と git 追跡状態の修復、既存 staged 変更を repair commit に混ぜないこと、ローカル SLM profile 準備時の doctor 実行を扱う。
+- doctor/init 系の CLI 挙動と runtime doctor の制御ロジックを検証する realization test。cmoc 管理 Ollama の導入・systemd user service・モデル pull、.cmoc の ignore/untrack、設定生成と既存値保持、repair commit が利用者の staged 変更を巻き込まないこと、ローカル SLM profile 準備時の doctor 起動を扱う。
 
 ## Read this when
-- doctor preprocess、init、cmoc 管理 Ollama、runtime_doctor、runtime_codex_profile、または .cmoc/config.json の生成・無視・追跡解除に関する外部挙動を変更する時。
-- repair commit が .gitignore や .agents/.gitkeep をどう扱い、既存 staged 変更をどう保護するかを確認したい時。
-- Ollama service の main PID、listener process、model pull 対象の重複排除、またはローカル SLM profile 作成時の service 自動準備を変更・調査する時。
+- doctor preprocess、run_doctor_preprocess、runtime doctor、cmoc 管理 Ollama、Ollama service 検証、モデル pull の重複排除を変更するとき。
+- init コマンドの config.json 生成、既存設定との同期、.cmoc の git ignore・追跡除外を変更するとき。
+- doctor による修復 commit が既存 staged 変更や .gitignore の人間変更をどう扱うかを確認・変更するとき。
+- prepare_codex_profile がローカル SLM 用 profile を作る際、Ollama port 不在時に doctor を走らせる挙動を確認するとき。
 
 ## Do not read this when
-- doctor や init の CLI 外部挙動に関係しない設定モデル、path model、agent call 実行制御だけを調べる時。
-- Ollama service の実装詳細だけを確認したい場合で、期待されるテスト挙動ではなく実装本文を直接読む方が適切な時。
-- oracle file の正本仕様そのものを確認したい時。
+- 個別の doctor 実装内部だけを読みたい場合は、先に runtime doctor の実装を読む。
+- config schema や model spec の正本定義を確認したいだけの場合は、oracle 側の config 定義を読む。
+- doctor/init と無関係な CLI サブコマンド、agent call 実行、apply fork、path model の挙動を調べる場合。
 
 ## hash
-- b54fbb56e81126f4346efe55719d4e554fca461b66ad80f546702e27b37a1848
+- 5d6b5482783d5b41a3aab5528281f2038a0a5f8f3471e89946f3189ba7e02775
 
 # `test_indexing_cli.py`
 
