@@ -122,23 +122,24 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断して検証する realization test。root placeholder 解決、repo/run/work root の扱い、config 変換と検証、CmocError の表示、CLI preflight と parse error、subcommand log、worktree 操作、FileAccessMode から Codex sandbox profile への変換、binary 判定など、個別サブコマンドより下位の共通実行前提をまとめて扱う。
-- 16,000 文字を超えるが、共通 fixture と root 状態を共有して同時に崩れやすい basic runtime 回帰を一箇所で検証する意図を持つ。
+- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder 解決、linked worktree 判定、config 変換・検証、CmocError の表示、CLI wrapper の preflight と error report、subcommand log、session/apply branch state、FileAccessMode から Codex sandbox profile への変換、binary 判定など、個別サブコマンドより下位の共通実行前提を扱う。
+- 共通 fixture と root 状態を共有する runtime 回帰テスト群であり、複数領域が同時に崩れやすい基礎挙動を一箇所で確認する入口になる。
 
 ## Read this when
-- runtime の root 解決、linked worktree、run worktree 作成・削除、または `<cmoc-root>` や `<run-root>` placeholder の挙動を変更する。
-- cmoc config の既定値、JSON 変換、入力検証、missing config error、Codex model spec や reasoning effort の扱いを変更する。
-- CmocError、CLI error report、Click/Typer parse error、stdout/stderr の出し分け、doctor preprocess、pre-log check、subcommand log の挙動を変更する。
-- FileAccessMode、Codex sandbox profile、追加 writable/readable path、oracle conflict write、repo local read、または binary 判定の runtime 制御を変更する。
-- runtime 共通契約に関わる regression test の追加先を探しており、個別サブコマンド固有ではない挙動を検証したい。
+- cmoc の root 解決、repo root と work root、run worktree 作成・削除、linked worktree 実行時の挙動を確認・変更する時。
+- config の既定値、JSON 変換順序、不正値検証、missing config error、Codex model provider 変換を確認・変更する時。
+- CmocError の Markdown 表示、CLI parse error、stdout/stderr の出し分け、doctor preprocess、pre-log check、subcommand log の記録条件を確認・変更する時。
+- FileAccessMode、Codex sandbox profile、追加 writable/read path の許可・拒否、oracle や realization の書き込み境界を確認・変更する時。
+- session/apply branch 名から session id を読む処理、branch state 読み込み、binary 判定、duration 表示など basic runtime の共通契約に関わる回帰を確認する時。
 
 ## Do not read this when
-- 特定サブコマンドの業務ロジック、入出力 schema、プロンプト構築、または agent orchestration の詳細だけを確認したい場合は、それぞれのサブコマンドや機能別 test を読む。
-- oracle file の正本仕様本文、INDEX.md 生成規則、または文書構成そのものを確認したい場合は、oracle/doc や oracle/src 側の該当本文を読む。
-- runtime ではなく個別 helper の純粋な単体挙動だけを変更する場合は、その helper に対応するより小さい test があればそちらを優先する。
+- 個別サブコマンド固有の business logic、入出力、永続状態だけを確認したい時は、そのサブコマンドの専用テストを先に読む。
+- oracle file の正本仕様そのものを確認・編集したい時は、対応する oracle doc/src/test を読む。
+- テスト helper や repo fixture の実装だけを調べたい時は、共通 test support 側を直接読む。
+- INDEX.md エントリー生成やルーティング文書の規則だけを確認したい時は、この runtime 回帰テストではなく該当する routing/index standard を読む。
 
 ## hash
-- fcd91cadb5a6d07b7e8163b0dd8cad889724de2bb9a08c92b74785841c154375
+- f54c0903bd892db1b8c77edbf2d93d01e367959cebacb4ff8ebb4dda97f2e33d
 
 # `test_cli_tui.py`
 
