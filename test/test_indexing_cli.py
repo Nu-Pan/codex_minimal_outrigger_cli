@@ -237,7 +237,7 @@ def test_indexing_preflight_in_apply_worktree_uses_repo_config(
     assert seen_models
     assert set(seen_models) == {custom_model}
     assert (apply_worktree / "INDEX.md").is_file()
-    assert (apply_worktree / ".cmoc" / "config.json").is_file()
+    assert not (apply_worktree / ".cmoc" / "config.json").exists()
 
 
 def test_indexing_skips_codex_when_existing_hashes_are_fresh(

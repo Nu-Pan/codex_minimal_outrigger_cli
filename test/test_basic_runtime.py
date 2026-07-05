@@ -470,6 +470,7 @@ def test_ensure_cmoc_ignored_updates_gitignore(tmp_path: Path) -> None:
 
     ensure_cmoc_ignored(root)
 
+    assert "/.cmoc/" in (root / ".gitignore").read_text()
     assert "/.cmoc/local/" in (root / ".gitignore").read_text()
     ignored = subprocess.run(
         ["git", "check-ignore", "-q", ".cmoc/local/.__cmoc_ignore_probe__"],

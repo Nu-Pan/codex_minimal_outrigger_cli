@@ -168,10 +168,14 @@ def test_apply_fork_ensures_cmoc_ignore_without_dirtying_session(
     run_git(root, "commit", "-m", "stop ignoring cmoc in gitignore")
     exclude = root / ".git" / "info" / "exclude"
     exclude.write_text(
-        "\n".join(line for line in exclude.read_text().splitlines() if line != "/.cmoc/local/")
+        "\n".join(
+            line
+            for line in exclude.read_text().splitlines()
+            if line not in {"/.cmoc/", "/.cmoc/local/"}
+        )
         + "\n"
     )
-    assert run_git(root, "status", "--short").stdout.strip() == "?? .cmoc/local/"
+    assert run_git(root, "status", "--short").stdout.strip() == "?? .cmoc/"
 
     class FakeCodexResult:
         output_json = {"findings": []}
@@ -380,10 +384,10 @@ def test_apply_fork_target_normalization_excludes_non_realization_paths(
     ]
 
 
-def test_apply_fork_target_normalization_keeps_tracked_cmoc_config(
+def test_apply_fork_target_normalization_excludes_cmoc_runtime_files(
     tmp_path: Path,
 ) -> None:
-    """realization file 定義上、tracked な .cmoc 配下 file は対象に残す。"""
+    """作業用状態領域の .cmoc 配下 file は対象にしない。"""
     root = make_repo(tmp_path)
     config_target = root / ".cmoc" / "config.json"
     ignored_local_target = root / ".cmoc" / "local" / "cache.json"
@@ -400,7 +404,7 @@ def test_apply_fork_target_normalization_keeps_tracked_cmoc_config(
         {config_target, ignored_local_target},
     )
 
-    assert targets == [config_target.resolve()]
+    assert targets == []
 
 
 def test_apply_fork_target_normalization_keeps_binary_files(

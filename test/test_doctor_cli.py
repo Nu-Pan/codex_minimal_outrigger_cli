@@ -46,7 +46,11 @@ def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
     committed_paths = run_git(root, "show", "--name-only", "--format=", "HEAD").stdout
     assert ".gitignore" in committed_paths
     assert ".agents/.gitkeep" in committed_paths
-    assert ".cmoc/config.json" in committed_paths
+    assert ".cmoc/config.json" not in committed_paths
+    assert run_git(root, "ls-files", "--", ".cmoc").stdout.strip() == ""
+    assert (
+        run_git(root, "check-ignore", "-q", ".cmoc/config.json").returncode == 0
+    )
 
 
 def test_doctor_pulls_each_unique_cmoc_provider_model(
@@ -119,6 +123,22 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
     }
     assert data["codex"]["reasoning_effort"]["low"] == "low"
     assert data["apply_fork"]["num_apply_files"] == 200
+
+
+def test_doctor_preprocess_untracks_existing_cmoc_files(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    config_path = root / ".cmoc" / "config.json"
+    write_config(config_path, CmocConfig())
+    run_git(root, "add", "-f", ".cmoc/config.json")
+    run_git(root, "commit", "-m", "track old cmoc config")
+    monkeypatch.chdir(root)
+
+    run_doctor(root)
+
+    assert run_git(root, "ls-files", "--", ".cmoc").stdout.strip() == ""
+    assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
 def test_doctor_repair_commit_does_not_include_preexisting_staged_changes(

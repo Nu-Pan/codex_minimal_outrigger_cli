@@ -300,7 +300,6 @@ def test_session_abandon_requires_existing_home_branch(
     run_git(root, "add", ".gitignore")
     run_git(root, "add", "-f", ".cmoc/tracked-probe")
     run_git(root, "commit", "-m", "track cmoc probe on session")
-    tracked_cmoc = run_git(root, "ls-files", "--", ".cmoc").stdout
     run_git(root, "branch", "-D", home_branch)
     run_git(root, "tag", home_branch, home_commit)
 
@@ -323,7 +322,7 @@ def test_session_abandon_requires_existing_home_branch(
         == 0
     )
     assert "/.cmoc/local/" in gitignore.read_text().splitlines()
-    assert run_git(root, "ls-files", "--", ".cmoc").stdout == tracked_cmoc
+    assert run_git(root, "ls-files", "--", ".cmoc").stdout == ""
 
 
 def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
@@ -349,7 +348,6 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     run_git(root, "add", ".gitignore")
     run_git(root, "add", "-f", ".cmoc/tracked-probe")
     run_git(root, "commit", "-m", "track cmoc probe on session")
-    tracked_cmoc = run_git(root, "ls-files", "--", ".cmoc").stdout
     original_delete_branch = session_module.delete_branch
 
     def fake_delete_branch(root: Path, branch: str, force: bool = False) -> None:
@@ -375,7 +373,7 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     state = json.loads(state_path.read_text())
     assert state["session"]["state"] == "active"
     assert "/.cmoc/local/" in gitignore.read_text().splitlines()
-    assert run_git(root, "ls-files", "--", ".cmoc").stdout == tracked_cmoc
+    assert run_git(root, "ls-files", "--", ".cmoc").stdout == ""
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 

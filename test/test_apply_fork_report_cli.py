@@ -461,7 +461,9 @@ def test_apply_fork_converges_when_last_allowed_target_has_no_findings(
         runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
     )
     (root / "README.md").write_text("# changed\n")
-    run_git(root, "add", "README.md")
+    (root / "src").mkdir()
+    (root / "src" / "app.py").write_text("value = 1\n")
+    run_git(root, "add", "README.md", "src/app.py")
     run_git(root, "commit", "-m", "change readme")
     config_path = root / ".cmoc" / "config.json"
     config = json.loads(config_path.read_text())

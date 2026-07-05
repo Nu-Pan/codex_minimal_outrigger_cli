@@ -9,6 +9,7 @@ from commons.runtime_results import CommandResult
 
 MANAGED_BRANCH_PREFIXES = ("cmoc/session/", "cmoc/apply/", "cmoc/run/")
 CMOC_IGNORE_PATTERN = "/.cmoc/local/"
+CMOC_TREE_IGNORE_PATTERN = "/.cmoc/"
 CMOC_IGNORE_PROBE = ".cmoc/local/.__cmoc_ignore_probe__"
 
 
@@ -51,7 +52,7 @@ def head_commit(root: Path) -> str:
 def require_clean_worktree(root: Path, status: str | None = None) -> None:
     """未コミット差分を許容しない操作の事前条件を共通化する。"""
     if status is None:
-        status = _status_without_cmoc_runtime_files(root)
+        status = _git_status_short(root)
     if status:
         raise CmocError(
             "git 未コミット差分が存在します。",
@@ -60,23 +61,9 @@ def require_clean_worktree(root: Path, status: str | None = None) -> None:
         )
 
 
-def _status_without_cmoc_runtime_files(root: Path) -> str:
-    """cmoc runtime 管理ファイルを除外した porcelain status を返す。"""
-    lines = run_git(["status", "--short"], root).stdout.splitlines()
-    visible = [
-        line
-        for line in lines
-        if _status_line_path(line) != ".cmoc/config.json"
-    ]
-    return "\n".join(visible).strip()
-
-
-def _status_line_path(line: str) -> str:
-    """`git status --short` の主 path を取り出す。"""
-    path = line[3:] if len(line) > 3 else ""
-    if " -> " in path:
-        path = path.split(" -> ", 1)[1]
-    return path
+def _git_status_short(root: Path) -> str:
+    """porcelain status を返す。"""
+    return run_git(["status", "--short"], root).stdout.strip()
 
 
 def is_managed_branch(branch: str) -> bool:
@@ -177,8 +164,8 @@ def _main_worktree_root(root: Path) -> Path:
 
 
 def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
-    """.cmoc/local の追跡有無と ignore 判定を同じ probe で取得する。"""
-    tracked = run_git(["ls-files", "--", ".cmoc/local"], root).stdout.strip()
+    """.cmoc の追跡有無と .cmoc/local の ignore 判定を取得する。"""
+    tracked = run_git(["ls-files", "--", ".cmoc"], root).stdout.strip()
     ignored = run_git(
         ["check-ignore", "-q", CMOC_IGNORE_PROBE],
         root,
@@ -190,15 +177,25 @@ def _cmoc_ignore_status(root: Path) -> tuple[str, int]:
 def with_cmoc_ignore_pattern(content: str) -> str:
     """既存の末尾改行を崩さず .cmoc ignore pattern を追加する。"""
     lines = content.splitlines()
-    if CMOC_IGNORE_PATTERN in lines:
+    patterns = []
+    if not _has_cmoc_tree_ignore(lines):
+        patterns.append(CMOC_TREE_IGNORE_PATTERN)
+    if CMOC_IGNORE_PATTERN not in lines:
+        patterns.append(CMOC_IGNORE_PATTERN)
+    if not patterns:
         return content
     separator = "\n" if lines and lines[-1] != "" else ""
     newline = "" if content == "" or content.endswith("\n") else "\n"
-    return f"{content}{newline}{separator}{CMOC_IGNORE_PATTERN}\n"
+    added = "\n".join(patterns)
+    return f"{content}{newline}{separator}{added}\n"
+
+
+def _has_cmoc_tree_ignore(lines: list[str]) -> bool:
+    return CMOC_TREE_IGNORE_PATTERN in lines or ".cmoc/" in lines
 
 
 def ensure_cmoc_ignored(root: Path) -> None:
-    """.gitignore と index を更新できる場面で .cmoc/local を追跡対象外にする。"""
+    """.gitignore と index を更新できる場面で .cmoc を追跡対象外にする。"""
     tracked, ignored_returncode = _cmoc_ignore_status(root)
     gitignore = root / ".gitignore"
     content = gitignore.read_text() if gitignore.exists() else ""
@@ -220,7 +217,7 @@ def ensure_cmoc_ignored(root: Path) -> None:
 
 
 def ensure_cmoc_ignored_in_exclude(root: Path) -> None:
-    """clean worktree を保つ必要がある caller 用に git exclude で .cmoc/local ignore を保証する。
+    """clean worktree を保つ必要がある caller 用に git exclude で .cmoc ignore を保証する。
 
     根拠:
     - <work-root>/oracle/doc/app_spec/sub_command/session_fork.md
@@ -230,10 +227,10 @@ def ensure_cmoc_ignored_in_exclude(root: Path) -> None:
         ["rev-parse", "--git-path", "info/exclude"], root
     ).stdout.strip()
     content = exclude_path.read_text() if exclude_path.exists() else ""
-    if CMOC_IGNORE_PATTERN not in content.splitlines():
+    updated_content = with_cmoc_ignore_pattern(content)
+    if updated_content != content:
         exclude_path.parent.mkdir(parents=True, exist_ok=True)
-        newline = "" if content == "" or content.endswith("\n") else "\n"
-        exclude_path.write_text(f"{content}{newline}{CMOC_IGNORE_PATTERN}\n")
+        exclude_path.write_text(updated_content)
     tracked, ignored_returncode = _cmoc_ignore_status(root)
     if tracked or ignored_returncode != 0:
         raise CmocError(

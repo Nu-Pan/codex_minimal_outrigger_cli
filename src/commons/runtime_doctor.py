@@ -51,17 +51,50 @@ def _ensure_agents_tracked(root: Path) -> None:
 
 
 def _commit_doctor_repairs(root: Path) -> None:
-    repair_paths = [".gitignore", ".agents/.gitkeep", ".cmoc/config.json"]
+    add_paths = [".gitignore", ".agents/.gitkeep"]
     # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
-    # `.cmoc/` 全体が ignored でも、修復した config は commit 対象に保つ。
-    run_git(["add", "-f", "--", *repair_paths], root)
-    diff = run_git(
-        ["diff", "--cached", "--quiet", "--", *repair_paths],
-        root,
-        check=False,
-    )
-    if diff.returncode == 1:
-        run_git(["commit", "-m", "cmoc doctor preprocess", "--", *repair_paths], root)
+    # .cmoc 配下は runtime 状態領域なので、生成した config も追跡対象へ戻さない。
+    run_git(["add", "-f", "--", *add_paths], root)
+    staged_paths = run_git(["diff", "--cached", "--name-only"], root).stdout.splitlines()
+    commit_paths = [
+        path
+        for path in staged_paths
+        if path in add_paths or path.startswith(".cmoc/")
+    ]
+    if commit_paths:
+        _commit_staged_paths_preserving_others(root, commit_paths)
+
+
+def _commit_staged_paths_preserving_others(root: Path, commit_paths: list[str]) -> None:
+    staged_paths = run_git(["diff", "--cached", "--name-only"], root).stdout.splitlines()
+    commit_path_set = set(commit_paths)
+    other_paths = [path for path in staged_paths if path not in commit_path_set]
+    other_patch = ""
+    if other_paths:
+        other_patch = run_git(
+            ["diff", "--cached", "--binary", "--", *other_paths],
+            root,
+        ).stdout
+        run_git(["reset", "-q", "HEAD", "--", *other_paths], root)
+    try:
+        # Pathspec commit would read tracked .cmoc files from the working tree and
+        # re-add them, so isolate the index and commit the staged repair as-is.
+        run_git(["commit", "-m", "cmoc doctor preprocess"], root)
+    finally:
+        if other_patch:
+            result = subprocess.run(
+                ["git", "apply", "--cached"],
+                cwd=root,
+                input=other_patch,
+                text=True,
+                capture_output=True,
+            )
+            if result.returncode != 0:
+                raise CmocError(
+                    "doctor preprocess 前の staged 差分を復元できませんでした。",
+                    ["git index の状態を確認してください。"],
+                    f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}",
+                )
 
 
 def _ensure_ollama_serves_local_slm(
