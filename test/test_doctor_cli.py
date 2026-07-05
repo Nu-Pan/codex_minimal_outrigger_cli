@@ -185,6 +185,27 @@ def test_doctor_repair_commit_does_not_include_preexisting_staged_changes(
     ]
 
 
+def test_doctor_repair_commit_does_not_include_preexisting_staged_gitignore(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    gitignore = root / ".gitignore"
+    gitignore.write_text("human-rule\n")
+    run_git(root, "add", ".gitignore")
+    monkeypatch.chdir(root)
+
+    run_doctor(root)
+
+    committed_gitignore = run_git(root, "show", "HEAD:.gitignore").stdout
+    assert "human-rule" not in committed_gitignore
+    assert "/.cmoc/local/" in committed_gitignore
+    assert gitignore.read_text() == "human-rule\n\n/.cmoc/\n/.cmoc/local/\n"
+    assert run_git(root, "diff", "--cached", "--name-only").stdout.splitlines() == [
+        ".gitignore"
+    ]
+    assert "human-rule" in run_git(root, "diff", "--cached").stdout
+
+
 def test_prepare_local_slm_profile_runs_doctor_when_port_is_missing(
     tmp_path: Path, monkeypatch
 ) -> None:
