@@ -159,11 +159,13 @@ def _write_fake_systemctl(path: Path, home: Path) -> None:
             import signal
             import subprocess
             import sys
+            import tempfile
             from pathlib import Path
 
             home = Path({str(home)!r})
             service = home / ".config" / "systemd" / "user" / "cmoc-ollama.service"
             pid_path = home / ".cmoc" / "ollama" / "service.pid"
+            global_pid_path = Path(tempfile.gettempdir()) / "cmoc-fake-ollama-service.pid"
 
             args = sys.argv[1:]
             if args[:1] == ["--user"]:
@@ -183,9 +185,15 @@ def _write_fake_systemctl(path: Path, home: Path) -> None:
                         raise SystemExit(0)
                     except OSError:
                         pass
+                if global_pid_path.exists():
+                    try:
+                        os.kill(int(global_pid_path.read_text()), signal.SIGTERM)
+                    except OSError:
+                        pass
                 process = subprocess.Popen(argv, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
                 pid_path.parent.mkdir(parents=True, exist_ok=True)
                 pid_path.write_text(str(process.pid))
+                global_pid_path.write_text(str(process.pid))
                 raise SystemExit(0)
             if args == ["is-active", "--quiet", "cmoc-ollama"]:
                 if not pid_path.exists():

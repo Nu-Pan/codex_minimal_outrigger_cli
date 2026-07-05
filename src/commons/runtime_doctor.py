@@ -340,7 +340,8 @@ def _verify_ollama_service(executable: Path) -> None:
             [f"systemctl --user status {_OLLAMA_SERVICE_NAME} を確認してください。"],
             f"service: {_OLLAMA_SERVICE_NAME}",
         )
-    if not _service_process_matches(executable):
+    main_pid = _service_main_pid()
+    if main_pid is None or not _process_argv_uses_executable(main_pid, executable):
         raise CmocError(
             "127.0.0.1:11434 の ollama service が cmoc managed ollama と一致しません。",
             [
@@ -349,10 +350,20 @@ def _verify_ollama_service(executable: Path) -> None:
             f"expected executable: {executable}",
         )
     deadline = time.monotonic() + _OLLAMA_START_TIMEOUT_SEC
+    listener_matched = False
     while time.monotonic() < deadline:
-        if _ollama_http_ok():
+        listener_matched = _listener_matches_service(main_pid, executable)
+        if listener_matched and _ollama_http_ok():
             return
         time.sleep(0.2)
+    if not listener_matched:
+        raise CmocError(
+            "127.0.0.1:11434 の ollama service が cmoc managed ollama と一致しません。",
+            [
+                f"systemctl --user restart {_OLLAMA_SERVICE_NAME} を実行してから再試行してください。"
+            ],
+            f"expected executable: {executable}",
+        )
     raise CmocError(
         "cmoc managed ollama へ接続できませんでした。",
         [
@@ -369,29 +380,29 @@ def _service_active() -> bool:
     )
 
 
-def _service_process_matches(executable: Path) -> bool:
+def _service_main_pid() -> int | None:
     pid_result = _run_systemctl(
         ["show", _OLLAMA_SERVICE_NAME, "--property=MainPID", "--value"]
     )
     if pid_result.returncode != 0:
-        return _service_file_matches(executable)
+        return None
     try:
         process_id = int(pid_result.stdout.strip())
     except ValueError:
-        return _service_file_matches(executable)
-    if process_id <= 0:
-        return _service_file_matches(executable)
-    return _process_argv_uses_executable(process_id, executable) or _service_file_matches(
-        executable
-    )
+        return None
+    return process_id if process_id > 0 else None
 
 
-def _service_file_matches(executable: Path) -> bool:
-    try:
-        lines = _ollama_service_file().read_text().splitlines()
-    except OSError:
-        return False
-    return f"ExecStart={executable} serve" in lines
+def _listener_matches_service(main_pid: int, executable: Path) -> bool:
+    # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
+    # service file は設定の正しさだけを示すため、11434 の現 listener を
+    # /proc で MainPID 系列の cmoc managed ollama process と直接対応付ける。
+    for process_id in _ollama_listener_process_ids():
+        if _process_is_descendant(process_id, main_pid) and _process_argv_uses_executable(
+            process_id, executable
+        ):
+            return True
+    return False
 
 
 def _process_argv_uses_executable(process_id: int, executable: Path) -> bool:
@@ -401,6 +412,75 @@ def _process_argv_uses_executable(process_id: int, executable: Path) -> bool:
         return False
     argv = [item.decode(errors="replace") for item in raw.split(b"\0") if item]
     return str(executable) in argv[:2]
+
+
+def _ollama_listener_process_ids() -> set[int]:
+    inodes = _listening_socket_inodes()
+    if not inodes:
+        return set()
+    process_ids: set[int] = set()
+    for process_dir in Path("/proc").iterdir():
+        if not process_dir.name.isdigit():
+            continue
+        fd_dir = process_dir / "fd"
+        try:
+            fds = list(fd_dir.iterdir())
+        except OSError:
+            continue
+        for fd in fds:
+            try:
+                target = os.readlink(fd)
+            except OSError:
+                continue
+            if target.startswith("socket:[") and target[8:-1] in inodes:
+                process_ids.add(int(process_dir.name))
+                break
+    return process_ids
+
+
+def _listening_socket_inodes() -> set[str]:
+    inodes: set[str] = set()
+    for table in (Path("/proc/net/tcp"), Path("/proc/net/tcp6")):
+        try:
+            lines = table.read_text().splitlines()[1:]
+        except OSError:
+            continue
+        for line in lines:
+            fields = line.split()
+            if len(fields) > 9 and _is_ollama_listen_socket(fields[1], fields[3]):
+                inodes.add(fields[9])
+    return inodes
+
+
+def _is_ollama_listen_socket(local_address: str, state: str) -> bool:
+    if state != "0A":
+        return False
+    host_hex, port_hex = local_address.rsplit(":", 1)
+    return host_hex == "0100007F" and int(port_hex, 16) == 11434
+
+
+def _process_is_descendant(process_id: int, ancestor_id: int) -> bool:
+    seen: set[int] = set()
+    while process_id > 0 and process_id not in seen:
+        if process_id == ancestor_id:
+            return True
+        seen.add(process_id)
+        process_id = _process_parent_id(process_id)
+    return False
+
+
+def _process_parent_id(process_id: int) -> int:
+    try:
+        stat = Path(f"/proc/{process_id}/stat").read_text()
+    except OSError:
+        return 0
+    tail = stat.rsplit(") ", 1)[-1].split()
+    if len(tail) < 2:
+        return 0
+    try:
+        return int(tail[1])
+    except ValueError:
+        return 0
 
 
 def _ollama_http_ok() -> bool:
