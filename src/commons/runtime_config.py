@@ -67,6 +67,7 @@ def _model_spec_map_from_dict(
     default: dict[ModelClass, CodexModelSpec],
     data: Any,
 ) -> dict[ModelClass, CodexModelSpec]:
+    """JSON 由来の model spec map を正本 enum key と設定型へ戻す。"""
     restored = dict(default)
     if not isinstance(data, dict):
         raise TypeError
@@ -88,6 +89,7 @@ def _model_spec_map_from_dict(
 
 
 def _section(data: dict[str, Any], key: str) -> dict[str, Any]:
+    """省略可能な config section を、型検証済み dict として取り出す。"""
     if key not in data:
         return {}
     value = data[key]
@@ -97,6 +99,7 @@ def _section(data: dict[str, Any], key: str) -> dict[str, Any]:
 
 
 def _int_value(data: dict[str, Any], key: str, default: int) -> int:
+    """JSON の bool 混入を拒否しつつ int config 値を復元する。"""
     value = data.get(key, default)
     # `<work-root>/oracle/src/oracle/other/cmoc_config.py` defines these as
     # int fields; JSON bool/string values are human edit errors, not numbers.

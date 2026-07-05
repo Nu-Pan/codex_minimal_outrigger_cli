@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+from click.testing import Result
 from typer.testing import CliRunner
 
 runner = CliRunner()
@@ -105,7 +106,7 @@ def write_python_executable(path: Path, lines: list[str]) -> None:
     path.chmod(0o755)
 
 
-def run_doctor(root: Path):
+def run_doctor(root: Path) -> Result:
     """Run doctor with fake managed Ollama/systemctl commands."""
     from main import app
 
@@ -115,7 +116,7 @@ def run_doctor(root: Path):
     return result
 
 
-def run_init(root: Path):
+def run_init(root: Path) -> Result:
     """Run init with fake managed Ollama/systemctl commands."""
     from main import app
 
