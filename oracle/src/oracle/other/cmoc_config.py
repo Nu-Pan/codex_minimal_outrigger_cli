@@ -55,10 +55,7 @@ class CodexModelSpec:
     #   いわば未指定 (default)
     # cmoc:
     #   cmoc managed ollama を使う
-    # その他:
-    #   `127.0.0.1:11434` のような <host>:<port> 形式で、
-    #   external model provider の直接指定を受け付ける。
-    model_provider: Literal["codex", "cmoc"] | str
+    model_provider: Literal["codex", "cmoc"]
 
     # モデル名
     model: str
