@@ -101,24 +101,27 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様断片を置く領域。自然言語仕様、agent call の入力契約・プロンプト・設定・パスなど、realization file が従う人間意図の確認入口になる。
-- 外部仕様や横断仕様を自然言語文書から探す場合と、AI agent call や共通規範プロンプトなどの基礎概念を実装形式の正本仕様断片から探す場合の分岐点になる。
+- cmoc の正本仕様断片を集めた領域。自然言語の仕様・設計判断・開発規則と、agent call parameter や prompt 構築などの横断的な正本実装断片への入口になる。
+- realization の実装差を避けたい利用者向け挙動、作業隔離モデル、branch/worktree の意味、AI agent call の入力契約・出力契約、共通補助概念の根拠を探すために読む。
 
 ## Read this when
-- cmoc の実装・テストを始める前に、正本仕様断片から読むべき領域を選びたいとき。
-- CLI 挙動、サブコマンド、状態遷移、ログ、エラー処理、Codex CLI 連携などの外部仕様や横断仕様を確認したいとき。
-- session fork/join、run worktree、managed branch など、cmoc の git branch・commit・worktree モデルを確認したいとき。
-- Python 実装、CLI 構成、開発環境、pytest を中心としたテスト規約など、realization code や realization test の書き方に関わる正本仕様断片を確認したいとき。
-- AI agent call のパラメータ、Structured Output schema、モデル設定、ファイルアクセス権限、preflight、共通規範プロンプト、リポジトリ別設定、パスプレースホルダなどの基礎概念を確認したいとき。
+- cmoc の実装・テスト・設計判断について、正本仕様断片から根拠を確認したいとき。
+- CLI 挙動、LLM 実行、補完、ログ、doctor preprocess、indexing、run 隔離、session state、managed ollama、外部 provider、サブコマンド仕様などのアプリケーション仕様へ進みたいとき。
+- session fork/join、apply/review などの run が扱う branch、commit、worktree、managed branch の意味や命名規則を確認したいとき。
+- AI agent call に渡す prompt、Structured Output schema、モデル設定、reasoning effort、cwd、ファイルアクセス権限、preflight 設定を確認したいとき。
+- agent call 用プロンプトの構築順序、静的部分と動的部分の分離、ファイルアクセス規則や各種標準文書の注入方法を確認したいとき。
+- リポジトリ別設定、ルートパスプレースホルダ、正本文書モデル、Markdown レンダリング helper など、複数の realization 実装が参照する横断的な正本実装断片を探すとき。
+- 過去に不採用となった設計案の背景や、Python 実装、CLI 構成、開発環境、pytest を中心とした realization code/test の開発規則を確認したいとき。
 
 ## Do not read this when
-- 正本仕様断片ではなく、現在の realization implementation や realization test の具体的なコード本文だけを調べたいとき。
-- oracle file と realization file の一般的な責務境界、編集責任、INDEX.md エントリー作成規則だけを確認したいとき。
-- パスキーワードの定義そのものだけを確認したいとき。
-- 採用済み仕様ではなく、実装上の関数、クラス、内部 helper、テスト構造を直接調べたいとき。
+- 実装ファイルの内部構造、既存関数、テスト配置、CLI 引数処理、branch 操作、diff 取得、merge 実行、保存処理、表示整形など、具体的な realization code の詳細だけを調べたいとき。
+- バックエンド API へ送る実際のリクエスト形式、具体的なモデル名解決、agent CLI 実行処理など、realization implementation 側の詳細を調べたいとき。
+- oracle file と realization file の一般的な定義、責務境界、編集権限、品質基準、INDEX.md エントリー生成規則だけを確認したいとき。
+- パスキーワードやルート種別の定義だけを確認したいとき。
+- 特定の正本仕様断片や対象機能が既に分かっているときは、この領域全体ではなく該当する下位領域または個別仕様を直接読む。
 
 ## hash
-- d6bca67183766fdd91f227ce006e85a31474238beb83b6c7482690c59e49b7aa
+- 7babc2bcc409e185cd0920f4c139b17794f65c80bda44b275f828a4d54f905e1
 
 # `pyproject.toml`
 

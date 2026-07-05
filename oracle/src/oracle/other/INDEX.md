@@ -1,40 +1,21 @@
 # `cmoc_config.py`
 
 ## Summary
-- cmoc のリポジトリ別設定を集約する `CmocConfig` と、その配下の Codex CLI、apply fork、review oracle 向け設定クラスを定義する oracle src。設定の永続化先、人間編集対象であること、Enum 系値の JSON 保存時の扱い、各サブコマンドの実行予算やモデル指定の正本断片を扱う。
+- cmoc のリポジトリ別設定を表す正本実装断片で、永続化先、JSON 保存時の Enum value 化、`cmoc init` による生成・同期、人間編集対象であることを定義する。
+- AI エージェント呼び出し、Codex CLI のモデル・reasoning effort 対応、ファイルアクセス規則違反時の recovery 試行回数、`cmoc apply fork` と `cmoc review oracle` のループ上限設定を集約する。
 
 ## Read this when
-- cmoc の設定項目、既定値、永続化先、人間編集可能な設定ファイルの扱いを確認したいとき。
-- Codex CLI に渡すモデル、reasoning effort、model provider、ファイルアクセス規則違反時のリカバリ回数に関する仕様断片を確認したいとき。
-- `cmoc apply fork` や `cmoc review oracle` のループ回数・処理件数など、リポジトリごとに変わりうる実行予算設定を扱うとき。
-- Enum 系の設定値を JSON へ保存する際の value 化など、設定のシリアライズ方針を確認したいとき。
+- リポジトリごとに変わりうる cmoc 設定の責務、永続化先、生成・同期・編集主体を確認したいとき。
+- `CmocConfig` またはその下位設定クラスに対応する実装・生成処理・JSON 変換処理を扱うとき。
+- Codex CLI に渡すモデル名、model provider、reasoning effort、並列数、各サブコマンドの処理上限やループ予算の正本値を確認したいとき。
 
 ## Do not read this when
-- 設定値を読み書きする実装コードや JSON 変換処理そのものを探しているだけで、正本仕様断片の確認が不要なとき。
-- パス概念一般、work-root や repo-root の定義を確認したいとき。
-- Codex CLI 呼び出し全体のプロンプト構築、agent call orchestration、モデルクラスや reasoning effort 自体の定義を確認したいとき。
+- パスキーワードや `<repo-root>` などのパスモデル自体を確認したいだけのとき。
+- 設定値をどう CLI 引数へ反映するか、または `.cmoc/config.json` を実際に読み書きする realization implementation の詳細だけを確認したいとき。
+- `cmoc apply fork` や `cmoc review oracle` のサブコマンド全体の仕様・制御フローを確認したいとき。
 
 ## hash
-- 273608bef07480763b0eaf32bd644b1ec2901f3430f15a9453edf4bb90c6d2b4
-
-# `cmoc_managed_ollama.py`
-
-## Summary
-- cmoc 設定で model_provider が cmoc のモデルがある場合に、cmoc 管理の Ollama を利用可能にするための手順を置く実装断片。
-- Ollama の取得・展開、ユーザー systemd service の定義、サービス起動確認、API 疎通確認、対象モデルの pull までの流れを扱う。
-
-## Read this when
-- cmoc 管理の Ollama を準備する処理、起動方式、systemd user service、OLLAMA_HOST・OLLAMA_MODELS の扱いを確認したいとき。
-- cmoc 設定内のモデル指定から Ollama を必要とするか判定する処理を確認したいとき。
-- cmoc provider のモデルをローカル Ollama へインストールする流れを実装・検討するとき。
-
-## Do not read this when
-- Codex や cmoc 設定構造そのものを確認したいだけのとき。
-- Ollama 以外の model_provider や外部 API provider の接続処理を調べたいとき。
-- パス表記や struct doc の文字列整形 helper の定義を確認したいとき。
-
-## hash
-- e545328ae1911e5803298068794f35bd0a134c34a762894dcf8e352d2a3e3849
+- f8dd1cdef7a041b5333280cf0b3f6c5dc8d3c2a290005db5818c68bb7d153e65
 
 # `path_model.py`
 

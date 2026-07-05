@@ -17,6 +17,23 @@
 ## hash
 - 480051b6d39bcaaf30039ef43ae1a8853e51bcadc27cd83c7c39a44cf76ef3c4
 
+# `cmoc_managed_ollama.md`
+
+## Summary
+- cmoc が設定に応じてローカルの ollama を管理起動し、Codex CLI の model provider として SLM を提供する仕様断片。サービス起動、archive 展開先、モデル配置先、Codex profile の provider 設定、doctor preprocess での起動条件を扱う。
+
+## Read this when
+- cmoc managed ollama を使う条件、検証項目、起動タイミングを確認したいとき。
+- ollama archive の取得元、展開先、systemd user service の設定場所、モデル pull 先を実装・確認するとき。
+- Codex CLI に渡す provider 設定や、組み込み ollama provider ID・`--oss`・`--local-provider` へ依存しない方針を確認するとき。
+
+## Do not read this when
+- 外部 model provider 全般や CodexModelSpec 全体の構造だけを確認したいとき。
+- ollama 以外のローカル実行基盤や、cmoc managed ollama に関係しない doctor 処理を調べるとき。
+
+## hash
+- d00f46736cf86dc386854167deb00591c0deedadc75687202bcef6f333f1074c
+
 # `codex_exec_rule.md`
 
 ## Summary
@@ -66,24 +83,24 @@
 # `doctor_preprocess.md`
 
 ## Summary
-- 各サブコマンドの本命処理前に共通実行される doctor preprocess の正本仕様断片。実行環境の検証・可能な修復・修復不能時のエラー終了を扱い、共通前提条件とサブコマンド固有前提条件の責務境界を定める。
-- git ignore 対象にすべきローカル状態領域、追跡対象として維持すべき agent 操作禁止領域、cmoc managed ollama、external model provider、preprocess 後の commit について、検証・修復・完了判定の入口となる。
+- 各サブコマンドの本命処理前に共通実行される doctor preprocess の正本仕様断片。リポジトリ状態の検証・可能な修復・修復不能時のエラー終了を扱い、サブコマンド固有の事前条件検証とは責務を分ける。
+- .cmoc/local の git ignore 保証、.agents の git 追跡保証、cmoc managed ollama の利用可能性保証、これらの修復差分の commit までの実行順序を定める。
 
 ## Read this when
-- サブコマンド開始前に必ず走る共通前処理の順序、責務範囲、失敗時挙動を確認したいとき。
-- ローカル状態領域を git 追跡対象外に保つ処理、gitignore への追加、tracked file の index 除外、ignore 判定 probe の扱いを実装・テストするとき。
-- agent 操作禁止領域をあらかじめ git 追跡対象にする処理、空ディレクトリ用ファイルの作成、git index 追加、tracked file 存在確認を実装・テストするとき。
-- cmoc managed ollama や external model provider の利用可能性確認を、共通前処理としてどこまで行うか判断するとき。
-- doctor preprocess が行った修復差分を commit するタイミングを確認したいとき。
+- 各サブコマンド実行前に共通で走る検証・修復処理の仕様を確認するとき。
+- .cmoc/local を git 追跡対象外に保つ処理、.gitignore 追記、git index からの除外、完了判定の条件を実装・テストするとき。
+- .agents を存在させ、空ディレクトリ時の保持ファイルを含めて git 追跡対象にする処理を実装・テストするとき。
+- doctor preprocess がどの時点でエラー終了すべきか、また修復後の差分を commit する流れを確認するとき。
+- cmoc managed ollama の利用可能性保証が doctor preprocess の一部であることを確認し、その詳細仕様へ進む入口を探すとき。
 
 ## Do not read this when
-- 個別サブコマンドだけに固有の事前条件や本命処理を調べたいとき。doctor preprocess 正常終了後に検証される側の仕様を読む。
-- ollama の起動・管理そのものの詳細や、ensure_cmoc_managed_ollama の内部仕様を調べたいとき。対応する実装または専用仕様を読む。
-- external model provider 側の設定方法、認証、修復手順を調べたいとき。この文書は cmoc から接続可能かの確認と、修復を諦める境界だけを扱う。
-- git の一般的な ignore や index 操作の解説を探しているとき。ここでは doctor preprocess 上必要な判定と修復条件だけを扱う。
+- 個別サブコマンド固有の事前条件、入力検証、実行本体だけを確認したいとき。
+- cmoc managed ollama 自体の詳細仕様を確認したいときは、その正本仕様を直接読む。
+- oracle file と realization file の一般的な定義や責務境界だけを確認したいとき。
+- INDEX.md エントリー生成規則やルーティング文書の一般基準だけを確認したいとき。
 
 ## hash
-- 46834efa6a54d6ae88a817ba5f6cc769b6854b2046b302acb45496a2e56494a2
+- ddfa0582cac3c3d222c5ad6bb5b90d20a6b77158a9025326c6dc822fd9b2d2d4
 
 # `error_handling.md`
 
@@ -106,6 +123,24 @@
 
 ## hash
 - bfaceea1701755cbe1f24db75ea9044ad4d4ed7dc98edef844bc94e39c3bbdf8
+
+# `external_model_provider.md`
+
+## Summary
+- 外部 LLM provider との関係を、Codex CLI への委譲を前提に定義する正本仕様断片。cmoc は provider 固有仕様を実行時制御せず、実際の model 選択・認証・接続は Codex CLI の責務として扱う境界を示す。
+
+## Read this when
+- cmoc と外部 LLM provider の責務分担を確認したいとき。
+- provider 固有の認証、接続、model 選択、API 差異を cmoc 側で扱うべきか判断したいとき。
+- Codex CLI へ委譲する外部 model 実行まわりの実装境界を確認したいとき。
+
+## Do not read this when
+- cmoc の内部 command 構成や通常の CLI 入出力を確認したいだけのとき。
+- 特定 provider の API 仕様、認証手順、model 名一覧を調べたいとき。
+- 外部 provider ではなくローカル filesystem、path model、run/work directory の扱いを確認したいとき。
+
+## hash
+- e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
 # `indexing.md`
 
@@ -152,26 +187,6 @@
 
 ## hash
 - 69c963981887477d4763539bc1d4d802043f5e3795d0dc6c923a41eab08016c7
-
-# `ollama_slm_server.md`
-
-## Summary
-- cmoc が設定有効時にローカルの ollama で SLM をサーブし、Codex CLI の model provider として利用するための正本仕様断片。ollama の起動確保、Codex profile に設定する provider 情報、codex exec へ渡さない argv、doctor preprocess での寿命管理を扱う。
-
-## Read this when
-- cmoc managed ollama を Codex CLI の model provider として設定する処理を実装・確認する時。
-- `ensure_cmoc_managed_ollama` を呼び出すタイミングや、ollama を利用可能にする責務境界を確認する時。
-- ollama への接続先、SLM 名の取得元、生成する Codex profile の provider 設定を確認する時。
-- `codex exec` 実行時に ollama 関連の argv や Codex CLI 組み込み provider への依存可否を判断する時。
-- doctor preprocess における cmoc managed ollama のインスタンス寿命管理を扱う時。
-
-## Do not read this when
-- ollama と無関係な Codex CLI 実行一般、agent call 制御、または profile 生成全体の仕様を確認したいだけの時。
-- `ensure_cmoc_managed_ollama` の内部実装詳細だけを調べたい時。
-- ローカル SLM ではない外部 model provider や通常の Codex CLI provider 設定を扱う時。
-
-## hash
-- 8cea533c20ea650f7a54c68a89d601d05ac4cbd906898fb240bc070b4e3befb6
 
 # `prompt_standard.md`
 

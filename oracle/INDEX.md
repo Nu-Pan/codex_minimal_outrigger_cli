@@ -1,44 +1,42 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様断片のうち、自然言語で書かれた文書群を集める領域。アプリケーション仕様、branch/worktree モデル、不採用設計案、開発規則など、実装前に読むべき仕様文書への入口になる。
-- 外部挙動や横断仕様、git branch と worktree の概念、開発・テスト方針、過去に退けた代替案を切り分けて確認するためのルーティング対象である。
+- cmoc の自然言語で書かれた正本仕様断片を集めた領域。アプリケーション仕様、branch/worktree モデル、不採用設計案、開発規則など、実装差を避けたい判断や利用者向け挙動、開発時の規約への入口になる。
+- 機能仕様、git 上の作業隔離モデル、設計判断の背景、realization code/test の書き方を、責務ごとの下位領域へ絞り込むために読む。
 
 ## Read this when
-- cmoc の仕様を自然言語の oracle doc から確認し、対象がアプリケーション仕様、branch/worktree モデル、開発規則、不採用設計案のどれに属するかを選びたいとき。
-- CLI 挙動、サブコマンド、状態遷移、ログ、エラー処理、Codex CLI 連携などの外部仕様や横断仕様を探すとき。
-- session fork/join、run worktree、managed branch など、cmoc の git branch・commit・worktree モデルを確認したいとき。
-- Python 実装、CLI 構成、開発環境、pytest を中心としたテスト規約など、realization code や realization test の書き方を確認したいとき。
-- 現行設計に対して、過去に不採用となった代替案やその理由を再検討したいとき。
+- cmoc の実装・テスト・設計判断で、自然言語の正本仕様断片から根拠を探したいとき。
+- CLI 挙動、LLM 実行、補完、ログ、doctor preprocess、indexing、run 隔離、session state、managed ollama、外部 provider、サブコマンド仕様などのアプリケーション仕様へ進みたいとき。
+- session fork/join、apply/review などの run が扱う branch、commit、worktree、managed branch の意味や命名規則を確認したいとき。
+- 過去に不採用となった設計案の背景や、再検討時に避けるべき理由を確認したいとき。
+- Python 実装、CLI 構成、開発環境、pytest を中心とした realization code/test の開発規則を確認したいとき。
 
 ## Do not read this when
-- 自然言語仕様ではなく、oracle src、oracle test、realization code の具体的な実装・テスト本文を確認したいとき。
-- oracle file と realization file の一般的な責務境界、編集責任、INDEX.md エントリー作成規則だけを確認したいとき。
-- `<cmoc-root>`、`<repo-root>`、`<run-root>`、`<work-root>` などのパスキーワード定義そのものだけを確認したいとき。
-- 採用済み仕様ではなく実装上の関数、クラス、内部 helper、テスト構造を直接調べたいとき。
+- oracle file と realization file の一般的な定義、責務境界、編集権限、品質基準、INDEX.md エントリー生成規則だけを確認したいとき。
+- パスキーワードやルート種別の定義だけを確認したいとき。
+- 実装ファイルの内部構造、既存関数、テスト配置、具体的な realization code の詳細だけを調べたいとき。
+- 特定の正本仕様断片や対象機能が既に分かっているときは、この領域全体ではなく該当する下位領域または個別仕様を直接読む。
 
 ## hash
-- 690fd1aca1eb642216bd1c09a5f3a860789ec5694de8c0a2e8f3ee2837e31db9
+- 2b5cf67e41557e6dbb33afb3da0d76c1658b6ca40bc8d4f037a2eb35e7e40545
 
 # `src`
 
 ## Summary
-- AI agent call のパラメータ、プロンプト構築、設定、パス、構造化文書 helper など、cmoc の基礎概念を定義する oracle src 領域。
-- agent call の入力契約・出力契約、共通規範プロンプト、リポジトリ別設定、モデル指定、ファイルアクセス権限、preflight、パスプレースホルダなどの正本仕様断片への入口。
+- cmoc の正本実装断片を扱う領域。AI agent call parameter、prompt 構築、リポジトリ設定、パス表記、規範データ構造、Markdown レンダリングなど、複数の realization 実装が参照する横断的な仕様断片への入口になる。
+- CLI サブコマンドの実行制御そのものではなく、agent call の入力契約・出力契約、共通プロンプト部品、横断的な補助概念を確認するためのまとまり。
 
 ## Read this when
-- cmoc が AI agent call をどの prompt、Structured Output schema、モデル設定、ファイルアクセス権限、preflight 設定で組み立てるか確認したいとき。
-- agent call 用の完全プロンプトが、役割、概要、ゴール、標準文書、読み書き規則、プレースホルダ定義などからどう構築されるか確認したいとき。
-- oracle standard、realization standard、review standard、apply review standard、index entry standard など、AI に注入する共通規範プロンプトの生成元を探すとき。
-- cmoc のリポジトリ別設定、モデル指定、実行予算、設定 JSON 保存方針、管理対象 Ollama に関する正本仕様断片を探すとき。
-- パスプレースホルダ、ルート探索、実パス変換、構造化 Markdown レンダリング helper など、複数領域から参照される基礎概念を確認したいとき。
+- cmoc が AI agent call に渡す prompt、Structured Output schema、モデル設定、reasoning effort、cwd、ファイルアクセス権限、preflight 設定を確認したいとき。
+- agent call 用プロンプトの構築順序、静的部分と動的部分の分離、ファイルアクセス規則や各種標準文書の注入方法を確認したいとき。
+- リポジトリ別設定、ルートパスプレースホルダ、正本文書モデル、構造化文書から Markdown へのレンダリング helper など、横断的な正本実装断片を探すとき。
+- INDEX.md エントリー生成、oracle file レビュー、fork 適用後レビュー、session join の conflict marker 解消、TUI 起動前後の agent call parameter 選定に関する正本仕様断片を確認したいとき。
 
 ## Do not read this when
-- CLI サブコマンド固有の利用者向け入出力、実行フロー、状態ファイル仕様、branch 操作、diff 取得、merge 実行などを調べたいとき。
-- バックエンド API へ送る実リクエスト形式、具体的なモデル名解決、agent CLI 実行処理など realization src 側の実装詳細を調べたいとき。
-- 個別の規範本文や生成済み Markdown 文書の意味だけを読みたいとき。
-- oracle file、realization file、INDEX.md などの管理方針そのものだけを確認したいとき。
-- 実装ファイルやテストファイルの現在構造を把握して直接修正したいだけで、agent call parameter、prompt 生成、設定、パス、文書モデルに関係しないとき。
+- CLI 引数処理、branch 操作、diff 取得、merge 実行、保存処理、表示整形など、サブコマンドの実行制御実装を直接調べたいとき。
+- oracle file と realization file の管理方針、文書品質基準、レビュー基準などの標準文書本文だけを確認したいとき。
+- バックエンド API へ送る実際のリクエスト形式、具体的なモデル名解決、agent CLI 実行処理など realization implementation 側の詳細を調べたいとき。
+- 実装ファイルやテストファイルの現在構造を把握して直接修正したいだけで、正本実装断片や prompt 生成に関係しないとき。
 
 ## hash
-- 418936a60b9acdebe4b99b30cece62d752aa59483e995e3ccd49bde5944a898a
+- 7564c7161e90ebc5984671d2f8fa985758094269a783deb5db927d6a53cfdd43
