@@ -18,20 +18,20 @@
 # `launch_tui.py`
 
 ## Summary
-- TUI 起動用の AgentCallParameter 構築を realization 側から呼び出す互換入口。oracle 側 builder へ委譲しつつ、TUI ログ配置先ディレクトリだけを実行時 path に基づいて事前作成する。
+- TUI 起動 parameter builder の realization 側互換入口。oracle 側 builder を呼び出しつつ、runtime 側で必要な TUI 用保存先 directory の存在だけを事前に保証する。
 
 ## Read this when
-- TUI 起動時に渡す AgentCallParameter の realization 側入口を確認・変更したいとき。
-- oracle 側の TUI 起動 parameter builder を realization 側からどう呼び出しているか確認したいとき。
-- TUI 起動ログ用ディレクトリの作成タイミングや runtime path 解決に関わる挙動を確認したいとき。
+- TUI 起動用の AgentCallParameter を realization 側から構築する入口を確認したいとき。
+- TUI 起動前に作成される runtime 側 directory の責務や削除条件を確認したいとき。
+- oracle 側 builder と realization 側の互換 wrapper の関係を確認したいとき。
 
 ## Do not read this when
-- TUI 起動 parameter の正本仕様や引数意味を確認したいだけの場合は、対応する oracle 側の仕様・builder を読む。
-- TUI 以外のサブコマンドの AgentCallParameter 構築を調べたい場合は、対象サブコマンドの builder へ進む。
-- ログディレクトリ全般の定義や path 解決規則を調べたい場合は、runtime path や path model の実装を直接読む。
+- AgentCallParameter の正本定義や builder 本体の仕様を確認したいときは、oracle 側の対応する builder を読む。
+- runtime path 全般の解決規則や logs directory の構成を確認したいときは、path 解決や runtime path を扱う対象を読む。
+- TUI サブコマンド全体の挙動や CLI 入口を確認したいだけなら、TUI command 側の対象を読む。
 
 ## hash
-- 432f7c77231110947806ebc091a242733ab8c1d582739cf4070dc9d43575081c
+- 060d2704d5ca8e17d8a67939fdd34a3419d9d4049d2b1c808c513409fbadf21f
 
 # `resolve_parameter.py`
 

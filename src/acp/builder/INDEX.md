@@ -127,22 +127,18 @@
 # `tui`
 
 ## Summary
-- TUI 起動用 AgentCallParameter 構築に関する旧 import 経路を維持する互換 package。
-- 正本側 builder への委譲と、既存 TUI 呼び出し向けの再公開・ログ配置先準備だけを担う。
-- realization 側と利用者向け公開面から旧参照が消えた後に削除できる互換層として位置づけられる。
+- TUI 起動・resolve parameter builder について、旧 `acp.builder.tui.*` import surface を維持するための realization 側互換層を扱うディレクトリ。
+- oracle 側 canonical builder を呼び出しまたは再公開しつつ、TUI runtime で必要な最小の補助処理や既存公開名の維持を担う。
 
 ## Read this when
-- 既存の TUI builder import 経路の互換維持、公開名、削除可否を確認する。
-- TUI 起動時に realization 側から正本側 builder をどう呼び出しているか確認する。
-- TUI 起動ログ用ディレクトリの作成タイミングや runtime path 解決に関わる挙動を確認する。
-- 既存 TUI import surface が参照する file access mode の選択肢を確認する。
+- 既存 import 経路 `acp.builder.tui.*` の互換維持、公開名、削除可否を確認するとき。
+- TUI 起動用または resolve 用の parameter builder を realization 側から利用する入口を確認するとき。
+- oracle 側 builder と realization 側互換 wrapper の関係、または TUI 起動前に保証される runtime 側 directory の責務を確認するとき。
 
 ## Do not read this when
-- TUI 実装本体の挙動や画面構成を確認したい場合。
-- TUI 起動 parameter や resolve parameter の正本仕様を確認したいだけの場合は、対応する oracle 側の仕様または canonical builder を読む。
-- TUI 以外のサブコマンドの AgentCallParameter 構築を調べたい場合は、対象サブコマンドの builder へ進む。
-- ログディレクトリ全般の定義、path 解決規則、file access mode 全体の定義を調べたい場合は、それぞれの定義元を読む。
-- 新しい公開 API や新規 import 経路を設計したい場合。
+- AgentCallParameter や TUI parameter builder の正本仕様を確認したい場合は、oracle 側の canonical builder を読む。
+- TUI 画面構成、CLI サブコマンド全体、runtime path 全般、logs directory 構成を調べたい場合は、それぞれを扱う対象を読む。
+- 新しい公開 API や新規 import 経路を設計したいだけで、既存互換 import surface の維持や移行に関係しない場合。
 
 ## hash
-- 7746c0d6659cb6d4db69f727bf74dc8e7e9f01b56993a6b40dd9d384965db34e
+- 6d462fda219bbdc61a8fa9fb6b8d497d66e925f893607def2c4864a23c271fb6

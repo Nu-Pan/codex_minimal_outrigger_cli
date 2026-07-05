@@ -134,25 +134,26 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体への入口。CLI 起動点、サブコマンド実装、共通 runtime、oracle 側正本実装への package shim、旧 import 経路を維持する互換層を束ねる。
-- この階層は、利用者向け CLI 公開面から各 workflow 実装へ進む経路と、複数機能で共有される実行基盤、正本側定義を複製しないための再公開・委譲境界を確認する起点になる。
+- cmoc の realization implementation を収める領域。CLI 入口、サブコマンド実行、runtime 共通基盤、正本側 oracle src への参照 shim、旧 import 経路互換層を扱う。
+- Typer による公開 CLI 面から各 workflow への接続、apply/session/review/indexing/TUI/init/doctor/eval oracle などのサブコマンド orchestration、Codex 呼び出し・設定・path・git・ログ・状態管理などの横断 helper への入口になる。
+- oracle src 側の正本実装を realization 側へ複製せず参照・再公開する互換境界も含み、旧 import 経路や shim の削除可否を判断する起点になる。
 
 ## Read this when
-- cmoc の realization implementation で、CLI 入口、サブコマンド、共通 runtime、互換 import、oracle 側実装への参照経路のどこへ進むべきか判断したいとき。
-- session、apply、review、indexing、TUI、init、doctor、eval oracle などの利用者向けコマンドの実行入口や委譲先を探したいとき。
-- Codex 実行、設定、git/path/log/error/state、INDEX 更新 preflight、call log、quota/capacity retry など、複数機能にまたがる runtime 基盤を確認したいとき。
-- oracle src 側の正本定義を realization 側へ複製せず、既存の acp、basic、config、runtime、oracle package import 経路をどう維持しているか調べたいとき。
-- CLI option、引数解析エラー、console script 起動、公開 module 名など、realization 側の公開面と実装入口の接続を確認または変更したいとき。
+- cmoc の realization implementation 全体から、CLI 入口、サブコマンド、runtime 共通基盤、互換 shim のどこへ進むべきか判断したいとき。
+- コマンド名、公開 option、console script 起動、CLI 引数解析エラー、各サブコマンド実装への委譲関係を確認・変更したいとき。
+- apply、session、review、INDEX maintenance、TUI、init、doctor、eval oracle など利用者向け workflow の実行入口や orchestration を追いたいとき。
+- Codex 実行、設定、root/path 解決、git 操作、ログ、エラー表示、永続 state、Structured Output、quota/capacity retry など複数箇所で共有される runtime helper を探したいとき。
+- oracle 側の正本定義を複製せず、realization 側の既存 import 経路へ再公開している互換層、module alias、fallback、削除条件を確認したいとき。
 
 ## Do not read this when
-- oracle file に記述された正本仕様断片、builder 正本仕様、設定や path model の正本定義、人間意図そのものを確認したいときは、対応する oracle 側を読む。
-- テストの期待値、外部挙動の検証、fixture、実行確認だけを調べたいときは、対応する realization test を読む。
-- 特定サブコマンド内の詳細責務がすでに分かっているときは、この階層全体ではなく、対象の下位 module や共通 helper へ直接進む。
-- 新しい公開 API、CLI 引数、設定項目、状態ファイルを追加する場所を探しているだけのとき。まず現行仕様上その公開面が必要かを oracle 側または該当仕様で確認する。
-- 旧 import 経路や互換 shim がすでに不要であることだけを確認済みで、残存理由や削除条件の詳細を読む必要がないとき。
+- 正本仕様断片、oracle doc、oracle src、oracle test の内容そのものを確認したいときは、oracle 側の該当対象を読む。
+- realization test の期待値、fixture、外部挙動検証を確認・変更したいときは、test 側を読む。
+- oracle file と realization file の定義、path placeholder、INDEX entry standard などの仕様概念だけを確認したいときは、対応する正本仕様文書を読む。
+- 特定のサブコマンド、runtime helper、互換 shim など読むべき下位対象がすでに分かっているときは、この領域全体ではなく該当する下位対象へ直接進む。
+- agent prompt、parameter builder の正本仕様、構造化文書 API、設定 schema、path model など oracle src 側の canonical 実装を調べたいときは、realization 側の再公開入口ではなく正本側を読む。
 
 ## hash
-- 3e05327b2147d26bfe27fb8095eed1f922fb08e37a477d18e0e6c91c9222e2ef
+- 32cb9147b4b1666dabb627618fd302383cfc299fbb7a62e99b13bd382f30b9f3
 
 # `test`
 

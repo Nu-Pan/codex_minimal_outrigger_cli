@@ -19,18 +19,18 @@
 # `builder`
 
 ## Summary
-- ACP builder 領域で、oracle 側 builder を正本に保ちながら旧 import 経路を維持する互換入口群と、apply fork・quota probe・review・session・TUI など個別用途の agent call parameter 構築境界を束ねる。
-- 主な責務は、正本側実装への委譲、既存参照向けの再公開、realization 側公開型への限定的な適合、互換 shim の削除条件確認であり、builder 本体の正本仕様そのものは oracle 側へ分離されている。
+- acp builder 配下の旧 import path 互換入口をまとめるディレクトリ。oracle 側 builder を正本に保ちながら、既存の acp.builder.* 参照を canonical 実装や realization 側 adapter へ中継する。
+- apply、review、session、tui、indexing、quota probe などの builder 互換層と、oracle 実装の再公開・alias・fallback・削除条件を確認する入口になる。
 
 ## Read this when
-- ACP builder 周辺で、旧 import 経路や公開名前空間を正本側 oracle 実装へどう接続しているかを確認したいとき。
-- apply fork、quota probe、review、session、TUI などの agent call parameter 構築について、realization 側が担う互換層・変換境界・fallback・削除条件を調べたいとき。
-- 既存の acp.builder 系参照を削除または移行する作業で、互換入口を残す理由、残存参照、canonical 実装への中継先を確認したいとき。
+- acp.builder.* の旧 import 経路互換、canonical oracle builder への接続、module alias、再公開 shim の残存理由を確認したいとき。
+- apply fork、review oracle、session、TUI、indexing、quota probe の agent call parameter builder について、realization 側の互換境界や oracle 側への委譲関係を調べるとき。
+- 正本 builder 追加後または旧参照移行後に、互換入口・fallback・wrapper を削除できる条件を確認したいとき。
 
 ## Do not read this when
-- agent prompt、出力条件、parameter 生成内容、builder 正本仕様など人間意図そのものを確認したい場合は、対応する oracle 側の仕様または canonical builder を読む。
-- apply、review、session、TUI など各機能の実行フロー、CLI 引数処理、branch 操作、画面構成、quota 管理など builder 以外の実装詳細を調べたい場合は、対象機能の実装へ進む。
-- 汎用 git helper、path model、ACP parameter 公開型、file access mode 全体、ログディレクトリ定義など builder 互換入口以外の共通定義を調べたい場合は、それぞれの定義元を読む。
+- agent prompt、parameter 生成内容、builder 本体の正本仕様や canonical 実装を確認したい場合は、oracle 側の該当 builder を直接読む。
+- apply、review、session、TUI など各機能の実行フロー、CLI 引数処理、状態操作、画面構成を調べたい場合は、それぞれの機能実装へ進む。
+- acp.builder 以外の acp package 公開面、汎用 AgentCallParameter 型、git helper、path model、quota 判定ロジックそのものを調べたい場合は、対象の共通実装や上位 package を読む。
 
 ## hash
-- 3de9950550df83a2ad41fe24099c36172697bba2fc10e7eccb386b1b02bcc709
+- d28a2d91e0a968f86c5ac7803651bc80785347f956d9f9e51a0672e60d285af8

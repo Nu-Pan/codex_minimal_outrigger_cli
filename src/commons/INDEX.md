@@ -325,22 +325,22 @@
 # `runtime_paths.py`
 
 ## Summary
-- 実行時の root 解決、時刻文字列、duration 表示、cmoc のローカル状態保存先、作業 directory 一時変更をまとめる runtime 用 path/time helper。
-- oracle 側の path resolver を CLI 実行時の runtime error に変換し、session・report・log・worktree・schema・config など `.cmoc/local` 周辺の保存先を一貫して組み立てる入口。
+- 実行時に必要な root path 解決、時刻文字列、duration 表示、cmoc 管理ディレクトリや設定ファイルの path 組み立て、cwd 一時変更、memo 配下判定を扱う runtime path helper 群。
+- root 解決失敗時は `CmocError` に変換し、利用者が実行場所を直せるメッセージを返す責務を持つ。
 
 ## Read this when
-- runtime code から `<repo-root>`, `<work-root>`, `<cmoc-root>` を解決する処理や、解決失敗時の利用者向け error を確認・変更したいとき。
-- session state、report、sub command log、Codex call log、managed worktree、schema store、config JSON の保存先 path を確認・変更したいとき。
-- 実行時刻の file name 用表記、console 表示用時刻、duration 表示の形式を確認・変更したいとき。
-- `<work-root>/memo` 判定や、cwd 前提の外部 API 呼び出し区間だけ作業 directory を切り替える処理を扱うとき。
+- 実行時の `<repo-root>`、`<work-root>`、`<cmoc-root>` 解決や、その失敗時エラー文言を確認・変更したいとき。
+- `.cmoc/local` 配下の session、report、log、worktree、schema、config の保存先 path を確認・変更したいとき。
+- file name 用 timestamp、console 表示用 timestamp、duration 表示形式を確認・変更したいとき。
+- `<work-root>/memo` 自体または配下の判定、または cwd 前提 API を呼ぶ短い区間の作業 directory 切替を扱うとき。
 
 ## Do not read this when
-- path placeholder の正本定義や root resolver の仕様そのものを確認したい場合は、oracle 側の path model を読む。
-- CLI command の実行フロー、永続状態の内容、report や log の中身を扱う場合は、それぞれの command・state・report・logging 実装を直接読む。
-- 一般的な runtime error 型や表示形式を変更したい場合は、error 定義側を読む。
+- placeholder 名や実 path 変換の正本定義そのものを確認したいだけなら、path model 側を読む。
+- 個別サブコマンドの report、log、session state の中身や schema を確認したいだけなら、それぞれの保存・読み書き処理へ進む。
+- CLI 引数解析、コマンド実行制御、利用者向け出力全体の仕様を確認したいだけなら、該当する command 層へ進む。
 
 ## hash
-- 48f612d340a45bf5d137635a4caadb23384a661da842f554fe82e50c97e40931
+- af9e2b9db9e0c790c7f08af804841b073dd6cd5ef99ca122152ad4a3387c78d3
 
 # `runtime_preprocess_command.py`
 

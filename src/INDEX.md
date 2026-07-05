@@ -1,24 +1,21 @@
 # `acp`
 
 ## Summary
-- ACP builder 互換領域への入口。oracle 側 builder を正本に保ちながら、既存の acp 系 import 経路を維持する互換入口と、agent call parameter 構築に関する用途別の中継・適合境界を束ねる。
-- この領域の責務は、正本側実装への委譲、旧公開名前空間の再公開、realization 側公開型への限定的な適合、互換 shim の残存理由と削除条件の確認にある。builder の正本仕様や生成内容そのものはこの領域ではなく oracle 側に置かれる。
+- oracle src 側の acp builder 実装を複製せず、既存の `acp.*` と `acp.builder.*` import 参照を維持するための互換入口を担う。
+- builder 配下の旧 import path、再公開 shim、module alias、fallback、削除条件を確認し、canonical oracle builder や realization 側 adapter への中継関係を判断する入口になる。
 
 ## Read this when
-- ACP builder 周辺で、旧 import 経路や公開名前空間が oracle 側の正本実装へどう接続されているかを確認したいとき。
-- apply fork、quota probe、review、session、TUI などの agent call parameter 構築について、realization 側の互換層、変換境界、fallback、削除条件を調べたいとき。
-- 既存の acp 系参照を oracle 側または実体 module へ移行する作業で、互換入口を残す理由、残存参照、canonical 実装への中継先を確認したいとき。
-- realization 側または利用者向け公開面に残る acp 系 import の扱いを判断したいとき。
+- `acp.*` または `acp.builder.*` の旧 import 経路互換、公開 import 面、oracle 側 builder への委譲関係を確認したいとき。
+- apply fork、review oracle、session、TUI、indexing、quota probe の agent call parameter builder について、realization 側の互換境界や adapter の残存理由を調べたいとき。
+- 正本 builder 追加後または旧参照移行後に、互換入口・fallback・wrapper を削除できる条件を確認したいとき。
 
 ## Do not read this when
-- agent prompt、出力条件、parameter 生成内容、builder 正本仕様など、人間意図そのものを確認したいときは、対応する oracle 側の仕様または canonical builder を読む。
-- apply、review、session、TUI など各機能の実行フロー、CLI 引数処理、branch 操作、画面構成、quota 管理など、builder 以外の実装詳細を調べたいときは、対象機能の実装へ進む。
-- 汎用 git helper、path model、ACP parameter 公開型、file access mode 全体、ログディレクトリ定義など、builder 互換入口以外の共通定義を調べたいときは、それぞれの定義元を読む。
-- 新しい acp 機能や API 仕様を追加する場所を探しているとき。この領域は互換維持と正本側への中継が中心であり、機能追加の入口ではない。
-- acp 系参照がすでに全公開面と realization 側から消えていることだけを確認済みで、互換入口や削除条件の詳細を読む必要がないとき。
+- agent prompt、parameter 生成内容、builder 本体の正本仕様や canonical 実装を確認したいときは、oracle 側の該当 builder を直接読む。
+- apply、review、session、TUI など各機能の実行フロー、CLI 引数処理、状態操作、画面構成を調べたいときは、それぞれの機能実装へ進む。
+- 汎用 AgentCallParameter 型、git helper、path model、quota 判定ロジックそのものを調べたいときは、対象の共通実装や上位 package を読む。
 
 ## hash
-- cc339a0181d1f27864f4435d3249f64c08d108196048df3f60c68cdd5b1bb454
+- c2da7611d9aaefe922c89b414b5338a95aea22ce81bfb17b831cb06bf5147492
 
 # `basic`
 
@@ -58,21 +55,25 @@
 # `commons`
 
 ## Summary
-- cmoc の実行時に複数箇所から共有される runtime helper 群をまとめる領域。
-- Codex 実行、設定、INDEX 更新 preflight、CLI 共通 runner、doctor 前処理、git/path/log/error/state など、サブコマンド横断の実行基盤へ進む入口になる。
+- cmoc の実行時処理で複数箇所から共有される runtime helper 群をまとめる領域。
+- Codex 実行、設定、パス、git、ログ、状態管理、エラー処理、INDEX 更新、doctor 前処理、apply 補助など、サブコマンド横断の共通基盤への入口になる。
+- 個別 helper の責務や挙動は下位要素ごとに分かれており、この領域は runtime 共通 API とその公開入口を探すためのまとまりとして扱う。
 
 ## Read this when
-- CLI サブコマンドや agent call 実装から共有 runtime API、共通 runner、状態管理、ログ、git/path 操作などの担当箇所を探したいとき。
-- Codex exec/TUI 起動、profile/sandbox 準備、Structured Output、quota/capacity retry、call log、preflight など Codex 呼び出し周辺の runtime 実装へ進みたいとき。
-- INDEX.md 自動更新、doctor preprocess、config 同期、session/apply state、apply process tracking など、複数機能にまたがる共通処理の配置を確認したいとき。
+- CLI サブコマンド横断で使われる runtime 共通処理の配置場所を探したいとき。
+- Codex exec/TUI 実行、profile、preflight、call log、Structured Output、quota/capacity retry など Codex 呼び出し基盤を調べたいとき。
+- config 読み書き、root/path 解決、内容 hash、git 操作、ログ、エラー表示、永続 state などの runtime helper を確認・変更したいとき。
+- INDEX.md 自動更新、doctor preprocess、apply process tracking など、実行前後に共通して働く runtime 制御を調べたいとき。
+- 複数の runtime API を呼び出し側でまとめて参照する公開入口や再公開対象を確認したいとき。
 
 ## Do not read this when
-- 特定サブコマンド固有の引数、出力、業務処理、利用者 workflow を調べたいときは、そのサブコマンド実装や対応する仕様を直接読む。
-- 正本仕様断片、prompt builder、path model、config 型定義など oracle 側の意味や要求を確認したいときは、対応する oracle file を読む。
-- テスト固有の期待値や外部挙動だけを確認したいときは、runtime helper 群ではなく該当する realization test を読む。
+- 個別サブコマンドの業務処理、引数定義、Typer 登録、利用者向け workflow を調べたいときは、該当するサブコマンド実装へ進む。
+- 正本仕様断片、prompt builder、path model、config 型の意味、INDEX entry standard など oracle 側の定義だけを確認したいときは、対応する oracle file を読む。
+- テスト固有の期待値や外部挙動を確認したいときは、該当する test または対象サブコマンドの実装を読む。
+- 単一 helper の詳細な引数、失敗時挙動、保存形式、永続状態の schema を確認したいときは、この領域全体ではなく該当する下位要素へ直接進む。
 
 ## hash
-- 3ebaed3e97d63f8c0fb217d12dbd43eb869d8d58dfb24a15d3647707b3dce11c
+- 7d1d86c1392d812286b06b38d5b789e7f35cb0d26ddcbc18bb15b8bb79cfd95e
 
 # `config`
 
