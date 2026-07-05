@@ -123,24 +123,25 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断して検証する realization test。root placeholder 解決、repo/work/run root 判定、config 読み書きと検証、CmocError の表示、CLI preflight と parse error、subcommand log、state branch 解析、FileAccessMode から Codex sandbox/profile への変換、binary 判定など、個別サブコマンドより下の共通前提をまとめて扱う。
-- 16,000 文字を超えるが、共通 runtime 契約として同時に崩れやすい領域を一箇所で回帰確認するためのファイルであり、fixture と root 状態の読み取り文脈を分散させないことも役割に含む。
+- cmoc の基礎 runtime 契約を横断的に検証する realization test。root placeholder と worktree 解決、config の既定値・不正値、CmocError の表示、CLI error の stdout report、subcommand log、FileAccessMode から Codex sandbox profile への変換、binary 判定など、個別サブコマンドより下位の共通実行前提をまとめて扱う。
+- 共通 fixture と root 状態を共有して崩れやすい runtime 回帰を一箇所で確認するための入口であり、分割より同時読解が重要な基礎契約を対象にする。
 
 ## Read this when
-- runtime の root 解決、linked worktree、run/work root、repo root の扱いを変更する。
-- cmoc config の既定値、dict 変換、読み込み失敗、型検証、model/reasoning effort 周辺を変更する。
-- CmocError、CLI error report、Click parse error、stdout/stderr の扱い、preflight、completion probe、subcommand log の挙動を変更する。
-- SessionState の branch 名解析、apply/session branch 形状、state 読み込みの拒否条件を変更する。
-- FileAccessMode、Codex profile、sandbox writable roots、extra writable/read paths、oracle/memo/.agents/.codex/.git などの許可境界を変更する。
-- binary 判定、duration 表示、`.cmoc/local` ignore 追加、起動 wrapper の missing venv report など、基礎 runtime の小さな契約を変更する。
+- root placeholder、repo root、run root、work root、linked worktree の解決挙動を変更・確認する。
+- cmoc config の読み込み、dict 変換、既定 model class、reasoning effort、不正値検証、missing config error を変更・確認する。
+- CmocError、CLI parse error、想定済み CLI error、error report の stdout/stderr 出力、Markdown 表示を変更・確認する。
+- subcommand log、pre-log check、completion probe、doctor preprocess、起動 wrapper の error report など CLI runtime の共通前処理・後処理を変更・確認する。
+- FileAccessMode、Codex profile の writable/read root、extra writable path、session join conflict write、sandbox mode、local SLM provider 設定を変更・確認する。
+- binary 判定、duration formatting、gitignore 更新、test helper の git repo 初期化など、基礎 runtime の共通補助挙動を変更・確認する。
 
 ## Do not read this when
-- 個別サブコマンド固有の business logic、出力内容、prompt 生成、review/apply/session の高レベル処理だけを確認したい場合。
-- oracle file の正本仕様本文を確認したい場合。このファイルは realization test であり、仕様の根拠そのものではない。
-- 単一の runtime helper の実装詳細だけを追う場合で、対応する実装ファイルやより狭いテストから直接確認できる場合。
+- 特定サブコマンド固有の業務ロジックや出力だけを確認したい場合は、そのサブコマンドを対象にした test または実装へ進む。
+- oracle file の正本仕様そのものを確認・編集したい場合は、対応する oracle doc または oracle src を読む。
+- Codex CLI や LLM の出力品質を検証したい場合は、この realization test の対象外。
+- 個別 module の内部 helper 実装だけを局所的に調べる場合は、まず該当する実装 file を読む。
 
 ## hash
-- 8d73aee81a0ecf2081096714de68c88d9f668a524662f5ca764bed25925d6c61
+- 973ff0328068b70e1c87763f11b2d89d7b39220a0075549545f978dc529e5399
 
 # `test_cli_tui.py`
 

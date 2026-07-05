@@ -134,41 +134,41 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation をまとめる領域。CLI 入口、サブコマンド実装、共通 runtime helper、oracle 側正本定義への参照 shim、旧 import 経路の互換層から、実行時の具体化されたコードへ進む起点になる。
-- 正本仕様や oracle 側実装を複製せずに参照・委譲する境界と、既存公開面を維持する互換入口を含むため、実装本体と互換維持層のどちらを読むべきかを切り分ける入口になる。
+- cmoc の realization implementation を配置する実装ルート。最上位 CLI、サブコマンド群、共通 runtime helper、oracle source 参照 shim、旧 import 経路を維持する互換層への入口をまとめる。
+- 正本仕様断片や prompt 本文は保持せず、oracle 側定義を参照・委譲しながら CLI 実行、workflow 制御、共通処理、互換再公開を具体化する realization code へ進むための起点になる。
 
 ## Read this when
-- cmoc の CLI コマンド構成、サブコマンドの実行入口、共通 runtime、状態管理、git/worktree 操作、Codex 実行基盤など realization 側の実装場所を探したいとき。
-- session、apply、review、indexing、TUI、初期化・修復など、利用者向け workflow の実行フロー、事前条件、状態遷移、出力、後片付けを確認または変更したいとき。
-- oracle 側 canonical 実装や共通定義を realization 側から参照・再公開する shim、旧 import 経路、公開互換層の残存理由や削除条件を確認したいとき。
-- 個別実装へ進む前に、CLI 入口、サブコマンド階層、共通 helper、互換入口のどれが現在の変更対象に近いかを切り分けたいとき。
+- cmoc の実装変更で、最上位 CLI、サブコマンド、共通 runtime、互換 import 層のどこから読むべきかを切り分けたいとき。
+- CLI コマンド構成、session/apply/review/indexing/TUI などの workflow、共通 helper、設定・ACP・basic・oracle package 互換入口への接続を確認したいとき。
+- oracle 側の正本定義を複製せず realization 側で参照・再公開・変換している境界や、旧 import 経路の削除条件を判断したいとき。
+- サブコマンド固有処理と共通 runtime 処理の責務境界、または console script から各実装関数へ至る実行入口を追いたいとき。
 
 ## Do not read this when
-- 正本仕様断片、prompt 本文、Structured Output schema、path model、config 型など oracle 側の定義そのものを確認したいときは、対応する oracle 側対象を読む。
-- テスト期待値や外部挙動の検証だけを確認したいときは、対応する test 側を読む。
-- 特定のサブコマンド、runtime helper、互換 shim の責務がすでに分かっているときは、この階層全体ではなく該当する下位対象を直接読む。
-- 新しい公開 API、CLI 引数、永続状態、import 経路を設計したいだけで、現行 realization 実装の接続先や互換維持を確認する段階ではないとき。
+- oracle file の正本仕様、prompt、Structured Output schema、path model、設定定義などの内容そのものを確認したいときは、対応する oracle 側の本文を読む。
+- 特定の helper、workflow、互換 shim の担当がすでに分かっているときは、この階層全体ではなく該当する下位対象を直接読む。
+- realization test の構成や検証内容を調べたいときは、test 側の入口を読む。
+- README、AGENTS、INDEX など実装本体ではない文書やルーティング情報だけを確認したいとき。
 
 ## hash
-- f929f2dd2fa7008aa58660f738764ec7323c2c44dff1fdd15b6db9b1f2cb8020
+- dd45b8aca0edd613befc6c62419f1b0edd3eb1fa101ae580dcc8916278026f7f
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群を収める領域。CLI サブコマンド、Codex 実行 runtime、ACP builder、prompt rendering、INDEX.md 更新、packaged import、基礎 runtime 契約など、実装から観測される外部挙動と制御ロジックを検証する入口になる。
-- 共通 pytest 補助を使い、一時 Git repository、Codex home、fake Codex/Ollama/systemctl、linked worktree、session/apply state、subprocess 実行など、外部状態を伴う回帰確認を広く扱う。
+- cmoc の realization test 群を配置するディレクトリ。CLI サブコマンド、Codex runtime、ACP builder、prompt rendering、packaged import、INDEX.md 更新、session/apply/review/doctor/TUI など、src 実装の外部挙動と制御ロジックを pytest で検証する。
+- 共通 test support と、個別機能ごとの回帰テストへの入口を提供する。
 
 ## Read this when
-- cmoc の realization implementation を変更した後、その変更が CLI 出力、終了コード、git 副作用、state 遷移、report、prompt、Codex 呼び出し、file access 境界に与える外部挙動を確認したいとき。
-- apply、session、review oracle、indexing、doctor/init、TUI、Codex exec/TUI runtime など、サブコマンドや runtime の既存回帰テストを探すとき。
-- ACP builder、structured output schema 参照、prompt parts、packaged import、root placeholder、config、path model、sandbox/profile 変換など、複数実装にまたがる基礎契約のテスト観点を探すとき。
-- 新しい realization test を追加する前に、既存テストへ case 追加・統合できる場所や、共有 fixture/helper の使い方を確認したいとき。
+- cmoc の realization test を追加・変更するために、対象機能に対応する既存テストファイルを探したいとき。
+- CLI 外部挙動、Git/worktree/state の副作用、Codex 実行ラッパー、indexing preflight、prompt/ACP/schema 連携などをテスト観点から確認したいとき。
+- 複数テストで使う一時 Git repository、Codex home、fake Codex/Ollama/systemctl、CLI runner などの共通 fixture や helper を探したいとき。
+- apply、session、review oracle、doctor/init、TUI、Codex runtime、INDEX.md 生成更新の回帰範囲を把握し、既存テストへ統合できるか判断したいとき。
 
 ## Do not read this when
-- 正本仕様断片そのものを確認・編集したい場合は、oracle 配下の該当文書または schema を読む。
-- production 実装の責務分割、内部 helper、処理手順を直接変更したい場合は、まず src 配下の対応実装を読む。
-- 個別ファイルの期待挙動が既に分かっており、その単一テストだけを確認すれば足りる場合は、該当テストへ直接進む。
-- Codex CLI や LLM の出力品質そのものを評価したい場合。この領域のテストは fake 実行や固定応答を使い、cmoc 側の制御と副作用を検証する。
+- production 実装の責務や内部 helper を変更したい場合は、先に src 配下の対応実装を読む。
+- oracle file の正本仕様、schema、prompt 文面、テスト規則そのものを確認・編集したい場合は、oracle 配下の該当文書または oracle src を読む。
+- 個別サブコマンドや runtime の期待挙動がすでに特定できている場合は、この階層全体ではなく対応するテストファイルへ直接進む。
+- Codex CLI や LLM の出力品質そのものを検証したい場合は、このディレクトリの realization test の対象外。
 
 ## hash
-- 178d8ab8595fb1d699c0df676d72156f9214735cc9c887b9c0794a603afb9cfa
+- 89d877b9fbc5d76b5a08fc51563450cee5a3c648236ac685b4e194ae4c10250e
