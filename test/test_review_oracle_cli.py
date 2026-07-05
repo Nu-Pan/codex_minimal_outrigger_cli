@@ -22,7 +22,7 @@ from _support import (
     runner,
     run_doctor,
 )
-from cmoc_runtime import SessionState
+from cmoc_runtime import CmocError, SessionState
 from config.cmoc_config import CmocConfig, CmocConfigReviewOracle
 from main import app
 import sub_commands.review.oracle as review_module
@@ -458,6 +458,133 @@ def test_review_oracle_advocate_receives_same_round_challenger_reasons(
     assert advocate_prompts
     assert "old challenger reason" in advocate_prompts[0]
     assert "same-round challenger reason" in advocate_prompts[0]
+
+
+def test_review_oracle_retries_semantic_merge_finding_failure(
+    tmp_path: Path,
+) -> None:
+    root = make_repo(tmp_path)
+    merge_calls = 0
+    config = CmocConfig(
+        review_oracle=CmocConfigReviewOracle(
+            num_enumerate_findings_loop=1,
+            num_merge_findings_loop=1,
+            num_validate_findings_loop=1,
+        ),
+    )
+
+    class FakeCodexResult:
+        def __init__(self, output_json: dict[str, object]) -> None:
+            self.output_json = output_json
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        nonlocal merge_calls
+        schema_name = parameter.structured_output_schema_path.name
+        if schema_name == "enumerate_finding.json":
+            return FakeCodexResult(
+                {
+                    "findings": [
+                        {"oracle_path": "oracle/spec.md", "title": "a"},
+                        {"oracle_path": "oracle/spec.md", "title": "b"},
+                    ]
+                }
+            )
+        if schema_name == "merge_finding.json":
+            merge_calls += 1
+            if merge_calls == 1:
+                return FakeCodexResult(
+                    {
+                        "operations": [
+                            {
+                                "kind": "delete",
+                                "target_ids": ["finding-9999"],
+                                "finding": None,
+                            }
+                        ]
+                    }
+                )
+            return FakeCodexResult(
+                {
+                    "operations": [
+                        {
+                            "kind": "merge",
+                            "target_ids": ["finding-0001", "finding-0002"],
+                            "finding": {"title": "merged"},
+                        }
+                    ]
+                }
+            )
+        if schema_name in {
+            "validate_finding_challenger.json",
+            "validate_finding_advocate.json",
+        }:
+            return FakeCodexResult({"reasons": []})
+        if schema_name == "judge_finding.json":
+            return FakeCodexResult({"verdict": "reject", "reason": "rejected"})
+        raise AssertionError(schema_name)
+
+    findings = review_module.run_review_oracle_loop(
+        root,
+        root,
+        [root / "oracle" / "spec.md"],
+        config,
+        fake_run_codex_exec,
+    )
+
+    assert merge_calls == 2
+    assert [finding["finding_id"] for finding in findings] == ["finding-0003"]
+    assert findings[0]["title"] == "merged"
+
+
+def test_review_oracle_fails_after_merge_finding_semantic_retries(
+    tmp_path: Path,
+) -> None:
+    root = make_repo(tmp_path)
+    merge_calls = 0
+    config = CmocConfig(
+        review_oracle=CmocConfigReviewOracle(
+            num_enumerate_findings_loop=1,
+            num_merge_findings_loop=1,
+            num_validate_findings_loop=1,
+        ),
+    )
+
+    class FakeCodexResult:
+        def __init__(self, output_json: dict[str, object]) -> None:
+            self.output_json = output_json
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        nonlocal merge_calls
+        schema_name = parameter.structured_output_schema_path.name
+        if schema_name == "enumerate_finding.json":
+            return FakeCodexResult(
+                {"findings": [{"oracle_path": "oracle/spec.md", "title": "a"}]}
+            )
+        if schema_name == "merge_finding.json":
+            merge_calls += 1
+            return FakeCodexResult(
+                {
+                    "operations": [
+                        {
+                            "kind": "delete",
+                            "target_ids": ["finding-9999"],
+                            "finding": None,
+                        }
+                    ]
+                }
+            )
+        raise AssertionError(schema_name)
+
+    with pytest.raises(CmocError, match="merge finding"):
+        review_module.run_review_oracle_loop(
+            root,
+            root,
+            [root / "oracle" / "spec.md"],
+            config,
+            fake_run_codex_exec,
+        )
+
+    assert merge_calls == 3
 
 
 def test_apply_finding_merge_operations_enforces_kind_contract() -> None:

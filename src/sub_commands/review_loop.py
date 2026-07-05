@@ -3,6 +3,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Callable
 
+from cmoc_runtime import CmocError
 from acp.builder.review.oracle.enumerate_finding import (
     build_review_oracle_enumerate_finding_parameter,
 )
@@ -22,6 +23,7 @@ from config.cmoc_config import CmocConfig
 from sub_commands.review_paths import finding_oracle_path
 
 CodexExec = Callable[..., object]
+_MAX_MERGE_FINDING_SEMANTIC_RETRIES = 2
 
 
 def run_review_oracle_loop(
@@ -72,24 +74,11 @@ def run_review_oracle_loop(
         if not dirty_files:
             break
         for _ in range(config.review_oracle.num_merge_findings_loop):
-            operations = codex_exec(
-                replace(
-                    build_review_oracle_merge_finding_parameter(
-                        json.dumps(findings, ensure_ascii=False, indent=2)
-                    ),
-                    cwd=worktree,
-                ),
-                root=log_root,
-                cwd=worktree,
-                config=config,
-                purpose="review oracle merge findings",
-            ).output_json
-            edits = list((operations or {}).get("operations", []))
-            if not edits:
-                break
-            findings, added_count = apply_finding_merge_operations(
-                findings, edits, next_id
+            findings, added_count, changed = _merge_findings_with_semantic_retry(
+                log_root, worktree, findings, next_id, config, codex_exec
             )
+            if not changed:
+                break
             next_id += added_count
     return _validate_and_judge_findings(log_root, worktree, findings, config, codex_exec)
 
@@ -173,6 +162,48 @@ def _validate_and_judge_findings(
         finding["verdict"] = (judge or {}).get("verdict", "reject")
         finding["judge_reason"] = (judge or {}).get("reason", "")
     return findings
+
+
+def _merge_findings_with_semantic_retry(
+    log_root: Path,
+    worktree: Path,
+    findings: list[dict],
+    next_id: int,
+    config: CmocConfig,
+    codex_exec: CodexExec,
+) -> tuple[list[dict], int, bool]:
+    last_error: ValueError | None = None
+    for _ in range(_MAX_MERGE_FINDING_SEMANTIC_RETRIES + 1):
+        operations = codex_exec(
+            replace(
+                build_review_oracle_merge_finding_parameter(
+                    json.dumps(findings, ensure_ascii=False, indent=2)
+                ),
+                cwd=worktree,
+            ),
+            root=log_root,
+            cwd=worktree,
+            config=config,
+            purpose="review oracle merge findings",
+        ).output_json
+        edits = list((operations or {}).get("operations", []))
+        if not edits:
+            return findings, 0, False
+        try:
+            merged, added_count = apply_finding_merge_operations(
+                findings, edits, next_id
+            )
+        except ValueError as exc:
+            last_error = exc
+            continue
+        return merged, added_count, True
+    # `<work-root>/oracle/doc/app_spec/codex_exec_rule.md` treats merge
+    # operation contract violations as semantic response failures.
+    raise CmocError(
+        "review oracle merge finding の Structured Output 検証に失敗しました。",
+        ["merge finding の Codex 出力と対象 finding_id を確認してください。"],
+        str(last_error),
+    ) from last_error
 
 
 def apply_finding_merge_operations(
