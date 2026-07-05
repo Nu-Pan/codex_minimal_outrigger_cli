@@ -10,8 +10,6 @@ subcommand log、CODEX_HOME/cwd は同じ retry 状態機械の観測点であ�
 
 import json
 import subprocess
-import sys
-import types
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import TextIO, cast
@@ -57,15 +55,6 @@ def stub_quota_probe_builder(
         ),
     )
     return probe_prompt
-
-
-def install_fake_quota_probe_oracle(
-    monkeypatch: pytest.MonkeyPatch,
-    builder: object,
-) -> None:
-    fake_module = types.ModuleType("oracle.acp_builder.quota_probe")
-    fake_module.build_quota_availability_probe_parameter = builder
-    monkeypatch.setitem(sys.modules, "oracle.acp_builder.quota_probe", fake_module)
 
 
 def test_resume_token_is_read_from_persisted_jsonl_log(tmp_path: Path) -> None:
@@ -253,28 +242,7 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert "- Exit code: `0`" in console
 
 
-def test_quota_probe_wrapper_delegates_to_oracle_builder(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    calls: list[AgentCallParameter] = []
-    expected = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        "oracle-defined probe",
-        None,
-        run_indexing_preflight=False,
-        cwd=Path("/tmp/oracle-probe-cwd"),
-    )
-
-    def build_oracle_parameter(
-        base_parameter: AgentCallParameter,
-    ) -> AgentCallParameter:
-        calls.append(base_parameter)
-        return expected
-
-    install_fake_quota_probe_oracle(monkeypatch, build_oracle_parameter)
-
+def test_quota_probe_builder_returns_minimal_runtime_probe() -> None:
     base = AgentCallParameter(
         ModelClass.FLAGSHIP,
         ReasoningEffort.HIGH,
@@ -284,11 +252,18 @@ def test_quota_probe_wrapper_delegates_to_oracle_builder(
         cwd=Path("/tmp/base-cwd"),
     )
 
-    assert build_quota_availability_probe_parameter(base) is expected
-    assert calls == [base]
+    probe = build_quota_availability_probe_parameter(base)
+
+    assert probe.model_class == ModelClass.MINIMUM
+    assert probe.reasoning_effort == ReasoningEffort.LOW
+    assert probe.file_access_mode == FileAccessMode.READONLY
+    assert probe.prompt == "Reply OK."
+    assert probe.structured_output_schema_path is None
+    assert probe.run_indexing_preflight is False
+    assert probe.cwd == base.cwd
 
 
-def test_quota_probe_uses_oracle_builder_when_quota_recovers(
+def test_quota_probe_uses_real_builder_when_quota_recovers(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -296,33 +271,22 @@ def test_quota_probe_uses_oracle_builder_when_quota_recovers(
     stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(cmoc_runtime.time, "sleep", lambda _seconds: None)
     calls: list[str] = []
-    expected_probe_cwd = Path("/tmp/oracle-probe-runtime-cwd")
-    install_fake_quota_probe_oracle(
-        monkeypatch,
-        lambda _base_parameter: AgentCallParameter(
-            ModelClass.MINIMUM,
-            ReasoningEffort.LOW,
-            FileAccessMode.READONLY,
-            "oracle-defined probe",
-            None,
-            run_indexing_preflight=False,
-            cwd=expected_probe_cwd,
-        ),
+    parameter = AgentCallParameter(
+        ModelClass.EFFICIENCY,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        "prompt",
+        None,
+        cwd=root,
     )
-    probe_parameter = build_quota_availability_probe_parameter(
-        AgentCallParameter(
-            ModelClass.EFFICIENCY,
-            ReasoningEffort.LOW,
-            FileAccessMode.READONLY,
-            "prompt",
-            None,
-        )
-    )
+    probe_parameter = build_quota_availability_probe_parameter(parameter)
     assert probe_parameter.model_class == ModelClass.MINIMUM
     assert probe_parameter.reasoning_effort == ReasoningEffort.LOW
     assert probe_parameter.file_access_mode == FileAccessMode.READONLY
+    assert probe_parameter.prompt == "Reply OK."
     assert probe_parameter.structured_output_schema_path is None
-    assert probe_parameter.cwd == expected_probe_cwd
+    assert probe_parameter.run_indexing_preflight is False
+    assert probe_parameter.cwd == root
 
     def fake_run(
         argv: list[str], **kwargs: object
@@ -347,13 +311,6 @@ def test_quota_probe_uses_oracle_builder_when_quota_recovers(
         )
 
     monkeypatch.setattr(runtime_codex_exec, "run_codex_subprocess", fake_run)
-    parameter = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.LOW,
-        FileAccessMode.READONLY,
-        "prompt",
-        None,
-    )
 
     result = run_codex_exec(
         parameter,
