@@ -1,4 +1,5 @@
 import json
+import shutil
 import tomllib
 from pathlib import Path
 
@@ -6,6 +7,7 @@ import pytest
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from config.cmoc_config import CmocConfig
 from oracle.other.cmoc_config import CodexModelSpec
+from commons.runtime_errors import CmocError
 from _support import (
     TEST_SLM_MODEL,
     codex_parameter,
@@ -16,6 +18,59 @@ from _support import (
     write_python_executable,
 )
 from commons.runtime_codex import run_codex_exec
+
+
+def test_run_codex_exec_invokes_real_codex_with_cmoc_managed_ollama_provider(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    real_codex = shutil.which("codex")
+    if real_codex is None:
+        pytest.skip("real Codex CLI is not installed")
+    root = make_repo(tmp_path)
+    setup_codex_home(tmp_path, monkeypatch)
+    fake_env = fake_managed_ollama_env(root)
+    for key, value in fake_env.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setenv(
+        "PATH",
+        f"{root / '.cmoc' / 'local' / 'fake-bin'}:{Path(real_codex).parent}:/usr/bin",
+    )
+    monkeypatch.setenv("OPENAI_API_KEY", "cmoc-local-test")
+    config = CmocConfig()
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
+
+    # <work-root>/oracle/doc/dev_rule/test_rule.md: this intentionally uses the
+    # real Codex CLI. The provider is controlled because LLM/provider quality is
+    # outside cmoc's test goal.
+    with pytest.raises(CmocError):
+        run_codex_exec(
+            AgentCallParameter(
+                ModelClass.MINIMUM,
+                ReasoningEffort.LOW,
+                FileAccessMode.READONLY,
+                "Reply with exactly cmoc-real-codex-provider.",
+                None,
+            ),
+            root=root,
+            capacity_initial_sleep_sec=0,
+            max_capacity_retries=0,
+            config=config,
+        )
+
+    call_log_path = next(
+        (root / ".cmoc" / "local" / "log" / "codex").glob("*_call.json")
+    )
+    call_log = json.loads(call_log_path.read_text())
+    profile = tomllib.loads(Path(call_log["profile_path"]).read_text())
+    assert call_log["argv"][:3] == ["codex", "exec", "--skip-git-repo-check"]
+    assert call_log["model_class"] == ModelClass.MINIMUM.value
+    assert profile["model"] == TEST_SLM_MODEL
+    assert profile["model_provider"] == "cmoc_managed_ollama"
+    assert profile["model_providers"]["cmoc_managed_ollama"] == {
+        "name": "cmoc managed ollama",
+        "base_url": "http://127.0.0.1:11434/v1",
+        "wire_api": "responses",
+    }
 
 
 def test_run_codex_exec_generates_profile_and_starts_codex(
@@ -284,5 +339,4 @@ def test_run_codex_exec_allows_repo_local_read_from_linked_worktree(
     record = json.loads(recorder.read_text())
     assert record["cwd"] == str(linked.resolve())
     assert record["args"][record["args"].index("--cd") + 1] == str(linked.resolve())
-
 
