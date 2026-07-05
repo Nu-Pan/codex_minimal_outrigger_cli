@@ -123,23 +123,24 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の共通 runtime 契約を横断して検証する realization test。root placeholder と worktree 判定、config 読み書き、CmocError の表示、CLI preflight と parse error、subcommand log、FileAccessMode から Codex profile への変換、binary 判定など、個別サブコマンドより下位の実行前提をまとめて扱う。
-- 複数機能にまたがるが、共通 fixture と root 状態を共有して崩れやすい basic runtime 回帰を一箇所で確認する入口として位置づけられている。
+- cmoc の基礎 runtime 契約を横断的に固定する realization test。root placeholder 解決、repo root と linked worktree の扱い、config 読み書き、CmocError 表示、CLI error 出力、subcommand log、FileAccessMode と Codex sandbox profile、binary 判定、worktree 作成・削除の安全条件をまとめて検証する。
+- 個別サブコマンドの振る舞いではなく、複数機能の実行前提になる共通 runtime 境界の回帰を扱う入口。
 
 ## Read this when
-- root 解決、`<cmoc-root>` や `<run-root>` の placeholder 変換、linked worktree と main worktree の扱いを変更・調査する場合。
-- CmocConfig の既定値、JSON 変換、設定値 validation、missing config error の挙動を変更・調査する場合。
-- CmocError の Markdown 表示、CLI parse error、想定済み CLI error の stdout/stderr 出力先、preflight 失敗時の subcommand log を確認する場合。
-- FileAccessMode、Codex sandbox profile、追加書き込み許可 path、session join conflict target、repo-local read 許可の境界を変更・調査する場合。
-- `.cmoc/local` ignore 生成、run worktree 作成・削除の保護条件、branch session id parsing、binary 判定、duration 表示などの basic runtime 回帰をまとめて確認する場合。
+- root 解決、work root / run root / repo root、linked worktree、または path placeholder の挙動を変更・調査するとき。
+- CmocConfig、config JSON 変換、model / reasoning effort の検証、load_config の error、または既定 config を変更・調査するとき。
+- CmocError、render_error、CLI parse error、stdout / stderr の error report、doctor preprocess、pre-log check、subcommand log の失敗時記録を変更・調査するとき。
+- FileAccessMode、Codex profile、sandbox writable roots、extra writable / readable path、oracle conflict write、local SLM provider 設定を変更・調査するとき。
+- create_run_worktree / remove_worktree の管理外 path 拒否、branch session id / apply branch session id、runtime state 読み込み条件を変更・調査するとき。
+- `.cmoc/local` ignore 設定、起動 wrapper の missing venv report、binary 判定の読み取り範囲など、cmoc の基礎 runtime 前提に関わる回帰を確認するとき。
 
 ## Do not read this when
-- 特定サブコマンド固有の業務ロジックや出力仕様だけを調べたい場合は、そのサブコマンドの実装・テストを直接読む。
-- oracle file の正本仕様そのものを確認したい場合は、対応する oracle doc または oracle src を読む。
-- INDEX.md エントリー生成やルーティング文書の規則だけを調べたい場合は、このテストではなく routing や index entry standard の正本仕様を読む。
+- 個別サブコマンド固有の業務ロジックや出力だけを調べる場合は、そのサブコマンドの test や実装を直接読む。
+- oracle doc や oracle src の正本仕様そのものを確認したい場合は、対応する oracle file を読む。
+- runtime と無関係な UI、文書、生成物、または isolated helper の単体挙動だけを扱う場合は、より直接の対象を読む。
 
 ## hash
-- 3d27d653bf669bd0602bf0dfd5ea9e0cb85b2245e19cbe25f79bcf51dc921d66
+- 717e6f5bfaf1ceca21dfd55d385c5425ccb1fc237880c37a697901142b64b19b
 
 # `test_cli_tui.py`
 
