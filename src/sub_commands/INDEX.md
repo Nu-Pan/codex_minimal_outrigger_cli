@@ -1,37 +1,41 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実装群をまとめるディレクトリで、apply run の開始、完了 join、破棄、report 生成に関する処理への入口になる。
-- apply fork の orchestration、対象ファイル列挙、state 更新、worktree・branch 操作、join 時の差分分類、abandon 時の cleanup など、apply run のライフサイクルを構成する実装を下位対象に分担している。
+- apply サブコマンド群の実装をまとめるディレクトリ。apply run の開始、破棄、join、fork report 生成など、apply branch/worktree と session state をまたぐ制御への入口になる。
+- 具体的な処理は各サブコマンド実装に分かれており、この階層では apply 操作ごとの実行条件、状態遷移、差分分類、cleanup、report 生成の担当先を選ぶためのルーティング単位になる。
 
 ## Read this when
-- apply サブコマンドの fork、join、abandon、report 生成のどの実装へ進むべきかを選びたいとき。
-- apply run の branch/worktree/state/report/cleanup の流れを、個別ファイルへ読む前に概観したいとき。
-- apply scope、再キュー、未 join run の破棄、join 時の想定外差分や conflict 処理など、apply 固有の制御ロジックの所在を探したいとき。
+- apply run の fork、abandon、join、report 生成のどの実装を読むべきか切り分けたいとき。
+- apply branch と session branch、apply worktree、apply state、process id、report 出力にまたがる apply サブコマンドの責務分担を確認したいとき。
+- apply 操作の実行条件、失敗条件、状態更新、cleanup、差分収集や差分分類に関わる実装へ進みたいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド、CLI parser、共通 runtime、git/worktree/state の低レベル helper を調べたいとき。
-- Codex prompt parameter や Structured Output schema の内容そのものを確認したいとき。
-- oracle file や realization file の概念定義、ファイルアクセス規則などの正本仕様を確認したいとき。
+- session 作成、共通 CLI runtime、git wrapper、worktree 操作、state 入出力など apply サブコマンド固有でない共通処理だけを調べたいとき。
+- oracle file、realization file、path model などの一般定義や仕様文書を確認したいとき。
+- Codex に渡す prompt、parameter、Structured Output schema の内容だけを確認したいとき。
 
 ## hash
-- 5af6853965ddb2ea87013abc0ebe57f16337ba8405dc7795314267b565323caa
+- 5b425d7cc03a048d1dc125da545223a5149851adcf8b4d707478c6ea53596858
 
 # `doctor.py`
 
 ## Summary
-- CLI runtime の preprocess 経路を使い、初回 setup 用の init と明示修復用の doctor を実行するサブコマンド実装。doctor preprocess の実行、init 後の config 同期、実行結果の簡潔な出力を担う。
+- 初期セットアップと診断前処理を CLI runtime 経由で実行するサブコマンド実装。
+- 現在の work root を実行可能状態へ修復し、初期化時だけ config 同期と config 差分の commit を行う入口を持つ。
+- doctor preprocess の実行、init 後の config 同期、`.cmoc/config.json` の git add/commit 条件を確認するための実装箇所。
 
 ## Read this when
-- init または doctor サブコマンドの実行内容、preprocess 呼び出し、init 時だけ行う config 同期の挙動を確認・変更したいとき。
-- work root を cmoc 実行可能状態へ修復する入口や、doctor preprocess と CLI runtime の接続を追いたいとき。
+- 初期化コマンドまたは診断コマンドの実行順序、出力、commit 挙動を変更したいとき。
+- doctor preprocess をどの root に対して実行するか、または CLI runtime の共通実行 wrapper との接続を確認したいとき。
+- config 同期を初期化時だけ行う制御や、同期後の `.cmoc/config.json` commit 条件を調べたいとき。
 
 ## Do not read this when
-- 個々の修復処理の詳細を確認したいだけのときは、doctor preprocess 本体の実装や対応する oracle doc を読む。
-- config 定義そのものや同期内容を確認したいだけのときは、config の正本定義または同期処理の実装を読む。
+- doctor preprocess の具体的な修復内容を調べたいときは、その実装または対応する oracle doc を読む。
+- config schema や config 内容の正本定義を確認したいときは、config 定義側を読む。
+- CLI runtime の共通 wrapper、git 実行 helper、root 解決 helper の詳細を調べたいときは、runtime 側を読む。
 
 ## hash
-- 5b34ca53a326cf2b246a8c474513a967e06d38c35c1a7bfb039d06df5a644e5e
+- 9c472b5cd07ec2b252497954c5ddbceeac48d9420db9cfcd8742d538b8591002
 
 # `indexing.py`
 

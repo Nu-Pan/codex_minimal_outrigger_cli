@@ -37,24 +37,23 @@
 # `fork.py`
 
 ## Summary
-- apply fork の実行本体を担い、session branch 上で isolated apply worktree と apply branch を作成して Codex による finding 列挙・適用・commit・state 更新・report 生成までを制御する。
-- apply scope から対象ファイルを列挙し、変更後の再キュー、対象重複排除、oracle/realization の対象判定、前回 join 済み apply merge commit の解決も扱う。
-- 単一の apply run orchestration と失敗時復旧条件を共有する処理を集約しており、apply state、worktree、再キュー、commit subject、report path の流れを追う入口になる。
+- apply fork の実行本体を扱う。session branch 上で apply 用 branch/worktree を作成し、scope から対象ファイルを列挙し、Codex による finding 列挙と適用、差分 commit、apply state 更新、report 出力までの一連の制御を担う。
+- apply 対象の正規化、再キュー、重複排除、commit subject 生成、前回 join 済み apply commit の解決など、apply fork loop の復旧条件や継続条件に関わる補助処理も同じ制御単位として含む。
 
 ## Read this when
-- apply fork の開始条件、branch/worktree 作成、apply state の running/completed/error 更新、process id 管理、report 出力を確認または変更したいとき。
-- apply scope ごとの finding 列挙対象、git ignored/INDEX/AGENTS/memo/oracle file の除外条件、変更ファイルの再キュー条件を確認または変更したいとき。
-- Codex に渡す finding 列挙・finding 適用の実行順、apply loop の収束判定、unconverged 終了コード、apply commit subject 生成を確認または変更したいとき。
-- 前回 join された apply merge commit を起点に差分対象を決める処理や、apply branch session id と git 履歴の関係を調べるとき。
+- apply fork の開始条件、作成される branch/worktree、apply state の running/completed/error 更新、process id 管理、report 出力の流れを確認したいとき。
+- apply scope ごとの対象ファイル列挙、oracle file と realization file の扱い、git ignored や管理外ディレクトリの除外条件を確認したいとき。
+- Codex による finding 列挙、finding 適用、変更ファイルの再キュー、apply commit 生成、未収束時の終了コードを変更または調査したいとき。
+- 前回 join 済み apply merge commit 以降の差分を apply 対象にする判定や、同一 session の apply branch 履歴解決を確認したいとき。
 
 ## Do not read this when
-- apply fork の report 本文や error report の書式だけを確認したい場合は、report 生成を担当する対象を直接読む。
-- Codex prompt parameter の内容や finding 列挙・適用プロンプト自体を確認したい場合は、builder 側の対象を直接読む。
-- apply 以外の subcommand、CLI parser、共通 runtime の git/worktree/state 低レベル処理を調べたい場合は、それぞれの担当対象を読む。
-- oracle file と realization file の概念定義そのものを確認したい場合は、正本仕様側の該当対象を読む。
+- apply fork の report 本文の書式や保存内容だけを確認したいときは、report 生成を担当する対象を読む。
+- Codex に渡す finding 列挙用または finding 適用用 prompt/parameter の内容だけを確認したいときは、それぞれの builder を読む。
+- apply fork 以外の apply subcommand、session 作成、join、共通 CLI runtime の挙動を調べたいだけのときは、それらを担当する対象へ進む。
+- 一般的な path model、oracle file 判定、git 実行、worktree 作成、state 入出力の共通実装を調べたいだけのときは、runtime 側の対象を読む。
 
 ## hash
-- cf5fccfe29842af8ec168978d32bb176c4edf4088cf320df49ff30816443cc6b
+- 1ae085c188d67a880ca283370781127c422afc55c5905e109f174b88c778286c
 
 # `fork_report.py`
 

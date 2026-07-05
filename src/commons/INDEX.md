@@ -246,21 +246,23 @@
 # `runtime_doctor.py`
 
 ## Summary
-- 共通実行前修復として、cmoc 管理対象の ignore 設定、.agents の追跡用 placeholder、cmoc 管理 Ollama の起動・model 準備を整え、修復差分だけを一時 index で commit する実行時処理を扱う。
-- git の staged 差分を退避・復元しながら doctor repair を HEAD 起点で分離する処理、Ollama archive の取得・展開、systemd user service の作成・検証、11434 listener と service process の照合、model pull の入口になる。
+- 共通実行前の doctor preprocess を担う実装。cmoc ignore 設定、`.agents` の追跡可能化、cmoc 管理 Ollama の導入・user service 起動確認・model 取得を行い、修復差分だけを一時 index 経由で commit し、既存 staged 差分を復元する。
+- git index を直接汚さずに HEAD 起点の一時 index で修復 commit を作る処理、systemd user service と `/proc` を使った Ollama listener 検証、cmoc provider model の重複排除と取得確認への入口になる。
 
 ## Read this when
-- 実行前の doctor preprocess、.gitignore/.agents/.cmoc の修復 commit、既存 staged 差分の保護や復元に関する挙動を確認・変更する時。
-- cmoc provider の model 利用時に Ollama を cmoc 管理でインストール、起動、検証、model 取得する処理を確認・変更する時。
-- systemctl --user、~/.cmoc/ollama、127.0.0.1:11434、/proc 経由の listener 判定に関する失敗時挙動や CmocError を調べる時。
+- 実行前修復、doctor preprocess、`.gitignore` 修復、`.agents` の tracked placeholder、`.cmoc/local` の追跡解除、修復 commit、既存 staged hunks の保護に関する挙動を確認または変更したいとき。
+- cmoc 管理 Ollama のインストール先、archive 取得、user service file 生成、`127.0.0.1:11434` の service 所有確認、HTTP 到達確認、model pull/show の制御を調べたいとき。
+- config の cmoc provider model からローカル SLM を準備する流れや、設定読み込み失敗時の fallback を確認したいとき。
+- git command、systemctl、tar、urllib、`/proc` 参照の失敗を `CmocError` として利用者向けに返す境界を調べたいとき。
 
 ## Do not read this when
-- runtime config の schema や model 設定そのものを確認したいだけなら、設定定義や読み込み処理を直接読む。
-- git command 実行 wrapper や cmoc ignore pattern の一般処理を確認したいだけなら、git 関連の共通 runtime 処理を読む。
-- doctor preprocess の正本仕様を確認したい時は、対応する oracle doc を読む。
+- 個別 CLI command の引数定義や dispatch だけを調べたい場合は、CLI 層の実装を先に読む。
+- 設定ファイルの schema、読み込み規則、model provider 定義そのものを調べたい場合は、config と runtime config の実装を読む。
+- 汎用 git wrapper や cmoc ignore pattern の基本仕様だけを調べたい場合は、runtime git 側を読む。
+- Ollama 以外の provider 実行、LLM 呼び出し、agent 実行制御を調べたい場合は、それぞれの実行系の実装を読む。
 
 ## hash
-- 86e37269c6ae612c184ea8a95e0549ceb2e19eb2aa6e938b40a042607f54453a
+- d89d26693fb7a29e7b0464ae5fe384c018e30b709d507514ac4774ace363bdcd
 
 # `runtime_errors.py`
 
@@ -283,23 +285,24 @@
 # `runtime_git.py`
 
 ## Summary
-- git subprocess の実行境界、branch/HEAD/status 取得、worktree 作成・削除、branch 削除、git ignore 判定を扱う runtime helper 群。
-- .cmoc/local を git 追跡対象外に保つ処理と、oracle file path 判定など git 状態に依存する repository 内 path 分類の入口になる。
+- git subprocess 実行を利用者向けエラーへ変換する境界と、branch・HEAD・status・worktree・ignore 判定を扱う runtime helper 群。
+- cmoc 管理 branch namespace、run/apply 用 linked worktree の作成・削除安全確認、`.cmoc/local` の git ignore 初期化・検査、oracle file 判定を担う。
 
 ## Read this when
-- git command の実行結果や失敗時エラーを扱う処理を確認・変更したいとき。
-- 未コミット差分の検査、現在 branch・HEAD commit の取得、status porcelain の path 解析を扱うとき。
-- cmoc 管理 branch や linked worktree の作成・削除・安全確認を扱うとき。
-- .cmoc/local の ignore 初期化、exclude への ignore 追加、git ignore 判定、oracle file path 判定を扱うとき。
+- git コマンド呼び出しの失敗時挙動、戻り値、利用者向けエラー化を確認・変更したいとき。
+- 未コミット差分の検査、porcelain status の path 取得、rename/copy path の扱いを確認したいとき。
+- cmoc が管理する branch 名、run/apply 用 worktree path の対応、worktree 作成・削除の安全条件を確認したいとき。
+- `.cmoc/local` を `.gitignore` または git exclude で追跡対象外にする処理や、その初期化済み検査を確認したいとき。
+- git ignore 判定、tracked file と ignore pattern の関係、oracle file path 判定を扱う実装を確認したいとき。
 
 ## Do not read this when
-- git を介さない path model や runtime directory の定義だけを確認したいとき。
-- CLI command の引数定義や利用者向け command flow を確認したいとき。
-- session state や apply/run report の保存形式そのものを確認したいとき。
-- oracle file の正本仕様本文を確認したいとき。
+- path keyword の概念定義そのものを確認したいだけなら、oracle 側の path model を読む。
+- CLI サブコマンドの入出力仕様や利用者向け workflow を確認したいだけなら、該当する app spec を読む。
+- runtime path のディレクトリ構成や `.cmoc/local` 配下の具体的な path 組み立てだけを確認したいなら、runtime paths 側を読む。
+- CommandResult や CmocError の型・表示形式だけを確認したいなら、それぞれの runtime result/error 定義を読む。
 
 ## hash
-- 73c3866df657cea05215893e182b3d869328aff8d031cb776f886880a2174d99
+- bfcce2aa66615b98cf1af9b07e665542bf19bea772bd5200bddac41b3ad4b98a
 
 # `runtime_logging.py`
 
