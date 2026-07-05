@@ -19,21 +19,22 @@
 # `builder`
 
 ## Summary
-- ACP builder 領域全体の入口で、oracle 側 builder を正本に保ちながら既存の acp.builder 系 import 経路を維持する互換層をまとめる。
-- apply、review、session、tui など個別 builder 領域へのルーティングと、旧公開名前空間から canonical oracle 実装または realization 側適応層へ接続する境界を確認する起点になる。
-- 実際の prompt、parameter 構築仕様、finding 処理、TUI 本体挙動などはここではなく、対象ごとの oracle 実装または個別 module に委ねる。
+- ACP builder 群の realization 側入口であり、oracle 側 builder を正本に保ちながら旧 import 経路を維持する互換層と、runtime 用の一部 builder をまとめる。
+- apply、review、session、TUI、indexing などの builder 領域について、canonical oracle 実装への中継、realization 側公開型への適合、既存 caller 移行までの互換維持を扱う。
+- quota availability probe のように通常実行ではなく runtime 制御のための最小 AgentCallParameter を組み立てる builder も含む。
 
 ## Read this when
-- acp.builder 配下の旧 import path 互換が、oracle 側 canonical 実装や realization 側 wrapper へどう接続されるかを俯瞰したいとき。
-- apply fork、review、session、tui、quota probe、indexing などの builder 互換入口のうち、どの下位領域を読むべきか判断したいとき。
-- oracle src を正本に保ちつつ realization 側で path 接続、module alias、返却型適応、最小補正を行う境界を確認したいとき。
-- acp.builder 系の互換 package や再公開 module を削除または移行する作業で、残す理由や削除条件を調べ始めるとき。
+- ACP builder の旧 import 経路が oracle 側 canonical 実装や互換入口へどう接続されるかを調べるとき。
+- apply fork、review、session、TUI、indexing など、用途別の agent call parameter builder 入口や互換 package の読む先を選びたいとき。
+- oracle 側 builder の戻り値を realization 側の公開型や runtime path に適合させる境界を確認または変更するとき。
+- 既存 caller を canonical import path へ移行する作業で、互換入口を残す理由、公開面維持、削除条件を確認したいとき。
+- quota waiting が使う Codex 呼び出し用の最小 AgentCallParameter 構成を調べたいとき。
 
 ## Do not read this when
-- oracle 側 builder の正本仕様、prompt 本文、parameter 生成内容を確認したいだけなら、対応する oracle 側 builder を直接読む。
-- apply、review、session、TUI など各機能の実行フローや本体挙動を調べたい場合は、それぞれの実装領域へ進む。
-- AgentCallParameter 型、path model、git helper、file access mode など ACP builder 以外の共通基盤を確認したい場合は、その定義元を読む。
-- 特定の変換処理、wrapper の詳細挙動、既知 typo 補正、runtime path 接続などを変更する場合は、該当する個別 module または下位 package を読む。
+- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したい場合は、対応する oracle 側 builder や oracle file を読む。
+- apply、review、session、TUI など各機能の実行フロー、UI、branch 操作、finding 処理など builder 以外の本体挙動を調べたい場合は、それぞれの実装領域へ進む。
+- AgentCallParameter の公開型、path model、git helper、file access mode など共通基盤だけを調べたい場合は、それぞれの定義元を読む。
+- 新しい公開 API や新規 import 経路を設計したいだけの場合は、互換維持層ではなく canonical な公開面や設計対象を読む。
 
 ## hash
-- e6655cc76801aede8a22b3b91dd714f3c3b1c2146b66314cdf4a8b2d8b18b1ad
+- 5c1968a3bd20d62f94b7c8204d160cf4b4a68d53b0fdb400aeb9e61082ce511d

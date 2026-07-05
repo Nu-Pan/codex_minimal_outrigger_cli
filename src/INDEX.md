@@ -1,24 +1,24 @@
 # `acp`
 
 ## Summary
-- ACP 互換層の入口で、oracle 側 builder を正本に保ちながら既存の acp 系 import 経路を維持する領域。
-- 公開 import 面の移行期間中に残す互換入口と、個別 builder 領域へ進むためのルーティングを担う。
-- 実際の builder 実装、prompt、parameter 構築、finding 処理、TUI 挙動は下位領域または対応する実体 module へ委ねる。
+- ACP builder 関連の realization 側入口。oracle 側 builder を正本に保ちながら、旧 `acp.*` import 経路を維持する互換層と runtime 用の一部 builder への入口を持つ。
+- apply、review、session、TUI、indexing、quota availability probe など、用途別 builder の互換維持、canonical oracle 実装への中継、realization 側公開型や runtime path への適合境界を扱う。
 
 ## Read this when
-- 既存の acp 系 import 参照を oracle 側 canonical 実装や realization 側 wrapper へどう接続しているかを確認したいとき。
-- apply、review、session、tui、quota probe、indexing などの builder 互換入口のうち、読むべき下位領域を判断したいとき。
-- acp 系互換 package や再公開 module を削除または移行する作業で、残す理由や削除条件を調べ始めるとき。
-- oracle src 由来の acp builder 互換 import が realization 側または利用者向け公開面でどう維持されているかを確認したいとき。
+- ACP builder の旧 import 経路が oracle 側 canonical 実装や互換入口へどう接続されるかを調べるとき。
+- apply fork、review、session、TUI、indexing など、用途別 agent call parameter builder の読む先を選びたいとき。
+- oracle 側 builder の戻り値を realization 側の公開型や runtime path に適合させる境界を確認または変更するとき。
+- 既存 caller を canonical import path へ移行する作業で、互換入口を残す理由、公開面維持、削除条件を確認したいとき。
+- quota waiting が使う Codex 呼び出し用の最小 AgentCallParameter 構成を調べたいとき。
 
 ## Do not read this when
-- oracle 側 builder の正本仕様、prompt 本文、parameter 生成内容を確認したいだけなら、対応する oracle 側 builder を直接読む。
-- apply、review、session、TUI など各機能の実行フローや本体挙動を調べたい場合は、それぞれの実装領域へ進む。
-- AgentCallParameter 型、path model、git helper、file access mode など ACP builder 以外の共通基盤を確認したい場合は、その定義元を読む。
-- 特定の変換処理、wrapper の詳細挙動、既知 typo 補正、runtime path 接続などを変更する場合は、該当する個別 module または下位 package を読む。
+- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したい場合は、対応する oracle 側 builder や oracle file を読む。
+- apply、review、session、TUI など各機能の実行フロー、UI、branch 操作、finding 処理など builder 以外の本体挙動を調べたい場合は、それぞれの実装領域へ進む。
+- AgentCallParameter の公開型、path model、git helper、file access mode など共通基盤だけを調べたい場合は、それぞれの定義元を読む。
+- 新しい公開 API や新規 import 経路を設計したいだけの場合は、互換維持層ではなく canonical な公開面や設計対象を読む。
 
 ## hash
-- ff451940106c25e6c85f5144a6578f39e1068598cdb6f7f35c39b9914c9db615
+- 66f9a9d31506fc1d7b60168dc0b487092d426facd75e7ec7f6915cb48c6553e6
 
 # `basic`
 

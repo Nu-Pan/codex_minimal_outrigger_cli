@@ -71,18 +71,20 @@
 # `quota_probe.py`
 
 ## Summary
-- Codex quota availability probe 用の AgentCallParameter 構築入口を、正本側 builder へ委譲する互換 wrapper。実際の構築仕様は持たず、既存の realization 側 import path を保つ役割に限定される。
+- Codex quota availability probe 用の AgentCallParameter を組み立てる小さな builder。quota waiting で使う最小構成の Codex 呼び出しとして、最小モデル、低 reasoning、readonly file access、固定 prompt、indexing preflight 無効化、base parameter 由来の cwd を設定する。
 
 ## Read this when
-- quota availability probe parameter builder の realization 側 import path がどこへ委譲されるかを確認したいとき。
-- 既存コードが参照する互換 wrapper の公開関数名や返却経路を確認したいとき。
+- quota availability probe の agent call parameter がどのように構成されるかを確認したいとき。
+- quota waiting が使う最小 Codex call の model class、reasoning effort、file access、prompt、cwd、indexing preflight の扱いを変更または調査するとき。
+- `AgentCallParameter` builder 群のうち、通常実行ではなく quota 確認専用の runtime-only probe に関わる処理を探しているとき。
 
 ## Do not read this when
-- quota availability probe parameter の正本仕様や実際の構築内容を確認したいとき。その場合は対応する oracle builder と Codex exec call 仕様を読む。
-- AgentCallParameter 型そのものや ACP 全般の構造を調べたいとき。その場合は ACP 定義側を読む。
+- 一般的な agent call parameter builder の共通設計や他用途の parameter 構成を調べたいだけのとき。
+- quota waiting 全体の制御フロー、待機判定、retry 動作を調べたいとき。
+- oracle 側で定義された Codex exec rule の正本仕様を確認したいとき。
 
 ## hash
-- cc447224058b3d72e7f5859e43fd3231d7c44b1153b422c5843f2d3e6c4ecc71
+- dcfb4fad630cd718821a65e700ae5814c83ede582ea327405c5fcbe0ad439cf8
 
 # `review`
 

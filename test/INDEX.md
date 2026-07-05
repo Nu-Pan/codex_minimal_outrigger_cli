@@ -205,24 +205,24 @@
 # `test_codex_runtime_quota_retry.py`
 
 ## Summary
-- Codex exec が quota exceeded になった後の待機、probe、resume、再実行の外部挙動を検証するテスト群。
-- resume token の抽出、quota availability probe の組み立て委譲、call log と subcommand log、CODEX_HOME と cwd、並列実行時の代表 probe 共有、probe 失敗時の伝播を同じ retry 状態機械の観測点として扱う。
-- quota 待機から復帰する Codex exec の回帰確認を一箇所に集約し、fake Codex 呼び出し列を追う文脈を分散させないための大きめのテストファイル。
+- Codex exec が quota exceeded になった後の待機、probe、resume、再実行の制御を検証する realization test。
+- quota retry 状態機械の観測点として、probe 共有、resume token 抽出、call log、subcommand log、CODEX_HOME、cwd、並列呼び出し時の代表 probe をまとめて扱う。
 
 ## Read this when
-- Codex exec の quota exceeded 後の poll、probe、resume、または resume token が無い場合の再実行挙動を変更・調査する。
-- quota availability probe の AgentCallParameter、oracle builder への委譲、probe 用 profile、prompt、cwd、CODEX_HOME の扱いを確認する。
-- Codex call log、stdout/output jsonl/prompt log、subcommand log の quota retry 関連イベントや status を変更・検証する。
-- quota retry 中の file access post validation の有無、probe 失敗時の即時失敗、並列 quota 待機時の代表 probe 共有を扱う。
+- Codex exec の quota exceeded 検出後に、availability probe を実行して復帰後に resume または再実行する挙動を確認・変更したいとき。
+- quota availability probe の AgentCallParameter、最小モデル、low reasoning、readonly、cwd 継承、実際の probe prompt を検証したいとき。
+- quota retry 中の call log、stdout/output jsonl log、prompt log、subcommand log、console 表示の記録内容を確認したいとき。
+- resume token を JSONL log から抽出する挙動、token がない場合の再実行挙動、relative CODEX_HOME と cwd の扱いを確認したいとき。
+- 並列に quota 待機した Codex exec が単一の代表 probe を共有し、probe 成功時は各呼び出しが復帰し、probe 失敗時は待機中の呼び出しも失敗する制御を確認したいとき。
+- quota 待機上限到達時や probe 失敗時に、quota で失敗した呼び出し・probe 呼び出しへ file access post validation をかけない挙動を確認したいとき。
 
 ## Do not read this when
-- quota exceeded と無関係な通常の Codex exec 成功・失敗処理だけを調べる場合。
-- AgentCallParameter の基本構造や file access mode の一般仕様を確認したいだけの場合。
-- ログ基盤全体の形式や SubcommandLogger の汎用挙動を調べる場合。
-- Codex CLI やプロファイル生成の一般処理を調べる場合で、quota retry の観測点に触れない場合。
+- quota retry 以外の Codex exec 正常実行、引数構築、構造化出力処理だけを確認したいとき。
+- quota availability probe の実装本文や prompt builder の責務を確認したいだけで、retry 時の外部挙動テストを読む必要がないとき。
+- SubcommandLogger や call log 形式そのものの汎用仕様を確認したいだけで、quota retry 時の記録内容に関心がないとき。
 
 ## hash
-- 1e8c1eda2e279c978bc021e7e9af8a9d8ee344ef5a4f36a3200ab76bc560e0ff
+- 9608587e76e52a1c7407c7978c17b649f56cb3fdb3532325b3f790841089e8ad
 
 # `test_codex_runtime_retry.py`
 
