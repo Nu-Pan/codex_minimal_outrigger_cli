@@ -165,18 +165,21 @@
 # `test`
 
 ## Summary
-- CLI・runtime・agent call・session/apply・review・indexing など、cmoc の realization test を置く領域。
-- 共通 helper とサブコマンド別の統合寄り回帰テスト、Codex runtime retry/home/quota、prompt/schema、packaged import、StructDoc rendering などの外部挙動検証への入口を担う。
+- cmoc の realization test 群を置くディレクトリ。CLI サブコマンド、Codex runtime、ACP builder、prompt、indexing、session/apply/review/doctor などの外部挙動と共通実行前提を検証するテストへの入口になる。
+- 共有 helper は、テスト用 Git リポジトリ、Codex home/profile、fake 外部コマンド、Typer runner、apply worktree 解決など、複数テストで使う環境構築を担う。
 
 ## Read this when
-- cmoc の自動テストから、変更対象のサブコマンドや runtime 共通契約に対応する既存テストを探したいとき。
-- apply、session、review oracle、indexing、doctor/init、TUI、Codex runtime、prompt builder、packaging、StructDoc rendering の回帰条件を確認または更新したいとき。
-- CLI 境界の外部挙動、git worktree/state、Codex fake 実行、report 出力、preflight、retry、file access mode などをテスト側から確認したいとき。
+- cmoc の実装変更に対応する realization test を探し、どの CLI・runtime・builder・prompt・indexing・session/apply/review/doctor テストを読むべきか絞り込みたいとき。
+- Codex exec/TUI 実行、retry、quota retry、post-call file access check、Codex home/profile、subprocess tracking など runtime 境界の回帰テストを確認したいとき。
+- apply fork/join/abandon、session fork/join/abandon、review oracle、doctor/init、indexing など、サブコマンドの外部挙動や状態遷移をテストから確認したいとき。
+- ACP builder、prompt parts、StructDoc rendering、packaged import など、CLI 以外の生成物・import 境界・文書整形に関する realization test を探したいとき。
+- テスト用 fixture、fake Codex/Ollama/systemctl、一時 Git リポジトリ作成など、共有テスト支援部品を確認または変更したいとき。
 
 ## Do not read this when
-- 実装本文を変更する入口を探しているだけの場合は、対応する実装領域を先に読む方がよい。
-- oracle file の正本仕様、標準文書、schema 定義そのものを確認したい場合は、oracle 側を読む。
-- 個別テストの期待値や fixture helper に関心がない場合、または特定の単体 helper 実装だけを調べたい場合は、より直接の対象へ進む。
+- oracle file の正本仕様本文や仕様方針を確認したいときは、oracle 側の該当文書または src/test を読む。
+- 本体実装の責務、内部 helper、低レベル処理だけを変更したい段階では、まず対応する src 側の実装を読む。
+- INDEX.md エントリー生成規則や routing 文書の一般方針だけを確認したいときは、正本仕様断片や該当する builder 実装を読む。
+- 個別の小さな unit assertion だけを追加する場合で、共有 fixture・fake 外部コマンド・CLI 外部挙動の回帰条件を確認する必要がないとき。
 
 ## hash
-- b22ab847accf5a5d5f80fb368c86b3a3cbc447ae246480e4458965c97aa94fcc
+- 8b43a07c786ea461223d7a4954a18e511efba56f16d2dffa8749fd78c8bf7e67
