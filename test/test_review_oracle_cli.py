@@ -761,20 +761,20 @@ def test_review_oracle_full_scope_keeps_tracked_ignored_oracle_files(
     rendered = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
-    assert "oracle_count_total: 5" in rendered
-    assert "oracle_count_evaluated: 5" in rendered
+    assert "oracle_count_total: 6" in rendered
+    assert "oracle_count_evaluated: 6" in rendered
     assert "`oracle/asset.bin`" in rendered
     assert "`oracle/ignored-link.md`" in rendered
     assert "`oracle/ignored.md`" in rendered
     assert "`oracle/memo/kept.md`" in rendered
+    assert "`oracle/memo-link.md`" in rendered
     assert "`oracle/spec.md`" in rendered
     assert "oracle/untracked-ignored.md" not in rendered
-    assert "oracle/memo-link.md" not in rendered
     assert "memo/oracle/draft.md" not in rendered
     enumerate_calls = [
         call for call in calls if call.startswith("review oracle enumerate findings")
     ]
-    assert len(enumerate_calls) == 5
+    assert len(enumerate_calls) == 6
 
 
 def test_review_oracle_accepts_short_scope_option(
@@ -923,6 +923,21 @@ def test_review_oracle_target_enumeration_excludes_agents_and_index(
     index.write_text("# index\n")
 
     assert enumerate_review_all_oracle_files(root) == [spec.resolve()]
+
+
+def test_review_oracle_target_enumeration_classifies_oracle_symlink_by_repo_path(
+    tmp_path: Path,
+) -> None:
+    """oracle 配下 symlink は link 先ではなく repository path で分類する。"""
+    root = make_repo(tmp_path)
+    (root / "memo").mkdir()
+    (root / "memo" / "draft.md").write_text("# draft\n")
+    oracle_link = root / "oracle" / "memo-link.md"
+    oracle_link.symlink_to("../memo/draft.md")
+    run_git(root, "add", "memo/draft.md", "oracle/memo-link.md")
+    run_git(root, "commit", "-m", "add oracle symlink")
+
+    assert oracle_link.absolute() in enumerate_review_all_oracle_files(root)
 
 
 def test_review_oracle_merges_review_index_changes(

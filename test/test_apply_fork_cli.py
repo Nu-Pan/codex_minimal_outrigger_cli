@@ -455,6 +455,23 @@ def test_apply_fork_target_normalization_keeps_tracked_ignored_files(
     ]
 
 
+def test_apply_fork_target_normalization_classifies_oracle_symlink_by_repo_path(
+    tmp_path: Path,
+) -> None:
+    """oracle 配下 symlink は link 先ではなく repository path で分類する。"""
+    root = make_repo(tmp_path)
+    (root / "memo").mkdir()
+    (root / "memo" / "draft.md").write_text("# draft\n")
+    oracle_link = root / "oracle" / "memo-link.md"
+    oracle_link.symlink_to("../memo/draft.md")
+    run_git(root, "add", "memo/draft.md", "oracle/memo-link.md")
+    run_git(root, "commit", "-m", "add oracle symlink")
+
+    targets = apply_fork_module.normalize_apply_targets(root, {oracle_link})
+
+    assert targets == [oracle_link.absolute()]
+
+
 def test_apply_fork_marks_state_completed_before_report(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
