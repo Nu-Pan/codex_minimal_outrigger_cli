@@ -20,21 +20,36 @@
 # `doctor.py`
 
 ## Summary
-- cmoc の初期化系サブコマンド実装で、init と doctor を CLI runtime の共通実行枠に載せ、doctor preprocess、config 同期、必要時の config commit を行う。
-- work root を実行可能状態へ修復し、`.cmoc/config.json` の生成・同期結果を git に反映する処理への入口として読む対象。
+- doctor サブコマンドの実処理として、CLI runtime の preprocess 実行経路へ処理を委譲する薄い入口。doctor 固有の処理内容はここでは持たず、明示的に doctor preprocess を起動する責務だけを持つ。
 
 ## Read this when
-- `cmoc init` または `cmoc doctor` の実行内容、出力、前処理の流れを確認・変更したいとき。
-- doctor preprocess と config 同期がどの順序で呼ばれ、どの条件で config commit されるかを調べたいとき。
-- CLI runtime のサブコマンド実行枠から初期化・修復処理を呼び出す実装を追いたいとき。
+- doctor サブコマンドが呼ばれた時に、どの runtime preprocess 名へ委譲されるかを確認したいとき。
+- doctor サブコマンドの実装入口と、runtime preprocess 実行処理との接続を変更または確認したいとき。
 
 ## Do not read this when
-- doctor preprocess 自体の修復内容や判定条件を確認したいだけなら、その実体を持つ runtime 側または対応する oracle doc を読む。
-- config の正本定義や config schema の内容を確認したいだけなら、config の oracle src を読む。
-- git 実行 helper や CLI runtime の共通サブコマンド制御を変更したい場合は、それらを定義する runtime 側を直接読む。
+- preprocess command の実行方法、失敗時挙動、runtime 側の制御を調べたいときは、preprocess 実行を担う commons 側の実装を読む。
+- doctor preprocess の中身や診断項目を調べたいときは、その preprocess 本体を読む。
 
 ## hash
-- 1e155e1cd02115d7841dd4fc9f8b61ba0e6543e6379ad4ec05e2f14544a7d49a
+- 13b0493ce99287b1643522676065d9b8d003da0fc0cc55a3423864c0541091a8
+
+# `eval_oracle.py`
+
+## Summary
+- want を書き出した oracle 評価を、review oracle と同じ実装経路へ委譲する薄い入口。eval oracle 側に独自の評価処理を持たせず、評価本体は review oracle 実装に集約する。
+
+## Read this when
+- eval oracle サブコマンドがどの評価実装へ接続されるかを確認したいとき。
+- want を書き出した oracle の評価経路と review oracle の評価経路が同一であることを確認したいとき。
+- eval oracle 用の入口関数や委譲先を変更する必要があるとき。
+
+## Do not read this when
+- review oracle の評価処理本体、出力、検査内容を確認したいときは、委譲先の review oracle 実装を読む。
+- oracle 評価の根拠となる正本仕様や working plan review の意図を確認したいときは、対応する oracle doc を読む。
+- CLI の引数定義やサブコマンド登録を確認したいだけのときは、CLI 構成側の実装を読む。
+
+## hash
+- aa69d5ae36aec1c3d31050a5ce5880c23ecaa6c7edd6a3d605751ccaf75a2501
 
 # `indexing.py`
 
@@ -57,6 +72,22 @@
 
 ## hash
 - 300dd7538efb7a60cb06753149ee3b7f779bd687acbf6cc8a567083f8e6fa0a8
+
+# `init.py`
+
+## Summary
+- CLI の init サブコマンド実装を扱う。実処理は CLI runtime の preprocess command に委譲し、このファイルは init 用の入口だけを持つ。
+
+## Read this when
+- init サブコマンドがどの runtime preprocess command を呼ぶか確認したいとき。
+- init サブコマンドの入口関数名や委譲先を変更したいとき。
+
+## Do not read this when
+- init の具体的な setup 内容や config 同期処理を確認したいとき。委譲先の runtime preprocess command 実装を読む。
+- CLI runtime の preprocess command 共通挙動を変更したいとき。共通実装側を読む。
+
+## hash
+- 1c31245c4d543ed7f9025e974fb32ba8e42ae10a6075fed57af40989bba4c425
 
 # `review`
 

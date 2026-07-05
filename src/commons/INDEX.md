@@ -341,6 +341,24 @@
 ## hash
 - 48f612d340a45bf5d137635a4caadb23384a661da842f554fe82e50c97e40931
 
+# `runtime_preprocess_command.py`
+
+## Summary
+- CLI サブコマンド実行前の共通前処理をまとめる実装。doctor 前処理、設定同期、設定ファイルの git commit、実行見出しの表示までを 1 つのランナーとして扱う。
+
+## Read this when
+- サブコマンド開始時に doctor 前処理や設定同期を走らせる流れを確認・変更したいとき。
+- `.cmoc/config.json` を前処理中に stage し、差分がある場合だけ commit する挙動を確認・変更したいとき。
+- `run_cli_subcommand` に渡す前処理コマンドの引数、見出し、doctor 前処理抑制の指定を確認したいとき。
+
+## Do not read this when
+- 個別の doctor 前処理内容そのものを確認したいときは、doctor 前処理の実装や対応する oracle doc を読む。
+- 設定値の定義や同期内容の詳細を確認したいときは、設定同期の実装や対応する oracle src を読む。
+- git コマンド実行 wrapper の挙動を確認したいときは、git 実行の共通実装を読む。
+
+## hash
+- 61feec31b018bcb1c8d23f423cb443339773508659f928540632e528fafc2057
+
 # `runtime_results.py`
 
 ## Summary
