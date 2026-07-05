@@ -166,10 +166,10 @@ atexit.register(_stop_registered_fake_ollama_services)
 
 def _write_fake_ollama(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
+    write_python_executable(
+        path,
         textwrap.dedent(
             """\
-            #!/usr/bin/env python3
             import http.server
             import os
             import sys
@@ -197,17 +197,16 @@ def _write_fake_ollama(path: Path) -> None:
 
             http.server.ThreadingHTTPServer((host, int(port)), Handler).serve_forever()
             """
-        )
+        ).splitlines(),
     )
-    path.chmod(0o755)
 
 
 def _write_fake_systemctl(path: Path, home: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
+    write_python_executable(
+        path,
         textwrap.dedent(
             f"""\
-            #!{sys.executable}
             import os
             import subprocess
             import sys
@@ -249,9 +248,8 @@ def _write_fake_systemctl(path: Path, home: Path) -> None:
             print("unsupported fake systemctl args: " + repr(args), file=sys.stderr)
             raise SystemExit(2)
             """
-        )
+        ).splitlines(),
     )
-    path.chmod(0o755)
 
 
 def apply_worktree_from_state(root: Path, state: dict) -> Path:
