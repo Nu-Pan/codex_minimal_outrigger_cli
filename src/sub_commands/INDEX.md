@@ -1,23 +1,24 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実行制御をまとめるディレクトリ。run の開始、破棄、取り込み、結果レポート生成に関する上位処理へ進む入口になる。
-- apply state、apply branch、apply worktree、process id、session branch との関係を扱う処理が集まっており、apply run の外部挙動や状態遷移を調べるときの起点になる。
+- apply 系サブコマンドの実装をまとめるディレクトリ。apply fork・join・abandon の実行制御、apply run の状態遷移、branch/worktree/process id の扱い、fork report 生成への入口を持つ。
+- apply run の開始、finding 適用、差分 commit、join merge、abandon cleanup、想定外差分や conflict の処理など、apply 操作単位の上位制御を読むための入口となる。
 
 ## Read this when
-- apply run の開始、破棄、取り込み、レポート生成のどの実装へ進むべきかを選びたいとき。
-- apply branch、apply worktree、apply process id、session state の扱いを伴う apply 系サブコマンドの挙動を確認または変更したいとき。
-- apply run の成功時・失敗時・未収束時の状態遷移、出力、cleanup、report 連携を調べたいとき。
-- apply 対象 file の列挙、finding 列挙と適用、差分 commit、join merge、abandon cleanup の流れをサブコマンド単位で追いたいとき。
+- apply fork・join・abandon のどの実装ファイルへ進むべきかを選びたいとき。
+- apply run の lifecycle、session branch と apply branch、apply worktree、apply state、process id、report の関係をサブコマンド単位で確認したいとき。
+- apply fork の対象 file 選定、Codex 呼び出し、再調査 loop、commit、report 出力に関する実装を探したいとき。
+- apply join の merge、force-resolve、想定外差分、INDEX.md conflict 自動解決、cleanup に関する実装を探したいとき。
+- apply abandon の未 join apply run 破棄、process 停止、worktree/branch/state cleanup に関する実装を探したいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド実行基盤、共通 runtime、設定読み込み、git wrapper、state 型そのものを調べたいとき。
-- branch、worktree、state file、process id を操作する低レベル helper の汎用実装だけを確認したいとき。
-- Codex に渡す prompt、parameter builder、Structured Output schema の詳細だけを確認したいとき。
-- oracle file や realization file の一般定義、INDEX.md 生成規則、ルーティング規則そのものを調べたいとき。
+- apply 以外のサブコマンド、CLI 共通の実行ラッパー、エラー表示、git wrapper、state 読み書き、worktree 操作の汎用基盤だけを調べたいとき。
+- apply fork report の Markdown 書式や差分要約だけを扱う場合を除き、report 生成詳細ではなく fork/join/abandon の制御対象が決まっているときは該当ファイルへ直接進めるとき。
+- Codex に渡す prompt、Structured Output schema、parameter builder の詳細だけを変更したいとき。
+- oracle file・realization file・INDEX.md 生成規則など、apply サブコマンド実装ではない仕様概念を確認したいとき。
 
 ## hash
-- 614529c6a7ab4147e599d32d7fa6c38cbb3a39b3193b78f1e0e21708f11e0609
+- b250d5db42f8e8934e1accf90fcb3a95c789203262135b20b52b0f38b2d515b7
 
 # `doctor.py`
 

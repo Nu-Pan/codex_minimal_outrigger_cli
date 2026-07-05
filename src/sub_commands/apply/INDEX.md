@@ -19,21 +19,20 @@
 # `abandon.py`
 
 ## Summary
-- apply abandon サブコマンドの実行本体を定義する実装。session branch または apply branch 上で、未 join の active apply run を破棄し、apply worktree・apply branch・process id を掃除して apply state を ready に戻す。
-- apply run の状態検証、実行中 process の停止、session worktree への退避、削除後の orphan 確認、利用者向け結果出力を一連の制御として扱う。
+- `apply abandon` サブコマンドの実行本体を提供する。session branch または apply branch 上で、未 join の active apply run を破棄し、apply process の停止、apply worktree と apply branch の削除、process id の削除、session state の ready 復帰、結果表示までを扱う。
 
 ## Read this when
-- apply abandon の外部挙動、失敗条件、出力内容を確認または変更したいとき。
-- apply run の破棄時に、apply branch、apply worktree、apply process id、session state がどう扱われるかを調べたいとき。
-- session branch と apply branch のどちらから実行できるか、また current branch と state 上の apply branch の整合性を確認したいとき。
+- `cmoc apply abandon` の実行条件、失敗条件、状態遷移、削除対象、出力内容を確認したいとき。
+- running 状態の apply run を abandon する際の process id 読み取り、停止処理、警告の扱いを確認したいとき。
+- apply branch 上と session branch 上のどちらから実行した場合に、どの worktree・branch・state file を対象にするかを調べたいとき。
 
 ## Do not read this when
-- apply start、apply join など abandon 以外の apply サブコマンドの制御を調べたいとき。
-- branch・worktree・state file・process id を操作する低レベル helper の実装詳細だけを確認したいとき。
-- CLI runtime の共通ラップ処理や run_cli_subcommand 自体の挙動を調べたいとき。
+- apply run の開始、join、状態生成など abandon 以外の apply 操作を調べたいとき。
+- worktree 削除、branch 削除、process 停止、state 読み書きの低レベル実装そのものを確認したいとき。
+- CLI subcommand 共通の実行ラッパーやエラー表示の仕組みを調べたいとき。
 
 ## hash
-- bcdcc131818c1e23500761134a43a75f1277f85f8fc017f5fd2040a8a12a3b7f
+- ef1be500d0c01731d346c9b7fd3cce45a56737e2215aa3760b4307ca13925785
 
 # `fork.py`
 

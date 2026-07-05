@@ -37,23 +37,23 @@
 # `test_apply_abandon_cli.py`
 
 ## Summary
-- apply abandon が active apply run を破棄する外部挙動を CLI 経由で検証する realization test。worktree・branch・state の cleanup、missing cleanup target の warning、running process と Codex child process group の停止順序、PID reuse・race・lock 待ち、apply worktree や linked session worktree からの実行位置判定、破損 state や stale apply branch の拒否条件を扱う。
-- 16,000 文字を超えるが、active apply run の abandon に関する成功・警告・失敗条件と共有 fixture を一箇所で読むための凝集したテストとして位置づけられている。
+- apply abandon が active apply run を破棄する外部挙動を CLI 経由で検証する realization test。worktree・branch・session state の cleanup、running apply process と Codex child process の停止、pid file 読み取り、linked session/apply worktree からの実行位置判定、破損 state や stale apply branch の拒否条件を扱う。
+- 16,000 文字を超えるが、同じ abandon 操作の成功・警告・失敗条件と state fixture を共有するため、active apply run 破棄の検証文脈を一箇所に保つテストとして位置づけられている。
 
 ## Read this when
-- apply abandon の CLI 挙動、cleanup 結果、出力内容、state 更新、branch/worktree 削除条件を確認・変更したいとき。
-- running apply process の停止、Codex child process group の停止順序、PID file 読み取り、tracking lock、PID reuse や終了 race の扱いを確認・変更したいとき。
-- apply abandon を repo root、apply worktree、linked session worktree、linked apply worktree、stale apply branch から実行した場合の判定を確認・変更したいとき。
-- apply abandon が破損 state、process identity 欠落、未コミット差分、active run ではない apply branch を拒否する条件を確認・変更したいとき。
+- apply abandon の CLI 出力、終了コード、session state 更新、apply worktree 削除、apply branch 削除の挙動を確認・変更する。
+- running apply abandon が親 process と記録済み Codex child process をどう停止し、pid file や lock をどう扱うかを確認・変更する。
+- apply worktree 内、linked session worktree、linked apply worktree、stale apply branch など、実行位置による abandon の境界条件を確認・変更する。
+- cleanup 対象が既に消えている場合の warning 成功扱いや、process identity 欠落・worktree 導出不能・dirty linked session などの拒否条件を確認する。
 
 ## Do not read this when
-- apply fork や session fork の生成処理そのものを確認したいだけで、abandon の前提 fixture としての利用に関心がないとき。
-- apply abandon 以外の subcommand の CLI 仕様や一般的な session state 管理を確認したいとき。
-- Codex 実行結果の品質、findings の内容、LLM 出力そのものを検証したいとき。
-- INDEX.md 生成規則や oracle/realization の一般標準を確認したいとき。
+- apply fork の Codex 実行結果生成や findings 処理そのものを確認したい場合。
+- apply abandon 以外の session fork、doctor、repo 作成 helper の基本挙動を確認したい場合。
+- CLI を介さない汎用的な git worktree 操作や branch 操作の実装詳細だけを確認したい場合。
+- oracle file の正本仕様そのもの、または INDEX.md エントリー生成規則を確認したい場合。
 
 ## hash
-- 0aa147edb6623ca11edd2f7145f55bbc19068f1ee03e1e848fec0eb29401ef96
+- 4acf89c60ce02aade6c08bf5801e01a9c3325bd6deffe0f3458863e1411e2a86
 
 # `test_apply_fork_cli.py`
 

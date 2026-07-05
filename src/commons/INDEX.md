@@ -52,23 +52,25 @@
 # `runtime_apply.py`
 
 ## Summary
-- apply 実行に関わる linked worktree の特定、apply process pid file の保存・読取・削除、Codex subprocess 追跡環境の一時設定、apply abandon 時の停止処理を担う runtime 補助実装。
-- pid 再利用を避けるため process start time と pidfd を使って停止対象の同一性を確認し、Codex subprocess は process group 単位で停止する。
+- apply 実行に紐づく worktree 特定、apply process の pid file 管理、Codex subprocess 追跡、apply abandon 時の停止処理を扱う runtime 補助実装。
+- pidfd、process start time、process group、Linux /proc を使って、PID reuse や zombie を考慮しながら停止対象の同一性確認と signal 送信を行う。
+- session branch と apply branch から対応 worktree を解決し、apply 実行中だけ subprocess 追跡先を有効化する入口にもなる。
 
 ## Read this when
-- apply branch から managed worktree を復元する処理、または session branch が checkout された linked worktree を探す処理を確認・変更したいとき。
-- apply process の pid file の保存形式、破損時の扱い、削除タイミング、process tracking 用環境変数の復元挙動を確認・変更したいとき。
-- apply abandon が実行中 apply process や Codex subprocess group をどの順序・条件・signal で停止するかを確認・変更したいとき。
-- pidfd、process start time、Linux /proc、process group、zombie process を使った停止対象の安全確認や警告生成を扱うとき。
+- apply abandon が実行中 apply process や Codex subprocess group をどう特定・停止するかを確認または変更したいとき。
+- apply process pid file の保存形式、読み取り時の壊れた内容の扱い、cleanup 時の削除条件を確認したいとき。
+- apply branch 名や session branch から linked worktree を解決する処理を調べたいとき。
+- Codex subprocess 追跡用の環境変数と process-local な追跡先設定の関係を変更したいとき。
+- pidfd、process start time、process group、/proc を使った process 同一性確認や停止待ちの挙動を調整したいとき。
 
 ## Do not read this when
-- apply の CLI 引数、session state schema、出力文言全体、または subcommand の高レベル制御だけを確認したいとき。
-- git worktree の一般的な作成・削除処理や session 管理の永続状態全体を確認したいとき。
-- Codex CLI 呼び出しそのもののコマンドライン構築、プロンプト生成、または LLM 出力処理を確認したいとき。
-- process 停止と関係しない runtime 共通関数、git command wrapper、path model の定義を確認したいとき。
+- apply abandon の利用者向け仕様や CLI 出力の正本仕様を確認したいだけなら、対応する oracle doc を読む。
+- apply command 全体の CLI 引数、session state 更新、または high-level な制御フローを調べたい場合は、該当する command 実装から読む。
+- git command 実行 wrapper、runtime 共通 error、path model、worktree root の基本定義を確認したい場合は、runtime 共通実装や oracle 側の path 定義を読む。
+- process 停止とは無関係な session 作成、commit、diff、merge などの apply 周辺処理を調べたい場合は、より直接その責務を持つ実装を読む。
 
 ## hash
-- 560d83c54153af00482520b92b6a5d9fd4bc5289777b59ed22976f848c21f8b0
+- d140e6a14473bec52d65e02ccd6c504f7a14b08e0b263dd943a21dcdf9b007b8
 
 # `runtime_cli.py`
 
