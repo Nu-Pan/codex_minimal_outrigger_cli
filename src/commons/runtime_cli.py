@@ -6,6 +6,7 @@ from typing import Any
 import typer
 
 from commons.runtime_errors import CmocError, render_error
+from commons.runtime_doctor import run_doctor_preprocess
 from commons.runtime_logging import (
     SubcommandLogger,
     reset_current_subcommand_logger,
@@ -30,6 +31,7 @@ def run_cli_subcommand(
     command_argv: Sequence[str] | None = None,
     error_to_stderr: bool = False,
     use_work_root_runtime: bool = False,
+    doctor_preprocess: bool = True,
     **kwargs: Any,
 ) -> None:
     """CLI サブコマンドの共通実行ライフサイクルを管理する。
@@ -48,6 +50,10 @@ def run_cli_subcommand(
         require_current_directory_is_work_root(current_root)
         log_root = repo_root()
         runtime_root = current_root if use_work_root_runtime else log_root
+        if doctor_preprocess:
+            # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+            # サブコマンド固有の検査より前に、共通修復を work root 基準で済ませる。
+            run_doctor_preprocess(runtime_root)
         if pre_log_check is not None:
             # <work-root>/oracle/doc/app_spec/sub_command/tui.md
             # require .cmoc ignore guarantees before any .cmoc log file is created.

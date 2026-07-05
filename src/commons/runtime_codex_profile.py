@@ -399,7 +399,7 @@ def prepare_codex_profile(
     ):
         from commons.runtime_doctor import run_doctor_preprocess
 
-        run_doctor_preprocess(root)
+        run_doctor_preprocess(root, config)
     profile = build_codex_profile(
         parameter,
         config or CmocConfig(),

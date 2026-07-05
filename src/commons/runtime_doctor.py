@@ -19,16 +19,15 @@ _OLLAMA_HOST = "127.0.0.1:11434"
 _OLLAMA_CONNECT_TIMEOUT_SEC = 0.5
 _OLLAMA_START_TIMEOUT_SEC = 30.0
 _OLLAMA_SERVICE_NAME = "cmoc-ollama"
-_FALLBACK_LOCAL_SLM_MODEL = "smollm2:135m"
 
 
-def run_doctor_preprocess(root: Path) -> None:
+def run_doctor_preprocess(root: Path, config: CmocConfig | None = None) -> None:
     """共通実行前修復を行い、修復差分だけを commit する。"""
     root = root.resolve()
     ensure_cmoc_ignored(root)
     _ensure_agents_tracked(root)
     sync_config(root)
-    _ensure_ollama_serves_local_slm(root)
+    _ensure_ollama_serves_local_slm(root, config)
     _commit_doctor_repairs(root)
 
 
@@ -53,7 +52,9 @@ def _ensure_agents_tracked(root: Path) -> None:
 
 def _commit_doctor_repairs(root: Path) -> None:
     repair_paths = [".gitignore", ".agents/.gitkeep", ".cmoc/config.json"]
-    run_git(["add", "--", *repair_paths], root)
+    # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+    # `.cmoc/` 全体が ignored でも、修復した config は commit 対象に保つ。
+    run_git(["add", "-f", "--", *repair_paths], root)
     diff = run_git(
         ["diff", "--cached", "--quiet", "--", *repair_paths],
         root,
@@ -63,26 +64,38 @@ def _commit_doctor_repairs(root: Path) -> None:
         run_git(["commit", "-m", "cmoc doctor preprocess", "--", *repair_paths], root)
 
 
-def _ensure_ollama_serves_local_slm(root: Path) -> None:
+def _ensure_ollama_serves_local_slm(
+    root: Path, config: CmocConfig | None = None
+) -> None:
     # <work-root>/oracle/doc/app_spec/cmoc_managed_ollama.md
-    # cmoc managed ollama は利用者 home の user service として 11434 固定で扱う。
+    # cmoc provider を要求する model がある場合だけ、user service として 11434 固定で扱う。
+    models = _cmoc_managed_model_names(root, config)
+    if not models:
+        return
     with _ollama_lock():
         executable = _ensure_ollama_installed()
         _ensure_ollama_service(executable)
         _verify_ollama_service(executable)
-        model = _local_slm_model(root)
-        _ensure_ollama_model(executable, model)
+        for model in models:
+            _ensure_ollama_model(executable, model)
 
 
-def _local_slm_model(root: Path) -> str:
-    try:
-        config = load_config(root)
-    except CmocError:
-        config = CmocConfig()
+def _cmoc_managed_model_names(
+    root: Path, config: CmocConfig | None = None
+) -> list[str]:
+    if config is None:
+        try:
+            config = load_config(root)
+        except CmocError:
+            config = CmocConfig()
+    models: list[str] = []
+    seen: set[str] = set()
     for spec in config.codex.model.values():
         if spec.model_provider == "cmoc":
-            return spec.model
-    return _FALLBACK_LOCAL_SLM_MODEL
+            if spec.model not in seen:
+                models.append(spec.model)
+                seen.add(spec.model)
+    return models
 
 
 def _ollama_root() -> Path:

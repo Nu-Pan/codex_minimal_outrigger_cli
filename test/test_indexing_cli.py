@@ -104,20 +104,31 @@ def test_indexing_uses_codex_index_entry_builder_and_commits(
     assert "cmoc indexing" in run_git(root, "log", "--oneline", "-1").stdout
 
 
-def test_indexing_uninitialized_clean_repo_fails_before_subcommand_log(
+def test_indexing_uninitialized_clean_repo_runs_doctor_before_body(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
 
+    class FakeCodexResult:
+        output_json = {
+            "summary": ["summary"],
+            "read_this_when": ["read"],
+            "do_not_read_this_when": ["skip"],
+        }
+
+    monkeypatch.setattr(
+        indexing_module,
+        "run_codex_exec",
+        lambda parameter, **kwargs: FakeCodexResult(),
+    )
     result = runner.invoke(app, ["indexing"], catch_exceptions=False)
 
-    assert result.exit_code != 0
-    assert "cmoc doctor を実行してから再実行してください。" in result.stdout
-    assert "cmoc doctor を実行してから再実行してください。" not in result.stderr
-    assert not (root / ".gitignore").exists()
-    assert not (root / "INDEX.md").exists()
-    assert not (root / ".cmoc" / "local" / "log" / "sub_command").exists()
+    assert result.exit_code == 0
+    assert "/.cmoc/local/" in (root / ".gitignore").read_text()
+    assert (root / ".agents" / ".gitkeep").is_file()
+    assert (root / "INDEX.md").is_file()
+    assert (root / ".cmoc" / "local" / "log" / "sub_command").is_dir()
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 

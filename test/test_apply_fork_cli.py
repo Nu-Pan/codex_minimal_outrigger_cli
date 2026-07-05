@@ -118,10 +118,10 @@ def test_apply_fork_uses_linked_worktree_branch_and_head(
     assert not apply_worktree.is_relative_to(linked)
 
 
-def test_apply_fork_does_not_rewrite_session_gitignore(
+def test_apply_fork_runs_doctor_preprocess_before_body(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
-    """apply fork が session 側の既存 .gitignore 表現を書き換えないことを確認する。"""
+    """apply fork 本体前に doctor preprocess の共通修復が実行される。"""
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
@@ -148,8 +148,8 @@ def test_apply_fork_does_not_rewrite_session_gitignore(
         app, ["apply", "fork", "--scope", "full"], catch_exceptions=False
     )
 
-    assert result.exit_code == 0
-    assert (root / ".gitignore").read_text() == ".cmoc/\n"
+    assert result.exit_code == 0, result.stdout
+    assert "/.cmoc/local/" in (root / ".gitignore").read_text().splitlines()
     assert run_git(root, "status", "--short").stdout.strip() == ""
 
 
@@ -186,9 +186,8 @@ def test_apply_fork_ensures_cmoc_ignore_without_dirtying_session(
     assert "/.cmoc/local/" in exclude.read_text().splitlines()
 
 
-@pytest.mark.parametrize("config_case", ["invalid_json", "missing"])
 def test_apply_fork_config_load_error_does_not_start_apply_run(
-    tmp_path: Path, monkeypatch: MonkeyPatch, config_case: str
+    tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """設定読み込み失敗時に apply run の branch/state を開始しないことを確認する。"""
     root = make_repo(tmp_path)
@@ -201,10 +200,7 @@ def test_apply_fork_config_load_error_does_not_start_apply_run(
     session_id = branch.removeprefix("cmoc/session/")
     state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
     config_path = root / ".cmoc" / "config.json"
-    if config_case == "invalid_json":
-        config_path.write_text("{invalid\n")
-    else:
-        config_path.unlink()
+    config_path.write_text("{invalid\n")
 
     result = runner.invoke(app, ["apply", "fork", "--scope", "full"])
 
@@ -220,8 +216,32 @@ def test_apply_fork_config_load_error_does_not_start_apply_run(
         root / ".cmoc" / "local" / "state" / "apply_processes" / f"{session_id}.pid"
     ).exists()
     assert run_git(root, "branch", "--list", f"cmoc/apply/{session_id}/*").stdout == ""
-    if config_case == "missing":
-        assert not config_path.exists()
+
+
+def test_apply_fork_missing_config_is_repaired_before_body(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    (root / ".cmoc" / "config.json").unlink()
+
+    def fake_run_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> FakeCodexResult:
+        return FakeCodexResult({"findings": []})
+
+    monkeypatch.setattr(apply_fork_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(
+        app, ["apply", "fork", "--scope", "full"], catch_exceptions=False
+    )
+
+    assert result.exit_code == 0, result.stdout
+    assert (root / ".cmoc" / "config.json").is_file()
 
 
 def test_apply_fork_can_target_and_edit_gitignore(

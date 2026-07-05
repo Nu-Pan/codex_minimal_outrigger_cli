@@ -171,7 +171,7 @@ def test_session_fork_initializes_cmoc_ignore_before_logging(
     branch = current_branch(root)
     assert branch.startswith("cmoc/session/")
     assert session_home_branch(root, branch) == home_branch
-    assert not (root / ".gitignore").exists()
+    assert "/.cmoc/local/" in (root / ".gitignore").read_text()
     assert (
         subprocess.run(
             ["git", "check-ignore", "-q", ".cmoc/local/.__cmoc_ignore_probe__"],
@@ -322,7 +322,7 @@ def test_session_abandon_requires_existing_home_branch(
         ).returncode
         == 0
     )
-    assert "/.cmoc/local/" not in gitignore.read_text().splitlines()
+    assert "/.cmoc/local/" in gitignore.read_text().splitlines()
     assert run_git(root, "ls-files", "--", ".cmoc").stdout == tracked_cmoc
 
 
@@ -374,7 +374,7 @@ def test_session_abandon_rolls_back_state_and_branch_on_cleanup_failure(
     )
     state = json.loads(state_path.read_text())
     assert state["session"]["state"] == "active"
-    assert "/.cmoc/local/" not in gitignore.read_text().splitlines()
+    assert "/.cmoc/local/" in gitignore.read_text().splitlines()
     assert run_git(root, "ls-files", "--", ".cmoc").stdout == tracked_cmoc
     assert run_git(root, "status", "--short").stdout.strip() == ""
 

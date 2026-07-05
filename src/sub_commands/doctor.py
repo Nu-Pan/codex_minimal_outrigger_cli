@@ -9,6 +9,7 @@ def cmoc_doctor_impl() -> None:
         _cmoc_doctor_body,
         command_name="doctor",
         command_argv=["cmoc", "doctor"],
+        doctor_preprocess=False,
     )
 
 

@@ -2,6 +2,8 @@ import json
 from pathlib import Path
 
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
+import commons.runtime_doctor as doctor_module
+from commons.runtime_config import write_config
 from config.cmoc_config import CmocConfig
 from oracle.other.cmoc_config import CodexModelSpec
 from commons.runtime_codex_profile import prepare_codex_profile
@@ -13,6 +15,9 @@ def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
     monkeypatch,
 ) -> None:
     root = make_repo(tmp_path)
+    config = CmocConfig()
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", "smollm2:135m")
+    write_config(root / ".cmoc" / "config.json", config)
 
     monkeypatch.chdir(root)
     result = run_doctor(root)
@@ -42,6 +47,38 @@ def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
     assert ".gitignore" in committed_paths
     assert ".agents/.gitkeep" in committed_paths
     assert ".cmoc/config.json" in committed_paths
+
+
+def test_doctor_pulls_each_unique_cmoc_provider_model(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    config = CmocConfig()
+    config.codex.model[ModelClass.MAINSTREAM] = CodexModelSpec("cmoc", "alpha")
+    config.codex.model[ModelClass.FLAGSHIP] = CodexModelSpec("cmoc", "beta")
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", "alpha")
+    write_config(root / ".cmoc" / "config.json", config)
+    pulled: list[str] = []
+
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(
+        doctor_module, "_ensure_ollama_installed", lambda: Path("ollama")
+    )
+    monkeypatch.setattr(
+        doctor_module, "_ensure_ollama_service", lambda executable: None
+    )
+    monkeypatch.setattr(
+        doctor_module, "_verify_ollama_service", lambda executable: None
+    )
+    monkeypatch.setattr(
+        doctor_module,
+        "_ensure_ollama_model",
+        lambda executable, model: pulled.append(model),
+    )
+
+    doctor_module.run_doctor_preprocess(root)
+
+    assert pulled == ["alpha", "beta"]
 
 
 def test_doctor_syncs_default_config_without_overwriting_human_values(
