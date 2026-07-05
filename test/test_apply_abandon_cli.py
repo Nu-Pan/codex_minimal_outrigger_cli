@@ -204,7 +204,10 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
     process_id_path.write_text("12345 67890\n")
     stopped: list[int] = []
 
-    def fake_stop_apply_process(process: apply_runtime.ApplyProcessIdentity) -> str:
+    def fake_stop_apply_process(
+        process: apply_runtime.ApplyProcessIdentity,
+        read_after_parent_exit: object = None,
+    ) -> str:
         """cleanup 前の worktree と branch がまだ残っていることを観測する。"""
         assert apply_worktree.is_dir()
         assert run_git(root, "rev-parse", "--verify", apply_branch).returncode == 0
@@ -233,10 +236,10 @@ def test_apply_abandon_stops_running_apply_process_before_cleanup(
     assert not process_id_path.exists()
 
 
-def test_stop_apply_process_stops_tracked_child_group_before_parent(
+def test_stop_apply_process_rereads_child_groups_after_parent_exit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Codex subprocess は親 apply process より先に専用 process group ごと止める。"""
+    """親終了後の pid file 再読込で後発 Codex child group も止める。"""
     order: list[str] = []
 
     def fake_stop_child(process: apply_runtime.ProcessIdentity) -> None:
@@ -257,17 +260,20 @@ def test_stop_apply_process_stops_tracked_child_group_before_parent(
     warning = apply_runtime.stop_apply_process(
         apply_runtime.ApplyProcessIdentity(
             12345, 20, (apply_runtime.ProcessIdentity(23456, 30),)
-        )
+        ),
+        lambda: apply_runtime.ApplyProcessIdentity(
+            12345, 20, (apply_runtime.ProcessIdentity(34567, 40),)
+        ),
     )
 
     assert warning is None
-    assert order == [f"child:23456", f"parent:12345:{apply_runtime.signal.SIGTERM}"]
+    assert order == [f"parent:12345:{apply_runtime.signal.SIGTERM}", "child:34567"]
 
 
 def test_stop_apply_process_keeps_child_warning_when_parent_is_stale(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """親 process 側の早期 warning でも child 停止 warning を破棄しない。"""
+    """親 process 側の warning 後も child 停止 warning を破棄しない。"""
     monkeypatch.setattr(
         apply_runtime,
         "stop_child_process_group",
@@ -284,8 +290,8 @@ def test_stop_apply_process_keeps_child_warning_when_parent_is_stale(
     )
 
     assert warning == (
-        "apply child process already stopped: 23456; "
-        "stale apply process id ignored: 12345"
+        "stale apply process id ignored: 12345; "
+        "apply child process already stopped: 23456"
     )
 
 

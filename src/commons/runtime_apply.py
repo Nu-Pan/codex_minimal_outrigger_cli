@@ -2,7 +2,7 @@ import os
 import select
 import signal
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import NamedTuple
@@ -152,7 +152,10 @@ def delete_apply_process_id(root: Path, session_id: str) -> None:
         path.unlink(missing_ok=True)
 
 
-def stop_apply_process(process: ApplyProcessIdentity) -> str | None:
+def stop_apply_process(
+    process: ApplyProcessIdentity,
+    read_after_parent_exit: Callable[[], ApplyProcessIdentity | None] | None = None,
+) -> str | None:
     """running abandon では cleanup 前に apply process が消えたことを確認する。"""
     warnings: list[str] = []
 
@@ -160,10 +163,6 @@ def stop_apply_process(process: ApplyProcessIdentity) -> str | None:
         combined = [*warnings, *extra]
         return "; ".join(combined) if combined else None
 
-    for child in process.child_processes:
-        warning = stop_child_process_group(child)
-        if warning:
-            warnings.append(warning)
     process_id = process.process_id
     if process_id == os.getpid():
         raise CmocError(
@@ -171,13 +170,33 @@ def stop_apply_process(process: ApplyProcessIdentity) -> str | None:
             ["別 process から cmoc apply abandon を実行してください。"],
             f"pid: {process_id}",
         )
+    parent_warning = _stop_parent_apply_process(process)
+    if parent_warning:
+        warnings.append(parent_warning)
+
+    # <work-root>/oracle/doc/app_spec/sub_command/apply_abandon.md
+    # 親 apply process の終了後に pid file を読み直す。親が snapshot 取得後に
+    # start_new_session=True の Codex child を増やしても cleanup 前に止めるため。
+    child_source = read_after_parent_exit() if read_after_parent_exit else process
+    child_processes = (
+        child_source.child_processes if child_source else process.child_processes
+    )
+    for child in child_processes:
+        warning = stop_child_process_group(child)
+        if warning:
+            warnings.append(warning)
+    return joined_warnings()
+
+
+def _stop_parent_apply_process(process: ApplyProcessIdentity) -> str | None:
+    process_id = process.process_id
     process_fd = open_process_fd(process_id)
     if process_fd is None:
-        return joined_warnings(f"apply process already stopped: {process_id}")
+        return f"apply process already stopped: {process_id}"
     try:
         current_start_time = process_start_time(process_id)
         if current_start_time is None and wait_process_fd_exit(process_fd, 0):
-            return joined_warnings(f"apply process already stopped: {process_id}")
+            return f"apply process already stopped: {process_id}"
         if process.start_time is None or current_start_time is None:
             raise CmocError(
                 "実行中 apply process の同一性を確認できません。",
@@ -185,13 +204,13 @@ def stop_apply_process(process: ApplyProcessIdentity) -> str | None:
                 f"pid: {process_id}",
             )
         if current_start_time != process.start_time:
-            return joined_warnings(f"stale apply process id ignored: {process_id}")
+            return f"stale apply process id ignored: {process_id}"
         send_process_signal(process_fd, process_id, signal.SIGTERM)
         if wait_process_fd_exit(process_fd, 5.0):
-            return joined_warnings()
+            return None
         send_process_signal(process_fd, process_id, signal.SIGKILL)
         if wait_process_fd_exit(process_fd, 5.0):
-            return joined_warnings()
+            return None
         raise CmocError(
             "実行中 apply process を停止できません。",
             ["apply process を確認して停止後に再実行してください。"],

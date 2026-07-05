@@ -76,7 +76,10 @@ def _cmoc_apply_abandon_body() -> None:
                 ["apply process id file を確認し、apply process 停止後に再実行してください。"],
                 f"session_id: {session_id}",
             )
-        stopped_warning = stop_apply_process(process_id)
+        stopped_warning = stop_apply_process(
+            process_id,
+            lambda: read_apply_process_id(repo, session_id),
+        )
         if stopped_warning:
             warnings.append(stopped_warning)
     if branch == apply_branch:
