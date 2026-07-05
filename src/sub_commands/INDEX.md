@@ -189,23 +189,24 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドの実行本体をまとめる実装領域。session の開始、取り込み、破棄に関する branch/state 操作、事前条件確認、失敗時処理、利用者向け出力の具体化を扱う。
-- パッケージ自体は初期化処理や公開 API を持たず、個別の session サブコマンド実装へ進むための入口として位置づく。
+- session 系サブコマンドの実装をまとめる領域。active session の作成、home branch への join、merge せず破棄する abandon など、session の lifecycle に関わる CLI 実行本体への入口になる。
+- 各サブコマンドは CLI runtime 経由の実行、git branch/state/worktree の事前条件、状態更新、利用者向け出力、失敗時の復旧情報を扱う。
 
 ## Read this when
-- session 系サブコマンドの実装を調べ、どの処理本体へ進むべきかを判断したいとき。
-- session の開始、home branch への merge、session branch の破棄、state 更新、branch switch/delete、clean worktree 確認などの実装を確認または変更したいとき。
-- session 操作中の git 操作失敗、rollback、conflict 解消委譲、conflict marker/unmerged path 検査、利用者向けエラー出力の扱いを調べたいとき。
-- session 配下のパッケージ境界を確認し、パッケージ自体に初期化処理があるかを見たいとき。
+- session 系サブコマンドの実行条件、branch 切り替え、state 更新、session branch の作成・削除、CLI 出力を確認または変更したいとき。
+- active session の開始、home branch への merge、merge せず破棄する処理など、session lifecycle の具体的な挙動を調べたいとき。
+- session join の merge conflict 解消委譲、conflict marker や unmerged path の検査、merge commit までの制御を確認したいとき。
+- session-id の生成、一意性確認、既存 branch/state file との衝突時 retry、active session 重複検出を調べたいとき。
+- session 操作の失敗時 rollback、cleanup error、手動復旧メッセージ、stderr 報告境界を確認したいとき。
 
 ## Do not read this when
-- session サブコマンドの正本仕様を確認したいときは、対応する oracle doc を読む。
-- session state のデータ構造、state file schema、path model、git wrapper、CLI runtime、branch 判定などの共通機構そのものを調べたいときは、それぞれの定義または共通実装へ進む。
-- session 以外のサブコマンド実装、共通 CLI ルーティング、サブコマンド登録を調べたいとき。
-- INDEX.md 用エントリーの生成規則やルーティング文書の書き方だけを確認したいときは、規則本文を読む。
+- session 系サブコマンドの正本仕様だけを確認したいときは、対応する oracle doc を読む。
+- git 操作 wrapper、CLI runtime、state 読み書き、path model、worktree clean 判定などの共通 helper の詳細を調べたいときは、runtime 側の実装を読む。
+- Codex CLI に渡す conflict 解消 prompt や parameter の組み立て自体を変更したいときは、その builder 側を読む。
+- 共通 CLI ルーティング、サブコマンド登録、または session 以外のサブコマンド実装を調べたいときは、より直接の対象へ進む。
 
 ## hash
-- 3f5d8784a365ddc733c78060bd96b6dcd807e5310d92e72cc43195ec711c5a8c
+- bc9755c9b7317f75cfd4f3490538dee4b2f91e01f24a34d77ac70bf1ed63bd63
 
 # `tui.py`
 

@@ -365,25 +365,24 @@
 # `test_session_cli.py`
 
 ## Summary
-- session fork/join/abandon の CLI 外部挙動を、branch と session state のライフサイクルを中心に検証する回帰テスト。
-- session branch の作成・削除、state file の作成・更新・rollback、linked worktree 上の挙動、dirty worktree 拒否、join 時の conflict 解消 agent 呼び出し、エラー出力先をまとめて扱う。
-- 16,000 文字超のファイルだが、同じ branch/state fixture を共有する session CLI 状態遷移の観測点として凝集している。
+- session branch と session state のライフサイクルを軸に、session fork/join/abandon の CLI 外部挙動をまとめて検証する回帰テスト。
+- session state 作成・衝突時 retry・破損 state 拒否・linked worktree 上の branch/head 扱い・dirty worktree 拒否・state cleanup・branch 削除可否・エラー出力先を扱う。
+- join では oracle conflict 解消 agent の file access mode、conflict 対象外差分の拒否、delete conflict 解消の staging、conflict marker 検出も検証する。
 
 ## Read this when
-- cmoc session fork/join/abandon の CLI 外部挙動を変更・確認する。
-- session state file の active/joined/abandoned 遷移、必須 field 欠落、破損 state、session-id collision の扱いを確認する。
-- session branch と home branch の切替、削除可否、linked worktree での branch/head/state の扱いを確認する。
-- session join の merge conflict 解消、oracle conflict 書き込み profile、conflict marker 検出、delete conflict 解消、conflict agent が残した余計な差分の拒否を確認する。
-- session abandon/join の失敗時 rollback、cleanup 失敗、stdout/stderr へのエラーレポート出力を検証する。
+- session fork/join/abandon の CLI 外部挙動、出力、終了コード、git branch/state 遷移を変更または確認する時。
+- session state file の生成・検証・cleanup・異常時 rollback・abandoned/joined/active state の扱いを確認する時。
+- linked worktree での session 操作、home branch への復帰、root worktree への影響有無を確認する時。
+- session join の conflict 解消 agent 呼び出し、oracle conflict 書き込み許可、conflict marker 残存検出、conflict 対象外差分拒否を確認する時。
+- session 操作での stdout/stderr の使い分けや、利用者向け完了・エラー報告を変更する時。
 
 ## Do not read this when
-- session CLI 以外のサブコマンド挙動や一般的な CLI 起動だけを確認したい。
-- session 状態遷移ではなく、個別 helper の純粋な単体ロジックだけを確認したい。
-- oracle conflict 解消や branch/state cleanup を伴わない通常の git 操作 wrapper を確認したい。
-- テスト支援 fixture や repo 作成 helper の定義を調べたい場合は、支援モジュールを直接読む。
+- session 以外のサブコマンドや、session の内部 helper 単体だけを確認したい時。
+- agent call の品質や LLM 出力内容そのものを検証したい時。
+- git 操作一般、設定読み込み、doctor の詳細挙動など、session CLI の外部状態遷移に直接関係しない実装を調べる時。
 
 ## hash
-- ffa4b4bdfc025ffdf8e77ac70cd8b16c2b737bd17c8866d0d9010f9719039149
+- 5270cc62f5afe98e96d504bf401972d20711b3c0977c56f15f8f71becf9d4bd1
 
 # `test_struct_doc_rendering.py`
 

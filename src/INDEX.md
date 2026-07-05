@@ -138,21 +138,21 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の各サブコマンド実行本体を集約する実装領域。apply、doctor、indexing、review、session、tui などの CLI 入口から、runtime・git・state・Codex 実行・report 生成などの共通処理へつなぐ上位 orchestration を扱う。
-- サブコマンド単位の実行順序、事前条件確認、状態遷移、branch/worktree 操作、利用者向け出力、失敗時処理を追うための入口であり、詳細ロジックは必要に応じて各サブコマンド配下や共通 helper へ進む。
+- CLI サブコマンドごとの実行本体を集約する領域。apply、doctor、indexing、review、session、TUI などの上位 orchestration へ進む入口になる。
+- 各サブコマンドは CLI runtime や共通 helper を呼び出し、事前条件検査、状態遷移、git/worktree 操作、Codex 実行接続、利用者向け出力や report 生成までをサブコマンド単位で束ねる。
+- 低レベルな runtime、git wrapper、state 型、prompt/schema builder の詳細ではなく、それらをサブコマンドの外部挙動としてどう接続するかを確認するための階層である。
 
 ## Read this when
-- cmoc のサブコマンド実装を確認し、どの command 本体または下位 module へ進むべきかを判断したいとき。
-- apply、review、session など、branch、worktree、state、process id、report、cleanup を伴うサブコマンドの外部挙動や状態遷移を確認または変更したいとき。
-- doctor、indexing、tui など、CLI runtime から特定の処理を起動する接続点、preflight、実行パラメータ解決、利用者向け出力を確認したいとき。
-- サブコマンドの上位制御と、対象列挙、loop、report、INDEX 変更反映、git 操作、Codex 実行 builder などの詳細処理との接続関係を追いたいとき。
+- サブコマンドの実行入口、実行順序、CLI runtime への渡し方、利用者向け出力を確認または変更したいとき。
+- apply、review、session など、branch、worktree、state、process id、report、cleanup を伴うサブコマンド固有の状態遷移を追いたいとき。
+- doctor、indexing、TUI のように、共通処理を CLI サブコマンドとして起動する接続点や preflight 条件を確認したいとき。
+- review oracle の対象列挙、finding loop、INDEX 変更反映、report 出力など、review 系処理のどの下位実装へ進むべきかを選びたいとき。
 
 ## Do not read this when
-- CLI runtime、git wrapper、state 型、path model、設定読み込み、Codex 実行基盤などの共通機構そのものを調べたいとき。
-- oracle file、realization file、INDEX.md 生成規則、ルーティング規則など、仕様文書や文書生成の一般定義を確認したいとき。
-- Codex に渡す prompt、parameter builder、Structured Output schema の詳細だけを確認したいとき。
-- サブコマンド登録やトップレベル CLI 配線だけを確認したいとき。
-- 低レベルな branch、worktree、state file、process id 操作 helper の汎用実装だけを確認したいとき。
+- CLI runtime、設定読み込み、git wrapper、state 読み書き、path model、worktree clean 判定などの共通 helper の低レベル実装だけを調べたいとき。
+- Codex に渡す prompt、parameter builder、Structured Output schema の内容そのものを確認または変更したいとき。
+- oracle file、realization file、INDEX.md 生成規則、ルーティング規則などの正本仕様や文書規則を確認したいとき。
+- 特定サブコマンドの詳細責務が既に分かっており、その下位 module が対象列挙、loop、report、merge、cleanup などを直接担っている場合。
 
 ## hash
-- 4b5587f17604677913bfa9f131d2aa758eb88af8fe828d566b93aed689aeeef7
+- 6257c2b35b39c8f18522ff09de3627c8c0550faa45653c3953b14118bdbea6ed
