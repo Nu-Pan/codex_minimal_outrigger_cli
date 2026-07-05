@@ -1,25 +1,21 @@
 # `apply`
 
 ## Summary
-- apply 系サブコマンドの実行本体をまとめる領域。apply run の開始、破棄、join、report 生成に関する CLI 制御、状態遷移、branch/worktree 操作、Codex 呼び出し、結果表示への入口になる。
-- apply fork では対象 file の選定、finding 列挙・適用、差分 commit、収束判定、state 更新を扱い、apply join/abandon では apply run の取り込みや破棄、cleanup、失敗条件を扱う。
+- apply 系サブコマンドの実装群をまとめるディレクトリで、apply run の開始、完了 join、破棄、report 生成に関する処理への入口になる。
+- apply fork の orchestration、対象ファイル列挙、state 更新、worktree・branch 操作、join 時の差分分類、abandon 時の cleanup など、apply run のライフサイクルを構成する実装を下位対象に分担している。
 
 ## Read this when
-- apply fork、join、abandon の実行条件、状態遷移、return code、削除対象、merge や cleanup、CLI 表示を確認または変更したいとき。
-- apply run に紐づく apply branch、apply worktree、process id、session state、oracle snapshot commit、前回 join 済み apply merge commit の関係を調べたいとき。
-- apply fork がどの file を対象にするか、scope ごとの差分、oracle 除外、git ignore・管理外領域・AGENTS/INDEX 除外、再調査キューや収束判定を確認したいとき。
-- apply fork の report 生成、失敗時 report、Markdown 構成、frontmatter、変更差分収集、Codex 要約や fallback 要約を確認または変更したいとき。
-- apply join 時に許可される差分範囲、想定外差分、force-resolve、INDEX.md conflict の自動解決、root memo や oracle file の扱いを確認したいとき。
+- apply サブコマンドの fork、join、abandon、report 生成のどの実装へ進むべきかを選びたいとき。
+- apply run の branch/worktree/state/report/cleanup の流れを、個別ファイルへ読む前に概観したいとき。
+- apply scope、再キュー、未 join run の破棄、join 時の想定外差分や conflict 処理など、apply 固有の制御ロジックの所在を探したいとき。
 
 ## Do not read this when
-- apply 以外のサブコマンド実行基盤、CLI 共通ラッパー、設定読み込み、git wrapper、state 型、worktree 探索、report directory の共通処理だけを調べたいとき。
-- Codex に渡す prompt、Structured Output schema、parameter builder の詳細だけを変更したいとき。
-- worktree 削除、branch 削除、process 停止、state 読み書きなどの低レベル helper の汎用実装そのものを確認したいとき。
-- oracle file や realization file の一般定義、ファイルアクセス規則、仕様文書上の分類を確認したいとき。
-- パッケージ説明や import 副作用の有無だけを確認したい場合を除き、具体的な apply サブコマンドと無関係な調査をしているとき。
+- apply 以外のサブコマンド、CLI parser、共通 runtime、git/worktree/state の低レベル helper を調べたいとき。
+- Codex prompt parameter や Structured Output schema の内容そのものを確認したいとき。
+- oracle file や realization file の概念定義、ファイルアクセス規則などの正本仕様を確認したいとき。
 
 ## hash
-- 09d2209b9249bd86daac8668d21433834b3b639ef7e5010f5e7d4917f0949c99
+- 5af6853965ddb2ea87013abc0ebe57f16337ba8405dc7795314267b565323caa
 
 # `doctor.py`
 
@@ -172,21 +168,20 @@
 # `review_targets.py`
 
 ## Summary
-- review oracle の対象候補を列挙する処理を扱う。oracle ツリー配下から対象外名・memo・git ignore 対象を除外し、scope が full でない場合は session 開始 commit から HEAD までに変更された oracle file だけへ絞り込む。
+- review oracle の対象となる oracle file を列挙する実装。scope が full の場合は全 oracle file、差分 scope の場合は session start commit から HEAD までに変更された oracle 配下の対象だけを返す。
 
 ## Read this when
-- review oracle が対象にする oracle file の列挙条件を確認・変更したいとき。
-- review oracle の full scope と変更分 scope の違いを確認したいとき。
-- session 開始 commit がない場合の review oracle 対象の扱いを確認したいとき。
-- oracle file 対象から INDEX.md、AGENTS.md、memo、git ignore 対象を除外する制御を確認したいとき。
+- review oracle が検査対象にする oracle file の列挙条件を確認したいとき。
+- scope と session state に応じて full review と差分 review の対象がどう変わるかを確認したいとき。
+- oracle 配下から git 追跡対象外・INDEX.md・AGENTS.md などを除外する判定が対象列挙にどう使われるかを追いたいとき。
 
 ## Do not read this when
-- review oracle の実際の検査内容や診断ルールを確認したいとき。
-- review oracle 以外のサブコマンドの対象列挙を確認したいとき。
-- git コマンド実行、SessionState、memo 判定、git ignore 判定の共通実装そのものを確認したいとき。
+- oracle file かどうかの判定条件そのものを確認したいときは、runtime 側の path 判定を読む。
+- review の実行内容、診断観点、出力形式を確認したいときは、対象列挙ではなく review 本体の実装を読む。
+- oracle 以外の review 対象や一般的なファイル探索処理を確認したいとき。
 
 ## hash
-- 00f712ea56b7dacdfbe5d7a0faf2bd9c9f3629aa7f0ce1a36ffa2280b37e3eb9
+- 76df8a9304aa0f5e4a6801534aeb25108d711ef343aabc725a20f8549b02c5ef
 
 # `session`
 

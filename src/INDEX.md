@@ -141,20 +141,18 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装をまとめる領域。apply、review、session、doctor/init、indexing、tui など、個別コマンドの実行本体や共通 runtime への接続点へ進む入口になる。
-- 各下位対象は、コマンドごとの事前条件、状態遷移、git/worktree/branch 操作、Codex 呼び出し、report 生成、CLI 表示などを扱う実装へ分かれている。
+- CLI サブコマンド実装をまとめる階層で、apply、session、review、init/doctor、indexing、tui などの利用者向けコマンドから各実行ロジックへ進む入口になる。
+- 各コマンドの薄い orchestration、runtime への接続、branch/worktree/state/report/cleanup などの高水準な制御フローを扱い、詳細な生成・判定・低レベル helper は下位対象または共通基盤へ分担している。
 
 ## Read this when
-- CLI サブコマンドの実行本体を調べるため、どのコマンド実装へ進むべきかを選びたいとき。
-- apply、review、session、doctor/init、indexing、tui のいずれかの実行条件、状態遷移、return code、cleanup、branch/worktree 操作、report 出力、CLI 表示を確認または変更したいとき。
-- CLI runtime や共通 helper そのものではなく、それらを各サブコマンドがどう呼び出しているかを追いたいとき。
-- 特定サブコマンド内で、対象列挙、Codex 呼び出し、INDEX 反映、差分検査、state 更新などの下位 module へ進む入口を探したいとき。
+- 特定の CLI サブコマンドの実装入口や、どの下位対象へ進むべきかを選びたいとき。
+- apply run、session 操作、review oracle、init/doctor、indexing、tui の実行順序、事前条件、state・branch・worktree・report との接続を概観したいとき。
+- サブコマンドが共通 runtime、Codex 実行、git 操作、INDEX maintenance、config 同期などへどう接続しているかを追い始めたいとき。
 
 ## Do not read this when
-- Typer app へのサブコマンド登録、CLI 全体の dispatch、共通 runtime、git wrapper、path model、state schema の汎用実装だけを調べたいとき。
-- Codex に渡す prompt、Structured Output schema、parameter builder の詳細だけを確認または変更したいとき。
-- oracle file や realization file の一般定義、ファイルアクセス規則、仕様文書上の分類など、サブコマンド実行本体と無関係な正本仕様を確認したいとき。
-- worktree 削除、branch 削除、process 停止、state 読み書き、repo root 判定、git ignore 判定などの低レベル helper の汎用実装そのものを調べたいとき。
+- CLI parser 全体の登録や dispatch、共通 runtime、git/worktree/state/path model などの低レベル helper そのものを調べたいとき。
+- Codex prompt parameter、Structured Output schema、oracle file や realization file の正本仕様を確認したいとき。
+- INDEX.md の本文生成、review finding の prompt、report 描画、対象列挙など、すでに責務が明確な個別ロジックだけを変更したいときは、その下位対象を直接読む。
 
 ## hash
-- 6f21450a6d425dd5e1d1166ed648f9367bd4d4546e81e3220c96a7965e273e27
+- 34ea204c48784c5aa96985c21ad6ed2c7a74e1ed8dd3646979598224e8bca1dc

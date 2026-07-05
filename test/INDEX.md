@@ -58,24 +58,25 @@
 # `test_apply_fork_cli.py`
 
 ## Summary
-- apply fork サブコマンドの CLI 挙動を検証する realization test。Codex 実行ループ、apply run の state 更新、apply worktree 配置、linked worktree 起点の branch/HEAD 利用、doctor preprocess、cmoc ignore 修復、設定読み込み失敗時の中断、`.gitignore` 編集、target normalization、report 生成前の completed 書き込みを扱う。
+- apply fork CLI の統合的な外部挙動を検証する realization test。Codex 実行を fake 化し、apply run の開始・完了、state 更新、apply branch/worktree の作成、report 前の completed 書き込み、doctor preprocess、設定読み込み失敗時の中断、`.gitignore` 編集、target 正規化を扱う。
+- session fork 済み状態から apply fork を実行したときの state schema、branch 命名、worktree 配置、不要な旧 state field や pid file の不在を確認する入口になる。
+- target 正規化について、root 直下 memo、管理領域、規範 path、`.cmoc/local`、tracked ignored file、binary file、oracle 配下 symlink の扱いを確認する入口になる。
 
 ## Read this when
-- `apply fork` の開始から完了までの外部挙動、state file、apply branch、apply worktree、report 生成順序を確認・変更したいとき。
-- `apply fork` が Codex 呼び出しをどの目的で実行するか、所見列挙や所見適用の制御をテストしたいとき。
-- linked worktree 上で `session fork` した後の `apply fork` が、linked worktree の現在 HEAD から apply run を始める挙動を確認したいとき。
-- `apply fork` 実行前の doctor preprocess、`.cmoc/local/` ignore 補修、clean worktree 維持に関する回帰を調べるとき。
-- `apply fork` の設定ファイル欠落・不正 JSON など、apply run を開始してはいけない失敗条件を確認したいとき。
-- `normalize_apply_targets` の除外・保持ルールを、root 直下の memo、管理ディレクトリ、oracle 配下、binary file、tracked ignored file の観点で確認したいとき。
+- apply fork の CLI 挙動、state 遷移、apply branch/worktree 作成、Codex loop 呼び出し順を変更または調査するとき。
+- apply fork 実行前の doctor preprocess、`.cmoc/local` ignore 修復、clean worktree 維持、`.gitignore` を所見対象として編集できる挙動を確認するとき。
+- 設定ファイルの欠落・JSON 不正など、apply run を開始する前に失敗すべき条件と、そのとき branch/state/pid を作らない保証を確認するとき。
+- apply fork の対象列挙・正規化で、realization file 定義から外れる path、root 直下 memo、tracked ignored file、binary、symlink、`.cmoc` 配下の扱いを確認するとき。
+- linked worktree 上で session branch と HEAD を基準に apply run を開始する挙動を調査するとき。
 
 ## Do not read this when
-- `apply fork` の実装内部だけを変更し、外部挙動や state・worktree・target normalization の期待値を確認する必要がないとき。
-- `apply fork` 以外の apply 系サブコマンド、session 操作、doctor 処理の単体仕様を探しているとき。
-- Codex CLI や LLM 出力品質そのもののテスト方針を確認したいとき。
-- INDEX 生成やルーティング文書の仕様を確認したいとき。
+- apply fork 以外のサブコマンドや、session fork 単体の詳細だけを調査するときは、該当コマンドの実装・テストへ進む。
+- Codex 実行 wrapper の一般仕様や実際の LLM 出力品質を調査するときは、この fake 前提の CLI テストではなく Codex 呼び出し層を読む。
+- target 正規化の実装詳細だけを局所的に変更するときは、まず apply fork 実装側の正規化関数を読み、必要に応じてこのテストで外部挙動を確認する。
+- report 本文の形式や表示内容を調査するときは、report 生成処理の実装・テストへ進む。
 
 ## hash
-- 16e781a6547b00a686ffe2380f5cc164fd6a417db6dd4073fb16f5107361f30d
+- 1c15028df8aab20679cc428e8652a4cd9d678da3b95b291df94acdc19d8750a2
 
 # `test_apply_fork_report_cli.py`
 
@@ -345,22 +346,25 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle の CLI 経由の外部挙動を検証するテスト。report 生成、対象 oracle file の選択、所見の列挙・検証・judge・merge、scope 指定、error report、review 用 worktree と join commit、INDEX.md 変更の取り込み、非 INDEX 差分の拒否を扱う。
-- 所見評価 loop の制御を直接検証するテストも含み、enumerate 時の既存所見の渡し方、challenger/advocate の理由伝播、merge operation の契約と semantic retry を確認する。
+- review oracle の CLI 実行、report 生成、対象 oracle file の列挙、所見の列挙・検証・judge・merge loop、review 用 worktree の join 結果を外部挙動として検証するテスト群。
+- accepted/rejected finding の report 表示、fatal/minor 件数、no_targets/error の report、tracked ignored oracle file や symlink の扱い、INDEX.md 差分の merge と非 INDEX.md 差分の拒否までを同じ review run 文脈で扱う。
 
 ## Read this when
-- `review oracle` CLI の report 内容、section 順、count、accepted/rejected finding の表示、error report の挙動を変更または調査するとき。
-- review oracle の対象ファイル列挙、full/session scope、tracked ignored oracle file、`AGENTS.md` と `INDEX.md` の除外、oracle root alias の扱いを確認するとき。
-- review oracle 実行時の一時 worktree、linked worktree、review join commit、INDEX.md 変更の merge、INDEX.md conflict 解決、非 INDEX 差分の拒否を扱うとき。
-- review oracle の finding loop、validate challenger/advocate、judge、merge operation、semantic retry、finding id 採番の制御を変更するとき。
+- review oracle コマンドの CLI 出力、report の構成・メタ情報・件数・section 順序を変更または確認したいとき。
+- oracle file の review 対象列挙、full/session scope、tracked ignored file、AGENTS.md・INDEX.md 除外、symlink の分類条件を確認したいとき。
+- finding の enumerate loop、同一対象への既存 finding の渡し方、challenger/advocate/judge/merge の制御、merge operation の契約や retry 挙動を変更するとき。
+- review 実行中に生成された INDEX.md 差分の取り込み、preflight indexing の反映、join commit の report 表示、merge conflict 解消、非 INDEX.md 差分の拒否を確認したいとき。
+- review oracle が途中失敗した場合の error report と CLI 表示を変更または検証したいとき。
 
 ## Do not read this when
-- oracle review ではないサブコマンド、または CLI 経由の review oracle 外部挙動に関係しない内部 helper だけを扱うとき。
-- realization file 全般の file classification や path model の正本仕様を確認したいときは、oracle 配下の該当仕様を読む。
-- INDEX.md エントリー生成そのものやルーティング文書の形式だけを扱うときは、このテストではなく対象のルーティング規則を読む。
+- oracle review 以外の review サブコマンドや、report 生成を伴わない汎用 CLI 挙動だけを確認したいとき。
+- oracle file の正本仕様本文そのものや、仕様文書の編集方針を確認したいとき。
+- INDEX.md エントリー生成の一般規則や routing 文書の構成だけを確認したいとき。
+- Codex 実行基盤や preflight の単体的な実装詳細だけを確認したいとき。
+- session fork や git worktree 操作そのものの基本挙動だけを確認したいとき。
 
 ## hash
-- 526c05c8b3b39046eb1b55cbcb4c50bb3c1e7c75c8a39ef5375d73f23d6277b2
+- 8f9544479db593c17e5a54d9ba47e1f89000aad759b50632b038bf3bcd60d112
 
 # `test_session_cli.py`
 

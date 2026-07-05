@@ -37,24 +37,24 @@
 # `fork.py`
 
 ## Summary
-- apply fork の実行制御を担い、session branch 上で isolated apply worktree と apply branch を作成して、対象 file の列挙、Codex による finding 列挙と適用、差分 commit、apply state 更新、report 出力までを 1 回の apply run として進める。
-- apply scope に応じた対象 file の正規化・重複排除、再調査キュー、前回 join 済み apply merge commit の解決、finding 由来または差分由来の commit subject 生成も同じ apply loop の復旧条件と合わせて扱う。
+- apply fork の実行本体を担い、session branch 上で isolated apply worktree と apply branch を作成して Codex による finding 列挙・適用・commit・state 更新・report 生成までを制御する。
+- apply scope から対象ファイルを列挙し、変更後の再キュー、対象重複排除、oracle/realization の対象判定、前回 join 済み apply merge commit の解決も扱う。
+- 単一の apply run orchestration と失敗時復旧条件を共有する処理を集約しており、apply state、worktree、再キュー、commit subject、report path の流れを追う入口になる。
 
 ## Read this when
-- apply fork サブコマンドの開始条件、実行中 state、終了時 state、return code、report path 出力を確認または変更したいとき。
-- apply fork がどの file を finding 列挙対象にするか、scope ごとの対象差分、oracle 除外、git ignore・管理外領域・AGENTS/INDEX 除外の扱いを確認したいとき。
-- Codex に finding 列挙や finding 適用を依頼する parameter、cwd、log root、purpose、subcommand logger の渡し方を確認または変更したいとき。
-- apply fork の loop 内で変更 file を再キューする条件、commit する条件、unconverged と converged の判定、finding 件数の report 連携を扱うとき。
-- apply branch、apply worktree、apply process id、oracle snapshot commit、前回 join 済み apply merge commit の関係を調べるとき。
+- apply fork の開始条件、branch/worktree 作成、apply state の running/completed/error 更新、process id 管理、report 出力を確認または変更したいとき。
+- apply scope ごとの finding 列挙対象、git ignored/INDEX/AGENTS/memo/oracle file の除外条件、変更ファイルの再キュー条件を確認または変更したいとき。
+- Codex に渡す finding 列挙・finding 適用の実行順、apply loop の収束判定、unconverged 終了コード、apply commit subject 生成を確認または変更したいとき。
+- 前回 join された apply merge commit を起点に差分対象を決める処理や、apply branch session id と git 履歴の関係を調べるとき。
 
 ## Do not read this when
-- apply fork の report 本文生成や error report の書式だけを変更したい場合は、report 生成側を直接読む。
-- Codex に渡す finding 列挙・finding 適用 prompt や parameter の詳細だけを変更したい場合は、builder 側を直接読む。
-- apply 以外のサブコマンド実行基盤、git wrapper、state の読み書き、worktree 作成、設定読み込みの汎用挙動を調べたい場合は、runtime や config 側を直接読む。
-- apply join の merge 処理そのものを確認または変更したい場合は、join 側を読む。
+- apply fork の report 本文や error report の書式だけを確認したい場合は、report 生成を担当する対象を直接読む。
+- Codex prompt parameter の内容や finding 列挙・適用プロンプト自体を確認したい場合は、builder 側の対象を直接読む。
+- apply 以外の subcommand、CLI parser、共通 runtime の git/worktree/state 低レベル処理を調べたい場合は、それぞれの担当対象を読む。
+- oracle file と realization file の概念定義そのものを確認したい場合は、正本仕様側の該当対象を読む。
 
 ## hash
-- d500937020bc92d2e20161e0f30d8b0d796141e77a344d0b90c31994508a1993
+- cf5fccfe29842af8ec168978d32bb176c4edf4088cf320df49ff30816443cc6b
 
 # `fork_report.py`
 
