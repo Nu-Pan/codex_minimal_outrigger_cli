@@ -51,6 +51,7 @@ from oracle.other.cmoc_config import CodexModelSpec
 from main import app
 
 from _support import (
+    TEST_SLM_MODEL,
     make_repo,
     run_git,
     runner,
@@ -728,7 +729,7 @@ def test_codex_profile_uses_cmoc_ollama_provider_for_local_slm(
     root = tmp_path / "repo"
     root.mkdir()
     config = CmocConfig()
-    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", "smollm2:135m")
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
 
     profile = build_codex_profile(
         AgentCallParameter(
@@ -744,7 +745,7 @@ def test_codex_profile_uses_cmoc_ollama_provider_for_local_slm(
 
     parsed = tomllib.loads(profile)
     provider = parsed["model_providers"]["cmoc_managed_ollama"]
-    assert parsed["model"] == "smollm2:135m"
+    assert parsed["model"] == TEST_SLM_MODEL
     assert parsed["model_provider"] == "cmoc_managed_ollama"
     assert provider == {
         "name": "cmoc managed ollama",

@@ -7,7 +7,13 @@ from commons.runtime_config import write_config
 from config.cmoc_config import CmocConfig
 from oracle.other.cmoc_config import CodexModelSpec
 from commons.runtime_codex_profile import prepare_codex_profile
-from _support import fake_managed_ollama_env, make_repo, run_doctor, run_git
+from _support import (
+    TEST_SLM_MODEL,
+    fake_managed_ollama_env,
+    make_repo,
+    run_doctor,
+    run_git,
+)
 
 
 def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
@@ -16,7 +22,7 @@ def test_doctor_preprocess_repairs_git_state_and_starts_managed_ollama(
 ) -> None:
     root = make_repo(tmp_path)
     config = CmocConfig()
-    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", "smollm2:135m")
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
     write_config(root / ".cmoc" / "config.json", config)
 
     monkeypatch.chdir(root)
@@ -169,7 +175,7 @@ def test_prepare_local_slm_profile_runs_doctor_when_port_is_missing(
     codex_home = tmp_path / "codex_home"
     codex_home.mkdir()
     config = CmocConfig()
-    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", "smollm2:135m")
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
 
     profile_path = prepare_codex_profile(
         AgentCallParameter(

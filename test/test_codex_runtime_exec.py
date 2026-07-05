@@ -10,6 +10,7 @@ from cmoc_runtime import CmocError
 from config.cmoc_config import CmocConfig
 from oracle.other.cmoc_config import CodexModelSpec
 from _support import (
+    TEST_SLM_MODEL,
     fake_managed_ollama_env,
     make_repo,
     run_git,
@@ -158,7 +159,7 @@ def test_run_codex_exec_uses_local_slm_profile_without_builtin_ollama_flags(
     for key, value in fake_env.items():
         monkeypatch.setenv(key, value)
     config = CmocConfig()
-    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", "smollm2:135m")
+    config.codex.model[ModelClass.MINIMUM] = CodexModelSpec("cmoc", TEST_SLM_MODEL)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     recorder = tmp_path / "record.json"

@@ -9,6 +9,10 @@ from typer.testing import CliRunner
 
 runner = CliRunner()
 
+# <work-root>/oracle/doc/dev_rule/test_rule.md fixes the local SLM used by
+# Codex CLI tests.
+TEST_SLM_MODEL = "qwen3:4b-instruct-2507-q4_K_M"
+
 
 def run_git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
     """Run a git command in the test repository and fail on command errors."""
