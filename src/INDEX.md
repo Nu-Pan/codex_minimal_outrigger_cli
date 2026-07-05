@@ -135,18 +135,18 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装を集約するディレクトリ。apply、session、review、tui、indexing など、各サブコマンドの実行入口や orchestration 層へ進むためのルーティング対象である。
-- 各対象は、共通 runtime や oracle 仕様そのものではなく、サブコマンド固有の branch/worktree/state/report 制御、preprocess 委譲、review loop、INDEX 反映、TUI 起動などの実装入口を担う。
+- CLI サブコマンド実装をまとめる階層。apply、session、review、indexing、tui、init、doctor、eval oracle などの実行入口と、各 workflow を共通 runtime や下位処理へ接続する orchestration を扱う。
+- 各サブコマンド固有の事前条件、状態遷移、委譲先、出力や report 生成への接続を切り分ける入口であり、詳細な生成ロジックや共通基盤の実装は下位または別階層へ進んで確認する。
 
 ## Read this when
-- どのサブコマンド実装へ進むべきかを、apply、session、review、tui、indexing、doctor、init、eval oracle などの単位で切り分けたいとき。
-- サブコマンドが CLI runtime、preprocess、git/worktree/state 操作、Codex 呼び出し、report 生成、INDEX 更新処理へどのように接続されるかを確認したいとき。
-- apply run、session 操作、review oracle、cmoc tui、cmoc indexing など、利用者向けコマンドの実行順序、事前条件、cleanup、失敗時挙動、表示出力の入口を探しているとき。
+- CLI サブコマンドごとの実装入口を探し、どの下位処理または共通 runtime へ進むべきか判断したいとき。
+- apply run、session 操作、review oracle、INDEX maintenance、TUI 起動、preprocess 委譲など、利用者向けコマンドの実行フローを確認または変更したいとき。
+- サブコマンド固有の preflight、branch/worktree/state 操作、report 出力、Codex 呼び出し、commit や merge への接続点を追いたいとき。
 
 ## Do not read this when
-- CLI runtime 共通処理、git wrapper、path model、state schema、Codex 実行 wrapper など、複数サブコマンドで共有される低レベル基盤だけを調べたいとき。
-- oracle file、realization file、INDEX.md 生成規則、path model などの正本仕様断片そのものを確認したいとき。
-- prompt 文面、Structured Output schema、INDEX.md の内容生成、report directory 共通処理、低レベルの state 読み書きや worktree 操作だけを直接確認したいとき。
+- CLI 全体の dispatch、Typer app 登録、共通 runtime、git wrapper、path model、設定 schema そのものを調べたいときは、それぞれの共通基盤側を読む。
+- oracle file や realization file の定義、INDEX.md 生成規則、サブコマンド仕様の正本断片を確認したいときは、対応する oracle 側を読む。
+- 特定サブコマンド内で読むべき下位処理がすでに分かっており、対象列挙、review loop、report 描画、INDEX 統合、parameter builder などの詳細だけを確認したいときは、その責務を持つ下位対象へ直接進む。
 
 ## hash
-- f7d3d3ce7759faf404c93a514e1be3243f9497b31f309dfaa6a1e2ee836ef11f
+- 1bec1c02782b4d234c86a1ba7704f34d2e45021b3a2d0e424fecc84784a3e654

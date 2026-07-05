@@ -81,25 +81,25 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 実行を通じて、所見列挙、適用、commit、変更要約、report 出力、session state 更新までの制御を検証するテスト群。
-- apply fork report の収束、未収束、error、変更ファイル再調査、未追跡 file の変更要約、削除 file の除外、rolling fork の対象選定を一つの文脈で扱う。
-- apply fork 用 ACP builder の import 可能性、prompt 内容、structured output schema 参照が期待どおりであることも検証する。
+- apply fork の CLI 経由の挙動を、所見列挙、所見適用、commit、変更要約、report 生成、session state 更新まで一体で検証するテスト。
+- apply fork report の収束、未収束、error、変更ファイル再調査、rolling fork、change summary builder import、schema 参照、禁止領域を書いた場合の扱いを同じ制御ループと report schema の観測結果として扱う。
+- 16,000 文字を超えるが、apply fork report の期待値と再検査制御の文脈を一箇所に保つため、責務境界は apply fork report CLI 検証に閉じている。
 
 ## Read this when
-- apply fork の CLI 挙動、終了 code、report 内容、変更要約、commit message、session state 更新を変更または調査する。
-- apply fork が適用後に変更 file を再調査する条件、所見が残る場合の未収束扱い、対象がない場合の収束 report を確認する。
-- apply fork report 用の差分取得、未追跡 file の扱い、削除済み tracked file の除外、fallback 変更要約を変更または調査する。
-- apply fork の rolling 実行が前回 apply join 後の変更だけを対象にするかを確認する。
-- apply fork 関連の ACP builder の import 経路、prompt に含める標準文脈、schema path を変更または調査する。
+- `apply fork` の report 出力、終了コード、収束・未収束・error の判定、所見数推移、変更内容要約の期待値を確認または変更するとき。
+- apply fork が所見適用後に変更ファイルを再調査する制御、新規ディレクトリ配下の展開、差分なし適用時の未収束扱いを確認または変更するとき。
+- apply fork の change summary が未追跡 file、削除済み tracked file、未 commit 差分、Codex 空要約時の fallback をどう扱うか確認または変更するとき。
+- apply fork builder の import 可能性、prompt に含める standard 文書、structured output schema path を検証するテストを探すとき。
+- rolling apply fork が前回 apply join 後の oracle 変更だけを対象にする session state 連携を確認または変更するとき。
 
 ## Do not read this when
-- apply fork 以外の subcommand の CLI report や state 更新だけを調査する。
-- Codex 実行基盤そのもの、git wrapper、session fork/join の一般挙動を調査しており、apply fork report の観測結果に関心がない。
-- oracle 側の正本仕様や prompt 断片そのものを編集・確認したい場合。
-- 単体 helper の実装詳細だけを確認したい場合で、CLI 経由の apply fork loop や report schema の期待値が不要な場合。
+- apply fork の CLI 実装本体や report 生成ロジックを変更したいだけで、テスト期待値ではなく実装の入口を探しているとき。
+- apply fork 以外の apply/join/session コマンドや一般的な repository 初期化 helper の挙動を確認したいとき。
+- Codex CLI や agent call の低レベル実行処理そのものを確認したいとき。
+- INDEX.md 生成規則、oracle/realization の一般標準、path placeholder の定義だけを確認したいとき。
 
 ## hash
-- ec9c152a6679e42935dc13923fa71675873739a79b1370774d5d822e67d79bec
+- 6e0a2ce4c0258715d4b8d46c5e8f37f76511ea51437015c353ecf43d1132f87f
 
 # `test_apply_join_cli.py`
 

@@ -134,42 +134,41 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation 全体への入口。CLI 起動点、サブコマンド実装、共通 runtime helper、oracle 側正本実装への package shim、旧 import 経路を維持する互換層を束ねる。
-- この領域は、利用者向け CLI の公開面と各実行フローを realization 側で具体化する実装を探すための起点であり、正本仕様断片そのものや oracle 側の定義内容を読む場所ではない。
+- cmoc の realization implementation を置く領域。CLI 入口、サブコマンド実行、runtime 共通処理、oracle 側正本実装への参照 shim、旧公開 import 経路の互換層を束ねる。
+- 正本仕様断片そのものではなく、oracle 側の定義や仕様を具体化し、既存利用者向け公開面を維持しながら実体実装へ接続する階層への入口になる。
 
 ## Read this when
-- cmoc の CLI 入口、サブコマンド、共通 runtime、互換 import 経路のどこへ進むべきかを切り分けたいとき。
-- apply、session、review、TUI、indexing、doctor、init、eval oracle などの利用者向けコマンドの realization implementation を調査・変更したいとき。
-- Codex 実行、設定、git、path、log、state、error、doctor、INDEX 更新 preflight など、複数のサブコマンドにまたがる runtime 実装を探したいとき。
-- oracle 側の正本実装を realization 側から参照する package shim や、acp、basic、config、runtime など旧 import 経路の互換維持・削除条件を確認したいとき。
+- cmoc の実装入口を探し、CLI 公開面、サブコマンド、runtime helper、互換 import 層のどこへ進むべきか判断したいとき。
+- 利用者向けコマンドの引数受け渡し、実行フロー、状態操作、Codex 呼び出し、report 出力、INDEX maintenance など realization 側の挙動を調査・変更したいとき。
+- oracle 側の正本定義を複製せず参照・再公開している互換層や package shim の残存理由、削除条件、移行先を確認したいとき。
+- 複数サブコマンドにまたがる設定、git、path、log、state、error、doctor、indexing などの共通 runtime 実装を探したいとき。
 
 ## Do not read this when
-- oracle file、prompt、path model、設定定義、builder 正本仕様、INDEX.md 生成規則など、人間意図そのものや正本仕様断片を確認したいときは、対応する oracle 側の本文を読む。
-- 特定のサブコマンドや helper の担当箇所が既に分かっているときは、この領域全体ではなく該当する下位要素を直接読む。
-- 実装ではなくテストを調査・変更したいときは、realization test 側を読む。
-- 新しい API や公開面を追加する場所を探しているだけで、現行仕様上の必要性や既存の実装入口がまだ確認できていないとき。
+- oracle file、builder 正本仕様、path model、設定定義、prompt、INDEX 生成規則など、人間意図そのものを確認したいときは oracle 側の該当本文を読む。
+- realization test を確認・変更したいときは test 側へ進む。
+- 特定のサブコマンド、runtime helper、互換入口など読むべき下位対象がすでに分かっているときは、この階層全体ではなく該当する下位対象へ直接進む。
+- 新しい公開 API、設定項目、状態ファイル、互換 shim を追加する場所を探しているだけのとき。必要性は先に oracle 側の要求と既存実装から確認する。
 
 ## hash
-- 813c0de45c33d3064ce833296722e1e8bfc4a6c6506265de3250241232e214c3
+- c83b7f5781955d4f9c9855bce0a3d001a6e3e74cdf677753d579a904942dca3a
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群を配置するディレクトリ。CLI サブコマンド、Codex runtime、ACP builder、prompt rendering、packaged import、INDEX.md 更新など、src 側の実装が外部挙動と共通 runtime 契約を満たすかを pytest で検証する。
-- 共通 test support はリポジトリ fixture、Codex home/profile、fake 外部コマンド、doctor/init 実行、apply worktree 解決などを提供し、各テストファイルは対象機能ごとの CLI 観測結果、state 遷移、git worktree/branch 副作用、ログ・report・schema 参照を扱う。
+- cmoc の realization test 全体を収めるディレクトリ。CLI サブコマンド、Codex runtime、indexing、prompt rendering、packaged import、共通 runtime 契約など、src 側実装の外部挙動と回帰条件を検証するテスト群への入口になる。
+- 共通 fixture/helper はテスト支援モジュールに集約され、個別テストは apply、session、doctor/init、review oracle、TUI、Codex exec/retry/home/post validation などの責務ごとに分かれている。
 
 ## Read this when
-- realization implementation の変更に対して、対応する外部挙動・runtime 契約・回帰テストの入口を探すとき。
-- apply/session/review/doctor/indexing/TUI などの CLI サブコマンドについて、終了 code、stdout/stderr、state、worktree/branch cleanup、report、git 状態への影響をテスト観点から確認するとき。
-- Codex exec/TUI runtime の起動引数、sandbox/file access、Codex home/profile、retry/quota、post validation、subprocess tracking、ログ出力の期待挙動を確認または変更するとき。
-- ACP builder、prompt parts、StructDoc Markdown rendering、packaged import など、CLI 実行より下位または横断的な realization 契約のテストを探すとき。
-- 既存 fixture/helper を使って新しい realization test を追加する前に、同じ観点の既存テストへ統合できるか確認するとき。
+- cmoc の realization test の配置を見渡し、変更対象に対応するテストファイルを選びたいとき。
+- CLI サブコマンド、runtime、Codex 実行、indexing、prompt builder、packaging/import 境界の既存回帰テストを追加・変更する入口を探すとき。
+- テスト用 Git repository、Codex home、fake Codex/Ollama/systemctl、apply worktree 解決などの共通 helper を使うテストを書くとき。
+- 実装変更後に、どの外部挙動テストや共通 runtime テストを確認すべきか判断したいとき。
 
 ## Do not read this when
-- 正本仕様断片そのものを確認・編集したい場合は、oracle 配下の対応する doc/src/test を読む。
-- 本番実装の責務、内部 helper、アルゴリズムだけを変更したい場合は、まず src 側の該当モジュールを読む。
-- INDEX.md エントリー生成規則や routing standard 自体を確認したい場合は、対応する oracle standard または builder/schema 側を読む。
-- 個別テストの fixture 実装だけを確認したい場合は、共通 test support または該当テストファイルへ直接進む。
+- 正本仕様断片を確認・編集したい場合は、oracle 配下の該当 oracle file を読む。
+- 本番実装の責務や内部処理を変更したい場合は、src 側の該当 implementation を読む。
+- 特定サブコマンドや runtime helper の期待挙動が既に分かっている場合は、この階層の個別テストファイルへ直接進む。
+- INDEX.md エントリー生成規則やルーティング文書の標準だけを確認したい場合は、該当する oracle standard を読む。
 
 ## hash
-- db85eb17e5f2d753203b822dc41a37850934074a3d15f98dfe5d66750d292093
+- 7aad3ab9d47ab4a387aecaaaffc57235b2d480d59128c79699ca089ae7b214be
