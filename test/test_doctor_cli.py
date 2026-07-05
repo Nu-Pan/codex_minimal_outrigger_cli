@@ -142,6 +142,33 @@ def test_doctor_does_not_sync_config(
     assert not config_path.exists()
 
 
+def test_doctor_preprocess_targets_current_linked_worktree(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    linked = tmp_path / "linked"
+    run_git(root, "worktree", "add", "-b", "linked-doctor", str(linked), "HEAD")
+    monkeypatch.chdir(linked)
+
+    result = runner.invoke(
+        app,
+        ["doctor"],
+        env=fake_managed_ollama_env(linked),
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert "/.cmoc/local/" in (linked / ".gitignore").read_text()
+    assert run_git(linked, "ls-files", "--", ".agents").stdout.splitlines() == [
+        ".agents/.gitkeep"
+    ]
+    assert run_git(
+        linked, "check-ignore", "-q", ".cmoc/local/.__cmoc_ignore_probe__"
+    ).returncode == 0
+    assert not (root / ".gitignore").exists()
+    assert not (root / ".agents").exists()
+
+
 def test_init_syncs_default_config_without_overwriting_human_values(
     tmp_path: Path, monkeypatch
 ) -> None:

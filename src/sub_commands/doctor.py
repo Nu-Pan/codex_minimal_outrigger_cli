@@ -1,6 +1,12 @@
 import typer
 
-from cmoc_runtime import run_cli_subcommand, run_doctor_preprocess, repo_root, sync_config
+from cmoc_runtime import (
+    run_cli_subcommand,
+    run_doctor_preprocess,
+    repo_root,
+    sync_config,
+    work_root,
+)
 
 
 def cmoc_init_impl() -> None:
@@ -29,9 +35,11 @@ def _run_preprocess_command(
 def _cmoc_preprocess_body(
     command_heading: str, sync_config_after_preprocess: bool
 ) -> None:
-    """現在の repo root を cmoc 実行可能状態へ修復する。"""
+    """現在の work root を cmoc 実行可能状態へ修復する。"""
+    current_root = work_root()
     root = repo_root()
-    run_doctor_preprocess(root)
+    # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
+    run_doctor_preprocess(current_root)
     if sync_config_after_preprocess:
         # <work-root>/oracle/src/oracle/other/cmoc_config.py
         # config は人間編集対象なので、生成・同期入口を init に限定する。
