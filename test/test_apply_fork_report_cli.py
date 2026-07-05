@@ -48,77 +48,13 @@ class FakeCodexResult:
         self.output_text = output_text
 
 
-def test_change_summary_builder_imports_with_src_pythonpath_only() -> None:
-    root = Path(__file__).parents[1]
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "from acp.builder.apply.fork.change_summary import "
-                "build_apply_fork_change_summary_parameter as build; "
-                "p = build('diff'); "
-                "assert p.structured_output_schema_path.name == 'change_summary.json'; "
-                "assert '# oracle and realization basic' in p.prompt"
-            ),
-        ],
-        cwd=root,
-        env={**os.environ, "PYTHONPATH": str(root / "src")},
-        text=True,
-        capture_output=True,
-    )
+def run_apply_fork_builder_import(
+    tmp_path: Path, code: str
+) -> subprocess.CompletedProcess[str]:
+    """subprocess の被テスト環境を tmp_path 配下だけに置く。
 
-    assert result.returncode == 0, result.stderr
-
-
-def test_file_finding_enumeration_builder_imports_with_src_pythonpath_only() -> None:
-    root = Path(__file__).parents[1]
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "from pathlib import Path; "
-                "from acp.builder.apply.fork.file_finding_enumeration import "
-                "build_apply_fork_file_finding_enumeration_parameter as build; "
-                "p = build(Path('<repo-root>') / 'src' / 'main.py'); "
-                "assert p.structured_output_schema_path.name == "
-                "'file_finding_enumeration.json'"
-            ),
-        ],
-        cwd=root,
-        env={**os.environ, "PYTHONPATH": str(root / "src")},
-        text=True,
-        capture_output=True,
-    )
-
-    assert result.returncode == 0, result.stderr
-
-
-def test_finding_application_builder_imports_with_src_pythonpath_only() -> None:
-    root = Path(__file__).parents[1]
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "from acp.builder.apply.fork.finding_application import "
-                "build_apply_fork_finding_application_parameter as build; "
-                "p = build([{'title': 't'}]); "
-                "assert p.structured_output_schema_path is None; "
-                "assert 'realization file' in p.prompt"
-            ),
-        ],
-        cwd=root,
-        env={**os.environ, "PYTHONPATH": str(root / "src")},
-        text=True,
-        capture_output=True,
-    )
-
-    assert result.returncode == 0, result.stderr
-
-
-def test_apply_fork_builders_import_from_packaged_layout(tmp_path: Path) -> None:
+    根拠: <work-root>/oracle/doc/dev_rule/test_rule.md
+    """
     root = Path(__file__).parents[1]
     target = tmp_path / "site"
     shutil.copytree(root / "src" / "acp", target / "acp")
@@ -127,33 +63,86 @@ def test_apply_fork_builders_import_from_packaged_layout(tmp_path: Path) -> None
 
     work = tmp_path / "work"
     (work / ".git").mkdir(parents=True)
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "from pathlib import Path; "
-                "from acp.builder.apply.fork.change_summary import "
-                "build_apply_fork_change_summary_parameter as change_summary; "
-                "from acp.builder.apply.fork.file_finding_enumeration import "
-                "build_apply_fork_file_finding_enumeration_parameter as enumerate_file; "
-                "from acp.builder.apply.fork.finding_application import "
-                "build_apply_fork_finding_application_parameter as apply_finding; "
-                "cs = change_summary('diff'); "
-                "fe = enumerate_file(Path('<repo-root>') / 'src' / 'main.py'); "
-                "fa = apply_finding([{'title': 't'}]); "
-                "assert cs.structured_output_schema_path.name == 'change_summary.json'; "
-                "assert fe.structured_output_schema_path.name == "
-                "'file_finding_enumeration.json'; "
-                "assert fa.structured_output_schema_path is None; "
-                "assert '# oracle and realization basic' in cs.prompt; "
-                "assert 'realization file' in fa.prompt"
-            ),
-        ],
+    return subprocess.run(
+        [sys.executable, "-c", code],
         cwd=work,
         env={**os.environ, "PYTHONPATH": str(target), "PYTHONNOUSERSITE": "1"},
         text=True,
         capture_output=True,
+    )
+
+
+def test_change_summary_builder_imports_with_src_pythonpath_only(tmp_path: Path) -> None:
+    result = run_apply_fork_builder_import(
+        tmp_path,
+        (
+            "from acp.builder.apply.fork.change_summary import "
+            "build_apply_fork_change_summary_parameter as build; "
+            "p = build('diff'); "
+            "assert p.structured_output_schema_path.name == 'change_summary.json'; "
+            "assert '# oracle and realization basic' in p.prompt"
+        ),
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_file_finding_enumeration_builder_imports_with_src_pythonpath_only(
+    tmp_path: Path,
+) -> None:
+    result = run_apply_fork_builder_import(
+        tmp_path,
+        (
+            "from pathlib import Path; "
+            "from acp.builder.apply.fork.file_finding_enumeration import "
+            "build_apply_fork_file_finding_enumeration_parameter as build; "
+            "p = build(Path('<repo-root>') / 'src' / 'main.py'); "
+            "assert p.structured_output_schema_path.name == "
+            "'file_finding_enumeration.json'"
+        ),
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_finding_application_builder_imports_with_src_pythonpath_only(
+    tmp_path: Path,
+) -> None:
+    result = run_apply_fork_builder_import(
+        tmp_path,
+        (
+            "from acp.builder.apply.fork.finding_application import "
+            "build_apply_fork_finding_application_parameter as build; "
+            "p = build([{'title': 't'}]); "
+            "assert p.structured_output_schema_path is None; "
+            "assert 'realization file' in p.prompt"
+        ),
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_apply_fork_builders_import_from_packaged_layout(tmp_path: Path) -> None:
+    result = run_apply_fork_builder_import(
+        tmp_path,
+        (
+            "from pathlib import Path; "
+            "from acp.builder.apply.fork.change_summary import "
+            "build_apply_fork_change_summary_parameter as change_summary; "
+            "from acp.builder.apply.fork.file_finding_enumeration import "
+            "build_apply_fork_file_finding_enumeration_parameter as enumerate_file; "
+            "from acp.builder.apply.fork.finding_application import "
+            "build_apply_fork_finding_application_parameter as apply_finding; "
+            "cs = change_summary('diff'); "
+            "fe = enumerate_file(Path('<repo-root>') / 'src' / 'main.py'); "
+            "fa = apply_finding([{'title': 't'}]); "
+            "assert cs.structured_output_schema_path.name == 'change_summary.json'; "
+            "assert fe.structured_output_schema_path.name == "
+            "'file_finding_enumeration.json'; "
+            "assert fa.structured_output_schema_path is None; "
+            "assert '# oracle and realization basic' in cs.prompt; "
+            "assert 'realization file' in fa.prompt"
+        ),
     )
 
     assert result.returncode == 0, result.stderr
