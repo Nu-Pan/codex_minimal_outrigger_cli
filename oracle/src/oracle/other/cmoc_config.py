@@ -25,9 +25,6 @@ class CmocConfig:
     cmoc の設定 (config) を集約したクラス
     """
 
-    # ユーザーローカル .cmoc ディレクトリのパス
-    user_local_cmoc_dir: Path = field(default_factory=lambda: Path("$HOME/.comc"))
-
     # AI エージェント呼び出しの最大並列数
     num_parallel: int = field(default=8)
 
