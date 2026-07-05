@@ -80,25 +80,24 @@
 # `test_apply_fork_report_cli.py`
 
 ## Summary
-- apply fork の CLI 実行を通じて、所見列挙、所見適用、変更要約、report 出力、session state 更新、rolling fork の対象選定をまとめて検証する realization test。
-- apply fork report の収束・未収束・error・変更ファイル再調査・未追跡 file・削除済み file 除外・禁止領域汚染時の非修復など、同じ制御 loop と report schema から観測される挙動を扱う。
-- apply fork 用 ACP builder が src のみの PYTHONPATH や packaged layout から import でき、oracle 由来の schema と標準 prompt を参照することも検証する。
+- apply fork の CLI 経由の report 生成、所見再検査ループ、変更要約、commit、session state 更新を横断して検証するテスト。
+- apply fork の収束、未収束、error、変更ファイル再調査、rolling apply fork の挙動を、同じ loop と report schema の観測結果としてまとめて扱う。
+- apply fork 用 ACP builder の import 可能性、prompt 内容、oracle schema 参照、変更差分要約 helper の対象 path 判定も検証する。
 
 ## Read this when
-- apply fork の report 内容、exit code、変更要約、commit message、session state 更新の期待挙動を確認・変更する。
-- apply fork が所見適用後に変更 file や新規 directory 配下を再調査し、収束または未収束を判定する制御を確認・変更する。
-- apply fork の error 時 report、未 commit 差分、未追跡 file、削除済み tracked file の扱いを確認・変更する。
-- apply fork 用 ACP builder の prompt、structured output schema、packaged layout での import 互換性を確認・変更する。
-- rolling apply fork が前回 apply join 後の oracle 変更だけを調査対象にする挙動を確認・変更する。
+- `apply fork` の終了コード、report 文面、所見数推移、変更内容要約、commit message、session state 更新を変更または調査する。
+- apply 後に変更されたファイルを再調査する制御、所見適用で差分が出ない場合の扱い、調査対象なしの場合の report を確認する。
+- apply fork の error report が未 commit 差分を要約する挙動、未追跡 file や削除済み tracked file の変更要約対象を確認する。
+- rolling apply fork が前回 apply join 後の変更だけを対象にする制御を調査する。
+- apply fork の finding enumeration、finding application、change summary の ACP builder import、prompt、structured output schema の参照先を変更する。
 
 ## Do not read this when
-- apply fork の内部実装だけを局所的に確認したい場合は、先に該当する実装側の subcommand や report helper を読む。
-- apply join、session fork、config 初期化など、apply fork report の観測結果に直接関係しない CLI 挙動だけを調べる。
-- Codex 実行 wrapper や runtime logging の一般挙動を調べる場合で、apply fork 固有の report・再検査制御が関係しない。
-- oracle file の正本仕様を確認したい場合は、対応する oracle doc または oracle src を読む。
+- `apply fork` 以外の apply サブコマンドや join 単体の通常挙動だけを確認したい。
+- Codex 実行基盤や ACP builder 共通部の詳細だけを調査しており、apply fork の CLI report や再検査制御に関係しない。
+- session fork、初期化、git helper、テスト支援 fixture の一般的な挙動だけを確認したい場合は、より直接の支援コードや該当テストを読む。
 
 ## hash
-- da2a01e92ef01e865a3998344fd4b70902cc056ec329c50aed4968f47aba0f8e
+- 2e4d304a5c74d7034a4d1cdc334996e1865faab3743382ac0d73e0c429b75ab9
 
 # `test_apply_join_cli.py`
 

@@ -132,21 +132,18 @@
 # `sub_commands`
 
 ## Summary
-- CLI のサブコマンド実装を集約する階層で、初期化・修復、indexing、TUI、session、apply、review などの実行入口と個別コマンド群へのルーティングを担う。
-- 共通 runtime に載った薄い orchestration から、branch/worktree/state、preflight、cleanup、report 生成、INDEX 変更反映など各 workflow 固有の実装へ進むための入口になる。
+- CLI サブコマンドの実行本体をまとめる領域。初期化・修復、index maintenance、TUI、session 操作、apply workflow、review workflow など、利用者向け command を runtime や下位 helper へ接続する入口になる。
+- 各 command 固有の preflight、branch/worktree/state/report 制御、cleanup、CLI 表示、共通処理への orchestration を確認するための上位ルーティング対象。
 
 ## Read this when
-- cmoc のサブコマンド実装のうち、どの workflow や個別コマンドへ進むべきかを切り分けたいとき。
-- 初期化・修復、indexing、TUI、session、apply、review oracle の実行フロー、事前条件、状態遷移、出力、後片付けを確認または変更したいとき。
-- session branch、apply branch/worktree、review branch、state file、process id、report、INDEX.md 更新など、サブコマンド固有の制御が複数領域にまたがる処理を追いたいとき。
-- サブコマンドから共通 runtime、Codex 実行、git 操作、worktree 操作、設定同期、対象列挙、差分検査などへどう接続しているかを確認したいとき。
+- 特定の CLI サブコマンドの実行本体がどの下位領域または module にあるかを選びたいとき。
+- 利用者向け command が runtime、git 操作、state、report、Codex 呼び出し、INDEX maintenance などの共通処理へどう接続されるかを追いたいとき。
+- session、apply、review、初期化・修復、indexing、TUI のいずれかに固有の実行条件、状態遷移、cleanup、出力、失敗時挙動を調べる入口を探しているとき。
 
 ## Do not read this when
-- CLI runtime、git wrapper、worktree 操作、state 入出力、path model、config schema など、サブコマンド固有でない共通基盤だけを調べたいとき。
-- oracle file、realization file、path model などの一般定義や正本仕様断片そのものを確認したいとき。
-- Codex に渡す prompt、parameter、Structured Output schema の本文だけを確認したいとき。
-- INDEX.md の内容生成ロジック、差分検出、lock、commit 処理など indexing 共通処理の詳細だけを調べたいとき。
-- review の対象列挙、review loop、report 描画、INDEX 統合処理など、下位の責務が分かっている場合は、その担当実装を直接読む。
+- CLI runtime、git wrapper、path model、state schema、report directory、Codex 実行 wrapper などの共通基盤だけを直接確認したいとき。
+- oracle file、realization file、INDEX.md 生成規則、path model などの正本仕様そのものを確認したいとき。
+- prompt 文面、Structured Output schema、低レベルの state 読み書き、worktree 操作、INDEX.md 本文生成など、下位の専用 helper が直接担う詳細だけを調べたいとき。
 
 ## hash
-- a212dae9e1ce4aac7f6ba11688b35351ffa01842647e395be3d5304d672d0667
+- e92060d92738616a54c1692f13b07d67629d831b65f0cde1f7e843f8b560c05b
