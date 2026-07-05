@@ -8,6 +8,7 @@ subcommand log、FileAccessMode、binary 判定は実行前提として一緒に
 根拠: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_standard.py
 """
 
+import json
 import shutil
 import subprocess
 import sys
@@ -491,19 +492,29 @@ def test_cli_completion_probe_skips_cmoc_preflight_and_side_effects(
     assert not (root / ".cmoc").exists()
 
 
-def test_pre_log_check_failure_does_not_write_subcommand_log(
+def test_pre_log_check_failure_writes_subcommand_log(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
     assert run_doctor(root).exit_code == 0
-    log_paths_before = set((root / ".cmoc" / "local" / "log" / "sub_command").glob("*.jsonl"))
+    log_dir = root / ".cmoc" / "local" / "log" / "sub_command"
+    log_paths_before = set(log_dir.glob("*.jsonl"))
     (root / "README.md").write_text("dirty\n")
 
     result = runner.invoke(app, ["indexing"])
 
     assert result.exit_code == 1
-    assert set((root / ".cmoc" / "local" / "log" / "sub_command").glob("*.jsonl")) == log_paths_before
+    new_logs = set(log_dir.glob("*.jsonl")) - log_paths_before
+    assert len(new_logs) == 1
+    assert "- サブコマンドログ:" in result.stdout
+    assert "- 終了コード: `1`" in result.stdout
+    events = [
+        json.loads(line) for line in next(iter(new_logs)).read_text().splitlines()
+    ]
+    assert events[0]["event"] == "command_invoked"
+    assert events[-1]["event"] == "command_finished"
+    assert events[-1]["returncode"] == 1
 
 
 def test_bin_cmoc_missing_venv_call_stack_uses_root_token_path(tmp_path: Path) -> None:
