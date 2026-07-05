@@ -143,25 +143,26 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を置く最上位領域で、CLI 入口、サブコマンド実装、共通 runtime 基盤、互換 import 層へ進むための起点。
-- Typer の公開 CLI 面、各 workflow の制御層、Codex 実行・git・state・INDEX 更新などの共通処理、oracle src を複製しない再公開境界を扱う。
-- 実処理は下位のサブコマンド領域や共通 runtime 領域に分かれ、正本仕様・prompt・基本型などは必要に応じて oracle 側の対応箇所を読む。
+- cmoc の realization implementation を集約し、最上位 CLI 入口、サブコマンド制御、共通 runtime helper、oracle src への互換 import 境界、既存公開 import 経路の再公開層へ進む起点になる。
+- 実処理の本体と移行用の薄い互換入口が混在する領域であり、機能変更ではサブコマンド実装や共通 runtime helperへ、import 互換性の確認では再公開層や shim へ読み分ける。
+- oracle 側の正本実装や builder を複製せず参照しながら、realization 側と利用者向け公開面に残る既存 import 経路を維持する責務も扱う。
 
 ## Read this when
-- cmoc の実装変更で、CLI 入口、サブコマンド実装、共通 runtime helper、互換 import 層のどこから読むべきか判断したいとき。
-- 公開 CLI コマンド、option、Typer/Click エラー変換、console script 起動経路を確認または変更したいとき。
-- apply、review、session、tui、indexing、doctor/init などのサブコマンド実行フローや下位処理への委譲先を探したいとき。
-- Codex CLI 起動、git 操作、state、config、path、logging、error、content hash、INDEX 更新 preflight など複数サブコマンドから使われる runtime 基盤を扱うとき。
-- oracle 側の正本実装を realization 側へ複製せず、既存の acp、basic、config、oracle、runtime 系 import 経路をどう維持しているか確認したいとき。
+- cmoc の CLI 公開面、サブコマンド構成、実行入口から各 workflow や共通 runtime helper への接続を確認または変更したいとき。
+- apply、session、review、indexing、doctor/init、TUI などのサブコマンド実行フロー、状態遷移、branch/worktree 操作、Codex 呼び出し、report 出力の実装場所を選びたいとき。
+- 設定、基本型、path model、ACP builder、oracle package などについて、oracle 側の正本実装を複製せず realization 側の既存 import 経路としてどう維持しているか確認したいとき。
+- Codex exec/TUI、profile、sandbox、CODEX_HOME、Structured Output、retry、quota/capacity、call log、INDEX 更新 preflight、apply process 管理、config、hash、doctor 前処理、error、git、logging、path、result、state などの共通 runtime 実装を探したいとき。
+- 互換 import path、再公開 module、runtime shim を削除・移行する作業で、残す理由、実体 module との対応、削除条件を調べ始めるとき。
 
 ## Do not read this when
-- oracle file の正本仕様、prompt 本文、parameter 生成内容、基本型、path model、設定定義そのものを確認したいだけなら、oracle 側の対応箇所を読む。
-- 生成済み INDEX.md の個別 entry 内容や特定 directory のルーティング判断だけを確認したい場合は、その directory の INDEX.md または対象本文を読む。
-- ログ、設定、state、schema、call log、report など生成済みファイルの内容調査が目的で、実装を変更しないとき。
-- 対象が既に特定のサブコマンド、runtime helper、互換 wrapper、builder 実体に絞れている場合は、この階層全体ではなく該当する下位対象を直接読む。
+- oracle file、oracle doc、oracle src、oracle test にある正本仕様断片、prompt 本文、parameter 生成内容、path keyword 定義、文章基準そのものを確認したいだけのとき。
+- 実装ではなくテストコードの検証観点、fixture、テスト実行時の期待挙動を確認または変更したいとき。
+- 生成済み INDEX.md の個別 entry 内容や、特定 directory のルーティング判断だけを確認したいとき。
+- 特定の共通型、設定定義、path model、AgentCallParameter、git helper、file access mode などの正本定義そのものを確認したいとき。
+- 対象が既に個別サブコマンド、共通 helper、互換 wrapper、または oracle 側 builder のどれかに絞れている場合は、その責務を持つ下位対象を直接読む。
 
 ## hash
-- 8d125a55b888137347ff4912873917123a649acdee0b5c687db5e742cf5cb26d
+- 2861bf5a347fd2b6b3a68c39da1b94ac934486b72669bb221bbd7ceff60f58b2
 
 # `test`
 

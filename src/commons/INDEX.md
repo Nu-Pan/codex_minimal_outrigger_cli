@@ -116,24 +116,24 @@
 # `runtime_codex_exec.py`
 
 ## Summary
-- Codex exec の単一試行ループを中心に、Structured Output 検証、semantic retry、capacity retry、quota 代表 probe、resume 継続、call log/subcommand event 記録を同じ状態機械として制御する実行制御モジュール。
-- Codex CLI 呼び出し用の prompt/stdout/stderr/output/call log を作成し、profile・schema・cwd・CODEX_HOME を解決したうえで `codex exec` の argv と subprocess 実行を管理する。
-- agent call 後の worktree 変更 path を git status から absolute path として取得し、必要に応じて ignored file も含める補助処理も持つ。
+- Codex exec の単一試行ループを中心に、Structured Output 検証、semantic retry、capacity retry、quota 待機と代表 probe、resume 継続、call log/subcommand event 記録を一体で制御する実行制御モジュール。
+- Codex CLI 呼び出しに使う profile、schema、cwd、prompt/stdout/stderr/output/call log の生成と、失敗種別ごとの再試行・エラー化を扱う。
+- worktree 上の変更 path を git status から absolute path として取得する補助処理も持つ。
 
 ## Read this when
-- Codex exec 呼び出しの再試行、quota 待機、capacity error、resume token、Structured Output schema 検証の挙動を確認・変更したいとき。
-- Codex call log、prompt log、stdout/stderr/output log、subcommand event の生成内容や記録タイミングを確認・変更したいとき。
-- Codex 実行時の cwd、CODEX_HOME、profile、schema path、subprocess env、`codex exec` argv の組み立てを追う必要があるとき。
-- agent call 後に変更された worktree path の収集方法、untracked/ignored file の扱いを確認・変更したいとき。
+- Codex exec 呼び出しの argv、cwd、profile、CODEX_HOME、schema、prompt stdin、実行 log の扱いを確認・変更したいとき。
+- Structured Output の必須 JSON 読み取り、schema 検証、semantic retry、capacity retry、quota 待機、quota availability probe、resume token 継続の制御を確認・変更したいとき。
+- Codex call の console 出力、subcommand log event、call log JSON、prompt/stdout/stderr/output log の内容や生成タイミングを確認・変更したいとき。
+- agent call 後に worktree の変更 path を取得する処理や、untracked directory を file-level path として扱う必要がある箇所を確認したいとき。
 
 ## Do not read this when
-- TUI 起動や exec 以外の UI 分岐を調べたいとき。
-- Codex profile、schema、CODEX_HOME、エラー判定、resume token 抽出などの低レベル helper 自体の実装を変更したいだけのときは、それらを定義する runtime Codex profile 周辺の対象を直接読む。
-- subcommand log の保存基盤や logger 実装そのものを変更したいだけのときは、logging 側の対象を直接読む。
-- git command 実行 wrapper や status parser の基本挙動を変更したいだけのときは、runtime git 側の対象を直接読む。
+- TUI 起動や exec 以外の Codex サブコマンド分岐を確認したいとき。
+- Codex profile の詳細な生成規則、CODEX_HOME 解決、quota/capacity error 判定、resume token 抽出、output JSON 読み取りの低レベル実装だけを確認したいときは、それらの runtime Codex profile 系の実装を直接読む。
+- subcommand logger や runtime path の一般的な定義だけを確認したいときは、それぞれの共通 runtime 実装を直接読む。
+- apply fork の仕様全体や requeue の上位制御を確認したいときは、この変更 path 補助だけでなく apply fork 側の実装・仕様を読む。
 
 ## hash
-- e1f74822c797e29849d127c111c4bbc37474ecf138420832a35f0dc3163d93ed
+- 4254bd141118194fa89f19a067d69c6c1e7ee61d2905e90d11cbe54a5dec7504
 
 # `runtime_codex_logging.py`
 
