@@ -255,7 +255,7 @@ def test_config_rejects_invalid_codex_model_specs(
     assert exc_info.value.summary == "cmoc config が不正です。"
 
 
-@pytest.mark.parametrize("value", [False, None, [], {}])
+@pytest.mark.parametrize("value", [False, None, [], {}, "", "  "])
 def test_config_rejects_non_string_reasoning_effort_names(value: object) -> None:
     with pytest.raises(CmocError) as exc_info:
         config_from_dict({"codex": {"reasoning_effort": {"low": value}}})

@@ -61,9 +61,9 @@ def _enum_str_map_from_dict(
     if not isinstance(data, dict):
         raise TypeError
     for key, value in data.items():
-        # `<work-root>/oracle/src/oracle/other/cmoc_config.py` stores enum values
-        # in JSON, so non-strings must be rejected, not stringified.
-        if not isinstance(value, str):
+        # `<work-root>/oracle/src/oracle/other/cmoc_config.py` maps
+        # ReasoningEffort to Codex CLI names; blank names are invalid JSON edits.
+        if not isinstance(value, str) or not value.strip():
             raise TypeError
         restored[key_type(key)] = value
     return restored
