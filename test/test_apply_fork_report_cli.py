@@ -796,6 +796,33 @@ def test_apply_fork_change_summary_excludes_deleted_tracked_files(
     assert "deleted_realization.py" not in captured_prompt
 
 
+@pytest.mark.parametrize("codex_output", [{"changes": []}, {}])
+def test_apply_fork_change_summary_fallback_keeps_paths(
+    tmp_path: Path, codex_output: dict[str, object]
+) -> None:
+    """Codex の空要約時も、差分がある report から変更 path を落とさない。"""
+    root = make_repo(tmp_path)
+    fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    (root / "README.md").write_text("# fallback path\n")
+
+    def fake_codex_exec(
+        parameter: AgentCallParameter, **kwargs: object
+    ) -> FakeCodexResult:
+        return FakeCodexResult(codex_output)
+
+    summary = build_change_summary(
+        root, root, fork_commit, CmocConfig(), fake_codex_exec
+    )
+
+    assert summary == [
+        {
+            "category": "変更要約なし",
+            "summary": "変更 path のみを機械的に記録しました。",
+            "changed_paths": ["README.md"],
+        }
+    ]
+
+
 def test_apply_fork_report_does_not_invent_loop_when_no_targets(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:

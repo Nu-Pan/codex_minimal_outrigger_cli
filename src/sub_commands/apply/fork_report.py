@@ -112,13 +112,10 @@ def build_change_summary(
         ).output_json
     except Exception:
         return fallback_change_summary(apply_worktree, fork_commit, "変更要約生成失敗")
-    return list((summary or {}).get("changes", [])) or [
-        {
-            "category": "変更要約なし",
-            "summary": "変更差分はありますが、構造化された変更要約は空でした。",
-            "changed_paths": [],
-        }
-    ]
+    changes = list((summary or {}).get("changes", []))
+    if not changes:
+        return fallback_change_summary(apply_worktree, fork_commit, "変更要約なし")
+    return changes
 
 
 def changed_diff_since_fork(apply_worktree: Path, fork_commit: str) -> str:
