@@ -130,7 +130,19 @@ def test_doctor_pulls_each_unique_cmoc_provider_model(
     assert pulled == ["alpha", "beta"]
 
 
-def test_doctor_syncs_default_config_without_overwriting_human_values(
+def test_doctor_does_not_sync_config(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = make_repo(tmp_path)
+    config_path = root / ".cmoc" / "config.json"
+    monkeypatch.chdir(root)
+
+    run_doctor(root)
+
+    assert not config_path.exists()
+
+
+def test_init_syncs_default_config_without_overwriting_human_values(
     tmp_path: Path, monkeypatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -154,8 +166,14 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
     )
     monkeypatch.chdir(root)
 
-    run_doctor(root)
+    result = runner.invoke(
+        app,
+        ["init"],
+        env=fake_managed_ollama_env(root),
+        catch_exceptions=False,
+    )
 
+    assert result.exit_code == 0
     data = json.loads(config_path.read_text())
     assert data["num_parallel"] == 3
     assert data["codex"]["model"]["mainstream"] == {

@@ -12,7 +12,7 @@ from _support import (
     make_repo,
     run_git,
     runner,
-    run_doctor,
+    run_init,
     setup_codex_home,
     stub_codex_profile,
     write_python_executable,
@@ -26,7 +26,7 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
 ) -> None:
     root = make_repo(tmp_path)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     fake_code = bin_dir / "code"
@@ -128,7 +128,7 @@ def test_tui_saves_complete_prompt_in_linked_worktree(
     setup_codex_home(tmp_path, monkeypatch)
     stub_codex_profile(tmp_path, monkeypatch)
     monkeypatch.chdir(root)
-    assert run_doctor(root).exit_code == 0
+    assert run_init(root).exit_code == 0
     linked = root / ".cmoc" / "local" / "worktree" / "linked"
     run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
     monkeypatch.chdir(linked)

@@ -11,7 +11,7 @@ from pathlib import Path
 
 from config.cmoc_config import CmocConfig
 
-from commons.runtime_config import load_config, sync_config
+from commons.runtime_config import load_config
 from commons.runtime_errors import CmocError
 from commons.runtime_git import ensure_cmoc_ignored, run_git, with_cmoc_ignore_pattern
 
@@ -31,7 +31,6 @@ def run_doctor_preprocess(root: Path, config: CmocConfig | None = None) -> None:
     }
     ensure_cmoc_ignored(root)
     _ensure_agents_tracked(root)
-    sync_config(root)
     _ensure_ollama_serves_local_slm(root, config)
     _commit_doctor_repairs(root, preexisting_staged_patches)
 
@@ -78,8 +77,6 @@ def _commit_doctor_repairs_from_head(root: Path) -> list[str]:
         _run_git_with_index(["read-tree", "HEAD"], root, index_path)
         _stage_gitignore_repair(root, index_path)
         _stage_agents_gitkeep_repair(root, index_path)
-        # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
-        # .cmoc 配下は runtime 状態領域なので、生成した config も追跡対象へ戻さない。
         _run_git_with_index(
             ["rm", "--cached", "-r", "--ignore-unmatch", ".cmoc"], root, index_path
         )

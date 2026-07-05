@@ -79,6 +79,7 @@ def break_preprocess_invariants(work: Path) -> Path:
         + "\n"
     )
     tracked_probe = work / ".cmoc" / "tracked-probe"
+    tracked_probe.parent.mkdir(exist_ok=True)
     tracked_probe.write_text("tracked\n")
     run_git(work, "add", ".gitignore")
     run_git(work, "add", "-f", ".cmoc/tracked-probe")
