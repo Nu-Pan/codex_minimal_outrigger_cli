@@ -155,20 +155,20 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 全体への入口。CLI サブコマンド、Codex runtime、indexing、prompt builder、packaged import、StructDoc rendering など、src 配下実装の外部挙動と共通 runtime 契約を pytest で検証する。
-- 共通 test support、apply/session/review/indexing/doctor/TUI/Codex runtime の大きな回帰テスト、ACP builder や prompt rendering の単体寄りテストへ進むためのルーティング対象である。
+- cmoc の realization test 群を収める領域。CLI サブコマンド、Codex 実行 runtime、ACP builder、prompt rendering、INDEX.md 更新、packaged import、基礎 runtime 契約など、実装から観測される外部挙動と制御ロジックを検証する入口になる。
+- 共通 pytest 補助を使い、一時 Git repository、Codex home、fake Codex/Ollama/systemctl、linked worktree、session/apply state、subprocess 実行など、外部状態を伴う回帰確認を広く扱う。
 
 ## Read this when
-- cmoc の realization test を追加・変更するために、既存テストの配置、責務境界、共有 fixture の入口を選びたいとき。
-- CLI 外部挙動、Codex exec/TUI runtime、quota/retry、file access post validation、doctor/init、indexing、apply/session/review の既存回帰テストを探すとき。
-- ACP builder、標準 prompt parts、packaged import、StructDoc Markdown rendering など、実装契約に対応するテストの所在を確認したいとき。
-- テスト支援関数、一時 Git repository、Codex home、fake Codex/Ollama/systemctl、apply worktree 解決 helper の使い方を確認したいとき。
+- cmoc の realization implementation を変更した後、その変更が CLI 出力、終了コード、git 副作用、state 遷移、report、prompt、Codex 呼び出し、file access 境界に与える外部挙動を確認したいとき。
+- apply、session、review oracle、indexing、doctor/init、TUI、Codex exec/TUI runtime など、サブコマンドや runtime の既存回帰テストを探すとき。
+- ACP builder、structured output schema 参照、prompt parts、packaged import、root placeholder、config、path model、sandbox/profile 変換など、複数実装にまたがる基礎契約のテスト観点を探すとき。
+- 新しい realization test を追加する前に、既存テストへ case 追加・統合できる場所や、共有 fixture/helper の使い方を確認したいとき。
 
 ## Do not read this when
-- production 実装の責務や内部処理を先に確認したい場合は、src 配下の対応実装へ進む。
-- oracle file の正本仕様、schema、prompt 文面、テストルールそのものを確認したい場合は、oracle 配下の該当文書または oracle src を読む。
-- 個別サブコマンドや単一 helper の期待挙動をすでに特定できている場合は、この階層全体ではなく該当テストファイルを直接読む。
-- Codex CLI や LLM 出力品質そのものを検証したい場合は対象外であり、この階層のテストは cmoc 側の制御、副作用、外部契約を検証する。
+- 正本仕様断片そのものを確認・編集したい場合は、oracle 配下の該当文書または schema を読む。
+- production 実装の責務分割、内部 helper、処理手順を直接変更したい場合は、まず src 配下の対応実装を読む。
+- 個別ファイルの期待挙動が既に分かっており、その単一テストだけを確認すれば足りる場合は、該当テストへ直接進む。
+- Codex CLI や LLM の出力品質そのものを評価したい場合。この領域のテストは fake 実行や固定応答を使い、cmoc 側の制御と副作用を検証する。
 
 ## hash
-- 684af72dad63746b233865d6418a4da5d8fa7eb1a947b65645f055d2d3f5bfce
+- 178d8ab8595fb1d699c0df676d72156f9214735cc9c887b9c0794a603afb9cfa

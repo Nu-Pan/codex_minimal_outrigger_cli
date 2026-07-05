@@ -352,23 +352,21 @@
 # `test_indexing_cli.py`
 
 ## Summary
-- indexing preflight と indexing subcommand が routing document を生成・更新・commit する外部挙動を検証する回帰テスト群。
-- 対象列挙、既存 hash による Codex 呼び出し省略、entry schema 検証、空 directory、安定順序、並列生成、root memo 除外、nested memo 対象化、symlink cycle 除外を扱う。
-- 通常 worktree、linked worktree、apply worktree、dirty worktree、未初期化 repository、INDEX.md conflict 解決など、git 状態を含む indexing workflow の入口。
+- INDEX.md 生成・更新の CLI 回帰テストを扱う。Codex によるエントリー生成、fresh hash による再生成スキップ、不正エントリー再生成、空ディレクトリ、兄弟順序、並列生成、memo 除外、symlink cycle 除外を検証する。
+- indexing 実行時の git 境界を扱う。clean/dirty worktree、linked worktree、apply worktree preflight、INDEX.md だけを commit する条件、INDEX.md conflict 解決の外部挙動を確認する。
 
 ## Read this when
-- indexing CLI の成功・失敗条件、commit 対象、dirty worktree の扱い、linked worktree での実行先を変更または確認するとき。
-- INDEX.md entry の rendering、schema mismatch、空白・複数行 semantic item、malformed entry 再生成、fresh hash 再利用の挙動を確認するとき。
-- routing document 更新対象の列挙規則、root memo 除外、nested memo indexing、directory symlink cycle の除外、同階層 entry の出力順序、非 ancestor index 生成の並列性を確認するとき。
-- apply 側の conflict 解決で INDEX.md を削除して merge commit を成立させる挙動を確認するとき。
+- indexing サブコマンド、indexing preflight、または INDEX.md 更新ワークフローの CLI から見える挙動を変更・確認する時。
+- INDEX.md の対象列挙、hash 再利用、エントリー schema 検証、render 順、並列更新、memo や symlink の扱いを調べる時。
+- indexing による commit 対象、dirty worktree 拒否、linked worktree での実行、merge conflict 解決の回帰を確認する時。
 
 ## Do not read this when
-- indexing の利用者向け仕様だけを確認したいときは、oracle doc の indexing 仕様を読む。
-- index entry 生成 prompt や Structured Output schema の正本を確認したいときは、oracle 側の prompt builder または schema を読む。
-- CLI 実装、git 操作 helper、設定読み書きの実装詳細を修正したいだけなら、対応する実装 module とその近接テストを読む。
+- INDEX.md エントリー文面の生成指示そのものや Structured Output schema の定義だけを確認したい時。
+- routing document 更新とは関係しない CLI サブコマンド、apply join の通常処理、または runtime 設定の一般的な読み書きを調べる時。
+- 個別 helper の内部実装だけを変更し、indexing CLI から観測される git 状態・生成結果・commit 条件に影響しない時。
 
 ## hash
-- e2178158922f7422afb5893671c284f7807472483e91bb055cb83ac9568c5537
+- b84e14c35db19fa57f4f3932aff74fd4e0bb8525dcf28ec71a3929a4447ffadd
 
 # `test_indexing_preflight.py`
 
