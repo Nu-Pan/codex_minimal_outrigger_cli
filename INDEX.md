@@ -94,24 +94,21 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本仕様断片全体への入口。自然言語仕様と oracle src の実装形式仕様を束ね、外部挙動、branch/worktree モデル、開発作法、AI agent call の prompt・Structured Output schema・モデル設定・共通基盤型など、実装差を避けたい事項の下位領域を選ぶための上位ルーティング情報を担う。
-- 利用者に見える CLI 挙動や状態管理、git 隔離モデル、不採用設計判断、realization code/test の作成基準、agent call parameter、パスモデル、設定、規範モデル、構造化 Markdown、共通規範プロンプトなどの正本仕様断片へ進む起点になる。
+- cmoc の正本仕様断片を置く領域で、自然言語の oracle doc と、AI エージェント呼び出しや共通基盤を定義する oracle src への入口になる。
+- 利用者向け仕様、branch/worktree モデル、設計判断、開発作法は自然言語文書へ、prompt・Structured Output schema・モデル設定・パスモデル・共通規範プロンプトなどの正本実装断片は oracle src へ進む。
 
 ## Read this when
-- cmoc の正本仕様断片から、自然言語仕様と oracle src のどちらを読むべきか判断したいとき。
-- 新しい実装やテストの前に、対象機能の正本仕様が CLI 挙動、状態管理、git 隔離モデル、設計判断、開発作法、AI agent call、prompt、Structured Output schema、共通基盤型のどの領域で述べられているか切り分けたいとき。
-- 複数の仕様領域にまたがる変更で、外部挙動、run 隔離、branch/worktree、テスト方針、実装規則、AI に注入する共通規範、agent call parameter の確認先を決めたいとき。
-- oracle file のうち、自然言語文書と実装・設定形式の正本仕様断片の境界を確認したいとき。
+- cmoc の実装・テスト・レビューで、正本仕様断片の所在を oracle doc と oracle src から切り分けたいとき。
+- CLI 挙動、共通処理、外部連携、状態、ログ、実行環境、branch/worktree モデル、開発作法、テスト方針に関する自然言語仕様を探したいとき。
+- AI agent call の prompt、Structured Output schema、モデル設定、ファイルアクセス権限、preflight 設定、共通データ構造、規範プロンプトの正本実装断片を確認したいとき。
 
 ## Do not read this when
-- oracle file と realization file の一般的な定義、編集責務、品質基準、INDEX.md エントリー生成規則だけを確認したいとき。
-- パス語彙そのものの定義だけを確認したいとき。
-- 対象の仕様領域が既に自然言語仕様または oracle src の下位対象に特定できており、その対象を直接読めば足りるとき。
-- CLI 引数処理、branch 操作、diff 取得、merge 実行、保存処理、表示整形など、realization implementation の具体的な関数や内部 helper を調べたいとき。
-- 実装ファイルやテストファイルの現在構造、テスト期待値、バックエンド API へ送る実際のリクエスト形式など、realization code 側の詳細だけを調べたいとき。
+- realization code の現在の実装場所、関数シグネチャ、内部ロジック、テスト期待値だけを直接調べたいとき。
+- oracle file と realization file の一般的な定義、編集責務、品質基準、INDEX.md エントリー作成規則だけを確認したいとき。
+- path placeholder、work root、repo root、run root などの語彙定義そのものだけを確認したいとき。
 
 ## hash
-- 424fe597845676a3e4a832eabd26da3b860bbe4035f0efaba4eee3c7e58c8a1e
+- 3a7fbaba0658d335217373593cc427bb065d2478cace0551d056a64cc41b534c
 
 # `pyproject.toml`
 

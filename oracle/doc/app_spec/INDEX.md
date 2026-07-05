@@ -85,24 +85,24 @@
 # `doctor_preprocess.md`
 
 ## Summary
-- 各サブコマンドの本命処理前に共通実行される doctor preprocess の正本仕様断片。リポジトリ状態の検証・可能な修復・修復不能時のエラー終了を扱い、サブコマンド固有の事前条件検証とは責務を分ける。
-- .cmoc/local の git ignore 保証、.agents の git 追跡保証、cmoc managed ollama の利用可能性保証、これらの修復差分の commit までの実行順序を定める。
+- doctor preprocess の正本仕様断片。cmoc の各サブコマンド本命処理前に共通実行される事前検証・修復の責務、実行順序、失敗時の扱いを定める。
+- git ignore 対象にすべきローカル状態、事前に tracked にしておく agent 操作禁止領域、cmoc managed ollama 利用可能性の保証を扱う。
+- 個別サブコマンド固有の前提条件ではなく、全サブコマンドに共通する実行環境整備の入口として読む。
 
 ## Read this when
-- 各サブコマンド実行前に共通で走る検証・修復処理の仕様を確認するとき。
-- .cmoc/local を git 追跡対象外に保つ処理、.gitignore 追記、git index からの除外、完了判定の条件を実装・テストするとき。
-- .agents を存在させ、空ディレクトリ時の保持ファイルを含めて git 追跡対象にする処理を実装・テストするとき。
-- doctor preprocess がどの時点でエラー終了すべきか、また修復後の差分を commit する流れを確認するとき。
-- cmoc managed ollama の利用可能性保証が doctor preprocess の一部であることを確認し、その詳細仕様へ進む入口を探すとき。
+- 各サブコマンド開始前に必ず走る共通事前処理の仕様を確認・実装・テストする。
+- ローカル状態を git 追跡対象外にする処理、既存 tracked file の index 除外、ignore 完了判定を扱う。
+- agent 操作禁止領域を作成し、空の場合の保持ファイル追加や git 追跡対象化を扱う。
+- 共通事前処理の修復後に差分を commit する流れ、または修復不能時のエラー終了条件を確認する。
+- cmoc managed ollama の利用可能性確認が、共通事前処理のどこに位置づくかを確認する。
 
 ## Do not read this when
-- 個別サブコマンド固有の事前条件、入力検証、実行本体だけを確認したいとき。
-- cmoc managed ollama 自体の詳細仕様を確認したいときは、その正本仕様を直接読む。
-- oracle file と realization file の一般的な定義や責務境界だけを確認したいとき。
-- INDEX.md エントリー生成規則やルーティング文書の一般基準だけを確認したいとき。
+- 個別サブコマンド固有の事前条件や本命処理だけを調べたい。
+- cmoc managed ollama 自体の詳細仕様を確認したい。
+- git ignore や agent 操作禁止領域と無関係な一般的な path model、CLI 出力形式、agent 実行制御を調べたい。
 
 ## hash
-- ddfa0582cac3c3d222c5ad6bb5b90d20a6b77158a9025326c6dc822fd9b2d2d4
+- 7e2c28bacd702ec043c6a683ac3ec9d1a1fcd2bd15519c72a50094356e85c0fc
 
 # `error_handling.md`
 
@@ -170,22 +170,21 @@
 # `misc_spec.md`
 
 ## Summary
-- cmoc の雑多な前提・共通仕様をまとめる文書。実装ファイル列挙、操作対象リポジトリへの仮定、実行時 pwd、非追跡領域、タイムスタンプ形式、管理ブランチ上で起きたことの範囲を定義する。
+- cmoc の横断的な補助仕様を扱う。実装ファイルの機械的な列挙範囲、操作対象リポジトリへの前提、実行時のカレントディレクトリ、タイムスタンプ形式、管理対象 branch 上で発生した変更の範囲を定義する。
 
 ## Read this when
-- 実装ファイルを機械的に列挙する対象範囲・除外条件を確認したいとき。
-- cmoc が操作する `<work-root>` に求める前提、または cmoc 実行時のカレントディレクトリを確認したいとき。
-- `.cmoc` 領域を git 追跡対象外にする理由や `cmoc doctor` の保証対象を確認したいとき。
-- cmoc で使うタイムスタンプ文字列の桁数・区切り・timezone を確認したいとき。
-- 「`<cmoc-managed-branch>` 上で変更された」などの表現が、commit 範囲・working tree・staging area・削除・rename をどう扱うか確認したいとき。
+- 実装ファイルをどの範囲・除外条件で列挙するかを確認したいとき。
+- cmoc が操作対象リポジトリに何を前提としてよいかを確認したいとき。
+- cmoc 実行時の pwd や、タイムスタンプ文字列の桁数・区切り・timezone を確認したいとき。
+- 管理対象 branch 上の変更として、commit 履歴・working tree・staging area・削除済みファイル・rename をどう扱うか確認したいとき。
 
 ## Do not read this when
-- 特定サブコマンドの入出力、終了条件、処理手順を確認したいとき。
-- `<cmoc-root>`, `<repo-root>`, `<run-root>`, `<work-root>` などのパスキーワードそのものの定義を確認したいとき。
-- oracle file、realization file、INDEX.md エントリーなどの分類や運用標準を確認したいとき。
+- 個別コマンドの入出力、終了条件、状態遷移を確認したいとき。
+- path placeholder 自体の意味や `<cmoc-root>`, `<repo-root>`, `<run-root>`, `<work-root>` の関係を確認したいとき。
+- oracle file と realization file の所有者、編集可否、責務境界を確認したいとき。
 
 ## hash
-- 1faea662321a0c82351d77d1ca4466b6515b03319fe4ad17b31d232e3ef0fe8b
+- 7253cac67a1f25770f2a03fa9755061f17885ed1886b8a92ae9c0300b1bec402
 
 # `prompt_standard.md`
 
@@ -210,25 +209,23 @@
 # `run_isolation.md`
 
 ## Summary
-- サブコマンド呼び出しごとに発生する run の作業隔離について、git branch と git worktree を使って人間の直接作業領域との衝突を避ける規則を述べる。
-- run 開始時の session branch から run branch を作り、run worktree 上で作業し、完了後の session branch への反映はサブコマンドごとの規則に従う、という責務境界を扱う。
-- 原則として run 作業の読み書き範囲を run root 内に閉じつつ、ログや状態ファイルなど明示された例外では repo root 配下への書き込みを許す、という隔離例外の入口になる。
+- サブコマンド呼び出しごとの run を、人間が触る作業ツリーから隔離するための正本仕様断片。run と session branch/run branch/run worktree の関係、run 作業を記録する branch と checkout 先 worktree、完了後のマージ規則がサブコマンドごとに異なることを扱う。
+- run 作業の読み書き範囲は原則として run root 内に閉じるが、ログ・ステートファイルのように repo root 配下へ書くべき例外がある、という境界も示す。
 
 ## Read this when
-- サブコマンド実行時に作業用 branch や worktree をどの時点・どの基準で作成し、どこで作業を記録するかを確認したいとき。
-- run root、repo root、cmoc session branch、cmoc run branch、cmoc run worktree の関係を前提に、作業隔離の実装やテストを設計するとき。
-- 人間が直接触る作業領域と cmoc が実行中に触る作業領域を分離する必要がある変更を行うとき。
-- run 作業が原則の書き込み範囲を越えて repo root 配下へログや状態ファイルを書いてよいかを判断したいとき。
-- サブコマンドごとに異なる具体的な run branch、run worktree、完了後マージ規則を定義する前に、共通の隔離モデルを確認したいとき。
+- サブコマンド 1 回の実行単位である run の作業場所、branch、worktree の扱いを確認したいとき。
+- run 開始時にどの HEAD から run 用 branch を作るべきか、run 作業をどこに記録すべきかを実装・検証するとき。
+- run worktree 上で run branch を checkout して作業する制御を実装・レビューするとき。
+- run 完了後に run branch を session branch へどう反映するかについて、サブコマンドごとのマージ規則との接点を確認したいとき。
+- run 作業が run root 外へ書き込んでよい例外条件、特に実行中ログやステートファイルの保存先を判断したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの具体的なブランチ名、worktree 名、またはマージ手順そのものだけを確認したいときは、そのサブコマンド固有の仕様を直接読む。
-- path キーワードの一般定義や repo root、run root、work root などのパスモデルだけを確認したいときは、パスモデルの仕様を直接読む。
-- oracle file と realization file の責務分離、編集権限、正本性の規則を確認したいだけのときは、oracle と realization の基本規則を読む。
-- 実装ファイルやテストの分割、抽象化、依存追加などの realization 品質基準を判断したいだけのときは、realization standard を読む。
+- サブコマンド固有の具体的な branch 名、worktree 名、または個別のマージ手順そのものを確認したいときは、各サブコマンドの仕様を直接読む。
+- path placeholder の一般定義や repo root/run root/work root の意味だけを確認したいときは、path model の仕様へ進む。
+- run 隔離とは無関係な CLI 引数、出力形式、プロンプト、レビュー内容の仕様を調べるとき。
 
 ## hash
-- 4ce051fea17daf64aa2c0285f4381244608cf0dd073cac8d85e6990a94db17d4
+- 09080d9369142ee34fc3e3f62417f75bf96a43acc236dab7c9677f750598f972
 
 # `session_state.md`
 

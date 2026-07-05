@@ -1,22 +1,21 @@
 # `app_spec`
 
 ## Summary
-- cmoc のアプリケーション仕様断片を集めた領域。CLI 補完、Codex CLI 呼び出し、ログ、doctor preprocess、managed ollama、run 隔離、session 状態、サブコマンド、インデクシング、利用手順など、実装差を避けたい外部挙動や共通境界の正本仕様へ進む入口になる。
-- 個別ファイルは、共通処理、永続状態、外部 provider 境界、サブコマンド仕様、利用者向けワークフローなどの責務ごとに分かれており、対象機能の仕様断片を選ぶための上位ルーティング情報として使う。
+- cmoc のアプリケーション仕様に関する oracle doc を集めた領域。CLI 自動補完、Codex CLI 呼び出し、ログ、doctor preprocess、エラー処理、外部 provider、インデクシング、run 隔離、session 状態、利用手順など、横断仕様とサブコマンド仕様への入口になる。
+- 利用者向け CLI 挙動そのものは下位のサブコマンド仕様へ進み、共通処理・外部連携・状態・ログ・実行環境などサブコマンド横断の正本仕様はこの階層の各文書から特定する。
 
 ## Read this when
-- cmoc の CLI 挙動、共通前処理、ログ、状態管理、Codex CLI 呼び出し、run 隔離、インデクシング、managed ollama、サブコマンド仕様のどの正本仕様断片を読むべきか判断したいとき。
-- 新しい実装やテストの前に、対象機能が共通仕様、個別サブコマンド仕様、外部 provider 境界、利用手順のどこで定義されているかを探すとき。
-- 複数の仕様領域にまたがる変更で、通常実行前処理、補完時の例外、ログ出力、状態更新、agent call、git worktree 隔離などの入口を切り分けたいとき。
+- cmoc の実装・テスト・レビューで、どの oracle doc が対象の正本仕様断片かを特定したいとき。
+- CLI 起動経路、Codex CLI 呼び出し、ログ、doctor preprocess、エラー処理、外部 LLM provider、インデクシング、run 隔離、session 状態、managed ollama、利用手順のいずれかに関わる仕様を探すとき。
+- サブコマンド固有仕様へ進むべきか、サブコマンドから呼ばれる共通仕様へ進むべきかを判断したいとき。
 
 ## Do not read this when
-- oracle file と realization file の一般的な定義、編集責務、品質基準、INDEX.md エントリー生成規則だけを確認したいとき。
-- <cmoc-root>、<repo-root>、<work-root>、<run-root> などのパス語彙そのものの定義だけを確認したいとき。
-- 実装ファイルの内部 helper、モジュール分割、具体的なコード構造だけを調べたいとき。
-- 対象のサブコマンドや共通処理が既に特定できており、その個別仕様ファイルを直接読めば足りるとき。
+- oracle file と realization file の一般的な定義、編集責務、品質基準、INDEX.md エントリー作成規則だけを確認したいとき。
+- path placeholder や work root、repo root、run root などの語彙定義だけを確認したいとき。
+- 実装ファイルの責務分割、内部 helper、テスト構成など realization code 側の現在実装だけを調べたいとき。
 
 ## hash
-- ca0cdc761c4c072cf5075fcd206a603de54cc28e18bcb1764369b6d838b88ce1
+- f9e3ee9504bf73553e62d5d4ec1835549398f7744458c598c54414278f96eb32
 
 # `branch_model.md`
 
