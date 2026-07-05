@@ -151,6 +151,8 @@ def _cmoc_apply_fork_body(
             else:
                 pending_targets = dedupe_apply_targets(pending_targets)
                 result_label = "unconverged" if pending_targets else "converged"
+            state.apply.state = "completed"
+            write_state(path, state)
             report_path = write_apply_fork_report(
                 root,
                 apply_worktree,
@@ -162,8 +164,6 @@ def _cmoc_apply_fork_body(
                 codex_exec,
             )
         delete_apply_process_id(root, session_id)
-        state.apply.state = "completed"
-        write_state(path, state)
     except BaseException as exc:
         delete_apply_process_id(root, session_id)
         state.apply.state = "error"
@@ -274,7 +274,7 @@ def normalize_apply_targets(
             continue
         if not rel_parts:
             continue
-        if rel_parts[0] in {".git", ".agents", ".codex", ".cmoc", "memo"}:
+        if rel_parts[0] in {".git", ".agents", ".codex", "memo"}:
             continue
         if not include_oracle and rel_parts[0] == "oracle":
             continue

@@ -270,7 +270,7 @@ def test_apply_fork_can_target_and_edit_gitignore(
         "suggested_fix": "update gitignore",
     }
     target_rels_by_call: list[list[str]] = []
-    current_findings = [finding]
+    gitignore_finding_returned = False
 
     def enumerate_findings(
         root_arg: Path,
@@ -279,11 +279,14 @@ def test_apply_fork_can_target_and_edit_gitignore(
         codex_exec: object,
         **kwargs: object,
     ) -> list[dict[str, object]]:
-        """対象 path を記録し、初回だけ gitignore 所見を返す。"""
-        nonlocal current_findings
-        target_rels_by_call.append([str(target.relative_to(root_arg))])
-        current_findings = [finding] if len(target_rels_by_call) == 1 else []
-        return current_findings
+        """対象 path を記録し、gitignore 初回調査だけ所見を返す。"""
+        nonlocal gitignore_finding_returned
+        rel = str(target.relative_to(root_arg))
+        target_rels_by_call.append([rel])
+        if rel == ".gitignore" and not gitignore_finding_returned:
+            gitignore_finding_returned = True
+            return [finding]
+        return []
 
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
@@ -307,7 +310,6 @@ def test_apply_fork_can_target_and_edit_gitignore(
     )
 
     assert result.exit_code == 0
-    assert ".gitignore" in target_rels_by_call[0]
     assert [".gitignore"] in target_rels_by_call
     branch = run_git(root, "branch", "--show-current").stdout.strip()
     session_id = branch.removeprefix("cmoc/session/")
@@ -378,6 +380,29 @@ def test_apply_fork_target_normalization_excludes_non_realization_paths(
     ]
 
 
+def test_apply_fork_target_normalization_keeps_tracked_cmoc_config(
+    tmp_path: Path,
+) -> None:
+    """realization file 定義上、tracked な .cmoc 配下 file は対象に残す。"""
+    root = make_repo(tmp_path)
+    config_target = root / ".cmoc" / "config.json"
+    ignored_local_target = root / ".cmoc" / "local" / "cache.json"
+    config_target.parent.mkdir()
+    ignored_local_target.parent.mkdir(parents=True)
+    config_target.write_text("{}\n")
+    ignored_local_target.write_text("{}\n")
+    (root / ".gitignore").write_text("/.cmoc/local/\n")
+    run_git(root, "add", ".gitignore", ".cmoc/config.json")
+    run_git(root, "commit", "-m", "add cmoc config")
+
+    targets = apply_fork_module.normalize_apply_targets(
+        root,
+        {config_target, ignored_local_target},
+    )
+
+    assert targets == [config_target.resolve()]
+
+
 def test_apply_fork_target_normalization_keeps_binary_files(
     tmp_path: Path,
 ) -> None:
@@ -425,3 +450,39 @@ def test_apply_fork_target_normalization_keeps_tracked_ignored_files(
         (root / "oracle" / "ignored.md").resolve(),
         realization_target.resolve(),
     ]
+
+
+def test_apply_fork_marks_state_completed_before_report(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """apply loop 正常完了直後、report 生成前に completed を state file へ書く。"""
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    branch = run_git(root, "branch", "--show-current").stdout.strip()
+    session_id = branch.removeprefix("cmoc/session/")
+    state_path = root / ".cmoc" / "local" / "session" / f"{session_id}.json"
+    seen_states: list[str] = []
+    monkeypatch.setattr(apply_fork_module, "enumerate_apply_targets", lambda *args: [])
+
+    def fake_write_report(*args: object, **kwargs: object) -> Path:
+        seen_states.append(json.loads(state_path.read_text())["apply"]["state"])
+        report_path = root / ".cmoc" / "local" / "report" / "apply" / "fork" / "state.md"
+        report_path.parent.mkdir(parents=True)
+        report_path.write_text("# report\n")
+        return report_path
+
+    monkeypatch.setattr(apply_fork_module, "write_apply_fork_report", fake_write_report)
+
+    class FakeCodexResult:
+        output_json = {"findings": []}
+
+    result = apply_fork_module._cmoc_apply_fork_body(
+        "full", lambda *args, **kwargs: FakeCodexResult()
+    )
+
+    assert result.returncode == 0
+    assert seen_states == ["completed"]

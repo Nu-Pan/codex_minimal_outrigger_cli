@@ -465,14 +465,14 @@ def test_apply_fork_converges_when_last_allowed_target_has_no_findings(
     run_git(root, "commit", "-m", "change readme")
     config_path = root / ".cmoc" / "config.json"
     config = json.loads(config_path.read_text())
-    config["apply_fork"]["num_apply_files"] = 1
+    config["apply_fork"]["num_apply_files"] = 2
     config_path.write_text(json.dumps(config, indent=2) + "\n")
     enumerate_calls = 0
 
     def fake_run_codex_exec(
         parameter: AgentCallParameter, **kwargs: object
     ) -> FakeCodexResult:
-        """上限 1 回の唯一の調査対象に空所見を返す。"""
+        """上限内の全調査対象に空所見を返す。"""
         nonlocal enumerate_calls
         purpose = str(kwargs["purpose"])
         if purpose.startswith("apply fork enumerate findings"):
@@ -489,7 +489,7 @@ def test_apply_fork_converges_when_last_allowed_target_has_no_findings(
     )
 
     assert result.exit_code == 0
-    assert enumerate_calls == 1
+    assert enumerate_calls == 2
     report_path = report_path_from_stdout(result.stdout)
     assert "result: converged" in report_path.read_text()
 
