@@ -58,21 +58,21 @@
 # `join.py`
 
 ## Summary
-- `session join` の実行本体を担い、active session branch を session home branch へ merge し、状態更新、session branch 削除判定、CLI 出力までを扱う。
-- merge conflict 発生時は Codex CLI に解消を委譲し、conflict 対象外の差分混入、残存 conflict marker、unmerged path を検査して merge commit まで進める。
-- session branch・apply 状態・clean worktree・cmoc ignore・home branch の事前条件と、post-precondition 失敗時の stderr 報告境界を実装する。
+- session join サブコマンドの実行本体を扱う。active session branch を session home branch へ merge し、state 更新、session branch 削除判定、利用者向け結果出力までを担当する。
+- merge conflict 発生時に Codex CLI へ conflict 解消を依頼し、conflict 対象外の差分混入、未解消 marker、unmerged path を検出して merge commit まで進める制御を含む。
+- session join の事前条件確認、clean worktree 確認、cmoc ignore 確認、post-precondition failure の stderr 報告指定など、CLI runtime と git 操作をつなぐ入口として読む。
 
 ## Read this when
-- `session join` の事前条件、merge 手順、状態遷移、出力内容、session branch 削除条件を確認または変更したいとき。
-- `session join` の merge conflict 自動解消、Codex CLI へ渡す conflict 対象、oracle conflict 書き込み許可、対象外差分の拒否ロジックを確認したいとき。
-- conflict marker 検出、unmerged path 検査、merge commit 実行、git status に基づく変更スナップショットの扱いを調べたいとき。
-- `session join` 実行中の git 操作失敗をどの出力経路で報告するか、または手動解決が必要な失敗の扱いを確認したいとき。
+- session join の実行条件、状態遷移、merge 先、session branch 削除可否、結果出力を確認または変更したいとき。
+- session join 中の merge conflict 解消フロー、Codex CLI に渡す conflict 対象、oracle conflict 書き込み例外、対象外差分の拒否を確認または変更したいとき。
+- conflict marker 検出、unmerged path 検出、merge commit 実行、git status snapshot や path fingerprint による差分監視の挙動を確認したいとき。
+- session join の失敗時に CmocError がどの文脈情報や stderr 報告指定を持つか調べたいとき。
 
 ## Do not read this when
-- session join 以外の session サブコマンドの実装を調べたいとき。
-- Codex CLI に渡す conflict 解消 prompt や parameter の組み立て自体を変更したいときは、その builder 側を読む。
-- branch/state/path model の正本仕様や状態データ構造そのものを確認したいときは、対応する oracle または runtime 側を読む。
-- INDEX.md 生成、ルーティング文書、preflight indexing の一般仕様だけを調べたいとき。
+- session join conflict 解消用に Codex CLI へ渡す prompt や実行 parameter の内容だけを確認したい場合は、builder 側の conflict resolution 定義を読む。
+- session state や apply state のデータ構造、永続化形式、branch と state file の対応を確認したいだけの場合は、runtime や state model の定義を読む。
+- 他の session サブコマンドの CLI 仕様や処理を調べたい場合は、それぞれのサブコマンド実装へ進む。
+- INDEX.md エントリー生成や indexing preflight 自体の仕様を調べたい場合は、indexing 側の実装を読む。
 
 ## hash
-- 959ce69a327c7a5d0acfeee433ffbf92f16512b48b5eb03b065888e2e3a08f80
+- 2bab0b8755c1f1ea15a06cb24170cd761e236bc680131d28c9f38200241e073d

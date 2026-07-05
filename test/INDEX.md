@@ -365,24 +365,24 @@
 # `test_session_cli.py`
 
 ## Summary
-- session branch と session state のライフサイクルを軸に、session fork/join/abandon の CLI 外部挙動をまとめて検証する回帰テスト。
-- session state 作成・衝突時 retry・破損 state 拒否・linked worktree 上の branch/head 扱い・dirty worktree 拒否・state cleanup・branch 削除可否・エラー出力先を扱う。
-- join では oracle conflict 解消 agent の file access mode、conflict 対象外差分の拒否、delete conflict 解消の staging、conflict marker 検出も検証する。
+- session fork/join/abandon の CLI 回帰テスト。session branch と session state のライフサイクルを中心に、linked worktree、state cleanup、dirty worktree 拒否、join 時の conflict 解消、branch 削除失敗時の外部挙動をまとめて検証する。
+- session 状態ファイルの生成・更新・破損検出、home/session branch の切替、preprocess による .cmoc/.agents/.gitignore 整理、stdout/stderr へのエラー出力先など、session CLI の観測可能な挙動を扱う。
 
 ## Read this when
-- session fork/join/abandon の CLI 外部挙動、出力、終了コード、git branch/state 遷移を変更または確認する時。
-- session state file の生成・検証・cleanup・異常時 rollback・abandoned/joined/active state の扱いを確認する時。
-- linked worktree での session 操作、home branch への復帰、root worktree への影響有無を確認する時。
-- session join の conflict 解消 agent 呼び出し、oracle conflict 書き込み許可、conflict marker 残存検出、conflict 対象外差分拒否を確認する時。
-- session 操作での stdout/stderr の使い分けや、利用者向け完了・エラー報告を変更する時。
+- session fork、session join、session abandon の外部挙動や回帰テストを確認・変更する。
+- session branch と session state file のライフサイクル、既存 state との衝突、active/joined/abandoned 状態遷移を扱う。
+- linked worktree 上での session 操作、home branch の検出、root worktree との branch 状態の分離を確認する。
+- session join の merge conflict 解消、oracle conflict 解消用 agent 呼び出し、conflict marker 検出、delete conflict の stage 処理を変更する。
+- session completion 時の cleanup、branch 削除失敗時の警告、cleanup failure 時の rollback、未コミット差分拒否、エラー出力先を検証する。
 
 ## Do not read this when
-- session 以外のサブコマンドや、session の内部 helper 単体だけを確認したい時。
-- agent call の品質や LLM 出力内容そのものを検証したい時。
-- git 操作一般、設定読み込み、doctor の詳細挙動など、session CLI の外部状態遷移に直接関係しない実装を調べる時。
+- session CLI 以外のサブコマンド挙動を調べる場合。
+- session の内部 helper 単体の細部だけを確認したい場合で、対象 helper の実装ファイルまたはより小さい単体テストへ直接進める場合。
+- doctor、config、runtime profile、agent call parameter の一般仕様を確認したいだけで、session join/fork/abandon の外部挙動に関係しない場合。
+- oracle file の正本仕様そのものを読む必要がある場合。
 
 ## hash
-- 5270cc62f5afe98e96d504bf401972d20711b3c0977c56f15f8f71becf9d4bd1
+- 2943eb85367151a80f9c8136874af2c73d52ff9ebc2e8e1576c8db6c2277c43c
 
 # `test_struct_doc_rendering.py`
 

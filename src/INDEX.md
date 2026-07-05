@@ -138,21 +138,20 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドごとの実行本体を集約する領域。apply、doctor、indexing、review、session、TUI などの上位 orchestration へ進む入口になる。
-- 各サブコマンドは CLI runtime や共通 helper を呼び出し、事前条件検査、状態遷移、git/worktree 操作、Codex 実行接続、利用者向け出力や report 生成までをサブコマンド単位で束ねる。
-- 低レベルな runtime、git wrapper、state 型、prompt/schema builder の詳細ではなく、それらをサブコマンドの外部挙動としてどう接続するかを確認するための階層である。
+- CLI サブコマンドの実行本体を集める階層。apply、review、session、doctor、indexing、TUI など、利用者向けコマンドを runtime、state、git 操作、Codex 実行、レポート出力へ接続する入口になる。
+- 各サブコマンド固有の事前条件確認、状態遷移、branch/worktree 操作、利用者向け出力、失敗時処理を追うための上位ルーティング地点であり、詳細な共通 helper や prompt/schema 定義へ進む前に読む対象を選ぶ場所である。
 
 ## Read this when
-- サブコマンドの実行入口、実行順序、CLI runtime への渡し方、利用者向け出力を確認または変更したいとき。
-- apply、review、session など、branch、worktree、state、process id、report、cleanup を伴うサブコマンド固有の状態遷移を追いたいとき。
-- doctor、indexing、TUI のように、共通処理を CLI サブコマンドとして起動する接続点や preflight 条件を確認したいとき。
-- review oracle の対象列挙、finding loop、INDEX 変更反映、report 出力など、review 系処理のどの下位実装へ進むべきかを選びたいとき。
+- CLI サブコマンドの挙動を確認または変更するために、どの実装領域へ進むべきかを選びたいとき。
+- apply、review、session のように branch、worktree、state、process id、report、cleanup を伴うコマンドの上位制御フローを追いたいとき。
+- doctor、indexing、TUI など、runtime 経由で共通処理を呼び出すサブコマンド固有の接続点や出力を確認したいとき。
+- review oracle の対象列挙、finding 処理、INDEX 変更反映、report 生成など、review 系処理のどの下位責務へ進むべきかを判断したいとき。
 
 ## Do not read this when
-- CLI runtime、設定読み込み、git wrapper、state 読み書き、path model、worktree clean 判定などの共通 helper の低レベル実装だけを調べたいとき。
-- Codex に渡す prompt、parameter builder、Structured Output schema の内容そのものを確認または変更したいとき。
-- oracle file、realization file、INDEX.md 生成規則、ルーティング規則などの正本仕様や文書規則を確認したいとき。
-- 特定サブコマンドの詳細責務が既に分かっており、その下位 module が対象列挙、loop、report、merge、cleanup などを直接担っている場合。
+- CLI runtime、設定読み込み、git wrapper、state 型、path model などの共通基盤そのものを調べたいとき。
+- Codex に渡す prompt、parameter builder、Structured Output schema の詳細だけを確認したいとき。
+- oracle file や realization file の一般定義、INDEX.md 生成規則、ルーティング規則そのものを確認したいとき。
+- 特定サブコマンドの正本仕様を確認したいだけのときは、実装ではなく対応する oracle doc を読む。
 
 ## hash
-- 6257c2b35b39c8f18522ff09de3627c8c0550faa45653c3953b14118bdbea6ed
+- 6dfe4e4873c986a77f6deca66f21adc4460d97a8764d6db60d1f9cdaf00a9280

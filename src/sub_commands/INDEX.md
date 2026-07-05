@@ -189,24 +189,24 @@
 # `session`
 
 ## Summary
-- session 系サブコマンドの実装をまとめる領域。active session の作成、home branch への join、merge せず破棄する abandon など、session の lifecycle に関わる CLI 実行本体への入口になる。
-- 各サブコマンドは CLI runtime 経由の実行、git branch/state/worktree の事前条件、状態更新、利用者向け出力、失敗時の復旧情報を扱う。
+- session 系サブコマンドの実装をまとめるディレクトリ。session branch の作成、home branch への join、merge せず破棄する abandon など、session の状態遷移と git 操作を CLI runtime 経由で実行する処理を収める。
+- 個別サブコマンドの実行条件、branch/state 更新、clean worktree や active session の事前条件確認、失敗時の CmocError と利用者向け出力を調べる入口になる。
+- join では merge conflict 解消を Codex CLI に依頼する制御、conflict 対象外差分や未解消状態の検出、merge commit までの監視も扱う。
 
 ## Read this when
-- session 系サブコマンドの実行条件、branch 切り替え、state 更新、session branch の作成・削除、CLI 出力を確認または変更したいとき。
-- active session の開始、home branch への merge、merge せず破棄する処理など、session lifecycle の具体的な挙動を調べたいとき。
-- session join の merge conflict 解消委譲、conflict marker や unmerged path の検査、merge commit までの制御を確認したいとき。
-- session-id の生成、一意性確認、既存 branch/state file との衝突時 retry、active session 重複検出を調べたいとき。
-- session 操作の失敗時 rollback、cleanup error、手動復旧メッセージ、stderr 報告境界を確認したいとき。
+- session 系サブコマンド全体の実装場所を探し、作成・join・破棄のどの処理へ進むべきか判断したいとき。
+- session branch と home branch の関係、session state file の作成・更新、branch 削除、active session の有無確認に関わる CLI 挙動を調べたいとき。
+- session join の merge conflict 解消フロー、対象外差分の拒否、未解消 marker や unmerged path の検出を調査または変更したいとき。
+- session サブコマンドの利用者向け出力、失敗時 rollback、手動復旧メッセージ、CmocError の文脈情報を確認したいとき。
 
 ## Do not read this when
 - session 系サブコマンドの正本仕様だけを確認したいときは、対応する oracle doc を読む。
-- git 操作 wrapper、CLI runtime、state 読み書き、path model、worktree clean 判定などの共通 helper の詳細を調べたいときは、runtime 側の実装を読む。
-- Codex CLI に渡す conflict 解消 prompt や parameter の組み立て自体を変更したいときは、その builder 側を読む。
-- 共通 CLI ルーティング、サブコマンド登録、または session 以外のサブコマンド実装を調べたいときは、より直接の対象へ進む。
+- session state のデータ構造、永続化形式、path model、git wrapper、worktree 検証などの共通 helper の詳細だけを調べたいときは、runtime や state model 側へ進む。
+- 共通 CLI ルーティング、サブコマンド登録、または session 以外のサブコマンド実装を調べたいときは、該当する上位または別サブコマンドの実装へ進む。
+- join の conflict 解消で Codex CLI に渡す prompt や実行 parameter の内容だけを確認したいときは、builder 側の conflict resolution 定義を読む。
 
 ## hash
-- bc9755c9b7317f75cfd4f3490538dee4b2f91e01f24a34d77ac70bf1ed63bd63
+- ececbe728f46af93eb9db9769da311f7af8753d226e4c9901504798b8c21f0ac
 
 # `tui.py`
 

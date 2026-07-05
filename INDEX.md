@@ -143,41 +143,40 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を置く主要な実装領域。CLI 入口、サブコマンド本体、共通 runtime helper、設定・basic・ACP などの互換 import 層を通じて、oracle file の意図を実行可能な実装へ具体化する。
-- Typer ベースの公開 CLI から、apply、review、session、doctor、indexing、TUI などのサブコマンド実装、git/path/state/logging/error/Codex 実行などの横断 runtime、oracle src への再公開 shim へ進む入口になる。
-- oracle src を realization 側へ複製しない方針のもと、旧 import path の互換維持、canonical 実装への委譲、公開面の移行条件を確認するための上位階層でもある。
+- cmoc の realization implementation を置く上位領域。CLI 入口、サブコマンド本体、共通 runtime helper、互換 import path、oracle src への再公開 shim など、利用者向けコマンドと実行基盤を構成する実装の入口になる。
+- 正本側実装を複製せずに既存公開参照を維持する互換層と、実際の CLI 実行フローを担う実装領域を含み、コマンド構成・共通処理・互換経路のどこへ進むべきかを選ぶための階層。
 
 ## Read this when
-- cmoc の CLI 入口、サブコマンド実行本体、共通 runtime helper、互換 import 層のどこを読むべきかを選びたいとき。
-- apply、review、session、doctor、indexing、TUI などの realization implementation を変更し、CLI 公開面から実処理までの接続を追いたいとき。
-- git/path/state/logging/error、Codex exec/TUI 実行制御、runtime config、INDEX 更新 preflight など、複数サブコマンドから共有される実行基盤を調べたいとき。
-- oracle src 側の正本実装を複製せず、realization 側で `acp.*`、`basic.*`、`config.*`、`oracle.*` などの既存 import 経路をどう維持しているか確認したいとき。
-- 古い公開 import path や互換 shim を canonical path へ移行・削除する作業で、影響範囲と削除条件を絞りたいとき。
+- cmoc の CLI 入口、サブコマンド実行本体、runtime 共通処理、互換 import path のどこを読むべきかを判断したいとき。
+- 利用者向けコマンドから state、git、path、logging、Codex 実行、report、preflight などの共通基盤へどう接続されるかを追いたいとき。
+- oracle src 側の型・設定・builder・path model などを realization 側で複製せず、既存公開参照として再公開する互換層や削除条件を確認したいとき。
+- 古い公開 import path を canonical 実装へ移行する作業で、残っている互換入口と影響範囲を絞りたいとき。
 
 ## Do not read this when
-- oracle file の正本仕様、人間意図、prompt、parameter 生成内容、path model、設定定義そのものを確認したいとき。対応する oracle 側の文書または src を読む。
-- 自動テストの内容や test fixture を確認したいとき。realization test 側の対象へ進む。
-- 生成済み INDEX.md の個別 entry、実行済み log/report、特定 session の状態内容だけを確認したいとき。
-- 特定サブコマンドや特定 runtime helper の下位 module が既に分かっているとき。この階層ではなく、該当する下位対象を直接読む。
-- 新しい正本仕様や oracle 側 API を設計したいとき。この対象は realization implementation と互換入口の領域であり、正本仕様追加の入口ではない。
+- oracle file に書かれた正本仕様断片、prompt、出力条件、設定定義、path model、構造化出力 schema そのものを確認したいとき。対応する oracle 側の文書または実装を読む。
+- 自動テストの内容やテスト観点を確認したいとき。テスト側の階層へ進む。
+- 生成済み INDEX entry、実行済み log、特定 session の状態内容など、実装変更を伴わない成果物や実行結果だけを確認したいとき。
+- 新しい公開 API、設定項目、CLI option、永続状態を設計したいだけで、既存実装や互換入口の変更箇所を探していないとき。
 
 ## hash
-- 32e149a74065cfb7cb8bdbf1803337e1ffc94b9558a16c7e25f6aaeb38fa1512
+- 3e4c694663add3a0e766f260740780808ed8b62bbb80f7b5cfd6eef1a63a65a0
 
 # `test`
 
 ## Summary
-- cmoc の realization test 全体を置く領域。CLI サブコマンド、Codex 実行 runtime、ACP builder、prompt rendering、packaged import、共有テスト支援など、実装の外部挙動と共通契約を検証する入口になる。
+- cmoc の realization test 群を収めるディレクトリ。CLI サブコマンド、Codex runtime、ACP builder、prompt/StructDoc、packaged import、共有テスト支援など、実装の外部挙動と制御ロジックを検証する入口になる。
+- apply/session/review/indexing/doctor/TUI などの結合テストと、runtime・builder・rendering の基礎テストへ進むためのルーティング対象である。
 
 ## Read this when
-- cmoc のテストを追加・修正するため、対象サブコマンドや runtime 領域に対応する既存テストを探したいとき。
-- CLI 外部挙動、session/apply/indexing/review oracle/doctor/TUI、Codex runtime、ACP builder、prompt parts、packaged import の回帰テスト範囲を確認したいとき。
-- テスト用 Git repository、fake Codex/Ollama/systemctl、Codex home/profile、Typer runner などの共有 fixture や支援 helper を再利用したいとき。
+- cmoc の realization test を探し、変更対象のサブコマンドや runtime 領域に対応するテストファイルを選びたいとき。
+- CLI 外部挙動、state/worktree/branch cleanup、Codex 呼び出し、file access、INDEX 更新、doctor/preprocess、prompt builder などの回帰テストを確認・変更したいとき。
+- テスト用 Git repository、Codex home、fake external command、Typer runner など、複数テストで共有される支援 helper の所在を判断したいとき。
+- oracle src 参照、packaged import、StructDoc Markdown rendering など、CLI 以外の realization test の入口を探したいとき。
 
 ## Do not read this when
-- 本番実装の責務や制御ロジックを先に確認したいときは、対応する realization implementation を読む。
-- oracle file の正本仕様、oracle/realization の定義、INDEX.md 生成規則そのものを確認したいときは、対応する oracle 側の文書を読む。
-- 個別テストの期待値や fixture を変更せず、利用者向け仕様や設計意図だけを把握したいとき。
+- 本番実装の制御ロジックや helper の詳細を先に確認したい場合は、対応する implementation 側へ進む。
+- oracle file の正本仕様、oracle/realization の定義、INDEX.md 生成規則そのものを確認したい場合は、対応する oracle doc/src を読む。
+- 個別テストファイルが既に分かっており、その本文だけを読めば足りる場合は、この階層の一覧ではなく対象テストへ直接進む。
 
 ## hash
-- a5621adcc0ff462f6d597d20a5ac931b83f80a83a5c74f2d99b0ca3a217ba6ea
+- 31cdffdf72f824337d8075a662cc67dcadb99f2709438446cc70d19b41151387
