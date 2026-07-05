@@ -1,23 +1,26 @@
 # `acp`
 
 ## Summary
-- ACP builder 互換層の realization 側入口。oracle 側 builder を正本として保ち、旧 import 経路から canonical 実装や個別用途の builder 接続層へつなぐ。
-- 主な役割は、既存 caller の移行期間中に公開 import 面を維持しつつ、prompt 内容や正本仕様を realization 側へ複製しない境界を示すこと。
+- ACP builder 領域の入口。oracle 側 builder を正本として扱い、旧来の公開 import 経路を維持する互換入口と、realization 側で必要な AgentCallParameter 構築境界への案内を担う。
+- canonical oracle 実装への委譲・再公開、旧 import 互換を残す理由と削除条件、oracle builder 戻り値を公開型や runtime 要件へ最小限適合させる境界を確認するための対象。
 
 ## Read this when
-- 旧 ACP builder import 経路が、どの oracle 実装、互換 package、個別 builder 接続層へつながるかを確認したいとき。
-- oracle 側 builder を正本に保ったまま、realization 側で module alias、公開型変換、最小補正、再公開をどう扱うか判断したいとき。
-- apply fork、quota probe、review、session、TUI 起動などの AgentCallParameter 構築入口を探すとき。
-- 旧 import 経路や互換入口を削除・移行する作業で、残す理由、削除条件、canonical path への接続先を確認したいとき。
+- ACP builder 全体で、oracle 側正本実装と realization 側互換入口の接続方針を確認したいとき。
+- 旧来の acp.builder 系 import path や acp.* 参照を canonical 実装へ移行する作業で、互換入口を残す理由や削除条件を調べたいとき。
+- apply fork、quota probe、review、session、TUI、indexing など builder 領域のうち、どの下位対象へ進むべきかを判断したいとき。
+- oracle builder の生成結果を realization 側 AgentCallParameter、公開型、runtime 保存、既知表記補正へ適合させる境界を探しているとき。
+- realization 側または利用者向け公開面に残る acp.* import の扱いを判断したいとき。
 
 ## Do not read this when
-- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図だけを確認したいとき。対応する oracle 側 builder を読む。
-- 各機能の実行フロー、画面挙動、branch 操作、finding 処理、イベントループなど、builder 以外の本体実装を調べたいとき。該当機能の実装へ進む。
-- AgentCallParameter の基本型、構造化出力 schema、path model、汎用 git helper、file access mode 全体など、builder 互換入口や個別 parameter 構築境界と無関係な共通定義を調べたいとき。
-- 新しい ACP 機能、公開 API、新規 import 経路を設計したいとき。既存互換面ではなく、正本仕様や利用者向け公開面を扱う対象を読む。
+- agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したいだけなら、対応する oracle 側 builder を読む。
+- apply、review、session、TUI など各機能そのものの実行フロー、CLI 引数処理、状態操作、UI 挙動を調べたいなら、それぞれの機能実装へ進む。
+- ACP parameter の公開型、汎用 git helper、path model、file access mode、Structured Output schema など builder 互換層と無関係な基礎実装を確認したいなら、該当する共通実装を直接読む。
+- acp builder の実装内容や生成処理そのものを調べたいときは、互換入口ではなく実装本体へ進む。
+- 新しい acp 機能、公開 API、新規 import 経路を設計したいだけなら、既存互換層ではなく正本仕様と利用者向け公開面の方針を確認する。
+- acp.* 参照がすでに全公開面と realization 側から消えていることだけを確認済みで、互換入口の詳細を読む必要がないとき。
 
 ## hash
-- 5a6568673440cf2ce5a954251b13d4f427287110398b9445b7e0c2bd1d8c033f
+- 7ff535e97cca846cdae9fcf0ea18bdec0b63e76823ae84744aa0f3ac318c49be
 
 # `basic`
 

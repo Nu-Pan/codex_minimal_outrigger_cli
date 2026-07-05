@@ -19,20 +19,20 @@
 # `builder`
 
 ## Summary
-- ACP builder 群の realization 側領域。oracle 側 builder を正本に保ちながら、旧来の `acp.builder.*` import 経路を維持する互換入口と、apply fork・quota probe・review・session・TUI など個別用途の builder 接続層をまとめる。
-- 主な責務は canonical oracle 実装への委譲・再公開、realization 側公開型への最小適合、既存 caller 移行までの互換維持であり、prompt 内容や正本仕様そのものは oracle 側に置く。
+- ACP builder 領域の入口。oracle 側 builder を正本として扱いながら、旧来の公開名前空間や既存 import 経路を維持する互換層と、quota probe・apply fork・TUI など一部の realization 側 AgentCallParameter 構築境界をまとめる。
+- 主な責務は、canonical oracle 実装への委譲・再公開、旧 import 互換の削除条件確認、oracle builder 戻り値を realization 側公開型や runtime 要件へ最小限適合させる境界の把握である。
 
 ## Read this when
-- `acp.builder.*` の旧 import path 互換がどの oracle 実装、互換 package、個別 builder へつながるかを調べるとき。
-- ACP builder まわりで、oracle 側 builder を正本に保ちながら realization 側で package path、module alias、公開型変換、最小補正をどう扱っているか確認するとき。
-- apply fork、quota availability probe、review oracle、session、TUI 起動などの AgentCallParameter 構築入口や、各用途の互換層をどこから読むべきか判断するとき。
-- 旧 import 経路や再公開モジュールを削除・移行する作業で、残す理由、削除条件、canonical path への接続先を確認するとき。
+- ACP builder 全体で、oracle 側正本実装と realization 側互換入口の接続方針を確認したいとき。
+- 旧来の acp.builder 系 import path を canonical 実装へ移行する作業で、互換 package や再公開モジュールを残す理由・削除条件を調べたいとき。
+- apply fork、quota probe、review、session、TUI、indexing などの builder 領域のうち、どの下位対象へ進むべきかを判断したいとき。
+- oracle builder の生成結果を realization 側 AgentCallParameter、公開型、runtime 保存、既知表記補正へ適合させる境界を探しているとき。
 
 ## Do not read this when
 - agent prompt、出力条件、parameter 生成内容の正本仕様や人間意図を確認したいだけなら、対応する oracle 側 builder を読む。
-- apply、review、session、TUI など各機能の実行フロー、画面挙動、branch 操作、finding 処理、イベントループなど builder 以外の本体実装を調べたいなら、該当機能の実装へ進む。
-- AgentCallParameter の基本型、構造化出力 schema、path model、汎用 git helper、file access mode 全体など、builder 互換入口や個別 parameter 構築境界と無関係な共通定義を調べたい場合。
-- 新しい公開 API や新規 import 経路を設計したい場合。既存互換面ではなく、正本仕様や利用者向け公開面を扱う対象を読む。
+- apply、review、session、TUI など各機能そのものの実行フロー、CLI 引数処理、状態操作、UI 挙動を調べたいなら、それぞれの機能実装へ進む。
+- ACP parameter の公開型、汎用 git helper、path model、file access mode、Structured Output schema など builder 互換層と無関係な基礎実装を確認したいなら、該当する共通実装を直接読む。
+- 新しい公開 API や新規 import 経路を設計したいだけなら、既存互換層ではなく正本仕様と利用者向け公開面の方針を確認する。
 
 ## hash
-- e9da21bdefb5ed02aaf539bf4af976f769a5ac178b2f955b1f61501cc8451aa7
+- fcc671a2003cd9edba9f36d1a2592ac512b9ff9c97b3c8f9795c5777a9bb558a
