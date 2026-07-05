@@ -123,24 +123,24 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断して検証する realization test。root placeholder と worktree 解決、config 読み込み・変換・validation、CmocError の Markdown 表示、CLI error の stdout 化、subcommand log、session/apply branch state、FileAccessMode と Codex sandbox profile、binary 判定、managed worktree の安全条件をまとめて扱う。
-- 個別サブコマンドの仕様テストではなく、複数機能の実行前提として同時に崩れやすい共通 runtime 境界の回帰確認を担う。
+- cmoc の基礎 runtime 契約を横断して検証する realization test。root placeholder 解決、repo/work/run root 判定、config 読み書きと検証、CmocError の表示、CLI preflight と parse error、subcommand log、state branch 解析、FileAccessMode から Codex sandbox/profile への変換、binary 判定など、個別サブコマンドより下の共通前提をまとめて扱う。
+- 16,000 文字を超えるが、共通 runtime 契約として同時に崩れやすい領域を一箇所で回帰確認するためのファイルであり、fixture と root 状態の読み取り文脈を分散させないことも役割に含む。
 
 ## Read this when
-- root/repo/work/run root の解決、linked worktree、placeholder path、managed worktree 作成・削除の安全条件を変更・調査する。
-- cmoc config の既定値、JSON 変換、validation、missing config error を変更・調査する。
-- CmocError、CLI parse error、stdout/stderr の出し分け、Markdown error report、起動 wrapper の call stack 表示を変更・調査する。
-- subcommand log の生成条件、pre-log check、completion probe、doctor preprocess など CLI runtime wrapper の副作用境界を変更・調査する。
-- FileAccessMode、Codex profile の writable/readable roots、追加書き込み許可 path、oracle conflict write、local SLM provider の扱いを変更・調査する。
-- session/apply branch 名から session id や state を解決する処理、または binary 判定の基本挙動を変更・調査する。
+- runtime の root 解決、linked worktree、run/work root、repo root の扱いを変更する。
+- cmoc config の既定値、dict 変換、読み込み失敗、型検証、model/reasoning effort 周辺を変更する。
+- CmocError、CLI error report、Click parse error、stdout/stderr の扱い、preflight、completion probe、subcommand log の挙動を変更する。
+- SessionState の branch 名解析、apply/session branch 形状、state 読み込みの拒否条件を変更する。
+- FileAccessMode、Codex profile、sandbox writable roots、extra writable/read paths、oracle/memo/.agents/.codex/.git などの許可境界を変更する。
+- binary 判定、duration 表示、`.cmoc/local` ignore 追加、起動 wrapper の missing venv report など、基礎 runtime の小さな契約を変更する。
 
 ## Do not read this when
-- 個別サブコマンド固有の業務ロジックや出力内容だけを確認したい場合は、そのサブコマンドの専用テストへ進む。
-- oracle file の正本仕様そのものを確認・編集したい場合は、対応する oracle doc/src/test を読む。
-- runtime 境界に関係しない小さな UI 文言、内部 helper、または単独 module の実装詳細だけを調べる場合は、対象 module のより直接のテストや実装を読む。
+- 個別サブコマンド固有の business logic、出力内容、prompt 生成、review/apply/session の高レベル処理だけを確認したい場合。
+- oracle file の正本仕様本文を確認したい場合。このファイルは realization test であり、仕様の根拠そのものではない。
+- 単一の runtime helper の実装詳細だけを追う場合で、対応する実装ファイルやより狭いテストから直接確認できる場合。
 
 ## hash
-- 1900fb989acfb6fbfe4cce3de06f0570e060972cfaf0210704076c0e76bc3d52
+- 8d73aee81a0ecf2081096714de68c88d9f668a524662f5ca764bed25925d6c61
 
 # `test_cli_tui.py`
 
@@ -334,25 +334,20 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor と init の CLI 挙動、および doctor preprocess が Git 状態、管理対象外領域、managed Ollama、Codex profile 準備に与える副作用を検証する realization test。
-- 一時リポジトリ上で、設定ファイル生成・同期、追跡対象からの除外、修復コミット、既存 staged/unstaged 変更の保持、linked worktree 対象化、Ollama service 検証と model pull の制御を外部挙動として確認する。
-- runtime doctor、runtime config、runtime Codex profile、CLI command の連携変更時に、利用者から見える Git/ファイルシステム/サービス準備の境界を確認する入口となる。
+- doctor/init CLI の実行前処理と設定生成を検証する realization test。git 状態の修復、`.cmoc/local` の ignore/untrack、`.agents` の追跡、config の生成・同期、managed ollama の準備・検証、linked worktree 対象化、ローカル SLM profile 作成時の doctor 実行を扱う。
 
 ## Read this when
-- doctor preprocess が作成・修復する `.gitignore`、`.agents`、`.cmoc/local`、managed Ollama 関連ファイル、修復コミットの対象を変更する場合。
-- init が `.cmoc/config.json` を生成・追跡し、既存の人間設定を上書きせず default を補完する挙動を変更する場合。
-- doctor が既存の staged 変更、unstaged hunk、rename、追跡済みだった local cache をどう扱うかを確認・変更する場合。
-- linked worktree 上で doctor を実行した時に、元リポジトリではなく現在の worktree を対象にする挙動を確認する場合。
-- managed Ollama service の main pid、listener process、実行ファイル一致、provider model pull、local SLM profile 準備時の doctor 起動条件を変更する場合。
+- doctor または init コマンドの外部挙動、git への副作用、config 生成・同期、managed ollama 準備に関するテストを確認・変更する場合。
+- `.cmoc/local` を追跡対象外に保つ処理、既存 staged/unstaged 変更を壊さない repair commit、既存 tracked local file の untrack 挙動を検証したい場合。
+- linked worktree 上で doctor が現在の作業ツリーだけを対象にすること、またはローカル SLM 用 Codex profile 作成時の doctor 連携を確認する場合。
 
 ## Do not read this when
-- doctor/init 以外の CLI command の表示、引数、通常処理だけを確認したい場合。
-- 設定 schema や model spec の定義そのものを確認したい場合は、実装または oracle 側の定義を直接読む。
-- Ollama の実インストール手順や systemd unit の一般仕様を調べたいだけの場合。
-- INDEX 生成やルーティング文書の規則を確認したい場合。
+- doctor/init 以外の CLI コマンドや、git 副作用を伴わない純粋な設定モデルの単体検証を探している場合。
+- runtime doctor の内部 helper 実装そのものを変更する場合は、まず対応する実装側を読む。
+- INDEX.md や oracle file のルーティング・正本仕様を編集するための根拠を探している場合。
 
 ## hash
-- 223f4e2b603263180a534e8be12ab0028bd9021398160697b6f5ba199058fcb0
+- 94f148ad6ae03e6186caba88532a7dae0d5be432cd85265092d8cbd7fc6df2fd
 
 # `test_indexing_cli.py`
 

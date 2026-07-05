@@ -20,22 +20,21 @@
 # `doctor.py`
 
 ## Summary
-- 初期セットアップと診断前処理を CLI runtime 経由で実行するサブコマンド実装。
-- 現在の work root を実行可能状態へ修復し、初期化時だけ config 同期と config 差分の commit を行う入口を持つ。
-- doctor preprocess の実行、init 後の config 同期、`.cmoc/config.json` の git add/commit 条件を確認するための実装箇所。
+- cmoc の初期化系サブコマンド実装で、init と doctor を CLI runtime の共通実行枠に載せ、doctor preprocess、config 同期、必要時の config commit を行う。
+- work root を実行可能状態へ修復し、`.cmoc/config.json` の生成・同期結果を git に反映する処理への入口として読む対象。
 
 ## Read this when
-- 初期化コマンドまたは診断コマンドの実行順序、出力、commit 挙動を変更したいとき。
-- doctor preprocess をどの root に対して実行するか、または CLI runtime の共通実行 wrapper との接続を確認したいとき。
-- config 同期を初期化時だけ行う制御や、同期後の `.cmoc/config.json` commit 条件を調べたいとき。
+- `cmoc init` または `cmoc doctor` の実行内容、出力、前処理の流れを確認・変更したいとき。
+- doctor preprocess と config 同期がどの順序で呼ばれ、どの条件で config commit されるかを調べたいとき。
+- CLI runtime のサブコマンド実行枠から初期化・修復処理を呼び出す実装を追いたいとき。
 
 ## Do not read this when
-- doctor preprocess の具体的な修復内容を調べたいときは、その実装または対応する oracle doc を読む。
-- config schema や config 内容の正本定義を確認したいときは、config 定義側を読む。
-- CLI runtime の共通 wrapper、git 実行 helper、root 解決 helper の詳細を調べたいときは、runtime 側を読む。
+- doctor preprocess 自体の修復内容や判定条件を確認したいだけなら、その実体を持つ runtime 側または対応する oracle doc を読む。
+- config の正本定義や config schema の内容を確認したいだけなら、config の oracle src を読む。
+- git 実行 helper や CLI runtime の共通サブコマンド制御を変更したい場合は、それらを定義する runtime 側を直接読む。
 
 ## hash
-- 9c472b5cd07ec2b252497954c5ddbceeac48d9420db9cfcd8742d538b8591002
+- 1e155e1cd02115d7841dd4fc9f8b61ba0e6543e6379ad4ec05e2f14544a7d49a
 
 # `indexing.py`
 
