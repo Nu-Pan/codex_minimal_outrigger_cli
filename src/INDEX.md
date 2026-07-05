@@ -60,26 +60,21 @@
 # `commons`
 
 ## Summary
-- cmoc の共通実行時支援を集めた領域。Codex 起動、CLI 共通ライフサイクル、設定、content hash、doctor 前処理、error 表示、git 操作、logging、path 解決、結果モデル、session state、apply process 管理、INDEX 更新 preflight などの runtime helper と公開入口を扱う。
-- 複数の実行時 helper をまとめて import するための集約入口と、責務別の runtime 実装へ進むための中継点になる。
+- cmoc の共通 runtime helper 群を収める実装ディレクトリ。Codex 起動、profile、設定、content hash、CLI 実行、doctor 前処理、error、git、logging、path、result、state、apply 補助、INDEX.md indexing preflight など、複数サブコマンドから利用される実行時支援を責務別モジュールで扱う。
+- 複数の runtime_* 実装をまとめて再公開する集約入口と、互換 import path を維持する薄い橋渡しも含む。
 
 ## Read this when
-- cmoc の実行時共通処理を変更するため、どの runtime helper が責務を持つかを選びたいとき。
-- Codex exec/TUI 呼び出し、profile、quota/capacity retry、Structured Output 検証、call log、preflight、subprocess 環境の扱いを追いたいとき。
-- CLI サブコマンドの共通実行処理、進行表示、終了コード化、例外表示、完了サマリー、サブコマンドログの仕組みを確認したいとき。
-- config 読み書き、runtime path、git wrapper、content hash、error report、結果モデル、session state 永続化など、複数サブコマンドから共有される実行時基盤を確認したいとき。
-- apply process の pid 管理、linked worktree 復元、abandon 時の process 停止など、apply 実行補助の低レベル挙動を調べたいとき。
-- INDEX.md の自動再生成 preflight、対象選別、entry 再利用、排他 lock、indexing commit の実装を確認または変更したいとき。
+- CLI サブコマンド共通の実行ライフサイクル、Codex exec/TUI 呼び出し、preflight、profile、config、git、path、logging、state、error など、複数機能にまたがる runtime 共通処理を確認または変更したいとき。
+- 新しいサブコマンドや上位処理から、既存の共通 runtime API を import して使うべきか、または公開入口へ追加すべきか判断したいとき。
+- INDEX.md 自動更新、Codex call log、quota/capacity retry、doctor preprocess、apply process tracking、session state file など、cmoc の実行基盤側の挙動を追いたいとき。
 
 ## Do not read this when
-- 個別サブコマンドの利用者向け仕様、引数定義、業務フロー、出力 schema だけを確認したいとき。その場合は対象 command 実装や対応する仕様文書へ進む。
-- oracle file、realization file、path placeholder、config 型などの正本仕様そのものを確認したいとき。その場合は oracle 側の該当定義を読む。
-- INDEX.md entry の文章基準や prompt 部品そのものを確認したいとき。その場合は indexing の正本仕様や prompt builder 側を読む。
-- 生成済みログ、生成済み INDEX.md、特定 session state file などの実行結果を調査したいだけで、runtime 実装を変更しないとき。
-- 個別 helper 関数や具体的な runtime 挙動の所在が既に分かっているときは、この階層全体ではなく該当する責務別実装へ直接進む。
+- 個別 CLI サブコマンドの利用者向け仕様、引数、出力 schema、業務フローだけを確認したいときは、対象サブコマンドの実装または対応する oracle doc を読む。
+- path placeholder、config 型、INDEX.md entry 文面基準、session state の仕様意図など、正本仕様断片そのものを確認したいときは oracle 側の該当本文を読む。
+- 生成済み INDEX.md の個別 entry 内容、実行済みログ、特定 session/report の状態調査だけが目的で、runtime 実装自体を変更しないとき。
 
 ## hash
-- f26a318a590fa4ac080ac52a80597b5c8dedc34a1e36b01ebca8e2d82579b40e
+- f9adba60b6d3343ea10c5d91bd5176694b307d621976849e0933b08434b00ab9
 
 # `config`
 
@@ -143,20 +138,20 @@
 # `sub_commands`
 
 ## Summary
-- cmoc の利用者向けサブコマンド実装を集める領域。apply、doctor、indexing、review、session、TUI などの実行入口と、各サブコマンド固有の事前条件、状態遷移、出力、失敗時処理を扱う。
-- 低レベル helper や正本仕様ではなく、CLI runtime や共通処理を利用してサブコマンド単位の外部挙動へ接続する orchestration 層を探すための入口。
+- CLI サブコマンドの実行本体を集約する領域。apply、session、review、doctor、indexing、TUI などの利用者向け操作について、runtime や共通 helper へ渡す前後の上位制御を扱う。
+- 各対象はサブコマンド単位またはその補助処理単位で分かれており、事前条件、状態遷移、branch/worktree/state 操作、Codex 呼び出し、report 出力、失敗時処理など、外部挙動に近い実装へ進むための入口になる。
 
 ## Read this when
-- 特定の cmoc サブコマンドの実行本体、CLI runtime への接続、command 名や argv の扱い、利用者向け出力を確認または変更したいとき。
-- apply や session の branch/worktree/state 操作、review oracle の対象列挙から report 出力までの上位制御、indexing 実行、doctor preprocess 呼び出し、TUI 起動制御のどこへ進むべきか判断したいとき。
-- サブコマンド固有の preflight、clean worktree 要件、merge conflict、想定外差分、cleanup、失敗時 report やエラー処理を追いたいとき。
-- 利用者向けコマンド単位の外部挙動を変更するため、該当する実行本体や report 生成処理を選びたいとき。
+- CLI サブコマンドの実行フロー、公開挙動、利用者向け出力、失敗時処理、または runtime/helper との接続点を確認・変更したいとき。
+- apply、session、review、doctor、indexing、TUI のどの実行本体または補助処理へ進むべきか判断したいとき。
+- branch、worktree、state、report、Codex 実行、INDEX 更新反映などを、特定サブコマンドの上位制御として追いたいとき。
+- サブコマンド固有の preflight、cleanup、merge conflict、rollback、対象列挙、loop、出力生成などの担当箇所を選びたいとき。
 
 ## Do not read this when
-- git 実行、branch/worktree 操作、state file、process id、path model、CLI runtime、設定 schema などの共通 helper の詳細だけを確認したいとき。
-- INDEX.md の生成内容、ルーティング文書規則、oracle file や realization file の定義など、サブコマンド実行制御から独立した仕様を確認したいとき。
-- サブコマンドの正本仕様そのものを確認したいときは、対応する oracle doc を読む。
-- 具体的に読むべきサブコマンド実装または report 生成対象が既に分かっており、その対象へ直接進めるとき。
+- git 実行、path model、state file schema、process id、設定 schema、CLI runtime、Codex 呼び出し wrapper など、サブコマンド固有でない共通基盤の詳細だけを調べたいとき。
+- oracle file、realization file、INDEX.md 生成規則、ルーティング文書規則など、CLI サブコマンド実行制御から独立した仕様を確認したいとき。
+- INDEX.md の内容生成、差分検出、lock、commit などの共通 indexing ロジックそのものを調べたいとき。
+- 具体的に読むべきサブコマンド実装や補助 module が既に分かっており、その対象へ直接進めるとき。
 
 ## hash
-- 2a8eb17b7337b4ce780319b71fe1a8fed4ce4e24dc5c04fcbc46deb0e192af52
+- f0da990bdeb9d4a8dd6a866f5212ef4f3e7974e382417a25bf9f1c3b1d3bc52f

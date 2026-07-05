@@ -73,22 +73,25 @@
 # `runtime_cli.py`
 
 ## Summary
-- CLI サブコマンド実装を共通ライフサイクルで実行するための補助コード。work root 検査、サブコマンドログの開始・完了記録、標準進行表示、戻り値の終了コード化、例外表示、標準完了サマリー出力を扱う。
+- CLI サブコマンド実装を共通の実行ライフサイクルに載せるための入口。work root 検査、doctor 前処理、pre-log 検査、サブコマンドログ作成、進捗表示、戻り値の終了コード化、例外表示、完了サマリー出力を一箇所で扱う。
+- 標準サマリーとは別の stdout 契約を持つサブコマンド向けの結果型と、CLI が work root で実行されていることを検査する処理も含む。
 
 ## Read this when
-- CLI サブコマンドの起動から終了までの共通処理、ログ作成、進行表示、終了コード処理、例外時の出力先を確認・変更したいとき。
-- サブコマンド実装関数の戻り値を CLI の終了コードや追加 stdout に変換する挙動を確認したいとき。
-- cmoc が work root 以外で実行された場合のエラー処理を確認したいとき。
-- サブコマンド完了時に出力される経過時間、quota 待機時間、ログパス、終了コードのサマリー形式を確認したいとき。
+- 新しい CLI サブコマンドを既存の共通実行形式に接続したいとき。
+- サブコマンド開始・実行・完了の表示、サブコマンドログ、終了コード、quota 待機時間、ステップ経過時間の出力契約を確認または変更したいとき。
+- サブコマンド例外時のエラー表示先、cmoc_stdout の扱い、typer.Exit への変換を確認または変更したいとき。
+- doctor 前処理、pre-log 検査、runtime state の基準 root、サブコマンドログの保存 root の順序や責務を確認したいとき。
+- CLI 実行場所が work root であることを要求する制御を確認または変更したいとき。
 
 ## Do not read this when
-- 個別サブコマンドの業務ロジックや引数定義を確認したいとき。
-- ログファイルの内部形式や記録 API の詳細を確認したいとき。
-- repo root、work root、時刻、経過時間整形の算出方法を確認したいとき。
-- エラーメッセージの描画内容そのものや CmocError の定義を確認したいとき。
+- 個別サブコマンドの業務ロジックだけを確認したい場合は、そのサブコマンド実装を直接読む。
+- ログファイルの具体的な書き込み形式やイベント保持構造を確認したい場合は、サブコマンドロガーの実装を読む。
+- repo root、work root、時刻、経過時間の算出方法だけを確認したい場合は、runtime path 系の実装を読む。
+- doctor 前処理の修復内容そのものを確認したい場合は、doctor 前処理の実装を読む。
+- エラーメッセージの整形規則だけを確認したい場合は、runtime error 系の実装を読む。
 
 ## hash
-- 60274717b7dd820c3cdc434ee32f8f28e4ef65a3819871a8ae0e2c7825d17348
+- ebd7a01ea3d2ee87c492789bd3416cfc94cc2588ff3d969b7f424bb6ba90c267
 
 # `runtime_codex.py`
 
@@ -171,25 +174,26 @@
 # `runtime_codex_profile.py`
 
 ## Summary
-- Codex CLI を起動する直前の profile、sandbox、cwd、CODEX_HOME、schema 配置を組み立て、起動後の subprocess 結果、JSONL error、resume token、quota/capacity 判定を扱う境界。
-- FileAccessMode から Codex CLI に渡す実行環境へ変換し、追加 read/write path の許可境界、apply 中の child process tracking、Codex CLI 不在時の利用者向けエラー化も担う。
-- 16,000 文字を超えるが、Codex profile 境界に関する失敗時文脈と不変条件を一箇所に集約するための実装意図をファイル先頭に持つ。
+- Codex CLI を起動するための profile、sandbox、cwd、CODEX_HOME、schema 配置、subprocess 実行、apply child process tracking、Codex JSONL の error 判定をまとめる実行境界。
+- cmoc の FileAccessMode と Codex CLI が受け取る実行環境の差分を吸収し、追加 read/write path の許可検査、hashed profile 生成、Codex home 検証、Codex subprocess の失敗を cmoc の利用者向け error へ変換する。
+- Codex CLI から返る機械的結果のうち、output JSON 読み取り、stderr と JSONL message の集約、resume token 抽出、capacity/quota error 判定を扱う。
 
 ## Read this when
-- AgentCallParameter や CmocConfig から Codex CLI profile を作る処理、sandbox mode、writable_roots、model provider、reasoning effort の扱いを確認・変更したいとき。
-- FileAccessMode ごとの read/write 許可境界、追加 read path や追加 writable path の検証、oracle conflict write の例外条件を調べるとき。
-- CODEX_HOME の解決・検証、hashed profile や Structured Output schema の配置、Codex subprocess に渡す環境変数を扱うとき。
-- Codex CLI subprocess の実行、Codex CLI 不在時の CmocError、apply abandon 用の child process pid tracking や pid file lock を扱うとき。
-- Codex JSONL stdout/stderr から利用者向け error detail、resume token、capacity error、quota error を判定する処理を確認するとき。
+- Codex CLI 起動時の sandbox/profile/cwd/CODEX_HOME/model provider 設定を変更・調査する場合。
+- FileAccessMode ごとの追加 read path または writable root の許可境界、oracle conflict 解消時の例外的 write 許可、TUI prompt 読み取り例外を確認する場合。
+- apply abandon と連動する Codex child process の pid 記録、lock、終了時削除、pid 再利用対策を扱う場合。
+- Structured Output schema の配置、Codex output JSON の読み取り、Codex JSONL からの error text、resume token、capacity/quota 判定を変更・調査する場合。
+- Codex CLI 不在、profile 生成失敗、Codex home/auth 不備、追加許可 path 不正を cmoc error としてどう表現するか確認する場合。
 
 ## Do not read this when
-- prompt 本文や file access rule の利用者向け説明文そのものを確認したいだけなら、対応する oracle 側の prompt builder 部品を読む。
-- ログディレクトリや schema store directory の path 定義だけを確認したいなら、runtime path 管理の対象を読む。
-- Codex 実行前の doctor preprocess の中身、Ollama 起動確認、repo 診断処理を変更したい場合は、doctor 側の実装を読む。
-- AgentCallParameter、FileAccessMode、ModelClass の型定義や設定 schema を確認したいだけなら、basic や config 側の定義を読む。
+- Codex に渡す prompt 本文や file access rule の自然言語説明を確認したいだけの場合は、prompt builder 側を読む。
+- cmoc config の model や reasoning effort の定義そのものを変更する場合は、config 定義側を読む。
+- runtime log directory や schema store directory の path model を確認する場合は、runtime path 管理側を読む。
+- oracle file 判定の仕様や git ignore 判定そのものを変更する場合は、runtime git 側を読む。
+- Codex CLI 以外の外部コマンド実行や一般的な subprocess wrapper を探しているだけの場合は、この境界ではない。
 
 ## hash
-- 5ea55989051a64c8bf15deb56741d45d74a1d11bddc5fe42b739c0cdc92e1aad
+- 86a67673b164efa60d67859580415f734e0847f8472159cc3054826b8cde7ac7
 
 # `runtime_codex_tui.py`
 
@@ -253,21 +257,21 @@
 # `runtime_doctor.py`
 
 ## Summary
-- 共通の実行前修復をまとめる実装。cmoc 管理対象の無視設定・設定同期・`.agents` 追跡準備を行い、修復差分を限定して commit する。
-- cmoc managed ollama の導入、systemd user service 起動確認、HTTP 疎通確認、ローカル SLM model の取得確認までを扱う。
+- 共通実行前修復をまとめる実行時処理。ignore 設定、agent 作業領域の追跡可能化、設定同期、cmoc 管理の local SLM 用 ollama 準備、修復差分の commit を扱う。
+- cmoc provider を使う model が設定されている場合にだけ、user service として ollama を導入・起動確認し、必要な model を取得可能な状態にする。
 
 ## Read this when
-- 実行前に自動修復される対象、修復差分の commit 範囲、`.agents` の初期追跡化を確認または変更したいとき。
-- cmoc managed ollama の install path、user service、固定 host、model 選択、pull 失敗時の扱いを確認または変更したいとき。
-- doctor preprocess が依存する git 操作、設定同期、Ollama 起動確認の順序や失敗時エラーを追うとき。
+- doctor preprocess の実行順序、修復対象、commit 対象、失敗時のエラー内容を確認または変更したいとき。
+- cmoc 管理の ollama の導入先、lock、systemd user service、HTTP 起動確認、model pull の挙動を確認または変更したいとき。
+- 設定内の cmoc provider model から local SLM の準備対象を決める処理を確認したいとき。
 
 ## Do not read this when
-- 設定ファイルの読み書き仕様そのものを確認したいだけなら、runtime config 側を読む。
-- git command の低レベル実行方法や `.cmoc` ignore 設定の詳細だけを確認したいなら、runtime git 側を読む。
-- Ollama 以外の provider や model 定義の構造を確認したいだけなら、config 定義側を読む。
+- CLI 引数やサブコマンドの定義だけを確認したいとき。
+- 設定ファイルの schema、読み書き形式、同期内容そのものを確認したいとき。
+- git コマンド実行 wrapper や共通エラー型の基本挙動だけを確認したいとき。
 
 ## hash
-- 233000cfc9fc86f69801b42b0677d88bb13ad6bce40e20356800ab04ecd4debb
+- f8f2bcf6fb2b439b6adeb2173528b833570d92fb069397befd405c4badd6d4c2
 
 # `runtime_errors.py`
 
