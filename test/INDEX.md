@@ -122,23 +122,26 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断検証する realization test。root placeholder と worktree 判定、config 読み込み・検証、CmocError の表示、CLI preflight と parse error、subcommand log、gitignore 更新、FileAccessMode から Codex sandbox/profile への変換、binary 判定、session state branch 解析をまとめて扱う。
-- 個別サブコマンド単体ではなく、実行前提として同時に崩れやすい runtime 境界の回帰確認を担う。
+- cmoc の基礎 runtime 契約を横断的に検証する realization test。root 解決、config 変換と検証、CmocError 表示、CLI error 出力、subcommand log、session/apply branch state、FileAccessMode から Codex sandbox profile への変換、binary 判定など、個別サブコマンドより下位の共通実行前提をまとめて扱う。
+- 共通 fixture と root 状態を共有しながら壊れやすい runtime 境界を回帰確認する入口であり、実行基盤の振る舞い変更時に外部挙動と制御ロジックへの影響を確認するためのテスト群である。
 
 ## Read this when
-- root/repo/work/run root の解決、linked worktree、run worktree 作成・削除の安全条件を変更・調査する時。
-- cmoc config の既定値、辞書からの構築、型検証、missing config error を変更・調査する時。
-- CmocError の Markdown report、CLI error の stdout/stderr、Click parse error、work root preflight、completion probe、subcommand log 生成条件を変更・調査する時。
-- FileAccessMode、Codex profile、sandbox writable roots、extra writable/read paths、oracle conflict write、local SLM provider の挙動を変更・調査する時。
-- session/apply branch 名から session id や state を読む制御、binary 判定、duration 表示、起動 wrapper の call stack 表示を変更・調査する時。
+- root placeholder、repo root、run root、work root、linked worktree の解決や拒否条件を変更する。
+- cmoc config の既定値、dict 変換、不正入力検証、missing config error を変更する。
+- CmocError の Markdown report、CLI 解析 error、想定済み CLI error の stdout/stderr 振り分け、preflight、completion probe の挙動を変更する。
+- subcommand log の生成条件、timestamp 衝突処理、pre-log check 失敗時の副作用を変更する。
+- session branch、apply branch、session state の読み書きや branch 名検証を変更する。
+- FileAccessMode、Codex profile、sandbox writable roots、追加書き込み許可 path、repo local read 許可、session join conflict target の許可境界を変更する。
+- `.cmoc` ignore pattern の生成、起動 wrapper の call stack 表示、duration 表示、binary 判定など、共通 runtime helper の外部挙動を変更する。
 
 ## Do not read this when
-- apply、review、session など個別サブコマンド固有の業務ロジックだけを確認したい時。
-- oracle doc や oracle src の正本仕様そのものを確認したい時。
-- 単一 helper の内部実装だけを追えば足り、runtime 境界をまたぐ外部挙動や CLI 表示に影響しない時。
+- 個別サブコマンド固有の business logic、出力内容、入力 scope の詳細だけを調べたい場合は、そのサブコマンドの実装または専用テストを先に読む。
+- oracle doc や oracle src の正本仕様そのものを確認したい場合は、対応する oracle file を読む。
+- テスト用 repository 作成 helper や CLI runner helper の実装詳細だけを変更する場合は、共通 test support を直接読む。
+- INDEX.md エントリー生成規則や routing 文書の書き方を確認したい場合は、routing 仕様を読む。
 
 ## hash
-- ec99e0e08d126e5c5c21de8446890ee66b607d2db8bdd22d7588d73a0a431ddb
+- 00f00c2baa01f9efe280356432266f45a822b2ee90d10bdc3b077a91c7a2d5c2
 
 # `test_cli_tui.py`
 
