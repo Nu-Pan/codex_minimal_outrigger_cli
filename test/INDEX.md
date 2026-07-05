@@ -143,21 +143,23 @@
 # `test_cli_tui.py`
 
 ## Summary
-- TUI サブコマンド起動前の CLI 前処理を、外部コマンド呼び出し・生成プロンプト・ログ保存先・linked worktree での root/cwd 扱いから検証するテスト。エディタで編集された依頼文を resolve parameter に渡し、解決結果から TUI 起動用パラメータと schema path、extra_read_paths、.cmoc/local 配下のログと .gitignore が整うことを確認する。
+- TUI 起動直前の CLI 前処理を外部挙動として検証するテスト。エディタで作成された依頼文の補完、パラメータ解決用 Codex exec 呼び出し、TUI 用 Codex 起動パラメータ、ログ保存先、`.cmoc/local` の無視設定を扱う。
+- 通常 worktree と linked worktree の両方で、TUI プロンプト生成物や schema、sub_command ログが repository root 側の `.cmoc/local` に置かれ、linked worktree 側へ追跡対象の成果物を残さないことを確認する。
 
 ## Read this when
-- TUI サブコマンドの起動前処理、エディタ起動後の依頼文整形、resolve parameter の結果反映、run_codex_tui への引数を変更する。
-- TUI の complete prompt、orig prompt、sub_command ログ、launch_tui.json や resolve_parameter.json の配置・参照方法を変更する。
-- linked worktree 上で tui を実行したときの保存先、root/cwd、.cmoc/local の ignore 状態、schema 生成場所を確認する。
-- file_access_mode の解決値が空の場合のデフォルト挙動を確認する。
+- `tui` サブコマンドの起動前処理、エディタ起動、依頼文の補完、パラメータ解決、Codex TUI 起動引数を変更する時。
+- TUI 実行時の file access mode、structured output schema、追加 read path、prompt 文面の組み立てを確認したい時。
+- `.cmoc/local/log/tui`、`.cmoc/local/log/sub_command`、`.cmoc/local/schema`、`.gitignore` への TUI 実行時副作用を変更または検証する時。
+- linked worktree 上で `tui` を実行した場合の root/cwd の扱い、ログ保存先、worktree 側 `.cmoc` の ignore 挙動を確認する時。
 
 ## Do not read this when
-- TUI 内部画面の描画や対話操作そのものを確認したい場合。
-- Codex 実行ラッパー全般の低レベルな挙動だけを確認したい場合。
-- doctor、git helper、テスト用 repo 作成 helper の詳細だけを確認したい場合。
+- TUI の対話 UI 本体や表示レイアウトだけを調べる時。
+- Codex 実行ラッパー全般の低レベルな実装だけを調べる時。
+- `doctor`、git worktree 作成、テスト用 repository fixture の汎用挙動だけを確認したい時。
+- oracle file や INDEX.md 生成規則そのものを確認したい時。
 
 ## hash
-- f4c67d69d00fa03a5f56318ca591b648cb24ddeb07dd59606c0af73aaf26cd2d
+- f41e9bffe37fa782ecc1d2e1e273d4f4f7a8f1823c750e5789e707d1321808bb
 
 # `test_codex_runtime_exec.py`
 

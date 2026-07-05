@@ -136,20 +136,23 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実行本体を集める階層。apply、review、session、doctor、indexing、TUI など、利用者向けコマンドを runtime、state、git 操作、Codex 実行、レポート出力へ接続する入口になる。
-- 各サブコマンド固有の事前条件確認、状態遷移、branch/worktree 操作、利用者向け出力、失敗時処理を追うための上位ルーティング地点であり、詳細な共通 helper や prompt/schema 定義へ進む前に読む対象を選ぶ場所である。
+- CLI サブコマンドの実行入口を集める階層。apply、review、session、doctor、indexing、tui などの上位 orchestration から、個別の実装領域へ進むための入口になる。
+- 各サブコマンドは、CLI runtime から現在の repository や work root、state、branch、worktree、Codex 実行 wrapper などを受け取り、下位 helper や共通処理へ接続する薄い制御層として位置づく。
+- サブコマンド単位の実行条件、状態遷移、git 操作、cleanup、report や利用者向け出力を調べるときに、どの下位対象を読むべきかを選ぶためのルーティング起点になる。
 
 ## Read this when
-- CLI サブコマンドの挙動を確認または変更するために、どの実装領域へ進むべきかを選びたいとき。
-- apply、review、session のように branch、worktree、state、process id、report、cleanup を伴うコマンドの上位制御フローを追いたいとき。
-- doctor、indexing、TUI など、runtime 経由で共通処理を呼び出すサブコマンド固有の接続点や出力を確認したいとき。
-- review oracle の対象列挙、finding 処理、INDEX 変更反映、report 生成など、review 系処理のどの下位責務へ進むべきかを判断したいとき。
+- CLI サブコマンドの実行入口や、どの subcommand 実装へ進むべきかを判断したいとき。
+- apply、review、session など、branch、worktree、state、process id、cleanup、merge、report を伴うサブコマンドの外部挙動や状態遷移を確認または変更したいとき。
+- doctor、indexing、tui のように、runtime から共通処理や Codex 実行へ接続する orchestration を確認したいとき。
+- サブコマンドの preflight、安全条件、clean worktree 要件、git 操作、エラー時の CmocError、利用者向け出力の扱いをサブコマンド単位で追いたいとき。
+- review oracle の対象列挙、finding loop、INDEX 変更反映、report 出力、または apply run の開始・破棄・取り込み・結果レポート生成など、複数 helper を束ねる上位制御を確認したいとき。
 
 ## Do not read this when
-- CLI runtime、設定読み込み、git wrapper、state 型、path model などの共通基盤そのものを調べたいとき。
-- Codex に渡す prompt、parameter builder、Structured Output schema の詳細だけを確認したいとき。
-- oracle file や realization file の一般定義、INDEX.md 生成規則、ルーティング規則そのものを確認したいとき。
-- 特定サブコマンドの正本仕様を確認したいだけのときは、実装ではなく対応する oracle doc を読む。
+- CLI 全体のトップレベル登録、Typer app の配線、共通 runtime 規約だけを確認したいときは、CLI entrypoint や runtime 側を読む。
+- git wrapper、path model、state 型、process id、branch、worktree 操作などの低レベル helper の汎用実装だけを確認したいときは、共通 helper 側を読む。
+- Codex に渡す prompt、parameter builder、Structured Output schema の内容だけを確認したいときは、builder や schema 側を読む。
+- INDEX.md の生成内容、ルーティング規則、oracle file や realization file の一般定義を確認したいときは、対応する oracle doc や indexing 共通処理側を読む。
+- 特定サブコマンドの下位処理だけを変更したいことが明確なときは、この階層全体ではなく、その責務を持つ下位対象へ直接進む。
 
 ## hash
-- 6dfe4e4873c986a77f6deca66f21adc4460d97a8764d6db60d1f9cdaf00a9280
+- ca02a456de4cfdc9fc9cbc2b1b8d1f7137c4632284e02b5e6091bb8a7c0297c1
