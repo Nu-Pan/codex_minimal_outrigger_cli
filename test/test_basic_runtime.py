@@ -16,6 +16,7 @@ from pathlib import Path
 
 import pytest
 import main as main_module
+import commons.runtime_cli as runtime_cli
 import commons.runtime_logging as runtime_logging
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 from basic.path_model import (
@@ -144,6 +145,30 @@ def test_runtime_distinguishes_repo_root_from_linked_worktree(
     assert repo_root(linked) == root.resolve()
     assert resolve_real_path(RootPathPlaceHolder.RUN) == linked.resolve()
     assert work_root(linked) == linked.resolve()
+
+
+def test_cli_wrapper_doctor_preprocess_uses_current_worktree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """doctor preprocess は runtime state 保存先ではなく current work root を修復する。"""
+    root = make_repo(tmp_path)
+    linked = root / ".cmoc" / "local" / "worktree" / "linked"
+    run_git(root, "worktree", "add", "-b", "linked-test", str(linked), "HEAD")
+    monkeypatch.chdir(linked)
+    doctor_roots: list[Path] = []
+    pre_log_roots: list[Path] = []
+
+    monkeypatch.setattr(runtime_cli, "run_doctor_preprocess", doctor_roots.append)
+
+    runtime_cli.run_cli_subcommand(
+        lambda: 0,
+        pre_log_check=pre_log_roots.append,
+        command_name="probe",
+        command_argv=["cmoc", "probe"],
+    )
+
+    assert doctor_roots == [linked.resolve()]
+    assert pre_log_roots == [root.resolve()]
 
 
 def test_run_root_placeholder_rejects_main_worktree(

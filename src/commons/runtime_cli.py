@@ -39,6 +39,7 @@ def run_cli_subcommand(
     work root 検査後、必要な pre-log 処理を済ませてからサブコマンドログを作成し、
     開始・完了表示、戻り値の終了コード化、例外のエラー表示を一箇所で扱う。
     runtime state は通常 repo root に置き、linked worktree 前処理では work root に置く。
+    doctor preprocess は runtime state の保存先とは別に常に current work root を修復する。
     サブコマンドログは常に repo root に置く。
     """
     logger = None
@@ -52,8 +53,8 @@ def run_cli_subcommand(
         runtime_root = current_root if use_work_root_runtime else log_root
         if doctor_preprocess:
             # <work-root>/oracle/doc/app_spec/doctor_preprocess.md
-            # サブコマンド固有の検査より前に、共通修復を work root 基準で済ませる。
-            run_doctor_preprocess(runtime_root)
+            # サブコマンド固有の検査より前に、共通修復を current work root 基準で済ませる。
+            run_doctor_preprocess(current_root)
         if pre_log_check is not None:
             # <work-root>/oracle/doc/app_spec/sub_command/tui.md
             # require .cmoc ignore guarantees before any .cmoc log file is created.
