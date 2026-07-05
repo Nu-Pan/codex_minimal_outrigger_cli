@@ -59,24 +59,21 @@
 
 ## Summary
 - cmoc の実行時に複数箇所から共有される runtime helper 群をまとめる領域。
-- Codex 実行、INDEX 更新 preflight、設定変換、内容 hash、CLI 共通ライフサイクル、doctor preprocess、エラー整形、git 操作、ログ、path/time、結果型、永続状態、apply process 管理などの共通実装への入口になる。
-- 対象直下には、runtime API の集約 import 入口と、責務別の実装・再公開モジュールが配置されている。
+- Codex 実行、設定、git、path、logging、state、error、INDEX 更新 preflight など、サブコマンド横断の共通処理へ進む入口になる。
+- 対象自体は共有 runtime 層のまとまりであり、個別 API の挙動や失敗時処理は下位要素で確認する。
 
 ## Read this when
-- cmoc の CLI サブコマンドや runtime 処理から共有される helper の配置先を探すとき。
-- Codex exec/TUI 呼び出し、profile 準備、quota/capacity retry、call log、preflight、Structured Output 検証など Codex 実行基盤を調べるとき。
-- INDEX.md 自動更新、entry hash、indexing commit、indexable 対象判定、既存 entry の parse・再利用を確認または変更するとき。
-- 設定 JSON の読み書き、runtime path/time、git wrapper、サブコマンドログ、利用者向けエラー、外部コマンド結果型、session state など、複数機能から参照される runtime 基盤を扱うとき。
-- apply 実行中 process の追跡・停止、session/apply branch と worktree path の対応、cmoc 管理 branch や linked worktree の安全条件を調べるとき。
+- cmoc の複数モジュールから使われる runtime 共通処理の配置場所や担当領域を探したいとき。
+- Codex 実行、設定変換、git 操作、path 解決、ログ、状態管理、doctor 前処理、INDEX 更新 preflight などの共通 helper の読む先を選びたいとき。
+- CLI サブコマンド実装から呼ばれる共通ライフサイクル、実行結果型、利用者向けエラー、永続状態や補助ファイル保存先の実装入口を確認したいとき。
 
 ## Do not read this when
-- 個別 CLI サブコマンドの業務処理、引数定義、利用者向け workflow だけを確認したい場合は、該当するサブコマンド実装または app spec を読む。
-- oracle file にある正本仕様断片、prompt builder、path placeholder 定義、config 型定義、indexing 標準、entry standard だけを確認したい場合は、oracle 側の該当対象を読む。
-- 特定の runtime API の詳細が分かっている場合は、この領域全体ではなく、責務に対応する直下の実装モジュールを読む。
-- テスト固有の期待値、fixture、外部挙動の検証内容を調べたい場合は、test 側の対象を読む。
+- 特定の CLI サブコマンド固有の引数、出力、業務ロジックを確認したいときは、そのサブコマンド実装を読む。
+- oracle 側の正本仕様断片、prompt、Structured Output schema、path model、config 型定義そのものを確認したいときは、対応する oracle 側を読む。
+- 個別 helper の詳細な入出力や失敗時挙動をすでに特定できているときは、この領域全体ではなく該当する下位要素を直接読む。
 
 ## hash
-- bcbf50ca38453fd29e68942adfecb005ee9457a3a020ac7dae766112a834f099
+- 0afa209554744703cba1d66144eb2b0a8b6ece415c4edf6c0d880317f6f437d4
 
 # `config`
 
