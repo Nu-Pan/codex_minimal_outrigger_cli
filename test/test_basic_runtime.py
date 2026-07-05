@@ -31,6 +31,7 @@ from cmoc_runtime import (
     ensure_cmoc_ignored,
     file_access_to_sandbox_mode,
     format_duration,
+    load_config,
     remove_worktree,
     render_error,
     repo_root,
@@ -207,6 +208,18 @@ def test_config_defaults_match_logical_model_classes() -> None:
     )
     assert config.codex.reasoning_effort[ReasoningEffort.HIGH] == "high"
     assert config.codex.num_try_falv_recovery == 1
+
+
+def test_load_config_missing_points_to_init(tmp_path: Path) -> None:
+    root = make_repo(tmp_path)
+
+    with pytest.raises(CmocError) as exc_info:
+        load_config(root)
+
+    assert exc_info.value.summary == "cmoc config が存在しません。"
+    assert exc_info.value.next_actions == [
+        "cmoc init を実行して <repo-root>/.cmoc/config.json を生成してください。"
+    ]
 
 
 @pytest.mark.parametrize("value", [False, None, [], "gpt"])

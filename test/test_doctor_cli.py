@@ -7,10 +7,12 @@ from commons.runtime_config import write_config
 from config.cmoc_config import CmocConfig
 from oracle.other.cmoc_config import CodexModelSpec
 from commons.runtime_codex_profile import prepare_codex_profile
+from main import app
 from _support import (
     TEST_SLM_MODEL,
     fake_managed_ollama_env,
     make_repo,
+    runner,
     run_doctor,
     run_git,
 )
@@ -129,6 +131,24 @@ def test_doctor_syncs_default_config_without_overwriting_human_values(
     }
     assert data["codex"]["reasoning_effort"]["low"] == "low"
     assert data["apply_fork"]["num_apply_files"] == 200
+
+
+def test_init_generates_config_and_ignores_cmoc(tmp_path: Path, monkeypatch) -> None:
+    root = make_repo(tmp_path)
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(
+        app,
+        ["init"],
+        env=fake_managed_ollama_env(root),
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert "# cmoc init" in result.stdout
+    assert (root / ".cmoc" / "config.json").is_file()
+    assert run_git(root, "check-ignore", "-q", ".cmoc/config.json").returncode == 0
+    assert run_git(root, "ls-files", "--", ".cmoc").stdout.strip() == ""
 
 
 def test_doctor_preprocess_untracks_existing_cmoc_files(

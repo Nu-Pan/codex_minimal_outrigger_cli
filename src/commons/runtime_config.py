@@ -181,7 +181,7 @@ def load_config(root: Path) -> CmocConfig:
     if not path.exists():
         raise CmocError(
             "cmoc config が存在しません。",
-            ["cmoc doctor を実行して <repo-root>/.cmoc/config.json を生成してください。"],
+            ["cmoc init を実行して <repo-root>/.cmoc/config.json を生成してください。"],
             str(path),
         )
     try:
