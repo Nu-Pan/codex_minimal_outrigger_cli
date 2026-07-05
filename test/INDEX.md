@@ -343,24 +343,22 @@
 # `test_review_oracle_cli.py`
 
 ## Summary
-- review oracle の CLI 実行、report 生成、対象 oracle file の列挙、所見の enumerate・validate・judge・merge loop、review 用 worktree と join commit、INDEX.md 変更の取り込み、処理失敗時 report、想定外差分の拒否をまとめて検証する realization test。
-- oracle review の外部挙動と所見評価 loop が同じ fake Codex 応答、report 文脈、review run 状態を共有するため、一箇所で凝集して扱う。
+- review oracle の CLI 経由の外部挙動を検証するテスト。report 生成、対象 oracle file の選択、所見の列挙・検証・judge・merge、scope 指定、error report、review 用 worktree と join commit、INDEX.md 変更の取り込み、非 INDEX 差分の拒否を扱う。
+- 所見評価 loop の制御を直接検証するテストも含み、enumerate 時の既存所見の渡し方、challenger/advocate の理由伝播、merge operation の契約と semantic retry を確認する。
 
 ## Read this when
-- review oracle CLI の出力 report、section 順、件数、accepted/rejected findings、error/no_targets 表示を確認・変更する。
-- review oracle の対象選択、full/session scope、tracked ignored oracle file、INDEX.md・AGENTS.md 除外、oracle root alias の扱いを確認・変更する。
-- review oracle の enumerate・validate challenger/advocate・judge・merge の loop 制御、prompt に渡す既存所見、semantic merge retry、merge operation contract を確認・変更する。
-- review oracle が linked worktree や session branch 上で作る review worktree、INDEX.md 生成差分の merge、join commit、INDEX.md conflict 解決を確認・変更する。
-- review oracle 実行中に処理失敗や INDEX.md 以外の差分が発生した場合の report と rollback 挙動を確認・変更する。
+- `review oracle` CLI の report 内容、section 順、count、accepted/rejected finding の表示、error report の挙動を変更または調査するとき。
+- review oracle の対象ファイル列挙、full/session scope、tracked ignored oracle file、`AGENTS.md` と `INDEX.md` の除外、oracle root alias の扱いを確認するとき。
+- review oracle 実行時の一時 worktree、linked worktree、review join commit、INDEX.md 変更の merge、INDEX.md conflict 解決、非 INDEX 差分の拒否を扱うとき。
+- review oracle の finding loop、validate challenger/advocate、judge、merge operation、semantic retry、finding id 採番の制御を変更するとき。
 
 ## Do not read this when
-- oracle review 以外の review サブコマンド、または CLI 全体の一般的な起動・設定だけを確認したい。
-- report の markdown 表示仕様ではなく、prompt 文面や structured output schema の正本仕様を確認したい。
-- oracle file 定義そのものや realization standard の根拠を読む必要がある場合は、対応する oracle file を直接読む。
-- INDEX.md エントリー生成や routing 文書の仕様を確認するだけなら、このテストではなく index 関連の oracle または実装を読む。
+- oracle review ではないサブコマンド、または CLI 経由の review oracle 外部挙動に関係しない内部 helper だけを扱うとき。
+- realization file 全般の file classification や path model の正本仕様を確認したいときは、oracle 配下の該当仕様を読む。
+- INDEX.md エントリー生成そのものやルーティング文書の形式だけを扱うときは、このテストではなく対象のルーティング規則を読む。
 
 ## hash
-- b8bedaaa05c6aeaaf2b37f657a681a1bcc4181aaef72ae253f269276b11a702d
+- 526c05c8b3b39046eb1b55cbcb4c50bb3c1e7c75c8a39ef5375d73f23d6277b2
 
 # `test_session_cli.py`
 

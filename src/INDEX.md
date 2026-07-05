@@ -141,21 +141,23 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンドの実行入口をまとめる領域。apply、review、session、init/doctor、indexing、tui などの具体的なサブコマンドを、runtime 共通処理や下位 helper へ接続する orchestration 層を扱う。
-- 各サブコマンド固有の実行条件、状態遷移、branch/worktree 操作、Codex 呼び出し、report や利用者向け出力へ進む入口になる。
+- CLI サブコマンド実装を集約する領域。session、apply、review、indexing、init/doctor、tui などの各利用者向け操作を、runtime 共通処理や下位 helper へ接続する入口を扱う。
+- 各サブコマンド固有の実行条件、状態遷移、branch/worktree 操作、Codex 呼び出し、report 生成、表示、cleanup へ進むための上位ルーティング地点である。
+- 対象列挙、prompt/schema 構築、git wrapper、state 型、path model、低レベル cleanup などの共通実装そのものではなく、それらを CLI 実行単位として組み合わせる層を読むための入口になる。
 
 ## Read this when
-- CLI サブコマンドごとの実行フロー、実行条件、return code、状態更新、branch/worktree 操作、cleanup、利用者向け表示を確認または変更したいとき。
-- apply、review、session の lifecycle 操作や、init/doctor、indexing、tui のサブコマンド入口から共通 runtime・下位処理へどう接続しているかを調べたいとき。
-- サブコマンド実装の置き場所を選ぶために、どの下位領域がどの CLI 操作を担うかを確認したいとき。
-- review や apply の report 生成、INDEX 変更反映、対象列挙、finding 処理などについて、まずサブコマンド単位の入口から処理の接続関係を追いたいとき。
+- CLI サブコマンドごとの実行フロー、runtime wrapper への渡し方、command 名、argv、利用者向け出力を確認または変更したいとき。
+- session や apply の fork/join/abandon、review oracle、indexing、init/doctor、tui など、具体的なサブコマンドの実装場所を選びたいとき。
+- サブコマンド実行時の preflight、状態検証、branch/worktree 操作、cleanup、merge、report 出力、return code のつながりを追いたいとき。
+- 各サブコマンドが対象列挙、Codex 実行、INDEX 更新、config 同期、doctor preprocess、report 生成などの下位処理へどのように接続しているかを確認したいとき。
+- サブコマンド固有の失敗条件、許可される差分範囲、削除対象、永続状態更新、CLI 表示の境界を調べたいとき。
 
 ## Do not read this when
-- CLI 全体の dispatch、Typer app 登録、runtime 共通 wrapper、設定読み込み、git wrapper、state 型、path model などの共通基盤だけを調べたいとき。
-- Codex に渡す prompt、Structured Output schema、parameter builder の本文や schema だけを確認または変更したいとき。
-- 低レベルな branch/worktree 削除、process 停止、state 読み書き、git command 実行 helper の汎用実装そのものを調べたいとき。
-- oracle file や realization file の一般定義、ファイルアクセス規則、仕様文書上の分類など、サブコマンド実行入口と無関係な仕様分類を確認したいとき。
-- INDEX.md の本文生成、差分検出、lock、commit など、indexing 共通処理の詳細ロジックだけを調べたいとき。
+- CLI 全体の dispatch、Typer app への登録、runtime 共通実行規約、設定読み込み、repository/worktree 検出だけを調べたいとき。
+- git wrapper、state schema、path model、worktree 削除、branch 削除、process 停止、state 読み書きなどの低レベル helper の汎用実装だけを確認したいとき。
+- Codex に渡す prompt、Structured Output schema、parameter builder の詳細だけを変更したいとき。
+- oracle file や realization file の一般定義、ファイルアクセス規則、INDEX.md 生成規則などの正本仕様そのものを確認したいとき。
+- 特定サブコマンドの下位責務がすでに分かっており、対象列挙、review loop、report 描画、INDEX 統合、config 定義などを直接読む方が適切なとき。
 
 ## hash
-- febf66766d6ef5d633cabb73870c36fa164400caa597c91273c24740a4b2919a
+- 9af3237029013b07209a1decdad9e195bae5016de30d3a3550857bfaea022ffb
