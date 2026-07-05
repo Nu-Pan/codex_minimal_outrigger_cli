@@ -12,8 +12,10 @@ from cmoc_runtime import (
 from sub_commands.apply.abandon import cmoc_apply_abandon_impl
 from sub_commands.apply.fork import cmoc_apply_fork_impl
 from sub_commands.apply.join import cmoc_apply_join_impl
-from sub_commands.doctor import cmoc_doctor_impl, cmoc_init_impl
+from sub_commands.doctor import cmoc_doctor_impl
+from sub_commands.eval_oracle import cmoc_eval_oracle_impl
 from sub_commands.indexing import cmoc_indexing_impl
+from sub_commands.init import cmoc_init_impl
 from sub_commands.review.oracle import cmoc_review_oracle_impl
 from sub_commands.session.abandon import cmoc_session_abandon_impl
 from sub_commands.session.fork import cmoc_session_fork_impl
@@ -166,7 +168,7 @@ def eval_oracle(
 ) -> None:
     """want を書き出した oracle を AI review する CLI 入口。"""
     # <work-root>/oracle/doc/considered_alternative/working_plan_review.md
-    cmoc_review_oracle_impl(scope.value)
+    cmoc_eval_oracle_impl(scope.value)
 
 
 @app.command()

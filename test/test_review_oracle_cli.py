@@ -15,7 +15,6 @@ import pytest
 
 import commons.indexing as indexing_module
 import commons.runtime_codex_preflight as codex_preflight_module
-import main as main_module
 from _support import (
     add_tracked_ignored_oracle_file,
     make_repo,
@@ -26,6 +25,7 @@ from _support import (
 from cmoc_runtime import CmocError, SessionState
 from config.cmoc_config import CmocConfig, CmocConfigReviewOracle
 from main import app
+import sub_commands.eval_oracle as eval_oracle_module
 import sub_commands.review.oracle as review_module
 from sub_commands.review_targets import enumerate_review_all_oracle_files
 
@@ -38,7 +38,9 @@ def test_eval_oracle_delegates_to_review_oracle_impl(
     def fake_review_oracle_impl(scope: str) -> None:
         calls.append(scope)
 
-    monkeypatch.setattr(main_module, "cmoc_review_oracle_impl", fake_review_oracle_impl)
+    monkeypatch.setattr(
+        eval_oracle_module, "cmoc_review_oracle_impl", fake_review_oracle_impl
+    )
 
     result = runner.invoke(app, ["eval-oracle", "-s", "full"], catch_exceptions=False)
 
