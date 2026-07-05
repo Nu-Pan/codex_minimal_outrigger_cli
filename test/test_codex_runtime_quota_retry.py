@@ -258,7 +258,8 @@ def test_quota_probe_builder_returns_minimal_readonly_parameter() -> None:
     assert probe.model_class == ModelClass.MINIMUM
     assert probe.reasoning_effort == ReasoningEffort.LOW
     assert probe.file_access_mode == FileAccessMode.READONLY
-    assert probe.prompt
+    assert "quota 利用可否を確認するための最小実行です。" in probe.prompt
+    assert "ok だけを返してください。" in probe.prompt
     assert probe.structured_output_schema_path is None
     assert probe.run_indexing_preflight is False
     assert probe.cwd == base.cwd

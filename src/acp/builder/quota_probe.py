@@ -5,7 +5,10 @@ from importlib import import_module
 from basic.acp import AgentCallParameter, FileAccessMode, ModelClass, ReasoningEffort
 
 
-_FALLBACK_PROBE_PROMPT = "Run a minimal quota availability check and answer only: ok"
+_FALLBACK_PROBE_PROMPT = (
+    "quota 利用可否を確認するための最小実行です。"
+    "利用可能なら ok だけを返してください。"
+)
 
 
 def build_quota_availability_probe_parameter(
@@ -19,9 +22,8 @@ def build_quota_availability_probe_parameter(
     else:
         return builder.build_quota_availability_probe_parameter(base_parameter)
 
-    # <work-root>/oracle/doc/app_spec/prompt_standard.md allows a minimal
-    # realization-side follow-up for an oracle src bug.  This branch is kept
-    # only until the missing oracle quota_probe builder exists.
+    # <work-root>/oracle/doc/app_spec/prompt_standard.md
+    # oracle 側 builder 欠落中だけの fallback。正本 builder 追加後に削除する。
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     return AgentCallParameter(
         ModelClass.MINIMUM,
