@@ -19,20 +19,21 @@
 # `builder`
 
 ## Summary
-- acp builder 配下の互換入口と個別 builder 領域へのルーティングを担うディレクトリ。oracle 側実装を正本に保ちつつ、旧来の acp.builder import 経路を canonical 実装や realization 側の適応層へ接続する。
-- apply fork、indexing、quota probe、review、session、TUI などの builder 入口があり、実処理本体ではなく import 互換、oracle builder 委譲、realization 公開型への最小変換、削除条件確認の入口として使う。
+- acp builder 領域の互換入口をまとめ、既存の acp.builder 系 import path を oracle 側 canonical 実装や realization 側の最小補正層へ接続する。
+- 主に apply、review、session、tui、indexing、quota probe などの builder 互換経路、oracle builder への委譲、旧公開面維持、削除条件確認の入口になる。
+- builder 本体の正本仕様ではなく、oracle 側実装を正本に保ちながら既存参照を成立させる package path、module alias、再 export、薄い fallback/補正を扱う。
 
 ## Read this when
-- acp.builder.* の旧 import 経路が、oracle 側 canonical 実装または realization 側 wrapper へどう接続されるかを調べたいとき。
-- oracle 側 builder を正本としながら realization 側で AgentCallParameter への変換、module alias、package path 追加、既知 typo 補正などをどこで行うか確認したいとき。
-- apply fork、quota probe、review、session、TUI、indexing の builder 互換入口や削除条件を確認し、個別領域へ進む入口を選びたいとき。
-- 旧 acp.builder 参照を canonical import path へ移行する作業で、残すべき互換層、既存参照向け公開面、削除できる条件を調べたいとき。
+- acp.builder 経由の旧 import path 互換が、oracle 側 canonical 実装や realization 側 wrapper へどう接続されるか確認したいとき。
+- apply fork、review、session、tui、indexing、quota probe などの agent call parameter builder 互換入口、委譲境界、最小補正、fallback の所在を探すとき。
+- 既存 caller を canonical path へ移行する作業で、互換 package や再公開 module を残す理由、削除条件、残存参照への影響を判断したいとき。
+- oracle 側 builder を正本としつつ、realization 側公開型への適合、module alias、package search path、file access mode 再公開、structured output schema 抑制などの互換処理を調べるとき。
 
 ## Do not read this when
-- oracle 側 builder の正本仕様、prompt 本文、parameter 生成内容そのものを確認したい場合は、対応する oracle 側実装を直接読む。
-- apply、review、session、TUI など各機能の実行フロー、画面挙動、branch 操作、finding 処理など builder 以外の実装詳細を調べたい場合は、該当機能の実装へ進む。
-- AgentCallParameter の基本型、file access mode、path model、Structured Output schema などの共通基礎仕様だけを確認したい場合は、それぞれの共通定義を読む。
-- 新しい公開 API や新規 import 経路を設計したい場合は、この互換領域ではなく正本仕様または新規機能の入口を確認する。
+- agent prompt、出力条件、parameter 生成内容、builder 本体の正本仕様や人間意図を確認したいだけなら、対応する oracle 側 builder を読む。
+- apply、review、session、tui など各機能そのものの実行フロー、UI、branch 操作、finding 処理、quota 管理ロジックを調べる場合は、それぞれの実装領域へ進む。
+- AgentCallParameter、FileAccessMode、path model、git helper、構造化出力 schema などの基礎型や共通実装を確認したいだけなら、該当する共通定義を直接読む。
+- 新しい公開 API や新規 import 経路を設計したい場合は、この互換領域を入口にせず、現行の canonical 実装または対象機能の公開面を確認する。
 
 ## hash
-- ebd7c0a82c1bef7ff80f973308194949451ef3a138f2dbeb65af7707112da669
+- 24cab1f619625b7b6c17d0a86558d404f9c72d9351af6acca6869c2d3941f528

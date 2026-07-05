@@ -71,20 +71,20 @@
 # `quota_probe.py`
 
 ## Summary
-- Codex quota availability probe 用の AgentCallParameter を組み立てる互換ビルダーです。正本側の quota probe ビルダーが存在する場合はそれへ委譲し、存在しない間だけ最小モデル・低 reasoning・readonly・indexing preflight 無効のフォールバック parameter を返します。
+- Codex quota 利用可否確認用の agent call parameter を組み立てる builder。正本側 builder が存在する場合はそれへ委譲し、欠落中のみ最小モデル・低 reasoning・read-only・preflight 無効の互換 fallback を返す。
 
 ## Read this when
-- quota availability probe の agent call parameter がどの model class、reasoning effort、file access mode、prompt、cwd、preflight 設定で作られるかを確認したいとき。
-- 正本側の quota probe ビルダーが未実装または欠落している場合の realization 側フォールバック挙動を確認・変更したいとき。
-- oracle src 側の同名ビルダーへ委譲する互換層の import 失敗時の扱いを確認したいとき。
+- quota availability probe 用の agent call parameter の組み立て経路を確認・変更したいとき。
+- 正本側 builder 欠落時の一時的な fallback 挙動、特に model class、reasoning effort、file access mode、cwd 引き継ぎ、indexing preflight 抑制を確認したいとき。
+- 正本側 builder 追加後に削除すべき互換実装の所在を確認したいとき。
 
 ## Do not read this when
-- 通常の agent call parameter 全般の型定義、列挙値、または基本データ構造を確認したいだけのとき。
-- quota probe 以外の agent call parameter builder の挙動を調べたいとき。
-- 正本仕様としての prompt standard や codex exec rule の内容そのものを確認したいとき。
+- 通常の agent call parameter 全般の組み立てや、quota probe 以外の builder を確認したいとき。
+- quota availability の判定結果や quota 管理ロジックそのものを調べたいとき。
+- prompt 標準や Codex 実行規則の正本仕様を確認したいときは、対応する oracle file を直接読む。
 
 ## hash
-- a9619b6ae173735996355a9f24ca76002339b03f007ea30609c9b804c2d97fe4
+- 4451d4911fd78af1cc6c1829504300c2b9e67f0856cb3cf48a7ddf75cda38fae
 
 # `review`
 
@@ -131,19 +131,18 @@
 # `tui`
 
 ## Summary
-- TUI 起動用 builder まわりの互換層を扱うディレクトリ。既存の `acp.builder.tui.*` import surface を維持しつつ、正本側 builder の再公開や realization runtime への complete prompt 保存を経由して TUI 用 AgentCallParameter を組み立てる入口を置く。
+- TUI 起動 parameter builder に関する互換層をまとめる領域。旧 import surface を維持しつつ、正本側 builder への委譲、TUI 用ログ配置の準備、structured output schema を渡さない補正、既存呼び出し向け file access mode の再公開を扱う。
+- 新しい TUI 実装本体ではなく、既存の TUI builder import 経路を正本側へ移行するまで残す realization 側の互換入口として位置づけられる。
 
 ## Read this when
-- 既存の `acp.builder.tui.*` import 互換性、公開名、削除可否を確認する。
-- TUI 起動用 AgentCallParameter の組み立て、モデル種別、reasoning effort、file access mode、Structured Output schema 非指定の扱いを確認または変更する。
-- TUI 起動時の complete prompt 生成、markdown 保存、保存先パス、agent へ渡す指示文の関係を確認する。
-- TUI resolve parameter builder の呼び出し元を正本側 import path へ移行する。
+- TUI 起動時に渡す AgentCallParameter の組み立て経路、または正本側 builder と realization 側互換処理の境界を確認・変更する。
+- 既存の TUI builder import 経路を維持する理由、公開名、削除可否、正本側 import path への移行方針を確認する。
+- TUI 起動用ログディレクトリの準備、structured output schema の無効化、既存 TUI 呼び出し向け file access mode の選択肢を調べる。
 
 ## Do not read this when
-- TUI 画面そのものの表示、入力処理、イベントループ、端末 UI の挙動を調べたい場合。
-- prompt builder の正本仕様、StructDoc の markdown rendering、runtime のローカルディレクトリ配置や repo root 解決の一般仕様を調べたい場合。
-- TUI 以外の builder や file access mode 全体の定義を確認したい場合。
-- 新しい公開 API や新規 import 経路を設計したい場合。
+- TUI の画面構成や実装本体の挙動を確認したい。
+- TUI 以外の subcommand の parameter builder、AgentCallParameter や FileAccessMode 自体の定義、runtime path 全般の規則を確認したい。
+- 新しい公開 API や新規 import 経路を設計したい。
 
 ## hash
-- e24d457b6a6333995ae031725e52ee505ea421f7f2b703335e0eff1f3f22782b
+- d7117cea6440f318f9c1a89114ad29b4ff438702672c442bc51acd8c26d399f2

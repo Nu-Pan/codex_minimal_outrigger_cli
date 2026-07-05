@@ -1,24 +1,21 @@
 # `acp`
 
 ## Summary
-- oracle src 側の acp builder 実装を複製せず、旧来の acp import 経路を維持するための互換入口をまとめる領域。実体は canonical 実装や個別 module 側に置き、この対象は import 互換、oracle builder 委譲、realization 側公開型への最小変換への入口として機能する。
-- 配下には acp builder の互換入口と apply fork、indexing、quota probe、review、session、TUI などの個別 builder 領域があり、旧参照をどこへ接続しているか、どの互換層を残すべきか、削除条件を確認するための起点になる。
+- acp builder 由来の旧 import path を、oracle 側 canonical 実装や realization 側の薄い互換層へ接続するための互換領域。
+- 実装本体や正本仕様ではなく、既存公開面を維持する入口、再 export、module alias、削除条件の判断材料を扱う。
 
 ## Read this when
-- acp.* または acp.builder.* の旧 import 経路が、oracle 側 canonical 実装や realization 側 wrapper へどう接続されるかを調べたいとき。
-- oracle 側 builder を正本に保ちつつ、realization 側で AgentCallParameter への変換、module alias、package path 追加、既知 typo 補正などを扱う場所を確認したいとき。
-- apply fork、quota probe、review、session、TUI、indexing などの builder 互換入口や削除条件を確認し、個別領域へ進む入口を選びたいとき。
-- 旧 acp 参照を canonical import path へ移行する作業で、残すべき互換層、公開面に残る import、削除できる条件を判断したいとき。
+- acp builder 系の旧 import path がどの互換入口を通じて canonical 実装や wrapper に接続されるか確認したいとき。
+- 既存 caller を canonical path へ移行する作業で、互換入口を残す理由、削除条件、残存参照への影響を判断したいとき。
+- oracle src 由来の builder 実装を複製せずに、realization 側や公開面の import 互換を保つ仕組みを調べたいとき。
 
 ## Do not read this when
-- acp builder の正本仕様、prompt 本文、parameter 生成内容そのものを確認したいときは、対応する oracle 側実装を直接読む。
-- apply、review、session、TUI など各機能の実行フロー、画面挙動、branch 操作、finding 処理など builder 以外の実装詳細を調べたいときは、該当機能の実装へ進む。
-- AgentCallParameter の基本型、file access mode、path model、Structured Output schema などの共通基礎仕様だけを確認したいときは、それぞれの共通定義を読む。
-- 新しい acp 機能、公開 API、新規 import 経路を設計したいときは、この互換維持領域ではなく正本仕様または新規機能の入口を確認する。
-- acp.* 参照がすでに全公開面と realization 側から消えていることだけを確認済みで、互換入口の詳細を読む必要がないとき。
+- agent prompt、parameter 生成内容、builder 本体の正本仕様や人間意図を確認したいときは、対応する oracle 側 builder を読む。
+- apply、review、session、tui、indexing、quota probe など各機能そのものの実行フローや状態操作を調べたいときは、それぞれの実装領域へ進む。
+- 新しい acp 機能、公開 API、新規 import 経路を設計したいときは、この互換領域ではなく canonical 実装または対象機能の公開面を確認する。
 
 ## hash
-- 1c5e2b3dac5ab40713d93f624d513992ff330b37eee6cb378d8ccfd94f37125e
+- 42c99f5538a931cb8932a2116a0f65a406fe7dc55710bfc086ca475821b5f0a1
 
 # `basic`
 
