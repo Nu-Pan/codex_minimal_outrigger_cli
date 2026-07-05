@@ -124,23 +124,24 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断的に固定する回帰テスト群。root placeholder と worktree 判定、config 復元と検証、CmocError の Markdown 表示、CLI preflight と parse error、subcommand log、FileAccessMode から Codex sandbox profile への変換、binary 判定など、複数サブコマンドの実行前提になる共通挙動を扱う。
+- cmoc の共通 runtime 契約を横断して検証する realization test。root placeholder と worktree 判定、config 読み書き、CmocError 表示、CLI preflight と parse error、subcommand log、FileAccessMode から Codex sandbox profile への変換、binary 判定など、個別サブコマンドより下の実行前提をまとめて扱う。
+- 複数領域にまたがるが、共通 fixture と root 状態を共有する basic runtime 回帰として凝集させており、分割しない根拠も本文冒頭で説明している。
 
 ## Read this when
-- root 解決、linked worktree、run/work/repo root の扱いを変更する。
-- CmocError、CLI error 表示、Click/Typer の parse error 変換、preflight、doctor preprocess、subcommand log の挙動を変更する。
-- config の既定値、JSON 化順序、config 読み込み・検証・復元処理を変更する。
-- FileAccessMode、Codex profile、sandbox writable roots、追加書き込み許可 path、repo local read 許可の制御を変更する。
-- runtime state の branch 名解析、session/apply branch からの session id 取得、state 読み込み条件を変更する。
-- `.cmoc/local` の ignore 追加、起動 wrapper の missing venv report、binary 判定など runtime 共通の外部挙動を変更する。
+- root 解決、repo root と linked worktree、run/work root placeholder の挙動を変更・調査する時。
+- CmocError、CLI error report、Click parse error、doctor preprocess、pre-log check、subcommand log の外部挙動を変更・調査する時。
+- cmoc config の既定値、JSON 化順序、読み込み失敗、型検証、Codex model spec や reasoning effort の扱いを変更・調査する時。
+- FileAccessMode、Codex sandbox profile、追加書き込み許可 path、oracle・realization・repo write 境界、linked worktree からの repo local read 許可を変更・調査する時。
+- `.cmoc/local` ignore 追加、managed worktree 作成・削除保護、branch session id 解析、binary 判定、起動 wrapper の missing venv report を変更・調査する時。
 
 ## Do not read this when
-- 個別サブコマンド固有の業務ロジックだけを確認したい場合。
-- oracle file の内容や routing 文書そのものの仕様を確認したい場合。
-- 特定の小さな helper の単体挙動だけを追えば足り、root 状態・CLI wrapper・config・sandbox profile の共通契約に影響しない場合。
+- 個別サブコマンド固有の業務ロジック、出力内容、状態遷移だけを確認したい時は、そのサブコマンドの test または実装へ進む。
+- oracle 文書や oracle src の正本仕様そのものを確認したい時は、対応する oracle file を読む。
+- routing 文書や INDEX.md エントリー生成規則だけを確認したい時は、routing・indexing 系の文書または test を読む。
+- LLM 出力品質、prompt 文面そのもの、agent call の高水準 orchestration だけを確認したい時は、runtime 境界より直接の対象へ進む。
 
 ## hash
-- 5d2ad271121650ec3008cc5d9975a9a9293544160d54001d28f551ce22d6e5e5
+- da13c497f268e5fdc7eb45fc05c7dcde49c0f5e230863b883277c12a7a7306b3
 
 # `test_cli_tui.py`
 
@@ -181,22 +182,21 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行ラッパーのテスト。プロファイル生成、sandbox 設定、作業ディレクトリ、schema 配置、managed Ollama provider 設定、実 Codex CLI 呼び出し時の制御を検証する。
-- `run_codex_exec` が `AgentCallParameter` と `CmocConfig` から Codex 実行引数・標準入力・出力取得・権限範囲を組み立てる挙動を確認する入口。
+- Codex CLI 実行ラッパーのテスト群。プロファイル生成、作業ディレクトリ、sandbox writable roots、schema 保存場所、managed Ollama provider 設定、実 Codex CLI 呼び出し時の記録内容を検証する。
+- fake executable と一時 git repo を使い、外部コマンド起動時の argv、stdin、cwd、出力、生成ファイル、設定ファイル内容が期待どおりになることを確認する。
 
 ## Read this when
-- Codex CLI の起動引数、`--cd`、`--profile`、`--output-last-message`、`--output-schema` の扱いを変更する時。
-- `run_codex_exec` の sandbox writable roots、`PURE_ORACLE_READ`、`REPO_WRITE`、linked worktree での cwd や read path の扱いを確認する時。
-- Codex 用プロファイルの model provider、managed Ollama 設定、local SLM 実行時に builtin Ollama flags を使わない挙動を変更する時。
-- Codex 実行ログ、prompt log、schema state の保存場所や repo root と linked worktree の関係を変更する時。
+- Codex CLI を起動する実装、実行プロファイル生成、sandbox 設定、writable roots、output schema の保存先、linked worktree での cwd と root の扱いを変更するとき。
+- managed Ollama provider や local SLM 用の model_provider 設定、Codex CLI へ渡す引数、builtin Ollama flags を使わない挙動を確認するとき。
+- agent call 実行結果のログ、prompt 入力、last message 出力、実 Codex CLI 連携のテスト方針を確認するとき。
 
 ## Do not read this when
-- Codex 実行以外の agent call parameter 定義や model class の仕様だけを確認したい時。
-- CLI 全体のサブコマンド構成、設定ファイル読み込み、git 操作の一般処理を調べたい時。
-- LLM の応答品質や Codex CLI 自体の出力内容を評価したい時。
+- Codex CLI 起動やプロファイル生成に関係しない設定読み込み、path model、通常の CLI サブコマンド挙動だけを調べるとき。
+- oracle 文書、INDEX 生成、リポジトリ構造定義など、agent 実行ラッパーの外部挙動に触れない仕様や実装を扱うとき。
+- テスト支援関数そのものの実装や fixture 作成方法を変更する場合で、まず共通テストサポートを直接読む方が適切なとき。
 
 ## hash
-- d987e24c2479ec46a6150f61598ede8914b25dec83552ce1b91eb7d269038fa7
+- 31f3f37fbbe16f44a4d5fdee0590a60438e9c15aea87efe2b56ba422a86fbe85
 
 # `test_codex_runtime_exec_post_validation_forbidden.py`
 
