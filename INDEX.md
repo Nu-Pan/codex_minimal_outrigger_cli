@@ -143,42 +143,41 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を置く実装領域で、最上位 CLI 入口、サブコマンド実装、共有 runtime helper、oracle src への互換 import 層を扱う。
-- 公開 CLI 面から各サブコマンド、runtime 共通基盤、既存 import path の互換入口へ進むためのルーティング対象である。
-- 正本仕様断片そのものは保持せず、oracle 側の定義や builder を複製しない形で realization 側の実装・互換境界を構成する。
+- cmoc の realization implementation を置く最上位実装領域で、CLI 入口、サブコマンド実装、runtime 共通処理、互換 import 層へ進むための入口。
+- oracle 側の正本実装を複製せずに参照・再公開する互換層と、realization 側で実際に動作を具体化する runtime/command 実装の両方を含む。
+- 具体的な処理内容は CLI 接続、個別サブコマンド、共通 helper、互換 package など下位対象へ分かれており、実装変更時に読む下位領域を選ぶための起点になる。
 
 ## Read this when
-- cmoc の実装を変更するために、CLI 入口、サブコマンド、runtime helper、互換 import 層のどこへ進むべきか判断したいとき。
-- CLI コマンド構成、サブコマンドの上位制御、Codex 呼び出し基盤、git・path・state・logging など複数機能で共有される runtime 実装を調べたいとき。
-- oracle src 側の正本実装を realization 側からどう参照・再公開しているか、既存 import path の互換入口を確認したいとき。
-- apply、review、session、indexing、doctor、TUI などの実装入口や、対応する下位実装領域を選びたいとき。
+- cmoc の実装ファイルの所在を探し、CLI 入口、サブコマンド、共通 runtime helper、互換 import 層のどこへ進むべきか判断したいとき。
+- 利用者向け CLI 公開面から各サブコマンド実装、共通処理、oracle 側 canonical 実装への接続関係を大まかに確認したいとき。
+- 既存 import path の互換維持、oracle src の再公開、realization 側 wrapper の削除可否や移行状況を調べ始めるとき。
+- apply、review、session、indexing、doctor/init、tui、config、basic、ACP builder、runtime helper など複数の実装候補から読む対象を絞り込みたいとき。
 
 ## Do not read this when
-- oracle file に書かれた正本仕様、prompt 本文、parameter builder、path model、設定定義などを確認したいだけなら、oracle 側の該当本文を読む。
-- 自動テストの構成や検証観点を調べたい場合は、テスト領域を読む。
-- 生成済み INDEX.md の個別 entry、実行ログ、config、state、call log などの保存済みデータを調査するだけなら、対象データまたは該当する routing 文書を直接読む。
-- 対象のサブコマンド、runtime helper、互換 module が既に特定できている場合は、この領域全体ではなく該当する下位対象を直接読む。
+- 正本仕様断片、prompt 本文、設定定義、path model、AgentCallParameter など oracle file の内容そのものを確認したい場合は、対応する oracle 側を直接読む。
+- 特定サブコマンド、特定 helper、特定互換 module の責務が既に分かっている場合は、この階層全体ではなく該当する下位対象を直接読む。
+- 生成済みログ、状態ファイル、INDEX entry、作業メモなど実装本体ではない内容を確認したいだけのとき。
+- テストコードの追加・修正・確認が目的で、実装側の変更対象を探す必要がない場合は、test 側を読む。
 
 ## hash
-- f47c072cd7e057441b2c09a8c73764d4fff86e5b2738834978d5d962b0978eee
+- ebb7dc8a9c6292b613285224746db6025fb918c012b0f9db15a1f19d94bd55e7
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群をまとめるテスト領域。CLI 外部挙動、Codex runtime、ACP builder、prompt rendering、packaged import、INDEX 更新、session/apply/review/doctor/TUI など、実装が正本仕様断片と既存の観測可能な挙動を満たすかを検証する入口になる。
-- テスト支援 helper も含み、一時 Git repository、Codex home/profile、fake 外部コマンド、managed Ollama 環境、apply/session worktree など、複数テストで共有するセットアップの確認先にもなる。
+- cmoc の realization test 群を置くディレクトリ。CLI 外部挙動、Codex runtime、ACP builder、prompt rendering、packaged import、indexing、doctor、session/apply/review oracle などの回帰テストと、複数テストで共有する pytest 補助関数への入口になる。
+- 個別ファイルはサブコマンド別・runtime 境界別・builder/prompt/import 別に分かれており、テスト対象の外部挙動や制御ロジックから読む先を選ぶためのまとまりである。
 
 ## Read this when
-- cmoc の realization implementation を変更し、対応する外部挙動や制御ロジックの回帰テストを確認・追加・修正したいとき。
-- CLI サブコマンドの終了コード、stdout/stderr、report、状態ファイル、worktree/branch cleanup、git 差分、ログ生成など、利用者から観測できる挙動の期待値を調べたいとき。
-- Codex runtime、ACP builder、prompt parts、file access mode、packaged import、INDEX 更新 preflight など、複数実装領域をまたぐ runtime 境界のテストを探すとき。
-- テスト用 repository、fake Codex/Ollama/systemctl、Codex home/profile stub、apply/session state fixture など、既存テストで共有される補助部品を再利用または変更したいとき。
+- cmoc の realization test 全体から、変更対象の CLI コマンド、Codex runtime、ACP builder、prompt、indexing、packaging に対応するテストファイルを探したいとき。
+- apply fork/join/abandon、session fork/join/abandon、review oracle、doctor/init、tui、indexing など、サブコマンドの外部挙動や回帰テストを確認・変更したいとき。
+- Codex CLI 実行、retry/quota retry、Codex home/profile、file access mode、subcommand log など、runtime 境界をまたぐテストを探したいとき。
+- テスト用 Git repository、Codex home/profile、fake 外部コマンド、doctor 実行環境など、複数テストで共有する補助処理の所在を確認したいとき。
 
 ## Do not read this when
-- 正本仕様断片そのものを確認したいときは、oracle 側の doc、src、test を読む。
-- 個別実装の内部 helper 分割や低レベルな処理手順だけを確認したいときは、対応する src 側の実装を直接読む。
-- INDEX.md エントリー生成規則、oracle file と realization file の責務境界、path placeholder の定義を確認したいだけのときは、該当する正本仕様を読む。
-- 実際の Codex CLI や LLM の出力品質、外部サービスの本物の挙動を評価したいときは対象外。ここでは fake や制御ロジックを通じて cmoc 側の観測可能な挙動を検証する。
+- 本番実装の責務境界、内部 helper、永続状態操作、Git 操作、Codex 実行処理そのものを確認したい場合は、対応する src 側を読む。
+- oracle file の正本仕様、oracle/realization の責務境界、INDEX.md 生成規則、path model の定義そのものを確認したい場合は、対応する oracle 側を読む。
+- 特定のテストファイルが既に分かっており、そのテスト本体だけを確認すれば足りる場合は、このディレクトリ単位ではなく該当ファイルへ直接進む。
 
 ## hash
-- d54d1836550bbc92f62f966ba011f93be3eb87b9cd5253e02385699c26254d8c
+- 6812c54dbad13473b18117df180f9a554c818824f48c20cd7967b67869066c8e

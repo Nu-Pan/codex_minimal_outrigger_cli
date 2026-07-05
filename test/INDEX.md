@@ -248,22 +248,20 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor/init がリポジトリ初期化状態、`.cmoc` の ignore/untrack、`.agents` の追跡、managed ollama の準備、既定設定の同期、Codex profile 準備時の doctor 起動を正しく行うことを検証する realization test。
-- git 状態修復、設定ファイル生成・同期、managed ollama provider model の取得、既存 staged 変更の保持といった、doctor 系 CLI/前処理の外部挙動を確認する入口になる。
+- doctor/init CLI と runtime doctor 周辺の統合テスト。`.cmoc` 設定生成・ignore/untrack、`.agents` 修復コミット、managed ollama の配置・systemd user service、cmoc provider model pull、既存 staged 変更を巻き込まない修復、local SLM profile 準備時の doctor 起動を検証する。
 
 ## Read this when
-- doctor preprocess、init、`.cmoc` の git ignore/untrack、`.agents` の初期追跡、managed ollama のインストール・service・model pull に関する挙動を変更する時。
-- 既定 config の追加・変更時に、人間が書いた値を上書きせず不足項目だけ同期されるかを確認したい時。
-- Codex profile 準備処理が local SLM 用 provider を使う条件や、ollama service が未準備の時に doctor を走らせる制御を変更する時。
-- doctor の repair commit が既存の staged 変更を巻き込まないこと、または修復後に作業ツリーを汚さないことを確認する時。
+- doctor preprocess、init、`.cmoc/config.json`、`.gitignore`、`.agents/.gitkeep`、managed ollama、cmoc model provider、local SLM profile 準備の外部挙動を変更する時。
+- doctor が Git の tracked/ignored/staged 状態をどう修復・保持するべきかを確認したい時。
+- 既定設定の同期で、人間が書いた設定値を上書きしないことを検証したい時。
 
 ## Do not read this when
-- agent call の一般的な引数モデル、file access mode、reasoning effort の仕様だけを確認したい時。
-- ollama の実インストール手順や systemd service の詳細実装だけを追う時は、実装側の runtime doctor/profile preparation を直接読む方がよい。
-- 設定 schema や default 値の正本定義そのものを確認したい時は、oracle 側または config 実装の定義を直接読む方がよい。
+- 個別の低レベル helper の単体挙動だけを確認したい時。
+- doctor/init 以外の CLI コマンドや agent call 実行フローを調べる時。
+- oracle 側の正本仕様や config schema の定義そのものを確認したい時。
 
 ## hash
-- cafc3e40ef4e2a1d33ca4ca9d4c3a5c04b6970dc0dfaae1af4745b7eb278d536
+- 0828ac0649ca7513aac6df5a6fe0a13edc3f947cd601c7821726e9aa04a3b4a7
 
 # `test_indexing_cli.py`
 

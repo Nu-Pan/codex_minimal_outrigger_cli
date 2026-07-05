@@ -61,26 +61,22 @@
 # `commons`
 
 ## Summary
-- cmoc の共有 runtime helper 群をまとめる領域。Codex 起動、profile、config、content hash、CLI 実行ライフサイクル、doctor 前処理、error、git、logging、path、result、state、indexing preflight、apply process 管理など、複数サブコマンドから使われる実行時支援を扱う。
-- 共通 API の集約入口と、責務別 runtime 実装が同階層に並ぶため、サブコマンド固有処理ではなく実行基盤側の依存元・公開面・横断的な補助処理を探す入口になる。
+- CLI 実行基盤で共通利用される runtime helper 群をまとめる領域。Codex 起動、profile、設定、content hash、INDEX 更新 preflight、doctor、error、git、logging、path、result、state、apply process 管理など、個別サブコマンドから横断的に使われる実行時処理の入口になる。
 
 ## Read this when
-- 複数のサブコマンドや runtime helper から共有される実行時 API、結果型、例外、path、git、logging、config、state などの実装を確認または変更したいとき。
-- Codex exec/TUI の起動、profile・CODEX_HOME・schema・quota/capacity retry・call log・Structured Output 検証・preflight 連携など、Codex 呼び出し基盤を調べたいとき。
-- INDEX.md の自動更新 preflight、entry 再生成、hash による再利用、indexing commit、対象除外条件、git ignore や binary 判定などの実装を扱うとき。
-- apply abandon に関わる process 特定・pid file・subprocess 追跡・signal 送信・linked worktree 解決など、apply 実行時の低レベル管理を確認したいとき。
-- CLI サブコマンドを共通実行ライフサイクルへ接続する処理、doctor 前処理、サブコマンドログ、終了コード化、例外表示、完了サマリー出力を確認したいとき。
-- cmoc 管理領域の path、config JSON、session state file、git worktree/branch、ignore 設定、共通エラーレポート、実行結果モデルなど、runtime 層の共有境界を調べたいとき。
+- 複数のサブコマンドや runtime 処理から共有される実行時 helper の所在を探したいとき。
+- Codex exec/TUI 呼び出し、profile 生成、quota/capacity retry、Structured Output 検証、call log、preflight 連携の実装入口を選びたいとき。
+- CLI 共通ライフサイクル、doctor 前処理、サブコマンドログ、利用者向け error、git/worktree 操作、path/state/config/result の共有処理を確認または変更したいとき。
+- INDEX 自動更新、apply abandon の process 停止、content hash 保存、binary 判定など、特定サブコマンドに閉じない共通 runtime 挙動を調べたいとき。
 
 ## Do not read this when
-- 個別サブコマンドの利用者向け仕様、CLI 引数、業務ロジック、画面出力、session/apply/run の high-level な制御フローだけを確認したいときは、該当する command 実装へ進む。
-- oracle file に書かれた正本仕様、path placeholder の定義、INDEX.md entry の文章基準、config 型の正本定義、session state の仕様意図を確認したいだけなら、oracle 側の該当文書や定義へ進む。
-- 生成済み INDEX.md の個別 entry 内容や、特定 directory のルーティング判断を確認したいだけなら、その directory のルーティング文書または対象本文を読む。
-- 特定の helper 関数や具体的な処理がどの責務別 runtime 実装にあるか既に分かっている場合は、この階層全体ではなく直接その実装本文へ進む。
-- ログファイル、config、state、call log などの生成済み実行履歴や保存済みデータを調査するだけで、runtime 実装自体を変更しないとき。
+- 個別サブコマンドの引数、利用者向け出力、業務ロジック、high-level な制御フローだけを調べたいとき。その場合は該当する command 実装へ進む。
+- 正本仕様、prompt 部品、path placeholder の定義、設定型そのものなど、人間が所有する仕様断片を確認したいとき。その場合は対応する oracle 側を読む。
+- 生成済みログ、状態ファイル、INDEX entry などの個別内容を確認したいだけで、runtime 実装を変更しないとき。
+- 単一の具体的な helper の処理内容が既に分かっているとき。その場合はこの領域全体ではなく、対応する責務別 runtime 実装本文を直接読む。
 
 ## hash
-- 338b055a273cb20d65056ab53a0dcdd494ffeb1b3dc01209ce9f9e0bb4dbe2be
+- cbd8a533d1af588dbd17e05e6b370426611ceb96f6e5522343a763fcaae451c1
 
 # `config`
 
