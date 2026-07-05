@@ -23,7 +23,6 @@
 - 必要な操作
     - `/.cmoc/local/` を `<work-root>/.gitignore` に追加する
     - 既に tracked な `<work-root>/.cmoc/local` ツリー内ファイルは追跡を解除する (e.g. `git rm --cached`)
-    - `<work-root>/.cmoc` ツリー内ファイルは追跡を解除する (e.g. `git rm --cached`)
 - `<repo-root>/.cmoc/local` 追跡対象外保証の完了判定は、以下の両方を満たすこととする
     - `git ls-files -- <repo-root>/.cmoc/local` の出力が空である
     - `git check-ignore -q <repo-root>/.cmoc/local/.__cmoc_ignore_probe__` が成功する
