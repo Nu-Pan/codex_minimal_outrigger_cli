@@ -59,6 +59,9 @@ def test_tui_runs_editor_resolves_parameters_and_launches_codex(
     ) -> FakeResolveResult:
         exec_calls.append((parameter, kwargs))
         assert kwargs["purpose"] == "tui resolve parameter"
+        assert parameter.model_class == ModelClass.MAINSTREAM
+        assert parameter.reasoning_effort == ReasoningEffort.MEDIUM
+        assert parameter.file_access_mode == FileAccessMode.READONLY
         assert parameter.structured_output_schema_path.name == "resolve_parameter.json"
         assert "remove me" not in parameter.prompt
         assert "src を確認して必要なら直す" in parameter.prompt
