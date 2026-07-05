@@ -44,6 +44,7 @@ _CONFLICT_WRITE_BLOCKED_ROOT_NAMES = {
     ".git",
     "memo",
 }
+_STANDARD_REALIZATION_WRITE_PATHS = ("src", "test", "bin", ".gitignore")
 _OLLAMA_PROVIDER_ID = "cmoc_managed_ollama"
 
 
@@ -154,22 +155,21 @@ def _writable_roots(
             # READONLY は cmoc 上の論理的な読み取り専用であり、Codex CLI
             # sandbox は pytest cache などの一時生成物を許せるよう workspace
             # に寄せる。
-            paths = [root]
+            paths = _top_level_writable_roots(mode, root)
         case FileAccessMode.PURE_ORACLE_READ:
             paths = [root / "oracle"]
         case FileAccessMode.REALIZATION_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            # Codex profile cannot express cmoc's deny-list. REALIZATION_WRITE
-            # includes root ancillary files such as .gitignore, so limiting the
-            # sandbox to existing directories is under-permissive.
-            paths = [root]
+            # `.agents` is a Codex-reserved tree, so opening <work-root> itself
+            # would grant a write path that codex exec cannot safely mediate.
+            paths = _top_level_writable_roots(mode, root)
         case FileAccessMode.REPO_WRITE:
             # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
             # <work-root>/oracle/src/oracle/prompt_builder/parts/file_access_rule.py
-            # Codex profile cannot express cmoc's deny-list. REPO_WRITE would be
-            # under-permissive if limited to existing top-level dirs.
-            paths = [root]
+            # Keep the sandbox roots positive-only; root itself would include
+            # `.agents`, `.git`, `.codex`, memo, and cmoc runtime state.
+            paths = _top_level_writable_roots(mode, root)
         case FileAccessMode.PURE_ORACLE_WRITE:
             paths = [root / "oracle"]
         case FileAccessMode.NO_RULE:
@@ -183,8 +183,7 @@ def _writable_roots(
         if resolved not in seen and not any(
             resolved.is_relative_to(parent) for parent in seen
         ):
-            sandbox_root = _sandbox_writable_root(resolved)
-            _append_writable_root(result, seen, sandbox_root)
+            _append_writable_root(result, seen, resolved)
     for path in extra_writable_paths or []:
         resolved = path.resolve()
         if not _is_writable_path_allowed(
@@ -200,16 +199,23 @@ def _writable_roots(
         if resolved not in seen and not any(
             resolved.is_relative_to(parent) for parent in seen
         ):
-            sandbox_root = _sandbox_writable_root(resolved)
-            _append_writable_root(result, seen, sandbox_root)
+            _append_writable_root(result, seen, resolved)
     return result
 
 
-def _sandbox_writable_root(path: Path) -> Path:
-    """Codex sandbox の writable_roots に渡せる directory path へ正規化する。"""
-    if path.exists() and path.is_file():
-        return path.parent.resolve()
-    return path.resolve()
+def _top_level_writable_roots(mode: FileAccessMode, root: Path) -> list[Path]:
+    """root 自体を開かず、許可済み top-level path だけを sandbox に渡す。"""
+    paths: list[Path] = []
+    candidates = [root / name for name in _STANDARD_REALIZATION_WRITE_PATHS]
+    if mode == FileAccessMode.REPO_WRITE:
+        candidates.append(root / "oracle")
+    if root.exists():
+        candidates.extend(root.iterdir())
+    for path in candidates:
+        resolved = path.resolve()
+        if resolved not in paths and _is_writable_path_allowed(mode, root, resolved):
+            paths.append(resolved)
+    return paths
 
 
 def _append_writable_root(result: list[Path], seen: set[Path], path: Path) -> None:
@@ -264,8 +270,6 @@ def _append_workspace_write_section(
     lines: list[str], writable_roots: list[Path]
 ) -> None:
     """Codex sandbox が理解できる workspace-write section を追加する。"""
-    if not writable_roots:
-        return
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
     # FileAccessMode の細かい deny は prompt 側にも載せるが、Codex profile
     # で表現できる sandbox 境界はここで必ず渡してから起動する。

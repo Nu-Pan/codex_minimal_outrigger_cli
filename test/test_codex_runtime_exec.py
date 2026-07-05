@@ -131,7 +131,10 @@ def test_run_codex_exec_generates_profile_and_starts_codex(
     writable_roots = set(
         tomllib.loads(record["profile"])["sandbox_workspace_write"]["writable_roots"]
     )
-    assert writable_roots == {str(root.resolve())}
+    assert writable_roots == {
+        str((root / name).resolve())
+        for name in ("bin", ".gitignore", "README.md", "oracle", "src", "test")
+    }
     assert (root / "oracle" / "created.md").read_text() == "created\n"
     assert (root / "src" / "created.py").read_text() == "created\n"
     assert (root / ".gitignore").read_text() == "memo\n"
@@ -339,4 +342,3 @@ def test_run_codex_exec_allows_repo_local_read_from_linked_worktree(
     record = json.loads(recorder.read_text())
     assert record["cwd"] == str(linked.resolve())
     assert record["args"][record["args"].index("--cd") + 1] == str(linked.resolve())
-

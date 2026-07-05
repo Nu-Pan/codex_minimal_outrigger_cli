@@ -1,4 +1,5 @@
 import json
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -239,7 +240,7 @@ def test_run_codex_exec_allows_readonly_realization_diff_after_call(
     assert (root / "src" / "changed.py").read_text() == "changed\n"
 
 
-def test_run_codex_exec_allows_blocked_runtime_diffs_after_call(
+def test_run_codex_exec_profile_does_not_open_agents_tree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = make_repo(tmp_path)
@@ -249,13 +250,17 @@ def test_run_codex_exec_allows_blocked_runtime_diffs_after_call(
     write_python_executable(
         bin_dir / "codex",
         [
-            "import json, pathlib, sys",
+            "import json, os, pathlib, sys, tomllib",
             "args = sys.argv[1:]",
             "output = pathlib.Path(args[args.index('--output-last-message') + 1])",
+            "profile = args[args.index('--profile') + 1]",
+            "home = pathlib.Path(os.environ['CODEX_HOME'])",
+            "profile_path = home / f'{profile}.config.toml'",
+            "roots = tomllib.loads(profile_path.read_text())",
+            "roots = roots['sandbox_workspace_write']['writable_roots']",
+            "agents = pathlib.Path('.agents').resolve()",
+            "assert not any(agents.is_relative_to(pathlib.Path(root)) for root in roots)",
             "output.write_text(json.dumps({'ok': True}))",
-            "agents = pathlib.Path('.agents')",
-            "agents.mkdir(exist_ok=True)",
-            "(agents / 'generated.md').write_text('changed\\n')",
             "print(json.dumps({'type': 'turn.completed'}))",
         ],
     )
@@ -268,7 +273,12 @@ def test_run_codex_exec_allows_blocked_runtime_diffs_after_call(
         config=CmocConfig(),
     )
 
-    assert (root / ".agents" / "generated.md").read_text() == "changed\n"
+    profile_path = next(tmp_path.glob("codex_home/cmoc_*.config.toml"))
+    writable_roots = tomllib.loads(profile_path.read_text())["sandbox_workspace_write"][
+        "writable_roots"
+    ]
+    agents = (root / ".agents").resolve()
+    assert not any(agents.is_relative_to(Path(path)) for path in writable_roots)
 
 
 def test_run_codex_exec_allows_agent_created_cmoc_log_diff(
@@ -426,4 +436,3 @@ def test_run_codex_exec_allows_repo_write_blocked_diffs_after_call(
     )
 
     assert (root / "memo" / "blocked.md").read_text() == "blocked\n"
-

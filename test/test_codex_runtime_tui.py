@@ -117,9 +117,11 @@ def test_run_codex_tui_allows_repo_complete_prompt_from_linked_worktree(
     profile = tomllib.loads(
         Path(json.loads(call_log.read_text())["profile_path"]).read_text()
     )
-    assert profile["sandbox_workspace_write"]["writable_roots"] == [
-        str(linked.resolve())
-    ]
+    writable_roots = set(profile["sandbox_workspace_write"]["writable_roots"])
+    assert writable_roots == {
+        str((linked / name).resolve())
+        for name in ("bin", ".gitignore", "README.md", "oracle", "src", "test")
+    }
 
 
 def test_run_codex_tui_fails_when_codex_exits_nonzero(
@@ -143,4 +145,3 @@ def test_run_codex_tui_fails_when_codex_exits_nonzero(
     assert len(call_logs) == 1
     call_log = json.loads(call_logs[0].read_text())
     assert call_log["argv"][:3] == ["codex", "--profile", call_log["profile_name"]]
-
