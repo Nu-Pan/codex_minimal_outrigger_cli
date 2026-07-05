@@ -1,22 +1,21 @@
 # `_support.py`
 
 ## Summary
-- CLI テストで共有するリポジトリ作成、Git 状態確認、Codex home/profile のスタブ化、fake Ollama/systemctl 環境、doctor/init 実行、apply worktree 解決の補助関数をまとめたテスト支援モジュール。
-- 外部コマンドや管理対象 Ollama を実際に使わず、Typer CLI と subprocess 制御を検証するための最小 fixture・fake executable 生成の入口になる。
+- CLI テストで使う最小 Git リポジトリ、Codex home、fake 外部コマンド、managed Ollama/systemctl のテスト環境を組み立てる共通 helper 群を提供する。
+- doctor/init の実行、現在 branch 取得、apply 用 worktree 解決など、複数のテストから共有される外部状態・サブプロセス制御の入口を担う。
 
 ## Read this when
-- CLI テストで使う一時 Git リポジトリ、初期コミット、追跡済み ignored oracle file、現在ブランチを用意または検証したいとき。
-- Codex CLI 実行テスト向けに CODEX_HOME、profile 生成、ローカル SLM、fake 外部コマンドをどう差し替えているか確認したいとき。
-- doctor/init をテスト内で起動する共通手順や、fake managed Ollama/systemctl の環境変数・スクリプト生成を変更したいとき。
-- session state から apply worktree path を解決するテスト補助を使う、またはその前提を確認したいとき。
+- CLI の統合寄りテストで、Git repository 初期化、tracked/ignored な oracle file、Codex home、profile 生成 stub、fake 実行ファイルを用意する helper の挙動を確認または変更したいとき。
+- doctor/init 実行時に fake managed Ollama や fake systemctl がどの環境変数・一時状態・プロセス管理で動くかを調べたいとき。
+- session state から apply branch の worktree path を解決するテスト補助処理を追いたいとき。
 
 ## Do not read this when
-- 個別コマンドの仕様や本体実装を確認したいだけなら、実装側の CLI・runtime モジュールへ直接進めばよい。
-- oracle file の定義やテスト規則そのものを確認したい場合は、対応する oracle 文書を読む方がよい。
-- 単一テストケースの期待値や外部挙動を確認したいだけなら、そのテスト本文を先に読めばよい。
+- 個別コマンドの本体実装や CLI option の仕様を確認したいだけの場合。
+- oracle file の正本仕様そのもの、またはテスト方針の原文を確認したい場合。
+- 単体テストごとの期待値やシナリオを確認したい場合は、各テスト本文を直接読む方がよい。
 
 ## hash
-- 6e65299890a06f72550c82713bf8533a62636006d84fce14771d3ada4fc3ca93
+- a1c5ea11d0d0e4a46f2976deb4f3b115f2aeacb8b90a44c0fe1ac0c771c85a9e
 
 # `test_acp_builder_parameters.py`
 

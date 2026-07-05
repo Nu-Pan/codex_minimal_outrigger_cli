@@ -167,20 +167,22 @@
 # `test`
 
 ## Summary
-- cmoc の realization test 全体を扱うディレクトリで、CLI サブコマンド、Codex runtime、ACP builder、prompt rendering、packaged import、共通 test support の外部挙動と制御ロジックを検証するテスト群への入口。
-- apply/session/review/indexing/doctor/TUI などのコマンド別回帰と、root/config/file access/log/state/retry などの共通 runtime 回帰を、対象領域ごとのテストファイルに分けて配置している。
+- CLI の外部挙動、共通 runtime、Codex 実行制御、session/apply/indexing/review/doctor/TUI などを検証する realization test 群を収める。
+- 統合寄りのサブコマンド回帰から、prompt builder、Structured Output schema 参照、packaging import、Markdown renderer などの単体寄り検証まで、実装が正本仕様断片と外部契約を満たすか確認する入口となる。
+- テスト用 Git repository、Codex home、fake 外部コマンド、managed service stub など、複数テストで共有する支援 helper も含む。
 
 ## Read this when
-- cmoc の実装変更に対して、どの realization test が該当するかを探したいとき。
-- CLI 外部挙動、state/worktree/branch の遷移、Codex 呼び出し、retry、file access mode、prompt/schema、INDEX 更新、packaging import の回帰テストを確認または更新したいとき。
-- 複数サブコマンドや共通 runtime にまたがる変更の影響範囲を、テスト側の入口から絞り込みたいとき。
-- テスト用 Git repository、Codex home、fake executable、managed Ollama/systemctl、doctor/init 実行などの共通 fixture や helper を探したいとき。
+- CLI サブコマンドの外部挙動、終了コード、stdout/stderr、report、state file、worktree、branch、commit、cleanup の期待値を確認または変更したいとき。
+- Codex exec/TUI 呼び出し、profile 生成、sandbox/file access mode、retry、quota retry、CODEX_HOME、call log、subcommand log など runtime 境界のテストを探すとき。
+- session/apply/indexing/review/doctor/init/TUI の回帰シナリオや、linked worktree 上での挙動を確認したいとき。
+- ACP builder、prompt parts、Structured Output schema 参照、oracle src 由来定義の import 境界、StructDoc Markdown rendering など、実装部品の期待値をテスト側から確認したいとき。
+- テスト repository や fake executable など、統合寄りテストの共通 fixture/helper の挙動を確認または変更したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片そのものを確認したい場合は、oracle 配下の該当 doc/src/test を読む。
-- 実装本文の責務や内部 helper の詳細だけを調べたい場合は、src 配下の対応 module を直接読む。
-- INDEX.md エントリー生成規則や routing 文書の標準だけを確認したい場合は、routing 仕様側を読む。
-- 単一の既知テストファイルを読むべきことが分かっている場合は、この階層全体ではなくそのテストへ直接進む。
+- 正本仕様断片そのものを確認したい場合は、oracle 側の該当文書または実装を読む方がよい。
+- 個別実装 module の内部構造、helper のアルゴリズム、型定義だけを調べたい場合は、対応する実装側を直接読む方がよい。
+- テスト期待値ではなく、利用者向けの CLI 仕様や routing 文書の作成規則だけを確認したい場合は、より直接の仕様断片や実装入口を読む方がよい。
+- Codex CLI や LLM の出力品質そのものを評価したい場合は、この対象は目的に合わない。
 
 ## hash
-- 91c9133ff0b0e93e100623a8209c452205b3fa8bbb6da983ff02c1efeacc1c3a
+- a884cbf955c3037a7404ec0ecf2422d62b856eab7048bdd2c943afeb940c08a8
