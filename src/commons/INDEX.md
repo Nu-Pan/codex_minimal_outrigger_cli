@@ -262,23 +262,23 @@
 # `runtime_doctor.py`
 
 ## Summary
-- 共通実行前修復を実行する処理を扱う。gitignore 修復、.agents の追跡対象化、設定同期、cmoc provider の model に必要な Ollama 環境準備をまとめ、doctor 修復差分だけを通常の user staged 差分から分離して commit する。
-- 一時 git index による repair commit 作成、既存 staged patch の復元、Ollama archive 取得、user systemd service 起動確認、model pull までの実行時制御が含まれる。
+- 共通実行前の doctor preprocess を実装する。cmoc ignore、.agents の追跡確保、runtime config 同期、cmoc 管理 Ollama の準備を行い、修復差分だけを専用 commit として分離する処理を担う。
+- cmoc provider を使う model が設定されている場合に、Ollama の取得、user systemd service の作成・起動確認、127.0.0.1:11434 の listener 検証、model pull を行う入口になる。
 
 ## Read this when
-- 実行前 doctor preprocess の挙動、修復対象、commit 対象、既存 staged 差分の保持を確認・変更したいとき。
-- .gitignore や .agents/.gitkeep を doctor がどの条件で修復し、どのように git index へ反映するかを調べるとき。
-- cmoc provider の model 利用時に、Ollama のインストール先、起動方法、systemd user service、接続確認、model 取得の流れを確認・変更したいとき。
-- doctor preprocess が出す CmocError の条件や、git/systemctl/ollama 外部コマンド失敗時の扱いを調べるとき。
+- cmoc コマンド実行前に行われる自動修復、修復 commit、既存 staged 差分の退避・復元に関する挙動を確認または変更したいとき。
+- `.gitignore`、`.agents/.gitkeep`、`.cmoc` の追跡状態を doctor preprocess がどう扱うかを調べたいとき。
+- cmoc 管理 Ollama のインストール先、systemd user service、ポート確認、model 準備、関連エラー処理を確認または変更したいとき。
+- runtime config の model provider が `cmoc` の場合だけ行われるローカル SLM 準備処理を追いたいとき。
 
 ## Do not read this when
-- 設定ファイルの schema、既定値、同期内容そのものを調べたいだけのときは、設定定義や設定同期の実装を読む。
-- git コマンド実行 wrapper の基本仕様や git ignore pattern の生成規則だけを調べたいときは、git 関連の共通実装を読む。
-- CLI サブコマンドの引数解析や doctor preprocess の呼び出し元だけを調べたいときは、コマンド層を読む。
-- Ollama を使わない provider の model 選択や Codex 設定の意味だけを調べたいときは、model/provider 設定を扱う実装を読む。
+- runtime config の schema、読み込み、同期そのものを調べたいだけなら、設定処理を担当する対象を読む。
+- git コマンド実行 wrapper や cmoc ignore pattern の基本仕様だけを調べたいなら、git/runtime helper 側を読む。
+- Ollama を使わない通常の command 実行フローや agent orchestration の詳細を調べたいだけなら、その command 実装を読む。
+- doctor preprocess の正本仕様を確認したいだけなら、対応する oracle doc を読む。
 
 ## hash
-- 79c1b657321db7a8284a1f8bf38febe85d04dfe847844e613ef05de45c512fac
+- 1258968173dad3bcc8bba327343370ee4fd47d6daef96cc20f1db60c977c712d
 
 # `runtime_errors.py`
 

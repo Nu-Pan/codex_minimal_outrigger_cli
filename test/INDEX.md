@@ -1,20 +1,20 @@
 # `_support.py`
 
 ## Summary
-- CLI テストで共有する pytest/CliRunner 用の補助関数群。最小 Git リポジトリ作成、Codex home/profile の差し替え、fake 外部コマンド生成、doctor 実行環境、apply worktree 解決など、複数テストから使う共通セットアップを担う。
+- cmoc CLI の realization test で共有するテスト補助関数群を置く。最小構成の Git リポジトリ作成、Codex home/profile のスタブ化、fake Ollama/systemctl 環境、doctor 実行、session state から apply worktree を解決する入口を提供する。
 
 ## Read this when
-- cmoc CLI のテストで使う一時 Git リポジトリ、tracked かつ ignored な oracle file、Codex home、Codex profile のスタブを用意する共通 fixture 相当の処理を確認・変更したいとき。
-- doctor や profile 作成を伴うテストで、fake Ollama、fake systemctl、管理対象 Ollama 環境の挙動を調べたいとき。
-- テスト内で fake Python executable を生成する方法、現在 branch の確認、apply session state から worktree path を解決する方法を再利用または修正したいとき。
+- CLI テストで使う一時 Git リポジトリ、tracked かつ ignored な oracle file、Codex home、Codex profile、fake 外部コマンドを準備したいとき。
+- doctor や subprocess 制御を伴うテストで、managed Ollama/systemctl を実サービスに依存せず動かす fixture 相当の補助処理を確認したいとき。
+- session state に記録された apply branch から apply worktree path を検証するテスト補助処理を探しているとき。
 
 ## Do not read this when
-- 個別 CLI コマンドの期待出力や終了コードなど、テストケース本体を確認したいだけのときは、該当する test file を直接読む。
-- 本番実装の Git 操作、Codex 実行、Ollama 管理、apply worktree 計算の仕様を確認したいときは、対応する src 側の実装または oracle file を読む。
-- INDEX.md の生成規則や oracle/realization の責務境界を確認したいときは、このテスト補助ではなく該当する正本仕様を読む。
+- 個別サブコマンドの期待出力やユーザー向け挙動そのものを確認したいときは、該当するテスト本文を読む。
+- プロダクト実装側の Git 操作、Codex 実行、doctor、apply worktree 生成ロジックを変更したいときは、実装側の該当 module を読む。
+- oracle file の定義やテストルールの正本仕様を確認したいときは、oracle 側の該当文書を読む。
 
 ## hash
-- 65e8db6f52f5e82aa6a34618ff8299eebdbb18546a8bb15d2e6087d5054f7f1e
+- e8108928643923f68af1cbf1c8be1b197b39998140d2f26461635a3f73b6dbf6
 
 # `test_acp_builder_parameters.py`
 
@@ -249,20 +249,20 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor/init CLI と runtime doctor 周辺の統合テスト。`.cmoc` 設定生成・ignore/untrack、`.agents` 修復コミット、managed ollama の配置・systemd user service、cmoc provider model pull、既存 staged 変更を巻き込まない修復、local SLM profile 準備時の doctor 起動を検証する。
+- doctor/init CLI と managed Ollama 周辺の外部挙動を検証する realization test。git 修復、`.cmoc` の ignore/untrack、`.agents` の追跡、既存 staged 変更を汚さない repair commit、default config 同期、Ollama service 検証、cmoc provider model pull、local SLM profile 準備時の doctor 実行を扱う。
 
 ## Read this when
-- doctor preprocess、init、`.cmoc/config.json`、`.gitignore`、`.agents/.gitkeep`、managed ollama、cmoc model provider、local SLM profile 準備の外部挙動を変更する時。
-- doctor が Git の tracked/ignored/staged 状態をどう修復・保持するべきかを確認したい時。
-- 既定設定の同期で、人間が書いた設定値を上書きしないことを検証したい時。
+- doctor preprocess、init、runtime config 同期、managed Ollama の install/service/model pull、local SLM profile 作成時の自動 doctor 実行を変更する時。
+- `.cmoc` を git 追跡対象外にする挙動、既存 tracked `.cmoc` の untrack、`.gitignore` 修復、`.agents/.gitkeep` の追跡、repair commit が人間の staged 変更を含めない制御を確認したい時。
+- Ollama service の active/main PID/listener/executable 照合や、cmoc provider の重複 model pull 抑制に関するテスト期待値を確認したい時。
 
 ## Do not read this when
-- 個別の低レベル helper の単体挙動だけを確認したい時。
-- doctor/init 以外の CLI コマンドや agent call 実行フローを調べる時。
-- oracle 側の正本仕様や config schema の定義そのものを確認したい時。
+- 通常の agent call orchestration、prompt 生成、apply fork、path model など doctor/init と managed Ollama に直接関係しない実装やテストを調べる時。
+- Codex profile 全般の形式を調べたいだけで、managed Ollama provider や port 不在時の doctor 実行に関係しない時。
+- oracle file の正本仕様を確認したい時。ここでは realization 側の外部挙動テストだけを扱う。
 
 ## hash
-- 0828ac0649ca7513aac6df5a6fe0a13edc3f947cd601c7821726e9aa04a3b4a7
+- 8a04df77d2ab4b807e52a7005458605db1b660e31e21157b791c6f77b32d2411
 
 # `test_indexing_cli.py`
 

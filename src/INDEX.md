@@ -61,26 +61,25 @@
 # `commons`
 
 ## Summary
-- cmoc の共有 runtime helper 群を収める実装領域。CLI 共通実行ライフサイクル、Codex 呼び出し、INDEX 更新 preflight、apply process 管理、config、content hash、doctor 前処理、error、git、logging、path、result、state など、複数の command から使われる実行時支援を扱う。
-- 個別 helper の実装だけでなく、runtime 系 API をまとめて再公開する入口や、Codex exec/TUI の互換 import 境界も含む。
+- cmoc の共有 runtime 実装を集める領域。Codex 起動、CLI 共通実行、config、content hash、doctor 前処理、error、git、logging、path、result、state、apply process 管理、INDEX.md 自動更新など、複数コマンドから使われる実行時支援を扱う。
+- runtime 系 API の集約入口と、責務別の runtime_* 実装本文へのルーティング起点になる。
 
 ## Read this when
-- CLI サブコマンドから共通利用される runtime helper の所在を探したいとき。
-- Codex exec/TUI 呼び出し、profile、sandbox、CODEX_HOME、Structured Output、retry、quota/capacity、call log、preflight の実装を確認または変更したいとき。
-- INDEX.md の自動更新、entry 再生成、hash による再利用、indexing commit、indexing preflight 連携を確認または変更したいとき。
-- apply abandon に伴う apply process や Codex subprocess group の特定・停止、pid file、worktree 解決、process tracking を調べたいとき。
-- config JSON の読み書き、content hash 保存、doctor 前処理、CmocError 表示、git wrapper、runtime logging、path 解決、実行結果モデル、session state 永続化などの共通 runtime 実装を扱うとき。
-- 複数の runtime helper をまとめて import している呼び出し元の依存先や、runtime API の公開入口を確認したいとき。
+- 複数の CLI サブコマンドや上位処理から共有される runtime helper の所在を探したいとき。
+- Codex exec/TUI 呼び出し、profile、preflight、call log、quota/capacity retry、Structured Output 検証に関する実行基盤を確認または変更したいとき。
+- work root 検査、doctor 前処理、サブコマンドログ、終了コード化、例外表示など、CLI 共通ライフサイクルを扱う実装を探したいとき。
+- config 読み書き、git wrapper、path 解決、content hash、runtime state、共通 result/error/logging など、個別コマンドではなく共通 runtime の責務を確認したいとき。
+- apply abandon の process 特定・停止、pid file、Codex subprocess tracking、linked worktree 解決を扱う実装を探したいとき。
+- INDEX.md の indexing preflight、自動更新、entry 再生成、hash による再利用、indexing commit を扱う実装を確認または変更したいとき。
 
 ## Do not read this when
-- 個別 CLI サブコマンドの利用者向け仕様、引数、業務ロジック、上位制御フローだけを調べたいとき。その場合は command 実装側を読む。
-- oracle file、realization file、path keyword、INDEX.md entry の文章基準など、正本仕様断片そのものを確認したいとき。その場合は oracle 側の文書や実装を読む。
-- 生成済み INDEX.md の個別 entry 内容や、特定 directory のルーティング判断だけを確認したいとき。その場合は対象 directory の INDEX.md または対象本文を読む。
-- subcommand log、runtime path、config 型、error 型などの利用箇所ではなく仕様意図や正本定義を確認したいだけのとき。
-- 公開 runtime API に加える必要が決まっていない、単一 command 内だけの小さな処理を実装したいとき。
+- 個別サブコマンドの利用者向け仕様、引数、画面出力、上位制御フローだけを調べたいときは、その command 実装へ進む。
+- oracle file や realization file の正本仕様、path keyword の定義、INDEX.md entry の文章基準を確認したいだけなら、対応する oracle 側の文書や実装を読む。
+- 生成済み INDEX.md の個別 entry 内容や特定 directory のルーティング判断を確認したいだけなら、その directory の INDEX.md または対象本文を読む。
+- 特定の runtime 処理の責務がすでに分かっている場合は、この階層全体ではなく該当する責務別 runtime 実装本文を直接読む。
 
 ## hash
-- 3dfc804e8caf6978512fb57ceffd2a982b479d23a1d39bd966474a070188722f
+- b5a862eeeaddbd31fdaac63d76cb06c9b1f6d3c42b3274f0c94760281d6f425a
 
 # `config`
 
