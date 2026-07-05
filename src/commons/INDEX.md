@@ -246,23 +246,23 @@
 # `runtime_doctor.py`
 
 ## Summary
-- 共通実行前の doctor preprocess を担う実装。cmoc ignore 設定、`.agents` の追跡可能化、cmoc 管理 Ollama の導入・user service 起動確認・model 取得を行い、修復差分だけを一時 index 経由で commit し、既存 staged 差分を復元する。
-- git index を直接汚さずに HEAD 起点の一時 index で修復 commit を作る処理、systemd user service と `/proc` を使った Ollama listener 検証、cmoc provider model の重複排除と取得確認への入口になる。
+- 共通実行前の doctor preprocess を実装し、cmoc 管理領域の ignore 設定、.agents の追跡用 placeholder、doctor 修復差分の専用 commit、cmoc provider 向け Ollama user service と model 準備を扱う。
+- git index を一時 index で復元・commit する処理と、systemd user service・/proc・Ollama HTTP API を使った 127.0.0.1:11434 の cmoc managed ollama 検証処理への入口になる。
 
 ## Read this when
-- 実行前修復、doctor preprocess、`.gitignore` 修復、`.agents` の tracked placeholder、`.cmoc/local` の追跡解除、修復 commit、既存 staged hunks の保護に関する挙動を確認または変更したいとき。
-- cmoc 管理 Ollama のインストール先、archive 取得、user service file 生成、`127.0.0.1:11434` の service 所有確認、HTTP 到達確認、model pull/show の制御を調べたいとき。
-- config の cmoc provider model からローカル SLM を準備する流れや、設定読み込み失敗時の fallback を確認したいとき。
-- git command、systemctl、tar、urllib、`/proc` 参照の失敗を `CmocError` として利用者向けに返す境界を調べたいとき。
+- 実行前修復、doctor preprocess、cmoc 管理ファイルの git ignore、.agents の追跡状態、または doctor 修復 commit の挙動を確認・変更したいとき。
+- cmoc provider の model 利用時に Ollama を自動インストール・起動・検証・pull する処理を確認・変更したいとき。
+- user staged hunks を壊さずに doctor 差分だけを commit する git index 操作や、一時 index を使う失敗時挙動を調べたいとき。
+- 127.0.0.1:11434 の listener が cmoc managed ollama service に属するかを /proc と systemctl で検証する制御を調べたいとき。
 
 ## Do not read this when
-- 個別 CLI command の引数定義や dispatch だけを調べたい場合は、CLI 層の実装を先に読む。
-- 設定ファイルの schema、読み込み規則、model provider 定義そのものを調べたい場合は、config と runtime config の実装を読む。
-- 汎用 git wrapper や cmoc ignore pattern の基本仕様だけを調べたい場合は、runtime git 側を読む。
-- Ollama 以外の provider 実行、LLM 呼び出し、agent 実行制御を調べたい場合は、それぞれの実行系の実装を読む。
+- 通常の runtime config 読み込み、CmocConfig の型定義、CmocError の表現、または汎用 git command wrapper の基本仕様だけを確認したいとき。
+- CLI subcommand の引数定義や利用者向け出力形式を調べたいとき。
+- Ollama 以外の model provider、Codex 設定 schema、または agent call の本体制御を確認したいとき。
+- doctor preprocess の正本仕様そのものを確認したいときは、対応する oracle doc を直接読む。
 
 ## hash
-- d89d26693fb7a29e7b0464ae5fe384c018e30b709d507514ac4774ace363bdcd
+- 5ca39c6ba8809e32bce37889ff64554aa25a22f8d45dae037244b49b95fa46f9
 
 # `runtime_errors.py`
 

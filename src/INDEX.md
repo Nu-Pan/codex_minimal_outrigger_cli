@@ -58,22 +58,22 @@
 # `commons`
 
 ## Summary
-- cmoc の実行時に複数箇所から共有される runtime helper 群をまとめる領域。
-- Codex 実行、設定、git、path、logging、state、error、INDEX 更新 preflight など、サブコマンド横断の共通処理へ進む入口になる。
-- 対象自体は共有 runtime 層のまとまりであり、個別 API の挙動や失敗時処理は下位要素で確認する。
+- cmoc の実行時に複数モジュールから共有される runtime helper 群を収める領域。
+- Codex 実行、設定、path、git、logging、state、doctor、INDEX 更新、apply process 管理など、サブコマンド横断の共通処理への入口になる。
+- 個別 helper の詳細ではなく、runtime 共通機能のまとまりと下位要素へ進むための判断材料を扱う。
 
 ## Read this when
-- cmoc の複数モジュールから使われる runtime 共通処理の配置場所や担当領域を探したいとき。
-- Codex 実行、設定変換、git 操作、path 解決、ログ、状態管理、doctor 前処理、INDEX 更新 preflight などの共通 helper の読む先を選びたいとき。
-- CLI サブコマンド実装から呼ばれる共通ライフサイクル、実行結果型、利用者向けエラー、永続状態や補助ファイル保存先の実装入口を確認したいとき。
+- CLI サブコマンド横断で使われる共通 runtime 処理の配置先を探したいとき。
+- Codex 実行、config、path、git、logging、state、doctor、INDEX 更新、apply process 管理などの runtime 基盤のどの下位要素へ進むべきか判断したいとき。
+- 複数の runtime API をまとめて参照する公開入口や、runtime helper 群の責務境界を確認したいとき。
 
 ## Do not read this when
-- 特定の CLI サブコマンド固有の引数、出力、業務ロジックを確認したいときは、そのサブコマンド実装を読む。
-- oracle 側の正本仕様断片、prompt、Structured Output schema、path model、config 型定義そのものを確認したいときは、対応する oracle 側を読む。
-- 個別 helper の詳細な入出力や失敗時挙動をすでに特定できているときは、この領域全体ではなく該当する下位要素を直接読む。
+- 個別サブコマンド固有の業務ロジック、CLI 引数、利用者向け workflow を調べたいときは、そのサブコマンド実装を読む。
+- 正本仕様断片、prompt、Structured Output schema、path model など oracle 側の定義を確認したいときは、対応する oracle file を読む。
+- テスト固有の期待値や外部挙動を確認したいときは、該当する test 側の対象を読む。
 
 ## hash
-- 0afa209554744703cba1d66144eb2b0a8b6ece415c4edf6c0d880317f6f437d4
+- ae88b6c890bc5c003c8c2739e99797def34b5e4f5717a5e54d94807a9fd6fe0b
 
 # `config`
 

@@ -334,21 +334,25 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor/init 系 CLI とローカル SLM 準備の統合テスト。git 状態修復、`.cmoc/local` の ignore/untrack、`.agents` 管理、managed ollama の設置・systemd service 検証、設定生成・同期、既存 staged 変更を巻き込まない修復 commit、linked worktree 対応を外部挙動として検証する。
+- doctor と init の CLI 挙動、および doctor preprocess が Git 状態、管理対象外領域、managed Ollama、Codex profile 準備に与える副作用を検証する realization test。
+- 一時リポジトリ上で、設定ファイル生成・同期、追跡対象からの除外、修復コミット、既存 staged/unstaged 変更の保持、linked worktree 対象化、Ollama service 検証と model pull の制御を外部挙動として確認する。
+- runtime doctor、runtime config、runtime Codex profile、CLI command の連携変更時に、利用者から見える Git/ファイルシステム/サービス準備の境界を確認する入口となる。
 
 ## Read this when
-- `doctor` コマンドの前処理、git 修復 commit、`.gitignore`、`.agents`、`.cmoc/local`、managed ollama の起動・検証・モデル pull に関するテストを確認または変更するとき。
-- `init` コマンドによる `.cmoc/config.json` の生成、git 追跡、既存人間設定を上書きしない default 同期の挙動を確認または変更するとき。
-- ローカル SLM 用 Codex profile 準備が ollama port 不在時に doctor 相当の準備を走らせる挙動を確認または変更するとき。
-- linked worktree 上で doctor が現在の worktree だけを対象にするか、または既存 staged 変更を修復 commit に混入させないかを検証したいとき。
+- doctor preprocess が作成・修復する `.gitignore`、`.agents`、`.cmoc/local`、managed Ollama 関連ファイル、修復コミットの対象を変更する場合。
+- init が `.cmoc/config.json` を生成・追跡し、既存の人間設定を上書きせず default を補完する挙動を変更する場合。
+- doctor が既存の staged 変更、unstaged hunk、rename、追跡済みだった local cache をどう扱うかを確認・変更する場合。
+- linked worktree 上で doctor を実行した時に、元リポジトリではなく現在の worktree を対象にする挙動を確認する場合。
+- managed Ollama service の main pid、listener process、実行ファイル一致、provider model pull、local SLM profile 準備時の doctor 起動条件を変更する場合。
 
 ## Do not read this when
-- doctor/init の CLI 外部挙動ではなく、個別 helper の純粋な単体ロジックだけを確認する場合は、対象 helper により近いテストまたは実装を読む。
-- oracle 側の設定 schema や model spec の正本定義を確認したい場合は、oracle 配下の該当文書または src を読む。
-- Codex profile 生成全般を確認したいだけで、doctor による managed ollama 準備との連携が関係しない場合は、runtime_codex_profile 周辺のより直接のテストを読む。
+- doctor/init 以外の CLI command の表示、引数、通常処理だけを確認したい場合。
+- 設定 schema や model spec の定義そのものを確認したい場合は、実装または oracle 側の定義を直接読む。
+- Ollama の実インストール手順や systemd unit の一般仕様を調べたいだけの場合。
+- INDEX 生成やルーティング文書の規則を確認したい場合。
 
 ## hash
-- 9e0061322507891ee434a5fe3db08e885c2f23efb49263084cef765b4f042d04
+- 223f4e2b603263180a534e8be12ab0028bd9021398160697b6f5ba199058fcb0
 
 # `test_indexing_cli.py`
 
