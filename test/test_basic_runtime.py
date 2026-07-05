@@ -243,6 +243,18 @@ def test_config_json_preserves_falv_recovery_count() -> None:
     assert config_to_dict(config)["codex"]["num_try_falv_recovery"] == 3
 
 
+def test_config_json_preserves_oracle_member_order() -> None:
+    data = config_to_dict(CmocConfig())
+
+    assert list(data["codex"]["model"]) == [
+        "mainstream",
+        "flagship",
+        "efficiency",
+        "minimum",
+    ]
+    assert list(data["codex"]["reasoning_effort"]) == ["low", "medium", "high"]
+
+
 def test_load_config_missing_points_to_doctor(tmp_path: Path) -> None:
     root = make_repo(tmp_path)
 
