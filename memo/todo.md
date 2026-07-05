@@ -6,11 +6,6 @@
 
 # cmoc の作業品質
     
-## cmoc 注入プロンプトとリポジトリ固有指示の整合性を取りたい
-
-- ファイルアクセス規則系とか、今はたまたまセーフなだけで普通に危ない
-- oracle の開発ルール系も合わせて見直したい
-
 ## OpenAI 公式のベストプラクティスを取り入れる
 
 - [Reasoning best practices | OpenAI API](https://developers.openai.com/api/docs/guides/reasoning-best-practices)
@@ -158,6 +153,11 @@
 - 複数エージェントに全く同じ作業をやらせて、その結果を１つにマージすれば、調子がいい時の結果を得られる確率が上がるはず、みいたいなやつ
 - 当然ながら、トークン消費は激しい
 - SLM バックエンドでできるだけ高い性能を得たいならこれか？
+
+## `AGENTS.md` の扱いが宙ぶらりん
+
+- 今は `cmoc tui` からの起動を前提として、`AGENTS.md` を消している
+- 若干の気持ち悪さがある
 
 # トークン消費効率
 
@@ -384,16 +384,6 @@
 - 最後の review oracle / apply レポートはどれか
 - apply が完了扱いか未完了扱いか
 - merge 可能そうか
-
-## `cmoc dector` サブコマンド
-
-- `cmoc init` を `cmoc doctor` で置き換えて「`<cmoc-root>` ツリーを cmoc を正しく実行可能な状態にする」くらいにしたほうが良いかも
-- 全サブコマンド共通の事前条件検証処理を明示的に呼び出せるコマンド、っていう立ち位置かも
-- codex が呼べるか
-- Structured Output が使えるか
-- .cmoc が gitignore されているか
-- oracle/INDEX.md があるか
-- 必要な git 状態か
 
 ## `cmoc kaizen fork` サブコマンド
 
