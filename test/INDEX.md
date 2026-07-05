@@ -122,25 +122,25 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断して検証する realization test。root placeholder 解決、linked worktree と main worktree の扱い、run worktree の安全境界、config 読み込み、CmocError の Markdown 表示、CLI error の stdout report、subcommand log、FileAccessMode と Codex profile、binary 判定、session/apply branch state 解析をまとめて扱う。
-- 個別サブコマンドの詳細仕様ではなく、複数機能の実行前提になる共通 runtime 挙動の回帰確認入口として位置づけられている。
+- 基礎 runtime 境界を横断する回帰テスト群。root placeholder と worktree 解決、config 検証、CmocError の表示、CLI error の stdout report、subcommand log、FileAccessMode から Codex sandbox/profile への変換、binary 判定など、個別サブコマンドより下の共通実行契約をまとめて検証する。
+- 共通 fixture と root 状態を共有する前提が強く、分割すると読み取り文脈が散るため、basic runtime 契約の凝集したテスト入口として扱う。
 
 ## Read this when
-- root/work/run/repo root の解決、root placeholder 変換、linked worktree 実行時の root 境界を確認または変更する。
-- CmocError、CLI 引数解析 error、stdout/stderr の report 出力、call stack 表示、preflight 失敗時の副作用抑制を確認または変更する。
-- subcommand log の作成条件、timestamp 衝突時の log file 分離、log 作成前 check の失敗挙動を確認または変更する。
-- CmocConfig の既定値、config_from_dict の型検証、Codex model/reasoning effort 名の扱いを確認または変更する。
-- FileAccessMode、Codex sandbox profile、追加書き込み許可 path、oracle/memo/.git/.agents/.codex などの許可境界を確認または変更する。
-- session/apply branch 名から session id を得る処理や、破損 branch 名に対する state 読み込み拒否を確認または変更する。
-- binary 判定、duration 表示、`.cmoc/local` ignore 追加、起動 wrapper の missing venv report など、共通 runtime の小さな契約を変更する。
+- root/repo/work/run root の解決、linked worktree、run worktree 作成・削除の安全条件に関する実装変更や回帰調査を行うとき。
+- cmoc config の既定値、型検証、Codex model/reasoning effort 設定、local SLM provider profile の生成条件を変更するとき。
+- CmocError、Click parse error、CLI preflight、completion probe、stdout/stderr の error report 挙動を確認するとき。
+- subcommand log の生成条件、timestamp 衝突時の扱い、pre-log check failure 時の副作用抑制を変更するとき。
+- FileAccessMode、Codex sandbox/profile の writable root、追加書き込み許可 path、oracle conflict write、repo local read 許可の境界を変更するとき。
+- binary 判定、duration 表示、起動 wrapper の call stack path 表示、`.cmoc` ignore pattern 追加など、共通 runtime の小さな外部契約を触るとき。
 
 ## Do not read this when
-- 個別サブコマンド固有の business logic、出力内容、workflow の詳細だけを確認したい場合は、そのサブコマンドの専用テストを読む。
-- oracle file の正本仕様そのもの、仕様文書の編集方針、INDEX.md 生成規則を確認したい場合は oracle 側の該当文書を読む。
-- 単一 helper の内部実装だけを局所的に変更し、root 境界や CLI 表示や Codex profile などの共通 runtime 契約に影響しないことが明らかな場合は、該当実装とより狭いテストを優先する。
+- 個別サブコマンド固有の業務フロー、出力 schema、prompt 内容だけを確認したいとき。
+- oracle 文書や oracle src 自体の正本仕様断片を調べたいとき。
+- テスト支援 helper の実装だけを確認したいときは、支援コード側を直接読む方がよい。
+- runtime ではないドメイン処理、UI、生成 report 本文、LLM 出力品質の検証方針だけを扱うとき。
 
 ## hash
-- f0d9dd0734e7108fdd31790a870dec2ca53b23fc0a9391a6d452aeecec363b3f
+- 9a75d79e1551fad16edb425ad1d2247696424dc43e25b33274299290190636db
 
 # `test_cli_tui.py`
 
@@ -164,22 +164,24 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI/TUI 起動まわりの realization test。Codex subprocess のプロセスグループ分離、profile 生成、sandbox writable roots、cwd、schema 出力先、local SLM provider 設定、呼び出しログ、エラー報告を、スタブした codex 実行ファイルで検証する。
-- agent call 後の差分を post validation で差し戻さない方針を広く検証する。oracle、.git、.agents、.codex、memo、README、gitignore、ignored artifact、cache、venv、cmoc log、linked worktree など、各 file access mode と runtime 生成物の扱いを確認する。
-- extra read path の事前許可チェック、pure oracle read の実行位置、linked worktree からの repo-local read、missing Codex CLI や非ゼロ終了時の CmocError と console report も扱う。
+- Codex CLI 実行・TUI 呼び出しの runtime 挙動を検証する realization test。Codex subprocess の起動引数、profile 生成、sandbox writable_roots、schema 出力、cwd、linked worktree、process group tracking、Codex CLI 欠落・非ゼロ終了時のエラー報告を扱う。
+- agent call 後の file access 差分を post validate しない方針を、oracle・.git・.agents・.codex・memo・README・ignored artifact・一時 cache・cmoc local log などの変更ケースで確認する。
 
 ## Read this when
-- Codex CLI の exec/tui 呼び出し引数、profile TOML、CODEX_HOME、sandbox 設定、cwd、prompt stdin、output schema の保存場所に関する挙動を変更・確認したいとき。
-- FileAccessMode と Codex 呼び出し後の差分検査の関係、特に forbidden path や runtime/cache/log/ignored file の差分を許容する挙動を変更・確認したいとき。
-- run_codex_subprocess、run_tracked_codex_subprocess、run_codex_exec、run_codex_tui の失敗時挙動、process tracking、schema retry、linked worktree 対応を調べるとき。
+- Codex CLI/TUI を起動する runtime 層、特に run_codex_exec、run_codex_tui、run_codex_subprocess、run_tracked_codex_subprocess の外部挙動を変更する。
+- FileAccessMode ごとの Codex profile、sandbox 設定、writable_roots、extra_read_paths、extra_writable_paths、cwd、linked worktree の扱いを確認・変更する。
+- Codex 呼び出し後の forbidden diff、ignored diff、一時 cache、runtime log、blocked root 配下の差分を許容するかどうかの制御を確認する。
+- structured output schema の retry、schema state 保存場所、output-last-message、prompt stdin、call log、missing codex CLI、Codex 非ゼロ終了時のエラー表示を変更する。
+- Codex subprocess の process group 分離や apply process tracking 環境変数の扱いを変更する。
 
 ## Do not read this when
-- agent call parameter の enum や値オブジェクト自体の定義だけを確認したいときは、basic 側の実装またはそのテストを直接読む。
-- Codex 以外の runtime、repository 作成 helper、git helper、test support utility の詳細を調べたいだけなら、それぞれの support 実装・テストを読む。
-- oracle/realization の概念定義や file access mode の正本仕様を確認したい場合は、oracle doc/src の該当箇所を読む。
+- agent call parameter の値オブジェクト自体、model class、reasoning effort、file access mode の定義だけを確認したい場合。
+- cmoc config の schema や model/provider 定義そのものを確認したい場合。
+- Codex 以外の外部コマンド実行、Git 操作 helper、fixture 作成 helper の一般挙動だけを調べたい場合。
+- oracle file や realization file の分類定義・パスモデルの正本仕様を確認したい場合。
 
 ## hash
-- e43360607d9c6d637d97ab082632721d0dad162c214aca99e2c4f837ede13835
+- 040fdc7301db6f4f681af29a32f311daaefd84f7af0b7b68f3524175bff86a6d
 
 # `test_codex_runtime_home.py`
 
@@ -247,40 +249,42 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor/preprocess 系のテスト。git 管理状態の修復、`.gitignore`・`.agents`・既定設定の同期、repo-local Ollama の起動、既存 staged 変更を修復 commit に混ぜないこと、local SLM 用 Codex profile 作成時の doctor 自動実行を外部挙動として検証する。
+- doctor 実行によるリポジトリ初期修復、既定設定同期、既存 staged 変更の温存、ローカル SLM 用 Codex profile 準備時の doctor 自動実行を検証するテスト。
+- git 状態、設定ファイル、ローカル ollama port、Codex profile 生成が doctor と連動して期待どおりになるかを確認する入口。
 
 ## Read this when
-- doctor コマンドまたは preprocess が repo 初期化・修復時に作るファイル、commit 対象、git index の扱いを変更する。
-- `.cmoc/config.json` の既定値同期で、人間が設定済みの値を保持しつつ不足キーを補う挙動を確認・変更する。
-- repo-local Ollama の port ファイル生成、起動確認、local SLM profile 生成との連携を変更する。
-- doctor 実行時に既存の staged 変更を保持し、修復 commit に含めない制御を確認する。
+- doctor の前処理が gitignore、管理対象ディレクトリ、設定ファイル、ローカル ollama 起動状態をどう整えるか確認したいとき。
+- 既存の staged 変更を doctor の repair commit に混ぜない挙動を変更・検証したいとき。
+- ローカル SLM 用 profile 準備時に port 情報が欠けている場合の復旧経路を確認したいとき。
+- doctor と設定同期、ollama port、Codex profile 生成の結合テストを追加・修正したいとき。
 
 ## Do not read this when
-- 個別コマンドの CLI 引数解析だけを確認したい場合。doctor 実行後のリポジトリ副作用に関係しないなら、より直接の CLI テストまたは実装を読む。
-- Codex profile の一般的な TOML 生成だけを確認したい場合。doctor 自動実行や local Ollama port の補修に関係しないなら、profile 生成側のテストを読む。
-- 設定 schema や既定値そのものの一覧を確認したい場合。この対象は設定値定義ではなく、doctor による同期結果を検証する。
+- doctor の CLI 実装本体や設定 merge の実装詳細を読みたいだけなら、実装側の該当モジュールを読む。
+- 個別 helper の単体テストや、doctor と無関係な profile 生成だけを調べたい場合は、より直接のテストまたは実装を読む。
+- INDEX ルーティング、oracle 文書、またはファイル分類ルールそのものを調べたい場合は対象外。
 
 ## hash
-- 273857ad2dd5617707946057ab037f37005bb2f2968d4c137d2ec8298d64d990
+- f10e64ff41d79f04a6622bc66383a1fbd948c302f5665e08a62443b7a5a38512
 
 # `test_indexing_cli.py`
 
 ## Summary
-- INDEX.md 生成・更新、indexing preflight、indexing サブコマンド、INDEX.md conflict 解決の外部挙動を検証する回帰テスト。対象列挙、hash 再利用、Codex 生成、commit 対象、dirty worktree 拒否、linked worktree、空ディレクトリ、memo 除外、symlink cycle 除外を同じ routing 更新ワークフローとして扱う。
+- INDEX.md 生成・更新に関する CLI と preflight の外部挙動を検証する回帰テスト群。対象列挙、hash 再利用、Codex によるエントリー生成、commit 対象、linked worktree、dirty worktree 拒否、INDEX.md conflict 解決、entry schema 検証、並列生成境界を扱う。
+- routing document 更新ワークフローを一体として観測するため、fixture と git 状態を共有しながら indexing subcommand と indexing preflight の境界を確認する。
 
 ## Read this when
-- indexing CLI または indexing preflight の成功・失敗条件、commit 条件、git worktree 上での対象 root 判定を変更する時。
-- INDEX.md エントリーの schema 検証、fresh hash による Codex 呼び出し省略、malformed entry の再生成、空ディレクトリ用 INDEX.md 生成を確認する時。
-- routing document 更新対象の列挙順、並列生成境界、root 直下 memo 除外、入れ子の memo 扱い、directory symlink cycle 除外を変更する時。
-- apply join 側の INDEX.md merge conflict 解決が、INDEX.md を削除して未解決 conflict を消し commit する挙動を確認する時。
+- indexing subcommand が INDEX.md を生成・更新・commit する外部挙動を変更または確認したいとき。
+- indexing preflight の対象 worktree、repo config 参照、dirty diff 許容範囲、commit 対象を確認したいとき。
+- INDEX.md entry の hash 再利用、malformed entry 再生成、schema mismatch 拒否、空ディレクトリ、memo 配下、symlink cycle、兄弟・非祖先ディレクトリの生成順を変更または検証したいとき。
+- apply 側の INDEX.md conflict 解決で、conflict した INDEX.md を削除して merge commit を完了する挙動を確認したいとき。
 
 ## Do not read this when
-- INDEX.md 生成の実装詳細や helper の責務を調べたいだけなら、対応する実装モジュールを読む。
-- doctor 初期化、runtime config、AgentCallParameter の一般仕様を調べたいだけなら、それぞれの直接の実装またはテストを読む。
-- 個別の routing 文書本文や INDEX.md エントリー文言の品質を確認したいだけなら、対象の oracle doc または生成対象ファイルを読む。
+- INDEX.md の文章生成ルールそのものや Structured Output schema の仕様だけを確認したいとき。
+- indexing の内部 helper 分割や個別アルゴリズムだけを調べたいときで、CLI・preflight から観測される外部挙動を確認しない場合。
+- doctor、apply、設定同期などの独立した挙動を調べたいときで、INDEX.md 更新ワークフローとの接点を扱わない場合。
 
 ## hash
-- 5b7f371d8e42cbb5a70e45d110a8ff125ef5f24ed6bc5f034bef8f91e31903cd
+- 2026eaf01c829f4db696afbd8e1454ea464639b0f82df2cde8c5cfec8b70f368
 
 # `test_indexing_preflight.py`
 

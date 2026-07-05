@@ -143,42 +143,39 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を置く領域で、CLI 入口、利用者向けサブコマンド、共通 runtime helper、設定・基本型・agent call parameter builder などの互換 import 層を扱う。
-- 正本側実装を複製せずに既存公開参照を維持するための薄い再公開・中継と、実際の CLI 実行フローや共通実行時処理へ進むための上位入口をまとめる。
+- cmoc の realization implementation を置く領域で、CLI 入口、サブコマンド orchestration、共通 runtime helper、互換 import 層を扱う。
+- oracle src の正本実装を複製せず利用するための shim や再公開境界と、利用者向け CLI 実行から低位 runtime 支援までの実装入口をまとめる。
 
 ## Read this when
-- cmoc の実装側で、CLI 公開面、サブコマンド実行本体、共通 runtime helper、または既存 import path の互換層のどこへ進むべきか判断したいとき。
-- 正本側の型・設定・builder・path model などを realization 側へ複製せず再公開している境界や、互換参照の削除条件を確認したいとき。
-- Codex 呼び出し、preflight、ログ、エラー表示、設定、git wrapper、state 管理、INDEX.md 自動更新など、複数サブコマンドから使われる実行時支援を探したいとき。
-- 利用者向けサブコマンドの実行入口、引数接続、状態遷移、出力、失敗時処理、外部コマンド制御を確認または変更したいとき。
+- cmoc の CLI コマンド構成、サブコマンド実行本体、runtime helper、設定・path・git・state・Codex 呼び出しなどの realization 側実装を確認または変更したいとき。
+- oracle 側実装を正本に保ったまま、realization 側の既存 import path や互換公開面がどの実体へ委譲されるかを調べたいとき。
+- apply、review、session、indexing、doctor、TUI などの利用者向け外部挙動から、対応する実装領域へ進む入口を選びたいとき。
+- INDEX 更新 preflight、agent call parameter 構築入口、公開型変換、runtime path 接続、共通 error/report 変換など、複数領域をつなぐ実装境界を確認したいとき。
 
 ## Do not read this when
-- oracle file にある正本仕様断片、人間意図、prompt、出力条件、path keyword、file access rule、INDEX.md entry 文面基準そのものを確認したいとき。
-- 正本側の基本型・設定・agent call parameter builder・構造化文書処理などの本文を確認したいときは、再公開層ではなく正本側の定義元を読む。
-- 特定のサブコマンドや runtime helper の読むべき対象が既に分かっているときは、この領域全体ではなく該当する責務別対象へ直接進む。
-- 新しい公開 API、設定項目、サブコマンド、互換層を設計する場所を探しているだけで、既存の実装入口や互換維持が論点ではないとき。
+- 正本仕様断片、人間意図、oracle file や realization file の定義、path model などの仕様そのものを確認したいときは、oracle 側の該当対象を読む。
+- agent prompt、出力条件、parameter 生成内容、設定値の意味、構造化出力 schema などの正本定義を確認したいだけのとき。
+- 生成済み INDEX entry、実行ログ、session file、report の内容を調査したいだけで、生成・保存・検証の実装を変更しないとき。
+- 既存互換 import path の維持や削除条件と無関係に、新しい API 仕様や正本仕様を設計する入口を探しているとき。
 
 ## hash
-- 8dc4ef7e3bf8364c409d612914820e1de1cea99524c4f227bdc7bdce3367abfe
+- 9f3610aa69edac0aea74084a6627352d3666d2c942521221154dd8699427798a
 
 # `test`
 
 ## Summary
-- cmoc の realization test 群をまとめるディレクトリ。CLI サブコマンド、Codex runtime、ACP builder、prompt rendering、packaged import、INDEX 更新など、realization implementation の外部挙動と共通 runtime 契約を検証するテストへの入口になる。
-- 個別ファイルは、session/apply/review/doctor/indexing/TUI/Codex 実行などの対象領域ごとに分かれており、共通 fixture や補助関数は CLI テスト用の支援ファイルに集約されている。
+- CLI と runtime の realization test 群を置くディレクトリ。apply/session/review/indexing/doctor/TUI/Codex 実行、ACP builder、prompt、packaging、StructDoc など、cmoc の外部挙動と共通制御ロジックをテストから確認する入口になる。
+- 共通 pytest 補助関数も同じ階層にあり、一時 Git リポジトリ、Codex home、fake executable、doctor 実行、apply worktree 解決など、各 CLI テストの前提環境を支える。
 
 ## Read this when
-- cmoc の実装変更に対応する既存 realization test を探し、どのテストファイルを読むべきか判断したいとき。
-- CLI サブコマンドの終了コード、標準出力、report、state 更新、branch/worktree cleanup などの外部挙動を確認・変更したいとき。
-- Codex CLI/TUI 呼び出し、profile、CODEX_HOME、file access mode、retry、quota retry、post validation、ログ出力など runtime 周辺の回帰テストを探したいとき。
-- ACP builder、prompt parts、Structured Output schema 参照、packaged import、StructDoc Markdown rendering など、CLI workflow 以外の realization test を探したいとき。
-- テスト用 Git repository、Codex home、fake executable、doctor 実行、apply worktree 解決などの共通テスト補助を確認したいとき。
+- realization test 全体から、変更対象の CLI サブコマンド、runtime 境界、ACP builder、prompt、packaging、StructDoc に対応するテストを探したいとき。
+- apply fork/join/abandon、session fork/join/abandon、review oracle、indexing、doctor、TUI、Codex runtime の外部挙動や回帰テストの入口を選びたいとき。
+- テストで使う共通 fixture、fake Codex/Ollama、Codex home 差し替え、一時 repository 作成などの補助関数を確認する必要があるとき。
 
 ## Do not read this when
-- oracle file の正本仕様、oracle/realization の標準、INDEX.md エントリー生成規則そのものを確認したい場合は、oracle 配下の該当文書を読む方がよい。
-- プロダクト実装の内部構造や helper の責務を先に確認したい場合は、src 配下の対応する実装ファイルを読む方がよい。
-- 個別のテスト対象が明確で、該当テストファイル名や実装ファイルがすでに分かっている場合は、そのファイルを直接読む方がよい。
-- Codex CLI や LLM の出力品質そのものを評価したい場合は、このテスト群の目的ではない。
+- プロダクト実装の責務や内部 helper を直接確認したい場合は、対応する実装ディレクトリへ進む方がよい。
+- oracle の正本仕様断片、oracle src、oracle test の根拠を確認したい場合は、oracle 配下の該当対象を読む方がよい。
+- 個別テストファイルが既に分かっており、その期待値や fixture だけを確認したい場合は、この階層全体ではなく該当テストを直接読む方がよい。
 
 ## hash
-- b282abafaa9924e573e7e393b1e1ed572a69cb7542c6690a784d17c3fa087723
+- 84c93db946d7bad652814d7156c9f6d23093a2e8e95e665b7dc6bcd00415cd00
