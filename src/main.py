@@ -160,6 +160,15 @@ def review_oracle(
     cmoc_review_oracle_impl(scope.value)
 
 
+@app.command("eval-oracle")
+def eval_oracle(
+    scope: ReviewOracleScope = typer.Option(ReviewOracleScope.session, "--scope", "-s"),
+) -> None:
+    """want を書き出した oracle を AI review する CLI 入口。"""
+    # <work-root>/oracle/doc/considered_alternative/working_plan_review.md
+    cmoc_review_oracle_impl(scope.value)
+
+
 @app.command()
 def indexing() -> None:
     """work root の INDEX.md を更新する CLI 入口。"""
