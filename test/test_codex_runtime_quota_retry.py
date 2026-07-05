@@ -10,10 +10,8 @@ subcommand log、CODEX_HOME/cwd は同じ retry 状態機械の観測点であ�
 
 import json
 import subprocess
-import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from types import ModuleType
 from typing import TextIO, cast
 
 import cmoc_runtime
@@ -56,27 +54,6 @@ def stub_quota_probe_builder(
             cwd=base_parameter.cwd,
         ),
     )
-    return probe_prompt
-
-
-def install_oracle_quota_probe_builder(
-    monkeypatch: pytest.MonkeyPatch, probe_prompt: str = PROBE_PROMPT
-) -> str:
-    module = ModuleType("oracle.acp_builder.quota_probe")
-
-    def fake_builder(base_parameter: AgentCallParameter) -> AgentCallParameter:
-        return AgentCallParameter(
-            ModelClass.MINIMUM,
-            ReasoningEffort.LOW,
-            FileAccessMode.READONLY,
-            probe_prompt,
-            None,
-            run_indexing_preflight=False,
-            cwd=base_parameter.cwd,
-        )
-
-    setattr(module, "build_quota_availability_probe_parameter", fake_builder)
-    monkeypatch.setitem(sys.modules, "oracle.acp_builder.quota_probe", module)
     return probe_prompt
 
 
@@ -265,52 +242,26 @@ def test_run_codex_exec_polls_and_resumes_after_quota(
     assert "- Exit code: `0`" in console
 
 
-def test_quota_probe_builder_delegates_to_oracle_builder_when_available(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_quota_probe_builder_returns_minimal_readonly_parameter() -> None:
     base = AgentCallParameter(
         ModelClass.FLAGSHIP,
         ReasoningEffort.HIGH,
         FileAccessMode.REPO_WRITE,
         "base",
         None,
-        cwd=Path("/tmp/base-cwd"),
-    )
-    expected = AgentCallParameter(
-        ModelClass.EFFICIENCY,
-        ReasoningEffort.MEDIUM,
-        FileAccessMode.READONLY,
-        "oracle probe",
-        None,
-        cwd=base.cwd,
-    )
-    calls: list[AgentCallParameter] = []
-
-    def fake_builder(parameter: AgentCallParameter) -> AgentCallParameter:
-        calls.append(parameter)
-        return expected
-
-    module = ModuleType("oracle.acp_builder.quota_probe")
-    setattr(module, "build_quota_availability_probe_parameter", fake_builder)
-    monkeypatch.setitem(sys.modules, "oracle.acp_builder.quota_probe", module)
-
-    assert build_quota_availability_probe_parameter(base) is expected
-    assert calls == [base]
-
-
-def test_quota_probe_builder_fails_when_oracle_builder_is_absent() -> None:
-    base = AgentCallParameter(
-        ModelClass.FLAGSHIP,
-        ReasoningEffort.HIGH,
-        FileAccessMode.REPO_WRITE,
-        "base",
-        None,
+        run_indexing_preflight=True,
         cwd=Path("/tmp/base-cwd"),
     )
 
-    with pytest.raises(ModuleNotFoundError) as error:
-        build_quota_availability_probe_parameter(base)
-    assert error.value.name == "oracle.acp_builder.quota_probe"
+    probe = build_quota_availability_probe_parameter(base)
+
+    assert probe.model_class == ModelClass.MINIMUM
+    assert probe.reasoning_effort == ReasoningEffort.LOW
+    assert probe.file_access_mode == FileAccessMode.READONLY
+    assert probe.prompt
+    assert probe.structured_output_schema_path is None
+    assert probe.run_indexing_preflight is False
+    assert probe.cwd == base.cwd
 
 
 def test_quota_probe_uses_real_builder_when_quota_recovers(
@@ -329,7 +280,6 @@ def test_quota_probe_uses_real_builder_when_quota_recovers(
         None,
         cwd=root,
     )
-    install_oracle_quota_probe_builder(monkeypatch)
     probe_parameter = build_quota_availability_probe_parameter(parameter)
 
     def fake_run(

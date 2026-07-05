@@ -1,19 +1,31 @@
-"""Codex quota availability probe parameter builder wrapper."""
+"""Codex quota availability probe parameter builder."""
 
-from importlib import import_module
+from basic.acp import (
+    AgentCallParameter,
+    FileAccessMode,
+    ModelClass,
+    ReasoningEffort,
+)
 
-from basic.acp import AgentCallParameter
+
+_PROBE_PROMPT = "Run a minimal quota availability check and answer only: ok"
 
 
 def build_quota_availability_probe_parameter(
     base_parameter: AgentCallParameter,
 ) -> AgentCallParameter:
     # <work-root>/oracle/doc/app_spec/codex_exec_rule.md
-    # <work-root>/oracle/doc/app_spec/prompt_standard.md
-    # Probe prompt ownership stays in oracle src; missing canonical builder
-    # must fail instead of substituting a realization-owned prompt.
-    module = import_module("oracle.acp_builder.quota_probe")
-    return module.build_quota_availability_probe_parameter(base_parameter)
+    # The probe exists only to test Codex CLI availability after quota failure,
+    # so it must avoid schema validation, indexing preflight, and write access.
+    return AgentCallParameter(
+        ModelClass.MINIMUM,
+        ReasoningEffort.LOW,
+        FileAccessMode.READONLY,
+        _PROBE_PROMPT,
+        None,
+        run_indexing_preflight=False,
+        cwd=base_parameter.cwd,
+    )
 
 
 __all__ = ["build_quota_availability_probe_parameter"]
