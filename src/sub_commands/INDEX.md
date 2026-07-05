@@ -20,23 +20,18 @@
 # `doctor.py`
 
 ## Summary
-- CLI の init/doctor サブコマンド実装で、runtime の共通実行経路を使って doctor preprocess を明示実行する入口を定義する。
-- init では preprocess 後に config 同期も行い、doctor では修復処理のみを行う差分を持つ。
-- repo root の検出、doctor preprocess、必要時の config 同期、実行結果表示の流れを確認するための入口である。
+- CLI runtime の preprocess 経路を使い、初回 setup 用の init と明示修復用の doctor を実行するサブコマンド実装。doctor preprocess の実行、init 後の config 同期、実行結果の簡潔な出力を担う。
 
 ## Read this when
-- init または doctor サブコマンドの挙動を変更・確認したいとき。
-- doctor preprocess の CLI からの呼び出し方、command heading、command argv、runtime wrapper との接続を確認したいとき。
-- init 実行時だけ config 同期を行う理由や、その同期入口を変更する必要があるとき。
-- CLI 実行後に表示される repo root 出力の生成箇所を確認したいとき。
+- init または doctor サブコマンドの実行内容、preprocess 呼び出し、init 時だけ行う config 同期の挙動を確認・変更したいとき。
+- work root を cmoc 実行可能状態へ修復する入口や、doctor preprocess と CLI runtime の接続を追いたいとき。
 
 ## Do not read this when
-- doctor preprocess 自体の修復内容や repo root 判定の詳細を知りたいだけなら、runtime 側の実装を読む。
-- config の正本内容や同期対象の定義を確認したいだけなら、対応する oracle 側の config 定義を読む。
-- Typer app へのサブコマンド登録や CLI 全体のルーティングを確認したいだけなら、上位の CLI 定義を読む。
+- 個々の修復処理の詳細を確認したいだけのときは、doctor preprocess 本体の実装や対応する oracle doc を読む。
+- config 定義そのものや同期内容を確認したいだけのときは、config の正本定義または同期処理の実装を読む。
 
 ## hash
-- b9218f70377e66d6cad3aa19e1dd8fd6a7bc1184744c81c74615b30c74ab8f06
+- 5b34ca53a326cf2b246a8c474513a967e06d38c35c1a7bfb039d06df5a644e5e
 
 # `indexing.py`
 

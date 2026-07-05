@@ -341,21 +341,23 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor/init 系の CLI 挙動と runtime doctor の制御ロジックを検証する realization test。cmoc 管理 Ollama の導入・systemd user service・モデル pull、.cmoc の ignore/untrack、設定生成と既存値保持、repair commit が利用者の staged 変更を巻き込まないこと、ローカル SLM profile 準備時の doctor 起動を扱う。
+- doctor/init CLI がリポジトリの git 状態、無視設定、管理下 Ollama、設定ファイルをどう修復・生成するかを外部挙動として検証するテスト群。
+- doctor preprocess が linked worktree を対象にすること、既存の staged 変更や人間の設定値を巻き込まないこと、cmoc 管理ファイルを追跡対象から外すことを確認する。
+- Codex profile 準備時に管理下 Ollama の port が未準備なら doctor 相当の準備が走る連携挙動も扱う。
 
 ## Read this when
-- doctor preprocess、run_doctor_preprocess、runtime doctor、cmoc 管理 Ollama、Ollama service 検証、モデル pull の重複排除を変更するとき。
-- init コマンドの config.json 生成、既存設定との同期、.cmoc の git ignore・追跡除外を変更するとき。
-- doctor による修復 commit が既存 staged 変更や .gitignore の人間変更をどう扱うかを確認・変更するとき。
-- prepare_codex_profile がローカル SLM 用 profile を作る際、Ollama port 不在時に doctor を走らせる挙動を確認するとき。
+- doctor または init コマンドの git 修復、.cmoc 無視、.agents 管理、設定生成・同期の挙動を変更する。
+- 管理下 Ollama の install/service/model pull/検証ロジック、または service process と listener の照合条件を変更する。
+- linked worktree 上での doctor 実行対象、既存 staged 変更の退避・復元、修復 commit に含める path の境界を確認したい。
+- local SLM 用 Codex profile 作成時に doctor preprocess が起動する条件を変更・確認する。
 
 ## Do not read this when
-- 個別の doctor 実装内部だけを読みたい場合は、先に runtime doctor の実装を読む。
-- config schema や model spec の正本定義を確認したいだけの場合は、oracle 側の config 定義を読む。
-- doctor/init と無関係な CLI サブコマンド、agent call 実行、apply fork、path model の挙動を調べる場合。
+- doctor/init の CLI 外部挙動ではなく、個別の設定 schema 定義や model enum の意味だけを確認したい場合は、その定義元を直接読む。
+- agent call の一般的な parameter 構造や Codex profile の通常生成だけを調べたい場合は、profile 実装とその専用テストを直接読む。
+- Ollama や systemd の低レベル helper 単体の実装詳細だけを調べる場合は、runtime doctor 実装を直接読む。
 
 ## hash
-- 5d6b5482783d5b41a3aab5528281f2038a0a5f8f3471e89946f3189ba7e02775
+- b3f9940592b6bfff68fc4e939dead57f1af0aef503cc2bda1b7b44c8833e5291
 
 # `test_indexing_cli.py`
 

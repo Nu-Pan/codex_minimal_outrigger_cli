@@ -142,18 +142,21 @@
 # `sub_commands`
 
 ## Summary
-- CLI サブコマンド実装をまとめる階層で、apply、session、review、init/doctor、indexing、tui などの利用者向けコマンドから各実行ロジックへ進む入口になる。
-- 各コマンドの薄い orchestration、runtime への接続、branch/worktree/state/report/cleanup などの高水準な制御フローを扱い、詳細な生成・判定・低レベル helper は下位対象または共通基盤へ分担している。
+- CLI サブコマンド実装の集約階層で、apply、session、review、indexing、doctor/init、TUI などの実行入口へ進むためのルーティング地点。
+- 各対象は、CLI runtime との接続、実行前検査、branch・worktree・state・report などの orchestration、または特定サブコマンド固有の制御ロジックを担う。
+- 個別の低レベル helper や正本仕様ではなく、利用者向けサブコマンドの実行フローから読む対象を選ぶための入口になる。
 
 ## Read this when
-- 特定の CLI サブコマンドの実装入口や、どの下位対象へ進むべきかを選びたいとき。
-- apply run、session 操作、review oracle、init/doctor、indexing、tui の実行順序、事前条件、state・branch・worktree・report との接続を概観したいとき。
-- サブコマンドが共通 runtime、Codex 実行、git 操作、INDEX maintenance、config 同期などへどう接続しているかを追い始めたいとき。
+- CLI サブコマンドの実装入口を探し、どの下位対象へ進むべきかを選びたいとき。
+- apply run、session 操作、review oracle、INDEX maintenance、doctor/init、TUI 起動など、サブコマンド単位の実行順序や orchestration を確認・変更したいとき。
+- サブコマンドが CLI runtime、preflight、git/worktree/state/report、Codex 実行処理へどう接続しているかを上位から追いたいとき。
+- 特定サブコマンドの失敗時処理、cleanup、branch 操作、出力や report 生成など、公開コマンドに近い制御境界を調べたいとき。
 
 ## Do not read this when
-- CLI parser 全体の登録や dispatch、共通 runtime、git/worktree/state/path model などの低レベル helper そのものを調べたいとき。
-- Codex prompt parameter、Structured Output schema、oracle file や realization file の正本仕様を確認したいとき。
-- INDEX.md の本文生成、review finding の prompt、report 描画、対象列挙など、すでに責務が明確な個別ロジックだけを変更したいときは、その下位対象を直接読む。
+- CLI parser やトップレベルのサブコマンド登録だけを確認したいときは、CLI entrypoint 側を読む。
+- git wrapper、worktree 操作、path model、state schema、config、runtime 共通処理などの低レベル helper 自体を変更したいときは、それぞれの共通基盤側を読む。
+- Codex prompt parameter、Structured Output schema、INDEX.md 生成規則、oracle file や realization file の概念定義などの正本仕様を確認したいときは、oracle 側の該当文書を読む。
+- サブコマンド実装ではなく、個別の report 描画、対象列挙、review loop、INDEX 統合処理などに読む対象が絞れているときは、その責務を担う下位対象へ直接進む。
 
 ## hash
-- 34ea204c48784c5aa96985c21ad6ed2c7a74e1ed8dd3646979598224e8bca1dc
+- 679e9056b28d8c3d53fa38b071494e936913adaff6a6061b5e77f341fe13b98a
