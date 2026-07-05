@@ -1,6 +1,7 @@
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Callable
 
 from commons.runtime_errors import CmocError
 from commons.runtime_paths import worktrees_dir
@@ -64,6 +65,34 @@ def require_clean_worktree(root: Path, status: str | None = None) -> None:
 def _git_status_short(root: Path) -> str:
     """porcelain status を返す。"""
     return run_git(["status", "--short"], root).stdout.strip()
+
+
+def status_path_statuses(
+    root: Path,
+    *,
+    untracked_all: bool = False,
+    include_rename_sources: bool = False,
+    git: Callable[[list[str], Path], CommandResult] = run_git,
+) -> list[tuple[str, Path]]:
+    """git status porcelain v1 -z の path を quote なしで返す。"""
+    args = ["status", "--porcelain=v1", "-z"]
+    if untracked_all:
+        args.append("-uall")
+    fields = git(args, root).stdout.split("\0")
+    paths: list[tuple[str, Path]] = []
+    index = 0
+    while index < len(fields):
+        field = fields[index]
+        index += 1
+        if not field:
+            continue
+        status = field[:2]
+        paths.append((status, root / field[3:]))
+        if status[0] in {"R", "C"} or status[1] in {"R", "C"}:
+            if include_rename_sources and index < len(fields) and fields[index]:
+                paths.append((status, root / fields[index]))
+            index += 1
+    return paths
 
 
 def is_managed_branch(branch: str) -> bool:

@@ -39,7 +39,7 @@ from commons.runtime_codex_profile import (
 )
 from commons.runtime_errors import CmocError
 from commons.runtime_codex_logging import emit_codex_call_console
-from commons.runtime_git import run_git
+from commons.runtime_git import run_git, status_path_statuses
 from commons.runtime_logging import SubcommandLogger, current_subcommand_logger
 from commons.runtime_paths import (
     codex_log_dir,
@@ -781,23 +781,10 @@ def _changed_worktree_path_statuses(
     root: Path, *, include_ignored: bool = False
 ) -> list[tuple[str, Path]]:
     """worktree 上の変更 path と git status code を absolute path として返す。"""
-    paths: list[tuple[str, Path]] = []
     # <work-root>/oracle/doc/app_spec/sub_command/apply_fork.md
     # apply requeue needs file-level paths after an agent call; default status
     # can collapse untracked directories into one directory path.
-    status_fields = run_git(
-        ["status", "--porcelain=v1", "-z", "-uall"], root
-    ).stdout.split("\0")
-    index = 0
-    while index < len(status_fields):
-        field = status_fields[index]
-        index += 1
-        if not field:
-            continue
-        status = field[:2]
-        paths.append((status, root / field[3:]))
-        if status[0] in {"R", "C"} or status[1] in {"R", "C"}:
-            index += 1
+    paths = status_path_statuses(root, untracked_all=True)
     if not include_ignored:
         return paths
     for path_text in run_git(

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from cmoc_runtime import CmocError, head_commit, run_git
+from commons.runtime_git import status_path_statuses
 
 
 def commit_review_index_changes(review_worktree: Path) -> bool:
@@ -47,20 +48,12 @@ def review_branch_has_index_changes(review_worktree: Path, base_commit: str) -> 
 
 
 def review_worktree_status_paths(review_worktree: Path) -> list[str]:
-    fields = run_git(
-        ["status", "--porcelain=v1", "-z"], review_worktree
-    ).stdout.split("\0")
-    paths: list[str] = []
-    index = 0
-    while index < len(fields) and fields[index]:
-        field = fields[index]
-        status = field[:2]
-        paths.append(field[3:])
-        index += 1
-        if status[0] in {"R", "C"}:
-            paths.append(fields[index])
-            index += 1
-    return paths
+    return [
+        str(path.relative_to(review_worktree))
+        for _status, path in status_path_statuses(
+            review_worktree, include_rename_sources=True
+        )
+    ]
 
 
 def merge_review_branch(root: Path, review_branch: str) -> str:

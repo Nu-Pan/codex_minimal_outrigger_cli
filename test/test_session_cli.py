@@ -550,6 +550,53 @@ def test_session_join_rejects_non_conflict_changes_from_conflict_agent(
     assert "session change" not in run_git(root, "log", "--oneline", "-1").stdout
 
 
+def test_session_join_rejects_staged_non_conflict_change_with_quoted_status_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = make_repo(tmp_path)
+    target = root / "oracle" / "spec.md"
+    extra = root / "src" / "extra file.py"
+    extra.parent.mkdir()
+    extra.write_text("base\n")
+    run_git(root, "add", "src/extra file.py")
+    run_git(root, "commit", "-m", "add extra")
+    monkeypatch.chdir(root)
+    assert run_doctor(root).exit_code == 0
+    assert (
+        runner.invoke(app, ["session", "fork"], catch_exceptions=False).exit_code == 0
+    )
+    session_branch = current_branch(root)
+    home_branch = session_home_branch(root, session_branch)
+    target.write_text("session change\n")
+    extra.write_text("session extra\n")
+    run_git(root, "add", "oracle/spec.md", "src/extra file.py")
+    run_git(root, "commit", "-m", "session changes")
+    run_git(root, "switch", home_branch)
+    target.write_text("home change\n")
+    run_git(root, "add", "oracle/spec.md")
+    run_git(root, "commit", "-m", "home change")
+    run_git(root, "switch", session_branch)
+
+    class FakeCodexResult:
+        output_json = None
+
+    def fake_run_codex_exec(parameter: object, **kwargs: object) -> object:
+        target.write_text("resolved change\n")
+        extra.write_text("agent extra\n")
+        run_git(root, "add", "src/extra file.py")
+        return FakeCodexResult()
+
+    monkeypatch.setattr(session_join_module, "run_codex_exec", fake_run_codex_exec)
+
+    result = runner.invoke(app, ["session", "join"])
+
+    assert result.exit_code != 0
+    assert current_branch(root) == home_branch
+    assert "conflict 解消以外の差分が残っています。" in result.stderr
+    assert "src/extra file.py" in result.stderr
+    assert "session changes" not in run_git(root, "log", "--oneline", "-1").stdout
+
+
 def test_session_join_conflict_marker_detection_uses_marker_block() -> None:
     assert not session_join_module._has_conflict_marker_block("Title\n=======\n")
     assert session_join_module._has_conflict_marker_block(
