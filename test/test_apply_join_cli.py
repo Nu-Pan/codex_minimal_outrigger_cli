@@ -525,6 +525,24 @@ def test_apply_join_classifies_root_memo_as_session_change(
     assert apply_module.is_expected_session_change(root, path) is True
 
 
+def test_apply_join_allows_session_oracle_symlink_to_outside_root(
+    tmp_path: Path,
+) -> None:
+    root = make_repo(tmp_path)
+    outside_target = tmp_path / "outside-oracle.md"
+    outside_target.write_text("# outside\n")
+    with (root / ".gitignore").open("a") as file:
+        file.write("oracle/ignored-link.md\n")
+    (root / "oracle" / "ignored-link.md").symlink_to(outside_target)
+    run_git(root, "add", "-f", ".gitignore", "oracle/ignored-link.md")
+    run_git(root, "commit", "-m", "add ignored oracle symlink")
+
+    path = "oracle/ignored-link.md"
+
+    assert apply_module.is_expected_apply_change(root, path) is False
+    assert apply_module.is_expected_session_change(root, path) is True
+
+
 @pytest.mark.parametrize("path", ["AGENTS.md", ".codex/config.toml"])
 def test_apply_join_rejects_non_realization_apply_paths(
     tmp_path: Path,

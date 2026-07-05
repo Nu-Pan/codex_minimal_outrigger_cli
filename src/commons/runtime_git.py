@@ -280,8 +280,11 @@ def is_oracle_file_path(root: Path, path: Path) -> bool:
     # <work-root>/oracle/src/oracle/prompt_builder/parts/oracle_and_realization_basic.py
     # Keep the oracle file definition in one runtime helper because it is used by
     # both Codex access checks and apply/session diff classification.
+    # Oracle ownership is defined by the repository path, so tracked symlinks
+    # under oracle/ remain oracle files even when their targets are outside root.
     try:
-        relative = path.resolve().relative_to(root.resolve())
+        candidate = path if path.is_absolute() else root / path
+        relative = candidate.absolute().relative_to(root.absolute())
     except ValueError:
         return False
     return (
