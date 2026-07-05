@@ -1,41 +1,42 @@
 # `doc`
 
 ## Summary
-- cmoc の正本仕様断片のうち、自然言語 Markdown 文書を集めた領域。アプリケーション仕様、branch/worktree モデル、不採用設計案、開発ルールなど、実装前に人間意図を確認する入口になる。
-- 公開 CLI 挙動、状態・ログ・インデックス生成、agent call 境界、実行環境管理、実装・テストの共通作法など、実装差を避けたい外部挙動や責務境界を扱う下位文書へ進むためのまとまり。
+- cmoc の正本仕様断片のうち、自然言語で書かれた文書群への入口。アプリケーション仕様、branch/worktree モデル、不採用設計案、開発規則など、実装差を避けたい外部挙動・共通境界・開発作法を扱う下位領域を選ぶための上位ルーティング情報を担う。
+- 個別領域は、利用者に見える CLI 挙動や状態管理、git branch/worktree の概念、過去に退けた代替案、realization code/test の作成基準などの責務ごとに分かれている。
 
 ## Read this when
-- cmoc の個別機能や開発作法について、自然言語で書かれた oracle doc を探すとき。
-- CLI 実行フロー、サブコマンド、共通前処理、ログ、状態管理、run 隔離、Codex CLI 呼び出し、provider 連携、branch/worktree モデルに関する正本仕様断片を確認したいとき。
-- Python 実装、CLI 配置、開発環境、pytest 方針など、realization code を追加・変更する前に守るべき共通ルールを確認したいとき。
-- 現行設計に対して、過去に不採用となった代替案やその理由を再検討したいとき。
+- cmoc の自然言語仕様から、アプリケーション仕様、branch/worktree モデル、不採用設計判断、開発規則のどこを読むべきか判断したいとき。
+- 新しい実装やテストの前に、対象機能の正本仕様が外部挙動、git 隔離モデル、設計判断の背景、開発作法のどの領域で述べられているかを切り分けたいとき。
+- 複数の仕様領域にまたがる変更で、CLI 挙動、run 隔離、状態管理、branch/worktree、テスト方針、実装規則、不採用案の背景をどこから確認するか決めたいとき。
 
 ## Do not read this when
-- oracle file と realization file の一般的な定義、責務境界、記述標準、INDEX.md エントリー作成規則だけを確認したいとき。
-- パスキーワードやルート種別の定義そのものを確認したいとき。
-- 自然言語の正本仕様ではなく、oracle src、oracle test、realization code、既存テストの具体的な関数構造や内部 helper を直接調べたいとき。
+- oracle file と realization file の一般的な定義、編集責務、品質基準、INDEX.md エントリー生成規則だけを確認したいとき。
+- <cmoc-root>、<repo-root>、<work-root>、<run-root> などのパス語彙そのものの定義だけを確認したいとき。
+- 実装ファイルの具体的な関数、内部 helper、モジュール分割、テスト期待値を直接調べたいとき。
+- 対象の仕様領域や個別文書が既に特定できており、その下位対象を直接読めば足りるとき。
 
 ## hash
-- e2d2741a77e32907dc16322ef2b56ad06f765c34eef38789a55f172c5611c0b5
+- 7809770dd262d38994027bb3d09da132b9e16acaf95d6e6c99afe9f1d21b76eb
 
 # `src`
 
 ## Summary
-- cmoc の正本実装として、AI agent call parameter、prompt 構築、共有設定、パス表記、規範モデル、Markdown rendering helper など、複数領域から参照される基礎仕様断片を扱う。
-- サブコマンドごとの AI エージェント呼び出し設定、共通規範プロンプト、ルートプレースホルダ付きパス、横断設定値、構造化文書モデルを確認する入口になる。
+- AI エージェント呼び出し仕様、共通基盤型、プロンプト構築仕様を扱う oracle src 配下の領域。agent call parameter、Structured Output schema、モデル・reasoning effort・ファイルアクセス設定、パスモデル、設定、規範モデル、構造化 Markdown、共通規範プロンプトへの入口になる。
+- INDEX.md エントリー生成、oracle file レビュー、fork 適用後レビュー、session join の conflict marker 解消、TUI 起動前後のパラメータ選定、prompt と schema の対応、共通標準文書の注入方法を確認するための下位領域へ進む起点になる。
 
 ## Read this when
-- AI エージェント呼び出し時の prompt、Structured Output schema、モデル設定、reasoning effort、cwd、ファイルアクセス権限、preflight 設定などの正本仕様断片を確認したいとき。
-- agent call 用の完全なプロンプトが、役割、概要、ゴール、補助プロンプト、ファイルアクセス制限、ルーティング規則、各種標準などの部品からどう構築されるかを確認・変更したいとき。
-- oracle standard、realization standard、review standard、apply review standard、index entry standard など、AI に注入する共通規範プロンプトや注入指定を確認したいとき。
-- cmoc 全体で共有される設定値、パス表記規則、規範文書の構造化、Markdown rendering helper の正本実装を探すとき。
-- INDEX.md エントリー生成、oracle file レビュー、fork 適用後レビュー、session join の conflict marker 解消、TUI 起動前後のパラメータ選定などで、AI agent call の入力契約と出力契約を実装・テストへ反映する前に確認したいとき。
+- cmoc が AI agent call をどの prompt、Structured Output schema、モデル設定、ファイルアクセス権限、preflight 設定で組み立てるか確認したいとき。
+- agent call parameter の共通データ構造、論理モデル名、論理 reasoning effort、Structured Output schema 指定方法を確認したいとき。
+- cmoc 全体で共有される設定値、パス表記、ルート解決、規範データ構造、構造化文書レンダリングの正本実装断片を探すとき。
+- agent call 用の完全なプロンプトが、標準文書、読み書き規則、補助プロンプト、プレースホルダ定義などの部品からどう構築されるか確認・変更したいとき。
+- oracle file、realization file、INDEX.md エントリー、レビュー所見、ファイル読み書きなど、AI に注入する共通規範プロンプトを確認・変更したいとき。
 
 ## Do not read this when
-- AI エージェント呼び出しや prompt 構築ではなく、CLI 引数処理、branch 操作、diff 取得、merge 実行、保存処理、表示整形などの実行制御実装を調べたいとき。
-- 個別サブコマンドの利用者向け入出力、実行フロー、状態ファイルの仕様を探しているとき。
-- 設定ファイルの読み書き、JSON 変換、init 処理、バックエンド API へ送る実リクエスト形式、具体的なモデル名解決、agent CLI 実行処理など、realization implementation 側の具体的なアルゴリズムだけを確認したいとき。
-- 生成済み Markdown の内容や配置先、個別の規範本文、CLI の実行状態など、正本実装上の基礎概念や prompt 部品以外の具体的な仕様を調べているとき。
+- CLI 引数処理、branch 操作、diff 取得、merge 実行、保存処理、表示整形など、AI エージェント呼び出し以外の実行制御実装を調べたいとき。
+- CLI サブコマンドごとの利用者向け入出力、実行フロー、状態ファイルの仕様を直接確認したいとき。
+- oracle standard、realization standard、apply review standard、index entry standard など、規範本文の意味だけを確認したいとき。
+- バックエンド API へ送る実際のリクエスト形式、具体的なモデル名解決、agent CLI 実行処理など realization src 側の実装詳細を調べたいとき。
+- 生成済み Markdown、個別の標準文書本文、パス概念そのもの、または実装ファイルやテストファイルの現在構造だけを調べたいとき。
 
 ## hash
-- 65b0b57aceb14bfd21b3a27e750d877af0d2a10c5ee9cfba987a0abca198dd52
+- d420ca3d1e03c5097c86f6dbdcec6d5316e6f34bbe1cb7f185feb4fcc88944d4

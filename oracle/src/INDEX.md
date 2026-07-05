@@ -1,21 +1,22 @@
 # `oracle`
 
 ## Summary
-- cmoc の正本実装のうち、AI agent call parameter、prompt 構築、共有設定・パス表記・規範モデル・Markdown rendering helper など、複数領域の実装やテストが参照する基礎仕様断片を扱う領域。
-- サブコマンドごとの AI エージェント呼び出し設定、共通規範プロンプトの組み立て、ルートプレースホルダ付きパスの扱い、横断的な設定値や構造化文書モデルを確認するための入口になる。
+- AI エージェント呼び出し仕様、共通基盤型、プロンプト構築仕様を扱う oracle src 配下の領域。agent call parameter、Structured Output schema、モデル・reasoning effort・ファイルアクセス設定、パスモデル、設定、規範モデル、構造化 Markdown、共通規範プロンプトへの入口になる。
+- INDEX.md エントリー生成、oracle file レビュー、fork 適用後レビュー、session join の conflict marker 解消、TUI 起動前後のパラメータ選定、prompt と schema の対応、共通標準文書の注入方法を確認するための下位領域へ進む起点になる。
 
 ## Read this when
-- cmoc が AI エージェントを呼び出す際の prompt、Structured Output schema、モデル設定、reasoning effort、cwd、ファイルアクセス権限、preflight 設定などの正本仕様断片を確認したいとき。
-- agent call 用の完全なプロンプトが、役割・概要・ゴール・補助プロンプト・ファイルアクセス制限・ルーティング規則・各種標準などの部品からどう構築されるかを確認・変更したいとき。
-- oracle standard、realization standard、review standard、apply review standard、index entry standard など、AI に注入する共通規範プロンプトやその注入指定を確認したいとき。
-- cmoc 全体で共有される設定値、パス表記規則、規範文書の構造化、または Markdown rendering helper の正本実装を探すとき。
-- INDEX.md エントリー生成、oracle file レビュー、fork 適用後レビュー、session join の conflict marker 解消、TUI 起動前後のパラメータ選定など、AI agent call の入力契約と出力契約を実装・テストへ反映する前に確認したいとき。
+- cmoc が AI agent call をどの prompt、Structured Output schema、モデル設定、ファイルアクセス権限、preflight 設定で組み立てるか確認したいとき。
+- agent call parameter の共通データ構造、論理モデル名、論理 reasoning effort、Structured Output schema 指定方法を確認したいとき。
+- cmoc 全体で共有される設定値、パス表記、ルート解決、規範データ構造、構造化文書レンダリングの正本実装断片を探すとき。
+- agent call 用の完全なプロンプトが、標準文書、読み書き規則、補助プロンプト、プレースホルダ定義などの部品からどう構築されるか確認・変更したいとき。
+- oracle file、realization file、INDEX.md エントリー、レビュー所見、ファイル読み書きなど、AI に注入する共通規範プロンプトを確認・変更したいとき。
 
 ## Do not read this when
-- AI エージェント呼び出しや prompt 構築ではなく、CLI 引数処理、branch 操作、diff 取得、merge 実行、保存処理、表示整形などの実行制御実装を調べたいとき。
-- 個別サブコマンドの利用者向け入出力、実行フロー、状態ファイルの仕様を探しているとき。
-- 設定ファイルの読み書き処理、JSON 変換処理、init 処理、バックエンド API へ送る実リクエスト形式、具体的なモデル名解決、agent CLI 実行処理など realization implementation 側の具体的なアルゴリズムだけを確認したいとき。
-- 生成済み Markdown の内容や配置先、個別の規範本文、CLI の実行状態など、正本実装上の基礎概念や prompt 部品以外の具体的な仕様を調べているとき。
+- CLI 引数処理、branch 操作、diff 取得、merge 実行、保存処理、表示整形など、AI エージェント呼び出し以外の実行制御実装を調べたいとき。
+- CLI サブコマンドごとの利用者向け入出力、実行フロー、状態ファイルの仕様を直接確認したいとき。
+- oracle standard、realization standard、apply review standard、index entry standard など、規範本文の意味だけを確認したいとき。
+- バックエンド API へ送る実際のリクエスト形式、具体的なモデル名解決、agent CLI 実行処理など realization src 側の実装詳細を調べたいとき。
+- 生成済み Markdown、個別の標準文書本文、パス概念そのもの、または実装ファイルやテストファイルの現在構造だけを調べたいとき。
 
 ## hash
-- 1f0bad8be1e8d1745d307119dacb2880c4990fbc65cb3f3e81dbf107780935cd
+- 2b71013c8701d5b6263a80882590be82ff50f85d7aa4a341bf42115f846ebbd7
