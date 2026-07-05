@@ -98,21 +98,21 @@
 # `main.py`
 
 ## Summary
-- Typer による cmoc の最上位 CLI 定義を担い、session/apply/review 配下を含むサブコマンドを各実装関数へ接続する入口。
-- 補完時以外の Click 引数解析エラーを cmoc 共通エラー形式へ変換し、console script から実行される main を提供する。
+- Typer ベースの cmoc CLI 入口を定義し、トップレベル command、session/apply/review のサブコマンド、補完時を除く引数解析エラーの cmoc 形式表示、console script からの起動を結び付ける。
+- 各 command は実処理を下位実装へ委譲し、CLI option 値の enum 化や既存 usage 互換 alias など、利用者に見えるコマンド面の接続点を担う。
 
 ## Read this when
-- cmoc の CLI コマンド構成、サブコマンド名、option 値、既定値、または実装関数へのディスパッチを確認・変更したいとき。
-- Typer/Click の引数解析エラーを cmoc 形式で表示する入口処理を確認・変更したいとき。
-- console script から起動されるアプリケーション入口や prog_name の扱いを確認したいとき。
+- CLI のコマンド構成、サブコマンド名、alias、option 名、option 既定値、Typer/Click の引数解析エラー表示を確認・変更したいとき。
+- 新しいサブコマンドを既存の実装関数へ接続したいとき、または既存サブコマンドがどの実装へ委譲されるかを追いたいとき。
+- console script 起動時のアプリケーション生成、補完時の例外処理回避、no-args help の挙動に関わる変更を行うとき。
 
 ## Do not read this when
-- 個々のサブコマンドの業務処理、git 操作、worktree 操作、review/apply/session の内部制御を確認したいだけのときは、対応するサブコマンド実装を直接読む。
-- cmoc 共通エラー型やエラー表示の詳細を確認したいだけのときは、共通 runtime 側を読む。
-- INDEX.md 更新処理そのもののアルゴリズムや生成内容を確認したいだけのときは、indexing 実装を読む。
+- 各サブコマンドの実処理、git 操作、worktree 操作、review/apply/session の制御詳細を調べたいだけのときは、対応する下位実装を直接読む。
+- cmoc 共通エラー型やエラー描画形式そのものを変更したいときは、runtime 側の定義を読む。
+- INDEX.md 更新処理、oracle review の中身、TUI 起動内容など、特定 command の内部仕様だけを確認したいときは、その command の委譲先を読む。
 
 ## hash
-- cb7ee361b9445d7c2a928441e07765ae4eaed3d2e06d35acd79015f249e66dde
+- a29eb3cdecf13a92176dd4bc97aacec04f61880af449fe691ce88e4854bc7e34
 
 # `oracle.py`
 

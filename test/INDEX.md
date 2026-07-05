@@ -331,20 +331,23 @@
 # `test_doctor_cli.py`
 
 ## Summary
-- doctor/init CLI の実行前処理と設定生成を検証する realization test。git 状態の修復、`.cmoc/local` の ignore/untrack、`.agents` の追跡、config の生成・同期、managed ollama の準備・検証、linked worktree 対象化、ローカル SLM profile 作成時の doctor 実行を扱う。
+- doctor/init CLI がリポジトリ初期化・修復・設定生成・管理 Ollama 準備・Codex profile 生成を行う外部挙動を検証するテスト。
+- gitignore、.agents、.cmoc/config.json、.cmoc/local、worktree、既存 staged/unstaged 変更の扱いなど、doctor preprocess の git 状態保全と追跡対象制御を扱う。
+- Ollama service の検証条件、cmoc provider model の pull、SLM profile 準備時の doctor 実行も対象に含む。
 
 ## Read this when
-- doctor または init コマンドの外部挙動、git への副作用、config 生成・同期、managed ollama 準備に関するテストを確認・変更する場合。
-- `.cmoc/local` を追跡対象外に保つ処理、既存 staged/unstaged 変更を壊さない repair commit、既存 tracked local file の untrack 挙動を検証したい場合。
-- linked worktree 上で doctor が現在の作業ツリーだけを対象にすること、またはローカル SLM 用 Codex profile 作成時の doctor 連携を確認する場合。
+- doctor または init コマンドの初期化・修復・設定生成・git commit/追跡対象制御の挙動を変更する。
+- 管理 Ollama のインストール先、systemd user service、listener/process 検証、model pull 条件を変更する。
+- preprocess が既存の staged change、unstaged hunk、rename、追跡済み .cmoc/local をどう扱うかを確認する。
+- Codex profile 生成時に managed Ollama の準備や doctor 実行が必要になる条件を変更する。
 
 ## Do not read this when
-- doctor/init 以外の CLI コマンドや、git 副作用を伴わない純粋な設定モデルの単体検証を探している場合。
-- runtime doctor の内部 helper 実装そのものを変更する場合は、まず対応する実装側を読む。
-- INDEX.md や oracle file のルーティング・正本仕様を編集するための根拠を探している場合。
+- 個別の設定データ構造や default 値の定義だけを確認したい場合は、設定モデルや oracle 側の定義を直接読む。
+- doctor/init 以外の CLI サブコマンドの表示や引数処理を調べる場合は、そのコマンドのテストへ進む。
+- Ollama service の実装詳細だけを変更し、CLI 経由の外部挙動や git 状態への影響を確認しない場合は、実装モジュールを直接読む。
 
 ## hash
-- 94f148ad6ae03e6186caba88532a7dae0d5be432cd85265092d8cbd7fc6df2fd
+- d61a084aa8238d1e9fc5be8a34cb8dcc800525bfa7bb26c709cc8fd5c7cb10e2
 
 # `test_indexing_cli.py`
 
