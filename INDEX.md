@@ -134,25 +134,24 @@
 # `src`
 
 ## Summary
-- cmoc の realization implementation を配置する実装本体の階層で、CLI 入口、利用者向けサブコマンド、共有 runtime helper、oracle 正本実装への package shim、旧 import 経路を保つ互換層をまとめる。
-- root command から session、apply、review、indexing、TUI、doctor などの実処理へ進む入口であり、複数サブコマンドから共有される Codex 実行、設定、git/worktree、path、state、log、preflight などの基盤処理へのルーティング起点になる。
-- oracle src 側の正本定義を複製せず参照・再公開する互換入口や、旧 `acp.*`、`basic.*`、`config.*` import 経路、runtime alias の削除判断を確認する場所でもある。
+- cmoc の realization implementation を置く階層で、CLI 入口、利用者向けサブコマンド、runtime 共通 helper、oracle 正本実装への参照 shim、旧 import 経路の互換層を扱う。
+- 実処理はサブコマンド固有の制御フローと横断的な runtime helper に分かれ、正本仕様や正本実装を複製せず参照・中継する境界もここから辿れる。
+- 既存公開面を保つための再公開、alias、wrapper、package shim など、移行期間中の realization 側接続点を確認する入口になる。
 
 ## Read this when
-- cmoc の realization implementation 全体から、CLI 入口、サブコマンド実装、共有 runtime helper、互換 shim のどこへ進むべきか判断したいとき。
-- 利用者向け command、subcommand、option、alias、console script 起動、または各 command から実処理へ委譲される経路を確認・変更したいとき。
-- session、apply、review oracle、indexing、TUI、doctor、eval oracle などのサブコマンド固有の workflow、状態遷移、branch/worktree/process 管理、Codex 呼び出し、merge、cleanup、report 生成を調べたいとき。
-- Codex exec/TUI 起動、profile・sandbox・CODEX_HOME、Structured Output、quota/capacity retry、call log、config、runtime path、git/worktree、state、error report、indexing preflight など、複数機能から使われる実行時基盤を探したいとき。
-- oracle 側の正本実装を realization 側から参照する package shim や、旧 import 互換層による再公開・中継・削除条件を確認したいとき。
+- cmoc の CLI 入口、サブコマンド実装、runtime 共通処理、または realization 側互換 import 経路のどこを読むべきか判断したいとき。
+- 利用者向け command の配線、サブコマンドの実行制御、状態更新、Codex 呼び出し、git/worktree 操作、report 生成などの realization implementation を調べたいとき。
+- oracle 側にある正本実装や正本定義を、realization 側が複製せずどのように参照・再公開・中継しているか確認したいとき。
+- 旧公開名や旧 import 経路を維持する互換 shim、wrapper、alias の残存理由や削除条件を判断したいとき。
 
 ## Do not read this when
-- oracle file の正本仕様断片、prompt、builder の生成内容、人間意図、path keyword 定義、INDEX.md entry standard を確認したいときは、対応する oracle 側の文書または実装を読む。
-- realization test の検証観点、fixture、テスト固有の制御を調べたいときは、test 側を読む。
-- 特定の下位 module やサブコマンドが既に分かっている場合は、この階層全体ではなく該当対象へ直接進む。
-- 旧 import 互換や oracle 参照経路に関係しない新しい公開 API 追加場所を探しているだけのときは、正本仕様または担当実装の責務を先に確認する。
+- oracle file にある正本仕様断片、prompt、Structured Output schema、人間意図そのものを確認したいときは、対応する oracle 側を読む。
+- テストコードを確認・変更したいときは、realization test 側を読む。
+- INDEX エントリー作成規則、oracle file と realization file の定義、path placeholder の正本説明を確認したいだけのときは、該当する正本仕様文書を読む。
+- 特定の下位対象が既に決まっているときは、この階層全体ではなく、その下位対象を直接読む。
 
 ## hash
-- bd739cc0e446db66d8b46cfff0b462a650a5394fc98aec80cffae9914e7eacaf
+- 5ae09ee834af571a86e95e297bc4b079324e94d1aab93ca5597c3d52c3f29b48
 
 # `test`
 
