@@ -12,6 +12,10 @@
 - [Prompt engineering | OpenAI API](https://developers.openai.com/api/docs/guides/prompt-engineering)
 - [Best practices for prompt engineering with the OpenAI API | OpenAI Help Center](https://help.openai.com/en/articles/6654000-best-practices-for-prompt-engineering-with-the-openai-api)
 
+## AGENTS.md 復活させる
+
+- cmoc 自体の説明とか、ディレクトリ構成とか、テストコマンドとか、いろいろ書ける余地はありそう
+
 ## コメントをめっちゃ書かせたい
 
 - コメントはめっちゃいっぱい書くべき
