@@ -19,20 +19,18 @@
 # `builder`
 
 ## Summary
-- acp builder 配下の realization 側互換入口を束ねるディレクトリ。oracle 側 canonical builder を正本に保ちながら、旧 acp.builder 系 import path、module alias、薄い wrapper、正本側欠落時の限定 fallback を扱う。
-- apply、review、session、tui、indexing、quota probe などの agent call parameter builder について、既存参照を oracle 側実装へ中継し、realization 側公開型への適応や互換削除条件を確認する入口になる。
+- agent call parameter builder の realization 側入口を束ねる階層。主に旧来の acp.builder 系 import 互換を維持し、oracle 側 canonical builder への委譲・再公開・薄い wrapper 境界を扱う。
+- apply、review、session、tui、indexing、quota probe などの builder 領域について、既存参照を壊さず oracle 側実装へ接続するための package path、module alias、公開関数、削除条件を確認する入口になる。
 
 ## Read this when
-- acp.builder.* の旧 import 互換性、再公開 module、module alias、package path 接続を確認したいとき。
-- agent call parameter builder が oracle 側 canonical 実装をどう呼び出し、必要に応じて realization 側公開型や既存公開名へどう適応するかを調べるとき。
-- apply、review、session、tui、indexing、quota probe の builder 互換層を残す理由や削除条件を確認したいとき。
-- 正本側 builder 欠落時の quota probe fallback など、この階層に限った一時的な互換実装の所在を探すとき。
+- acp.builder 配下の旧 import path 互換が、oracle 側 canonical 実装または realization 側 wrapper へどう接続されるかを調べたいとき。
+- apply、review、session、tui、indexing、quota probe の AgentCallParameter builder について、realization 側公開入口、委譲先、再公開境界、互換 shim の削除可否を確認したいとき。
+- oracle 側 builder を正本に保ちながら、realization 側で package path、module alias、戻り値変換、限定補正、runtime 補助処理をどこまで担うかを追跡したいとき。
 
 ## Do not read this when
-- 各 builder の正本仕様、prompt、parameter 生成内容、人間意図を確認したい場合は、対応する oracle 側 canonical 実装や oracle file を読む。
-- cmoc apply fork、review、session、TUI など各機能全体の実行フロー、CLI 引数処理、runtime path、git 操作を調べたい場合は、それぞれの上位実装や呼び出し元を読む。
-- AgentCallParameter の公開型、汎用 git helper、path model、quota 管理、INDEX.md 生成仕様など builder 互換入口以外の共通概念を調べたいだけの場合。
-- 新規機能の通常実装場所を探しており、既存 acp.builder import surface の維持や移行に関係しない場合。
+- AgentCallParameter の具体的な構築仕様、prompt、出力条件、人間意図を確認したい場合は、対応する oracle 側 canonical builder を読む。
+- apply fork、review、session、TUI など各機能全体の実行フロー、CLI 引数処理、状態操作、画面構成、git 処理を調べたい場合は、それぞれの上位実装または直接の機能実装を読む。
+- ACP parameter の公開型、汎用 path model、git helper、oracle file 定義、INDEX.md エントリー生成仕様など、builder import 互換以外の共通概念を調べたい場合は、それぞれの共通実装や正本仕様へ進む。
 
 ## hash
-- 21f1e423075dab393715a7f463f99193ee7bfc44251267059c8fccfa8f4ab13d
+- 6bfbcfda2722a0c9c52e52da91435c4403b5fe256078eec2a2f60b0866ff5239

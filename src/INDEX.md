@@ -1,23 +1,22 @@
 # `acp`
 
 ## Summary
-- oracle src 側の acp builder 実装を正本に保ちつつ、旧 acp 系 import path を維持するための realization 側互換入口。
-- 配下の builder 互換層へ進む入口であり、既存の acp.* / acp.builder.* 参照、再公開 module、薄い wrapper、限定 fallback、互換削除条件の確認に使う。
+- oracle src 側の agent call parameter builder を正本に保ちながら、realization 側で旧来の acp 系 import 互換を維持するための入口階層。実体実装の複製ではなく、canonical builder への委譲、再公開、薄い wrapper、module alias、削除条件の確認に使う。
+- apply、review、session、tui、indexing、quota probe などの builder 領域について、既存公開面や realization 側参照を壊さず oracle 側実装へ接続する境界を扱う。
 
 ## Read this when
-- acp.* または acp.builder.* の旧 import 互換性を維持している場所や理由を確認したいとき。
-- agent call parameter builder の既存参照が oracle 側 canonical 実装へどう中継され、realization 側公開型や既存公開名へどう適応されるかを調べるとき。
-- apply、review、session、tui、indexing、quota probe などの builder 互換層を残す理由、削除条件、限定 fallback の所在を確認したいとき。
-- 公開面や realization 側に残る acp 系 import を oracle 側または実体 module へ移行する作業をするとき。
+- acp 系 import path を oracle 側 canonical 実装または実体 module へ移行する作業で、互換入口を残す理由、委譲先、削除条件を確認したいとき。
+- realization 側または利用者向け公開面に残る acp 系参照について、再公開境界、薄い wrapper、限定補正、runtime 補助処理の扱いを判断したいとき。
+- agent call parameter builder の旧 import 互換が、apply、review、session、tui、indexing、quota probe などの領域ごとにどこで維持されているかを追跡したいとき。
 
 ## Do not read this when
-- acp builder の正本仕様、prompt、parameter 生成内容、人間意図を確認したいときは、対応する oracle 側 canonical 実装や oracle file を読む。
-- cmoc apply fork、review、session、TUI など各機能全体の実行フロー、CLI 引数処理、runtime path、git 操作を調べたいときは、それぞれの上位実装や呼び出し元を読む。
-- AgentCallParameter の公開型、汎用 git helper、path model、quota 管理、INDEX.md 生成仕様など、builder 互換入口以外の共通概念だけを調べたいとき。
-- 新しい acp 機能や API 仕様を追加する場所を探しており、既存 acp 系 import surface の維持や移行に関係しないとき。
+- agent call parameter の具体的な構築仕様、prompt、出力条件、人間意図を確認したいとき。対応する oracle 側 canonical builder を読む。
+- 各機能全体の実行フロー、CLI 引数処理、状態操作、画面構成、git 処理を調べたいとき。それぞれの上位実装または直接の機能実装を読む。
+- 公開型、汎用 path model、git helper、oracle file 定義、INDEX.md エントリー生成仕様など、builder import 互換以外の共通概念を調べたいとき。それぞれの共通実装や正本仕様へ進む。
+- acp 系参照が全公開面と realization 側から消えていることを確認済みで、互換入口の削除判断や移行経緯を読む必要がないとき。
 
 ## hash
-- 64ed97016fdae9f63942add2f604f5c092c95e406babacda18ecab0b47eab07a
+- 8a30e62ad6cd17ae3ca589daf06896998e85eb44f41619fe332bbdaa54f7663c
 
 # `basic`
 
