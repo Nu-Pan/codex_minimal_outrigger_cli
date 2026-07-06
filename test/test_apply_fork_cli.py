@@ -10,7 +10,6 @@ Size rationale: <work-root>/oracle/src/oracle/prompt_builder/parts/realization_s
 import json
 from pathlib import Path
 
-import pytest
 from basic.acp import AgentCallParameter
 from _support import (
     add_tracked_ignored_oracle_file,
