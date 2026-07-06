@@ -8,7 +8,7 @@ from cmoc_runtime import (
 
 
 def enumerate_review_oracle_targets(
-    root: Path, scope: str, state: SessionState
+    root: Path, scope: str, state: SessionState, review_fork_commit: str
 ) -> list[Path]:
     """review oracle の scope に応じた oracle file 対象を列挙する。"""
     all_oracle_files = enumerate_review_all_oracle_files(root)
@@ -17,9 +17,11 @@ def enumerate_review_oracle_targets(
     start = state.session.session_start_commit
     if not start:
         return []
+    # <work-root>/oracle/doc/app_spec/sub_command/review_oracle.md
+    # session scope は review fork 時点の oracle snapshot を対象に固定する。
     changed = set(
         run_git(
-            ["diff", "--name-only", start, "HEAD", "--", "oracle"], root
+            ["diff", "--name-only", start, review_fork_commit, "--", "oracle"], root
         ).stdout.splitlines()
     )
     return [

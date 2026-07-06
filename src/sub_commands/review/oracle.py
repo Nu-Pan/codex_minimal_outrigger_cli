@@ -108,7 +108,7 @@ def _cmoc_review_oracle_body(
             with pushd(review_worktree):
                 all_oracle_files = enumerate_review_all_oracle_files(review_worktree)
                 oracle_files = enumerate_review_oracle_targets(
-                    review_worktree, scope, state
+                    review_worktree, scope, state, review_fork_commit
                 )
                 findings = run_review_oracle_loop(
                     root, review_worktree, oracle_files, config, codex_exec

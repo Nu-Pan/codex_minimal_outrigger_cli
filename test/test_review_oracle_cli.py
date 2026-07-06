@@ -104,7 +104,6 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyP
         "## Evaluated oracle file",
         "## Fatal findings",
         "## Minor findings",
-        "## Finding details",
     ]
     section_offsets = [rendered.index(section) for section in required_sections]
     assert section_offsets == sorted(section_offsets)
@@ -198,15 +197,14 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
         "## Evaluated oracle file",
         "## Fatal findings",
         "## Minor findings",
-        "## Finding details",
     ]
     detail_order = [
         "### Accepted fatal findings",
         "accepted fatal",
-        "### Accepted minor findings",
-        "accepted minor",
         "### Rejected fatal findings",
         "rejected fatal",
+        "### Accepted minor findings",
+        "accepted minor",
         "### Rejected minor findings",
         "rejected minor",
     ]
@@ -270,7 +268,6 @@ def test_review_oracle_report_includes_rejected_findings(
         "## Evaluated oracle file",
         "## Fatal findings",
         "## Minor findings",
-        "## Finding details",
     ]
     assert "### Rejected fatal findings" in rendered
     assert "### Rejected minor findings" in rendered
@@ -279,6 +276,7 @@ def test_review_oracle_report_includes_rejected_findings(
     if severity == "fatal":
         assert rendered.index("### Rejected fatal findings") < finding_offset
     else:
+        assert rendered.index("## Minor findings") < finding_offset
         assert rendered.index("### Rejected minor findings") < finding_offset
     assert "rejected reason" in rendered
     assert "judge reason: judge rejected reason" in rendered
@@ -356,6 +354,8 @@ def test_review_oracle_uses_linked_worktree_branch_and_oracle(
     report_path = Path(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     )
+    assert report_path.is_relative_to(root / ".cmoc" / "local" / "report")
+    assert not report_path.is_relative_to(linked)
     rendered = report_path.read_text()
     assert f"review_fork_commit: {linked_commit}" in rendered
     assert "`oracle/linked.md`" in rendered
@@ -936,6 +936,30 @@ def test_review_oracle_session_scope_keeps_changed_tracked_ignored_oracle_files(
     assert "oracle_count_evaluated: 2" in rendered
     assert "`oracle/ignored-link.md`" in rendered
     assert "`oracle/ignored.md`" in rendered
+
+
+def test_review_oracle_session_scope_uses_review_fork_commit(
+    tmp_path: Path,
+) -> None:
+    """session scope の差分終点は実行時 HEAD ではなく review fork commit に固定する。"""
+    root = make_repo(tmp_path)
+    state = SessionState()
+    state.session.session_start_commit = run_git(
+        root, "rev-parse", "HEAD"
+    ).stdout.strip()
+    (root / "oracle" / "fork.md").write_text("# fork\n")
+    run_git(root, "add", "oracle/fork.md")
+    run_git(root, "commit", "-m", "review fork target")
+    review_fork_commit = run_git(root, "rev-parse", "HEAD").stdout.strip()
+    (root / "oracle" / "after.md").write_text("# after\n")
+    run_git(root, "add", "oracle/after.md")
+    run_git(root, "commit", "-m", "after review fork")
+
+    targets = review_module.enumerate_review_oracle_targets(
+        root, "session", state, review_fork_commit
+    )
+
+    assert targets == [(root / "oracle" / "fork.md").resolve()]
 
 
 def test_review_oracle_target_enumeration_excludes_agents_and_index(
