@@ -73,22 +73,6 @@
 ## hash
 - 300dd7538efb7a60cb06753149ee3b7f779bd687acbf6cc8a567083f8e6fa0a8
 
-# `init.py`
-
-## Summary
-- CLI の init サブコマンド実装を扱う。実処理は CLI runtime の preprocess command に委譲し、このファイルは init 用の入口だけを持つ。
-
-## Read this when
-- init サブコマンドがどの runtime preprocess command を呼ぶか確認したいとき。
-- init サブコマンドの入口関数名や委譲先を変更したいとき。
-
-## Do not read this when
-- init の具体的な setup 内容や config 同期処理を確認したいとき。委譲先の runtime preprocess command 実装を読む。
-- CLI runtime の preprocess command 共通挙動を変更したいとき。共通実装側を読む。
-
-## hash
-- 1c31245c4d543ed7f9025e974fb32ba8e42ae10a6075fed57af40989bba4c425
-
 # `review`
 
 ## Summary
