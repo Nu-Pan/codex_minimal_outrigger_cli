@@ -451,6 +451,21 @@ def test_load_state_for_branch_rejects_apply_branch_with_extra_parts(tmp_path: P
         load_state_for_branch(tmp_path, "cmoc/apply/session/run/extra")
 
 
+@pytest.mark.parametrize("part", ["session", "apply"])
+@pytest.mark.parametrize("value", [[], {}])
+def test_session_state_rejects_unhashable_state_values(
+    part: str, value: object
+) -> None:
+    data = SessionState().to_dict()
+    data[part]["state"] = value
+
+    with pytest.raises(CmocError) as exc_info:
+        SessionState.from_dict(data)
+
+    assert exc_info.value.summary == "session state file が不正です。"
+    assert f"`{part}.state` が不正です" in exc_info.value.detail
+
+
 def test_cli_error_report_is_written_to_stdout(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

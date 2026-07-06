@@ -165,7 +165,7 @@ def _require_state(
     part: dict[str, Any], key: str, allowed: set[str], source: Path | None
 ) -> None:
     state = part["state"]
-    if state not in allowed:
+    if not isinstance(state, str) or state not in allowed:
         raise _invalid_state(
             source,
             f"`{key}.state` が不正です: {state!r}; allowed: {', '.join(sorted(allowed))}",
