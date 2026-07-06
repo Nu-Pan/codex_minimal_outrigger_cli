@@ -123,24 +123,25 @@
 # `test_basic_runtime.py`
 
 ## Summary
-- cmoc の基礎 runtime 契約を横断検証する realization test。root placeholder 解決、linked worktree と work root 判定、config 読み書きと検証、CmocError の表示、CLI preflight と error report、subcommand log、session state、FileAccessMode から Codex sandbox profile への変換、binary 判定を扱う。
-- 個別サブコマンドより下の共通 runtime 前提が一緒に崩れないことを確認するための回帰テスト群であり、runtime 境界の変更時に読む入口になる。
+- cmoc の基礎 runtime 契約を横断して検証する realization test。root placeholder 解決、repo/run/work root 判定、config 読み書き、CmocError 表示、CLI preflight と error report、subcommand log、session state、FileAccessMode、Codex profile 生成、binary 判定など、個別サブコマンドより下の共通実行前提を扱う。
+- 16,000 文字を超えるが、共通 runtime 契約として同時に崩れやすい挙動と fixture/root 状態の文脈を一箇所に保つための回帰テストとして位置づけられている。
 
 ## Read this when
-- root/repo/run/work root の解決、placeholder path、linked worktree 上の挙動を変更・確認する。
-- CmocConfig、config JSON 変換、config validation、既定 model/reasoning effort を変更・確認する。
-- CmocError、render_error、CLI parse error、stdout/stderr の error report、doctor preprocess、pre-log check、subcommand log の制御を変更・確認する。
-- SessionState、session/apply branch 名からの session id 抽出、branch 状態読み込みを変更・確認する。
-- FileAccessMode、Codex profile の sandbox writable/read 権限、extra writable path、oracle/realization/repo write 境界を変更・確認する。
-- runtime content の binary 判定、起動 wrapper の missing venv report、`.cmoc/local` ignore 生成を変更・確認する。
+- root placeholder、linked worktree、run/work/repo root 解決、または cmoc 管理 worktree の作成・削除挙動を変更・調査する。
+- config の既定値、JSON 変換、読み込み失敗、型検証、または model/reasoning effort 設定の扱いを変更・調査する。
+- CmocError の Markdown 表示、CLI 引数解析 error、stdout/stderr の出力先、preflight、doctor preprocess、completion probe、subcommand log の挙動を変更・調査する。
+- session/apply branch 名からの session id 抽出、session state の読み書き・検証を変更・調査する。
+- FileAccessMode、Codex sandbox/profile、追加 read/write 許可 path、oracle/realization/repo write 境界、local SLM provider 設定を変更・調査する。
+- binary 判定、duration 表示、gitignore への `.cmoc/local` ignore 追加、またはテスト用 repo 作成 helper の runtime 前提を変更・調査する。
 
 ## Do not read this when
-- 個別サブコマンド固有の business logic や CLI workflow の詳細だけを確認したい場合は、そのサブコマンドの test を直接読む。
-- oracle file の正本仕様本文を確認したい場合は、対応する oracle doc/src/test を読む。
-- INDEX.md エントリー生成や routing 文書だけを扱う場合は、対象階層の routing 情報を読む。
+- 特定サブコマンド固有の業務フローや出力だけを確認したい場合は、そのサブコマンドのテストへ進む。
+- oracle 文書そのものの正本仕様や INDEX.md 生成規則を確認したい場合は、oracle 側の該当文書を読む。
+- 個別 helper の内部実装だけを局所的に確認したい場合は、対応する実装モジュールを直接読む。
+- LLM 出力品質やプロンプト本文の内容を検証したい場合は、この runtime 回帰テストではなく該当する oracle/prompt 関連の対象へ進む。
 
 ## hash
-- c81a30b43bf95a89c4a03a08e48b7cb221e1d10e477645b3f23882cd809476f3
+- cc1569d333735d7e8a50a57899d2f8bb9761159fe95e70a228cb6ceadb784adb
 
 # `test_cli_tui.py`
 
@@ -181,22 +182,23 @@
 # `test_codex_runtime_exec.py`
 
 ## Summary
-- Codex CLI 実行ラッパーの統合テスト群。実際または偽装した Codex 実行ファイルを使い、プロファイル生成、sandbox writable_roots、作業ディレクトリ、schema 保存先、call log、cmoc 管理 Ollama provider 設定が期待どおりになることを検証する。
-- realization test として、`run_codex_exec` が agent call parameter と cmoc 設定から Codex CLI 起動引数・標準入力・出力・ローカル状態をどう構成するかを確認する入口になる。
+- Codex 実行ラッパーが Codex CLI 起動引数、profile 生成、sandbox 権限、出力 schema の保存先、呼び出しログ、ローカル SLM provider 設定を期待通り扱うことを検証する realization test。
+- 実物の Codex CLI と Ollama を使う任意の統合確認と、偽の codex 実行ファイルを使う制御ロジック確認を含む。
 
 ## Read this when
-- Codex CLI を起動する runtime 実装、特に `run_codex_exec` の引数生成、profile TOML、schema パス、出力ログ、call log の挙動を変更する。
-- `FileAccessMode` ごとの sandbox 設定、writable_roots、PURE_ORACLE_READ 時の書き込み許可範囲、`.agents` 除外を確認したい。
-- cmoc 管理 Ollama provider、ローカル SLM profile、実 Codex CLI と実 Ollama を使う統合確認の条件や期待値を確認したい。
-- git worktree からの実行時に、cwd と repo root 配下の `.cmoc/local` 状態保存先がどう扱われるかを確認したい。
+- Codex CLI を起動する処理、profile TOML 生成、`--cd` や `--output-schema` などの引数構成を変更する。
+- `FileAccessMode` ごとの filesystem 権限、writable roots、`.agents` 除外、pure oracle read の権限表現を確認する。
+- cmoc 管理 Ollama provider、ローカル SLM model、Codex 組み込み Ollama flag を使わない挙動を変更または調査する。
+- linked worktree 実行時の cwd、repo root 配下への schema state 保存、repo local read の扱いを確認する。
+- Codex 実行結果の出力本文、JSON 出力、prompt log、call log の保存・対応関係を検証する。
 
 ## Do not read this when
-- Codex CLI 起動ではなく、oracle 文書や path model の正本仕様そのものを確認したい。
-- agent call parameter のデータ構造や cmoc config の定義だけを確認したい場合は、それらの実装・oracle 定義を直接読む方が適切。
-- Codex 実行結果の内容品質や LLM 応答の妥当性を検証したい場合。このテストは cmoc が管理する起動・状態・設定の外部挙動を対象にしている。
+- Codex runtime の外部挙動ではなく、個別の oracle 文書や routing 文書の内容だけを確認したい。
+- Codex CLI 起動に関係しない一般的な設定読み込み、git 操作 helper、テスト支援 fixture の詳細を調べたい。
+- LLM の回答品質やプロンプト内容そのものを検証したい。
 
 ## hash
-- b382616b943a28de6a78338c1f30d23bcfa34e43a0286e6005b1e6ce96422c4d
+- 8d7ae2572f52e0343e730c204727135e9be77bdf5c8551815a0c0d7b541f179a
 
 # `test_codex_runtime_home.py`
 
