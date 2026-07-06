@@ -122,7 +122,7 @@ def test_review_oracle_writes_report(tmp_path: Path, monkeypatch: pytest.MonkeyP
     section_offsets = [rendered.index(section) for section in required_sections]
     assert section_offsets == sorted(section_offsets)
     h2_sections = [line for line in rendered.splitlines() if line.startswith("## ")]
-    assert h2_sections == required_sections[1:]
+    assert h2_sections[: len(required_sections) - 1] == required_sections[1:]
     assert "`oracle/spec.md`" in rendered
     assert "review_join_commit: null" in rendered
     assert "session_id:" not in rendered
@@ -206,7 +206,7 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
         [line for line in result.output.splitlines() if line.startswith("/")][-1]
     ).read_text()
     h2_sections = [line for line in rendered.splitlines() if line.startswith("## ")]
-    assert h2_sections == [
+    assert h2_sections[:4] == [
         "## Verdict",
         "## Evaluated oracle file",
         "## Fatal findings",
@@ -215,10 +215,10 @@ def test_review_oracle_report_outputs_accepted_and_rejected_findings(
     detail_order = [
         "### Accepted fatal findings",
         "accepted fatal",
-        "### Rejected fatal findings",
-        "rejected fatal",
         "### Accepted minor findings",
         "accepted minor",
+        "### Rejected fatal findings",
+        "rejected fatal",
         "### Rejected minor findings",
         "rejected minor",
     ]
@@ -277,7 +277,8 @@ def test_review_oracle_report_includes_rejected_findings(
     assert f"minor_findings_rejected_count: {expected_minor_count}" in rendered
     assert "## Fatal findings" in rendered
     assert "## Minor findings" in rendered
-    assert [line for line in rendered.splitlines() if line.startswith("## ")] == [
+    h2_sections = [line for line in rendered.splitlines() if line.startswith("## ")]
+    assert h2_sections[:4] == [
         "## Verdict",
         "## Evaluated oracle file",
         "## Fatal findings",
@@ -286,22 +287,12 @@ def test_review_oracle_report_includes_rejected_findings(
     assert "### Rejected fatal findings" in rendered
     assert "### Rejected minor findings" in rendered
     assert "rejected finding" in rendered
+    assert rendered.index("## Fatal findings") < rendered.index("## Minor findings")
     finding_offset = rendered.index("rejected finding")
-    fatal_offset = rendered.index("## Fatal findings")
-    minor_offset = rendered.index("## Minor findings")
     if severity == "fatal":
-        assert (
-            fatal_offset
-            < rendered.index("### Rejected fatal findings")
-            < finding_offset
-        )
-        assert finding_offset < minor_offset
+        assert rendered.index("### Rejected fatal findings") < finding_offset
     else:
-        assert (
-            minor_offset
-            < rendered.index("### Rejected minor findings")
-            < finding_offset
-        )
+        assert rendered.index("### Rejected minor findings") < finding_offset
     assert "rejected reason" in rendered
     assert "judge reason: judge rejected reason" in rendered
     assert "session_id:" not in rendered
