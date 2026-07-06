@@ -21,10 +21,20 @@ def test_tracked_codex_subprocess_records_dedicated_process_group(
         script,
         [
             "import os, pathlib, sys, time",
-            "time.sleep(0.2)",
+            "path = pathlib.Path(sys.argv[1])",
+            "process_id = os.getpid()",
+            "child_prefix = f'child {process_id} '",
+            "deadline = time.monotonic() + 3",
+            "while True:",
+            "    tracking_text = path.read_text()",
+            "    if any(line.startswith(child_prefix) for line in tracking_text.splitlines()):",
+            "        break",
+            "    if time.monotonic() >= deadline:",
+            "        break",
+            "    time.sleep(0.01)",
             "print(os.getpid())",
             "print(os.getpgrp())",
-            "print(pathlib.Path(sys.argv[1]).read_text(), end='')",
+            "print(tracking_text, end='')",
         ],
     )
 
@@ -57,5 +67,4 @@ def test_run_codex_subprocess_ignores_inherited_apply_tracking_env(
 
     assert result.stdout == "ok\n"
     assert not tracking_path.exists()
-
 
